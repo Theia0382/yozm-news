@@ -79,7 +79,7 @@ main ── 안정 릴리스 (dev → main PR 로만)
 
 - 작업 브랜치는 `dev` 에서 분기하고, PR 로 `dev` 에 merge 한다
 - `main` · `dev` 에 직접 커밋 · push 하지 않는다
-- 작업 브랜치의 이력은 선형으로 유지한다. merge 뒤에도 브랜치는 지우지 않는다
+- 작업 브랜치의 이력은 선형으로 유지한다 — `dev` 를 들이는 동기화 merge([§5](#5-pr) 충돌 · 동기화)만 예외다. merge 뒤에도 브랜치는 지우지 않는다
 - **이름**: `{접두사}/{이슈 번호}-{설명}` — 접두사는 이슈 라벨(작업 유형)과 같고, 설명은 영문 소문자 kebab-case
 
 ## 4. 커밋 메시지
@@ -126,11 +126,11 @@ Issue: #12
 
 - **대상**은 `dev`. 하나의 이슈에 PR 하나
 - **제목**은 커밋 메시지 제목과 같은 형식: `{유형}({영역}): {요지}`
-- **본문**은 [PR 템플릿](.github/pull_request_template.md)을 따른다 — 변경 요약, `Closes #{이슈 번호}`, 확인 사항. merge 커밋 메시지가 PR 제목과 본문으로 만들어지므로 저장소의 변경을 정리해 쓴다
+- **본문**은 [PR 템플릿](.github/pull_request_template.md)을 따른다 — 변경 요약, `Closes #{이슈 번호}`, 확인 사항. 리뷰어가 읽고 PR 에 남는 변경 기록이므로 저장소의 변경을 정리해 쓴다
 - **CI**: PR 과 `dev` 에서 GitHub Actions(`.github/workflows/ci.yml`)가 §1 의 검사를 돌리고, 결과가 체크 `backend` · `frontend` 로 표시된다. **두 체크가 통과해야 merge 한다**
-- **merge** 는 리드가 한다. 방식은 **merge commit** 만 쓴다(squash · rebase merge 를 쓰지 않는다 — 작업 브랜치의 커밋을 그대로 남긴다)
+- **merge** 는 리드가 한다. 방식은 **merge commit** 만 쓴다(squash · rebase merge 를 쓰지 않는다 — 작업 브랜치의 커밋을 그대로 남긴다). merge 커밋 메시지는 저장소 설정이 만든다 — 제목 `Merge pull request #{번호} from {소유자}/{작업 브랜치}`, 본문은 PR 제목. merge 커밋은 [§4](#4-커밋-메시지) 형식을 따르지 않는다
 - **리뷰**: 리드가 GitHub 에서 검토하고, 필요하면 로컬로 받아 확인한다(`gh pr checkout {번호}`)
-- **충돌**: 작업 브랜치에 `dev` 를 merge 해서 해소하고 다시 push 한다. force push 하지 않는다
+- **충돌 · 동기화**: 작업 브랜치에 `dev` 를 merge 해서 해소하고 다시 push 한다. 이 merge 커밋의 메시지는 `Merge origin/dev into {작업 브랜치}` 이고, 마지막 문단에 `Issue: #{이슈 번호}` 를 둔다. force push 하지 않는다
 - **릴리스**: 안정 시점에 리드가 `dev` → `main` PR 을 만들어 merge 한다
 
 ## 6. 문서
