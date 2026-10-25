@@ -2,6 +2,8 @@
 FROM eclipse-temurin:25-jdk
 ENV TZ=UTC LANG=C.UTF-8 LC_ALL=C.UTF-8
 WORKDIR /workspace
+# toolchain 에 맞는 JDK 를 내려받지 않는다 — 내려받기 설정이 생겨도 JDK 는 이 이미지의 것 하나뿐이라 태그와 toolchain 이 다르면 실패한다.
+RUN mkdir -p /root/.gradle && echo "org.gradle.java.installations.auto-download=false" > /root/.gradle/gradle.properties
 COPY backend/gradlew backend/settings.gradle.kts backend/build.gradle.kts backend/
 COPY backend/gradle backend/gradle
 # 의존성 계층 — 빌드 파일이 그대로면 캐시를 재사용한다. dependencies 가 toolchain 을 확인하고,

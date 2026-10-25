@@ -34,15 +34,17 @@ jobs:
             *.cache-from=type=gha,scope=backend
             *.cache-to=type=gha,scope=backend,mode=max
       - name: Check
+        id: check
         run: docker compose -f compose.check.yaml up --force-recreate --attach backend --abort-on-container-exit --exit-code-from backend backend docker
+      # 보고서는 검사 단계가 실패했을 때만 모은다 — 이미지 빌드 실패 등에서는 꺼낼 보고서가 없다.
       - name: Collect test reports
-        if: failure()
+        if: failure() && steps.check.outcome == 'failure'
         run: |
           mkdir -p backend-test-reports
           docker compose -f compose.check.yaml cp backend:/workspace/backend/build/reports/tests/test backend-test-reports/html
           docker compose -f compose.check.yaml cp backend:/workspace/backend/build/test-results/test backend-test-reports/xml
       - name: Upload test reports
-        if: failure()
+        if: failure() && steps.check.outcome == 'failure'
         uses: actions/upload-artifact@v7
         with:
           name: backend-test-reports
