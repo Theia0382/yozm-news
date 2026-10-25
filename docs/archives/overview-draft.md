@@ -44,7 +44,7 @@
 
 ### 제외 (이후 단계)
 
-- 외부 API(제3자 조회용)와 MCP 어댑터 → [07-roadmap.md](07-roadmap.md)
+- 외부 API(제3자 조회용)와 MCP 어댑터 → [roadmap.md](../roadmap.md)
 - 사용자가 직접 피드를 추가하는 기능
 - 기사 본문 추출 (파이프라인 자리만 만들어 둔다)
 - 같은 사건 기사의 임베딩 기반 클러스터링 (v1은 LLM 종합 단계에 맡긴다)
@@ -55,7 +55,7 @@
 ## 설계 원칙
 
 1. **교체 가능한 경계**: 뉴스 공급원(`ArticleSource`), 본문 추출(`ContentExtractor`), 평가(`ArticleEvaluator`), 다이제스트 생성(`DigestGenerator`)은 인터페이스 뒤에 둔다. 특정 공급자의 API 형태가 도메인 모델로 새어 들어오지 않게 한다.
-2. **셀프 호스팅 가능**: 외부 서비스(로그인, 메일, 봇 차단, Cloudflare 등)는 표준 프로토콜(OIDC, SMTP, S3)이나 자체 인터페이스로 연결하고, 설정으로 교체하거나 끌 수 있게 한다. 개발과 테스트는 외부 계정 없이 로컬 대체물로 돈다 ([ADR-0012](adr/0012-swappable-external-dependencies.md)).
+2. **셀프 호스팅 가능**: 외부 서비스(로그인, 메일, 봇 차단, Cloudflare 등)는 표준 프로토콜(OIDC, SMTP, S3)이나 자체 인터페이스로 연결하고, 설정으로 교체하거나 끌 수 있게 한다. 개발과 테스트는 외부 계정 없이 로컬 대체물로 돈다 ([ADR-0012](../adr/0012-swappable-external-dependencies.md)).
 3. **도메인은 관심 분야를 모른다**: 다루는 주제는 코드가 아니라 태그 체계와 사용자 설정으로 정해진다.
 4. **비용 주체에 따라 단계를 나눈다**: 사용자 수와 무관한 일(수집, 공유 평가)은 운영자 비용, 사용자 수에 비례하는 일(다이제스트 생성)은 사용자 비용이다. 운영자 비용은 사용자 수가 늘어도 일정하게 유지되도록 설계한다.
 5. **판단 근거를 남긴다**: Jev의 태그별 확률, 모델 버전, 태그 체계 버전, LLM 토큰 사용량을 저장해 나중에 임계값 조정과 품질 분석에 쓴다.
@@ -68,9 +68,9 @@
 | 항목 | 초안 | 현재 설계 | 근거 |
 |---|---|---|---|
 | 사용자 | 개인용 도구 | 공개 멀티유저 서비스 | 사용자 결정 |
-| 뉴스 소스 | 네이버 뉴스 검색 API | 운영자 큐레이션 RSS | [ADR-0001](adr/0001-news-source-rss.md) |
-| Jev 역할 | 관심 조건 관련성 판별 + 분류 + 중요도 | 사용자 무관 공유 평가만 (분류·중요도·적합성) | [ADR-0002](adr/0002-shared-evaluation-with-jev.md) |
-| 개인화 | Jev 관련성 판별 | 사용자 LLM이 공유 평가된 후보 중에서 수행 | [ADR-0003](adr/0003-byok-personalized-digest.md) |
-| 요약 단위 | 기사별 요약 | 사용자별로 여러 기사를 종합한 다이제스트 | [ADR-0003](adr/0003-byok-personalized-digest.md) |
-| LLM 비용 | 미정 | 사용자 BYOK | [ADR-0003](adr/0003-byok-personalized-digest.md) |
-| 본문 추출 | 평가 전 단계로 수행 | v1은 RSS 요약문만 사용, 추출은 선택 단계 | [03-pipeline.md](03-pipeline.md), [research](research/2026-10-rss-survey.md) |
+| 뉴스 소스 | 네이버 뉴스 검색 API | 운영자 큐레이션 RSS | [ADR-0001](../adr/0001-news-source-rss.md) |
+| Jev 역할 | 관심 조건 관련성 판별 + 분류 + 중요도 | 사용자 무관 공유 평가만 (분류·중요도·적합성) | [ADR-0002](../adr/0002-shared-evaluation-with-jev.md) |
+| 개인화 | Jev 관련성 판별 | 사용자 LLM이 공유 평가된 후보 중에서 수행 | [ADR-0003](../adr/0003-byok-personalized-digest.md) |
+| 요약 단위 | 기사별 요약 | 사용자별로 여러 기사를 종합한 다이제스트 | [ADR-0003](../adr/0003-byok-personalized-digest.md) |
+| LLM 비용 | 미정 | 사용자 BYOK | [ADR-0003](../adr/0003-byok-personalized-digest.md) |
+| 본문 추출 | 평가 전 단계로 수행 | v1은 RSS 요약문만 사용, 추출은 선택 단계 | [pipeline.md](../pipeline.md), [research](../research/2026-10-rss-survey.md) |

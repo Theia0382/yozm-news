@@ -12,23 +12,20 @@ AI로 뉴스 기사를 수집·분류하고, 사용자마다 관심사에 맞춘
 
 | 경로 | 내용 |
 |---|---|
-| [`docs/`](docs/) | 설계 문서, 아키텍처 결정 기록(ADR), 조사 자료 |
+| [`docs/`](docs/README.md) | 설계 문서, 아키텍처 결정 기록(ADR), 테스트 전략, 조사 자료 |
 | [`backend/`](backend/) | Spring Boot 애플리케이션 (Java 25, Gradle) |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | 개발 환경, 이슈 · 브랜치 · 커밋 · PR 규약 |
 
 ## 개발
 
-### 필요한 것
-
-- JDK 25
-- Docker (테스트에서 Testcontainers로 PostgreSQL을 띄웁니다)
-
-### 백엔드 테스트
+JDK 25 와 Docker 가 필요합니다. 저장소 루트에서 백엔드 테스트를 실행합니다.
 
 ```sh
-cd backend
-./gradlew test
+backend/gradlew -p backend test
 ```
+
+개발 환경 설정과 기여 규약은 [`CONTRIBUTING.md`](CONTRIBUTING.md)에 있습니다.
 
 ## 문서
 
-설계 문서는 [`docs/README.md`](docs/README.md)부터 읽으면 됩니다.
+설계 문서는 [`docs/README.md`](docs/README.md)부터 읽으면 됩니다. 시스템 전체 그림은 [`docs/overview.md`](docs/overview.md)에 있습니다.

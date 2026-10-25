@@ -16,7 +16,7 @@
 - 기사별 요약은 만들지 않는다. 따라서 사용자 간에 공유되는 생성물도 없다.
 - **LLM 키가 없는 사용자에게는 키 등록 페이지만 보여준다.**
 - 공급자 차이는 Spring AI로 흡수하고, 사용자 키로 요청마다 클라이언트를 만든다.
-- 키는 envelope encryption으로 보관한다 ([06-security.md](../06-security.md)).
+- 키는 envelope encryption으로 보관한다 ([security.md](../security.md)).
 
 ## 결과
 

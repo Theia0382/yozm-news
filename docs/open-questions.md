@@ -15,7 +15,7 @@
 | 7 | 축별 태그 임계값 `τ`, 저장 하한, 중요도 기준 | M2에서 표본 검수 후 결정 |
 | 8 | 다이제스트 주기: 하루 1회 고정인가, 사용자가 여러 번 받을 수 있는가 | v1은 하루 1회 + 수동 재생성 |
 | 9 | 기본 후보 수와 모델별 토큰 예산 | 60건에서 시작해 M4 측정 결과로 조정 |
-| 10 | 보존 기간 ([04-data-model.md](04-data-model.md)) | 초안 값으로 시작 |
+| 10 | 보존 기간 ([data-model.md](data-model.md)) | 초안 값으로 시작 |
 | 11 | 사용자 피드 추가 허용 | v1은 불가. 열 때는 사용자당 피드 수 상한, 피드 볼륨 상한, 운영자 승인 중 하나 이상이 필요하다 (Jev 비용이 운영자 부담이므로) |
 | 12 | 본문 추출 도입 | M4 품질 측정 후. 요약문이 거의 없는 소스(제목만 주는 피드)부터 검토 |
 | 13 | 저가 모델 기반 기본 티어 | 보류 (사용자 결정) |
@@ -38,4 +38,4 @@
 | 18 | 아키텍처 패턴, 기본 패키지 `net.yozmnews`, 컨트롤러는 각 모듈 안 | [ADR-0013](adr/0013-architecture-patterns.md) |
 | 5 | 프론트엔드 세부: React Router, TanStack Query, Tailwind + shadcn/ui | [ADR-0005](adr/0005-frontend-react-spa.md) |
 | 17 | 메일 발송: v1에서 하지 않음 | [ADR-0011](adr/0011-no-email-in-v1.md) |
-| 6 | 서비스 이름: 요즘뉴스(Yozm News), 도메인 `yozmnews.net` (Cloudflare Registrar). 비상업 개인 프로젝트 성격이라 상표 리스크는 감수 | [05-infrastructure.md](05-infrastructure.md) |
+| 6 | 서비스 이름: 요즘뉴스(Yozm News), 도메인 `yozmnews.net` (Cloudflare Registrar). 비상업 개인 프로젝트 성격이라 상표 리스크는 감수 | [infrastructure.md](infrastructure.md) |

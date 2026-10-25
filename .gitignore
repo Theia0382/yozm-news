@@ -4,6 +4,15 @@
 .env
 .env.*
 !.env.example
+.envrc
+
+# 개인 도구 설정 (각자 관리)
+.claude/
+CLAUDE.md
+.mcp.json
+
+# 이슈별 작업 디렉터리 (git worktree)
+.worktrees/
 
 # OS
 .DS_Store

@@ -1,4 +1,4 @@
-# 05. 인프라와 운영
+# 인프라와 운영
 
 ## 원칙
 
@@ -62,7 +62,7 @@ Cloudflare는 권장 구성이지 필수가 아니다. 셀프 호스팅에서는
 | 값 | 보관 |
 |---|---|
 | DB 비밀번호, Google OAuth client secret, Jev API 키, Turnstile secret, Tunnel 토큰 | 호스트의 환경 파일 또는 Docker secrets. 저장소에 커밋하지 않는다 |
-| BYOK 키 암호화용 KEK | 위와 같되 **별도 파일**로 분리하고 DB 백업에는 포함하지 않는다. 버전을 붙여 교체할 수 있게 한다 ([06-security.md](06-security.md)) |
+| BYOK 키 암호화용 KEK | 위와 같되 **별도 파일**로 분리하고 DB 백업에는 포함하지 않는다. 버전을 붙여 교체할 수 있게 한다 ([security.md](security.md)) |
 
 ## 관측
 
