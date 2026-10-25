@@ -28,7 +28,7 @@ backend/gradlew -p backend build                                 # 컴파일 + �
 
 - **제목**은 한국어. 모듈 작업이면 앞에 모듈 이름 — `[digest] 후보 선별 쿼리 구현`
 - **본문**에 목적, 수용 기준(AC), 관련 문서(`docs/` · ADR 링크)를 적는다
-- **라벨은 하나** — 작업 브랜치 접두사와 같은 값: `feature` · `fix` · `refactor` · `chore` · `optimize` · `test` · `docs`
+- **라벨은 하나** — 작업 유형([§4 유형](#4-커밋-메시지)에서 `revert` 를 뺀 값). 작업 브랜치 접두사와 같다
 - 큰 묶음은 상위 이슈 + 하위 이슈(sub-issue), 로드맵 단계는 Milestone
 - 작업을 시작하기 전에 이슈가 있어야 한다. 버그는 원인과 범위를 파악한 뒤에 정확히 만든다
 
@@ -37,15 +37,14 @@ backend/gradlew -p backend build                                 # 컴파일 + �
 ```
 main ── 안정 릴리스 (dev → main PR 로만)
  └── dev ── 통합 브랜치 (작업 브랜치의 PR merge 대상)
-      ├── feature/12-frontend-init
+      ├── feat/12-frontend-init
       └── fix/15-feed-date-parse
 ```
 
 - 작업 브랜치는 `dev` 에서 분기하고, PR 로 `dev` 에 merge 한다
 - `main` · `dev` 에 직접 커밋 · push 하지 않는다
 - 작업 브랜치의 이력은 선형으로 유지한다. merge 뒤에도 브랜치는 지우지 않는다
-- **이름**: `{접두사}/{이슈 번호}-{설명}` — 접두사는 이슈 라벨과 같고, 설명은 영문 소문자 kebab-case
-  - `feature` 새 기능 · `fix` 버그 수정 · `refactor` 동작 변경 없는 구조 개선 · `chore` 빌드 · 설정 · 의존성 · `optimize` 성능 · `test` 테스트 추가 · 개선 · `docs` 문서만
+- **이름**: `{접두사}/{이슈 번호}-{설명}` — 접두사는 이슈 라벨(작업 유형)과 같고, 설명은 영문 소문자 kebab-case
 
 ## 4. 커밋 메시지
 
@@ -58,7 +57,21 @@ main ── 안정 릴리스 (dev → main PR 로만)
 Issue: #12
 ```
 
-- **유형**: `feat` · `fix` · `refactor` · `optimize` · `test` · `chore` · `docs`
+- **유형**: [Conventional Commits](https://www.conventionalcommits.org/) 의 type 을 따른다
+
+  | 유형 | 대상 |
+  |---|---|
+  | `feat` | 새 기능 |
+  | `fix` | 버그 수정 |
+  | `refactor` | 동작 변경 없는 구조 개선 |
+  | `perf` | 성능 개선 |
+  | `test` | 테스트 추가 · 개선 |
+  | `docs` | 문서만 |
+  | `build` | 빌드 시스템 · 의존성 (Gradle · npm · Dockerfile) |
+  | `ci` | CI 설정 |
+  | `chore` | 그 밖의 잡무 (설정 · 저장소 관리) |
+  | `revert` | 이전 커밋 되돌리기 — 커밋에만 쓰고 이슈 라벨 · 브랜치 접두사로는 쓰지 않는다 |
+
 - **영역**: 아래 표의 낱말 하나 — 주된 영역. 셋 이상을 고르게 걸치면 `({영역})` 을 생략한다
 - **요지**: 한 가지 변경의 요지, 한국어 50자 이내, 명사형 종결(`~ 추가` · `~ 정정` · `~ 통합`)
 - **본문**: 제목만으로 무엇이 바뀌었는지 다 드러나지 않으면 변경 항목 bullet 을 쓴다. 여러 변경을 담은 커밋은 항상 쓴다
@@ -71,7 +84,7 @@ Issue: #12
 | `source` · `article` · `evaluation` · `digest` · `llm` · `credential` · `user` · `feedback` · `admin` · `platform` | 백엔드 모듈 ([overview.md §5](docs/overview.md#5-모듈-지도)) |
 | `web` | 프론트엔드 |
 | `adr` · `docs` · `qa` | ADR · 설계 문서 · 테스트 전략 |
-| `build` · `ci` · `deploy` | Gradle · 의존성 / CI / Docker · Compose · 배포 |
+| `deploy` | Docker · Compose · 배포 설정 |
 
 ## 5. PR
 
