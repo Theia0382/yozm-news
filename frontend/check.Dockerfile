@@ -5,9 +5,11 @@ WORKDIR /workspace
 COPY frontend/.nvmrc frontend/package.json frontend/pnpm-lock.yaml frontend/
 RUN want="$(cat frontend/.nvmrc)"; have="$(node --version)"; \
     case "${have#v}" in "$want"|"$want".*) ;; *) echo "Node $have does not match frontend/.nvmrc ($want)" >&2; exit 1 ;; esac
-RUN corepack enable && pnpm -C frontend install --frozen-lockfile
+# corepack 은 실행 위치의 package.json 에서 packageManager 를 찾는다 — 여기부터 pnpm 은 frontend 안에서 돈다.
+WORKDIR /workspace/frontend
+RUN corepack enable && pnpm install --frozen-lockfile
 # Prettier 는 저장소 루트의 .editorconfig 를 설정으로 읽는다.
-COPY .editorconfig ./
-COPY frontend frontend
+COPY .editorconfig /workspace/
+COPY frontend /workspace/frontend
 # 네 검사를 모두 돌리고, 하나라도 실패하면 실패로 끝낸다.
-CMD ["sh", "-c", "s=0; for t in build lint format:check test; do pnpm -C frontend run $t || s=1; done; exit $s"]
+CMD ["sh", "-c", "s=0; for t in build lint format:check test; do pnpm run $t || s=1; done; exit $s"]
