@@ -9,10 +9,14 @@
 - **JDK 25**
 - **Docker** — 테스트가 Testcontainers 로 PostgreSQL 컨테이너를 띄운다
 - Gradle 은 따로 설치하지 않는다 — 저장소의 wrapper(`backend/gradlew`)를 쓴다
+- **Node.js 24** (`frontend/.nvmrc`)
+- **pnpm** — 설치된 버전과 관계없이 `frontend/package.json` 의 `packageManager` 에 고정한 버전으로 실행된다
 
 ### 빌드와 테스트
 
 저장소 루트에서 실행한다.
+
+**백엔드**
 
 ```sh
 backend/gradlew -p backend test                                  # 전체 테스트
@@ -20,7 +24,22 @@ backend/gradlew -p backend test --tests 'net.yozmnews.digest.*'  # 일부만
 backend/gradlew -p backend build                                 # 컴파일 + 테스트 + 검사
 ```
 
-결과는 `backend/build/test-results/test/` (JUnit XML) 와 `backend/build/reports/tests/test/index.html` 에 남는다. 테스트로 무엇을 증명해야 하는지는 [테스트 전략](docs/qa/test-strategy.md)을 따른다.
+결과는 `backend/build/test-results/test/` (JUnit XML) 와 `backend/build/reports/tests/test/index.html` 에 남는다.
+
+**프론트엔드**
+
+```sh
+pnpm -C frontend install       # 의존성 설치 (처음 한 번, lockfile 이 바뀌었을 때)
+pnpm -C frontend dev           # 개발 서버 — /api · /oauth2 · /login 은 localhost:8080 백엔드로 넘긴다
+pnpm -C frontend build         # 타입 검사 + 빌드
+pnpm -C frontend lint          # ESLint
+pnpm -C frontend format        # Prettier 로 정렬 (검사만: format:check)
+pnpm -C frontend test          # Vitest
+```
+
+UI 컴포넌트는 shadcn 으로 추가한다 — `pnpm -C frontend dlx shadcn@latest add <컴포넌트>` (`src/shared/ui` 에 생긴다).
+
+테스트로 무엇을 증명해야 하는지는 [테스트 전략](docs/qa/test-strategy.md)을 따른다.
 
 ## 2. 이슈
 
