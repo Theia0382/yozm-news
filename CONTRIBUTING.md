@@ -6,7 +6,7 @@
 
 ### 필요한 것
 
-- **Docker** — 검사(아래)는 컨테이너에서 돌고, 검사에 필요한 호스트 도구는 Docker 뿐이다. privileged 컨테이너를 허용해야 한다 — 백엔드 테스트의 Testcontainers 가 검사 정의 안의 Docker 엔진(DinD)을 쓴다
+- **Docker**(Compose 플러그인 포함) — 검사(아래)는 컨테이너에서 돌고, 검사에 필요한 호스트 도구는 Docker 뿐이다. privileged 컨테이너를 허용해야 한다 — 백엔드 테스트의 Testcontainers 가 검사 정의 안의 Docker 엔진(DinD)을 쓴다
 
 호스트에서 직접 빌드하거나 개발 서버를 돌릴 때는 다음도 필요하다.
 
@@ -127,7 +127,7 @@ Issue: #12
 - **대상**은 `dev`. 하나의 이슈에 PR 하나
 - **제목**은 커밋 메시지 제목과 같은 형식: `{유형}({영역}): {요지}`
 - **본문**은 [PR 템플릿](.github/pull_request_template.md)을 따른다 — 변경 요약, `Closes #{이슈 번호}`, 확인 사항. merge 커밋 메시지가 PR 제목과 본문으로 만들어지므로 저장소의 변경을 정리해 쓴다
-- **CI**: PR 과 `dev` 에서 GitHub Actions(`.github/workflows/ci.yml`)가 §1 의 검사를 돌고, 결과가 체크 `backend` · `frontend` 로 표시된다. **두 체크가 통과해야 merge 한다**
+- **CI**: PR 과 `dev` 에서 GitHub Actions(`.github/workflows/ci.yml`)가 §1 의 검사를 돌리고, 결과가 체크 `backend` · `frontend` 로 표시된다. **두 체크가 통과해야 merge 한다**
 - **merge** 는 리드가 한다. 방식은 **merge commit** 만 쓴다(squash · rebase merge 를 쓰지 않는다 — 작업 브랜치의 커밋을 그대로 남긴다)
 - **리뷰**: 리드가 GitHub 에서 검토하고, 필요하면 로컬로 받아 확인한다(`gh pr checkout {번호}`)
 - **충돌**: 작업 브랜치에 `dev` 를 merge 해서 해소하고 다시 push 한다. force push 하지 않는다
