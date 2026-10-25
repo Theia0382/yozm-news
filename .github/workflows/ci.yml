@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [dev, main]
+  push:
+    branches: [dev]
+
+permissions:
+  contents: read
+
+concurrency:
+  # PR 은 번호별로 묶어 새 push 가 이전 실행을 취소한다. dev push 는 실행마다 고유한 그룹이라 서로 취소하지 않는다.
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+# 검사는 compose.check.yaml 의 컨테이너에서 돈다 — 로컬과 같은 정의 · 같은 명령(CONTRIBUTING.md §1).
+# CI 만 이미지 빌드를 앞 단계로 떼어 GitHub Actions 캐시를 계층 캐시로 쓴다.
+jobs:
+  backend:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - name: Build image
+        uses: docker/bake-action@v7
+        with:
+          source: .
+          files: compose.check.yaml
+          targets: backend
+          load: true
+          set: |
+            *.cache-from=type=gha,scope=backend
+            *.cache-to=type=gha,scope=backend,mode=max
+      - name: Check
+        id: check
+        run: docker compose -f compose.check.yaml up --force-recreate --attach backend --abort-on-container-exit --exit-code-from backend backend docker
+      # 보고서는 검사 단계가 실패했을 때만 모은다 — 이미지 빌드 실패 등에서는 꺼낼 보고서가 없다.
+      - name: Collect test reports
+        if: failure() && steps.check.outcome == 'failure'
+        run: |
+          mkdir -p backend-test-reports
+          docker compose -f compose.check.yaml cp backend:/workspace/backend/build/reports/tests/test backend-test-reports/html
+          docker compose -f compose.check.yaml cp backend:/workspace/backend/build/test-results/test backend-test-reports/xml
+      - name: Upload test reports
+        if: failure() && steps.check.outcome == 'failure'
+        uses: actions/upload-artifact@v7
+        with:
+          name: backend-test-reports
+          path: backend-test-reports/
+          retention-days: 7
+
+  frontend:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - name: Build image
+        uses: docker/bake-action@v7
+        with:
+          source: .
+          files: compose.check.yaml
+          targets: frontend
+          load: true
+          set: |
+            *.cache-from=type=gha,scope=frontend
+            *.cache-to=type=gha,scope=frontend,mode=max
+      - name: Check
+        run: docker compose -f compose.check.yaml run --rm frontend
