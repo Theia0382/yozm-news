@@ -1,0 +1,25 @@
+*
+!.editorconfig
+!frontend/
+# 저장소가 추적하지 않는 것(.gitignore · frontend/.gitignore 의 대상)은 넣지 않는다 — CI 의 체크아웃과 같은 파일로 검사한다.
+frontend/**/node_modules
+frontend/**/dist
+frontend/**/coverage
+frontend/**/*.local
+frontend/**/*.log
+frontend/**/*.tsbuildinfo
+frontend/**/.env
+frontend/**/.env.*
+!frontend/**/.env.example
+frontend/**/.envrc
+frontend/**/.claude
+frontend/**/CLAUDE.md
+frontend/**/.mcp.json
+frontend/**/.worktrees
+frontend/**/.DS_Store
+frontend/**/Thumbs.db
+frontend/**/.idea
+frontend/**/*.iml
+frontend/**/.vscode
+frontend/**/*.swp
+frontend/**/.zed

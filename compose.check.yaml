@@ -1,0 +1,40 @@
+# 검사 환경 — CI 와 로컬이 같은 정의를 쓴다. 실행 명령은 CONTRIBUTING.md §1.
+name: yozmnews-check
+
+services:
+  backend:
+    image: yozmnews-check-backend
+    build:
+      context: .
+      dockerfile: backend/check.Dockerfile
+    environment:
+      # Testcontainers 는 호스트 Docker 가 아니라 아래 docker 서비스(DinD)를 쓴다 — 호스트 종류와 무관하게 같은 구성이다.
+      DOCKER_HOST: tcp://docker:2375
+      TESTCONTAINERS_HOST_OVERRIDE: docker
+    depends_on:
+      docker:
+        condition: service_healthy
+
+  frontend:
+    image: yozmnews-check-frontend
+    build:
+      context: .
+      dockerfile: frontend/check.Dockerfile
+
+  docker:
+    image: docker:29-dind
+    privileged: true
+    # 엔진은 이 정의의 내부 네트워크에만 열린다(공개 포트 없음). TLS 를 끄면 기동 지연이 없다.
+    command: ["--tls=false"]
+    environment:
+      DOCKER_TLS_CERTDIR: ""
+    volumes:
+      - dind-data:/var/lib/docker
+    healthcheck:
+      test: ["CMD", "docker", "info"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+volumes:
+  dind-data:
