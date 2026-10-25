@@ -1,0 +1,16 @@
+# 저장소 공통 항목. 프로젝트별 항목은 backend/.gitignore, frontend/.gitignore에 둔다.
+
+# 비밀 값
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE (개인 설정)
+.idea/
+*.iml
+.vscode/
+*.swp
