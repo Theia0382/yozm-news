@@ -6,15 +6,31 @@
 
 ### 필요한 것
 
+- **Docker** — 검사(아래)는 컨테이너에서 돌고, 검사에 필요한 호스트 도구는 Docker 뿐이다. privileged 컨테이너를 허용해야 한다 — 백엔드 테스트의 Testcontainers 가 검사 정의 안의 Docker 엔진(DinD)을 쓴다
+
+호스트에서 직접 빌드하거나 개발 서버를 돌릴 때는 다음도 필요하다.
+
 - **JDK 25**
-- **Docker** — 테스트가 Testcontainers 로 PostgreSQL 컨테이너를 띄운다
-- Gradle 은 따로 설치하지 않는다 — 저장소의 wrapper(`backend/gradlew`)를 쓴다
+- Gradle 은 따로 설치하지 않는다 — 저장소의 wrapper(`backend/gradlew`)를 쓴다. 호스트에서 돌리는 테스트도 Testcontainers 로 PostgreSQL 컨테이너를 띄운다
 - **Node.js 24** (`frontend/.nvmrc`)
 - **pnpm** — 설치된 버전과 관계없이 `frontend/package.json` 의 `packageManager` 에 고정한 버전으로 실행된다
 
-### 빌드와 테스트
+### 검사 (CI 와 같음)
 
-저장소 루트에서 실행한다.
+PR 을 올리기 전에 돌리는 검사다. CI 와 같은 정의(`compose.check.yaml`)와 같은 명령을 써서, 결과가 호스트의 OS · 도구 버전 · Docker 구성에 따라 달라지지 않게 한다([ADR-0016](docs/adr/0016-containerized-checks.md)). 저장소 루트에서 실행한다.
+
+```sh
+docker compose -f compose.check.yaml up --build --force-recreate --attach backend --abort-on-container-exit --exit-code-from backend backend docker   # 백엔드: backend/gradlew -p backend build
+docker compose -f compose.check.yaml run --rm --build frontend   # 프론트엔드: 의존성 고정 설치 뒤 build · lint · format:check · test
+```
+
+- 종료 코드가 검사 결과다. 백엔드 로그에 `> Task :test` 가 `UP-TO-DATE` 없이 찍혀야 테스트가 실제로 돈 것이다
+- 백엔드 결과 보고서는 작업 트리에 생기지 않는다. 검사가 끝난 컨테이너에서 꺼낸다 — `docker compose -f compose.check.yaml cp backend:/workspace/backend/build/reports/tests/test <받을 디렉터리>`
+- 정리: `docker compose -f compose.check.yaml down -v` — 멈춘 컨테이너와 검사용 Docker 엔진의 데이터 볼륨을 지운다(다음 백엔드 검사가 PostgreSQL 이미지를 다시 받는다)
+
+### 호스트에서 직접 실행 (빠른 반복)
+
+일부 테스트만 돌리거나 개발 서버를 띄울 때 쓴다. 결과가 호스트 환경에 따라 다를 수 있으니 PR 전에는 위의 검사를 돌린다. 저장소 루트에서 실행한다.
 
 **백엔드**
 
@@ -111,6 +127,7 @@ Issue: #12
 - **대상**은 `dev`. 하나의 이슈에 PR 하나
 - **제목**은 커밋 메시지 제목과 같은 형식: `{유형}({영역}): {요지}`
 - **본문**은 [PR 템플릿](.github/pull_request_template.md)을 따른다 — 변경 요약, `Closes #{이슈 번호}`, 확인 사항. merge 커밋 메시지가 PR 제목과 본문으로 만들어지므로 저장소의 변경을 정리해 쓴다
+- **CI**: PR 과 `dev` 에서 GitHub Actions(`.github/workflows/ci.yml`)가 §1 의 검사를 돌고, 결과가 체크 `backend` · `frontend` 로 표시된다. **두 체크가 통과해야 merge 한다**
 - **merge** 는 리드가 한다. 방식은 **merge commit** 만 쓴다(squash · rebase merge 를 쓰지 않는다 — 작업 브랜치의 커밋을 그대로 남긴다)
 - **리뷰**: 리드가 GitHub 에서 검토하고, 필요하면 로컬로 받아 확인한다(`gh pr checkout {번호}`)
 - **충돌**: 작업 브랜치에 `dev` 를 merge 해서 해소하고 다시 push 한다. force push 하지 않는다

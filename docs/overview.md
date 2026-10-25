@@ -154,7 +154,7 @@ flowchart LR
 | LLM · 평가 | Spring AI 2.x(OpenAI · Anthropic), Jev | [ADR-0008](adr/0008-v1-llm-providers.md) · [ADR-0002](adr/0002-shared-evaluation-with-jev.md) |
 | 인증 | Spring Security(OIDC + 이메일 · 비밀번호), Spring Session JDBC | [ADR-0009](adr/0009-authentication-google-and-local.md) · [ADR-0011](adr/0011-no-email-in-v1.md) |
 | 백그라운드 작업 · RSS | JobRunr(PostgreSQL 저장소), Rome | [ADR-0004](adr/0004-tech-stack.md) |
-| 빌드 · 테스트 | Gradle(Kotlin DSL), JUnit 5, Testcontainers, WireMock | [ADR-0004](adr/0004-tech-stack.md) · [테스트 전략](qa/test-strategy.md) |
+| 빌드 · 테스트 | Gradle(Kotlin DSL), JUnit 5, Testcontainers, WireMock. 검사는 컨테이너에서 돌고 CI(GitHub Actions)와 로컬이 같은 Compose 정의를 쓴다 | [ADR-0004](adr/0004-tech-stack.md) · [ADR-0016](adr/0016-containerized-checks.md) · [테스트 전략](qa/test-strategy.md) |
 | 프론트엔드 | React + TypeScript + Vite, React Router, TanStack Query, Tailwind + shadcn/ui, OpenAPI → TS 타입 생성 | [ADR-0005](adr/0005-frontend-react-spa.md) |
 | 배포 | Docker 이미지 + Docker Compose, Cloudflare(선택) | [ADR-0006](adr/0006-deployment-compose-cloudflare.md) |
 
