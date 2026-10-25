@@ -7,7 +7,7 @@
 ```java
 // source: 뉴스 공급원. v1 구현체는 RssArticleSource 하나.
 public interface ArticleSource {
-    FetchResult fetch(FeedDescriptor feed, FetchState previous); // ETag/Last-Modified 포함
+    FetchResult fetch(FeedDescriptor feed, FetchState previous); // feed 는 수집 프로필 포함, previous 는 ETag/Last-Modified
 }
 
 // article: 본문 추출. v1은 NoopContentExtractor. 소스별로 켤 수 있다.
