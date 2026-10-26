@@ -1,6 +1,6 @@
 # ADR-0006: 배포: Docker Compose + Cloudflare Tunnel
 
-- 상태: 승인
+- 상태: 승인. 서비스 목록의 `web` · `worker`(기본 구성)는 [ADR-0021](0021-separate-deploy-compose-with-single-app-service.md)이 대체
 - 날짜: 2026-10-25
 
 ## 맥락
