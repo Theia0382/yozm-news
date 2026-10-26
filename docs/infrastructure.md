@@ -73,6 +73,7 @@ Cloudflare는 권장 구성이지 필수가 아니다. 셀프 호스팅에서는
 - **대시보드**: v1은 운영자 화면과 JobRunr 대시보드로 충분하다. 필요해지면 Grafana Cloud 무료 티어 등으로 지표를 내보낸다.
 - **오류 추적**: Sentry 같은 외부 서비스는 선택. 붙인다면 요청 본문과 헤더 전송을 끈다.
 - **헬스 체크**: Actuator 는 HTTP 로 `health` 엔드포인트만 노출한다(탐색 페이지 `/actuator` 와 probe 그룹 `/actuator/health/liveness` · `/actuator/health/readiness` 포함). `/actuator/health` 응답에는 집계 상태와 probe 그룹 이름만 담고, 구성요소와 상세는 넣지 않는다. 집계에는 DB 가 들어 있어 DB 장애 때 상태가 `DOWN` 이 되고 HTTP 503 으로 응답한다.
+- **API 명세**: 화면용 API 의 OpenAPI 명세 엔드포인트(`/v3/api-docs`)는 기본으로 꺼져 있고 Spring profile `local` 에서만 켜진다. 다른 환경에서 열려면 `springdoc.api-docs.enabled`(환경 변수 `SPRINGDOC_API_DOCS_ENABLED`)를 켠다. 명세는 `/api/**` 만 담고, Swagger UI 는 없다([ADR-0020](adr/0020-screen-api-contract-from-committed-openapi-spec.md)).
 
 ## 백업과 복구
 

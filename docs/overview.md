@@ -144,6 +144,7 @@ flowchart LR
 | LLM 입출력 | RSS 내용은 신뢰할 수 없는 입력, LLM 출력은 스키마로 검증하는 데이터 | [pipeline.md](pipeline.md) · [security.md](security.md) |
 | 외부 의존성 | 표준 프로토콜 · 자체 인터페이스 뒤, 설정으로 교체 · 비활성, 로컬 대체물 | [ADR-0012](adr/0012-swappable-external-dependencies.md) |
 | 판정 시점 | 바뀔 수 있는 임계값은 저장 시점이 아니라 조회 시점에 적용한다 | [ADR-0010](adr/0010-tag-taxonomy.md) |
+| 화면용 API 계약 | 정본은 커밋된 OpenAPI 명세 `api/openapi.json` 이고 백엔드 검사가 코드와 대조한다. 객체 속성은 모두 필수이고, null 이 될 수 있는 속성은 JSpecify `@Nullable` 로 표시한다. 프론트엔드 타입은 이 명세에서 생성한다 | [ADR-0020](adr/0020-screen-api-contract-from-committed-openapi-spec.md) |
 
 ## 7. 기술 스택
 
@@ -155,7 +156,7 @@ flowchart LR
 | 인증 | Spring Security(OIDC + 이메일 · 비밀번호), Spring Session JDBC | [ADR-0009](adr/0009-authentication-google-and-local.md) · [ADR-0011](adr/0011-no-email-in-v1.md) |
 | 백그라운드 작업 · RSS | JobRunr(PostgreSQL 저장소), Rome | [ADR-0004](adr/0004-tech-stack.md) |
 | 빌드 · 테스트 | Gradle(Kotlin DSL), JUnit 5, Testcontainers, WireMock. 검사는 컨테이너에서 돌고 CI(GitHub Actions)와 로컬이 같은 Compose 정의를 쓴다 | [ADR-0004](adr/0004-tech-stack.md) · [ADR-0016](adr/0016-containerized-checks.md) · [테스트 전략](qa/test-strategy.md) |
-| 프론트엔드 | React + TypeScript + Vite, React Router, TanStack Query, Tailwind + shadcn/ui, OpenAPI → TS 타입 생성 | [ADR-0005](adr/0005-frontend-react-spa.md) |
+| 프론트엔드 | React + TypeScript + Vite, React Router, TanStack Query, Tailwind + shadcn/ui, OpenAPI → TS 타입 생성 | [ADR-0005](adr/0005-frontend-react-spa.md) · [ADR-0020](adr/0020-screen-api-contract-from-committed-openapi-spec.md) |
 | 배포 | Docker 이미지 + Docker Compose, Cloudflare(선택) | [ADR-0006](adr/0006-deployment-compose-cloudflare.md) |
 
 라이브러리 버전의 정본은 `backend/build.gradle.kts` 다.
