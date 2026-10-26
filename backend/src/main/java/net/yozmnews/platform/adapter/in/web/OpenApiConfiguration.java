@@ -21,8 +21,9 @@ import org.springframework.context.annotation.Configuration;
 class OpenApiConfiguration {
 
 	/**
-	 * 실행 환경에 따라 바뀌지 않는 {@code info} · {@code servers}. 화면용 API 는 프론트엔드와 함께 바뀌므로 버전을 두지
-	 * 않고, SPA 와 같은 오리진에서 제공된다.
+	 * 실행 환경에 따라 바뀌지 않는 {@code info} · {@code servers}. 화면용 API 는 프론트엔드와 함께 바뀌므로 버전을 매기지
+	 * 않고, 명세 형식이 요구하는 {@code version} 은 고정 값 {@code 0} 으로 둔다. 서버 주소는 SPA 와 같은 오리진이라
+	 * {@code /} 다.
 	 */
 	@Bean
 	OpenAPI screenApi() {

@@ -1,5 +1,6 @@
 package net.yozmnews;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
 import java.nio.charset.StandardCharsets;
@@ -20,8 +21,8 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * 화면용 API 명세의 속성 규칙 — 속성은 모두 필수, JSpecify {@code @Nullable} 은 null 허용 타입. 규칙이 실제 응답과
- * 맞는지(null 속성도 키째 쓰는지)를 같은 표본으로 함께 본다.
+ * 화면용 API 명세의 범위와 속성 규칙 — 명세는 {@code /api/**} 만 담고, 속성은 모두 필수, JSpecify {@code @Nullable} 은
+ * null 허용 타입. 규칙이 실제 응답과 맞는지(null 속성도 키째 쓰는지)를 같은 표본으로 함께 본다.
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest(classes = { YozmnewsApplication.class, OpenApiSchemaRulesTests.RulesSampleController.class },
@@ -31,6 +32,14 @@ class OpenApiSchemaRulesTests {
 
 	@Autowired
 	MockMvc mockMvc;
+
+	@Test
+	void specCoversScreenApiPathsOnly() throws Exception {
+		JsonNode paths = JsonMapper.builder().build().readTree(body("/v3/api-docs")).path("paths");
+
+		assertThat(paths.has("/api/rules-sample")).as("화면용 API 경로").isTrue();
+		assertThat(paths.has("/public-api/rules-sample")).as("화면용 API 밖의 경로").isFalse();
+	}
 
 	@Test
 	void allPropertiesAreRequiredAndNullableOnesAllowNull() throws Exception {
@@ -76,6 +85,11 @@ class OpenApiSchemaRulesTests {
 		@GetMapping("/api/rules-sample")
 		RulesSample rulesSample() {
 			return new RulesSample("n", null, List.of(), null, new RulesChild("v"));
+		}
+
+		@GetMapping("/public-api/rules-sample")
+		RulesChild outsideScreenApi() {
+			return new RulesChild("v");
 		}
 
 	}
