@@ -42,7 +42,7 @@ backend/gradlew -p backend build                                 # 컴파일 + �
 
 결과는 `backend/build/test-results/test/` (JUnit XML) 와 `backend/build/reports/tests/test/index.html` 에 남는다.
 
-IDE 에서 테스트를 돌릴 때도 Gradle 로 실행을 위임한다. 테스트가 PostgreSQL 이미지를 읽는 `compose.yaml` 의 경로를 Gradle 이 시스템 속성으로 넘기므로, 위임하지 않으면 PostgreSQL 컨테이너를 띄우는 테스트가 그 시스템 속성이 없다는 메시지로 실패한다([ADR-0019](docs/adr/0019-dev-compose-per-checkout-and-test-image-source.md)).
+IDE 에서 테스트를 돌릴 때도 Gradle 로 실행을 위임한다. 테스트가 읽는 저장소 파일(PostgreSQL 이미지를 정하는 `compose.yaml`, 화면용 API 명세 `api/openapi.json`)의 경로를 Gradle 이 시스템 속성으로 넘기므로, 위임하지 않으면 PostgreSQL 컨테이너를 띄우는 테스트가 그 시스템 속성이 없다는 메시지로 실패한다([ADR-0019](docs/adr/0019-dev-compose-per-checkout-and-test-image-source.md)).
 
 **백엔드 로컬 실행**
 
@@ -86,7 +86,7 @@ pnpm -C frontend generate:api                 # api/openapi.json 에서 API 타�
 - 화면용 API 를 바꾸면 `updateOpenApiSpec` 으로 명세를 다시 써서 함께 커밋한다. 명세가 코드와 다르면 백엔드 테스트가 이 명령을 안내하며 실패한다
 - 생성 타입은 커밋하지 않는다. `dev` · `build` 는 먼저 생성한다. clone 직후와 명세가 바뀐 브랜치를 받은 뒤에는 `generate:api` 를 한 번 돌려야 IDE 가 새 타입을 본다
 - 명세가 프론트엔드 코드와 맞지 않으면 프론트엔드 `build` 의 타입 검사가 실패한다
-- 실행 중인 백엔드의 명세(`http://localhost:8080/v3/api-docs`)는 Spring profile `local` 에서만 열린다
+- 실행 중인 백엔드의 명세 엔드포인트(`http://localhost:8080/v3/api-docs`)는 기본으로 닫혀 있고 Spring profile `local` 로 실행하면 열린다([infrastructure.md](docs/infrastructure.md) "관측")
 
 테스트로 무엇을 증명해야 하는지는 [테스트 전략](docs/qa/test-strategy.md)을 따른다.
 
