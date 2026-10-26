@@ -18,7 +18,7 @@
 | `backup` | pg_dump + S3 호환 업로드 | 매일 덤프를 R2(또는 다른 S3 호환 저장소)에 올린다 |
 
 - 소규모 환경에서는 `web`과 `worker`를 하나의 컨테이너(profile `web,worker`)로 합칠 수 있다.
-- 로컬 개발은 Compose `dev` 프로필(`postgres`, `mock-oauth2-server`, 메일 도입 후 `mailpit`)만 띄우고, 백엔드는 IDE에서 Spring profile `local`로, 프론트엔드는 Vite 개발 서버(프록시 설정)로 실행한다. 외부 계정이나 비밀 값 없이 전체 흐름이 돈다 ([ADR-0012](adr/0012-swappable-external-dependencies.md)).
+- 로컬 개발은 Compose `dev` 프로필(`postgres`, `mock-oauth2-server`, 메일 도입 후 `mailpit`)만 띄우고, 백엔드는 Gradle `bootRun`(IDE는 이 태스크로 위임)으로 Spring profile `local`로, 프론트엔드는 Vite 개발 서버(프록시 설정)로 실행한다. 외부 계정이나 비밀 값 없이 전체 흐름이 돈다 ([ADR-0012](adr/0012-swappable-external-dependencies.md)). 개발용 Compose는 checkout마다 따로 뜨고, 테스트도 그 PostgreSQL 이미지를 쓴다 ([ADR-0019](adr/0019-dev-compose-per-checkout-and-test-image-source.md)).
 
 ## Cloudflare
 

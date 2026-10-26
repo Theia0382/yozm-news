@@ -44,6 +44,8 @@ dependencies {
 	testImplementation("org.springframework.modulith:spring-modulith-starter-test")
 	testImplementation("org.testcontainers:testcontainers-junit-jupiter")
 	testImplementation("org.testcontainers:testcontainers-postgresql")
+	// DevComposeFile 이 직접 쓴다 — 버전은 Spring Boot 의존성 관리
+	testImplementation("org.yaml:snakeyaml")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
@@ -53,6 +55,17 @@ dependencyManagement {
 	}
 }
 
+// 개발용 Compose 파일 — 테스트의 PostgreSQL 이미지 정본(DevComposeFile).
+// 경로를 시스템 속성으로 넘기고, 파일이 바뀌면 테스트가 다시 돌도록 입력으로 등록한다.
+val devComposeFile = layout.projectDirectory.file("../compose.yaml")
+val devComposeFileProperty = "yozmnews.dev-compose-file"
+
 tasks.withType<Test> {
 	useJUnitPlatform()
+	inputs.file(devComposeFile).withPropertyName("devComposeFile").withPathSensitivity(PathSensitivity.NONE)
+	systemProperty(devComposeFileProperty, devComposeFile.asFile.path)
+}
+
+tasks.named<JavaExec>("bootTestRun") {
+	systemProperty(devComposeFileProperty, devComposeFile.asFile.path)
 }
