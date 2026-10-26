@@ -7,7 +7,8 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 
 export default defineConfig([
-  globalIgnores(["dist", "coverage"]),
+  // 생성 파일(src/shared/api/schema.d.ts)은 flat config 가 .gitignore 를 읽지 않으므로 여기서도 뺀다
+  globalIgnores(["dist", "coverage", "src/shared/api/schema.d.ts"]),
   {
     files: ["**/*.{ts,tsx}"],
     extends: [

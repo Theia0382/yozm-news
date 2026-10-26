@@ -2,7 +2,7 @@
 FROM node:24
 ENV TZ=UTC LANG=C.UTF-8 LC_ALL=C.UTF-8 CI=true COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 WORKDIR /workspace
-COPY frontend/.nvmrc frontend/package.json frontend/pnpm-lock.yaml frontend/
+COPY frontend/.nvmrc frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml frontend/
 RUN want="$(cat frontend/.nvmrc)"; have="$(node --version)"; \
     case "${have#v}" in "$want"|"$want".*) ;; *) echo "Node $have does not match frontend/.nvmrc ($want)" >&2; exit 1 ;; esac
 # corepack 은 실행 위치의 package.json 에서 packageManager 를 찾는다 — 여기부터 pnpm 은 frontend 안에서 돈다.
@@ -10,6 +10,8 @@ WORKDIR /workspace/frontend
 RUN corepack enable && pnpm install --frozen-lockfile
 # Prettier 는 저장소 루트의 .editorconfig 를 설정으로 읽는다.
 COPY .editorconfig /workspace/
+# build 가 API 타입을 생성하는 화면용 API 명세(package.json 의 generate:api)
+COPY api/openapi.json /workspace/api/openapi.json
 COPY frontend /workspace/frontend
 # 네 검사를 모두 돌리고, 하나라도 실패하면 실패로 끝낸다.
 CMD ["sh", "-c", "s=0; for t in build lint format:check test; do pnpm run $t || s=1; done; exit $s"]
