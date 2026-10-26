@@ -15,6 +15,7 @@ AI로 뉴스 기사를 수집·분류하고, 사용자마다 관심사에 맞춘
 | [`docs/`](docs/README.md) | 설계 문서, 아키텍처 결정 기록(ADR), 테스트 전략, 조사 자료 |
 | [`backend/`](backend/) | Spring Boot 애플리케이션 (Java 25, Gradle) |
 | [`frontend/`](frontend/) | React SPA (TypeScript, Vite, pnpm) |
+| [`api/`](api/) | 화면용 API 명세(OpenAPI) — 백엔드 코드에서 만들어 커밋하고, 프론트엔드가 여기서 타입을 생성한다 |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | 개발 환경, 이슈 · 브랜치 · 커밋 · PR 규약 |
 
 ## 개발

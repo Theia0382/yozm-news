@@ -1,0 +1,4 @@
+peerDependencyRules:
+  allowedVersions:
+    # openapi-typescript 는 피어로 TypeScript 5 만 받지만 이 저장소의 TypeScript 6 에서 생성 · 타입 검사가 동작한다
+    openapi-typescript>typescript: "6"

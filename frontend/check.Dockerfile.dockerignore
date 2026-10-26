@@ -1,6 +1,7 @@
 *
 !.editorconfig
 !frontend/
+!api/openapi.json
 # 저장소가 추적하지 않는 것(.gitignore · frontend/.gitignore 의 대상)은 넣지 않는다 — CI 의 체크아웃과 같은 파일로 검사한다.
 frontend/**/node_modules
 frontend/**/dist
@@ -8,6 +9,7 @@ frontend/**/coverage
 frontend/**/*.local
 frontend/**/*.log
 frontend/**/*.tsbuildinfo
+frontend/**/src/shared/api/schema.d.ts
 frontend/**/.env
 frontend/**/.env.*
 !frontend/**/.env.example

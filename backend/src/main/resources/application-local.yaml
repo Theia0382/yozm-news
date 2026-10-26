@@ -6,3 +6,8 @@ spring:
       file: ../compose.yaml
       profiles:
         active: dev
+
+springdoc:
+  api-docs:
+    # 개발 중에는 /v3/api-docs 로 명세를 볼 수 있게 켠다
+    enabled: true

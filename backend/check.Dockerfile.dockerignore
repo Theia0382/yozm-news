@@ -5,3 +5,4 @@
 !backend/build.gradle.kts
 !backend/src/
 !compose.yaml
+!api/openapi.json

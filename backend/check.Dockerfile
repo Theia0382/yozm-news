@@ -14,5 +14,7 @@ RUN chmod +x backend/gradlew \
  && rm backend/gradle/verification-metadata.dryrun.xml
 # 테스트가 PostgreSQL 이미지를 읽는 개발용 Compose 파일(backend/build.gradle.kts 의 devComposeFile)
 COPY compose.yaml compose.yaml
+# 테스트가 현재 코드의 명세와 비교하는 화면용 API 명세(backend/build.gradle.kts 의 openApiSpecFile)
+COPY api/openapi.json api/openapi.json
 COPY backend/src backend/src
 CMD ["backend/gradlew", "-p", "backend", "build", "--no-daemon", "--console=plain"]
