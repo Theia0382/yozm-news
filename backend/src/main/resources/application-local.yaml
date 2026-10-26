@@ -1,0 +1,8 @@
+spring:
+  docker:
+    compose:
+      enabled: true
+      # 저장소 루트의 개발용 Compose. 상대 경로는 작업 디렉터리(backend/) 기준
+      file: ../compose.yaml
+      profiles:
+        active: dev
