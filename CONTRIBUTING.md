@@ -42,6 +42,8 @@ backend/gradlew -p backend build                                 # 컴파일 + �
 
 결과는 `backend/build/test-results/test/` (JUnit XML) 와 `backend/build/reports/tests/test/index.html` 에 남는다.
 
+IDE 에서 테스트를 돌릴 때도 Gradle 로 실행을 위임한다. 테스트가 PostgreSQL 이미지를 읽는 `compose.yaml` 의 경로를 Gradle 이 넘기므로, 위임하지 않으면 테스트가 그 경로가 없다는 메시지로 실패한다([ADR-0019](docs/adr/0019-dev-compose-per-checkout-and-test-image-source.md)).
+
 **백엔드 로컬 실행**
 
 개발용 의존 서비스(PostgreSQL · mock OIDC 서버)는 저장소 루트 `compose.yaml` 의 Compose 프로필 `dev` 에 있다. 백엔드를 Spring profile `local` 로 실행하면 앱이 이 Compose 를 띄우고 그 PostgreSQL 에 접속한다([ADR-0018](docs/adr/0018-local-profile-compose-connection.md)). Docker 가 필요하다.
