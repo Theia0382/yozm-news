@@ -77,9 +77,10 @@ check "K8 /v3/api-docs 는 넘기지 않음" /v3/api-docs 200 text/html
 check "K10 /login 은 넘기지 않음" /login 200 text/html
 
 # K9 배포 postgres 는 개발용 정의의 이미지를 그대로 쓴다(정본: 저장소 루트 compose.yaml)
-deploy_image=$("${compose[@]}" config --images postgres 2>&1)
-dev_image=$(docker compose -f "$repo_dir/compose.yaml" --profile dev config --images postgres 2>&1)
-if [[ -n $dev_image && $deploy_image == "$dev_image" ]]; then pass "K9 PostgreSQL 이미지 ($deploy_image)"; else fail "K9 PostgreSQL 이미지" "$dev_image" "$deploy_image"; fi
+# 두 명령이 모두 성공해야 비교한다 — 같은 오류 메시지끼리 같다고 통과하지 않는다
+deploy_image=$("${compose[@]}" config --images postgres 2>&1) && deploy_ok=1 || deploy_ok=0
+dev_image=$(docker compose -f "$repo_dir/compose.yaml" --profile dev config --images postgres 2>&1) && dev_ok=1 || dev_ok=0
+if ((deploy_ok && dev_ok)) && [[ -n $dev_image && $deploy_image == "$dev_image" ]]; then pass "K9 PostgreSQL 이미지 ($deploy_image)"; else fail "K9 PostgreSQL 이미지" "$dev_image" "$deploy_image"; fi
 
 if ((failures > 0)); then
   printf '%d 항목 실패\n' "$failures"

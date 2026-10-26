@@ -14,7 +14,7 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: true
 
-# 검사는 compose.check.yaml 의 컨테이너에서 돈다 — 로컬과 같은 정의 · 같은 명령(CONTRIBUTING.md §1).
+# backend · frontend 검사는 compose.check.yaml 의 컨테이너에서, deploy 는 배포 구성(deploy/compose.yaml)으로 돈다 — 로컬과 같은 정의 · 같은 명령(CONTRIBUTING.md §1).
 # CI 만 이미지 빌드를 앞 단계로 떼어 GitHub Actions 캐시를 계층 캐시로 쓴다.
 jobs:
   backend:
