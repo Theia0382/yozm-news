@@ -24,7 +24,8 @@ export function parseBackendPathPrefixes(caddySnippet: string): string[] {
     .map((pattern) => pattern.slice(0, -1));
 }
 
-// 접두사마다 Vite proxy 항목을 만든다. 키가 ^ 로 시작하면 Vite 는 정규식으로 해석한다 — Caddy 의 /경로/* 와 같은 일치다.
+// 접두사마다 Vite proxy 항목을 만든다. 키가 ^ 로 시작하면 Vite 는 정규식으로 해석한다 — Caddy 의 /경로/* 와 같은 접두 일치다.
+// 다만 Caddy 는 대소문자를 구분하지 않고 이 정규식은 구분한다(/API/x 는 운영에서만 앱으로 간다).
 export function viteProxyEntries(
   prefixes: readonly string[],
   target: string,
@@ -38,6 +39,7 @@ function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+// 정본 파일을 읽어 Vite proxy 항목을 만든다(vite.config.ts 가 부른다).
 export function readViteProxyEntries(target: string): Record<string, string> {
   return viteProxyEntries(
     parseBackendPathPrefixes(readFileSync(backendPathsFile, "utf8")),

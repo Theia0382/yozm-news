@@ -7,8 +7,13 @@ import {
   viteProxyEntries,
 } from "./backendPaths.ts";
 
+// Vite 개발 서버가 server.proxy 키를 해석하는 방식 — ^ 로 시작하면 정규식, 아니면 접두 문자열
 function matches(entries: Record<string, string>, pathname: string): boolean {
-  return Object.keys(entries).some((key) => new RegExp(key).test(pathname));
+  return Object.keys(entries).some((key) =>
+    key.startsWith("^")
+      ? new RegExp(key).test(pathname)
+      : pathname.startsWith(key),
+  );
 }
 
 describe("parseBackendPathPrefixes", () => {
