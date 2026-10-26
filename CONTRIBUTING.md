@@ -42,6 +42,23 @@ backend/gradlew -p backend build                                 # 컴파일 + �
 
 결과는 `backend/build/test-results/test/` (JUnit XML) 와 `backend/build/reports/tests/test/index.html` 에 남는다.
 
+**백엔드 로컬 실행**
+
+개발용 의존 서비스(PostgreSQL · mock OIDC 서버)는 저장소 루트 `compose.yaml` 의 Compose 프로필 `dev` 에 있다. 백엔드를 Spring profile `local` 로 실행하면 앱이 이 Compose 를 띄우고 그 PostgreSQL 에 접속한다([ADR-0018](docs/adr/0018-local-profile-compose-connection.md)). Docker 가 필요하다.
+
+```sh
+backend/gradlew -p backend bootRun --args=--spring.profiles.active=local  # 백엔드 실행 — 헬스 체크 http://localhost:8080/actuator/health
+docker compose --profile dev up -d                                       # (선택) 의존 서비스만 먼저 띄우기
+docker compose --profile dev down -v                                     # 컨테이너와 개발 DB 볼륨 삭제 — DB 초기화
+```
+
+- IDE 에서는 이 Gradle 태스크(`bootRun`)로 실행을 위임한다
+- Compose 를 먼저 띄우지 않았으면 앱이 띄우고, 앱이 끝날 때 멈춘다. 먼저 띄워 두었으면 앱이 끝나도 그대로 둔다
+- 바꿀 수 있는 값(호스트 포트)은 `.env.example` 에 있다. 필요한 줄만 `.env` 로 옮긴다 — `.env` 는 없어도 된다
+- 컨테이너 · 볼륨은 checkout(작업 디렉터리)마다 따로 생긴다. 두 checkout 의 환경을 함께 띄우면 mock OIDC 서버의 호스트 포트가 겹치니 한쪽의 `.env` 에서 바꾼다. checkout 을 지우기 전에 그 checkout 에서 `down -v` 로 정리한다
+- 자기 PostgreSQL 을 쓰려면 Compose 연동을 끄고(`SPRING_DOCKER_COMPOSE_ENABLED=false`) DB 접속 환경 변수(`SPRING_DATASOURCE_*` — [infrastructure.md](docs/infrastructure.md) "비밀 값")를 준다
+- PostgreSQL 버전은 `compose.yaml` 의 이미지가 정하고, 테스트도 같은 이미지를 쓴다([ADR-0019](docs/adr/0019-dev-compose-per-checkout-and-test-image-source.md)). 메이저 버전을 올린 뒤에는 `down -v` 로 개발 DB 를 다시 만든다
+
 **프론트엔드**
 
 ```sh
