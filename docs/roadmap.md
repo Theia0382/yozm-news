@@ -6,7 +6,7 @@
 
 - Gradle 멀티 모듈(또는 단일 모듈 + Modulith 패키지), Spring Boot 4, Flyway, Testcontainers 기반 테스트
 - React + Vite 프로젝트, OpenAPI → TS 타입 생성 파이프라인
-- Compose `dev` 프로필(Postgres, mock-oauth2-server), Spring profile `local`의 Fake 평가기·다이제스트 생성기, Dockerfile(멀티 아키텍처), GitHub Actions 테스트
+- Compose `dev` 프로필(Postgres, mock-oauth2-server), Spring profile `local`, Dockerfile(멀티 아키텍처), GitHub Actions 테스트
 - **완료 기준**: `docker compose up`으로 빈 앱이 뜨고 헬스 체크가 통과한다. Modulith 구조 검증 테스트가 CI에서 돈다.
 
 ## M1. 수집
@@ -20,7 +20,7 @@
 ## M2. 공유 평가
 
 - 태그 체계 버전 관리, 질문·설명·중요도 기준 관리, 축별 임계값
-- `ArticleEvaluator` + `JevArticleEvaluator`, 평가 대기열과 재시도
+- `ArticleEvaluator` + `JevArticleEvaluator`, Spring profile `local`의 `FakeArticleEvaluator`, 평가 대기열과 재시도
 - 운영자 화면: 태그 분포, 기사당 태그 수, 확률 분포, 기사별 평가 결과, 요청당 토큰
 - **완료 기준**: 1주일치 기사가 평가되고, 운영자가 표본 100건을 검수해 축별 임계값 `τ` 초기값을 정한다.
 
@@ -35,7 +35,7 @@
 
 ## M4. 다이제스트
 
-- 후보 선별, 프롬프트, 구조화 출력 검증, 저장
+- `DigestGenerator` + Spring profile `local`의 `FakeDigestGenerator`, 후보 선별, 프롬프트, 구조화 출력 검증, 저장
 - 일정 기반 생성과 수동 재생성(횟수 제한)
 - 웹 UI: 오늘의 다이제스트, 지난 다이제스트, 원문 링크, 생성 상태와 토큰 사용량
 - **완료 기준**: 테스트 사용자 몇 명이 1주일간 매일 다이제스트를 받는다. 실패율과 평균 토큰 사용량을 측정한다.
