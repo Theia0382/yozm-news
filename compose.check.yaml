@@ -6,7 +6,8 @@ services:
     image: yozmnews-check-backend
     build:
       context: .
-      dockerfile: backend/check.Dockerfile
+      dockerfile: backend/Dockerfile
+      target: check
     environment:
       # Testcontainers 는 호스트 Docker 가 아니라 아래 docker 서비스(DinD)를 쓴다 — 호스트 종류와 무관하게 같은 구성이다.
       DOCKER_HOST: tcp://docker:2375
@@ -19,7 +20,8 @@ services:
     image: yozmnews-check-frontend
     build:
       context: .
-      dockerfile: frontend/check.Dockerfile
+      dockerfile: frontend/Dockerfile
+      target: check
 
   docker:
     image: docker:29-dind

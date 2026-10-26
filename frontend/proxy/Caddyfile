@@ -1,0 +1,21 @@
+# 배포 proxy — SPA 정적 파일을 내려주고, 백엔드 경로만 앱으로 넘긴다(단일 오리진).
+{
+	# 관리 API 를 열지 않고, 비root 사용자가 쓸 수 없는 디렉터리에 설정을 저장하지 않는다
+	admin off
+	persist_config off
+}
+
+# HTTP 만 받는다 — TLS 는 앞단(Cloudflare Tunnel 또는 운영자의 리버스 프록시)이 맡는다
+:8080 {
+	# 앱으로 넘기는 경로의 정본(@backend) — Vite 개발 서버도 같은 파일을 읽는다(backendPaths.ts)
+	import backend-paths.caddy
+	handle @backend {
+		reverse_proxy app:8080
+	}
+	# 그 밖의 경로는 SPA — 파일이 없으면 index.html 로 응답해 라우터가 처리한다
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}
