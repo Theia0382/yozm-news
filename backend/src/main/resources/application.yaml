@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: yozmnews
+  docker:
+    compose:
+      # 개발용 Compose 연동은 local 프로필에서만 켠다 (application-local.yaml)
+      enabled: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+      show-components: never

@@ -64,12 +64,15 @@ Cloudflare는 권장 구성이지 필수가 아니다. 셀프 호스팅에서는
 | DB 비밀번호, Google OAuth client secret, Jev API 키, Turnstile secret, Tunnel 토큰 | 호스트의 환경 파일 또는 Docker secrets. 저장소에 커밋하지 않는다 |
 | BYOK 키 암호화용 KEK | 위와 같되 **별도 파일**로 분리하고 DB 백업에는 포함하지 않는다. 버전을 붙여 교체할 수 있게 한다 ([security.md](security.md)) |
 
+앱은 DB 접속 정보를 Spring 표준 환경 변수 `SPRING_DATASOURCE_URL` · `SPRING_DATASOURCE_USERNAME` · `SPRING_DATASOURCE_PASSWORD` 로 받는다. `SPRING_DATASOURCE_URL` 이 없으면 기동하지 않는다([ADR-0017](adr/0017-standard-datasource-env-vars.md)). 로컬 개발(Spring profile `local`)은 이 값 대신 개발용 Compose 의 PostgreSQL 컨테이너에서 접속 정보를 읽는다 — 이 연동이 켜져 있는 동안 위 환경 변수는 쓰이지 않는다([ADR-0018](adr/0018-local-profile-compose-connection.md)).
+
 ## 관측
 
 - **로그**: JSON 구조화 로그. 요청 ID와 사용자 ID를 포함하고, 비밀 값은 마스킹한다.
 - **지표**: Spring Boot Actuator와 Micrometer. 핵심 지표는 피드별 수집 성공률, 평가 대기열 길이, Jev 지연·토큰, 다이제스트 생성 성공률·소요 시간, 공급자별 오류율.
 - **대시보드**: v1은 운영자 화면과 JobRunr 대시보드로 충분하다. 필요해지면 Grafana Cloud 무료 티어 등으로 지표를 내보낸다.
 - **오류 추적**: Sentry 같은 외부 서비스는 선택. 붙인다면 요청 본문과 헤더 전송을 끈다.
+- **헬스 체크**: Actuator 는 HTTP 로 `health` 엔드포인트만 노출한다(탐색 페이지 `/actuator` 와 probe 그룹 `/actuator/health/liveness` · `/actuator/health/readiness` 포함). `/actuator/health` 응답에는 집계 상태와 probe 그룹 이름만 담고, 구성요소와 상세는 넣지 않는다. 집계에는 DB 가 들어 있어 DB 장애 때 상태가 `DOWN` 이 되고 HTTP 503 으로 응답한다.
 
 ## 백업과 복구
 
