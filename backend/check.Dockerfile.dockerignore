@@ -4,3 +4,4 @@
 !backend/settings.gradle.kts
 !backend/build.gradle.kts
 !backend/src/
+!compose.yaml

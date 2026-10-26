@@ -12,5 +12,7 @@ RUN chmod +x backend/gradlew \
  && backend/gradlew -p backend dependencies --no-daemon --console=plain > /dev/null \
  && backend/gradlew -p backend help --write-verification-metadata sha256 --dry-run --no-daemon --console=plain > /dev/null \
  && rm backend/gradle/verification-metadata.dryrun.xml
+# 테스트가 PostgreSQL 이미지를 읽는 개발용 Compose 파일(backend/build.gradle.kts 의 devComposeFile)
+COPY compose.yaml compose.yaml
 COPY backend/src backend/src
 CMD ["backend/gradlew", "-p", "backend", "build", "--no-daemon", "--console=plain"]
