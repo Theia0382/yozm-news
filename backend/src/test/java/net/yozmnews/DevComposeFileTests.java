@@ -34,6 +34,7 @@ class DevComposeFileTests {
 		Path missing = this.dir.resolve("absent.yaml");
 
 		assertThatIllegalStateException().isThrownBy(() -> DevComposeFile.imageOf(missing, "postgres"))
+			.withMessageContaining("개발용 Compose 파일이 없다")
 			.withMessageContaining(missing.toString());
 	}
 
