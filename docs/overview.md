@@ -80,7 +80,7 @@ flowchart LR
 
     user --> edge --> tunnel --> proxy
     admin --> edge
-    proxy -->|/api, /oauth2| web
+    proxy -->|/api, /oauth2, /login| web
     web --> db
     worker --> db
     worker --> feeds

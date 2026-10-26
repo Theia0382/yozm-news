@@ -1,6 +1,6 @@
 # ADR-0019: 개발용 Compose 는 checkout 마다 따로 뜨고, 테스트의 PostgreSQL 이미지는 그 파일에서 읽는다
 
-- 상태: 승인
+- 상태: 승인. 결과의 운영 배포 프로젝트 이름 문장은 [ADR-0021](0021-separate-deploy-compose-with-single-app-service.md)이 대체
 - 날짜: 2026-10-26
 - 근거: [이슈 #3](https://github.com/Theia0382/yozm-news/issues/3) — 기점 `3361638` 의 worktree 에 임시 Compose 파일을 두고 `bootRun` · `docker compose` 로 실측
 - 관련: [ADR-0012](0012-swappable-external-dependencies.md)(개발 환경 · 로컬 대체물), [ADR-0018](0018-local-profile-compose-connection.md)(로컬 DB 접속 정보), [ADR-0004](0004-tech-stack.md)(테스트 DB 는 Testcontainers), [ADR-0016](0016-containerized-checks.md)(컨테이너 검사)

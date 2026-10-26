@@ -28,6 +28,17 @@ docker compose -f compose.check.yaml run --rm --build frontend   # 프론트엔�
 - 백엔드 결과 보고서는 작업 트리에 생기지 않는다. 검사가 끝난 컨테이너에서 꺼낸다 — `docker compose -f compose.check.yaml cp backend:/workspace/backend/build/reports/tests/test <받을 디렉터리>`
 - 정리: `docker compose -f compose.check.yaml down -v` — 멈춘 컨테이너와 검사용 Docker 엔진의 데이터 볼륨을 지운다(다음 백엔드 검사가 PostgreSQL 이미지를 다시 받는다)
 
+배포 구성 검사는 배포 구성(`deploy/compose.yaml`)을 띄워 스모크를 돌린다. CI 는 같은 정의로 이미지를 두 아키텍처(`linux/amd64` · `linux/arm64`)로도 빌드한다. 실행 절차 · 설정 값은 [infrastructure.md](docs/infrastructure.md) "배포 구성 실행".
+
+```sh
+cp deploy/.env.example deploy/.env   # 처음 한 번 — POSTGRES_PASSWORD 를 적는다
+docker compose -f deploy/compose.yaml up -d --build --wait   # 이미지 빌드 뒤 모든 서비스가 healthy 가 될 때까지 기다린다
+bash deploy/smoke.sh                                          # 종료 코드가 검사 결과다 (bash · docker · curl 필요)
+docker compose -f deploy/compose.yaml down -v                 # 정리 — 배포 구성의 DB 볼륨도 지운다
+```
+
+- Dockerfile 은 측별 하나다(`backend/Dockerfile` · `frontend/Dockerfile`). 검사 이미지는 target `check`, 배포 이미지는 target `app` · `proxy` 다([ADR-0022](docs/adr/0022-image-targets-per-side-dockerfile-without-run-in-runtime-stage.md)). 배포 target 의 실행 단계에 명령(`RUN`)을 더하면 에뮬레이션 없는 빌더에서 다른 아키텍처의 빌드가 깨진다
+
 ### 호스트에서 직접 실행 (빠른 반복)
 
 일부 테스트만 돌리거나 개발 서버를 띄울 때 쓴다. 결과가 호스트 환경에 따라 다를 수 있으니 PR 전에는 위의 검사를 돌린다. 저장소 루트에서 실행한다.
@@ -65,7 +76,7 @@ docker compose --profile dev down -v                                     # 컨�
 
 ```sh
 pnpm -C frontend install       # 의존성 설치 (처음 한 번, lockfile 이 바뀌었을 때)
-pnpm -C frontend dev           # API 타입 생성 + 개발 서버 — /api · /oauth2 · /login 은 localhost:8080 백엔드로 넘긴다
+pnpm -C frontend dev           # API 타입 생성 + 개발 서버 — /api/** · /oauth2/** · /login/** 은 localhost:8080 백엔드로 넘긴다(정본 frontend/proxy/backend-paths.caddy)
 pnpm -C frontend build         # API 타입 생성 + 타입 검사 + 빌드
 pnpm -C frontend lint          # ESLint
 pnpm -C frontend format        # Prettier 로 정렬 (검사만: format:check)
@@ -160,7 +171,7 @@ Issue: #12
 - **대상**은 `dev`. 하나의 이슈에 PR 하나
 - **제목**은 커밋 메시지 제목과 같은 형식: `{유형}({영역}): {요지}`
 - **본문**은 [PR 템플릿](.github/pull_request_template.md)을 따른다 — 변경 요약, `Closes #{이슈 번호}`, 확인 사항. 리뷰어가 읽고 PR 에 남는 변경 기록이므로 저장소의 변경을 정리해 쓴다
-- **CI**: PR 과 `dev` 에서 GitHub Actions(`.github/workflows/ci.yml`)가 §1 의 검사를 돌리고, 결과가 체크 `backend` · `frontend` 로 표시된다. **두 체크가 통과해야 merge 한다**
+- **CI**: PR 과 `dev` 에서 GitHub Actions(`.github/workflows/ci.yml`)가 §1 의 검사를 돌리고, 결과가 체크 `backend` · `frontend` · `deploy` 로 표시된다. **세 체크가 통과해야 merge 한다**
 - **merge** 는 리드가 한다. 방식은 **merge commit** 만 쓴다(squash · rebase merge 를 쓰지 않는다 — 작업 브랜치의 커밋을 그대로 남긴다). merge 커밋 메시지는 저장소 설정이 만든다 — 제목 `Merge pull request #{번호} from {소유자}/{작업 브랜치}`, 본문은 PR 제목. merge 커밋은 [§4](#4-커밋-메시지) 형식을 따르지 않는다
 - **리뷰**: 리드가 GitHub 에서 검토하고, 필요하면 로컬로 받아 확인한다(`gh pr checkout {번호}`)
 - **충돌 · 동기화**: 작업 브랜치에 `dev` 를 merge 해서 해소하고 다시 push 한다. 이 merge 커밋의 메시지는 `Merge origin/dev into {작업 브랜치}` 이고, 마지막 문단에 `Issue: #{이슈 번호}` 를 둔다. force push 하지 않는다
