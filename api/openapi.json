@@ -1,0 +1,43 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "title" : "요즘뉴스 화면용 API",
+    "version" : "0"
+  },
+  "servers" : [ {
+    "url" : "/"
+  } ],
+  "paths" : {
+    "/api/ping" : {
+      "get" : {
+        "operationId" : "ping",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PingResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "ping-controller" ]
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "PingResponse" : {
+        "type" : "object",
+        "properties" : {
+          "message" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "message" ]
+      }
+    }
+  }
+}

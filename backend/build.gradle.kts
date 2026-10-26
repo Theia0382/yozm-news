@@ -30,6 +30,7 @@ dependencies {
 	implementation("org.springframework.modulith:spring-modulith-observability-api")
 	implementation("org.springframework.modulith:spring-modulith-starter-core")
 	implementation("org.springframework.modulith:spring-modulith-starter-jdbc")
+	implementation("org.springdoc:springdoc-openapi-starter-webmvc-api:3.2.0")
 	developmentOnly("org.springframework.boot:spring-boot-docker-compose")
 	runtimeOnly("org.postgresql:postgresql")
 	runtimeOnly("org.springframework.modulith:spring-modulith-actuator")
@@ -68,4 +69,30 @@ tasks.withType<Test> {
 
 tasks.named<JavaExec>("bootTestRun") {
 	systemProperty(devComposeFileProperty, devComposeFile.asFile.path)
+}
+
+// 화면용 API 명세의 정본(저장소 루트 api/openapi.json) — OpenApiSpecTests 가 현재 코드의 명세와 비교한다.
+// 파일이 바뀌면 테스트가 다시 돌도록 입력으로 등록하고(파일이 없어도 구성은 되고 테스트가 안내와 함께 실패한다),
+// updateOpenApiSpec 은 같은 테스트로 파일을 다시 쓴다.
+val openApiSpecFile = layout.projectDirectory.file("../api/openapi.json")
+val openApiSpecFileProperty = "yozmnews.openapi-spec-file"
+
+tasks.withType<Test> {
+	systemProperty(openApiSpecFileProperty, openApiSpecFile.asFile.path)
+}
+
+tasks.named<Test>("test") {
+	inputs.files(openApiSpecFile).withPropertyName("openApiSpecFile").withPathSensitivity(PathSensitivity.NONE)
+}
+
+tasks.register<Test>("updateOpenApiSpec") {
+	description = "현재 코드의 화면용 API 명세로 api/openapi.json 을 다시 쓴다."
+	group = "documentation"
+	testClassesDirs = sourceSets["test"].output.classesDirs
+	classpath = sourceSets["test"].runtimeClasspath
+	filter {
+		includeTestsMatching("net.yozmnews.OpenApiSpecTests")
+	}
+	systemProperty("yozmnews.openapi-spec-update", "true")
+	outputs.upToDateWhen { false }
 }
