@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createApiClient } from "@/shared/api/client";
 import type { components } from "@/shared/api/schema";
 
-describe("apiClient", () => {
+describe("createApiClient", () => {
   it("생성 타입으로 /api/ping 을 호출하고 응답을 해석한다", async () => {
     const requests: Request[] = [];
     const body: components["schemas"]["PingResponse"] = { message: "pong" };
