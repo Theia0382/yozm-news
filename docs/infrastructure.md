@@ -8,17 +8,41 @@
 
 ## Compose 구성
 
+배포 구성은 `deploy/compose.yaml` 이다. 저장소 루트의 개발용 `compose.yaml`(Compose 프로필 `dev`)과 따로 두고, 운영 값은 `deploy/.env` 에서 받는다 ([ADR-0021](adr/0021-separate-deploy-compose-with-single-app-service.md)). 지금 배포 구성에 있는 서비스는 `proxy` · `app` · `postgres` 이고, `cloudflared` · `backup` 은 그 기능을 만들 때 더한다.
+
 | 서비스 | 이미지 | 역할 |
 |---|---|---|
-| `proxy` | Caddy (SPA 빌드 결과를 포함한 자체 이미지) | SPA 정적 파일 제공, `/api`·`/oauth2`·`/login`을 `web`으로 프록시 |
-| `web` | `newsdigest-app` (profile `web`) | REST API, 인증 |
-| `worker` | `newsdigest-app` (profile `worker`) | 백그라운드 작업 |
-| `postgres` | PostgreSQL 17+ | 관리형 DB를 쓰는 환경에서는 빼고 접속 정보만 바꾼다 |
-| `cloudflared` | cloudflare/cloudflared | Tunnel. `proxy`로만 연결한다 |
-| `backup` | pg_dump + S3 호환 업로드 | 매일 덤프를 R2(또는 다른 S3 호환 저장소)에 올린다 |
+| `proxy` | `yozmnews-proxy` — Caddy 에 SPA 빌드 결과를 담은 자체 이미지(`frontend/Dockerfile` target `proxy`) | SPA 정적 파일 제공. `/api/**`·`/oauth2/**`·`/login/**` 만 `app` 으로 넘기고, 그 밖의 경로(`/actuator/**` 포함)는 SPA 가 답한다. 넘기는 경로의 정본은 `frontend/proxy/backend-paths.caddy` 이고, Vite 개발 서버도 같은 파일을 읽는다 |
+| `app` | `yozmnews-app` (`backend/Dockerfile` target `app`) | REST API, 인증, 백그라운드 작업. 역할 profile 이 생기면 기본 구성은 두 역할(`web`·`worker`)을 함께 켠 프로세스 하나다 |
+| `postgres` | PostgreSQL 17+ — 이미지는 개발용 `compose.yaml` 의 `postgres` 를 물려받는다 | 관리형 DB를 쓰는 환경에서는 빼고 접속 정보만 바꾼다 |
+| `cloudflared` | cloudflare/cloudflared (아직 없음) | Tunnel. `proxy`로만 연결한다 |
+| `backup` | pg_dump + S3 호환 업로드 (아직 없음) | 매일 덤프를 R2(또는 다른 S3 호환 저장소)에 올린다 |
 
-- 소규모 환경에서는 `web`과 `worker`를 하나의 컨테이너(profile `web,worker`)로 합칠 수 있다.
+- 역할을 나눠 띄우는 구성은 `app` 대신 같은 이미지의 `web`·`worker` 두 서비스로 둔다.
+- 이미지는 `linux/amd64`·`linux/arm64` 로 빌드한다. 빌드 단계는 빌더 플랫폼에서 돌고 실행 단계에는 명령이 없어, 에뮬레이션 없이 두 아키텍처를 만든다. `proxy` · `app` 컨테이너는 root 가 아닌 uid 65534 로 돈다 ([ADR-0022](adr/0022-image-targets-per-side-dockerfile-without-run-in-runtime-stage.md)).
 - 로컬 개발은 Compose `dev` 프로필(`postgres`, `mock-oauth2-server`, 메일 도입 후 `mailpit`)만 띄우고, 백엔드는 Gradle `bootRun`(IDE는 이 태스크로 위임)으로 Spring profile `local`로, 프론트엔드는 Vite 개발 서버(프록시 설정)로 실행한다. 외부 계정이나 비밀 값 없이 전체 흐름이 돈다 ([ADR-0012](adr/0012-swappable-external-dependencies.md)). 개발용 Compose는 checkout마다 따로 뜨고, 테스트도 그 PostgreSQL 이미지를 쓴다 ([ADR-0019](adr/0019-dev-compose-per-checkout-and-test-image-source.md)).
+
+## 배포 구성 실행
+
+저장소 루트에서 실행한다. 지금은 이미지를 소스에서 빌드하므로 저장소 전체가 필요하다.
+
+1. `deploy/.env.example` 을 `deploy/.env` 로 복사하고 `POSTGRES_PASSWORD` 를 적는다. 없거나 비어 있으면 Compose 가 변수 이름을 말하며 멈춘다.
+2. 띄우고 확인한다.
+
+   ```sh
+   docker compose -f deploy/compose.yaml up -d --build --wait   # 호스트 플랫폼 이미지를 빌드하고 postgres → app → proxy 가 healthy 가 될 때까지 기다린다
+   bash deploy/smoke.sh                                          # 기동 상태 · 공개 범위 · 라우팅 확인 (bash · docker · curl 필요)
+   docker compose -f deploy/compose.yaml down                    # 정지 — DB 볼륨은 남는다. down -v 는 DB 를 지운다
+   ```
+
+   `deploy/` 에서는 `-f` 없이 `docker compose up -d --build --wait` 로 같다.
+3. 브라우저로 `http://127.0.0.1:8000` 을 연다.
+
+- 기본은 이 호스트의 루프백(`127.0.0.1:8000`)에만 공개한다. Tunnel 없이 직접 공개하는 셀프 호스팅에서만 `deploy/.env` 의 `PROXY_HOST_ADDRESS` · `PROXY_HOST_PORT` 를 바꾼다. `app` · `postgres` 는 호스트에 공개하지 않는다.
+- healthcheck: `postgres` 는 `pg_isready`, `app` 은 `/actuator/health` 가 200 인지 본다(DB 장애 때 unhealthy), `proxy` 는 자기 정적 응답을 본다.
+- 프로젝트 이름은 `yozmnews-deploy` 로 고정이다. 컨테이너 · DB 볼륨(`yozmnews-deploy_postgres-data`) 이름이 배포 디렉터리 이름과 무관하고, checkout 이름을 따르는 개발용 프로젝트와 겹치지 않는다. 한 호스트에서 두 벌을 띄울 때만 `deploy/.env` 의 `COMPOSE_PROJECT_NAME` 으로 바꾼다.
+- 두 아키텍처 이미지 빌드는 `deploy/` 에서 `docker buildx bake --set '*.platform=linux/amd64,linux/arm64' app proxy` 로 한다. bake 는 `extends` 대상과 빌드 컨텍스트를 작업 디렉터리 기준으로 읽어, 저장소 루트에서 `-f deploy/compose.yaml` 로는 실패한다. 결과가 어디에 남는지는 빌더에 따라 다르다 — `docker` 드라이버에 containerd 이미지 저장소면 두 아키텍처 이미지가 로컬 이미지로 남고, `docker-container` 드라이버면 빌드 캐시에만 남는다. 레지스트리 게시는 아직 없다.
+- PostgreSQL 이미지는 개발용 `compose.yaml` 의 것을 물려받는다. 18 부터 데이터가 메이저별 경로에 있으므로, 메이저를 바꾸면 배포 DB 는 기존 데이터를 두고 빈 클러스터로 뜬다 — 덤프 · 복원으로 옮긴 뒤 바꾼다.
 
 ## Cloudflare
 
@@ -83,6 +107,6 @@ Cloudflare는 권장 구성이지 필수가 아니다. 셀프 호스팅에서는
 
 ## CI/CD (초안)
 
-- GitHub Actions: 테스트 → 멀티 아키텍처 이미지 빌드 → GHCR 푸시.
-- 배포: 호스트에서 `docker compose pull && docker compose up -d`. 처음에는 수동으로 하고, 이후 SSH 배포 작업으로 자동화한다.
-- DB 마이그레이션은 `web` 기동 시 Flyway가 실행한다. 되돌릴 수 없는 변경은 두 번의 배포로 나눈다(확장 → 축소).
+- GitHub Actions: PR 마다 백엔드 · 프론트엔드 검사와 배포 구성 검사(두 아키텍처 이미지 빌드 → 배포 구성 기동 → `deploy/smoke.sh`)를 돌린다. 이후 멀티 아키텍처 이미지를 GHCR 에 푸시한다.
+- 배포(이미지를 레지스트리에 게시한 뒤): 호스트에서 `docker compose -f deploy/compose.yaml pull && docker compose -f deploy/compose.yaml up -d`. 처음에는 수동으로 하고, 이후 SSH 배포 작업으로 자동화한다.
+- DB 마이그레이션은 앱 기동 시 Flyway가 실행한다. 되돌릴 수 없는 변경은 두 번의 배포로 나눈다(확장 → 축소).

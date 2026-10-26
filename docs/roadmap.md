@@ -7,7 +7,7 @@
 - Gradle 멀티 모듈(또는 단일 모듈 + Modulith 패키지), Spring Boot 4, Flyway, Testcontainers 기반 테스트
 - React + Vite 프로젝트, OpenAPI → TS 타입 생성 파이프라인
 - Compose `dev` 프로필(Postgres, mock-oauth2-server), Spring profile `local`, Dockerfile(멀티 아키텍처), GitHub Actions 테스트
-- **완료 기준**: `docker compose up`으로 빈 앱이 뜨고 헬스 체크가 통과한다. Modulith 구조 검증 테스트가 CI에서 돈다.
+- **완료 기준**: 배포 구성(`docker compose -f deploy/compose.yaml up`)으로 빈 앱이 뜨고 헬스 체크가 통과한다. Modulith 구조 검증 테스트가 CI에서 돈다.
 
 ## M1. 수집
 
