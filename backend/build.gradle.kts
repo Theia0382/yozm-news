@@ -32,6 +32,9 @@ dependencies {
 	implementation("org.springframework.modulith:spring-modulith-starter-core")
 	implementation("org.springframework.modulith:spring-modulith-starter-jdbc")
 	implementation("org.springdoc:springdoc-openapi-starter-webmvc-api:3.2.0")
+	// 수집 프로필 · 프리셋 파일(YAML 1.2) 읽기 — 이벤트 API 로 키 · 값의 태그 · 앵커 · 별칭을 그대로 본다.
+	// Spring Boot 가 버전을 관리하지 않아 직접 고정한다
+	implementation("org.snakeyaml:snakeyaml-engine:3.0.1")
 	developmentOnly("org.springframework.boot:spring-boot-docker-compose")
 	runtimeOnly("org.postgresql:postgresql")
 	runtimeOnly("org.springframework.modulith:spring-modulith-actuator")

@@ -1,0 +1,11 @@
+# 이용조건 검토일이 없고 보정 규칙이 틀렸다
+source:
+  name: 깨진일보
+  homepage: https://broken.example
+  language: ko
+feeds:
+  - key: all
+    url: https://broken.example/rss.xml
+    section: 전체
+preCorrections:
+  - rule: run-script

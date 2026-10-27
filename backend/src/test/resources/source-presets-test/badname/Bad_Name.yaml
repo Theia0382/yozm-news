@@ -1,0 +1,10 @@
+# 합성 프리셋 — 실제 언론사가 아니다
+source:
+  name: 알파일보
+  homepage: https://alpha.example
+  language: ko
+termsReviewedAt: 2026-10-25
+feeds:
+  - key: all
+    url: https://alpha.example/rss/all.xml
+    section: 전체

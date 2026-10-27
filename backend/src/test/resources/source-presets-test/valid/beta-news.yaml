@@ -1,0 +1,12 @@
+# 합성 프리셋 — 날짜가 RFC 822 가 아닌 피드
+source:
+  name: 베타뉴스
+  homepage: https://beta.example
+  language: ko
+termsReviewedAt: 2026-09-30
+feeds:
+  - key: politics
+    url: https://beta.example/rss/politics.xml
+    section: 정치
+dates:
+  formats: ["yyyy-MM-dd HH:mm:ss"]
