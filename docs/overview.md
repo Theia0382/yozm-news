@@ -29,7 +29,7 @@
 
 ### v1 포함
 
-- 운영자가 등록 · 관리하는 RSS 피드에서 기사 수집, 정규화, 중복 제거, 피드 상태 모니터링(실패 · 방치된 피드 감지)
+- 운영자가 켠 소스의 RSS 피드에서 기사 수집, 정규화, 중복 제거, 피드 상태 모니터링(실패 · 방치된 피드 감지). 소스는 수집 프로필로 등록하고, 주요 언론사는 프리셋으로 제공한다([ADR-0015](adr/0015-source-presets-and-collection-profiles.md))
 - 운영자가 관리하는 태그 체계(주제 2단계 · 지역 · 형식)와 Jev 공유 평가(주제 · 지역 다중 태그, 기사 형식, 중요도)
 - 가입 · 로그인: OIDC 로그인(기본 Google), 자체 로그인(이메일 · 비밀번호, 복구 코드)
 - LLM API 키 등록(BYOK — OpenAI · Anthropic). 키가 없는 사용자에게는 키 등록 페이지만 보여준다
@@ -80,7 +80,7 @@ flowchart LR
 
     user --> edge --> tunnel --> proxy
     admin --> edge
-    proxy -->|/api, /oauth2| web
+    proxy -->|/api, /oauth2, /login| web
     web --> db
     worker --> db
     worker --> feeds
@@ -91,7 +91,7 @@ flowchart LR
 ```
 
 - 브라우저에는 **단일 오리진**으로 서비스한다. `proxy` 가 React SPA 정적 파일을 내려주고 `/api/**` · `/oauth2/**` · `/login/**` 을 `web` 으로 넘긴다
-- `web` 과 `worker` 는 **같은 컨테이너 이미지**를 Spring profile 로 역할만 나눠 실행한다. 작은 배포에서는 두 profile 을 한 프로세스에서 함께 켤 수 있다
+- `web` 과 `worker` 는 **같은 컨테이너 이미지**를 Spring profile 로 역할만 나눠 실행한다. 기본 배포 구성은 두 profile 을 함께 켠 프로세스 하나(서비스 `app`)이고, 나눠 띄울 때는 `web` · `worker` 두 서비스로 둔다 ([infrastructure.md](infrastructure.md))
 - Cloudflare 는 권장 구성이며 필수가 아니다 — 셀프 호스팅에서는 일반 리버스 프록시로 대체한다 ([infrastructure.md](infrastructure.md))
 
 | 역할 | 하는 일 | 확장 |
@@ -105,8 +105,8 @@ flowchart LR
 
 | 모듈 | 책임 |
 |---|---|
-| `source` | 피드 등록 · 상태, 수집 스케줄, RSS 파싱 · 정규화 |
-| `article` | 기사 저장, 중복 제거, 기사 조회 |
+| `source` | 소스 등록(수집 프로필 · 프리셋) · 켜기 · 끄기 · 피드 상태, 수집 스케줄, RSS 파싱 · 정규화 |
+| `article` | 같은 기사 판정(정규 URL · 제목 비교 키) · 중복 제거, 기사 저장 · 조회 |
 | `evaluation` | 태그 체계, 공유 평가(`ArticleEvaluator` — Jev), 평가 결과 |
 | `digest` | 후보 선별, 프롬프트 구성, 다이제스트 생성 · 검증 · 저장 |
 | `llm` | 공급자 · 모델 목록, 사용자 키로 LLM 클라이언트 생성, 키 검증 |
@@ -144,6 +144,7 @@ flowchart LR
 | LLM 입출력 | RSS 내용은 신뢰할 수 없는 입력, LLM 출력은 스키마로 검증하는 데이터 | [pipeline.md](pipeline.md) · [security.md](security.md) |
 | 외부 의존성 | 표준 프로토콜 · 자체 인터페이스 뒤, 설정으로 교체 · 비활성, 로컬 대체물 | [ADR-0012](adr/0012-swappable-external-dependencies.md) |
 | 판정 시점 | 바뀔 수 있는 임계값은 저장 시점이 아니라 조회 시점에 적용한다 | [ADR-0010](adr/0010-tag-taxonomy.md) |
+| 화면용 API 계약 | 정본은 커밋된 OpenAPI 명세 `api/openapi.json` 이고 백엔드 검사가 코드와 대조한다. 객체 속성은 모두 필수이고, null 이 될 수 있는 속성은 JSpecify `@Nullable` 로 표시한다. 프론트엔드 타입은 이 명세에서 생성한다 | [ADR-0020](adr/0020-screen-api-contract-from-committed-openapi-spec.md) |
 
 ## 7. 기술 스택
 
@@ -154,8 +155,8 @@ flowchart LR
 | LLM · 평가 | Spring AI 2.x(OpenAI · Anthropic), Jev | [ADR-0008](adr/0008-v1-llm-providers.md) · [ADR-0002](adr/0002-shared-evaluation-with-jev.md) |
 | 인증 | Spring Security(OIDC + 이메일 · 비밀번호), Spring Session JDBC | [ADR-0009](adr/0009-authentication-google-and-local.md) · [ADR-0011](adr/0011-no-email-in-v1.md) |
 | 백그라운드 작업 · RSS | JobRunr(PostgreSQL 저장소), Rome | [ADR-0004](adr/0004-tech-stack.md) |
-| 빌드 · 테스트 | Gradle(Kotlin DSL), JUnit 5, Testcontainers, WireMock | [ADR-0004](adr/0004-tech-stack.md) · [테스트 전략](qa/test-strategy.md) |
-| 프론트엔드 | React + TypeScript + Vite, React Router, TanStack Query, Tailwind + shadcn/ui, OpenAPI → TS 타입 생성 | [ADR-0005](adr/0005-frontend-react-spa.md) |
+| 빌드 · 테스트 | Gradle(Kotlin DSL), JUnit 5, Testcontainers, WireMock. 검사는 컨테이너에서 돌고 CI(GitHub Actions)와 로컬이 같은 Compose 정의를 쓴다 | [ADR-0004](adr/0004-tech-stack.md) · [ADR-0016](adr/0016-containerized-checks.md) · [테스트 전략](qa/test-strategy.md) |
+| 프론트엔드 | React + TypeScript + Vite, React Router, TanStack Query, Tailwind + shadcn/ui, OpenAPI → TS 타입 생성 | [ADR-0005](adr/0005-frontend-react-spa.md) · [ADR-0020](adr/0020-screen-api-contract-from-committed-openapi-spec.md) |
 | 배포 | Docker 이미지 + Docker Compose, Cloudflare(선택) | [ADR-0006](adr/0006-deployment-compose-cloudflare.md) |
 
 라이브러리 버전의 정본은 `backend/build.gradle.kts` 다.
@@ -166,6 +167,8 @@ flowchart LR
 |---|---|
 | 소스(Source) | 언론사 등 기사 발행 주체 |
 | 피드(Feed) | 소스가 제공하는 RSS/Atom 피드 하나. 한 소스가 여러 피드를 가질 수 있다 |
+| 수집 프로필 | 소스의 피드 목록과, 그 피드를 읽고 형식을 보정하는 방법을 선언형으로 적은 것 |
+| 프리셋 | 개발팀이 저장소에서 관리하고 테스트로 검증한 주요 언론사의 수집 프로필. 운영자는 참조해서 켜고 끈다 |
 | 기사(Article) | 중복 제거된 기사 1건. 여러 피드에서 같은 기사가 들어와도 1건으로 저장한다 |
 | 공유 평가 | 사용자와 무관하게 기사마다 한 번만 수행하는 Jev 평가(태그 · 형식 · 중요도). 비용은 운영자가 부담 |
 | 태그 체계(Taxonomy) | 운영자가 관리하는 통제 어휘. 주제(2단계) · 지역 · 형식 축으로 나뉘고 버전을 가진다. 기사에는 여러 태그가 붙을 수 있다 |

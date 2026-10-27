@@ -1,0 +1,32 @@
+spring:
+  application:
+    name: yozmnews
+  docker:
+    compose:
+      # 개발용 Compose 연동은 local 프로필에서만 켠다 (application-local.yaml)
+      enabled: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+      show-components: never
+
+springdoc:
+  api-docs:
+    # 명세 엔드포인트는 기본으로 끈다 — 테스트와 local 프로필에서만 켠다
+    enabled: false
+  # 화면용 API 만 명세에 넣는다. 외부 API 는 계약을 따로 둔다
+  paths-to-match: /api/**
+  default-produces-media-type: application/json
+  # 커밋된 명세(저장소 루트 api/openapi.json)와 바이트로 비교하므로 출력을 고정한다
+  writer-with-order-by-keys: true
+  writer-with-default-pretty-printer: true
+  model-converters:
+    java-nullable-property-customizer:
+      # JSpecify @Nullable 속성을 null 허용 타입으로 낸다
+      enabled: true

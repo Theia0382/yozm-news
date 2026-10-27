@@ -1,6 +1,6 @@
 # ADR-0012: 외부 의존성은 교체 가능하게, 개발 환경에는 로컬 대체물을 둔다
 
-- 상태: 승인
+- 상태: 승인. 개발 환경의 Compose 프로필 `prod` 항목은 [ADR-0021](0021-separate-deploy-compose-with-single-app-service.md)이 대체
 - 날짜: 2026-10-25
 - 관련: [ADR-0006](0006-deployment-compose-cloudflare.md), [ADR-0009](0009-authentication-google-and-local.md), [ADR-0011](0011-no-email-in-v1.md)
 

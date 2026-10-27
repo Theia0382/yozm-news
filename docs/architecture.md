@@ -7,7 +7,7 @@
 ```java
 // source: 뉴스 공급원. v1 구현체는 RssArticleSource 하나.
 public interface ArticleSource {
-    FetchResult fetch(FeedDescriptor feed, FetchState previous); // ETag/Last-Modified 포함
+    FetchResult fetch(FeedDescriptor feed, FetchState previous); // feed 는 수집 프로필 포함, previous 는 ETag/Last-Modified
 }
 
 // article: 본문 추출. v1은 NoopContentExtractor. 소스별로 켤 수 있다.
@@ -52,6 +52,6 @@ public interface LlmClientFactory {
 ## 외부 API와 MCP (v1 이후)
 
 - 경로를 분리한다: 화면용 `/api/**`(세션 쿠키), 외부용 `/public-api/v1/**`(Personal Access Token), MCP `/mcp`(OAuth 2.1).
-- 화면용 API와 외부 API는 계약을 따로 관리한다. 외부 API는 하위 호환을 지켜야 하는 공개 계약이고, 화면용 API는 프론트엔드와 함께 자유롭게 바뀐다.
+- 화면용 API와 외부 API는 계약을 따로 관리한다. 외부 API는 하위 호환을 지켜야 하는 공개 계약이고, 화면용 API는 프론트엔드와 함께 자유롭게 바뀐다. 화면용 API 계약의 정본은 커밋된 OpenAPI 명세(`api/openapi.json`)이고, 프론트엔드 타입은 그 명세에서 생성한다 ([ADR-0020](adr/0020-screen-api-contract-from-committed-openapi-spec.md)).
 - MCP 서버는 Spring AI의 MCP 서버 기능(Streamable HTTP)으로 구현하고, 내부적으로는 외부 API와 같은 서비스 계층을 호출한다. ChatGPT 등 원격 MCP 클라이언트 연결에는 OAuth 2.1 인가 서버(Spring Authorization Server)가 필요하다.
 - 외부에는 **다이제스트 요약문, 기사 메타데이터, 원문 링크**만 제공한다. RSS 요약문 원문은 외부 API로 내보내지 않는다 ([security.md](security.md)).

@@ -1,0 +1,13 @@
+spring:
+  docker:
+    compose:
+      enabled: true
+      # 저장소 루트의 개발용 Compose. 상대 경로는 작업 디렉터리(backend/) 기준
+      file: ../compose.yaml
+      profiles:
+        active: dev
+
+springdoc:
+  api-docs:
+    # 개발 중에는 /v3/api-docs 로 명세를 볼 수 있게 켠다
+    enabled: true

@@ -6,12 +6,12 @@
 
 - Gradle 멀티 모듈(또는 단일 모듈 + Modulith 패키지), Spring Boot 4, Flyway, Testcontainers 기반 테스트
 - React + Vite 프로젝트, OpenAPI → TS 타입 생성 파이프라인
-- Compose `dev` 프로필(Postgres, mock-oauth2-server), Spring profile `local`의 Fake 평가기·다이제스트 생성기, Dockerfile(멀티 아키텍처), GitHub Actions 테스트
-- **완료 기준**: `docker compose up`으로 빈 앱이 뜨고 헬스 체크가 통과한다. Modulith 구조 검증 테스트가 CI에서 돈다.
+- Compose `dev` 프로필(Postgres, mock-oauth2-server), Spring profile `local`, Dockerfile(멀티 아키텍처), GitHub Actions 테스트
+- **완료 기준**: 배포 구성(`docker compose -f deploy/compose.yaml up`)으로 빈 앱이 뜨고 헬스 체크가 통과한다. Modulith 구조 검증 테스트가 CI에서 돈다.
 
 ## M1. 수집
 
-- 소스·피드 관리 (운영자 API, 최소 화면)
+- 수집 프로필과 주요 언론사 프리셋, 소스 · 피드 켜기 · 끄기, 운영자 프로필 작성과 활성화 미리보기 관문 (운영자 API, 최소 화면) ([ADR-0015](adr/0015-source-presets-and-collection-profiles.md))
 - 수집 스케줄링, 조건부 GET, 파싱, 정규화, L1·L2 중복 제거
 - 피드 상태 관리(`DEGRADED`, `STALE`)
 - 조사한 국내 피드 형식 이상 사례를 테스트 픽스처로 만든다. 직접 작성한 합성 데이터로 만든다.
@@ -20,7 +20,7 @@
 ## M2. 공유 평가
 
 - 태그 체계 버전 관리, 질문·설명·중요도 기준 관리, 축별 임계값
-- `ArticleEvaluator` + `JevArticleEvaluator`, 평가 대기열과 재시도
+- `ArticleEvaluator` + `JevArticleEvaluator`, Spring profile `local`의 `FakeArticleEvaluator`, 평가 대기열과 재시도
 - 운영자 화면: 태그 분포, 기사당 태그 수, 확률 분포, 기사별 평가 결과, 요청당 토큰
 - **완료 기준**: 1주일치 기사가 평가되고, 운영자가 표본 100건을 검수해 축별 임계값 `τ` 초기값을 정한다.
 
@@ -35,7 +35,7 @@
 
 ## M4. 다이제스트
 
-- 후보 선별, 프롬프트, 구조화 출력 검증, 저장
+- `DigestGenerator` + Spring profile `local`의 `FakeDigestGenerator`, 후보 선별, 프롬프트, 구조화 출력 검증, 저장
 - 일정 기반 생성과 수동 재생성(횟수 제한)
 - 웹 UI: 오늘의 다이제스트, 지난 다이제스트, 원문 링크, 생성 상태와 토큰 사용량
 - **완료 기준**: 테스트 사용자 몇 명이 1주일간 매일 다이제스트를 받는다. 실패율과 평균 토큰 사용량을 측정한다.

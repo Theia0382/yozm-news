@@ -57,8 +57,8 @@ erDiagram
 
 | 테이블 | 주요 컬럼 | 비고 |
 |---|---|---|
-| `sources` | id, name, homepage_url, language, terms_reviewed_at, extraction_allowed | 출처 표기와 이용조건 검토 이력 |
-| `feeds` | id, source_id, url, section_label, poll_interval, status(`ACTIVE`/`DEGRADED`/`STALE`/`DISABLED`), etag, last_modified, next_poll_at, last_success_at, last_new_item_at, consecutive_failures, last_error | |
+| `sources` | id, preset_key, profile(jsonb), enabled, terms_reviewed_at, extraction_allowed | 이름 · 홈페이지 · 언어 · 피드 목록 · 수집 주기는 수집 프로필에 있다([ADR-0015](adr/0015-source-presets-and-collection-profiles.md)). `preset_key` 가 있으면 프리셋을 참조하고 `profile` 에는 운영자가 덮어쓴 항목만 둔다 — 프리셋은 저장소 파일이 정본이라 DB 에 복사하지 않는다. `preset_key` 가 없으면 `profile` 이 운영자가 작성한 전체 프로필이다. 이용조건 검토일은 프리셋 소스면 프리셋 값을 쓴다 |
+| `feeds` | id, source_id, feed_key, enabled, status(`ACTIVE`/`DEGRADED`/`STALE`), etag, last_modified, next_poll_at, last_success_at, last_new_item_at, consecutive_failures, last_error | `feed_key` 는 수집 프로필 안의 피드 식별자. URL · 섹션 이름은 프로필에 있다. `enabled` 는 운영자 스위치, `status` 는 수집 상태라 서로 독립이다 |
 | `articles` | id, source_id, canonical_url, url_hash(고유), title, summary_text, author, published_at, published_at_estimated, image_url, first_seen_at, eval_status(`PENDING`/`DONE`/`FAILED`) | `summary_text`는 RSS 요약문(최대 1,000자) |
 | `article_feed_entries` | article_id, feed_id, guid, feed_category, seen_at | 어떤 피드에서 언제 봤는지. 중복 제거 근거 |
 

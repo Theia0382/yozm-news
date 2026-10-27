@@ -1,0 +1,40 @@
+# 개발용 의존 서비스 — Compose 프로필 dev. 실행 방법은 CONTRIBUTING.md §1.
+# 바꿀 수 있는 값은 .env.example 에 있다. .env 가 없어도 아래 기본값으로 뜬다.
+services:
+  postgres:
+    # PostgreSQL 버전의 정본 — 테스트(Testcontainers)도 이 이미지를 읽어 쓴다.
+    # 배포 구성(deploy/compose.yaml)도 물려받는다 — 메이저를 바꾸면 배포 DB 는 빈 클러스터로 뜨므로 데이터 이전이 필요하다
+    image: postgres:18
+    profiles: [dev]
+    environment:
+      POSTGRES_DB: yozmnews
+      POSTGRES_USER: yozmnews
+      POSTGRES_PASSWORD: yozmnews
+    ports:
+      # 비워 두면 호스트 포트를 Docker 가 고른다. 앱은 Spring Boot 가 공개 포트를 읽어 접속한다
+      - "127.0.0.1:${DEV_POSTGRES_PORT:-}:5432"
+    volumes:
+      # 18 부터 이미지가 데이터를 /var/lib/postgresql/<메이저>/docker 에 둔다 — 이 경로 하나에 건다
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      # TCP 로 확인한다 — 첫 기동의 초기화 중에는 소켓으로만 받는 임시 서버가 뜬다
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  mock-oauth2-server:
+    # 로컬 OIDC 공급자. 로그인 연동은 아직 없다
+    image: ghcr.io/navikt/mock-oauth2-server:6.1.3
+    profiles: [dev]
+    ports:
+      # issuer 가 이 주소로 만들어지므로 호스트 포트는 고정한다
+      - "127.0.0.1:${DEV_MOCK_OAUTH2_PORT:-8090}:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:8080/isalive"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+volumes:
+  postgres-data:

@@ -1,0 +1,9 @@
+node_modules/
+dist/
+coverage/
+*.local
+*.log
+*.tsbuildinfo
+
+# 명세(../api/openapi.json)에서 생성하는 API 타입 — pnpm generate:api
+src/shared/api/schema.d.ts
