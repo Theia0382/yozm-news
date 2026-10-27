@@ -5,6 +5,26 @@ spring:
     compose:
       # 개발용 Compose 연동은 local 프로필에서만 켠다 (application-local.yaml)
       enabled: false
+  modulith:
+    events:
+      jdbc:
+        schema-initialization:
+          # 스키마의 정본은 Flyway 마이그레이션이다. 이 키가 없으면 Modulith 가 기동 때 테이블을 만든다
+          enabled: false
+
+jobrunr:
+  database:
+    # 스키마의 정본은 Flyway 마이그레이션이다 — JobRunr 는 만들지 않고 테이블이 있는지만 본다
+    skip-create: true
+  background-job-server:
+    # 기본 구성은 두 역할(화면 · 백그라운드 작업)을 함께 하는 프로세스 하나다
+    enabled: true
+  dashboard:
+    # 대시보드는 Spring Security · proxy 밖의 별도 포트로 뜬다 — 접근 통제가 생기기 전에는 켜지 않는다
+    enabled: false
+  miscellaneous:
+    # 대시보드를 켜더라도 사용 통계를 내보내지 않는다
+    allow-anonymous-data-usage: false
 
 management:
   endpoints:
