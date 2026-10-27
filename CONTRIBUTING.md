@@ -161,7 +161,7 @@ Issue: #12
 
 | 영역 | 대상 |
 |---|---|
-| `source` · `article` · `evaluation` · `digest` · `llm` · `credential` · `user` · `feedback` · `admin` · `platform` | 백엔드 모듈 ([overview.md §5](docs/overview.md#5-모듈-지도)) |
+| `source` · `article` · `evaluation` · `digest` · `llm` · `credential` · `user` · `feedback` · `admin` · `platform` · `event` · `storyline` · `report` | 백엔드 모듈 ([overview.md §5](docs/overview.md#5-모듈-지도)) |
 | `web` | 프론트엔드 |
 | `adr` · `docs` · `qa` | ADR · 설계 문서 · 테스트 전략 |
 | `deploy` | Docker · Compose · 배포 설정 |
