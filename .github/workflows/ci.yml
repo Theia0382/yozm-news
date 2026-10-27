@@ -2,15 +2,15 @@ name: CI
 
 on:
   pull_request:
-    branches: [dev, main]
+    branches: [main]
   push:
-    branches: [dev]
+    branches: [main]
 
 permissions:
   contents: read
 
 concurrency:
-  # PR 은 번호별로 묶어 새 push 가 이전 실행을 취소한다. dev push 는 실행마다 고유한 그룹이라 서로 취소하지 않는다.
+  # PR 은 번호별로 묶어 새 push 가 이전 실행을 취소한다. main push 는 실행마다 고유한 그룹이라 서로 취소하지 않는다.
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: true
 
