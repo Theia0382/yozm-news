@@ -154,7 +154,7 @@ flowchart LR
 | 데이터 | PostgreSQL, Flyway, Spring Data JDBC + JdbcClient | [ADR-0004](adr/0004-tech-stack.md) · [ADR-0014](adr/0014-spring-data-jdbc.md) |
 | LLM · 평가 | Spring AI 2.x(OpenAI · Anthropic), Jev | [ADR-0008](adr/0008-v1-llm-providers.md) · [ADR-0002](adr/0002-shared-evaluation-with-jev.md) |
 | 인증 | Spring Security(OIDC + 이메일 · 비밀번호), Spring Session JDBC | [ADR-0009](adr/0009-authentication-google-and-local.md) · [ADR-0011](adr/0011-no-email-in-v1.md) |
-| 백그라운드 작업 · RSS | JobRunr OSS(PostgreSQL 저장소), Rome | [ADR-0004](adr/0004-tech-stack.md) · [ADR-0023](adr/0023-jobrunr-oss-framework-schema-and-event-resubmission.md) |
+| 백그라운드 작업 · RSS | JobRunr OSS(PostgreSQL 저장소), Rome, snakeyaml-engine(수집 프로필 YAML) | [ADR-0004](adr/0004-tech-stack.md) · [ADR-0023](adr/0023-jobrunr-oss-framework-schema-and-event-resubmission.md) · [ADR-0024](adr/0024-collection-profile-yaml-and-preset-reference-or-own-profile.md) |
 | 빌드 · 테스트 | Gradle(Kotlin DSL), JUnit 5, Testcontainers, WireMock. 검사는 컨테이너에서 돌고 CI(GitHub Actions)와 로컬이 같은 Compose 정의를 쓴다 | [ADR-0004](adr/0004-tech-stack.md) · [ADR-0016](adr/0016-containerized-checks.md) · [테스트 전략](qa/test-strategy.md) |
 | 프론트엔드 | React + TypeScript + Vite, React Router, TanStack Query, Tailwind + shadcn/ui, OpenAPI → TS 타입 생성 | [ADR-0005](adr/0005-frontend-react-spa.md) · [ADR-0020](adr/0020-screen-api-contract-from-committed-openapi-spec.md) |
 | 배포 | Docker 이미지 + Docker Compose, Cloudflare(선택) | [ADR-0006](adr/0006-deployment-compose-cloudflare.md) |
@@ -169,6 +169,7 @@ flowchart LR
 | 피드(Feed) | 소스가 제공하는 RSS/Atom 피드 하나. 한 소스가 여러 피드를 가질 수 있다 |
 | 수집 프로필 | 소스의 피드 목록과, 그 피드를 읽고 형식을 보정하는 방법을 선언형으로 적은 것 |
 | 프리셋 | 개발팀이 저장소에서 관리하고 테스트로 검증한 주요 언론사의 수집 프로필. 운영자는 참조해서 켜고 끈다 |
+| 운영자 프로필 | 운영자가 쓴 완결된 수집 프로필. 프리셋 원문을 복사해 고친 것일 수 있지만, 프리셋 수정을 따라가지 않는다 |
 | 기사(Article) | 중복 제거된 기사 1건. 여러 피드에서 같은 기사가 들어와도 1건으로 저장한다 |
 | 공유 평가 | 사용자와 무관하게 기사마다 한 번만 수행하는 Jev 평가(태그 · 형식 · 중요도). 비용은 운영자가 부담 |
 | 태그 체계(Taxonomy) | 운영자가 관리하는 통제 어휘. 주제(2단계) · 지역 · 형식 축으로 나뉘고 버전을 가진다. 기사에는 여러 태그가 붙을 수 있다 |
