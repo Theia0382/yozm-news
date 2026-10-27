@@ -187,3 +187,6 @@ Issue: #12
 - 모듈 구조와 패턴은 [ADR-0013](docs/adr/0013-architecture-patterns.md), 데이터 접근은 [ADR-0014](docs/adr/0014-spring-data-jdbc.md)를 따른다
 - 모듈의 공개 API(모듈 최상위 패키지의 타입)는 Javadoc 을 쓴다. 주석과 Javadoc 은 현재 동작만 설명하고, 이슈 번호에 기대지 않고 그 자리에서 이해되게 쓴다
 - 변경 안에서 발견한 작은 정리(낡은 주석 · dead code · 중복)는 같은 PR 에서 끝낸다
+- JobRunr · Spring Modulith 의 스키마는 라이브러리 원문을 Flyway 마이그레이션에 담는다([ADR-0023](docs/adr/0023-jobrunr-oss-framework-schema-and-event-resubmission.md)). 구획 규칙은 `V1__jobrunr_and_event_publication.sql` 머리 주석에 있다
+  - JobRunr 를 올려 새 스크립트가 생기면 `FrameworkSchemaMigrationTests` 가 실패한다. 그 원문을 Flyway 새 버전 파일에 `-- jobrunr-migration:` 구획으로 옮기고, `-- jobrunr-migration-record` 구획에 기록 행을 더한다
+  - Spring Modulith 를 올릴 때는 이벤트 발행 레지스트리의 스키마 판이 바뀌었는지 릴리스 노트로 확인한다. 테스트는 지금 쓰는 판의 원문만 대조하므로 판이 바뀐 것은 알리지 못한다. 원문이 `CREATE TABLE IF NOT EXISTS` 라 새 판 원문을 옮겨도 이미 있는 테이블은 바뀌지 않는다 — 바뀐 부분을 손으로 쓴 마이그레이션으로 더하고, 대조 테스트의 Modulith 대조를 새 판에 맞게 고친다

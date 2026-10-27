@@ -1,6 +1,6 @@
 # ADR-0023: 백그라운드 작업은 JobRunr OSS 로 돌리고, 프레임워크 스키마는 라이브러리 원문을 Flyway 에 담으며, 실패한 이벤트는 반복 작업이 상한까지 다시 처리한다
 
-- 상태: 제안
+- 상태: 승인
 - 날짜: 2026-10-27
 - 근거: [이슈 #16](https://github.com/Theia0382/yozm-news/issues/16) — 기점 `ca8479f` 의 저장소와 JobRunr 9.0.2(바이너리 · 소스 jar, Maven Central SHA-1 대조) · Spring Modulith 2.1.1(events-api · core · jdbc 소스 jar)을 읽어 확인
 - 관련: [ADR-0004](0004-tech-stack.md)(백그라운드 작업 = JobRunr), [ADR-0013](0013-architecture-patterns.md)(도메인 이벤트 · 멱등 작업), [ADR-0014](0014-spring-data-jdbc.md)(스키마 정본 = Flyway)
