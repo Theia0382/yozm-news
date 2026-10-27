@@ -13,7 +13,7 @@
 | 서비스 | 이미지 | 역할 |
 |---|---|---|
 | `proxy` | `yozmnews-proxy` — Caddy 에 SPA 빌드 결과를 담은 자체 이미지(`frontend/Dockerfile` target `proxy`) | SPA 정적 파일 제공. `/api/**`·`/oauth2/**`·`/login/**` 만 `app` 으로 넘기고, 그 밖의 경로(`/actuator/**` 포함)는 SPA 가 답한다. 넘기는 경로의 정본은 `frontend/proxy/backend-paths.caddy` 이고, Vite 개발 서버도 같은 파일을 읽는다 |
-| `app` | `yozmnews-app` (`backend/Dockerfile` target `app`) | REST API, 인증, 백그라운드 작업. 역할 profile 이 생기면 기본 구성은 두 역할(`web`·`worker`)을 함께 켠 프로세스 하나다 |
+| `app` | `yozmnews-app` (`backend/Dockerfile` target `app`) | REST API, 인증, 백그라운드 작업(JobRunr 작업 서버). 역할 profile 이 생기면 기본 구성은 두 역할(`web`·`worker`)을 함께 켠 프로세스 하나다 |
 | `postgres` | PostgreSQL 17+ — 이미지는 개발용 `compose.yaml` 의 `postgres` 를 물려받는다 | 관리형 DB를 쓰는 환경에서는 빼고 접속 정보만 바꾼다 |
 | `cloudflared` | cloudflare/cloudflared (아직 없음) | Tunnel. `proxy`로만 연결한다 |
 | `backup` | pg_dump + S3 호환 업로드 (아직 없음) | 매일 덤프를 R2(또는 다른 S3 호환 저장소)에 올린다 |
@@ -94,9 +94,9 @@ Cloudflare는 권장 구성이지 필수가 아니다. 셀프 호스팅에서는
 
 - **로그**: JSON 구조화 로그. 요청 ID와 사용자 ID를 포함하고, 비밀 값은 마스킹한다.
 - **지표**: Spring Boot Actuator와 Micrometer. 핵심 지표는 피드별 수집 성공률, 평가 대기열 길이, Jev 지연·토큰, 다이제스트 생성 성공률·소요 시간, 공급자별 오류율.
-- **대시보드**: v1은 운영자 화면과 JobRunr 대시보드로 충분하다. 필요해지면 Grafana Cloud 무료 티어 등으로 지표를 내보낸다.
+- **대시보드**: v1은 운영자 화면으로 충분하다. JobRunr 대시보드는 Spring Security · `proxy` 밖의 별도 포트로 뜨므로 기본으로 꺼 두고, 운영자 접근 통제가 생긴 뒤에 연다([ADR-0023](adr/0023-jobrunr-oss-framework-schema-and-event-resubmission.md)). 필요해지면 Grafana Cloud 무료 티어 등으로 지표를 내보낸다.
 - **오류 추적**: Sentry 같은 외부 서비스는 선택. 붙인다면 요청 본문과 헤더 전송을 끈다.
-- **헬스 체크**: Actuator 는 HTTP 로 `health` 엔드포인트만 노출한다(탐색 페이지 `/actuator` 와 probe 그룹 `/actuator/health/liveness` · `/actuator/health/readiness` 포함). `/actuator/health` 응답에는 집계 상태와 probe 그룹 이름만 담고, 구성요소와 상세는 넣지 않는다. 집계에는 DB 가 들어 있어 DB 장애 때 상태가 `DOWN` 이 되고 HTTP 503 으로 응답한다.
+- **헬스 체크**: Actuator 는 HTTP 로 `health` 엔드포인트만 노출한다(탐색 페이지 `/actuator` 와 probe 그룹 `/actuator/health/liveness` · `/actuator/health/readiness` 포함). `/actuator/health` 응답에는 집계 상태와 probe 그룹 이름만 담고, 구성요소와 상세는 넣지 않는다. 집계에는 DB 와 JobRunr 작업 서버가 들어 있어, DB 장애 때나 작업 서버를 켠 프로세스에서 작업 서버가 멈췄을 때 상태가 `DOWN` 이 되고 HTTP 503 으로 응답한다.
 - **API 명세**: 화면용 API 의 OpenAPI 명세 엔드포인트(`/v3/api-docs`)는 기본으로 꺼져 있고 Spring profile `local` 에서만 켜진다. 다른 환경에서 열려면 `springdoc.api-docs.enabled`(환경 변수 `SPRINGDOC_API_DOCS_ENABLED`)를 켠다. 명세는 `/api/**` 만 담고, Swagger UI 는 없다([ADR-0020](adr/0020-screen-api-contract-from-committed-openapi-spec.md)).
 
 ## 백업과 복구

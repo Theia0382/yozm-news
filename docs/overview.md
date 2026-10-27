@@ -126,7 +126,7 @@ flowchart LR
 ```
 
 - 모듈 간에는 **공개 API(모듈 최상위 패키지의 타입)와 도메인 이벤트로만** 연결한다. 다른 모듈의 하위 패키지 접근은 Modulith 검증 테스트가 막는다
-- 이벤트는 Spring Modulith 이벤트 발행 레지스트리(JDBC)에 기록되어, 처리 중 프로세스가 죽어도 재시작 후 다시 처리된다
+- 이벤트는 Spring Modulith 이벤트 발행 레지스트리(JDBC)에 기록된다. 리스너가 실패한 발행은 반복 작업이 주기적으로 다시 처리하고, 처리 도중 프로세스가 죽어 멈춘 발행은 정해진 시간이 지나면 실패로 바뀌어 같은 경로로 다시 처리된다. 정해진 횟수를 넘긴 발행은 실패로 남는다([ADR-0023](adr/0023-jobrunr-oss-framework-schema-and-event-resubmission.md))
 - `ArticleEvaluated` 를 받은 `digest` 는 즉시 생성하지 않는다. 다이제스트는 사용자 일정에 따라 생성되고, 이 이벤트는 지표 갱신에만 쓴다
 
 모듈 인터페이스 초안과 백그라운드 작업 목록은 [architecture.md](architecture.md)에 있다.
@@ -138,7 +138,7 @@ flowchart LR
 | aggregate 참조 | aggregate 사이 참조는 ID 로만 한다. 다른 모듈의 엔티티를 객체로 붙잡지 않는다 | [ADR-0013](adr/0013-architecture-patterns.md) · [ADR-0014](adr/0014-spring-data-jdbc.md) |
 | 데이터 접근 | 쓰기는 aggregate(Spring Data JDBC), 화면 · 운영자 조회와 후보 선별 · 대량 처리는 SQL 조회 모델(JdbcClient). 스키마의 정본은 Flyway 마이그레이션 | [ADR-0014](adr/0014-spring-data-jdbc.md) |
 | 트랜잭션 경계 | 외부 호출(LLM · Jev · 피드)은 DB 트랜잭션 밖에서 한다 — 상태 `RUNNING` 커밋 → 외부 호출 → 새 트랜잭션에서 결과 저장 | [ADR-0013](adr/0013-architecture-patterns.md) |
-| 상태 전이 · 작업 | 상태 전이는 aggregate 메서드로만, 백그라운드 작업은 다시 실행해도 결과가 같다 | [ADR-0013](adr/0013-architecture-patterns.md) |
+| 상태 전이 · 작업 | 상태 전이는 aggregate 메서드로만, 백그라운드 작업과 이벤트 리스너는 다시 실행해도 결과가 같다(이벤트는 최소 한 번 처리된다) | [ADR-0013](adr/0013-architecture-patterns.md) · [ADR-0023](adr/0023-jobrunr-oss-framework-schema-and-event-resubmission.md) |
 | 사용자 범위 | 화면 · API 의 사용자 데이터 조회는 세션의 `userId` 로만 범위를 정한다. 요청으로 받은 사용자 ID 는 신뢰하지 않는다 | [security.md](security.md) |
 | 비밀 값 | BYOK 키 평문은 `llm` 모듈 안에서 호출 직전에만 존재하고, 로그 · 오류 · 응답에 남지 않는다 | [security.md](security.md) |
 | LLM 입출력 | RSS 내용은 신뢰할 수 없는 입력, LLM 출력은 스키마로 검증하는 데이터 | [pipeline.md](pipeline.md) · [security.md](security.md) |
@@ -154,7 +154,7 @@ flowchart LR
 | 데이터 | PostgreSQL, Flyway, Spring Data JDBC + JdbcClient | [ADR-0004](adr/0004-tech-stack.md) · [ADR-0014](adr/0014-spring-data-jdbc.md) |
 | LLM · 평가 | Spring AI 2.x(OpenAI · Anthropic), Jev | [ADR-0008](adr/0008-v1-llm-providers.md) · [ADR-0002](adr/0002-shared-evaluation-with-jev.md) |
 | 인증 | Spring Security(OIDC + 이메일 · 비밀번호), Spring Session JDBC | [ADR-0009](adr/0009-authentication-google-and-local.md) · [ADR-0011](adr/0011-no-email-in-v1.md) |
-| 백그라운드 작업 · RSS | JobRunr(PostgreSQL 저장소), Rome | [ADR-0004](adr/0004-tech-stack.md) |
+| 백그라운드 작업 · RSS | JobRunr OSS(PostgreSQL 저장소), Rome | [ADR-0004](adr/0004-tech-stack.md) · [ADR-0023](adr/0023-jobrunr-oss-framework-schema-and-event-resubmission.md) |
 | 빌드 · 테스트 | Gradle(Kotlin DSL), JUnit 5, Testcontainers, WireMock. 검사는 컨테이너에서 돌고 CI(GitHub Actions)와 로컬이 같은 Compose 정의를 쓴다 | [ADR-0004](adr/0004-tech-stack.md) · [ADR-0016](adr/0016-containerized-checks.md) · [테스트 전략](qa/test-strategy.md) |
 | 프론트엔드 | React + TypeScript + Vite, React Router, TanStack Query, Tailwind + shadcn/ui, OpenAPI → TS 타입 생성 | [ADR-0005](adr/0005-frontend-react-spa.md) · [ADR-0020](adr/0020-screen-api-contract-from-committed-openapi-spec.md) |
 | 배포 | Docker 이미지 + Docker Compose, Cloudflare(선택) | [ADR-0006](adr/0006-deployment-compose-cloudflare.md) |

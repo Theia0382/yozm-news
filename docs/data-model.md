@@ -90,7 +90,9 @@ erDiagram
 
 ## 프레임워크 테이블
 
-- JobRunr 작업 테이블, Spring Modulith 이벤트 발행 레지스트리, Spring Session 테이블. 각 라이브러리가 제공하는 스키마를 Flyway 마이그레이션에 포함한다.
+- 각 라이브러리가 제공하는 스키마를 Flyway 마이그레이션에 담고, 라이브러리의 스키마 자동 생성은 끈다.
+- JobRunr 작업 테이블과 Spring Modulith 이벤트 발행 레지스트리는 첫 마이그레이션 `V1` 에 라이브러리 원문 그대로 들어 있다. 원문 대조 테스트가 라이브러리가 지금 내놓는 원문과 같은지 확인한다([ADR-0023](adr/0023-jobrunr-oss-framework-schema-and-event-resubmission.md)).
+- Spring Session 테이블은 인증 기능을 더할 때 같은 방식으로 담는다.
 
 ## 보존 정책 (초안)
 
@@ -102,5 +104,7 @@ erDiagram
 | 다이제스트 | 사용자 탈퇴 시까지 | |
 | `digest_candidates` | 30일 | 디버깅용 |
 | 탈퇴 사용자 | 즉시 비식별화, 30일 후 완전 삭제 | 실수로 탈퇴한 경우의 복구 기간 |
+| JobRunr 작업 기록 | 성공하고 36시간 뒤 삭제 상태, 다시 72시간 뒤 영구 삭제. 실패한 작업은 남는다 | JobRunr 기본값. 작업의 결과는 각 모듈의 데이터에 남는다 |
+| 이벤트 발행 기록 (`event_publication`) | 완료 즉시 삭제. 실패한 발행은 남는다 | 결과는 각 모듈의 데이터에 남고, 실패한 발행은 재처리와 원인 조사의 근거다([ADR-0023](adr/0023-jobrunr-oss-framework-schema-and-event-resubmission.md)) |
 
 보존 기간은 [open-questions.md](open-questions.md)에서 확정한다.

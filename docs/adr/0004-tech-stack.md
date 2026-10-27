@@ -39,3 +39,7 @@
 | 마이크로서비스 | 운영 부담이 규모에 비해 과하다 |
 | Quartz / db-scheduler / 직접 구현한 `SKIP LOCKED` 큐 | 모두 가능. JobRunr가 재시도, 반복 작업, 대시보드를 한 번에 제공해서 골랐다. 라이선스(LGPL)와 OSS 기능 범위는 착수 시 다시 확인한다 |
 | Redis 기반 큐 | 구성 요소가 늘어난다 |
+
+## 후속 기록
+
+- 2026-10-27: 착수 때 다시 확인한 JobRunr 의 라이선스 · OSS 기능 범위와 도입 방식은 [ADR-0023](0023-jobrunr-oss-framework-schema-and-event-resubmission.md)에 있다.

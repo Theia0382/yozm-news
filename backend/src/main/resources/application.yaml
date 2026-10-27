@@ -5,6 +5,41 @@ spring:
     compose:
       # 개발용 Compose 연동은 local 프로필에서만 켠다 (application-local.yaml)
       enabled: false
+  modulith:
+    events:
+      jdbc:
+        schema-initialization:
+          # 스키마의 정본은 Flyway 마이그레이션이다. 이 키가 없으면 Modulith 가 기동 때 테이블을 만든다
+          enabled: false
+      # 완료된 발행은 바로 지운다 — 결과는 각 모듈의 데이터에 남고, 실패한 발행은 남아 다시 처리된다
+      completion-mode: delete
+      staleness:
+        # 발행 시각에서 멈춤 기준이 지나도 끝나지 않은 발행을 실패로 바꾼다. 세 상태 모두 같은 값이어야 한다 —
+        # 감시는 기간 하나라도 있으면 세 상태를 모두 판정하고, 비운 상태는 발행 전부를 멈춤으로 본다
+        published: ${yozmnews.events.stale-after}
+        processing: ${yozmnews.events.stale-after}
+        resubmitted: ${yozmnews.events.stale-after}
+
+jobrunr:
+  database:
+    # 스키마의 정본은 Flyway 마이그레이션이다 — JobRunr 는 만들지 않고 테이블이 있는지만 본다
+    skip-create: true
+  background-job-server:
+    # 기본 구성은 두 역할(화면 · 백그라운드 작업)을 함께 하는 프로세스 하나다
+    enabled: true
+  dashboard:
+    # 대시보드는 Spring Security · proxy 밖의 별도 포트로 뜬다 — 접근 통제가 생기기 전에는 켜지 않는다
+    enabled: false
+  miscellaneous:
+    # 대시보드를 켜더라도 사용 통계를 내보내지 않는다
+    allow-anonymous-data-usage: false
+
+yozmnews:
+  events:
+    # 발행하고 이만큼 지나도 끝나지 않은 발행은 멈춘 것으로 본다. 리스너는 DB 쓰기와 작업 등록만 하는 짧은 처리다
+    stale-after: PT30M
+    # 실패한 발행을 다시 처리하는 주기. (재처리 시도 상한 − 1) × 이 값 < stale-after 여야 한다 — 기동 때 확인한다
+    resubmission-interval: PT5M
 
 management:
   endpoints:
