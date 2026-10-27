@@ -24,7 +24,7 @@
 |---|---|
 | [overview.md](overview.md) | 시스템 개요 (1층) |
 | [architecture.md](architecture.md) | 모듈 인터페이스 초안, 백그라운드 작업, 외부 API · MCP |
-| [pipeline.md](pipeline.md) | 수집 → 평가 → 다이제스트 생성 파이프라인 상세 |
+| [pipeline.md](pipeline.md) | 수집 → 평가 → 사건 묶기 → 다이제스트 생성 파이프라인, 관심 신호 · 이슈 · 변화 리포트 상세 |
 | [data-model.md](data-model.md) | 데이터 모델과 보존 정책 |
 | [infrastructure.md](infrastructure.md) | 배포 토폴로지, 호스팅, 운영 |
 | [security.md](security.md) | 인증 · 인가, BYOK 키 보관, 저작권 · 개인정보 |
