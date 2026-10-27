@@ -19,7 +19,8 @@ import org.springframework.modulith.events.EventPublication.Status;
 
 class EventResubmissionPolicyTests {
 
-	private final EventResubmissionPolicy policy = new EventResubmissionPolicy(Duration.ofMinutes(5),
+	// 판정은 두 시간에 기대지 않는다 — 조건 경계에서 먼 값을 써서 조건 확인의 변화가 판정 시험에 번지지 않게 한다
+	private final EventResubmissionPolicy policy = new EventResubmissionPolicy(Duration.ofMinutes(1),
 			Duration.ofMinutes(30));
 
 	@ParameterizedTest

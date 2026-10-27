@@ -21,6 +21,7 @@ public final class EventResubmissionPolicy {
 	 * 재제출 주기와 멈춤 기준 시간이 함께 지켜야 할 조건을 확인한다. 감시는 발행 시각으로 멈춤을 판정하므로, 마지막
 	 * 재제출까지 걸리는 시간 (MAX_ATTEMPTS − 1) × 재제출 주기가 멈춤 기준보다 짧아야 정상 운영에서 재처리 중인 발행을
 	 * 멈춤으로 오판하지 않는다.
+	 * @throws NullPointerException 두 값 중 하나가 없을 때
 	 * @throws IllegalArgumentException 두 값 중 하나가 0 이하이거나 조건을 어길 때
 	 */
 	public EventResubmissionPolicy(Duration resubmissionInterval, Duration staleAfter) {
