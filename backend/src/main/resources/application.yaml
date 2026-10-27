@@ -11,6 +11,14 @@ spring:
         schema-initialization:
           # 스키마의 정본은 Flyway 마이그레이션이다. 이 키가 없으면 Modulith 가 기동 때 테이블을 만든다
           enabled: false
+      # 완료된 발행은 바로 지운다 — 결과는 각 모듈의 데이터에 남고, 실패한 발행은 남아 다시 처리된다
+      completion-mode: delete
+      staleness:
+        # 발행 시각에서 멈춤 기준이 지나도 끝나지 않은 발행을 실패로 바꾼다. 세 상태 모두 같은 값이어야 한다 —
+        # 감시는 기간 하나라도 있으면 세 상태를 모두 판정하고, 비운 상태는 발행 전부를 멈춤으로 본다
+        published: ${yozmnews.events.stale-after}
+        processing: ${yozmnews.events.stale-after}
+        resubmitted: ${yozmnews.events.stale-after}
 
 jobrunr:
   database:
@@ -25,6 +33,13 @@ jobrunr:
   miscellaneous:
     # 대시보드를 켜더라도 사용 통계를 내보내지 않는다
     allow-anonymous-data-usage: false
+
+yozmnews:
+  events:
+    # 발행하고 이만큼 지나도 끝나지 않은 발행은 멈춘 것으로 본다. 리스너는 DB 쓰기와 작업 등록만 하는 짧은 처리다
+    stale-after: PT30M
+    # 실패한 발행을 다시 처리하는 주기. (재처리 시도 상한 − 1) × 이 값 < stale-after 여야 한다 — 기동 때 확인한다
+    resubmission-interval: PT5M
 
 management:
   endpoints:
