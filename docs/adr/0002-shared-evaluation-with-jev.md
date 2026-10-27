@@ -1,6 +1,6 @@
 # ADR-0002: Jev는 사용자 무관 공유 평가에만 사용
 
-- 상태: 승인. 다중 카테고리 처리 방식은 [ADR-0010](0010-tag-taxonomy.md)이 대체
+- 상태: 승인. 다중 카테고리 처리 방식은 [ADR-0010](0010-tag-taxonomy.md)이 대체. 평가 항목 목록은 [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md)이, 개인화 주체는 [ADR-0028](0028-explicit-signals-and-interest-weighted-candidates.md)이 부분 대체
 - 날짜: 2026-10-25
 
 ## 맥락

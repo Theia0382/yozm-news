@@ -1,6 +1,6 @@
 # ADR-0007: 같은 사건 묶기는 v1에서 LLM 종합에 맡김
 
-- 상태: 제안
+- 상태: 대체됨([ADR-0025](0025-long-term-personal-news-history-in-v1.md))
 - 날짜: 2026-10-25
 
 ## 맥락
