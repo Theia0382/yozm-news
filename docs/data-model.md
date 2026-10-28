@@ -76,8 +76,8 @@ erDiagram
 |---|---|---|
 | `sources` | id, preset_key, profile(jsonb), enabled, poll_interval, extraction_allowed | 이름 · 홈페이지 · 언어 · 이용조건 검토일 · 피드 목록 · 권장 수집 주기는 수집 프로필에 있다([ADR-0015](adr/0015-source-presets-and-collection-profiles.md) · [ADR-0024](adr/0024-collection-profile-yaml-and-preset-reference-or-own-profile.md)). `preset_key` 와 `profile` 은 둘 중 하나다 — `preset_key` 면 프리셋을 참조하고(프리셋은 저장소 파일이 정본이라 DB 에 복사하지 않는다), `profile` 이면 운영자 프로필 전체다. `poll_interval` 은 운영자 수집 주기 설정(소스 단위, 정하지 않았으면 비어 있다)이고, 실제 주기를 정하는 순서는 [pipeline.md](pipeline.md#수집-동작) 다 |
 | `feeds` | id, source_id, feed_key, enabled, poll_interval, status(`ACTIVE`/`DEGRADED`/`STALE`), etag, last_modified, next_poll_at, last_success_at, last_new_item_at, consecutive_failures, last_error | `feed_key` 는 수집 프로필 안의 피드 식별자. URL · 섹션 이름은 프로필에 있다. `enabled` 는 운영자 스위치, `status` 는 수집 상태라 서로 독립이다. `poll_interval` 은 운영자 수집 주기 설정(피드 단위)이다 |
-| `articles` | id, source_id, canonical_url, url_hash(고유), title, summary_text, author, published_at, published_at_estimated, image_url, first_seen_at, eval_status(`PENDING`/`DONE`/`FAILED`) | `summary_text`는 RSS 요약문(최대 1,000자) |
-| `article_feed_entries` | article_id, feed_id, guid, feed_category, seen_at | 어떤 피드에서 언제 봤는지. 중복 제거 근거 |
+| `articles` | id, source_id, canonical_url, url_hash(고유), title, title_key_hash, summary_text, author, published_at, published_at_estimated, image_url, first_seen_at | 중복 제거된 기사([pipeline.md](pipeline.md#3-중복-제거)). `canonical_url` 은 원문 링크이고 `url_hash` 는 그 SHA-256, `title_key_hash` 는 제목 비교 키의 SHA-256 이다. `summary_text`는 RSS 요약문(최대 1,000자). 처음 저장한 값이 남는다. `source_id` 는 FK 없이 ID 만 둔다(모듈 사이는 ID 로 참조). 평가 상태는 평가 쪽이 갖는다 |
+| `article_feed_entries` | article_id, feed_id, item_url_hash, guid, guid_hash, feed_categories(목록), published_at_estimated, match_kind(`NEW`/`URL`/`GUID`/`TITLE`), seen_at | 어떤 피드에서 언제 봤는지. 중복 제거 근거. (article_id, feed_id) 고유 — 그 피드에서 처음 본 항목의 값이고, 다시 보면 바꾸지 않는다. `item_url_hash` 는 그 항목의 정규 URL 해시, `published_at_estimated` 는 그 항목의 발행 시각을 추정했는지, `match_kind` 는 그 항목이 기사를 새로 만들었는지 · 어떤 판정으로 붙었는지다. `feed_id` 는 FK 없이 ID 만 둔다 |
 
 ## 평가
 
