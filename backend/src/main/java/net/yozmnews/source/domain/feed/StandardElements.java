@@ -12,7 +12,7 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * 프로필의 {@code $standard} 가 읽는 요소 — 그 피드 형식의 명세가 정한 요소다. RSS 2.0 의 {@code dc:date} 처럼 형식 밖의 요소는
- * 프로필이 요소 이름으로 가리킨다. RSS 0.9x 는 판을 구별하지 않고 RSS 2.0 의 이름으로 읽는다(없는 요소는 값이 없을 뿐이다).
+ * 프로필이 요소 이름으로 가리킨다. RSS 0.91~0.94 는 판을 구별하지 않고 RSS 2.0 의 이름으로 읽는다(없는 요소는 값이 없을 뿐이다).
  */
 final class StandardElements {
 
