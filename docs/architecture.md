@@ -5,10 +5,10 @@
 ## 핵심 인터페이스
 
 ```java
-// source: 뉴스 공급원. v1 구현체는 RssArticleSource 하나.
+// source: 뉴스 공급원. 모든 피드 수집(정기 수집 · 활성화 미리보기)이 거친다. v1 구현체는 RssArticleSource 하나.
 public interface ArticleSource {
-    FetchResult fetch(FeedDescriptor feed, FetchState previous); // feed 는 수집 프로필 포함, previous 는 ETag/Last-Modified
-}
+    FetchResult fetch(FeedDescriptor feed, FetchState previous); // feed = 피드 URL + 수집 프로필, previous = ETag/Last-Modified
+}   // FetchResult: Fetched(정규화 결과 · 새 상태 · 받은 시각 · 영구 이동한 주소) | NotModified(상태 · 시각 · 영구 이동한 주소) | Failed(이유 · 일시/영구 · 실패한 시각)
 
 // article: 본문 추출. v1은 NoopContentExtractor. 소스별로 켤 수 있다.
 public interface ContentExtractor {
@@ -47,6 +47,7 @@ public interface LlmClientFactory {
 
 - `ArticleEvaluator`의 v1 구현체는 `JevArticleEvaluator`. Jev 호출 경로(직접 API 또는 AI Gateway)는 설정으로 바꾼다. 사건 소속 판정의 인자 · 반환 타입(`EventDescriptor` · `MembershipJudgement`)은 `evaluation` 이 소유한다 — `event` 의 타입을 받으면 모듈 순환이 된다. `event` 는 `evaluation` 의 공개 API 를 거쳐 판정을 요청한다 ([ADR-0026](adr/0026-event-clustering-with-local-embeddings-and-jev.md)).
 - `ArticleEmbedder`의 v1 구현체는 로컬 모델을 ONNX Runtime 으로 돌리는 구현이고, 설정으로 외부 임베딩 API 구현으로 바꿀 수 있다. 개발 · 테스트는 고정 규칙 기반 로컬 대체물을 쓴다.
+- `ArticleSource`의 v1 구현체는 Apache HttpClient 로 피드를 받아 정규화로 넘기는 `RssArticleSource`. 입출력 실패도 결과(`Failed`)로 돌려준다. 내부 주소 차단 · 요청 제한은 이 구현이 건다 ([ADR-0031](adr/0031-feed-request-blocks-internal-addresses-with-apache-httpclient-deadline.md)).
 - `DigestGenerator`의 v1 구현체는 Spring AI `ChatClient` 기반 `LlmDigestGenerator`. 공급자별 차이는 Spring AI가 흡수한다.
 - `ReportGenerator`의 v1 구현체는 `DigestGenerator` 와 같은 방식의 LLM 구현이고, Spring profile `local` 은 고정 응답 로컬 대체물을 쓴다 ([ADR-0025](adr/0025-long-term-personal-news-history-in-v1.md)).
 - Spring AI의 `ChatModel`은 보통 애플리케이션 전역 빈으로 쓰지만, BYOK에서는 **요청마다 사용자 키로 인스턴스를 만든다**. `LlmClientFactory`가 이 차이를 감춘다.
