@@ -1,0 +1,125 @@
+package net.yozmnews.source.domain.poll;
+
+import java.net.URI;
+import java.time.Instant;
+import java.util.List;
+import java.util.Objects;
+
+import net.yozmnews.source.FeedId;
+import net.yozmnews.source.domain.fetch.FetchResult;
+import net.yozmnews.source.domain.fetch.FetchState;
+import net.yozmnews.source.domain.profile.PollInterval;
+import org.jspecify.annotations.Nullable;
+
+/**
+ * 피드 하나의 수집 상태 — 수집 작업만 바꾼다. 운영자의 켜짐 여부 · 주기 설정과 다른 행에 있어 서로를 덮어쓰지 않는다. 점유 중이면
+ * {@code nextPollAt} 은 예약 시각 + {@link PollSchedule#LEASE} 다 — 대상 조회는 {@code nextPollAt} 하나로 고르므로, 점유가
+ * 풀리지 않은 채 남아도 그 시각이 지나면 다시 대상이 된다.
+ *
+ * @param feedId 피드
+ * @param nextPollAt 다음에 대상이 되는 시각
+ * @param lease 점유 — 없으면 null
+ * @param fetchState 다음 요청에 보낼 조건부 요청 값
+ * @param lastPolledAt 마지막으로 수집을 마친 시각(성공 · 변경 없음 · 실패) — 없으면 null
+ * @param lastSuccessAt 마지막 성공 · 변경 없음 시각 — 없으면 null
+ * @param lastNewItemAt 새 항목이 있던 마지막 수집의 시각 — 없으면 null
+ * @param consecutiveFailures 연속 실패 수
+ * @param lastError 마지막 실패 — 없으면 null. 성공해도 지우지 않는다
+ * @param movedTo 마지막 결과가 거친 영구 이동의 대상 — 없으면 null
+ * @param lastOverflowAt 마지막 넘침 의심 시각 — 없으면 null
+ * @param overflowCount 넘침 의심 횟수
+ * @param previousItemKeys 직전 성공 수집의 항목 키 — 아직 성공한 수집이 없으면 null
+ */
+public record FeedPollState(FeedId feedId, Instant nextPollAt, @Nullable Lease lease, FetchState fetchState,
+		@Nullable Instant lastPolledAt, @Nullable Instant lastSuccessAt, @Nullable Instant lastNewItemAt,
+		int consecutiveFailures, @Nullable LastError lastError, @Nullable URI movedTo, @Nullable Instant lastOverflowAt,
+		int overflowCount, @Nullable List<ItemKey> previousItemKeys) {
+
+	public FeedPollState {
+		Objects.requireNonNull(feedId, "feedId");
+		Objects.requireNonNull(nextPollAt, "nextPollAt");
+		Objects.requireNonNull(fetchState, "fetchState");
+		if (consecutiveFailures < 0) {
+			throw new IllegalArgumentException("연속 실패 수는 0 이상이다: " + consecutiveFailures);
+		}
+		if (overflowCount < 0) {
+			throw new IllegalArgumentException("넘침 의심 횟수는 0 이상이다: " + overflowCount);
+		}
+		previousItemKeys = (previousItemKeys != null) ? List.copyOf(previousItemKeys) : null;
+	}
+
+	/** 새 피드의 수집 상태 — 곧바로 대상이 된다. 켜지기 전에는 대상 조회가 거른다 */
+	public static FeedPollState initial(FeedId feedId, Instant now) {
+		return new FeedPollState(feedId, now, null, FetchState.NONE, null, null, null, 0, null, null, null, 0, null);
+	}
+
+	/**
+	 * 점유한다. 만료된 점유(now 가 nextPollAt 이상)는 새 점유로 덮어쓴다 — 대상 조회가 고른 행에는 만료된 점유가 남아 있을 수 있다.
+	 * @throws IllegalStateException 유효한 점유가 있을 때
+	 */
+	public FeedPollState claim(Lease lease, Instant now) {
+		Objects.requireNonNull(lease, "lease");
+		Objects.requireNonNull(now, "now");
+		if (this.lease != null && now.isBefore(this.nextPollAt)) {
+			throw new IllegalStateException("유효한 점유가 있다: " + this.feedId);
+		}
+		return new FeedPollState(this.feedId, lease.scheduledAt().plus(PollSchedule.LEASE), lease, this.fetchState,
+				this.lastPolledAt, this.lastSuccessAt, this.lastNewItemAt, this.consecutiveFailures, this.lastError,
+				this.movedTo, this.lastOverflowAt, this.overflowCount, this.previousItemKeys);
+	}
+
+	/**
+	 * 수집 결과를 반영하고 점유를 푼다.
+	 * @param interval 이 피드의 실제 주기
+	 * @throws IllegalStateException 점유가 없을 때
+	 */
+	public PollOutcome complete(FetchResult result, PollInterval interval) {
+		Objects.requireNonNull(result, "result");
+		Objects.requireNonNull(interval, "interval");
+		if (this.lease == null) {
+			throw new IllegalStateException("점유 없이 수집 결과를 반영할 수 없다: " + this.feedId);
+		}
+		return switch (result) {
+			case FetchResult.Fetched fetched -> fetched(fetched, interval);
+			case FetchResult.NotModified notModified -> {
+				Instant at = notModified.fetchedAt();
+				FeedPollState next = new FeedPollState(this.feedId, PollSchedule.afterSuccess(at, interval), null,
+						notModified.state(), at, at, this.lastNewItemAt, 0, this.lastError, notModified.movedTo(),
+						this.lastOverflowAt, this.overflowCount, this.previousItemKeys);
+				yield new PollOutcome(next, List.of(), false, movedToChanged(notModified.movedTo()));
+			}
+			case FetchResult.Failed failed -> {
+				Instant at = failed.attemptedAt();
+				int failures = this.consecutiveFailures + 1;
+				Instant nextPollAt = PollSchedule.afterFailure(at, interval, failures, failed.failure().permanence());
+				FeedPollState next = new FeedPollState(this.feedId, nextPollAt, null, this.fetchState, at,
+						this.lastSuccessAt, this.lastNewItemAt, failures, LastError.of(failed.failure(), at),
+						this.movedTo, this.lastOverflowAt, this.overflowCount, this.previousItemKeys);
+				yield new PollOutcome(next, List.of(), false, false);
+			}
+		};
+	}
+
+	/** 프로필이나 그 안의 피드를 얻지 못했다 — 점유를 풀고 다시 확인할 때까지 미룬다. 다른 값은 바꾸지 않는다 */
+	public FeedPollState deferForUnavailableProfile(Instant now) {
+		return new FeedPollState(this.feedId, now.plus(PollSchedule.PROFILE_RECHECK), null, this.fetchState,
+				this.lastPolledAt, this.lastSuccessAt, this.lastNewItemAt, this.consecutiveFailures, this.lastError,
+				this.movedTo, this.lastOverflowAt, this.overflowCount, this.previousItemKeys);
+	}
+
+	private PollOutcome fetched(FetchResult.Fetched fetched, PollInterval interval) {
+		Instant at = fetched.fetchedAt();
+		ItemComparison comparison = ItemComparison.compare(this.previousItemKeys, fetched.normalization().articles());
+		boolean overflow = comparison.overflowSuspected();
+		FeedPollState next = new FeedPollState(this.feedId, PollSchedule.afterSuccess(at, interval), null,
+				fetched.state(), at, at, comparison.newArticles().isEmpty() ? this.lastNewItemAt : at, 0,
+				this.lastError, fetched.movedTo(), overflow ? at : this.lastOverflowAt,
+				overflow ? this.overflowCount + 1 : this.overflowCount, comparison.currentKeys());
+		return new PollOutcome(next, comparison.newArticles(), overflow, movedToChanged(fetched.movedTo()));
+	}
+
+	private boolean movedToChanged(@Nullable URI movedTo) {
+		return movedTo != null && !movedTo.equals(this.movedTo);
+	}
+
+}
