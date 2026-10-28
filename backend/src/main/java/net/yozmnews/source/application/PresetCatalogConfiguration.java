@@ -35,10 +35,15 @@ class PresetCatalogConfiguration {
 
 	private static final String EXTENSION = ".yaml";
 
+	/** 프리셋 파일과 운영자 프로필을 같은 읽기기 · 검증기로 읽는다 */
 	@Bean
-	PresetCatalog presetCatalog(ResourceLoader resourceLoader) {
-		return load(ResourcePatternUtils.getResourcePatternResolver(resourceLoader), LOCATION,
-				new ProfileParser(new ProfileTextReader()));
+	ProfileParser profileParser() {
+		return new ProfileParser(new ProfileTextReader());
+	}
+
+	@Bean
+	PresetCatalog presetCatalog(ResourceLoader resourceLoader, ProfileParser profileParser) {
+		return load(ResourcePatternUtils.getResourcePatternResolver(resourceLoader), LOCATION, profileParser);
 	}
 
 	/**

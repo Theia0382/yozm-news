@@ -1,0 +1,13 @@
+# 합성 프리셋 — 피드가 둘인 소스. 등록 · 기동 대조 테스트가 쓴다
+source:
+  name: 멀티일보
+  homepage: https://multi.example
+  language: ko
+termsReviewedAt: 2026-10-20
+feeds:
+  - key: one
+    url: https://multi.example/rss/one.xml
+    section: 하나
+  - key: two
+    url: https://multi.example/rss/two.xml
+    section: 둘

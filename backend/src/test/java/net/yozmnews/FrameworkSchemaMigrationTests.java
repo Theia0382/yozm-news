@@ -45,13 +45,14 @@ class FrameworkSchemaMigrationTests {
 	@Test
 	void migratesEmptyDatabase() {
 		assertThat(this.jdbc.sql("select version from flyway_schema_history where success").query(String.class).list())
-			.containsExactly("1");
+			.containsExactlyInAnyOrder("1", "2");
 		assertThat(this.jdbc.sql("""
 				select table_name from information_schema.tables
 				where table_schema = 'public' and table_type = 'BASE TABLE'
 				""").query(String.class).list())
 			.containsExactlyInAnyOrder("flyway_schema_history", "jobrunr_jobs", "jobrunr_recurring_jobs",
-					"jobrunr_backgroundjobservers", "jobrunr_metadata", "jobrunr_migrations", "event_publication");
+					"jobrunr_backgroundjobservers", "jobrunr_metadata", "jobrunr_migrations", "event_publication", "sources",
+					"feeds", "feed_poll_states");
 		assertThat(this.jdbc.sql("""
 				select table_name from information_schema.tables
 				where table_schema = 'public' and table_type = 'VIEW'
