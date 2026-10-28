@@ -56,7 +56,7 @@ public interface LlmClientFactory {
 | 작업 | 주기/계기 | 내용 |
 |---|---|---|
 | `PollDueFeeds` | 1분마다 | `next_poll_at`이 지난 피드를 골라 수집 작업 등록 |
-| `PollFeed(feedId)` | 위에서 등록 | 조건부 GET, 파싱, 정규화, 기사 저장 |
+| `PollFeed(feedId)` | 위에서 등록 | 조건부 GET, 파싱, 정규화, 새 항목마다 `ArticleFetched` 발행(기사 저장은 `article`) |
 | `EvaluatePendingArticles` | 1분마다 + `ArticleStored` | 평가 대기 기사를 묶어서 Jev 호출 |
 | `AssignArticleToEvent` | `ArticleStored` | 기사 표현(임베딩 · 고유명사) → 사건 후보 → 판정 → 배정 또는 새 사건 ([pipeline.md](pipeline.md) §8) |
 | `MergeEvents` | 주기 | 가까운 열린 사건끼리 합친다 |
@@ -77,3 +77,19 @@ public interface LlmClientFactory {
 - MCP 서버는 Spring AI의 MCP 서버 기능(Streamable HTTP)으로 구현하고, 내부적으로는 외부 API와 같은 서비스 계층을 호출한다. ChatGPT 등 원격 MCP 클라이언트 연결에는 OAuth 2.1 인가 서버(Spring Authorization Server)가 필요하다.
 - 조회 대상: 다이제스트(주요 뉴스 · 추가 헤드라인), 기사 메타데이터 · 검색, 사건, 이슈와 타임라인, 관심사 히스토리, 변화 리포트. 사용자 데이터(다이제스트 · 이슈 · 관심사 히스토리 · 리포트)는 토큰 주인의 범위로 한정한다.
 - 외부에는 **다이제스트 · 리포트의 LLM 종합문, 기사 메타데이터, 원문 링크**만 제공한다. RSS 요약문 원문은 외부 API로 내보내지 않는다 ([security.md](security.md)).
+
+## 모듈 이벤트
+
+```java
+// source → article. 수집 작업(PollFeed)이 새 항목마다 하나 발행한다.
+public record ArticleFetched(SourceId sourceId, FeedId feedId, Instant fetchedAt, FetchedArticle article) {}
+
+// 정규화된 기사 — 원문 본문은 담지 않는다.
+public record FetchedArticle(String title, URI link, @Nullable String guid, @Nullable String summary,
+        Instant publishedAt, boolean publishedAtEstimated, @Nullable String author, List<String> categories,
+        @Nullable URI thumbnail) {}
+```
+
+- `SourceId` · `FeedId` 는 `sources.id` · `feeds.id`(1 이상의 `long`)다. 피드 식별자는 수집 프로필 안의 피드 키와 다르다.
+- `fetchedAt` 은 그 항목을 받은 수집의 시각이다. `article` 은 이것을 처음 발견한 시각 · 본 시각으로 쓴다.
+- `link` · `thumbnail` 은 `http` · `https` 웹 주소, `summary` 는 `FetchedArticle.SUMMARY_MAX_CODE_POINTS`(1,000 코드 포인트) 이하, `categories` 는 피드 순서이고 같은 값이 없다. `guid` 는 피드의 항목 식별자 원문이다. 정규화 규칙은 [pipeline.md](pipeline.md) §2.
