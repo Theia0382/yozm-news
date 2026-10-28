@@ -54,7 +54,7 @@ import org.jspecify.annotations.Nullable;
 public final class RssArticleSource implements ArticleSource, AutoCloseable {
 
 	/** RSS · Atom 을 앞세우되 무엇이 와도 정규화가 판정한다 */
-	private static final String ACCEPT ="application/rss+xml, application/atom+xml, application/rdf+xml;q=0.9, "
+	private static final String ACCEPT = "application/rss+xml, application/atom+xml, application/rdf+xml;q=0.9, "
 			+ "application/xml;q=0.9, text/xml;q=0.9, */*;q=0.8";
 
 	private final CloseableHttpClient client;
