@@ -10,6 +10,7 @@ import static org.awaitility.Awaitility.await;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -21,6 +22,7 @@ import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.source.ArticleFetched;
 import net.yozmnews.source.FeedId;
+import net.yozmnews.source.SourceId;
 import net.yozmnews.source.adapter.in.job.PollDueFeedsJob;
 import net.yozmnews.source.adapter.in.job.PollFeedJob;
 import net.yozmnews.source.domain.fetch.FetchFailureReason;
@@ -256,19 +258,84 @@ class FeedPollingIntegrationTests {
 		server.stubFor(get("/w.xml").willReturn(TestFeeds.rss("w1")));
 		UUID token = UUID.randomUUID();
 		Instant scheduled = Instant.now().plusSeconds(3).truncatedTo(ChronoUnit.MILLIS);
-		this.jdbc.sql("""
-				update feed_poll_states set lease_token = :token, lease_scheduled_at = :scheduled, next_poll_at = :expires
-				where feed_id = :feed
-				""")
-			.param("token", token)
-			.param("scheduled", scheduled.atOffset(ZoneOffset.UTC))
-			.param("expires", scheduled.plus(Duration.ofMinutes(10)).atOffset(ZoneOffset.UTC))
-			.param("feed", feed)
-			.update();
+		writeLease(feed, token, scheduled, scheduled.plus(Duration.ofMinutes(10)));
 
 		this.pollFeedJob.run(feed, token);
 
 		assertThat(this.feeds.receivedAt(List.of("/w.xml")).getFirst()).isAfterOrEqualTo(scheduled);
+	}
+
+	@Test
+	void ignoresFeedsOfADisabledSourceAndDisabledFeeds() {
+		long kept = this.feeds.source("/kept.xml").getFirst();
+		long disabledFeed = this.feeds.source("/off.xml").getFirst();
+		server.stubFor(get("/kept.xml").willReturn(TestFeeds.rss("k1")));
+		this.operations.disableFeed(new FeedId(disabledFeed));
+		SourceId source = sourceOf(kept);
+		FeedPollState offBefore = state(disabledFeed);
+		assertThat(offBefore.lease()).isNull();
+		assertThat(offBefore.nextPollAt()).isBeforeOrEqualTo(Instant.now());
+
+		List<ClaimedPoll> first = this.scheduler.claimDueFeeds();
+		ClaimedPoll claim = claimOf(first, kept);
+		this.operations.disableSource(source);
+		this.pollFeedJob.run(kept, claim.token());
+		FeedPollState afterRun = state(kept);
+		makeDue(kept);
+		List<ClaimedPoll> whileDisabled = this.scheduler.claimDueFeeds();
+		this.operations.enableSource(source);
+		List<ClaimedPoll> afterEnabled = this.scheduler.claimDueFeeds();
+
+		assertThat(first).extracting(poll -> poll.feedId().value()).containsExactly(kept);
+		assertThat(this.feeds.requests("/kept.xml")).isZero();
+		assertThat(afterRun.lease().token()).isEqualTo(claim.token());
+		assertThat(whileDisabled).isEmpty();
+		assertThat(afterEnabled).extracting(poll -> poll.feedId().value()).containsExactly(kept);
+		assertThat(state(disabledFeed).lease()).isNull();
+	}
+
+	@Test
+	void discardsTheResultWhenTheLeaseIsLostDuringTheFetch(CapturedOutput output) {
+		long feed = this.feeds.source("/lost.xml").getFirst();
+		server.stubFor(get("/lost.xml").willReturn(TestFeeds.rss("l1").withFixedDelay(2_000)));
+		ClaimedPoll first = claim(feed);
+
+		CompletableFuture<Void> polling = CompletableFuture.runAsync(() -> this.pollFeedJob.run(feed, first.token()));
+		await().atMost(TIMEOUT).until(() -> this.feeds.requests("/lost.xml") == 1);
+		makeDue(feed);
+		ClaimedPoll second = claim(feed);
+		polling.join();
+
+		assertThat(this.recorder.forFeed(feed)).isEmpty();
+		assertThat(this.feeds.requests("/lost.xml")).isEqualTo(1);
+		assertThat(state(feed).lease().token()).isEqualTo(second.token());
+		assertThat(output).contains("수집하는 사이 점유를 잃어 결과를 버린다 — 피드 " + feed);
+	}
+
+	@Test
+	void skipsTheFetchWhenTheReservationOutlastsTheLease(CapturedOutput output) {
+		long late = this.feeds.source("/late.xml").getFirst();
+		long fits = this.feeds.source("/fits.xml").getFirst();
+		server.stubFor(get("/late.xml").willReturn(TestFeeds.rss("t1")));
+		server.stubFor(get("/fits.xml").willReturn(TestFeeds.rss("t2")));
+		Instant now = Instant.now().truncatedTo(ChronoUnit.MILLIS);
+		UUID lateToken = UUID.randomUUID();
+		UUID fitsToken = UUID.randomUUID();
+		writeLease(late, lateToken, now, now.plusSeconds(5));
+		writeLease(fits, fitsToken, now, now.plus(Duration.ofMinutes(10)));
+
+		Instant before = Instant.now();
+		this.pollFeedJob.run(late, lateToken);
+		Instant after = Instant.now();
+		this.pollFeedJob.run(fits, fitsToken);
+
+		assertThat(this.feeds.requests("/late.xml")).isZero();
+		assertThat(output).contains("같은 소스의 요청 예약이 점유 만료를 넘는다 — 피드 " + late);
+		assertThat(state(late).lease().token()).isEqualTo(lateToken);
+		// 건너뛴 수집도 그 예약을 쓴 것으로 남는다 — 시작(실행 중의 지금) + 10초
+		assertThat(nextFetchAt(sourceOf(late))).isBetween(before.plusSeconds(10).truncatedTo(ChronoUnit.MICROS),
+				after.plusSeconds(10).plus(1, ChronoUnit.MICROS));
+		assertThat(this.feeds.requests("/fits.xml")).isEqualTo(1);
 	}
 
 	private ClaimedPoll claim(long feed) {
@@ -290,6 +357,34 @@ class FeedPollingIntegrationTests {
 		this.jdbc.sql("update feed_poll_states set next_poll_at = now() - interval '1 second' where feed_id = :feed")
 			.param("feed", feed)
 			.update();
+	}
+
+	/** 점유를 직접 쓴다 — 토큰 · 예약 시각 · 만료(다음 수집 시각) */
+	private void writeLease(long feed, UUID token, Instant scheduled, Instant expires) {
+		this.jdbc.sql("""
+				update feed_poll_states set lease_token = :token, lease_scheduled_at = :scheduled, next_poll_at = :expires
+				where feed_id = :feed
+				""")
+			.param("token", token)
+			.param("scheduled", scheduled.atOffset(ZoneOffset.UTC))
+			.param("expires", expires.atOffset(ZoneOffset.UTC))
+			.param("feed", feed)
+			.update();
+	}
+
+	private SourceId sourceOf(long feed) {
+		return new SourceId(this.jdbc.sql("select source_id from feeds where id = :feed")
+			.param("feed", feed)
+			.query(Long.class)
+			.single());
+	}
+
+	private Instant nextFetchAt(SourceId source) {
+		return this.jdbc.sql("select next_fetch_at from source_fetch_slots where source_id = :source")
+			.param("source", source.value())
+			.query(OffsetDateTime.class)
+			.single()
+			.toInstant();
 	}
 
 	private FeedPollState state(long feed) {
