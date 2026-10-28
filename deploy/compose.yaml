@@ -37,6 +37,8 @@ services:
       YOZMNEWS_COLLECTION_CONTACT: ${YOZMNEWS_COLLECTION_CONTACT:?YOZMNEWS_COLLECTION_CONTACT 를 deploy/.env 에 적는다}
       # 수집이 연결해도 되는 내부 대역(CIDR, 쉼표 구분) — 비우면 내부 주소를 모두 막는다
       YOZMNEWS_COLLECTION_ALLOWED_NETWORKS: ${YOZMNEWS_COLLECTION_ALLOWED_NETWORKS:-}
+      # 동시에 실행하는 백그라운드 작업 수 — 값을 적지 않는다: deploy/.env 에 있을 때만 넘기고, 없으면 앱의 기본값을 쓴다
+      YOZMNEWS_JOB_WORKERS:
     depends_on:
       postgres:
         condition: service_healthy

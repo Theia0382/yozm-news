@@ -1,0 +1,10 @@
+# 합성 프리셋 — 피드가 하나인 소스
+source:
+  name: 솔로뉴스
+  homepage: https://solo.example
+  language: ko
+termsReviewedAt: 2026-10-21
+feeds:
+  - key: all
+    url: https://solo.example/rss/all.xml
+    section: 전체

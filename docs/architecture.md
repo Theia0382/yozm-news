@@ -56,8 +56,8 @@ public interface LlmClientFactory {
 
 | 작업 | 주기/계기 | 내용 |
 |---|---|---|
-| `PollDueFeeds` | 1분마다 | `next_poll_at`이 지난 피드를 골라 수집 작업 등록 |
-| `PollFeed(feedId)` | 위에서 등록 | 조건부 GET, 파싱, 정규화, 새 항목마다 `ArticleFetched` 발행(기사 저장은 `article`) |
+| `PollDueFeeds` | 1분마다 | 소스 · 피드가 켜졌고 `next_poll_at` 이 지난 피드를 잠그고 점유를 기록한 뒤, 점유 토큰을 작업 id 로 피드마다 수집 작업을 예약 등록. 같은 소스의 피드는 예약 시각을 띄운다. 프로필에서 피드를 얻지 못하면 미룬다 ([pipeline.md](pipeline.md#수집-동작) · [ADR-0033](adr/0033-feed-polling-db-lease-per-feed-new-items-and-per-source-request-spacing.md)) |
+| `PollFeed(feedId, 점유 토큰)` | 위에서 등록 | 점유 확인 → 같은 소스의 요청 시작 시각 예약 · 대기 → 트랜잭션 밖에서 조건부 GET · 파싱 · 정규화 → 한 트랜잭션에서 수집 상태 반영과 새 항목(그 피드의 직전 성공 수집에 없던 항목)마다 `ArticleFetched` 발행. 기사 저장은 `article`. 점유가 자기 것이 아니면 아무것도 하지 않고, 재시도하지 않는다 |
 | `EvaluatePendingArticles` | 1분마다 + `ArticleStored` | 평가 대기 기사를 묶어서 Jev 호출 |
 | `AssignArticleToEvent` | `ArticleStored` | 기사 표현(임베딩 · 고유명사) → 사건 후보 → 판정 → 배정 또는 새 사건 ([pipeline.md](pipeline.md) §8) |
 | `MergeEvents` | 주기 | 가까운 열린 사건끼리 합친다 |
