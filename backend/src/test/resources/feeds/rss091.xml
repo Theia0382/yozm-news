@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<!DOCTYPE rss PUBLIC "-//Netscape Communications//DTD RSS 0.91//EN" "http://my.netscape.com/publish/formats/rss-0.91.dtd">
+<!-- 합성 — 실제 피드가 아니다 -->
+<rss version="0.91">
+<channel>
+<title>알파일보</title>
+<link>https://alpha.example</link>
+<description>합성 피드</description>
+<language>ko</language>
+<item>
+<title>공개 DTD 의 RSS 0.91</title>
+<link>https://alpha.example/news/91</link>
+<description>0.91 요약</description>
+</item>
+</channel>
+</rss>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 합성 — 실제 피드가 아니다 -->
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:dc="http://purl.org/dc/elements/1.1/">
+<title>알파일보</title><id>urn:alpha</id><updated>2026-10-26T00:00:00Z</updated>
+<entry><title>첫째</title><id>urn:p1</id><updated>2026-10-26T00:00:00Z</updated><link href="https://alpha.example/news/p1"/><dc:creator>가</dc:creator></entry>
+<entry><title>둘째</title><id>urn:p2</id><updated>2026-10-26T00:00:00Z</updated><link href="https://alpha.example/news/p2"/><dc:creator>나</dc:creator></entry>
+<entry><title>셋째</title><id>urn:p3</id><updated>2026-10-26T00:00:00Z</updated><link href="https://alpha.example/news/p3"/><dc:creator>다</dc:creator></entry>
+</feed>

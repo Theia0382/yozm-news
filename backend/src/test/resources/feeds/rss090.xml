@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<!-- 합성 — 실제 피드가 아니다 -->
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns="http://my.netscape.com/rdf/simple/0.9/">
+<channel>
+<title>알파일보</title>
+<link>https://alpha.example</link>
+<description>합성 피드</description>
+</channel>
+<item>
+<title>RSS 0.90 항목</title>
+<link>https://alpha.example/news/90</link>
+</item>
+</rdf:RDF>

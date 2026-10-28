@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 합성 — 실제 피드가 아니다 -->
+<feed xmlns="http://www.w3.org/2005/Atom">
+<title>알파일보</title>
+<id>urn:alpha</id>
+<updated>2026-10-26T00:00:00Z</updated>
+<entry>
+<title type="html">경제 &amp;lt;속보&amp;gt;</title>
+<id> urn:alpha:1 </id>
+<link rel="alternate" href="https://alpha.example/news/a1"/>
+<link rel="enclosure" type="image/jpeg" href="https://alpha.example/a1.jpg"/>
+<published>2026-10-25T09:31:38+09:00</published>
+<updated>2026-10-26T00:00:00Z</updated>
+<author><name>이기자</name><email>lee@alpha.example</email></author>
+<category term="경제"/>
+<category term="증시"/>
+<summary type="html">&lt;p&gt;코스피가 올랐다.&lt;/p&gt;</summary>
+</entry>
+<entry>
+<title>발행 시각 없는 항목</title>
+<id>urn:alpha:2</id>
+<link href="https://alpha.example/news/a2"/>
+<updated>2026-10-26T00:00:00Z</updated>
+</entry>
+</feed>
