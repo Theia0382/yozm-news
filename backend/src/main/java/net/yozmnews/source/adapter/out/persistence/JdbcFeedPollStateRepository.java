@@ -8,20 +8,27 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
 import net.yozmnews.source.FeedId;
+import net.yozmnews.source.SourceId;
 import net.yozmnews.source.domain.fetch.FetchFailureReason;
 import net.yozmnews.source.domain.fetch.FetchState;
+import net.yozmnews.source.domain.poll.FeedPollContext;
 import net.yozmnews.source.domain.poll.FeedPollState;
 import net.yozmnews.source.domain.poll.FeedPollStateRepository;
 import net.yozmnews.source.domain.poll.ItemKey;
 import net.yozmnews.source.domain.poll.LastError;
 import net.yozmnews.source.domain.poll.Lease;
+import net.yozmnews.source.domain.profile.FeedKey;
+import net.yozmnews.source.domain.profile.PollInterval;
+import net.yozmnews.source.domain.profile.PollIntervalSettings;
 import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
@@ -37,6 +44,25 @@ class JdbcFeedPollStateRepository implements FeedPollStateRepository {
 			feed_id, next_poll_at, lease_token, lease_scheduled_at, etag, last_modified, last_polled_at, last_success_at,
 			last_new_item_at, consecutive_failures, last_error_reason, last_error_message, last_error_status,
 			last_error_at, moved_to, last_overflow_at, overflow_count, previous_item_keys""";
+
+	/** 피드 행을 뺀 모든 열의 갱신 */
+	private static final String SET_ALL = """
+			next_poll_at = :nextPollAt, lease_token = :leaseToken, lease_scheduled_at = :leaseScheduledAt, etag = :etag,
+			last_modified = :lastModified, last_polled_at = :lastPolledAt, last_success_at = :lastSuccessAt,
+			last_new_item_at = :lastNewItemAt, consecutive_failures = :consecutiveFailures,
+			last_error_reason = :lastErrorReason, last_error_message = :lastErrorMessage,
+			last_error_status = :lastErrorStatus, last_error_at = :lastErrorAt, moved_to = :movedTo,
+			last_overflow_at = :lastOverflowAt, overflow_count = :overflowCount, previous_item_keys = :previousItemKeys""";
+
+	/** 수집 상태와 그 피드 · 소스의 운영 설정 — 수집 대상은 소스와 피드가 모두 켜진 피드다 */
+	private static final String CONTEXT = "select " + COLUMNS + """
+			, f.source_id, f.feed_key, s.poll_interval_minutes as source_interval_minutes,
+			f.poll_interval_minutes as feed_interval_minutes
+			from feed_poll_states ps
+			join feeds f on f.id = ps.feed_id
+			join sources s on s.id = f.source_id
+			where s.enabled and f.enabled
+			""";
 
 	private final JdbcClient jdbc;
 
@@ -60,6 +86,71 @@ class JdbcFeedPollStateRepository implements FeedPollStateRepository {
 			.param("feedId", feedId.value())
 			.query((rs, row) -> state(rs))
 			.optional();
+	}
+
+	@Override
+	public List<FeedPollContext> lockDue(Instant now, int limit) {
+		return this.jdbc.sql(CONTEXT + """
+				and ps.next_poll_at <= :now
+				order by ps.next_poll_at
+				limit :limit
+				for update of ps skip locked
+				""").param("now", timestamp(now)).param("limit", limit).query((rs, row) -> context(rs)).list();
+	}
+
+	@Override
+	public Map<SourceId, Instant> lastScheduledBySource(Collection<SourceId> sources, Instant now) {
+		if (sources.isEmpty()) {
+			return Map.of();
+		}
+		Map<SourceId, Instant> last = new LinkedHashMap<>();
+		this.jdbc.sql("""
+				select f.source_id, max(ps.lease_scheduled_at) as last_scheduled
+				from feed_poll_states ps
+				join feeds f on f.id = ps.feed_id
+				where f.source_id in (:sources) and ps.lease_token is not null and ps.next_poll_at > :now
+				group by f.source_id
+				""")
+			.param("sources", sources.stream().map(SourceId::value).toList())
+			.param("now", timestamp(now))
+			.query(rs -> {
+				last.put(new SourceId(rs.getLong("source_id")), instant(rs, "last_scheduled"));
+			});
+		return last;
+	}
+
+	@Override
+	public void saveLocked(FeedPollState state) {
+		this.jdbc.sql("update feed_poll_states set " + SET_ALL + " where feed_id = :feedId")
+			.params(parameters(state))
+			.update();
+	}
+
+	@Override
+	public boolean replaceIfLeased(UUID token, FeedPollState next) {
+		Map<String, @Nullable Object> values = parameters(next);
+		values.put("token", token);
+		return this.jdbc.sql("update feed_poll_states set " + SET_ALL
+				+ " where feed_id = :feedId and lease_token = :token").params(values).update() == 1;
+	}
+
+	@Override
+	public Optional<FeedPollContext> findLeased(FeedId feedId, UUID token) {
+		return this.jdbc.sql(CONTEXT + "and ps.feed_id = :feedId and ps.lease_token = :token")
+			.param("feedId", feedId.value())
+			.param("token", token)
+			.query((rs, row) -> context(rs))
+			.optional();
+	}
+
+	private static FeedPollContext context(ResultSet rs) throws SQLException {
+		return new FeedPollContext(state(rs), new SourceId(rs.getLong("source_id")), new FeedKey(rs.getString("feed_key")),
+				new PollIntervalSettings(interval(rs, "source_interval_minutes"), interval(rs, "feed_interval_minutes")));
+	}
+
+	private static @Nullable PollInterval interval(ResultSet rs, String column) throws SQLException {
+		Integer minutes = rs.getObject(column, Integer.class);
+		return (minutes != null) ? PollInterval.ofMinutes(minutes).orElseThrow() : null;
 	}
 
 	/** 상태의 모든 열을 이름 붙은 매개변수로 — 열 이름의 camelCase */

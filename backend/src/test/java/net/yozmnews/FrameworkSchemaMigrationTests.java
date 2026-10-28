@@ -52,7 +52,7 @@ class FrameworkSchemaMigrationTests {
 				""").query(String.class).list())
 			.containsExactlyInAnyOrder("flyway_schema_history", "jobrunr_jobs", "jobrunr_recurring_jobs",
 					"jobrunr_backgroundjobservers", "jobrunr_metadata", "jobrunr_migrations", "event_publication", "sources",
-					"feeds", "feed_poll_states");
+					"feeds", "feed_poll_states", "source_fetch_slots");
 		assertThat(this.jdbc.sql("""
 				select table_name from information_schema.tables
 				where table_schema = 'public' and table_type = 'VIEW'

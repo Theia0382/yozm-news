@@ -1,4 +1,4 @@
--- 소스 · 피드와 피드의 수집 상태.
+-- 소스 · 피드와 피드의 수집 상태, 소스의 요청 시작 예약.
 --
 -- 운영자가 쓰는 운영 설정(sources · feeds)과 수집 작업만 쓰는 수집 상태(feed_poll_states)를 다른 테이블에 둔다 —
 -- 운영자 변경과 수집 결과가 서로를 덮어쓰지 않는다. 수집 주기의 하한은 source 모듈의 PollInterval 이 정본이라
@@ -60,3 +60,10 @@ CREATE TABLE feed_poll_states (
 );
 
 CREATE INDEX feed_poll_states_next_poll_at_idx ON feed_poll_states (next_poll_at);
+
+-- 소스마다 다음 요청을 시작할 수 있는 시각 — 같은 언론사의 요청 시작 사이를 띄우는 예약이다. 수집 작업이 요청 직전에 이 행을
+-- 잠그고 시작 시각을 받는다. 비어 있으면(NULL) 아직 요청한 적이 없다
+CREATE TABLE source_fetch_slots (
+  source_id             BIGINT      PRIMARY KEY REFERENCES sources (id),
+  next_fetch_at         TIMESTAMPTZ
+);

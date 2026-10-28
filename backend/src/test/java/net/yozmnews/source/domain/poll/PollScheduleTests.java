@@ -76,4 +76,32 @@ class PollScheduleTests {
 		assertThat(PollSchedule.waitBeforeFetch(lease, Instant.parse("2026-10-28T10:00:30Z"))).isEqualTo(Duration.ZERO);
 	}
 
+	@Test
+	void reservesTheFirstRequestOfASourceNow() {
+		Instant now = Instant.parse("2026-10-28T10:00:00Z");
+
+		assertThat(PollSchedule.reserveFetch(null, now)).isEqualTo(new PollSchedule.FetchSlot(now,
+				Instant.parse("2026-10-28T10:00:10Z")));
+	}
+
+	@Test
+	void reservesTheNextRequestOfASourceAfterThePreviousOne() {
+		Instant now = Instant.parse("2026-10-28T10:00:00Z");
+
+		assertThat(PollSchedule.reserveFetch(Instant.parse("2026-10-28T10:00:04Z"), now))
+			.isEqualTo(new PollSchedule.FetchSlot(Instant.parse("2026-10-28T10:00:04Z"),
+					Instant.parse("2026-10-28T10:00:14Z")));
+		assertThat(PollSchedule.reserveFetch(Instant.parse("2026-10-28T09:59:00Z"), now))
+			.isEqualTo(new PollSchedule.FetchSlot(now, Instant.parse("2026-10-28T10:00:10Z")));
+	}
+
+	@Test
+	void aReservationFitsTheLeaseOnlyWhenTheFetchCanEndBeforeItExpires() {
+		PollSchedule.FetchSlot slot = new PollSchedule.FetchSlot(Instant.parse("2026-10-28T10:00:00Z"),
+				Instant.parse("2026-10-28T10:00:10Z"));
+
+		assertThat(PollSchedule.fitsLease(slot, Instant.parse("2026-10-28T10:00:11Z"))).isTrue();
+		assertThat(PollSchedule.fitsLease(slot, Instant.parse("2026-10-28T10:00:10Z"))).isFalse();
+	}
+
 }

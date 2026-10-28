@@ -7,6 +7,7 @@ import java.util.Objects;
 import net.yozmnews.source.domain.fetch.FailurePermanence;
 import net.yozmnews.source.domain.fetch.FetchLimits;
 import net.yozmnews.source.domain.profile.PollInterval;
+import org.jspecify.annotations.Nullable;
 
 /**
  * 수집 일정의 산식과 상수 — 정본. 값은 측정 전 목표이고 운영 데이터로 다시 판단한다.
@@ -31,7 +32,10 @@ public final class PollSchedule {
 	/** 프로필이나 그 안의 피드를 얻지 못한 피드를 다시 확인하기까지 */
 	public static final Duration PROFILE_RECHECK = Duration.ofHours(1);
 
-	/** 같은 소스의 수집 사이 간격 — 수집 하나의 마감만큼 띄워, 같은 언론사에 요청이 몰리지 않게 한다 */
+	/**
+	 * 같은 소스의 요청 시작 사이 간격 — 수집 하나의 마감만큼 띄워, 같은 언론사에 요청이 동시에 나가지 않게 한다. 보장은 요청 직전의
+	 * 시작 시각 예약({@link #reserveFetch})이 하고, 작업 예약 시각의 분산({@link PollSlots})은 worker 를 오래 붙잡지 않게 하는 보조다
+	 */
 	public static final Duration SOURCE_SPACING = FetchLimits.DEADLINE;
 
 	private PollSchedule() {
@@ -73,12 +77,52 @@ public final class PollSchedule {
 	}
 
 	/**
-	 * 점유의 예약 시각까지 남은 시간 — 지났으면 0. JobRunr 작업 서버는 poll 간격 안에 든 예약 작업을 바로 실행하므로, 수집 작업이 이만큼
-	 * 기다린 뒤 요청해야 같은 소스의 수집 사이 간격이 지켜진다.
+	 * 점유의 예약 시각까지 남은 시간 — 지났으면 0. JobRunr 작업 서버는 poll 간격 안에 든 예약 작업을 일찍 시작하므로, 수집 작업은 예약
+	 * 시각까지 기다린 뒤 요청 시작 시각을 예약한다.
 	 */
 	public static Duration waitBeforeFetch(Lease lease, Instant now) {
-		Duration remaining = Duration.between(now, lease.scheduledAt());
+		return remaining(lease.scheduledAt(), now);
+	}
+
+	/**
+	 * 같은 소스의 요청 시작 시각을 예약한다 — 시작은 max(그 소스의 다음 요청 가능 시각, now), 다음 요청 가능 시각은 시작 + 간격이다.
+	 * 작업 서버가 작업을 언제 시작하든, 같은 소스의 요청 시작 사이가 간격 이상으로 벌어진다.
+	 * @param nextFetchAt 그 소스의 다음 요청 가능 시각 — 아직 요청한 적이 없으면 null
+	 */
+	public static FetchSlot reserveFetch(@Nullable Instant nextFetchAt, Instant now) {
+		Objects.requireNonNull(now, "now");
+		Instant start = (nextFetchAt != null && nextFetchAt.isAfter(now)) ? nextFetchAt : now;
+		return new FetchSlot(start, start.plus(SOURCE_SPACING));
+	}
+
+	/**
+	 * 예약한 시작 시각에 요청해도 점유가 유효한 동안 끝나는가 — 시작 + 수집 마감이 점유 만료보다 이르다. 아니면 기다리는 사이 점유가
+	 * 만료되어 다른 회차가 같은 피드를 다시 가져갈 수 있다.
+	 * @param leaseExpiresAt 점유가 만료되는 시각 — 점유 중인 상태의 다음 수집 시각
+	 */
+	public static boolean fitsLease(FetchSlot slot, Instant leaseExpiresAt) {
+		return slot.start().plus(FetchLimits.DEADLINE).isBefore(leaseExpiresAt);
+	}
+
+	/** 시각까지 남은 시간 — 지났으면 0 */
+	public static Duration remaining(Instant target, Instant now) {
+		Duration remaining = Duration.between(now, target);
 		return remaining.isNegative() ? Duration.ZERO : remaining;
+	}
+
+	/**
+	 * 예약한 요청 시작.
+	 *
+	 * @param start 요청을 시작할 시각
+	 * @param next 그 소스의 다음 요청 가능 시각
+	 */
+	public record FetchSlot(Instant start, Instant next) {
+
+		public FetchSlot {
+			Objects.requireNonNull(start, "start");
+			Objects.requireNonNull(next, "next");
+		}
+
 	}
 
 }

@@ -9,6 +9,8 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * 같은 소스에서 이번 회차에 수집할 피드들의 예약 시각 — 앞서 예약한 수집과 서로를 {@link PollSchedule#SOURCE_SPACING} 만큼 띄운다.
+ * 작업 서버는 예약 작업을 poll 간격 단위로 묶어 시작하므로 이 분산만으로는 요청 간격이 보장되지 않는다 — 보장은
+ * {@link PollSchedule#reserveFetch} 가 하고, 이 분산은 같은 소스의 작업들이 한꺼번에 worker 를 잡고 기다리지 않게 한다.
  */
 public final class PollSlots {
 

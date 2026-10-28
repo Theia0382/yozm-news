@@ -15,8 +15,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.simple.JdbcClient;
 
-/** JobRunr · Modulith 의 기본 설정 — 스키마는 만들지 않고, 대시보드는 끄고, 작업 서버는 켠다. */
+/**
+ * JobRunr · Modulith 의 기본 설정 — 스키마는 만들지 않고, 대시보드는 끄고, 작업 서버는 켠다. 작업 서버의 worker 수는 호스트와 무관한
+ * 설정값이고, 피드 수집 반복 작업이 등록된다.
+ */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
 class JobRunrConfigurationTests {
@@ -26,6 +30,9 @@ class JobRunrConfigurationTests {
 
 	@Autowired
 	ApplicationContext context;
+
+	@Autowired
+	JdbcClient jdbc;
 
 	@Test
 	void librariesDoNotCreateSchema() {
@@ -47,6 +54,21 @@ class JobRunrConfigurationTests {
 		BackgroundJobServer server = this.context.getBean(BackgroundJobServer.class);
 		await().atMost(Duration.ofSeconds(60)).until(server::isRunning);
 		assertThat(this.context.getBean(JsonMapper.class)).isInstanceOf(Jackson3JsonMapper.class);
+	}
+
+	@Test
+	void workerCountIsASettingRatherThanTheHostCoreCount() {
+		assertThat(this.properties.getBackgroundJobServer().getWorkerCount()).isEqualTo(16);
+		BackgroundJobServer server = this.context.getBean(BackgroundJobServer.class);
+		await().atMost(Duration.ofSeconds(60)).until(server::isRunning);
+		assertThat(server.getServerStatus().getWorkerPoolSize()).isEqualTo(16);
+	}
+
+	@Test
+	void registersTheRecurringFeedPollingJob() {
+		assertThat(this.jdbc.sql("select count(*) from jobrunr_recurring_jobs where id = 'poll-due-feeds'")
+			.query(Integer.class)
+			.single()).isEqualTo(1);
 	}
 
 }

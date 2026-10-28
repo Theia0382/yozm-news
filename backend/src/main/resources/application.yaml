@@ -27,6 +27,9 @@ jobrunr:
   background-job-server:
     # 기본 구성은 두 역할(화면 · 백그라운드 작업)을 함께 하는 프로세스 하나다
     enabled: true
+    # 동시에 실행하는 작업 수. 없으면 JobRunr 가 호스트 코어 수로 정해(가상 스레드 CPU × 16) 동시 수집 수가 호스트마다 달라진다.
+    # 피드 수집은 대기 중에 DB 연결을 잡지 않는다. 측정 전 목표값이고, 운영 데이터로 다시 판단한다
+    worker-count: ${YOZMNEWS_JOB_WORKERS:16}
   dashboard:
     # 대시보드는 Spring Security · proxy 밖의 별도 포트로 뜬다 — 접근 통제가 생기기 전에는 켜지 않는다
     enabled: false
