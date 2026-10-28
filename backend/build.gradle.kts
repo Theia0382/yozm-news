@@ -41,6 +41,8 @@ dependencies {
 	implementation("org.jsoup:jsoup:1.23.2")
 	// RSS · Atom 형식 판별과 제목 · 링크. Spring Boot 가 버전을 관리하지 않아 직접 고정한다
 	implementation("com.rometools:rome:2.1.0")
+	// 피드 수집 HTTP 클라이언트 — 연결 관리자에 꽂는 이름 해석기로 연결 주소를 검사한다. 버전은 Spring Boot 의존성 관리
+	implementation("org.apache.httpcomponents.client5:httpclient5")
 	developmentOnly("org.springframework.boot:spring-boot-docker-compose")
 	runtimeOnly("org.postgresql:postgresql")
 	runtimeOnly("org.springframework.modulith:spring-modulith-actuator")
@@ -57,6 +59,9 @@ dependencies {
 	testImplementation("org.springframework.modulith:spring-modulith-events-core")
 	testImplementation("org.testcontainers:testcontainers-junit-jupiter")
 	testImplementation("org.testcontainers:testcontainers-postgresql")
+	// 외부 HTTP 대체 — Jetty · Jackson 을 안에 숨긴 판이라 Spring Boot 가 관리하는 판과 부딪히지 않는다. Spring Boot 가
+	// 버전을 관리하지 않아 직접 고정한다(4.x 는 아직 베타)
+	testImplementation("org.wiremock:wiremock-standalone:3.13.2")
 	// DevComposeFile 이 직접 쓴다 — 버전은 Spring Boot 의존성 관리
 	testImplementation("org.yaml:snakeyaml")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
