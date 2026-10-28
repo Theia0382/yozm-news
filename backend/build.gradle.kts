@@ -35,6 +35,10 @@ dependencies {
 	// 수집 프로필 · 프리셋 파일(YAML 1.2) 읽기 — 이벤트 API 로 키 · 값의 태그 · 앵커 · 별칭을 그대로 본다.
 	// Spring Boot 가 버전을 관리하지 않아 직접 고정한다
 	implementation("org.snakeyaml:snakeyaml-engine:3.0.1")
+	// 피드 XML 문서 — 파서는 정규화가 직접 구성한다. 버전은 Spring Boot 의존성 관리
+	implementation("org.jdom:jdom2")
+	// 피드 텍스트의 HTML 제거 · HTML 엔티티 표. Spring Boot 가 버전을 관리하지 않아 직접 고정한다
+	implementation("org.jsoup:jsoup:1.23.2")
 	developmentOnly("org.springframework.boot:spring-boot-docker-compose")
 	runtimeOnly("org.postgresql:postgresql")
 	runtimeOnly("org.springframework.modulith:spring-modulith-actuator")
