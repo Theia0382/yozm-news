@@ -86,7 +86,6 @@ class RssArticleSourceTests {
 		this.sources.forEach(RssArticleSource::close);
 	}
 
-	// T-S2-1 · T-S2-12
 	@Test
 	void fetchesAndNormalizesAFeed() {
 		server.stubFor(get("/feed").willReturn(rss(feed("첫 기사")).withHeader("ETag", ETAG)
@@ -101,7 +100,6 @@ class RssArticleSourceTests {
 		assertThat(fetched.movedTo()).isNull();
 	}
 
-	// T-S2-2
 	@Test
 	void sendsConditionalHeadersAndKeepsTheStateOnNotModified() {
 		server.stubFor(get("/feed").withHeader("If-None-Match", equalTo(ETAG))
@@ -124,7 +122,6 @@ class RssArticleSourceTests {
 			.withHeader("If-Modified-Since", absent()));
 	}
 
-	// T-S2-3
 	@Test
 	void decodesWithTheTransportCharset() {
 		byte[] body = feedWithoutDeclaration("한글 제목").getBytes(Charset.forName("EUC-KR"));
@@ -146,7 +143,6 @@ class RssArticleSourceTests {
 		assertThat(fetched.normalization().replacedCharacters()).isPositive();
 	}
 
-	// T-S2-4
 	@Test
 	void identifiesItselfAndAcceptsFeedsAndCompression() {
 		server.stubFor(get("/feed").willReturn(rss(feed("첫 기사"))));
@@ -171,7 +167,6 @@ class RssArticleSourceTests {
 		server.verify(getRequestedFor(urlEqualTo("/c2")).withHeader("Cookie", absent()));
 	}
 
-	// T-S2-5
 	@Test
 	void timesOutWhileWaitingForHeaders() {
 		server.stubFor(get("/slow").willReturn(rss(feed("첫 기사")).withFixedDelay(2_000)));
@@ -203,7 +198,6 @@ class RssArticleSourceTests {
 			.fetch(descriptor("/h1"), FetchState.NONE));
 	}
 
-	// T-S2-6
 	@Test
 	void declaredLengthOverTheLimitIsTooLarge() {
 		server.stubFor(get("/big").willReturn(aResponse().withBody("a".repeat(1_001))));
@@ -279,7 +273,6 @@ class RssArticleSourceTests {
 		assertThat(fetched(fetchWith(SMALL_BODY, "/gz")).normalization().articles()).hasSize(1);
 	}
 
-	// T-S2-7
 	@ParameterizedTest
 	@CsvSource({ "500, SERVER_ERROR, TEMPORARY", "503, SERVER_ERROR, TEMPORARY", "404, NOT_FOUND, PERMANENT",
 			"403, ACCESS_DENIED, PERMANENT", "429, THROTTLED, TEMPORARY" })
@@ -300,7 +293,6 @@ class RssArticleSourceTests {
 		assertFailure(fetchWith(SMALL_BODY, "/gone"), FetchFailureReason.NOT_FOUND, 404);
 	}
 
-	// T-S2-8
 	@Test
 	void temporaryRedirectIsFollowedWithoutAMove() {
 		server.stubFor(get("/old").willReturn(aResponse().withStatus(302).withHeader("Location", "/new")));
@@ -367,7 +359,6 @@ class RssArticleSourceTests {
 		fetched(fetchWith(SMALL_BODY, "/old"));
 	}
 
-	// T-S2-9
 	@Test
 	void blocksLoopbackWithoutSendingARequest() {
 		server.stubFor(get("/feed").willReturn(rss(feed("첫 기사"))));
@@ -432,7 +423,6 @@ class RssArticleSourceTests {
 		assertThat(server.findAll(anyRequestedFor(anyUrl()))).isEmpty();
 	}
 
-	// T-S2-10
 	@Test
 	void closedPortIsAConnectionFailure() throws IOException {
 		int port;
@@ -461,7 +451,6 @@ class RssArticleSourceTests {
 				FetchState.NONE), FetchFailureReason.TLS_FAILURE, null);
 	}
 
-	// T-S2-11 · T-S2-12
 	@Test
 	void documentThatIsNotAFeedIsUnreadable() {
 		server.stubFor(get("/html").willReturn(aResponse().withHeader("Content-Type", "text/html")

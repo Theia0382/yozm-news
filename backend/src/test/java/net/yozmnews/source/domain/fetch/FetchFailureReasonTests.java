@@ -10,7 +10,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 /**
- * 실패 이유의 일시 · 영구 분류(확인 요청 C-1 포함)와 실패 값의 불변식.
+ * 실패 이유의 일시 · 영구 분류와 실패 값의 불변식.
  */
 class FetchFailureReasonTests {
 
