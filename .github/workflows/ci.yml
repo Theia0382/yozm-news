@@ -77,6 +77,7 @@ jobs:
     env:
       # 배포 구성의 필수 값 — CI 에서만 쓰는 일회성 값이고 비밀 값이 아니다
       POSTGRES_PASSWORD: ci-smoke-only
+      YOZMNEWS_COLLECTION_CONTACT: https://github.com/Theia0382/yozm-news/issues
     steps:
       - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v4

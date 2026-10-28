@@ -26,7 +26,7 @@
 
 저장소 루트에서 실행한다. 지금은 이미지를 소스에서 빌드하므로 저장소 전체가 필요하다.
 
-1. `deploy/.env.example` 을 `deploy/.env` 로 복사하고 `POSTGRES_PASSWORD` 를 적는다. 없거나 비어 있으면 Compose 가 변수 이름을 말하며 멈춘다.
+1. `deploy/.env.example` 을 `deploy/.env` 로 복사하고 필수 값 `POSTGRES_PASSWORD` · `YOZMNEWS_COLLECTION_CONTACT` 를 적는다([수집 설정](#수집-설정)). 없거나 비어 있으면 Compose 가 변수 이름을 말하며 멈춘다.
 2. 띄우고 확인한다.
 
    ```sh
@@ -43,6 +43,18 @@
 - 프로젝트 이름은 `yozmnews-deploy` 로 고정이다. 컨테이너 · DB 볼륨(`yozmnews-deploy_postgres-data`) 이름이 배포 디렉터리 이름과 무관하고, checkout 이름을 따르는 개발용 프로젝트와 겹치지 않는다. 한 호스트에서 두 벌을 띄울 때만 `deploy/.env` 의 `COMPOSE_PROJECT_NAME` 으로 바꾼다.
 - 두 아키텍처 이미지 빌드는 `deploy/` 에서 `docker buildx bake --set '*.platform=linux/amd64,linux/arm64' app proxy` 로 한다. bake 는 `extends` 대상과 빌드 컨텍스트를 작업 디렉터리 기준으로 읽어, 저장소 루트에서 `-f deploy/compose.yaml` 로는 실패한다. 결과가 어디에 남는지는 빌더에 따라 다르다 — `docker` 드라이버에 containerd 이미지 저장소면 두 아키텍처 이미지가 로컬 이미지로 남고, `docker-container` 드라이버면 빌드 캐시에만 남는다. 레지스트리 게시는 아직 없다.
 - PostgreSQL 이미지는 개발용 `compose.yaml` 의 것을 물려받는다. 18 부터 데이터가 메이저별 경로에 있으므로, 메이저를 바꾸면 배포 DB 는 기존 데이터를 두고 빈 클러스터로 뜬다 — 덤프 · 복원으로 옮긴 뒤 바꾼다.
+
+## 수집 설정
+
+피드 수집 요청의 설정이다([ADR-0031](adr/0031-feed-request-blocks-internal-addresses-with-apache-httpclient-deadline.md)). 배포 구성은 `deploy/.env` 에서 받는다.
+
+| 환경 변수 | 필수 | 뜻 |
+|---|---|---|
+| `YOZMNEWS_COLLECTION_CONTACT` | 예 | 수집 요청의 `User-Agent` 에 밝히는 운영자 연락처 — 피드 운영자(언론사)가 요청 주체에 닿을 이메일 주소나 `http` · `https` URL. 없거나 형식이 틀리면 앱이 뜨지 않는다. 모든 피드 서버에 나가는 값이라 비밀 값을 넣지 않는다 |
+| `YOZMNEWS_COLLECTION_ALLOWED_NETWORKS` | 아니오 | 수집이 연결해도 되는 내부 대역(CIDR, 쉼표 구분 — 빈 항목은 건너뛴다). 같은 망에 둔 RSS 생성기 같은 피드를 받을 때만 연다. 비우면 내부 주소를 모두 막는다([security.md](security.md#피드-요청)). 형식이 틀리면 앱이 뜨지 않는다 |
+
+- 로컬 개발(Spring profile `local`)은 연락처로 프로젝트 이슈 주소를 쓴다(`application-local.yaml`).
+- 수집은 시스템 프록시 설정을 읽지 않는다. 바깥 연결이 프록시를 거쳐야만 하는 망에서는 피드를 받지 못한다.
 
 ## Cloudflare
 

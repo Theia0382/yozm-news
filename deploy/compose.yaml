@@ -33,6 +33,10 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/$${POSTGRES_DB}
       SPRING_DATASOURCE_USERNAME: $${POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: $${POSTGRES_PASSWORD}
+      # 수집 요청의 User-Agent 에 밝히는 운영자 연락처 — 없으면 앱이 뜨지 않는다
+      YOZMNEWS_COLLECTION_CONTACT: ${YOZMNEWS_COLLECTION_CONTACT:?YOZMNEWS_COLLECTION_CONTACT 를 deploy/.env 에 적는다}
+      # 수집이 연결해도 되는 내부 대역(CIDR, 쉼표 구분) — 비우면 내부 주소를 모두 막는다
+      YOZMNEWS_COLLECTION_ALLOWED_NETWORKS: ${YOZMNEWS_COLLECTION_ALLOWED_NETWORKS:-}
     depends_on:
       postgres:
         condition: service_healthy

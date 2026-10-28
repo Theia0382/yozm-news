@@ -11,3 +11,8 @@ springdoc:
   api-docs:
     # 개발 중에는 /v3/api-docs 로 명세를 볼 수 있게 켠다
     enabled: true
+
+yozmnews:
+  collection:
+    # 수집 요청의 User-Agent 에 밝히는 연락처(필수). 개발 중에 실제 피드를 받을 때 피드 운영자가 닿는 프로젝트 이슈 주소
+    contact: https://github.com/Theia0382/yozm-news/issues

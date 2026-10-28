@@ -31,7 +31,7 @@ docker compose -f compose.check.yaml run --rm --build frontend   # 프론트엔�
 배포 구성 검사는 배포 구성(`deploy/compose.yaml`)을 띄워 스모크를 돌린다. CI 는 같은 정의로 이미지를 두 아키텍처(`linux/amd64` · `linux/arm64`)로도 빌드한다. 실행 절차 · 설정 값은 [infrastructure.md](docs/infrastructure.md) "배포 구성 실행".
 
 ```sh
-cp deploy/.env.example deploy/.env   # 처음 한 번 — POSTGRES_PASSWORD 를 적는다
+cp deploy/.env.example deploy/.env   # 처음 한 번 — POSTGRES_PASSWORD · YOZMNEWS_COLLECTION_CONTACT 를 적는다
 docker compose -f deploy/compose.yaml up -d --build --wait   # 이미지 빌드 뒤 모든 서비스가 healthy 가 될 때까지 기다린다
 bash deploy/smoke.sh                                          # 종료 코드가 검사 결과다 (bash · docker · curl 필요)
 docker compose -f deploy/compose.yaml down -v                 # 정리 — 배포 구성의 DB 볼륨도 지운다
