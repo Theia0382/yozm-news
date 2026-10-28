@@ -89,8 +89,12 @@ public record ArticleFetched(SourceId sourceId, FeedId feedId, Instant fetchedAt
 public record FetchedArticle(String title, URI link, @Nullable String guid, @Nullable String summary,
         Instant publishedAt, boolean publishedAtEstimated, @Nullable String author, List<String> categories,
         @Nullable URI thumbnail) {}
+
+// article → evaluation · event. 새 기사를 저장했을 때 하나 발행한다.
+public record ArticleStored(ArticleId articleId) {}
 ```
 
 - `SourceId` · `FeedId` 는 `sources.id` · `feeds.id`(1 이상의 `long`)다. 피드 식별자는 수집 프로필 안의 피드 키와 다르다.
 - `fetchedAt` 은 그 항목을 받은 수집의 시각이다. `article` 은 이것을 처음 발견한 시각 · 본 시각으로 쓴다.
 - `link` · `thumbnail` 은 `http` · `https` 웹 주소, `summary` 는 `FetchedArticle.SUMMARY_MAX_CODE_POINTS`(1,000 코드 포인트) 이하, `categories` 는 피드 순서이고 같은 값이 없다. `guid` 는 피드의 항목 식별자 원문이다. 정규화 규칙은 [pipeline.md](pipeline.md) §2.
+- `ArticleId` 는 `articles.id`(1 이상의 `long`)다. `ArticleStored` 는 기사 하나에 많아야 한 번 나간다 — 같은 기사로 판정된 항목이나 같은 `ArticleFetched` 를 다시 처리한 경우에는 나가지 않는다. 기사 내용은 싣지 않고 기사 ID 만 싣는다. 같은 기사 판정은 [pipeline.md](pipeline.md) §3.
