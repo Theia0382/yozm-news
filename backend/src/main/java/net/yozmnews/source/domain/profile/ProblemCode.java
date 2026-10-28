@@ -47,6 +47,8 @@ public enum ProblemCode {
 	POLL_INTERVAL_TOO_SHORT,
 	/** 알 수 없는 사전 보정 규칙 */
 	UNKNOWN_PRE_CORRECTION,
+	/** 같은 사전 보정 규칙이 두 번 있다 */
+	DUPLICATE_PRE_CORRECTION,
 	/** 지원하지 않는 문자 인코딩 */
 	INVALID_CHARSET,
 	/** 알 수 없는 기사 항목 */

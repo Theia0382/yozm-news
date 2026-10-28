@@ -180,6 +180,36 @@ class ProfileValidationTests {
 	}
 
 	@Test
+	void rejectsTheSamePreCorrectionTwice() {
+		assertThat(problems(SOURCE + FEED + """
+				preCorrections:
+				  - rule: force-encoding
+				    charset: EUC-KR
+				  - rule: force-encoding
+				    charset: UTF-8
+				""")).containsExactly("preCorrections[1].rule DUPLICATE_PRE_CORRECTION");
+		assertThat(problems(SOURCE + FEED + """
+				preCorrections:
+				  - rule: replace-undefined-entities
+				  - rule: strip-invalid-control-chars
+				  - rule: replace-undefined-entities
+				""")).containsExactly("preCorrections[2].rule DUPLICATE_PRE_CORRECTION");
+	}
+
+	@Test
+	void acceptsEveryPreCorrectionOnce() {
+		assertThat(parsed(SOURCE + FEED + """
+				preCorrections:
+				  - rule: strip-invalid-control-chars
+				  - rule: force-encoding
+				    charset: UTF-8
+				  - rule: replace-undefined-entities
+				""").preCorrections()).containsExactly(new PreCorrection.StripInvalidControlChars(),
+						new PreCorrection.ForceEncoding(Charset.forName("UTF-8")),
+						new PreCorrection.ReplaceUndefinedEntities());
+	}
+
+	@Test
 	void checksTheCharsetOfPreCorrections() {
 		assertThat(problems(SOURCE + FEED + "preCorrections:\n  - rule: force-encoding\n    charset: NO-SUCH\n"))
 			.containsExactly("preCorrections[0].charset INVALID_CHARSET");

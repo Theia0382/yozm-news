@@ -10,7 +10,7 @@ public sealed interface ValueSource {
 	/** 프로필 텍스트에서 파서 표준값을 가리키는 표기 — {@code $} 는 XML 이름에 쓸 수 없어 요소 이름과 겹치지 않는다 */
 	String STANDARD_TOKEN = "$standard";
 
-	/** 파서가 표준으로 읽은 값 */
+	/** 그 피드 형식의 명세가 정한 요소의 값(RSS 2.0 의 {@code pubDate} · Atom 의 {@code published} 등) */
 	record Standard() implements ValueSource {
 
 	}

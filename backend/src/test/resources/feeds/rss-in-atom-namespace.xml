@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 합성 — 실제 피드가 아니다 -->
+<rss version="2.0" xmlns="http://www.w3.org/2005/Atom">
+<channel>
+<title>알파일보</title>
+<link>https://alpha.example</link>
+<description>합성 피드</description>
+<item>
+<title>Atom 이름공간의 rss</title>
+<link>https://alpha.example/news/x</link>
+</item>
+</channel>
+</rss>

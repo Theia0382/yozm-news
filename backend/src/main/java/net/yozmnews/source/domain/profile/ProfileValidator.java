@@ -15,6 +15,7 @@ import java.time.temporal.TemporalAccessor;
 import java.time.temporal.TemporalQueries;
 import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -34,7 +35,7 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * 초안 → {@link CollectionProfile}. 의미 규칙(필수 항목, URL · 언어 · 식별자 · 인코딩 · 날짜 형식 · 시간대의 유효성, 수집 주기
- * 하한, 피드 URL 중복, 요소 이름과 이름공간)을 판정하고 문제를 모두 모은다. 프리셋 파일과 운영자 프로필은 이용조건 검토일만 다르게
+ * 하한, 피드 URL 중복, 사전 보정 규칙 중복, 요소 이름과 이름공간)을 판정하고 문제를 모두 모은다. 프리셋 파일과 운영자 프로필은 이용조건 검토일만 다르게
  * 다룬다.
  */
 final class ProfileValidator {
@@ -202,6 +203,7 @@ final class ProfileValidator {
 			return List.of();
 		}
 		List<PreCorrection> result = new ArrayList<>();
+		Set<PreCorrection.Rule> seen = EnumSet.noneOf(PreCorrection.Rule.class);
 		for (PreCorrectionDraft correction : corrections.value()) {
 			Located<String> rule = correction.rule();
 			if (rule == null) {
@@ -211,6 +213,11 @@ final class ProfileValidator {
 			PreCorrection.Rule known = PreCorrection.Rule.ofKey(rule.value()).orElse(null);
 			if (known == null) {
 				problem(rule, ProblemCode.UNKNOWN_PRE_CORRECTION, "알 수 없는 사전 보정 규칙: " + rule.value());
+				continue;
+			}
+			// 같은 규칙이 둘이면 어느 쪽을 쓸지(force-encoding 의 문자셋 등)가 적용 순서에 숨는다
+			if (!seen.add(known)) {
+				problem(rule, ProblemCode.DUPLICATE_PRE_CORRECTION, "같은 사전 보정 규칙이 앞에 또 있다: " + rule.value());
 				continue;
 			}
 			PreCorrection built = switch (known) {

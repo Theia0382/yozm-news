@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 합성 — 실제 피드가 아니다 -->
+<rss version="0.93" >
+<channel>
+<title>알파일보</title>
+<link>https://alpha.example</link>
+<description>합성 피드</description>
+<item>
+<title>RSS 0.93 항목</title>
+<link>https://alpha.example/news/93</link>
+<pubDate>Sun, 25 Oct 2026 09:31:38 +0900</pubDate>
+</item>
+</channel>
+</rss>

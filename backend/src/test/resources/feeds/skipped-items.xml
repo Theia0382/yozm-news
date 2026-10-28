@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 합성 — 실제 피드가 아니다 -->
+<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:media="http://search.yahoo.com/mrss/">
+<channel>
+<title>알파일보</title>
+<link>https://alpha.example</link>
+<description>합성 피드</description>
+<item><title>링크 없음</title></item>
+<item><title>permalink 아닌 guid 만</title><guid isPermaLink="false">only-guid</guid></item>
+<item><title>상대 링크</title><link>/news/3</link></item>
+<item><title>스크립트 링크</title><link>javascript:alert(1)</link></item>
+<item><title>공백이 든 링크</title><link>https://alpha.example/a b</link></item>
+<item><title>   </title><link>https://alpha.example/news/6</link></item>
+<item><title>정상 항목</title><link>https://alpha.example/news/7</link></item>
+</channel>
+</rss>

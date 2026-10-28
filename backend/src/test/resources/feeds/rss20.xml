@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 합성 — 실제 피드가 아니다 -->
+<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:media="http://search.yahoo.com/mrss/">
+<channel>
+<title>알파일보</title>
+<link>https://alpha.example</link>
+<description>합성 피드</description>
+<item>
+<title>국회, &lt;b&gt;예산안&lt;/b&gt; 처리</title>
+<link> https://alpha.example/news/1 </link>
+<guid isPermaLink="false"> alpha-1 </guid>
+<description><![CDATA[<p>여야가&nbsp;합의했다.</p>]]></description>
+<pubDate>Sun, 25 Oct 2026 09:31:38 +0900</pubDate>
+<author>reporter@alpha.example (홍길동)</author>
+<category>정치</category>
+<category>국회</category>
+<category>정치</category>
+<enclosure url="https://alpha.example/a.mp3" type="audio/mpeg" length="1"/>
+<enclosure url="https://alpha.example/t1.jpg" type="image/jpeg" length="1"/>
+</item>
+<item>
+<title>두 번째</title>
+<link>https://alpha.example/news/2</link>
+</item>
+</channel>
+</rss>
