@@ -22,6 +22,8 @@ erDiagram
     users ||--o{ reports : ""
 
     sources ||--o{ feeds : ""
+    sources ||--o| source_fetch_slots : ""
+    feeds ||--|| feed_poll_states : ""
     sources ||--o{ articles : ""
     feeds ||--o{ article_feed_entries : ""
     articles ||--o{ article_feed_entries : ""
@@ -74,8 +76,10 @@ erDiagram
 
 | 테이블 | 주요 컬럼 | 비고 |
 |---|---|---|
-| `sources` | id, preset_key, profile(jsonb), enabled, poll_interval, extraction_allowed | 이름 · 홈페이지 · 언어 · 이용조건 검토일 · 피드 목록 · 권장 수집 주기는 수집 프로필에 있다([ADR-0015](adr/0015-source-presets-and-collection-profiles.md) · [ADR-0024](adr/0024-collection-profile-yaml-and-preset-reference-or-own-profile.md)). `preset_key` 와 `profile` 은 둘 중 하나다 — `preset_key` 면 프리셋을 참조하고(프리셋은 저장소 파일이 정본이라 DB 에 복사하지 않는다), `profile` 이면 운영자 프로필 전체다. `poll_interval` 은 운영자 수집 주기 설정(소스 단위, 정하지 않았으면 비어 있다)이고, 실제 주기를 정하는 순서는 [pipeline.md](pipeline.md#수집-동작) 다 |
-| `feeds` | id, source_id, feed_key, enabled, poll_interval, status(`ACTIVE`/`DEGRADED`/`STALE`), etag, last_modified, next_poll_at, last_success_at, last_new_item_at, consecutive_failures, last_error | `feed_key` 는 수집 프로필 안의 피드 식별자. URL · 섹션 이름은 프로필에 있다. `enabled` 는 운영자 스위치, `status` 는 수집 상태라 서로 독립이다. `poll_interval` 은 운영자 수집 주기 설정(피드 단위)이다 |
+| `sources` | id, preset_key(고유), profile(텍스트), enabled, poll_interval_minutes | 이름 · 홈페이지 · 언어 · 이용조건 검토일 · 피드 목록 · 권장 수집 주기는 수집 프로필에 있다([ADR-0015](adr/0015-source-presets-and-collection-profiles.md) · [ADR-0024](adr/0024-collection-profile-yaml-and-preset-reference-or-own-profile.md)). `preset_key` 와 `profile` 은 둘 중 하나다(제약) — `preset_key` 면 프리셋을 참조하고(프리셋은 저장소 파일이 정본이라 DB 에 복사하지 않는다), `profile` 이면 운영자 프로필 원문이다. 원문은 주석까지 그대로 두고 읽을 때마다 검증한다([ADR-0033](adr/0033-feed-polling-db-lease-per-feed-new-items-and-per-source-request-spacing.md)). 같은 프리셋을 두 소스가 참조하지 않는다. `poll_interval_minutes` 는 운영자 수집 주기 설정(소스 단위, 분, 정하지 않았으면 비어 있다)이고, 실제 주기를 정하는 순서는 [pipeline.md](pipeline.md#수집-동작) 다. 본문 추출 허용 여부는 추출을 켤 때 더한다 |
+| `feeds` | id, source_id, feed_key, enabled, poll_interval_minutes | 운영자가 쓰는 운영 설정만 둔다. `feed_key` 는 수집 프로필 안의 피드 식별자이고, 소스 안에서 고유하다. URL · 섹션은 프로필에 있다. `poll_interval_minutes` 는 운영자 수집 주기 설정(피드 단위)이다. 행은 지우지 않는다 — 받은 기사의 기록(`article_feed_entries.feed_id`)이 가리킨다. 프로필에서 빠진 피드의 행도 남는다 |
+| `feed_poll_states` | feed_id, status(`ACTIVE`/`DEGRADED`/`STALE`), next_poll_at, lease_token, lease_scheduled_at, etag, last_modified, last_polled_at, last_success_at, last_new_item_at, consecutive_failures, last_error_reason · message · status · at, moved_to, last_overflow_at, overflow_count, previous_item_keys | 피드의 수집 상태 — 피드당 1행, 수집 작업만 쓴다. 운영자 스위치(`feeds.enabled`)와 다른 행이라 서로 독립이고 서로를 덮어쓰지 않는다. 점유 중이면 `lease_token` · `lease_scheduled_at` 이 함께 있고(제약) `next_poll_at` 은 예약 시각 + 점유 기간이다. `last_error_*` 는 마지막 실패이고 성공한 뒤에도 남는다(이유 · 시각이 함께 있다 — 제약). `moved_to` 는 마지막 결과가 거친 영구 이동의 대상이다. `previous_item_keys` 는 직전 성공 수집의 항목 키(`text[]`)이고, 비어 있으면(NULL) 아직 성공한 수집이 없다는 뜻이라 빈 배열과 다르다. `status` 는 수집 상태이고, 판정은 [pipeline.md](pipeline.md#수집-동작) 의 기준을 따른다 |
+| `source_fetch_slots` | source_id, next_fetch_at | 소스마다 다음 요청을 시작할 수 있는 시각 — 소스당 1행. 같은 언론사의 요청 시작 사이를 띄우는 예약이다. 비어 있으면(NULL) 아직 요청한 적이 없다 |
 | `articles` | id, source_id, canonical_url, url_hash(고유), title, summary_text, author, published_at, published_at_estimated, image_url, first_seen_at, eval_status(`PENDING`/`DONE`/`FAILED`) | `summary_text`는 RSS 요약문(최대 1,000자) |
 | `article_feed_entries` | article_id, feed_id, guid, feed_category, seen_at | 어떤 피드에서 언제 봤는지. 중복 제거 근거 |
 
