@@ -14,7 +14,7 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: true
 
-# backend · frontend 검사는 compose.check.yaml 의 컨테이너에서, deploy 는 배포 구성(deploy/compose.yaml)으로 돈다 — 로컬과 같은 정의 · 같은 명령(CONTRIBUTING.md §1).
+# backend · frontend · docs 검사는 compose.check.yaml 의 컨테이너에서, deploy 는 배포 구성(deploy/compose.yaml)으로 돈다 — 로컬과 같은 정의 · 같은 명령(CONTRIBUTING.md §1).
 # CI 만 이미지 빌드를 앞 단계로 떼어 GitHub Actions 캐시를 계층 캐시로 쓴다.
 jobs:
   backend:
@@ -69,6 +69,26 @@ jobs:
             *.cache-to=type=gha,scope=frontend,mode=max
       - name: Check
         run: docker compose -f compose.check.yaml run --rm frontend
+
+  # 공개 마크다운의 상대 링크 · 앵커(tools/docs-check)
+  docs:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - name: Build image
+        uses: docker/bake-action@v7
+        with:
+          source: .
+          files: compose.check.yaml
+          targets: docs
+          load: true
+          set: |
+            *.cache-from=type=gha,scope=docs
+            *.cache-to=type=gha,scope=docs,mode=max
+      - name: Check
+        run: docker compose -f compose.check.yaml run --rm docs
 
   # 배포 구성(deploy/compose.yaml) — 두 아키텍처 이미지 빌드, 기동 · healthcheck, 스모크(deploy/smoke.sh 는 로컬과 같은 정의).
   deploy:

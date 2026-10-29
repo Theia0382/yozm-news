@@ -23,6 +23,12 @@ services:
       dockerfile: frontend/Dockerfile
       target: check
 
+  docs:
+    image: yozmnews-check-docs
+    build:
+      context: .
+      dockerfile: tools/docs-check/Dockerfile
+
   docker:
     image: docker:29-dind
     privileged: true

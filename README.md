@@ -13,11 +13,12 @@ AI로 뉴스 기사를 수집·분류하고, 사용자마다 구독 주제와 �
 
 | 경로 | 내용 |
 |---|---|
-| [`docs/`](docs/README.md) | 설계 문서, 아키텍처 결정 기록(ADR), 테스트 전략, 조사 자료 |
+| [`docs/`](docs/README.md) | 설계 문서(모듈 Spec 포함), 아키텍처 결정 기록(ADR), 개발 인프라 · 운영 문서, 테스트 전략, 조사 자료 |
 | [`backend/`](backend/) | Spring Boot 애플리케이션 (Java 25, Gradle) |
 | [`frontend/`](frontend/) | React SPA (TypeScript, Vite, pnpm) |
 | [`api/`](api/) | 화면용 API 명세(OpenAPI) — 백엔드 코드에서 만들어 커밋하고, 프론트엔드가 여기서 타입을 생성한다 |
 | [`deploy/`](deploy/) | 배포 구성(Docker Compose — proxy · app · PostgreSQL)과 스모크 검사. 실행 방법은 [`docs/infrastructure.md`](docs/infrastructure.md) "배포 구성 실행" |
+| [`tools/`](tools/docs-check/) | 저장소 도구 — 공개 마크다운의 상대 링크 · 앵커 검사기(`tools/docs-check`) |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | 개발 환경, 이슈 · 브랜치 · 커밋 · PR 규약 |
 
 ## 개발

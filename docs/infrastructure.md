@@ -51,7 +51,7 @@
 | 환경 변수 | 필수 | 뜻 |
 |---|---|---|
 | `YOZMNEWS_COLLECTION_CONTACT` | 예 | 수집 요청의 `User-Agent` 에 밝히는 운영자 연락처 — 피드 운영자(언론사)가 요청 주체에 닿을 이메일 주소나 `http` · `https` URL. 없거나 형식이 틀리면 앱이 뜨지 않는다. 모든 피드 서버에 나가는 값이라 비밀 값을 넣지 않는다 |
-| `YOZMNEWS_COLLECTION_ALLOWED_NETWORKS` | 아니오 | 수집이 연결해도 되는 내부 대역(CIDR, 쉼표 구분 — 빈 항목은 건너뛴다). 같은 망에 둔 RSS 생성기 같은 피드를 받을 때만 연다. 비우면 내부 주소를 모두 막는다([security.md](security.md#피드-요청)). 형식이 틀리면 앱이 뜨지 않는다. 판정은 실제로 연결하는 주소로 하므로, 피드 URL 의 `localhost` 는 IPv6 루프백(`::1`)으로 풀려 `127.0.0.1/32` 밖이 될 수 있다 — 주소로 적거나 두 대역을 함께 연다 |
+| `YOZMNEWS_COLLECTION_ALLOWED_NETWORKS` | 아니오 | 수집이 연결해도 되는 내부 대역(CIDR, 쉼표 구분 — 빈 항목은 건너뛴다). 같은 망에 둔 RSS 생성기 같은 피드를 받을 때만 연다. 비우면 내부 주소를 모두 막는다([source Spec "피드 요청"](specs/source.md#피드-요청)). 형식이 틀리면 앱이 뜨지 않는다. 판정은 실제로 연결하는 주소로 하므로, 피드 URL 의 `localhost` 는 IPv6 루프백(`::1`)으로 풀려 `127.0.0.1/32` 밖이 될 수 있다 — 주소로 적거나 두 대역을 함께 연다 |
 | `YOZMNEWS_JOB_WORKERS` | 아니오 | 동시에 실행하는 백그라운드 작업(피드 수집 등) 수. 줄이 없으면 앱의 기본값(`application.yaml`)을 쓴다. 값을 비운 줄(`YOZMNEWS_JOB_WORKERS=`)은 빈 값이 그대로 전달되어 앱의 기본값이 아니라 작업 서버의 기본값(호스트 코어 수 기준)이 되므로, 쓰지 않을 때는 줄을 지우거나 주석으로 둔다. 작업 서버의 기본값은 동시 수집 수가 호스트마다 달라져서 앱이 값을 고정한다 |
 
 - 로컬 개발(Spring profile `local`)은 연락처로 프로젝트 이슈 주소를 쓴다(`application-local.yaml`).
@@ -120,7 +120,7 @@ Cloudflare는 권장 구성이지 필수가 아니다. 셀프 호스팅에서는
 
 ## CI/CD (초안)
 
-- GitHub Actions: PR 마다 백엔드 · 프론트엔드 검사와 배포 구성 검사(두 아키텍처 이미지 빌드 → 배포 구성 기동 → `deploy/smoke.sh`)를 돌린다. 이후 멀티 아키텍처 이미지를 GHCR 에 푸시한다.
+- GitHub Actions: PR 마다 백엔드 · 프론트엔드 검사, 문서 링크 검사와 배포 구성 검사(두 아키텍처 이미지 빌드 → 배포 구성 기동 → `deploy/smoke.sh`)를 돌린다. 이후 멀티 아키텍처 이미지를 GHCR 에 푸시한다.
 - 배포(이미지를 레지스트리에 게시한 뒤): 호스트에서 `docker compose -f deploy/compose.yaml pull && docker compose -f deploy/compose.yaml up -d`. 처음에는 수동으로 하고, 이후 SSH 배포 작업으로 자동화한다.
 - DB 마이그레이션은 앱 기동 시 Flyway가 실행한다. 되돌릴 수 없는 변경은 두 번의 배포로 나눈다(확장 → 축소).
 
