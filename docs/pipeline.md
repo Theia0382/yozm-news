@@ -17,7 +17,7 @@
 
 ### 수집 동작
 
-수집 일정 · 새 항목 · 요청과 결과의 규칙은 source Spec 의 [수집 일정](specs/source.md#수집-일정) · [새 항목](specs/source.md#새-항목) · [요청과 결과](specs/source.md#요청과-결과)에, 수집 작업은 [§5](specs/source.md#5-작업과-리스너)에 있다.
+수집 일정 · 새 항목 · 요청과 결과의 규칙은 source Spec 의 [수집 일정](specs/source.md#수집-일정) · [새 항목](specs/source.md#새-항목) · [요청과 결과](specs/source.md#요청과-결과)에, 수집 작업은 [들어오는 쪽](specs/source.md#들어오는-쪽)에 있다.
 
 ## 2. 정규화
 
