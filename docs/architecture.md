@@ -5,11 +5,6 @@
 ## 핵심 인터페이스
 
 ```java
-// article: 본문 추출. v1은 NoopContentExtractor. 소스별로 켤 수 있다.
-public interface ContentExtractor {
-    Optional<ExtractedContent> extract(ArticleRef article);
-}
-
 // evaluation: 공유 평가. 사용자 정보를 받지 않는다. Jev 를 부르는 유일한 포트다.
 public interface ArticleEvaluator {
     EvaluatorInfo info();                                        // 이름, 모델 버전
@@ -72,11 +67,4 @@ public interface LlmClientFactory {
 
 ## 모듈 이벤트
 
-`source` 가 발행하는 `ArticleFetched` 와 그 기사 값 `FetchedArticle` 은 [source Spec §3](specs/source.md#3-공개-인터페이스)에 있다.
-
-```java
-// article → evaluation · event. 새 기사를 저장했을 때 하나 발행한다.
-public record ArticleStored(ArticleId articleId) {}
-```
-
-- `ArticleId` 는 `articles.id`(1 이상의 `long`)다. `ArticleStored` 는 기사 하나에 많아야 한 번 나간다 — 같은 기사로 판정된 항목이나 같은 `ArticleFetched` 를 다시 처리한 경우에는 나가지 않는다. 기사 내용은 싣지 않고 기사 ID 만 싣는다. 같은 기사 판정은 [pipeline.md](pipeline.md) §3.
+코드가 있는 모듈의 이벤트는 그 모듈 Spec 의 공개 인터페이스 절(§3)에, 모듈 사이의 이벤트 흐름은 [overview.md §5](overview.md#5-모듈-지도)에 있다.

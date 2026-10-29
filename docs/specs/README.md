@@ -11,6 +11,7 @@ Spring Modulith 모듈(`net.yozmnews` 바로 아래 패키지) 하나가 Spec �
 
 | 모듈 | Spec | 책임 |
 |---|---|---|
+| `article` | [article.md](article.md) | 같은 기사 판정 · 중복 제거, 기사 저장, 피드별 기록, (미구현) 본문 추출 |
 | `source` | [source.md](source.md) | 소스 등록 · 켜기 · 끄기, 수집 일정, 피드 요청, RSS 정규화, 새 항목 발행 |
 
 ## 2. 공통 구조
