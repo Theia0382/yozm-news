@@ -1,6 +1,6 @@
 # ADR-0016: 검사는 컨테이너에서 돌리고, CI 와 로컬이 같은 Compose 정의를 쓴다
 
-- 상태: 승인
+- 상태: 승인. 검사 서비스 목록은 [ADR-0035](0035-public-markdown-links-and-anchors-checked-by-separate-check-service.md)가 대체
 - 날짜: 2026-10-25
 - 근거: [이슈 #1](https://github.com/Theia0382/yozm-news/issues/1) — 기점 `6cd2477` 의 저장소 사본에서 시제품으로 실측
 - 관련: [ADR-0004](0004-tech-stack.md)(빌드 · 테스트 도구), [ADR-0006](0006-deployment-compose-cloudflare.md)(배포 Compose)

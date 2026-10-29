@@ -120,7 +120,7 @@ Cloudflare는 권장 구성이지 필수가 아니다. 셀프 호스팅에서는
 
 ## CI/CD (초안)
 
-- GitHub Actions: PR 마다 백엔드 · 프론트엔드 검사와 배포 구성 검사(두 아키텍처 이미지 빌드 → 배포 구성 기동 → `deploy/smoke.sh`)를 돌린다. 이후 멀티 아키텍처 이미지를 GHCR 에 푸시한다.
+- GitHub Actions: PR 마다 백엔드 · 프론트엔드 검사, 문서 링크 검사와 배포 구성 검사(두 아키텍처 이미지 빌드 → 배포 구성 기동 → `deploy/smoke.sh`)를 돌린다. 이후 멀티 아키텍처 이미지를 GHCR 에 푸시한다.
 - 배포(이미지를 레지스트리에 게시한 뒤): 호스트에서 `docker compose -f deploy/compose.yaml pull && docker compose -f deploy/compose.yaml up -d`. 처음에는 수동으로 하고, 이후 SSH 배포 작업으로 자동화한다.
 - DB 마이그레이션은 앱 기동 시 Flyway가 실행한다. 되돌릴 수 없는 변경은 두 번의 배포로 나눈다(확장 → 축소).
 

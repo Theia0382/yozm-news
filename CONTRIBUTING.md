@@ -22,11 +22,13 @@ PR 을 올리기 전에 돌리는 검사다. CI 와 같은 정의(`compose.check
 ```sh
 docker compose -f compose.check.yaml up --build --force-recreate --attach backend --abort-on-container-exit --exit-code-from backend backend docker   # 백엔드: backend/gradlew -p backend build
 docker compose -f compose.check.yaml run --rm --build frontend   # 프론트엔드: 의존성 고정 설치 뒤 build · lint · format:check · test
+docker compose -f compose.check.yaml run --rm --build docs       # 문서: 공개 마크다운의 상대 링크 · 앵커
 ```
 
 - 종료 코드가 검사 결과다. 백엔드 로그에 `> Task :test` 가 `UP-TO-DATE` 없이 찍혀야 테스트가 실제로 돈 것이다
 - 백엔드 결과 보고서는 작업 트리에 생기지 않는다. 검사가 끝난 컨테이너에서 꺼낸다 — `docker compose -f compose.check.yaml cp backend:/workspace/backend/build/reports/tests/test <받을 디렉터리>`
 - 정리: `docker compose -f compose.check.yaml down -v` — 멈춘 컨테이너와 검사용 Docker 엔진의 데이터 볼륨을 지운다(다음 백엔드 검사가 PostgreSQL 이미지를 다시 받는다)
+- 문서 검사 이미지에는 문서와 문서가 가리키는 경로만 들어간다. 문서가 새 경로(예: 새 최상위 디렉터리)를 가리켜 "경로 없음"으로 실패하면 그 경로를 허용 목록 `tools/docs-check/Dockerfile.dockerignore` 에 더한다
 
 배포 구성 검사는 배포 구성(`deploy/compose.yaml`)을 띄워 스모크를 돌린다. CI 는 같은 정의로 이미지를 두 아키텍처(`linux/amd64` · `linux/arm64`)로도 빌드한다. 실행 절차 · 설정 값은 [infrastructure.md](docs/infrastructure.md) "배포 구성 실행".
 
@@ -37,7 +39,7 @@ bash deploy/smoke.sh                                          # 종료 코드가
 docker compose -f deploy/compose.yaml down -v                 # 정리 — 배포 구성의 DB 볼륨도 지운다
 ```
 
-- Dockerfile 은 측별 하나다(`backend/Dockerfile` · `frontend/Dockerfile`). 검사 이미지는 target `check`, 배포 이미지는 target `app` · `proxy` 다([ADR-0022](docs/adr/0022-image-targets-per-side-dockerfile-without-run-in-runtime-stage.md)). 배포 target 의 실행 단계에 명령(`RUN`)을 더하면 에뮬레이션 없는 빌더에서 다른 아키텍처의 빌드가 깨진다
+- Dockerfile 은 측별 하나다(`backend/Dockerfile` · `frontend/Dockerfile`). 검사 이미지는 target `check`, 배포 이미지는 target `app` · `proxy` 다([ADR-0022](docs/adr/0022-image-targets-per-side-dockerfile-without-run-in-runtime-stage.md)). 문서 검사 이미지는 검사 전용 `tools/docs-check/Dockerfile` 하나다. 배포 target 의 실행 단계에 명령(`RUN`)을 더하면 에뮬레이션 없는 빌더에서 다른 아키텍처의 빌드가 깨진다
 
 ### 호스트에서 직접 실행 (빠른 반복)
 
@@ -111,6 +113,7 @@ pnpm -C frontend generate:api                 # api/openapi.json 에서 API 타�
 - 큰 묶음은 상위 이슈 + 하위 이슈(sub-issue), 로드맵 단계는 Milestone
 - **담당자** — 작업을 시작할 때 자기를 담당자로 지정한다. 담당자가 있는 열린 이슈가 진행 중인 작업이고, 담당자가 없는 열린 이슈가 백로그다
 - 작업을 시작하기 전에 이슈가 있어야 한다. 버그는 원인과 범위를 파악한 뒤에 정확히 만든다
+- **새 모듈**은 그 모듈의 Spec([docs/specs/](docs/specs/README.md))을 만드는 설계 이슈를 먼저 진행하고, 구현 이슈는 그 Spec 을 토대로 한다
 
 ## 3. 브랜치
 
@@ -171,13 +174,15 @@ Issue: #12
 - **대상**은 `main`. 하나의 이슈에 PR 하나
 - **제목**은 커밋 메시지 제목과 같은 형식: `{유형}({영역}): {요지}`
 - **본문**은 [PR 템플릿](.github/pull_request_template.md)을 따른다 — 변경 요약, `Closes #{이슈 번호}`, 확인 사항. 리뷰어가 읽고 PR 에 남는 변경 기록이므로 저장소의 변경을 정리해 쓴다
-- **CI**: PR 과 `main` 에서 GitHub Actions(`.github/workflows/ci.yml`)가 §1 의 검사를 돌리고, 결과가 체크 `backend` · `frontend` · `deploy` 로 표시된다. **세 체크가 통과해야 merge 한다**
+- **CI**: PR 과 `main` 에서 GitHub Actions(`.github/workflows/ci.yml`)가 §1 의 검사를 돌리고, 결과가 체크 `backend` · `frontend` · `deploy` · `docs` 로 표시된다. **네 체크가 통과해야 merge 한다**
 - **merge** 는 리드가 한다. 방식은 **merge commit** 만 쓴다(squash · rebase merge 를 쓰지 않는다 — 작업 브랜치의 커밋을 그대로 남긴다). merge 커밋 메시지는 저장소 설정이 만든다 — 제목 `Merge pull request #{번호} from {소유자}/{작업 브랜치}`, 본문은 PR 제목. merge 커밋은 [§4](#4-커밋-메시지) 형식을 따르지 않는다
 - **리뷰**: 리드가 GitHub 에서 검토하고, 필요하면 로컬로 받아 확인한다(`gh pr checkout {번호}`)
 - **충돌 · 동기화**: 작업 브랜치에 `main` 을 merge 해서 해소하고 다시 push 한다. 이 merge 커밋의 메시지는 `Merge origin/main into {작업 브랜치}` 이고, 마지막 문단에 `Issue: #{이슈 번호}` 를 둔다. force push 하지 않는다
 
 ## 6. 문서
 
+- 문서는 종류 · 독자별 갈래로 나뉜다 — [docs/README.md §2 문서 목록](docs/README.md#2-문서-목록)
+- 모듈의 공개 인터페이스 · 이벤트 · 작업 · 규칙 · 불변식을 바꾸면 그 모듈의 Spec 을 함께 고친다. Spec 의 구조와 쓰는 규칙은 [docs/specs/README.md](docs/specs/README.md)
 - 변경이 어떤 문서 갱신을 요구하는지는 [docs/README.md §3 갱신 트리거](docs/README.md#3-갱신-트리거)가 정한다. 해당하는 문서 갱신은 그 PR 에 포함한다
 - 작성 규칙(현재 상태만 쓰기 · 절 번호 유지 · ADR 수정 범위 · 상대 링크)은 [docs/README.md §4](docs/README.md#4-작성-규칙)
 - ADR 은 [docs/adr/README.md](docs/adr/README.md)의 양식으로 쓰고, 번호는 모든 브랜치에서 가장 큰 번호 + 1 로 정한 뒤 바로 커밋한다
