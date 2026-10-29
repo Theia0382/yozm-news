@@ -182,7 +182,7 @@ Issue: #12
 ## 6. 문서
 
 - 문서는 종류 · 독자별 갈래로 나뉜다 — [docs/README.md §2 문서 목록](docs/README.md#2-문서-목록)
-- 모듈의 공개 인터페이스 · 이벤트 · 작업 · 규칙 · 불변식을 바꾸면 그 모듈의 Spec 을 함께 고친다. Spec 의 구조와 쓰는 규칙은 [docs/specs/README.md](docs/specs/README.md)
+- 모듈의 공개 인터페이스 · 이벤트 · 포트 · 내부 구조(Spec 에 있는 구성 요소) · 작업 · 규칙 · 불변식을 바꾸면 그 모듈의 Spec 을 함께 고친다. Spec 의 구조와 쓰는 규칙은 [docs/specs/README.md](docs/specs/README.md)
 - 변경이 어떤 문서 갱신을 요구하는지는 [docs/README.md §3 갱신 트리거](docs/README.md#3-갱신-트리거)가 정한다. 해당하는 문서 갱신은 그 PR 에 포함한다
 - 작성 규칙(현재 상태만 쓰기 · 절 번호 유지 · ADR 수정 범위 · 상대 링크)은 [docs/README.md §4](docs/README.md#4-작성-규칙)
 - ADR 은 [docs/adr/README.md](docs/adr/README.md)의 양식으로 쓰고, 번호는 모든 브랜치에서 가장 큰 번호 + 1 로 정한 뒤 바로 커밋한다
