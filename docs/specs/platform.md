@@ -39,7 +39,64 @@ HTTP 엔드포인트:
 
 요청 · 응답 형식의 정본은 [`api/openapi.json`](../../api/openapi.json)이다([ADR-0020](../adr/0020-screen-api-contract-from-committed-openapi-spec.md)).
 
-## 4. 규칙과 불변식
+## 4. 내부 구조
+
+### 개관
+
+| 패키지 | 책임 |
+|---|---|
+| `adapter/in/job` | 이벤트 발행 재처리 반복 작업 |
+| `adapter/in/web` | API 계약 확인 엔드포인트, 화면용 API 명세 설정 |
+| `application` | 재처리 유스케이스, 재처리 설정과 정책 결선 |
+| `domain` | 재처리 대상 판정과 그 설정 조건 |
+
+협력: `EventResubmissionJob` 이 `EventResubmissionService` 를 부르고, 서비스는 Spring Modulith 의 미완료 발행 전체를 읽어 `EventResubmissionPolicy` 의 판정대로 재제출한다. 정책은 `EventResubmissionConfiguration` 이 설정 값(`EventResubmissionProperties`)으로 만든다.
+
+#### 발행 상태와 재처리
+
+이벤트 발행의 상태와 그 전이는 Spring Modulith 가 갖는다. 이 모듈의 규칙이 정하는 전이에 식별자를 달았다.
+
+```mermaid
+stateDiagram-v2
+    [*] --> PUBLISHED: 발행 — 처리 시도 1 (platform-R1)
+    PUBLISHED --> PROCESSING: 리스너 처리 시작
+    PROCESSING --> COMPLETED: 처리 성공
+    PROCESSING --> FAILED: 리스너 실패
+    FAILED --> RESUBMITTED: 재제출 — 처리 시도 6 미만, 시도 +1 (platform-R1 · R4)
+    RESUBMITTED --> PROCESSING: 리스너 다시 처리
+    PUBLISHED --> FAILED: 멈춤 기준 30분 (platform-R2)
+    PROCESSING --> FAILED: 멈춤 기준 30분 (platform-R2)
+    RESUBMITTED --> FAILED: 멈춤 기준 30분 (platform-R2)
+    FAILED --> FAILED: 처리 시도 6 이상 — 다시 처리하지 않고 경고 로그 (platform-R1)
+    COMPLETED --> [*]: 바로 지운다 (platform-R5)
+```
+
+### 들어오는 쪽
+
+| 작업 · 리스너 | 구성 요소 | 계기 | 내용 |
+|---|---|---|---|
+| 이벤트 발행 재처리 — 반복 작업 ID `event-publication-resubmission` | `EventResubmissionJob` | 재제출 주기(§7, 기본 5분)마다 | 미완료 발행에서 다시 처리할 것을 재제출하고 상한에 이른 것을 알린다(platform-R1 · R4). 재시도하지 않는다 — 실패한 회차가 재시도를 기다리는 동안 작업 서버가 다음 회차를 건너뛰므로 다음 회차가 곧 재시도다 |
+| 재처리 설정 검사 | `EventResubmissionConfiguration` | 기동 | 재제출 주기와 멈춤 기준의 조건을 확인한다(platform-R3) |
+| API 계약 확인 | `PingController` | `GET /api/ping` | `{"message": "pong"}` 을 돌려준다(platform-R7). 응답 값 `PingResponse` |
+| 화면용 API 명세 | `OpenApiConfiguration` | 명세 생성 | 명세의 고정 값과 속성 규칙(platform-R6) |
+
+### `application`
+
+- `EventResubmissionService` — 미완료 발행 전체를 읽어 정책이 고른 것을 재제출하고, 상한에 이른 실패 발행의 ID 를 경고 로그 한 줄로 남긴다. 재제출은 리스너의 처리 끝을 기다리지 않는다. 같은 발행은 여러 인스턴스가 동시에 불러도 한 곳에서만 재제출된다 — Spring Modulith 의 조건부 상태 갱신(platform-R1 · platform-R4). 이 클래스는 트랜잭션을 열지 않는다 — 발행의 상태 갱신은 Spring Modulith 가 한다
+- `EventResubmissionConfiguration` — 설정 값으로 정책을 만든다. 설정 조합이 조건을 어기면 기동이 실패한다(platform-R3)
+- `EventResubmissionProperties` — 재처리 설정 키(`yozmnews.events` — §7)
+
+### `domain`
+
+- `EventResubmissionPolicy` — 재처리 대상 판정의 정본. 발행마다 다시 처리 · 상한 · 건너뜀을 정하고, 만들 때 재제출 주기와 멈춤 기준의 조건을 확인한다(platform-R1 · platform-R3). Spring Modulith 의 `EventPublication` 상태를 `default` 없는 망라 `switch` 로 분기한다 — `domain` 이 교체하지 않는 프레임워크의 타입을 쓰는 근거는 [ADR-0037](../adr/0037-domain-may-use-non-replaceable-framework-types.md)이다
+- 그 밖의 값: `EventResubmissionPolicy.Decision`
+- 저장 단위: 자기 테이블이 없다(§6)
+
+### 나가는 쪽
+
+해당 없음 — 포트가 없다. 이벤트 발행 레지스트리(Spring Modulith)와 반복 작업(JobRunr)은 프레임워크다.
+
+## 5. 규칙과 불변식
 
 ### 이벤트 발행 재처리
 
@@ -56,13 +113,6 @@ HTTP 엔드포인트:
 - **platform-R6** — 백엔드가 만드는 화면용 API 명세는 실행 환경과 무관하게 같다: `info` 는 제목 `요즘뉴스 화면용 API` · 버전 `0`(화면용 API 는 프론트엔드와 함께 바뀌어 버전을 매기지 않는다), `servers` 는 `/`(SPA 와 같은 오리진). 객체 스키마의 속성은 모두 필수로 내고(이름 순) — 응답은 null 인 속성도 키째 쓴다 — null 가능성은 JSpecify `@Nullable` 이 타입으로 남긴다. 명세는 `/api/**` 경로만 담고, 출력은 키 순 · 들여쓰기로 고정해 커밋된 명세와 바이트로 비교한다. 실행 중인 앱의 명세 엔드포인트는 기본으로 닫혀 있다. 명세가 정본이라는 규약과 프론트엔드 타입 생성은 [overview.md §6](../overview.md#6-횡단-규약) "화면용 API 계약"이 정한다
 - **platform-R7** — `GET /api/ping` 은 `{"message": "pong"}` 을 돌려준다. 화면에는 쓰지 않고 사용자 데이터를 담지 않는다
 
-## 5. 작업과 리스너
-
-| 작업 · 리스너 | 계기 | 내용 |
-|---|---|---|
-| 이벤트 발행 재처리 — 반복 작업 ID `event-publication-resubmission` | 재제출 주기(§7, 기본 5분)마다 | 미완료 발행에서 다시 처리할 것을 재제출하고 상한에 이른 것을 알린다(platform-R1 · R4). 재시도하지 않는다 — 실패한 회차가 재시도를 기다리는 동안 작업 서버가 다음 회차를 건너뛰므로 다음 회차가 곧 재시도다 |
-| 재처리 설정 검사 | 기동 | 재제출 주기와 멈춤 기준의 조건을 확인한다(platform-R3) |
-
 ## 6. 데이터
 
 해당 없음 — 이 모듈은 자기 테이블이 없다. 이벤트 발행 레지스트리와 작업 테이블은 프레임워크 테이블이라 [data-model.md](../data-model.md)에 있다.
@@ -72,18 +122,15 @@ HTTP 엔드포인트:
 | 설정 키 | 바꾸는 규칙 |
 |---|---|
 | `yozmnews.events.stale-after` | 멈춤 기준 시간(기본 30분 — platform-R2 · R3). Spring Modulith 의 멈춤 감시(`spring.modulith.events.staleness.*` 세 상태)가 같은 키를 읽는다. 필수 |
-| `yozmnews.events.resubmission-interval` | 재제출 주기(기본 5분 — platform-R3, §5). 반복 작업이 같은 키를 읽는다. 필수 |
+| `yozmnews.events.resubmission-interval` | 재제출 주기(기본 5분 — platform-R3, §4). 반복 작업이 같은 키를 읽는다. 필수 |
 | `spring.modulith.events.completion-mode` | `delete` — 완료된 발행을 바로 지운다(platform-R5) |
 | `springdoc.api-docs.enabled` · `springdoc.paths-to-match` · `springdoc.writer-with-*` · `springdoc.model-converters.java-nullable-property-customizer.enabled` | 명세 엔드포인트 기본 꺼짐 · `/api/**` 만 · 출력 고정 · `@Nullable` 속성을 null 허용 타입으로(platform-R6) |
 
-## 8. 외부 의존
-
-해당 없음 — 포트가 없다. 이벤트 발행 레지스트리(Spring Modulith)와 반복 작업(JobRunr)은 프레임워크다.
-
-## 9. 결정
+## 8. 결정
 
 | ADR | 한 줄 |
 |---|---|
 | [0013](../adr/0013-architecture-patterns.md) | 아키텍처 패턴: 모듈러 모놀리스 + 실용적 헥사고날 |
 | [0020](../adr/0020-screen-api-contract-from-committed-openapi-spec.md) | 화면용 API 계약은 커밋된 OpenAPI 명세가 정본이고, 프론트엔드 타입은 그 명세에서 생성한다 |
 | [0023](../adr/0023-jobrunr-oss-framework-schema-and-event-resubmission.md) | 백그라운드 작업은 JobRunr OSS 로 돌리고, 프레임워크 스키마는 라이브러리 원문을 Flyway 에 담으며, 실패한 이벤트는 반복 작업이 상한까지 다시 처리한다 |
+| [0037](../adr/0037-domain-may-use-non-replaceable-framework-types.md) | `domain` 은 교체하지 않는 프레임워크의 타입을 쓸 수 있고, 그 단위 테스트는 스프링 컨텍스트 없이 돈다 |

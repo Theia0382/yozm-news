@@ -35,24 +35,127 @@
 
 모듈 최상위 패키지 `net.yozmnews.article` 의 공개 타입은 아래 둘이다. 다른 모듈이 기사를 조회하는 공개 API 는 아직 없다.
 
+### ArticleId
+
+기사 식별자 — `articles.id` 다.
+
 ```java
 public record ArticleId(long value) {}
+```
 
+| 필드 | 뜻 | 제약 |
+|---|---|---|
+| `value` | `articles.id` | 1 이상 — 아니면 생성자가 `IllegalArgumentException` 을 던진다 |
+
+관련 규칙: 없음.
+
+### ArticleStored
+
+새 기사를 저장했다(article → evaluation · event).
+
+```java
 public record ArticleStored(ArticleId articleId) {}
 ```
 
-**`ArticleId`** — `articles.id` 다. 값은 1 이상이고, 아니면 생성자가 `IllegalArgumentException` 을 던진다.
+| 필드 | 뜻 | 제약 |
+|---|---|---|
+| `articleId` | 새로 저장한 기사. 기사 내용은 싣지 않고 기사 ID 만 싣는다 | null 이 아니다 |
 
-**`ArticleStored`** — 새 기사를 저장했다(article → evaluation · event).
+- 계약
+  - 새 기사를 저장한 트랜잭션 안에서 발행한다(article-R11) — 기사 행과 발행이 함께 커밋된다
+  - 기사 하나에 많아야 한 번 나간다. 같은 기사로 판정된 항목, 같은 `ArticleFetched` 를 다시 처리한 경우, 다른 소스가 같은 정규 URL 의 기사를 먼저 저장해 거기에 붙은 경우에는 나가지 않는다
+  - 소비 모듈이 생기기 전에 저장된 기사는 이 이벤트를 받지 못한다 — 리스너가 없는 발행은 남지 않는다
 
-- 새 기사를 저장한 트랜잭션 안에서 발행한다(article-R11) — 기사 행과 발행이 함께 커밋된다
-- 기사 하나에 많아야 한 번 나간다. 같은 기사로 판정된 항목, 같은 `ArticleFetched` 를 다시 처리한 경우, 다른 소스가 같은 정규 URL 의 기사를 먼저 저장해 거기에 붙은 경우에는 나가지 않는다
-- 기사 내용은 싣지 않고 기사 ID 만 싣는다. `articleId` 는 null 이 아니다
-- 소비 모듈이 생기기 전에 저장된 기사는 이 이벤트를 받지 못한다 — 리스너가 없는 발행은 남지 않는다
+관련 규칙: article-R9 · article-R10 · article-R11.
 
 HTTP 엔드포인트: 없음.
 
-## 4. 규칙과 불변식
+## 4. 내부 구조
+
+### 개관
+
+| 패키지 | 책임 |
+|---|---|
+| `application` | `source` 의 `ArticleFetched` 를 받는 리스너와, 항목 하나를 판정 · 저장 · 기록하는 유스케이스 |
+| `domain` | 같은 기사 판정의 키(정규 URL · 제목 비교 키 · 해시)와 판정 규칙, 기사 저장소 |
+| `adapter/out/persistence` | 기사 저장소의 JdbcClient 구현 |
+
+협력: `ArticleFetchedListener` 가 받은 이벤트를 `ArticleIntake` 에 넘긴다. `ArticleIntake` 는 `ArticleRepository` 로 소스를 잠그고 후보를 모아 `ArticleMatching` 의 판정에 따라 기사 · 엔트리를 기록하고, 새 기사면 `ArticleStored` 를 발행한다. 판정 키(`CanonicalUrl` · `TitleKey` · `KeyHash`)는 들어온 항목(`IncomingItem`)을 만들 때 계산한다.
+
+#### 항목 하나 처리
+
+```mermaid
+sequenceDiagram
+    participant Reg as 이벤트 발행 레지스트리
+    participant L as ArticleFetchedListener
+    participant I as ArticleIntake
+    participant M as ArticleMatching
+    participant Repo as ArticleRepository
+
+    Reg->>L: ArticleFetched — 비동기 · 새 트랜잭션
+    L->>I: 항목 하나
+    Note over I,Repo: 트랜잭션 — 판정 · 저장 · 기록
+    I->>Repo: 소스 단위 잠금 (article-R9)
+    I->>Repo: 판정 후보 모으기
+    I->>M: 판정 — URL · GUID · TITLE · NEW (article-R3 ~ R6)
+    alt 새 기사
+        I->>Repo: 기사 넣기 — 처음 값이 남는다 (article-R8)
+        alt 다른 소스가 같은 정규 URL 을 먼저 저장함
+            I->>Repo: 그 기사에 URL 로 붙음 (article-R9)
+        else 저장함
+            I->>Reg: ArticleStored 발행 (article-R11)
+        end
+    end
+    I->>Repo: 기사 · 피드 엔트리, 이미 있으면 그대로 (article-R7 · R10)
+```
+
+### 들어오는 쪽
+
+| 작업 · 리스너 | 구성 요소 | 계기 | 내용 |
+|---|---|---|---|
+| `ArticleFetched` 리스너 | `ArticleFetchedListener`(`application`) | `source` 의 `ArticleFetched` | 항목 하나를 판정해 저장 · 기록한다(article-R3 ~ R11). 비동기 · 새 트랜잭션이고 이벤트 발행 레지스트리에 기록된다(Spring Modulith `@ApplicationModuleListener`). 처리가 실패한 발행은 `platform` 의 이벤트 재처리 작업([platform Spec 들어오는 쪽](platform.md#들어오는-쪽))이 다시 처리하고, 다시 처리해도 결과가 같다(article-R10) |
+
+컨트롤러 · 반복 작업은 없다.
+
+### `application`
+
+- `ArticleIntake` — 들어온 항목 하나를 한 트랜잭션에서 판정 · 저장 · 기록한다. 같은 소스의 판정은 소스 단위 잠금으로 한 줄로 세우고, 다시 불러도 결과가 같다. 새 기사를 저장했을 때만 그 트랜잭션 안에서 `ArticleStored` 를 발행한다(article-R7 ~ R11)
+- `ArticleFetchedListener` — 리스너(들어오는 쪽)
+
+### `domain`
+
+- 저장 단위: aggregate 가 없다. 기사와 엔트리는 삽입 전용 저장소 `ArticleRepository` 가 쓴다 — 소스 잠금 · 후보 조회 · "없으면 넣기"(기사 · 엔트리)와 정규 URL 로 다시 찾기만 있고 갱신은 없다(article-R7 · article-R8 · article-R9)
+- `ArticleMatching` — 같은 기사 판정 규칙의 정본(article-R3 ~ article-R6)
+- `CanonicalUrl` — 정규 URL(article-R1)
+- `TitleKey` — 제목 비교 키(article-R2)
+- `KeyHash` — 길이 상한이 없는 키(정규 URL · 제목 비교 키 · guid)의 SHA-256 — 인덱스와 비교에 쓴다
+- 그 밖의 값: `IncomingItem` · `MatchCandidates` · `MatchDecision` · `MatchKind` · `TimeRange`
+
+### 나가는 쪽
+
+#### `ContentExtractor`
+
+**(미구현)** 본문 추출(article-R12)의 포트. 아직 코드가 없다. 설계 초안의 시그니처:
+
+```java
+public interface ContentExtractor {
+    Optional<ExtractedContent> extract(ArticleRef article);
+}
+```
+
+설계는 v1 구현을 아무것도 추출하지 않는 구현으로 두고, 소스별로 켤 수 있게 한다.
+
+그 밖의 외부 의존은 없다.
+
+#### 저장소 구현
+
+- `JdbcArticleRepository` — `ArticleRepository` 의 PostgreSQL 구현(JdbcClient). 쓰기는 `INSERT … ON CONFLICT` 뿐이고 갱신하지 않는다
+
+#### 신뢰할 수 없는 입력
+
+같은 기사 판정의 입력(`ArticleFetched`)은 `source` 가 정규화한 값이다 — 신뢰할 수 없는 피드 입력의 방어는 [source Spec](source.md#피드-xml-입력)에 있다.
+
+## 5. 규칙과 불변식
 
 ### 판정 키
 
@@ -83,16 +186,10 @@ HTTP 엔드포인트: 없음.
 
 ### 본문 추출
 
-- **article-R12** — **(미구현)** 본문 추출(`ContentExtractor` — §8)의 자리만 만들고 v1 은 추출하지 않는다. 켤 때의 원칙:
+- **article-R12** — **(미구현)** 본문 추출(`ContentExtractor` — §4)의 자리만 만들고 v1 은 추출하지 않는다. 켤 때의 원칙:
   - 소스별 허용 목록으로만 켠다. 대상은 이용조건과 robots.txt 의 AI 관련 조항을 확인한 소스로 한정한다
   - 추출한 본문은 다이제스트 생성 입력으로만 쓰고, 짧은 보존 기간 후 삭제한다
   - 화면이나 외부 API 로 본문을 노출하지 않는다
-
-## 5. 작업과 리스너
-
-| 작업 · 리스너 | 계기 | 내용 |
-|---|---|---|
-| `ArticleFetched` 리스너 | `source` 의 `ArticleFetched` | 항목 하나를 판정해 저장 · 기록한다(article-R3 ~ R11). 비동기 · 새 트랜잭션이고 이벤트 발행 레지스트리에 기록된다(Spring Modulith `@ApplicationModuleListener`). 처리가 실패한 발행은 `platform` 의 이벤트 재처리 작업([platform Spec §5](platform.md#5-작업과-리스너))이 다시 처리하고, 다시 처리해도 결과가 같다(article-R10) |
 
 ## 6. 데이터
 
@@ -109,21 +206,7 @@ HTTP 엔드포인트: 없음.
 
 해당 없음.
 
-## 8. 외부 의존
-
-**(미구현)** **포트 `ContentExtractor`** — 본문 추출(article-R12). 아직 코드가 없다. 설계 초안의 시그니처:
-
-```java
-public interface ContentExtractor {
-    Optional<ExtractedContent> extract(ArticleRef article);
-}
-```
-
-설계는 v1 구현을 아무것도 추출하지 않는 구현으로 두고, 소스별로 켤 수 있게 한다.
-
-그 밖의 외부 의존은 없다. 같은 기사 판정의 입력(`ArticleFetched`)은 `source` 가 정규화한 값이다 — 신뢰할 수 없는 피드 입력의 방어는 [source Spec](source.md#피드-xml-입력)에 있다.
-
-## 9. 결정
+## 8. 결정
 
 | ADR | 한 줄 |
 |---|---|
