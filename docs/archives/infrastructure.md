@@ -8,19 +8,19 @@
 
 ## Compose 구성
 
-배포 구성은 `deploy/compose.yaml` 이다. 저장소 루트의 개발용 `compose.yaml`(Compose 프로필 `dev`)과 따로 두고, 운영 값은 `deploy/.env` 에서 받는다 ([ADR-0021](adr/0021-separate-deploy-compose-with-single-app-service.md)). 지금 배포 구성에 있는 서비스는 `proxy` · `app` · `postgres` 이고, `cloudflared` · `backup` 은 그 기능을 만들 때 더한다.
+배포 구성은 `deploy/compose.yaml` 이다. 저장소 루트의 개발용 `compose.yaml`(Compose 프로필 `dev`)과 따로 두고, 운영 값은 `deploy/.env` 에서 받는다 ([ADR-0021](../adr/0021-separate-deploy-compose-with-single-app-service.md)). 지금 배포 구성에 있는 서비스는 `proxy` · `app` · `postgres` 이고, `cloudflared` · `backup` 은 그 기능을 만들 때 더한다.
 
 | 서비스 | 이미지 | 역할 |
 |---|---|---|
 | `proxy` | `yozmnews-proxy` — Caddy 에 SPA 빌드 결과를 담은 자체 이미지(`frontend/Dockerfile` target `proxy`) | SPA 정적 파일 제공. `/api/**`·`/oauth2/**`·`/login/**` 만 `app` 으로 넘기고, 그 밖의 경로(`/actuator/**` 포함)는 SPA 가 답한다. 넘기는 경로의 정본은 `frontend/proxy/backend-paths.caddy` 이고, Vite 개발 서버도 같은 파일을 읽는다 |
 | `app` | `yozmnews-app` (`backend/Dockerfile` target `app`) | REST API, 인증, 백그라운드 작업(JobRunr 작업 서버). 역할 profile 이 생기면 기본 구성은 두 역할(`web`·`worker`)을 함께 켠 프로세스 하나다 |
-| `postgres` | PostgreSQL 17+ — 이미지는 개발용 `compose.yaml` 의 `postgres` 를 물려받는다. 사건 묶기를 구현할 때 pgvector 확장이 든 이미지(지금과 OS 계열을 맞춘 태그)로 바뀐다 | 관리형 DB를 쓰는 환경에서는 빼고 접속 정보만 바꾼다. 사건 묶기가 생기면 외부 DB 에도 pgvector 0.8 이상이 필요하다. 확장 설치에 superuser 권한이 필요하므로, 앱 계정에 그 권한이 없으면 DBA 가 먼저 설치한다 ([ADR-0027](adr/0027-pgvector-for-vector-storage.md)) |
+| `postgres` | PostgreSQL 17+ — 이미지는 개발용 `compose.yaml` 의 `postgres` 를 물려받는다. 사건 묶기를 구현할 때 pgvector 확장이 든 이미지(지금과 OS 계열을 맞춘 태그)로 바뀐다 | 관리형 DB를 쓰는 환경에서는 빼고 접속 정보만 바꾼다. 사건 묶기가 생기면 외부 DB 에도 pgvector 0.8 이상이 필요하다. 확장 설치에 superuser 권한이 필요하므로, 앱 계정에 그 권한이 없으면 DBA 가 먼저 설치한다 ([ADR-0027](../adr/0027-pgvector-for-vector-storage.md)) |
 | `cloudflared` | cloudflare/cloudflared (아직 없음) | Tunnel. `proxy`로만 연결한다 |
 | `backup` | pg_dump + S3 호환 업로드 (아직 없음) | 매일 덤프를 R2(또는 다른 S3 호환 저장소)에 올린다 |
 
 - 역할을 나눠 띄우는 구성은 `app` 대신 같은 이미지의 `web`·`worker` 두 서비스로 둔다.
-- 이미지는 `linux/amd64`·`linux/arm64` 로 빌드한다. 빌드 단계는 빌더 플랫폼에서 돌고 실행 단계에는 명령이 없어, 에뮬레이션 없이 두 아키텍처를 만든다. `proxy` · `app` 컨테이너는 root 가 아닌 uid 65534 로 돈다 ([ADR-0022](adr/0022-image-targets-per-side-dockerfile-without-run-in-runtime-stage.md)).
-- 로컬 개발은 Compose `dev` 프로필(`postgres`, `mock-oauth2-server`, 메일 도입 후 `mailpit`)만 띄우고, 백엔드는 Gradle `bootRun`(IDE는 이 태스크로 위임)으로 Spring profile `local`로, 프론트엔드는 Vite 개발 서버(프록시 설정)로 실행한다. 외부 계정이나 비밀 값 없이 전체 흐름이 돈다 ([ADR-0012](adr/0012-swappable-external-dependencies.md)). 개발용 Compose는 checkout마다 따로 뜨고, 테스트도 그 PostgreSQL 이미지를 쓴다 ([ADR-0019](adr/0019-dev-compose-per-checkout-and-test-image-source.md)).
+- 이미지는 `linux/amd64`·`linux/arm64` 로 빌드한다. 빌드 단계는 빌더 플랫폼에서 돌고 실행 단계에는 명령이 없어, 에뮬레이션 없이 두 아키텍처를 만든다. `proxy` · `app` 컨테이너는 root 가 아닌 uid 65534 로 돈다 ([ADR-0022](../adr/0022-image-targets-per-side-dockerfile-without-run-in-runtime-stage.md)).
+- 로컬 개발은 Compose `dev` 프로필(`postgres`, `mock-oauth2-server`, 메일 도입 후 `mailpit`)만 띄우고, 백엔드는 Gradle `bootRun`(IDE는 이 태스크로 위임)으로 Spring profile `local`로, 프론트엔드는 Vite 개발 서버(프록시 설정)로 실행한다. 외부 계정이나 비밀 값 없이 전체 흐름이 돈다 ([ADR-0012](../adr/0012-swappable-external-dependencies.md)). 개발용 Compose는 checkout마다 따로 뜨고, 테스트도 그 PostgreSQL 이미지를 쓴다 ([ADR-0019](../adr/0019-dev-compose-per-checkout-and-test-image-source.md)).
 
 ## 배포 구성 실행
 
@@ -46,12 +46,12 @@
 
 ## 수집 설정
 
-피드 수집 요청과 수집 작업의 설정이다([ADR-0031](adr/0031-feed-request-blocks-internal-addresses-with-apache-httpclient-deadline.md)). 배포 구성은 `deploy/.env` 에서 받는다.
+피드 수집 요청과 수집 작업의 설정이다([ADR-0031](../adr/0031-feed-request-blocks-internal-addresses-with-apache-httpclient-deadline.md)). 배포 구성은 `deploy/.env` 에서 받는다.
 
 | 환경 변수 | 필수 | 뜻 |
 |---|---|---|
 | `YOZMNEWS_COLLECTION_CONTACT` | 예 | 수집 요청의 `User-Agent` 에 밝히는 운영자 연락처 — 피드 운영자(언론사)가 요청 주체에 닿을 이메일 주소나 `http` · `https` URL. 없거나 형식이 틀리면 앱이 뜨지 않는다. 모든 피드 서버에 나가는 값이라 비밀 값을 넣지 않는다 |
-| `YOZMNEWS_COLLECTION_ALLOWED_NETWORKS` | 아니오 | 수집이 연결해도 되는 내부 대역(CIDR, 쉼표 구분 — 빈 항목은 건너뛴다). 같은 망에 둔 RSS 생성기 같은 피드를 받을 때만 연다. 비우면 내부 주소를 모두 막는다([source Spec "피드 요청"](specs/source.md#피드-요청)). 형식이 틀리면 앱이 뜨지 않는다. 판정은 실제로 연결하는 주소로 하므로, 피드 URL 의 `localhost` 는 IPv6 루프백(`::1`)으로 풀려 `127.0.0.1/32` 밖이 될 수 있다 — 주소로 적거나 두 대역을 함께 연다 |
+| `YOZMNEWS_COLLECTION_ALLOWED_NETWORKS` | 아니오 | 수집이 연결해도 되는 내부 대역(CIDR, 쉼표 구분 — 빈 항목은 건너뛴다). 같은 망에 둔 RSS 생성기 같은 피드를 받을 때만 연다. 비우면 내부 주소를 모두 막는다([source Spec "피드 요청"](../specs/source.md#피드-요청)). 형식이 틀리면 앱이 뜨지 않는다. 판정은 실제로 연결하는 주소로 하므로, 피드 URL 의 `localhost` 는 IPv6 루프백(`::1`)으로 풀려 `127.0.0.1/32` 밖이 될 수 있다 — 주소로 적거나 두 대역을 함께 연다 |
 | `YOZMNEWS_JOB_WORKERS` | 아니오 | 동시에 실행하는 백그라운드 작업(피드 수집 등) 수. 줄이 없으면 앱의 기본값(`application.yaml`)을 쓴다. 값을 비운 줄(`YOZMNEWS_JOB_WORKERS=`)은 빈 값이 그대로 전달되어 앱의 기본값이 아니라 작업 서버의 기본값(호스트 코어 수 기준)이 되므로, 쓰지 않을 때는 줄을 지우거나 주석으로 둔다. 작업 서버의 기본값은 동시 수집 수가 호스트마다 달라져서 앱이 값을 고정한다 |
 
 - 로컬 개발(Spring profile `local`)은 연락처로 프로젝트 이슈 주소를 쓴다(`application-local.yaml`).
@@ -59,7 +59,7 @@
 
 ## Cloudflare
 
-Cloudflare는 권장 구성이지 필수가 아니다. 셀프 호스팅에서는 Tunnel 대신 일반 리버스 프록시를, R2 대신 다른 S3 호환 저장소를, Turnstile 대신 다른 봇 차단 수단을 쓰거나 끌 수 있다 ([ADR-0012](adr/0012-swappable-external-dependencies.md)).
+Cloudflare는 권장 구성이지 필수가 아니다. 셀프 호스팅에서는 Tunnel 대신 일반 리버스 프록시를, R2 대신 다른 S3 호환 저장소를, Turnstile 대신 다른 봇 차단 수단을 쓰거나 끌 수 있다 ([ADR-0012](../adr/0012-swappable-external-dependencies.md)).
 
 도메인은 `yozmnews.net`이다. Cloudflare Registrar로 등록하므로 DNS도 Cloudflare에서 관리한다.
 
@@ -73,13 +73,13 @@ Cloudflare는 권장 구성이지 필수가 아니다. 셀프 호스팅에서는
 | AI Gateway (선택) | Jev 호출 경유. 호출 로그, 비용 집계, 재시도, 한도 설정. 보도에 따르면 `typesafe/jev`로 지원한다 |
 
 - **사용자 BYOK LLM 호출은 AI Gateway를 거치지 않고** 공급자에 직접 보낸다. 사용자 키와 프롬프트가 제3자 로그에 남지 않게 하기 위해서다.
-- **Turnstile**은 자체 가입·로그인·복구 코드 사용 화면에 붙인다 ([ADR-0009](adr/0009-authentication-google-and-local.md), [ADR-0011](adr/0011-no-email-in-v1.md)).
+- **Turnstile**은 자체 가입·로그인·복구 코드 사용 화면에 붙인다 ([ADR-0009](../adr/0009-authentication-google-and-local.md), [ADR-0011](../adr/0011-no-email-in-v1.md)).
 
 ## 메일 발송 (v1 제외)
 
-- v1에는 메일 발송이 없다 ([ADR-0011](adr/0011-no-email-in-v1.md)). 아래는 나중에 도입할 때의 방침이다.
-- 발송은 표준 **SMTP**로 한다. SMTP 접속 정보만 바꾸면 상용 서비스(SES, Resend 등)와 자체 메일 서버(Postfix 등)를 오갈 수 있다. 설정이 없으면 메일 기능이 꺼진다 ([ADR-0012](adr/0012-swappable-external-dependencies.md)).
-- 후보: Resend, Amazon SES, Postmark 등. 선택은 [open-questions.md](open-questions.md)에서 한다.
+- v1에는 메일 발송이 없다 ([ADR-0011](../adr/0011-no-email-in-v1.md)). 아래는 나중에 도입할 때의 방침이다.
+- 발송은 표준 **SMTP**로 한다. SMTP 접속 정보만 바꾸면 상용 서비스(SES, Resend 등)와 자체 메일 서버(Postfix 등)를 오갈 수 있다. 설정이 없으면 메일 기능이 꺼진다 ([ADR-0012](../adr/0012-swappable-external-dependencies.md)).
+- 후보: Resend, Amazon SES, Postmark 등. 선택은 [open-questions.md](../open-questions.md)에서 한다.
 - 발송 도메인에 SPF, DKIM, DMARC를 설정한다. Cloudflare DNS에서 관리한다.
 - 자체 메일 서버를 쓸 때는 전달률(스팸 분류)을 위해 SPF·DKIM·DMARC와 역방향 DNS 설정이 필요하다. 상용 SMTP 릴레이를 쓰는 것도 운영자의 선택지다.
 
@@ -99,18 +99,18 @@ Cloudflare는 권장 구성이지 필수가 아니다. 셀프 호스팅에서는
 | 값 | 보관 |
 |---|---|
 | DB 비밀번호, Google OAuth client secret, Jev API 키, Turnstile secret, Tunnel 토큰 | 호스트의 환경 파일 또는 Docker secrets. 저장소에 커밋하지 않는다 |
-| BYOK 키 암호화용 KEK | 위와 같되 **별도 파일**로 분리하고 DB 백업에는 포함하지 않는다. 버전을 붙여 교체할 수 있게 한다 ([security.md](security.md)) |
+| BYOK 키 암호화용 KEK | 위와 같되 **별도 파일**로 분리하고 DB 백업에는 포함하지 않는다. 버전을 붙여 교체할 수 있게 한다 ([security.md](../security.md)) |
 
-앱은 DB 접속 정보를 Spring 표준 환경 변수 `SPRING_DATASOURCE_URL` · `SPRING_DATASOURCE_USERNAME` · `SPRING_DATASOURCE_PASSWORD` 로 받는다. `SPRING_DATASOURCE_URL` 이 없으면 기동하지 않는다([ADR-0017](adr/0017-standard-datasource-env-vars.md)). 로컬 개발(Spring profile `local`)은 이 값 대신 개발용 Compose 의 PostgreSQL 컨테이너에서 접속 정보를 읽는다 — 이 연동이 켜져 있는 동안 위 환경 변수는 쓰이지 않는다([ADR-0018](adr/0018-local-profile-compose-connection.md)).
+앱은 DB 접속 정보를 Spring 표준 환경 변수 `SPRING_DATASOURCE_URL` · `SPRING_DATASOURCE_USERNAME` · `SPRING_DATASOURCE_PASSWORD` 로 받는다. `SPRING_DATASOURCE_URL` 이 없으면 기동하지 않는다([ADR-0017](../adr/0017-standard-datasource-env-vars.md)). 로컬 개발(Spring profile `local`)은 이 값 대신 개발용 Compose 의 PostgreSQL 컨테이너에서 접속 정보를 읽는다 — 이 연동이 켜져 있는 동안 위 환경 변수는 쓰이지 않는다([ADR-0018](../adr/0018-local-profile-compose-connection.md)).
 
 ## 관측
 
 - **로그**: JSON 구조화 로그. 요청 ID와 사용자 ID를 포함하고, 비밀 값은 마스킹한다.
 - **지표**: Spring Boot Actuator와 Micrometer. 핵심 지표는 피드별 수집 성공률, 평가 대기열 길이, Jev 지연·토큰, 사건 배정 수 · 애매한 구간 판정 비율 · 열린 사건 수, 다이제스트 · 변화 리포트 생성 성공률·소요 시간, 공급자별 오류율.
-- **대시보드**: v1은 운영자 화면으로 충분하다. JobRunr 대시보드는 Spring Security · `proxy` 밖의 별도 포트로 뜨므로 기본으로 꺼 두고, 운영자 접근 통제가 생긴 뒤에 연다([ADR-0023](adr/0023-jobrunr-oss-framework-schema-and-event-resubmission.md)). 필요해지면 Grafana Cloud 무료 티어 등으로 지표를 내보낸다.
+- **대시보드**: v1은 운영자 화면으로 충분하다. JobRunr 대시보드는 Spring Security · `proxy` 밖의 별도 포트로 뜨므로 기본으로 꺼 두고, 운영자 접근 통제가 생긴 뒤에 연다([ADR-0023](../adr/0023-jobrunr-oss-framework-schema-and-event-resubmission.md)). 필요해지면 Grafana Cloud 무료 티어 등으로 지표를 내보낸다.
 - **오류 추적**: Sentry 같은 외부 서비스는 선택. 붙인다면 요청 본문과 헤더 전송을 끈다.
 - **헬스 체크**: Actuator 는 HTTP 로 `health` 엔드포인트만 노출한다(탐색 페이지 `/actuator` 와 probe 그룹 `/actuator/health/liveness` · `/actuator/health/readiness` 포함). `/actuator/health` 응답에는 집계 상태와 probe 그룹 이름만 담고, 구성요소와 상세는 넣지 않는다. 집계에는 DB 와 JobRunr 작업 서버가 들어 있어, DB 장애 때나 작업 서버를 켠 프로세스에서 작업 서버가 멈췄을 때 상태가 `DOWN` 이 되고 HTTP 503 으로 응답한다.
-- **API 명세**: 화면용 API 의 OpenAPI 명세 엔드포인트(`/v3/api-docs`)는 기본으로 꺼져 있고 Spring profile `local` 에서만 켜진다. 다른 환경에서 열려면 `springdoc.api-docs.enabled`(환경 변수 `SPRINGDOC_API_DOCS_ENABLED`)를 켠다. 명세는 `/api/**` 만 담고, Swagger UI 는 없다([ADR-0020](adr/0020-screen-api-contract-from-committed-openapi-spec.md)).
+- **API 명세**: 화면용 API 의 OpenAPI 명세 엔드포인트(`/v3/api-docs`)는 기본으로 꺼져 있고 Spring profile `local` 에서만 켜진다. 다른 환경에서 열려면 `springdoc.api-docs.enabled`(환경 변수 `SPRINGDOC_API_DOCS_ENABLED`)를 켠다. 명세는 `/api/**` 만 담고, Swagger UI 는 없다([ADR-0020](../adr/0020-screen-api-contract-from-committed-openapi-spec.md)).
 
 ## 백업과 복구
 
@@ -126,5 +126,5 @@ Cloudflare는 권장 구성이지 필수가 아니다. 셀프 호스팅에서는
 
 ## 데이터 보존 설정
 
-- 보존 기간의 정본은 [data-model.md](data-model.md) 보존 정책이고, 정리는 보존 정리 작업(`Retention` — [architecture.md](architecture.md))이 한다.
-- RSS 요약문은 기본으로 지우지 않는다. 운영자는 보존 일수를 정해 자동 삭제를 켤 수 있다(기본 꺼짐). 설정 이름은 보존 정리 기능을 만들 때 정한다 ([ADR-0029](adr/0029-indefinite-summary-retention-with-optional-deletion.md)).
+- 보존 기간의 정본은 [data-model.md](../data-model.md) 보존 정책이고, 정리는 보존 정리 작업(`Retention` — [architecture.md](../architecture.md))이 한다.
+- RSS 요약문은 기본으로 지우지 않는다. 운영자는 보존 일수를 정해 자동 삭제를 켤 수 있다(기본 꺼짐). 설정 이름은 보존 정리 기능을 만들 때 정한다 ([ADR-0029](../adr/0029-indefinite-summary-retention-with-optional-deletion.md)).

@@ -8,6 +8,7 @@
 |---|---|---|---|
 | 1 | 초기 태그 체계 세부 문구(태그 설명, 중요도 기준) | 구조는 확정([ADR-0010](adr/0010-tag-taxonomy.md)). 초안 어휘로 파일럿 후 문구 확정 | M2 |
 | 19 | 첫 프리셋 대상 언론사와 활성화 관문 기준값(날짜 해석률 등) | 구조는 확정([ADR-0015](adr/0015-source-presets-and-collection-profiles.md)). [조사 자료](research/2026-10-rss-survey.md)의 12곳 중 이용조건을 확인한 곳부터, 기준값은 프리셋 테스트 데이터로 정한다 | M1 |
+| 30 | 운영 호스팅 선택 — 공식 인스턴스를 띄울 곳 | 서울 리전 VPS 한 대에 배포 구성 전체 + Tunnel([ADR-0006](adr/0006-deployment-compose-cloudflare.md)). 후보: Oracle Cloud 무료 ARM(춘천 · 서울) · Vultr 서울 · AWS Lightsail 서울. 관리형 컨테이너 + 관리형 PostgreSQL 은 #29 를 확인한 뒤. 집 · 사무실 서버(셀프 호스팅)는 비용이 가장 작지만 가용성이 전원 · 회선에 달린다 | M8 |
 
 ## 운영하면서 결정
 
@@ -25,6 +26,7 @@
 | 22 | 사건 배정 입력(기사 벡터)의 보관 기간 | 후보 시간 창에 여유를 더한 값. M3 에서 정한다 |
 | 23 | 진행 중인 이슈(`storyline`) 구획의 상한, 이슈 휴면 기준 일수 | M5 토큰 · 연결 측정으로 정한다 |
 | 24 | 관심도 감쇠 · 가중치, 구독 제안 기준 | 중립에서 시작해 M6 측정으로 정한다 |
+| 31 | 메일 발송 서비스 선택(메일을 도입할 때) | SMTP 로 붙인다([ADR-0012](adr/0012-swappable-external-dependencies.md)). 후보 Resend · Amazon SES · Postmark. 발송 도메인에 SPF · DKIM · DMARC 를 설정한다. 자체 메일 서버는 전달률을 위해 역방향 DNS 도 필요하다 |
 
 ## 확인이 필요한 외부 사실
 
@@ -49,7 +51,7 @@
 | 18 | 아키텍처 패턴, 기본 패키지 `net.yozmnews`, 컨트롤러는 각 모듈 안 | [ADR-0013](adr/0013-architecture-patterns.md) |
 | 5 | 프론트엔드 세부: React Router, TanStack Query, Tailwind + shadcn/ui | [ADR-0005](adr/0005-frontend-react-spa.md) |
 | 17 | 메일 발송: v1에서 하지 않음 | [ADR-0011](adr/0011-no-email-in-v1.md) |
-| 6 | 서비스 이름: 요즘뉴스(Yozm News), 도메인 `yozmnews.net` (Cloudflare Registrar). 비상업 개인 프로젝트 성격이라 상표 리스크는 감수 | [infrastructure.md](infrastructure.md) |
+| 6 | 서비스 이름: 요즘뉴스(Yozm News), 도메인 `yozmnews.net` (Cloudflare Registrar). 비상업 개인 프로젝트 성격이라 상표 리스크는 감수 | [operations/deployment.md](operations/deployment.md#공개-경로와-외부-서비스) |
 
 ## 결정됨 (2026-10-27)
 

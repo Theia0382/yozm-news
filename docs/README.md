@@ -26,7 +26,6 @@
 | [pipeline.md](pipeline.md) | 단계마다 그 단계를 가진 모듈의 Spec. 상단의 단계 흐름 그림은 이 문서를 `archives/` 로 보낼 때 `overview.md` 로 옮긴다 |
 | [data-model.md](data-model.md) | 모듈 테이블 → 그 모듈 Spec 의 데이터 절. 모듈 사이 관계(ER 개요) · 보존 정책 · 프레임워크 테이블은 이 문서에 남는다 — 전환이 끝나면 데이터 개요 문서로 남는다 |
 | [security.md](security.md) | 한 모듈이 구현하는 규칙 → 그 모듈의 Spec. 횡단 정책(인가 · 데이터 격리 · 개인정보 · 저작권 · 악용 방지)은 이 문서에 남는다 — 전환이 끝나면 횡단 보안 문서로 남는다 |
-| [infrastructure.md](infrastructure.md) | `development/`(개발 · 검사 · CI) · `operations/`(운영)로 나눈다 |
 
 [roadmap.md](roadmap.md) · [open-questions.md](open-questions.md) 는 계획 문서라 전환 대상이 아니다.
 
@@ -47,7 +46,6 @@
 | | [development/](development/README.md) | 개발 인프라 — 개발 · 검사 환경, CI, 이미지 구성 |
 | | [qa/test-strategy.md](qa/test-strategy.md) | 테스트 전략 |
 | 운영 | [operations/](operations/README.md) | 셀프 호스팅 운영 |
-| | [infrastructure.md](infrastructure.md) | 배포 토폴로지, 호스팅, 운영, CI (전환 중) |
 | 계획 | [roadmap.md](roadmap.md) | 마일스톤 |
 | | [open-questions.md](open-questions.md) | 미결 사항과 권장안 |
 | 자료 | [research/](research/) | 사전 조사 자료 |
