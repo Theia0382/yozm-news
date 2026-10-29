@@ -35,6 +35,8 @@
 
 모듈 최상위 패키지 `net.yozmnews.article` 의 공개 타입은 아래 둘이다. 다른 모듈이 기사를 조회하는 공개 API 는 아직 없다.
 
+HTTP 엔드포인트: 없음.
+
 ### ArticleId
 
 기사 식별자 — `articles.id` 다.
@@ -67,8 +69,6 @@ public record ArticleStored(ArticleId articleId) {}
   - 소비 모듈이 생기기 전에 저장된 기사는 이 이벤트를 받지 못한다 — 리스너가 없는 발행은 남지 않는다
 
 관련 규칙: article-R9 · article-R10 · article-R11.
-
-HTTP 엔드포인트: 없음.
 
 ## 4. 내부 구조
 
@@ -111,7 +111,7 @@ sequenceDiagram
 
 ### 들어오는 쪽
 
-| 작업 · 리스너 | 구성 요소 | 계기 | 내용 |
+| 진입점 | 구성 요소 | 계기 | 내용 |
 |---|---|---|---|
 | `ArticleFetched` 리스너 | `ArticleFetchedListener`(`application`) | `source` 의 `ArticleFetched` | 항목 하나를 판정해 저장 · 기록한다(article-R3 ~ R11). 비동기 · 새 트랜잭션이고 이벤트 발행 레지스트리에 기록된다(Spring Modulith `@ApplicationModuleListener`). 처리가 실패한 발행은 `platform` 의 이벤트 재처리 작업([platform Spec 들어오는 쪽](platform.md#들어오는-쪽))이 다시 처리하고, 다시 처리해도 결과가 같다(article-R10) |
 
@@ -133,6 +133,8 @@ sequenceDiagram
 
 ### 나가는 쪽
 
+외부 의존은 본문 추출의 포트 `ContentExtractor` 하나이고, 아직 구현되지 않았다. 그 밖의 외부 의존은 없다.
+
 #### `ContentExtractor`
 
 **(미구현)** 본문 추출(article-R12)의 포트. 아직 코드가 없다. 설계 초안의 시그니처:
@@ -144,8 +146,6 @@ public interface ContentExtractor {
 ```
 
 설계는 v1 구현을 아무것도 추출하지 않는 구현으로 두고, 소스별로 켤 수 있게 한다.
-
-그 밖의 외부 의존은 없다.
 
 #### 저장소 구현
 

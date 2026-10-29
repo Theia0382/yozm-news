@@ -45,6 +45,8 @@
 
 모듈 최상위 패키지 `net.yozmnews.source` 의 공개 타입은 아래 넷이다. 소스 등록 · 켜기 · 끄기 · 수집 주기 변경의 유스케이스는 모듈 안에서만 보이고(`application` 패키지의 패키지 전용 클래스), 다른 모듈에 공개한 API 는 없다.
 
+HTTP 엔드포인트: 없음.
+
 ### SourceId
 
 소스 식별자 — `sources.id` 다.
@@ -127,8 +129,6 @@ public record FetchedArticle(String title, URI link, @Nullable String guid, @Nul
 
 관련 규칙: source-R40 · source-R41.
 
-HTTP 엔드포인트: 없음.
-
 ## 4. 내부 구조
 
 ### 개관
@@ -204,7 +204,7 @@ sequenceDiagram
 
 ### 들어오는 쪽
 
-| 작업 · 리스너 | 구성 요소 | 계기 | 내용 |
+| 진입점 | 구성 요소 | 계기 | 내용 |
 |---|---|---|---|
 | 수집할 피드 등록 — 반복 작업 ID `poll-due-feeds` | `PollDueFeedsJob` | 1분마다 | 대상 피드를 점유하고 점유 토큰을 작업 ID 로 피드마다 수집 작업을 예약 시각에 등록한다(source-R15 · source-R18 · source-R19). 재시도하지 않는다 — 실패한 회차가 재시도를 기다리는 동안 작업 서버가 다음 회차를 건너뛰므로 다음 회차가 곧 재시도다. 같은 점유를 두 번 등록해도 작업 ID 가 같아 작업은 하나다 |
 | 피드 수집(피드 ID, 점유 토큰) — 작업 ID 는 점유 토큰 | `PollFeedJob` → `FeedPoller` | 위에서 등록 | 점유 확인 → 예약 시각까지 대기 → 같은 소스의 요청 시작 시각 예약 · 대기 → 트랜잭션 밖에서 요청 · 정규화 → 한 트랜잭션에서 수집 상태 반영과 새 항목마다 `ArticleFetched` 발행(source-R16 ~ source-R21). 재시도하지 않는다 |

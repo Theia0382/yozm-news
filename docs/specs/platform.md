@@ -73,7 +73,7 @@ stateDiagram-v2
 
 ### 들어오는 쪽
 
-| 작업 · 리스너 | 구성 요소 | 계기 | 내용 |
+| 진입점 | 구성 요소 | 계기 | 내용 |
 |---|---|---|---|
 | 이벤트 발행 재처리 — 반복 작업 ID `event-publication-resubmission` | `EventResubmissionJob` | 재제출 주기(§7, 기본 5분)마다 | 미완료 발행에서 다시 처리할 것을 재제출하고 상한에 이른 것을 알린다(platform-R1 · R4). 재시도하지 않는다 — 실패한 회차가 재시도를 기다리는 동안 작업 서버가 다음 회차를 건너뛰므로 다음 회차가 곧 재시도다 |
 | 재처리 설정 검사 | `EventResubmissionConfiguration` | 기동 | 재제출 주기와 멈춤 기준의 조건을 확인한다(platform-R3) |
