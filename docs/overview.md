@@ -1,6 +1,6 @@
 # 시스템 개요
 
-요즘뉴스의 1층 문서다. 목적 · 범위 · 품질 목표 · 시스템 구성 · 모듈 지도 · 횡단 규약 · 용어를 담는다. 모듈 하나의 계약과 내부 규칙은 모듈 Spec(`specs/`)이, 결정의 이유는 [ADR](adr/README.md)이 소유한다.
+요즘뉴스의 1층 문서다. 목적 · 범위 · 품질 목표 · 시스템 구성 · 모듈 지도 · 횡단 규약 · 용어를 담는다. v1 전체의 시스템 지도라 아직 코드가 없는 모듈 · 의존 · 이벤트도 담고, 아직 설계되지 않은 부분은 항목 앞에 **(미설계)** 를 적는다 — 그 부분을 설계하는 이슈가 표시를 지운다. 모듈 하나의 계약과 내부 규칙은 [모듈 Spec](specs/README.md)이, 결정의 이유는 [ADR](adr/README.md)이 소유한다.
 
 ## 1. 목적
 
@@ -116,16 +116,16 @@ flowchart LR
 
 | 모듈 | 책임 |
 |---|---|
-| `source` | 소스 등록(수집 프로필 · 프리셋) · 켜기 · 끄기 · 피드 상태, 수집 스케줄, RSS 파싱 · 정규화 |
-| `article` | 같은 기사 판정(정규 URL · 제목 비교 키) · 중복 제거, 기사 저장 · 조회 |
+| [`source`](specs/source.md) | 소스 등록(수집 프로필 · 프리셋) · 켜기 · 끄기 · 피드 상태, 수집 스케줄, RSS 파싱 · 정규화(`ArticleSource` — 모든 피드 수집이 거치는 포트) |
+| [`article`](specs/article.md) | 같은 기사 판정(정규 URL · 제목 비교 키) · 중복 제거, 기사 저장 · 조회, 본문 추출(`ContentExtractor` — v1 비활성) |
 | `evaluation` | 태그 체계와 태그 키 계보, 공유 평가(`ArticleEvaluator` — Jev 를 부르는 유일한 포트. 태그 · 형식 · 중요도와 사건 소속 판정), 평가 결과 |
-| `digest` | 후보 선별(관심도 · 큰 사건 · 사건 단위 중복 제거 · 선정 이유), 프롬프트 구성, 다이제스트 생성 · 검증 · 저장, 이슈 연결 적용과 이슈 타임라인 조회, 관심도 산식과 관심사 히스토리 조회 |
-| `llm` | 공급자 · 모델 목록, 사용자 키로 LLM 클라이언트 생성, 키 검증 |
+| `digest` | 후보 선별(관심도 · 큰 사건 · 사건 단위 중복 제거 · 선정 이유), 프롬프트 구성, 다이제스트 생성(`DigestGenerator`) · 검증 · 저장, 이슈 연결 적용과 이슈 타임라인 조회, 관심도 산식과 관심사 히스토리 조회 |
+| `llm` | 공급자 · 모델 목록, 사용자 키로 LLM 클라이언트 생성(`LlmClientFactory` — 모든 LLM 호출과 BYOK 키 복호화가 거치는 관문), 키 검증 |
 | `credential` | BYOK 키 암호화 보관(envelope encryption) |
 | `user` | 계정, OIDC 연동, 자체 로그인(비밀번호 · 복구 코드), 화면 내 알림, 사용자 설정 · 태그 선호와 구독 변경 이력, 리포트 설정 |
 | `feedback` | 좋아요 / 싫어요 — 추가 전용 기록과 현재 상태 |
 | `admin` | 운영자 기능(피드 · 태그 체계 · 평가 결과 · 사건) |
-| `platform` | 여러 모듈에 걸친 것: 보안 설정, 오류 응답 형식, 공통 타입, 프로필별 설정 검사 |
+| [`platform`](specs/platform.md) | 여러 모듈에 걸친 것: 실패한 이벤트 발행 재처리, 화면용 API 명세 설정 · API 계약 확인 엔드포인트, 보안 설정, 오류 응답 형식, 공통 타입, 프로필별 설정 검사 |
 | `event` | 공유 사건 묶기 — 기사 표현(임베딩 · 고유명사, `ArticleEmbedder`), 사건 배정 · 병합 · 닫기, 큰 사건 판정, 사건 조회. 사용자를 모른다 |
 | `storyline` | 사용자별 이슈 — 제목 · 현재 상태 요약 · 상태 전이 · 추적 · 해제와 그 이력 |
 | `report` | 변화 리포트 일정 · 생성(`ReportGenerator`) · 저장 · 조회 |
@@ -141,12 +141,14 @@ flowchart LR
 ```
 
 - 모듈 간에는 **공개 API(모듈 최상위 패키지의 타입)와 도메인 이벤트로만** 연결한다. 다른 모듈의 하위 패키지 접근은 Modulith 검증 테스트가 막는다
-- 이벤트는 Spring Modulith 이벤트 발행 레지스트리(JDBC)에 기록된다. 리스너가 실패한 발행은 반복 작업이 주기적으로 다시 처리하고, 처리 도중 프로세스가 죽어 멈춘 발행은 정해진 시간이 지나면 실패로 바뀌어 같은 경로로 다시 처리된다. 정해진 횟수를 넘긴 발행은 실패로 남는다([ADR-0023](adr/0023-jobrunr-oss-framework-schema-and-event-resubmission.md))
+- 이벤트는 Spring Modulith 이벤트 발행 레지스트리(JDBC)에 기록된다. 리스너가 실패한 발행은 반복 작업이 주기적으로 다시 처리하고, 처리 도중 프로세스가 죽어 멈춘 발행은 정해진 시간이 지나면 실패로 바뀌어 같은 경로로 다시 처리된다. 정해진 횟수를 넘긴 발행은 실패로 남는다 — 규칙은 [platform Spec](specs/platform.md#이벤트-발행-재처리)([ADR-0023](adr/0023-jobrunr-oss-framework-schema-and-event-resubmission.md))
+- **(미설계)** `ArticleEvaluated` · `UserSettingsChanged` · `CredentialInvalidated` 는 발행 주체 · 시점 · 내용이 아직 설계되지 않았다
 - `ArticleEvaluated` 를 받은 `digest` 는 즉시 생성하지 않는다. 다이제스트는 사용자 일정에 따라 생성되고, 이 이벤트는 지표 갱신에만 쓴다
-- 그림은 이벤트만 그린다. 사건 · 이슈 · 관심도 · 변화 리포트에 걸친 공개 API 의존은 `digest` → `event` · `storyline` · `feedback` · `user` · `evaluation` · `llm`, `event` → `article` · `evaluation`, `report` → `digest` · `event` · `evaluation` · `storyline` · `user` · `llm`, `admin` → `event` 다
+- 그림은 이벤트만 그린다. **모듈 사이 의존(공개 API · 이벤트)의 정본은 이 절이다** — 각 모듈 Spec 은 그 모듈이 내놓는 것(공개 인터페이스 · 발행 이벤트)만 갖고 의존은 이 절을 가리킨다. 사건 · 이슈 · 관심도 · 변화 리포트에 걸친 공개 API 의존은 `digest` → `event` · `storyline` · `feedback` · `user` · `evaluation` · `llm`, `event` → `article` · `evaluation`, `report` → `digest` · `event` · `evaluation` · `storyline` · `user` · `llm`, `admin` → `event` 다
+- **(미설계)** 그 밖의 공개 API 의존(예: 평가 · 후보 선별 · 운영자 기능이 기사 · 소스를 읽는 의존)과 `admin` 이 다른 모듈의 운영 기능에 닿는 경계, 여러 모듈의 데이터에 걸친 작업(보존 정리 · 휴면 이슈 전환)의 소속은 아직 설계되지 않았다
 - 모듈 사이 순환 의존은 Modulith 검증 테스트가 실패로 판정하고, 다른 모듈의 이벤트 타입을 받는 것도 의존으로 센다. 그래서 이슈 타임라인은 그 정본인 주요 뉴스 섹션을 가진 `digest` 가, 관심도는 노출 기록을 가진 `digest` 가 내주고, `storyline` 은 `digest` 를 모르며, `report` 는 다른 모듈을 읽기만 한다. 사건 소속 판정의 인자 · 반환 타입은 `evaluation` 이 소유한다 ([ADR-0025](adr/0025-long-term-personal-news-history-in-v1.md) · [ADR-0026](adr/0026-event-clustering-with-local-embeddings-and-jev.md))
 
-모듈 인터페이스 초안과 백그라운드 작업 목록은 [architecture.md](architecture.md)에 있다.
+코드가 있는 모듈의 공개 인터페이스 · 작업은 그 모듈 Spec 에, 아직 모듈이 없는 포트 · 백그라운드 작업의 초안은 [architecture.md](architecture.md)에 있다.
 
 ## 6. 횡단 규약
 
@@ -154,7 +156,7 @@ flowchart LR
 |---|---|---|
 | aggregate 참조 | aggregate 사이 참조는 ID 로만 한다. 다른 모듈의 엔티티를 객체로 붙잡지 않는다 | [ADR-0013](adr/0013-architecture-patterns.md) · [ADR-0014](adr/0014-spring-data-jdbc.md) |
 | 데이터 접근 | 쓰기는 aggregate(Spring Data JDBC), 화면 · 운영자 조회와 후보 선별 · 대량 처리는 SQL 조회 모델(JdbcClient). 스키마의 정본은 Flyway 마이그레이션 | [ADR-0014](adr/0014-spring-data-jdbc.md) |
-| 트랜잭션 경계 | 외부 호출(LLM · Jev · 피드)은 DB 트랜잭션 밖에서 한다 — 상태 `RUNNING` 커밋 → 외부 호출 → 새 트랜잭션에서 결과 저장 | [ADR-0013](adr/0013-architecture-patterns.md) |
+| 트랜잭션 경계 | 외부 호출(LLM · Jev · 피드)은 DB 트랜잭션 밖에서 한다 — 진행 표시(상태 · 점유)를 커밋 → 외부 호출 → 새 트랜잭션에서 결과 저장 | [ADR-0013](adr/0013-architecture-patterns.md) · [ADR-0033](adr/0033-feed-polling-db-lease-per-feed-new-items-and-per-source-request-spacing.md) |
 | 상태 전이 · 작업 | 상태 전이는 aggregate 메서드로만, 백그라운드 작업과 이벤트 리스너는 다시 실행해도 결과가 같다(이벤트는 최소 한 번 처리된다) | [ADR-0013](adr/0013-architecture-patterns.md) · [ADR-0023](adr/0023-jobrunr-oss-framework-schema-and-event-resubmission.md) |
 | 사용자 범위 | 화면 · API 의 사용자 데이터 조회는 세션의 `userId` 로만 범위를 정한다. 요청으로 받은 사용자 ID 는 신뢰하지 않는다 | [security.md](security.md) |
 | 비밀 값 | BYOK 키 평문은 `llm` 모듈 안에서 호출 직전에만 존재하고, 로그 · 오류 · 응답에 남지 않는다 | [security.md](security.md) |
