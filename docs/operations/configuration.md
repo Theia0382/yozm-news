@@ -56,7 +56,8 @@
 
 - 지금 배포 구성의 비밀 값은 `POSTGRES_PASSWORD` 하나다
 - **(미구현)** OIDC 공급자의 client secret, Jev API 키, 봇 차단(Turnstile) secret, Tunnel 토큰, BYOK 키 암호화용 KEK
-- 비밀 값은 호스트의 환경 파일(`deploy/.env`) 또는 Docker secrets 에 두고 저장소에 커밋하지 않는다
+- 비밀 값은 호스트의 환경 파일(`deploy/.env`)에 두고 저장소에 커밋하지 않는다
+- **(미구현)** 비밀 값을 Docker secrets 로도 받는다
 - **(미구현)** KEK 는 다른 비밀 값과 **별도 파일**로 두고 DB 백업에 넣지 않는다. 버전을 붙여 교체할 수 있게 하고, DB 백업과 다른 위치에 따로 백업한다. KEK 를 잃으면 저장된 사용자 키를 복호화할 수 없다 — 사용자가 키를 다시 등록하면 되므로 치명적이지는 않다. 키 암호화 구조와 KEK 교체 절차는 [security.md](../security.md)
 
 ## 데이터 보존

@@ -87,7 +87,7 @@ Cloudflare 는 권장 구성이지 필수가 아니다. 셀프 호스팅에서�
 | **(미구현)** R2 | DB 백업 저장. 외부로 나가는 전송량 요금이 없다 |
 | **(미구현)** AI Gateway (선택) | Jev 호출 경유 — 호출 로그, 비용 집계, 재시도, 한도. Jev 지원 여부는 확인 전이다([미결 #15](../open-questions.md)) |
 
-- 사용자 BYOK LLM 호출은 AI Gateway 를 거치지 않고 공급자에 직접 보낸다 — 사용자 키와 프롬프트가 제3자 로그에 남지 않게 하기 위해서다
+- **(미구현)** 사용자 BYOK LLM 호출은 AI Gateway 를 거치지 않고 공급자에 직접 보낸다 — 사용자 키와 프롬프트가 제3자 로그에 남지 않게 하기 위해서다
 - **(미구현)** Turnstile 은 자체 가입 · 로그인 · 복구 코드 사용 화면에 붙인다([ADR-0009](../adr/0009-authentication-google-and-local.md) · [ADR-0011](../adr/0011-no-email-in-v1.md))
 - 이 프로젝트의 공식 인스턴스 도메인은 `yozmnews.net` 이다. Cloudflare Registrar 로 등록해 DNS 도 Cloudflare 에서 관리한다
 
