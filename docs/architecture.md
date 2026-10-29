@@ -55,7 +55,6 @@ public interface LlmClientFactory {
 | `ScheduleDueReports` | 1시간마다 | 리포트 시점이 된 사용자의 변화 리포트 생성 작업 등록 |
 | `GenerateReport(userId, period)` | 위에서 등록 | 통계 집계 → 스냅숏 → LLM 호출 → 검증 → 저장 |
 | `Retention` | 하루 1회 | 보존 기간이 지난 데이터 정리 ([data-model.md](data-model.md)) — 사건 배정 입력, 요약문(운영 설정을 켰을 때) 포함 |
-| `EventResubmissionJob` (반복 작업 ID `event-publication-resubmission`) | 5분마다 | 리스너가 실패한 이벤트 발행을 다시 처리한다. 한 발행의 총 처리 시도는 6회까지이고, 넘긴 발행은 실패로 남겨 실행마다 경고 로그로 알린다. 처리 도중 멈춘 발행은 Modulith 감시가 발행 30분 뒤 실패로 바꿔 이 작업이 고른다 ([ADR-0023](adr/0023-jobrunr-oss-framework-schema-and-event-resubmission.md)) |
 
 ## 외부 API와 MCP (v1 이후)
 

@@ -92,7 +92,7 @@ HTTP 엔드포인트: 없음.
 
 | 작업 · 리스너 | 계기 | 내용 |
 |---|---|---|
-| `ArticleFetched` 리스너 | `source` 의 `ArticleFetched` | 항목 하나를 판정해 저장 · 기록한다(article-R3 ~ R11). 비동기 · 새 트랜잭션이고 이벤트 발행 레지스트리에 기록된다(Spring Modulith `@ApplicationModuleListener`). 처리가 실패한 발행은 `platform` 의 이벤트 재처리 작업이 다시 처리하고, 다시 처리해도 결과가 같다(article-R10) |
+| `ArticleFetched` 리스너 | `source` 의 `ArticleFetched` | 항목 하나를 판정해 저장 · 기록한다(article-R3 ~ R11). 비동기 · 새 트랜잭션이고 이벤트 발행 레지스트리에 기록된다(Spring Modulith `@ApplicationModuleListener`). 처리가 실패한 발행은 `platform` 의 이벤트 재처리 작업([platform Spec §5](platform.md#5-작업과-리스너))이 다시 처리하고, 다시 처리해도 결과가 같다(article-R10) |
 
 ## 6. 데이터
 
