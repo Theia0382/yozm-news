@@ -26,7 +26,6 @@
 | [pipeline.md](pipeline.md) | 단계마다 그 단계를 가진 모듈의 Spec. 상단의 단계 흐름 그림은 이 문서를 `archives/` 로 보낼 때 `overview.md` 로 옮긴다 |
 | [data-model.md](data-model.md) | 모듈 테이블 → 그 모듈 Spec 의 데이터 절. 모듈 사이 관계(ER 개요) · 보존 정책 · 프레임워크 테이블은 이 문서에 남는다 — 전환이 끝나면 데이터 개요 문서로 남는다 |
 | [security.md](security.md) | 한 모듈이 구현하는 규칙 → 그 모듈의 Spec. 횡단 정책(인가 · 데이터 격리 · 개인정보 · 저작권 · 악용 방지)은 이 문서에 남는다 — 전환이 끝나면 횡단 보안 문서로 남는다 |
-| [infrastructure.md](infrastructure.md) | `development/`(개발 · 검사 · CI) · `operations/`(운영)로 나눈다 |
 
 [roadmap.md](roadmap.md) · [open-questions.md](open-questions.md) 는 계획 문서라 전환 대상이 아니다.
 
@@ -47,7 +46,6 @@
 | | [development/](development/README.md) | 개발 인프라 — 개발 · 검사 환경, CI, 이미지 구성 |
 | | [qa/test-strategy.md](qa/test-strategy.md) | 테스트 전략 |
 | 운영 | [operations/](operations/README.md) | 셀프 호스팅 운영 |
-| | [infrastructure.md](infrastructure.md) | 배포 토폴로지, 호스팅, 운영, CI (전환 중) |
 | 계획 | [roadmap.md](roadmap.md) | 마일스톤 |
 | | [open-questions.md](open-questions.md) | 미결 사항과 권장안 |
 | 자료 | [research/](research/) | 사전 조사 자료 |
@@ -66,8 +64,8 @@
 | 횡단 규약 변경 (트랜잭션 경계 · 사용자 범위 · 비밀 값 · 오류 응답 형식 등) | `overview.md` §6 + 관련 ADR |
 | 도메인 용어 신설 · 이름 변경 | 모듈 Spec 의 용어 절, 횡단 용어면 `overview.md` §8 |
 | 파이프라인 · 데이터 모델 · 보안 설계 변경 | 한 모듈에 속하면 그 모듈 Spec, 아니면 `pipeline` · `data-model` · `security`(§1 전환 중인 문서의 행선지) |
-| 개발 인프라 변경 (개발 환경 · 검사 정의 · CI · 이미지) | `development/` — 지금 그 내용은 `infrastructure.md` 에 있다. 문서 검사의 판정이 바뀌면 §4 의 링크 규칙 |
-| 운영 변경 (배포 구성 · 운영 설정 · 호스팅 · 백업) | `operations/` — 지금 그 내용은 `infrastructure.md` 에 있다 |
+| 개발 인프라 변경 (개발 환경 · 검사 정의 · CI · 이미지) | `development/`. 문서 검사의 판정이 바뀌면 §4 의 링크 규칙 |
+| 운영 변경 (배포 구성 · 운영 설정 · 호스팅 · 백업) | `operations/` |
 | DB 스키마 변경 | Flyway 마이그레이션이 정본 + 그 모듈 Spec 의 데이터 절(주요 컬럼 · 의미 · 제약의 뜻) |
 | 확정된 프로젝트 결정 (ADR 선별 기준 충족) | ADR 신설 + [adr/README.md](adr/README.md) 표 행 + 관련 문서의 근거 링크 |
 | 결정 역전 | 새 ADR + 구 ADR 의 상태 줄 + 표 행 |

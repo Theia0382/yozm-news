@@ -6,7 +6,7 @@
 
 ### 필요한 것
 
-- **Docker**(Compose 플러그인 포함) — 검사(아래)는 컨테이너에서 돌고, 검사에 필요한 호스트 도구는 Docker 뿐이다. privileged 컨테이너를 허용해야 한다 — 백엔드 테스트의 Testcontainers 가 검사 정의 안의 Docker 엔진(DinD)을 쓴다
+- **Docker**(Compose 플러그인 포함) — 검사(아래)는 컨테이너에서 돌고, 검사에 필요한 호스트 도구는 Docker 뿐이다. privileged 컨테이너를 허용해야 한다(검사 정의의 구성은 [개발 인프라 — 검사 환경](docs/development/infrastructure.md#검사-환경))
 
 호스트에서 직접 빌드하거나 개발 서버를 돌릴 때는 다음도 필요하다.
 
@@ -30,16 +30,13 @@ docker compose -f compose.check.yaml run --rm --build docs       # 문서: 공�
 - 정리: `docker compose -f compose.check.yaml down -v` — 멈춘 컨테이너와 검사용 Docker 엔진의 데이터 볼륨을 지운다(다음 백엔드 검사가 PostgreSQL 이미지를 다시 받는다)
 - 문서 검사 이미지에는 문서와 문서가 가리키는 경로만 들어간다. 문서가 새 경로(예: 새 최상위 디렉터리)를 가리켜 "경로 없음"으로 실패하면 그 경로를 허용 목록 `tools/docs-check/Dockerfile.dockerignore` 에 더한다
 
-배포 구성 검사는 배포 구성(`deploy/compose.yaml`)을 띄워 스모크를 돌린다. CI 는 같은 정의로 이미지를 두 아키텍처(`linux/amd64` · `linux/arm64`)로도 빌드한다. 실행 절차 · 설정 값은 [infrastructure.md](docs/infrastructure.md) "배포 구성 실행".
+배포 구성 검사는 배포 구성을 [배포 구성 실행](docs/operations/deployment.md#배포-구성-실행) 대로 띄워 스모크(`deploy/smoke.sh`)를 돌린다 — 스모크의 종료 코드가 검사 결과다. 검사가 끝나면 DB 볼륨까지 지우는 정지로 정리한다. CI 는 같은 정의로 이미지를 두 아키텍처(`linux/amd64` · `linux/arm64`)로도 빌드한다 — 로컬에서는 `deploy/` 에서 실행한다([개발 인프라 — 이미지](docs/development/infrastructure.md#이미지)).
 
 ```sh
-cp deploy/.env.example deploy/.env   # 처음 한 번 — POSTGRES_PASSWORD · YOZMNEWS_COLLECTION_CONTACT 를 적는다
-docker compose -f deploy/compose.yaml up -d --build --wait   # 이미지 빌드 뒤 모든 서비스가 healthy 가 될 때까지 기다린다
-bash deploy/smoke.sh                                          # 종료 코드가 검사 결과다 (bash · docker · curl 필요)
-docker compose -f deploy/compose.yaml down -v                 # 정리 — 배포 구성의 DB 볼륨도 지운다
+docker buildx bake --set '*.platform=linux/amd64,linux/arm64' app proxy   # deploy/ 에서 — 두 아키텍처 배포 이미지 빌드
 ```
 
-- Dockerfile 은 측별 하나다(`backend/Dockerfile` · `frontend/Dockerfile`). 검사 이미지는 target `check`, 배포 이미지는 target `app` · `proxy` 다([ADR-0022](docs/adr/0022-image-targets-per-side-dockerfile-without-run-in-runtime-stage.md)). 문서 검사 이미지는 검사 전용 `tools/docs-check/Dockerfile` 하나다. 배포 target 의 실행 단계에 명령(`RUN`)을 더하면 에뮬레이션 없는 빌더에서 다른 아키텍처의 빌드가 깨진다
+- 배포 target 의 실행 단계에는 명령(`RUN`)을 두지 않는다 — 에뮬레이션 없는 빌더에서 다른 아키텍처의 빌드가 깨진다. 이미지 구성은 [개발 인프라 — 이미지](docs/development/infrastructure.md#이미지)
 
 ### 호스트에서 직접 실행 (빠른 반복)
 
@@ -55,7 +52,7 @@ backend/gradlew -p backend build                                 # 컴파일 + �
 
 결과는 `backend/build/test-results/test/` (JUnit XML) 와 `backend/build/reports/tests/test/index.html` 에 남는다.
 
-IDE 에서 테스트를 돌릴 때도 Gradle 로 실행을 위임한다. 테스트가 읽는 저장소 파일(PostgreSQL 이미지를 정하는 `compose.yaml`, 화면용 API 명세 `api/openapi.json`)의 경로를 Gradle 이 시스템 속성으로 넘기므로, 위임하지 않으면 PostgreSQL 컨테이너를 띄우는 테스트가 그 시스템 속성이 없다는 메시지로 실패한다([ADR-0019](docs/adr/0019-dev-compose-per-checkout-and-test-image-source.md)).
+IDE 에서 테스트를 돌릴 때도 Gradle 로 실행을 위임한다. 위임하지 않으면 PostgreSQL 컨테이너를 띄우는 테스트가 시스템 속성이 없다는 메시지로 실패한다 — [테스트가 저장소 파일을 읽는 결선](docs/development/infrastructure.md#테스트가-저장소-파일을-읽는-결선).
 
 **백엔드 로컬 실행**
 
@@ -71,8 +68,8 @@ docker compose --profile dev down -v                                     # 컨�
 - Compose 를 먼저 띄우지 않았으면 앱이 띄우고, 앱이 끝날 때 멈춘다. 먼저 띄워 두었으면 앱이 끝나도 그대로 둔다
 - 바꿀 수 있는 값(호스트 포트)은 `.env.example` 에 있다. 필요한 줄만 `.env` 로 옮긴다 — `.env` 는 없어도 된다
 - 컨테이너 · 볼륨은 checkout(작업 디렉터리)마다 따로 생긴다. 두 checkout 의 환경을 함께 띄우면 mock OIDC 서버의 호스트 포트가 겹치니 한쪽의 `.env` 에서 바꾼다. checkout 을 지우기 전에 그 checkout 에서 `down -v` 로 정리한다
-- 자기 PostgreSQL 을 쓰려면 Compose 연동을 끄고(`SPRING_DOCKER_COMPOSE_ENABLED=false`) DB 접속 환경 변수(`SPRING_DATASOURCE_*` — [infrastructure.md](docs/infrastructure.md) "비밀 값")를 준다
-- PostgreSQL 버전은 `compose.yaml` 의 이미지가 정하고, 테스트도 같은 이미지를 쓴다([ADR-0019](docs/adr/0019-dev-compose-per-checkout-and-test-image-source.md)). 메이저 버전을 올린 뒤에는 `down -v` 로 개발 DB 를 다시 만든다
+- 자기 PostgreSQL 을 쓰려면 Compose 연동을 끄고(`SPRING_DOCKER_COMPOSE_ENABLED=false`) DB 접속 환경 변수(`SPRING_DATASOURCE_*` — [운영 설정 — DB 접속](docs/operations/configuration.md#db-접속))를 준다
+- PostgreSQL 이미지는 `compose.yaml` 이 정한다([PostgreSQL 이미지 정본](docs/development/infrastructure.md#postgresql-이미지-정본)). 메이저 버전을 올린 뒤에는 `down -v` 로 개발 DB 를 다시 만든다
 
 **프론트엔드**
 
@@ -99,7 +96,7 @@ pnpm -C frontend generate:api                 # api/openapi.json 에서 API 타�
 - 화면용 API 를 바꾸면 `updateOpenApiSpec` 으로 명세를 다시 써서 함께 커밋한다. 명세가 코드와 다르면 백엔드 테스트가 이 명령을 안내하며 실패한다
 - 생성 타입은 커밋하지 않는다. `dev` · `build` 는 먼저 생성한다. clone 직후와 명세가 바뀐 브랜치를 받은 뒤에는 `generate:api` 를 한 번 돌려야 IDE 가 새 타입을 본다
 - 명세가 프론트엔드 코드와 맞지 않으면 프론트엔드 `build` 의 타입 검사가 실패한다
-- 실행 중인 백엔드의 명세 엔드포인트(`http://localhost:8080/v3/api-docs`)는 기본으로 닫혀 있고 Spring profile `local` 로 실행하면 열린다([infrastructure.md](docs/infrastructure.md) "관측")
+- 실행 중인 백엔드의 명세 엔드포인트(`http://localhost:8080/v3/api-docs`)는 기본으로 닫혀 있고 Spring profile `local` 로 실행하면 열린다([platform Spec §7](docs/specs/platform.md#7-설정))
 
 테스트로 무엇을 증명해야 하는지는 [테스트 전략](docs/qa/test-strategy.md)을 따른다.
 
@@ -196,3 +193,4 @@ Issue: #12
 - JobRunr · Spring Modulith 의 스키마는 라이브러리 원문을 Flyway 마이그레이션에 담는다([ADR-0023](docs/adr/0023-jobrunr-oss-framework-schema-and-event-resubmission.md)). 구획 규칙은 `V1__jobrunr_and_event_publication.sql` 머리 주석에 있다
   - JobRunr 를 올려 새 스크립트가 생기면 `FrameworkSchemaMigrationTests` 가 실패한다. 그 원문을 Flyway 새 버전 파일에 `-- jobrunr-migration:` 구획으로 옮기고, `-- jobrunr-migration-record` 구획에 기록 행을 더한다
   - Spring Modulith 를 올릴 때는 이벤트 발행 레지스트리의 스키마 판이 바뀌었는지 릴리스 노트로 확인한다. 테스트는 지금 쓰는 판의 원문만 대조하므로, 그 원문이 바뀌면 실패하지만 판이 바뀐 것은 알리지 못한다. 원문이 `CREATE TABLE IF NOT EXISTS` 라 새 원문을 옮겨도 이미 있는 테이블은 바뀌지 않는다 — 바뀐 부분을 손으로 쓴 마이그레이션으로 더하고, 대조 테스트의 Modulith 대조를 새 원문에 맞게 고친다
+- 되돌릴 수 없는 스키마 변경은 두 번의 배포로 나눈다(확장 → 축소)

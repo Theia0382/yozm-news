@@ -41,6 +41,7 @@
 | [0035](0035-public-markdown-links-and-anchors-checked-by-separate-check-service.md) | 공개 마크다운의 상대 링크와 앵커는 별도 검사 서비스가 확인한다 | 승인 |
 | [0036](0036-module-spec-holds-internal-structure-and-port-declarations-in-eight-sections.md) | 모듈 Spec 은 책임 단위의 내부 구조와 포트 선언까지 갖고, 절을 바깥에서 안쪽 순서의 여덟 절로 둔다 | 승인 |
 | [0037](0037-domain-may-use-non-replaceable-framework-types.md) | `domain` 은 교체하지 않는 프레임워크의 타입을 쓸 수 있고, 그 단위 테스트는 스프링 컨텍스트 없이 돈다 | 승인 |
+| [0038](0038-container-images-use-major-tags-and-revisit-pinning-at-publication.md) | 컨테이너 이미지는 모두 메이저 태그로 받고, 버전 고정과 갱신 자동화는 이미지를 게시할 때 다시 본다 | 승인 |
 
 양식:
 

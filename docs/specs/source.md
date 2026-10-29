@@ -211,7 +211,7 @@ sequenceDiagram
 | 기동 대조 | `PresetFeedReconciliation`(`application`) | 애플리케이션 준비 완료(`ApplicationReadyEvent`) | 소스마다 프로필과 저장된 피드를 대조한다(source-R8) |
 | **(미구현)** 피드 건강 검사 | — | 1시간마다 | 연속 실패 · 장기 무소식 피드 표시, 운영자 알림(source-R30 · source-R31) |
 
-수집 작업이 동시에 몇 개 도는지는 작업 서버의 worker 수가 정한다(§7). 수집 작업은 기다리는 동안 DB 연결을 잡지 않는다. 컨트롤러는 없다.
+수집 작업이 동시에 몇 개 도는지는 작업 서버의 동시 실행 수가 정한다([운영 설정 — 백그라운드 작업](../operations/configuration.md#백그라운드-작업)). 수집 작업은 기다리는 동안 DB 연결을 잡지 않는다. 컨트롤러는 없다.
 
 ### `application`
 
@@ -506,9 +506,8 @@ RSS 품질이 피드마다 크게 다르므로 사전 보정 → 파싱 → 필�
 |---|---|
 | `yozmnews.collection.contact` | 수집 요청 `User-Agent` 의 운영자 연락처(source-R29). 필수 — 없거나 형식이 틀리면 앱이 뜨지 않는다 |
 | `yozmnews.collection.allowed-networks` | 막힌 대역 가운데 수집이 연결해도 되는 대역(CIDR 목록 — source-R34). 없으면 내부 주소를 모두 막는다. 형식이 틀리면 앱이 뜨지 않는다 |
-| `jobrunr.background-job-server.worker-count` | 동시에 실행하는 백그라운드 작업 수 — 동시에 도는 피드 수집 수의 상한이다 |
 
-환경 변수 이름 · 값 예시는 [infrastructure.md "수집 설정"](../infrastructure.md#수집-설정)에 있다.
+환경 변수 이름 · 값 예시는 [운영 설정 — 피드 수집](../operations/configuration.md#피드-수집)에 있다.
 
 ## 8. 결정
 
