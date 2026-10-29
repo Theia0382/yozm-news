@@ -45,13 +45,62 @@
 
 모듈 최상위 패키지 `net.yozmnews.source` 의 공개 타입은 아래 넷이다. 소스 등록 · 켜기 · 끄기 · 수집 주기 변경의 유스케이스는 모듈 안에서만 보이고(`application` 패키지의 패키지 전용 클래스), 다른 모듈에 공개한 API 는 없다.
 
+HTTP 엔드포인트: 없음.
+
+### SourceId
+
+소스 식별자 — `sources.id` 다.
+
 ```java
 public record SourceId(long value) {}
+```
 
+| 필드 | 뜻 | 제약 |
+|---|---|---|
+| `value` | `sources.id` | 1 이상 — 아니면 생성자가 `IllegalArgumentException` 을 던진다 |
+
+관련 규칙: 없음.
+
+### FeedId
+
+피드 식별자 — `feeds.id` 다. 수집 프로필 안의 피드 식별자(feed key)와 다르다.
+
+```java
 public record FeedId(long value) {}
+```
 
+| 필드 | 뜻 | 제약 |
+|---|---|---|
+| `value` | `feeds.id` | 1 이상 — 아니면 생성자가 `IllegalArgumentException` 을 던진다 |
+
+관련 규칙: source-R7(피드는 지우지 않는다 — 받은 기사의 기록이 피드 ID 를 가리킨다).
+
+### ArticleFetched
+
+수집한 피드의 새 항목 하나(source → article).
+
+```java
 public record ArticleFetched(SourceId sourceId, FeedId feedId, Instant fetchedAt, FetchedArticle article) {}
+```
 
+| 필드 | 뜻 | 제약 |
+|---|---|---|
+| `sourceId` | 항목을 받은 소스 | null 이 아니다 |
+| `feedId` | 항목을 받은 피드 | null 이 아니다 |
+| `fetchedAt` | 그 항목을 받은 수집의 시각(결과를 반영한 시각). 소비자는 이것을 처음 발견한 시각 · 본 시각으로 쓴다 | null 이 아니다 |
+| `article` | 정규화한 기사 | null 이 아니다 |
+
+- 계약
+  - 수집 작업이 새 항목마다 하나 발행한다. 발행은 그 수집의 결과 반영과 같은 트랜잭션이다(source-R17) — 수집 상태의 직전 항목 키가 커밋되면 그 수집의 발행도 커밋된다
+  - 같은 피드의 같은 항목 키는 그 키가 직전 성공 수집에 남아 있는 동안 다시 발행되지 않는다(source-R20). 피드에서 빠졌다가 다시 실린 항목, 첫 수집의 항목은 발행된다. 같은 기사가 다른 피드 · 다른 항목 키로 다시 올 수 있다 — 같은 기사인지는 소비자가 판정한다
+
+관련 규칙: source-R16 · source-R17 · source-R20.
+
+### FetchedArticle
+
+정규화한 기사 하나. 원문 본문은 담지 않는다.
+
+```java
 public record FetchedArticle(String title, URI link, @Nullable String guid, @Nullable String summary,
         Instant publishedAt, boolean publishedAtEstimated, @Nullable String author, List<String> categories,
         @Nullable URI thumbnail) {
@@ -62,34 +111,237 @@ public record FetchedArticle(String title, URI link, @Nullable String guid, @Nul
 }
 ```
 
-**`SourceId` · `FeedId`** — `sources.id` · `feeds.id` 다. 값은 1 이상이고, 아니면 생성자가 `IllegalArgumentException` 을 던진다. 피드 ID 는 수집 프로필 안의 피드 식별자와 다르다.
+생성자는 필수 값(`title` · `link` · `publishedAt` · `categories`)이 null 이면 `NullPointerException`, 제목 · 링크 · 썸네일 · 요약문 길이의 제약을 어기면 `IllegalArgumentException` 을 던진다. 카테고리의 순서 · 같은 값 없음은 정규화가 지킨다(source-R41).
 
-**`ArticleFetched`** — 수집한 피드의 새 항목 하나(source → article).
-
-- 수집 작업이 새 항목마다 하나 발행한다. 발행은 그 수집의 결과 반영과 같은 트랜잭션이다(source-R17) — 수집 상태의 직전 항목 키가 커밋되면 그 수집의 발행도 커밋된다
-- 같은 피드의 같은 항목 키는 그 키가 직전 성공 수집에 남아 있는 동안 다시 발행되지 않는다(source-R20). 피드에서 빠졌다가 다시 실린 항목, 첫 수집의 항목은 발행된다. 같은 기사가 다른 피드 · 다른 항목 키로 다시 올 수 있다 — 같은 기사인지는 소비자가 판정한다
-- `fetchedAt` 은 그 항목을 받은 수집의 시각이다(결과를 반영한 시각). 소비자는 이것을 처음 발견한 시각 · 본 시각으로 쓴다
-- 네 필드는 모두 null 이 아니다
-
-**`FetchedArticle`** — 정규화한 기사 하나. 원문 본문은 담지 않는다. 생성자는 필수 값(`title` · `link` · `publishedAt` · `categories`)이 null 이면 `NullPointerException`, 제목 · 링크 · 썸네일 · 요약문 길이의 제약을 어기면 `IllegalArgumentException` 을 던진다. 카테고리의 순서 · 같은 값 없음은 정규화가 지킨다(source-R41).
-
-| 필드 | 뜻 · 제약 |
-|---|---|
-| `title` | 정리한 제목 — 비어 있지 않다 |
-| `link` | 피드가 준 기사 링크(앞뒤 공백만 지운 원문) — `isWebUrl` 을 만족한다. 같은 기사 판정용 정규 URL 은 소비자가 만든다 |
-| `guid` | 피드의 항목 식별자 원문(RSS `guid` · RSS 1.0 `rdf:about` · Atom `id`, 앞뒤 공백 제거) — 없을 수 있다 |
-| `summary` | 정리한 요약문 — 최대 `SUMMARY_MAX_CODE_POINTS`(1,000) 코드 포인트, 없을 수 있다 |
-| `publishedAt` | 발행 시각 |
-| `publishedAtEstimated` | 발행 시각을 해석하지 못해 받은 시각으로 채웠는지 |
-| `author` | 기자명 — 없을 수 있다 |
-| `categories` | 피드 카테고리 — 피드 순서, 같은 값 없음, 비어 있을 수 있다. 바꿀 수 없는 목록이다 |
-| `thumbnail` | 썸네일 URL — 있으면 `isWebUrl` 을 만족한다 |
+| 필드 | 뜻 | 제약 |
+|---|---|---|
+| `title` | 정리한 제목 | 비어 있지 않다 |
+| `link` | 피드가 준 기사 링크(앞뒤 공백만 지운 원문). 같은 기사 판정용 정규 URL 은 소비자가 만든다 | `isWebUrl` 을 만족한다 |
+| `guid` | 피드의 항목 식별자 원문(RSS `guid` · RSS 1.0 `rdf:about` · Atom `id`, 앞뒤 공백 제거) | 없을 수 있다 |
+| `summary` | 정리한 요약문 | 최대 `SUMMARY_MAX_CODE_POINTS`(1,000) 코드 포인트, 없을 수 있다 |
+| `publishedAt` | 발행 시각 | — |
+| `publishedAtEstimated` | 발행 시각을 해석하지 못해 받은 시각으로 채웠는지 | — |
+| `author` | 기자명 | 없을 수 있다 |
+| `categories` | 피드 카테고리 — 피드 순서 | 같은 값 없음, 비어 있을 수 있다. 바꿀 수 없는 목록이다 |
+| `thumbnail` | 썸네일 URL | 있으면 `isWebUrl` 을 만족한다 |
 
 `isWebUrl(uri)` — 기사 링크 · 썸네일로 받는 주소인가: 절대 URI, 스킴 `http` · `https`(대소문자 무시), 호스트 있음.
 
-HTTP 엔드포인트: 없음.
+관련 규칙: source-R40 · source-R41.
 
-## 4. 규칙과 불변식
+## 4. 내부 구조
+
+### 개관
+
+| 패키지 | 책임 |
+|---|---|
+| `adapter/in/job` | 반복 작업과 피드 수집 작업 — 작업 서버(JobRunr)가 부른다 |
+| `application` | 유스케이스(등록 · 운영 설정 · 점유 · 수집 한 회차 · 기동 대조)와 트랜잭션 경계 |
+| `domain/registry` | 소스 · 피드 aggregate 와 그 저장소, 소스의 프로필 얻기, 켜기 · 수집 가능 판정 |
+| `domain/profile` | 수집 프로필 모델과 그 바인딩 · 검증, 프리셋 카탈로그, 실제 주기 |
+| `domain/profile/text` | 프로필 원문을 YAML 이벤트로 읽어 트리로 옮긴다 |
+| `domain/poll` | 피드의 수집 상태와 그 전이, 수집 일정 산식, 새 항목 비교, 수집 상태 · 요청 예약 저장소 |
+| `domain/fetch` | 피드 요청 관문(포트 `ArticleSource`)과 요청 규칙 — 주소 · 리다이렉트 · 상태 코드 · 실패 분류 · 제한 |
+| `domain/feed` | 정규화 — 문자 인코딩 · 사전 보정 · XML 읽기 · 형식 판별 · 필드 보정 |
+| `adapter/out/rss` | 포트 `ArticleSource` 의 v1 구현(Apache HttpClient) |
+| `adapter/out/persistence` | 수집 상태 · 요청 예약 저장소의 JdbcClient 구현 |
+
+협력:
+
+- **등록 · 운영 설정** — `SourceRegistration` · `SourceOperations` 가 `ProfileResolver` 로 소스의 프로필을 얻어(프리셋은 `PresetCatalog`, 운영자 원문은 `ProfileParser`) 판정하고, `SourceRepository` · `FeedRepository` 로 쓴다. 피드 행과 수집 상태 행은 `FeedProvisioner` 가 함께 만든다
+- **수집** — `PollScheduler` 가 `FeedPollStateRepository` 로 대상을 잠그고 `FeedPollState` 의 전이로 점유를 기록한다. `FeedPoller` 가 `SourceFetchSlotRepository` · `PollSchedule` 로 요청 시작 시각을 예약하고, 포트 `ArticleSource` 로 받은 결과를 `FeedPollState` 에 반영해 `ArticleFetched` 를 발행한다. `ArticleSource` 의 구현 `RssArticleSource` 는 요청 규칙(`domain/fetch`)으로 요청하고 `FeedNormalizer`(`domain/feed`)로 정규화한다
+
+#### 수집 한 회차
+
+```mermaid
+sequenceDiagram
+    participant Due as PollDueFeedsJob
+    participant Sch as PollScheduler
+    participant Jobs as JobRunr
+    participant Job as PollFeedJob
+    participant Poller as FeedPoller
+    participant State as FeedPollState
+    participant Src as ArticleSource
+    participant DB as PostgreSQL
+
+    Due->>Sch: 1분마다 지금 수집할 피드 점유 (source-R15)
+    Note over Sch,DB: 트랜잭션 — 점유
+    Sch->>DB: 대상 피드 잠금, 최대 100개 (source-R6 · R15)
+    alt 프로필이나 그 피드를 얻지 못함
+        Sch->>DB: 점유하지 않고 1시간 뒤로 미룸 (source-R19)
+    else 수집할 수 있음
+        Sch->>State: claim — 같은 소스는 예약 시각을 띄움 (source-R15 · R18)
+        Sch->>DB: 점유 기록 후 커밋
+    end
+    Due->>Jobs: 점유 토큰을 작업 ID 로 예약 시각에 등록 (source-R15)
+    Jobs->>Job: 예약 시각에 실행
+    Job->>Poller: 피드 ID · 점유 토큰
+    Poller->>DB: 점유가 자기 것인지 확인 (source-R16)
+    opt 점유가 없음
+        Poller-->>Job: 아무것도 하지 않음
+    end
+    opt 프로필이나 그 피드를 얻지 못함
+        Poller->>DB: 트랜잭션 — 1시간 뒤로 미룸 (source-R19)
+        Poller-->>Job: 이번에 수집하지 않음 (source-R19)
+    end
+    Poller->>Poller: 예약 시각까지 대기 (source-R18)
+    Note over Poller,DB: 트랜잭션 — 요청 시작 시각 예약
+    Poller->>DB: 소스의 다음 요청 가능 시각 잠금 · 갱신 (source-R18)
+    opt 시작 + 수집 마감이 점유 만료보다 이르지 않음
+        Poller-->>Job: 이번에 수집하지 않음 (source-R18)
+    end
+    Poller->>Poller: 시작 시각까지 대기 (source-R18)
+    Poller->>Src: 트랜잭션 밖에서 요청 · 정규화 (source-R17 · R22 · R28 · R33 ~ R44)
+    Src-->>Poller: 결과 — 성공 · 변경 없음 · 실패
+    Poller->>State: complete — 다음 수집 시각 · 새 항목 (source-R20 ~ R27)
+    Note over Poller,DB: 트랜잭션 — 결과 반영과 발행
+    alt 점유 토큰이 그대로임
+        Poller->>DB: 수집 상태 반영, 새 항목마다 ArticleFetched 발행 (source-R16 · R17)
+    else 그사이 점유를 잃음
+        Poller-->>Job: 반영도 발행도 하지 않음 (source-R16)
+    end
+```
+
+### 들어오는 쪽
+
+| 진입점 | 구성 요소 | 계기 | 내용 |
+|---|---|---|---|
+| 수집할 피드 등록 — 반복 작업 ID `poll-due-feeds` | `PollDueFeedsJob` | 1분마다 | 대상 피드를 점유하고 점유 토큰을 작업 ID 로 피드마다 수집 작업을 예약 시각에 등록한다(source-R15 · source-R18 · source-R19). 재시도하지 않는다 — 실패한 회차가 재시도를 기다리는 동안 작업 서버가 다음 회차를 건너뛰므로 다음 회차가 곧 재시도다. 같은 점유를 두 번 등록해도 작업 ID 가 같아 작업은 하나다 |
+| 피드 수집(피드 ID, 점유 토큰) — 작업 ID 는 점유 토큰 | `PollFeedJob` → `FeedPoller` | 위에서 등록 | 점유 확인 → 예약 시각까지 대기 → 같은 소스의 요청 시작 시각 예약 · 대기 → 트랜잭션 밖에서 요청 · 정규화 → 한 트랜잭션에서 수집 상태 반영과 새 항목마다 `ArticleFetched` 발행(source-R16 ~ source-R21). 재시도하지 않는다 |
+| 기동 대조 | `PresetFeedReconciliation`(`application`) | 애플리케이션 준비 완료(`ApplicationReadyEvent`) | 소스마다 프로필과 저장된 피드를 대조한다(source-R8) |
+| **(미구현)** 피드 건강 검사 | — | 1시간마다 | 연속 실패 · 장기 무소식 피드 표시, 운영자 알림(source-R30 · source-R31) |
+
+수집 작업이 동시에 몇 개 도는지는 작업 서버의 worker 수가 정한다(§7). 수집 작업은 기다리는 동안 DB 연결을 잡지 않는다. 컨트롤러는 없다.
+
+### `application`
+
+- `PollScheduler` — 지금 수집할 피드를 점유한다. 대상 잠금 · 점유 기록을 한 트랜잭션에서 하고, 수집 작업 등록은 커밋 뒤 호출자(`PollDueFeedsJob`)가 한다 — 작업 저장소는 그 트랜잭션에 참여하지 않는다(source-R15 · source-R19)
+- `FeedPoller` — 점유한 피드를 한 번 수집한다. 요청 시작 시각 예약과 결과 반영 · 발행을 각각 한 트랜잭션에서 하고, 피드 요청은 트랜잭션 밖에서 한다. 프로필을 얻지 못한 갈래는 미룸만 한 트랜잭션에서 쓴다(source-R16 ~ source-R19)
+- `SourceRegistration` — 소스를 등록한다. 소스 행과 프로필의 피드마다 꺼진 피드 행 · 수집 상태 행을 한 트랜잭션에서 만든다(source-R1 ~ source-R3)
+- `SourceOperations` — 소스 · 피드를 켜고 끄고 수집 주기를 바꾼다. 연산마다 한 트랜잭션이다. 켜기는 지금의 프로필로 판정하고, 거절하면 아무것도 저장하지 않는다(source-R4 · source-R5 · source-R14)
+- `FeedProvisioner` — 피드 행과 그 수집 상태 행을 함께 만든다. 이미 있으면 아무것도 하지 않는다 — 등록과 기동 대조가 호출자의 트랜잭션 안에서 쓴다(source-R3 · source-R8)
+- `PresetFeedReconciliation` — 기동 대조(들어오는 쪽). 프로필을 얻은 소스마다 한 트랜잭션에서 프로필에 새로 생긴 피드를 더한다. 프로필을 얻지 못한 소스는 경고 로그만 남긴다(source-R8)
+- `PresetCatalogConfiguration` — 기동 때 프리셋 파일을 모두 읽어 카탈로그로 둔다. 하나라도 검증에 실패하면 기동하지 않는다(source-R12)
+- `SourceRegistryConfiguration` — 프로필 해석기 `ProfileResolver` 를 카탈로그와 검증기로 만든다
+- 그 밖의 값: `ClaimedPoll`(점유한 회차) · `Registration`(등록 결과)
+
+### `domain`
+
+#### `domain/registry`
+
+- `Source` · `Feed` — aggregate(Spring Data JDBC). 운영 설정(켜짐 · 수집 주기)만 둔다 — 이름 · URL · 섹션은 수집 프로필에, 수집 상태는 다른 행(`feed_poll_states`)에 있다(source-R1 · source-R7)
+- `SourceRepository` · `FeedRepository` — 두 aggregate 의 저장소. 피드 행은 "없으면 넣기"로만 만든다(source-R2 · source-R3)
+- `ProfileResolver` — 소스의 수집 프로필을 얻는다 — 프리셋은 카탈로그에서, 운영자 프로필은 저장된 원문을 검증해서. 가리킬 곳을 잃었는지는 저장하지 않고 부를 때마다 판정한다(source-R1 · source-R8)
+- `PollTarget` — 피드를 지금 수집할 수 있는가 — 프로필을 얻었고 그 프로필에 피드가 있는가(source-R5 · source-R19)
+- `FeedReconciliation` — 프로필의 피드와 저장된 피드 행을 견준 결과(source-R8)
+- 그 밖의 값: `Activation` · `ActivationRefusal` · `ProfileResolution`
+
+#### `domain/profile`
+
+- `CollectionProfile` — 검증을 통과한 수집 프로필. 프리셋과 운영자 프로필이 같은 모델이고, 검증기만 만든다(source-R10)
+- `ProfileParser` — 원문 → 프로필. `text` 의 읽기기 → `ProfileBinder` → `ProfileValidator` 를 지나고, 입력 오류는 예외가 아니라 문제 목록으로 돌려준다
+- `ProfileBinder` — 트리 → 초안. 알 수 없는 키 · 같은 매핑 안 중복 키 · 앵커 · 별칭 · 명시 태그 · 빈 값 · 형(type) 오류를 판정한다(source-R32)
+- `ProfileValidator` — 초안 → 프로필. 값 규칙의 정본이다(source-R11)
+- `PresetCatalog` · `Preset` — 프리셋 키 → 프리셋(source-R12)
+- `PollIntervalPolicy` — 실제 주기 산식(source-R14)
+- 그 밖의 값 · 식별자 타입: `FeedKey` · `PresetKey` · `FeedSpec` · `SourceInfo` · `PollInterval` · `PollIntervalSettings` · `PreCorrection` · `ItemField` · `ValueSource` · `ElementName` · `KnownNamespaces` · `DateParsing` · `DatePattern` · `Identifiers` · `ProfileDraft` · `ProfileParse` · `PresetParse` · `ProfilePath` · `ProfileProblem` · `ProblemCode`
+
+#### `domain/profile/text`
+
+- `ProfileTextReader` — 프로필 원문을 YAML 이벤트 API 로만 읽어 트리로 옮긴다 — 원문 길이 상한 · 문서 하나 · 최상위 매핑(source-R32)
+- `ProfileTree` — 원문을 받은 그대로 옮긴 트리. 판정은 하지 않는다
+- 그 밖의 값: `ReadResult` · `TextLocation`
+
+#### `domain/poll`
+
+- `FeedPollState` — 피드 하나의 수집 상태. aggregate 가 아닌 상태 객체로, 전이(`claim` 점유 · `complete` 결과 반영 · `deferForUnavailableProfile` 미룸)가 다음 상태를 계산한다. 저장은 `FeedPollStateRepository` 가 점유 토큰을 조건으로 한다(source-R15 · source-R16 · source-R19 ~ source-R27)
+- `PollSchedule` — 수집 일정 산식과 상수의 정본(점유 기간 · 같은 소스 요청 간격 · 프로필 재확인 · 백오프 상한)(source-R15 · source-R18 · source-R19 · source-R25)
+- `PollSlots` — 같은 소스에서 이번 회차에 수집할 피드들의 예약 시각을 띄운다(source-R18)
+- `ItemComparison` · `ItemKey` — 새 항목 판정과 넘침 의심(source-R20 · source-R21)
+- `FeedPollStateRepository` — 수집 상태 저장소. 수집 작업만 쓴다 — 대상 잠금 · 점유 확인 · 토큰 조건 반영(source-R6 · source-R15 · source-R16)
+- `SourceFetchSlotRepository` — 소스마다 다음 요청 가능 시각의 저장소. 요청 직전에 그 행을 잠근다(source-R18)
+- 그 밖의 값: `Lease` · `LastError` · `PollOutcome` · `FeedPollContext`
+
+#### `domain/fetch`
+
+- `ArticleSource` — 피드 요청 관문(포트). 선언은 나가는 쪽에 있다
+- `AddressPolicy` · `NetworkRange` — 내부 주소 판정. 대역 표의 정본이다(source-R33 · source-R34)
+- `FetchUrls` — 요청할 수 있는 주소와 리다이렉트 대상 풀기(source-R35)
+- `StatusRule` — 응답 상태 코드 → 결과(source-R23 · source-R24)
+- `FetchFailureReason` — 실패 이유의 닫힌 목록과 일시 · 영구 분류(source-R24)
+- `FetchState` — 조건부 요청 값과 그 저장 · 재전송 조건(source-R22)
+- `FetchLimits` — 수집 마감 · 본문 크기 · 리다이렉트 상한(source-R28)
+- `UserAgent` — 요청의 `User-Agent` 와 연락처 형식(source-R29)
+- `RedirectTrail` — 따라간 리다이렉트 홉 수와 영구 이동 주소(source-R27 · source-R28)
+- `ContentTypeCharset` — `Content-Type` 의 charset 읽기(source-R38)
+- 그 밖의 값: `FeedDescriptor` · `FetchResult` · `FetchFailure` · `FailurePermanence` · `StatusOutcome`
+
+#### `domain/feed`
+
+- `FeedNormalizer` — 정규화의 진입. 문자 인코딩 판정 → 사전 보정 → XML 읽기 → 형식 판별 → 항목마다 필드 보정. 상태가 없고 호출마다 파서를 새로 만든다(source-R38 ~ source-R44)
+- `DocumentDecoder` · `KoreanCharsets` — 받은 바이트의 문자 인코딩 판정과 읽기(source-R38)
+- `PreCorrector` · `EntityReferences` · `XmlCharacters` — 사전 보정(source-R38)
+- `FeedXmlReader` · `IsolatedXmlReaders` · `DeclarationRejectingHandler` — 외부 엔티티 · DTD 선언을 받지 않는 XML 읽기(source-R43 · source-R44)
+- `RomeFeed` · `FeedFormat` — Rome 의 형식 판별과 항목별 제목 · 링크(source-R39)
+- `ItemNormalizer` · `StandardElements` — 항목 하나 → 기사, 형식마다 읽을 곳 `$standard`(source-R40 · source-R41)
+- `PublishedAtResolver` · `Rfc822DateTime` — 발행 시각 해석(source-R40)
+- `TextCleaner` — HTML 제거 · 엔티티 해제 · 공백 정리(source-R40 · source-R45)
+- 그 밖의 값: `FeedNormalization` · `FeedDocument` · `ItemValues` · `SkippedItem` · `SkipReason` · `DocumentProblem` · `DocumentProblemKind` · `MarkupScanner`
+
+### 나가는 쪽
+
+#### `ArticleSource`
+
+모든 피드 수집(정기 수집 · 활성화 전 미리보기)이 거치는 관문이다. 모듈 안의 포트(`domain/fetch`)라 공개 인터페이스(§3)가 아니다. 선언의 정본은 이 Spec 이다.
+
+```java
+public interface ArticleSource {
+    FetchResult fetch(FeedDescriptor feed, FetchState previous);
+}
+
+public record FeedDescriptor(URI url, CollectionProfile profile) {}
+
+public record FetchState(@Nullable String etag, @Nullable String lastModified) {}
+
+public sealed interface FetchResult {
+    record Fetched(FeedNormalization.Normalized normalization, FetchState state, Instant fetchedAt,
+            @Nullable URI movedTo) implements FetchResult {}
+    record NotModified(FetchState state, Instant fetchedAt, @Nullable URI movedTo) implements FetchResult {}
+    record Failed(FetchFailure failure, Instant attemptedAt) implements FetchResult {}
+}
+```
+
+- 입출력 실패는 예외가 아니라 `FetchResult.Failed` 다. 인자가 null 이면 `NullPointerException`
+- `previous` 는 직전 수집이 남긴 조건부 요청 값이고, 처음이면 `FetchState.NONE`
+
+#### 구현과 로컬 대체물
+
+- `RssArticleSource` — 포트의 v1 구현이고 하나뿐이다. Apache HttpClient 5 로 피드를 받아 `FeedNormalizer` 로 넘긴다. 리다이렉트는 직접 따라가며 홉마다 요청 규칙(`domain/fetch`)으로 판정하고, 한 번의 수집 전체에 마감 하나를 건다. 내부 주소 차단 · 요청 제한은 이 구현이 건다(source-R28 · source-R33 ~ source-R37). 정규화는 Rome(형식 판별 · 제목 · 링크), 자체 구성한 SAX 파서 · JDOM(DTD 선언 거부), jsoup(HTML 제거 · 엔티티 표)을 쓴다
+- `PolicyDnsResolver` — 이름 해석 결과를 `AddressPolicy` 로 거른다. 연결은 이 해석기가 돌려준 주소로만 하므로 검사한 주소가 곧 연결 주소다(source-R33)
+- `BoundedBody` — 응답 본문을 크기 상한까지만 읽는다(source-R28)
+- `FeedHttpClients` — 수집용 Apache 클라이언트를 만든다. 구성과 테스트가 같이 쓴다(source-R36)
+- `RssArticleSourceConfiguration` · `CollectionProperties` — 수집 설정(§7)으로 구현을 만든다. 연락처가 없거나 설정이 틀리면 기동이 실패한다(source-R29 · source-R34)
+- 그 밖: 예외 `BlockedAddressException` · `BodyTooLargeException`
+- 로컬 대체물은 없다 — 테스트는 실제 구현에 WireMock 피드 서버를 붙인다
+
+#### 저장소 구현
+
+- `JdbcFeedPollStateRepository` · `JdbcSourceFetchSlotRepository` — 수집 상태 · 요청 예약 저장소의 JdbcClient 구현. 쓰기 조건이 점유 토큰 · 행 잠금이라 aggregate 저장 대신 SQL 로 쓴다
+- `SourceRepository` · `FeedRepository` 는 Spring Data JDBC 가 구현한다
+
+#### 수집 프로필 읽기
+
+프로필 원문은 snakeyaml-engine 의 이벤트 API 로만 읽는다(source-R32).
+
+#### 신뢰할 수 없는 입력
+
+| 입력 | 방어 |
+|---|---|
+| 운영자 프로필 원문 | [운영자 프로필 입력](#운영자-프로필-입력) — source-R32 |
+| 피드 URL · 리다이렉트 | [피드 요청](#피드-요청) — source-R33 ~ source-R37 |
+| 피드 문서 | [피드 XML 입력](#피드-xml-입력) — source-R43 ~ source-R46, 크기 상한 source-R28 |
+
+## 5. 규칙과 불변식
 
 ### 등록과 켜기
 
@@ -101,7 +353,7 @@ HTTP 엔드포인트: 없음.
 - **source-R6** — 수집 대상은 소스와 피드가 모두 켜졌고 다음 수집 시각이 지난 피드다
 - **source-R7** — 피드는 지우지 않는다 — 받은 기사의 기록이 피드 ID 를 가리킨다. 프로필에서 빠진 피드도 남는다. 피드 식별자 · 프리셋 키는 저장된 뒤 바꾸지 않는다
 - **source-R8** — 기동 때 소스마다 지금의 프로필과 저장된 피드를 대조한다. 프로필에 새로 생긴 피드는 꺼진 피드로 더하고(source-R3 과 같은 경로), 사라진 프리셋 · 검증에 걸린 운영자 원문 · 프로필에서 빠진 피드는 경고 로그로 알린다. 피드는 지우지도 끄지도 않는다 — 켜고 끄는 것은 운영자의 선택이다. 가리킬 곳을 잃었는지는 저장하지 않고 그때의 프리셋 파일 · 검증기로 판정한다. 여러 인스턴스가 함께 해도 결과가 같다
-- **source-R9** — **(미구현)** 활성화 관문의 미리보기: 켜기 전에 한 번 받아 미리보기(항목 수 · 날짜 해석률 · 요약문 길이 분포 · 파싱 오류)를 만들고, 기준에 못 미치면 켜지 않는다. 이 미리보기도 피드 요청 관문(`ArticleSource` — §8)을 거친다
+- **source-R9** — **(미구현)** 활성화 관문의 미리보기: 켜기 전에 한 번 받아 미리보기(항목 수 · 날짜 해석률 · 요약문 길이 분포 · 파싱 오류)를 만들고, 기준에 못 미치면 켜지 않는다. 이 미리보기도 피드 요청 관문(`ArticleSource` — §4)을 거친다
 
 ### 수집 프로필
 
@@ -235,17 +487,6 @@ RSS 품질이 피드마다 크게 다르므로 사전 보정 → 파싱 → 필�
 - **source-R45** — 제목 · 요약문 · 기자명 · 카테고리는 HTML 로 보고 텍스트만 남긴다
 - **source-R46** — 문서를 읽지 못한 이유의 문구는 피드에서 이름(선언한 문자 인코딩 레이블 · DTD 선언 · 엔티티의 이름)만 인용한다
 
-## 5. 작업과 리스너
-
-| 작업 · 리스너 | 계기 | 내용 |
-|---|---|---|
-| 수집할 피드 등록 — 반복 작업 ID `poll-due-feeds` | 1분마다 | 대상 피드를 점유하고 점유 토큰을 작업 ID 로 피드마다 수집 작업을 예약 시각에 등록한다(source-R15 · source-R18 · source-R19). 재시도하지 않는다 — 실패한 회차가 재시도를 기다리는 동안 작업 서버가 다음 회차를 건너뛰므로 다음 회차가 곧 재시도다. 같은 점유를 두 번 등록해도 작업 ID 가 같아 작업은 하나다 |
-| 피드 수집(피드 ID, 점유 토큰) — 작업 ID 는 점유 토큰 | 위에서 등록 | 점유 확인 → 예약 시각까지 대기 → 같은 소스의 요청 시작 시각 예약 · 대기 → 트랜잭션 밖에서 요청 · 정규화 → 한 트랜잭션에서 수집 상태 반영과 새 항목마다 `ArticleFetched` 발행(source-R16 ~ source-R21). 재시도하지 않는다 |
-| 기동 대조 | 애플리케이션 준비 완료(`ApplicationReadyEvent`) | 소스마다 프로필과 저장된 피드를 대조한다(source-R8) |
-| **(미구현)** 피드 건강 검사 | 1시간마다 | 연속 실패 · 장기 무소식 피드 표시, 운영자 알림(source-R30 · source-R31) |
-
-수집 작업이 동시에 몇 개 도는지는 작업 서버의 worker 수가 정한다(§7). 수집 작업은 기다리는 동안 DB 연결을 잡지 않는다.
-
 ## 6. 데이터
 
 컬럼 타입 · 인덱스 · 제약 문면의 정본은 `backend/src/main/resources/db/migration/V3__sources_and_feeds.sql` 이다.
@@ -269,43 +510,7 @@ RSS 품질이 피드마다 크게 다르므로 사전 보정 → 파싱 → 필�
 
 환경 변수 이름 · 값 예시는 [infrastructure.md "수집 설정"](../infrastructure.md#수집-설정)에 있다.
 
-## 8. 외부 의존
-
-**포트 `ArticleSource`** (`net.yozmnews.source.domain.fetch` — 모듈 안의 포트라 §3 이 아니다). 모든 피드 수집(정기 수집 · 활성화 전 미리보기)이 거치는 관문이다.
-
-```java
-public interface ArticleSource {
-    FetchResult fetch(FeedDescriptor feed, FetchState previous);
-}
-
-public record FeedDescriptor(URI url, CollectionProfile profile) {}
-
-public record FetchState(@Nullable String etag, @Nullable String lastModified) {}
-
-public sealed interface FetchResult {
-    record Fetched(FeedNormalization.Normalized normalization, FetchState state, Instant fetchedAt,
-            @Nullable URI movedTo) implements FetchResult {}
-    record NotModified(FetchState state, Instant fetchedAt, @Nullable URI movedTo) implements FetchResult {}
-    record Failed(FetchFailure failure, Instant attemptedAt) implements FetchResult {}
-}
-```
-
-- 입출력 실패는 예외가 아니라 `Failed` 다. 인자가 null 이면 `NullPointerException`
-- `previous` 는 직전 수집이 남긴 조건부 요청 값이고, 처음이면 `FetchState.NONE`
-- v1 구현은 `RssArticleSource` 하나다 — Apache HttpClient 5 로 피드를 받아 정규화로 넘긴다. 내부 주소 차단 · 요청 제한은 이 구현이 건다(source-R28 · source-R33 ~ source-R37). 정규화는 Rome(형식 판별 · 제목 · 링크), 자체 구성한 SAX 파서 · JDOM(DTD 선언 거부), jsoup(HTML 제거 · 엔티티 표)을 쓴다
-- 로컬 대체물은 없다 — 테스트는 실제 구현에 WireMock 피드 서버를 붙인다
-
-**수집 프로필 읽기** — 프로필 원문은 snakeyaml-engine 의 이벤트 API 로만 읽는다(source-R32).
-
-**신뢰할 수 없는 입력**
-
-| 입력 | 방어 |
-|---|---|
-| 운영자 프로필 원문 | [운영자 프로필 입력](#운영자-프로필-입력) — source-R32 |
-| 피드 URL · 리다이렉트 | [피드 요청](#피드-요청) — source-R33 ~ source-R37 |
-| 피드 문서 | [피드 XML 입력](#피드-xml-입력) — source-R43 ~ source-R46, 크기 상한 source-R28 |
-
-## 9. 결정
+## 8. 결정
 
 | ADR | 한 줄 |
 |---|---|
