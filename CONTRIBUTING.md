@@ -6,7 +6,7 @@
 
 ### 필요한 것
 
-- **Docker**(Compose 플러그인 포함) — 검사(아래)는 컨테이너에서 돌고, 검사에 필요한 호스트 도구는 Docker 뿐이다. privileged 컨테이너를 허용해야 한다 — 백엔드 테스트의 Testcontainers 가 검사 정의 안의 Docker 엔진(DinD)을 쓴다
+- **Docker**(Compose 플러그인 포함) — 검사(아래)는 컨테이너에서 돌고, 검사에 필요한 호스트 도구는 Docker 뿐이다. privileged 컨테이너를 허용해야 한다(검사 정의의 구성은 [개발 인프라 — 검사 환경](docs/development/infrastructure.md#검사-환경))
 
 호스트에서 직접 빌드하거나 개발 서버를 돌릴 때는 다음도 필요하다.
 
@@ -39,7 +39,7 @@ bash deploy/smoke.sh                                          # 종료 코드가
 docker compose -f deploy/compose.yaml down -v                 # 정리 — 배포 구성의 DB 볼륨도 지운다
 ```
 
-- Dockerfile 은 측별 하나다(`backend/Dockerfile` · `frontend/Dockerfile`). 검사 이미지는 target `check`, 배포 이미지는 target `app` · `proxy` 다([ADR-0022](docs/adr/0022-image-targets-per-side-dockerfile-without-run-in-runtime-stage.md)). 문서 검사 이미지는 검사 전용 `tools/docs-check/Dockerfile` 하나다. 배포 target 의 실행 단계에 명령(`RUN`)을 더하면 에뮬레이션 없는 빌더에서 다른 아키텍처의 빌드가 깨진다
+- 배포 target 의 실행 단계에는 명령(`RUN`)을 두지 않는다 — 에뮬레이션 없는 빌더에서 다른 아키텍처의 빌드가 깨진다. 이미지 구성은 [개발 인프라 — 이미지](docs/development/infrastructure.md#이미지)
 
 ### 호스트에서 직접 실행 (빠른 반복)
 
@@ -55,7 +55,7 @@ backend/gradlew -p backend build                                 # 컴파일 + �
 
 결과는 `backend/build/test-results/test/` (JUnit XML) 와 `backend/build/reports/tests/test/index.html` 에 남는다.
 
-IDE 에서 테스트를 돌릴 때도 Gradle 로 실행을 위임한다. 테스트가 읽는 저장소 파일(PostgreSQL 이미지를 정하는 `compose.yaml`, 화면용 API 명세 `api/openapi.json`)의 경로를 Gradle 이 시스템 속성으로 넘기므로, 위임하지 않으면 PostgreSQL 컨테이너를 띄우는 테스트가 그 시스템 속성이 없다는 메시지로 실패한다([ADR-0019](docs/adr/0019-dev-compose-per-checkout-and-test-image-source.md)).
+IDE 에서 테스트를 돌릴 때도 Gradle 로 실행을 위임한다. 위임하지 않으면 PostgreSQL 컨테이너를 띄우는 테스트가 시스템 속성이 없다는 메시지로 실패한다 — [테스트가 저장소 파일을 읽는 결선](docs/development/infrastructure.md#테스트가-저장소-파일을-읽는-결선).
 
 **백엔드 로컬 실행**
 
@@ -72,7 +72,7 @@ docker compose --profile dev down -v                                     # 컨�
 - 바꿀 수 있는 값(호스트 포트)은 `.env.example` 에 있다. 필요한 줄만 `.env` 로 옮긴다 — `.env` 는 없어도 된다
 - 컨테이너 · 볼륨은 checkout(작업 디렉터리)마다 따로 생긴다. 두 checkout 의 환경을 함께 띄우면 mock OIDC 서버의 호스트 포트가 겹치니 한쪽의 `.env` 에서 바꾼다. checkout 을 지우기 전에 그 checkout 에서 `down -v` 로 정리한다
 - 자기 PostgreSQL 을 쓰려면 Compose 연동을 끄고(`SPRING_DOCKER_COMPOSE_ENABLED=false`) DB 접속 환경 변수(`SPRING_DATASOURCE_*` — [infrastructure.md](docs/infrastructure.md) "비밀 값")를 준다
-- PostgreSQL 버전은 `compose.yaml` 의 이미지가 정하고, 테스트도 같은 이미지를 쓴다([ADR-0019](docs/adr/0019-dev-compose-per-checkout-and-test-image-source.md)). 메이저 버전을 올린 뒤에는 `down -v` 로 개발 DB 를 다시 만든다
+- PostgreSQL 이미지는 `compose.yaml` 이 정한다([PostgreSQL 이미지 정본](docs/development/infrastructure.md#postgresql-이미지-정본)). 메이저 버전을 올린 뒤에는 `down -v` 로 개발 DB 를 다시 만든다
 
 **프론트엔드**
 
@@ -99,7 +99,7 @@ pnpm -C frontend generate:api                 # api/openapi.json 에서 API 타�
 - 화면용 API 를 바꾸면 `updateOpenApiSpec` 으로 명세를 다시 써서 함께 커밋한다. 명세가 코드와 다르면 백엔드 테스트가 이 명령을 안내하며 실패한다
 - 생성 타입은 커밋하지 않는다. `dev` · `build` 는 먼저 생성한다. clone 직후와 명세가 바뀐 브랜치를 받은 뒤에는 `generate:api` 를 한 번 돌려야 IDE 가 새 타입을 본다
 - 명세가 프론트엔드 코드와 맞지 않으면 프론트엔드 `build` 의 타입 검사가 실패한다
-- 실행 중인 백엔드의 명세 엔드포인트(`http://localhost:8080/v3/api-docs`)는 기본으로 닫혀 있고 Spring profile `local` 로 실행하면 열린다([infrastructure.md](docs/infrastructure.md) "관측")
+- 실행 중인 백엔드의 명세 엔드포인트(`http://localhost:8080/v3/api-docs`)는 기본으로 닫혀 있고 Spring profile `local` 로 실행하면 열린다([platform Spec §7](docs/specs/platform.md#7-설정))
 
 테스트로 무엇을 증명해야 하는지는 [테스트 전략](docs/qa/test-strategy.md)을 따른다.
 
