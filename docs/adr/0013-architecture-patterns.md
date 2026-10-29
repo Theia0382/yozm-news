@@ -81,3 +81,7 @@ net.yozmnews.<module>
 | 교과서적 헥사고날 / 클린 아키텍처 | 영속성까지 포트로 만들고 모델을 두 벌 두면 변환 코드만 늘어난다 |
 | 컨트롤러를 별도 `web` 모듈에 모음 | `web`이 모든 모듈을 알아야 하고, 각 모듈이 내부 서비스를 공개해야 해서 경계가 약해진다 |
 | 마이크로서비스 | [ADR-0004](0004-tech-stack.md) 참고 |
+
+## 후속 기록
+
+- 2026-10-29: 테스트 표의 "단위 — `domain` — 스프링 없이 순수 Java"를 읽는 법과, `domain` 이 교체하지 않는 프레임워크(Spring Data JDBC · Spring Modulith)의 타입을 쓰는 기준은 [ADR-0037](0037-domain-may-use-non-replaceable-framework-types.md)에 있다.

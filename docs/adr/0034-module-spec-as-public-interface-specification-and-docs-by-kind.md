@@ -1,6 +1,6 @@
 # ADR-0034: 모듈 Spec 은 모듈 공개 인터페이스의 명세로 코드보다 먼저 쓰고, 설계 문서는 종류 · 독자별 갈래로 나눈다
 
-- 상태: 승인
+- 상태: 승인 (Spec 이 담는 것 · 클래스 구조의 자리 · 절 목록과 번호 고정은 [ADR-0036](0036-module-spec-holds-internal-structure-and-port-declarations-in-eight-sections.md)이 대체)
 - 날짜: 2026-10-29
 - 근거: [이슈 #41](https://github.com/Theia0382/yozm-news/issues/41) — 기점 `cfd13e3` 에서 코드가 있는 세 모듈(`source` · `article` · `platform`)의 지식이 놓인 문서 · 코드 · ADR 을 대조
 - 관련: [ADR-0013](0013-architecture-patterns.md)(모듈 구조 · 모듈 문서 자동 생성 — 손으로 쓰는 Spec 은 그 생성물을 대체하지 않는다), [ADR-0020](0020-screen-api-contract-from-committed-openapi-spec.md)(화면용 API 형식의 정본은 `api/openapi.json` — Spec 은 엔드포인트만 적는다)
