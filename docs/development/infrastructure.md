@@ -14,7 +14,7 @@
 | 각 Dockerfile 옆의 `Dockerfile.dockerignore` | 이미지에 들어가는 파일의 허용 목록 | 검사 · 빌드 입력 |
 | [.github/workflows/ci.yml](../../.github/workflows/ci.yml) | CI | job · 계기 · 캐시 · 보고서 |
 | [frontend/proxy/](../../frontend/proxy/) | 배포 proxy(Caddy) 설정 | 앱으로 넘기는 경로(`backend-paths.caddy`) |
-| [deploy/](../../deploy/) | 배포 구성과 스모크 | 배포 서비스 정의 · 운영 값 목록 |
+| [deploy/](../../deploy/) | 배포 구성과 스모크 — 띄우고 운영하는 방법은 [배포와 운영](../operations/deployment.md) | 배포 서비스 정의 · 운영 값 목록 |
 
 ## 개발용 Compose
 
@@ -79,7 +79,7 @@ IDE 에서 테스트를 Gradle 에 맡기는 것은 1 때문이다([CONTRIBUTING
 
 - 모든 이미지는 메이저 태그로 받는다 — 검사 · 실행 기반 이미지(`FROM`)와 개발용 서비스 · DinD(`image:`). 변형이나 OS 계열을 붙인 태그(`-slim` · `-dind` · `-jdk`, `pg{메이저}-{OS 계열}` 형식)도 메이저 태그다([ADR-0038](../adr/0038-container-images-use-major-tags-and-revisit-pinning-at-publication.md))
 - 다시 빌드하거나 받으면 그 메이저의 최신 패치가 들어온다. 그래서 CI 에서 검사한 이미지와 나중에 빌드한 이미지의 패치가 다를 수 있다
-- JDK · Node 의 메이저는 버전 정본(Gradle toolchain · `frontend/.nvmrc`)과 함께 바꾼다. PostgreSQL 의 메이저를 바꾸면 배포 DB 를 덤프 · 복원으로 먼저 옮겨야 한다 — 새 메이저는 데이터를 다른 경로에 두어 기존 데이터를 두고 빈 클러스터로 뜬다([ADR-0021](../adr/0021-separate-deploy-compose-with-single-app-service.md))
+- JDK · Node 의 메이저는 버전 정본(Gradle toolchain · `frontend/.nvmrc`)과 함께 바꾼다. PostgreSQL 의 메이저를 바꾸면 배포 DB 를 먼저 옮겨야 한다([업데이트](../operations/deployment.md#업데이트))
 - 메이저 태그가 게시되지 않는 이미지만 정확한 버전으로 두고, 그 줄에 사유를 적는다. 지금은 그런 이미지가 없다
 
 ## proxy 가 넘기는 경로
@@ -123,10 +123,10 @@ IDE 에서 테스트를 Gradle 에 맡기는 것은 1 때문이다([CONTRIBUTING
 | 커밋된 화면용 API 명세 = 코드의 명세 | 테스트 `OpenApiSpecTests` | `api/openapi.json` · `backend/build.gradle.kts` |
 | 넘기는 경로의 정본 하나를 Caddy · Vite 가 함께 읽는다 | 테스트 `backendPaths.test.ts` + 스모크 K5 · K6 · K10 | `frontend/proxy/` |
 | proxy 가 관리 · 명세 엔드포인트를 넘기지 않는다 | 스모크 K7 · K8 | `frontend/proxy/backend-paths.caddy` |
-| 배포 구성은 proxy 만 호스트에 공개하고 기본은 루프백이다 | 스모크 K2 | `deploy/compose.yaml` |
-| 배포 구성의 세 서비스가 순서대로 healthy 가 된다 | 구조(`depends_on` 의 healthy 조건) + `up --wait` + 스모크 K1 | `deploy/compose.yaml` |
-| 배포 필수 값이 없으면 멈춘다 | 구조(Compose 필수 보간) + 테스트 `RssArticleSourceConfigurationTests`(수집 연락처) | `deploy/compose.yaml` |
-| HTTP 로는 `health` 만 노출하고 상세 · 구성요소를 담지 않는다 | 테스트 `HealthEndpointTests` | `backend/src/main/resources/application.yaml` |
+| 배포 구성은 proxy 만 호스트에 공개하고 기본은 루프백이다 | 스모크 K2 | [공개](../operations/configuration.md#공개) |
+| 배포 구성의 세 서비스가 순서대로 healthy 가 된다 | 구조(`depends_on` 의 healthy 조건) + `up --wait` + 스모크 K1 | [배포 구성 실행](../operations/deployment.md#배포-구성-실행) |
+| 배포 필수 값이 없으면 멈춘다 | 구조(Compose 필수 보간) + 테스트 `RssArticleSourceConfigurationTests`(수집 연락처) | [운영 설정](../operations/configuration.md) |
+| HTTP 로는 `health` 만 노출하고 상세 · 구성요소를 담지 않는다 | 테스트 `HealthEndpointTests` | [헬스 체크와 관측](../operations/deployment.md#헬스-체크와-관측) |
 | 명세 엔드포인트는 기본으로 닫혀 있다 | 테스트 `ApiDocsExposureTests` | [platform Spec §7](../specs/platform.md#7-설정) |
 | JobRunr 대시보드는 꺼져 있고, 사용 통계를 보내지 않고, 라이브러리가 스키마를 만들지 않는다 | 테스트 `JobRunrConfigurationTests` | `application.yaml` |
 | 작업 서버의 동시 실행 수는 호스트 코어 수가 아니라 설정값이다 | 테스트 `JobRunrConfigurationTests` | `application.yaml` |
@@ -139,6 +139,6 @@ IDE 에서 테스트를 Gradle 에 맡기는 것은 1 때문이다([CONTRIBUTING
 | DinD 엔진은 공개 포트 없이 검사 정의 안에만 열린다 | 없음 | `compose.check.yaml` |
 | 검사 결과가 호스트의 시간대 · 로캘과 무관하다 | 없음 — 세 검사 이미지가 같은 `ENV` 를 각자 둔다 | 세 Dockerfile |
 | 개발용 Compose 의 포트는 호스트 루프백에만 열린다 | 없음 | `compose.yaml` |
-| PostgreSQL 메이저를 바꾸기 전에 배포 DB 를 옮긴다 | 없음 — 절차 | `compose.yaml` 주석 · [ADR-0021](../adr/0021-separate-deploy-compose-with-single-app-service.md) |
-| 작업 서버 동시 실행 수 변수를 빈 값 줄로 두지 않는다 — 빈 값이면 작업 서버의 기본값(호스트 코어 수 기준)이 된다 | 없음 | `deploy/.env.example` |
-| 배포 구성의 Compose 프로젝트 이름이 고정이다 | 없음 — 정의 한 줄 | `deploy/compose.yaml` |
+| PostgreSQL 메이저를 바꾸기 전에 배포 DB 를 옮긴다 | 없음 — 절차 | [업데이트](../operations/deployment.md#업데이트) |
+| 작업 서버 동시 실행 수 변수를 빈 값 줄로 두지 않는다 | 없음 | [백그라운드 작업](../operations/configuration.md#백그라운드-작업) |
+| 배포 구성의 Compose 프로젝트 이름이 고정이다 | 없음 — 정의 한 줄 | [Compose](../operations/configuration.md#compose) |

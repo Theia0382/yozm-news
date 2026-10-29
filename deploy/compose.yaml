@@ -1,4 +1,4 @@
-# 배포 구성 — proxy · app · postgres. 실행 방법은 docs/infrastructure.md "배포 구성 실행".
+# 배포 구성 — proxy · app · postgres. 실행 방법은 docs/operations/deployment.md "배포 구성 실행".
 # 운영 값은 이 디렉터리의 .env 에서 받는다(.env.example). 개발용 구성은 저장소 루트 compose.yaml(프로필 dev).
 # 프로젝트 이름을 고정한다 — 디렉터리 이름이 바뀌어도 같은 DB 볼륨을 쓰고, checkout 디렉터리 이름을 따르는 개발용 프로젝트와 겹치지 않는다.
 name: yozmnews-deploy

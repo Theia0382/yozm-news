@@ -66,7 +66,7 @@
 | 도메인 용어 신설 · 이름 변경 | 모듈 Spec 의 용어 절, 횡단 용어면 `overview.md` §8 |
 | 파이프라인 · 데이터 모델 · 보안 설계 변경 | 한 모듈에 속하면 그 모듈 Spec, 아니면 `pipeline` · `data-model` · `security`(§1 전환 중인 문서의 행선지) |
 | 개발 인프라 변경 (개발 환경 · 검사 정의 · CI · 이미지) | `development/` |
-| 운영 변경 (배포 구성 · 운영 설정 · 호스팅 · 백업) | `operations/` — 지금 그 내용은 `infrastructure.md` 에 있다 |
+| 운영 변경 (배포 구성 · 운영 설정 · 호스팅 · 백업) | `operations/` |
 | DB 스키마 변경 | Flyway 마이그레이션이 정본 + 그 모듈 Spec 의 데이터 절(주요 컬럼 · 의미 · 제약의 뜻) |
 | 확정된 프로젝트 결정 (ADR 선별 기준 충족) | ADR 신설 + [adr/README.md](adr/README.md) 표 행 + 관련 문서의 근거 링크 |
 | 결정 역전 | 새 ADR + 구 ADR 의 상태 줄 + 표 행 |

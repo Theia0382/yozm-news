@@ -102,8 +102,8 @@ flowchart LR
 ```
 
 - 브라우저에는 **단일 오리진**으로 서비스한다. `proxy` 가 React SPA 정적 파일을 내려주고 `/api/**` · `/oauth2/**` · `/login/**` 을 `web` 으로 넘긴다
-- `web` 과 `worker` 는 **같은 컨테이너 이미지**를 Spring profile 로 역할만 나눠 실행한다. 기본 배포 구성은 두 profile 을 함께 켠 프로세스 하나(서비스 `app`)이고, 나눠 띄울 때는 `web` · `worker` 두 서비스로 둔다 ([infrastructure.md](infrastructure.md))
-- Cloudflare 는 권장 구성이며 필수가 아니다 — 셀프 호스팅에서는 일반 리버스 프록시로 대체한다 ([infrastructure.md](infrastructure.md))
+- `web` 과 `worker` 는 **같은 컨테이너 이미지**를 Spring profile 로 역할만 나눠 실행한다. 기본 배포 구성은 두 profile 을 함께 켠 프로세스 하나(서비스 `app`)이고, 나눠 띄울 때는 `web` · `worker` 두 서비스로 둔다 ([operations/deployment.md](operations/deployment.md#서비스))
+- Cloudflare 는 권장 구성이며 필수가 아니다 — 셀프 호스팅에서는 일반 리버스 프록시로 대체한다 ([operations/deployment.md](operations/deployment.md#공개-경로와-외부-서비스))
 
 | 역할 | 하는 일 | 확장 |
 |---|---|---|

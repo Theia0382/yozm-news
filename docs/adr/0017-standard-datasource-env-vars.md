@@ -15,7 +15,7 @@
 
 - 앱은 DB 접속 정보를 Spring 표준 환경 변수 `SPRING_DATASOURCE_URL` · `SPRING_DATASOURCE_USERNAME` · `SPRING_DATASOURCE_PASSWORD` 로 받는다.
 - 기본 설정 파일(`application.yaml`)에는 `spring.datasource` 키도, 다른 이름의 환경 변수를 잇는 자리표시자도 두지 않는다.
-- 앱이 받는 환경 변수 이름은 [infrastructure.md](../infrastructure.md) "비밀 값" 절에 적는다.
+- 앱이 받는 환경 변수 이름은 [operations/configuration.md](../operations/configuration.md#db-접속) "DB 접속" 절에 적는다.
 
 ## 결과
 
