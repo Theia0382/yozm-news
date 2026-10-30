@@ -11,7 +11,7 @@ import org.springframework.modulith.events.core.EventSerializer;
 import org.springframework.test.context.TestPropertySource;
 
 /**
- * 이벤트 발행 레지스트리가 쓰는 직렬화기로 {@link ArticleStored} 를 저장했다가 되읽을 수 있다.
+ * {@link ArticleStored} 의 직렬화 왕복 — 이벤트 발행 레지스트리가 쓰는 직렬화기로 본다
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest

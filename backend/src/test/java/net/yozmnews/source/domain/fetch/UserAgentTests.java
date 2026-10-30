@@ -9,6 +9,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 /**
  * User-Agent 의 문법과 연락처 검사.
+ * <p>
+ * 지키는 규칙: source-R29
  */
 class UserAgentTests {
 

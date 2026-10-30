@@ -14,7 +14,9 @@ import net.yozmnews.source.FetchedArticle;
 import org.junit.jupiter.api.Test;
 
 /**
- * 조사 자료의 형식 이상 사례(AC4)와 문서 단위 결과 — 합성 픽스처를 프로필에 따라 정규화한다.
+ * 조사 자료의 형식 이상 사례와 문서 단위 결과 — 합성 픽스처를 프로필에 따라 정규화한다.
+ * <p>
+ * 지키는 규칙: source-R38 · source-R40 · source-R41 · source-R42 · source-R44
  */
 class FeedNormalizerAnomalyTests {
 

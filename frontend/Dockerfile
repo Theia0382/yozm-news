@@ -1,5 +1,5 @@
-# 프론트엔드 이미지 — target check 는 검사(compose.check.yaml), proxy 는 배포(deploy/compose.yaml — SPA 정적 파일 + 백엔드 프록시).
-# Node 버전은 이 태그가 정하고, frontend/.nvmrc 와 다르면 이미지 빌드가 실패한다. pnpm 버전은 corepack 이 package.json 의 packageManager 에서 읽는다.
+# 프론트엔드 이미지 — target check 는 검사(compose.check.yaml), proxy 는 배포(deploy/compose.yaml). 구성은 docs/development/infrastructure.md "이미지".
+# Node 태그는 frontend/.nvmrc 와 같아야 한다 — 다르면 이미지 빌드가 실패한다.
 
 # 빌드는 빌더 플랫폼에서 돈다 — 정적 파일은 아키텍처와 무관하다.
 FROM --platform=$BUILDPLATFORM node:24 AS deps
@@ -24,7 +24,7 @@ CMD ["sh", "-c", "s=0; for t in build lint format:check test; do pnpm run $t || 
 FROM deps AS build
 RUN pnpm run build
 
-# 실행 단계는 대상 플랫폼 이미지다 — 명령(RUN)을 두면 에뮬레이션 없는 빌더에서 빌더와 다른 아키텍처(amd64 빌더면 arm64)의 빌드가 깨진다. 복사와 메타데이터만 둔다.
+# 실행 단계에는 복사와 메타데이터만 둔다(RUN 없음) — docs/development/infrastructure.md "이미지"
 FROM caddy:2 AS proxy
 COPY frontend/proxy/Caddyfile frontend/proxy/backend-paths.caddy /etc/caddy/
 COPY --from=build /workspace/frontend/dist /srv

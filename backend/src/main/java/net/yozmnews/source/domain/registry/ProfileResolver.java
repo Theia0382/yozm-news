@@ -9,8 +9,7 @@ import net.yozmnews.source.domain.profile.ProfileParse;
 import net.yozmnews.source.domain.profile.ProfileParser;
 
 /**
- * 소스의 수집 프로필을 얻는다 — 프리셋은 카탈로그에서, 운영자 프로필은 저장된 원문을 검증해서. 가리킬 곳을 잃었는지는 저장하지 않고
- * 부를 때마다 판정한다 — 프리셋의 정본은 저장소 파일이고 카탈로그가 그 파일을 읽는다.
+ * 소스의 수집 프로필 해석기 — docs/specs/source.md §4 · source-R1 · source-R8
  */
 public final class ProfileResolver {
 

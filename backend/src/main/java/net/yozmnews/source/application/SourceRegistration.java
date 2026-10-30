@@ -19,7 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 소스를 등록한다 — 소스 행과 프로필의 피드마다 꺼진 피드 행 · 수집 상태 행을 한 트랜잭션에서 만든다. 켜기는 따로 한다.
+ * 소스 등록 — docs/specs/source.md §4 · source-R1 ~ source-R3
  */
 @Service
 class SourceRegistration {
@@ -53,8 +53,8 @@ class SourceRegistration {
 	}
 
 	/**
-	 * 프리셋을 참조하는 소스. 같은 프리셋을 두 소스가 참조하지 않는다 — 판정은 {@code sources.preset_key} 의 고유 제약 하나로 한다.
-	 * 제약 위반은 트랜잭션 밖에서 잡는다: 안에서 잡으면 이미 중단된 트랜잭션을 커밋하려다 실패한다.
+	 * 프리셋을 참조하는 소스를 등록한다 — source-R2. 같은 프리셋의 판정은 {@code sources.preset_key} 의 고유 제약 하나로 하고,
+	 * 제약 위반은 트랜잭션 밖에서 잡는다 — 안에서 잡으면 이미 중단된 트랜잭션을 커밋하려다 실패한다.
 	 */
 	Registration registerPreset(PresetKey key) {
 		Optional<Preset> preset = this.catalog.find(key);
@@ -69,7 +69,7 @@ class SourceRegistration {
 		}
 	}
 
-	/** 운영자 프로필 소스 — 원문을 검증하고, 통과하면 원문 그대로 저장한다 */
+	/** 운영자 프로필 소스를 등록한다 — source-R1 */
 	Registration registerOperatorProfile(String text) {
 		return switch (this.parser.parseOperatorProfile(text)) {
 			case ProfileParse.Parsed parsed -> register(Source.ofOperatorProfile(text, this.clock.instant()),

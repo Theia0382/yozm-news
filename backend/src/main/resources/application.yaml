@@ -11,11 +11,10 @@ spring:
         schema-initialization:
           # 스키마의 정본은 Flyway 마이그레이션이다. 이 키가 없으면 Modulith 가 기동 때 테이블을 만든다
           enabled: false
-      # 완료된 발행은 바로 지운다 — 결과는 각 모듈의 데이터에 남고, 실패한 발행은 남아 다시 처리된다
+      # 완료된 발행은 바로 지운다 — docs/specs/platform.md §5 · platform-R5
       completion-mode: delete
       staleness:
-        # 발행 시각에서 멈춤 기준이 지나도 끝나지 않은 발행을 실패로 바꾼다. 세 상태 모두 같은 값이어야 한다 —
-        # 감시는 기간 하나라도 있으면 세 상태를 모두 판정하고, 비운 상태는 발행 전부를 멈춤으로 본다
+        # 세 상태 모두 같은 값이어야 한다 — docs/specs/platform.md §5 · platform-R2
         published: ${yozmnews.events.stale-after}
         processing: ${yozmnews.events.stale-after}
         resubmitted: ${yozmnews.events.stale-after}
@@ -27,11 +26,10 @@ jobrunr:
   background-job-server:
     # 기본 구성은 두 역할(화면 · 백그라운드 작업)을 함께 하는 프로세스 하나다
     enabled: true
-    # 동시에 실행하는 작업 수. 없으면 JobRunr 가 호스트 코어 수로 정해(가상 스레드 CPU × 16) 동시 수집 수가 호스트마다 달라진다.
-    # 피드 수집은 대기 중에 DB 연결을 잡지 않는다. 측정 전 목표값이고, 운영 데이터로 다시 판단한다
+    # 작업 서버 동시 실행 수 — docs/operations/configuration.md "백그라운드 작업". 측정 전 목표값이고, 운영 데이터로 다시 판단한다
     worker-count: ${YOZMNEWS_JOB_WORKERS:16}
   dashboard:
-    # 대시보드는 Spring Security · proxy 밖의 별도 포트로 뜬다 — 접근 통제가 생기기 전에는 켜지 않는다
+    # 대시보드는 켜지 않는다 — docs/operations/deployment.md "헬스 체크와 관측"
     enabled: false
   miscellaneous:
     # 대시보드를 켜더라도 사용 통계를 내보내지 않는다
@@ -39,9 +37,9 @@ jobrunr:
 
 yozmnews:
   events:
-    # 발행하고 이만큼 지나도 끝나지 않은 발행은 멈춘 것으로 본다. 리스너는 DB 쓰기와 작업 등록만 하는 짧은 처리다
+    # 멈춤 기준 — docs/specs/platform.md §7 · platform-R2. 리스너는 짧은 처리여야 한다 — ADR-0023
     stale-after: PT30M
-    # 실패한 발행을 다시 처리하는 주기. (재처리 시도 상한 − 1) × 이 값 < stale-after 여야 한다 — 기동 때 확인한다
+    # 재제출 주기 — docs/specs/platform.md §7 · platform-R3
     resubmission-interval: PT5M
 
 management:
@@ -56,12 +54,12 @@ management:
 
 springdoc:
   api-docs:
-    # 명세 엔드포인트는 기본으로 끈다 — 테스트와 local 프로필에서만 켠다
+    # 명세 엔드포인트는 기본으로 끈다 — docs/specs/platform.md §5 · platform-R6
     enabled: false
-  # 화면용 API 만 명세에 넣는다. 외부 API 는 계약을 따로 둔다
+  # 화면용 API 만 명세에 넣는다 — platform-R6
   paths-to-match: /api/**
   default-produces-media-type: application/json
-  # 커밋된 명세(저장소 루트 api/openapi.json)와 바이트로 비교하므로 출력을 고정한다
+  # 출력을 고정한다 — platform-R6
   writer-with-order-by-keys: true
   writer-with-default-pretty-printer: true
   model-converters:

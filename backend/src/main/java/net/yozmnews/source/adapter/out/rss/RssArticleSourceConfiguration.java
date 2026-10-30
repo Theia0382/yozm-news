@@ -14,9 +14,11 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * 수집 구현을 설정으로 만든다 — 연락처가 없거나 설정이 틀리면 기동이 실패한다. Apache 클라이언트와 취소 스케줄러는
- * 컨텍스트 빈으로 두지 않는다: 스케줄러 빈은 Spring 의 기본 작업 스케줄러 자리를 차지하고, 클라이언트 빈은 내부 주소를
- * 막는 클라이언트를 다른 용도로 주입받게 한다. 둘은 {@link RssArticleSource} 가 소유하고 빈이 닫힐 때 닫는다.
+ * 수집 구현의 결선 — docs/specs/source.md §4 · source-R29 · source-R34.
+ * <p>
+ * Apache 클라이언트와 취소 스케줄러는 컨텍스트 빈으로 두지 않는다 — 스케줄러 빈은 Spring 의 기본 작업 스케줄러 자리를
+ * 차지하고, 클라이언트 빈은 내부 주소를 막는 클라이언트를 다른 용도로 주입받게 한다. 둘은 {@link RssArticleSource} 가 소유하고 빈이
+ * 닫힐 때 닫는다.
  */
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(CollectionProperties.class)
@@ -26,6 +28,7 @@ class RssArticleSourceConfiguration {
 			+ "(환경 변수 YOZMNEWS_COLLECTION_CONTACT). 피드 운영자가 요청 주체에 닿을 이메일 주소나 http · https URL 이다";
 
 	/**
+	 * 수집 요청의 {@code User-Agent} 를 만든다.
 	 * @throws IllegalStateException 연락처가 없거나 비었을 때, 형식이 틀렸을 때(원인은 {@code UserAgent} 의
 	 * {@link IllegalArgumentException}) — 문구에 설정 키와 환경 변수 이름이 있다
 	 */
@@ -45,7 +48,7 @@ class RssArticleSourceConfiguration {
 	}
 
 	/**
-	 * 빈 항목은 건너뛴다 — 환경 변수가 비어 있으면 빈 목록이다.
+	 * 차단 대역 정책을 만든다 — 허용 목록의 빈 항목은 건너뛴다(환경 변수가 비어 있으면 빈 목록이다).
 	 * @throws IllegalStateException 항목이 CIDR 대역이 아닐 때(원인은 {@code NetworkRange} 의
 	 * {@link IllegalArgumentException}) — 문구에 설정 키와 환경 변수 이름이 있다
 	 */

@@ -28,8 +28,10 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 /**
- * 저장 · 고유 제약 · 후보 조회를 Flyway 가 적용된 실제 PostgreSQL 에서. 테스트마다 트랜잭션을 롤백한다. 해시 기대값은
- * {@code sha256sum} 으로 따로 계산한 16진수다.
+ * 기사 저장소의 저장 · 고유 제약 · 후보 조회 — Flyway 가 적용된 실제 PostgreSQL 에서 본다. 테스트마다 트랜잭션을 롤백한다.
+ * 해시 기대값은 {@code sha256sum} 으로 따로 계산한 16진수다.
+ * <p>
+ * 지키는 규칙: article-R2 · article-R3 · article-R6 · article-R7 · article-R8 · article-R9
  */
 @JdbcTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)

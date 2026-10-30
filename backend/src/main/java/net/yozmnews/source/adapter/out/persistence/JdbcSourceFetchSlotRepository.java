@@ -11,7 +11,9 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
 /**
- * {@code source_fetch_slots} 를 JdbcClient 로 읽고 쓴다. 행은 소스마다 하나이고 처음 예약할 때 만든다 — 잠금은 그 행에 건다.
+ * {@link SourceFetchSlotRepository} 의 JdbcClient 구현 — docs/specs/source.md §4.
+ * <p>
+ * 행은 소스마다 하나이고 처음 예약할 때 만든다 — 잠금은 그 행에 건다.
  */
 @Repository
 class JdbcSourceFetchSlotRepository implements SourceFetchSlotRepository {

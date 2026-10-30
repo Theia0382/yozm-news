@@ -11,19 +11,14 @@ import net.yozmnews.source.FetchedArticle;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 같은 기사 판정용 정규 URL — {@code canonical_url} 이고, 화면의 원문 링크로도 쓴다. 자원을 바꾸지 않는 변환만 한다: 스킴
- * · 호스트 소문자, 기본 포트(http 80 · https 443) 제거, 빈 경로는 {@code /}, 프래그먼트 제거, 추적 파라미터 제거, 남은
- * 질의가 비면 {@code ?} 도 없앤다. 경로와 남은 파라미터의 순서 · 값 · 인코딩은 그대로 둔다 — 서버가 순서 · 대소문자를
- * 구분할 수 있다.
- *
- * @param value 정규 URL
+ * 정규 URL — docs/specs/article.md §4 · article-R1
  */
 public record CanonicalUrl(String value) {
 
-	/** 추적 파라미터 이름의 접두사 — 대소문자 무시 */
+	/** 추적 파라미터 이름의 접두사 */
 	static final List<String> TRACKING_PREFIXES = List.of("utm_");
 
-	/** 추적 파라미터 이름 — 대소문자 무시 */
+	/** 추적 파라미터 이름 */
 	static final Set<String> TRACKING_NAMES = Set.of("fbclid", "gclid", "dclid", "gbraid", "wbraid", "msclkid",
 			"yclid", "igshid", "mc_cid", "mc_eid");
 
@@ -32,8 +27,8 @@ public record CanonicalUrl(String value) {
 	}
 
 	/**
-	 * 기사 링크의 정규 URL. 조립은 원 URI 의 raw 구성요소로 해서 퍼센트 인코딩이 바뀌지 않는다.
-	 * @param link {@link FetchedArticle#isWebUrl} 을 만족하는 주소 — 아니면 거부한다
+	 * 기사 링크의 정규 URL 을 만든다. 원 URI 의 raw 구성 요소로 조립해 퍼센트 인코딩을 바꾸지 않는다.
+	 * @throws IllegalArgumentException 링크가 {@link FetchedArticle#isWebUrl} 을 만족하지 않을 때
 	 */
 	public static CanonicalUrl of(URI link) {
 		if (!FetchedArticle.isWebUrl(link)) {
@@ -67,7 +62,6 @@ public record CanonicalUrl(String value) {
 		return scheme.equals("https") ? 443 : 80;
 	}
 
-	/** 추적 파라미터 조각만 지우고, 남은 조각은 원문 그대로 원래 순서로 다시 잇는다 — 빈 조각도 남긴다 */
 	private static String withoutTracking(@Nullable String rawQuery) {
 		if (rawQuery == null) {
 			return "";

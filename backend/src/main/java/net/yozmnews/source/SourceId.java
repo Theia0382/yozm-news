@@ -1,9 +1,7 @@
 package net.yozmnews.source;
 
 /**
- * 소스(언론사) 식별자 — {@code sources.id}.
- *
- * @param value 1 이상
+ * 소스(언론사) 식별자 — docs/specs/source.md §3
  */
 public record SourceId(long value) {
 

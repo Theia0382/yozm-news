@@ -47,6 +47,9 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 수집 작업 흐름 — 실제 PostgreSQL · JobRunr 작업 서버와 WireMock 피드로 본다. 피드는 루프백의 WireMock 이라 수집 허용 대역에
  * {@code 127.0.0.1/32} 를 둔다. 작업 서버 poll 간격은 JobRunr 하한(5초)으로 줄인다. 1분 반복 작업은 테스트가 직접 부르므로 지운다 —
  * 남겨 두면 테스트 사이에 대상을 먼저 점유한다(등록은 {@code JobRunrConfigurationTests} 가 본다). 테스트는 트랜잭션으로 감싸지 않는다.
+ * <p>
+ * 지키는 규칙: source-R6 · source-R16 · source-R17 · source-R18 · source-R19 · source-R20 · source-R22 · source-R23 · source-R24 ·
+ * source-R25
  */
 @Import({ TestcontainersConfiguration.class, RegistryTestCatalog.class })
 @SpringBootTest

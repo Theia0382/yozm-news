@@ -6,7 +6,9 @@ import net.yozmnews.source.domain.registry.ProfileResolver;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-/** 소스의 프로필을 얻는 해석기를 카탈로그와 검증기로 만든다. */
+/**
+ * 프로필 해석기 결선 — docs/specs/source.md §4
+ */
 @Configuration(proxyBeanMethods = false)
 class SourceRegistryConfiguration {
 

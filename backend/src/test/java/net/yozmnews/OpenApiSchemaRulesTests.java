@@ -21,8 +21,9 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * 화면용 API 명세의 범위와 속성 규칙 — 명세는 {@code /api/**} 만 담고, 속성은 모두 필수, JSpecify {@code @Nullable} 은
- * null 허용 타입. 규칙이 실제 응답과 맞는지(null 속성도 키째 쓰는지)를 같은 표본으로 함께 본다.
+ * 화면용 API 명세의 경로 · 속성 규칙 — 시험용 컨트롤러를 더한 앱에서 명세와 응답을 본다.
+ * <p>
+ * 지키는 규칙: platform-R6
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest(classes = { YozmnewsApplication.class, OpenApiSchemaRulesTests.RulesSampleController.class },

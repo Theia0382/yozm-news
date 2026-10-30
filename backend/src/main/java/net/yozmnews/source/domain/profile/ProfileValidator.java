@@ -34,15 +34,13 @@ import net.yozmnews.source.domain.profile.text.TextLocation;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 초안 → {@link CollectionProfile}. 의미 규칙(필수 항목, URL · 언어 · 식별자 · 인코딩 · 날짜 형식 · 시간대의 유효성, 수집 주기
- * 하한, 피드 URL 중복, 사전 보정 규칙 중복, 요소 이름과 이름공간)을 판정하고 문제를 모두 모은다. 프리셋 파일과 운영자 프로필은 이용조건 검토일만 다르게
- * 다룬다.
+ * 프로필 값 규칙의 검증기 — 정본 · docs/specs/source.md §4 · source-R11
  */
 final class ProfileValidator {
 
 	/**
 	 * 날짜 형식을 검사하는 표본 시각 — 분이 0 이 아니어야 한다. 분이 0 이면 시까지만 담은 패턴이 왕복을 통과해 버린다. 오전/오후 없는
-	 * 12시간제 패턴은 다시 읽은 값에서 시각이 정해지지 않아 거부된다
+	 * 12시간제 패턴은 다시 읽은 값에서 시각이 정해지지 않아 거부된다.
 	 */
 	static final LocalDateTime DATE_SAMPLE = LocalDateTime.of(2026, 10, 25, 21, 37, 52);
 
@@ -54,6 +52,7 @@ final class ProfileValidator {
 
 	private static final Pattern ELEMENT = Pattern.compile("(?:(" + NAME + "):)?(" + NAME + ")");
 
+	/** 검증하는 원문의 종류 */
 	enum Kind {
 
 		/** 프리셋 파일 — 이용조건 검토일이 반드시 있다 */
@@ -66,10 +65,12 @@ final class ProfileValidator {
 	/** 검증 결과 */
 	sealed interface ValidationResult {
 
+		/** 검증을 통과했다 */
 		record Valid(CollectionProfile profile) implements ValidationResult {
 
 		}
 
+		/** 문제가 있다 */
 		record Invalid(List<ProfileProblem> problems) implements ValidationResult {
 
 			public Invalid {
@@ -258,7 +259,7 @@ final class ProfileValidator {
 		return null;
 	}
 
-	/** 접두사 → 이름공간 URI. 기본 접두사를 포함한다 */
+	/** 접두사 → 이름공간 URI 를 만든다 — 기본 접두사를 포함한다 */
 	private Map<String, String> namespaces(ProfileDraft draft) {
 		Map<String, String> namespaces = new LinkedHashMap<>(KnownNamespaces.PREFIXES);
 		Located<Map<String, Located<String>>> declared = draft.namespaces();
@@ -366,7 +367,7 @@ final class ProfileValidator {
 	}
 
 	/**
-	 * 패턴이 컴파일되고, 표본 시각을 형식화한 뒤 다시 읽었을 때 연 · 월 · 일 · 시 · 분이 그대로 돌아오는지 본다.
+	 * 패턴이 컴파일되고, 표본 시각을 형식화한 뒤 다시 읽었을 때 연 · 월 · 일 · 시 · 분이 그대로 돌아오는지 본다
 	 */
 	private @Nullable DatePattern datePattern(Located<String> format, Locale language, ZoneId zone) {
 		DateTimeFormatter formatter;
@@ -401,7 +402,10 @@ final class ProfileValidator {
 		return value.value();
 	}
 
-	/** 문제가 있으면 null — 문제는 이미 알렸다 */
+	/**
+	 * URL 값을 읽는다.
+	 * @return 문제가 있으면 null — 문제는 이미 알렸다
+	 */
 	private @Nullable URI url(@Nullable Located<String> value, ProfilePath path, TextLocation parent) {
 		if (value == null) {
 			missing(path, parent);

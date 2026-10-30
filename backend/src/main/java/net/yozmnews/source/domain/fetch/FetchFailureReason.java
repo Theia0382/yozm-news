@@ -1,43 +1,29 @@
 package net.yozmnews.source.domain.fetch;
 
 /**
- * 수집 실패의 이유 — 닫힌 집합. 일시 · 영구 분류의 정본은 {@link #permanence()} 하나다.
+ * 수집 실패의 이유 — docs/specs/source.md §4 · source-R24
  */
 public enum FetchFailureReason {
 
-	/** 한 번의 수집에 거는 마감을 넘었다 — 풀 대기 · 연결 · 응답 · 리다이렉트 · 본문 어디서든 */
 	TIMEOUT,
-	/** 연결하지 못했거나 연결이 끊겼다 — 그 밖의 입출력 오류 포함 */
 	CONNECTION_FAILED,
-	/** 호스트 이름을 해석하지 못했다 — "이름 없음"과 "해석기 장애"를 가르지 못해 일시로 본다 */
 	NAME_NOT_RESOLVED,
-	/** 5xx */
 	SERVER_ERROR,
-	/** 408 · 429 */
 	THROTTLED,
-	/** 401 · 403 — 대개 봇 차단이라 사람이 풀어야 한다 */
+	/** 대개 봇 차단이라 사람이 풀어야 한다 */
 	ACCESS_DENIED,
-	/** 404 · 410 */
 	NOT_FOUND,
-	/** 그 밖의 4xx */
 	CLIENT_ERROR,
-	/** 그 밖의 상태 코드, 조건부 헤더를 보내지 않았는데 온 304 */
 	UNEXPECTED_STATUS,
-	/** 리다이렉트 홉이 상한을 넘었다 */
 	TOO_MANY_REDIRECTS,
-	/** 리다이렉트의 {@code Location} 이 없거나 URI 로 읽을 수 없다 */
 	INVALID_REDIRECT,
-	/** 처음 URL 이나 리다이렉트 대상이 요청할 수 있는 주소가 아니다 */
 	UNSUPPORTED_URL,
-	/** 연결 주소가 차단 대역이다 */
 	BLOCKED_ADDRESS,
-	/** TLS 핸드셰이크 · 인증서 오류 */
 	TLS_FAILURE,
-	/** 본문이 크기 상한을 넘었다 */
 	TOO_LARGE,
-	/** 받은 문서를 정규화가 읽지 못했다 */
 	UNREADABLE;
 
+	/** 일시 · 영구 분류를 돌려준다 — 정본 */
 	public FailurePermanence permanence() {
 		return switch (this) {
 			case TIMEOUT, CONNECTION_FAILED, NAME_NOT_RESOLVED, SERVER_ERROR, THROTTLED -> FailurePermanence.TEMPORARY;
@@ -47,7 +33,7 @@ public enum FetchFailureReason {
 		};
 	}
 
-	/** 운영자용 한국어 문구의 머리 */
+	/** 운영자용 한국어 문구의 머리를 돌려준다 */
 	String description() {
 		return switch (this) {
 			case TIMEOUT -> "수집 시간 상한을 넘었다";

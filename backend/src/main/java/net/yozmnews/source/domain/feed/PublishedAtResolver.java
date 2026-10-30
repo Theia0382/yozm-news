@@ -14,18 +14,20 @@ import net.yozmnews.source.domain.profile.DatePattern;
 import net.yozmnews.source.domain.profile.DateParsing;
 
 /**
- * 발행 시각 원문 하나를 해석한다 — RFC 822 → ISO 8601 → 프로필의 날짜 형식 순으로 처음 성공한 값. 오프셋이 없는 값은 프로필 시간대의
- * 현지 시각이다. 받은 시각보다 {@link #FUTURE_TOLERANCE} 넘게 미래인 값은 시간대를 잘못 적은 것으로 보고 해석 실패로 돌린다.
+ * 발행 시각 원문 해석 — docs/specs/source.md §4 · source-R40
  */
 final class PublishedAtResolver {
 
-	/** 받은 시각보다 이만큼까지 미래인 발행 시각은 받는다 */
+	/** 미래 발행 시각의 허용 한도(받은 시각부터) — 넘는 값은 시간대를 잘못 적은 것으로 본다 */
 	static final Duration FUTURE_TOLERANCE = Duration.ofHours(1);
 
 	private PublishedAtResolver() {
 	}
 
-	/** @return 해석한 시각 — 해석하지 못했거나 너무 미래면 빈 값 */
+	/**
+	 * 발행 시각 원문 하나를 해석한다.
+	 * @return 해석한 시각 — 해석하지 못했거나 너무 미래면 비어 있다
+	 */
 	static Optional<Instant> resolve(String text, DateParsing dates, Instant fetchedAt) {
 		String value = text.strip();
 		if (value.isEmpty()) {

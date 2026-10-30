@@ -12,22 +12,17 @@ import net.yozmnews.source.domain.profile.PollInterval;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 피드 하나의 수집 상태 — 수집 작업만 바꾼다. 운영자의 켜짐 여부 · 주기 설정과 다른 행에 있어 서로를 덮어쓰지 않는다. 점유 중이면
- * {@code nextPollAt} 은 예약 시각 + {@link PollSchedule#LEASE} 다 — 대상 조회는 {@code nextPollAt} 하나로 고르므로, 점유가
- * 풀리지 않은 채 남아도 그 시각이 지나면 다시 대상이 된다.
+ * 피드 하나의 수집 상태 — docs/specs/source.md §4 · source-R15 · source-R16 · source-R19 ~ source-R27.
  *
- * @param feedId 피드
  * @param nextPollAt 다음에 대상이 되는 시각
  * @param lease 점유 — 없으면 null
  * @param fetchState 다음 요청에 보낼 조건부 요청 값
  * @param lastPolledAt 마지막으로 수집을 마친 시각(성공 · 변경 없음 · 실패) — 없으면 null
  * @param lastSuccessAt 마지막 성공 · 변경 없음 시각 — 없으면 null
  * @param lastNewItemAt 새 항목이 있던 마지막 수집의 시각 — 없으면 null
- * @param consecutiveFailures 연속 실패 수
- * @param lastError 마지막 실패 — 없으면 null. 성공해도 지우지 않는다
+ * @param lastError 마지막 실패 — 없으면 null
  * @param movedTo 마지막 결과가 거친 영구 이동의 대상 — 없으면 null
  * @param lastOverflowAt 마지막 넘침 의심 시각 — 없으면 null
- * @param overflowCount 넘침 의심 횟수
  * @param previousItemKeys 직전 성공 수집의 항목 키 — 아직 성공한 수집이 없으면 null
  */
 public record FeedPollState(FeedId feedId, Instant nextPollAt, @Nullable Lease lease, FetchState fetchState,
@@ -48,7 +43,7 @@ public record FeedPollState(FeedId feedId, Instant nextPollAt, @Nullable Lease l
 		previousItemKeys = (previousItemKeys != null) ? List.copyOf(previousItemKeys) : null;
 	}
 
-	/** 새 피드의 수집 상태 — 곧바로 대상이 된다. 켜지기 전에는 대상 조회가 거른다 */
+	/** 새 피드의 수집 상태를 만든다 — 곧바로 대상이 되지만 켜지기 전에는 대상 조회가 거른다 */
 	public static FeedPollState initial(FeedId feedId, Instant now) {
 		return new FeedPollState(feedId, now, null, FetchState.NONE, null, null, null, 0, null, null, null, 0, null);
 	}
@@ -100,7 +95,7 @@ public record FeedPollState(FeedId feedId, Instant nextPollAt, @Nullable Lease l
 		};
 	}
 
-	/** 프로필이나 그 안의 피드를 얻지 못했다 — 점유를 풀고 다시 확인할 때까지 미룬다. 다른 값은 바꾸지 않는다 */
+	/** 프로필이나 그 안의 피드를 얻지 못한 피드를 미룬다 — source-R19 */
 	public FeedPollState deferForUnavailableProfile(Instant now) {
 		return new FeedPollState(this.feedId, now.plus(PollSchedule.PROFILE_RECHECK), null, this.fetchState,
 				this.lastPolledAt, this.lastSuccessAt, this.lastNewItemAt, this.consecutiveFailures, this.lastError,

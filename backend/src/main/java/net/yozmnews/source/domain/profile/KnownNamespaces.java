@@ -3,7 +3,7 @@ package net.yozmnews.source.domain.profile;
 import java.util.Map;
 
 /**
- * 프로필이 선언하지 않아도 쓸 수 있는 이름공간 접두사와 그 URI. 피드 정규화도 같은 URI 를 쓴다.
+ * 프로필이 선언하지 않아도 쓸 수 있는 이름공간 접두사와 그 URI — 피드 정규화도 같은 URI 를 쓴다
  */
 public final class KnownNamespaces {
 

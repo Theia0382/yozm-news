@@ -292,7 +292,7 @@ sequenceDiagram
 
 #### `ArticleSource`
 
-모든 피드 수집(정기 수집 · 활성화 전 미리보기)이 거치는 관문이다. 모듈 안의 포트(`domain/fetch`)라 공개 인터페이스(§3)가 아니다. 선언의 정본은 이 Spec 이다.
+모든 피드 수집이 거치는 관문이다. 활성화 전 미리보기가 이 관문을 거치는 것은 source-R9 가 정한다. 모듈 안의 포트(`domain/fetch`)라 공개 인터페이스(§3)가 아니다. 선언의 정본은 이 Spec 이다.
 
 ```java
 public interface ArticleSource {
@@ -319,7 +319,7 @@ public sealed interface FetchResult {
 - `RssArticleSource` — 포트의 v1 구현이고 하나뿐이다. Apache HttpClient 5 로 피드를 받아 `FeedNormalizer` 로 넘긴다. 리다이렉트는 직접 따라가며 홉마다 요청 규칙(`domain/fetch`)으로 판정하고, 한 번의 수집 전체에 마감 하나를 건다. 내부 주소 차단 · 요청 제한은 이 구현이 건다(source-R28 · source-R33 ~ source-R37). 정규화는 Rome(형식 판별 · 제목 · 링크), 자체 구성한 SAX 파서 · JDOM(DTD 선언 거부), jsoup(HTML 제거 · 엔티티 표)을 쓴다
 - `PolicyDnsResolver` — 이름 해석 결과를 `AddressPolicy` 로 거른다. 연결은 이 해석기가 돌려준 주소로만 하므로 검사한 주소가 곧 연결 주소다(source-R33)
 - `BoundedBody` — 응답 본문을 크기 상한까지만 읽는다(source-R28)
-- `FeedHttpClients` — 수집용 Apache 클라이언트를 만든다. 구성과 테스트가 같이 쓴다(source-R36)
+- `FeedHttpClients` — 수집용 Apache 클라이언트를 만든다. 구성과 테스트가 같이 쓴다(source-R28 · source-R36)
 - `RssArticleSourceConfiguration` · `CollectionProperties` — 수집 설정(§7)으로 구현을 만든다. 연락처가 없거나 설정이 틀리면 기동이 실패한다(source-R29 · source-R34)
 - 그 밖: 예외 `BlockedAddressException` · `BodyTooLargeException`
 - 로컬 대체물은 없다 — 테스트는 실제 구현에 WireMock 피드 서버를 붙인다

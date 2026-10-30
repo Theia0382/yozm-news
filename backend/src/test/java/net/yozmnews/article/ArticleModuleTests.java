@@ -16,7 +16,9 @@ import org.springframework.test.context.TestPropertySource;
 
 /**
  * article 모듈 하나의 결선 — source 가 발행한 {@code ArticleFetched} 를 비동기 리스너가 받아 저장하고
- * {@link ArticleStored} 를 발행한다.
+ * {@link ArticleStored} 를 발행하는지 Modulith 시나리오로 본다.
+ * <p>
+ * 지키는 규칙: article-R11
  */
 @ApplicationModuleTest
 @Import(TestcontainersConfiguration.class)

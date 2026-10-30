@@ -10,7 +10,9 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 /**
- * RFC 822 날짜의 해석 범위 — 받는 변형과 버리는 변형.
+ * RFC 822 날짜의 해석 범위 — 받는 변형과 버리는 변형을 표로 본다.
+ * <p>
+ * 지키는 규칙: source-R40
  */
 class Rfc822DateTimeTests {
 

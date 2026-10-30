@@ -24,6 +24,7 @@ public record MatchCandidates(@Nullable ArticleId byArticleUrl, @Nullable Articl
 	}
 
 	/**
+	 * guid 로 찾은 후보.
 	 * @param articleId 같은 guid 의 엔트리가 붙은 기사
 	 * @param titleKeyHash 그 기사의 제목 비교 키 해시
 	 */
@@ -37,8 +38,7 @@ public record MatchCandidates(@Nullable ArticleId byArticleUrl, @Nullable Articl
 	}
 
 	/**
-	 * @param articleId 기사
-	 * @param publishedAt 기사의 발행 시각
+	 * 제목으로 찾은 후보.
 	 * @param seenInFeed 항목을 받은 피드에 이 기사의 엔트리가 이미 있는지
 	 */
 	public record TitleCandidate(ArticleId articleId, Instant publishedAt, boolean seenInFeed) {

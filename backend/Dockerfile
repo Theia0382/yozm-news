@@ -1,5 +1,5 @@
-# 백엔드 이미지 — target check 는 검사(compose.check.yaml), app 은 배포(deploy/compose.yaml).
-# JDK 버전은 JAVA_VERSION 이 정하고, backend/build.gradle.kts 의 toolchain 과 다르면 Gradle 이 맞는 JDK 를 찾지 못해 deps 단계가 실패한다.
+# 백엔드 이미지 — target check 는 검사(compose.check.yaml), app 은 배포(deploy/compose.yaml). 구성은 docs/development/infrastructure.md "이미지".
+# JAVA_VERSION 은 backend/build.gradle.kts 의 toolchain 과 같아야 한다 — 다르면 deps 단계가 실패한다.
 ARG JAVA_VERSION=25
 
 # 빌드는 빌더 플랫폼에서 돈다 — jar 는 아키텍처와 무관하다.
@@ -31,7 +31,7 @@ COPY backend/src backend/src
 RUN backend/gradlew -p backend bootJar --no-daemon --console=plain \
  && java -Djarmode=tools -jar backend/build/libs/*.jar extract --layers --launcher --destination /extracted
 
-# 실행 단계는 대상 플랫폼 이미지다 — 명령(RUN)을 두면 에뮬레이션 없는 빌더에서 빌더와 다른 아키텍처(amd64 빌더면 arm64)의 빌드가 깨진다. 복사와 메타데이터만 둔다.
+# 실행 단계에는 복사와 메타데이터만 둔다(RUN 없음) — docs/development/infrastructure.md "이미지"
 FROM eclipse-temurin:${JAVA_VERSION}-jre AS app
 WORKDIR /app
 COPY --from=build /extracted/dependencies/ ./

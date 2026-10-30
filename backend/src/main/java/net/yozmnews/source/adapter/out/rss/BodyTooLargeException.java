@@ -3,7 +3,7 @@ package net.yozmnews.source.adapter.out.rss;
 import java.io.IOException;
 
 /**
- * 응답 본문이 크기 상한을 넘었다.
+ * 응답 본문이 크기 상한을 넘었다
  */
 final class BodyTooLargeException extends IOException {
 

@@ -17,8 +17,7 @@ import net.yozmnews.source.domain.profile.PreCorrection;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 피드 바이트 → 문자열. 문자 인코딩은 프로필의 {@code force-encoding} → BOM → XML 선언 → 전송 계층 charset → UTF-8 순으로
- * 정한다. 읽을 수 없는 바이트는 U+FFFD 로 바꾸고 그 수를 센다.
+ * 피드 바이트 → 문자열 디코더 — docs/specs/source.md §4 · source-R38
  */
 final class DocumentDecoder {
 
@@ -32,9 +31,13 @@ final class DocumentDecoder {
 
 	private static final char BYTE_ORDER_MARK = '\uFEFF';
 
+	/** 디코딩 결과 */
 	sealed interface Decoded {
 
-		/** @param replacedCharacters U+FFFD 로 바꾼 자리 수 */
+		/**
+		 * 문자열로 읽었다.
+		 * @param replacedCharacters U+FFFD 로 바꾼 자리 수
+		 */
 		record Text(String text, int replacedCharacters) implements Decoded {
 
 			public Text {
@@ -43,6 +46,7 @@ final class DocumentDecoder {
 
 		}
 
+		/** 문서를 읽지 못했다 */
 		record Failed(DocumentProblem problem) implements Decoded {
 
 			public Failed {
@@ -82,7 +86,7 @@ final class DocumentDecoder {
 		return textOf(bytes, 0, charset);
 	}
 
-	/** 사전 보정 규칙은 프로필 안에서 한 번씩만 나온다 */
+	/** 프로필이 강제한 문자셋을 찾는다 — 사전 보정 규칙은 프로필 안에서 한 번씩만 나온다 */
 	private static Optional<Charset> forced(List<PreCorrection> corrections) {
 		for (PreCorrection correction : corrections) {
 			Optional<Charset> charset = switch (correction) {

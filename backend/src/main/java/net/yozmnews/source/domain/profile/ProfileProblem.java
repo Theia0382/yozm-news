@@ -7,8 +7,6 @@ import net.yozmnews.source.domain.profile.text.TextLocation;
 /**
  * 프로필의 문제 하나 — 운영자에게 그대로 보여 줄 값이다.
  *
- * @param path 문제가 있는 위치
- * @param code 문제 종류
  * @param message 운영자가 읽을 문구
  * @param location 텍스트 안의 줄:열 — 알 수 없으면 {@link TextLocation#UNKNOWN}
  */

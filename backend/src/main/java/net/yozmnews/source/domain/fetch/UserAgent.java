@@ -7,10 +7,7 @@ import java.util.Objects;
 import java.util.regex.Pattern;
 
 /**
- * 수집 요청의 {@code User-Agent} — 서비스 이름 · 프로젝트 주소 · 운영자 연락처를 밝힌다. 연락처는 셀프 호스팅마다 다른
- * 운영자 설정값이다.
- *
- * @param contact 운영자 연락처 — 이메일 주소나 http · https URL
+ * 수집 요청의 {@code User-Agent} — docs/specs/source.md §4 · source-R29
  */
 public record UserAgent(String contact) {
 
@@ -22,12 +19,12 @@ public record UserAgent(String contact) {
 
 	private static final Pattern EMAIL = Pattern.compile("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
 
-	/** 헤더 주석({@code (...)}) 안에 넣으므로 주석을 깨는 문자와 구분자를 받지 않는다 */
+	/** 연락처에 받지 않는 문자 — 헤더 주석({@code (...)}) 안에 넣으므로 주석을 깨는 문자와 구분자다 */
 	private static final String FORBIDDEN = "()\\;";
 
 	/**
-	 * @throws IllegalArgumentException 연락처가 비었거나, {@link #MAX_CONTACT_LENGTH} 를 넘거나, 0x21~0x7E 밖의 문자 · 괄호 ·
-	 * 역슬래시 · 세미콜론이 있거나, 이메일 주소도 http · https URL 도 아닐 때
+	 * 연락처 형식을 확인한다 — source-R29.
+	 * @throws IllegalArgumentException 연락처가 형식에 맞지 않을 때
 	 */
 	public UserAgent {
 		Objects.requireNonNull(contact, "contact");
@@ -42,7 +39,7 @@ public record UserAgent(String contact) {
 		}
 	}
 
-	/** {@code YozmNews (+https://github.com/Theia0382/yozm-news; {contact})} */
+	/** 헤더 값을 만든다 — source-R29 */
 	public String headerValue() {
 		return PRODUCT + " (+" + PROJECT_URL + "; " + this.contact + ")";
 	}

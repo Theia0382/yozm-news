@@ -11,8 +11,9 @@ import net.yozmnews.source.FetchedArticle;
 import org.junit.jupiter.api.Test;
 
 /**
- * 새 항목 · 넘침 의심 판정 — 직전 성공 수집의 키와 비교한다. 넘침 의심은 첫 수집이 아니고 직전 · 이번 키가 모두 있는데 하나도 겹치지
- * 않을 때다.
+ * 새 항목 · 넘침 의심 판정 — 직전 키와 이번 기사를 손으로 적어 비교한다.
+ * <p>
+ * 지키는 규칙: source-R20 · source-R21
  */
 class ItemComparisonTests {
 

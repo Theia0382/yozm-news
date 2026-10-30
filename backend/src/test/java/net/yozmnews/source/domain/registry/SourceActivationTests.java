@@ -11,7 +11,11 @@ import java.util.List;
 import net.yozmnews.source.domain.profile.PresetKey;
 import org.junit.jupiter.api.Test;
 
-/** 소스 켜기 — 프로필을 얻었고 이용조건 검토일이 있어야 한다. 거절하면 꺼진 채로 둔다. */
+/**
+ * 소스 켜기 — 합성 프로필로 aggregate 를 직접 본다.
+ * <p>
+ * 지키는 규칙: source-R4
+ */
 class SourceActivationTests {
 
 	@Test

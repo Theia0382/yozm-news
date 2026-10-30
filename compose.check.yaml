@@ -9,7 +9,7 @@ services:
       dockerfile: backend/Dockerfile
       target: check
     environment:
-      # Testcontainers 는 호스트 Docker 가 아니라 아래 docker 서비스(DinD)를 쓴다 — 호스트 종류와 무관하게 같은 구성이다.
+      # Testcontainers 는 아래 docker 서비스(DinD)를 쓴다 — docs/development/infrastructure.md "검사 환경"
       DOCKER_HOST: tcp://docker:2375
       TESTCONTAINERS_HOST_OVERRIDE: docker
     depends_on:
@@ -32,7 +32,7 @@ services:
   docker:
     image: docker:29-dind
     privileged: true
-    # 엔진은 이 정의의 내부 네트워크에만 열린다(공개 포트 없음). TLS 를 끄면 기동 지연이 없다.
+    # TLS 를 끄면 기동 지연이 없다. 엔진의 노출 범위는 docs/development/infrastructure.md "검사 환경"
     command: ["--tls=false"]
     environment:
       DOCKER_TLS_CERTDIR: ""

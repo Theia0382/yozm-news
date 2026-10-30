@@ -17,13 +17,14 @@ import org.jdom2.Element;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 피드 항목 하나 → 기사. 링크와 제목이 없으면 건너뛰고, 나머지 값은 프로필의 읽을 곳 목록에서 처음으로 쓸 수 있는 값을 쓴다. 발행
- * 시각을 쓸 수 있는 값이 없으면 받은 시각으로 채우고 추정으로 표시한다.
+ * 피드 항목 하나 → 기사 — docs/specs/source.md §4 · source-R40 · source-R41
  */
 final class ItemNormalizer {
 
+	/** 항목 하나의 정규화 결과 */
 	sealed interface Outcome {
 
+		/** 기사로 만들었다 */
 		record Article(FetchedArticle article) implements Outcome {
 
 			public Article {
@@ -32,6 +33,7 @@ final class ItemNormalizer {
 
 		}
 
+		/** 항목을 건너뛰었다 */
 		record Skipped(SkipReason reason) implements Outcome {
 
 			public Skipped {
@@ -74,7 +76,7 @@ final class ItemNormalizer {
 		return ItemValues.candidates(item, format, field, profile.items().get(field));
 	}
 
-	/** 읽을 곳 순서 · 문서 순서로 처음 쓸 수 있는 값 */
+	/** 읽을 곳 순서 · 문서 순서로 처음 쓸 수 있는 값을 고른다 */
 	private static <T> Optional<T> first(List<List<String>> candidates, Function<String, Optional<T>> usable) {
 		for (List<String> values : candidates) {
 			for (String value : values) {
@@ -87,7 +89,7 @@ final class ItemNormalizer {
 		return Optional.empty();
 	}
 
-	/** 쓸 수 있는 값이 하나라도 나온 첫 읽을 곳의 값 전부 — 문서 순서, 같은 값은 한 번 */
+	/** 카테고리를 고른다 — source-R41 */
 	private static List<String> categories(List<List<String>> candidates) {
 		for (List<String> values : candidates) {
 			Set<String> categories = new LinkedHashSet<>();

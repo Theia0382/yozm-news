@@ -25,6 +25,8 @@ import org.springframework.test.context.TestPropertySource;
 /**
  * 같은 언론사의 요청 간격 — 작업 서버의 poll 간격을 운영 기본값(15초) 그대로 두고 잰다. 작업 서버는 예약 작업을 poll 간격 단위로 묶어
  * 시작하므로, 짧은 poll 간격에서는 작업 예약 시각의 분산만으로도 간격이 지켜진 것처럼 보인다. 판정은 WireMock 이 실제로 받은 시각이다.
+ * <p>
+ * 지키는 규칙: source-R18
  */
 @Import({ TestcontainersConfiguration.class, RegistryTestCatalog.class })
 @SpringBootTest

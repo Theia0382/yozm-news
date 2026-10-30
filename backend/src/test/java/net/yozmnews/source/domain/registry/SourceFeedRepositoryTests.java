@@ -18,8 +18,8 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 /**
- * 소스 · 피드 aggregate 의 저장 — 피드 행은 SQL 로 만들고(version 0) aggregate 로 읽고 · 고치고 · 저장한다. 운영자 변경은 수집 상태
- * 행을 건드리지 않는다.
+ * 소스 · 피드 aggregate 의 저장 — 실제 PostgreSQL 에서 피드 행은 SQL 로 만들고(version 0) aggregate 로 읽고 · 고치고 ·
+ * 저장한다. 운영자 변경이 수집 상태 행을 건드리지 않는지도 본다.
  */
 @DataJdbcTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)

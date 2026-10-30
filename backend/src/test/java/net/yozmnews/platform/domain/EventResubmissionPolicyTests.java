@@ -17,6 +17,11 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.modulith.events.EventPublication;
 import org.springframework.modulith.events.EventPublication.Status;
 
+/**
+ * 재처리 판정과 설정 조건 — 스프링 없이 정책을 직접 만든다.
+ * <p>
+ * 지키는 규칙: platform-R1 · platform-R3
+ */
 class EventResubmissionPolicyTests {
 
 	// 판정은 두 시간에 기대지 않는다 — 조건 경계에서 먼 값을 써서 조건 확인의 변화가 판정 시험에 번지지 않게 한다

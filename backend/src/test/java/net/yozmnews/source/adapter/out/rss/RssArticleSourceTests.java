@@ -53,8 +53,11 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 /**
- * 실제 Apache 결선(구성과 같은 공장)으로 WireMock 을 부른다. WireMock 은 루프백에서 뜨므로 기본 클라이언트는 허용 목록에
- * {@code 127.0.0.1/32} 를 둔다 — 허용 목록이 없는 클라이언트로 차단을 따로 확인한다.
+ * 피드 요청 관문의 구현 — 실제 Apache 결선(구성과 같은 공장)으로 WireMock 을 부른다. WireMock 은 루프백에서 뜨므로 기본
+ * 클라이언트는 허용 목록에 {@code 127.0.0.1/32} 를 둔다 — 허용 목록이 없는 클라이언트로 차단을 따로 확인한다.
+ * <p>
+ * 지키는 규칙: source-R22 · source-R24 · source-R27 · source-R28 · source-R29 · source-R33 · source-R34 · source-R35 · source-R36 ·
+ * source-R37 · source-R38 · source-R42
  */
 class RssArticleSourceTests {
 

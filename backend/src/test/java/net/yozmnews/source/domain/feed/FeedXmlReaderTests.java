@@ -24,7 +24,9 @@ import org.xml.sax.InputSource;
 import org.xml.sax.helpers.DefaultHandler;
 
 /**
- * 피드 XML 읽기 — 외부 엔티티 · DTD 를 해석하지 않는다(AC3). 디코딩 · 사전 보정을 거친 원문을 읽는다.
+ * 피드 XML 읽기 — 디코딩 · 사전 보정을 거친 원문을 읽는다.
+ * <p>
+ * 지키는 규칙: source-R38 · source-R43 · source-R44 · source-R46
  */
 class FeedXmlReaderTests {
 

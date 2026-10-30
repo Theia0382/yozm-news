@@ -16,7 +16,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 /**
- * RSS 0.9x · 1.0 · 2.0 · Atom 을 같은 기사 구조로 읽는다(AC1). 기본 프로필(모든 항목 {@code $standard})로 읽는다.
+ * 피드 형식별 정규화 — 형식마다 합성 픽스처를 기본 프로필(모든 항목 {@code $standard})로 읽는다.
+ * <p>
+ * 지키는 규칙: source-R39 · source-R41 · source-R42
  */
 class FeedNormalizerFormatTests {
 

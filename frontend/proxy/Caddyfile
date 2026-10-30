@@ -7,7 +7,7 @@
 
 # HTTP 만 받는다 — TLS 는 앞단(Cloudflare Tunnel 또는 운영자의 리버스 프록시)이 맡는다
 :8080 {
-	# 앱으로 넘기는 경로의 정본(@backend) — Vite 개발 서버도 같은 파일을 읽는다(backendPaths.ts)
+	# 앱으로 넘기는 경로(@backend) — docs/development/infrastructure.md "proxy 가 넘기는 경로"
 	import backend-paths.caddy
 	handle @backend {
 		reverse_proxy app:8080

@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * 프로필 텍스트를 해석한 결과.
+ * 프로필 텍스트를 해석한 결과
  */
 public sealed interface ProfileParse {
 

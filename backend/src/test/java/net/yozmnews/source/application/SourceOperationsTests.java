@@ -17,7 +17,9 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 /**
- * 소스 · 피드의 켜기 · 끄기와 수집 주기 — 실제 PostgreSQL 에서 등록한 소스로 본다. 거절하면 아무것도 저장하지 않는다.
+ * 소스 · 피드의 켜기 · 끄기와 수집 주기 — 실제 PostgreSQL 에서 등록한 소스로 본다.
+ * <p>
+ * 지키는 규칙: source-R4 · source-R5 · source-R14
  */
 @Import({ TestcontainersConfiguration.class, RegistryTestCatalog.class })
 @SpringBootTest

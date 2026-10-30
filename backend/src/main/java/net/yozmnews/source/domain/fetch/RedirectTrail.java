@@ -6,8 +6,10 @@ import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 한 번의 수집에서 따라간 리다이렉트 홉을 센다. 영구 이동은 처음 URL 에서 끊기지 않고 이어진 영구 이동(301 · 308) 홉만
- * 친다 — 그 마지막 대상이 프로필이 앞으로 쓸 주소다. 임시 이동이 한 번이라도 끼면 그 뒤의 영구 이동은 치지 않는다.
+ * 한 번의 수집에서 따라간 리다이렉트 홉 세기 — docs/specs/source.md §4 · source-R27 · source-R28.
+ * <p>
+ * 영구 이동은 처음 URL 에서 끊기지 않고 이어진 영구 이동(301 · 308) 홉만 친다 — 임시 이동이 한 번이라도 끼면 그 뒤의 영구 이동은
+ * 치지 않는다.
  */
 public final class RedirectTrail {
 
@@ -20,7 +22,7 @@ public final class RedirectTrail {
 	private @Nullable URI movedTo;
 
 	/**
-	 * @param maxRedirects 따라갈 수 있는 홉 수
+	 * 홉 상한을 정한다.
 	 * @throws IllegalArgumentException 음수일 때
 	 */
 	public RedirectTrail(int maxRedirects) {
@@ -49,7 +51,10 @@ public final class RedirectTrail {
 		return true;
 	}
 
-	/** 영구 이동한 주소 — 없으면 null */
+	/**
+	 * 영구 이동한 주소를 돌려준다.
+	 * @return 없으면 null
+	 */
 	public @Nullable URI movedTo() {
 		return this.movedTo;
 	}

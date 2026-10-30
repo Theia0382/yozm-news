@@ -14,7 +14,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 /**
- * 공개 타입의 불변식 — 정규화가 아닌 경로로 잘못 만든 값은 크게 실패한다.
+ * 공개 타입의 생성 제약(docs/specs/source.md §3) — 정규화를 거치지 않고 값을 직접 만들어 본다
  */
 class FetchedArticleTests {
 

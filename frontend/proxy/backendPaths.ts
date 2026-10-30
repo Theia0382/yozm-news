@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-// proxy 가 앱으로 넘기는 경로의 정본(Caddy 조각). Caddy 는 import 로, Vite 개발 서버는 이 모듈로 읽는다.
+// proxy 가 앱으로 넘기는 경로의 정본(Caddy 조각)을 Vite 개발 서버가 읽는다 — docs/development/infrastructure.md "proxy 가 넘기는 경로"
 export const backendPathsFile = path.resolve(
   import.meta.dirname,
   "backend-paths.caddy",
@@ -25,7 +25,7 @@ export function parseBackendPathPrefixes(caddySnippet: string): string[] {
 }
 
 // 접두사마다 Vite proxy 항목을 만든다. 키가 ^ 로 시작하면 Vite 는 정규식으로 해석한다 — Caddy 의 /경로/* 와 같은 접두 일치다.
-// 다만 Caddy 는 대소문자를 구분하지 않고 이 정규식은 구분한다(/API/x 는 운영에서만 앱으로 간다).
+// 대소문자 구분은 Caddy 와 다르다 — docs/development/infrastructure.md "proxy 가 넘기는 경로"
 export function viteProxyEntries(
   prefixes: readonly string[],
   target: string,

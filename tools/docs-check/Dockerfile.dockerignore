@@ -3,7 +3,7 @@
 !*.md
 !docs/
 !.github/
-# 문서가 가리키는 문서 밖 경로 — 문서가 여기에 없는 경로를 가리키면 검사가 "경로 없음"으로 실패한다. 그때 그 경로를 더한다.
+# 문서가 가리키는 문서 밖 경로 — 더하는 때는 docs/development/infrastructure.md "문서 링크 검사"
 !.editorconfig
 !compose.yaml
 !compose.check.yaml
@@ -11,7 +11,7 @@
 !backend/
 !deploy/
 !frontend/
-# 저장소가 추적하지 않는 것(.gitignore · backend/.gitignore · frontend/.gitignore 의 대상)은 넣지 않는다 — CI 의 체크아웃과 같은 파일로 검사한다.
+# 저장소가 추적하지 않는 것(.gitignore 의 대상)을 다시 뺀다 — docs/development/infrastructure.md "검사 환경"
 **/.env
 **/.env.*
 !.env.example

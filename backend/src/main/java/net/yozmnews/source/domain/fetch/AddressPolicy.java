@@ -7,8 +7,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 /**
- * 수집이 연결해도 되는 주소인가. 내부 주소(루프백 · 사설 · 링크 로컬 · 공유 · 예약 · 멀티캐스트)는 기본으로 막고, 운영
- * 설정의 허용 목록에 든 대역만 연다 — 허용 목록은 막힌 것을 여는 데만 쓰인다.
+ * 내부 주소 판정 — docs/specs/source.md §4 · source-R33 · source-R34
  */
 public final class AddressPolicy {
 
@@ -44,6 +43,7 @@ public final class AddressPolicy {
 	private final List<NetworkRange> allowed;
 
 	/**
+	 * 허용 대역으로 정책을 만든다.
 	 * @param allowed 운영 설정의 허용 대역 — 비어 있을 수 있다
 	 */
 	public AddressPolicy(List<NetworkRange> allowed) {
@@ -51,14 +51,14 @@ public final class AddressPolicy {
 	}
 
 	/**
-	 * 해석 결과 가운데 처음으로 막힌 주소. 하나라도 막히면 그 이름 전체를 거부한다 — 공개 주소만 골라 쓰지 않는다.
-	 * @return 없으면 빈 값(전부 허용)
+	 * 해석 결과 가운데 처음으로 막힌 주소를 찾는다 — source-R33.
+	 * @return 없으면 비어 있다(전부 허용)
 	 */
 	public Optional<InetAddress> firstBlocked(List<InetAddress> addresses) {
 		return addresses.stream().filter(address -> !permits(address)).findFirst();
 	}
 
-	/** 허용 목록에 들면 허용, 아니면 차단 대역(IPv4 를 품은 IPv6 는 품은 IPv4 도)에 들면 차단 */
+	/** 주소를 판정한다 — 허용 목록에 들면 허용, 아니면 차단 대역(IPv4 를 품은 IPv6 는 품은 IPv4 도)에 들면 차단 */
 	boolean permits(InetAddress address) {
 		Objects.requireNonNull(address, "address");
 		if (this.allowed.stream().anyMatch(range -> range.contains(address))) {
@@ -74,7 +74,7 @@ public final class AddressPolicy {
 		return embeddedIpv4(bytes).map(AddressPolicy::isBlocked).orElse(false);
 	}
 
-	/** IPv4 를 품은 IPv6 형식이면 품은 IPv4 — IPv4 대응(::ffff:0:0/96)은 JDK 가 {@code Inet4Address} 로 바꾸므로 여기 오지 않는다 */
+	/** IPv4 를 품은 IPv6 형식이면 품은 IPv4 를 꺼낸다 — IPv4 대응(::ffff:0:0/96)은 JDK 가 {@code Inet4Address} 로 바꾸므로 여기 오지 않는다 */
 	private static Optional<byte[]> embeddedIpv4(byte[] bytes) {
 		if (bytes.length != 16) {
 			return Optional.empty();

@@ -28,14 +28,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 지금 수집할 피드를 점유한다 — 한 트랜잭션에서 대상을 잠그고, 같은 소스의 피드끼리 예약 시각을 띄워 점유를 기록하고 커밋한다. 수집 작업
- * 등록은 커밋 뒤 호출자가 한다: 작업 저장소는 이 트랜잭션에 참여하지 않으므로, 등록 전에 멈춰도 점유가 만료되면 다시 대상이 된다.
- * 프로필이나 그 안의 피드를 얻지 못한 피드는 점유하지 않고 미룬다.
+ * 지금 수집할 피드의 점유 — docs/specs/source.md §4 · source-R15 · source-R19
  */
 @Service
 public class PollScheduler {
 
-	/** 한 회차에 점유하는 최대 피드 수 — 남은 대상은 다음 회차가 고른다. 측정 전 목표다 */
+	/** 한 회차에 점유하는 최대 피드 수 — 측정 전 목표다 */
 	static final int CLAIM_BATCH = 100;
 
 	private static final Logger logger = LoggerFactory.getLogger(PollScheduler.class);
@@ -65,7 +63,10 @@ public class PollScheduler {
 		this.clock = clock;
 	}
 
-	/** @return 점유한 수집 — 예약 시각 순이 아닐 수 있다 */
+	/**
+	 * 지금 수집할 피드를 점유한다.
+	 * @return 점유한 수집 — 예약 시각 순이 아닐 수 있다
+	 */
 	public List<ClaimedPoll> claimDueFeeds() {
 		Instant now = this.clock.instant();
 		List<Deferred> deferred = new ArrayList<>();

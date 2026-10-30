@@ -24,8 +24,10 @@ import org.springframework.test.context.event.ApplicationEvents;
 import org.springframework.test.context.event.RecordApplicationEvents;
 
 /**
- * 들어온 항목을 같은 기사 판정에 따라 저장하고, 다시 처리해도 결과가 같다. 유스케이스를 같은 스레드에서 불러 커밋된 행과
- * 발행된 이벤트를 잰다 — 테스트를 트랜잭션으로 감싸지 않고 테스트마다 두 테이블을 비운다.
+ * 들어온 항목의 판정 · 저장 · 기록 — 유스케이스를 같은 스레드에서 불러 커밋된 행과 발행된 이벤트를 잰다. 테스트를 트랜잭션으로
+ * 감싸지 않고 테스트마다 두 테이블을 비운다.
+ * <p>
+ * 지키는 규칙: article-R3 · article-R4 · article-R5 · article-R7 · article-R10 · article-R11
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest

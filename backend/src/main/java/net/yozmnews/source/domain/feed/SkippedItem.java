@@ -6,7 +6,6 @@ import java.util.Objects;
  * 기사로 넘기지 않은 피드 항목.
  *
  * @param position 문서 안 항목 순번(1부터)
- * @param reason 이유
  */
 public record SkippedItem(int position, SkipReason reason) {
 

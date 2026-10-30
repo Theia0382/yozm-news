@@ -15,7 +15,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 /**
- * 문자 인코딩 판정 순서(force-encoding → BOM → XML 선언 → 전송 계층 → UTF-8)와 한국어 계열 레이블, 읽을 수 없는 바이트.
+ * 문자 인코딩 판정과 디코딩 — 바이트를 직접 만들어 본다.
+ * <p>
+ * 지키는 규칙: source-R38 · source-R42
  */
 class DocumentDecoderTests {
 

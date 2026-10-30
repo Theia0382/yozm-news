@@ -6,13 +6,13 @@ import java.util.Objects;
 import java.util.Optional;
 
 /**
- * 파싱 전에 피드 원문에 적용하는 보정. 닫힌 목록에서만 고른다 — 프로필에는 코드를 넣을 수 없다.
+ * 파싱 전에 피드 원문에 적용하는 보정 — source-R38
  */
 public sealed interface PreCorrection {
 
 	Rule rule();
 
-	/** 정의되지 않은 엔티티를 치환한다 */
+	/** 정의되지 않은 엔티티를 치환하는 보정 */
 	record ReplaceUndefinedEntities() implements PreCorrection {
 
 		@Override
@@ -22,7 +22,7 @@ public sealed interface PreCorrection {
 
 	}
 
-	/** XML 에 쓸 수 없는 제어 문자를 지운다 */
+	/** XML 에 쓸 수 없는 제어 문자를 지우는 보정 */
 	record StripInvalidControlChars() implements PreCorrection {
 
 		@Override
@@ -32,7 +32,7 @@ public sealed interface PreCorrection {
 
 	}
 
-	/** 선언과 관계없이 이 문자 인코딩으로 읽는다 */
+	/** 선언과 관계없이 이 문자 인코딩으로 읽는 보정 */
 	record ForceEncoding(Charset charset) implements PreCorrection {
 
 		public ForceEncoding {

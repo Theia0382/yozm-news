@@ -12,8 +12,9 @@ import net.yozmnews.source.domain.profile.text.ProfileTextReader;
 import org.junit.jupiter.api.Test;
 
 /**
- * 발행 시각 해석 순서(RFC 822 → ISO 8601 → 프로필 패턴), 오프셋 없는 값의 시간대, 미래 시각. 날짜 설정은 운영자 프로필 검증을 거쳐
- * 만든다.
+ * 발행 시각 해석 — 날짜 설정은 운영자 프로필 검증을 거쳐 만든다.
+ * <p>
+ * 지키는 규칙: source-R40
  */
 class PublishedAtResolverTests {
 

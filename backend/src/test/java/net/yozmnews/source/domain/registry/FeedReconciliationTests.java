@@ -9,7 +9,11 @@ import java.util.List;
 import net.yozmnews.source.domain.profile.FeedKey;
 import org.junit.jupiter.api.Test;
 
-/** 기동 대조의 판정 — 프로필 {one, two} 와 저장된 피드 키를 견준다. */
+/**
+ * 기동 대조의 판정 — 프로필 {one, two} 와 저장된 피드 키를 견준다.
+ * <p>
+ * 지키는 규칙: source-R8
+ */
 class FeedReconciliationTests {
 
 	@Test

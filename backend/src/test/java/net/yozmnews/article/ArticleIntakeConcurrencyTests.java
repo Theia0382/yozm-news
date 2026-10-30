@@ -30,8 +30,10 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 동시에 들어온 같은 소스의 항목은 소스 잠금으로 줄을 선다. 테스트 스레드의 트랜잭션이 기사를 넣고 커밋하지 않은 채로 다른
- * 스레드의 처리를 지켜본다 — 기다리면 그 기사를 보고 붙고, 기다리지 않으면 커밋 전의 기사를 보지 못해 새 기사를 만든다.
+ * 동시에 들어온 항목의 직렬화 — 테스트 스레드의 트랜잭션이 기사를 넣고 커밋하지 않은 채로 다른 스레드의 처리를 지켜본다.
+ * 기다리면 그 기사를 보고 붙고, 기다리지 않으면 커밋 전의 기사를 보지 못해 새 기사를 만든다.
+ * <p>
+ * 지키는 규칙: article-R9
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest

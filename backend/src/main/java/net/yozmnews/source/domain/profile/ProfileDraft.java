@@ -28,22 +28,26 @@ record ProfileDraft(TextLocation location, @Nullable SourceDraft source, @Nullab
 
 	}
 
+	/** 소스 정보 초안 */
 	record SourceDraft(ProfilePath path, TextLocation location, @Nullable Located<String> name,
 			@Nullable Located<String> homepage, @Nullable Located<String> language) {
 
 	}
 
+	/** 피드 초안 */
 	record FeedDraft(ProfilePath path, TextLocation location, @Nullable Located<String> key,
 			@Nullable Located<String> url, @Nullable Located<String> section,
 			@Nullable Located<Integer> pollIntervalMinutes) {
 
 	}
 
+	/** 사전 보정 초안 */
 	record PreCorrectionDraft(ProfilePath path, TextLocation location, @Nullable Located<String> rule,
 			@Nullable Located<String> charset) {
 
 	}
 
+	/** 날짜 해석 초안 */
 	record DatesDraft(ProfilePath path, TextLocation location, @Nullable Located<List<Located<String>>> formats,
 			@Nullable Located<String> timeZone) {
 

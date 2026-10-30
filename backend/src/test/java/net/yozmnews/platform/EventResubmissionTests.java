@@ -29,6 +29,8 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 재처리 대상 선별 · 상한 · 멈춘 발행. 반복 작업이 끼어들지 않도록 작업 서버를 끄고 {@code resubmit()} 을 직접 불러
  * 판정한다(반복 작업 등록과 Modulith staleness 감시는 그대로 돈다). 감시 주기는 2초로 줄이고 멈춤 기준은 운영 값(30분)을
  * 쓴다.
+ * <p>
+ * 지키는 규칙: platform-R1 · platform-R2 · platform-R4
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest

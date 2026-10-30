@@ -33,8 +33,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 수집 상태의 왕복 — 모든 열이 값 그대로 돌아온다. 직전 항목 키는 null(첫 수집 전) · 빈 배열 · 여러 키가 서로 다르게 남는다. 대상
- * 피드 잠금은 두 회차가 겹치면 뒤 회차가 앞 회차가 잡은 행을 기다리지 않고 건너뛴다.
+ * 수집 상태 저장소의 왕복과 대상 잠금 — Flyway 가 적용된 실제 PostgreSQL 에서 본다.
+ * <p>
+ * 지키는 규칙: source-R3 · source-R15 · source-R20
  */
 @JdbcTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)

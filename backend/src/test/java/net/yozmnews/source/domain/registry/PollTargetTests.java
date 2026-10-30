@@ -16,8 +16,10 @@ import net.yozmnews.source.domain.profile.PresetKey;
 import org.junit.jupiter.api.Test;
 
 /**
- * 수집 대상 — 프로필을 얻었고 그 안에 피드가 있어야 주기를 정하고 받는다. 프로필에 없는 피드는 주기 정책에 넘기지 않는다(정책은 그런
- * 피드에서 예외를 던진다).
+ * 수집 대상 판정 — 합성 프로필로 본다. 프로필에 없는 피드를 주기 정책에 넘기지 않는지(정책은 그런 피드에서 예외를 던진다)도
+ * 본다.
+ * <p>
+ * 지키는 규칙: source-R5 · source-R19
  */
 class PollTargetTests {
 

@@ -8,9 +8,8 @@ import net.yozmnews.source.domain.fetch.FetchFailureReason;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 피드의 마지막 수집 실패 — 성공한 뒤에도 남는다.
+ * 피드의 마지막 수집 실패 — source-R26.
  *
- * @param reason 이유
  * @param message 운영자용 문구({@link FetchFailure#message()} 그대로 — 응답 본문을 옮기지 않는다)
  * @param httpStatus 실패를 정한 응답의 상태 코드 — 응답이 없었으면 null
  * @param at 실패를 확정한 시각

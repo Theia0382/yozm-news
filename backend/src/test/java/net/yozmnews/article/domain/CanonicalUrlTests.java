@@ -11,7 +11,9 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 /**
- * 정규 URL — 자원을 바꾸지 않는 변환만 한다. 기대값은 손으로 적은 리터럴이다.
+ * 정규 URL — 기대값은 손으로 적은 리터럴이다.
+ * <p>
+ * 지키는 규칙: article-R1
  */
 class CanonicalUrlTests {
 

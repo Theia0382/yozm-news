@@ -4,7 +4,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * API 계약 파이프라인(명세 → 프론트엔드 생성 타입)을 확인하는 엔드포인트. 화면에는 쓰지 않고, 사용자 데이터를 담지 않는다.
+ * API 계약 확인 엔드포인트 — docs/specs/platform.md §4 · platform-R7
  */
 @RestController
 class PingController {

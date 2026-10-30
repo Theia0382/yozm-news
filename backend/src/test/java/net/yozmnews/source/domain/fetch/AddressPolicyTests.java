@@ -10,7 +10,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 /**
- * 차단 대역 표의 행마다 대표 주소 하나, 그 경계 밖 공개 주소, 허용 목록.
+ * 내부 주소 판정 — 차단 대역 표의 행마다 대표 주소 하나, 그 경계 밖 공개 주소, 허용 목록으로 본다.
+ * <p>
+ * 지키는 규칙: source-R33 · source-R34
  */
 class AddressPolicyTests {
 

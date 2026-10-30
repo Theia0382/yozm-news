@@ -7,7 +7,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 /**
- * 상태 코드 규칙 — 코드마다 기대 결과를 손으로 적은 표.
+ * 상태 코드 규칙 — 코드마다 기대 결과를 손으로 적은 표로 본다.
+ * <p>
+ * 지키는 규칙: source-R23 · source-R24
  */
 class StatusRuleTests {
 

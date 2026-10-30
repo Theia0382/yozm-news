@@ -7,8 +7,7 @@ import net.yozmnews.source.FetchedArticle;
 import net.yozmnews.source.domain.profile.CollectionProfile;
 
 /**
- * 피드 문서를 수집 프로필에 따라 정규화한다 — 문자 인코딩 판정 → 사전 보정 → XML 읽기(DTD 를 해석하지 않음) → Rome 형식 판별 →
- * 항목마다 필드 보정. 상태가 없고 호출마다 파서를 새로 만든다.
+ * 피드 정규화 — docs/specs/source.md §4 · source-R38 ~ source-R44
  */
 public final class FeedNormalizer {
 

@@ -23,8 +23,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 소스의 다음 요청 가능 시각 — 처음에는 비어 있고, 쓴 값을 소스마다 따로 돌려준다. 읽기는 그 소스의 행을 잠가, 같은 소스의 예약이
- * 한 줄로 선다.
+ * 소스의 다음 요청 가능 시각 저장소 — 실제 PostgreSQL 에서 두 트랜잭션으로 행 잠금을 본다.
+ * <p>
+ * 지키는 규칙: source-R18
  */
 @JdbcTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)

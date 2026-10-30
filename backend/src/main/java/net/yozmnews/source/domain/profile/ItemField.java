@@ -21,7 +21,7 @@ public enum ItemField {
 		this.key = key;
 	}
 
-	/** 프로필 텍스트의 {@code items} 아래 키 */
+	/** 프로필 텍스트의 {@code items} 아래 키를 돌려준다 */
 	public String key() {
 		return this.key;
 	}

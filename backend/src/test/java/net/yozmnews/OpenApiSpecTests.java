@@ -16,9 +16,11 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.web.servlet.MockMvc;
 
 /**
- * 커밋된 화면용 API 명세(저장소 루트 {@code api/openapi.json})가 현재 코드가 내는 명세와 같은지 본다. 갱신 태스크
+ * 커밋된 화면용 API 명세(저장소 루트 {@code api/openapi.json})와 현재 코드가 내는 명세의 비교. 갱신 태스크
  * ({@code updateOpenApiSpec})에서는 비교 대신 파일을 다시 쓴다. 경로와 갱신 여부는 Gradle 이 시스템 속성으로 넘긴다
  * ({@code backend/build.gradle.kts}).
+ * <p>
+ * 지키는 규칙: platform-R6
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest(properties = "springdoc.api-docs.enabled=true")

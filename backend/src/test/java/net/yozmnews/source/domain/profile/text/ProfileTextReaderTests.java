@@ -16,6 +16,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
+/**
+ * 프로필 원문 읽기 — 텍스트를 직접 넣어 트리와 문제를 본다.
+ * <p>
+ * 지키는 규칙: source-R32
+ */
 class ProfileTextReaderTests {
 
 	private final ProfileTextReader reader = new ProfileTextReader();

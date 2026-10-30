@@ -5,7 +5,9 @@ import java.io.IOException;
 import java.io.InputStream;
 
 /**
- * 본문을 상한까지만 읽는다 — 상한을 넘는 바이트를 읽는 순간 멈춘다.
+ * 응답 본문의 상한 읽기 — docs/specs/source.md §4 · source-R28.
+ * <p>
+ * 상한을 넘는 바이트를 읽는 순간 멈춘다.
  */
 final class BoundedBody {
 
@@ -15,6 +17,7 @@ final class BoundedBody {
 	}
 
 	/**
+	 * 본문을 상한까지만 읽는다.
 	 * @param max 상한 — 같으면 통과
 	 * @throws BodyTooLargeException 읽은 바이트가 상한을 넘는 순간
 	 */

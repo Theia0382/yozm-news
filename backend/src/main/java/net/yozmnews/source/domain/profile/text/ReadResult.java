@@ -5,7 +5,7 @@ import java.util.Objects;
 import net.yozmnews.source.domain.profile.ProfileProblem;
 
 /**
- * 프로필 텍스트를 읽은 결과.
+ * 프로필 텍스트를 읽은 결과
  */
 public sealed interface ReadResult {
 

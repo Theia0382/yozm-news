@@ -8,8 +8,7 @@ import java.util.regex.Pattern;
 import org.jsoup.nodes.Entities;
 
 /**
- * 사전 보정 {@code replace-undefined-entities} — XML 이 모르는 엔티티 참조를 고친다. 숫자 참조와 XML 기본 엔티티는 그대로 두고,
- * HTML 이름 엔티티는 같은 문자의 숫자 참조로, 그 밖의 {@code &} 는 {@code &amp;} 로 바꿔 글자 그대로 남긴다.
+ * 사전 보정 {@code replace-undefined-entities} — docs/specs/source.md §4 · source-R38
  */
 final class EntityReferences {
 

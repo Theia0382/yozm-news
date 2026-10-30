@@ -10,9 +10,10 @@ import org.xml.sax.SAXException;
 import org.xml.sax.XMLReader;
 
 /**
- * 피드 XML 파서를 호출마다 새 팩토리로 만든다. JDOM 의 공유 팩토리({@code XMLReaders})는 한 번 걸린 기능 설정이 같은 JVM 의 다른
- * 빌더에도 남으므로 쓰지 않는다. 외부 엔티티 · 외부 DTD 를 읽지 않고, DOCTYPE 자체는 받는다 — DTD 의 선언은
- * {@link DeclarationRejectingHandler} 가 거부한다.
+ * 호출마다 새로 만드는 피드 XML 파서 팩토리 — docs/specs/source.md §4 · source-R43 · source-R44.
+ * <p>
+ * JDOM 의 공유 팩토리({@code XMLReaders})는 한 번 걸린 기능 설정이 같은 JVM 의 다른 빌더에도 남으므로 쓰지 않는다. DOCTYPE 자체는
+ * 받고, DTD 의 선언은 {@link DeclarationRejectingHandler} 가 거부한다.
  */
 final class IsolatedXmlReaders implements XMLReaderJDOMFactory {
 

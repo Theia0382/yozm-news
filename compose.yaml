@@ -2,8 +2,8 @@
 # 바꿀 수 있는 값은 .env.example 에 있다. .env 가 없어도 아래 기본값으로 뜬다.
 services:
   postgres:
-    # PostgreSQL 버전의 정본 — 테스트(Testcontainers)도 이 이미지를 읽어 쓴다.
-    # 배포 구성(deploy/compose.yaml)도 물려받는다 — 메이저를 바꾸면 배포 DB 는 빈 클러스터로 뜨므로 데이터 이전이 필요하다
+    # PostgreSQL 이미지의 정본 — docs/development/infrastructure.md "PostgreSQL 이미지 정본".
+    # 메이저를 바꾸기 전에 배포 DB 를 옮긴다 — docs/operations/deployment.md "업데이트"
     image: postgres:18
     profiles: [dev]
     environment:
@@ -24,7 +24,7 @@ services:
       retries: 30
 
   mock-oauth2-server:
-    # 로컬 OIDC 공급자. 로그인 연동은 아직 없다
+    # 로컬 OIDC 공급자
     image: ghcr.io/navikt/mock-oauth2-server:6
     profiles: [dev]
     ports:

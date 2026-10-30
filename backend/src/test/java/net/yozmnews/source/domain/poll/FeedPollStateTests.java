@@ -23,8 +23,9 @@ import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 /**
- * 수집 상태 전이 — 점유하고, 결과(성공 · 변경 없음 · 실패)마다 정해진 값만 바꾸고 점유를 푼다. 기대값은 결과 시각과 주기 15분에서
- * 손으로 센 시각이다.
+ * 수집 상태 전이 — 기대값은 결과 시각과 주기 15분에서 손으로 센 시각이다.
+ * <p>
+ * 지키는 규칙: source-R15 · source-R16 · source-R19 · source-R20 · source-R21 · source-R22 · source-R23 · source-R25 · source-R26 · source-R27
  */
 class FeedPollStateTests {
 

@@ -14,8 +14,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 /**
- * 다음 수집 시각 — 성공하면 주기 뒤, 실패하면 주기를 연속 실패마다 두 배로 늘리되 일시 6시간 · 영구 24시간에서 멈추고 주기보다 짧아지지
- * 않는다. 수집 작업은 예약 시각 전에 요청하지 않는다.
+ * 수집 일정 산식 — 기대 시각은 손으로 센 값이다.
+ * <p>
+ * 지키는 규칙: source-R18 · source-R25
  */
 class PollScheduleTests {
 

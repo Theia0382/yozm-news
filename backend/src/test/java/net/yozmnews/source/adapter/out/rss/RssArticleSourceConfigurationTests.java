@@ -14,7 +14,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
 /**
- * 수집 구성 — 연락처가 없거나 설정이 틀리면 기동이 실패한다.
+ * 수집 구성 — 설정 값을 바꿔 컨텍스트를 띄워 본다.
+ * <p>
+ * 지키는 규칙: source-R29 · source-R34
  */
 class RssArticleSourceConfigurationTests {
 

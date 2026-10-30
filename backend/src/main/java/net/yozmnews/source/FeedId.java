@@ -1,9 +1,7 @@
 package net.yozmnews.source;
 
 /**
- * 피드 식별자 — {@code feeds.id}. 수집 프로필 안의 피드 식별자(feed key)와 다르다.
- *
- * @param value 1 이상
+ * 피드 식별자 — docs/specs/source.md §3
  */
 public record FeedId(long value) {
 
