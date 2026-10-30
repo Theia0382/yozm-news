@@ -35,12 +35,13 @@ import org.snakeyaml.engine.v2.nodes.Tag;
 import org.snakeyaml.engine.v2.resolver.JsonScalarResolver;
 
 /**
- * YAML(그리고 JSON) 텍스트를 {@link ProfileTree} 로 옮긴다. snakeyaml-engine 의 이벤트 API 만 쓴다 — 객체를 만드는 단계를
- * 거치지 않으므로 태그로 Java 객체가 생기지 않고, 키와 값의 앵커 · 태그 · 위치를 그대로 받는다. 스레드 안전하다.
+ * 프로필 원문 읽기기 — docs/specs/source.md §4 · source-R32.
+ * <p>
+ * YAML(그리고 JSON) 텍스트를 {@link ProfileTree} 로 옮기며 키와 값의 앵커 · 태그 · 위치를 그대로 받는다. 스레드 안전하다.
  */
 public final class ProfileTextReader {
 
-	/** 텍스트 길이 상한(문자 수). 넘으면 읽지 않는다 */
+	/** 텍스트 길이 상한(문자 수) — 넘으면 읽지 않는다 */
 	public static final int MAX_CHARS = 65_536;
 
 	private final JsonScalarResolver resolver = new JsonScalarResolver();
@@ -76,7 +77,7 @@ public final class ProfileTextReader {
 	}
 
 	/**
-	 * 이벤트를 따라 트리를 만든다. 재귀하지 않는다 — 깊게 중첩된 입력이 스택을 넘치지 않게 열린 컬렉션을 직접 쌓는다.
+	 * 이벤트를 따라 트리를 만드는 빌더 — 깊게 중첩된 입력이 스택을 넘치지 않게 재귀하지 않고 열린 컬렉션을 직접 쌓는다
 	 */
 	private final class Builder {
 

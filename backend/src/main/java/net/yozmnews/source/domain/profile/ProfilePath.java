@@ -55,8 +55,10 @@ public record ProfilePath(List<Segment> segments) {
 		return text.toString();
 	}
 
+	/** 위치의 한 조각 — 매핑 키 또는 목록 번호 */
 	public sealed interface Segment {
 
+		/** 매핑 키 */
 		record Key(String name) implements Segment {
 
 			public Key {
@@ -65,6 +67,7 @@ public record ProfilePath(List<Segment> segments) {
 
 		}
 
+		/** 목록 번호 */
 		record Index(int value) implements Segment {
 
 		}

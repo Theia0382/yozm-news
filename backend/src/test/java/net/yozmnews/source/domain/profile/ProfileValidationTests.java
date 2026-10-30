@@ -17,7 +17,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 /**
- * 운영자 프로필(프리셋 없음)의 검증 — 모델 값, 기본값, 그리고 문제마다 경로와 종류.
+ * 운영자 프로필(프리셋 없음)의 검증 — 모델 값, 기본값, 그리고 문제마다 경로와 종류를 본다.
+ * <p>
+ * 지키는 규칙: source-R10 · source-R11 · source-R14 · source-R32
  */
 class ProfileValidationTests {
 

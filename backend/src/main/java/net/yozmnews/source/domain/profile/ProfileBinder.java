@@ -24,10 +24,9 @@ import net.yozmnews.source.domain.profile.text.TextLocation;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 트리 → 초안. 어디서든 적용하는 거부 규칙(알 수 없는 키 · 같은 매핑 안 중복 키 · 앵커 · 별칭 · 명시 태그 · 빈 값)과 형(type)
- * 오류, 문서 안의 피드 식별자 중복을 판정한다. 문제는 모두 모은다.
+ * 트리 → 초안 바인더 — docs/specs/source.md §4 · source-R32.
  * <p>
- * 아래 키 이름은 DB 에 저장된 운영자 프로필이 가리킨다 — 키 이름을 바꾸려면 저장된 프로필의 데이터 이행이 함께 있어야 한다.
+ * 문제는 모두 모은다. 아래 키 이름은 DB 에 저장된 운영자 프로필이 가리킨다 — 키 이름을 바꾸려면 저장된 프로필의 데이터 이행이 함께 있어야 한다.
  */
 final class ProfileBinder {
 
@@ -89,7 +88,7 @@ final class ProfileBinder {
 		return new BindResult(draft, binder.problems);
 	}
 
-	/** 바인딩 결과. 문제가 있으면 초안은 일부만 채워져 있다 */
+	/** 바인딩 결과 — 문제가 있으면 초안은 일부만 채워져 있다 */
 	record BindResult(ProfileDraft draft, List<ProfileProblem> problems) {
 
 		BindResult {
@@ -214,7 +213,7 @@ final class ProfileBinder {
 	}
 
 	/**
-	 * 매핑의 항목을 키 → 값으로 모은다. 키가 문자열 스칼라가 아니거나, 앞에 나온 키와 같거나, 알 수 없는 키면 문제로 알리고 뺀다.
+	 * 매핑의 항목을 키 → 값으로 모은다 — 키가 문자열 스칼라가 아니거나, 앞에 나온 키와 같거나, 알 수 없는 키면 문제로 알리고 뺀다
 	 */
 	private Map<String, ProfileTree> entries(MapNode map, ProfilePath path, Predicate<String> known,
 			ProblemCode unknownCode) {
@@ -268,7 +267,7 @@ final class ProfileBinder {
 		return null;
 	}
 
-	/** 문자열 값 — 문자열 · 수 · 불리언 스칼라의 원문을 받는다 */
+	/** 문자열 값을 읽는다 — 문자열 · 수 · 불리언 스칼라의 원문을 받는다 */
 	private @Nullable Located<String> string(@Nullable ProfileTree node, ProfilePath path) {
 		if (node == null || !usable(node, path) || isNull(node, path)) {
 			return null;
@@ -295,7 +294,7 @@ final class ProfileBinder {
 		return new Located<>(values, path, list.location());
 	}
 
-	/** 32비트 정수 값 — 소수 · 문자열 · 범위 밖 정수는 형 오류다 */
+	/** 32비트 정수 값을 읽는다 — 소수 · 문자열 · 범위 밖 정수는 형 오류다 */
 	private @Nullable Located<Integer> integer(@Nullable ProfileTree node, ProfilePath path) {
 		if (node == null || !usable(node, path) || isNull(node, path)) {
 			return null;

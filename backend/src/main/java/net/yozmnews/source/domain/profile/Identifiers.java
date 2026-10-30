@@ -3,7 +3,7 @@ package net.yozmnews.source.domain.profile;
 import java.util.regex.Pattern;
 
 /**
- * 피드 식별자 · 프리셋 키의 형식 — 소문자 · 숫자를 하이픈 하나로 잇고, 40자 이하다.
+ * 피드 식별자 · 프리셋 키의 형식 — source-R11
  */
 final class Identifiers {
 

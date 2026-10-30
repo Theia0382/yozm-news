@@ -4,18 +4,18 @@ import java.time.Duration;
 import java.util.Objects;
 
 /**
- * 피드의 실제 수집 주기를 정한다. 프로필의 주기는 권장 기본값이고 운영자 설정이 이긴다 — 운영자 피드 설정 → 운영자 소스 설정 →
- * 프로필 피드 권장값 → 프로필 소스 권장값 → {@link #DEFAULT} 순으로 처음 있는 값이다.
+ * 피드의 실제 수집 주기 — docs/specs/source.md §4 · source-R14
  */
 public final class PollIntervalPolicy {
 
-	/** 어디에도 값이 없을 때의 주기. 운영 데이터로 다시 판단한다 */
+	/** 어디에도 값이 없을 때의 주기 — 운영 데이터로 다시 판단한다 */
 	public static final PollInterval DEFAULT = new PollInterval(Duration.ofMinutes(15));
 
 	private PollIntervalPolicy() {
 	}
 
 	/**
+	 * 실제 주기를 정한다.
 	 * @throws IllegalArgumentException 피드가 그 프로필의 피드가 아닐 때
 	 */
 	public static PollInterval effective(CollectionProfile profile, FeedSpec feed, PollIntervalSettings operator) {

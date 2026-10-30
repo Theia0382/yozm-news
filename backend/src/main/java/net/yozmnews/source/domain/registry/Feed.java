@@ -14,9 +14,7 @@ import org.springframework.data.annotation.Version;
 import org.springframework.data.relational.core.mapping.Table;
 
 /**
- * 피드 — 운영자가 쓰는 aggregate. 운영 설정(켜짐 · 수집 주기)만 둔다. URL · 섹션은 프로필에, 수집 상태는 수집 작업만 쓰는 다른 행
- * ({@code feed_poll_states})에 있어 운영자 변경과 수집이 서로를 덮어쓰지 않는다. 행은 {@code FeedRepository#insertIfAbsent} 로만
- * 만든다 — 피드 식별자는 그 피드에서 받은 기사의 기록이 가리키므로 지우지 않는다.
+ * 피드 aggregate — docs/specs/source.md §4 · source-R1 · source-R7
  */
 @Table("feeds")
 public final class Feed {
@@ -65,15 +63,17 @@ public final class Feed {
 		return this.enabled;
 	}
 
-	/** 운영자 피드 주기 설정 — 정하지 않았으면 null */
+	/**
+	 * 운영자 피드 주기 설정을 돌려준다.
+	 * @return 정하지 않았으면 null
+	 */
 	public @Nullable PollInterval pollInterval() {
 		return (this.pollIntervalMinutes != null) ? PollInterval.ofMinutes(this.pollIntervalMinutes).orElseThrow()
 				: null;
 	}
 
 	/**
-	 * 켠다 — 소스의 프로필을 얻었고 그 프로필에 이 피드가 있어야 한다. 판정은 {@link PollTarget#of} 한 곳이다. 이용조건 검토일은 소스를
-	 * 켤 때 본다. 거절하면 상태를 바꾸지 않는다.
+	 * 피드를 켠다 — source-R5. 판정은 {@link PollTarget#of} 가 한다.
 	 * @param resolution 이 피드가 속한 소스의 프로필을 얻은 결과
 	 */
 	public Activation enable(ProfileResolution resolution) {
@@ -90,7 +90,10 @@ public final class Feed {
 		this.enabled = false;
 	}
 
-	/** @param interval 새 설정 — null 이면 설정을 지운다 */
+	/**
+	 * 운영자 피드 주기 설정을 바꾼다.
+	 * @param interval 새 설정 — null 이면 설정을 지운다
+	 */
 	public void changePollInterval(@Nullable PollInterval interval) {
 		this.pollIntervalMinutes = (interval != null) ? Math.toIntExact(interval.value().toMinutes()) : null;
 	}

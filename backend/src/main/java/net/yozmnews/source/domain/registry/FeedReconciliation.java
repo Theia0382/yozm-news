@@ -10,8 +10,7 @@ import net.yozmnews.source.domain.profile.FeedKey;
 import net.yozmnews.source.domain.profile.FeedSpec;
 
 /**
- * 프로필의 피드와 저장된 피드 행을 견준 결과 — 배포로 프리셋이 바뀐 뒤 기동할 때 쓴다. 저장된 행은 지우지 않는다: 피드 식별자는 그
- * 피드에서 받은 기사의 기록이 가리킨다.
+ * 프로필의 피드와 저장된 피드 행을 견준 결과 — docs/specs/source.md §4 · source-R8.
  *
  * @param missing 프로필에 있고 행이 없는 피드 — 프로필 순서
  * @param orphaned 행은 있고 프로필에 없는 피드 — 받은 순서

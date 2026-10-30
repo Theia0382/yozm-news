@@ -8,7 +8,7 @@ import net.yozmnews.source.domain.profile.PresetKey;
 import net.yozmnews.source.domain.profile.ProfileProblem;
 
 /**
- * 소스의 수집 프로필을 얻은 결과 — 프리셋은 배포로, 운영자 원문은 검증 규칙의 변경으로 가리킬 곳을 잃을 수 있다.
+ * 소스의 수집 프로필을 얻은 결과 — 프리셋은 배포로, 운영자 원문은 검증 규칙의 변경으로 가리킬 곳을 잃을 수 있다
  */
 public sealed interface ProfileResolution {
 

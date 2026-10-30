@@ -12,7 +12,9 @@ import net.yozmnews.source.domain.profile.text.ProfileTextReader;
 import org.junit.jupiter.api.Test;
 
 /**
- * 프리셋 — 운영자 프로필과 같은 검증에 이용조건 검토일이 반드시 있다는 것만 더한다. 프리셋 원문은 그대로 운영자 프로필로 쓸 수 있다.
+ * 프리셋 — 합성 프리셋 원문으로 본다.
+ * <p>
+ * 지키는 규칙: source-R11 · source-R12 · source-R13
  */
 class PresetTests {
 

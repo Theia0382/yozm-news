@@ -14,7 +14,11 @@ import net.yozmnews.source.domain.profile.PresetCatalog;
 import net.yozmnews.source.domain.profile.PresetKey;
 import org.junit.jupiter.api.Test;
 
-/** 소스의 프로필 — 프리셋은 카탈로그에서, 운영자 프로필은 원문을 다시 검증해서 얻는다. */
+/**
+ * 소스의 프로필 해석 — 합성 카탈로그와 저장된 원문으로 본다.
+ * <p>
+ * 지키는 규칙: source-R1 · source-R8
+ */
 class ProfileResolverTests {
 
 	private static final Preset ALPHA = preset("alpha", REVIEWED_TEXT);

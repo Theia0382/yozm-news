@@ -4,10 +4,11 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * 프리셋 파일을 해석한 결과.
+ * 프리셋 파일을 해석한 결과
  */
 public sealed interface PresetParse {
 
+	/** 검증을 통과했다 */
 	record Parsed(Preset preset) implements PresetParse {
 
 		public Parsed {

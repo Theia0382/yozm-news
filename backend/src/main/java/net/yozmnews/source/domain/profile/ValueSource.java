@@ -3,7 +3,7 @@ package net.yozmnews.source.domain.profile;
 import java.util.Objects;
 
 /**
- * 기사 항목 값을 읽을 곳 하나. 프로필 텍스트에서는 {@code $standard} 또는 요소 이름({@code dc:date} · {@code author})이다.
+ * 기사 항목 값을 읽을 곳 하나 — 프로필 텍스트에서는 {@code $standard} 또는 요소 이름({@code dc:date} · {@code author})이다
  */
 public sealed interface ValueSource {
 

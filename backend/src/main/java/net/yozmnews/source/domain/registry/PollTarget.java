@@ -11,9 +11,10 @@ import net.yozmnews.source.domain.profile.PollIntervalPolicy;
 import net.yozmnews.source.domain.profile.PollIntervalSettings;
 
 /**
- * 피드를 지금 수집할 수 있는가 — 프로필을 얻었고 그 프로필에 피드가 있어야 한다. 실제 주기는 피드가 프로필에 있음을 본 뒤에만 정한다
- * ({@link PollIntervalPolicy#effective} 는 프로필에 없는 피드에서 예외를 던진다). 이용조건 검토일은 소스를 켤 때 보는 소스 단위의
- * 조건이라 여기서 보지 않는다.
+ * 피드를 지금 수집할 수 있는지의 판정 — docs/specs/source.md §4 · source-R5 · source-R19.
+ * <p>
+ * 실제 주기는 피드가 프로필에 있음을 본 뒤에만 정한다({@link PollIntervalPolicy#effective} 는 프로필에 없는 피드에서 예외를
+ * 던진다).
  */
 public sealed interface PollTarget {
 
@@ -42,7 +43,7 @@ public sealed interface PollTarget {
 			Objects.requireNonNull(feed, "feed");
 		}
 
-		/** 실제 주기 — 정본은 {@link PollIntervalPolicy#effective} */
+		/** 실제 주기를 정한다 — {@link PollIntervalPolicy#effective} 에 맡긴다 */
 		public PollInterval interval(PollIntervalSettings operator) {
 			return PollIntervalPolicy.effective(this.profile, this.feed, operator);
 		}

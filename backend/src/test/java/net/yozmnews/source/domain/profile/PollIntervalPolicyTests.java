@@ -10,8 +10,9 @@ import net.yozmnews.source.domain.profile.text.ProfileTextReader;
 import org.junit.jupiter.api.Test;
 
 /**
- * 실제 수집 주기 — 운영자 피드 설정 → 운영자 소스 설정 → 프로필 피드 권장값 → 프로필 소스 권장값 → 15분. 이웃 두 단계에 늘 값이
- * 함께 있도록 위 단계부터 하나씩 비운다 — 순서가 바뀌면 드러난다.
+ * 실제 수집 주기 — 이웃 두 단계에 늘 값이 함께 있도록 위 단계부터 하나씩 비운다. 순서가 바뀌면 드러난다.
+ * <p>
+ * 지키는 규칙: source-R14
  */
 class PollIntervalPolicyTests {
 

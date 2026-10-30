@@ -3,7 +3,7 @@ package net.yozmnews.source.domain.profile;
 import java.util.Objects;
 
 /**
- * 피드 식별자 — 프로필 안에서 고유하다. {@code feeds.feed_key} 에 저장되므로 한 번 쓰인 값은 바꾸지 않는다.
+ * 수집 프로필 안의 피드 식별자 — source-R7 · source-R11
  */
 public record FeedKey(String value) {
 

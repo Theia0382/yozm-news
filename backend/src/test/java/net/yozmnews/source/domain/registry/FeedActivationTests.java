@@ -8,7 +8,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import net.yozmnews.source.domain.profile.PresetKey;
 import org.junit.jupiter.api.Test;
 
-/** 피드 켜기 — 소스의 프로필에 그 피드가 있어야 한다. 이용조건 검토일은 소스를 켤 때 본다. */
+/**
+ * 피드 켜기 — 합성 프로필로 aggregate 를 직접 본다.
+ * <p>
+ * 지키는 규칙: source-R5
+ */
 class FeedActivationTests {
 
 	@Test
