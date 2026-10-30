@@ -16,7 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 소스 · 피드의 운영 설정 — 켜기 · 끄기와 수집 주기. 켜기는 지금의 프로필로 판정한다. 거절하면 아무것도 저장하지 않는다.
+ * 소스 · 피드의 운영 설정 — docs/specs/source.md §4 · source-R4 · source-R5 · source-R14
  */
 @Service
 class SourceOperations {
@@ -37,7 +37,7 @@ class SourceOperations {
 		this.transaction = transaction;
 	}
 
-	/** 이용조건 검토일이 없거나 프로필을 얻지 못하면 거절한다 */
+	/** 소스를 켠다 — source-R4 */
 	Activation enableSource(SourceId id) {
 		return this.transaction.execute(status -> {
 			Source source = source(id);
@@ -53,7 +53,7 @@ class SourceOperations {
 		updateSource(id, Source::disable);
 	}
 
-	/** 소스의 프로필을 얻지 못하거나 그 프로필에 피드가 없으면 거절한다 */
+	/** 피드를 켠다 — source-R5 */
 	Activation enableFeed(FeedId id) {
 		return this.transaction.execute(status -> {
 			Feed feed = feed(id);
@@ -70,6 +70,7 @@ class SourceOperations {
 	}
 
 	/**
+	 * 소스의 수집 주기 설정을 바꾼다.
 	 * @param minutes 새 설정(분) — null 이면 설정을 지운다
 	 * @return 하한보다 짧아(0 · 음수 포함) 바꾸지 않았으면 false
 	 */
@@ -83,6 +84,7 @@ class SourceOperations {
 	}
 
 	/**
+	 * 피드의 수집 주기 설정을 바꾼다.
 	 * @param minutes 새 설정(분) — null 이면 설정을 지운다
 	 * @return 하한보다 짧아(0 · 음수 포함) 바꾸지 않았으면 false
 	 */
@@ -95,7 +97,7 @@ class SourceOperations {
 		return true;
 	}
 
-	/** 입력 검사의 정본은 {@link PollInterval#ofMinutes} — 설정을 지우는 null 은 받는다 */
+	/** {@link PollInterval#ofMinutes} 가 받는 값인지 본다 — 설정을 지우는 null 도 받는다 */
 	private static boolean acceptable(@Nullable Integer minutes) {
 		return minutes == null || PollInterval.ofMinutes(minutes).isPresent();
 	}

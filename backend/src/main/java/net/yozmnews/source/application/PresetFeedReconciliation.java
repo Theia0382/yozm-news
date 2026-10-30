@@ -21,9 +21,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 기동 때 소스마다 지금의 프로필과 저장된 피드 행을 대조한다 — 프리셋은 배포로만 바뀌므로 기동이 대조할 때다. 프로필에 새로 생긴
- * 피드는 꺼진 행으로 더하고, 가리킬 곳을 잃은 소스 · 피드는 경고 로그로 알린다. 행은 지우지도 끄지도 않는다 — 운영자 스위치는
- * 운영자의 것이고, 피드 식별자는 받은 기사의 기록이 가리킨다. 여러 인스턴스가 함께 돌아도 결과가 같다.
+ * 기동 대조 — docs/specs/source.md §4 · source-R8
  */
 @Component
 class PresetFeedReconciliation {

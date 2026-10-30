@@ -7,10 +7,10 @@ import net.yozmnews.source.SourceId;
 import net.yozmnews.source.domain.profile.PresetKey;
 import net.yozmnews.source.domain.profile.ProfileProblem;
 
-/** 소스 등록의 결과. */
+/** 소스 등록의 결과 */
 sealed interface Registration {
 
-	/** 등록했다 — 소스와 프로필의 피드는 모두 꺼진 채다 */
+	/** 등록했다 */
 	record Registered(SourceId id) implements Registration {
 
 		public Registered {

@@ -34,7 +34,8 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
 /**
- * {@code feed_poll_states} 를 JdbcClient 로 읽고 쓴다. 쓰기의 조건이 점유 토큰이라 aggregate 저장(버전 조건) 대신 SQL 로 쓴다.
+ * {@link FeedPollStateRepository} 의 JdbcClient 구현 — docs/specs/source.md §4.
+ * <p>
  * 직전 항목 키는 {@code text[]} 다 — null 은 아직 성공한 수집이 없다는 뜻이라 빈 배열과 다르다.
  */
 @Repository
@@ -54,7 +55,7 @@ class JdbcFeedPollStateRepository implements FeedPollStateRepository {
 			last_error_status = :lastErrorStatus, last_error_at = :lastErrorAt, moved_to = :movedTo,
 			last_overflow_at = :lastOverflowAt, overflow_count = :overflowCount, previous_item_keys = :previousItemKeys""";
 
-	/** 수집 상태와 그 피드 · 소스의 운영 설정 — 수집 대상은 소스와 피드가 모두 켜진 피드다 */
+	/** 수집 상태와 그 피드 · 소스의 운영 설정 */
 	private static final String CONTEXT = "select " + COLUMNS + """
 			, f.source_id, f.feed_key, s.poll_interval_minutes as source_interval_minutes,
 			f.poll_interval_minutes as feed_interval_minutes
@@ -153,7 +154,7 @@ class JdbcFeedPollStateRepository implements FeedPollStateRepository {
 		return (minutes != null) ? PollInterval.ofMinutes(minutes).orElseThrow() : null;
 	}
 
-	/** 상태의 모든 열을 이름 붙은 매개변수로 — 열 이름의 camelCase */
+	/** 상태의 모든 열을 이름 붙은 매개변수로 옮긴다 — 이름은 열 이름의 camelCase */
 	static Map<String, @Nullable Object> parameters(FeedPollState state) {
 		Lease lease = state.lease();
 		LastError error = state.lastError();

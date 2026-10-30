@@ -20,8 +20,9 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 /**
- * 소스 등록과 기동 대조 — 실제 PostgreSQL 에서 합성 프리셋 multi(피드 one · two)로 본다. 등록은 소스와 꺼진 피드 · 수집 상태 행을 함께
- * 만들고, 기동 대조는 프로필에 새로 생긴 피드를 더하고 가리킬 곳을 잃은 것을 경고한다.
+ * 소스 등록과 기동 대조 — 실제 PostgreSQL 에서 합성 프리셋 multi(피드 one · two)로 본다.
+ * <p>
+ * 지키는 규칙: source-R1 · source-R2 · source-R3 · source-R8
  */
 @Import({ TestcontainersConfiguration.class, RegistryTestCatalog.class })
 @SpringBootTest

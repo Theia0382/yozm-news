@@ -17,9 +17,10 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 소스 · 피드 스키마의 제약 — 실제 PostgreSQL 에서 Flyway 마이그레이션을 적용해 본다. 프리셋 키와 운영자 프로필은 둘 중 하나이고,
- * 같은 프리셋 · 같은 소스의 같은 피드 키는 한 행이다. 수집 상태의 점유와 마지막 오류는 짝으로만 있다. 운영자 원문은 주석까지
- * 그대로 남는다. 제약 위반은 그 트랜잭션을 중단시키므로 테스트를 트랜잭션으로 감싸지 않고 행을 직접 지운다.
+ * 소스 · 피드 스키마의 제약 — 실제 PostgreSQL 에서 Flyway 마이그레이션을 적용해 본다. 제약 위반은 그 트랜잭션을 중단시키므로
+ * 테스트를 트랜잭션으로 감싸지 않고 행을 직접 지운다.
+ * <p>
+ * 지키는 규칙: source-R1 · source-R2 · source-R3
  */
 @JdbcTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)

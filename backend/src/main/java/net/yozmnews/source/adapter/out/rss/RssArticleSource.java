@@ -47,13 +47,14 @@ import org.apache.hc.core5.util.Timeout;
 import org.jspecify.annotations.Nullable;
 
 /**
- * v1 수집 구현 — 피드를 HTTP(S) 로 받아 정규화로 넘긴다. 리다이렉트는 직접 따라가며 홉마다 domain 규칙으로 판정하고, 한
- * 번의 수집 전체에 마감 하나를 건다(홉마다 남은 시간 뒤에 그 홉의 요청을 취소한다). 받은 클라이언트와 취소 스케줄러를
- * 소유하고 {@link #close()} 에서 닫는다.
+ * 피드 요청 관문의 구현 — docs/specs/source.md §4 · source-R28 · source-R33 ~ source-R37.
+ * <p>
+ * 한 번의 수집 전체에 거는 마감은 홉마다 남은 시간 뒤에 그 홉의 요청을 취소해 지킨다. 받은 클라이언트와 취소 스케줄러를 소유하고
+ * {@link #close()} 에서 닫는다.
  */
 public final class RssArticleSource implements ArticleSource, AutoCloseable {
 
-	/** RSS · Atom 을 앞세우되 무엇이 와도 정규화가 판정한다 */
+	/** 요청의 {@code Accept} — RSS · Atom 을 앞세우되 무엇이 와도 정규화가 판정한다 */
 	private static final String ACCEPT = "application/rss+xml, application/atom+xml, application/rdf+xml;q=0.9, "
 			+ "application/xml;q=0.9, text/xml;q=0.9, */*;q=0.8";
 
@@ -230,7 +231,7 @@ public final class RssArticleSource implements ArticleSource, AutoCloseable {
 		};
 	}
 
-	/** 압축(Apache 가 풀어 준다)이 아닌 응답이 상한보다 큰 길이를 밝혔는가 — 압축된 응답의 길이는 푼 바이트와 비교할 수 없다 */
+	/** 압축(Apache 가 풀어 준다)이 아닌 응답이 상한보다 큰 길이를 밝혔는지 본다 — 압축된 응답의 길이는 푼 바이트와 비교할 수 없다 */
 	private boolean declaredTooLarge(ClassicHttpResponse response) {
 		String encoding = header(response, HttpHeaders.CONTENT_ENCODING);
 		if (encoding != null && !encoding.strip().toLowerCase(Locale.ROOT).equals("identity")) {
@@ -301,7 +302,7 @@ public final class RssArticleSource implements ArticleSource, AutoCloseable {
 	}
 
 	/**
-	 * 문구에 인용할 URL — userinfo 를 지운다(비밀 값일 수 있다). 호스트로 읽히지 않는 authority(예: 밑줄이 든 이름)는
+	 * 문구에 인용할 URL 을 만든다 — userinfo 를 지운다(source-R37). 호스트로 읽히지 않는 authority(예: 밑줄이 든 이름)는
 	 * {@code URI} 가 userinfo 를 따로 나누지 않으므로, authority 의 마지막 {@code @} 앞을 지운다.
 	 */
 	static String display(URI url) {

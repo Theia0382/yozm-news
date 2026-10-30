@@ -9,7 +9,9 @@ import java.io.IOException;
 import org.junit.jupiter.api.Test;
 
 /**
- * 본문을 상한까지만 읽는다 — 같으면 통과, 넘으면 실패.
+ * 응답 본문의 상한 읽기 — 메모리 스트림으로 본다.
+ * <p>
+ * 지키는 규칙: source-R28
  */
 class BoundedBodyTests {
 

@@ -17,6 +17,8 @@ import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 
 /**
  * 프리셋 디렉터리 적재 — 테스트 리소스의 합성 프리셋으로 본다. Spring 컨텍스트는 띄우지 않는다.
+ * <p>
+ * 지키는 규칙: source-R12
  */
 class PresetCatalogLoadTests {
 

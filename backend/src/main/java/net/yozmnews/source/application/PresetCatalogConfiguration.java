@@ -24,9 +24,9 @@ import org.springframework.core.io.support.ResourcePatternResolver;
 import org.springframework.core.io.support.ResourcePatternUtils;
 
 /**
- * 저장소의 프리셋 파일({@code source-presets/{key}.yaml})을 기동 때 모두 읽어 {@link PresetCatalog} 로 둔다. 하나라도 검증에
- * 실패하거나, 디렉터리에 {@code .yaml} 이 아닌 파일 · 키 형식이 아닌 이름이 있으면 기동을 멈춘다 — 프리셋은 배포물의 일부라 CI 의
- * 테스트가 먼저 잡는다.
+ * 프리셋 카탈로그 적재 — docs/specs/source.md §4 · source-R12.
+ * <p>
+ * 프리셋은 배포물의 일부라 잘못된 파일은 CI 의 테스트가 먼저 잡는다.
  */
 @Configuration(proxyBeanMethods = false)
 class PresetCatalogConfiguration {
@@ -35,7 +35,6 @@ class PresetCatalogConfiguration {
 
 	private static final String EXTENSION = ".yaml";
 
-	/** 프리셋 파일과 운영자 프로필을 같은 읽기기 · 검증기로 읽는다 */
 	@Bean
 	ProfileParser profileParser() {
 		return new ProfileParser(new ProfileTextReader());
@@ -47,6 +46,7 @@ class PresetCatalogConfiguration {
 	}
 
 	/**
+	 * 위치의 프리셋 파일을 모두 읽어 카탈로그를 만든다.
 	 * @throws IllegalStateException 적재에 실패한 파일이 하나라도 있을 때 — 메시지에 파일마다 문제를 모두 담는다
 	 * @throws IllegalArgumentException 여러 classpath 위치에 같은 이름의 프리셋 파일이 있을 때
 	 * @throws UncheckedIOException 위치나 파일을 읽지 못했을 때

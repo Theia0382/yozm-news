@@ -36,17 +36,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 점유한 피드를 한 번 수집한다.
- * <ol>
- * <li>점유가 자기 것인지 확인한다 — 아니면(이미 반영됨 · 만료 뒤 다른 회차가 가져감 · 소스나 피드가 꺼짐) 아무것도 하지 않는다</li>
- * <li>예약 시각까지 기다린다 — 작업 서버는 예약 작업을 poll 간격만큼 일찍 시작할 수 있다</li>
- * <li>같은 소스의 요청 시작 시각을 예약하고 그때까지 기다린다 — 작업 서버는 예약 작업을 poll 간격 단위로 묶어 시작하므로, 같은
- * 언론사에 요청이 동시에 나가지 않는 것은 이 예약이 보장한다. 그 시각이 점유 만료에 너무 가까우면 수집하지 않는다(점유가 만료되면 다음
- * 회차가 다시 가져간다)</li>
- * <li>트랜잭션 밖에서 {@link ArticleSource} 로 받는다</li>
- * <li>한 트랜잭션에서 결과를 반영하고 새 항목마다 {@link ArticleFetched} 를 발행한다 — 직전 항목 키와 발행이 함께 커밋되므로, 키만
- * 남고 발행이 사라지는 일이 없다. 그사이 점유를 잃었으면 반영도 발행도 하지 않는다</li>
- * </ol>
+ * 점유한 피드의 수집 한 회차 — docs/specs/source.md §4 · source-R16 ~ source-R21.
+ * <p>
+ * 작업 서버는 예약 작업을 poll 간격만큼 일찍 시작할 수 있어, 예약 시각까지 기다린 뒤 수집한다.
  */
 @Service
 public class FeedPoller {
@@ -145,7 +137,7 @@ public class FeedPoller {
 		log(context, target, result, outcome);
 	}
 
-	/** 같은 소스의 요청 시작 시각을 예약한다 — 행 잠금이 같은 소스의 예약을 한 줄로 세운다 */
+	/** 같은 소스의 요청 시작 시각을 예약한다 — source-R18 */
 	private FetchSlot reserve(SourceId source) {
 		return this.transaction.execute(status -> {
 			FetchSlot slot = PollSchedule.reserveFetch(this.fetchSlots.lockNextFetchAt(source), this.clock.instant());
@@ -154,7 +146,10 @@ public class FeedPoller {
 		});
 	}
 
-	/** @return 기다렸으면 true, 기다리다 중단되면 false — 수집하지 않고 점유가 만료되기를 둔다 */
+	/**
+	 * 주어진 시간만큼 기다린다.
+	 * @return 기다렸으면 true, 기다리다 중단되면 false — 수집하지 않고 점유가 만료되기를 둔다
+	 */
 	private static boolean sleep(Duration wait) {
 		if (wait.isZero()) {
 			return true;
