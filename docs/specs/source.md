@@ -292,7 +292,7 @@ sequenceDiagram
 
 #### `ArticleSource`
 
-모든 피드 수집(정기 수집 · 활성화 전 미리보기)이 거치는 관문이다. 모듈 안의 포트(`domain/fetch`)라 공개 인터페이스(§3)가 아니다. 선언의 정본은 이 Spec 이다.
+모든 피드 수집이 거치는 관문이다. 활성화 전 미리보기가 이 관문을 거치는 것은 source-R9 가 정한다. 모듈 안의 포트(`domain/fetch`)라 공개 인터페이스(§3)가 아니다. 선언의 정본은 이 Spec 이다.
 
 ```java
 public interface ArticleSource {

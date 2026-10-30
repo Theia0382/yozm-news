@@ -11,7 +11,7 @@
 - 대상은 자동 테스트 전 계층과 사람의 확인이 **증거로서** 갖는 자격과 한계다
 - 범위 밖
   - 실행 명령 · 실행 시점 — [CONTRIBUTING.md](../../CONTRIBUTING.md)
-  - 모듈 고유의 테스트 명세 — 규칙 · 불변식은 모듈 Spec 이 식별자와 함께 갖고([specs/README.md](../specs/README.md) §3), 어느 테스트가 지키는지는 테스트가 그 식별자로 가리킨다
+  - 모듈 고유의 테스트 명세 — 규칙 · 불변식은 모듈 Spec 이 식별자와 함께 갖고([specs/README.md](../specs/README.md) §3), 어느 테스트가 지키는지는 테스트가 그 식별자로 가리킨다(표기는 [CONTRIBUTING.md §7](../../CONTRIBUTING.md#주석))
   - 테스트 도구와 버전 목록 — `backend/build.gradle.kts`
 
 ---
