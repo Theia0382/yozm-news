@@ -8,7 +8,7 @@ import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 피드 상태 판정의 규칙과 기준값 — 정본 · docs/specs/source.md §5 · source-R30 · source-R31 · source-R47.
+ * 피드 상태 판정의 규칙과 기준값 — 정본 · docs/specs/source.md §4 · source-R30 · source-R31 · source-R47.
  * <p>
  * 값은 측정 전 목표이고 운영 데이터로 다시 판단한다.
  */

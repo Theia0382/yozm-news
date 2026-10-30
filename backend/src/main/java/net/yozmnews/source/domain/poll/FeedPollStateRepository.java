@@ -11,7 +11,7 @@ import net.yozmnews.source.FeedId;
 import net.yozmnews.source.SourceId;
 
 /**
- * 수집 상태 저장소 — docs/specs/source.md §4 · source-R6 · source-R15 · source-R16.
+ * 수집 상태 저장소 — docs/specs/source.md §4 · source-R6 · source-R15 · source-R16 · source-R48.
  * <p>
  * 전이는 {@link FeedPollState} 가 계산하고, 저장소는 그 값을 옮긴다.
  */

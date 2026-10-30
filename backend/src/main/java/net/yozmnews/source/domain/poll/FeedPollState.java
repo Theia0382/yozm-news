@@ -14,7 +14,8 @@ import net.yozmnews.source.domain.profile.PollInterval;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 피드 하나의 수집 상태 — docs/specs/source.md §4 · source-R15 · source-R16 · source-R19 ~ source-R27.
+ * 피드 하나의 수집 상태 — docs/specs/source.md §4 · source-R15 · source-R16 · source-R19 ~ source-R27 · source-R30 ·
+ * source-R31.
  *
  * @param nextPollAt 다음에 대상이 되는 시각
  * @param lease 점유 — 없으면 null

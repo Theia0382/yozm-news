@@ -1,6 +1,6 @@
 # ADR-0033: 피드 수집은 DB 점유로 겹침을 막고, 피드별 직전 항목으로 새 항목을 가르며, 같은 언론사 요청 사이는 요청 직전의 DB 예약으로 띄운다
 
-- 상태: 승인
+- 상태: 승인. "`feed_poll_states` 는 수집 작업만 쓴다"는 [ADR-0040](0040-feed-status-stored-in-poll-state-and-rejudged-hourly-by-health-check.md)이 부분 대체
 - 날짜: 2026-10-28
 - 근거: [이슈 #21](https://github.com/Theia0382/yozm-news/issues/21) — JobRunr 9.0.2 소스를 읽고, 실제 PostgreSQL · JobRunr 작업 서버 · WireMock 으로 확인. 구현 `fc20680`(수집 일정 판단 규칙) · `e513722`(소스 · 피드 저장과 켜기) · `acd0670`(수집 작업)
 - 관련: [ADR-0013](0013-architecture-patterns.md)(판단은 `domain`, 외부 호출은 트랜잭션 밖, 멱등 작업), [ADR-0014](0014-spring-data-jdbc.md)(쓰기 aggregate · 특수 쓰기 JdbcClient), [ADR-0023](0023-jobrunr-oss-framework-schema-and-event-resubmission.md)(JobRunr OSS · 이벤트 재처리), [ADR-0024](0024-collection-profile-yaml-and-preset-reference-or-own-profile.md)(프리셋 참조 · 수집 주기 — 미뤄 둔 운영자 원문의 저장 형태를 이 ADR 이 정한다), [ADR-0031](0031-feed-request-blocks-internal-addresses-with-apache-httpclient-deadline.md)(수집 마감 · 호스트별 연결을 제한하지 않음)

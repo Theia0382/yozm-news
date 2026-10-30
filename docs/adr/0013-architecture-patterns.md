@@ -1,6 +1,6 @@
 # ADR-0013: 아키텍처 패턴: 모듈러 모놀리스 + 실용적 헥사고날
 
-- 상태: 승인 (이벤트 재처리 시점 — "재시작 후에도 처리된다" — 은 [ADR-0023](0023-jobrunr-oss-framework-schema-and-event-resubmission.md)이 대체)
+- 상태: 승인 (이벤트 재처리 시점 — "재시작 후에도 처리된다" — 은 [ADR-0023](0023-jobrunr-oss-framework-schema-and-event-resubmission.md)이 대체. 상태 머신의 피드 상태는 [ADR-0040](0040-feed-status-stored-in-poll-state-and-rejudged-hourly-by-health-check.md)이 부분 대체)
 - 날짜: 2026-10-25
 
 ## 맥락
