@@ -3,6 +3,7 @@ package net.yozmnews.source.domain.poll;
 import static net.yozmnews.source.domain.poll.PollFixtures.article;
 import static net.yozmnews.source.domain.poll.PollFixtures.keys;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 import java.net.URI;
@@ -25,7 +26,8 @@ import org.junit.jupiter.api.Test;
 /**
  * 수집 상태 전이 — 기대값은 결과 시각과 주기 15분에서 손으로 센 시각이다.
  * <p>
- * 지키는 규칙: source-R15 · source-R16 · source-R19 · source-R20 · source-R21 · source-R22 · source-R23 · source-R25 · source-R26 · source-R27
+ * 지키는 규칙: source-R15 · source-R16 · source-R19 · source-R20 · source-R21 · source-R22 · source-R23 · source-R25 · source-R26 · source-R27 ·
+ * source-R30 · source-R31
  */
 class FeedPollStateTests {
 
@@ -48,12 +50,16 @@ class FeedPollStateTests {
 
 	private static final URI MOVED = URI.create("https://news.example/rss/new");
 
+	/** 이전 수집들이 남긴 새 항목의 가장 늦은 발행 시각 */
+	private static final Instant PUBLISHED_BEFORE = Instant.parse("2026-10-27T03:00:00Z");
+
 	@Test
 	void startsDueImmediatelyWithNothingRecorded() {
 		Instant now = Instant.parse("2026-10-28T09:00:00Z");
 
 		assertThat(FeedPollState.initial(FEED, now)).isEqualTo(
-				new FeedPollState(FEED, now, null, FetchState.NONE, null, null, null, 0, null, null, null, 0, null));
+				new FeedPollState(FEED, now, null, FetchState.NONE, null, null, null, null, 0, 0, null, null, null, 0,
+						null));
 	}
 
 	@Test
@@ -87,18 +93,19 @@ class FeedPollStateTests {
 		FetchedArticle a = article("a");
 		FetchedArticle b = article("b");
 
-		PollOutcome outcome = leased(null, 0, null).complete(fetched(List.of(a, b), null), INTERVAL);
+		PollOutcome outcome = leased(null, 0, 0, null, null).complete(fetched(List.of(a, b), null), INTERVAL);
 
 		assertThat(outcome.newArticles()).containsExactly(a, b);
 		assertThat(outcome.overflowSuspected()).isFalse();
 		assertThat(outcome.movedToChanged()).isFalse();
 		assertThat(outcome.state()).isEqualTo(new FeedPollState(FEED, Instant.parse("2026-10-28T10:15:12Z"), null,
-				NEW_STATE, DONE, DONE, DONE, 0, OLD_ERROR, null, EARLIER, 2, keys("g:a", "g:b")));
+				NEW_STATE, DONE, DONE, DONE, Instant.parse("2026-10-28T00:00:00Z"), 0, 0, OLD_ERROR, null, EARLIER, 2,
+				keys("g:a", "g:b")));
 	}
 
 	@Test
 	void aFetchWithoutNewItemsKeepsTheLastNewItemTime() {
-		PollOutcome outcome = leased(keys("g:a"), 0, null).complete(fetched(List.of(article("a")), null),
+		PollOutcome outcome = leased(keys("g:a"), 0, 0, null, null).complete(fetched(List.of(article("a")), null),
 				INTERVAL);
 
 		assertThat(outcome.newArticles()).isEmpty();
@@ -108,7 +115,7 @@ class FeedPollStateTests {
 
 	@Test
 	void aFetchSharingNoItemWithThePreviousOneCountsAsSuspectedOverflow() {
-		PollOutcome outcome = leased(keys("g:a"), 0, null).complete(fetched(List.of(article("c")), null),
+		PollOutcome outcome = leased(keys("g:a"), 0, 0, null, null).complete(fetched(List.of(article("c")), null),
 				INTERVAL);
 
 		assertThat(outcome.overflowSuspected()).isTrue();
@@ -118,14 +125,15 @@ class FeedPollStateTests {
 
 	@Test
 	void aSuccessfulFetchResetsFailuresAndReplacesTheMovedAddress() {
-		PollOutcome cleared = leased(keys("g:a"), 4, MOVED).complete(fetched(List.of(article("a")), null),
+		PollOutcome cleared = leased(keys("g:a"), 4, 2, null, MOVED).complete(fetched(List.of(article("a")), null),
 				INTERVAL);
-		PollOutcome moved = leased(keys("g:a"), 0, null).complete(fetched(List.of(article("a")), MOVED),
+		PollOutcome moved = leased(keys("g:a"), 0, 0, null, null).complete(fetched(List.of(article("a")), MOVED),
 				INTERVAL);
-		PollOutcome same = leased(keys("g:a"), 0, MOVED).complete(fetched(List.of(article("a")), MOVED),
+		PollOutcome same = leased(keys("g:a"), 0, 0, null, MOVED).complete(fetched(List.of(article("a")), MOVED),
 				INTERVAL);
 
 		assertThat(cleared.state().consecutiveFailures()).isZero();
+		assertThat(cleared.state().consecutivePermanentFailures()).isZero();
 		assertThat(cleared.state().movedTo()).isNull();
 		assertThat(cleared.movedToChanged()).isFalse();
 		assertThat(moved.state().movedTo()).isEqualTo(MOVED);
@@ -135,19 +143,19 @@ class FeedPollStateTests {
 
 	@Test
 	void notModifiedIsASuccessThatKeepsTheItemKeys() {
-		PollOutcome outcome = leased(keys("g:a"), 3, null)
+		PollOutcome outcome = leased(keys("g:a"), 3, 1, PUBLISHED_BEFORE, null)
 			.complete(new FetchResult.NotModified(NEW_STATE, DONE, MOVED), INTERVAL);
 
 		assertThat(outcome.newArticles()).isEmpty();
 		assertThat(outcome.overflowSuspected()).isFalse();
 		assertThat(outcome.movedToChanged()).isTrue();
 		assertThat(outcome.state()).isEqualTo(new FeedPollState(FEED, Instant.parse("2026-10-28T10:15:12Z"), null,
-				NEW_STATE, DONE, DONE, EARLIER, 0, OLD_ERROR, MOVED, EARLIER, 2, keys("g:a")));
+				NEW_STATE, DONE, DONE, EARLIER, PUBLISHED_BEFORE, 0, 0, OLD_ERROR, MOVED, EARLIER, 2, keys("g:a")));
 	}
 
 	@Test
 	void notModifiedWithoutARedirectClearsTheMovedAddress() {
-		PollOutcome outcome = leased(keys("g:a"), 0, MOVED)
+		PollOutcome outcome = leased(keys("g:a"), 0, 0, null, MOVED)
 			.complete(new FetchResult.NotModified(NEW_STATE, DONE, null), INTERVAL);
 
 		assertThat(outcome.state().movedTo()).isNull();
@@ -158,12 +166,12 @@ class FeedPollStateTests {
 	void aTemporaryFailureBacksOffAndKeepsWhatWasLastReceived() {
 		FetchFailure failure = FetchFailure.status(FetchFailureReason.SERVER_ERROR, 503);
 
-		PollOutcome outcome = leased(keys("g:a"), 0, MOVED)
+		PollOutcome outcome = leased(keys("g:a"), 0, 0, PUBLISHED_BEFORE, MOVED)
 			.complete(new FetchResult.Failed(failure, DONE), INTERVAL);
 
 		assertThat(outcome.newArticles()).isEmpty();
 		assertThat(outcome.state()).isEqualTo(new FeedPollState(FEED, Instant.parse("2026-10-28T10:30:12Z"), null,
-				OLD_STATE, DONE, EARLIER, EARLIER, 1,
+				OLD_STATE, DONE, EARLIER, EARLIER, PUBLISHED_BEFORE, 1, 0,
 				new LastError(FetchFailureReason.SERVER_ERROR, "서버 오류 응답 (HTTP 503)", 503, DONE), MOVED, EARLIER, 2,
 				keys("g:a")));
 	}
@@ -172,7 +180,7 @@ class FeedPollStateTests {
 	void aPermanentFailureBacksOffTowardsADay() {
 		FetchFailure failure = FetchFailure.status(FetchFailureReason.NOT_FOUND, 404);
 
-		PollOutcome outcome = leased(keys("g:a"), 5, null).complete(new FetchResult.Failed(failure, DONE),
+		PollOutcome outcome = leased(keys("g:a"), 5, 0, null, null).complete(new FetchResult.Failed(failure, DONE),
 				INTERVAL);
 
 		assertThat(outcome.state().consecutiveFailures()).isEqualTo(6);
@@ -181,18 +189,101 @@ class FeedPollStateTests {
 
 	@Test
 	void deferringForAMissingProfileReleasesTheLeaseForAnHour() {
-		FeedPollState state = leased(keys("g:a"), 2, MOVED);
+		FeedPollState state = leased(keys("g:a"), 2, 1, PUBLISHED_BEFORE, MOVED);
 
 		FeedPollState deferred = state.deferForUnavailableProfile(Instant.parse("2026-10-28T10:00:00Z"));
 
 		assertThat(deferred).isEqualTo(new FeedPollState(FEED, Instant.parse("2026-10-28T11:00:00Z"), null, OLD_STATE,
-				EARLIER, EARLIER, EARLIER, 2, OLD_ERROR, MOVED, EARLIER, 2, keys("g:a")));
+				EARLIER, EARLIER, EARLIER, PUBLISHED_BEFORE, 2, 1, OLD_ERROR, MOVED, EARLIER, 2, keys("g:a")));
+	}
+
+	@Test
+	void aPermanentFailureAddsToThePermanentCountAndATemporaryOneDoesNot() {
+		FeedPollState afterNotFound = leased(keys("g:a"), 1, 0, null, null)
+			.complete(new FetchResult.Failed(FetchFailure.status(FetchFailureReason.NOT_FOUND, 404), DONE), INTERVAL)
+			.state();
+		FeedPollState afterServerError = leased(keys("g:a"), 2, 1, null, null)
+			.complete(new FetchResult.Failed(FetchFailure.status(FetchFailureReason.SERVER_ERROR, 503), DONE), INTERVAL)
+			.state();
+
+		assertThat(afterNotFound.consecutiveFailures()).isEqualTo(2);
+		assertThat(afterNotFound.consecutivePermanentFailures()).isEqualTo(1);
+		assertThat(afterServerError.consecutiveFailures()).isEqualTo(3);
+		assertThat(afterServerError.consecutivePermanentFailures()).isEqualTo(1);
+	}
+
+	@Test
+	void notModifiedClearsThePermanentCount() {
+		FeedPollState state = leased(keys("g:a"), 2, 2, null, null)
+			.complete(new FetchResult.NotModified(NEW_STATE, DONE, null), INTERVAL)
+			.state();
+
+		assertThat(state.consecutiveFailures()).isZero();
+		assertThat(state.consecutivePermanentFailures()).isZero();
+	}
+
+	@Test
+	void claimingKeepsTheStatusInputs() {
+		FeedPollState claimed = leased(keys("g:a"), 2, 1, PUBLISHED_BEFORE, null)
+			.claim(new Lease(UUID.randomUUID(), SCHEDULED), Instant.parse("2026-10-28T10:10:10Z"));
+
+		assertThat(claimed.consecutiveFailures()).isEqualTo(2);
+		assertThat(claimed.consecutivePermanentFailures()).isEqualTo(1);
+		assertThat(claimed.latestPublishedAt()).isEqualTo(Instant.parse("2026-10-27T03:00:00Z"));
+	}
+
+	@Test
+	void thePermanentCountStaysWithinTheFailureCount() {
+		assertThatIllegalArgumentException().isThrownBy(() -> leased(null, 2, 3, null, null));
+		assertThatIllegalArgumentException().isThrownBy(() -> leased(null, 2, -1, null, null));
+		assertThat(leased(null, 2, 2, null, null).consecutivePermanentFailures()).isEqualTo(2);
+	}
+
+	@Test
+	void theLatestPublishedTimeIsTheLatestOfTheNewItems() {
+		FeedPollState state = leased(null, 0, 0, null, null)
+			.complete(fetched(List.of(article("a", Instant.parse("2026-10-27T01:00:00Z"), false),
+					article("b", Instant.parse("2026-10-27T03:00:00Z"), false)), null), INTERVAL)
+			.state();
+
+		assertThat(state.latestPublishedAt()).isEqualTo(Instant.parse("2026-10-27T03:00:00Z"));
+	}
+
+	@Test
+	void aNewItemPublishedLongAgoDoesNotMoveTheLatestPublishedTimeBack() {
+		FeedPollState state = leased(keys("g:a"), 0, 0, PUBLISHED_BEFORE, null)
+			.complete(fetched(List.of(article("a"), article("old", Instant.parse("2026-10-20T00:00:00Z"), false)), null),
+					INTERVAL)
+			.state();
+
+		assertThat(state.latestPublishedAt()).isEqualTo(Instant.parse("2026-10-27T03:00:00Z"));
+	}
+
+	@Test
+	void aNewItemWithAnEstimatedPublishedTimeCountsAsReceivedNow() {
+		// 추정한 발행 시각은 받은 시각(DONE)이다 — 옛 항목에만 발행 시각이 있던 피드도 새 기사가 오면 앞으로 간다
+		FeedPollState state = leased(keys("g:a"), 0, 0, Instant.parse("2026-10-20T00:00:00Z"), null)
+			.complete(fetched(List.of(article("a"), article("fresh", DONE, true)), null), INTERVAL)
+			.state();
+
+		assertThat(state.latestPublishedAt()).isEqualTo(Instant.parse("2026-10-28T10:00:12Z"));
+	}
+
+	@Test
+	void aFetchWithoutNewItemsKeepsTheLatestPublishedTime() {
+		FeedPollState state = leased(keys("g:a"), 0, 0, PUBLISHED_BEFORE, null)
+			.complete(fetched(List.of(article("a")), null), INTERVAL)
+			.state();
+
+		assertThat(state.latestPublishedAt()).isEqualTo(Instant.parse("2026-10-27T03:00:00Z"));
 	}
 
 	/** 점유 중인 상태 — 이전 수집들이 남긴 값은 모두 EARLIER 와 OLD_ 상수다. 넘침 의심은 두 번 있었다 */
-	private static FeedPollState leased(@Nullable List<ItemKey> previousKeys, int failures, @Nullable URI movedTo) {
+	private static FeedPollState leased(@Nullable List<ItemKey> previousKeys, int failures, int permanentFailures,
+			@Nullable Instant latestPublishedAt, @Nullable URI movedTo) {
 		return new FeedPollState(FEED, Instant.parse("2026-10-28T10:10:10Z"), new Lease(UUID.randomUUID(), SCHEDULED),
-				OLD_STATE, EARLIER, EARLIER, EARLIER, failures, OLD_ERROR, movedTo, EARLIER, 2, previousKeys);
+				OLD_STATE, EARLIER, EARLIER, EARLIER, latestPublishedAt, failures, permanentFailures, OLD_ERROR, movedTo,
+				EARLIER, 2, previousKeys);
 	}
 
 	private static FetchResult.Fetched fetched(List<FetchedArticle> articles, @Nullable URI movedTo) {

@@ -59,6 +59,7 @@ class SourceRequestSpacingTests {
 	void reset() {
 		this.feeds = new TestFeeds(this.registration, this.operations, this.jdbc, server);
 		this.jobs.deleteRecurringJob("poll-due-feeds");
+		this.jobs.deleteRecurringJob("feed-health-check");
 		new RegistryRows(this.jdbc).deleteAll();
 	}
 

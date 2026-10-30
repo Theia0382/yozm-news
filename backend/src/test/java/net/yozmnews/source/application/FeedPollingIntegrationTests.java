@@ -49,7 +49,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 남겨 두면 테스트 사이에 대상을 먼저 점유한다(등록은 {@code JobRunrConfigurationTests} 가 본다). 테스트는 트랜잭션으로 감싸지 않는다.
  * <p>
  * 지키는 규칙: source-R6 · source-R16 · source-R17 · source-R18 · source-R19 · source-R20 · source-R22 · source-R23 · source-R24 ·
- * source-R25
+ * source-R25 · source-R30 · source-R31
  */
 @Import({ TestcontainersConfiguration.class, RegistryTestCatalog.class })
 @SpringBootTest
@@ -101,6 +101,7 @@ class FeedPollingIntegrationTests {
 	void reset() {
 		this.feeds = new TestFeeds(this.registration, this.operations, this.jdbc, server);
 		this.jobs.deleteRecurringJob("poll-due-feeds");
+		this.jobs.deleteRecurringJob("feed-health-check");
 		new RegistryRows(this.jdbc).deleteAll();
 		this.recorder.clear();
 	}
@@ -118,6 +119,8 @@ class FeedPollingIntegrationTests {
 		assertThat(first.consecutiveFailures()).isZero();
 		assertThat(first.previousItemKeys()).containsExactly(new ItemKey("g:a1"), new ItemKey("g:a2"));
 		assertThat(first.lastNewItemAt()).isEqualTo(first.lastPolledAt());
+		// TestFeeds.rss 의 발행 시각 Wed, 28 Oct 2026 09:00:00 +0900
+		assertThat(first.latestPublishedAt()).isEqualTo(Instant.parse("2026-10-28T00:00:00Z"));
 		assertThat(first.nextPollAt()).isEqualTo(first.lastPolledAt().plus(Duration.ofMinutes(15)));
 		ArticleFetched event = this.recorder.forFeed(feed).getFirst().event();
 		assertThat(event.feedId()).isEqualTo(new FeedId(feed));
@@ -143,6 +146,7 @@ class FeedPollingIntegrationTests {
 		pollNow(feed);
 		FeedPollState temporary = state(feed);
 		assertThat(temporary.consecutiveFailures()).isEqualTo(1);
+		assertThat(temporary.consecutivePermanentFailures()).isZero();
 		assertThat(temporary.lastError().reason()).isEqualTo(FetchFailureReason.SERVER_ERROR);
 		assertThat(temporary.lastError().httpStatus()).isEqualTo(500);
 		assertThat(temporary.nextPollAt()).isEqualTo(temporary.lastPolledAt().plus(Duration.ofMinutes(30)));
@@ -151,6 +155,7 @@ class FeedPollingIntegrationTests {
 		pollNow(feed);
 		FeedPollState permanent = state(feed);
 		assertThat(permanent.consecutiveFailures()).isEqualTo(2);
+		assertThat(permanent.consecutivePermanentFailures()).isEqualTo(1);
 		assertThat(permanent.lastError().reason()).isEqualTo(FetchFailureReason.NOT_FOUND);
 		assertThat(permanent.nextPollAt()).isEqualTo(permanent.lastPolledAt().plus(Duration.ofHours(1)));
 		assertThat(permanent.fetchState().etag()).isEqualTo("\"v3\"");

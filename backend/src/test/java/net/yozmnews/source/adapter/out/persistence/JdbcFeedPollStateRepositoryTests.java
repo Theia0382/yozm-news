@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.URI;
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -35,7 +36,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 /**
  * 수집 상태 저장소의 왕복과 대상 잠금 — Flyway 가 적용된 실제 PostgreSQL 에서 본다.
  * <p>
- * 지키는 규칙: source-R3 · source-R15 · source-R20
+ * 지키는 규칙: source-R3 · source-R15 · source-R20 · source-R48
  */
 @JdbcTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -77,7 +78,7 @@ class JdbcFeedPollStateRepositoryTests {
 		FeedPollState state = new FeedPollState(feed("b"), Instant.parse("2026-10-28T10:10:10Z"),
 				new Lease(UUID.fromString("0a1b2c3d-0000-4000-8000-000000000001"), Instant.parse("2026-10-28T10:00:10Z")),
 				new FetchState("W/\"abc\"", "Wed, 28 Oct 2026 10:00:00 GMT"), AT, Instant.parse("2026-10-27T08:00:00Z"),
-				Instant.parse("2026-10-26T07:00:00Z"), 3,
+				Instant.parse("2026-10-26T07:00:00Z"), Instant.parse("2026-10-27T03:00:00Z"), 3, 1,
 				new LastError(FetchFailureReason.SERVER_ERROR, "서버 오류 응답 (HTTP 503)", 503, AT),
 				URI.create("https://news.example/rss/new"), Instant.parse("2026-10-25T06:00:00Z"), 4,
 				List.of(new ItemKey("g:urn:1"), new ItemKey("l:https://news.example/2"), new ItemKey("g:urn:3")));
@@ -113,6 +114,30 @@ class JdbcFeedPollStateRepositoryTests {
 	@Test
 	void findsNothingForAFeedWithoutState() {
 		assertThat(this.repository.find(feed("f"))).isEmpty();
+	}
+
+	@Test
+	void collectionWritesLeaveTheFeedStatusAlone() {
+		FeedId feed = feed("g");
+		UUID token = UUID.fromString("0a1b2c3d-0000-4000-8000-000000000002");
+		this.repository.insertIfAbsent(FeedPollState.initial(feed, AT).claim(new Lease(token, AT), AT));
+		this.jdbc.sql("""
+				update feed_poll_states set status = 'STALE', status_changed_at = '2026-10-29T00:00:00Z' where feed_id = :feed
+				""").param("feed", feed.value()).update();
+
+		boolean replaced = this.repository.replaceIfLeased(token, FeedPollState.initial(feed, AT));
+		Status afterReplace = status(feed);
+		this.repository.saveLocked(FeedPollState.initial(feed, Instant.parse("2026-10-29T12:00:00Z")));
+		Status afterSave = status(feed);
+		FeedId fresh = feed("h");
+		this.repository.insertIfAbsent(FeedPollState.initial(fresh, AT));
+
+		assertThat(replaced).isTrue();
+		assertThat(afterReplace).isEqualTo(new Status("STALE", Instant.parse("2026-10-29T00:00:00Z")));
+		assertThat(this.repository.find(feed).orElseThrow().nextPollAt())
+			.isEqualTo(Instant.parse("2026-10-29T12:00:00Z"));
+		assertThat(afterSave).isEqualTo(new Status("STALE", Instant.parse("2026-10-29T00:00:00Z")));
+		assertThat(status(fresh)).isEqualTo(new Status("ACTIVE", null));
 	}
 
 	@Test
@@ -173,6 +198,20 @@ class JdbcFeedPollStateRepositoryTests {
 		}
 	}
 
+	private Status status(FeedId feed) {
+		return this.jdbc.sql("select status, status_changed_at from feed_poll_states where feed_id = :feed")
+			.param("feed", feed.value())
+			.query((rs, row) -> {
+				OffsetDateTime changedAt = rs.getObject("status_changed_at", OffsetDateTime.class);
+				return new Status(rs.getString("status"), (changedAt != null) ? changedAt.toInstant() : null);
+			})
+			.single();
+	}
+
+	/** 수집 경로가 쓰지 않는 피드 상태 두 열 */
+	private record Status(String status, @Nullable Instant changedAt) {
+	}
+
 	private FeedId feed(String key) {
 		return new FeedId(this.jdbc.sql("""
 				insert into feeds (source_id, feed_key, enabled, version, created_at)
@@ -181,7 +220,8 @@ class JdbcFeedPollStateRepositoryTests {
 	}
 
 	private static FeedPollState withKeys(FeedId feed, @Nullable List<ItemKey> keys) {
-		return new FeedPollState(feed, AT, null, FetchState.NONE, null, null, null, 0, null, null, null, 0, keys);
+		return new FeedPollState(feed, AT, null, FetchState.NONE, null, null, null, null, 0, 0, null, null, null, 0,
+				keys);
 	}
 
 }

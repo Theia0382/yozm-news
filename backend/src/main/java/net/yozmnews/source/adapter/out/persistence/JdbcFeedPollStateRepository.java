@@ -43,14 +43,16 @@ class JdbcFeedPollStateRepository implements FeedPollStateRepository {
 
 	static final String COLUMNS = """
 			feed_id, next_poll_at, lease_token, lease_scheduled_at, etag, last_modified, last_polled_at, last_success_at,
-			last_new_item_at, consecutive_failures, last_error_reason, last_error_message, last_error_status,
-			last_error_at, moved_to, last_overflow_at, overflow_count, previous_item_keys""";
+			last_new_item_at, latest_published_at, consecutive_failures, consecutive_permanent_failures,
+			last_error_reason, last_error_message, last_error_status, last_error_at, moved_to, last_overflow_at,
+			overflow_count, previous_item_keys""";
 
-	/** 피드 행을 뺀 모든 열의 갱신 */
+	/** 피드 행과 피드 상태(status · status_changed_at — 피드 건강 검사가 쓴다)를 뺀 모든 열의 갱신 */
 	private static final String SET_ALL = """
 			next_poll_at = :nextPollAt, lease_token = :leaseToken, lease_scheduled_at = :leaseScheduledAt, etag = :etag,
 			last_modified = :lastModified, last_polled_at = :lastPolledAt, last_success_at = :lastSuccessAt,
-			last_new_item_at = :lastNewItemAt, consecutive_failures = :consecutiveFailures,
+			last_new_item_at = :lastNewItemAt, latest_published_at = :latestPublishedAt,
+			consecutive_failures = :consecutiveFailures, consecutive_permanent_failures = :consecutivePermanentFailures,
 			last_error_reason = :lastErrorReason, last_error_message = :lastErrorMessage,
 			last_error_status = :lastErrorStatus, last_error_at = :lastErrorAt, moved_to = :movedTo,
 			last_overflow_at = :lastOverflowAt, overflow_count = :overflowCount, previous_item_keys = :previousItemKeys""";
@@ -75,8 +77,9 @@ class JdbcFeedPollStateRepository implements FeedPollStateRepository {
 	public void insertIfAbsent(FeedPollState initial) {
 		this.jdbc.sql("insert into feed_poll_states (" + COLUMNS + """
 				) values (:feedId, :nextPollAt, :leaseToken, :leaseScheduledAt, :etag, :lastModified, :lastPolledAt,
-				:lastSuccessAt, :lastNewItemAt, :consecutiveFailures, :lastErrorReason, :lastErrorMessage,
-				:lastErrorStatus, :lastErrorAt, :movedTo, :lastOverflowAt, :overflowCount, :previousItemKeys)
+				:lastSuccessAt, :lastNewItemAt, :latestPublishedAt, :consecutiveFailures, :consecutivePermanentFailures,
+				:lastErrorReason, :lastErrorMessage, :lastErrorStatus, :lastErrorAt, :movedTo, :lastOverflowAt,
+				:overflowCount, :previousItemKeys)
 				on conflict (feed_id) do nothing
 				""").params(parameters(initial)).update();
 	}
@@ -169,7 +172,9 @@ class JdbcFeedPollStateRepository implements FeedPollStateRepository {
 		values.put("lastPolledAt", timestamp(state.lastPolledAt()));
 		values.put("lastSuccessAt", timestamp(state.lastSuccessAt()));
 		values.put("lastNewItemAt", timestamp(state.lastNewItemAt()));
+		values.put("latestPublishedAt", timestamp(state.latestPublishedAt()));
 		values.put("consecutiveFailures", state.consecutiveFailures());
+		values.put("consecutivePermanentFailures", state.consecutivePermanentFailures());
 		values.put("lastErrorReason", (error != null) ? error.reason().name() : null);
 		values.put("lastErrorMessage", (error != null) ? error.message() : null);
 		values.put("lastErrorStatus", (error != null) ? error.httpStatus() : null);
@@ -192,7 +197,8 @@ class JdbcFeedPollStateRepository implements FeedPollStateRepository {
 		return new FeedPollState(new FeedId(rs.getLong("feed_id")), instant(rs, "next_poll_at"), lease,
 				new FetchState(rs.getString("etag"), rs.getString("last_modified")), nullableInstant(rs, "last_polled_at"),
 				nullableInstant(rs, "last_success_at"), nullableInstant(rs, "last_new_item_at"),
-				rs.getInt("consecutive_failures"), error, (movedTo != null) ? URI.create(movedTo) : null,
+				nullableInstant(rs, "latest_published_at"), rs.getInt("consecutive_failures"),
+				rs.getInt("consecutive_permanent_failures"), error, (movedTo != null) ? URI.create(movedTo) : null,
 				nullableInstant(rs, "last_overflow_at"), rs.getInt("overflow_count"), itemKeys(rs));
 	}
 

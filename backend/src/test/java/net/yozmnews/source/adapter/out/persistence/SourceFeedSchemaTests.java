@@ -20,7 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
  * 소스 · 피드 스키마의 제약 — 실제 PostgreSQL 에서 Flyway 마이그레이션을 적용해 본다. 제약 위반은 그 트랜잭션을 중단시키므로
  * 테스트를 트랜잭션으로 감싸지 않고 행을 직접 지운다.
  * <p>
- * 지키는 규칙: source-R1 · source-R2 · source-R3
+ * 지키는 규칙: source-R1 · source-R2 · source-R3 · source-R30 · source-R31
  */
 @JdbcTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
@@ -83,6 +83,26 @@ class SourceFeedSchemaTests {
 	}
 
 	@Test
+	void aPollStateKeepsThePermanentCountWithinTheFailureCountAndAKnownStatus() {
+		long source = insertSource("'alpha'", "null");
+		long checked = insertFeedReturningId(source, "checked");
+		long defaulted = insertFeedReturningId(source, "defaulted");
+
+		assertThatExceptionOfType(DataIntegrityViolationException.class)
+			.isThrownBy(() -> insertCounts(checked, 2, 3, "'ACTIVE'"));
+		assertThatExceptionOfType(DataIntegrityViolationException.class)
+			.isThrownBy(() -> insertCounts(checked, 0, 0, "'GONE'"));
+		insertCounts(checked, 2, 2, "'DEGRADED'");
+		insertPollState(defaulted, "null", "null", "null", "null");
+
+		assertThat(this.jdbc.sql("""
+				select status, consecutive_permanent_failures, status_changed_at, latest_published_at
+				from feed_poll_states where feed_id = :feed
+				""").param("feed", defaulted).query((rs, row) -> rs.getString(1) + " " + rs.getInt(2) + " "
+						+ rs.getObject(3) + " " + rs.getObject(4)).single()).isEqualTo("ACTIVE 0 null null");
+	}
+
+	@Test
 	void keepsTheOperatorProfileTextVerbatim() {
 		long source = this.jdbc.sql("""
 				insert into sources (profile, enabled, version, created_at) values (:text, false, 0, now()) returning id
@@ -104,6 +124,23 @@ class SourceFeedSchemaTests {
 				+ " now(), " + leaseToken + ", " + leaseScheduledAt + ", 0, " + errorReason + ", '문구', " + errorAt + ", 0)")
 			.param("feed", feed)
 			.update();
+	}
+
+	private void insertCounts(long feed, int failures, int permanentFailures, String status) {
+		this.jdbc.sql("insert into feed_poll_states (feed_id, next_poll_at, consecutive_failures,"
+				+ " consecutive_permanent_failures, status, overflow_count) values (:feed, now(), :failures, :permanent, "
+				+ status + ", 0)")
+			.param("feed", feed)
+			.param("failures", failures)
+			.param("permanent", permanentFailures)
+			.update();
+	}
+
+	private long insertFeedReturningId(long source, String key) {
+		return this.jdbc.sql("""
+				insert into feeds (source_id, feed_key, enabled, version, created_at) values (:source, :key, false, 0, now())
+				returning id
+				""").param("source", source).param("key", key).query(Long.class).single();
 	}
 
 	private void insertFeed(long source, String key) {

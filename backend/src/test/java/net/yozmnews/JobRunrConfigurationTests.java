@@ -70,4 +70,11 @@ class JobRunrConfigurationTests {
 			.single()).isEqualTo(1);
 	}
 
+	@Test
+	void registersTheRecurringFeedHealthCheckJob() {
+		assertThat(this.jdbc.sql("select count(*) from jobrunr_recurring_jobs where id = 'feed-health-check'")
+			.query(Integer.class)
+			.single()).isEqualTo(1);
+	}
+
 }

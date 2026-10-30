@@ -81,6 +81,7 @@ class CollectionWithArticleIntakeTests {
 	void reset() {
 		this.feeds = new TestFeeds(this.registration, this.operations, this.jdbc, server);
 		this.jobs.deleteRecurringJob("poll-due-feeds");
+		this.jobs.deleteRecurringJob("feed-health-check");
 		this.jdbc.sql("delete from article_feed_entries").update();
 		this.jdbc.sql("delete from articles").update();
 		this.jdbc.sql("delete from event_publication").update();
