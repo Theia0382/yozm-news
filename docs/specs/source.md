@@ -11,6 +11,7 @@
 - **피드 요청** — 조건부 GET 으로 피드를 받고, 내부 주소로 가는 요청을 막고, 한 번의 수집에 마감 · 크기 상한을 건다
 - **정규화** — 받은 문서를 수집 프로필대로 보정 · 파싱하고 항목마다 기사 값으로 정리한다
 - **새 항목 판정과 발행** — 그 피드의 직전 성공 수집에 없던 항목만 `ArticleFetched` 로 넘긴다
+- **피드 상태** — 수집 결과로 피드를 `ACTIVE` · `DEGRADED` · `STALE` 로 판정한다
 
 하지 않는 것:
 
@@ -32,7 +33,7 @@
 | 활성화 관문 | 소스 · 피드를 켜기 전의 판정 — 소스 켜기의 이용조건 검토일(source-R4)과 피드 켜기의 미리보기 · 활성화 기준(source-R9) |
 | 미리보기 | 꺼진 피드를 켜기 전에 한 번 받아 만든 지표와 기사 표본. 저장하지 않는다 |
 | 활성화 기준 | 미리보기가 넘어야 피드가 켜지는 기준 — 기사 수 · 건너뛴 비율 · 날짜 해석률 · 대체 문자 비율(source-R9) |
-| 운영 설정 · 수집 상태 | 운영 설정은 운영자가 쓰는 켜짐 여부 · 수집 주기, 수집 상태는 수집 작업만 쓰는 일정 · 결과 기록이다. 서로 다른 행에 있다 |
+| 운영 설정 · 수집 상태 | 운영 설정은 운영자가 쓰는 켜짐 여부 · 수집 주기, 수집 상태는 수집 작업이 쓰는 일정 · 결과 기록과 피드 건강 검사가 쓰는 피드 상태다(source-R48). 서로 다른 행에 있다 |
 | 실제 주기 | 운영 설정과 프로필의 권장값에서 정한, 피드를 수집하는 주기 |
 | 점유 | 한 피드의 한 회차 수집을 한 작업에 묶는 표시 — 토큰과 예약 시각 |
 | 수집 마감 | 한 번의 수집 전체(연결 대기 · 연결 · 응답 · 리다이렉트 · 본문)에 거는 시간 상한 |
@@ -43,6 +44,9 @@
 | 넘침 의심 | 직전 성공 수집과 겹치는 항목이 하나도 없는 수집 — 수집 간격 동안 피드가 싣는 건수보다 많은 기사가 나와 일부를 놓쳤을 수 있다 |
 | 영구 이동 주소 | 처음 URL 에서 끊기지 않고 이어진 영구 이동(301 · 308)의 마지막 대상 |
 | 일시 · 영구 실패 | 영구 실패는 사람이 무언가를 바꾸기 전에는 다시 보내도 같은 결과가 날 것으로 보는 실패, 그 밖은 일시 실패다 |
+| 피드 상태 | 피드가 기준 안에서 수집되는지(`ACTIVE`), 계속 실패하는지(`DEGRADED`), 응답은 정상이지만 오래 새 기사가 없는지(`STALE`) |
+| 연속 영구 실패 수 | 연속 실패 가운데 영구 실패의 수. 성공 · 변경 없음에 0 이 된다 |
+| 새 항목의 가장 늦은 발행 시각 | 지금까지 새 항목의 발행 시각 가운데 가장 늦은 것. 발행 시각을 추정한 항목은 받은 시각으로 센다 |
 
 ## 3. 공개 인터페이스
 
@@ -139,21 +143,22 @@ public record FetchedArticle(String title, URI link, @Nullable String guid, @Nul
 | 패키지 | 책임 |
 |---|---|
 | `adapter/in/job` | 반복 작업과 피드 수집 작업 — 작업 서버(JobRunr)가 부른다 |
-| `application` | 유스케이스(등록 · 운영 설정 · 점유 · 수집 한 회차 · 기동 대조)와 트랜잭션 경계 |
+| `application` | 유스케이스(등록 · 운영 설정 · 점유 · 수집 한 회차 · 기동 대조 · 피드 건강 검사)와 트랜잭션 경계 |
 | `domain/registry` | 소스 · 피드 aggregate 와 그 저장소, 소스의 프로필 얻기, 켜기 · 수집 가능 판정 |
 | `domain/profile` | 수집 프로필 모델과 그 바인딩 · 검증, 프리셋 카탈로그, 실제 주기 |
 | `domain/profile/text` | 프로필 원문을 YAML 이벤트로 읽어 트리로 옮긴다 |
-| `domain/poll` | 피드의 수집 상태와 그 전이, 수집 일정 산식, 새 항목 비교, 수집 상태 · 요청 예약 저장소 |
+| `domain/poll` | 피드의 수집 상태와 그 전이, 수집 일정 산식, 새 항목 비교, 피드 상태 판정, 수집 상태 · 피드 상태 · 요청 예약 저장소 |
 | `domain/fetch` | 피드 요청 관문(포트 `ArticleSource`)과 요청 규칙 — 주소 · 리다이렉트 · 상태 코드 · 실패 분류 · 제한 |
 | `domain/feed` | 정규화 — 문자 인코딩 · 사전 보정 · XML 읽기 · 형식 판별 · 필드 보정 |
 | `domain/gate` | 활성화 관문의 미리보기 — 지표 · 활성화 기준 · 피드 켜기 판정 순서 |
 | `adapter/out/rss` | 포트 `ArticleSource` 의 v1 구현(Apache HttpClient) |
-| `adapter/out/persistence` | 수집 상태 · 요청 예약 저장소의 JdbcClient 구현 |
+| `adapter/out/persistence` | 수집 상태 · 피드 상태 · 요청 예약 저장소의 JdbcClient 구현 |
 
 협력:
 
 - **등록 · 운영 설정** — `SourceRegistration` · `SourceOperations` 가 `ProfileResolver` 로 소스의 프로필을 얻어(프리셋은 `PresetCatalog`, 운영자 원문은 `ProfileParser`) 판정하고, `SourceRepository` · `FeedRepository` 로 쓴다. 피드 행과 수집 상태 행은 `FeedProvisioner` 가 함께 만든다. 피드 켜기는 `FeedGate`(`domain/gate`)의 판정 사이에 `SourceFetchSlots` 로 요청 시작 시각을 예약하고 포트 `ArticleSource` 로 피드를 받는다. 등록 전 원문의 미리보기는 `ProfilePreviewer` 가 같은 판정으로 한다
 - **수집** — `PollScheduler` 가 `FeedPollStateRepository` 로 대상을 잠그고 `FeedPollState` 의 전이로 점유를 기록한다. `FeedPoller` 가 `SourceFetchSlots`(`SourceFetchSlotRepository` · `PollSchedule`)로 요청 시작 시각을 예약하고, 포트 `ArticleSource` 로 받은 결과를 `FeedPollState` 에 반영해 `ArticleFetched` 를 발행한다. `ArticleSource` 의 구현 `RssArticleSource` 는 요청 규칙(`domain/fetch`)으로 요청하고 `FeedNormalizer`(`domain/feed`)로 정규화한다
+- **피드 상태** — `FeedHealthCheck` 가 `FeedStatusRepository` 로 켜진 피드의 행을 잠그고, `FeedStatusRule` 로 다시 판정해 바뀐 행만 쓴다
 
 #### 수집 한 회차
 
@@ -213,7 +218,7 @@ sequenceDiagram
 | 수집할 피드 등록 — 반복 작업 ID `poll-due-feeds` | `PollDueFeedsJob` | 1분마다 | 대상 피드를 점유하고 점유 토큰을 작업 ID 로 피드마다 수집 작업을 예약 시각에 등록한다(source-R15 · source-R18 · source-R19). 재시도하지 않는다 — 실패한 회차가 재시도를 기다리는 동안 작업 서버가 다음 회차를 건너뛰므로 다음 회차가 곧 재시도다. 같은 점유를 두 번 등록해도 작업 ID 가 같아 작업은 하나다 |
 | 피드 수집(피드 ID, 점유 토큰) — 작업 ID 는 점유 토큰 | `PollFeedJob` → `FeedPoller` | 위에서 등록 | 점유 확인 → 예약 시각까지 대기 → 같은 소스의 요청 시작 시각 예약 · 대기 → 트랜잭션 밖에서 요청 · 정규화 → 한 트랜잭션에서 수집 상태 반영과 새 항목마다 `ArticleFetched` 발행(source-R16 ~ source-R21). 재시도하지 않는다 |
 | 기동 대조 | `PresetFeedReconciliation`(`application`) | 애플리케이션 준비 완료(`ApplicationReadyEvent`) | 소스마다 프로필과 저장된 피드를 대조한다(source-R8) |
-| **(미구현)** 피드 건강 검사 | — | 1시간마다 | 연속 실패 · 장기 무소식 피드 표시, 운영자 알림(source-R30 · source-R31) |
+| 피드 건강 검사 — 반복 작업 ID `feed-health-check` | `FeedHealthCheckJob` → `FeedHealthCheck` | 1시간마다 | 켜진 피드의 상태를 다시 판정해 바뀐 행만 쓰고, 커밋 뒤 전이를 로그한다(source-R30 · source-R31 · source-R47 ~ source-R49). 같은 입력이면 같은 판정이라 다시 실행해도 결과가 같다. 한 회차가 대상 행을 잠그므로 겹친 회차는 기다린다(source-R48). 재시도하지 않는다 — 다음 회차가 다시 판정한다 |
 
 수집 작업이 동시에 몇 개 도는지는 작업 서버의 동시 실행 수가 정한다([운영 설정 — 백그라운드 작업](../operations/configuration.md#백그라운드-작업)). 수집 작업은 기다리는 동안 DB 연결을 잡지 않는다. 컨트롤러는 없다.
 
@@ -227,9 +232,15 @@ sequenceDiagram
 - `ProfilePreviewer` — 등록 전 운영자 프로필 원문의 피드 하나를 미리본다. DB 를 쓰지 않고 요청 시작 시각을 예약하지 않는다(source-R9)
 - `FeedProvisioner` — 피드 행과 그 수집 상태 행을 함께 만든다. 이미 있으면 아무것도 하지 않는다 — 등록과 기동 대조가 호출자의 트랜잭션 안에서 쓴다(source-R3 · source-R8)
 - `PresetFeedReconciliation` — 기동 대조(들어오는 쪽). 프로필을 얻은 소스마다 한 트랜잭션에서 프로필에 새로 생긴 피드를 더한다. 프로필을 얻지 못한 소스는 경고 로그만 남긴다(source-R8)
+- `FeedHealthCheck` — 피드 건강 검사(들어오는 쪽). 대상 행 잠금 · 판정 · 바뀐 행 쓰기를 한 트랜잭션에서 하고, 전이 로그는 커밋 뒤에 남긴다(source-R30 · source-R31 · source-R47 ~ source-R49)
+
+  ```java
+  public List<FeedStatusChange> run()   // 이번에 바뀐 피드 — 피드 ID 순
+  ```
+
 - `PresetCatalogConfiguration` — 기동 때 프리셋 파일을 모두 읽어 카탈로그로 둔다. 하나라도 검증에 실패하면 기동하지 않는다(source-R12)
 - `SourceRegistryConfiguration` — 프로필 해석기 `ProfileResolver` 를 카탈로그와 검증기로 만든다
-- 그 밖의 값: `ClaimedPoll`(점유한 회차) · `Registration`(등록 결과)
+- 그 밖의 값: `ClaimedPoll`(점유한 회차) · `Registration`(등록 결과) · `FeedStatusChange`(건강 검사가 바꾼 피드 하나 — 판정한 수집 상태 · 이전 · 새 상태 · 판정 시각)
 
 ### `domain`
 
@@ -260,13 +271,23 @@ sequenceDiagram
 
 #### `domain/poll`
 
-- `FeedPollState` — 피드 하나의 수집 상태. aggregate 가 아닌 상태 객체로, 전이(`claim` 점유 · `complete` 결과 반영 · `deferForUnavailableProfile` 미룸)가 다음 상태를 계산한다. 저장은 `FeedPollStateRepository` 가 점유 토큰을 조건으로 한다(source-R15 · source-R16 · source-R19 ~ source-R27)
+- `FeedPollState` — 피드 하나의 수집 상태. aggregate 가 아닌 상태 객체로, 전이(`claim` 점유 · `complete` 결과 반영 · `deferForUnavailableProfile` 미룸)가 다음 상태를 계산한다. 저장은 `FeedPollStateRepository` 가 점유 토큰을 조건으로 한다(source-R15 · source-R16 · source-R19 ~ source-R27 · source-R30 · source-R31)
 - `PollSchedule` — 수집 일정 산식과 상수의 정본(점유 기간 · 같은 소스 요청 간격 · 프로필 재확인 · 백오프 상한)(source-R15 · source-R18 · source-R19 · source-R25)
 - `PollSlots` — 같은 소스에서 이번 회차에 수집할 피드들의 예약 시각을 띄운다(source-R18)
 - `ItemComparison` · `ItemKey` — 새 항목 판정과 넘침 의심(source-R20 · source-R21)
-- `FeedPollStateRepository` — 수집 상태 저장소. 수집 작업만 쓴다 — 대상 잠금 · 점유 확인 · 토큰 조건 반영(source-R6 · source-R15 · source-R16)
+- `FeedStatusRule` — 피드 상태 판정의 규칙과 기준값 상수의 정본(연속 실패 · 그 가운데 영구 실패 · 무소식 기간). 수집 상태와 지금 시각으로 상태를 판정하고, 저장된 상태에서 바뀌는지 본다(source-R30 · source-R31 · source-R47)
+- `FeedPollStateRepository` — 수집 상태 저장소. 수집 작업이 쓴다 — 대상 잠금 · 점유 확인 · 토큰 조건 반영. 피드 상태 열은 쓰지 않는다(source-R6 · source-R15 · source-R16 · source-R48)
+- `FeedStatusRepository` — 피드 상태 저장소. 피드 건강 검사만 쓴다(source-R47 · source-R48)
+
+  ```java
+  public interface FeedStatusRepository {
+      List<FeedStatusTarget> lockTargets();   // 소스 · 피드가 모두 켜진 피드의 행을 잠그고 읽는다 — 호출자의 트랜잭션 안, 피드 ID 순
+      void saveStatus(FeedId feedId, FeedStatus status, Instant changedAt);   // 잠근 행의 상태와 바뀐 시각만 쓴다
+  }
+  ```
+
 - `SourceFetchSlotRepository` — 소스마다 다음 요청 가능 시각의 저장소. 요청 직전에 그 행을 잠근다(source-R18)
-- 그 밖의 값: `Lease` · `LastError` · `PollOutcome` · `FeedPollContext`
+- 그 밖의 값: `Lease` · `LastError` · `PollOutcome` · `FeedPollContext` · `FeedStatus`(`ACTIVE` · `DEGRADED` · `STALE`) · `FeedStatusTarget`(판정할 피드 — 수집 상태와 저장된 피드 상태)
 
 #### `domain/fetch`
 
@@ -339,7 +360,7 @@ public sealed interface FetchResult {
 
 #### 저장소 구현
 
-- `JdbcFeedPollStateRepository` · `JdbcSourceFetchSlotRepository` — 수집 상태 · 요청 예약 저장소의 JdbcClient 구현. 쓰기 조건이 점유 토큰 · 행 잠금이라 aggregate 저장 대신 SQL 로 쓴다
+- `JdbcFeedPollStateRepository` · `JdbcFeedStatusRepository` · `JdbcSourceFetchSlotRepository` — 수집 상태 · 피드 상태 · 요청 예약 저장소의 JdbcClient 구현. 쓰기 조건이 점유 토큰 · 행 잠금이라 aggregate 저장 대신 SQL 로 쓴다. 피드 상태 저장소는 수집 상태의 열 목록 · 행 읽기를 함께 쓴다
 - `SourceRepository` · `FeedRepository` 는 Spring Data JDBC 가 구현한다
 
 #### 수집 프로필 읽기
@@ -451,8 +472,19 @@ public sealed interface FetchResult {
   - 리다이렉트는 5회까지 따라가고, 홉마다 대상 주소를 다시 검사한다(source-R33 · source-R35)
   - 한 번의 수집 안에서는 다시 보내지 않는다. 다음 수집은 일정이 정한다
 - **source-R29** — 요청의 `User-Agent` 는 `YozmNews (+https://github.com/Theia0382/yozm-news; {연락처})` 다. 연락처는 운영 설정(§7)이고, 이메일 주소나 `http` · `https` URL 이며, 1~200자에 0x21~0x7E 밖의 문자 · 괄호 · 역슬래시 · 세미콜론이 없다. 없거나 형식이 틀리면 앱이 뜨지 않는다
-- **source-R30** — **(미구현)** 연속 실패가 기준 이상이면 피드를 `DEGRADED` 로 바꾸고 운영자에게 알린다
-- **source-R31** — **(미구현)** 방치된 피드: 응답은 정상이지만 일정 기간 새 기사가 없으면 `STALE` 로 표시한다. 실제로 2024년 이후 갱신되지 않은 피드가 있었다([조사 자료](../research/2026-10-rss-survey.md))
+
+### 피드 상태
+
+- **source-R30** — 연속 실패가 5회(`FeedStatusRule.DEGRADED_AFTER_FAILURES`) 이상이거나, 그 가운데 영구 실패가 2회(`FeedStatusRule.DEGRADED_AFTER_PERMANENT_FAILURES`) 이상이면 `DEGRADED` 다. 연속 영구 실패 수는 실패마다 그 이유가 영구 실패(source-R24)면 하나 늘고, 성공 · 변경 없음에 0 이 된다 — 일시 실패가 끼어도 줄지 않는다. 기준이 횟수라 걸리는 시간은 실제 주기와 백오프(source-R25)에 따라 다르다(주기 15분에 일시 실패만 이어지면 첫 실패부터 7시간 30분)
+- **source-R31** — 응답은 정상이지만 오래 새 기사가 없으면 `STALE` 이다. 성공 · 변경 없음이 한 번이라도 있었고, 다음 가운데 하나일 때다
+  - 새 항목이 한 번도 없었다
+  - 새 항목이 있던 마지막 수집 시각이 7일(`FeedStatusRule.STALE_AFTER`) 이상 지났다
+  - 새 항목의 가장 늦은 발행 시각이 7일 이상 지났다
+
+  기간은 지금 시각과의 차라 시간대가 없고, 정확히 7일이 지난 순간부터 `STALE` 이다. 새 항목의 가장 늦은 발행 시각은 성공 수집의 새 항목으로만 바뀌고 직전 값보다 늦을 때만 바뀐다 — 옛 항목을 돌려 실어도 오르지 않고, 등록 때 이미 방치된 피드는 첫 수집의 옛 발행 시각이 그대로 남는다. 발행 시각을 추정한 항목(source-R40)은 받은 시각으로 센다. 프로필을 얻지 못해 수집을 미루는 켜진 피드(source-R19)도 대상이라 시간이 지나면 `STALE` 이 된다 — 원인은 미룸 경고 로그가 알린다. 실제로 2024년 이후 갱신되지 않은 피드가 있었다([조사 자료](../research/2026-10-rss-survey.md))
+- **source-R47** — 피드 건강 검사는 1시간마다 소스 · 피드가 모두 켜진 피드 전부를 현재 기준으로 다시 판정하고, 판정이 저장된 상태와 다를 때만 상태와 바뀐 시각(판정 시각)을 쓴다. 판정 순서는 `DEGRADED`(source-R30) → `STALE`(source-R31) → `ACTIVE` 다 — 성공은 `DEGRADED` 를 풀 뿐이라 `STALE` 조건이 맞으면 `STALE` 이고, 기준 미만의 실패는 `STALE` 을 풀지 않는다. 판정은 저장된 상태를 보지 않으므로 모든 상태 쌍 사이의 전이가 있다. 꺼진 피드는 마지막 상태를 그대로 두고, 켜고 끄는 것은 상태를 바꾸지 않는다. 다시 켠 직후 첫 수집 전에 검사가 돌면 옛 입력으로 판정하고, 다음 수집 · 검사가 맞춘다. 기준을 바꿔 배포하면 다음 검사가 모든 대상을 새 기준으로 맞춘다. 새 피드의 첫 상태는 `ACTIVE` 다
+- **source-R48** — 피드 상태와 바뀐 시각은 피드 건강 검사만 쓰고, 그 밖의 수집 상태는 수집 작업만 쓴다. 검사는 한 트랜잭션에서 대상 행을 피드 ID 순으로 잠그고(먼저 잡힌 잠금을 기다린다) 판정 · 쓰기를 한다 — 잠근 동안 수집 결과 반영은 기다리고 수집 대상 잠금(source-R15)은 그 행을 건너뛰므로, 옛 입력으로 판정한 상태가 쓰이지 않는다. 검사는 재시도하지 않는다 — 다음 회차가 다시 판정한다
+- **source-R49** — 상태가 바뀐 피드만 커밋 뒤 로그를 남긴다. `DEGRADED` · `STALE` 진입은 WARN, `ACTIVE` 복귀는 INFO 이고, 문구는 피드 ID · 이전 → 새 상태 · 연속 실패 수와 그 가운데 영구 실패 수 · 마지막 실패의 이유와 분류 · 마지막 새 항목 시각 · 새 항목의 가장 늦은 발행 시각이다. 운영자에게 알리는 것은 저장된 상태(운영자 화면)와 이 로그까지이고, 화면 내 알림은 알림 기능이 생기는 M4 에서 한다
 
 ### 운영자 프로필 입력
 
@@ -511,16 +543,14 @@ RSS 품질이 피드마다 크게 다르므로 사전 보정 → 파싱 → 필�
 
 ## 6. 데이터
 
-컬럼 타입 · 인덱스 · 제약 문면의 정본은 `backend/src/main/resources/db/migration/V3__sources_and_feeds.sql` 이다.
+컬럼 타입 · 인덱스 · 제약 문면의 정본은 `backend/src/main/resources/db/migration/V3__sources_and_feeds.sql` · `V4__feed_status.sql` 이다.
 
 | 테이블 | 주요 컬럼 | 뜻 |
 |---|---|---|
 | `sources` | id, preset_key(고유), profile(텍스트), enabled, poll_interval_minutes | 소스의 운영 설정. 이름 · 홈페이지 · 언어 · 이용조건 검토일 · 피드 목록 · 권장 수집 주기는 수집 프로필에 있다. `preset_key` 와 `profile` 은 둘 중 하나다(제약 — source-R1). `preset_key` 의 고유 제약이 같은 프리셋의 두 번째 소스를 막는다(source-R2). `poll_interval_minutes` 는 운영자 소스 주기(분, 정하지 않았으면 비어 있다 — source-R14). **(미구현)** 본문 추출 허용 여부는 추출을 켤 때 더한다 |
 | `feeds` | id, source_id, feed_key, enabled, poll_interval_minutes | 피드의 운영 설정만 둔다. (source_id, feed_key) 고유. URL · 섹션은 프로필에 있다. `poll_interval_minutes` 는 운영자 피드 주기. 행은 지우지 않는다(source-R7) — `article` 의 피드별 기록이 `feeds.id` 를 가리킨다 |
-| `feed_poll_states` | feed_id, next_poll_at, lease_token, lease_scheduled_at, etag, last_modified, last_polled_at, last_success_at, last_new_item_at, consecutive_failures, last_error_reason · message · status · at, moved_to, last_overflow_at, overflow_count, previous_item_keys | 피드의 수집 상태 — 피드당 1행. 등록 · 기동 대조가 첫 행을 만들고(source-R3), 그 뒤에는 수집 작업만 쓴다. 운영 설정(`feeds`)과 다른 행이라 서로를 덮어쓰지 않는다. 점유 중이면 `lease_token` · `lease_scheduled_at` 이 함께 있고(제약) `next_poll_at` 은 예약 시각 + 점유 기간이다(source-R15). `last_polled_at` 은 마지막으로 수집을 마친 시각(성공 · 변경 없음 · 실패), `last_success_at` 은 마지막 성공 · 변경 없음, `last_new_item_at` 은 새 항목이 있던 마지막 수집의 시각이다. `last_error_*` 는 마지막 실패이고 이유 · 시각이 함께 있다(제약 — source-R26). `moved_to` 는 마지막 성공 · 변경 없음 결과가 거친 영구 이동 주소이고 실패는 바꾸지 않는다(source-R27). `last_overflow_at` · `overflow_count` 는 넘침 의심(source-R21). `previous_item_keys` 는 직전 성공 수집의 항목 키(`text[]`)이고, 비어 있으면(NULL) 아직 성공한 수집이 없다는 뜻이라 빈 배열과 다르다(source-R20) |
+| `feed_poll_states` | feed_id, next_poll_at, lease_token, lease_scheduled_at, etag, last_modified, last_polled_at, last_success_at, last_new_item_at, latest_published_at, consecutive_failures, consecutive_permanent_failures, last_error_reason · message · status · at, moved_to, last_overflow_at, overflow_count, previous_item_keys, status, status_changed_at | 피드의 수집 상태 — 피드당 1행. 등록 · 기동 대조가 첫 행을 만들고(source-R3), 그 뒤에는 `status` · `status_changed_at` 을 피드 건강 검사가, 나머지를 수집 작업이 쓴다(source-R48). 운영 설정(`feeds`)과 다른 행이라 서로를 덮어쓰지 않는다. 점유 중이면 `lease_token` · `lease_scheduled_at` 이 함께 있고(제약) `next_poll_at` 은 예약 시각 + 점유 기간이다(source-R15). `last_polled_at` 은 마지막으로 수집을 마친 시각(성공 · 변경 없음 · 실패), `last_success_at` 은 마지막 성공 · 변경 없음, `last_new_item_at` 은 새 항목이 있던 마지막 수집의 시각이다. `last_error_*` 는 마지막 실패이고 이유 · 시각이 함께 있다(제약 — source-R26). `moved_to` 는 마지막 성공 · 변경 없음 결과가 거친 영구 이동 주소이고 실패는 바꾸지 않는다(source-R27). `last_overflow_at` · `overflow_count` 는 넘침 의심(source-R21). `previous_item_keys` 는 직전 성공 수집의 항목 키(`text[]`)이고, 비어 있으면(NULL) 아직 성공한 수집이 없다는 뜻이라 빈 배열과 다르다(source-R20). `consecutive_permanent_failures` 는 연속 실패 가운데 영구 실패의 수이고 연속 실패 수를 넘지 않는다(제약 — source-R30). `latest_published_at` 은 새 항목의 가장 늦은 발행 시각이고 비어 있으면 아직 없다(source-R31). `status` 는 피드 상태(`ACTIVE` · `DEGRADED` · `STALE` — 제약, 기본값 `ACTIVE`)이고 `status_changed_at` 은 건강 검사가 그것을 마지막으로 바꾼 시각이다 — 비어 있으면 바꾼 적이 없다(source-R47) |
 | `source_fetch_slots` | source_id, next_fetch_at | 소스마다 다음 요청을 시작할 수 있는 시각 — 소스당 1행, 처음 예약할 때 만든다. 같은 언론사의 요청 시작 사이를 띄우는 예약이고, 수집 작업과 피드 켜기의 미리보기가 요청 직전에 이 행을 잠근다(source-R9 · source-R18). 값은 그 소스의 마지막 예약이 정한 다음 요청 가능 시각이고, 예약한 뒤 요청을 건너뛰어도 남는다 |
-
-**(미구현)** 피드의 수집 상태 값(`ACTIVE` · `DEGRADED` · `STALE` — source-R30 · source-R31)을 담을 컬럼은 아직 없다.
 
 ## 7. 설정
 
@@ -541,4 +571,5 @@ RSS 품질이 피드마다 크게 다르므로 사전 보정 → 파싱 → 필�
 | [0030](../adr/0030-feed-xml-own-parser-and-rome-for-format-title-link.md) | 피드 문서는 자체 구성한 XML 파서로 읽어 DTD 선언을 거부하고, Rome 은 형식 판별 · 제목 · 링크에만 쓴다 |
 | [0031](../adr/0031-feed-request-blocks-internal-addresses-with-apache-httpclient-deadline.md) | 피드 요청은 내부 주소를 기본으로 막고, Apache HttpClient 로 한 번의 수집 전체에 마감 · 크기 상한을 건다 |
 | [0033](../adr/0033-feed-polling-db-lease-per-feed-new-items-and-per-source-request-spacing.md) | 피드 수집은 DB 점유로 겹침을 막고, 피드별 직전 항목으로 새 항목을 가르며, 같은 언론사 요청 사이는 요청 직전의 DB 예약으로 띄운다 |
+| [0040](../adr/0040-feed-status-stored-in-poll-state-and-rejudged-hourly-by-health-check.md) | 피드 상태는 수집 상태 행에 저장하고, 피드 건강 검사가 매시간 켜진 피드를 다시 판정한다 |
 | [0041](../adr/0041-activation-gate-previews-a-feed-on-enable-and-judges-by-code-constants.md) | 활성화 관문은 피드를 켤 때 한 번 받아 미리보고, 코드 상수 기준으로 판정한다 |

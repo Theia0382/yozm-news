@@ -24,6 +24,12 @@ final class PollFixtures {
 		return new FetchedArticle("제목 " + link, URI.create(link), guid, null, PUBLISHED, false, null, List.of(), null);
 	}
 
+	/** guid 가 있는 기사 — 발행 시각을 정한다. 추정이면 그 시각은 받은 시각이다(source-R40) */
+	static FetchedArticle article(String guid, Instant publishedAt, boolean publishedAtEstimated) {
+		return new FetchedArticle("제목 " + guid, URI.create("https://news.example/" + guid), guid, null, publishedAt,
+				publishedAtEstimated, null, List.of(), null);
+	}
+
 	static FetchedArticle linkOnly(String link) {
 		return article(null, link);
 	}
