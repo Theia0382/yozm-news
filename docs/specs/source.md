@@ -6,7 +6,7 @@
 
 `source` 는 뉴스 소스(언론사)를 등록하고 그 피드를 수집해, 새 항목마다 정규화한 기사를 넘긴다.
 
-- **등록과 운영 설정** — 소스를 수집 프로필로 등록하고(프리셋 참조 또는 운영자 프로필), 소스 · 피드를 켜고 끄며, 운영자 수집 주기를 둔다. 기동 때 저장된 피드를 지금의 프로필과 대조한다
+- **등록과 운영 설정** — 소스를 수집 프로필로 등록하고(프리셋 참조 또는 운영자 프로필), 소스 · 피드를 켜고 끄며, 운영자 수집 주기를 둔다. 피드는 한 번 받아 본 미리보기가 활성화 기준을 넘을 때만 켠다. 기동 때 저장된 피드를 지금의 프로필과 대조한다
 - **수집 일정** — 수집할 피드를 고르고, 겹치지 않게 점유하고, 같은 언론사에 요청이 몰리지 않게 띄우고, 결과로 다음 수집 시각을 정한다
 - **피드 요청** — 조건부 GET 으로 피드를 받고, 내부 주소로 가는 요청을 막고, 한 번의 수집에 마감 · 크기 상한을 건다
 - **정규화** — 받은 문서를 수집 프로필대로 보정 · 파싱하고 항목마다 기사 값으로 정리한다
@@ -29,6 +29,9 @@
 | 프리셋 키 | 프리셋 파일 이름(`{key}.yaml` 의 `{key}`). 소스가 프리셋을 참조할 때 저장하는 값이다 |
 | 피드 식별자(feed key) | 수집 프로필 안에서 피드를 가르는 이름. 피드 ID(`FeedId` — `feeds.id`)와 다르다 |
 | 이용조건 검토일 | 소스의 RSS 이용조건을 검토한 날짜(프로필의 `termsReviewedAt`). 없으면 소스를 켤 수 없다 |
+| 활성화 관문 | 소스 · 피드를 켜기 전의 판정 — 소스 켜기의 이용조건 검토일(source-R4)과 피드 켜기의 미리보기 · 활성화 기준(source-R9) |
+| 미리보기 | 꺼진 피드를 켜기 전에 한 번 받아 만든 지표와 기사 표본. 저장하지 않는다 |
+| 활성화 기준 | 미리보기가 넘어야 피드가 켜지는 기준 — 기사 수 · 건너뛴 비율 · 날짜 해석률 · 대체 문자 비율(source-R9) |
 | 운영 설정 · 수집 상태 | 운영 설정은 운영자가 쓰는 켜짐 여부 · 수집 주기, 수집 상태는 수집 작업만 쓰는 일정 · 결과 기록이다. 서로 다른 행에 있다 |
 | 실제 주기 | 운영 설정과 프로필의 권장값에서 정한, 피드를 수집하는 주기 |
 | 점유 | 한 피드의 한 회차 수집을 한 작업에 묶는 표시 — 토큰과 예약 시각 |
@@ -143,13 +146,14 @@ public record FetchedArticle(String title, URI link, @Nullable String guid, @Nul
 | `domain/poll` | 피드의 수집 상태와 그 전이, 수집 일정 산식, 새 항목 비교, 수집 상태 · 요청 예약 저장소 |
 | `domain/fetch` | 피드 요청 관문(포트 `ArticleSource`)과 요청 규칙 — 주소 · 리다이렉트 · 상태 코드 · 실패 분류 · 제한 |
 | `domain/feed` | 정규화 — 문자 인코딩 · 사전 보정 · XML 읽기 · 형식 판별 · 필드 보정 |
+| `domain/gate` | 활성화 관문의 미리보기 — 지표 · 활성화 기준 · 피드 켜기 판정 순서 |
 | `adapter/out/rss` | 포트 `ArticleSource` 의 v1 구현(Apache HttpClient) |
 | `adapter/out/persistence` | 수집 상태 · 요청 예약 저장소의 JdbcClient 구현 |
 
 협력:
 
-- **등록 · 운영 설정** — `SourceRegistration` · `SourceOperations` 가 `ProfileResolver` 로 소스의 프로필을 얻어(프리셋은 `PresetCatalog`, 운영자 원문은 `ProfileParser`) 판정하고, `SourceRepository` · `FeedRepository` 로 쓴다. 피드 행과 수집 상태 행은 `FeedProvisioner` 가 함께 만든다
-- **수집** — `PollScheduler` 가 `FeedPollStateRepository` 로 대상을 잠그고 `FeedPollState` 의 전이로 점유를 기록한다. `FeedPoller` 가 `SourceFetchSlotRepository` · `PollSchedule` 로 요청 시작 시각을 예약하고, 포트 `ArticleSource` 로 받은 결과를 `FeedPollState` 에 반영해 `ArticleFetched` 를 발행한다. `ArticleSource` 의 구현 `RssArticleSource` 는 요청 규칙(`domain/fetch`)으로 요청하고 `FeedNormalizer`(`domain/feed`)로 정규화한다
+- **등록 · 운영 설정** — `SourceRegistration` · `SourceOperations` 가 `ProfileResolver` 로 소스의 프로필을 얻어(프리셋은 `PresetCatalog`, 운영자 원문은 `ProfileParser`) 판정하고, `SourceRepository` · `FeedRepository` 로 쓴다. 피드 행과 수집 상태 행은 `FeedProvisioner` 가 함께 만든다. 피드 켜기는 `FeedGate`(`domain/gate`)의 판정 사이에 `SourceFetchSlots` 로 요청 시작 시각을 예약하고 포트 `ArticleSource` 로 피드를 받는다. 등록 전 원문의 미리보기는 `ProfilePreviewer` 가 같은 판정으로 한다
+- **수집** — `PollScheduler` 가 `FeedPollStateRepository` 로 대상을 잠그고 `FeedPollState` 의 전이로 점유를 기록한다. `FeedPoller` 가 `SourceFetchSlots`(`SourceFetchSlotRepository` · `PollSchedule`)로 요청 시작 시각을 예약하고, 포트 `ArticleSource` 로 받은 결과를 `FeedPollState` 에 반영해 `ArticleFetched` 를 발행한다. `ArticleSource` 의 구현 `RssArticleSource` 는 요청 규칙(`domain/fetch`)으로 요청하고 `FeedNormalizer`(`domain/feed`)로 정규화한다
 
 #### 수집 한 회차
 
@@ -217,8 +221,10 @@ sequenceDiagram
 
 - `PollScheduler` — 지금 수집할 피드를 점유한다. 대상 잠금 · 점유 기록을 한 트랜잭션에서 하고, 수집 작업 등록은 커밋 뒤 호출자(`PollDueFeedsJob`)가 한다 — 작업 저장소는 그 트랜잭션에 참여하지 않는다(source-R15 · source-R19)
 - `FeedPoller` — 점유한 피드를 한 번 수집한다. 요청 시작 시각 예약과 결과 반영 · 발행을 각각 한 트랜잭션에서 하고, 피드 요청은 트랜잭션 밖에서 한다. 프로필을 얻지 못한 갈래는 미룸만 한 트랜잭션에서 쓴다(source-R16 ~ source-R19)
+- `SourceFetchSlots` — 같은 소스의 요청 시작 시각을 한 트랜잭션에서 예약하고(행을 잠근 뒤 지금 시각을 읽는다) 그 시각까지 기다린다. 수집 작업과 피드 켜기가 쓴다(source-R18)
 - `SourceRegistration` — 소스를 등록한다. 소스 행과 프로필의 피드마다 꺼진 피드 행 · 수집 상태 행을 한 트랜잭션에서 만든다(source-R1 ~ source-R3)
-- `SourceOperations` — 소스 · 피드를 켜고 끄고 수집 주기를 바꾼다. 연산마다 한 트랜잭션이다. 켜기는 지금의 프로필로 판정하고, 거절하면 아무것도 저장하지 않는다(source-R4 · source-R5 · source-R14)
+- `SourceOperations` — 소스 · 피드를 켜고 끄고 수집 주기를 바꾼다. 피드 켜기 밖의 연산은 한 트랜잭션이다. 피드 켜기는 읽고 판정하는 트랜잭션 → 요청 시작 시각 예약 트랜잭션 → 트랜잭션 밖에서 대기 · 요청 → 다시 읽고 판정 · 저장하는 트랜잭션으로 나뉘므로 호출자의 트랜잭션 밖에서 부른다. 대기가 중단되면 예외로 끝나고 예약만 남는다. 켜기는 지금의 프로필로 판정하고, 거절하면 저장하는 것은 피드를 받으려 잡은 요청 시작 시각 예약뿐이다(source-R4 · source-R5 · source-R9 · source-R14 · source-R18)
+- `ProfilePreviewer` — 등록 전 운영자 프로필 원문의 피드 하나를 미리본다. DB 를 쓰지 않고 요청 시작 시각을 예약하지 않는다(source-R9)
 - `FeedProvisioner` — 피드 행과 그 수집 상태 행을 함께 만든다. 이미 있으면 아무것도 하지 않는다 — 등록과 기동 대조가 호출자의 트랜잭션 안에서 쓴다(source-R3 · source-R8)
 - `PresetFeedReconciliation` — 기동 대조(들어오는 쪽). 프로필을 얻은 소스마다 한 트랜잭션에서 프로필에 새로 생긴 피드를 더한다. 프로필을 얻지 못한 소스는 경고 로그만 남긴다(source-R8)
 - `PresetCatalogConfiguration` — 기동 때 프리셋 파일을 모두 읽어 카탈로그로 둔다. 하나라도 검증에 실패하면 기동하지 않는다(source-R12)
@@ -288,6 +294,13 @@ sequenceDiagram
 - `TextCleaner` — HTML 제거 · 엔티티 해제 · 공백 정리(source-R40 · source-R45)
 - 그 밖의 값: `FeedNormalization` · `FeedDocument` · `ItemValues` · `SkippedItem` · `SkipReason` · `DocumentProblem` · `DocumentProblemKind` · `MarkupScanner`
 
+#### `domain/gate`
+
+- `FeedGate` — 피드 켜기 관문의 판정 순서. 요청 전 설정 판정(`PollTarget` — 거절이거나 이미 켜졌으면 요청하지 않는다), 받은 결과의 미리보기 · 판정, 저장 직전에 다시 얻은 프로필로 설정 판정과 피드 URL 대조를 되풀이한 뒤 `Feed` 를 켠다(source-R5 · source-R9)
+- `ActivationCriteria` — 활성화 기준값과 판정의 정본(source-R9)
+- `FeedPreview` · `SummaryLengths` — 받은 결과와 프로필로 만드는 미리보기 지표와 요약문 길이 분포(source-R9)
+- 그 밖의 값: `ArticleSample` · `Criterion` · `Shortfall` · `PreviewOutcome` · `FeedActivation` · `ProfilePreview`
+
 ### 나가는 쪽
 
 #### `ArticleSource`
@@ -349,11 +362,20 @@ public sealed interface FetchResult {
 - **source-R2** — 같은 프리셋을 두 소스가 참조하지 않는다. 두 번째 등록은 "이미 등록된 프리셋"으로 거절한다. 카탈로그에 없는 프리셋 키, 검증을 통과하지 못한 운영자 원문도 등록하지 않는다
 - **source-R3** — 소스를 등록하면 한 트랜잭션에서 소스와, 프로필의 피드마다 꺼진 피드와 그 수집 상태를 만든다. 소스도 꺼진 채다. 피드 · 수집 상태를 만드는 일은 이미 있으면 아무것도 하지 않는다 — 여러 인스턴스가 함께 해도 피드 하나에 행 하나다
 - **source-R4** — 소스는 그 프로필을 얻었고 프로필에 이용조건 검토일이 있어야 켜진다. 거절 이유는 프로필을 얻지 못함(프리셋이 사라졌거나 운영자 원문이 검증에 걸림) · 검토일 없음이고, 거절하면 아무것도 바꾸지 않는다
-- **source-R5** — 피드는 그 소스의 프로필을 얻었고 프로필에 그 피드가 있어야 켜진다. 거절 이유는 프로필을 얻지 못함 · 프로필에 피드가 없음이고, 거절하면 아무것도 바꾸지 않는다. 이용조건 검토일은 소스를 켤 때만 본다
+- **source-R5** — 피드는 그 소스의 프로필을 얻었고 프로필에 그 피드가 있어야 켜진다. 꺼진 피드는 여기에 더해 미리보기가 활성화 기준을 넘어야 켜진다(source-R9). 거절 이유는 프로필을 얻지 못함 · 프로필에 피드가 없음 · 피드를 받지 못함 · 기준에 못 미침 · 미리본 뒤 피드 URL 이 바뀜이고, 거절하면 바뀌는 것은 피드를 받으려 잡은 요청 시작 시각 예약(source-R18)뿐이다. 이미 켜진 피드를 켜면 받지 않고 켜진 결과다. 이용조건 검토일은 소스를 켤 때만 본다
 - **source-R6** — 수집 대상은 소스와 피드가 모두 켜졌고 다음 수집 시각이 지난 피드다
 - **source-R7** — 피드는 지우지 않는다 — 받은 기사의 기록이 피드 ID 를 가리킨다. 프로필에서 빠진 피드도 남는다. 피드 식별자 · 프리셋 키는 저장된 뒤 바꾸지 않는다
 - **source-R8** — 기동 때 소스마다 지금의 프로필과 저장된 피드를 대조한다. 프로필에 새로 생긴 피드는 꺼진 피드로 더하고(source-R3 과 같은 경로), 사라진 프리셋 · 검증에 걸린 운영자 원문 · 프로필에서 빠진 피드는 경고 로그로 알린다. 피드는 지우지도 끄지도 않는다 — 켜고 끄는 것은 운영자의 선택이다. 가리킬 곳을 잃었는지는 저장하지 않고 그때의 프리셋 파일 · 검증기로 판정한다. 여러 인스턴스가 함께 해도 결과가 같다
-- **source-R9** — **(미구현)** 활성화 관문의 미리보기: 켜기 전에 한 번 받아 미리보기(항목 수 · 날짜 해석률 · 요약문 길이 분포 · 파싱 오류)를 만들고, 기준에 못 미치면 켜지 않는다. 이 미리보기도 피드 요청 관문(`ArticleSource` — §4)을 거친다
+- **source-R9** — 활성화 관문의 미리보기: 꺼진 피드를 켤 때 그 피드를 한 번 받아 미리보기를 만들고, 활성화 기준에 못 미치면 켜지 않는다. 소스 켜기는 미리보지 않는다
+  - 요청은 피드 요청 관문(`ArticleSource` — §4)으로 조건부 요청 값 없이 보내고, 같은 소스의 요청 시작 시각 예약(source-R18)을 지킨다. 켜기는 그 소스에 앞서 잡힌 예약 하나당 최대 10초를 더 기다리고, 요청은 수집 마감(10초) 안에 끝난다
+  - 받지 못하면(304 포함 — 조건 없는 요청의 304 는 예상 밖 상태다) 그 수집 실패를 거절 이유로 돌려준다
+  - 지표: 항목 수(기사 + 건너뛴 항목) · 건너뛴 항목 · 발행 시각을 해석한 기사 수 · 요약문 길이 분포(코드 포인트, 있는 · 없는 기사 수와 최소 · 아래 중앙값 · 최대) · 대체 문자 수와 읽은 문자 수 · 추정이 아닌 발행 시각의 최댓값 · 영구 이동 주소 · 기사 앞 몇 건(수는 `FeedPreview`)의 제목 · 발행 시각 · 추정 여부. 요약문 · 최신 발행 시각 · 영구 이동 · 표본은 보이기만 하고 판정하지 않는다
+  - 활성화 기준: 기사 수의 하한, 항목 수 대비 건너뛴 비율의 상한, 기사 수 대비 발행 시각을 해석한 비율의 하한, 읽은 문자 수 대비 대체 문자 비율의 상한. 경계 값은 통과다. 비율은 분모가 0 이면 판정하지 않는다. 프로필이 발행 시각의 읽을 곳을 빈 목록으로 선언하면 날짜 해석률은 판정하지 않는다. 기준값의 정본은 `ActivationCriteria`(§4)이고, 정한 근거는 [ADR-0041](../adr/0041-activation-gate-previews-a-feed-on-enable-and-judges-by-code-constants.md)에 있다
+  - 기준에 못 미치면 못 미친 기준마다 실제 값과 기준값을 미리보기와 함께 돌려준다
+  - 미리보기는 저장하지 않는다 — 기사 · 수집 상태 · 조건부 요청 값을 쓰지 않는다. 요청 시작 시각 예약만 남는다
+  - 판정은 켜는 순간에만 한다. 기준값이 바뀌어도 켜진 피드를 다시 판정하지 않는다
+  - 저장 직전에 프로필을 다시 얻어 설정 판정(source-R5)을 다시 하고, 피드 URL 이 미리본 것과 다르면 켜지 않는다
+  - 등록 전 운영자 프로필 원문과 피드 식별자로도 같은 판정의 미리보기를 한다. DB 를 쓰지 않고, 소스 행이 없어 요청 시작 시각을 예약하지 않는다. 원문이 검증에 걸리거나 피드 식별자가 없으면 받지 않는다
 
 ### 수집 프로필
 
@@ -366,7 +388,7 @@ public sealed interface FetchResult {
   | `feeds[]` — `key` · `url` · `section` · `pollIntervalMinutes` | `feeds` 와 각 피드의 `key` · `url` · `section` | 피드 하나 이상. `pollIntervalMinutes` 는 그 피드의 권장 주기 |
   | `pollIntervalMinutes` | 아니오 | 소스의 권장 주기(분) |
   | `preCorrections[]` — `rule` · `charset` | 아니오 | 사전 보정, 적용 순서대로(source-R38) |
-  | `items` — `publishedAt` · `summary` · `author` · `category` · `thumbnail` | 아니오 | 기사 값마다 읽을 곳 목록(source-R41). 적지 않은 값은 `[$standard]`, 빈 목록은 그 값을 읽지 않는다 |
+  | `items` — `publishedAt` · `summary` · `author` · `category` · `thumbnail` | 아니오 | 기사 값마다 읽을 곳 목록(source-R41). 적지 않은 값은 `[$standard]`, 빈 목록은 그 값을 읽지 않는다 — `publishedAt` 의 빈 목록은 활성화 기준의 날짜 해석률도 보지 않게 한다(source-R9) |
   | `namespaces` | 아니오 | 요소 이름의 접두사 → 이름공간 URI. 기본 접두사 `dc` · `content` · `media` · `atom` 은 다시 정의할 수 없다 |
   | `dates.formats[]` · `dates.timeZone` | 아니오 | 표준 형식 다음에 시도할 날짜 형식, 오프셋 없는 값의 시간대(없으면 `Asia/Seoul`) |
 - **source-R11** — 프로필의 값 규칙. 어긋나면 프로필 전체가 무효이고, 문제마다 위치와 함께 알린다.
@@ -386,7 +408,7 @@ public sealed interface FetchResult {
 - **source-R15** — 1분마다 한 트랜잭션에서 대상 피드를 다음 수집 시각 순으로 최대 100개 잠그고(다른 회차가 잠근 행은 건너뛴다), 피드마다 점유(토큰 · 예약 시각)를 기록해 커밋한다. 점유 중인 피드의 다음 수집 시각은 예약 시각 + 10분(점유 기간)이라, 점유가 풀리지 않아도 그 시각이 지나면 다시 대상이 된다. 만료된 점유는 새 점유로 덮어쓴다. 커밋한 뒤 점유 토큰을 작업 ID 로 수집 작업을 예약 시각에 등록한다 — 등록 전에 멈추면 점유만 남고 만료 뒤 다시 대상이 된다
 - **source-R16** — 수집 작업은 점유가 자기 것(토큰 일치)이고 소스 · 피드가 아직 켜져 있을 때만 받는다. 결과는 토큰이 그대로일 때만 반영하고, 그사이 점유를 잃었으면 반영도 발행도 하지 않는다. 작업은 재시도하지 않는다 — 점유 만료가 재시도다. 그래서 한 회차의 결과는 한 번 반영되고, 같은 작업을 다시 실행해도 결과가 같다
 - **source-R17** — 피드 요청은 DB 트랜잭션 밖에서 하고, 결과 반영과 새 항목의 `ArticleFetched` 발행은 한 트랜잭션에서 한다
-- **source-R18** — 같은 소스의 요청 시작 사이는 수집 마감(10초) 이상 띄운다. 수집 작업은 예약 시각까지 기다린 뒤, 요청 직전에 그 소스의 다음 요청 가능 시각을 잠가 시작 시각(max(다음 요청 가능 시각, 지금))을 받고 다음 요청 가능 시각을 시작 + 10초로 옮긴다. 받은 시작 + 수집 마감이 점유 만료보다 이르지 않으면 이번에 수집하지 않는다(점유가 만료되면 다음 회차가 가져간다). 같은 소스의 피드끼리 작업 예약 시각도 10초씩 띄우지만, 작업 서버가 예약 작업을 poll 간격 단위로 묶어 시작하므로 간격의 보장은 요청 직전 예약이 한다. 이름 해석은 마감 밖이라, 해석이 길면 앞 요청이 끝나기 전에 다음 요청이 시작될 수 있다
+- **source-R18** — 같은 소스의 요청 시작 사이는 수집 마감(10초) 이상 띄운다. 수집 작업과 피드 켜기의 미리보기(source-R9)가 같은 예약을 쓰고, 등록 전 원문의 미리보기는 소스 행이 없어 예약하지 않는다. 수집 작업은 예약 시각까지 기다린 뒤, 요청 직전에 그 소스의 다음 요청 가능 시각을 잠가 시작 시각(max(다음 요청 가능 시각, 지금))을 받고 다음 요청 가능 시각을 시작 + 10초로 옮긴다. 받은 시작 + 수집 마감이 점유 만료보다 이르지 않으면 이번에 수집하지 않는다(점유가 만료되면 다음 회차가 가져간다). 같은 소스의 피드끼리 작업 예약 시각도 10초씩 띄우지만, 작업 서버가 예약 작업을 poll 간격 단위로 묶어 시작하므로 간격의 보장은 요청 직전 예약이 한다. 이름 해석은 마감 밖이라, 해석이 길면 앞 요청이 끝나기 전에 다음 요청이 시작될 수 있다
 - **source-R19** — 프로필이나 그 안의 피드를 얻지 못한 피드는 수집하지 않는다. 대상을 고를 때 확인해 점유하지 않고, 수집 작업이 시작할 때 다시 확인해 점유를 푼다. 어느 쪽이든 다음 수집 시각을 1시간 뒤로 미루고 경고 로그를 남긴다. 점유 · 다음 수집 시각 밖의 수집 상태 값은 바꾸지 않는다
 
 ### 새 항목
@@ -453,7 +475,7 @@ public sealed interface FetchResult {
 RSS 품질이 피드마다 크게 다르므로 사전 보정 → 파싱 → 필드 보정의 세 단계로 맞춘다([ADR-0030](../adr/0030-feed-xml-own-parser-and-rome-for-format-title-link.md)).
 
 - **source-R38** — 사전 보정 — 받은 바이트를 문자로 읽고, 프로필이 고른 보정을 적힌 순서대로 적용한다
-  - 문자 인코딩은 프로필의 `force-encoding` → BOM → XML 선언 → 전송 계층(HTTP `Content-Type`)의 charset → UTF-8 순으로 정한다. 한국어 계열 레이블(`euc-kr` 등)과 강제한 EUC-KR · CP949 는 windows-949 로 읽는다. 문서가 선언한 인코딩을 지원하지 않으면 문서를 읽지 않고, 전송 계층의 charset 을 지원하지 않으면 그 값만 버린다. 읽을 수 없는 바이트는 U+FFFD 로 바꾸고 그 수를 결과에 남긴다
+  - 문자 인코딩은 프로필의 `force-encoding` → BOM → XML 선언 → 전송 계층(HTTP `Content-Type`)의 charset → UTF-8 순으로 정한다. 한국어 계열 레이블(`euc-kr` 등)과 강제한 EUC-KR · CP949 는 windows-949 로 읽는다. 문서가 선언한 인코딩을 지원하지 않으면 문서를 읽지 않고, 전송 계층의 charset 을 지원하지 않으면 그 값만 버린다. 읽을 수 없는 바이트는 U+FFFD 로 바꾸고 그 수와 읽은 문자 수(사전 보정 전 코드 포인트, BOM 제외)를 결과에 남긴다
   - `replace-undefined-entities` — HTML 이름 엔티티는 같은 문자의 숫자 참조로, 그 밖의 `&` 는 `&amp;` 로 바꾼다. 숫자 참조와 XML 기본 엔티티는 그대로 둔다
   - `strip-invalid-control-chars` — XML 1.0 에 쓸 수 없는 문자와, 그런 문자를 가리키는 숫자 참조를 지운다
   - CDATA · 주석 · 처리 명령 안의 참조는 고치지 않는다
@@ -496,7 +518,7 @@ RSS 품질이 피드마다 크게 다르므로 사전 보정 → 파싱 → 필�
 | `sources` | id, preset_key(고유), profile(텍스트), enabled, poll_interval_minutes | 소스의 운영 설정. 이름 · 홈페이지 · 언어 · 이용조건 검토일 · 피드 목록 · 권장 수집 주기는 수집 프로필에 있다. `preset_key` 와 `profile` 은 둘 중 하나다(제약 — source-R1). `preset_key` 의 고유 제약이 같은 프리셋의 두 번째 소스를 막는다(source-R2). `poll_interval_minutes` 는 운영자 소스 주기(분, 정하지 않았으면 비어 있다 — source-R14). **(미구현)** 본문 추출 허용 여부는 추출을 켤 때 더한다 |
 | `feeds` | id, source_id, feed_key, enabled, poll_interval_minutes | 피드의 운영 설정만 둔다. (source_id, feed_key) 고유. URL · 섹션은 프로필에 있다. `poll_interval_minutes` 는 운영자 피드 주기. 행은 지우지 않는다(source-R7) — `article` 의 피드별 기록이 `feeds.id` 를 가리킨다 |
 | `feed_poll_states` | feed_id, next_poll_at, lease_token, lease_scheduled_at, etag, last_modified, last_polled_at, last_success_at, last_new_item_at, consecutive_failures, last_error_reason · message · status · at, moved_to, last_overflow_at, overflow_count, previous_item_keys | 피드의 수집 상태 — 피드당 1행. 등록 · 기동 대조가 첫 행을 만들고(source-R3), 그 뒤에는 수집 작업만 쓴다. 운영 설정(`feeds`)과 다른 행이라 서로를 덮어쓰지 않는다. 점유 중이면 `lease_token` · `lease_scheduled_at` 이 함께 있고(제약) `next_poll_at` 은 예약 시각 + 점유 기간이다(source-R15). `last_polled_at` 은 마지막으로 수집을 마친 시각(성공 · 변경 없음 · 실패), `last_success_at` 은 마지막 성공 · 변경 없음, `last_new_item_at` 은 새 항목이 있던 마지막 수집의 시각이다. `last_error_*` 는 마지막 실패이고 이유 · 시각이 함께 있다(제약 — source-R26). `moved_to` 는 마지막 성공 · 변경 없음 결과가 거친 영구 이동 주소이고 실패는 바꾸지 않는다(source-R27). `last_overflow_at` · `overflow_count` 는 넘침 의심(source-R21). `previous_item_keys` 는 직전 성공 수집의 항목 키(`text[]`)이고, 비어 있으면(NULL) 아직 성공한 수집이 없다는 뜻이라 빈 배열과 다르다(source-R20) |
-| `source_fetch_slots` | source_id, next_fetch_at | 소스마다 다음 요청을 시작할 수 있는 시각 — 소스당 1행, 처음 예약할 때 만든다. 같은 언론사의 요청 시작 사이를 띄우는 예약이고, 요청 직전에 이 행을 잠근다(source-R18). 값은 그 소스의 마지막 예약이 정한 다음 요청 가능 시각이고, 예약한 뒤 요청을 건너뛰어도 남는다 |
+| `source_fetch_slots` | source_id, next_fetch_at | 소스마다 다음 요청을 시작할 수 있는 시각 — 소스당 1행, 처음 예약할 때 만든다. 같은 언론사의 요청 시작 사이를 띄우는 예약이고, 수집 작업과 피드 켜기의 미리보기가 요청 직전에 이 행을 잠근다(source-R9 · source-R18). 값은 그 소스의 마지막 예약이 정한 다음 요청 가능 시각이고, 예약한 뒤 요청을 건너뛰어도 남는다 |
 
 **(미구현)** 피드의 수집 상태 값(`ACTIVE` · `DEGRADED` · `STALE` — source-R30 · source-R31)을 담을 컬럼은 아직 없다.
 
@@ -519,3 +541,4 @@ RSS 품질이 피드마다 크게 다르므로 사전 보정 → 파싱 → 필�
 | [0030](../adr/0030-feed-xml-own-parser-and-rome-for-format-title-link.md) | 피드 문서는 자체 구성한 XML 파서로 읽어 DTD 선언을 거부하고, Rome 은 형식 판별 · 제목 · 링크에만 쓴다 |
 | [0031](../adr/0031-feed-request-blocks-internal-addresses-with-apache-httpclient-deadline.md) | 피드 요청은 내부 주소를 기본으로 막고, Apache HttpClient 로 한 번의 수집 전체에 마감 · 크기 상한을 건다 |
 | [0033](../adr/0033-feed-polling-db-lease-per-feed-new-items-and-per-source-request-spacing.md) | 피드 수집은 DB 점유로 겹침을 막고, 피드별 직전 항목으로 새 항목을 가르며, 같은 언론사 요청 사이는 요청 직전의 DB 예약으로 띄운다 |
+| [0041](../adr/0041-activation-gate-previews-a-feed-on-enable-and-judges-by-code-constants.md) | 활성화 관문은 피드를 켤 때 한 번 받아 미리보고, 코드 상수 기준으로 판정한다 |

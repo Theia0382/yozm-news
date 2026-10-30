@@ -7,7 +7,7 @@ import net.yozmnews.source.FetchedArticle;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 요약문 길이 분포 — 코드 포인트 수.
+ * 요약문 길이 분포(코드 포인트 수) — docs/specs/source.md §4 · source-R9.
  *
  * @param present 요약문이 있는 기사 수
  * @param absent 요약문이 없는 기사 수

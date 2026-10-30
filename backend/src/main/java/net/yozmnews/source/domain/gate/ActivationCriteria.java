@@ -6,7 +6,7 @@ import java.util.List;
 /**
  * 활성화 기준 — 정본 · docs/specs/source.md §4 · source-R9.
  * <p>
- * 기준값은 잠정값이다 — 실제 프리셋으로 확정한다. 비율은 분모가 0 이면 판정하지 않는다.
+ * 값을 정한 근거는 ADR-0041 이다. 비율은 분모가 0 이면 판정하지 않는다.
  */
 public final class ActivationCriteria {
 
