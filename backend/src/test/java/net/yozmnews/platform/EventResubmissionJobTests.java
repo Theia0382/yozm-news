@@ -20,7 +20,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * 실패한 이벤트 발행을 실제 JobRunr 반복 작업이 다시 처리한다. 반복 주기와 작업 서버 poll 간격을 JobRunr 하한(5초)으로
- * 줄여 기다린다. 재처리 정책의 조건((6 − 1) × 5초 < 30분)은 그대로 성립한다.
+ * 줄여 기다린다. 재처리 정책의 조건((6 − 1) × 5초가 30분보다 짧다)은 그대로 성립한다.
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest

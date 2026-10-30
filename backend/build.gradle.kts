@@ -113,3 +113,30 @@ tasks.register<Test>("updateOpenApiSpec") {
 	systemProperty("yozmnews.openapi-spec-update", "true")
 	outputs.upToDateWhen { false }
 }
+
+// Javadoc 형식 검사 — 깨진 참조 · HTML · 태그로 빌드가 실패한다. 누락은 보지 않는다(CONTRIBUTING.md §7).
+// javac 은 컴파일에서, javadoc 은 check 에서 main · 테스트 소스를 본다.
+tasks.withType<JavaCompile>().configureEach {
+	options.compilerArgs.add("-Xdoclint:all,-missing")
+}
+
+val javadocTest = tasks.register<Javadoc>("javadocTest") {
+	description = "테스트 소스의 Javadoc 형식을 검사한다."
+	group = "verification"
+	source = sourceSets["test"].allJava
+	classpath = sourceSets["test"].compileClasspath + sourceSets["test"].output
+	setDestinationDir(layout.buildDirectory.dir("docs/javadoc-test").get().asFile)
+}
+
+tasks.withType<Javadoc>().configureEach {
+	(options as StandardJavadocDocletOptions).apply {
+		encoding = "UTF-8"
+		addBooleanOption("Xdoclint:all,-missing", true)
+		addBooleanOption("Werror", true)
+		addBooleanOption("private", true)
+	}
+}
+
+tasks.named("check") {
+	dependsOn(tasks.named("javadoc"), javadocTest)
+}
