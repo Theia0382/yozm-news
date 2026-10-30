@@ -18,7 +18,9 @@ final class FeedHttpClients {
 	}
 
 	/**
-	 * 수집용 클라이언트를 만든다. 리다이렉트는 수집이 홉마다 직접 따라가므로 끈다. 압축 요청 · 자동 해제는 기본대로 둔다.
+	 * 수집용 클라이언트를 만든다.
+	 * <p>
+	 * 리다이렉트는 수집이 홉마다 직접 따라가므로 끈다. 압축 요청 · 자동 해제는 기본대로 둔다.
 	 */
 	static CloseableHttpClient create(AddressPolicy policy) {
 		return HttpClients.custom()

@@ -11,8 +11,9 @@ import org.jdom2.Namespace;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 프로필의 {@code $standard} 가 읽는 요소 — 그 피드 형식의 명세가 정한 요소다. RSS 2.0 의 {@code dc:date} 처럼 형식 밖의 요소는
- * 프로필이 요소 이름으로 가리킨다. RSS 0.91~0.94 는 판을 구별하지 않고 RSS 2.0 의 이름으로 읽는다(없는 요소는 값이 없을 뿐이다).
+ * 프로필의 {@code $standard} 가 읽는 요소 — docs/specs/source.md §4 · source-R40 · source-R41.
+ * <p>
+ * RSS 0.91~0.94 는 판을 구별하지 않고 RSS 2.0 의 이름으로 읽는다(없는 요소는 값이 없을 뿐이다).
  */
 final class StandardElements {
 
@@ -25,7 +26,7 @@ final class StandardElements {
 	private StandardElements() {
 	}
 
-	/** 항목의 원문 값 — 문서 순서, 정리 전 */
+	/** 항목의 원문 값을 문서 순서로 읽는다 — 정리 전 */
 	static List<String> values(Element item, FeedFormat format, ItemField field) {
 		Namespace namespace = format.namespace(item.getDocument());
 		return switch (field) {
@@ -64,7 +65,10 @@ final class StandardElements {
 		};
 	}
 
-	/** 항목 식별자 원문 — RSS {@code guid} · RDF {@code rdf:about} · Atom {@code id}. 없으면 null */
+	/**
+	 * 항목 식별자 원문을 읽는다 — RSS {@code guid} · RDF {@code rdf:about} · Atom {@code id}.
+	 * @return 없으면 null
+	 */
 	static @Nullable String guid(Element item, FeedFormat format) {
 		Namespace namespace = format.namespace(item.getDocument());
 		return switch (format.family()) {
@@ -82,7 +86,7 @@ final class StandardElements {
 		return elements.stream().map(element -> element.getAttributeValue(attribute)).filter(Objects::nonNull).toList();
 	}
 
-	/** {@code type} 이 이미지인 것 */
+	/** {@code type} 이 이미지인 요소를 고른다 */
 	private static List<Element> images(List<Element> elements) {
 		return elements.stream().filter(element -> {
 			String type = element.getAttributeValue("type");

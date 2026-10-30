@@ -6,8 +6,10 @@ import org.jspecify.annotations.Nullable;
 import org.xml.sax.Locator;
 
 /**
- * DTD 의 선언과 선언되지 않은 엔티티를 거부하는 JDOM 처리기. 파서는 내부 subset 의 선언을 본문보다 먼저 알리므로, 엔티티가 펼쳐지기 전에
- * 문서 읽기가 멈춘다. 외부 DTD 를 가리키는 문서에서 파서가 정의되지 않은 엔티티를 건너뛰는 것도 같은 예외로 멈춘다.
+ * DTD 선언 거부 처리기 — docs/specs/source.md §4 · source-R43 · source-R44.
+ * <p>
+ * 파서는 내부 subset 의 선언을 본문보다 먼저 알리므로, 엔티티가 펼쳐지기 전에 문서 읽기가 멈춘다. 외부 DTD 를 가리키는 문서에서
+ * 파서가 정의되지 않은 엔티티를 건너뛰는 것도 같은 예외로 멈춘다.
  */
 final class DeclarationRejectingHandler extends SAXHandler {
 
@@ -65,7 +67,7 @@ final class DeclarationRejectingHandler extends SAXHandler {
 		return (locator == null || locator.getColumnNumber() < 1) ? null : locator.getColumnNumber();
 	}
 
-	/** 선언을 만나 문서 읽기를 멈춘다 — 파서를 거쳐 그대로 올라온다 */
+	/** 선언을 만나 문서 읽기를 멈추는 예외 — 파서를 거쳐 그대로 올라온다 */
 	static final class DtdDeclarationRejected extends RuntimeException {
 
 		private final @Nullable Integer line;

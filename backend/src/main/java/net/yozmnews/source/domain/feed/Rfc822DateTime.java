@@ -13,8 +13,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * RSS 의 RFC 822 날짜. 요일은 생략할 수 있고 이름만 확인한다(날짜와 대조하지 않는다). 연도는 4자리만 받는다 — 2자리 연도는 세기를
- * 정할 수 없어 해석 실패로 보낸다. 초와 시간대는 생략할 수 있고, 시간대가 없으면 주어진 시간대의 현지 시각으로 본다.
+ * RSS 의 RFC 822 날짜 — docs/specs/source.md §4 · source-R40.
+ * <p>
+ * 요일 · 초 · 시간대는 생략할 수 있고, 시간대가 없으면 주어진 시간대의 현지 시각으로 본다. 2자리 연도는 세기를 정할 수 없어 받지
+ * 않는다.
  */
 final class Rfc822DateTime {
 
@@ -38,8 +40,9 @@ final class Rfc822DateTime {
 	}
 
 	/**
+	 * RFC 822 날짜를 해석한다.
 	 * @param zone 시간대가 없는 값에 쓸 시간대
-	 * @return 해석한 시각 — 형식이 아니거나 없는 날짜 · 시각이면 빈 값
+	 * @return 해석한 시각 — 형식이 아니거나 없는 날짜 · 시각이면 비어 있다
 	 */
 	static Optional<Instant> parse(String text, ZoneId zone) {
 		Matcher matcher = FORMAT.matcher(text.strip());

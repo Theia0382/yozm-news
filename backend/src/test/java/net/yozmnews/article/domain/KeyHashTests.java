@@ -8,7 +8,7 @@ import java.util.HexFormat;
 import org.junit.jupiter.api.Test;
 
 /**
- * SHA-256 다이제스트 — 기대값은 {@code sha256sum} 으로 따로 계산한 16진수다.
+ * SHA-256 다이제스트 — 기대값은 {@code sha256sum} 으로 따로 계산한 16진수다
  */
 class KeyHashTests {
 

@@ -15,15 +15,18 @@ import org.xml.sax.SAXNotSupportedException;
 import org.xml.sax.XMLReader;
 
 /**
- * 사전 보정을 마친 피드 원문 → JDOM 문서. 파서는 {@link IsolatedXmlReaders} 가 만들고, DTD 의 선언은
- * {@link DeclarationRejectingHandler} 가 거부한다.
+ * 사전 보정을 마친 피드 원문 → JDOM 문서 — docs/specs/source.md §4 · source-R43 · source-R44.
+ * <p>
+ * 파서는 {@link IsolatedXmlReaders} 가 만들고, DTD 의 선언은 {@link DeclarationRejectingHandler} 가 거부한다.
  */
 final class FeedXmlReader {
 
 	private static final String DECLARATION_HANDLER = "http://xml.org/sax/properties/declaration-handler";
 
+	/** XML 읽기 결과 */
 	sealed interface Read {
 
+		/** 문서를 읽었다 */
 		record Parsed(Document document) implements Read {
 
 			public Parsed {
@@ -32,6 +35,7 @@ final class FeedXmlReader {
 
 		}
 
+		/** 문서를 읽지 못했다 */
 		record Failed(DocumentProblem problem) implements Read {
 
 			public Failed {

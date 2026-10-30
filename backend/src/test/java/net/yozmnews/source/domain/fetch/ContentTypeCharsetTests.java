@@ -9,7 +9,9 @@ import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 /**
- * Content-Type 의 charset 매개변수.
+ * Content-Type 의 charset 매개변수 읽기.
+ * <p>
+ * 지키는 규칙: source-R38
  */
 class ContentTypeCharsetTests {
 

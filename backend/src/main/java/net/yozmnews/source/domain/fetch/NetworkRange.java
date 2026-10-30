@@ -6,7 +6,9 @@ import java.util.Arrays;
 import java.util.Objects;
 
 /**
- * CIDR 대역 하나. 배열을 생성자와 접근자에서 복사한다 — 밖에서 바꿀 수 없다.
+ * CIDR 대역 하나 — docs/specs/source.md §4 · source-R33 · source-R34.
+ * <p>
+ * 배열을 생성자와 접근자에서 복사한다 — 밖에서 바꿀 수 없다.
  *
  * @param address 대역의 시작 주소(IPv4 4바이트 · IPv6 16바이트) — 접두 뒤 비트는 0
  * @param prefixLength 접두 길이
@@ -14,6 +16,7 @@ import java.util.Objects;
 public record NetworkRange(byte[] address, int prefixLength) {
 
 	/**
+	 * 값을 확인한다.
 	 * @throws IllegalArgumentException 주소 길이가 4 · 16 이 아니거나, 접두 길이가 범위 밖이거나, 접두 뒤 비트가 0 이 아닐 때
 	 */
 	public NetworkRange {
@@ -70,7 +73,10 @@ public record NetworkRange(byte[] address, int prefixLength) {
 		return this.address.clone();
 	}
 
-	/** 주소 계열이 다르면 false */
+	/**
+	 * 주소가 이 대역에 드는지 본다.
+	 * @return 주소 계열이 다르면 false
+	 */
 	public boolean contains(InetAddress candidate) {
 		return containsBytes(candidate.getAddress());
 	}

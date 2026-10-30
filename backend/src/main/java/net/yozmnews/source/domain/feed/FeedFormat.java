@@ -10,7 +10,9 @@ import org.jdom2.Namespace;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Rome 이 판별하는 피드 형식 — 형식마다 항목 요소의 위치와 이름공간.
+ * Rome 이 판별하는 피드 형식 — docs/specs/source.md §4 · source-R39.
+ * <p>
+ * 형식마다 항목 요소의 위치와 이름공간을 갖는다.
  */
 enum FeedFormat {
 
@@ -50,7 +52,10 @@ enum FeedFormat {
 		this.namespaceUri = namespaceUri;
 	}
 
-	/** @throws IllegalStateException Rome 이 이 목록 밖의 형식을 판별했을 때 */
+	/**
+	 * Rome 의 형식 이름으로 찾는다.
+	 * @throws IllegalStateException Rome 이 이 목록 밖의 형식을 판별했을 때
+	 */
 	static FeedFormat ofRomeType(String type) {
 		return Arrays.stream(values())
 			.filter(format -> format.romeType.equals(type))
@@ -62,13 +67,13 @@ enum FeedFormat {
 		return this.family;
 	}
 
-	/** 항목 요소와 형식 고유 요소의 이름공간 */
+	/** 항목 요소와 형식 고유 요소의 이름공간을 돌려준다 */
 	Namespace namespace(Document document) {
 		return (this.namespaceUri != null) ? Namespace.getNamespace(this.namespaceUri)
 				: document.getRootElement().getNamespace();
 	}
 
-	/** 항목 요소 — 문서 순서 */
+	/** 항목 요소를 문서 순서로 돌려준다 */
 	List<Element> itemElements(Document document) {
 		Namespace namespace = namespace(document);
 		Element root = document.getRootElement();

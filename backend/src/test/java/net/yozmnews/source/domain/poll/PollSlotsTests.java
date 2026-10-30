@@ -7,7 +7,11 @@ import java.time.Instant;
 
 import org.junit.jupiter.api.Test;
 
-/** 같은 소스의 예약 시각 — 앞서 예약한 수집과 이번 회차의 수집을 10초씩 띄운다. */
+/**
+ * 같은 소스의 예약 시각 분산 — 기대 시각은 손으로 센 값이다.
+ * <p>
+ * 지키는 규칙: source-R18
+ */
 class PollSlotsTests {
 
 	private static final Instant NOW = Instant.parse("2026-10-28T10:00:00Z");

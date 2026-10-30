@@ -9,6 +9,8 @@ import org.junit.jupiter.api.Test;
 
 /**
  * 영구 이동 추적과 홉 상한.
+ * <p>
+ * 지키는 규칙: source-R27 · source-R28
  */
 class RedirectTrailTests {
 

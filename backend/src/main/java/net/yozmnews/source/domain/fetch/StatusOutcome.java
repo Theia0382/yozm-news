@@ -3,7 +3,7 @@ package net.yozmnews.source.domain.fetch;
 import java.util.Objects;
 
 /**
- * 응답 상태 코드를 어떻게 다룰지 — {@link StatusRule#classify} 가 정한다.
+ * 응답 상태 코드를 어떻게 다룰지 — {@link StatusRule#classify} 가 정한다
  */
 public sealed interface StatusOutcome {
 
@@ -11,7 +11,7 @@ public sealed interface StatusOutcome {
 	record Body() implements StatusOutcome {
 	}
 
-	/** 조건부 헤더를 보낸 요청의 304 — 변경 없음 */
+	/** 조건부 헤더를 보낸 요청의 304 — 바뀌지 않았다 */
 	record NotModified() implements StatusOutcome {
 	}
 
@@ -23,7 +23,7 @@ public sealed interface StatusOutcome {
 	record Redirect(boolean permanent) implements StatusOutcome {
 	}
 
-	/** 실패 */
+	/** 실패했다 */
 	record Failure(FetchFailureReason reason) implements StatusOutcome {
 
 		public Failure {

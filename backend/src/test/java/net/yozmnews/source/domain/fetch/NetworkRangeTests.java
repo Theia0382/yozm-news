@@ -11,6 +11,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 /**
  * CIDR 읽기와 포함 판정.
+ * <p>
+ * 지키는 규칙: source-R34
  */
 class NetworkRangeTests {
 

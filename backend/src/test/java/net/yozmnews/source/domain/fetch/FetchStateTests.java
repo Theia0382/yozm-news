@@ -6,7 +6,9 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.junit.jupiter.api.Test;
 
 /**
- * 조건부 요청 값 — 다시 보낼 수 있는 값만 남긴다.
+ * 조건부 요청 값 — 기대값은 손으로 적은 리터럴이다.
+ * <p>
+ * 지키는 규칙: source-R22
  */
 class FetchStateTests {
 

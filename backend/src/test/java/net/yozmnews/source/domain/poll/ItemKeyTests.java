@@ -7,7 +7,11 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 
 import org.junit.jupiter.api.Test;
 
-/** 같은 피드 안의 항목 키 — guid 가 먼저이고, 없으면 링크 원문이다. */
+/**
+ * 같은 피드 안의 항목 키 — 기대값은 손으로 적은 리터럴이다.
+ * <p>
+ * 지키는 규칙: source-R20
+ */
 class ItemKeyTests {
 
 	@Test

@@ -11,6 +11,8 @@ import org.junit.jupiter.params.provider.CsvSource;
 
 /**
  * 실패 이유의 일시 · 영구 분류와 실패 값의 불변식.
+ * <p>
+ * 지키는 규칙: source-R24 · source-R37
  */
 class FetchFailureReasonTests {
 

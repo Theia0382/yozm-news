@@ -4,7 +4,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * 사전 보정 {@code strip-invalid-control-chars} — XML 1.0 에 쓸 수 없는 문자와, 그런 문자를 가리키는 숫자 참조를 지운다.
+ * 사전 보정 {@code strip-invalid-control-chars} — docs/specs/source.md §4 · source-R38
  */
 final class XmlCharacters {
 
@@ -16,7 +16,7 @@ final class XmlCharacters {
 	private XmlCharacters() {
 	}
 
-	/** XML 1.0 의 {@code Char} 인가 */
+	/** XML 1.0 의 {@code Char} 인지 본다 */
 	private static boolean isXmlChar(int codePoint) {
 		return codePoint == 0x9 || codePoint == 0xA || codePoint == 0xD || (codePoint >= 0x20 && codePoint <= 0xD7FF)
 				|| (codePoint >= 0xE000 && codePoint <= 0xFFFD) || (codePoint >= 0x10000 && codePoint <= 0x10FFFF);

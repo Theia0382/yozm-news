@@ -13,6 +13,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 /**
  * 요청할 수 있는 주소와 리다이렉트 대상 해석.
+ * <p>
+ * 지키는 규칙: source-R35
  */
 class FetchUrlsTests {
 

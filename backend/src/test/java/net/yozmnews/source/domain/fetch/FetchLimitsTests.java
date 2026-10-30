@@ -9,6 +9,8 @@ import org.junit.jupiter.api.Test;
 
 /**
  * 한 번의 수집에 거는 제한 값.
+ * <p>
+ * 지키는 규칙: source-R28
  */
 class FetchLimitsTests {
 

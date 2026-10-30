@@ -9,7 +9,9 @@ import net.yozmnews.source.domain.profile.PreCorrection;
 import org.junit.jupiter.api.Test;
 
 /**
- * 사전 보정 — 정의되지 않은 엔티티 치환과 쓸 수 없는 문자 제거, 적용 순서.
+ * 사전 보정 — 원문 문자열을 직접 넣어 본다.
+ * <p>
+ * 지키는 규칙: source-R38
  */
 class PreCorrectorTests {
 

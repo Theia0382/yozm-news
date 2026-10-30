@@ -1,7 +1,7 @@
 package net.yozmnews.source.domain.fetch;
 
 /**
- * 응답 상태 코드의 규칙.
+ * 응답 상태 코드의 규칙 — docs/specs/source.md §4 · source-R23 · source-R24
  */
 public final class StatusRule {
 
@@ -9,8 +9,9 @@ public final class StatusRule {
 	}
 
 	/**
-	 * @param status 응답 상태 코드 — 100~599 밖이면(예: Apache 가 받는 세 자리 999) 예상 밖 응답이다
-	 * @param conditionalSent 이 요청에 조건부 헤더를 보냈는가 — 보내지 않았는데 온 304 는 예상 밖 응답이다
+	 * 응답 상태 코드를 분류한다.
+	 * @param status 응답 상태 코드 — Apache 는 세 자리 999 까지 받는다
+	 * @param conditionalSent 이 요청에 조건부 헤더를 보냈는가
 	 */
 	public static StatusOutcome classify(int status, boolean conditionalSent) {
 		return switch (status) {

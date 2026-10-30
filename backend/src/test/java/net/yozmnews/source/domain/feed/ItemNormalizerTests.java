@@ -12,7 +12,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 /**
- * 항목 정규화 — Rome 항목과 항목 요소의 짝, 건너뛰는 항목, 메타데이터의 읽을 곳 목록.
+ * 항목 정규화 — 합성 픽스처의 항목으로 본다.
+ * <p>
+ * 지키는 규칙: source-R39 · source-R40 · source-R41
  */
 class ItemNormalizerTests {
 

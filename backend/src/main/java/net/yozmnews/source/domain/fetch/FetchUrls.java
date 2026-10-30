@@ -8,8 +8,9 @@ import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 수집이 요청할 수 있는 주소와 리다이렉트 대상. 프로필 URL 검사 · 기사 링크 규칙과 지금은 조건이 비슷하지만 바뀌는 계기가
- * 달라 따로 둔다. 처음 URL 과 모든 리다이렉트 홉이 같은 규칙을 지난다.
+ * 요청할 수 있는 주소와 리다이렉트 대상 — docs/specs/source.md §4 · source-R35.
+ * <p>
+ * 프로필 URL 검사 · 기사 링크 규칙과 지금은 조건이 비슷하지만 바뀌는 계기가 달라 따로 둔다.
  */
 public final class FetchUrls {
 
@@ -19,10 +20,7 @@ public final class FetchUrls {
 	private FetchUrls() {
 	}
 
-	/**
-	 * 절대 URI · 스킴 http · https(대소문자 무시) · 호스트 있음 · userinfo 없음 · 포트는 없거나 1~65535. 수집은 인증 정보를
-	 * 보내지 않는다 — {@code http://user:pw@host/} 는 받지 않는다. 범위 밖 포트는 연결할 수 없는 주소다.
-	 */
+	/** 요청할 수 있는 주소인지 본다 — source-R35 */
 	public static boolean isFetchable(URI uri) {
 		String scheme = uri.getScheme();
 		if (!uri.isAbsolute() || scheme == null || uri.getHost() == null || uri.getRawUserInfo() != null) {

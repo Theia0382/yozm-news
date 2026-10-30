@@ -6,12 +6,12 @@ import java.util.Objects;
 import net.yozmnews.source.FetchedArticle;
 
 /**
- * 피드 문서를 정규화한 결과.
+ * 피드 문서를 정규화한 결과
  */
 public sealed interface FeedNormalization {
 
 	/**
-	 * 문서를 읽었다 — 기사가 0건일 수 있다. 항목마다 기사이거나 건너뛴 항목이다.
+	 * 문서를 읽었다 — source-R42.
 	 *
 	 * @param articles 기사 — 문서 순서
 	 * @param skipped 건너뛴 항목 — 문서 순서
@@ -30,7 +30,7 @@ public sealed interface FeedNormalization {
 
 	}
 
-	/** 문서 전체를 읽지 못했다 — 수집 쪽은 영구 실패로 다룬다 */
+	/** 문서 전체를 읽지 못했다 — source-R42 */
 	record Unreadable(DocumentProblem problem) implements FeedNormalization {
 
 		public Unreadable {

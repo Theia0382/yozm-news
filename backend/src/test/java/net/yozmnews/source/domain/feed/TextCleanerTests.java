@@ -8,7 +8,9 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 /**
- * 텍스트 정리 — HTML 제거 · 엔티티 해제 · 공백 정리, 요약문 상한.
+ * 텍스트 정리 — 원문 문자열을 직접 넣어 본다.
+ * <p>
+ * 지키는 규칙: source-R40 · source-R45
  */
 class TextCleanerTests {
 
