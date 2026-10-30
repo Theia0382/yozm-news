@@ -18,7 +18,7 @@
 | [0012](0012-swappable-external-dependencies.md) | 외부 의존성은 교체 가능하게, 개발 환경에는 로컬 대체물을 둔다 | 승인 (Compose 프로필 `prod` 부분은 0021이 대체) |
 | [0013](0013-architecture-patterns.md) | 아키텍처 패턴: 모듈러 모놀리스 + 실용적 헥사고날 | 승인 (이벤트 재처리 시점은 0023이, 상태 머신의 피드 상태는 0040이 대체) |
 | [0014](0014-spring-data-jdbc.md) | 데이터 접근은 Spring Data JDBC + JdbcClient | 승인 |
-| [0015](0015-source-presets-and-collection-profiles.md) | 뉴스 소스는 수집 프로필로 등록하고, 주요 언론사는 프리셋으로 제공한다 | 승인 (프리셋 소스의 운영자 권한은 0024가 대체) |
+| [0015](0015-source-presets-and-collection-profiles.md) | 뉴스 소스는 수집 프로필로 등록하고, 주요 언론사는 프리셋으로 제공한다 | 승인 (프리셋 소스의 운영자 권한은 0024가, 활성화 미리보기의 단위는 0041이 대체) |
 | [0016](0016-containerized-checks.md) | 검사는 컨테이너에서 돌리고, CI 와 로컬이 같은 Compose 정의를 쓴다 | 승인 (검사 서비스 목록은 0035가 대체) |
 | [0017](0017-standard-datasource-env-vars.md) | DB 접속 정보는 Spring 표준 환경 변수로 받는다 | 승인 |
 | [0018](0018-local-profile-compose-connection.md) | 로컬 개발의 DB 접속 정보는 개발용 Compose 컨테이너에서 읽는다 | 승인 |
@@ -44,6 +44,7 @@
 | [0038](0038-container-images-use-major-tags-and-revisit-pinning-at-publication.md) | 컨테이너 이미지는 모두 메이저 태그로 받고, 버전 고정과 갱신 자동화는 이미지를 게시할 때 다시 본다 | 승인 |
 | [0039](0039-code-comments-point-to-owning-docs-and-javadoc-format-checked-by-javac-and-javadoc.md) | 코드 주석은 Spec · ADR · 문서가 덮지 않는 것만 담고 그 위치를 가리키며, Javadoc 형식은 javac 과 javadoc 이 빌드에서 검사한다 | 승인 |
 | [0040](0040-feed-status-stored-in-poll-state-and-rejudged-hourly-by-health-check.md) | 피드 상태는 수집 상태 행에 저장하고, 피드 건강 검사가 매시간 켜진 피드를 다시 판정한다 | 승인 |
+| [0041](0041-activation-gate-previews-a-feed-on-enable-and-judges-by-code-constants.md) | 활성화 관문은 피드를 켤 때 한 번 받아 미리보고, 코드 상수 기준으로 판정한다 | 승인 |
 
 양식:
 

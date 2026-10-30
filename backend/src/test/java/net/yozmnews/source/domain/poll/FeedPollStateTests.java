@@ -287,7 +287,7 @@ class FeedPollStateTests {
 	}
 
 	private static FetchResult.Fetched fetched(List<FetchedArticle> articles, @Nullable URI movedTo) {
-		return new FetchResult.Fetched(new FeedNormalization.Normalized(articles, List.of(), 0), NEW_STATE, DONE,
+		return new FetchResult.Fetched(new FeedNormalization.Normalized(articles, List.of(), 0, 1_000), NEW_STATE, DONE,
 				movedTo);
 	}
 

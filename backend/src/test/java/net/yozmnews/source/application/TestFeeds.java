@@ -1,6 +1,7 @@
 package net.yozmnews.source.application;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -14,13 +15,18 @@ import java.util.stream.Collectors;
 import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import com.github.tomakehurst.wiremock.stubbing.ServeEvent;
+import com.github.tomakehurst.wiremock.stubbing.StubMapping;
 import net.yozmnews.source.FeedId;
 import net.yozmnews.source.SourceId;
+import net.yozmnews.source.domain.gate.FeedActivation;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 /**
  * 수집 통합 테스트의 피드 — WireMock 경로마다 피드 하나인 운영자 프로필 소스를 등록하고 켠다. 피드 URL 은 {@code 127.0.0.1} 이다:
  * {@code localhost} 는 IPv6 루프백으로 풀려 테스트의 허용 대역({@code 127.0.0.1/32}) 밖이 될 수 있다.
+ * <p>
+ * 피드 켜기는 미리보기로 피드를 한 번 받는다. 켜는 동안만 통과 응답을 두고, 켠 뒤 그 응답 · 요청 기록 · 소스의 요청 시작 시각 예약을
+ * 지운다 — 수집 시험의 요청 수 · 수신 시각 · 첫 요청 시각에 미리보기가 섞이지 않는다.
  */
 final class TestFeeds {
 
@@ -64,10 +70,18 @@ final class TestFeeds {
 		List<Long> ids = new ArrayList<>();
 		for (int i = 0; i < paths.length; i++) {
 			long id = new RegistryRows(this.jdbc).feedId(source.value(), "f" + i);
-			this.operations.enableFeed(new FeedId(id));
+			enablePassingPreview(source, new FeedId(id), paths[i]);
 			ids.add(id);
 		}
 		return ids;
+	}
+
+	private void enablePassingPreview(SourceId source, FeedId feed, String path) {
+		StubMapping preview = this.server.stubFor(get(path).willReturn(rss("preview")));
+		assertThat(this.operations.enableFeed(feed)).isInstanceOf(FeedActivation.Activated.class);
+		this.server.removeStub(preview);
+		this.server.removeServeEventsMatching(getRequestedFor(urlEqualTo(path)).build());
+		this.jdbc.sql("delete from source_fetch_slots where source_id = :source").param("source", source.value()).update();
 	}
 
 	int requests(String path) {

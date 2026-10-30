@@ -10,8 +10,8 @@ import net.yozmnews.source.domain.profile.ProfileParse;
 import net.yozmnews.source.domain.profile.ProfileParser;
 import net.yozmnews.source.domain.profile.text.ProfileTextReader;
 
-/** 등록 · 켜기 테스트의 프로필 */
-final class RegistryFixtures {
+/** 등록 · 켜기 테스트의 프로필과 피드 — 다른 패키지의 관문 테스트도 쓴다 */
+public final class RegistryFixtures {
 
 	static final Instant NOW = Instant.parse("2026-10-28T09:00:00Z");
 
@@ -39,7 +39,7 @@ final class RegistryFixtures {
 	static final String UNREVIEWED_TEXT = SOURCE + FEEDS;
 
 	/** 이용조건 검토일이 있는 운영자 프로필 원문 — 피드 one · two */
-	static final String REVIEWED_TEXT = SOURCE + "termsReviewedAt: 2026-10-01\n" + FEEDS;
+	public static final String REVIEWED_TEXT = SOURCE + "termsReviewedAt: 2026-10-01\n" + FEEDS;
 
 	/** 검증에 걸리는 원문 — 필수 항목이 없다 */
 	static final String INVALID_TEXT = "source:\n  name: 이름만\n";
@@ -47,12 +47,17 @@ final class RegistryFixtures {
 	private RegistryFixtures() {
 	}
 
-	static CollectionProfile profile(String text) {
+	public static CollectionProfile profile(String text) {
 		return ((ProfileParse.Parsed) PARSER.parseOperatorProfile(text)).profile();
 	}
 
 	static Preset preset(String key, String text) {
 		return ((PresetParse.Parsed) Preset.parse(new PresetKey(key), text, PARSER)).preset();
+	}
+
+	/** 저장된 피드 하나 — 피드 ID 1, 소스 ID 7 */
+	public static Feed feed(String key, boolean enabled) {
+		return new Feed(1L, 7L, key, enabled, null, 0L, NOW);
 	}
 
 }

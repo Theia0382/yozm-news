@@ -15,10 +15,10 @@ import net.yozmnews.source.domain.profile.text.ProfileTextReader;
 /**
  * 정규화 테스트의 합성 피드({@code src/test/resources/feeds/}) · 운영자 프로필 · 받은 시각.
  */
-final class FeedFixtures {
+public final class FeedFixtures {
 
 	/** 픽스처의 발행 시각보다 뒤 — 미래 검사에 걸리지 않는다 */
-	static final Instant FETCHED_AT = Instant.parse("2026-10-26T00:00:00Z");
+	public static final Instant FETCHED_AT = Instant.parse("2026-10-26T00:00:00Z");
 
 	private static final String BASE_PROFILE = """
 			source:
@@ -45,17 +45,17 @@ final class FeedFixtures {
 	}
 
 	/** @param extra 기본 프로필 뒤에 붙일 최상위 항목(YAML) */
-	static CollectionProfile profile(String extra) {
+	public static CollectionProfile profile(String extra) {
 		ProfileParse parse = new ProfileParser(new ProfileTextReader()).parseOperatorProfile(BASE_PROFILE + extra);
 		assertThat(parse).as("%s", parse).isInstanceOf(ProfileParse.Parsed.class);
 		return ((ProfileParse.Parsed) parse).profile();
 	}
 
-	static FeedNormalization normalize(byte[] body, String profile) {
+	public static FeedNormalization normalize(byte[] body, String profile) {
 		return new FeedNormalizer().normalize(new FeedDocument(body, null, FETCHED_AT), profile(profile));
 	}
 
-	static FeedNormalization.Normalized normalized(String name, String profile) {
+	public static FeedNormalization.Normalized normalized(String name, String profile) {
 		FeedNormalization result = normalize(bytes(name), profile);
 		assertThat(result).as("%s", result).isInstanceOf(FeedNormalization.Normalized.class);
 		return (FeedNormalization.Normalized) result;

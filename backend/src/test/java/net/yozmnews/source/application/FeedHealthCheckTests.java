@@ -1,5 +1,8 @@
 package net.yozmnews.source.application;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlMatching;
+import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 
@@ -8,9 +11,11 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
+import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.source.FeedId;
 import net.yozmnews.source.SourceId;
+import net.yozmnews.source.domain.gate.FeedActivation;
 import net.yozmnews.source.domain.poll.FeedStatus;
 import net.yozmnews.source.domain.poll.FeedStatusRepository;
 import org.jobrunr.scheduling.JobScheduler;
@@ -18,45 +23,54 @@ import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * 피드 건강 검사 — 등록한 소스의 수집 상태를 SQL 로 맞추고, 고정 시각으로 검사를 직접 부른다. 커밋 뒤의 로그를 보므로 테스트를
- * 트랜잭션으로 감싸지 않는다.
+ * 트랜잭션으로 감싸지 않는다. 피드 켜기는 피드를 한 번 받아 미리보므로 피드는 루프백의 WireMock(수집 허용 대역
+ * {@code 127.0.0.1/32})이 통과 응답을 주고, 켠 뒤 그 소스의 요청 시작 시각 예약을 지운다 — 같은 소스의 피드를 잇달아 켜도 기다리지 않는다.
  * <p>
  * 지키는 규칙: source-R30 · source-R31 · source-R47 · source-R49
  */
 @Import({ TestcontainersConfiguration.class, RegistryTestCatalog.class })
 @SpringBootTest
+@TestPropertySource(properties = "yozmnews.collection.allowed-networks=127.0.0.1/32")
 @ExtendWith(OutputCaptureExtension.class)
 class FeedHealthCheckTests {
+
+	@RegisterExtension
+	static WireMockExtension server = WireMockExtension.newInstance()
+		.options(wireMockConfig().dynamicPort().gzipDisabled(true))
+		.build();
 
 	private static final Instant NOW = Instant.parse("2026-10-30T00:00:00Z");
 
 	private static final String FEED_PROFILE = """
 			source:
-			  name: 건강일보%s
-			  homepage: https://health%s.example
+			  name: 건강일보%1$s
+			  homepage: https://health%1$s.example
 			  language: ko
 			termsReviewedAt: 2026-10-01
 			feeds:
 			  - key: a
-			    url: https://health.example/a.xml
+			    url: http://127.0.0.1:%2$d/health%1$s/a.xml
 			    section: 전체
 			  - key: b
-			    url: https://health.example/b.xml
+			    url: http://127.0.0.1:%2$d/health%1$s/b.xml
 			    section: 전체
 			  - key: c
-			    url: https://health.example/c.xml
+			    url: http://127.0.0.1:%2$d/health%1$s/c.xml
 			    section: 전체
 			  - key: d
-			    url: https://health.example/d.xml
+			    url: http://127.0.0.1:%2$d/health%1$s/d.xml
 			    section: 전체
 			""";
 
@@ -89,6 +103,7 @@ class FeedHealthCheckTests {
 		new RegistryRows(this.jdbc).deleteAll();
 		this.clock.set(NOW);
 		this.check = new FeedHealthCheck(this.statuses, this.transaction, this.clock::get);
+		server.stubFor(get(urlMatching("/health.*\\.xml")).willReturn(TestFeeds.rss("h1")));
 	}
 
 	@Test
@@ -184,7 +199,7 @@ class FeedHealthCheckTests {
 		this.clock.set(Instant.parse("2026-10-30T01:00:00Z"));
 		this.check.run();
 		String whileDisabled = status(a);
-		this.operations.enableFeed(a);
+		enable(a, source);
 		String afterEnabling = status(a);
 		this.check.run();
 
@@ -195,7 +210,7 @@ class FeedHealthCheckTests {
 	}
 
 	private SourceId register(String n) {
-		Registration registered = this.registration.registerOperatorProfile(FEED_PROFILE.formatted(n, n));
+		Registration registered = this.registration.registerOperatorProfile(FEED_PROFILE.formatted(n, server.getPort()));
 		assertThat(registered).isInstanceOf(Registration.Registered.class);
 		SourceId source = ((Registration.Registered) registered).id();
 		this.operations.enableSource(source);
@@ -208,8 +223,14 @@ class FeedHealthCheckTests {
 
 	private FeedId enabledFeed(SourceId source, String key) {
 		FeedId feed = feedOf(source, key);
-		this.operations.enableFeed(feed);
+		enable(feed, source);
 		return feed;
+	}
+
+	/** 피드를 켠다 — 미리보기를 통과한 뒤 그 소스의 요청 시작 시각 예약을 지운다 */
+	private void enable(FeedId feed, SourceId source) {
+		assertThat(this.operations.enableFeed(feed)).isInstanceOf(FeedActivation.Activated.class);
+		this.jdbc.sql("delete from source_fetch_slots where source_id = :source").param("source", source.value()).update();
 	}
 
 	/** 수집 상태의 판정 입력 — 새 항목의 발행 시각은 마지막 새 항목 시각과 같게 둔다 */

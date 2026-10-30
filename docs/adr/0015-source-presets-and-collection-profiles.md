@@ -1,6 +1,6 @@
 # ADR-0015: 뉴스 소스는 수집 프로필로 등록하고, 주요 언론사는 프리셋으로 제공한다
 
-- 상태: 승인 (운영자 절에서 프리셋이 있는 소스를 다루는 방식 — 켜고 끄기만 하고 참조 위에 덮어쓴다 — 은 [ADR-0024](0024-collection-profile-yaml-and-preset-reference-or-own-profile.md)가 대체)
+- 상태: 승인 (운영자 절에서 프리셋이 있는 소스를 다루는 방식 — 켜고 끄기만 하고 참조 위에 덮어쓴다 — 은 [ADR-0024](0024-collection-profile-yaml-and-preset-reference-or-own-profile.md)가, 활성화 관문 절의 미리보기 단위(소스와 피드를 켜기 전 → 피드를 켤 때)는 [ADR-0041](0041-activation-gate-previews-a-feed-on-enable-and-judges-by-code-constants.md)이 대체)
 - 날짜: 2026-10-25
 - 관련: [ADR-0001](0001-news-source-rss.md)(운영자 큐레이션 RSS)의 등록 방식을 구체화한다
 
