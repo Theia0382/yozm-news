@@ -104,10 +104,7 @@ public final class PollSchedule {
 	}
 
 	/**
-	 * 예약한 요청 시작.
-	 *
-	 * @param start 요청을 시작할 시각
-	 * @param next 그 소스의 다음 요청 가능 시각
+	 * 예약한 요청 시작
 	 */
 	public record FetchSlot(Instant start, Instant next) {
 

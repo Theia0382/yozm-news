@@ -45,7 +45,6 @@ final class RomeFeed {
 
 	/**
 	 * Rome 항목과 짝지은 항목 요소.
-	 * @param element 짝지은 항목 요소
 	 * @param title Rome 이 읽은 제목(Atom 텍스트 구성을 푼 값)
 	 * @param link Rome 이 고른 기사 링크(RSS 는 link 가 없으면 permalink guid, Atom 은 alternate)
 	 */

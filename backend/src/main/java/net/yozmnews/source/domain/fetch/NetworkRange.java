@@ -11,7 +11,6 @@ import java.util.Objects;
  * 배열을 생성자와 접근자에서 복사한다 — 밖에서 바꿀 수 없다.
  *
  * @param address 대역의 시작 주소(IPv4 4바이트 · IPv6 16바이트) — 접두 뒤 비트는 0
- * @param prefixLength 접두 길이
  */
 public record NetworkRange(byte[] address, int prefixLength) {
 

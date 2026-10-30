@@ -36,7 +36,6 @@ public sealed interface FetchResult {
 	 * 304 — 바뀌지 않았다.
 	 *
 	 * @param state 이전 상태에 304 가 준 값을 반영한 조건부 요청 값
-	 * @param fetchedAt 응답을 받은 시각
 	 * @param movedTo {@link Fetched#movedTo} 와 같다
 	 */
 	record NotModified(FetchState state, Instant fetchedAt, @Nullable URI movedTo) implements FetchResult {
@@ -49,10 +48,7 @@ public sealed interface FetchResult {
 	}
 
 	/**
-	 * 실패했다.
-	 *
-	 * @param failure 이유와 분류
-	 * @param attemptedAt 실패를 확정한 시각
+	 * 실패했다
 	 */
 	record Failed(FetchFailure failure, Instant attemptedAt) implements FetchResult {
 

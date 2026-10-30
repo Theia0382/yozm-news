@@ -18,7 +18,6 @@ public final class PollSlots {
 	/**
 	 * 이번 회차의 예약 시각을 정한다.
 	 * @param lastScheduled 그 소스에서 점유 중인 수집의 마지막 예약 시각 — 없으면 null
-	 * @param count 이번 회차에 예약할 수
 	 * @return 예약 시각 count 개 — 첫 값은 max(now, lastScheduled + 간격), 이후 간격마다
 	 * @throws IllegalArgumentException count 가 음수일 때
 	 */

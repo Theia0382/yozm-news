@@ -23,7 +23,6 @@ public final class RedirectTrail {
 
 	/**
 	 * 홉 상한을 정한다.
-	 * @param maxRedirects 따라갈 수 있는 홉 수
 	 * @throws IllegalArgumentException 음수일 때
 	 */
 	public RedirectTrail(int maxRedirects) {

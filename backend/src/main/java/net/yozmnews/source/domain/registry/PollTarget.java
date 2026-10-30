@@ -31,10 +31,7 @@ public sealed interface PollTarget {
 	}
 
 	/**
-	 * 수집할 수 있다.
-	 *
-	 * @param profile 피드를 읽는 프로필
-	 * @param feed 그 프로필의 피드
+	 * 수집할 수 있다
 	 */
 	record Ready(CollectionProfile profile, FeedSpec feed) implements PollTarget {
 

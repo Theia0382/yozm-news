@@ -10,7 +10,6 @@ import java.util.Objects;
  *
  * @param deadline 한 번의 수집 전체(풀 대기 · 연결 · 응답 · 리다이렉트 홉 · 본문)에 거는 마감
  * @param maxBodyBytes 본문 크기 상한(압축을 푼 바이트)
- * @param maxRedirects 따라갈 리다이렉트 홉 수
  */
 public record FetchLimits(Duration deadline, long maxBodyBytes, int maxRedirects) {
 
