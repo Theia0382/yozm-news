@@ -12,13 +12,8 @@ import org.jspecify.annotations.Nullable;
 /**
  * 들어온 항목 하나 — {@link ArticleFetched} 와 그 항목의 같은 기사 판정 키.
  *
- * @param sourceId 소스
- * @param feedId 항목을 받은 피드
  * @param fetchedAt 받은 수집의 시각 — 처음 발견한 시각 · 그 피드에서 처음 본 시각
- * @param article 정규화된 기사
- * @param canonicalUrl 링크의 정규 URL
- * @param titleKey 제목 비교 키
- * @param guidHash guid 원문의 해시 — guid 가 없으면 없다
+ * @param guidHash guid 원문의 해시 — guid 가 없으면 null
  */
 public record IncomingItem(SourceId sourceId, FeedId feedId, Instant fetchedAt, FetchedArticle article,
 		CanonicalUrl canonicalUrl, TitleKey titleKey, @Nullable KeyHash guidHash) {
@@ -32,7 +27,7 @@ public record IncomingItem(SourceId sourceId, FeedId feedId, Instant fetchedAt, 
 		Objects.requireNonNull(titleKey, "titleKey");
 	}
 
-	/** 판정 키는 여기 한 곳에서 계산한다 */
+	/** 이벤트의 항목으로 판정 키를 계산한다 — 정본 */
 	public static IncomingItem from(ArticleFetched event) {
 		FetchedArticle article = event.article();
 		String guid = article.guid();

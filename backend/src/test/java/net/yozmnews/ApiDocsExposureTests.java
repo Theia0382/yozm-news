@@ -12,7 +12,11 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
 
-/** 명세 엔드포인트는 기본 설정에서 닫혀 있다 — 테스트와 local 프로필만 켠다. */
+/**
+ * 명세 엔드포인트의 기본 노출 — 기본 설정으로 띄운 앱에 HTTP 로 묻는다.
+ * <p>
+ * 지키는 규칙: platform-R6
+ */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class ApiDocsExposureTests {

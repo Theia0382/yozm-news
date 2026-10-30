@@ -18,8 +18,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 /**
- * JobRunr · Modulith 의 기본 설정 — 스키마는 만들지 않고, 대시보드는 끄고, 작업 서버는 켠다. 작업 서버의 worker 수는 호스트와 무관한
- * 설정값이고, 피드 수집 반복 작업이 등록된다.
+ * JobRunr · Modulith 의 설정 — 실제 PostgreSQL 로 띄운 컨텍스트의 설정 값 · 빈 · 작업 테이블을 본다
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest

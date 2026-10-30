@@ -10,6 +10,9 @@ import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+/**
+ * 개발용 Compose 파일의 서비스 이미지 읽기 — 임시 디렉터리에 쓴 Compose 파일로 본다
+ */
 class DevComposeFileTests {
 
 	@TempDir

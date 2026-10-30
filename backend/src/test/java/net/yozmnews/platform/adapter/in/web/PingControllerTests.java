@@ -11,6 +11,11 @@ import org.springframework.http.MediaType;
 import org.springframework.test.json.JsonCompareMode;
 import org.springframework.test.web.servlet.MockMvc;
 
+/**
+ * API 계약 확인 엔드포인트 — 웹 계층만 띄운 MockMvc 로 본다.
+ * <p>
+ * 지키는 규칙: platform-R7
+ */
 @WebMvcTest(PingController.class)
 class PingControllerTests {
 

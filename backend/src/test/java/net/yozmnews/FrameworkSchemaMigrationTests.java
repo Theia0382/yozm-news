@@ -23,9 +23,10 @@ import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 /**
- * 프레임워크 테이블(JobRunr · Modulith 이벤트 발행 레지스트리)의 정본은 Flyway 마이그레이션이다. 마이그레이션은 두
- * 라이브러리의 스키마 원문을 구획으로 나눠 담는다(구획 규칙은 {@code V1__jobrunr_and_event_publication.sql} 머리 주석).
- * 라이브러리를 올려 원문이 바뀌거나 새 스크립트가 생기면 여기서 실패한다.
+ * 프레임워크 테이블(JobRunr · Modulith 이벤트 발행 레지스트리)의 마이그레이션 — 실제 PostgreSQL 의 빈 DB 에 적용하고, 마이그레이션의
+ * 구획을 두 라이브러리의 스키마 원문과 대조한다. 라이브러리를 올려 원문이 바뀌거나 새 스크립트가 생기면 실패한다.
+ * <p>
+ * 구획 규칙은 {@code V1__jobrunr_and_event_publication.sql} 머리 주석, 결정은 ADR-0023 에 있다.
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest

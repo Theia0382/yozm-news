@@ -1,9 +1,7 @@
 package net.yozmnews.article;
 
 /**
- * 기사 식별자 — {@code articles.id}.
- *
- * @param value 1 이상
+ * 기사 식별자 — docs/specs/article.md §3
  */
 public record ArticleId(long value) {
 

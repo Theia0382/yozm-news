@@ -5,7 +5,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 
 /**
- * 제목 비교 키 — 공백 · 전각/반각 · 대소문자만 맞추고 말머리 · 구두점은 남긴다.
+ * 제목 비교 키 — 기대값은 손으로 적은 리터럴이다.
+ * <p>
+ * 지키는 규칙: article-R2
  */
 class TitleKeyTests {
 

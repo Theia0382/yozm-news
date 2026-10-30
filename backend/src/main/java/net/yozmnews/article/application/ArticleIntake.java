@@ -15,9 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 들어온 항목 하나를 같은 기사 판정에 따라 저장한다. 같은 소스의 판정은 소스 단위 잠금으로 직렬화하고, 다시 불러도 결과가
- * 같다 — 다시 온 항목은 처음과 같은 기사에 걸리고(새 기사 · URL 로 붙은 항목은 그 URL, 제목으로 붙은 항목은 자기 엔트리의
- * 항목 URL, guid 로 붙은 항목은 바뀌지 않은 guid 후보), 엔트리는 기사 · 피드마다 한 번만 기록한다.
+ * 들어온 항목 하나의 판정 · 저장 · 기록 — docs/specs/article.md §4 · article-R7 ~ article-R11
  */
 @Service
 public class ArticleIntake {
@@ -33,7 +31,6 @@ public class ArticleIntake {
 		this.events = events;
 	}
 
-	/** 새 기사를 저장했을 때만 이 트랜잭션 안에서 {@link ArticleStored} 를 발행한다. */
 	@Transactional
 	public void accept(ArticleFetched event) {
 		IncomingItem item = IncomingItem.from(event);
@@ -48,7 +45,7 @@ public class ArticleIntake {
 	private Placement store(IncomingItem item, boolean guidReused) {
 		ArticleId stored = this.repository.insertIfAbsent(item).orElse(null);
 		if (stored == null) {
-			// 다른 소스가 같은 정규 URL 의 기사를 먼저 저장했다 — 소스 단위 잠금 밖의 경합이다
+			// 다른 소스가 같은 정규 URL 의 기사를 먼저 저장했다 — article-R9
 			ArticleId existing = this.repository.findByUrlHash(item.canonicalUrl().hash())
 				.orElseThrow(() -> new IllegalStateException("정규 URL 충돌 뒤 기사가 없다: " + item.canonicalUrl()));
 			return new Placement(existing, MatchKind.URL);

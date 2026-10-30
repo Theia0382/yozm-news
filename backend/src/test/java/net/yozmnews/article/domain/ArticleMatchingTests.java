@@ -16,7 +16,9 @@ import net.yozmnews.source.SourceId;
 import org.junit.jupiter.api.Test;
 
 /**
- * 같은 기사 판정 순서 · 시간 창 · 동률. 표에 적지 않은 후보는 비어 있다. 기준 발행 시각은 {@code 2026-10-28T00:00:00Z}.
+ * 같은 기사 판정 — 표에 적지 않은 후보는 비어 있다. 기준 발행 시각은 {@code 2026-10-28T00:00:00Z} 다.
+ * <p>
+ * 지키는 규칙: article-R2 · article-R3 · article-R4 · article-R5
  */
 class ArticleMatchingTests {
 

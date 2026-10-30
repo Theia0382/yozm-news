@@ -6,7 +6,7 @@ import net.yozmnews.article.ArticleId;
 import net.yozmnews.source.SourceId;
 
 /**
- * 기사 저장소 — 같은 기사 판정의 후보 조회와 기록. 기사는 처음 저장한 값이 남고 갱신하지 않는다.
+ * 기사 저장소 — docs/specs/article.md §4 · article-R7 · article-R8 · article-R9
  */
 public interface ArticleRepository {
 
@@ -15,15 +15,18 @@ public interface ArticleRepository {
 
 	MatchCandidates findCandidates(IncomingItem item);
 
-	/** 새 기사 — 같은 정규 URL 의 기사가 이미 있으면(다른 소스가 먼저 저장) 비어 있다 */
+	/**
+	 * 새 기사를 넣는다.
+	 * @return 넣은 기사 — 같은 정규 URL 의 기사가 이미 있으면(다른 소스가 먼저 저장) 비어 있다
+	 */
 	Optional<ArticleId> insertIfAbsent(IncomingItem item);
 
-	/** 정규 URL 해시로 기사 — {@link #insertIfAbsent} 가 비었을 때 다시 읽는다 */
+	/** 정규 URL 해시로 기사를 찾는다 — {@link #insertIfAbsent} 가 비었을 때 다시 읽는다 */
 	Optional<ArticleId> findByUrlHash(KeyHash urlHash);
 
 	/**
-	 * 그 피드의 항목을 기사에 기록한다 — 기사 · 피드마다 한 번이고, 이미 있으면 아무것도 바꾸지 않는다.
-	 * @return 새로 기록했는지
+	 * 그 피드의 항목을 기사의 엔트리로 기록한다.
+	 * @return 새로 기록했으면 true, 그 기사 · 피드의 엔트리가 이미 있으면 false
 	 */
 	boolean insertEntryIfAbsent(ArticleId articleId, IncomingItem item, MatchKind kind);
 

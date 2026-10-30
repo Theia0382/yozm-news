@@ -14,6 +14,8 @@ import org.junit.jupiter.api.Test;
 
 /**
  * 들어온 항목의 판정 키 — 기대값은 손으로 적은 리터럴 · {@code sha256sum} 값이다.
+ * <p>
+ * 지키는 규칙: article-R1 · article-R2
  */
 class IncomingItemTests {
 

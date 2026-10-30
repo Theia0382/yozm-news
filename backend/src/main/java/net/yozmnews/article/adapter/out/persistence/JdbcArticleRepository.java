@@ -27,7 +27,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
 /**
- * {@link ArticleRepository} 의 PostgreSQL 구현 — 쓰기는 {@code INSERT … ON CONFLICT} 뿐이고 갱신하지 않는다.
+ * {@link ArticleRepository} 의 PostgreSQL 구현 — docs/specs/article.md §4
  */
 @Repository
 class JdbcArticleRepository implements ArticleRepository {
