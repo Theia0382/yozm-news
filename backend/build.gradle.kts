@@ -32,8 +32,7 @@ dependencies {
 	implementation("org.springframework.modulith:spring-modulith-starter-core")
 	implementation("org.springframework.modulith:spring-modulith-starter-jdbc")
 	implementation("org.springdoc:springdoc-openapi-starter-webmvc-api:3.2.0")
-	// 수집 프로필 · 프리셋 파일(YAML 1.2) 읽기 — 이벤트 API 로 키 · 값의 태그 · 앵커 · 별칭을 그대로 본다.
-	// Spring Boot 가 버전을 관리하지 않아 직접 고정한다
+	// 수집 프로필 · 프리셋 파일(YAML 1.2) 읽기 — Spring Boot 가 버전을 관리하지 않아 직접 고정한다
 	implementation("org.snakeyaml:snakeyaml-engine:3.0.1")
 	// 피드 XML 문서 — 파서는 정규화가 직접 구성한다. 버전은 Spring Boot 의존성 관리
 	implementation("org.jdom:jdom2")
@@ -41,7 +40,7 @@ dependencies {
 	implementation("org.jsoup:jsoup:1.23.2")
 	// RSS · Atom 형식 판별과 제목 · 링크. Spring Boot 가 버전을 관리하지 않아 직접 고정한다
 	implementation("com.rometools:rome:2.1.0")
-	// 피드 수집 HTTP 클라이언트 — 연결 관리자에 꽂는 이름 해석기로 연결 주소를 검사한다. 버전은 Spring Boot 의존성 관리
+	// 피드 수집 HTTP 클라이언트 — 버전은 Spring Boot 의존성 관리
 	implementation("org.apache.httpcomponents.client5:httpclient5")
 	developmentOnly("org.springframework.boot:spring-boot-docker-compose")
 	runtimeOnly("org.postgresql:postgresql")
@@ -60,7 +59,7 @@ dependencies {
 	testImplementation("org.testcontainers:testcontainers-junit-jupiter")
 	testImplementation("org.testcontainers:testcontainers-postgresql")
 	// 외부 HTTP 대체 — Jetty · Jackson 을 안에 숨긴 판이라 Spring Boot 가 관리하는 판과 부딪히지 않는다. Spring Boot 가
-	// 버전을 관리하지 않아 직접 고정한다(4.x 는 아직 베타)
+	// 버전을 관리하지 않아 직접 고정한다
 	testImplementation("org.wiremock:wiremock-standalone:3.13.2")
 	// DevComposeFile 이 직접 쓴다 — 버전은 Spring Boot 의존성 관리
 	testImplementation("org.yaml:snakeyaml")
@@ -73,8 +72,7 @@ dependencyManagement {
 	}
 }
 
-// 개발용 Compose 파일 — 테스트의 PostgreSQL 이미지 정본(DevComposeFile).
-// 경로를 시스템 속성으로 넘기고, 파일이 바뀌면 테스트가 다시 돌도록 입력으로 등록한다.
+// 개발용 Compose 파일 — 테스트가 PostgreSQL 이미지를 읽는다. 결선은 docs/development/infrastructure.md "테스트가 저장소 파일을 읽는 결선"
 val devComposeFile = layout.projectDirectory.file("../compose.yaml")
 val devComposeFileProperty = "yozmnews.dev-compose-file"
 
@@ -88,9 +86,8 @@ tasks.named<JavaExec>("bootTestRun") {
 	systemProperty(devComposeFileProperty, devComposeFile.asFile.path)
 }
 
-// 화면용 API 명세의 정본(저장소 루트 api/openapi.json) — OpenApiSpecTests 가 현재 코드의 명세와 비교한다.
-// 파일이 바뀌면 테스트가 다시 돌도록 입력으로 등록하고(파일이 없어도 구성은 되고 테스트가 안내와 함께 실패한다),
-// updateOpenApiSpec 은 같은 테스트로 파일을 다시 쓴다.
+// 화면용 API 명세(저장소 루트 api/openapi.json) — 결선은 docs/development/infrastructure.md "테스트가 저장소 파일을 읽는 결선".
+// 파일이 없어도 구성은 되고 테스트가 안내와 함께 실패하도록 inputs.files 로 등록한다. updateOpenApiSpec 은 같은 테스트로 파일을 다시 쓴다.
 val openApiSpecFile = layout.projectDirectory.file("../api/openapi.json")
 val openApiSpecFileProperty = "yozmnews.openapi-spec-file"
 
@@ -114,10 +111,11 @@ tasks.register<Test>("updateOpenApiSpec") {
 	outputs.upToDateWhen { false }
 }
 
-// Javadoc 형식 검사 — 깨진 참조 · HTML · 태그로 빌드가 실패한다. 누락은 보지 않는다(CONTRIBUTING.md §7).
-// javac 은 컴파일에서, javadoc 은 check 에서 main · 테스트 소스를 본다.
+// Javadoc 형식 검사 — 누락은 보지 않는다. 단계마다 잡는 것은 docs/development/infrastructure.md "불변식과 지키는 장치"
+val doclint = "Xdoclint:all,-missing"
+
 tasks.withType<JavaCompile>().configureEach {
-	options.compilerArgs.add("-Xdoclint:all,-missing")
+	options.compilerArgs.add("-$doclint")
 }
 
 val javadocTest = tasks.register<Javadoc>("javadocTest") {
@@ -131,7 +129,7 @@ val javadocTest = tasks.register<Javadoc>("javadocTest") {
 tasks.withType<Javadoc>().configureEach {
 	(options as StandardJavadocDocletOptions).apply {
 		encoding = "UTF-8"
-		addBooleanOption("Xdoclint:all,-missing", true)
+		addBooleanOption(doclint, true)
 		addBooleanOption("Werror", true)
 		addBooleanOption("private", true)
 	}

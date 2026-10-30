@@ -1,6 +1,6 @@
 # 배포 구성 — proxy · app · postgres. 실행 방법은 docs/operations/deployment.md "배포 구성 실행".
-# 운영 값은 이 디렉터리의 .env 에서 받는다(.env.example). 개발용 구성은 저장소 루트 compose.yaml(프로필 dev).
-# 프로젝트 이름을 고정한다 — 디렉터리 이름이 바뀌어도 같은 DB 볼륨을 쓰고, checkout 디렉터리 이름을 따르는 개발용 프로젝트와 겹치지 않는다.
+# 운영 값은 이 디렉터리의 .env 에서 받는다 — docs/operations/configuration.md
+# 프로젝트 이름을 고정한다 — docs/operations/deployment.md "배포 구성 실행"
 name: yozmnews-deploy
 
 # DB 이름 · 계정의 정의는 이 한 곳이다 — postgres 와 app 이 함께 읽는다.
@@ -11,7 +11,7 @@ x-database: &database
 
 services:
   postgres:
-    # 이미지 · healthcheck · 볼륨 경로는 개발용 정의를 물려받는다 — PostgreSQL 이미지의 정본은 저장소 루트 compose.yaml 이다
+    # 이미지 · healthcheck · 볼륨 경로는 개발용 정의를 물려받는다 — docs/development/infrastructure.md "PostgreSQL 이미지 정본"
     extends:
       file: ../compose.yaml
       service: postgres
@@ -33,11 +33,11 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/$${POSTGRES_DB}
       SPRING_DATASOURCE_USERNAME: $${POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: $${POSTGRES_PASSWORD}
-      # 수집 요청의 User-Agent 에 밝히는 운영자 연락처 — 없으면 앱이 뜨지 않는다
+      # 운영자 연락처(필수) — docs/operations/configuration.md "피드 수집"
       YOZMNEWS_COLLECTION_CONTACT: ${YOZMNEWS_COLLECTION_CONTACT:?YOZMNEWS_COLLECTION_CONTACT 를 deploy/.env 에 적는다}
-      # 수집이 연결해도 되는 내부 대역(CIDR, 쉼표 구분) — 비우면 내부 주소를 모두 막는다
+      # 수집이 연결해도 되는 내부 대역 — docs/operations/configuration.md "피드 수집"
       YOZMNEWS_COLLECTION_ALLOWED_NETWORKS: ${YOZMNEWS_COLLECTION_ALLOWED_NETWORKS:-}
-      # 동시에 실행하는 백그라운드 작업 수 — 값을 적지 않는다: deploy/.env 에 있을 때만 넘기고, 없으면 앱의 기본값을 쓴다
+      # 작업 서버 동시 실행 수 — 기본값을 적지 않는다(deploy/.env 에 있을 때만 넘긴다). docs/operations/configuration.md "백그라운드 작업"
       YOZMNEWS_JOB_WORKERS:
     depends_on:
       postgres:
@@ -59,7 +59,7 @@ services:
       dockerfile: frontend/Dockerfile
       target: proxy
     ports:
-      # 이 호스트에서만 접속하는 것이 기본이다. Tunnel 없이 직접 공개할 때만 .env 로 주소를 바꾼다
+      # 기본은 이 호스트에서만 접속 — docs/operations/configuration.md "공개"
       - "${PROXY_HOST_ADDRESS:-127.0.0.1}:${PROXY_HOST_PORT:-8000}:8080"
     depends_on:
       app:
