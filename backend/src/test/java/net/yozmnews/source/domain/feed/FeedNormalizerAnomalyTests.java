@@ -176,7 +176,23 @@ class FeedNormalizerAnomalyTests {
 					.getBytes(StandardCharsets.UTF_8),
 				"");
 
-		assertThat(result).isEqualTo(new FeedNormalization.Normalized(List.of(), List.of(), 0));
+		assertThat(result).isEqualTo(new FeedNormalization.Normalized(List.of(), List.of(), 0, 122));
+	}
+
+	@Test
+	void countsDecodedCodePointsWithoutTheByteOrderMark() {
+		byte[] text = "<rss version=\"2.0\"><channel><title>한\uD83D\uDE00</title><link>https://alpha.example</link><description>d</description></channel></rss>"
+			.getBytes(StandardCharsets.UTF_8);
+		byte[] body = new byte[3 + text.length];
+		body[0] = (byte) 0xEF;
+		body[1] = (byte) 0xBB;
+		body[2] = (byte) 0xBF;
+		System.arraycopy(text, 0, body, 3, text.length);
+
+		FeedNormalization result = FeedFixtures.normalize(body, "");
+
+		// readsAnEmptyFeed 의 122자에서 제목 t(1자)를 한 · U+1F600(코드 포인트 2, UTF-16 단위 3)으로 바꿨다 — BOM 은 세지 않는다
+		assertThat(result).isEqualTo(new FeedNormalization.Normalized(List.of(), List.of(), 0, 123));
 	}
 
 	private static FetchedArticle only(FeedNormalization.Normalized normalized) {

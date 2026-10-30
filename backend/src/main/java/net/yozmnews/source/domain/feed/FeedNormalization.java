@@ -16,15 +16,21 @@ public sealed interface FeedNormalization {
 	 * @param articles 기사 — 문서 순서
 	 * @param skipped 건너뛴 항목 — 문서 순서
 	 * @param replacedCharacters 읽을 수 없는 바이트를 U+FFFD 로 바꾼 자리 수
+	 * @param decodedCharacters 받은 바이트를 문자로 읽은 결과의 코드 포인트 수 — 사전 보정 전, BOM 제외
 	 */
-	record Normalized(List<FetchedArticle> articles, List<SkippedItem> skipped, int replacedCharacters)
-			implements FeedNormalization {
+	record Normalized(List<FetchedArticle> articles, List<SkippedItem> skipped, int replacedCharacters,
+			int decodedCharacters) implements FeedNormalization {
 
+		/**
+		 * 결과를 만든다.
+		 * @throws IllegalArgumentException 대체한 자리 수가 0 보다 작거나 읽은 문자 수보다 클 때
+		 */
 		public Normalized {
 			articles = List.copyOf(articles);
 			skipped = List.copyOf(skipped);
-			if (replacedCharacters < 0) {
-				throw new IllegalArgumentException("대체한 자리 수는 0 이상이다: " + replacedCharacters);
+			if (replacedCharacters < 0 || replacedCharacters > decodedCharacters) {
+				throw new IllegalArgumentException(
+						"대체한 자리 수는 0 이상, 읽은 문자 수 이하다: " + replacedCharacters + " / " + decodedCharacters);
 			}
 		}
 

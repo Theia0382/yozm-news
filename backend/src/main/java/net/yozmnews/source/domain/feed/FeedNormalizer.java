@@ -22,14 +22,15 @@ public final class FeedNormalizer {
 				case FeedXmlReader.Read.Failed failed -> new FeedNormalization.Unreadable(failed.problem());
 				case FeedXmlReader.Read.Parsed parsed -> switch (RomeFeed.build(parsed.document())) {
 					case RomeFeed.Built.Failed failed -> new FeedNormalization.Unreadable(failed.problem());
-					case RomeFeed.Built.Feed feed -> items(feed, document, profile, decoded.replacedCharacters());
+					case RomeFeed.Built.Feed feed -> items(feed, document, profile, decoded.replacedCharacters(),
+							decoded.text().codePointCount(0, decoded.text().length()));
 				};
 			};
 		};
 	}
 
 	private static FeedNormalization.Normalized items(RomeFeed.Built.Feed feed, FeedDocument document,
-			CollectionProfile profile, int replacedCharacters) {
+			CollectionProfile profile, int replacedCharacters, int decodedCharacters) {
 		List<FetchedArticle> articles = new ArrayList<>();
 		List<SkippedItem> skipped = new ArrayList<>();
 		for (int i = 0; i < feed.entries().size(); i++) {
@@ -38,7 +39,7 @@ public final class FeedNormalizer {
 				case ItemNormalizer.Outcome.Skipped skip -> skipped.add(new SkippedItem(i + 1, skip.reason()));
 			}
 		}
-		return new FeedNormalization.Normalized(articles, skipped, replacedCharacters);
+		return new FeedNormalization.Normalized(articles, skipped, replacedCharacters, decodedCharacters);
 	}
 
 }
