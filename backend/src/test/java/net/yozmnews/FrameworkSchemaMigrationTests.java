@@ -48,7 +48,7 @@ class FrameworkSchemaMigrationTests {
 		assertThat(this.jdbc.sql("""
 				select version from flyway_schema_history where success order by installed_rank
 				""").query(String.class).list())
-			.containsExactly("1", "2", "3");
+			.containsExactly("1", "2", "3", "4");
 		assertThat(this.jdbc.sql("""
 				select table_name from information_schema.tables
 				where table_schema = 'public' and table_type = 'BASE TABLE'
