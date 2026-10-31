@@ -94,7 +94,7 @@ function PresetList({ presets }: { presets: PresetResponse[] }) {
               </p>
             </div>
             {preset.sourceId !== null ? (
-              <span className="text-sm">등록됨 (소스 {preset.sourceId})</span>
+              <span className="text-sm">등록됨</span>
             ) : (
               <Button
                 variant="outline"
@@ -143,7 +143,7 @@ function SourceCard({
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h3 className="font-semibold">
-            {source.name ?? `소스 ${source.id}`}{" "}
+            {source.name ?? "이름을 읽지 못한 소스"}{" "}
             <span className="text-sm font-normal text-muted-foreground">
               {source.presetKey !== null
                 ? `프리셋 ${source.presetKey}`
@@ -253,7 +253,16 @@ function FeedRow({ feed, minimum }: { feed: FeedResponse; minimum: number }) {
         <Button
           variant="outline"
           disabled={busy}
-          onClick={() => (feed.enabled ? disable.mutate() : enable.mutate())}
+          onClick={() => {
+            // 행은 마지막 동작의 결과만 보인다 — 다른 동작의 결과 · 오류를 지운다
+            if (feed.enabled) {
+              enable.reset();
+              disable.mutate();
+            } else {
+              disable.reset();
+              enable.mutate();
+            }
+          }}
         >
           {enable.isPending
             ? "받아서 확인하는 중…"

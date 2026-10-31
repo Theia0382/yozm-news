@@ -84,6 +84,19 @@ const SOURCES: Schemas["SourceListResponse"] = {
   ],
 };
 
+/** 피드 one 의 켜짐만 바꾼 소스 목록 */
+function withFeedOne(enabled: boolean): Schemas["SourceListResponse"] {
+  return {
+    ...SOURCES,
+    sources: SOURCES.sources.map((source) => ({
+      ...source,
+      feeds: source.feeds.map((feed) =>
+        feed.feedKey === "one" ? { ...feed, enabled } : feed,
+      ),
+    })),
+  };
+}
+
 function renderPage(extra: Record<string, Handler> = {}) {
   const server = fakeServer({
     "GET /api/admin/presets": () => json(PRESETS),
@@ -122,7 +135,9 @@ describe("SourcesPage", () => {
   it("프리셋은 등록 여부를, 가리킬 곳을 잃은 소스 · 피드는 그 사실을 보인다", async () => {
     renderPage();
 
-    expect(await screen.findByText("등록됨 (소스 3)")).toBeInTheDocument();
+    expect(
+      await screen.findByText("등록됨", { exact: true }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "등록" })).toBeInTheDocument();
     expect(await screen.findByText("one")).toBeInTheDocument();
     expect(
@@ -135,8 +150,13 @@ describe("SourcesPage", () => {
         "프로필에 없는 피드입니다(수집하지 않습니다)",
       ),
     ).toBeInTheDocument();
-    const vanished = screen.getByRole("heading", { name: /^소스 4/ });
-    expect(vanished).toHaveTextContent("소스 4 프리셋 vanished");
+    const vanished = screen.getByRole("heading", {
+      name: /^이름을 읽지 못한 소스/,
+    });
+    expect(vanished).toHaveTextContent("이름을 읽지 못한 소스 프리셋 vanished");
+    expect(
+      screen.getByRole("heading", { name: /^멀티일보/ }),
+    ).toBeInTheDocument();
     expect(
       screen.getByText("참조하던 프리셋이 사라졌습니다"),
     ).toBeInTheDocument();
@@ -214,5 +234,79 @@ describe("SourcesPage", () => {
           .map((r) => r.body),
       ).toEqual(['{"minutes":10}', '{"minutes":null}']),
     );
+  });
+
+  it("피드를 끄면 그 행의 켜기 결과를 지운다", async () => {
+    const user = userEvent.setup();
+    let enabled = false;
+    renderPage({
+      "GET /api/admin/sources": () => json(withFeedOne(enabled)),
+      "POST /api/admin/feeds/11/enable": () => {
+        enabled = true;
+        return json({
+          result: "ENABLED",
+          preview: null,
+          shortfalls: [],
+          refusal: null,
+          failure: null,
+        });
+      },
+      "POST /api/admin/feeds/11/disable": () => {
+        enabled = false;
+        return noContent();
+      },
+    });
+    await screen.findByText("one");
+
+    await user.click(
+      within(feedRow("one")).getByRole("button", { name: "켜기" }),
+    );
+    expect(
+      await within(feedRow("one")).findByText("켰습니다."),
+    ).toBeInTheDocument();
+    await user.click(
+      await within(feedRow("one")).findByRole("button", { name: "끄기" }),
+    );
+
+    expect(
+      await within(feedRow("one")).findByRole("button", { name: "켜기" }),
+    ).toBeInTheDocument();
+    expect(within(feedRow("one")).getByText("꺼짐")).toBeInTheDocument();
+    expect(within(feedRow("one")).queryByText("켰습니다.")).toBeNull();
+  });
+
+  it("켜기가 실패한 뒤 피드를 끄면 그 실패 문구를 지운다", async () => {
+    const user = userEvent.setup();
+    let enabled = false;
+    renderPage({
+      "GET /api/admin/sources": () => json(withFeedOne(enabled)),
+      // 다른 요청이 먼저 켜서 이 요청은 동시 수정으로 실패한다
+      "POST /api/admin/feeds/11/enable": () => {
+        enabled = true;
+        return problem(409, "다른 요청이 먼저 바꿨다");
+      },
+      "POST /api/admin/feeds/11/disable": () => {
+        enabled = false;
+        return noContent();
+      },
+    });
+    await screen.findByText("one");
+
+    await user.click(
+      within(feedRow("one")).getByRole("button", { name: "켜기" }),
+    );
+    expect(
+      await within(feedRow("one")).findByText("다른 요청이 먼저 바꿨다"),
+    ).toBeInTheDocument();
+    await user.click(
+      await within(feedRow("one")).findByRole("button", { name: "끄기" }),
+    );
+
+    expect(
+      await within(feedRow("one")).findByRole("button", { name: "켜기" }),
+    ).toBeInTheDocument();
+    expect(
+      within(feedRow("one")).queryByText("다른 요청이 먼저 바꿨다"),
+    ).toBeNull();
   });
 });
