@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
 
+import net.yozmnews.source.ActivationRefusal;
 import net.yozmnews.source.SourceId;
 import net.yozmnews.source.domain.profile.PollInterval;
 import net.yozmnews.source.domain.profile.PresetKey;

@@ -8,6 +8,7 @@ import com.rometools.rome.feed.synd.SyndEntry;
 import com.rometools.rome.feed.synd.SyndFeed;
 import com.rometools.rome.io.FeedException;
 import com.rometools.rome.io.SyndFeedInput;
+import net.yozmnews.source.DocumentProblemKind;
 import org.jdom2.Document;
 import org.jdom2.Element;
 import org.jspecify.annotations.Nullable;

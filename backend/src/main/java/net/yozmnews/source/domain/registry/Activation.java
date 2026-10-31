@@ -2,6 +2,8 @@ package net.yozmnews.source.domain.registry;
 
 import java.util.Objects;
 
+import net.yozmnews.source.ActivationRefusal;
+
 /**
  * 켜기의 결과
  */

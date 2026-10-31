@@ -11,6 +11,7 @@ import java.util.Set;
 import java.util.function.Function;
 
 import net.yozmnews.source.FetchedArticle;
+import net.yozmnews.source.SkipReason;
 import net.yozmnews.source.domain.profile.CollectionProfile;
 import net.yozmnews.source.domain.profile.ItemField;
 import org.jdom2.Element;

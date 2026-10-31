@@ -1,4 +1,4 @@
-package net.yozmnews.source.domain.fetch;
+package net.yozmnews.source;
 
 /**
  * 수집 실패의 분류 — 다음 수집 일정과 피드 상태가 쓴다

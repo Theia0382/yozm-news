@@ -2,6 +2,7 @@ package net.yozmnews.source.domain.feed;
 
 import java.util.Objects;
 
+import net.yozmnews.source.DocumentProblemKind;
 import org.jspecify.annotations.Nullable;
 
 /**

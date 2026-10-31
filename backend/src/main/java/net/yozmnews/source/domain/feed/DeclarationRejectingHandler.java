@@ -1,5 +1,6 @@
 package net.yozmnews.source.domain.feed;
 
+import net.yozmnews.source.DocumentProblemKind;
 import org.jdom2.JDOMFactory;
 import org.jdom2.input.sax.SAXHandler;
 import org.jspecify.annotations.Nullable;

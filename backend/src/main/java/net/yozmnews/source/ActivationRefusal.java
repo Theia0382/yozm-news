@@ -1,4 +1,4 @@
-package net.yozmnews.source.domain.registry;
+package net.yozmnews.source;
 
 /**
  * 소스 · 피드를 켜지 않은 이유 — 피드를 수집하지 않는 이유이기도 하다

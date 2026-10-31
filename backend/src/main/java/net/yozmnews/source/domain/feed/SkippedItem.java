@@ -2,6 +2,8 @@ package net.yozmnews.source.domain.feed;
 
 import java.util.Objects;
 
+import net.yozmnews.source.SkipReason;
+
 /**
  * 기사로 넘기지 않은 피드 항목.
  *

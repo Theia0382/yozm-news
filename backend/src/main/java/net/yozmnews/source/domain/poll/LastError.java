@@ -3,8 +3,8 @@ package net.yozmnews.source.domain.poll;
 import java.time.Instant;
 import java.util.Objects;
 
+import net.yozmnews.source.FetchFailureReason;
 import net.yozmnews.source.domain.fetch.FetchFailure;
-import net.yozmnews.source.domain.fetch.FetchFailureReason;
 import org.jspecify.annotations.Nullable;
 
 /**

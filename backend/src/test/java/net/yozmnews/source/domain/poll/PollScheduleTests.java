@@ -7,7 +7,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 
-import net.yozmnews.source.domain.fetch.FailurePermanence;
+import net.yozmnews.source.FailurePermanence;
 import net.yozmnews.source.domain.profile.PollInterval;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;

@@ -2,6 +2,8 @@ package net.yozmnews.source.domain.fetch;
 
 import java.util.Objects;
 
+import net.yozmnews.source.FetchFailureReason;
+
 /**
  * 응답 상태 코드를 어떻게 다룰지 — {@link StatusRule#classify} 가 정한다
  */

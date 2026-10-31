@@ -10,6 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.List;
 
+import net.yozmnews.source.DocumentProblemKind;
 import net.yozmnews.source.FetchedArticle;
 import org.junit.jupiter.api.Test;
 

@@ -13,6 +13,7 @@ import java.util.List;
 
 import javax.xml.parsers.SAXParserFactory;
 
+import net.yozmnews.source.DocumentProblemKind;
 import net.yozmnews.source.domain.profile.PreCorrection;
 import org.jdom2.Document;
 import org.jdom2.input.JDOMParseException;

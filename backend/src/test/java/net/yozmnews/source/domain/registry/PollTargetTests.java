@@ -8,6 +8,7 @@ import java.net.URI;
 import java.time.Duration;
 import java.util.List;
 
+import net.yozmnews.source.ActivationRefusal;
 import net.yozmnews.source.domain.profile.CollectionProfile;
 import net.yozmnews.source.domain.profile.FeedKey;
 import net.yozmnews.source.domain.profile.PollInterval;

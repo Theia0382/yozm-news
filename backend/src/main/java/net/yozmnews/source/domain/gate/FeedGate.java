@@ -4,10 +4,10 @@ import java.net.URI;
 import java.util.List;
 import java.util.Objects;
 
+import net.yozmnews.source.FetchFailureReason;
 import net.yozmnews.source.SourceId;
 import net.yozmnews.source.domain.fetch.FeedDescriptor;
 import net.yozmnews.source.domain.fetch.FetchFailure;
-import net.yozmnews.source.domain.fetch.FetchFailureReason;
 import net.yozmnews.source.domain.fetch.FetchResult;
 import net.yozmnews.source.domain.profile.CollectionProfile;
 import net.yozmnews.source.domain.registry.Activation;

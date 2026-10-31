@@ -5,9 +5,9 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 
+import net.yozmnews.source.FailurePermanence;
 import net.yozmnews.source.FeedId;
 import net.yozmnews.source.FetchedArticle;
-import net.yozmnews.source.domain.fetch.FailurePermanence;
 import net.yozmnews.source.domain.fetch.FetchResult;
 import net.yozmnews.source.domain.fetch.FetchState;
 import net.yozmnews.source.domain.profile.PollInterval;

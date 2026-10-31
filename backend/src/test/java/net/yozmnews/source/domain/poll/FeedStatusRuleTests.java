@@ -8,8 +8,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 import net.yozmnews.source.FeedId;
+import net.yozmnews.source.FetchFailureReason;
 import net.yozmnews.source.domain.fetch.FetchFailure;
-import net.yozmnews.source.domain.fetch.FetchFailureReason;
 import net.yozmnews.source.domain.fetch.FetchResult;
 import net.yozmnews.source.domain.fetch.FetchState;
 import net.yozmnews.source.domain.profile.PollInterval;

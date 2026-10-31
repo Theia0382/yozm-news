@@ -1,4 +1,4 @@
-package net.yozmnews.source.domain.feed;
+package net.yozmnews.source;
 
 /**
  * 피드 문서 전체를 읽지 못한 이유

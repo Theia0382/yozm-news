@@ -4,8 +4,8 @@ import java.net.URI;
 import java.util.List;
 import java.util.Objects;
 
+import net.yozmnews.source.ActivationRefusal;
 import net.yozmnews.source.domain.fetch.FetchFailure;
-import net.yozmnews.source.domain.registry.ActivationRefusal;
 import org.jspecify.annotations.Nullable;
 
 /**
