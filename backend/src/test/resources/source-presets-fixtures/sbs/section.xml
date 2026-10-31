@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 합성 — 실제 피드가 아니다. SBS 섹션 피드의 구조: 짧은 description 과 본문 전체가 든 content:encoded, CDATA 안 HTML 이름 참조(description 의 &sim; · content:encoded 의 &nbsp;), 줄바꿈 · 탭이 든 author, 카테고리 여럿, enclosure 와 media:thumbnail -->
+<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:media="http://search.yahoo.com/mrss/">
+	<channel>
+		<title>합성 방송 : 정치</title>
+		<link>https://news.sbs.example</link>
+		<description>합성 피드</description>
+		<webMaster>news@sbs.example(합성)</webMaster>
+		<item>
+			<title><![CDATA[합성, 정치 기사 하나…"합성 인용"]]></title>
+					<link><![CDATA[https://news.sbs.example/news/endPage.do?news_id=N1000000001&plink=RSSREADER&cooper=RSSREADER]]></link>
+					<guid isPermaLink="true">https://news.sbs.example/news/endPage.do?news_id=N1000000001</guid>
+					<pubDate>Fri, 30 Oct 2026 15:49:00 +0900</pubDate>
+						<author><![CDATA[
+							reporter@sbs.example
+							(합성기자)
+						]]></author>
+			<description><![CDATA[합성 리드 한 문장이 요약문이다. 10&sim;20일 이어지는 …]]></description>
+				<category domain="https://news.sbs.example/news/newsSection.do?sectionType=01"><![CDATA[정치]]></category>
+				<category domain="https://news.sbs.example/news/newsSection.do?sectionType=01"><![CDATA[POLITICS]]></category>
+				<category domain="https://news.sbs.example/"><![CDATA[합성 뉴스]]></category>
+				<category><![CDATA[일반기사]]></category>
+						<category domain="https://news.sbs.example/news/keywordList.do?keyword=%ED%95%A9%EC%84%B1"><![CDATA[합성]]></category>
+			<enclosure url="https://img.sbs.example/newimg/news/20261030/100000001_1280.jpg" length="0" type="image/jpeg"/>
+			<media:thumbnail url="https://img.sbs.example/newimg/news/20261030/100000001_300.jpg"/>
+			<content:encoded><![CDATA[<p>합성 본문&nbsp;문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. 합성 본문 문장입니다. </p>ⓒ 합성 : 무단복제 및 재배포 금지]]></content:encoded>
+		</item>
+		<item>
+			<title><![CDATA[합성 기사 둘]]></title>
+					<link><![CDATA[https://news.sbs.example/news/endPage.do?news_id=N1000000002&plink=RSSREADER&cooper=RSSREADER]]></link>
+					<guid isPermaLink="true">https://news.sbs.example/news/endPage.do?news_id=N1000000002</guid>
+					<pubDate>Fri, 30 Oct 2026 11:00:00 +0900</pubDate>
+						<author><![CDATA[news@sbs.example(합성)]]></author>
+			<description><![CDATA[합성 요약문 둘]]></description>
+			<content:encoded><![CDATA[<p>합성 본문 둘</p>]]></content:encoded>
+		</item>
+	</channel>
+</rss>

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- 합성 — 실제 피드가 아니다. 동아일보 섹션 피드의 구조: guid 없음, 요약문 = img 태그 + 본문 앞 텍스트, 항목마다 subtitle · copyright · media:content, 경로에 공백이 든 링크, 이미지만 있는 요약문 -->
+<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:media="http://search.yahoo.com/mrss/" xmlns:y="http://www.yahoo.com/y-namespace" xmlns:fn="http://www.w3.org/2004/10/xpath-functions" xmlns:atom="http://www.w3.org/2005/Atom" ><channel><title>합성 | 합성일보</title><copyright>합성</copyright><link>https://www.donga.example/</link><description>합성 RSS</description><language>ko</language><pubDate>Fri, 30 Oct 2026 15:53:22 +0900</pubDate>
+<item>
+<title><![CDATA[합성 정치 기사 하나]]></title>
+<subtitle><![CDATA[합성 부제]]></subtitle>
+<copyright><![CDATA[1]]></copyright>
+<link><![CDATA[https://www.donga.example/news/Politics/article/all/20261030/100000001/1]]></link>
+<pubDate>Fri, 30 Oct 2026 14:30:00 +0900</pubDate>
+<description><![CDATA[<img src='https://dimg.donga.example/wps/NEWS/IMAGE/2026/10/30/100000001.1.jpg' align='left' width='80' height='50'>합성 본문의 앞부분이 요약문으로 실리고 여기서 잘린다 ]]></description>
+<media:content type="image/jpg" url="https://dimg.donga.example/wps/NEWS/IMAGE/2026/10/30/100000001.1.jpg"  />
+</item>
+<item>
+<title><![CDATA[합성 연재 기사 둘]]></title>
+<copyright><![CDATA[1]]></copyright>
+<link><![CDATA[https://www.donga.example/news/K-TECH Global Leaders/article/all/20261030/100000002/1]]></link>
+<pubDate>Fri, 30 Oct 2026 12:00:00 +0900</pubDate>
+<description><![CDATA[<img src='https://dimg.donga.example/wps/NEWS/IMAGE/2026/10/30/100000002.1.jpg' align='left' width='80' height='50'>합성 연재의 요약문]]></description>
+<media:content type="image/jpg" url="https://dimg.donga.example/wps/NEWS/IMAGE/2026/10/30/100000002.1.jpg"  />
+</item>
+<item>
+<title><![CDATA[합성 사진 기사 셋]]></title>
+<copyright><![CDATA[1]]></copyright>
+<link><![CDATA[https://www.donga.example/news/Economy/article/all/20261030/100000003/1]]></link>
+<pubDate>Fri, 30 Oct 2026 10:15:00 +0900</pubDate>
+<description><![CDATA[<img src='https://dimg.donga.example/wps/NEWS/IMAGE/2026/10/30/100000003.1.jpg' align='left' width='80' height='50'>]]></description>
+</item>
+</channel></rss>

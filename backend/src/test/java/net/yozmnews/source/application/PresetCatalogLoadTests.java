@@ -3,6 +3,7 @@ package net.yozmnews.source.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
+import static org.assertj.core.api.Assertions.tuple;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -67,9 +68,12 @@ class PresetCatalogLoadTests {
 
 	@Test
 	void loadsTheRepositoryPresets() {
-		// 저장소의 프리셋이 모두 검증을 통과해야 기동이 된다. 기대값은 저장소에 둔 프리셋 키 목록이다(지금은 없다) —
-		// 프리셋을 더하면 그 키를 여기에 더한다
-		assertThat(load(PresetCatalogConfiguration.LOCATION).all()).extracting(Preset::key).isEmpty();
+		// 저장소의 프리셋이 모두 검증을 통과해야 기동이 된다. 기대값은 저장소에 둔 프리셋의 키 · 이용조건 검토일 · 피드 수다 —
+		// 프리셋을 더하거나 그 검토일 · 피드를 바꾸면 여기도 바꾼다
+		assertThat(load(PresetCatalogConfiguration.LOCATION).all())
+			.extracting(preset -> preset.key().value(), Preset::termsReviewedAt, preset -> preset.profile().feeds().size())
+			.containsExactly(tuple("donga", LocalDate.of(2026, 10, 31), 16), tuple("jtbc", LocalDate.of(2026, 10, 31), 8),
+					tuple("kyunghyang", LocalDate.of(2026, 10, 31), 12), tuple("sbs", LocalDate.of(2026, 10, 31), 8));
 	}
 
 	@Test

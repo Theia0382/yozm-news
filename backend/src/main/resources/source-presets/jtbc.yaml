@@ -1,0 +1,31 @@
+# JTBC 프리셋 — 이용조건 검토의 전제는 docs/security.md "저작권과 소스 이용조건"
+source:
+  name: JTBC
+  homepage: https://news.jtbc.co.kr
+  language: ko
+termsReviewedAt: 2026-10-31
+feeds:
+  - key: politics
+    url: https://news-ex.jtbc.co.kr/v1/get/rss/section/politics
+    section: 정치
+  - key: economy
+    url: https://news-ex.jtbc.co.kr/v1/get/rss/section/economy
+    section: 경제
+  - key: society
+    url: https://news-ex.jtbc.co.kr/v1/get/rss/section/society
+    section: 사회
+  - key: international
+    url: https://news-ex.jtbc.co.kr/v1/get/rss/section/international
+    section: 국제
+  - key: culture
+    url: https://news-ex.jtbc.co.kr/v1/get/rss/section/culture
+    section: 문화
+  - key: entertainment
+    url: https://news-ex.jtbc.co.kr/v1/get/rss/section/entertainment
+    section: 연예
+  - key: sports
+    url: https://news-ex.jtbc.co.kr/v1/get/rss/section/sports
+    section: 스포츠
+  - key: weather
+    url: https://news-ex.jtbc.co.kr/v1/get/rss/section/weather
+    section: 날씨

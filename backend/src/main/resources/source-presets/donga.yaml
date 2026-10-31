@@ -1,0 +1,55 @@
+# 동아일보 프리셋 — 이용조건 검토의 전제는 docs/security.md "저작권과 소스 이용조건"
+source:
+  name: 동아일보
+  homepage: https://www.donga.com
+  language: ko
+termsReviewedAt: 2026-10-31
+feeds:
+  - key: total
+    url: https://rss.donga.com/total.xml
+    section: 전체기사
+  - key: politics
+    url: https://rss.donga.com/politics.xml
+    section: 정치
+  - key: society
+    url: https://rss.donga.com/national.xml
+    section: 사회
+  - key: economy
+    url: https://rss.donga.com/economy.xml
+    section: 경제
+  - key: international
+    url: https://rss.donga.com/international.xml
+    section: 국제
+  - key: editorials
+    url: https://rss.donga.com/editorials.xml
+    section: 사설칼럼
+  - key: science
+    url: https://rss.donga.com/science.xml
+    section: 의학과학
+  - key: culture
+    url: https://rss.donga.com/culture.xml
+    section: 문화연예
+  - key: sports
+    url: https://rss.donga.com/sports.xml
+    section: 스포츠
+  - key: people
+    url: https://rss.donga.com/inmul.xml
+    section: 사람속으로
+  - key: health
+    url: https://rss.donga.com/health.xml
+    section: 건강
+  - key: books
+    url: https://rss.donga.com/book.xml
+    section: 도서
+  - key: performances
+    url: https://rss.donga.com/show.xml
+    section: 공연
+  - key: women
+    url: https://rss.donga.com/woman.xml
+    section: 여성
+  - key: travel
+    url: https://rss.donga.com/travel.xml
+    section: 여행
+  - key: living
+    url: https://rss.donga.com/lifeinfo.xml
+    section: 생활정보
