@@ -112,7 +112,7 @@ final class ItemNormalizer {
 
 	private static Optional<URI> webUrl(String text) {
 		try {
-			URI uri = new URI(text);
+			URI uri = new URI(LinkText.encodeUnsafe(text));
 			return FetchedArticle.isWebUrl(uri) ? Optional.of(uri) : Optional.empty();
 		}
 		catch (URISyntaxException ex) {

@@ -40,7 +40,7 @@
    ```sh
    cp deploy/.env.example deploy/.env                            # 처음 한 번 — 필수 값을 적는다
    docker compose -f deploy/compose.yaml up -d --build --wait   # 호스트 플랫폼 이미지를 빌드하고 postgres → app → proxy 가 healthy 가 될 때까지 기다린다
-   bash deploy/smoke.sh                                          # 기동 상태 · 공개 범위 · 라우팅 · 앱 역할 확인 — 종료 코드 0 이면 통과 (bash · docker · curl 필요)
+   bash deploy/smoke.sh                                          # 기동 상태 · 공개 범위 · 라우팅 · 앱 역할 · 프리셋 적재 확인 — 종료 코드 0 이면 통과 (bash · docker · curl 필요)
    ```
 
    `deploy/` 에서는 `-f` 없이 `docker compose up -d --build --wait` 로 같다. 스모크는 공개 주소를 기본값(루프백)으로 둔 구성을 확인한다 — [공개](configuration.md#공개) 주소를 바꾼 구성에서는 공개 범위 항목이 실패한다.

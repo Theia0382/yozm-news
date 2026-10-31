@@ -7,7 +7,6 @@
 | # | 질문 | 권장안 | 필요 시점 |
 |---|---|---|---|
 | 1 | 초기 태그 체계 세부 문구(태그 설명, 중요도 기준) | 구조는 확정([ADR-0010](adr/0010-tag-taxonomy.md)). 초안 어휘로 파일럿 후 문구 확정 | M2 |
-| 19 | 첫 프리셋 대상 언론사와 활성화 관문 기준값(날짜 해석률 등) | 구조는 확정([ADR-0015](adr/0015-source-presets-and-collection-profiles.md)). 첫 프리셋은 [조사 자료](research/2026-10-rss-survey.md)의 12곳 중 이용조건을 확인한 곳부터 고른다. 기준값은 잠정값과 그 실측 근거를 [ADR-0041](adr/0041-activation-gate-previews-a-feed-on-enable-and-judges-by-code-constants.md)에 두었고, 첫 프리셋의 실제 피드로 확정한다 | M1 |
 | 30 | 운영 호스팅 선택 — 공식 인스턴스를 띄울 곳 | 서울 리전 VPS 한 대에 배포 구성 전체 + Tunnel([ADR-0006](adr/0006-deployment-compose-cloudflare.md)). 후보: Oracle Cloud 무료 ARM(춘천 · 서울) · Vultr 서울 · AWS Lightsail 서울. 관리형 컨테이너 + 관리형 PostgreSQL 은 #29 를 확인한 뒤. 집 · 사무실 서버(셀프 호스팅)는 비용이 가장 작지만 가용성이 전원 · 회선에 달린다 | M8 |
 
 ## 운영하면서 결정
@@ -32,7 +31,6 @@
 
 | # | 내용 |
 |---|---|
-| 14 | 각 언론사 RSS의 이용조건 (특히 AI 처리와 상업적 서비스에 대한 조항). 소스를 활성화하기 전에 확인한다 |
 | 15 | Jev 공식 가격, 이용 경로(직접 API 대기열, AI Gateway 지원 여부), 요청당 토큰 상한(32k와 64k로 자료가 엇갈림), 질문 수 상한, Choice 선택지 상한. 현재 수치는 3자 자료 기준이다 |
 | 16 | 네이버 검색 API 약관 개정 공식 원문. 보도 기준으로 결정했으며 원문은 직접 확인하지 못했다 |
 | 25 | pgvector 이미지(OS 계열을 맞춘 PG 18 태그)의 재빌드 주기 — PostgreSQL 보안 패치가 반영되는 속도 |

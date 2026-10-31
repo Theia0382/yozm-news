@@ -89,6 +89,12 @@ roles_expected='The following 2 profiles are active: "web", "worker"'
 roles_line=$("${compose[@]}" logs --no-log-prefix app 2>&1 | grep -m 1 -E 'profiles? (is|are) active|No active profile set')
 if [[ $roles_line == *"$roles_expected" ]]; then pass "K11 app 의 역할 web · worker"; else fail "K11 app 의 역할 web · worker" "$roles_expected" "${roles_line:-없음}"; fi
 
+# K12 배포 이미지가 저장소의 프리셋을 모두 적재한다 — 앱의 적재 로그 줄(PresetCatalogConfiguration)을 저장소 파일 수와 비교한다
+preset_files=("$repo_dir"/backend/src/main/resources/source-presets/*.yaml)
+[[ -e ${preset_files[0]} ]] || preset_files=()
+loaded=$("${compose[@]}" logs --no-color app 2>&1 | grep -o '프리셋 [0-9]*개를 적재했다' | tail -n 1)
+if [[ $loaded == "프리셋 ${#preset_files[@]}개를 적재했다" ]]; then pass "K12 프리셋 적재 (${#preset_files[@]}개)"; else fail "K12 프리셋 적재" "프리셋 ${#preset_files[@]}개를 적재했다" "${loaded:-적재 로그 없음}"; fi
+
 if ((failures > 0)); then
   printf '%d 항목 실패\n' "$failures"
   exit 1

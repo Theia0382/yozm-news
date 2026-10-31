@@ -2,6 +2,7 @@ package net.yozmnews.source.domain.feed;
 
 import static net.yozmnews.source.domain.feed.FeedFixtures.normalized;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
 import java.net.URI;
 import java.util.List;
@@ -48,6 +49,35 @@ class ItemNormalizerTests {
 				new SkippedItem(6, SkipReason.MISSING_TITLE));
 		// 대조 — 링크와 제목이 있는 항목은 기사다
 		assertThat(normalized.articles()).extracting(FetchedArticle::title).containsExactly("정상 항목");
+	}
+
+	@Test
+	void encodesCharactersAUriCannotHoldInLinksAndThumbnails() {
+		FeedNormalization.Normalized normalized = normalized("link-unencoded-space", "");
+
+		assertThat(normalized.articles()).extracting(FetchedArticle::title, FetchedArticle::link)
+			.containsExactly(
+					tuple("공백이 든 경로", URI.create("https://alpha.example/news/K-TECH%20Global%20Leaders/article/1")),
+					tuple("꺾쇠가 든 경로", URI.create("https://alpha.example/news/a%3Cb")),
+					tuple("공백이 든 썸네일", URI.create("https://alpha.example/news/3")),
+					tuple("이미 인코딩된 경로", URI.create("https://alpha.example/news/already%20encoded")));
+		assertThat(normalized.articles().get(2).thumbnail())
+			.isEqualTo(URI.create("https://img.alpha.example/2026/a%20b.jpg"));
+		assertThat(normalized.skipped()).containsExactly(new SkippedItem(5, SkipReason.INVALID_LINK),
+				new SkippedItem(6, SkipReason.INVALID_LINK));
+	}
+
+	@Test
+	void keepsTheLinksTheEncodingDoesNotReach() {
+		FeedNormalization.Normalized normalized = normalized("link-unencoded-space", "");
+
+		// 이미 인코딩된 경로는 두 번 인코딩하지 않는다
+		assertThat(normalized.articles()).filteredOn(article -> article.title().equals("이미 인코딩된 경로"))
+			.extracting(FetchedArticle::link)
+			.containsExactly(URI.create("https://alpha.example/news/already%20encoded"));
+		// 상대 링크는 인코딩해도 웹 주소가 아니고, 경로의 대괄호는 인코딩 대상이 아니다
+		assertThat(normalized.skipped()).contains(new SkippedItem(5, SkipReason.INVALID_LINK),
+				new SkippedItem(6, SkipReason.INVALID_LINK));
 	}
 
 	@Test
