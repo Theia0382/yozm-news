@@ -22,7 +22,7 @@ const REPORT: Schemas["PreviewReport"] = {
   samples: [
     {
       title: "표본 기사 제목",
-      publishedAt: "2026-10-28T00:00:00Z",
+      publishedAt: "2026-10-28T06:30:00Z",
       publishedAtEstimated: true,
     },
   ],
@@ -53,7 +53,28 @@ describe("FeedEnableResultView", () => {
     expect(screen.getByText("3건 (기사 2 · 건너뜀 1)")).toBeInTheDocument();
     expect(screen.getByText("2번째 항목 — 링크 없음")).toBeInTheDocument();
     expect(screen.getByText("표본 기사 제목")).toBeInTheDocument();
-    expect(screen.getByText(/\(추정\)/)).toBeInTheDocument();
+    // 시각은 실행 환경 시간대(시험은 Asia/Seoul 고정)의 지역 표기로 보인다
+    expect(
+      screen.getByText("2026. 10. 28. 오전 9:00 GMT+9"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("2026. 10. 28. 오후 3:30 GMT+9 (추정)"),
+    ).toBeInTheDocument();
+  });
+
+  it("최신 발행 시각이 없으면 없다고 보인다", () => {
+    render(
+      <FeedEnableResultView
+        result={enable({
+          result: "ENABLED",
+          preview: { ...REPORT, latestPublishedAt: null },
+        })}
+      />,
+    );
+
+    expect(
+      screen.getByText("최신 발행 시각").nextElementSibling,
+    ).toHaveTextContent(/^없음$/);
   });
 
   it("기준에 못 미치면 기준마다 실제 값과 기준값을 보인다", () => {

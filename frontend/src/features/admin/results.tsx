@@ -10,6 +10,7 @@ import {
   refusalLabels,
   skipReasonLabels,
 } from "@/features/admin/labels";
+import { formatDateTime } from "@/shared/lib/dateTime";
 
 // 서버가 돌려준 판정 · 미리보기의 표시. 피드에서 온 문구(제목 · 실패 문구 · 문서 문제)는 텍스트로만 그리고, 긴 것은 줄여 보이고 펼친다.
 
@@ -203,7 +204,11 @@ export function PreviewReportView({ report }: { report: PreviewReport }) {
           {report.replacedCharacters} / {report.decodedCharacters}
         </dd>
         <dt>최신 발행 시각</dt>
-        <dd>{report.latestPublishedAt ?? "없음"}</dd>
+        <dd>
+          {report.latestPublishedAt === null
+            ? "없음"
+            : formatDateTime(report.latestPublishedAt)}
+        </dd>
         {report.movedTo && (
           <>
             <dt>영구 이동</dt>
@@ -227,7 +232,7 @@ export function PreviewReportView({ report }: { report: PreviewReport }) {
           <li key={index}>
             <LongText text={sample.title} />{" "}
             <span className="text-muted-foreground">
-              {sample.publishedAt}
+              {formatDateTime(sample.publishedAt)}
               {sample.publishedAtEstimated && " (추정)"}
             </span>
           </li>
