@@ -39,6 +39,8 @@ services:
       YOZMNEWS_COLLECTION_CONTACT: ${YOZMNEWS_COLLECTION_CONTACT:?YOZMNEWS_COLLECTION_CONTACT 를 deploy/.env 에 적는다}
       # 수집이 연결해도 되는 내부 대역 — docs/operations/configuration.md "피드 수집"
       YOZMNEWS_COLLECTION_ALLOWED_NETWORKS: ${YOZMNEWS_COLLECTION_ALLOWED_NETWORKS:-}
+      # 운영자 토큰(비밀 값) — 없으면 운영자 기능이 닫힌다. docs/operations/configuration.md "운영자"
+      YOZMNEWS_ADMIN_TOKEN: ${YOZMNEWS_ADMIN_TOKEN:-}
       # 작업 서버 동시 실행 수 — 기본값을 적지 않는다(deploy/.env 에 있을 때만 넘긴다). docs/operations/configuration.md "백그라운드 작업"
       YOZMNEWS_JOB_WORKERS:
     depends_on:

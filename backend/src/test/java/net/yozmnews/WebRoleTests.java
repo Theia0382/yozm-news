@@ -18,6 +18,8 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.scheduling.config.ScheduledTaskHolder;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.test.context.ActiveProfiles;
 
 /**
@@ -73,6 +75,16 @@ class WebRoleTests {
 		JSONAssert.assertEquals("""
 				{"groups":["liveness","readiness"],"status":"UP"}
 				""", health.body(), JSONCompareMode.STRICT);
+	}
+
+	@Test
+	void closesTheAdminPathsWithoutATokenAndCreatesNoDefaultUser() throws Exception {
+		HttpResponse<String> admin = RoleProbe.get(this.port, "/api/admin/sources");
+		assertThat(admin.statusCode()).isEqualTo(403);
+		assertThat(admin.headers().firstValue("Content-Type")).hasValueSatisfying(
+				type -> assertThat(type).startsWith("application/problem+json"));
+		assertThat(this.context.getBeanNamesForType(UserDetailsService.class)).isEmpty();
+		assertThat(this.context.getBeansOfType(SecurityFilterChain.class)).containsOnlyKeys("adminChain", "defaultChain");
 	}
 
 }

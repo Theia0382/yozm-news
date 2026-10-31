@@ -68,8 +68,10 @@ check "K4 SPA 딥 링크" /smoke/deep/link 200 text/html
 check "K5 /api/ping 을 앱으로" /api/ping 200 application/json
 body=$(cat "$body_file")
 if [[ $body == '{"message":"pong"}' ]]; then pass "K5 /api/ping 응답"; else fail "K5 /api/ping 응답" '{"message":"pong"}' "$body"; fi
-# K6 로그인 경로는 앱으로 넘긴다(앱이 JSON 오류로 답한다)
-check "K6 /login/oauth2/… 를 앱으로" /login/oauth2/code/smoke "*" application/json
+# K6 로그인 경로는 앱으로 넘긴다(앱이 문제 응답으로 답한다 — docs/specs/platform.md "오류 응답 형식")
+check "K6 /login/oauth2/… 를 앱으로" /login/oauth2/code/smoke "*" application/problem+json
+# K13 운영자 경로는 토큰이 없는 기본 배포에서 닫혀 있다
+check "K13 운영자 기능 닫힘" /api/admin/sources 403 application/problem+json
 # K7 · K8 관리 · 명세 엔드포인트는 넘기지 않는다(SPA 가 답한다)
 check "K7 /actuator/health 는 넘기지 않음" /actuator/health 200 text/html
 check "K8 /v3/api-docs 는 넘기지 않음" /v3/api-docs 200 text/html
