@@ -30,7 +30,8 @@
 |---|---|---|---|---|
 | `YOZMNEWS_JOB_WORKERS` | 아니오 | `app` → `jobrunr.background-job-server.worker-count` | `8` | 작업 서버가 동시에 실행하는 백그라운드 작업 수 |
 
-- 작업 서버는 앱 전체에 하나다. 피드 수집 · 이벤트 재처리 등 모든 백그라운드 작업이 이 수를 나눠 쓰므로, 이 값이 동시에 도는 피드 수집 수의 상한이기도 하다
+- 작업 서버는 작업 역할(`worker`)을 켠 프로세스마다 하나다 — 배포 구성에서는 `app` 하나다. 피드 수집 · 이벤트 재처리 등 모든 백그라운드 작업이 이 수를 나눠 쓰므로, 이 값이 동시에 도는 피드 수집 수의 상한이기도 하다
+- 앱의 역할은 배포 정의(`deploy/compose.yaml`)가 `SPRING_PROFILES_ACTIVE: web,worker` 로 고정한다. `deploy/.env` 로 바꾸는 값이 아니다([platform Spec](../specs/platform.md#역할))
 - 줄이 없으면 앱의 기본값(`backend/src/main/resources/application.yaml`)을 쓴다. 작업 서버 자체의 기본값은 호스트 코어 수에 따라 달라지므로 앱이 값을 고정해 둔다
 - 값을 비운 줄(`YOZMNEWS_JOB_WORKERS=`)은 빈 값이 그대로 넘어가 앱의 기본값이 아니라 작업 서버의 기본값이 된다. 쓰지 않을 때는 줄을 지우거나 주석으로 둔다
 
