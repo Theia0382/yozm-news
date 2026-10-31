@@ -89,7 +89,7 @@ HTTP 엔드포인트 — 모두 운영자 경로다(운영자 토큰 필요 — 
 
 - **admin-R1** — 운영 기능이 정상으로 내놓는 결과는 200 응답이다. 응답은 판별자 `result` 하나와, 결과마다 쓰이는 속성을 모두 담은 평평한 레코드다 — 그 결과에 쓰이지 않는 속성은 `null` 이거나 빈 목록이다. 결과 → 판별자:
   - 등록 — `REGISTERED`(소스 ID) · `ALREADY_REGISTERED` · `INVALID_PROFILE`(문제)
-  - 원문 수정 — `REVISED`(끈 피드 ID · 소스를 껐는지 · 더한 피드 ID) · `INVALID_PROFILE`(문제)
+  - 원문 수정 — `REVISED`(끈 피드의 식별자 · 소스를 껐는지 · 더한 피드의 식별자) · `INVALID_PROFILE`(문제)
   - 소스 켜기 — `ENABLED` · `REFUSED`(이유)
   - 피드 켜기 — `ENABLED`(미리보기, 이미 켜졌으면 `null`) · `REFUSED`(이유) · `BELOW_CRITERIA`(미리보기 · 못 미친 기준) · `UNFETCHED`(실패) · `READING_CHANGED`
   - 원문 미리보기 — `INVALID_PROFILE`(문제) · `FEED_NOT_IN_PROFILE` · `PASSED`(미리보기) · `BELOW_CRITERIA`(미리보기 · 못 미친 기준) · `UNFETCHED`(실패)

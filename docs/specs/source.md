@@ -216,7 +216,7 @@ public sealed interface SourceRegistrationResult {
     record InvalidProfile(List<ProfileProblemView> problems);
 }
 public sealed interface ProfileRevisionResult {
-    record Revised(List<FeedId> disabledFeeds, boolean sourceDisabled, List<FeedId> addedFeeds);
+    record Revised(List<String> disabledFeedKeys, boolean sourceDisabled, List<String> addedFeedKeys);
     record InvalidProfile(List<ProfileProblemView> problems); record NotOperatorProfile();
 }
 public sealed interface SourceEnableResult { record Enabled(); record Refused(ActivationRefusal reason); }
@@ -235,7 +235,7 @@ public sealed interface ProfilePreviewResult {
 | 결과 | 뜻 |
 |---|---|
 | `SourceRegistrationResult` | 등록함(소스 · 피드는 꺼진 채) · 카탈로그에 없는 프리셋 · 이미 등록된 프리셋 · 원문 검증 실패 |
-| `ProfileRevisionResult.Revised` | 원문을 고쳤다 — 읽기 설정이 바뀌어 끈 피드(피드 ID 순), 검토일이 사라져 소스를 껐는지, 새로 더한 꺼진 피드(원문 순) |
+| `ProfileRevisionResult.Revised` | 원문을 고쳤다 — 읽기 설정이 바뀌어 끈 피드의 식별자(피드 ID 순), 검토일이 사라져 소스를 껐는지, 새로 더한 꺼진 피드의 식별자(원문 순) |
 | `ProfileRevisionResult` 의 나머지 | 새 원문 검증 실패(아무것도 바꾸지 않음) · 프리셋 소스라 원문 없음 |
 | `SourceEnableResult` | 켬 · 켜지 않음(이유) |
 | `FeedEnableResult` | 켬(꺼진 피드를 켜며 만든 미리보기, 이미 켜졌으면 null) · 설정 판정 거절 · 기준 미달(미리보기 · 못 미친 기준 — 비어 있지 않다) · 받지 못함 · 미리본 뒤 읽기 설정이 바뀜 |
@@ -399,7 +399,7 @@ sequenceDiagram
 - `ProfilePreviewer` — 등록 전 운영자 프로필 원문의 피드 하나를 미리본다. DB 를 쓰지 않고 요청 시작 시각을 예약하지 않는다(source-R9)
 - `SourceAdministrationService` — 공개 API `SourceAdministration` 의 구현. 유스케이스 · `SourceCatalog` 에 맡기고 결과를 공개 타입으로 옮긴다. 트랜잭션을 열지 않는다 — 피드 켜기 · 원문 미리보기는 트랜잭션 밖에서 받는다(source-R51 · source-R52)
 - `SourceCatalog` — 운영 목록. 읽기 전용 트랜잭션 하나에서 소스 · 피드 행을 읽고, 소스마다 지금의 프로필을 얻어 상태 · 실제 주기를 정한다(source-R51)
-- `FeedProvisioner` — 피드 행과 그 수집 상태 행을 함께 만든다. 이미 있으면 아무것도 하지 않는다 — 등록과 기동 대조가 호출자의 트랜잭션 안에서 쓴다(source-R3 · source-R8)
+- `FeedProvisioner` — 피드 행과 그 수집 상태 행을 함께 만든다. 이미 있으면 아무것도 하지 않는다 — 등록 · 원문 수정 · 기동 대조가 호출자의 트랜잭션 안에서 쓴다(source-R3 · source-R8)
 - `PresetFeedReconciliation` — 기동 대조(들어오는 쪽). 프로필을 얻은 소스마다 한 트랜잭션에서 프로필에 새로 생긴 피드를 더한다. 프로필을 얻지 못한 소스는 경고 로그만 남긴다(source-R8)
 - `FeedHealthCheck` — 피드 건강 검사(들어오는 쪽). 대상 행 잠금 · 판정 · 바뀐 행 쓰기를 한 트랜잭션에서 하고, 전이 로그는 커밋 뒤에 남긴다(source-R30 · source-R31 · source-R47 ~ source-R49)
 
@@ -577,7 +577,7 @@ public sealed interface FetchResult {
   - 켜진 소스는 새 원문에 이용조건 검토일이 없으면 끈다(source-R4)
   - 새 원문에 새로 생긴 피드는 꺼진 피드와 그 수집 상태로 더한다(source-R3 과 같은 경로). 피드 행은 지우지 않는다(source-R7)
   - 그 소스의 피드 행은 바뀌지 않았어도 모두 저장한다 — 피드 켜기의 저장 직전 판정(source-R9)과 겹치면 늦은 쪽이 동시 수정으로 실패한다
-  - 결과는 끈 피드(피드 ID 순) · 소스를 껐는지 · 더한 피드(원문 순)다
+  - 결과는 끈 피드의 식별자(피드 ID 순) · 소스를 껐는지 · 더한 피드의 식별자(원문 순)다
 - **source-R51** — 운영 목록: 프리셋은 키 순이고, 그 프리셋을 참조하는 소스가 있으면 그 소스 ID 를 함께 낸다. 소스는 소스 ID 순, 피드는 피드 ID 순이다. 소스마다 지금의 프로필을 얻어(source-R8) 얻었는지 · 사라진 프리셋인지 · 검증에 걸린 원문인지를 내고, 얻지 못하면 이름 · 홈페이지 · 검토일을 비운다. 피드마다 프로필에 있는지를 내고, 있으면 URL · 섹션 · 실제 주기(source-R14)를, 없으면 셋을 비운다. 행은 읽기 전용 트랜잭션 하나에서 읽는다
 - **source-R52** — 공개 운영 API 의 대상과 입력: 없는 소스 · 피드는 `UnknownSourceException` · `UnknownFeedException` 이다. 형식이 틀린 프리셋 키는 카탈로그에 없는 프리셋, 형식이 틀린 피드 식별자는 원문에 없는 피드로 답한다. 같은 소스 · 피드를 다른 요청이 먼저 바꿨으면 동시 수정 실패(`OptimisticLockingFailureException`)다. 수집 주기의 하한보다 짧은 운영자 설정은 바꾸지 않고 거짓으로 답한다(source-R14)
 
