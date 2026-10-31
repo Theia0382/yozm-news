@@ -1,6 +1,6 @@
 # ADR-0003: 사용자 BYOK LLM으로 개인화 종합 다이제스트 생성
 
-- 상태: 승인
+- 상태: 승인. 결과의 기본 티어 검토는 [ADR-0047](0047-self-hosted-software-run-by-instance-operators.md)이 철회(키 없는 사용자용 헤드라인 목록 대안은 미결로 남는다)
 - 날짜: 2026-10-25
 
 ## 맥락
