@@ -2,6 +2,7 @@ package net.yozmnews.source.adapter.in.job;
 
 import java.util.UUID;
 
+import net.yozmnews.platform.WorkerRole;
 import net.yozmnews.source.application.ClaimedPoll;
 import net.yozmnews.source.application.PollScheduler;
 import org.jobrunr.jobs.annotations.Job;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Component;
  * <p>
  * JobRunr 가 다른 패키지에서 반사로 부르므로 클래스가 public 이어야 한다.
  */
+@WorkerRole
 @Component
 public class PollDueFeedsJob {
 

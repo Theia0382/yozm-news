@@ -1,0 +1,15 @@
+# 작업 역할(profile worker)에서만 켜는 설정 — docs/specs/platform.md §7 · platform-R9.
+# 기본 파일은 꺼진 값이고 여기서만 켠다 — profile 별 파일은 활성화 순서대로 덮어쓰므로 역할끼리 같은 키를 다르게 쓰지 않는다
+spring:
+  modulith:
+    events:
+      staleness:
+        # 세 상태 모두 같은 값이어야 한다 — docs/specs/platform.md §5 · platform-R2
+        published: ${yozmnews.events.stale-after}
+        processing: ${yozmnews.events.stale-after}
+        resubmitted: ${yozmnews.events.stale-after}
+
+jobrunr:
+  background-job-server:
+    # 작업 역할을 켠 프로세스는 작업 서버를 띄운다 — 서버가 멈추면 health 가 DOWN 이다(ADR-0023)
+    enabled: true

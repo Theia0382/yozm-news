@@ -16,19 +16,18 @@ spring:
           enabled: false
       # 완료된 발행은 바로 지운다 — docs/specs/platform.md §5 · platform-R5
       completion-mode: delete
-      staleness:
-        # 세 상태 모두 같은 값이어야 한다 — docs/specs/platform.md §5 · platform-R2
-        published: ${yozmnews.events.stale-after}
-        processing: ${yozmnews.events.stale-after}
-        resubmitted: ${yozmnews.events.stale-after}
+      # 멈춤 감시(staleness)는 작업 역할에서만 켠다 — application-worker.yaml
+    moments:
+      # 시간 이벤트를 쓰지 않는다 — docs/specs/platform.md §7 · platform-R9. 스케줄링은 작업 역할이 켠다
+      enabled: false
 
 jobrunr:
   database:
     # 스키마의 정본은 Flyway 마이그레이션이다 — JobRunr 는 만들지 않고 테이블이 있는지만 본다
     skip-create: true
   background-job-server:
-    # 기본 구성은 두 역할(화면 · 백그라운드 작업)을 함께 하는 프로세스 하나다
-    enabled: true
+    # 작업 역할에서만 켠다(application-worker.yaml) — docs/specs/platform.md §7 · platform-R9
+    enabled: false
     # 작업 서버 동시 실행 수 — docs/operations/configuration.md "백그라운드 작업". 측정 전 목표값이고, 운영 데이터로 다시 판단한다
     worker-count: ${YOZMNEWS_JOB_WORKERS:16}
   dashboard:

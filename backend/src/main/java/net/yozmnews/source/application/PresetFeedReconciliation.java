@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.time.InstantSource;
 import java.util.List;
 
+import net.yozmnews.platform.WorkerRole;
 import net.yozmnews.source.domain.profile.FeedKey;
 import net.yozmnews.source.domain.registry.Feed;
 import net.yozmnews.source.domain.registry.FeedReconciliation;
@@ -23,6 +24,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 /**
  * 기동 대조 — docs/specs/source.md §4 · source-R8
  */
+@WorkerRole
 @Component
 class PresetFeedReconciliation {
 
