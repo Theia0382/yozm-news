@@ -8,6 +8,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import net.yozmnews.source.domain.profile.Preset;
 import net.yozmnews.source.domain.profile.PresetCatalog;
@@ -16,6 +17,8 @@ import net.yozmnews.source.domain.profile.PresetParse;
 import net.yozmnews.source.domain.profile.ProfileParser;
 import net.yozmnews.source.domain.profile.ProfileProblem;
 import net.yozmnews.source.domain.profile.text.ProfileTextReader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.Resource;
@@ -33,6 +36,8 @@ class PresetCatalogConfiguration {
 
 	static final String LOCATION = "classpath*:source-presets/*";
 
+	private static final Logger logger = LoggerFactory.getLogger(PresetCatalogConfiguration.class);
+
 	private static final String EXTENSION = ".yaml";
 
 	@Bean
@@ -46,7 +51,7 @@ class PresetCatalogConfiguration {
 	}
 
 	/**
-	 * 위치의 프리셋 파일을 모두 읽어 카탈로그를 만든다.
+	 * 위치의 프리셋 파일을 모두 읽어 카탈로그를 만들고, 적재한 수와 키를 정보 로그로 알린다 — 배포 구성 스모크(K12)가 이 줄을 읽는다.
 	 * @throws IllegalStateException 적재에 실패한 파일이 하나라도 있을 때 — 메시지에 파일마다 문제를 모두 담는다
 	 * @throws IllegalArgumentException 여러 classpath 위치에 같은 이름의 프리셋 파일이 있을 때
 	 * @throws UncheckedIOException 위치나 파일을 읽지 못했을 때
@@ -76,7 +81,10 @@ class PresetCatalogConfiguration {
 		if (!failures.isEmpty()) {
 			throw new IllegalStateException("프리셋을 적재하지 못했다 (" + location + ")\n" + String.join("\n", failures));
 		}
-		return new PresetCatalog(presets);
+		PresetCatalog catalog = new PresetCatalog(presets);
+		logger.info("프리셋 {}개를 적재했다: {}", presets.size(),
+				presets.stream().map(preset -> preset.key().value()).collect(Collectors.joining(", ")));
+		return catalog;
 	}
 
 	private static List<Resource> resources(ResourcePatternResolver resolver, String location) {

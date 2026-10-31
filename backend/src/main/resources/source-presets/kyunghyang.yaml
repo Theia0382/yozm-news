@@ -1,0 +1,46 @@
+# 경향신문 프리셋 — 이용조건 검토의 전제는 docs/security.md "저작권과 소스 이용조건"
+source:
+  name: 경향신문
+  homepage: https://www.khan.co.kr
+  language: ko
+termsReviewedAt: 2026-10-31
+items:
+  publishedAt: [$standard, "dc:date"]
+  author: [$standard, "dc:creator"]
+feeds:
+  - key: total
+    url: https://www.khan.co.kr/rss/rssdata/total_news.xml
+    section: 전체뉴스
+  - key: opinion
+    url: https://www.khan.co.kr/rss/rssdata/opinion_news.xml
+    section: 오피니언
+  - key: politics
+    url: https://www.khan.co.kr/rss/rssdata/politic_news.xml
+    section: 정치
+  - key: economy
+    url: https://www.khan.co.kr/rss/rssdata/economy_news.xml
+    section: 경제
+  - key: society
+    url: https://www.khan.co.kr/rss/rssdata/society_news.xml
+    section: 사회
+  - key: local
+    url: https://www.khan.co.kr/rss/rssdata/local_news.xml
+    section: 지역
+  - key: world
+    url: https://www.khan.co.kr/rss/rssdata/kh_world.xml
+    section: 국제
+  - key: culture
+    url: https://www.khan.co.kr/rss/rssdata/culture_news.xml
+    section: 문화
+  - key: sports
+    url: https://www.khan.co.kr/rss/rssdata/kh_sports.xml
+    section: 스포츠
+  - key: science
+    url: https://www.khan.co.kr/rss/rssdata/science_news.xml
+    section: 과학·환경
+  - key: life
+    url: https://www.khan.co.kr/rss/rssdata/life_news.xml
+    section: 라이프
+  - key: people
+    url: https://www.khan.co.kr/rss/rssdata/people_news.xml
+    section: 사람

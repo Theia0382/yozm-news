@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 합성 — 실제 피드가 아니다. 경향신문 섹션 피드의 구조: pubDate 없이 dc:date(ISO 8601), 기자는 dc:creator, 링크에 추적 질의(&amp;), guid 는 질의 없는 주소, CDATA 카테고리, 기자 없는 항목 -->
+<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <channel>
+    <title>합성신문 : 전체뉴스</title>
+    <link>https://www.khan.example</link>
+    <description>합성 피드</description>
+    <item>
+      <dc:creator><![CDATA[합성기자 기자]]></dc:creator>
+      <title><![CDATA[합성 정치 기사 “합성 인용” 하나]]></title>
+      <link>https://www.khan.example/article/202610301532001?utm_source=khan_rss&amp;utm_medium=rss&amp;utm_campaign=total_news</link>
+      <guid>https://www.khan.example/article/202610301532001</guid>
+      <description><![CDATA[합성 본문 앞 이백 자 남짓이 요약문으로 실리고 ··· ]]></description>
+      <dc:date>2026-10-30T15:32:00+09:00</dc:date>
+      <category><![CDATA[정치일반]]></category>
+    </item>
+    <item>
+      <title><![CDATA[합성 사설 둘]]></title>
+      <link>https://www.khan.example/article/202610301833001?utm_source=khan_rss&amp;utm_medium=rss&amp;utm_campaign=opinion_news</link>
+      <guid>https://www.khan.example/article/202610301833001</guid>
+      <description><![CDATA[합성 사설의 요약문]]></description>
+      <dc:date>2026-10-30T18:33:00+09:00</dc:date>
+      <category><![CDATA[사설]]></category>
+    </item>
+  </channel>
+</rss>

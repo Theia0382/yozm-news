@@ -1,0 +1,31 @@
+# SBS 프리셋 — 이용조건 검토의 전제는 docs/security.md "저작권과 소스 이용조건"
+source:
+  name: SBS
+  homepage: https://news.sbs.co.kr
+  language: ko
+termsReviewedAt: 2026-10-31
+feeds:
+  - key: latest
+    url: https://news.sbs.co.kr/news/newsflashRssFeed.do?plink=RSSREADER
+    section: 최신
+  - key: politics
+    url: https://news.sbs.co.kr/news/SectionRssFeed.do?sectionId=01&plink=RSSREADER
+    section: 정치
+  - key: economy
+    url: https://news.sbs.co.kr/news/SectionRssFeed.do?sectionId=02&plink=RSSREADER
+    section: 경제
+  - key: society
+    url: https://news.sbs.co.kr/news/SectionRssFeed.do?sectionId=03&plink=RSSREADER
+    section: 사회
+  - key: international
+    url: https://news.sbs.co.kr/news/SectionRssFeed.do?sectionId=07&plink=RSSREADER
+    section: 국제
+  - key: culture
+    url: https://news.sbs.co.kr/news/SectionRssFeed.do?sectionId=08&plink=RSSREADER
+    section: 생활·문화
+  - key: entertainment
+    url: https://news.sbs.co.kr/news/SectionRssFeed.do?sectionId=14&plink=RSSREADER
+    section: 연예
+  - key: sports
+    url: https://news.sbs.co.kr/news/SectionRssFeed.do?sectionId=09&plink=RSSREADER
+    section: 스포츠
