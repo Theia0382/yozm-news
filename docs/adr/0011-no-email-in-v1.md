@@ -1,6 +1,6 @@
 # ADR-0011: v1에서는 메일 발송을 하지 않는다
 
-- 상태: 승인
+- 상태: 승인. 결과의 '봇 가입의 주 방어선'은 공개 가입을 연 인스턴스로 [ADR-0048](0048-sign-up-closed-by-default-with-invitations-and-operator-bootstrap.md)이 좁힘. 초기 비밀번호로 만든 계정에서 복구 코드를 보여 주는 때(첫 로그인)도 [ADR-0048](0048-sign-up-closed-by-default-with-invitations-and-operator-bootstrap.md)
 - 날짜: 2026-10-25
 - 관련: [ADR-0009](0009-authentication-google-and-local.md)의 이메일 인증, 비밀번호 재설정, 메일 발송 서비스 부분을 대체한다
 

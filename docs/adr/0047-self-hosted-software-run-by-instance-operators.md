@@ -3,7 +3,7 @@
 - 상태: 승인
 - 날짜: 2026-10-31
 - 근거: [이슈 #55](https://github.com/Theia0382/yozm-news/issues/55) — 기점 `250d96f` 의 설계 문서 · ADR 에서 공개 서비스 전제를 전수로 찾아 정리. [이슈 #24](https://github.com/Theia0382/yozm-news/issues/24)에서 조사 자료의 국내 언론사 12곳 RSS 이용조건을 원문으로 대조(2026-10-31)
-- 관련: [ADR-0003](0003-byok-personalized-digest.md)(기본 티어 검토 — 이 ADR 이 철회한다), [ADR-0006](0006-deployment-compose-cloudflare.md)(권장 시작점 — 이 ADR 이 대체한다), [ADR-0015](0015-source-presets-and-collection-profiles.md)(프리셋), [ADR-0025](0025-long-term-personal-news-history-in-v1.md)(장기 기능을 넣은 v1 — 그 끝을 이 ADR 이 다시 정한다)
+- 관련: [ADR-0003](0003-byok-personalized-digest.md)(기본 티어 검토 — 이 ADR 이 철회한다), [ADR-0006](0006-deployment-compose-cloudflare.md)(권장 시작점 — 이 ADR 이 대체한다), [ADR-0015](0015-source-presets-and-collection-profiles.md)(프리셋), [ADR-0025](0025-long-term-personal-news-history-in-v1.md)(장기 기능을 넣은 v1 — 그 끝을 이 ADR 이 다시 정한다), [ADR-0048](0048-sign-up-closed-by-default-with-invitations-and-operator-bootstrap.md)(가입 정책)
 
 ## 맥락
 

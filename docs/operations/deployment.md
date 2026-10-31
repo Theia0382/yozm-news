@@ -45,6 +45,7 @@
 
    `deploy/` 에서는 `-f` 없이 `docker compose up -d --build --wait` 로 같다. 스모크는 공개 주소를 기본값(루프백)으로 둔 구성을 확인한다 — [공개](configuration.md#공개) 주소를 바꾼 구성에서는 공개 범위 항목이 실패한다.
 3. 브라우저로 proxy 의 공개 주소를 연다 — 기본은 이 호스트의 루프백이다([공개](configuration.md#공개))
+4. **(미구현)** 첫 운영자 계정을 만든다 — 처음 띄우면 `app` 로그(`docker compose -f deploy/compose.yaml logs app`)에 운영자 초대 링크가 나온다. 만료 전에 열어 가입한다. 만료되면 `app` 을 다시 시작해 새 링크를 받는다. 운영 설정으로 이메일 · 초기 비밀번호를 줬으면 그 값으로 로그인한다([계정과 고지](configuration.md#계정과-고지))
 
 정지:
 
@@ -88,7 +89,7 @@ Cloudflare 는 권장 구성이지 필수가 아니다. 운영자는 Tunnel 대�
 | **(미구현)** AI Gateway (선택) | Jev 호출 경유 — 호출 로그, 비용 집계, 재시도, 한도. Jev 지원 여부는 확인 전이다([미결 #15](../open-questions.md)) |
 
 - **(미구현)** 사용자 BYOK LLM 호출은 AI Gateway 를 거치지 않고 공급자에 직접 보낸다 — 사용자 키와 프롬프트가 제3자 로그에 남지 않게 하기 위해서다
-- **(미구현)** Turnstile 은 자체 가입 · 로그인 · 복구 코드 사용 화면에 붙인다([ADR-0009](../adr/0009-authentication-google-and-local.md) · [ADR-0011](../adr/0011-no-email-in-v1.md))
+- **(미구현)** 봇 차단(Turnstile 등)은 로그인 · 복구 코드 사용 화면과, 공개 가입을 열었을 때 가입 화면에 붙인다([security.md](../security.md#악용-방지))
 
 ## 백업과 복구
 

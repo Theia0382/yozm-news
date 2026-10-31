@@ -1,6 +1,6 @@
 # ADR-0009: v1 인증은 Google 로그인과 자체(이메일·비밀번호) 로그인
 
-- 상태: 승인. 이메일 인증·비밀번호 재설정·메일 발송 부분은 [ADR-0011](0011-no-email-in-v1.md)이 대체
+- 상태: 승인. 이메일 인증·비밀번호 재설정·메일 발송 부분은 [ADR-0011](0011-no-email-in-v1.md)이, Cloudflare Turnstile 고정은 [ADR-0012](0012-swappable-external-dependencies.md)가 대체(봇 차단은 교체 · 끄기 가능). 가입 요청의 봇 차단은 공개 가입을 연 인스턴스로 [ADR-0048](0048-sign-up-closed-by-default-with-invitations-and-operator-bootstrap.md)이 좁힘
 - 날짜: 2026-10-25
 
 ## 맥락
@@ -33,3 +33,7 @@
 | Kakao, GitHub 등 추가 | v1 범위 밖. 공급자 추가는 설정과 매핑 코드 수준으로 가능하게 둔다 |
 | 매직 링크(비밀번호 없는 이메일 로그인) | 비밀번호 저장 부담은 없지만, 로그인할 때마다 메일함을 열어야 한다. 이후 검토 |
 | 외부 인증 서비스(Auth0, Clerk, Supabase Auth 등) | 구현은 줄지만 사용자 수 기반 과금과 외부 의존이 생긴다. 셀프 호스팅 원칙과도 맞지 않는다 |
+
+## 후속 기록
+
+- 2026-10-31: 누가 계정을 만들 수 있는가(가입 자격)와 첫 운영자 계정을 만드는 방법은 [ADR-0048](0048-sign-up-closed-by-default-with-invitations-and-operator-bootstrap.md)에 있다.
