@@ -1210,18 +1210,16 @@
       "RevisionResponse" : {
         "type" : "object",
         "properties" : {
-          "addedFeedIds" : {
+          "addedFeedKeys" : {
             "type" : "array",
             "items" : {
-              "type" : "integer",
-              "format" : "int64"
+              "type" : "string"
             }
           },
-          "disabledFeedIds" : {
+          "disabledFeedKeys" : {
             "type" : "array",
             "items" : {
-              "type" : "integer",
-              "format" : "int64"
+              "type" : "string"
             }
           },
           "problems" : {
@@ -1238,7 +1236,7 @@
             "type" : "boolean"
           }
         },
-        "required" : [ "addedFeedIds", "disabledFeedIds", "problems", "result", "sourceDisabled" ]
+        "required" : [ "addedFeedKeys", "disabledFeedKeys", "problems", "result", "sourceDisabled" ]
       },
       "SkippedItemView" : {
         "type" : "object",

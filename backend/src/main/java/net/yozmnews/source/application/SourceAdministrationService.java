@@ -96,8 +96,8 @@ class SourceAdministrationService implements SourceAdministration {
 	@Override
 	public ProfileRevisionResult reviseOperatorProfile(SourceId id, String text) {
 		return switch (this.registration.reviseOperatorProfile(id, text)) {
-			case Revision.Revised revised -> new ProfileRevisionResult.Revised(revised.disabledFeeds(),
-					revised.sourceDisabled(), revised.addedFeeds());
+			case Revision.Revised revised -> new ProfileRevisionResult.Revised(keys(revised.disabledFeeds()),
+					revised.sourceDisabled(), keys(revised.addedFeeds()));
 			case Revision.InvalidProfile invalid ->
 				new ProfileRevisionResult.InvalidProfile(problems(invalid.problems()));
 			case Revision.NotOperatorProfile notOperator -> new ProfileRevisionResult.NotOperatorProfile();
@@ -208,6 +208,10 @@ class SourceAdministrationService implements SourceAdministration {
 				(problem != null)
 						? new DocumentProblemView(problem.kind(), problem.message(), problem.line(), problem.column())
 						: null);
+	}
+
+	private static List<String> keys(List<FeedKey> feeds) {
+		return feeds.stream().map(FeedKey::value).toList();
 	}
 
 	private static List<ProfileProblemView> problems(List<ProfileProblem> problems) {

@@ -7,9 +7,9 @@ import java.time.Duration;
 import java.util.List;
 
 import net.yozmnews.TestcontainersConfiguration;
-import net.yozmnews.source.FeedId;
 import net.yozmnews.source.SourceId;
 import net.yozmnews.source.UnknownSourceException;
+import net.yozmnews.source.domain.profile.FeedKey;
 import net.yozmnews.source.domain.profile.PresetKey;
 import net.yozmnews.source.domain.registry.Feed;
 import net.yozmnews.source.domain.registry.FeedRepository;
@@ -176,11 +176,23 @@ class SourceRegistrationTests {
 		Revision result = this.registration.reviseOperatorProfile(new SourceId(source),
 				REVIEWED_TWO_FEEDS.replace("main.xml", "main-v2.xml").replace("section: 부록", "section: 덤"));
 
-		assertThat(result).isEqualTo(new Revision.Revised(List.of(new FeedId(this.rows.feedId(source, "main"))), false,
-				List.of()));
+		assertThat(result).isEqualTo(new Revision.Revised(List.of(new FeedKey("main")), false, List.of()));
 		assertThat(this.rows.feeds(source)).containsExactly("extra:true", "main:false");
 		assertThat(sourceText(source)).contains("main-v2.xml");
 		assertThat(sourceEnabled(source)).isTrue();
+	}
+
+	@Test
+	void revisionListsTheDisabledFeedsInTheOrderTheyWereCreated() {
+		long source = enabledOperatorSource();
+
+		Revision result = this.registration.reviseOperatorProfile(new SourceId(source),
+				REVIEWED_TWO_FEEDS.replace("language: ko", "language: en"));
+
+		// main 을 먼저 만들었다 — 만든 순(main, extra)은 사전 순(extra, main)과 다르다
+		assertThat(result).isEqualTo(new Revision.Revised(List.of(new FeedKey("main"), new FeedKey("extra")), false,
+				List.of()));
+		assertThat(this.rows.feeds(source)).containsExactly("extra:false", "main:false");
 	}
 
 	@Test
@@ -194,7 +206,7 @@ class SourceRegistrationTests {
 				""");
 
 		long added = this.rows.feedId(source, "added");
-		assertThat(result).isEqualTo(new Revision.Revised(List.of(), false, List.of(new FeedId(added))));
+		assertThat(result).isEqualTo(new Revision.Revised(List.of(), false, List.of(new FeedKey("added"))));
 		assertThat(this.rows.feeds(source)).containsExactly("added:false", "extra:true", "main:true");
 		assertThat(this.rows.hasPollState(added)).isTrue();
 	}

@@ -27,13 +27,11 @@ class FeedProvisioner {
 
 	/**
 	 * 피드 행과 수집 상태 행을 없으면 만든다.
-	 * @return 그 피드 — 새로 만들었든 이미 있었든
 	 */
-	Feed provision(SourceId source, FeedKey key, Instant now) {
+	void provision(SourceId source, FeedKey key, Instant now) {
 		this.feeds.insertIfAbsent(source.value(), key.value(), now);
 		Feed feed = this.feeds.findBySourceIdAndFeedKey(source.value(), key.value()).orElseThrow();
 		this.pollStates.insertIfAbsent(FeedPollState.initial(feed.id(), now));
-		return feed;
 	}
 
 }

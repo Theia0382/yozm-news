@@ -148,19 +148,19 @@ class AdminSourceControllerTests {
 
 	@Test
 	void revisionAnswersTheChangedFeedsTheProblemsOrNotFoundForAPresetSource() throws Exception {
-		this.administration.revision = new ProfileRevisionResult.Revised(List.of(new FeedId(11)), true,
-				List.of(new FeedId(13), new FeedId(14)));
+		this.administration.revision = new ProfileRevisionResult.Revised(List.of("main"), true,
+				List.of("added", "extra"));
 		this.mockMvc.perform(json(put("/api/admin/sources/5/profile"), "{\"profile\":\"새 원문\"}"))
 			.andExpect(status().isOk())
 			.andExpect(content().json("""
-					{"result":"REVISED","disabledFeedIds":[11],"sourceDisabled":true,"addedFeedIds":[13,14],"problems":[]}
+					{"result":"REVISED","disabledFeedKeys":["main"],"sourceDisabled":true,"addedFeedKeys":["added","extra"],"problems":[]}
 					""", JsonCompareMode.STRICT));
 
 		this.administration.revision = new ProfileRevisionResult.InvalidProfile(List.of(PROBLEM));
 		this.mockMvc.perform(json(put("/api/admin/sources/5/profile"), "{\"profile\":\"틀린 원문\"}"))
 			.andExpect(status().isOk())
 			.andExpect(content().json("""
-					{"result":"INVALID_PROFILE","disabledFeedIds":[],"sourceDisabled":false,"addedFeedIds":[],
+					{"result":"INVALID_PROFILE","disabledFeedKeys":[],"sourceDisabled":false,"addedFeedKeys":[],
 					 "problems":[%s]}
 					""".formatted(PROBLEM_JSON), JsonCompareMode.STRICT));
 

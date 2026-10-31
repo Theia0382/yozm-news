@@ -106,9 +106,9 @@ describe("ProfileEditorPage", () => {
       "PUT /api/admin/sources/5/profile": () =>
         json({
           result: "REVISED",
-          disabledFeedIds: [11],
+          disabledFeedKeys: ["main"],
           sourceDisabled: true,
-          addedFeedIds: [13],
+          addedFeedKeys: ["added"],
           problems: [],
         }),
     });
@@ -120,11 +120,35 @@ describe("ProfileEditorPage", () => {
     await user.click(screen.getByRole("button", { name: "저장" }));
 
     const status = await screen.findByRole("status");
-    expect(status).toHaveTextContent("읽기 설정이 바뀌어 끈 피드: 11");
+    expect(status).toHaveTextContent("읽기 설정이 바뀌어 끈 피드: main");
     expect(status).toHaveTextContent("이용조건 검토일이 없어 소스를 껐습니다.");
-    expect(status).toHaveTextContent("새로 더한 피드(꺼진 채): 13");
+    expect(status).toHaveTextContent("새로 더한 피드(꺼진 채): added");
     expect(
       server.requests.filter((r) => r.method === "PUT").map((r) => r.body),
     ).toEqual(['{"profile":"source: 새"}']);
+  });
+
+  it("끈 피드 · 더한 피드가 없는 수정은 그 줄을 보이지 않는다", async () => {
+    const user = userEvent.setup();
+    renderEditor("/admin/sources/5/profile", {
+      "GET /api/admin/sources/5/profile": () =>
+        json({ profile: "source: 원래\n" }),
+      "PUT /api/admin/sources/5/profile": () =>
+        json({
+          result: "REVISED",
+          disabledFeedKeys: [],
+          sourceDisabled: false,
+          addedFeedKeys: [],
+          problems: [],
+        }),
+    });
+
+    await screen.findByLabelText("수집 프로필 원문(YAML)");
+    await user.click(screen.getByRole("button", { name: "저장" }));
+
+    const status = await screen.findByRole("status");
+    expect(status).toHaveTextContent("저장했습니다.");
+    expect(status).not.toHaveTextContent("읽기 설정이 바뀌어 끈 피드");
+    expect(status).not.toHaveTextContent("새로 더한 피드");
   });
 });

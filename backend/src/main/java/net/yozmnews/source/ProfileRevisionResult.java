@@ -7,13 +7,13 @@ import java.util.List;
  */
 public sealed interface ProfileRevisionResult {
 
-	/** 고쳤다 — 읽기 설정이 바뀌어 끈 피드(피드 ID 순), 검토일이 사라져 소스를 껐는지, 새로 더한 꺼진 피드(원문 순) */
-	record Revised(List<FeedId> disabledFeeds, boolean sourceDisabled,
-			List<FeedId> addedFeeds) implements ProfileRevisionResult {
+	/** 고쳤다 — 읽기 설정이 바뀌어 끈 피드의 식별자(피드 ID 순), 검토일이 사라져 소스를 껐는지, 새로 더한 꺼진 피드의 식별자(원문 순) */
+	record Revised(List<String> disabledFeedKeys, boolean sourceDisabled,
+			List<String> addedFeedKeys) implements ProfileRevisionResult {
 
 		public Revised {
-			disabledFeeds = List.copyOf(disabledFeeds);
-			addedFeeds = List.copyOf(addedFeeds);
+			disabledFeedKeys = List.copyOf(disabledFeedKeys);
+			addedFeedKeys = List.copyOf(addedFeedKeys);
 		}
 
 	}

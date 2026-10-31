@@ -9,7 +9,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import net.yozmnews.source.FeedId;
 import net.yozmnews.source.SourceId;
 import net.yozmnews.source.UnknownSourceException;
 import net.yozmnews.source.domain.profile.CollectionProfile;
@@ -127,19 +126,20 @@ class SourceRegistration {
 			}
 			this.sources.save(source);
 			List<Feed> existing = this.feeds.findAllBySourceId(id.value());
-			List<FeedId> disabled = new ArrayList<>();
+			List<FeedKey> disabled = new ArrayList<>();
 			for (Feed feed : existing.stream().sorted(Comparator.comparingLong(feed -> feed.id().value())).toList()) {
 				if (feed.enabled() && !ProfileRevision.keepsEnabled(before, after, feed.feedKey())) {
 					feed.disable();
-					disabled.add(feed.id());
+					disabled.add(feed.feedKey());
 				}
 				this.feeds.save(feed);
 			}
 			Set<FeedKey> known = existing.stream().map(Feed::feedKey).collect(Collectors.toSet());
-			List<FeedId> added = new ArrayList<>();
+			List<FeedKey> added = new ArrayList<>();
 			for (FeedSpec spec : after.feeds()) {
 				if (!known.contains(spec.key())) {
-					added.add(this.provisioner.provision(id, spec.key(), now).id());
+					this.provisioner.provision(id, spec.key(), now);
+					added.add(spec.key());
 				}
 			}
 			return new Revision.Revised(disabled, sourceDisabled, added);

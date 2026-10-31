@@ -240,8 +240,7 @@ class SourceAdministrationServiceTests {
 						    section: 새것
 						""");
 
-		assertThat(result).isEqualTo(new ProfileRevisionResult.Revised(List.of(new FeedId(main)), false,
-				List.of(new FeedId(this.rows.feedId(source.value(), "added")))));
+		assertThat(result).isEqualTo(new ProfileRevisionResult.Revised(List.of("main"), false, List.of("added")));
 		assertThat(this.administration.reviseOperatorProfile(registered(this.administration.registerPreset("solo")),
 				text))
 			.isEqualTo(new ProfileRevisionResult.NotOperatorProfile());

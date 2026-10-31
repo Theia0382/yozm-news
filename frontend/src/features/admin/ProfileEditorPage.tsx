@@ -146,19 +146,19 @@ function ProfileEditor({
       {revise.data?.result === "REVISED" && (
         <div role="status" className="space-y-1">
           <p>저장했습니다.</p>
-          {revise.data.disabledFeedIds.length > 0 && (
+          {revise.data.disabledFeedKeys.length > 0 && (
             <p>
               읽기 설정이 바뀌어 끈 피드:{" "}
-              {revise.data.disabledFeedIds.join(", ")} — 다시 켜면 미리보기를
+              {revise.data.disabledFeedKeys.join(", ")} — 다시 켜면 미리보기를
               거칩니다.
             </p>
           )}
           {revise.data.sourceDisabled && (
             <p>이용조건 검토일이 없어 소스를 껐습니다.</p>
           )}
-          {revise.data.addedFeedIds.length > 0 && (
+          {revise.data.addedFeedKeys.length > 0 && (
             <p>
-              새로 더한 피드(꺼진 채): {revise.data.addedFeedIds.join(", ")}
+              새로 더한 피드(꺼진 채): {revise.data.addedFeedKeys.join(", ")}
             </p>
           )}
         </div>

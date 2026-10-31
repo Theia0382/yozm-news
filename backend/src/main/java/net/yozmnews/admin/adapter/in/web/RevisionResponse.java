@@ -2,7 +2,6 @@ package net.yozmnews.admin.adapter.in.web;
 
 import java.util.List;
 
-import net.yozmnews.source.FeedId;
 import net.yozmnews.source.ProfileProblemView;
 import net.yozmnews.source.ProfileRevisionResult;
 import org.springframework.http.HttpStatus;
@@ -14,8 +13,8 @@ import org.springframework.web.server.ResponseStatusException;
  * {@code REVISED} 면 끈 피드 · 소스를 껐는지 · 더한 피드가, {@code INVALID_PROFILE} 이면 {@code problems} 가 있다. 프리셋 소스는 결과가
  * 아니라 404 다.
  */
-record RevisionResponse(Outcome result, List<Long> disabledFeedIds, boolean sourceDisabled, List<Long> addedFeedIds,
-		List<ProfileProblemView> problems) {
+record RevisionResponse(Outcome result, List<String> disabledFeedKeys, boolean sourceDisabled,
+		List<String> addedFeedKeys, List<ProfileProblemView> problems) {
 
 	/**
 	 * 결과를 응답으로 옮긴다.
@@ -23,17 +22,13 @@ record RevisionResponse(Outcome result, List<Long> disabledFeedIds, boolean sour
 	 */
 	static RevisionResponse of(ProfileRevisionResult result) {
 		return switch (result) {
-			case ProfileRevisionResult.Revised revised -> new RevisionResponse(Outcome.REVISED, ids(revised.disabledFeeds()),
-					revised.sourceDisabled(), ids(revised.addedFeeds()), List.of());
+			case ProfileRevisionResult.Revised revised -> new RevisionResponse(Outcome.REVISED,
+					revised.disabledFeedKeys(), revised.sourceDisabled(), revised.addedFeedKeys(), List.of());
 			case ProfileRevisionResult.InvalidProfile invalid ->
 				new RevisionResponse(Outcome.INVALID_PROFILE, List.of(), false, List.of(), invalid.problems());
 			case ProfileRevisionResult.NotOperatorProfile notOperator ->
 				throw new ResponseStatusException(HttpStatus.NOT_FOUND, AdminSourceController.PRESET_SOURCE_HAS_NO_TEXT);
 		};
-	}
-
-	private static List<Long> ids(List<FeedId> feeds) {
-		return feeds.stream().map(FeedId::value).toList();
 	}
 
 	enum Outcome {
