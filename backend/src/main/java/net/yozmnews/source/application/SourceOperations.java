@@ -5,6 +5,8 @@ import java.util.function.Consumer;
 
 import net.yozmnews.source.FeedId;
 import net.yozmnews.source.SourceId;
+import net.yozmnews.source.UnknownFeedException;
+import net.yozmnews.source.UnknownSourceException;
 import net.yozmnews.source.domain.fetch.ArticleSource;
 import net.yozmnews.source.domain.fetch.FeedDescriptor;
 import net.yozmnews.source.domain.fetch.FetchState;
@@ -107,7 +109,7 @@ class SourceOperations {
 		return this.transaction.execute(status -> {
 			Feed feed = feed(id);
 			FeedActivation activation = FeedGate.enable(feed, this.resolver.resolve(source(feed.sourceId())),
-					descriptor.url(), outcome);
+					descriptor.profile().reading(feed.feedKey()).orElseThrow(), outcome);
 			if (activation instanceof FeedActivation.Activated) {
 				this.feeds.save(feed);
 			}
@@ -174,11 +176,11 @@ class SourceOperations {
 
 	private Source source(SourceId id) {
 		return this.sources.findById(id.value())
-			.orElseThrow(() -> new IllegalArgumentException("없는 소스: " + id.value()));
+			.orElseThrow(() -> new UnknownSourceException(id));
 	}
 
 	private Feed feed(FeedId id) {
-		return this.feeds.findById(id.value()).orElseThrow(() -> new IllegalArgumentException("없는 피드: " + id.value()));
+		return this.feeds.findById(id.value()).orElseThrow(() -> new UnknownFeedException(id));
 	}
 
 }

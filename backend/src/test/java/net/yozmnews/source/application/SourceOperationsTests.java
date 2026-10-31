@@ -4,6 +4,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -20,6 +21,8 @@ import net.yozmnews.source.Criterion;
 import net.yozmnews.source.FeedId;
 import net.yozmnews.source.FetchFailureReason;
 import net.yozmnews.source.SourceId;
+import net.yozmnews.source.UnknownFeedException;
+import net.yozmnews.source.UnknownSourceException;
 import net.yozmnews.source.domain.gate.FeedActivation;
 import net.yozmnews.source.domain.gate.FeedPreview;
 import net.yozmnews.source.domain.gate.Shortfall;
@@ -243,6 +246,23 @@ class SourceOperationsTests {
 			.param("id", source)
 			.query(Integer.class)
 			.single()).isEqualTo(15);
+	}
+
+	@Test
+	void unknownIdsAreReportedAsUnknown() {
+		long source = preset("solo");
+		FeedId feed = new FeedId(this.rows.feedId(source, "all"));
+		// 대조 — 있는 피드는 그대로 끈다
+		this.operations.disableFeed(feed);
+		assertThat(this.rows.feeds(source)).containsExactly("all:false");
+
+		assertThatExceptionOfType(UnknownFeedException.class)
+			.isThrownBy(() -> this.operations.enableFeed(new FeedId(999_999)))
+			.satisfies(ex -> assertThat(ex.id()).isEqualTo(new FeedId(999_999)));
+		assertThatExceptionOfType(UnknownSourceException.class)
+			.isThrownBy(() -> this.operations.disableSource(new SourceId(999_999)));
+		assertThatExceptionOfType(UnknownFeedException.class)
+			.isThrownBy(() -> this.operations.changeFeedPollInterval(new FeedId(999_999), 30));
 	}
 
 	private static FeedPreview activated(FeedActivation activation) {

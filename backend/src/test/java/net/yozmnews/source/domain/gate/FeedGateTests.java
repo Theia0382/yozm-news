@@ -16,6 +16,8 @@ import net.yozmnews.source.domain.fetch.FetchFailure;
 import net.yozmnews.source.domain.fetch.FetchResult;
 import net.yozmnews.source.domain.fetch.FetchState;
 import net.yozmnews.source.domain.profile.CollectionProfile;
+import net.yozmnews.source.domain.profile.FeedKey;
+import net.yozmnews.source.domain.profile.FeedReading;
 import net.yozmnews.source.domain.profile.PresetKey;
 import net.yozmnews.source.domain.registry.Feed;
 import net.yozmnews.source.domain.registry.ProfileResolution;
@@ -25,7 +27,7 @@ import org.junit.jupiter.api.Test;
 /**
  * 피드 켜기 관문의 판정 순서 — 요청 전 설정 판정, 받은 결과의 판정, 저장 직전 재판정. 피드와 프로필은 합성 프로필(피드 one · two)이다.
  * <p>
- * 지키는 규칙: source-R5 · source-R9
+ * 지키는 규칙: source-R5 · source-R9(저장 직전 읽기 설정 대조)
  */
 class FeedGateTests {
 
@@ -36,6 +38,9 @@ class FeedGateTests {
 	private static final CollectionProfile PROFILE = RegistryFixtures.profile(RegistryFixtures.REVIEWED_TEXT);
 
 	private static final ProfileResolution RESOLVED = new ProfileResolution.Resolved(PROFILE);
+
+	/** 미리본 프로필의 피드 one 읽기 설정 */
+	private static final FeedReading READING_ONE = PROFILE.reading(new FeedKey("one")).orElseThrow();
 
 	@Test
 	void refusesWithoutRequestingWhenTheProfileIsUnavailable() {
@@ -97,11 +102,11 @@ class FeedGateTests {
 	}
 
 	@Test
-	void enablesAPassedFeedWhoseUrlIsUnchanged() {
+	void enablesAPassedFeedWhoseReadingIsUnchanged() {
 		Feed feed = RegistryFixtures.feed("one", false);
 		PreviewOutcome.Passed passed = (PreviewOutcome.Passed) FeedGate.preview(fetched(true), PROFILE);
 
-		assertThat(FeedGate.enable(feed, RESOLVED, ONE, passed))
+		assertThat(FeedGate.enable(feed, RESOLVED, READING_ONE, passed))
 			.isEqualTo(new FeedActivation.Activated(passed.preview()));
 		assertThat(feed.enabled()).isTrue();
 	}
@@ -109,11 +114,37 @@ class FeedGateTests {
 	@Test
 	void keepsTheFeedOffWhenItsUrlChangedAfterThePreview() {
 		Feed feed = RegistryFixtures.feed("one", false);
-		URI old = URI.create("https://synthetic.example/rss/old.xml");
+		FeedReading previewedOldUrl = RegistryFixtures
+			.profile(RegistryFixtures.REVIEWED_TEXT.replace("rss/one.xml", "rss/old.xml"))
+			.reading(new FeedKey("one"))
+			.orElseThrow();
 
-		assertThat(FeedGate.enable(feed, RESOLVED, old, FeedGate.preview(fetched(true), PROFILE)))
-			.isEqualTo(new FeedActivation.TargetChanged(old, ONE));
+		assertThat(FeedGate.enable(feed, RESOLVED, previewedOldUrl, FeedGate.preview(fetched(true), PROFILE)))
+			.isEqualTo(new FeedActivation.ReadingChanged());
 		assertThat(feed.enabled()).isFalse();
+	}
+
+	@Test
+	void keepsTheFeedOffWhenItsReadingRulesChangedAfterThePreview() {
+		Feed feed = RegistryFixtures.feed("one", false);
+		ProfileResolution summaryFromContent = new ProfileResolution.Resolved(RegistryFixtures
+			.profile(RegistryFixtures.REVIEWED_TEXT + "items:\n  summary: [\"content:encoded\"]\n"));
+
+		assertThat(FeedGate.enable(feed, summaryFromContent, READING_ONE, FeedGate.preview(fetched(true), PROFILE)))
+			.isEqualTo(new FeedActivation.ReadingChanged());
+		assertThat(feed.enabled()).isFalse();
+	}
+
+	@Test
+	void enablesWhenOnlyTheNameAndSectionChangedAfterThePreview() {
+		Feed feed = RegistryFixtures.feed("one", false);
+		ProfileResolution renamed = new ProfileResolution.Resolved(RegistryFixtures
+			.profile(RegistryFixtures.REVIEWED_TEXT.replace("name: 합성일보", "name: 새합성일보").replace("section: 하나", "section: 첫째")));
+		PreviewOutcome.Passed passed = (PreviewOutcome.Passed) FeedGate.preview(fetched(true), PROFILE);
+
+		assertThat(FeedGate.enable(feed, renamed, READING_ONE, passed))
+			.isEqualTo(new FeedActivation.Activated(passed.preview()));
+		assertThat(feed.enabled()).isTrue();
 	}
 
 	@Test
@@ -130,7 +161,7 @@ class FeedGateTests {
 				    section: 둘
 				"""));
 
-		assertThat(FeedGate.enable(feed, withoutOne, ONE, FeedGate.preview(fetched(true), PROFILE)))
+		assertThat(FeedGate.enable(feed, withoutOne, READING_ONE, FeedGate.preview(fetched(true), PROFILE)))
 			.isEqualTo(new FeedActivation.Refused(ActivationRefusal.FEED_NOT_IN_PROFILE));
 		assertThat(feed.enabled()).isFalse();
 	}
@@ -141,9 +172,9 @@ class FeedGateTests {
 		PreviewOutcome.BelowCriteria below = (PreviewOutcome.BelowCriteria) FeedGate.preview(fetched(false), PROFILE);
 		FetchFailure failure = new FetchFailure(FetchFailureReason.NOT_FOUND, "없음 (HTTP 404)", 404, null);
 
-		assertThat(FeedGate.enable(feed, RESOLVED, ONE, below))
+		assertThat(FeedGate.enable(feed, RESOLVED, READING_ONE, below))
 			.isEqualTo(new FeedActivation.BelowCriteria(below.preview(), below.shortfalls()));
-		assertThat(FeedGate.enable(feed, RESOLVED, ONE, new PreviewOutcome.Unfetched(failure)))
+		assertThat(FeedGate.enable(feed, RESOLVED, READING_ONE, new PreviewOutcome.Unfetched(failure)))
 			.isEqualTo(new FeedActivation.Unfetched(failure));
 		assertThat(feed.enabled()).isFalse();
 	}

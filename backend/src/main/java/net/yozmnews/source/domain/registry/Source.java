@@ -25,7 +25,7 @@ public final class Source {
 
 	private final @Nullable String presetKey;
 
-	private final @Nullable String profile;
+	private @Nullable String profile;
 
 	private boolean enabled;
 
@@ -82,6 +82,18 @@ public final class Source {
 	 */
 	public Optional<String> operatorProfile() {
 		return Optional.ofNullable(this.profile);
+	}
+
+	/**
+	 * 운영자 원문을 바꾼다 — 검증은 호출자가 한다. 켜짐 · 피드에 미치는 영향은 {@link ProfileRevision} 이 판정한다.
+	 * @throws IllegalStateException 프리셋을 참조하는 소스일 때
+	 */
+	public void reviseOperatorProfile(String text) {
+		Objects.requireNonNull(text, "text");
+		if (this.profile == null) {
+			throw new IllegalStateException("프리셋을 참조하는 소스는 원문을 갖지 않는다: " + this.presetKey);
+		}
+		this.profile = text;
 	}
 
 	public boolean enabled() {
