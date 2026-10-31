@@ -4,7 +4,7 @@
 
 ## 구성
 
-- 배포 단위는 Docker Compose 하나다. VPS · 관리형 클라우드 · 셀프 호스팅 어디서든 같은 정의로 띄운다([ADR-0006](../adr/0006-deployment-compose-cloudflare.md))
+- 배포 단위는 Docker Compose 하나다. 운영자의 호스트(집 서버 · VPS · 관리형 클라우드) 어디서든 같은 정의로 띄운다([ADR-0006](../adr/0006-deployment-compose-cloudflare.md))
 - 서버 포트는 외부에 열지 않고 앞단(Cloudflare Tunnel 또는 운영자의 리버스 프록시)으로 공개한다. proxy 는 HTTP 만 받고 TLS 는 앞단이 맡는다
 - 상태 저장소는 PostgreSQL 하나다([overview.md §3](../overview.md#3-품질-목표와-제약))
 
@@ -62,7 +62,7 @@ docker compose -f deploy/compose.yaml down -v   # 정지하고 DB 볼륨까지 �
 - 저장소를 새 버전으로 받고 [배포 구성 실행](#배포-구성-실행)의 `up` 을 다시 돌린다 — 바뀐 이미지가 다시 빌드되고 바뀐 서비스만 다시 뜬다
 - DB 마이그레이션은 `app` 이 기동할 때 Flyway 가 실행한다
 - **PostgreSQL 메이저가 바뀐 버전으로 올릴 때** — 새 메이저는 데이터를 다른 경로에 두어, 그대로 띄우면 기존 데이터를 두고 빈 클러스터로 뜬다. 올리기 전에 `pg_dump` 로 덤프하고, 새 버전으로 띄운 뒤 복원한다([ADR-0021](../adr/0021-separate-deploy-compose-with-single-app-service.md))
-- **(미구현)** 이미지를 레지스트리(GHCR)에 두 아키텍처로 게시하고, 호스트는 `pull` 로 받아 띄운다. 처음에는 수동으로 하고, 이후 SSH 배포 작업으로 자동화한다
+- **(미구현)** 이미지를 레지스트리(GHCR)에 두 아키텍처로 게시하고, 운영자는 새 버전을 `pull` 로 받아 띄운다. 게시는 릴리스 때 개발팀이 한다
 
 ## 헬스 체크와 관측
 
@@ -77,7 +77,7 @@ docker compose -f deploy/compose.yaml down -v   # 정지하고 DB 볼륨까지 �
 
 ## 공개 경로와 외부 서비스
 
-Cloudflare 는 권장 구성이지 필수가 아니다. 셀프 호스팅에서는 Tunnel 대신 일반 리버스 프록시를, R2 대신 다른 S3 호환 저장소를, Turnstile 대신 다른 봇 차단 수단을 쓰거나 끌 수 있다([ADR-0012](../adr/0012-swappable-external-dependencies.md)).
+Cloudflare 는 권장 구성이지 필수가 아니다. 운영자는 Tunnel 대신 일반 리버스 프록시를, R2 대신 다른 S3 호환 저장소를, Turnstile 대신 다른 봇 차단 수단을 쓰거나 끌 수 있다([ADR-0012](../adr/0012-swappable-external-dependencies.md)).
 
 | 기능 | 용도 |
 |---|---|
@@ -89,7 +89,6 @@ Cloudflare 는 권장 구성이지 필수가 아니다. 셀프 호스팅에서�
 
 - **(미구현)** 사용자 BYOK LLM 호출은 AI Gateway 를 거치지 않고 공급자에 직접 보낸다 — 사용자 키와 프롬프트가 제3자 로그에 남지 않게 하기 위해서다
 - **(미구현)** Turnstile 은 자체 가입 · 로그인 · 복구 코드 사용 화면에 붙인다([ADR-0009](../adr/0009-authentication-google-and-local.md) · [ADR-0011](../adr/0011-no-email-in-v1.md))
-- 이 프로젝트의 공식 인스턴스 도메인은 `yozmnews.net` 이다. Cloudflare Registrar 로 등록해 DNS 도 Cloudflare 에서 관리한다
 
 ## 백업과 복구
 
