@@ -17,7 +17,7 @@ import org.springframework.security.web.SecurityFilterChain;
 /**
  * 보안 구성의 기동 — 잘못된 운영자 토큰은 기동을 멈추고, 기본 사용자 · 생성 비밀번호가 생기지 않는다.
  * <p>
- * 지키는 규칙: 운영자 접근 통제(docs/specs/platform.md §5)
+ * 지키는 규칙: platform-R10 · platform-R11
  */
 class SecurityConfigurationTests {
 

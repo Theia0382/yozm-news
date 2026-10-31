@@ -51,7 +51,7 @@ import org.springframework.test.context.TestPropertySource;
  * 공개 운영 API — 목록 · 등록 · 수정 · 미리보기 · 켜기의 결과를 공개 타입으로 옮기는지, 실제 PostgreSQL 과 합성 프리셋 multi(피드 one ·
  * two) · solo(피드 all), 루프백 WireMock 피드로 본다.
  * <p>
- * 지키는 규칙: source-R1 · source-R2 · source-R4 · source-R8 · source-R9 · source-R14 · source-R19
+ * 지키는 규칙: source-R1 · source-R2 · source-R4 · source-R8 · source-R9 · source-R14 · source-R50 · source-R51 · source-R52
  */
 @Import({ TestcontainersConfiguration.class, RegistryTestCatalog.class })
 @SpringBootTest

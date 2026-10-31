@@ -8,7 +8,7 @@ import java.util.regex.Pattern;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 운영자 자격 — 운영자 기능이 열렸는지와 제시된 토큰이 맞는지의 판정. docs/specs/platform.md §4 · 운영자 접근 통제.
+ * 운영자 자격 — 운영자 기능이 열렸는지와 제시된 토큰이 맞는지의 판정. docs/specs/platform.md §4 · platform-R11.
  * <p>
  * 값은 다이제스트로만 갖고, 예외 메시지 · {@link #toString()} 에 담지 않는다.
  */

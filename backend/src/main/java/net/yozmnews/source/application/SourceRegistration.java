@@ -33,7 +33,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 소스 등록과 운영자 원문 수정 — docs/specs/source.md §4 · source-R1 ~ source-R3
+ * 소스 등록과 운영자 원문 수정 — docs/specs/source.md §4 · source-R1 ~ source-R3 · source-R50
  */
 @Service
 class SourceRegistration {
@@ -102,7 +102,7 @@ class SourceRegistration {
 	/**
 	 * 운영자 원문을 고친다 — 한 트랜잭션. 읽기 설정이 바뀐 켜진 피드와, 검토일이 사라진 켜진 소스를 끄고, 원문에 새로 생긴 피드를 꺼진 채
 	 * 더한다. 그 소스의 피드 행은 바뀌지 않았어도 모두 저장한다 — 피드 켜기의 저장 직전 판정과 겹치면 늦은 쪽이 낙관적 잠금으로 실패하게
-	 * 한다(docs/specs/source.md §5 · 운영자 원문 수정).
+	 * 한다(source-R50).
 	 * @throws UnknownSourceException 없는 소스일 때 — 원문을 검증하기 전에 가른다
 	 */
 	Revision reviseOperatorProfile(SourceId id, String text) {

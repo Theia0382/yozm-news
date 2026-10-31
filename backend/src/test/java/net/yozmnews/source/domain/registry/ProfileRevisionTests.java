@@ -14,7 +14,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 /**
  * 운영자 원문 수정의 판정 — 읽기 설정이 바뀐 피드와 검토일이 사라진 소스만 끈다.
  * <p>
- * 지키는 규칙: 운영자 원문 수정(docs/specs/source.md §5) · source-R4 · source-R9
+ * 지키는 규칙: source-R4 · source-R9 · source-R50
  */
 class ProfileRevisionTests {
 

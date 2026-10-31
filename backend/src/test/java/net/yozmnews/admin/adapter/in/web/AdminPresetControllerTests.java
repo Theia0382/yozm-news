@@ -26,7 +26,7 @@ import org.springframework.test.web.servlet.MockMvc;
 /**
  * 운영자 API 의 프리셋 — 목록과 등록. 카탈로그에 없는 프리셋은 404 다.
  * <p>
- * 지키는 규칙: 운영자 API(docs/specs/admin.md §5) · source-R1 · source-R2
+ * 지키는 규칙: admin-R1 · admin-R2 · source-R1 · source-R2
  */
 @WebMvcTest(controllers = AdminPresetController.class, properties = AdminRequests.TOKEN_PROPERTY)
 @Import({ WebSliceSecurity.class, FakeSourceAdministration.Config.class })

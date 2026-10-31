@@ -1,7 +1,7 @@
 package net.yozmnews.source;
 
 /**
- * 수집 실패의 이유 — docs/specs/source.md §4 · source-R24
+ * 수집 실패의 이유 — docs/specs/source.md §3 · source-R24
  */
 public enum FetchFailureReason {
 

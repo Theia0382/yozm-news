@@ -43,7 +43,7 @@ import org.springframework.test.web.servlet.MockMvc;
 /**
  * 운영자 API 의 소스 — 목록, 운영자 원문 등록 · 조회 · 수정 · 미리보기, 소스 켜기 · 끄기 · 수집 주기.
  * <p>
- * 지키는 규칙: 운영자 API(docs/specs/admin.md §5) · source-R1 · source-R4 · source-R9 · source-R14
+ * 지키는 규칙: admin-R1 · admin-R2 · admin-R3 · source-R1 · source-R4 · source-R9 · source-R14
  */
 @WebMvcTest(controllers = AdminSourceController.class, properties = AdminRequests.TOKEN_PROPERTY)
 @Import({ WebSliceSecurity.class, FakeSourceAdministration.Config.class })

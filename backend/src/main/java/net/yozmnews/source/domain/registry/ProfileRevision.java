@@ -6,7 +6,7 @@ import net.yozmnews.source.domain.profile.CollectionProfile;
 import net.yozmnews.source.domain.profile.FeedKey;
 
 /**
- * 운영자 원문 수정의 판정 — 무엇이 켜진 채 남는가. docs/specs/source.md §5 · 운영자 원문 수정.
+ * 운영자 원문 수정의 판정 — 무엇이 켜진 채 남는가. docs/specs/source.md §4 · source-R50.
  * <p>
  * 관문은 켜는 순간에만 판정하므로, 관문이 본 읽기 설정이나 이용조건 검토일이 바뀐 피드 · 소스는 끄고 다시 켜게 한다.
  */

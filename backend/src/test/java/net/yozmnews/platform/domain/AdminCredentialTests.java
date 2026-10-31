@@ -10,7 +10,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 /**
  * 운영자 자격의 형식 · 열림 · 대조.
  * <p>
- * 지키는 규칙: 운영자 접근 통제(docs/specs/platform.md §5)
+ * 지키는 규칙: platform-R11
  */
 class AdminCredentialTests {
 

@@ -20,7 +20,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.intercept.AuthorizationFilter;
 
 /**
- * 보안 구성 — 운영자 경로만 운영자 토큰을 요구하고 나머지는 연다. docs/specs/platform.md §4 · 운영자 접근 통제.
+ * 보안 구성 — 운영자 경로만 운영자 토큰을 요구하고 나머지는 연다. docs/specs/platform.md §4 · platform-R10 · platform-R11.
  * <p>
  * 두 역할 공통이다 — 역할에 묶으면 그 역할이 없는 프로세스에 Spring Boot 의 기본 보안(모든 요청 인증 · 생성 비밀번호)이 선다.
  */
@@ -83,7 +83,7 @@ class SecurityConfiguration {
 
 	/**
 	 * 세션 · 폼 로그인 · Basic · 로그아웃 · 요청 저장을 쓰지 않는다. CSRF 를 끈다 — 브라우저가 자동으로 붙이는 자격(쿠키 · Basic)이 없다. 쿠키
-	 * 세션이 생기면(M4) 켠다.
+	 * 세션을 들일 때 켠다.
 	 */
 	private static HttpSecurity statelessWithoutForms(HttpSecurity http) throws Exception {
 		return http.csrf(AbstractHttpConfigurer::disable)

@@ -25,7 +25,7 @@ import org.springframework.web.server.ResponseStatusException;
 /**
  * 컨트롤러 오류의 문제 응답 — 형식 · 다섯 속성 · 예외 메시지 비노출.
  * <p>
- * 지키는 규칙: 오류 응답 형식(docs/specs/platform.md §5)
+ * 지키는 규칙: platform-R12
  */
 @WebMvcTest(controllers = ProblemResponseAdviceTests.FailingController.class)
 @Import({ WebSliceSecurity.class, ProblemResponseAdviceTests.FailingController.class })

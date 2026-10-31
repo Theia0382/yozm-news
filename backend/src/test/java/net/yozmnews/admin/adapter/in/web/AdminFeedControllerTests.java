@@ -43,7 +43,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * 운영자 API 의 피드 켜기 · 끄기 · 수집 주기 — 결과 종류마다 판별자와 null 키까지의 응답, 없는 피드 404 · 하한 미만 400 · 동시 수정
  * 409 · 토큰 없음 401.
  * <p>
- * 지키는 규칙: 운영자 API(docs/specs/admin.md §5) · source-R5 · source-R9 · source-R14
+ * 지키는 규칙: admin-R1 · admin-R2 · admin-R3 · source-R5 · source-R9 · source-R14
  */
 @WebMvcTest(controllers = AdminFeedController.class, properties = AdminRequests.TOKEN_PROPERTY)
 @Import({ WebSliceSecurity.class, FakeSourceAdministration.Config.class })

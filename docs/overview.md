@@ -126,7 +126,7 @@ flowchart LR
 | `credential` | BYOK 키 암호화 보관(envelope encryption) |
 | `user` | 계정, OIDC 연동, 자체 로그인(비밀번호 · 복구 코드), 화면 내 알림, 사용자 설정 · 태그 선호와 구독 변경 이력, 리포트 설정 |
 | `feedback` | 좋아요 / 싫어요 — 추가 전용 기록과 현재 상태 |
-| `admin` | 운영자 기능(피드 · 태그 체계 · 평가 결과 · 사건) |
+| [`admin`](specs/admin.md) | 운영자 기능의 HTTP API(소스 · 피드 관리, (미구현) 태그 체계 · 평가 결과 · 사건) — 각 모듈의 공개 운영 API 를 부른다 |
 | [`platform`](specs/platform.md) | 여러 모듈에 걸친 것: 실패한 이벤트 발행 재처리, 화면용 API 명세 설정 · API 계약 확인 엔드포인트, 역할(profile `web` · `worker`)과 그 기동 검사, 보안 설정, 오류 응답 형식, 공통 타입 |
 | `event` | 공유 사건 묶기 — 기사 표현(임베딩 · 고유명사, `ArticleEmbedder`), 사건 배정 · 병합 · 닫기, 큰 사건 판정, 사건 조회. 사용자를 모른다 |
 | `storyline` | 사용자별 이슈 — 제목 · 현재 상태 요약 · 상태 전이 · 추적 · 해제와 그 이력 |
@@ -147,7 +147,8 @@ flowchart LR
 - **(미설계)** `ArticleEvaluated` · `UserSettingsChanged` · `CredentialInvalidated` 는 발행 주체 · 시점 · 내용이 아직 설계되지 않았다
 - `ArticleEvaluated` 를 받은 `digest` 는 즉시 생성하지 않는다. 다이제스트는 사용자 일정에 따라 생성되고, 이 이벤트는 지표 갱신에만 쓴다
 - 그림은 이벤트만 그린다. **모듈 사이 의존(공개 API · 이벤트)의 정본은 이 절이다** — 각 모듈 Spec 은 그 모듈이 내놓는 것(공개 인터페이스 · 발행 이벤트)만 갖고 의존은 이 절을 가리킨다. 각 모듈의 화면 · 작업 진입점은 `platform` 의 역할 애너테이션(공개 타입)에 의존한다 — 그래서 `platform` 은 다른 모듈의 타입에 의존하지 않는다([ADR-0042](adr/0042-app-roles-as-web-worker-profiles-marked-by-platform-annotations.md)). 사건 · 이슈 · 관심도 · 변화 리포트에 걸친 공개 API 의존은 `digest` → `event` · `storyline` · `feedback` · `user` · `evaluation` · `llm`, `event` → `article` · `evaluation`, `report` → `digest` · `event` · `evaluation` · `storyline` · `user` · `llm`, `admin` → `event` 다
-- **(미설계)** 그 밖의 공개 API 의존(예: 평가 · 후보 선별 · 운영자 기능이 기사 · 소스를 읽는 의존)과 `admin` 이 다른 모듈의 운영 기능에 닿는 경계, 여러 모듈의 데이터에 걸친 작업(보존 정리 · 휴면 이슈 전환)의 소속은 아직 설계되지 않았다
+- `admin` 은 운영자 기능을 가진 모듈의 공개 운영 API 를 부른다 — 지금은 `source` 의 `SourceAdministration`(소스 · 피드 관리). 운영 결과의 타입은 그 모듈이 공개하고 HTTP 응답 모양은 `admin` 이 정한다([ADR-0045](adr/0045-admin-module-serves-operator-api-over-module-public-operation-apis.md))
+- **(미설계)** 그 밖의 공개 API 의존(예: 평가 · 후보 선별이 기사 · 소스를 읽는 의존)과 여러 모듈의 데이터에 걸친 작업(보존 정리 · 휴면 이슈 전환)의 소속은 아직 설계되지 않았다
 - 모듈 사이 순환 의존은 Modulith 검증 테스트가 실패로 판정하고, 다른 모듈의 이벤트 타입을 받는 것도 의존으로 센다. 그래서 이슈 타임라인은 그 정본인 주요 뉴스 섹션을 가진 `digest` 가, 관심도는 노출 기록을 가진 `digest` 가 내주고, `storyline` 은 `digest` 를 모르며, `report` 는 다른 모듈을 읽기만 한다. 사건 소속 판정의 인자 · 반환 타입은 `evaluation` 이 소유한다 ([ADR-0025](adr/0025-long-term-personal-news-history-in-v1.md) · [ADR-0026](adr/0026-event-clustering-with-local-embeddings-and-jev.md))
 
 코드가 있는 모듈의 공개 인터페이스 · 작업은 그 모듈 Spec 에, 아직 모듈이 없는 포트 · 백그라운드 작업의 초안은 [architecture.md](architecture.md)에 있다.
@@ -167,6 +168,8 @@ flowchart LR
 | 판정 시점 | 바뀔 수 있는 임계값은 저장 시점이 아니라 조회 시점에 적용한다(피드 상태는 저장하되 매 실행 현재 기준으로 다시 판정한다) | [ADR-0010](adr/0010-tag-taxonomy.md) · [ADR-0040](adr/0040-feed-status-stored-in-poll-state-and-rejudged-hourly-by-health-check.md) |
 | 신호 이력 | 관심 신호(좋아요 / 싫어요 · 이슈 추적 · 구독 변경)는 추가 전용 이벤트 기록이 정본이고, 현재 상태는 그 투영이다. 신호는 각 모듈이 자기 것을 기록한다 | [ADR-0028](adr/0028-explicit-signals-and-interest-weighted-candidates.md) |
 | 화면용 API 계약 | 정본은 커밋된 OpenAPI 명세 `api/openapi.json` 이고 백엔드 검사가 코드와 대조한다. 객체 속성은 모두 필수이고, null 이 될 수 있는 속성은 JSpecify `@Nullable` 로 표시한다. 프론트엔드 타입은 이 명세에서 생성한다 | [ADR-0020](adr/0020-screen-api-contract-from-committed-openapi-spec.md) |
+| 오류 응답 형식 | 판정 결과는 판별자 `result` 하나의 평평한 200 응답이고, 요청의 문제만 HTTP 오류다. 오류 본문은 RFC 9457 의 필드 이름을 따르는 `application/problem+json`(`platform` 의 `ApiProblem`)이고 모든 속성이 값을 갖는다 | [ADR-0044](adr/0044-screen-api-results-as-flat-discriminated-200-and-rfc9457-problems.md) · [platform Spec](specs/platform.md#오류-응답-형식) |
+| 운영자 인가 | 운영자 경로(`/api/admin/**`)는 `ADMIN` 역할만 쓴다 — 지금은 운영자 토큰 하나가 그 역할을 준다 | [ADR-0043](adr/0043-admin-functions-guarded-by-env-bearer-token-until-account-roles.md) · [security.md](security.md#인가와-데이터-격리) |
 
 ## 7. 기술 스택
 

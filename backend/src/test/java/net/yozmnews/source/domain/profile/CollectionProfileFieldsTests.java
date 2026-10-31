@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test;
 /**
  * 프로필 모델의 값마다 피드 읽기 설정인지가 정해져 있다 — 값이 늘면 이 표를 고치기 전까지 실패한다(누락은 크게 실패).
  * <p>
- * 지키는 규칙: 운영자 원문 수정 · source-R9(읽기 설정 대조)
+ * 지키는 규칙: source-R9 · source-R50
  */
 class CollectionProfileFieldsTests {
 

@@ -17,7 +17,7 @@ import org.springframework.test.web.servlet.MockMvc;
 /**
  * 운영자 토큰을 설정하지 않은 인스턴스 — 운영자 경로는 어떤 토큰으로도 열리지 않고 닫힘을 알린다.
  * <p>
- * 지키는 규칙: 운영자 접근 통제(docs/specs/platform.md §5)
+ * 지키는 규칙: platform-R10 · platform-R11 · platform-R13
  */
 @WebMvcTest(controllers = AdminSecurityTests.ProbeController.class)
 @Import({ WebSliceSecurity.class, AdminSecurityTests.ProbeController.class })

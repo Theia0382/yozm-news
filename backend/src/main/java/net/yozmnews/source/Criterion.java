@@ -1,7 +1,7 @@
 package net.yozmnews.source;
 
 /**
- * 활성화 기준의 종류 — 기준값과 판정의 정본은 {@code domain/gate} 의 {@code ActivationCriteria}(source-R9)
+ * 활성화 기준의 종류 — docs/specs/source.md §3. 기준값과 판정의 정본은 {@code domain/gate} 의 {@code ActivationCriteria}(source-R9)
  */
 public enum Criterion {
 

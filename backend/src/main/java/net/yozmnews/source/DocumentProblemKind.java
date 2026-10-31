@@ -1,7 +1,7 @@
 package net.yozmnews.source;
 
 /**
- * 피드 문서 전체를 읽지 못한 이유
+ * 피드 문서 전체를 읽지 못한 이유 — docs/specs/source.md §3 · source-R42
  */
 public enum DocumentProblemKind {
 

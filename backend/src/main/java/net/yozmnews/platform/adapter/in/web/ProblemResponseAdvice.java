@@ -24,7 +24,7 @@ import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 /**
- * 컨트롤러 오류를 {@link ApiProblem} 으로 낸다 — docs/specs/platform.md §4 · 오류 응답 형식.
+ * 컨트롤러 오류를 {@link ApiProblem} 으로 낸다 — docs/specs/platform.md §4 · platform-R12.
  * <p>
  * 프레임워크 예외(형식 오류 · 없는 경로 · {@code ResponseStatusException} 등)는 상위 클래스가 받고 {@link #createResponseEntity} 가
  * 본문을 바꾼다. 다른 모듈의 조언이 먼저 받도록 우선순위를 가장 낮게 둔다.

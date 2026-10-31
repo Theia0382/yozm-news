@@ -30,7 +30,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 /**
  * 소스 등록 · 운영자 원문 수정과 기동 대조 — 실제 PostgreSQL 에서 합성 프리셋 multi(피드 one · two)와 합성 운영자 원문으로 본다.
  * <p>
- * 지키는 규칙: source-R1 · source-R2 · source-R3 · source-R7 · source-R8 · 운영자 원문 수정(docs/specs/source.md §5)
+ * 지키는 규칙: source-R1 · source-R2 · source-R3 · source-R7 · source-R8 · source-R50
  */
 @Import({ TestcontainersConfiguration.class, RegistryTestCatalog.class })
 @SpringBootTest
