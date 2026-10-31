@@ -82,6 +82,11 @@ deploy_image=$("${compose[@]}" config --images postgres 2>&1) && deploy_ok=1 || 
 dev_image=$(docker compose -f "$repo_dir/compose.yaml" --profile dev config --images postgres 2>&1) && dev_ok=1 || dev_ok=0
 if ((deploy_ok && dev_ok)) && [[ -n $dev_image && $deploy_image == "$dev_image" ]]; then pass "K9 PostgreSQL 이미지 ($deploy_image)"; else fail "K9 PostgreSQL 이미지" "$dev_image" "$deploy_image"; fi
 
+# K11 app 은 두 역할(화면 · 작업)을 한 프로세스에서 한다 — 켜진 profile 은 Spring Boot 기동 로그의 한 줄로 본다
+roles_expected='The following 2 profiles are active: "web", "worker"'
+roles_line=$("${compose[@]}" logs --no-log-prefix app 2>&1 | grep -m 1 -E 'profiles? (is|are) active|No active profile set')
+if [[ $roles_line == *"$roles_expected" ]]; then pass "K11 app 의 역할 web · worker"; else fail "K11 app 의 역할 web · worker" "$roles_expected" "${roles_line:-없음}"; fi
+
 if ((failures > 0)); then
   printf '%d 항목 실패\n' "$failures"
   exit 1
