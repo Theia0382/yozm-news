@@ -9,6 +9,7 @@ import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.servers.Server;
+import net.yozmnews.platform.WebRole;
 import org.springdoc.core.customizers.OpenApiCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,6 +17,7 @@ import org.springframework.context.annotation.Configuration;
 /**
  * 화면용 API 명세의 고정 값과 속성 규칙 — docs/specs/platform.md §4 · platform-R6
  */
+@WebRole
 @Configuration(proxyBeanMethods = false)
 class OpenApiConfiguration {
 
