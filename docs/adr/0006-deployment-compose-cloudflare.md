@@ -1,6 +1,6 @@
 # ADR-0006: 배포: Docker Compose + Cloudflare Tunnel
 
-- 상태: 승인. 서비스 목록의 `web` · `worker`(기본 구성)는 [ADR-0021](0021-separate-deploy-compose-with-single-app-service.md)이 대체
+- 상태: 승인. 서비스 목록의 `web` · `worker`(기본 구성)는 [ADR-0021](0021-separate-deploy-compose-with-single-app-service.md)이, 공개를 Tunnel 로만 하고 Cloudflare 서비스(DNS · CDN · WAF · 요청 제한 · R2)를 쓴다는 부분은 [ADR-0012](0012-swappable-external-dependencies.md)가, 권장 시작점(서울 리전 VPS)은 [ADR-0047](0047-self-hosted-software-run-by-instance-operators.md)이 대체
 - 날짜: 2026-10-25
 
 ## 맥락
