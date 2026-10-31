@@ -1,5 +1,6 @@
 package net.yozmnews.platform.adapter.in.job;
 
+import net.yozmnews.platform.WorkerRole;
 import net.yozmnews.platform.application.EventResubmissionService;
 import org.jobrunr.jobs.annotations.Job;
 import org.jobrunr.jobs.annotations.Recurring;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Component;
  * <p>
  * JobRunr 가 다른 패키지에서 반사로 부르므로 클래스가 public 이어야 한다.
  */
+@WorkerRole
 @Component
 public class EventResubmissionJob {
 

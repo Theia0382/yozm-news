@@ -20,7 +20,7 @@
 
 - 루트 `compose.yaml` 의 서비스는 모두 프로필 `dev` 에 있다 — PostgreSQL 과 로컬 OIDC 공급자(`mock-oauth2-server`)
 - **(미구현)** 메일을 도입하면 발송 메일을 확인할 `mailpit` 이 더해진다([ADR-0012](../adr/0012-swappable-external-dependencies.md))
-- 백엔드를 Spring profile `local` 로 실행하면 앱이 이 Compose 를 띄우고, 컨테이너에서 PostgreSQL 접속 정보를 읽는다. 이 연동이 켜져 있는 동안 DB 접속 환경 변수는 쓰이지 않는다([ADR-0018](../adr/0018-local-profile-compose-connection.md)). `local` 의 나머지 값(명세 엔드포인트 열기 · 수집 연락처)은 `backend/src/main/resources/application-local.yaml` 에 있다
+- 백엔드를 Spring profile `local` 로 실행하면 앱이 이 Compose 를 띄우고, 컨테이너에서 PostgreSQL 접속 정보를 읽는다. 이 연동이 켜져 있는 동안 DB 접속 환경 변수는 쓰이지 않는다([ADR-0018](../adr/0018-local-profile-compose-connection.md)). `local` 의 나머지 값(명세 엔드포인트 열기 · 수집 연락처)은 `backend/src/main/resources/application-local.yaml` 에 있다. `local` 은 역할 profile 이 아니므로 역할(`web` · `worker`)을 함께 켠다 — `local` 만 켜면 역할 검사가 기동을 멈춘다([platform Spec](../specs/platform.md#역할))
 - Compose 프로젝트 이름을 정하지 않으므로 checkout(작업 디렉터리) 이름이 프로젝트 이름이 된다. 그래서 checkout 마다 컨테이너 · 네트워크 · 개발 DB 볼륨이 따로 생긴다([ADR-0019](../adr/0019-dev-compose-per-checkout-and-test-image-source.md)). 호스트 포트는 루프백에만 연다
 - mock OIDC 서버의 issuer 가 호스트 포트로 만들어지므로 그 포트는 고정이다. PostgreSQL 의 호스트 포트는 비워 두면 Docker 가 고르고, 앱은 공개된 포트를 읽어 접속한다
 
@@ -119,13 +119,17 @@ IDE 에서 테스트를 Gradle 에 맡기는 것은 1 때문이다([CONTRIBUTING
 | 배포 target 의 실행 단계에 `RUN` 이 없다 | CI 단계 — `deploy` 의 두 아키텍처 빌드와 빌더 에뮬레이션 확인 | `backend/Dockerfile` · `frontend/Dockerfile` · `ci.yml` |
 | PostgreSQL 이미지는 `compose.yaml` 한 줄이 정하고 테스트가 그 값을 쓴다 | 구조 + 테스트 `DevComposeFileTests`(파일 · 서비스 · 이미지가 없거나 보간 · 시스템 속성 없음은 실패) | `compose.yaml` · `backend/build.gradle.kts` |
 | 배포 구성의 PostgreSQL 이 같은 이미지를 쓴다 | 구조(`extends`) + 스모크 K9 | `deploy/compose.yaml` · `deploy/smoke.sh` |
-| 배포 이미지가 저장소의 프리셋을 모두 적재한다 | 스모크 K11 — 앱의 적재 로그 줄의 수 = 저장소의 프리셋 파일 수(로그 문구는 [source-R12](../specs/source.md#수집-프로필)) | `backend/src/main/resources/source-presets/` · `deploy/smoke.sh` |
+| 배포 이미지가 저장소의 프리셋을 모두 적재한다 | 스모크 K12 — 앱의 적재 로그 줄의 수 = 저장소의 프리셋 파일 수(로그 문구는 [source-R12](../specs/source.md#수집-프로필)) | `backend/src/main/resources/source-presets/` · `deploy/smoke.sh` |
 | 테스트가 읽는 저장소 파일이 검사 이미지에 있다 | 빌드 실패(허용 목록에 없으면 복사가 실패) · 검사 실패(복사하지 않으면 이미지 안에 파일이 없다) | [결선](#테스트가-저장소-파일을-읽는-결선) |
 | 커밋된 화면용 API 명세 = 코드의 명세 | 테스트 `OpenApiSpecTests` | `api/openapi.json` · `backend/build.gradle.kts` |
 | Javadoc 형식 오류(깨진 참조 · HTML · 태그)가 없다 — main · 테스트 소스 | 빌드 실패 — 컴파일의 javac doclint 가 깨진 참조 · HTML 을(배포 빌드 `bootJar` 에도 걸린다), `check` 의 `javadoc` · `javadocTest` 가 그에 더해 알 수 없는 태그 · doclint 경고를 잡는다(`-Werror` 는 이 둘에만). 문서화 누락은 검사하지 않는다([ADR-0039](../adr/0039-code-comments-point-to-owning-docs-and-javadoc-format-checked-by-javac-and-javadoc.md)) | `backend/build.gradle.kts` |
 | 넘기는 경로의 정본 하나를 Caddy · Vite 가 함께 읽는다 | 테스트 `backendPaths.test.ts` + 스모크 K5 · K6 · K10 | `frontend/proxy/` |
 | proxy 가 관리 · 명세 엔드포인트를 넘기지 않는다 | 스모크 K7 · K8 | `frontend/proxy/backend-paths.caddy` |
 | 배포 구성은 proxy 만 호스트에 공개하고 기본은 루프백이다 | 스모크 K2 | [공개](../operations/configuration.md#공개) |
+| 배포 구성의 `app` 은 두 역할(`web` · `worker`)을 켠다 | 스모크 K11 | `deploy/compose.yaml` |
+| 역할이 하나도 켜지지 않으면 기동하지 않는다 | 테스트 `ActiveRolesTests` · `RoleConfigurationTests` | [platform Spec](../specs/platform.md#역할) |
+| 역할 조합마다 켜지는 구성요소가 정해져 있다(작업 서버 · 작업 진입점 · 기동 대조 · 스케줄링 · 화면용 API) | 테스트 `WebRoleTests` · `WorkerRoleTests` · `BothRolesTests` | `application.yaml` · `application-worker.yaml` |
+| 웹 · 작업 패키지의 구성요소는 맞는 역할을 달고, 리스너는 역할을 달지 않는다 | 테스트 `RoleMembershipTests` | [platform Spec](../specs/platform.md#역할) |
 | 배포 구성의 세 서비스가 순서대로 healthy 가 된다 | 구조(`depends_on` 의 healthy 조건) + `up --wait` + 스모크 K1 | [배포 구성 실행](../operations/deployment.md#배포-구성-실행) |
 | 배포 필수 값이 없으면 멈춘다 | 구조(Compose 필수 보간) + 테스트 `RssArticleSourceConfigurationTests`(수집 연락처) | [운영 설정](../operations/configuration.md) |
 | HTTP 로는 `health` 만 노출하고 상세 · 구성요소를 담지 않는다 | 테스트 `HealthEndpointTests` | [헬스 체크와 관측](../operations/deployment.md#헬스-체크와-관측) |
@@ -137,7 +141,7 @@ IDE 에서 테스트를 Gradle 에 맡기는 것은 1 때문이다([CONTRIBUTING
 | `app` · `proxy` 는 root 가 아닌 uid 로 돈다 | 없음 | `backend/Dockerfile` · `frontend/Dockerfile` |
 | proxy 는 관리 API 를 열지 않고 설정을 디스크에 저장하지 않는다 | 없음 | `frontend/proxy/Caddyfile` |
 | 검사 이미지에 저장소가 추적하지 않는 파일이 들어가지 않는다 | 없음 — 허용 목록의 무시 줄은 `.gitignore` 의 손 사본이다 | 각 `Dockerfile.dockerignore` |
-| 작업 서버가 멈추면 `health` 가 `DOWN` 이 된다 | 없음 — 테스트는 집계에 DB 가 들어 있는지만 본다 | `application.yaml` |
+| 작업 서버가 멈추면 `health` 가 `DOWN` 이 된다 | 없음 — 테스트는 집계에 DB 가 들어 있는지만 본다 | `application-worker.yaml` |
 | DinD 엔진은 공개 포트 없이 검사 정의 안에만 열린다 | 없음 | `compose.check.yaml` |
 | 검사 결과가 호스트의 시간대 · 로캘과 무관하다 | 없음 — 세 검사 이미지가 같은 `ENV` 를 각자 둔다 | 세 Dockerfile |
 | 개발용 Compose 의 포트는 호스트 루프백에만 열린다 | 없음 | `compose.yaml` |

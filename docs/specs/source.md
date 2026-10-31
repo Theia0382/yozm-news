@@ -142,7 +142,7 @@ public record FetchedArticle(String title, URI link, @Nullable String guid, @Nul
 
 | 패키지 | 책임 |
 |---|---|
-| `adapter/in/job` | 반복 작업과 피드 수집 작업 — 작업 서버(JobRunr)가 부른다 |
+| `adapter/in/job` | 반복 작업과 피드 수집 작업 — 작업 서버(JobRunr)가 부른다. 작업 역할에서만 켜진다([platform-R9](platform.md#역할)) |
 | `application` | 유스케이스(등록 · 운영 설정 · 점유 · 수집 한 회차 · 기동 대조 · 피드 건강 검사)와 트랜잭션 경계 |
 | `domain/registry` | 소스 · 피드 aggregate 와 그 저장소, 소스의 프로필 얻기, 켜기 · 수집 가능 판정 |
 | `domain/profile` | 수집 프로필 모델과 그 바인딩 · 검증, 프리셋 카탈로그, 실제 주기 |
@@ -217,10 +217,12 @@ sequenceDiagram
 |---|---|---|---|
 | 수집할 피드 등록 — 반복 작업 ID `poll-due-feeds` | `PollDueFeedsJob` | 1분마다 | 대상 피드를 점유하고 점유 토큰을 작업 ID 로 피드마다 수집 작업을 예약 시각에 등록한다(source-R15 · source-R18 · source-R19). 재시도하지 않는다 — 실패한 회차가 재시도를 기다리는 동안 작업 서버가 다음 회차를 건너뛰므로 다음 회차가 곧 재시도다. 같은 점유를 두 번 등록해도 작업 ID 가 같아 작업은 하나다 |
 | 피드 수집(피드 ID, 점유 토큰) — 작업 ID 는 점유 토큰 | `PollFeedJob` → `FeedPoller` | 위에서 등록 | 점유 확인 → 예약 시각까지 대기 → 같은 소스의 요청 시작 시각 예약 · 대기 → 트랜잭션 밖에서 요청 · 정규화 → 한 트랜잭션에서 수집 상태 반영과 새 항목마다 `ArticleFetched` 발행(source-R16 ~ source-R21). 재시도하지 않는다 |
-| 기동 대조 | `PresetFeedReconciliation`(`application`) | 애플리케이션 준비 완료(`ApplicationReadyEvent`) | 소스마다 프로필과 저장된 피드를 대조한다(source-R8) |
+| 기동 대조 | `PresetFeedReconciliation`(`application`) | 작업 역할의 애플리케이션 준비 완료(`ApplicationReadyEvent`) | 소스마다 프로필과 저장된 피드를 대조한다(source-R8) |
 | 피드 건강 검사 — 반복 작업 ID `feed-health-check` | `FeedHealthCheckJob` → `FeedHealthCheck` | 1시간마다 | 켜진 피드의 상태를 다시 판정해 바뀐 행만 쓰고, 커밋 뒤 전이를 로그한다(source-R30 · source-R31 · source-R47 ~ source-R49). 같은 입력이면 같은 판정이라 다시 실행해도 결과가 같다. 한 회차가 대상 행을 잠그므로 겹친 회차는 기다린다(source-R48). 재시도하지 않는다 — 다음 회차가 다시 판정한다 |
 
 수집 작업이 동시에 몇 개 도는지는 작업 서버의 동시 실행 수가 정한다([운영 설정 — 백그라운드 작업](../operations/configuration.md#백그라운드-작업)). 수집 작업은 기다리는 동안 DB 연결을 잡지 않는다. 컨트롤러는 없다.
+
+반복 작업 둘(`PollDueFeedsJob` · `FeedHealthCheckJob`)과 수집 작업(`PollFeedJob`)의 진입점, 기동 대조는 작업 역할(`@WorkerRole`)에서만 켜지고, 반복 작업 등록도 작업 역할이 한다. 피드 켜기 · 미리보기 · 등록 같은 운영 유스케이스와 피드 요청 관문은 두 역할 공통이다([platform-R9](platform.md#역할)).
 
 ### `application`
 
@@ -421,7 +423,7 @@ public sealed interface FetchResult {
   - 사전 보정은 닫힌 목록(`replace-undefined-entities` · `strip-invalid-control-chars` · `force-encoding`)에서만 고르고 같은 규칙을 두 번 쓰지 않는다. `force-encoding` 의 `charset` 은 지원하는 문자 인코딩이다
   - 읽을 곳은 `$standard` 또는 `접두사:이름` · `이름` 형식의 요소 이름이고, 접두사는 기본 접두사이거나 `namespaces` 에 정의한 것이다. 한 값의 목록 안에 같은 것을 두 번 쓰지 않는다
   - 날짜 형식은 패턴으로 읽을 수 있고 연 · 월 · 일 · 시 · 분을 모두 담는다. 시간대는 알려진 시간대다
-- **source-R12** — 프리셋은 `backend/src/main/resources/source-presets/{key}.yaml` 하나가 하나이고, 이용조건 검토일이 반드시 있다. 기동 때 모든 프리셋을 운영자 프로필과 같은 읽기기 · 검증기로 읽는다. 하나라도 검증에 실패하거나, 그 디렉터리에 `.yaml` 이 아닌 파일 · 키 형식이 아닌 이름 · 같은 이름이 있으면 기동하지 않는다. 적재하면 그 수와 키를 정보 로그 `프리셋 {n}개를 적재했다: {키}` 로 남긴다 — 배포 구성 스모크(K11)가 이 줄의 수를 저장소의 프리셋 파일 수와 비교하므로, 문구를 바꾸면 `deploy/smoke.sh` 도 함께 바꾼다
+- **source-R12** — 프리셋은 `backend/src/main/resources/source-presets/{key}.yaml` 하나가 하나이고, 이용조건 검토일이 반드시 있다. 기동 때 모든 프리셋을 운영자 프로필과 같은 읽기기 · 검증기로 읽는다. 하나라도 검증에 실패하거나, 그 디렉터리에 `.yaml` 이 아닌 파일 · 키 형식이 아닌 이름 · 같은 이름이 있으면 기동하지 않는다. 적재하면 그 수와 키를 정보 로그 `프리셋 {n}개를 적재했다: {키}` 로 남긴다 — 배포 구성 스모크(K12)가 이 줄의 수를 저장소의 프리셋 파일 수와 비교하므로, 문구를 바꾸면 `deploy/smoke.sh` 도 함께 바꾼다
 - **source-R13** — 프리셋을 참조하는 소스는 운영자가 소스 · 피드를 켜고 끄고 수집 주기를 정할 뿐이다. 프리셋이 바뀌면 다음 배포부터 바뀐 프리셋으로 수집한다. 운영자 프로필은 프리셋과 같은 형식의 완결된 프로필이고, 프리셋 원문을 복사해 고친 프로필은 이후 프리셋 수정을 따라가지 않는다
 
 ### 수집 일정
@@ -574,3 +576,4 @@ RSS 품질이 피드마다 크게 다르므로 사전 보정 → 파싱 → 필�
 | [0033](../adr/0033-feed-polling-db-lease-per-feed-new-items-and-per-source-request-spacing.md) | 피드 수집은 DB 점유로 겹침을 막고, 피드별 직전 항목으로 새 항목을 가르며, 같은 언론사 요청 사이는 요청 직전의 DB 예약으로 띄운다 |
 | [0040](../adr/0040-feed-status-stored-in-poll-state-and-rejudged-hourly-by-health-check.md) | 피드 상태는 수집 상태 행에 저장하고, 피드 건강 검사가 매시간 켜진 피드를 다시 판정한다 |
 | [0041](../adr/0041-activation-gate-previews-a-feed-on-enable-and-judges-by-code-constants.md) | 활성화 관문은 피드를 켤 때 한 번 받아 미리보고, 코드 상수 기준으로 판정한다 |
+| [0042](../adr/0042-app-roles-as-web-worker-profiles-marked-by-platform-annotations.md) | 앱 역할은 Spring profile `web` · `worker` 로 나누고, 소속은 `platform` 역할 애너테이션으로 표시하며, 역할이 없으면 기동하지 않는다 |

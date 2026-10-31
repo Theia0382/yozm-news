@@ -51,7 +51,7 @@ class PresetCatalogConfiguration {
 	}
 
 	/**
-	 * 위치의 프리셋 파일을 모두 읽어 카탈로그를 만들고, 적재한 수와 키를 정보 로그로 알린다 — 배포 구성 스모크(K11)가 이 줄을 읽는다.
+	 * 위치의 프리셋 파일을 모두 읽어 카탈로그를 만들고, 적재한 수와 키를 정보 로그로 알린다 — 배포 구성 스모크(K12)가 이 줄을 읽는다.
 	 * @throws IllegalStateException 적재에 실패한 파일이 하나라도 있을 때 — 메시지에 파일마다 문제를 모두 담는다
 	 * @throws IllegalArgumentException 여러 classpath 위치에 같은 이름의 프리셋 파일이 있을 때
 	 * @throws UncheckedIOException 위치나 파일을 읽지 못했을 때

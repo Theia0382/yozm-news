@@ -38,7 +38,7 @@ class KyunghyangPresetTests {
 	void keepsTheTrackingQueryOfTheLink() {
 		FetchedArticle first = PresetFixtures.normalized("kyunghyang", "section").articles().get(0);
 
-		// 정규 URL 은 article 이 만든다 — source 는 링크를 그대로 넘긴다
+		// 정규 URL 은 article 이 만든다 — source 는 추적 질의를 지우지 않는다
 		assertThat(first.link()).isEqualTo(URI.create(
 				"https://www.khan.example/article/202610301532001?utm_source=khan_rss&utm_medium=rss&utm_campaign=total_news"));
 		assertThat(first.guid()).isEqualTo("https://www.khan.example/article/202610301532001");
