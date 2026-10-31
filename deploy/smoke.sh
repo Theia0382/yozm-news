@@ -82,6 +82,12 @@ deploy_image=$("${compose[@]}" config --images postgres 2>&1) && deploy_ok=1 || 
 dev_image=$(docker compose -f "$repo_dir/compose.yaml" --profile dev config --images postgres 2>&1) && dev_ok=1 || dev_ok=0
 if ((deploy_ok && dev_ok)) && [[ -n $dev_image && $deploy_image == "$dev_image" ]]; then pass "K9 PostgreSQL 이미지 ($deploy_image)"; else fail "K9 PostgreSQL 이미지" "$dev_image" "$deploy_image"; fi
 
+# K11 배포 이미지가 저장소의 프리셋을 모두 적재한다 — 앱의 적재 로그 줄(PresetCatalogConfiguration)을 저장소 파일 수와 비교한다
+preset_files=("$repo_dir"/backend/src/main/resources/source-presets/*.yaml)
+[[ -e ${preset_files[0]} ]] || preset_files=()
+loaded=$("${compose[@]}" logs --no-color app 2>&1 | grep -o '프리셋 [0-9]*개를 적재했다' | tail -n 1)
+if [[ $loaded == "프리셋 ${#preset_files[@]}개를 적재했다" ]]; then pass "K11 프리셋 적재 (${#preset_files[@]}개)"; else fail "K11 프리셋 적재" "프리셋 ${#preset_files[@]}개를 적재했다" "${loaded:-적재 로그 없음}"; fi
+
 if ((failures > 0)); then
   printf '%d 항목 실패\n' "$failures"
   exit 1

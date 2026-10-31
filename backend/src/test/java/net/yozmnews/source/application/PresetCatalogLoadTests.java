@@ -14,6 +14,9 @@ import net.yozmnews.source.domain.profile.PresetKey;
 import net.yozmnews.source.domain.profile.ProfileParser;
 import net.yozmnews.source.domain.profile.text.ProfileTextReader;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 
 /**
@@ -21,6 +24,7 @@ import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
  * <p>
  * 지키는 규칙: source-R12
  */
+@ExtendWith(OutputCaptureExtension.class)
 class PresetCatalogLoadTests {
 
 	private final PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
@@ -74,6 +78,16 @@ class PresetCatalogLoadTests {
 			.extracting(preset -> preset.key().value(), Preset::termsReviewedAt, preset -> preset.profile().feeds().size())
 			.containsExactly(tuple("donga", LocalDate.of(2026, 10, 31), 16), tuple("jtbc", LocalDate.of(2026, 10, 31), 8),
 					tuple("kyunghyang", LocalDate.of(2026, 10, 31), 12), tuple("sbs", LocalDate.of(2026, 10, 31), 8));
+	}
+
+	@Test
+	void logsHowManyPresetsItLoaded(CapturedOutput output) {
+		load(PresetCatalogConfiguration.LOCATION);
+		// 대조 — 수와 키는 적재한 결과에서 나온다
+		load("classpath*:source-presets-test/none/*");
+
+		assertThat(output.getOut()).contains("프리셋 4개를 적재했다: donga, jtbc, kyunghyang, sbs")
+			.contains("프리셋 0개를 적재했다: ");
 	}
 
 	@Test
