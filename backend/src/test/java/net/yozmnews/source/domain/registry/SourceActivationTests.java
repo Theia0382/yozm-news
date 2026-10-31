@@ -8,6 +8,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 
+import net.yozmnews.source.ActivationRefusal;
 import net.yozmnews.source.domain.profile.PresetKey;
 import org.junit.jupiter.api.Test;
 

@@ -60,6 +60,12 @@ public final class CollectionProfile {
 		return this.feeds;
 	}
 
+	/** 그 피드의 읽기 설정 — 프로필에 그 피드가 없으면 비어 있다 */
+	public Optional<FeedReading> reading(FeedKey key) {
+		return feed(key).map(feed -> new FeedReading(feed.url(), this.source.language(), this.preCorrections,
+				this.items, this.dates));
+	}
+
 	public Optional<FeedSpec> feed(FeedKey key) {
 		return this.feeds.stream().filter(feed -> feed.key().equals(key)).findFirst();
 	}

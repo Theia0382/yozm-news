@@ -124,6 +124,7 @@ IDE 에서 테스트를 Gradle 에 맡기는 것은 1 때문이다([CONTRIBUTING
 | 커밋된 화면용 API 명세 = 코드의 명세 | 테스트 `OpenApiSpecTests` | `api/openapi.json` · `backend/build.gradle.kts` |
 | Javadoc 형식 오류(깨진 참조 · HTML · 태그)가 없다 — main · 테스트 소스 | 빌드 실패 — 컴파일의 javac doclint 가 깨진 참조 · HTML 을(배포 빌드 `bootJar` 에도 걸린다), `check` 의 `javadoc` · `javadocTest` 가 그에 더해 알 수 없는 태그 · doclint 경고를 잡는다(`-Werror` 는 이 둘에만). 문서화 누락은 검사하지 않는다([ADR-0039](../adr/0039-code-comments-point-to-owning-docs-and-javadoc-format-checked-by-javac-and-javadoc.md)) | `backend/build.gradle.kts` |
 | 넘기는 경로의 정본 하나를 Caddy · Vite 가 함께 읽는다 | 테스트 `backendPaths.test.ts` + 스모크 K5 · K6 · K10 | `frontend/proxy/` |
+| 운영자 토큰을 설정하지 않은 배포는 운영자 경로가 닫혀 있다(403 문제 응답) | 스모크 K13 | [운영 설정 — 운영자](../operations/configuration.md#운영자) |
 | proxy 가 관리 · 명세 엔드포인트를 넘기지 않는다 | 스모크 K7 · K8 | `frontend/proxy/backend-paths.caddy` |
 | 배포 구성은 proxy 만 호스트에 공개하고 기본은 루프백이다 | 스모크 K2 | [공개](../operations/configuration.md#공개) |
 | 배포 구성의 `app` 은 두 역할(`web` · `worker`)을 켠다 | 스모크 K11 | `deploy/compose.yaml` |

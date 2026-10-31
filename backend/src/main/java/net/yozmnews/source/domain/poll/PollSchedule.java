@@ -4,7 +4,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
 
-import net.yozmnews.source.domain.fetch.FailurePermanence;
+import net.yozmnews.source.FailurePermanence;
 import net.yozmnews.source.domain.fetch.FetchLimits;
 import net.yozmnews.source.domain.profile.PollInterval;
 import org.jspecify.annotations.Nullable;

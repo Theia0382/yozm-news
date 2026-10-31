@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
+import net.yozmnews.source.Criterion;
 import net.yozmnews.source.domain.feed.FeedFixtures;
 import net.yozmnews.source.domain.feed.FeedNormalization;
 import net.yozmnews.source.domain.fetch.FetchResult;

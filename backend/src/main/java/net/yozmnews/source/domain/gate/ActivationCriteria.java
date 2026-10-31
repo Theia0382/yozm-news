@@ -3,6 +3,8 @@ package net.yozmnews.source.domain.gate;
 import java.util.ArrayList;
 import java.util.List;
 
+import net.yozmnews.source.Criterion;
+
 /**
  * 활성화 기준 — 정본 · docs/specs/source.md §4 · source-R9.
  * <p>

@@ -1,11 +1,18 @@
 package net.yozmnews.source.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import java.time.Duration;
+import java.util.List;
 
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.source.SourceId;
+import net.yozmnews.source.UnknownSourceException;
+import net.yozmnews.source.domain.profile.FeedKey;
 import net.yozmnews.source.domain.profile.PresetKey;
+import net.yozmnews.source.domain.registry.Feed;
+import net.yozmnews.source.domain.registry.FeedRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,12 +24,13 @@ import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 /**
- * 소스 등록과 기동 대조 — 실제 PostgreSQL 에서 합성 프리셋 multi(피드 one · two)로 본다.
+ * 소스 등록 · 운영자 원문 수정과 기동 대조 — 실제 PostgreSQL 에서 합성 프리셋 multi(피드 one · two)와 합성 운영자 원문으로 본다.
  * <p>
- * 지키는 규칙: source-R1 · source-R2 · source-R3 · source-R7 · source-R8
+ * 지키는 규칙: source-R1 · source-R2 · source-R3 · source-R7 · source-R8 · source-R50
  */
 @Import({ TestcontainersConfiguration.class, RegistryTestCatalog.class })
 @SpringBootTest
@@ -41,8 +49,27 @@ class SourceRegistrationTests {
 			    section: 전체
 			""";
 
+	/** 이용조건 검토일이 있는 운영자 원문 — 피드 main · extra */
+	private static final String REVIEWED_TWO_FEEDS = """
+			source:
+			  name: 운영자일보
+			  homepage: https://operator.example
+			  language: ko
+			termsReviewedAt: 2026-10-01
+			feeds:
+			  - key: main
+			    url: https://operator.example/main.xml
+			    section: 전체
+			  - key: extra
+			    url: https://operator.example/extra.xml
+			    section: 부록
+			""";
+
 	@Autowired
 	SourceRegistration registration;
+
+	@Autowired
+	FeedRepository feedRepository;
 
 	@Autowired
 	PresetFeedReconciliation reconciliation;
@@ -140,6 +167,124 @@ class SourceRegistrationTests {
 
 		assertThat(output).contains("프리셋이 사라졌다").contains("vanished");
 		assertThat(this.rows.count("feeds")).isZero();
+	}
+
+	@Test
+	void revisionDisablesOnlyTheEnabledFeedWhoseReadingChanged() {
+		long source = enabledOperatorSource();
+
+		Revision result = this.registration.reviseOperatorProfile(new SourceId(source),
+				REVIEWED_TWO_FEEDS.replace("main.xml", "main-v2.xml").replace("section: 부록", "section: 덤"));
+
+		assertThat(result).isEqualTo(new Revision.Revised(List.of(new FeedKey("main")), false, List.of()));
+		assertThat(this.rows.feeds(source)).containsExactly("extra:true", "main:false");
+		assertThat(sourceText(source)).contains("main-v2.xml");
+		assertThat(sourceEnabled(source)).isTrue();
+	}
+
+	@Test
+	void revisionListsTheDisabledFeedsInTheOrderTheyWereCreated() {
+		long source = enabledOperatorSource();
+
+		Revision result = this.registration.reviseOperatorProfile(new SourceId(source),
+				REVIEWED_TWO_FEEDS.replace("language: ko", "language: en"));
+
+		// main 을 먼저 만들었다 — 만든 순(main, extra)은 사전 순(extra, main)과 다르다
+		assertThat(result).isEqualTo(new Revision.Revised(List.of(new FeedKey("main"), new FeedKey("extra")), false,
+				List.of()));
+		assertThat(this.rows.feeds(source)).containsExactly("extra:false", "main:false");
+	}
+
+	@Test
+	void revisionAddsAFeedNewToTheTextDisabledWithItsPollState() {
+		long source = enabledOperatorSource();
+
+		Revision result = this.registration.reviseOperatorProfile(new SourceId(source), REVIEWED_TWO_FEEDS + """
+				  - key: added
+				    url: https://operator.example/added.xml
+				    section: 새것
+				""");
+
+		long added = this.rows.feedId(source, "added");
+		assertThat(result).isEqualTo(new Revision.Revised(List.of(), false, List.of(new FeedKey("added"))));
+		assertThat(this.rows.feeds(source)).containsExactly("added:false", "extra:true", "main:true");
+		assertThat(this.rows.hasPollState(added)).isTrue();
+	}
+
+	@Test
+	void revisionDropsTheTermsDateAndDisablesTheSource() {
+		long source = enabledOperatorSource();
+
+		Revision result = this.registration.reviseOperatorProfile(new SourceId(source),
+				REVIEWED_TWO_FEEDS.replace("termsReviewedAt: 2026-10-01\n", ""));
+
+		assertThat(result).isEqualTo(new Revision.Revised(List.of(), true, List.of()));
+		assertThat(sourceEnabled(source)).isFalse();
+		assertThat(this.rows.feeds(source)).containsExactly("extra:true", "main:true");
+	}
+
+	@Test
+	void revisionWithAnInvalidTextChangesNothing() {
+		long source = enabledOperatorSource();
+
+		Revision result = this.registration.reviseOperatorProfile(new SourceId(source), "source:\n  name: 이름만\n");
+
+		assertThat(result).isInstanceOfSatisfying(Revision.InvalidProfile.class,
+				invalid -> assertThat(invalid.problems()).isNotEmpty());
+		assertThat(sourceText(source)).isEqualTo(REVIEWED_TWO_FEEDS);
+		assertThat(this.rows.feeds(source)).containsExactly("extra:true", "main:true");
+	}
+
+	@Test
+	void presetSourceHasNoTextToRevise() {
+		long source = registered(this.registration.registerPreset(new PresetKey("multi")));
+
+		assertThat(this.registration.reviseOperatorProfile(new SourceId(source), REVIEWED_TWO_FEEDS))
+			.isEqualTo(new Revision.NotOperatorProfile());
+		assertThat(this.rows.feeds(source)).containsExactly("one:false", "two:false");
+	}
+
+	@Test
+	void missingSourceIsReportedBeforeTheTextIsValidated() {
+		assertThatExceptionOfType(UnknownSourceException.class)
+			.isThrownBy(() -> this.registration.reviseOperatorProfile(new SourceId(999_999), "틀린 원문"))
+			.satisfies(ex -> assertThat(ex.id()).isEqualTo(new SourceId(999_999)));
+	}
+
+	@Test
+	void aFeedReadBeforeTheRevisionCannotBeSavedAfterIt() {
+		long source = enabledOperatorSource();
+		Feed staleUnchanged = this.feedRepository.findById(this.rows.feedId(source, "extra")).orElseThrow();
+		Feed staleDisabled = this.feedRepository.findById(this.rows.feedId(source, "main")).orElseThrow();
+
+		this.registration.reviseOperatorProfile(new SourceId(source),
+				REVIEWED_TWO_FEEDS.replace("main.xml", "main-v2.xml"));
+
+		// 수정이 끈 피드 — 바뀐 행이라 언제나 버전이 오른다(대조)
+		assertThatExceptionOfType(OptimisticLockingFailureException.class)
+			.isThrownBy(() -> this.feedRepository.save(staleDisabled));
+		// 수정이 바꾸지 않은 피드 — 피드 행을 모두 저장해야 버전이 오른다
+		assertThatExceptionOfType(OptimisticLockingFailureException.class)
+			.isThrownBy(() -> this.feedRepository.save(staleUnchanged));
+	}
+
+	/** 검토일이 있는 운영자 원문(피드 main · extra)을 등록하고 소스와 두 피드를 켠 상태로 둔다 */
+	private long enabledOperatorSource() {
+		long source = registered(this.registration.registerOperatorProfile(REVIEWED_TWO_FEEDS));
+		this.jdbc.sql("update sources set enabled = true where id = :id").param("id", source).update();
+		this.jdbc.sql("update feeds set enabled = true where source_id = :id").param("id", source).update();
+		return source;
+	}
+
+	private String sourceText(long source) {
+		return this.jdbc.sql("select profile from sources where id = :id").param("id", source).query(String.class).single();
+	}
+
+	private boolean sourceEnabled(long source) {
+		return this.jdbc.sql("select enabled from sources where id = :id")
+			.param("id", source)
+			.query(Boolean.class)
+			.single();
 	}
 
 	private static long registered(Registration result) {

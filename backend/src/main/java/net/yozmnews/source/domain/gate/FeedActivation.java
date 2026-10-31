@@ -1,11 +1,10 @@
 package net.yozmnews.source.domain.gate;
 
-import java.net.URI;
 import java.util.List;
 import java.util.Objects;
 
+import net.yozmnews.source.ActivationRefusal;
 import net.yozmnews.source.domain.fetch.FetchFailure;
-import net.yozmnews.source.domain.registry.ActivationRefusal;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -58,18 +57,8 @@ public sealed interface FeedActivation {
 
 	}
 
-	/**
-	 * 미리본 뒤 저장 전에 피드 URL 이 바뀌어 켜지 않았다.
-	 * @param previewed 미리본 URL
-	 * @param current 저장 직전에 다시 얻은 프로필의 URL
-	 */
-	record TargetChanged(URI previewed, URI current) implements FeedActivation {
-
-		public TargetChanged {
-			Objects.requireNonNull(previewed, "previewed");
-			Objects.requireNonNull(current, "current");
-		}
-
+	/** 미리본 뒤 저장 전에 그 피드의 읽기 설정(URL 포함)이 바뀌어 켜지 않았다 */
+	record ReadingChanged() implements FeedActivation {
 	}
 
 }

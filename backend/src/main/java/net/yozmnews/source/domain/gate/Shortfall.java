@@ -2,6 +2,8 @@ package net.yozmnews.source.domain.gate;
 
 import java.util.Objects;
 
+import net.yozmnews.source.Criterion;
+
 /**
  * 못 미친 기준 하나.
  *

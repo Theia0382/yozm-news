@@ -3,8 +3,10 @@ package net.yozmnews.source.domain.fetch;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
+import net.yozmnews.source.DocumentProblemKind;
+import net.yozmnews.source.FailurePermanence;
+import net.yozmnews.source.FetchFailureReason;
 import net.yozmnews.source.domain.feed.DocumentProblem;
-import net.yozmnews.source.domain.feed.DocumentProblemKind;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;

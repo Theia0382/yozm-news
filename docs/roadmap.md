@@ -36,6 +36,7 @@
 ## M4. 사용자와 키
 
 - OIDC 로그인(운영 기본 Google, 개발은 mock 서버), 자체 로그인(복구 코드, 봇 차단), 가입 정책(기본 닫힘 · 공개 가입 설정, 초대 링크, 운영자 계정 생성, 첫 운영자), 외부 계정 연결, 세션, CSRF
+- 운영자 경로(`/api/admin/**`)의 인증을 운영자 토큰에서 `ADMIN` 역할 계정의 세션으로 바꾸고 CSRF 를 켠다 — 경로와 역할 판정은 그대로다([ADR-0043](adr/0043-admin-functions-guarded-by-env-bearer-token-until-account-roles.md))
 - 화면 내 알림(비밀번호 변경, 키 무효, 다이제스트 실패, 피드 상태 변화 — 운영자)
 - BYOK 키 등록·검증·삭제(OpenAI, Anthropic), envelope encryption, API 키 발급 안내
 - 키가 없는 사용자는 키 등록 페이지로만 이동

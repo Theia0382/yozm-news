@@ -10,12 +10,12 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import net.yozmnews.source.ActivationRefusal;
 import net.yozmnews.source.SourceId;
 import net.yozmnews.source.domain.poll.FeedPollContext;
 import net.yozmnews.source.domain.poll.FeedPollStateRepository;
 import net.yozmnews.source.domain.poll.Lease;
 import net.yozmnews.source.domain.poll.PollSlots;
-import net.yozmnews.source.domain.registry.ActivationRefusal;
 import net.yozmnews.source.domain.registry.PollTarget;
 import net.yozmnews.source.domain.registry.ProfileResolution;
 import net.yozmnews.source.domain.registry.ProfileResolver;

@@ -30,13 +30,13 @@ import java.util.List;
 import java.util.zip.GZIPOutputStream;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
+import net.yozmnews.source.DocumentProblemKind;
+import net.yozmnews.source.FailurePermanence;
+import net.yozmnews.source.FetchFailureReason;
 import net.yozmnews.source.domain.feed.DocumentProblem;
-import net.yozmnews.source.domain.feed.DocumentProblemKind;
 import net.yozmnews.source.domain.fetch.AddressPolicy;
-import net.yozmnews.source.domain.fetch.FailurePermanence;
 import net.yozmnews.source.domain.fetch.FeedDescriptor;
 import net.yozmnews.source.domain.fetch.FetchFailure;
-import net.yozmnews.source.domain.fetch.FetchFailureReason;
 import net.yozmnews.source.domain.fetch.FetchLimits;
 import net.yozmnews.source.domain.fetch.FetchResult;
 import net.yozmnews.source.domain.fetch.FetchState;

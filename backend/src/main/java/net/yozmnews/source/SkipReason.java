@@ -1,7 +1,7 @@
-package net.yozmnews.source.domain.feed;
+package net.yozmnews.source;
 
 /**
- * 피드 항목을 기사로 넘기지 않은 이유
+ * 피드 항목을 기사로 넘기지 않은 이유 — docs/specs/source.md §3 · source-R40
  */
 public enum SkipReason {
 

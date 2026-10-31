@@ -13,6 +13,7 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import net.yozmnews.source.DocumentProblemKind;
 import net.yozmnews.source.domain.profile.PreCorrection;
 import org.jspecify.annotations.Nullable;
 

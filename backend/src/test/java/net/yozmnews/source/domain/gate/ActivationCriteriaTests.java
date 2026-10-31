@@ -5,7 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.ArrayList;
 import java.util.List;
 
-import net.yozmnews.source.domain.feed.SkipReason;
+import net.yozmnews.source.Criterion;
+import net.yozmnews.source.SkipReason;
 import net.yozmnews.source.domain.feed.SkippedItem;
 import org.junit.jupiter.api.Test;
 

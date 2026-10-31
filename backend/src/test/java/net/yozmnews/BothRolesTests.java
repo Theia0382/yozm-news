@@ -3,6 +3,7 @@ package net.yozmnews;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
+import java.net.http.HttpResponse;
 import java.time.Duration;
 
 import net.yozmnews.platform.domain.ActiveRoles;
@@ -15,6 +16,8 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Import;
 import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.web.SecurityFilterChain;
 
 /**
  * 역할 profile 을 켜지 않은 프로세스 — 기본 profile 로 두 역할을 함께 한다. HealthEndpointTests 와 같은 구성이라 컨텍스트를
@@ -67,6 +70,16 @@ class BothRolesTests {
 	@Test
 	void servesTheScreenApi() throws Exception {
 		assertThat(RoleProbe.get(this.port, "/api/ping").statusCode()).isEqualTo(200);
+	}
+
+	@Test
+	void closesTheAdminPathsWithoutATokenAndCreatesNoDefaultUser() throws Exception {
+		HttpResponse<String> admin = RoleProbe.get(this.port, "/api/admin/sources");
+		assertThat(admin.statusCode()).isEqualTo(403);
+		assertThat(admin.headers().firstValue("Content-Type")).hasValueSatisfying(
+				type -> assertThat(type).startsWith("application/problem+json"));
+		assertThat(this.context.getBeanNamesForType(UserDetailsService.class)).isEmpty();
+		assertThat(this.context.getBeansOfType(SecurityFilterChain.class)).containsOnlyKeys("adminChain", "defaultChain");
 	}
 
 }

@@ -13,10 +13,10 @@ import java.util.List;
 import java.util.UUID;
 
 import net.yozmnews.source.FeedId;
+import net.yozmnews.source.FetchFailureReason;
 import net.yozmnews.source.FetchedArticle;
 import net.yozmnews.source.domain.feed.FeedNormalization;
 import net.yozmnews.source.domain.fetch.FetchFailure;
-import net.yozmnews.source.domain.fetch.FetchFailureReason;
 import net.yozmnews.source.domain.fetch.FetchResult;
 import net.yozmnews.source.domain.fetch.FetchState;
 import net.yozmnews.source.domain.profile.PollInterval;

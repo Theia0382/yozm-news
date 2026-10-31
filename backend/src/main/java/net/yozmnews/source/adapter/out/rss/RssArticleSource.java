@@ -18,6 +18,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.net.ssl.SSLException;
 
+import net.yozmnews.source.FetchFailureReason;
 import net.yozmnews.source.domain.feed.FeedDocument;
 import net.yozmnews.source.domain.feed.FeedNormalization;
 import net.yozmnews.source.domain.feed.FeedNormalizer;
@@ -26,7 +27,6 @@ import net.yozmnews.source.domain.fetch.ArticleSource;
 import net.yozmnews.source.domain.fetch.ContentTypeCharset;
 import net.yozmnews.source.domain.fetch.FeedDescriptor;
 import net.yozmnews.source.domain.fetch.FetchFailure;
-import net.yozmnews.source.domain.fetch.FetchFailureReason;
 import net.yozmnews.source.domain.fetch.FetchLimits;
 import net.yozmnews.source.domain.fetch.FetchResult;
 import net.yozmnews.source.domain.fetch.FetchState;

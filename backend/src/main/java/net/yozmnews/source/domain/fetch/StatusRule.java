@@ -1,5 +1,7 @@
 package net.yozmnews.source.domain.fetch;
 
+import net.yozmnews.source.FetchFailureReason;
+
 /**
  * 응답 상태 코드의 규칙 — docs/specs/source.md §4 · source-R23 · source-R24
  */

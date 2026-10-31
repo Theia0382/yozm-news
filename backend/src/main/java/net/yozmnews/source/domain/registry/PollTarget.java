@@ -2,6 +2,7 @@ package net.yozmnews.source.domain.registry;
 
 import java.util.Objects;
 
+import net.yozmnews.source.ActivationRefusal;
 import net.yozmnews.source.domain.fetch.FeedDescriptor;
 import net.yozmnews.source.domain.profile.CollectionProfile;
 import net.yozmnews.source.domain.profile.FeedKey;

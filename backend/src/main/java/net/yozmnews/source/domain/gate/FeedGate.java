@@ -1,15 +1,15 @@
 package net.yozmnews.source.domain.gate;
 
-import java.net.URI;
 import java.util.List;
 import java.util.Objects;
 
+import net.yozmnews.source.FetchFailureReason;
 import net.yozmnews.source.SourceId;
 import net.yozmnews.source.domain.fetch.FeedDescriptor;
 import net.yozmnews.source.domain.fetch.FetchFailure;
-import net.yozmnews.source.domain.fetch.FetchFailureReason;
 import net.yozmnews.source.domain.fetch.FetchResult;
 import net.yozmnews.source.domain.profile.CollectionProfile;
+import net.yozmnews.source.domain.profile.FeedReading;
 import net.yozmnews.source.domain.registry.Activation;
 import net.yozmnews.source.domain.registry.Feed;
 import net.yozmnews.source.domain.registry.PollTarget;
@@ -19,7 +19,7 @@ import net.yozmnews.source.domain.registry.ProfileResolution;
  * 피드 켜기 관문의 판정 — docs/specs/source.md §4 · source-R5 · source-R9.
  * <p>
  * 요청 전에는 설정 판정({@link PollTarget#of})만 하고, 받은 결과는 {@link ActivationCriteria} 에 견주며, 저장 직전에 다시 얻은 프로필로
- * 설정 판정을 되풀이한다. 피드를 켜는 전이는 {@link Feed#enable} 이 한다.
+ * 설정 판정과 읽기 설정 대조를 되풀이한다. 피드를 켜는 전이는 {@link Feed#enable} 이 한다.
  */
 public final class FeedGate {
 
@@ -55,11 +55,12 @@ public final class FeedGate {
 	}
 
 	/**
-	 * 저장 직전에 판정한다. 통과한 미리보기이고, 다시 얻은 프로필에 피드가 있고, 그 URL 이 미리본 URL 과 같을 때만 피드를 켠다.
+	 * 저장 직전에 판정한다. 통과한 미리보기이고, 다시 얻은 프로필에 피드가 있고, 그 피드의 읽기 설정이 미리본 것과 같을 때만 피드를 켠다.
 	 * @param current 저장 직전에 다시 얻은 프로필
-	 * @param previewed 미리본 피드 URL
+	 * @param previewed 미리본 프로필의 그 피드 읽기 설정
 	 */
-	public static FeedActivation enable(Feed feed, ProfileResolution current, URI previewed, PreviewOutcome outcome) {
+	public static FeedActivation enable(Feed feed, ProfileResolution current, FeedReading previewed,
+			PreviewOutcome outcome) {
 		Objects.requireNonNull(previewed, "previewed");
 		return switch (outcome) {
 			case PreviewOutcome.BelowCriteria below -> new FeedActivation.BelowCriteria(below.preview(),
@@ -67,9 +68,8 @@ public final class FeedGate {
 			case PreviewOutcome.Unfetched unfetched -> new FeedActivation.Unfetched(unfetched.failure());
 			case PreviewOutcome.Passed passed -> switch (PollTarget.of(current, feed.feedKey())) {
 				case PollTarget.Unavailable unavailable -> new FeedActivation.Refused(unavailable.reason());
-				case PollTarget.Ready ready -> ready.feed().url().equals(previewed)
-						? activate(feed, current, passed.preview())
-						: new FeedActivation.TargetChanged(previewed, ready.feed().url());
+				case PollTarget.Ready ready -> previewed.equals(ready.profile().reading(feed.feedKey()).orElseThrow())
+						? activate(feed, current, passed.preview()) : new FeedActivation.ReadingChanged();
 			};
 		};
 	}

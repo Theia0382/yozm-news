@@ -18,5 +18,7 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     setupFiles: ["./src/test/setup.ts"],
+    // 시각 표기가 실행 기기의 시간대에 따라 달라지지 않게 고정한다(검사 이미지는 TZ=UTC)
+    env: { TZ: "Asia/Seoul" },
   },
 });

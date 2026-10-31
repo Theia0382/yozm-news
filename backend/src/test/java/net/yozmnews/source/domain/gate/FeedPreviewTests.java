@@ -8,9 +8,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import net.yozmnews.source.FetchedArticle;
+import net.yozmnews.source.SkipReason;
 import net.yozmnews.source.domain.feed.FeedFixtures;
 import net.yozmnews.source.domain.feed.FeedNormalization;
-import net.yozmnews.source.domain.feed.SkipReason;
 import net.yozmnews.source.domain.feed.SkippedItem;
 import net.yozmnews.source.domain.fetch.FetchResult;
 import net.yozmnews.source.domain.fetch.FetchState;

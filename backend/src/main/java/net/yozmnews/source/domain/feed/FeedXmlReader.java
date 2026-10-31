@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.util.Objects;
 
+import net.yozmnews.source.DocumentProblemKind;
 import org.jdom2.Document;
 import org.jdom2.JDOMException;
 import org.jdom2.input.JDOMParseException;

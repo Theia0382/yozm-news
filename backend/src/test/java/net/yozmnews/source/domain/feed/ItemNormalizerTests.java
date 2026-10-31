@@ -8,6 +8,7 @@ import java.net.URI;
 import java.util.List;
 
 import net.yozmnews.source.FetchedArticle;
+import net.yozmnews.source.SkipReason;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;

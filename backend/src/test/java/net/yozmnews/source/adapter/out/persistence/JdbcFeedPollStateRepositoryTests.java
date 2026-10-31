@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit;
 
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.source.FeedId;
-import net.yozmnews.source.domain.fetch.FetchFailureReason;
+import net.yozmnews.source.FetchFailureReason;
 import net.yozmnews.source.domain.fetch.FetchState;
 import net.yozmnews.source.domain.poll.FeedPollContext;
 import net.yozmnews.source.domain.poll.FeedPollState;

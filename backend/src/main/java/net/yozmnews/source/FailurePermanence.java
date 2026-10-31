@@ -1,7 +1,7 @@
-package net.yozmnews.source.domain.fetch;
+package net.yozmnews.source;
 
 /**
- * 수집 실패의 분류 — 다음 수집 일정과 피드 상태가 쓴다
+ * 수집 실패의 분류 — docs/specs/source.md §3 · source-R24. 다음 수집 일정과 피드 상태가 쓴다
  */
 public enum FailurePermanence {
 

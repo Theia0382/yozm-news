@@ -1,6 +1,6 @@
 # ADR-0041: 활성화 관문은 피드를 켤 때 한 번 받아 미리보고, 코드 상수 기준으로 판정한다
 
-- 상태: 승인
+- 상태: 승인 (저장 직전 대조의 대상 — 피드 URL — 은 [ADR-0046](0046-operator-profile-revision-disables-feeds-whose-reading-changed.md)이 읽기 설정 전체로 대체)
 - 날짜: 2026-10-30
 - 근거: [이슈 #23](https://github.com/Theia0382/yozm-news/issues/23) — 조사 자료의 공개 RSS 12곳을 한 번씩 받아 지표만 재고(원문은 저장하지 않음), 합성 피드로 기준의 경계를 시험. 구현 `e2a2c34`(미리보기 지표와 기준 판정) · `d321f49`(요청 시작 시각 예약 추출) · `2791095`(피드 켜기 관문과 원문 미리보기)
 - 관련: [ADR-0015](0015-source-presets-and-collection-profiles.md)(활성화 관문 — 미리보기의 단위를 이 ADR 이 좁힌다), [ADR-0033](0033-feed-polling-db-lease-per-feed-new-items-and-per-source-request-spacing.md)(같은 언론사 요청 예약 — 미리보기도 같은 예약을 쓴다), [ADR-0030](0030-feed-xml-own-parser-and-rome-for-format-title-link.md)(`dc:date` 매핑 누락을 날짜 해석률이 드러낸다), [ADR-0032](0032-same-article-matching-avoids-false-merges-with-per-feed-entries-under-source-lock.md)(관문은 guid 유일성을 보지 않는다)

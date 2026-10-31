@@ -7,10 +7,10 @@ import java.net.URI;
 import java.time.Instant;
 import java.util.List;
 
+import net.yozmnews.source.Criterion;
 import net.yozmnews.source.FetchedArticle;
 import net.yozmnews.source.domain.feed.FeedFixtures;
 import net.yozmnews.source.domain.feed.FeedNormalization;
-import net.yozmnews.source.domain.gate.Criterion;
 import net.yozmnews.source.domain.gate.PreviewOutcome;
 import net.yozmnews.source.domain.gate.Shortfall;
 import net.yozmnews.source.domain.profile.CollectionProfile;

@@ -5,6 +5,7 @@ import static net.yozmnews.source.domain.registry.RegistryFixtures.UNREVIEWED_TE
 import static net.yozmnews.source.domain.registry.RegistryFixtures.profile;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import net.yozmnews.source.ActivationRefusal;
 import net.yozmnews.source.domain.profile.PresetKey;
 import org.junit.jupiter.api.Test;
 
