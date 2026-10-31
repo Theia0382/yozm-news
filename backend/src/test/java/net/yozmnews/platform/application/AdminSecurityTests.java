@@ -23,7 +23,8 @@ import org.springframework.web.bind.annotation.RestController;
  * <p>
  * 지키는 규칙: 운영자 접근 통제(docs/specs/platform.md §5)
  */
-@WebMvcTest(properties = "yozmnews.admin.token=" + AdminSecurityTests.TOKEN)
+@WebMvcTest(controllers = AdminSecurityTests.ProbeController.class,
+		properties = "yozmnews.admin.token=" + AdminSecurityTests.TOKEN)
 @Import({ WebSliceSecurity.class, AdminSecurityTests.ProbeController.class })
 class AdminSecurityTests {
 

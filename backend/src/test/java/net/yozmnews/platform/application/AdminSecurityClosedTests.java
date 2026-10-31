@@ -19,7 +19,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * <p>
  * 지키는 규칙: 운영자 접근 통제(docs/specs/platform.md §5)
  */
-@WebMvcTest
+@WebMvcTest(controllers = AdminSecurityTests.ProbeController.class)
 @Import({ WebSliceSecurity.class, AdminSecurityTests.ProbeController.class })
 class AdminSecurityClosedTests {
 

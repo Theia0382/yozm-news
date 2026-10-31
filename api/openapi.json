@@ -8,6 +8,811 @@
     "url" : "/"
   } ],
   "paths" : {
+    "/api/admin/feeds/{id}/disable" : {
+      "post" : {
+        "operationId" : "disable_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "없는 피드다"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "다른 요청이 먼저 바꿨다"
+          }
+        },
+        "tags" : [ "admin-feed-controller" ]
+      }
+    },
+    "/api/admin/feeds/{id}/enable" : {
+      "post" : {
+        "operationId" : "enable_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/FeedEnableResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "없는 피드다"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "다른 요청이 먼저 바꿨다"
+          }
+        },
+        "tags" : [ "admin-feed-controller" ]
+      }
+    },
+    "/api/admin/feeds/{id}/poll-interval" : {
+      "put" : {
+        "operationId" : "changePollInterval_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PollIntervalRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "수집 주기가 하한보다 짧다"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "없는 피드다"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "다른 요청이 먼저 바꿨다"
+          }
+        },
+        "tags" : [ "admin-feed-controller" ]
+      }
+    },
+    "/api/admin/presets" : {
+      "get" : {
+        "operationId" : "presets",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/PresetResponse"
+                  }
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          }
+        },
+        "tags" : [ "admin-preset-controller" ]
+      }
+    },
+    "/api/admin/presets/{key}/registration" : {
+      "post" : {
+        "operationId" : "register_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "key",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RegistrationResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "카탈로그에 없는 프리셋이다"
+          }
+        },
+        "tags" : [ "admin-preset-controller" ]
+      }
+    },
+    "/api/admin/profile-previews" : {
+      "post" : {
+        "operationId" : "preview",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PreviewRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PreviewResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청 본문의 형식이 틀렸다"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          }
+        },
+        "tags" : [ "admin-source-controller" ]
+      }
+    },
+    "/api/admin/sources" : {
+      "get" : {
+        "operationId" : "sources",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SourceListResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          }
+        },
+        "tags" : [ "admin-source-controller" ]
+      },
+      "post" : {
+        "operationId" : "register",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ProfileText"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RegistrationResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청 본문의 형식이 틀렸다"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          }
+        },
+        "tags" : [ "admin-source-controller" ]
+      }
+    },
+    "/api/admin/sources/{id}/disable" : {
+      "post" : {
+        "operationId" : "disable",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "없는 소스다"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "다른 요청이 먼저 바꿨다"
+          }
+        },
+        "tags" : [ "admin-source-controller" ]
+      }
+    },
+    "/api/admin/sources/{id}/enable" : {
+      "post" : {
+        "operationId" : "enable",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SourceEnableResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "없는 소스다"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "다른 요청이 먼저 바꿨다"
+          }
+        },
+        "tags" : [ "admin-source-controller" ]
+      }
+    },
+    "/api/admin/sources/{id}/poll-interval" : {
+      "put" : {
+        "operationId" : "changePollInterval",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PollIntervalRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "수집 주기가 하한보다 짧다"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "없는 소스다"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "다른 요청이 먼저 바꿨다"
+          }
+        },
+        "tags" : [ "admin-source-controller" ]
+      }
+    },
+    "/api/admin/sources/{id}/profile" : {
+      "get" : {
+        "operationId" : "profile",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProfileText"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "없는 소스이거나 프리셋을 참조하는 소스다"
+          }
+        },
+        "tags" : [ "admin-source-controller" ]
+      },
+      "put" : {
+        "operationId" : "revise",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ProfileText"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RevisionResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청 본문의 형식이 틀렸다"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "없는 소스이거나 프리셋을 참조하는 소스다"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "다른 요청이 먼저 바꿨다"
+          }
+        },
+        "tags" : [ "admin-source-controller" ]
+      }
+    },
     "/api/ping" : {
       "get" : {
         "operationId" : "ping",
@@ -29,6 +834,180 @@
   },
   "components" : {
     "schemas" : {
+      "ApiProblem" : {
+        "type" : "object",
+        "properties" : {
+          "detail" : {
+            "type" : "string"
+          },
+          "instance" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "type" : {
+            "type" : "string",
+            "format" : "uri"
+          }
+        },
+        "required" : [ "detail", "instance", "status", "title", "type" ]
+      },
+      "ArticleSampleView" : {
+        "type" : "object",
+        "properties" : {
+          "publishedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "publishedAtEstimated" : {
+            "type" : "boolean"
+          },
+          "title" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "publishedAt", "publishedAtEstimated", "title" ]
+      },
+      "CriterionShortfall" : {
+        "type" : "object",
+        "properties" : {
+          "actual" : {
+            "type" : "number",
+            "format" : "double"
+          },
+          "criterion" : {
+            "type" : "string",
+            "enum" : [ "ARTICLES", "SKIPPED_ITEMS", "DATED_ARTICLES", "REPLACED_CHARACTERS" ]
+          },
+          "threshold" : {
+            "type" : "number",
+            "format" : "double"
+          }
+        },
+        "required" : [ "actual", "criterion", "threshold" ]
+      },
+      "DocumentProblemView" : {
+        "type" : "object",
+        "properties" : {
+          "column" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int32"
+          },
+          "kind" : {
+            "type" : "string",
+            "enum" : [ "UNSUPPORTED_ENCODING", "MALFORMED_XML", "DTD_DECLARATION", "NOT_A_FEED" ]
+          },
+          "line" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int32"
+          },
+          "message" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "column", "kind", "line", "message" ]
+      },
+      "FeedEnableResponse" : {
+        "type" : "object",
+        "properties" : {
+          "failure" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/FetchFailureView"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "preview" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/PreviewReport"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "refusal" : {
+            "type" : [ "string", "null" ],
+            "enum" : [ "PROFILE_UNAVAILABLE", "TERMS_NOT_REVIEWED", "FEED_NOT_IN_PROFILE" ]
+          },
+          "result" : {
+            "type" : "string",
+            "enum" : [ "ENABLED", "REFUSED", "BELOW_CRITERIA", "UNFETCHED", "READING_CHANGED" ]
+          },
+          "shortfalls" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CriterionShortfall"
+            }
+          }
+        },
+        "required" : [ "failure", "preview", "refusal", "result", "shortfalls" ]
+      },
+      "FeedResponse" : {
+        "type" : "object",
+        "properties" : {
+          "effectivePollIntervalMinutes" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int32"
+          },
+          "enabled" : {
+            "type" : "boolean"
+          },
+          "feedKey" : {
+            "type" : "string"
+          },
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "inProfile" : {
+            "type" : "boolean"
+          },
+          "pollIntervalMinutes" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int32"
+          },
+          "section" : {
+            "type" : [ "string", "null" ]
+          },
+          "url" : {
+            "type" : [ "string", "null" ],
+            "format" : "uri"
+          }
+        },
+        "required" : [ "effectivePollIntervalMinutes", "enabled", "feedKey", "id", "inProfile", "pollIntervalMinutes", "section", "url" ]
+      },
+      "FetchFailureView" : {
+        "type" : "object",
+        "properties" : {
+          "httpStatus" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int32"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "permanence" : {
+            "type" : "string",
+            "enum" : [ "TEMPORARY", "PERMANENT" ]
+          },
+          "problem" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/DocumentProblemView"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "reason" : {
+            "type" : "string",
+            "enum" : [ "TIMEOUT", "CONNECTION_FAILED", "NAME_NOT_RESOLVED", "SERVER_ERROR", "THROTTLED", "ACCESS_DENIED", "NOT_FOUND", "CLIENT_ERROR", "UNEXPECTED_STATUS", "TOO_MANY_REDIRECTS", "INVALID_REDIRECT", "UNSUPPORTED_URL", "BLOCKED_ADDRESS", "TLS_FAILURE", "TOO_LARGE", "UNREADABLE" ]
+          }
+        },
+        "required" : [ "httpStatus", "message", "permanence", "problem", "reason" ]
+      },
       "PingResponse" : {
         "type" : "object",
         "properties" : {
@@ -37,6 +1016,340 @@
           }
         },
         "required" : [ "message" ]
+      },
+      "PollIntervalRequest" : {
+        "type" : "object",
+        "properties" : {
+          "minutes" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int32"
+          }
+        },
+        "required" : [ "minutes" ]
+      },
+      "PresetResponse" : {
+        "type" : "object",
+        "properties" : {
+          "feedCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "homepage" : {
+            "type" : "string",
+            "format" : "uri"
+          },
+          "key" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "sourceId" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int64"
+          },
+          "termsReviewedAt" : {
+            "type" : "string",
+            "format" : "date"
+          }
+        },
+        "required" : [ "feedCount", "homepage", "key", "name", "sourceId", "termsReviewedAt" ]
+      },
+      "PreviewReport" : {
+        "type" : "object",
+        "properties" : {
+          "articles" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "datedArticles" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "decodedCharacters" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "items" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "latestPublishedAt" : {
+            "type" : [ "string", "null" ],
+            "format" : "date-time"
+          },
+          "movedTo" : {
+            "type" : [ "string", "null" ],
+            "format" : "uri"
+          },
+          "publishedAtUnread" : {
+            "type" : "boolean"
+          },
+          "replacedCharacters" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "samples" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ArticleSampleView"
+            }
+          },
+          "skipped" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/SkippedItemView"
+            }
+          },
+          "summaries" : {
+            "$ref" : "#/components/schemas/SummaryLengthsView"
+          }
+        },
+        "required" : [ "articles", "datedArticles", "decodedCharacters", "items", "latestPublishedAt", "movedTo", "publishedAtUnread", "replacedCharacters", "samples", "skipped", "summaries" ]
+      },
+      "PreviewRequest" : {
+        "type" : "object",
+        "properties" : {
+          "feedKey" : {
+            "type" : "string"
+          },
+          "profile" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "feedKey", "profile" ]
+      },
+      "PreviewResponse" : {
+        "type" : "object",
+        "properties" : {
+          "failure" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/FetchFailureView"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "preview" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/PreviewReport"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "problems" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ProfileProblemView"
+            }
+          },
+          "result" : {
+            "type" : "string",
+            "enum" : [ "INVALID_PROFILE", "FEED_NOT_IN_PROFILE", "PASSED", "BELOW_CRITERIA", "UNFETCHED" ]
+          },
+          "shortfalls" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CriterionShortfall"
+            }
+          }
+        },
+        "required" : [ "failure", "preview", "problems", "result", "shortfalls" ]
+      },
+      "ProfileProblemView" : {
+        "type" : "object",
+        "properties" : {
+          "code" : {
+            "type" : "string"
+          },
+          "column" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int32"
+          },
+          "line" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int32"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "path" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "code", "column", "line", "message", "path" ]
+      },
+      "ProfileText" : {
+        "type" : "object",
+        "properties" : {
+          "profile" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "profile" ]
+      },
+      "RegistrationResponse" : {
+        "type" : "object",
+        "properties" : {
+          "problems" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ProfileProblemView"
+            }
+          },
+          "result" : {
+            "type" : "string",
+            "enum" : [ "REGISTERED", "ALREADY_REGISTERED", "INVALID_PROFILE" ]
+          },
+          "sourceId" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int64"
+          }
+        },
+        "required" : [ "problems", "result", "sourceId" ]
+      },
+      "RevisionResponse" : {
+        "type" : "object",
+        "properties" : {
+          "addedFeedIds" : {
+            "type" : "array",
+            "items" : {
+              "type" : "integer",
+              "format" : "int64"
+            }
+          },
+          "disabledFeedIds" : {
+            "type" : "array",
+            "items" : {
+              "type" : "integer",
+              "format" : "int64"
+            }
+          },
+          "problems" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ProfileProblemView"
+            }
+          },
+          "result" : {
+            "type" : "string",
+            "enum" : [ "REVISED", "INVALID_PROFILE" ]
+          },
+          "sourceDisabled" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "addedFeedIds", "disabledFeedIds", "problems", "result", "sourceDisabled" ]
+      },
+      "SkippedItemView" : {
+        "type" : "object",
+        "properties" : {
+          "position" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "reason" : {
+            "type" : "string",
+            "enum" : [ "MISSING_LINK", "INVALID_LINK", "MISSING_TITLE" ]
+          }
+        },
+        "required" : [ "position", "reason" ]
+      },
+      "SourceEnableResponse" : {
+        "type" : "object",
+        "properties" : {
+          "refusal" : {
+            "type" : [ "string", "null" ],
+            "enum" : [ "PROFILE_UNAVAILABLE", "TERMS_NOT_REVIEWED", "FEED_NOT_IN_PROFILE" ]
+          },
+          "result" : {
+            "type" : "string",
+            "enum" : [ "ENABLED", "REFUSED" ]
+          }
+        },
+        "required" : [ "refusal", "result" ]
+      },
+      "SourceListResponse" : {
+        "type" : "object",
+        "properties" : {
+          "minimumPollIntervalMinutes" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "sources" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/SourceResponse"
+            }
+          }
+        },
+        "required" : [ "minimumPollIntervalMinutes", "sources" ]
+      },
+      "SourceResponse" : {
+        "type" : "object",
+        "properties" : {
+          "enabled" : {
+            "type" : "boolean"
+          },
+          "feeds" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/FeedResponse"
+            }
+          },
+          "homepage" : {
+            "type" : [ "string", "null" ],
+            "format" : "uri"
+          },
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "name" : {
+            "type" : [ "string", "null" ]
+          },
+          "pollIntervalMinutes" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int32"
+          },
+          "presetKey" : {
+            "type" : [ "string", "null" ]
+          },
+          "profileState" : {
+            "type" : "string",
+            "enum" : [ "AVAILABLE", "PRESET_MISSING", "INVALID" ]
+          },
+          "termsReviewedAt" : {
+            "type" : [ "string", "null" ],
+            "format" : "date"
+          }
+        },
+        "required" : [ "enabled", "feeds", "homepage", "id", "name", "pollIntervalMinutes", "presetKey", "profileState", "termsReviewedAt" ]
+      },
+      "SummaryLengthsView" : {
+        "type" : "object",
+        "properties" : {
+          "absent" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "max" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int32"
+          },
+          "median" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int32"
+          },
+          "min" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int32"
+          },
+          "present" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        },
+        "required" : [ "absent", "max", "median", "min", "present" ]
       }
     }
   }

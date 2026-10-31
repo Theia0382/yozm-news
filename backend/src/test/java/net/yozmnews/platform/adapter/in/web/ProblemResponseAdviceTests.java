@@ -27,7 +27,7 @@ import org.springframework.web.server.ResponseStatusException;
  * <p>
  * 지키는 규칙: 오류 응답 형식(docs/specs/platform.md §5)
  */
-@WebMvcTest
+@WebMvcTest(controllers = ProblemResponseAdviceTests.FailingController.class)
 @Import({ WebSliceSecurity.class, ProblemResponseAdviceTests.FailingController.class })
 class ProblemResponseAdviceTests {
 
