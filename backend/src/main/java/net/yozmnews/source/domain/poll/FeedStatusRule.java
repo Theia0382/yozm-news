@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
 
+import net.yozmnews.source.FeedStatus;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -22,6 +23,9 @@ public final class FeedStatusRule {
 
 	/** 새 기사가 이만큼 없으면 STALE */
 	public static final Duration STALE_AFTER = Duration.ofDays(7);
+
+	/** 피드 건강 검사가 다시 판정하는 간격(ISO 8601 기간) — 반복 작업의 애너테이션 속성이 상수식만 받아 문자열로 둔다(source-R47) */
+	public static final String RECHECK_INTERVAL = "PT1H";
 
 	private FeedStatusRule() {}
 

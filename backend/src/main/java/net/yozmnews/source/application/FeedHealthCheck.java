@@ -6,8 +6,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import net.yozmnews.source.FeedStatus;
 import net.yozmnews.source.domain.poll.FeedPollState;
-import net.yozmnews.source.domain.poll.FeedStatus;
 import net.yozmnews.source.domain.poll.FeedStatusRepository;
 import net.yozmnews.source.domain.poll.FeedStatusRule;
 import net.yozmnews.source.domain.poll.FeedStatusTarget;

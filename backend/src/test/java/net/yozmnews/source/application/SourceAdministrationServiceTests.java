@@ -7,6 +7,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import java.net.URI;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -20,10 +21,14 @@ import net.yozmnews.source.Criterion;
 import net.yozmnews.source.CriterionShortfall;
 import net.yozmnews.source.FailurePermanence;
 import net.yozmnews.source.FeedEnableResult;
+import net.yozmnews.source.FeedHealthView;
 import net.yozmnews.source.FeedId;
+import net.yozmnews.source.FeedStatus;
+import net.yozmnews.source.FeedStatusCriteria;
 import net.yozmnews.source.FeedView;
 import net.yozmnews.source.FetchFailureReason;
 import net.yozmnews.source.FetchFailureView;
+import net.yozmnews.source.LastFailureView;
 import net.yozmnews.source.PresetView;
 import net.yozmnews.source.PreviewReport;
 import net.yozmnews.source.ProfilePreviewResult;
@@ -58,6 +63,10 @@ import org.springframework.test.context.TestPropertySource;
 @TestPropertySource(properties = "yozmnews.collection.allowed-networks=127.0.0.1/32")
 class SourceAdministrationServiceTests {
 
+	/** 등록 직후의 수집 상태 — 아직 수집하지 않았다 */
+	private static final FeedHealthView NEVER_COLLECTED = new FeedHealthView(FeedStatus.ACTIVE, null, null, 0, 0, null,
+			null, null);
+
 	@RegisterExtension
 	static WireMockExtension server = WireMockExtension.newInstance()
 		.options(wireMockConfig().dynamicPort().gzipDisabled(true))
@@ -80,6 +89,12 @@ class SourceAdministrationServiceTests {
 	@Test
 	void minimumPollIntervalIsFifteenMinutes() {
 		assertThat(SourceAdministration.MINIMUM_POLL_INTERVAL_MINUTES).isEqualTo(15);
+	}
+
+	@Test
+	void feedStatusCriteriaAreTheStatusRuleValues() {
+		assertThat(SourceAdministration.FEED_STATUS_CRITERIA)
+			.isEqualTo(new FeedStatusCriteria(5, 2, Duration.ofDays(7), Duration.ofHours(1)));
 	}
 
 	@Test
@@ -115,9 +130,52 @@ class SourceAdministrationServiceTests {
 		assertThat(this.administration.sources()).containsExactly(new SourceView(new SourceId(source), "multi", false,
 				30, ProfileState.AVAILABLE, "멀티일보", URI.create("https://multi.example"), LocalDate.parse("2026-10-20"),
 				List.of(new FeedView(one, "one", false, null, true, URI.create("https://multi.example/rss/one.xml"), "하나",
-						30),
+						30, NEVER_COLLECTED),
 						new FeedView(two, "two", false, 45, true, URI.create("https://multi.example/rss/two.xml"), "둘",
-								45))));
+								45, NEVER_COLLECTED))));
+	}
+
+	@Test
+	void sourcesCarryEachFeedsCollectionStateWithTheFailureClassFromItsReason() {
+		long source = registered(this.administration.registerPreset("multi")).value();
+		long one = this.rows.feedId(source, "one");
+		long two = this.rows.feedId(source, "two");
+		this.jdbc.sql("""
+				update feed_poll_states set status = 'DEGRADED', status_changed_at = '2026-10-31T04:30:00Z',
+				    last_success_at = '2026-10-30T22:00:00Z', last_new_item_at = '2026-10-30T21:00:00Z',
+				    latest_published_at = '2026-10-30T20:30:00Z', consecutive_failures = 6,
+				    consecutive_permanent_failures = 2, last_error_reason = 'ACCESS_DENIED',
+				    last_error_message = '접근 거부', last_error_status = 403, last_error_at = '2026-10-31T04:00:00Z'
+				where feed_id = :feed
+				""").param("feed", one).update();
+		this.jdbc.sql("""
+				update feed_poll_states set last_success_at = '2026-10-31T03:00:00Z', consecutive_failures = 1,
+				    last_error_reason = 'TIMEOUT', last_error_message = '시간 초과', last_error_at = '2026-10-31T04:00:00Z'
+				where feed_id = :feed
+				""").param("feed", two).update();
+
+		List<FeedView> feeds = this.administration.sources().getFirst().feeds();
+
+		assertThat(feeds).extracting(FeedView::health)
+			.containsExactly(
+					new FeedHealthView(FeedStatus.DEGRADED, Instant.parse("2026-10-31T04:30:00Z"),
+							Instant.parse("2026-10-30T22:00:00Z"), 6, 2,
+							new LastFailureView(FetchFailureReason.ACCESS_DENIED, FailurePermanence.PERMANENT, "접근 거부",
+									403, Instant.parse("2026-10-31T04:00:00Z")),
+							Instant.parse("2026-10-30T21:00:00Z"), Instant.parse("2026-10-30T20:30:00Z")),
+					new FeedHealthView(FeedStatus.ACTIVE, null, Instant.parse("2026-10-31T03:00:00Z"), 1, 0,
+							new LastFailureView(FetchFailureReason.TIMEOUT, FailurePermanence.TEMPORARY, "시간 초과", null,
+									Instant.parse("2026-10-31T04:00:00Z")),
+							null, null));
+	}
+
+	@Test
+	void aFeedWithoutACollectionStateRowFailsTheListLoudly() {
+		long source = registered(this.administration.registerPreset("solo")).value();
+		long orphan = this.rows.insertFeed(source, "orphan");
+
+		assertThatExceptionOfType(IllegalStateException.class).isThrownBy(() -> this.administration.sources())
+			.withMessage("피드에 수집 상태 행이 없다: " + orphan);
 	}
 
 	@Test
@@ -128,6 +186,7 @@ class SourceAdministrationServiceTests {
 			.query(Long.class)
 			.single();
 		long feed = this.rows.insertFeed(vanished, "lost");
+		this.rows.insertPollState(feed);
 		long invalid = this.jdbc
 			.sql("insert into sources (profile, enabled, version, created_at) values ('source:\n  name: 이름만\n', false, 0, "
 					+ "now()) returning id")
@@ -136,7 +195,9 @@ class SourceAdministrationServiceTests {
 
 		assertThat(this.administration.sources()).containsExactly(
 				new SourceView(new SourceId(vanished), "vanished", true, null, ProfileState.PRESET_MISSING, null, null,
-						null, List.of(new FeedView(new FeedId(feed), "lost", false, null, false, null, null, null))),
+						null,
+						List.of(new FeedView(new FeedId(feed), "lost", false, null, false, null, null, null,
+								NEVER_COLLECTED))),
 				new SourceView(new SourceId(invalid), null, false, null, ProfileState.INVALID, null, null, null,
 						List.of()));
 	}

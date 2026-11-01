@@ -1,6 +1,6 @@
-package net.yozmnews.source.domain.poll;
+package net.yozmnews.source;
 
-/** 피드 상태 — docs/specs/source.md §4 · source-R30 · source-R31 */
+/** 피드 상태 — docs/specs/source.md §3 · source-R30 · source-R31 */
 public enum FeedStatus {
 
 	/** 기준 안에서 수집되고 있다 */

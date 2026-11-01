@@ -40,12 +40,23 @@ final class RegistryRows {
 			.single();
 	}
 
-	/** 수집 상태 행이 없는 피드도 만든다 — 프로필에서 빠진 피드를 흉내 낸다 */
+	/**
+	 * 수집 상태 행이 없는 피드도 만든다 — 프로필에서 빠진 피드를 흉내 낸다. 운영 목록은 수집 상태 행이 없는 피드에서 실패하므로, 목록에 내려면
+	 * {@link #insertPollState} 를 함께 부른다
+	 */
 	long insertFeed(long source, String key) {
 		return this.jdbc.sql("""
 				insert into feeds (source_id, feed_key, enabled, version, created_at)
 				values (:source, :key, false, 0, now()) returning id
 				""").param("source", source).param("key", key).query(Long.class).single();
+	}
+
+	/** 아직 수집하지 않은 피드의 수집 상태 행 — 등록 · 기동 대조가 만드는 첫 행과 같은 값이다 */
+	void insertPollState(long feed) {
+		this.jdbc.sql("""
+				insert into feed_poll_states (feed_id, next_poll_at, consecutive_failures, overflow_count)
+				values (:feed, now(), 0, 0)
+				""").param("feed", feed).update();
 	}
 
 	boolean hasPollState(long feed) {

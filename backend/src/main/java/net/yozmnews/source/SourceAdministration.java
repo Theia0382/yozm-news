@@ -1,8 +1,10 @@
 package net.yozmnews.source;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 
+import net.yozmnews.source.domain.poll.FeedStatusRule;
 import net.yozmnews.source.domain.profile.PollInterval;
 import org.jspecify.annotations.Nullable;
 
@@ -18,10 +20,15 @@ public interface SourceAdministration {
 	/** 수집 주기의 하한(분) — 값의 정본은 수집 프로필의 하한이다(source-R14) */
 	int MINIMUM_POLL_INTERVAL_MINUTES = Math.toIntExact(PollInterval.MINIMUM.toMinutes());
 
+	/** 피드 상태의 판정 기준값과 재판정 간격 — 값의 정본은 피드 상태 판정 규칙이다(source-R30 · source-R31 · source-R47) */
+	FeedStatusCriteria FEED_STATUS_CRITERIA = new FeedStatusCriteria(FeedStatusRule.DEGRADED_AFTER_FAILURES,
+			FeedStatusRule.DEGRADED_AFTER_PERMANENT_FAILURES, FeedStatusRule.STALE_AFTER,
+			Duration.parse(FeedStatusRule.RECHECK_INTERVAL));
+
 	/** 카탈로그의 프리셋 — 키 순 */
 	List<PresetView> presets();
 
-	/** 등록된 소스 — 소스 ID 순, 피드는 피드 ID 순 */
+	/** 등록된 소스 — 소스 ID 순, 피드는 피드 ID 순. 피드마다 수집 상태를 싣는다 */
 	List<SourceView> sources();
 
 	/** 운영자 원문 — 프리셋을 참조하는 소스면 비어 있다 */

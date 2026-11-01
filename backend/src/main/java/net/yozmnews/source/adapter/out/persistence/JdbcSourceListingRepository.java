@@ -2,9 +2,11 @@ package net.yozmnews.source.adapter.out.persistence;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 import net.yozmnews.source.FeedId;
+import net.yozmnews.source.FeedStatus;
 import net.yozmnews.source.SourceId;
 import net.yozmnews.source.domain.registry.SourceListingRepository;
 import org.jspecify.annotations.Nullable;
@@ -12,7 +14,9 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
 /**
- * {@link SourceListingRepository} 의 JdbcClient 구현 — docs/specs/source.md §4
+ * {@link SourceListingRepository} 의 JdbcClient 구현 — docs/specs/source.md §4.
+ * <p>
+ * 수집 상태의 열 목록과 행 읽기는 {@link JdbcFeedPollStateRepository} 의 것을 쓴다.
  */
 @Repository
 class JdbcSourceListingRepository implements SourceListingRepository {
@@ -37,14 +41,27 @@ class JdbcSourceListingRepository implements SourceListingRepository {
 
 	@Override
 	public List<FeedRow> findAllFeeds() {
-		return this.jdbc.sql("""
-				select id, source_id, feed_key, enabled, poll_interval_minutes
-				from feeds
-				order by source_id, id
-				""")
+		// 수집 상태 행이 없는 피드도 빠뜨리지 않는다 — 그 피드의 수집 상태 열은 모두 비고 poll 은 null 이다
+		return this.jdbc.sql("select f.id, f.source_id, f.feed_key, f.enabled, f.poll_interval_minutes, "
+				+ JdbcFeedPollStateRepository.COLUMNS + """
+						, ps.status, ps.status_changed_at
+						from feeds f
+						left join feed_poll_states ps on ps.feed_id = f.id
+						order by f.source_id, f.id
+						""")
 			.query((rs, row) -> new FeedRow(new FeedId(rs.getLong("id")), new SourceId(rs.getLong("source_id")),
-					rs.getString("feed_key"), rs.getBoolean("enabled"), nullableInt(rs, "poll_interval_minutes")))
+					rs.getString("feed_key"), rs.getBoolean("enabled"), nullableInt(rs, "poll_interval_minutes"),
+					poll(rs)))
 			.list();
+	}
+
+	private static @Nullable PollRow poll(ResultSet rs) throws SQLException {
+		if (rs.getObject("feed_id") == null) {
+			return null;
+		}
+		OffsetDateTime changedAt = rs.getObject("status_changed_at", OffsetDateTime.class);
+		return new PollRow(JdbcFeedPollStateRepository.state(rs), FeedStatus.valueOf(rs.getString("status")),
+				(changedAt != null) ? changedAt.toInstant() : null);
 	}
 
 	private static @Nullable Integer nullableInt(ResultSet rs, String column) throws SQLException {

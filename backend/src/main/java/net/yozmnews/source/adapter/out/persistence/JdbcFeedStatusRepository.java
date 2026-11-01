@@ -5,7 +5,7 @@ import java.time.ZoneOffset;
 import java.util.List;
 
 import net.yozmnews.source.FeedId;
-import net.yozmnews.source.domain.poll.FeedStatus;
+import net.yozmnews.source.FeedStatus;
 import net.yozmnews.source.domain.poll.FeedStatusRepository;
 import net.yozmnews.source.domain.poll.FeedStatusTarget;
 import org.springframework.jdbc.core.simple.JdbcClient;
