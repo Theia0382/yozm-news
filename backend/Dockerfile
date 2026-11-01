@@ -22,6 +22,8 @@ FROM deps AS check
 COPY compose.yaml compose.yaml
 # 테스트가 현재 코드의 명세와 비교하는 화면용 API 명세(backend/build.gradle.kts 의 openApiSpecFile)
 COPY api/openapi.json api/openapi.json
+# 테스트가 예시 프로필을 검증하는 운영 안내서(backend/build.gradle.kts 의 sourcesGuideFile)
+COPY docs/operations/sources.md docs/operations/sources.md
 COPY backend/src backend/src
 CMD ["backend/gradlew", "-p", "backend", "build", "--no-daemon", "--console=plain"]
 

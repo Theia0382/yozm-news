@@ -13,3 +13,4 @@
 |---|---|
 | [deployment.md](deployment.md) | 배포 구성 실행 · 업데이트 · 헬스 체크와 관측 · 공개 경로와 외부 서비스 · 백업과 복구 |
 | [configuration.md](configuration.md) | 운영 설정 레퍼런스 · 비밀 값 · 데이터 보존 |
+| [sources.md](sources.md) | 소스 등록 · 켜기, 수집 프로필 작성과 예시 |
