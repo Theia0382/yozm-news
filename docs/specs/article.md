@@ -113,8 +113,9 @@ public record FeedEntryStatistics(List<EntryCounts> buckets) {
 
 public record EntryBucket(Instant from, Instant to) {}
 
-public record EntryCounts(int entries, int duplicates, int titleMatches, int estimated, int guidReuses) {
-    public static final EntryCounts NONE = new EntryCounts(0, 0, 0, 0, 0);
+public record EntryCounts(int entries, int duplicates, int urlMatches, int titleMatches, int estimated,
+        int guidReuses) {
+    public static final EntryCounts NONE = new EntryCounts(0, 0, 0, 0, 0, 0);
     public EntryCounts plus(EntryCounts other);
     public @Nullable Double duplicateRate();
     public @Nullable Double estimatedRate();
@@ -129,7 +130,7 @@ public record EntryCounts(int entries, int duplicates, int titleMatches, int est
 | `combined(Collection<FeedId>)` | 피드 여럿의 칸별 합 — 같은 칸끼리 `plus` | — |
 | `FeedEntryStatistics` | 칸별 개수와 기간 전체(`total()` — 칸을 모두 더한 값) | 칸은 `EntryStatistics.buckets` 와 같은 순서 |
 | `EntryBucket` | 칸 하나의 범위 — 시작 포함, 끝 제외 | 시작이 끝보다 앞선다 |
-| `EntryCounts` | 엔트리 · 중복 · 제목 판정 · 날짜 추정 · guid 재사용 수와 비율 셋 — 비율 산식의 정본(article-R14) | 모두 0 이상, 중복 · 추정 ≤ 엔트리, 제목 판정 ≤ 중복, guid 재사용 ≤ 엔트리 − 중복. 아니면 `IllegalArgumentException` |
+| `EntryCounts` | 엔트리 · 중복 · URL 판정 · 제목 판정 · 날짜 추정 · guid 재사용 수와 비율 셋 — 비율 산식의 정본(article-R14) | 모두 0 이상, 중복 · 추정 ≤ 엔트리, URL 판정 + 제목 판정 ≤ 중복(나머지는 `GUID`), guid 재사용 ≤ 엔트리 − 중복. 아니면 `IllegalArgumentException` |
 
 관련 규칙: article-R13 · article-R14.
 
@@ -257,6 +258,7 @@ public interface ContentExtractor {
 - **article-R13** — 엔트리 집계는 받은 시각(`seen_at`)이 기간의 시작 이상 끝 미만인 엔트리를 피드 · 칸마다 센다. 기간은 조회 시각(마이크로초로 자른다)에서 거꾸로 7일(`EntryWindow.LENGTH`)이라 시간대가 없고, 칸은 기간을 시작부터 1일(`EntryWindow.BUCKET`)씩 나눈 7개다. 세는 것:
   - 엔트리 — 행 하나. 단위는 (기사, 피드)라 같은 피드에 다시 실린 항목 · 같은 피드에서 같은 기사로 판정된 두 번째 항목은 세지 않는다(article-R7)
   - 중복 — 판정 종류가 `NEW` 가 아닌 엔트리(`URL` · `GUID` · `TITLE`). 기록되는 중복 엔트리는 다른 피드가 먼저 실은 기사에 붙은 것이다 — guid 후보는 같은 피드의 엔트리에서만 나오므로 `GUID` 로 붙은 항목은 엔트리를 새로 남기지 않는다
+  - URL 판정 — 판정 종류가 `URL` 인 엔트리
   - 제목 판정 — 판정 종류가 `TITLE` 인 엔트리
   - 날짜 추정 — 그 항목의 발행 시각을 추정한 엔트리(엔트리의 값 — 기사의 값이 아니다)
   - guid 재사용 — 판정 종류가 `NEW` 이고, 같은 피드 · 같은 guid 의 엔트리가 다른 기사에 먼저 있는 엔트리(article-R4 의 데이터 모양). 먼저는 (받은 시각, 기사 ID) 순이다 — 한 수집에서 받은 둘은 받은 시각이 같고 같은 소스의 판정은 줄을 서므로(article-R9) 먼저 넣은 기사의 ID 가 작다. 먼저 있는 엔트리는 기간 밖이어도 된다. 제목 비교 키가 빈 항목도 같은 모양이면 센다
