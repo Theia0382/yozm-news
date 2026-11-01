@@ -9,6 +9,7 @@ type Permanence = Schemas["FetchFailureView"]["permanence"];
 type SkipReason = Schemas["SkippedItemView"]["reason"];
 type DocumentProblemKind = Schemas["DocumentProblemView"]["kind"];
 type ProfileState = Schemas["SourceResponse"]["profileState"];
+type FeedStatus = Schemas["FeedCollectionResponse"]["status"];
 
 export const refusalLabels = {
   PROFILE_UNAVAILABLE:
@@ -75,6 +76,12 @@ export const profileStateLabels = {
   PRESET_MISSING: "참조하던 프리셋이 사라졌습니다",
   INVALID: "운영자 원문이 검증에 걸립니다",
 } as const satisfies Record<ProfileState, string>;
+
+export const feedStatusLabels = {
+  ACTIVE: "정상",
+  DEGRADED: "계속 실패",
+  STALE: "오래 새 기사 없음",
+} as const satisfies Record<FeedStatus, string>;
 
 /** 내부 주소로 가는 요청을 막았을 때의 안내 — 화면에서는 열 수 없다 */
 export const BLOCKED_ADDRESS_HINT =

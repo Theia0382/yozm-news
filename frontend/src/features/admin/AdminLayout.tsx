@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useMemo, useState } from "react";
-import { Link, Outlet } from "react-router";
+import { Link, NavLink, Outlet } from "react-router";
 import {
   ADMIN_CLOSED,
   AdminApiError,
@@ -107,10 +107,20 @@ export function AdminLayout({ baseUrl, fetch }: AdminLayoutProps) {
   return (
     <AdminSessionContext.Provider value={client}>
       <div className="space-y-6">
-        <header className="flex items-center justify-between gap-3">
-          <Link to="/admin" className="text-2xl font-bold">
-            운영자
-          </Link>
+        <header className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-6">
+            <Link to="/admin" className="text-2xl font-bold">
+              운영자
+            </Link>
+            <nav aria-label="운영자 메뉴" className="flex gap-4">
+              <NavLink to="/admin" end className={navLinkClass}>
+                소스 · 피드
+              </NavLink>
+              <NavLink to="/admin/collection" className={navLinkClass}>
+                수집 현황
+              </NavLink>
+            </nav>
+          </div>
           <Button variant="outline" onClick={lock}>
             잠금
           </Button>
@@ -119,6 +129,11 @@ export function AdminLayout({ baseUrl, fetch }: AdminLayoutProps) {
       </div>
     </AdminSessionContext.Provider>
   );
+}
+
+/** 지금 화면의 메뉴는 굵게 밑줄 — NavLink 가 aria-current 도 단다 */
+function navLinkClass({ isActive }: { isActive: boolean }): string {
+  return isActive ? "font-semibold underline" : "text-muted-foreground";
 }
 
 function TokenForm({
