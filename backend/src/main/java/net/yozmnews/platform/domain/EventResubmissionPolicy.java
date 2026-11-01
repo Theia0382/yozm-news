@@ -2,11 +2,13 @@ package net.yozmnews.platform.domain;
 
 import java.time.Duration;
 import java.util.Objects;
+import java.util.Optional;
 
+import net.yozmnews.platform.StrandedReason;
 import org.springframework.modulith.events.EventPublication;
 
 /**
- * 재처리 대상 판정 — 정본 · docs/specs/platform.md §4 · platform-R1 · platform-R3
+ * 재처리 대상과 남겨진 발행의 판정 — 정본 · docs/specs/platform.md §4 · platform-R1 · platform-R3 · platform-R16
  */
 public final class EventResubmissionPolicy {
 
@@ -33,10 +35,39 @@ public final class EventResubmissionPolicy {
 	}
 
 	public Decision decide(EventPublication publication) {
-		return switch (publication.getStatus()) {
-			case FAILED -> (publication.getCompletionAttempts() < MAX_ATTEMPTS) ? Decision.RESUBMIT : Decision.EXHAUSTED;
+		return decide(publication.getStatus(), publication.getCompletionAttempts());
+	}
+
+	/**
+	 * 상태와 처리 시도로 재처리를 판정한다 — 이벤트를 읽지 않은 레지스트리 행에도 쓴다.
+	 * @param status 발행 상태
+	 * @param completionAttempts 처리 시도 수
+	 * @return 판정
+	 */
+	public Decision decide(EventPublication.Status status, int completionAttempts) {
+		return switch (status) {
+			case FAILED -> (completionAttempts < MAX_ATTEMPTS) ? Decision.RESUBMIT : Decision.EXHAUSTED;
 			case PUBLISHED, PROCESSING, RESUBMITTED, COMPLETED -> Decision.SKIP;
 		};
+	}
+
+	/**
+	 * 재처리가 더 이상 다루지 않아 운영자가 처리할 발행인지 판정한다 — platform-R1 · platform-R16.
+	 * @param status 발행 상태
+	 * @param completionAttempts 처리 시도 수
+	 * @param eventTypeLoadable 이벤트 클래스를 로드할 수 있는지
+	 * @return 남겨진 까닭, 남겨진 발행이 아니면 빈 값
+	 */
+	public Optional<StrandedReason> stranded(EventPublication.Status status, int completionAttempts,
+			boolean eventTypeLoadable) {
+		if (!eventTypeLoadable) {
+			return switch (status) {
+				case PUBLISHED, PROCESSING, FAILED, RESUBMITTED -> Optional.of(StrandedReason.UNREADABLE);
+				case COMPLETED -> Optional.empty();
+			};
+		}
+		return (decide(status, completionAttempts) == Decision.EXHAUSTED) ? Optional.of(StrandedReason.EXHAUSTED)
+				: Optional.empty();
 	}
 
 	/** 재처리 판정 */
