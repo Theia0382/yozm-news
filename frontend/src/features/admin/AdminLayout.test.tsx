@@ -117,9 +117,14 @@ describe("AdminLayout", () => {
     const menu = await screen.findByRole("navigation", { name: "운영자 메뉴" });
     const sources = within(menu).getByRole("link", { name: "소스 · 피드" });
     const collection = within(menu).getByRole("link", { name: "수집 현황" });
+    const publications = within(menu).getByRole("link", {
+      name: "이벤트 발행",
+    });
     expect(sources).toHaveAttribute("href", "/admin");
     expect(sources).toHaveAttribute("aria-current", "page");
     expect(collection).toHaveAttribute("href", "/admin/collection");
     expect(collection).not.toHaveAttribute("aria-current");
+    expect(publications).toHaveAttribute("href", "/admin/event-publications");
+    expect(publications).not.toHaveAttribute("aria-current");
   });
 });

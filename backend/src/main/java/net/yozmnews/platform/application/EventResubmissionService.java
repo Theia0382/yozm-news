@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import net.yozmnews.platform.domain.EventReading;
 import net.yozmnews.platform.domain.EventResubmissionPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,7 +12,7 @@ import org.springframework.modulith.events.IncompleteEventPublications;
 import org.springframework.stereotype.Service;
 
 /**
- * 이벤트 발행 재처리 유스케이스 — docs/specs/platform.md §4 · platform-R1 · platform-R4
+ * 이벤트 발행 재처리 유스케이스 — docs/specs/platform.md §4 · platform-R1 · platform-R4 · platform-R16
  */
 @Service
 public class EventResubmissionService {
@@ -29,17 +30,31 @@ public class EventResubmissionService {
 
 	public void resubmit() {
 		List<UUID> exhausted = new ArrayList<>();
-		this.publications.resubmitIncompletePublications(publication -> switch (this.policy.decide(publication)) {
+		List<UUID> unreadable = new ArrayList<>();
+		this.publications.resubmitIncompletePublications((publication) -> switch (this.policy.decide(
+				publication.getStatus(), publication.getCompletionAttempts(),
+				() -> EventReading.readable(publication::getEvent))) {
 			case RESUBMIT -> true;
 			case EXHAUSTED -> {
 				exhausted.add(publication.getIdentifier());
 				yield false;
 			}
+			case UNREADABLE -> {
+				unreadable.add(publication.getIdentifier());
+				yield false;
+			}
 			case SKIP -> false;
 		});
+		List<String> parts = new ArrayList<>();
 		if (!exhausted.isEmpty()) {
-			logger.warn("재처리 상한({}회)에 이른 실패 이벤트 발행 {}건: {}", EventResubmissionPolicy.MAX_ATTEMPTS,
-					exhausted.size(), exhausted);
+			parts.add("재처리 상한(" + EventResubmissionPolicy.MAX_ATTEMPTS + "회)에 이른 실패 이벤트 발행 " + exhausted.size()
+					+ "건: " + exhausted);
+		}
+		if (!unreadable.isEmpty()) {
+			parts.add("읽을 수 없어 다시 처리하지 않은 실패 이벤트 발행 " + unreadable.size() + "건: " + unreadable);
+		}
+		if (!parts.isEmpty()) {
+			logger.warn("{}", String.join(" · ", parts));
 		}
 	}
 

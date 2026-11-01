@@ -32,6 +32,8 @@ dependencies {
 	implementation("org.springframework.modulith:spring-modulith-observability-api")
 	implementation("org.springframework.modulith:spring-modulith-starter-core")
 	implementation("org.springframework.modulith:spring-modulith-starter-jdbc")
+	// 이벤트 발행 레지스트리의 직렬화기(EventSerializer) — 남겨진 발행 판정이 본문을 읽는다(docs/specs/platform.md platform-R16)
+	implementation("org.springframework.modulith:spring-modulith-events-core")
 	implementation("org.springdoc:springdoc-openapi-starter-webmvc-api:3.2.0")
 	// 수집 프로필 · 프리셋 파일(YAML 1.2) 읽기 — Spring Boot 가 버전을 관리하지 않아 직접 고정한다
 	implementation("org.snakeyaml:snakeyaml-engine:3.0.1")
@@ -56,8 +58,6 @@ dependencies {
 	testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
 	testImplementation("org.springframework.boot:spring-boot-testcontainers")
 	testImplementation("org.springframework.modulith:spring-modulith-starter-test")
-	// 이벤트 발행 레지스트리의 직렬화기(EventSerializer)로 이벤트 왕복을 확인한다 — 런타임에는 starter-jdbc 가 들인다
-	testImplementation("org.springframework.modulith:spring-modulith-events-core")
 	testImplementation("org.testcontainers:testcontainers-junit-jupiter")
 	testImplementation("org.testcontainers:testcontainers-postgresql")
 	// 외부 HTTP 대체 — Jetty · Jackson 을 안에 숨긴 판이라 Spring Boot 가 관리하는 판과 부딪히지 않는다. Spring Boot 가

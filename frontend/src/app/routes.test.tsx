@@ -4,6 +4,7 @@ import { RouterProvider } from "react-router/dom";
 import { describe, expect, it } from "vitest";
 import { routes } from "@/app/routes";
 import { CollectionPage } from "@/features/admin/CollectionPage";
+import { EventPublicationsPage } from "@/features/admin/EventPublicationsPage";
 
 describe("routes", () => {
   it("루트 경로에서 첫 화면을 보여준다", async () => {
@@ -25,5 +26,17 @@ describe("routes", () => {
     expect(typeof lazy).toBe("function");
     const loaded = await (lazy as () => Promise<{ Component?: unknown }>)();
     expect(loaded.Component).toBe(CollectionPage);
+  });
+
+  it("운영자 화면 아래 이벤트 발행 경로가 이벤트 발행 화면을 내려받는다", async () => {
+    const admin = routes[0]?.children?.find((route) => route.path === "admin");
+    const publications = admin?.children?.find(
+      (route) => route.path === "event-publications",
+    );
+    const lazy = publications?.lazy;
+
+    expect(typeof lazy).toBe("function");
+    const loaded = await (lazy as () => Promise<{ Component?: unknown }>)();
+    expect(loaded.Component).toBe(EventPublicationsPage);
   });
 });
