@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 /**
  * 소스 · 피드의 숨김 전이 — 숨김은 끄기를 포함하고, 다시 보이면 꺼진 채다.
  * <p>
- * 지키는 규칙: 숨김(docs/specs/source.md §5)
+ * 지키는 규칙: source-R53
  */
 class HidingTests {
 

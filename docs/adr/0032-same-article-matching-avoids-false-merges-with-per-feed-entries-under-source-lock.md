@@ -1,6 +1,6 @@
 # ADR-0032: 같은 기사 판정은 기사를 잃지 않는 쪽으로 좁히고, 피드별 기록은 (기사, 피드)마다 한 행으로 소스 단위 잠금 안에서 쓴다
 
-- 상태: 승인
+- 상태: 승인. L2 의 범위 "같은 소스"는 [ADR-0052](0052-article-sources-live-in-feed-entries-and-late-items-of-deleted-feeds-are-dropped.md)가 부분 대체(이 소스의 엔트리가 있는 기사)
 - 날짜: 2026-10-28
 - 근거: [이슈 #20](https://github.com/Theia0382/yozm-news/issues/20) — Spring Modulith 2.1.1 · Spring Boot 4.1.2 자동 구성을 확인하고, PostgreSQL 에서 btree 항목 크기 한계와 소스 잠금 대기를 실행으로 확인. 구현 `8b43269`(판정 규칙) · `a84e3fe`(스키마 · 저장소) · `ee7d895`(이벤트 처리)
 - 관련: [ADR-0013](0013-architecture-patterns.md)(aggregate 사이 ID 참조 · 멱등 작업), [ADR-0014](0014-spring-data-jdbc.md)(upsert 는 JdbcClient), [ADR-0023](0023-jobrunr-oss-framework-schema-and-event-resubmission.md)(이벤트는 최소 한 번 처리된다), [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md)(다른 기사를 같은 사건으로 묶는 일)

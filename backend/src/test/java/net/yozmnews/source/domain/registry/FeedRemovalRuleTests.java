@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test;
 /**
  * 피드 숨기기 · 삭제의 대상 판정.
  * <p>
- * 지키는 규칙: 숨김 · 삭제의 피드 대상(docs/specs/source.md §5)
+ * 지키는 규칙: source-R54
  */
 class FeedRemovalRuleTests {
 

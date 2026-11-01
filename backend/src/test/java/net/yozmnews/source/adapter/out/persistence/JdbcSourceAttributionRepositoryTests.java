@@ -19,7 +19,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 /**
  * 출처 이름 기록 저장소 — 실제 PostgreSQL 에서 이름이 다를 때만 쓰는 upsert 를 본다.
  * <p>
- * 지키는 규칙: 출처 이름 기록(docs/specs/source.md §5)
+ * 지키는 규칙: source-R57
  */
 @JdbcTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)

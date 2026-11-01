@@ -39,7 +39,7 @@ import org.springframework.test.context.event.RecordApplicationEvents;
 /**
  * 소스 · 피드의 숨김과 삭제 — 공개 운영 API 로 숨기고 다시 보이고 지우며, 운영 목록 · 운영 연산 · 저장된 행 · 발행된 이벤트를 잰다.
  * <p>
- * 지키는 규칙: 숨김 · 삭제(docs/specs/source.md §5) · source-R2 · source-R52
+ * 지키는 규칙: source-R2 · source-R52 ~ source-R55
  */
 @Import({ TestcontainersConfiguration.class, RegistryTestCatalog.class })
 @SpringBootTest

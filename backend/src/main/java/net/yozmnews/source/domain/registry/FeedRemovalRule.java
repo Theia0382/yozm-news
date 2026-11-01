@@ -6,7 +6,7 @@ import net.yozmnews.source.FeedRemovalRefusal;
 import net.yozmnews.source.domain.profile.FeedKey;
 
 /**
- * 피드 숨기기 · 삭제의 대상 판정 — docs/specs/source.md §5.
+ * 피드 숨기기 · 삭제의 대상 판정 — docs/specs/source.md §4 · source-R54.
  * <p>
  * 대상은 프로필을 얻었고 그 프로필에 없는 피드다. 프로필에 있는 피드는 숨기거나 지워도 원문 수정 · 기동 대조가 다시 더하고, 프로필을
  * 얻지 못한 소스는 소스 단위로 숨기거나 지운다.
