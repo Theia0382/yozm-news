@@ -76,7 +76,7 @@ public final class EventResubmissionPolicy {
 		/** 다시 처리한다 */
 		RESUBMIT,
 
-		/** 실패했지만 시도 상한에 이르렀다 — 다시 처리하지 않고 알린다 */
+		/** 실패했지만 시도 상한에 이르렀다 — 재처리 작업은 다시 처리하지 않고 알린다(운영자는 다시 처리할 수 있다) */
 		EXHAUSTED,
 
 		/** 다시 처리할 대상이 아니다 */
