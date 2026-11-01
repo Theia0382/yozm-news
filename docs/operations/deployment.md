@@ -34,18 +34,19 @@
 
 저장소 루트에서 실행한다.
 
-1. 값을 준비한다 — `deploy/.env.example` 을 `deploy/.env` 로 복사하고 필수 값을 적는다([운영 설정](configuration.md)). 필수 값이 없거나 비어 있으면 Compose 가 변수 이름을 말하며 멈춘다
+1. 값을 준비한다 — `deploy/.env.example` 을 `deploy/.env` 로 복사하고 필수 값을 적는다([운영 설정](configuration.md)). 필수 값이 없거나 비어 있으면 Compose 가 변수 이름을 말하며 멈춘다. 운영자 화면으로 소스를 등록하려면 [운영자 토큰](configuration.md#운영자)도 적는다
 2. 띄우고 확인한다
 
    ```sh
-   cp deploy/.env.example deploy/.env                            # 처음 한 번 — 필수 값을 적는다
+   cp deploy/.env.example deploy/.env                            # 처음 한 번 — 필수 값과 운영자 토큰을 적는다
    docker compose -f deploy/compose.yaml up -d --build --wait   # 호스트 플랫폼 이미지를 빌드하고 postgres → app → proxy 가 healthy 가 될 때까지 기다린다
-   bash deploy/smoke.sh                                          # 기동 상태 · 공개 범위 · 라우팅 · 앱 역할 · 프리셋 적재 확인 — 종료 코드 0 이면 통과 (bash · docker · curl 필요)
+   bash deploy/smoke.sh                                          # 기동 상태 · 공개 범위 · 라우팅 · 운영자 경로 · 앱 역할 · 프리셋 적재 확인 — 종료 코드 0 이면 통과 (bash · docker · curl 필요)
    ```
 
-   `deploy/` 에서는 `-f` 없이 `docker compose up -d --build --wait` 로 같다. 스모크는 공개 주소를 기본값(루프백)으로 둔 구성을 확인한다 — [공개](configuration.md#공개) 주소를 바꾼 구성에서는 공개 범위 항목이 실패한다.
-3. 브라우저로 proxy 의 공개 주소를 연다 — 기본은 이 호스트의 루프백이다([공개](configuration.md#공개))
-4. **(미구현)** 첫 운영자 계정을 만든다 — 처음 띄우면 `app` 로그(`docker compose -f deploy/compose.yaml logs app`)에 운영자 초대 링크가 나온다. 만료 전에 열어 가입한다. 만료되면 `app` 을 다시 시작해 새 링크를 받는다. 운영 설정으로 이메일 · 초기 비밀번호를 줬으면 그 값으로 로그인한다([계정과 고지](configuration.md#계정과-고지))
+   `deploy/` 에서는 `-f` 없이 `docker compose up -d --build --wait` 로 같다. 스모크는 공개 주소를 기본값(루프백)으로 둔 구성을 확인한다 — [공개](configuration.md#공개) 주소를 바꾼 구성에서는 공개 범위 항목이 실패한다. 운영자 토큰은 넣은 구성 · 넣지 않은 구성 모두 확인한다.
+3. 브라우저로 proxy 의 공개 주소를 연다 — 기본은 이 호스트의 루프백이다([공개](configuration.md#공개)). 운영자 화면은 `/admin` 이고, 운영자 토큰을 넣어 연다
+4. 소스를 등록하고 켠다 — [소스 등록](sources.md). 소스와 피드를 켜기 전에는 아무것도 수집하지 않는다
+5. **(미구현)** 첫 운영자 계정을 만든다 — 처음 띄우면 `app` 로그(`docker compose -f deploy/compose.yaml logs app`)에 운영자 초대 링크가 나온다. 만료 전에 열어 가입한다. 만료되면 `app` 을 다시 시작해 새 링크를 받는다. 운영 설정으로 이메일 · 초기 비밀번호를 줬으면 그 값으로 로그인한다([계정과 고지](configuration.md#계정과-고지))
 
 정지:
 

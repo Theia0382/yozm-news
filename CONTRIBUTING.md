@@ -30,7 +30,7 @@ docker compose -f compose.check.yaml run --rm --build docs       # 문서: 공�
 - 정리: `docker compose -f compose.check.yaml down -v` — 멈춘 컨테이너와 검사용 Docker 엔진의 데이터 볼륨을 지운다(다음 백엔드 검사가 PostgreSQL 이미지를 다시 받는다)
 - 문서 검사 이미지에는 문서와 문서가 가리키는 경로만 들어간다. 문서가 새 경로(예: 새 최상위 디렉터리)를 가리켜 "경로 없음"으로 실패하면 그 경로를 허용 목록 `tools/docs-check/Dockerfile.dockerignore` 에 더한다
 
-배포 구성 검사는 배포 구성을 [배포 구성 실행](docs/operations/deployment.md#배포-구성-실행) 대로 띄워 스모크(`deploy/smoke.sh`)를 돌린다 — 스모크의 종료 코드가 검사 결과다. 검사가 끝나면 DB 볼륨까지 지우는 정지로 정리한다. CI 는 같은 정의로 이미지를 두 아키텍처(`linux/amd64` · `linux/arm64`)로도 빌드한다 — 로컬에서는 `deploy/` 에서 실행한다([개발 인프라 — 이미지](docs/development/infrastructure.md#이미지)).
+배포 구성 검사는 배포 구성을 [배포 구성 실행](docs/operations/deployment.md#배포-구성-실행) 대로 띄워 스모크(`deploy/smoke.sh`)를 돌린다 — 스모크의 종료 코드가 검사 결과다. CI 는 운영자 토큰을 넣은 구성으로 `app` 을 다시 띄워 스모크를 한 번 더 돌린다. 검사가 끝나면 DB 볼륨까지 지우는 정지로 정리한다. CI 는 같은 정의로 이미지를 두 아키텍처(`linux/amd64` · `linux/arm64`)로도 빌드한다 — 로컬에서는 `deploy/` 에서 실행한다([개발 인프라 — 이미지](docs/development/infrastructure.md#이미지)).
 
 ```sh
 docker buildx bake --set '*.platform=linux/amd64,linux/arm64' app proxy   # deploy/ 에서 — 두 아키텍처 배포 이미지 빌드
@@ -52,7 +52,7 @@ backend/gradlew -p backend build                                 # 컴파일 + �
 
 결과는 `backend/build/test-results/test/` (JUnit XML) 와 `backend/build/reports/tests/test/index.html` 에 남는다.
 
-IDE 에서 테스트를 돌릴 때도 Gradle 로 실행을 위임한다. 위임하지 않으면 PostgreSQL 컨테이너를 띄우는 테스트가 시스템 속성이 없다는 메시지로 실패한다 — [테스트가 저장소 파일을 읽는 결선](docs/development/infrastructure.md#테스트가-저장소-파일을-읽는-결선).
+IDE 에서 테스트를 돌릴 때도 Gradle 로 실행을 위임한다. 위임하지 않으면 저장소 파일을 읽는 테스트(PostgreSQL 컨테이너를 띄우는 테스트 포함)가 시스템 속성이 없다는 메시지로 실패한다 — [테스트가 저장소 파일을 읽는 결선](docs/development/infrastructure.md#테스트가-저장소-파일을-읽는-결선).
 
 **백엔드 로컬 실행**
 

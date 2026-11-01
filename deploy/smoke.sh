@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 배포 구성 스모크 — 기본 설정으로 띄운 배포 구성(deploy/compose.yaml)이 갖춰야 할 것을 확인한다.
+# 배포 구성 스모크 — 띄운 배포 구성(deploy/compose.yaml)이 갖춰야 할 것을 확인한다. 공개 주소는 기본값이어야 하고, 운영자 토큰은 넣어도 넣지 않아도 된다.
 # CI(.github/workflows/ci.yml 의 deploy job)와 로컬이 같은 파일을 쓴다. 필요한 호스트 도구: bash · docker · curl.
 # 사용: 배포 구성을 띄운 뒤(PROXY_HOST_ADDRESS 는 기본값) bash deploy/smoke.sh — 종료 코드 0 이면 전 항목 통과다.
 set -uo pipefail
@@ -70,8 +70,21 @@ body=$(cat "$body_file")
 if [[ $body == '{"message":"pong"}' ]]; then pass "K5 /api/ping 응답"; else fail "K5 /api/ping 응답" '{"message":"pong"}' "$body"; fi
 # K6 로그인 경로는 앱으로 넘긴다(앱이 문제 응답으로 답한다 — docs/specs/platform.md "오류 응답 형식")
 check "K6 /login/oauth2/… 를 앱으로" /login/oauth2/code/smoke "*" application/problem+json
-# K13 운영자 경로는 토큰이 없는 기본 배포에서 닫혀 있다
-check "K13 운영자 기능 닫힘" /api/admin/sources 403 application/problem+json
+# K13 운영자 경로는 토큰 없는 요청에 열리지 않는다 — 토큰이 없는 배포는 닫혀 있고, 토큰을 넣은 배포는 인증을 요구한다(docs/specs/platform.md "운영자 접근 통제")
+# 토큰 유무는 실행 중인 app 의 환경을 컨테이너 안의 bash 가 보고 표지(set · unset)만 내보낸다 — 토큰 값은 이 스크립트로 나오지 않는다
+# 종료 코드 0 과 표지가 함께 있어야 판정한 것이다 — app 이 떠 있지 않아도 exec 가 실패하므로, 읽지 못한 것을 토큰 없음으로 넘기지 않는다
+token_marker=$("${compose[@]}" exec -T app bash -c '[[ -n ${YOZMNEWS_ADMIN_TOKEN:-} ]] && echo set || echo unset' 2>/dev/null) && token_read=1 || token_read=0
+k13_name=""
+case "$token_read:$token_marker" in
+  1:unset) k13_name="K13 운영자 경로 닫힘(토큰 없음)" k13_status=403 k13_problem=urn:yozmnews:problem:admin-closed ;;
+  1:set) k13_name="K13 운영자 경로 인증 요구(토큰 있음)" k13_status=401 k13_problem=urn:yozmnews:problem:admin-unauthorized ;;
+esac
+if [[ -z $k13_name ]]; then
+  fail "K13 운영자 토큰 설정" "app 환경의 표지 set · unset" "운영자 토큰 설정을 읽지 못했다"
+else
+  check "$k13_name" /api/admin/sources "$k13_status" application/problem+json
+  if grep -qF "\"$k13_problem\"" "$body_file"; then pass "$k13_name 문제 유형"; else fail "$k13_name 문제 유형" "$k13_problem" "$(head -c 200 "$body_file")"; fi
+fi
 # K7 · K8 관리 · 명세 엔드포인트는 넘기지 않는다(SPA 가 답한다)
 check "K7 /actuator/health 는 넘기지 않음" /actuator/health 200 text/html
 check "K8 /v3/api-docs 는 넘기지 않음" /v3/api-docs 200 text/html

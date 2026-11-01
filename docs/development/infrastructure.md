@@ -51,7 +51,7 @@ PostgreSQL 이미지는 `compose.yaml` 의 `postgres` 서비스 `image` 한 줄�
 
 ### 테스트가 저장소 파일을 읽는 결선
 
-백엔드 테스트는 저장소 파일 둘을 읽는다 — PostgreSQL 이미지를 정하는 `compose.yaml` 과, 현재 코드의 명세와 비교하는 화면용 API 명세 `api/openapi.json`([ADR-0020](../adr/0020-screen-api-contract-from-committed-openapi-spec.md)). 파일마다 네 곳이 맞물린다.
+백엔드 테스트는 저장소 파일 셋을 읽는다 — PostgreSQL 이미지를 정하는 `compose.yaml`, 현재 코드의 명세와 비교하는 화면용 API 명세 `api/openapi.json`([ADR-0020](../adr/0020-screen-api-contract-from-committed-openapi-spec.md)), 예시 프로필을 실제 검증기로 통과시키는 운영 안내서 `docs/operations/sources.md`([소스 등록](../operations/sources.md#예시)). 파일마다 네 곳이 맞물린다.
 
 1. `backend/build.gradle.kts` 가 파일 경로를 테스트에 시스템 속성으로 넘긴다
 2. 같은 파일이 Gradle 테스트 태스크의 입력으로 등록되어, 파일이 바뀌면 테스트가 다시 돈다
@@ -99,7 +99,7 @@ IDE 에서 테스트를 Gradle 에 맡기는 것은 1 때문이다([CONTRIBUTING
 | `backend` | 검사 정의의 `backend` · `docker` 로 백엔드 검사 |
 | `frontend` | 검사 정의의 `frontend` |
 | `docs` | 검사 정의의 `docs` |
-| `deploy` | 배포 이미지를 두 아키텍처로 빌드하고, 배포 구성을 띄워 healthcheck 를 기다린 뒤 `deploy/smoke.sh` |
+| `deploy` | 배포 이미지를 두 아키텍처로 빌드하고, 배포 구성을 띄워 healthcheck 를 기다린 뒤 `deploy/smoke.sh`, 이어서 운영자 토큰을 넣어 `app` 을 다시 띄우고 한 번 더 `deploy/smoke.sh` |
 
 - **필수 체크** — 네 job 모두 `main` 의 필수 체크다. 필수 여부는 저장소 설정(branch protection)이 정한다
 - **캐시** — 각 job 은 검사를 돌리기 전에 같은 정의로 이미지를 buildx bake 로 먼저 빌드해, GitHub Actions 캐시를 계층 캐시로 쓴다. 캐시 범위는 job 마다 따로다(`ci.yml`)
@@ -122,9 +122,10 @@ IDE 에서 테스트를 Gradle 에 맡기는 것은 1 때문이다([CONTRIBUTING
 | 배포 이미지가 저장소의 프리셋을 모두 적재한다 | 스모크 K12 — 앱의 적재 로그 줄의 수 = 저장소의 프리셋 파일 수(로그 문구는 [source-R12](../specs/source.md#수집-프로필)) | `backend/src/main/resources/source-presets/` · `deploy/smoke.sh` |
 | 테스트가 읽는 저장소 파일이 검사 이미지에 있다 | 빌드 실패(허용 목록에 없으면 복사가 실패) · 검사 실패(복사하지 않으면 이미지 안에 파일이 없다) | [결선](#테스트가-저장소-파일을-읽는-결선) |
 | 커밋된 화면용 API 명세 = 코드의 명세 | 테스트 `OpenApiSpecTests` | `api/openapi.json` · `backend/build.gradle.kts` |
+| 운영 안내서의 예시 프로필이 지금의 검증기를 통과한다 | 테스트 `SourcesGuideExampleTests`(코드 블록은 `yaml` · `sh` 만, `yaml` 블록 1개 이상) | `docs/operations/sources.md` · `backend/build.gradle.kts` |
 | Javadoc 형식 오류(깨진 참조 · HTML · 태그)가 없다 — main · 테스트 소스 | 빌드 실패 — 컴파일의 javac doclint 가 깨진 참조 · HTML 을(배포 빌드 `bootJar` 에도 걸린다), `check` 의 `javadoc` · `javadocTest` 가 그에 더해 알 수 없는 태그 · doclint 경고를 잡는다(`-Werror` 는 이 둘에만). 문서화 누락은 검사하지 않는다([ADR-0039](../adr/0039-code-comments-point-to-owning-docs-and-javadoc-format-checked-by-javac-and-javadoc.md)) | `backend/build.gradle.kts` |
 | 넘기는 경로의 정본 하나를 Caddy · Vite 가 함께 읽는다 | 테스트 `backendPaths.test.ts` + 스모크 K5 · K6 · K10 | `frontend/proxy/` |
-| 운영자 토큰을 설정하지 않은 배포는 운영자 경로가 닫혀 있다(403 문제 응답) | 스모크 K13 | [운영 설정 — 운영자](../operations/configuration.md#운영자) |
+| 운영자 경로는 토큰 없는 요청에 열리지 않는다 — 토큰을 설정하지 않은 배포는 닫혀 있고(403 `admin-closed`), 설정한 배포는 인증을 요구한다(401 `admin-unauthorized`) | 스모크 K13 — CI 는 두 구성을 돌린다 | [운영 설정 — 운영자](../operations/configuration.md#운영자) |
 | proxy 가 관리 · 명세 엔드포인트를 넘기지 않는다 | 스모크 K7 · K8 | `frontend/proxy/backend-paths.caddy` |
 | 배포 구성은 proxy 만 호스트에 공개하고 기본은 루프백이다 | 스모크 K2 | [공개](../operations/configuration.md#공개) |
 | 배포 구성의 `app` 은 두 역할(`web` · `worker`)을 켠다 | 스모크 K11 | `deploy/compose.yaml` |

@@ -6,3 +6,4 @@
 !backend/src/
 !compose.yaml
 !api/openapi.json
+!docs/operations/sources.md

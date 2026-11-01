@@ -103,6 +103,15 @@ tasks.named<Test>("test") {
 	inputs.files(openApiSpecFile).withPropertyName("openApiSpecFile").withPathSensitivity(PathSensitivity.NONE)
 }
 
+// 운영 안내서(저장소 루트 docs/operations/sources.md) — 테스트가 예시 프로필을 검증한다. 결선은 docs/development/infrastructure.md "테스트가 저장소 파일을 읽는 결선"
+val sourcesGuideFile = layout.projectDirectory.file("../docs/operations/sources.md")
+val sourcesGuideFileProperty = "yozmnews.sources-guide-file"
+
+tasks.withType<Test> {
+	inputs.file(sourcesGuideFile).withPropertyName("sourcesGuideFile").withPathSensitivity(PathSensitivity.NONE)
+	systemProperty(sourcesGuideFileProperty, sourcesGuideFile.asFile.path)
+}
+
 tasks.register<Test>("updateOpenApiSpec") {
 	description = "현재 코드의 화면용 API 명세로 api/openapi.json 을 다시 쓴다."
 	group = "documentation"
