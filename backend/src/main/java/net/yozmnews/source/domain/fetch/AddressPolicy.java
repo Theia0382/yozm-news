@@ -24,12 +24,21 @@ public final class AddressPolicy {
 			NetworkRange.parse("198.51.100.0/24"), NetworkRange.parse("203.0.113.0/24"), // IETF 프로토콜 할당 · 문서용
 			NetworkRange.parse("198.18.0.0/15"), // 벤치마크
 			NetworkRange.parse("224.0.0.0/4"), NetworkRange.parse("240.0.0.0/4"), // 멀티캐스트 · 예약(255.255.255.255 포함)
+			NetworkRange.parse("192.88.99.2/32"), // 6a44 relay(RFC 6751)
 			// IPv6
 			NetworkRange.parse("::/128"), NetworkRange.parse("::1/128"), // 미지정 · 루프백
-			NetworkRange.parse("100::/64"), // 폐기 접두(RFC 6666)
-			NetworkRange.parse("2001::/32"), NetworkRange.parse("2001:db8::/32"), // Teredo · 문서용
+			NetworkRange.parse("64:ff9b:1::/48"), // 로컬 NAT64(RFC 8215) — 품은 IPv4 의 자리를 알 수 없어 통째로 막는다
+			NetworkRange.parse("2001::/32"), NetworkRange.parse("2001:2::/48"), // Teredo · 벤치마크(RFC 5180)
+			NetworkRange.parse("2001:db8::/32"), NetworkRange.parse("3fff::/20"), // 문서용(RFC 3849 · RFC 9637)
 			NetworkRange.parse("fc00::/7"), NetworkRange.parse("fe80::/10"), NetworkRange.parse("fec0::/10"),
-			NetworkRange.parse("ff00::/8")); // 고유 로컬 · 링크 로컬 · 폐기된 사이트 로컬 · 멀티캐스트
+			NetworkRange.parse("ff00::/8"), // 고유 로컬 · 링크 로컬 · 폐기된 사이트 로컬 · 멀티캐스트
+			// IPv6 IETF 예약 — 100::/8 은 폐기 접두(RFC 6666) · 더미(RFC 9780), 4000::/3 은 SRv6 SID(RFC 9602)를 품는다.
+			// ::/8 은 잘 알려진 NAT64(64:ff9b::/96)를 품어 통째로 막지 않는다
+			NetworkRange.parse("100::/8"), NetworkRange.parse("200::/7"), NetworkRange.parse("400::/6"),
+			NetworkRange.parse("800::/5"), NetworkRange.parse("1000::/4"), NetworkRange.parse("4000::/3"),
+			NetworkRange.parse("6000::/3"), NetworkRange.parse("8000::/3"), NetworkRange.parse("a000::/3"),
+			NetworkRange.parse("c000::/3"), NetworkRange.parse("e000::/4"), NetworkRange.parse("f000::/5"),
+			NetworkRange.parse("f800::/6"), NetworkRange.parse("fe00::/9"));
 
 	/** IPv4 호환(::/96) — 마지막 4바이트가 IPv4 */
 	private static final NetworkRange IPV4_COMPATIBLE = NetworkRange.parse("::/96");

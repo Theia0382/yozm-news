@@ -386,6 +386,15 @@ class RssArticleSourceTests {
 	}
 
 	@Test
+	void blocksAnIpv6BenchmarkLiteral() {
+		FetchFailure failure = assertFailure(source(FetchLimits.DEFAULT, List.of())
+			.fetch(new FeedDescriptor(URI.create("http://[2001:2::1]/feed"), PROFILE), FetchState.NONE),
+				FetchFailureReason.BLOCKED_ADDRESS, null);
+
+		assertThat(failure.message()).isEqualTo("내부 주소로 가는 요청을 막았다: [2001:2::1] → 2001:2:0:0:0:0:0:1");
+	}
+
+	@Test
 	void blocksARedirectToTheMetadataAddress() {
 		server.stubFor(get("/meta").willReturn(
 				aResponse().withStatus(302).withHeader("Location", "http://169.254.169.254/latest/meta-data/")));
