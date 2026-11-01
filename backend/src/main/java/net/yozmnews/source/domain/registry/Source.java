@@ -31,6 +31,8 @@ public final class Source {
 
 	private @Nullable Integer pollIntervalMinutes;
 
+	private @Nullable Instant hiddenAt;
+
 	@Version
 	private @Nullable Long version;
 
@@ -38,7 +40,7 @@ public final class Source {
 
 	@PersistenceCreator
 	Source(@Nullable Long id, @Nullable String presetKey, @Nullable String profile, boolean enabled,
-			@Nullable Integer pollIntervalMinutes, @Nullable Long version, Instant createdAt) {
+			@Nullable Integer pollIntervalMinutes, @Nullable Instant hiddenAt, @Nullable Long version, Instant createdAt) {
 		if ((presetKey == null) == (profile == null)) {
 			throw new IllegalArgumentException("소스는 프리셋 키와 운영자 프로필 가운데 하나만 갖는다");
 		}
@@ -47,18 +49,19 @@ public final class Source {
 		this.profile = profile;
 		this.enabled = enabled;
 		this.pollIntervalMinutes = pollIntervalMinutes;
+		this.hiddenAt = hiddenAt;
 		this.version = version;
 		this.createdAt = Objects.requireNonNull(createdAt, "createdAt");
 	}
 
 	/** 프리셋을 참조하는 꺼진 소스를 만든다 */
 	public static Source ofPreset(PresetKey key, Instant now) {
-		return new Source(null, key.value(), null, false, null, null, now);
+		return new Source(null, key.value(), null, false, null, null, null, now);
 	}
 
 	/** 운영자 프로필 원문을 가진 꺼진 소스를 만든다 — 원문 검증은 등록 유스케이스가 먼저 한다 */
 	public static Source ofOperatorProfile(String text, Instant now) {
-		return new Source(null, null, Objects.requireNonNull(text, "text"), false, null, null, now);
+		return new Source(null, null, Objects.requireNonNull(text, "text"), false, null, null, null, now);
 	}
 
 	/**
@@ -129,6 +132,28 @@ public final class Source {
 
 	public void disable() {
 		this.enabled = false;
+	}
+
+	/** 숨겼는가 — 숨긴 소스는 운영 목록 · 운영 연산의 대상이 아니다 */
+	public boolean hidden() {
+		return this.hiddenAt != null;
+	}
+
+	/**
+	 * 숨긴다 — 숨김은 끄기를 포함한다. 이미 숨겼으면 숨긴 시각을 바꾸지 않는다.
+	 * @param now 숨긴 시각
+	 */
+	public void hide(Instant now) {
+		Objects.requireNonNull(now, "now");
+		this.enabled = false;
+		if (this.hiddenAt == null) {
+			this.hiddenAt = now;
+		}
+	}
+
+	/** 숨긴 시각을 지운다 — 꺼진 채 돌아온다 */
+	public void unhide() {
+		this.hiddenAt = null;
 	}
 
 	/**

@@ -68,12 +68,25 @@ class JdbcSourceListingRepositoryTests {
 		long presetFeedOne = insertFeed(preset, "one", false, null);
 
 		assertThat(this.repository.findAllSources()).containsExactly(
-				new SourceRow(new SourceId(operator), null, "# 원문\nsource: {}\n", false, null),
-				new SourceRow(new SourceId(preset), "multi", null, true, 30));
+				new SourceRow(new SourceId(operator), null, "# 원문\nsource: {}\n", false, null, null),
+				new SourceRow(new SourceId(preset), "multi", null, true, 30, null));
 		assertThat(this.repository.findAllFeeds()).containsExactly(
-				new FeedRow(new FeedId(operatorFeed), new SourceId(operator), "main", false, null, null),
-				new FeedRow(new FeedId(presetFeedTwo), new SourceId(preset), "two", true, 45, null),
-				new FeedRow(new FeedId(presetFeedOne), new SourceId(preset), "one", false, null, null));
+				new FeedRow(new FeedId(operatorFeed), new SourceId(operator), "main", false, null, null, null),
+				new FeedRow(new FeedId(presetFeedTwo), new SourceId(preset), "two", true, 45, null, null),
+				new FeedRow(new FeedId(presetFeedOne), new SourceId(preset), "one", false, null, null, null));
+	}
+
+	@Test
+	void readsWhenASourceOrAFeedWasHidden() {
+		long source = insertSource("multi", null, false, null);
+		long feed = insertFeed(source, "typo", false, null);
+		this.jdbc.sql("update sources set hidden_at = '2026-11-01T00:00:00Z' where id = :id").param("id", source).update();
+		this.jdbc.sql("update feeds set hidden_at = '2026-11-02T00:00:00Z' where id = :id").param("id", feed).update();
+
+		assertThat(this.repository.findAllSources()).containsExactly(new SourceRow(new SourceId(source), "multi", null,
+				false, null, Instant.parse("2026-11-01T00:00:00Z")));
+		assertThat(this.repository.findAllFeeds()).containsExactly(new FeedRow(new FeedId(feed), new SourceId(source),
+				"typo", false, null, Instant.parse("2026-11-02T00:00:00Z"), null));
 	}
 
 	@Test
@@ -95,11 +108,11 @@ class JdbcSourceListingRepositoryTests {
 			.update();
 
 		assertThat(this.repository.findAllFeeds()).containsExactly(
-				new FeedRow(failing, new SourceId(source), "failing", true, null,
+				new FeedRow(failing, new SourceId(source), "failing", true, null, null,
 						new PollRow(failingState, FeedStatus.DEGRADED, Instant.parse("2026-10-31T04:30:00Z"))),
-				new FeedRow(fresh, new SourceId(source), "fresh", true, null,
+				new FeedRow(fresh, new SourceId(source), "fresh", true, null, null,
 						new PollRow(FeedPollState.initial(fresh, AT), FeedStatus.ACTIVE, null)),
-				new FeedRow(orphan, new SourceId(source), "orphan", false, null, null));
+				new FeedRow(orphan, new SourceId(source), "orphan", false, null, null, null));
 	}
 
 	@Test

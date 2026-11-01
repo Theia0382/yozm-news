@@ -13,16 +13,17 @@ import org.jspecify.annotations.Nullable;
  * 등록된 소스 하나 — docs/specs/admin.md §3.
  * <p>
  * 프로필을 얻지 못하면({@code profileState} 가 {@code AVAILABLE} 이 아님) 이름은 기록된 출처 이름(없으면 null)이고, 홈페이지 ·
- * 검토일은 null 이다.
+ * 검토일은 null 이다. {@code feeds} 는 숨기지 않은 피드, {@code hiddenFeeds} 는 숨긴 피드다.
  */
 record SourceResponse(long id, @Nullable String presetKey, boolean enabled, @Nullable Integer pollIntervalMinutes,
 		ProfileState profileState, @Nullable String name, @Nullable URI homepage, @Nullable LocalDate termsReviewedAt,
-		List<FeedResponse> feeds) {
+		List<FeedResponse> feeds, List<FeedResponse> hiddenFeeds) {
 
 	static SourceResponse of(SourceView source) {
 		return new SourceResponse(source.id().value(), source.presetKey(), source.enabled(),
 				source.pollIntervalMinutes(), source.profileState(), source.name(), source.homepage(),
-				source.termsReviewedAt(), source.feeds().stream().map(FeedResponse::of).toList());
+				source.termsReviewedAt(), source.feeds().stream().map(FeedResponse::of).toList(),
+				source.hiddenFeeds().stream().map(FeedResponse::of).toList());
 	}
 
 	/**

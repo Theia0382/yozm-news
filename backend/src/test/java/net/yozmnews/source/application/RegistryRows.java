@@ -53,6 +53,18 @@ final class RegistryRows {
 				""").param("source", source).param("key", key).query(Long.class).single();
 	}
 
+	/** 소스 · 피드를 숨긴 것으로 둔다 — table 은 sources 나 feeds */
+	void hide(String table, long id) {
+		this.jdbc.sql("update " + table + " set enabled = false, hidden_at = now() where id = :id").param("id", id).update();
+	}
+
+	boolean hidden(String table, long id) {
+		return this.jdbc.sql("select hidden_at is not null from " + table + " where id = :id")
+			.param("id", id)
+			.query(Boolean.class)
+			.single();
+	}
+
 	/** 기록된 출처 이름 — 기록이 없으면 비어 있다 */
 	Optional<String> recordedName(long source) {
 		return this.jdbc.sql("select name from source_attributions where source_id = :source")

@@ -28,8 +28,11 @@ public interface SourceAdministration {
 	/** 카탈로그의 프리셋 — 키 순 */
 	List<PresetView> presets();
 
-	/** 등록된 소스 — 소스 ID 순, 피드는 피드 ID 순. 피드마다 수집 상태를 싣는다 */
+	/** 숨기지 않은 소스 — 소스 ID 순, 피드는 피드 ID 순. 피드마다 수집 상태를 싣는다 */
 	List<SourceView> sources();
+
+	/** 숨긴 소스 — 숨긴 시각 순(같으면 소스 ID 순) */
+	List<SourceView> hiddenSources();
 
 	/** 운영자 원문 — 프리셋을 참조하는 소스면 비어 있다 */
 	Optional<String> operatorProfileText(SourceId id);
@@ -61,5 +64,17 @@ public interface SourceAdministration {
 
 	/** 피드의 운영자 수집 주기를 바꾼다 — null 이면 지운다. 하한보다 짧으면 바꾸지 않고 false(source-R14) */
 	boolean changeFeedPollInterval(FeedId id, @Nullable Integer minutes);
+
+	/** 소스를 숨긴다 — 소스 · 그 피드를 끈다. 이미 숨겼으면 아무것도 바꾸지 않는다 */
+	void hideSource(SourceId id);
+
+	/** 숨긴 소스를 다시 보인다 — 소스 · 피드는 꺼진 채다 */
+	void unhideSource(SourceId id);
+
+	/** 피드를 숨긴다 — 프로필을 얻었고 그 프로필에 없는 피드만 */
+	FeedRemovalResult hideFeed(FeedId id);
+
+	/** 숨긴 피드를 다시 보인다 — 꺼진 채다 */
+	void unhideFeed(FeedId id);
 
 }

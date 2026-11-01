@@ -2,6 +2,7 @@ package net.yozmnews.source.adapter.out.persistence;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.List;
 
@@ -30,19 +31,20 @@ class JdbcSourceListingRepository implements SourceListingRepository {
 	@Override
 	public List<SourceRow> findAllSources() {
 		return this.jdbc.sql("""
-				select id, preset_key, profile, enabled, poll_interval_minutes
+				select id, preset_key, profile, enabled, poll_interval_minutes, hidden_at
 				from sources
 				order by id
 				""")
 			.query((rs, row) -> new SourceRow(new SourceId(rs.getLong("id")), rs.getString("preset_key"),
-					rs.getString("profile"), rs.getBoolean("enabled"), nullableInt(rs, "poll_interval_minutes")))
+					rs.getString("profile"), rs.getBoolean("enabled"), nullableInt(rs, "poll_interval_minutes"),
+					nullableInstant(rs, "hidden_at")))
 			.list();
 	}
 
 	@Override
 	public List<FeedRow> findAllFeeds() {
 		// 수집 상태 행이 없는 피드도 빠뜨리지 않는다 — 그 피드의 수집 상태 열은 모두 비고 poll 은 null 이다
-		return this.jdbc.sql("select f.id, f.source_id, f.feed_key, f.enabled, f.poll_interval_minutes, "
+		return this.jdbc.sql("select f.id, f.source_id, f.feed_key, f.enabled, f.poll_interval_minutes, f.hidden_at, "
 				+ JdbcFeedPollStateRepository.COLUMNS + """
 						, ps.status, ps.status_changed_at
 						from feeds f
@@ -51,7 +53,7 @@ class JdbcSourceListingRepository implements SourceListingRepository {
 						""")
 			.query((rs, row) -> new FeedRow(new FeedId(rs.getLong("id")), new SourceId(rs.getLong("source_id")),
 					rs.getString("feed_key"), rs.getBoolean("enabled"), nullableInt(rs, "poll_interval_minutes"),
-					poll(rs)))
+					nullableInstant(rs, "hidden_at"), poll(rs)))
 			.list();
 	}
 
@@ -62,6 +64,11 @@ class JdbcSourceListingRepository implements SourceListingRepository {
 		OffsetDateTime changedAt = rs.getObject("status_changed_at", OffsetDateTime.class);
 		return new PollRow(JdbcFeedPollStateRepository.state(rs), FeedStatus.valueOf(rs.getString("status")),
 				(changedAt != null) ? changedAt.toInstant() : null);
+	}
+
+	private static @Nullable Instant nullableInstant(ResultSet rs, String column) throws SQLException {
+		OffsetDateTime value = rs.getObject(column, OffsetDateTime.class);
+		return (value != null) ? value.toInstant() : null;
 	}
 
 	private static @Nullable Integer nullableInt(ResultSet rs, String column) throws SQLException {

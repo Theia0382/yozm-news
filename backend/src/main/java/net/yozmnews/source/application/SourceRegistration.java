@@ -21,6 +21,7 @@ import net.yozmnews.source.domain.profile.PresetKey;
 import net.yozmnews.source.domain.profile.ProfileParse;
 import net.yozmnews.source.domain.profile.ProfileParser;
 import net.yozmnews.source.domain.registry.Feed;
+import net.yozmnews.source.domain.registry.FeedReconciliation;
 import net.yozmnews.source.domain.registry.FeedRepository;
 import net.yozmnews.source.domain.registry.ProfileResolution;
 import net.yozmnews.source.domain.registry.ProfileResolver;
@@ -114,7 +115,9 @@ class SourceRegistration {
 	Revision reviseOperatorProfile(SourceId id, String text) {
 		Instant now = this.clock.instant();
 		return this.transaction.execute(status -> {
-			Source source = this.sources.findById(id.value()).orElseThrow(() -> new UnknownSourceException(id));
+			Source source = this.sources.findById(id.value())
+				.filter(found -> !found.hidden())
+				.orElseThrow(() -> new UnknownSourceException(id));
 			if (source.operatorProfile().isEmpty()) {
 				return new Revision.NotOperatorProfile();
 			}
@@ -134,11 +137,15 @@ class SourceRegistration {
 			this.sources.save(source);
 			this.attributions.record(id, after.source().name(), now);
 			List<Feed> existing = this.feeds.findAllBySourceId(id.value());
+			Set<FeedKey> reappeared = Set.copyOf(FeedReconciliation.compare(after, existing).reappeared());
 			List<FeedKey> disabled = new ArrayList<>();
 			for (Feed feed : existing.stream().sorted(Comparator.comparingLong(feed -> feed.id().value())).toList()) {
 				if (feed.enabled() && !ProfileRevision.keepsEnabled(before, after, feed.feedKey())) {
 					feed.disable();
 					disabled.add(feed.feedKey());
+				}
+				if (reappeared.contains(feed.feedKey())) {
+					feed.unhide();
 				}
 				this.feeds.save(feed);
 			}

@@ -103,9 +103,9 @@ class SourceAdministrationServiceTests {
 
 		assertThat(this.administration.presets()).containsExactly(
 				new PresetView("multi", "멀티일보", URI.create("https://multi.example"), LocalDate.parse("2026-10-20"), 2,
-						multi),
+						multi, false),
 				new PresetView("solo", "솔로뉴스", URI.create("https://solo.example"), LocalDate.parse("2026-10-21"), 1,
-						null));
+						null, false));
 	}
 
 	@Test
@@ -132,7 +132,8 @@ class SourceAdministrationServiceTests {
 				List.of(new FeedView(one, "one", false, null, true, URI.create("https://multi.example/rss/one.xml"), "하나",
 						30, NEVER_COLLECTED),
 						new FeedView(two, "two", false, 45, true, URI.create("https://multi.example/rss/two.xml"), "둘",
-								45, NEVER_COLLECTED))));
+								45, NEVER_COLLECTED)),
+				List.of()));
 	}
 
 	@Test
@@ -200,9 +201,10 @@ class SourceAdministrationServiceTests {
 				new SourceView(new SourceId(vanished), "vanished", true, null, ProfileState.PRESET_MISSING, "사라진일보",
 						null, null,
 						List.of(new FeedView(new FeedId(feed), "lost", false, null, false, null, null, null,
-								NEVER_COLLECTED))),
+								NEVER_COLLECTED)),
+						List.of()),
 				new SourceView(new SourceId(invalid), null, false, null, ProfileState.INVALID, null, null, null,
-						List.of()));
+						List.of(), List.of()));
 	}
 
 	@Test

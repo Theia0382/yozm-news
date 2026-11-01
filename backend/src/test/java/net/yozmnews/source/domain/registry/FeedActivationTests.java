@@ -47,7 +47,7 @@ class FeedActivationTests {
 	}
 
 	private static Feed feed(String key) {
-		return new Feed(1L, 2L, key, false, null, 0L, NOW);
+		return new Feed(1L, 2L, key, false, null, null, 0L, NOW);
 	}
 
 }

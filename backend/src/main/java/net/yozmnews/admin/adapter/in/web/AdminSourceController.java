@@ -21,7 +21,8 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
- * 운영자 API — 소스 목록 · 운영자 원문 등록 · 조회 · 수정 · 미리보기, 소스 켜기 · 끄기 · 수집 주기. docs/specs/admin.md §3.
+ * 운영자 API — 소스 목록 · 숨긴 소스 목록 · 운영자 원문 등록 · 조회 · 수정 · 미리보기, 소스 켜기 · 끄기 · 수집 주기 · 숨기기 ·
+ * 다시 보이기. docs/specs/admin.md §3.
  * <p>
  * 피드 켜기 · 원문 미리보기는 피드를 받으므로 응답까지 걸릴 수 있다 — 트랜잭션을 열지 않는다.
  */
@@ -49,6 +50,13 @@ class AdminSourceController {
 	SourceListResponse sources() {
 		return new SourceListResponse(SourceAdministration.MINIMUM_POLL_INTERVAL_MINUTES,
 				this.administration.sources().stream().map(SourceResponse::of).toList());
+	}
+
+	@GetMapping("/api/admin/sources/hidden")
+	@ApiResponse(responseCode = "200", description = "OK", useReturnTypeSchema = true)
+	SourceListResponse hiddenSources() {
+		return new SourceListResponse(SourceAdministration.MINIMUM_POLL_INTERVAL_MINUTES,
+				this.administration.hiddenSources().stream().map(SourceResponse::of).toList());
 	}
 
 	@PostMapping("/api/admin/sources")
@@ -117,6 +125,30 @@ class AdminSourceController {
 					schema = @Schema(implementation = ApiProblem.class)))
 	void disable(@PathVariable long id) {
 		this.administration.disableSource(AdminIds.source(id));
+	}
+
+	@PostMapping("/api/admin/sources/{id}/hide")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	@ApiResponse(responseCode = "404", description = "없는 소스다",
+			content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+					schema = @Schema(implementation = ApiProblem.class)))
+	@ApiResponse(responseCode = "409", description = "다른 요청이 먼저 바꿨다",
+			content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+					schema = @Schema(implementation = ApiProblem.class)))
+	void hide(@PathVariable long id) {
+		this.administration.hideSource(AdminIds.source(id));
+	}
+
+	@PostMapping("/api/admin/sources/{id}/unhide")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	@ApiResponse(responseCode = "404", description = "없는 소스다",
+			content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+					schema = @Schema(implementation = ApiProblem.class)))
+	@ApiResponse(responseCode = "409", description = "다른 요청이 먼저 바꿨다",
+			content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+					schema = @Schema(implementation = ApiProblem.class)))
+	void unhide(@PathVariable long id) {
+		this.administration.unhideSource(AdminIds.source(id));
 	}
 
 	@PutMapping("/api/admin/sources/{id}/poll-interval")
