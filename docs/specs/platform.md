@@ -31,7 +31,7 @@
 | 처리 시도 | 한 발행의 리스너 실행 횟수 — 최초 처리와 재제출 |
 | 멈춘 발행 | 발행하고 멈춤 기준 시간이 지나도 끝나지 않은 발행 — 처리 도중 프로세스가 죽은 경우 등 |
 | 상한에 이른 발행 | 실패했고 처리 시도가 상한에 이른 발행 — 재처리 작업이 다시 처리하지 않는다 |
-| 읽을 수 없는 발행 | 이벤트 클래스를 찾을 수 없어 Spring Modulith 가 읽지 못하는 미완료 발행 — 재처리 작업 · 멈춤 감시 · 상한 경고 로그에 나타나지 않는다(Spring Modulith 가 행을 읽을 때마다 알 수 없는 종류의 경고를 남긴다) |
+| 읽을 수 없는 발행 | 이벤트를 읽을 수 없는 미완료 발행 — 이벤트 클래스를 로드할 수 없거나, 본문을 그 클래스로 읽을 수 없다(예외 또는 값 없음). 클래스가 없는 발행은 Spring Modulith 가 읽을 때 버려 재처리 작업 · 멈춤 감시에 나타나지 않고, 행을 읽을 때마다 알 수 없는 종류의 경고만 남는다. 본문을 읽을 수 없는 발행은 멈춤 감시를 받고, 실패 상태면 재처리 작업이 읽어 보고 건너뛰며 그 경고 줄에 나온다 |
 | 남겨진 발행 | 재처리가 더 이상 다루지 않아 운영자가 처리할 발행 — 상한에 이른 발행과 읽을 수 없는 발행 |
 | 폐기 | 남겨진 발행을 레지스트리에서 지우는 것 — 되돌릴 수 없다 |
 | 운영자 토큰 | 운영자 경로를 여는 비밀 값 하나 — 서버 설정으로 받고, 화면이 `Authorization: Bearer` 로 보낸다. 설정하지 않으면 운영자 기능이 닫힌다 |
@@ -124,12 +124,12 @@ public enum DiscardOutcome { DISCARDED, NOT_STRANDED, CHANGED, NOT_FOUND }
 |---|---|
 | `MAX_BATCH` | 다시 처리 · 폐기 한 번에 받는 발행 수의 상한이자 목록에 싣는 발행 수의 상한 |
 | `strandedPublications()` | 남겨진 발행 — 발행 시각 오름차순(같으면 ID 순) 앞쪽 최대 `MAX_BATCH` 건과 전체 건수(`total`) |
-| `resubmit(ids)` | 고른 발행 가운데 상한에 이른 것을 지금 재제출한다(platform-R14) |
+| `resubmit(ids)` | 고른 발행 가운데 상한에 이르고 이벤트를 읽을 수 있는 것을 지금 재제출한다(platform-R14) |
 | `discard(ids)` | 고른 발행 가운데 남겨진 발행을 읽은 그대로일 때 지운다(platform-R15) |
 | `StrandedPublication` | ID · 까닭 · 이벤트 클래스 이름 · 리스너 ID · 발행 시각 · 처리 시도 · 마지막 재제출 시각. 마지막 재제출 시각은 저장 때 발행 시각으로 채워지므로 재제출된 적 없으면 발행 시각과 같다 |
-| `StrandedReason` | `EXHAUSTED` 상한에 이른 발행(다시 처리 · 폐기) · `UNREADABLE` 읽을 수 없는 발행(폐기만) |
+| `StrandedReason` | `EXHAUSTED` 상한에 이른 발행(다시 처리 · 폐기) · `UNREADABLE` 읽을 수 없는 발행 — 클래스가 없거나 본문이 그 클래스로 읽히지 않음(폐기만) |
 | `BatchResult` | `Processed` — 요청 ID 마다 결과 하나, 요청 ID 의 UUID 순(Java `UUID.compareTo`). `OverLimit` — 요청이 `MAX_BATCH` 를 넘어 아무것도 하지 않았다 |
-| `ResubmissionOutcome` | `RESUBMITTED` 재제출했다(동시 요청이 먼저 재제출한 경우 포함) · `NOT_EXHAUSTED` 상한에 이른 발행이 아니다(상한 미만 · 처리 중 · 그사이 바뀜) · `UNREADABLE` 읽을 수 없어 재제출할 수 없다 · `NOT_FOUND` 레지스트리에 없다 |
+| `ResubmissionOutcome` | `RESUBMITTED` 재제출했다(동시 요청이 먼저 재제출한 경우 포함) · `NOT_EXHAUSTED` 상한에 이른 발행이 아니다(상한 미만 · 처리 중 · 그사이 바뀜) · `UNREADABLE` 이벤트를 읽을 수 없어 재제출할 수 없다 · `NOT_FOUND` 레지스트리에 없다 |
 | `DiscardOutcome` | `DISCARDED` 지웠다 · `NOT_STRANDED` 남겨진 발행이 아니다 · `CHANGED` 읽은 뒤 바뀌어 지우지 않았다 · `NOT_FOUND` 레지스트리에 없다 |
 
 결과 타입은 HTTP 모양을 갖지 않는다 — 응답 모양은 `admin` 이 정한다([ADR-0045](../adr/0045-admin-module-serves-operator-api-over-module-public-operation-apis.md)). 관련 규칙: platform-R14 ~ platform-R16.
@@ -153,9 +153,9 @@ HTTP 엔드포인트:
 | `adapter/in/web` | API 계약 확인 엔드포인트, 화면용 API 명세 설정, 컨트롤러 오류의 문제 응답 |
 | `adapter/out/persistence` | 이벤트 발행 레지스트리 행의 읽기 · 조건부 삭제 |
 | `application` | 재처리 유스케이스, 남겨진 발행의 운영 유스케이스, 재처리 설정과 정책 결선, 역할 검사 결선, 작업 역할의 스케줄링, 보안 구성과 운영자 토큰 인증 |
-| `domain` | 재처리 대상 · 남겨진 발행 판정과 그 설정 조건, 레지스트리 행 저장 인터페이스, 역할 판정, 운영자 자격 판정 |
+| `domain` | 재처리 대상 · 남겨진 발행 판정과 그 설정 조건, 이벤트를 읽을 수 있는지의 판정, 레지스트리 행 저장 인터페이스, 역할 판정, 운영자 자격 판정 |
 
-협력: `EventResubmissionJob` 이 `EventResubmissionService` 를 부르고, 서비스는 Spring Modulith 의 미완료 발행 전체를 읽어 `EventResubmissionPolicy` 의 판정대로 재제출한다. `admin` 의 운영자 API 는 `EventPublicationAdministrationService` 를 부른다 — 이 서비스는 `RegistryRows`(구현 `JdbcRegistryRows`)로 레지스트리 행을 읽어 같은 정책으로 남겨진 발행을 가르고, 다시 처리는 Spring Modulith 의 재제출 경로로, 폐기는 `RegistryRows` 의 조건부 삭제로 한다. 정책은 `EventResubmissionConfiguration` 이 설정 값(`EventResubmissionProperties`)으로 만든다. `RoleConfiguration` 이 켜진 profile 로 `ActiveRoles` 를 만든다. `SecurityConfiguration` 이 설정 값(`AdminSecurityProperties`)으로 `AdminCredential` 을 만들고, 운영자 체인의 `AdminTokenFilter` 가 제시된 토큰을 `AdminTokenAuthenticationProvider` 에 맡겨 대조한다. 보안 진입점과 `ProblemResponseAdvice` 는 `ProblemResponses` 로 문제 응답을 쓴다.
+협력: `EventResubmissionJob` 이 `EventResubmissionService` 를 부르고, 서비스는 Spring Modulith 의 미완료 발행 전체를 읽어 `EventResubmissionPolicy` 의 판정대로 재제출한다 — 실패 발행은 재제출 전에 `EventReading` 으로 이벤트를 읽어 본다. `admin` 의 운영자 API 는 `EventPublicationAdministrationService` 를 부른다 — 이 서비스는 `RegistryRows`(구현 `JdbcRegistryRows` — 본문은 Spring Modulith 의 `EventSerializer` 로 읽어 `EventReading` 으로 판정한다)로 레지스트리 행을 읽어 같은 정책으로 남겨진 발행을 가르고, 다시 처리는 Spring Modulith 의 재제출 경로로, 폐기는 `RegistryRows` 의 조건부 삭제로 한다. 정책은 `EventResubmissionConfiguration` 이 설정 값(`EventResubmissionProperties`)으로 만든다. `RoleConfiguration` 이 켜진 profile 로 `ActiveRoles` 를 만든다. `SecurityConfiguration` 이 설정 값(`AdminSecurityProperties`)으로 `AdminCredential` 을 만들고, 운영자 체인의 `AdminTokenFilter` 가 제시된 토큰을 `AdminTokenAuthenticationProvider` 에 맡겨 대조한다. 보안 진입점과 `ProblemResponseAdvice` 는 `ProblemResponses` 로 문제 응답을 쓴다.
 
 역할: `EventResubmissionJob` 과 `WorkerSchedulingConfiguration` 은 작업 역할, `PingController` · `OpenApiConfiguration` · `ProblemResponseAdvice` 는 화면 역할에서만 켜진다. `EventPublicationAdministrationService` · `JdbcRegistryRows` 는 공통이다. 보안 구성을 포함한 나머지는 두 역할 공통이다(platform-R9 · platform-R10).
 
@@ -169,13 +169,13 @@ stateDiagram-v2
     PUBLISHED --> PROCESSING: 리스너 처리 시작
     PROCESSING --> COMPLETED: 처리 성공
     PROCESSING --> FAILED: 리스너 실패
-    FAILED --> RESUBMITTED: 재제출 — 처리 시도 6 미만, 시도 +1 (platform-R1 · R4)
+    FAILED --> RESUBMITTED: 재제출 — 이벤트를 읽을 수 있고 처리 시도 6 미만, 시도 +1 (platform-R1 · R4)
     RESUBMITTED --> PROCESSING: 리스너 다시 처리
     PUBLISHED --> FAILED: 멈춤 기준 30분 (platform-R2)
     PROCESSING --> FAILED: 멈춤 기준 30분 (platform-R2)
     RESUBMITTED --> FAILED: 멈춤 기준 30분 (platform-R2)
-    FAILED --> FAILED: 처리 시도 6 이상 — 재처리 작업은 다시 처리하지 않고 경고 로그 (platform-R1)
-    FAILED --> RESUBMITTED: 운영자 다시 처리 — 상한에 이른 발행, 시도 +1 (platform-R14)
+    FAILED --> FAILED: 처리 시도 6 이상이거나 이벤트를 읽을 수 없음 — 재처리 작업은 다시 처리하지 않고 경고 로그 (platform-R1)
+    FAILED --> RESUBMITTED: 운영자 다시 처리 — 상한에 이르고 이벤트를 읽을 수 있는 발행, 시도 +1 (platform-R14)
     FAILED --> [*]: 운영자 폐기 — 남겨진 발행 (platform-R15)
     COMPLETED --> [*]: 바로 지운다 (platform-R5)
 ```
@@ -184,7 +184,7 @@ stateDiagram-v2
 
 | 진입점 | 구성 요소 | 계기 | 내용 |
 |---|---|---|---|
-| 이벤트 발행 재처리 — 반복 작업 ID `event-publication-resubmission` | `EventResubmissionJob` | 재제출 주기(§7, 기본 5분)마다 | 미완료 발행에서 다시 처리할 것을 재제출하고 상한에 이른 것을 알린다(platform-R1 · R4). 재시도하지 않는다 — 실패한 회차가 재시도를 기다리는 동안 작업 서버가 다음 회차를 건너뛰므로 다음 회차가 곧 재시도다 |
+| 이벤트 발행 재처리 — 반복 작업 ID `event-publication-resubmission` | `EventResubmissionJob` | 재제출 주기(§7, 기본 5분)마다 | 미완료 발행에서 다시 처리할 것을 재제출하고 상한에 이른 것과 이벤트를 읽을 수 없는 것을 알린다(platform-R1 · R4). 재시도하지 않는다 — 실패한 회차가 재시도를 기다리는 동안 작업 서버가 다음 회차를 건너뛰므로 다음 회차가 곧 재시도다 |
 | 남겨진 발행의 운영 기능 | `EventPublicationAdministrationService` | 공개 운영 API 호출(`admin` 의 운영자 요청 — 화면 역할) | 목록 · 다시 처리 · 폐기(platform-R14 ~ R16). 트랜잭션을 열지 않는다 |
 | 재처리 설정 검사 | `EventResubmissionConfiguration` | 기동 | 재제출 주기와 멈춤 기준의 조건을 확인한다(platform-R3) |
 | 역할 검사 | `RoleConfiguration` | 기동 | 켜진 profile 로 역할을 정하고, 하나도 없으면 기동하지 않는다(platform-R8) |
@@ -197,8 +197,8 @@ stateDiagram-v2
 
 ### `application`
 
-- `EventResubmissionService` — 미완료 발행 전체를 읽어 정책이 고른 것을 재제출하고, 상한에 이른 실패 발행의 ID 를 경고 로그 한 줄로 남긴다. 재제출은 리스너의 처리 끝을 기다리지 않는다. 같은 발행은 여러 인스턴스가 동시에 불러도 한 곳에서만 재제출된다 — Spring Modulith 의 조건부 상태 갱신(platform-R1 · platform-R4). 이 클래스는 트랜잭션을 열지 않는다 — 발행의 상태 갱신은 Spring Modulith 가 한다
-- `EventPublicationAdministrationService` — 공개 운영 API `EventPublicationAdministration` 의 구현. 목록은 레지스트리 행 전체를 읽어 정책으로 남겨진 발행을 가른다. 다시 처리는 고른 행을 먼저 읽어 두고(결과의 까닭을 가르는 데만 쓴다), Spring Modulith 의 미완료 발행 재제출을 "고른 ID 이고 정책이 상한에 이름으로 판정한 것"만 통과시키는 필터로 부른다. 폐기는 고른 행을 읽어 남겨진 발행만 조건부로 지우고 지운 행마다 경고 로그 한 줄을 남긴다. 상태가 빈 행은 판정에 넘기지 않는다(platform-R14 ~ R16)
+- `EventResubmissionService` — 미완료 발행 전체를 읽어 정책이 고른 것을 재제출한다. 실패 발행은 필터에서 이벤트를 먼저 읽어 보고(`EventReading`) 읽을 수 없으면 재제출하지 않는다. 상한에 이른 실패 발행과 읽을 수 없는 실패 발행의 ID 를 따로 세어 경고 로그 한 줄로 남긴다. 재제출은 리스너의 처리 끝을 기다리지 않는다. 같은 발행은 여러 인스턴스가 동시에 불러도 한 곳에서만 재제출된다 — Spring Modulith 의 조건부 상태 갱신(platform-R1 · platform-R4). 이 클래스는 트랜잭션을 열지 않는다 — 발행의 상태 갱신은 Spring Modulith 가 한다
+- `EventPublicationAdministrationService` — 공개 운영 API `EventPublicationAdministration` 의 구현. 목록은 레지스트리 행 전체를 읽어 정책으로 남겨진 발행을 가른다. 다시 처리는 고른 행을 먼저 읽어 두고(결과의 까닭을 가르는 데만 쓴다), Spring Modulith 의 미완료 발행 재제출을 "고른 ID 이고, 이벤트를 읽어 본 뒤 정책이 상한에 이름으로 판정한 것"만 통과시키는 필터로 부른다. 폐기는 고른 행을 읽어 남겨진 발행만 조건부로 지우고 지운 행마다 경고 로그 한 줄을 남긴다. 상태가 빈 행은 판정에 넘기지 않는다(platform-R14 ~ R16)
 - `EventResubmissionConfiguration` — 설정 값으로 정책을 만든다. 설정 조합이 조건을 어기면 기동이 실패한다(platform-R3)
 - `EventResubmissionProperties` — 재처리 설정 키(`yozmnews.events` — §7)
 - `RoleConfiguration` — 켜진 profile 로 `ActiveRoles` 를 만든다. 활성 profile 이 없으면 기본 profile 이다(platform-R8)
@@ -211,10 +211,11 @@ stateDiagram-v2
 
 ### `domain`
 
-- `EventResubmissionPolicy` — 재처리 대상과 남겨진 발행 판정의 정본. 발행마다(또는 상태 · 처리 시도로) 다시 처리 · 상한 · 건너뜀을 정하고, 상태 · 처리 시도 · 이벤트 클래스를 로드할 수 있는지로 남겨진 까닭을 정하며, 만들 때 재제출 주기와 멈춤 기준의 조건을 확인한다(platform-R1 · platform-R3 · platform-R16). Spring Modulith 의 `EventPublication` 상태를 `default` 없는 망라 `switch` 로 분기한다 — `domain` 이 교체하지 않는 프레임워크의 타입을 쓰는 근거는 [ADR-0037](../adr/0037-domain-may-use-non-replaceable-framework-types.md)이다
+- `EventResubmissionPolicy` — 재처리 대상과 남겨진 발행 판정의 정본. 상태 · 처리 시도 · 이벤트를 읽을 수 있는지로 다시 처리 · 상한 · 읽을 수 없음 · 건너뜀과 남겨진 까닭을 정한다 — 읽을 수 있는지는 판정에 필요할 때만 묻는다(실패 발행, 남겨진 까닭은 미완료 발행). 만들 때 재제출 주기와 멈춤 기준의 조건을 확인한다(platform-R1 · platform-R3 · platform-R16). Spring Modulith 의 `EventPublication` 상태를 `default` 없는 망라 `switch` 로 분기한다 — `domain` 이 교체하지 않는 프레임워크의 타입을 쓰는 근거는 [ADR-0037](../adr/0037-domain-may-use-non-replaceable-framework-types.md)이다
 - `ActiveRoles` — 이 프로세스가 맡는 역할. 판정의 정본 — 두 역할 모두 아니면 켜는 방법을 알리며 거부한다(platform-R8)
 - `AdminCredential` — 운영자 자격의 판정 정본 — 토큰 형식(최소 · 최대 길이 상수), 열림, 상수 시간 대조. 값은 다이제스트로만 갖는다(platform-R11)
-- `RegistryRows` — 이벤트 발행 레지스트리의 행을 이벤트 내용 없이 읽고(전체 · ID 로), 읽은 그대로일 때만 지우는 저장 인터페이스. 구현은 `adapter/out/persistence` 의 `JdbcRegistryRows` 다(platform-R15 · platform-R16)
+- `EventReading` — 이벤트를 읽을 수 있는지의 판정 정본. 읽기가 값을 돌려주면 참, 예외 · 클래스 연결 오류를 던지거나 값이 없으면 거짓이다(platform-R16)
+- `RegistryRows` — 이벤트 발행 레지스트리의 행을 읽고(전체 · ID 로), 읽은 그대로일 때만 지우는 저장 인터페이스. 이벤트 내용은 읽을 수 있는지의 판정에만 쓰고 행에 싣지 않는다. 구현은 `adapter/out/persistence` 의 `JdbcRegistryRows` 다(platform-R15 · platform-R16)
 - 그 밖의 값: `EventResubmissionPolicy.Decision` · `RegistryRows.RegistryRow`
 - 저장 단위: 자기 테이블이 없다(§6)
 
@@ -228,17 +229,17 @@ stateDiagram-v2
 
 모듈 사이 이벤트는 Spring Modulith 이벤트 발행 레지스트리(JDBC)에 기록된다([ADR-0023](../adr/0023-jobrunr-oss-framework-schema-and-event-resubmission.md)).
 
-- **platform-R1** — 다시 처리하는 것은 리스너가 실패한(`FAILED`) 발행뿐이다. 한 발행의 총 처리 시도 상한은 6회(최초 처리 1회 + 재제출 5회)다 — 발행의 처리 시도 수는 저장 때 1 이고 재제출마다 1 씩 는다. 재처리 작업은 처리 시도가 상한에 이른 실패 발행을 다시 처리하지 않고 실패로 남기며(운영자 처리는 platform-R14 · R15), 남아 있는 동안 재처리 작업이 돌 때마다 그 발행 ID 들을 경고 로그 한 줄로 알린다
+- **platform-R1** — 다시 처리하는 것은 리스너가 실패한(`FAILED`) 발행 가운데 이벤트를 읽을 수 있는 것뿐이다(platform-R16). 한 발행의 총 처리 시도 상한은 6회(최초 처리 1회 + 재제출 5회)다 — 발행의 처리 시도 수는 저장 때 1 이고 재제출마다 1 씩 는다. 재처리 작업은 처리 시도가 상한에 이른 실패 발행을 다시 처리하지 않고 실패로 남기며(운영자 처리는 platform-R14 · R15), 이벤트를 읽을 수 없는 실패 발행도 처리 시도와 상관없이 다시 처리하지 않는다. 남아 있는 동안 재처리 작업이 돌 때마다 두 갈래의 발행 ID 를 따로 세어 경고 로그 한 줄로 알린다
 - **platform-R2** — 처리 도중 멈춘 발행은 Spring Modulith 의 멈춤 감시가 발행 시각에서 멈춤 기준 시간(30분)이 지나면 실패로 바꾸고, 그 뒤 platform-R1 의 경로로 다시 처리된다. 감시는 작업 역할에서만 돈다(platform-R9). 멈춤 기준은 발행 · 처리 중 · 재제출 세 상태에 같은 값이다 — 감시는 기간이 하나라도 있으면 세 상태를 모두 판정하고, 비운 상태는 발행 전부를 멈춤으로 본다
 - **platform-R3** — 재제출 주기와 멈춤 기준은 0 보다 크고, (처리 시도 상한 − 1) × 재제출 주기가 멈춤 기준보다 짧아야 한다 — 감시는 발행 시각으로 멈춤을 판정하므로, 마지막 재제출이 멈춤 기준 안에 있어야 정상 운영에서 재처리 중인 발행을 멈춤으로 오판하지 않는다. 기동 때 확인하고 어기면 기동하지 않는다
-- **platform-R4** — 재처리는 미완료 발행 전체를 읽어 고른다 — 상한에 이른 실패 발행이 쌓여도 새 실패 발행이 밀리지 않는다. 같은 발행은 여러 인스턴스가 동시에 재처리해도 한 곳에서만 재제출된다(Spring Modulith 의 조건부 상태 갱신). 재제출은 리스너의 처리 끝을 기다리지 않는다
+- **platform-R4** — 재처리는 미완료 발행 전체를 읽어 고른다 — 상한에 이른 실패 발행이 쌓여도 새 실패 발행이 밀리지 않는다. 고르는 필터는 조건부 갱신 전에 실패 발행의 이벤트를 읽어 보고, 읽지 못한 발행은 갱신 · 재제출하지 않는다 — 본문을 읽을 수 없는 발행이 재제출 도중 예외로 그 회차의 나머지를 끊지 않고, 처리 시도도 늘지 않는다. 같은 발행은 여러 인스턴스가 동시에 재처리해도 한 곳에서만 재제출된다(Spring Modulith 의 조건부 상태 갱신). 재제출은 리스너의 처리 끝을 기다리지 않는다
 - **platform-R5** — 완료된 발행은 바로 지운다 — 결과는 각 모듈의 데이터에 남는다. 실패한 발행은 운영자가 폐기할 때까지(platform-R15) 남아 재처리와 원인 조사의 근거가 된다. 이 보존 기간은 [data-model.md "보존 정책"](../data-model.md#보존-정책-초안)의 이벤트 발행 기록 행이다
 
 ### 남겨진 발행의 운영자 처리
 
-- **platform-R14** — 운영자는 남겨진 발행을 본다: 발행 시각 오름차순(같으면 ID 순) 앞쪽 최대 500건(`EventPublicationAdministration.MAX_BATCH`)과 전체 건수, 발행마다 ID · 까닭 · 이벤트 종류 · 리스너 · 발행 시각 · 처리 시도 · 마지막 재제출 시각 — 이벤트 내용은 내지 않는다. 다시 처리는 고른 발행 가운데 상한에 이른 것을 지금 한 번 재제출한다 — 재처리 작업과 같은 재제출 경로 · 조건부 갱신(platform-R4)을 거치고 처리 시도는 1 늘어난다. 처리 시도를 되돌리지 않으므로, 다시 실패한 발행은 곧바로 상한에 이른 발행으로 남고 재처리 작업은 다루지 않는다. 재제출은 리스너의 처리 끝을 기다리지 않는다. 결과는 고른 발행마다 `RESUBMITTED` · `NOT_EXHAUSTED` · `UNREADABLE` · `NOT_FOUND` 다. 재제출 직후의 다시 처리를 막지 않는다 — 멈춤 감시는 발행 시각으로 판정하므로(platform-R2) 운영자가 재제출한 발행은 처리 중이어도 다음 감시 회차에 실패로 바뀔 수 있고, 같은 발행이 동시에 처리되면 리스너 멱등이 결과를 지킨다
+- **platform-R14** — 운영자는 남겨진 발행을 본다: 발행 시각 오름차순(같으면 ID 순) 앞쪽 최대 500건(`EventPublicationAdministration.MAX_BATCH`)과 전체 건수, 발행마다 ID · 까닭 · 이벤트 종류 · 리스너 · 발행 시각 · 처리 시도 · 마지막 재제출 시각 — 이벤트 내용은 내지 않는다. 다시 처리는 고른 발행 가운데 상한에 이르고 이벤트를 읽을 수 있는 것을 지금 한 번 재제출한다 — 재처리 작업과 같은 재제출 경로 · 조건부 갱신(platform-R4)을 거치고 처리 시도는 1 늘어난다. 처리 시도를 되돌리지 않으므로, 다시 실패한 발행은 곧바로 상한에 이른 발행으로 남고 재처리 작업은 다루지 않는다. 재제출은 리스너의 처리 끝을 기다리지 않는다. 결과는 고른 발행마다 `RESUBMITTED` · `NOT_EXHAUSTED` · `UNREADABLE` · `NOT_FOUND` 다. 재제출 직후의 다시 처리를 막지 않는다 — 멈춤 감시는 발행 시각으로 판정하므로(platform-R2) 운영자가 재제출한 발행은 처리 중이어도 다음 감시 회차에 실패로 바뀔 수 있고, 같은 발행이 동시에 처리되면 리스너 멱등이 결과를 지킨다
 - **platform-R15** — 폐기는 고른 발행 가운데 남겨진 발행을, 읽은 상태 · 처리 시도 · 이벤트 종류가 그대로일 때만 레지스트리에서 지운다. 결과는 고른 발행마다 `DISCARDED` · `NOT_STRANDED` · `CHANGED` · `NOT_FOUND` 다. 폐기 기록은 따로 두지 않고, 지운 발행마다 경고 로그 한 줄에 ID · 까닭 · 이벤트 종류 · 리스너 · 발행 시각 · 처리 시도를 남긴다 — 이벤트 내용은 남기지 않는다. 폐기는 되돌릴 수 없다. 다시 처리 · 폐기는 한 번에 500건까지 받고, 넘으면 아무것도 하지 않는다. 트랜잭션을 열지 않는다 — 폐기는 행마다 문장 하나다
-- **platform-R16** — 남겨진 발행은 상한에 이른 발행(platform-R1 의 판정)과 읽을 수 없는 발행이다. 읽을 수 없는 발행은 완료되지 않았고 이벤트 클래스를 Spring Modulith 와 같은 클래스 로더로 로드할 수 없는 발행이다 — 상태 · 처리 시도와 상관없다. 판정의 정본은 `EventResubmissionPolicy` 다. 레지스트리 행은 이벤트 내용을 읽지 않고 읽는다 — 처리 시도가 비었으면 0 으로 읽고, 상태가 빈 행은 남겨진 발행이 아니다
+- **platform-R16** — 남겨진 발행은 상한에 이른 발행(platform-R1 의 판정)과 읽을 수 없는 발행이다. 읽을 수 없는 발행은 완료되지 않았고, 이벤트 클래스를 Spring Modulith 와 같은 클래스 로더로 로드할 수 없거나, 본문을 그 클래스로 Spring Modulith 와 같은 직렬화기(`EventSerializer`)로 읽을 수 없는(예외 또는 값 없음) 발행이다 — 상태 · 처리 시도와 상관없다. 판정의 정본은 `EventResubmissionPolicy`(뜻)와 `EventReading`(읽기 결과 → 읽을 수 있음)이다. 레지스트리 행의 이벤트 내용은 이 판정에만 읽고 응답 · 로그에 싣지 않는다 — 처리 시도가 비었으면 0 으로 읽고, 상태가 빈 행은 남겨진 발행이 아니다
 
 ### 역할
 
@@ -269,7 +270,7 @@ stateDiagram-v2
 
 해당 없음 — 이 모듈은 자기 테이블이 없다. 이벤트 발행 레지스트리와 작업 테이블은 프레임워크 테이블이라 [data-model.md](../data-model.md)에 있다.
 
-남겨진 발행의 운영자 처리는 레지스트리 테이블 `event_publication` 을 직접 읽고 지운다(platform-R14 ~ R16). 쓰는 열은 `id` · `event_type` · `listener_id` · `publication_date` · `status` · `completion_attempts` · `last_resubmission_date` 이고, 이벤트 내용(`serialized_event`)은 읽지 않는다. 행을 바꾸는 것은 조건부 삭제뿐이다 — 상태 갱신은 Spring Modulith 가 한다.
+남겨진 발행의 운영자 처리는 레지스트리 테이블 `event_publication` 을 직접 읽고 지운다(platform-R14 ~ R16). 쓰는 열은 `id` · `event_type` · `listener_id` · `publication_date` · `status` · `completion_attempts` · `last_resubmission_date` · `serialized_event` 이고, 이벤트 내용(`serialized_event`)은 읽을 수 있는지의 판정에만 쓰고 응답 · 로그에 싣지 않는다(platform-R16). 행을 바꾸는 것은 조건부 삭제뿐이다 — 상태 갱신은 Spring Modulith 가 한다.
 
 ## 7. 설정
 
@@ -296,4 +297,4 @@ stateDiagram-v2
 | [0043](../adr/0043-admin-functions-guarded-by-env-bearer-token-until-account-roles.md) | 운영자 기능은 계정 인증 전까지 환경 변수의 Bearer 토큰으로 막고, 계정 인증이 생기면 같은 경로의 `ADMIN` 역할 판정으로 바꾼다 |
 | [0044](../adr/0044-screen-api-results-as-flat-discriminated-200-and-rfc9457-problems.md) | 화면 API 는 판정 결과를 판별자 하나의 평평한 200 응답으로, 요청의 문제만 RFC 9457 형식의 자체 오류 레코드로 앱 전체에서 낸다 |
 | [0045](../adr/0045-admin-module-serves-operator-api-over-module-public-operation-apis.md) | 운영자 API 는 `admin` 모듈이 내고, 각 모듈은 운영 기능과 결과 타입을 최상위 공개 API 로 낸다 |
-| [0050](../adr/0050-operator-resubmits-once-or-discards-stranded-event-publications-read-from-registry.md) | 상한에 이른 · 읽을 수 없는 이벤트 발행은 운영자가 즉시 1회 재제출하거나 기록 없이 폐기하고, 목록 · 폐기는 `platform` 이 레지스트리 테이블을 직접 다룬다 |
+| [0050](../adr/0050-operator-resubmits-once-or-discards-stranded-event-publications-read-from-registry.md) | 이벤트를 읽을 수 없는 발행은 재제출 전에 거르고, 상한에 이른 · 읽을 수 없는 발행은 운영자가 즉시 1회 재제출하거나 기록 없이 폐기하며, 목록 · 폐기는 `platform` 이 레지스트리 테이블을 직접 다룬다 |

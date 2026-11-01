@@ -144,7 +144,7 @@ flowchart LR
 ```
 
 - 모듈 간에는 **공개 API(모듈 최상위 패키지의 타입)와 도메인 이벤트로만** 연결한다. 다른 모듈의 하위 패키지 접근은 Modulith 검증 테스트가 막는다
-- 이벤트는 Spring Modulith 이벤트 발행 레지스트리(JDBC)에 기록된다. 리스너가 실패한 발행은 반복 작업이 주기적으로 다시 처리하고, 처리 도중 프로세스가 죽어 멈춘 발행은 정해진 시간이 지나면 실패로 바뀌어 같은 경로로 다시 처리된다. 정해진 횟수를 넘긴 발행은 실패로 남고, 운영자가 화면에서 다시 처리하거나 폐기한다 — 규칙은 [platform Spec](specs/platform.md#이벤트-발행-재처리)([ADR-0023](adr/0023-jobrunr-oss-framework-schema-and-event-resubmission.md))
+- 이벤트는 Spring Modulith 이벤트 발행 레지스트리(JDBC)에 기록된다. 리스너가 실패한 발행은 반복 작업이 주기적으로 다시 처리하고, 처리 도중 프로세스가 죽어 멈춘 발행은 정해진 시간이 지나면 실패로 바뀌어 같은 경로로 다시 처리된다. 정해진 횟수를 넘긴 발행과 이벤트를 읽을 수 없는 발행은 다시 처리하지 않고 남기며, 운영자가 화면에서 다시 처리하거나 폐기한다 — 규칙은 [platform Spec](specs/platform.md#이벤트-발행-재처리)([ADR-0023](adr/0023-jobrunr-oss-framework-schema-and-event-resubmission.md))
 - **(미설계)** `ArticleEvaluated` · `UserSettingsChanged` · `CredentialInvalidated` 는 발행 주체 · 시점 · 내용이 아직 설계되지 않았다
 - `ArticleEvaluated` 를 받은 `digest` 는 즉시 생성하지 않는다. 다이제스트는 사용자 일정에 따라 생성되고, 이 이벤트는 지표 갱신에만 쓴다
 - 그림은 이벤트만 그린다. **모듈 사이 의존(공개 API · 이벤트)의 정본은 이 절이다** — 각 모듈 Spec 은 그 모듈이 내놓는 것(공개 인터페이스 · 발행 이벤트)만 갖고 의존은 이 절을 가리킨다. 각 모듈의 화면 · 작업 진입점은 `platform` 의 역할 애너테이션(공개 타입)에 의존한다 — 그래서 `platform` 은 다른 모듈의 타입에 의존하지 않는다([ADR-0042](adr/0042-app-roles-as-web-worker-profiles-marked-by-platform-annotations.md)). 사건 · 이슈 · 관심도 · 변화 리포트에 걸친 공개 API 의존은 `digest` → `event` · `storyline` · `feedback` · `user` · `evaluation` · `llm`, `event` → `article` · `evaluation`, `report` → `digest` · `event` · `evaluation` · `storyline` · `user` · `llm`, `admin` → `event` 다
