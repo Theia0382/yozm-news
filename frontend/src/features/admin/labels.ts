@@ -10,6 +10,9 @@ type SkipReason = Schemas["SkippedItemView"]["reason"];
 type DocumentProblemKind = Schemas["DocumentProblemView"]["kind"];
 type ProfileState = Schemas["SourceResponse"]["profileState"];
 type FeedStatus = Schemas["FeedCollectionResponse"]["status"];
+type StrandedReason = Schemas["StrandedPublicationResponse"]["reason"];
+type ResubmissionOutcome = Schemas["ResubmissionItemResponse"]["result"];
+type DiscardOutcome = Schemas["DiscardItemResponse"]["result"];
 
 export const refusalLabels = {
   PROFILE_UNAVAILABLE:
@@ -82,6 +85,25 @@ export const feedStatusLabels = {
   DEGRADED: "계속 실패",
   STALE: "오래 새 기사 없음",
 } as const satisfies Record<FeedStatus, string>;
+
+export const strandedReasonLabels = {
+  EXHAUSTED: "처리 시도 상한에 이름",
+  UNREADABLE: "이벤트 종류를 찾을 수 없음 — 폐기만 가능",
+} as const satisfies Record<StrandedReason, string>;
+
+export const resubmissionOutcomeLabels = {
+  RESUBMITTED: "다시 처리함",
+  NOT_EXHAUSTED: "상한에 이른 발행이 아님(상한 미만 · 처리 중 · 그사이 바뀜)",
+  UNREADABLE: "이벤트 종류를 찾을 수 없어 다시 처리하지 못함 — 폐기만 가능",
+  NOT_FOUND: "이미 없음(완료됐거나 폐기됨)",
+} as const satisfies Record<ResubmissionOutcome, string>;
+
+export const discardOutcomeLabels = {
+  DISCARDED: "폐기함",
+  NOT_STRANDED: "남겨진 발행이 아니라 지우지 않음",
+  CHANGED: "그사이 바뀌어 지우지 않음",
+  NOT_FOUND: "이미 없음(완료됐거나 폐기됨)",
+} as const satisfies Record<DiscardOutcome, string>;
 
 /** 내부 주소로 가는 요청을 막았을 때의 안내 — 화면에서는 열 수 없다 */
 export const BLOCKED_ADDRESS_HINT =
