@@ -8,8 +8,19 @@ import {
   unwrap,
 } from "@/features/admin/adminClient";
 import { ADMIN_QUERY_KEY, useAdminClient } from "@/features/admin/adminSession";
-import { profileStateLabels, refusalLabels } from "@/features/admin/labels";
+import {
+  profileStateLabels,
+  refusalLabels,
+  sourceName,
+} from "@/features/admin/labels";
 import { FeedEnableResultView } from "@/features/admin/results";
+import {
+  FeedRemovalActions,
+  HiddenFeedItem,
+  HiddenSourceItem,
+  SourceRemovalActions,
+  UnhidePresetSource,
+} from "@/features/admin/SourceRemoval";
 import { Button } from "@/shared/ui/button";
 import { NARROW_WIDTH } from "@/shared/ui/widths";
 
@@ -19,8 +30,9 @@ type FeedResponse = Schemas["FeedResponse"];
 
 const PRESETS_KEY = [...ADMIN_QUERY_KEY, "presets"];
 const SOURCES_KEY = [...ADMIN_QUERY_KEY, "sources"];
+const HIDDEN_SOURCES_KEY = [...SOURCES_KEY, "hidden"];
 
-/** 운영자 첫 화면 — 프리셋 목록과 등록된 소스 · 피드의 운영 설정 */
+/** 운영자 첫 화면 — 프리셋 목록, 등록된 소스 · 피드의 운영 설정, 숨긴 소스 */
 export function SourcesPage() {
   const client = useAdminClient();
   const presets = useQuery({
@@ -30,6 +42,10 @@ export function SourcesPage() {
   const sources = useQuery({
     queryKey: SOURCES_KEY,
     queryFn: () => unwrap(client.GET("/api/admin/sources")),
+  });
+  const hidden = useQuery({
+    queryKey: HIDDEN_SOURCES_KEY,
+    queryFn: () => unwrap(client.GET("/api/admin/sources/hidden")),
   });
 
   return (
@@ -58,6 +74,24 @@ export function SourcesPage() {
                 minimum={sources.data.minimumPollIntervalMinutes}
               />
             ))
+          ))}
+      </section>
+      <section className="space-y-3">
+        <h2 className="text-xl font-semibold">숨긴 소스</h2>
+        <p className="text-sm text-muted-foreground">
+          숨긴 소스는 수집하지 않고, 받은 기사는 남아 있습니다. 다시 보이면 꺼진
+          채로 소스 목록에 돌아갑니다.
+        </p>
+        {hidden.error && <p role="alert">{failureText(hidden.error)}</p>}
+        {hidden.data &&
+          (hidden.data.sources.length === 0 ? (
+            <p className="text-muted-foreground">숨긴 소스가 없습니다.</p>
+          ) : (
+            <ul className="divide-y divide-border rounded-md border border-border">
+              {hidden.data.sources.map((source) => (
+                <HiddenSourceItem key={source.id} source={source} />
+              ))}
+            </ul>
           ))}
       </section>
     </div>
@@ -96,7 +130,11 @@ function PresetList({ presets }: { presets: PresetResponse[] }) {
               </p>
             </div>
             {preset.sourceId !== null ? (
-              <span className="text-sm">등록됨</span>
+              preset.sourceHidden ? (
+                <UnhidePresetSource sourceId={preset.sourceId} />
+              ) : (
+                <span className="text-sm">등록됨</span>
+              )
             ) : (
               <Button
                 variant="outline"
@@ -110,7 +148,9 @@ function PresetList({ presets }: { presets: PresetResponse[] }) {
         ))}
       </ul>
       {register.data?.result === "ALREADY_REGISTERED" && (
-        <p role="alert">이미 등록된 프리셋입니다.</p>
+        <p role="alert">
+          이미 등록된 프리셋입니다. 숨긴 소스면 다시 보이기로 되돌립니다.
+        </p>
       )}
       {register.error && <p role="alert">{failureText(register.error)}</p>}
     </div>
@@ -145,7 +185,7 @@ function SourceCard({
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h3 className="font-semibold">
-            {source.name ?? "이름을 읽지 못한 소스"}{" "}
+            {sourceName(source)}{" "}
             <span className="text-sm font-normal text-muted-foreground">
               {source.presetKey !== null
                 ? `프리셋 ${source.presetKey}`
@@ -164,7 +204,7 @@ function SourceCard({
               </p>
             )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm">{source.enabled ? "켜짐" : "꺼짐"}</span>
           <Button
             variant="outline"
@@ -185,6 +225,7 @@ function SourceCard({
               원문 편집
             </Link>
           )}
+          <SourceRemovalActions source={source} />
         </div>
       </header>
       {toggle.data?.result === "REFUSED" && toggle.data.refusal && (
@@ -209,14 +250,37 @@ function SourceCard({
       />
       <ul className="divide-y divide-border">
         {source.feeds.map((feed) => (
-          <FeedRow key={feed.id} feed={feed} minimum={minimum} />
+          <FeedRow
+            key={feed.id}
+            sourceId={source.id}
+            feed={feed}
+            minimum={minimum}
+          />
         ))}
       </ul>
+      {source.hiddenFeeds.length > 0 && (
+        <div className="space-y-1">
+          <h4 className="text-sm font-medium">숨긴 피드</h4>
+          <ul className="divide-y divide-border">
+            {source.hiddenFeeds.map((feed) => (
+              <HiddenFeedItem key={feed.id} sourceId={source.id} feed={feed} />
+            ))}
+          </ul>
+        </div>
+      )}
     </article>
   );
 }
 
-function FeedRow({ feed, minimum }: { feed: FeedResponse; minimum: number }) {
+function FeedRow({
+  sourceId,
+  feed,
+  minimum,
+}: {
+  sourceId: number;
+  feed: FeedResponse;
+  minimum: number;
+}) {
   const client = useAdminClient();
   const queryClient = useQueryClient();
   const refresh = () =>
@@ -275,6 +339,9 @@ function FeedRow({ feed, minimum }: { feed: FeedResponse; minimum: number }) {
                 : "켜기"}
         </Button>
       </div>
+      {!feed.inProfile && (
+        <FeedRemovalActions sourceId={sourceId} feed={feed} />
+      )}
       {enable.data && <FeedEnableResultView result={enable.data} />}
       {(enable.error ?? disable.error) && (
         <p role="alert">{failureText(enable.error ?? disable.error)}</p>

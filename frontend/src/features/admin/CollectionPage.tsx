@@ -90,7 +90,9 @@ function Definitions({ status }: { status: CollectionStatus }) {
         <dt className="font-medium">날짜 추정 비율</dt>
         <dd>엔트리 가운데 발행 시각을 읽지 못해 받은 시각으로 채운 비율</dd>
         <dt className="font-medium">제목 판정 비율</dt>
-        <dd>엔트리 가운데 제목이 같아 같은 소스의 기사로 판정된 비율</dd>
+        <dd>
+          엔트리 가운데 제목이 같아 이 소스가 이미 받은 기사로 판정된 비율
+        </dd>
         <dt className="font-medium">guid 재사용</dt>
         <dd>
           같은 피드에 먼저 실린 다른 기사와 guid 가 같은데 새 기사로 저장된
