@@ -229,6 +229,26 @@ describe("CollectionPage", () => {
     expect(definitions).toHaveTextContent("상태는 30분마다 다시 판정한다");
   });
 
+  it("정의 목록마다 표의 어느 열을 설명하는지 첫 문장으로 밝힌다", async () => {
+    renderPage();
+
+    const metrics = await screen.findByLabelText(
+      "지표: 표의 같은 이름 열이 뜻하는 것이다.",
+    );
+    expect(within(metrics).getByText("중복률")).toBeInTheDocument();
+    expect(within(metrics).getByText("guid 재사용")).toBeInTheDocument();
+    expect(within(metrics).queryByText("계속 실패")).not.toBeInTheDocument();
+
+    const statuses = screen.getByLabelText(
+      "상태: 피드마다 표의 상태 열에 아래 셋 중 하나가 나온다.",
+    );
+    expect(
+      within(statuses)
+        .getAllByRole("term")
+        .map((term) => term.textContent),
+    ).toEqual(["계속 실패", "오래 새 기사 없음", "정상"]);
+  });
+
   it("피드마다 수집 상태와 지표를, 소스마다 합계를 보인다", async () => {
     renderPage();
 

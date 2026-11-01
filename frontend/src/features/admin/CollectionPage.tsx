@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { ReactNode } from "react";
+import { type ReactNode, useId } from "react";
 import { cn } from "cn";
 import {
   failureText,
@@ -67,13 +67,19 @@ function CollectionStatusView({ status }: { status: CollectionStatus }) {
 /** 집계 기간과 지표 · 상태의 정의 — 기준값 · 간격은 서버가 준 수다 */
 function Definitions({ status }: { status: CollectionStatus }) {
   const criteria: StatusCriteria = status.criteria;
+  const metricsLeadId = useId();
+  const statusLeadId = useId();
   return (
     <section aria-label="지표와 상태의 정의" className="space-y-3 text-sm">
       <p>
         집계 기간: {formatDateTime(status.from)} ~ {formatDateTime(status.to)}{" "}
         (칸 하나는 이 기간을 같은 길이로 나눈 구간)
       </p>
-      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
+      <p id={metricsLeadId}>지표: 표의 같은 이름 열이 뜻하는 것이다.</p>
+      <dl
+        aria-labelledby={metricsLeadId}
+        className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1"
+      >
         <dt className="font-medium">엔트리</dt>
         <dd>
           피드가 처음 실은 기사 하나 — 같은 피드에 다시 실린 항목은 세지 않고,
@@ -93,7 +99,13 @@ function Definitions({ status }: { status: CollectionStatus }) {
         <dt className="font-medium">비율 없음</dt>
         <dd>기간 안에 엔트리가 없다(0% 가 아니다)</dd>
       </dl>
-      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
+      <p id={statusLeadId}>
+        상태: 피드마다 표의 상태 열에 아래 셋 중 하나가 나온다.
+      </p>
+      <dl
+        aria-labelledby={statusLeadId}
+        className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1"
+      >
         <dt className="font-medium">{feedStatusLabels.DEGRADED}</dt>
         <dd>
           연속 실패 {criteria.degradedAfterFailures}회 이상이거나 그 가운데 영구
