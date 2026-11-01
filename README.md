@@ -7,7 +7,7 @@ AI로 뉴스 기사를 수집·분류하고, 사용자마다 구독 주제와 �
 - 사용자가 등록한 LLM API 키(OpenAI, Anthropic)로 여러 기사를 종합한 다이제스트와 주간 · 월간 변화 리포트를 만듭니다.
 - 개인이 자기 서버에 띄워 쓰며, 어떤 소스를 켜고 누구와 함께 쓸지는 인스턴스 운영자가 정합니다. 외부 서비스는 설정으로 교체하거나 끌 수 있게 설계합니다.
 
-> 현재 설계와 프로젝트 초기화 단계입니다. 아직 동작하는 기능은 없습니다.
+> 개발 중입니다. 지금은 언론사 RSS 수집과 운영자 화면(소스 등록 · 켜기)이 동작하고, 기사 평가 · 다이제스트는 아직 없습니다.
 
 ## 저장소 구조
 
@@ -35,3 +35,5 @@ pnpm -C frontend install && pnpm -C frontend dev  # 프론트엔드 개발 서�
 ## 문서
 
 설계 문서는 [`docs/README.md`](docs/README.md)부터 읽으면 됩니다. 시스템 전체 그림은 [`docs/overview.md`](docs/overview.md)에 있습니다.
+
+자기 서버에 띄우려면 [`docs/operations/deployment.md`](docs/operations/deployment.md#배포-구성-실행)의 배포 구성 실행부터 따라갑니다.
