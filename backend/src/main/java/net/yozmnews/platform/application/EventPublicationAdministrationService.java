@@ -18,6 +18,7 @@ import net.yozmnews.platform.ResubmissionResult;
 import net.yozmnews.platform.StrandedPublication;
 import net.yozmnews.platform.StrandedPublications;
 import net.yozmnews.platform.StrandedReason;
+import net.yozmnews.platform.domain.EventReading;
 import net.yozmnews.platform.domain.EventResubmissionPolicy;
 import net.yozmnews.platform.domain.EventResubmissionPolicy.Decision;
 import net.yozmnews.platform.domain.RegistryRows;
@@ -69,7 +70,9 @@ class EventPublicationAdministrationService implements EventPublicationAdministr
 		Map<UUID, RegistryRow> read = byId(this.rows.findByIds(ids));
 		Set<UUID> passed = new HashSet<>();
 		this.publications.resubmitIncompletePublications((publication) -> ids.contains(publication.getIdentifier())
-				&& this.policy.decide(publication) == Decision.EXHAUSTED && passed.add(publication.getIdentifier()));
+				&& this.policy.decide(publication.getStatus(), publication.getCompletionAttempts(),
+						() -> EventReading.readable(publication::getEvent)) == Decision.EXHAUSTED
+				&& passed.add(publication.getIdentifier()));
 		return new BatchResult.Processed<>(sorted(ids).stream()
 			.map((id) -> new ResubmissionResult(id, resubmissionOutcome(passed.contains(id), read.get(id))))
 			.toList());
@@ -119,7 +122,7 @@ class EventPublicationAdministrationService implements EventPublicationAdministr
 		if (status == null) {
 			return Optional.empty();
 		}
-		return this.policy.stranded(status, row.completionAttempts(), row.eventTypeLoadable());
+		return this.policy.stranded(status, row.completionAttempts(), row::eventReadable);
 	}
 
 	private static StrandedPublication publication(RegistryRow row, StrandedReason reason) {

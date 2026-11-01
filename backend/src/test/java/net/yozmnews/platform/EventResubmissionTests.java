@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,7 +31,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 판정한다(반복 작업 등록과 Modulith staleness 감시는 그대로 돈다). 감시 주기는 2초로 줄이고 멈춤 기준은 운영 값(30분)을
  * 쓴다.
  * <p>
- * 지키는 규칙: platform-R1 · platform-R2 · platform-R4
+ * 지키는 규칙: platform-R1 · platform-R2 · platform-R4 · platform-R16
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -40,6 +41,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 class EventResubmissionTests {
 
 	private static final Duration TIMEOUT = Duration.ofSeconds(60);
+
+	private static final String PROBE_LISTENER = "net.yozmnews.platform.ResubmissionProbeListener.on(net.yozmnews.platform.ResubmissionProbeEvent)";
 
 	@Autowired
 	JdbcClient jdbc;
@@ -122,6 +125,51 @@ class EventResubmissionTests {
 			.sql("select count(*) from event_publication where status = 'FAILED' and completion_attempts = 6")
 			.query(Integer.class)
 			.single()).isEqualTo(102);
+	}
+
+	@Test
+	void aPublicationWhoseBodyCannotBeReadDoesNotCutTheRoundShort(CapturedOutput output) {
+		UUID broken = insertBroken("FAILED", 1);
+		String fresh = UUID.randomUUID().toString();
+		this.rows.publish(fresh, Behavior.FAIL_ONCE);
+		awaitFailed(fresh, 1);
+
+		this.service.resubmit();
+
+		await().atMost(TIMEOUT).until(() -> this.rows.find(fresh).isEmpty());
+		assertThat(this.listener.calls(fresh)).isEqualTo(2);
+		assertThat(rowOf(broken)).isEqualTo(List.of("FAILED", "1"));
+		assertThat(output).contains("읽을 수 없어 다시 처리하지 않은 실패 이벤트 발행 1건: [" + broken + "]");
+		assertThat(output).doesNotContain("재처리 상한(");
+	}
+
+	@Test
+	void exhaustedAndUnreadablePublicationsAreCountedApartOnOneLine(CapturedOutput output) {
+		UUID exhausted = UUID.randomUUID();
+		this.rows.insert(exhausted, "net.yozmnews.platform.ResubmissionProbeEvent", PROBE_LISTENER,
+				Instant.parse("2026-10-02T00:00:00Z"), "FAILED", 6, null);
+		UUID broken = insertBroken("FAILED", 1);
+
+		this.service.resubmit();
+
+		assertThat(output).contains("재처리 상한(6회)에 이른 실패 이벤트 발행 1건: [" + exhausted
+				+ "] · 읽을 수 없어 다시 처리하지 않은 실패 이벤트 발행 1건: [" + broken + "]");
+	}
+
+	/** 시험 이벤트 클래스이지만 본문을 읽을 수 없는 행(없는 열거값) — 다른 발행보다 먼저 발행된 것으로 둔다 */
+	private UUID insertBroken(String status, int attempts) {
+		UUID id = UUID.randomUUID();
+		this.rows.insert(id, "net.yozmnews.platform.ResubmissionProbeEvent", PROBE_LISTENER,
+				Instant.parse("2026-10-01T00:00:00Z"), status, attempts, null,
+				EventPublicationRows.BROKEN_BODY);
+		return id;
+	}
+
+	private List<String> rowOf(UUID id) {
+		return this.jdbc.sql("select status, completion_attempts from event_publication where id = :id")
+			.param("id", id)
+			.query((rs, n) -> List.of(rs.getString("status"), String.valueOf(rs.getInt("completion_attempts"))))
+			.single();
 	}
 
 	@Test

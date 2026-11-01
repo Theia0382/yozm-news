@@ -44,8 +44,14 @@ final class EventPublicationRows {
 			.optional();
 	}
 
+	/** 직접 넣는 행의 기본 본문 — 시험 이벤트로 읽을 수 있다 */
+	static final String READABLE_BODY = "{\"id\":\"inserted\",\"behavior\":\"SUCCEED\"}";
+
+	/** 시험 이벤트 클래스로 읽을 수 없는 본문 — 없는 열거값 */
+	static final String BROKEN_BODY = "{\"id\":\"broken\",\"behavior\":\"NO_SUCH\"}";
+
 	/**
-	 * 발행 행을 직접 넣는다 — 이벤트 내용은 읽지 않는 시험에 쓴다.
+	 * 발행 행을 직접 넣는다 — 본문은 시험 이벤트로 읽을 수 있는 {@link #READABLE_BODY} 다.
 	 * @param status 상태 — null 이면 비운다
 	 * @param attempts 처리 시도 — null 이면 비운다
 	 * @param lastResubmittedAt 마지막 재제출 시각 — null 이면 비운다
@@ -58,13 +64,20 @@ final class EventPublicationRows {
 	/** 정해 둔 ID 로 발행 행을 직접 넣는다 — ID 순서를 보는 시험에 쓴다 */
 	UUID insert(UUID id, String eventType, String listenerId, Instant publishedAt, @Nullable String status,
 			@Nullable Integer attempts, @Nullable Instant lastResubmittedAt) {
+		return insert(id, eventType, listenerId, publishedAt, status, attempts, lastResubmittedAt, READABLE_BODY);
+	}
+
+	/** 본문을 정해 발행 행을 직접 넣는다 — 읽을 수 없는 본문을 보는 시험에 쓴다 */
+	UUID insert(UUID id, String eventType, String listenerId, Instant publishedAt, @Nullable String status,
+			@Nullable Integer attempts, @Nullable Instant lastResubmittedAt, String body) {
 		this.jdbc.sql("""
 				insert into event_publication
 				  (id, listener_id, event_type, serialized_event, publication_date, status, completion_attempts,
 				   last_resubmission_date)
-				values (:id, :listenerId, :eventType, '{}', :publishedAt, :status, :attempts, :lastResubmittedAt)
+				values (:id, :listenerId, :eventType, :body, :publishedAt, :status, :attempts, :lastResubmittedAt)
 				""")
 			.param("id", id)
+			.param("body", body)
 			.param("listenerId", listenerId)
 			.param("eventType", eventType)
 			.param("publishedAt", publishedAt.atOffset(ZoneOffset.UTC))

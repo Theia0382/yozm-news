@@ -7,19 +7,22 @@ import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
+import net.yozmnews.platform.domain.EventReading;
 import net.yozmnews.platform.domain.RegistryRows;
 import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.BeanClassLoaderAware;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.modulith.events.EventPublication;
+import org.springframework.modulith.events.core.EventSerializer;
 import org.springframework.stereotype.Repository;
 import org.springframework.util.ClassUtils;
 
 /**
  * {@link RegistryRows} 의 PostgreSQL 구현 — docs/specs/platform.md §4.
  * <p>
- * 이벤트 발행 레지스트리({@code event_publication})를 이벤트 내용 없이 읽는다. 이벤트 클래스를 로드할 수 있는지는 Spring Modulith 가 행을 읽을
- * 때와 같은 클래스 로더 · 같은 판정({@link ClassUtils})으로 본다(platform-R16).
+ * 이벤트 발행 레지스트리({@code event_publication})를 읽는다. 이벤트 내용은 읽을 수 있는지의 판정에만 읽고 결과 행에 담지 않는다. 이벤트 클래스를
+ * 로드할 수 있는지는 Spring Modulith 가 행을 읽을 때와 같은 클래스 로더 · 같은 판정({@link ClassUtils})으로, 본문을 그 클래스로 읽을 수 있는지는
+ * Spring Modulith 와 같은 직렬화기({@link EventSerializer})로 본다(platform-R16).
  */
 @Repository
 class JdbcRegistryRows implements RegistryRows, BeanClassLoaderAware {
@@ -28,16 +31,20 @@ class JdbcRegistryRows implements RegistryRows, BeanClassLoaderAware {
 	private static final String ATTEMPTS = "coalesce(completion_attempts, 0)";
 
 	private static final String SELECT = """
-			select id, event_type, listener_id, publication_date, status, %s as completion_attempts, last_resubmission_date
+			select id, event_type, listener_id, publication_date, status, %s as completion_attempts, last_resubmission_date,
+			       serialized_event
 			from event_publication
 			""".formatted(ATTEMPTS);
 
 	private final JdbcClient jdbc;
 
+	private final EventSerializer serializer;
+
 	private @Nullable ClassLoader classLoader;
 
-	JdbcRegistryRows(JdbcClient jdbc) {
+	JdbcRegistryRows(JdbcClient jdbc, EventSerializer serializer) {
 		this.jdbc = jdbc;
+		this.serializer = serializer;
 	}
 
 	@Override
@@ -86,7 +93,16 @@ class JdbcRegistryRows implements RegistryRows, BeanClassLoaderAware {
 				rs.getObject("publication_date", OffsetDateTime.class).toInstant(),
 				(status != null) ? EventPublication.Status.valueOf(status) : null, rs.getInt("completion_attempts"),
 				(lastResubmission != null) ? lastResubmission.toInstant() : null,
-				ClassUtils.isPresent(eventType, this.classLoader));
+				readable(eventType, rs.getString("serialized_event")));
+	}
+
+	/** 클래스를 로드할 수 있고 본문을 그 클래스로 읽을 수 있는지 */
+	private boolean readable(String eventType, String body) {
+		if (!ClassUtils.isPresent(eventType, this.classLoader)) {
+			return false;
+		}
+		Class<?> type = ClassUtils.resolveClassName(eventType, this.classLoader);
+		return EventReading.readable(() -> this.serializer.deserialize(body, type));
 	}
 
 }

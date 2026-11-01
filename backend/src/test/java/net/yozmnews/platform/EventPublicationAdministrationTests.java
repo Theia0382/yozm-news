@@ -119,10 +119,10 @@ class EventPublicationAdministrationTests {
 		this.jdbc.sql("""
 				insert into event_publication
 				  (id, listener_id, event_type, serialized_event, publication_date, status, completion_attempts)
-				select gen_random_uuid(), 'listener', :eventType, '{}', timestamptz '2026-10-01 00:00:00+00' + n * interval '1 second',
+				select gen_random_uuid(), 'listener', :eventType, :body, timestamptz '2026-10-01 00:00:00+00' + n * interval '1 second',
 				  'FAILED', 6
 				from generate_series(1, 501) as n
-				""").param("eventType", PROBE_EVENT).update();
+				""").param("eventType", PROBE_EVENT).param("body", EventPublicationRows.READABLE_BODY).update();
 
 		StrandedPublications listed = this.administration.strandedPublications();
 
@@ -172,18 +172,52 @@ class EventPublicationAdministrationTests {
 		UUID exhausted = exhaustedProbe(Behavior.ALWAYS_FAIL);
 		UUID belowLimit = this.rows.insert(PROBE_EVENT, "listener-x", T1, "FAILED", 5, T3);
 		UUID unreadable = this.rows.insert(MISSING_EVENT, "listener-x", T1, "FAILED", 6, T3);
+		UUID brokenBody = brokenRow("FAILED", 6);
 		UUID missing = UUID.randomUUID();
 
 		BatchResult<ResubmissionResult> result = this.administration
-			.resubmit(Set.of(exhausted, belowLimit, unreadable, missing));
+			.resubmit(Set.of(exhausted, belowLimit, unreadable, brokenBody, missing));
 
 		assertThat(result).isEqualTo(new BatchResult.Processed<>(sortedBy(ResubmissionResult::id,
 				new ResubmissionResult(exhausted, ResubmissionOutcome.RESUBMITTED),
 				new ResubmissionResult(belowLimit, ResubmissionOutcome.NOT_EXHAUSTED),
 				new ResubmissionResult(unreadable, ResubmissionOutcome.UNREADABLE),
+				new ResubmissionResult(brokenBody, ResubmissionOutcome.UNREADABLE),
 				new ResubmissionResult(missing, ResubmissionOutcome.NOT_FOUND))));
 		assertThat(attemptsOf(belowLimit)).isEqualTo(5);
 		assertThat(attemptsOf(unreadable)).isEqualTo(6);
+		assertThat(attemptsOf(brokenBody)).isEqualTo(6);
+	}
+
+	@Test
+	void resubmissionIsNotCutShortByAPublicationWhoseBodyCannotBeRead() {
+		UUID brokenBody = brokenRow("FAILED", 6);
+		UUID exhausted = exhaustedProbe(Behavior.FAIL_ONCE);
+
+		BatchResult<ResubmissionResult> result = this.administration.resubmit(Set.of(brokenBody, exhausted));
+
+		assertThat(result).isEqualTo(new BatchResult.Processed<>(sortedBy(ResubmissionResult::id,
+				new ResubmissionResult(brokenBody, ResubmissionOutcome.UNREADABLE),
+				new ResubmissionResult(exhausted, ResubmissionOutcome.RESUBMITTED))));
+		await().atMost(TIMEOUT).until(() -> !this.rows.exists(exhausted));
+		assertThat(this.listener.calls(probeOf(exhausted))).isEqualTo(2);
+		assertThat(statusOf(brokenBody)).isEqualTo("FAILED");
+		assertThat(attemptsOf(brokenBody)).isEqualTo(6);
+	}
+
+	@Test
+	void listsPublicationsWhoseBodyCannotBeReadAsUnreadable() {
+		UUID brokenBody = brokenRow("FAILED", 1);
+		UUID nullBody = this.rows.insert(UUID.randomUUID(), PROBE_EVENT, "listener-n", T2, "FAILED", 1, T2, "null");
+		this.rows.insert(PROBE_EVENT, "listener-r", T3, "FAILED", 1, T3);
+
+		StrandedPublications listed = this.administration.strandedPublications();
+
+		assertThat(listed.total()).isEqualTo(2);
+		assertThat(listed.publications()).containsExactly(
+				new StrandedPublication(brokenBody, StrandedReason.UNREADABLE, PROBE_EVENT, "listener-broken", T1, 1,
+						T3),
+				new StrandedPublication(nullBody, StrandedReason.UNREADABLE, PROBE_EVENT, "listener-n", T2, 1, T2));
 	}
 
 	@Test
@@ -192,17 +226,22 @@ class EventPublicationAdministrationTests {
 		UUID unreadable = this.rows.insert(MISSING_EVENT, "listener-d", T2, "PUBLISHED", 1, null);
 		UUID unreadableWithoutAttempts = this.rows.insert(MISSING_EVENT, "listener-g", T2, "PUBLISHED", null, null);
 		UUID belowLimit = this.rows.insert(PROBE_EVENT, "listener-b", T1, "FAILED", 5, T3);
+		UUID brokenBody = brokenRow("FAILED", 1);
 		UUID missing = UUID.randomUUID();
 
 		BatchResult<DiscardResult> result = this.administration
-			.discard(Set.of(exhausted, unreadable, unreadableWithoutAttempts, belowLimit, missing));
+			.discard(Set.of(exhausted, unreadable, unreadableWithoutAttempts, belowLimit, brokenBody, missing));
 
 		assertThat(result).isEqualTo(new BatchResult.Processed<>(sortedBy(DiscardResult::id,
 				new DiscardResult(exhausted, DiscardOutcome.DISCARDED),
 				new DiscardResult(unreadable, DiscardOutcome.DISCARDED),
 				new DiscardResult(unreadableWithoutAttempts, DiscardOutcome.DISCARDED),
 				new DiscardResult(belowLimit, DiscardOutcome.NOT_STRANDED),
+				new DiscardResult(brokenBody, DiscardOutcome.DISCARDED),
 				new DiscardResult(missing, DiscardOutcome.NOT_FOUND))));
+		assertThat(this.rows.exists(brokenBody)).isFalse();
+		assertThat(output).contains("운영자가 이벤트 발행을 폐기했다: id=" + brokenBody
+				+ ", reason=UNREADABLE, eventType=net.yozmnews.platform.ResubmissionProbeEvent, listenerId=listener-broken, publishedAt=2026-10-01T00:00:00Z, completionAttempts=1");
 		assertThat(this.rows.exists(exhausted)).isFalse();
 		assertThat(this.rows.exists(unreadable)).isFalse();
 		assertThat(this.rows.exists(unreadableWithoutAttempts)).isFalse();
@@ -270,6 +309,19 @@ class EventPublicationAdministrationTests {
 
 	private String probeOf(UUID id) {
 		return this.probes.get(id);
+	}
+
+	/** 시험 이벤트 클래스이지만 본문을 읽을 수 없는 행 — 가장 오래된 발행 시각(T1) */
+	private UUID brokenRow(String status, int attempts) {
+		return this.rows.insert(UUID.randomUUID(), PROBE_EVENT, "listener-broken", T1, status, attempts, T3,
+				EventPublicationRows.BROKEN_BODY);
+	}
+
+	private String statusOf(UUID id) {
+		return this.jdbc.sql("select status from event_publication where id = :id")
+			.param("id", id)
+			.query(String.class)
+			.single();
 	}
 
 	private int attemptsOf(UUID id) {

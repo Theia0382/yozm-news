@@ -3,6 +3,7 @@ package net.yozmnews.platform.domain;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.BooleanSupplier;
 
 import net.yozmnews.platform.StrandedReason;
 import org.springframework.modulith.events.EventPublication;
@@ -34,19 +35,21 @@ public final class EventResubmissionPolicy {
 		}
 	}
 
-	public Decision decide(EventPublication publication) {
-		return decide(publication.getStatus(), publication.getCompletionAttempts());
-	}
-
 	/**
-	 * 상태와 처리 시도로 재처리를 판정한다 — 이벤트를 읽지 않은 레지스트리 행에도 쓴다.
+	 * 상태 · 처리 시도 · 이벤트를 읽을 수 있는지로 재처리를 판정한다 — 읽을 수 있는지는 실패 발행일 때만 묻는다.
 	 * @param status 발행 상태
 	 * @param completionAttempts 처리 시도 수
+	 * @param readable 이벤트를 읽을 수 있는지 — 실패 발행일 때만 부른다
 	 * @return 판정
 	 */
-	public Decision decide(EventPublication.Status status, int completionAttempts) {
+	public Decision decide(EventPublication.Status status, int completionAttempts, BooleanSupplier readable) {
 		return switch (status) {
-			case FAILED -> (completionAttempts < MAX_ATTEMPTS) ? Decision.RESUBMIT : Decision.EXHAUSTED;
+			case FAILED -> {
+				if (!readable.getAsBoolean()) {
+					yield Decision.UNREADABLE;
+				}
+				yield (completionAttempts < MAX_ATTEMPTS) ? Decision.RESUBMIT : Decision.EXHAUSTED;
+			}
 			case PUBLISHED, PROCESSING, RESUBMITTED, COMPLETED -> Decision.SKIP;
 		};
 	}
@@ -55,19 +58,22 @@ public final class EventResubmissionPolicy {
 	 * 재처리가 더 이상 다루지 않아 운영자가 처리할 발행인지 판정한다 — platform-R1 · platform-R16.
 	 * @param status 발행 상태
 	 * @param completionAttempts 처리 시도 수
-	 * @param eventTypeLoadable 이벤트 클래스를 로드할 수 있는지
+	 * @param readable 이벤트를 읽을 수 있는지 — 완료되지 않은 발행일 때 한 번만 부른다
 	 * @return 남겨진 까닭, 남겨진 발행이 아니면 빈 값
 	 */
 	public Optional<StrandedReason> stranded(EventPublication.Status status, int completionAttempts,
-			boolean eventTypeLoadable) {
-		if (!eventTypeLoadable) {
-			return switch (status) {
-				case PUBLISHED, PROCESSING, FAILED, RESUBMITTED -> Optional.of(StrandedReason.UNREADABLE);
-				case COMPLETED -> Optional.empty();
-			};
-		}
-		return (decide(status, completionAttempts) == Decision.EXHAUSTED) ? Optional.of(StrandedReason.EXHAUSTED)
-				: Optional.empty();
+			BooleanSupplier readable) {
+		return switch (status) {
+			case COMPLETED -> Optional.empty();
+			case PUBLISHED, PROCESSING, FAILED, RESUBMITTED -> {
+				boolean canRead = readable.getAsBoolean();
+				if (!canRead) {
+					yield Optional.of(StrandedReason.UNREADABLE);
+				}
+				yield (decide(status, completionAttempts, () -> canRead) == Decision.EXHAUSTED)
+						? Optional.of(StrandedReason.EXHAUSTED) : Optional.empty();
+			}
+		};
 	}
 
 	/** 재처리 판정 */
@@ -78,6 +84,9 @@ public final class EventResubmissionPolicy {
 
 		/** 실패했지만 시도 상한에 이르렀다 — 재처리 작업은 다시 처리하지 않고 알린다(운영자는 다시 처리할 수 있다) */
 		EXHAUSTED,
+
+		/** 실패했지만 이벤트를 읽을 수 없다 — 다시 처리하지 않고 알린다(운영자는 폐기할 수 있다) */
+		UNREADABLE,
 
 		/** 다시 처리할 대상이 아니다 */
 		SKIP

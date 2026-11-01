@@ -17,7 +17,7 @@ public interface EventPublicationAdministration {
 	StrandedPublications strandedPublications();
 
 	/**
-	 * 주어진 발행 중 상한에 이른 것을 지금 재제출한다(처리 시도 +1). 발행마다 결과를 낸다.
+	 * 주어진 발행 중 상한에 이르고 이벤트를 읽을 수 있는 것을 지금 재제출한다(처리 시도 +1). 발행마다 결과를 낸다.
 	 * @param ids 다시 처리할 발행 ID
 	 * @return 발행마다의 결과, {@link #MAX_BATCH} 를 넘으면 아무것도 하지 않고 {@link BatchResult.OverLimit}
 	 */

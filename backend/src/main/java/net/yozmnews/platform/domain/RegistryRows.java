@@ -9,7 +9,7 @@ import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 import org.springframework.modulith.events.EventPublication;
 
-/** 이벤트 발행 레지스트리의 행을 이벤트 역직렬화 없이 읽고 지운다 — docs/specs/platform.md §4 · platform-R15 */
+/** 이벤트 발행 레지스트리의 행을 읽고 지운다 — 이벤트 내용은 읽을 수 있는지의 판정에만 읽고 싣지 않는다. docs/specs/platform.md §4 · platform-R15 · platform-R16 */
 public interface RegistryRows {
 
 	/**
@@ -42,11 +42,11 @@ public interface RegistryRows {
 	 * @param status 발행 상태 — 열이 비었으면 null
 	 * @param completionAttempts 처리 시도 수 — 열이 비었으면 0
 	 * @param lastResubmittedAt 마지막 재제출 시각
-	 * @param eventTypeLoadable 이벤트 클래스를 로드할 수 있는지
+	 * @param eventReadable 이벤트를 읽을 수 있는지 — 클래스를 로드할 수 있고 본문을 그 클래스로 읽을 수 있다(platform-R16)
 	 */
 	record RegistryRow(UUID id, String eventType, String listenerId, Instant publishedAt,
 			EventPublication.@Nullable Status status, int completionAttempts, @Nullable Instant lastResubmittedAt,
-			boolean eventTypeLoadable) {
+			boolean eventReadable) {
 
 		public RegistryRow {
 			Objects.requireNonNull(id, "id");
