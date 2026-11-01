@@ -9,6 +9,7 @@
 - **같은 기사 판정 · 중복 제거** — 정규 URL 을 주 키로, guid · 제목 비교 키를 보조 키로 판정한다
 - **기사 저장** — 새 기사는 처음 받은 값으로 저장하고 `ArticleStored` 를 발행한다
 - **피드별 기록** — 같은 기사로 판정한 항목도 버리지 않고 기사 · 피드마다 한 번 기록한다
+- **엔트리 집계** — 피드별 기록을 집계 기간 · 칸마다 세어 중복률 · 날짜 추정 비율 · 제목 판정 비율 · guid 재사용을 운영 기능의 공개 API(`ArticleAdministration`)로 낸다
 - **(미구현)** 본문 추출 — 자리만 있고 v1 에서는 하지 않는다(article-R12)
 
 하지 않는 것:
@@ -29,11 +30,16 @@
 | 제목 비교 키 | 제목을 NFKC 정규화 · 소문자 · 공백 제거한 값(article-R2). 같은 기사 판정의 보조 키다 |
 | 엔트리 | 기사 하나를 피드 하나에서 본 기록(`article_feed_entries` 한 행) |
 | 판정 종류 | 엔트리가 기사를 새로 만들었는지(`NEW`), 어떤 판정으로 기존 기사에 붙었는지(`URL` · `GUID` · `TITLE`) |
+| 집계 기간 · 칸 | 엔트리를 세는 기간(조회 시각에서 거꾸로 잡는다)과 그 기간을 같은 길이로 빈틈없이 나눈 구간. 둘 다 시작 포함, 끝 제외(article-R13) |
+| 중복률 | 엔트리 가운데 판정 종류가 `NEW` 가 아닌 것의 비율 — 그 피드가 처음 실은 기사 가운데 이미 다른 피드에서 저장된 기사의 비율(article-R13 · article-R14) |
+| 날짜 추정 비율 | 엔트리 가운데 발행 시각을 추정한 것의 비율(article-R13 · article-R14) |
+| 제목 판정 비율 | 엔트리 가운데 판정 종류가 `TITLE` 인 것의 비율(article-R13 · article-R14) |
+| guid 재사용 | 같은 피드 · 같은 guid 의 엔트리가 다른 기사에 먼저 있는데 새 기사가 된 엔트리(article-R4 · article-R13) |
 | L1 · L2 · L3 · L4 | 같은 기사 판정의 단계 — L1 정규 URL · guid, L2 같은 소스의 제목, L3 다른 소스의 전재, L4 같은 사건의 다른 기사. `article` 은 L1 · L2 만 합친다 |
 
 ## 3. 공개 인터페이스
 
-모듈 최상위 패키지 `net.yozmnews.article` 의 공개 타입은 아래 둘이다. 다른 모듈이 기사를 조회하는 공개 API 는 아직 없다.
+모듈 최상위 패키지 `net.yozmnews.article` 의 공개 타입은 아래와 같다 — 식별자, 새 기사 이벤트, 운영 기능의 공개 API `ArticleAdministration` 과 그 결과 타입. 다른 모듈이 기사를 조회하는 공개 API 는 아직 없다.
 
 HTTP 엔드포인트: 없음.
 
@@ -70,17 +76,75 @@ public record ArticleStored(ArticleId articleId) {}
 
 관련 규칙: article-R9 · article-R10 · article-R11.
 
+### ArticleAdministration
+
+기사 쪽 운영 기능 — 운영자 화면이 부른다. 구현은 `application` 의 `ArticleAdministrationService` 다.
+
+```java
+public interface ArticleAdministration {
+    EntryStatistics entryStatistics();
+}
+```
+
+| 멤버 | 뜻 |
+|---|---|
+| `entryStatistics()` | 지금 기준 최근 집계 기간의 피드별 · 칸별 엔트리 개수(article-R13) |
+
+- 계약
+  - 질의 하나로 센다 — 트랜잭션을 열지 않고, 기다리지 않는다
+  - 기간 안에 엔트리가 없는 피드는 결과에 없다 — `EntryStatistics.feed` 가 빈 칸들로 답한다
+
+관련 규칙: article-R13 · article-R14.
+
+### EntryStatistics · FeedEntryStatistics · EntryBucket · EntryCounts
+
+엔트리 집계(article-R13)의 값.
+
+```java
+public record EntryStatistics(Instant from, Instant to, List<EntryBucket> buckets,
+        Map<FeedId, List<EntryCounts>> countsByFeed) {
+    public FeedEntryStatistics feed(FeedId feed);
+    public FeedEntryStatistics combined(Collection<FeedId> feeds);
+}
+
+public record FeedEntryStatistics(List<EntryCounts> buckets) {
+    public EntryCounts total();
+}
+
+public record EntryBucket(Instant from, Instant to) {}
+
+public record EntryCounts(int entries, int duplicates, int titleMatches, int estimated, int guidReuses) {
+    public static final EntryCounts NONE = new EntryCounts(0, 0, 0, 0, 0);
+    public EntryCounts plus(EntryCounts other);
+    public @Nullable Double duplicateRate();
+    public @Nullable Double estimatedRate();
+    public @Nullable Double titleMatchRate();
+}
+```
+
+| 타입 · 멤버 | 뜻 | 제약 |
+|---|---|---|
+| `EntryStatistics` | 집계 결과 — 기간의 시작(포함) · 끝(제외, 집계한 시각), 칸, 기간 안에 엔트리가 있는 피드의 칸별 개수 | 칸이 시작에서 끝까지 빈틈없이 잇고, 피드마다 칸 수와 같은 길이 · 같은 순서다. 아니면 `IllegalArgumentException` |
+| `feed(FeedId)` | 피드 하나의 칸별 개수 — 엔트리가 없으면 모든 칸이 `NONE` | — |
+| `combined(Collection<FeedId>)` | 피드 여럿의 칸별 합 — 같은 칸끼리 `plus` | — |
+| `FeedEntryStatistics` | 칸별 개수와 기간 전체(`total()` — 칸을 모두 더한 값) | 칸은 `EntryStatistics.buckets` 와 같은 순서 |
+| `EntryBucket` | 칸 하나의 범위 — 시작 포함, 끝 제외 | 시작이 끝보다 앞선다 |
+| `EntryCounts` | 엔트리 · 중복 · 제목 판정 · 날짜 추정 · guid 재사용 수와 비율 셋 — 비율 산식의 정본(article-R14) | 모두 0 이상, 중복 · 추정 ≤ 엔트리, 제목 판정 ≤ 중복, guid 재사용 ≤ 엔트리 − 중복. 아니면 `IllegalArgumentException` |
+
+관련 규칙: article-R13 · article-R14.
+
 ## 4. 내부 구조
 
 ### 개관
 
 | 패키지 | 책임 |
 |---|---|
-| `application` | `source` 의 `ArticleFetched` 를 받는 리스너와, 항목 하나를 판정 · 저장 · 기록하는 유스케이스 |
-| `domain` | 같은 기사 판정의 키(정규 URL · 제목 비교 키 · 해시)와 판정 규칙, 기사 저장소 |
-| `adapter/out/persistence` | 기사 저장소의 JdbcClient 구현 |
+| (최상위) | 공개 API `ArticleAdministration` 과 그 결과 타입, 식별자 · 이벤트 |
+| `application` | `source` 의 `ArticleFetched` 를 받는 리스너와, 항목 하나를 판정 · 저장 · 기록하는 유스케이스, 공개 운영 API 의 구현 |
+| `domain` | 같은 기사 판정의 키(정규 URL · 제목 비교 키 · 해시)와 판정 규칙, 기사 저장소, 엔트리 집계의 기간 · 칸과 집계 조회 |
+| `adapter/out/persistence` | 기사 저장소 · 집계 조회의 JdbcClient 구현 |
 
-협력: `ArticleFetchedListener` 가 받은 이벤트를 `ArticleIntake` 에 넘긴다. `ArticleIntake` 는 `ArticleRepository` 로 소스를 잠그고 후보를 모아 `ArticleMatching` 의 판정에 따라 기사 · 엔트리를 기록하고, 새 기사면 `ArticleStored` 를 발행한다. 판정 키(`CanonicalUrl` · `TitleKey` · `KeyHash`)는 들어온 항목(`IncomingItem`)을 만들 때 계산한다.
+협력: 엔트리 집계는 `ArticleAdministrationService` 가 `EntryWindow` 로 기간을 잡고 `EntryStatisticsRepository` 로 세어 `EntryWindow.statistics` 로 모은다. 같은 기사 판정은 `ArticleFetchedListener` 가 받은 이벤트를 `ArticleIntake` 에 넘긴다. `ArticleIntake` 는 `ArticleRepository` 로 소스를 잠그고 후보를 모아 `ArticleMatching` 의 판정에 따라 기사 · 엔트리를 기록하고, 새 기사면 `ArticleStored` 를 발행한다. 판정 키(`CanonicalUrl` · `TitleKey` · `KeyHash`)는 들어온 항목(`IncomingItem`)을 만들 때 계산한다.
 
 #### 항목 하나 처리
 
@@ -121,6 +185,7 @@ sequenceDiagram
 
 - `ArticleIntake` — 들어온 항목 하나를 한 트랜잭션에서 판정 · 저장 · 기록한다. 같은 소스의 판정은 소스 단위 잠금으로 한 줄로 세우고, 다시 불러도 결과가 같다. 새 기사를 저장했을 때만 그 트랜잭션 안에서 `ArticleStored` 를 발행한다(article-R7 ~ R11)
 - `ArticleFetchedListener` — 리스너(들어오는 쪽)
+- `ArticleAdministrationService` — 공개 API `ArticleAdministration` 의 구현. 지금 시각으로 기간을 잡아 집계 조회 하나로 세고 결과로 모은다. 트랜잭션 · 역할 애너테이션이 없다 — 두 역할 공통이다(article-R13)
 
 ### `domain`
 
@@ -129,7 +194,9 @@ sequenceDiagram
 - `CanonicalUrl` — 정규 URL(article-R1)
 - `TitleKey` — 제목 비교 키(article-R2)
 - `KeyHash` — 길이 상한이 없는 키(정규 URL · 제목 비교 키 · guid)의 SHA-256 — 인덱스와 비교에 쓴다
-- 그 밖의 값: `IncomingItem` · `MatchCandidates` · `MatchDecision` · `MatchKind` · `TimeRange`
+- `EntryWindow` — 엔트리 집계 기간 · 칸 길이의 정본(`LENGTH` 7일 · `BUCKET` 1일). 끝 시각에서 거꾸로 기간을 잡고(끝은 마이크로초로 자른다) 칸을 나누며, 집계 조회의 행을 결과로 모은다 — 칸 번호가 범위 밖이거나 같은 칸이 두 번이면 크게 실패한다(article-R13)
+- `EntryStatisticsRepository` — 엔트리 집계 조회 — 기간 안 엔트리를 피드 · 칸마다 센다. 읽기만 한다(article-R13)
+- 그 밖의 값: `IncomingItem` · `MatchCandidates` · `MatchDecision` · `MatchKind` · `TimeRange` · `EntryCountRow`(피드 하나의 칸 하나에서 센 개수)
 
 ### 나가는 쪽
 
@@ -150,6 +217,7 @@ public interface ContentExtractor {
 #### 저장소 구현
 
 - `JdbcArticleRepository` — `ArticleRepository` 의 PostgreSQL 구현(JdbcClient). 쓰기는 `INSERT … ON CONFLICT` 뿐이고 갱신하지 않는다
+- `JdbcEntryStatisticsRepository` — `EntryStatisticsRepository` 의 PostgreSQL 구현(JdbcClient). 질의 하나가 세는 규칙의 정본이다(article-R13)
 
 #### 신뢰할 수 없는 입력
 
@@ -184,6 +252,18 @@ public interface ContentExtractor {
 - **article-R10** — 같은 항목을 다시 처리해도 결과가 같다. 다시 온 항목은 처음과 같은 기사에 걸리고(새 기사 · URL 로 붙은 항목은 그 정규 URL, 제목으로 붙은 항목은 자기 엔트리의 항목 URL, guid 로 붙은 항목은 바뀌지 않은 guid 후보), 엔트리는 다시 기록되지 않는다
 - **article-R11** — 새 기사를 저장했을 때만, 그 트랜잭션 안에서 `ArticleStored` 를 발행한다
 
+### 엔트리 집계
+
+- **article-R13** — 엔트리 집계는 받은 시각(`seen_at`)이 기간의 시작 이상 끝 미만인 엔트리를 피드 · 칸마다 센다. 기간은 조회 시각(마이크로초로 자른다)에서 거꾸로 7일(`EntryWindow.LENGTH`)이라 시간대가 없고, 칸은 기간을 시작부터 1일(`EntryWindow.BUCKET`)씩 나눈 7개다. 세는 것:
+  - 엔트리 — 행 하나. 단위는 (기사, 피드)라 같은 피드에 다시 실린 항목 · 같은 피드에서 같은 기사로 판정된 두 번째 항목은 세지 않는다(article-R7)
+  - 중복 — 판정 종류가 `NEW` 가 아닌 엔트리(`URL` · `GUID` · `TITLE`). 기록되는 중복 엔트리는 다른 피드가 먼저 실은 기사에 붙은 것이다 — guid 후보는 같은 피드의 엔트리에서만 나오므로 `GUID` 로 붙은 항목은 엔트리를 새로 남기지 않는다
+  - 제목 판정 — 판정 종류가 `TITLE` 인 엔트리
+  - 날짜 추정 — 그 항목의 발행 시각을 추정한 엔트리(엔트리의 값 — 기사의 값이 아니다)
+  - guid 재사용 — 판정 종류가 `NEW` 이고, 같은 피드 · 같은 guid 의 엔트리가 다른 기사에 먼저 있는 엔트리(article-R4 의 데이터 모양). 먼저는 (받은 시각, 기사 ID) 순이다 — 한 수집에서 받은 둘은 받은 시각이 같고 같은 소스의 판정은 줄을 서므로(article-R9) 먼저 넣은 기사의 ID 가 작다. 먼저 있는 엔트리는 기간 밖이어도 된다. 제목 비교 키가 빈 항목도 같은 모양이면 센다
+
+  세는 규칙의 정본은 `JdbcEntryStatisticsRepository` 의 질의 하나다
+- **article-R14** — 비율은 해당 수 ÷ 엔트리 수다(중복률 · 날짜 추정 비율 · 제목 판정 비율). 엔트리가 없으면 비율이 없다(0 이 아니다). 칸 · 피드를 합칠 때는 개수를 더한 뒤 나눈다 — 비율의 평균을 내지 않는다. 산식의 정본은 `EntryCounts` 하나이고, 소비자는 그 값을 옮길 뿐 다시 계산하지 않는다
+
 ### 본문 추출
 
 - **article-R12** — **(미구현)** 본문 추출(`ContentExtractor` — §4)의 자리만 만들고 v1 은 추출하지 않는다. 켤 때의 원칙:
@@ -193,12 +273,12 @@ public interface ContentExtractor {
 
 ## 6. 데이터
 
-컬럼 타입 · 인덱스 · 제약 문면의 정본은 `backend/src/main/resources/db/migration/V2__articles.sql` 이다. `source_id` · `feed_id` 는 `source` 의 테이블을 가리키지만 FK 를 두지 않는다 — 모듈 사이는 ID 로만 참조한다. 길이 상한이 없는 키(정규 URL · 제목 비교 키 · guid)는 UTF-8 바이트의 SHA-256(32바이트)으로 비교 · 인덱스에 쓴다.
+컬럼 타입 · 인덱스 · 제약 문면의 정본은 `backend/src/main/resources/db/migration/V2__articles.sql` 과 엔트리 집계의 인덱스를 더한 `V5__article_feed_entries_seen_at_index.sql` 이다. `source_id` · `feed_id` 는 `source` 의 테이블을 가리키지만 FK 를 두지 않는다 — 모듈 사이는 ID 로만 참조한다. 길이 상한이 없는 키(정규 URL · 제목 비교 키 · guid)는 UTF-8 바이트의 SHA-256(32바이트)으로 비교 · 인덱스에 쓴다.
 
 | 테이블 | 주요 컬럼 | 뜻 |
 |---|---|---|
 | `articles` | id, source_id, canonical_url, url_hash(고유), title, title_key_hash, summary_text, author, published_at, published_at_estimated, image_url, first_seen_at | 중복 제거된 기사. `canonical_url` 은 정규 URL(원문 링크)이고 `url_hash` 는 그 SHA-256 — 고유 제약이 article-R9 의 경합을 가른다. `title_key_hash` 는 제목 비교 키의 SHA-256. `summary_text` 는 RSS 요약문(최대 1,000 코드 포인트), `image_url` 은 썸네일 URL, `first_seen_at` 은 처음 발견한 시각. 처음 저장한 값이 남는다(article-R8). 평가 상태는 평가 쪽이 갖는다 |
-| `article_feed_entries` | article_id, feed_id, item_url_hash, guid, guid_hash, feed_categories(목록), published_at_estimated, match_kind(`NEW`/`URL`/`GUID`/`TITLE`), seen_at | 어떤 피드에서 언제 봤는지 — 중복 제거의 근거. (article_id, feed_id) 고유 — 그 피드에서 처음 본 항목의 값이고 다시 보면 바꾸지 않는다(article-R7). `item_url_hash` 는 그 항목의 정규 URL 해시로 article-R3 의 2 가 대조한다. `guid` · `guid_hash` 는 함께 있거나 함께 없다(제약). `published_at_estimated` 는 그 항목의 발행 시각을 추정했는지, `match_kind` 는 판정 종류다 |
+| `article_feed_entries` | article_id, feed_id, item_url_hash, guid, guid_hash, feed_categories(목록), published_at_estimated, match_kind(`NEW`/`URL`/`GUID`/`TITLE`), seen_at | 어떤 피드에서 언제 봤는지 — 중복 제거의 근거. (article_id, feed_id) 고유 — 그 피드에서 처음 본 항목의 값이고 다시 보면 바꾸지 않는다(article-R7). `item_url_hash` 는 그 항목의 정규 URL 해시로 article-R3 의 2 가 대조한다. `guid` · `guid_hash` 는 함께 있거나 함께 없다(제약). `published_at_estimated` 는 그 항목의 발행 시각을 추정했는지, `match_kind` 는 판정 종류다. 엔트리 집계는 `seen_at` 범위로 센다(`seen_at` 인덱스 — article-R13) |
 
 보존 기간은 [data-model.md "보존 정책"](../data-model.md#보존-정책-초안)에 있다.
 

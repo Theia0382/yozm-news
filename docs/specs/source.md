@@ -144,6 +144,9 @@ public record FetchedArticle(String title, URI link, @Nullable String guid, @Nul
 ```java
 public interface SourceAdministration {
     int MINIMUM_POLL_INTERVAL_MINUTES = Math.toIntExact(PollInterval.MINIMUM.toMinutes());
+    FeedStatusCriteria FEED_STATUS_CRITERIA = new FeedStatusCriteria(FeedStatusRule.DEGRADED_AFTER_FAILURES,
+            FeedStatusRule.DEGRADED_AFTER_PERMANENT_FAILURES, FeedStatusRule.STALE_AFTER,
+            Duration.parse(FeedStatusRule.RECHECK_INTERVAL));
 
     List<PresetView> presets();
     List<SourceView> sources();
@@ -164,7 +167,8 @@ public interface SourceAdministration {
 | 멤버 | 뜻 |
 |---|---|
 | `MINIMUM_POLL_INTERVAL_MINUTES` | 수집 주기의 하한(분) — 값의 출처는 프로필 모델의 하한 하나다(source-R14) |
-| `presets()` · `sources()` | 운영 목록(source-R51) |
+| `FEED_STATUS_CRITERIA` | 피드 상태의 판정 기준값과 재판정 간격 — 값의 출처는 피드 상태 판정 규칙 하나다(source-R30 · source-R31 · source-R47) |
+| `presets()` · `sources()` | 운영 목록 — 소스 목록은 피드마다 수집 상태를 싣는다(source-R51) |
 | `operatorProfileText` | 운영자 원문 — 프리셋을 참조하는 소스면 비어 있다 |
 | `registerPreset` · `registerOperatorProfile` | 소스 등록(source-R1 ~ source-R3) |
 | `reviseOperatorProfile` | 운영자 원문 수정(source-R50) |
@@ -176,9 +180,9 @@ public interface SourceAdministration {
   - 피드 켜기 · 원문 미리보기는 피드를 받는다 — 호출자의 트랜잭션 밖에서 부른다
   - 없는 대상 · 형식이 틀린 입력 · 동시 수정의 신호는 source-R52 다
 
-관련 규칙: source-R1 ~ source-R5 · source-R9 · source-R14 · source-R50 ~ source-R52.
+관련 규칙: source-R1 ~ source-R5 · source-R9 · source-R14 · source-R30 · source-R31 · source-R47 · source-R50 ~ source-R52.
 
-### PresetView · SourceView · FeedView · ProfileState
+### PresetView · SourceView · FeedView · ProfileState · FeedHealthView · LastFailureView · FeedStatusCriteria
 
 운영 목록(source-R51)의 값.
 
@@ -192,19 +196,32 @@ public record SourceView(SourceId id, @Nullable String presetKey, boolean enable
 
 public record FeedView(FeedId id, String feedKey, boolean enabled, @Nullable Integer pollIntervalMinutes,
         boolean inProfile, @Nullable URI url, @Nullable String section,
-        @Nullable Integer effectivePollIntervalMinutes) {}
+        @Nullable Integer effectivePollIntervalMinutes, FeedHealthView health) {}
 
 public enum ProfileState { AVAILABLE, PRESET_MISSING, INVALID }
+
+public record FeedHealthView(FeedStatus status, @Nullable Instant statusChangedAt, @Nullable Instant lastSuccessAt,
+        int consecutiveFailures, int consecutivePermanentFailures, @Nullable LastFailureView lastFailure,
+        @Nullable Instant lastNewItemAt, @Nullable Instant latestPublishedAt) {}
+
+public record LastFailureView(FetchFailureReason reason, FailurePermanence permanence, String message,
+        @Nullable Integer httpStatus, Instant at) {}
+
+public record FeedStatusCriteria(int degradedAfterFailures, int degradedAfterPermanentFailures, Duration staleAfter,
+        Duration recheckInterval) {}
 ```
 
 | 타입 · 필드 | 뜻 |
 |---|---|
 | `PresetView` | 카탈로그의 프리셋 하나 — 키 · 이름 · 홈페이지 · 이용조건 검토일 · 피드 수. `sourceId` 는 그 프리셋을 참조하는 소스, 없으면 null |
 | `SourceView` | 등록된 소스 하나 — 운영 설정(켜짐 · 운영자 주기)과 프로필에서 얻은 이름 · 홈페이지 · 검토일. 프로필을 얻지 못하면 셋은 null. 프리셋 키가 없으면 운영자 원문 소스다 |
-| `FeedView` | 소스의 피드 하나 — 운영 설정과 프로필의 URL · 섹션 · 실제 주기(분). 프로필에 그 피드가 없으면(`inProfile` 거짓) 셋은 null |
+| `FeedView` | 소스의 피드 하나 — 운영 설정과 프로필의 URL · 섹션 · 실제 주기(분), 수집 상태(`health`). 프로필에 그 피드가 없으면(`inProfile` 거짓) URL · 섹션 · 실제 주기는 null |
 | `ProfileState` | 프로필을 얻었는가 — 얻음 · 참조하던 프리셋이 사라짐 · 운영자 원문이 검증에 걸림 |
+| `FeedHealthView` | 피드의 수집 상태 — 피드 건강 검사가 저장한 상태와 그것을 마지막으로 바꾼 시각(바꾼 적이 없으면 null), 마지막 성공 · 변경 없음 시각, 연속 실패 수와 그 가운데 영구 실패 수(연속 실패 수를 넘지 않는다), 마지막 실패, 새 항목이 있던 마지막 수집 시각, 새 항목의 가장 늦은 발행 시각. 시각은 없으면 null |
+| `LastFailureView` | 피드의 마지막 수집 실패 — 이유 · 분류 · 운영자용 문구 · 상태 코드(응답이 없었으면 null) · 확정 시각. 성공한 뒤에도 남는다(source-R26). 분류는 이유의 `permanence()` 다 |
+| `FeedStatusCriteria` | 피드 상태의 판정 기준값(연속 실패 · 그 가운데 영구 실패 · 무소식 기간)과 재판정 간격 — 화면이 보이는 값이다. 두 수는 1 이상, 두 기간은 양수 |
 
-관련 규칙: source-R8 · source-R14 · source-R51.
+관련 규칙: source-R8 · source-R14 · source-R26 · source-R30 · source-R31 · source-R47 · source-R51.
 
 ### SourceRegistrationResult · ProfileRevisionResult · SourceEnableResult · FeedEnableResult · ProfilePreviewResult
 
@@ -277,7 +294,7 @@ public record ProfileProblemView(String path, String code, String message, @Null
 
 관련 규칙: source-R9 · source-R11 · source-R24 · source-R32 · source-R37 · source-R46.
 
-### ActivationRefusal · Criterion · FetchFailureReason · FailurePermanence · SkipReason · DocumentProblemKind
+### ActivationRefusal · Criterion · FetchFailureReason · FailurePermanence · SkipReason · DocumentProblemKind · FeedStatus
 
 결과에 싣는 닫힌 집합 — 모듈 안의 판정도 같은 열거를 쓴다.
 
@@ -289,6 +306,7 @@ public record ProfileProblemView(String path, String code, String message, @Null
 | `FailurePermanence` | `TEMPORARY` · `PERMANENT` | 수집 실패의 분류(source-R24) |
 | `SkipReason` | `MISSING_LINK` · `INVALID_LINK` · `MISSING_TITLE` | 항목을 기사로 넘기지 않은 이유(source-R40) |
 | `DocumentProblemKind` | `UNSUPPORTED_ENCODING` · `MALFORMED_XML` · `DTD_DECLARATION` · `NOT_A_FEED` | 문서 전체를 읽지 못한 이유(source-R42 · source-R44) |
+| `FeedStatus` | `ACTIVE` · `DEGRADED` · `STALE` | 피드 상태 — 기준 안에서 수집됨 · 계속 실패함 · 응답은 정상이지만 오래 새 기사가 없음(source-R30 · source-R31) |
 
 ### UnknownSourceException · UnknownFeedException
 
@@ -398,7 +416,7 @@ sequenceDiagram
 - `SourceOperations` — 소스 · 피드를 켜고 끄고 수집 주기를 바꾼다. 피드 켜기 밖의 연산은 한 트랜잭션이다. 피드 켜기는 읽고 판정하는 트랜잭션 → 요청 시작 시각 예약 트랜잭션 → 트랜잭션 밖에서 대기 · 요청 → 다시 읽고 판정 · 저장하는 트랜잭션으로 나뉘므로 호출자의 트랜잭션 밖에서 부른다. 대기가 중단되면 예외로 끝나고 예약만 남는다. 켜기는 지금의 프로필로 판정하고, 거절하면 저장하는 것은 피드를 받으려 잡은 요청 시작 시각 예약뿐이다(source-R4 · source-R5 · source-R9 · source-R14 · source-R18)
 - `ProfilePreviewer` — 등록 전 운영자 프로필 원문의 피드 하나를 미리본다. DB 를 쓰지 않고 요청 시작 시각을 예약하지 않는다(source-R9)
 - `SourceAdministrationService` — 공개 API `SourceAdministration` 의 구현. 유스케이스 · `SourceCatalog` 에 맡기고 결과를 공개 타입으로 옮긴다. 트랜잭션을 열지 않는다 — 피드 켜기 · 원문 미리보기는 트랜잭션 밖에서 받는다(source-R51 · source-R52)
-- `SourceCatalog` — 운영 목록. 읽기 전용 트랜잭션 하나에서 소스 · 피드 행을 읽고, 소스마다 지금의 프로필을 얻어 상태 · 실제 주기를 정한다(source-R51)
+- `SourceCatalog` — 운영 목록. 읽기 전용 트랜잭션 하나에서 소스 · 피드 행과 피드의 수집 상태 행을 읽고, 소스마다 지금의 프로필을 얻어 상태 · 실제 주기를 정한다. 수집 상태 행이 없는 피드는 목록을 실패시킨다(source-R51)
 - `FeedProvisioner` — 피드 행과 그 수집 상태 행을 함께 만든다. 이미 있으면 아무것도 하지 않는다 — 등록 · 원문 수정 · 기동 대조가 호출자의 트랜잭션 안에서 쓴다(source-R3 · source-R8)
 - `PresetFeedReconciliation` — 기동 대조(들어오는 쪽). 프로필을 얻은 소스마다 한 트랜잭션에서 프로필에 새로 생긴 피드를 더한다. 프로필을 얻지 못한 소스는 경고 로그만 남긴다(source-R8)
 - `FeedHealthCheck` — 피드 건강 검사(들어오는 쪽). 대상 행 잠금 · 판정 · 바뀐 행 쓰기를 한 트랜잭션에서 하고, 전이 로그는 커밋 뒤에 남긴다(source-R30 · source-R31 · source-R47 ~ source-R49)
@@ -419,7 +437,7 @@ sequenceDiagram
 - `SourceRepository` · `FeedRepository` — 두 aggregate 의 저장소. 피드 행은 "없으면 넣기"로만 만든다(source-R2 · source-R3)
 - `ProfileResolver` — 소스의 수집 프로필을 얻는다 — 프리셋은 카탈로그에서, 운영자 프로필은 저장된 원문을 검증해서. 저장된 소스와 운영 목록의 행이 같은 판정을 쓴다. 가리킬 곳을 잃었는지는 저장하지 않고 부를 때마다 판정한다(source-R1 · source-R8)
 - `ProfileRevision` — 운영자 원문 수정의 판정 — 켜진 피드 · 소스가 켜진 채 남는가(source-R50)
-- `SourceListingRepository` — 운영 목록의 조회 포트 — 소스 · 피드의 운영 설정 행을 읽기만 한다(source-R51)
+- `SourceListingRepository` — 운영 목록의 조회 포트 — 소스 · 피드의 운영 설정 행과 피드의 수집 상태 행(판정 입력 · 저장된 피드 상태 · 바뀐 시각)을 읽기만 한다(source-R51)
 - `PollTarget` — 피드를 지금 수집할 수 있는가 — 프로필을 얻었고 그 프로필에 피드가 있는가(source-R5 · source-R19)
 - `FeedReconciliation` — 프로필의 피드와 저장된 피드 행을 견준 결과(source-R8)
 - 그 밖의 값: `Activation` · `ProfileResolution`. 켜지 않은 이유 `ActivationRefusal` 은 공개 열거다(§3)
@@ -447,7 +465,7 @@ sequenceDiagram
 - `PollSchedule` — 수집 일정 산식과 상수의 정본(점유 기간 · 같은 소스 요청 간격 · 프로필 재확인 · 백오프 상한)(source-R15 · source-R18 · source-R19 · source-R25)
 - `PollSlots` — 같은 소스에서 이번 회차에 수집할 피드들의 예약 시각을 띄운다(source-R18)
 - `ItemComparison` · `ItemKey` — 새 항목 판정과 넘침 의심(source-R20 · source-R21)
-- `FeedStatusRule` — 피드 상태 판정의 규칙과 기준값 상수의 정본(연속 실패 · 그 가운데 영구 실패 · 무소식 기간). 수집 상태와 지금 시각으로 상태를 판정하고, 저장된 상태에서 바뀌는지 본다(source-R30 · source-R31 · source-R47)
+- `FeedStatusRule` — 피드 상태 판정의 규칙과 기준값 상수의 정본(연속 실패 · 그 가운데 영구 실패 · 무소식 기간 · 재판정 간격 `RECHECK_INTERVAL` — 반복 작업과 공개 기준값이 가리킨다). 수집 상태와 지금 시각으로 상태를 판정하고, 저장된 상태에서 바뀌는지 본다(source-R30 · source-R31 · source-R47)
 - `FeedPollStateRepository` — 수집 상태 저장소. 수집 작업이 쓴다 — 대상 잠금 · 점유 확인 · 토큰 조건 반영. 피드 상태 열은 쓰지 않는다(source-R6 · source-R15 · source-R16 · source-R48)
 - `FeedStatusRepository` — 피드 상태 저장소. 피드 건강 검사만 쓴다(source-R47 · source-R48)
 
@@ -459,7 +477,7 @@ sequenceDiagram
   ```
 
 - `SourceFetchSlotRepository` — 소스마다 다음 요청 가능 시각의 저장소. 요청 직전에 그 행을 잠근다(source-R18)
-- 그 밖의 값: `Lease` · `LastError` · `PollOutcome` · `FeedPollContext` · `FeedStatus`(`ACTIVE` · `DEGRADED` · `STALE`) · `FeedStatusTarget`(판정할 피드 — 수집 상태와 저장된 피드 상태)
+- 그 밖의 값: `Lease` · `LastError` · `PollOutcome` · `FeedPollContext` · `FeedStatusTarget`(판정할 피드 — 수집 상태와 저장된 피드 상태). 피드 상태 `FeedStatus` 는 공개 열거다(§3)
 
 #### `domain/fetch`
 
@@ -533,7 +551,7 @@ public sealed interface FetchResult {
 #### 저장소 구현
 
 - `JdbcFeedPollStateRepository` · `JdbcFeedStatusRepository` · `JdbcSourceFetchSlotRepository` — 수집 상태 · 피드 상태 · 요청 예약 저장소의 JdbcClient 구현. 쓰기 조건이 점유 토큰 · 행 잠금이라 aggregate 저장 대신 SQL 로 쓴다. 피드 상태 저장소는 수집 상태의 열 목록 · 행 읽기를 함께 쓴다
-- `JdbcSourceListingRepository` — 운영 목록 조회 포트의 JdbcClient 구현(source-R51)
+- `JdbcSourceListingRepository` — 운영 목록 조회 포트의 JdbcClient 구현. 수집 상태 행은 left join 으로 읽고 열 목록 · 행 읽기는 수집 상태 저장소의 것을 쓴다(source-R51)
 - `SourceRepository` · `FeedRepository` 는 Spring Data JDBC 가 구현한다
 
 #### 수집 프로필 읽기
@@ -578,7 +596,7 @@ public sealed interface FetchResult {
   - 새 원문에 새로 생긴 피드는 꺼진 피드와 그 수집 상태로 더한다(source-R3 과 같은 경로). 피드 행은 지우지 않는다(source-R7)
   - 그 소스의 피드 행은 바뀌지 않았어도 모두 저장한다 — 피드 켜기의 저장 직전 판정(source-R9)과 겹치면 늦은 쪽이 동시 수정으로 실패한다
   - 결과는 끈 피드의 식별자(피드 ID 순) · 소스를 껐는지 · 더한 피드의 식별자(원문 순)다
-- **source-R51** — 운영 목록: 프리셋은 키 순이고, 그 프리셋을 참조하는 소스가 있으면 그 소스 ID 를 함께 낸다. 소스는 소스 ID 순, 피드는 피드 ID 순이다. 소스마다 지금의 프로필을 얻어(source-R8) 얻었는지 · 사라진 프리셋인지 · 검증에 걸린 원문인지를 내고, 얻지 못하면 이름 · 홈페이지 · 검토일을 비운다. 피드마다 프로필에 있는지를 내고, 있으면 URL · 섹션 · 실제 주기(source-R14)를, 없으면 셋을 비운다. 행은 읽기 전용 트랜잭션 하나에서 읽는다
+- **source-R51** — 운영 목록: 프리셋은 키 순이고, 그 프리셋을 참조하는 소스가 있으면 그 소스 ID 를 함께 낸다. 소스는 소스 ID 순, 피드는 피드 ID 순이다. 소스마다 지금의 프로필을 얻어(source-R8) 얻었는지 · 사라진 프리셋인지 · 검증에 걸린 원문인지를 내고, 얻지 못하면 이름 · 홈페이지 · 검토일을 비운다. 피드마다 프로필에 있는지를 내고, 있으면 URL · 섹션 · 실제 주기(source-R14)를, 없으면 셋을 비운다. 피드마다 수집 상태를 낸다 — 저장된 피드 상태와 바뀐 시각(source-R47), 마지막 성공, 연속 실패 수와 그 가운데 영구 실패 수(source-R30), 마지막 실패와 그 분류(source-R24 · source-R26), 새 항목이 있던 마지막 수집 시각과 새 항목의 가장 늦은 발행 시각(source-R31). 수집 상태 행이 없는 피드는 등록 · 기동 대조의 불변식(source-R3)이 깨진 것이라 목록을 실패시킨다. 행은 읽기 전용 트랜잭션 하나에서 읽는다
 - **source-R52** — 공개 운영 API 의 대상과 입력: 없는 소스 · 피드는 `UnknownSourceException` · `UnknownFeedException` 이다. 형식이 틀린 프리셋 키는 카탈로그에 없는 프리셋, 형식이 틀린 피드 식별자는 원문에 없는 피드로 답한다. 같은 소스 · 피드를 다른 요청이 먼저 바꿨으면 동시 수정 실패(`OptimisticLockingFailureException`)다. 수집 주기의 하한보다 짧은 운영자 설정은 바꾸지 않고 거짓으로 답한다(source-R14)
 
 ### 수집 프로필
@@ -665,7 +683,7 @@ public sealed interface FetchResult {
   - 새 항목의 가장 늦은 발행 시각이 7일 이상 지났다
 
   기간은 지금 시각과의 차라 시간대가 없고, 정확히 7일이 지난 순간부터 `STALE` 이다. 새 항목의 가장 늦은 발행 시각은 성공 수집의 새 항목으로만 바뀌고 직전 값보다 늦을 때만 바뀐다 — 옛 항목을 돌려 실어도 오르지 않고, 등록 때 이미 방치된 피드는 첫 수집의 옛 발행 시각이 그대로 남는다. 발행 시각을 추정한 항목(source-R40)은 받은 시각으로 센다. 프로필을 얻지 못해 수집을 미루는 켜진 피드(source-R19)도 대상이라 시간이 지나면 `STALE` 이 된다 — 원인은 미룸 경고 로그가 알린다. 실제로 2024년 이후 갱신되지 않은 피드가 있었다([조사 자료](../research/2026-10-rss-survey.md))
-- **source-R47** — 피드 건강 검사는 1시간마다 소스 · 피드가 모두 켜진 피드 전부를 현재 기준으로 다시 판정하고, 판정이 저장된 상태와 다를 때만 상태와 바뀐 시각(판정 시각)을 쓴다. 판정 순서는 `DEGRADED`(source-R30) → `STALE`(source-R31) → `ACTIVE` 다 — 성공은 `DEGRADED` 를 풀 뿐이라 `STALE` 조건이 맞으면 `STALE` 이고, 기준 미만의 실패는 `STALE` 을 풀지 않는다. 판정은 저장된 상태를 보지 않으므로 모든 상태 쌍 사이의 전이가 있다. 꺼진 피드는 마지막 상태를 그대로 두고, 켜고 끄는 것은 상태를 바꾸지 않는다. 다시 켠 직후 첫 수집 전에 검사가 돌면 옛 입력으로 판정하고, 다음 수집 · 검사가 맞춘다. 기준을 바꿔 배포하면 다음 검사가 모든 대상을 새 기준으로 맞춘다. 새 피드의 첫 상태는 `ACTIVE` 다
+- **source-R47** — 피드 건강 검사는 1시간(`FeedStatusRule.RECHECK_INTERVAL`)마다 소스 · 피드가 모두 켜진 피드 전부를 현재 기준으로 다시 판정하고, 판정이 저장된 상태와 다를 때만 상태와 바뀐 시각(판정 시각)을 쓴다. 판정 순서는 `DEGRADED`(source-R30) → `STALE`(source-R31) → `ACTIVE` 다 — 성공은 `DEGRADED` 를 풀 뿐이라 `STALE` 조건이 맞으면 `STALE` 이고, 기준 미만의 실패는 `STALE` 을 풀지 않는다. 판정은 저장된 상태를 보지 않으므로 모든 상태 쌍 사이의 전이가 있다. 꺼진 피드는 마지막 상태를 그대로 두고, 켜고 끄는 것은 상태를 바꾸지 않는다. 다시 켠 직후 첫 수집 전에 검사가 돌면 옛 입력으로 판정하고, 다음 수집 · 검사가 맞춘다. 기준을 바꿔 배포하면 다음 검사가 모든 대상을 새 기준으로 맞춘다. 새 피드의 첫 상태는 `ACTIVE` 다
 - **source-R48** — 피드 상태와 바뀐 시각은 피드 건강 검사만 쓰고, 그 밖의 수집 상태는 수집 작업만 쓴다. 검사는 한 트랜잭션에서 대상 행을 피드 ID 순으로 잠그고(먼저 잡힌 잠금을 기다린다) 판정 · 쓰기를 한다 — 잠근 동안 수집 결과 반영은 기다리고 수집 대상 잠금(source-R15)은 그 행을 건너뛰므로, 옛 입력으로 판정한 상태가 쓰이지 않는다. 검사는 재시도하지 않는다 — 다음 회차가 다시 판정한다
 - **source-R49** — 상태가 바뀐 피드만 커밋 뒤 로그를 남긴다. `DEGRADED` · `STALE` 진입은 WARN, `ACTIVE` 복귀는 INFO 이고, 문구는 피드 ID · 이전 → 새 상태 · 연속 실패 수와 그 가운데 영구 실패 수 · 마지막 실패의 이유와 분류 · 마지막 새 항목 시각 · 새 항목의 가장 늦은 발행 시각이다. 운영자에게 알리는 것은 저장된 상태(운영자 화면)와 이 로그까지이고, 화면 내 알림은 알림 기능이 생기는 M4 에서 한다
 
