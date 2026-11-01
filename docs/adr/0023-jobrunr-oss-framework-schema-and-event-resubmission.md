@@ -68,3 +68,4 @@
 ## 후속 기록
 
 - 2026-10-31: 결과 절의 "역할별로 끌지는 역할 profile 을 나눌 때 정한다"는 [ADR-0042](0042-app-roles-as-web-worker-profiles-marked-by-platform-annotations.md)가 정했다 — 작업 서버와 멈춤 감시는 작업 역할(`worker`)에서만 돈다.
+- 2026-11-01: 결과 절의 "상한에 이른 발행을 다시 처리하거나 지우는 수단은 아직 없다"는 [ADR-0050](0050-operator-resubmits-once-or-discards-stranded-event-publications-read-from-registry.md)가 해소했다 — 운영자가 화면에서 즉시 1회 재제출하거나 폐기한다.

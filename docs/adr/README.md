@@ -52,6 +52,7 @@
 | [0046](0046-operator-profile-revision-disables-feeds-whose-reading-changed.md) | 운영자 원문을 고치면 읽기 설정이 바뀐 켜진 피드(검토일이 사라지면 소스)를 끄고, 피드 켜기는 저장 직전에 읽기 설정 전체를 다시 대조한다 | 승인 |
 | [0047](0047-self-hosted-software-run-by-instance-operators.md) | 요즘뉴스는 개인이 자기 서버에 띄워 쓰는 셀프 호스팅 소프트웨어이고, 소스와 함께 쓸 사람은 인스턴스 운영자가 정한다 | 승인 |
 | [0048](0048-sign-up-closed-by-default-with-invitations-and-operator-bootstrap.md) | 가입은 기본으로 닫고 운영자의 초대 링크와 계정 생성으로 사람을 들이며, 첫 운영자는 기동 때 로그의 초대 링크나 환경 변수로 만든다 | 승인 |
+| [0050](0050-operator-resubmits-once-or-discards-stranded-event-publications-read-from-registry.md) | 상한에 이른 · 읽을 수 없는 이벤트 발행은 운영자가 즉시 1회 재제출하거나 기록 없이 폐기하고, 목록 · 폐기는 `platform` 이 레지스트리 테이블을 직접 다룬다 | 승인 |
 
 양식:
 
