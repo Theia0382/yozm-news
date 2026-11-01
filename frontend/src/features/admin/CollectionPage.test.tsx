@@ -24,6 +24,7 @@ const TO = "2026-11-01T03:00:00Z";
 const NO_ENTRIES: EntryMetrics = {
   entries: 0,
   duplicates: 0,
+  urlMatches: 0,
   titleMatches: 0,
   estimated: 0,
   guidReuses: 0,
@@ -35,6 +36,7 @@ const NO_ENTRIES: EntryMetrics = {
 const FIRST_BUCKET: EntryMetrics = {
   entries: 12,
   duplicates: 9,
+  urlMatches: 5,
   titleMatches: 3,
   estimated: 6,
   guidReuses: 1,
@@ -46,6 +48,7 @@ const FIRST_BUCKET: EntryMetrics = {
 const SECOND_BUCKET: EntryMetrics = {
   entries: 988,
   duplicates: 747,
+  urlMatches: 740,
   titleMatches: 7,
   estimated: 4,
   guidReuses: 0,
@@ -74,6 +77,7 @@ const STATUS: Schemas["CollectionStatusResponse"] = {
       total: {
         entries: 1000,
         duplicates: 756,
+        urlMatches: 745,
         titleMatches: 10,
         estimated: 10,
         guidReuses: 1,
@@ -109,6 +113,7 @@ const STATUS: Schemas["CollectionStatusResponse"] = {
           total: {
             entries: 1000,
             duplicates: 756,
+            urlMatches: 745,
             titleMatches: 10,
             estimated: 10,
             guidReuses: 1,

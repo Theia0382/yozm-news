@@ -65,10 +65,10 @@ class ArticleAdministrationServiceTests {
 		assertThat(statistics.to()).isEqualTo(Instant.parse("2026-11-01T03:00:00Z"));
 		assertThat(statistics.buckets()).hasSize(7)
 			.startsWith(new EntryBucket(Instant.parse("2026-10-25T03:00:00Z"), Instant.parse("2026-10-26T03:00:00Z")));
-		assertThat(statistics.feed(new FeedId(7)).buckets()).containsExactly(new EntryCounts(1, 1, 1, 1, 0),
+		assertThat(statistics.feed(new FeedId(7)).buckets()).containsExactly(new EntryCounts(1, 1, 0, 1, 1, 0),
 				EntryCounts.NONE, EntryCounts.NONE, EntryCounts.NONE, EntryCounts.NONE, EntryCounts.NONE,
-				new EntryCounts(2, 1, 0, 1, 0));
-		assertThat(statistics.feed(new FeedId(7)).total()).isEqualTo(new EntryCounts(3, 2, 1, 2, 0));
+				new EntryCounts(2, 1, 1, 0, 1, 0));
+		assertThat(statistics.feed(new FeedId(7)).total()).isEqualTo(new EntryCounts(3, 2, 1, 1, 2, 0));
 	}
 
 	@Test

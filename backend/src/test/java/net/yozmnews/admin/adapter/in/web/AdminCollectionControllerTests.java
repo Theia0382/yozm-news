@@ -51,7 +51,7 @@ class AdminCollectionControllerTests {
 	private static final Instant TO = Instant.parse("2026-11-01T03:00:00Z");
 
 	private static final String NO_ENTRIES = """
-			{"entries":0,"duplicates":0,"titleMatches":0,"estimated":0,"guidReuses":0,
+			{"entries":0,"duplicates":0,"urlMatches":0,"titleMatches":0,"estimated":0,"guidReuses":0,
 			 "duplicateRate":null,"estimatedRate":null,"titleMatchRate":null}""";
 
 	@Autowired
@@ -86,8 +86,8 @@ class AdminCollectionControllerTests {
 				new SourceView(new SourceId(4), null, false, null, ProfileState.INVALID, null, null, null, List.of()));
 		this.articles.statistics = new EntryStatistics(FROM, TO,
 				List.of(new EntryBucket(FROM, MIDDLE), new EntryBucket(MIDDLE, TO)),
-				Map.of(new FeedId(11), List.of(new EntryCounts(10, 1, 0, 0, 0), EntryCounts.NONE), new FeedId(12),
-						List.of(EntryCounts.NONE, new EntryCounts(90, 45, 9, 27, 2))));
+				Map.of(new FeedId(11), List.of(new EntryCounts(10, 1, 1, 0, 0, 0), EntryCounts.NONE), new FeedId(12),
+						List.of(EntryCounts.NONE, new EntryCounts(90, 45, 30, 9, 27, 2))));
 
 		this.mockMvc.perform(authorized(get("/api/admin/collection-status")))
 			.andExpect(status().isOk())
@@ -97,14 +97,14 @@ class AdminCollectionControllerTests {
 					  "recheckIntervalMinutes":60},
 					 "sources":[
 					  {"id":3,"name":"멀티일보","presetKey":"multi","enabled":true,"profileState":"AVAILABLE",
-					   "total":{"entries":100,"duplicates":46,"titleMatches":9,"estimated":27,"guidReuses":2,
+					   "total":{"entries":100,"duplicates":46,"urlMatches":31,"titleMatches":9,"estimated":27,"guidReuses":2,
 					    "duplicateRate":0.46,"estimatedRate":0.27,"titleMatchRate":0.09},
 					   "buckets":[
 					    {"from":"2026-10-30T03:00:00Z","to":"2026-10-31T03:00:00Z",
-					     "metrics":{"entries":10,"duplicates":1,"titleMatches":0,"estimated":0,"guidReuses":0,
+					     "metrics":{"entries":10,"duplicates":1,"urlMatches":1,"titleMatches":0,"estimated":0,"guidReuses":0,
 					      "duplicateRate":0.1,"estimatedRate":0.0,"titleMatchRate":0.0}},
 					    {"from":"2026-10-31T03:00:00Z","to":"2026-11-01T03:00:00Z",
-					     "metrics":{"entries":90,"duplicates":45,"titleMatches":9,"estimated":27,"guidReuses":2,
+					     "metrics":{"entries":90,"duplicates":45,"urlMatches":30,"titleMatches":9,"estimated":27,"guidReuses":2,
 					      "duplicateRate":0.5,"estimatedRate":0.3,"titleMatchRate":0.1}}],
 					   "feeds":[
 					    {"id":11,"feedKey":"one","section":"하나","enabled":true,"inProfile":true,"status":"DEGRADED",
@@ -113,22 +113,22 @@ class AdminCollectionControllerTests {
 					     "lastFailure":{"reason":"ACCESS_DENIED","permanence":"PERMANENT","message":"접근 거부",
 					      "httpStatus":403,"at":"2026-10-31T04:00:00Z"},
 					     "lastNewItemAt":"2026-10-30T21:00:00Z","latestPublishedAt":"2026-10-30T20:30:00Z",
-					     "total":{"entries":10,"duplicates":1,"titleMatches":0,"estimated":0,"guidReuses":0,
+					     "total":{"entries":10,"duplicates":1,"urlMatches":1,"titleMatches":0,"estimated":0,"guidReuses":0,
 					      "duplicateRate":0.1,"estimatedRate":0.0,"titleMatchRate":0.0},
 					     "buckets":[
 					      {"from":"2026-10-30T03:00:00Z","to":"2026-10-31T03:00:00Z",
-					       "metrics":{"entries":10,"duplicates":1,"titleMatches":0,"estimated":0,"guidReuses":0,
+					       "metrics":{"entries":10,"duplicates":1,"urlMatches":1,"titleMatches":0,"estimated":0,"guidReuses":0,
 					        "duplicateRate":0.1,"estimatedRate":0.0,"titleMatchRate":0.0}},
 					      {"from":"2026-10-31T03:00:00Z","to":"2026-11-01T03:00:00Z","metrics":%1$s}]},
 					    {"id":12,"feedKey":"gone","section":null,"enabled":false,"inProfile":false,"status":"ACTIVE",
 					     "statusChangedAt":null,"lastSuccessAt":null,"consecutiveFailures":0,
 					     "consecutivePermanentFailures":0,"lastFailure":null,"lastNewItemAt":null,"latestPublishedAt":null,
-					     "total":{"entries":90,"duplicates":45,"titleMatches":9,"estimated":27,"guidReuses":2,
+					     "total":{"entries":90,"duplicates":45,"urlMatches":30,"titleMatches":9,"estimated":27,"guidReuses":2,
 					      "duplicateRate":0.5,"estimatedRate":0.3,"titleMatchRate":0.1},
 					     "buckets":[
 					      {"from":"2026-10-30T03:00:00Z","to":"2026-10-31T03:00:00Z","metrics":%1$s},
 					      {"from":"2026-10-31T03:00:00Z","to":"2026-11-01T03:00:00Z",
-					       "metrics":{"entries":90,"duplicates":45,"titleMatches":9,"estimated":27,"guidReuses":2,
+					       "metrics":{"entries":90,"duplicates":45,"urlMatches":30,"titleMatches":9,"estimated":27,"guidReuses":2,
 					        "duplicateRate":0.5,"estimatedRate":0.3,"titleMatchRate":0.1}}]}]},
 					  {"id":4,"name":null,"presetKey":null,"enabled":false,"profileState":"INVALID","total":%1$s,
 					   "buckets":[

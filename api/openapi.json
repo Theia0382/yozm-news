@@ -1024,9 +1024,13 @@
           "titleMatches" : {
             "type" : "integer",
             "format" : "int32"
+          },
+          "urlMatches" : {
+            "type" : "integer",
+            "format" : "int32"
           }
         },
-        "required" : [ "duplicateRate", "duplicates", "entries", "estimated", "estimatedRate", "guidReuses", "titleMatchRate", "titleMatches" ]
+        "required" : [ "duplicateRate", "duplicates", "entries", "estimated", "estimatedRate", "guidReuses", "titleMatchRate", "titleMatches", "urlMatches" ]
       },
       "FeedCollectionResponse" : {
         "type" : "object",

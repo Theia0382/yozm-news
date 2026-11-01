@@ -20,7 +20,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 /**
- * 엔트리 집계 질의 — 무엇을 중복 · 제목 판정 · 추정 · guid 재사용으로 세는지, 칸 경계를 Flyway 가 적용된 실제 PostgreSQL 에서 본다.
+ * 엔트리 집계 질의 — 무엇을 중복 · URL 판정 · 제목 판정 · 추정 · guid 재사용으로 세는지, 칸 경계를 Flyway 가 적용된 실제 PostgreSQL 에서 본다.
  * <p>
  * 기간은 2026-10-25T03:00Z 이상 2026-11-01T03:00Z 미만이고, 칸 i 는 시작 + i · 24시간부터다. 기대값은 손으로 셈한 수다.
  * <p>
@@ -56,7 +56,7 @@ class JdbcEntryStatisticsRepositoryTests {
 	}
 
 	@Test
-	void countsDuplicatesTitleMatchesAndEstimatesOfAFeedInABucket() {
+	void countsDuplicatesUrlAndTitleMatchesAndEstimatesOfAFeedInABucket() {
 		Instant at = Instant.parse("2026-10-31T12:00:00Z");
 		entry(11, "NEW", true, null, at);
 		entry(11, "URL", true, null, at);
@@ -64,7 +64,7 @@ class JdbcEntryStatisticsRepositoryTests {
 		entry(11, "URL", true, null, at);
 
 		assertThat(this.repository.countEntries(WINDOW))
-			.containsExactly(new EntryCountRow(new FeedId(11), 6, new EntryCounts(4, 3, 1, 3, 0)));
+			.containsExactly(new EntryCountRow(new FeedId(11), 6, new EntryCounts(4, 3, 2, 1, 3, 0)));
 	}
 
 	@Test
@@ -75,8 +75,9 @@ class JdbcEntryStatisticsRepositoryTests {
 		entry(12, "TITLE", false, null, at);
 		entry(12, "GUID", false, "g-known", at);
 
+		// GUID 는 중복이지만 URL 판정 수에 들지 않는다 — 중복 4 = URL 2 + 제목 판정 1 + 나머지 1
 		assertThat(this.repository.countEntries(WINDOW))
-			.containsExactly(new EntryCountRow(new FeedId(12), 1, new EntryCounts(4, 4, 1, 0, 0)));
+			.containsExactly(new EntryCountRow(new FeedId(12), 1, new EntryCounts(4, 4, 2, 1, 0, 0)));
 	}
 
 	@Test
@@ -86,7 +87,7 @@ class JdbcEntryStatisticsRepositoryTests {
 		entry(13, "NEW", true, null, at);
 
 		assertThat(this.repository.countEntries(WINDOW))
-			.containsExactly(new EntryCountRow(new FeedId(13), 3, new EntryCounts(2, 0, 0, 2, 0)));
+			.containsExactly(new EntryCountRow(new FeedId(13), 3, new EntryCounts(2, 0, 0, 0, 2, 0)));
 	}
 
 	@Test
@@ -99,9 +100,9 @@ class JdbcEntryStatisticsRepositoryTests {
 		entry(14, "NEW", false, null, Instant.parse("2026-11-01T02:59:59.999999Z"));
 
 		assertThat(this.repository.countEntries(WINDOW)).containsExactlyInAnyOrder(
-				new EntryCountRow(new FeedId(14), 0, new EntryCounts(2, 0, 0, 0, 0)),
-				new EntryCountRow(new FeedId(14), 1, new EntryCounts(1, 0, 0, 0, 0)),
-				new EntryCountRow(new FeedId(14), 6, new EntryCounts(1, 0, 0, 0, 0)));
+				new EntryCountRow(new FeedId(14), 0, new EntryCounts(2, 0, 0, 0, 0, 0)),
+				new EntryCountRow(new FeedId(14), 1, new EntryCounts(1, 0, 0, 0, 0, 0)),
+				new EntryCountRow(new FeedId(14), 6, new EntryCounts(1, 0, 0, 0, 0, 0)));
 	}
 
 	@Test
@@ -111,8 +112,8 @@ class JdbcEntryStatisticsRepositoryTests {
 		entry(16, "URL", true, null, at);
 
 		assertThat(this.repository.countEntries(WINDOW)).containsExactlyInAnyOrder(
-				new EntryCountRow(new FeedId(15), 3, new EntryCounts(1, 0, 0, 0, 0)),
-				new EntryCountRow(new FeedId(16), 3, new EntryCounts(1, 1, 0, 1, 0)));
+				new EntryCountRow(new FeedId(15), 3, new EntryCounts(1, 0, 0, 0, 0, 0)),
+				new EntryCountRow(new FeedId(16), 3, new EntryCounts(1, 1, 1, 0, 1, 0)));
 	}
 
 	@Test
@@ -130,11 +131,11 @@ class JdbcEntryStatisticsRepositoryTests {
 		entry(18, "NEW", false, "g-later", Instant.parse("2026-10-31T00:00:00Z"));
 
 		assertThat(this.repository.countEntries(WINDOW)).containsExactlyInAnyOrder(
-				new EntryCountRow(new FeedId(17), 1, new EntryCounts(1, 0, 0, 0, 1)),
-				new EntryCountRow(new FeedId(17), 2, new EntryCounts(1, 0, 0, 0, 0)),
-				new EntryCountRow(new FeedId(17), 3, new EntryCounts(2, 0, 0, 0, 1)),
-				new EntryCountRow(new FeedId(17), 4, new EntryCounts(1, 0, 0, 0, 1)),
-				new EntryCountRow(new FeedId(18), 5, new EntryCounts(1, 0, 0, 0, 0)));
+				new EntryCountRow(new FeedId(17), 1, new EntryCounts(1, 0, 0, 0, 0, 1)),
+				new EntryCountRow(new FeedId(17), 2, new EntryCounts(1, 0, 0, 0, 0, 0)),
+				new EntryCountRow(new FeedId(17), 3, new EntryCounts(2, 0, 0, 0, 0, 1)),
+				new EntryCountRow(new FeedId(17), 4, new EntryCounts(1, 0, 0, 0, 0, 1)),
+				new EntryCountRow(new FeedId(18), 5, new EntryCounts(1, 0, 0, 0, 0, 0)));
 	}
 
 	@Test
@@ -143,8 +144,8 @@ class JdbcEntryStatisticsRepositoryTests {
 		entry(19, "URL", false, "g-attached", Instant.parse("2026-10-30T00:00:00Z"));
 
 		assertThat(this.repository.countEntries(WINDOW)).containsExactlyInAnyOrder(
-				new EntryCountRow(new FeedId(19), 2, new EntryCounts(1, 0, 0, 0, 0)),
-				new EntryCountRow(new FeedId(19), 4, new EntryCounts(1, 1, 0, 0, 0)));
+				new EntryCountRow(new FeedId(19), 2, new EntryCounts(1, 0, 0, 0, 0, 0)),
+				new EntryCountRow(new FeedId(19), 4, new EntryCounts(1, 1, 1, 0, 0, 0)));
 	}
 
 	/** 기사 하나와 그 기사의 엔트리 하나 — 기사는 넣은 순서로 ID 가 커진다 */

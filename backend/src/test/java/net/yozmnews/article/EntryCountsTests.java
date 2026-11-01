@@ -16,7 +16,7 @@ class EntryCountsTests {
 
 	@Test
 	void ratesDivideEachCountByTheEntries() {
-		EntryCounts counts = new EntryCounts(4, 3, 1, 3, 0);
+		EntryCounts counts = new EntryCounts(4, 3, 2, 1, 3, 0);
 
 		assertThat(counts.duplicateRate()).isEqualTo(0.75);
 		assertThat(counts.estimatedRate()).isEqualTo(0.75);
@@ -28,36 +28,37 @@ class EntryCountsTests {
 		assertThat(EntryCounts.NONE.duplicateRate()).isNull();
 		assertThat(EntryCounts.NONE.estimatedRate()).isNull();
 		assertThat(EntryCounts.NONE.titleMatchRate()).isNull();
-		assertThat(new EntryCounts(2, 0, 0, 0, 0).duplicateRate()).isEqualTo(0.0);
+		assertThat(new EntryCounts(2, 0, 0, 0, 0, 0).duplicateRate()).isEqualTo(0.0);
 	}
 
 	@Test
 	void aSumAddsTheCountsBeforeDividingNotTheRates() {
-		EntryCounts sum = new EntryCounts(10, 1, 0, 0, 0).plus(new EntryCounts(90, 45, 0, 0, 0));
+		EntryCounts sum = new EntryCounts(10, 1, 1, 0, 0, 0).plus(new EntryCounts(90, 45, 45, 0, 0, 0));
 
-		assertThat(sum).isEqualTo(new EntryCounts(100, 46, 0, 0, 0));
+		assertThat(sum).isEqualTo(new EntryCounts(100, 46, 46, 0, 0, 0));
 		assertThat(sum.duplicateRate()).isEqualTo(0.46);
 	}
 
 	@Test
 	void everyCountIsAddedToItsOwnCount() {
-		assertThat(new EntryCounts(5, 3, 1, 2, 1).plus(new EntryCounts(7, 2, 2, 6, 3)))
-			.isEqualTo(new EntryCounts(12, 5, 3, 8, 4));
+		assertThat(new EntryCounts(5, 3, 2, 1, 2, 1).plus(new EntryCounts(7, 4, 3, 1, 6, 3)))
+			.isEqualTo(new EntryCounts(12, 7, 5, 2, 8, 4));
 	}
 
 	@Test
 	void boundaryCountsAreAllowed() {
-		assertThat(new EntryCounts(3, 3, 3, 3, 0).duplicateRate()).isEqualTo(1.0);
-		assertThat(new EntryCounts(2, 1, 0, 0, 1).entries()).isEqualTo(2);
+		assertThat(new EntryCounts(3, 3, 0, 3, 3, 0).duplicateRate()).isEqualTo(1.0);
+		assertThat(new EntryCounts(3, 3, 2, 1, 0, 0).urlMatches()).isEqualTo(2);
+		assertThat(new EntryCounts(2, 1, 0, 0, 0, 1).entries()).isEqualTo(2);
 	}
 
 	@ParameterizedTest
-	@CsvSource({ "-1, 0, 0, 0, 0", "2, 3, 0, 0, 0", "2, 0, 0, 3, 0", "3, 1, 2, 0, 0", "3, 1, 0, 0, 3",
-			"1, 0, 0, 0, -1" })
-	void countsThatCannotHappenAreRejected(int entries, int duplicates, int titleMatches, int estimated,
-			int guidReuses) {
+	@CsvSource({ "-1, 0, 0, 0, 0, 0", "2, 3, 0, 0, 0, 0", "2, 0, 0, 0, 3, 0", "3, 1, 0, 2, 0, 0",
+			"3, 3, 2, 2, 0, 0", "1, 0, -1, 0, 0, 0", "3, 1, 0, 0, 0, 3", "1, 0, 0, 0, 0, -1" })
+	void countsThatCannotHappenAreRejected(int entries, int duplicates, int urlMatches, int titleMatches,
+			int estimated, int guidReuses) {
 		assertThatIllegalArgumentException()
-			.isThrownBy(() -> new EntryCounts(entries, duplicates, titleMatches, estimated, guidReuses));
+			.isThrownBy(() -> new EntryCounts(entries, duplicates, urlMatches, titleMatches, estimated, guidReuses));
 	}
 
 }

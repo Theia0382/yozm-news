@@ -26,15 +26,15 @@ class EntryStatisticsTests {
 	private static final List<EntryBucket> BUCKETS = List.of(new EntryBucket(FROM, MIDDLE), new EntryBucket(MIDDLE, TO));
 
 	private final EntryStatistics statistics = new EntryStatistics(FROM, TO, BUCKETS,
-			Map.of(new FeedId(1), List.of(new EntryCounts(10, 1, 0, 2, 0), new EntryCounts(4, 0, 0, 0, 1)),
-					new FeedId(2), List.of(new EntryCounts(90, 45, 5, 0, 0), EntryCounts.NONE)));
+			Map.of(new FeedId(1), List.of(new EntryCounts(10, 1, 1, 0, 2, 0), new EntryCounts(4, 0, 0, 0, 0, 1)),
+					new FeedId(2), List.of(new EntryCounts(90, 45, 40, 5, 0, 0), EntryCounts.NONE)));
 
 	@Test
 	void aFeedWithEntriesHasItsBucketsAndTheirTotal() {
 		FeedEntryStatistics feed = this.statistics.feed(new FeedId(1));
 
-		assertThat(feed.buckets()).containsExactly(new EntryCounts(10, 1, 0, 2, 0), new EntryCounts(4, 0, 0, 0, 1));
-		assertThat(feed.total()).isEqualTo(new EntryCounts(14, 1, 0, 2, 1));
+		assertThat(feed.buckets()).containsExactly(new EntryCounts(10, 1, 1, 0, 2, 0), new EntryCounts(4, 0, 0, 0, 0, 1));
+		assertThat(feed.total()).isEqualTo(new EntryCounts(14, 1, 1, 0, 2, 1));
 	}
 
 	@Test
@@ -49,8 +49,8 @@ class EntryStatisticsTests {
 	void feedsCombineBucketByBucket() {
 		FeedEntryStatistics combined = this.statistics.combined(List.of(new FeedId(1), new FeedId(2), new FeedId(3)));
 
-		assertThat(combined.buckets()).containsExactly(new EntryCounts(100, 46, 5, 2, 0), new EntryCounts(4, 0, 0, 0, 1));
-		assertThat(combined.total()).isEqualTo(new EntryCounts(104, 46, 5, 2, 1));
+		assertThat(combined.buckets()).containsExactly(new EntryCounts(100, 46, 41, 5, 2, 0), new EntryCounts(4, 0, 0, 0, 0, 1));
+		assertThat(combined.total()).isEqualTo(new EntryCounts(104, 46, 41, 5, 2, 1));
 		assertThat(this.statistics.combined(List.of()).buckets()).containsExactly(EntryCounts.NONE, EntryCounts.NONE);
 	}
 

@@ -54,15 +54,15 @@ class EntryWindowTests {
 	@Test
 	void rowsFillTheirBucketsAndTheRestStayEmpty() {
 		EntryStatistics statistics = EntryWindow.endingAt(TO)
-			.statistics(List.of(new EntryCountRow(new FeedId(9), 0, new EntryCounts(2, 1, 0, 0, 0)),
-					new EntryCountRow(new FeedId(9), 6, new EntryCounts(3, 0, 0, 3, 1))));
+			.statistics(List.of(new EntryCountRow(new FeedId(9), 0, new EntryCounts(2, 1, 1, 0, 0, 0)),
+					new EntryCountRow(new FeedId(9), 6, new EntryCounts(3, 0, 0, 0, 3, 1))));
 
 		assertThat(statistics.from()).isEqualTo(Instant.parse("2026-10-25T03:00:00Z"));
 		assertThat(statistics.to()).isEqualTo(TO);
 		assertThat(statistics.countsByFeed()).containsOnlyKeys(new FeedId(9));
-		assertThat(statistics.feed(new FeedId(9)).buckets()).containsExactly(new EntryCounts(2, 1, 0, 0, 0),
+		assertThat(statistics.feed(new FeedId(9)).buckets()).containsExactly(new EntryCounts(2, 1, 1, 0, 0, 0),
 				EntryCounts.NONE, EntryCounts.NONE, EntryCounts.NONE, EntryCounts.NONE, EntryCounts.NONE,
-				new EntryCounts(3, 0, 0, 3, 1));
+				new EntryCounts(3, 0, 0, 0, 3, 1));
 	}
 
 	@Test
@@ -73,7 +73,7 @@ class EntryWindowTests {
 	@Test
 	void aBucketOutsideThePeriodOrTwiceIsAMismatch() {
 		EntryWindow window = EntryWindow.endingAt(TO);
-		EntryCounts one = new EntryCounts(1, 0, 0, 0, 0);
+		EntryCounts one = new EntryCounts(1, 0, 0, 0, 0, 0);
 
 		assertThatIllegalStateException()
 			.isThrownBy(() -> window.statistics(List.of(new EntryCountRow(new FeedId(9), 7, one))));

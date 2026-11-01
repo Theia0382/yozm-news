@@ -95,13 +95,14 @@ record CollectionStatusResponse(Instant from, Instant to, StatusCriteriaResponse
 	/**
 	 * 엔트리 개수와 비율 — 엔트리가 없으면 비율은 null 이다(0 이 아니다).
 	 */
-	record EntryMetricsResponse(int entries, int duplicates, int titleMatches, int estimated, int guidReuses,
-			@Nullable Double duplicateRate, @Nullable Double estimatedRate, @Nullable Double titleMatchRate) {
+	record EntryMetricsResponse(int entries, int duplicates, int urlMatches, int titleMatches, int estimated,
+			int guidReuses, @Nullable Double duplicateRate, @Nullable Double estimatedRate,
+			@Nullable Double titleMatchRate) {
 
 		static EntryMetricsResponse of(EntryCounts counts) {
-			return new EntryMetricsResponse(counts.entries(), counts.duplicates(), counts.titleMatches(),
-					counts.estimated(), counts.guidReuses(), counts.duplicateRate(), counts.estimatedRate(),
-					counts.titleMatchRate());
+			return new EntryMetricsResponse(counts.entries(), counts.duplicates(), counts.urlMatches(),
+					counts.titleMatches(), counts.estimated(), counts.guidReuses(), counts.duplicateRate(),
+					counts.estimatedRate(), counts.titleMatchRate());
 		}
 
 	}
