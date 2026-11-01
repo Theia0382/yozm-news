@@ -99,7 +99,9 @@ class SourceOperations {
 	}
 
 	private FeedActivation previewAndEnable(FeedId id, FeedGate.Precheck.Fetch fetch) {
-		FetchSlot slot = this.fetchSlots.reserve(fetch.source(), this.clock);
+		// 미리보기 전에 소스가 지워졌으면 없는 피드다
+		FetchSlot slot = this.fetchSlots.reserve(fetch.source(), this.clock)
+			.orElseThrow(() -> new UnknownFeedException(id));
 		if (!SourceFetchSlots.sleep(PollSchedule.remaining(slot.start(), this.clock.instant()))) {
 			throw new IllegalStateException("같은 소스의 요청 순서를 기다리다 중단됐다 — 피드 " + id.value());
 		}

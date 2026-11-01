@@ -7,6 +7,10 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMoc
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 import static org.awaitility.Awaitility.await;
+import static org.mockito.AdditionalAnswers.delegatesTo;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -15,6 +19,7 @@ import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -26,9 +31,13 @@ import net.yozmnews.source.FetchFailureReason;
 import net.yozmnews.source.SourceId;
 import net.yozmnews.source.adapter.in.job.PollDueFeedsJob;
 import net.yozmnews.source.adapter.in.job.PollFeedJob;
+import net.yozmnews.source.domain.fetch.ArticleSource;
+import net.yozmnews.source.domain.poll.FeedPollContext;
 import net.yozmnews.source.domain.poll.FeedPollState;
 import net.yozmnews.source.domain.poll.FeedPollStateRepository;
 import net.yozmnews.source.domain.poll.ItemKey;
+import net.yozmnews.source.domain.registry.ProfileResolver;
+import net.yozmnews.source.domain.registry.SourceRepository;
 import org.jobrunr.scheduling.JobScheduler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,6 +47,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.TestPropertySource;
@@ -94,6 +104,21 @@ class FeedPollingIntegrationTests {
 
 	@Autowired
 	TransactionTemplate transaction;
+
+	@Autowired
+	SourceFetchSlots fetchSlots;
+
+	@Autowired
+	SourceRepository sourceRepository;
+
+	@Autowired
+	ProfileResolver resolver;
+
+	@Autowired
+	ArticleSource articleSource;
+
+	@Autowired
+	ApplicationEventPublisher events;
 
 	private TestFeeds feeds;
 
@@ -344,6 +369,43 @@ class FeedPollingIntegrationTests {
 		assertThat(nextFetchAt(sourceOf(late))).isBetween(before.plusSeconds(10).truncatedTo(ChronoUnit.MICROS),
 				after.plusSeconds(10).plus(1, ChronoUnit.MICROS));
 		assertThat(this.feeds.requests("/fits.xml")).isEqualTo(1);
+	}
+
+	@Test
+	void aSourceDeletedRightAfterTheLeaseIsCheckedEndsThePollQuietly() {
+		long deleted = this.feeds.source("/deleted.xml").getFirst();
+		long kept = this.feeds.source("/kept.xml").getFirst();
+		server.stubFor(get("/deleted.xml").willReturn(TestFeeds.rss("d1")));
+		server.stubFor(get("/kept.xml").willReturn(TestFeeds.rss("k1")));
+		long deletedSource = sourceOf(deleted).value();
+		Instant now = Instant.now();
+		UUID deletedToken = UUID.randomUUID();
+		UUID keptToken = UUID.randomUUID();
+		writeLease(deleted, deletedToken, now, now.plus(Duration.ofMinutes(10)));
+		writeLease(kept, keptToken, now, now.plus(Duration.ofMinutes(10)));
+		// 점유를 확인한 바로 뒤에 다른 쪽이 그 소스를 지운 것처럼 한다
+		FeedPollStateRepository deleting = mock(FeedPollStateRepository.class, delegatesTo(this.pollStates));
+		doAnswer(invocation -> {
+			FeedId feed = invocation.getArgument(0);
+			Optional<FeedPollContext> leased = this.pollStates.findLeased(feed, invocation.getArgument(1));
+			if (feed.value() == deleted) {
+				new RegistryRows(this.jdbc).deleteSource(deletedSource);
+			}
+			return leased;
+		}).when(deleting).findLeased(any(), any());
+		FeedPoller poller = new FeedPoller(deleting, this.fetchSlots, this.sourceRepository, this.resolver,
+				this.articleSource, this.events, this.transaction);
+
+		// 대조 — 지우지 않은 소스의 피드는 같은 대역으로 수집한다
+		poller.poll(new FeedId(kept), keptToken);
+		assertThat(this.feeds.requests("/kept.xml")).isEqualTo(1);
+		assertThat(this.recorder.forFeed(kept)).hasSize(1);
+
+		poller.poll(new FeedId(deleted), deletedToken);
+
+		assertThat(this.feeds.requests("/deleted.xml")).isZero();
+		assertThat(this.recorder.forFeed(deleted)).isEmpty();
+		assertThat(this.pollStates.find(new FeedId(deleted))).isEmpty();
 	}
 
 	private ClaimedPoll claim(long feed) {

@@ -3,6 +3,7 @@ package net.yozmnews.admin.adapter.in.web;
 import static net.yozmnews.admin.adapter.in.web.AdminRequests.authorized;
 import static net.yozmnews.admin.adapter.in.web.AdminRequests.json;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -196,6 +197,25 @@ class AdminFeedControllerTests {
 					""", JsonCompareMode.STRICT));
 
 		assertThat(this.administration.calls).containsExactly("hideFeed 7", "hideFeed 8");
+	}
+
+	@Test
+	void deletingAFeedAnswersRemovedOrTheRefusal() throws Exception {
+		this.administration.feedRemoval = new FeedRemovalResult.Removed();
+		this.mockMvc.perform(authorized(delete("/api/admin/feeds/7")))
+			.andExpect(status().isOk())
+			.andExpect(content().json("""
+					{"result":"REMOVED","refusal":null}
+					""", JsonCompareMode.STRICT));
+
+		this.administration.feedRemoval = new FeedRemovalResult.Refused(FeedRemovalRefusal.PROFILE_UNAVAILABLE);
+		this.mockMvc.perform(authorized(delete("/api/admin/feeds/8")))
+			.andExpect(status().isOk())
+			.andExpect(content().json("""
+					{"result":"REFUSED","refusal":"PROFILE_UNAVAILABLE"}
+					""", JsonCompareMode.STRICT));
+
+		assertThat(this.administration.calls).containsExactly("deleteFeed 7", "deleteFeed 8");
 	}
 
 	@Test

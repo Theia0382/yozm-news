@@ -170,6 +170,17 @@ class FakeSourceAdministration implements SourceAdministration {
 		called("unhideFeed " + id.value());
 	}
 
+	@Override
+	public void deleteSource(SourceId id) {
+		called("deleteSource " + id.value());
+	}
+
+	@Override
+	public FeedRemovalResult deleteFeed(FeedId id) {
+		called("deleteFeed " + id.value());
+		return given(this.feedRemoval);
+	}
+
 	private void called(String call) {
 		this.calls.add(call);
 		if (this.failure != null) {

@@ -86,8 +86,12 @@ public class FeedPoller {
 			return;
 		}
 		FeedPollContext context = leased.get();
-		Source source = this.sources.findById(context.sourceId().value()).orElseThrow();
-		switch (PollTarget.of(this.resolver.resolve(source), context.feedKey())) {
+		Optional<Source> source = this.sources.findById(context.sourceId().value());
+		if (source.isEmpty()) {
+			logger.debug("점유를 확인한 뒤 소스가 지워져 수집하지 않는다 — 소스 {} 피드 {}", context.sourceId().value(), feedId.value());
+			return;
+		}
+		switch (PollTarget.of(this.resolver.resolve(source.get()), context.feedKey())) {
 			case PollTarget.Ready target -> fetch(context, token, target);
 			case PollTarget.Unavailable unavailable -> {
 				FeedPollState deferred = context.state().deferForUnavailableProfile(this.clock.instant());
@@ -104,7 +108,13 @@ public class FeedPoller {
 		if (!SourceFetchSlots.sleep(PollSchedule.waitBeforeFetch(lease, this.clock.instant()))) {
 			return;
 		}
-		FetchSlot slot = this.fetchSlots.reserve(context.sourceId(), this.clock);
+		Optional<FetchSlot> reserved = this.fetchSlots.reserve(context.sourceId(), this.clock);
+		if (reserved.isEmpty()) {
+			logger.debug("요청을 예약하는 사이 소스가 지워져 수집하지 않는다 — 소스 {} 피드 {}", context.sourceId().value(),
+					state.feedId().value());
+			return;
+		}
+		FetchSlot slot = reserved.get();
 		if (!PollSchedule.fitsLease(slot, state.nextPollAt())) {
 			logger.warn("같은 소스의 요청 예약이 점유 만료를 넘는다 — 피드 {} 를 이번에 수집하지 않는다(시작 {}, 만료 {})",
 					state.feedId().value(), slot.start(), state.nextPollAt());

@@ -10,6 +10,7 @@ import net.yozmnews.platform.WebRole;
 import net.yozmnews.source.SourceAdministration;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -18,7 +19,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 운영자 API — 피드 켜기 · 끄기 · 수집 주기 · 숨기기 · 다시 보이기. docs/specs/admin.md §3.
+ * 운영자 API — 피드 켜기 · 끄기 · 수집 주기 · 숨기기 · 다시 보이기 · 삭제. docs/specs/admin.md §3.
  * <p>
  * 꺼진 피드를 켜면 한 번 받아 미리보므로 같은 언론사의 앞선 요청을 기다린 만큼 응답이 늦다 — 트랜잭션을 열지 않는다.
  */
@@ -89,6 +90,15 @@ class AdminFeedController {
 					schema = @Schema(implementation = ApiProblem.class)))
 	FeedRemovalResponse hide(@PathVariable long id) {
 		return FeedRemovalResponse.of(this.administration.hideFeed(AdminIds.feed(id)));
+	}
+
+	@DeleteMapping("/api/admin/feeds/{id}")
+	@ApiResponse(responseCode = "200", description = "OK", useReturnTypeSchema = true)
+	@ApiResponse(responseCode = "404", description = "없는 피드이거나 숨긴 소스의 피드다",
+			content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+					schema = @Schema(implementation = ApiProblem.class)))
+	FeedRemovalResponse delete(@PathVariable long id) {
+		return FeedRemovalResponse.of(this.administration.deleteFeed(AdminIds.feed(id)));
 	}
 
 	@PostMapping("/api/admin/feeds/{id}/unhide")

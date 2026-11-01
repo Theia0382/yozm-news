@@ -21,4 +21,7 @@ public interface SourceAttributionRepository {
 	/** 기록된 이름 — 기록이 없는 소스는 빠진다 */
 	Map<SourceId, String> findAll();
 
+	/** 소스의 기록을 지운다 — 소스 삭제가 소스 행보다 먼저 부른다 */
+	void delete(SourceId source);
+
 }

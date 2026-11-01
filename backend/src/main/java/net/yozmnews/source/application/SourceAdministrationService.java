@@ -198,6 +198,16 @@ class SourceAdministrationService implements SourceAdministration {
 		this.removal.unhideFeed(id);
 	}
 
+	@Override
+	public void deleteSource(SourceId id) {
+		this.removal.deleteSource(id);
+	}
+
+	@Override
+	public FeedRemovalResult deleteFeed(FeedId id) {
+		return removal(this.removal.deleteFeed(id));
+	}
+
 	private static FeedRemovalResult removal(Optional<FeedRemovalRefusal> refusal) {
 		return refusal.<FeedRemovalResult>map(FeedRemovalResult.Refused::new).orElseGet(FeedRemovalResult.Removed::new);
 	}

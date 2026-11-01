@@ -77,4 +77,10 @@ public interface SourceAdministration {
 	/** 숨긴 피드를 다시 보인다 — 꺼진 채다 */
 	void unhideFeed(FeedId id);
 
+	/** 소스를 지운다 — 그 피드 · 수집 상태 · 요청 예약 · 출처 이름까지 지우고 {@link SourceDeleted} 를 발행한다. 숨긴 소스도 지운다 */
+	void deleteSource(SourceId id);
+
+	/** 피드를 지운다 — 프로필을 얻었고 그 프로필에 없는 피드만. {@link FeedDeleted} 를 발행한다 */
+	FeedRemovalResult deleteFeed(FeedId id);
+
 }

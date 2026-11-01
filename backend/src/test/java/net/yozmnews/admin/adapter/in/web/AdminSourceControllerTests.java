@@ -3,6 +3,7 @@ package net.yozmnews.admin.adapter.in.web;
 import static net.yozmnews.admin.adapter.in.web.AdminRequests.authorized;
 import static net.yozmnews.admin.adapter.in.web.AdminRequests.json;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -127,6 +128,17 @@ class AdminSourceControllerTests {
 		this.mockMvc.perform(authorized(post("/api/admin/sources/5/unhide"))).andExpect(status().isNoContent());
 
 		assertThat(this.administration.calls).containsExactly("hideSource 5", "unhideSource 5");
+	}
+
+	@Test
+	void deletingASourceAnswersNoContentAndAnUnknownSourceIsNotFound() throws Exception {
+		this.mockMvc.perform(authorized(delete("/api/admin/sources/5"))).andExpect(status().isNoContent());
+		assertThat(this.administration.calls).containsExactly("deleteSource 5");
+
+		this.administration.failure = new UnknownSourceException(new SourceId(99));
+		this.mockMvc.perform(authorized(delete("/api/admin/sources/99")))
+			.andExpect(status().isNotFound())
+			.andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON));
 	}
 
 	@Test

@@ -53,6 +53,17 @@ final class RegistryRows {
 				""").param("source", source).param("key", key).query(Long.class).single();
 	}
 
+	/** 소스와 그 행을 자식부터 지운다 — 다른 쪽이 그 소스를 지운 것처럼 */
+	void deleteSource(long source) {
+		this.jdbc.sql("delete from feed_poll_states where feed_id in (select id from feeds where source_id = :source)")
+			.param("source", source)
+			.update();
+		this.jdbc.sql("delete from feeds where source_id = :source").param("source", source).update();
+		this.jdbc.sql("delete from source_fetch_slots where source_id = :source").param("source", source).update();
+		this.jdbc.sql("delete from source_attributions where source_id = :source").param("source", source).update();
+		this.jdbc.sql("delete from sources where id = :source").param("source", source).update();
+	}
+
 	/** 소스 · 피드를 숨긴 것으로 둔다 — table 은 sources 나 feeds */
 	void hide(String table, long id) {
 		this.jdbc.sql("update " + table + " set enabled = false, hidden_at = now() where id = :id").param("id", id).update();

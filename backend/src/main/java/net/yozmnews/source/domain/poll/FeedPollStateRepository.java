@@ -47,4 +47,13 @@ public interface FeedPollStateRepository {
 	 */
 	Optional<FeedPollContext> findLeased(FeedId feedId, UUID token);
 
+	/**
+	 * 지울 피드의 수집 상태 행을 피드 ID 순으로 잠근다 — 피드 건강 검사와 같은 순서라 교착이 없고, 진행 중인 수집 결과 반영과 줄을 선다.
+	 * 트랜잭션 안에서 부른다.
+	 */
+	void lockForRemoval(List<FeedId> feeds);
+
+	/** 피드의 수집 상태 행을 지운다 — 피드 행보다 먼저 부른다 */
+	void delete(List<FeedId> feeds);
+
 }

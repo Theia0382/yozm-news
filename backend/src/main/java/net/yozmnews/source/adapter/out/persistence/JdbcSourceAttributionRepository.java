@@ -47,4 +47,11 @@ class JdbcSourceAttributionRepository implements SourceAttributionRepository {
 		return names;
 	}
 
+	@Override
+	public void delete(SourceId source) {
+		this.jdbc.sql("delete from source_attributions where source_id = :source")
+			.param("source", source.value())
+			.update();
+	}
+
 }

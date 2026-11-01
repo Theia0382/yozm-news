@@ -7,12 +7,14 @@ import static org.assertj.core.groups.Tuple.tuple;
 import java.util.Optional;
 
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.source.FeedDeleted;
 import net.yozmnews.source.FeedId;
 import net.yozmnews.source.FeedRemovalRefusal;
 import net.yozmnews.source.FeedRemovalResult;
 import net.yozmnews.source.FeedView;
 import net.yozmnews.source.PresetView;
 import net.yozmnews.source.SourceAdministration;
+import net.yozmnews.source.SourceDeleted;
 import net.yozmnews.source.SourceId;
 import net.yozmnews.source.SourceRegistrationResult;
 import net.yozmnews.source.SourceView;
@@ -31,14 +33,17 @@ import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.test.context.event.ApplicationEvents;
+import org.springframework.test.context.event.RecordApplicationEvents;
 
 /**
- * 소스 · 피드의 숨김 — 공개 운영 API 로 숨기고 다시 보이며, 운영 목록 · 운영 연산 · 저장된 행을 잰다.
+ * 소스 · 피드의 숨김과 삭제 — 공개 운영 API 로 숨기고 다시 보이고 지우며, 운영 목록 · 운영 연산 · 저장된 행 · 발행된 이벤트를 잰다.
  * <p>
- * 지키는 규칙: 숨김(docs/specs/source.md §5) · source-R52
+ * 지키는 규칙: 숨김 · 삭제(docs/specs/source.md §5) · source-R2 · source-R52
  */
 @Import({ TestcontainersConfiguration.class, RegistryTestCatalog.class })
 @SpringBootTest
+@RecordApplicationEvents
 @ExtendWith(OutputCaptureExtension.class)
 class SourceRemovalTests {
 
@@ -62,6 +67,9 @@ class SourceRemovalTests {
 
 	@Autowired
 	JdbcClient jdbc;
+
+	@Autowired
+	ApplicationEvents events;
 
 	RegistryRows rows;
 
@@ -219,6 +227,107 @@ class SourceRemovalTests {
 	}
 
 	@Test
+	void deletingASourceRemovesItsRowsAndPublishesTheEvent(CapturedOutput output) {
+		SourceId deleted = registered(this.administration.registerPreset("multi"));
+		SourceId kept = registered(this.administration.registerPreset("solo"));
+		long one = this.rows.feedId(deleted.value(), "one");
+		long two = this.rows.feedId(deleted.value(), "two");
+		this.jdbc.sql("insert into source_fetch_slots (source_id, next_fetch_at) values (:source, now())")
+			.param("source", deleted.value())
+			.update();
+		this.jdbc.sql("update sources set enabled = true where id = :id").param("id", deleted.value()).update();
+
+		this.administration.deleteSource(deleted);
+
+		assertThat(count("select count(*) from sources where id = :id", deleted.value())).isZero();
+		assertThat(count("select count(*) from feeds where source_id = :id", deleted.value())).isZero();
+		assertThat(this.rows.hasPollState(one)).isFalse();
+		assertThat(this.rows.hasPollState(two)).isFalse();
+		assertThat(count("select count(*) from source_fetch_slots where source_id = :id", deleted.value())).isZero();
+		assertThat(count("select count(*) from source_attributions where source_id = :id", deleted.value())).isZero();
+		assertThat(this.rows.feeds(kept.value())).containsExactly("all:false");
+		assertThat(this.rows.recordedName(kept.value())).contains("솔로뉴스");
+		assertThat(this.events.stream(SourceDeleted.class)).containsExactly(new SourceDeleted(deleted));
+		assertThat(output)
+			.contains("운영자가 소스를 지웠다 — 소스 " + deleted.value() + " 프리셋 multi 피드 [" + one + ", " + two + "]");
+		assertThatExceptionOfType(UnknownSourceException.class)
+			.isThrownBy(() -> this.administration.enableSource(deleted));
+	}
+
+	@Test
+	void aDeletedPresetIsRegisteredAgainAsANewSource() {
+		SourceId deleted = registered(this.administration.registerPreset("multi"));
+		this.administration.deleteSource(deleted);
+
+		SourceId again = registered(this.administration.registerPreset("multi"));
+
+		assertThat(again).isNotEqualTo(deleted);
+		assertThat(this.administration.presets()).extracting(PresetView::key, PresetView::sourceId,
+				PresetView::sourceHidden)
+			.containsExactly(tuple("multi", again, false), tuple("solo", null, false));
+	}
+
+	@Test
+	void aHiddenSourceIsDeletedFromTheHiddenList() {
+		SourceId source = registered(this.administration.registerPreset("multi"));
+		this.administration.hideSource(source);
+
+		this.administration.deleteSource(source);
+
+		assertThat(this.administration.hiddenSources()).isEmpty();
+		assertThat(this.events.stream(SourceDeleted.class)).containsExactly(new SourceDeleted(source));
+	}
+
+	@Test
+	void deletingAFeedMissingFromTheProfileRemovesItsRowsAndPublishesTheEvent(CapturedOutput output) {
+		SourceId source = registered(this.administration.registerPreset("multi"));
+		long typo = this.rows.insertFeed(source.value(), "typo");
+		this.rows.insertPollState(typo);
+		long hidden = this.rows.insertFeed(source.value(), "hidden");
+		this.rows.insertPollState(hidden);
+		this.administration.hideFeed(new FeedId(hidden));
+		this.jdbc.sql("update feeds set enabled = true where id = :id").param("id", typo).update();
+
+		assertThat(this.administration.deleteFeed(new FeedId(typo))).isEqualTo(new FeedRemovalResult.Removed());
+		assertThat(this.administration.deleteFeed(new FeedId(hidden))).isEqualTo(new FeedRemovalResult.Removed());
+
+		assertThat(this.rows.feeds(source.value())).containsExactly("one:false", "two:false");
+		assertThat(this.rows.hasPollState(typo)).isFalse();
+		assertThat(this.rows.hasPollState(hidden)).isFalse();
+		assertThat(this.events.stream(FeedDeleted.class)).containsExactly(new FeedDeleted(source, new FeedId(typo)),
+				new FeedDeleted(source, new FeedId(hidden)));
+		assertThat(output).contains("운영자가 피드를 지웠다 — 소스 " + source.value() + " 프리셋 multi 피드 " + typo);
+	}
+
+	@Test
+	void aFeedOfTheProfileOrOfASourceWithoutAProfileOrOfAHiddenSourceIsNotDeleted() {
+		SourceId source = registered(this.administration.registerPreset("multi"));
+		FeedId one = new FeedId(this.rows.feedId(source.value(), "one"));
+		SourceId hiddenSource = registered(this.administration.registerOperatorProfile(OPERATOR_TEXT));
+		long stray = this.rows.insertFeed(hiddenSource.value(), "stray");
+		this.rows.insertPollState(stray);
+		this.administration.hideSource(hiddenSource);
+		long vanished = this.jdbc
+			.sql("insert into sources (preset_key, enabled, version, created_at) values ('vanished', false, 0, now()) "
+					+ "returning id")
+			.query(Long.class)
+			.single();
+		long lost = this.rows.insertFeed(vanished, "lost");
+		this.rows.insertPollState(lost);
+
+		assertThat(this.administration.deleteFeed(one))
+			.isEqualTo(new FeedRemovalResult.Refused(FeedRemovalRefusal.IN_PROFILE));
+		assertThat(this.administration.deleteFeed(new FeedId(lost)))
+			.isEqualTo(new FeedRemovalResult.Refused(FeedRemovalRefusal.PROFILE_UNAVAILABLE));
+		assertThat(this.rows.hasPollState(lost)).isTrue();
+		assertThatExceptionOfType(UnknownFeedException.class)
+			.isThrownBy(() -> this.administration.deleteFeed(new FeedId(stray)));
+		assertThat(this.rows.feeds(source.value())).containsExactly("one:false", "two:false");
+		assertThat(this.rows.feeds(hiddenSource.value())).containsExactly("main:false", "stray:false");
+		assertThat(this.events.stream(FeedDeleted.class)).isEmpty();
+	}
+
+	@Test
 	void unknownIdsAreReportedAsUnknown() {
 		assertThatExceptionOfType(UnknownSourceException.class)
 			.isThrownBy(() -> this.administration.hideSource(new SourceId(999_999)));
@@ -228,6 +337,14 @@ class SourceRemovalTests {
 			.isThrownBy(() -> this.administration.hideFeed(new FeedId(999_999)));
 		assertThatExceptionOfType(UnknownFeedException.class)
 			.isThrownBy(() -> this.administration.unhideFeed(new FeedId(999_999)));
+		assertThatExceptionOfType(UnknownSourceException.class)
+			.isThrownBy(() -> this.administration.deleteSource(new SourceId(999_999)));
+		assertThatExceptionOfType(UnknownFeedException.class)
+			.isThrownBy(() -> this.administration.deleteFeed(new FeedId(999_999)));
+	}
+
+	private long count(String sql, long id) {
+		return this.jdbc.sql(sql).param("id", id).query(Long.class).single();
 	}
 
 	private @Nullable Object hiddenAt(String table, long id) {

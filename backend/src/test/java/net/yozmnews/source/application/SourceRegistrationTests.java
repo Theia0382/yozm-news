@@ -19,6 +19,7 @@ import net.yozmnews.source.domain.registry.Feed;
 import net.yozmnews.source.domain.attribution.SourceAttributionRepository;
 import net.yozmnews.source.domain.registry.FeedRepository;
 import net.yozmnews.source.domain.registry.ProfileResolver;
+import net.yozmnews.source.domain.registry.Source;
 import net.yozmnews.source.domain.registry.SourceRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -310,6 +311,31 @@ class SourceRegistrationTests {
 		assertThat(output).contains("프리셋이 사라졌다 — 소스 " + shownVanished + " 의")
 			.doesNotContain("프리셋이 사라졌다 — 소스 " + hiddenVanished + " 의")
 			.doesNotContain("프로필에서 빠진 피드 — 소스 " + hidden + " 피드");
+	}
+
+	@Test
+	void reconciliationSkipsASourceDeletedAfterTheListWasReadAndGoesOn(CapturedOutput output) {
+		long deleted = registered(this.registration.registerPreset(new PresetKey("multi")));
+		long next = this.jdbc
+			.sql("insert into sources (preset_key, enabled, version, created_at) values ('solo', false, 0, now()) "
+					+ "returning id")
+			.query(Long.class)
+			.single();
+		// 대조가 소스 목록을 읽은 뒤 다른 쪽이 첫 소스를 지운 것처럼 한다
+		SourceRepository deleting = mock(SourceRepository.class, delegatesTo(this.sourceRepository));
+		doAnswer(invocation -> {
+			Iterable<Source> all = this.sourceRepository.findAll();
+			this.rows.deleteSource(deleted);
+			return all;
+		}).when(deleting).findAll();
+
+		new PresetFeedReconciliation(deleting, this.feedRepository, this.resolver, this.provisioner, this.attributions,
+				this.transaction)
+			.reconcile();
+
+		assertThat(this.rows.feeds(next)).containsExactly("all:false");
+		assertThat(this.rows.count("sources")).isEqualTo(1);
+		assertThat(output).contains("기동 대조 사이 지워진 소스를 건너뛴다 — 소스 " + deleted);
 	}
 
 	@Test

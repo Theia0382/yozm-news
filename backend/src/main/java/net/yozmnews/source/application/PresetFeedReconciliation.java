@@ -96,6 +96,11 @@ class PresetFeedReconciliation {
 	}
 
 	private void reconcile(Source source, ProfileResolution.Resolved resolved) {
+		// 목록을 읽은 뒤 지워진 소스는 건너뛴다 — 공유 잠금이 삭제와 줄을 세우고, 지워졌으면 행이 없다
+		if (this.sources.lockForKeyShare(source.id().value()).isEmpty()) {
+			logger.info("기동 대조 사이 지워진 소스를 건너뛴다 — 소스 {}", source.id().value());
+			return;
+		}
 		List<Feed> stored = this.feeds.findAllBySourceId(source.id().value());
 		FeedReconciliation reconciliation = FeedReconciliation.compare(resolved.profile(), stored);
 		Instant now = this.clock.instant();
