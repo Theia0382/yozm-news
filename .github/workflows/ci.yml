@@ -136,6 +136,14 @@ jobs:
         run: docker compose -f deploy/compose.yaml up -d --no-build --wait
       - name: Smoke
         run: bash deploy/smoke.sh
+      # 운영자 토큰을 넣은 구성 — app 만 토큰과 함께 다시 띄워 같은 스모크를 돌린다(K13 의 토큰 갈래). docs/development/infrastructure.md "CI"
+      - name: Restart app with an operator token
+        env:
+          # CI 에서만 쓰는 일회성 값이고 비밀 값이 아니다 — job env 에 두면 첫 Start 부터 토큰이 들어가 토큰 없는 갈래를 돌리지 않는다
+          YOZMNEWS_ADMIN_TOKEN: ci-smoke-only-operator-token-0123456789
+        run: docker compose -f deploy/compose.yaml up -d --no-build --wait app
+      - name: Smoke (operator token)
+        run: bash deploy/smoke.sh
       - name: Logs
         if: failure()
         run: docker compose -f deploy/compose.yaml logs --no-color
