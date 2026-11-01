@@ -5,6 +5,8 @@ import java.util.List;
 
 import net.yozmnews.article.ArticleAdministration;
 import net.yozmnews.article.EntryStatistics;
+import net.yozmnews.source.FeedId;
+import net.yozmnews.source.SourceId;
 import org.jspecify.annotations.Nullable;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
@@ -16,10 +18,13 @@ class FakeArticleAdministration implements ArticleAdministration {
 
 	@Nullable EntryStatistics statistics;
 
+	long exclusiveArticles;
+
 	final List<String> calls = new ArrayList<>();
 
 	void reset() {
 		this.statistics = null;
+		this.exclusiveArticles = 0;
 		this.calls.clear();
 	}
 
@@ -30,6 +35,18 @@ class FakeArticleAdministration implements ArticleAdministration {
 			throw new IllegalStateException("시험이 결과를 정하지 않았다");
 		}
 		return this.statistics;
+	}
+
+	@Override
+	public long exclusiveArticleCount(SourceId sourceId) {
+		this.calls.add("exclusiveArticleCount " + sourceId.value());
+		return this.exclusiveArticles;
+	}
+
+	@Override
+	public long exclusiveArticleCount(SourceId sourceId, FeedId feedId) {
+		this.calls.add("exclusiveArticleCount " + sourceId.value() + " " + feedId.value());
+		return this.exclusiveArticles;
 	}
 
 	/** 운영자 API 슬라이스에 대역을 싣는다 */

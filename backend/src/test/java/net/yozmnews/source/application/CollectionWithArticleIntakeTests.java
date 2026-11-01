@@ -22,6 +22,8 @@ import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import com.zaxxer.hikari.HikariDataSource;
 import com.zaxxer.hikari.HikariPoolMXBean;
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.source.SourceAdministration;
+import net.yozmnews.source.SourceId;
 import net.yozmnews.source.adapter.in.job.PollDueFeedsJob;
 import org.jobrunr.scheduling.JobScheduler;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,7 +44,7 @@ import org.springframework.test.context.TestPropertySource;
  * 수집과 기사 저장을 함께 돌린 연결 수요 — 실제 작업 서버 · 실제 article 리스너 · 기본 연결 풀로 한 회차에 200건을 받는다. 한 소스 ·
  * 한 피드에 새 항목이 리스너 수보다 많은 경우를 넣는다(같은 소스의 리스너는 소스 단위 잠금 앞에 줄을 서고, 기다리는 동안 연결을
  * 잡는다). 모든 항목이 기사로 저장되고 남은 발행이 없고 연결 대기 시간 초과가 없어야 한다. 연결 대기 스레드 수의 최댓값은 기록으로
- * 남긴다 — 단언하지 않는다.
+ * 남긴다 — 단언하지 않는다. 운영자가 소스를 지우면 그 소스가 받은 기사가 기사 쪽 리스너로 지워지는지도 모듈을 건너 본다.
  */
 @Import({ TestcontainersConfiguration.class, RegistryTestCatalog.class })
 @SpringBootTest
@@ -62,6 +64,9 @@ class CollectionWithArticleIntakeTests {
 
 	@Autowired
 	SourceOperations operations;
+
+	@Autowired
+	SourceAdministration administration;
 
 	@Autowired
 	PollDueFeedsJob pollDueFeedsJob;
@@ -140,6 +145,35 @@ class CollectionWithArticleIntakeTests {
 
 		assertThat(output).contains("수집 · 기사 저장 연결 측정");
 		assertThat(output).doesNotContain("SQLTransientConnectionException");
+	}
+
+	@Test
+	void deletingASourceRemovesTheArticlesItCollectedAndLeavesTheOthers() {
+		server.stubFor(get("/deleted.xml").willReturn(TestFeeds.rss("d1", "d2")));
+		server.stubFor(get("/kept.xml").willReturn(TestFeeds.rss("k1")));
+		long deletedFeed = this.feeds.source("/deleted.xml").getFirst();
+		long keptFeed = this.feeds.source("/kept.xml").getFirst();
+		long deletedSource = this.jdbc.sql("select source_id from feeds where id = :id")
+			.param("id", deletedFeed)
+			.query(Long.class)
+			.single();
+		this.pollDueFeedsJob.run();
+		await().atMost(Duration.ofSeconds(30))
+			.until(() -> count("select count(*) from article_feed_entries where feed_id in (:ids)",
+					List.of(deletedFeed, keptFeed)) == 3 && publications() == 0);
+
+		this.administration.deleteSource(new SourceId(deletedSource));
+
+		await().atMost(Duration.ofSeconds(30))
+			.until(() -> count("select count(*) from article_feed_entries where feed_id in (:ids)",
+					List.of(deletedFeed)) == 0 && publications() == 0);
+		assertThat(this.jdbc.sql("select count(*) from articles").query(Integer.class).single()).isEqualTo(1);
+		assertThat(count("select count(*) from article_feed_entries where feed_id in (:ids)", List.of(keptFeed)))
+			.isEqualTo(1);
+	}
+
+	private int publications() {
+		return this.jdbc.sql("select count(*) from event_publication").query(Integer.class).single();
 	}
 
 	private int count(String sql, List<Long> ids) {

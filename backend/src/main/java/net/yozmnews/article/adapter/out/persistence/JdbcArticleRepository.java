@@ -7,6 +7,7 @@ import java.sql.Types;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -20,6 +21,7 @@ import net.yozmnews.article.domain.MatchCandidates.GuidCandidate;
 import net.yozmnews.article.domain.MatchCandidates.TitleCandidate;
 import net.yozmnews.article.domain.MatchKind;
 import net.yozmnews.article.domain.TimeRange;
+import net.yozmnews.source.FeedId;
 import net.yozmnews.source.FetchedArticle;
 import net.yozmnews.source.SourceId;
 import org.jspecify.annotations.Nullable;
@@ -117,6 +119,64 @@ class JdbcArticleRepository implements ArticleRepository {
 			.param("seenAt", timestamp(item.fetchedAt()))
 			.update();
 		return inserted == 1;
+	}
+
+	@Override
+	public List<ArticleId> deleteEntries(SourceId sourceId) {
+		return this.jdbc.sql("delete from article_feed_entries where source_id = :sourceId returning article_id")
+			.param("sourceId", sourceId.value())
+			.query(Long.class)
+			.list()
+			.stream()
+			.map(ArticleId::new)
+			.toList();
+	}
+
+	@Override
+	public List<ArticleId> deleteEntries(SourceId sourceId, FeedId feedId) {
+		return this.jdbc.sql("""
+				delete from article_feed_entries where source_id = :sourceId and feed_id = :feedId
+				returning article_id
+				""")
+			.param("sourceId", sourceId.value())
+			.param("feedId", feedId.value())
+			.query(Long.class)
+			.list()
+			.stream()
+			.map(ArticleId::new)
+			.toList();
+	}
+
+	@Override
+	public int deleteArticlesWithoutEntries(Collection<ArticleId> articleIds) {
+		if (articleIds.isEmpty()) {
+			return 0;
+		}
+		Long[] ids = articleIds.stream().map(ArticleId::value).distinct().toArray(Long[]::new);
+		return this.jdbc.sql("""
+				delete from articles a where a.id = any(:ids)
+				    and not exists (select 1 from article_feed_entries e where e.article_id = a.id)
+				""").param("ids", ids).update();
+	}
+
+	@Override
+	public long countArticlesOnlyIn(SourceId sourceId) {
+		return this.jdbc.sql("""
+				select count(distinct e.article_id) from article_feed_entries e
+				where e.source_id = :sourceId
+				    and not exists (select 1 from article_feed_entries o
+				        where o.article_id = e.article_id and o.source_id <> :sourceId)
+				""").param("sourceId", sourceId.value()).query(Long.class).single();
+	}
+
+	@Override
+	public long countArticlesOnlyIn(SourceId sourceId, FeedId feedId) {
+		return this.jdbc.sql("""
+				select count(*) from article_feed_entries e
+				where e.source_id = :sourceId and e.feed_id = :feedId
+				    and not exists (select 1 from article_feed_entries o
+				        where o.article_id = e.article_id and o.feed_id <> :feedId)
+				""").param("sourceId", sourceId.value()).param("feedId", feedId.value()).query(Long.class).single();
 	}
 
 	private @Nullable ArticleId findByEntryUrl(KeyHash urlHash) {
