@@ -2,6 +2,7 @@ package net.yozmnews.source.adapter.in.job;
 
 import net.yozmnews.platform.WorkerRole;
 import net.yozmnews.source.application.FeedHealthCheck;
+import net.yozmnews.source.domain.poll.FeedStatusRule;
 import org.jobrunr.jobs.annotations.Job;
 import org.jobrunr.jobs.annotations.Recurring;
 import org.springframework.stereotype.Component;
@@ -23,7 +24,7 @@ public class FeedHealthCheckJob {
 		this.check = check;
 	}
 
-	@Recurring(id = ID, interval = "PT1H")
+	@Recurring(id = ID, interval = FeedStatusRule.RECHECK_INTERVAL)
 	@Job(name = "피드 건강 검사", retries = 0)
 	public void run() {
 		this.check.run();

@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.List;
 
 import net.yozmnews.source.FeedId;
+import net.yozmnews.source.FeedStatus;
 
 /** 피드 건강 검사만 쓰는 피드 상태 저장소 — docs/specs/source.md §4 · source-R47 · source-R48 */
 public interface FeedStatusRepository {

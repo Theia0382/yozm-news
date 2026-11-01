@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter } from "react-router";
 import { RouterProvider } from "react-router/dom";
@@ -108,5 +108,18 @@ describe("AdminLayout", () => {
     renderAdmin(checksToken);
 
     expect(await screen.findByText("운영자 본문")).toBeInTheDocument();
+  });
+
+  it("열린 화면의 머리줄에 운영자 메뉴가 있고 지금 화면을 표시한다", async () => {
+    sessionStorage.setItem(STORAGE_KEY, TOKEN);
+    renderAdmin(checksToken);
+
+    const menu = await screen.findByRole("navigation", { name: "운영자 메뉴" });
+    const sources = within(menu).getByRole("link", { name: "소스 · 피드" });
+    const collection = within(menu).getByRole("link", { name: "수집 현황" });
+    expect(sources).toHaveAttribute("href", "/admin");
+    expect(sources).toHaveAttribute("aria-current", "page");
+    expect(collection).toHaveAttribute("href", "/admin/collection");
+    expect(collection).not.toHaveAttribute("aria-current");
   });
 });

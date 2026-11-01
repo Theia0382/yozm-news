@@ -23,6 +23,13 @@ export const routes: RouteObject[] = [
             }),
           },
           {
+            path: "collection",
+            lazy: async () => ({
+              Component: (await import("@/features/admin/CollectionPage"))
+                .CollectionPage,
+            }),
+          },
+          {
             path: "sources/new",
             lazy: async () => ({
               Component: (await import("@/features/admin/ProfileEditorPage"))

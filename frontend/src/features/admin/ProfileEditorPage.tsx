@@ -5,6 +5,7 @@ import { failureText, unwrap } from "@/features/admin/adminClient";
 import { ADMIN_QUERY_KEY, useAdminClient } from "@/features/admin/adminSession";
 import { ProfileProblems, PreviewResultView } from "@/features/admin/results";
 import { Button } from "@/shared/ui/button";
+import { NARROW_WIDTH } from "@/shared/ui/widths";
 
 /**
  * 운영자 프로필 원문 편집 — /admin/sources/new 는 새로 등록하고, /admin/sources/:id/profile 은 등록된 원문을 고친다. 항목별 폼은
@@ -27,18 +28,20 @@ export function ProfileEditorPage() {
     enabled: sourceId !== null,
   });
 
-  if (sourceId !== null && current.isPending) {
-    return <p className="text-muted-foreground">원문을 읽는 중…</p>;
-  }
-  if (sourceId !== null && current.error) {
-    return <p role="alert">{failureText(current.error)}</p>;
-  }
   return (
-    <ProfileEditor
-      key={sourceId ?? "new"}
-      sourceId={sourceId}
-      initial={current.data?.profile ?? ""}
-    />
+    <div className={NARROW_WIDTH}>
+      {sourceId !== null && current.isPending ? (
+        <p className="text-muted-foreground">원문을 읽는 중…</p>
+      ) : sourceId !== null && current.error ? (
+        <p role="alert">{failureText(current.error)}</p>
+      ) : (
+        <ProfileEditor
+          key={sourceId ?? "new"}
+          sourceId={sourceId}
+          initial={current.data?.profile ?? ""}
+        />
+      )}
+    </div>
   );
 }
 

@@ -8,6 +8,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import net.yozmnews.source.FeedId;
+import net.yozmnews.source.FeedStatus;
 import net.yozmnews.source.FetchFailureReason;
 import net.yozmnews.source.domain.fetch.FetchFailure;
 import net.yozmnews.source.domain.fetch.FetchResult;

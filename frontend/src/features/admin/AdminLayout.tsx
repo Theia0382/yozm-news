@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { type FormEvent, useMemo, useState } from "react";
-import { Link, Outlet } from "react-router";
+import { type FormEvent, type ReactNode, useMemo, useState } from "react";
+import { cn } from "cn";
+import { Link, NavLink, Outlet } from "react-router";
 import {
   ADMIN_CLOSED,
   AdminApiError,
@@ -18,6 +19,7 @@ import {
   saveAdminToken,
 } from "@/features/admin/adminToken";
 import { Button } from "@/shared/ui/button";
+import { NARROW_WIDTH, PAGE_FRAME, WIDE_WIDTH } from "@/shared/ui/widths";
 
 type AdminLayoutProps = {
   /** 시험이 가짜 서버 주소 · fetch 를 넣는다 — 화면에서는 같은 오리진의 상대 경로다 */
@@ -72,7 +74,11 @@ export function AdminLayout({ baseUrl, fetch }: AdminLayoutProps) {
   }
 
   if (probe.isPending) {
-    return <p className="text-muted-foreground">운영자 기능을 확인하는 중…</p>;
+    return (
+      <NarrowFrame>
+        <p className="text-muted-foreground">운영자 기능을 확인하는 중…</p>
+      </NarrowFrame>
+    );
   }
   if (probe.error) {
     const error = probe.error;
@@ -82,35 +88,53 @@ export function AdminLayout({ baseUrl, fetch }: AdminLayoutProps) {
       error.problem?.type === ADMIN_CLOSED
     ) {
       return (
-        <section className="space-y-3">
-          <h1 className="text-2xl font-bold">운영자 기능이 닫혀 있습니다</h1>
-          <p>
-            이 인스턴스는 운영자 토큰을 설정하지 않았습니다. 서버에{" "}
-            <code>YOZMNEWS_ADMIN_TOKEN</code>을 설정하고 다시 띄우면 열립니다.
-          </p>
-        </section>
+        <NarrowFrame>
+          <section className="space-y-3">
+            <h1 className="text-2xl font-bold">운영자 기능이 닫혀 있습니다</h1>
+            <p>
+              이 인스턴스는 운영자 토큰을 설정하지 않았습니다. 서버에{" "}
+              <code>YOZMNEWS_ADMIN_TOKEN</code>을 설정하고 다시 띄우면 열립니다.
+            </p>
+          </section>
+        </NarrowFrame>
       );
     }
     if (error instanceof AdminApiError && error.status === 401) {
-      return <TokenForm notice={notice} onSubmit={open} />;
+      return (
+        <NarrowFrame>
+          <TokenForm notice={notice} onSubmit={open} />
+        </NarrowFrame>
+      );
     }
     return (
-      <section className="space-y-3">
-        <p role="alert">{failureText(error)}</p>
-        <Button variant="outline" onClick={() => probe.refetch()}>
-          다시 시도
-        </Button>
-      </section>
+      <NarrowFrame>
+        <section className="space-y-3">
+          <p role="alert">{failureText(error)}</p>
+          <Button variant="outline" onClick={() => probe.refetch()}>
+            다시 시도
+          </Button>
+        </section>
+      </NarrowFrame>
     );
   }
 
   return (
     <AdminSessionContext.Provider value={client}>
-      <div className="space-y-6">
-        <header className="flex items-center justify-between gap-3">
-          <Link to="/admin" className="text-2xl font-bold">
-            운영자
-          </Link>
+      <div className={cn(PAGE_FRAME, WIDE_WIDTH, "space-y-6")}>
+        <header className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-6">
+            <Link to="/admin" className="text-2xl font-bold">
+              운영자
+            </Link>
+            <nav aria-label="운영자 메뉴" className="flex gap-4">
+              <NavLink to="/admin" end className={navLinkClass}>
+                소스 · 피드
+              </NavLink>
+              <NavLink to="/admin/collection" className={navLinkClass}>
+                수집 현황
+              </NavLink>
+            </nav>
+          </div>
           <Button variant="outline" onClick={lock}>
             잠금
           </Button>
@@ -119,6 +143,16 @@ export function AdminLayout({ baseUrl, fetch }: AdminLayoutProps) {
       </div>
     </AdminSessionContext.Provider>
   );
+}
+
+/** 운영자 틀의 안내 화면(확인 중 · 닫힘 · 토큰 입력 · 오류)의 그릇 — 첫 화면과 같은 가운데 · 읽기 폭 */
+function NarrowFrame({ children }: { children: ReactNode }) {
+  return <div className={cn(PAGE_FRAME, NARROW_WIDTH)}>{children}</div>;
+}
+
+/** 지금 화면의 메뉴는 굵게 밑줄 — NavLink 가 aria-current 도 단다 */
+function navLinkClass({ isActive }: { isActive: boolean }): string {
+  return isActive ? "font-semibold underline" : "text-muted-foreground";
 }
 
 function TokenForm({

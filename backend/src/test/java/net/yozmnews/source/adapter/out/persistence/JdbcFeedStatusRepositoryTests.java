@@ -14,9 +14,9 @@ import java.util.concurrent.TimeUnit;
 
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.source.FeedId;
+import net.yozmnews.source.FeedStatus;
 import net.yozmnews.source.domain.fetch.FetchState;
 import net.yozmnews.source.domain.poll.FeedPollState;
-import net.yozmnews.source.domain.poll.FeedStatus;
 import net.yozmnews.source.domain.poll.FeedStatusTarget;
 import net.yozmnews.source.domain.poll.Lease;
 import org.junit.jupiter.api.Test;

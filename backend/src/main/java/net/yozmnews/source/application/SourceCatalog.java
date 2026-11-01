@@ -6,12 +6,16 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import net.yozmnews.source.FeedHealthView;
 import net.yozmnews.source.FeedView;
+import net.yozmnews.source.LastFailureView;
 import net.yozmnews.source.PresetView;
 import net.yozmnews.source.ProfileState;
 import net.yozmnews.source.SourceId;
 import net.yozmnews.source.SourceView;
 import net.yozmnews.source.UnknownSourceException;
+import net.yozmnews.source.domain.poll.FeedPollState;
+import net.yozmnews.source.domain.poll.LastError;
 import net.yozmnews.source.domain.profile.CollectionProfile;
 import net.yozmnews.source.domain.profile.FeedKey;
 import net.yozmnews.source.domain.profile.PollInterval;
@@ -23,6 +27,7 @@ import net.yozmnews.source.domain.registry.ProfileResolution;
 import net.yozmnews.source.domain.registry.ProfileResolver;
 import net.yozmnews.source.domain.registry.SourceListingRepository;
 import net.yozmnews.source.domain.registry.SourceListingRepository.FeedRow;
+import net.yozmnews.source.domain.registry.SourceListingRepository.PollRow;
 import net.yozmnews.source.domain.registry.SourceListingRepository.SourceRow;
 import net.yozmnews.source.domain.registry.SourceRepository;
 import org.jspecify.annotations.Nullable;
@@ -31,7 +36,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 운영자 목록 — 프리셋 · 소스 · 피드의 운영 설정과 그 프로필에서 얻은 정보. docs/specs/source.md §4.
+ * 운영자 목록 — 프리셋 · 소스 · 피드의 운영 설정, 그 프로필에서 얻은 정보, 피드의 수집 상태. docs/specs/source.md §4.
  * <p>
  * 행은 읽기 트랜잭션 하나에서 읽고, 소스마다 지금의 프로필을 얻어 가리킬 곳을 잃었는지와 실제 주기를 판정한다(source-R8 · source-R14).
  */
@@ -124,11 +129,27 @@ class SourceCatalog {
 				PollInterval effective = ready.interval(new PollIntervalSettings(interval(sourcePollIntervalMinutes),
 						interval(feed.pollIntervalMinutes())));
 				yield new FeedView(feed.id(), feed.feedKey(), feed.enabled(), feed.pollIntervalMinutes(), true,
-						ready.feed().url(), ready.feed().section(), Math.toIntExact(effective.value().toMinutes()));
+						ready.feed().url(), ready.feed().section(), Math.toIntExact(effective.value().toMinutes()),
+						health(feed));
 			}
 			case PollTarget.Unavailable unavailable -> new FeedView(feed.id(), feed.feedKey(), feed.enabled(),
-					feed.pollIntervalMinutes(), false, null, null, null);
+					feed.pollIntervalMinutes(), false, null, null, null, health(feed));
 		};
+	}
+
+	/** 수집 상태 — 행이 없으면 등록 · 기동 대조의 불변식(source-R3)이 깨진 것이라 조용히 넘기지 않는다 */
+	private static FeedHealthView health(FeedRow feed) {
+		PollRow poll = feed.poll();
+		if (poll == null) {
+			throw new IllegalStateException("피드에 수집 상태 행이 없다: " + feed.id().value());
+		}
+		FeedPollState state = poll.state();
+		LastError error = state.lastError();
+		LastFailureView lastFailure = (error != null) ? new LastFailureView(error.reason(),
+				error.reason().permanence(), error.message(), error.httpStatus(), error.at()) : null;
+		return new FeedHealthView(poll.status(), poll.statusChangedAt(), state.lastSuccessAt(),
+				state.consecutiveFailures(), state.consecutivePermanentFailures(), lastFailure, state.lastNewItemAt(),
+				state.latestPublishedAt());
 	}
 
 	private static @Nullable PollInterval interval(@Nullable Integer minutes) {

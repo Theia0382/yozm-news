@@ -17,7 +17,9 @@ import java.util.Optional;
 import net.yozmnews.platform.application.WebSliceSecurity;
 import net.yozmnews.source.ActivationRefusal;
 import net.yozmnews.source.FailurePermanence;
+import net.yozmnews.source.FeedHealthView;
 import net.yozmnews.source.FeedId;
+import net.yozmnews.source.FeedStatus;
 import net.yozmnews.source.FeedView;
 import net.yozmnews.source.FetchFailureReason;
 import net.yozmnews.source.FetchFailureView;
@@ -56,6 +58,10 @@ class AdminSourceControllerTests {
 			{"path":"feeds[0].url","code":"INVALID_URL","message":"http · https 절대 URL 이 아니다","line":7,"column":10}
 			""";
 
+	/** 소스 목록 응답은 수집 상태를 싣지 않는다 — 값은 응답과 무관하다 */
+	private static final FeedHealthView NEVER_COLLECTED = new FeedHealthView(FeedStatus.ACTIVE, null, null, 0, 0, null,
+			null, null);
+
 	@Autowired
 	MockMvc mockMvc;
 
@@ -73,8 +79,9 @@ class AdminSourceControllerTests {
 				new SourceView(new SourceId(3), "multi", true, 30, ProfileState.AVAILABLE, "멀티일보",
 						URI.create("https://multi.example"), LocalDate.parse("2026-10-20"),
 						List.of(new FeedView(new FeedId(11), "one", true, null, true,
-								URI.create("https://multi.example/rss/one.xml"), "하나", 30),
-								new FeedView(new FeedId(12), "gone", false, 45, false, null, null, null))),
+								URI.create("https://multi.example/rss/one.xml"), "하나", 30, NEVER_COLLECTED),
+								new FeedView(new FeedId(12), "gone", false, 45, false, null, null, null,
+										NEVER_COLLECTED))),
 				new SourceView(new SourceId(4), null, false, null, ProfileState.INVALID, null, null, null, List.of()));
 
 		this.mockMvc.perform(authorized(get("/api/admin/sources")))

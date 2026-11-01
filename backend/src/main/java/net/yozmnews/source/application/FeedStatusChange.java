@@ -3,8 +3,8 @@ package net.yozmnews.source.application;
 import java.time.Instant;
 import java.util.Objects;
 
+import net.yozmnews.source.FeedStatus;
 import net.yozmnews.source.domain.poll.FeedPollState;
-import net.yozmnews.source.domain.poll.FeedStatus;
 
 /**
  * 피드 건강 검사가 바꾼 피드 하나.
