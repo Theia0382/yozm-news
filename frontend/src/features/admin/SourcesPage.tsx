@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 import { Link } from "react-router";
+import { cn } from "cn";
 import {
   failureText,
   type Schemas,
@@ -10,6 +11,7 @@ import { ADMIN_QUERY_KEY, useAdminClient } from "@/features/admin/adminSession";
 import { profileStateLabels, refusalLabels } from "@/features/admin/labels";
 import { FeedEnableResultView } from "@/features/admin/results";
 import { Button } from "@/shared/ui/button";
+import { NARROW_WIDTH } from "@/shared/ui/widths";
 
 type PresetResponse = Schemas["PresetResponse"];
 type SourceResponse = Schemas["SourceResponse"];
@@ -31,7 +33,7 @@ export function SourcesPage() {
   });
 
   return (
-    <div className="space-y-8">
+    <div className={cn(NARROW_WIDTH, "space-y-8")}>
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">프리셋</h2>
         {presets.error && <p role="alert">{failureText(presets.error)}</p>}

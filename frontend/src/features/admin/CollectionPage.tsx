@@ -1,12 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
+import { cn } from "cn";
 import {
   failureText,
   type Schemas,
   unwrap,
 } from "@/features/admin/adminClient";
 import { ADMIN_QUERY_KEY, useAdminClient } from "@/features/admin/adminSession";
-import { BucketStrip } from "@/features/admin/BucketStrip";
+import { BucketStrip, RateSwatch } from "@/features/admin/BucketStrip";
 import {
   failureReasonLabels,
   feedStatusLabels,
@@ -17,6 +18,7 @@ import {
   formatHours,
   formatMinutes,
   formatRate,
+  RATE_LEVEL_LEGEND,
 } from "@/features/admin/metrics";
 import { formatDateTime } from "@/shared/lib/dateTime";
 
@@ -110,6 +112,27 @@ function Definitions({ status }: { status: CollectionStatus }) {
         상태는 {formatMinutes(criteria.recheckIntervalMinutes)}마다 다시
         판정한다. 소스나 피드가 꺼진 피드는 마지막 상태가 그대로 남는다.
       </p>
+      <BucketLegend />
+    </section>
+  );
+}
+
+/** 칸 줄 범례 — 두 줄의 뜻과 진하기 단계의 견본 */
+function BucketLegend() {
+  return (
+    <section aria-label="칸 줄 범례" className="space-y-1">
+      <p>
+        칸별 지표: 윗줄(중복)은 중복률, 아랫줄(추정)은 날짜 추정 비율이다. 칸을
+        누르거나 마우스를 올리면 그 구간의 기간 · 개수를 연다.
+      </p>
+      <ul className="flex flex-wrap gap-x-4 gap-y-1">
+        {RATE_LEVEL_LEGEND.map(({ level, label }) => (
+          <li key={label} className="flex items-center gap-1">
+            <RateSwatch level={level} />
+            {label}
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }
@@ -133,8 +156,8 @@ function SourceSection({ source }: { source: SourceCollection }) {
         </p>
       )}
       <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead className="text-muted-foreground">
+        <table className="w-full min-w-6xl text-left text-sm break-keep [&_td]:px-2 [&_td]:py-1 [&_th]:px-2 [&_th]:py-1">
+          <thead className="text-muted-foreground [&_th]:whitespace-nowrap">
             <tr>
               <th scope="col">피드</th>
               <th scope="col">켜짐</th>
@@ -144,12 +167,22 @@ function SourceSection({ source }: { source: SourceCollection }) {
               <th scope="col">마지막 실패</th>
               <th scope="col">마지막 새 항목</th>
               <th scope="col">새 항목의 가장 늦은 발행</th>
-              <th scope="col">엔트리</th>
-              <th scope="col">중복률</th>
-              <th scope="col">날짜 추정 비율</th>
-              <th scope="col">제목 판정 비율</th>
-              <th scope="col">guid 재사용</th>
-              <th scope="col">칸별 중복률 · 날짜 추정 비율</th>
+              <th scope="col" className="text-right">
+                엔트리
+              </th>
+              <th scope="col" className="text-right">
+                중복률
+              </th>
+              <th scope="col" className="text-right">
+                날짜 추정 비율
+              </th>
+              <th scope="col" className="text-right">
+                제목 판정 비율
+              </th>
+              <th scope="col" className="text-right">
+                guid 재사용
+              </th>
+              <th scope="col">칸별 지표</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border align-top">
@@ -194,7 +227,7 @@ function FeedRow({
           </span>
         )}
       </th>
-      <td>
+      <td className="whitespace-nowrap">
         {feed.enabled ? (sourceEnabled ? "켜짐" : "소스 꺼짐") : "꺼짐"}
         {!feed.inProfile && (
           <span className="block text-xs text-destructive">프로필에 없음</span>
@@ -202,11 +235,10 @@ function FeedRow({
       </td>
       <td>
         <span
-          className={
-            feed.status === "ACTIVE"
-              ? undefined
-              : "font-medium text-destructive"
-          }
+          className={cn(
+            "whitespace-nowrap",
+            feed.status !== "ACTIVE" && "font-medium text-destructive",
+          )}
         >
           {feedStatusLabels[feed.status]}
         </span>
@@ -217,11 +249,11 @@ function FeedRow({
         </span>
       </td>
       <td>{time(feed.lastSuccessAt)}</td>
-      <td>
+      <td className="whitespace-nowrap">
         {feed.consecutiveFailures}회 (영구 {feed.consecutivePermanentFailures}
         회)
       </td>
-      <td>
+      <td className="min-w-48">
         <LastFailureCell failure={feed.lastFailure} />
       </td>
       <td>{time(feed.lastNewItemAt)}</td>
@@ -230,6 +262,9 @@ function FeedRow({
     </tr>
   );
 }
+
+/** 수 · 비율 칸 — 줄바꿈 없이 오른쪽 정렬, 고른 숫자 폭 */
+const NUMBER_CELL = "text-right whitespace-nowrap tabular-nums";
 
 /** 엔트리 수 · 비율 셋 · guid 재사용 · 칸 줄 둘 */
 function MetricCells({
@@ -243,19 +278,21 @@ function MetricCells({
 }) {
   return (
     <>
-      <td>{total.entries}</td>
-      <td>{formatRate(total.duplicateRate)}</td>
-      <td>{formatRate(total.estimatedRate)}</td>
-      <td>{formatRate(total.titleMatchRate)}</td>
-      <td>{total.guidReuses}</td>
+      <td className={NUMBER_CELL}>{total.entries}</td>
+      <td className={NUMBER_CELL}>{formatRate(total.duplicateRate)}</td>
+      <td className={NUMBER_CELL}>{formatRate(total.estimatedRate)}</td>
+      <td className={NUMBER_CELL}>{formatRate(total.titleMatchRate)}</td>
+      <td className={NUMBER_CELL}>{total.guidReuses}</td>
       <td className="space-y-1">
         <BucketStrip
           label={`${label} 중복률`}
+          name="중복"
           buckets={buckets}
           rate={(metrics) => metrics.duplicateRate}
         />
         <BucketStrip
           label={`${label} 날짜 추정 비율`}
+          name="추정"
           buckets={buckets}
           rate={(metrics) => metrics.estimatedRate}
         />

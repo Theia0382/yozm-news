@@ -3,6 +3,7 @@ import {
   formatHours,
   formatMinutes,
   formatRate,
+  RATE_LEVEL_LEGEND,
   rateLevel,
 } from "@/features/admin/metrics";
 
@@ -31,6 +32,19 @@ describe("rateLevel", () => {
     expect(rateLevel(0.75)).toBe(3);
     expect(rateLevel(0.7501)).toBe(4);
     expect(rateLevel(1)).toBe(4);
+  });
+});
+
+describe("RATE_LEVEL_LEGEND", () => {
+  it("단계마다 구간 경계에서 만든 문구를 순서대로 둔다", () => {
+    expect(RATE_LEVEL_LEGEND).toEqual([
+      { level: "none", label: "엔트리 없음" },
+      { level: 0, label: "0%" },
+      { level: 1, label: "25% 이하" },
+      { level: 2, label: "50% 이하" },
+      { level: 3, label: "75% 이하" },
+      { level: 4, label: "75% 초과" },
+    ]);
   });
 });
 

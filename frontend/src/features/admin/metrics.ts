@@ -5,10 +5,13 @@ export function formatRate(rate: number | null): string {
   return rate === null ? "없음" : `${(rate * 100).toFixed(1)}%`;
 }
 
-/** 칸 색의 단계 — "none" 은 엔트리가 없는 칸, 0 은 0%, 1 ~ 4 는 25% 씩 올라가는 구간(위 끝 포함) */
+/** 칸 색의 단계 — "none" 은 엔트리가 없는 칸, 0 은 0%, 1 ~ 4 는 구간 경계로 나눈 단계 */
 export type RateLevel = "none" | 0 | 1 | 2 | 3 | 4;
 
-/** 비율의 칸 색 단계 — 0% · ~25% · ~50% · ~75% · 그 위. 좋고 나쁨이 아니라 크기만 나타낸다 */
+/** 구간 경계의 정본 — 1 ~ 3 단계의 위 끝(포함). 그 위는 4 단계. 칸 색과 범례가 함께 쓴다 */
+export const RATE_LEVEL_BOUNDS = [0.25, 0.5, 0.75] as const;
+
+/** 비율의 칸 색 단계 — 좋고 나쁨이 아니라 크기만 나타낸다 */
 export function rateLevel(rate: number | null): RateLevel {
   if (rate === null) {
     return "none";
@@ -16,17 +19,33 @@ export function rateLevel(rate: number | null): RateLevel {
   if (rate <= 0) {
     return 0;
   }
-  if (rate <= 0.25) {
+  const [first, second, third] = RATE_LEVEL_BOUNDS;
+  if (rate <= first) {
     return 1;
   }
-  if (rate <= 0.5) {
+  if (rate <= second) {
     return 2;
   }
-  if (rate <= 0.75) {
+  if (rate <= third) {
     return 3;
   }
   return 4;
 }
+
+function percent(bound: number): string {
+  return `${Math.round(bound * 100)}%`;
+}
+
+/** 범례 — 단계마다 문구. 문구는 구간 경계에서 만든다 */
+export const RATE_LEVEL_LEGEND: readonly { level: RateLevel; label: string }[] =
+  [
+    { level: "none", label: "엔트리 없음" },
+    { level: 0, label: "0%" },
+    { level: 1, label: `${percent(RATE_LEVEL_BOUNDS[0])} 이하` },
+    { level: 2, label: `${percent(RATE_LEVEL_BOUNDS[1])} 이하` },
+    { level: 3, label: `${percent(RATE_LEVEL_BOUNDS[2])} 이하` },
+    { level: 4, label: `${percent(RATE_LEVEL_BOUNDS[2])} 초과` },
+  ];
 
 /** 단계마다 한 가지 색의 진하기 — 엔트리가 없는 칸은 빗금 */
 export const RATE_LEVEL_CLASSES = {

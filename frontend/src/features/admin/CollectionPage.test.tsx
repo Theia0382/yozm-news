@@ -302,7 +302,7 @@ describe("CollectionPage", () => {
     const detail = await screen.findByRole("dialog");
     expect(detail).toHaveTextContent(FIRST_PERIOD);
     expect(detail).toHaveTextContent("엔트리12건");
-    expect(detail).toHaveTextContent("중복9건 (그중 제목 판정 3건)");
+    expect(detail).toHaveTextContent("중복9건 (URL 5건 · 제목 판정 3건)");
     expect(detail).toHaveTextContent("날짜 추정6건");
     expect(detail).toHaveTextContent("guid 재사용1건");
     expect(detail).toHaveTextContent("중복률75.0%");
@@ -323,6 +323,46 @@ describe("CollectionPage", () => {
     const detail = await screen.findByRole("dialog");
     expect(detail).toHaveTextContent("엔트리0건");
     expect(detail).toHaveTextContent("중복률없음");
+  });
+
+  it("칸 줄 범례에 두 줄의 뜻과 진하기 견본 여섯을 보이고, 칸 줄 앞에 짧은 이름을 붙인다", async () => {
+    renderPage();
+
+    const legend = await screen.findByRole("region", { name: "칸 줄 범례" });
+    expect(legend).toHaveTextContent(
+      "윗줄(중복)은 중복률, 아랫줄(추정)은 날짜 추정 비율이다",
+    );
+    const items = within(legend).getAllByRole("listitem");
+    expect(items.map((item) => item.textContent)).toEqual([
+      "엔트리 없음",
+      "0%",
+      "25% 이하",
+      "50% 이하",
+      "75% 이하",
+      "75% 초과",
+    ]);
+    const swatches = items.map((item) =>
+      item.querySelector('[aria-hidden="true"]'),
+    );
+    expect(swatches.filter((swatch) => swatch !== null)).toHaveLength(6);
+    const strips = within(row("하나"));
+    // 견본은 같은 단계의 칸과 색이 같고 이웃 단계와는 다르다 — 첫 칸의 중복률 75.0% 는 "75% 이하"
+    const colours = (element: Element | null | undefined) =>
+      [...(element?.classList ?? [])].filter((name) =>
+        /^(bg|border)-/.test(name),
+      );
+    const cell = strips.getByRole("button", {
+      name: `하나 중복률 ${FIRST_PERIOD}: 75.0%`,
+    });
+    expect(colours(cell)).not.toEqual([]);
+    expect(colours(swatches[4])).toEqual(colours(cell));
+    expect(colours(swatches[3])).not.toEqual(colours(cell));
+    expect(
+      strips.getByRole("group", { name: "하나 중복률" }),
+    ).toHaveTextContent(/^중복/);
+    expect(
+      strips.getByRole("group", { name: "하나 날짜 추정 비율" }),
+    ).toHaveTextContent(/^추정/);
   });
 
   it("조회가 실패하면 그 이유를 알린다", async () => {
