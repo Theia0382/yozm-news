@@ -10,7 +10,8 @@ import org.jspecify.annotations.Nullable;
 /**
  * 등록된 소스 하나의 운영 설정과 프로필 정보 — docs/specs/source.md §3.
  * <p>
- * 프로필을 얻지 못하면 {@code name} · {@code homepage} · {@code termsReviewedAt} 은 null 이다.
+ * {@code name} 은 프로필의 소스 이름이고, 프로필을 얻지 못하면 기록된 출처 이름이다(기록이 없으면 null). 프로필을 얻지 못하면
+ * {@code homepage} · {@code termsReviewedAt} 은 null 이다.
  */
 public record SourceView(SourceId id, @Nullable String presetKey, boolean enabled,
 		@Nullable Integer pollIntervalMinutes, ProfileState profileState, @Nullable String name,

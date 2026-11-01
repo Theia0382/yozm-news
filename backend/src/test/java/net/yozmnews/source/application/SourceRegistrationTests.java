@@ -159,6 +159,43 @@ class SourceRegistrationTests {
 	}
 
 	@Test
+	void registeringRecordsTheProfileNameAsTheAttribution() {
+		long preset = registered(this.registration.registerPreset(new PresetKey("multi")));
+		long operator = registered(this.registration.registerOperatorProfile(OPERATOR_TEXT));
+
+		assertThat(this.rows.recordedName(preset)).contains("멀티일보");
+		assertThat(this.rows.recordedName(operator)).contains("운영자일보");
+	}
+
+	@Test
+	void revisionRecordsTheNameOfTheNewText() {
+		long source = registered(this.registration.registerOperatorProfile(OPERATOR_TEXT));
+
+		this.registration.reviseOperatorProfile(new SourceId(source), OPERATOR_TEXT.replace("운영자일보", "운영자신문"));
+
+		assertThat(this.rows.recordedName(source)).contains("운영자신문");
+	}
+
+	@Test
+	void reconciliationRecordsTheNameOfASourceWhoseProfileItGets() {
+		long recorded = this.jdbc
+			.sql("insert into sources (preset_key, enabled, version, created_at) values ('multi', false, 0, now()) "
+					+ "returning id")
+			.query(Long.class)
+			.single();
+		long vanished = this.jdbc
+			.sql("insert into sources (preset_key, enabled, version, created_at) values ('vanished', false, 0, now()) "
+					+ "returning id")
+			.query(Long.class)
+			.single();
+
+		this.reconciliation.reconcile();
+
+		assertThat(this.rows.recordedName(recorded)).contains("멀티일보");
+		assertThat(this.rows.recordedName(vanished)).isEmpty();
+	}
+
+	@Test
 	void reconciliationWarnsAboutAPresetThatIsGone(CapturedOutput output) {
 		this.jdbc.sql("insert into sources (preset_key, enabled, version, created_at) values ('vanished', true, 0, now())")
 			.update();

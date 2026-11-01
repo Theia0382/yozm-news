@@ -5,6 +5,7 @@ import java.time.InstantSource;
 import java.util.List;
 
 import net.yozmnews.platform.WorkerRole;
+import net.yozmnews.source.domain.attribution.SourceAttributionRepository;
 import net.yozmnews.source.domain.profile.FeedKey;
 import net.yozmnews.source.domain.registry.Feed;
 import net.yozmnews.source.domain.registry.FeedReconciliation;
@@ -22,7 +23,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 기동 대조 — docs/specs/source.md §4 · source-R8
+ * 기동 대조 — docs/specs/source.md §4 · source-R8.
+ * <p>
+ * 프로필을 얻은 소스는 같은 트랜잭션에서 프로필의 소스 이름을 출처 이름으로 기록한다 — 이미 있던 소스의 기록도 여기서 채워진다.
  */
 @WorkerRole
 @Component
@@ -38,22 +41,26 @@ class PresetFeedReconciliation {
 
 	private final FeedProvisioner provisioner;
 
+	private final SourceAttributionRepository attributions;
+
 	private final TransactionTemplate transaction;
 
 	private final InstantSource clock;
 
 	@Autowired
 	PresetFeedReconciliation(SourceRepository sources, FeedRepository feeds, ProfileResolver resolver,
-			FeedProvisioner provisioner, TransactionTemplate transaction) {
-		this(sources, feeds, resolver, provisioner, transaction, InstantSource.system());
+			FeedProvisioner provisioner, SourceAttributionRepository attributions, TransactionTemplate transaction) {
+		this(sources, feeds, resolver, provisioner, attributions, transaction, InstantSource.system());
 	}
 
 	PresetFeedReconciliation(SourceRepository sources, FeedRepository feeds, ProfileResolver resolver,
-			FeedProvisioner provisioner, TransactionTemplate transaction, InstantSource clock) {
+			FeedProvisioner provisioner, SourceAttributionRepository attributions, TransactionTemplate transaction,
+			InstantSource clock) {
 		this.sources = sources;
 		this.feeds = feeds;
 		this.resolver = resolver;
 		this.provisioner = provisioner;
+		this.attributions = attributions;
 		this.transaction = transaction;
 		this.clock = clock;
 	}
@@ -76,6 +83,7 @@ class PresetFeedReconciliation {
 		List<FeedKey> stored = this.feeds.findAllBySourceId(source.id().value()).stream().map(Feed::feedKey).toList();
 		FeedReconciliation reconciliation = FeedReconciliation.compare(resolved.profile(), stored);
 		Instant now = this.clock.instant();
+		this.attributions.record(source.id(), resolved.profile().source().name(), now);
 		for (FeedKey key : reconciliation.missing()) {
 			this.provisioner.provision(source.id(), key, now);
 			logger.info("프로필에 새로 생긴 피드를 꺼진 채로 더했다 — 소스 {} 피드 {}", source.id().value(), key);

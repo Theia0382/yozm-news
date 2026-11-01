@@ -1,6 +1,7 @@
 package net.yozmnews.source.application;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.jdbc.core.simple.JdbcClient;
 
@@ -17,6 +18,7 @@ final class RegistryRows {
 		this.jdbc.sql("delete from source_fetch_slots").update();
 		this.jdbc.sql("delete from feed_poll_states").update();
 		this.jdbc.sql("delete from feeds").update();
+		this.jdbc.sql("delete from source_attributions").update();
 		this.jdbc.sql("delete from sources").update();
 	}
 
@@ -49,6 +51,14 @@ final class RegistryRows {
 				insert into feeds (source_id, feed_key, enabled, version, created_at)
 				values (:source, :key, false, 0, now()) returning id
 				""").param("source", source).param("key", key).query(Long.class).single();
+	}
+
+	/** 기록된 출처 이름 — 기록이 없으면 비어 있다 */
+	Optional<String> recordedName(long source) {
+		return this.jdbc.sql("select name from source_attributions where source_id = :source")
+			.param("source", source)
+			.query(String.class)
+			.optional();
 	}
 
 	/** 아직 수집하지 않은 피드의 수집 상태 행 — 등록 · 기동 대조가 만드는 첫 행과 같은 값이다 */

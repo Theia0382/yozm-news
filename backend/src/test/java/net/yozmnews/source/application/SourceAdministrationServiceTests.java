@@ -187,6 +187,9 @@ class SourceAdministrationServiceTests {
 			.single();
 		long feed = this.rows.insertFeed(vanished, "lost");
 		this.rows.insertPollState(feed);
+		this.jdbc.sql("insert into source_attributions (source_id, name, recorded_at) values (:source, '사라진일보', now())")
+			.param("source", vanished)
+			.update();
 		long invalid = this.jdbc
 			.sql("insert into sources (profile, enabled, version, created_at) values ('source:\n  name: 이름만\n', false, 0, "
 					+ "now()) returning id")
@@ -194,12 +197,23 @@ class SourceAdministrationServiceTests {
 			.single();
 
 		assertThat(this.administration.sources()).containsExactly(
-				new SourceView(new SourceId(vanished), "vanished", true, null, ProfileState.PRESET_MISSING, null, null,
-						null,
+				new SourceView(new SourceId(vanished), "vanished", true, null, ProfileState.PRESET_MISSING, "사라진일보",
+						null, null,
 						List.of(new FeedView(new FeedId(feed), "lost", false, null, false, null, null, null,
 								NEVER_COLLECTED))),
 				new SourceView(new SourceId(invalid), null, false, null, ProfileState.INVALID, null, null, null,
 						List.of()));
+	}
+
+	@Test
+	void aSourceWhoseProfileResolvesShowsTheProfileNameOverAnOlderRecord() {
+		// 프리셋 이름이 바뀐 배포 직후처럼 기록이 아직 옛 이름이다
+		SourceId solo = registered(this.administration.registerPreset("solo"));
+		assertThat(this.jdbc.sql("update source_attributions set name = '옛솔로뉴스' where source_id = :source")
+			.param("source", solo.value())
+			.update()).isEqualTo(1);
+
+		assertThat(this.administration.sources()).extracting(SourceView::name).containsExactly("솔로뉴스");
 	}
 
 	@Test

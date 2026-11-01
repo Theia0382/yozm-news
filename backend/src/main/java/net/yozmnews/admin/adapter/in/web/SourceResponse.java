@@ -12,7 +12,8 @@ import org.jspecify.annotations.Nullable;
 /**
  * 등록된 소스 하나 — docs/specs/admin.md §3.
  * <p>
- * 프로필을 얻지 못하면({@code profileState} 가 {@code AVAILABLE} 이 아님) 이름 · 홈페이지 · 검토일은 null 이다.
+ * 프로필을 얻지 못하면({@code profileState} 가 {@code AVAILABLE} 이 아님) 이름은 기록된 출처 이름(없으면 null)이고, 홈페이지 ·
+ * 검토일은 null 이다.
  */
 record SourceResponse(long id, @Nullable String presetKey, boolean enabled, @Nullable Integer pollIntervalMinutes,
 		ProfileState profileState, @Nullable String name, @Nullable URI homepage, @Nullable LocalDate termsReviewedAt,

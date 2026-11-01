@@ -14,6 +14,7 @@ import net.yozmnews.source.ProfileState;
 import net.yozmnews.source.SourceId;
 import net.yozmnews.source.SourceView;
 import net.yozmnews.source.UnknownSourceException;
+import net.yozmnews.source.domain.attribution.SourceAttributionRepository;
 import net.yozmnews.source.domain.poll.FeedPollState;
 import net.yozmnews.source.domain.poll.LastError;
 import net.yozmnews.source.domain.profile.CollectionProfile;
@@ -51,14 +52,17 @@ class SourceCatalog {
 
 	private final ProfileResolver resolver;
 
+	private final SourceAttributionRepository attributions;
+
 	private final TransactionTemplate readOnly;
 
 	SourceCatalog(PresetCatalog catalog, SourceListingRepository listing, SourceRepository sources,
-			ProfileResolver resolver, PlatformTransactionManager transactions) {
+			ProfileResolver resolver, SourceAttributionRepository attributions, PlatformTransactionManager transactions) {
 		this.catalog = catalog;
 		this.listing = listing;
 		this.sources = sources;
 		this.resolver = resolver;
+		this.attributions = attributions;
 		this.readOnly = new TransactionTemplate(transactions);
 		this.readOnly.setReadOnly(true);
 	}
@@ -80,9 +84,10 @@ class SourceCatalog {
 			Map<SourceId, List<FeedRow>> feeds = this.listing.findAllFeeds()
 				.stream()
 				.collect(Collectors.groupingBy(FeedRow::sourceId));
+			Map<SourceId, String> recordedNames = this.attributions.findAll();
 			return this.listing.findAllSources()
 				.stream()
-				.map(row -> sourceView(row, feeds.getOrDefault(row.id(), List.of())))
+				.map(row -> sourceView(row, feeds.getOrDefault(row.id(), List.of()), recordedNames.get(row.id())))
 				.toList();
 		});
 	}
@@ -100,7 +105,8 @@ class SourceCatalog {
 				preset.termsReviewedAt(), profile.feeds().size(), sourceId);
 	}
 
-	private SourceView sourceView(SourceRow row, List<FeedRow> feeds) {
+	/** 이름은 프로필의 소스 이름 — 프로필을 얻지 못하면 기록된 출처 이름(없으면 null) */
+	private SourceView sourceView(SourceRow row, List<FeedRow> feeds, @Nullable String recordedName) {
 		ProfileResolution resolution = this.resolver.resolve(row);
 		@Nullable CollectionProfile profile = switch (resolution) {
 			case ProfileResolution.Resolved resolved -> resolved.profile();
@@ -117,7 +123,7 @@ class SourceCatalog {
 			.map(feed -> feedView(feed, resolution, row.pollIntervalMinutes()))
 			.toList();
 		return new SourceView(row.id(), row.presetKey(), row.enabled(), row.pollIntervalMinutes(), state,
-				(profile != null) ? profile.source().name() : null,
+				(profile != null) ? profile.source().name() : recordedName,
 				(profile != null) ? profile.source().homepage() : null,
 				(profile != null) ? profile.termsReviewedAt().orElse(null) : null, feedViews);
 	}
