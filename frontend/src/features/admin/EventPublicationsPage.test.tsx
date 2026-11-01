@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter } from "react-router";
 import { RouterProvider } from "react-router/dom";
@@ -50,7 +50,7 @@ const EMPTY: Listing = { total: 0, limit: 500, publications: [] };
 
 function renderPage(
   handlers: Record<string, Handler> = {},
-): ReturnType<typeof fakeServer> {
+): ReturnType<typeof fakeServer> & { queryClient: QueryClient } {
   const server = fakeServer({
     "GET /api/admin/event-publications": () => json(LISTING),
     ...handlers,
@@ -63,18 +63,17 @@ function renderPage(
   const router = createMemoryRouter([
     { path: "/", element: <EventPublicationsPage /> },
   ]);
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
   render(
-    <QueryClientProvider
-      client={
-        new QueryClient({ defaultOptions: { queries: { retry: false } } })
-      }
-    >
+    <QueryClientProvider client={queryClient}>
       <AdminSessionContext.Provider value={client}>
         <RouterProvider router={router} />
       </AdminSessionContext.Provider>
     </QueryClientProvider>,
   );
-  return server;
+  return Object.assign(server, { queryClient });
 }
 
 function requestsTo(server: ReturnType<typeof fakeServer>, key: string) {
@@ -107,7 +106,7 @@ describe("EventPublicationsPage", () => {
       .closest("tr");
     const other = within(unreadable as HTMLElement);
     expect(
-      other.getByText("이벤트 종류를 찾을 수 없음 — 폐기만 가능"),
+      other.getByText("이벤트를 읽을 수 없음 — 폐기만 가능"),
     ).toBeInTheDocument();
     expect(other.getByText("없음")).toBeInTheDocument();
   });
@@ -152,7 +151,7 @@ describe("EventPublicationsPage", () => {
     await user.click(screen.getByRole("button", { name: "다시 처리" }));
 
     expect(await screen.findByRole("status")).toHaveTextContent(
-      "다시 처리 결과: 다시 처리함 1건 · 이벤트 종류를 찾을 수 없어 다시 처리하지 못함 — 폐기만 가능 1건 — 처리는 뒤에서 이어지므로 잠시 뒤 새로고침해 확인합니다",
+      "다시 처리 결과: 다시 처리함 1건 · 이벤트를 읽을 수 없어 다시 처리하지 못함 — 폐기만 가능 1건 — 처리는 뒤에서 이어지므로 잠시 뒤 새로고침해 확인합니다",
     );
     const posted = requestsTo(
       server,
@@ -237,6 +236,55 @@ describe("EventPublicationsPage", () => {
     expect(
       requestsTo(server, "GET /api/admin/event-publications"),
     ).toHaveLength(2);
+  });
+
+  it("폐기 대화상자는 연 때의 대상을 지킨다 — 열린 동안 목록이 바뀌어도 제목과 보내는 ID 가 그대로다", async () => {
+    const user = userEvent.setup();
+    const server = renderPage({
+      "POST /api/admin/event-publications/discard": () =>
+        json({
+          results: [
+            { id: EXHAUSTED_ID, result: "DISCARDED" },
+            { id: UNREADABLE_ID, result: "NOT_FOUND" },
+          ],
+        }),
+    });
+
+    await user.click(
+      await screen.findByRole("checkbox", { name: "모두 고르기" }),
+    );
+    await user.click(screen.getByRole("button", { name: "폐기" }));
+    expect(await screen.findByRole("alertdialog")).toHaveTextContent(
+      "발행 2건을 폐기할까요?",
+    );
+
+    // 대화상자가 열린 동안 한 건이 사라진 목록으로 다시 읽는다
+    server.handlers["GET /api/admin/event-publications"] = () =>
+      json({ ...LISTING, total: 1, publications: [LISTING.publications[0]] });
+    await server.queryClient.invalidateQueries();
+    await waitFor(() =>
+      expect(
+        requestsTo(server, "GET /api/admin/event-publications"),
+      ).toHaveLength(2),
+    );
+    await waitFor(() =>
+      expect(screen.queryByText("net.yozmnews.source.RenamedEvent")).toBeNull(),
+    );
+
+    const dialog = screen.getByRole("alertdialog");
+    expect(dialog).toHaveTextContent("발행 2건을 폐기할까요?");
+    await user.click(within(dialog).getByRole("button", { name: "폐기" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "폐기 결과: 폐기함 1건 · 이미 없음(완료됐거나 폐기됨) 1건",
+    );
+    const posted = requestsTo(
+      server,
+      "POST /api/admin/event-publications/discard",
+    );
+    expect(JSON.parse(posted[0]?.body ?? "")).toEqual({
+      ids: [EXHAUSTED_ID, UNREADABLE_ID],
+    });
   });
 
   it("조작이 거절되면 서버의 설명을 알리고, 다음 조작이 성공하면 그 거절을 지운다", async () => {

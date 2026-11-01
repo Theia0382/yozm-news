@@ -58,8 +58,8 @@ function Explanation() {
     <section aria-label="남겨진 발행의 뜻" className="space-y-1 text-sm">
       <p>
         모듈 사이 이벤트 가운데 재처리가 더 이상 다루지 않는 발행입니다 — 처리
-        시도가 상한에 이른 실패 발행과, 이벤트 종류를 찾을 수 없어 재처리가 읽지
-        못하는 발행.
+        시도가 상한에 이른 실패 발행과, 이벤트를 읽을 수 없어(이벤트 종류가
+        없거나 내용이 그 종류로 읽히지 않음) 재처리가 다루지 못하는 발행.
       </p>
       <p>
         다시 처리는 고른 발행을 지금 한 번 다시 보냅니다(처리 시도가 1 늡니다).
@@ -87,6 +87,8 @@ function ListingView({
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [confirming, setConfirming] = useState(false);
+  // 폐기 대화상자의 대상 — 열 때 고정해, 열린 동안 · 닫히는 동안 목록 · 선택이 바뀌어도 제목과 보내는 ID 가 그대로다
+  const [discardTarget, setDiscardTarget] = useState<string[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
 
   const refresh = () =>
@@ -171,7 +173,10 @@ function ListingView({
         <Button
           variant="destructive"
           disabled={chosen.length === 0 || pending}
-          onClick={() => setConfirming(true)}
+          onClick={() => {
+            setDiscardTarget(chosen);
+            setConfirming(true);
+          }}
         >
           {discard.isPending ? "폐기하는 중…" : "폐기"}
         </Button>
@@ -207,7 +212,7 @@ function ListingView({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              발행 {chosen.length}건을 폐기할까요?
+              발행 {discardTarget.length}건을 폐기할까요?
             </AlertDialogTitle>
             <AlertDialogDescription>
               지운 발행은 되돌릴 수 없고, 그 이벤트는 다시 처리되지 않습니다.
@@ -220,7 +225,7 @@ function ListingView({
               onClick={() => {
                 setConfirming(false);
                 clearOutcome();
-                discard.mutate(chosen);
+                discard.mutate(discardTarget);
               }}
             >
               폐기

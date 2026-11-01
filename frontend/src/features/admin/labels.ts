@@ -88,13 +88,13 @@ export const feedStatusLabels = {
 
 export const strandedReasonLabels = {
   EXHAUSTED: "처리 시도 상한에 이름",
-  UNREADABLE: "이벤트 종류를 찾을 수 없음 — 폐기만 가능",
+  UNREADABLE: "이벤트를 읽을 수 없음 — 폐기만 가능",
 } as const satisfies Record<StrandedReason, string>;
 
 export const resubmissionOutcomeLabels = {
   RESUBMITTED: "다시 처리함",
   NOT_EXHAUSTED: "상한에 이른 발행이 아님(상한 미만 · 처리 중 · 그사이 바뀜)",
-  UNREADABLE: "이벤트 종류를 찾을 수 없어 다시 처리하지 못함 — 폐기만 가능",
+  UNREADABLE: "이벤트를 읽을 수 없어 다시 처리하지 못함 — 폐기만 가능",
   NOT_FOUND: "이미 없음(완료됐거나 폐기됨)",
 } as const satisfies Record<ResubmissionOutcome, string>;
 
