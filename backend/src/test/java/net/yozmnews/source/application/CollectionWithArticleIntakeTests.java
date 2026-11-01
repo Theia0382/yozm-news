@@ -125,7 +125,7 @@ class CollectionWithArticleIntakeTests {
 			this.pollDueFeedsJob.run();
 			await().atMost(Duration.ofSeconds(120))
 				.pollInterval(Duration.ofMillis(200))
-				.until(() -> count("select count(*) from articles where source_id in (:ids)", sourceIds) == 200
+				.until(() -> count("select count(distinct article_id) from article_feed_entries where source_id in (:ids)", sourceIds) == 200
 						&& count("select count(*) from article_feed_entries where feed_id in (:ids)", feedIds) == 200
 						&& this.jdbc.sql("select count(*) from event_publication").query(Integer.class).single() == 0);
 		}

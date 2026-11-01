@@ -80,13 +80,12 @@ class JdbcArticleRepositoryTests {
 
 		assertThat(inserted).isTrue();
 		Map<String, Object> article = this.jdbc.sql("""
-				select source_id, canonical_url, encode(url_hash, 'hex') as url_hash, title,
+				select canonical_url, encode(url_hash, 'hex') as url_hash, title,
 				    encode(title_key_hash, 'hex') as title_key_hash, summary_text, author, published_at,
 				    published_at_estimated, image_url, first_seen_at
 				from articles where id = :id
 				""").param("id", id.value()).query().singleRow();
-		assertThat(article).containsEntry("source_id", 3L)
-			.containsEntry("canonical_url", "https://a.example/news/1")
+		assertThat(article).containsEntry("canonical_url", "https://a.example/news/1")
 			.containsEntry("url_hash", "0255a70a6060ad42610393d88c1de21f1f51cf6e6540fba7e8a5b1df21bd487f")
 			.containsEntry("title", "국회 본회의 통과")
 			.containsEntry("title_key_hash", "a681129ed8417ef41f715b6f89634823bc1c4934b3e82f0c0ff71ad0b09fd70f")
@@ -98,7 +97,8 @@ class JdbcArticleRepositoryTests {
 		assertThat(instant(article.get("first_seen_at"))).isEqualTo(Instant.parse("2026-10-28T01:00:00Z"));
 
 		Map<String, Object> entry = entryRow(id, FEED);
-		assertThat(entry).containsEntry("item_url_hash",
+		assertThat(entry).containsEntry("source_id", 3L)
+			.containsEntry("item_url_hash",
 				"0255a70a6060ad42610393d88c1de21f1f51cf6e6540fba7e8a5b1df21bd487f")
 			.containsEntry("guid", "g-1")
 			.containsEntry("guid_hash", "b9817549cc546b0ee549a42a97b94811ed862005f8c17409217cc58128d8f630")
@@ -253,6 +253,22 @@ class JdbcArticleRepositoryTests {
 	}
 
 	@Test
+	void findsTitleCandidatesOfArticlesThisSourceHasAnEntryFor() {
+		// 소스 4 의 피드 7 이 먼저 저장하고 이 소스(3)의 피드 6 이 같은 URL 로 붙은 기사는 후보다. 소스 4 만 가진 기사는 아니다
+		ArticleId shared = store(item(new SourceId(4), new FeedId(7), "https://a.example/news/1", null, TITLE,
+				PUBLISHED_AT, FETCHED_AT, List.of()), MatchKind.NEW);
+		this.repository.insertEntryIfAbsent(shared, item(SOURCE, OTHER_FEED, "https://a.example/news/1", null, TITLE,
+				PUBLISHED_AT, FETCHED_AT, List.of()), MatchKind.URL);
+		store(item(new SourceId(4), new FeedId(7), "https://a.example/news/2", null, TITLE, PUBLISHED_AT, FETCHED_AT,
+				List.of()), MatchKind.NEW);
+
+		MatchCandidates candidates = this.repository.findCandidates(item(SOURCE, FEED, "https://a.example/news/9",
+				null, TITLE, PUBLISHED_AT, FETCHED_AT, List.of()));
+
+		assertThat(candidates.byTitle()).containsExactly(new TitleCandidate(shared, PUBLISHED_AT, false));
+	}
+
+	@Test
 	void doesNotLookUpTitleCandidatesForAnEmptyKey() {
 		store(item(SOURCE, OTHER_FEED, "https://a.example/news/1", null, "\u00A0", PUBLISHED_AT, FETCHED_AT,
 				List.of()), MatchKind.NEW);
@@ -293,7 +309,7 @@ class JdbcArticleRepositoryTests {
 
 	private Map<String, Object> entryRow(ArticleId articleId, FeedId feedId) {
 		return this.jdbc.sql("""
-				select encode(item_url_hash, 'hex') as item_url_hash, guid, encode(guid_hash, 'hex') as guid_hash,
+				select source_id, encode(item_url_hash, 'hex') as item_url_hash, guid, encode(guid_hash, 'hex') as guid_hash,
 				    feed_categories::text as feed_categories, published_at_estimated, match_kind, seen_at
 				from article_feed_entries where article_id = :articleId and feed_id = :feedId
 				""").param("articleId", articleId.value()).param("feedId", feedId.value()).query().singleRow();

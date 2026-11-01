@@ -53,9 +53,9 @@ class ArticleAdministrationServiceTests {
 
 	@Test
 	void countsTheEntriesOfTheSevenDaysBeforeNowPerFeedAndBucket() {
-		this.rows.entry(this.rows.article(1), 7, "NEW", true, null, Instant.parse("2026-10-31T20:00:00Z"));
-		this.rows.entry(this.rows.article(1), 7, "URL", false, null, Instant.parse("2026-10-31T21:00:00Z"));
-		this.rows.entry(this.rows.article(1), 7, "TITLE", true, null, Instant.parse("2026-10-25T03:00:00Z"));
+		this.rows.entry(this.rows.article(), 1, 7, "NEW", true, null, Instant.parse("2026-10-31T20:00:00Z"));
+		this.rows.entry(this.rows.article(), 1, 7, "URL", false, null, Instant.parse("2026-10-31T21:00:00Z"));
+		this.rows.entry(this.rows.article(), 1, 7, "TITLE", true, null, Instant.parse("2026-10-25T03:00:00Z"));
 		ArticleAdministrationService service = new ArticleAdministrationService(this.repository,
 				InstantSource.fixed(Instant.parse("2026-11-01T03:00:00Z")));
 

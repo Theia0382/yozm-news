@@ -63,14 +63,13 @@ class JdbcArticleRepository implements ArticleRepository {
 		FetchedArticle article = item.article();
 		URI thumbnail = article.thumbnail();
 		return this.jdbc.sql("""
-				insert into articles (source_id, canonical_url, url_hash, title, title_key_hash, summary_text, author,
+				insert into articles (canonical_url, url_hash, title, title_key_hash, summary_text, author,
 				    published_at, published_at_estimated, image_url, first_seen_at)
-				values (:sourceId, :canonicalUrl, :urlHash, :title, :titleKeyHash, :summary, :author,
+				values (:canonicalUrl, :urlHash, :title, :titleKeyHash, :summary, :author,
 				    :publishedAt, :publishedAtEstimated, :imageUrl, :firstSeenAt)
 				on conflict (url_hash) do nothing
 				returning id
 				""")
-			.param("sourceId", item.sourceId().value())
 			.param("canonicalUrl", item.canonicalUrl().value())
 			.param("urlHash", item.canonicalUrl().hash().bytes())
 			.param("title", article.title())
@@ -100,14 +99,15 @@ class JdbcArticleRepository implements ArticleRepository {
 		FetchedArticle article = item.article();
 		KeyHash guidHash = item.guidHash();
 		int inserted = this.jdbc.sql("""
-				insert into article_feed_entries (article_id, feed_id, item_url_hash, guid, guid_hash, feed_categories,
-				    published_at_estimated, match_kind, seen_at)
-				values (:articleId, :feedId, :itemUrlHash, :guid, :guidHash, :categories,
-				    :publishedAtEstimated, :matchKind, :seenAt)
+				insert into article_feed_entries (article_id, feed_id, source_id, item_url_hash, guid, guid_hash,
+				    feed_categories, published_at_estimated, match_kind, seen_at)
+				values (:articleId, :feedId, :sourceId, :itemUrlHash, :guid, :guidHash,
+				    :categories, :publishedAtEstimated, :matchKind, :seenAt)
 				on conflict (article_id, feed_id) do nothing
 				""")
 			.param("articleId", articleId.value())
 			.param("feedId", item.feedId().value())
+			.param("sourceId", item.sourceId().value())
 			.param("itemUrlHash", item.canonicalUrl().hash().bytes())
 			.param("guid", article.guid(), Types.VARCHAR)
 			.param("guidHash", (guidHash != null) ? guidHash.bytes() : null, Types.BINARY)
@@ -153,8 +153,9 @@ class JdbcArticleRepository implements ArticleRepository {
 				    exists (select 1 from article_feed_entries e where e.article_id = a.id and e.feed_id = :feedId)
 				        as seen_in_feed
 				from articles a
-				where a.source_id = :sourceId and a.title_key_hash = :titleKeyHash
+				where a.title_key_hash = :titleKeyHash
 				    and a.published_at between :from and :to
+				    and exists (select 1 from article_feed_entries s where s.article_id = a.id and s.source_id = :sourceId)
 				""")
 			.param("feedId", item.feedId().value())
 			.param("sourceId", item.sourceId().value())

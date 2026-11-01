@@ -4,6 +4,7 @@ import static net.yozmnews.article.Fetched.item;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Instant;
+import java.util.List;
 
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleRows.Entry;
@@ -140,6 +141,43 @@ class ArticleIntakeTests {
 		assertThat(this.rows.articleIds()).containsExactly(id);
 		assertThat(this.rows.entries()).containsExactly(new Entry(id, 11, "NEW"), new Entry(id, 21, "URL"));
 		assertThat(this.events.stream(ArticleStored.class)).hasSize(1);
+	}
+
+	@Test
+	void sameTitleFromAnotherFeedOfASourceThatSharesTheArticleJoinsIt() {
+		// 소스 1 의 피드 11 이 먼저 저장하고 소스 2 의 피드 21 이 같은 URL 로 붙은 기사 — 소스 2 의 다른 피드 22 의 같은 제목 항목
+		this.intake.accept(item(1, 11, "https://a.example/news/1", null, TITLE, T));
+		this.intake.accept(item(2, 21, "https://a.example/news/1", null, TITLE, T));
+		this.intake.accept(item(2, 22, "https://a.example/section/9", null, TITLE, T.plusSeconds(3_600)));
+
+		long id = this.rows.articleIds().getFirst();
+		assertThat(this.rows.articleIds()).containsExactly(id);
+		assertThat(this.rows.entries()).containsExactly(new Entry(id, 11, "NEW"), new Entry(id, 21, "URL"),
+				new Entry(id, 22, "TITLE"));
+	}
+
+	@Test
+	void sameTitleFromAnotherSourceWithoutAnEntryOfThatSourceIsANewArticle() {
+		// 소스 2 의 엔트리가 없는 소스 1 의 기사는 같은 제목이어도 소스 2 의 피드 22 항목이 붙을 후보가 아니다
+		this.intake.accept(item(1, 11, "https://a.example/news/1", null, TITLE, T));
+		this.intake.accept(item(2, 22, "https://a.example/section/9", null, TITLE, T.plusSeconds(3_600)));
+
+		List<Long> ids = this.rows.articleIds();
+		assertThat(ids).hasSize(2);
+		assertThat(this.rows.entries()).containsExactly(new Entry(ids.get(0), 11, "NEW"),
+				new Entry(ids.get(1), 22, "NEW"));
+	}
+
+	@Test
+	void sameTitleFromTheFeedThatAlreadyHasTheSharedArticleIsANewArticle() {
+		this.intake.accept(item(1, 11, "https://a.example/news/1", null, TITLE, T));
+		this.intake.accept(item(2, 21, "https://a.example/news/1", null, TITLE, T));
+		this.intake.accept(item(2, 21, "https://a.example/section/9", null, TITLE, T.plusSeconds(3_600)));
+
+		List<Long> ids = this.rows.articleIds();
+		assertThat(ids).hasSize(2);
+		assertThat(this.rows.entries()).containsExactly(new Entry(ids.get(0), 11, "NEW"),
+				new Entry(ids.get(0), 21, "URL"), new Entry(ids.get(1), 21, "NEW"));
 	}
 
 }
