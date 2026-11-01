@@ -695,7 +695,7 @@ public sealed interface FetchResult {
 
 ### 피드 요청
 
-수집은 운영자가 적은 URL 과 피드가 보낸 리다이렉트를 따라 서버에서 요청한다. 서버 측 요청 위험을 막는다([ADR-0031](../adr/0031-feed-request-blocks-internal-addresses-with-apache-httpclient-deadline.md)).
+수집은 운영자가 적은 URL 과 피드가 보낸 리다이렉트를 따라 서버에서 요청한다. 서버 측 요청 위험을 막는다([ADR-0031](../adr/0031-feed-request-blocks-internal-addresses-with-apache-httpclient-deadline.md) · [ADR-0049](../adr/0049-feed-request-blocks-ipv6-reserved-space-and-local-nat64.md)).
 
 - **source-R33** — 내부 주소(IPv4 의 루프백 · 사설 · 링크 로컬 · 공유 · 문서용 · 벤치마크 · 멀티캐스트 · 예약 · 6a44 relay 대역, IPv6 의 미지정 · 루프백 · 고유 로컬 · 링크 로컬 · 사이트 로컬 · 문서용 · 벤치마크 · 멀티캐스트 · Teredo · 로컬 NAT64 · IETF 예약 대역 — IETF 예약은 폐기 접두 · 더미 · SRv6 SID 를 품고, 잘 알려진 NAT64 를 품은 `::/8` 은 빼고 막는다)로 가는 요청은 기본으로 막는다. IPv4 를 품은 IPv6 주소(IPv4 호환 · 잘 알려진 NAT64 · 6to4)는 품은 IPv4 도 본다. 대역 표의 정본은 이 모듈의 `AddressPolicy` 다. 검사는 실제로 연결하는 주소에 한다 — 이름을 해석한 결과 가운데 하나라도 막힌 주소면 그 이름 전체를 거부한다. 처음 URL 과 모든 리다이렉트 홉이 같은 검사를 지난다
 - **source-R34** — 막힌 대역은 서버 설정(§7 `allowed-networks`)으로만 연다. 화면의 운영자 권한으로는 열 수 없다. IPv4 대역을 열어도 그 IPv4 를 품은 IPv6 주소는 열리지 않는다 — 허용 목록은 주소 계열이 같은 대역만 본다
@@ -777,3 +777,4 @@ RSS 품질이 피드마다 크게 다르므로 사전 보정 → 파싱 → 필�
 | [0042](../adr/0042-app-roles-as-web-worker-profiles-marked-by-platform-annotations.md) | 앱 역할은 Spring profile `web` · `worker` 로 나누고, 소속은 `platform` 역할 애너테이션으로 표시하며, 역할이 없으면 기동하지 않는다 |
 | [0045](../adr/0045-admin-module-serves-operator-api-over-module-public-operation-apis.md) | 운영자 API 는 `admin` 모듈이 내고, 각 모듈은 운영 기능과 결과 타입을 최상위 공개 API 로 낸다 |
 | [0046](../adr/0046-operator-profile-revision-disables-feeds-whose-reading-changed.md) | 운영자 원문을 고치면 읽기 설정이 바뀐 켜진 피드(검토일이 사라지면 소스)를 끄고, 피드 켜기는 저장 직전에 읽기 설정 전체를 다시 대조한다 |
+| [0049](../adr/0049-feed-request-blocks-ipv6-reserved-space-and-local-nat64.md) | 피드 요청의 차단 대역을 IPv6 예약 공간과 로컬 NAT64 접두까지 넓힌다 |
