@@ -1,13 +1,18 @@
 package net.yozmnews.source.application;
 
+import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import net.yozmnews.source.FeedHealthView;
+import net.yozmnews.source.FeedId;
+import net.yozmnews.source.FeedLabel;
 import net.yozmnews.source.FeedView;
 import net.yozmnews.source.LastFailureView;
 import net.yozmnews.source.PresetView;
@@ -42,6 +47,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 운영자 목록 — 프리셋 · 소스 · 피드의 운영 설정, 그 프로필에서 얻은 정보, 피드의 수집 상태. docs/specs/source.md §4.
  * <p>
  * 행은 읽기 트랜잭션 하나에서 읽고, 소스마다 지금의 프로필을 얻어 가리킬 곳을 잃었는지와 실제 주기를 판정한다(source-R8 · source-R14).
+ * 공개 조회 {@code FeedLabels} 의 피드별 출처 이름 · 섹션도 같은 해석으로 낸다.
  */
 @Component
 class SourceCatalog {
@@ -105,6 +111,37 @@ class SourceCatalog {
 		return source.operatorProfile();
 	}
 
+	/**
+	 * 피드의 출처 이름 · 섹션 — 숨긴 소스 · 피드도 낸다. 운영 목록과 같은 해석이다.
+	 * @return 피드 ID → 이름 · 섹션 — 없는 피드는 빠진다
+	 */
+	Map<FeedId, FeedLabel> labels(Collection<FeedId> feedIds) {
+		if (feedIds.isEmpty()) {
+			return Map.of();
+		}
+		Set<FeedId> wanted = Set.copyOf(feedIds);
+		return this.readOnly.execute(status -> {
+			Map<SourceId, List<FeedRow>> feeds = this.listing.findAllFeeds()
+				.stream()
+				.filter(feed -> wanted.contains(feed.id()))
+				.collect(Collectors.groupingBy(FeedRow::sourceId));
+			Map<SourceId, String> recordedNames = this.attributions.findAll();
+			Map<FeedId, FeedLabel> labels = new HashMap<>();
+			for (SourceRow row : this.listing.findAllSources()) {
+				List<FeedRow> sourceFeeds = feeds.getOrDefault(row.id(), List.of());
+				if (sourceFeeds.isEmpty()) {
+					continue;
+				}
+				ProfileResolution resolution = this.resolver.resolve(row);
+				String name = name(resolution, recordedNames.get(row.id()));
+				for (FeedRow feed : sourceFeeds) {
+					labels.put(feed.id(), new FeedLabel(name, section(resolution, feed)));
+				}
+			}
+			return Map.copyOf(labels);
+		});
+	}
+
 	private List<SourceView> list(boolean hidden) {
 		return this.readOnly.execute(status -> {
 			Map<SourceId, List<FeedRow>> feeds = this.listing.findAllFeeds()
@@ -127,7 +164,6 @@ class SourceCatalog {
 				source != null && source.hiddenAt() != null);
 	}
 
-	/** 이름은 프로필의 소스 이름 — 프로필을 얻지 못하면 기록된 출처 이름(없으면 null) */
 	private SourceView sourceView(SourceRow row, List<FeedRow> feeds, @Nullable String recordedName) {
 		ProfileResolution resolution = this.resolver.resolve(row);
 		@Nullable CollectionProfile profile = switch (resolution) {
@@ -143,9 +179,28 @@ class SourceCatalog {
 		List<FeedView> visible = feedViews(feeds, resolution, row.pollIntervalMinutes(), false);
 		List<FeedView> hidden = feedViews(feeds, resolution, row.pollIntervalMinutes(), true);
 		return new SourceView(row.id(), row.presetKey(), row.enabled(), row.pollIntervalMinutes(), state,
-				(profile != null) ? profile.source().name() : recordedName,
+				name(resolution, recordedName),
 				(profile != null) ? profile.source().homepage() : null,
 				(profile != null) ? profile.termsReviewedAt().orElse(null) : null, visible, hidden);
+	}
+
+	/**
+	 * 출처 이름 — 프로필의 소스 이름, 프로필을 얻지 못하면 기록된 출처 이름(없으면 null). 운영 목록과 공개 조회가 함께 쓰는 정본이다
+	 */
+	private static @Nullable String name(ProfileResolution resolution, @Nullable String recordedName) {
+		return switch (resolution) {
+			case ProfileResolution.Resolved resolved -> resolved.profile().source().name();
+			case ProfileResolution.PresetMissing missing -> recordedName;
+			case ProfileResolution.Invalid invalid -> recordedName;
+		};
+	}
+
+	/** 피드 섹션 — 프로필에 그 피드가 있을 때만(없으면 null) */
+	private static @Nullable String section(ProfileResolution resolution, FeedRow feed) {
+		return switch (PollTarget.of(resolution, new FeedKey(feed.feedKey()))) {
+			case PollTarget.Ready ready -> ready.feed().section();
+			case PollTarget.Unavailable unavailable -> null;
+		};
 	}
 
 	/** 숨김 여부가 같은 피드 — 피드 ID 순 */
@@ -165,7 +220,7 @@ class SourceCatalog {
 				PollInterval effective = ready.interval(new PollIntervalSettings(interval(sourcePollIntervalMinutes),
 						interval(feed.pollIntervalMinutes())));
 				yield new FeedView(feed.id(), feed.feedKey(), feed.enabled(), feed.pollIntervalMinutes(), true,
-						ready.feed().url(), ready.feed().section(), Math.toIntExact(effective.value().toMinutes()),
+						ready.feed().url(), section(resolution, feed), Math.toIntExact(effective.value().toMinutes()),
 						health(feed));
 			}
 			case PollTarget.Unavailable unavailable -> new FeedView(feed.id(), feed.feedKey(), feed.enabled(),
