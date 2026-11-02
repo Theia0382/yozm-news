@@ -1,5 +1,6 @@
 package net.yozmnews.platform.domain;
 
+import net.yozmnews.platform.LocalDevelopment;
 import net.yozmnews.platform.WebRole;
 import net.yozmnews.platform.WorkerRole;
 
@@ -17,8 +18,8 @@ public record ActiveRoles(boolean web, boolean worker) {
 	public ActiveRoles {
 		if (!web && !worker) {
 			throw new IllegalStateException("역할 profile 이 하나도 켜지지 않았다 — " + WebRole.PROFILE + " · "
-					+ WorkerRole.PROFILE + " 가운데 하나 이상을 켠다 (예: --spring.profiles.active=local,"
-					+ WebRole.PROFILE + "," + WorkerRole.PROFILE + ")");
+					+ WorkerRole.PROFILE + " 가운데 하나 이상을 켠다 (예: --spring.profiles.active="
+					+ LocalDevelopment.PROFILE + "," + WebRole.PROFILE + "," + WorkerRole.PROFILE + ")");
 		}
 	}
 
