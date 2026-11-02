@@ -25,6 +25,15 @@ class ImportanceScoreTests {
 	}
 
 	@Test
+	void staysWithinTheLevelsThatHaveProbabilityDespiteFloatingPointError() {
+		// 나눗셈만 하면 5.000000000000001 · 2.9999999999999996 이 되는 분포 — 저장 제약(1 ~ 5)을 넘거나 그 수준 밖으로 나간다
+		assertThat(ImportanceScore.expected(Map.of(1, 0.0, 2, 0.0, 3, 0.0, 4, 0.0, 5, 0.9738340099187002)))
+			.isEqualTo(5.0);
+		assertThat(ImportanceScore.expected(Map.of(1, 0.0, 2, 0.0, 3, 0.9014274576114836, 4, 0.0, 5, 0.0)))
+			.isEqualTo(3.0);
+	}
+
+	@Test
 	void isMissingWhenTheProbabilitiesSumToZero() {
 		assertThat(ImportanceScore.expected(Map.of(1, 0.0, 5, 0.0))).isNull();
 		assertThat(ImportanceScore.expected(Map.of())).isNull();
