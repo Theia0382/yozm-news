@@ -1,5 +1,7 @@
 package net.yozmnews.source.domain.profile;
 
+import net.yozmnews.platform.YamlProblemKind;
+
 /**
  * 프로필 문제의 종류 — 운영자에게 보이는 문구는 {@link ProfileProblem#message()} 가 구체적으로 담는다
  */
@@ -66,6 +68,25 @@ public enum ProblemCode {
 	/** 알 수 없는 시간대다 */
 	INVALID_TIME_ZONE,
 	/** 이용조건 검토일이 ISO 날짜가 아니다 */
-	INVALID_TERMS_REVIEWED_AT
+	INVALID_TERMS_REVIEWED_AT;
+
+	/**
+	 * 공통 YAML 문제의 종류를 같은 이름의 코드로 옮긴다 — 공통 종류가 늘면 이 {@code switch} 가 컴파일되지 않는다(ADR-0056).
+	 */
+	public static ProblemCode of(YamlProblemKind kind) {
+		return switch (kind) {
+			case TOO_LARGE -> TOO_LARGE;
+			case SYNTAX_ERROR -> SYNTAX_ERROR;
+			case NOT_A_MAPPING -> NOT_A_MAPPING;
+			case MULTIPLE_DOCUMENTS -> MULTIPLE_DOCUMENTS;
+			case UNKNOWN_KEY -> UNKNOWN_KEY;
+			case DUPLICATE_KEY -> DUPLICATE_KEY;
+			case ALIAS_NOT_ALLOWED -> ALIAS_NOT_ALLOWED;
+			case ANCHOR_NOT_ALLOWED -> ANCHOR_NOT_ALLOWED;
+			case TAG_NOT_ALLOWED -> TAG_NOT_ALLOWED;
+			case NULL_NOT_ALLOWED -> NULL_NOT_ALLOWED;
+			case WRONG_TYPE -> WRONG_TYPE;
+		};
+	}
 
 }

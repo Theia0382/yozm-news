@@ -45,7 +45,6 @@ import net.yozmnews.source.domain.fetch.UserAgent;
 import net.yozmnews.source.domain.profile.CollectionProfile;
 import net.yozmnews.source.domain.profile.ProfileParse;
 import net.yozmnews.source.domain.profile.ProfileParser;
-import net.yozmnews.source.domain.profile.text.ProfileTextReader;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -597,7 +596,7 @@ class RssArticleSourceTests {
 	}
 
 	private static CollectionProfile profile() {
-		ProfileParse parse = new ProfileParser(new ProfileTextReader()).parseOperatorProfile("""
+		ProfileParse parse = new ProfileParser().parseOperatorProfile("""
 				source:
 				  name: 알파일보
 				  homepage: https://alpha.example

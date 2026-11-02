@@ -10,7 +10,6 @@ import java.time.Instant;
 import net.yozmnews.source.domain.profile.CollectionProfile;
 import net.yozmnews.source.domain.profile.ProfileParse;
 import net.yozmnews.source.domain.profile.ProfileParser;
-import net.yozmnews.source.domain.profile.text.ProfileTextReader;
 
 /**
  * 정규화 테스트의 합성 피드({@code src/test/resources/feeds/}) · 운영자 프로필 · 받은 시각.
@@ -46,7 +45,7 @@ public final class FeedFixtures {
 
 	/** @param extra 기본 프로필 뒤에 붙일 최상위 항목(YAML) */
 	public static CollectionProfile profile(String extra) {
-		ProfileParse parse = new ProfileParser(new ProfileTextReader()).parseOperatorProfile(BASE_PROFILE + extra);
+		ProfileParse parse = new ProfileParser().parseOperatorProfile(BASE_PROFILE + extra);
 		assertThat(parse).as("%s", parse).isInstanceOf(ProfileParse.Parsed.class);
 		return ((ProfileParse.Parsed) parse).profile();
 	}

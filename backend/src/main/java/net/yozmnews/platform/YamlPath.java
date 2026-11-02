@@ -1,41 +1,42 @@
-package net.yozmnews.source.domain.profile;
+package net.yozmnews.platform;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
 /**
- * 프로필 안의 위치. 표시는 {@code source.name} · {@code feeds[0].url} · {@code items.summary[1]} 같은 꼴이고, 최상위는 빈
- * 문자열이다.
+ * YAML 문서 안의 위치 — docs/specs/platform.md §3.
+ * <p>
+ * 표시는 {@code source.name} · {@code feeds[0].url} · {@code items.summary[1]} 같은 꼴이고, 최상위는 빈 문자열이다.
  */
-public record ProfilePath(List<Segment> segments) {
+public record YamlPath(List<Segment> segments) {
 
-	public static final ProfilePath ROOT = new ProfilePath(List.of());
+	public static final YamlPath ROOT = new YamlPath(List.of());
 
-	public ProfilePath {
+	public YamlPath {
 		segments = List.copyOf(segments);
 	}
 
-	public static ProfilePath of(String... keys) {
-		ProfilePath path = ROOT;
+	public static YamlPath of(String... keys) {
+		YamlPath path = ROOT;
 		for (String key : keys) {
 			path = path.child(key);
 		}
 		return path;
 	}
 
-	public ProfilePath child(String key) {
+	public YamlPath child(String key) {
 		return append(new Segment.Key(key));
 	}
 
-	public ProfilePath index(int index) {
+	public YamlPath index(int index) {
 		return append(new Segment.Index(index));
 	}
 
-	private ProfilePath append(Segment segment) {
+	private YamlPath append(Segment segment) {
 		List<Segment> appended = new ArrayList<>(this.segments);
 		appended.add(segment);
-		return new ProfilePath(appended);
+		return new YamlPath(appended);
 	}
 
 	@Override

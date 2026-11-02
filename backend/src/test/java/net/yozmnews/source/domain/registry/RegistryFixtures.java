@@ -8,14 +8,13 @@ import net.yozmnews.source.domain.profile.PresetKey;
 import net.yozmnews.source.domain.profile.PresetParse;
 import net.yozmnews.source.domain.profile.ProfileParse;
 import net.yozmnews.source.domain.profile.ProfileParser;
-import net.yozmnews.source.domain.profile.text.ProfileTextReader;
 
 /** 등록 · 켜기 테스트의 프로필과 피드 — 다른 패키지의 관문 테스트도 쓴다 */
 public final class RegistryFixtures {
 
 	static final Instant NOW = Instant.parse("2026-10-28T09:00:00Z");
 
-	static final ProfileParser PARSER = new ProfileParser(new ProfileTextReader());
+	static final ProfileParser PARSER = new ProfileParser();
 
 	private static final String SOURCE = """
 			source:

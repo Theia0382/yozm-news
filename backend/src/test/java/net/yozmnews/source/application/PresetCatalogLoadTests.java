@@ -12,7 +12,6 @@ import net.yozmnews.source.domain.profile.Preset;
 import net.yozmnews.source.domain.profile.PresetCatalog;
 import net.yozmnews.source.domain.profile.PresetKey;
 import net.yozmnews.source.domain.profile.ProfileParser;
-import net.yozmnews.source.domain.profile.text.ProfileTextReader;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.test.system.CapturedOutput;
@@ -29,7 +28,7 @@ class PresetCatalogLoadTests {
 
 	private final PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
 
-	private final ProfileParser parser = new ProfileParser(new ProfileTextReader());
+	private final ProfileParser parser = new ProfileParser();
 
 	@Test
 	void loadsEveryPresetWithItsFileNameAsTheKey() {

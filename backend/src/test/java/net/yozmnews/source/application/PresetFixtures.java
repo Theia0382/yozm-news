@@ -18,7 +18,6 @@ import net.yozmnews.source.domain.profile.CollectionProfile;
 import net.yozmnews.source.domain.profile.Preset;
 import net.yozmnews.source.domain.profile.PresetKey;
 import net.yozmnews.source.domain.profile.ProfileParser;
-import net.yozmnews.source.domain.profile.text.ProfileTextReader;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 
 /**
@@ -37,7 +36,7 @@ final class PresetFixtures {
 	static Preset preset(String key) {
 		return PresetCatalogConfiguration
 			.load(new PathMatchingResourcePatternResolver(), PresetCatalogConfiguration.LOCATION,
-					new ProfileParser(new ProfileTextReader()))
+					new ProfileParser())
 			.find(new PresetKey(key))
 			.orElseThrow(() -> new AssertionError("저장소에 프리셋이 없다: " + key));
 	}

@@ -2,9 +2,10 @@ package net.yozmnews.source.domain.profile;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
-import net.yozmnews.source.domain.profile.text.TextLocation;
+import net.yozmnews.platform.StrictYamlBinding.Located;
+import net.yozmnews.platform.TextLocation;
+import net.yozmnews.platform.YamlPath;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -17,38 +18,27 @@ record ProfileDraft(TextLocation location, @Nullable SourceDraft source, @Nullab
 		@Nullable Located<Map<ItemField, Located<List<Located<String>>>>> items,
 		@Nullable Located<Map<String, Located<String>>> namespaces, @Nullable DatesDraft dates) {
 
-	/** 경로와 위치를 단 값 */
-	record Located<T>(T value, ProfilePath path, TextLocation location) {
-
-		Located {
-			Objects.requireNonNull(value, "value");
-			Objects.requireNonNull(path, "path");
-			Objects.requireNonNull(location, "location");
-		}
-
-	}
-
 	/** 소스 정보 초안 */
-	record SourceDraft(ProfilePath path, TextLocation location, @Nullable Located<String> name,
+	record SourceDraft(YamlPath path, TextLocation location, @Nullable Located<String> name,
 			@Nullable Located<String> homepage, @Nullable Located<String> language) {
 
 	}
 
 	/** 피드 초안 */
-	record FeedDraft(ProfilePath path, TextLocation location, @Nullable Located<String> key,
+	record FeedDraft(YamlPath path, TextLocation location, @Nullable Located<String> key,
 			@Nullable Located<String> url, @Nullable Located<String> section,
 			@Nullable Located<Integer> pollIntervalMinutes) {
 
 	}
 
 	/** 사전 보정 초안 */
-	record PreCorrectionDraft(ProfilePath path, TextLocation location, @Nullable Located<String> rule,
+	record PreCorrectionDraft(YamlPath path, TextLocation location, @Nullable Located<String> rule,
 			@Nullable Located<String> charset) {
 
 	}
 
 	/** 날짜 해석 초안 */
-	record DatesDraft(ProfilePath path, TextLocation location, @Nullable Located<List<Located<String>>> formats,
+	record DatesDraft(YamlPath path, TextLocation location, @Nullable Located<List<Located<String>>> formats,
 			@Nullable Located<String> timeZone) {
 
 	}

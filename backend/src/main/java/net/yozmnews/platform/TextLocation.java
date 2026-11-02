@@ -1,7 +1,7 @@
-package net.yozmnews.source.domain.profile.text;
+package net.yozmnews.platform;
 
 /**
- * 프로필 텍스트 안의 위치 — 줄과 열은 1부터 센다
+ * YAML 원문 안의 위치 — docs/specs/platform.md §3. 줄과 열은 1부터 센다
  */
 public record TextLocation(int line, int column) {
 

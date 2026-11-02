@@ -16,7 +16,6 @@ import net.yozmnews.source.domain.profile.PresetKey;
 import net.yozmnews.source.domain.profile.PresetParse;
 import net.yozmnews.source.domain.profile.ProfileParser;
 import net.yozmnews.source.domain.profile.ProfileProblem;
-import net.yozmnews.source.domain.profile.text.ProfileTextReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
@@ -42,7 +41,7 @@ class PresetCatalogConfiguration {
 
 	@Bean
 	ProfileParser profileParser() {
-		return new ProfileParser(new ProfileTextReader());
+		return new ProfileParser();
 	}
 
 	@Bean

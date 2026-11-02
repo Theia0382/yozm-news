@@ -1,29 +1,28 @@
-package net.yozmnews.source.domain.profile.text;
+package net.yozmnews.platform;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
 
-import net.yozmnews.source.domain.profile.ProblemCode;
-import net.yozmnews.source.domain.profile.ProfileProblem;
-import net.yozmnews.source.domain.profile.text.ProfileTree.AliasNode;
-import net.yozmnews.source.domain.profile.text.ProfileTree.Entry;
-import net.yozmnews.source.domain.profile.text.ProfileTree.ListNode;
-import net.yozmnews.source.domain.profile.text.ProfileTree.MapNode;
-import net.yozmnews.source.domain.profile.text.ProfileTree.ScalarKind;
-import net.yozmnews.source.domain.profile.text.ProfileTree.ScalarNode;
+import net.yozmnews.platform.YamlTree.AliasNode;
+import net.yozmnews.platform.YamlTree.Entry;
+import net.yozmnews.platform.YamlTree.ListNode;
+import net.yozmnews.platform.YamlTree.MapNode;
+import net.yozmnews.platform.YamlTree.ScalarKind;
+import net.yozmnews.platform.YamlTree.ScalarNode;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 /**
- * 프로필 원문 읽기 — 텍스트를 직접 넣어 트리와 문제를 본다.
+ * YAML 원문 읽기 — 텍스트를 직접 넣어 트리와 문제를 본다. 상한은 수집 프로필과 같은 65,536자로 둔다.
  * <p>
- * 지키는 규칙: source-R32
+ * 지키는 규칙: platform-R17 · source-R32
  */
-class ProfileTextReaderTests {
+class YamlTextReaderTests {
 
-	private final ProfileTextReader reader = new ProfileTextReader();
+	private final YamlTextReader reader = new YamlTextReader(65_536);
 
 	@Test
 	void keepsMappingsListsAndScalarsInOrder() {
@@ -162,26 +161,26 @@ class ProfileTextReaderTests {
 
 	@Test
 	void rejectsATopLevelThatIsNotAMapping() {
-		assertThat(unreadable("- a\n- b\n")).isEqualTo(problem(ProblemCode.NOT_A_MAPPING, new TextLocation(1, 1)));
-		assertThat(unreadable("just text\n").code()).isEqualTo(ProblemCode.NOT_A_MAPPING);
+		assertThat(unreadable("- a\n- b\n")).isEqualTo(problem(YamlProblemKind.NOT_A_MAPPING, new TextLocation(1, 1)));
+		assertThat(unreadable("just text\n").kind()).isEqualTo(YamlProblemKind.NOT_A_MAPPING);
 	}
 
 	@Test
 	void rejectsMoreThanOneDocument() {
-		ProfileProblem problem = unreadable("a: 1\n---\nb: 2\n");
+		YamlProblem problem = unreadable("a: 1\n---\nb: 2\n");
 
-		assertThat(problem.code()).isEqualTo(ProblemCode.MULTIPLE_DOCUMENTS);
+		assertThat(problem.kind()).isEqualTo(YamlProblemKind.MULTIPLE_DOCUMENTS);
 		assertThat(problem.location()).isEqualTo(new TextLocation(2, 1));
 	}
 
 	@Test
 	void reportsSyntaxErrorsWithTheirLocation() {
-		ProfileProblem tab = unreadable("a:\n\tb: 1\n");
-		assertThat(tab.code()).isEqualTo(ProblemCode.SYNTAX_ERROR);
+		YamlProblem tab = unreadable("a:\n\tb: 1\n");
+		assertThat(tab.kind()).isEqualTo(YamlProblemKind.SYNTAX_ERROR);
 		assertThat(tab.location()).isEqualTo(new TextLocation(2, 1));
 
-		ProfileProblem flow = unreadable("a: [1, 2\n");
-		assertThat(flow.code()).isEqualTo(ProblemCode.SYNTAX_ERROR);
+		YamlProblem flow = unreadable("a: [1, 2\n");
+		assertThat(flow.kind()).isEqualTo(YamlProblemKind.SYNTAX_ERROR);
 		assertThat(flow.location()).isEqualTo(new TextLocation(2, 1));
 	}
 
@@ -198,23 +197,34 @@ class ProfileTextReaderTests {
 		String overLimit = "a: " + "x".repeat(65_537 - 3);
 
 		assertThat(overLimit).hasSize(65_537);
-		assertThat(unreadable(overLimit).code()).isEqualTo(ProblemCode.TOO_LARGE);
+		assertThat(unreadable(overLimit)).isEqualTo(new YamlProblem(YamlPath.ROOT, YamlProblemKind.TOO_LARGE,
+				"원문은 65536자까지다 — 지금 65537자", TextLocation.UNKNOWN));
+	}
+
+	@Test
+	void takesTheLengthLimitFromTheCaller() {
+		YamlTextReader small = new YamlTextReader(10);
+
+		assertThat(small.read("a: 1234567")).isInstanceOf(YamlRead.Read.class);
+		assertThat(small.read("a: 12345678")).isEqualTo(new YamlRead.Unreadable(new YamlProblem(YamlPath.ROOT,
+				YamlProblemKind.TOO_LARGE, "원문은 10자까지다 — 지금 11자", TextLocation.UNKNOWN)));
+		assertThatThrownBy(() -> new YamlTextReader(0)).isInstanceOf(IllegalArgumentException.class);
 	}
 
 	private MapNode read(String text) {
-		ReadResult result = this.reader.read(text);
-		assertThat(result).isInstanceOf(ReadResult.Read.class);
-		return ((ReadResult.Read) result).root();
+		YamlRead result = this.reader.read(text);
+		assertThat(result).isInstanceOf(YamlRead.Read.class);
+		return ((YamlRead.Read) result).root();
 	}
 
-	private ProfileProblem unreadable(String text) {
-		ReadResult result = this.reader.read(text);
-		assertThat(result).isInstanceOf(ReadResult.Unreadable.class);
-		return ((ReadResult.Unreadable) result).problem();
+	private YamlProblem unreadable(String text) {
+		YamlRead result = this.reader.read(text);
+		assertThat(result).isInstanceOf(YamlRead.Unreadable.class);
+		return ((YamlRead.Unreadable) result).problem();
 	}
 
-	private static ProfileProblem problem(ProblemCode code, TextLocation location) {
-		return new ProfileProblem(net.yozmnews.source.domain.profile.ProfilePath.ROOT, code,
+	private static YamlProblem problem(YamlProblemKind kind, TextLocation location) {
+		return new YamlProblem(YamlPath.ROOT, kind,
 				"최상위는 항목을 담은 매핑이어야 한다", location);
 	}
 
@@ -222,7 +232,7 @@ class ProfileTextReaderTests {
 		return map.entries().stream().map(entry -> scalar(entry.key()).text()).toList();
 	}
 
-	private static ScalarNode scalar(ProfileTree node) {
+	private static ScalarNode scalar(YamlTree node) {
 		assertThat(node).isInstanceOf(ScalarNode.class);
 		return (ScalarNode) node;
 	}

@@ -10,8 +10,7 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
 
-import net.yozmnews.source.domain.profile.text.ProfileTextReader;
-import net.yozmnews.source.domain.profile.text.TextLocation;
+import net.yozmnews.platform.TextLocation;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -37,7 +36,7 @@ class ProfileValidationTests {
 			    section: 전체
 			""";
 
-	private final ProfileParser parser = new ProfileParser(new ProfileTextReader());
+	private final ProfileParser parser = new ProfileParser();
 
 	@Test
 	void buildsEveryValueOfAFullProfile() {
