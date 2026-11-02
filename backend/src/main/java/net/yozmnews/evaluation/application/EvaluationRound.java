@@ -35,7 +35,6 @@ import net.yozmnews.source.FeedLabels;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -45,15 +44,11 @@ import org.springframework.transaction.support.TransactionTemplate;
  * <p>
  * 대기를 점유해 커밋한 뒤, 트랜잭션 밖에서 기사 · 피드 맥락을 읽고 기사마다 차례로 평가기를 부른다. 결과는 기사마다 새 트랜잭션에서 점유 토큰이
  * 맞을 때만 반영한다. 평가기 사용 불가 · 결과가 체계와 어긋남 · 평가기의 예상 못한 예외면 그 기사부터 남은 점유를 풀고 회차를 멈춘다.
- * <p>
- * 평가기 빈이 없는 구성에서는 아무것도 하지 않는다 — 기사는 평가 대기에 남고, 작업을 만들 때 경고한다.
  */
 @Service
 public class EvaluationRound {
 
 	private static final Logger logger = LoggerFactory.getLogger(EvaluationRound.class);
-
-	private final ObjectProvider<ArticleEvaluator> evaluators;
 
 	private final PendingEvaluations pending;
 
@@ -74,18 +69,16 @@ public class EvaluationRound {
 	private final InstantSource clock;
 
 	@Autowired
-	EvaluationRound(ObjectProvider<ArticleEvaluator> evaluators, PendingEvaluations pending, TagSetDirectory directory,
-			ThresholdRepository thresholds, ArticleDirectory articles, FeedLabels feedLabels,
-			EvaluationResultRepository results, EvaluationQueueRepository queue, TransactionTemplate transaction) {
-		this(evaluators, pending, directory, thresholds, articles, feedLabels, results, queue, transaction,
+	EvaluationRound(PendingEvaluations pending, TagSetDirectory directory, ThresholdRepository thresholds,
+			ArticleDirectory articles, FeedLabels feedLabels, EvaluationResultRepository results,
+			EvaluationQueueRepository queue, TransactionTemplate transaction) {
+		this(pending, directory, thresholds, articles, feedLabels, results, queue, transaction,
 				InstantSource.system());
 	}
 
-	EvaluationRound(ObjectProvider<ArticleEvaluator> evaluators, PendingEvaluations pending, TagSetDirectory directory,
-			ThresholdRepository thresholds, ArticleDirectory articles, FeedLabels feedLabels,
-			EvaluationResultRepository results, EvaluationQueueRepository queue, TransactionTemplate transaction,
-			InstantSource clock) {
-		this.evaluators = evaluators;
+	EvaluationRound(PendingEvaluations pending, TagSetDirectory directory, ThresholdRepository thresholds,
+			ArticleDirectory articles, FeedLabels feedLabels, EvaluationResultRepository results,
+			EvaluationQueueRepository queue, TransactionTemplate transaction, InstantSource clock) {
 		this.pending = pending;
 		this.directory = directory;
 		this.thresholds = thresholds;
@@ -97,17 +90,9 @@ public class EvaluationRound {
 		this.clock = clock;
 	}
 
-	/** 평가기 빈이 있는가 */
-	public boolean evaluatorAvailable() {
-		return this.evaluators.getIfAvailable() != null;
-	}
-
-	/** 회차 하나를 돈다 */
-	public void run() {
-		ArticleEvaluator evaluator = this.evaluators.getIfAvailable();
-		if (evaluator == null) {
-			return;
-		}
+	/** 회차 하나를 돈다 — 평가기는 작업 진입점이 넘긴다 */
+	public void run(ArticleEvaluator evaluator) {
+		Objects.requireNonNull(evaluator, "evaluator");
 		List<PendingEvaluation> claimed = this.pending.claimDue(this.clock.instant());
 		if (claimed.isEmpty()) {
 			return;
