@@ -11,9 +11,9 @@ Spring Modulith 모듈(`net.yozmnews` 바로 아래 패키지) 하나가 Spec �
 
 | 모듈 | Spec | 책임 |
 |---|---|---|
-| `admin` | [admin.md](admin.md) | 운영자 기능의 HTTP API — 소스 · 피드 관리, 수집 현황, 이벤트 발행 |
+| `admin` | [admin.md](admin.md) | 운영자 기능의 HTTP API — 소스 · 피드 관리, 수집 현황, 이벤트 발행, 태그 체계 버전 |
 | `article` | [article.md](article.md) | 같은 기사 판정 · 중복 제거, 기사 저장 · 조회, 피드별 기록, 지운 소스 · 피드의 기사 삭제 · 알림, (미구현) 본문 추출 |
-| `evaluation` | [evaluation.md](evaluation.md) | 태그 체계(버전 · 태그 · 질문 · 중요도 기준)와 첫 기동 적재, 태그 기준 · 저장 기준과 그 변경 이력, 활성 체계 조회, 공유 평가 포트와 로컬 대체물, 평가 대기 · 평가 작업 · 결과 저장과 조회, (미구현) 체계 변경 |
+| `evaluation` | [evaluation.md](evaluation.md) | 태그 체계(버전 · 태그 · 질문 · 중요도 기준)와 첫 기동 적재, 태그 기준 · 저장 기준과 그 변경 이력, 활성 체계 조회, 공유 평가 포트와 로컬 대체물, 평가 대기 · 평가 작업 · 결과 저장과 조회, 체계 변경 · 태그 키 계보 |
 | `platform` | [platform.md](platform.md) | 이벤트 발행 재처리 · 남겨진 발행의 운영자 처리, 화면용 API 명세 설정, API 계약 확인 엔드포인트, 역할(profile `web` · `worker`), 로컬 개발 표시(profile `local`), 운영자 접근 통제, 오류 응답 형식, YAML 원문 읽기 · 공통 거부 |
 | `source` | [source.md](source.md) | 소스 등록 · 운영자 원문 수정 · 켜기 · 끄기와 그 공개 운영 API, 출처 이름 · 섹션 조회, 수집 일정, 피드 요청, RSS 정규화, 새 항목 발행 |
 
