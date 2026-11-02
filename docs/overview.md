@@ -128,7 +128,7 @@ flowchart LR
 | `user` | 계정, OIDC 연동, 자체 로그인(비밀번호 · 복구 코드), 화면 내 알림, 사용자 설정 · 태그 선호와 구독 변경 이력, 리포트 설정 |
 | `feedback` | 좋아요 / 싫어요 — 추가 전용 기록과 현재 상태 |
 | [`admin`](specs/admin.md) | 운영자 기능의 HTTP API(소스 · 피드 관리, 수집 현황, 이벤트 발행, (미구현) 태그 체계 · 평가 결과 · 사건) — 각 모듈의 공개 운영 API 를 부른다 |
-| [`platform`](specs/platform.md) | 여러 모듈에 걸친 것: 실패한 이벤트 발행 재처리와 남겨진 발행의 운영자 처리, 화면용 API 명세 설정 · API 계약 확인 엔드포인트, 역할(profile `web` · `worker`)과 그 기동 검사, 보안 설정, 오류 응답 형식, YAML 원문 읽기 |
+| [`platform`](specs/platform.md) | 여러 모듈에 걸친 것: 실패한 이벤트 발행 재처리와 남겨진 발행의 운영자 처리, 화면용 API 명세 설정 · API 계약 확인 엔드포인트, 역할(profile `web` · `worker`)과 그 기동 검사, 로컬 개발 표시(profile `local` — 로컬 대체물 등록), 보안 설정, 오류 응답 형식, YAML 원문 읽기 |
 | `event` | 공유 사건 묶기 — 기사 표현(임베딩 · 고유명사, `ArticleEmbedder`), 사건 배정 · 병합 · 닫기, 큰 사건 판정, 사건 조회. 사용자를 모른다 |
 | `storyline` | 사용자별 이슈 — 제목 · 현재 상태 요약 · 상태 전이 · 추적 · 해제와 그 이력 |
 | `report` | 변화 리포트 일정 · 생성(`ReportGenerator`) · 저장 · 조회 |
@@ -169,7 +169,7 @@ flowchart LR
 | 사용자 범위 | 화면 · API 의 사용자 데이터 조회는 세션의 `userId` 로만 범위를 정한다. 요청으로 받은 사용자 ID 는 신뢰하지 않는다 | [security.md](security.md) |
 | 비밀 값 | BYOK 키 평문은 `llm` 모듈 안에서 호출 직전에만 존재하고, 로그 · 오류 · 응답에 남지 않는다 | [security.md](security.md) |
 | LLM 입출력 | RSS 내용은 신뢰할 수 없는 입력, LLM 출력은 스키마로 검증하는 데이터 | [pipeline.md](pipeline.md) · [security.md](security.md) |
-| 외부 의존성 | 표준 프로토콜 · 자체 인터페이스 뒤, 설정으로 교체 · 비활성, 로컬 대체물 | [ADR-0012](adr/0012-swappable-external-dependencies.md) |
+| 외부 의존성 | 표준 프로토콜 · 자체 인터페이스 뒤, 설정으로 교체 · 비활성, 로컬 대체물(profile `local` 에서만 등록 — 켜는 운영 설정 없음) | [ADR-0012](adr/0012-swappable-external-dependencies.md) · [ADR-0057](adr/0057-local-substitutes-registered-only-in-local-profile-without-operator-switch.md) |
 | 판정 시점 | 바뀔 수 있는 임계값은 저장 시점이 아니라 조회 시점에 적용한다(피드 상태는 저장하되 매 실행 현재 기준으로 다시 판정한다) | [ADR-0010](adr/0010-tag-taxonomy.md) · [ADR-0040](adr/0040-feed-status-stored-in-poll-state-and-rejudged-hourly-by-health-check.md) |
 | 신호 이력 | 관심 신호(좋아요 / 싫어요 · 이슈 추적 · 구독 변경)는 추가 전용 이벤트 기록이 정본이고, 현재 상태는 그 투영이다. 신호는 각 모듈이 자기 것을 기록한다 | [ADR-0028](adr/0028-explicit-signals-and-interest-weighted-candidates.md) |
 | 화면용 API 계약 | 정본은 커밋된 OpenAPI 명세 `api/openapi.json` 이고 백엔드 검사가 코드와 대조한다. 객체 속성은 모두 필수이고, null 이 될 수 있는 속성은 JSpecify `@Nullable` 로 표시한다. 프론트엔드 타입은 이 명세에서 생성한다 | [ADR-0020](adr/0020-screen-api-contract-from-committed-openapi-spec.md) |
