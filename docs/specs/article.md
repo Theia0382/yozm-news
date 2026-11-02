@@ -10,7 +10,8 @@
 - **기사 저장** — 새 기사는 처음 받은 값으로 저장하고 `ArticleStored` 를 발행한다
 - **피드별 기록** — 같은 기사로 판정한 항목도 버리지 않고 기사 · 피드마다 한 번 기록한다
 - **엔트리 집계** — 피드별 기록을 집계 기간 · 칸마다 세어 중복률 · 날짜 추정 비율 · 제목 판정 비율 · guid 재사용을 운영 기능의 공개 API(`ArticleAdministration`)로 낸다
-- **지운 소스 · 피드의 기사 삭제** — 운영자가 소스 · 피드를 지우면 그 소스(피드)의 엔트리와, 엔트리가 남지 않은 기사를 지운다. 지우기 전에 함께 지워질 기사 수를 공개 API 로 센다(article-R15). 지운 피드의 늦은 항목은 저장하지 않는다(article-R16)
+- **지운 소스 · 피드의 기사 삭제** — 운영자가 소스 · 피드를 지우면 그 소스(피드)의 엔트리와, 엔트리가 남지 않은 기사를 지우고 지운 기사를 `ArticlesRemoved` 로 알린다. 지우기 전에 함께 지워질 기사 수를 공개 API 로 센다(article-R15). 지운 피드의 늦은 항목은 저장하지 않는다(article-R16)
+- **기사 조회** — 다른 모듈이 기사의 제목 · 요약문 · 엔트리(소스 · 피드 · 카테고리)를 공개 조회(`ArticleDirectory`)로 읽는다
 - **(미구현)** 본문 추출 — 자리만 있고 v1 에서는 하지 않는다(article-R12)
 
 하지 않는 것:
@@ -40,7 +41,7 @@
 
 ## 3. 공개 인터페이스
 
-모듈 최상위 패키지 `net.yozmnews.article` 의 공개 타입은 아래와 같다 — 식별자, 새 기사 이벤트, 운영 기능의 공개 API `ArticleAdministration` 과 그 결과 타입. 다른 모듈이 기사를 조회하는 공개 API 는 아직 없다.
+모듈 최상위 패키지 `net.yozmnews.article` 의 공개 타입은 아래와 같다 — 식별자, 새 기사 · 지운 기사 이벤트, 기사 조회의 공개 API `ArticleDirectory` 와 그 값 타입, 운영 기능의 공개 API `ArticleAdministration` 과 그 결과 타입.
 
 받는 이벤트는 `source` 의 `ArticleFetched` · `SourceDeleted` · `FeedDeleted` 이고, `source` 의 공개 조회 `SourceDirectory` 로 피드가 아직 있는지 묻는다([source Spec §3](source.md#3-공개-인터페이스)).
 
@@ -76,9 +77,56 @@ public record ArticleStored(ArticleId articleId) {}
   - 새 기사를 저장한 트랜잭션 안에서 발행한다(article-R11) — 기사 행과 발행이 함께 커밋된다
   - 기사 하나에 많아야 한 번 나간다. 같은 기사로 판정된 항목, 같은 `ArticleFetched` 를 다시 처리한 경우, 다른 소스가 같은 정규 URL 의 기사를 먼저 저장해 거기에 붙은 경우에는 나가지 않는다
   - 소비 모듈이 생기기 전에 저장된 기사는 이 이벤트를 받지 못한다 — 리스너가 없는 발행은 남지 않는다
-  - 저장된 기사는 그 기사의 엔트리가 모두 지워지면 — 운영자가 그 기사를 가진 소스 · 피드를 모두 지우면 — 지워진다(article-R15). 지워졌음을 알리는 이벤트는 없다 — 기사를 가리키는 모듈이 그 삭제를 따르는 길은 **(미설계)** 다
+  - 저장된 기사는 그 기사의 엔트리가 모두 지워지면 — 운영자가 그 기사를 가진 소스 · 피드를 모두 지우면 — 지워지고, `ArticlesRemoved` 로 알린다(article-R15)
 
 관련 규칙: article-R9 · article-R10 · article-R11.
+
+### ArticlesRemoved
+
+기사를 지웠다(article → evaluation). 운영자가 소스 · 피드를 지워 엔트리가 남지 않은 기사다.
+
+```java
+public record ArticlesRemoved(List<ArticleId> articleIds) {}
+```
+
+| 필드 | 뜻 | 제약 |
+|---|---|---|
+| `articleIds` | 지운 기사 — ID 순 | 비어 있지 않고 중복이 없다 — 아니면 생성자가 `IllegalArgumentException` 을 던진다 |
+
+- 계약
+  - 기사를 지운 트랜잭션 안에서 발행한다 — 기사 행 삭제와 발행이 함께 커밋된다
+  - 한 이벤트에 1,000건까지 싣는다 — 넘으면 나눠 여러 번 발행한다(`ArticleRemoval.MAX_IDS_PER_EVENT`)
+  - 지운 기사가 없으면(다시 처리해 지울 것이 없음 포함) 발행하지 않는다. 다른 소스 · 피드의 엔트리가 남은 기사는 지우지 않으므로 싣지 않는다
+  - 기사를 ID 로 가리키는 모듈은 이 이벤트로 자기 행을 지운다([ADR-0060](../adr/0060-article-deletion-announced-by-removed-article-ids-and-followed-by-referencing-modules.md))
+
+관련 규칙: article-R15.
+
+### ArticleDirectory · ArticleContent · ArticleEntryView
+
+기사 조회 — 다른 모듈이 기사의 제목 · 요약문 · 엔트리를 읽는다. 구현은 `application` 의 `ArticleDirectoryService` 다.
+
+```java
+public interface ArticleDirectory {
+    Map<ArticleId, ArticleContent> findAll(Collection<ArticleId> ids);
+}
+
+public record ArticleContent(ArticleId id, String title, @Nullable String summary, List<ArticleEntryView> entries) {}
+
+public record ArticleEntryView(SourceId sourceId, FeedId feedId, List<String> categories) {}
+```
+
+| 타입 · 멤버 | 뜻 |
+|---|---|
+| `findAll` | 기사들의 내용 — 없는(지운) 기사는 결과에 없다. 빈 입력이면 빈 맵 |
+| `ArticleContent.summary` | 저장된 RSS 요약문 — 없으면 null |
+| `ArticleContent.entries` | 기사의 엔트리 — 받은 시각 순, 같으면 피드 ID 순 |
+| `ArticleEntryView.categories` | 그 피드에서 처음 본 항목의 RSS 카테고리 — 피드 순서 그대로 |
+
+- 계약
+  - 트랜잭션을 열지 않는다 — 엔트리 · 기사 두 질의로 읽고, 각 질의는 그 순간의 값이다. 엔트리를 먼저 읽으므로 두 질의 사이에 지운 기사는 결과에서 빠진다
+  - 출처 이름 · 피드 섹션은 담지 않는다 — `source` 의 공개 조회가 낸다
+
+관련 규칙: article-R7 · article-R8.
 
 ### ArticleAdministration
 
@@ -149,12 +197,12 @@ public record EntryCounts(int entries, int duplicates, int urlMatches, int title
 
 | 패키지 | 책임 |
 |---|---|
-| (최상위) | 공개 API `ArticleAdministration` 과 그 결과 타입, 식별자 · 이벤트 |
-| `application` | `source` 의 `ArticleFetched` · `SourceDeleted` · `FeedDeleted` 를 받는 리스너와, 항목 하나를 판정 · 저장 · 기록하는 유스케이스, 지운 소스 · 피드의 기사를 지우는 유스케이스, 공개 운영 API 의 구현 |
+| (최상위) | 공개 API `ArticleDirectory` · `ArticleAdministration` 과 그 값 · 결과 타입, 식별자 · 이벤트 |
+| `application` | `source` 의 `ArticleFetched` · `SourceDeleted` · `FeedDeleted` 를 받는 리스너와, 항목 하나를 판정 · 저장 · 기록하는 유스케이스, 지운 소스 · 피드의 기사를 지우는 유스케이스, 공개 조회 · 공개 운영 API 의 구현 |
 | `domain` | 같은 기사 판정의 키(정규 URL · 제목 비교 키 · 해시)와 판정 규칙, 기사 저장소, 엔트리 집계의 기간 · 칸과 집계 조회 |
 | `adapter/out/persistence` | 기사 저장소 · 집계 조회의 JdbcClient 구현 |
 
-협력: 엔트리 집계는 `ArticleAdministrationService` 가 `EntryWindow` 로 기간을 잡고 `EntryStatisticsRepository` 로 세어 `EntryWindow.statistics` 로 모은다. 기사 수는 같은 서비스가 `ArticleRepository` 로 센다. 같은 기사 판정은 `ArticleFetchedListener` 가 받은 이벤트를 `ArticleIntake` 에 넘긴다. `ArticleIntake` 는 `ArticleRepository` 로 소스를 잠그고, `source` 의 `SourceDirectory` 로 피드가 있는지 묻고, 후보를 모아 `ArticleMatching` 의 판정에 따라 기사 · 엔트리를 기록하고, 새 기사면 `ArticleStored` 를 발행한다. 판정 키(`CanonicalUrl` · `TitleKey` · `KeyHash`)는 들어온 항목(`IncomingItem`)을 만들 때 계산한다. 지운 소스 · 피드는 `SourceRemovalListener` 가 받은 이벤트를 `ArticleRemoval` 에 넘기고, `ArticleRemoval` 이 같은 소스 잠금 안에서 `ArticleRepository` 로 지운다.
+협력: 엔트리 집계는 `ArticleAdministrationService` 가 `EntryWindow` 로 기간을 잡고 `EntryStatisticsRepository` 로 세어 `EntryWindow.statistics` 로 모은다. 기사 수는 같은 서비스가 `ArticleRepository` 로 센다. 같은 기사 판정은 `ArticleFetchedListener` 가 받은 이벤트를 `ArticleIntake` 에 넘긴다. `ArticleIntake` 는 `ArticleRepository` 로 소스를 잠그고, `source` 의 `SourceDirectory` 로 피드가 있는지 묻고, 후보를 모아 `ArticleMatching` 의 판정에 따라 기사 · 엔트리를 기록하고, 새 기사면 `ArticleStored` 를 발행한다. 판정 키(`CanonicalUrl` · `TitleKey` · `KeyHash`)는 들어온 항목(`IncomingItem`)을 만들 때 계산한다. 지운 소스 · 피드는 `SourceRemovalListener` 가 받은 이벤트를 `ArticleRemoval` 에 넘기고, `ArticleRemoval` 이 같은 소스 잠금 안에서 `ArticleRepository` 로 지운 뒤 지운 기사를 `ArticlesRemoved` 로 발행한다. 기사 조회는 `ArticleDirectoryService` 가 `ArticleRepository` 로 읽는다.
 
 #### 항목 하나 처리
 
@@ -200,7 +248,7 @@ sequenceDiagram
 ### `application`
 
 - `ArticleIntake` — 들어온 항목 하나를 한 트랜잭션에서 판정 · 저장 · 기록한다. 같은 소스의 판정은 소스 단위 잠금으로 한 줄로 세우고, 잠금 뒤 피드가 지워졌으면 저장하지 않는다. 다시 불러도 결과가 같다. 새 기사를 저장했을 때만 그 트랜잭션 안에서 `ArticleStored` 를 발행한다(article-R7 ~ R11 · article-R16)
-- `ArticleRemoval` — 지운 소스 · 피드의 엔트리와 엔트리가 남지 않은 기사를 한 트랜잭션에서 지운다. 같은 소스 단위 잠금 안에서 하고, 지운 엔트리 · 기사 수를 정보 로그로 남긴다(article-R15)
+- `ArticleRemoval` — 지운 소스 · 피드의 엔트리와 엔트리가 남지 않은 기사를 한 트랜잭션에서 지우고, 지운 기사가 있으면 같은 트랜잭션에서 `ArticlesRemoved` 를 1,000건(`MAX_IDS_PER_EVENT` — 측정 전 목표, 정본) 단위로 발행한다. 같은 소스 단위 잠금 안에서 하고, 지운 엔트리 · 기사 수를 정보 로그로 남긴다(article-R15)
 
   ```java
   void removeSource(SourceId sourceId)
@@ -208,11 +256,12 @@ sequenceDiagram
   ```
 
 - `ArticleFetchedListener` · `SourceRemovalListener` — 리스너(들어오는 쪽)
+- `ArticleDirectoryService` — 공개 API `ArticleDirectory` 의 구현. 저장소에 맡기고, 트랜잭션 · 역할 애너테이션이 없다
 - `ArticleAdministrationService` — 공개 API `ArticleAdministration` 의 구현. 지금 시각으로 기간을 잡아 집계 조회 하나로 세고 결과로 모은다. 기사 수는 저장소의 질의 하나로 센다. 트랜잭션 · 역할 애너테이션이 없다 — 두 역할 공통이다(article-R13 · article-R15)
 
 ### `domain`
 
-- 저장 단위: aggregate 가 없다. 기사와 엔트리는 저장소 `ArticleRepository` 가 쓴다 — 소스 잠금 · 후보 조회 · "없으면 넣기"(기사 · 엔트리) · 정규 URL 로 다시 찾기와, 지운 소스 · 피드의 엔트리 · 기사 지우기 · 그 수 세기가 있다. 갱신은 없다(article-R7 ~ article-R9 · article-R15)
+- 저장 단위: aggregate 가 없다. 기사와 엔트리는 저장소 `ArticleRepository` 가 쓴다 — 소스 잠금 · 후보 조회 · "없으면 넣기"(기사 · 엔트리) · 정규 URL 로 다시 찾기, 지운 소스 · 피드의 엔트리 · 기사 지우기 · 그 수 세기, 기사 내용 읽기가 있다. 갱신은 없다(article-R7 ~ article-R9 · article-R15)
 
   ```java
   public interface ArticleRepository {
@@ -223,9 +272,10 @@ sequenceDiagram
       boolean insertEntryIfAbsent(ArticleId articleId, IncomingItem item, MatchKind kind);
       List<ArticleId> deleteEntries(SourceId sourceId);                      // 지운 엔트리의 기사 — 같은 기사가 여럿일 수 있다
       List<ArticleId> deleteEntries(SourceId sourceId, FeedId feedId);
-      int deleteArticlesWithoutEntries(Collection<ArticleId> articleIds);    // 엔트리가 남지 않은 기사만 — 지운 기사 수
+      List<ArticleId> deleteArticlesWithoutEntries(Collection<ArticleId> articleIds);  // 엔트리가 남지 않은 기사만 — 지운 기사(ID 순)
       long countArticlesOnlyIn(SourceId sourceId);
       long countArticlesOnlyIn(SourceId sourceId, FeedId feedId);
+      Map<ArticleId, ArticleContent> findContents(Collection<ArticleId> articleIds);  // 없는 기사는 빠진다 — 엔트리는 받은 시각 · 피드 ID 순
   }
   ```
 
@@ -255,7 +305,7 @@ public interface ContentExtractor {
 
 #### 저장소 구현
 
-- `JdbcArticleRepository` — `ArticleRepository` 의 PostgreSQL 구현(JdbcClient). 넣기는 `INSERT … ON CONFLICT`, 지우기는 엔트리를 지운 문장과 엔트리가 남지 않은 기사를 지우는 문장 둘이고(한 문장으로 합치면 같은 스냅숏이 지운 엔트리를 본다), 갱신하지 않는다
+- `JdbcArticleRepository` — `ArticleRepository` 의 PostgreSQL 구현(JdbcClient). 넣기는 `INSERT … ON CONFLICT`, 지우기는 엔트리를 지운 문장과 엔트리가 남지 않은 기사를 지우는 문장 둘이고(한 문장으로 합치면 같은 스냅숏이 지운 엔트리를 본다) 지운 기사 ID 를 `RETURNING` 으로 받아 정렬한다. 내용 읽기는 엔트리 · 기사 질의 둘이다. 갱신하지 않는다
 - `JdbcEntryStatisticsRepository` — `EntryStatisticsRepository` 의 PostgreSQL 구현(JdbcClient). 질의 하나가 세는 규칙의 정본이다(article-R13)
 
 #### 신뢰할 수 없는 입력
@@ -293,7 +343,7 @@ public interface ContentExtractor {
 
 ### 지운 소스 · 피드
 
-- **article-R15** — 운영자가 소스를 지우면(`SourceDeleted`) 그 소스의 엔트리를, 피드를 지우면(`FeedDeleted`) 그 소스의 그 피드의 엔트리를 지우고, 지운 엔트리의 기사 가운데 엔트리가 하나도 남지 않은 기사를 지운다. 다른 소스 · 다른 피드의 엔트리가 남은 기사는 그 엔트리와 함께 남는다 — 기사의 처음 값(article-R8)은 바뀌지 않는다. 한 트랜잭션이고 그 소스의 단위 잠금(article-R9) 안에서 한다. 다시 처리해도 결과가 같다(지울 엔트리가 없으면 0건). 지운 엔트리 · 기사 수를 소스 · 피드 ID 와 함께 정보 로그로 남긴다. 지우는 사이 다른 소스가 같은 기사에 엔트리를 넣으면 기사 FK 로 한쪽이 실패하고, 이벤트 재처리로 수렴한다 — 잠금을 더하지 않는다. 지우기 전에 함께 지워질 기사 수(엔트리가 모두 그 소스 · 그 피드의 것인 기사)를 `ArticleAdministration` 이 센다
+- **article-R15** — 운영자가 소스를 지우면(`SourceDeleted`) 그 소스의 엔트리를, 피드를 지우면(`FeedDeleted`) 그 소스의 그 피드의 엔트리를 지우고, 지운 엔트리의 기사 가운데 엔트리가 하나도 남지 않은 기사를 지운다. 다른 소스 · 다른 피드의 엔트리가 남은 기사는 그 엔트리와 함께 남는다 — 기사의 처음 값(article-R8)은 바뀌지 않는다. 한 트랜잭션이고 그 소스의 단위 잠금(article-R9) 안에서 한다. 다시 처리해도 결과가 같다(지울 엔트리가 없으면 0건). 지운 기사가 있으면 같은 트랜잭션에서 그 ID 를 `ArticlesRemoved` 로 발행한다 — 한 이벤트에 1,000건까지, 넘으면 나눠 발행한다. 지운 엔트리 · 기사 수를 소스 · 피드 ID 와 함께 정보 로그로 남긴다. 지우는 사이 다른 소스가 같은 기사에 엔트리를 넣으면 기사 FK 로 한쪽이 실패하고, 이벤트 재처리로 수렴한다 — 잠금을 더하지 않는다. 지우기 전에 함께 지워질 기사 수(엔트리가 모두 그 소스 · 그 피드의 것인 기사)를 `ArticleAdministration` 이 센다
 - **article-R16** — 소스 단위 잠금 뒤 항목의 피드가 `source` 에 없으면(운영자가 그 피드나 소스를 지웠다) 그 항목을 저장하지 않고, 소스 · 피드 ID 를 담은 정보 로그를 남긴다. 숨긴 피드는 있는 피드다. 잠금 안에서 묻으므로, 피드가 있어 저장한 항목은 뒤이어 같은 잠금을 잡는 삭제 처리(article-R15)가 지운다
 
 ### 엔트리 집계
@@ -338,3 +388,4 @@ public interface ContentExtractor {
 | [0029](../adr/0029-indefinite-summary-retention-with-optional-deletion.md) | RSS 요약문은 기본 무기한 보존하고, 자동 삭제는 운영 설정으로 켠다 |
 | [0032](../adr/0032-same-article-matching-avoids-false-merges-with-per-feed-entries-under-source-lock.md) | 같은 기사 판정은 기사를 잃지 않는 쪽으로 좁히고, 피드별 기록은 (기사, 피드)마다 한 행으로 소스 단위 잠금 안에서 쓴다 |
 | [0052](../adr/0052-article-sources-live-in-feed-entries-and-late-items-of-deleted-feeds-are-dropped.md) | 기사의 소스는 피드별 기록이 갖고, 제목 판정은 그 소스의 기록이 있는 기사에서 하며, 지운 피드의 늦은 항목은 버린다 |
+| [0060](../adr/0060-article-deletion-announced-by-removed-article-ids-and-followed-by-referencing-modules.md) | 기사 삭제는 지운 기사 ID 이벤트로 알리고, 기사를 가리키는 모듈이 받아 자기 행을 지운다 |

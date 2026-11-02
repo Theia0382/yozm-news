@@ -33,6 +33,7 @@ erDiagram
     tag_sets ||--o{ importance_rubrics : ""
     tag_sets ||--o{ tag_set_thresholds : ""
     tag_sets ||--o{ tag_set_threshold_changes : ""
+    articles ||--o| evaluation_queue : ""
     articles ||--o{ article_evaluations : ""
     article_evaluations ||--o{ article_tags : ""
     tags ||--o{ article_tags : ""
@@ -82,7 +83,7 @@ erDiagram
 
 ## 평가
 
-태그 체계 테이블(`tag_sets` · `tags` · `importance_rubrics` · `tag_set_thresholds` · `tag_set_threshold_changes`)과 평가 결과 테이블(`article_evaluations` · `article_tags` · `tag_key_lineage` · `article_event_judgements`)은 [evaluation Spec §6](specs/evaluation.md#6-데이터)에 있다.
+태그 체계 테이블(`tag_sets` · `tags` · `importance_rubrics` · `tag_set_thresholds` · `tag_set_threshold_changes`)과 평가 대기 · 평가 결과 테이블(`evaluation_queue` · `article_evaluations` · `article_tags` · `tag_key_lineage` · `article_event_judgements`)은 [evaluation Spec §6](specs/evaluation.md#6-데이터)에 있다.
 
 ## 사건
 
@@ -147,6 +148,6 @@ erDiagram
 | JobRunr 작업 기록 | 성공하고 36시간 뒤 삭제 상태, 다시 72시간 뒤 영구 삭제. 실패한 작업은 남는다 | JobRunr 기본값. 작업의 결과는 각 모듈의 데이터에 남는다 |
 | 이벤트 발행 기록 (`event_publication`) | 완료 즉시 삭제. 실패한 발행은 운영자가 폐기할 때까지 남는다 | 결과는 각 모듈의 데이터에 남고, 실패한 발행은 재처리와 원인 조사의 근거다([ADR-0023](adr/0023-jobrunr-oss-framework-schema-and-event-resubmission.md) · [ADR-0050](adr/0050-operator-resubmits-once-or-discards-stranded-event-publications-read-from-registry.md)) |
 
-- **무기한은 자동으로 지우지 않는다는 뜻이다.** 숨긴 소스 · 피드의 기사도 남는다. 운영자가 소스 · 피드를 지우면 그 소스 · 피드만 가진 기사(메타데이터 · 요약문 · 엔트리)가 함께 지워지고, 다른 소스 · 피드도 가진 기사는 남는다([source Spec 숨김과 삭제](specs/source.md#숨김과-삭제) · [article Spec](specs/article.md#지운-소스--피드) · [ADR-0051](adr/0051-operator-hides-or-deletes-sources-and-feeds-and-deletion-removes-exclusive-articles.md) · [ADR-0052](adr/0052-article-sources-live-in-feed-entries-and-late-items-of-deleted-feeds-are-dropped.md)). 기사를 가리키는 다른 데이터가 그 삭제를 따르는 길은 **(미설계)** 다([overview.md §5](overview.md#5-모듈-지도))
+- **무기한은 자동으로 지우지 않는다는 뜻이다.** 숨긴 소스 · 피드의 기사도 남는다. 운영자가 소스 · 피드를 지우면 그 소스 · 피드만 가진 기사(메타데이터 · 요약문 · 엔트리)가 함께 지워지고, 다른 소스 · 피드도 가진 기사는 남는다([source Spec 숨김과 삭제](specs/source.md#숨김과-삭제) · [article Spec](specs/article.md#지운-소스--피드) · [ADR-0051](adr/0051-operator-hides-or-deletes-sources-and-feeds-and-deletion-removes-exclusive-articles.md) · [ADR-0052](adr/0052-article-sources-live-in-feed-entries-and-late-items-of-deleted-feeds-are-dropped.md)). 기사를 가리키는 다른 모듈의 데이터는 `article` 이 알리는 지운 기사 ID 로 함께 지워진다 — 지금은 평가 대기 · 평가 · 태그([overview.md §5](overview.md#5-모듈-지도) · [ADR-0060](adr/0060-article-deletion-announced-by-removed-article-ids-and-followed-by-referencing-modules.md))
 
 보존 기간은 [open-questions.md](open-questions.md)에서 확정한다.
