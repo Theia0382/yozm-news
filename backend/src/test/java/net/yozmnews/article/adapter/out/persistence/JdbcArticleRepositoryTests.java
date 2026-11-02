@@ -10,6 +10,8 @@ import java.util.Map;
 import java.util.stream.IntStream;
 
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.article.ArticleContent;
+import net.yozmnews.article.ArticleEntryView;
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.article.domain.IncomingItem;
 import net.yozmnews.article.domain.MatchCandidates;
@@ -28,10 +30,10 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 /**
- * 기사 저장소의 저장 · 고유 제약 · 후보 조회 — Flyway 가 적용된 실제 PostgreSQL 에서 본다. 테스트마다 트랜잭션을 롤백한다.
- * 해시 기대값은 {@code sha256sum} 으로 따로 계산한 16진수다.
+ * 기사 저장소의 저장 · 고유 제약 · 후보 조회 · 내용 조회 · 삭제 — Flyway 가 적용된 실제 PostgreSQL 에서 본다. 테스트마다 트랜잭션을
+ * 롤백한다. 해시 기대값은 {@code sha256sum} 으로 따로 계산한 16진수다.
  * <p>
- * 지키는 규칙: article-R2 · article-R3 · article-R6 · article-R7 · article-R8 · article-R9
+ * 지키는 규칙: article-R2 · article-R3 · article-R6 · article-R7 · article-R8 · article-R9 · article-R15
  */
 @JdbcTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -299,6 +301,66 @@ class JdbcArticleRepositoryTests {
 			.param("id", id.value())
 			.query(Integer.class)
 			.single()).isEqualTo(10_000);
+	}
+
+	@Test
+	void readsTitleSummaryAndEntriesInTheOrderTheyWereSeen() {
+		Instant earlier = Instant.parse("2026-10-28T00:30:00Z");
+		// 기사 A — 피드 6 에서 먼저(00:30), 피드 5 에서 나중(01:00) 본다. 피드 ID 순과 받은 시각 순이 엇갈린다
+		IncomingItem first = IncomingItem.from(new ArticleFetched(SOURCE, OTHER_FEED, earlier,
+				new FetchedArticle(TITLE, URI.create("https://a.example/news/1"), null, "요약", PUBLISHED_AT, false,
+						null, List.of("정치", "국회"), null)));
+		ArticleId a = store(first, MatchKind.NEW);
+		this.repository.insertEntryIfAbsent(a, item(new SourceId(4), FEED, "https://a.example/news/1", null, TITLE,
+				PUBLISHED_AT, FETCHED_AT, List.of("속보")), MatchKind.URL);
+		// 기사 B — 요약문 없음, 엔트리 하나
+		ArticleId b = store(item(SOURCE, FEED, "https://a.example/news/2", null, "경제 지표 발표", PUBLISHED_AT,
+				FETCHED_AT, List.of()), MatchKind.NEW);
+		// 기사 C — 같은 시각에 받은 두 엔트리는 피드 ID 순이다(피드 6 을 먼저 넣는다)
+		ArticleId c = store(item(SOURCE, OTHER_FEED, "https://a.example/news/3", null, "날씨", PUBLISHED_AT,
+				FETCHED_AT, List.of("생활")), MatchKind.NEW);
+		this.repository.insertEntryIfAbsent(c, item(SOURCE, FEED, "https://a.example/news/3", null, "날씨",
+				PUBLISHED_AT, FETCHED_AT, List.of()), MatchKind.URL);
+		ArticleId missing = new ArticleId(a.value() + b.value() + c.value() + 1_000);
+
+		Map<ArticleId, ArticleContent> contents = this.repository.findContents(List.of(missing, c, a, b));
+
+		assertThat(contents).containsOnlyKeys(a, b, c);
+		assertThat(contents.get(a)).isEqualTo(new ArticleContent(a, "국회 본회의 통과", "요약",
+				List.of(new ArticleEntryView(new SourceId(3), new FeedId(6), List.of("정치", "국회")),
+						new ArticleEntryView(new SourceId(4), new FeedId(5), List.of("속보")))));
+		assertThat(contents.get(b)).isEqualTo(new ArticleContent(b, "경제 지표 발표", null,
+				List.of(new ArticleEntryView(new SourceId(3), new FeedId(5), List.of()))));
+		assertThat(contents.get(c).entries()).extracting(ArticleEntryView::feedId)
+			.containsExactly(new FeedId(5), new FeedId(6));
+		assertThat(this.repository.findContents(List.of())).isEmpty();
+	}
+
+	@Test
+	void deletesOnlyTheGivenArticlesLeftWithoutEntriesAndReturnsThemInIdOrder() {
+		ArticleId first = store(item(SOURCE, FEED, "https://a.example/news/1", null, "하나", PUBLISHED_AT, FETCHED_AT,
+				List.of()), MatchKind.NEW);
+		ArticleId kept = store(item(SOURCE, FEED, "https://a.example/news/2", null, "둘", PUBLISHED_AT, FETCHED_AT,
+				List.of()), MatchKind.NEW);
+		ArticleId second = store(item(SOURCE, FEED, "https://a.example/news/3", null, "셋", PUBLISHED_AT, FETCHED_AT,
+				List.of()), MatchKind.NEW);
+		ArticleId untouched = store(item(SOURCE, FEED, "https://a.example/news/4", null, "넷", PUBLISHED_AT,
+				FETCHED_AT, List.of()), MatchKind.NEW);
+		this.jdbc.sql("delete from article_feed_entries where article_id in (:ids)")
+			.param("ids", List.of(first.value(), second.value(), untouched.value()))
+			.update();
+		// first 의 행을 다시 써 물리 순서를 ID 순과 어긋나게 하고 인덱스 없이 훑게 한다 — 지운 순서가 아니라 정렬이 ID 순을 만들어야 한다
+		this.jdbc.sql("update articles set title = title where id = :id").param("id", first.value()).update();
+		this.jdbc.sql("set local enable_indexscan = off").update();
+		this.jdbc.sql("set local enable_bitmapscan = off").update();
+
+		// 엔트리가 남은 기사(kept)와 넘기지 않은 기사(untouched)는 남는다. 넘긴 순서 · 중복과 무관하게 ID 순이다
+		List<ArticleId> deleted = this.repository.deleteArticlesWithoutEntries(List.of(second, kept, first, second));
+
+		assertThat(deleted).containsExactly(first, second);
+		assertThat(this.jdbc.sql("select id from articles order by id").query(Long.class).list())
+			.containsExactly(kept.value(), untouched.value());
+		assertThat(this.repository.deleteArticlesWithoutEntries(List.of())).isEmpty();
 	}
 
 	private ArticleId store(IncomingItem item, MatchKind kind) {
