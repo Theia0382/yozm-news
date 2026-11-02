@@ -4,11 +4,13 @@ import java.math.BigDecimal;
 import java.time.InstantSource;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 import net.yozmnews.evaluation.ChangeActor;
 import net.yozmnews.evaluation.MultiTagKind;
 import net.yozmnews.evaluation.TagSetAdministration;
 import net.yozmnews.evaluation.TagSetId;
+import net.yozmnews.evaluation.TagSetVersionView;
 import net.yozmnews.evaluation.TagThresholds;
 import net.yozmnews.evaluation.ThresholdChangeResult;
 import net.yozmnews.evaluation.ThresholdChangeView;
@@ -25,7 +27,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 공개 API {@link TagSetAdministration} 의 구현 — docs/specs/evaluation.md §4 · evaluation-R11 ~ evaluation-R13.
  * <p>
  * 변경은 한 트랜잭션에서 활성 버전 조회 → 지금 태그 기준 · 저장 기준 행 잠금 → 지난 저장 기준 최댓값 → 판정 → 쓰기다. 역할 애너테이션이 없다(두 역할
- * 공통).
+ * 공통). 버전 연산은 {@link TagSetVersioning} 에 맡긴다.
  */
 @Service
 class TagSetAdministrationService implements TagSetAdministration {
@@ -38,18 +40,21 @@ class TagSetAdministrationService implements TagSetAdministration {
 
 	private final InstantSource clock;
 
+	private final TagSetVersioning versioning;
+
 	@Autowired
 	TagSetAdministrationService(TagSetRepository tagSets, ThresholdRepository thresholds,
-			TransactionTemplate transaction) {
-		this(tagSets, thresholds, transaction, InstantSource.system());
+			TransactionTemplate transaction, TagSetVersioning versioning) {
+		this(tagSets, thresholds, transaction, InstantSource.system(), versioning);
 	}
 
 	TagSetAdministrationService(TagSetRepository tagSets, ThresholdRepository thresholds,
-			TransactionTemplate transaction, InstantSource clock) {
+			TransactionTemplate transaction, InstantSource clock, TagSetVersioning versioning) {
 		this.tagSets = tagSets;
 		this.thresholds = thresholds;
 		this.transaction = transaction;
 		this.clock = clock;
+		this.versioning = versioning;
 	}
 
 	@Override
@@ -79,6 +84,16 @@ class TagSetAdministrationService implements TagSetAdministration {
 	@Override
 	public List<ThresholdChangeView> thresholdChanges() {
 		return this.thresholds.changes(TagSetDirectoryService.active(this.tagSets).id());
+	}
+
+	@Override
+	public List<TagSetVersionView> versions() {
+		return this.versioning.versions();
+	}
+
+	@Override
+	public Optional<String> versionText(TagSetId id) {
+		return this.versioning.versionText(Objects.requireNonNull(id, "id"));
 	}
 
 	private static TagThresholds view(MultiTagKind kind, ThresholdValues values) {

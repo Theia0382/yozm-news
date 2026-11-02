@@ -63,7 +63,8 @@ class TagSetAdministrationTests {
 	void startFromTheInitialThresholds() {
 		TagSetRows.resetThresholds(this.jdbc);
 		this.administration = new TagSetAdministrationService(this.tagSets, this.thresholds,
-				new TransactionTemplate(this.transactionManager), InstantSource.fixed(NOW));
+				new TransactionTemplate(this.transactionManager), InstantSource.fixed(NOW),
+				new TagSetVersioning(this.tagSets, this.thresholds));
 	}
 
 	@AfterEach

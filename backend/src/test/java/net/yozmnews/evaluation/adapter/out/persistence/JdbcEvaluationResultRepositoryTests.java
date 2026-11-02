@@ -51,6 +51,7 @@ class JdbcEvaluationResultRepositoryTests {
 
 	@BeforeEach
 	void createTagSets() {
+		this.jdbc.sql("delete from tag_key_lineage").update();
 		this.jdbc.sql("delete from tag_set_threshold_changes").update();
 		this.jdbc.sql("delete from tag_set_thresholds").update();
 		this.jdbc.sql("delete from importance_rubrics").update();

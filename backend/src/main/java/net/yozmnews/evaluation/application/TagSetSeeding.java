@@ -66,7 +66,7 @@ class TagSetSeeding implements SmartInitializingSingleton {
 	 */
 	boolean seedIfEmpty() {
 		Boolean seeded = this.transaction.execute(status -> {
-			this.tagSets.lockForSeeding();
+			this.tagSets.lockForChange();
 			if (this.tagSets.anyExists()) {
 				return false;
 			}
