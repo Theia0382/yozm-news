@@ -10,7 +10,7 @@
 - **첫 기동 적재** — 저장소의 기본 체계 파일을 기동 때 검증하고, 버전이 하나도 없으면 버전 1 로 들인다(evaluation-R1 · R2)
 - **태그 기준 · 저장 기준** — 주제 · 지역마다 두 기준을 두고, 운영자의 변경을 이력과 함께 받는다. 앱은 두 기준을 막지 않고, 이전 기사와 어긋날 수 있는 변경에 경고한다(evaluation-R10 ~ R13)
 - **활성 체계 조회** — 평가 · 후보 선별이 쓰는 활성 버전과 두 기준을 공개 API(`TagSetDirectory`)로 낸다
-- **(미구현)** 공유 평가 — 평가 대기 기사를 묶어 Jev 로 태그 · 형식 · 중요도를 묻고 결과를 저장한다(`ArticleEvaluator` — Jev 를 부르는 유일한 포트, evaluation-R14 · R15)
+- **공유 평가** — 기사 하나를 넘긴 체계의 질문으로 평가하는 포트(`ArticleEvaluator` — Jev 를 부르는 유일한 포트)와 로컬 대체물(`FakeArticleEvaluator`)을 둔다. **(미구현)** 평가 대기 기사를 묶어 Jev 로 태그 · 형식 · 중요도를 묻고 결과를 저장한다(evaluation-R14 · R15 · R17)
 - **(미구현)** 체계 변경과 태그 키 계보 — 새 버전 작성 · 활성 전환 · 최근 기사 재평가, 키 이름 변경 · 분할 · 병합의 기록(evaluation-R16)
 - **(미구현)** 사건 소속 판정 — 사건 묶기의 애매한 구간을 Jev 로 판정한다([ADR-0026](../adr/0026-event-clustering-with-local-embeddings-and-jev.md))
 
@@ -37,6 +37,8 @@
 | 기본 체계 파일 | 저장소의 `backend/src/main/resources/tag-sets/default.yaml`. 첫 기동에 버전 1 로 들어간다(evaluation-R1 · R2). 첫 체계는 [조사 초안](../research/2026-10-news-categories.md) 3.2 를 바탕으로 한다 |
 | 첫 기동 적재 | 버전이 하나도 없을 때 기본 체계 파일을 버전 1 로 저장하는 기동 시 동작(evaluation-R2) |
 | 행위자 | 두 기준을 정한 주체의 종류 — 시스템(첫 기동 적재) · 운영자(공개 운영 API) |
+| 피드 맥락 | 평가 입력에서 기사가 실린 피드 하나의 값 — 출처 이름 · 피드 섹션(수집 프로필) · 그 피드 항목의 RSS 카테고리. 기사가 실린 피드(엔트리)마다 하나다(evaluation-R17) |
+| 실패 갈래 | 평가기가 예상한 실패의 종류 — 일시 · 기사 거부 · 평가기 사용 불가. 평가 작업의 재시도가 이 갈래로 나뉜다([ADR-0058](../adr/0058-evaluator-failures-in-three-kinds-and-unavailable-evaluator-skips-article-retries.md)) |
 
 ## 3. 공개 인터페이스
 
@@ -192,10 +194,12 @@ public record ThresholdChangeView(MultiTagKind kind, @Nullable BigDecimal previo
 | (최상위) | 공개 API `TagSetDirectory` · `TagSetAdministration` 과 그 값 · 결과 타입(§3) |
 | `domain/tagset` | 태그 체계 정의와 그 읽기 · 검증, 질문 틀, 버전 aggregate 와 그 저장소 |
 | `domain/threshold` | 두 기준의 값 규칙과 변경 판정, 두 기준 저장소 |
+| `domain/evaluator` | 공유 평가의 포트와 그 입력 · 결과 · 실패, 피드 맥락의 카테고리 상한 |
 | `application` | 기본 체계 파일의 기동 검증, 첫 기동 적재, 공개 API 의 구현 |
 | `adapter/out/persistence` | 두 기준 저장소의 JdbcClient 구현 |
+| `adapter/out/fake` | 공유 평가 포트의 로컬 대체물과 그 결선(`local` 에서만) |
 
-협력: `DefaultTagSetConfiguration` 이 기본 체계 파일을 `TagSetParser`(`platform` 의 `YamlTextReader` → `TagSetBinder` → `TagSetValidator`)로 읽어 `TagSetDefinition` 을 만든다. `TagSetSeeding` 이 그 정의로 `TagSetRepository` 에 버전 1 을, `ThresholdRepository` 에 처음 두 기준을 쓴다. `TagSetDirectoryService` 는 `TagSetRepository` 로 활성 버전을 읽어 질문 문장(`QuestionTemplate`)을 만들어 공개 타입으로 옮기고, 두 기준은 `ThresholdRepository` 로 읽는다. `TagSetAdministrationService` 는 활성 버전의 두 기준을 `ThresholdRepository` 로 잠가 `ThresholdRule` 로 판정하고 같은 저장소로 쓴다.
+협력: `DefaultTagSetConfiguration` 이 기본 체계 파일을 `TagSetParser`(`platform` 의 `YamlTextReader` → `TagSetBinder` → `TagSetValidator`)로 읽어 `TagSetDefinition` 을 만든다. `TagSetSeeding` 이 그 정의로 `TagSetRepository` 에 버전 1 을, `ThresholdRepository` 에 처음 두 기준을 쓴다. `TagSetDirectoryService` 는 `TagSetRepository` 로 활성 버전을 읽어 질문 문장(`QuestionTemplate`)을 만들어 공개 타입으로 옮기고, 두 기준은 `ThresholdRepository` 로 읽는다. `TagSetAdministrationService` 는 활성 버전의 두 기준을 `ThresholdRepository` 로 잠가 `ThresholdRule` 로 판정하고 같은 저장소로 쓴다. 공유 평가의 포트 `ArticleEvaluator` 는 **(미구현)** 평가 작업이 부른다 — 로컬 개발에서는 `FakeArticleEvaluatorConfiguration` 이 `FakeArticleEvaluator` 를 그 포트로 등록한다.
 
 #### 첫 기동
 
@@ -258,6 +262,11 @@ sequenceDiagram
 - `TagKind` — 태그 종류 `TOPIC` · `REGION` · `FORMAT` — 태그 행의 종류
 - 그 밖의 값: `TagSetContent` · `TagSetDefinition` · `TopicCategoryDef` · `TagDef` · `FormatDef` · `ImportanceLevelDef` · `TagSetDraft` · `TagSetParse` · `TagSetProblem` · `TagSetProblemCode`
 
+#### `domain/evaluator`
+
+- 포트 `ArticleEvaluator`(나가는 쪽)와 그 값 · 결과: `EvaluationInput` · `FeedContext` · `EvaluationResult` · `Evaluation` · `EvaluationFailure`
+- `FeedContext.limited` — 피드 맥락의 카테고리 상한을 적용하는 정본(evaluation-R17)
+
 #### `domain/threshold`
 
 - `ThresholdRule` — 두 기준 변경 판정과 경고의 정본(evaluation-R11 · R12)
@@ -280,31 +289,76 @@ sequenceDiagram
 
 ### 나가는 쪽
 
-외부 의존은 공유 평가의 포트 `ArticleEvaluator` 하나이고, 아직 구현되지 않았다.
+외부 의존은 공유 평가의 포트 `ArticleEvaluator` 하나다.
 
 #### `ArticleEvaluator`
 
-**(미구현)** 공유 평가의 포트 — Jev 를 부르는 유일한 포트다. 사용자 정보를 받지 않는다. 설계 초안의 시그니처:
+공유 평가의 포트 — Jev 를 부르는 유일한 포트다. 사용자 정보를 받지 않는다. 패키지는 `domain/evaluator` 다.
 
 ```java
 public interface ArticleEvaluator {
-    EvaluatorInfo info();                                        // 이름, 모델 버전
-    List<Evaluation> evaluate(List<EvaluationInput> inputs, TagSetView tagSet);
-    List<MembershipJudgement> judgeEventMembership(EvaluationInput article, List<EventDescriptor> candidates); // 애매한 구간의 사건 소속 판정
+    EvaluationResult evaluate(EvaluationInput input, TagSetView tagSet);
+}
+
+public record EvaluationInput(String title, @Nullable String summary, List<FeedContext> feeds) {}
+
+public record FeedContext(@Nullable String sourceName, @Nullable String section, List<String> categories) {
+    public static final int MAX_CATEGORIES = 5;
+    public static final int MAX_CATEGORY_CODE_POINTS = 40;
+    public static FeedContext limited(@Nullable String sourceName, @Nullable String section, List<String> categories);
+}
+
+public sealed interface EvaluationResult permits Evaluation, EvaluationFailure {}
+
+public record Evaluation(Map<String, Double> topics, Map<String, Double> regions, Map<String, Double> formats,
+        Map<Integer, Double> importance, String evaluator, String modelVersion, int inputTokens, String rawResponse)
+        implements EvaluationResult {}
+
+public record EvaluationFailure(Kind kind, String message) implements EvaluationResult {
+    public enum Kind { TRANSIENT, ARTICLE_REJECTED, EVALUATOR_UNAVAILABLE }
 }
 ```
 
-- v1 구현체는 `JevArticleEvaluator` 이고 Jev 호출 경로(직접 API 또는 AI Gateway)는 설정으로 바꾼다. 개발 · 시험은 고정 규칙 로컬 대체물(`FakeArticleEvaluator`)을 쓴다([ADR-0012](../adr/0012-swappable-external-dependencies.md))
-- 사건 소속 판정의 인자 · 반환 타입(`EventDescriptor` · `MembershipJudgement`)은 `evaluation` 이 소유한다 — `event` 의 타입을 받으면 모듈 순환이 된다. `event` 는 `evaluation` 의 공개 API 를 거쳐 판정을 요청한다([ADR-0026](../adr/0026-event-clustering-with-local-embeddings-and-jev.md))
-- 입력(state)은 기사마다 한 번 보낸다:
+| 타입 · 멤버 | 뜻 | 제약 |
+|---|---|---|
+| `evaluate` | 기사 하나를 넘긴 체계의 질문으로 평가한다 | — |
+| `EvaluationInput.title` | 기사 제목 | 공백뿐이 아니다 |
+| `EvaluationInput.summary` | RSS 요약문 — 없으면 null | 공백뿐이 아니다. 길이 상한은 수집이 정한다(`FetchedArticle.SUMMARY_MAX_CODE_POINTS` — [source Spec](source.md)) |
+| `EvaluationInput.feeds` | 기사가 실린 피드의 맥락 — 넘긴 순서 그대로 | 비어 있을 수 있다 |
+| `FeedContext.sourceName` · `section` | 출처 이름 · 피드 섹션(수집 프로필) — 없으면 null | 공백뿐이 아니다 |
+| `FeedContext.categories` | 그 피드 항목의 RSS 카테고리 — 피드 순서 | 공백뿐인 원소가 없고 상한 안이다(evaluation-R17). 상한을 모르는 값은 `limited` 로 만든다 |
+| `Evaluation.topics` · `regions` · `formats` | 주제 중분류 전체 키 · 지역 키 · 형식 키 → 확률 | 키가 공백뿐이 아니고, 확률은 0 이상 1 이하의 유한값이다 |
+| `Evaluation.importance` | 중요도 수준 → 확률 | 확률 제약은 같다 |
+| `Evaluation.evaluator` · `modelVersion` | 평가기 이름 · 모델 버전 | 공백뿐이 아니다 |
+| `Evaluation.inputTokens` | 입력 토큰 수 | 0 이상 |
+| `Evaluation.rawResponse` | 원본 응답 — JSON 텍스트 | — |
+| `EvaluationFailure.Kind` | 실패 갈래 — `TRANSIENT`(시간이 지나면 풀릴 수 있다 — 마감 초과 · 연결 실패 · 서버 오류 · 요청 제한. 그 기사를 재시도한다) · `ARTICLE_REJECTED`(그 기사 때문이라 다시 보내도 같다 — 입력 거부 · 그 기사의 응답을 읽을 수 없음. 그 기사를 실패로 남긴다) · `EVALUATOR_UNAVAILABLE`(평가기 자체를 쓸 수 없다 — 키 무효 · 한도 소진 · 설정 오류. 기사 재시도를 쓰지 않고 회차를 멈춘다) | — |
+| `EvaluationFailure.message` | 운영자용 문구 | 공백뿐이 아니고 비밀 값을 담지 않는다 |
+
+- 계약
+  - 질문 · 태그는 넘긴 체계에서 읽는다 — 구현은 문구를 갖지 않는다(evaluation-R14)
+  - 성공이면 넘긴 체계의 주제 중분류 · 지역 · 형식 선택지 · 중요도 수준마다 확률이 하나씩 있고, 다른 키는 없다. 분포의 합은 계약하지 않는다. 결과 레코드는 값 하나하나만 검사하고, 체계와 맞는지는 부르는 쪽이 본다
+  - 예상한 실패는 `EvaluationFailure` 로 돌려준다 — 예외를 던지지 않는다. 예상 못한 런타임 예외는 구현 결함이다([ADR-0058](../adr/0058-evaluator-failures-in-three-kinds-and-unavailable-evaluator-skips-article-retries.md))
+  - 외부 호출을 하므로 부르는 쪽은 DB 트랜잭션 밖에서 부른다. 구현은 트랜잭션을 열지 않는다
+  - 형식 · 중요도는 분포만 돌려준다. 대표값 고르기 · 저장 기준 거르기 · `low_confidence` 는 저장 쪽 규칙이다(evaluation-R15)
+- **(미구현)** 사건 소속 판정 — 사건 묶기가 이 포트에 연산을 더한다. 그 인자 · 반환 타입(`EventDescriptor` · `MembershipJudgement`)은 `evaluation` 이 소유한다 — `event` 의 타입을 받으면 모듈 순환이 된다. `event` 는 `evaluation` 의 공개 API 를 거쳐 판정을 요청한다([ADR-0026](../adr/0026-event-clustering-with-local-embeddings-and-jev.md))
+- 입력(state)은 기사마다 한 번 보낸다. 피드 맥락마다 출처 줄 하나이고, 없는 값과 요약이 없을 때의 요약 줄은 뺀다:
 
   ```
-  출처: {소스 이름} / 피드 섹션: {피드 카테고리}
+  출처: {출처 이름} / 피드 섹션: {피드 섹션} / 카테고리: {RSS 항목 카테고리}
   제목: {제목}
-  요약: {RSS 요약문, 최대 1,000자}
+  요약: {RSS 요약문}
   ```
 
 - 비용과 처리량 추정(측정 전): 피드 20개, 하루 약 4,000건, 질문 55개(주제 중분류 46 · 지역 7 · 형식 1 · 중요도 1). 기사당 입력 약 1,700토큰(state 약 300 + 질문 · 설명 약 1,400). 하루 약 6.8M 토큰 → 보도된 단가($0.042 / 1M 입력 토큰, 출력 무료) 기준 하루 약 $0.29, 월 약 $9 — 사용자 수와 무관하다. Jev 응답 지연은 보도 기준 요청당 70–500ms 이고 질문은 병렬로 평가된다. 재시도는 JobRunr 작업 단위로 건다. JobRunr OSS 에는 작업 종류별 동시성 제한이 없어, 동시성은 작업 설계(묶음 처리 · 반복 작업의 회차 비중첩)와 worker 수로 제한한다([ADR-0023](../adr/0023-jobrunr-oss-framework-schema-and-event-resubmission.md)). 태그 설명이 길어지면 모든 요청의 입력이 늘어나므로 설명은 짧게 두고(evaluation-R8), 운영자 화면에 요청당 평균 토큰 수를 보인다
+
+#### 구현과 로컬 대체물
+
+- **(미구현)** v1 구현 `JevArticleEvaluator` — Jev 호출 경로(직접 API 또는 AI Gateway)는 설정으로 바꾼다
+- `FakeArticleEvaluator`(`adapter/out/fake`) — 로컬 대체물. 외부 호출 없이 고정 규칙으로 같은 입력 · 같은 체계에 같은 결과를 낸다. `local` 에서만 등록되고(§7 · [platform-R18](platform.md#로컬-개발)), 시험은 직접 만들어 쓴다([ADR-0057](../adr/0057-local-substitutes-registered-only-in-local-profile-without-operator-switch.md)). 개발 · 확인용 인스턴스가 기대는 조종 계약:
+  - 실패 표지 — 제목에 `[fake:transient]` · `[fake:article-rejected]` · `[fake:evaluator-unavailable]` 가 있으면 그 갈래로 실패한다. 표지는 제목에서만 본다. 여럿이면 갈래 선언 순서(일시 → 기사 거부 → 평가기 사용 불가)로 처음 것이다
+  - 이름 일치 — 태그 · 대분류 이름을 `·` 로 나눈 조각이 제목 · 피드 섹션 · 카테고리에 들어 있으면 그 태그의 확률을 높인다. 요약 · 출처 이름은 보지 않는다. 일치가 없으면 주제는 고정 규칙으로 하나를, 지역 · 형식은 체계 순서의 첫 항목을 고른다. 수치와 고르는 규칙은 클래스 Javadoc 이 정본이다
+  - 평가기 이름 `fake`, 모델 버전 `fake-rules-2` — 규칙을 바꾸면 버전을 올린다. 입력 토큰은 실제 토큰 수가 아니다
 
 **(미구현)** 평가 작업 `EvaluatePendingArticles` — 1분마다 + `ArticleStored` 를 계기로 평가 대기 기사를 묶어 `ArticleEvaluator` 로 평가한다.
 
@@ -318,6 +372,7 @@ public interface ArticleEvaluator {
 | 입력 | 방어 |
 |---|---|
 | 기본 체계 파일 | 저장소 파일이라 PR 로 리뷰되지만 읽기는 엄격하다 — YAML 공통 거부([platform Spec YAML 원문 읽기](platform.md#yaml-원문-읽기)) · evaluation-R5 ~ R8 · R10 |
+| RSS 항목 카테고리(평가 입력) | 피드가 개수 · 길이를 정하는 값이라 평가 입력에 넣기 전에 줄인다 — evaluation-R17 |
 
 ## 5. 규칙과 불변식
 
@@ -369,6 +424,7 @@ public interface ArticleEvaluator {
   - 태그가 붙었는지는 조회 시점에 그 태그 종류의 태그 기준으로 판단한다 — 태그 기준을 바꿔도 다시 평가하거나 데이터를 다시 쓰지 않는다
   - 주제 태그가 태그 기준을 하나도 넘지 못하면 최고 확률 태그를 하나 붙이고 `low_confidence` 로 표시한다 — 후보 선별 때 중요도 가중치를 낮춘다. 그 확률마저 저장 기준 미만이면 미분류다
   - LLM 재평가는 운영자 비용이 드므로 v1 에서는 하지 않는다
+- **evaluation-R17** — 평가 입력의 RSS 항목 카테고리는 피드 맥락마다 5개(`FeedContext.MAX_CATEGORIES`), 하나에 40 코드 포인트(`FeedContext.MAX_CATEGORY_CODE_POINTS`)까지다. 줄이는 순서는 카테고리마다 앞 40 코드 포인트로 자르고(서로게이트 쌍을 가르지 않는다) 끝 공백을 지운 뒤, 공백뿐인 것을 버리고 남은 것의 앞 5개를 담는 것이다. 정본은 `FeedContext.limited` 다 — 카테고리는 모든 요청의 state 에 들어가므로 피드 값이 요청 크기를 늘리지 않게 한다
 
 ### 체계 변경
 
@@ -397,7 +453,9 @@ public interface ArticleEvaluator {
 
 ## 7. 설정
 
-해당 없음.
+| 설정 | 바꾸는 규칙 |
+|---|---|
+| profile `local` | 로컬 대체물 `FakeArticleEvaluator` 를 `ArticleEvaluator` 로 등록한다(platform-R18). 그 밖의 profile 에서는 등록되지 않는다. 로컬 대체물을 켜는 설정 키는 없다([ADR-0057](../adr/0057-local-substitutes-registered-only-in-local-profile-without-operator-switch.md)) |
 
 ## 8. 결정
 
@@ -411,3 +469,5 @@ public interface ArticleEvaluator {
 | [0054](../adr/0054-tag-set-seeded-from-default-yaml-on-first-start-with-immutable-versions-and-question-templates.md) | 태그 체계는 기본 YAML 파일을 첫 기동에 버전 1로 들이고, 버전 내용은 바꾸지 않으며, 질문은 태그 종류마다 둔 틀에 태그 설명을 끼워 만든다 |
 | [0055](../adr/0055-tag-and-store-thresholds-change-with-history-and-warn-instead-of-blocking.md) | 태그 기준 · 저장 기준은 버전의 설정으로 이력과 함께 바꾸고, 앱은 두 기준을 막지 않고 이번 변경이 어긋남을 만들 때 경고한다 |
 | [0056](../adr/0056-platform-reads-yaml-text-and-applies-common-rejection.md) | YAML 원문 읽기와 공통 거부는 `platform` 이 맡고, 문서별 형식 · 검증은 각 모듈의 `domain` 이 한다 |
+| [0057](../adr/0057-local-substitutes-registered-only-in-local-profile-without-operator-switch.md) | 로컬 대체물은 `local` profile 에서만 등록하고, 운영 설정으로 켜는 스위치를 두지 않는다 |
+| [0058](../adr/0058-evaluator-failures-in-three-kinds-and-unavailable-evaluator-skips-article-retries.md) | 평가기 실패는 일시 · 기사 거부 · 평가기 사용 불가 셋으로 나누고, 평가기 사용 불가는 기사 재시도를 쓰지 않는다 |
