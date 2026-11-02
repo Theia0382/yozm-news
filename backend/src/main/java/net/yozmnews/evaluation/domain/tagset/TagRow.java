@@ -2,6 +2,7 @@ package net.yozmnews.evaluation.domain.tagset;
 
 import java.util.Objects;
 
+import net.yozmnews.evaluation.TagKind;
 import org.jspecify.annotations.Nullable;
 import org.springframework.data.annotation.PersistenceCreator;
 import org.springframework.data.relational.core.mapping.Table;

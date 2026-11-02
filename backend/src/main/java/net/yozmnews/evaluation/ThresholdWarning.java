@@ -1,7 +1,7 @@
 package net.yozmnews.evaluation;
 
 /**
- * 두 기준 변경의 경고 — 이번 변경이 이전 기사와 어긋남을 만들 때 — docs/specs/evaluation.md §3 · evaluation-R12
+ * 태그 기준 · 저장 기준 변경의 경고 — 이번 변경이 이전 기사와 어긋남을 만들 때 — docs/specs/evaluation.md §3 · evaluation-R12
  */
 public enum ThresholdWarning {
 

@@ -45,13 +45,13 @@ public record EvaluationRecord(ArticleId articleId, TagSetId tagSetId, String ev
 
 	/**
 	 * 평가 결과를 저장할 모양으로 옮긴다. 결과는 {@link ResultCheck} 로 체계와 맞는지 본 것이어야 한다.
-	 * @param thresholds 평가 때의 두 기준 — 체계와 같은 버전
+	 * @param thresholds 평가 때의 태그 기준 · 저장 기준 — 체계와 같은 버전
 	 * @throws IllegalArgumentException 기준의 버전이 체계와 다를 때
 	 */
 	public static EvaluationRecord of(ArticleId articleId, Evaluation evaluation, TagSetView tagSet,
 			TagSetThresholds thresholds, Instant evaluatedAt) {
 		if (!thresholds.versionId().equals(tagSet.id())) {
-			throw new IllegalArgumentException("두 기준의 버전이 체계와 다르다: " + thresholds.versionId().value() + " · "
+			throw new IllegalArgumentException("태그 기준 · 저장 기준의 버전이 체계와 다르다: " + thresholds.versionId().value() + " · "
 					+ tagSet.id().value());
 		}
 		List<StoredTag> tags = new ArrayList<>();

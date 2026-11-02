@@ -76,7 +76,7 @@ class JdbcThresholdRepository implements ThresholdRepository {
 			.optional()
 			.orElse(null);
 		if (max == null) {
-			throw new IllegalStateException("두 기준의 이력이 없다 — 처음 값이 첫 행이어야 한다: " + version + " " + kind);
+			throw new IllegalStateException("태그 기준 · 저장 기준의 이력이 없다 — 처음 값이 첫 행이어야 한다: " + version + " " + kind);
 		}
 		return max;
 	}
@@ -94,7 +94,7 @@ class JdbcThresholdRepository implements ThresholdRepository {
 			.param("kind", kind.name())
 			.update();
 		if (updated != 1) {
-			throw new IllegalStateException("두 기준 행이 없다: " + version + " " + kind);
+			throw new IllegalStateException("태그 기준 · 저장 기준 행이 없다: " + version + " " + kind);
 		}
 		appendChange(version, kind, previous, next, actor, at);
 	}
@@ -131,7 +131,7 @@ class JdbcThresholdRepository implements ThresholdRepository {
 		TagThresholds topic = rows.get(MultiTagKind.TOPIC);
 		TagThresholds region = rows.get(MultiTagKind.REGION);
 		if (topic == null || region == null) {
-			throw new IllegalStateException("태그 종류마다 두 기준 행이 있어야 한다: " + version + " " + rows.keySet());
+			throw new IllegalStateException("태그 종류마다 태그 기준 · 저장 기준 행이 있어야 한다: " + version + " " + rows.keySet());
 		}
 		return new TagSetThresholds(version, topic, region);
 	}

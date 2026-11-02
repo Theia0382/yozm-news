@@ -9,6 +9,7 @@ import java.util.Objects;
 import java.util.Set;
 
 import net.yozmnews.evaluation.ChangeActor;
+import net.yozmnews.evaluation.TagKind;
 import net.yozmnews.evaluation.TagSetId;
 import org.jspecify.annotations.Nullable;
 import org.springframework.data.annotation.Id;
@@ -19,7 +20,7 @@ import org.springframework.data.relational.core.mapping.Table;
 /**
  * 태그 체계 버전 aggregate — 버전 하나가 태그 세트 하나다 — docs/specs/evaluation.md §4 · evaluation-R3 · evaluation-R4.
  * <p>
- * 버전 내용(질문 틀 · 질문 · 태그 · 중요도 기준)을 바꾸는 메서드가 없다 — 만들 때 한 번 쓴다. 두 기준은 이 aggregate 밖에서 바뀐다.
+ * 버전 내용(질문 틀 · 질문 · 태그 · 중요도 기준)을 바꾸는 메서드가 없다 — 만들 때 한 번 쓴다. 태그 기준 · 저장 기준은 이 aggregate 밖에서 바뀐다.
  */
 @Table("tag_sets")
 public final class TagSet {

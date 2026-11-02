@@ -25,7 +25,7 @@ import net.yozmnews.platform.YamlPath;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 초안 → 태그 체계 정의 — docs/specs/evaluation.md §4. 키 · 구성 · 문구 · 두 기준 규칙의 정본이다(evaluation-R6 ~ R8 ·
+ * 초안 → 태그 체계 정의 — docs/specs/evaluation.md §4. 키 · 구성 · 문구 · 태그 기준 · 저장 기준 규칙의 정본이다(evaluation-R6 ~ R8 ·
  * evaluation-R10).
  * <p>
  * 문제는 모두 모은다. 하나라도 있으면 정의를 만들지 않는다.

@@ -22,13 +22,13 @@ record TagSetDraft(TextLocation location, @Nullable QuestionsDraft questions, @N
 
 	}
 
-	/** 처음 두 기준 초안 */
+	/** 처음 태그 기준 · 저장 기준 초안 */
 	record ThresholdsDraft(YamlPath path, TextLocation location, @Nullable ThresholdDraft topic,
 			@Nullable ThresholdDraft region) {
 
 	}
 
-	/** 한 태그 종류의 처음 두 기준 초안 */
+	/** 한 태그 종류의 처음 태그 기준 · 저장 기준 초안 */
 	record ThresholdDraft(YamlPath path, TextLocation location, @Nullable Located<BigDecimal> tagThreshold,
 			@Nullable Located<BigDecimal> storeThreshold) {
 

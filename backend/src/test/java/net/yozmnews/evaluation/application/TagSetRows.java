@@ -3,7 +3,7 @@ package net.yozmnews.evaluation.application;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 /**
- * 시험 픽스처 — 같은 DB 를 쓰는 시험끼리 두 기준 · 이력이 서로를 흔들지 않게 체계 상태를 처음 모양으로 되돌린다.
+ * 시험 픽스처 — 같은 DB 를 쓰는 시험끼리 태그 기준 · 저장 기준 · 이력이 서로를 흔들지 않게 체계 상태를 처음 모양으로 되돌린다.
  * <p>
  * 이력을 지우는 것은 이 픽스처뿐이다 — 프로덕션 코드에는 그 경로가 없다(evaluation-R13).
  */
@@ -12,7 +12,7 @@ final class TagSetRows {
 	private TagSetRows() {
 	}
 
-	/** 활성 버전의 두 기준을 처음 값(0.5 / 0.1)으로, 이력은 태그 종류마다 시스템 첫 행만 남긴다 */
+	/** 활성 버전의 태그 기준 · 저장 기준을 처음 값(0.5 / 0.1)으로, 이력은 태그 종류마다 시스템 첫 행만 남긴다 */
 	static void resetThresholds(JdbcClient jdbc) {
 		jdbc.sql("""
 				update tag_set_thresholds set tag_threshold = 0.5, store_threshold = 0.1

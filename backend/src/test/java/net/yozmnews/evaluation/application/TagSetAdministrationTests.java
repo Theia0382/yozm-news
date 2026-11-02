@@ -32,7 +32,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 두 기준 변경과 이력 — 실제 PostgreSQL 에서 이전 값 · 새 값 · 행위자 · 시각, 경고, 바꾸지 않는 결과, 동시 변경의 줄 서기를 본다.
+ * 태그 기준 · 저장 기준 변경과 이력 — 실제 PostgreSQL 에서 이전 값 · 새 값 · 행위자 · 시각, 경고, 바꾸지 않는 결과, 동시 변경의 줄 서기를 본다.
  * <p>
  * 지키는 규칙: evaluation-R11 ~ evaluation-R13
  */

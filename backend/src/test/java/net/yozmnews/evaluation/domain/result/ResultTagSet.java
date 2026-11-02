@@ -48,7 +48,7 @@ final class ResultTagSet {
 	private ResultTagSet() {
 	}
 
-	/** 버전 1 의 두 기준 — 주제 · 지역 */
+	/** 버전 1 의 태그 기준 · 저장 기준 — 주제 · 지역 */
 	static TagSetThresholds thresholds(String topicTag, String topicStore, String regionTag, String regionStore) {
 		return new TagSetThresholds(VERSION,
 				new TagThresholds(MultiTagKind.TOPIC, new BigDecimal(topicTag), new BigDecimal(topicStore)),

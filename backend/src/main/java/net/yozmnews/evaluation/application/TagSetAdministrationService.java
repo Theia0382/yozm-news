@@ -24,7 +24,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 /**
  * 공개 API {@link TagSetAdministration} 의 구현 — docs/specs/evaluation.md §4 · evaluation-R11 ~ evaluation-R13.
  * <p>
- * 변경은 한 트랜잭션에서 활성 버전 조회 → 지금 두 기준 행 잠금 → 지난 저장 기준 최댓값 → 판정 → 쓰기다. 역할 애너테이션이 없다(두 역할
+ * 변경은 한 트랜잭션에서 활성 버전 조회 → 지금 태그 기준 · 저장 기준 행 잠금 → 지난 저장 기준 최댓값 → 판정 → 쓰기다. 역할 애너테이션이 없다(두 역할
  * 공통).
  */
 @Service
@@ -62,7 +62,7 @@ class TagSetAdministrationService implements TagSetAdministration {
 		return Objects.requireNonNull(this.transaction.execute(status -> {
 			TagSetId version = TagSetDirectoryService.active(this.tagSets).id();
 			ThresholdValues current = this.thresholds.lockCurrent(version, kind)
-				.orElseThrow(() -> new IllegalStateException("두 기준 행이 없다: " + version + " " + kind));
+				.orElseThrow(() -> new IllegalStateException("태그 기준 · 저장 기준 행이 없다: " + version + " " + kind));
 			BigDecimal pastMax = this.thresholds.maxStoreThreshold(version, kind);
 			return switch (ThresholdRule.decide(current, pastMax, tagThreshold, storeThreshold)) {
 				case ThresholdDecision.OutOfRange outOfRange -> new ThresholdChangeResult.OutOfRange();

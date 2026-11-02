@@ -23,7 +23,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 /**
- * 활성 체계 조회 — 실제 PostgreSQL 에서 기동 때 적재된 첫 버전과 처음 두 기준 · 이력을 본다.
+ * 활성 체계 조회 — 실제 PostgreSQL 에서 기동 때 적재된 첫 버전과 처음 태그 기준 · 저장 기준 · 이력을 본다.
  * <p>
  * 지키는 규칙: evaluation-R2 ~ evaluation-R4 · evaluation-R9 · evaluation-R10 · evaluation-R13
  */
