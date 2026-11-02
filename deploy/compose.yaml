@@ -43,6 +43,11 @@ services:
       YOZMNEWS_ADMIN_TOKEN: ${YOZMNEWS_ADMIN_TOKEN:-}
       # 작업 서버 동시 실행 수 — 기본값을 적지 않는다(deploy/.env 에 있을 때만 넘긴다). docs/operations/configuration.md "백그라운드 작업"
       YOZMNEWS_JOB_WORKERS:
+      # 공유 평가 Jev 키(비밀 값, 필수 — 작업 역할은 키 없이 뜨지 않는다). 모델 · 기본 주소는 deploy/.env 에 있을 때만 넘긴다.
+      # docs/operations/configuration.md "공유 평가"
+      YOZMNEWS_JEV_API_KEY: ${YOZMNEWS_JEV_API_KEY:?YOZMNEWS_JEV_API_KEY 를 deploy/.env 에 적는다}
+      YOZMNEWS_JEV_MODEL:
+      YOZMNEWS_JEV_BASE_URL:
     depends_on:
       postgres:
         condition: service_healthy

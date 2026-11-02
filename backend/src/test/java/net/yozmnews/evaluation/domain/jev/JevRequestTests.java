@@ -5,10 +5,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 
-import org.junit.jupiter.api.Test;
-
 import net.yozmnews.evaluation.domain.evaluator.EvaluationInput;
 import net.yozmnews.evaluation.domain.evaluator.FeedContext;
+import org.junit.jupiter.api.Test;
 
 /**
  * Jev 요청 본문 — 질문 이름 · 질문 문장 · 선택지 · 수준 순서, state 형식.

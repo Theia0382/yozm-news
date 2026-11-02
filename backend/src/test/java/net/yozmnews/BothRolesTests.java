@@ -6,6 +6,8 @@ import static org.awaitility.Awaitility.await;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 
+import net.yozmnews.evaluation.adapter.out.jev.JevArticleEvaluator;
+import net.yozmnews.evaluation.domain.evaluator.ArticleEvaluator;
 import net.yozmnews.platform.domain.ActiveRoles;
 import org.jobrunr.server.BackgroundJobServer;
 import org.junit.jupiter.api.Test;
@@ -58,6 +60,14 @@ class BothRolesTests {
 				"feed-health-check", "event-publication-resubmission", "evaluate-pending-articles");
 		assertThat(this.context.containsBean("presetFeedReconciliation")).isTrue();
 		assertThat(RoleProbe.stalenessMonitorTasks(this.context)).hasSize(1);
+	}
+
+	@Test
+	void evaluatesWithJevWithoutReachingTheRealService() {
+		// 시험 설정은 키와 닿지 않는 기본 주소를 주고, 모델은 main 의 기본값을 쓴다
+		assertThat(this.context.getBean(ArticleEvaluator.class)).isInstanceOf(JevArticleEvaluator.class);
+		assertThat(this.environment.getProperty("yozmnews.jev.base-url")).isEqualTo("http://127.0.0.1:9");
+		assertThat(this.environment.getProperty("yozmnews.jev.model")).isEqualTo("jev-latest");
 	}
 
 	@Test

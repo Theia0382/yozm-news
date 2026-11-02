@@ -5,10 +5,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Map;
 
-import org.junit.jupiter.api.Test;
-
 import net.yozmnews.evaluation.domain.evaluator.Evaluation;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationFailure;
+import org.junit.jupiter.api.Test;
 
 /**
  * Jev 의 200 응답을 포트 결과로 — 답의 이름 · 종류 · 수준 위치, 읽을 수 없는 응답은 평가기 사용 불가.

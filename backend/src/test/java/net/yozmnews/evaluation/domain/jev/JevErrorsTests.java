@@ -2,11 +2,10 @@ package net.yozmnews.evaluation.domain.jev;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import net.yozmnews.evaluation.domain.evaluator.EvaluationFailure.Kind;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-
-import net.yozmnews.evaluation.domain.evaluator.EvaluationFailure.Kind;
 
 /**
  * Jev 오류 응답의 갈래와 운영자용 문구 — 본문은 실측 응답의 모양이다.

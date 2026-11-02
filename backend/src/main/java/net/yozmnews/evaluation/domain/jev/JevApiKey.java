@@ -11,7 +11,7 @@ import java.util.Objects;
 public final class JevApiKey {
 
 	/** 키의 최대 길이 */
-	public static final int MAX_LENGTH = 512;
+	static final int MAX_LENGTH = 512;
 
 	private final String value;
 

@@ -58,7 +58,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.support.StaticListableBeanFactory;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
@@ -301,25 +300,6 @@ class EvaluationFlowTests {
 	}
 
 	@Test
-	void withoutAnEvaluatorARoundLeavesTheQueueAlone() {
-		long article = enqueued("경제 지표 발표");
-		EvaluationRound none = round(new StaticListableBeanFactory().getBeanProvider(ArticleEvaluator.class));
-
-		none.run();
-
-		assertThat(none.evaluatorAvailable()).isFalse();
-		assertThat(untouched(article)).isTrue();
-		assertThat(evaluationRows()).isZero();
-
-		// 대조 — 같은 행을 평가기 있는 회차는 평가한다
-		EvaluationRound some = round(new FakeArticleEvaluator());
-		some.run();
-
-		assertThat(some.evaluatorAvailable()).isTrue();
-		assertThat(evaluatedArticles()).containsExactly(article);
-	}
-
-	@Test
 	void theEvaluationIsJudgedWithTheCurrentThresholdsWithoutRewritingIt() {
 		long article = enqueued("국회 본회의 통과");
 		round(new Literal()).run();
@@ -429,20 +409,15 @@ class EvaluationFlowTests {
 				ChangeActor.OPERATOR);
 	}
 
-	private EvaluationRound round(ArticleEvaluator evaluator) {
+	/** 시험의 시계로 만든 회차에 평가기를 넘겨 한 번 돈다 */
+	private Runnable round(ArticleEvaluator evaluator) {
 		return round(evaluator, this.results);
 	}
 
-	private EvaluationRound round(ArticleEvaluator evaluator, EvaluationResultRepository results) {
-		StaticListableBeanFactory beans = new StaticListableBeanFactory(Map.of("evaluator", evaluator));
-		return new EvaluationRound(beans.getBeanProvider(ArticleEvaluator.class), this.pending, this.directory,
-				this.thresholds, this.articles, this.feedLabels, results, this.queue, this.transaction,
-				(InstantSource) this.now::get);
-	}
-
-	private EvaluationRound round(org.springframework.beans.factory.ObjectProvider<ArticleEvaluator> evaluators) {
-		return new EvaluationRound(evaluators, this.pending, this.directory, this.thresholds, this.articles,
-				this.feedLabels, this.results, this.queue, this.transaction, (InstantSource) this.now::get);
+	private Runnable round(ArticleEvaluator evaluator, EvaluationResultRepository results) {
+		EvaluationRound round = new EvaluationRound(this.pending, this.directory, this.thresholds, this.articles,
+				this.feedLabels, results, this.queue, this.transaction, (InstantSource) this.now::get);
+		return () -> round.run(evaluator);
 	}
 
 	/** 대기에 넣은 기사 — 넣은 시각 T, 소스 1 · 피드 11 */

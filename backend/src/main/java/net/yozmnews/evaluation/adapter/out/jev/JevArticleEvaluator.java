@@ -20,12 +20,10 @@ import java.util.concurrent.Flow;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import org.jspecify.annotations.Nullable;
-
 import net.yozmnews.evaluation.TagSetView;
 import net.yozmnews.evaluation.domain.evaluator.ArticleEvaluator;
-import net.yozmnews.evaluation.domain.evaluator.EvaluationFailure;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationFailure.Kind;
+import net.yozmnews.evaluation.domain.evaluator.EvaluationFailure;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationInput;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationResult;
 import net.yozmnews.evaluation.domain.jev.JevApiKey;
@@ -33,6 +31,7 @@ import net.yozmnews.evaluation.domain.jev.JevErrors;
 import net.yozmnews.evaluation.domain.jev.JevOutcome;
 import net.yozmnews.evaluation.domain.jev.JevRequest;
 import net.yozmnews.evaluation.domain.jev.JevResponse;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Jev(TypeSafe System One) 평가기 — docs/specs/evaluation.md §4 구현과 로컬 대체물.

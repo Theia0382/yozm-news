@@ -1,8 +1,7 @@
 package net.yozmnews.evaluation.domain.jev;
 
-import org.jspecify.annotations.Nullable;
-
 import net.yozmnews.evaluation.domain.evaluator.EvaluationFailure;
+import org.jspecify.annotations.Nullable;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
