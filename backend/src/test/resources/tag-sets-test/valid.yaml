@@ -1,0 +1,26 @@
+# 합성 체계 — 기동 검증 시험용(DefaultTagSetConfigurationLoadTests)
+questions:
+  topic: "주제: {description}"
+  region: "지역: {description}"
+  format: 형식은 무엇인가
+  importance: 얼마나 중요한가
+thresholds:
+  topic: { tagThreshold: 0.5, storeThreshold: 0.1 }
+  region: { tagThreshold: 0.5, storeThreshold: 0.1 }
+topics:
+  - key: alpha
+    name: 알파
+    description: 알파 설명
+    subtopics:
+      - { key: one, name: 하나, description: 하나 설명 }
+regions:
+  - { key: here, name: 여기, description: 여기 설명 }
+formats:
+  - { key: plain, name: 보통, description: 보통 기사 }
+  - { key: promo, name: 홍보, description: 홍보 기사, excludedByDefault: true }
+importance:
+  - { level: 1, description: 하나 }
+  - { level: 2, description: 둘 }
+  - { level: 3, description: 셋 }
+  - { level: 4, description: 넷 }
+  - { level: 5, description: 다섯 }
