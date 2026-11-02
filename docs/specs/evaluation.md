@@ -240,7 +240,7 @@ sequenceDiagram
 
 #### `domain/tagset`
 
-- 저장 단위: aggregate `TagSet`(`tag_sets` — 버전 하나)과 그 자식 행(태그 · 중요도 기준). 버전 내용을 바꾸는 메서드가 없다 — 만들 때 한 번 쓴다(evaluation-R4). `TagSet.first` 가 번호 1 · 활성 버전을 만든다
+- 저장 단위: aggregate `TagSet`(`tag_sets` — 버전 하나)과 그 자식 행(태그 `TagRow` · 중요도 기준 `ImportanceRubricRow`). 버전 내용을 바꾸는 메서드가 없다 — 만들 때 한 번 쓴다(evaluation-R4). `TagSet.first` 가 번호 1 · 활성 버전을 만든다
 
   ```java
   public interface TagSetRepository extends CrudRepository<TagSet, Long> {
