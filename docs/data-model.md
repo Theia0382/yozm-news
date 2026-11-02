@@ -29,12 +29,15 @@ erDiagram
     feeds ||--o{ article_feed_entries : ""
     articles ||--o{ article_feed_entries : ""
 
-    taxonomy_versions ||--o{ tags : ""
+    tag_sets ||--o{ tags : ""
+    tag_sets ||--o{ importance_rubrics : ""
+    tag_sets ||--o{ tag_set_thresholds : ""
+    tag_sets ||--o{ tag_set_threshold_changes : ""
     articles ||--o{ article_evaluations : ""
     article_evaluations ||--o{ article_tags : ""
     tags ||--o{ article_tags : ""
     tags ||--o{ user_tag_preferences : ""
-    taxonomy_versions ||--o{ tag_key_lineage : ""
+    tag_sets ||--o{ tag_key_lineage : ""
     articles ||--o{ article_event_judgements : ""
 
     articles ||--o{ article_match_features : ""
@@ -63,8 +66,8 @@ erDiagram
 | `user_recovery_codes` | user_id, code_hash, created_at, used_at | 자체 로그인 복구 코드. 사용자당 유효한 코드 1개. 쓰면 새로 발급한다 ([ADR-0011](adr/0011-no-email-in-v1.md)) |
 | `user_notices` | id, user_id, kind(`PASSWORD_CHANGED`/`KEY_INVALID`/`DIGEST_FAILED`…), payload(jsonb), created_at, read_at | 메일 대신 쓰는 화면 내 알림 |
 | `user_settings` | user_id, timezone, digest_time, interest_text, max_candidates, llm_provider, llm_model, weekly_report_enabled, weekly_report_weekday, monthly_report_enabled, updated_at | `interest_text`는 자유 텍스트 관심사. 길이 제한 있음 |
-| `user_tag_preferences` | user_id, dimension(`topic`/`region`/`format`), tag_key, mode(`SUBSCRIBE`/`EXCLUDE`), created_at | 현재 상태 — `user_tag_preference_events` 의 투영. 태그 **키**로 연결해 체계 버전이 바뀌어도 유지된다(키가 바뀌면 태그 키 계보를 따른다). 대분류 구독은 하위 전체 구독으로 해석한다. 형식의 기본 제외값은 가입 시 행으로 넣는다 |
-| `user_tag_preference_events` | id, user_id, dimension, tag_key, mode, action(`ADD`/`REMOVE`), occurred_at | 구독 · 제외 변경 이력. 추가만 한다(관심 신호 — [ADR-0028](adr/0028-explicit-signals-and-interest-weighted-candidates.md)) |
+| `user_tag_preferences` | user_id, tag_kind(`TOPIC`/`REGION`/`FORMAT`), tag_key, mode(`SUBSCRIBE`/`EXCLUDE`), created_at | 현재 상태 — `user_tag_preference_events` 의 투영. 태그 **키**로 연결해 체계 버전이 바뀌어도 유지된다(키가 바뀌면 태그 키 계보를 따른다). 대분류 구독은 하위 전체 구독으로 해석한다. 형식의 기본 제외값(활성 태그 체계에서 기본 제외인 형식)은 가입 시 행으로 넣는다 |
+| `user_tag_preference_events` | id, user_id, tag_kind, tag_key, mode, action(`ADD`/`REMOVE`), occurred_at | 구독 · 제외 변경 이력. 추가만 한다(관심 신호 — [ADR-0028](adr/0028-explicit-signals-and-interest-weighted-candidates.md)) |
 | `user_excluded_sources` | user_id, source_id | |
 
 ## LLM 키 (BYOK)
@@ -79,16 +82,7 @@ erDiagram
 
 ## 평가
 
-| 테이블 | 주요 컬럼 | 비고 |
-|---|---|---|
-| `taxonomy_versions` | id, version, active, created_at, created_by | 태그 체계 버전 |
-| `taxonomy_thresholds` | taxonomy_version_id, dimension, threshold, store_floor, updated_at, updated_by | 축별 임계값 `τ`와 저장 하한. 조정 이력은 별도 감사 로그로 남긴다 |
-| `tags` | id, taxonomy_version_id, dimension(`topic`/`region`/`format`), key, parent_key, name, description, question_text, iptc_code, sort_order | (version, dimension, key) 고유. 주제 대분류는 `parent_key`가 없고 Jev에 묻지 않는 행 |
-| `importance_rubrics` | taxonomy_version_id, level, description | 중요도 Score 기준 |
-| `article_evaluations` | id, article_id, taxonomy_version_id, evaluator, model_version, format_key, format_probability, importance, importance_distribution(jsonb), low_confidence, raw_response(jsonb), input_tokens, evaluated_at | 기사당 평가 1회. 원본 응답까지 저장한다 |
-| `article_tags` | article_id, evaluation_id, dimension, tag_key, probability | 주제·지역 태그. 저장 하한 이상인 태그를 확률과 함께 저장한다. "붙었는지"는 조회 시 `τ`와 비교한다. 대분류는 저장하지 않고 조회 시 `parent_key`로 펼친다 |
-| `tag_key_lineage` | taxonomy_version_id, dimension, from_key, to_key, kind(`RENAME`/`SPLIT`/`MERGE`) | 태그 키 계보. 이 버전에서 이전 키가 어느 새 키로 이어지는지. 사용자 선호와 주제별 시계열이 따라간다 |
-| `article_event_judgements` | id, article_id, evaluator, model_version, candidates(jsonb — 후보 사건 ID와 확률), raw_response(jsonb), input_tokens, judged_at | 사건 소속 판정 원본(애매한 구간만). 배정 결과는 `event_articles` |
+태그 체계 테이블(`tag_sets` · `tags` · `importance_rubrics` · `tag_set_thresholds` · `tag_set_threshold_changes`)과 평가 결과 테이블(`article_evaluations` · `article_tags` · `tag_key_lineage` · `article_event_judgements`)은 [evaluation Spec §6](specs/evaluation.md#6-데이터)에 있다.
 
 ## 사건
 
@@ -141,11 +135,11 @@ erDiagram
 |---|---|---|
 | 기사 메타데이터 (제목, 링크, 시각, 출처) | 무기한 | 지난 다이제스트의 링크를 유지하기 위해. 출처는 그 기사의 엔트리가 가리키는 소스들의 이름이다 — 프로필을 얻지 못하면 기록된 출처 이름([source Spec 출처 이름](specs/source.md#출처-이름) · [ADR-0053](adr/0053-source-records-last-confirmed-name-apart-from-operating-settings.md)) |
 | 기사 요약문 (`summary_text`) | 기본 무기한. 운영 설정(보존 일수, 기본 꺼짐)을 켜면 그 뒤 삭제 | 재평가 · 임베딩 재계산 · 검색에 쓴다. 화면 · 외부 API 에는 노출하지 않는다. 지워진 기사도 장기 기능에서 처리된다 ([ADR-0029](adr/0029-indefinite-summary-retention-with-optional-deletion.md)) |
-| 주제 · 지역 태그(`article_tags`), 태그 체계, 태그 키 계보 | 무기한 | 주제별 보도량과 관심사 히스토리의 근거 |
+| 주제 · 지역 태그(`article_tags`), 태그 체계, 태그 기준 · 저장 기준과 그 변경 이력, 태그 키 계보 | 무기한 | 주제별 보도량과 관심사 히스토리의 근거 |
 | 사건 배정 입력 (`article_match_features`) | 사건 배정 시간 창 + 여유 | 요약문으로 다시 계산한다 |
 | 사건 (`events` · `event_articles`) | 무기한 | 사건 · 이슈 보도량의 근거 |
 | 사건 소속 판정 원본 (`article_event_judgements`) | 180일 | 평가 원본 응답과 같다 |
-| 평가 원본 응답 (`raw_response`) | 180일 | 임계값 분석에 충분한 기간 |
+| 평가 원본 응답 (`raw_response`) | 180일 | 태그 기준 · 저장 기준 분석에 충분한 기간 |
 | 다이제스트 | 사용자 탈퇴 시까지 | 주요 뉴스 섹션은 이슈 타임라인의 정본, 인용 항목은 노출 기록이다 |
 | 이슈 · 관심 신호 이력(`feedback_events` · `storyline_tracking_events` · `user_tag_preference_events`) · 변화 리포트 | 사용자 탈퇴 시까지 | 관심사 히스토리 · 리포트의 근거 |
 | `digest_candidates` | 30일 | 디버깅용 |

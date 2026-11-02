@@ -13,7 +13,8 @@ Spring Modulith 모듈(`net.yozmnews` 바로 아래 패키지) 하나가 Spec �
 |---|---|---|
 | `admin` | [admin.md](admin.md) | 운영자 기능의 HTTP API — 소스 · 피드 관리, 수집 현황, 이벤트 발행 |
 | `article` | [article.md](article.md) | 같은 기사 판정 · 중복 제거, 기사 저장, 피드별 기록, (미구현) 본문 추출 |
-| `platform` | [platform.md](platform.md) | 이벤트 발행 재처리 · 남겨진 발행의 운영자 처리, 화면용 API 명세 설정, API 계약 확인 엔드포인트, 역할(profile `web` · `worker`), 운영자 접근 통제, 오류 응답 형식, (미구현) 공통 타입 |
+| `evaluation` | [evaluation.md](evaluation.md) | 태그 체계(버전 · 태그 · 질문 · 중요도 기준)와 첫 기동 적재, 태그 기준 · 저장 기준과 그 변경 이력, 활성 체계 조회, (미구현) 공유 평가 · 체계 변경 |
+| `platform` | [platform.md](platform.md) | 이벤트 발행 재처리 · 남겨진 발행의 운영자 처리, 화면용 API 명세 설정, API 계약 확인 엔드포인트, 역할(profile `web` · `worker`), 운영자 접근 통제, 오류 응답 형식, YAML 원문 읽기 · 공통 거부 |
 | `source` | [source.md](source.md) | 소스 등록 · 운영자 원문 수정 · 켜기 · 끄기와 그 공개 운영 API, 수집 일정, 피드 요청, RSS 정규화, 새 항목 발행 |
 
 ## 2. 공통 구조

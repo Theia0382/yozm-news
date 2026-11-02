@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.http.HttpResponse;
 
+import net.yozmnews.evaluation.TagSetDirectory;
 import net.yozmnews.platform.WebRole;
 import net.yozmnews.platform.domain.ActiveRoles;
 import org.jobrunr.scheduling.JobScheduler;
@@ -25,7 +26,7 @@ import org.springframework.test.context.ActiveProfiles;
 /**
  * 화면 역할만 켠 프로세스 — 실제 PostgreSQL 로 띄운 앱의 구성요소와 HTTP 응답을 본다.
  * <p>
- * 지키는 규칙: platform-R8 · platform-R9
+ * 지키는 규칙: platform-R8 · platform-R9 · evaluation-R2
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -55,6 +56,12 @@ class WebRoleTests {
 		assertThat(this.context.containsBean("presetFeedReconciliation")).isFalse();
 		// 스케줄링이 켜지지 않는다 — 이 역할에는 감시 기간이 없어 스케줄링이 켜져도 등록된 작업은 0건이므로 작업 수로는 가리지 못한다
 		assertThat(this.context.getBeanNamesForType(ScheduledTaskHolder.class)).isEmpty();
+	}
+
+	@Test
+	void seedsTheDefaultTagSetOnItsOwn() {
+		// 이 컨텍스트는 새 컨테이너의 빈 DB 로 뜬다 — 화면 역할만 켠 프로세스도 기동 때 첫 버전을 적재한다(evaluation-R2)
+		assertThat(this.context.getBean(TagSetDirectory.class).activeTagSet().number()).isEqualTo(1);
 	}
 
 	@Test

@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Set;
 
 import net.yozmnews.source.domain.profile.CodeFences.Block;
-import net.yozmnews.source.domain.profile.text.ProfileTextReader;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -19,7 +18,7 @@ class SourcesGuideExampleTests {
 	/** 안내서에 쓸 수 있는 코드 블록 — 프로필을 다른 표지로 쓰면 검증을 빠져나가므로 이 밖의 블록을 두지 않는다 */
 	private static final Set<String> ALLOWED_INFO = Set.of("yaml", "sh");
 
-	private final ProfileParser parser = new ProfileParser(new ProfileTextReader());
+	private final ProfileParser parser = new ProfileParser();
 
 	@Test
 	void everyCodeFenceIsYamlOrShell() {

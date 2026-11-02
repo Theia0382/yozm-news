@@ -8,7 +8,6 @@ import java.util.Optional;
 import net.yozmnews.source.domain.profile.DateParsing;
 import net.yozmnews.source.domain.profile.ProfileParse;
 import net.yozmnews.source.domain.profile.ProfileParser;
-import net.yozmnews.source.domain.profile.text.ProfileTextReader;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -115,7 +114,7 @@ class PublishedAtResolverTests {
 				    url: https://alpha.example/rss.xml
 				    section: 전체
 				""" + (datesBody.isEmpty() ? "" : "dates:\n" + datesBody);
-		ProfileParse parse = new ProfileParser(new ProfileTextReader()).parseOperatorProfile(text);
+		ProfileParse parse = new ProfileParser().parseOperatorProfile(text);
 		assertThat(parse).as("%s", parse).isInstanceOf(ProfileParse.Parsed.class);
 		return ((ProfileParse.Parsed) parse).profile().dates();
 	}

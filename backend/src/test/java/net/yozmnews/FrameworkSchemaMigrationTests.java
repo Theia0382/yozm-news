@@ -48,7 +48,7 @@ class FrameworkSchemaMigrationTests {
 		assertThat(this.jdbc.sql("""
 				select version from flyway_schema_history where success order by installed_rank
 				""").query(String.class).list())
-			.containsExactly("1", "2", "3", "4", "5", "6", "7", "8");
+			.containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9");
 		assertThat(this.jdbc.sql("""
 				select table_name from information_schema.tables
 				where table_schema = 'public' and table_type = 'BASE TABLE'
@@ -56,7 +56,8 @@ class FrameworkSchemaMigrationTests {
 			.containsExactlyInAnyOrder("flyway_schema_history", "jobrunr_jobs", "jobrunr_recurring_jobs",
 					"jobrunr_backgroundjobservers", "jobrunr_metadata", "jobrunr_migrations", "event_publication",
 					"articles", "article_feed_entries", "sources", "feeds", "feed_poll_states", "source_fetch_slots",
-					"source_attributions");
+					"source_attributions", "tag_sets", "tags", "importance_rubrics", "tag_set_thresholds",
+					"tag_set_threshold_changes");
 		assertThat(this.jdbc.sql("""
 				select table_name from information_schema.tables
 				where table_schema = 'public' and table_type = 'VIEW'

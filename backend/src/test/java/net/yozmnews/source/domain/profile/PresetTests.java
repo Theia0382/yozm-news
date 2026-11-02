@@ -8,7 +8,6 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
 
-import net.yozmnews.source.domain.profile.text.ProfileTextReader;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -35,7 +34,7 @@ class PresetTests {
 
 	private static final String WITHOUT_TERMS = PRESET.replace("termsReviewedAt: 2026-09-30\n", "");
 
-	private final ProfileParser parser = new ProfileParser(new ProfileTextReader());
+	private final ProfileParser parser = new ProfileParser();
 
 	private final PresetKey key = new PresetKey("beta-news");
 

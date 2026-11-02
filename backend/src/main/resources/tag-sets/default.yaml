@@ -1,0 +1,244 @@
+# 기본 태그 체계 — 첫 기동에 버전이 하나도 없으면 버전 1로 들어간다(docs/specs/evaluation.md §5 · evaluation-R1 · R2).
+# 이미 적재한 인스턴스는 이 파일이 바뀌어도 따라가지 않는다. 문구는 파일럿 전 초안이다.
+# 형식은 evaluation-R5 — 중분류 key 는 조각만 적고, 저장 키는 대분류 키를 붙인 전체 키(politics.executive)다.
+questions:
+  topic: "이 기사가 주요하게 다루는 주제가 다음에 해당하는가: {description}"
+  region: "이 기사의 주요 무대가 다음에 해당하는가: {description}"
+  format: "이 기사의 형식은 무엇인가"
+  importance: "이 기사가 다루는 사안은 얼마나 중요한가"
+thresholds:
+  topic:
+    tagThreshold: 0.5
+    storeThreshold: 0.1
+  region:
+    tagThreshold: 0.5
+    storeThreshold: 0.1
+topics:
+  - key: politics
+    name: "정치"
+    description: "국내 정치 · 국정 운영 · 외교안보"
+    subtopics:
+      - key: executive
+        name: "대통령실·행정부"
+        description: "대통령실 · 총리 · 정부 부처의 국정 운영과 고위 인사"
+      - key: legislature
+        name: "국회·정당·선거"
+        description: "국회 입법 · 정당 활동 · 선거와 정치 여론조사"
+      - key: north-korea
+        name: "북한·통일"
+        description: "북한 정권 · 북한 사회와 남북 관계 · 통일 정책"
+      - key: diplomacy-defense
+        name: "외교·국방"
+        description: "한국 정부의 외교 · 안보 정책과 군 · 국방 정책"
+  - key: economy
+    name: "경제"
+    description: "거시경제 · 금융 · 시장 · 가계 경제"
+    subtopics:
+      - key: macro
+        name: "거시경제·정책"
+        description: "성장률 · 물가 · 금리 · 환율 · 재정 · 무역 등 거시 지표와 경제 정책"
+      - key: finance
+        name: "금융"
+        description: "은행 · 보험 · 카드 · 대출과 금융 당국의 감독 · 규제"
+      - key: markets
+        name: "증권·투자"
+        description: "주식 · 채권 · 펀드 · ETF 시장 동향과 투자 상품(가상자산 제외)"
+      - key: real-estate
+        name: "부동산"
+        description: "주택 · 상업용 부동산 시장과 부동산 · 주거 정책"
+      - key: consumer
+        name: "생활경제·소비자"
+        description: "장바구니 물가 · 가계 소비 · 소비자 피해와 보호"
+      - key: crypto
+        name: "가상자산"
+        description: "비트코인 등 가상자산의 시세 · 거래소 · 규제"
+  - key: industry
+    name: "산업·기업"
+    description: "업종별 산업 동향과 기업 경영"
+    subtopics:
+      - key: semiconductor
+        name: "반도체·전자"
+        description: "반도체 · 디스플레이 · 전자부품과 가전 산업"
+      - key: mobility
+        name: "자동차·모빌리티"
+        description: "완성차 · 전기차 · 배터리 · 부품과 모빌리티 서비스"
+      - key: energy
+        name: "에너지·화학"
+        description: "정유 · 석유화학 · 전력 · 가스 · 원자력 등 에너지 · 화학 산업"
+      - key: heavy
+        name: "조선·중공업·건설"
+        description: "조선 · 철강 · 기계 · 방산 제조와 건설 산업"
+      - key: bio
+        name: "바이오·제약"
+        description: "제약 · 바이오 · 의료기기 기업과 신약 개발"
+      - key: retail
+        name: "유통·소비재·서비스"
+        description: "유통 · 식품 · 패션 · 화장품 · 항공 · 여행 등 소비재 · 서비스 기업"
+      - key: startup
+        name: "스타트업·벤처"
+        description: "스타트업 · 벤처 투자 · 중소기업"
+      - key: corporate
+        name: "기업경영·재계"
+        description: "대기업 집단 · 지배구조 · 실적 · 인수합병 · 경영진"
+  - key: tech
+    name: "IT·과학"
+    description: "정보기술 · 인터넷 · 과학"
+    subtopics:
+      - key: ai
+        name: "인공지능"
+        description: "인공지능 기술 · 서비스 · 정책"
+      - key: internet
+        name: "소프트웨어·인터넷·플랫폼"
+        description: "소프트웨어 · 클라우드 · 인터넷 서비스 · 플랫폼 기업과 그 규제"
+      - key: devices
+        name: "모바일·기기"
+        description: "스마트폰 · PC · 웨어러블 등 기기와 제품 출시"
+      - key: telecom-media
+        name: "통신·방송·미디어"
+        description: "통신사 · 방송 · 콘텐츠 유통 · 언론 산업과 그 정책"
+      - key: security
+        name: "보안"
+        description: "해킹 · 개인정보 유출 · 사이버 보안"
+      - key: game
+        name: "게임"
+        description: "게임 산업 · 게임 출시 · e스포츠"
+      - key: science
+        name: "과학·우주"
+        description: "기초과학 · 연구개발 · 우주 탐사"
+  - key: society
+    name: "사회"
+    description: "사건 · 법 · 교육 · 노동 · 복지 · 지역"
+    subtopics:
+      - key: incidents
+        name: "사건·사고·재난"
+        description: "범죄 · 사고 · 화재 · 자연재해와 재난 대응"
+      - key: law
+        name: "법조·수사"
+        description: "수사 · 재판 · 판결과 법원 · 검찰"
+      - key: education
+        name: "교육"
+        description: "입시 · 학교 · 대학과 교육 정책"
+      - key: labor
+        name: "노동·고용"
+        description: "일자리 · 고용 지표 · 노사 관계 · 노동 정책"
+      - key: welfare
+        name: "복지·인권"
+        description: "복지 제도 · 저출생 · 고령화 · 인권 · 차별"
+      - key: health-policy
+        name: "보건·의료 정책"
+        description: "의료 제도 · 건강보험 · 의료계 · 감염병 대응"
+      - key: regional
+        name: "지역"
+        description: "수도권 밖 지방자치단체 · 지역 개발 · 지역 사회 소식"
+  - key: environment
+    name: "기후·환경"
+    description: "기후변화와 환경"
+    subtopics:
+      - key: climate
+        name: "기후·에너지 전환"
+        description: "기후변화 · 탄소 감축 · 재생에너지 전환 정책"
+      - key: ecology
+        name: "환경·생태"
+        description: "대기 · 수질 · 폐기물 · 생태계 보전"
+  - key: world
+    name: "국제"
+    description: "해외 정치 · 외교 · 분쟁 · 사회(해외 경제 · 기술은 해당 주제)"
+    subtopics:
+      - key: politics
+        name: "국제정치·외교"
+        description: "외국 정부의 정치와 나라 사이의 외교(한국 정부의 외교는 제외)"
+      - key: conflict
+        name: "분쟁·안보"
+        description: "해외 전쟁 · 무력 충돌 · 테러 · 국제 안보"
+      - key: society
+        name: "해외 사회·사건"
+        description: "해외의 사회 이슈 · 사건 · 사고 · 재난"
+  - key: culture
+    name: "생활·문화"
+    description: "건강 · 여가 · 문화 · 연예"
+    subtopics:
+      - key: health
+        name: "건강·의학 정보"
+        description: "질병 · 건강 관리 · 의학 연구 정보"
+      - key: leisure
+        name: "여행·레저·음식"
+        description: "여행 · 레저 · 음식 · 맛집"
+      - key: lifestyle
+        name: "패션·뷰티·라이프스타일"
+        description: "패션 · 뷰티 · 생활 방식 · 트렌드"
+      - key: arts
+        name: "공연·전시·책"
+        description: "공연 · 전시 · 출판 · 문학"
+      - key: religion
+        name: "종교"
+        description: "종교계 소식과 종교 단체"
+      - key: entertainment
+        name: "연예·방송"
+        description: "연예인 · 방송 프로그램 · 영화 · 대중음악"
+  - key: sports
+    name: "스포츠"
+    description: "스포츠 종목과 체육"
+    subtopics:
+      - key: baseball
+        name: "야구"
+        description: "국내외 프로야구와 국가대표 야구"
+      - key: football
+        name: "축구"
+        description: "국내외 프로축구와 국가대표 축구"
+      - key: others
+        name: "기타 종목"
+        description: "야구 · 축구 밖의 스포츠 종목과 체육 정책"
+regions:
+  - key: domestic
+    name: "국내"
+    description: "대한민국(북한 제외)"
+  - key: korean-peninsula
+    name: "북한·한반도"
+    description: "북한과 남북 관계 · 한반도 정세"
+  - key: us
+    name: "미국"
+    description: "미국"
+  - key: china
+    name: "중국"
+    description: "중국 · 홍콩 · 대만"
+  - key: japan
+    name: "일본"
+    description: "일본"
+  - key: europe
+    name: "유럽"
+    description: "유럽 나라들과 유럽연합 · 러시아"
+  - key: other-foreign
+    name: "기타 해외"
+    description: "위 지역 밖의 해외(중동 · 동남아시아 · 중남미 · 아프리카 · 오세아니아 등)"
+formats:
+  - key: straight
+    name: "스트레이트"
+    description: "사실을 중심으로 전하는 일반 보도"
+  - key: analysis
+    name: "분석·해설"
+    description: "배경 · 의미 · 전망을 풀어 쓴 기사"
+  - key: opinion
+    name: "오피니언·칼럼"
+    description: "사설 · 칼럼 · 기고 등 필자의 의견"
+  - key: interview
+    name: "인터뷰"
+    description: "인물과의 문답 · 대담이 중심인 기사"
+  - key: press-release
+    name: "보도자료·홍보"
+    description: "기업 · 기관의 보도자료를 옮기거나 제품 · 행사를 홍보하는 기사"
+    excludedByDefault: true
+  - key: brief
+    name: "단신·공지"
+    description: "인사 · 부고 · 운세 · 날씨 · 짧은 알림"
+    excludedByDefault: true
+importance:
+  - level: 1
+    description: "개인이나 소수에게만 관련된 소식, 가벼운 화제"
+  - level: 2
+    description: "특정 업계 · 지역 · 관심층에 관련된 소식"
+  - level: 3
+    description: "여러 분야나 많은 사람에게 영향을 주는 소식"
+  - level: 4
+    description: "사회 전반에 큰 영향을 주는 주요 정책 · 사건"
+  - level: 5
+    description: "나라 전체나 국제적으로 매우 큰 영향을 주는 사안(대형 재난 · 전쟁 · 정권 교체 등)"

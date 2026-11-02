@@ -6,7 +6,6 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import java.net.URI;
 import java.time.Duration;
 
-import net.yozmnews.source.domain.profile.text.ProfileTextReader;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -34,7 +33,7 @@ class PollIntervalPolicyTests {
 			    section: 속보
 			""";
 
-	private final ProfileParser parser = new ProfileParser(new ProfileTextReader());
+	private final ProfileParser parser = new ProfileParser();
 
 	private final CollectionProfile withSourceInterval = parse(SOURCE + FEEDS + "pollIntervalMinutes: 20\n");
 

@@ -3,6 +3,7 @@ package net.yozmnews.source.application;
 import java.util.List;
 import java.util.Optional;
 
+import net.yozmnews.platform.TextLocation;
 import net.yozmnews.source.ArticleSampleView;
 import net.yozmnews.source.CriterionShortfall;
 import net.yozmnews.source.DocumentProblemView;
@@ -34,7 +35,6 @@ import net.yozmnews.source.domain.gate.SummaryLengths;
 import net.yozmnews.source.domain.profile.FeedKey;
 import net.yozmnews.source.domain.profile.PresetKey;
 import net.yozmnews.source.domain.profile.ProfileProblem;
-import net.yozmnews.source.domain.profile.text.TextLocation;
 import net.yozmnews.source.domain.registry.Activation;
 import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;

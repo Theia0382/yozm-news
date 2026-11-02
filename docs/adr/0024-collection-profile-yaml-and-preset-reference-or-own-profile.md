@@ -1,6 +1,6 @@
 # ADR-0024: 수집 프로필은 YAML 로 쓰고, 소스는 프리셋을 참조하거나 자기 프로필을 갖는다
 
-- 상태: 승인
+- 상태: 승인 (거부 절의 공통 거부 — 앵커 · 별칭 · 명시 태그 · 같은 매핑 안 중복 키 · 알 수 없는 키 · `null` 값 · 여러 문서 · 최상위가 매핑이 아닌 문서 · 상한 초과를 `source` 의 `domain` 이 한다는 자리 — 는 [ADR-0056](0056-platform-reads-yaml-text-and-applies-common-rejection.md)이 부분 대체)
 - 날짜: 2026-10-27
 - 근거: [이슈 #17](https://github.com/Theia0382/yozm-news/issues/17) — 기점 `ee32e8f` 의 저장소와 snakeyaml-engine 3.0.1 · jackson-dataformat-yaml 3.1.7(Maven Central 바이너리 · 소스 jar)을 실행해 확인
 - 관련: [ADR-0015](0015-source-presets-and-collection-profiles.md)(수집 프로필 · 프리셋 — 프리셋이 있는 소스를 운영자가 다루는 방식을 이 ADR 이 대체한다), [ADR-0013](0013-architecture-patterns.md)(판단은 `domain`)

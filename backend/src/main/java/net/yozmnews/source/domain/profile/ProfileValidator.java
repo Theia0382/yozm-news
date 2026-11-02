@@ -25,12 +25,13 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import net.yozmnews.platform.StrictYamlBinding.Located;
+import net.yozmnews.platform.TextLocation;
+import net.yozmnews.platform.YamlPath;
 import net.yozmnews.source.domain.profile.ProfileDraft.DatesDraft;
 import net.yozmnews.source.domain.profile.ProfileDraft.FeedDraft;
-import net.yozmnews.source.domain.profile.ProfileDraft.Located;
 import net.yozmnews.source.domain.profile.ProfileDraft.PreCorrectionDraft;
 import net.yozmnews.source.domain.profile.ProfileDraft.SourceDraft;
-import net.yozmnews.source.domain.profile.text.TextLocation;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -107,7 +108,7 @@ final class ProfileValidator {
 	}
 
 	private SourceInfo source(ProfileDraft draft) {
-		ProfilePath path = ProfilePath.of(ProfileBinder.SOURCE);
+		YamlPath path = YamlPath.of(ProfileBinder.SOURCE);
 		SourceDraft source = draft.source();
 		if (source == null) {
 			missing(path, draft.location());
@@ -130,7 +131,7 @@ final class ProfileValidator {
 				case OPERATOR_PROFILE -> false;
 			};
 			if (required) {
-				missing(ProfilePath.of(ProfileBinder.TERMS_REVIEWED_AT), draft.location());
+				missing(YamlPath.of(ProfileBinder.TERMS_REVIEWED_AT), draft.location());
 			}
 			return null;
 		}
@@ -146,7 +147,7 @@ final class ProfileValidator {
 	private List<FeedSpec> feeds(ProfileDraft draft) {
 		Located<List<FeedDraft>> feeds = draft.feeds();
 		if (feeds == null) {
-			missing(ProfilePath.of(ProfileBinder.FEEDS), draft.location());
+			missing(YamlPath.of(ProfileBinder.FEEDS), draft.location());
 			return List.of();
 		}
 		if (feeds.value().isEmpty()) {
@@ -394,7 +395,7 @@ final class ProfileValidator {
 		return null;
 	}
 
-	private String required(@Nullable Located<String> value, ProfilePath path, TextLocation parent) {
+	private String required(@Nullable Located<String> value, YamlPath path, TextLocation parent) {
 		if (value == null) {
 			missing(path, parent);
 			return "";
@@ -406,7 +407,7 @@ final class ProfileValidator {
 	 * URL 값을 읽는다.
 	 * @return 문제가 있으면 null — 문제는 이미 알렸다
 	 */
-	private @Nullable URI url(@Nullable Located<String> value, ProfilePath path, TextLocation parent) {
+	private @Nullable URI url(@Nullable Located<String> value, YamlPath path, TextLocation parent) {
 		if (value == null) {
 			missing(path, parent);
 			return null;
@@ -431,7 +432,7 @@ final class ProfileValidator {
 		return (uri != null) ? uri : INVALID_URL;
 	}
 
-	private Locale language(@Nullable Located<String> value, ProfilePath path, TextLocation parent) {
+	private Locale language(@Nullable Located<String> value, YamlPath path, TextLocation parent) {
 		if (value == null) {
 			missing(path, parent);
 			return Locale.ROOT;
@@ -445,7 +446,7 @@ final class ProfileValidator {
 		return Locale.ROOT;
 	}
 
-	private void missing(ProfilePath path, TextLocation parent) {
+	private void missing(YamlPath path, TextLocation parent) {
 		this.problems.add(new ProfileProblem(path, ProblemCode.MISSING_REQUIRED, "필수 항목이 없다", parent));
 	}
 
