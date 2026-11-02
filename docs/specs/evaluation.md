@@ -79,7 +79,7 @@ public interface TagSetDirectory {
 | 멤버 | 뜻 |
 |---|---|
 | `activeTagSet()` | 활성 버전의 내용 — 태그 · 질문 문장 · 중요도 기준 |
-| `activeThresholds()` | 활성 버전의 주제 · 지역 태그 기준 · 저장 기준 |
+| `activeThresholds()` | 활성 버전의 주제 · 지역의 태그 기준 · 저장 기준 |
 
 - 계약
   - 활성 버전은 언제나 하나다. 없으면(첫 기동 적재의 불변식이 깨짐) `IllegalStateException` 이다(evaluation-R3)
@@ -142,7 +142,7 @@ public record TagSetThresholds(TagSetId versionId, TagThresholds topic, TagThres
 | `MultiTagKind` | 태그 기준 · 저장 기준이 있는 태그 종류 — 여러 태그가 붙는 주제 · 지역. 형식은 하나를 고르므로 없다 | — |
 | `TagThresholds.tagThreshold` | 태그 기준 — 저장된 확률이 이 값 이상이면 태그가 붙는다 | 0 이상 1 이하, 소수 셋째 자리까지(evaluation-R10) |
 | `TagThresholds.storeThreshold` | 저장 기준 — 평가 때 이 값 이상인 확률만 저장한다 | 같음 |
-| `TagSetThresholds` | 한 버전의 주제 · 지역 태그 기준 · 저장 기준 | — |
+| `TagSetThresholds` | 한 버전의 주제 · 지역의 태그 기준 · 저장 기준 | — |
 
 관련 규칙: evaluation-R10.
 
@@ -167,7 +167,7 @@ public interface TagSetAdministration {
 | 멤버 | 뜻 |
 |---|---|
 | `MAX_REEVALUATION_DAYS` | 재평가 기간의 상한(일) — 정본이다(evaluation-R25) |
-| `changeThresholds` | 활성 버전의 한 태그 종류 태그 기준 · 저장 기준을 바꾼다(evaluation-R11 · R12) |
+| `changeThresholds` | 활성 버전의 한 태그 종류의 태그 기준 · 저장 기준을 바꾼다(evaluation-R11 · R12) |
 | `thresholdChanges()` | 활성 버전의 태그 기준 · 저장 기준 이력 — 최근 것부터(evaluation-R13) |
 | `versions()` | 버전 목록 — 번호가 큰 것부터 |
 | `versionText` | 버전의 원문 — 그 버전의 내용과 지금 태그 기준 · 저장 기준으로 만든다. 없는 버전이면 빈 값(evaluation-R27) |
@@ -726,7 +726,7 @@ public record EvaluationFailure(Kind kind, String message) implements Evaluation
 
 판단의 이유는 [ADR-0054](../adr/0054-tag-set-seeded-from-default-yaml-on-first-start-with-immutable-versions-and-question-templates.md)에 있다.
 
-- **evaluation-R1** — 기본 체계는 `backend/src/main/resources/tag-sets/default.yaml` 하나다. 기동 때 두 역할 모두 이 파일을 읽어 검증한다. 파일이 없거나 읽을 수 없거나 검증에 걸리면 문제를 경로 · 줄:열과 함께 모두 담아 기동하지 않는다. 기본 체계 파일에는 계보 절(`lineage` — evaluation-R22)을 둘 수 없다 — 있으면 같은 방식으로 기동하지 않는다(정본 `TagSetDefinition.lineageProblemForDefault`)
+- **evaluation-R1** — 기본 체계는 `backend/src/main/resources/tag-sets/default.yaml` 하나다. 기동 때 두 역할 모두 이 파일을 읽어 검증한다. 파일이 없거나 읽을 수 없거나 검증에 걸리면 문제를 경로 · 줄:열과 함께 모두 담아 기동하지 않는다. 기본 체계 파일에는 계보 항목(`lineage` — evaluation-R22)을 둘 수 없다 — 항목이 있으면 같은 방식으로 기동하지 않는다. 빈 절은 계보가 없는 것과 같다(정본 `TagSetDefinition.lineageProblemForDefault`)
 - **evaluation-R2** — 첫 기동 적재: 버전이 하나도 없을 때만 기본 체계를 번호 1 · 활성 · 행위자 시스템의 버전으로 저장하고, 주제 · 지역의 처음 태그 기준 · 저장 기준과 그 이력 첫 행을 함께 쓴다. 한 트랜잭션이고 `tag_sets` 표 잠금(자기 자신과 충돌하는 모드) 안에서 한다 — 여러 프로세스가 동시에 떠도 하나만 적재하고, 다시 기동해도 결과가 같다. 버전이 이미 있으면 파일이 바뀌어도 적재하지 않는다 — 파일의 개정은 새 인스턴스의 시작점일 뿐이고, 이미 적재한 인스턴스는 체계 변경(evaluation-R16)으로 새 버전을 들인다. 두 역할 모두 적재하고, 싱글톤을 모두 만든 뒤 웹 서버 · 작업 서버가 시작하기 전에 한다 — 어느 역할의 프로세스도 활성 버전 없이 요청 · 작업을 받지 않는다. 적재하면 정보 로그 `기본 태그 체계를 버전 1로 적재했다` 를 남긴다. 버전이 이미 있고 기본 체계 파일과 내용이 같은 버전이 하나도 없으면 정보 로그 `기본 체계 파일과 내용이 같은 태그 체계 버전이 없다 — 파일의 개정을 들이려면 체계 변경으로 새 버전을 만든다` 를 남긴다 — 내용은 버전 내용(evaluation-R4)이고 태그 기준 · 저장 기준은 비교하지 않는다(정본 `TagSetContent.matchesAny`)
 - **evaluation-R3** — 활성 버전은 언제나 정확히 하나다 — DB 제약(활성 행 하나)이 지킨다. 활성 버전이 없으면 조회 · 변경이 `IllegalStateException` 으로 실패한다(첫 기동 적재의 불변식이 깨진 것이다)
 - **evaluation-R4** — 버전 내용(질문 틀 · 질문 · 태그 · 이름 · 설명 · 중요도 기준 · 기본 제외)은 만든 뒤 바뀌지 않는다. 문구 하나를 바꿔도 새 버전이다. 태그 기준 · 저장 기준만 버전의 설정으로 바뀐다(evaluation-R11)
@@ -817,8 +817,9 @@ public record EvaluationFailure(Kind kind, String message) implements Evaluation
   - 한 목록 안에 같은 키가 없고, `rename` 의 이전 키와 새 키는 다르다
   - 같은 태그 종류에서 한 키는 많아야 한 항목의 `from` 이고, 많아야 한 항목의 `to` 다
   - `to` 는 그 원문의 같은 태그 종류에 있다
+  - 주제 계보는 같은 층끼리 잇는다 — 이전 키 · 새 키가 모두 대분류이거나 모두 중분류다
   - 대분류 키가 바뀌어 중분류의 전체 키가 바뀌면 바뀐 전체 키마다 따로 적는다 — 계보를 추론하지 않는다
-  - 기본 체계 파일에는 둘 수 없다(evaluation-R1)
+  - 기본 체계 파일에는 계보 항목을 둘 수 없다(evaluation-R1)
 - **evaluation-R23** — 기준 버전과의 대조(정본 `TagSetRevision`):
   - `from` 키는 기준 버전의 같은 태그 종류에 있다
   - `from` 키가 새 버전에도 있으면 그 항목의 `to` 에 있다 — 이전 키를 남기는 분할 · 병합만 허용한다
@@ -828,7 +829,7 @@ public record EvaluationFailure(Kind kind, String message) implements Evaluation
 - **evaluation-R24** — 변경 목록(정본 `TagSetRevision`):
   - `added` — 새 버전에만 있고 계보의 새 키가 아닌 키. 앞 버전에서 지운 키를 다시 쓰면 여기에 나온다
   - `removed` — 계보 없이 지운 키: 기준 버전에만 있고 계보의 이전 키가 아닌 키
-  - `revised` — 두 버전에 다 있고 이름 · 설명 · 대분류 · 기본 제외 가운데 하나가 다른 키
+  - `revised` — 두 버전에 다 있고 이름 · 설명 · 기본 제외 가운데 하나가 다른 키
   - `lineage` — 계보 항목
   - `questionsRevised` · `importanceRevised` — 질문 틀 · 질문, 중요도 기준이 바뀌었는가
   - `thresholds` — 원문의 태그 기준 · 저장 기준이 기준 버전의 지금 값과 크기가 다른 태그 종류

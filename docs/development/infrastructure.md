@@ -51,7 +51,7 @@ PostgreSQL 이미지는 `compose.yaml` 의 `postgres` 서비스 `image` 한 줄�
 
 ### 테스트가 저장소 파일을 읽는 결선
 
-백엔드 테스트는 저장소 파일 셋을 읽는다 — PostgreSQL 이미지를 정하는 `compose.yaml`, 현재 코드의 명세와 비교하는 화면용 API 명세 `api/openapi.json`([ADR-0020](../adr/0020-screen-api-contract-from-committed-openapi-spec.md)), 예시 프로필을 실제 검증기로 통과시키는 운영 안내서 `docs/operations/sources.md`([소스 등록](../operations/sources.md#예시)). 파일마다 네 곳이 맞물린다.
+백엔드 테스트는 저장소 파일 넷을 읽는다 — PostgreSQL 이미지를 정하는 `compose.yaml`, 현재 코드의 명세와 비교하는 화면용 API 명세 `api/openapi.json`([ADR-0020](../adr/0020-screen-api-contract-from-committed-openapi-spec.md)), 예시 프로필을 실제 검증기로 통과시키는 운영 안내서 `docs/operations/sources.md`([소스 등록](../operations/sources.md#예시)), 예시 원문을 기본 체계에 적용해 확인을 통과시키는 운영 안내서 `docs/operations/tag-sets.md`([태그 체계 바꾸기](../operations/tag-sets.md#예시)). 파일마다 네 곳이 맞물린다.
 
 1. `backend/build.gradle.kts` 가 파일 경로를 테스트에 시스템 속성으로 넘긴다
 2. 같은 파일이 Gradle 테스트 태스크의 입력으로 등록되어, 파일이 바뀌면 테스트가 다시 돈다
@@ -123,6 +123,7 @@ IDE 에서 테스트를 Gradle 에 맡기는 것은 1 때문이다([CONTRIBUTING
 | 테스트가 읽는 저장소 파일이 검사 이미지에 있다 | 빌드 실패(허용 목록에 없으면 복사가 실패) · 검사 실패(복사하지 않으면 이미지 안에 파일이 없다) | [결선](#테스트가-저장소-파일을-읽는-결선) |
 | 커밋된 화면용 API 명세 = 코드의 명세 | 테스트 `OpenApiSpecTests` | `api/openapi.json` · `backend/build.gradle.kts` |
 | 운영 안내서의 예시 프로필이 지금의 검증기를 통과한다 | 테스트 `SourcesGuideExampleTests`(코드 블록은 `yaml` · `sh` 만, `yaml` 블록 1개 이상) | `docs/operations/sources.md` · `backend/build.gradle.kts` |
+| 태그 체계 안내서의 예시 원문을 기본 체계에 적용하면 확인을 통과한다 | 테스트 `TagSetsGuideExampleTests`(코드 블록은 `yaml` · `sh` 만, 받은 원문의 같은 절을 `yaml` 블록으로 바꾸거나 끝에 더한 원문이 형식 검증과 기본 체계와의 대조를 통과하고 계보가 하나 이상) | `docs/operations/tag-sets.md` · `backend/build.gradle.kts` |
 | Javadoc 형식 오류(깨진 참조 · HTML · 태그)가 없다 — main · 테스트 소스 | 빌드 실패 — 컴파일의 javac doclint 가 깨진 참조 · HTML 을(배포 빌드 `bootJar` 에도 걸린다), `check` 의 `javadoc` · `javadocTest` 가 그에 더해 알 수 없는 태그 · doclint 경고를 잡는다(`-Werror` 는 이 둘에만). 문서화 누락은 검사하지 않는다([ADR-0039](../adr/0039-code-comments-point-to-owning-docs-and-javadoc-format-checked-by-javac-and-javadoc.md)) | `backend/build.gradle.kts` |
 | 넘기는 경로의 정본 하나를 Caddy · Vite 가 함께 읽는다 | 테스트 `backendPaths.test.ts` + 스모크 K5 · K6 · K10 | `frontend/proxy/` |
 | 운영자 경로는 토큰 없는 요청에 열리지 않는다 — 토큰을 설정하지 않은 배포는 닫혀 있고(403 `admin-closed`), 설정한 배포는 인증을 요구한다(401 `admin-unauthorized`) | 스모크 K13 — CI 는 두 구성을 돌린다 | [운영 설정 — 운영자](../operations/configuration.md#운영자) |
