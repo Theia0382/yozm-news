@@ -38,6 +38,11 @@ jobrunr:
     allow-anonymous-data-usage: false
 
 yozmnews:
+  jev:
+    # 공유 평가 Jev 의 모델(별칭 또는 버전 ID)과 기본 주소 — docs/specs/evaluation.md §7 · docs/operations/configuration.md "공유 평가".
+    # 키는 비밀 값이라 여기 적지 않는다 — 환경 변수 YOZMNEWS_JEV_API_KEY
+    model: jev-latest
+    base-url: https://api.typesafe.ai
   events:
     # 멈춤 기준 — docs/specs/platform.md §7 · platform-R2. 리스너는 짧은 처리여야 한다 — ADR-0023
     stale-after: PT30M

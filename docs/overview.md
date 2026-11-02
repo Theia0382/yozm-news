@@ -86,7 +86,7 @@ flowchart LR
         db[(PostgreSQL)]
     end
     feeds[[언론사 RSS 피드]]
-    jev[[Jev<br/>직접 또는 AI Gateway 경유]]
+    jev[[Jev<br/>TypeSafe System One API]]
     llm[[LLM 공급자<br/>OpenAI · Anthropic]]
     oauth[[OIDC 공급자<br/>기본: Google]]
 

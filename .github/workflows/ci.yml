@@ -97,6 +97,8 @@ jobs:
       # 배포 구성의 필수 값 — CI 에서만 쓰는 일회성 값이고 비밀 값이 아니다
       POSTGRES_PASSWORD: ci-smoke-only
       YOZMNEWS_COLLECTION_CONTACT: https://github.com/Theia0382/yozm-news/issues
+      # 형식만 맞는 일회성 값 — 스모크에는 평가할 기사가 없어 Jev 로 요청하지 않는다
+      YOZMNEWS_JEV_API_KEY: ci-smoke-only-not-a-jev-key
     steps:
       - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v4

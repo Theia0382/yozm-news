@@ -4,3 +4,8 @@ yozmnews:
   collection:
     # 수집 연락처는 필수다(없으면 앱이 뜨지 않는다). 테스트는 실제 피드를 받지 않는다
     contact: https://github.com/Theia0382/yozm-news/issues
+  jev:
+    # Jev 키는 작업 역할의 필수 설정이다(없으면 앱이 뜨지 않는다). 형식만 맞는 시험 값이고, 기본 주소는 닿지 않는 주소라
+    # 반복 작업이 돌아도 실제 Jev 로 요청하지 않는다
+    api-key: test-key-not-a-real-jev-key
+    base-url: http://127.0.0.1:9
