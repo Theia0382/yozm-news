@@ -36,10 +36,10 @@ import tools.jackson.databind.json.JsonMapper;
  * <li>주제 — 중분류 이름이 일치하면 그 중분류 {@value #NAME_MATCH}. 대분류 이름이 일치하고 그 대분류에 일치한 중분류가 없으면 그
  * 대분류의 중분류 가운데 해시로 고른 하나 {@value #CATEGORY_MATCH}. 둘 다 없으면 전체 중분류 가운데 해시로 고른 하나
  * {@value #PICKED}. 나머지는 {@value #LOW_BOUND} 미만의 해시값</li>
- * <li>지역 — 이름이 일치하면 {@value #NAME_MATCH}, 하나도 없으면 해시로 고른 하나 {@value #PICKED}, 나머지는
+ * <li>지역 — 이름이 일치하면 {@value #NAME_MATCH}, 하나도 없으면 체계 순서의 첫 지역 {@value #PICKED}, 나머지는
  * {@value #LOW_BOUND} 미만의 해시값</li>
- * <li>형식 — 이름이 일치한 첫 선택지, 없으면 해시로 고른 하나가 {@value #FORMAT_CHOSEN}, 나머지 선택지가 그 나머지를 똑같이
- * 나눈다</li>
+ * <li>형식 — 이름이 일치한 첫 선택지, 없으면 체계 순서의 첫 선택지가 {@value #FORMAT_CHOSEN}, 나머지 선택지가 그 나머지를
+ * 똑같이 나눈다</li>
  * <li>중요도 — 해시로 고른 수준이 {@value #IMPORTANCE_CHOSEN}, 나머지 수준이 그 나머지를 똑같이 나눈다</li>
  * <li>해시 — {@code SHA-256(제목 + "\n" + 구분자 + "\n" + 키)} 의 앞 8바이트를 0 이상 1 미만으로 옮긴 값. 해시로 고르면 해시값이
  * 가장 큰 키(같으면 체계 순서가 앞선 키)다</li>
@@ -55,7 +55,7 @@ public final class FakeArticleEvaluator implements ArticleEvaluator {
 	public static final String NAME = "fake";
 
 	/** 모델 버전 — 규칙을 바꾸면 올린다 */
-	public static final String MODEL_VERSION = "fake-rules-1";
+	public static final String MODEL_VERSION = "fake-rules-2";
 
 	/** 이름이 일치한 태그의 확률 */
 	static final double NAME_MATCH = 0.9;
@@ -63,11 +63,11 @@ public final class FakeArticleEvaluator implements ArticleEvaluator {
 	/** 대분류 이름만 일치했을 때 고른 중분류의 확률 */
 	static final double CATEGORY_MATCH = 0.8;
 
-	/** 일치가 없을 때 고른 태그의 확률 */
+	/** 일치가 없을 때 고른 주제 · 지역의 확률 */
 	static final double PICKED = 0.7;
 
-	/** 나머지 태그 확률의 상한(미만) */
-	static final double LOW_BOUND = 0.3;
+	/** 나머지 태그 확률의 상한(미만) — 저장 기준 기본값(0.1)을 조금 넘겨, 나머지 가운데 소수만 저장 기준 이상이 되게 한다 */
+	static final double LOW_BOUND = 0.12;
 
 	/** 고른 형식의 확률 */
 	static final double FORMAT_CHOSEN = 0.8;
@@ -97,7 +97,7 @@ public final class FakeArticleEvaluator implements ArticleEvaluator {
 		String text = matchText(input);
 		Map<String, Double> topics = topics(title, tagSet.topics(), text);
 		Map<String, Double> regions = regions(title, tagSet.regions(), text);
-		Map<String, Double> formats = formats(title, tagSet.format().options(), text);
+		Map<String, Double> formats = formats(tagSet.format().options(), text);
 		Map<Integer, Double> importance = importance(title, tagSet.importance().levels());
 		return new Evaluation(topics, regions, formats, importance, NAME, MODEL_VERSION, tokens(input, tagSet),
 				rawResponse(topics, regions, formats, importance));
@@ -180,17 +180,17 @@ public final class FakeArticleEvaluator implements ArticleEvaluator {
 			}
 		}
 		if (!matched) {
-			result.put(pick(title, "region", regions.stream().map(AskedTag::key).toList()), PICKED);
+			result.put(regions.getFirst().key(), PICKED);
 		}
 		return result;
 	}
 
-	private static Map<String, Double> formats(String title, List<FormatOption> options, String text) {
+	private static Map<String, Double> formats(List<FormatOption> options, String text) {
 		String chosen = options.stream()
 			.filter(option -> matches(option.name(), text))
 			.map(FormatOption::key)
 			.findFirst()
-			.orElseGet(() -> pick(title, "format", options.stream().map(FormatOption::key).toList()));
+			.orElse(options.getFirst().key());
 		double rest = (1 - FORMAT_CHOSEN) / (options.size() - 1);
 		Map<String, Double> result = new LinkedHashMap<>();
 		for (FormatOption option : options) {

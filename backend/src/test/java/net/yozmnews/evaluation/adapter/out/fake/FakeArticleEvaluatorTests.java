@@ -71,7 +71,7 @@ class FakeArticleEvaluatorTests {
 		assertThat(evaluation.formats()).containsOnlyKeys("straight", "opinion", "feature");
 		assertThat(evaluation.importance()).containsOnlyKeys(1, 2, 3, 4, 5);
 		assertThat(evaluation.evaluator()).isEqualTo("fake");
-		assertThat(evaluation.modelVersion()).isEqualTo("fake-rules-1");
+		assertThat(evaluation.modelVersion()).isEqualTo("fake-rules-2");
 	}
 
 	@Test
@@ -81,9 +81,9 @@ class FakeArticleEvaluatorTests {
 		assertThat(values(evaluation.topics(), "politics.executive", "politics.assembly")).filteredOn(v -> v == 0.8)
 			.hasSize(1);
 		assertThat(values(evaluation.topics(), "politics.executive", "politics.assembly")).filteredOn(v -> v != 0.8)
-			.allSatisfy(v -> assertThat(v).isLessThan(0.3));
+			.allSatisfy(v -> assertThat(v).isLessThan(0.12));
 		assertThat(values(evaluation.topics(), "economy.finance", "economy.realestate"))
-			.allSatisfy(v -> assertThat(v).isLessThan(0.3));
+			.allSatisfy(v -> assertThat(v).isLessThan(0.12));
 	}
 
 	@Test
@@ -92,23 +92,33 @@ class FakeArticleEvaluatorTests {
 
 		assertThat(evaluation.topics()).containsEntry("politics.assembly", 0.9);
 		// 그 대분류의 중분류가 일치했으므로 대분류 이름 일치로 다른 중분류를 고르지 않는다
-		assertThat(evaluation.topics().get("politics.executive")).isLessThan(0.3);
+		assertThat(evaluation.topics().get("politics.executive")).isLessThan(0.12);
 		assertThat(values(evaluation.topics(), "economy.finance", "economy.realestate"))
-			.allSatisfy(v -> assertThat(v).isLessThan(0.3));
+			.allSatisfy(v -> assertThat(v).isLessThan(0.12));
 	}
 
 	@Test
-	void picksOneSubtopicAndOneRegionWhenNothingMatches() {
+	void picksOneSubtopicAndTheFirstRegionWhenNothingMatches() {
 		Evaluation evaluation = evaluate(input("날씨 맑음", "전체기사"));
 
 		assertThat(evaluation.topics().values()).filteredOn(v -> v == 0.7).hasSize(1);
 		assertThat(evaluation.topics().values()).filteredOn(v -> v != 0.7)
 			.hasSize(3)
-			.allSatisfy(v -> assertThat(v).isBetween(0.0, 0.3).isLessThan(0.3));
-		assertThat(evaluation.regions().values()).filteredOn(v -> v == 0.7).hasSize(1);
-		assertThat(evaluation.regions().values()).filteredOn(v -> v != 0.7)
-			.singleElement()
-			.satisfies(v -> assertThat(v).isLessThan(0.3));
+			.allSatisfy(v -> assertThat(v).isBetween(0.0, 0.12).isLessThan(0.12));
+		// 체계 순서의 첫 지역이다 — 고정 체계는 키 순서(domestic)와 체계 순서(world)가 다르다
+		assertThat(evaluation.regions()).containsEntry("world", 0.7);
+		assertThat(evaluation.regions().get("domestic")).isLessThan(0.12);
+	}
+
+	@Test
+	void picksTheFirstRegionAndFormatWhateverTheTitle() {
+		// 제목이 달라도 일치가 없으면 늘 체계 순서의 첫 지역 · 첫 선택지다 — 제목에 따라 고르지 않는다
+		for (String title : List.of("날씨 맑음", "날씨 흐림", "주말 나들이 인파", "새 학기 시작", "단풍 절정", "연휴 귀성길")) {
+			Evaluation evaluation = evaluate(input(title, "전체기사"));
+
+			assertThat(evaluation.regions()).as(title).containsEntry("world", 0.7);
+			assertThat(evaluation.formats()).as(title).containsEntry("straight", 0.8);
+		}
 	}
 
 	@Test
@@ -129,7 +139,7 @@ class FakeArticleEvaluatorTests {
 		Evaluation evaluation = evaluate(input("국내 물가 상승", "전체기사"));
 
 		assertThat(evaluation.regions()).containsEntry("domestic", 0.9);
-		assertThat(evaluation.regions().get("world")).isLessThan(0.3);
+		assertThat(evaluation.regions().get("world")).isLessThan(0.12);
 	}
 
 	@Test
@@ -143,13 +153,13 @@ class FakeArticleEvaluatorTests {
 	}
 
 	@Test
-	void choosesOneFormatAndOneImportanceLevelWhenNothingMatches() {
+	void choosesTheFirstFormatAndOneImportanceLevelWhenNothingMatches() {
 		Evaluation evaluation = evaluate(input("날씨 맑음", "전체기사"));
 
-		assertThat(evaluation.formats().values()).filteredOn(v -> v == 0.8).hasSize(1);
-		assertThat(evaluation.formats().values()).filteredOn(v -> v != 0.8)
-			.hasSize(2)
-			.allSatisfy(v -> assertThat(v).isCloseTo(0.1, within(1e-12)));
+		// 체계 순서의 첫 선택지다 — 고정 체계는 키 순서(feature)와 체계 순서(straight)가 다르다
+		assertThat(evaluation.formats()).containsEntry("straight", 0.8);
+		assertThat(evaluation.formats().get("opinion")).isCloseTo(0.1, within(1e-12));
+		assertThat(evaluation.formats().get("feature")).isCloseTo(0.1, within(1e-12));
 		assertThat(evaluation.importance().values()).filteredOn(v -> v == 0.6).hasSize(1);
 		assertThat(evaluation.importance().values()).filteredOn(v -> v != 0.6)
 			.hasSize(4)
@@ -220,7 +230,7 @@ class FakeArticleEvaluatorTests {
 
 		Map<String, Object> raw = JsonMapper.builder().build().readValue(evaluation.rawResponse(), LinkedHashMap.class);
 
-		assertThat(raw).containsEntry("evaluator", "fake").containsEntry("modelVersion", "fake-rules-1");
+		assertThat(raw).containsEntry("evaluator", "fake").containsEntry("modelVersion", "fake-rules-2");
 		assertThat(raw.keySet()).containsExactly("evaluator", "modelVersion", "topics", "regions", "formats",
 				"importance");
 		assertThat(keys(raw, "topics")).containsExactly("economy.finance", "economy.realestate", "politics.assembly",
