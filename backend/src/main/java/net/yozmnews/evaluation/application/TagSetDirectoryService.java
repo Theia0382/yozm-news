@@ -1,20 +1,9 @@
 package net.yozmnews.evaluation.application;
 
-import java.util.List;
-
-import net.yozmnews.evaluation.AskedTag;
-import net.yozmnews.evaluation.FormatChoice;
-import net.yozmnews.evaluation.FormatOption;
-import net.yozmnews.evaluation.ImportanceLevel;
-import net.yozmnews.evaluation.ImportanceScale;
 import net.yozmnews.evaluation.TagSetDirectory;
 import net.yozmnews.evaluation.TagSetThresholds;
 import net.yozmnews.evaluation.TagSetView;
-import net.yozmnews.evaluation.TopicCategory;
-import net.yozmnews.evaluation.domain.tagset.QuestionTemplate;
-import net.yozmnews.evaluation.domain.tagset.TagDef;
 import net.yozmnews.evaluation.domain.tagset.TagSet;
-import net.yozmnews.evaluation.domain.tagset.TagSetContent;
 import net.yozmnews.evaluation.domain.tagset.TagSetRepository;
 import net.yozmnews.evaluation.domain.threshold.ThresholdRepository;
 import org.springframework.stereotype.Service;
@@ -22,7 +11,7 @@ import org.springframework.stereotype.Service;
 /**
  * 공개 API {@link TagSetDirectory} 의 구현 — docs/specs/evaluation.md §4 · evaluation-R3 · evaluation-R9.
  * <p>
- * 활성 버전을 읽어 질문 문장을 만들고 공개 타입으로 옮긴다. 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통).
+ * 활성 버전을 읽어 공개 타입으로 옮긴다 — 옮기는 일은 {@link TagSetViews} 가 한다. 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통).
  */
 @Service
 class TagSetDirectoryService implements TagSetDirectory {
@@ -38,24 +27,7 @@ class TagSetDirectoryService implements TagSetDirectory {
 
 	@Override
 	public TagSetView activeTagSet() {
-		TagSet active = active(this.tagSets);
-		TagSetContent content = active.content();
-		List<TopicCategory> topics = content.topics()
-			.stream()
-			.map(topic -> new TopicCategory(topic.key().value(), topic.name(), topic.description(),
-					asked(topic.subtopics(), content.topicTemplate())))
-			.toList();
-		List<FormatOption> formats = content.formats()
-			.stream()
-			.map(format -> new FormatOption(format.key().value(), format.name(), format.description(),
-					format.excludedByDefault()))
-			.toList();
-		List<ImportanceLevel> levels = content.importance()
-			.stream()
-			.map(level -> new ImportanceLevel(level.level(), level.description()))
-			.toList();
-		return new TagSetView(active.id(), active.number(), topics, asked(content.regions(), content.regionTemplate()),
-				new FormatChoice(content.formatQuestion(), formats), new ImportanceScale(content.importanceQuestion(), levels));
+		return TagSetViews.view(active(this.tagSets));
 	}
 
 	@Override
@@ -70,12 +42,6 @@ class TagSetDirectoryService implements TagSetDirectory {
 	static TagSet active(TagSetRepository tagSets) {
 		return tagSets.findByActiveTrue()
 			.orElseThrow(() -> new IllegalStateException("활성 태그 체계 버전이 없다 — 첫 기동 적재의 불변식이 깨졌다"));
-	}
-
-	private static List<AskedTag> asked(List<TagDef> tags, QuestionTemplate template) {
-		return tags.stream()
-			.map(tag -> new AskedTag(tag.key().value(), tag.name(), tag.description(), template.render(tag.description())))
-			.toList();
 	}
 
 }

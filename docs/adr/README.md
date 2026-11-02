@@ -15,7 +15,7 @@
 | [0009](0009-authentication-google-and-local.md) | v1 인증은 Google 로그인과 자체(이메일·비밀번호) 로그인 | 승인 (메일 관련 부분은 0011이, Turnstile 고정은 0012가 대체, 가입 봇 차단 범위는 0048이 좁힘) |
 | [0010](0010-tag-taxonomy.md) | 태그 체계: 축 분리 + 통제 어휘 다중 태그 | 승인 |
 | [0011](0011-no-email-in-v1.md) | v1에서는 메일 발송을 하지 않는다 | 승인 (봇 가입 방어선의 범위는 0048이 좁힘) |
-| [0012](0012-swappable-external-dependencies.md) | 외부 의존성은 교체 가능하게, 개발 환경에는 로컬 대체물을 둔다 | 승인 (Compose 프로필 `prod` 부분은 0021이, Fake 구현을 운영에서 막는 기동 시 검사는 0057이 대체) |
+| [0012](0012-swappable-external-dependencies.md) | 외부 의존성은 교체 가능하게, 개발 환경에는 로컬 대체물을 둔다 | 승인 (Compose 프로필 `prod` 부분은 0021이, Fake 구현을 운영에서 막는 기동 시 검사는 0057이, 평가기 없이 띄울 수 있다는 부분은 0061이 대체) |
 | [0013](0013-architecture-patterns.md) | 아키텍처 패턴: 모듈러 모놀리스 + 실용적 헥사고날 | 승인 (이벤트 재처리 시점은 0023이, 상태 머신의 피드 상태는 0040이 대체) |
 | [0014](0014-spring-data-jdbc.md) | 데이터 접근은 Spring Data JDBC + JdbcClient | 승인 |
 | [0015](0015-source-presets-and-collection-profiles.md) | 뉴스 소스는 수집 프로필로 등록하고, 주요 언론사는 프리셋으로 제공한다 | 승인 (프리셋 소스의 운영자 권한은 0024가, 활성화 미리보기의 단위는 0041이 대체) |
@@ -62,6 +62,9 @@
 | [0056](0056-platform-reads-yaml-text-and-applies-common-rejection.md) | YAML 원문 읽기와 공통 거부는 `platform` 이 맡고, 문서별 형식 · 검증은 각 모듈의 `domain` 이 한다 | 승인 |
 | [0057](0057-local-substitutes-registered-only-in-local-profile-without-operator-switch.md) | 로컬 대체물은 `local` profile 에서만 등록하고, 운영 설정으로 켜는 스위치를 두지 않는다 | 승인 |
 | [0058](0058-evaluator-failures-in-three-kinds-and-unavailable-evaluator-skips-article-retries.md) | 평가기 실패는 일시 · 기사 거부 · 평가기 사용 불가 셋으로 나누고, 평가기 사용 불가는 기사 재시도를 쓰지 않는다 | 승인 |
+| [0059](0059-evaluation-job-limits-concurrency-and-retries-with-db-leases-on-queue-rows.md) | 평가 작업은 대기 행의 DB 점유와 상태로 동시성 · 재시도를 제한하고, 정착 시간 뒤 평가하며, 결과가 체계와 어긋나거나 평가기가 예상 못한 예외를 던지면 회차를 멈춘다 | 승인 |
+| [0060](0060-article-deletion-announced-by-removed-article-ids-and-followed-by-referencing-modules.md) | 기사 삭제는 지운 기사 ID 이벤트로 알리고, 기사를 가리키는 모듈이 받아 자기 행을 지운다 | 승인 |
+| [0061](0061-worker-role-does-not-run-without-an-evaluator.md) | 작업 역할은 평가기 없이 운영하지 않고, 그 기동 검사는 운영 평가기의 설정과 함께 둔다 | 승인 |
 
 양식:
 

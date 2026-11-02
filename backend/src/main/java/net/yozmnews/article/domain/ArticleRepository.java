@@ -2,8 +2,10 @@ package net.yozmnews.article.domain;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
+import net.yozmnews.article.ArticleContent;
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.source.FeedId;
 import net.yozmnews.source.SourceId;
@@ -47,9 +49,15 @@ public interface ArticleRepository {
 
 	/**
 	 * 주어진 기사 가운데 엔트리가 남지 않은 기사를 지운다 — 다른 소스 · 피드의 엔트리가 남은 기사는 남긴다.
-	 * @return 지운 기사 수
+	 * @return 지운 기사 — ID 순, 중복 없음
 	 */
-	int deleteArticlesWithoutEntries(Collection<ArticleId> articleIds);
+	List<ArticleId> deleteArticlesWithoutEntries(Collection<ArticleId> articleIds);
+
+	/**
+	 * 기사들의 제목 · 요약문 · 엔트리를 읽는다.
+	 * @return 기사 ID → 내용 — 없는 기사는 빠진다. 엔트리는 받은 시각 순, 같으면 피드 ID 순
+	 */
+	Map<ArticleId, ArticleContent> findContents(Collection<ArticleId> articleIds);
 
 	/** 엔트리가 모두 그 소스의 것인 기사 수 — 소스를 지우면 함께 지워질 기사 */
 	long countArticlesOnlyIn(SourceId sourceId);

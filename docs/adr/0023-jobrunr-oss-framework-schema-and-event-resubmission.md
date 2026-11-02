@@ -70,3 +70,4 @@
 - 2026-10-31: 결과 절의 "역할별로 끌지는 역할 profile 을 나눌 때 정한다"는 [ADR-0042](0042-app-roles-as-web-worker-profiles-marked-by-platform-annotations.md)가 정했다 — 작업 서버와 멈춤 감시는 작업 역할(`worker`)에서만 돈다.
 - 2026-11-01: 결과 절의 "상한에 이른 발행을 다시 처리하거나 지우는 수단은 아직 없다"는 [ADR-0050](0050-operator-resubmits-once-or-discards-stranded-event-publications-read-from-registry.md)가 해소했다 — 운영자가 화면에서 즉시 1회 재제출하거나 폐기한다.
 - 2026-11-01: 결정 절의 "`FAILED` 발행만 골라 재제출한다"는 [ADR-0050](0050-operator-resubmits-once-or-discards-stranded-event-publications-read-from-registry.md)이 "이벤트를 읽을 수 있는 `FAILED` 발행"으로 좁혔다 — 재제출 전에 이벤트를 읽어 보고 읽지 못하면 재제출하지 않는다. 그래서 검토한 대안 표에서 "상한 없이 성공할 때까지 다시 처리한다"를 기각한 사유의 "영구 실패(직렬화 깨짐 · 코드 결함)" 가운데 직렬화 깨짐은 상한까지 가지 않는다.
+- 2026-11-02: 결과 절의 "작업 종류별 동시성 제한이 필요한 작업(평가 등)은 작업 설계와 worker 수로 제한한다. 방식은 그 기능을 구현할 때 정한다"는 [ADR-0059](0059-evaluation-job-limits-concurrency-and-retries-with-db-leases-on-queue-rows.md)가 정했다 — 평가는 반복 작업 하나가 대기 행을 DB 점유로 묶어 차례로 평가하고, 재시도는 대기 행의 상태로 한다.

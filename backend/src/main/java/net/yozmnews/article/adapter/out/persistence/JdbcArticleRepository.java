@@ -7,10 +7,17 @@ import java.sql.Types;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
+import net.yozmnews.article.ArticleContent;
+import net.yozmnews.article.ArticleEntryView;
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.article.domain.ArticleMatching;
 import net.yozmnews.article.domain.ArticleRepository;
@@ -148,15 +155,51 @@ class JdbcArticleRepository implements ArticleRepository {
 	}
 
 	@Override
-	public int deleteArticlesWithoutEntries(Collection<ArticleId> articleIds) {
+	public List<ArticleId> deleteArticlesWithoutEntries(Collection<ArticleId> articleIds) {
 		if (articleIds.isEmpty()) {
-			return 0;
+			return List.of();
 		}
-		Long[] ids = articleIds.stream().map(ArticleId::value).distinct().toArray(Long[]::new);
+		// returning 은 순서를 보장하지 않는다 — 정렬해 돌려준다
 		return this.jdbc.sql("""
 				delete from articles a where a.id = any(:ids)
 				    and not exists (select 1 from article_feed_entries e where e.article_id = a.id)
-				""").param("ids", ids).update();
+				returning a.id
+				""")
+			.param("ids", ids(articleIds))
+			.query(Long.class)
+			.list()
+			.stream()
+			.sorted()
+			.map(ArticleId::new)
+			.toList();
+	}
+
+	@Override
+	public Map<ArticleId, ArticleContent> findContents(Collection<ArticleId> articleIds) {
+		if (articleIds.isEmpty()) {
+			return Map.of();
+		}
+		Long[] ids = ids(articleIds);
+		// 엔트리를 먼저 읽는다 — 두 질의 사이에 지운 기사는 기사 질의에서 빠져, 엔트리 없는 내용으로 나오지 않는다
+		Map<Long, List<ArticleEntryView>> entries = new HashMap<>();
+		this.jdbc.sql("""
+				select article_id, source_id, feed_id, feed_categories from article_feed_entries
+				where article_id = any(:ids)
+				order by article_id, seen_at, feed_id
+				""").param("ids", ids).query((ResultSet rs) -> {
+					entries.computeIfAbsent(rs.getLong("article_id"), id -> new ArrayList<>())
+						.add(new ArticleEntryView(new SourceId(rs.getLong("source_id")), new FeedId(rs.getLong("feed_id")),
+								List.of((String[]) rs.getArray("feed_categories").getArray())));
+				});
+		Map<ArticleId, ArticleContent> contents = new LinkedHashMap<>();
+		this.jdbc.sql("select id, title, summary_text from articles where id = any(:ids) order by id")
+			.param("ids", ids)
+			.query((ResultSet rs) -> {
+				ArticleId id = new ArticleId(rs.getLong("id"));
+				contents.put(id, new ArticleContent(id, rs.getString("title"), rs.getString("summary_text"),
+						entries.getOrDefault(id.value(), List.of())));
+			});
+		return Collections.unmodifiableMap(contents);
 	}
 
 	@Override
@@ -225,6 +268,10 @@ class JdbcArticleRepository implements ArticleRepository {
 			.query((rs, rowNum) -> new TitleCandidate(new ArticleId(rs.getLong("id")), instant(rs, "published_at"),
 					rs.getBoolean("seen_in_feed")))
 			.list();
+	}
+
+	private static Long[] ids(Collection<ArticleId> articleIds) {
+		return articleIds.stream().map(ArticleId::value).distinct().toArray(Long[]::new);
 	}
 
 	private static OffsetDateTime timestamp(Instant instant) {

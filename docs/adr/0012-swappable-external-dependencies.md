@@ -1,6 +1,6 @@
 # ADR-0012: 외부 의존성은 교체 가능하게, 개발 환경에는 로컬 대체물을 둔다
 
-- 상태: 승인. 개발 환경의 Compose 프로필 `prod` 항목은 [ADR-0021](0021-separate-deploy-compose-with-single-app-service.md)이 대체. Fake 구현을 운영에서 막는 기동 시 검사 항목은 [ADR-0057](0057-local-substitutes-registered-only-in-local-profile-without-operator-switch.md)이 대체(등록 조건)
+- 상태: 승인. 개발 환경의 Compose 프로필 `prod` 항목은 [ADR-0021](0021-separate-deploy-compose-with-single-app-service.md)이 대체. Fake 구현을 운영에서 막는 기동 시 검사 항목은 [ADR-0057](0057-local-substitutes-registered-only-in-local-profile-without-operator-switch.md)이 대체(등록 조건). 평가기를 끌 수 있다는 부분(원칙 1 의 평가기, 결과의 "Jev 키 없이도 서비스를 띄울 수 있다")은 [ADR-0061](0061-worker-role-does-not-run-without-an-evaluator.md)이 대체(평가기는 교체만 한다)
 - 날짜: 2026-10-25
 - 관련: [ADR-0006](0006-deployment-compose-cloudflare.md), [ADR-0009](0009-authentication-google-and-local.md), [ADR-0011](0011-no-email-in-v1.md)
 

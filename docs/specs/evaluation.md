@@ -10,7 +10,9 @@
 - **첫 기동 적재** — 저장소의 기본 체계 파일을 기동 때 검증하고, 버전이 하나도 없으면 버전 1 로 들인다(evaluation-R1 · R2)
 - **태그 기준 · 저장 기준** — 주제 · 지역마다 두 기준을 두고, 운영자의 변경을 이력과 함께 받는다. 앱은 두 기준을 막지 않고, 이전 기사와 어긋날 수 있는 변경에 경고한다(evaluation-R10 ~ R13)
 - **활성 체계 조회** — 평가 · 후보 선별이 쓰는 활성 버전과 두 기준을 공개 API(`TagSetDirectory`)로 낸다
-- **공유 평가** — 기사 하나를 넘긴 체계의 질문으로 평가하는 포트(`ArticleEvaluator` — Jev 를 부르는 유일한 포트)와 로컬 대체물(`FakeArticleEvaluator`)을 둔다. **(미구현)** 평가 대기 기사를 묶어 Jev 로 태그 · 형식 · 중요도를 묻고 결과를 저장한다(evaluation-R14 · R15 · R17)
+- **공유 평가** — 기사 하나를 넘긴 체계의 질문으로 평가하는 포트(`ArticleEvaluator` — Jev 를 부르는 유일한 포트)와 로컬 대체물(`FakeArticleEvaluator`)을 둔다. 새 기사를 평가 대기에 넣고, 1분마다 대기를 묶어 평가기로 태그 · 형식 · 중요도를 묻고 결과를 저장한다(evaluation-R14 · R15 · R17 ~ R20)
+- **평가 결과 조회** — 기사의 붙은 태그 · 형식 · 중요도를 조회 시점의 두 기준으로 판정해 공개 API(`ArticleEvaluations`)로 낸다. 대기 · 실패 건수를 공개 운영 API(`EvaluationAdministration`)로 낸다(evaluation-R15 · R20)
+- **지운 기사 따르기** — `article` 이 기사를 지우면 그 기사의 대기 · 평가 · 태그 행을 지운다(evaluation-R21)
 - **(미구현)** 체계 변경과 태그 키 계보 — 새 버전 작성 · 활성 전환 · 최근 기사 재평가, 키 이름 변경 · 분할 · 병합의 기록(evaluation-R16)
 - **(미구현)** 사건 소속 판정 — 사건 묶기의 애매한 구간을 Jev 로 판정한다([ADR-0026](../adr/0026-event-clustering-with-local-embeddings-and-jev.md))
 
@@ -18,7 +20,7 @@
 
 - 사용자를 모른다. 사용자 태그 선호 · 구독은 `user` 가, 후보 선별은 `digest` 가 한다. 두 기준의 변경을 기록할 때도 행위자 종류(시스템 · 운영자)만 남기고 사용자를 가리키지 않는다(evaluation-R13)
 - 인증을 모른다. 운영자 요청인지는 부르는 쪽(`admin`)이 정해 넘긴다
-- 기사를 수집하거나 같은 기사를 판정하지 않는다 — `source` · `article` 이 한다
+- 기사를 수집하거나 같은 기사를 판정하지 않는다 — `source` · `article` 이 한다. 기사 내용과 출처 이름 · 피드 섹션은 갖지 않고 `article` · `source` 의 공개 조회로 읽는다
 
 다른 모듈과의 의존과 이벤트 흐름은 [overview.md §5](../overview.md#5-모듈-지도)에 있다.
 
@@ -39,10 +41,20 @@
 | 행위자 | 두 기준을 정한 주체의 종류 — 시스템(첫 기동 적재) · 운영자(공개 운영 API) |
 | 피드 맥락 | 평가 입력에서 기사가 실린 피드 하나의 값 — 출처 이름 · 피드 섹션(수집 프로필) · 그 피드 항목의 RSS 카테고리. 기사가 실린 피드(엔트리)마다 하나다(evaluation-R17) |
 | 실패 갈래 | 평가기가 예상한 실패의 종류 — 일시 · 기사 거부 · 평가기 사용 불가. 평가 작업의 재시도가 이 갈래로 나뉜다([ADR-0058](../adr/0058-evaluator-failures-in-three-kinds-and-unavailable-evaluator-skips-article-retries.md)) |
+| 평가 대기 | 평가할 기사의 목록(`evaluation_queue` — 기사마다 한 행). 평가 가능 시각 · 일시 실패 수 · 점유 · 실패 까닭을 갖는다(evaluation-R18) |
+| 정착 시간 | 대기에 넣은 뒤 평가할 수 있기까지의 시간(30분). 같은 기사의 다른 피드 엔트리가 붙을 시간이다(evaluation-R18) |
+| 회차 | 반복 작업 한 번 — 대기를 묶어 점유하고 차례로 평가한다(evaluation-R19) |
+| 점유 | 회차가 대기 행을 가져갔다는 표시(토큰 · 만료). 결과는 토큰이 맞을 때만 반영한다(evaluation-R19) |
+| 회차 멈춤 | 평가기 사용 불가 · 결과가 체계와 어긋남 · 평가기의 예상 못한 예외에서, 그 기사부터 남은 점유를 풀고 회차를 끝내는 것. 기사는 대기에 그대로 남는다(evaluation-R20) |
+| `low_confidence` | 주제 태그가 태그 기준을 하나도 넘지 못해, 저장 기준 이상인 가장 높은 확률의 주제 태그 하나를 붙인 판정. 조회 때 정한다(evaluation-R15) |
+| 미분류 | 저장 기준 이상인 주제 태그가 없는 판정. 조회 때 정한다(evaluation-R15) |
+| 대표 형식 · 중요도 기대값 | 형식 분포에서 확률이 가장 큰 선택지, 중요도 분포의 확률 가중 평균. 분포와 함께 저장한다(evaluation-R15) |
 
 ## 3. 공개 인터페이스
 
-모듈 최상위 패키지 `net.yozmnews.evaluation` 의 공개 타입은 활성 체계 조회 `TagSetDirectory`, 두 기준의 운영 API `TagSetAdministration`, 그 값 · 결과 타입이다. 이벤트는 내지 않는다.
+모듈 최상위 패키지 `net.yozmnews.evaluation` 의 공개 타입은 활성 체계 조회 `TagSetDirectory`, 두 기준의 운영 API `TagSetAdministration`, 평가 결과 조회 `ArticleEvaluations`, 평가 대기의 운영 API `EvaluationAdministration`, 그 값 · 결과 타입이다. 이벤트는 내지 않는다.
+
+받는 이벤트는 `article` 의 `ArticleStored` · `ArticlesRemoved` 이고, 평가 입력은 `article` 의 공개 조회 `ArticleDirectory` 와 `source` 의 공개 조회 `FeedLabels` 로 읽는다([article Spec §3](article.md#3-공개-인터페이스) · [source Spec §3](source.md#3-공개-인터페이스)).
 
 HTTP 엔드포인트: 없음 — 운영자 HTTP API 는 `admin` 이 이 모듈의 공개 운영 API 를 불러 낸다([ADR-0045](../adr/0045-admin-module-serves-operator-api-over-module-public-operation-apis.md)).
 
@@ -185,21 +197,91 @@ public record ThresholdChangeView(MultiTagKind kind, @Nullable BigDecimal previo
 
 관련 규칙: evaluation-R11 ~ evaluation-R13.
 
+### ArticleEvaluations
+
+평가 결과 조회 — 다른 모듈이 기사의 붙은 태그 · 형식 · 중요도를 읽는다. 구현은 `application` 의 `ArticleEvaluationsService` 다.
+
+```java
+public interface ArticleEvaluations {
+    Optional<ArticleEvaluationView> find(ArticleId articleId);
+}
+```
+
+| 멤버 | 뜻 |
+|---|---|
+| `find` | 기사의 평가 — 평가하지 않은 기사면 빈 값. 평가가 여러 버전이면 버전 번호가 가장 큰 것 |
+
+- 계약
+  - 붙었는지는 조회할 때 그 평가의 체계 버전과 그 버전의 지금 두 기준으로 판정한다 — 두 기준을 바꿔도 다시 평가하거나 데이터를 다시 쓰지 않는다(evaluation-R15)
+  - 트랜잭션을 열지 않는다. 사용자 정보를 받지 않는다 — 공유 평가다
+
+관련 규칙: evaluation-R15.
+
+### ArticleEvaluationView · TopicStatus · TagProbability
+
+```java
+public record ArticleEvaluationView(ArticleId articleId, TagSetId tagSetId, TopicStatus topicStatus,
+        List<TagProbability> topics, List<String> topicCategories, List<TagProbability> regions, String format,
+        @Nullable Double importance) {}
+
+public enum TopicStatus { TAGGED, LOW_CONFIDENCE, UNCLASSIFIED }
+
+public record TagProbability(String key, double probability) {}
+```
+
+| 타입 · 필드 | 뜻 |
+|---|---|
+| `tagSetId` | 평가한 태그 체계 버전 |
+| `topicStatus` | 주제 판정 — `TAGGED`(태그 기준을 넘은 주제가 있다) · `LOW_CONFIDENCE`(없어서 저장 기준 이상인 최고 확률 하나를 붙였다) · `UNCLASSIFIED`(저장 기준 이상인 주제가 없다) |
+| `topics` | 붙은 주제 중분류(전체 키)와 확률 — 체계 순서. `LOW_CONFIDENCE` 면 하나, `UNCLASSIFIED` 면 빈 목록 |
+| `topicCategories` | 붙은 중분류의 대분류 키 — 체계 순서, 중복 없음 |
+| `regions` | 붙은 지역과 확률 — 체계 순서 |
+| `format` | 대표 형식 키 |
+| `importance` | 중요도 기대값(1 ~ 5) — 확률 합이 0 이었으면 null |
+
+관련 규칙: evaluation-R15.
+
+### EvaluationAdministration · EvaluationQueueCounts
+
+평가 대기의 운영 — 운영자 화면이 부른다. 구현은 `application` 의 `EvaluationAdministrationService` 다.
+
+```java
+public interface EvaluationAdministration {
+    EvaluationQueueCounts queueCounts();
+}
+
+public record EvaluationQueueCounts(long waiting, long rejected, long exhausted) {}
+```
+
+| 멤버 · 필드 | 뜻 |
+|---|---|
+| `queueCounts()` | 지금의 대기 · 실패 건수 — 질의 하나로 센다. 트랜잭션을 열지 않는다 |
+| `waiting` | 실패로 남지 않은 대기 — 점유 중 포함 |
+| `rejected` | 기사 거부로 실패로 남은 대기 |
+| `exhausted` | 일시 실패가 시도 상한에 이르러 실패로 남은 대기 |
+
+관련 규칙: evaluation-R18 · evaluation-R20.
+
 ## 4. 내부 구조
 
 ### 개관
 
 | 패키지 | 책임 |
 |---|---|
-| (최상위) | 공개 API `TagSetDirectory` · `TagSetAdministration` 과 그 값 · 결과 타입(§3) |
+| (최상위) | 공개 API `TagSetDirectory` · `TagSetAdministration` · `ArticleEvaluations` · `EvaluationAdministration` 과 그 값 · 결과 타입(§3) |
 | `domain/tagset` | 태그 체계 정의와 그 읽기 · 검증, 질문 틀, 버전 aggregate 와 그 저장소 |
 | `domain/threshold` | 두 기준의 값 규칙과 변경 판정, 두 기준 저장소 |
 | `domain/evaluator` | 공유 평가의 포트와 그 입력 · 결과 · 실패, 피드 맥락의 카테고리 상한 |
-| `application` | 기본 체계 파일의 기동 검증, 첫 기동 적재, 공개 API 의 구현 |
-| `adapter/out/persistence` | 두 기준 저장소의 JdbcClient 구현 |
+| `domain/queue` | 평가 대기의 일정(정착 · 점유 · 재시도)과 대기 행의 전이, 대기 저장소 |
+| `domain/result` | 결과와 체계의 일치 검사, 결과 해석(저장 기준 거르기 · 대표값), 조회 시점 판정, 결과 저장소 |
+| `application` | 기본 체계 파일의 기동 검증, 첫 기동 적재, 기사 이벤트 리스너, 대기 점유와 평가 회차, 공개 API 의 구현 |
+| `adapter/in/job` | 평가 반복 작업(작업 역할) |
+| `adapter/out/persistence` | 두 기준 · 대기 · 결과 저장소의 JdbcClient 구현 |
 | `adapter/out/fake` | 공유 평가 포트의 로컬 대체물과 그 결선(`local` 에서만) |
 
-협력: `DefaultTagSetConfiguration` 이 기본 체계 파일을 `TagSetParser`(`platform` 의 `YamlTextReader` → `TagSetBinder` → `TagSetValidator`)로 읽어 `TagSetDefinition` 을 만든다. `TagSetSeeding` 이 그 정의로 `TagSetRepository` 에 버전 1 을, `ThresholdRepository` 에 처음 두 기준을 쓴다. `TagSetDirectoryService` 는 `TagSetRepository` 로 활성 버전을 읽어 질문 문장(`QuestionTemplate`)을 만들어 공개 타입으로 옮기고, 두 기준은 `ThresholdRepository` 로 읽는다. `TagSetAdministrationService` 는 활성 버전의 두 기준을 `ThresholdRepository` 로 잠가 `ThresholdRule` 로 판정하고 같은 저장소로 쓴다. 공유 평가의 포트 `ArticleEvaluator` 는 **(미구현)** 평가 작업이 부른다 — 로컬 개발에서는 `FakeArticleEvaluatorConfiguration` 이 `FakeArticleEvaluator` 를 그 포트로 등록한다.
+협력: `DefaultTagSetConfiguration` 이 기본 체계 파일을 `TagSetParser`(`platform` 의 `YamlTextReader` → `TagSetBinder` → `TagSetValidator`)로 읽어 `TagSetDefinition` 을 만든다. `TagSetSeeding` 이 그 정의로 `TagSetRepository` 에 버전 1 을, `ThresholdRepository` 에 처음 두 기준을 쓴다. `TagSetDirectoryService` 는 `TagSetRepository` 로 활성 버전을 읽어 `TagSetViews` 로 공개 타입(질문 문장은 `QuestionTemplate`)으로 옮기고, 두 기준은 `ThresholdRepository` 로 읽는다. `TagSetAdministrationService` 는 활성 버전의 두 기준을 `ThresholdRepository` 로 잠가 `ThresholdRule` 로 판정하고 같은 저장소로 쓴다.
+
+평가: `ArticleEventsListener` 가 `ArticleStored` 로 기사를 `EvaluationQueueRepository` 에 넣고, `ArticlesRemoved` 로 대기 · 결과 행을 지운다. 작업 역할의 `EvaluatePendingArticlesJob` 이 1분마다 `EvaluationRound` 를 돌린다. 회차는 `PendingEvaluations` 로 대기를 점유하고(`PendingEvaluation` 의 전이 · `EvaluationSchedule` 의 일정), `TagSetDirectory` · `ThresholdRepository` 로 활성 체계와 그 버전의 두 기준을, `article` 의 `ArticleDirectory` 와 `source` 의 `FeedLabels` 로 입력을 읽어 포트 `ArticleEvaluator` 를 부른다. 결과는 `ResultCheck` 로 체계와 대조하고 `EvaluationRecord` 로 저장할 모양을 만들어 `EvaluationResultRepository` 에 쓰고, 실패는 대기 행의 전이로 쓴다. `ArticleEvaluationsService` 는 `EvaluationResultRepository` 로 평가를 읽어 `TagSetViews` · `ThresholdRepository` 로 그 버전의 체계와 두 기준을 얻고 `TagJudgement` 로 판정한다. 로컬 개발에서는 `FakeArticleEvaluatorConfiguration` 이 `FakeArticleEvaluator` 를 포트로 등록한다.
 
 #### 첫 기동
 
@@ -224,20 +306,56 @@ sequenceDiagram
     end
 ```
 
+#### 평가 회차
+
+```mermaid
+sequenceDiagram
+    participant J as EvaluatePendingArticlesJob
+    participant R as EvaluationRound
+    participant Q as EvaluationQueueRepository
+    participant A as ArticleDirectory · FeedLabels
+    participant E as ArticleEvaluator
+    participant Res as EvaluationResultRepository
+
+    J->>R: 1분마다 (작업 역할)
+    R->>Q: 트랜잭션 — 평가할 대기 잠금 · 점유 쓰기 · 커밋 (evaluation-R19)
+    R->>A: 기사 내용 · 출처 이름 · 섹션 (트랜잭션 밖)
+    loop 점유한 기사마다 — 점유 순
+        R->>E: 평가 (트랜잭션 밖)
+        alt 성공 · 체계와 맞음
+            R->>Q: 트랜잭션 — 토큰이 맞으면 대기 행 삭제
+            R->>Res: 같은 트랜잭션 — 평가 · 태그 행 (evaluation-R15)
+        else 일시 · 기사 거부
+            R->>Q: 토큰이 맞으면 재시도 일정 · 실패 (evaluation-R20)
+        else 평가기 사용 불가 · 어긋남 · 예외
+            R->>Q: 남은 점유 해제 — 회차 멈춤 (evaluation-R20)
+        end
+    end
+```
+
 ### 들어오는 쪽
 
 | 진입점 | 구성 요소 | 계기 | 내용 |
 |---|---|---|---|
 | 기본 체계 파일 기동 검증 | `DefaultTagSetConfiguration`(`application`) | 컨텍스트를 만들 때(두 역할 공통) | 기본 체계 파일을 읽어 검증하고 정의를 빈으로 둔다. 실패하면 기동하지 않는다(evaluation-R1) |
 | 첫 기동 적재 | `TagSetSeeding`(`application`) | 싱글톤을 모두 만든 뒤(`SmartInitializingSingleton`) — 웹 서버 · 작업 서버가 시작하기 전. 두 역할 공통 | 버전이 하나도 없을 때만 버전 1 을 적재한다. 여러 프로세스가 동시에 떠도 하나만 적재하고, 다시 기동해도 결과가 같다(evaluation-R2) |
+| `ArticleStored` · `ArticlesRemoved` 리스너 | `ArticleEventsListener`(`application`) | `article` 의 `ArticleStored` · `ArticlesRemoved` | 새 기사를 평가 대기에 넣고(evaluation-R18), 지운 기사의 대기 · 평가 · 태그 행을 지운다(evaluation-R21). 비동기 · 새 트랜잭션이고 이벤트 발행 레지스트리에 기록된다(Spring Modulith `@ApplicationModuleListener`). 실패한 발행은 `platform` 의 이벤트 재처리 작업이 다시 처리하고, 다시 처리해도 결과가 같다 |
+| 평가 반복 작업 | `EvaluatePendingArticlesJob`(`adapter/in/job`, 작업 역할) | JobRunr 반복 작업 `evaluate-pending-articles` — 1분마다, 재시도 없음 | `EvaluationRound` 를 돌린다(evaluation-R19 · R20). 이전 실행이 대기 · 처리 중이면 그 회차는 건너뛴다. 평가기 빈이 없으면 작업을 만들 때 경고 로그 `평가기가 없어 기사를 평가하지 않는다 — 기사는 평가 대기에 쌓인다` 를 남긴다 |
 
-컨트롤러 · 이벤트 리스너 · 반복 작업은 없다.
+컨트롤러는 없다.
 
 ### `application`
 
 - `DefaultTagSetConfiguration` — 기본 체계 파일의 기동 검증(들어오는 쪽). 읽기 · 판정은 정적 `load(Resource, TagSetParser)` 에 있고 실패하면 파일의 문제를 모두 담은 예외로 기동을 멈춘다(evaluation-R1)
 - `TagSetSeeding` — 첫 기동 적재(들어오는 쪽). `seedIfEmpty()` 가 한 트랜잭션에서 표를 잠그고 버전이 없을 때만 버전 1 과 처음 두 기준을 쓴다. 적재하면 정보 로그 `기본 태그 체계를 버전 1로 적재했다` 를 남긴다(evaluation-R2)
 - `TagSetDirectoryService` — 공개 API `TagSetDirectory` 의 구현. 트랜잭션 · 역할 애너테이션이 없다(evaluation-R3)
+- `TagSetViews` — 체계 버전을 공개 타입(`TagSetView`)으로 옮기는 정본. 활성 버전 조회와 평가 결과의 버전 조회(`of(TagSetId)` — 없는 버전이면 `IllegalStateException`)가 함께 쓴다(evaluation-R9)
+- `ArticleEventsListener` — 리스너(들어오는 쪽). 넣기는 시각을 `InstantSource` 에서 얻는다. 지우기는 한 트랜잭션에서 대기 행을 먼저, 평가 · 태그 행을 나중에 지운다(evaluation-R21)
+- `PendingEvaluations` — 대기 점유. `claimDue(now)` 가 한 트랜잭션에서 평가할 수 있는 대기를 `CLAIM_BATCH`(50 — 측정 전 목표, 정본)까지 잠그고 점유를 써 커밋한다(evaluation-R19)
+- `EvaluationRound` — 평가 회차 하나(evaluation-R19 · R20). 평가기는 선택 주입(`ObjectProvider`)이고 없으면 아무것도 하지 않는다(`evaluatorAvailable()`). 시각은 `InstantSource` 에서 얻는다. 로그: `평가 대기 기사가 지워져 대기에서 뺐다 — 기사 {ID}`(정보), `평가기를 쓸 수 없어 회차를 멈췄다 — 기사 {ID}: {문구}`(경고), `평가 결과가 체계와 맞지 않아 회차를 멈췄다 — 기사 {ID}: {어긋남}` · `평가기가 예상 못한 예외를 던져 회차를 멈췄다 — 기사 {ID}`(오류)
+- `ArticleEvaluationsService` — 공개 API `ArticleEvaluations` 의 구현(evaluation-R15)
+- `EvaluationAdministrationService` — 공개 운영 API `EvaluationAdministration` 의 구현
+- `TagSetViews` · `PendingEvaluations` · `EvaluationRound` · `ArticleEvaluationsService` · `EvaluationAdministrationService` 는 트랜잭션 · 역할 애너테이션이 없다 — 두 역할 공통이고, 점유 · 회차는 `TransactionTemplate` 으로 트랜잭션을 연다. `ArticleEventsListener` 는 리스너마다 새 트랜잭션이다
 - `TagSetAdministrationService` — 공개 API `TagSetAdministration` 의 구현. 변경은 한 트랜잭션에서 활성 버전 조회 → 두 기준 행 잠금 → 지난 저장 기준 최댓값 → 판정 → 쓰기다. 시각은 `InstantSource` 에서 얻는다(evaluation-R11 ~ R13)
 
 ### `domain`
@@ -286,6 +404,46 @@ sequenceDiagram
   ```
 
 - 그 밖의 값: `ThresholdDecision`
+
+#### `domain/queue`
+
+- `EvaluationSchedule` — 정착 시간(`SETTLE_DELAY` 30분) · 점유 기간(`LEASE` 30분) · 일시 실패의 시도 상한(`MAX_ATTEMPTS` 5) · 재시도 간격(`FIRST_RETRY` 1분부터 두 배씩, `MAX_RETRY` 1시간에서 멈춤)의 정본. 값은 측정 전 목표다(evaluation-R18 ~ R20)
+- `PendingEvaluation` — 대기 행 하나와 그 전이 `claim` · `afterTransient` · `afterRejected` · `released`. 실패로 남은 행은 점유가 없고 다시 전이하지 않는다(evaluation-R19 · R20)
+- 저장 단위: aggregate 가 없다 — 대기 행의 전이는 `PendingEvaluation` 이 계산하고, 점유 토큰을 조건으로 한 SQL 갱신 · 삭제로 쓴다(수집 상태와 같은 모양 — [ADR-0033](../adr/0033-feed-polling-db-lease-per-feed-new-items-and-per-source-request-spacing.md)). 저장소 `EvaluationQueueRepository` 가 쓴다
+
+  ```java
+  public interface EvaluationQueueRepository {
+      void enqueue(ArticleId articleId, Instant now);                  // 없으면 넣기 — 평가 가능 시각은 정착 시간 뒤. 있으면 그대로
+      List<PendingEvaluation> lockDue(Instant now, int limit);        // 평가할 수 있는 행 — 평가 가능 시각, 기사 ID 순. 잡힌 행은 건너뛴다
+      void saveLocked(PendingEvaluation next);                         // lockDue 로 잠근 행 갱신
+      boolean replaceIfLeased(UUID token, PendingEvaluation next);    // 토큰이 맞을 때만 갱신
+      boolean deleteIfLeased(ArticleId articleId, UUID token);        // 토큰이 맞을 때만 삭제
+      void delete(Collection<ArticleId> articleIds);                   // 지운 기사 따르기
+      EvaluationQueueCounts counts();
+  }
+  ```
+
+- 그 밖의 값: `EvaluationLease` · `QueueFailure`(`ARTICLE_REJECTED` · `RETRIES_EXHAUSTED`)
+
+#### `domain/result`
+
+- `ResultCheck` — 결과와 체계의 일치 검사의 정본(evaluation-R20)
+- `EvaluationRecord` — 저장할 평가 한 건과 결과 해석(`of` — 저장 기준 거르기 · 대표 형식 · 중요도 기대값)의 정본(evaluation-R15)
+- `ImportanceScore` — 중요도 기대값의 정본(evaluation-R15)
+- `TagJudgement` — 조회 시점 판정의 정본(evaluation-R15)
+- `Probabilities` — 확률 ≥ 기준 비교의 정본 — 저장 거르기와 판정이 함께 쓴다(evaluation-R15)
+- 저장 단위: aggregate 가 없다 — 평가 · 태그 행은 넣기 한 번이고 갱신하지 않는다. 저장소 `EvaluationResultRepository` 가 쓴다
+
+  ```java
+  public interface EvaluationResultRepository {
+      boolean exists(ArticleId articleId, TagSetId tagSetId);
+      void insert(EvaluationRecord record);                            // 평가 행 + 태그 행 — 기사 · 버전마다 하나
+      Optional<StoredEvaluation> findLatest(ArticleId articleId);      // 버전 번호가 가장 큰 평가와 그 태그 행
+      void deleteByArticles(Collection<ArticleId> articleIds);         // 지운 기사 따르기
+  }
+  ```
+
+- 그 밖의 값: `StoredTag` · `StoredEvaluation`
 
 ### 나가는 쪽
 
@@ -350,7 +508,7 @@ public record EvaluationFailure(Kind kind, String message) implements Evaluation
   요약: {RSS 요약문}
   ```
 
-- 비용과 처리량 추정(측정 전): 피드 20개, 하루 약 4,000건, 질문 55개(주제 중분류 46 · 지역 7 · 형식 1 · 중요도 1). 기사당 입력 약 1,700토큰(state 약 300 + 질문 · 설명 약 1,400). 하루 약 6.8M 토큰 → 보도된 단가($0.042 / 1M 입력 토큰, 출력 무료) 기준 하루 약 $0.29, 월 약 $9 — 사용자 수와 무관하다. Jev 응답 지연은 보도 기준 요청당 70–500ms 이고 질문은 병렬로 평가된다. 재시도는 JobRunr 작업 단위로 건다. JobRunr OSS 에는 작업 종류별 동시성 제한이 없어, 동시성은 작업 설계(묶음 처리 · 반복 작업의 회차 비중첩)와 worker 수로 제한한다([ADR-0023](../adr/0023-jobrunr-oss-framework-schema-and-event-resubmission.md)). 태그 설명이 길어지면 모든 요청의 입력이 늘어나므로 설명은 짧게 두고(evaluation-R8), 운영자 화면에 요청당 평균 토큰 수를 보인다
+- 비용과 처리량 추정(측정 전): 피드 20개, 하루 약 4,000건, 질문 55개(주제 중분류 46 · 지역 7 · 형식 1 · 중요도 1). 기사당 입력 약 1,700토큰(state 약 300 + 질문 · 설명 약 1,400). 하루 약 6.8M 토큰 → 보도된 단가($0.042 / 1M 입력 토큰, 출력 무료) 기준 하루 약 $0.29, 월 약 $9 — 사용자 수와 무관하다. Jev 응답 지연은 보도 기준 요청당 70–500ms 이고 질문은 병렬로 평가된다. 재시도는 JobRunr 작업이 아니라 대기 행의 상태(시도 수 · 평가 가능 시각)로 한다. JobRunr OSS 에는 작업 종류별 동시성 제한이 없어, 동시성은 반복 작업 하나 안의 묶음 점유와 순차 호출로 제한한다 — 평가는 작업 서버 worker 가운데 많아야 하나를 쓴다(evaluation-R19, [ADR-0059](../adr/0059-evaluation-job-limits-concurrency-and-retries-with-db-leases-on-queue-rows.md)). 태그 설명이 길어지면 모든 요청의 입력이 늘어나므로 설명은 짧게 두고(evaluation-R8), 운영자 화면에 요청당 평균 토큰 수를 보인다
 
 #### 구현과 로컬 대체물
 
@@ -360,12 +518,14 @@ public record EvaluationFailure(Kind kind, String message) implements Evaluation
   - 이름 일치 — 태그 · 대분류 이름을 `·` 로 나눈 조각이 제목 · 피드 섹션 · 카테고리에 들어 있으면 그 태그의 확률을 높인다. 요약 · 출처 이름은 보지 않는다. 일치가 없으면 주제는 고정 규칙으로 하나를, 지역 · 형식은 체계 순서의 첫 항목을 고른다. 수치와 고르는 규칙은 클래스 Javadoc 이 정본이다
   - 평가기 이름 `fake`, 모델 버전 `fake-rules-2` — 규칙을 바꾸면 버전을 올린다. 입력 토큰은 실제 토큰 수가 아니다
 
-**(미구현)** 평가 작업 `EvaluatePendingArticles` — 1분마다 + `ArticleStored` 를 계기로 평가 대기 기사를 묶어 `ArticleEvaluator` 로 평가한다.
+평가 작업은 `ArticleStored` 로 대기에 들어간 기사를 1분마다 묶어 `ArticleEvaluator` 로 평가한다 — §4 들어오는 쪽 · evaluation-R18 ~ R20.
 
 #### 저장소 구현
 
 - `JdbcThresholdRepository` — `ThresholdRepository` 의 PostgreSQL 구현(JdbcClient). 잠금은 `SELECT … FOR UPDATE`, 갱신과 이력 추가는 같은 트랜잭션의 두 문장이다
 - `TagSetRepository` 는 Spring Data JDBC 저장소다. 표 잠금은 `LOCK TABLE tag_sets IN SHARE ROW EXCLUSIVE MODE` 다
+- `JdbcEvaluationQueueRepository` — `EvaluationQueueRepository` 의 PostgreSQL 구현(JdbcClient). 넣기는 `INSERT … ON CONFLICT DO NOTHING`, 잠금은 `FOR UPDATE SKIP LOCKED`, 회차의 반영은 점유 토큰을 조건으로 한 갱신 · 삭제다. 평가 가능 시각의 정착 시간은 `EvaluationSchedule` 이 정한다 — SQL 에 값을 두지 않는다
+- `JdbcEvaluationResultRepository` — `EvaluationResultRepository` 의 PostgreSQL 구현(JdbcClient). 분포 · 원본 응답은 `jsonb` 로 쓰고, 지우기는 태그 행 → 평가 행 순이다
 
 #### 신뢰할 수 없는 입력
 
@@ -373,6 +533,7 @@ public record EvaluationFailure(Kind kind, String message) implements Evaluation
 |---|---|
 | 기본 체계 파일 | 저장소 파일이라 PR 로 리뷰되지만 읽기는 엄격하다 — YAML 공통 거부([platform Spec YAML 원문 읽기](platform.md#yaml-원문-읽기)) · evaluation-R5 ~ R8 · R10 |
 | RSS 항목 카테고리(평가 입력) | 피드가 개수 · 길이를 정하는 값이라 평가 입력에 넣기 전에 줄인다 — evaluation-R17 |
+| 평가기 결과 · 원본 응답 | 저장 전에 체계와 대조한다 — 키 집합이 체계와 같고, 원본 응답은 JSON 이고 문자 U+0000 · 짝 없는 서로게이트가 없어야 한다(PostgreSQL `jsonb` 가 받지 않는다). 어긋나면 회차를 멈춘다 — evaluation-R20 |
 
 ## 5. 규칙과 불변식
 
@@ -409,7 +570,7 @@ public record EvaluationFailure(Kind kind, String message) implements Evaluation
 
 ### 공유 평가
 
-- **evaluation-R14** — **(미구현)** 기사마다 사용자 정보 없이 한 번 평가하고, 결과는 모든 사용자의 후보 선별에 공통으로 쓴다. 모든 질문을 기사당 요청 하나에 묶고 state 는 한 번 보낸다. 질문은 활성 버전에서 읽는다 — 코드에 문구를 두지 않는다:
+- **evaluation-R14** — 기사마다 사용자 정보 없이 한 번 평가하고, 결과는 모든 사용자의 후보 선별에 공통으로 쓴다. 모든 질문을 기사당 요청 하나에 묶고 state 는 한 번 보낸다. 질문은 활성 버전에서 읽는다 — 코드에 문구를 두지 않는다:
 
   | 태그 종류 · 항목 | 질문 | 형식 | 다중 |
   |---|---|---|---|
@@ -418,13 +579,39 @@ public record EvaluationFailure(Kind kind, String message) implements Evaluation
   | 형식 | 형식 질문과 선택지 | Choice | 단일 |
   | 중요도 | 중요도 질문과 1 ~ 5 기준 | Score | 단일 값 |
 
-- **evaluation-R15** — **(미구현)** 결과 해석:
-  - 응답 원본, 평가기 이름 · 모델 버전, 태그 체계 버전을 저장한다
-  - 주제 · 지역 태그는 확률이 저장 기준 이상이면 확률과 함께 저장한다
-  - 태그가 붙었는지는 조회 시점에 그 태그 종류의 태그 기준으로 판단한다 — 태그 기준을 바꿔도 다시 평가하거나 데이터를 다시 쓰지 않는다
-  - 주제 태그가 태그 기준을 하나도 넘지 못하면 최고 확률 태그를 하나 붙이고 `low_confidence` 로 표시한다 — 후보 선별 때 중요도 가중치를 낮춘다. 그 확률마저 저장 기준 미만이면 미분류다
+- **evaluation-R15** — 결과 해석과 판정:
+  - 저장 — 원본 응답, 평가기 이름 · 모델 버전, 태그 체계 버전, 입력 토큰을 저장한다. 기사 하나에 체계 버전마다 평가 하나다
+  - 주제 · 지역 태그는 확률이 평가 때 그 태그 종류의 저장 기준 이상이면 확률과 함께 저장한다
+  - 형식은 분포 전체와 대표 형식 — 확률이 가장 큰 선택지(같으면 체계 순서가 앞선 것)와 그 확률 — 을 저장한다
+  - 중요도는 분포 전체와 기대값 — Σ(수준 × 확률) ÷ Σ확률, 확률 합이 0 이면 없음 — 을 저장한다. 분포의 합이 1 이 아니어도 정의된다. 기대값은 확률이 있는 수준의 최솟값 ~ 최댓값으로 맞춘다 — 부동소수 오차로 그 범위를 벗어나지 않는다
+  - 판정은 저장하지 않고 조회할 때 한다 — 그 평가의 체계 버전과 그 버전의 지금 두 기준으로. 두 기준을 바꿔도 다시 평가하거나 데이터를 다시 쓰지 않는다
+  - 주제는 태그 기준 이상인 저장 태그가 붙는다. 하나도 없으면 저장 태그 가운데 확률이 가장 높은 것(같으면 체계 순서가 앞선 것)이 지금 저장 기준 이상일 때 그 하나를 붙이고 `low_confidence` 로 표시한다 — 후보 선별 때 중요도 가중치를 낮춘다. 그 확률마저 지금 저장 기준 미만이거나 저장 태그가 없으면 미분류다
+  - 지역은 태그 기준 이상인 저장 태그가 붙는다. 대분류는 붙은 중분류의 대분류다(`parent_key`)
+  - 확률과 기준은 확률의 십진 표현으로 비교하고 경계를 포함한다(0.1 은 0.100 이상이다)
+  - 조회는 기사의 평가 가운데 체계 버전 번호가 가장 큰 것을 쓴다
+  - 정본: 저장은 `EvaluationRecord` · `ImportanceScore`, 판정은 `TagJudgement`, 비교는 `Probabilities`
   - LLM 재평가는 운영자 비용이 드므로 v1 에서는 하지 않는다
 - **evaluation-R17** — 평가 입력의 RSS 항목 카테고리는 피드 맥락마다 5개(`FeedContext.MAX_CATEGORIES`), 하나에 40 코드 포인트(`FeedContext.MAX_CATEGORY_CODE_POINTS`)까지다. 줄이는 순서는 카테고리마다 앞 40 코드 포인트로 자르고(서로게이트 쌍을 가르지 않는다) 끝 공백을 지운 뒤, 공백뿐인 것을 버리고 남은 것의 앞 5개를 담는 것이다. 정본은 `FeedContext.limited` 다 — 카테고리는 모든 요청의 state 에 들어가므로 피드 값이 요청 크기를 늘리지 않게 한다
+
+### 평가 대기와 평가 작업
+
+판단의 이유는 [ADR-0059](../adr/0059-evaluation-job-limits-concurrency-and-retries-with-db-leases-on-queue-rows.md) · [ADR-0060](../adr/0060-article-deletion-announced-by-removed-article-ids-and-followed-by-referencing-modules.md) · [ADR-0061](../adr/0061-worker-role-does-not-run-without-an-evaluator.md)에 있다.
+
+- **evaluation-R18** — 평가 대기: 새 기사(`ArticleStored`)를 평가 대기에 넣는다. 기사마다 한 행이고 이미 있으면 그대로다 — 같은 이벤트를 다시 처리해도 결과가 같다. 평가 가능 시각은 넣은 시각 + 정착 시간 30분이다 — 같은 기사의 다른 피드 엔트리(섹션 · 카테고리)가 붙은 뒤에 평가한다. 이 모듈이 생기기 전에 저장된 기사는 대기 테이블을 만드는 마이그레이션이 한 번 넣고, 그 기사들은 바로 평가할 수 있다. 평가에 성공하면 대기 행을 지운다
+- **evaluation-R19** — 점유와 회차: 반복 작업(1분, 재시도 없음)의 회차는 실패로 남지 않았고 평가 가능 시각이 지났고 점유가 없거나 만료된 대기 행을 평가 가능 시각 · 기사 ID 순으로 50건까지 잠가(다른 트랜잭션이 잡은 행은 건너뛴다) 점유(토큰 · 만료 = 지금 + 30분)를 쓰고 커밋한다. 반복 작업은 이전 실행이 대기 · 처리 중이면 그 회차를 건너뛴다.
+  - 회차는 활성 버전과 그 버전의 두 기준, 기사 내용, 피드의 출처 이름 · 섹션을 트랜잭션 밖에서 한 번에 읽고, 점유 순으로 기사마다 평가기를 트랜잭션 밖에서 차례로 부른다 — 평가는 작업 서버 worker 가운데 많아야 하나를 쓴다
+  - 입력의 피드 맥락은 기사의 엔트리마다 하나이고 받은 시각 순(같으면 피드 ID 순)이다. 이름 · 섹션이 없는 피드(그새 지운 피드 포함)는 비우고, 공백뿐인 요약은 없는 요약이다
+  - 결과는 기사마다 새 트랜잭션에서 점유 토큰이 맞을 때만 반영한다 — 점유가 만료돼 다른 회차가 가져갔거나 기사가 지워져 대기 행이 없으면 늦은 결과를 버린다
+  - 점유한 기사에 그 버전의 평가가 이미 있거나 기사가 지워졌으면 평가하지 않고 대기 행을 지운다(지워진 기사는 정보 로그)
+- **evaluation-R20** — 결과 갈래와 재시도(갈래 분기는 `default` 가 없다):
+  - 성공이고 결과가 체계와 맞으면 저장한다(evaluation-R15)
+  - 일시 실패면 시도 수를 하나 늘린다. 다섯 번째면 실패(`RETRIES_EXHAUSTED`)로 남기고, 아니면 결과를 받은 시각 + min(1분 × 2^(시도 − 1), 1시간) 뒤로 미룬다 — 1 · 2 · 4 · 8분
+  - 기사 거부면 바로 실패(`ARTICLE_REJECTED`)로 남긴다. 실패로 남은 행은 다시 평가하지 않고, 마지막 실패 문구와 함께 남아 운영 API 가 센다
+  - 평가기 사용 불가 · 결과가 체계와 어긋남 · 평가기의 예상 못한 예외면 그 기사부터 남은 점유를 풀고(시도 수 · 평가 가능 시각은 그대로) 회차를 멈춘다 — 기사를 잃지 않고 다음 회차가 다시 가져간다. 사용 불가는 경고, 어긋남 · 예외는 오류 로그에 기사 ID 를 남긴다
+  - 결과가 체계와 맞는다는 것은 주제 중분류 · 지역 · 형식 선택지 · 중요도 수준의 키 집합이 넘긴 체계와 정확히 같고, 원본 응답이 JSON 이고 문자열 값 · 키 어디에도 문자 U+0000 · 짝 없는 서로게이트가 없다는 것이다(PostgreSQL `jsonb` 가 받지 않는다). 정본은 `ResultCheck` 다
+  - 일정 값의 정본은 `EvaluationSchedule`, 점유 상한은 `PendingEvaluations.CLAIM_BATCH` 이고 모두 측정 전 목표다
+  - 작업 역할은 평가기 없이 운영하지 않는다 — 그 기동 검사는 운영 평가기의 설정이 둔다. 평가기 빈이 없는 구성에서는 회차가 아무것도 하지 않고 기사는 평가 대기에 남으며, 작업을 만들 때 경고 로그 한 줄을 남긴다
+- **evaluation-R21** — 지운 기사 따르기: `article` 이 기사를 지우면(`ArticlesRemoved`) 한 트랜잭션에서 그 기사들의 대기 행을 먼저, 평가 · 태그 행을 나중에 지운다 — 진행 중인 저장이 대기 행을 잡고 있으면 그 커밋을 기다린 뒤 결과 행을 지워, 커밋 직전의 평가를 놓치지 않는다. 다시 처리해도 결과가 같다. 이벤트보다 먼저 대기에 들어와 이벤트를 받기 전에 회차가 만난 지운 기사는 evaluation-R19 가 지운다
 
 ### 체계 변경
 
@@ -435,7 +622,7 @@ public record EvaluationFailure(Kind kind, String message) implements Evaluation
 
 ## 6. 데이터
 
-컬럼 타입 · 인덱스 · 제약 문면의 정본은 `backend/src/main/resources/db/migration/V9__tag_sets.sql` 이다. 태그 종류 · 행위자 값은 대문자 상수 이름(`TOPIC` · `REGION` · `FORMAT` · `SYSTEM` · `OPERATOR`)으로 저장한다.
+컬럼 타입 · 인덱스 · 제약 문면의 정본은 `backend/src/main/resources/db/migration/V9__tag_sets.sql`(태그 체계 · 두 기준)과 `V10__evaluation_queue_and_results.sql`(평가 대기 · 평가 · 태그)이다. 태그 종류 · 행위자 · 실패 까닭 값은 대문자 상수 이름(`TOPIC` · `REGION` · `FORMAT` · `SYSTEM` · `OPERATOR` · `ARTICLE_REJECTED` · `RETRIES_EXHAUSTED`)으로 저장한다.
 
 | 테이블 | 주요 컬럼 | 뜻 |
 |---|---|---|
@@ -444,8 +631,9 @@ public record EvaluationFailure(Kind kind, String message) implements Evaluation
 | `importance_rubrics` | tag_set_id, level(1~5), description | 중요도 Score 기준. (tag_set_id, level) 고유 |
 | `tag_set_thresholds` | tag_set_id, tag_kind(`TOPIC`/`REGION`), tag_threshold, store_threshold | 버전 · 태그 종류마다 지금 두 기준(evaluation-R10). 값은 0 ~ 1, 소수 셋째 자리 |
 | `tag_set_threshold_changes` | id, tag_set_id, tag_kind, previous_tag_threshold, previous_store_threshold, tag_threshold, store_threshold, actor(`SYSTEM`/`OPERATOR`), changed_at | 두 기준의 이력 — 추가만 한다(evaluation-R13). 이전 값 둘은 함께 있거나 함께 없다(처음 값) |
-| `article_evaluations` | id, article_id, tag_set_id, evaluator, model_version, format_key, format_probability, importance, importance_distribution(jsonb), low_confidence, raw_response(jsonb), input_tokens, evaluated_at | **(미구현)** 기사당 평가 1회. 원본 응답까지 저장한다 |
-| `article_tags` | article_id, evaluation_id, tag_kind, tag_key, probability | **(미구현)** 주제 · 지역 태그. 저장 기준 이상인 태그를 확률과 함께 저장한다. 붙었는지는 조회 때 태그 기준과 비교한다. 대분류는 저장하지 않고 조회 때 `parent_key` 로 펼친다 |
+| `evaluation_queue` | article_id(기본 키), enqueued_at, eligible_at, attempts, lease_token, lease_expires_at, failure(`ARTICLE_REJECTED`/`RETRIES_EXHAUSTED`), last_error | 평가 대기 — 기사마다 한 행(evaluation-R18). 점유 둘은 함께 있거나 함께 없고, 실패로 남은 행은 점유가 없다(제약). 회차의 잠금은 `(eligible_at, article_id)` 부분 인덱스(실패 아닌 행)로 찾는다(evaluation-R19). 성공하면 지운다 |
+| `article_evaluations` | id, article_id, tag_set_id, evaluator, model_version, format_key, format_probability, format_distribution(jsonb), importance, importance_distribution(jsonb), raw_response(jsonb), input_tokens, evaluated_at | 평가 — (article_id, tag_set_id) 고유(evaluation-R15). `tag_set_id` 는 같은 모듈의 `tag_sets` FK. `format_key` · `format_probability` 는 대표 형식, `importance` 는 기대값(1 ~ 5, 확률 합이 0 이면 null). `low_confidence` · 미분류는 저장하지 않는다 — 조회 때 판정한다. 원본 응답까지 저장한다 |
+| `article_tags` | evaluation_id, article_id, tag_kind(`TOPIC`/`REGION`), tag_key, probability | 주제 · 지역 태그 — (evaluation_id, tag_kind, tag_key) 기본 키, `article_id` 인덱스. 평가 때 저장 기준 이상인 태그를 확률과 함께 저장한다. 붙었는지는 조회 때 태그 기준과 비교한다. 대분류는 저장하지 않고 조회 때 `parent_key` 로 펼친다 |
 | `tag_key_lineage` | tag_set_id, tag_kind, from_key, to_key, kind(`RENAME`/`SPLIT`/`MERGE`) | **(미구현)** 태그 키 계보. 이 버전에서 이전 키가 어느 새 키로 이어지는지. 사용자 선호와 주제별 시계열이 따라간다 |
 | `article_event_judgements` | id, article_id, evaluator, model_version, candidates(jsonb — 후보 사건 ID와 확률), raw_response(jsonb), input_tokens, judged_at | **(미구현)** 사건 소속 판정 원본(애매한 구간만). 배정 결과는 `event_articles` |
 
@@ -471,3 +659,6 @@ public record EvaluationFailure(Kind kind, String message) implements Evaluation
 | [0056](../adr/0056-platform-reads-yaml-text-and-applies-common-rejection.md) | YAML 원문 읽기와 공통 거부는 `platform` 이 맡고, 문서별 형식 · 검증은 각 모듈의 `domain` 이 한다 |
 | [0057](../adr/0057-local-substitutes-registered-only-in-local-profile-without-operator-switch.md) | 로컬 대체물은 `local` profile 에서만 등록하고, 운영 설정으로 켜는 스위치를 두지 않는다 |
 | [0058](../adr/0058-evaluator-failures-in-three-kinds-and-unavailable-evaluator-skips-article-retries.md) | 평가기 실패는 일시 · 기사 거부 · 평가기 사용 불가 셋으로 나누고, 평가기 사용 불가는 기사 재시도를 쓰지 않는다 |
+| [0059](../adr/0059-evaluation-job-limits-concurrency-and-retries-with-db-leases-on-queue-rows.md) | 평가 작업은 대기 행의 DB 점유와 상태로 동시성 · 재시도를 제한하고, 정착 시간 뒤 평가하며, 결과가 체계와 어긋나거나 평가기가 예상 못한 예외를 던지면 회차를 멈춘다 |
+| [0060](../adr/0060-article-deletion-announced-by-removed-article-ids-and-followed-by-referencing-modules.md) | 기사 삭제는 지운 기사 ID 이벤트로 알리고, 기사를 가리키는 모듈이 받아 자기 행을 지운다 |
+| [0061](../adr/0061-worker-role-does-not-run-without-an-evaluator.md) | 작업 역할은 평가기 없이 운영하지 않고, 그 기동 검사는 운영 평가기의 설정과 함께 둔다 |

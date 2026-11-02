@@ -138,6 +138,7 @@ flowchart LR
     source -- ArticleFetched --> article
     source -- SourceDeleted · FeedDeleted --> article
     article -- ArticleStored --> evaluation
+    article -- ArticlesRemoved --> evaluation
     article -- ArticleStored --> event
     evaluation -- ArticleEvaluated --> digest
     user -- UserSettingsChanged --> digest
@@ -151,9 +152,10 @@ flowchart LR
 - 그림은 이벤트만 그린다. **모듈 사이 의존(공개 API · 이벤트)의 정본은 이 절이다** — 각 모듈 Spec 은 그 모듈이 내놓는 것(공개 인터페이스 · 발행 이벤트)만 갖고 의존은 이 절을 가리킨다. 각 모듈의 화면 · 작업 진입점은 `platform` 의 역할 애너테이션(공개 타입)에 의존한다 — 그래서 `platform` 은 다른 모듈의 타입에 의존하지 않는다([ADR-0042](adr/0042-app-roles-as-web-worker-profiles-marked-by-platform-annotations.md)). 사건 · 이슈 · 관심도 · 변화 리포트에 걸친 공개 API 의존은 `digest` → `event` · `storyline` · `feedback` · `user` · `evaluation` · `llm`, `event` → `article` · `evaluation`, `report` → `digest` · `event` · `evaluation` · `storyline` · `user` · `llm`, `admin` → `event` 다
 - `source` · `evaluation` → `platform` 의 공개 API 의존은 YAML 원문 읽기(`YamlTextReader` · `StrictYamlBinding`)다 — 수집 프로필과 기본 태그 체계 파일을 같은 공통 거부로 읽는다
 - `article` → `source` 의 공개 API 의존은 `SourceDirectory`(피드가 아직 있는지 — 지운 피드의 늦은 항목을 버린다)다. 기사의 출처 이름은 `source` 가 기록한다
-- **(미설계)** 운영자가 소스 · 피드를 지우면 `article` 이 그 소스 · 피드만 가진 기사를 지운다. 기사를 ID 로 가리키는 모듈(평가 · 사건 · 다이제스트)이 그 삭제를 따르는 길은 그 모듈을 구현할 때 정한다
+- 운영자가 소스 · 피드를 지우면 `article` 이 그 소스 · 피드만 가진 기사를 지우고 지운 기사 ID 를 `ArticlesRemoved` 로 알린다. 기사를 ID 로 가리키는 모듈은 그 이벤트를 받아 자기 행을 지운다 — 지금은 `evaluation`(평가 대기 · 평가 · 태그)이고, 사건 · 다이제스트도 같은 이벤트를 받는다([ADR-0060](adr/0060-article-deletion-announced-by-removed-article-ids-and-followed-by-referencing-modules.md))
+- `evaluation` → `article` · `source` 의 공개 API 의존은 평가 입력이다 — 기사의 제목 · 요약문 · 엔트리는 `article` 의 `ArticleDirectory` 가, 피드의 출처 이름 · 섹션은 `source` 의 `FeedLabels` 가 낸다
 - `admin` 은 운영자 기능을 가진 모듈의 공개 운영 API 를 부른다 — 지금은 `source` 의 `SourceAdministration`(소스 · 피드 관리 · 숨김 · 삭제 · 수집 상태), `article` 의 `ArticleAdministration`(엔트리 집계 · 삭제하면 함께 지워질 기사 수), `platform` 의 `EventPublicationAdministration`(남겨진 이벤트 발행의 다시 처리 · 폐기). 운영 결과의 타입은 그 모듈이 공개하고 HTTP 응답 모양은 `admin` 이 정한다([ADR-0045](adr/0045-admin-module-serves-operator-api-over-module-public-operation-apis.md))
-- **(미설계)** 그 밖의 공개 API 의존(예: 평가 · 후보 선별이 기사 · 소스를 읽는 의존)과 여러 모듈의 데이터에 걸친 작업(보존 정리 · 휴면 이슈 전환)의 소속은 아직 설계되지 않았다
+- **(미설계)** 그 밖의 공개 API 의존(예: 후보 선별이 기사 · 소스를 읽는 의존)과 여러 모듈의 데이터에 걸친 작업(보존 정리 · 휴면 이슈 전환)의 소속은 아직 설계되지 않았다
 - 모듈 사이 순환 의존은 Modulith 검증 테스트가 실패로 판정하고, 다른 모듈의 이벤트 타입을 받는 것도 의존으로 센다. 그래서 이슈 타임라인은 그 정본인 주요 뉴스 섹션을 가진 `digest` 가, 관심도는 노출 기록을 가진 `digest` 가 내주고, `storyline` 은 `digest` 를 모르며, `report` 는 다른 모듈을 읽기만 한다. 사건 소속 판정의 인자 · 반환 타입은 `evaluation` 이 소유한다 ([ADR-0025](adr/0025-long-term-personal-news-history-in-v1.md) · [ADR-0026](adr/0026-event-clustering-with-local-embeddings-and-jev.md))
 
 코드가 있는 모듈의 공개 인터페이스 · 작업은 그 모듈 Spec 에, 아직 모듈이 없는 포트 · 백그라운드 작업의 초안은 [architecture.md](architecture.md)에 있다.
@@ -169,7 +171,7 @@ flowchart LR
 | 사용자 범위 | 화면 · API 의 사용자 데이터 조회는 세션의 `userId` 로만 범위를 정한다. 요청으로 받은 사용자 ID 는 신뢰하지 않는다 | [security.md](security.md) |
 | 비밀 값 | BYOK 키 평문은 `llm` 모듈 안에서 호출 직전에만 존재하고, 로그 · 오류 · 응답에 남지 않는다 | [security.md](security.md) |
 | LLM 입출력 | RSS 내용은 신뢰할 수 없는 입력, LLM 출력은 스키마로 검증하는 데이터 | [pipeline.md](pipeline.md) · [security.md](security.md) |
-| 외부 의존성 | 표준 프로토콜 · 자체 인터페이스 뒤, 설정으로 교체 · 비활성, 로컬 대체물(profile `local` 에서만 등록 — 켜는 운영 설정 없음) | [ADR-0012](adr/0012-swappable-external-dependencies.md) · [ADR-0057](adr/0057-local-substitutes-registered-only-in-local-profile-without-operator-switch.md) |
+| 외부 의존성 | 표준 프로토콜 · 자체 인터페이스 뒤, 설정으로 교체 · 비활성, 로컬 대체물(profile `local` 에서만 등록 — 켜는 운영 설정 없음). 평가기는 핵심 기능이라 교체만 하고 끄지 않는다 — 작업 역할은 평가기 없이 운영하지 않는다 | [ADR-0012](adr/0012-swappable-external-dependencies.md) · [ADR-0057](adr/0057-local-substitutes-registered-only-in-local-profile-without-operator-switch.md) · [ADR-0061](adr/0061-worker-role-does-not-run-without-an-evaluator.md) |
 | 판정 시점 | 바뀔 수 있는 임계값은 저장 시점이 아니라 조회 시점에 적용한다(피드 상태는 저장하되 매 실행 현재 기준으로 다시 판정한다) | [ADR-0010](adr/0010-tag-taxonomy.md) · [ADR-0040](adr/0040-feed-status-stored-in-poll-state-and-rejudged-hourly-by-health-check.md) |
 | 신호 이력 | 관심 신호(좋아요 / 싫어요 · 이슈 추적 · 구독 변경)는 추가 전용 이벤트 기록이 정본이고, 현재 상태는 그 투영이다. 신호는 각 모듈이 자기 것을 기록한다 | [ADR-0028](adr/0028-explicit-signals-and-interest-weighted-candidates.md) |
 | 화면용 API 계약 | 정본은 커밋된 OpenAPI 명세 `api/openapi.json` 이고 백엔드 검사가 코드와 대조한다. 객체 속성은 모두 필수이고, null 이 될 수 있는 속성은 JSpecify `@Nullable` 로 표시한다. 프론트엔드 타입은 이 명세에서 생성한다 | [ADR-0020](adr/0020-screen-api-contract-from-committed-openapi-spec.md) |

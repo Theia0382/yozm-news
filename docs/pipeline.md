@@ -33,7 +33,7 @@
 
 ## 5. Jev 공유 평가
 
-공유 평가는 `evaluation` 모듈이 한다 — evaluation Spec 의 [기본 체계와 첫 기동](specs/evaluation.md#기본-체계와-첫-기동) · [체계 파일 형식과 검증](specs/evaluation.md#체계-파일-형식과-검증) · [태그 기준 · 저장 기준](specs/evaluation.md#태그-기준--저장-기준) · [공유 평가](specs/evaluation.md#공유-평가) · [체계 변경](specs/evaluation.md#체계-변경), 포트와 비용 추정은 [`ArticleEvaluator`](specs/evaluation.md#articleevaluator)에 있다.
+공유 평가는 `evaluation` 모듈이 한다 — evaluation Spec 의 [기본 체계와 첫 기동](specs/evaluation.md#기본-체계와-첫-기동) · [체계 파일 형식과 검증](specs/evaluation.md#체계-파일-형식과-검증) · [태그 기준 · 저장 기준](specs/evaluation.md#태그-기준--저장-기준) · [공유 평가](specs/evaluation.md#공유-평가) · [평가 대기와 평가 작업](specs/evaluation.md#평가-대기와-평가-작업) · [체계 변경](specs/evaluation.md#체계-변경), 포트와 비용 추정은 [`ArticleEvaluator`](specs/evaluation.md#articleevaluator)에 있다.
 
 ## 6. 다이제스트 생성
 
