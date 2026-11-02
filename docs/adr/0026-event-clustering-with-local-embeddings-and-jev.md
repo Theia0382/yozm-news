@@ -1,6 +1,6 @@
 # ADR-0026: 사건 묶기는 로컬 임베딩과 고유명사 산식으로 하고, 애매한 구간만 Jev 로 판정한다
 
-- 상태: 승인
+- 상태: 승인. 관문의 접속 설정 가운데 AI Gateway 경유는 [ADR-0063](0063-jev-called-through-one-system-one-schema-context-overflow-probed-with-empty-state-latest-model-alias-by-default.md)이 대체(System One 스키마의 기본 주소 교체만)
 - 날짜: 2026-10-27
 - 근거: [이슈 #36](https://github.com/Theia0382/yozm-news/issues/36) — 기점 `e4dbe0d` 의 설계 문서 · ADR 과 Spring Modulith 2.1.1 의 모듈 순환 판정을 대조해 확인
 - 관련: [ADR-0025](0025-long-term-personal-news-history-in-v1.md)(공유 사건), [ADR-0002](0002-shared-evaluation-with-jev.md)(Jev 공유 평가 — 평가 항목 목록을 이 ADR 이 부분 대체한다), [ADR-0010](0010-tag-taxonomy.md)(질문 묶음), [ADR-0012](0012-swappable-external-dependencies.md)(교체 가능한 외부 의존성), [ADR-0027](0027-pgvector-for-vector-storage.md)(벡터 저장)

@@ -30,7 +30,6 @@
 
 | # | 내용 |
 |---|---|
-| 15 | Jev 공식 가격, 이용 경로(직접 API 대기열, AI Gateway 지원 여부), 요청당 토큰 상한(32k와 64k로 자료가 엇갈림), 질문 수 상한, Choice 선택지 상한. 현재 수치는 3자 자료 기준이다 |
 | 16 | 네이버 검색 API 약관 개정 공식 원문. 보도 기준으로 결정했으며 원문은 직접 확인하지 못했다 |
 | 25 | pgvector 이미지(OS 계열을 맞춘 PG 18 태그)의 재빌드 주기 — PostgreSQL 보안 패치가 반영되는 속도 |
 | 26 | ONNX Runtime Java 배포본에 linux-aarch64 네이티브가 들어 있는지, 네이티브를 푸는 임시 경로가 root 가 아닌 컨테이너에서 쓰이는지 |
@@ -60,3 +59,9 @@
 | # | 내용 | 반영 |
 |---|---|---|
 | 13 | 저가 모델 기반 기본 티어: 두지 않는다 | [ADR-0047](adr/0047-self-hosted-software-run-by-instance-operators.md) |
+
+## 결정됨 (2026-11-02)
+
+| # | 내용 | 반영 |
+|---|---|---|
+| 15 | Jev 공식 자료 확인 — 가격은 입력 100만 토큰당 $0.042(출력 무료). 경로는 TypeSafe System One API(`POST /v1/systemone`)이고, OpenRouter 가 같은 스키마의 호환 경로를 둔다. Cloudflare · Vercel AI Gateway 경유는 공식 문서에 없다. 문맥 상한은 요청 전체 64k · 질문 하나 32k 토큰이고, 질문 수 상한은 없다. Choice 선택지는 1 ~ 255개, Score 수준은 1 ~ 10개다 | [evaluation Spec](specs/evaluation.md#구현과-로컬-대체물) · [ADR-0063](adr/0063-jev-called-through-one-system-one-schema-context-overflow-probed-with-empty-state-latest-model-alias-by-default.md) |

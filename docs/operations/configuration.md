@@ -24,6 +24,21 @@
 - 내부 대역은 같은 망에 둔 RSS 생성기 같은 피드를 받을 때만 연다. 대역은 쉼표로 이어 적고, 빈 항목은 건너뛴다. 판정은 실제로 연결하는 주소로 하므로, 피드 URL 의 `localhost` 는 IPv6 루프백(`::1`)으로 풀려 `127.0.0.1/32` 밖이 될 수 있다 — 주소로 적거나 두 대역을 함께 연다. 로컬 NAT64 접두(`64:ff9b:1::/48`)로 DNS64 를 돌리는 IPv6 전용 망은 IPv4 피드가 그 접두 안의 주소로 풀려 막힌다 — 그 접두를 열면 받지만, 연 대역에서는 사설 IPv4 로 가는 요청도 함께 열린다
 - 수집은 시스템 프록시 설정을 읽지 않는다(source-R36). 바깥 연결이 프록시를 거쳐야만 하는 망에서는 피드를 받지 못한다
 
+## 공유 평가
+
+| 변수 | 필수 | 쓰는 곳 | 값 예시 | 바꾸는 것 |
+|---|---|---|---|---|
+| `YOZMNEWS_JEV_API_KEY` | 예 | `app` → `yozmnews.jev.api-key` | TypeSafe 콘솔에서 만든 키 | 평가 모델 Jev 의 API 키 — [비밀 값](#비밀-값) · [evaluation Spec §7](../specs/evaluation.md#7-설정) |
+| `YOZMNEWS_JEV_MODEL` | 아니오 | `app` → `yozmnews.jev.model` | `jev-1.14.0` | 평가 모델 — 기본 `jev-latest` |
+| `YOZMNEWS_JEV_BASE_URL` | 아니오 | `app` → `yozmnews.jev.base-url` | `https://openrouter.ai/api` | Jev 를 부르는 기본 주소 — 기본 `https://api.typesafe.ai` |
+
+- 앱은 수집한 기사마다 Jev 에 요청 하나를 보내 주제 · 지역 · 형식 · 중요도를 묻는다. 비용은 이 키의 계정에 청구되고 사용자 수와 무관하다 — 기본 태그 체계에서 기사당 입력 약 3,000 ~ 4,100토큰이다([evaluation Spec](../specs/evaluation.md#articleevaluator))
+- 키가 없으면 앱이 뜨지 않는다 — 배포 구성은 줄이 없거나 값이 비면 Compose 가 변수 이름을 말하며 멈춘다. 공백 · 제어 문자 · ASCII 밖의 문자가 있거나 512자를 넘는 키도 앱이 뜨지 않는다. 키가 맞는지는 평가 때 드러난다 — 틀린 키면 평가가 멈추고 앱 로그에 경고 `평가기를 쓸 수 없어 회차를 멈췄다` 가 남는다. 기사는 평가 대기에 남아, 키를 고쳐 앱을 다시 띄우면 그대로 평가된다
+- 모델 기본값 `jev-latest` 는 TypeSafe 가 새 버전을 올리면 따라간다. 평가마다 실제로 답한 버전이 저장된다. 태그 기준 · 저장 기준을 맞춘 뒤에는 버전 ID 로 고정한다. 고정한 버전이 내려가면 평가가 멈추고 같은 경고가 남는다 — 새 버전으로 바꾼다
+- OpenRouter 로 부르려면 기본 주소를 `https://openrouter.ai/api`, 모델을 `typesafe/` 이름(예: `typesafe/jev-1.13`, 최신 별칭은 `~typesafe/jev-latest`), 키를 OpenRouter 키로 바꾼다 — 같은 요청 · 응답 스키마의 호환 경로다. 실제로 확인한 경로는 TypeSafe 직접이다
+- 요청 제한 · 일시적인 서버 오류는 기사마다 1 · 2 · 4 · 8분 뒤 다시 시도하고, 다섯 번째에 실패로 남긴다. 실패로 남은 기사는 다시 평가하지 않는다. 잔액이 떨어졌을 때 TypeSafe 가 주는 응답은 문서에 없다 — 요청 제한으로 온다면 그동안 들어온 기사가 이렇게 실패로 남을 수 있다
+- 모델 · 기본 주소의 값을 비운 줄(`YOZMNEWS_JEV_MODEL=`)은 빈 값이 그대로 넘어가 앱이 뜨지 않는다. 쓰지 않을 때는 줄을 지우거나 주석으로 둔다
+
 ## 백그라운드 작업
 
 | 변수 | 필수 | 쓰는 곳 | 값 예시 | 바꾸는 것 |
@@ -75,8 +90,8 @@
 
 ## 비밀 값
 
-- 지금 배포 구성의 비밀 값은 `POSTGRES_PASSWORD` 와 [운영자 토큰](#운영자)(`YOZMNEWS_ADMIN_TOKEN`) 둘이다
-- **(미구현)** OIDC 공급자의 client secret, Jev API 키, 봇 차단(Turnstile) secret, Tunnel 토큰, BYOK 키 암호화용 KEK, 첫 운영자 초기 비밀번호
+- 지금 배포 구성의 비밀 값은 `POSTGRES_PASSWORD`, [운영자 토큰](#운영자)(`YOZMNEWS_ADMIN_TOKEN`), [Jev API 키](#공유-평가)(`YOZMNEWS_JEV_API_KEY`) 셋이다
+- **(미구현)** OIDC 공급자의 client secret, 봇 차단(Turnstile) secret, Tunnel 토큰, BYOK 키 암호화용 KEK, 첫 운영자 초기 비밀번호
 - 비밀 값은 호스트의 환경 파일(`deploy/.env`)에 두고 저장소에 커밋하지 않는다
 - **(미구현)** 비밀 값을 Docker secrets 로도 받는다
 - **(미구현)** KEK 는 다른 비밀 값과 **별도 파일**로 두고 DB 백업에 넣지 않는다. 버전을 붙여 교체할 수 있게 하고, DB 백업과 다른 위치에 따로 백업한다. KEK 를 잃으면 저장된 사용자 키를 복호화할 수 없다 — 사용자가 키를 다시 등록하면 되므로 치명적이지는 않다. 키 암호화 구조와 KEK 교체 절차는 [security.md](../security.md)
