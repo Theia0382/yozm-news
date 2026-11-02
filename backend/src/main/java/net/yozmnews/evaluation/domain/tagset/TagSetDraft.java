@@ -14,7 +14,8 @@ import org.jspecify.annotations.Nullable;
  */
 record TagSetDraft(TextLocation location, @Nullable QuestionsDraft questions, @Nullable ThresholdsDraft thresholds,
 		@Nullable Located<List<TopicDraft>> topics, @Nullable Located<List<TagDraft>> regions,
-		@Nullable Located<List<FormatDraft>> formats, @Nullable Located<List<LevelDraft>> importance) {
+		@Nullable Located<List<FormatDraft>> formats, @Nullable Located<List<LevelDraft>> importance,
+		@Nullable Located<List<LineageDraft>> lineage) {
 
 	/** 질문 문구 초안 */
 	record QuestionsDraft(YamlPath path, TextLocation location, @Nullable Located<String> topic,
@@ -57,6 +58,13 @@ record TagSetDraft(TextLocation location, @Nullable QuestionsDraft questions, @N
 	/** 중요도 수준 초안 */
 	record LevelDraft(YamlPath path, TextLocation location, @Nullable Located<Integer> level,
 			@Nullable Located<String> description) {
+
+	}
+
+	/** 계보 항목 초안 — evaluation-R22 */
+	record LineageDraft(YamlPath path, TextLocation location, @Nullable Located<String> kind,
+			@Nullable Located<String> change, @Nullable Located<List<Located<String>>> from,
+			@Nullable Located<List<Located<String>>> to) {
 
 	}
 

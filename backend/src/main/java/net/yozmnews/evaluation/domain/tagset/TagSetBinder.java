@@ -7,6 +7,7 @@ import java.util.Set;
 
 import net.yozmnews.evaluation.domain.tagset.TagSetDraft.FormatDraft;
 import net.yozmnews.evaluation.domain.tagset.TagSetDraft.LevelDraft;
+import net.yozmnews.evaluation.domain.tagset.TagSetDraft.LineageDraft;
 import net.yozmnews.evaluation.domain.tagset.TagSetDraft.QuestionsDraft;
 import net.yozmnews.evaluation.domain.tagset.TagSetDraft.TagDraft;
 import net.yozmnews.evaluation.domain.tagset.TagSetDraft.ThresholdDraft;
@@ -62,7 +63,24 @@ final class TagSetBinder {
 
 	static final String LEVEL = "level";
 
-	private static final Set<String> ROOT_KEYS = Set.of(QUESTIONS, THRESHOLDS, TOPICS, REGIONS, FORMATS, IMPORTANCE);
+	static final String LINEAGE = "lineage";
+
+	static final String KIND = "kind";
+
+	static final String CHANGE = "change";
+
+	static final String FROM = "from";
+
+	static final String TO = "to";
+
+	static final String RENAME = "rename";
+
+	static final String SPLIT = "split";
+
+	static final String MERGE = "merge";
+
+	private static final Set<String> ROOT_KEYS = Set.of(QUESTIONS, THRESHOLDS, TOPICS, REGIONS, FORMATS, IMPORTANCE,
+			LINEAGE);
 
 	private static final Set<String> QUESTION_KEYS = Set.of(TOPIC, REGION, FORMAT, IMPORTANCE);
 
@@ -77,6 +95,8 @@ final class TagSetBinder {
 	private static final Set<String> FORMAT_KEYS = Set.of(KEY, NAME, DESCRIPTION, EXCLUDED_BY_DEFAULT);
 
 	private static final Set<String> LEVEL_KEYS = Set.of(LEVEL, DESCRIPTION);
+
+	private static final Set<String> LINEAGE_KEYS = Set.of(KIND, CHANGE, FROM, TO);
 
 	private final List<TagSetProblem> problems = new ArrayList<>();
 
@@ -109,7 +129,8 @@ final class TagSetBinder {
 				list(entries.get(TOPICS), path.child(TOPICS), this::topic),
 				list(entries.get(REGIONS), path.child(REGIONS), this::tag),
 				list(entries.get(FORMATS), path.child(FORMATS), this::format),
-				list(entries.get(IMPORTANCE), path.child(IMPORTANCE), this::level));
+				list(entries.get(IMPORTANCE), path.child(IMPORTANCE), this::level),
+				list(entries.get(LINEAGE), path.child(LINEAGE), this::lineage));
 	}
 
 	private @Nullable QuestionsDraft questions(@Nullable YamlTree node, YamlPath path) {
@@ -182,6 +203,17 @@ final class TagSetBinder {
 		Map<String, YamlTree> entries = this.binding.entries(map, path, LEVEL_KEYS::contains);
 		return new LevelDraft(path, map.location(), this.binding.integer(entries.get(LEVEL), path.child(LEVEL)),
 				string(entries, DESCRIPTION, path));
+	}
+
+	private @Nullable LineageDraft lineage(YamlTree node, YamlPath path) {
+		MapNode map = this.binding.map(node, path);
+		if (map == null) {
+			return null;
+		}
+		Map<String, YamlTree> entries = this.binding.entries(map, path, LINEAGE_KEYS::contains);
+		return new LineageDraft(path, map.location(), string(entries, KIND, path), string(entries, CHANGE, path),
+				this.binding.strings(entries.get(FROM), path.child(FROM)),
+				this.binding.strings(entries.get(TO), path.child(TO)));
 	}
 
 	private @Nullable Located<String> string(Map<String, YamlTree> entries, String key, YamlPath path) {

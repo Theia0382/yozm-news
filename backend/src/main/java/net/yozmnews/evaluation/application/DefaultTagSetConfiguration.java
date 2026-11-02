@@ -3,18 +3,21 @@ package net.yozmnews.evaluation.application;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import net.yozmnews.evaluation.domain.tagset.TagSetDefinition;
 import net.yozmnews.evaluation.domain.tagset.TagSetParse;
 import net.yozmnews.evaluation.domain.tagset.TagSetParser;
+import net.yozmnews.evaluation.domain.tagset.TagSetProblem;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 
 /**
- * 기본 체계 파일의 기동 검증 — docs/specs/evaluation.md §4 · evaluation-R1.
+ * 기본 체계 파일의 기동 검증 — docs/specs/evaluation.md §4 · evaluation-R1. 기본 체계 파일에는 계보 절을 둘 수 없다.
  * <p>
  * 역할 애너테이션이 없다 — 두 역할 모두 기동 때 검증한다. 기본 체계 파일은 배포물의 일부라 잘못된 파일은 CI 의 테스트가 먼저 잡는다.
  */
@@ -45,11 +48,20 @@ class DefaultTagSetConfiguration {
 			throw new UncheckedIOException("기본 태그 체계 파일을 읽지 못했다: " + resource.getDescription(), ex);
 		}
 		return switch (parser.parse(text)) {
-			case TagSetParse.Parsed parsed -> parsed.definition();
-			case TagSetParse.Invalid invalid -> throw new IllegalStateException("기본 태그 체계 파일을 적재하지 못했다 ("
-					+ resource.getDescription() + ")\n"
-					+ invalid.problems().stream().map(problem -> "  " + problem).collect(Collectors.joining("\n")));
+			case TagSetParse.Parsed parsed -> {
+				Optional<TagSetProblem> lineage = parsed.definition().lineageProblemForDefault();
+				if (lineage.isPresent()) {
+					throw failure(resource, List.of(lineage.get()));
+				}
+				yield parsed.definition();
+			}
+			case TagSetParse.Invalid invalid -> throw failure(resource, invalid.problems());
 		};
+	}
+
+	private static IllegalStateException failure(Resource resource, List<TagSetProblem> problems) {
+		return new IllegalStateException("기본 태그 체계 파일을 적재하지 못했다 (" + resource.getDescription() + ")\n"
+				+ problems.stream().map(problem -> "  " + problem).collect(Collectors.joining("\n")));
 	}
 
 }
