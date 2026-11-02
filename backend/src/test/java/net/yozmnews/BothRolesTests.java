@@ -52,10 +52,10 @@ class BothRolesTests {
 	void runsBackgroundJobs() {
 		BackgroundJobServer server = this.context.getBean(BackgroundJobServer.class);
 		await().atMost(Duration.ofSeconds(60)).until(server::isRunning);
-		assertThat(RoleProbe.jobEntryPointBeans(this.context)).hasSize(4)
+		assertThat(RoleProbe.jobEntryPointBeans(this.context)).hasSize(5)
 			.allSatisfy((type, beans) -> assertThat(beans).as(type.getName()).isEqualTo(1));
 		assertThat(RoleProbe.recurringJobIds(this.jdbc)).containsExactlyInAnyOrder("poll-due-feeds",
-				"feed-health-check", "event-publication-resubmission");
+				"feed-health-check", "event-publication-resubmission", "evaluate-pending-articles");
 		assertThat(this.context.containsBean("presetFeedReconciliation")).isTrue();
 		assertThat(RoleProbe.stalenessMonitorTasks(this.context)).hasSize(1);
 	}
