@@ -24,6 +24,8 @@ COPY compose.yaml compose.yaml
 COPY api/openapi.json api/openapi.json
 # 테스트가 예시 프로필을 검증하는 운영 안내서(backend/build.gradle.kts 의 sourcesGuideFile)
 COPY docs/operations/sources.md docs/operations/sources.md
+# 테스트가 예시 원문을 검증하는 운영 안내서(backend/build.gradle.kts 의 tagSetsGuideFile)
+COPY docs/operations/tag-sets.md docs/operations/tag-sets.md
 COPY backend/src backend/src
 CMD ["backend/gradlew", "-p", "backend", "build", "--no-daemon", "--console=plain"]
 

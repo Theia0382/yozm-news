@@ -1,4 +1,4 @@
-package net.yozmnews.source.domain.profile;
+package net.yozmnews;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -12,7 +12,7 @@ import org.jspecify.annotations.Nullable;
  * 낱말이다. 닫는 줄은 앞 공백을 뺀 내용이 같은 울타리 문자를 여는 줄 이상 이어 쓴 것뿐인 줄이다. 블록 내용은 여는 줄의 들여쓰기만큼 앞 공백을 뺀다. 울타리
  * 없이 들여쓴 코드 블록은 잡지 않는다.
  */
-final class CodeFences {
+public final class CodeFences {
 
 	/**
 	 * 코드 블록 하나.
@@ -21,7 +21,7 @@ final class CodeFences {
 	 * @param info 정보 문자열의 첫 낱말 — 없으면 빈 문자열
 	 * @param content 블록 내용 — 줄마다 줄바꿈으로 끝난다
 	 */
-	record Block(int line, String info, String content) {
+	public record Block(int line, String info, String content) {
 	}
 
 	private record Opening(int indent, char fence, int length, String info) {
@@ -31,7 +31,7 @@ final class CodeFences {
 	}
 
 	/** {@code markdown} 의 코드 블록을 문서 순서로. 닫히지 않은 울타리가 있으면 실패한다. */
-	static List<Block> extract(String markdown) {
+	public static List<Block> extract(String markdown) {
 		String[] lines = markdown.split("\r?\n", -1);
 		List<Block> blocks = new ArrayList<>();
 		int index = 0;

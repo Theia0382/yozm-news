@@ -103,13 +103,17 @@ tasks.named<Test>("test") {
 	inputs.files(openApiSpecFile).withPropertyName("openApiSpecFile").withPathSensitivity(PathSensitivity.NONE)
 }
 
-// 운영 안내서(저장소 루트 docs/operations/sources.md) — 테스트가 예시 프로필을 검증한다. 결선은 docs/development/infrastructure.md "테스트가 저장소 파일을 읽는 결선"
+// 운영 안내서(저장소 루트 docs/operations/sources.md · tag-sets.md) — 테스트가 예시 프로필 · 예시 원문을 검증한다. 결선은 docs/development/infrastructure.md "테스트가 저장소 파일을 읽는 결선"
 val sourcesGuideFile = layout.projectDirectory.file("../docs/operations/sources.md")
 val sourcesGuideFileProperty = "yozmnews.sources-guide-file"
+val tagSetsGuideFile = layout.projectDirectory.file("../docs/operations/tag-sets.md")
+val tagSetsGuideFileProperty = "yozmnews.tag-sets-guide-file"
 
 tasks.withType<Test> {
 	inputs.file(sourcesGuideFile).withPropertyName("sourcesGuideFile").withPathSensitivity(PathSensitivity.NONE)
 	systemProperty(sourcesGuideFileProperty, sourcesGuideFile.asFile.path)
+	inputs.file(tagSetsGuideFile).withPropertyName("tagSetsGuideFile").withPathSensitivity(PathSensitivity.NONE)
+	systemProperty(tagSetsGuideFileProperty, tagSetsGuideFile.asFile.path)
 }
 
 tasks.register<Test>("updateOpenApiSpec") {
