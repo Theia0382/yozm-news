@@ -2,9 +2,15 @@ package net.yozmnews.source.application;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.mockito.AdditionalAnswers.delegatesTo;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -23,6 +29,7 @@ import net.yozmnews.source.FetchFailureReason;
 import net.yozmnews.source.SourceId;
 import net.yozmnews.source.UnknownFeedException;
 import net.yozmnews.source.UnknownSourceException;
+import net.yozmnews.source.domain.fetch.ArticleSource;
 import net.yozmnews.source.domain.gate.FeedActivation;
 import net.yozmnews.source.domain.gate.FeedPreview;
 import net.yozmnews.source.domain.gate.Shortfall;
@@ -30,8 +37,12 @@ import net.yozmnews.source.domain.profile.Preset;
 import net.yozmnews.source.domain.profile.PresetCatalog;
 import net.yozmnews.source.domain.profile.PresetKey;
 import net.yozmnews.source.domain.profile.PresetParse;
+import net.yozmnews.source.domain.poll.SourceFetchSlotRepository;
 import net.yozmnews.source.domain.profile.ProfileParser;
 import net.yozmnews.source.domain.registry.Activation;
+import net.yozmnews.source.domain.registry.FeedRepository;
+import net.yozmnews.source.domain.registry.ProfileResolver;
+import net.yozmnews.source.domain.registry.SourceRepository;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -44,6 +55,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * 소스 · 피드의 켜기 · 끄기와 수집 주기 — 실제 PostgreSQL 에서 등록한 소스로 본다. 피드는 루프백의 WireMock 이라 수집 허용 대역에
@@ -81,6 +93,24 @@ class SourceOperationsTests {
 
 	@Autowired
 	FetchedArticleRecorder recorder;
+
+	@Autowired
+	SourceRepository sourceRepository;
+
+	@Autowired
+	FeedRepository feedRepository;
+
+	@Autowired
+	ProfileResolver resolver;
+
+	@Autowired
+	ArticleSource articleSource;
+
+	@Autowired
+	SourceFetchSlotRepository slotRepository;
+
+	@Autowired
+	TransactionTemplate transaction;
 
 	@Autowired
 	JdbcClient jdbc;
@@ -246,6 +276,33 @@ class SourceOperationsTests {
 			.param("id", source)
 			.query(Integer.class)
 			.single()).isEqualTo(15);
+	}
+
+	@Test
+	void aSourceDeletedBeforeThePreviewIsReservedMakesTheFeedUnknown() {
+		long source = preset("multi");
+		long kept = preset("solo");
+		FeedId one = new FeedId(this.rows.feedId(source, "one"));
+		FeedId all = new FeedId(this.rows.feedId(kept, "all"));
+		server.stubFor(get("/multi/one.xml").willReturn(TestFeeds.rss("a1")));
+		server.stubFor(get("/solo/all.xml").willReturn(TestFeeds.rss("s1")));
+		// 첫 판정 뒤, 미리보기의 요청 예약 직전에 다른 쪽이 그 소스를 지운 것처럼 한다
+		SourceFetchSlotRepository deleting = mock(SourceFetchSlotRepository.class, delegatesTo(this.slotRepository));
+		doAnswer(invocation -> {
+			SourceId reserved = invocation.getArgument(0);
+			if (reserved.value() == source) {
+				this.rows.deleteSource(source);
+			}
+			return this.slotRepository.lockNextFetchAt(reserved);
+		}).when(deleting).lockNextFetchAt(any());
+		SourceOperations operations = new SourceOperations(this.sourceRepository, this.feedRepository, this.resolver,
+				this.articleSource, new SourceFetchSlots(deleting, this.transaction), this.transaction);
+
+		// 대조 — 지우지 않은 소스의 피드는 같은 대역으로 켜진다
+		assertThat(operations.enableFeed(all)).isInstanceOf(FeedActivation.Activated.class);
+
+		assertThatExceptionOfType(UnknownFeedException.class).isThrownBy(() -> operations.enableFeed(one));
+		assertThat(server.findAll(getRequestedFor(urlEqualTo("/multi/one.xml")))).isEmpty();
 	}
 
 	@Test

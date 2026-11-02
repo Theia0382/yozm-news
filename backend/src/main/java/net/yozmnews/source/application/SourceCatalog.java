@@ -3,6 +3,7 @@ package net.yozmnews.source.application;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -14,6 +15,7 @@ import net.yozmnews.source.ProfileState;
 import net.yozmnews.source.SourceId;
 import net.yozmnews.source.SourceView;
 import net.yozmnews.source.UnknownSourceException;
+import net.yozmnews.source.domain.attribution.SourceAttributionRepository;
 import net.yozmnews.source.domain.poll.FeedPollState;
 import net.yozmnews.source.domain.poll.LastError;
 import net.yozmnews.source.domain.profile.CollectionProfile;
@@ -25,6 +27,7 @@ import net.yozmnews.source.domain.profile.PresetCatalog;
 import net.yozmnews.source.domain.registry.PollTarget;
 import net.yozmnews.source.domain.registry.ProfileResolution;
 import net.yozmnews.source.domain.registry.ProfileResolver;
+import net.yozmnews.source.domain.registry.Source;
 import net.yozmnews.source.domain.registry.SourceListingRepository;
 import net.yozmnews.source.domain.registry.SourceListingRepository.FeedRow;
 import net.yozmnews.source.domain.registry.SourceListingRepository.PollRow;
@@ -43,6 +46,11 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Component
 class SourceCatalog {
 
+	/** 숨긴 소스의 순서 — 숨긴 시각, 같으면 소스 ID */
+	private static final Comparator<SourceRow> HIDDEN_ORDER = Comparator
+		.comparing((SourceRow row) -> Objects.requireNonNull(row.hiddenAt(), "hiddenAt"))
+		.thenComparingLong(row -> row.id().value());
+
 	private final PresetCatalog catalog;
 
 	private final SourceListingRepository listing;
@@ -51,23 +59,27 @@ class SourceCatalog {
 
 	private final ProfileResolver resolver;
 
+	private final SourceAttributionRepository attributions;
+
 	private final TransactionTemplate readOnly;
 
 	SourceCatalog(PresetCatalog catalog, SourceListingRepository listing, SourceRepository sources,
-			ProfileResolver resolver, PlatformTransactionManager transactions) {
+			ProfileResolver resolver, SourceAttributionRepository attributions, PlatformTransactionManager transactions) {
 		this.catalog = catalog;
 		this.listing = listing;
 		this.sources = sources;
 		this.resolver = resolver;
+		this.attributions = attributions;
 		this.readOnly = new TransactionTemplate(transactions);
 		this.readOnly.setReadOnly(true);
 	}
 
+	/** 프리셋 — 참조하는 소스(숨긴 소스 포함)와 그 소스를 숨겼는지를 함께 낸다 */
 	List<PresetView> presets() {
-		Map<String, SourceId> registered = this.readOnly.execute(status -> this.listing.findAllSources()
+		Map<String, SourceRow> registered = this.readOnly.execute(status -> this.listing.findAllSources()
 			.stream()
 			.filter(row -> row.presetKey() != null)
-			.collect(Collectors.toMap(SourceRow::presetKey, SourceRow::id)));
+			.collect(Collectors.toMap(SourceRow::presetKey, row -> row)));
 		return this.catalog.all()
 			.stream()
 			.sorted(Comparator.comparing(preset -> preset.key().value()))
@@ -75,32 +87,48 @@ class SourceCatalog {
 			.toList();
 	}
 
+	/** 숨기지 않은 소스 — 소스 ID 순 */
 	List<SourceView> sources() {
+		return list(false);
+	}
+
+	/** 숨긴 소스 — 숨긴 시각 순, 같으면 소스 ID 순 */
+	List<SourceView> hiddenSources() {
+		return list(true);
+	}
+
+	/** @throws UnknownSourceException 없는 소스 · 숨긴 소스일 때 */
+	Optional<String> operatorProfileText(SourceId id) {
+		Source source = this.sources.findById(id.value())
+			.filter(found -> !found.hidden())
+			.orElseThrow(() -> new UnknownSourceException(id));
+		return source.operatorProfile();
+	}
+
+	private List<SourceView> list(boolean hidden) {
 		return this.readOnly.execute(status -> {
 			Map<SourceId, List<FeedRow>> feeds = this.listing.findAllFeeds()
 				.stream()
 				.collect(Collectors.groupingBy(FeedRow::sourceId));
+			Map<SourceId, String> recordedNames = this.attributions.findAll();
 			return this.listing.findAllSources()
 				.stream()
-				.map(row -> sourceView(row, feeds.getOrDefault(row.id(), List.of())))
+				.filter(row -> (row.hiddenAt() != null) == hidden)
+				.sorted(hidden ? HIDDEN_ORDER : Comparator.comparingLong(row -> row.id().value()))
+				.map(row -> sourceView(row, feeds.getOrDefault(row.id(), List.of()), recordedNames.get(row.id())))
 				.toList();
 		});
 	}
 
-	/** @throws UnknownSourceException 없는 소스일 때 */
-	Optional<String> operatorProfileText(SourceId id) {
-		return this.sources.findById(id.value())
-			.orElseThrow(() -> new UnknownSourceException(id))
-			.operatorProfile();
-	}
-
-	private static PresetView presetView(Preset preset, @Nullable SourceId sourceId) {
+	private static PresetView presetView(Preset preset, @Nullable SourceRow source) {
 		CollectionProfile profile = preset.profile();
 		return new PresetView(preset.key().value(), profile.source().name(), profile.source().homepage(),
-				preset.termsReviewedAt(), profile.feeds().size(), sourceId);
+				preset.termsReviewedAt(), profile.feeds().size(), (source != null) ? source.id() : null,
+				source != null && source.hiddenAt() != null);
 	}
 
-	private SourceView sourceView(SourceRow row, List<FeedRow> feeds) {
+	/** 이름은 프로필의 소스 이름 — 프로필을 얻지 못하면 기록된 출처 이름(없으면 null) */
+	private SourceView sourceView(SourceRow row, List<FeedRow> feeds, @Nullable String recordedName) {
 		ProfileResolution resolution = this.resolver.resolve(row);
 		@Nullable CollectionProfile profile = switch (resolution) {
 			case ProfileResolution.Resolved resolved -> resolved.profile();
@@ -112,14 +140,22 @@ class SourceCatalog {
 			case ProfileResolution.PresetMissing missing -> ProfileState.PRESET_MISSING;
 			case ProfileResolution.Invalid invalid -> ProfileState.INVALID;
 		};
-		List<FeedView> feedViews = feeds.stream()
-			.sorted(Comparator.comparingLong(feed -> feed.id().value()))
-			.map(feed -> feedView(feed, resolution, row.pollIntervalMinutes()))
-			.toList();
+		List<FeedView> visible = feedViews(feeds, resolution, row.pollIntervalMinutes(), false);
+		List<FeedView> hidden = feedViews(feeds, resolution, row.pollIntervalMinutes(), true);
 		return new SourceView(row.id(), row.presetKey(), row.enabled(), row.pollIntervalMinutes(), state,
-				(profile != null) ? profile.source().name() : null,
+				(profile != null) ? profile.source().name() : recordedName,
 				(profile != null) ? profile.source().homepage() : null,
-				(profile != null) ? profile.termsReviewedAt().orElse(null) : null, feedViews);
+				(profile != null) ? profile.termsReviewedAt().orElse(null) : null, visible, hidden);
+	}
+
+	/** 숨김 여부가 같은 피드 — 피드 ID 순 */
+	private static List<FeedView> feedViews(List<FeedRow> feeds, ProfileResolution resolution,
+			@Nullable Integer sourcePollIntervalMinutes, boolean hidden) {
+		return feeds.stream()
+			.filter(feed -> (feed.hiddenAt() != null) == hidden)
+			.sorted(Comparator.comparingLong(feed -> feed.id().value()))
+			.map(feed -> feedView(feed, resolution, sourcePollIntervalMinutes))
+			.toList();
 	}
 
 	private static FeedView feedView(FeedRow feed, ProfileResolution resolution,

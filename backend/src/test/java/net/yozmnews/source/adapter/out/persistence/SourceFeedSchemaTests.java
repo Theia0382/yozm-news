@@ -41,6 +41,7 @@ class SourceFeedSchemaTests {
 	void deleteRows() {
 		this.jdbc.sql("delete from feed_poll_states").update();
 		this.jdbc.sql("delete from feeds").update();
+		this.jdbc.sql("delete from source_attributions").update();
 		this.jdbc.sql("delete from sources").update();
 	}
 

@@ -7,6 +7,8 @@
 `source` 는 뉴스 소스(언론사)를 등록하고 그 피드를 수집해, 새 항목마다 정규화한 기사를 넘긴다.
 
 - **등록과 운영 설정** — 소스를 수집 프로필로 등록하고(프리셋 참조 또는 운영자 프로필), 운영자 원문을 고치고, 소스 · 피드를 켜고 끄며, 운영자 수집 주기를 둔다. 피드는 한 번 받아 본 미리보기가 활성화 기준을 넘을 때만 켠다. 기동 때 저장된 피드를 지금의 프로필과 대조한다. 이 운영 기능과 운영 목록을 공개 API(`SourceAdministration`)로 낸다
+- **숨김과 삭제** — 소스 · 피드를 숨기고(끄고 목록에서 빼되 행과 받은 기사를 남긴다) 다시 보이며, 지운다(행을 지우고 `SourceDeleted` · `FeedDeleted` 를 발행해 그 소스 · 피드만 가진 기사까지 지우게 한다). 다른 모듈이 피드가 아직 있는지 묻는 공개 조회(`SourceDirectory`)를 낸다
+- **출처 이름 기록** — 프로필에서 마지막으로 확인한 소스 이름을 기록해, 프로필을 얻지 못해도 출처를 보일 수 있게 한다
 - **수집 일정** — 수집할 피드를 고르고, 겹치지 않게 점유하고, 같은 언론사에 요청이 몰리지 않게 띄우고, 결과로 다음 수집 시각을 정한다
 - **피드 요청** — 조건부 GET 으로 피드를 받고, 내부 주소로 가는 요청을 막고, 한 번의 수집에 마감 · 크기 상한을 건다
 - **정규화** — 받은 문서를 수집 프로필대로 보정 · 파싱하고 항목마다 기사 값으로 정리한다
@@ -48,10 +50,13 @@
 | 연속 영구 실패 수 | 연속 실패 가운데 영구 실패의 수. 성공 · 변경 없음에 0 이 된다 |
 | 피드 읽기 설정 | 한 피드를 받아 기사로 만드는 데 쓰이는 프로필 값 — 피드 URL · 소스 언어 · 사전 보정 · 읽을 곳 · 날짜 해석. 이름 · 홈페이지 · 섹션 · 이용조건 검토일 · 수집 주기는 들지 않는다. 정본은 `FeedReading`(§4) |
 | 새 항목의 가장 늦은 발행 시각 | 지금까지 새 항목의 발행 시각 가운데 가장 늦은 것. 발행 시각을 추정한 항목은 받은 시각으로 센다 |
+| 숨김 | 소스 · 피드를 끄고 운영 목록 · 운영 연산에서 빼는 것. 행 · 원문 · 수집 상태 · 받은 기사는 남고 다시 보일 수 있다(source-R53) |
+| 삭제 | 소스 · 피드의 행을 지우는 것. 되돌릴 수 없고, 그 소스 · 피드만 가진 기사도 `article` 이 지운다(source-R55) |
+| 출처 이름 | `source` 가 프로필에서 마지막으로 확인한 소스 이름. 운영 설정과 다른 행에 기록한다(source-R57) |
 
 ## 3. 공개 인터페이스
 
-모듈 최상위 패키지 `net.yozmnews.source` 의 공개 타입은 아래와 같다 — 식별자 둘 · 수집 이벤트와 그 기사, 운영 기능의 공개 API `SourceAdministration` 과 그 결과 · 목록 타입 · 공개 열거 · 예외.
+모듈 최상위 패키지 `net.yozmnews.source` 의 공개 타입은 아래와 같다 — 식별자 둘 · 수집 이벤트와 그 기사, 삭제 이벤트 둘, 피드가 있는지 묻는 공개 조회 `SourceDirectory`, 운영 기능의 공개 API `SourceAdministration` 과 그 결과 · 목록 타입 · 공개 열거 · 예외.
 
 HTTP 엔드포인트: 없음.
 
@@ -81,7 +86,7 @@ public record FeedId(long value) {}
 |---|---|---|
 | `value` | `feeds.id` | 1 이상 — 아니면 생성자가 `IllegalArgumentException` 을 던진다 |
 
-관련 규칙: source-R7(피드는 지우지 않는다 — 받은 기사의 기록이 피드 ID 를 가리킨다).
+관련 규칙: source-R7(피드 행은 운영자 삭제로만 지운다 — 받은 기사의 기록이 피드 ID 를 가리킨다) · source-R55.
 
 ### ArticleFetched
 
@@ -103,6 +108,45 @@ public record ArticleFetched(SourceId sourceId, FeedId feedId, Instant fetchedAt
   - 같은 피드의 같은 항목 키는 그 키가 직전 성공 수집에 남아 있는 동안 다시 발행되지 않는다(source-R20). 피드에서 빠졌다가 다시 실린 항목, 첫 수집의 항목은 발행된다. 같은 기사가 다른 피드 · 다른 항목 키로 다시 올 수 있다 — 같은 기사인지는 소비자가 판정한다
 
 관련 규칙: source-R16 · source-R17 · source-R20.
+
+### SourceDeleted · FeedDeleted
+
+운영자가 소스 · 피드를 지웠다(source → article).
+
+```java
+public record SourceDeleted(SourceId sourceId) {}
+public record FeedDeleted(SourceId sourceId, FeedId feedId) {}
+```
+
+| 필드 | 뜻 | 제약 |
+|---|---|---|
+| `sourceId` | 지운 소스 · 지운 피드의 소스 | null 이 아니다 |
+| `feedId` | 지운 피드 | null 이 아니다 |
+
+- 계약
+  - 소스 · 피드 행을 지운 트랜잭션에서 발행한다(source-R55) — 행 삭제가 커밋되면 발행도 커밋된다
+  - 소비자는 그 소스(피드)의 기록을 지운다. 이벤트 발행 레지스트리에 남아 실패하면 다시 처리되므로, 소비는 다시 처리해도 결과가 같아야 한다
+
+관련 규칙: source-R55.
+
+### SourceDirectory
+
+다른 모듈이 피드가 아직 있는지 묻는 조회. 구현은 `application` 의 `SourceDirectoryService` 다.
+
+```java
+public interface SourceDirectory {
+    boolean feedExists(FeedId id);
+}
+```
+
+| 멤버 | 뜻 |
+|---|---|
+| `feedExists` | 피드 행이 있는가 — 숨긴 피드 · 숨긴 소스의 피드도 있다. 운영자가 지운 피드 · 지운 소스의 피드만 없다 |
+
+- 계약
+  - 트랜잭션을 열지 않고 호출자의 트랜잭션에서 읽는다
+
+관련 규칙: source-R55.
 
 ### FetchedArticle
 
@@ -150,6 +194,7 @@ public interface SourceAdministration {
 
     List<PresetView> presets();
     List<SourceView> sources();
+    List<SourceView> hiddenSources();
     Optional<String> operatorProfileText(SourceId id);
     SourceRegistrationResult registerPreset(String presetKey);
     SourceRegistrationResult registerOperatorProfile(String text);
@@ -161,6 +206,12 @@ public interface SourceAdministration {
     void disableFeed(FeedId id);
     boolean changeSourcePollInterval(SourceId id, @Nullable Integer minutes);
     boolean changeFeedPollInterval(FeedId id, @Nullable Integer minutes);
+    void hideSource(SourceId id);
+    void unhideSource(SourceId id);
+    FeedRemovalResult hideFeed(FeedId id);
+    void unhideFeed(FeedId id);
+    void deleteSource(SourceId id);
+    FeedRemovalResult deleteFeed(FeedId id);
 }
 ```
 
@@ -168,19 +219,21 @@ public interface SourceAdministration {
 |---|---|
 | `MINIMUM_POLL_INTERVAL_MINUTES` | 수집 주기의 하한(분) — 값의 출처는 프로필 모델의 하한 하나다(source-R14) |
 | `FEED_STATUS_CRITERIA` | 피드 상태의 판정 기준값과 재판정 간격 — 값의 출처는 피드 상태 판정 규칙 하나다(source-R30 · source-R31 · source-R47) |
-| `presets()` · `sources()` | 운영 목록 — 소스 목록은 피드마다 수집 상태를 싣는다(source-R51) |
+| `presets()` · `sources()` · `hiddenSources()` | 운영 목록 — 소스 목록은 숨기지 않은 소스이고 피드마다 수집 상태를 싣는다. 숨긴 소스는 따로 낸다(source-R51 · source-R53) |
 | `operatorProfileText` | 운영자 원문 — 프리셋을 참조하는 소스면 비어 있다 |
 | `registerPreset` · `registerOperatorProfile` | 소스 등록(source-R1 ~ source-R3) |
 | `reviseOperatorProfile` | 운영자 원문 수정(source-R50) |
 | `previewOperatorProfile` | 등록 전 원문의 피드 하나 미리보기(source-R9) |
 | `enableSource` · `disableSource` · `enableFeed` · `disableFeed` | 켜기 · 끄기(source-R4 · source-R5 · source-R9) |
 | `changeSourcePollInterval` · `changeFeedPollInterval` | 운영자 수집 주기 — null 이면 지운다. 하한보다 짧으면 바꾸지 않고 false(source-R14) |
+| `hideSource` · `unhideSource` · `hideFeed` · `unhideFeed` | 숨기기 · 다시 보이기(source-R53). 피드는 프로필을 얻었고 그 프로필에 없는 피드만 숨긴다(source-R54) |
+| `deleteSource` · `deleteFeed` | 삭제(source-R55). 피드는 숨기기와 같은 대상만 지운다(source-R54) |
 
 - 계약
   - 피드 켜기 · 원문 미리보기는 피드를 받는다 — 호출자의 트랜잭션 밖에서 부른다
   - 없는 대상 · 형식이 틀린 입력 · 동시 수정의 신호는 source-R52 다
 
-관련 규칙: source-R1 ~ source-R5 · source-R9 · source-R14 · source-R30 · source-R31 · source-R47 · source-R50 ~ source-R52.
+관련 규칙: source-R1 ~ source-R5 · source-R9 · source-R14 · source-R30 · source-R31 · source-R47 · source-R50 ~ source-R55.
 
 ### PresetView · SourceView · FeedView · ProfileState · FeedHealthView · LastFailureView · FeedStatusCriteria
 
@@ -188,11 +241,12 @@ public interface SourceAdministration {
 
 ```java
 public record PresetView(String key, String name, URI homepage, LocalDate termsReviewedAt, int feedCount,
-        @Nullable SourceId sourceId) {}
+        @Nullable SourceId sourceId, boolean sourceHidden) {}
 
 public record SourceView(SourceId id, @Nullable String presetKey, boolean enabled,
         @Nullable Integer pollIntervalMinutes, ProfileState profileState, @Nullable String name,
-        @Nullable URI homepage, @Nullable LocalDate termsReviewedAt, List<FeedView> feeds) {}
+        @Nullable URI homepage, @Nullable LocalDate termsReviewedAt, List<FeedView> feeds,
+        List<FeedView> hiddenFeeds) {}
 
 public record FeedView(FeedId id, String feedKey, boolean enabled, @Nullable Integer pollIntervalMinutes,
         boolean inProfile, @Nullable URI url, @Nullable String section,
@@ -213,17 +267,17 @@ public record FeedStatusCriteria(int degradedAfterFailures, int degradedAfterPer
 
 | 타입 · 필드 | 뜻 |
 |---|---|
-| `PresetView` | 카탈로그의 프리셋 하나 — 키 · 이름 · 홈페이지 · 이용조건 검토일 · 피드 수. `sourceId` 는 그 프리셋을 참조하는 소스, 없으면 null |
-| `SourceView` | 등록된 소스 하나 — 운영 설정(켜짐 · 운영자 주기)과 프로필에서 얻은 이름 · 홈페이지 · 검토일. 프로필을 얻지 못하면 셋은 null. 프리셋 키가 없으면 운영자 원문 소스다 |
+| `PresetView` | 카탈로그의 프리셋 하나 — 키 · 이름 · 홈페이지 · 이용조건 검토일 · 피드 수. `sourceId` 는 그 프리셋을 참조하는 소스(숨긴 소스 포함), 없으면 null. `sourceHidden` 은 그 소스를 숨겼는지 — 숨긴 소스의 프리셋은 다시 등록하지 않고 다시 보인다(source-R2) |
+| `SourceView` | 등록된 소스 하나 — 운영 설정(켜짐 · 운영자 주기)과 프로필에서 얻은 이름 · 홈페이지 · 검토일. 프로필을 얻지 못하면 홈페이지 · 검토일은 null 이고 이름은 기록된 출처 이름(source-R57 — 기록이 없으면 null)이다. 프리셋 키가 없으면 운영자 원문 소스다. `feeds` 는 숨기지 않은 피드, `hiddenFeeds` 는 숨긴 피드 — 둘 다 피드 ID 순 |
 | `FeedView` | 소스의 피드 하나 — 운영 설정과 프로필의 URL · 섹션 · 실제 주기(분), 수집 상태(`health`). 프로필에 그 피드가 없으면(`inProfile` 거짓) URL · 섹션 · 실제 주기는 null |
 | `ProfileState` | 프로필을 얻었는가 — 얻음 · 참조하던 프리셋이 사라짐 · 운영자 원문이 검증에 걸림 |
 | `FeedHealthView` | 피드의 수집 상태 — 피드 건강 검사가 저장한 상태와 그것을 마지막으로 바꾼 시각(바꾼 적이 없으면 null), 마지막 성공 · 변경 없음 시각, 연속 실패 수와 그 가운데 영구 실패 수(연속 실패 수를 넘지 않는다), 마지막 실패, 새 항목이 있던 마지막 수집 시각, 새 항목의 가장 늦은 발행 시각. 시각은 없으면 null |
 | `LastFailureView` | 피드의 마지막 수집 실패 — 이유 · 분류 · 운영자용 문구 · 상태 코드(응답이 없었으면 null) · 확정 시각. 성공한 뒤에도 남는다(source-R26). 분류는 이유의 `permanence()` 다 |
 | `FeedStatusCriteria` | 피드 상태의 판정 기준값(연속 실패 · 그 가운데 영구 실패 · 무소식 기간)과 재판정 간격 — 화면이 보이는 값이다. 두 수는 1 이상, 두 기간은 양수 |
 
-관련 규칙: source-R8 · source-R14 · source-R26 · source-R30 · source-R31 · source-R47 · source-R51.
+관련 규칙: source-R8 · source-R14 · source-R26 · source-R30 · source-R31 · source-R47 · source-R51 · source-R53 · source-R57.
 
-### SourceRegistrationResult · ProfileRevisionResult · SourceEnableResult · FeedEnableResult · ProfilePreviewResult
+### SourceRegistrationResult · ProfileRevisionResult · SourceEnableResult · FeedEnableResult · ProfilePreviewResult · FeedRemovalResult
 
 운영 기능의 결과 — 유스케이스가 정상으로 내놓는 판정이다.
 
@@ -247,6 +301,7 @@ public sealed interface ProfilePreviewResult {
     record Passed(PreviewReport preview); record BelowCriteria(PreviewReport preview, List<CriterionShortfall> shortfalls);
     record Unfetched(FetchFailureView failure);
 }
+public sealed interface FeedRemovalResult { record Removed(); record Refused(FeedRemovalRefusal reason); }
 ```
 
 | 결과 | 뜻 |
@@ -257,8 +312,9 @@ public sealed interface ProfilePreviewResult {
 | `SourceEnableResult` | 켬 · 켜지 않음(이유) |
 | `FeedEnableResult` | 켬(꺼진 피드를 켜며 만든 미리보기, 이미 켜졌으면 null) · 설정 판정 거절 · 기준 미달(미리보기 · 못 미친 기준 — 비어 있지 않다) · 받지 못함 · 미리본 뒤 읽기 설정이 바뀜 |
 | `ProfilePreviewResult` | 원문 검증 실패 · 원문에 그 피드 식별자 없음 · 기준 통과 · 기준 미달 · 받지 못함 |
+| `FeedRemovalResult` | 피드 숨기기 · 삭제 — 숨겼다 · 지웠다(이미 숨긴 피드를 숨겨도 이 결과) · 아무것도 바꾸지 않았다(이유) |
 
-관련 규칙: source-R1 ~ source-R5 · source-R9 · source-R50.
+관련 규칙: source-R1 ~ source-R5 · source-R9 · source-R50 · source-R53 ~ source-R55.
 
 ### PreviewReport · SkippedItemView · SummaryLengthsView · ArticleSampleView · CriterionShortfall · FetchFailureView · DocumentProblemView · ProfileProblemView
 
@@ -294,7 +350,7 @@ public record ProfileProblemView(String path, String code, String message, @Null
 
 관련 규칙: source-R9 · source-R11 · source-R24 · source-R32 · source-R37 · source-R46.
 
-### ActivationRefusal · Criterion · FetchFailureReason · FailurePermanence · SkipReason · DocumentProblemKind · FeedStatus
+### ActivationRefusal · Criterion · FetchFailureReason · FailurePermanence · SkipReason · DocumentProblemKind · FeedStatus · FeedRemovalRefusal
 
 결과에 싣는 닫힌 집합 — 모듈 안의 판정도 같은 열거를 쓴다.
 
@@ -307,6 +363,7 @@ public record ProfileProblemView(String path, String code, String message, @Null
 | `SkipReason` | `MISSING_LINK` · `INVALID_LINK` · `MISSING_TITLE` | 항목을 기사로 넘기지 않은 이유(source-R40) |
 | `DocumentProblemKind` | `UNSUPPORTED_ENCODING` · `MALFORMED_XML` · `DTD_DECLARATION` · `NOT_A_FEED` | 문서 전체를 읽지 못한 이유(source-R42 · source-R44) |
 | `FeedStatus` | `ACTIVE` · `DEGRADED` · `STALE` | 피드 상태 — 기준 안에서 수집됨 · 계속 실패함 · 응답은 정상이지만 오래 새 기사가 없음(source-R30 · source-R31) |
+| `FeedRemovalRefusal` | `IN_PROFILE` · `PROFILE_UNAVAILABLE` | 피드를 숨기거나 지우지 않은 이유 — 프로필에 있는 피드 · 프로필을 얻지 못함(source-R54) |
 
 ### UnknownSourceException · UnknownFeedException
 
@@ -315,7 +372,7 @@ public final class UnknownSourceException extends RuntimeException { public Sour
 public final class UnknownFeedException extends RuntimeException { public FeedId id(); }
 ```
 
-없는 소스 · 피드를 가리켰다 — 문구는 "없는 소스: {ID}" · "없는 피드: {ID}" 다.
+없는 소스 · 피드를 가리켰다 — 문구는 "없는 소스: {ID}" · "없는 피드: {ID}" 다. 숨긴 대상도 운영 연산에서는 없는 대상이다(source-R53).
 
 관련 규칙: source-R52.
 
@@ -326,8 +383,9 @@ public final class UnknownFeedException extends RuntimeException { public FeedId
 | 패키지 | 책임 |
 |---|---|
 | `adapter/in/job` | 반복 작업과 피드 수집 작업 — 작업 서버(JobRunr)가 부른다. 작업 역할에서만 켜진다([platform-R9](platform.md#역할)) |
-| `application` | 유스케이스(등록 · 운영 설정 · 점유 · 수집 한 회차 · 기동 대조 · 피드 건강 검사)와 트랜잭션 경계 |
-| `domain/registry` | 소스 · 피드 aggregate 와 그 저장소, 소스의 프로필 얻기, 켜기 · 수집 가능 판정, 운영자 원문 수정의 판정, 운영 목록 조회 포트 |
+| `application` | 유스케이스(등록 · 운영 설정 · 숨김 · 삭제 · 점유 · 수집 한 회차 · 기동 대조 · 피드 건강 검사)와 트랜잭션 경계 |
+| `domain/registry` | 소스 · 피드 aggregate 와 그 저장소, 소스의 프로필 얻기, 켜기 · 수집 가능 판정, 운영자 원문 수정의 판정, 피드 숨김 · 삭제의 대상 판정, 운영 목록 조회 포트 |
+| `domain/attribution` | 출처 이름 기록의 저장소 |
 | `domain/profile` | 수집 프로필 모델과 그 바인딩 · 검증, 프리셋 카탈로그, 실제 주기, 피드 읽기 설정 |
 | `domain/profile/text` | 프로필 원문을 YAML 이벤트로 읽어 트리로 옮긴다 |
 | `domain/poll` | 피드의 수집 상태와 그 전이, 수집 일정 산식, 새 항목 비교, 피드 상태 판정, 수집 상태 · 피드 상태 · 요청 예약 저장소 |
@@ -335,11 +393,11 @@ public final class UnknownFeedException extends RuntimeException { public FeedId
 | `domain/feed` | 정규화 — 문자 인코딩 · 사전 보정 · XML 읽기 · 형식 판별 · 필드 보정 |
 | `domain/gate` | 활성화 관문의 미리보기 — 지표 · 활성화 기준 · 피드 켜기 판정 순서 |
 | `adapter/out/rss` | 포트 `ArticleSource` 의 v1 구현(Apache HttpClient) |
-| `adapter/out/persistence` | 수집 상태 · 피드 상태 · 요청 예약 저장소와 운영 목록 조회의 JdbcClient 구현 |
+| `adapter/out/persistence` | 수집 상태 · 피드 상태 · 요청 예약 · 출처 이름 저장소와 운영 목록 조회의 JdbcClient 구현 |
 
 협력:
 
-- **등록 · 운영 설정** — `SourceRegistration` · `SourceOperations` 가 `ProfileResolver` 로 소스의 프로필을 얻어(프리셋은 `PresetCatalog`, 운영자 원문은 `ProfileParser`) 판정하고, `SourceRepository` · `FeedRepository` 로 쓴다. 피드 행과 수집 상태 행은 `FeedProvisioner` 가 함께 만든다. 피드 켜기는 `FeedGate`(`domain/gate`)의 판정 사이에 `SourceFetchSlots` 로 요청 시작 시각을 예약하고 포트 `ArticleSource` 로 피드를 받는다. 등록 전 원문의 미리보기는 `ProfilePreviewer` 가 같은 판정으로 한다. 운영자 원문 수정은 `SourceRegistration` 이 `ProfileRevision` 으로 판정한다. 공개 API 의 구현 `SourceAdministrationService` 가 이 유스케이스들과 운영 목록(`SourceCatalog` — `SourceListingRepository` · `ProfileResolver` · `PresetCatalog`)에 맡기고 결과를 공개 타입으로 옮긴다
+- **등록 · 운영 설정** — `SourceRegistration` · `SourceOperations` 가 `ProfileResolver` 로 소스의 프로필을 얻어(프리셋은 `PresetCatalog`, 운영자 원문은 `ProfileParser`) 판정하고, `SourceRepository` · `FeedRepository` 로 쓴다. 피드 행과 수집 상태 행은 `FeedProvisioner` 가 함께 만든다. 피드 켜기는 `FeedGate`(`domain/gate`)의 판정 사이에 `SourceFetchSlots` 로 요청 시작 시각을 예약하고 포트 `ArticleSource` 로 피드를 받는다. 등록 전 원문의 미리보기는 `ProfilePreviewer` 가 같은 판정으로 한다. 운영자 원문 수정은 `SourceRegistration` 이 `ProfileRevision` 으로 판정한다. 숨김 · 삭제는 `SourceRemoval` 이 `FeedRemovalRule` 로 피드 대상을 판정하고 소스 · 피드 · 수집 상태 · 요청 예약 · 출처 이름 저장소로 쓴다. 등록 · 원문 수정 · 기동 대조는 `SourceAttributionRepository` 에 출처 이름을 기록한다. 공개 API 의 구현 `SourceAdministrationService` 가 이 유스케이스들과 운영 목록(`SourceCatalog` — `SourceListingRepository` · `ProfileResolver` · `PresetCatalog` · `SourceAttributionRepository`)에 맡기고 결과를 공개 타입으로 옮긴다. 공개 조회 `SourceDirectory` 의 구현 `SourceDirectoryService` 는 `FeedRepository` 로 묻는다
 - **수집** — `PollScheduler` 가 `FeedPollStateRepository` 로 대상을 잠그고 `FeedPollState` 의 전이로 점유를 기록한다. `FeedPoller` 가 `SourceFetchSlots`(`SourceFetchSlotRepository` · `PollSchedule`)로 요청 시작 시각을 예약하고, 포트 `ArticleSource` 로 받은 결과를 `FeedPollState` 에 반영해 `ArticleFetched` 를 발행한다. `ArticleSource` 의 구현 `RssArticleSource` 는 요청 규칙(`domain/fetch`)으로 요청하고 `FeedNormalizer`(`domain/feed`)로 정규화한다
 - **피드 상태** — `FeedHealthCheck` 가 `FeedStatusRepository` 로 켜진 피드의 행을 잠그고, `FeedStatusRule` 로 다시 판정해 바뀐 행만 쓴다
 
@@ -372,13 +430,19 @@ sequenceDiagram
     opt 점유가 없음
         Poller-->>Job: 아무것도 하지 않음
     end
+    opt 그사이 소스가 지워짐
+        Poller-->>Job: 아무것도 하지 않음 (source-R56)
+    end
     opt 프로필이나 그 피드를 얻지 못함
         Poller->>DB: 트랜잭션 — 1시간 뒤로 미룸 (source-R19)
         Poller-->>Job: 이번에 수집하지 않음 (source-R19)
     end
     Poller->>Poller: 예약 시각까지 대기 (source-R18)
     Note over Poller,DB: 트랜잭션 — 요청 시작 시각 예약
-    Poller->>DB: 소스의 다음 요청 가능 시각 잠금 · 갱신 (source-R18)
+    Poller->>DB: 소스 행 공유 잠금 → 다음 요청 가능 시각 잠금 · 갱신 (source-R18)
+    opt 그사이 소스가 지워짐
+        Poller-->>Job: 이번에 수집하지 않음 (source-R56)
+    end
     opt 시작 + 수집 마감이 점유 만료보다 이르지 않음
         Poller-->>Job: 이번에 수집하지 않음 (source-R18)
     end
@@ -400,7 +464,7 @@ sequenceDiagram
 |---|---|---|---|
 | 수집할 피드 등록 — 반복 작업 ID `poll-due-feeds` | `PollDueFeedsJob` | 1분마다 | 대상 피드를 점유하고 점유 토큰을 작업 ID 로 피드마다 수집 작업을 예약 시각에 등록한다(source-R15 · source-R18 · source-R19). 재시도하지 않는다 — 실패한 회차가 재시도를 기다리는 동안 작업 서버가 다음 회차를 건너뛰므로 다음 회차가 곧 재시도다. 같은 점유를 두 번 등록해도 작업 ID 가 같아 작업은 하나다 |
 | 피드 수집(피드 ID, 점유 토큰) — 작업 ID 는 점유 토큰 | `PollFeedJob` → `FeedPoller` | 위에서 등록 | 점유 확인 → 예약 시각까지 대기 → 같은 소스의 요청 시작 시각 예약 · 대기 → 트랜잭션 밖에서 요청 · 정규화 → 한 트랜잭션에서 수집 상태 반영과 새 항목마다 `ArticleFetched` 발행(source-R16 ~ source-R21). 재시도하지 않는다 |
-| 기동 대조 | `PresetFeedReconciliation`(`application`) | 작업 역할의 애플리케이션 준비 완료(`ApplicationReadyEvent`) | 소스마다 프로필과 저장된 피드를 대조한다(source-R8) |
+| 기동 대조 | `PresetFeedReconciliation`(`application`) | 작업 역할의 애플리케이션 준비 완료(`ApplicationReadyEvent`) | 숨긴 소스를 포함해 소스마다 프로필과 저장된 피드를 대조하고 출처 이름을 기록한다(source-R8 · source-R57) |
 | 피드 건강 검사 — 반복 작업 ID `feed-health-check` | `FeedHealthCheckJob` → `FeedHealthCheck` | 1시간마다 | 켜진 피드의 상태를 다시 판정해 바뀐 행만 쓰고, 커밋 뒤 전이를 로그한다(source-R30 · source-R31 · source-R47 ~ source-R49). 같은 입력이면 같은 판정이라 다시 실행해도 결과가 같다. 한 회차가 대상 행을 잠그므로 겹친 회차는 기다린다(source-R48). 재시도하지 않는다 — 다음 회차가 다시 판정한다 |
 
 수집 작업이 동시에 몇 개 도는지는 작업 서버의 동시 실행 수가 정한다([운영 설정 — 백그라운드 작업](../operations/configuration.md#백그라운드-작업)). 수집 작업은 기다리는 동안 DB 연결을 잡지 않는다. 컨트롤러는 없다 — 운영 기능은 공개 API `SourceAdministration`(§3)으로 들어온다.
@@ -411,14 +475,21 @@ sequenceDiagram
 
 - `PollScheduler` — 지금 수집할 피드를 점유한다. 대상 잠금 · 점유 기록을 한 트랜잭션에서 하고, 수집 작업 등록은 커밋 뒤 호출자(`PollDueFeedsJob`)가 한다 — 작업 저장소는 그 트랜잭션에 참여하지 않는다(source-R15 · source-R19)
 - `FeedPoller` — 점유한 피드를 한 번 수집한다. 요청 시작 시각 예약과 결과 반영 · 발행을 각각 한 트랜잭션에서 하고, 피드 요청은 트랜잭션 밖에서 한다. 프로필을 얻지 못한 갈래는 미룸만 한 트랜잭션에서 쓴다(source-R16 ~ source-R19)
-- `SourceFetchSlots` — 같은 소스의 요청 시작 시각을 한 트랜잭션에서 예약하고(행을 잠근 뒤 지금 시각을 읽는다) 그 시각까지 기다린다. 수집 작업과 피드 켜기가 쓴다(source-R18)
-- `SourceRegistration` — 소스를 등록하고 운영자 원문을 고친다. 등록은 소스 행과 프로필의 피드마다 꺼진 피드 행 · 수집 상태 행을 한 트랜잭션에서 만든다(source-R1 ~ source-R3). 원문 수정은 원문 교체 · 소스 · 피드 끄기 · 새 피드 더하기 · 그 소스의 피드 행 전부 저장을 한 트랜잭션에서 한다(source-R50)
-- `SourceOperations` — 소스 · 피드를 켜고 끄고 수집 주기를 바꾼다. 피드 켜기 밖의 연산은 한 트랜잭션이다. 피드 켜기는 읽고 판정하는 트랜잭션 → 요청 시작 시각 예약 트랜잭션 → 트랜잭션 밖에서 대기 · 요청 → 다시 읽고 판정 · 저장하는 트랜잭션으로 나뉘므로 호출자의 트랜잭션 밖에서 부른다. 대기가 중단되면 예외로 끝나고 예약만 남는다. 켜기는 지금의 프로필로 판정하고, 거절하면 저장하는 것은 피드를 받으려 잡은 요청 시작 시각 예약뿐이다(source-R4 · source-R5 · source-R9 · source-R14 · source-R18)
+- `SourceFetchSlots` — 같은 소스의 요청 시작 시각을 한 트랜잭션에서 예약하고(행을 잠근 뒤 지금 시각을 읽는다) 그 시각까지 기다린다. 소스가 그사이 지워졌으면 예약하지 않고 빈 결과다. 수집 작업과 피드 켜기가 쓴다(source-R18 · source-R56)
+
+  ```java
+  Optional<FetchSlot> reserve(SourceId source, InstantSource clock)   // 소스가 지워졌으면 비어 있다
+  ```
+
+- `SourceRegistration` — 소스를 등록하고 운영자 원문을 고친다. 등록은 소스 행과 프로필의 피드마다 꺼진 피드 행 · 수집 상태 행을 만들고 출처 이름을 기록하는 일을 한 트랜잭션에서 한다(source-R1 ~ source-R3 · source-R57). 원문 수정은 원문 교체 · 소스 · 피드 끄기 · 새 피드 더하기 · 다시 생긴 숨긴 피드 다시 보이기 · 그 소스의 피드 행 전부 저장 · 출처 이름 기록을 한 트랜잭션에서 한다(source-R50 · source-R53 · source-R57)
+- `SourceOperations` — 소스 · 피드를 켜고 끄고 수집 주기를 바꾼다. 숨긴 소스 · 숨긴 피드 · 숨긴 소스의 피드는 없는 대상이다(source-R53). 피드 켜기 밖의 연산은 한 트랜잭션이다. 피드 켜기는 읽고 판정하는 트랜잭션 → 요청 시작 시각 예약 트랜잭션 → 트랜잭션 밖에서 대기 · 요청 → 다시 읽고 판정 · 저장하는 트랜잭션으로 나뉘므로 호출자의 트랜잭션 밖에서 부른다. 예약하는 사이 소스가 지워졌으면 없는 피드로 끝난다(source-R56). 대기가 중단되면 예외로 끝나고 예약만 남는다. 켜기는 지금의 프로필로 판정하고, 거절하면 저장하는 것은 피드를 받으려 잡은 요청 시작 시각 예약뿐이다(source-R4 · source-R5 · source-R9 · source-R14 · source-R18)
+- `SourceRemoval` — 소스 · 피드를 숨기고 다시 보이고 지운다. 연산마다 한 트랜잭션이고, 운영자의 동작은 커밋 뒤 경고 로그로 남긴다. 삭제는 소스 행을 배타 잠금한 뒤 자식 행부터 지우고 같은 트랜잭션에서 `SourceDeleted` · `FeedDeleted` 를 발행한다(source-R53 ~ source-R55)
+- `SourceDirectoryService` — 공개 조회 `SourceDirectory` 의 구현. 트랜잭션을 열지 않는다(source-R55)
 - `ProfilePreviewer` — 등록 전 운영자 프로필 원문의 피드 하나를 미리본다. DB 를 쓰지 않고 요청 시작 시각을 예약하지 않는다(source-R9)
 - `SourceAdministrationService` — 공개 API `SourceAdministration` 의 구현. 유스케이스 · `SourceCatalog` 에 맡기고 결과를 공개 타입으로 옮긴다. 트랜잭션을 열지 않는다 — 피드 켜기 · 원문 미리보기는 트랜잭션 밖에서 받는다(source-R51 · source-R52)
-- `SourceCatalog` — 운영 목록. 읽기 전용 트랜잭션 하나에서 소스 · 피드 행과 피드의 수집 상태 행을 읽고, 소스마다 지금의 프로필을 얻어 상태 · 실제 주기를 정한다. 수집 상태 행이 없는 피드는 목록을 실패시킨다(source-R51)
+- `SourceCatalog` — 운영 목록. 읽기 전용 트랜잭션 하나에서 소스 · 피드 행과 피드의 수집 상태 행 · 출처 이름을 읽고, 소스마다 지금의 프로필을 얻어 상태 · 실제 주기를 정한다. 숨긴 소스와 숨기지 않은 소스, 숨긴 피드와 숨기지 않은 피드를 가른다. 수집 상태 행이 없는 피드는 목록을 실패시킨다(source-R51 · source-R53 · source-R57)
 - `FeedProvisioner` — 피드 행과 그 수집 상태 행을 함께 만든다. 이미 있으면 아무것도 하지 않는다 — 등록 · 원문 수정 · 기동 대조가 호출자의 트랜잭션 안에서 쓴다(source-R3 · source-R8)
-- `PresetFeedReconciliation` — 기동 대조(들어오는 쪽). 프로필을 얻은 소스마다 한 트랜잭션에서 프로필에 새로 생긴 피드를 더한다. 프로필을 얻지 못한 소스는 경고 로그만 남긴다(source-R8)
+- `PresetFeedReconciliation` — 기동 대조(들어오는 쪽). 숨긴 소스를 포함해 프로필을 얻은 소스마다 한 트랜잭션에서 소스 행을 공유 잠금한 뒤 출처 이름을 기록하고, 프로필에 새로 생긴 피드를 더하고, 다시 생긴 숨긴 피드를 다시 보인다. 프로필을 얻지 못한 소스는 경고 로그만 남긴다(숨긴 소스면 debug). 한 소스의 대조가 지워진 소스 · 동시 수정을 만나면 그 소스만 건너뛴다(source-R8 · source-R53 · source-R56 · source-R57)
 - `FeedHealthCheck` — 피드 건강 검사(들어오는 쪽). 대상 행 잠금 · 판정 · 바뀐 행 쓰기를 한 트랜잭션에서 하고, 전이 로그는 커밋 뒤에 남긴다(source-R30 · source-R31 · source-R47 ~ source-R49)
 
   ```java
@@ -433,14 +504,33 @@ sequenceDiagram
 
 #### `domain/registry`
 
-- `Source` · `Feed` — aggregate(Spring Data JDBC). 운영 설정(켜짐 · 수집 주기)만 둔다 — 이름 · URL · 섹션은 수집 프로필에, 수집 상태는 다른 행(`feed_poll_states`)에 있다(source-R1 · source-R7)
-- `SourceRepository` · `FeedRepository` — 두 aggregate 의 저장소. 피드 행은 "없으면 넣기"로만 만든다(source-R2 · source-R3)
+- `Source` · `Feed` — aggregate(Spring Data JDBC). 운영 설정(켜짐 · 수집 주기 · 숨긴 시각)만 둔다 — 이름 · URL · 섹션은 수집 프로필에, 수집 상태는 다른 행(`feed_poll_states`)에 있다. `hide` 는 끄고 숨긴 시각을 남기고(이미 숨겼으면 처음 시각), `unhide` 는 숨긴 시각만 지운다 — 꺼진 채 돌아온다(source-R1 · source-R7 · source-R53)
+- `SourceRepository` · `FeedRepository` — 두 aggregate 의 저장소. 피드 행은 "없으면 넣기"로만 만든다(source-R2 · source-R3). 소스 행의 잠금 둘은 삭제와 그 밖의 쓰기를 줄 세운다(source-R55 · source-R56)
+
+  ```java
+  Optional<Long> lockForUpdate(long id);    // 배타 잠금 — 삭제가 쓴다. 소스가 없으면 비어 있다
+  Optional<Long> lockForKeyShare(long id);  // 공유 잠금 — 요청 예약 · 기동 대조가 쓴다. 운영 변경과는 기다리지 않고 삭제와만 줄을 선다
+  ```
+
 - `ProfileResolver` — 소스의 수집 프로필을 얻는다 — 프리셋은 카탈로그에서, 운영자 프로필은 저장된 원문을 검증해서. 저장된 소스와 운영 목록의 행이 같은 판정을 쓴다. 가리킬 곳을 잃었는지는 저장하지 않고 부를 때마다 판정한다(source-R1 · source-R8)
 - `ProfileRevision` — 운영자 원문 수정의 판정 — 켜진 피드 · 소스가 켜진 채 남는가(source-R50)
 - `SourceListingRepository` — 운영 목록의 조회 포트 — 소스 · 피드의 운영 설정 행과 피드의 수집 상태 행(판정 입력 · 저장된 피드 상태 · 바뀐 시각)을 읽기만 한다(source-R51)
 - `PollTarget` — 피드를 지금 수집할 수 있는가 — 프로필을 얻었고 그 프로필에 피드가 있는가(source-R5 · source-R19)
-- `FeedReconciliation` — 프로필의 피드와 저장된 피드 행을 견준 결과(source-R8)
+- `FeedReconciliation` — 프로필의 피드와 저장된 피드 행을 견준 결과 — 행이 없는 피드, 숨기지 않은 행 가운데 프로필에 없는 피드, 숨긴 행 가운데 프로필에 다시 생긴 피드(source-R8 · source-R53)
+- `FeedRemovalRule` — 피드 숨김 · 삭제의 대상 판정 — 프로필을 얻었고 그 프로필에 없는 피드만(source-R54)
 - 그 밖의 값: `Activation` · `ProfileResolution`. 켜지 않은 이유 `ActivationRefusal` 은 공개 열거다(§3)
+
+#### `domain/attribution`
+
+- `SourceAttributionRepository` — 출처 이름 기록의 저장소(source-R57)
+
+  ```java
+  public interface SourceAttributionRepository {
+      void record(SourceId source, String name, Instant at);   // 기록된 이름과 같으면 아무것도 바꾸지 않는다
+      Map<SourceId, String> findAll();                         // 기록이 없는 소스는 빠진다
+      void delete(SourceId source);                            // 소스 삭제가 소스 행보다 먼저 부른다
+  }
+  ```
 
 #### `domain/profile`
 
@@ -476,7 +566,18 @@ sequenceDiagram
   }
   ```
 
-- `SourceFetchSlotRepository` — 소스마다 다음 요청 가능 시각의 저장소. 요청 직전에 그 행을 잠근다(source-R18)
+- `SourceFetchSlotRepository` — 소스마다 다음 요청 가능 시각의 저장소. 요청 직전에 소스 행을 공유 잠금한 뒤 그 행을 잠근다(source-R18 · source-R56)
+
+  ```java
+  public interface SourceFetchSlotRepository {
+      SlotLock lockNextFetchAt(SourceId source);   // 소스가 없으면 SourceGone — 예약 행을 만들지 않는다
+      void saveNextFetchAt(SourceId source, Instant next);
+      void deleteBySource(SourceId source);        // 소스 삭제가 소스 행보다 먼저 부른다
+  }
+  public sealed interface SlotLock { record Locked(@Nullable Instant nextFetchAt); record SourceGone(); }
+  ```
+
+- `FeedPollStateRepository` 의 삭제 — 지울 피드의 수집 상태 행을 피드 ID 순으로 잠그고(`lockForRemoval` — 피드 건강 검사와 같은 순서) 지운다(`delete`)(source-R55)
 - 그 밖의 값: `Lease` · `LastError` · `PollOutcome` · `FeedPollContext` · `FeedStatusTarget`(판정할 피드 — 수집 상태와 저장된 피드 상태). 피드 상태 `FeedStatus` 는 공개 열거다(§3)
 
 #### `domain/fetch`
@@ -551,6 +652,7 @@ public sealed interface FetchResult {
 #### 저장소 구현
 
 - `JdbcFeedPollStateRepository` · `JdbcFeedStatusRepository` · `JdbcSourceFetchSlotRepository` — 수집 상태 · 피드 상태 · 요청 예약 저장소의 JdbcClient 구현. 쓰기 조건이 점유 토큰 · 행 잠금이라 aggregate 저장 대신 SQL 로 쓴다. 피드 상태 저장소는 수집 상태의 열 목록 · 행 읽기를 함께 쓴다
+- `JdbcSourceAttributionRepository` — 출처 이름 저장소의 JdbcClient 구현. 기록은 이름이 다를 때만 쓰는 upsert 다(source-R57)
 - `JdbcSourceListingRepository` — 운영 목록 조회 포트의 JdbcClient 구현. 수집 상태 행은 left join 으로 읽고 열 목록 · 행 읽기는 수집 상태 저장소의 것을 쓴다(source-R51)
 - `SourceRepository` · `FeedRepository` 는 Spring Data JDBC 가 구현한다
 
@@ -571,13 +673,13 @@ public sealed interface FetchResult {
 ### 등록과 켜기
 
 - **source-R1** — v1 은 운영자만 소스를 등록한다. 소스는 프리셋을 참조하거나 운영자 프로필 원문을 갖는다. 둘 중 정확히 하나다. 프리셋을 참조하면 프로필을 DB 에 복사하지 않는다 — 프리셋은 저장소 파일이 정본이다. 운영자 프로필 원문은 주석까지 그대로 저장하고, 읽을 때마다 지금의 검증기로 검증한다
-- **source-R2** — 같은 프리셋을 두 소스가 참조하지 않는다. 두 번째 등록은 "이미 등록된 프리셋"으로 거절한다. 카탈로그에 없는 프리셋 키, 검증을 통과하지 못한 운영자 원문도 등록하지 않는다
+- **source-R2** — 같은 프리셋을 두 소스가 참조하지 않는다. 두 번째 등록은 "이미 등록된 프리셋"으로 거절한다 — 숨긴 소스가 참조하는 프리셋도 같고, 운영자는 그 소스를 다시 보여 되돌린다(source-R53). 지운 소스의 프리셋은 다시 등록할 수 있고 새 소스가 된다(source-R55). 카탈로그에 없는 프리셋 키, 검증을 통과하지 못한 운영자 원문도 등록하지 않는다
 - **source-R3** — 소스를 등록하면 한 트랜잭션에서 소스와, 프로필의 피드마다 꺼진 피드와 그 수집 상태를 만든다. 소스도 꺼진 채다. 피드 · 수집 상태를 만드는 일은 이미 있으면 아무것도 하지 않는다 — 여러 인스턴스가 함께 해도 피드 하나에 행 하나다
 - **source-R4** — 소스는 그 프로필을 얻었고 프로필에 이용조건 검토일이 있어야 켜진다. 거절 이유는 프로필을 얻지 못함(프리셋이 사라졌거나 운영자 원문이 검증에 걸림) · 검토일 없음이고, 거절하면 아무것도 바꾸지 않는다
 - **source-R5** — 피드는 그 소스의 프로필을 얻었고 프로필에 그 피드가 있어야 켜진다. 꺼진 피드는 여기에 더해 미리보기가 활성화 기준을 넘어야 켜진다(source-R9). 거절 이유는 프로필을 얻지 못함 · 프로필에 피드가 없음 · 피드를 받지 못함 · 기준에 못 미침 · 미리본 뒤 그 피드의 읽기 설정이 바뀜이고, 거절하면 바뀌는 것은 피드를 받으려 잡은 요청 시작 시각 예약(source-R18)뿐이다. 이미 켜진 피드를 켜면 받지 않고 켜진 결과다. 이용조건 검토일은 소스를 켤 때만 본다 — 켜진 소스의 원문에서 검토일이 사라지는 수정은 source-R50 이 다룬다
 - **source-R6** — 수집 대상은 소스와 피드가 모두 켜졌고 다음 수집 시각이 지난 피드다
-- **source-R7** — 피드는 지우지 않는다 — 받은 기사의 기록이 피드 ID 를 가리킨다. 프로필에서 빠진 피드도 남는다. 피드 식별자 · 프리셋 키는 저장된 뒤 바꾸지 않는다
-- **source-R8** — 기동 때 소스마다 지금의 프로필과 저장된 피드를 대조한다. 프로필에 새로 생긴 피드는 꺼진 피드로 더하고(source-R3 과 같은 경로), 사라진 프리셋 · 검증에 걸린 운영자 원문 · 프로필에서 빠진 피드는 경고 로그로 알린다. 피드는 지우지도 끄지도 않는다 — 켜고 끄는 것은 운영자의 선택이다. 가리킬 곳을 잃었는지는 저장하지 않고 그때의 프리셋 파일 · 검증기로 판정한다. 여러 인스턴스가 함께 해도 결과가 같다
+- **source-R7** — 소스 · 피드 행은 운영자의 삭제(source-R55)로만 지운다 — 받은 기사의 기록이 소스 · 피드 ID 를 가리키므로, 지울 때 그 기록도 `article` 이 지운다. 프로필에서 빠진 피드도 남는다(운영자가 숨기거나 지울 수 있다 — source-R54). 피드 식별자 · 프리셋 키는 저장된 뒤 바꾸지 않는다
+- **source-R8** — 기동 때 숨긴 소스를 포함해 소스마다 지금의 프로필과 저장된 피드를 대조한다. 프로필에 새로 생긴 피드는 꺼진 피드로 더하고(source-R3 과 같은 경로), 숨긴 피드가 프로필에 다시 생겼으면 다시 보인다(꺼진 채 — source-R53). 사라진 프리셋 · 검증에 걸린 운영자 원문 · 프로필에서 빠진 숨기지 않은 피드는 경고 로그로 알린다 — 숨긴 소스면 debug 로 낮춘다. 피드는 지우지도 끄지도 않는다 — 켜고 끄는 것은 운영자의 선택이다. 가리킬 곳을 잃었는지는 저장하지 않고 그때의 프리셋 파일 · 검증기로 판정한다. 소스마다 한 트랜잭션이고 소스 행을 공유 잠금한 뒤 한다 — 그사이 지워진 소스는 건너뛰고(source-R56), 다시 보이기가 다른 쪽의 저장과 겹쳐 동시 수정에 걸리면 그 소스를 경고와 함께 건너뛰고 다음 소스를 대조한다(다음 기동이 다시 대조한다). 출처 이름도 기록한다(source-R57). 여러 인스턴스가 함께 해도 결과가 같다
 - **source-R9** — 활성화 관문의 미리보기: 꺼진 피드를 켤 때 그 피드를 한 번 받아 미리보기를 만들고, 활성화 기준에 못 미치면 켜지 않는다. 소스 켜기는 미리보지 않는다
   - 요청은 피드 요청 관문(`ArticleSource` — §4)으로 조건부 요청 값 없이 보내고, 같은 소스의 요청 시작 시각 예약(source-R18)을 지킨다. 켜기는 그 소스에 앞서 잡힌 예약 하나당 최대 10초를 더 기다리고, 요청은 수집 마감(10초) 안에 끝난다
   - 받지 못하면(304 포함 — 조건 없는 요청의 304 는 예상 밖 상태다) 그 수집 실패를 거절 이유로 돌려준다
@@ -589,15 +691,16 @@ public sealed interface FetchResult {
   - 저장 직전에 프로필을 다시 얻어 설정 판정(source-R5)을 다시 하고, 그 피드의 읽기 설정(§2 — URL 포함)이 미리본 것과 다르면 켜지 않는다
   - 등록 전 운영자 프로필 원문과 피드 식별자로도 같은 판정의 미리보기를 한다. DB 를 쓰지 않고, 소스 행이 없어 요청 시작 시각을 예약하지 않는다. 원문이 검증에 걸리거나 피드 식별자가 없으면 받지 않는다
 - **source-R50** — 운영자 원문 수정: 운영자 프로필 소스의 원문을 새 원문으로 바꾼다. 한 트랜잭션이다.
-  - 없는 소스면 원문을 보기 전에 실패한다(source-R52). 프리셋 소스는 원문이 없어 고치지 않는다
+  - 없는 소스 · 숨긴 소스면 원문을 보기 전에 실패한다(source-R52 · source-R53). 프리셋 소스는 원문이 없어 고치지 않는다
   - 새 원문이 검증(source-R10 · source-R11 · source-R32)에 걸리면 아무것도 바꾸지 않고 문제를 돌려준다
   - 켜진 피드는 옛 원문(교체 전 원문으로 얻은 프로필)과 새 원문 모두에 있고 두 읽기 설정(§2)이 같을 때만 켜진 채 남고, 아니면 끈다 — 원문에서 빠진 피드, 옛 원문이 검증에 걸렸던 소스의 피드도 끈다. 꺼진 피드는 그대로 둔다
   - 켜진 소스는 새 원문에 이용조건 검토일이 없으면 끈다(source-R4)
-  - 새 원문에 새로 생긴 피드는 꺼진 피드와 그 수집 상태로 더한다(source-R3 과 같은 경로). 피드 행은 지우지 않는다(source-R7)
+  - 새 원문에 새로 생긴 피드는 꺼진 피드와 그 수집 상태로 더한다(source-R3 과 같은 경로). 숨긴 피드가 새 원문에 다시 생겼으면 다시 보인다(꺼진 채 — source-R53). 피드 행은 지우지 않는다(source-R7)
+  - 새 원문의 소스 이름을 출처 이름으로 기록한다(source-R57)
   - 그 소스의 피드 행은 바뀌지 않았어도 모두 저장한다 — 피드 켜기의 저장 직전 판정(source-R9)과 겹치면 늦은 쪽이 동시 수정으로 실패한다
   - 결과는 끈 피드의 식별자(피드 ID 순) · 소스를 껐는지 · 더한 피드의 식별자(원문 순)다
-- **source-R51** — 운영 목록: 프리셋은 키 순이고, 그 프리셋을 참조하는 소스가 있으면 그 소스 ID 를 함께 낸다. 소스는 소스 ID 순, 피드는 피드 ID 순이다. 소스마다 지금의 프로필을 얻어(source-R8) 얻었는지 · 사라진 프리셋인지 · 검증에 걸린 원문인지를 내고, 얻지 못하면 이름 · 홈페이지 · 검토일을 비운다. 피드마다 프로필에 있는지를 내고, 있으면 URL · 섹션 · 실제 주기(source-R14)를, 없으면 셋을 비운다. 피드마다 수집 상태를 낸다 — 저장된 피드 상태와 바뀐 시각(source-R47), 마지막 성공, 연속 실패 수와 그 가운데 영구 실패 수(source-R30), 마지막 실패와 그 분류(source-R24 · source-R26), 새 항목이 있던 마지막 수집 시각과 새 항목의 가장 늦은 발행 시각(source-R31). 수집 상태 행이 없는 피드는 등록 · 기동 대조의 불변식(source-R3)이 깨진 것이라 목록을 실패시킨다. 행은 읽기 전용 트랜잭션 하나에서 읽는다
-- **source-R52** — 공개 운영 API 의 대상과 입력: 없는 소스 · 피드는 `UnknownSourceException` · `UnknownFeedException` 이다. 형식이 틀린 프리셋 키는 카탈로그에 없는 프리셋, 형식이 틀린 피드 식별자는 원문에 없는 피드로 답한다. 같은 소스 · 피드를 다른 요청이 먼저 바꿨으면 동시 수정 실패(`OptimisticLockingFailureException`)다. 수집 주기의 하한보다 짧은 운영자 설정은 바꾸지 않고 거짓으로 답한다(source-R14)
+- **source-R51** — 운영 목록: 프리셋은 키 순이고, 그 프리셋을 참조하는 소스(숨긴 소스 포함)가 있으면 그 소스 ID 와 그 소스를 숨겼는지를 함께 낸다. 소스 목록은 숨기지 않은 소스를 소스 ID 순으로, 숨긴 소스 목록은 숨긴 시각 순(같으면 소스 ID 순)으로 낸다. 소스마다 숨기지 않은 피드와 숨긴 피드를 나눠 각각 피드 ID 순으로 낸다. 소스마다 지금의 프로필을 얻어(source-R8) 얻었는지 · 사라진 프리셋인지 · 검증에 걸린 원문인지를 내고, 얻지 못하면 홈페이지 · 검토일을 비우고 이름은 기록된 출처 이름(source-R57 — 기록이 없으면 비운다)으로 낸다. 피드마다 프로필에 있는지를 내고, 있으면 URL · 섹션 · 실제 주기(source-R14)를, 없으면 셋을 비운다. 피드마다 수집 상태를 낸다 — 저장된 피드 상태와 바뀐 시각(source-R47), 마지막 성공, 연속 실패 수와 그 가운데 영구 실패 수(source-R30), 마지막 실패와 그 분류(source-R24 · source-R26), 새 항목이 있던 마지막 수집 시각과 새 항목의 가장 늦은 발행 시각(source-R31). 수집 상태 행이 없는 피드는 등록 · 기동 대조의 불변식(source-R3)이 깨진 것이라 목록을 실패시킨다. 행은 읽기 전용 트랜잭션 하나에서 읽는다
+- **source-R52** — 공개 운영 API 의 대상과 입력: 없는 소스 · 피드는 `UnknownSourceException` · `UnknownFeedException` 이다 — 숨긴 소스 · 숨긴 피드 · 숨긴 소스의 피드도 숨김 · 다시 보이기 · 삭제 밖의 연산에서는 같다(source-R53). 형식이 틀린 프리셋 키는 카탈로그에 없는 프리셋, 형식이 틀린 피드 식별자는 원문에 없는 피드로 답한다. 같은 소스 · 피드를 다른 요청이 먼저 바꿨으면 동시 수정 실패(`OptimisticLockingFailureException`)다 — 삭제는 버전 조건이 없어 이 실패가 없고, 먼저 지운 대상을 다시 지우면 없는 대상이다. 수집 주기의 하한보다 짧은 운영자 설정은 바꾸지 않고 거짓으로 답한다(source-R14)
 
 ### 수집 프로필
 
@@ -628,7 +731,7 @@ public sealed interface FetchResult {
 
 - **source-R14** — 실제 주기는 운영자 피드 설정 → 운영자 소스 설정 → 프로필 피드 값 → 프로필 소스 값 → 15분 순으로 처음 있는 값이다. 하한은 15분이고 프로필 권장값과 운영자 설정 모두에 적용한다 — 하한보다 짧은 운영자 설정(0 · 음수 포함)은 받지 않고 바꾸지 않는다
 - **source-R15** — 1분마다 한 트랜잭션에서 대상 피드를 다음 수집 시각 순으로 최대 100개 잠그고(다른 회차가 잠근 행은 건너뛴다), 피드마다 점유(토큰 · 예약 시각)를 기록해 커밋한다. 점유 중인 피드의 다음 수집 시각은 예약 시각 + 10분(점유 기간)이라, 점유가 풀리지 않아도 그 시각이 지나면 다시 대상이 된다. 만료된 점유는 새 점유로 덮어쓴다. 커밋한 뒤 점유 토큰을 작업 ID 로 수집 작업을 예약 시각에 등록한다 — 등록 전에 멈추면 점유만 남고 만료 뒤 다시 대상이 된다
-- **source-R16** — 수집 작업은 점유가 자기 것(토큰 일치)이고 소스 · 피드가 아직 켜져 있을 때만 받는다. 결과는 토큰이 그대로일 때만 반영하고, 그사이 점유를 잃었으면 반영도 발행도 하지 않는다. 작업은 재시도하지 않는다 — 점유 만료가 재시도다. 그래서 한 회차의 결과는 한 번 반영되고, 같은 작업을 다시 실행해도 결과가 같다
+- **source-R16** — 수집 작업은 점유가 자기 것(토큰 일치)이고 소스 · 피드가 아직 켜져 있을 때만 받는다(소스가 지워졌으면 source-R56). 결과는 토큰이 그대로일 때만 반영하고, 그사이 점유를 잃었으면 반영도 발행도 하지 않는다. 작업은 재시도하지 않는다 — 점유 만료가 재시도다. 그래서 한 회차의 결과는 한 번 반영되고, 같은 작업을 다시 실행해도 결과가 같다
 - **source-R17** — 피드 요청은 DB 트랜잭션 밖에서 하고, 결과 반영과 새 항목의 `ArticleFetched` 발행은 한 트랜잭션에서 한다
 - **source-R18** — 같은 소스의 요청 시작 사이는 수집 마감(10초) 이상 띄운다. 수집 작업과 피드 켜기의 미리보기(source-R9)가 같은 예약을 쓰고, 등록 전 원문의 미리보기는 소스 행이 없어 예약하지 않는다. 수집 작업은 예약 시각까지 기다린 뒤, 요청 직전에 그 소스의 다음 요청 가능 시각을 잠가 시작 시각(max(다음 요청 가능 시각, 지금))을 받고 다음 요청 가능 시각을 시작 + 10초로 옮긴다. 받은 시작 + 수집 마감이 점유 만료보다 이르지 않으면 이번에 수집하지 않는다(점유가 만료되면 다음 회차가 가져간다). 같은 소스의 피드끼리 작업 예약 시각도 10초씩 띄우지만, 작업 서버가 예약 작업을 poll 간격 단위로 묶어 시작하므로 간격의 보장은 요청 직전 예약이 한다. 이름 해석은 마감 밖이라, 해석이 길면 앞 요청이 끝나기 전에 다음 요청이 시작될 수 있다
 - **source-R19** — 프로필이나 그 안의 피드를 얻지 못한 피드는 수집하지 않는다. 대상을 고를 때 확인해 점유하지 않고, 수집 작업이 시작할 때 다시 확인해 점유를 푼다. 어느 쪽이든 다음 수집 시각을 1시간 뒤로 미루고 경고 로그를 남긴다. 점유 · 다음 수집 시각 밖의 수집 상태 값은 바꾸지 않는다
@@ -742,16 +845,46 @@ RSS 품질이 피드마다 크게 다르므로 사전 보정 → 파싱 → 필�
 - **source-R45** — 제목 · 요약문 · 기자명 · 카테고리는 HTML 로 보고 텍스트만 남긴다
 - **source-R46** — 문서를 읽지 못한 이유의 문구는 피드에서 이름(선언한 문자 인코딩 레이블 · DTD 선언 · 엔티티의 이름)만 인용한다
 
+### 숨김과 삭제
+
+숨김은 끄고 목록에서 빼되 남기고 되돌릴 수 있다. 삭제는 그 소스 · 피드만 가진 기사까지 지우고 되돌릴 수 없다. 운영자 화면은 두 기능의 차이를 확인 대화상자로 밝힌다([ADR-0051](../adr/0051-operator-hides-or-deletes-sources-and-feeds-and-deletion-removes-exclusive-articles.md)).
+
+- **source-R53** — 숨김: 소스를 숨기면 소스와 그 피드를 모두 끄고 숨긴 시각을 남긴다 — 한 트랜잭션이고, 소스 행 뒤에 피드를 읽어 먼저 커밋된 원문 수정이 더한 피드까지 끈다. 피드를 숨기면 그 피드를 끄고 숨긴 시각을 남긴다(대상은 source-R54).
+  - 행 · 운영자 원문 · 수집 상태 · 받은 기사는 그대로다. 숨긴 것을 자동으로 지우지 않는다
+  - 숨긴 소스 · 피드는 운영 목록에서 빠지고 숨긴 소스는 따로 낸다(source-R51). 숨김 · 다시 보이기 · 삭제 밖의 운영 연산(켜기 · 끄기 · 수집 주기 · 원문 조회 · 수정)에서는 없는 대상이다(source-R52). 숨긴 소스의 피드는 피드 단위로 숨기거나 다시 보이거나 지우지 않는다 — 소스 단위로 한다
+  - 다시 보이면 숨긴 시각만 지운다 — 소스 · 피드는 꺼진 채 돌아오고 운영자가 다시 켠다. 이미 숨긴 것을 숨기거나 숨기지 않은 것을 다시 보이면 아무것도 바꾸지 않는다
+  - 숨긴 소스가 참조하는 프리셋은 다시 등록하지 않는다(source-R2). 숨긴 피드가 원문 수정 · 기동 대조로 프로필에 다시 생기면 다시 보인다(꺼진 채 — source-R8 · source-R50)
+  - 겹친 운영 변경은 소스 · 피드 행의 버전이 가른다 — 늦은 쪽이 동시 수정 실패다(source-R52)
+  - 운영자의 숨기기 · 다시 보이기는 커밋 뒤 소스 ID · 프리셋 키(있으면) · 피드 ID 를 담은 경고 로그로 남긴다
+- **source-R54** — 피드 숨김 · 삭제의 대상은 프로필을 얻었고 그 프로필에 없는 피드다. 프로필에 있는 피드는 `IN_PROFILE` 로 거절한다 — 숨기거나 지워도 원문 수정 · 기동 대조가 다시 더한다. 프로필을 얻지 못한 소스(사라진 프리셋 · 검증에 걸린 원문)의 피드는 `PROFILE_UNAVAILABLE` 로 거절한다 — 소스 단위로 숨기거나 지운다. 거절하면 아무것도 바꾸지 않는다. 판정의 정본은 `FeedRemovalRule` 이다
+- **source-R55** — 삭제는 되돌릴 수 없다. 켜진 소스 · 피드, 숨긴 소스 · 피드도 지운다.
+  - 소스 삭제: 한 트랜잭션에서 소스 행을 배타 잠금하고, 그 소스의 피드를 읽어 수집 상태 행을 피드 ID 순으로 잠근 뒤, 수집 상태 · 피드 · 요청 예약 · 출처 이름 · 소스 행을 지우고 `SourceDeleted` 를 발행한다
+  - 피드 삭제: 한 트랜잭션에서 그 피드의 소스 행을 배타 잠금하고, 피드를 다시 읽어 대상(source-R54)을 판정한 뒤, 수집 상태 · 피드 행을 지우고 `FeedDeleted` 를 발행한다 — 소스 잠금이 같은 식별자를 다시 넣는 원문 수정과 줄을 세운다
+  - 소비자 `article` 이 그 소스 · 피드의 엔트리와 엔트리가 남지 않은 기사를 지운다([article-R15](article.md#지운-소스--피드)). 그 처리가 실패하면 이벤트 재처리가 다시 처리한다. 남겨진 발행을 폐기하면 기사 쪽 삭제는 일어나지 않는다
+  - 다른 모듈은 피드가 아직 있는지를 `SourceDirectory` 로 묻는다 — 숨긴 피드는 있다
+  - 운영자의 삭제는 커밋 뒤 소스 ID · 프리셋 키(있으면) · 지운 피드 ID 를 담은 경고 로그로 남긴다
+- **source-R56** — 지워진 소스를 만난 갈래. 소스 삭제는 소스 행의 배타 잠금으로, 요청 시작 시각 예약 · 기동 대조는 공유 잠금으로 줄을 선다 — 공유 잠금은 운영자의 다른 변경(키를 바꾸지 않는 갱신)과는 서로 기다리지 않는다.
+  - 수집 작업이 점유를 확인한 뒤 소스가 지워졌으면 아무것도 하지 않고 끝난다. 예약하는 사이 지워졌으면 예약 행을 만들지 않고 이번에 수집하지 않는다
+  - 피드 켜기의 예약하는 사이 소스가 지워졌으면 없는 피드다(source-R52)
+  - 기동 대조가 소스 목록을 읽은 뒤 소스가 지워졌으면 그 소스를 정보 로그와 함께 건너뛰고 다음 소스를 대조한다
+
+### 출처 이름
+
+기사의 출처는 소스 이름으로 보인다. 이름의 정본은 프로필이고, 프로필을 얻지 못해도 출처를 보이도록 마지막으로 확인한 이름을 기록한다([ADR-0053](../adr/0053-source-records-last-confirmed-name-apart-from-operating-settings.md)).
+
+- **source-R57** — 등록 · 운영자 원문 수정 · 기동 대조가 그때 얻은 프로필의 소스 이름을 소스마다 기록한다. 기록된 이름과 같으면 쓰지 않는다(기록 시각 포함) — 여러 인스턴스가 함께 해도 결과가 같다. 운영 설정과 다른 행이라 운영자의 변경과 서로를 덮어쓰지 않는다. 프로필을 얻지 못한 소스의 운영 목록 이름은 기록된 이름이다(source-R51). 소스를 지우면 기록도 지운다(source-R55)
+
 ## 6. 데이터
 
-컬럼 타입 · 인덱스 · 제약 문면의 정본은 `backend/src/main/resources/db/migration/V3__sources_and_feeds.sql` · `V4__feed_status.sql` 이다.
+컬럼 타입 · 인덱스 · 제약 문면의 정본은 `backend/src/main/resources/db/migration/V3__sources_and_feeds.sql` · `V4__feed_status.sql` · `V7__source_attributions.sql` · `V8__source_feed_hidden.sql` 이다.
 
 | 테이블 | 주요 컬럼 | 뜻 |
 |---|---|---|
-| `sources` | id, preset_key(고유), profile(텍스트), enabled, poll_interval_minutes | 소스의 운영 설정. 이름 · 홈페이지 · 언어 · 이용조건 검토일 · 피드 목록 · 권장 수집 주기는 수집 프로필에 있다. `preset_key` 와 `profile` 은 둘 중 하나다(제약 — source-R1). `preset_key` 의 고유 제약이 같은 프리셋의 두 번째 소스를 막는다(source-R2). `poll_interval_minutes` 는 운영자 소스 주기(분, 정하지 않았으면 비어 있다 — source-R14). **(미구현)** 본문 추출 허용 여부는 추출을 켤 때 더한다 |
-| `feeds` | id, source_id, feed_key, enabled, poll_interval_minutes | 피드의 운영 설정만 둔다. (source_id, feed_key) 고유. URL · 섹션은 프로필에 있다. `poll_interval_minutes` 는 운영자 피드 주기. 행은 지우지 않는다(source-R7) — `article` 의 피드별 기록이 `feeds.id` 를 가리킨다 |
+| `sources` | id, preset_key(고유), profile(텍스트), enabled, poll_interval_minutes, hidden_at | 소스의 운영 설정. `hidden_at` 은 숨긴 시각이고 비어 있으면 숨기지 않았다(source-R53). 이름 · 홈페이지 · 언어 · 이용조건 검토일 · 피드 목록 · 권장 수집 주기는 수집 프로필에 있다. `preset_key` 와 `profile` 은 둘 중 하나다(제약 — source-R1). `preset_key` 의 고유 제약이 같은 프리셋의 두 번째 소스를 막는다(source-R2). `poll_interval_minutes` 는 운영자 소스 주기(분, 정하지 않았으면 비어 있다 — source-R14). **(미구현)** 본문 추출 허용 여부는 추출을 켤 때 더한다 |
+| `feeds` | id, source_id, feed_key, enabled, poll_interval_minutes, hidden_at | 피드의 운영 설정만 둔다. (source_id, feed_key) 고유. URL · 섹션은 프로필에 있다. `poll_interval_minutes` 는 운영자 피드 주기, `hidden_at` 은 숨긴 시각(source-R53). 행은 운영자의 삭제로만 지운다(source-R7 · source-R55) — `article` 의 피드별 기록이 `feeds.id` 를 가리킨다 |
 | `feed_poll_states` | feed_id, next_poll_at, lease_token, lease_scheduled_at, etag, last_modified, last_polled_at, last_success_at, last_new_item_at, latest_published_at, consecutive_failures, consecutive_permanent_failures, last_error_reason · message · status · at, moved_to, last_overflow_at, overflow_count, previous_item_keys, status, status_changed_at | 피드의 수집 상태 — 피드당 1행. 등록 · 기동 대조가 첫 행을 만들고(source-R3), 그 뒤에는 `status` · `status_changed_at` 을 피드 건강 검사가, 나머지를 수집 작업이 쓴다(source-R48). 운영 설정(`feeds`)과 다른 행이라 서로를 덮어쓰지 않는다. 점유 중이면 `lease_token` · `lease_scheduled_at` 이 함께 있고(제약) `next_poll_at` 은 예약 시각 + 점유 기간이다(source-R15). `last_polled_at` 은 마지막으로 수집을 마친 시각(성공 · 변경 없음 · 실패), `last_success_at` 은 마지막 성공 · 변경 없음, `last_new_item_at` 은 새 항목이 있던 마지막 수집의 시각이다. `last_error_*` 는 마지막 실패이고 이유 · 시각이 함께 있다(제약 — source-R26). `moved_to` 는 마지막 성공 · 변경 없음 결과가 거친 영구 이동 주소이고 실패는 바꾸지 않는다(source-R27). `last_overflow_at` · `overflow_count` 는 넘침 의심(source-R21). `previous_item_keys` 는 직전 성공 수집의 항목 키(`text[]`)이고, 비어 있으면(NULL) 아직 성공한 수집이 없다는 뜻이라 빈 배열과 다르다(source-R20). `consecutive_permanent_failures` 는 연속 실패 가운데 영구 실패의 수이고 연속 실패 수를 넘지 않는다(제약 — source-R30). `latest_published_at` 은 새 항목의 가장 늦은 발행 시각이고 비어 있으면 아직 없다(source-R31). `status` 는 피드 상태(`ACTIVE` · `DEGRADED` · `STALE` — 제약, 기본값 `ACTIVE`)이고 `status_changed_at` 은 건강 검사가 그것을 마지막으로 바꾼 시각이다 — 비어 있으면 바꾼 적이 없다(source-R47) |
-| `source_fetch_slots` | source_id, next_fetch_at | 소스마다 다음 요청을 시작할 수 있는 시각 — 소스당 1행, 처음 예약할 때 만든다. 같은 언론사의 요청 시작 사이를 띄우는 예약이고, 수집 작업과 피드 켜기의 미리보기가 요청 직전에 이 행을 잠근다(source-R9 · source-R18). 값은 그 소스의 마지막 예약이 정한 다음 요청 가능 시각이고, 예약한 뒤 요청을 건너뛰어도 남는다 |
+| `source_fetch_slots` | source_id, next_fetch_at | 소스마다 다음 요청을 시작할 수 있는 시각 — 소스당 1행, 처음 예약할 때 만든다. 같은 언론사의 요청 시작 사이를 띄우는 예약이고, 수집 작업과 피드 켜기의 미리보기가 요청 직전에 이 행을 잠근다(source-R9 · source-R18). 값은 그 소스의 마지막 예약이 정한 다음 요청 가능 시각이고, 예약한 뒤 요청을 건너뛰어도 남는다. 소스를 지우면 함께 지운다(source-R55) |
+| `source_attributions` | source_id(기본 키), name, recorded_at | 출처 이름 — 프로필에서 마지막으로 확인한 소스 이름과 그 값을 처음 기록한 시각. 소스당 1행이고 운영 설정(`sources`)과 다른 행이다(source-R57). 기록이 없는 소스는 다음 기동 대조가 채운다 |
 
 ## 7. 설정
 
@@ -778,3 +911,5 @@ RSS 품질이 피드마다 크게 다르므로 사전 보정 → 파싱 → 필�
 | [0045](../adr/0045-admin-module-serves-operator-api-over-module-public-operation-apis.md) | 운영자 API 는 `admin` 모듈이 내고, 각 모듈은 운영 기능과 결과 타입을 최상위 공개 API 로 낸다 |
 | [0046](../adr/0046-operator-profile-revision-disables-feeds-whose-reading-changed.md) | 운영자 원문을 고치면 읽기 설정이 바뀐 켜진 피드(검토일이 사라지면 소스)를 끄고, 피드 켜기는 저장 직전에 읽기 설정 전체를 다시 대조한다 |
 | [0049](../adr/0049-feed-request-blocks-ipv6-reserved-space-and-local-nat64.md) | 피드 요청의 차단 대역을 IPv6 예약 공간과 로컬 NAT64 접두까지 넓힌다 |
+| [0051](../adr/0051-operator-hides-or-deletes-sources-and-feeds-and-deletion-removes-exclusive-articles.md) | 운영자는 소스 · 피드를 숨기거나 삭제하고, 숨김은 끄고 남기며 삭제는 그 소스 · 피드만 가진 기사까지 지운다 |
+| [0053](../adr/0053-source-records-last-confirmed-name-apart-from-operating-settings.md) | 출처는 source 가 프로필에서 마지막으로 확인한 소스 이름을 운영 설정과 다른 테이블에 기록한다 |

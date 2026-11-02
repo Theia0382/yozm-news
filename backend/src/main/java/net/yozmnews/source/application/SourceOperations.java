@@ -99,7 +99,9 @@ class SourceOperations {
 	}
 
 	private FeedActivation previewAndEnable(FeedId id, FeedGate.Precheck.Fetch fetch) {
-		FetchSlot slot = this.fetchSlots.reserve(fetch.source(), this.clock);
+		// 미리보기 전에 소스가 지워졌으면 없는 피드다
+		FetchSlot slot = this.fetchSlots.reserve(fetch.source(), this.clock)
+			.orElseThrow(() -> new UnknownFeedException(id));
 		if (!SourceFetchSlots.sleep(PollSchedule.remaining(slot.start(), this.clock.instant()))) {
 			throw new IllegalStateException("같은 소스의 요청 순서를 기다리다 중단됐다 — 피드 " + id.value());
 		}
@@ -174,13 +176,22 @@ class SourceOperations {
 		});
 	}
 
+	/** 숨긴 소스는 없는 소스다 — 운영 연산의 대상이 아니다 */
 	private Source source(SourceId id) {
 		return this.sources.findById(id.value())
+			.filter(source -> !source.hidden())
 			.orElseThrow(() -> new UnknownSourceException(id));
 	}
 
+	/** 숨긴 피드 · 숨긴 소스의 피드는 없는 피드다 — 운영 연산의 대상이 아니다 */
 	private Feed feed(FeedId id) {
-		return this.feeds.findById(id.value()).orElseThrow(() -> new UnknownFeedException(id));
+		Feed feed = this.feeds.findById(id.value())
+			.filter(found -> !found.hidden())
+			.orElseThrow(() -> new UnknownFeedException(id));
+		if (this.sources.findById(feed.sourceId().value()).map(Source::hidden).orElse(true)) {
+			throw new UnknownFeedException(id);
+		}
+		return feed;
 	}
 
 }

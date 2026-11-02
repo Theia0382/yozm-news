@@ -82,8 +82,10 @@ class AdminCollectionControllerTests {
 				new FeedHealthView(FeedStatus.ACTIVE, null, null, 0, 0, null, null, null));
 		this.sources.sources = List.of(
 				new SourceView(new SourceId(3), "multi", true, null, ProfileState.AVAILABLE, "멀티일보",
-						URI.create("https://multi.example"), LocalDate.parse("2026-10-20"), List.of(failing, gone)),
-				new SourceView(new SourceId(4), null, false, null, ProfileState.INVALID, null, null, null, List.of()));
+						URI.create("https://multi.example"), LocalDate.parse("2026-10-20"), List.of(failing, gone),
+						List.of()),
+				new SourceView(new SourceId(4), null, false, null, ProfileState.INVALID, null, null, null, List.of(),
+						List.of()));
 		this.articles.statistics = new EntryStatistics(FROM, TO,
 				List.of(new EntryBucket(FROM, MIDDLE), new EntryBucket(MIDDLE, TO)),
 				Map.of(new FeedId(11), List.of(new EntryCounts(10, 1, 1, 0, 0, 0), EntryCounts.NONE), new FeedId(12),

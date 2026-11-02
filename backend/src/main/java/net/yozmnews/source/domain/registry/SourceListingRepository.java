@@ -24,9 +24,10 @@ public interface SourceListingRepository {
 	/**
 	 * 소스 행 — 프리셋 키와 운영자 원문 가운데 하나만 있다.
 	 * @param pollIntervalMinutes 운영자 소스 주기(분) — 정하지 않았으면 null
+	 * @param hiddenAt 숨긴 시각 — 숨기지 않았으면 null
 	 */
 	record SourceRow(SourceId id, @Nullable String presetKey, @Nullable String profile, boolean enabled,
-			@Nullable Integer pollIntervalMinutes) {
+			@Nullable Integer pollIntervalMinutes, @Nullable Instant hiddenAt) {
 
 		public SourceRow {
 			Objects.requireNonNull(id, "id");
@@ -40,10 +41,11 @@ public interface SourceListingRepository {
 	/**
 	 * 피드 행.
 	 * @param pollIntervalMinutes 운영자 피드 주기(분) — 정하지 않았으면 null
+	 * @param hiddenAt 숨긴 시각 — 숨기지 않았으면 null
 	 * @param poll 수집 상태 — 수집 상태 행이 없을 때만 null 이다(등록 · 기동 대조가 두 행을 함께 만든다 — source-R3)
 	 */
 	record FeedRow(FeedId id, SourceId sourceId, String feedKey, boolean enabled,
-			@Nullable Integer pollIntervalMinutes, @Nullable PollRow poll) {
+			@Nullable Integer pollIntervalMinutes, @Nullable Instant hiddenAt, @Nullable PollRow poll) {
 
 		public FeedRow {
 			Objects.requireNonNull(id, "id");

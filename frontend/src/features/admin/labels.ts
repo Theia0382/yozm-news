@@ -13,6 +13,9 @@ type FeedStatus = Schemas["FeedCollectionResponse"]["status"];
 type StrandedReason = Schemas["StrandedPublicationResponse"]["reason"];
 type ResubmissionOutcome = Schemas["ResubmissionItemResponse"]["result"];
 type DiscardOutcome = Schemas["DiscardItemResponse"]["result"];
+type FeedRemovalRefusal = NonNullable<
+  Schemas["FeedRemovalResponse"]["refusal"]
+>;
 
 export const refusalLabels = {
   PROFILE_UNAVAILABLE:
@@ -104,6 +107,18 @@ export const discardOutcomeLabels = {
   CHANGED: "그사이 바뀌어 지우지 않음",
   NOT_FOUND: "이미 없음(완료됐거나 폐기됨)",
 } as const satisfies Record<DiscardOutcome, string>;
+
+export const feedRemovalRefusalLabels = {
+  IN_PROFILE:
+    "프로필에 있는 피드입니다 — 프로필에서 빼야 숨기거나 지울 수 있습니다",
+  PROFILE_UNAVAILABLE:
+    "프로필을 얻지 못해 프로필에 있는 피드인지 판정하지 못했습니다 — 프리셋이 사라졌거나 운영자 원문이 검증에 걸립니다",
+} as const satisfies Record<FeedRemovalRefusal, string>;
+
+/** 소스 이름 — 이름을 읽지 못했으면 그 사실을 보인다 */
+export function sourceName(source: Schemas["SourceResponse"]): string {
+  return source.name ?? "이름을 읽지 못한 소스";
+}
 
 /** 내부 주소로 가는 요청을 막았을 때의 안내 — 화면에서는 열 수 없다 */
 export const BLOCKED_ADDRESS_HINT =

@@ -47,16 +47,17 @@ class AdminPresetControllerTests {
 	void listsEachPresetWithItsSource() throws Exception {
 		this.administration.presets = List.of(
 				new PresetView("multi", "멀티일보", URI.create("https://multi.example"), LocalDate.parse("2026-10-20"), 2,
-						new SourceId(3)),
-				new PresetView("solo", "솔로뉴스", URI.create("https://solo.example"), LocalDate.parse("2026-10-21"), 1, null));
+						new SourceId(3), false),
+				new PresetView("solo", "솔로뉴스", URI.create("https://solo.example"), LocalDate.parse("2026-10-21"), 1,
+						new SourceId(4), true));
 
 		this.mockMvc.perform(authorized(get("/api/admin/presets")))
 			.andExpect(status().isOk())
 			.andExpect(content().json("""
 					[{"key":"multi","name":"멀티일보","homepage":"https://multi.example","termsReviewedAt":"2026-10-20",
-					  "feedCount":2,"sourceId":3},
+					  "feedCount":2,"sourceId":3,"sourceHidden":false},
 					 {"key":"solo","name":"솔로뉴스","homepage":"https://solo.example","termsReviewedAt":"2026-10-21",
-					  "feedCount":1,"sourceId":null}]
+					  "feedCount":1,"sourceId":4,"sourceHidden":true}]
 					""", JsonCompareMode.STRICT));
 	}
 

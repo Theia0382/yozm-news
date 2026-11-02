@@ -9,14 +9,15 @@ import org.jspecify.annotations.Nullable;
 /**
  * 프리셋 하나 — docs/specs/admin.md §3.
  * <p>
- * {@code sourceId} 는 그 프리셋을 참조하는 소스이고, 아직 등록하지 않았으면 null 이다.
+ * {@code sourceId} 는 그 프리셋을 참조하는 소스이고(숨긴 소스 포함), 아직 등록하지 않았으면 null 이다. {@code sourceHidden} 은 그
+ * 소스를 숨겼는지다 — 화면은 다시 등록 대신 다시 보이기를 보인다.
  */
 record PresetResponse(String key, String name, URI homepage, LocalDate termsReviewedAt, int feedCount,
-		@Nullable Long sourceId) {
+		@Nullable Long sourceId, boolean sourceHidden) {
 
 	static PresetResponse of(PresetView preset) {
 		return new PresetResponse(preset.key(), preset.name(), preset.homepage(), preset.termsReviewedAt(),
-				preset.feedCount(), (preset.sourceId() != null) ? preset.sourceId().value() : null);
+				preset.feedCount(), (preset.sourceId() != null) ? preset.sourceId().value() : null, preset.sourceHidden());
 	}
 
 }

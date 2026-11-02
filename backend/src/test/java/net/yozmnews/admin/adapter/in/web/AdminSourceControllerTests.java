@@ -3,6 +3,7 @@ package net.yozmnews.admin.adapter.in.web;
 import static net.yozmnews.admin.adapter.in.web.AdminRequests.authorized;
 import static net.yozmnews.admin.adapter.in.web.AdminRequests.json;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -81,8 +82,10 @@ class AdminSourceControllerTests {
 						List.of(new FeedView(new FeedId(11), "one", true, null, true,
 								URI.create("https://multi.example/rss/one.xml"), "하나", 30, NEVER_COLLECTED),
 								new FeedView(new FeedId(12), "gone", false, 45, false, null, null, null,
-										NEVER_COLLECTED))),
-				new SourceView(new SourceId(4), null, false, null, ProfileState.INVALID, null, null, null, List.of()));
+										NEVER_COLLECTED)),
+						List.of()),
+				new SourceView(new SourceId(4), null, false, null, ProfileState.INVALID, null, null, null, List.of(),
+						List.of()));
 
 		this.mockMvc.perform(authorized(get("/api/admin/sources")))
 			.andExpect(status().isOk())
@@ -93,10 +96,62 @@ class AdminSourceControllerTests {
 					   {"id":11,"feedKey":"one","enabled":true,"pollIntervalMinutes":null,"inProfile":true,
 					    "url":"https://multi.example/rss/one.xml","section":"하나","effectivePollIntervalMinutes":30},
 					   {"id":12,"feedKey":"gone","enabled":false,"pollIntervalMinutes":45,"inProfile":false,
-					    "url":null,"section":null,"effectivePollIntervalMinutes":null}]},
+					    "url":null,"section":null,"effectivePollIntervalMinutes":null}],"hiddenFeeds":[]},
 					 {"id":4,"presetKey":null,"enabled":false,"pollIntervalMinutes":null,"profileState":"INVALID",
-					  "name":null,"homepage":null,"termsReviewedAt":null,"feeds":[]}]}
+					  "name":null,"homepage":null,"termsReviewedAt":null,"feeds":[],"hiddenFeeds":[]}]}
 					""", JsonCompareMode.STRICT));
+	}
+
+	@Test
+	void hiddenListCarriesTheHiddenSourcesWithTheirHiddenFeeds() throws Exception {
+		this.administration.hiddenSources = List.of(new SourceView(new SourceId(6), "solo", false, null,
+				ProfileState.AVAILABLE, "솔로뉴스", URI.create("https://solo.example"), LocalDate.parse("2026-10-21"),
+				List.of(), List.of(new FeedView(new FeedId(21), "typo", false, null, false, null, null, null,
+						NEVER_COLLECTED))));
+
+		this.mockMvc.perform(authorized(get("/api/admin/sources/hidden")))
+			.andExpect(status().isOk())
+			.andExpect(content().json("""
+					{"minimumPollIntervalMinutes":15,"sources":[
+					 {"id":6,"presetKey":"solo","enabled":false,"pollIntervalMinutes":null,"profileState":"AVAILABLE",
+					  "name":"솔로뉴스","homepage":"https://solo.example","termsReviewedAt":"2026-10-21","feeds":[],
+					  "hiddenFeeds":[
+					   {"id":21,"feedKey":"typo","enabled":false,"pollIntervalMinutes":null,"inProfile":false,
+					    "url":null,"section":null,"effectivePollIntervalMinutes":null}]}]}
+					""", JsonCompareMode.STRICT));
+		assertThat(this.administration.calls).containsExactly("hiddenSources");
+	}
+
+	@Test
+	void hidingAndUnhidingASourceAnswerNoContent() throws Exception {
+		this.mockMvc.perform(authorized(post("/api/admin/sources/5/hide"))).andExpect(status().isNoContent());
+		this.mockMvc.perform(authorized(post("/api/admin/sources/5/unhide"))).andExpect(status().isNoContent());
+
+		assertThat(this.administration.calls).containsExactly("hideSource 5", "unhideSource 5");
+	}
+
+	@Test
+	void deletingASourceAnswersNoContentAndAnUnknownSourceIsNotFound() throws Exception {
+		this.mockMvc.perform(authorized(delete("/api/admin/sources/5"))).andExpect(status().isNoContent());
+		assertThat(this.administration.calls).containsExactly("deleteSource 5");
+
+		this.administration.failure = new UnknownSourceException(new SourceId(99));
+		this.mockMvc.perform(authorized(delete("/api/admin/sources/99")))
+			.andExpect(status().isNotFound())
+			.andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON));
+	}
+
+	@Test
+	void hidingAnUnknownSourceIsNotFoundAndARaceIsAConflict() throws Exception {
+		this.administration.failure = new UnknownSourceException(new SourceId(99));
+		this.mockMvc.perform(authorized(post("/api/admin/sources/99/hide")))
+			.andExpect(status().isNotFound())
+			.andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON));
+
+		this.administration.failure = new OptimisticLockingFailureException("version");
+		this.mockMvc.perform(authorized(post("/api/admin/sources/5/unhide")))
+			.andExpect(status().isConflict())
+			.andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON));
 	}
 
 	@Test

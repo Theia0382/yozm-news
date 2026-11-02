@@ -33,13 +33,13 @@ final class ArticleRows {
 	/** 두 테이블의 모든 열 — 해시 · 배열은 글자로 바꿔 값으로 비교할 수 있게 한다 */
 	Snapshot snapshot() {
 		List<Map<String, Object>> articles = this.jdbc.sql("""
-				select id, source_id, canonical_url, encode(url_hash, 'hex') as url_hash, title,
+				select id, canonical_url, encode(url_hash, 'hex') as url_hash, title,
 				    encode(title_key_hash, 'hex') as title_key_hash, summary_text, author, published_at::text,
 				    published_at_estimated, image_url, first_seen_at::text
 				from articles order by id
 				""").query().listOfRows();
 		List<Map<String, Object>> entries = this.jdbc.sql("""
-				select article_id, feed_id, encode(item_url_hash, 'hex') as item_url_hash, guid,
+				select article_id, feed_id, source_id, encode(item_url_hash, 'hex') as item_url_hash, guid,
 				    encode(guid_hash, 'hex') as guid_hash, feed_categories::text, published_at_estimated, match_kind,
 				    seen_at::text
 				from article_feed_entries order by article_id, feed_id

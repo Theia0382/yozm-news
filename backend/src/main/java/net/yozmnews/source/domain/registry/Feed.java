@@ -30,19 +30,22 @@ public final class Feed {
 
 	private @Nullable Integer pollIntervalMinutes;
 
+	private @Nullable Instant hiddenAt;
+
 	@Version
 	private Long version;
 
 	private final Instant createdAt;
 
 	@PersistenceCreator
-	Feed(Long id, long sourceId, String feedKey, boolean enabled, @Nullable Integer pollIntervalMinutes, Long version,
-			Instant createdAt) {
+	Feed(Long id, long sourceId, String feedKey, boolean enabled, @Nullable Integer pollIntervalMinutes,
+			@Nullable Instant hiddenAt, Long version, Instant createdAt) {
 		this.id = Objects.requireNonNull(id, "id");
 		this.sourceId = sourceId;
 		this.feedKey = Objects.requireNonNull(feedKey, "feedKey");
 		this.enabled = enabled;
 		this.pollIntervalMinutes = pollIntervalMinutes;
+		this.hiddenAt = hiddenAt;
 		this.version = Objects.requireNonNull(version, "version");
 		this.createdAt = Objects.requireNonNull(createdAt, "createdAt");
 	}
@@ -88,6 +91,28 @@ public final class Feed {
 
 	public void disable() {
 		this.enabled = false;
+	}
+
+	/** 숨겼는가 — 숨긴 피드는 운영 목록의 피드 행 · 운영 연산의 대상이 아니다 */
+	public boolean hidden() {
+		return this.hiddenAt != null;
+	}
+
+	/**
+	 * 숨긴다 — 숨김은 끄기를 포함한다. 이미 숨겼으면 숨긴 시각을 바꾸지 않는다. 대상인지는 {@link FeedRemovalRule} 이 판정한다.
+	 * @param now 숨긴 시각
+	 */
+	public void hide(Instant now) {
+		Objects.requireNonNull(now, "now");
+		this.enabled = false;
+		if (this.hiddenAt == null) {
+			this.hiddenAt = now;
+		}
+	}
+
+	/** 숨긴 시각을 지운다 — 꺼진 채 돌아온다 */
+	public void unhide() {
+		this.hiddenAt = null;
 	}
 
 	/**

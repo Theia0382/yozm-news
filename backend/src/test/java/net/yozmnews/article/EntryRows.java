@@ -30,15 +30,14 @@ public final class EntryRows {
 	}
 
 	/** 기사 하나 — 정규 URL 은 넣을 때마다 다르다 */
-	public long article(long sourceId) {
+	public long article() {
 		String url = "https://entries.example/" + UUID.randomUUID();
 		return this.jdbc.sql("""
-				insert into articles (source_id, canonical_url, url_hash, title, title_key_hash, published_at,
+				insert into articles (canonical_url, url_hash, title, title_key_hash, published_at,
 				    published_at_estimated, first_seen_at)
-				values (:source, :url, :urlHash, '제목', :titleHash, '2026-10-20T00:00:00Z', false, '2026-10-20T00:00:00Z')
+				values (:url, :urlHash, '제목', :titleHash, '2026-10-20T00:00:00Z', false, '2026-10-20T00:00:00Z')
 				returning id
 				""")
-			.param("source", sourceId)
 			.param("url", url)
 			.param("urlHash", sha256(url))
 			.param("titleHash", sha256("제목"))
@@ -47,15 +46,16 @@ public final class EntryRows {
 	}
 
 	/** 엔트리 하나 — 항목 URL 해시는 기사마다 다른 값이면 된다 */
-	public void entry(long articleId, long feedId, String matchKind, boolean estimated, @Nullable String guid,
-			Instant seenAt) {
+	public void entry(long articleId, long sourceId, long feedId, String matchKind, boolean estimated,
+			@Nullable String guid, Instant seenAt) {
 		this.jdbc.sql("""
-				insert into article_feed_entries (article_id, feed_id, item_url_hash, guid, guid_hash, feed_categories,
-				    published_at_estimated, match_kind, seen_at)
-				values (:article, :feed, :itemUrlHash, :guid, :guidHash, '{}', :estimated, :kind, :seenAt)
+				insert into article_feed_entries (article_id, feed_id, source_id, item_url_hash, guid, guid_hash,
+				    feed_categories, published_at_estimated, match_kind, seen_at)
+				values (:article, :feed, :source, :itemUrlHash, :guid, :guidHash, '{}', :estimated, :kind, :seenAt)
 				""")
 			.param("article", articleId)
 			.param("feed", feedId)
+			.param("source", sourceId)
 			.param("itemUrlHash", sha256("item-" + articleId))
 			.param("guid", guid, Types.VARCHAR)
 			.param("guidHash", (guid != null) ? sha256(guid) : null, Types.BINARY)

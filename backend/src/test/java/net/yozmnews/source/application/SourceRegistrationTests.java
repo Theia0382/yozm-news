@@ -2,6 +2,10 @@ package net.yozmnews.source.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.mockito.AdditionalAnswers.delegatesTo;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
 
 import java.time.Duration;
 import java.util.List;
@@ -12,7 +16,11 @@ import net.yozmnews.source.UnknownSourceException;
 import net.yozmnews.source.domain.profile.FeedKey;
 import net.yozmnews.source.domain.profile.PresetKey;
 import net.yozmnews.source.domain.registry.Feed;
+import net.yozmnews.source.domain.attribution.SourceAttributionRepository;
 import net.yozmnews.source.domain.registry.FeedRepository;
+import net.yozmnews.source.domain.registry.ProfileResolver;
+import net.yozmnews.source.domain.registry.Source;
+import net.yozmnews.source.domain.registry.SourceRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,6 +34,7 @@ import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * 소스 등록 · 운영자 원문 수정과 기동 대조 — 실제 PostgreSQL 에서 합성 프리셋 multi(피드 one · two)와 합성 운영자 원문으로 본다.
@@ -73,6 +82,21 @@ class SourceRegistrationTests {
 
 	@Autowired
 	PresetFeedReconciliation reconciliation;
+
+	@Autowired
+	SourceRepository sourceRepository;
+
+	@Autowired
+	ProfileResolver resolver;
+
+	@Autowired
+	FeedProvisioner provisioner;
+
+	@Autowired
+	SourceAttributionRepository attributions;
+
+	@Autowired
+	TransactionTemplate transaction;
 
 	@Autowired
 	JdbcClient jdbc;
@@ -156,6 +180,162 @@ class SourceRegistrationTests {
 		assertThat(this.rows.feeds(source)).containsExactly("gone:false", "one:false", "two:false");
 		assertThat(this.rows.hasPollState(this.rows.feedId(source, "two"))).isTrue();
 		assertThat(output).contains("프로필에서 빠진 피드 — 소스 " + source + " 피드 gone");
+	}
+
+	@Test
+	void registeringRecordsTheProfileNameAsTheAttribution() {
+		long preset = registered(this.registration.registerPreset(new PresetKey("multi")));
+		long operator = registered(this.registration.registerOperatorProfile(OPERATOR_TEXT));
+
+		assertThat(this.rows.recordedName(preset)).contains("멀티일보");
+		assertThat(this.rows.recordedName(operator)).contains("운영자일보");
+	}
+
+	@Test
+	void revisionRecordsTheNameOfTheNewText() {
+		long source = registered(this.registration.registerOperatorProfile(OPERATOR_TEXT));
+
+		this.registration.reviseOperatorProfile(new SourceId(source), OPERATOR_TEXT.replace("운영자일보", "운영자신문"));
+
+		assertThat(this.rows.recordedName(source)).contains("운영자신문");
+	}
+
+	@Test
+	void reconciliationRecordsTheNameOfASourceWhoseProfileItGets() {
+		long recorded = this.jdbc
+			.sql("insert into sources (preset_key, enabled, version, created_at) values ('multi', false, 0, now()) "
+					+ "returning id")
+			.query(Long.class)
+			.single();
+		long vanished = this.jdbc
+			.sql("insert into sources (preset_key, enabled, version, created_at) values ('vanished', false, 0, now()) "
+					+ "returning id")
+			.query(Long.class)
+			.single();
+
+		this.reconciliation.reconcile();
+
+		assertThat(this.rows.recordedName(recorded)).contains("멀티일보");
+		assertThat(this.rows.recordedName(vanished)).isEmpty();
+	}
+
+	@Test
+	void revisionUnhidesAHiddenFeedWhoseKeyIsBackInTheText() {
+		long source = registered(this.registration.registerOperatorProfile(OPERATOR_TEXT));
+		long extra = this.rows.insertFeed(source, "extra");
+		this.rows.insertPollState(extra);
+		long gone = this.rows.insertFeed(source, "gone");
+		this.rows.insertPollState(gone);
+		this.rows.hide("feeds", extra);
+		this.rows.hide("feeds", gone);
+
+		Revision revision = this.registration.reviseOperatorProfile(new SourceId(source), REVIEWED_TWO_FEEDS);
+
+		assertThat(revision).isEqualTo(new Revision.Revised(List.of(), false, List.of()));
+		assertThat(this.rows.hidden("feeds", extra)).isFalse();
+		assertThat(this.rows.hidden("feeds", gone)).isTrue();
+		assertThat(this.rows.feeds(source)).containsExactly("extra:false", "gone:false", "main:false");
+	}
+
+	@Test
+	void reconciliationReconcilesAHiddenSourceAndUnhidesAFeedBackInThePreset(CapturedOutput output) {
+		long source = registered(this.registration.registerPreset(new PresetKey("multi")));
+		long one = this.rows.feedId(source, "one");
+		this.jdbc.sql("delete from feed_poll_states where feed_id = :feed").param("feed", one).update();
+		this.jdbc.sql("delete from feeds where id = :feed").param("feed", one).update();
+		long two = this.rows.feedId(source, "two");
+		this.rows.hide("feeds", two);
+		long typo = this.rows.insertFeed(source, "typo");
+		this.rows.insertPollState(typo);
+		this.rows.hide("feeds", typo);
+		this.rows.hide("sources", source);
+
+		this.reconciliation.reconcile();
+
+		assertThat(this.rows.feeds(source)).containsExactly("one:false", "two:false", "typo:false");
+		assertThat(this.rows.hidden("feeds", two)).isFalse();
+		assertThat(this.rows.hidden("feeds", typo)).isTrue();
+		assertThat(this.rows.hidden("sources", source)).isTrue();
+		assertThat(output).contains("프로필에 다시 생긴 숨긴 피드를 꺼진 채로 다시 보인다 — 소스 " + source + " 피드 two")
+			.doesNotContain("프로필에서 빠진 피드 — 소스 " + source);
+	}
+
+	@Test
+	void reconciliationSkipsASourceWhoseHiddenFeedChangedMeanwhileAndGoesOn(CapturedOutput output) {
+		long first = registered(this.registration.registerPreset(new PresetKey("multi")));
+		long two = this.rows.feedId(first, "two");
+		this.rows.hide("feeds", two);
+		long second = this.jdbc
+			.sql("insert into sources (preset_key, enabled, version, created_at) values ('solo', false, 0, now()) "
+					+ "returning id")
+			.query(Long.class)
+			.single();
+		// 대조가 첫 소스의 피드를 읽은 뒤 다른 쪽이 숨긴 피드 two 를 먼저 저장한 것처럼 버전을 올린다
+		FeedRepository meanwhile = mock(FeedRepository.class, delegatesTo(this.feedRepository));
+		doAnswer(invocation -> {
+			List<Feed> found = this.feedRepository.findAllBySourceId(invocation.getArgument(0));
+			if (invocation.<Long>getArgument(0) == first) {
+				this.jdbc.sql("update feeds set version = version + 1 where id = :feed").param("feed", two).update();
+			}
+			return found;
+		}).when(meanwhile).findAllBySourceId(anyLong());
+
+		new PresetFeedReconciliation(this.sourceRepository, meanwhile, this.resolver, this.provisioner,
+				this.attributions, this.transaction)
+			.reconcile();
+
+		assertThat(output).contains("다른 변경과 겹쳐 이 소스의 기동 대조를 건너뛴다 — 소스 " + first);
+		assertThat(this.rows.hidden("feeds", two)).isTrue();
+		assertThat(this.rows.feeds(second)).containsExactly("all:false");
+	}
+
+	@Test
+	void reconciliationDoesNotWarnAboutAHiddenSource(CapturedOutput output) {
+		long hiddenVanished = this.jdbc
+			.sql("insert into sources (preset_key, enabled, version, created_at) values ('vanished', false, 0, now()) "
+					+ "returning id")
+			.query(Long.class)
+			.single();
+		this.rows.hide("sources", hiddenVanished);
+		long shownVanished = this.jdbc
+			.sql("insert into sources (preset_key, enabled, version, created_at) values ('lost', false, 0, now()) "
+					+ "returning id")
+			.query(Long.class)
+			.single();
+		long hidden = registered(this.registration.registerPreset(new PresetKey("multi")));
+		this.rows.insertPollState(this.rows.insertFeed(hidden, "stray"));
+		this.rows.hide("sources", hidden);
+
+		this.reconciliation.reconcile();
+
+		assertThat(output).contains("프리셋이 사라졌다 — 소스 " + shownVanished + " 의")
+			.doesNotContain("프리셋이 사라졌다 — 소스 " + hiddenVanished + " 의")
+			.doesNotContain("프로필에서 빠진 피드 — 소스 " + hidden + " 피드");
+	}
+
+	@Test
+	void reconciliationSkipsASourceDeletedAfterTheListWasReadAndGoesOn(CapturedOutput output) {
+		long deleted = registered(this.registration.registerPreset(new PresetKey("multi")));
+		long next = this.jdbc
+			.sql("insert into sources (preset_key, enabled, version, created_at) values ('solo', false, 0, now()) "
+					+ "returning id")
+			.query(Long.class)
+			.single();
+		// 대조가 소스 목록을 읽은 뒤 다른 쪽이 첫 소스를 지운 것처럼 한다
+		SourceRepository deleting = mock(SourceRepository.class, delegatesTo(this.sourceRepository));
+		doAnswer(invocation -> {
+			Iterable<Source> all = this.sourceRepository.findAll();
+			this.rows.deleteSource(deleted);
+			return all;
+		}).when(deleting).findAll();
+
+		new PresetFeedReconciliation(deleting, this.feedRepository, this.resolver, this.provisioner, this.attributions,
+				this.transaction)
+			.reconcile();
+
+		assertThat(this.rows.feeds(next)).containsExactly("all:false");
+		assertThat(this.rows.count("sources")).isEqualTo(1);
+		assertThat(output).contains("기동 대조 사이 지워진 소스를 건너뛴다 — 소스 " + deleted);
 	}
 
 	@Test

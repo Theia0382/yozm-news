@@ -150,7 +150,7 @@ class JdbcEntryStatisticsRepositoryTests {
 
 	/** 기사 하나와 그 기사의 엔트리 하나 — 기사는 넣은 순서로 ID 가 커진다 */
 	private void entry(long feed, String matchKind, boolean estimated, @Nullable String guid, Instant seenAt) {
-		this.rows.entry(this.rows.article(SOURCE), feed, matchKind, estimated, guid, seenAt);
+		this.rows.entry(this.rows.article(), SOURCE, feed, matchKind, estimated, guid, seenAt);
 	}
 
 }

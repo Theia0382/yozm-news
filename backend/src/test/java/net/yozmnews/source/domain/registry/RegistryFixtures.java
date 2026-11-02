@@ -57,7 +57,7 @@ public final class RegistryFixtures {
 
 	/** 저장된 피드 하나 — 피드 ID 1, 소스 ID 7 */
 	public static Feed feed(String key, boolean enabled) {
-		return new Feed(1L, 7L, key, enabled, null, 0L, NOW);
+		return new Feed(1L, 7L, key, enabled, null, null, 0L, NOW);
 	}
 
 }

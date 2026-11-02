@@ -6,6 +6,7 @@ import java.util.Optional;
 
 import net.yozmnews.source.FeedEnableResult;
 import net.yozmnews.source.FeedId;
+import net.yozmnews.source.FeedRemovalResult;
 import net.yozmnews.source.PresetView;
 import net.yozmnews.source.ProfilePreviewResult;
 import net.yozmnews.source.ProfileRevisionResult;
@@ -27,6 +28,8 @@ class FakeSourceAdministration implements SourceAdministration {
 
 	List<SourceView> sources = List.of();
 
+	List<SourceView> hiddenSources = List.of();
+
 	Optional<String> profileText = Optional.empty();
 
 	@Nullable SourceRegistrationResult registration;
@@ -39,6 +42,8 @@ class FakeSourceAdministration implements SourceAdministration {
 
 	@Nullable FeedEnableResult feedEnable;
 
+	@Nullable FeedRemovalResult feedRemoval;
+
 	boolean intervalAccepted = true;
 
 	/** 정하면 모든 호출이 이 예외를 던진다 */
@@ -49,12 +54,14 @@ class FakeSourceAdministration implements SourceAdministration {
 	void reset() {
 		this.presets = List.of();
 		this.sources = List.of();
+		this.hiddenSources = List.of();
 		this.profileText = Optional.empty();
 		this.registration = null;
 		this.revision = null;
 		this.preview = null;
 		this.sourceEnable = null;
 		this.feedEnable = null;
+		this.feedRemoval = null;
 		this.intervalAccepted = true;
 		this.failure = null;
 		this.calls.clear();
@@ -70,6 +77,12 @@ class FakeSourceAdministration implements SourceAdministration {
 	public List<SourceView> sources() {
 		called("sources");
 		return this.sources;
+	}
+
+	@Override
+	public List<SourceView> hiddenSources() {
+		called("hiddenSources");
+		return this.hiddenSources;
 	}
 
 	@Override
@@ -134,6 +147,38 @@ class FakeSourceAdministration implements SourceAdministration {
 	public boolean changeFeedPollInterval(FeedId id, @Nullable Integer minutes) {
 		called("changeFeedPollInterval " + id.value() + " " + minutes);
 		return this.intervalAccepted;
+	}
+
+	@Override
+	public void hideSource(SourceId id) {
+		called("hideSource " + id.value());
+	}
+
+	@Override
+	public void unhideSource(SourceId id) {
+		called("unhideSource " + id.value());
+	}
+
+	@Override
+	public FeedRemovalResult hideFeed(FeedId id) {
+		called("hideFeed " + id.value());
+		return given(this.feedRemoval);
+	}
+
+	@Override
+	public void unhideFeed(FeedId id) {
+		called("unhideFeed " + id.value());
+	}
+
+	@Override
+	public void deleteSource(SourceId id) {
+		called("deleteSource " + id.value());
+	}
+
+	@Override
+	public FeedRemovalResult deleteFeed(FeedId id) {
+		called("deleteFeed " + id.value());
+		return given(this.feedRemoval);
 	}
 
 	private void called(String call) {

@@ -147,6 +147,27 @@ class JdbcFeedPollStateRepository implements FeedPollStateRepository {
 			.optional();
 	}
 
+	@Override
+	public void lockForRemoval(List<FeedId> feeds) {
+		if (feeds.isEmpty()) {
+			return;
+		}
+		this.jdbc.sql("select feed_id from feed_poll_states where feed_id in (:feeds) order by feed_id for update")
+			.param("feeds", feeds.stream().map(FeedId::value).toList())
+			.query(Long.class)
+			.list();
+	}
+
+	@Override
+	public void delete(List<FeedId> feeds) {
+		if (feeds.isEmpty()) {
+			return;
+		}
+		this.jdbc.sql("delete from feed_poll_states where feed_id in (:feeds)")
+			.param("feeds", feeds.stream().map(FeedId::value).toList())
+			.update();
+	}
+
 	private static FeedPollContext context(ResultSet rs) throws SQLException {
 		return new FeedPollContext(state(rs), new SourceId(rs.getLong("source_id")), new FeedKey(rs.getString("feed_key")),
 				new PollIntervalSettings(interval(rs, "source_interval_minutes"), interval(rs, "feed_interval_minutes")));

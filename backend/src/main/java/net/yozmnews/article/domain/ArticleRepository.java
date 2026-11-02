@@ -1,8 +1,11 @@
 package net.yozmnews.article.domain;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.source.FeedId;
 import net.yozmnews.source.SourceId;
 
 /**
@@ -29,5 +32,29 @@ public interface ArticleRepository {
 	 * @return 새로 기록했으면 true, 그 기사 · 피드의 엔트리가 이미 있으면 false
 	 */
 	boolean insertEntryIfAbsent(ArticleId articleId, IncomingItem item, MatchKind kind);
+
+	/**
+	 * 소스의 엔트리를 모두 지운다.
+	 * @return 지운 엔트리의 기사 — 같은 기사가 여럿일 수 있다
+	 */
+	List<ArticleId> deleteEntries(SourceId sourceId);
+
+	/**
+	 * 소스의 한 피드의 엔트리를 지운다.
+	 * @return 지운 엔트리의 기사
+	 */
+	List<ArticleId> deleteEntries(SourceId sourceId, FeedId feedId);
+
+	/**
+	 * 주어진 기사 가운데 엔트리가 남지 않은 기사를 지운다 — 다른 소스 · 피드의 엔트리가 남은 기사는 남긴다.
+	 * @return 지운 기사 수
+	 */
+	int deleteArticlesWithoutEntries(Collection<ArticleId> articleIds);
+
+	/** 엔트리가 모두 그 소스의 것인 기사 수 — 소스를 지우면 함께 지워질 기사 */
+	long countArticlesOnlyIn(SourceId sourceId);
+
+	/** 엔트리가 모두 그 소스의 그 피드의 것인 기사 수 — 피드를 지우면 함께 지워질 기사 */
+	long countArticlesOnlyIn(SourceId sourceId, FeedId feedId);
 
 }

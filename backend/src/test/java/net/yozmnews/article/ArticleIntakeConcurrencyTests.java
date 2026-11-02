@@ -60,12 +60,37 @@ class ArticleIntakeConcurrencyTests {
 
 	ArticleRows rows;
 
+	SourceFeedRows sources;
+
+	long sourceA;
+
+	long sourceB;
+
+	long feedA1;
+
+	long feedA2;
+
+	long feedA3;
+
+	long feedB1;
+
+	long feedB2;
+
 	ExecutorService executor = Executors.newSingleThreadExecutor();
 
 	@BeforeEach
 	void setUp(@Autowired JdbcClient jdbc) {
 		this.rows = new ArticleRows(jdbc);
 		this.rows.deleteAll();
+		this.sources = new SourceFeedRows(jdbc);
+		this.sources.deleteAll();
+		this.sourceA = this.sources.source("a");
+		this.feedA1 = this.sources.feed(this.sourceA, "a1");
+		this.feedA2 = this.sources.feed(this.sourceA, "a2");
+		this.feedA3 = this.sources.feed(this.sourceA, "a3");
+		this.sourceB = this.sources.source("b");
+		this.feedB1 = this.sources.feed(this.sourceB, "b1");
+		this.feedB2 = this.sources.feed(this.sourceB, "b2");
 	}
 
 	@AfterEach
@@ -76,10 +101,10 @@ class ArticleIntakeConcurrencyTests {
 	@Test
 	void sameSourceWaitsForTheSourceLockAndThenJoins() throws Exception {
 		Future<?> waiting = this.transaction.execute((status) -> {
-			this.repository.lockSource(new SourceId(1));
-			storeUncommitted(item(1, 11, "https://a.example/news/1", null, TITLE, T));
+			this.repository.lockSource(new SourceId(this.sourceA));
+			storeUncommitted(item(this.sourceA, this.feedA1, "https://a.example/news/1", null, TITLE, T));
 			Future<?> pending = this.executor
-				.submit(() -> this.intake.accept(item(1, 12, "https://a.example/section/9", null, TITLE, T)));
+				.submit(() -> this.intake.accept(item(this.sourceA, this.feedA2, "https://a.example/section/9", null, TITLE, T)));
 			assertBlocked(pending);
 			return pending;
 		});
@@ -87,16 +112,16 @@ class ArticleIntakeConcurrencyTests {
 		waiting.get(DONE_SECONDS, TimeUnit.SECONDS);
 		long id = this.rows.articleIds().getFirst();
 		assertThat(this.rows.articleIds()).containsExactly(id);
-		assertThat(this.rows.entries()).containsExactly(new Entry(id, 11, "NEW"), new Entry(id, 12, "TITLE"));
+		assertThat(this.rows.entries()).containsExactly(new Entry(id, this.feedA1, "NEW"), new Entry(id, this.feedA2, "TITLE"));
 	}
 
 	@Test
 	void anotherSourceDoesNotWait() throws Exception {
 		this.transaction.executeWithoutResult((status) -> {
-			this.repository.lockSource(new SourceId(1));
-			storeUncommitted(item(1, 11, "https://a.example/news/1", null, TITLE, T));
+			this.repository.lockSource(new SourceId(this.sourceA));
+			storeUncommitted(item(this.sourceA, this.feedA1, "https://a.example/news/1", null, TITLE, T));
 			Future<?> other = this.executor
-				.submit(() -> this.intake.accept(item(2, 21, "https://b.example/news/1", null, TITLE, T)));
+				.submit(() -> this.intake.accept(item(this.sourceB, this.feedB1, "https://b.example/news/1", null, TITLE, T)));
 			try {
 				other.get(DONE_SECONDS, TimeUnit.SECONDS);
 			}
@@ -111,9 +136,9 @@ class ArticleIntakeConcurrencyTests {
 	@Test
 	void sameUrlFromAnotherSourceWaitsForTheUniqueKeyAndThenJoins() throws Exception {
 		Future<?> waiting = this.transaction.execute((status) -> {
-			storeUncommitted(item(1, 11, "https://a.example/news/1", null, TITLE, T));
+			storeUncommitted(item(this.sourceA, this.feedA1, "https://a.example/news/1", null, TITLE, T));
 			Future<?> pending = this.executor
-				.submit(() -> this.intake.accept(item(2, 21, "HTTPS://A.example/news/1#c", null, "다른 제목", T)));
+				.submit(() -> this.intake.accept(item(this.sourceB, this.feedB1, "HTTPS://A.example/news/1#c", null, "다른 제목", T)));
 			assertBlocked(pending);
 			return pending;
 		});
@@ -121,7 +146,7 @@ class ArticleIntakeConcurrencyTests {
 		waiting.get(DONE_SECONDS, TimeUnit.SECONDS);
 		long id = this.rows.articleIds().getFirst();
 		assertThat(this.rows.articleIds()).containsExactly(id);
-		assertThat(this.rows.entries()).containsExactly(new Entry(id, 11, "NEW"), new Entry(id, 21, "URL"));
+		assertThat(this.rows.entries()).containsExactly(new Entry(id, this.feedA1, "NEW"), new Entry(id, this.feedB1, "URL"));
 	}
 
 	private void storeUncommitted(ArticleFetched event) {

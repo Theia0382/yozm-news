@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 
 import net.yozmnews.source.SourceId;
 import net.yozmnews.source.UnknownSourceException;
+import net.yozmnews.source.domain.attribution.SourceAttributionRepository;
 import net.yozmnews.source.domain.profile.CollectionProfile;
 import net.yozmnews.source.domain.profile.FeedKey;
 import net.yozmnews.source.domain.profile.FeedSpec;
@@ -20,6 +21,7 @@ import net.yozmnews.source.domain.profile.PresetKey;
 import net.yozmnews.source.domain.profile.ProfileParse;
 import net.yozmnews.source.domain.profile.ProfileParser;
 import net.yozmnews.source.domain.registry.Feed;
+import net.yozmnews.source.domain.registry.FeedReconciliation;
 import net.yozmnews.source.domain.registry.FeedRepository;
 import net.yozmnews.source.domain.registry.ProfileResolution;
 import net.yozmnews.source.domain.registry.ProfileResolver;
@@ -32,7 +34,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 소스 등록과 운영자 원문 수정 — docs/specs/source.md §4 · source-R1 ~ source-R3 · source-R50
+ * 소스 등록과 운영자 원문 수정 — docs/specs/source.md §4 · source-R1 ~ source-R3 · source-R50.
+ * <p>
+ * 둘 다 같은 트랜잭션에서 프로필의 소스 이름을 출처 이름으로 기록한다.
  */
 @Service
 class SourceRegistration {
@@ -49,25 +53,29 @@ class SourceRegistration {
 
 	private final FeedProvisioner provisioner;
 
+	private final SourceAttributionRepository attributions;
+
 	private final TransactionTemplate transaction;
 
 	private final InstantSource clock;
 
 	@Autowired
 	SourceRegistration(PresetCatalog catalog, ProfileParser parser, SourceRepository sources, FeedRepository feeds,
-			ProfileResolver resolver, FeedProvisioner provisioner, TransactionTemplate transaction) {
-		this(catalog, parser, sources, feeds, resolver, provisioner, transaction, InstantSource.system());
+			ProfileResolver resolver, FeedProvisioner provisioner, SourceAttributionRepository attributions,
+			TransactionTemplate transaction) {
+		this(catalog, parser, sources, feeds, resolver, provisioner, attributions, transaction, InstantSource.system());
 	}
 
 	SourceRegistration(PresetCatalog catalog, ProfileParser parser, SourceRepository sources, FeedRepository feeds,
-			ProfileResolver resolver, FeedProvisioner provisioner, TransactionTemplate transaction,
-			InstantSource clock) {
+			ProfileResolver resolver, FeedProvisioner provisioner, SourceAttributionRepository attributions,
+			TransactionTemplate transaction, InstantSource clock) {
 		this.catalog = catalog;
 		this.parser = parser;
 		this.sources = sources;
 		this.feeds = feeds;
 		this.resolver = resolver;
 		this.provisioner = provisioner;
+		this.attributions = attributions;
 		this.transaction = transaction;
 		this.clock = clock;
 	}
@@ -107,7 +115,9 @@ class SourceRegistration {
 	Revision reviseOperatorProfile(SourceId id, String text) {
 		Instant now = this.clock.instant();
 		return this.transaction.execute(status -> {
-			Source source = this.sources.findById(id.value()).orElseThrow(() -> new UnknownSourceException(id));
+			Source source = this.sources.findById(id.value())
+				.filter(found -> !found.hidden())
+				.orElseThrow(() -> new UnknownSourceException(id));
 			if (source.operatorProfile().isEmpty()) {
 				return new Revision.NotOperatorProfile();
 			}
@@ -125,12 +135,17 @@ class SourceRegistration {
 				source.disable();
 			}
 			this.sources.save(source);
+			this.attributions.record(id, after.source().name(), now);
 			List<Feed> existing = this.feeds.findAllBySourceId(id.value());
+			Set<FeedKey> reappeared = Set.copyOf(FeedReconciliation.compare(after, existing).reappeared());
 			List<FeedKey> disabled = new ArrayList<>();
 			for (Feed feed : existing.stream().sorted(Comparator.comparingLong(feed -> feed.id().value())).toList()) {
 				if (feed.enabled() && !ProfileRevision.keepsEnabled(before, after, feed.feedKey())) {
 					feed.disable();
 					disabled.add(feed.feedKey());
+				}
+				if (reappeared.contains(feed.feedKey())) {
+					feed.unhide();
 				}
 				this.feeds.save(feed);
 			}
@@ -150,6 +165,7 @@ class SourceRegistration {
 		Instant now = this.clock.instant();
 		return this.transaction.execute(status -> {
 			Source saved = this.sources.save(source);
+			this.attributions.record(saved.id(), profile.source().name(), now);
 			for (FeedSpec feed : profile.feeds()) {
 				this.provisioner.provision(saved.id(), feed.key(), now);
 			}

@@ -200,6 +200,63 @@
         "tags" : [ "admin-event-publication-controller" ]
       }
     },
+    "/api/admin/feeds/{id}" : {
+      "delete" : {
+        "operationId" : "delete_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/FeedRemovalResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "없는 피드이거나 숨긴 소스의 피드다"
+          }
+        },
+        "tags" : [ "admin-feed-controller" ]
+      }
+    },
     "/api/admin/feeds/{id}/disable" : {
       "post" : {
         "operationId" : "disable_1",
@@ -327,6 +384,73 @@
         "tags" : [ "admin-feed-controller" ]
       }
     },
+    "/api/admin/feeds/{id}/hide" : {
+      "post" : {
+        "operationId" : "hide_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/FeedRemovalResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "없는 피드이거나 숨긴 소스의 피드다"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "다른 요청이 먼저 바꿨다"
+          }
+        },
+        "tags" : [ "admin-feed-controller" ]
+      }
+    },
     "/api/admin/feeds/{id}/poll-interval" : {
       "put" : {
         "operationId" : "changePollInterval_1",
@@ -392,6 +516,66 @@
               }
             },
             "description" : "없는 피드다"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "다른 요청이 먼저 바꿨다"
+          }
+        },
+        "tags" : [ "admin-feed-controller" ]
+      }
+    },
+    "/api/admin/feeds/{id}/unhide" : {
+      "post" : {
+        "operationId" : "unhide_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "없는 피드이거나 숨긴 소스의 피드다"
           },
           "409" : {
             "content" : {
@@ -656,6 +840,151 @@
         "tags" : [ "admin-source-controller" ]
       }
     },
+    "/api/admin/sources/hidden" : {
+      "get" : {
+        "operationId" : "hiddenSources",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SourceListResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          }
+        },
+        "tags" : [ "admin-source-controller" ]
+      }
+    },
+    "/api/admin/sources/{id}" : {
+      "delete" : {
+        "operationId" : "delete",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "없는 소스다"
+          }
+        },
+        "tags" : [ "admin-source-controller" ]
+      }
+    },
+    "/api/admin/sources/{id}/deletion-impact" : {
+      "get" : {
+        "operationId" : "source",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DeletionImpactResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "ID 가 1 미만이다"
+          }
+        },
+        "tags" : [ "admin-deletion-impact-controller" ]
+      }
+    },
     "/api/admin/sources/{id}/disable" : {
       "post" : {
         "operationId" : "disable",
@@ -738,6 +1067,66 @@
               }
             },
             "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "없는 소스다"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "다른 요청이 먼저 바꿨다"
+          }
+        },
+        "tags" : [ "admin-source-controller" ]
+      }
+    },
+    "/api/admin/sources/{id}/hide" : {
+      "post" : {
+        "operationId" : "hide",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
           },
           "401" : {
             "content" : {
@@ -1005,6 +1394,131 @@
         "tags" : [ "admin-source-controller" ]
       }
     },
+    "/api/admin/sources/{id}/unhide" : {
+      "post" : {
+        "operationId" : "unhide",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "없는 소스다"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "다른 요청이 먼저 바꿨다"
+          }
+        },
+        "tags" : [ "admin-source-controller" ]
+      }
+    },
+    "/api/admin/sources/{sourceId}/feeds/{feedId}/deletion-impact" : {
+      "get" : {
+        "operationId" : "feed",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "sourceId",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }, {
+          "in" : "path",
+          "name" : "feedId",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DeletionImpactResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "ID 가 1 미만이다"
+          }
+        },
+        "tags" : [ "admin-deletion-impact-controller" ]
+      }
+    },
     "/api/ping" : {
       "get" : {
         "operationId" : "ping",
@@ -1105,6 +1619,16 @@
           }
         },
         "required" : [ "actual", "criterion", "threshold" ]
+      },
+      "DeletionImpactResponse" : {
+        "type" : "object",
+        "properties" : {
+          "exclusiveArticles" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        },
+        "required" : [ "exclusiveArticles" ]
       },
       "DiscardItemResponse" : {
         "type" : "object",
@@ -1324,6 +1848,20 @@
         },
         "required" : [ "failure", "preview", "refusal", "result", "shortfalls" ]
       },
+      "FeedRemovalResponse" : {
+        "type" : "object",
+        "properties" : {
+          "refusal" : {
+            "type" : [ "string", "null" ],
+            "enum" : [ "IN_PROFILE", "PROFILE_UNAVAILABLE" ]
+          },
+          "result" : {
+            "type" : "string",
+            "enum" : [ "REMOVED", "REFUSED" ]
+          }
+        },
+        "required" : [ "refusal", "result" ]
+      },
       "FeedResponse" : {
         "type" : "object",
         "properties" : {
@@ -1447,6 +1985,9 @@
           "name" : {
             "type" : "string"
           },
+          "sourceHidden" : {
+            "type" : "boolean"
+          },
           "sourceId" : {
             "type" : [ "integer", "null" ],
             "format" : "int64"
@@ -1456,7 +1997,7 @@
             "format" : "date"
           }
         },
-        "required" : [ "feedCount", "homepage", "key", "name", "sourceId", "termsReviewedAt" ]
+        "required" : [ "feedCount", "homepage", "key", "name", "sourceHidden", "sourceId", "termsReviewedAt" ]
       },
       "PreviewReport" : {
         "type" : "object",
@@ -1760,6 +2301,12 @@
               "$ref" : "#/components/schemas/FeedResponse"
             }
           },
+          "hiddenFeeds" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/FeedResponse"
+            }
+          },
           "homepage" : {
             "type" : [ "string", "null" ],
             "format" : "uri"
@@ -1787,7 +2334,7 @@
             "format" : "date"
           }
         },
-        "required" : [ "enabled", "feeds", "homepage", "id", "name", "pollIntervalMinutes", "presetKey", "profileState", "termsReviewedAt" ]
+        "required" : [ "enabled", "feeds", "hiddenFeeds", "homepage", "id", "name", "pollIntervalMinutes", "presetKey", "profileState", "termsReviewedAt" ]
       },
       "StatusCriteriaResponse" : {
         "type" : "object",

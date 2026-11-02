@@ -10,6 +10,7 @@ import java.util.concurrent.TimeUnit;
 
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.source.SourceId;
+import net.yozmnews.source.domain.poll.SlotLock;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
@@ -43,8 +44,8 @@ class JdbcSourceFetchSlotRepositoryTests {
 
 	@Test
 	void aSourceThatNeverRequestedHasNoNextRequestTime() {
-		assertThat(this.repository.lockNextFetchAt(source("alpha"))).isNull();
-		assertThat(this.repository.lockNextFetchAt(source("beta"))).isNull();
+		assertThat(this.repository.lockNextFetchAt(source("alpha"))).isEqualTo(new SlotLock.Locked(null));
+		assertThat(this.repository.lockNextFetchAt(source("beta"))).isEqualTo(new SlotLock.Locked(null));
 	}
 
 	@Test
@@ -55,8 +56,70 @@ class JdbcSourceFetchSlotRepositoryTests {
 
 		this.repository.saveNextFetchAt(alpha, Instant.parse("2026-10-28T10:00:10.123456Z"));
 
-		assertThat(this.repository.lockNextFetchAt(alpha)).isEqualTo(Instant.parse("2026-10-28T10:00:10.123456Z"));
-		assertThat(this.repository.lockNextFetchAt(beta)).isNull();
+		assertThat(this.repository.lockNextFetchAt(alpha))
+			.isEqualTo(new SlotLock.Locked(Instant.parse("2026-10-28T10:00:10.123456Z")));
+		assertThat(this.repository.lockNextFetchAt(beta)).isEqualTo(new SlotLock.Locked(null));
+	}
+
+	@Test
+	void aSourceThatIsGoneIsReportedWithoutMakingASlotRow() {
+		SourceId present = source("present");
+
+		assertThat(this.repository.lockNextFetchAt(present)).isEqualTo(new SlotLock.Locked(null));
+		assertThat(this.repository.lockNextFetchAt(new SourceId(999_999))).isEqualTo(new SlotLock.SourceGone());
+		assertThat(this.jdbc.sql("select source_id from source_fetch_slots").query(Long.class).list())
+			.containsExactly(present.value());
+	}
+
+	@Test
+	void deletingTheSlotOfASourceLeavesTheOthers() {
+		SourceId alpha = source("alpha");
+		SourceId beta = source("beta");
+		this.repository.lockNextFetchAt(alpha);
+		this.repository.lockNextFetchAt(beta);
+
+		this.repository.deleteBySource(alpha);
+
+		assertThat(this.jdbc.sql("select source_id from source_fetch_slots").query(Long.class).list())
+			.containsExactly(beta.value());
+	}
+
+	@Test
+	@Transactional(propagation = Propagation.NOT_SUPPORTED)
+	void aReservationWaitsForADeletionHoldingTheSourceRowAndThenFindsItGone() throws InterruptedException {
+		TransactionTemplate transaction = new TransactionTemplate(this.transactionManager);
+		SourceId source = source("deleting");
+		CountDownLatch deleted = new CountDownLatch(1);
+		CountDownLatch commit = new CountDownLatch(1);
+		try {
+			CompletableFuture<Void> deletion = CompletableFuture.runAsync(() -> transaction.executeWithoutResult(status -> {
+				this.jdbc.sql("select id from sources where id = :source for update").param("source", source.value())
+					.query(Long.class)
+					.list();
+				this.jdbc.sql("delete from sources where id = :source").param("source", source.value()).update();
+				deleted.countDown();
+				awaitQuietly(commit);
+			}));
+			assertThat(deleted.await(10, TimeUnit.SECONDS)).isTrue();
+			CompletableFuture<SlotLock> reservation = CompletableFuture
+				.supplyAsync(() -> transaction.execute(status -> this.repository.lockNextFetchAt(source)));
+			Thread.sleep(300);
+			assertThat(reservation).isNotDone();
+
+			commit.countDown();
+			deletion.join();
+
+			assertThat(reservation.join()).isEqualTo(new SlotLock.SourceGone());
+			assertThat(this.jdbc.sql("select count(*) from source_fetch_slots where source_id = :source")
+				.param("source", source.value())
+				.query(Integer.class)
+				.single()).isZero();
+		}
+		finally {
+			commit.countDown();
+			this.jdbc.sql("delete from source_fetch_slots where source_id = :source").param("source", source.value()).update();
+			this.jdbc.sql("delete from sources where id = :source").param("source", source.value()).update();
+		}
 	}
 
 	@Test

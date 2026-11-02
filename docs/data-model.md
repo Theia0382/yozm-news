@@ -23,8 +23,9 @@ erDiagram
 
     sources ||--o{ feeds : ""
     sources ||--o| source_fetch_slots : ""
+    sources ||--o| source_attributions : ""
     feeds ||--|| feed_poll_states : ""
-    sources ||--o{ articles : ""
+    sources ||--o{ article_feed_entries : ""
     feeds ||--o{ article_feed_entries : ""
     articles ||--o{ article_feed_entries : ""
 
@@ -74,7 +75,7 @@ erDiagram
 
 ## 소스와 기사
 
-소스 테이블(`sources` · `feeds` · `feed_poll_states` · `source_fetch_slots`)은 [source Spec §6](specs/source.md#6-데이터), 기사 테이블(`articles` · `article_feed_entries`)은 [article Spec §6](specs/article.md#6-데이터)에 있다.
+소스 테이블(`sources` · `feeds` · `feed_poll_states` · `source_fetch_slots` · `source_attributions`)은 [source Spec §6](specs/source.md#6-데이터), 기사 테이블(`articles` · `article_feed_entries`)은 [article Spec §6](specs/article.md#6-데이터)에 있다.
 
 ## 평가
 
@@ -138,7 +139,7 @@ erDiagram
 
 | 데이터 | 보존 | 이유 |
 |---|---|---|
-| 기사 메타데이터 (제목, 링크, 시각, 출처) | 무기한 | 지난 다이제스트의 링크를 유지하기 위해 |
+| 기사 메타데이터 (제목, 링크, 시각, 출처) | 무기한 | 지난 다이제스트의 링크를 유지하기 위해. 출처는 그 기사의 엔트리가 가리키는 소스들의 이름이다 — 프로필을 얻지 못하면 기록된 출처 이름([source Spec 출처 이름](specs/source.md#출처-이름) · [ADR-0053](adr/0053-source-records-last-confirmed-name-apart-from-operating-settings.md)) |
 | 기사 요약문 (`summary_text`) | 기본 무기한. 운영 설정(보존 일수, 기본 꺼짐)을 켜면 그 뒤 삭제 | 재평가 · 임베딩 재계산 · 검색에 쓴다. 화면 · 외부 API 에는 노출하지 않는다. 지워진 기사도 장기 기능에서 처리된다 ([ADR-0029](adr/0029-indefinite-summary-retention-with-optional-deletion.md)) |
 | 주제 · 지역 태그(`article_tags`), 태그 체계, 태그 키 계보 | 무기한 | 주제별 보도량과 관심사 히스토리의 근거 |
 | 사건 배정 입력 (`article_match_features`) | 사건 배정 시간 창 + 여유 | 요약문으로 다시 계산한다 |
@@ -151,5 +152,7 @@ erDiagram
 | 탈퇴 사용자 | 즉시 비식별화, 30일 후 완전 삭제 | 실수로 탈퇴한 경우의 복구 기간 |
 | JobRunr 작업 기록 | 성공하고 36시간 뒤 삭제 상태, 다시 72시간 뒤 영구 삭제. 실패한 작업은 남는다 | JobRunr 기본값. 작업의 결과는 각 모듈의 데이터에 남는다 |
 | 이벤트 발행 기록 (`event_publication`) | 완료 즉시 삭제. 실패한 발행은 운영자가 폐기할 때까지 남는다 | 결과는 각 모듈의 데이터에 남고, 실패한 발행은 재처리와 원인 조사의 근거다([ADR-0023](adr/0023-jobrunr-oss-framework-schema-and-event-resubmission.md) · [ADR-0050](adr/0050-operator-resubmits-once-or-discards-stranded-event-publications-read-from-registry.md)) |
+
+- **무기한은 자동으로 지우지 않는다는 뜻이다.** 숨긴 소스 · 피드의 기사도 남는다. 운영자가 소스 · 피드를 지우면 그 소스 · 피드만 가진 기사(메타데이터 · 요약문 · 엔트리)가 함께 지워지고, 다른 소스 · 피드도 가진 기사는 남는다([source Spec 숨김과 삭제](specs/source.md#숨김과-삭제) · [article Spec](specs/article.md#지운-소스--피드) · [ADR-0051](adr/0051-operator-hides-or-deletes-sources-and-feeds-and-deletion-removes-exclusive-articles.md) · [ADR-0052](adr/0052-article-sources-live-in-feed-entries-and-late-items-of-deleted-feeds-are-dropped.md)). 기사를 가리키는 다른 데이터가 그 삭제를 따르는 길은 **(미설계)** 다([overview.md §5](overview.md#5-모듈-지도))
 
 보존 기간은 [open-questions.md](open-questions.md)에서 확정한다.

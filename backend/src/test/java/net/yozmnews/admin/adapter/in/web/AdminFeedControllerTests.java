@@ -3,6 +3,7 @@ package net.yozmnews.admin.adapter.in.web;
 import static net.yozmnews.admin.adapter.in.web.AdminRequests.authorized;
 import static net.yozmnews.admin.adapter.in.web.AdminRequests.json;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -22,6 +23,8 @@ import net.yozmnews.source.DocumentProblemView;
 import net.yozmnews.source.FailurePermanence;
 import net.yozmnews.source.FeedEnableResult;
 import net.yozmnews.source.FeedId;
+import net.yozmnews.source.FeedRemovalRefusal;
+import net.yozmnews.source.FeedRemovalResult;
 import net.yozmnews.source.FetchFailureReason;
 import net.yozmnews.source.FetchFailureView;
 import net.yozmnews.source.PreviewReport;
@@ -175,6 +178,55 @@ class AdminFeedControllerTests {
 	void disablingAnswersNoContent() throws Exception {
 		this.mockMvc.perform(authorized(post("/api/admin/feeds/7/disable"))).andExpect(status().isNoContent());
 		assertThat(this.administration.calls).containsExactly("disableFeed 7");
+	}
+
+	@Test
+	void hidingAFeedAnswersRemovedOrTheRefusal() throws Exception {
+		this.administration.feedRemoval = new FeedRemovalResult.Removed();
+		this.mockMvc.perform(authorized(post("/api/admin/feeds/7/hide")))
+			.andExpect(status().isOk())
+			.andExpect(content().json("""
+					{"result":"REMOVED","refusal":null}
+					""", JsonCompareMode.STRICT));
+
+		this.administration.feedRemoval = new FeedRemovalResult.Refused(FeedRemovalRefusal.IN_PROFILE);
+		this.mockMvc.perform(authorized(post("/api/admin/feeds/8/hide")))
+			.andExpect(status().isOk())
+			.andExpect(content().json("""
+					{"result":"REFUSED","refusal":"IN_PROFILE"}
+					""", JsonCompareMode.STRICT));
+
+		assertThat(this.administration.calls).containsExactly("hideFeed 7", "hideFeed 8");
+	}
+
+	@Test
+	void deletingAFeedAnswersRemovedOrTheRefusal() throws Exception {
+		this.administration.feedRemoval = new FeedRemovalResult.Removed();
+		this.mockMvc.perform(authorized(delete("/api/admin/feeds/7")))
+			.andExpect(status().isOk())
+			.andExpect(content().json("""
+					{"result":"REMOVED","refusal":null}
+					""", JsonCompareMode.STRICT));
+
+		this.administration.feedRemoval = new FeedRemovalResult.Refused(FeedRemovalRefusal.PROFILE_UNAVAILABLE);
+		this.mockMvc.perform(authorized(delete("/api/admin/feeds/8")))
+			.andExpect(status().isOk())
+			.andExpect(content().json("""
+					{"result":"REFUSED","refusal":"PROFILE_UNAVAILABLE"}
+					""", JsonCompareMode.STRICT));
+
+		assertThat(this.administration.calls).containsExactly("deleteFeed 7", "deleteFeed 8");
+	}
+
+	@Test
+	void unhidingAFeedAnswersNoContentAndAnUnknownFeedIsNotFound() throws Exception {
+		this.mockMvc.perform(authorized(post("/api/admin/feeds/7/unhide"))).andExpect(status().isNoContent());
+		assertThat(this.administration.calls).containsExactly("unhideFeed 7");
+
+		this.administration.failure = new UnknownFeedException(new FeedId(99));
+		this.mockMvc.perform(authorized(post("/api/admin/feeds/99/hide")))
+			.andExpect(status().isNotFound())
+			.andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON));
 	}
 
 	@Test

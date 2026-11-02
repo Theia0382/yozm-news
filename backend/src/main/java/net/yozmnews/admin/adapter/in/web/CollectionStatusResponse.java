@@ -20,8 +20,8 @@ import org.jspecify.annotations.Nullable;
 /**
  * 수집 현황 — 집계 기간, 피드 상태의 기준값, 소스마다 합계와 피드 행. docs/specs/admin.md §3.
  * <p>
- * 소스 행의 개수는 그 소스의 피드 전부(꺼진 피드 · 프로필에 없는 피드 포함)의 칸별 합이다. 비율은 개수와 함께 {@code article} 이 낸
- * 값을 옮긴다(article-R14).
+ * 숨긴 소스 · 숨긴 피드는 싣지 않는다. 소스 행의 개수는 그 소스의 숨기지 않은 피드 전부(꺼진 피드 · 프로필에 없는 피드 포함)의 칸별
+ * 합이다. 비율은 개수와 함께 {@code article} 이 낸 값을 옮긴다(article-R14).
  *
  * @param from 집계 기간의 시작(포함)
  * @param to 집계 기간의 끝(제외) — 집계한 시각

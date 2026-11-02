@@ -8,6 +8,8 @@ import net.yozmnews.source.CriterionShortfall;
 import net.yozmnews.source.DocumentProblemView;
 import net.yozmnews.source.FeedEnableResult;
 import net.yozmnews.source.FeedId;
+import net.yozmnews.source.FeedRemovalRefusal;
+import net.yozmnews.source.FeedRemovalResult;
 import net.yozmnews.source.FetchFailureView;
 import net.yozmnews.source.PresetView;
 import net.yozmnews.source.PreviewReport;
@@ -53,12 +55,15 @@ class SourceAdministrationService implements SourceAdministration {
 
 	private final ProfilePreviewer previewer;
 
+	private final SourceRemoval removal;
+
 	SourceAdministrationService(SourceCatalog catalog, SourceRegistration registration, SourceOperations operations,
-			ProfilePreviewer previewer) {
+			ProfilePreviewer previewer, SourceRemoval removal) {
 		this.catalog = catalog;
 		this.registration = registration;
 		this.operations = operations;
 		this.previewer = previewer;
+		this.removal = removal;
 	}
 
 	@Override
@@ -69,6 +74,11 @@ class SourceAdministrationService implements SourceAdministration {
 	@Override
 	public List<SourceView> sources() {
 		return this.catalog.sources();
+	}
+
+	@Override
+	public List<SourceView> hiddenSources() {
+		return this.catalog.hiddenSources();
 	}
 
 	@Override
@@ -166,6 +176,40 @@ class SourceAdministrationService implements SourceAdministration {
 	@Override
 	public boolean changeFeedPollInterval(FeedId id, @Nullable Integer minutes) {
 		return this.operations.changeFeedPollInterval(id, minutes);
+	}
+
+	@Override
+	public void hideSource(SourceId id) {
+		this.removal.hideSource(id);
+	}
+
+	@Override
+	public void unhideSource(SourceId id) {
+		this.removal.unhideSource(id);
+	}
+
+	@Override
+	public FeedRemovalResult hideFeed(FeedId id) {
+		return removal(this.removal.hideFeed(id));
+	}
+
+	@Override
+	public void unhideFeed(FeedId id) {
+		this.removal.unhideFeed(id);
+	}
+
+	@Override
+	public void deleteSource(SourceId id) {
+		this.removal.deleteSource(id);
+	}
+
+	@Override
+	public FeedRemovalResult deleteFeed(FeedId id) {
+		return removal(this.removal.deleteFeed(id));
+	}
+
+	private static FeedRemovalResult removal(Optional<FeedRemovalRefusal> refusal) {
+		return refusal.<FeedRemovalResult>map(FeedRemovalResult.Refused::new).orElseGet(FeedRemovalResult.Removed::new);
 	}
 
 	private static SourceRegistrationResult registration(Registration registration) {
