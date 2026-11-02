@@ -387,7 +387,6 @@ public final class UnknownFeedException extends RuntimeException { public FeedId
 | `domain/registry` | 소스 · 피드 aggregate 와 그 저장소, 소스의 프로필 얻기, 켜기 · 수집 가능 판정, 운영자 원문 수정의 판정, 피드 숨김 · 삭제의 대상 판정, 운영 목록 조회 포트 |
 | `domain/attribution` | 출처 이름 기록의 저장소 |
 | `domain/profile` | 수집 프로필 모델과 그 바인딩 · 검증, 프리셋 카탈로그, 실제 주기, 피드 읽기 설정 |
-| `domain/profile/text` | 프로필 원문을 YAML 이벤트로 읽어 트리로 옮긴다 |
 | `domain/poll` | 피드의 수집 상태와 그 전이, 수집 일정 산식, 새 항목 비교, 피드 상태 판정, 수집 상태 · 피드 상태 · 요청 예약 저장소 |
 | `domain/fetch` | 피드 요청 관문(포트 `ArticleSource`)과 요청 규칙 — 주소 · 리다이렉트 · 상태 코드 · 실패 분류 · 제한 |
 | `domain/feed` | 정규화 — 문자 인코딩 · 사전 보정 · XML 읽기 · 형식 판별 · 필드 보정 |
@@ -535,19 +534,13 @@ sequenceDiagram
 #### `domain/profile`
 
 - `CollectionProfile` — 검증을 통과한 수집 프로필. 프리셋과 운영자 프로필이 같은 모델이고, 검증기만 만든다(source-R10)
-- `ProfileParser` — 원문 → 프로필. `text` 의 읽기기 → `ProfileBinder` → `ProfileValidator` 를 지나고, 입력 오류는 예외가 아니라 문제 목록으로 돌려준다
-- `ProfileBinder` — 트리 → 초안. 알 수 없는 키 · 같은 매핑 안 중복 키 · 앵커 · 별칭 · 명시 태그 · 빈 값 · 형(type) 오류를 판정한다(source-R32)
+- `ProfileParser` — 원문 → 프로필. 원문 상한(`MAX_CHARS` 65,536 — source-R32 의 정본)의 `platform` `YamlTextReader` → `ProfileBinder` → `ProfileValidator` 를 지나고, 입력 오류는 예외가 아니라 문제 목록으로 돌려준다
+- `ProfileBinder` — 트리 → 초안. 수집 프로필 형식의 키 목록이 이 클래스에 있다. 공통 거부(알 수 없는 키 · 같은 매핑 안 중복 키 · 앵커 · 별칭 · 명시 태그 · 빈 값 · 형 오류)는 `platform` 의 `StrictYamlBinding` 에 맡기고, 피드 식별자 중복 · 알 수 없는 기사 항목은 여기서 판정해 같은 문제 목록에 원문 순서대로 넣는다(source-R32)
 - `ProfileValidator` — 초안 → 프로필. 값 규칙의 정본이다(source-R11)
 - `PresetCatalog` · `Preset` — 프리셋 키 → 프리셋(source-R12)
 - `PollIntervalPolicy` — 실제 주기 산식(source-R14)
 - `FeedReading` — 피드 읽기 설정의 정본(§2). `CollectionProfile.reading` 이 피드마다 만든다. 날짜 형식은 패턴 문자열로 비교한다(source-R9 · source-R50)
-- 그 밖의 값 · 식별자 타입: `FeedKey` · `PresetKey` · `FeedSpec` · `SourceInfo` · `PollInterval` · `PollIntervalSettings` · `PreCorrection` · `ItemField` · `ValueSource` · `ElementName` · `KnownNamespaces` · `DateParsing` · `DatePattern` · `Identifiers` · `ProfileDraft` · `ProfileParse` · `PresetParse` · `ProfilePath` · `ProfileProblem` · `ProblemCode`
-
-#### `domain/profile/text`
-
-- `ProfileTextReader` — 프로필 원문을 YAML 이벤트 API 로만 읽어 트리로 옮긴다 — 원문 길이 상한 · 문서 하나 · 최상위 매핑(source-R32)
-- `ProfileTree` — 원문을 받은 그대로 옮긴 트리. 판정은 하지 않는다
-- 그 밖의 값: `ReadResult` · `TextLocation`
+- 그 밖의 값 · 식별자 타입: `FeedKey` · `PresetKey` · `FeedSpec` · `SourceInfo` · `PollInterval` · `PollIntervalSettings` · `PreCorrection` · `ItemField` · `ValueSource` · `ElementName` · `KnownNamespaces` · `DateParsing` · `DatePattern` · `Identifiers` · `ProfileDraft` · `ProfileParse` · `PresetParse` · `ProfileProblem` · `ProblemCode`(공통 문제 종류와 같은 이름을 담고 `of` 가 망라 변환한다)
 
 #### `domain/poll`
 
@@ -658,7 +651,7 @@ public sealed interface FetchResult {
 
 #### 수집 프로필 읽기
 
-프로필 원문은 snakeyaml-engine 의 이벤트 API 로만 읽는다(source-R32).
+프로필 원문은 `platform` 의 YAML 원문 읽기로 읽는다 — snakeyaml-engine 의 이벤트 API 만 쓴다([platform-R17](platform.md#yaml-원문-읽기) · source-R32).
 
 #### 신뢰할 수 없는 입력
 
@@ -794,7 +787,7 @@ public sealed interface FetchResult {
 
 운영자 프로필 원문은 운영자 권한으로 들어오지만 해석기는 그대로 믿지 않는다([ADR-0024](../adr/0024-collection-profile-yaml-and-preset-reference-or-own-profile.md)).
 
-- **source-R32** — 원문은 65,536자까지다. YAML 은 이벤트 파서로만 읽는다 — 태그로 객체를 만드는 단계가 없다. 문서는 하나이고 최상위는 매핑이다. 앵커 · 별칭 · 명시 태그, 알 수 없는 키, 같은 매핑 안 중복 키, 빈 값(`null` · 값을 적지 않음)은 오류다. 사전 보정은 닫힌 목록에서만 고른다 — 프로필에 코드를 넣을 수 없다. 피드 · 홈페이지 URL 은 `http` · `https` 절대 URL 만 받고, 내부 주소를 가리키는 URL 은 수집이 막는다(source-R33)
+- **source-R32** — 원문은 65,536자까지다. YAML 읽기와 공통 거부(이벤트 파서만 · 문서 하나 · 최상위 매핑 · 앵커 · 별칭 · 명시 태그 · 알 수 없는 키 · 같은 매핑 안 중복 키 · 빈 값 · 형 오류)는 [platform-R17](platform.md#yaml-원문-읽기)이고, 알려진 키는 수집 프로필 형식(source-R11)이 정한다. 사전 보정은 닫힌 목록에서만 고른다 — 프로필에 코드를 넣을 수 없다. 피드 · 홈페이지 URL 은 `http` · `https` 절대 URL 만 받고, 내부 주소를 가리키는 URL 은 수집이 막는다(source-R33)
 
 ### 피드 요청
 
@@ -913,3 +906,4 @@ RSS 품질이 피드마다 크게 다르므로 사전 보정 → 파싱 → 필�
 | [0049](../adr/0049-feed-request-blocks-ipv6-reserved-space-and-local-nat64.md) | 피드 요청의 차단 대역을 IPv6 예약 공간과 로컬 NAT64 접두까지 넓힌다 |
 | [0051](../adr/0051-operator-hides-or-deletes-sources-and-feeds-and-deletion-removes-exclusive-articles.md) | 운영자는 소스 · 피드를 숨기거나 삭제하고, 숨김은 끄고 남기며 삭제는 그 소스 · 피드만 가진 기사까지 지운다 |
 | [0053](../adr/0053-source-records-last-confirmed-name-apart-from-operating-settings.md) | 출처는 source 가 프로필에서 마지막으로 확인한 소스 이름을 운영 설정과 다른 테이블에 기록한다 |
+| [0056](../adr/0056-platform-reads-yaml-text-and-applies-common-rejection.md) | YAML 원문 읽기와 공통 거부는 `platform` 이 맡고, 문서별 형식 · 검증은 각 모듈의 `domain` 이 한다 |

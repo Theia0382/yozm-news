@@ -121,14 +121,14 @@ flowchart LR
 |---|---|
 | [`source`](specs/source.md) | 소스 등록(수집 프로필 · 프리셋) · 켜기 · 끄기 · 숨김 · 삭제 · 피드 상태, 출처 이름 기록, 수집 스케줄, RSS 파싱 · 정규화(`ArticleSource` — 모든 피드 수집이 거치는 포트) |
 | [`article`](specs/article.md) | 같은 기사 판정(정규 URL · 제목 비교 키) · 중복 제거, 기사 저장 · 조회, 피드별 엔트리 집계(중복률 · 날짜 추정 비율), 지운 소스 · 피드의 기사 삭제, 본문 추출(`ContentExtractor` — v1 비활성) |
-| `evaluation` | 태그 체계와 태그 키 계보, 공유 평가(`ArticleEvaluator` — Jev 를 부르는 유일한 포트. 태그 · 형식 · 중요도와 사건 소속 판정), 평가 결과 |
+| [`evaluation`](specs/evaluation.md) | 태그 체계(기본 체계 적재 · 두 기준과 그 변경 이력)와 태그 키 계보, 공유 평가(`ArticleEvaluator` — Jev 를 부르는 유일한 포트. 태그 · 형식 · 중요도와 사건 소속 판정), 평가 결과 |
 | `digest` | 후보 선별(관심도 · 큰 사건 · 사건 단위 중복 제거 · 선정 이유), 프롬프트 구성, 다이제스트 생성(`DigestGenerator`) · 검증 · 저장, 이슈 연결 적용과 이슈 타임라인 조회, 관심도 산식과 관심사 히스토리 조회 |
 | `llm` | 공급자 · 모델 목록, 사용자 키로 LLM 클라이언트 생성(`LlmClientFactory` — 모든 LLM 호출과 BYOK 키 복호화가 거치는 관문), 키 검증 |
 | `credential` | BYOK 키 암호화 보관(envelope encryption) |
 | `user` | 계정, OIDC 연동, 자체 로그인(비밀번호 · 복구 코드), 화면 내 알림, 사용자 설정 · 태그 선호와 구독 변경 이력, 리포트 설정 |
 | `feedback` | 좋아요 / 싫어요 — 추가 전용 기록과 현재 상태 |
 | [`admin`](specs/admin.md) | 운영자 기능의 HTTP API(소스 · 피드 관리, 수집 현황, 이벤트 발행, (미구현) 태그 체계 · 평가 결과 · 사건) — 각 모듈의 공개 운영 API 를 부른다 |
-| [`platform`](specs/platform.md) | 여러 모듈에 걸친 것: 실패한 이벤트 발행 재처리와 남겨진 발행의 운영자 처리, 화면용 API 명세 설정 · API 계약 확인 엔드포인트, 역할(profile `web` · `worker`)과 그 기동 검사, 보안 설정, 오류 응답 형식, 공통 타입 |
+| [`platform`](specs/platform.md) | 여러 모듈에 걸친 것: 실패한 이벤트 발행 재처리와 남겨진 발행의 운영자 처리, 화면용 API 명세 설정 · API 계약 확인 엔드포인트, 역할(profile `web` · `worker`)과 그 기동 검사, 보안 설정, 오류 응답 형식, YAML 원문 읽기 |
 | `event` | 공유 사건 묶기 — 기사 표현(임베딩 · 고유명사, `ArticleEmbedder`), 사건 배정 · 병합 · 닫기, 큰 사건 판정, 사건 조회. 사용자를 모른다 |
 | `storyline` | 사용자별 이슈 — 제목 · 현재 상태 요약 · 상태 전이 · 추적 · 해제와 그 이력 |
 | `report` | 변화 리포트 일정 · 생성(`ReportGenerator`) · 저장 · 조회 |
@@ -149,6 +149,7 @@ flowchart LR
 - **(미설계)** `ArticleEvaluated` · `UserSettingsChanged` · `CredentialInvalidated` 는 발행 주체 · 시점 · 내용이 아직 설계되지 않았다
 - `ArticleEvaluated` 를 받은 `digest` 는 즉시 생성하지 않는다. 다이제스트는 사용자 일정에 따라 생성되고, 이 이벤트는 지표 갱신에만 쓴다
 - 그림은 이벤트만 그린다. **모듈 사이 의존(공개 API · 이벤트)의 정본은 이 절이다** — 각 모듈 Spec 은 그 모듈이 내놓는 것(공개 인터페이스 · 발행 이벤트)만 갖고 의존은 이 절을 가리킨다. 각 모듈의 화면 · 작업 진입점은 `platform` 의 역할 애너테이션(공개 타입)에 의존한다 — 그래서 `platform` 은 다른 모듈의 타입에 의존하지 않는다([ADR-0042](adr/0042-app-roles-as-web-worker-profiles-marked-by-platform-annotations.md)). 사건 · 이슈 · 관심도 · 변화 리포트에 걸친 공개 API 의존은 `digest` → `event` · `storyline` · `feedback` · `user` · `evaluation` · `llm`, `event` → `article` · `evaluation`, `report` → `digest` · `event` · `evaluation` · `storyline` · `user` · `llm`, `admin` → `event` 다
+- `source` · `evaluation` → `platform` 의 공개 API 의존은 YAML 원문 읽기(`YamlTextReader` · `StrictYamlBinding`)다 — 수집 프로필과 기본 태그 체계 파일을 같은 공통 거부로 읽는다
 - `article` → `source` 의 공개 API 의존은 `SourceDirectory`(피드가 아직 있는지 — 지운 피드의 늦은 항목을 버린다)다. 기사의 출처 이름은 `source` 가 기록한다
 - **(미설계)** 운영자가 소스 · 피드를 지우면 `article` 이 그 소스 · 피드만 가진 기사를 지운다. 기사를 ID 로 가리키는 모듈(평가 · 사건 · 다이제스트)이 그 삭제를 따르는 길은 그 모듈을 구현할 때 정한다
 - `admin` 은 운영자 기능을 가진 모듈의 공개 운영 API 를 부른다 — 지금은 `source` 의 `SourceAdministration`(소스 · 피드 관리 · 숨김 · 삭제 · 수집 상태), `article` 의 `ArticleAdministration`(엔트리 집계 · 삭제하면 함께 지워질 기사 수), `platform` 의 `EventPublicationAdministration`(남겨진 이벤트 발행의 다시 처리 · 폐기). 운영 결과의 타입은 그 모듈이 공개하고 HTTP 응답 모양은 `admin` 이 정한다([ADR-0045](adr/0045-admin-module-serves-operator-api-over-module-public-operation-apis.md))
@@ -204,7 +205,9 @@ flowchart LR
 | 운영자 프로필 | 운영자가 쓴 완결된 수집 프로필. 프리셋 원문을 복사해 고친 것일 수 있지만, 프리셋 수정을 따라가지 않는다 |
 | 기사(Article) | 중복 제거된 기사 1건. 여러 피드에서 같은 기사가 들어와도 1건으로 저장한다 |
 | 공유 평가 | 사용자와 무관하게 기사마다 한 번만 수행하는 Jev 평가(태그 · 형식 · 중요도). 비용은 운영자가 부담 |
-| 태그 체계(Taxonomy) | 운영자가 관리하는 통제 어휘. 주제(2단계) · 지역 · 형식 축으로 나뉘고 버전을 가진다. 기사에는 여러 태그가 붙을 수 있다 |
+| 태그 체계(Tag set) | 운영자가 관리하는 통제 어휘. 주제(2단계) · 지역 · 형식의 태그 종류로 나뉘고 버전을 가진다. 기사에는 여러 태그가 붙을 수 있다 |
+| 태그 종류 | 태그 체계의 갈래 — 주제 · 지역 · 형식. 기사는 종류마다 따로 태그를 받는다. 주제 · 지역은 여러 태그가, 형식은 하나가 붙는다 |
+| 태그 기준 | 주제 · 지역 태그가 기사에 붙었는지 가르는 확률 값. 조회할 때 적용하므로 바꿔도 다시 평가하지 않는다 — 규칙은 [evaluation Spec](specs/evaluation.md) |
 | 후보(Candidate) | 다이제스트 생성 시 한 사용자에게 LLM 입력으로 넘기는 기사 집합 |
 | 다이제스트(Digest) | 한 사용자의 한 기간(기본: 하루)에 대해 LLM 이 여러 기사를 종합해 만든 결과물 |
 | BYOK | Bring Your Own Key. 사용자가 자기 LLM API 키를 등록해 다이제스트 · 변화 리포트 생성 비용을 직접 부담하는 방식 |
@@ -212,7 +215,7 @@ flowchart LR
 | 큰 사건 | 판정 기준을 넘는 사건. 구독과 무관하게 후보에 들어간다. 판정 규칙은 [pipeline.md](pipeline.md) |
 | 이슈(`storyline`) | 한 사용자가 몇 주에서 몇 달에 걸쳐 따라가는 전개. 다이제스트가 그날의 주요 뉴스를 이어 붙인다. GitHub 이슈와 다른 말이다 |
 | 주요 뉴스(`top_stories`) | 다이제스트 하루치에서 여러 기사를 종합한 섹션. 주요 뉴스 하나가 이슈의 한 장면이 된다 |
-| 주제 | 태그 체계의 주제 축(대분류 · 중분류). 보도량과 관심도를 세는 단위이고, Topic 이라는 별도 용어를 두지 않는다 |
+| 주제 | 태그 체계의 주제 태그(대분류 · 중분류). 보도량과 관심도를 세는 단위이고, Topic 이라는 별도 용어를 두지 않는다 |
 | 관심도 | 명시적 신호로 계산한, 기간 × 주제별 관심의 크기. 후보 순위와 관심사 히스토리에 쓰인다. 계산 방법은 [pipeline.md](pipeline.md) |
 | 관심사 히스토리 | 쌓인 명시적 신호와, 그로 계산한 관심도의 변화 |
 | 자유 텍스트 관심사 | 사용자가 설정에 적는 관심사 문장(`interest_text`). 관심도 · 관심사 히스토리와 구분해 항상 이 이름으로 부른다 |

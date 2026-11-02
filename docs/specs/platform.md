@@ -13,12 +13,13 @@
 - **역할** — 앱 역할 profile(`web` · `worker`)과 구성요소의 역할 표시, 역할이 하나도 켜지지 않았을 때의 기동 검사, 작업 역할의 스케줄링
 - **운영자 접근 통제** — 운영자 경로(`/api/admin/**`)를 운영자 토큰으로 막고, 그 밖의 경로는 연다. 보안 구성은 두 역할 공통이다
 - **오류 응답 형식** — 화면용 API 의 오류 본문(`ApiProblem`)과 그것을 만드는 정본(`ProblemResponses`), 컨트롤러 오류 · 보안 거부의 문제 응답
-- **(미구현)** 공통 타입
+- **YAML 원문 읽기** — YAML 원문을 이벤트 API 로 읽어 트리로 옮기고, 문서 종류와 무관한 공통 거부(앵커 · 별칭 · 명시 태그 · 중복 키 · 알 수 없는 키 · 빈 값 · 형 오류 등)를 하는 공개 타입. 수집 프로필(`source`)과 기본 태그 체계(`evaluation`)가 쓴다
 
 하지 않는 것:
 
 - 다른 모듈의 도메인 규칙을 갖지 않는다. 이벤트를 다시 처리할 뿐, 이벤트를 받아 처리하는 일은 각 리스너 모듈의 것이다
 - 화면용 API 명세 파일(`api/openapi.json`)을 소유하지 않는다 — 명세는 각 모듈의 컨트롤러에서 만들어진다
+- YAML 문서의 형식(키 목록) · 값 규칙 · 길이 상한 값을 갖지 않는다 — 문서를 가진 모듈의 `domain` 이 정본이고, 이 모듈은 공통 거부만 한다(platform-R17)
 - 각 모듈 구성요소의 역할을 정하지 않는다 — 역할 애너테이션은 각 모듈이 자기 구성요소에 단다. 이 모듈은 그 표시와 소속 규칙(platform-R9)을 갖는다
 
 다른 모듈과의 의존과 이벤트 흐름은 [overview.md §5](../overview.md#5-모듈-지도)에 있다.
@@ -36,11 +37,12 @@
 | 폐기 | 남겨진 발행을 레지스트리에서 지우는 것 — 되돌릴 수 없다 |
 | 운영자 토큰 | 운영자 경로를 여는 비밀 값 하나 — 서버 설정으로 받고, 화면이 `Authorization: Bearer` 로 보낸다. 설정하지 않으면 운영자 기능이 닫힌다 |
 | 문제 응답 | 화면용 API 의 오류 응답 — RFC 9457 의 필드 이름을 따르는 `application/problem+json` 본문 |
+| 공통 거부 | 문서 종류와 무관하게 거부하는 YAML 문제 — 길이 상한 초과 · 문법 오류 · 최상위가 매핑이 아님 · 여러 문서 · 알 수 없는 키 · 같은 매핑 안 중복 키 · 별칭 · 앵커 · 명시 태그 · 빈 값 · 형 오류(platform-R17) |
 | 역할 | 한 프로세스가 맡는 일의 갈래 — 화면 역할(profile `web` — 화면용 API)과 작업 역할(profile `worker` — 백그라운드 작업). 같은 이미지가 켜진 profile 로 역할을 정한다 |
 
 ## 3. 공개 인터페이스
 
-모듈 최상위 패키지 `net.yozmnews.platform` 의 공개 타입은 역할 애너테이션 둘, 문제 응답 둘(`ApiProblem` · `ProblemResponses`), 이벤트 발행 운영 API(`EventPublicationAdministration` 과 결과 타입 — 파일 9개, 중첩 레코드를 더하면 타입 11개)다.
+모듈 최상위 패키지 `net.yozmnews.platform` 의 공개 타입은 역할 애너테이션 둘, 문제 응답 둘(`ApiProblem` · `ProblemResponses`), 이벤트 발행 운영 API(`EventPublicationAdministration` 과 결과 타입 — 파일 9개, 중첩 레코드를 더하면 타입 11개), YAML 원문 읽기(파일 8개)다.
 
 | 타입 | 형태 | 용도 |
 |---|---|---|
@@ -92,6 +94,94 @@ public class ProblemResponses {
 | `standardTitle(status)` | 상태 코드의 표준 문구 |
 
 관련 규칙: platform-R12.
+
+### YamlTextReader · YamlRead · YamlTree · YamlPath · TextLocation · YamlProblem · YamlProblemKind · StrictYamlBinding
+
+YAML 원문 읽기와 공통 거부(platform-R17). 문서를 가진 모듈이 자기 형식의 바인더 · 검증기에서 쓴다.
+
+```java
+public final class YamlTextReader {
+    public YamlTextReader(int maxChars);
+    public YamlRead read(String text);
+}
+
+public sealed interface YamlRead {
+    record Read(YamlTree.MapNode root) implements YamlRead {}
+    record Unreadable(YamlProblem problem) implements YamlRead {}
+}
+
+public sealed interface YamlTree {
+    TextLocation location();
+    @Nullable String anchor();
+    @Nullable String tag();
+    record MapNode(List<Entry> entries, TextLocation location, @Nullable String anchor, @Nullable String tag) implements YamlTree {}
+    record Entry(YamlTree key, YamlTree value) {}
+    record ListNode(List<YamlTree> items, TextLocation location, @Nullable String anchor, @Nullable String tag) implements YamlTree {}
+    record ScalarNode(ScalarKind kind, String text, TextLocation location, @Nullable String anchor, @Nullable String tag) implements YamlTree {}
+    record AliasNode(String anchorName, TextLocation location) implements YamlTree {}
+    enum ScalarKind { STRING, INTEGER, DECIMAL, BOOLEAN, NULL }
+}
+
+public record YamlPath(List<Segment> segments) {
+    public static final YamlPath ROOT;
+    public static YamlPath of(String... keys);
+    public YamlPath child(String key);
+    public YamlPath index(int index);
+    public sealed interface Segment {
+        record Key(String name) implements Segment {}
+        record Index(int value) implements Segment {}
+    }
+}
+
+public record TextLocation(int line, int column) {
+    public static final TextLocation UNKNOWN;
+}
+
+public record YamlProblem(YamlPath path, YamlProblemKind kind, String message, TextLocation location) {}
+
+public enum YamlProblemKind {
+    TOO_LARGE, SYNTAX_ERROR, NOT_A_MAPPING, MULTIPLE_DOCUMENTS,
+    UNKNOWN_KEY, DUPLICATE_KEY, ALIAS_NOT_ALLOWED, ANCHOR_NOT_ALLOWED, TAG_NOT_ALLOWED,
+    NULL_NOT_ALLOWED, WRONG_TYPE
+}
+
+public final class StrictYamlBinding {
+    public StrictYamlBinding(Consumer<YamlProblem> problems);
+    public Map<String, YamlTree> entries(YamlTree.MapNode map, YamlPath path, Predicate<String> known);
+    public Map<String, YamlTree> entries(YamlTree.MapNode map, YamlPath path, Predicate<String> known, UnknownKey onUnknown);
+    public @Nullable YamlTree.MapNode map(@Nullable YamlTree node, YamlPath path);
+    public @Nullable YamlTree.ListNode list(@Nullable YamlTree node, YamlPath path);
+    public @Nullable Located<String> string(@Nullable YamlTree node, YamlPath path);
+    public @Nullable Located<List<Located<String>>> strings(@Nullable YamlTree node, YamlPath path);
+    public @Nullable Located<Integer> integer(@Nullable YamlTree node, YamlPath path);
+    public @Nullable Located<BigDecimal> decimal(@Nullable YamlTree node, YamlPath path);
+    public @Nullable Located<Boolean> bool(@Nullable YamlTree node, YamlPath path);
+
+    @FunctionalInterface
+    public interface UnknownKey { void report(YamlPath keyPath, String key, TextLocation location); }
+
+    public record Located<T>(T value, YamlPath path, TextLocation location) {}
+}
+```
+
+| 타입 · 멤버 | 뜻 | 제약 |
+|---|---|---|
+| `YamlTextReader` | 원문 → 트리. 키와 값의 앵커 · 태그 · 위치를 그대로 받는다. 스레드 안전 | 상한(문자 수)은 1 이상 — 문서를 가진 모듈이 자기 규칙의 값을 넘긴다 |
+| `YamlRead.Read` | 최상위가 매핑인 문서 하나를 읽었다 — 빈 원문 · 내용 없는 문서는 빈 매핑 | — |
+| `YamlRead.Unreadable` | 트리로 옮길 수 없다 — 상한 초과 · 문법 오류 · 최상위가 매핑이 아님 · 여러 문서 | — |
+| `YamlTree` | 원문을 받은 그대로 옮긴 트리. 같은 매핑 안 중복 키 · 별칭 · 앵커 · 명시 태그도 남긴다. 스칼라 종류는 YAML 1.2 JSON 스키마로 정한다 | — |
+| `YamlPath` | 문서 안의 위치. 표시는 `source.name` · `feeds[0].url` 꼴이고 최상위는 빈 문자열 | — |
+| `TextLocation` | 줄 · 열(1부터). 모르면 `UNKNOWN`(0, 0) | — |
+| `YamlProblem` | 공통 문제 하나 — 경로 · 종류 · 사람이 읽을 문구 · 위치 | — |
+| `StrictYamlBinding` | 트리를 엄격하게 읽는 도구 — 문서 하나에 하나. 공통 문제를 찾은 순서대로 생성자의 소비자에게 넘기고, 쓸 수 없는 값은 null 로 돌려준다 | — |
+| `entries` | 매핑의 항목을 키 → 값으로 모은다. 키가 문자열 스칼라가 아니거나 앞의 키와 같거나 알 수 없는 키면 문제로 알리고 뺀다. `UnknownKey` 를 넘기면 알 수 없는 키를 호출자가 자기 종류로 알린다 | — |
+| `string` · `integer` · `decimal` · `bool` | 스칼라 값 읽기 — 문자열은 문자열 · 수 · 불리언 스칼라의 원문, 정수는 32비트 정수 스칼라, 소수는 정수 · 소수 스칼라, 불리언은 불리언 스칼라. 아니면 형 오류 | — |
+
+- 계약
+  - 문제 문구는 문서 종류를 모른다 — 문서를 가진 모듈은 공통 종류를 자기 문제 코드로 옮길 뿐 문구를 바꾸지 않는다
+  - 모듈의 문제 코드가 공통 종류와 같은 이름을 담으면 그 변환은 `default` 없는 망라 `switch` 로 쓴다 — 공통 종류가 늘면 컴파일이 깨진다([ADR-0056](../adr/0056-platform-reads-yaml-text-and-applies-common-rejection.md))
+
+관련 규칙: platform-R17.
 
 ### EventPublicationAdministration
 
@@ -148,16 +238,16 @@ HTTP 엔드포인트:
 
 | 패키지 | 책임 |
 |---|---|
-| (최상위) | 역할 애너테이션 · 문제 응답 · 이벤트 발행 운영 API(§3) |
+| (최상위) | 역할 애너테이션 · 문제 응답 · 이벤트 발행 운영 API · YAML 원문 읽기(§3) |
 | `adapter/in/job` | 이벤트 발행 재처리 반복 작업 |
 | `adapter/in/web` | API 계약 확인 엔드포인트, 화면용 API 명세 설정, 컨트롤러 오류의 문제 응답 |
 | `adapter/out/persistence` | 이벤트 발행 레지스트리 행의 읽기 · 조건부 삭제 |
 | `application` | 재처리 유스케이스, 남겨진 발행의 운영 유스케이스, 재처리 설정과 정책 결선, 역할 검사 결선, 작업 역할의 스케줄링, 보안 구성과 운영자 토큰 인증 |
 | `domain` | 재처리 대상 · 남겨진 발행 판정과 그 설정 조건, 이벤트를 읽을 수 있는지의 판정, 레지스트리 행 저장 인터페이스, 역할 판정, 운영자 자격 판정 |
 
-협력: `EventResubmissionJob` 이 `EventResubmissionService` 를 부르고, 서비스는 Spring Modulith 의 미완료 발행 전체를 읽어 `EventResubmissionPolicy` 의 판정대로 재제출한다 — 실패 발행은 재제출 전에 `EventReading` 으로 이벤트를 읽어 본다. `admin` 의 운영자 API 는 `EventPublicationAdministrationService` 를 부른다 — 이 서비스는 `RegistryRows`(구현 `JdbcRegistryRows` — 본문은 Spring Modulith 의 `EventSerializer` 로 읽어 `EventReading` 으로 판정한다)로 레지스트리 행을 읽어 같은 정책으로 남겨진 발행을 가르고, 다시 처리는 Spring Modulith 의 재제출 경로로, 폐기는 `RegistryRows` 의 조건부 삭제로 한다. 정책은 `EventResubmissionConfiguration` 이 설정 값(`EventResubmissionProperties`)으로 만든다. `RoleConfiguration` 이 켜진 profile 로 `ActiveRoles` 를 만든다. `SecurityConfiguration` 이 설정 값(`AdminSecurityProperties`)으로 `AdminCredential` 을 만들고, 운영자 체인의 `AdminTokenFilter` 가 제시된 토큰을 `AdminTokenAuthenticationProvider` 에 맡겨 대조한다. 보안 진입점과 `ProblemResponseAdvice` 는 `ProblemResponses` 로 문제 응답을 쓴다.
+협력: `EventResubmissionJob` 이 `EventResubmissionService` 를 부르고, 서비스는 Spring Modulith 의 미완료 발행 전체를 읽어 `EventResubmissionPolicy` 의 판정대로 재제출한다 — 실패 발행은 재제출 전에 `EventReading` 으로 이벤트를 읽어 본다. `admin` 의 운영자 API 는 `EventPublicationAdministrationService` 를 부른다 — 이 서비스는 `RegistryRows`(구현 `JdbcRegistryRows` — 본문은 Spring Modulith 의 `EventSerializer` 로 읽어 `EventReading` 으로 판정한다)로 레지스트리 행을 읽어 같은 정책으로 남겨진 발행을 가르고, 다시 처리는 Spring Modulith 의 재제출 경로로, 폐기는 `RegistryRows` 의 조건부 삭제로 한다. 정책은 `EventResubmissionConfiguration` 이 설정 값(`EventResubmissionProperties`)으로 만든다. `RoleConfiguration` 이 켜진 profile 로 `ActiveRoles` 를 만든다. `SecurityConfiguration` 이 설정 값(`AdminSecurityProperties`)으로 `AdminCredential` 을 만들고, 운영자 체인의 `AdminTokenFilter` 가 제시된 토큰을 `AdminTokenAuthenticationProvider` 에 맡겨 대조한다. 보안 진입점과 `ProblemResponseAdvice` 는 `ProblemResponses` 로 문제 응답을 쓴다. YAML 원문 읽기는 다른 구성 요소와 협력하지 않는다 — 다른 모듈이 `YamlTextReader` 로 읽은 트리를 `StrictYamlBinding` 으로 바인딩한다.
 
-역할: `EventResubmissionJob` 과 `WorkerSchedulingConfiguration` 은 작업 역할, `PingController` · `OpenApiConfiguration` · `ProblemResponseAdvice` 는 화면 역할에서만 켜진다. `EventPublicationAdministrationService` · `JdbcRegistryRows` 는 공통이다. 보안 구성을 포함한 나머지는 두 역할 공통이다(platform-R9 · platform-R10).
+역할: `EventResubmissionJob` 과 `WorkerSchedulingConfiguration` 은 작업 역할, `PingController` · `OpenApiConfiguration` · `ProblemResponseAdvice` 는 화면 역할에서만 켜진다. `EventPublicationAdministrationService` · `JdbcRegistryRows` 는 공통이다. 보안 구성을 포함한 나머지는 두 역할 공통이다(platform-R9 · platform-R10). YAML 원문 읽기 타입은 빈이 아니다.
 
 #### 발행 상태와 재처리
 
@@ -247,7 +337,7 @@ stateDiagram-v2
 - **platform-R9** — 역할 소속:
   - 화면 역할 — 각 모듈 `adapter/in/web` 의 구성요소(화면용 API 컨트롤러 · 명세 설정). `@WebRole` 을 단다
   - 작업 역할 — 각 모듈 `adapter/in/job` 의 구성요소(작업 진입점 — 반복 작업 등록 포함), JobRunr 작업 서버, 프리셋 기동 대조, Spring 스케줄링과 멈춤 감시. 구성요소에는 `@WorkerRole` 을 단다
-  - 공통 — 애플리케이션 서비스 · 도메인 · 저장소, 작업 등록(`JobScheduler`), 피드 요청 관문과 같은 언론사 요청 예약, 이벤트 리스너, Flyway 마이그레이션, 관리 엔드포인트(health), 역할 검사, 보안 구성(platform-R10). 이벤트 리스너에는 역할을 달지 않는다 — 리스너는 발행한 프로세스에서 돌고 발행 기록도 그 프로세스의 리스너에 대해서만 생기므로, 한 역할에서 빼면 그 역할이 발행한 이벤트가 처리되지 않는다. 재제출한 발행의 리스너는 재제출한 프로세스에서 돈다 — 재처리 작업이면 작업 역할, 운영자의 다시 처리면 화면 역할
+  - 공통 — 애플리케이션 서비스 · 도메인 · 저장소, 작업 등록(`JobScheduler`), 피드 요청 관문과 같은 언론사 요청 예약, 이벤트 리스너, 기본 태그 체계의 기동 검증 · 첫 기동 적재, Flyway 마이그레이션, 관리 엔드포인트(health), 역할 검사, 보안 구성(platform-R10). 이벤트 리스너에는 역할을 달지 않는다 — 리스너는 발행한 프로세스에서 돌고 발행 기록도 그 프로세스의 리스너에 대해서만 생기므로, 한 역할에서 빼면 그 역할이 발행한 이벤트가 처리되지 않는다. 재제출한 발행의 리스너는 재제출한 프로세스에서 돈다 — 재처리 작업이면 작업 역할, 운영자의 다시 처리면 화면 역할
   - 한 구성요소가 두 역할을 함께 달지 않는다. 역할이 켜는 설정은 작업 역할 설정 파일(§7)에만 두고 기본은 꺼진 값이다 — 역할 설정 파일은 활성화 순서대로 덮어쓰므로 역할끼리 같은 키를 다르게 쓰지 않는다
   - 주기 실행은 JobRunr 반복 작업으로 둔다. Spring 스케줄링은 작업 역할에서만 켜지므로, 공통 구성요소의 `@Scheduled` 는 화면 역할만 켠 프로세스에서 돌지 않는다
 
@@ -265,6 +355,12 @@ stateDiagram-v2
 
 - **platform-R12** — 화면용 API 의 오류 응답은 `application/problem+json` 의 `ApiProblem`(§3)이고 `Cache-Control: no-store` 다. 다섯 속성 모두 값을 갖는다 — `instance` 는 요청 경로(질의 문자열 제외), `detail` 은 언제나 채운다. 따로 정하지 않은 문제는 `type` 이 `about:blank` 이고 `title` 은 상태 코드의 표준 문구다. 컨트롤러 오류는 화면 역할에서 문제 응답으로 낸다 — 프레임워크 예외(본문 · 경로 값 형식 400, 없는 경로 404, `ResponseStatusException` 의 상태와 이유 등)는 그 상태와 설명으로, 동시 수정(`OptimisticLockingFailureException`)은 409 로, 처리하지 못한 예외는 500 으로 낸다. 500 은 예외 문구를 싣지 않고 ERROR 로그를 남긴다. 다른 모듈의 조언이 이 조언보다 먼저 받는다. 판정 결과는 오류가 아니라 200 응답이다([ADR-0044](../adr/0044-screen-api-results-as-flat-discriminated-200-and-rfc9457-problems.md))
 - **platform-R13** — 문제 유형 URI 는 화면과의 계약이다(명세의 `type` 은 열거가 아니다). 정본은 `ProblemTypes` 다: `urn:yozmnews:problem:admin-closed`(403, 운영자 기능 닫힘) · `urn:yozmnews:problem:admin-unauthorized`(401, 토큰 없음 · 틀림) · `urn:yozmnews:problem:admin-forbidden`(403, 역할 없음). 화면은 `admin-closed` 로 닫힘 안내를 가른다
+
+### YAML 원문 읽기
+
+판단의 이유는 [ADR-0056](../adr/0056-platform-reads-yaml-text-and-applies-common-rejection.md)에 있다.
+
+- **platform-R17** — YAML 원문은 snakeyaml-engine 의 이벤트 API 로만 읽는다 — 태그로 객체를 만드는 단계가 없다. 해석은 YAML 1.2 JSON 스키마 규칙이다 — 불리언은 소문자 `true` · `false` 뿐이고 `no` · `015` · `~` 와 따옴표 친 값은 문자열이다. 원문 길이 상한(문자 수)은 문서를 가진 모듈이 정해 넘기고, 넘으면 읽지 않는다. 문서는 하나이고 최상위는 매핑이다 — 빈 원문 · 내용 없는 문서는 빈 매핑이다. 공통 거부는 앵커 · 별칭 · 명시 태그, 같은 매핑 안 중복 키, 문자열이 아닌 키, 알 수 없는 키(무엇이 알려진 키인지는 문서를 가진 모듈이 정한다), 빈 값(`null` · 값을 적지 않음), 형 오류다. 별칭은 값을 쓸 수 없고, 앵커 · 태그가 붙은 값은 알린 뒤에도 계속 읽어 다른 문제를 함께 모은다. 문제는 경로 · 줄:열과 함께 찾은 순서대로 한 번에 모두 넘긴다 — 문서를 가진 모듈이 자기 문제와 같은 목록에 넣어 원문 순서를 지킨다
 
 ## 6. 데이터
 
@@ -298,3 +394,4 @@ stateDiagram-v2
 | [0044](../adr/0044-screen-api-results-as-flat-discriminated-200-and-rfc9457-problems.md) | 화면 API 는 판정 결과를 판별자 하나의 평평한 200 응답으로, 요청의 문제만 RFC 9457 형식의 자체 오류 레코드로 앱 전체에서 낸다 |
 | [0045](../adr/0045-admin-module-serves-operator-api-over-module-public-operation-apis.md) | 운영자 API 는 `admin` 모듈이 내고, 각 모듈은 운영 기능과 결과 타입을 최상위 공개 API 로 낸다 |
 | [0050](../adr/0050-operator-resubmits-once-or-discards-stranded-event-publications-read-from-registry.md) | 이벤트를 읽을 수 없는 발행은 재제출 전에 거르고, 상한에 이른 · 읽을 수 없는 발행은 운영자가 즉시 1회 재제출하거나 기록 없이 폐기하며, 목록 · 폐기는 `platform` 이 레지스트리 테이블을 직접 다룬다 |
+| [0056](../adr/0056-platform-reads-yaml-text-and-applies-common-rejection.md) | YAML 원문 읽기와 공통 거부는 `platform` 이 맡고, 문서별 형식 · 검증은 각 모듈의 `domain` 이 한다 |

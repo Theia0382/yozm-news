@@ -54,3 +54,7 @@
 | 주제 Choice 하나 + 확률 상위 2개 | 여러 주제에 걸친 기사는 확률이 나뉘어 판단 근거가 약해진다. 선택지 상한도 불확실하다 |
 | 대분류만 사용 | 너무 거칠어 사용자 후보가 커지고 LLM 비용이 늘어난다 |
 | 2단계 질의(대분류 → 중분류) | 위 "결과" 참고 |
+
+## 후속 기록
+
+- 2026-11-02: 첫 체계를 만들며 조사 초안(`research/2026-10-news-categories.md` 3.2)의 중분류를 다시 세니 46개였다 — 이 ADR 의 "중분류 45개" · "주제 45개 … 질문 약 54개"는 센 수의 오류이고, 초안 그대로 중분류 46 · 질문 55개다. 질문 문구 · 태그 설명의 자리와 첫 체계를 들이는 방식은 [ADR-0054](0054-tag-set-seeded-from-default-yaml-on-first-start-with-immutable-versions-and-question-templates.md), 두 값(임계값 `τ` · 저장 하한)의 변경은 [ADR-0055](0055-tag-and-store-thresholds-change-with-history-and-warn-instead-of-blocking.md)가 정했다. 이 ADR 의 이름은 지금 문서에서 이렇게 부른다 — 태그 축 · 축 → 태그 종류, 임계값 `τ` → 태그 기준, 저장 하한 → 저장 기준, `dimension` → `tag_kind`(태그 테이블은 `kind`). 태그 체계의 코드 이름은 `taxonomy` 가 아니라 `tag set` 이다 — 다른 문서의 옛 이름 `taxonomy_versions` · `TaxonomyVersion` 은 `tag_sets` · `TagSet` 이다

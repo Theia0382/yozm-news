@@ -4,14 +4,9 @@
 
 ## 핵심 인터페이스
 
-```java
-// evaluation: 공유 평가. 사용자 정보를 받지 않는다. Jev 를 부르는 유일한 포트다.
-public interface ArticleEvaluator {
-    EvaluatorInfo info();                                        // 이름, 모델 버전
-    List<Evaluation> evaluate(List<EvaluationInput> inputs, Taxonomy taxonomy);
-    List<MembershipJudgement> judgeEventMembership(EvaluationInput article, List<EventDescriptor> candidates); // 애매한 구간의 사건 소속 판정
-}
+`evaluation` 의 공유 평가 포트 `ArticleEvaluator` 와 평가 작업은 [evaluation Spec](specs/evaluation.md#articleevaluator)에 있다.
 
+```java
 // event: 사건 묶기용 기사 임베딩. 사용자 정보를 받지 않는다.
 public interface ArticleEmbedder {
     EmbedderInfo info();                                         // 이름, 모델 버전, 차원
@@ -35,7 +30,6 @@ public interface LlmClientFactory {
 }
 ```
 
-- `ArticleEvaluator`의 v1 구현체는 `JevArticleEvaluator`. Jev 호출 경로(직접 API 또는 AI Gateway)는 설정으로 바꾼다. 사건 소속 판정의 인자 · 반환 타입(`EventDescriptor` · `MembershipJudgement`)은 `evaluation` 이 소유한다 — `event` 의 타입을 받으면 모듈 순환이 된다. `event` 는 `evaluation` 의 공개 API 를 거쳐 판정을 요청한다 ([ADR-0026](adr/0026-event-clustering-with-local-embeddings-and-jev.md)).
 - `ArticleEmbedder`의 v1 구현체는 로컬 모델을 ONNX Runtime 으로 돌리는 구현이고, 설정으로 외부 임베딩 API 구현으로 바꿀 수 있다. 개발 · 테스트는 고정 규칙 기반 로컬 대체물을 쓴다.
 - `DigestGenerator`의 v1 구현체는 Spring AI `ChatClient` 기반 `LlmDigestGenerator`. 공급자별 차이는 Spring AI가 흡수한다.
 - `ReportGenerator`의 v1 구현체는 `DigestGenerator` 와 같은 방식의 LLM 구현이고, Spring profile `local` 은 고정 응답 로컬 대체물을 쓴다 ([ADR-0025](adr/0025-long-term-personal-news-history-in-v1.md)).
@@ -45,7 +39,6 @@ public interface LlmClientFactory {
 
 | 작업 | 주기/계기 | 내용 |
 |---|---|---|
-| `EvaluatePendingArticles` | 1분마다 + `ArticleStored` | 평가 대기 기사를 묶어서 Jev 호출 |
 | `AssignArticleToEvent` | `ArticleStored` | 기사 표현(임베딩 · 고유명사) → 사건 후보 → 판정 → 배정 또는 새 사건 ([pipeline.md](pipeline.md) §8) |
 | `MergeEvents` | 주기 | 가까운 열린 사건끼리 합친다 |
 | `CloseEvents` | 하루 1회 | 새 기사가 일정 기간 없는 사건을 닫는다 |
