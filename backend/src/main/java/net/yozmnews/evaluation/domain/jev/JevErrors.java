@@ -22,7 +22,7 @@ public final class JevErrors {
 	public static final String CONTEXT_EXCEEDED = "max_tokens_exceeded";
 
 	/** 문구 전체의 길이 상한(코드 포인트) */
-	public static final int MAX_MESSAGE_CODE_POINTS = 500;
+	static final int MAX_MESSAGE_CODE_POINTS = 500;
 
 	/** Jev 가 준 설명의 길이 상한(코드 포인트) */
 	static final int MAX_DETAIL_CODE_POINTS = 200;
