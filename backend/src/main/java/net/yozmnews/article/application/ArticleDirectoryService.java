@@ -1,6 +1,8 @@
 package net.yozmnews.article.application;
 
+import java.time.Instant;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 import net.yozmnews.article.ArticleContent;
@@ -24,6 +26,11 @@ class ArticleDirectoryService implements ArticleDirectory {
 	@Override
 	public Map<ArticleId, ArticleContent> findAll(Collection<ArticleId> ids) {
 		return this.repository.findContents(ids);
+	}
+
+	@Override
+	public List<ArticleId> firstSeenSince(Instant since) {
+		return this.repository.findFirstSeenSince(since);
 	}
 
 }

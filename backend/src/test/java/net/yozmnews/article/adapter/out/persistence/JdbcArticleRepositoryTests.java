@@ -33,7 +33,8 @@ import org.springframework.jdbc.core.simple.JdbcClient;
  * 기사 저장소의 저장 · 고유 제약 · 후보 조회 · 내용 조회 · 삭제 — Flyway 가 적용된 실제 PostgreSQL 에서 본다. 테스트마다 트랜잭션을
  * 롤백한다. 해시 기대값은 {@code sha256sum} 으로 따로 계산한 16진수다.
  * <p>
- * 지키는 규칙: article-R2 · article-R3 · article-R6 · article-R7 · article-R8 · article-R9 · article-R15
+ * 지키는 규칙: article-R2 · article-R3 · article-R6 · article-R7 · article-R8 · article-R9 · article-R15 ·
+ * evaluation-R25(재평가 대상 조회)
  */
 @JdbcTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -334,6 +335,25 @@ class JdbcArticleRepositoryTests {
 		assertThat(contents.get(c).entries()).extracting(ArticleEntryView::feedId)
 			.containsExactly(new FeedId(5), new FeedId(6));
 		assertThat(this.repository.findContents(List.of())).isEmpty();
+	}
+
+	@Test
+	void findsArticlesFirstSeenAtOrAfterAnInstantInIdOrder() {
+		// 다른 시험이 남긴 기사와 겹치지 않게 먼 시각을 쓴다. 둘째 기사가 첫째보다 먼저 보여 처음 본 시각 순과 ID 순이 엇갈린다
+		Instant boundary = Instant.parse("2031-01-01T00:00:00Z");
+		ArticleId atBoundary = store(item(SOURCE, FEED, "https://a.example/news/31", null, "경계", PUBLISHED_AT,
+				boundary, List.of()), MatchKind.NEW);
+		ArticleId before = store(item(SOURCE, FEED, "https://a.example/news/32", null, "1초 전", PUBLISHED_AT,
+				Instant.parse("2030-12-31T23:59:59Z"), List.of()), MatchKind.NEW);
+		ArticleId later = store(item(SOURCE, FEED, "https://a.example/news/33", null, "뒤", PUBLISHED_AT,
+				Instant.parse("2031-01-01T00:00:01Z"), List.of()), MatchKind.NEW);
+		ArticleId nextDay = store(item(SOURCE, FEED, "https://a.example/news/34", null, "다음 날",
+				PUBLISHED_AT, Instant.parse("2031-01-02T00:00:00Z"), List.of()), MatchKind.NEW);
+
+		assertThat(this.repository.findFirstSeenSince(boundary)).containsExactly(atBoundary, later, nextDay);
+		assertThat(this.repository.findFirstSeenSince(Instant.parse("2031-01-03T00:00:00Z"))).isEmpty();
+		assertThat(this.repository.findFirstSeenSince(Instant.parse("2030-12-31T23:59:59Z")))
+			.containsExactly(atBoundary, before, later, nextDay);
 	}
 
 	@Test
