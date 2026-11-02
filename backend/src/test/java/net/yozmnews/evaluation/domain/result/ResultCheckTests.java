@@ -95,6 +95,24 @@ class ResultCheckTests {
 	}
 
 	@Test
+	void anUnpairedSurrogateAnywhereInTheRawResponseIsAMismatch() {
+		// JSON 이스케이프 — 값의 짝 없는 상위 서로게이트, 키의 짝 없는 하위 서로게이트
+		assertThat(ResultCheck.mismatch(evaluation(TOPICS, REGIONS, FORMATS, IMPORTANCE, "{\"a\":\"x\\ud800\"}"),
+				TAG_SET))
+			.contains("원본 응답에 짝 없는 서로게이트가 있다");
+		assertThat(ResultCheck.mismatch(evaluation(TOPICS, REGIONS, FORMATS, IMPORTANCE, "{\"\\udc00\":1}"), TAG_SET))
+			.contains("원본 응답에 짝 없는 서로게이트가 있다");
+	}
+
+	@Test
+	void aPairedSurrogateIsNotAMismatch() {
+		// U+1F600 — 이스케이프한 짝과 원문 그대로의 글자
+		assertThat(ResultCheck.mismatch(
+				evaluation(TOPICS, REGIONS, FORMATS, IMPORTANCE, "{\"a\":\"\\ud83d\\ude00 \uD83D\uDE00\"}"), TAG_SET))
+			.isEmpty();
+	}
+
+	@Test
 	void anEscapedBackslashBeforeU0000IsNotANulCharacter() {
 		// 원문 {"a":"\\u0000"} — 값은 백슬래시 하나와 글자 u0000 이다
 		assertThat(ResultCheck.mismatch(evaluation(TOPICS, REGIONS, FORMATS, IMPORTANCE, "{\"a\":\"\\\\u0000\"}"),

@@ -19,8 +19,8 @@ import tools.jackson.databind.json.JsonMapper;
 /**
  * 평가 결과가 넘긴 체계와 맞는지 — docs/specs/evaluation.md §5.
  * <p>
- * 주제 중분류 · 지역 · 형식 선택지 · 중요도 수준의 키 집합이 체계와 정확히 같아야 하고, 원본 응답은 JSON 이고 어디에도 문자 U+0000 이 없어야
- * 한다(PostgreSQL {@code jsonb} 가 받지 않는다). 어긋남의 문구는 태그 종류 · 키만 담는다.
+ * 주제 중분류 · 지역 · 형식 선택지 · 중요도 수준의 키 집합이 체계와 정확히 같아야 하고, 원본 응답은 JSON 이고 어디에도 문자 U+0000 과 짝
+ * 없는 서로게이트가 없어야 한다(PostgreSQL {@code jsonb} 가 둘 다 받지 않는다). 어긋남의 문구는 태그 종류 · 키만 담는다.
  */
 public final class ResultCheck {
 
@@ -70,29 +70,47 @@ public final class ResultCheck {
 		if (root == null || root.isMissingNode()) {
 			return Optional.of("원본 응답이 JSON 이 아니다");
 		}
-		return containsNul(root) ? Optional.of("원본 응답에 문자 U+0000 이 있다") : Optional.empty();
+		return unstorable(root);
 	}
 
-	private static boolean containsNul(JsonNode node) {
+	/** jsonb 가 받지 않는 문자 — 문자열 값과 키를 모두 훑는다 */
+	private static Optional<String> unstorable(JsonNode node) {
 		if (node.isString()) {
-			return node.stringValue().indexOf('\u0000') >= 0;
+			return unstorable(node.stringValue());
 		}
 		if (node.isObject()) {
 			for (Map.Entry<String, JsonNode> property : node.properties()) {
-				if (property.getKey().indexOf('\u0000') >= 0 || containsNul(property.getValue())) {
-					return true;
+				Optional<String> found = unstorable(property.getKey()).or(() -> unstorable(property.getValue()));
+				if (found.isPresent()) {
+					return found;
 				}
 			}
-			return false;
 		}
 		if (node.isArray()) {
 			for (JsonNode element : node.values()) {
-				if (containsNul(element)) {
-					return true;
+				Optional<String> found = unstorable(element);
+				if (found.isPresent()) {
+					return found;
 				}
 			}
 		}
-		return false;
+		return Optional.empty();
+	}
+
+	private static Optional<String> unstorable(String text) {
+		for (int i = 0; i < text.length(); i++) {
+			char c = text.charAt(i);
+			if (c == '\u0000') {
+				return Optional.of("원본 응답에 문자 U+0000 이 있다");
+			}
+			if (Character.isHighSurrogate(c) && i + 1 < text.length() && Character.isLowSurrogate(text.charAt(i + 1))) {
+				i++;
+			}
+			else if (Character.isSurrogate(c)) {
+				return Optional.of("원본 응답에 짝 없는 서로게이트가 있다");
+			}
+		}
+		return Optional.empty();
 	}
 
 }
