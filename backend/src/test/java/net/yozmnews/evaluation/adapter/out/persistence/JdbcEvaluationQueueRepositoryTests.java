@@ -30,9 +30,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 평가 대기 저장소 — 넣기 · 잠금 대상 · 토큰 조건 반영 · 건수 · 동시 잠금을 Flyway 가 적용된 실제 PostgreSQL 에서 본다.
+ * 평가 대기 저장소 — 넣기 · 재평가 넣기 · 잠금 대상 · 토큰 조건 반영 · 건수 · 동시 잠금을 Flyway 가 적용된 실제 PostgreSQL 에서 본다.
  * <p>
- * 지키는 규칙: evaluation-R18 · evaluation-R19 · evaluation-R20
+ * 지키는 규칙: evaluation-R18 · evaluation-R19 · evaluation-R20 · evaluation-R25
  */
 @JdbcTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -66,6 +66,36 @@ class JdbcEvaluationQueueRepositoryTests {
 				assertThat(instant(row.get("enqueued_at"))).isEqualTo(Instant.parse("2026-11-02T00:00:00Z"));
 				assertThat(instant(row.get("eligible_at"))).isEqualTo(Instant.parse("2026-11-02T00:30:00Z"));
 			});
+	}
+
+	@Test
+	void requeuesNewRowsAndFailedRowsAtOnceAndLeavesWaitingAndLeasedRowsAlone() {
+		Instant now = Instant.parse("2026-11-09T00:00:00Z");
+		row(11, T.plusSeconds(1800), 0, null, null, null);                    // 대기 중 — 정착 시간 뒤
+		row(12, T.plusSeconds(60), 2, OTHER, now.plusSeconds(600), null);     // 회차가 점유 중
+		row(13, T, 0, null, null, "ARTICLE_REJECTED");                        // 기사 거부로 실패
+		row(14, T, 5, null, null, "RETRIES_EXHAUSTED");                       // 시도 소진으로 실패
+		this.jdbc.sql("update evaluation_queue set last_error = '거부' where article_id in (13, 14)").update();
+
+		int requeued = this.repository.requeue(
+				List.of(new ArticleId(10), new ArticleId(11), new ArticleId(12), new ArticleId(13), new ArticleId(14)),
+				now);
+
+		assertThat(requeued).isEqualTo(3);
+		assertThat(rowOf(10)).containsEntry("attempts", 0).containsEntry("failure", null).containsEntry("lease_token", null);
+		assertThat(instant(rowOf(10).get("eligible_at"))).isEqualTo(Instant.parse("2026-11-09T00:00:00Z"));
+		assertThat(instant(rowOf(10).get("enqueued_at"))).isEqualTo(Instant.parse("2026-11-09T00:00:00Z"));
+		for (long failed : List.of(13L, 14L)) {
+			assertThat(rowOf(failed)).containsEntry("attempts", 0).containsEntry("failure", null)
+				.containsEntry("last_error", null);
+			assertThat(instant(rowOf(failed).get("eligible_at"))).isEqualTo(Instant.parse("2026-11-09T00:00:00Z"));
+		}
+		assertThat(instant(rowOf(11).get("eligible_at"))).isEqualTo(Instant.parse("2026-11-02T00:30:00Z"));
+		assertThat(rowOf(12)).containsEntry("attempts", 2).containsEntry("lease_token", OTHER);
+		assertThat(instant(rowOf(12).get("eligible_at"))).isEqualTo(Instant.parse("2026-11-02T00:01:00Z"));
+		assertThat(this.repository.requeue(List.of(), now)).isZero();
+		// 같은 기사가 두 번 와도 한 행이다
+		assertThat(this.repository.requeue(List.of(new ArticleId(15), new ArticleId(15)), now)).isEqualTo(1);
 	}
 
 	@Test
@@ -182,6 +212,13 @@ class JdbcEvaluationQueueRepositoryTests {
 					java.sql.Types.TIMESTAMP_WITH_TIMEZONE)
 			.param("failure", failure, java.sql.Types.VARCHAR)
 			.update();
+	}
+
+	private Map<String, Object> rowOf(long article) {
+		return this.jdbc.sql("""
+				select enqueued_at, eligible_at, attempts, lease_token, failure, last_error from evaluation_queue
+				where article_id = :article
+				""").param("article", article).query().singleRow();
 	}
 
 	private Map<String, Object> failureOf(long article) {

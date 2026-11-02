@@ -11,6 +11,9 @@ import java.util.Optional;
  */
 public interface TagSetAdministration {
 
+	/** 재평가 기간의 상한(일) — 정본이다(evaluation-R25) */
+	int MAX_REEVALUATION_DAYS = 30;
+
 	/**
 	 * 활성 버전의 한 태그 종류의 태그 기준 · 저장 기준을 바꾼다 — 한 트랜잭션이고 같은 태그 종류의 변경은 줄을 선다(evaluation-R11 · R12).
 	 * @param actor 운영자 요청은 {@link ChangeActor#OPERATOR}
@@ -33,5 +36,22 @@ public interface TagSetAdministration {
 	 * @return 없는 버전이면 빈 값
 	 */
 	Optional<String> versionText(TagSetId id);
+
+	/**
+	 * 원문을 확인한다 — 검증하고 그 순간의 활성 버전과 대조해 변경 목록과 재평가 기간에 처음 본 기사 수를 돌려준다. 아무것도 쓰지 않는다
+	 * (evaluation-R16 · R22 ~ R25).
+	 * @param recentDays 재평가 기간(일) — 0 ~ {@link #MAX_REEVALUATION_DAYS}
+	 * @throws IllegalStateException 활성 버전이 없을 때
+	 */
+	TagSetReviewResult review(String text, int recentDays);
+
+	/**
+	 * 원문으로 새 버전을 만들어 활성으로 바꾼다 — 재평가 대상 기사를 트랜잭션 밖에서 읽은 뒤, 한 트랜잭션에서 표를 잠그고 그 순간의 활성
+	 * 버전과 다시 대조해 쓴다(evaluation-R16 · R25).
+	 * @param recentDays 재평가 기간(일) — 0 ~ {@link #MAX_REEVALUATION_DAYS}. 0 이면 재평가하지 않는다
+	 * @param actor 새 버전과 그 처음 태그 기준 · 저장 기준 이력 행의 행위자 — 운영자 요청은 {@link ChangeActor#OPERATOR}
+	 * @throws IllegalStateException 활성 버전이 없을 때
+	 */
+	TagSetActivationResult activate(String text, int recentDays, ChangeActor actor);
 
 }

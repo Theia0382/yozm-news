@@ -1,31 +1,82 @@
 package net.yozmnews.evaluation.application;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.time.InstantSource;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
+import net.yozmnews.article.ArticleDirectory;
+import net.yozmnews.article.ArticleId;
+import net.yozmnews.evaluation.ChangeActor;
+import net.yozmnews.evaluation.MultiTagKind;
+import net.yozmnews.evaluation.TagSetActivationResult;
+import net.yozmnews.evaluation.TagSetAdministration;
 import net.yozmnews.evaluation.TagSetId;
+import net.yozmnews.evaluation.TagSetProblemView;
+import net.yozmnews.evaluation.TagSetReviewResult;
 import net.yozmnews.evaluation.TagSetVersionView;
+import net.yozmnews.evaluation.domain.queue.EvaluationQueueRepository;
 import net.yozmnews.evaluation.domain.tagset.TagSet;
+import net.yozmnews.evaluation.domain.tagset.TagSetDefinition;
+import net.yozmnews.evaluation.domain.tagset.TagSetParse;
+import net.yozmnews.evaluation.domain.tagset.TagSetParser;
+import net.yozmnews.evaluation.domain.tagset.TagSetProblem;
 import net.yozmnews.evaluation.domain.tagset.TagSetRepository;
+import net.yozmnews.evaluation.domain.tagset.TagSetRevision;
+import net.yozmnews.evaluation.domain.tagset.TagSetRevision.Revision;
 import net.yozmnews.evaluation.domain.tagset.TagSetWriter;
 import net.yozmnews.evaluation.domain.threshold.ThresholdRepository;
+import net.yozmnews.evaluation.domain.threshold.ThresholdValues;
+import net.yozmnews.platform.TextLocation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 태그 체계 버전 연산 — 버전 목록 · 원문 내보내기 — docs/specs/evaluation.md §4 · evaluation-R27.
+ * 태그 체계 버전 연산 — 버전 목록 · 원문 내보내기 · 확인 · 활성화 — docs/specs/evaluation.md §4 · evaluation-R16 ·
+ * evaluation-R22 ~ evaluation-R25 · evaluation-R27.
  * <p>
- * {@link TagSetAdministrationService} 가 맡긴다. 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통).
+ * {@link TagSetAdministrationService} 가 맡긴다. 확인은 트랜잭션을 열지 않는다. 활성화는 재평가 대상 기사를 트랜잭션 밖에서 읽은 뒤, 한
+ * 트랜잭션({@link TransactionTemplate})에서 표 잠금 → 대조 → 쓰기다. 시각은 {@link InstantSource} 에서 얻는다. 역할 애너테이션이
+ * 없다(두 역할 공통).
  */
 @Component
 class TagSetVersioning {
+
+	private static final Logger logger = LoggerFactory.getLogger(TagSetVersioning.class);
 
 	private final TagSetRepository tagSets;
 
 	private final ThresholdRepository thresholds;
 
-	TagSetVersioning(TagSetRepository tagSets, ThresholdRepository thresholds) {
+	private final EvaluationQueueRepository queue;
+
+	private final ArticleDirectory articles;
+
+	private final TransactionTemplate transaction;
+
+	private final InstantSource clock;
+
+	private final TagSetParser parser = new TagSetParser();
+
+	@Autowired
+	TagSetVersioning(TagSetRepository tagSets, ThresholdRepository thresholds, EvaluationQueueRepository queue,
+			ArticleDirectory articles, TransactionTemplate transaction) {
+		this(tagSets, thresholds, queue, articles, transaction, InstantSource.system());
+	}
+
+	TagSetVersioning(TagSetRepository tagSets, ThresholdRepository thresholds, EvaluationQueueRepository queue,
+			ArticleDirectory articles, TransactionTemplate transaction, InstantSource clock) {
 		this.tagSets = tagSets;
 		this.thresholds = thresholds;
+		this.queue = queue;
+		this.articles = articles;
+		this.transaction = transaction;
+		this.clock = clock;
 	}
 
 	/** 버전 목록 — 번호가 큰 것부터 */
@@ -37,6 +88,95 @@ class TagSetVersioning {
 	Optional<String> versionText(TagSetId id) {
 		return this.tagSets.findById(id.value())
 			.map(tagSet -> TagSetWriter.write(tagSet.content(), this.thresholds.current(tagSet.id())));
+	}
+
+	/** 확인 — 아무것도 쓰지 않는다 */
+	TagSetReviewResult review(String text, int recentDays) {
+		Objects.requireNonNull(text, "text");
+		if (!daysInRange(recentDays)) {
+			return new TagSetReviewResult.DaysOutOfRange();
+		}
+		TagSetDefinition definition;
+		switch (this.parser.parse(text)) {
+			case TagSetParse.Parsed parsed -> definition = parsed.definition();
+			case TagSetParse.Invalid invalid -> {
+				return new TagSetReviewResult.Invalid(views(invalid.problems()));
+			}
+		}
+		Instant now = this.clock.instant();
+		TagSet base = TagSetDirectoryService.active(this.tagSets);
+		return switch (TagSetRevision.review(base.content(), this.thresholds.current(base.id()), definition)) {
+			case Revision.Rejected rejected -> new TagSetReviewResult.Invalid(views(rejected.problems()));
+			case Revision.Unchanged unchanged -> new TagSetReviewResult.Unchanged();
+			case Revision.Changed changed -> new TagSetReviewResult.Ready(changed.changes(),
+					recent(recentDays, now).size());
+		};
+	}
+
+	/** 활성화 — 대조를 통과하면 기준 버전을 끄고 새 버전을 활성으로 넣고, 처음 태그 기준 · 저장 기준과 재평가 대기를 쓴다 */
+	TagSetActivationResult activate(String text, int recentDays, ChangeActor actor) {
+		Objects.requireNonNull(text, "text");
+		Objects.requireNonNull(actor, "actor");
+		if (!daysInRange(recentDays)) {
+			return new TagSetActivationResult.DaysOutOfRange();
+		}
+		TagSetDefinition definition;
+		switch (this.parser.parse(text)) {
+			case TagSetParse.Parsed parsed -> definition = parsed.definition();
+			case TagSetParse.Invalid invalid -> {
+				return new TagSetActivationResult.Invalid(views(invalid.problems()));
+			}
+		}
+		Instant now = this.clock.instant();
+		// 기사 조회는 트랜잭션 밖이다 — 그 사이 처음 본 기사는 ArticleStored 로, 지운 기사는 회차가 대기에서 뺀다(evaluation-R25)
+		List<ArticleId> recent = recent(recentDays, now);
+		TagSetActivationResult result = Objects.requireNonNull(this.transaction.execute(status -> {
+			this.tagSets.lockForChange();
+			TagSet base = TagSetDirectoryService.active(this.tagSets);
+			return switch (TagSetRevision.review(base.content(), this.thresholds.current(base.id()), definition)) {
+				case Revision.Rejected rejected -> new TagSetActivationResult.Invalid(views(rejected.problems()));
+				case Revision.Unchanged unchanged -> new TagSetActivationResult.Unchanged();
+				case Revision.Changed changed -> {
+					if (!this.tagSets.deactivate(base.id().value())) {
+						throw new IllegalStateException("표 잠금 안에서 읽은 활성 버전을 끄지 못했다: " + base.id().value());
+					}
+					TagSet saved = this.tagSets.save(TagSet.next(base, definition, actor, now));
+					for (MultiTagKind kind : MultiTagKind.values()) {
+						ThresholdValues initial = Objects.requireNonNull(definition.initialThresholds().get(kind),
+								"처음 값");
+						this.thresholds.insertInitial(saved.id(), kind, initial, actor, now);
+					}
+					int requeued = this.queue.requeue(recent, now);
+					yield new TagSetActivationResult.Activated(view(saved), changed.changes(), requeued);
+				}
+			};
+		}));
+		if (result instanceof TagSetActivationResult.Activated activated) {
+			logger.info("태그 체계 버전 {}를 활성으로 바꿨다 — 재평가 대기 {}건", activated.version().number(),
+					activated.requeued());
+		}
+		return result;
+	}
+
+	/** 재평가 기간에 처음 본 기사 — 기간이 0 이면 읽지 않는다. 경계 시각은 활성화 시각 − 기간 × 24시간이고 포함한다 */
+	private List<ArticleId> recent(int recentDays, Instant now) {
+		if (recentDays == 0) {
+			return List.of();
+		}
+		return this.articles.firstSeenSince(now.minus(Duration.ofDays(recentDays)));
+	}
+
+	private static boolean daysInRange(int recentDays) {
+		return recentDays >= 0 && recentDays <= TagSetAdministration.MAX_REEVALUATION_DAYS;
+	}
+
+	/** 원문 문제를 공개 타입으로 옮긴다 — 최상위 경로는 빈 문자열, 모르는 위치는 null */
+	private static List<TagSetProblemView> views(List<TagSetProblem> problems) {
+		return problems.stream().map(problem -> {
+			boolean known = !problem.location().equals(TextLocation.UNKNOWN);
+			return new TagSetProblemView(problem.path().toString(), problem.code().name(), problem.message(),
+					known ? problem.location().line() : null, known ? problem.location().column() : null);
+		}).toList();
 	}
 
 	static TagSetVersionView view(TagSet tagSet) {

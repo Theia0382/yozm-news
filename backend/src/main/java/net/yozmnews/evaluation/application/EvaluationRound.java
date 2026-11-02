@@ -14,6 +14,7 @@ import net.yozmnews.article.ArticleDirectory;
 import net.yozmnews.article.ArticleEntryView;
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.evaluation.TagSetDirectory;
+import net.yozmnews.evaluation.TagSetId;
 import net.yozmnews.evaluation.TagSetThresholds;
 import net.yozmnews.evaluation.TagSetView;
 import net.yozmnews.evaluation.domain.evaluator.ArticleEvaluator;
@@ -28,6 +29,7 @@ import net.yozmnews.evaluation.domain.queue.PendingEvaluation;
 import net.yozmnews.evaluation.domain.result.EvaluationRecord;
 import net.yozmnews.evaluation.domain.result.EvaluationResultRepository;
 import net.yozmnews.evaluation.domain.result.ResultCheck;
+import net.yozmnews.evaluation.domain.tagset.TagSetRepository;
 import net.yozmnews.evaluation.domain.threshold.ThresholdRepository;
 import net.yozmnews.source.FeedId;
 import net.yozmnews.source.FeedLabel;
@@ -45,6 +47,10 @@ import org.springframework.transaction.support.TransactionTemplate;
  * <p>
  * 대기를 점유해 커밋한 뒤, 트랜잭션 밖에서 기사 · 피드 맥락을 읽고 기사마다 차례로 평가기를 부른다. 결과는 기사마다 새 트랜잭션에서 점유 토큰이
  * 맞을 때만 반영한다. 평가기 사용 불가 · 결과가 체계와 어긋남 · 평가기의 예상 못한 예외면 그 기사부터 남은 점유를 풀고 회차를 멈춘다.
+ * <p>
+ * 결과를 반영하는 트랜잭션은 먼저 표를 잠가 회차가 읽은 버전이 아직 활성인지 본다. 은퇴했으면 그 기사의 점유만 풀고(성공이면 그 버전의
+ * 평가는 저장한다) 남은 점유를 풀어 회차를 멈춘다 — 대기 행은 기사에 지금 활성 버전의 평가가 있게 된 트랜잭션에서만 지운다
+ * (evaluation-R19).
  * <p>
  * 평가기 빈이 없는 구성에서는 아무것도 하지 않는다 — 기사는 평가 대기에 남고, 작업을 만들 때 경고한다.
  */
@@ -69,6 +75,8 @@ public class EvaluationRound {
 
 	private final EvaluationQueueRepository queue;
 
+	private final TagSetRepository tagSets;
+
 	private final TransactionTemplate transaction;
 
 	private final InstantSource clock;
@@ -76,15 +84,16 @@ public class EvaluationRound {
 	@Autowired
 	EvaluationRound(ObjectProvider<ArticleEvaluator> evaluators, PendingEvaluations pending, TagSetDirectory directory,
 			ThresholdRepository thresholds, ArticleDirectory articles, FeedLabels feedLabels,
-			EvaluationResultRepository results, EvaluationQueueRepository queue, TransactionTemplate transaction) {
-		this(evaluators, pending, directory, thresholds, articles, feedLabels, results, queue, transaction,
+			EvaluationResultRepository results, EvaluationQueueRepository queue, TagSetRepository tagSets,
+			TransactionTemplate transaction) {
+		this(evaluators, pending, directory, thresholds, articles, feedLabels, results, queue, tagSets, transaction,
 				InstantSource.system());
 	}
 
 	EvaluationRound(ObjectProvider<ArticleEvaluator> evaluators, PendingEvaluations pending, TagSetDirectory directory,
 			ThresholdRepository thresholds, ArticleDirectory articles, FeedLabels feedLabels,
-			EvaluationResultRepository results, EvaluationQueueRepository queue, TransactionTemplate transaction,
-			InstantSource clock) {
+			EvaluationResultRepository results, EvaluationQueueRepository queue, TagSetRepository tagSets,
+			TransactionTemplate transaction, InstantSource clock) {
 		this.evaluators = evaluators;
 		this.pending = pending;
 		this.directory = directory;
@@ -93,6 +102,7 @@ public class EvaluationRound {
 		this.feedLabels = feedLabels;
 		this.results = results;
 		this.queue = queue;
+		this.tagSets = tagSets;
 		this.transaction = transaction;
 		this.clock = clock;
 	}
@@ -131,7 +141,11 @@ public class EvaluationRound {
 				continue;
 			}
 			if (this.results.exists(claim.articleId(), tagSet.id())) {
-				delete(claim);
+				if (!writeIfCurrent(tagSet.id(), () -> this.queue.deleteIfLeased(claim.articleId(), token(claim)),
+						() -> this.queue.replaceIfLeased(token(claim), claim.released()))) {
+					stopRetired(claimed, i);
+					return;
+				}
 				continue;
 			}
 			EvaluationInput input = input(content, labels);
@@ -155,22 +169,40 @@ public class EvaluationRound {
 					}
 					EvaluationRecord record = EvaluationRecord.of(claim.articleId(), evaluation, tagSet, thresholds,
 							this.clock.instant());
-					this.transaction.executeWithoutResult(status -> {
+					boolean current = writeIfCurrent(tagSet.id(), () -> {
 						if (this.queue.deleteIfLeased(claim.articleId(), token(claim))) {
 							this.results.insert(record);
 						}
+					}, () -> {
+						// 은퇴한 버전의 평가도 유효하다 — 저장하되 대기 행은 남겨 새 활성 버전으로 다시 평가한다
+						if (this.queue.replaceIfLeased(token(claim), claim.released())
+								&& !this.results.exists(claim.articleId(), tagSet.id())) {
+							this.results.insert(record);
+						}
 					});
+					if (!current) {
+						stopRetired(claimed, i);
+						return;
+					}
 				}
 				case EvaluationFailure failure -> {
-					switch (failure.kind()) {
-						case TRANSIENT -> replace(claim, claim.afterTransient(failure.message(), this.clock.instant()));
-						case ARTICLE_REJECTED -> replace(claim, claim.afterRejected(failure.message()));
+					@Nullable PendingEvaluation failed = switch (failure.kind()) {
+						case TRANSIENT -> claim.afterTransient(failure.message(), this.clock.instant());
+						case ARTICLE_REJECTED -> claim.afterRejected(failure.message());
 						case EVALUATOR_UNAVAILABLE -> {
 							release(claimed.subList(i, claimed.size()));
 							logger.warn("평가기를 쓸 수 없어 회차를 멈췄다 — 기사 {}: {}", claim.articleId().value(),
 									failure.message());
-							return;
+							yield null;
 						}
+					};
+					if (failed == null) {
+						return;
+					}
+					if (!writeIfCurrent(tagSet.id(), () -> this.queue.replaceIfLeased(token(claim), failed),
+							() -> this.queue.replaceIfLeased(token(claim), claim.released()))) {
+						stopRetired(claimed, i);
+						return;
 					}
 				}
 			}
@@ -186,6 +218,30 @@ public class EvaluationRound {
 		}).toList();
 		String summary = content.summary();
 		return new EvaluationInput(content.title(), (summary == null || summary.isBlank()) ? null : summary, feeds);
+	}
+
+	/**
+	 * 회차가 읽은 버전이 아직 활성일 때만 쓴다 — 새 트랜잭션에서 표를 활성 전환과 충돌하는 모드로 잠근 뒤 본다.
+	 * @param whenActive 활성일 때의 쓰기
+	 * @param whenRetired 은퇴했을 때의 쓰기 — 그 기사의 점유를 푼다
+	 * @return 활성이었으면 true
+	 */
+	private boolean writeIfCurrent(TagSetId version, Runnable whenActive, Runnable whenRetired) {
+		return Boolean.TRUE.equals(this.transaction.execute(status -> {
+			this.tagSets.lockAgainstChange();
+			if (this.tagSets.isActive(version.value())) {
+				whenActive.run();
+				return true;
+			}
+			whenRetired.run();
+			return false;
+		}));
+	}
+
+	/** 은퇴한 버전으로 평가한 기사 뒤의 점유를 풀고 회차를 멈춘다 */
+	private void stopRetired(List<PendingEvaluation> claimed, int index) {
+		release(claimed.subList(index + 1, claimed.size()));
+		logger.info("활성 태그 체계가 바뀌어 회차를 멈췄다 — 기사 {}", claimed.get(index).articleId().value());
 	}
 
 	private void delete(PendingEvaluation claim) {

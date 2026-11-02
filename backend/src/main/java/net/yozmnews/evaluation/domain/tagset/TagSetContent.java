@@ -1,5 +1,6 @@
 package net.yozmnews.evaluation.domain.tagset;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
@@ -24,6 +25,14 @@ public record TagSetContent(QuestionTemplate topicTemplate, QuestionTemplate reg
 		regions = List.copyOf(regions);
 		formats = List.copyOf(formats);
 		importance = List.copyOf(importance);
+	}
+
+	/**
+	 * 저장된 버전 내용 가운데 이 내용과 같은 것이 있는가 — 기본 체계 파일의 개정을 알리는 판정(evaluation-R2). 내용은 버전 내용이고 태그
+	 * 기준 · 저장 기준은 들지 않는다.
+	 */
+	public boolean matchesAny(Collection<TagSetContent> stored) {
+		return stored.contains(this);
 	}
 
 	/**

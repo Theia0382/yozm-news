@@ -35,6 +35,14 @@ public final class EvaluationSchedule {
 	}
 
 	/**
+	 * 재평가로 넣거나 되돌린 기사를 평가할 수 있는 첫 시각 — 넣은 그 시각이다. 이미 엔트리가 붙은 기사라 정착 시간을 두지 않는다
+	 * (evaluation-R18 · R25).
+	 */
+	public static Instant eligibleAfterRequeue(Instant requeuedAt) {
+		return Objects.requireNonNull(requeuedAt, "requeuedAt");
+	}
+
+	/**
 	 * 일시 실패 뒤 다시 시도하기까지의 간격 — {@code min(FIRST_RETRY × 2^(attempts − 1), MAX_RETRY)}. 상한에 이르면 더 곱하지 않아 넘치지
 	 * 않는다.
 	 * @param attempts 지금까지의 일시 실패 수 — 1 이상

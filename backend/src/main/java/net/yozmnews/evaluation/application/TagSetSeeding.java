@@ -2,12 +2,15 @@ package net.yozmnews.evaluation.application;
 
 import java.time.Instant;
 import java.time.InstantSource;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import net.yozmnews.evaluation.ChangeActor;
 import net.yozmnews.evaluation.MultiTagKind;
 import net.yozmnews.evaluation.TagSetId;
 import net.yozmnews.evaluation.domain.tagset.TagSet;
+import net.yozmnews.evaluation.domain.tagset.TagSetContent;
 import net.yozmnews.evaluation.domain.tagset.TagSetDefinition;
 import net.yozmnews.evaluation.domain.tagset.TagSetRepository;
 import net.yozmnews.evaluation.domain.threshold.ThresholdRepository;
@@ -61,7 +64,8 @@ class TagSetSeeding implements SmartInitializingSingleton {
 	}
 
 	/**
-	 * 버전이 하나도 없을 때만 기본 체계를 버전 1 로 적재한다 — 한 트랜잭션, 표 잠금 안. 다시 불러도 결과가 같다.
+	 * 버전이 하나도 없을 때만 기본 체계를 버전 1 로 적재한다 — 한 트랜잭션, 표 잠금 안. 다시 불러도 결과가 같다. 적재하지 않았고 기본
+	 * 체계 파일과 내용이 같은 버전이 없으면 정보 로그를 남긴다(evaluation-R2).
 	 * @return 적재했는가
 	 */
 	boolean seedIfEmpty() {
@@ -82,6 +86,11 @@ class TagSetSeeding implements SmartInitializingSingleton {
 			return true;
 		}
 		logger.debug("태그 체계 버전이 이미 있어 기본 체계를 적재하지 않았다");
+		List<TagSetContent> stored = new ArrayList<>();
+		this.tagSets.findAll().forEach(tagSet -> stored.add(tagSet.content()));
+		if (!this.definition.content().matchesAny(stored)) {
+			logger.info("기본 체계 파일과 내용이 같은 태그 체계 버전이 없다 — 파일의 개정을 들이려면 체계 변경으로 새 버전을 만든다");
+		}
 		return false;
 	}
 
