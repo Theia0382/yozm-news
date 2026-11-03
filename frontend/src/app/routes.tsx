@@ -30,6 +30,13 @@ export const routes: RouteObject[] = [
             }),
           },
           {
+            path: "evaluation",
+            lazy: async () => ({
+              Component: (await import("@/features/admin/EvaluationPage"))
+                .EvaluationPage,
+            }),
+          },
+          {
             path: "event-publications",
             lazy: async () => ({
               Component: (

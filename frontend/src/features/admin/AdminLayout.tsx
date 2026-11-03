@@ -133,6 +133,9 @@ export function AdminLayout({ baseUrl, fetch }: AdminLayoutProps) {
               <NavLink to="/admin/collection" className={navLinkClass}>
                 수집 현황
               </NavLink>
+              <NavLink to="/admin/evaluation" className={navLinkClass}>
+                평가 현황
+              </NavLink>
               <NavLink to="/admin/event-publications" className={navLinkClass}>
                 이벤트 발행
               </NavLink>

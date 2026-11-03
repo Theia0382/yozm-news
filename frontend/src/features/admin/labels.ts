@@ -13,6 +13,7 @@ type FeedStatus = Schemas["FeedCollectionResponse"]["status"];
 type StrandedReason = Schemas["StrandedPublicationResponse"]["reason"];
 type ResubmissionOutcome = Schemas["ResubmissionItemResponse"]["result"];
 type DiscardOutcome = Schemas["DiscardItemResponse"]["result"];
+type StoredRange = Schemas["ProbabilityBucket"]["stored"];
 type FeedRemovalRefusal = NonNullable<
   Schemas["FeedRemovalResponse"]["refusal"]
 >;
@@ -123,3 +124,10 @@ export function sourceName(source: Schemas["SourceResponse"]): string {
 /** 내부 주소로 가는 요청을 막았을 때의 안내 — 화면에서는 열 수 없다 */
 export const BLOCKED_ADDRESS_HINT =
   "내부 주소는 서버 설정 YOZMNEWS_COLLECTION_ALLOWED_NETWORKS 로만 열 수 있습니다";
+
+/** 확률 칸이 지금 저장 기준 이상인가 — 전부 저장되는 칸은 따로 적지 않는다 */
+export const storedRangeLabels = {
+  ALL: null,
+  PART: "일부 저장",
+  NONE: "저장하지 않음",
+} as const satisfies Record<StoredRange, string | null>;
