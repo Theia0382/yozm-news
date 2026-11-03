@@ -7,6 +7,8 @@ export type Handler = (request: Request) => Response | Promise<Response>;
 export type RecordedRequest = {
   method: string;
   path: string;
+  /** 질의 문자열 — `?` 포함, 없으면 빈 문자열 */
+  search: string;
   authorization: string | null;
   body: string;
 };
@@ -15,10 +17,12 @@ export function fakeServer(handlers: Record<string, Handler>) {
   const requests: RecordedRequest[] = [];
   const fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
     const request = input instanceof Request ? input : new Request(input, init);
-    const path = new URL(request.url).pathname;
+    const url = new URL(request.url);
+    const path = url.pathname;
     requests.push({
       method: request.method,
       path,
+      search: url.search,
       authorization: request.headers.get("Authorization"),
       body: request.method === "GET" ? "" : await request.clone().text(),
     });

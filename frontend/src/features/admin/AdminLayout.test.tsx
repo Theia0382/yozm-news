@@ -117,6 +117,7 @@ describe("AdminLayout", () => {
     const menu = await screen.findByRole("navigation", { name: "운영자 메뉴" });
     const sources = within(menu).getByRole("link", { name: "소스 · 피드" });
     const collection = within(menu).getByRole("link", { name: "수집 현황" });
+    const evaluation = within(menu).getByRole("link", { name: "평가 현황" });
     const publications = within(menu).getByRole("link", {
       name: "이벤트 발행",
     });
@@ -124,6 +125,8 @@ describe("AdminLayout", () => {
     expect(sources).toHaveAttribute("aria-current", "page");
     expect(collection).toHaveAttribute("href", "/admin/collection");
     expect(collection).not.toHaveAttribute("aria-current");
+    expect(evaluation).toHaveAttribute("href", "/admin/evaluation");
+    expect(evaluation).not.toHaveAttribute("aria-current");
     expect(publications).toHaveAttribute("href", "/admin/event-publications");
     expect(publications).not.toHaveAttribute("aria-current");
   });
