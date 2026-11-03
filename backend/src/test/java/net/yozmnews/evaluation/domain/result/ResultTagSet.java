@@ -23,15 +23,15 @@ import net.yozmnews.evaluation.TopicCategory;
  */
 public final class ResultTagSet {
 
-	static final TagSetId VERSION = new TagSetId(1);
+	public static final TagSetId VERSION = new TagSetId(1);
 
-	static final String EXECUTIVE = "politics.executive";
+	public static final String EXECUTIVE = "politics.executive";
 
-	static final String ASSEMBLY = "politics.assembly";
+	public static final String ASSEMBLY = "politics.assembly";
 
-	static final String FINANCE = "economy.finance";
+	public static final String FINANCE = "economy.finance";
 
-	static final TagSetView TAG_SET = new TagSetView(VERSION, 1,
+	public static final TagSetView TAG_SET = new TagSetView(VERSION, 1,
 			List.of(new TopicCategory("politics", "정치", "정치", List.of(
 					new AskedTag(EXECUTIVE, "대통령실·행정부", "대통령실과 행정부", "대통령실과 행정부를 다루는가"),
 					new AskedTag(ASSEMBLY, "국회·정당·선거", "국회와 정당", "국회와 정당을 다루는가"))),
@@ -55,11 +55,11 @@ public final class ResultTagSet {
 				new TagThresholds(MultiTagKind.REGION, new BigDecimal(regionTag), new BigDecimal(regionStore)));
 	}
 
-	static StoredTag topic(String key, double probability) {
+	public static StoredTag topic(String key, double probability) {
 		return new StoredTag(MultiTagKind.TOPIC, key, probability);
 	}
 
-	static StoredTag region(String key, double probability) {
+	public static StoredTag region(String key, double probability) {
 		return new StoredTag(MultiTagKind.REGION, key, probability);
 	}
 

@@ -777,6 +777,12 @@ class EvaluationFlowTests {
 		}
 
 		@Override
+		public void streamVersionPeriod(net.yozmnews.evaluation.TagSetId version, Instant from, Instant to,
+				java.util.function.Consumer<net.yozmnews.evaluation.domain.overview.EvaluationSample> sink) {
+			this.delegate.streamVersionPeriod(version, from, to, sink);
+		}
+
+		@Override
 		public void deleteByArticles(java.util.Collection<ArticleId> articleIds) {
 			this.delegate.deleteByArticles(articleIds);
 		}

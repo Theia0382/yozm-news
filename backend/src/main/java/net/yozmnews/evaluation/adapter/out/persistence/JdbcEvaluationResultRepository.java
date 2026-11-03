@@ -6,20 +6,26 @@ import java.sql.Types;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.TreeMap;
+import java.util.function.Consumer;
 
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.evaluation.MultiTagKind;
 import net.yozmnews.evaluation.TagSetId;
+import net.yozmnews.evaluation.domain.overview.EvaluationSample;
 import net.yozmnews.evaluation.domain.result.EvaluationRecord;
 import net.yozmnews.evaluation.domain.result.EvaluationResultRepository;
 import net.yozmnews.evaluation.domain.result.StoredEvaluation;
 import net.yozmnews.evaluation.domain.result.StoredTag;
+import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
@@ -27,11 +33,17 @@ import tools.jackson.databind.json.JsonMapper;
  * <p>
  * 평가 행과 태그 행은 넣기 한 번이고 갱신하지 않는다 — aggregate 가 없다. 분포 · 원본 응답은 {@code jsonb} 로 쓴다(분포의 키는 형식 키 ·
  * 중요도 수준). 지우기는 태그 행 → 평가 행 순이다.
+ * <p>
+ * 기간 흘려 받기는 SQL 한 문장을 {@link #STREAM_FETCH_SIZE} 행씩 커서로 받아 평가 ID 가 바뀔 때 한 건을 넘긴다(태그 행은 조회와 같은 순서). PgJDBC 는 autocommit 이
+ * 꺼진 연결(트랜잭션 안)에서 fetch size 가 있을 때만 나눠 받고, 아니면 결과 전체를 메모리에 담는다 — 그래서 트랜잭션 밖 호출은 막는다.
  */
 @Repository
 class JdbcEvaluationResultRepository implements EvaluationResultRepository {
 
 	private static final JsonMapper JSON = JsonMapper.builder().build();
+
+	/** 기간 흘려 받기에서 커서가 한 번에 받는 행 수 */
+	static final int STREAM_FETCH_SIZE = 1_000;
 
 	private final JdbcClient jdbc;
 
@@ -101,6 +113,35 @@ class JdbcEvaluationResultRepository implements EvaluationResultRepository {
 	}
 
 	@Override
+	public void streamVersionPeriod(TagSetId version, Instant from, Instant to, Consumer<EvaluationSample> sink) {
+		requireTransaction();
+		Streamed current = new Streamed(version);
+		this.jdbc.sql("""
+				select e.id, e.article_id, e.format_key, e.format_probability, e.importance, e.input_tokens,
+				       t.tag_kind, t.tag_key, t.probability
+				from article_evaluations e
+				left join article_tags t on t.evaluation_id = e.id
+				where e.tag_set_id = :version and e.evaluated_at >= :from and e.evaluated_at < :to
+				order by e.id, t.tag_kind, t.tag_key
+				""")
+			.withFetchSize(STREAM_FETCH_SIZE)
+			.param("version", version.value())
+			.param("from", timestamp(from))
+			.param("to", timestamp(to))
+			.query(rs -> {
+				long id = rs.getLong("id");
+				if (!current.holds(id)) {
+					current.flush(sink);
+					current.start(id, rs);
+				}
+				if (rs.getString("tag_kind") != null) {
+					current.tags.add(tag(rs, 0));
+				}
+			});
+		current.flush(sink);
+	}
+
+	@Override
 	public void deleteByArticles(Collection<ArticleId> articleIds) {
 		if (articleIds.isEmpty()) {
 			return;
@@ -124,6 +165,62 @@ class JdbcEvaluationResultRepository implements EvaluationResultRepository {
 
 	private static OffsetDateTime timestamp(Instant instant) {
 		return instant.atOffset(ZoneOffset.UTC);
+	}
+
+	private static void requireTransaction() {
+		if (!TransactionSynchronizationManager.isActualTransactionActive()) {
+			throw new IllegalStateException("기간 흘려 받기는 트랜잭션 안에서 부른다 — 밖에서는 결과 전체가 메모리에 담긴다");
+		}
+	}
+
+	/** 흘려 받는 중인 평가 한 건 — 평가 ID 가 바뀌면 넘긴다 */
+	private static final class Streamed {
+
+		private final TagSetId version;
+
+		private long id;
+
+		/** 담은 평가가 없으면 null */
+		private @Nullable ArticleId article;
+
+		private @Nullable String formatKey;
+
+		private double formatProbability;
+
+		private @Nullable Double importance;
+
+		private int inputTokens;
+
+		private final List<StoredTag> tags = new ArrayList<>();
+
+		Streamed(TagSetId version) {
+			this.version = version;
+		}
+
+		boolean holds(long id) {
+			return this.article != null && this.id == id;
+		}
+
+		void start(long id, ResultSet rs) throws SQLException {
+			this.id = id;
+			this.article = new ArticleId(rs.getLong("article_id"));
+			this.formatKey = rs.getString("format_key");
+			this.formatProbability = rs.getDouble("format_probability");
+			this.importance = rs.getObject("importance", Double.class);
+			this.inputTokens = rs.getInt("input_tokens");
+			this.tags.clear();
+		}
+
+		void flush(Consumer<EvaluationSample> sink) {
+			if (this.article == null) {
+				return;
+			}
+			sink.accept(new EvaluationSample(new StoredEvaluation(this.article, this.version,
+					Objects.requireNonNull(this.formatKey, "format_key"), this.importance, this.tags),
+					this.formatProbability, this.inputTokens));
+			this.article = null;
+		}
+
 	}
 
 }
