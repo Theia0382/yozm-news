@@ -3,7 +3,6 @@ package net.yozmnews.source.application;
 import java.util.List;
 import java.util.Optional;
 
-import net.yozmnews.platform.TextLocation;
 import net.yozmnews.source.ArticleSampleView;
 import net.yozmnews.source.CriterionShortfall;
 import net.yozmnews.source.DocumentProblemView;
@@ -263,10 +262,8 @@ class SourceAdministrationService implements SourceAdministration {
 	}
 
 	private static ProfileProblemView problem(ProfileProblem problem) {
-		TextLocation location = problem.location();
-		boolean known = !location.equals(TextLocation.UNKNOWN);
 		return new ProfileProblemView(problem.path().toString(), problem.code().name(), problem.message(),
-				known ? location.line() : null, known ? location.column() : null);
+				problem.location().knownLine(), problem.location().knownColumn());
 	}
 
 }

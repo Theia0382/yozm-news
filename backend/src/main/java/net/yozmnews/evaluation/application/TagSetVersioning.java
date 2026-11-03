@@ -27,7 +27,6 @@ import net.yozmnews.evaluation.domain.tagset.TagSetRevision;
 import net.yozmnews.evaluation.domain.tagset.TagSetRevision.Revision;
 import net.yozmnews.evaluation.domain.tagset.TagSetWriter;
 import net.yozmnews.evaluation.domain.threshold.ThresholdRepository;
-import net.yozmnews.platform.TextLocation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -198,11 +197,10 @@ class TagSetVersioning {
 
 	/** 원문 문제를 공개 타입으로 옮긴다 — 최상위 경로는 빈 문자열, 모르는 위치는 null */
 	private static List<TagSetProblemView> views(List<TagSetProblem> problems) {
-		return problems.stream().map(problem -> {
-			boolean known = !problem.location().equals(TextLocation.UNKNOWN);
-			return new TagSetProblemView(problem.path().toString(), problem.code().name(), problem.message(),
-					known ? problem.location().line() : null, known ? problem.location().column() : null);
-		}).toList();
+		return problems.stream()
+			.map(problem -> new TagSetProblemView(problem.path().toString(), problem.code().name(), problem.message(),
+					problem.location().knownLine(), problem.location().knownColumn()))
+			.toList();
 	}
 
 	static TagSetVersionView view(TagSet tagSet) {
