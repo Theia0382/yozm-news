@@ -10,13 +10,14 @@
 - **수집 현황** — 피드마다 수집 상태와 엔트리 지표, 소스마다 그 합
 - **이벤트 발행** — 남겨진 이벤트 발행의 목록 · 다시 처리 · 폐기
 - **태그 체계** — 버전 목록 · 버전 원문 조회, 운영자 원문의 확인 · 활성화(재평가 기간 포함)
+- **평가 현황** — 기간을 골라 주제별 보도량, 버전 하나의 평가 품질 지표, 지금의 평가 대기 · 실패 건수
 - **응답 모양** — 모듈의 운영 결과를 판별자 하나의 평평한 응답으로 옮기고, 요청의 문제를 HTTP 오류로 낸다
 
 하지 않는 것:
 
 - 판정 · 저장 · 조회를 하지 않는다 — 그 지식을 가진 모듈의 공개 운영 API 에 맡긴다
 - 운영자를 인증하지 않는다 — 운영자 경로의 보호는 `platform` 의 보안 구성이 한다([platform Spec "운영자 접근 통제"](platform.md#운영자-접근-통제))
-- **(미구현)** 태그 기준 · 저장 기준 · 평가 결과 · 사건의 운영자 기능
+- **(미구현)** 태그 기준 · 저장 기준 변경 · 기사별 평가 결과 · 사건의 운영자 기능
 
 다른 모듈과의 의존과 이벤트 흐름은 [overview.md §5](../overview.md#5-모듈-지도)에 있다.
 
@@ -60,8 +61,11 @@ HTTP 엔드포인트 — 모두 운영자 경로다(운영자 토큰 필요 — 
 | `GET /api/admin/tag-sets/{id}/text` | 버전의 원문 — 그 버전의 내용과 지금 태그 기준 · 저장 기준으로 만든다([evaluation-R27](evaluation.md#체계-변경)) |
 | `POST /api/admin/tag-set-reviews` | 운영자 원문(본문 `text`)의 확인 — 아무것도 쓰지 않는다. 본문 `recentDays` 는 재평가 기간(없으면 0) |
 | `POST /api/admin/tag-sets` | 운영자 원문(본문 `text`)으로 새 버전을 만들어 활성으로 바꾼다. 본문 `recentDays` 는 재평가 기간(없으면 0 — 재평가하지 않는다) |
+| `GET /api/admin/topic-coverage` | 주제별 보도량 — 질의 `from` · `to`(시작일 · 종료일, `yyyy-MM-dd`, 끝 포함) · `zone`(날짜를 해석할 시간대) · 선택 `topic`(되풀이 — 없으면 모든 주제). 활성 버전 ID 와 날짜 범위의 상한(`maxDays`)을 함께 낸다([evaluation-R28](evaluation.md#평가-현황--주제별-보도량) · R30) |
+| `GET /api/admin/evaluation-overview` | 평가 현황 — 질의 `version`(태그 체계 버전 ID) · `from` · `to` · `zone`([evaluation-R29](evaluation.md#평가-현황--주제별-보도량)) |
+| `GET /api/admin/evaluation-queue` | 지금의 평가 대기 · 실패 건수 — 기간과 무관하다 |
 
-요청 · 응답 형식의 정본은 [`api/openapi.json`](../../api/openapi.json)이다([ADR-0020](../adr/0020-screen-api-contract-from-committed-openapi-spec.md)). 결과 · 오류의 대응은 admin-R1 ~ admin-R3, 수집 현황의 응답은 admin-R4 다. 이벤트 발행 목록은 `platform` 의 `StrandedPublications` 를 옮기기만 하고 이벤트 내용을 싣지 않는다(platform-R14).
+요청 · 응답 형식의 정본은 [`api/openapi.json`](../../api/openapi.json)이다([ADR-0020](../adr/0020-screen-api-contract-from-committed-openapi-spec.md)). 결과 · 오류의 대응은 admin-R1 ~ admin-R3, 수집 현황의 응답은 admin-R4, 평가 현황 · 보도량 · 대기 건수의 응답은 admin-R5 다. 이벤트 발행 목록은 `platform` 의 `StrandedPublications` 를 옮기기만 하고 이벤트 내용을 싣지 않는다(platform-R14).
 
 ## 4. 내부 구조
 
@@ -70,9 +74,9 @@ HTTP 엔드포인트 — 모두 운영자 경로다(운영자 토큰 필요 — 
 | 패키지 | 책임 |
 |---|---|
 | (최상위) | 모듈 선언 — 의존을 `source` · `article` · `evaluation` · `platform` 으로 둔다(`package-info`) |
-| `adapter/in/web` | 운영자 컨트롤러, 결과 · 목록의 응답 레코드, 없는 대상의 404 |
+| `adapter/in/web` | 운영자 컨트롤러, 결과 · 목록의 응답 레코드, 요청 매개변수 읽기, 없는 대상의 404 |
 
-협력: 컨트롤러는 `source` 의 공개 운영 API `SourceAdministration`, `article` 의 공개 운영 API `ArticleAdministration`, `evaluation` 의 공개 운영 API `TagSetAdministration`, `platform` 의 공개 운영 API `EventPublicationAdministration` 만 부르고, 결과를 응답 레코드의 정적 팩토리로 옮긴다. 오류 응답은 `platform` 의 `ProblemResponses` 로 만든다. `application` · `domain` 이 없다 — 판단이 없다.
+협력: 컨트롤러는 `source` 의 공개 운영 API `SourceAdministration`, `article` 의 공개 운영 API `ArticleAdministration`, `evaluation` 의 공개 운영 API `TagSetAdministration` · `EvaluationAdministration` 과 공개 조회 `TopicCoverage`, `platform` 의 공개 운영 API `EventPublicationAdministration` 만 부르고, 결과를 응답 레코드의 정적 팩토리로 옮긴다. 오류 응답은 `platform` 의 `ProblemResponses` 로 만든다. `application` · `domain` 이 없다 — 판단이 없다.
 
 역할: 모든 구성 요소가 화면 역할(`@WebRole`)이다(platform-R9).
 
@@ -87,11 +91,12 @@ HTTP 엔드포인트 — 모두 운영자 경로다(운영자 토큰 필요 — 
 | 수집 현황 | `AdminCollectionController` | `GET /api/admin/collection-status` | 소스 목록(수집 상태 포함)과 엔트리 집계를 소스 · 피드 행으로 맞붙인다(admin-R4) |
 | 이벤트 발행 | `AdminEventPublicationController` | `GET /api/admin/event-publications` · `POST …/resubmission` · `POST …/discard` | 남겨진 발행의 목록과 다시 처리 · 폐기의 발행별 결과를 옮긴다. 한 번에 받는 발행 수의 상한은 공개 API 가 판정하고 컨트롤러는 그 결과를 400 으로 옮긴다(admin-R1 · admin-R3) |
 | 태그 체계 | `AdminTagSetController` | `GET /api/admin/tag-sets` · `GET …/{id}/text` · `POST /api/admin/tag-set-reviews` · `POST /api/admin/tag-sets` | 버전 목록 · 원문 · 확인 · 활성화의 결과를 옮긴다. 재평가 기간의 범위는 공개 API 가 판정하고 컨트롤러는 그 결과를 400 으로 옮긴다(admin-R1 ~ admin-R3) |
+| 평가 현황 | `AdminEvaluationController` | `GET /api/admin/topic-coverage` · `GET /api/admin/evaluation-overview` · `GET /api/admin/evaluation-queue` | 보도량 · 평가 현황 · 대기 건수의 결과를 옮긴다. 기간의 범위는 공개 타입이 판정하고, 컨트롤러는 날짜 · 시간대를 읽어 넘기고 그 결과를 400 으로 옮긴다(admin-R2 · admin-R3 · admin-R5) |
 | 없는 대상 | `AdminExceptionHandling` | 운영자 컨트롤러의 공개 예외 | 없는 소스 · 피드를 404 문제 응답으로 낸다(admin-R2) |
 
 컨트롤러는 트랜잭션을 열지 않는다 — 피드 켜기 · 원문 미리보기는 피드를 받으므로 응답까지 걸린다(source-R9).
 
-`adapter/in/web` 의 그 밖의 타입: 응답 `PresetResponse` · `SourceListResponse` · `SourceResponse`(`FeedResponse`) · `RegistrationResponse` · `RevisionResponse` · `SourceEnableResponse` · `FeedEnableResponse` · `PreviewResponse` · `FeedRemovalResponse` · `DeletionImpactResponse` · `CollectionStatusResponse`(`StatusCriteriaResponse` · `SourceCollectionResponse` · `FeedCollectionResponse` · `EntryMetricsResponse` · `EntryBucketResponse`) · `StrandedPublicationListResponse`(`StrandedPublicationResponse`) · `ResubmissionListResponse`(`ResubmissionItemResponse`) · `DiscardListResponse`(`DiscardItemResponse`) · `TagSetListResponse`(`TagSetVersionItem`) · `TagSetText` · `TagSetReviewResponse` · `TagSetActivationResponse`, 요청 `ProfileText` · `PreviewRequest` · `PollIntervalRequest` · `EventPublicationIdsRequest` · `TagSetRequest`, 보조 `AdminIds`(경로 ID) · `PollIntervals`(하한 미만의 400) · `ReevaluationDays`(범위 밖 재평가 기간의 400).
+`adapter/in/web` 의 그 밖의 타입: 응답 `PresetResponse` · `SourceListResponse` · `SourceResponse`(`FeedResponse`) · `RegistrationResponse` · `RevisionResponse` · `SourceEnableResponse` · `FeedEnableResponse` · `PreviewResponse` · `FeedRemovalResponse` · `DeletionImpactResponse` · `CollectionStatusResponse`(`StatusCriteriaResponse` · `SourceCollectionResponse` · `FeedCollectionResponse` · `EntryMetricsResponse` · `EntryBucketResponse`) · `StrandedPublicationListResponse`(`StrandedPublicationResponse`) · `ResubmissionListResponse`(`ResubmissionItemResponse`) · `DiscardListResponse`(`DiscardItemResponse`) · `TagSetListResponse`(`TagSetVersionItem`) · `TagSetText` · `TagSetReviewResponse` · `TagSetActivationResponse` · `TopicCoverageResponse` · `EvaluationOverviewResponse` · `EvaluationQueueResponse`, 요청 `ProfileText` · `PreviewRequest` · `PollIntervalRequest` · `EventPublicationIdsRequest` · `TagSetRequest`, 보조 `AdminIds`(경로 ID) · `PollIntervals`(하한 미만의 400) · `ReevaluationDays`(범위 밖 재평가 기간의 400) · `AdminPeriods`(기간 매개변수 — 날짜 · 시간대 읽기와 그 400).
 
 ### `application`
 
@@ -122,8 +127,8 @@ HTTP 엔드포인트 — 모두 운영자 경로다(운영자 토큰 필요 — 
   - 태그 체계 활성화 — `ACTIVATED`(새 버전 ID · 번호 · 변경 목록 · 재평가 대기에 넣은 수) · `UNCHANGED` · `INVALID_TAG_SET`(문제)
 
   판별자와 속성의 조합은 응답 레코드의 정적 팩토리 하나에서만 만든다. 응답의 소스 · 피드 · 태그 체계 버전 ID 는 JSON 수이고, 이벤트 발행 ID 는 UUID 문자열이다. 여러 발행을 한 번에 다루는 조작은 발행마다 판별자 하나를 단 항목(`id` · `result`)의 목록을 낸다
-- **admin-R2** — 대상이 없으면 404 문제 응답이다: 없는 소스 · 피드(`source` 의 공개 예외), 경로의 ID 가 1 미만, 카탈로그에 없는 프리셋, 프리셋 소스의 운영자 원문(조회 · 수정), 없는 태그 체계 버전의 원문. 없는 소스 · 피드는 이 모듈의 조언이 앱 전체 조언보다 먼저 받는다 — 처리하지 못한 예외(500)가 되지 않는다
-- **admin-R3** — 요청의 문제는 그 상태의 문제 응답이다: 본문 형식 · 원문 없음 400, 수집 주기의 하한 미만 400(설명 "수집 주기는 {하한}분 이상이다" — 하한은 `SourceAdministration.MINIMUM_POLL_INTERVAL_MINUTES`), 다른 요청이 먼저 바꿈 409(platform-R12), 이벤트 발행 다시 처리 · 폐기의 ID 형식 오류 · `ids` 없음 · 빈 원소 400, 한 번에 받는 발행 수 초과 400(설명 "한 번에 {상한}건까지 처리한다" — 상한은 `EventPublicationAdministration.MAX_BATCH`, 넘었는지는 공개 API 가 판정한다), 태그 체계 확인 · 활성화의 재평가 기간 범위 밖 400(설명 "재평가 기간은 0일에서 {상한}일까지다" — 상한은 `TagSetAdministration.MAX_REEVALUATION_DAYS`, 범위는 공개 API 가 판정한다). 빈 `ids` 는 200 빈 결과다. 끄기 · 주기 변경 · 소스 숨기기 · 다시 보이기 · 피드 다시 보이기 · 소스 삭제는 성공하면 204 다. 삭제는 버전 조건이 없어 409 가 없다. 소스 목록 응답은 수집 주기의 하한을 함께 낸다
+- **admin-R2** — 대상이 없으면 404 문제 응답이다: 없는 소스 · 피드(`source` 의 공개 예외), 경로의 ID 가 1 미만, 카탈로그에 없는 프리셋, 프리셋 소스의 운영자 원문(조회 · 수정), 없는 태그 체계 버전의 원문 · 평가 현황(질의 `version` 의 1 미만도 경로의 ID 와 같다). 없는 소스 · 피드는 이 모듈의 조언이 앱 전체 조언보다 먼저 받는다 — 처리하지 못한 예외(500)가 되지 않는다
+- **admin-R3** — 요청의 문제는 그 상태의 문제 응답이다: 본문 형식 · 원문 없음 400, 수집 주기의 하한 미만 400(설명 "수집 주기는 {하한}분 이상이다" — 하한은 `SourceAdministration.MINIMUM_POLL_INTERVAL_MINUTES`), 다른 요청이 먼저 바꿈 409(platform-R12), 이벤트 발행 다시 처리 · 폐기의 ID 형식 오류 · `ids` 없음 · 빈 원소 400, 한 번에 받는 발행 수 초과 400(설명 "한 번에 {상한}건까지 처리한다" — 상한은 `EventPublicationAdministration.MAX_BATCH`, 넘었는지는 공개 API 가 판정한다), 태그 체계 확인 · 활성화의 재평가 기간 범위 밖 400(설명 "재평가 기간은 0일에서 {상한}일까지다" — 상한은 `TagSetAdministration.MAX_REEVALUATION_DAYS`, 범위는 공개 API 가 판정한다), 평가 현황 · 보도량의 날짜 형식 400(설명 "날짜는 yyyy-MM-dd 형식이다: {값}") · 없는 시간대 400("없는 시간대다: {값}") · 기간 범위 밖 400("기간은 1일에서 {상한}일까지다" — 상한은 `EvaluationPeriod.MAX_DAYS`, 범위는 공개 타입이 판정한다 — 하루가 통째로 없는 날도 여기다) · 활성 태그 체계에 없는 주제 400("활성 태그 체계에 없는 주제다: {키, …}" — 키는 사전 순), 질의 매개변수 없음 · 형식 오류 400. 빈 `ids` 는 200 빈 결과다. 끄기 · 주기 변경 · 소스 숨기기 · 다시 보이기 · 피드 다시 보이기 · 소스 삭제는 성공하면 204 다. 삭제는 버전 조건이 없어 409 가 없다. 소스 목록 응답은 수집 주기의 하한을 함께 낸다
 
 ### 수집 현황
 
@@ -132,6 +137,14 @@ HTTP 엔드포인트 — 모두 운영자 경로다(운영자 토큰 필요 — 
   - 비율은 `EntryCounts` 가 낸 값을 옮긴다 — 다시 나누지 않고, 엔트리가 없으면 `null` 이다(article-R14)
   - 피드 상태의 기준값과 재판정 간격은 `SourceAdministration.FEED_STATUS_CRITERIA` 에서 오고, 무소식 기간은 시간 수 · 재판정 간격은 분 수로 낸다
   - 피드 행의 수집 상태와 마지막 실패는 `FeedHealthView` 를 옮긴다 — 마지막 실패(`LastFailureView`)는 ID 가 없는 값이라 그대로 싣는다
+
+### 평가 현황
+
+- **admin-R5** — 평가 현황 · 주제별 보도량 · 대기 건수 응답은 `evaluation` 의 결과를 옮기기만 한다:
+  - 버전 · 활성 버전 ID 만 JSON 수로 옮기고, 수 · 비율 · 칸 · 주제의 값 레코드는 ID 가 없는 값이라 그대로 싣는다
+  - 비율은 공개 결과의 값이다 — 다시 나누지 않고, 평가가 없으면 `null` 이다(evaluation-R29)
+  - 날짜 범위의 상한(`maxDays`)은 `EvaluationPeriod.MAX_DAYS` 에서 온다
+  - 컨트롤러는 트랜잭션을 열지 않는다 — 집계의 읽기 전용 트랜잭션은 공개 API 가 연다
 
 ## 6. 데이터
 
