@@ -2,6 +2,7 @@ package net.yozmnews.evaluation.domain.tagset;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.List;
@@ -9,6 +10,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import net.yozmnews.evaluation.LineageKind;
 import net.yozmnews.evaluation.MultiTagKind;
@@ -121,8 +124,10 @@ final class TagSetValidator {
 		Map<TagKind, Set<String>> fromSeen = new EnumMap<>(TagKind.class);
 		Map<TagKind, Set<String>> toSeen = new EnumMap<>(TagKind.class);
 		for (LineageDraft item : draft.value()) {
-			TagKind kind = lineageKind(item.kind(), item.path().child(TagSetBinder.KIND), item.location());
-			LineageKind change = lineageChange(item.change(), item.path().child(TagSetBinder.CHANGE), item.location());
+			TagKind kind = named(item.kind(), item.path().child(TagSetBinder.KIND), item.location(), TagKind.values(),
+					TagSetValidator::kindName, "태그 종류");
+			LineageKind change = named(item.change(), item.path().child(TagSetBinder.CHANGE), item.location(),
+					LineageKind.values(), TagSetValidator::lineageName, "계보 종류");
 			List<Located<TagKey>> from = lineageKeys(item.from(), item.path().child(TagSetBinder.FROM), item.location(),
 					kind);
 			List<Located<TagKey>> to = lineageKeys(item.to(), item.path().child(TagSetBinder.TO), item.location(),
@@ -168,34 +173,25 @@ final class TagSetValidator {
 		return lineage;
 	}
 
-	private @Nullable TagKind lineageKind(@Nullable Located<String> value, YamlPath path, TextLocation parent) {
+	/**
+	 * 원문의 이름 값을 열거값으로 읽는다 — 값이 없으면 missing, 맞는 이름이 없으면 INVALID_LINEAGE_VALUE. 허용 이름 목록은 열거 선언
+	 * 순으로 {@code name} 에서 만든다.
+	 * @param what 문구의 대상 — "태그 종류" · "계보 종류"
+	 */
+	private <E extends Enum<E>> @Nullable E named(@Nullable Located<String> value, YamlPath path, TextLocation parent,
+			E[] values, Function<E, String> name, String what) {
 		if (value == null) {
 			missing(path, parent);
 			return null;
 		}
-		for (TagKind kind : TagKind.values()) {
-			if (kindName(kind).equals(value.value())) {
-				return kind;
+		for (E candidate : values) {
+			if (name.apply(candidate).equals(value.value())) {
+				return candidate;
 			}
 		}
-		problem(path, TagSetProblemCode.INVALID_LINEAGE_VALUE, "태그 종류는 " + TagSetBinder.TOPIC + " · "
-				+ TagSetBinder.REGION + " · " + TagSetBinder.FORMAT + " 가운데 하나다 — 지금 '" + value.value() + "'",
-				value.location());
-		return null;
-	}
-
-	private @Nullable LineageKind lineageChange(@Nullable Located<String> value, YamlPath path, TextLocation parent) {
-		if (value == null) {
-			missing(path, parent);
-			return null;
-		}
-		for (LineageKind change : LineageKind.values()) {
-			if (lineageName(change).equals(value.value())) {
-				return change;
-			}
-		}
-		problem(path, TagSetProblemCode.INVALID_LINEAGE_VALUE, "계보 종류는 " + TagSetBinder.RENAME + " · "
-				+ TagSetBinder.SPLIT + " · " + TagSetBinder.MERGE + " 가운데 하나다 — 지금 '" + value.value() + "'",
+		problem(path, TagSetProblemCode.INVALID_LINEAGE_VALUE,
+				what + "는 " + Arrays.stream(values).map(name).collect(Collectors.joining(" · ")) + " 가운데 하나다 — 지금 '"
+						+ value.value() + "'",
 				value.location());
 		return null;
 	}
@@ -280,6 +276,14 @@ final class TagSetValidator {
 		};
 	}
 
+	/** 기준이 있는 태그 종류의 태그 종류 */
+	private static TagKind tagKind(MultiTagKind kind) {
+		return switch (kind) {
+			case TOPIC -> TagKind.TOPIC;
+			case REGION -> TagKind.REGION;
+		};
+	}
+
 	/** 원문에 적는 계보 종류 이름 */
 	static String lineageName(LineageKind change) {
 		return switch (change) {
@@ -344,10 +348,7 @@ final class TagSetValidator {
 			return thresholds;
 		}
 		for (MultiTagKind kind : MultiTagKind.values()) {
-			String key = switch (kind) {
-				case TOPIC -> TagSetBinder.TOPIC;
-				case REGION -> TagSetBinder.REGION;
-			};
+			String key = kindName(tagKind(kind));
 			ThresholdDraft threshold = switch (kind) {
 				case TOPIC -> draft.topic();
 				case REGION -> draft.region();

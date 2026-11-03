@@ -35,10 +35,7 @@ public final class TagJudgement {
 	 * @throws IllegalArgumentException 기준의 버전이 체계와 다르거나, 저장 행의 키가 체계에 없을 때
 	 */
 	public static Judged judge(List<StoredTag> stored, TagSetView tagSet, TagSetThresholds thresholds) {
-		if (!thresholds.versionId().equals(tagSet.id())) {
-			throw new IllegalArgumentException("태그 기준 · 저장 기준의 버전이 체계와 다르다: " + thresholds.versionId().value() + " · "
-					+ tagSet.id().value());
-		}
+		VersionMatch.require(thresholds, tagSet);
 		Map<String, Integer> topicOrder = new HashMap<>();
 		Map<String, String> categoryOf = new HashMap<>();
 		Map<String, Integer> categoryOrder = new HashMap<>();

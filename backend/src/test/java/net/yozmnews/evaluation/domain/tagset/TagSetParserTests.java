@@ -141,6 +141,10 @@ class TagSetParserTests {
 			.containsExactly("lineage[2].change INVALID_LINEAGE_VALUE");
 		assertThat(problems(VALID + LINEAGE.replace("kind: topic", "kind: TOPIC")))
 			.containsExactly("lineage[0].kind INVALID_LINEAGE_VALUE");
+		assertThat(invalid(VALID + LINEAGE.replace("kind: region", "kind: place"))).extracting(TagSetProblem::message)
+			.containsExactly("태그 종류는 topic · region · format 가운데 하나다 — 지금 'place'");
+		assertThat(invalid(VALID + LINEAGE.replace("change: merge", "change: join"))).extracting(TagSetProblem::message)
+			.containsExactly("계보 종류는 rename · split · merge 가운데 하나다 — 지금 'join'");
 	}
 
 	@Test
@@ -370,10 +374,13 @@ class TagSetParserTests {
 	}
 
 	private List<String> problems(String text) {
+		return invalid(text).stream().map(problem -> problem.path() + " " + problem.code()).toList();
+	}
+
+	private List<TagSetProblem> invalid(String text) {
 		TagSetParse parse = this.parser.parse(text);
 		assertThat(parse).isInstanceOf(TagSetParse.Invalid.class);
-		return ((TagSetParse.Invalid) parse).problems().stream().map(problem -> problem.path() + " " + problem.code())
-			.toList();
+		return ((TagSetParse.Invalid) parse).problems();
 	}
 
 }

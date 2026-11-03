@@ -167,8 +167,7 @@ public final class TagSetRevision {
 			ThresholdValues proposed = Objects.requireNonNull(next.initialThresholds().get(kind), "처음 값");
 			if (current.tagThreshold().compareTo(proposed.tagThreshold()) != 0
 					|| current.storeThreshold().compareTo(proposed.storeThreshold()) != 0) {
-				thresholds.add(new ThresholdDifference(current,
-						new TagThresholds(kind, proposed.tagThreshold(), proposed.storeThreshold())));
+				thresholds.add(new ThresholdDifference(current, proposed.toView(kind)));
 			}
 		}
 		return new TagSetChanges(added, removed, revised, lineage, questionsRevised, importanceRevised, thresholds);

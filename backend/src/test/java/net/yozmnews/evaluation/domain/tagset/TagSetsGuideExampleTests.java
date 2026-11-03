@@ -15,7 +15,6 @@ import net.yozmnews.evaluation.TagSetId;
 import net.yozmnews.evaluation.TagSetThresholds;
 import net.yozmnews.evaluation.TagThresholds;
 import net.yozmnews.evaluation.domain.tagset.TagSetRevision.Revision;
-import net.yozmnews.evaluation.domain.threshold.ThresholdValues;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.ClassPathResource;
 
@@ -83,8 +82,7 @@ class TagSetsGuideExampleTests {
 	}
 
 	private static TagThresholds tagThresholds(TagSetDefinition definition, MultiTagKind kind) {
-		ThresholdValues values = definition.initialThresholds().get(kind);
-		return new TagThresholds(kind, values.tagThreshold(), values.storeThreshold());
+		return definition.initialThresholds().get(kind).toView(kind);
 	}
 
 }

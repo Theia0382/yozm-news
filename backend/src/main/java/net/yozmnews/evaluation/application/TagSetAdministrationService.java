@@ -13,7 +13,6 @@ import net.yozmnews.evaluation.TagSetAdministration;
 import net.yozmnews.evaluation.TagSetId;
 import net.yozmnews.evaluation.TagSetReviewResult;
 import net.yozmnews.evaluation.TagSetVersionView;
-import net.yozmnews.evaluation.TagThresholds;
 import net.yozmnews.evaluation.ThresholdChangeResult;
 import net.yozmnews.evaluation.ThresholdChangeView;
 import net.yozmnews.evaluation.domain.tagset.TagSetRepository;
@@ -75,10 +74,10 @@ class TagSetAdministrationService implements TagSetAdministration {
 			BigDecimal pastMax = this.thresholds.maxStoreThreshold(version, kind);
 			return switch (ThresholdRule.decide(current, pastMax, tagThreshold, storeThreshold)) {
 				case ThresholdDecision.OutOfRange outOfRange -> new ThresholdChangeResult.OutOfRange();
-				case ThresholdDecision.Unchanged unchanged -> new ThresholdChangeResult.Unchanged(view(kind, current));
+				case ThresholdDecision.Unchanged unchanged -> new ThresholdChangeResult.Unchanged(current.toView(kind));
 				case ThresholdDecision.Change change -> {
 					this.thresholds.apply(version, kind, current, change.next(), actor, this.clock.instant());
-					yield new ThresholdChangeResult.Changed(view(kind, current), view(kind, change.next()),
+					yield new ThresholdChangeResult.Changed(current.toView(kind), change.next().toView(kind),
 							change.warnings());
 				}
 			};
@@ -108,10 +107,6 @@ class TagSetAdministrationService implements TagSetAdministration {
 	@Override
 	public TagSetActivationResult activate(String text, int recentDays, ChangeActor actor) {
 		return this.versioning.activate(text, recentDays, actor);
-	}
-
-	private static TagThresholds view(MultiTagKind kind, ThresholdValues values) {
-		return new TagThresholds(kind, values.tagThreshold(), values.storeThreshold());
 	}
 
 }

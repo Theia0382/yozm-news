@@ -50,10 +50,7 @@ public record EvaluationRecord(ArticleId articleId, TagSetId tagSetId, String ev
 	 */
 	public static EvaluationRecord of(ArticleId articleId, Evaluation evaluation, TagSetView tagSet,
 			TagSetThresholds thresholds, Instant evaluatedAt) {
-		if (!thresholds.versionId().equals(tagSet.id())) {
-			throw new IllegalArgumentException("태그 기준 · 저장 기준의 버전이 체계와 다르다: " + thresholds.versionId().value() + " · "
-					+ tagSet.id().value());
-		}
+		VersionMatch.require(thresholds, tagSet);
 		List<StoredTag> tags = new ArrayList<>();
 		List<AskedTag> subtopics = tagSet.topics().stream().flatMap(category -> category.subtopics().stream()).toList();
 		stored(tags, thresholds.topic(), subtopics, evaluation.topics());
