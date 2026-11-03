@@ -17,6 +17,14 @@ public interface EvaluationQueueRepository {
 	void enqueue(ArticleId articleId, Instant now);
 
 	/**
+	 * 재평가 대기에 넣는다 — 없으면 넣고, 실패로 남은 행은 실패 · 시도 수 · 마지막 문구를 지우고 되돌린다. 평가 가능 시각은
+	 * {@link EvaluationSchedule#eligibleAfterRequeue}. 대기 중 · 점유 중인 행은 그대로다(evaluation-R25). 같은 기사 ID 가 여러 번
+	 * 있어도 한 번만 센다.
+	 * @return 넣거나 되돌린 행 수
+	 */
+	int requeue(Collection<ArticleId> articleIds, Instant now);
+
+	/**
 	 * 지금 평가할 수 있는 대기 행을 잠근다 — 실패로 남지 않았고, 평가 가능 시각이 지났고, 점유가 없거나 만료된 행. 평가 가능 시각, 기사 ID 순.
 	 * 다른 트랜잭션이 잠근 행은 건너뛴다. 트랜잭션 안에서 부른다.
 	 */

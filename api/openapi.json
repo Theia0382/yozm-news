@@ -1519,6 +1519,215 @@
         "tags" : [ "admin-deletion-impact-controller" ]
       }
     },
+    "/api/admin/tag-set-reviews" : {
+      "post" : {
+        "operationId" : "review",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/TagSetRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TagSetReviewResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청 본문의 형식이 틀렸거나 재평가 기간이 범위 밖이다"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          }
+        },
+        "tags" : [ "admin-tag-set-controller" ]
+      }
+    },
+    "/api/admin/tag-sets" : {
+      "get" : {
+        "operationId" : "versions",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TagSetListResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          }
+        },
+        "tags" : [ "admin-tag-set-controller" ]
+      },
+      "post" : {
+        "operationId" : "activate",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/TagSetRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TagSetActivationResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청 본문의 형식이 틀렸거나 재평가 기간이 범위 밖이다"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          }
+        },
+        "tags" : [ "admin-tag-set-controller" ]
+      }
+    },
+    "/api/admin/tag-sets/{id}/text" : {
+      "get" : {
+        "operationId" : "text",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TagSetText"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "없는 태그 체계 버전이다"
+          }
+        },
+        "tags" : [ "admin-tag-set-controller" ]
+      }
+    },
     "/api/ping" : {
       "get" : {
         "operationId" : "ping",
@@ -2434,6 +2643,263 @@
           }
         },
         "required" : [ "absent", "max", "median", "min", "present" ]
+      },
+      "TagLineageView" : {
+        "type" : "object",
+        "properties" : {
+          "change" : {
+            "type" : "string",
+            "enum" : [ "RENAME", "SPLIT", "MERGE" ]
+          },
+          "from" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "kind" : {
+            "type" : "string",
+            "enum" : [ "TOPIC", "REGION", "FORMAT" ]
+          },
+          "to" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          }
+        },
+        "required" : [ "change", "from", "kind", "to" ]
+      },
+      "TagRef" : {
+        "type" : "object",
+        "properties" : {
+          "key" : {
+            "type" : "string"
+          },
+          "kind" : {
+            "type" : "string",
+            "enum" : [ "TOPIC", "REGION", "FORMAT" ]
+          }
+        },
+        "required" : [ "key", "kind" ]
+      },
+      "TagSetActivationResponse" : {
+        "type" : "object",
+        "properties" : {
+          "changes" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/TagSetChanges"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "id" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int64"
+          },
+          "number" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int32"
+          },
+          "problems" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/TagSetProblemView"
+            }
+          },
+          "requeued" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int64"
+          },
+          "result" : {
+            "type" : "string",
+            "enum" : [ "ACTIVATED", "UNCHANGED", "INVALID_TAG_SET" ]
+          }
+        },
+        "required" : [ "changes", "id", "number", "problems", "requeued", "result" ]
+      },
+      "TagSetChanges" : {
+        "type" : "object",
+        "properties" : {
+          "added" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/TagRef"
+            }
+          },
+          "importanceRevised" : {
+            "type" : "boolean"
+          },
+          "lineage" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/TagLineageView"
+            }
+          },
+          "questionsRevised" : {
+            "type" : "boolean"
+          },
+          "removed" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/TagRef"
+            }
+          },
+          "revised" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/TagRef"
+            }
+          },
+          "thresholds" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ThresholdDifference"
+            }
+          }
+        },
+        "required" : [ "added", "importanceRevised", "lineage", "questionsRevised", "removed", "revised", "thresholds" ]
+      },
+      "TagSetListResponse" : {
+        "type" : "object",
+        "properties" : {
+          "maxReevaluationDays" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "versions" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/TagSetVersionItem"
+            }
+          }
+        },
+        "required" : [ "maxReevaluationDays", "versions" ]
+      },
+      "TagSetProblemView" : {
+        "type" : "object",
+        "properties" : {
+          "code" : {
+            "type" : "string"
+          },
+          "column" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int32"
+          },
+          "line" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int32"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "path" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "code", "column", "line", "message", "path" ]
+      },
+      "TagSetRequest" : {
+        "type" : "object",
+        "properties" : {
+          "recentDays" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int32"
+          },
+          "text" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "recentDays", "text" ]
+      },
+      "TagSetReviewResponse" : {
+        "type" : "object",
+        "properties" : {
+          "changes" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/TagSetChanges"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "problems" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/TagSetProblemView"
+            }
+          },
+          "recentArticles" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int64"
+          },
+          "result" : {
+            "type" : "string",
+            "enum" : [ "READY", "UNCHANGED", "INVALID_TAG_SET" ]
+          }
+        },
+        "required" : [ "changes", "problems", "recentArticles", "result" ]
+      },
+      "TagSetText" : {
+        "type" : "object",
+        "properties" : {
+          "text" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "text" ]
+      },
+      "TagSetVersionItem" : {
+        "type" : "object",
+        "properties" : {
+          "active" : {
+            "type" : "boolean"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "createdBy" : {
+            "type" : "string",
+            "enum" : [ "SYSTEM", "OPERATOR" ]
+          },
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "number" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        },
+        "required" : [ "active", "createdAt", "createdBy", "id", "number" ]
+      },
+      "TagThresholds" : {
+        "type" : "object",
+        "properties" : {
+          "kind" : {
+            "type" : "string",
+            "enum" : [ "TOPIC", "REGION" ]
+          },
+          "storeThreshold" : {
+            "type" : "number"
+          },
+          "tagThreshold" : {
+            "type" : "number"
+          }
+        },
+        "required" : [ "kind", "storeThreshold", "tagThreshold" ]
+      },
+      "ThresholdDifference" : {
+        "type" : "object",
+        "properties" : {
+          "current" : {
+            "$ref" : "#/components/schemas/TagThresholds"
+          },
+          "proposed" : {
+            "$ref" : "#/components/schemas/TagThresholds"
+          }
+        },
+        "required" : [ "current", "proposed" ]
       }
     }
   }

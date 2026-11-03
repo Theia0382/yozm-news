@@ -29,10 +29,7 @@ final class DevComposeFile {
 
 	/** 시스템 속성 값을 경로로. 없거나 비어 있으면 Gradle 밖에서 실행한 것이다. */
 	static Path pathFrom(@Nullable String propertyValue) {
-		if (propertyValue == null || propertyValue.isBlank()) {
-			throw new IllegalStateException("시스템 속성 " + PATH_PROPERTY + " 이 없다 — 테스트는 Gradle 로 실행한다");
-		}
-		return Path.of(propertyValue);
+		return GradleProperties.pathFrom(PATH_PROPERTY, propertyValue);
 	}
 
 	/**

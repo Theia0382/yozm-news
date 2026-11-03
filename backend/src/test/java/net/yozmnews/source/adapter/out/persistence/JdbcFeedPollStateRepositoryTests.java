@@ -1,5 +1,6 @@
 package net.yozmnews.source.adapter.out.persistence;
 
+import static net.yozmnews.Latches.awaitQuietly;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.URI;
@@ -186,15 +187,6 @@ class JdbcFeedPollStateRepositoryTests {
 			this.jdbc.sql("delete from sources where id in (:sources)")
 				.param("sources", List.of(enabledSource, this.source))
 				.update();
-		}
-	}
-
-	private static void awaitQuietly(CountDownLatch latch) {
-		try {
-			latch.await(30, TimeUnit.SECONDS);
-		}
-		catch (InterruptedException ex) {
-			Thread.currentThread().interrupt();
 		}
 	}
 

@@ -24,8 +24,9 @@ import org.springframework.stereotype.Repository;
 /**
  * {@link EvaluationQueueRepository} 의 JdbcClient 구현 — docs/specs/evaluation.md §4.
  * <p>
- * 넣기는 {@code INSERT … ON CONFLICT DO NOTHING}, 잠금은 {@code FOR UPDATE SKIP LOCKED}, 점유한 회차의 반영은 점유 토큰을 조건으로 한
- * 갱신 · 삭제다. 평가 가능 시각의 정착 시간은 {@link EvaluationSchedule} 이 정한다 — SQL 에 값을 두지 않는다.
+ * 넣기는 {@code INSERT … ON CONFLICT DO NOTHING}, 재평가는 실패 행만 되돌리는 {@code ON CONFLICT … DO UPDATE … WHERE}, 잠금은
+ * {@code FOR UPDATE SKIP LOCKED}, 점유한 회차의 반영은 점유 토큰을 조건으로 한 갱신 · 삭제다. 평가 가능 시각의 정착 시간은
+ * {@link EvaluationSchedule} 이 정한다 — SQL 에 값을 두지 않는다.
  */
 @Repository
 class JdbcEvaluationQueueRepository implements EvaluationQueueRepository {
@@ -52,6 +53,25 @@ class JdbcEvaluationQueueRepository implements EvaluationQueueRepository {
 			.param("article", articleId.value())
 			.param("now", timestamp(now))
 			.param("eligible", timestamp(EvaluationSchedule.eligibleAfterEnqueue(now)))
+			.update();
+	}
+
+	@Override
+	public int requeue(Collection<ArticleId> articleIds, Instant now) {
+		if (articleIds.isEmpty()) {
+			return 0;
+		}
+		return this.jdbc.sql("""
+				insert into evaluation_queue (article_id, enqueued_at, eligible_at)
+				select id, :now, :eligible from unnest(cast(:ids as bigint[])) as requeued(id)
+				on conflict (article_id) do update
+				set eligible_at = excluded.eligible_at, attempts = 0, failure = null, last_error = null
+				where evaluation_queue.failure is not null
+				""")
+			// 한 문장이 같은 행을 두 번 갱신할 수 없다 — 겹친 ID 는 하나로
+			.param("ids", articleIds.stream().map(ArticleId::value).distinct().toArray(Long[]::new))
+			.param("now", timestamp(now))
+			.param("eligible", timestamp(EvaluationSchedule.eligibleAfterRequeue(now)))
 			.update();
 	}
 

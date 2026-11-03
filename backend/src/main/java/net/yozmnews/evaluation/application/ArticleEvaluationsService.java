@@ -15,7 +15,7 @@ import org.springframework.stereotype.Service;
 /**
  * 공개 조회 {@link ArticleEvaluations} 의 구현 — docs/specs/evaluation.md §4 · evaluation-R15.
  * <p>
- * 평가 행의 버전과 그 버전의 지금 두 기준으로 {@link TagJudgement} 가 판정한다. 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통).
+ * 평가 행의 버전과 그 버전의 지금 태그 기준 · 저장 기준으로 {@link TagJudgement} 가 판정한다. 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통).
  */
 @Service
 class ArticleEvaluationsService implements ArticleEvaluations {

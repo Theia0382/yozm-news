@@ -20,12 +20,6 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @WebRole
 @RestController
-@ApiResponse(responseCode = "401", description = "운영자 토큰이 없거나 맞지 않는다",
-		content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
-				schema = @Schema(implementation = ApiProblem.class)))
-@ApiResponse(responseCode = "403", description = "운영자 기능이 닫혀 있다",
-		content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
-				schema = @Schema(implementation = ApiProblem.class)))
 class AdminPresetController {
 
 	private final SourceAdministration administration;

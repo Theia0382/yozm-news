@@ -175,6 +175,14 @@ class JdbcArticleRepository implements ArticleRepository {
 	}
 
 	@Override
+	public List<ArticleId> findFirstSeenSince(Instant since) {
+		return this.jdbc.sql("select id from articles where first_seen_at >= :since order by id")
+			.param("since", timestamp(since))
+			.query((rs, row) -> new ArticleId(rs.getLong("id")))
+			.list();
+	}
+
+	@Override
 	public Map<ArticleId, ArticleContent> findContents(Collection<ArticleId> articleIds) {
 		if (articleIds.isEmpty()) {
 			return Map.of();

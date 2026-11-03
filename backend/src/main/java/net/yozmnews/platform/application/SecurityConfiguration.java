@@ -26,10 +26,10 @@ import org.springframework.security.web.access.intercept.AuthorizationFilter;
  */
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(AdminSecurityProperties.class)
-class SecurityConfiguration {
+public class SecurityConfiguration {
 
-	/** 운영자 경로 — 정본 */
-	static final String ADMIN_PATHS = "/api/admin/**";
+	/** 운영자 경로 — 정본. 화면용 API 명세 설정도 이 값으로 운영자 연산을 가른다 */
+	public static final String ADMIN_PATHS = "/api/admin/**";
 
 	/** 운영자 역할 이름 */
 	static final String ADMIN_ROLE = "ADMIN";

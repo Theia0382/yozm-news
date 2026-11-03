@@ -1,7 +1,7 @@
-package net.yozmnews.evaluation.domain.tagset;
+package net.yozmnews.evaluation;
 
 /**
- * 태그 종류 — 태그 행의 종류 — docs/specs/evaluation.md §4
+ * 태그 종류 — 태그 행 · 계보 행의 종류 — docs/specs/evaluation.md §3
  */
 public enum TagKind {
 

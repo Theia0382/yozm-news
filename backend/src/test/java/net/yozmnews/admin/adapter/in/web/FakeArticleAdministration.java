@@ -31,10 +31,7 @@ class FakeArticleAdministration implements ArticleAdministration {
 	@Override
 	public EntryStatistics entryStatistics() {
 		this.calls.add("entryStatistics");
-		if (this.statistics == null) {
-			throw new IllegalStateException("시험이 결과를 정하지 않았다");
-		}
-		return this.statistics;
+		return FakeResults.given(this.statistics);
 	}
 
 	@Override

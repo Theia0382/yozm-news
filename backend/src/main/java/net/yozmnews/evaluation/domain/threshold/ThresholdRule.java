@@ -9,9 +9,9 @@ import java.util.Set;
 import net.yozmnews.evaluation.ThresholdWarning;
 
 /**
- * 두 기준 변경 판정과 경고의 정본 — docs/specs/evaluation.md §4 · evaluation-R11 · evaluation-R12.
+ * 태그 기준 · 저장 기준 변경 판정과 경고의 정본 — docs/specs/evaluation.md §4 · evaluation-R11 · evaluation-R12.
  * <p>
- * 앱은 두 기준의 관계를 막지 않는다. 이번 변경이 이전 기사와 어긋남을 만들 때만 경고를 싣고, 이미 어긋난 상태에서 다른 값만 바꾸는 변경에는
+ * 앱은 태그 기준 · 저장 기준의 관계를 막지 않는다. 이번 변경이 이전 기사와 어긋남을 만들 때만 경고를 싣고, 이미 어긋난 상태에서 다른 값만 바꾸는 변경에는
  * 다시 알리지 않는다.
  */
 public final class ThresholdRule {
@@ -21,7 +21,7 @@ public final class ThresholdRule {
 
 	/**
 	 * 변경을 판정한다.
-	 * @param current 지금 두 기준
+	 * @param current 지금 태그 기준 · 저장 기준
 	 * @param pastMaxStoreThreshold 이 변경 전까지 그 버전 · 그 태그 종류의 이력(처음 값 포함)에 있는 저장 기준의 최댓값
 	 * @param tagThreshold 요청한 태그 기준
 	 * @param storeThreshold 요청한 저장 기준

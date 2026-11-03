@@ -103,11 +103,12 @@ public record ArticlesRemoved(List<ArticleId> articleIds) {}
 
 ### ArticleDirectory · ArticleContent · ArticleEntryView
 
-기사 조회 — 다른 모듈이 기사의 제목 · 요약문 · 엔트리를 읽는다. 구현은 `application` 의 `ArticleDirectoryService` 다.
+기사 조회 — 다른 모듈이 기사의 제목 · 요약문 · 엔트리를 읽고, 처음 본 시각으로 기사를 찾는다. 구현은 `application` 의 `ArticleDirectoryService` 다.
 
 ```java
 public interface ArticleDirectory {
     Map<ArticleId, ArticleContent> findAll(Collection<ArticleId> ids);
+    List<ArticleId> firstSeenSince(Instant since);
 }
 
 public record ArticleContent(ArticleId id, String title, @Nullable String summary, List<ArticleEntryView> entries) {}
@@ -118,12 +119,14 @@ public record ArticleEntryView(SourceId sourceId, FeedId feedId, List<String> ca
 | 타입 · 멤버 | 뜻 |
 |---|---|
 | `findAll` | 기사들의 내용 — 없는(지운) 기사는 결과에 없다. 빈 입력이면 빈 맵 |
+| `firstSeenSince` | 처음 본 시각(`first_seen_at`)이 `since` 이상인 기사의 ID — ID 순. `evaluation` 이 체계를 바꿀 때 재평가 대상을 고른다 |
 | `ArticleContent.summary` | 저장된 RSS 요약문 — 없으면 null |
 | `ArticleContent.entries` | 기사의 엔트리 — 받은 시각 순, 같으면 피드 ID 순 |
 | `ArticleEntryView.categories` | 그 피드에서 처음 본 항목의 RSS 카테고리 — 피드 순서 그대로 |
 
 - 계약
-  - 트랜잭션을 열지 않는다 — 엔트리 · 기사 두 질의로 읽고, 각 질의는 그 순간의 값이다. 엔트리를 먼저 읽으므로 두 질의 사이에 지운 기사는 결과에서 빠진다
+  - 트랜잭션을 열지 않는다 — `findAll` 은 엔트리 · 기사 두 질의로 읽고, 각 질의는 그 순간의 값이다. 엔트리를 먼저 읽으므로 두 질의 사이에 지운 기사는 결과에서 빠진다. `firstSeenSince` 는 질의 하나다
+  - `first_seen_at` 에는 인덱스가 없다 — `firstSeenSince` 는 표 전체를 읽는다. 드문 운영 연산(체계 변경)이 부른다
   - 출처 이름 · 피드 섹션은 담지 않는다 — `source` 의 공개 조회가 낸다
 
 관련 규칙: article-R7 · article-R8.
@@ -276,6 +279,7 @@ sequenceDiagram
       long countArticlesOnlyIn(SourceId sourceId);
       long countArticlesOnlyIn(SourceId sourceId, FeedId feedId);
       Map<ArticleId, ArticleContent> findContents(Collection<ArticleId> articleIds);  // 없는 기사는 빠진다 — 엔트리는 받은 시각 · 피드 ID 순
+      List<ArticleId> findFirstSeenSince(Instant since);                               // first_seen_at >= since — ID 순
   }
   ```
 

@@ -9,13 +9,14 @@
 - **소스 · 피드 관리** — 프리셋 목록 · 등록, 소스 목록 · 숨긴 소스 목록, 운영자 원문 등록 · 조회 · 수정 · 미리보기, 소스 · 피드 켜기 · 끄기, 운영자 수집 주기, 소스 · 피드 숨기기 · 다시 보이기 · 삭제와 삭제하면 함께 지워질 기사 수
 - **수집 현황** — 피드마다 수집 상태와 엔트리 지표, 소스마다 그 합
 - **이벤트 발행** — 남겨진 이벤트 발행의 목록 · 다시 처리 · 폐기
+- **태그 체계** — 버전 목록 · 버전 원문 조회, 운영자 원문의 확인 · 활성화(재평가 기간 포함)
 - **응답 모양** — 모듈의 운영 결과를 판별자 하나의 평평한 응답으로 옮기고, 요청의 문제를 HTTP 오류로 낸다
 
 하지 않는 것:
 
 - 판정 · 저장 · 조회를 하지 않는다 — 그 지식을 가진 모듈의 공개 운영 API 에 맡긴다
 - 운영자를 인증하지 않는다 — 운영자 경로의 보호는 `platform` 의 보안 구성이 한다([platform Spec "운영자 접근 통제"](platform.md#운영자-접근-통제))
-- **(미구현)** 태그 체계 · 평가 결과 · 사건의 운영자 기능
+- **(미구현)** 태그 기준 · 저장 기준 · 평가 결과 · 사건의 운영자 기능
 
 다른 모듈과의 의존과 이벤트 흐름은 [overview.md §5](../overview.md#5-모듈-지도)에 있다.
 
@@ -55,6 +56,10 @@ HTTP 엔드포인트 — 모두 운영자 경로다(운영자 토큰 필요 — 
 | `GET /api/admin/event-publications` | 남겨진 이벤트 발행 — 발행 시각 오름차순 앞쪽 최대 상한 건, 전체 건수, 실을 수 있는 건수(`limit`) |
 | `POST /api/admin/event-publications/resubmission` | 고른 발행(본문 `ids`) 다시 처리 — 발행마다 결과 |
 | `POST /api/admin/event-publications/discard` | 고른 발행(본문 `ids`) 폐기 — 발행마다 결과 |
+| `GET /api/admin/tag-sets` | 태그 체계 버전 목록(번호가 큰 것부터)과 재평가 기간의 상한 |
+| `GET /api/admin/tag-sets/{id}/text` | 버전의 원문 — 그 버전의 내용과 지금 태그 기준 · 저장 기준으로 만든다([evaluation-R27](evaluation.md#체계-변경)) |
+| `POST /api/admin/tag-set-reviews` | 운영자 원문(본문 `text`)의 확인 — 아무것도 쓰지 않는다. 본문 `recentDays` 는 재평가 기간(없으면 0) |
+| `POST /api/admin/tag-sets` | 운영자 원문(본문 `text`)으로 새 버전을 만들어 활성으로 바꾼다. 본문 `recentDays` 는 재평가 기간(없으면 0 — 재평가하지 않는다) |
 
 요청 · 응답 형식의 정본은 [`api/openapi.json`](../../api/openapi.json)이다([ADR-0020](../adr/0020-screen-api-contract-from-committed-openapi-spec.md)). 결과 · 오류의 대응은 admin-R1 ~ admin-R3, 수집 현황의 응답은 admin-R4 다. 이벤트 발행 목록은 `platform` 의 `StrandedPublications` 를 옮기기만 하고 이벤트 내용을 싣지 않는다(platform-R14).
 
@@ -64,10 +69,10 @@ HTTP 엔드포인트 — 모두 운영자 경로다(운영자 토큰 필요 — 
 
 | 패키지 | 책임 |
 |---|---|
-| (최상위) | 모듈 선언 — 의존을 `source` · `article` · `platform` 으로 둔다(`package-info`) |
+| (최상위) | 모듈 선언 — 의존을 `source` · `article` · `evaluation` · `platform` 으로 둔다(`package-info`) |
 | `adapter/in/web` | 운영자 컨트롤러, 결과 · 목록의 응답 레코드, 없는 대상의 404 |
 
-협력: 컨트롤러는 `source` 의 공개 운영 API `SourceAdministration`, `article` 의 공개 운영 API `ArticleAdministration`, `platform` 의 공개 운영 API `EventPublicationAdministration` 만 부르고, 결과를 응답 레코드의 정적 팩토리로 옮긴다. 오류 응답은 `platform` 의 `ProblemResponses` 로 만든다. `application` · `domain` 이 없다 — 판단이 없다.
+협력: 컨트롤러는 `source` 의 공개 운영 API `SourceAdministration`, `article` 의 공개 운영 API `ArticleAdministration`, `evaluation` 의 공개 운영 API `TagSetAdministration`, `platform` 의 공개 운영 API `EventPublicationAdministration` 만 부르고, 결과를 응답 레코드의 정적 팩토리로 옮긴다. 오류 응답은 `platform` 의 `ProblemResponses` 로 만든다. `application` · `domain` 이 없다 — 판단이 없다.
 
 역할: 모든 구성 요소가 화면 역할(`@WebRole`)이다(platform-R9).
 
@@ -81,11 +86,12 @@ HTTP 엔드포인트 — 모두 운영자 경로다(운영자 토큰 필요 — 
 | 삭제 영향 | `AdminDeletionImpactController` | `GET …/deletion-impact` 둘 | `article` 의 기사 수를 옮긴다(admin-R2) |
 | 수집 현황 | `AdminCollectionController` | `GET /api/admin/collection-status` | 소스 목록(수집 상태 포함)과 엔트리 집계를 소스 · 피드 행으로 맞붙인다(admin-R4) |
 | 이벤트 발행 | `AdminEventPublicationController` | `GET /api/admin/event-publications` · `POST …/resubmission` · `POST …/discard` | 남겨진 발행의 목록과 다시 처리 · 폐기의 발행별 결과를 옮긴다. 한 번에 받는 발행 수의 상한은 공개 API 가 판정하고 컨트롤러는 그 결과를 400 으로 옮긴다(admin-R1 · admin-R3) |
+| 태그 체계 | `AdminTagSetController` | `GET /api/admin/tag-sets` · `GET …/{id}/text` · `POST /api/admin/tag-set-reviews` · `POST /api/admin/tag-sets` | 버전 목록 · 원문 · 확인 · 활성화의 결과를 옮긴다. 재평가 기간의 범위는 공개 API 가 판정하고 컨트롤러는 그 결과를 400 으로 옮긴다(admin-R1 ~ admin-R3) |
 | 없는 대상 | `AdminExceptionHandling` | 운영자 컨트롤러의 공개 예외 | 없는 소스 · 피드를 404 문제 응답으로 낸다(admin-R2) |
 
 컨트롤러는 트랜잭션을 열지 않는다 — 피드 켜기 · 원문 미리보기는 피드를 받으므로 응답까지 걸린다(source-R9).
 
-`adapter/in/web` 의 그 밖의 타입: 응답 `PresetResponse` · `SourceListResponse` · `SourceResponse`(`FeedResponse`) · `RegistrationResponse` · `RevisionResponse` · `SourceEnableResponse` · `FeedEnableResponse` · `PreviewResponse` · `FeedRemovalResponse` · `DeletionImpactResponse` · `CollectionStatusResponse`(`StatusCriteriaResponse` · `SourceCollectionResponse` · `FeedCollectionResponse` · `EntryMetricsResponse` · `EntryBucketResponse`) · `StrandedPublicationListResponse`(`StrandedPublicationResponse`) · `ResubmissionListResponse`(`ResubmissionItemResponse`) · `DiscardListResponse`(`DiscardItemResponse`), 요청 `ProfileText` · `PreviewRequest` · `PollIntervalRequest` · `EventPublicationIdsRequest`, 보조 `AdminIds`(경로 ID) · `PollIntervals`(하한 미만의 400).
+`adapter/in/web` 의 그 밖의 타입: 응답 `PresetResponse` · `SourceListResponse` · `SourceResponse`(`FeedResponse`) · `RegistrationResponse` · `RevisionResponse` · `SourceEnableResponse` · `FeedEnableResponse` · `PreviewResponse` · `FeedRemovalResponse` · `DeletionImpactResponse` · `CollectionStatusResponse`(`StatusCriteriaResponse` · `SourceCollectionResponse` · `FeedCollectionResponse` · `EntryMetricsResponse` · `EntryBucketResponse`) · `StrandedPublicationListResponse`(`StrandedPublicationResponse`) · `ResubmissionListResponse`(`ResubmissionItemResponse`) · `DiscardListResponse`(`DiscardItemResponse`) · `TagSetListResponse`(`TagSetVersionItem`) · `TagSetText` · `TagSetReviewResponse` · `TagSetActivationResponse`, 요청 `ProfileText` · `PreviewRequest` · `PollIntervalRequest` · `EventPublicationIdsRequest` · `TagSetRequest`, 보조 `AdminIds`(경로 ID) · `PollIntervals`(하한 미만의 400) · `ReevaluationDays`(범위 밖 재평가 기간의 400).
 
 ### `application`
 
@@ -93,7 +99,7 @@ HTTP 엔드포인트 — 모두 운영자 경로다(운영자 토큰 필요 — 
 
 ### `domain`
 
-해당 없음 — 판단과 저장은 `source` 에 있다.
+해당 없음 — 판단과 저장은 그 기능을 가진 모듈(`source` · `article` · `evaluation` · `platform`)에 있다.
 
 ### 나가는 쪽
 
@@ -112,10 +118,12 @@ HTTP 엔드포인트 — 모두 운영자 경로다(운영자 토큰 필요 — 
   - 피드 숨기기 · 삭제 — `REMOVED` · `REFUSED`(이유 `IN_PROFILE` · `PROFILE_UNAVAILABLE`)
   - 이벤트 발행 다시 처리 — 발행마다 `RESUBMITTED` · `NOT_EXHAUSTED` · `UNREADABLE` · `NOT_FOUND`(platform-R14)
   - 이벤트 발행 폐기 — 발행마다 `DISCARDED` · `NOT_STRANDED` · `CHANGED` · `NOT_FOUND`(platform-R15)
+  - 태그 체계 확인 — `READY`(변경 목록 · 재평가 기간에 처음 본 기사 수) · `UNCHANGED` · `INVALID_TAG_SET`(문제)
+  - 태그 체계 활성화 — `ACTIVATED`(새 버전 ID · 번호 · 변경 목록 · 재평가 대기에 넣은 수) · `UNCHANGED` · `INVALID_TAG_SET`(문제)
 
-  판별자와 속성의 조합은 응답 레코드의 정적 팩토리 하나에서만 만든다. 응답의 소스 · 피드 ID 는 JSON 수이고, 이벤트 발행 ID 는 UUID 문자열이다. 여러 발행을 한 번에 다루는 조작은 발행마다 판별자 하나를 단 항목(`id` · `result`)의 목록을 낸다
-- **admin-R2** — 대상이 없으면 404 문제 응답이다: 없는 소스 · 피드(`source` 의 공개 예외), 경로의 ID 가 1 미만, 카탈로그에 없는 프리셋, 프리셋 소스의 운영자 원문(조회 · 수정). 없는 소스 · 피드는 이 모듈의 조언이 앱 전체 조언보다 먼저 받는다 — 처리하지 못한 예외(500)가 되지 않는다
-- **admin-R3** — 요청의 문제는 그 상태의 문제 응답이다: 본문 형식 · 원문 없음 400, 수집 주기의 하한 미만 400(설명 "수집 주기는 {하한}분 이상이다" — 하한은 `SourceAdministration.MINIMUM_POLL_INTERVAL_MINUTES`), 다른 요청이 먼저 바꿈 409(platform-R12), 이벤트 발행 다시 처리 · 폐기의 ID 형식 오류 · `ids` 없음 · 빈 원소 400, 한 번에 받는 발행 수 초과 400(설명 "한 번에 {상한}건까지 처리한다" — 상한은 `EventPublicationAdministration.MAX_BATCH`, 넘었는지는 공개 API 가 판정한다). 빈 `ids` 는 200 빈 결과다. 끄기 · 주기 변경 · 소스 숨기기 · 다시 보이기 · 피드 다시 보이기 · 소스 삭제는 성공하면 204 다. 삭제는 버전 조건이 없어 409 가 없다. 소스 목록 응답은 수집 주기의 하한을 함께 낸다
+  판별자와 속성의 조합은 응답 레코드의 정적 팩토리 하나에서만 만든다. 응답의 소스 · 피드 · 태그 체계 버전 ID 는 JSON 수이고, 이벤트 발행 ID 는 UUID 문자열이다. 여러 발행을 한 번에 다루는 조작은 발행마다 판별자 하나를 단 항목(`id` · `result`)의 목록을 낸다
+- **admin-R2** — 대상이 없으면 404 문제 응답이다: 없는 소스 · 피드(`source` 의 공개 예외), 경로의 ID 가 1 미만, 카탈로그에 없는 프리셋, 프리셋 소스의 운영자 원문(조회 · 수정), 없는 태그 체계 버전의 원문. 없는 소스 · 피드는 이 모듈의 조언이 앱 전체 조언보다 먼저 받는다 — 처리하지 못한 예외(500)가 되지 않는다
+- **admin-R3** — 요청의 문제는 그 상태의 문제 응답이다: 본문 형식 · 원문 없음 400, 수집 주기의 하한 미만 400(설명 "수집 주기는 {하한}분 이상이다" — 하한은 `SourceAdministration.MINIMUM_POLL_INTERVAL_MINUTES`), 다른 요청이 먼저 바꿈 409(platform-R12), 이벤트 발행 다시 처리 · 폐기의 ID 형식 오류 · `ids` 없음 · 빈 원소 400, 한 번에 받는 발행 수 초과 400(설명 "한 번에 {상한}건까지 처리한다" — 상한은 `EventPublicationAdministration.MAX_BATCH`, 넘었는지는 공개 API 가 판정한다), 태그 체계 확인 · 활성화의 재평가 기간 범위 밖 400(설명 "재평가 기간은 0일에서 {상한}일까지다" — 상한은 `TagSetAdministration.MAX_REEVALUATION_DAYS`, 범위는 공개 API 가 판정한다). 빈 `ids` 는 200 빈 결과다. 끄기 · 주기 변경 · 소스 숨기기 · 다시 보이기 · 피드 다시 보이기 · 소스 삭제는 성공하면 204 다. 삭제는 버전 조건이 없어 409 가 없다. 소스 목록 응답은 수집 주기의 하한을 함께 낸다
 
 ### 수집 현황
 
@@ -142,3 +150,4 @@ HTTP 엔드포인트 — 모두 운영자 경로다(운영자 토큰 필요 — 
 | [0045](../adr/0045-admin-module-serves-operator-api-over-module-public-operation-apis.md) | 운영자 API 는 `admin` 모듈이 내고, 각 모듈은 운영 기능과 결과 타입을 최상위 공개 API 로 낸다 |
 | [0050](../adr/0050-operator-resubmits-once-or-discards-stranded-event-publications-read-from-registry.md) | 이벤트를 읽을 수 없는 발행은 재제출 전에 거르고, 상한에 이른 · 읽을 수 없는 발행은 운영자가 즉시 1회 재제출하거나 기록 없이 폐기하며, 목록 · 폐기는 `platform` 이 레지스트리 테이블을 직접 다룬다 |
 | [0051](../adr/0051-operator-hides-or-deletes-sources-and-feeds-and-deletion-removes-exclusive-articles.md) | 운영자는 소스 · 피드를 숨기거나 삭제하고, 숨김은 끄고 남기며 삭제는 그 소스 · 피드만 가진 기사까지 지운다 |
+| [0062](../adr/0062-tag-set-versions-from-operator-text-activated-forward-with-key-lineage-and-recent-reevaluation.md) | 태그 체계는 운영자 원문으로 새 버전을 만들어 앞으로만 켜고, 키 계보를 원문에 적으며, 켤 때 정한 일수 안에 처음 본 기사를 재평가 대기에 넣는다 |

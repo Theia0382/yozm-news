@@ -2,6 +2,7 @@ package net.yozmnews.evaluation.domain.tagset;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.List;
@@ -9,10 +10,15 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
+import net.yozmnews.evaluation.LineageKind;
 import net.yozmnews.evaluation.MultiTagKind;
+import net.yozmnews.evaluation.TagKind;
 import net.yozmnews.evaluation.domain.tagset.TagSetDraft.FormatDraft;
 import net.yozmnews.evaluation.domain.tagset.TagSetDraft.LevelDraft;
+import net.yozmnews.evaluation.domain.tagset.TagSetDraft.LineageDraft;
 import net.yozmnews.evaluation.domain.tagset.TagSetDraft.QuestionsDraft;
 import net.yozmnews.evaluation.domain.tagset.TagSetDraft.TagDraft;
 import net.yozmnews.evaluation.domain.tagset.TagSetDraft.ThresholdDraft;
@@ -25,8 +31,8 @@ import net.yozmnews.platform.YamlPath;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 초안 → 태그 체계 정의 — docs/specs/evaluation.md §4. 키 · 구성 · 문구 · 두 기준 규칙의 정본이다(evaluation-R6 ~ R8 ·
- * evaluation-R10).
+ * 초안 → 태그 체계 정의 — docs/specs/evaluation.md §4. 키 · 구성 · 문구 · 태그 기준 · 저장 기준 · 원문 안 계보 규칙의 정본이다
+ * (evaluation-R6 ~ R8 · evaluation-R10 · evaluation-R22).
  * <p>
  * 문제는 모두 모은다. 하나라도 있으면 정의를 만들지 않는다.
  */
@@ -92,10 +98,199 @@ final class TagSetValidator {
 		List<ImportanceLevelDef> importance = importance(draft.importance(), root.child(TagSetBinder.IMPORTANCE),
 				draft.location());
 		if (!this.problems.isEmpty() || questions == null) {
+			lineage(draft.lineage(), null);
 			return null;
 		}
-		return new TagSetDefinition(new TagSetContent(questions.topic(), questions.region(), questions.format(),
-				questions.importance(), topics, regions, formats, importance), thresholds);
+		TagSetContent content = new TagSetContent(questions.topic(), questions.region(), questions.format(),
+				questions.importance(), topics, regions, formats, importance);
+		List<Located<LineageDef>> lineage = lineage(draft.lineage(), content);
+		if (!this.problems.isEmpty()) {
+			return null;
+		}
+		return new TagSetDefinition(content, thresholds, lineage);
+	}
+
+	/**
+	 * 계보 절을 원문 하나 안에서 검증한다(evaluation-R22).
+	 * @param content 이 원문의 내용 — 다른 항목에 문제가 있어 없으면 새 키가 원문에 있는지는 보지 않는다(문제가 연쇄로 불지 않게)
+	 * @return 쓸 수 있는 계보 항목 — 원문 순서
+	 */
+	private List<Located<LineageDef>> lineage(@Nullable Located<List<LineageDraft>> draft,
+			@Nullable TagSetContent content) {
+		List<Located<LineageDef>> lineage = new ArrayList<>();
+		if (draft == null) {
+			return lineage;
+		}
+		Map<TagKind, Set<String>> fromSeen = new EnumMap<>(TagKind.class);
+		Map<TagKind, Set<String>> toSeen = new EnumMap<>(TagKind.class);
+		for (LineageDraft item : draft.value()) {
+			TagKind kind = named(item.kind(), item.path().child(TagSetBinder.KIND), item.location(), TagKind.values(),
+					TagSetValidator::kindName, "태그 종류");
+			LineageKind change = named(item.change(), item.path().child(TagSetBinder.CHANGE), item.location(),
+					LineageKind.values(), TagSetValidator::lineageName, "계보 종류");
+			List<Located<TagKey>> from = lineageKeys(item.from(), item.path().child(TagSetBinder.FROM), item.location(),
+					kind);
+			List<Located<TagKey>> to = lineageKeys(item.to(), item.path().child(TagSetBinder.TO), item.location(),
+					kind);
+			if (kind == null || change == null || from == null || to == null) {
+				continue;
+			}
+			if (!countsFit(change, from.size(), to.size())) {
+				problem(item.path(), TagSetProblemCode.INVALID_LINEAGE_COUNT, lineageName(change)
+						+ " 는 이전 키 · 새 키가 " + countRule(change) + "이어야 한다 — 지금 " + from.size() + " → " + to.size(),
+						item.location());
+				continue;
+			}
+			List<TagKey> fromKeys = from.stream().map(Located::value).toList();
+			List<TagKey> toKeys = to.stream().map(Located::value).toList();
+			if (change == LineageKind.RENAME && fromKeys.equals(toKeys)) {
+				problem(item.path(), TagSetProblemCode.DUPLICATE_LINEAGE_KEY, "이름 변경의 이전 키와 새 키가 같다",
+						item.location());
+				continue;
+			}
+			if (kind == TagKind.TOPIC && !sameLayer(fromKeys, toKeys)) {
+				problem(item.path(), TagSetProblemCode.LINEAGE_LAYER_MISMATCH,
+						"주제 계보는 대분류는 대분류로, 중분류는 중분류로만 잇는다", item.location());
+				continue;
+			}
+			boolean usable = repeatsNone(from, fromSeen.computeIfAbsent(kind, k -> new HashSet<>()), "이전 키");
+			usable &= repeatsNone(to, toSeen.computeIfAbsent(kind, k -> new HashSet<>()), "새 키");
+			if (content != null) {
+				Set<String> keys = new HashSet<>(content.keys(kind));
+				for (Located<TagKey> key : to) {
+					if (!keys.contains(key.value().value())) {
+						problem(key.path(), TagSetProblemCode.LINEAGE_TARGET_MISSING,
+								"새 키 '" + key.value() + "' 가 이 원문의 " + kindName(kind) + " 에 없다", key.location());
+						usable = false;
+					}
+				}
+			}
+			if (usable) {
+				lineage.add(
+						new Located<>(new LineageDef(kind, change, fromKeys, toKeys), item.path(), item.location()));
+			}
+		}
+		return lineage;
+	}
+
+	/**
+	 * 원문의 이름 값을 열거값으로 읽는다 — 값이 없으면 missing, 맞는 이름이 없으면 INVALID_LINEAGE_VALUE. 허용 이름 목록은 열거 선언
+	 * 순으로 {@code name} 에서 만든다.
+	 * @param what 문구의 대상 — "태그 종류" · "계보 종류"
+	 */
+	private <E extends Enum<E>> @Nullable E named(@Nullable Located<String> value, YamlPath path, TextLocation parent,
+			E[] values, Function<E, String> name, String what) {
+		if (value == null) {
+			missing(path, parent);
+			return null;
+		}
+		for (E candidate : values) {
+			if (name.apply(candidate).equals(value.value())) {
+				return candidate;
+			}
+		}
+		problem(path, TagSetProblemCode.INVALID_LINEAGE_VALUE,
+				what + "는 " + Arrays.stream(values).map(name).collect(Collectors.joining(" · ")) + " 가운데 하나다 — 지금 '"
+						+ value.value() + "'",
+				value.location());
+		return null;
+	}
+
+	/**
+	 * 계보 항목의 키 목록 — 키 형식과 한 목록 안의 겹침을 본다. 지역 · 형식의 키는 조각 하나다.
+	 * @param kind 그 항목의 태그 종류 — 쓸 수 없으면 null(조각 수는 보지 않는다)
+	 * @return 쓸 수 없는 키가 있거나 목록이 없으면 null
+	 */
+	private @Nullable List<Located<TagKey>> lineageKeys(@Nullable Located<List<Located<String>>> value, YamlPath path,
+			TextLocation parent, @Nullable TagKind kind) {
+		if (value == null) {
+			missing(path, parent);
+			return null;
+		}
+		List<Located<TagKey>> keys = new ArrayList<>();
+		Set<String> seen = new HashSet<>();
+		boolean usable = true;
+		for (Located<String> item : value.value()) {
+			String text = item.value();
+			boolean single = kind == null || kind == TagKind.TOPIC || TagKey.isSegment(text);
+			if (!TagKey.isKey(text) || !single) {
+				problem(item.path(), TagSetProblemCode.INVALID_KEY, "계보의 키 '" + text + "' 가 "
+						+ ((kind == null || kind == TagKind.TOPIC) ? "태그 키" : kindName(kind) + " 키(조각 하나)")
+						+ " 형식이 아니다", item.location());
+				usable = false;
+				continue;
+			}
+			if (!seen.add(text)) {
+				problem(item.path(), TagSetProblemCode.DUPLICATE_LINEAGE_KEY, "키 '" + text + "' 가 이 목록에 또 있다",
+						item.location());
+				usable = false;
+				continue;
+			}
+			keys.add(new Located<>(new TagKey(text), item.path(), item.location()));
+		}
+		return usable ? keys : null;
+	}
+
+	/** 같은 태그 종류에서 한 키는 많아야 한 항목의 이전 키(새 키)다 — 겹치면 알린다 */
+	private boolean repeatsNone(List<Located<TagKey>> keys, Set<String> seen, String role) {
+		boolean none = true;
+		for (Located<TagKey> key : keys) {
+			if (!seen.add(key.value().value())) {
+				problem(key.path(), TagSetProblemCode.LINEAGE_KEY_REPEATED,
+						role + " '" + key.value() + "' 가 앞의 계보 항목에도 있다", key.location());
+				none = false;
+			}
+		}
+		return none;
+	}
+
+	/** 주제 계보의 키가 모두 대분류이거나 모두 중분류인가 */
+	private static boolean sameLayer(List<TagKey> from, List<TagKey> to) {
+		boolean child = from.get(0).isChild();
+		return from.stream().allMatch(key -> key.isChild() == child)
+				&& to.stream().allMatch(key -> key.isChild() == child);
+	}
+
+	private static boolean countsFit(LineageKind change, int from, int to) {
+		return switch (change) {
+			case RENAME -> from == 1 && to == 1;
+			case SPLIT -> from == 1 && to >= 2;
+			case MERGE -> from >= 2 && to == 1;
+		};
+	}
+
+	private static String countRule(LineageKind change) {
+		return switch (change) {
+			case RENAME -> "하나 → 하나";
+			case SPLIT -> "하나 → 둘 이상";
+			case MERGE -> "둘 이상 → 하나";
+		};
+	}
+
+	/** 원문에 적는 태그 종류 이름 */
+	static String kindName(TagKind kind) {
+		return switch (kind) {
+			case TOPIC -> TagSetBinder.TOPIC;
+			case REGION -> TagSetBinder.REGION;
+			case FORMAT -> TagSetBinder.FORMAT;
+		};
+	}
+
+	/** 기준이 있는 태그 종류의 태그 종류 */
+	private static TagKind tagKind(MultiTagKind kind) {
+		return switch (kind) {
+			case TOPIC -> TagKind.TOPIC;
+			case REGION -> TagKind.REGION;
+		};
+	}
+
+	/** 원문에 적는 계보 종류 이름 */
+	static String lineageName(LineageKind change) {
+		return switch (change) {
+			case RENAME -> TagSetBinder.RENAME;
+			case SPLIT -> TagSetBinder.SPLIT;
+			case MERGE -> TagSetBinder.MERGE;
+		};
 	}
 
 	private record Questions(QuestionTemplate topic, QuestionTemplate region, String format, String importance) {
@@ -153,10 +348,7 @@ final class TagSetValidator {
 			return thresholds;
 		}
 		for (MultiTagKind kind : MultiTagKind.values()) {
-			String key = switch (kind) {
-				case TOPIC -> TagSetBinder.TOPIC;
-				case REGION -> TagSetBinder.REGION;
-			};
+			String key = kindName(tagKind(kind));
 			ThresholdDraft threshold = switch (kind) {
 				case TOPIC -> draft.topic();
 				case REGION -> draft.region();

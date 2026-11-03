@@ -1,9 +1,9 @@
-package net.yozmnews.source.domain.profile;
+package net.yozmnews;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
-import net.yozmnews.source.domain.profile.CodeFences.Block;
+import net.yozmnews.CodeFences.Block;
 import org.junit.jupiter.api.Test;
 
 class CodeFencesTests {

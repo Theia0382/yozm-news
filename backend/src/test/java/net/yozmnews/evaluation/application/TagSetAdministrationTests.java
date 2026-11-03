@@ -1,5 +1,6 @@
 package net.yozmnews.evaluation.application;
 
+import static net.yozmnews.Latches.awaitQuietly;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.math.BigDecimal;
@@ -32,7 +33,8 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 두 기준 변경과 이력 — 실제 PostgreSQL 에서 이전 값 · 새 값 · 행위자 · 시각, 경고, 바꾸지 않는 결과, 동시 변경의 줄 서기를 본다.
+ * 태그 기준 · 저장 기준 변경과 이력 — 실제 PostgreSQL 에서 이전 값 · 새 값 · 행위자 · 시각, 경고, 바꾸지 않는 결과, 활성 전환과의
+ * 줄 서기, 동시 변경의 줄 서기를 본다.
  * <p>
  * 지키는 규칙: evaluation-R11 ~ evaluation-R13
  */
@@ -57,13 +59,17 @@ class TagSetAdministrationTests {
 	@Autowired
 	JdbcClient jdbc;
 
+	@Autowired
+	TagSetVersioning versioning;
+
 	private TagSetAdministrationService administration;
 
 	@BeforeEach
 	void startFromTheInitialThresholds() {
 		TagSetRows.resetThresholds(this.jdbc);
 		this.administration = new TagSetAdministrationService(this.tagSets, this.thresholds,
-				new TransactionTemplate(this.transactionManager), InstantSource.fixed(NOW));
+				new TransactionTemplate(this.transactionManager), InstantSource.fixed(NOW),
+				this.versioning);
 	}
 
 	@AfterEach
@@ -102,6 +108,31 @@ class TagSetAdministrationTests {
 
 		assertThat(this.administration.thresholdChanges()).hasSize(2);
 		assertThat(this.directory.activeThresholds().region()).isEqualTo(thresholds(MultiTagKind.REGION, "0.500", "0.100"));
+	}
+
+	@Test
+	void aChangeWaitsWhileAnActivationHoldsTheTagSetTable() throws Exception {
+		CompletableFuture<ThresholdChangeResult> change = whileAnotherTransactionHolds("share row exclusive", () -> {
+			CompletableFuture<ThresholdChangeResult> started = CompletableFuture
+				.supplyAsync(() -> this.administration.changeThresholds(MultiTagKind.TOPIC, new BigDecimal("0.6"),
+						new BigDecimal("0.1"), ChangeActor.OPERATOR));
+			sleepQuietly(300);
+			// 활성 전환의 잠금을 쥔 동안 끝나지 않는다 — 활성 버전을 읽기 전에 표 잠금에서 기다린다
+			assertThat(started.isDone()).isFalse();
+			return started;
+		});
+
+		assertThat(change.get(10, TimeUnit.SECONDS)).isInstanceOf(ThresholdChangeResult.Changed.class);
+	}
+
+	@Test
+	void aChangeDoesNotWaitForAnotherChangeOrAResultWrite() throws Exception {
+		// 결과 쓰기 · 다른 변경이 쥐는 잠금(SHARE)과는 충돌하지 않는다 — 잠금을 쥔 동안 끝난다
+		ThresholdChangeResult result = whileAnotherTransactionHolds("share",
+				() -> this.administration.changeThresholds(MultiTagKind.TOPIC, new BigDecimal("0.6"),
+						new BigDecimal("0.1"), ChangeActor.OPERATOR));
+
+		assertThat(result).isInstanceOf(ThresholdChangeResult.Changed.class);
 	}
 
 	@Test
@@ -145,9 +176,29 @@ class TagSetAdministrationTests {
 		return new TagThresholds(kind, new BigDecimal(tag), new BigDecimal(store));
 	}
 
-	private static void awaitQuietly(CountDownLatch latch) {
+	/** 다른 트랜잭션이 tag_sets 표를 그 모드로 잠근 동안 일을 하고, 일이 끝나면 잠금을 푼다 */
+	private <T> T whileAnotherTransactionHolds(String mode, java.util.function.Supplier<T> work) throws Exception {
+		CountDownLatch locked = new CountDownLatch(1);
+		CountDownLatch release = new CountDownLatch(1);
+		TransactionTemplate transaction = new TransactionTemplate(this.transactionManager);
+		CompletableFuture<Void> holder = CompletableFuture.runAsync(() -> transaction.executeWithoutResult(status -> {
+			this.jdbc.sql("lock table tag_sets in " + mode + " mode").update();
+			locked.countDown();
+			awaitQuietly(release);
+		}));
 		try {
-			latch.await(30, TimeUnit.SECONDS);
+			assertThat(locked.await(10, TimeUnit.SECONDS)).isTrue();
+			return work.get();
+		}
+		finally {
+			release.countDown();
+			holder.get(10, TimeUnit.SECONDS);
+		}
+	}
+
+	private static void sleepQuietly(long millis) {
+		try {
+			Thread.sleep(millis);
 		}
 		catch (InterruptedException ex) {
 			Thread.currentThread().interrupt();

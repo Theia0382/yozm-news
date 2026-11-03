@@ -1,5 +1,7 @@
 package net.yozmnews.admin.adapter.in.web;
 
+import static net.yozmnews.admin.adapter.in.web.FakeResults.given;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -39,26 +41,19 @@ class FakeEventPublicationAdministration implements EventPublicationAdministrati
 
 	@Override
 	public StrandedPublications strandedPublications() {
-		return required(this.stranded);
+		return given(this.stranded);
 	}
 
 	@Override
 	public BatchResult<ResubmissionResult> resubmit(Set<UUID> ids) {
 		this.resubmitted.add(Set.copyOf(ids));
-		return required(this.resubmission);
+		return given(this.resubmission);
 	}
 
 	@Override
 	public BatchResult<DiscardResult> discard(Set<UUID> ids) {
 		this.discarded.add(Set.copyOf(ids));
-		return required(this.discard);
-	}
-
-	private static <T> T required(@Nullable T result) {
-		if (result == null) {
-			throw new IllegalStateException("시험이 결과를 정하지 않았다");
-		}
-		return result;
+		return given(this.discard);
 	}
 
 	/** 운영자 API 슬라이스에 대역을 싣는다 */

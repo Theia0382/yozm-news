@@ -1,5 +1,6 @@
 package net.yozmnews.article.domain;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -58,6 +59,12 @@ public interface ArticleRepository {
 	 * @return 기사 ID → 내용 — 없는 기사는 빠진다. 엔트리는 받은 시각 순, 같으면 피드 ID 순
 	 */
 	Map<ArticleId, ArticleContent> findContents(Collection<ArticleId> articleIds);
+
+	/**
+	 * 처음 본 시각({@code first_seen_at})이 {@code since} 이상인 기사.
+	 * @return 기사 ID — ID 순
+	 */
+	List<ArticleId> findFirstSeenSince(Instant since);
 
 	/** 엔트리가 모두 그 소스의 것인 기사 수 — 소스를 지우면 함께 지워질 기사 */
 	long countArticlesOnlyIn(SourceId sourceId);

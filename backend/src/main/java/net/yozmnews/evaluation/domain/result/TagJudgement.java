@@ -18,7 +18,7 @@ import net.yozmnews.evaluation.TopicCategory;
 import net.yozmnews.evaluation.TopicStatus;
 
 /**
- * 조회 시점 판정 — 저장된 태그에 지금 두 기준을 적용해 붙은 태그 · 주제 판정 · 대분류를 정한다 · docs/specs/evaluation.md §5.
+ * 조회 시점 판정 — 저장된 태그에 지금 태그 기준 · 저장 기준을 적용해 붙은 태그 · 주제 판정 · 대분류를 정한다 · docs/specs/evaluation.md §5.
  * <p>
  * 주제: 태그 기준 이상인 저장 행이 있으면 {@link TopicStatus#TAGGED}. 없으면 저장 행 가운데 확률이 가장 높은 것(같으면 체계 순서가 앞선 것)이
  * 저장 기준 이상일 때 그 하나로 {@link TopicStatus#LOW_CONFIDENCE}, 아니거나 행이 없으면 {@link TopicStatus#UNCLASSIFIED}. 지역: 태그 기준
@@ -31,14 +31,11 @@ public final class TagJudgement {
 
 	/**
 	 * @param tagSet 평가 행의 체계 버전
-	 * @param thresholds 그 버전의 지금 두 기준
+	 * @param thresholds 그 버전의 지금 태그 기준 · 저장 기준
 	 * @throws IllegalArgumentException 기준의 버전이 체계와 다르거나, 저장 행의 키가 체계에 없을 때
 	 */
 	public static Judged judge(List<StoredTag> stored, TagSetView tagSet, TagSetThresholds thresholds) {
-		if (!thresholds.versionId().equals(tagSet.id())) {
-			throw new IllegalArgumentException("두 기준의 버전이 체계와 다르다: " + thresholds.versionId().value() + " · "
-					+ tagSet.id().value());
-		}
+		VersionMatch.require(thresholds, tagSet);
 		Map<String, Integer> topicOrder = new HashMap<>();
 		Map<String, String> categoryOf = new HashMap<>();
 		Map<String, Integer> categoryOrder = new HashMap<>();

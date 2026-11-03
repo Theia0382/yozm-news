@@ -1,7 +1,7 @@
 package net.yozmnews.evaluation;
 
 /**
- * 기사의 주제 판정 — 조회 시점에 그 평가 버전의 지금 두 기준으로 정한다 · docs/specs/evaluation.md §3
+ * 기사의 주제 판정 — 조회 시점에 그 평가 버전의 지금 태그 기준 · 저장 기준으로 정한다 · docs/specs/evaluation.md §3
  */
 public enum TopicStatus {
 

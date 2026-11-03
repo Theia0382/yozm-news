@@ -1,6 +1,8 @@
 package net.yozmnews.article;
 
+import java.time.Instant;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -15,5 +17,13 @@ public interface ArticleDirectory {
 	 * @return 기사 ID → 내용 — 없는(지운) 기사는 결과에 없다. 빈 입력이면 빈 맵
 	 */
 	Map<ArticleId, ArticleContent> findAll(Collection<ArticleId> ids);
+
+	/**
+	 * 처음 본 시각이 {@code since} 이상인 기사를 찾는다 — 체계를 바꿀 때의 재평가 대상(evaluation-R25).
+	 * <p>
+	 * 처음 본 시각에는 인덱스가 없어 표 전체를 읽는다 — 드문 운영 연산이 부른다.
+	 * @return 기사 ID — ID 순
+	 */
+	List<ArticleId> firstSeenSince(Instant since);
 
 }

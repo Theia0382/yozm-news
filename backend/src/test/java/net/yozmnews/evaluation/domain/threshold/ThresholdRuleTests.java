@@ -11,7 +11,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 /**
- * 두 기준 변경 판정과 경고 — 값 리터럴로 판정과 경고 집합을 본다. "지금"은 태그 기준 / 저장 기준 순이다.
+ * 태그 기준 · 저장 기준 변경 판정과 경고 — 값 리터럴로 판정과 경고 집합을 본다. "지금"은 태그 기준 / 저장 기준 순이다.
  * <p>
  * 지키는 규칙: evaluation-R10 ~ evaluation-R12
  */

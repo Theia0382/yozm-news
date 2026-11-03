@@ -42,6 +42,22 @@ public record TagKey(String value) {
 		return new TagKey(parent.value + "." + segment);
 	}
 
+	/** 태그 키인가 — 조각 하나이거나 조각 둘을 점 하나로 이은 꼴(evaluation-R6) */
+	public static boolean isKey(String text) {
+		String[] segments = text.split("\\.", -1);
+		return segments.length <= 2 && isSegment(segments[0]) && (segments.length == 1 || isSegment(segments[1]));
+	}
+
+	/** 중분류 전체 키인가 — 조각 둘 */
+	public boolean isChild() {
+		return this.value.indexOf('.') >= 0;
+	}
+
+	/** 마지막 조각 — 중분류 전체 키면 점 뒤 조각, 조각 하나면 그 조각 */
+	public String leaf() {
+		return this.value.substring(this.value.indexOf('.') + 1);
+	}
+
 	/** 키 조각인가 — 영문 소문자 · 숫자를 하이픈 하나로 이은 40자 이하 */
 	public static boolean isSegment(String text) {
 		return text.length() <= MAX_SEGMENT_LENGTH && SEGMENT.matcher(text).matches();

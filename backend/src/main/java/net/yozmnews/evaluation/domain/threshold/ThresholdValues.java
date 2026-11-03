@@ -4,6 +4,9 @@ import java.math.BigDecimal;
 import java.util.Objects;
 import java.util.Optional;
 
+import net.yozmnews.evaluation.MultiTagKind;
+import net.yozmnews.evaluation.TagThresholds;
+
 /**
  * 태그 기준 · 저장 기준 한 쌍 — docs/specs/evaluation.md §4 · evaluation-R10.
  * <p>
@@ -36,6 +39,11 @@ public record ThresholdValues(BigDecimal tagThreshold, BigDecimal storeThreshold
 			return Optional.empty();
 		}
 		return Optional.of(new ThresholdValues(tagThreshold, storeThreshold));
+	}
+
+	/** 이 값을 그 태그 종류의 공개 값으로 옮긴다 */
+	public TagThresholds toView(MultiTagKind kind) {
+		return new TagThresholds(kind, this.tagThreshold, this.storeThreshold);
 	}
 
 	/** 값 하나가 범위 안인가 — 0 이상 1 이하, 끝의 0 을 뺀 소수 자리가 셋 이하 */

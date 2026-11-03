@@ -61,11 +61,7 @@ class OpenApiSpecTests {
 	}
 
 	private static Path specFile() {
-		String value = System.getProperty(PATH_PROPERTY);
-		if (value == null || value.isBlank()) {
-			throw new IllegalStateException("시스템 속성 " + PATH_PROPERTY + " 이 없다 — 테스트는 Gradle 로 실행한다");
-		}
-		return Path.of(value);
+		return GradleProperties.pathFrom(PATH_PROPERTY, System.getProperty(PATH_PROPERTY));
 	}
 
 }

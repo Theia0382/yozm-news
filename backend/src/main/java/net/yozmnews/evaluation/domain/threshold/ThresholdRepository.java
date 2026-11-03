@@ -12,17 +12,17 @@ import net.yozmnews.evaluation.TagSetThresholds;
 import net.yozmnews.evaluation.ThresholdChangeView;
 
 /**
- * 두 기준 저장소 — 지금 행과 추가 전용 이력 — docs/specs/evaluation.md §4 · evaluation-R11 · evaluation-R13.
+ * 태그 기준 · 저장 기준 저장소 — 지금 행과 추가 전용 이력 — docs/specs/evaluation.md §4 · evaluation-R11 · evaluation-R13.
  * <p>
  * 구현은 {@code adapter/out/persistence} 의 {@code JdbcThresholdRepository} 다. 이력을 지우는 연산은 없다.
  */
 public interface ThresholdRepository {
 
-	/** 처음 두 기준과 그 이력 첫 행(이전 값 없음)을 쓴다 */
+	/** 처음 태그 기준 · 저장 기준과 그 이력 첫 행(이전 값 없음)을 쓴다 */
 	void insertInitial(TagSetId version, MultiTagKind kind, ThresholdValues values, ChangeActor actor, Instant at);
 
 	/**
-	 * 지금 두 기준을 행 잠금으로 읽는다 — 트랜잭션 안에서 부른다.
+	 * 지금 태그 기준 · 저장 기준을 행 잠금으로 읽는다 — 트랜잭션 안에서 부른다.
 	 * @return 행이 없으면 빈 값
 	 */
 	Optional<ThresholdValues> lockCurrent(TagSetId version, MultiTagKind kind);
@@ -41,7 +41,7 @@ public interface ThresholdRepository {
 	List<ThresholdChangeView> changes(TagSetId version);
 
 	/**
-	 * 지금 두 기준을 돌려준다.
+	 * 지금 태그 기준 · 저장 기준을 돌려준다.
 	 * @throws IllegalStateException 기준이 있는 태그 종류의 행이 하나라도 없을 때
 	 */
 	TagSetThresholds current(TagSetId version);

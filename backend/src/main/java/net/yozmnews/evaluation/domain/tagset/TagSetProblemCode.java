@@ -3,7 +3,8 @@ package net.yozmnews.evaluation.domain.tagset;
 import net.yozmnews.platform.YamlProblemKind;
 
 /**
- * 태그 체계 파일 문제의 종류 — docs/specs/evaluation.md §4 · evaluation-R5 ~ evaluation-R8 · evaluation-R10.
+ * 태그 체계 파일 문제의 종류 — docs/specs/evaluation.md §4 · evaluation-R1 · evaluation-R5 ~ evaluation-R8 · evaluation-R10 ·
+ * evaluation-R22 · evaluation-R23.
  * <p>
  * 앞 11개는 공통 YAML 문제와 같은 이름이고 {@link #of} 가 옮긴다. 사람에게 보이는 문구는 {@link TagSetProblem#message()} 가
  * 구체적으로 담는다.
@@ -83,7 +84,37 @@ public enum TagSetProblemCode {
 	PLACEHOLDER_NOT_ALLOWED,
 
 	/** 기준 값이 0 ~ 1 · 소수 셋째 자리 밖이다 */
-	INVALID_THRESHOLD;
+	INVALID_THRESHOLD,
+
+	/** 계보 항목의 태그 종류 · 계보 종류가 정해진 값이 아니다 */
+	INVALID_LINEAGE_VALUE,
+
+	/** 계보 항목의 이전 키 · 새 키 수가 계보 종류와 맞지 않는다 */
+	INVALID_LINEAGE_COUNT,
+
+	/** 계보 항목 한 목록 안에 같은 키가 또 있거나, 이름 변경의 이전 키와 새 키가 같다 */
+	DUPLICATE_LINEAGE_KEY,
+
+	/** 같은 태그 종류에서 한 키가 두 계보 항목의 이전 키(또는 새 키)다 */
+	LINEAGE_KEY_REPEATED,
+
+	/** 계보의 새 키가 이 원문의 같은 태그 종류에 없다 */
+	LINEAGE_TARGET_MISSING,
+
+	/** 주제 계보가 대분류와 중분류를 잇는다 — 같은 층끼리만 잇는다 */
+	LINEAGE_LAYER_MISMATCH,
+
+	/** 기본 체계 파일에 계보 절이 있다 */
+	LINEAGE_IN_DEFAULT,
+
+	/** 계보의 이전 키가 기준 버전의 같은 태그 종류에 없다 */
+	LINEAGE_SOURCE_MISSING,
+
+	/** 계보의 이전 키가 새 버전에도 있는데 그 항목의 새 키가 아니다 */
+	LINEAGE_SOURCE_KEPT,
+
+	/** 계보의 새 키가 기준 버전에 이미 있다 — 이름 변경이 아니라 분할 · 병합이거나, 그 항목의 이전 키가 아니다 */
+	LINEAGE_TARGET_EXISTS;
 
 	/**
 	 * 공통 YAML 문제의 종류를 같은 이름의 코드로 옮긴다 — 공통 종류가 늘면 이 {@code switch} 가 컴파일되지 않는다(ADR-0056).

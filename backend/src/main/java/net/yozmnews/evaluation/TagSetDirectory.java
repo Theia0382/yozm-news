@@ -14,7 +14,7 @@ public interface TagSetDirectory {
 	TagSetView activeTagSet();
 
 	/**
-	 * 활성 버전의 주제 · 지역 두 기준을 돌려준다.
+	 * 활성 버전의 주제 · 지역 태그 기준 · 저장 기준을 돌려준다.
 	 * @throws IllegalStateException 활성 버전이 없을 때
 	 */
 	TagSetThresholds activeThresholds();

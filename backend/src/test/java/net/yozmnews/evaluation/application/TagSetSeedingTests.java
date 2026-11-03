@@ -1,5 +1,6 @@
 package net.yozmnews.evaluation.application;
 
+import static net.yozmnews.Latches.awaitQuietly;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
@@ -17,6 +18,8 @@ import net.yozmnews.evaluation.TagSetAdministration;
 import net.yozmnews.evaluation.TagSetDirectory;
 import net.yozmnews.evaluation.domain.tagset.TagSetDefinition;
 import net.yozmnews.evaluation.domain.tagset.TagSetRepository;
+import net.yozmnews.evaluation.domain.tagset.TagSetTexts;
+import net.yozmnews.evaluation.domain.tagset.TagSetWriter;
 import net.yozmnews.evaluation.domain.threshold.ThresholdRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,7 +35,8 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 첫 기동 적재 — 실제 PostgreSQL 에서 빈 표에만 적재하는지, 다시 불러도 · 동시에 불러도 버전 하나인지 본다.
+ * 첫 기동 적재 — 실제 PostgreSQL 에서 빈 표에만 적재하는지, 다시 불러도 · 동시에 불러도 버전 하나인지, 파일과 내용이 같은 버전이 없을
+ * 때만 개정을 알리는지 본다.
  * <p>
  * 픽스처가 체계 행을 모두 지운 뒤 시작하고, 끝에는 다시 적재해 처음 모양으로 둔다.
  * <p>
@@ -44,6 +48,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 class TagSetSeedingTests {
 
 	private static final Instant NOW = Instant.parse("2026-11-02T03:00:00Z");
+
+	private static final String NOTICE = "기본 체계 파일과 내용이 같은 태그 체계 버전이 없다 — 파일의 개정을 들이려면 체계 변경으로 새 버전을 만든다";
 
 	@Autowired
 	TagSetDefinition definition;
@@ -110,6 +116,38 @@ class TagSetSeedingTests {
 	}
 
 	@Test
+	void saysNothingMoreWhenAVersionHasTheFileContent(CapturedOutput output) {
+		this.seeding.seedIfEmpty();
+
+		this.seeding.seedIfEmpty();
+
+		assertThat(output).doesNotContain(NOTICE);
+	}
+
+	@Test
+	void noticesARevisedFileUntilAVersionWithItsContentExists(CapturedOutput output) {
+		this.seeding.seedIfEmpty();
+		TagSetDefinition revised = TagSetTexts.parsed(TagSetWriter.write(this.definition.content(),
+				this.thresholds.current(this.directory.activeTagSet().id()))
+			.replace("description: \"미국\"", "description: \"미국 · 미국령\""));
+		TagSetSeeding afterRevision = new TagSetSeeding(revised, this.tagSets, this.thresholds,
+				new TransactionTemplate(this.transactionManager), InstantSource.fixed(NOW));
+
+		assertThat(afterRevision.seedIfEmpty()).isFalse();
+		assertThat(output).contains(NOTICE);
+		assertThat(TagSetRows.count(this.jdbc, "tag_sets")).isEqualTo(1);
+
+		// 개정한 내용을 새 버전으로 들이면 다시 알리지 않는다 — 태그 기준 · 저장 기준은 비교하지 않는다
+		TagSetVersions.activate(TagSetWriter.write(revised.content(),
+				this.thresholds.current(this.directory.activeTagSet().id())).replace("tagThreshold: 0.5", "tagThreshold: 0.6"),
+				this.tagSets, this.thresholds, new TransactionTemplate(this.transactionManager), NOW);
+		int noticesBefore = occurrences(output.getAll(), NOTICE);
+		afterRevision.seedIfEmpty();
+
+		assertThat(occurrences(output.getAll(), NOTICE)).isEqualTo(noticesBefore);
+	}
+
+	@Test
 	void doesNothingWhenAVersionExists() {
 		this.seeding.seedIfEmpty();
 
@@ -147,13 +185,12 @@ class TagSetSeedingTests {
 		assertThat(TagSetRows.count(this.jdbc, "tag_set_threshold_changes")).isEqualTo(2);
 	}
 
-	private static void awaitQuietly(CountDownLatch latch) {
-		try {
-			latch.await(30, TimeUnit.SECONDS);
+	private static int occurrences(String text, String part) {
+		int count = 0;
+		for (int at = text.indexOf(part); at >= 0; at = text.indexOf(part, at + part.length())) {
+			count++;
 		}
-		catch (InterruptedException ex) {
-			Thread.currentThread().interrupt();
-		}
+		return count;
 	}
 
 }

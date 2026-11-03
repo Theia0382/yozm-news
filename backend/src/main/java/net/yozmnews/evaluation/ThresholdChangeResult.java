@@ -4,7 +4,7 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * 두 기준 변경의 결과 — docs/specs/evaluation.md §3 · evaluation-R11 · evaluation-R12
+ * 태그 기준 · 저장 기준 변경의 결과 — docs/specs/evaluation.md §3 · evaluation-R11 · evaluation-R12
  */
 public sealed interface ThresholdChangeResult {
 

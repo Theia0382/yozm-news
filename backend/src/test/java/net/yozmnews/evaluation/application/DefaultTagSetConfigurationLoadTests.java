@@ -40,6 +40,15 @@ class DefaultTagSetConfigurationLoadTests {
 	}
 
 	@Test
+	void failsWhenTheFileHasALineageSection() {
+		assertThatIllegalStateException()
+			.isThrownBy(() -> DefaultTagSetConfiguration.load(new ClassPathResource("tag-sets-test/with-lineage.yaml"),
+					this.parser))
+			.withMessageContaining("with-lineage.yaml")
+			.withMessageContaining("28:5 lineage: 기본 체계 파일에는 계보를 둘 수 없다 [LINEAGE_IN_DEFAULT]");
+	}
+
+	@Test
 	void failsWhenTheFileIsMissing() {
 		assertThatIllegalStateException()
 			.isThrownBy(() -> DefaultTagSetConfiguration.load(new ClassPathResource("tag-sets-test/missing.yaml"),

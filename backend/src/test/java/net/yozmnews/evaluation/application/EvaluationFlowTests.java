@@ -1,5 +1,6 @@
 package net.yozmnews.evaluation.application;
 
+import static net.yozmnews.Latches.awaitQuietly;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
@@ -17,9 +18,11 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.article.ArticleContent;
 import net.yozmnews.article.ArticleDirectory;
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.article.ArticleStored;
@@ -36,6 +39,7 @@ import net.yozmnews.evaluation.MultiTagKind;
 import net.yozmnews.evaluation.TagProbability;
 import net.yozmnews.evaluation.TagSetAdministration;
 import net.yozmnews.evaluation.TagSetDirectory;
+import net.yozmnews.evaluation.TagSetId;
 import net.yozmnews.evaluation.TagSetView;
 import net.yozmnews.evaluation.TopicStatus;
 import net.yozmnews.evaluation.adapter.out.fake.FakeArticleEvaluator;
@@ -48,6 +52,7 @@ import net.yozmnews.evaluation.domain.queue.EvaluationQueueRepository;
 import net.yozmnews.evaluation.domain.result.EvaluationRecord;
 import net.yozmnews.evaluation.domain.result.EvaluationResultRepository;
 import net.yozmnews.evaluation.domain.result.StoredEvaluation;
+import net.yozmnews.evaluation.domain.tagset.TagSetRepository;
 import net.yozmnews.evaluation.domain.threshold.ThresholdRepository;
 import net.yozmnews.source.FeedLabels;
 import net.yozmnews.source.SourceDeleted;
@@ -71,10 +76,11 @@ import org.springframework.transaction.support.TransactionTemplate;
 /**
  * 평가 흐름 — 대기 → 회차 → 저장 → 조회, 실패 갈래, 지운 기사 따르기를 실제 PostgreSQL 과 결선된 저장소 · 공개 조회로 본다.
  * <p>
- * 회차는 시험이 평가기와 고정 시계를 넣어 직접 만든다 — 작업 서버를 꺼 반복 작업이 시험의 회차와 겹치지 않는다. 기본 체계(버전 1, 처음 두 기준
- * 0.5 / 0.1)를 쓰고, 테스트마다 기사 · 대기 · 평가 행과 두 기준을 처음으로 되돌린다.
+ * 회차는 시험이 평가기와 고정 시계를 넣어 직접 만든다 — 작업 서버를 꺼 반복 작업이 시험의 회차와 겹치지 않는다. 기본 체계(버전 1, 처음 태그 기준 · 저장 기준
+ * 0.5 / 0.1)를 쓰고, 테스트마다 기사 · 대기 · 평가 행과 태그 기준 · 저장 기준을 처음으로 되돌린다.
  * <p>
- * 지키는 규칙: evaluation-R14 · evaluation-R15 · evaluation-R18 · evaluation-R19 · evaluation-R20 · evaluation-R21
+ * 지키는 규칙: evaluation-R14 · evaluation-R15 · evaluation-R18 · evaluation-R19 · evaluation-R20 · evaluation-R21. 회차 중의 활성
+ * 전환(evaluation-R19 의 활성 확인)은 시험이 저장소 수단으로 버전 2 를 켜서 만든다
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -109,6 +115,12 @@ class EvaluationFlowTests {
 	EvaluationQueueRepository queue;
 
 	@Autowired
+	TagSetRepository tagSets;
+
+	@Autowired
+	TagSetVersioning versioning;
+
+	@Autowired
 	TransactionTemplate transaction;
 
 	@Autowired
@@ -138,7 +150,138 @@ class EvaluationFlowTests {
 		this.jdbc.sql("delete from articles").update();
 		this.jdbc.sql("delete from source_attributions where name = '기록일보'").update();
 		this.jdbc.sql("delete from sources where preset_key = 'evaluation-flow'").update();
+		TagSetRows.removeVersionsAfterFirst(this.jdbc);
 		TagSetRows.resetThresholds(this.jdbc);
+	}
+
+	@Test
+	void aResultOfAVersionRetiredDuringTheRoundIsKeptAndTheArticleStaysQueuedForTheActiveVersion(CapturedOutput output) {
+		long first = enqueued("국회 본회의 통과");
+		long second = enqueued("경제 지표 발표");
+		TagSetId retired = this.directory.activeTagSet().id();
+		AtomicInteger calls = new AtomicInteger();
+		ArticleEvaluator switching = (input, tagSet) -> {
+			if (calls.getAndIncrement() == 0) {
+				switchToASecondVersion();
+			}
+			return new FakeArticleEvaluator().evaluate(input, tagSet);
+		};
+
+		round(switching).run();
+
+		// 은퇴한 버전 1 의 평가는 저장하고, 대기 행은 남겨 점유만 푼다. 뒤 기사는 평가하지 않고 점유를 풀어 회차를 멈춘다
+		assertThat(calls.get()).isEqualTo(1);
+		assertThat(this.results.exists(new ArticleId(first), retired)).isTrue();
+		assertThat(waitingWithoutLease(first)).isTrue();
+		assertThat(untouched(second)).isTrue();
+		assertThat(output).contains("활성 태그 체계가 바뀌어 회차를 멈췄다 — 기사 " + first);
+
+		round(new FakeArticleEvaluator()).run();
+
+		TagSetId active = this.directory.activeTagSet().id();
+		assertThat(active).isNotEqualTo(retired);
+		assertThat(this.evaluations.find(new ArticleId(first)).orElseThrow().tagSetId()).isEqualTo(active);
+		assertThat(this.evaluations.find(new ArticleId(second)).orElseThrow().tagSetId()).isEqualTo(active);
+		assertThat(queueRows()).isZero();
+	}
+
+	@Test
+	void aRejectionFromAVersionRetiredDuringTheRoundDoesNotFailTheArticle() {
+		long article = enqueued("[fake:article-rejected] 거부");
+		ArticleEvaluator switching = (input, tagSet) -> {
+			switchToASecondVersion();
+			return new FakeArticleEvaluator().evaluate(input, tagSet);
+		};
+
+		round(switching).run();
+
+		// 실패로 남기지 않고 점유만 푼다 — 시도 수도 그대로다
+		assertThat(waitingWithoutLease(article)).isTrue();
+		assertThat(attemptsAndEligible(article)).containsEntry("attempts", 0);
+	}
+
+	@Test
+	void aRejectionWithoutAnActivationFailsTheArticle() {
+		long article = enqueued("[fake:article-rejected] 거부");
+
+		round(new FakeArticleEvaluator()).run();
+
+		assertThat(failure(article)).isEqualTo("ARTICLE_REJECTED");
+	}
+
+	@Test
+	void anArticleAlreadyEvaluatedWithAVersionRetiredBeforeTheCheckStaysQueued() {
+		long article = enqueued("국회 본회의 통과");
+		round(new FakeArticleEvaluator()).run();
+		this.queue.enqueue(new ArticleId(article), T);
+		AtomicInteger calls = new AtomicInteger();
+		ArticleEvaluator counting = (input, tagSet) -> {
+			calls.incrementAndGet();
+			return new FakeArticleEvaluator().evaluate(input, tagSet);
+		};
+		// 회차가 활성 버전을 읽은 뒤, 그 버전의 평가가 있는지 보기 전에 활성이 바뀐다
+		ArticleDirectory switchingArticles = new ArticleDirectory() {
+			@Override
+			public Map<ArticleId, ArticleContent> findAll(java.util.Collection<ArticleId> ids) {
+				switchToASecondVersion();
+				return EvaluationFlowTests.this.articles.findAll(ids);
+			}
+
+			@Override
+			public List<ArticleId> firstSeenSince(Instant since) {
+				return EvaluationFlowTests.this.articles.firstSeenSince(since);
+			}
+		};
+
+		round(counting, switchingArticles).run();
+
+		assertThat(calls.get()).isZero();
+		assertThat(waitingWithoutLease(article)).isTrue();
+	}
+
+	@Test
+	void anArticleAlreadyEvaluatedWithTheActiveVersionLeavesTheQueue() {
+		long article = enqueued("국회 본회의 통과");
+		round(new FakeArticleEvaluator()).run();
+		this.queue.enqueue(new ArticleId(article), T);
+
+		round(new FakeArticleEvaluator()).run();
+
+		assertThat(queueRows()).isZero();
+	}
+
+	@Test
+	void aResultWriteWaitsWhileAnActivationHoldsTheTagSetTable() throws Exception {
+		enqueued("국회 본회의 통과");
+		CountDownLatch locked = new CountDownLatch(1);
+		CountDownLatch release = new CountDownLatch(1);
+		AtomicReference<CompletableFuture<Void>> holder = new AtomicReference<>();
+		// 평가가 끝나기 전에 다른 연결이 활성 전환의 잠금을 쥔다 — 결과를 쓰는 트랜잭션이 활성을 본 뒤 전환이 끼어들 틈을 막는지 본다
+		ArticleEvaluator holding = (input, tagSet) -> {
+			holder.set(CompletableFuture.runAsync(() -> this.transaction.executeWithoutResult(status -> {
+				this.jdbc.sql("lock table tag_sets in share row exclusive mode").update();
+				locked.countDown();
+				awaitQuietly(release);
+			})));
+			awaitQuietly(locked);
+			return new FakeArticleEvaluator().evaluate(input, tagSet);
+		};
+		try {
+			CompletableFuture<Void> running = CompletableFuture.runAsync(() -> round(holding).run());
+			assertThat(locked.await(10, TimeUnit.SECONDS)).isTrue();
+			Thread.sleep(300);
+			boolean waited = !running.isDone();
+			release.countDown();
+			running.get(10, TimeUnit.SECONDS);
+			holder.get().get(10, TimeUnit.SECONDS);
+
+			assertThat(waited).isTrue();
+			assertThat(queueRows()).isZero();
+			assertThat(evaluationRows()).isEqualTo(1);
+		}
+		finally {
+			release.countDown();
+		}
 	}
 
 	@Test
@@ -147,7 +290,7 @@ class EvaluationFlowTests {
 
 		this.transaction.executeWithoutResult(status -> this.events.publishEvent(new ArticleStored(new ArticleId(article))));
 		await().atMost(Duration.ofSeconds(10)).until(() -> queueRows() == 1);
-		Instant eligible = eligibleAt(article);
+		Instant eligible = QueueRows.eligibleAt(this.jdbc, article);
 		this.now.set(eligible.minusSeconds(1));
 		round(new FakeArticleEvaluator()).run();
 		long beforeDue = evaluationRows();
@@ -162,7 +305,7 @@ class EvaluationFlowTests {
 		// 같은 이벤트를 다시 처리해도 평가는 한 번이다 — 대기 행은 다시 생기고 다음 회차가 지운다
 		this.transaction.executeWithoutResult(status -> this.events.publishEvent(new ArticleStored(new ArticleId(article))));
 		await().atMost(Duration.ofSeconds(10)).until(() -> queueRows() == 1);
-		this.now.set(eligibleAt(article));
+		this.now.set(QueueRows.eligibleAt(this.jdbc, article));
 		round(new FakeArticleEvaluator()).run();
 
 		assertThat(evaluationRows()).isEqualTo(1);
@@ -414,9 +557,30 @@ class EvaluationFlowTests {
 		return round(evaluator, this.results);
 	}
 
+	private Runnable round(ArticleEvaluator evaluator, ArticleDirectory articles) {
+		EvaluationRound round = new EvaluationRound(this.pending, this.directory, this.thresholds, articles,
+				this.feedLabels, this.results, this.queue, this.tagSets, this.transaction, (InstantSource) this.now::get);
+		return () -> round.run(evaluator);
+	}
+
+	/** 기본 체계에서 미국 설명 하나를 바꾼 버전 2 를 켠다 — 저장소 수단만 쓴다(대조 · 재평가 없음) */
+	private void switchToASecondVersion() {
+		String text = this.versioning.versionText(this.directory.activeTagSet().id()).orElseThrow()
+			.replace("description: \"미국\"", "description: \"미국 · 미국령\"");
+		TagSetVersions.activate(text, this.tagSets, this.thresholds, this.transaction, this.now.get());
+	}
+
+	/** 실패 없이 대기 중이고 점유가 없다 */
+	private boolean waitingWithoutLease(long article) {
+		return this.jdbc.sql("""
+				select count(*) from evaluation_queue
+				where article_id = :article and lease_token is null and failure is null
+				""").param("article", article).query(Long.class).single() == 1;
+	}
+
 	private Runnable round(ArticleEvaluator evaluator, EvaluationResultRepository results) {
 		EvaluationRound round = new EvaluationRound(this.pending, this.directory, this.thresholds, this.articles,
-				this.feedLabels, results, this.queue, this.transaction, (InstantSource) this.now::get);
+				this.feedLabels, results, this.queue, this.tagSets, this.transaction, (InstantSource) this.now::get);
 		return () -> round.run(evaluator);
 	}
 
@@ -471,14 +635,6 @@ class EvaluationFlowTests {
 
 	private List<Long> evaluatedArticles() {
 		return this.jdbc.sql("select article_id from article_evaluations order by article_id").query(Long.class).list();
-	}
-
-	private Instant eligibleAt(long article) {
-		return this.jdbc.sql("select eligible_at from evaluation_queue where article_id = :article")
-			.param("article", article)
-			.query(OffsetDateTime.class)
-			.single()
-			.toInstant();
 	}
 
 	private Map<String, Object> attemptsAndEligible(long article) {

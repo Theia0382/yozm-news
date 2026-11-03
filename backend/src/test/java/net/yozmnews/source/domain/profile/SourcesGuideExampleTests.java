@@ -4,9 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
-import net.yozmnews.source.domain.profile.CodeFences.Block;
+import net.yozmnews.CodeFences.Block;
+import net.yozmnews.OperationsGuide;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -15,29 +15,17 @@ import org.junit.jupiter.api.Test;
  */
 class SourcesGuideExampleTests {
 
-	/** 안내서에 쓸 수 있는 코드 블록 — 프로필을 다른 표지로 쓰면 검증을 빠져나가므로 이 밖의 블록을 두지 않는다 */
-	private static final Set<String> ALLOWED_INFO = Set.of("yaml", "sh");
-
 	private final ProfileParser parser = new ProfileParser();
 
 	@Test
 	void everyCodeFenceIsYamlOrShell() {
-		List<Block> blocks = CodeFences.extract(SourcesGuide.text());
-		List<String> outside = blocks.stream()
-			.filter((block) -> !ALLOWED_INFO.contains(block.info()))
-			.map((block) -> block.line() + "번째 줄: '" + block.info() + "'")
-			.toList();
-
-		assertThat(blocks).as("안내서에 코드 블록이 하나 이상 있다").isNotEmpty();
-		assertThat(outside).as("안내서의 코드 블록은 yaml · sh 만 쓴다").isEmpty();
+		assertThat(OperationsGuide.SOURCES.blocks()).as("안내서에 코드 블록이 하나 이상 있다").isNotEmpty();
+		assertThat(OperationsGuide.SOURCES.blocksOutsideTheAllowedInfo()).as("안내서의 코드 블록은 yaml · sh 만 쓴다").isEmpty();
 	}
 
 	@Test
 	void everyYamlBlockIsAValidOperatorProfile() {
-		List<Block> profiles = CodeFences.extract(SourcesGuide.text())
-			.stream()
-			.filter((block) -> block.info().equals("yaml"))
-			.toList();
+		List<Block> profiles = OperationsGuide.SOURCES.yamlBlocks();
 		List<String> invalid = new ArrayList<>();
 		for (Block block : profiles) {
 			switch (this.parser.parseOperatorProfile(block.content())) {
