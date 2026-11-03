@@ -396,7 +396,7 @@ public record TagKeyMapping(TagSetId from, TagSetId to, Map<TagKind, Map<String,
 | `adapter/out/jev` | 공유 평가 포트의 운영 구현(Jev)과 그 결선 · 설정, 키가 있는가의 조건, 작업 역할의 키 기동 검사 |
 | `adapter/out/fake` | 공유 평가 포트의 로컬 대체물과 그 결선(`local` 이면서 Jev 키가 없을 때만) |
 
-협력: `DefaultTagSetConfiguration` 이 기본 체계 파일을 `TagSetParser`(`platform` 의 `YamlTextReader` → `TagSetBinder` → `TagSetValidator`)로 읽어 `TagSetDefinition` 을 만든다. `TagSetSeeding` 이 그 정의로 `TagSetRepository` 에 버전 1 을, `ThresholdRepository` 에 처음 태그 기준 · 저장 기준을 쓴다. `TagSetDirectoryService` 는 `TagSetRepository` 로 활성 버전을 읽어 `TagSetViews` 로 공개 타입(질문 문장은 `QuestionTemplate`)으로 옮기고, 태그 기준 · 저장 기준은 `ThresholdRepository` 로 읽는다. `TagSetAdministrationService` 는 활성 버전의 태그 기준 · 저장 기준을 `ThresholdRepository` 로 잠가 `ThresholdRule` 로 판정하고 같은 저장소로 쓴다. 버전 연산은 `TagSetVersioning` 에 맡긴다 — 원문을 `TagSetParser` 로 읽고, 재평가 대상을 `article` 의 `ArticleDirectory.firstSeenSince` 로 얻고, `TagSetRepository` 로 표를 잠가 활성 버전을 읽어 `TagSetRevision` 으로 대조한다. 활성화면 `TagSetRepository` 로 이전 버전을 끄고 `TagSet.next` 를 저장하고, `ThresholdRepository` 에 처음 태그 기준 · 저장 기준을, `EvaluationQueueRepository.requeue` 로 재평가 대기를 쓴다. 원문 내보내기는 `TagSetWriter` 가 한다. `TagKeyLineageService` 는 `TagSetRepository` 로 버전을 번호 순으로 읽어 `KeyLineage` 로 해석한다.
+협력: `DefaultTagSetConfiguration` 이 기본 체계 파일을 `TagSetParser`(`platform` 의 `YamlTextReader` → `TagSetBinder` → `TagSetValidator`)로 읽어 `TagSetDefinition` 을 만든다. `TagSetSeeding` 이 그 정의로 `TagSetVersionStore` 를 불러 버전 1 을 쓴다 — `TagSetVersionStore` 는 `TagSetRepository` 에 버전을, `ThresholdRepository` 에 처음 태그 기준 · 저장 기준을 쓰는 새 버전 쓰기의 정본이다. `TagSetDirectoryService` 는 `TagSetRepository` 로 활성 버전을 읽어 `TagSetViews` 로 공개 타입(질문 문장은 `QuestionTemplate`)으로 옮기고, 태그 기준 · 저장 기준은 `ThresholdRepository` 로 읽는다. `TagSetAdministrationService` 는 활성 버전의 태그 기준 · 저장 기준을 `ThresholdRepository` 로 잠가 `ThresholdRule` 로 판정하고 같은 저장소로 쓴다. 버전 연산은 `TagSetVersioning` 에 맡긴다 — 원문을 `TagSetParser` 로 읽고, 재평가 대상을 `article` 의 `ArticleDirectory.firstSeenSince` 로 얻고, `TagSetRepository` 로 표를 잠가 활성 버전을 읽어 `TagSetRevision` 으로 대조한다. 활성화면 `TagSetVersionStore` 로 이전 버전을 끄고 `TagSet.next` 와 처음 태그 기준 · 저장 기준을 쓰고, `EvaluationQueueRepository.requeue` 로 재평가 대기를 쓴다. 원문 내보내기는 `TagSetWriter` 가 한다. `TagKeyLineageService` 는 `TagSetRepository` 로 버전을 번호 순으로 읽어 `KeyLineage` 로 해석한다.
 
 평가: `ArticleEventsListener` 가 `ArticleStored` 로 기사를 `EvaluationQueueRepository` 에 넣고, `ArticlesRemoved` 로 대기 · 결과 행을 지운다. 작업 역할의 `EvaluatePendingArticlesJob` 이 1분마다 `EvaluationRound` 를 돌린다. 회차는 `PendingEvaluations` 로 대기를 점유하고(`PendingEvaluation` 의 전이 · `EvaluationSchedule` 의 일정), `TagSetDirectory` · `ThresholdRepository` 로 활성 체계와 그 버전의 태그 기준 · 저장 기준을, `article` 의 `ArticleDirectory` 와 `source` 의 `FeedLabels` 로 입력을 읽어 포트 `ArticleEvaluator` 를 부른다. 결과는 `ResultCheck` 로 체계와 대조하고 `EvaluationRecord` 로 저장할 모양을 만들어 `EvaluationResultRepository` 에 쓰고, 실패는 대기 행의 전이로 쓴다. 쓰기마다 `TagSetRepository` 로 표를 잠가 회차가 읽은 버전이 아직 활성인지 본다(evaluation-R19). `ArticleEvaluationsService` 는 `EvaluationResultRepository` 로 평가를 읽어 `TagSetViews` · `ThresholdRepository` 로 그 버전의 체계와 태그 기준 · 저장 기준을 얻고 `TagJudgement` 로 판정한다. 평가기는 Jev 키가 있으면 `JevArticleEvaluatorConfiguration` 이 `JevArticleEvaluator` 를, `local` 이면서 키가 없으면 `FakeArticleEvaluatorConfiguration` 이 `FakeArticleEvaluator` 를 포트로 등록한다 — 키가 있는가는 `JevKeyCondition` 이 정한다. `JevArticleEvaluator` 는 `JevRequest` 로 요청 본문을, `JevResponse` 로 결과를, `JevErrors` 로 오류 갈래 · 문구를 만든다.
 
@@ -406,6 +406,7 @@ public record TagKeyMapping(TagSetId from, TagSetId to, Map<TagKind, Map<String,
 sequenceDiagram
     participant C as DefaultTagSetConfiguration
     participant S as TagSetSeeding
+    participant W as TagSetVersionStore
     participant TS as TagSetRepository
     participant TR as ThresholdRepository
 
@@ -418,8 +419,9 @@ sequenceDiagram
     S->>TS: 트랜잭션 — 표 잠금 (evaluation-R2)
     S->>TS: 버전이 있는가
     alt 버전이 없음
-        S->>TS: 버전 1 저장 — 활성 · 시스템 (evaluation-R2 · R3)
-        S->>TR: 주제 · 지역 처음 태그 기준 · 저장 기준 + 이력 첫 행 (evaluation-R13)
+        S->>W: 버전 1 쓰기 — 같은 트랜잭션
+        W->>TS: 버전 1 저장 — 활성 · 시스템 (evaluation-R2 · R3)
+        W->>TR: 주제 · 지역 처음 태그 기준 · 저장 기준 + 이력 첫 행 (evaluation-R13)
     else 버전이 있음
         S->>TS: 기본 체계 파일과 내용이 같은 버전이 있는가 — 없으면 정보 로그 (evaluation-R2)
     end
@@ -432,6 +434,7 @@ sequenceDiagram
     participant A as admin
     participant V as TagSetVersioning
     participant D as ArticleDirectory
+    participant W as TagSetVersionStore
     participant TS as TagSetRepository
     participant TR as ThresholdRepository
     participant Q as EvaluationQueueRepository
@@ -444,8 +447,9 @@ sequenceDiagram
     alt 대조 문제 · 같은 내용
         V-->>A: Invalid · Unchanged — 아무것도 쓰지 않는다
     else 바뀜
-        V->>TS: 기준 버전 끄기 → 새 버전(번호 + 1) · 계보 행 저장 (evaluation-R3 · R16)
-        V->>TR: 처음 태그 기준 · 저장 기준 + 이력 첫 행 (evaluation-R13)
+        V->>W: 새 버전 쓰기 — 같은 트랜잭션
+        W->>TS: 기준 버전 끄기 → 새 버전(번호 + 1) · 계보 행 저장 (evaluation-R3 · R16)
+        W->>TR: 처음 태그 기준 · 저장 기준 + 이력 첫 행 (evaluation-R13)
         V->>Q: 재평가 대기 넣기 · 실패 행 되돌리기 (evaluation-R25)
         V-->>A: Activated
     end
@@ -508,6 +512,7 @@ sequenceDiagram
 - `TagSetViews` · `PendingEvaluations` · `EvaluationRound` · `ArticleEvaluationsService` · `EvaluationAdministrationService` 는 트랜잭션 · 역할 애너테이션이 없다 — 두 역할 공통이고, 점유 · 회차는 `TransactionTemplate` 으로 트랜잭션을 연다. `ArticleEventsListener` 는 리스너마다 새 트랜잭션이다
 - `TagSetAdministrationService` — 공개 API `TagSetAdministration` 의 구현. 태그 기준 · 저장 기준 변경은 한 트랜잭션에서 표 잠금(활성 전환과 줄 서기) → 활성 버전 조회 → 태그 기준 · 저장 기준 행 잠금 → 지난 저장 기준 최댓값 → 판정 → 쓰기다. 시각은 `InstantSource` 에서 얻는다(evaluation-R11 ~ R13). 버전 연산은 `TagSetVersioning` 에 맡긴다
 - `TagSetVersioning` — 버전 목록 · 원문 내보내기 · 확인 · 활성화(evaluation-R16 · R22 ~ R25 · R27). 활성화는 재평가 대상 기사를 트랜잭션 밖에서 읽은 뒤 한 트랜잭션(`TransactionTemplate`)에서 표 잠금 → 대조 → 쓰기다. 시각은 `InstantSource` 에서 얻는다. 활성화하면 정보 로그 `태그 체계 버전 {번호}를 활성으로 바꿨다 — 재평가 대기 {건}건` 을 남긴다
+- `TagSetVersionStore` — 새 버전 쓰기(버전 행과 그 버전의 처음 태그 기준 · 저장 기준 · 이력 첫 행)의 정본(evaluation-R2 · R3 · R13 · R16). 첫 적재(`TagSetSeeding`)는 버전 1 을, 활성화(`TagSetVersioning`)는 기준 버전을 끈 뒤 다음 버전을 쓴다. 트랜잭션을 열지 않는다 — 부르는 쪽의 트랜잭션 · 표 잠금 안에서 쓴다. 빈이 아니다
 - `TagKeyLineageService` — 공개 API `TagKeyLineage` 의 구현(evaluation-R26). 트랜잭션 · 역할 애너테이션이 없다
 
 ### `domain`
@@ -556,7 +561,7 @@ sequenceDiagram
 #### `domain/threshold`
 
 - `ThresholdRule` — 태그 기준 · 저장 기준 변경 판정과 경고의 정본(evaluation-R11 · R12)
-- `ThresholdValues` — 태그 기준 · 저장 기준 한 쌍과 값 규칙(evaluation-R10)
+- `ThresholdValues` — 태그 기준 · 저장 기준 한 쌍과 값 규칙(evaluation-R10). 공개 값 `TagThresholds` 로 옮기는 것도 이것이 한다
 - 저장 단위: aggregate 가 없다 — 태그 기준 · 저장 기준은 상태 전이가 아니라 값 갱신과 이력 추가이고, 판정은 `ThresholdRule` 이 한다. 저장소 `ThresholdRepository` 가 쓴다
 
   ```java
@@ -600,6 +605,7 @@ sequenceDiagram
 - `EvaluationRecord` — 저장할 평가 한 건과 결과 해석(`of` — 저장 기준 거르기 · 대표 형식 · 중요도 기대값)의 정본(evaluation-R15)
 - `ImportanceScore` — 중요도 기대값의 정본(evaluation-R15)
 - `TagJudgement` — 조회 시점 판정의 정본(evaluation-R15)
+- `VersionMatch` — 태그 기준 · 저장 기준과 체계의 버전이 같다는 사전 조건의 정본 — `EvaluationRecord` · `TagJudgement` 가 쓴다
 - `Probabilities` — 확률 ≥ 기준 비교의 정본 — 저장 거르기와 판정이 함께 쓴다(evaluation-R15)
 - 저장 단위: aggregate 가 없다 — 평가 · 태그 행은 넣기 한 번이고 갱신하지 않는다. 저장소 `EvaluationResultRepository` 가 쓴다
 
