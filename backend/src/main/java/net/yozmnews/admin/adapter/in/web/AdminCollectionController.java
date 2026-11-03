@@ -2,14 +2,10 @@ package net.yozmnews.admin.adapter.in.web;
 
 import java.util.Objects;
 
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import net.yozmnews.article.ArticleAdministration;
-import net.yozmnews.platform.ApiProblem;
 import net.yozmnews.platform.WebRole;
 import net.yozmnews.source.SourceAdministration;
-import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -20,12 +16,6 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @WebRole
 @RestController
-@ApiResponse(responseCode = "401", description = "운영자 토큰이 없거나 맞지 않는다",
-		content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
-				schema = @Schema(implementation = ApiProblem.class)))
-@ApiResponse(responseCode = "403", description = "운영자 기능이 닫혀 있다",
-		content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
-				schema = @Schema(implementation = ApiProblem.class)))
 class AdminCollectionController {
 
 	private final SourceAdministration sources;
