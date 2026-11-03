@@ -10,14 +10,12 @@ import net.yozmnews.evaluation.ChangeActor;
 import net.yozmnews.evaluation.TagSetAdministration;
 import net.yozmnews.platform.ApiProblem;
 import net.yozmnews.platform.WebRole;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
 
 /**
  * 운영자 API — 태그 체계 버전 목록 · 버전 원문, 운영자 원문의 확인 · 활성화. docs/specs/admin.md §3.
@@ -55,7 +53,7 @@ class AdminTagSetController {
 	TagSetText text(@PathVariable long id) {
 		return this.administration.versionText(AdminIds.tagSet(id))
 			.map(TagSetText::new)
-			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "없는 태그 체계 버전: " + id));
+			.orElseThrow(() -> AdminIds.unknownTagSet(id));
 	}
 
 	@PostMapping("/api/admin/tag-set-reviews")
