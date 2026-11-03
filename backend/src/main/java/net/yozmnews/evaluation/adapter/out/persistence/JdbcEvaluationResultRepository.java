@@ -45,6 +45,9 @@ class JdbcEvaluationResultRepository implements EvaluationResultRepository {
 	/** 기간 흘려 받기에서 커서가 한 번에 받는 행 수 */
 	static final int STREAM_FETCH_SIZE = 1_000;
 
+	/** 기사의 최신 평가 고르기 — 버전 번호가 큰 것(evaluation-R15). {@code tag_sets s} 를 이은 조회가 함께 쓰는 정렬 */
+	private static final String LATEST_VERSION_FIRST = "s.number desc";
+
 	private final JdbcClient jdbc;
 
 	JdbcEvaluationResultRepository(JdbcClient jdbc) {
@@ -101,11 +104,11 @@ class JdbcEvaluationResultRepository implements EvaluationResultRepository {
 	public Optional<StoredEvaluation> findLatest(ArticleId articleId) {
 		return this.jdbc.sql("""
 				select e.id, e.tag_set_id, e.format_key, e.importance from article_evaluations e
-				join tag_sets t on t.id = e.tag_set_id
+				join tag_sets s on s.id = e.tag_set_id
 				where e.article_id = :article
-				order by t.number desc
+				order by %s
 				limit 1
-				""").param("article", articleId.value()).query((rs, row) -> {
+				""".formatted(LATEST_VERSION_FIRST)).param("article", articleId.value()).query((rs, row) -> {
 					long id = rs.getLong("id");
 					return new StoredEvaluation(articleId, new TagSetId(rs.getLong("tag_set_id")), rs.getString("format_key"),
 							rs.getObject("importance", Double.class), tags(id));
@@ -114,30 +117,56 @@ class JdbcEvaluationResultRepository implements EvaluationResultRepository {
 
 	@Override
 	public void streamVersionPeriod(TagSetId version, Instant from, Instant to, Consumer<EvaluationSample> sink) {
-		requireTransaction();
-		Streamed current = new Streamed(version);
-		this.jdbc.sql("""
-				select e.id, e.article_id, e.format_key, e.format_probability, e.importance, e.input_tokens,
+		stream(this.jdbc.sql("""
+				select e.id, e.article_id, e.tag_set_id, e.format_key, e.format_probability, e.importance, e.input_tokens,
 				       t.tag_kind, t.tag_key, t.probability
 				from article_evaluations e
 				left join article_tags t on t.evaluation_id = e.id
 				where e.tag_set_id = :version and e.evaluated_at >= :from and e.evaluated_at < :to
 				order by e.id, t.tag_kind, t.tag_key
-				""")
-			.withFetchSize(STREAM_FETCH_SIZE)
-			.param("version", version.value())
-			.param("from", timestamp(from))
-			.param("to", timestamp(to))
-			.query(rs -> {
-				long id = rs.getLong("id");
-				if (!current.holds(id)) {
-					current.flush(sink);
-					current.start(id, rs);
-				}
-				if (rs.getString("tag_kind") != null) {
-					current.tags.add(tag(rs, 0));
-				}
-			});
+				""").param("version", version.value()).param("from", timestamp(from)).param("to", timestamp(to)), sink);
+	}
+
+	@Override
+	public void streamFirstEvaluatedIn(Instant from, Instant to, Consumer<StoredEvaluation> sink) {
+		// 첫 평가 시각이 기간 안인 기사 — 같은 시각의 두 평가가 둘 다 남아도 기사 집합이라 한 번이다
+		stream(this.jdbc.sql("""
+				with firsts as (
+				  select c.article_id from article_evaluations c
+				  where c.evaluated_at >= :from and c.evaluated_at < :to
+				    and not exists (select 1 from article_evaluations p
+				                    where p.article_id = c.article_id and p.evaluated_at < c.evaluated_at)
+				), latest as (
+				  select distinct on (e.article_id) e.id, e.article_id, e.tag_set_id, e.format_key, e.format_probability,
+				         e.importance, e.input_tokens
+				  from article_evaluations e join tag_sets s on s.id = e.tag_set_id
+				  where e.article_id in (select article_id from firsts)
+				  order by e.article_id, %s
+				)
+				select l.*, t.tag_kind, t.tag_key, t.probability from latest l
+				left join article_tags t on t.evaluation_id = l.id and t.tag_kind = 'TOPIC'
+				order by l.article_id, t.tag_kind, t.tag_key
+				""".formatted(LATEST_VERSION_FIRST)).param("from", timestamp(from)).param("to", timestamp(to)),
+				sample -> sink.accept(sample.evaluation()));
+	}
+
+	/**
+	 * 평가 행과 그 태그 행을 평가마다 모아 한 건씩 넘긴다 — 행은 평가 ID 가 이어지게 정렬돼 있어야 한다.
+	 * @throws IllegalStateException 트랜잭션 밖에서 불렀을 때
+	 */
+	private static void stream(JdbcClient.StatementSpec statement, Consumer<EvaluationSample> sink) {
+		requireTransaction();
+		Streamed current = new Streamed();
+		statement.withFetchSize(STREAM_FETCH_SIZE).query(rs -> {
+			long id = rs.getLong("id");
+			if (!current.holds(id)) {
+				current.flush(sink);
+				current.start(id, rs);
+			}
+			if (rs.getString("tag_kind") != null) {
+				current.tags.add(tag(rs, 0));
+			}
+		});
 		current.flush(sink);
 	}
 
@@ -176,9 +205,9 @@ class JdbcEvaluationResultRepository implements EvaluationResultRepository {
 	/** 흘려 받는 중인 평가 한 건 — 평가 ID 가 바뀌면 넘긴다 */
 	private static final class Streamed {
 
-		private final TagSetId version;
-
 		private long id;
+
+		private @Nullable TagSetId version;
 
 		/** 담은 평가가 없으면 null */
 		private @Nullable ArticleId article;
@@ -193,10 +222,6 @@ class JdbcEvaluationResultRepository implements EvaluationResultRepository {
 
 		private final List<StoredTag> tags = new ArrayList<>();
 
-		Streamed(TagSetId version) {
-			this.version = version;
-		}
-
 		boolean holds(long id) {
 			return this.article != null && this.id == id;
 		}
@@ -204,6 +229,7 @@ class JdbcEvaluationResultRepository implements EvaluationResultRepository {
 		void start(long id, ResultSet rs) throws SQLException {
 			this.id = id;
 			this.article = new ArticleId(rs.getLong("article_id"));
+			this.version = new TagSetId(rs.getLong("tag_set_id"));
 			this.formatKey = rs.getString("format_key");
 			this.formatProbability = rs.getDouble("format_probability");
 			this.importance = rs.getObject("importance", Double.class);
@@ -215,7 +241,8 @@ class JdbcEvaluationResultRepository implements EvaluationResultRepository {
 			if (this.article == null) {
 				return;
 			}
-			sink.accept(new EvaluationSample(new StoredEvaluation(this.article, this.version,
+			sink.accept(new EvaluationSample(new StoredEvaluation(this.article,
+					Objects.requireNonNull(this.version, "tag_set_id"),
 					Objects.requireNonNull(this.formatKey, "format_key"), this.importance, this.tags),
 					this.formatProbability, this.inputTokens));
 			this.article = null;

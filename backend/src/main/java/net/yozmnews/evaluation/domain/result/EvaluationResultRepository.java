@@ -30,6 +30,13 @@ public interface EvaluationResultRepository {
 	 */
 	void streamVersionPeriod(TagSetId version, Instant from, Instant to, Consumer<EvaluationSample> sink);
 
+	/**
+	 * 첫 평가 시각(그 기사 평가 행의 가장 이른 평가 시각)이 {@code [from, to)} 인 기사마다 최신 버전 평가와 그 주제 태그 행을 기사 ID 순으로
+	 * 한 건씩 넘긴다 — {@link #streamVersionPeriod} 와 같이 커서로 나눠 받으므로 트랜잭션 안에서 부른다.
+	 * @throws IllegalStateException 트랜잭션 밖에서 불렀을 때
+	 */
+	void streamFirstEvaluatedIn(Instant from, Instant to, Consumer<StoredEvaluation> sink);
+
 	/** 기사들의 평가 · 태그 행을 지운다 — 지운 기사를 따른다 */
 	void deleteByArticles(Collection<ArticleId> articleIds);
 

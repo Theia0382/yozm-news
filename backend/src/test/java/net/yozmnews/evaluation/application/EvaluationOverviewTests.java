@@ -2,13 +2,10 @@ package net.yozmnews.evaluation.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Proxy;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleId;
@@ -32,12 +29,8 @@ import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.TestPropertySource;
@@ -52,7 +45,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * <p>
  * 지키는 규칙: evaluation-R29
  */
-@Import({ TestcontainersConfiguration.class, EvaluationOverviewTests.TransactionSettings.class })
+@Import({ TestcontainersConfiguration.class, TransactionSettings.class })
 @SpringBootTest
 @TestPropertySource(properties = "jobrunr.background-job-server.enabled=false")
 class EvaluationOverviewTests {
@@ -177,48 +170,6 @@ class EvaluationOverviewTests {
 
 	private static StoredTag topic(String key, double probability) {
 		return new StoredTag(MultiTagKind.TOPIC, key, probability);
-	}
-
-	/**
-	 * 태그 기준 · 저장 기준 저장소를 감싸, 지금 기준을 읽는 순간 그 연결의 격리 수준 · 읽기 전용 여부를 DB 에 묻고 적는다 — 집계와 같은
-	 * 트랜잭션 연결로 묻는다.
-	 */
-	@TestConfiguration(proxyBeanMethods = false)
-	static class TransactionSettings {
-
-		final List<Map<String, String>> seen = new CopyOnWriteArrayList<>();
-
-		@Bean
-		static BeanPostProcessor recordTransactionSettings(ObjectProvider<JdbcClient> jdbc,
-				ObjectProvider<TransactionSettings> settings) {
-			return new BeanPostProcessor() {
-				@Override
-				public Object postProcessAfterInitialization(Object bean, String name) {
-					if (!(bean instanceof ThresholdRepository delegate)) {
-						return bean;
-					}
-					return Proxy.newProxyInstance(ThresholdRepository.class.getClassLoader(),
-							new Class<?>[] { ThresholdRepository.class }, (proxy, method, args) -> {
-								if (method.getName().equals("current")) {
-									settings.getObject().seen.add(Map.of("isolation",
-											setting(jdbc.getObject(), "transaction_isolation"), "readOnly",
-											setting(jdbc.getObject(), "transaction_read_only")));
-								}
-								try {
-									return method.invoke(delegate, args);
-								}
-								catch (InvocationTargetException ex) {
-									throw ex.getCause();
-								}
-							});
-				}
-			};
-		}
-
-		private static String setting(JdbcClient jdbc, String name) {
-			return jdbc.sql("select current_setting(:name)").param("name", name).query(String.class).single();
-		}
-
 	}
 
 }

@@ -783,6 +783,11 @@ class EvaluationFlowTests {
 		}
 
 		@Override
+		public void streamFirstEvaluatedIn(Instant from, Instant to, java.util.function.Consumer<StoredEvaluation> sink) {
+			this.delegate.streamFirstEvaluatedIn(from, to, sink);
+		}
+
+		@Override
 		public void deleteByArticles(java.util.Collection<ArticleId> articleIds) {
 			this.delegate.deleteByArticles(articleIds);
 		}
