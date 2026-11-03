@@ -1,5 +1,7 @@
 package net.yozmnews.evaluation.application;
 
+import java.util.List;
+
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 /**
@@ -7,7 +9,11 @@ import org.springframework.jdbc.core.simple.JdbcClient;
  * <p>
  * 이력을 지우는 것은 이 픽스처뿐이다 — 프로덕션 코드에는 그 경로가 없다(evaluation-R13).
  */
-final class TagSetRows {
+public final class TagSetRows {
+
+	/** 버전에 딸린 표 — 지울 순서(외래 키 순). {@code tag_sets} 는 마지막에 따로 지운다 */
+	private static final List<String> VERSION_TABLES = List.of("tag_key_lineage", "tag_set_threshold_changes",
+			"tag_set_thresholds", "importance_rubrics", "tags");
 
 	private TagSetRows() {
 	}
@@ -24,13 +30,11 @@ final class TagSetRows {
 				""").update();
 	}
 
-	/** 체계 행을 모두 지운다 — 적재 시험이 빈 표에서 시작하도록. 끝에는 다시 적재해 처음 모양으로 둔다 */
-	static void removeAll(JdbcClient jdbc) {
-		jdbc.sql("delete from tag_key_lineage").update();
-		jdbc.sql("delete from tag_set_threshold_changes").update();
-		jdbc.sql("delete from tag_set_thresholds").update();
-		jdbc.sql("delete from importance_rubrics").update();
-		jdbc.sql("delete from tags").update();
+	/** 체계 행을 모두 지운다 — 빈 표에서 시작하는 시험이 쓴다. 적재 시험은 끝에 다시 적재해 처음 모양으로 둔다 */
+	public static void removeAll(JdbcClient jdbc) {
+		for (String table : VERSION_TABLES) {
+			jdbc.sql("delete from " + table).update();
+		}
 		jdbc.sql("delete from tag_sets").update();
 	}
 
@@ -43,11 +47,9 @@ final class TagSetRows {
 		jdbc.sql("delete from article_tags where evaluation_id in (select id from article_evaluations where tag_set_id in "
 				+ later + ")").update();
 		jdbc.sql("delete from article_evaluations where tag_set_id in " + later).update();
-		jdbc.sql("delete from tag_key_lineage where tag_set_id in " + later).update();
-		jdbc.sql("delete from tag_set_threshold_changes where tag_set_id in " + later).update();
-		jdbc.sql("delete from tag_set_thresholds where tag_set_id in " + later).update();
-		jdbc.sql("delete from importance_rubrics where tag_set_id in " + later).update();
-		jdbc.sql("delete from tags where tag_set_id in " + later).update();
+		for (String table : VERSION_TABLES) {
+			jdbc.sql("delete from " + table + " where tag_set_id in " + later).update();
+		}
 		jdbc.sql("delete from tag_sets where number > 1").update();
 		jdbc.sql("update tag_sets set active = true where number = 1").update();
 	}

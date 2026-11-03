@@ -1,5 +1,7 @@
 package net.yozmnews.admin.adapter.in.web;
 
+import static net.yozmnews.admin.adapter.in.web.FakeResults.given;
+
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
@@ -75,13 +77,6 @@ class FakeTagSetAdministration implements TagSetAdministration {
 	public TagSetActivationResult activate(String text, int recentDays, ChangeActor actor) {
 		this.calls.add("activate " + recentDays + " " + actor + " " + text);
 		return given(this.activation);
-	}
-
-	private static <T> T given(@Nullable T result) {
-		if (result == null) {
-			throw new IllegalStateException("시험이 결과를 정하지 않았다");
-		}
-		return result;
 	}
 
 	/** 운영자 API 슬라이스에 대역을 싣는다 */

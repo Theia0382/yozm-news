@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.InstantSource;
-import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
@@ -177,12 +176,12 @@ class TagSetVersioningTests {
 		assertThat(TagSetRows.count(this.jdbc, "tag_key_lineage")).isEqualTo(1);
 		// A 는 새로 넣고 B 는 실패를 지워 되돌린다 — 평가 가능 시각은 활성화 시각이다
 		assertThat(queueRow(this.a)).containsEntry("attempts", 0).containsEntry("failure", null);
-		assertThat(eligible(this.a)).isEqualTo(NOW);
+		assertThat(QueueRows.eligibleAt(this.jdbc, this.a)).isEqualTo(NOW);
 		assertThat(queueRow(this.b)).containsEntry("attempts", 0).containsEntry("failure", null)
 			.containsEntry("last_error", null);
-		assertThat(eligible(this.b)).isEqualTo(NOW);
+		assertThat(QueueRows.eligibleAt(this.jdbc, this.b)).isEqualTo(NOW);
 		// C 는 대기 중이라 그대로, D 는 기간 밖이라 넣지 않는다. 평가 행은 건드리지 않는다
-		assertThat(eligible(this.c)).isEqualTo(Instant.parse("2032-01-10T00:20:00Z"));
+		assertThat(QueueRows.eligibleAt(this.jdbc, this.c)).isEqualTo(Instant.parse("2032-01-10T00:20:00Z"));
 		assertThat(this.jdbc.sql("select count(*) from evaluation_queue where article_id = :d").param("d", this.d)
 			.query(Long.class).single()).isZero();
 		assertThat(TagSetRows.count(this.jdbc, "article_evaluations")).isEqualTo(evaluationsBefore);
@@ -258,14 +257,6 @@ class TagSetVersioningTests {
 			.param("article", article)
 			.query()
 			.singleRow();
-	}
-
-	private Instant eligible(long article) {
-		return this.jdbc.sql("select eligible_at from evaluation_queue where article_id = :article")
-			.param("article", article)
-			.query(OffsetDateTime.class)
-			.single()
-			.toInstant();
 	}
 
 	private void clean() {

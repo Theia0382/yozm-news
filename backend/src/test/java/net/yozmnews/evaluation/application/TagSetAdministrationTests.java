@@ -1,5 +1,6 @@
 package net.yozmnews.evaluation.application;
 
+import static net.yozmnews.Latches.awaitQuietly;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.math.BigDecimal;
@@ -198,15 +199,6 @@ class TagSetAdministrationTests {
 	private static void sleepQuietly(long millis) {
 		try {
 			Thread.sleep(millis);
-		}
-		catch (InterruptedException ex) {
-			Thread.currentThread().interrupt();
-		}
-	}
-
-	private static void awaitQuietly(CountDownLatch latch) {
-		try {
-			latch.await(30, TimeUnit.SECONDS);
 		}
 		catch (InterruptedException ex) {
 			Thread.currentThread().interrupt();

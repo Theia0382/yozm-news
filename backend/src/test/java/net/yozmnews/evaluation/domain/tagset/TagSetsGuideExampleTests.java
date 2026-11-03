@@ -1,5 +1,6 @@
 package net.yozmnews.evaluation.domain.tagset;
 
+import static net.yozmnews.evaluation.domain.tagset.TagSetTexts.parsed;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
@@ -29,8 +30,6 @@ class TagSetsGuideExampleTests {
 
 	/** 최상위 절의 머리 줄 — 들여쓰지 않은 키 */
 	private static final Pattern SECTION = Pattern.compile("^([A-Za-z]+):", Pattern.MULTILINE);
-
-	private final TagSetParser parser = new TagSetParser();
 
 	@Test
 	void everyCodeFenceIsYamlOrShell() {
@@ -68,12 +67,6 @@ class TagSetsGuideExampleTests {
 		Matcher next = SECTION.matcher(text);
 		int end = next.find(existing.end()) ? next.start() : text.length();
 		return text.substring(0, existing.start()) + block.content() + text.substring(end);
-	}
-
-	private TagSetDefinition parsed(String text) {
-		TagSetParse parse = this.parser.parse(text);
-		assertThat(parse).as("%s", parse).isInstanceOf(TagSetParse.Parsed.class);
-		return ((TagSetParse.Parsed) parse).definition();
 	}
 
 	private static TagSetThresholds thresholds(TagSetDefinition definition) {

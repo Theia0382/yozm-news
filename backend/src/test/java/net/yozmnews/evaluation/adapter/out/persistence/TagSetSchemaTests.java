@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.catchThrowable;
 import java.sql.SQLException;
 
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.evaluation.application.TagSetRows;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,12 +47,7 @@ class TagSetSchemaTests {
 
 	@AfterEach
 	void removeRows() {
-		this.jdbc.sql("delete from tag_key_lineage").update();
-		this.jdbc.sql("delete from tag_set_threshold_changes").update();
-		this.jdbc.sql("delete from tag_set_thresholds").update();
-		this.jdbc.sql("delete from importance_rubrics").update();
-		this.jdbc.sql("delete from tags").update();
-		this.jdbc.sql("delete from tag_sets").update();
+		TagSetRows.removeAll(this.jdbc);
 	}
 
 	@Test

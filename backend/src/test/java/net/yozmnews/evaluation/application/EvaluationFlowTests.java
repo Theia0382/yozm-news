@@ -1,5 +1,6 @@
 package net.yozmnews.evaluation.application;
 
+import static net.yozmnews.Latches.awaitQuietly;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
@@ -289,7 +290,7 @@ class EvaluationFlowTests {
 
 		this.transaction.executeWithoutResult(status -> this.events.publishEvent(new ArticleStored(new ArticleId(article))));
 		await().atMost(Duration.ofSeconds(10)).until(() -> queueRows() == 1);
-		Instant eligible = eligibleAt(article);
+		Instant eligible = QueueRows.eligibleAt(this.jdbc, article);
 		this.now.set(eligible.minusSeconds(1));
 		round(new FakeArticleEvaluator()).run();
 		long beforeDue = evaluationRows();
@@ -304,7 +305,7 @@ class EvaluationFlowTests {
 		// 같은 이벤트를 다시 처리해도 평가는 한 번이다 — 대기 행은 다시 생기고 다음 회차가 지운다
 		this.transaction.executeWithoutResult(status -> this.events.publishEvent(new ArticleStored(new ArticleId(article))));
 		await().atMost(Duration.ofSeconds(10)).until(() -> queueRows() == 1);
-		this.now.set(eligibleAt(article));
+		this.now.set(QueueRows.eligibleAt(this.jdbc, article));
 		round(new FakeArticleEvaluator()).run();
 
 		assertThat(evaluationRows()).isEqualTo(1);
@@ -569,15 +570,6 @@ class EvaluationFlowTests {
 		TagSetVersions.activate(text, this.tagSets, this.thresholds, this.transaction, this.now.get());
 	}
 
-	private static void awaitQuietly(CountDownLatch latch) {
-		try {
-			latch.await(30, TimeUnit.SECONDS);
-		}
-		catch (InterruptedException ex) {
-			Thread.currentThread().interrupt();
-		}
-	}
-
 	/** 실패 없이 대기 중이고 점유가 없다 */
 	private boolean waitingWithoutLease(long article) {
 		return this.jdbc.sql("""
@@ -643,14 +635,6 @@ class EvaluationFlowTests {
 
 	private List<Long> evaluatedArticles() {
 		return this.jdbc.sql("select article_id from article_evaluations order by article_id").query(Long.class).list();
-	}
-
-	private Instant eligibleAt(long article) {
-		return this.jdbc.sql("select eligible_at from evaluation_queue where article_id = :article")
-			.param("article", article)
-			.query(OffsetDateTime.class)
-			.single()
-			.toInstant();
 	}
 
 	private Map<String, Object> attemptsAndEligible(long article) {

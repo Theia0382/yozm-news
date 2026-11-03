@@ -1,5 +1,6 @@
 package net.yozmnews.evaluation.domain.tagset;
 
+import static net.yozmnews.evaluation.domain.tagset.TagSetTexts.parsed;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.math.BigDecimal;
@@ -69,8 +70,6 @@ class TagSetRevisionTests {
 	private static final TagSetThresholds BASE_THRESHOLDS = new TagSetThresholds(new TagSetId(1),
 			new TagThresholds(MultiTagKind.TOPIC, new BigDecimal("0.5"), new BigDecimal("0.1")),
 			new TagThresholds(MultiTagKind.REGION, new BigDecimal("0.5"), new BigDecimal("0.1")));
-
-	private final TagSetParser parser = new TagSetParser();
 
 	private final TagSetContent base = parsed(BASE).content();
 
@@ -245,12 +244,6 @@ class TagSetRevisionTests {
 			.stream()
 			.map(problem -> problem.location() + " " + problem.path() + " " + problem.code())
 			.toList();
-	}
-
-	private TagSetDefinition parsed(String text) {
-		TagSetParse parse = this.parser.parse(text);
-		assertThat(parse).as("%s", parse).isInstanceOf(TagSetParse.Parsed.class);
-		return ((TagSetParse.Parsed) parse).definition();
 	}
 
 }

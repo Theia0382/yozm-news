@@ -1,5 +1,6 @@
 package net.yozmnews.evaluation.adapter.out.persistence;
 
+import static net.yozmnews.Latches.awaitQuietly;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Instant;
@@ -241,15 +242,6 @@ class JdbcEvaluationQueueRepositoryTests {
 			case java.sql.Timestamp sql -> sql.toInstant();
 			case null, default -> throw new IllegalStateException("시각이 아니다: " + timestamp);
 		};
-	}
-
-	private static void awaitQuietly(CountDownLatch latch) {
-		try {
-			latch.await(30, TimeUnit.SECONDS);
-		}
-		catch (InterruptedException ex) {
-			Thread.currentThread().interrupt();
-		}
 	}
 
 }

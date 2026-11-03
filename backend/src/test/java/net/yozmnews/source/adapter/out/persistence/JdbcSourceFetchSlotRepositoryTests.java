@@ -1,5 +1,6 @@
 package net.yozmnews.source.adapter.out.persistence;
 
+import static net.yozmnews.Latches.awaitQuietly;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
@@ -153,15 +154,6 @@ class JdbcSourceFetchSlotRepositoryTests {
 			release.countDown();
 			this.jdbc.sql("delete from source_fetch_slots where source_id = :source").param("source", source.value()).update();
 			this.jdbc.sql("delete from sources where id = :source").param("source", source.value()).update();
-		}
-	}
-
-	private static void awaitQuietly(CountDownLatch latch) {
-		try {
-			latch.await(30, TimeUnit.SECONDS);
-		}
-		catch (InterruptedException ex) {
-			Thread.currentThread().interrupt();
 		}
 	}
 

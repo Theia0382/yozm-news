@@ -130,9 +130,7 @@ class KeyLineageTests {
 				  - { level: 4, description: 넷 }
 				  - { level: 5, description: 다섯 }
 				""".formatted(regionLines);
-		TagSetParse parse = new TagSetParser().parse(text);
-		assertThat(parse).as("%s", parse).isInstanceOf(TagSetParse.Parsed.class);
-		return new KeyLineage.Version(new TagSetId(id), ((TagSetParse.Parsed) parse).definition().content(), lineage);
+		return new KeyLineage.Version(new TagSetId(id), TagSetTexts.parsed(text).content(), lineage);
 	}
 
 }

@@ -1,5 +1,6 @@
 package net.yozmnews.evaluation.application;
 
+import static net.yozmnews.Latches.awaitQuietly;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
@@ -17,6 +18,7 @@ import net.yozmnews.evaluation.TagSetAdministration;
 import net.yozmnews.evaluation.TagSetDirectory;
 import net.yozmnews.evaluation.domain.tagset.TagSetDefinition;
 import net.yozmnews.evaluation.domain.tagset.TagSetRepository;
+import net.yozmnews.evaluation.domain.tagset.TagSetTexts;
 import net.yozmnews.evaluation.domain.tagset.TagSetWriter;
 import net.yozmnews.evaluation.domain.threshold.ThresholdRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -125,7 +127,7 @@ class TagSetSeedingTests {
 	@Test
 	void noticesARevisedFileUntilAVersionWithItsContentExists(CapturedOutput output) {
 		this.seeding.seedIfEmpty();
-		TagSetDefinition revised = TagSetVersions.parsed(TagSetWriter.write(this.definition.content(),
+		TagSetDefinition revised = TagSetTexts.parsed(TagSetWriter.write(this.definition.content(),
 				this.thresholds.current(this.directory.activeTagSet().id()))
 			.replace("description: \"미국\"", "description: \"미국 · 미국령\""));
 		TagSetSeeding afterRevision = new TagSetSeeding(revised, this.tagSets, this.thresholds,
@@ -189,15 +191,6 @@ class TagSetSeedingTests {
 			count++;
 		}
 		return count;
-	}
-
-	private static void awaitQuietly(CountDownLatch latch) {
-		try {
-			latch.await(30, TimeUnit.SECONDS);
-		}
-		catch (InterruptedException ex) {
-			Thread.currentThread().interrupt();
-		}
 	}
 
 }

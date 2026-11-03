@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Set;
 
 import net.yozmnews.CodeFences.Block;
-import org.jspecify.annotations.Nullable;
 
 /**
  * 예시를 시험이 지키는 운영 안내서 — {@code docs/operations/sources.md} · {@code docs/operations/tag-sets.md}. 파일 경로는
@@ -32,7 +31,7 @@ public enum OperationsGuide {
 
 	/** 안내서 원문. 파일이 없거나 읽지 못하면 실패한다. */
 	public String text() {
-		Path path = pathFrom(this.pathProperty, System.getProperty(this.pathProperty));
+		Path path = GradleProperties.pathFrom(this.pathProperty, System.getProperty(this.pathProperty));
 		if (!Files.isRegularFile(path)) {
 			throw new IllegalStateException("운영 안내서가 없다: " + path);
 		}
@@ -60,14 +59,6 @@ public enum OperationsGuide {
 			.filter((block) -> !CODE_BLOCK_INFO.contains(block.info()))
 			.map((block) -> block.line() + "번째 줄: '" + block.info() + "'")
 			.toList();
-	}
-
-	/** 시스템 속성 값을 경로로. 없거나 비어 있으면 Gradle 밖에서 실행한 것이다. */
-	static Path pathFrom(String property, @Nullable String value) {
-		if (value == null || value.isBlank()) {
-			throw new IllegalStateException("시스템 속성 " + property + " 이 없다 — 테스트는 Gradle 로 실행한다");
-		}
-		return Path.of(value);
 	}
 
 }

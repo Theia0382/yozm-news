@@ -1,5 +1,7 @@
 package net.yozmnews.evaluation.domain.tagset;
 
+import static net.yozmnews.evaluation.domain.result.ResultTagSet.thresholds;
+import static net.yozmnews.evaluation.domain.tagset.TagSetTexts.parsed;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
@@ -7,9 +9,6 @@ import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 
 import net.yozmnews.evaluation.MultiTagKind;
-import net.yozmnews.evaluation.TagSetId;
-import net.yozmnews.evaluation.TagSetThresholds;
-import net.yozmnews.evaluation.TagThresholds;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.ClassPathResource;
 
@@ -49,8 +48,6 @@ class TagSetWriterTests {
 			  - { level: 4, description: 넷 }
 			  - { level: 5, description: 다섯 }
 			""";
-
-	private final TagSetParser parser = new TagSetParser();
 
 	@Test
 	void writesTheContentAndTheCurrentThresholdsInTheFileLayout() {
@@ -150,19 +147,6 @@ class TagSetWriterTests {
 		assertThat(TagSetWriter.number(new BigDecimal("0.125"))).isEqualTo("0.125");
 		assertThat(TagSetWriter.number(new BigDecimal("0.000"))).isEqualTo("0");
 		assertThat(TagSetWriter.number(new BigDecimal("1.000"))).isEqualTo("1");
-	}
-
-	private static TagSetThresholds thresholds(String topicTag, String topicStore, String regionTag,
-			String regionStore) {
-		return new TagSetThresholds(new TagSetId(1),
-				new TagThresholds(MultiTagKind.TOPIC, new BigDecimal(topicTag), new BigDecimal(topicStore)),
-				new TagThresholds(MultiTagKind.REGION, new BigDecimal(regionTag), new BigDecimal(regionStore)));
-	}
-
-	private TagSetDefinition parsed(String text) {
-		TagSetParse parse = this.parser.parse(text);
-		assertThat(parse).as("%s", parse).isInstanceOf(TagSetParse.Parsed.class);
-		return ((TagSetParse.Parsed) parse).definition();
 	}
 
 }

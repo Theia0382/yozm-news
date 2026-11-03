@@ -21,6 +21,7 @@ import net.yozmnews.evaluation.domain.tagset.TagSet;
 import net.yozmnews.evaluation.domain.tagset.TagSetDefinition;
 import net.yozmnews.evaluation.domain.tagset.TagSetParser;
 import net.yozmnews.evaluation.domain.tagset.TagSetRepository;
+import net.yozmnews.evaluation.domain.tagset.TagSetTexts;
 import net.yozmnews.evaluation.domain.threshold.ThresholdRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -96,10 +97,10 @@ class TagSetStorageTests {
 
 	@Test
 	void theTextOfAVersionReadsBackToItsContentAndItsCurrentThresholds() {
-		TagSetDefinition before = TagSetVersions.parsed(this.versioning.versionText(this.first.id()).orElseThrow());
+		TagSetDefinition before = TagSetTexts.parsed(this.versioning.versionText(this.first.id()).orElseThrow());
 		ThresholdChangeResult change = this.administration.changeThresholds(MultiTagKind.TOPIC, new BigDecimal("0.6"),
 				new BigDecimal("0.1"), ChangeActor.OPERATOR);
-		TagSetDefinition after = TagSetVersions.parsed(this.versioning.versionText(this.first.id()).orElseThrow());
+		TagSetDefinition after = TagSetTexts.parsed(this.versioning.versionText(this.first.id()).orElseThrow());
 
 		assertThat(change).isInstanceOf(ThresholdChangeResult.Changed.class);
 		assertThat(before.content()).isEqualTo(this.first.content());
@@ -131,7 +132,7 @@ class TagSetStorageTests {
 		TagSet stored = this.tagSets.findById(second.value()).orElseThrow();
 		assertThat(stored.number()).isEqualTo(2);
 		assertThat(stored.active()).isTrue();
-		assertThat(stored.content()).isEqualTo(TagSetVersions.parsed(text).content());
+		assertThat(stored.content()).isEqualTo(TagSetTexts.parsed(text).content());
 		assertThat(stored.lineage()).containsExactly(
 				new LineageDef(TagKind.REGION, LineageKind.RENAME, List.of(new TagKey("japan")), List.of(new TagKey("nippon"))),
 				new LineageDef(TagKind.REGION, LineageKind.SPLIT, List.of(new TagKey("europe")),

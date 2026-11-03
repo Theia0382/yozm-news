@@ -12,6 +12,7 @@ import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.evaluation.MultiTagKind;
 import net.yozmnews.evaluation.TagSetId;
+import net.yozmnews.evaluation.application.TagSetRows;
 import net.yozmnews.evaluation.domain.result.EvaluationRecord;
 import net.yozmnews.evaluation.domain.result.StoredEvaluation;
 import net.yozmnews.evaluation.domain.result.StoredTag;
@@ -51,12 +52,7 @@ class JdbcEvaluationResultRepositoryTests {
 
 	@BeforeEach
 	void createTagSets() {
-		this.jdbc.sql("delete from tag_key_lineage").update();
-		this.jdbc.sql("delete from tag_set_threshold_changes").update();
-		this.jdbc.sql("delete from tag_set_thresholds").update();
-		this.jdbc.sql("delete from importance_rubrics").update();
-		this.jdbc.sql("delete from tags").update();
-		this.jdbc.sql("delete from tag_sets").update();
+		TagSetRows.removeAll(this.jdbc);
 		// 번호가 큰 버전을 먼저 만든다 — 행 ID 순과 버전 번호 순이 어긋난다
 		this.second = tagSet(2, true);
 		this.first = tagSet(1, false);

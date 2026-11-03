@@ -21,7 +21,7 @@ import net.yozmnews.evaluation.TopicCategory;
  * 체계 순서와 키의 사전 순이 어긋난다(중분류 executive → assembly → finance, 지역 world → domestic) — 순서 단언이 정렬 우연으로 통과하지
  * 않는다.
  */
-final class ResultTagSet {
+public final class ResultTagSet {
 
 	static final TagSetId VERSION = new TagSetId(1);
 
@@ -49,7 +49,7 @@ final class ResultTagSet {
 	}
 
 	/** 버전 1 의 태그 기준 · 저장 기준 — 주제 · 지역 */
-	static TagSetThresholds thresholds(String topicTag, String topicStore, String regionTag, String regionStore) {
+	public static TagSetThresholds thresholds(String topicTag, String topicStore, String regionTag, String regionStore) {
 		return new TagSetThresholds(VERSION,
 				new TagThresholds(MultiTagKind.TOPIC, new BigDecimal(topicTag), new BigDecimal(topicStore)),
 				new TagThresholds(MultiTagKind.REGION, new BigDecimal(regionTag), new BigDecimal(regionStore)));

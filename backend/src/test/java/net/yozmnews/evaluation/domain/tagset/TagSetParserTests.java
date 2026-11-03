@@ -1,5 +1,6 @@
 package net.yozmnews.evaluation.domain.tagset;
 
+import static net.yozmnews.evaluation.domain.tagset.TagSetTexts.parsed;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.math.BigDecimal;
@@ -365,12 +366,6 @@ class TagSetParserTests {
 		assertThat(atLimit).hasSize(65_536);
 		assertThat(parsed(atLimit).content().regions()).hasSize(2);
 		assertThat(problems(atLimit + "#")).containsExactly(" TOO_LARGE");
-	}
-
-	private TagSetDefinition parsed(String text) {
-		TagSetParse parse = this.parser.parse(text);
-		assertThat(parse).as("%s", parse).isInstanceOf(TagSetParse.Parsed.class);
-		return ((TagSetParse.Parsed) parse).definition();
 	}
 
 	private List<String> problems(String text) {
