@@ -1,20 +1,14 @@
 package net.yozmnews.evaluation.application;
 
-import java.time.Instant;
 import java.time.InstantSource;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 import net.yozmnews.evaluation.ChangeActor;
-import net.yozmnews.evaluation.MultiTagKind;
-import net.yozmnews.evaluation.TagSetId;
-import net.yozmnews.evaluation.domain.tagset.TagSet;
 import net.yozmnews.evaluation.domain.tagset.TagSetContent;
 import net.yozmnews.evaluation.domain.tagset.TagSetDefinition;
 import net.yozmnews.evaluation.domain.tagset.TagSetRepository;
 import net.yozmnews.evaluation.domain.threshold.ThresholdRepository;
-import net.yozmnews.evaluation.domain.threshold.ThresholdValues;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.SmartInitializingSingleton;
@@ -37,7 +31,7 @@ class TagSetSeeding implements SmartInitializingSingleton {
 
 	private final TagSetRepository tagSets;
 
-	private final ThresholdRepository thresholds;
+	private final TagSetVersionStore versionStore;
 
 	private final TransactionTemplate transaction;
 
@@ -53,7 +47,7 @@ class TagSetSeeding implements SmartInitializingSingleton {
 			TransactionTemplate transaction, InstantSource clock) {
 		this.definition = definition;
 		this.tagSets = tagSets;
-		this.thresholds = thresholds;
+		this.versionStore = new TagSetVersionStore(tagSets, thresholds);
 		this.transaction = transaction;
 		this.clock = clock;
 	}
@@ -74,11 +68,7 @@ class TagSetSeeding implements SmartInitializingSingleton {
 			if (this.tagSets.anyExists()) {
 				return false;
 			}
-			Instant now = this.clock.instant();
-			TagSetId version = this.tagSets.save(TagSet.first(this.definition.content(), ChangeActor.SYSTEM, now)).id();
-			for (Map.Entry<MultiTagKind, ThresholdValues> initial : this.definition.initialThresholds().entrySet()) {
-				this.thresholds.insertInitial(version, initial.getKey(), initial.getValue(), ChangeActor.SYSTEM, now);
-			}
+			this.versionStore.first(this.definition, ChangeActor.SYSTEM, this.clock.instant());
 			return true;
 		});
 		if (Boolean.TRUE.equals(seeded)) {

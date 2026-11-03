@@ -126,9 +126,8 @@ public class EvaluationRound {
 				continue;
 			}
 			if (this.results.exists(claim.articleId(), tagSet.id())) {
-				if (!writeIfCurrent(tagSet.id(), () -> this.queue.deleteIfLeased(claim.articleId(), token(claim)),
-						() -> this.queue.replaceIfLeased(token(claim), claim.released()))) {
-					stopRetired(claimed, i);
+				if (!writeIfCurrent(claimed, i, tagSet.id(),
+						() -> this.queue.deleteIfLeased(claim.articleId(), token(claim)))) {
 					return;
 				}
 				continue;
@@ -154,19 +153,16 @@ public class EvaluationRound {
 					}
 					EvaluationRecord record = EvaluationRecord.of(claim.articleId(), evaluation, tagSet, thresholds,
 							this.clock.instant());
-					boolean current = writeIfCurrent(tagSet.id(), () -> {
+					if (!writeIfCurrent(claimed, i, tagSet.id(), () -> {
 						if (this.queue.deleteIfLeased(claim.articleId(), token(claim))) {
 							this.results.insert(record);
 						}
 					}, () -> {
 						// 은퇴한 버전의 평가도 유효하다 — 저장하되 대기 행은 남겨 새 활성 버전으로 다시 평가한다
-						if (this.queue.replaceIfLeased(token(claim), claim.released())
-								&& !this.results.exists(claim.articleId(), tagSet.id())) {
+						if (!this.results.exists(claim.articleId(), tagSet.id())) {
 							this.results.insert(record);
 						}
-					});
-					if (!current) {
-						stopRetired(claimed, i);
+					})) {
 						return;
 					}
 				}
@@ -184,9 +180,8 @@ public class EvaluationRound {
 					if (failed == null) {
 						return;
 					}
-					if (!writeIfCurrent(tagSet.id(), () -> this.queue.replaceIfLeased(token(claim), failed),
-							() -> this.queue.replaceIfLeased(token(claim), claim.released()))) {
-						stopRetired(claimed, i);
+					if (!writeIfCurrent(claimed, i, tagSet.id(),
+							() -> this.queue.replaceIfLeased(token(claim), failed))) {
 						return;
 					}
 				}
@@ -205,22 +200,38 @@ public class EvaluationRound {
 		return new EvaluationInput(content.title(), (summary == null || summary.isBlank()) ? null : summary, feeds);
 	}
 
+	/** {@link #writeIfCurrent(List, int, TagSetId, Runnable, Runnable)} — 은퇴했을 때 점유를 푸는 것 말고는 쓰지 않는다 */
+	private boolean writeIfCurrent(List<PendingEvaluation> claimed, int index, TagSetId version, Runnable whenActive) {
+		return writeIfCurrent(claimed, index, version, whenActive, () -> {
+		});
+	}
+
 	/**
-	 * 회차가 읽은 버전이 아직 활성일 때만 쓴다 — 새 트랜잭션에서 표를 활성 전환과 충돌하는 모드로 잠근 뒤 본다.
+	 * 회차가 읽은 버전이 아직 활성일 때만 쓴다 — 새 트랜잭션에서 표를 활성 전환과 충돌하는 모드로 잠근 뒤 본다. 은퇴했으면 이 기사의 점유를
+	 * 풀고(풀었을 때만 {@code whenReleased}), 트랜잭션 뒤에 남은 점유를 풀고 회차를 멈춘다.
+	 * @param claimed 회차가 점유한 기사 — 그 가운데 {@code index} 가 이 기사다
 	 * @param whenActive 활성일 때의 쓰기
-	 * @param whenRetired 은퇴했을 때의 쓰기 — 그 기사의 점유를 푼다
-	 * @return 활성이었으면 true
+	 * @param whenReleased 은퇴했고 이 기사의 점유를 풀었을 때의 쓰기
+	 * @return 활성이었으면 true — false 면 회차를 멈췄다
 	 */
-	private boolean writeIfCurrent(TagSetId version, Runnable whenActive, Runnable whenRetired) {
-		return Boolean.TRUE.equals(this.transaction.execute(status -> {
+	private boolean writeIfCurrent(List<PendingEvaluation> claimed, int index, TagSetId version, Runnable whenActive,
+			Runnable whenReleased) {
+		PendingEvaluation claim = claimed.get(index);
+		boolean active = Boolean.TRUE.equals(this.transaction.execute(status -> {
 			this.tagSets.lockAgainstChange();
 			if (this.tagSets.isActive(version.value())) {
 				whenActive.run();
 				return true;
 			}
-			whenRetired.run();
+			if (unlease(claim)) {
+				whenReleased.run();
+			}
 			return false;
 		}));
+		if (!active) {
+			stopRetired(claimed, index);
+		}
+		return active;
 	}
 
 	/** 은퇴한 버전으로 평가한 기사 뒤의 점유를 풀고 회차를 멈춘다 */
@@ -233,15 +244,19 @@ public class EvaluationRound {
 		this.transaction.executeWithoutResult(status -> this.queue.deleteIfLeased(claim.articleId(), token(claim)));
 	}
 
-	private void replace(PendingEvaluation claim, PendingEvaluation next) {
-		this.transaction.executeWithoutResult(status -> this.queue.replaceIfLeased(token(claim), next));
-	}
-
-	/** 남은 점유를 푼다 — 시도 수 · 평가 가능 시각은 그대로 */
+	/** 남은 점유를 푼다 — 기사마다 트랜잭션 하나 */
 	private void release(List<PendingEvaluation> remaining) {
 		for (PendingEvaluation claim : remaining) {
-			replace(claim, claim.released());
+			this.transaction.executeWithoutResult(status -> unlease(claim));
 		}
+	}
+
+	/**
+	 * 이 기사의 점유를 푼다 — 시도 수 · 평가 가능 시각은 그대로. 트랜잭션 안에서 부른다.
+	 * @return 풀었으면 true — 점유가 이미 바뀌었으면 false
+	 */
+	private boolean unlease(PendingEvaluation claim) {
+		return this.queue.replaceIfLeased(token(claim), claim.released());
 	}
 
 	private static UUID token(PendingEvaluation claim) {

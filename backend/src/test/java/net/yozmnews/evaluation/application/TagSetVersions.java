@@ -15,8 +15,8 @@ import net.yozmnews.evaluation.domain.threshold.ThresholdRepository;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 시험 픽스처 — 저장소의 수단(기준 버전 끄기 · 다음 버전 저장 · 처음 태그 기준 · 저장 기준)만으로 새 버전을 활성으로 만든다. 대조 ·
- * 재평가는 하지 않는다 — 그 유스케이스는 {@code TagSetVersioning.activate} 다. 뒤처리는 {@link TagSetRows#removeVersionsAfterFirst}.
+ * 시험 픽스처 — 제품의 새 버전 쓰기({@link TagSetVersionStore#next})로 새 버전을 활성으로 만든다. 대조 · 재평가는 하지 않는다 — 그
+ * 유스케이스는 {@code TagSetVersioning.activate} 다. 뒤처리는 {@link TagSetRows#removeVersionsAfterFirst}.
  */
 final class TagSetVersions {
 
@@ -33,13 +33,10 @@ final class TagSetVersions {
 	static TagSetId activate(String text, TagSetRepository tagSets, ThresholdRepository thresholds,
 			TransactionTemplate transaction, Instant now) {
 		TagSetDefinition definition = parsed(text);
+		TagSetVersionStore versions = new TagSetVersionStore(tagSets, thresholds);
 		return transaction.execute(status -> {
 			TagSet base = tagSets.findByActiveTrue().orElseThrow();
-			assertThat(tagSets.deactivate(base.id().value())).isTrue();
-			TagSet saved = tagSets.save(TagSet.next(base, definition, ChangeActor.OPERATOR, now));
-			definition.initialThresholds()
-				.forEach((kind, values) -> thresholds.insertInitial(saved.id(), kind, values, ChangeActor.OPERATOR, now));
-			return saved.id();
+			return versions.next(base, definition, ChangeActor.OPERATOR, now).id();
 		});
 	}
 

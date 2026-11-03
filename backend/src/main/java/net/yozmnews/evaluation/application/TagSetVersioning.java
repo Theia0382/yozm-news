@@ -10,7 +10,6 @@ import java.util.Optional;
 import net.yozmnews.article.ArticleDirectory;
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.evaluation.ChangeActor;
-import net.yozmnews.evaluation.MultiTagKind;
 import net.yozmnews.evaluation.TagSetActivationResult;
 import net.yozmnews.evaluation.TagSetAdministration;
 import net.yozmnews.evaluation.TagSetId;
@@ -28,7 +27,6 @@ import net.yozmnews.evaluation.domain.tagset.TagSetRevision;
 import net.yozmnews.evaluation.domain.tagset.TagSetRevision.Revision;
 import net.yozmnews.evaluation.domain.tagset.TagSetWriter;
 import net.yozmnews.evaluation.domain.threshold.ThresholdRepository;
-import net.yozmnews.evaluation.domain.threshold.ThresholdValues;
 import net.yozmnews.platform.TextLocation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,6 +51,8 @@ class TagSetVersioning {
 
 	private final ThresholdRepository thresholds;
 
+	private final TagSetVersionStore versionStore;
+
 	private final EvaluationQueueRepository queue;
 
 	private final ArticleDirectory articles;
@@ -73,6 +73,7 @@ class TagSetVersioning {
 			ArticleDirectory articles, TransactionTemplate transaction, InstantSource clock) {
 		this.tagSets = tagSets;
 		this.thresholds = thresholds;
+		this.versionStore = new TagSetVersionStore(tagSets, thresholds);
 		this.queue = queue;
 		this.articles = articles;
 		this.transaction = transaction;
@@ -93,19 +94,19 @@ class TagSetVersioning {
 	/** 확인 — 아무것도 쓰지 않는다 */
 	TagSetReviewResult review(String text, int recentDays) {
 		Objects.requireNonNull(text, "text");
-		if (!daysInRange(recentDays)) {
-			return new TagSetReviewResult.DaysOutOfRange();
-		}
 		TagSetDefinition definition;
-		switch (this.parser.parse(text)) {
-			case TagSetParse.Parsed parsed -> definition = parsed.definition();
-			case TagSetParse.Invalid invalid -> {
-				return new TagSetReviewResult.Invalid(views(invalid.problems()));
+		switch (draft(text, recentDays)) {
+			case Draft.DaysOutOfRange outOfRange -> {
+				return new TagSetReviewResult.DaysOutOfRange();
 			}
+			case Draft.Invalid invalid -> {
+				return new TagSetReviewResult.Invalid(invalid.problems());
+			}
+			case Draft.Ready ready -> definition = ready.definition();
 		}
 		Instant now = this.clock.instant();
 		TagSet base = TagSetDirectoryService.active(this.tagSets);
-		return switch (TagSetRevision.review(base.content(), this.thresholds.current(base.id()), definition)) {
+		return switch (revise(base, definition)) {
 			case Revision.Rejected rejected -> new TagSetReviewResult.Invalid(views(rejected.problems()));
 			case Revision.Unchanged unchanged -> new TagSetReviewResult.Unchanged();
 			case Revision.Changed changed -> new TagSetReviewResult.Ready(changed.changes(),
@@ -117,15 +118,15 @@ class TagSetVersioning {
 	TagSetActivationResult activate(String text, int recentDays, ChangeActor actor) {
 		Objects.requireNonNull(text, "text");
 		Objects.requireNonNull(actor, "actor");
-		if (!daysInRange(recentDays)) {
-			return new TagSetActivationResult.DaysOutOfRange();
-		}
 		TagSetDefinition definition;
-		switch (this.parser.parse(text)) {
-			case TagSetParse.Parsed parsed -> definition = parsed.definition();
-			case TagSetParse.Invalid invalid -> {
-				return new TagSetActivationResult.Invalid(views(invalid.problems()));
+		switch (draft(text, recentDays)) {
+			case Draft.DaysOutOfRange outOfRange -> {
+				return new TagSetActivationResult.DaysOutOfRange();
 			}
+			case Draft.Invalid invalid -> {
+				return new TagSetActivationResult.Invalid(invalid.problems());
+			}
+			case Draft.Ready ready -> definition = ready.definition();
 		}
 		Instant now = this.clock.instant();
 		// 기사 조회는 트랜잭션 밖이다 — 그 사이 처음 본 기사는 ArticleStored 로, 지운 기사는 회차가 대기에서 뺀다(evaluation-R25)
@@ -133,19 +134,11 @@ class TagSetVersioning {
 		TagSetActivationResult result = Objects.requireNonNull(this.transaction.execute(status -> {
 			this.tagSets.lockForChange();
 			TagSet base = TagSetDirectoryService.active(this.tagSets);
-			return switch (TagSetRevision.review(base.content(), this.thresholds.current(base.id()), definition)) {
+			return switch (revise(base, definition)) {
 				case Revision.Rejected rejected -> new TagSetActivationResult.Invalid(views(rejected.problems()));
 				case Revision.Unchanged unchanged -> new TagSetActivationResult.Unchanged();
 				case Revision.Changed changed -> {
-					if (!this.tagSets.deactivate(base.id().value())) {
-						throw new IllegalStateException("표 잠금 안에서 읽은 활성 버전을 끄지 못했다: " + base.id().value());
-					}
-					TagSet saved = this.tagSets.save(TagSet.next(base, definition, actor, now));
-					for (MultiTagKind kind : MultiTagKind.values()) {
-						ThresholdValues initial = Objects.requireNonNull(definition.initialThresholds().get(kind),
-								"처음 값");
-						this.thresholds.insertInitial(saved.id(), kind, initial, actor, now);
-					}
+					TagSet saved = this.versionStore.next(base, definition, actor, now);
 					int requeued = this.queue.requeue(recent, now);
 					yield new TagSetActivationResult.Activated(view(saved), changed.changes(), requeued);
 				}
@@ -156,6 +149,39 @@ class TagSetVersioning {
 					activated.requeued());
 		}
 		return result;
+	}
+
+	/** 확인 · 활성화의 원문 앞 검사 결과 */
+	private sealed interface Draft {
+
+		/** 원문을 읽었다 */
+		record Ready(TagSetDefinition definition) implements Draft {
+		}
+
+		/** 재평가 기간이 범위 밖이다 */
+		record DaysOutOfRange() implements Draft {
+		}
+
+		/** 원문이 형식 검증에 걸렸다 */
+		record Invalid(List<TagSetProblemView> problems) implements Draft {
+		}
+
+	}
+
+	/** 확인 · 활성화의 원문 앞 검사 — 재평가 기간 범위 → 원문 해석 */
+	private Draft draft(String text, int recentDays) {
+		if (!daysInRange(recentDays)) {
+			return new Draft.DaysOutOfRange();
+		}
+		return switch (this.parser.parse(text)) {
+			case TagSetParse.Parsed parsed -> new Draft.Ready(parsed.definition());
+			case TagSetParse.Invalid invalid -> new Draft.Invalid(views(invalid.problems()));
+		};
+	}
+
+	/** 기준 버전과 그 지금 태그 기준 · 저장 기준으로 원문을 대조한다 — 확인 · 활성화 공통 */
+	private Revision revise(TagSet base, TagSetDefinition definition) {
+		return TagSetRevision.review(base.content(), this.thresholds.current(base.id()), definition);
 	}
 
 	/** 재평가 기간에 처음 본 기사 — 기간이 0 이면 읽지 않는다. 경계 시각은 활성화 시각 − 기간 × 24시간이고 포함한다 */
