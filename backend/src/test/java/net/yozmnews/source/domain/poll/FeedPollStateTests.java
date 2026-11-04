@@ -28,7 +28,7 @@ import org.junit.jupiter.api.Test;
 /**
  * 수집 상태 전이 — 기대값은 결과 시각과 주기 15분에서 손으로 센 시각이다.
  * <p>
- * 지키는 규칙: source-R15 · source-R16 · source-R19 · source-R20 · source-R21 · source-R22 · source-R23 · source-R25 · source-R26 · source-R27 ·
+ * 지키는 규칙: source-R15 · source-R16 · source-R19 · source-R20 · source-R21 · source-R22 · source-R23 · source-R24 · source-R25 · source-R26 · source-R27 ·
  * source-R30 · source-R31
  */
 class FeedPollStateTests {
@@ -197,6 +197,22 @@ class FeedPollStateTests {
 
 		assertThat(outcome.state().consecutiveFailures()).isEqualTo(6);
 		assertThat(outcome.state().nextPollAt()).isEqualTo(Instant.parse("2026-10-29T02:00:12Z"));
+	}
+
+	@Test
+	void aBlockedAddressBacksOffWithTheTemporaryCap() {
+		FetchFailure blocked = FetchFailure.of(FetchFailureReason.BLOCKED_ADDRESS, "www.khan.co.kr → 10.0.0.1");
+
+		FeedPollState fourth = leased(keys("g:a"), 3, 0, null, null)
+			.complete(new FetchResult.Failed(blocked, DONE), INTERVAL)
+			.state();
+		FeedPollState fifth = leased(keys("g:a"), 4, 0, null, null)
+			.complete(new FetchResult.Failed(blocked, DONE), INTERVAL)
+			.state();
+
+		assertThat(fourth.nextPollAt()).isEqualTo(Instant.parse("2026-10-28T14:00:12Z"));
+		assertThat(fifth.consecutivePermanentFailures()).isZero();
+		assertThat(fifth.nextPollAt()).isEqualTo(Instant.parse("2026-10-28T16:00:12Z"));
 	}
 
 	@Test
