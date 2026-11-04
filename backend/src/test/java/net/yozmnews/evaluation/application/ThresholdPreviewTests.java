@@ -3,6 +3,7 @@ package net.yozmnews.evaluation.application;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -38,7 +39,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 기준 미리보기 — 실제 PostgreSQL 의 활성 버전(기본 체계, 기준 0.5 / 0.1) 평가로 결선된 공개 API 를 부른다. 기간 안 둘(행정부 0.45 —
  * low_confidence, 행정부 0.8 — TAGGED)과 기간 밖 하나(행정부 0.45).
  * <p>
- * 지키는 규칙: evaluation-R33
+ * 지키는 규칙: evaluation-R32 · evaluation-R33
  */
 @Import({ TestcontainersConfiguration.class, TransactionSettings.class })
 @SpringBootTest
@@ -47,6 +48,11 @@ class ThresholdPreviewTests {
 
 	private static final EvaluationPeriod PERIOD = new EvaluationPeriod(Instant.parse("2026-10-27T15:00:00Z"),
 			Instant.parse("2026-11-03T15:00:00Z"));
+
+	/** 처음 값(첫 기동 적재 — 시험 실행 시각)과 시험 안의 변경을 모두 덮는 범위 */
+	private static final Instant COVERED_FROM = Instant.parse("2026-01-01T00:00:00Z");
+
+	private static final Instant COVERED_TO = Instant.parse("2100-01-01T00:00:00Z");
 
 	@Autowired
 	TagSetAdministration administration;
@@ -76,6 +82,7 @@ class ThresholdPreviewTests {
 
 	@AfterEach
 	void reset() {
+		TagBackfillRows.removeAll(this.jdbc);
 		this.jdbc.sql("delete from article_tags").update();
 		this.jdbc.sql("delete from article_evaluations").update();
 		TagSetRows.removeVersionsAfterFirst(this.jdbc);
@@ -145,6 +152,41 @@ class ThresholdPreviewTests {
 	}
 
 	@Test
+	void aFinishedBackfillOfTheWholeVersionLiftsThePreviewWarningAboutThePastStoreThreshold() {
+		lowerTheTopicStoreThresholdFrom02To01();
+		TagBackfillRows.insertFinished(this.jdbc, this.first, COVERED_FROM, COVERED_TO, "0.1", 0);
+
+		assertThat(((ThresholdPreviewResult.Previewed) preview(MultiTagKind.TOPIC, "0.15", "0.1")).warnings()).isEmpty();
+	}
+
+	@Test
+	void withoutABackfillThePreviewWarnsAboutThePastStoreThreshold() {
+		// 대조 — 덮음이 없으면 0.2 로 저장된 평가가 남아 있다
+		lowerTheTopicStoreThresholdFrom02To01();
+
+		assertThat(((ThresholdPreviewResult.Previewed) preview(MultiTagKind.TOPIC, "0.15", "0.1")).warnings())
+			.containsExactly(ThresholdWarning.TAG_BELOW_PAST_STORE);
+	}
+
+	@Test
+	void bothOverviewsOfThePreviewSeeTheMixedStoreFloorsOfTheirOwnTagKind() {
+		// 기간이 처음 값 시각(첫 기동 적재 — 시험 실행 시각)과 변경 시각을 품어야 섞임을 볼 수 있다
+		Instant now = Instant.now();
+		EvaluationPeriod period = new EvaluationPeriod(now.minus(Duration.ofDays(1)), now.plus(Duration.ofDays(1)));
+		lowerTheTopicStoreThresholdFrom02To01();
+
+		ThresholdPreviewResult.Previewed previewed = (ThresholdPreviewResult.Previewed) this.administration
+			.previewThresholds(MultiTagKind.TOPIC, new BigDecimal("0.4"), new BigDecimal("0.1"), period);
+
+		assertThat(previewed.before().topicProbabilities().storeThresholdChanged()).isTrue();
+		// 대조 — 지역 저장 기준은 바꾸지 않았다
+		assertThat(previewed.before().regionProbabilities().storeThresholdChanged()).isFalse();
+		// 제안을 이력에 더하지 않는다 — 제안 기준의 집계도 지금 바닥 그대로
+		assertThat(previewed.after().topicProbabilities().storeThresholdChanged()).isTrue();
+		assertThat(previewed.after().regionProbabilities().storeThresholdChanged()).isFalse();
+	}
+
+	@Test
 	void theSameOrOutOfRangeValuesPreviewNothing() {
 		assertThat(preview(MultiTagKind.REGION, "0.50", "0.1000"))
 			.isEqualTo(new ThresholdPreviewResult.Unchanged(this.first,
@@ -161,6 +203,13 @@ class ThresholdPreviewTests {
 
 		assertThat(this.settings.seen).containsExactly(Map.of("isolation", "read committed", "readOnly", "off"),
 				Map.of("isolation", "repeatable read", "readOnly", "on"));
+	}
+
+	private void lowerTheTopicStoreThresholdFrom02To01() {
+		this.administration.changeThresholds(MultiTagKind.TOPIC, new BigDecimal("0.5"), new BigDecimal("0.2"),
+				ChangeActor.OPERATOR);
+		this.administration.changeThresholds(MultiTagKind.TOPIC, new BigDecimal("0.5"), new BigDecimal("0.1"),
+				ChangeActor.OPERATOR);
 	}
 
 	private ThresholdPreviewResult preview(MultiTagKind kind, String tag, String store) {

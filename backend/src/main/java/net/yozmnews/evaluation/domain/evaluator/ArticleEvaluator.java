@@ -10,4 +10,7 @@ public interface ArticleEvaluator {
 	/** 기사 하나를 넘긴 체계의 질문으로 평가한다 — docs/specs/evaluation.md §4 */
 	EvaluationResult evaluate(EvaluationInput input, TagSetView tagSet);
 
+	/** 저장된 원본 응답을 넘긴 체계로 다시 읽는다 — docs/specs/evaluation.md §4 */
+	RereadResult reread(String evaluator, String rawResponse, TagSetView tagSet);
+
 }

@@ -1960,6 +1960,158 @@
         "tags" : [ "admin-deletion-impact-controller" ]
       }
     },
+    "/api/admin/tag-backfill-reviews" : {
+      "post" : {
+        "operationId" : "review_1",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/TagBackfillRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TagBackfillReviewResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청 본문의 형식이 틀렸거나 채울 기간이 범위 밖이다"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          }
+        },
+        "tags" : [ "admin-tag-backfill-controller" ]
+      }
+    },
+    "/api/admin/tag-backfills" : {
+      "get" : {
+        "operationId" : "runs",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TagBackfillListResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          }
+        },
+        "tags" : [ "admin-tag-backfill-controller" ]
+      },
+      "post" : {
+        "operationId" : "request",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/TagBackfillRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TagBackfillResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청 본문의 형식이 틀렸거나 채울 기간이 범위 밖이다"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          }
+        },
+        "tags" : [ "admin-tag-backfill-controller" ]
+      }
+    },
     "/api/admin/tag-set-reviews" : {
       "post" : {
         "operationId" : "review",
@@ -3856,6 +4008,137 @@
         },
         "required" : [ "absent", "max", "median", "min", "present" ]
       },
+      "TagBackfillListResponse" : {
+        "type" : "object",
+        "properties" : {
+          "maxDays" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "runs" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/TagBackfillRunResponse"
+            }
+          }
+        },
+        "required" : [ "maxDays", "runs" ]
+      },
+      "TagBackfillRequest" : {
+        "type" : "object",
+        "properties" : {
+          "days" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        },
+        "required" : [ "days" ]
+      },
+      "TagBackfillResponse" : {
+        "type" : "object",
+        "properties" : {
+          "result" : {
+            "type" : "string",
+            "enum" : [ "REQUESTED", "ALREADY_OPEN" ]
+          },
+          "run" : {
+            "$ref" : "#/components/schemas/TagBackfillRunResponse"
+          }
+        },
+        "required" : [ "result", "run" ]
+      },
+      "TagBackfillReviewResponse" : {
+        "type" : "object",
+        "properties" : {
+          "evaluations" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "from" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "result" : {
+            "type" : "string",
+            "enum" : [ "READY" ]
+          },
+          "to" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "versions" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/VersionCount"
+            }
+          }
+        },
+        "required" : [ "evaluations", "from", "result", "to", "versions" ]
+      },
+      "TagBackfillRunResponse" : {
+        "type" : "object",
+        "properties" : {
+          "days" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "evaluations" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "finishedAt" : {
+            "type" : [ "string", "null" ],
+            "format" : "date-time"
+          },
+          "from" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "processed" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "requestedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "skippedOtherEvaluator" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "skippedUnreadable" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "startedAt" : {
+            "type" : [ "string", "null" ],
+            "format" : "date-time"
+          },
+          "state" : {
+            "type" : "string",
+            "enum" : [ "WAITING", "RUNNING", "DONE" ]
+          },
+          "tagsAdded" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "to" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "versions" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/VersionItem"
+            }
+          }
+        },
+        "required" : [ "days", "evaluations", "finishedAt", "from", "id", "processed", "requestedAt", "skippedOtherEvaluator", "skippedUnreadable", "startedAt", "state", "tagsAdded", "to", "versions" ]
+      },
       "TagLineageView" : {
         "type" : "object",
         "properties" : {
@@ -4449,6 +4732,64 @@
           }
         },
         "required" : [ "lower", "share", "upper", "upperInclusive" ]
+      },
+      "VersionCount" : {
+        "type" : "object",
+        "properties" : {
+          "evaluations" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "number" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        },
+        "required" : [ "evaluations", "id", "number" ]
+      },
+      "VersionItem" : {
+        "type" : "object",
+        "properties" : {
+          "evaluations" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "number" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "processed" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "regionStoreThreshold" : {
+            "type" : "number"
+          },
+          "skippedOtherEvaluator" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "skippedUnreadable" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "tagsAdded" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "topicStoreThreshold" : {
+            "type" : "number"
+          }
+        },
+        "required" : [ "evaluations", "id", "number", "processed", "regionStoreThreshold", "skippedOtherEvaluator", "skippedUnreadable", "tagsAdded", "topicStoreThreshold" ]
       }
     }
   }

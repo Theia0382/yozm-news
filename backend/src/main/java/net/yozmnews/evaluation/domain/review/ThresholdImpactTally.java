@@ -9,10 +9,10 @@ import net.yozmnews.evaluation.MultiTagKind;
 import net.yozmnews.evaluation.TagProbability;
 import net.yozmnews.evaluation.TagSetThresholds;
 import net.yozmnews.evaluation.TagSetView;
-import net.yozmnews.evaluation.ThresholdChangeView;
 import net.yozmnews.evaluation.domain.overview.EvaluationSample;
 import net.yozmnews.evaluation.domain.overview.OverviewTally;
 import net.yozmnews.evaluation.domain.result.TagJudgement.Judged;
+import net.yozmnews.evaluation.domain.threshold.StoreFloors;
 
 /**
  * 기준 미리보기 집계의 정본 — 같은 평가를 지금 기준 · 제안 기준의 평가 현황 집계 둘에 넣고, 그 태그 종류의 판정이 다른 평가를 센다 ·
@@ -34,14 +34,15 @@ public final class ThresholdImpactTally {
 	/**
 	 * @param current 그 버전의 지금 태그 기준 · 저장 기준
 	 * @param proposed 그 태그 종류만 제안 값으로 바꾼 기준
-	 * @param changes 그 버전의 태그 기준 · 저장 기준 이력 — 두 집계가 함께 쓴다(제안을 더하지 않는다)
+	 * @param topicFloors 그 버전 주제의 저장 바닥 — 지금 이력과 끝난 채움의 덮음, 두 집계가 함께 쓴다(제안을 이력에 더하지 않는다)
+	 * @param regionFloors 그 버전 지역의 저장 바닥 — 두 집계가 함께 쓴다
 	 * @throws IllegalArgumentException 기준의 버전이 체계와 다를 때
 	 */
 	public ThresholdImpactTally(TagSetView tagSet, TagSetThresholds current, TagSetThresholds proposed,
-			MultiTagKind kind, List<ThresholdChangeView> changes, EvaluationPeriod period) {
+			MultiTagKind kind, StoreFloors topicFloors, StoreFloors regionFloors, EvaluationPeriod period) {
 		this.kind = Objects.requireNonNull(kind, "kind");
-		this.before = new OverviewTally(tagSet, current, changes, period);
-		this.after = new OverviewTally(tagSet, proposed, changes, period);
+		this.before = new OverviewTally(tagSet, current, topicFloors, regionFloors, period);
+		this.after = new OverviewTally(tagSet, proposed, topicFloors, regionFloors, period);
 	}
 
 	/** 평가 한 건을 두 기준으로 센다 */

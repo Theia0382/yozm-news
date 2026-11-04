@@ -10,17 +10,21 @@ import static net.yozmnews.evaluation.domain.result.ResultTagSet.thresholds;
 import static net.yozmnews.evaluation.domain.result.ResultTagSet.topic;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.evaluation.ChangeActor;
 import net.yozmnews.evaluation.EvaluationOverview;
 import net.yozmnews.evaluation.EvaluationPeriod;
 import net.yozmnews.evaluation.MultiTagKind;
 import net.yozmnews.evaluation.TagSetThresholds;
+import net.yozmnews.evaluation.ThresholdChangeView;
 import net.yozmnews.evaluation.domain.overview.EvaluationSample;
 import net.yozmnews.evaluation.domain.result.StoredEvaluation;
 import net.yozmnews.evaluation.domain.result.StoredTag;
+import net.yozmnews.evaluation.domain.threshold.StoreFloors;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -36,6 +40,11 @@ class ThresholdImpactTallyTests {
 
 	private static final EvaluationPeriod PERIOD = new EvaluationPeriod(Instant.parse("2026-11-01T00:00:00Z"),
 			Instant.parse("2026-11-02T00:00:00Z"));
+
+	/** 기간 전 처음 값 그대로인 저장 바닥 — 두 집계가 함께 쓴다 */
+	private static final StoreFloors UNIFORM_TOPIC = floors(MultiTagKind.TOPIC);
+
+	private static final StoreFloors UNIFORM_REGION = floors(MultiTagKind.REGION);
 
 	private static final TagSetThresholds CURRENT = thresholds("0.5", "0.1", "0.5", "0.1");
 
@@ -61,7 +70,7 @@ class ThresholdImpactTallyTests {
 	@Test
 	void aTopicJudgementThatKeepsItsStatusButAttachesAnotherSubtopicChanges() {
 		ThresholdImpactTally tally = new ThresholdImpactTally(TAG_SET, CURRENT, thresholds("0.4", "0.1", "0.5", "0.1"),
-				MultiTagKind.TOPIC, List.of(), PERIOD);
+				MultiTagKind.TOPIC, UNIFORM_TOPIC, UNIFORM_REGION, PERIOD);
 		// 행정부 0.8 · 국회 0.45 — 두 기준 모두 TAGGED 이고, 제안 기준에서 국회가 더 붙는다
 		tally.add(new EvaluationSample(new StoredEvaluation(new ArticleId(5), VERSION, "straight", 3.0,
 				List.of(topic(EXECUTIVE, 0.8), topic(ASSEMBLY, 0.45))), 0.7, 100));
@@ -100,13 +109,19 @@ class ThresholdImpactTallyTests {
 	}
 
 	private static ThresholdImpactTally tally(TagSetThresholds proposed, MultiTagKind kind) {
-		ThresholdImpactTally tally = new ThresholdImpactTally(TAG_SET, CURRENT, proposed, kind, List.of(), PERIOD);
+		ThresholdImpactTally tally = new ThresholdImpactTally(TAG_SET, CURRENT, proposed, kind, UNIFORM_TOPIC, UNIFORM_REGION,
+				PERIOD);
 		long article = 1;
 		for (List<StoredTag> tags : EVALUATIONS) {
 			StoredEvaluation evaluation = new StoredEvaluation(new ArticleId(article++), VERSION, "straight", 3.0, tags);
 			tally.add(new EvaluationSample(evaluation, 0.7, 100));
 		}
 		return tally;
+	}
+
+	private static StoreFloors floors(MultiTagKind kind) {
+		return StoreFloors.of(kind, List.of(new ThresholdChangeView(kind, null, null, new BigDecimal("0.5"),
+				new BigDecimal("0.1"), ChangeActor.SYSTEM, Instant.parse("2026-10-01T00:00:00Z"))), List.of());
 	}
 
 }

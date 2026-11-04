@@ -50,11 +50,7 @@ public record EvaluationRecord(ArticleId articleId, TagSetId tagSetId, String ev
 	 */
 	public static EvaluationRecord of(ArticleId articleId, Evaluation evaluation, TagSetView tagSet,
 			TagSetThresholds thresholds, Instant evaluatedAt) {
-		VersionMatch.require(thresholds, tagSet);
-		List<StoredTag> tags = new ArrayList<>();
-		List<AskedTag> subtopics = tagSet.topics().stream().flatMap(category -> category.subtopics().stream()).toList();
-		stored(tags, thresholds.topic(), subtopics, evaluation.topics());
-		stored(tags, thresholds.region(), tagSet.regions(), evaluation.regions());
+		List<StoredTag> tags = storedTags(evaluation, tagSet, thresholds);
 		FormatOption chosen = null;
 		double chosenProbability = 0;
 		for (FormatOption option : tagSet.format().options()) {
@@ -70,6 +66,20 @@ public record EvaluationRecord(ArticleId articleId, TagSetId tagSetId, String ev
 		return new EvaluationRecord(articleId, tagSet.id(), evaluation.evaluator(), evaluation.modelVersion(),
 				chosen.key(), chosenProbability, evaluation.formats(), ImportanceScore.expected(evaluation.importance()),
 				evaluation.importance(), tags, evaluation.rawResponse(), evaluation.inputTokens(), evaluatedAt);
+	}
+
+	/**
+	 * 저장 기준 이상인 주제 · 지역 태그를 고른다 — 주제 다음 지역, 체계 순서. 평가 저장({@link #of})과 빠진 태그 채움이 함께 쓴다.
+	 * @param thresholds 거를 저장 기준 — 체계와 같은 버전. 태그 기준은 쓰지 않는다
+	 * @throws IllegalArgumentException 기준의 버전이 체계와 다를 때
+	 */
+	public static List<StoredTag> storedTags(Evaluation evaluation, TagSetView tagSet, TagSetThresholds thresholds) {
+		VersionMatch.require(thresholds, tagSet);
+		List<StoredTag> tags = new ArrayList<>();
+		List<AskedTag> subtopics = tagSet.topics().stream().flatMap(category -> category.subtopics().stream()).toList();
+		stored(tags, thresholds.topic(), subtopics, evaluation.topics());
+		stored(tags, thresholds.region(), tagSet.regions(), evaluation.regions());
+		return tags;
 	}
 
 	private static void stored(List<StoredTag> into, TagThresholds thresholds, List<AskedTag> asked,

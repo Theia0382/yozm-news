@@ -20,11 +20,12 @@ import net.yozmnews.evaluation.domain.evaluator.EvaluationFailure;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationInput;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationResult;
 import net.yozmnews.evaluation.domain.evaluator.FeedContext;
+import net.yozmnews.evaluation.domain.evaluator.RereadFailure;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * 고정 규칙 평가기 — 결정성 · 채움 · 이름 일치 · 실패 표지 · 입력 토큰 · 원본 응답. 해시로 고른 위치는 단언하지 않고 개수와 규칙이 정한
+ * 고정 규칙 평가기 — 결정성 · 채움 · 이름 일치 · 실패 표지 · 입력 토큰 · 원본 응답과 그 다시 읽기. 해시로 고른 위치는 단언하지 않고 개수와 규칙이 정한
  * 값을 본다.
  */
 class FakeArticleEvaluatorTests {
@@ -46,6 +47,52 @@ class FakeArticleEvaluatorTests {
 					new ImportanceLevel(3, "보통"), new ImportanceLevel(4, "큼"), new ImportanceLevel(5, "매우 큼"))));
 
 	private final FakeArticleEvaluator evaluator = new FakeArticleEvaluator();
+
+	/** 고정 체계의 키를 모두 가진 Fake 원본 응답 리터럴 */
+	private static final String RAW = """
+			{"evaluator":"fake","modelVersion":"fake-rules-2",\
+			"topics":{"economy.finance":0.05,"economy.realestate":0.11,"politics.assembly":0.9,"politics.executive":0.7},\
+			"regions":{"domestic":0.9,"world":0.03},\
+			"formats":{"feature":0.1,"opinion":0.1,"straight":0.8},\
+			"importance":{"1":0.1,"2":0.1,"3":0.6,"4":0.1,"5":0.1}}""";
+
+	@Test
+	void rereadsItsOwnRawResponseForTheTagSet() {
+		assertThat(this.evaluator.reread("fake", RAW, TAG_SET)).isEqualTo(new Evaluation(
+				Map.of("politics.executive", 0.7, "politics.assembly", 0.9, "economy.finance", 0.05,
+						"economy.realestate", 0.11),
+				Map.of("world", 0.03, "domestic", 0.9), Map.of("straight", 0.8, "opinion", 0.1, "feature", 0.1),
+				Map.of(1, 0.1, 2, 0.1, 3, 0.6, 4, 0.1, 5, 0.1), "fake", "fake-rules-2", 0, RAW));
+	}
+
+	@Test
+	void rereadingAnEvaluationGivesItsProbabilitiesBack() {
+		Evaluation evaluation = evaluate(input("대통령 시정연설", "정치"));
+
+		Evaluation reread = (Evaluation) this.evaluator.reread("fake", evaluation.rawResponse(), TAG_SET);
+
+		assertThat(reread.topics()).isEqualTo(evaluation.topics());
+		assertThat(reread.regions()).isEqualTo(evaluation.regions());
+		assertThat(reread.formats()).isEqualTo(evaluation.formats());
+		assertThat(reread.importance()).isEqualTo(evaluation.importance());
+	}
+
+	@Test
+	void doesNotRereadTheResponseOfAnotherEvaluator() {
+		assertThat(this.evaluator.reread("jev", RAW, TAG_SET)).isEqualTo(
+				new RereadFailure(RereadFailure.Kind.OTHER_EVALUATOR, "Fake 가 남긴 원본 응답이 아니다 — 평가기 jev"));
+	}
+
+	@Test
+	void aRawResponseWithoutAProbabilityOfTheTagSetIsUnreadable() {
+		assertThat(this.evaluator.reread("fake", RAW.replace(",\"world\":0.03", ""), TAG_SET)).isEqualTo(
+				new RereadFailure(RereadFailure.Kind.UNREADABLE,
+						"Fake 원본 응답을 읽을 수 없다 — 확률이 없거나 숫자가 아니다 — regions.world"));
+		assertThat(this.evaluator.reread("fake", RAW.replace("\"5\":0.1", "\"5\":1.5"), TAG_SET)).isEqualTo(
+				new RereadFailure(RereadFailure.Kind.UNREADABLE, "Fake 원본 응답을 읽을 수 없다 — 확률이 0 ~ 1 이 아니다 — importance.5"));
+		assertThat(this.evaluator.reread("fake", "[]", TAG_SET))
+			.isEqualTo(new RereadFailure(RereadFailure.Kind.UNREADABLE, "Fake 원본 응답을 읽을 수 없다 — JSON 객체가 아니다"));
+	}
 
 	@Test
 	void givesTheSameResultForTheSameInput() {

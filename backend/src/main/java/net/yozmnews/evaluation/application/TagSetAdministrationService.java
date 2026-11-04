@@ -21,8 +21,10 @@ import net.yozmnews.evaluation.ThresholdChangeView;
 import net.yozmnews.evaluation.ThresholdKindStatus;
 import net.yozmnews.evaluation.ThresholdPreviewResult;
 import net.yozmnews.evaluation.ThresholdStatusView;
+import net.yozmnews.evaluation.domain.backfill.TagBackfillRepository;
 import net.yozmnews.evaluation.domain.tagset.TagSet;
 import net.yozmnews.evaluation.domain.tagset.TagSetRepository;
+import net.yozmnews.evaluation.domain.threshold.StoreFloors;
 import net.yozmnews.evaluation.domain.threshold.ThresholdDecision;
 import net.yozmnews.evaluation.domain.threshold.ThresholdRepository;
 import net.yozmnews.evaluation.domain.threshold.ThresholdRule;
@@ -36,9 +38,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 /**
  * 공개 API {@link TagSetAdministration} 의 구현 — docs/specs/evaluation.md §4 · evaluation-R11 ~ evaluation-R13.
  * <p>
- * 변경은 한 트랜잭션에서 표 잠금(활성 전환과 줄 서기) → 활성 버전 조회 → 지금 태그 기준 · 저장 기준 행 잠금 → 지난 저장 기준 최댓값 →
- * 판정 → 쓰기다. 역할 애너테이션이 없다(두 역할 공통). 버전 연산은 {@link TagSetVersioning}, 기준 미리보기는 {@link ThresholdPreviews} 에
- * 맡긴다.
+ * 변경은 한 트랜잭션에서 표 잠금(활성 전환과 줄 서기) → 활성 버전 조회 → 지금 태그 기준 · 저장 기준 행 잠금 → 지난 저장 기준 최댓값(이력과
+ * 끝난 채움의 저장 바닥 — {@link StoreFloors}) → 판정 → 쓰기다. 역할 애너테이션이 없다(두 역할 공통). 버전 연산은 {@link TagSetVersioning},
+ * 기준 미리보기는 {@link ThresholdPreviews} 에 맡긴다.
  */
 @Service
 class TagSetAdministrationService implements TagSetAdministration {
@@ -49,24 +51,27 @@ class TagSetAdministrationService implements TagSetAdministration {
 
 	private final TransactionTemplate transaction;
 
-	/** 기준 상태 읽기 — 읽기 전용 {@code REPEATABLE READ}: 지금 값 · 이력 · 최댓값을 한 스냅숏에서 읽는다 */
+	/** 기준 상태 읽기 — 읽기 전용 {@code REPEATABLE READ}: 지금 값 · 이력 · 끝난 채움의 덮음을 한 스냅숏에서 읽는다 */
 	private final TransactionTemplate readOnly;
 
 	private final InstantSource clock;
 
 	private final TagSetVersioning versioning;
 
+	private final TagBackfillRepository backfills;
+
 	private final ThresholdPreviews previews;
 
 	@Autowired
 	TagSetAdministrationService(TagSetRepository tagSets, ThresholdRepository thresholds,
-			TransactionTemplate transaction, TagSetVersioning versioning, ThresholdPreviews previews) {
-		this(tagSets, thresholds, transaction, InstantSource.system(), versioning, previews);
+			TransactionTemplate transaction, TagSetVersioning versioning, TagBackfillRepository backfills,
+			ThresholdPreviews previews) {
+		this(tagSets, thresholds, transaction, InstantSource.system(), versioning, backfills, previews);
 	}
 
 	TagSetAdministrationService(TagSetRepository tagSets, ThresholdRepository thresholds,
 			TransactionTemplate transaction, InstantSource clock, TagSetVersioning versioning,
-			ThresholdPreviews previews) {
+			TagBackfillRepository backfills, ThresholdPreviews previews) {
 		this.tagSets = tagSets;
 		this.thresholds = thresholds;
 		this.transaction = transaction;
@@ -76,6 +81,7 @@ class TagSetAdministrationService implements TagSetAdministration {
 		this.readOnly.setIsolationLevel(TransactionDefinition.ISOLATION_REPEATABLE_READ);
 		this.clock = clock;
 		this.versioning = versioning;
+		this.backfills = backfills;
 		this.previews = previews;
 	}
 
@@ -92,7 +98,7 @@ class TagSetAdministrationService implements TagSetAdministration {
 			TagSetId version = TagSetDirectoryService.active(this.tagSets).id();
 			ThresholdValues current = this.thresholds.lockCurrent(version, kind)
 				.orElseThrow(() -> new IllegalStateException("태그 기준 · 저장 기준 행이 없다: " + version + " " + kind));
-			BigDecimal pastMax = this.thresholds.maxStoreThreshold(version, kind);
+			BigDecimal pastMax = floors(version, kind, this.thresholds.changes(version)).pastMax();
 			return switch (ThresholdRule.decide(current, pastMax, tagThreshold, storeThreshold)) {
 				case ThresholdDecision.OutOfRange outOfRange -> new ThresholdChangeResult.OutOfRange();
 				case ThresholdDecision.Unchanged unchanged ->
@@ -131,10 +137,15 @@ class TagSetAdministrationService implements TagSetAdministration {
 
 	/** 한 태그 종류의 상태 — 판정은 {@link ThresholdStanding} */
 	private ThresholdKindStatus kindStatus(TagThresholds current, TagSetId version, List<ThresholdChangeView> changes) {
-		BigDecimal pastMax = this.thresholds.maxStoreThreshold(version, current.kind());
+		BigDecimal pastMax = floors(version, current.kind(), changes).pastMax();
 		ThresholdValues values = new ThresholdValues(current.tagThreshold(), current.storeThreshold());
 		return new ThresholdKindStatus(current, pastMax,
 				ThresholdStanding.of(values, pastMax, ThresholdStanding.storeChanged(changes, current.kind())));
+	}
+
+	/** 그 태그 종류의 저장 바닥 — 이력과 끝난 채움의 덮음(evaluation-R32) */
+	private StoreFloors floors(TagSetId version, MultiTagKind kind, List<ThresholdChangeView> changes) {
+		return StoreFloors.of(kind, changes, this.backfills.coverages(version, kind));
 	}
 
 	@Override

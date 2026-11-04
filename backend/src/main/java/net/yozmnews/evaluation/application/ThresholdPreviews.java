@@ -12,9 +12,11 @@ import net.yozmnews.evaluation.TagSetThresholds;
 import net.yozmnews.evaluation.TagThresholds;
 import net.yozmnews.evaluation.ThresholdChangeView;
 import net.yozmnews.evaluation.ThresholdPreviewResult;
+import net.yozmnews.evaluation.domain.backfill.TagBackfillRepository;
 import net.yozmnews.evaluation.domain.result.EvaluationResultRepository;
 import net.yozmnews.evaluation.domain.review.ThresholdImpactTally;
 import net.yozmnews.evaluation.domain.tagset.TagSetRepository;
+import net.yozmnews.evaluation.domain.threshold.StoreFloors;
 import net.yozmnews.evaluation.domain.threshold.ThresholdDecision;
 import net.yozmnews.evaluation.domain.threshold.ThresholdRepository;
 import net.yozmnews.evaluation.domain.threshold.ThresholdRule;
@@ -28,7 +30,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 기준 미리보기 — docs/specs/evaluation.md §4 · evaluation-R33. {@code TagSetAdministrationService} 가 맡긴다. 역할 애너테이션이 없다(두
  * 역할 공통).
  * <p>
- * 읽기 전용 {@code REPEATABLE READ} 트랜잭션 하나에서 활성 버전 · 지금 기준 · 이력 · 평가 행을 읽는다 — 잠그지 않고 아무것도 쓰지 않는다. 범위 ·
+ * 읽기 전용 {@code REPEATABLE READ} 트랜잭션 하나에서 활성 버전 · 지금 기준 · 이력 · 끝난 채움의 덮음 · 평가 행을 읽는다 — 잠그지 않고 아무것도 쓰지 않는다. 범위 ·
  * 같은 값 · 경고는 변경과 같은 판정({@link ThresholdRule})이다.
  */
 @Component
@@ -42,14 +44,18 @@ class ThresholdPreviews {
 
 	private final EvaluationResultRepository results;
 
+	private final TagBackfillRepository backfills;
+
 	private final TransactionTemplate snapshot;
 
 	ThresholdPreviews(TagSetRepository tagSets, TagSetViews views, ThresholdRepository thresholds,
-			EvaluationResultRepository results, PlatformTransactionManager transactions) {
+			EvaluationResultRepository results, TagBackfillRepository backfills,
+			PlatformTransactionManager transactions) {
 		this.tagSets = tagSets;
 		this.views = views;
 		this.thresholds = thresholds;
 		this.results = results;
+		this.backfills = backfills;
 		this.snapshot = new TransactionTemplate(transactions);
 		this.snapshot.setReadOnly(true);
 		this.snapshot.setIsolationLevel(TransactionDefinition.ISOLATION_REPEATABLE_READ);
@@ -72,7 +78,13 @@ class ThresholdPreviews {
 				case REGION -> current.region();
 			};
 			ThresholdValues values = new ThresholdValues(currentKind.tagThreshold(), currentKind.storeThreshold());
-			BigDecimal pastMax = this.thresholds.maxStoreThreshold(version, kind);
+			List<ThresholdChangeView> changes = this.thresholds.changes(version);
+			StoreFloors topicFloors = floors(version, MultiTagKind.TOPIC, changes);
+			StoreFloors regionFloors = floors(version, MultiTagKind.REGION, changes);
+			BigDecimal pastMax = switch (kind) {
+				case TOPIC -> topicFloors.pastMax();
+				case REGION -> regionFloors.pastMax();
+			};
 			return switch (ThresholdRule.decide(values, pastMax, tagThreshold, storeThreshold)) {
 				case ThresholdDecision.OutOfRange outOfRange -> new ThresholdPreviewResult.OutOfRange();
 				case ThresholdDecision.Unchanged unchanged ->
@@ -83,9 +95,8 @@ class ThresholdPreviews {
 						case TOPIC -> new TagSetThresholds(version, proposedKind, current.region());
 						case REGION -> new TagSetThresholds(version, current.topic(), proposedKind);
 					};
-					List<ThresholdChangeView> changes = this.thresholds.changes(version);
 					ThresholdImpactTally tally = new ThresholdImpactTally(this.views.of(version), current, proposed,
-							kind, changes, period);
+							kind, topicFloors, regionFloors, period);
 					this.results.streamVersionPeriod(version, period.from(), period.to(), tally::add);
 					EvaluationOverview before = tally.before();
 					yield new ThresholdPreviewResult.Previewed(version, currentKind, proposedKind, change.warnings(),
@@ -93,6 +104,11 @@ class ThresholdPreviews {
 				}
 			};
 		}));
+	}
+
+	/** 그 태그 종류의 저장 바닥 — 이력과 끝난 채움의 덮음(evaluation-R32) */
+	private StoreFloors floors(TagSetId version, MultiTagKind kind, List<ThresholdChangeView> changes) {
+		return StoreFloors.of(kind, changes, this.backfills.coverages(version, kind));
 	}
 
 }
