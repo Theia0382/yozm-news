@@ -43,7 +43,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 줄 서기, 동시 변경의 줄 서기, 끝난 채움이 지난 저장 기준 최댓값을 내리는 것, 결과의 버전, 기준 상태(지난 저장 기준 최댓값 · 어긋난 상태 ·
  * 이력)를 본다.
  * <p>
- * 지키는 규칙: evaluation-R11 ~ evaluation-R13 · evaluation-R34
+ * 지키는 규칙: evaluation-R11 ~ evaluation-R13 · evaluation-R36
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest

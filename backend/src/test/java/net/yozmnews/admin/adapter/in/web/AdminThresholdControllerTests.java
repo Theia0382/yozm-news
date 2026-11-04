@@ -43,7 +43,7 @@ import org.springframework.test.web.servlet.MockMvc;
 /**
  * 운영자 API 의 태그 기준 · 저장 기준 — 상태 · 미리보기 · 변경의 JSON 모양과 판별자, 운영자 행위자, 범위 밖 값 · 본문 · 경로의 400, 토큰.
  * <p>
- * 지키는 규칙: admin-R1 · admin-R3 · evaluation-R11 · evaluation-R33 · evaluation-R34
+ * 지키는 규칙: admin-R1 · admin-R3 · evaluation-R11 · evaluation-R35 · evaluation-R36
  */
 @WebMvcTest(controllers = AdminThresholdController.class, properties = AdminRequests.TOKEN_PROPERTY)
 @Import({ WebSliceSecurity.class, FakeTagSetAdministration.Config.class })

@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Test;
  * 어긋난 상태 — 지금 값 리터럴과 리터럴 이력 · 덮음으로 만든 저장 바닥으로 상태 집합을 본다. 바닥은 지금 값과 따로 만든다 — 바닥의
  * 마지막 저장 기준이 지금 저장 기준과 달라도 판정은 두 입력을 따로 본다.
  * <p>
- * 지키는 규칙: evaluation-R34
+ * 지키는 규칙: evaluation-R36
  */
 class ThresholdStandingTests {
 

@@ -8,7 +8,7 @@ import net.yozmnews.evaluation.ThresholdWarning;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 기준 미리보기의 결과 — docs/specs/admin.md §3 · admin-R1 · evaluation-R33.
+ * 기준 미리보기의 결과 — docs/specs/admin.md §3 · admin-R1 · evaluation-R35.
  * <p>
  * {@code PREVIEWED} 면 제안 값 · 경고 · 평가 수 · 판정이 달라지는 평가 수 · 두 기준의 평가 현황이 있다. {@code UNCHANGED} 는 지금 값만
  * 있다. 범위 밖 값은 결과가 아니라 400 이다.

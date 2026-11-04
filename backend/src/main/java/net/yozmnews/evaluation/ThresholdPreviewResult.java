@@ -4,7 +4,7 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * 기준 미리보기의 결과 — 아무것도 쓰지 않는다 · docs/specs/evaluation.md §3 · evaluation-R33.
+ * 기준 미리보기의 결과 — 아무것도 쓰지 않는다 · docs/specs/evaluation.md §3 · evaluation-R35.
  */
 public sealed interface ThresholdPreviewResult {
 

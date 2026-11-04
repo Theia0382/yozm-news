@@ -27,7 +27,7 @@ import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 기준 미리보기 — docs/specs/evaluation.md §4 · evaluation-R33. {@code TagSetAdministrationService} 가 맡긴다. 역할 애너테이션이 없다(두
+ * 기준 미리보기 — docs/specs/evaluation.md §4 · evaluation-R35. {@code TagSetAdministrationService} 가 맡긴다. 역할 애너테이션이 없다(두
  * 역할 공통).
  * <p>
  * 읽기 전용 {@code REPEATABLE READ} 트랜잭션 하나에서 활성 버전 · 지금 기준 · 이력 · 끝난 채움의 덮음 · 평가 행을 읽는다 — 잠그지 않고 아무것도 쓰지 않는다. 범위 ·

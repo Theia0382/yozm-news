@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.PriorityQueue;
 
 /**
- * 표집의 정본 — 씨앗과 평가 ID 의 해시가 작은 {@code size} 건을 고른다 · docs/specs/evaluation.md §4 · evaluation-R32.
+ * 표집의 정본 — 씨앗과 평가 ID 의 해시가 작은 {@code size} 건을 고른다 · docs/specs/evaluation.md §4 · evaluation-R34.
  * <p>
  * 평가 ID {@code id} 의 해시는 씨앗으로 시작한 SplitMix64 의 {@code id + 1} 번째 출력이다 — 상태 {@code seed + (id + 1) × γ} 에 마무리
  * 함수를 씌운다. 해시는 부호 없이 견주고, 같으면 평가 ID 순이다. 한 건씩 뽑는 순서에 기대지 않으므로 모집단에 평가 하나가 들고 나도 많아야

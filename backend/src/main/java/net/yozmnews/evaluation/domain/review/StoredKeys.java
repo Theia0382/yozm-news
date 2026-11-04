@@ -6,7 +6,7 @@ import java.util.Set;
 import net.yozmnews.evaluation.MultiTagKind;
 
 /**
- * 거르기의 필요조건 — 그 태그 종류의 이 키들 가운데 하나의 저장 행이 있다 · docs/specs/evaluation.md §4 · evaluation-R31.
+ * 거르기의 필요조건 — 그 태그 종류의 이 키들 가운데 하나의 저장 행이 있다 · docs/specs/evaluation.md §4 · evaluation-R33.
  * <p>
  * 붙은 태그는 저장 행 가운데서 고르므로 이 조건을 지나지 않은 평가는 거르기에 맞지 않는다. 붙었는지는 판정이 정한다.
  */

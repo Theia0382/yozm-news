@@ -8,7 +8,7 @@ import java.util.Set;
 import net.yozmnews.evaluation.ThresholdCondition;
 
 /**
- * 어긋난 상태 판정의 정본 — 입력은 지금 값과 저장 바닥(evaluation-R32) · docs/specs/evaluation.md §4 · evaluation-R34.
+ * 어긋난 상태 판정의 정본 — 입력은 지금 값과 저장 바닥(evaluation-R32) · docs/specs/evaluation.md §4 · evaluation-R36.
  * <p>
  * 경고({@link ThresholdRule})는 이번 변경이 어긋남을 만들 때 한 번 나오고, 어긋난 상태는 지금 값과 저장 바닥으로 정해져 남아 있는 동안
  * 나온다.

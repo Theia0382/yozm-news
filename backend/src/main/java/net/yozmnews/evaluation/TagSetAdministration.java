@@ -30,14 +30,14 @@ public interface TagSetAdministration {
 
 	/**
 	 * 활성 버전의 기준 상태 — 태그 종류마다 지금 값 · 지난 저장 기준 최댓값 · 어긋난 상태와 이력. 읽기 전용 {@code REPEATABLE READ}
-	 * 트랜잭션 하나(한 스냅숏)에서 읽는다(evaluation-R34).
+	 * 트랜잭션 하나(한 스냅숏)에서 읽는다(evaluation-R36).
 	 * @throws IllegalStateException 활성 버전이 없을 때
 	 */
 	ThresholdStatusView thresholdStatus();
 
 	/**
 	 * 기준 미리보기 — 활성 버전 · 한 태그 종류의 제안 값으로 기간 안 평가의 판정이 어떻게 달라지는지. 아무것도 쓰지 않고, 읽기 전용
-	 * {@code REPEATABLE READ} 트랜잭션 하나에서 읽는다. 범위 · 같은 값 판정과 경고는 {@link #changeThresholds} 와 같다(evaluation-R33).
+	 * {@code REPEATABLE READ} 트랜잭션 하나에서 읽는다. 범위 · 같은 값 판정과 경고는 {@link #changeThresholds} 와 같다(evaluation-R35).
 	 * @throws IllegalStateException 활성 버전이 없을 때
 	 */
 	ThresholdPreviewResult previewThresholds(MultiTagKind kind, BigDecimal tagThreshold, BigDecimal storeThreshold,

@@ -7,7 +7,7 @@ import net.yozmnews.evaluation.ThresholdKindStatus;
 import net.yozmnews.evaluation.ThresholdStatusView;
 
 /**
- * 활성 버전의 태그 기준 · 저장 기준 상태 — docs/specs/admin.md §3 · evaluation-R34. 버전 ID 는 JSON 수다.
+ * 활성 버전의 태그 기준 · 저장 기준 상태 — docs/specs/admin.md §3 · evaluation-R36. 버전 ID 는 JSON 수다.
  *
  * @param changes 이력 — 최근 것부터
  */

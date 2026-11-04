@@ -38,7 +38,7 @@ import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 공개 운영 API {@link EvaluationReview} 의 구현 — docs/specs/evaluation.md §4 · evaluation-R31 · evaluation-R32. 역할 애너테이션이
+ * 공개 운영 API {@link EvaluationReview} 의 구현 — docs/specs/evaluation.md §4 · evaluation-R33 · evaluation-R34. 역할 애너테이션이
  * 없다(두 역할 공통).
  * <p>
  * 세 연산 모두 읽기 전용 {@code REPEATABLE READ} 트랜잭션 하나에서 읽는다 — 체계 · 기준 · 평가 행이 한 스냅숏이다. 판정은

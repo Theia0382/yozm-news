@@ -3,7 +3,7 @@ package net.yozmnews.evaluation;
 import java.util.Objects;
 
 /**
- * 평가 목록의 결과 — docs/specs/evaluation.md §3 · evaluation-R31.
+ * 평가 목록의 결과 — docs/specs/evaluation.md §3 · evaluation-R33.
  */
 public sealed interface EvaluationListResult {
 

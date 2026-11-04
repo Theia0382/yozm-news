@@ -2,7 +2,7 @@ package net.yozmnews.evaluation;
 
 /**
  * 어긋난 상태 — 지금 태그 기준 · 저장 기준과 그 이력 · 끝난 채움 때문에 태그가 붙지 않을 수 있는 상태 · docs/specs/evaluation.md §3 ·
- * evaluation-R34.
+ * evaluation-R36.
  */
 public enum ThresholdCondition {
 

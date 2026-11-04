@@ -16,7 +16,7 @@ import net.yozmnews.evaluation.domain.threshold.StoreFloors;
 
 /**
  * 기준 미리보기 집계의 정본 — 같은 평가를 지금 기준 · 제안 기준의 평가 현황 집계 둘에 넣고, 그 태그 종류의 판정이 다른 평가를 센다 ·
- * docs/specs/evaluation.md §4 · evaluation-R33.
+ * docs/specs/evaluation.md §4 · evaluation-R35.
  * <p>
  * 판정은 두 집계가 한다({@link OverviewTally#add} 가 돌려준다). 주제는 주제 판정과 붙은 중분류 키, 지역은 붙은 지역 키를 견준다 — 체계 순
  * 목록이라 같은 집합이면 같은 목록이다. 메모리는 평가 수에 비례하지 않는다.

@@ -55,7 +55,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 0.3, LOW_CONFIDENCE ③ 기사 3 — ② 와 같은 시각, 국회 0.7, TAGGED ④ 기사 4 — 미국 0.6 만, UNCLASSIFIED, 대표 형식 오피니언. 기간 밖
  * 둘(기사 5 · 6)과 버전 2 의 기간 안 평가 하나(기사 7)는 나오지 않는다.
  * <p>
- * 지키는 규칙: evaluation-R31 · evaluation-R32
+ * 지키는 규칙: evaluation-R33 · evaluation-R34
  */
 @Import({ TestcontainersConfiguration.class, TransactionSettings.class })
 @SpringBootTest

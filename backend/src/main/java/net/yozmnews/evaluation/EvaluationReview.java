@@ -26,13 +26,13 @@ public interface EvaluationReview {
 
 	/**
 	 * 평가 목록 — 그 버전의 평가 가운데 평가 시각이 기간 안인 것을 평가 시각 · ID 내림차순으로, {@code after} 다음부터 거르기에 맞는 것
-	 * {@code limit} 건(evaluation-R31).
+	 * {@code limit} 건(evaluation-R33).
 	 * @param after 이어 받을 자리 — 처음이면 null
 	 */
 	EvaluationListResult list(TagSetId version, EvaluationPeriod period, EvaluationFilter filter,
 			@Nullable EvaluationCursor after, int limit);
 
-	/** 표본 — 같은 모집단에서 씨앗으로 고른 {@code size} 건(evaluation-R32) */
+	/** 표본 — 같은 모집단에서 씨앗으로 고른 {@code size} 건(evaluation-R34) */
 	EvaluationSampleResult sample(TagSetId version, EvaluationPeriod period, long seed, int size);
 
 	/**

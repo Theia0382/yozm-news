@@ -6,7 +6,7 @@ import java.util.List;
 import net.yozmnews.evaluation.EvaluationSampleView;
 
 /**
- * 표본 — 씨앗으로 고른 평가, 해시 순 · docs/specs/admin.md §3 · evaluation-R32.
+ * 표본 — 씨앗으로 고른 평가, 해시 순 · docs/specs/admin.md §3 · evaluation-R34.
  *
  * @param population 표본을 고른 평가의 수
  */

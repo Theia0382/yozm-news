@@ -17,7 +17,7 @@ import org.junit.jupiter.api.Test;
  * 저장 바닥 계산 — 리터럴 이력 · 덮음으로 지난 저장 기준 최댓값과 바닥이 섞였는지를 본다. 이력은 저장소 순서(최근 것부터)로 넘기고, 읽기 지연은
  * 프로덕션 값과 같은 30분을 리터럴로 쓴다.
  * <p>
- * 지키는 규칙: evaluation-R12 · evaluation-R29 · evaluation-R34
+ * 지키는 규칙: evaluation-R12 · evaluation-R29 · evaluation-R36
  */
 class StoreFloorsTests {
 

@@ -14,7 +14,7 @@ import net.yozmnews.evaluation.domain.queue.EvaluationSchedule;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 저장 바닥 계산 — 정본 · docs/specs/evaluation.md §4 · evaluation-R12 · evaluation-R29 · evaluation-R34.
+ * 저장 바닥 계산 — 정본 · docs/specs/evaluation.md §4 · evaluation-R12 · evaluation-R29 · evaluation-R36.
  * <p>
  * 저장 바닥은 한 버전 · 한 태그 종류의 평가 시각 축 위에서, 그 시각의 평가에 어느 확률까지 저장돼 있는가다. 평가마다 쓴 저장 기준은 기록되지
  * 않아 이력과 끝난 채움 기록으로 되짚는다. 이력 행 i 의 저장 기준은 닫힌 구간 {@code [c_i, c_{i+1}]} 동안 유효하다(마지막은 끝없이, 다음

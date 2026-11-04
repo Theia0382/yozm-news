@@ -34,7 +34,7 @@ import org.junit.jupiter.api.Test;
  * ① 행정부 0.45 — 지금 low_confidence ② 행정부 0.8 — 지금 TAGGED ③ 국회 0.45 · 금융 0.42 — 지금 국회 하나로 low_confidence ④ 행정부 0.8 ·
  * 국외 0.45 — 지금 TAGGED, 지역 없음.
  * <p>
- * 지키는 규칙: evaluation-R33
+ * 지키는 규칙: evaluation-R35
  */
 class ThresholdImpactTallyTests {
 

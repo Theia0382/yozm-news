@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * 표본 — 씨앗으로 고른 평가 · docs/specs/evaluation.md §3 · evaluation-R32.
+ * 표본 — 씨앗으로 고른 평가 · docs/specs/evaluation.md §3 · evaluation-R34.
  *
  * @param population 표본을 고른 평가의 수(버전 · 기간)
  * @param rows 고른 평가 — 해시 오름차순

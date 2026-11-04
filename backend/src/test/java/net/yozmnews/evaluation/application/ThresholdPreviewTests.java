@@ -39,7 +39,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 기준 미리보기 — 실제 PostgreSQL 의 활성 버전(기본 체계, 기준 0.5 / 0.1) 평가로 결선된 공개 API 를 부른다. 기간 안 둘(행정부 0.45 —
  * low_confidence, 행정부 0.8 — TAGGED)과 기간 밖 하나(행정부 0.45).
  * <p>
- * 지키는 규칙: evaluation-R32 · evaluation-R33
+ * 지키는 규칙: evaluation-R32 · evaluation-R35
  */
 @Import({ TestcontainersConfiguration.class, TransactionSettings.class })
 @SpringBootTest

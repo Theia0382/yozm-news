@@ -26,7 +26,7 @@ import org.junit.jupiter.api.Test;
 /**
  * 평가 목록 거르기 — 고정 체계(ResultTagSet, 기준 0.5 / 0.1)의 판정으로 본다. 판정은 실제 {@link TagJudgement} 가 한다.
  * <p>
- * 지키는 규칙: evaluation-R31
+ * 지키는 규칙: evaluation-R33
  */
 class ReviewFilterTests {
 

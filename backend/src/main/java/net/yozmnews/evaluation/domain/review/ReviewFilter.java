@@ -16,7 +16,7 @@ import net.yozmnews.evaluation.domain.result.TagJudgement.Judged;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 평가 목록 거르기의 정본 — docs/specs/evaluation.md §4 · evaluation-R31.
+ * 평가 목록 거르기의 정본 — docs/specs/evaluation.md §4 · evaluation-R33.
  * <p>
  * 거르기는 조회 시점 판정({@code TagJudgement})의 결과로 본다. 저장소에는 판정과 무관한 조건 — 저장 행의 필요조건({@link StoredKeys})과
  * 저장된 대표 형식 — 만 넘긴다. 기준과의 비교는 여기에도 저장소에도 두지 않는다. 주제 키가 대분류인지 중분류인지는 키 모양이 아니라 평가 버전의 체계로 가른다.
