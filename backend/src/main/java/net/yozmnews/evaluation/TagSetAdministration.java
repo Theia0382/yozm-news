@@ -29,8 +29,8 @@ public interface TagSetAdministration {
 	List<ThresholdChangeView> thresholdChanges();
 
 	/**
-	 * 활성 버전의 기준 상태 — 태그 종류마다 지금 값 · 지난 저장 기준 최댓값 · 어긋난 상태와 이력. 읽기 전용 트랜잭션 하나에서 읽는다
-	 * (evaluation-R34).
+	 * 활성 버전의 기준 상태 — 태그 종류마다 지금 값 · 지난 저장 기준 최댓값 · 어긋난 상태와 이력. 읽기 전용 {@code REPEATABLE READ}
+	 * 트랜잭션 하나(한 스냅숏)에서 읽는다(evaluation-R34).
 	 * @throws IllegalStateException 활성 버전이 없을 때
 	 */
 	ThresholdStatusView thresholdStatus();

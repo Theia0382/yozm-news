@@ -196,7 +196,7 @@ public interface TagSetAdministration {
   - `changeThresholds` 는 한 트랜잭션이다. 같은 태그 종류의 변경은 줄을 서므로, 이력의 이전 값이 바로 앞 변경의 새 값이다. 활성 전환과도 줄을 선다(evaluation-R11)
   - 값이 범위 밖이면 `OutOfRange`, 지금 값과 같으면 `Unchanged` 이고 둘 다 아무것도 쓰지 않는다
   - 경고는 변경을 막지 않는다 — `Changed` 에 실린다(evaluation-R12). `Changed` · `Unchanged` 는 변경을 판정한 활성 버전을 싣는다 — 미리보기 뒤 활성 전환이 끼었으면 부르는 쪽이 버전으로 안다
-  - `thresholdStatus` 는 읽기 전용 트랜잭션 하나에서 읽는다. `previewThresholds` 는 읽기 전용 `REPEATABLE READ` 트랜잭션 하나에서 읽고 잠그지 않는다 — 저장의 결과가 정본이다. 값의 범위 · 같은 값 판정은 `changeThresholds` 와 같다(`OutOfRange` · `Unchanged`)
+  - `thresholdStatus` 는 읽기 전용 `REPEATABLE READ` 트랜잭션 하나(한 스냅숏)에서 읽는다. `previewThresholds` 는 읽기 전용 `REPEATABLE READ` 트랜잭션 하나에서 읽고 잠그지 않는다 — 저장의 결과가 정본이다. 값의 범위 · 같은 값 판정은 `changeThresholds` 와 같다(`OutOfRange` · `Unchanged`)
   - 운영자 요청은 `ChangeActor.OPERATOR` 로 부른다. `SYSTEM` 은 첫 기동 적재가 쓴다. `activate` 의 행위자는 새 버전과 그 처음 태그 기준 · 저장 기준 이력 행의 행위자다
   - `review` · `activate` 는 `recentDays` 가 0 ~ `MAX_REEVALUATION_DAYS` 밖이면 `DaysOutOfRange` 이고 아무것도 하지 않는다. 원문 문제는 `Invalid` 다 — 파서 문제가 있으면 그것만, 없으면 기준 버전 대조 문제다. 대조 문제가 없고 내용이 기준 버전과 같으면 `Unchanged` 다 — 원문의 태그 기준 · 저장 기준만 다르면 `Unchanged` 이고, 그 변경은 `changeThresholds` 로 한다
   - `review` 는 트랜잭션을 열지 않고 그 순간의 활성 버전과 대조한다. `activate` 는 재평가 대상 기사를 트랜잭션 밖에서 읽은 뒤, 한 트랜잭션에서 표를 잠그고 그 순간의 활성 버전과 다시 대조해 쓴다 — 확인 결과가 낡았어도 틀린 버전을 켜지 않는다
@@ -671,7 +671,7 @@ public record TagKeyMapping(TagSetId from, TagSetId to, Map<TagKind, Map<String,
 
 집계: `EvaluationAdministrationService.overview` 와 `TopicCoverageService` 는 각자 읽기 전용 `REPEATABLE READ` 트랜잭션 하나(`TransactionTemplate`)를 연다. 평가 현황은 `TagSetRepository.existsById` 로 버전을 보고, `TagSetViews` · `ThresholdRepository`(`current` · `changes`)로 `OverviewTally` 를 만들어 `EvaluationResultRepository.streamVersionPeriod` 의 평가를 하나씩 넣는다 — 판정은 `TagJudgement` 가 한다. 보도량은 `TagSetDirectory` 로 활성 버전을 읽고 `CoverageTally.unknownTopics` 로 고른 키를 본 뒤, `streamFirstEvaluatedIn` 의 기사마다 그 평가 버전의 `TagSetViews` · `ThresholdRepository.current` · `TagKeyLineage.toActive` 를(버전마다 한 번) 얻어 `TagJudgement` 의 판정과 계보 표를 `CoverageTally` 에 넣는다. 결과 저장소는 평가 행을 fetch size 커서로 나눠 받는다.
 
-검수 · 미리보기: `EvaluationReviewService` 는 같은 모양의 트랜잭션에서 `TagSetRepository.existsById` 로 버전을 보고 `TagSetViews` · `ThresholdRepository.current` 로 그 버전의 체계 · 기준을 얻는다. 목록은 `ReviewFilter` 로 거를 키를 보고 `EvaluationResultRepository.scanNewestFirst` 의 평가를 `TagJudgement` 로 판정해 `ReviewFilter.matches` 로 거르며, 쪽이 차면 흘려 받기를 멈춘다. 표본은 `streamIds` 로 `EvaluationSampler` 를 채우고 고른 평가를 `findListed` 로 읽는다. 상세는 `findDetail` 이다. 공개 값으로 옮기기는 `EvaluationReviewViews` 가 한다. `TagSetAdministrationService` 는 기준 상태를 `ThresholdRepository`(`current` · `maxStoreThreshold` · `changes`)와 `ThresholdStanding` 으로 내고, 미리보기는 `ThresholdPreviews` 에 맡긴다 — 활성 버전 · 기준 · 이력을 읽어 `ThresholdRule.decide` 로 판정하고, `ThresholdImpactTally` 에 `streamVersionPeriod` 의 평가를 넣는다.
+검수 · 미리보기: `EvaluationReviewService` 는 같은 모양의 트랜잭션에서 `TagSetRepository.existsById` 로 버전을 보고 `TagSetViews` · `ThresholdRepository.current` 로 그 버전의 체계 · 기준을 얻는다. 목록은 `ReviewFilter` 로 거를 키와 저장소가 좁힐 조건(저장 행 필요조건 · 대표 형식)을 보고 `EvaluationResultRepository.scanNewestFirst` 의 평가를 `TagJudgement` 로 판정해 `ReviewFilter.matches` 로 거르며, 쪽이 차면 흘려 받기를 멈춘다. 표본은 `streamIds` 로 `EvaluationSampler` 를 채우고 고른 평가를 `findListed` 로 읽는다. 상세는 `findDetail` 이다. 공개 값으로 옮기기는 `EvaluationReviewViews` 가 한다. `TagSetAdministrationService` 는 기준 상태를 `ThresholdRepository`(`current` · `maxStoreThreshold` · `changes`)와 `ThresholdStanding` 으로 내고, 미리보기는 `ThresholdPreviews` 에 맡긴다 — 활성 버전 · 기준 · 이력을 읽어 `ThresholdRule.decide` 로 판정하고, `ThresholdImpactTally` 에 `streamVersionPeriod` 의 평가를 넣는다.
 
 #### 첫 기동
 
@@ -882,7 +882,7 @@ sequenceDiagram
 - `ResultCheck` — 결과와 체계의 일치 검사의 정본(evaluation-R20)
 - `EvaluationRecord` — 저장할 평가 한 건과 결과 해석(`of` — 저장 기준 거르기 · 대표 형식 · 중요도 기대값)의 정본(evaluation-R15)
 - `ImportanceScore` — 중요도 기대값의 정본(evaluation-R15)
-- `TagJudgement` — 조회 시점 판정의 정본(evaluation-R15)
+- `TagJudgement` — 조회 시점 판정의 정본(evaluation-R15). 저장 행을 그 버전의 체계 순으로 늘어놓기(`ordered`)도 이것이 하고, 판정과 검수 상세(`EvaluationReviewViews`)가 함께 쓴다
 - `VersionMatch` — 태그 기준 · 저장 기준과 체계의 버전이 같다는 사전 조건의 정본 — `EvaluationRecord` · `TagJudgement` · `OverviewTally` 가 쓴다(그래서 공개 클래스다)
 - `Probabilities` — 확률 ≥ 기준 비교의 정본 — 저장 거르기와 판정이 함께 쓴다(evaluation-R15)
 - 저장 단위: aggregate 가 없다 — 평가 · 태그 행은 넣기 한 번이고 갱신하지 않는다. 저장소 `EvaluationResultRepository` 가 쓴다
@@ -897,7 +897,8 @@ sequenceDiagram
       void streamFirstEvaluatedIn(Instant from, Instant to,
               Consumer<StoredEvaluation> sink);                         // 첫 평가 시각 [from, to) 인 기사의 최신 평가와 주제 태그 행 — 기사 ID 순
       void scanNewestFirst(TagSetId version, Instant from, Instant to, @Nullable EvaluationCursor after,
-              @Nullable StoredKeys required, Predicate<ListedEvaluation> sink); // 그 버전 · [from, to) · 커서 뒤 — 평가 시각 · ID 내림차순, sink 가 거짓이면 멈춘다
+              @Nullable StoredKeys required, @Nullable String formatKey,
+              Predicate<ListedEvaluation> sink); // 그 버전 · [from, to) · 커서 뒤 — 평가 시각 · ID 내림차순, sink 가 거짓이면 멈춘다
       void streamIds(TagSetId version, Instant from, Instant to, LongConsumer sink); // 그 버전 · [from, to) 의 평가 ID
       List<ListedEvaluation> findListed(Collection<EvaluationId> ids);  // 없는 ID 는 빠진다
       Optional<StoredEvaluationDetail> findDetail(EvaluationId id);
@@ -905,7 +906,7 @@ sequenceDiagram
   }
   ```
 
-  흘려 받기(`streamVersionPeriod` · `streamFirstEvaluatedIn` · `scanNewestFirst` · `streamIds`)는 결과를 담아 두지 않고 커서로 나눠 받으므로 트랜잭션 안에서 부른다 — 밖이면 `IllegalStateException`(evaluation-R29 ~ R32). `scanNewestFirst` 의 `required` 는 거르기의 필요조건(그 태그 종류의 그 키들 가운데 하나의 저장 행이 있다)이다 — 붙었는지는 판정이 정한다(evaluation-R31)
+  흘려 받기(`streamVersionPeriod` · `streamFirstEvaluatedIn` · `scanNewestFirst` · `streamIds`)는 결과를 담아 두지 않고 커서로 나눠 받으므로 트랜잭션 안에서 부른다 — 밖이면 `IllegalStateException`(evaluation-R29 ~ R32). `scanNewestFirst` 의 `required` 는 거르기의 필요조건(그 태그 종류의 그 키들 가운데 하나의 저장 행이 있다)이고 `formatKey` 는 저장된 대표 형식이 그것인 평가만이다 — 붙었는지는 판정이 정한다(evaluation-R31)
 
 - 그 밖의 값: `StoredTag` · `StoredEvaluation` · `ListedEvaluation`(평가 ID · 평가 시각 · `EvaluationSample`) · `StoredEvaluationDetail`(평가 ID · 평가 시각 · 평가기 · 모델 버전 · 입력 토큰 · 형식 분포 · 중요도 분포 · `StoredEvaluation`)
 
@@ -913,7 +914,7 @@ sequenceDiagram
 
 집계 판단 — 스프링 없이 평가를 하나씩 받아 센다. 메모리는 평가 수에 비례하지 않는다.
 
-- `OverviewTally` — 평가 현황 집계(evaluation-R29). 입력은 버전의 `TagSetView` · 지금 기준 · 기준 이력 · 기간이고, `add(EvaluationSample)` 마다 `TagJudgement` 로 판정해 센다. 붙은 태그 수 칸의 상한 `TAGS_PER_ARTICLE_CAP`(5)의 정본이다. 저장 기준이 바뀐 적이 있는가는 `ThresholdStanding.storeChanged` 로 본다
+- `OverviewTally` — 평가 현황 집계(evaluation-R29). 입력은 버전의 `TagSetView` · 지금 기준 · 기준 이력 · 기간이고, `add(EvaluationSample)` 마다 `TagJudgement` 로 판정해 세고 그 판정을 돌려준다 — 기준 미리보기가 두 집계의 판정을 견준다. 붙은 태그 수 칸의 상한 `TAGS_PER_ARTICLE_CAP`(5)의 정본이다. 저장 기준이 바뀐 적이 있는가는 `ThresholdStanding.storeChanged` 로 본다
 - `CoverageTally` — 주제별 보도량 집계(evaluation-R30). `add(Judged, TagKeyMapping)` 마다 판정이 붙인 주제를 계보 표로 활성 중분류 집합에 잇고, 고른 주제 거르기 · 활성 버전에 없는 키(`unknownTopics`) · 계보 표의 기준 버전 불변식의 정본이다
 - `ProbabilityBins` — 확률 칸(0.1 폭 10칸)의 칸 고르기 · 저장된 범위 판정의 정본 — 칸 고르기는 `Probabilities.atLeast` 로 한다
 - `ImportanceBins` — 중요도 기대값 칸(0.5 폭 8칸)의 정본
@@ -926,7 +927,7 @@ sequenceDiagram
 
 검수 · 미리보기의 판단 — 스프링 없이 평가를 하나씩 받는다.
 
-- `ReviewFilter` — 거르기의 정본(evaluation-R31). `unknown`(그 버전에 없는 키), `storedKeys`(SQL 필요조건 `StoredKeys` — 주제 대분류는 하위 중분류 전체 키, 중분류 · 지역은 그 키, 형식 · 주제 판정만은 없음), `matches`(판정 · 대표 형식이 거르기에 맞는가 — 대분류인지 중분류인지는 체계로 가른다)
+- `ReviewFilter` — 거르기의 정본(evaluation-R31). `unknown`(그 버전에 없는 키), `storedKeys`(SQL 필요조건 `StoredKeys` — 주제 대분류는 하위 중분류 전체 키, 중분류 · 지역은 그 키, 형식 · 주제 판정만은 없음), `formatKey`(형식 태그로 거를 때 저장소가 좁힐 대표 형식 — 저장된 값이라 판정과 무관하다), `matches`(판정 · 대표 형식이 거르기에 맞는가 — 대분류인지 중분류인지는 체계로 가른다)
 - `EvaluationSampler` — 표집의 정본(evaluation-R32). 씨앗과 평가 ID 의 해시(SplitMix64 마무리 함수)가 작은 `size` 건을 고른다 — 메모리는 `size` 에 비례한다
 - `ThresholdImpactTally` — 기준 미리보기 집계의 정본(evaluation-R33). 지금 기준 · 제안 기준의 `OverviewTally` 둘에 평가를 넣고, 두 `TagJudgement` 판정의 그 태그 종류 결과가 다른 평가를 센다
 - 그 밖의 값: `StoredKeys`
@@ -1196,19 +1197,22 @@ public record EvaluationFailure(Kind kind, String message) implements Evaluation
 - **evaluation-R31** — 평가 목록(정본 `ReviewFilter`):
   - 대상은 그 버전의 평가 가운데 평가 시각이 집계 기간 `[from, to)`(evaluation-R28) 안인 것이다. 순서는 평가 시각 내림차순, 같으면 평가 ID 내림차순이고, 커서가 있으면 그 평가 다음부터다
   - 거르기는 그 평가 버전의 지금 태그 기준 · 저장 기준으로 조회 때 판정한 결과로 본다(evaluation-R15) — 주제 대분류는 붙은 대분류에, 중분류는 붙은 중분류에(`low_confidence` 로 붙은 하나 포함), 지역은 붙은 지역에, 형식은 대표 형식에 있어야 한다. 주제 판정을 함께 고르면 둘 다 맞아야 한다
-  - 저장소는 판정과 무관한 필요조건으로만 좁힌다 — 버전 · 기간 · 커서, 그리고 주제 · 지역 태그로 거를 때 그 키(대분류는 하위 중분류 키 가운데 하나)의 저장 행이 있다. 붙은 태그는 저장 행 가운데서 고르므로 이 조건을 지나지 않은 평가는 맞지 않는다. 기준과의 비교는 저장소에 두지 않는다
+  - 저장소는 판정과 무관한 조건으로만 좁힌다 — 버전 · 기간 · 커서, 주제 · 지역 태그로 거를 때 그 키(대분류는 하위 중분류 키 가운데 하나)의 저장 행이 있다(붙은 태그는 저장 행 가운데서 고르므로 이 조건을 지나지 않은 평가는 맞지 않는다), 형식 태그로 거를 때 저장된 대표 형식이 그 키다. 기준과의 비교는 저장소에 두지 않는다
   - 한 번에 1 ~ `MAX_PAGE_SIZE`(50)건이다. 맞는 평가가 더 있으면 마지막 행의 커서를 낸다. 쪽이 차면 흘려 받기를 멈춘다 — 드문 거르기는 기간 전체를 판정할 수 있다
   - 거를 태그가 그 버전의 그 태그 종류에 없으면 아무것도 읽지 않고 그 태그를 낸다. 건수는 세지 않는다 — 같은 버전 · 기간의 수는 평가 현황(evaluation-R29)이 낸다
+  - 처리 시간 — 개발 기기의 합성 데이터(31일 · 평가 124,000건 · 평가마다 주제 태그 행 10, 모두 태그 기준 이상)에서 쪽 하나(20건)를 거르기 없이 6 ~ 87 ms(8회 가운데 한 번 1.64초), 맞는 평가가 없는 주제 태그로 48 ~ 78 ms, 대표 형식으로 11 ~ 17 ms, 맞는 평가가 없는 `UNCLASSIFIED` 로 2.11 ~ 2.90초를 쟀다. 판정으로만 가를 수 있고 맞는 평가가 드문 거르기는 기간 전체를 판정하므로 위 데이터에서 목표 2초를 넘었다 — 그대로 둔다
 - **evaluation-R32** — 표본(정본 `EvaluationSampler`):
   - 모집단은 목록과 같다(그 버전 · 평가 시각이 기간 안, 거르기 없음). 씨앗과 평가 ID 를 SplitMix64 마무리 함수로 섞은 64비트 값(부호 없이 비교, 같으면 평가 ID 순)이 작은 `size` 건을 그 값의 오름차순으로 낸다. 모집단이 `size` 보다 작으면 전부다
   - 같은 씨앗 · 버전 · 기간이면 같은 평가를 같은 순서로 낸다. 모집단에 평가 하나가 들거나 나면 표본에서는 많아야 그 평가와 표본 경계(해시 순 `size` 번째)의 평가 하나가 들고 나고, 나머지 평가와 그 순서는 그대로다 — 한 건씩 뽑는 순서에 기대지 않는다
   - 크기는 1 ~ `MAX_SAMPLE_SIZE`(200), 기본 `DEFAULT_SAMPLE_SIZE`(100)이다. 씨앗은 0 ~ `MAX_SEED`(2^53 − 1)이다
+  - 처리 시간 — 위 합성 데이터에서 100건 표본을 29 ~ 62 ms 에 냈다
 - **evaluation-R33** — 기준 미리보기(정본 `ThresholdImpactTally`):
   - 대상은 활성 버전의 평가 가운데 평가 시각이 기간 안인 것이다. 한 태그 종류의 제안 값만 바꾸고 다른 태그 종류는 지금 값이다
   - 제안 값의 범위 · 같은 값 판정과 경고는 변경(evaluation-R11 · R12)과 같은 판정이다(정본 `ThresholdRule`). 아무것도 쓰지 않고 잠그지 않는다 — 미리보기 뒤의 변경 · 활성 전환은 저장 결과의 버전 · 이전 값이 알린다
   - 평가마다 지금 기준 · 제안 기준으로 판정해(evaluation-R15) 그 태그 종류의 결과가 다르면 "판정이 달라지는 평가"로 센다 — 주제는 주제 판정과 붙은 중분류 키 집합, 지역은 붙은 지역 키 집합이다. 두 기준의 평가 현황(evaluation-R29)을 함께 낸다
   - 판정은 저장된 확률로만 한다 — 저장 기준을 내리면 지난 평가에는 낮춘 구간의 확률이 없어(`STORE_THRESHOLD_LOWERED`) 미리보기에 그 효과가 보이지 않는다
   - 읽기 전용 `REPEATABLE READ` 트랜잭션 하나에서 센다 — 활성 버전 · 기준 · 이력 · 평가 행이 한 스냅숏이다
+  - 처리 시간은 기간의 평가 수에 비례한다 — 위 합성 데이터에서 31일(평가 123,999)은 3.15 ~ 3.68초, 7일(약 28,000)은 0.81 ~ 0.97초를 쟀다. 31일은 목표 2초를 넘는다 — 그대로 둔다
 - **evaluation-R34** — 어긋난 상태(정본 `ThresholdStanding`): 활성 버전의 태그 종류마다 지금 값과 이력으로 정한다. 경고(evaluation-R12)와 달리 그 상태가 남아 있는 동안 나온다:
   - `TAG_BELOW_STORE` — 태그 기준 < 저장 기준
   - `TAG_BELOW_PAST_STORE` — 태그 기준 < 그 버전 · 그 태그 종류의 지난 저장 기준 최댓값(이력 전체, 처음 값 포함) 이고, 그 최댓값 > 지금 저장 기준
