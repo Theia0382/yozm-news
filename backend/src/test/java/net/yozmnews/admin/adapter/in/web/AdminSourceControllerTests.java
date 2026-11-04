@@ -264,13 +264,13 @@ class AdminSourceControllerTests {
 					""".formatted(PROBLEM_JSON), JsonCompareMode.STRICT));
 
 		this.administration.preview = new ProfilePreviewResult.Unfetched(new FetchFailureView(
-				FetchFailureReason.BLOCKED_ADDRESS, FailurePermanence.PERMANENT, "내부 주소로 가는 요청을 막았다: 10.0.0.1", null,
+				FetchFailureReason.BLOCKED_ADDRESS, FailurePermanence.TEMPORARY, "내부 주소로 가는 요청을 막았다: 10.0.0.1", null,
 				null));
 		this.mockMvc.perform(json(post("/api/admin/profile-previews"), "{\"profile\":\"원문\",\"feedKey\":\"main\"}"))
 			.andExpect(status().isOk())
 			.andExpect(content().json("""
 					{"result":"UNFETCHED","problems":[],"preview":null,"shortfalls":[],
-					 "failure":{"reason":"BLOCKED_ADDRESS","permanence":"PERMANENT",
+					 "failure":{"reason":"BLOCKED_ADDRESS","permanence":"TEMPORARY",
 					            "message":"내부 주소로 가는 요청을 막았다: 10.0.0.1","httpStatus":null,"problem":null}}
 					""", JsonCompareMode.STRICT));
 

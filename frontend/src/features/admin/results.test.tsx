@@ -118,7 +118,7 @@ describe("FeedEnableResultView", () => {
           result: "UNFETCHED",
           failure: {
             reason: "BLOCKED_ADDRESS",
-            permanence: "PERMANENT",
+            permanence: "TEMPORARY",
             message: "내부 주소로 가는 요청을 막았다: 10.0.0.1",
             httpStatus: null,
             problem: null,
@@ -127,7 +127,7 @@ describe("FeedEnableResultView", () => {
       />,
     );
 
-    expect(screen.getByText("내부 주소 차단 (영구적)")).toBeInTheDocument();
+    expect(screen.getByText("내부 주소 차단 (일시적)")).toBeInTheDocument();
     expect(
       screen.getByText("내부 주소로 가는 요청을 막았다: 10.0.0.1"),
     ).toBeInTheDocument();
