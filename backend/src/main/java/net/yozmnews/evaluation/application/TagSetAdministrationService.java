@@ -12,16 +12,23 @@ import net.yozmnews.evaluation.TagSetActivationResult;
 import net.yozmnews.evaluation.TagSetAdministration;
 import net.yozmnews.evaluation.TagSetId;
 import net.yozmnews.evaluation.TagSetReviewResult;
+import net.yozmnews.evaluation.TagSetThresholds;
 import net.yozmnews.evaluation.TagSetVersionView;
+import net.yozmnews.evaluation.TagThresholds;
 import net.yozmnews.evaluation.ThresholdChangeResult;
 import net.yozmnews.evaluation.ThresholdChangeView;
+import net.yozmnews.evaluation.ThresholdKindStatus;
+import net.yozmnews.evaluation.ThresholdStatusView;
+import net.yozmnews.evaluation.domain.tagset.TagSet;
 import net.yozmnews.evaluation.domain.tagset.TagSetRepository;
 import net.yozmnews.evaluation.domain.threshold.ThresholdDecision;
 import net.yozmnews.evaluation.domain.threshold.ThresholdRepository;
 import net.yozmnews.evaluation.domain.threshold.ThresholdRule;
+import net.yozmnews.evaluation.domain.threshold.ThresholdStanding;
 import net.yozmnews.evaluation.domain.threshold.ThresholdValues;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
@@ -39,6 +46,9 @@ class TagSetAdministrationService implements TagSetAdministration {
 
 	private final TransactionTemplate transaction;
 
+	/** 기준 상태 읽기 — 읽기 전용 {@code REPEATABLE READ}: 지금 값 · 이력 · 최댓값을 한 스냅숏에서 읽는다 */
+	private final TransactionTemplate readOnly;
+
 	private final InstantSource clock;
 
 	private final TagSetVersioning versioning;
@@ -54,6 +64,10 @@ class TagSetAdministrationService implements TagSetAdministration {
 		this.tagSets = tagSets;
 		this.thresholds = thresholds;
 		this.transaction = transaction;
+		this.readOnly = new TransactionTemplate(Objects.requireNonNull(transaction.getTransactionManager(),
+				"transactionManager"));
+		this.readOnly.setReadOnly(true);
+		this.readOnly.setIsolationLevel(TransactionDefinition.ISOLATION_REPEATABLE_READ);
 		this.clock = clock;
 		this.versioning = versioning;
 	}
@@ -74,10 +88,11 @@ class TagSetAdministrationService implements TagSetAdministration {
 			BigDecimal pastMax = this.thresholds.maxStoreThreshold(version, kind);
 			return switch (ThresholdRule.decide(current, pastMax, tagThreshold, storeThreshold)) {
 				case ThresholdDecision.OutOfRange outOfRange -> new ThresholdChangeResult.OutOfRange();
-				case ThresholdDecision.Unchanged unchanged -> new ThresholdChangeResult.Unchanged(current.toView(kind));
+				case ThresholdDecision.Unchanged unchanged ->
+					new ThresholdChangeResult.Unchanged(version, current.toView(kind));
 				case ThresholdDecision.Change change -> {
 					this.thresholds.apply(version, kind, current, change.next(), actor, this.clock.instant());
-					yield new ThresholdChangeResult.Changed(current.toView(kind), change.next().toView(kind),
+					yield new ThresholdChangeResult.Changed(version, current.toView(kind), change.next().toView(kind),
 							change.warnings());
 				}
 			};
@@ -87,6 +102,26 @@ class TagSetAdministrationService implements TagSetAdministration {
 	@Override
 	public List<ThresholdChangeView> thresholdChanges() {
 		return this.thresholds.changes(TagSetDirectoryService.active(this.tagSets).id());
+	}
+
+	@Override
+	public ThresholdStatusView thresholdStatus() {
+		return Objects.requireNonNull(this.readOnly.execute(status -> {
+			TagSet active = TagSetDirectoryService.active(this.tagSets);
+			TagSetId version = active.id();
+			TagSetThresholds current = this.thresholds.current(version);
+			List<ThresholdChangeView> changes = this.thresholds.changes(version);
+			return new ThresholdStatusView(version, active.number(), kindStatus(current.topic(), version, changes),
+					kindStatus(current.region(), version, changes), changes);
+		}));
+	}
+
+	/** 한 태그 종류의 상태 — 판정은 {@link ThresholdStanding} */
+	private ThresholdKindStatus kindStatus(TagThresholds current, TagSetId version, List<ThresholdChangeView> changes) {
+		BigDecimal pastMax = this.thresholds.maxStoreThreshold(version, current.kind());
+		ThresholdValues values = new ThresholdValues(current.tagThreshold(), current.storeThreshold());
+		return new ThresholdKindStatus(current, pastMax,
+				ThresholdStanding.of(values, pastMax, ThresholdStanding.storeChanged(changes, current.kind())));
 	}
 
 	@Override

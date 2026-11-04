@@ -16,6 +16,7 @@ import net.yozmnews.evaluation.TagSetReviewResult;
 import net.yozmnews.evaluation.TagSetVersionView;
 import net.yozmnews.evaluation.ThresholdChangeResult;
 import net.yozmnews.evaluation.ThresholdChangeView;
+import net.yozmnews.evaluation.ThresholdStatusView;
 import org.jspecify.annotations.Nullable;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
@@ -52,6 +53,11 @@ class FakeTagSetAdministration implements TagSetAdministration {
 
 	@Override
 	public List<ThresholdChangeView> thresholdChanges() {
+		throw new UnsupportedOperationException("태그 체계 컨트롤러는 부르지 않는다");
+	}
+
+	@Override
+	public ThresholdStatusView thresholdStatus() {
 		throw new UnsupportedOperationException("태그 체계 컨트롤러는 부르지 않는다");
 	}
 

@@ -27,6 +27,7 @@ import net.yozmnews.evaluation.domain.result.StoredTag;
 import net.yozmnews.evaluation.domain.result.TagJudgement;
 import net.yozmnews.evaluation.domain.result.TagJudgement.Judged;
 import net.yozmnews.evaluation.domain.result.VersionMatch;
+import net.yozmnews.evaluation.domain.threshold.ThresholdStanding;
 
 /**
  * 평가 현황 집계 — 버전 하나의 평가를 한 건씩 받아 판정 · 태그 분포 · 태그 수 · 확률 · 중요도 · 입력 토큰을 센다 ·
@@ -98,8 +99,8 @@ public final class OverviewTally {
 		this.thresholds = Objects.requireNonNull(thresholds, "thresholds");
 		this.period = Objects.requireNonNull(period, "period");
 		VersionMatch.require(thresholds, tagSet);
-		this.topicStoreChanged = storeThresholdChanged(changes, MultiTagKind.TOPIC);
-		this.regionStoreChanged = storeThresholdChanged(changes, MultiTagKind.REGION);
+		this.topicStoreChanged = ThresholdStanding.storeChanged(changes, MultiTagKind.TOPIC);
+		this.regionStoreChanged = ThresholdStanding.storeChanged(changes, MultiTagKind.REGION);
 		for (TopicCategory category : tagSet.topics()) {
 			this.categories.put(category.key(), 0L);
 			this.categoryNames.put(category.key(), category.name());
@@ -173,14 +174,6 @@ public final class OverviewTally {
 				this.regionProbabilities.histogram(this.thresholds.region().storeThreshold(), this.regionStoreChanged),
 				this.formatProbabilities.histogram(null, false), this.importance.buckets(this.evaluations),
 				this.importanceMissing, this.inputTokens.summary());
-	}
-
-	/** 이력에 그 태그 종류의 저장 기준이 바뀐 행이 있는가 — 처음 값 행(이전 값 없음)은 바뀐 것이 아니다 */
-	static boolean storeThresholdChanged(List<ThresholdChangeView> changes, MultiTagKind kind) {
-		return changes.stream()
-			.filter(change -> change.kind() == kind)
-			.anyMatch(change -> change.previousStoreThreshold() != null
-					&& change.previousStoreThreshold().compareTo(change.storeThreshold()) != 0);
 	}
 
 	private Share status(TopicStatus status) {
