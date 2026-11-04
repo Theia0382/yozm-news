@@ -1,7 +1,9 @@
 package net.yozmnews.source.domain.poll;
 
 import static net.yozmnews.source.domain.poll.PollFixtures.article;
+import static net.yozmnews.source.domain.poll.PollFixtures.articles;
 import static net.yozmnews.source.domain.poll.PollFixtures.keys;
+import static net.yozmnews.source.domain.poll.PollFixtures.keysOf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
@@ -114,13 +116,23 @@ class FeedPollStateTests {
 	}
 
 	@Test
-	void aFetchSharingNoItemWithThePreviousOneCountsAsSuspectedOverflow() {
-		PollOutcome outcome = leased(keys("g:a"), 0, 0, null, null).complete(fetched(List.of(article("c")), null),
+	void tenKeysSharingNoneWithThePreviousTenCountAsSuspectedOverflow() {
+		PollOutcome outcome = leased(keysOf("p", 10), 0, 0, null, null).complete(fetched(articles("n", 10), null),
 				INTERVAL);
 
 		assertThat(outcome.overflowSuspected()).isTrue();
 		assertThat(outcome.state().lastOverflowAt()).isEqualTo(DONE);
 		assertThat(outcome.state().overflowCount()).isEqualTo(3);
+	}
+
+	@Test
+	void aSmallFeedReplacingItsOnlyItemKeepsTheOverflowRecord() {
+		PollOutcome outcome = leased(keys("g:a"), 0, 0, null, null).complete(fetched(List.of(article("c")), null),
+				INTERVAL);
+
+		assertThat(outcome.overflowSuspected()).isFalse();
+		assertThat(outcome.state().lastOverflowAt()).isEqualTo(EARLIER);
+		assertThat(outcome.state().overflowCount()).isEqualTo(2);
 	}
 
 	@Test

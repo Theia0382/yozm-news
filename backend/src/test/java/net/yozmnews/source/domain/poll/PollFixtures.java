@@ -3,6 +3,7 @@ package net.yozmnews.source.domain.poll;
 import java.net.URI;
 import java.time.Instant;
 import java.util.List;
+import java.util.stream.IntStream;
 
 import net.yozmnews.source.FetchedArticle;
 import org.jspecify.annotations.Nullable;
@@ -36,6 +37,16 @@ final class PollFixtures {
 
 	static List<ItemKey> keys(String... values) {
 		return java.util.Arrays.stream(values).map(ItemKey::new).toList();
+	}
+
+	/** guid 가 {@code prefix1} … {@code prefix{count}} 인 기사 — 문서 순서 */
+	static List<FetchedArticle> articles(String prefix, int count) {
+		return IntStream.rangeClosed(1, count).mapToObj(i -> article(prefix + i)).toList();
+	}
+
+	/** {@code g:prefix1} … {@code g:prefix{count}} 키 */
+	static List<ItemKey> keysOf(String prefix, int count) {
+		return IntStream.rangeClosed(1, count).mapToObj(i -> new ItemKey("g:" + prefix + i)).toList();
 	}
 
 }
