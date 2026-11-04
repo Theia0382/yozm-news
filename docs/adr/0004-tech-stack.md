@@ -1,6 +1,6 @@
 # ADR-0004: 백엔드 기술 스택
 
-- 상태: 승인. 데이터 접근 항목은 [ADR-0014](0014-spring-data-jdbc.md)가 대체
+- 상태: 승인. 부분 대체 — 데이터 접근([ADR-0014](0014-spring-data-jdbc.md)) · RSS 파싱의 Rome 역할([ADR-0030](0030-feed-xml-own-parser-and-rome-for-format-title-link.md))
 - 날짜: 2026-10-25
 
 ## 맥락
@@ -10,6 +10,8 @@
 - 여러 LLM 공급자(BYOK)와 이후 MCP 서버를 지원해야 한다.
 
 ## 결정
+
+> 부분 대체 — "데이터 접근" 행은 [ADR-0014](0014-spring-data-jdbc.md), "RSS" 행은 [ADR-0030](0030-feed-xml-own-parser-and-rome-for-format-title-link.md). 지금 상태: [`overview` §7](../overview.md#7-기술-스택)
 
 | 영역 | 선택 |
 |---|---|

@@ -1,6 +1,6 @@
 # ADR-0009: v1 인증은 Google 로그인과 자체(이메일·비밀번호) 로그인
 
-- 상태: 승인. 이메일 인증·비밀번호 재설정·메일 발송 부분은 [ADR-0011](0011-no-email-in-v1.md)이, Cloudflare Turnstile 고정은 [ADR-0012](0012-swappable-external-dependencies.md)가 대체(봇 차단은 교체 · 끄기 가능). 가입 요청의 봇 차단은 공개 가입을 연 인스턴스로 [ADR-0048](0048-sign-up-closed-by-default-with-invitations-and-operator-bootstrap.md)이 좁힘
+- 상태: 승인. 부분 대체 — 이메일 인증 · 비밀번호 재설정 · 메일 발송([ADR-0011](0011-no-email-in-v1.md)) · Turnstile 고정([ADR-0012](0012-swappable-external-dependencies.md)) · 가입 요청의 봇 차단 범위([ADR-0048](0048-sign-up-closed-by-default-with-invitations-and-operator-bootstrap.md))
 - 날짜: 2026-10-25
 
 ## 맥락
@@ -12,14 +12,18 @@
 - **Google 로그인**: Spring Security OAuth2 Client(OpenID Connect).
 - **자체 로그인**: 이메일 + 비밀번호.
   - 비밀번호는 Argon2id로 해시한다(Spring Security `Argon2PasswordEncoder`).
+  > 부분 대체(아래 두 항목) — [ADR-0011](0011-no-email-in-v1.md). 지금 상태: [`security` "자체 로그인"](../security.md#자체-로그인)
   - 가입 직후 이메일 인증을 필수로 한다. 인증 전에는 키 등록과 다이제스트 생성을 막는다.
   - 비밀번호 재설정은 일회용 토큰 링크로 한다. 토큰은 해시로만 저장하고, 30분 뒤 만료한다.
 - 세션 방식은 두 로그인이 같다(Spring Session JDBC, 세션 쿠키).
+> 부분 대체 — [ADR-0012](0012-swappable-external-dependencies.md) · [ADR-0048](0048-sign-up-closed-by-default-with-invitations-and-operator-bootstrap.md). 지금 상태: [`security` "악용 방지"](../security.md#악용-방지) · [`security` "가입"](../security.md#가입)
 - 가입·로그인·재설정 요청에 Cloudflare Turnstile과 요청 제한을 적용한다.
+> 부분 대체 — [ADR-0011](0011-no-email-in-v1.md). 지금 상태: [`security` "자체 로그인"](../security.md#자체-로그인)
 - 이메일 발송을 위해 트랜잭션 메일 서비스를 하나 쓴다. 선택은 [open-questions.md](../open-questions.md)에서 한다.
 
 ## 결과
 
+> 부분 대체(아래 두 항목) — [ADR-0011](0011-no-email-in-v1.md). 지금 상태: [`security` "자체 로그인"](../security.md#자체-로그인)
 - 비밀번호 저장, 이메일 인증, 재설정, 무차별 대입 방어가 새로 필요하다. 상세는 [security.md](../security.md).
 - 외부 의존성으로 이메일 발송 서비스가 추가된다. 도메인에 SPF, DKIM, DMARC 설정이 필요하다.
 - 같은 이메일로 Google과 자체 계정이 각각 생길 수 있다. 자동으로 합치지 않고, 로그인한 상태에서 명시적으로 연결하게 한다.

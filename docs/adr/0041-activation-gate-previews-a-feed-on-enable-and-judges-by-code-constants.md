@@ -1,6 +1,6 @@
 # ADR-0041: 활성화 관문은 피드를 켤 때 한 번 받아 미리보고, 코드 상수 기준으로 판정한다
 
-- 상태: 승인 (저장 직전 대조의 대상 — 피드 URL — 은 [ADR-0046](0046-operator-profile-revision-disables-feeds-whose-reading-changed.md)이 읽기 설정 전체로 대체)
+- 상태: 승인. 부분 대체 — 저장 직전 대조의 대상([ADR-0046](0046-operator-profile-revision-disables-feeds-whose-reading-changed.md))
 - 날짜: 2026-10-30
 - 근거: [이슈 #23](https://github.com/Theia0382/yozm-news/issues/23) — 조사 자료의 공개 RSS 12곳을 한 번씩 받아 지표만 재고(원문은 저장하지 않음), 합성 피드로 기준의 경계를 시험. 구현 `e2a2c34`(미리보기 지표와 기준 판정) · `d321f49`(요청 시작 시각 예약 추출) · `2791095`(피드 켜기 관문과 원문 미리보기)
 - 관련: [ADR-0015](0015-source-presets-and-collection-profiles.md)(활성화 관문 — 미리보기의 단위를 이 ADR 이 좁힌다), [ADR-0033](0033-feed-polling-db-lease-per-feed-new-items-and-per-source-request-spacing.md)(같은 언론사 요청 예약 — 미리보기도 같은 예약을 쓴다), [ADR-0030](0030-feed-xml-own-parser-and-rome-for-format-title-link.md)(`dc:date` 매핑 누락을 날짜 해석률이 드러낸다), [ADR-0032](0032-same-article-matching-avoids-false-merges-with-per-feed-entries-under-source-lock.md)(관문은 guid 유일성을 보지 않는다)
@@ -20,6 +20,7 @@
 
 - **관문은 피드 켜기에만 든다.** 꺼진 피드를 켤 때 그 피드를 한 번 받아(조건부 요청 값 없이, 피드 요청 관문 `ArticleSource` 로) 미리보기를 만들고, 기준을 넘을 때만 켠다. 소스 켜기는 이용조건 검토일만 본다. 처음 수집되는 피드는 모두 피드 켜기를 지나므로 프리셋 · 운영자 프로필이 같은 관문을 지난다. 이미 켜진 피드를 다시 켜면 받지 않는다.
 - **미리보기 요청도 같은 언론사 요청 간격을 지킨다.** 수집 작업과 같은 요청 직전 예약(ADR-0033)으로 시작 시각을 받고 그때까지 기다린다. 켜기 호출은 그 소스에 앞서 잡힌 예약 하나당 최대 10초를 더 기다린다.
+> 부분 대체(마지막 문장) — [ADR-0046](0046-operator-profile-revision-disables-feeds-whose-reading-changed.md). 지금 상태: [source Spec §5](../specs/source.md#5-규칙과-불변식) source-R5
 - **켜기는 트랜잭션 셋으로 나눈다.** 읽고 판정 → 예약 → 트랜잭션 밖에서 요청 → 다시 읽고 판정 · 저장. 저장 직전에 프로필을 다시 얻어 피드 URL 이 미리본 것과 같을 때만 켠다.
 - **기준은 넷이다.** 기사 수, 항목 수 대비 건너뛴 비율, 기사 수 대비 발행 시각을 해석한 비율, 읽은 문자 수 대비 U+FFFD 로 바꾼 비율. 비율은 분모가 0 이면 판정하지 않는다.
 - **날짜가 없는 피드는 프로필의 선언으로만 인정한다.** 프로필이 발행 시각의 읽을 곳을 빈 목록(`items.publishedAt: []`)으로 선언하면 날짜 해석률을 보지 않는다. 빈 목록은 기본값(`[$standard]`)을 일부러 바꿔야 생기므로, 매핑 · 형식 누락 같은 실수는 그대로 거절된다.

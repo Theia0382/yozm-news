@@ -1,6 +1,6 @@
 # ADR-0024: 수집 프로필은 YAML 로 쓰고, 소스는 프리셋을 참조하거나 자기 프로필을 갖는다
 
-- 상태: 승인 (거부 절의 공통 거부 — 앵커 · 별칭 · 명시 태그 · 같은 매핑 안 중복 키 · 알 수 없는 키 · `null` 값 · 여러 문서 · 최상위가 매핑이 아닌 문서 · 상한 초과를 `source` 의 `domain` 이 한다는 자리 — 는 [ADR-0056](0056-platform-reads-yaml-text-and-applies-common-rejection.md)이 부분 대체)
+- 상태: 승인. 부분 대체 — 공통 거부의 자리([ADR-0056](0056-platform-reads-yaml-text-and-applies-common-rejection.md))
 - 날짜: 2026-10-27
 - 근거: [이슈 #17](https://github.com/Theia0382/yozm-news/issues/17) — 기점 `ee32e8f` 의 저장소와 snakeyaml-engine 3.0.1 · jackson-dataformat-yaml 3.1.7(Maven Central 바이너리 · 소스 jar)을 실행해 확인
 - 관련: [ADR-0015](0015-source-presets-and-collection-profiles.md)(수집 프로필 · 프리셋 — 프리셋이 있는 소스를 운영자가 다루는 방식을 이 ADR 이 대체한다), [ADR-0013](0013-architecture-patterns.md)(판단은 `domain`)
@@ -17,6 +17,7 @@
 
 - **텍스트 표기는 YAML 이다.** 프리셋 파일과 운영자 원문이 같은 표기를 쓴다. 해석은 YAML 1.2 JSON 스키마 규칙을 따른다 — 불리언은 소문자 `true` · `false` 뿐이고, `no` · `015` 는 문자열이다. JSON 텍스트도 같은 읽기기로 읽힌다.
 - **YAML 은 snakeyaml-engine 의 이벤트 API 로 읽는다.** 객체를 만드는 단계(Composer · Constructor)를 거치지 않으므로 태그로 Java 객체가 생기는 경로가 없다. 키와 값의 앵커 · 태그 · 위치를 모두 그대로 받는다. Spring Boot 가 버전을 관리하지 않으므로 버전을 직접 고정한다.
+> 부분 대체(둘째 문장) — [ADR-0056](0056-platform-reads-yaml-text-and-applies-common-rejection.md). 지금 상태: [platform Spec §5](../specs/platform.md#5-규칙과-불변식) platform-R17
 - **읽기와 판정을 나눈다.** 읽기기는 판정 없이 트리를 만들고, 거부는 `source` 모듈의 `domain` 코드가 한다. 어디서든 거부하는 것은 알 수 없는 키, 같은 매핑 안 중복 키, 앵커 · 별칭 · 명시 태그, `null` 값, 여러 문서, 최상위가 매핑이 아닌 문서, 상한(65,536자)을 넘는 텍스트다. 문제는 경로 · 줄:열과 함께 한 번에 모두 돌려준다.
 - **스키마의 정본은 `source` 모듈 `domain` 의 모델과 검증기다.** JSON Schema 파일은 두지 않는다. 날짜 패턴 컴파일 · 시간대 · 필드 기준 고유성처럼 JSON Schema 로 표현하지 못하는 규칙이 있어, 두면 규칙이 두 곳이 된다.
 - **프리셋은 `backend/src/main/resources/source-presets/{key}.yaml` 에 하나씩 둔다.** 파일 이름이 프리셋 키(`sources.preset_key`)다. 프리셋 파일에는 이용조건 검토일(`termsReviewedAt`)이 반드시 있다. 기동 때 모든 프리셋을 검증하고 하나라도 실패하면 기동을 멈춘다.

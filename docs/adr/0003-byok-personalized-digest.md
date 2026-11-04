@@ -1,6 +1,6 @@
 # ADR-0003: 사용자 BYOK LLM으로 개인화 종합 다이제스트 생성
 
-- 상태: 승인. 결과의 기본 티어 검토는 [ADR-0047](0047-self-hosted-software-run-by-instance-operators.md)이 철회(키 없는 사용자용 헤드라인 목록 대안은 미결로 남는다)
+- 상태: 승인. 부분 대체 — 기본 티어 검토([ADR-0047](0047-self-hosted-software-run-by-instance-operators.md))
 - 날짜: 2026-10-25
 
 ## 맥락
@@ -21,12 +21,15 @@
 ## 결과
 
 - 운영자의 생성형 LLM 비용이 0이다.
+> 부분 대체(셋째 문장) — [ADR-0047](0047-self-hosted-software-run-by-instance-operators.md). 지금 상태: [`open-questions` "결정됨 (2026-10-31)"](../open-questions.md#결정됨-2026-10-31) 13번
 - 가입 직후 바로 체험할 수 없다. 키 발급이라는 진입 장벽이 생긴다. 저가 모델 기반 기본 티어는 나중에 검토한다.
 - 사용자 키의 유효성, 한도, 요금 부족이 다이제스트 실패 원인이 된다. 상태를 명확히 보여주는 UI가 필요하다.
 - 키 보관이 보안상 가장 중요한 자산이 된다.
 - 같은 사건을 다룬 여러 기사를 LLM이 하나의 이슈로 묶을 수 있다 ([ADR-0007](0007-defer-event-clustering.md)).
 
 ## 검토한 대안
+
+> 부분 대체("키 없는 사용자에게 Jev 결과 기반 헤드라인 목록 제공" 행) — [ADR-0047](0047-self-hosted-software-run-by-instance-operators.md). 지금 상태: [`open-questions` "운영하면서 결정"](../open-questions.md#운영하면서-결정) 32번
 
 | 대안 | 기각 이유 |
 |---|---|

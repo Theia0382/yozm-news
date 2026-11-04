@@ -1,6 +1,6 @@
 # ADR-0011: v1에서는 메일 발송을 하지 않는다
 
-- 상태: 승인. 결과의 '봇 가입의 주 방어선'은 공개 가입을 연 인스턴스로 [ADR-0048](0048-sign-up-closed-by-default-with-invitations-and-operator-bootstrap.md)이 좁힘. 초기 비밀번호로 만든 계정에서 복구 코드를 보여 주는 때(첫 로그인)도 [ADR-0048](0048-sign-up-closed-by-default-with-invitations-and-operator-bootstrap.md)
+- 상태: 승인. 부분 대체 — 복구 코드를 보여 주는 때([ADR-0048](0048-sign-up-closed-by-default-with-invitations-and-operator-bootstrap.md)) · 봇 가입의 주 방어선([ADR-0048](0048-sign-up-closed-by-default-with-invitations-and-operator-bootstrap.md))
 - 날짜: 2026-10-25
 - 관련: [ADR-0009](0009-authentication-google-and-local.md)의 이메일 인증, 비밀번호 재설정, 메일 발송 서비스 부분을 대체한다
 
@@ -14,6 +14,7 @@
 - 자체 로그인은 **이메일 + 비밀번호**를 유지한다. 이메일은 로그인 식별자로만 쓰고, **인증되지 않은 값**으로 다룬다(`email_verified_at`은 비어 있음). 나중에 메일을 도입하면 그때 인증 절차를 붙인다.
 - 이메일 인증 전 기능 제한은 없다. 가입하면 바로 키 등록과 다이제스트를 쓸 수 있다.
 - **비밀번호 분실 대비**:
+  > 부분 대체(첫 문장) — [ADR-0048](0048-sign-up-closed-by-default-with-invitations-and-operator-bootstrap.md). 지금 상태: [`security` "자체 로그인"](../security.md#자체-로그인) 복구 코드 행
   - 가입 직후 **복구 코드**를 한 번 보여준다. 코드는 해시로만 저장하고, 쓰면 새 코드를 발급한다. 복구 코드로 비밀번호를 재설정할 수 있다.
   - Google 계정 연결을 권장한다. 연결해 두면 비밀번호를 잊어도 Google로 로그인할 수 있다.
   - 둘 다 없으면 계정을 복구할 수 없다. 가입 화면에서 이 점을 안내한다.
@@ -25,6 +26,7 @@
 - 이메일이 인증되지 않았으므로 **이메일을 신원의 근거로 쓰지 않는다.**
   - 같은 이메일의 Google 계정과 자동으로 연결하지 않는다. 이 원칙은 원래도 있었다.
   - 다른 사람의 이메일로 가입하는 것을 막을 수 없다. 나중에 메일을 도입할 때, 인증되지 않은 계정과 실제 소유자 사이의 충돌을 처리하는 정책이 필요하다.
+> 부분 대체(첫 문장) — [ADR-0048](0048-sign-up-closed-by-default-with-invitations-and-operator-bootstrap.md). 지금 상태: [`security` "가입"](../security.md#가입) · [`security` "악용 방지"](../security.md#악용-방지)
 - 가입 비용이 낮아지므로 Turnstile과 요청 제한이 봇 가입의 주 방어선이다. Jev는 공유 평가, LLM은 사용자 키라서 봇 계정이 만드는 운영자 비용은 DB 행 정도다.
 - 이후 메일을 도입하면 SMTP 기반 `MailSender`로 붙이고([ADR-0012](0012-swappable-external-dependencies.md)), 이메일 인증과 이메일 기반 비밀번호 재설정을 추가한다.
 

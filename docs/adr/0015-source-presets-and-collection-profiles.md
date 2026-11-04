@@ -1,6 +1,6 @@
 # ADR-0015: 뉴스 소스는 수집 프로필로 등록하고, 주요 언론사는 프리셋으로 제공한다
 
-- 상태: 승인 (운영자 절에서 프리셋이 있는 소스를 다루는 방식 — 켜고 끄기만 하고 참조 위에 덮어쓴다 — 은 [ADR-0024](0024-collection-profile-yaml-and-preset-reference-or-own-profile.md)가, 활성화 관문 절의 미리보기 단위(소스와 피드를 켜기 전 → 피드를 켤 때)는 [ADR-0041](0041-activation-gate-previews-a-feed-on-enable-and-judges-by-code-constants.md)이 대체)
+- 상태: 승인. 부분 대체 — 프리셋 소스를 운영자가 다루는 방식([ADR-0024](0024-collection-profile-yaml-and-preset-reference-or-own-profile.md)) · 활성화 관문의 미리보기 단위([ADR-0041](0041-activation-gate-previews-a-feed-on-enable-and-judges-by-code-constants.md))
 - 날짜: 2026-10-25
 - 관련: [ADR-0001](0001-news-source-rss.md)(운영자 큐레이션 RSS)의 등록 방식을 구체화한다
 
@@ -26,12 +26,14 @@
 
 ### 운영자
 
+> 부분 대체(아래 두 항목) — [ADR-0024](0024-collection-profile-yaml-and-preset-reference-or-own-profile.md). 지금 상태: [source Spec §5](../specs/source.md#5-규칙과-불변식) source-R13
 - 프리셋이 있는 소스는 운영자가 고르고 **켜고 끄기만** 한다. 피드 단위로도 켜고 끌 수 있다.
 - 운영자는 프리셋을 복사하지 않고 **참조**한다. 필요한 항목만 덮어쓸 수 있고, 덮어쓴 항목은 운영자 화면에 표시한다. 덮어쓰지 않은 항목은 프리셋이 바뀌면 다음 배포에서 그대로 따라간다.
 - 프리셋이 없는 소스는 운영자가 같은 형식으로 수집 프로필을 직접 작성한다. 운영자 프로필에는 코드를 넣을 수 없다.
 
 ### 활성화 관문
 
+> 부분 대체 — [ADR-0041](0041-activation-gate-previews-a-feed-on-enable-and-judges-by-code-constants.md). 지금 상태: [source Spec §5](../specs/source.md#5-규칙과-불변식) source-R9
 - 소스와 피드를 켜기 전에 서버가 한 번 받아 **미리보기**를 만든다 — 항목 수, 날짜 해석률, 요약문 길이 분포, 파싱 오류.
 - 미리보기가 기준에 못 미치면 활성화하지 않는다. 프리셋을 켤 때도, 운영자 프로필을 켤 때도 같은 관문을 지난다.
 - 이용조건 검토일이 없는 소스는 활성화하지 않는다([ADR-0001](0001-news-source-rss.md)). 프리셋은 개발팀이, 운영자 프로필은 운영자가 기록한다.

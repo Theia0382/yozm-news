@@ -1,6 +1,6 @@
 # ADR-0025: 장기 개인 뉴스 히스토리를 v1 핵심 가치로 둔다 — 공유 사건 · 사용자별 이슈 · 변화 리포트
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — "공개 전부터" 쌓는 이력 데이터([ADR-0047](0047-self-hosted-software-run-by-instance-operators.md))
 - 날짜: 2026-10-27
 - 근거: [이슈 #36](https://github.com/Theia0382/yozm-news/issues/36) — 기점 `e4dbe0d` 의 설계 문서 · ADR 과 Spring Modulith 2.1.1 의 모듈 순환 판정(`ApplicationModules`)을 대조해 확인
 - 관련: [ADR-0007](0007-defer-event-clustering.md)(같은 사건 묶기 — 이 ADR 이 대체한다), [ADR-0003](0003-byok-personalized-digest.md)(BYOK 다이제스트 — 결정은 유지하고 호출의 입출력이 넓어진다), [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md)(사건 묶기 방법), [ADR-0028](0028-explicit-signals-and-interest-weighted-candidates.md)(관심 신호 · 후보 선별), [ADR-0029](0029-indefinite-summary-retention-with-optional-deletion.md)(요약문 보존)
@@ -32,6 +32,7 @@
 - 다이제스트 프롬프트에 이슈 목록이 들어가 입력 토큰이 늘어난다. 이슈 수 상한과 토큰 예산은 다이제스트를 만들 때 측정해 정한다.
 - 이슈는 그 사용자의 다이제스트에 들어온 기사로만 이어진다. 보도량은 사건 단위로 세고, 이슈는 인용한 기사를 거쳐 사건에 닿는다.
 - 이슈 화면은 `storyline`(목록 · 상태 · 추적)과 `digest`(타임라인) 두 API 를 조합한다.
+> 부분 대체 — [ADR-0047](0047-self-hosted-software-run-by-instance-operators.md). 지금 상태: [`overview` §1](../overview.md#1-목적)
 - 공개 전부터 이력 데이터를 쌓으므로, 그 데이터를 보존하는 마이그레이션 규율이 필요하다.
 - 로드맵에 사건 묶기 · 변화 리포트 단계가 생기고 공개가 늦어진다.
 

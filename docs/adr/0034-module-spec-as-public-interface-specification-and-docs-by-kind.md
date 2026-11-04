@@ -1,6 +1,6 @@
 # ADR-0034: 모듈 Spec 은 모듈 공개 인터페이스의 명세로 코드보다 먼저 쓰고, 설계 문서는 종류 · 독자별 갈래로 나눈다
 
-- 상태: 승인 (Spec 이 담는 것 · 클래스 구조의 자리 · 절 목록과 번호 고정은 [ADR-0036](0036-module-spec-holds-internal-structure-and-port-declarations-in-eight-sections.md)이 대체)
+- 상태: 승인. 부분 대체 — Spec 이 담는 것 · 클래스 구조의 자리 · 절 목록과 번호 고정([ADR-0036](0036-module-spec-holds-internal-structure-and-port-declarations-in-eight-sections.md))
 - 날짜: 2026-10-29
 - 근거: [이슈 #41](https://github.com/Theia0382/yozm-news/issues/41) — 기점 `cfd13e3` 에서 코드가 있는 세 모듈(`source` · `article` · `platform`)의 지식이 놓인 문서 · 코드 · ADR 을 대조
 - 관련: [ADR-0013](0013-architecture-patterns.md)(모듈 구조 · 모듈 문서 자동 생성 — 손으로 쓰는 Spec 은 그 생성물을 대체하지 않는다), [ADR-0020](0020-screen-api-contract-from-committed-openapi-spec.md)(화면용 API 형식의 정본은 `api/openapi.json` — Spec 은 엔드포인트만 적는다)
@@ -15,10 +15,13 @@
 
 ## 결정
 
+> 부분 대체(둘째 문장) — [ADR-0036](0036-module-spec-holds-internal-structure-and-port-declarations-in-eight-sections.md). 지금 상태: [`specs/README` §2](../specs/README.md#2-공통-구조)
 - **모듈 Spec(`docs/specs/{모듈}.md`)은 모듈 공개 인터페이스의 명세다.** 공개 타입 · 이벤트의 선언(시그니처)과 그 의미 · 제약, 규칙 · 불변식, 작업 · 리스너, 데이터, 설정, 외부 의존, 모듈 용어를 담는다.
   - 공개 인터페이스의 정본은 Spec 이고 코드는 Spec 을 따른다. 코드의 선언은 사본이고, 이 사본은 감수한다 — 공개 인터페이스를 바꾸는 변경은 Spec 과 코드를 함께 고친다.
+  > 부분 대체(첫 문장) — [ADR-0036](0036-module-spec-holds-internal-structure-and-port-declarations-in-eight-sections.md). 지금 상태: [`specs/README` §2](../specs/README.md#2-공통-구조)
   - 내부 상세(클래스 구조 · 알고리즘 · 비공개 시그니처)는 Javadoc 이 정본이다. 판단의 이유는 ADR 이 갖고 Spec 은 번호로 가리킨다.
 - **새 모듈은 Spec 을 먼저 쓴다.** 그 모듈의 Spec 을 만드는 설계 이슈가 먼저이고, 구현 이슈는 그 Spec 을 토대로 한다. 공개 인터페이스 · 이벤트 · 작업 · 규칙 · 불변식을 바꾸는 변경은 Spec 을 고친다. 모듈마다 Spec 이 있는지 확인하는 자동 검사는 두지 않는다.
+> 부분 대체(둘째 · 셋째 문장) — [ADR-0036](0036-module-spec-holds-internal-structure-and-port-declarations-in-eight-sections.md). 지금 상태: [`specs/README` §2](../specs/README.md#2-공통-구조)
 - **공통 구조는 `docs/specs/README.md` 하나가 정본이다.** 모든 Spec 이 같은 번호의 아홉 절(책임과 범위 · 용어 · 공개 인터페이스 · 규칙과 불변식 · 작업과 리스너 · 데이터 · 설정 · 외부 의존 · 결정)을 갖고, 빈 절은 "해당 없음"으로 남긴다. 절 번호는 바꾸지 않는다 — 코드 주석이 `docs/specs/{모듈}.md §n` 으로 가리킨다.
 - **규칙 · 불변식에는 식별자 `{모듈}-R{번호}` 를 단다.** 테스트가 자기가 지키는 규칙을 이 식별자로 가리킨다. 지운 규칙의 번호는 다시 쓰지 않는다.
 - **아직 구현되지 않은 설계도 Spec 에 담고 `(미구현)` 으로 표시한다.** 구현하는 변경이 표시를 지운다.
