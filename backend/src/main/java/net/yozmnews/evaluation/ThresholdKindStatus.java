@@ -7,7 +7,7 @@ import java.util.Set;
 /**
  * 한 태그 종류의 기준 상태 — docs/specs/evaluation.md §3 · evaluation-R34.
  *
- * @param pastMaxStoreThreshold 그 버전 · 그 태그 종류의 이력(처음 값 포함)에 있는 저장 기준의 최댓값
+ * @param pastMaxStoreThreshold 지난 저장 기준 최댓값 — 이력과 끝난 빠진 태그 채움으로 계산한 저장 바닥의 최댓값(evaluation-R32)
  * @param conditions 어긋난 상태 — 없으면 빈 집합
  */
 public record ThresholdKindStatus(TagThresholds current, BigDecimal pastMaxStoreThreshold,

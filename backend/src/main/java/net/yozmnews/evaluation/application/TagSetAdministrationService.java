@@ -137,10 +137,9 @@ class TagSetAdministrationService implements TagSetAdministration {
 
 	/** 한 태그 종류의 상태 — 판정은 {@link ThresholdStanding} */
 	private ThresholdKindStatus kindStatus(TagThresholds current, TagSetId version, List<ThresholdChangeView> changes) {
-		BigDecimal pastMax = floors(version, current.kind(), changes).pastMax();
+		StoreFloors floors = floors(version, current.kind(), changes);
 		ThresholdValues values = new ThresholdValues(current.tagThreshold(), current.storeThreshold());
-		return new ThresholdKindStatus(current, pastMax,
-				ThresholdStanding.of(values, pastMax, ThresholdStanding.storeChanged(changes, current.kind())));
+		return new ThresholdKindStatus(current, floors.pastMax(), ThresholdStanding.of(values, floors));
 	}
 
 	/** 그 태그 종류의 저장 바닥 — 이력과 끝난 채움의 덮음(evaluation-R32) */

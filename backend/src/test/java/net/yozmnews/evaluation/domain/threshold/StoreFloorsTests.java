@@ -17,7 +17,7 @@ import org.junit.jupiter.api.Test;
  * 저장 바닥 계산 — 리터럴 이력 · 덮음으로 지난 저장 기준 최댓값과 바닥이 섞였는지를 본다. 이력은 저장소 순서(최근 것부터)로 넘기고, 읽기 지연은
  * 프로덕션 값과 같은 30분을 리터럴로 쓴다.
  * <p>
- * 지키는 규칙: evaluation-R12 · evaluation-R29
+ * 지키는 규칙: evaluation-R12 · evaluation-R29 · evaluation-R34
  */
 class StoreFloorsTests {
 
@@ -143,6 +143,52 @@ class StoreFloorsTests {
 		assertThat(StoreFloors.of(MultiTagKind.TOPIC, changes,
 				List.of(new StoreCoverage(T0, T1.plus(Duration.ofMinutes(31)), new BigDecimal("0.1"))))
 			.pastMax()).isEqualByComparingTo("0.1");
+	}
+
+	@Test
+	void theWholeVersionIsNotMixedWithOnlyTheInitialValue() {
+		assertThat(floors(List.of(initial("0.2", T0))).mixed()).isFalse();
+	}
+
+	@Test
+	void loweringTheStoreThresholdMixesTheWholeVersion() {
+		assertThat(floors(List.of(change("0.2", "0.1", T1), initial("0.2", T0))).mixed()).isTrue();
+	}
+
+	@Test
+	void aCoverageFromTheInitialValueToPastTheReadLagOfTheLoweringMakesTheWholeVersionUniform() {
+		assertThat(loweredTo01AtT1(T1.plus(Duration.ofMinutes(31)), "0.1").mixed()).isFalse();
+	}
+
+	@Test
+	void aCoverageEndingWithinTheReadLagOfTheLoweringLeavesTheWholeVersionMixed() {
+		// 이력 행은 끝을 포함하고 덮음은 끝을 뺀다 — 덮음의 끝이 내린 시각 + 30분이면 그 순간이 옛 기준으로 남는다
+		assertThat(loweredTo01AtT1(T1.plus(Duration.ofMinutes(30)), "0.1").mixed()).isTrue();
+		assertThat(loweredTo01AtT1(T1.plus(Duration.ofMinutes(29)), "0.1").mixed()).isTrue();
+	}
+
+	@Test
+	void aCoverageDoesNotLiftTheWholeVersionAfterTheStoreThresholdIsRaised() {
+		// 덮음은 바닥을 내리기만 한다 — 올리기 전 평가는 0.1 까지, 뒤 평가는 0.2 까지 저장돼 있다
+		StoreFloors floors = StoreFloors.of(MultiTagKind.TOPIC, List.of(change("0.1", "0.2", T1), initial("0.1", T0)),
+				List.of(new StoreCoverage(T0, T1.plus(Duration.ofMinutes(31)), new BigDecimal("0.2"))), LAG);
+
+		assertThat(floors.mixed()).isTrue();
+	}
+
+	@Test
+	void theWholeVersionCountsTheSameMagnitudeAsOneFloor() {
+		// 덮인 앞쪽 바닥은 0.1, 뒤쪽은 0.100 — 크기가 같아 하나다
+		StoreFloors floors = StoreFloors.of(MultiTagKind.TOPIC, List.of(change("0.2", "0.100", T1), initial("0.2", T0)),
+				List.of(new StoreCoverage(T0, T1.plus(Duration.ofMinutes(31)), new BigDecimal("0.1"))), LAG);
+
+		assertThat(floors.mixed()).isFalse();
+	}
+
+	/** 처음 값 0.2(T0) → 0.1(T1) 로 내린 주제 이력과 [T0, coveredTo) 를 덮은 채움 */
+	private static StoreFloors loweredTo01AtT1(Instant coveredTo, String coveredThreshold) {
+		return StoreFloors.of(MultiTagKind.TOPIC, List.of(change("0.2", "0.1", T1), initial("0.2", T0)),
+				List.of(new StoreCoverage(T0, coveredTo, new BigDecimal(coveredThreshold))), LAG);
 	}
 
 	/** 처음 값 0.3(T0) → 0.1(T1) 로 내린 주제 이력 */

@@ -283,6 +283,25 @@ class TagSetAdministrationTests {
 	}
 
 	@Test
+	void aFinishedBackfillOfTheWholeVersionLiftsTheMixedStoreFloorsOfTheStatus() {
+		change(MultiTagKind.TOPIC, "0.5", "0.2");
+		change(MultiTagKind.TOPIC, "0.5", "0.1");
+		TagBackfillRows.insertFinished(this.jdbc, this.first, COVERED_FROM, COVERED_TO, "0.1", 0);
+
+		assertThat(this.administration.thresholdStatus().topic().conditions()).isEmpty();
+	}
+
+	@Test
+	void withoutABackfillTheLoweredStoreThresholdLeavesTheStatusMixed() {
+		// 대조 — 덮음이 없으면 0.2 로 저장된 평가가 남는다(태그 기준 0.5 는 지난 최댓값 0.2 보다 높아 그 상태는 없다)
+		change(MultiTagKind.TOPIC, "0.5", "0.2");
+		change(MultiTagKind.TOPIC, "0.5", "0.1");
+
+		assertThat(this.administration.thresholdStatus().topic().conditions())
+			.containsExactly(ThresholdCondition.STORE_THRESHOLD_CHANGED);
+	}
+
+	@Test
 	void aFinishedBackfillOfTheWholeVersionLowersThePastMaximumOfTheStatus() {
 		change(MultiTagKind.TOPIC, "0.5", "0.2");
 		change(MultiTagKind.TOPIC, "0.5", "0.1");
