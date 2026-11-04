@@ -127,6 +127,15 @@ describe("AdminLayout", () => {
     expect(collection).not.toHaveAttribute("aria-current");
     expect(evaluation).toHaveAttribute("href", "/admin/evaluation");
     expect(evaluation).not.toHaveAttribute("aria-current");
+    for (const [name, href] of [
+      ["평가 결과", "/admin/evaluations"],
+      ["표본 검수", "/admin/samples"],
+      ["태그 기준", "/admin/thresholds"],
+    ]) {
+      const link = within(menu).getByRole("link", { name });
+      expect(link).toHaveAttribute("href", href);
+      expect(link).not.toHaveAttribute("aria-current");
+    }
     expect(publications).toHaveAttribute("href", "/admin/event-publications");
     expect(publications).not.toHaveAttribute("aria-current");
   });

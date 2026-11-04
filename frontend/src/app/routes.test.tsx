@@ -4,8 +4,12 @@ import { RouterProvider } from "react-router/dom";
 import { describe, expect, it } from "vitest";
 import { routes } from "@/app/routes";
 import { CollectionPage } from "@/features/admin/CollectionPage";
+import { EvaluationDetailPage } from "@/features/admin/EvaluationDetailPage";
+import { EvaluationListPage } from "@/features/admin/EvaluationListPage";
 import { EvaluationPage } from "@/features/admin/EvaluationPage";
 import { EventPublicationsPage } from "@/features/admin/EventPublicationsPage";
+import { SamplePage } from "@/features/admin/SamplePage";
+import { ThresholdsPage } from "@/features/admin/ThresholdsPage";
 
 describe("routes", () => {
   it("루트 경로에서 첫 화면을 보여준다", async () => {
@@ -40,6 +44,25 @@ describe("routes", () => {
     const loaded = await (lazy as () => Promise<{ Component?: unknown }>)();
     expect(loaded.Component).toBe(EvaluationPage);
   });
+
+  it.each([
+    ["evaluations", "EvaluationListPage", () => EvaluationListPage],
+    ["evaluations/:id", "EvaluationDetailPage", () => EvaluationDetailPage],
+    ["samples", "SamplePage", () => SamplePage],
+    ["thresholds", "ThresholdsPage", () => ThresholdsPage],
+  ])(
+    "운영자 화면 아래 %s 경로가 %s 를 내려받는다",
+    async (path, _name, component) => {
+      const admin = routes[0]?.children?.find(
+        (route) => route.path === "admin",
+      );
+      const lazy = admin?.children?.find((route) => route.path === path)?.lazy;
+
+      expect(typeof lazy).toBe("function");
+      const loaded = await (lazy as () => Promise<{ Component?: unknown }>)();
+      expect(loaded.Component).toBe(component());
+    },
+  );
 
   it("운영자 화면 아래 이벤트 발행 경로가 이벤트 발행 화면을 내려받는다", async () => {
     const admin = routes[0]?.children?.find((route) => route.path === "admin");
