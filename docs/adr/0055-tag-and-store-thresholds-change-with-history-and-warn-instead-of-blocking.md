@@ -1,6 +1,6 @@
 # ADR-0055: 태그 기준 · 저장 기준은 버전의 설정으로 이력과 함께 바꾸고, 앱은 두 기준을 막지 않고 이번 변경이 어긋남을 만들 때 경고한다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 지난 저장 기준 최댓값의 계산([ADR-0070](0070-past-store-threshold-maximum-and-mixed-store-floors-computed-from-history-and-finished-backfills.md)) · 빠진 태그 채우기([ADR-0069](0069-missing-tags-filled-by-the-evaluator-rereading-stored-raw-responses-over-an-operator-chosen-period.md)) · 경고의 판단 근거([ADR-0070](0070-past-store-threshold-maximum-and-mixed-store-floors-computed-from-history-and-finished-backfills.md))
 - 날짜: 2026-11-02
 - 근거: [이슈 #68](https://github.com/Theia0382/yozm-news/issues/68) — 저장 기준을 낮춘 뒤 이전 기사의 태그가 조용히 빠지는 경로를 설계 문서의 결과 해석 규칙으로 따라가 확인
 - 관련: [ADR-0010](0010-tag-taxonomy.md)(태그별 확률을 저장 하한 이상 저장하고 붙음은 조회 때 판정 — 이 ADR 은 그 두 값을 태그 기준 · 저장 기준이라 부른다), [ADR-0043](0043-admin-functions-guarded-by-env-bearer-token-until-account-roles.md)(운영자 토큰 하나), [ADR-0045](0045-admin-module-serves-operator-api-over-module-public-operation-apis.md)(운영자 HTTP 는 `admin`)
@@ -18,14 +18,17 @@
 - **앱은 두 기준을 막지 않는다** — 값의 유효성만 본다. 데이터 관리는 운영자의 판단이다.
 - **이번 변경이 이전 기사와 어긋남을 만들 때만 경고를 결과에 담는다.** 이미 어긋난 상태에서 다른 값만 바꾸면 다시 알리지 않는다.
   - 저장 기준을 지금 값보다 낮춤
+  > 부분 대체 — [ADR-0070](0070-past-store-threshold-maximum-and-mixed-store-floors-computed-from-history-and-finished-backfills.md). 지금 상태: [evaluation Spec §5](../specs/evaluation.md#빠진-태그-채움--저장-바닥) evaluation-R32
   - 태그 기준을 내렸고, 새 값이 그 버전에서 써 온 저장 기준의 최댓값보다 낮음
   - 이번 변경으로 태그 기준이 저장 기준보다 낮아짐
 - **"누가"는 행위자 종류(시스템 · 운영자)로 남긴다.** `evaluation` 은 사용자를 가리키지 않는다. 계정 인증이 생기면 그 작업이 사용자 식별자를 더한다.
+> 부분 대체 — [ADR-0069](0069-missing-tags-filled-by-the-evaluator-rereading-stored-raw-responses-over-an-operator-chosen-period.md). 지금 상태: [evaluation Spec §5](../specs/evaluation.md#빠진-태그-채움--저장-바닥) evaluation-R31
 - **빠진 태그를 채우는 재평가는 별도 기능이다** — 운영자가 재평가 기간을 일 단위로 정하는 기능으로 따로 설계한다.
 
 ## 결과
 
 - 운영자는 두 기준을 자유롭게 조정하고, 이전 기사와 어긋남을 만드는 변경에서 알림을 받는다. 어긋남을 만들지 않는 변경에는 같은 경고가 반복되지 않는다.
+> 부분 대체 — [ADR-0070](0070-past-store-threshold-maximum-and-mixed-store-floors-computed-from-history-and-finished-backfills.md). 지금 상태: [evaluation Spec §5](../specs/evaluation.md#빠진-태그-채움--저장-바닥) evaluation-R32
 - 경고는 그 구간에 실제로 평가된 기사가 있었는지 모른다 — 기준을 바꾼 이력으로만 판단한다.
 - 태그 기준을 지난 저장 기준 최댓값 아래로 내릴 때마다 경고한다 — 내릴 때마다 이전 기사에 붙지 않는 구간이 넓어진다. 어긋난 상태에서 태그 기준을 올리거나 다른 값만 바꾸면 경고하지 않으므로, 어긋난 상태가 남아 있는지는 화면이 상태로 보여야 한다.
 - 이력은 무기한 보존한다.
