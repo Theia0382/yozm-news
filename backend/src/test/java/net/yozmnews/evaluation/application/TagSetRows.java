@@ -12,8 +12,8 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 public final class TagSetRows {
 
 	/** 버전에 딸린 표 — 지울 순서(외래 키 순). {@code tag_sets} 는 마지막에 따로 지운다 */
-	private static final List<String> VERSION_TABLES = List.of("tag_key_lineage", "tag_set_threshold_changes",
-			"tag_set_thresholds", "importance_rubrics", "tags");
+	private static final List<String> VERSION_TABLES = List.of("tag_backfill_versions", "tag_key_lineage",
+			"tag_set_threshold_changes", "tag_set_thresholds", "importance_rubrics", "tags");
 
 	private TagSetRows() {
 	}
@@ -35,11 +35,12 @@ public final class TagSetRows {
 		for (String table : VERSION_TABLES) {
 			jdbc.sql("delete from " + table).update();
 		}
+		jdbc.sql("delete from tag_backfills").update();
 		jdbc.sql("delete from tag_sets").update();
 	}
 
 	/**
-	 * 버전 2 이상과 그 행(계보 · 태그 기준 · 저장 기준 · 이력 · 태그 · 중요도 기준 · 평가)을 지우고 버전 1 을 다시 켠다 — 버전을 만든 시험의
+	 * 버전 2 이상과 그 행(채움의 버전별 기록 · 계보 · 태그 기준 · 저장 기준 · 이력 · 태그 · 중요도 기준 · 평가)을 지우고 버전 1 을 다시 켠다 — 버전을 만든 시험의
 	 * 뒤처리. 버전을 지우는 것은 이 픽스처뿐이다 — 프로덕션 코드에는 그 경로가 없다
 	 */
 	static void removeVersionsAfterFirst(JdbcClient jdbc) {

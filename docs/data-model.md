@@ -137,10 +137,11 @@ erDiagram
 | 기사 메타데이터 (제목, 링크, 시각, 출처) | 무기한 | 지난 다이제스트의 링크를 유지하기 위해. 출처는 그 기사의 엔트리가 가리키는 소스들의 이름이다 — 프로필을 얻지 못하면 기록된 출처 이름([source Spec 출처 이름](specs/source.md#출처-이름) · [ADR-0053](adr/0053-source-records-last-confirmed-name-apart-from-operating-settings.md)) |
 | 기사 요약문 (`summary_text`) | 기본 무기한. 운영 설정(보존 일수, 기본 꺼짐)을 켜면 그 뒤 삭제 | 재평가 · 임베딩 재계산 · 검색에 쓴다. 화면 · 외부 API 에는 노출하지 않는다. 지워진 기사도 장기 기능에서 처리된다 ([ADR-0029](adr/0029-indefinite-summary-retention-with-optional-deletion.md)) |
 | 주제 · 지역 태그(`article_tags`), 태그 체계, 태그 기준 · 저장 기준과 그 변경 이력, 태그 키 계보 | 무기한 | 주제별 보도량과 관심사 히스토리의 근거 |
+| 빠진 태그 채움 기록(`tag_backfills` · `tag_backfill_versions`) | 무기한 | 끝난 채움이 저장 바닥 계산의 입력이다 — 지우면 태그 기준 · 저장 기준의 경고와 평가 현황 표시가 바뀐다([evaluation-R32](specs/evaluation.md#빠진-태그-채움--저장-바닥)) |
 | 사건 배정 입력 (`article_match_features`) | 사건 배정 시간 창 + 여유 | 요약문으로 다시 계산한다 |
 | 사건 (`events` · `event_articles`) | 무기한 | 사건 · 이슈 보도량의 근거 |
 | 사건 소속 판정 원본 (`article_event_judgements`) | 180일 | 평가 원본 응답과 같다 |
-| 평가 원본 응답 (`raw_response`) | 180일 | 태그 기준 · 저장 기준 분석에 충분한 기간 |
+| 평가 원본 응답 (`raw_response`) | 180일 | 태그 기준 · 저장 기준 분석과 저장 기준을 낮춘 뒤 빠진 태그 채움([evaluation-R31](specs/evaluation.md#빠진-태그-채움--저장-바닥) — 채울 기간의 상한도 180일)에 충분한 기간. **(미설계)** 지운 뒤 원본이 없는 평가의 채움 처분은 보존을 구현하는 작업이 정한다 |
 | 다이제스트 | 사용자 탈퇴 시까지 | 주요 뉴스 섹션은 이슈 타임라인의 정본, 인용 항목은 노출 기록이다 |
 | 이슈 · 관심 신호 이력(`feedback_events` · `storyline_tracking_events` · `user_tag_preference_events`) · 변화 리포트 | 사용자 탈퇴 시까지 | 관심사 히스토리 · 리포트의 근거 |
 | `digest_candidates` | 30일 | 디버깅용 |

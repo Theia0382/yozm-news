@@ -19,7 +19,7 @@ import java.util.Objects;
  */
 public record Evaluation(Map<String, Double> topics, Map<String, Double> regions, Map<String, Double> formats,
 		Map<Integer, Double> importance, String evaluator, String modelVersion, int inputTokens, String rawResponse)
-		implements EvaluationResult {
+		implements EvaluationResult, RereadResult {
 
 	/**
 	 * @throws IllegalArgumentException 키가 공백뿐이거나, 확률이 0 이상 1 이하의 유한값이 아니거나, 이름 · 버전이 공백뿐이거나, 토큰 수가

@@ -57,6 +57,25 @@ class EvaluationRecordTests {
 	}
 
 	@Test
+	void storedTagsFilterByTheGivenStoreThresholdIncludingTheBoundary() {
+		// 채움이 넘기는 저장 기준(0.05)으로 거른다 — 0.05 는 0.050 이상이고 태그 기준은 쓰지 않는다
+		Evaluation evaluation = evaluation(Map.of(EXECUTIVE, 0.04, ASSEMBLY, 0.05, FINANCE, 0.7),
+				Map.of("world", 0.049, "domestic", 0.05), Map.of("straight", 0.5, "opinion", 0.25, "feature", 0.25));
+
+		assertThat(EvaluationRecord.storedTags(evaluation, TAG_SET, thresholds("0.9", "0.05", "0.9", "0.050")))
+			.containsExactly(topic(ASSEMBLY, 0.05), topic(FINANCE, 0.7), region("domestic", 0.05));
+	}
+
+	@Test
+	void storedTagsOfAnotherVersionAreACallerDefect() {
+		Evaluation evaluation = evaluation(Map.of(EXECUTIVE, 0.5, ASSEMBLY, 0.5, FINANCE, 0.5),
+				Map.of("world", 0.5, "domestic", 0.5), Map.of("straight", 0.5, "opinion", 0.25, "feature", 0.25));
+
+		assertThatIllegalArgumentException().isThrownBy(() -> EvaluationRecord.storedTags(evaluation, TAG_SET,
+				new TagSetThresholds(new TagSetId(2), STORE_0_1.topic(), STORE_0_1.region())));
+	}
+
+	@Test
 	void theRepresentativeFormatIsTheMostLikelyAndATieGoesToTheEarlierOption() {
 		Evaluation tie = evaluation(Map.of(EXECUTIVE, 0.5, ASSEMBLY, 0.5, FINANCE, 0.5), Map.of("world", 0.5,
 				"domestic", 0.5), Map.of("feature", 0.2, "opinion", 0.4, "straight", 0.4));

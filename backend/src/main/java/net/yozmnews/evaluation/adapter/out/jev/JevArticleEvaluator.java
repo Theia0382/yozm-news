@@ -22,10 +22,13 @@ import java.util.concurrent.TimeoutException;
 
 import net.yozmnews.evaluation.TagSetView;
 import net.yozmnews.evaluation.domain.evaluator.ArticleEvaluator;
+import net.yozmnews.evaluation.domain.evaluator.Evaluation;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationFailure.Kind;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationFailure;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationInput;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationResult;
+import net.yozmnews.evaluation.domain.evaluator.RereadFailure;
+import net.yozmnews.evaluation.domain.evaluator.RereadResult;
 import net.yozmnews.evaluation.domain.jev.JevApiKey;
 import net.yozmnews.evaluation.domain.jev.JevErrors;
 import net.yozmnews.evaluation.domain.jev.JevOutcome;
@@ -114,6 +117,21 @@ public final class JevArticleEvaluator implements ArticleEvaluator, AutoCloseabl
 				case JevOutcome.Failed failed -> new EvaluationFailure(failed.kind(), message(REQUEST_FAILED, answered));
 				case JevOutcome.ContextExceeded exceeded -> probe(answered, tagSet);
 			};
+		};
+	}
+
+	/** 저장된 Jev 응답 본문을 넘긴 체계로 다시 읽는다 — 요청을 보내지 않는다 */
+	@Override
+	public RereadResult reread(String evaluator, String rawResponse, TagSetView tagSet) {
+		Objects.requireNonNull(evaluator, "evaluator");
+		Objects.requireNonNull(rawResponse, "rawResponse");
+		Objects.requireNonNull(tagSet, "tagSet");
+		if (!JevResponse.EVALUATOR.equals(evaluator)) {
+			return new RereadFailure(RereadFailure.Kind.OTHER_EVALUATOR, "Jev 가 남긴 원본 응답이 아니다 — 평가기 " + evaluator);
+		}
+		return switch (JevResponse.read(rawResponse, null, tagSet)) {
+			case Evaluation evaluation -> evaluation;
+			case EvaluationFailure failure -> new RereadFailure(RereadFailure.Kind.UNREADABLE, failure.message());
 		};
 	}
 

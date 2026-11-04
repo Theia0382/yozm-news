@@ -22,7 +22,8 @@ public final class ThresholdRule {
 	/**
 	 * 변경을 판정한다.
 	 * @param current 지금 태그 기준 · 저장 기준
-	 * @param pastMaxStoreThreshold 이 변경 전까지 그 버전 · 그 태그 종류의 이력(처음 값 포함)에 있는 저장 기준의 최댓값
+	 * @param pastMaxStoreThreshold 이 변경 전까지 그 버전 · 그 태그 종류의 지난 저장 기준 최댓값 — 이력과 끝난 채움의 저장 바닥 최댓값
+	 * ({@link StoreFloors#pastMax()})
 	 * @param tagThreshold 요청한 태그 기준
 	 * @param storeThreshold 요청한 저장 기준
 	 */

@@ -1,6 +1,5 @@
 package net.yozmnews.evaluation.adapter.out.persistence;
 
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -62,23 +61,6 @@ class JdbcThresholdRepository implements ThresholdRepository {
 			.param("kind", kind.name())
 			.query((rs, row) -> new ThresholdValues(rs.getBigDecimal("tag_threshold"), rs.getBigDecimal("store_threshold")))
 			.optional();
-	}
-
-	@Override
-	public BigDecimal maxStoreThreshold(TagSetId version, MultiTagKind kind) {
-		BigDecimal max = this.jdbc.sql("""
-				select max(store_threshold) from tag_set_threshold_changes
-				where tag_set_id = :version and tag_kind = :kind
-				""")
-			.param("version", version.value())
-			.param("kind", kind.name())
-			.query(BigDecimal.class)
-			.optional()
-			.orElse(null);
-		if (max == null) {
-			throw new IllegalStateException("태그 기준 · 저장 기준의 이력이 없다 — 처음 값이 첫 행이어야 한다: " + version + " " + kind);
-		}
-		return max;
 	}
 
 	@Override

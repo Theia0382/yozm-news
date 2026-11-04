@@ -15,6 +15,8 @@
 - **평가 현황** — 버전 하나의 평가 가운데 평가 시각이 집계 기간 안인 것의 주제 판정 · 태그 분포 · 붙은 태그 수 · 확률 분포 · 중요도 · 입력 토큰을 공개 운영 API(`EvaluationAdministration.overview`)로 낸다(evaluation-R28 · R29)
 - **주제별 보도량** — 첫 평가 시각이 집계 기간 안인 기사를 최신 평가의 조회 시점 판정과 태그 키 계보로 활성 버전의 주제마다 세어 공개 조회(`TopicCoverage`)로 낸다(evaluation-R28 · R30)
 - **지운 기사 따르기** — `article` 이 기사를 지우면 그 기사의 대기 · 평가 · 태그 행을 지운다(evaluation-R21)
+- **빠진 태그 채움** — 저장 기준을 낮추기 전에 평가된 평가에는 낮춘 구간의 태그 행이 없다. 운영자가 정한 기간에 평가된 평가의 저장된 원본 응답을 평가기가 다시 읽어, 지금 저장 기준 이상인데 없는 태그 행만 더한다. Jev 를 부르지 않는다. 확인 · 요청 · 목록을 공개 운영 API(`TagBackfillAdministration`)로 내고, 작업 역할의 반복 작업이 실행한다(evaluation-R31)
+- **저장 바닥** — 이력과 끝난 채움으로 평가 시각마다 어느 확률까지 저장돼 있는지를 계산해, 태그 기준 · 저장 기준의 경고(지난 저장 기준 최댓값)와 평가 현황의 "저장 기준이 섞였다" 표시를 낸다(evaluation-R12 · R29 · R32)
 - **체계 변경** — 운영자 원문을 지금 활성 버전과 대조해 확인하거나, 새 버전으로 저장해 곧바로 활성으로 바꾼다. 버전은 앞으로만 켠다. 활성으로 바꿀 때 운영자가 정한 일수 안에 처음 본 기사를 재평가 대기에 넣는다. 버전 목록과 버전의 원문을 공개 운영 API(`TagSetAdministration`)로 낸다(evaluation-R16 · R22 ~ R25 · R27)
 - **태그 키 계보** — 키 이름 변경 · 분할 · 병합을 새 버전과 함께 기록하고, 옛 버전의 키를 활성 버전의 키로 푸는 표를 공개 API(`TagKeyLineage`)로 낸다(evaluation-R22 · R23 · R26)
 - **(미구현)** 사건 소속 판정 — 사건 묶기의 애매한 구간을 Jev 로 판정한다([ADR-0026](../adr/0026-event-clustering-with-local-embeddings-and-jev.md))
@@ -38,6 +40,10 @@
 | 태그 키 | 태그를 가리키는 값. 대분류 · 지역 · 형식은 조각 하나(`politics` · `domestic` · `straight`), 중분류는 대분류 키를 붙인 전체 키(`politics.executive`)다(evaluation-R6). 사용자 선호와 평가 결과가 이 키로 태그를 가리킨다 |
 | 질문 틀 | 주제 · 지역의 Yes/No 질문 문장의 틀. 자리표시자 `{description}` 에 태그 설명을 끼워 태그마다 질문을 만든다(evaluation-R9) |
 | 저장 기준 | 평가 때 태그 확률을 저장할지 가르는 값. 이 값 이상인 확률만 저장한다(evaluation-R15) |
+| 빠진 태그 채움 | 운영자가 정한 기간에 평가된 평가의 원본 응답을 다시 읽어, 그 버전의 채울 저장 기준 이상인데 없는 태그 행을 더하는 것(evaluation-R31). 체계 변경 때의 재평가(evaluation-R25 — 새 버전으로 Jev 를 다시 부른다)와 다르다 |
+| 덮는 범위 | 채움 하나가 다루는 평가 시각 `[요청 시각 − 일수 × 24시간, 요청 시각)`(evaluation-R31) |
+| 채울 저장 기준 | 채움을 요청한 순간 버전마다의 지금 저장 기준 — 요청이 기록하고 실행은 이 값까지 채운다(evaluation-R31) |
+| 저장 바닥 | 평가 시각 t 의 평가에 저장돼 있다고 볼 수 있는 확률의 하한 — 그때 쓰였을 수 있는 저장 기준과 t 를 덮은 끝난 채움의 채울 저장 기준 가운데 작은 것(evaluation-R32) |
 | 기본 제외 | 형식 태그의 속성. 사용자가 따로 정하지 않으면 그 형식의 기사를 후보에서 뺀다 |
 | 기본 체계 파일 | 저장소의 `backend/src/main/resources/tag-sets/default.yaml`. 첫 기동에 버전 1 로 들어간다(evaluation-R1 · R2). 첫 체계는 [조사 초안](../research/2026-10-news-categories.md) 3.2 를 바탕으로 한다 |
 | 첫 기동 적재 | 버전이 하나도 없을 때 기본 체계 파일을 버전 1 로 저장하는 기동 시 동작(evaluation-R2) |
@@ -65,7 +71,7 @@
 
 ## 3. 공개 인터페이스
 
-모듈 최상위 패키지 `net.yozmnews.evaluation` 의 공개 타입은 활성 체계 조회 `TagSetDirectory`, 태그 체계의 운영 API `TagSetAdministration`(태그 기준 · 저장 기준 · 버전), 태그 키 계보 조회 `TagKeyLineage`, 평가 결과 조회 `ArticleEvaluations`, 평가 대기 · 평가 현황의 운영 API `EvaluationAdministration`, 주제별 보도량 조회 `TopicCoverage`, 집계 기간 `EvaluationPeriod`, 그 값 · 결과 타입이다. 이벤트는 내지 않는다 — 활성 전환을 알리는 이벤트는 받는 모듈(사용자 선호)의 작업이 정한다.
+모듈 최상위 패키지 `net.yozmnews.evaluation` 의 공개 타입은 활성 체계 조회 `TagSetDirectory`, 태그 체계의 운영 API `TagSetAdministration`(태그 기준 · 저장 기준 · 버전), 태그 키 계보 조회 `TagKeyLineage`, 평가 결과 조회 `ArticleEvaluations`, 평가 대기 · 평가 현황의 운영 API `EvaluationAdministration`, 빠진 태그 채움의 운영 API `TagBackfillAdministration`, 주제별 보도량 조회 `TopicCoverage`, 집계 기간 `EvaluationPeriod`, 그 값 · 결과 타입이다. 이벤트는 내지 않는다 — 활성 전환을 알리는 이벤트는 받는 모듈(사용자 선호)의 작업이 정한다.
 
 받는 이벤트는 `article` 의 `ArticleStored` · `ArticlesRemoved` 이고, 평가 입력과 재평가 대상은 `article` 의 공개 조회 `ArticleDirectory`(`findAll` · `firstSeenSince`) 와 `source` 의 공개 조회 `FeedLabels` 로 읽는다([article Spec §3](article.md#3-공개-인터페이스) · [source Spec §3](source.md#3-공개-인터페이스)).
 
@@ -414,12 +420,83 @@ public record TokenBucket(int lower, int upper, long count) {}
 | `topics` · `topicCategories` · `regions` | 그 버전의 중분류 · 대분류 · 지역마다(체계 순서, 0 인 키 포함) 판정이 그 태그를 붙인 평가 수 |
 | `formats` | 그 버전의 형식마다 대표 형식이 그것인 평가 수 |
 | `topicsPerArticle` · `regionsPerArticle` | 판정이 붙인 태그 수 0 ~ 4 와 마지막 칸 "5 이상"(`orMore`)의 평가 수. 주제의 0 은 미분류, `low_confidence` 는 1 |
-| `ProbabilityHistogram` | 확률 0.1 폭 10칸 — 주제 · 지역은 저장된 태그 행 전부, 형식은 대표 형식의 확률. `storeThreshold` 는 지금 저장 기준(형식은 null), `storeThresholdChanged` 는 그 버전 · 그 태그 종류의 저장 기준이 바뀐 적이 있는가 |
+| `ProbabilityHistogram` | 확률 0.1 폭 10칸 — 주제 · 지역은 저장된 태그 행 전부, 형식은 대표 형식의 확률. `storeThreshold` 는 지금 저장 기준(형식은 null), `storeThresholdChanged` 는 집계 기간 안 평가 시각의 저장 바닥이 둘 이상인가(evaluation-R32 — 형식은 거짓) |
 | `ProbabilityBucket` | `[lower, upper)`, 마지막 칸만 `[lower, upper]`(`upperInclusive`). `stored` 는 그 칸이 지금 저장 기준 이상인가 — 전부(`ALL`) · 일부(`PART`) · 아님(`NONE`) |
 | `importance` · `importanceMissing` | 중요도 기대값의 0.5 폭 8칸(`[1, 1.5)` … `[4.5, 5]`)과 기대값이 없는 평가 수 |
 | `TokenSummary` | 요청 하나의 입력 토큰 — 평균 · 최소 · 최대(평가 0 이면 null)와 칸 `[lower, upper)` |
 
 관련 규칙: evaluation-R29.
+
+### TagBackfillAdministration · TagBackfillReviewResult · TagBackfillRequestResult
+
+빠진 태그 채움의 운영 — 운영자 요청으로 `admin` 이 부른다. 구현은 `application` 의 `TagBackfillAdministrationService` 다. 실행은 작업 역할의 반복 작업이 한다(§4 들어오는 쪽).
+
+```java
+public interface TagBackfillAdministration {
+    int MAX_DAYS = 180;
+
+    TagBackfillReviewResult review(int days);
+    TagBackfillRequestResult request(int days);
+    List<TagBackfillRunView> runs();
+}
+
+public sealed interface TagBackfillReviewResult {
+    record Ready(Instant from, Instant to, long evaluations, List<TagBackfillVersionCount> versions)
+            implements TagBackfillReviewResult {}
+    record DaysOutOfRange() implements TagBackfillReviewResult {}
+}
+
+public sealed interface TagBackfillRequestResult {
+    record Requested(TagBackfillRunView run) implements TagBackfillRequestResult {}
+    record AlreadyOpen(TagBackfillRunView run) implements TagBackfillRequestResult {}
+    record DaysOutOfRange() implements TagBackfillRequestResult {}
+}
+```
+
+| 멤버 · 값 | 뜻 |
+|---|---|
+| `MAX_DAYS` | 채울 기간의 상한(일) — 정본이다(evaluation-R31) |
+| `review` | 확인 — 덮을 범위 `[지금 − 일수 × 24시간, 지금)` 의 평가 수를 버전별로 센다. 아무것도 쓰지 않는다 |
+| `request` | 요청 — 채움 하나와 모든 버전의 채울 저장 기준을 기록한다. 실행은 시작 가능 시각(요청 + 1분) 뒤 작업 역할이 한다 |
+| `runs` | 채움 목록 — 최근 것부터 모두 |
+| `Ready` | 덮을 범위(`from` 포함 · `to` 제외, `to` 는 확인한 시각), 그 범위의 평가 수, 평가가 있는 버전마다 수(버전 번호 순) |
+| `Requested` · `AlreadyOpen` | 기록한 채움 · 끝나지 않은 채움이 있어 아무것도 쓰지 않았다 — 그 채움 |
+| `DaysOutOfRange` | 일수가 1 ~ `MAX_DAYS` 밖이라 아무것도 하지 않았다 |
+
+- 계약
+  - `request` 는 한 트랜잭션이다. 끝나지 않은 채움은 하나뿐이다 — 동시 요청은 앞 요청의 커밋을 기다린 뒤 `AlreadyOpen` 이다(evaluation-R31)
+  - `review` · `runs` 는 트랜잭션을 열지 않는다. 사용자 정보를 받지 않는다
+
+관련 규칙: evaluation-R31.
+
+### TagBackfillRunView · TagBackfillVersionView · TagBackfillVersionCount · TagBackfillState
+
+```java
+public record TagBackfillRunView(long id, int days, Instant from, Instant to, Instant requestedAt,
+        TagBackfillState state, @Nullable Instant startedAt, @Nullable Instant finishedAt, long evaluations,
+        long processed, long tagsAdded, long skippedOtherEvaluator, long skippedUnreadable,
+        List<TagBackfillVersionView> versions) {}
+
+public record TagBackfillVersionView(TagSetId version, int number, BigDecimal topicStoreThreshold,
+        BigDecimal regionStoreThreshold, long evaluations, long processed, long tagsAdded, long skippedOtherEvaluator,
+        long skippedUnreadable) {}
+
+public record TagBackfillVersionCount(TagSetId version, int number, long evaluations) {}
+
+public enum TagBackfillState { WAITING, RUNNING, DONE }
+```
+
+| 타입 · 필드 | 뜻 |
+|---|---|
+| `TagBackfillRunView` | 채움 하나 — 덮는 범위(`to` = `requestedAt`), 상태, 시작 · 끝 시각(없으면 null), 버전별 건수의 합과 버전마다(버전 번호 순) |
+| `evaluations` | 요청 때 센 대상 평가 수 |
+| `processed` | 처리한 평가 수 — 건너뛴 평가 포함 |
+| `tagsAdded` | 더한 태그 행 수 |
+| `skippedOtherEvaluator` · `skippedUnreadable` | 평가기가 달라 · 원본 응답을 읽을 수 없거나 체계와 어긋나 건너뛴 평가 수 |
+| `TagBackfillVersionView` | 버전 하나 — 채울 저장 기준(주제 · 지역)과 건수 |
+| `TagBackfillState` | `WAITING`(시작 전) · `RUNNING`(시작했고 끝나지 않음) · `DONE`(끝남 — 그 버전에서 건너뛴 평가가 없으면 덮는 범위가 저장 바닥 계산에 든다, evaluation-R32) |
+
+관련 규칙: evaluation-R31 · evaluation-R32.
 
 ### TopicCoverage · TopicCoverageResult · TopicCoverageView · CategoryCoverage · SubtopicCoverage
 
@@ -491,25 +568,26 @@ public record TagKeyMapping(TagSetId from, TagSetId to, Map<TagKind, Map<String,
 
 | 패키지 | 책임 |
 |---|---|
-| (최상위) | 공개 API `TagSetDirectory` · `TagSetAdministration` · `TagKeyLineage` · `ArticleEvaluations` · `EvaluationAdministration` · `TopicCoverage` 와 집계 기간 `EvaluationPeriod`, 그 값 · 결과 타입(§3) |
+| (최상위) | 공개 API `TagSetDirectory` · `TagSetAdministration` · `TagKeyLineage` · `ArticleEvaluations` · `EvaluationAdministration` · `TagBackfillAdministration` · `TopicCoverage` 와 집계 기간 `EvaluationPeriod`, 그 값 · 결과 타입(§3) |
 | `domain/tagset` | 태그 체계 정의와 그 읽기 · 검증 · 원문 쓰기, 질문 틀, 기준 버전 대조, 태그 키 계보 해석, 버전 aggregate 와 그 저장소 |
-| `domain/threshold` | 태그 기준 · 저장 기준의 값 규칙과 변경 판정, 태그 기준 · 저장 기준 저장소 |
+| `domain/threshold` | 태그 기준 · 저장 기준의 값 규칙과 변경 판정, 저장 바닥 계산, 태그 기준 · 저장 기준 저장소 |
+| `domain/backfill` | 빠진 태그 채움 행과 그 점유 · 일정, 채움 저장소 |
 | `domain/evaluator` | 공유 평가의 포트와 그 입력 · 결과 · 실패, 피드 맥락의 카테고리 상한 |
 | `domain/jev` | Jev 요청 본문 · 응답 읽기 · 오류 갈래 · 키 형식의 판정 |
 | `domain/queue` | 평가 대기의 일정(정착 · 점유 · 재시도)과 대기 행의 전이, 대기 저장소 |
-| `domain/result` | 결과와 체계의 일치 검사, 결과 해석(저장 기준 거르기 · 대표값), 조회 시점 판정, 결과 저장소 |
+| `domain/result` | 결과와 체계의 일치 검사, 결과 해석(저장 기준 거르기 · 대표값), 조회 시점 판정, 결과 저장소(채움의 잠금 읽기 · 태그 더하기 포함) |
 | `domain/overview` | 평가 현황 · 주제별 보도량의 집계 판단 — 판정 · 계보 풀기를 불러 세기, 칸 규칙, 비율 |
-| `application` | 기본 체계 파일의 기동 검증, 첫 기동 적재, 확인 · 활성화, 기사 이벤트 리스너, 대기 점유와 평가 회차, 공개 API 의 구현(집계의 읽기 전용 트랜잭션 포함) |
-| `adapter/in/job` | 평가 반복 작업(작업 역할) |
-| `adapter/out/persistence` | 태그 기준 · 저장 기준 · 대기 · 결과 저장소의 JdbcClient 구현 |
+| `application` | 기본 체계 파일의 기동 검증, 첫 기동 적재, 확인 · 활성화, 기사 이벤트 리스너, 대기 점유와 평가 회차, 채움 회차, 공개 API 의 구현(집계의 읽기 전용 트랜잭션 포함) |
+| `adapter/in/job` | 평가 반복 작업 · 채움 반복 작업(작업 역할) |
+| `adapter/out/persistence` | 태그 기준 · 저장 기준 · 대기 · 결과 · 채움 저장소의 JdbcClient 구현 |
 | `adapter/out/jev` | 공유 평가 포트의 운영 구현(Jev)과 그 결선 · 설정, 키가 있는가의 조건, 작업 역할의 키 기동 검사 |
 | `adapter/out/fake` | 공유 평가 포트의 로컬 대체물과 그 결선(`local` 이면서 Jev 키가 없을 때만) |
 
-협력: `DefaultTagSetConfiguration` 이 기본 체계 파일을 `TagSetParser`(`platform` 의 `YamlTextReader` → `TagSetBinder` → `TagSetValidator`)로 읽어 `TagSetDefinition` 을 만든다. `TagSetSeeding` 이 그 정의로 `TagSetVersionStore` 를 불러 버전 1 을 쓴다 — `TagSetVersionStore` 는 `TagSetRepository` 에 버전을, `ThresholdRepository` 에 처음 태그 기준 · 저장 기준을 쓰는 새 버전 쓰기의 정본이다. `TagSetDirectoryService` 는 `TagSetRepository` 로 활성 버전을 읽어 `TagSetViews` 로 공개 타입(질문 문장은 `QuestionTemplate`)으로 옮기고, 태그 기준 · 저장 기준은 `ThresholdRepository` 로 읽는다. `TagSetAdministrationService` 는 활성 버전의 태그 기준 · 저장 기준을 `ThresholdRepository` 로 잠가 `ThresholdRule` 로 판정하고 같은 저장소로 쓴다. 버전 연산은 `TagSetVersioning` 에 맡긴다 — 원문을 `TagSetParser` 로 읽고, 재평가 대상을 `article` 의 `ArticleDirectory.firstSeenSince` 로 얻고, `TagSetRepository` 로 표를 잠가 활성 버전을 읽어 `TagSetRevision` 으로 대조한다. 활성화면 `TagSetVersionStore` 로 이전 버전을 끄고 `TagSet.next` 와 처음 태그 기준 · 저장 기준을 쓰고, `EvaluationQueueRepository.requeue` 로 재평가 대기를 쓴다. 원문 내보내기는 `TagSetWriter` 가 한다. `TagKeyLineageService` 는 `TagSetRepository` 로 버전을 번호 순으로 읽어 `KeyLineage` 로 해석한다.
+협력: `DefaultTagSetConfiguration` 이 기본 체계 파일을 `TagSetParser`(`platform` 의 `YamlTextReader` → `TagSetBinder` → `TagSetValidator`)로 읽어 `TagSetDefinition` 을 만든다. `TagSetSeeding` 이 그 정의로 `TagSetVersionStore` 를 불러 버전 1 을 쓴다 — `TagSetVersionStore` 는 `TagSetRepository` 에 버전을, `ThresholdRepository` 에 처음 태그 기준 · 저장 기준을 쓰는 새 버전 쓰기의 정본이다. `TagSetDirectoryService` 는 `TagSetRepository` 로 활성 버전을 읽어 `TagSetViews` 로 공개 타입(질문 문장은 `QuestionTemplate`)으로 옮기고, 태그 기준 · 저장 기준은 `ThresholdRepository` 로 읽는다. `TagSetAdministrationService` 는 활성 버전의 태그 기준 · 저장 기준을 `ThresholdRepository` 로 잠그고, 그 버전의 이력과 `TagBackfillRepository.coverages` 의 끝난 채움으로 `StoreFloors` 를 만들어 지난 저장 기준 최댓값을 얻은 뒤 `ThresholdRule` 로 판정하고 같은 저장소로 쓴다. 버전 연산은 `TagSetVersioning` 에 맡긴다 — 원문을 `TagSetParser` 로 읽고, 재평가 대상을 `article` 의 `ArticleDirectory.firstSeenSince` 로 얻고, `TagSetRepository` 로 표를 잠가 활성 버전을 읽어 `TagSetRevision` 으로 대조한다. 활성화면 `TagSetVersionStore` 로 이전 버전을 끄고 `TagSet.next` 와 처음 태그 기준 · 저장 기준을 쓰고, `EvaluationQueueRepository.requeue` 로 재평가 대기를 쓴다. 원문 내보내기는 `TagSetWriter` 가 한다. `TagKeyLineageService` 는 `TagSetRepository` 로 버전을 번호 순으로 읽어 `KeyLineage` 로 해석한다.
 
-평가: `ArticleEventsListener` 가 `ArticleStored` 로 기사를 `EvaluationQueueRepository` 에 넣고, `ArticlesRemoved` 로 대기 · 결과 행을 지운다. 작업 역할의 `EvaluatePendingArticlesJob` 이 1분마다 `EvaluationRound` 를 돌린다. 회차는 `PendingEvaluations` 로 대기를 점유하고(`PendingEvaluation` 의 전이 · `EvaluationSchedule` 의 일정), `TagSetDirectory` · `ThresholdRepository` 로 활성 체계와 그 버전의 태그 기준 · 저장 기준을, `article` 의 `ArticleDirectory` 와 `source` 의 `FeedLabels` 로 입력을 읽어 포트 `ArticleEvaluator` 를 부른다. 결과는 `ResultCheck` 로 체계와 대조하고 `EvaluationRecord` 로 저장할 모양을 만들어 `EvaluationResultRepository` 에 쓰고, 실패는 대기 행의 전이로 쓴다. 쓰기마다 `TagSetRepository` 로 표를 잠가 회차가 읽은 버전이 아직 활성인지 본다(evaluation-R19). `ArticleEvaluationsService` 는 `EvaluationResultRepository` 로 평가를 읽어 `TagSetViews` · `ThresholdRepository` 로 그 버전의 체계와 태그 기준 · 저장 기준을 얻고 `TagJudgement` 로 판정한다. 평가기는 Jev 키가 있으면 `JevArticleEvaluatorConfiguration` 이 `JevArticleEvaluator` 를, `local` 이면서 키가 없으면 `FakeArticleEvaluatorConfiguration` 이 `FakeArticleEvaluator` 를 포트로 등록한다 — 키가 있는가는 `JevKeyCondition` 이 정한다. `JevArticleEvaluator` 는 `JevRequest` 로 요청 본문을, `JevResponse` 로 결과를, `JevErrors` 로 오류 갈래 · 문구를 만든다.
+평가: `ArticleEventsListener` 가 `ArticleStored` 로 기사를 `EvaluationQueueRepository` 에 넣고, `ArticlesRemoved` 로 대기 · 결과 행을 지운다. 작업 역할의 `EvaluatePendingArticlesJob` 이 1분마다 `EvaluationRound` 를 돌린다. 회차는 `PendingEvaluations` 로 대기를 점유하고(`PendingEvaluation` 의 전이 · `EvaluationSchedule` 의 일정), `TagSetDirectory` · `ThresholdRepository` 로 활성 체계와 그 버전의 태그 기준 · 저장 기준을, `article` 의 `ArticleDirectory` 와 `source` 의 `FeedLabels` 로 입력을 읽어 포트 `ArticleEvaluator` 를 부른다. 결과는 `ResultCheck` 로 체계와 대조하고 `EvaluationRecord` 로 저장할 모양을 만들어 `EvaluationResultRepository` 에 쓰고, 실패는 대기 행의 전이로 쓴다. 쓰기마다 `TagSetRepository` 로 표를 잠가 회차가 읽은 버전이 아직 활성인지 본다(evaluation-R19). `ArticleEvaluationsService` 는 `EvaluationResultRepository` 로 평가를 읽어 `TagSetViews` · `ThresholdRepository` 로 그 버전의 체계와 태그 기준 · 저장 기준을 얻고 `TagJudgement` 로 판정한다. 채움: `TagBackfillAdministrationService` 가 `EvaluationResultRepository.countByVersion` 으로 범위의 평가 수를 세고, 요청이면 `TagSetRepository` 로 표를 잠가 모든 버전의 `ThresholdRepository.current` 저장 기준을 채울 기준으로 `TagBackfillRepository` 에 기록한다. 작업 역할의 `BackfillMissingTagsJob` 이 1분마다 `TagBackfillRound` 를 돌린다. 회차는 `TagBackfillRepository` 로 채움을 점유하고(`TagBackfill.claim` · `BackfillSchedule` 의 일정), 버전마다 `TagSetViews` 와 채울 기준을 한 번 읽은 뒤, 묶음마다 `EvaluationResultRepository.lockResponses` 로 평가를 잠가 읽어 포트 `ArticleEvaluator.reread` 로 원본 응답을 다시 읽고, `ResultCheck` 로 대조한 결과를 `EvaluationRecord.storedTags` 로 걸러 `addMissingTags` 로 더한다. 진행은 `TagBackfillRepository.advance` 로 점유 토큰이 맞을 때만 쓴다. 평가기는 Jev 키가 있으면 `JevArticleEvaluatorConfiguration` 이 `JevArticleEvaluator` 를, `local` 이면서 키가 없으면 `FakeArticleEvaluatorConfiguration` 이 `FakeArticleEvaluator` 를 포트로 등록한다 — 키가 있는가는 `JevKeyCondition` 이 정한다. `JevArticleEvaluator` 는 `JevRequest` 로 요청 본문을, `JevResponse` 로 결과를, `JevErrors` 로 오류 갈래 · 문구를 만든다.
 
-집계: `EvaluationAdministrationService.overview` 와 `TopicCoverageService` 는 각자 읽기 전용 `REPEATABLE READ` 트랜잭션 하나(`TransactionTemplate`)를 연다. 평가 현황은 `TagSetRepository.existsById` 로 버전을 보고, `TagSetViews` · `ThresholdRepository`(`current` · `changes`)로 `OverviewTally` 를 만들어 `EvaluationResultRepository.streamVersionPeriod` 의 평가를 하나씩 넣는다 — 판정은 `TagJudgement` 가 한다. 보도량은 `TagSetDirectory` 로 활성 버전을 읽고 `CoverageTally.unknownTopics` 로 고른 키를 본 뒤, `streamFirstEvaluatedIn` 의 기사마다 그 평가 버전의 `TagSetViews` · `ThresholdRepository.current` · `TagKeyLineage.toActive` 를(버전마다 한 번) 얻어 `TagJudgement` 의 판정과 계보 표를 `CoverageTally` 에 넣는다. 결과 저장소는 평가 행을 fetch size 커서로 나눠 받는다.
+집계: `EvaluationAdministrationService.overview` 와 `TopicCoverageService` 는 각자 읽기 전용 `REPEATABLE READ` 트랜잭션 하나(`TransactionTemplate`)를 연다. 평가 현황은 `TagSetRepository.existsById` 로 버전을 보고, `TagSetViews` · `ThresholdRepository`(`current` · `changes`)와 `TagBackfillRepository.coverages` 로 만든 태그 종류별 `StoreFloors` 로 `OverviewTally` 를 만들어 `EvaluationResultRepository.streamVersionPeriod` 의 평가를 하나씩 넣는다 — 판정은 `TagJudgement` 가 한다. 보도량은 `TagSetDirectory` 로 활성 버전을 읽고 `CoverageTally.unknownTopics` 로 고른 키를 본 뒤, `streamFirstEvaluatedIn` 의 기사마다 그 평가 버전의 `TagSetViews` · `ThresholdRepository.current` · `TagKeyLineage.toActive` 를(버전마다 한 번) 얻어 `TagJudgement` 의 판정과 계보 표를 `CoverageTally` 에 넣는다. 결과 저장소는 평가 행을 fetch size 커서로 나눠 받는다.
 
 #### 첫 기동
 
@@ -597,6 +675,34 @@ sequenceDiagram
     end
 ```
 
+#### 빠진 태그 채움
+
+```mermaid
+sequenceDiagram
+    participant A as admin
+    participant S as TagBackfillAdministrationService
+    participant J as BackfillMissingTagsJob
+    participant R as TagBackfillRound
+    participant B as TagBackfillRepository
+    participant Res as EvaluationResultRepository
+    participant E as ArticleEvaluator
+
+    A->>S: request(일수)
+    S->>B: 트랜잭션 — 표 잠금(SHARE) · 버전마다 지금 저장 기준 · 끝나지 않은 채움이 없으면 기록 (evaluation-R31)
+    J->>R: 1분마다 (작업 역할)
+    R->>B: 트랜잭션 — 시작할 수 있는 채움 잠금 · 점유 쓰기 · 커밋
+    loop 묶음마다 — 한 트랜잭션
+        R->>Res: 덮는 범위의 평가를 평가 ID 순 500건 잠가 읽기 (FOR KEY SHARE)
+        alt 남은 평가가 없음
+            R->>B: 토큰이 맞으면 끝냄 — 이때부터 덮음이 저장 바닥 계산에 든다 (evaluation-R32)
+        else 평가가 있음
+            R->>E: 평가마다 원본 응답 다시 읽기 (외부 호출 없음)
+            R->>Res: 체계와 맞으면 채울 저장 기준 이상인데 없는 태그 행만 더하기
+            R->>B: 토큰이 맞으면 커서 · 버전별 건수 · 점유 갱신 — 아니면 묶음 되돌림 · 멈춤
+        end
+    end
+```
+
 ### 들어오는 쪽
 
 | 진입점 | 구성 요소 | 계기 | 내용 |
@@ -605,6 +711,7 @@ sequenceDiagram
 | 첫 기동 적재 | `TagSetSeeding`(`application`) | 싱글톤을 모두 만든 뒤(`SmartInitializingSingleton`) — 웹 서버 · 작업 서버가 시작하기 전. 두 역할 공통 | 버전이 하나도 없을 때만 버전 1 을 적재한다. 여러 프로세스가 동시에 떠도 하나만 적재하고, 다시 기동해도 결과가 같다(evaluation-R2) |
 | `ArticleStored` · `ArticlesRemoved` 리스너 | `ArticleEventsListener`(`application`) | `article` 의 `ArticleStored` · `ArticlesRemoved` | 새 기사를 평가 대기에 넣고(evaluation-R18), 지운 기사의 대기 · 평가 · 태그 행을 지운다(evaluation-R21). 비동기 · 새 트랜잭션이고 이벤트 발행 레지스트리에 기록된다(Spring Modulith `@ApplicationModuleListener`). 실패한 발행은 `platform` 의 이벤트 재처리 작업이 다시 처리하고, 다시 처리해도 결과가 같다 |
 | 평가 반복 작업 | `EvaluatePendingArticlesJob`(`adapter/in/job`, 작업 역할) | JobRunr 반복 작업 `evaluate-pending-articles` — 1분마다, 재시도 없음 | 평가기를 필수로 주입받아 `EvaluationRound` 에 넘겨 돌린다(evaluation-R19 · R20). 이전 실행이 대기 · 처리 중이면 그 회차는 건너뛴다 |
+| 채움 반복 작업 | `BackfillMissingTagsJob`(`adapter/in/job`, 작업 역할) | JobRunr 반복 작업 `backfill-missing-tags` — 1분마다, 재시도 없음 | 평가기를 필수로 주입받아 `TagBackfillRound` 에 넘겨 돌린다(evaluation-R31). 이전 실행이 대기 · 처리 중이면 그 회차는 건너뛴다 |
 | 작업 역할 키 기동 검사 | `JevKeyRequirement`(`adapter/out/jev`, 작업 역할) | 컨텍스트를 만들 때 | `local` 이 아닌데 Jev 키가 없으면 기동하지 않는다(evaluation-R20) |
 
 컨트롤러는 없다.
@@ -621,8 +728,10 @@ sequenceDiagram
 - `ArticleEvaluationsService` — 공개 API `ArticleEvaluations` 의 구현(evaluation-R15)
 - `EvaluationAdministrationService` — 공개 운영 API `EvaluationAdministration` 의 구현. `overview` 는 `PlatformTransactionManager` 로 만든 읽기 전용 `REPEATABLE READ` `TransactionTemplate` 안에서 센다(evaluation-R29)
 - `TopicCoverageService` — 공개 조회 `TopicCoverage` 의 구현. 같은 모양의 트랜잭션 안에서 센다 — 평가에 나온 버전마다 체계 · 지금 기준 · 계보 표를 한 번씩 읽는다(호출 하나 안). 역할 애너테이션이 없다(evaluation-R30)
-- `TagSetViews` · `PendingEvaluations` · `EvaluationRound` · `ArticleEvaluationsService` · `EvaluationAdministrationService` · `TopicCoverageService` 는 트랜잭션 · 역할 애너테이션이 없다 — 두 역할 공통이고, 점유 · 회차 · 집계는 `TransactionTemplate` 으로 트랜잭션을 연다. `ArticleEventsListener` 는 리스너마다 새 트랜잭션이다
-- `TagSetAdministrationService` — 공개 API `TagSetAdministration` 의 구현. 태그 기준 · 저장 기준 변경은 한 트랜잭션에서 표 잠금(활성 전환과 줄 서기) → 활성 버전 조회 → 태그 기준 · 저장 기준 행 잠금 → 지난 저장 기준 최댓값 → 판정 → 쓰기다. 시각은 `InstantSource` 에서 얻는다(evaluation-R11 ~ R13). 버전 연산은 `TagSetVersioning` 에 맡긴다
+- `TagBackfillAdministrationService` — 공개 운영 API `TagBackfillAdministration` 의 구현(evaluation-R31). 요청은 한 트랜잭션에서 `tag_sets` 표를 `SHARE` 로 잠근 뒤 모든 버전의 지금 저장 기준과 범위의 평가 수로 버전별 계획을 만들어 기록한다. 기록하지 못하면 끝나지 않은 채움을 읽어 `AlreadyOpen` 으로 — 그 사이 끝나 읽기가 비면 기록을 한 번 더 한다. 시각은 `InstantSource` 에서 얻는다
+- `TagBackfillRound` — 채움 회차 하나(evaluation-R31). 평가기는 `run(ArticleEvaluator)` 의 인자로 받는다. 점유를 커밋한 뒤 버전마다 체계와 채울 기준(저장 기준은 계획의 값, 태그 기준은 거르기에 쓰이지 않아 지금 값)을 한 번 읽고, 묶음마다 한 트랜잭션에서 잠가 읽기 → 다시 읽기 → 대조 → 더하기 → 진행 쓰기를 한다. 멈춤 갈래는 셋이다 — 남은 평가가 없으면 끝냄, 진행 쓰기에서 토큰이 맞지 않으면 그 묶음을 되돌리고 멈춤(점유를 다른 회차가 가져갔다), 그 밖의 예외(계획에 없는 버전의 평가 · DB 오류)면 그 묶음을 되돌리고 점유를 풀고 멈춤. 다시 읽기의 예상 못한 예외는 그 평가를 읽을 수 없음으로 세고 이어 간다. 로그: `빠진 태그 채움 {ID} 을 끝냈다 — 평가 {n}건, 더한 태그 {m}건, 건너뜀 {k}건` · `빠진 태그 채움 {ID} 의 점유를 다른 회차가 가져가 멈췄다`(정보), `빠진 태그 채움 {ID} 에서 평가기가 원본 응답을 다시 읽다 예상 못한 예외를 던졌다 — 평가 {ID}` · `빠진 태그 채움 {ID} 을 멈췄다 — 다음 회차가 이어서 한다`(오류)
+- `TagSetViews` · `PendingEvaluations` · `EvaluationRound` · `ArticleEvaluationsService` · `EvaluationAdministrationService` · `TagBackfillAdministrationService` · `TagBackfillRound` · `TopicCoverageService` 는 트랜잭션 · 역할 애너테이션이 없다 — 두 역할 공통이고, 점유 · 회차 · 집계 · 채움 요청은 `TransactionTemplate` 으로 트랜잭션을 연다. `ArticleEventsListener` 는 리스너마다 새 트랜잭션이다
+- `TagSetAdministrationService` — 공개 API `TagSetAdministration` 의 구현. 태그 기준 · 저장 기준 변경은 한 트랜잭션에서 표 잠금(활성 전환과 줄 서기) → 활성 버전 조회 → 태그 기준 · 저장 기준 행 잠금 → 지난 저장 기준 최댓값(`StoreFloors.pastMax` — 이력과 끝난 채움) → 판정 → 쓰기다. 시각은 `InstantSource` 에서 얻는다(evaluation-R11 ~ R13). 버전 연산은 `TagSetVersioning` 에 맡긴다
 - `TagSetVersioning` — 버전 목록 · 원문 내보내기 · 확인 · 활성화(evaluation-R16 · R22 ~ R25 · R27). 활성화는 재평가 대상 기사를 트랜잭션 밖에서 읽은 뒤 한 트랜잭션(`TransactionTemplate`)에서 표 잠금 → 대조 → 쓰기다. 시각은 `InstantSource` 에서 얻는다. 활성화하면 정보 로그 `태그 체계 버전 {번호}를 활성으로 바꿨다 — 재평가 대기 {건}건` 을 남긴다
 - `TagSetVersionStore` — 새 버전 쓰기(버전 행과 그 버전의 처음 태그 기준 · 저장 기준 · 이력 첫 행)의 정본(evaluation-R2 · R3 · R13 · R16). 첫 적재(`TagSetSeeding`)는 버전 1 을, 활성화(`TagSetVersioning`)는 기준 버전을 끈 뒤 다음 버전을 쓴다. 트랜잭션을 열지 않는다 — 부르는 쪽의 트랜잭션 · 표 잠금 안에서 쓴다. 빈이 아니다
 - `TagKeyLineageService` — 공개 API `TagKeyLineage` 의 구현(evaluation-R26). 트랜잭션 · 역할 애너테이션이 없다
@@ -660,7 +769,7 @@ sequenceDiagram
 
 #### `domain/evaluator`
 
-- 포트 `ArticleEvaluator`(나가는 쪽)와 그 값 · 결과: `EvaluationInput` · `FeedContext` · `EvaluationResult` · `Evaluation` · `EvaluationFailure`
+- 포트 `ArticleEvaluator`(나가는 쪽)와 그 값 · 결과: `EvaluationInput` · `FeedContext` · `EvaluationResult` · `Evaluation` · `EvaluationFailure` · `RereadResult` · `RereadFailure`
 - `FeedContext.limited` — 피드 맥락의 카테고리 상한을 적용하는 정본(evaluation-R17)
 
 #### `domain/jev`
@@ -673,6 +782,7 @@ sequenceDiagram
 #### `domain/threshold`
 
 - `ThresholdRule` — 태그 기준 · 저장 기준 변경 판정과 경고의 정본(evaluation-R11 · R12)
+- `StoreFloors` — 저장 바닥 계산의 정본(evaluation-R32). 이력(저장소 순서 그대로)과 끝난 채움의 덮음(`StoreCoverage` — 덮은 범위와 채운 저장 기준)으로 지난 저장 기준 최댓값(`pastMax`)과 기간 안 바닥이 섞였는지(`mixed`)를 낸다. 읽기 지연은 세 인자 `of` 가 `EvaluationSchedule.LEASE` 로 정한다 — 경고 · 평가 현황이 모두 이것을 부른다
 - `ThresholdValues` — 태그 기준 · 저장 기준 한 쌍과 값 규칙(evaluation-R10). 공개 값 `TagThresholds` 로 옮기는 것도 이것이 한다
 - 저장 단위: aggregate 가 없다 — 태그 기준 · 저장 기준은 상태 전이가 아니라 값 갱신과 이력 추가이고, 판정은 `ThresholdRule` 이 한다. 저장소 `ThresholdRepository` 가 쓴다
 
@@ -680,7 +790,6 @@ sequenceDiagram
   public interface ThresholdRepository {
       void insertInitial(TagSetId version, MultiTagKind kind, ThresholdValues values, ChangeActor actor, Instant at);
       Optional<ThresholdValues> lockCurrent(TagSetId version, MultiTagKind kind);   // 행 잠금 — 트랜잭션 안에서
-      BigDecimal maxStoreThreshold(TagSetId version, MultiTagKind kind);            // 이력 전체의 저장 기준 최댓값
       void apply(TagSetId version, MultiTagKind kind, ThresholdValues previous, ThresholdValues next,
               ChangeActor actor, Instant at);                                      // 현재 행 갱신 + 이력 행 추가
       List<ThresholdChangeView> changes(TagSetId version);                          // 최근 것부터
@@ -689,6 +798,34 @@ sequenceDiagram
   ```
 
 - 그 밖의 값: `ThresholdDecision`
+
+#### `domain/backfill`
+
+- `TagBackfill` — 채움 행 하나와 그 점유. `claim(token, now)` 이 점유(만료 = 지금 + `BackfillSchedule.LEASE`)와 처음 점유의 시작 시각을 쓰고, `state()` 가 시작 · 끝 시각으로 상태를 정한다. 끝난 채움은 점유가 없다. 진행 · 끝냄은 점유 토큰을 조건으로 한 SQL 갱신이다(evaluation-R31)
+- `BackfillSchedule` — 시작 지연(`START_DELAY` 1분 — 평가 시각을 찍은 결과가 커밋되기까지의 여유) · 점유 기간(`LEASE` 10분 — 묶음마다 갱신) · 묶음 크기(`BATCH` 500)의 정본. 값은 목표다 — 묶음 하나의 측정은 evaluation-R31
+- 저장 단위: aggregate 가 없다 — 채움 행은 요청이 넣고 회차가 토큰 조건 갱신으로 진행을 쓴다(평가 대기와 같은 모양). 저장소 `TagBackfillRepository` 가 쓴다
+
+  ```java
+  public interface TagBackfillRepository {
+      Optional<Long> insertIfNoneOpen(int days, Instant from, Instant to, Instant eligibleAt,
+              List<BackfillVersionPlan> versions);                      // 끝나지 않은 채움이 없으면 넣고 그 ID — 있으면 빈 값
+      Optional<TagBackfill> findOpen();
+      Optional<TagBackfill> lockDue(Instant now);                       // 시작할 수 있고 점유가 없거나 만료된 채움 — 잡힌 행은 건너뛴다
+      void saveLocked(TagBackfill claimed);                             // lockDue 로 잠근 채움의 점유
+      boolean advance(long id, UUID token, long cursor, Map<TagSetId, BackfillCounts> counts,
+              Instant leaseExpiresAt);                                  // 토큰이 맞을 때만 커서 · 버전별 건수 · 점유 갱신
+      boolean finish(long id, UUID token, Instant now);                 // 토큰이 맞을 때만 끝냄 — 점유를 푼다
+      boolean release(long id, UUID token);                             // 토큰이 맞을 때만 점유를 푼다
+      Map<TagSetId, BackfillVersionPlan> versions(long id);
+      Optional<TagBackfillRunView> run(long id);
+      List<TagBackfillRunView> runs();                                  // 최근 것부터
+      List<StoreCoverage> coverages(TagSetId version, MultiTagKind kind); // 끝났고 그 버전에서 건너뛴 평가가 없는 채움 — 요청 순
+  }
+  ```
+
+  점유 갱신은 진행 쓰기(`advance`)가 함께 한다 — 따로 갱신하는 연산이 없다. 끝난 채움을 지우는 연산은 없다 — 저장 바닥 계산의 입력이다
+
+- 그 밖의 값: `BackfillVersionPlan`(버전 · 채울 저장 기준 둘 · 요청 때 센 평가 수) · `BackfillCounts`(묶음의 버전별 처리 · 더한 태그 · 건너뜀 둘)
 
 #### `domain/queue`
 
@@ -714,7 +851,7 @@ sequenceDiagram
 #### `domain/result`
 
 - `ResultCheck` — 결과와 체계의 일치 검사의 정본(evaluation-R20)
-- `EvaluationRecord` — 저장할 평가 한 건과 결과 해석(`of` — 저장 기준 거르기 · 대표 형식 · 중요도 기대값)의 정본(evaluation-R15)
+- `EvaluationRecord` — 저장할 평가 한 건과 결과 해석(`of` — 저장 기준 거르기 · 대표 형식 · 중요도 기대값)의 정본(evaluation-R15). 저장 기준 거르기는 `storedTags` 로 꺼내 빠진 태그 채움도 쓴다(evaluation-R31)
 - `ImportanceScore` — 중요도 기대값의 정본(evaluation-R15)
 - `TagJudgement` — 조회 시점 판정의 정본(evaluation-R15)
 - `VersionMatch` — 태그 기준 · 저장 기준과 체계의 버전이 같다는 사전 조건의 정본 — `EvaluationRecord` · `TagJudgement` · `OverviewTally` 가 쓴다(그래서 공개 클래스다)
@@ -730,19 +867,24 @@ sequenceDiagram
               Consumer<EvaluationSample> sink);                         // 그 버전 · 평가 시각 [from, to) — 평가 ID 순
       void streamFirstEvaluatedIn(Instant from, Instant to,
               Consumer<StoredEvaluation> sink);                         // 첫 평가 시각 [from, to) 인 기사의 최신 평가와 주제 태그 행 — 기사 ID 순
-      void deleteByArticles(Collection<ArticleId> articleIds);         // 지운 기사 따르기
+      List<StoredResponse> lockResponses(Instant from, Instant to, long afterId,
+              int limit);                                              // 채움 — 평가 시각 [from, to) · ID 가 afterId 뒤 · ID 순 limit 건, 키 공유 잠금
+      int addMissingTags(long evaluationId, ArticleId articleId,
+              List<StoredTag> tags);                                   // 채움 — 없는 태그 행만 더한다. 더한 행 수
+      Map<TagSetId, Long> countByVersion(Instant from, Instant to);    // 채움 확인 · 요청 — 평가 시각 [from, to) 의 평가 수
+      void deleteByArticles(Collection<ArticleId> articleIds);         // 지운 기사 따르기 — 평가 행을 ID 순으로 먼저 잠근다
   }
   ```
 
   흘려 받기 둘은 결과를 담아 두지 않고 커서로 나눠 받으므로 트랜잭션 안에서 부른다 — 밖이면 `IllegalStateException`(evaluation-R29 · R30)
 
-- 그 밖의 값: `StoredTag` · `StoredEvaluation`
+- 그 밖의 값: `StoredTag` · `StoredEvaluation` · `StoredResponse`(채움이 다시 읽을 평가 — 평가 ID · 기사 · 버전 · 평가기 이름 · 원본 응답)
 
 #### `domain/overview`
 
 집계 판단 — 스프링 없이 평가를 하나씩 받아 센다. 메모리는 평가 수에 비례하지 않는다.
 
-- `OverviewTally` — 평가 현황 집계(evaluation-R29). 입력은 버전의 `TagSetView` · 지금 기준 · 기준 이력 · 기간이고, `add(EvaluationSample)` 마다 `TagJudgement` 로 판정해 센다. 붙은 태그 수 칸의 상한 `TAGS_PER_ARTICLE_CAP`(5)과 저장 기준 바뀜 판정(이력에 이전 저장 기준이 있고 값이 다른 행)의 정본이다
+- `OverviewTally` — 평가 현황 집계(evaluation-R29). 입력은 버전의 `TagSetView` · 지금 기준 · 태그 종류별 `StoreFloors` · 기간이고, `add(EvaluationSample)` 마다 `TagJudgement` 로 판정해 센다. 붙은 태그 수 칸의 상한 `TAGS_PER_ARTICLE_CAP`(5)의 정본이다. 저장 기준이 섞였는지는 `StoreFloors.mixed`(기간)가 낸다(evaluation-R32)
 - `CoverageTally` — 주제별 보도량 집계(evaluation-R30). `add(Judged, TagKeyMapping)` 마다 판정이 붙인 주제를 계보 표로 활성 중분류 집합에 잇고, 고른 주제 거르기 · 활성 버전에 없는 키(`unknownTopics`) · 계보 표의 기준 버전 불변식의 정본이다
 - `ProbabilityBins` — 확률 칸(0.1 폭 10칸)의 칸 고르기 · 저장된 범위 판정의 정본 — 칸 고르기는 `Probabilities.atLeast` 로 한다
 - `ImportanceBins` — 중요도 기대값 칸(0.5 폭 8칸)의 정본
@@ -762,6 +904,7 @@ sequenceDiagram
 ```java
 public interface ArticleEvaluator {
     EvaluationResult evaluate(EvaluationInput input, TagSetView tagSet);
+    RereadResult reread(String evaluator, String rawResponse, TagSetView tagSet);
 }
 
 public record EvaluationInput(String title, @Nullable String summary, List<FeedContext> feeds) {}
@@ -776,16 +919,23 @@ public sealed interface EvaluationResult permits Evaluation, EvaluationFailure {
 
 public record Evaluation(Map<String, Double> topics, Map<String, Double> regions, Map<String, Double> formats,
         Map<Integer, Double> importance, String evaluator, String modelVersion, int inputTokens, String rawResponse)
-        implements EvaluationResult {}
+        implements EvaluationResult, RereadResult {}
 
 public record EvaluationFailure(Kind kind, String message) implements EvaluationResult {
     public enum Kind { TRANSIENT, ARTICLE_REJECTED, EVALUATOR_UNAVAILABLE }
+}
+
+public sealed interface RereadResult permits Evaluation, RereadFailure {}
+
+public record RereadFailure(Kind kind, String message) implements RereadResult {
+    public enum Kind { OTHER_EVALUATOR, UNREADABLE }
 }
 ```
 
 | 타입 · 멤버 | 뜻 | 제약 |
 |---|---|---|
 | `evaluate` | 기사 하나를 넘긴 체계의 질문으로 평가한다 | — |
+| `reread` | 저장된 원본 응답을 넘긴 체계(그 평가의 버전)로 다시 읽는다 — 외부를 부르지 않는다. `evaluator` 는 그 평가를 남긴 평가기 이름이다 | — |
 | `EvaluationInput.title` | 기사 제목 | 공백뿐이 아니다 |
 | `EvaluationInput.summary` | RSS 요약문 — 없으면 null | 공백뿐이 아니다. 길이 상한은 수집이 정한다(`FetchedArticle.SUMMARY_MAX_CODE_POINTS` — [source Spec](source.md)) |
 | `EvaluationInput.feeds` | 기사가 실린 피드의 맥락 — 넘긴 순서 그대로 | 비어 있을 수 있다 |
@@ -798,9 +948,12 @@ public record EvaluationFailure(Kind kind, String message) implements Evaluation
 | `Evaluation.rawResponse` | 원본 응답 — JSON 텍스트 | — |
 | `EvaluationFailure.Kind` | 실패 갈래 — `TRANSIENT`(시간이 지나면 풀릴 수 있다 — 마감 초과 · 연결 실패 · 서버 오류 · 요청 제한. 그 기사를 재시도한다) · `ARTICLE_REJECTED`(그 기사 때문이라 다시 보내도 같다 — 입력 거부 · 그 기사의 응답을 읽을 수 없음. 그 기사를 실패로 남긴다) · `EVALUATOR_UNAVAILABLE`(평가기 자체를 쓸 수 없다 — 키 무효 · 한도 소진 · 설정 오류. 기사 재시도를 쓰지 않고 회차를 멈춘다) | — |
 | `EvaluationFailure.message` | 운영자용 문구 | 공백뿐이 아니고 비밀 값을 담지 않는다 |
+| `RereadFailure.Kind` | 다시 읽기의 실패 갈래 — `OTHER_EVALUATOR`(다른 평가기가 남긴 원본 응답 — 그 형식을 모른다) · `UNREADABLE`(이 평가기의 형식이 아니거나 넘긴 체계의 답이 없다) | — |
+| `RereadFailure.message` | 운영자용 문구 | 공백뿐이 아니고 비밀 값 · 원본 응답 원문을 담지 않는다 |
 
 - 계약
   - 질문 · 태그는 넘긴 체계에서 읽는다 — 구현은 문구를 갖지 않는다(evaluation-R14)
+  - 원본 응답의 형식은 그 응답을 낸 구현만 안다 — 다시 읽기는 외부를 부르지 않아 트랜잭션 안에서 불러도 된다. 예상한 실패는 `RereadFailure` 로 돌려주고, 예상 못한 런타임 예외는 구현 결함이다. 되찾은 평가가 체계와 맞는지는 부르는 쪽이 `ResultCheck` 로 본다(evaluation-R31)
   - 성공이면 넘긴 체계의 주제 중분류 · 지역 · 형식 선택지 · 중요도 수준마다 확률이 하나씩 있고, 다른 키는 없다. 분포의 합은 계약하지 않는다. 결과 레코드는 값 하나하나만 검사하고, 체계와 맞는지는 부르는 쪽이 본다
   - 예상한 실패는 `EvaluationFailure` 로 돌려준다 — 예외를 던지지 않는다. 예상 못한 런타임 예외는 구현 결함이다([ADR-0058](../adr/0058-evaluator-failures-in-three-kinds-and-unavailable-evaluator-skips-article-retries.md))
   - 외부 호출을 하므로 부르는 쪽은 DB 트랜잭션 밖에서 부른다. 구현은 트랜잭션을 열지 않는다
@@ -833,10 +986,12 @@ public record EvaluationFailure(Kind kind, String message) implements Evaluation
 
   - 실패 문구 — 무엇이 일어났는지와 상태 · `error_type` · Jev 설명 앞 200 코드 포인트 · `Retry-After` · 요청 ID(응답 헤더 `x-typesafe-request-id`)를 담고 500 코드 포인트 이하다. 요청 · 응답 본문 원문(검증 실패 응답은 요청 본문을 되돌려준다)은 담지 않는다. 확인 요청이 받아들여지지 않은 실패는 확인 요청의 응답으로 쓴다
   - 키는 `Authorization` 헤더로만 나간다
+  - 다시 읽기 — 평가기 이름이 `jev` 가 아니면 `OTHER_EVALUATOR`, 맞으면 `JevResponse` 로 읽는다(요청을 보내지 않는다). 읽을 수 없으면 `UNREADABLE` 이고 문구는 `JevResponse` 의 것이다
 - `FakeArticleEvaluator`(`adapter/out/fake`) — 로컬 대체물. 외부 호출 없이 고정 규칙으로 같은 입력 · 같은 체계에 같은 결과를 낸다. `local` 이면서 Jev 키가 없을 때만 등록되고(§7 · [platform-R18](platform.md#로컬-개발)), 시험은 직접 만들어 쓴다([ADR-0057](../adr/0057-local-substitutes-registered-only-in-local-profile-without-operator-switch.md)). 개발 · 확인용 인스턴스가 기대는 조종 계약:
   - 실패 표지 — 제목에 `[fake:transient]` · `[fake:article-rejected]` · `[fake:evaluator-unavailable]` 가 있으면 그 갈래로 실패한다. 표지는 제목에서만 본다. 여럿이면 갈래 선언 순서(일시 → 기사 거부 → 평가기 사용 불가)로 처음 것이다
   - 이름 일치 — 태그 · 대분류 이름을 `·` 로 나눈 조각이 제목 · 피드 섹션 · 카테고리에 들어 있으면 그 태그의 확률을 높인다. 요약 · 출처 이름은 보지 않는다. 일치가 없으면 주제는 고정 규칙으로 하나를, 지역 · 형식은 체계 순서의 첫 항목을 고른다. 수치와 고르는 규칙은 클래스 Javadoc 이 정본이다
   - 평가기 이름 `fake`, 모델 버전 `fake-rules-2` — 규칙을 바꾸면 버전을 올린다. 입력 토큰은 실제 토큰 수가 아니다
+  - 다시 읽기 — 평가기 이름이 `fake` 가 아니면 `OTHER_EVALUATOR`, 맞으면 자기 원본 응답에서 넘긴 체계의 키마다 확률을 읽는다(중요도 키는 수준의 문자열). 모델 버전은 원본의 값, 입력 토큰은 원본에 없어 0 이다. 키가 없거나 확률이 0 ~ 1 유한값이 아니면 `UNREADABLE`
 
 평가 작업은 `ArticleStored` 로 대기에 들어간 기사를 1분마다 묶어 `ArticleEvaluator` 로 평가한다 — §4 들어오는 쪽 · evaluation-R18 ~ R20.
 
@@ -844,8 +999,9 @@ public record EvaluationFailure(Kind kind, String message) implements Evaluation
 
 - `JdbcThresholdRepository` — `ThresholdRepository` 의 PostgreSQL 구현(JdbcClient). 잠금은 `SELECT … FOR UPDATE`, 갱신과 이력 추가는 같은 트랜잭션의 두 문장이다
 - `TagSetRepository` 는 Spring Data JDBC 저장소다. 표 잠금은 `LOCK TABLE tag_sets IN SHARE ROW EXCLUSIVE MODE`(`lockForChange`) · `IN SHARE MODE`(`lockAgainstChange`) 다. 행 잠금(`FOR SHARE`)을 쓰지 않는 것은, READ COMMITTED 에서 전환을 기다린 문장이 다시 평가할 때 끈 옛 행만 보고 새 활성 행은 보지 못하기 때문이다. `deactivate` 는 조건부 갱신(`… where id = :id and active`)이다
+- `JdbcTagBackfillRepository` — `TagBackfillRepository` 의 PostgreSQL 구현(JdbcClient). 넣기는 끝나지 않은 행의 부분 고유 인덱스에 `INSERT … ON CONFLICT DO NOTHING RETURNING id` 로 판정한다 — 위반 예외는 트랜잭션을 깨므로 쓰지 않는다. 잠금은 `FOR UPDATE SKIP LOCKED`, 회차의 쓰기는 점유 토큰을 조건으로 한 갱신이다. 덮음은 끝났고 그 버전에서 건너뛴 평가가 없는 채움만 읽는다
 - `JdbcEvaluationQueueRepository` — `EvaluationQueueRepository` 의 PostgreSQL 구현(JdbcClient). 넣기는 `INSERT … ON CONFLICT DO NOTHING`, 재평가는 `INSERT … SELECT unnest(…) ON CONFLICT … DO UPDATE … WHERE failure IS NOT NULL` 한 문장, 잠금은 `FOR UPDATE SKIP LOCKED`, 회차의 반영은 점유 토큰을 조건으로 한 갱신 · 삭제다. 평가 가능 시각의 정착 시간은 `EvaluationSchedule` 이 정한다 — SQL 에 값을 두지 않는다
-- `JdbcEvaluationResultRepository` — `EvaluationResultRepository` 의 PostgreSQL 구현(JdbcClient). 분포 · 원본 응답은 `jsonb` 로 쓰고, 지우기는 태그 행 → 평가 행 순이다. 흘려 받기 둘은 SQL 한 문장을 `STREAM_FETCH_SIZE`(1,000행) 커서로 받아 평가마다 태그 행을 묶는 보조 하나를 함께 쓴다 — PgJDBC 는 트랜잭션 안(autocommit 꺼짐)에서 fetch size 가 있을 때만 나눠 받는다. 최신 평가 고르기의 정렬(`LATEST_VERSION_FIRST` — 버전 번호 내림차순)은 `findLatest` 와 첫 평가 흘려 받기가 함께 쓴다
+- `JdbcEvaluationResultRepository` — `EvaluationResultRepository` 의 PostgreSQL 구현(JdbcClient). 분포 · 원본 응답은 `jsonb` 로 쓰고, 지우기는 평가 행을 평가 ID 순으로 `FOR UPDATE` 로 잠근 뒤 태그 행 → 평가 행 순이다(evaluation-R21). 채움의 잠금 읽기는 `ORDER BY id LIMIT … FOR KEY SHARE`, 태그 더하기는 `INSERT … ON CONFLICT (evaluation_id, tag_kind, tag_key) DO NOTHING` 이다. 잠금 읽기의 묶음은 그새 지워진 평가 때문에 비지 않는다 — PostgreSQL 의 잠금 절은 "If a LIMIT is used, locking stops once enough rows have been returned to satisfy the limit"이고, 다시 평가해 돌려주지 않는 행은 그 수에 들지 않는다([PostgreSQL 18 SELECT — The Locking Clause](https://www.postgresql.org/docs/18/sql-select.html#SQL-FOR-UPDATE-SHARE)). 원본 응답은 `raw_response::text` 로 꺼낸다 — 공백 · 키 순서는 원문과 다르고 수치는 자릿수를 지킨다. 흘려 받기 둘은 SQL 한 문장을 `STREAM_FETCH_SIZE`(1,000행) 커서로 받아 평가마다 태그 행을 묶는 보조 하나를 함께 쓴다 — PgJDBC 는 트랜잭션 안(autocommit 꺼짐)에서 fetch size 가 있을 때만 나눠 받는다. 최신 평가 고르기의 정렬(`LATEST_VERSION_FIRST` — 버전 번호 내림차순)은 `findLatest` 와 첫 평가 흘려 받기가 함께 쓴다
 
 #### 신뢰할 수 없는 입력
 
@@ -855,6 +1011,7 @@ public record EvaluationFailure(Kind kind, String message) implements Evaluation
 | 운영자 원문(확인 · 활성화) | 운영자 경로 뒤의 입력이지만 기본 체계 파일과 같은 엄격한 읽기 — 원문 상한 65,536자 · YAML 공통 거부 · evaluation-R5 ~ R8 · R10 · R22 · R23 |
 | RSS 항목 카테고리(평가 입력) | 피드가 개수 · 길이를 정하는 값이라 평가 입력에 넣기 전에 줄인다 — evaluation-R17 |
 | Jev 응답 | 본문은 1 MiB 까지 받는다. 200 은 질문마다 기대한 종류의 답과 0 ~ 1 의 유한 확률이 있어야 하고, 없으면 평가기 사용 불가다. 오류 응답의 설명 · 요청 ID · `Retry-After` 는 실패 문구에 넣기 전에 제어 문자를 공백으로, 짝 없는 서로게이트를 U+FFFD 로 바꾸고 길이를 자른다 — 문구는 대기 행에 저장되고 PostgreSQL `text` 는 U+0000 을 받지 않는다. 오류 본문 원문은 문구에 넣지 않는다 |
+| 저장된 원본 응답(빠진 태그 채움) | 평가기가 자기 형식으로만 다시 읽고, 넘긴 체계의 답이 없으면 읽을 수 없음이다. 되찾은 결과는 `ResultCheck` 로 체계와 대조한다 — 어긋나면 건너뛰고 센다(evaluation-R31) |
 | 평가기 결과 · 원본 응답 | 저장 전에 체계와 대조한다 — 키 집합이 체계와 같고, 원본 응답은 JSON 이고 문자 U+0000 · 짝 없는 서로게이트가 없어야 한다(PostgreSQL `jsonb` 가 받지 않는다). 어긋나면 회차를 멈춘다 — evaluation-R20 |
 
 ## 5. 규칙과 불변식
@@ -884,10 +1041,10 @@ public record EvaluationFailure(Kind kind, String message) implements Evaluation
 - **evaluation-R11** — 태그 기준 · 저장 기준의 변경은 활성 버전의 한 태그 종류에 한다. 값이 범위 밖이면 바꾸지 않는다. 지금 값과 같으면 바꾸지 않고 이력도 남기지 않는다. 그 밖에는 바꾸고 이력을 남긴다 — 앱은 저장 기준 · 태그 기준의 관계를 막지 않는다. 한 트랜잭션이고 그 태그 종류의 현재 행을 잠근 뒤 한다 — 같은 태그 종류의 동시 변경은 줄을 서서, 뒤 변경의 이전 값이 앞 변경의 새 값이다. 활성 전환과도 줄을 선다 — 활성 버전을 읽기 전에 `tag_sets` 표를 활성 전환과 충돌하는 모드(`SHARE`)로 잠가, 전환 직후의 변경이 방금 은퇴한 버전에 들어가지 않는다
 - **evaluation-R12** — 이번 변경이 이전 기사와 어긋남을 만들 때만 경고를 결과에 담는다. 이미 어긋난 상태에서 다른 값만 바꾸는 변경에는 다시 알리지 않는다:
   - `STORE_THRESHOLD_LOWERED` — 새 저장 기준 < 지금 저장 기준
-  - `TAG_BELOW_PAST_STORE` — 새 태그 기준 < 지금 태그 기준 이고, 새 태그 기준 < 그 버전 · 그 태그 종류의 지난 저장 기준 최댓값(이 변경 전까지의 이력 — 처음 값 포함)
+  - `TAG_BELOW_PAST_STORE` — 새 태그 기준 < 지금 태그 기준 이고, 새 태그 기준 < 그 버전 · 그 태그 종류의 지난 저장 기준 최댓값(이 변경 전까지의 이력과 끝난 빠진 태그 채움으로 계산한 저장 바닥의 최댓값 — evaluation-R32)
   - `TAG_BELOW_STORE` — 새 태그 기준 < 새 저장 기준 이고, 지금 태그 기준 ≥ 지금 저장 기준
 
-  판정의 정본은 `ThresholdRule` 하나다. 빠진 태그를 채우는 길은 **(미설계)** 다
+  판정의 정본은 `ThresholdRule` 하나다. 저장 기준을 낮춘 뒤 빠진 태그는 운영자가 채운다(evaluation-R31)
 - **evaluation-R13** — 태그 기준 · 저장 기준의 이력은 추가만 한다. 행마다 버전 · 태그 종류 · 이전 값 · 새 값 · 행위자 · 시각을 남기고, 처음 값이 첫 행이다 — 이전 값이 없고, 행위자는 그 버전을 만든 행위자다(첫 기동 적재는 시스템, 활성화는 요청의 행위자 — evaluation-R16). 행위자는 시스템(첫 기동 적재) · 운영자(공개 운영 API) 둘이다 — 지금 운영자는 토큰 하나라 사람을 구별하지 않는다([ADR-0043](../adr/0043-admin-functions-guarded-by-env-bearer-token-until-account-roles.md)). 이력은 무기한 보존한다
 
 ### 공유 평가
@@ -903,10 +1060,10 @@ public record EvaluationFailure(Kind kind, String message) implements Evaluation
 
 - **evaluation-R15** — 결과 해석과 판정:
   - 저장 — 원본 응답, 평가기 이름 · 모델 버전, 태그 체계 버전, 입력 토큰을 저장한다. 기사 하나에 체계 버전마다 평가 하나다
-  - 주제 · 지역 태그는 확률이 평가 때 그 태그 종류의 저장 기준 이상이면 확률과 함께 저장한다
+  - 주제 · 지역 태그는 확률이 평가 때 그 태그 종류의 저장 기준 이상이면 확률과 함께 저장한다 — 빠진 태그 채움(evaluation-R31)은 그 뒤 채울 저장 기준 이상인데 없는 행을 더한다
   - 형식은 분포 전체와 대표 형식 — 확률이 가장 큰 선택지(같으면 체계 순서가 앞선 것)와 그 확률 — 을 저장한다
   - 중요도는 분포 전체와 기대값 — Σ(수준 × 확률) ÷ Σ확률, 확률 합이 0 이면 없음 — 을 저장한다. 분포의 합이 1 이 아니어도 정의된다. 기대값은 확률이 있는 수준의 최솟값 ~ 최댓값으로 맞춘다 — 부동소수 오차로 그 범위를 벗어나지 않는다
-  - 판정은 저장하지 않고 조회할 때 한다 — 그 평가의 체계 버전과 그 버전의 지금 태그 기준 · 저장 기준으로. 태그 기준 · 저장 기준을 바꿔도 다시 평가하거나 데이터를 다시 쓰지 않는다
+  - 판정은 저장하지 않고 조회할 때 한다 — 그 평가의 체계 버전과 그 버전의 지금 태그 기준 · 저장 기준으로. 태그 기준 · 저장 기준을 바꿔도 다시 평가하거나 데이터를 다시 쓰지 않는다 — 낮춘 저장 기준의 빠진 태그는 운영자가 채운다(evaluation-R31)
   - 주제는 태그 기준 이상인 저장 태그가 붙는다. 하나도 없으면 저장 태그 가운데 확률이 가장 높은 것(같으면 체계 순서가 앞선 것)이 지금 저장 기준 이상일 때 그 하나를 붙이고 `low_confidence` 로 표시한다 — 후보 선별 때 중요도 가중치를 낮춘다. 그 확률마저 지금 저장 기준 미만이거나 저장 태그가 없으면 미분류다
   - 지역은 태그 기준 이상인 저장 태그가 붙는다. 대분류는 붙은 중분류의 대분류다(`parent_key`)
   - 확률과 기준은 확률의 십진 표현으로 비교하고 경계를 포함한다(0.1 은 0.100 이상이다)
@@ -934,7 +1091,7 @@ public record EvaluationFailure(Kind kind, String message) implements Evaluation
   - 결과가 체계와 맞는다는 것은 주제 중분류 · 지역 · 형식 선택지 · 중요도 수준의 키 집합이 넘긴 체계와 정확히 같고, 원본 응답이 JSON 이고 문자열 값 · 키 어디에도 문자 U+0000 · 짝 없는 서로게이트가 없다는 것이다(PostgreSQL `jsonb` 가 받지 않는다). 정본은 `ResultCheck` 다
   - 일정 값의 정본은 `EvaluationSchedule`, 점유 상한은 `PendingEvaluations.CLAIM_BATCH` 이고 모두 측정 전 목표다
   - 작업 역할은 평가기 없이 운영하지 않는다 — `local` 이 아닌 작업 역할은 Jev 키 없이 기동하지 않는다(`JevKeyRequirement`). 화면 역할만 띄운 프로세스는 키를 요구하지 않는다. 키가 맞는지는 평가 때 드러난다(평가기 사용 불가 — 회차 멈춤)
-- **evaluation-R21** — 지운 기사 따르기: `article` 이 기사를 지우면(`ArticlesRemoved`) 한 트랜잭션에서 그 기사들의 대기 행을 먼저, 평가 · 태그 행을 나중에 지운다 — 진행 중인 저장이 대기 행을 잡고 있으면 그 커밋을 기다린 뒤 결과 행을 지워, 커밋 직전의 평가를 놓치지 않는다. 다시 처리해도 결과가 같다. 이벤트보다 먼저 대기에 들어와 이벤트를 받기 전에 회차가 만난 지운 기사는 evaluation-R19 가 지운다
+- **evaluation-R21** — 지운 기사 따르기: `article` 이 기사를 지우면(`ArticlesRemoved`) 한 트랜잭션에서 그 기사들의 대기 행을 먼저, 평가 · 태그 행을 나중에 지운다 — 진행 중인 저장이 대기 행을 잡고 있으면 그 커밋을 기다린 뒤 결과 행을 지워, 커밋 직전의 평가를 놓치지 않는다. 평가 · 태그 행을 지우기 전에 평가 행을 평가 ID 순으로 잠근다 — 그 평가를 잠근 빠진 태그 채움(evaluation-R31)이 있으면 그 커밋을 기다려 채움이 더한 태그 행까지 지우고, 채움은 지우기를 기다렸다가 지운 평가를 보지 않는다. 두 쪽 모두 평가 ID 순으로 잠가 서로 엇갈려 기다리지 않는다. 다시 처리해도 결과가 같다. 이벤트보다 먼저 대기에 들어와 이벤트를 받기 전에 회차가 만난 지운 기사는 evaluation-R19 가 지운다
 
 ### 체계 변경
 
@@ -996,10 +1153,10 @@ public record EvaluationFailure(Kind kind, String message) implements Evaluation
 - **evaluation-R29** — 평가 현황(정본 `OverviewTally`):
   - 대상은 그 버전의 평가 가운데 평가 시각이 기간 안인 것이다. 판정은 그 버전의 지금 태그 기준 · 저장 기준으로 조회 때 한다(evaluation-R15)
   - 태그 분포는 그 버전의 키마다(체계 순서, 0 인 키 포함) 판정이 붙인 평가 수다 — 주제는 중분류와 대분류, 형식은 대표 형식. 붙은 태그 수는 0 ~ 4 와 "5 이상" 칸이고 주제의 0 은 미분류, `low_confidence` 는 1 이다
-  - 확률 분포는 0.1 폭 10칸(마지막 칸만 끝 포함)이고 칸은 확률의 십진 표현으로 고른다(evaluation-R15 의 비교). 주제 · 지역은 저장된 태그 행 전부, 형식은 대표 형식의 확률이다. 칸마다 지금 저장 기준 이상인가를 낸다 — 위 끝이 저장 기준 이하(끝 포함 칸은 미만)면 저장하지 않음, 아래 끝이 저장 기준 이상이면 전부, 그 밖은 일부. 그 버전 · 태그 종류의 저장 기준이 바뀐 적이 있으면 함께 알린다 — 저장 기준 근처 칸은 평가마다 다른 기준으로 저장됐다
+  - 확률 분포는 0.1 폭 10칸(마지막 칸만 끝 포함)이고 칸은 확률의 십진 표현으로 고른다(evaluation-R15 의 비교). 주제 · 지역은 저장된 태그 행 전부, 형식은 대표 형식의 확률이다. 칸마다 지금 저장 기준 이상인가를 낸다 — 위 끝이 저장 기준 이하(끝 포함 칸은 미만)면 저장하지 않음, 아래 끝이 저장 기준 이상이면 전부, 그 밖은 일부. 집계 기간 안 평가의 저장 바닥이 둘 이상이면(evaluation-R32) 함께 알린다 — 저장 기준 근처 칸은 평가마다 다른 기준으로 저장됐다
   - 중요도는 기대값의 0.5 폭 8칸이고, 기대값이 없는 평가는 따로 센다. 입력 토큰은 평균 · 최소 · 최대와 칸이다 — 칸 폭은 100 · 250 · 500 · 1,000 · 2,500 · 5,000 · 10,000 가운데 칸 수가 12 이하인 가장 작은 것(없으면 10,000 · 칸 수 제한 없음), 첫 칸은 최소를 그 폭으로 내린 값부터 최대가 드는 칸까지 잇는다
   - 비율은 수 ÷ 평가 수다. 평가가 없으면 비율 · 평균 · 최소 · 최대는 없음(null)이고 수는 0 이다(정본 `Shares`)
-  - 읽기 전용 `REPEATABLE READ` 트랜잭션 하나에서 센다 — 체계 · 기준 · 이력 · 평가 행이 한 스냅숏이다. 평가 행은 fetch size 커서로 나눠 받아 담아 두지 않는다
+  - 읽기 전용 `REPEATABLE READ` 트랜잭션 하나에서 센다 — 체계 · 기준 · 이력 · 끝난 채움 · 평가 행이 한 스냅숏이다. 평가 행은 fetch size 커서로 나눠 받아 담아 두지 않는다
   - 처리 시간은 기간의 평가 행 수에 비례한다 — 개발 기기의 합성 데이터(31일 · 평가 124,000건 · 평가마다 태그 행 10)에서 1.74 ~ 2.28초(중앙값 약 1.96초 — 준비 실행 뒤, 첫 호출은 2.27 ~ 2.34초)를 쟀다. 목표 2초의 경계이고 그대로 둔다
 - **evaluation-R30** — 주제별 보도량(정본 `CoverageTally`):
   - 대상은 첫 평가 시각이 기간 안인 기사다. 기사는 최신 평가(evaluation-R15 — 버전 번호가 가장 큰 것)로 한 번 센다. 재평가는 기사를 다른 기간으로 옮기지 않는다
@@ -1007,12 +1164,33 @@ public record EvaluationFailure(Kind kind, String message) implements Evaluation
   - 중분류 · 대분류마다 기사는 한 번 센다. 대분류의 수는 하위 중분류 어느 것이든 붙은 기사 수다 — 하위의 합이 아니다. 활성 주제에 하나도 이어지지 않은 기사(미분류 · 계보 없이 지운 키뿐)는 따로 센다
   - 고른 주제는 결과에만 적용한다 — 빈 집합은 모든 주제, 대분류 키는 하위 중분류 전부, 중분류 키만 고르면 그 대분류 항목에 고른 중분류만이고 대분류의 수는 대분류 전체다. 활성 버전에 없는 키가 있으면 아무것도 세지 않고 그 키들을 낸다
   - 읽기 전용 `REPEATABLE READ` 트랜잭션 하나에서 센다 — 활성 버전 · 체계 · 기준 · 계보 · 평가 행이 한 스냅숏이라, 계보 표의 기준 버전이 읽은 활성 버전과 다르면 불변식이 깨진 것으로 실패한다
-  - 이 규칙은 평가 행이 갱신되지 않고 버전 단위로 지워지지 않는다는 데 기댄다 — 평가 행은 지운 기사를 따를 때만 지운다(evaluation-R21). 평가 행을 고치거나 버전째 지우는 변경은 이 규칙의 기간 축을 함께 다시 정한다
+  - 이 규칙은 평가 행이 갱신되지 않고 버전 단위로 지워지지 않는다는 데 기댄다 — 평가 행은 지운 기사를 따를 때만 지운다(evaluation-R21). 빠진 태그 채움은 태그 행만 더하고 평가 행을 고치지 않는다(evaluation-R31). 평가 행을 고치거나 버전째 지우는 변경은 이 규칙의 기간 축을 함께 다시 정한다
   - 처리 시간 — 위 합성 데이터에서 1.20 ~ 1.47초(준비 실행 뒤, 첫 호출은 1.42 ~ 1.53초)를 쟀다(목표 2초). 재평가가 많은 데이터에서는 재지 않았다
+
+### 빠진 태그 채움 · 저장 바닥
+
+판단의 이유는 [ADR-0069](../adr/0069-missing-tags-filled-by-the-evaluator-rereading-stored-raw-responses-over-an-operator-chosen-period.md) · [ADR-0070](../adr/0070-past-store-threshold-maximum-and-mixed-store-floors-computed-from-history-and-finished-backfills.md)에 있다.
+
+- **evaluation-R31** — 빠진 태그 채움:
+  - 운영자가 일수 1 ~ 180(`TagBackfillAdministration.MAX_DAYS`)을 정한다. 덮는 범위는 요청 시각 − 일수 × 24시간 이후(포함)부터 요청 시각(제외)까지의 평가 시각이다. 버전과 무관하게 범위 안 모든 평가가 대상이고, 각 평가는 그 버전의 채울 저장 기준까지 채운다
+  - 요청은 한 트랜잭션에서 `tag_sets` 표를 `SHARE` 로 잠그고 모든 버전의 지금 저장 기준(주제 · 지역)을 채울 저장 기준으로 기록한다 — 실행 중 기준이 바뀌어도 기록한 값까지 채운다. 끝나지 않은 채움은 하나뿐이다 — 있으면 기록하지 않고 그 채움을 돌려준다. 확인은 같은 범위의 평가 수를 버전별로 세고 아무것도 쓰지 않는다
+  - 실행은 작업 역할의 반복 작업(1분, 재시도 없음)이다. 시작 가능 시각(요청 + 1분 — 평가 시각을 찍은 결과가 커밋되기까지의 여유)이 지났고 점유(10분, 묶음마다 갱신)가 없거나 만료된 채움을 점유한다. 범위 안 평가를 평가 ID 순으로 500건씩 한 트랜잭션에서 키 공유 잠금으로 읽고, 평가마다 평가기가 원본 응답을 그 평가의 버전으로 다시 읽는다 — Jev 를 부르지 않는다. 체계와 맞으면 채울 저장 기준 이상인 주제 · 지역 확률 가운데 태그 행이 없는 것만 더한다(거르기는 evaluation-R15 의 저장 거르기와 같다). 평가 행은 고치지 않는다 — 같은 원본에서 같은 확률이 나오므로 있는 행은 그대로이고, 다시 돌려도 결과가 같다. 정본은 `TagBackfillRound` · `BackfillSchedule` 이다
+  - 평가기가 다르면 · 원본 응답을 읽을 수 없거나 체계와 어긋나면 · 다시 읽기가 예상 못한 예외를 던지면 그 평가를 건너뛰고 버전별로 센다
+  - 묶음 끝에 커서 · 버전별 건수 · 점유를 점유 토큰이 맞을 때만 쓴다 — 맞지 않으면 그 묶음을 되돌리고 멈춘다. 그 밖의 예외는 그 묶음을 되돌리고 점유를 풀고 멈춘다 — 다음 회차가 커서부터 잇는다. 범위에 남은 평가가 없으면 끝낸다
+  - 열린 채움이 이어 가지 못하는 경우가 있다 — 요청 때 없던 버전의 평가가 범위에 있으면(프로세스 사이 시계가 어긋났을 때만 생긴다) 회차마다 같은 묶음에서 멈추고, 점유 뒤 체계 · 기준 읽기가 계속 실패하면 점유 만료마다 다시 시도한다. 그동안 새 요청은 그 채움을 돌려받는다 — 채움을 취소하는 길은 없다
+  - 처리 시간 — 개발 기기의 합성 데이터(30일 · 하루 4,000건 = 평가 120,000건, 기본 체계의 Jev 형식 원본 응답 — 텍스트 3,027바이트 · 저장 1,099바이트, 평가마다 더하는 태그 4행)에서 채움 하나를 41.9 · 43.6초에 마쳤다(묶음 하나 평균 0.175 · 0.182초 — 점유 기간 10분 안). 180일(720,000건)은 선형으로 약 4.2 ~ 4.4분으로 추정한다 — 재지 않았다. 실제 Jev 응답의 크기와 운영 기기에서는 재지 않았다
+  - **(미설계)** 원본 응답 보존(180일 — [data-model "보존 정책"](../data-model.md#보존-정책-초안))을 구현하면 원본이 없는 평가는 채울 수 없다 — 그 처분은 보존을 구현하는 작업이 정한다
+- **evaluation-R32** — 저장 바닥(정본 `StoreFloors`):
+  - 평가마다 쓴 저장 기준은 기록하지 않아 이력과 끝난 채움으로 되짚는다. 이력 행의 저장 기준은 그 행의 시각부터 다음 행의 시각까지(양 끝 포함 — 다음 행의 시각이 앞서면 그 행의 시각 하나) 유효하고, 마지막 행은 끝없이 유효하다
+  - 평가 시각 t 의 평가가 쓴 저장 기준은 `[t − 30분, t]` 와 겹치는 행의 값 가운데 가장 큰 것으로 본다 — 회차는 기준을 시작 때 읽고 평가 시각은 결과 뒤에 찍으며, 회차는 점유 기간(`EvaluationSchedule.LEASE` 30분) 안에 끝난다
+  - t 를 덮은 끝난 채움이 있으면 바닥은 그 값과 채움의 채울 저장 기준 가운데 작은 것이다. 덮음은 끝났고 그 버전에서 건너뛴 평가가 없는 채움만이다 — 진행 중이거나 건너뛴 평가가 있는 채움은 바닥을 내리지 않는다
+  - 지난 저장 기준 최댓값(evaluation-R12)은 처음 값 시각부터 끝없이의 바닥 최댓값이다 — 채움이 없으면 이력의 저장 기준 최댓값과 같다. 그래서 저장 기준을 내린 뒤 30분 안에 채움을 요청하면 "요청 시각부터 내린 시각 + 30분까지"가 덮이지 않아 경고가 남는다
+  - 평가 현황의 저장 기준 섞임(evaluation-R29)은 집계 기간(처음 값 시각 전은 빼고) 안에서 바닥이 둘 이상인가다 — 실제 평가가 있는 시각만이 아니라 시각 축으로 본다. 섞이지 않았는데 참일 수는 있어도 섞였는데 거짓이지는 않다
+  - 판단은 모두 바닥을 크게 잡는 쪽이다 — 경고를 놓치지 않는다
 
 ## 6. 데이터
 
-컬럼 타입 · 인덱스 · 제약 문면의 정본은 `backend/src/main/resources/db/migration/V9__tag_sets.sql`(태그 체계 · 태그 기준 · 저장 기준)과 `V10__evaluation_queue_and_results.sql`(평가 대기 · 평가 · 태그), `V11__tag_key_lineage.sql`(태그 키 계보), `V12__article_evaluations_period_indexes.sql`(기간 집계의 인덱스)이다. 태그 종류 · 행위자 · 실패 까닭 · 계보 종류 값은 대문자 상수 이름(`TOPIC` · `REGION` · `FORMAT` · `SYSTEM` · `OPERATOR` · `ARTICLE_REJECTED` · `RETRIES_EXHAUSTED` · `RENAME` · `SPLIT` · `MERGE`)으로 저장한다.
+컬럼 타입 · 인덱스 · 제약 문면의 정본은 `backend/src/main/resources/db/migration/V9__tag_sets.sql`(태그 체계 · 태그 기준 · 저장 기준)과 `V10__evaluation_queue_and_results.sql`(평가 대기 · 평가 · 태그), `V11__tag_key_lineage.sql`(태그 키 계보), `V12__article_evaluations_period_indexes.sql`(기간 집계의 인덱스), `V13__tag_backfills.sql`(빠진 태그 채움)이다. 태그 종류 · 행위자 · 실패 까닭 · 계보 종류 값은 대문자 상수 이름(`TOPIC` · `REGION` · `FORMAT` · `SYSTEM` · `OPERATOR` · `ARTICLE_REJECTED` · `RETRIES_EXHAUSTED` · `RENAME` · `SPLIT` · `MERGE`)으로 저장한다.
 
 | 테이블 | 주요 컬럼 | 뜻 |
 |---|---|---|
@@ -1023,8 +1201,10 @@ public record EvaluationFailure(Kind kind, String message) implements Evaluation
 | `tag_set_threshold_changes` | id, tag_set_id, tag_kind, previous_tag_threshold, previous_store_threshold, tag_threshold, store_threshold, actor(`SYSTEM`/`OPERATOR`), changed_at | 태그 기준 · 저장 기준의 이력 — 추가만 한다(evaluation-R13). 이전 값 둘은 함께 있거나 함께 없다(처음 값) |
 | `evaluation_queue` | article_id(기본 키), enqueued_at, eligible_at, attempts, lease_token, lease_expires_at, failure(`ARTICLE_REJECTED`/`RETRIES_EXHAUSTED`), last_error | 평가 대기 — 기사마다 한 행(evaluation-R18). 점유 둘은 함께 있거나 함께 없고, 실패로 남은 행은 점유가 없다(제약). 회차의 잠금은 `(eligible_at, article_id)` 부분 인덱스(실패 아닌 행)로 찾는다(evaluation-R19). 성공하면 지운다 |
 | `article_evaluations` | id, article_id, tag_set_id, evaluator, model_version, format_key, format_probability, format_distribution(jsonb), importance, importance_distribution(jsonb), raw_response(jsonb), input_tokens, evaluated_at | 평가 — (article_id, tag_set_id) 고유(evaluation-R15). `tag_set_id` 는 같은 모듈의 `tag_sets` FK. `format_key` · `format_probability` 는 대표 형식, `importance` 는 기대값(1 ~ 5, 확률 합이 0 이면 null). `low_confidence` · 미분류는 저장하지 않는다 — 조회 때 판정한다. 원본 응답까지 저장한다. 갱신하지 않고 버전 단위로 지우지 않는다(evaluation-R30). 기간 집계는 `evaluated_at` 인덱스(주제별 보도량)와 `(tag_set_id, evaluated_at)` 인덱스(평가 현황)로 찾는다 |
-| `article_tags` | evaluation_id, article_id, tag_kind(`TOPIC`/`REGION`), tag_key, probability | 주제 · 지역 태그 — (evaluation_id, tag_kind, tag_key) 기본 키, `article_id` 인덱스. 평가 때 저장 기준 이상인 태그를 확률과 함께 저장한다. 붙었는지는 조회 때 태그 기준과 비교한다. 대분류는 저장하지 않고 조회 때 `parent_key` 로 펼친다 |
+| `article_tags` | evaluation_id, article_id, tag_kind(`TOPIC`/`REGION`), tag_key, probability | 주제 · 지역 태그 — (evaluation_id, tag_kind, tag_key) 기본 키, `article_id` 인덱스. 평가 때 저장 기준 이상인 태그를 확률과 함께 저장하고, 빠진 태그 채움이 채울 저장 기준 이상인데 없는 행을 더한다(evaluation-R31). 붙었는지는 조회 때 태그 기준과 비교한다. 대분류는 저장하지 않고 조회 때 `parent_key` 로 펼친다 |
 | `tag_key_lineage` | tag_set_id, tag_kind(`TOPIC`/`REGION`/`FORMAT`), from_key, to_key, kind(`RENAME`/`SPLIT`/`MERGE`) | 태그 키 계보 — (tag_set_id, tag_kind, from_key, to_key) 기본 키. 이 버전에서 기준 버전(번호 − 1)의 이전 키가 어느 새 키로 이어지는지(evaluation-R22 · R23). 새 키는 같은 버전 · 같은 태그 종류의 태그 행이다(커밋 때 확인하는 FK). 이전 키는 기준 버전의 키라 FK 가 없다 — 활성화가 확인한다. 버전과 함께 한 번 쓰고 바꾸지 않는다. 사용자 선호와 주제별 시계열이 따라간다(evaluation-R26) |
+| `tag_backfills` | id, days, covered_from, covered_to, eligible_at, cursor_id, lease_token, lease_expires_at, started_at, finished_at | 빠진 태그 채움 — 요청 하나가 한 행(evaluation-R31). 덮는 평가 시각 `[covered_from, covered_to)`(`covered_to` 는 요청 시각), 시작 가능 시각, 처리한 마지막 평가 ID, 점유. 끝나지 않은 행은 하나다(부분 고유 인덱스). 점유 둘은 함께 있거나 함께 없고, 끝난 행은 점유가 없다(제약). 지우지 않는다 — 저장 바닥 계산의 입력이다(evaluation-R32) |
+| `tag_backfill_versions` | backfill_id, tag_set_id, topic_store_threshold, region_store_threshold, evaluations, processed, tags_added, skipped_other, skipped_unreadable | 채움의 버전별 기록 — (backfill_id, tag_set_id) 기본 키. 요청 때 모든 버전의 채울 저장 기준과 대상 평가 수, 실행이 더하는 버전별 건수. 건너뛴 평가가 있는 버전은 덮음이 아니다(evaluation-R32) |
 | `article_event_judgements` | id, article_id, evaluator, model_version, candidates(jsonb — 후보 사건 ID와 확률), raw_response(jsonb), input_tokens, judged_at | **(미구현)** 사건 소속 판정 원본(애매한 구간만). 배정 결과는 `event_articles` |
 
 `article_id` 는 `article` 의 기사를 가리키지만 FK 를 두지 않는다 — 모듈 사이는 ID 로만 참조한다. 보존 기간은 [data-model.md "보존 정책"](../data-model.md#보존-정책-초안)에 있다.
@@ -1058,3 +1238,5 @@ public record EvaluationFailure(Kind kind, String message) implements Evaluation
 | [0062](../adr/0062-tag-set-versions-from-operator-text-activated-forward-with-key-lineage-and-recent-reevaluation.md) | 태그 체계는 운영자 원문으로 새 버전을 만들어 앞으로만 켜고, 키 계보를 원문에 적으며, 켤 때 정한 일수 안에 처음 본 기사를 재평가 대기에 넣는다 |
 | [0063](../adr/0063-jev-called-through-one-system-one-schema-context-overflow-probed-with-empty-state-latest-model-alias-by-default.md) | Jev 는 System One 스키마 하나로 부르고, 문맥 초과는 빈 state 로 다시 물어 원인을 가리며, 모델 기본값은 최신 별칭이다 |
 | [0064](../adr/0064-topic-coverage-counts-articles-by-first-evaluation-time-with-query-time-judgement-over-key-lineage-in-the-app.md) | 주제별 보도량은 기사의 첫 평가 시각으로 기간에 넣고, 최신 평가의 조회 시점 판정을 계보로 활성 버전 키에 이어 앱에서 센다 |
+| [0069](../adr/0069-missing-tags-filled-by-the-evaluator-rereading-stored-raw-responses-over-an-operator-chosen-period.md) | 저장 기준을 낮춘 뒤 빠진 태그는 운영자가 정한 기간의 평가를 저장된 원본 응답으로 평가기가 다시 읽어 채운다 |
+| [0070](../adr/0070-past-store-threshold-maximum-and-mixed-store-floors-computed-from-history-and-finished-backfills.md) | 지난 저장 기준 최댓값과 평가 현황의 저장 기준 섞임은 이력과 끝난 채움 기록으로 평가 시각 축의 저장 바닥을 계산해 낸다 |

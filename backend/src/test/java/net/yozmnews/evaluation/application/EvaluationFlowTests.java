@@ -48,6 +48,7 @@ import net.yozmnews.evaluation.domain.evaluator.Evaluation;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationInput;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationResult;
 import net.yozmnews.evaluation.domain.evaluator.FeedContext;
+import net.yozmnews.evaluation.domain.evaluator.RereadResult;
 import net.yozmnews.evaluation.domain.queue.EvaluationQueueRepository;
 import net.yozmnews.evaluation.domain.result.EvaluationRecord;
 import net.yozmnews.evaluation.domain.result.EvaluationResultRepository;
@@ -160,7 +161,7 @@ class EvaluationFlowTests {
 		long second = enqueued("경제 지표 발표");
 		TagSetId retired = this.directory.activeTagSet().id();
 		AtomicInteger calls = new AtomicInteger();
-		ArticleEvaluator switching = (input, tagSet) -> {
+		EvaluateOnly switching = (input, tagSet) -> {
 			if (calls.getAndIncrement() == 0) {
 				switchToASecondVersion();
 			}
@@ -188,7 +189,7 @@ class EvaluationFlowTests {
 	@Test
 	void aRejectionFromAVersionRetiredDuringTheRoundDoesNotFailTheArticle() {
 		long article = enqueued("[fake:article-rejected] 거부");
-		ArticleEvaluator switching = (input, tagSet) -> {
+		EvaluateOnly switching = (input, tagSet) -> {
 			switchToASecondVersion();
 			return new FakeArticleEvaluator().evaluate(input, tagSet);
 		};
@@ -215,7 +216,7 @@ class EvaluationFlowTests {
 		round(new FakeArticleEvaluator()).run();
 		this.queue.enqueue(new ArticleId(article), T);
 		AtomicInteger calls = new AtomicInteger();
-		ArticleEvaluator counting = (input, tagSet) -> {
+		EvaluateOnly counting = (input, tagSet) -> {
 			calls.incrementAndGet();
 			return new FakeArticleEvaluator().evaluate(input, tagSet);
 		};
@@ -257,7 +258,7 @@ class EvaluationFlowTests {
 		CountDownLatch release = new CountDownLatch(1);
 		AtomicReference<CompletableFuture<Void>> holder = new AtomicReference<>();
 		// 평가가 끝나기 전에 다른 연결이 활성 전환의 잠금을 쥔다 — 결과를 쓰는 트랜잭션이 활성을 본 뒤 전환이 끼어들 틈을 막는지 본다
-		ArticleEvaluator holding = (input, tagSet) -> {
+		EvaluateOnly holding = (input, tagSet) -> {
 			holder.set(CompletableFuture.runAsync(() -> this.transaction.executeWithoutResult(status -> {
 				this.jdbc.sql("lock table tag_sets in share row exclusive mode").update();
 				locked.countDown();
@@ -368,7 +369,7 @@ class EvaluationFlowTests {
 	void theRetryDelayCountsFromWhenTheFailureCameBack() {
 		long article = enqueued("[fake:transient] 지연");
 		// 평가에 10초가 걸린다 — 재시도 간격은 점유한 시각이 아니라 일시 실패를 받은 시각부터 잰다
-		ArticleEvaluator slow = (input, tagSet) -> {
+		EvaluateOnly slow = (input, tagSet) -> {
 			this.now.set(this.now.get().plusSeconds(10));
 			return new FakeArticleEvaluator().evaluate(input, tagSet);
 		};
@@ -507,7 +508,7 @@ class EvaluationFlowTests {
 	void aResultIsDiscardedWhenTheArticleIsRemovedDuringItsEvaluation() {
 		long article = enqueued("경제 지표 발표");
 		ArticleEventsListener listener = new ArticleEventsListener(this.queue, this.results);
-		ArticleEvaluator removing = (input, tagSet) -> {
+		EvaluateOnly removing = (input, tagSet) -> {
 			this.transaction.executeWithoutResult(
 					status -> listener.on(new ArticlesRemoved(List.of(new ArticleId(article)))));
 			return new FakeArticleEvaluator().evaluate(input, tagSet);
@@ -664,7 +665,7 @@ class EvaluationFlowTests {
 	}
 
 	/** 받은 입력과 그때 트랜잭션이 있었는지를 기록한다 */
-	private static final class Recording implements ArticleEvaluator {
+	private static final class Recording implements EvaluateOnly {
 
 		final List<EvaluationInput> inputs = new ArrayList<>();
 
@@ -686,7 +687,7 @@ class EvaluationFlowTests {
 	}
 
 	/** 제목에 표지가 있으면 결함을 낸다 — 주제 키 하나를 뺀 결과, 또는 예외 */
-	private static final class Defective implements ArticleEvaluator {
+	private static final class Defective implements EvaluateOnly {
 
 		private final String marker;
 
@@ -716,7 +717,7 @@ class EvaluationFlowTests {
 	}
 
 	/** 기본 체계에 리터럴 확률을 준다 — 주제 국회 0.625 · 금융 0.375, 지역 국내 0.75, 형식 스트레이트 0.75, 중요도 {2:0.5, 4:0.5} */
-	private static final class Literal implements ArticleEvaluator {
+	private static final class Literal implements EvaluateOnly {
 
 		@Override
 		public EvaluationResult evaluate(EvaluationInput input, TagSetView tagSet) {
@@ -788,8 +789,36 @@ class EvaluationFlowTests {
 		}
 
 		@Override
+		public List<net.yozmnews.evaluation.domain.result.StoredResponse> lockResponses(Instant from, Instant to,
+				long afterId, int limit) {
+			return this.delegate.lockResponses(from, to, afterId, limit);
+		}
+
+		@Override
+		public int addMissingTags(long evaluationId, ArticleId articleId,
+				List<net.yozmnews.evaluation.domain.result.StoredTag> tags) {
+			return this.delegate.addMissingTags(evaluationId, articleId, tags);
+		}
+
+		@Override
+		public Map<net.yozmnews.evaluation.TagSetId, Long> countByVersion(Instant from, Instant to) {
+			return this.delegate.countByVersion(from, to);
+		}
+
+		@Override
 		public void deleteByArticles(java.util.Collection<ArticleId> articleIds) {
 			this.delegate.deleteByArticles(articleIds);
+		}
+
+	}
+
+	/** 평가만 하는 시험 평가기 — 이 시험은 원본 응답을 다시 읽지 않으므로 다시 읽기는 크게 실패한다 */
+	@FunctionalInterface
+	private interface EvaluateOnly extends ArticleEvaluator {
+
+		@Override
+		default RereadResult reread(String evaluator, String rawResponse, TagSetView tagSet) {
+			throw new UnsupportedOperationException("이 시험 평가기는 원본 응답을 다시 읽지 않는다");
 		}
 
 	}

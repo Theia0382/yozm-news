@@ -3,6 +3,7 @@ package net.yozmnews.evaluation.application;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +26,7 @@ import net.yozmnews.evaluation.domain.result.EvaluationResultRepository;
 import net.yozmnews.evaluation.domain.result.StoredTag;
 import net.yozmnews.evaluation.domain.tagset.TagSetRepository;
 import net.yozmnews.evaluation.domain.threshold.ThresholdRepository;
+import net.yozmnews.evaluation.domain.threshold.ThresholdValues;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -86,6 +88,7 @@ class EvaluationOverviewTests {
 	void reset() {
 		this.jdbc.sql("delete from article_tags").update();
 		this.jdbc.sql("delete from article_evaluations").update();
+		TagBackfillRows.removeAll(this.jdbc);
 		TagSetRows.removeVersionsAfterFirst(this.jdbc);
 		TagSetRows.resetThresholds(this.jdbc);
 		this.settings.seen.clear();
@@ -134,8 +137,42 @@ class EvaluationOverviewTests {
 		assertThat(overview.topicStatus().tagged()).isEqualTo(new Share(2, 1.0));
 		assertThat(overview.topics()).contains(new TagShare("politics.legislature", "국회·정당·선거", new Share(1, 0.5)));
 		assertThat(overview.topicProbabilities().storeThreshold()).isEqualByComparingTo("0.2");
+		// 변경 시각(시험 실행 시각)이 기간 끝보다 뒤라 기간 안 평가는 한 바닥으로 저장됐다
+		assertThat(overview.topicProbabilities().storeThresholdChanged()).isFalse();
+		assertThat(overview.regionProbabilities().storeThresholdChanged()).isFalse();
+	}
+
+	@Test
+	void aStoreThresholdChangedBeforeThePeriodLeavesThePeriodUniform() {
+		TagSetId version = versionBeforeThePeriod();
+		changeTopicStoreAt(version, "0.3", PERIOD.from().minus(Duration.ofHours(1)));
+
+		EvaluationOverview overview = this.administration.overview(version, PERIOD).orElseThrow();
+
+		assertThat(overview.topicProbabilities().storeThresholdChanged()).isFalse();
+	}
+
+	@Test
+	void aStoreThresholdChangedWithinThePeriodIsFlagged() {
+		TagSetId version = versionBeforeThePeriod();
+		changeTopicStoreAt(version, "0.3", Instant.parse("2026-10-30T00:00:00Z"));
+
+		EvaluationOverview overview = this.administration.overview(version, PERIOD).orElseThrow();
+
 		assertThat(overview.topicProbabilities().storeThresholdChanged()).isTrue();
 		assertThat(overview.regionProbabilities().storeThresholdChanged()).isFalse();
+	}
+
+	@Test
+	void aFinishedBackfillOfThePeriodMakesItsFloorUniform() {
+		TagSetId version = versionBeforeThePeriod();
+		changeTopicStoreAt(version, "0.3", Instant.parse("2026-10-25T00:00:00Z"));
+		changeTopicStoreAt(version, "0.1", Instant.parse("2026-10-30T00:00:00Z"));
+		TagBackfillRows.insertFinished(this.jdbc, version, PERIOD.from(), PERIOD.to(), "0.1", 0);
+
+		EvaluationOverview overview = this.administration.overview(version, PERIOD).orElseThrow();
+
+		assertThat(overview.topicProbabilities().storeThresholdChanged()).isFalse();
 	}
 
 	@Test
@@ -161,6 +198,21 @@ class EvaluationOverviewTests {
 
 		assertThat(this.settings.seen).containsExactly(Map.of("isolation", "read committed", "readOnly", "off"),
 				Map.of("isolation", "repeatable read", "readOnly", "on"));
+	}
+
+	/** 기간 전(2026-10-20)에 처음 값을 둔 새 버전 — 첫 기동 적재의 처음 값 시각은 시험 실행 시각이라 기간보다 뒤다 */
+	private TagSetId versionBeforeThePeriod() {
+		return TagSetVersions.activate(this.tagSetAdministration.versionText(this.first).orElseThrow(), this.tagSets,
+				this.thresholds, this.transaction, Instant.parse("2026-10-20T00:00:00Z"));
+	}
+
+	/** 그 버전 주제의 저장 기준을 그 시각에 바꾼다 — 시스템 시계를 쓰는 changeThresholds 로는 지난 시각의 변경을 만들 수 없다 */
+	private void changeTopicStoreAt(TagSetId version, String store, Instant at) {
+		this.transaction.executeWithoutResult(status -> {
+			ThresholdValues current = this.thresholds.lockCurrent(version, MultiTagKind.TOPIC).orElseThrow();
+			this.thresholds.apply(version, MultiTagKind.TOPIC, current,
+					new ThresholdValues(current.tagThreshold(), new BigDecimal(store)), ChangeActor.OPERATOR, at);
+		});
 	}
 
 	private void insert(long article, Instant at, @Nullable Double importance, int tokens, List<StoredTag> tags) {
