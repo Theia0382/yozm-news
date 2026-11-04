@@ -36,22 +36,16 @@ public final class TagJudgement {
 	 */
 	public static Judged judge(List<StoredTag> stored, TagSetView tagSet, TagSetThresholds thresholds) {
 		VersionMatch.require(thresholds, tagSet);
-		Map<String, Integer> topicOrder = new HashMap<>();
 		Map<String, String> categoryOf = new HashMap<>();
 		Map<String, Integer> categoryOrder = new HashMap<>();
 		for (TopicCategory category : tagSet.topics()) {
 			categoryOrder.put(category.key(), categoryOrder.size());
 			for (AskedTag subtopic : category.subtopics()) {
-				topicOrder.put(subtopic.key(), topicOrder.size());
 				categoryOf.put(subtopic.key(), category.key());
 			}
 		}
-		Map<String, Integer> regionOrder = new HashMap<>();
-		for (AskedTag region : tagSet.regions()) {
-			regionOrder.put(region.key(), regionOrder.size());
-		}
-		List<StoredTag> topics = ordered(stored, MultiTagKind.TOPIC, topicOrder);
-		List<StoredTag> regions = ordered(stored, MultiTagKind.REGION, regionOrder);
+		List<StoredTag> topics = ordered(stored, MultiTagKind.TOPIC, tagSet);
+		List<StoredTag> regions = ordered(stored, MultiTagKind.REGION, tagSet);
 
 		List<StoredTag> tagged = topics.stream()
 			.filter(tag -> Probabilities.atLeast(tag.probability(), thresholds.topic().tagThreshold()))
@@ -89,6 +83,22 @@ public final class TagJudgement {
 			.toList();
 		return new Judged(status, attached.stream().map(TagJudgement::view).toList(), List.copyOf(categories),
 				regionTags);
+	}
+
+	/**
+	 * 한 태그 종류의 저장 행을 체계 순서로 — 판정과 검수 상세가 함께 쓰는 정본.
+	 * @throws IllegalArgumentException 저장 행의 키가 그 체계의 그 태그 종류에 없을 때
+	 */
+	public static List<StoredTag> ordered(List<StoredTag> stored, MultiTagKind kind, TagSetView tagSet) {
+		List<AskedTag> asked = switch (kind) {
+			case TOPIC -> tagSet.topics().stream().flatMap(category -> category.subtopics().stream()).toList();
+			case REGION -> tagSet.regions();
+		};
+		Map<String, Integer> order = new HashMap<>();
+		for (AskedTag tag : asked) {
+			order.put(tag.key(), order.size());
+		}
+		return ordered(stored, kind, order);
 	}
 
 	/** 한 태그 종류의 저장 행 — 체계 순서 */

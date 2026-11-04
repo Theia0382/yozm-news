@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Optional;
 
 import net.yozmnews.evaluation.ChangeActor;
+import net.yozmnews.evaluation.EvaluationPeriod;
 import net.yozmnews.evaluation.MultiTagKind;
 import net.yozmnews.evaluation.TagSetActivationResult;
 import net.yozmnews.evaluation.TagSetAdministration;
@@ -16,6 +17,7 @@ import net.yozmnews.evaluation.TagSetReviewResult;
 import net.yozmnews.evaluation.TagSetVersionView;
 import net.yozmnews.evaluation.ThresholdChangeResult;
 import net.yozmnews.evaluation.ThresholdChangeView;
+import net.yozmnews.evaluation.ThresholdPreviewResult;
 import net.yozmnews.evaluation.ThresholdStatusView;
 import org.jspecify.annotations.Nullable;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -58,6 +60,12 @@ class FakeTagSetAdministration implements TagSetAdministration {
 
 	@Override
 	public ThresholdStatusView thresholdStatus() {
+		throw new UnsupportedOperationException("태그 체계 컨트롤러는 부르지 않는다");
+	}
+
+	@Override
+	public ThresholdPreviewResult previewThresholds(MultiTagKind kind, BigDecimal tagThreshold,
+			BigDecimal storeThreshold, EvaluationPeriod period) {
 		throw new UnsupportedOperationException("태그 체계 컨트롤러는 부르지 않는다");
 	}
 

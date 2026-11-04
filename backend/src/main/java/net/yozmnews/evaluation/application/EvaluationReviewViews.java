@@ -25,7 +25,7 @@ import net.yozmnews.evaluation.TopicCategory;
 import net.yozmnews.evaluation.domain.result.ListedEvaluation;
 import net.yozmnews.evaluation.domain.result.StoredEvaluation;
 import net.yozmnews.evaluation.domain.result.StoredEvaluationDetail;
-import net.yozmnews.evaluation.domain.result.StoredTag;
+import net.yozmnews.evaluation.domain.result.TagJudgement;
 import net.yozmnews.evaluation.domain.result.TagJudgement.Judged;
 
 /**
@@ -56,7 +56,6 @@ final class EvaluationReviewViews {
 			Judged judged) {
 		StoredEvaluation evaluation = detail.evaluation();
 		Names names = new Names(tagSet);
-		List<AskedTag> subtopics = tagSet.topics().stream().flatMap(category -> category.subtopics().stream()).toList();
 		List<DistributionShare> formats = new ArrayList<>();
 		for (FormatOption option : tagSet.format().options()) {
 			formats.add(new DistributionShare(option.key(), option.name(),
@@ -69,29 +68,21 @@ final class EvaluationReviewViews {
 		}
 		return new EvaluationDetailView(detail.id(), evaluation.articleId(), tagSet.id(), tagSet.number(),
 				detail.evaluator(), detail.modelVersion(), detail.evaluatedAt(), detail.inputTokens(), thresholds,
-				judged.status(), stored(evaluation, MultiTagKind.TOPIC, subtopics, judged.topics()),
-				categories(judged, names), stored(evaluation, MultiTagKind.REGION, tagSet.regions(), judged.regions()),
+				judged.status(), stored(evaluation, MultiTagKind.TOPIC, tagSet, names.subtopics, judged.topics()),
+				categories(judged, names),
+				stored(evaluation, MultiTagKind.REGION, tagSet, names.regions, judged.regions()),
 				formats, evaluation.formatKey(), importance, evaluation.importance());
 	}
 
-	/** 한 태그 종류의 저장 행 전부 — 체계 순, 판정이 붙인 것인지 */
-	private static List<StoredTagView> stored(StoredEvaluation evaluation, MultiTagKind kind, List<AskedTag> order,
-			List<TagProbability> attached) {
-		Map<String, Double> probabilities = new HashMap<>();
-		for (StoredTag tag : evaluation.tags()) {
-			if (tag.kind() == kind) {
-				probabilities.put(tag.key(), tag.probability());
-			}
-		}
+	/** 한 태그 종류의 저장 행 전부 — 체계 순({@link TagJudgement#ordered}), 판정이 붙인 것인지 */
+	private static List<StoredTagView> stored(StoredEvaluation evaluation, MultiTagKind kind, TagSetView tagSet,
+			Map<String, String> names, List<TagProbability> attached) {
 		Set<String> attachedKeys = attached.stream().map(TagProbability::key).collect(Collectors.toSet());
-		List<StoredTagView> views = new ArrayList<>();
-		for (AskedTag tag : order) {
-			Double probability = probabilities.get(tag.key());
-			if (probability != null) {
-				views.add(new StoredTagView(tag.key(), tag.name(), probability, attachedKeys.contains(tag.key())));
-			}
-		}
-		return views;
+		return TagJudgement.ordered(evaluation.tags(), kind, tagSet)
+			.stream()
+			.map(tag -> new StoredTagView(tag.key(), name(names, tag.key()), tag.probability(),
+					attachedKeys.contains(tag.key())))
+			.toList();
 	}
 
 	private static List<NamedTag> named(List<TagProbability> tags, Map<String, String> names) {

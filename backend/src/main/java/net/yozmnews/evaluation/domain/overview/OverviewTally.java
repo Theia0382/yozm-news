@@ -121,9 +121,10 @@ public final class OverviewTally {
 
 	/**
 	 * 평가 한 건을 센다.
+	 * @return 그 평가를 이 집계의 기준으로 한 판정 — 세는 데 쓴 것
 	 * @throws IllegalArgumentException 평가의 버전이 체계와 다르거나, 저장 행 · 대표 형식의 키가 체계에 없을 때
 	 */
-	public void add(EvaluationSample sample) {
+	public Judged add(EvaluationSample sample) {
 		StoredEvaluation evaluation = sample.evaluation();
 		if (!evaluation.tagSetId().equals(this.tagSet.id())) {
 			throw new IllegalArgumentException("평가의 버전이 체계와 다르다: " + evaluation.tagSetId() + " " + this.tagSet.id());
@@ -160,6 +161,7 @@ public final class OverviewTally {
 			this.importance.add(evaluation.importance());
 		}
 		this.inputTokens.add(sample.inputTokens());
+		return judged;
 	}
 
 	/** 지금까지 센 평가 현황 */

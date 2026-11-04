@@ -67,6 +67,9 @@ class TagSetAdministrationTests {
 	@Autowired
 	TagSetVersioning versioning;
 
+	@Autowired
+	ThresholdPreviews previews;
+
 	private TagSetAdministrationService administration;
 
 	/** 버전 1 의 ID — 첫 기동 적재가 쓴 행 */
@@ -79,7 +82,7 @@ class TagSetAdministrationTests {
 				this.jdbc.sql("select id from tag_sets where number = 1").query(Long.class).single());
 		this.administration = new TagSetAdministrationService(this.tagSets, this.thresholds,
 				new TransactionTemplate(this.transactionManager), InstantSource.fixed(NOW),
-				this.versioning);
+				this.versioning, this.previews);
 	}
 
 	@AfterEach
