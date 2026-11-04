@@ -788,6 +788,32 @@ class EvaluationFlowTests {
 		}
 
 		@Override
+		public void scanNewestFirst(net.yozmnews.evaluation.TagSetId version, Instant from, Instant to,
+				net.yozmnews.evaluation.@Nullable EvaluationCursor after,
+				net.yozmnews.evaluation.domain.review.@Nullable StoredKeys required, @Nullable String formatKey,
+				java.util.function.Predicate<net.yozmnews.evaluation.domain.result.ListedEvaluation> sink) {
+			this.delegate.scanNewestFirst(version, from, to, after, required, formatKey, sink);
+		}
+
+		@Override
+		public void streamIds(net.yozmnews.evaluation.TagSetId version, Instant from, Instant to,
+				java.util.function.LongConsumer sink) {
+			this.delegate.streamIds(version, from, to, sink);
+		}
+
+		@Override
+		public List<net.yozmnews.evaluation.domain.result.ListedEvaluation> findListed(
+				java.util.Collection<net.yozmnews.evaluation.EvaluationId> ids) {
+			return this.delegate.findListed(ids);
+		}
+
+		@Override
+		public Optional<net.yozmnews.evaluation.domain.result.StoredEvaluationDetail> findDetail(
+				net.yozmnews.evaluation.EvaluationId id) {
+			return this.delegate.findDetail(id);
+		}
+
+		@Override
 		public void deleteByArticles(java.util.Collection<ArticleId> articleIds) {
 			this.delegate.deleteByArticles(articleIds);
 		}
