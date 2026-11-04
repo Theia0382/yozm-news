@@ -32,8 +32,6 @@ import org.springframework.web.server.ResponseStatusException;
 @RestController
 class AdminEvaluationController {
 
-	private static final String PERIOD_PROBLEM = "날짜 · 시간대의 형식이 틀렸거나 기간이 범위 밖이다";
-
 	private final EvaluationAdministration administration;
 
 	private final TopicCoverage coverage;
@@ -45,7 +43,7 @@ class AdminEvaluationController {
 
 	@GetMapping("/api/admin/topic-coverage")
 	@ApiResponse(responseCode = "200", description = "OK", useReturnTypeSchema = true)
-	@ApiResponse(responseCode = "400", description = PERIOD_PROBLEM + ", 또는 활성 태그 체계에 없는 주제다",
+	@ApiResponse(responseCode = "400", description = AdminPeriods.PROBLEM + ", 또는 활성 태그 체계에 없는 주제다",
 			content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
 					schema = @Schema(implementation = ApiProblem.class)))
 	TopicCoverageResponse topicCoverage(@Parameter(description = "시작일(yyyy-MM-dd)") @RequestParam String from,
@@ -63,7 +61,7 @@ class AdminEvaluationController {
 
 	@GetMapping("/api/admin/evaluation-overview")
 	@ApiResponse(responseCode = "200", description = "OK", useReturnTypeSchema = true)
-	@ApiResponse(responseCode = "400", description = PERIOD_PROBLEM,
+	@ApiResponse(responseCode = "400", description = AdminPeriods.PROBLEM,
 			content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
 					schema = @Schema(implementation = ApiProblem.class)))
 	@ApiResponse(responseCode = "404", description = "없는 태그 체계 버전이다",
