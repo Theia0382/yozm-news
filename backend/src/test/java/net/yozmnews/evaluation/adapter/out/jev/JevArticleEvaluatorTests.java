@@ -37,6 +37,7 @@ import net.yozmnews.evaluation.domain.evaluator.EvaluationFailure;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationInput;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationResult;
 import net.yozmnews.evaluation.domain.evaluator.FeedContext;
+import net.yozmnews.evaluation.domain.evaluator.RereadFailure;
 import net.yozmnews.evaluation.domain.jev.JevApiKey;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -281,6 +282,29 @@ class JevArticleEvaluatorTests {
 		server.verify(postRequestedFor(urlEqualTo(PATH)).withHeader("Authorization", equalTo("Bearer " + KEY)));
 		assertThat(messages).hasSize(7).allSatisfy(message -> assertThat(message).isNotBlank().doesNotContain(KEY));
 		assertThat(output.getAll()).doesNotContain(KEY);
+	}
+
+	@Test
+	void rereadsAStoredAnswerWithoutSendingARequest() {
+		assertThat(evaluator().reread("jev", ANSWER, TAG_SET)).isEqualTo(new Evaluation(
+				Map.of("economy.real-estate", 0.93), Map.of("domestic", 0.99), Map.of("straight", 0.98, "opinion", 0.02),
+				Map.of(1, 0.79, 2, 0.21), "jev", "jev-1.14.0", 3208, ANSWER));
+		server.verify(0, anyRequestedFor(anyUrl()));
+	}
+
+	@Test
+	void doesNotRereadTheResponseOfAnotherEvaluator() {
+		assertThat(evaluator().reread("fake", ANSWER, TAG_SET)).isEqualTo(
+				new RereadFailure(RereadFailure.Kind.OTHER_EVALUATOR, "Jev 가 남긴 원본 응답이 아니다 — 평가기 fake"));
+	}
+
+	@Test
+	void aStoredAnswerWithoutAnAnswerOfTheTagSetIsUnreadable() {
+		String answer = ANSWER.replace("\"region.domestic\":{\"type\":\"noul\",\"noul\":0.99},", "");
+
+		assertThat(evaluator().reread("jev", answer, TAG_SET)).isEqualTo(new RereadFailure(RereadFailure.Kind.UNREADABLE,
+				"Jev 응답을 읽을 수 없다 — 답이 없다 — region.domestic"));
+		server.verify(0, anyRequestedFor(anyUrl()));
 	}
 
 	private void contextExceededThenProbe(ResponseDefinitionBuilder probe) {

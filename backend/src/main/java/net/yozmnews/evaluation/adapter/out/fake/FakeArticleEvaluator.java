@@ -22,6 +22,10 @@ import net.yozmnews.evaluation.domain.evaluator.EvaluationFailure;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationInput;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationResult;
 import net.yozmnews.evaluation.domain.evaluator.FeedContext;
+import net.yozmnews.evaluation.domain.evaluator.RereadFailure;
+import net.yozmnews.evaluation.domain.evaluator.RereadResult;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
@@ -45,7 +49,8 @@ import tools.jackson.databind.json.JsonMapper;
  * 가장 큰 키(같으면 체계 순서가 앞선 키)다</li>
  * <li>입력 토큰 — 제목 · 요약 · 출처 이름 · 섹션 · 카테고리와 체계의 질문 문장 · 형식 선택지 이름 · 중요도 기준의 코드 포인트 합을
  * 2로 나눠 올린 값. 실제 토큰 수가 아니다</li>
- * <li>원본 응답 — 평가기 이름 · 버전과 태그 종류별 확률을 키 순으로 담은 JSON</li>
+ * <li>원본 응답 — 평가기 이름 · 버전과 태그 종류별 확률을 키 순으로 담은 JSON. 다시 읽기는 넘긴 체계의 키마다 그 확률을 읽고,
+ * 입력 토큰은 원본에 없어 0 이다</li>
  * </ul>
  * 넘긴 체계는 검증된 체계다 — 주제 · 중분류 · 지역이 하나 이상, 형식 선택지가 둘 이상이다.
  */
@@ -56,6 +61,19 @@ public final class FakeArticleEvaluator implements ArticleEvaluator {
 
 	/** 모델 버전 — 규칙을 바꾸면 올린다 */
 	public static final String MODEL_VERSION = "fake-rules-2";
+
+	/** 원본 응답의 키 — 쓰기와 다시 읽기가 함께 쓴다 */
+	private static final String RAW_EVALUATOR = "evaluator";
+
+	private static final String RAW_MODEL_VERSION = "modelVersion";
+
+	private static final String RAW_TOPICS = "topics";
+
+	private static final String RAW_REGIONS = "regions";
+
+	private static final String RAW_FORMATS = "formats";
+
+	private static final String RAW_IMPORTANCE = "importance";
 
 	/** 이름이 일치한 태그의 확률 */
 	static final double NAME_MATCH = 0.9;
@@ -101,6 +119,23 @@ public final class FakeArticleEvaluator implements ArticleEvaluator {
 		Map<Integer, Double> importance = importance(title, tagSet.importance().levels());
 		return new Evaluation(topics, regions, formats, importance, NAME, MODEL_VERSION, tokens(input, tagSet),
 				rawResponse(topics, regions, formats, importance));
+	}
+
+	/** 자기가 남긴 원본 응답을 넘긴 체계로 다시 읽는다 */
+	@Override
+	public RereadResult reread(String evaluator, String rawResponse, TagSetView tagSet) {
+		Objects.requireNonNull(evaluator, "evaluator");
+		Objects.requireNonNull(rawResponse, "rawResponse");
+		Objects.requireNonNull(tagSet, "tagSet");
+		if (!NAME.equals(evaluator)) {
+			return new RereadFailure(RereadFailure.Kind.OTHER_EVALUATOR, "Fake 가 남긴 원본 응답이 아니다 — 평가기 " + evaluator);
+		}
+		try {
+			return reread(rawResponse, tagSet);
+		}
+		catch (Unreadable ex) {
+			return new RereadFailure(RereadFailure.Kind.UNREADABLE, "Fake 원본 응답을 읽을 수 없다 — " + ex.getMessage());
+		}
 	}
 
 	/** 실패 갈래의 표지 — docs/specs/evaluation.md §4 */
@@ -238,13 +273,64 @@ public final class FakeArticleEvaluator implements ArticleEvaluator {
 	private static String rawResponse(Map<String, Double> topics, Map<String, Double> regions,
 			Map<String, Double> formats, Map<Integer, Double> importance) {
 		Map<String, Object> root = new LinkedHashMap<>();
-		root.put("evaluator", NAME);
-		root.put("modelVersion", MODEL_VERSION);
-		root.put("topics", new TreeMap<>(topics));
-		root.put("regions", new TreeMap<>(regions));
-		root.put("formats", new TreeMap<>(formats));
-		root.put("importance", new TreeMap<>(importance));
+		root.put(RAW_EVALUATOR, NAME);
+		root.put(RAW_MODEL_VERSION, MODEL_VERSION);
+		root.put(RAW_TOPICS, new TreeMap<>(topics));
+		root.put(RAW_REGIONS, new TreeMap<>(regions));
+		root.put(RAW_FORMATS, new TreeMap<>(formats));
+		root.put(RAW_IMPORTANCE, new TreeMap<>(importance));
 		return JSON.writeValueAsString(root);
+	}
+
+	/** 원본 응답에서 넘긴 체계의 키마다 확률을 읽는다 — 중요도 키는 수준의 문자열 */
+	private static Evaluation reread(String rawResponse, TagSetView tagSet) {
+		JsonNode root;
+		try {
+			root = JSON.readTree(rawResponse);
+		}
+		catch (JacksonException ex) {
+			throw new Unreadable("JSON 이 아니다");
+		}
+		if (root == null || !root.isObject()) {
+			throw new Unreadable("JSON 객체가 아니다");
+		}
+		JsonNode model = root.get(RAW_MODEL_VERSION);
+		if (model == null || !model.isString() || model.stringValue().isBlank()) {
+			throw new Unreadable(RAW_MODEL_VERSION + " 이 없거나 비었다");
+		}
+		Map<String, Double> topics = new LinkedHashMap<>();
+		for (TopicCategory category : tagSet.topics()) {
+			for (AskedTag subtopic : category.subtopics()) {
+				topics.put(subtopic.key(), probability(root, RAW_TOPICS, subtopic.key()));
+			}
+		}
+		Map<String, Double> regions = new LinkedHashMap<>();
+		for (AskedTag region : tagSet.regions()) {
+			regions.put(region.key(), probability(root, RAW_REGIONS, region.key()));
+		}
+		Map<String, Double> formats = new LinkedHashMap<>();
+		for (FormatOption option : tagSet.format().options()) {
+			formats.put(option.key(), probability(root, RAW_FORMATS, option.key()));
+		}
+		Map<Integer, Double> importance = new LinkedHashMap<>();
+		for (ImportanceLevel level : tagSet.importance().levels()) {
+			importance.put(level.level(), probability(root, RAW_IMPORTANCE, Integer.toString(level.level())));
+		}
+		// 입력 토큰은 원본 응답에 없다 — 다시 읽기는 토큰 수를 쓰지 않는다
+		return new Evaluation(topics, regions, formats, importance, NAME, model.stringValue(), 0, rawResponse);
+	}
+
+	private static double probability(JsonNode root, String kind, String key) {
+		JsonNode values = root.get(kind);
+		JsonNode value = (values != null && values.isObject()) ? values.get(key) : null;
+		if (value == null || !value.isNumber()) {
+			throw new Unreadable("확률이 없거나 숫자가 아니다 — " + kind + "." + key);
+		}
+		double probability = value.doubleValue();
+		if (!Double.isFinite(probability) || probability < 0 || probability > 1) {
+			throw new Unreadable("확률이 0 ~ 1 이 아니다 — " + kind + "." + key);
+		}
+		return probability;
 	}
 
 	/** 해시값이 가장 큰 키 — 같으면 앞선 키 */
@@ -275,6 +361,15 @@ public final class FakeArticleEvaluator implements ArticleEvaluator {
 		catch (NoSuchAlgorithmException ex) {
 			throw new IllegalStateException("SHA-256 을 쓸 수 없다", ex);
 		}
+	}
+
+	/** 원본 응답을 읽을 수 없는 까닭 — 문구는 체계 키와 고정 문구만 담는다 */
+	private static final class Unreadable extends RuntimeException {
+
+		Unreadable(String message) {
+			super(message, null, false, false);
+		}
+
 	}
 
 }
