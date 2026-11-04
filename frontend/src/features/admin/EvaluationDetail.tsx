@@ -8,6 +8,7 @@ import { useAdminClient } from "@/features/admin/adminSession";
 import { EVALUATION_KEY } from "@/features/admin/evaluationQueries";
 import { topicStatusLabels } from "@/features/admin/labels";
 import { safeLink } from "@/features/admin/links";
+import { formatProbability } from "@/features/admin/metrics";
 import { formatDateTime } from "@/shared/lib/dateTime";
 
 type Detail = Schemas["EvaluationDetailResponse"];
@@ -64,18 +65,18 @@ export function EvaluationDetail({ detail }: { detail: Detail }) {
         <ul className="space-y-0.5">
           {detail.formats.map((share) => (
             <li key={share.key}>
-              {share.name} {share.probability}
+              {share.name} {formatProbability(share.probability)}
               {share.key === detail.format && " — 대표 형식"}
             </li>
           ))}
         </ul>
         <h4 className="font-semibold">
-          중요도 분포 — 기대값 {detail.importance ?? "없음"}
+          중요도 분포 — 기대값 {formatProbability(detail.importance)}
         </h4>
         <ul className="space-y-0.5">
           {detail.importanceLevels.map((share) => (
             <li key={share.key}>
-              {share.key} ({share.name}) {share.probability}
+              {share.key} ({share.name}) {formatProbability(share.probability)}
             </li>
           ))}
         </ul>
@@ -147,7 +148,10 @@ function ArticleView({ detail }: { detail: Detail }) {
 
 function StoredTable({ label, tags }: { label: string; tags: StoredTag[] }) {
   return (
-    <table aria-label={label} className="w-full text-left">
+    <table
+      aria-label={label}
+      className="w-full text-left [&_td]:px-2 [&_td]:py-1 [&_th]:px-2 [&_th]:py-1"
+    >
       <caption className="text-left text-muted-foreground">{label}</caption>
       <thead>
         <tr>
@@ -165,7 +169,9 @@ function StoredTable({ label, tags }: { label: string; tags: StoredTag[] }) {
           tags.map((tag) => (
             <tr key={tag.key}>
               <td>{tag.name}</td>
-              <td className="tabular-nums">{tag.probability}</td>
+              <td className="tabular-nums">
+                {formatProbability(tag.probability)}
+              </td>
               <td>{tag.attached ? "붙음" : "붙지 않음"}</td>
             </tr>
           ))

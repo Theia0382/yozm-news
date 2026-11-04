@@ -87,15 +87,33 @@ describe("ThresholdsPage", () => {
 
     const topicStatus = await screen.findByLabelText("주제");
     expect(topicStatus).toHaveTextContent(
-      "주제 — 태그 기준 0.5 · 저장 기준 0.1 (이 버전에서 써 온 저장 기준의 최댓값 0.2)",
+      "주제 — 태그 기준 0.5 · 저장 기준 0.1 (지난 저장 기준 최댓값 0.2)",
     );
     expect(topicStatus).toHaveTextContent(
-      "이 버전의 저장 기준이 바뀐 적이 있다",
+      "이 버전의 평가마다 저장된 확률 범위가 다르다 — 저장 기준이 바뀌었고 빠진 태그 채움이 그 차이를 다 메우지 않았다",
     );
     expect(screen.getByLabelText("지역")).toHaveTextContent("어긋난 상태 없음");
     const history = screen.getByRole("table", { name: "이력" });
     expect(within(history).getAllByRole("row")[1]).toHaveTextContent(
       "주제0.5 → 0.50.2 → 0.1운영자",
+    );
+  });
+
+  it("저장 기준을 낮춘 미리보기의 경고는 빠진 태그 채움을 안내한다", async () => {
+    renderAdminRoutes([{ path: "/", element: <ThresholdsPage /> }], "/", {
+      "GET /api/admin/thresholds": () => json(STATUS),
+      "POST /api/admin/threshold-previews": () =>
+        json({
+          ...PREVIEW,
+          proposed: topic(0.5, 0.05),
+          warnings: ["STORE_THRESHOLD_LOWERED"],
+        }),
+    });
+
+    await previewTopicTag("0.4");
+
+    expect(screen.getByRole("list", { name: "경고" })).toHaveTextContent(
+      "저장 기준을 낮췄다 — 지난 평가에는 낮춘 구간의 확률이 없다. 빠진 태그 채움으로 채울 수 있다",
     );
   });
 
@@ -121,7 +139,7 @@ describe("ThresholdsPage", () => {
       "기간 안 평가 120건 가운데 7건의 주제 판정이 달라진다",
     );
     expect(preview).toHaveTextContent(
-      "태그 기준을 이 버전에서 써 온 저장 기준보다 낮췄다",
+      "태그 기준을 지난 저장 기준 최댓값보다 낮췄다 — 그보다 높은 저장 기준으로 저장된 평가에는 그 구간 태그가 붙지 않는다",
     );
     const rows = within(
       screen.getByRole("table", { name: "전후" }),

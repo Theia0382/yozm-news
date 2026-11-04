@@ -54,6 +54,42 @@ describe("EvaluationDetail", () => {
     ).toBeInTheDocument();
   });
 
+  it("확률 · 중요도 기대값을 셋째 자리까지 반올림해 보인다", async () => {
+    const raw = detail(9);
+    renderAlone(
+      <EvaluationDetail
+        detail={{
+          ...raw,
+          topics: [{ ...raw.topics[0]!, probability: 0.10885070239097819 }],
+          formats: [
+            { key: "straight", name: "스트레이트", probability: 0.8 },
+            {
+              key: "analysis",
+              name: "분석·해설",
+              probability: 0.039999999999999994,
+            },
+          ],
+          importance: 2.5000000000000004,
+        }}
+      />,
+    );
+
+    const topics = await screen.findByRole("table", {
+      name: "주제(저장된 중분류 전부)",
+    });
+    expect(within(topics).getAllByRole("row")[1]).toHaveTextContent(
+      "대통령실·행정부0.109붙음",
+    );
+    expect(screen.getByText("스트레이트 0.8 — 대표 형식")).toBeInTheDocument();
+    expect(screen.getByText("분석·해설 0.04")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "중요도 분포 — 기대값 2.5" }),
+    ).toBeInTheDocument();
+    // 원형 실수는 보이지 않는다
+    expect(document.body.textContent).not.toContain("0.10885070239097819");
+    expect(document.body.textContent).not.toContain("2.5000000000000004");
+  });
+
   it("그새 지운 기사는 평가 결과만 보인다", async () => {
     renderAlone(<EvaluationDetail detail={{ ...detail(9), article: null }} />);
 

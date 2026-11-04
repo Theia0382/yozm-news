@@ -260,8 +260,8 @@ function StatusView({ status }: { status: Status }) {
           >
             <p>
               {tagKindLabels[kind]} — 태그 기준 {item.current.tagThreshold} ·
-              저장 기준 {item.current.storeThreshold} (이 버전에서 써 온 저장
-              기준의 최댓값 {item.pastMaxStoreThreshold})
+              저장 기준 {item.current.storeThreshold} (지난 저장 기준 최댓값{" "}
+              {item.pastMaxStoreThreshold})
             </p>
             {item.conditions.length === 0 ? (
               <p className="text-muted-foreground">어긋난 상태 없음</p>
@@ -275,7 +275,10 @@ function StatusView({ status }: { status: Status }) {
           </div>
         );
       })}
-      <table aria-label="이력" className="w-full text-left">
+      <table
+        aria-label="이력"
+        className="w-full text-left [&_td]:px-2 [&_td]:py-1 [&_th]:px-2 [&_th]:py-1"
+      >
         <caption className="text-left font-medium">이력 — 최근 것부터</caption>
         <thead>
           <tr>
@@ -392,7 +395,10 @@ function Comparison({
   }
   const changed = rows.filter((row) => row.before !== row.after);
   return (
-    <table aria-label="전후" className="w-full text-left">
+    <table
+      aria-label="전후"
+      className="w-full text-left [&_td]:px-2 [&_td]:py-1 [&_th]:px-2 [&_th]:py-1"
+    >
       <caption className="text-left text-muted-foreground">
         지금 기준 → 새 기준의 평가 수 — 바뀐 줄만
       </caption>

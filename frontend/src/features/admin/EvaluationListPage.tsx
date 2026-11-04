@@ -19,6 +19,7 @@ import {
   useTagSetVersions,
 } from "@/features/admin/tagSetVersions";
 import { VersionSelect } from "@/features/admin/VersionSelect";
+import { formatProbability } from "@/features/admin/metrics";
 import { formatDateTime } from "@/shared/lib/dateTime";
 
 type Row = Schemas["EvaluationRowResponse"];
@@ -223,7 +224,10 @@ function statusCount(overview: Overview, status: TopicStatus): number {
 
 function RowsTable({ rows }: { rows: Row[] }) {
   return (
-    <table aria-label="평가 결과" className="w-full text-left text-sm">
+    <table
+      aria-label="평가 결과"
+      className="w-full text-left text-sm [&_td]:px-2 [&_td]:py-1 [&_th]:px-2 [&_th]:py-1"
+    >
       <thead>
         <tr>
           <th className="font-medium">평가 시각</th>
@@ -251,15 +255,21 @@ function RowsTable({ rows }: { rows: Row[] }) {
             </td>
             <td>{topicStatusLabels[row.topicStatus]}</td>
             <td>
-              {row.topics.map((t) => `${t.name} ${t.probability}`).join(", ")}
+              {row.topics
+                .map((t) => `${t.name} ${formatProbability(t.probability)}`)
+                .join(", ")}
             </td>
             <td>
-              {row.regions.map((t) => `${t.name} ${t.probability}`).join(", ")}
+              {row.regions
+                .map((t) => `${t.name} ${formatProbability(t.probability)}`)
+                .join(", ")}
             </td>
             <td>
-              {row.format.name} {row.format.probability}
+              {row.format.name} {formatProbability(row.format.probability)}
             </td>
-            <td className="tabular-nums">{row.importance ?? "없음"}</td>
+            <td className="tabular-nums">
+              {formatProbability(row.importance)}
+            </td>
           </tr>
         ))}
       </tbody>

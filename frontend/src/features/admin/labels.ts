@@ -150,9 +150,9 @@ export const tagKindLabels = {
 /** 기준 변경의 경고 — 변경을 막지 않는 알림이다(그 변경이 어긋남을 만들 때만 나온다) */
 export const thresholdWarningLabels = {
   STORE_THRESHOLD_LOWERED:
-    "저장 기준을 낮췄다 — 지난 평가에는 낮춘 구간의 확률이 없어, 그 구간 태그는 앞으로의 평가에만 붙는다",
+    "저장 기준을 낮췄다 — 지난 평가에는 낮춘 구간의 확률이 없다. 빠진 태그 채움으로 채울 수 있다",
   TAG_BELOW_PAST_STORE:
-    "태그 기준을 이 버전에서 써 온 저장 기준보다 낮췄다 — 그 저장 기준으로 평가된 기사에는 그 구간 태그가 붙지 않는다",
+    "태그 기준을 지난 저장 기준 최댓값보다 낮췄다 — 그보다 높은 저장 기준으로 저장된 평가에는 그 구간 태그가 붙지 않는다",
   TAG_BELOW_STORE:
     "태그 기준이 저장 기준보다 낮아졌다 — 그 구간 확률은 저장되지 않아 붙지 않는다",
 } as const satisfies Record<ThresholdWarning, string>;
@@ -162,7 +162,7 @@ export const thresholdConditionLabels = {
   TAG_BELOW_STORE:
     "태그 기준이 저장 기준보다 낮다 — 그 구간 확률은 저장되지 않아 붙지 않는다",
   TAG_BELOW_PAST_STORE:
-    "태그 기준이 이 버전에서 써 온 저장 기준보다 낮다 — 그 저장 기준으로 평가된 기사에는 그 구간 태그가 없다",
+    "태그 기준이 지난 저장 기준 최댓값보다 낮다 — 그보다 높은 저장 기준으로 저장된 평가에는 그 구간 태그가 없다",
   STORE_THRESHOLD_CHANGED:
-    "이 버전의 저장 기준이 바뀐 적이 있다 — 평가마다 다른 저장 기준으로 저장됐다",
+    "이 버전의 평가마다 저장된 확률 범위가 다르다 — 저장 기준이 바뀌었고 빠진 태그 채움이 그 차이를 다 메우지 않았다",
 } as const satisfies Record<ThresholdCondition, string>;

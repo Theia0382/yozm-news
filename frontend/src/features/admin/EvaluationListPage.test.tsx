@@ -62,6 +62,33 @@ describe("EvaluationListPage", () => {
     expect(screen.queryByRole("button", { name: "더 보기" })).toBeNull();
   });
 
+  it("행의 확률 · 중요도 기대값을 셋째 자리까지 반올림해 보인다", async () => {
+    const raw = row(9, "국회 본회의 통과");
+    renderPage([
+      page(
+        [
+          {
+            ...raw,
+            topics: [{ ...raw.topics[0]!, probability: 0.10885070239097819 }],
+            importance: 2.9999999999999996,
+          },
+        ],
+        null,
+      ),
+    ]);
+
+    const table = await screen.findByRole("table", { name: "평가 결과" });
+    const cells = within(within(table).getAllByRole("row")[1]!).getAllByRole(
+      "cell",
+    );
+    expect(cells[3]).toHaveTextContent(/^대통령실·행정부 0\.109$/);
+    // 대조 — 끝의 0 이 없는 값은 그대로
+    expect(cells[5]).toHaveTextContent(/^스트레이트 0\.7$/);
+    expect(cells[6]).toHaveTextContent(/^3$/);
+    expect(table.textContent).not.toContain("0.10885070239097819");
+    expect(table.textContent).not.toContain("2.9999999999999996");
+  });
+
   it("거르기 선택지는 평가 현황의 키와 수이고, 고르면 그 거르기로 다시 받는다", async () => {
     const server = renderPage([page([row(9, "국회 본회의 통과")], null)]);
     await screen.findByRole("table", { name: "평가 결과" });
