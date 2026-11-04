@@ -21,7 +21,6 @@ import net.yozmnews.evaluation.ThresholdChangeView;
 import net.yozmnews.evaluation.ThresholdKindStatus;
 import net.yozmnews.evaluation.ThresholdPreviewResult;
 import net.yozmnews.evaluation.ThresholdStatusView;
-import net.yozmnews.evaluation.domain.backfill.TagBackfillRepository;
 import net.yozmnews.evaluation.domain.tagset.TagSet;
 import net.yozmnews.evaluation.domain.tagset.TagSetRepository;
 import net.yozmnews.evaluation.domain.threshold.StoreFloors;
@@ -58,20 +57,20 @@ class TagSetAdministrationService implements TagSetAdministration {
 
 	private final TagSetVersioning versioning;
 
-	private final TagBackfillRepository backfills;
+	private final StoreFloorsReader floors;
 
 	private final ThresholdPreviews previews;
 
 	@Autowired
 	TagSetAdministrationService(TagSetRepository tagSets, ThresholdRepository thresholds,
-			TransactionTemplate transaction, TagSetVersioning versioning, TagBackfillRepository backfills,
+			TransactionTemplate transaction, TagSetVersioning versioning, StoreFloorsReader floors,
 			ThresholdPreviews previews) {
-		this(tagSets, thresholds, transaction, InstantSource.system(), versioning, backfills, previews);
+		this(tagSets, thresholds, transaction, InstantSource.system(), versioning, floors, previews);
 	}
 
 	TagSetAdministrationService(TagSetRepository tagSets, ThresholdRepository thresholds,
 			TransactionTemplate transaction, InstantSource clock, TagSetVersioning versioning,
-			TagBackfillRepository backfills, ThresholdPreviews previews) {
+			StoreFloorsReader floors, ThresholdPreviews previews) {
 		this.tagSets = tagSets;
 		this.thresholds = thresholds;
 		this.transaction = transaction;
@@ -81,7 +80,7 @@ class TagSetAdministrationService implements TagSetAdministration {
 		this.readOnly.setIsolationLevel(TransactionDefinition.ISOLATION_REPEATABLE_READ);
 		this.clock = clock;
 		this.versioning = versioning;
-		this.backfills = backfills;
+		this.floors = floors;
 		this.previews = previews;
 	}
 
@@ -98,7 +97,7 @@ class TagSetAdministrationService implements TagSetAdministration {
 			TagSetId version = TagSetDirectoryService.active(this.tagSets).id();
 			ThresholdValues current = this.thresholds.lockCurrent(version, kind)
 				.orElseThrow(() -> new IllegalStateException("태그 기준 · 저장 기준 행이 없다: " + version + " " + kind));
-			BigDecimal pastMax = floors(version, kind, this.thresholds.changes(version)).pastMax();
+			BigDecimal pastMax = this.floors.floors(version, kind, this.thresholds.changes(version)).pastMax();
 			return switch (ThresholdRule.decide(current, pastMax, tagThreshold, storeThreshold)) {
 				case ThresholdDecision.OutOfRange outOfRange -> new ThresholdChangeResult.OutOfRange();
 				case ThresholdDecision.Unchanged unchanged ->
@@ -137,14 +136,9 @@ class TagSetAdministrationService implements TagSetAdministration {
 
 	/** 한 태그 종류의 상태 — 판정은 {@link ThresholdStanding} */
 	private ThresholdKindStatus kindStatus(TagThresholds current, TagSetId version, List<ThresholdChangeView> changes) {
-		StoreFloors floors = floors(version, current.kind(), changes);
+		StoreFloors floors = this.floors.floors(version, current.kind(), changes);
 		ThresholdValues values = new ThresholdValues(current.tagThreshold(), current.storeThreshold());
 		return new ThresholdKindStatus(current, floors.pastMax(), ThresholdStanding.of(values, floors));
-	}
-
-	/** 그 태그 종류의 저장 바닥 — 이력과 끝난 채움의 덮음(evaluation-R32) */
-	private StoreFloors floors(TagSetId version, MultiTagKind kind, List<ThresholdChangeView> changes) {
-		return StoreFloors.of(kind, changes, this.backfills.coverages(version, kind));
 	}
 
 	@Override

@@ -11,12 +11,10 @@ import net.yozmnews.evaluation.EvaluationQueueCounts;
 import net.yozmnews.evaluation.MultiTagKind;
 import net.yozmnews.evaluation.TagSetId;
 import net.yozmnews.evaluation.ThresholdChangeView;
-import net.yozmnews.evaluation.domain.backfill.TagBackfillRepository;
 import net.yozmnews.evaluation.domain.overview.OverviewTally;
 import net.yozmnews.evaluation.domain.queue.EvaluationQueueRepository;
 import net.yozmnews.evaluation.domain.result.EvaluationResultRepository;
 import net.yozmnews.evaluation.domain.tagset.TagSetRepository;
-import net.yozmnews.evaluation.domain.threshold.StoreFloors;
 import net.yozmnews.evaluation.domain.threshold.ThresholdRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -42,19 +40,19 @@ class EvaluationAdministrationService implements EvaluationAdministration {
 
 	private final EvaluationResultRepository results;
 
-	private final TagBackfillRepository backfills;
+	private final StoreFloorsReader floors;
 
 	private final TransactionTemplate snapshot;
 
 	EvaluationAdministrationService(EvaluationQueueRepository queue, TagSetRepository tagSets, TagSetViews views,
-			ThresholdRepository thresholds, EvaluationResultRepository results, TagBackfillRepository backfills,
+			ThresholdRepository thresholds, EvaluationResultRepository results, StoreFloorsReader floors,
 			PlatformTransactionManager transactions) {
 		this.queue = queue;
 		this.tagSets = tagSets;
 		this.views = views;
 		this.thresholds = thresholds;
 		this.results = results;
-		this.backfills = backfills;
+		this.floors = floors;
 		this.snapshot = new TransactionTemplate(transactions);
 		this.snapshot.setReadOnly(true);
 		this.snapshot.setIsolationLevel(TransactionDefinition.ISOLATION_REPEATABLE_READ);
@@ -75,8 +73,8 @@ class EvaluationAdministrationService implements EvaluationAdministration {
 			}
 			List<ThresholdChangeView> changes = this.thresholds.changes(version);
 			OverviewTally tally = new OverviewTally(this.views.of(version), this.thresholds.current(version),
-					StoreFloors.of(MultiTagKind.TOPIC, changes, this.backfills.coverages(version, MultiTagKind.TOPIC)),
-					StoreFloors.of(MultiTagKind.REGION, changes, this.backfills.coverages(version, MultiTagKind.REGION)),
+					this.floors.floors(version, MultiTagKind.TOPIC, changes),
+					this.floors.floors(version, MultiTagKind.REGION, changes),
 					period);
 			this.results.streamVersionPeriod(version, period.from(), period.to(), tally::add);
 			return Optional.of(tally.overview());

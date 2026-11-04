@@ -12,7 +12,6 @@ import net.yozmnews.evaluation.TagSetThresholds;
 import net.yozmnews.evaluation.TagThresholds;
 import net.yozmnews.evaluation.ThresholdChangeView;
 import net.yozmnews.evaluation.ThresholdPreviewResult;
-import net.yozmnews.evaluation.domain.backfill.TagBackfillRepository;
 import net.yozmnews.evaluation.domain.result.EvaluationResultRepository;
 import net.yozmnews.evaluation.domain.review.ThresholdImpactTally;
 import net.yozmnews.evaluation.domain.tagset.TagSetRepository;
@@ -44,18 +43,18 @@ class ThresholdPreviews {
 
 	private final EvaluationResultRepository results;
 
-	private final TagBackfillRepository backfills;
+	private final StoreFloorsReader floors;
 
 	private final TransactionTemplate snapshot;
 
 	ThresholdPreviews(TagSetRepository tagSets, TagSetViews views, ThresholdRepository thresholds,
-			EvaluationResultRepository results, TagBackfillRepository backfills,
+			EvaluationResultRepository results, StoreFloorsReader floors,
 			PlatformTransactionManager transactions) {
 		this.tagSets = tagSets;
 		this.views = views;
 		this.thresholds = thresholds;
 		this.results = results;
-		this.backfills = backfills;
+		this.floors = floors;
 		this.snapshot = new TransactionTemplate(transactions);
 		this.snapshot.setReadOnly(true);
 		this.snapshot.setIsolationLevel(TransactionDefinition.ISOLATION_REPEATABLE_READ);
@@ -79,8 +78,8 @@ class ThresholdPreviews {
 			};
 			ThresholdValues values = new ThresholdValues(currentKind.tagThreshold(), currentKind.storeThreshold());
 			List<ThresholdChangeView> changes = this.thresholds.changes(version);
-			StoreFloors topicFloors = floors(version, MultiTagKind.TOPIC, changes);
-			StoreFloors regionFloors = floors(version, MultiTagKind.REGION, changes);
+			StoreFloors topicFloors = this.floors.floors(version, MultiTagKind.TOPIC, changes);
+			StoreFloors regionFloors = this.floors.floors(version, MultiTagKind.REGION, changes);
 			BigDecimal pastMax = switch (kind) {
 				case TOPIC -> topicFloors.pastMax();
 				case REGION -> regionFloors.pastMax();
@@ -104,11 +103,6 @@ class ThresholdPreviews {
 				}
 			};
 		}));
-	}
-
-	/** 그 태그 종류의 저장 바닥 — 이력과 끝난 채움의 덮음(evaluation-R32) */
-	private StoreFloors floors(TagSetId version, MultiTagKind kind, List<ThresholdChangeView> changes) {
-		return StoreFloors.of(kind, changes, this.backfills.coverages(version, kind));
 	}
 
 }
