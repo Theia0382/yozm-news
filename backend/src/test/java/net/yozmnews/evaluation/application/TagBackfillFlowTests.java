@@ -79,6 +79,12 @@ class TagBackfillFlowTests {
 	TagSetVersioning versioning;
 
 	@Autowired
+	ThresholdPreviews previews;
+
+	@Autowired
+	StoreFloorsReader floors;
+
+	@Autowired
 	TransactionTemplate transaction;
 
 	@Autowired
@@ -194,7 +200,7 @@ class TagBackfillFlowTests {
 	private ThresholdChangeResult.Changed lowerTheTopicTagThresholdTo(String tag) {
 		TagSetAdministrationService administration = new TagSetAdministrationService(this.tagSets, this.thresholds,
 				this.transaction, InstantSource.fixed(REQUESTED.plus(Duration.ofHours(2))), this.versioning,
-				this.backfills);
+				this.floors, this.previews);
 		return (ThresholdChangeResult.Changed) administration.changeThresholds(MultiTagKind.TOPIC, new BigDecimal(tag),
 				new BigDecimal("0.1"), ChangeActor.OPERATOR);
 	}

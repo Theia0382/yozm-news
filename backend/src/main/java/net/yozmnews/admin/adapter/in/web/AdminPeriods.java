@@ -16,6 +16,9 @@ import org.springframework.web.server.ResponseStatusException;
  */
 final class AdminPeriods {
 
+	/** 기간 매개변수의 400 을 화면용 API 명세에 적는 설명 — 기간을 받는 운영자 엔드포인트가 함께 쓴다 */
+	static final String PROBLEM = "날짜 · 시간대의 형식이 틀렸거나 기간이 범위 밖이다";
+
 	private AdminPeriods() {
 	}
 

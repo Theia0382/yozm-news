@@ -176,6 +176,317 @@
         "tags" : [ "admin-evaluation-controller" ]
       }
     },
+    "/api/admin/evaluation-samples" : {
+      "get" : {
+        "operationId" : "evaluationSample",
+        "parameters" : [ {
+          "description" : "태그 체계 버전 ID",
+          "in" : "query",
+          "name" : "version",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }, {
+          "description" : "시작일(yyyy-MM-dd)",
+          "in" : "query",
+          "name" : "from",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "종료일(yyyy-MM-dd, 포함)",
+          "in" : "query",
+          "name" : "to",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "날짜를 해석할 시간대(IANA ID)",
+          "in" : "query",
+          "name" : "zone",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "씨앗 — 같은 씨앗이면 같은 표본",
+          "in" : "query",
+          "name" : "seed",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }, {
+          "description" : "표본 크기 — 없으면 100",
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int32"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/EvaluationSampleResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "날짜 · 시간대의 형식이 틀렸거나 기간이 범위 밖이다, 또는 표본 크기 · 씨앗이 범위 밖이다"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "없는 태그 체계 버전이다"
+          }
+        },
+        "tags" : [ "admin-evaluation-review-controller" ]
+      }
+    },
+    "/api/admin/evaluations" : {
+      "get" : {
+        "operationId" : "evaluations",
+        "parameters" : [ {
+          "description" : "태그 체계 버전 ID",
+          "in" : "query",
+          "name" : "version",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }, {
+          "description" : "시작일(yyyy-MM-dd)",
+          "in" : "query",
+          "name" : "from",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "종료일(yyyy-MM-dd, 포함)",
+          "in" : "query",
+          "name" : "to",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "날짜를 해석할 시간대(IANA ID)",
+          "in" : "query",
+          "name" : "zone",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "거를 태그의 종류 — tag 와 함께",
+          "in" : "query",
+          "name" : "tagKind",
+          "required" : false,
+          "schema" : {
+            "type" : [ "string", "null" ],
+            "enum" : [ "TOPIC", "REGION", "FORMAT" ]
+          }
+        }, {
+          "description" : "거를 태그의 키 — 주제는 대분류 키 · 중분류 전체 키",
+          "in" : "query",
+          "name" : "tag",
+          "required" : false,
+          "schema" : {
+            "type" : [ "string", "null" ]
+          }
+        }, {
+          "description" : "거를 주제 판정",
+          "in" : "query",
+          "name" : "topicStatus",
+          "required" : false,
+          "schema" : {
+            "type" : [ "string", "null" ],
+            "enum" : [ "TAGGED", "LOW_CONFIDENCE", "UNCLASSIFIED" ]
+          }
+        }, {
+          "description" : "이어 받을 커서의 평가 시각(ISO-8601) — afterId 와 함께",
+          "in" : "query",
+          "name" : "afterEvaluatedAt",
+          "required" : false,
+          "schema" : {
+            "type" : [ "string", "null" ]
+          }
+        }, {
+          "description" : "이어 받을 커서의 평가 ID — afterEvaluatedAt 과 함께",
+          "in" : "query",
+          "name" : "afterId",
+          "required" : false,
+          "schema" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int64"
+          }
+        }, {
+          "description" : "한 번에 받을 수 — 없으면 20",
+          "in" : "query",
+          "name" : "limit",
+          "required" : false,
+          "schema" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int32"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/EvaluationListResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "날짜 · 시간대의 형식이 틀렸거나 기간이 범위 밖이다, 거르기 · 커서 · 쪽 크기가 틀렸거나 그 태그 체계 버전에 없는 태그다"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "없는 태그 체계 버전이다"
+          }
+        },
+        "tags" : [ "admin-evaluation-review-controller" ]
+      }
+    },
+    "/api/admin/evaluations/{id}" : {
+      "get" : {
+        "operationId" : "evaluationDetail",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/EvaluationDetailResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "없는 평가다"
+          }
+        },
+        "tags" : [ "admin-evaluation-review-controller" ]
+      }
+    },
     "/api/admin/event-publications" : {
       "get" : {
         "operationId" : "strandedPublications",
@@ -2010,6 +2321,169 @@
         "tags" : [ "admin-tag-set-controller" ]
       }
     },
+    "/api/admin/threshold-previews" : {
+      "post" : {
+        "operationId" : "previewThresholds",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ThresholdPreviewRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ThresholdPreviewResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청 본문의 형식이 틀렸거나, 날짜 · 시간대 · 기간 · 태그 기준 · 저장 기준이 범위 밖이다"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          }
+        },
+        "tags" : [ "admin-threshold-controller" ]
+      }
+    },
+    "/api/admin/thresholds" : {
+      "get" : {
+        "operationId" : "thresholdStatus",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ThresholdStatusResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          }
+        },
+        "tags" : [ "admin-threshold-controller" ]
+      }
+    },
+    "/api/admin/thresholds/{kind}" : {
+      "put" : {
+        "operationId" : "changeThresholds",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "kind",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "enum" : [ "TOPIC", "REGION" ]
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ThresholdChangeRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ThresholdChangeResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청 본문 · 경로의 형식이 틀렸거나 태그 기준 · 저장 기준이 범위 밖이다"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          }
+        },
+        "tags" : [ "admin-threshold-controller" ]
+      }
+    },
     "/api/admin/topic-coverage" : {
       "get" : {
         "operationId" : "topicCoverage",
@@ -2268,6 +2742,22 @@
         },
         "required" : [ "results" ]
       },
+      "DistributionShare" : {
+        "type" : "object",
+        "properties" : {
+          "key" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "probability" : {
+            "type" : "number",
+            "format" : "double"
+          }
+        },
+        "required" : [ "key", "name", "probability" ]
+      },
       "DocumentProblemView" : {
         "type" : "object",
         "properties" : {
@@ -2347,6 +2837,128 @@
           }
         },
         "required" : [ "duplicateRate", "duplicates", "entries", "estimated", "estimatedRate", "guidReuses", "titleMatchRate", "titleMatches", "urlMatches" ]
+      },
+      "EvaluationDetailResponse" : {
+        "type" : "object",
+        "properties" : {
+          "article" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/ReviewArticleDetailResponse"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "articleId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "evaluatedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "evaluator" : {
+            "type" : "string"
+          },
+          "format" : {
+            "type" : "string"
+          },
+          "formats" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/DistributionShare"
+            }
+          },
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "importance" : {
+            "type" : [ "number", "null" ],
+            "format" : "double"
+          },
+          "importanceLevels" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/DistributionShare"
+            }
+          },
+          "inputTokens" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "modelVersion" : {
+            "type" : "string"
+          },
+          "regionThresholds" : {
+            "$ref" : "#/components/schemas/TagThresholds"
+          },
+          "regions" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/StoredTagView"
+            }
+          },
+          "topicCategories" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/TagName"
+            }
+          },
+          "topicStatus" : {
+            "type" : "string",
+            "enum" : [ "TAGGED", "LOW_CONFIDENCE", "UNCLASSIFIED" ]
+          },
+          "topicThresholds" : {
+            "$ref" : "#/components/schemas/TagThresholds"
+          },
+          "topics" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/StoredTagView"
+            }
+          },
+          "version" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "versionNumber" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        },
+        "required" : [ "article", "articleId", "evaluatedAt", "evaluator", "format", "formats", "id", "importance", "importanceLevels", "inputTokens", "modelVersion", "regionThresholds", "regions", "topicCategories", "topicStatus", "topicThresholds", "topics", "version", "versionNumber" ]
+      },
+      "EvaluationListResponse" : {
+        "type" : "object",
+        "properties" : {
+          "from" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "nextEvaluatedAt" : {
+            "type" : [ "string", "null" ],
+            "format" : "date-time"
+          },
+          "nextId" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int64"
+          },
+          "rows" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/EvaluationRowResponse"
+            }
+          },
+          "to" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "version" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        },
+        "required" : [ "from", "nextEvaluatedAt", "nextId", "rows", "to", "version" ]
       },
       "EvaluationOverviewResponse" : {
         "type" : "object",
@@ -2448,6 +3060,92 @@
           }
         },
         "required" : [ "exhausted", "rejected", "waiting" ]
+      },
+      "EvaluationRowResponse" : {
+        "type" : "object",
+        "properties" : {
+          "article" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/ReviewArticleResponse"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "articleId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "evaluatedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "format" : {
+            "$ref" : "#/components/schemas/NamedTag"
+          },
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "importance" : {
+            "type" : [ "number", "null" ],
+            "format" : "double"
+          },
+          "regions" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/NamedTag"
+            }
+          },
+          "topicCategories" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/TagName"
+            }
+          },
+          "topicStatus" : {
+            "type" : "string",
+            "enum" : [ "TAGGED", "LOW_CONFIDENCE", "UNCLASSIFIED" ]
+          },
+          "topics" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/NamedTag"
+            }
+          }
+        },
+        "required" : [ "article", "articleId", "evaluatedAt", "format", "id", "importance", "regions", "topicCategories", "topicStatus", "topics" ]
+      },
+      "EvaluationSampleResponse" : {
+        "type" : "object",
+        "properties" : {
+          "from" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "population" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "rows" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/EvaluationRowResponse"
+            }
+          },
+          "seed" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "to" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "version" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        },
+        "required" : [ "from", "population", "rows", "seed", "to", "version" ]
       },
       "EventPublicationIdsRequest" : {
         "type" : "object",
@@ -2662,6 +3360,22 @@
           }
         },
         "required" : [ "at", "httpStatus", "message", "permanence", "reason" ]
+      },
+      "NamedTag" : {
+        "type" : "object",
+        "properties" : {
+          "key" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "probability" : {
+            "type" : "number",
+            "format" : "double"
+          }
+        },
+        "required" : [ "key", "name", "probability" ]
       },
       "PingResponse" : {
         "type" : "object",
@@ -2931,6 +3645,61 @@
         },
         "required" : [ "results" ]
       },
+      "ReviewArticleDetailResponse" : {
+        "type" : "object",
+        "properties" : {
+          "canonicalUrl" : {
+            "type" : "string",
+            "format" : "uri"
+          },
+          "entries" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ReviewEntryResponse"
+            }
+          },
+          "summary" : {
+            "type" : [ "string", "null" ]
+          },
+          "title" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "canonicalUrl", "entries", "summary", "title" ]
+      },
+      "ReviewArticleResponse" : {
+        "type" : "object",
+        "properties" : {
+          "sources" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "title" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "sources", "title" ]
+      },
+      "ReviewEntryResponse" : {
+        "type" : "object",
+        "properties" : {
+          "categories" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "section" : {
+            "type" : [ "string", "null" ]
+          },
+          "sourceName" : {
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "categories", "section", "sourceName" ]
+      },
       "RevisionResponse" : {
         "type" : "object",
         "properties" : {
@@ -3126,6 +3895,25 @@
           }
         },
         "required" : [ "degradedAfterFailures", "degradedAfterPermanentFailures", "recheckIntervalMinutes", "staleAfterHours" ]
+      },
+      "StoredTagView" : {
+        "type" : "object",
+        "properties" : {
+          "attached" : {
+            "type" : "boolean"
+          },
+          "key" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "probability" : {
+            "type" : "number",
+            "format" : "double"
+          }
+        },
+        "required" : [ "attached", "key", "name", "probability" ]
       },
       "StrandedPublicationListResponse" : {
         "type" : "object",
@@ -3377,6 +4165,18 @@
         },
         "required" : [ "change", "from", "kind", "to" ]
       },
+      "TagName" : {
+        "type" : "object",
+        "properties" : {
+          "key" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "key", "name" ]
+      },
       "TagRef" : {
         "type" : "object",
         "properties" : {
@@ -3611,6 +4411,80 @@
         },
         "required" : [ "kind", "storeThreshold", "tagThreshold" ]
       },
+      "ThresholdChangeRequest" : {
+        "type" : "object",
+        "properties" : {
+          "storeThreshold" : {
+            "type" : "number"
+          },
+          "tagThreshold" : {
+            "type" : "number"
+          }
+        },
+        "required" : [ "storeThreshold", "tagThreshold" ]
+      },
+      "ThresholdChangeResponse" : {
+        "type" : "object",
+        "properties" : {
+          "current" : {
+            "$ref" : "#/components/schemas/TagThresholds"
+          },
+          "previous" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/TagThresholds"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "result" : {
+            "type" : "string",
+            "enum" : [ "CHANGED", "UNCHANGED" ]
+          },
+          "version" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "warnings" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string",
+              "enum" : [ "STORE_THRESHOLD_LOWERED", "TAG_BELOW_PAST_STORE", "TAG_BELOW_STORE" ]
+            },
+            "uniqueItems" : true
+          }
+        },
+        "required" : [ "current", "previous", "result", "version", "warnings" ]
+      },
+      "ThresholdChangeView" : {
+        "type" : "object",
+        "properties" : {
+          "actor" : {
+            "type" : "string",
+            "enum" : [ "SYSTEM", "OPERATOR" ]
+          },
+          "changedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "kind" : {
+            "type" : "string",
+            "enum" : [ "TOPIC", "REGION" ]
+          },
+          "previousStoreThreshold" : {
+            "type" : [ "number", "null" ]
+          },
+          "previousTagThreshold" : {
+            "type" : [ "number", "null" ]
+          },
+          "storeThreshold" : {
+            "type" : "number"
+          },
+          "tagThreshold" : {
+            "type" : "number"
+          }
+        },
+        "required" : [ "actor", "changedAt", "kind", "previousStoreThreshold", "previousTagThreshold", "storeThreshold", "tagThreshold" ]
+      },
       "ThresholdDifference" : {
         "type" : "object",
         "properties" : {
@@ -3622,6 +4496,131 @@
           }
         },
         "required" : [ "current", "proposed" ]
+      },
+      "ThresholdKindStatus" : {
+        "type" : "object",
+        "properties" : {
+          "conditions" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string",
+              "enum" : [ "TAG_BELOW_STORE", "TAG_BELOW_PAST_STORE", "STORE_THRESHOLD_CHANGED" ]
+            },
+            "uniqueItems" : true
+          },
+          "current" : {
+            "$ref" : "#/components/schemas/TagThresholds"
+          },
+          "pastMaxStoreThreshold" : {
+            "type" : "number"
+          }
+        },
+        "required" : [ "conditions", "current", "pastMaxStoreThreshold" ]
+      },
+      "ThresholdPreviewRequest" : {
+        "type" : "object",
+        "properties" : {
+          "from" : {
+            "type" : "string"
+          },
+          "kind" : {
+            "type" : "string",
+            "enum" : [ "TOPIC", "REGION" ]
+          },
+          "storeThreshold" : {
+            "type" : "number"
+          },
+          "tagThreshold" : {
+            "type" : "number"
+          },
+          "to" : {
+            "type" : "string"
+          },
+          "zone" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "from", "kind", "storeThreshold", "tagThreshold", "to", "zone" ]
+      },
+      "ThresholdPreviewResponse" : {
+        "type" : "object",
+        "properties" : {
+          "after" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/EvaluationOverviewResponse"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "before" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/EvaluationOverviewResponse"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "changed" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int64"
+          },
+          "current" : {
+            "$ref" : "#/components/schemas/TagThresholds"
+          },
+          "evaluations" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int64"
+          },
+          "proposed" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/TagThresholds"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "result" : {
+            "type" : "string",
+            "enum" : [ "PREVIEWED", "UNCHANGED" ]
+          },
+          "version" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "warnings" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string",
+              "enum" : [ "STORE_THRESHOLD_LOWERED", "TAG_BELOW_PAST_STORE", "TAG_BELOW_STORE" ]
+            },
+            "uniqueItems" : true
+          }
+        },
+        "required" : [ "after", "before", "changed", "current", "evaluations", "proposed", "result", "version", "warnings" ]
+      },
+      "ThresholdStatusResponse" : {
+        "type" : "object",
+        "properties" : {
+          "changes" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ThresholdChangeView"
+            }
+          },
+          "region" : {
+            "$ref" : "#/components/schemas/ThresholdKindStatus"
+          },
+          "topic" : {
+            "$ref" : "#/components/schemas/ThresholdKindStatus"
+          },
+          "version" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "versionNumber" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        },
+        "required" : [ "changes", "region", "topic", "version", "versionNumber" ]
       },
       "TokenBucket" : {
         "type" : "object",

@@ -2,6 +2,7 @@ package net.yozmnews.evaluation.application;
 
 import static net.yozmnews.Latches.awaitQuietly;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -16,11 +17,14 @@ import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.evaluation.ChangeActor;
 import net.yozmnews.evaluation.MultiTagKind;
 import net.yozmnews.evaluation.TagSetDirectory;
+import net.yozmnews.evaluation.TagSetId;
 import net.yozmnews.evaluation.TagThresholds;
 import net.yozmnews.evaluation.ThresholdChangeResult;
 import net.yozmnews.evaluation.ThresholdChangeView;
+import net.yozmnews.evaluation.ThresholdCondition;
+import net.yozmnews.evaluation.ThresholdKindStatus;
+import net.yozmnews.evaluation.ThresholdStatusView;
 import net.yozmnews.evaluation.ThresholdWarning;
-import net.yozmnews.evaluation.domain.backfill.TagBackfillRepository;
 import net.yozmnews.evaluation.domain.tagset.TagSetRepository;
 import net.yozmnews.evaluation.domain.threshold.ThresholdRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -35,9 +39,10 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * 태그 기준 · 저장 기준 변경과 이력 — 실제 PostgreSQL 에서 이전 값 · 새 값 · 행위자 · 시각, 경고, 바꾸지 않는 결과, 활성 전환과의
- * 줄 서기, 동시 변경의 줄 서기, 끝난 채움이 지난 저장 기준 최댓값을 내리는 것을 본다.
+ * 줄 서기, 동시 변경의 줄 서기, 끝난 채움이 지난 저장 기준 최댓값을 내리는 것, 결과의 버전, 기준 상태(지난 저장 기준 최댓값 · 어긋난 상태 ·
+ * 이력)를 본다.
  * <p>
- * 지키는 규칙: evaluation-R11 ~ evaluation-R13
+ * 지키는 규칙: evaluation-R11 ~ evaluation-R13 · evaluation-R36
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -69,22 +74,31 @@ class TagSetAdministrationTests {
 	TagSetVersioning versioning;
 
 	@Autowired
-	TagBackfillRepository backfills;
+	StoreFloorsReader floors;
+
+	@Autowired
+	ThresholdPreviews previews;
 
 	private TagSetAdministrationService administration;
+
+	/** 버전 1 의 ID — 첫 기동 적재가 쓴 행 */
+	private TagSetId first;
 
 	@BeforeEach
 	void startFromTheInitialThresholds() {
 		TagBackfillRows.removeAll(this.jdbc);
 		TagSetRows.resetThresholds(this.jdbc);
+		this.first = new TagSetId(
+				this.jdbc.sql("select id from tag_sets where number = 1").query(Long.class).single());
 		this.administration = new TagSetAdministrationService(this.tagSets, this.thresholds,
 				new TransactionTemplate(this.transactionManager), InstantSource.fixed(NOW),
-				this.versioning, this.backfills);
+				this.versioning, this.floors, this.previews);
 	}
 
 	@AfterEach
 	void restoreTheInitialThresholds() {
 		TagBackfillRows.removeAll(this.jdbc);
+		TagSetRows.removeVersionsAfterFirst(this.jdbc);
 		TagSetRows.resetThresholds(this.jdbc);
 	}
 
@@ -92,8 +106,9 @@ class TagSetAdministrationTests {
 	void changesTheThresholdsAndRecordsTheChange() {
 		ThresholdChangeResult result = change(MultiTagKind.TOPIC, "0.6", "0.2");
 
-		assertThat(result).isEqualTo(new ThresholdChangeResult.Changed(thresholds(MultiTagKind.TOPIC, "0.500", "0.100"),
-				thresholds(MultiTagKind.TOPIC, "0.600", "0.200"), Set.of()));
+		assertThat(result).isEqualTo(new ThresholdChangeResult.Changed(this.first,
+				thresholds(MultiTagKind.TOPIC, "0.500", "0.100"), thresholds(MultiTagKind.TOPIC, "0.600", "0.200"),
+				Set.of()));
 		assertThat(this.administration.thresholdChanges().get(0)).isEqualTo(new ThresholdChangeView(MultiTagKind.TOPIC,
 				new BigDecimal("0.500"), new BigDecimal("0.100"), new BigDecimal("0.600"), new BigDecimal("0.200"),
 				ChangeActor.OPERATOR, NOW));
@@ -118,7 +133,7 @@ class TagSetAdministrationTests {
 		TagBackfillRows.insertFinished(this.jdbc, this.directory.activeTagSet().id(), COVERED_FROM, COVERED_TO, "0.1",
 				0);
 
-		assertThat(change(MultiTagKind.TOPIC, "0.2", "0.1")).isEqualTo(new ThresholdChangeResult.Changed(
+		assertThat(change(MultiTagKind.TOPIC, "0.2", "0.1")).isEqualTo(new ThresholdChangeResult.Changed(this.first,
 				thresholds(MultiTagKind.TOPIC, "0.500", "0.100"), thresholds(MultiTagKind.TOPIC, "0.200", "0.100"),
 				Set.of()));
 	}
@@ -129,7 +144,7 @@ class TagSetAdministrationTests {
 		change(MultiTagKind.TOPIC, "0.5", "0.3");
 		change(MultiTagKind.TOPIC, "0.5", "0.1");
 
-		assertThat(change(MultiTagKind.TOPIC, "0.2", "0.1")).isEqualTo(new ThresholdChangeResult.Changed(
+		assertThat(change(MultiTagKind.TOPIC, "0.2", "0.1")).isEqualTo(new ThresholdChangeResult.Changed(this.first,
 				thresholds(MultiTagKind.TOPIC, "0.500", "0.100"), thresholds(MultiTagKind.TOPIC, "0.200", "0.100"),
 				Set.of(ThresholdWarning.TAG_BELOW_PAST_STORE)));
 	}
@@ -148,7 +163,8 @@ class TagSetAdministrationTests {
 	@Test
 	void writesNothingForTheSameValuesOrValuesOutOfRange() {
 		assertThat(change(MultiTagKind.REGION, "0.50", "0.1000"))
-			.isEqualTo(new ThresholdChangeResult.Unchanged(thresholds(MultiTagKind.REGION, "0.500", "0.100")));
+			.isEqualTo(new ThresholdChangeResult.Unchanged(this.first,
+					thresholds(MultiTagKind.REGION, "0.500", "0.100")));
 		assertThat(change(MultiTagKind.REGION, "1.5", "0.1")).isEqualTo(new ThresholdChangeResult.OutOfRange());
 
 		assertThat(this.administration.thresholdChanges()).hasSize(2);
@@ -198,7 +214,7 @@ class TagSetAdministrationTests {
 			assertThat(second).as("앞 변경이 커밋하기 전에는 뒤 변경이 기다린다").isNotDone();
 			commit.countDown();
 			first.get(10, TimeUnit.SECONDS);
-			assertThat(second.get(10, TimeUnit.SECONDS)).isEqualTo(new ThresholdChangeResult.Changed(
+			assertThat(second.get(10, TimeUnit.SECONDS)).isEqualTo(new ThresholdChangeResult.Changed(this.first,
 					thresholds(MultiTagKind.TOPIC, "0.600", "0.200"), thresholds(MultiTagKind.TOPIC, "0.700", "0.200"),
 					Set.of()));
 		}
@@ -210,6 +226,98 @@ class TagSetAdministrationTests {
 		assertThat(changes.get(0).tagThreshold()).isEqualTo(new BigDecimal("0.700"));
 		assertThat(changes.get(1).previousTagThreshold()).isEqualTo(new BigDecimal("0.500"));
 		assertThat(changes.get(1).tagThreshold()).isEqualTo(new BigDecimal("0.600"));
+	}
+
+	@Test
+	void theResultsCarryTheVersionThatWasActiveWhenTheChangeWasJudged() {
+		// 대조: 활성화 전의 변경은 버전 1 이다
+		assertThat(((ThresholdChangeResult.Changed) change(MultiTagKind.TOPIC, "0.6", "0.1")).version())
+			.isEqualTo(this.first);
+		TagSetId second = TagSetVersions.activate(this.administration.versionText(this.first).orElseThrow(),
+				this.tagSets, this.thresholds, new TransactionTemplate(this.transactionManager), NOW);
+
+		assertThat(second).isNotEqualTo(this.first);
+		assertThat(((ThresholdChangeResult.Changed) change(MultiTagKind.TOPIC, "0.7", "0.1")).version())
+			.isEqualTo(second);
+		// 새 버전의 처음 값은 원문의 값(주제 0.6 / 0.1, 지역 0.5 / 0.1)이다 — 같은 값은 바꾸지 않았다는 결과도 그 버전을 싣는다
+		assertThat(change(MultiTagKind.REGION, "0.5", "0.1")).isEqualTo(new ThresholdChangeResult.Unchanged(second,
+				thresholds(MultiTagKind.REGION, "0.500", "0.100")));
+	}
+
+	@Test
+	void theStatusGivesTheCurrentValuesThePastMaximumTheStandingConditionsAndTheHistory() {
+		change(MultiTagKind.TOPIC, "0.6", "0.2");
+		change(MultiTagKind.TOPIC, "0.15", "0.1");
+		change(MultiTagKind.REGION, "0.05", "0.1");
+
+		ThresholdStatusView status = this.administration.thresholdStatus();
+
+		assertThat(status.version()).isEqualTo(this.first);
+		assertThat(status.versionNumber()).isEqualTo(1);
+		// 주제 — 저장 기준을 0.2 로 올렸다가 내렸다. 태그 기준 0.15 는 지난 최댓값 0.2 아래다
+		assertThat(status.topic()).isEqualTo(new ThresholdKindStatus(thresholds(MultiTagKind.TOPIC, "0.150", "0.100"),
+				new BigDecimal("0.200"),
+				Set.of(ThresholdCondition.TAG_BELOW_PAST_STORE, ThresholdCondition.STORE_THRESHOLD_CHANGED)));
+		// 지역 — 저장 기준은 바뀐 적이 없고, 태그 기준이 저장 기준 아래다
+		assertThat(status.region()).isEqualTo(new ThresholdKindStatus(
+				thresholds(MultiTagKind.REGION, "0.050", "0.100"), new BigDecimal("0.100"),
+				Set.of(ThresholdCondition.TAG_BELOW_STORE)));
+		// 이력 — 처음 값 둘과 변경 셋, 최근 것부터
+		assertThat(status.changes()).hasSize(5);
+		assertThat(status.changes())
+			.extracting(ThresholdChangeView::kind, ThresholdChangeView::tagThreshold, ThresholdChangeView::storeThreshold)
+			.startsWith(tuple(MultiTagKind.REGION, new BigDecimal("0.050"), new BigDecimal("0.100")),
+					tuple(MultiTagKind.TOPIC, new BigDecimal("0.150"), new BigDecimal("0.100")),
+					tuple(MultiTagKind.TOPIC, new BigDecimal("0.600"), new BigDecimal("0.200")));
+	}
+
+	@Test
+	void theStatusOfTheInitialThresholdsHasNoCondition() {
+		ThresholdStatusView status = this.administration.thresholdStatus();
+
+		assertThat(status.topic().conditions()).isEmpty();
+		assertThat(status.region().conditions()).isEmpty();
+		assertThat(status.topic().pastMaxStoreThreshold()).isEqualTo(new BigDecimal("0.100"));
+		assertThat(status.changes()).hasSize(2);
+	}
+
+	@Test
+	void aFinishedBackfillOfTheWholeVersionLiftsTheMixedStoreFloorsOfTheStatus() {
+		change(MultiTagKind.TOPIC, "0.5", "0.2");
+		change(MultiTagKind.TOPIC, "0.5", "0.1");
+		TagBackfillRows.insertFinished(this.jdbc, this.first, COVERED_FROM, COVERED_TO, "0.1", 0);
+
+		assertThat(this.administration.thresholdStatus().topic().conditions()).isEmpty();
+	}
+
+	@Test
+	void withoutABackfillTheLoweredStoreThresholdLeavesTheStatusMixed() {
+		// 대조 — 덮음이 없으면 0.2 로 저장된 평가가 남는다(태그 기준 0.5 는 지난 최댓값 0.2 보다 높아 그 상태는 없다)
+		change(MultiTagKind.TOPIC, "0.5", "0.2");
+		change(MultiTagKind.TOPIC, "0.5", "0.1");
+
+		assertThat(this.administration.thresholdStatus().topic().conditions())
+			.containsExactly(ThresholdCondition.STORE_THRESHOLD_CHANGED);
+	}
+
+	@Test
+	void aFinishedBackfillOfTheWholeVersionLowersThePastMaximumOfTheStatus() {
+		change(MultiTagKind.TOPIC, "0.5", "0.2");
+		change(MultiTagKind.TOPIC, "0.5", "0.1");
+		TagBackfillRows.insertFinished(this.jdbc, this.first, COVERED_FROM, COVERED_TO, "0.1", 0);
+
+		assertThat(this.administration.thresholdStatus().topic().pastMaxStoreThreshold())
+			.isEqualTo(new BigDecimal("0.100"));
+	}
+
+	@Test
+	void withoutABackfillThePastMaximumOfTheStatusIsTheLargestStoreThresholdOfTheHistory() {
+		// 대조 — 덮음이 없으면 0.2 로 저장된 평가가 남아 있다
+		change(MultiTagKind.TOPIC, "0.5", "0.2");
+		change(MultiTagKind.TOPIC, "0.5", "0.1");
+
+		assertThat(this.administration.thresholdStatus().topic().pastMaxStoreThreshold())
+			.isEqualTo(new BigDecimal("0.200"));
 	}
 
 	private ThresholdChangeResult change(MultiTagKind kind, String tag, String store) {

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatHours,
   formatMinutes,
+  formatProbability,
   formatRate,
   RATE_LEVEL_LEGEND,
   rateLevel,
@@ -14,6 +15,26 @@ describe("formatRate", () => {
     expect(formatRate(1)).toBe("100.0%");
     expect(formatRate(0)).toBe("0.0%");
     expect(formatRate(null)).toBe("없음");
+  });
+});
+
+describe("formatProbability", () => {
+  it("소수 넷째 자리에서 반올림해 셋째 자리까지, 끝의 0 없이 보인다", () => {
+    expect(formatProbability(0.10885070239097819)).toBe("0.109");
+    expect(formatProbability(2.9999999999999996)).toBe("3");
+    expect(formatProbability(2.5000000000000004)).toBe("2.5");
+    expect(formatProbability(0.039999999999999994)).toBe("0.04");
+    expect(formatProbability(0.4996)).toBe("0.5");
+    expect(formatProbability(1)).toBe("1");
+  });
+
+  it("반올림 경계 — 0.0005 는 올리고 0.00049 는 버린다", () => {
+    expect(formatProbability(0.0005)).toBe("0.001");
+    expect(formatProbability(0.00049)).toBe("0");
+  });
+
+  it("값이 없으면 없음이다", () => {
+    expect(formatProbability(null)).toBe("없음");
   });
 });
 

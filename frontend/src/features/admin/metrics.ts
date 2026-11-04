@@ -1,8 +1,25 @@
-// 운영자 화면(수집 현황 · 평가 현황)의 표시 규칙 — 서버가 낸 비율 · 기간을 글자와 칸 색으로 옮기기만 한다. 비율은 계산하지 않는다(정본은 서버 — article-R14 · evaluation-R29).
+// 운영자 화면(수집 현황 · 평가 현황 · 평가 검수)의 표시 규칙 — 서버가 낸 비율 · 기간 · 확률을 글자와 칸 색으로 옮기기만 한다. 비율은 계산하지 않는다(정본은 서버 — article-R14 · evaluation-R29).
 
 /** 비율 표시 — 소수 한 자리 백분율. 분모가 없어(엔트리 · 평가가 0) 비율이 없으면(null) "없음" 이다(0% 가 아니다) */
 export function formatRate(rate: number | null): string {
   return rate === null ? "없음" : `${(rate * 100).toFixed(1)}%`;
+}
+
+/**
+ * 확률 · 중요도 기대값의 표시 자릿수 — 소수 넷째 자리에서 반올림한다(셋째 자리까지). 화면이 정한 표시 결정이고, 태그 기준 · 저장 기준의
+ * 자릿수(evaluation-R10)를 따라 바뀌지 않는다 — 바꿀 때는 이 값 하나를 고친다. 서버 값은 원형이고 판정은 서버가 한다
+ */
+export const PROBABILITY_FRACTION_DIGITS = 3;
+
+// 십진 표현으로 반올림하고 끝의 0 을 붙이지 않는다 — toFixed 는 이진 표현으로 어긋나고 끝의 0 을 붙인다
+const probabilityFormat = new Intl.NumberFormat("ko-KR", {
+  maximumFractionDigits: PROBABILITY_FRACTION_DIGITS,
+  useGrouping: false,
+});
+
+/** 확률 · 중요도 기대값 표시 — 값이 없으면(null) "없음" 이다 */
+export function formatProbability(value: number | null): string {
+  return value === null ? "없음" : probabilityFormat.format(value);
 }
 
 /** 칸 색의 단계 — "none" 은 엔트리가 없는 칸, 0 은 0%, 1 ~ 4 는 구간 경계로 나눈 단계 */

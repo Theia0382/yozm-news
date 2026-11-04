@@ -11,7 +11,7 @@
 - **피드별 기록** — 같은 기사로 판정한 항목도 버리지 않고 기사 · 피드마다 한 번 기록한다
 - **엔트리 집계** — 피드별 기록을 집계 기간 · 칸마다 세어 중복률 · 날짜 추정 비율 · 제목 판정 비율 · guid 재사용을 운영 기능의 공개 API(`ArticleAdministration`)로 낸다
 - **지운 소스 · 피드의 기사 삭제** — 운영자가 소스 · 피드를 지우면 그 소스(피드)의 엔트리와, 엔트리가 남지 않은 기사를 지우고 지운 기사를 `ArticlesRemoved` 로 알린다. 지우기 전에 함께 지워질 기사 수를 공개 API 로 센다(article-R15). 지운 피드의 늦은 항목은 저장하지 않는다(article-R16)
-- **기사 조회** — 다른 모듈이 기사의 제목 · 요약문 · 엔트리(소스 · 피드 · 카테고리)를 공개 조회(`ArticleDirectory`)로 읽는다
+- **기사 조회** — 다른 모듈이 기사의 제목 · 요약문 · 정규 URL · 엔트리(소스 · 피드 · 카테고리)를 공개 조회(`ArticleDirectory`)로 읽는다
 - **(미구현)** 본문 추출 — 자리만 있고 v1 에서는 하지 않는다(article-R12)
 
 하지 않는 것:
@@ -103,7 +103,7 @@ public record ArticlesRemoved(List<ArticleId> articleIds) {}
 
 ### ArticleDirectory · ArticleContent · ArticleEntryView
 
-기사 조회 — 다른 모듈이 기사의 제목 · 요약문 · 엔트리를 읽고, 처음 본 시각으로 기사를 찾는다. 구현은 `application` 의 `ArticleDirectoryService` 다.
+기사 조회 — 다른 모듈이 기사의 제목 · 요약문 · 정규 URL · 엔트리를 읽고, 처음 본 시각으로 기사를 찾는다. 구현은 `application` 의 `ArticleDirectoryService` 다.
 
 ```java
 public interface ArticleDirectory {
@@ -111,7 +111,8 @@ public interface ArticleDirectory {
     List<ArticleId> firstSeenSince(Instant since);
 }
 
-public record ArticleContent(ArticleId id, String title, @Nullable String summary, List<ArticleEntryView> entries) {}
+public record ArticleContent(ArticleId id, String title, @Nullable String summary, URI canonicalUrl,
+        List<ArticleEntryView> entries) {}
 
 public record ArticleEntryView(SourceId sourceId, FeedId feedId, List<String> categories) {}
 ```
@@ -121,6 +122,7 @@ public record ArticleEntryView(SourceId sourceId, FeedId feedId, List<String> ca
 | `findAll` | 기사들의 내용 — 없는(지운) 기사는 결과에 없다. 빈 입력이면 빈 맵 |
 | `firstSeenSince` | 처음 본 시각(`first_seen_at`)이 `since` 이상인 기사의 ID — ID 순. `evaluation` 이 체계를 바꿀 때 재평가 대상을 고른다 |
 | `ArticleContent.summary` | 저장된 RSS 요약문 — 없으면 null |
+| `ArticleContent.canonicalUrl` | 기사의 정규 URL(article-R1) — 원문 링크. 언제나 http · https 다 |
 | `ArticleContent.entries` | 기사의 엔트리 — 받은 시각 순, 같으면 피드 ID 순 |
 | `ArticleEntryView.categories` | 그 피드에서 처음 본 항목의 RSS 카테고리 — 피드 순서 그대로 |
 
@@ -393,3 +395,4 @@ public interface ContentExtractor {
 | [0032](../adr/0032-same-article-matching-avoids-false-merges-with-per-feed-entries-under-source-lock.md) | 같은 기사 판정은 기사를 잃지 않는 쪽으로 좁히고, 피드별 기록은 (기사, 피드)마다 한 행으로 소스 단위 잠금 안에서 쓴다 |
 | [0052](../adr/0052-article-sources-live-in-feed-entries-and-late-items-of-deleted-feeds-are-dropped.md) | 기사의 소스는 피드별 기록이 갖고, 제목 판정은 그 소스의 기록이 있는 기사에서 하며, 지운 피드의 늦은 항목은 버린다 |
 | [0060](../adr/0060-article-deletion-announced-by-removed-article-ids-and-followed-by-referencing-modules.md) | 기사 삭제는 지운 기사 ID 이벤트로 알리고, 기사를 가리키는 모듈이 받아 자기 행을 지운다 |
+| [0068](../adr/0068-rss-summaries-shown-only-on-operator-screens-and-users-get-processed-information.md) | RSS 요약문은 운영자 화면에만 보이고, 인스턴스 사용자와 외부 API 에는 가공한 정보만 낸다 |

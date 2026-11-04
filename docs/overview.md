@@ -63,7 +63,7 @@
 3. **도메인은 관심 분야를 모른다** — 다루는 주제는 코드가 아니라 태그 체계와 사용자 설정으로 정해진다
 4. **비용 주체에 따라 단계를 나눈다** — 사용자 수와 무관한 일(수집 · 공유 평가 · 사건 묶기)은 운영자 비용, 사용자 수에 비례하는 일(다이제스트 · 변화 리포트 생성)은 사용자 비용이다. 운영자는 생성형 LLM 을 쓰지 않는다. 운영자 비용은 사용자 수가 늘어도 일정하다 ([ADR-0002](adr/0002-shared-evaluation-with-jev.md) · [ADR-0003](adr/0003-byok-personalized-digest.md) · [ADR-0025](adr/0025-long-term-personal-news-history-in-v1.md))
 5. **판단 근거를 남긴다** — Jev 의 태그별 확률, 모델 버전, 태그 체계 버전, 사건 소속 판정 원본, 임베딩 모델 버전, LLM 토큰 사용량을 저장해 임계값 조정과 품질 분석에 쓴다
-6. **원문은 원문 사이트에서** — 기사 본문을 재게시하지 않는다. 종합 요약 · 원문 링크 · 출처 표기만 제공한다
+6. **원문은 원문 사이트에서** — 기사 본문을 재게시하지 않는다. 사용자에게는 종합 요약 · 원문 링크 · 출처 표기만 제공하고, RSS 요약문 원문은 운영자 화면에서만 보인다 ([ADR-0068](adr/0068-rss-summaries-shown-only-on-operator-screens-and-users-get-processed-information.md))
 7. **LLM 출력은 데이터로 다룬다** — 링크와 기사 정보는 LLM 이 아니라 DB 에서 가져와 렌더링한다. LLM 은 후보 별칭으로만 인용한다
 8. **작게 운영 가능하게** — v1 은 PostgreSQL 하나 외에 별도 상태 저장소(Redis · 메시지 브로커 · 벡터 DB)를 두지 않는다. 벡터는 pgvector 확장에 둔다 ([ADR-0027](adr/0027-pgvector-for-vector-storage.md))
 9. **관심 신호는 명시적 행동만** — 좋아요 / 싫어요 · 이슈 추적 · 구독 변경만 관심 신호로 쓰고, 클릭 · 열람은 추적하지 않는다 ([ADR-0028](adr/0028-explicit-signals-and-interest-weighted-candidates.md))
@@ -127,7 +127,7 @@ flowchart LR
 | `credential` | BYOK 키 암호화 보관(envelope encryption) |
 | `user` | 계정, OIDC 연동, 자체 로그인(비밀번호 · 복구 코드), 화면 내 알림, 사용자 설정 · 태그 선호와 구독 변경 이력, 리포트 설정 |
 | `feedback` | 좋아요 / 싫어요 — 추가 전용 기록과 현재 상태 |
-| [`admin`](specs/admin.md) | 운영자 기능의 HTTP API(소스 · 피드 관리, 수집 현황, 이벤트 발행, 태그 체계 버전, 평가 현황, 빠진 태그 채움, (미구현) 태그 기준 · 저장 기준 · 평가 결과 · 사건) — 각 모듈의 공개 운영 API 를 부른다 |
+| [`admin`](specs/admin.md) | 운영자 기능의 HTTP API(소스 · 피드 관리, 수집 현황, 이벤트 발행, 태그 체계 버전, 평가 현황, 평가 검수, 태그 기준 · 저장 기준, 빠진 태그 채움, (미구현) 사건) — 각 모듈의 공개 API(운영 API · 공개 조회)를 부른다 |
 | [`platform`](specs/platform.md) | 여러 모듈에 걸친 것: 실패한 이벤트 발행 재처리와 남겨진 발행의 운영자 처리, 화면용 API 명세 설정 · API 계약 확인 엔드포인트, 역할(profile `web` · `worker`)과 그 기동 검사, 로컬 개발 표시(profile `local` — 로컬 대체물 등록), 보안 설정, 오류 응답 형식, YAML 원문 읽기 |
 | `event` | 공유 사건 묶기 — 기사 표현(임베딩 · 고유명사, `ArticleEmbedder`), 사건 배정 · 병합 · 닫기, 큰 사건 판정, 사건 조회. 사용자를 모른다 |
 | `storyline` | 사용자별 이슈 — 제목 · 현재 상태 요약 · 상태 전이 · 추적 · 해제와 그 이력 |
@@ -154,7 +154,7 @@ flowchart LR
 - `article` → `source` 의 공개 API 의존은 `SourceDirectory`(피드가 아직 있는지 — 지운 피드의 늦은 항목을 버린다)다. 기사의 출처 이름은 `source` 가 기록한다
 - 운영자가 소스 · 피드를 지우면 `article` 이 그 소스 · 피드만 가진 기사를 지우고 지운 기사 ID 를 `ArticlesRemoved` 로 알린다. 기사를 ID 로 가리키는 모듈은 그 이벤트를 받아 자기 행을 지운다 — 지금은 `evaluation`(평가 대기 · 평가 · 태그)이고, 사건 · 다이제스트도 같은 이벤트를 받는다([ADR-0060](adr/0060-article-deletion-announced-by-removed-article-ids-and-followed-by-referencing-modules.md))
 - `evaluation` → `article` · `source` 의 공개 API 의존은 평가 입력이다 — 기사의 제목 · 요약문 · 엔트리는 `article` 의 `ArticleDirectory` 가, 피드의 출처 이름 · 섹션은 `source` 의 `FeedLabels` 가 낸다. 체계를 바꿀 때의 재평가 대상(처음 본 시각이 기간 안인 기사)도 `article` 의 `ArticleDirectory` 가 낸다
-- `admin` 은 운영자 기능을 가진 모듈의 공개 운영 API 를 부른다 — 지금은 `source` 의 `SourceAdministration`(소스 · 피드 관리 · 숨김 · 삭제 · 수집 상태), `article` 의 `ArticleAdministration`(엔트리 집계 · 삭제하면 함께 지워질 기사 수), `evaluation` 의 `TagSetAdministration`(태그 체계 버전 목록 · 원문 · 확인 · 활성화) · `EvaluationAdministration`(평가 현황 · 대기 건수) · `TagBackfillAdministration`(빠진 태그 채움의 확인 · 요청 · 목록) · `TopicCoverage`(주제별 보도량), `platform` 의 `EventPublicationAdministration`(남겨진 이벤트 발행의 다시 처리 · 폐기). 운영 결과의 타입은 그 모듈이 공개하고 HTTP 응답 모양은 `admin` 이 정한다([ADR-0045](adr/0045-admin-module-serves-operator-api-over-module-public-operation-apis.md))
+- `admin` 은 운영자 기능을 가진 모듈의 공개 운영 API 를 부른다 — 지금은 `source` 의 `SourceAdministration`(소스 · 피드 관리 · 숨김 · 삭제 · 수집 상태), `article` 의 `ArticleAdministration`(엔트리 집계 · 삭제하면 함께 지워질 기사 수), `evaluation` 의 `TagSetAdministration`(태그 체계 버전 목록 · 원문 · 확인 · 활성화, 태그 기준 · 저장 기준의 상태 · 미리보기 · 변경) · `EvaluationAdministration`(평가 대기 · 평가 현황) · `TagBackfillAdministration`(빠진 태그 채움의 확인 · 요청 · 목록) · `EvaluationReview`(평가 결과 목록 · 표본 · 상세), `platform` 의 `EventPublicationAdministration`(남겨진 이벤트 발행의 다시 처리 · 폐기). 운영자 화면에 기사 정보를 맞붙이려고 공개 조회도 부른다 — `evaluation` 의 `TopicCoverage`(주제별 보도량), `article` 의 `ArticleDirectory`(제목 · 요약문 · 정규 URL · 엔트리), `source` 의 `FeedLabels`(출처 이름 · 섹션). 운영 결과의 타입은 그 모듈이 공개하고 HTTP 응답 모양은 `admin` 이 정한다([ADR-0045](adr/0045-admin-module-serves-operator-api-over-module-public-operation-apis.md))
 - **(미설계)** 그 밖의 공개 API 의존(예: 후보 선별이 기사 · 소스를 읽는 의존)과 여러 모듈의 데이터에 걸친 작업(보존 정리 · 휴면 이슈 전환)의 소속은 아직 설계되지 않았다
 - 모듈 사이 순환 의존은 Modulith 검증 테스트가 실패로 판정하고, 다른 모듈의 이벤트 타입을 받는 것도 의존으로 센다. 그래서 이슈 타임라인은 그 정본인 주요 뉴스 섹션을 가진 `digest` 가, 관심도는 노출 기록을 가진 `digest` 가 내주고, `storyline` 은 `digest` 를 모르며, `report` 는 다른 모듈을 읽기만 한다. 사건 소속 판정의 인자 · 반환 타입은 `evaluation` 이 소유한다 ([ADR-0025](adr/0025-long-term-personal-news-history-in-v1.md) · [ADR-0026](adr/0026-event-clustering-with-local-embeddings-and-jev.md))
 

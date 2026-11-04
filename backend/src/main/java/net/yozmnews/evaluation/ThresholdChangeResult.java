@@ -8,11 +8,12 @@ import java.util.Set;
  */
 public sealed interface ThresholdChangeResult {
 
-	/** 바꿨다 — 이전 값 · 새 값과 경고(없으면 빈 집합) */
-	record Changed(TagThresholds previous, TagThresholds current, Set<ThresholdWarning> warnings)
+	/** 바꿨다 — 판정한 활성 버전, 이전 값 · 새 값과 경고(없으면 빈 집합) */
+	record Changed(TagSetId version, TagThresholds previous, TagThresholds current, Set<ThresholdWarning> warnings)
 			implements ThresholdChangeResult {
 
 		public Changed {
+			Objects.requireNonNull(version, "version");
 			Objects.requireNonNull(previous, "previous");
 			Objects.requireNonNull(current, "current");
 			warnings = Set.copyOf(warnings);
@@ -20,10 +21,11 @@ public sealed interface ThresholdChangeResult {
 
 	}
 
-	/** 지금 값과 같아 바꾸지 않았다 */
-	record Unchanged(TagThresholds current) implements ThresholdChangeResult {
+	/** 지금 값과 같아 바꾸지 않았다 — 판정한 활성 버전과 지금 값 */
+	record Unchanged(TagSetId version, TagThresholds current) implements ThresholdChangeResult {
 
 		public Unchanged {
+			Objects.requireNonNull(version, "version");
 			Objects.requireNonNull(current, "current");
 		}
 

@@ -6,7 +6,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 import java.util.TreeSet;
 
 import net.yozmnews.evaluation.MultiTagKind;
@@ -15,7 +14,7 @@ import net.yozmnews.evaluation.domain.queue.EvaluationSchedule;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 저장 바닥 계산 — 정본 · docs/specs/evaluation.md §4 · evaluation-R12 · evaluation-R29.
+ * 저장 바닥 계산 — 정본 · docs/specs/evaluation.md §4 · evaluation-R12 · evaluation-R29 · evaluation-R36.
  * <p>
  * 저장 바닥은 한 버전 · 한 태그 종류의 평가 시각 축 위에서, 그 시각의 평가에 어느 확률까지 저장돼 있는가다. 평가마다 쓴 저장 기준은 기록되지
  * 않아 이력과 끝난 채움 기록으로 되짚는다. 이력 행 i 의 저장 기준은 닫힌 구간 {@code [c_i, c_{i+1}]} 동안 유효하다(마지막은 끝없이, 다음
@@ -87,14 +86,12 @@ public final class StoreFloors {
 
 	/** 지난 저장 기준 최댓값을 낸다 — 처음 값 시각부터 끝없이 본 바닥의 최댓값이고, 채움이 없으면 이력의 저장 기준 최댓값과 같다 */
 	public BigDecimal pastMax() {
-		BigDecimal max = null;
-		for (Instant at : samples(this.origin, null)) {
-			BigDecimal floor = floor(at);
-			if (max == null || floor.compareTo(max) > 0) {
-				max = floor;
-			}
-		}
-		return Objects.requireNonNull(max);
+		return floorsAt(this.origin, null).last();
+	}
+
+	/** 처음 값 시각부터 끝없이 본 바닥이 둘 이상인지 판단한다 — 버전 전체에서 평가마다 저장된 범위가 다를 수 있는가 */
+	public boolean mixed() {
+		return floorsAt(this.origin, null).size() > 1;
 	}
 
 	/** 평가 시각 {@code [from, to)} 에서 바닥이 둘 이상인지 판단한다 — 처음 값 시각 전은 보지 않는다 */
@@ -105,11 +102,16 @@ public final class StoreFloors {
 		if (!start.isBefore(to)) {
 			return false;
 		}
-		Set<BigDecimal> floors = new TreeSet<>();
-		for (Instant at : samples(start, to)) {
+		return floorsAt(start, to).size() > 1;
+	}
+
+	/** {@code [start, end)} 의 표본점마다의 바닥 — 크기로 견줘 같은 값(scale 만 다른 값 포함)은 하나다. end 가 없으면 끝없이 */
+	private TreeSet<BigDecimal> floorsAt(Instant start, @Nullable Instant end) {
+		TreeSet<BigDecimal> floors = new TreeSet<>();
+		for (Instant at : samples(start, end)) {
 			floors.add(floor(at));
 		}
-		return floors.size() > 1;
+		return floors;
 	}
 
 	/** 평가 시각 at 의 바닥 — at 은 처음 값 시각 이후다 */

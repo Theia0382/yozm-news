@@ -1,16 +1,27 @@
 import { useQuery } from "@tanstack/react-query";
-import { type ReactNode, useId, useState } from "react";
+import { type ReactNode, useState } from "react";
 import {
   failureText,
   type Schemas,
   unwrap,
 } from "@/features/admin/adminClient";
-import { ADMIN_QUERY_KEY, useAdminClient } from "@/features/admin/adminSession";
+import { useAdminClient } from "@/features/admin/adminSession";
 import {
   DistributionBars,
   type DistributionRow,
 } from "@/features/admin/DistributionBars";
+import {
+  EVALUATION_KEY,
+  useEvaluationOverview,
+} from "@/features/admin/evaluationQueries";
 import { storedRangeLabels } from "@/features/admin/labels";
+import { PeriodFields } from "@/features/admin/PeriodFields";
+import { browserZone, defaultFirst, today } from "@/features/admin/periods";
+import {
+  chosenOrActive,
+  useTagSetVersions,
+} from "@/features/admin/tagSetVersions";
+import { VersionSelect } from "@/features/admin/VersionSelect";
 import { formatDateTime } from "@/shared/lib/dateTime";
 
 type TopicCoverage = Schemas["TopicCoverageResponse"];
@@ -21,59 +32,17 @@ type CountBucket = Schemas["CountBucket"];
 type ProbabilityHistogram = Schemas["ProbabilityHistogram"];
 type ValueBucket = Schemas["ValueBucket"];
 type TokenSummary = Schemas["TokenSummary"];
-type TagSetVersion = Schemas["TagSetVersionItem"];
-
-const EVALUATION_KEY = [...ADMIN_QUERY_KEY, "evaluation"];
-
-/** 기본 기간 — 오늘을 포함한 이 날수 */
-const DEFAULT_DAYS = 7;
-
-/** 날짜 하나(yyyy-MM-dd)의 하루 길이 — 날짜 더하기는 그 날짜의 UTC 자정에서 한다(시간대 전환과 무관) */
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-/** 그 시간대의 오늘(yyyy-MM-dd) */
-function today(zone: string): string {
-  // en-CA 형식이 yyyy-MM-dd 다
-  return new Intl.DateTimeFormat("en-CA", { timeZone: zone }).format(
-    new Date(),
-  );
-}
-
-/** 날짜에 날수를 더한다 */
-function addDays(date: string, days: number): string {
-  return new Date(Date.parse(`${date}T00:00:00Z`) + days * DAY_MS)
-    .toISOString()
-    .slice(0, 10);
-}
-
-/** 시작일 ~ 종료일의 날수 — 끝 포함 */
-function dayCount(first: string, last: string): number {
-  return (
-    Math.round(
-      (Date.parse(`${last}T00:00:00Z`) - Date.parse(`${first}T00:00:00Z`)) /
-        DAY_MS,
-    ) + 1
-  );
-}
-
 /**
  * 평가 현황 — 기간을 골라 주제별 보도량 · 평가 대기 · 버전 하나의 품질 지표를 본다. 날짜는 브라우저 시간대로 해석하고, 수 · 비율은 모두 서버가
  * 낸 값을 보이기만 한다.
  */
 export function EvaluationPage() {
   const client = useAdminClient();
-  const [zone] = useState(
-    () => Intl.DateTimeFormat().resolvedOptions().timeZone,
-  );
+  const [zone] = useState(browserZone);
   const [last, setLast] = useState(() => today(zone));
-  const [first, setFirst] = useState(() =>
-    addDays(today(zone), 1 - DEFAULT_DAYS),
-  );
+  const [first, setFirst] = useState(() => defaultFirst(zone));
   const [chosenVersion, setChosenVersion] = useState<number | null>(null);
   const [maxDays, setMaxDays] = useState<number | null>(null);
-  const firstId = useId();
-  const lastId = useId();
-  const versionId = useId();
 
   const period = { from: first, to: last, zone };
   const filled = first !== "" && last !== "";
@@ -90,65 +59,26 @@ export function EvaluationPage() {
     queryKey: [...EVALUATION_KEY, "queue"],
     queryFn: () => unwrap(client.GET("/api/admin/evaluation-queue")),
   });
-  const versions = useQuery({
-    queryKey: [...ADMIN_QUERY_KEY, "tag-sets"],
-    queryFn: () => unwrap(client.GET("/api/admin/tag-sets")),
-  });
-  const version =
-    chosenVersion ??
-    versions.data?.versions.find((item) => item.active)?.id ??
-    null;
-  const overview = useQuery({
-    queryKey: [...EVALUATION_KEY, "overview", version, period],
-    queryFn: () =>
-      unwrap(
-        client.GET("/api/admin/evaluation-overview", {
-          params: { query: { version: version ?? 0, ...period } },
-        }),
-      ),
-    enabled: filled && version !== null,
-  });
+  const versions = useTagSetVersions();
+  const version = chosenOrActive(chosenVersion, versions.data?.versions);
+  const overview = useEvaluationOverview(version, period, filled);
 
   // 상한은 서버가 낸 값을 기억해 다음 입력의 안내에 쓴다 — 응답이 바뀐 렌더에서 바로 맞춘다(효과를 거치지 않는다)
   if (coverage.data && coverage.data.maxDays !== maxDays) {
     setMaxDays(coverage.data.maxDays);
   }
 
-  const hint = periodHint(first, last, maxDays);
-
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-semibold">평가 현황</h2>
-      <form
-        aria-label="기간"
-        className="flex flex-wrap items-end gap-4 text-sm"
-        onSubmit={(event) => event.preventDefault()}
-      >
-        <label htmlFor={firstId} className="space-y-1">
-          <span className="block">시작일</span>
-          <input
-            id={firstId}
-            type="date"
-            value={first}
-            onChange={(event) => setFirst(event.target.value)}
-            className="rounded-md border border-input px-2 py-1"
-          />
-        </label>
-        <label htmlFor={lastId} className="space-y-1">
-          <span className="block">종료일(포함)</span>
-          <input
-            id={lastId}
-            type="date"
-            value={last}
-            onChange={(event) => setLast(event.target.value)}
-            className="rounded-md border border-input px-2 py-1"
-          />
-        </label>
-        <p className="text-muted-foreground">
-          날짜는 이 브라우저의 시간대({zone}) 자정 기준이다
-        </p>
-        {hint && <p className="w-full text-destructive">{hint}</p>}
-      </form>
+      <PeriodFields
+        first={first}
+        last={last}
+        zone={zone}
+        maxDays={maxDays}
+        onFirst={setFirst}
+        onLast={setLast}
+      />
 
       <QueueSection queue={queue} />
 
@@ -169,55 +99,16 @@ export function EvaluationPage() {
           고른 버전의 평가 가운데 평가 시각이 기간 안인 것을, 그 버전의 지금
           태그 기준 · 저장 기준으로 판정해 센다. 비율의 분모는 평가 수다.
         </p>
-        {versions.error && <p role="alert">{failureText(versions.error)}</p>}
-        {versions.data && (
-          <label
-            htmlFor={versionId}
-            className="flex items-center gap-2 text-sm"
-          >
-            태그 체계 버전
-            <select
-              id={versionId}
-              value={version ?? ""}
-              onChange={(event) => setChosenVersion(Number(event.target.value))}
-              className="rounded-md border border-input px-2 py-1"
-            >
-              {versions.data.versions.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {versionLabel(item)}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
+        <VersionSelect
+          versions={versions}
+          value={version}
+          onChange={setChosenVersion}
+        />
         {overview.error && <p role="alert">{failureText(overview.error)}</p>}
         {overview.data && <OverviewView overview={overview.data} />}
       </section>
     </div>
   );
-}
-
-/** 양식 안내 — 서버의 400 이 정본이고, 이것은 보내기 전에 알리는 것뿐이다 */
-function periodHint(
-  first: string,
-  last: string,
-  maxDays: number | null,
-): string | null {
-  if (first === "" || last === "") {
-    return "시작일과 종료일을 고른다";
-  }
-  const days = dayCount(first, last);
-  if (days < 1) {
-    return "종료일이 시작일보다 앞선다";
-  }
-  if (maxDays !== null && days > maxDays) {
-    return `기간은 ${maxDays}일까지다 — 지금 ${days}일`;
-  }
-  return null;
-}
-
-function versionLabel(version: TagSetVersion): string {
-  return `버전 ${version.number}${version.active ? " (활성)" : ""}`;
 }
 
 function QueueSection({
@@ -351,7 +242,7 @@ function OverviewView({ overview }: { overview: Overview }) {
       </Block>
       <Block title="중요도 — 기대값의 분포">
         <DistributionBars
-          label="중요도 기대값 칸별 평가 수"
+          label="중요도 기대값 구간별 평가 수"
           rows={overview.importance.map((bucket) => valueRow(bucket))}
         />
         <p className="text-sm">
@@ -445,12 +336,12 @@ function Probabilities({
       </p>
       {histogram.storeThresholdChanged && (
         <p className="text-sm">
-          이 버전에서 저장 기준이 바뀐 적이 있다 — 저장 기준 근처 칸의 수는
-          평가마다 다른 기준으로 저장된 것이다
+          이 기간의 평가는 서로 다른 저장 기준으로 저장됐다 — 이전 저장 기준의
+          분포가 섞여 있다
         </p>
       )}
       <DistributionBars
-        label={`${label} 확률 칸별 수`}
+        label={`${label} 확률 구간별 수`}
         rows={histogram.buckets.map((bucket) => ({
           key: String(bucket.lower),
           label: rangeLabel(
@@ -491,7 +382,7 @@ function Tokens({ tokens }: { tokens: TokenSummary }) {
         {number(tokens.max)}
       </p>
       <DistributionBars
-        label="입력 토큰 칸별 평가 수"
+        label="입력 토큰 구간별 평가 수"
         rows={tokens.buckets.map((bucket) => ({
           key: String(bucket.lower),
           label: rangeLabel(
