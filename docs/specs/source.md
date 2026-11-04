@@ -779,7 +779,7 @@ public sealed interface FetchResult {
   | `TOO_MANY_REDIRECTS` | 리다이렉트가 상한을 넘었다 | 영구 |
   | `INVALID_REDIRECT` | `Location` 이 없거나 URI 로 읽을 수 없다 | 영구 |
   | `UNSUPPORTED_URL` | 처음 URL 이나 리다이렉트 대상이 요청할 수 있는 주소가 아니다(source-R35) | 영구 |
-  | `BLOCKED_ADDRESS` | 연결 주소가 차단 대역이다(source-R33) | 영구 |
+  | `BLOCKED_ADDRESS` | 연결 주소가 차단 대역이다(source-R33 — 이름이 차단 대역으로 풀렸을 때 설정 문제와 망의 일시 장애를 가르지 못한다) | 일시 |
   | `TLS_FAILURE` | TLS 핸드셰이크 · 인증서 오류 | 영구 |
   | `TOO_LARGE` | 본문이 크기 상한을 넘었다 | 영구 |
   | `UNREADABLE` | 받은 문서를 정규화가 읽지 못했다(source-R42) | 영구 |
@@ -932,3 +932,4 @@ RSS 품질이 피드마다 크게 다르므로 사전 보정 → 파싱 → 필�
 | [0051](../adr/0051-operator-hides-or-deletes-sources-and-feeds-and-deletion-removes-exclusive-articles.md) | 운영자는 소스 · 피드를 숨기거나 삭제하고, 숨김은 끄고 남기며 삭제는 그 소스 · 피드만 가진 기사까지 지운다 |
 | [0053](../adr/0053-source-records-last-confirmed-name-apart-from-operating-settings.md) | 출처는 source 가 프로필에서 마지막으로 확인한 소스 이름을 운영 설정과 다른 테이블에 기록한다 |
 | [0056](../adr/0056-platform-reads-yaml-text-and-applies-common-rejection.md) | YAML 원문 읽기와 공통 거부는 `platform` 이 맡고, 문서별 형식 · 검증은 각 모듈의 `domain` 이 한다 |
+| [0065](../adr/0065-blocked-address-fetch-failure-counts-as-temporary.md) | 막힌 주소로 가는 피드 요청은 일시 실패로 센다 |
