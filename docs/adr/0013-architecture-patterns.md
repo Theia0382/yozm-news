@@ -1,6 +1,6 @@
 # ADR-0013: 아키텍처 패턴: 모듈러 모놀리스 + 실용적 헥사고날
 
-- 상태: 승인 (이벤트 재처리 시점 — "재시작 후에도 처리된다" — 은 [ADR-0023](0023-jobrunr-oss-framework-schema-and-event-resubmission.md)이 대체. 상태 머신의 피드 상태는 [ADR-0040](0040-feed-status-stored-in-poll-state-and-rejudged-hourly-by-health-check.md)이 부분 대체)
+- 상태: 승인. 부분 대체 — 이벤트 재처리 시점([ADR-0023](0023-jobrunr-oss-framework-schema-and-event-resubmission.md)) · 상태 머신의 피드 상태([ADR-0040](0040-feed-status-stored-in-poll-state-and-rejudged-hourly-by-health-check.md))
 - 날짜: 2026-10-25
 
 ## 맥락
@@ -20,6 +20,7 @@
 
 - `net.yozmnews` 바로 아래 패키지 하나가 모듈 하나다.
 - 다른 모듈에는 모듈 최상위 패키지의 공개 타입(API, 이벤트)으로만 접근한다. 하위 패키지는 외부에 보이지 않는다.
+> 부분 대체(둘째 문장) — [ADR-0023](0023-jobrunr-oss-framework-schema-and-event-resubmission.md). 지금 상태: [platform Spec §5](../specs/platform.md#5-규칙과-불변식) platform-R1 · platform-R2
 - 모듈 간 비동기 연동은 도메인 이벤트로 한다. 이벤트는 이벤트 발행 레지스트리(JDBC)에 기록되어 재시작 후에도 처리된다.
 - 모듈 경계 위반은 Modulith 검증 테스트로 CI에서 막는다.
 
@@ -42,6 +43,8 @@ net.yozmnews.<module>
 - **컨트롤러는 각 모듈 안**(`adapter/in/web`)에 둔다. 별도 `web` 모듈은 두지 않는다. 보안 설정, 오류 응답 형식, 공통 타입처럼 여러 모듈에 걸친 것은 `platform` 모듈에 둔다.
 
 ### 함께 적용하는 패턴
+
+> 부분 대체("상태 머신" 행의 피드 상태) — [ADR-0040](0040-feed-status-stored-in-poll-state-and-rejudged-hourly-by-health-check.md). 지금 상태: [source Spec §5](../specs/source.md#5-규칙과-불변식) source-R47 · source-R48
 
 | 패턴 | 적용 방식 |
 |---|---|

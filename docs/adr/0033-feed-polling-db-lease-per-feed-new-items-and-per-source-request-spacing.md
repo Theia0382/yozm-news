@@ -1,6 +1,6 @@
 # ADR-0033: 피드 수집은 DB 점유로 겹침을 막고, 피드별 직전 항목으로 새 항목을 가르며, 같은 언론사 요청 사이는 요청 직전의 DB 예약으로 띄운다
 
-- 상태: 승인. "`feed_poll_states` 는 수집 작업만 쓴다"는 [ADR-0040](0040-feed-status-stored-in-poll-state-and-rejudged-hourly-by-health-check.md)이, "피드 행을 지울 수 없다"와 기동 대조의 "행은 지우지도 끄지도 않는다" 가운데 숨김 표시(프로필에 다시 생긴 숨긴 피드를 다시 보인다)는 [ADR-0051](0051-operator-hides-or-deletes-sources-and-feeds-and-deletion-removes-exclusive-articles.md)이, 넘침 의심의 조건은 [ADR-0066](0066-overflow-suspected-only-when-previous-and-current-fetches-both-have-ten-or-more-keys.md)이 부분 대체
+- 상태: 승인. 부분 대체 — 피드 행을 지울 수 없다는 부분과 기동 대조의 숨김 표시([ADR-0051](0051-operator-hides-or-deletes-sources-and-feeds-and-deletion-removes-exclusive-articles.md)) · 넘침 의심의 조건([ADR-0066](0066-overflow-suspected-only-when-previous-and-current-fetches-both-have-ten-or-more-keys.md)) · 수집 상태를 수집 작업만 쓴다는 부분([ADR-0040](0040-feed-status-stored-in-poll-state-and-rejudged-hourly-by-health-check.md))
 - 날짜: 2026-10-28
 - 근거: [이슈 #21](https://github.com/Theia0382/yozm-news/issues/21) — JobRunr 9.0.2 소스를 읽고, 실제 PostgreSQL · JobRunr 작업 서버 · WireMock 으로 확인. 구현 `fc20680`(수집 일정 판단 규칙) · `e513722`(소스 · 피드 저장과 켜기) · `acd0670`(수집 작업)
 - 관련: [ADR-0013](0013-architecture-patterns.md)(판단은 `domain`, 외부 호출은 트랜잭션 밖, 멱등 작업), [ADR-0014](0014-spring-data-jdbc.md)(쓰기 aggregate · 특수 쓰기 JdbcClient), [ADR-0023](0023-jobrunr-oss-framework-schema-and-event-resubmission.md)(JobRunr OSS · 이벤트 재처리), [ADR-0024](0024-collection-profile-yaml-and-preset-reference-or-own-profile.md)(프리셋 참조 · 수집 주기 — 미뤄 둔 운영자 원문의 저장 형태를 이 ADR 이 정한다), [ADR-0031](0031-feed-request-blocks-internal-addresses-with-apache-httpclient-deadline.md)(수집 마감 · 호스트별 연결을 제한하지 않음)
@@ -14,6 +14,7 @@
   - 작업 서버는 poll 간격(기본 15초)마다 `now + poll 간격` 전에 예약된 작업을 한꺼번에 대기열에 넣는다. 대기열에서 작업을 꺼내는 일도 따로 poll 간격마다 돈다. 그래서 예약 작업은 예약 시각보다 일찍 시작하기도, 늦게 시작하기도 하고, 가까운 예약끼리는 같은 때 시작한다
 - 피드는 최근 N건(조사 자료 기준 20 ~ 120건)을 싣는다. 매 수집에서 1회분을 전부 발행하면 발행 물량의 대부분이 이미 받은 항목이다.
 - 운영자의 켜짐 여부 · 주기 설정과 수집 결과는 같은 피드에 대해 서로 다른 주체가 쓴다. 한 행에 두면 수집 결과 저장이 그사이의 운영자 변경을 덮어쓴다.
+> 부분 대체(마지막 문장) — [ADR-0051](0051-operator-hides-or-deletes-sources-and-feeds-and-deletion-removes-exclusive-articles.md). 지금 상태: [source Spec §5](../specs/source.md#5-규칙과-불변식) source-R55
 - 프리셋은 배포물이다. 배포로 피드가 빠지거나 파일이 지워지면 저장된 소스 · 피드가 가리킬 곳을 잃는다. 피드 식별자는 받은 기사의 기록이 가리키므로 행을 지울 수 없다.
 - 클라이언트는 호스트별 연결을 제한하지 않는다(ADR-0031). 같은 언론사의 피드 여러 개가 같은 때 요청되지 않게 하는 일은 수집 일정의 몫이다.
 
@@ -25,6 +26,7 @@
   - 수집 작업은 시작할 때 점유가 자기 것이고 소스 · 피드가 아직 켜져 있는지 보고, 결과는 토큰이 일치할 때만 반영한다. 다시 실행되거나 만료 뒤 다른 회차와 겹쳐도 상태와 발행은 한 번이다. 작업은 재시도하지 않는다 — 점유 만료가 재시도다.
 - **수집은 트랜잭션 밖에서 하고, 결과 반영과 발행은 한 트랜잭션이다.** 직전 항목 키와 `ArticleFetched` 가 함께 커밋되므로, 키만 남고 발행이 사라지는 일이 없다.
 - **새 항목은 피드별 직전 성공 수집의 항목 키로 가른다.** 키는 guid 가 있으면 `g:` + guid, 없으면 `l:` + 링크 원문이다(같은 피드 안의 비교라 정규 URL 을 쓰지 않는다). 직전 키에 없는 항목만 발행한다. 첫 수집은 전부 발행한다.
+  > 부분 대체(첫 문장) — [ADR-0066](0066-overflow-suspected-only-when-previous-and-current-fetches-both-have-ten-or-more-keys.md). 지금 상태: [source Spec §5](../specs/source.md#5-규칙과-불변식) source-R21
   - 넘침 의심은 직전 키가 있고 비어 있지 않고, 이번 항목이 있는데 하나도 겹치지 않을 때다. 수집 상태(마지막 시각 · 횟수)와 경고 로그로 남긴다.
   - 304 는 성공이다 — 연속 실패를 0 으로 하고 조건부 요청 값을 갱신하며, 직전 키는 그대로 둔다.
 - **실패 백오프는 같은 지수 증가에 상한만 다르다.** 다음 수집 = 실패 시각 + max(주기, min(주기 × 2^연속 실패, 상한)). 상한은 일시 실패 6시간, 영구 실패 24시간이다. 실제 주기가 상한보다 길어도 주기보다 이르게 잡지 않는다. 영구 실패도 멈추지 않는다.
@@ -32,8 +34,10 @@
   - 소스마다 한 행에 다음 요청 가능 시각을 둔다. 수집 작업은 요청 직전에 그 행을 잠그고 시작 시각 = max(다음 요청 가능 시각, 지금)을 받아 다음 요청 가능 시각을 시작 시각 + 간격(수집 마감 10초)으로 쓴 뒤 커밋하고, 트랜잭션 밖에서 시작 시각까지 기다렸다 요청한다.
   - 시작 시각 + 수집 마감이 점유 만료보다 이르지 않으면 이번에는 수집하지 않는다 — 점유가 만료되면 다음 회차가 가져간다.
   - 반복 작업이 같은 소스의 작업 예약 시각을 간격만큼 띄우고, 수집 작업이 예약 시각까지 기다리는 것은 보조다. 작업들이 한꺼번에 worker 를 잡고 기다리지 않게 할 뿐, 간격은 보장하지 않는다(맥락 — 작업 서버의 시작 시각이 poll 간격 단위로 뭉친다).
+> 부분 대체(둘째 문장) — [ADR-0040](0040-feed-status-stored-in-poll-state-and-rejudged-hourly-by-health-check.md). 지금 상태: [source Spec §5](../specs/source.md#5-규칙과-불변식) source-R48
 - **운영 설정과 수집 상태는 다른 테이블이다.** `feeds` 는 운영자가 쓰는 aggregate(켜짐 · 주기 설정, 낙관적 잠금)이고, `feed_poll_states` 는 수집 작업만 쓴다. 수집 상태의 전이는 `domain` 의 불변 값이 계산하고, 저장은 점유 토큰을 조건으로 한 SQL 갱신이다 — 조건이 버전이 아니라 토큰이라 aggregate 저장 대신 JdbcClient 의 특수 쓰기다.
 - **프리셋 변화는 기동 때 대조하고, 수집 때 다시 확인한다.** 가리킬 곳을 잃었는지는 저장하지 않고 카탈로그로 판정한다.
+  > 부분 대체(둘째 문장) — [ADR-0051](0051-operator-hides-or-deletes-sources-and-feeds-and-deletion-removes-exclusive-articles.md). 지금 상태: [source Spec §5](../specs/source.md#5-규칙과-불변식) source-R8 · source-R53
   - 기동 때 프로필에 새로 생긴 피드는 꺼진 행으로 더하고, 사라진 프리셋 · 프로필에서 빠진 피드는 경고 로그로 알린다. 행은 지우지도 끄지도 않는다 — 운영자 스위치는 운영자의 것이다.
   - 수집 때 프로필이나 그 안의 피드를 얻지 못하면 점유하지 않고 1시간 뒤로 미루며 경고 로그를 남긴다. 프리셋이 돌아오면 다음 확인에서 다시 수집한다. 저장된 운영자 원문이 검증에 걸리는 경우도 같은 갈래다.
 - **운영자 프로필은 원문 텍스트로 저장한다.** 읽을 때마다 운영자 프로필 검증기를 지난다. 주석 · 서식이 그대로 남는다.
@@ -62,3 +66,7 @@
 | 운영 설정과 수집 상태를 한 행에 두고 낙관적 잠금으로 재시도한다 | 점유 · 결과 저장 · 운영자 변경이 같은 버전을 다투고 모든 쓰기 경로에 재시도가 필요하다 |
 | 가리킬 곳을 잃은 피드의 운영자 스위치를 자동으로 끈다 | 운영자의 선택을 시스템이 바꾸고, 프리셋이 돌아와도 운영자가 다시 켜야 한다 |
 | 운영자 프로필을 jsonb 로 저장한다 | 변환 코드가 새로 필요하고 운영자가 쓴 주석 · 서식이 사라진다 |
+
+## 후속 기록
+
+- 2026-11-04: 결정 절 "수집 때 프로필이나 그 안의 피드를 얻지 못하면 점유하지 않고 1시간 뒤로 미루며"의 문면은 지금 동작과 다르다 — [source Spec §5](../specs/source.md#5-규칙과-불변식) source-R19

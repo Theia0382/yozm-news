@@ -1,6 +1,6 @@
 # ADR-0032: 같은 기사 판정은 기사를 잃지 않는 쪽으로 좁히고, 피드별 기록은 (기사, 피드)마다 한 행으로 소스 단위 잠금 안에서 쓴다
 
-- 상태: 승인. L2 의 범위 "같은 소스"는 [ADR-0052](0052-article-sources-live-in-feed-entries-and-late-items-of-deleted-feeds-are-dropped.md)가 부분 대체(이 소스의 엔트리가 있는 기사)
+- 상태: 승인. 부분 대체 — L2 의 범위([ADR-0052](0052-article-sources-live-in-feed-entries-and-late-items-of-deleted-feeds-are-dropped.md))
 - 날짜: 2026-10-28
 - 근거: [이슈 #20](https://github.com/Theia0382/yozm-news/issues/20) — Spring Modulith 2.1.1 · Spring Boot 4.1.2 자동 구성을 확인하고, PostgreSQL 에서 btree 항목 크기 한계와 소스 잠금 대기를 실행으로 확인. 구현 `8b43269`(판정 규칙) · `a84e3fe`(스키마 · 저장소) · `ee7d895`(이벤트 처리)
 - 관련: [ADR-0013](0013-architecture-patterns.md)(aggregate 사이 ID 참조 · 멱등 작업), [ADR-0014](0014-spring-data-jdbc.md)(upsert 는 JdbcClient), [ADR-0023](0023-jobrunr-oss-framework-schema-and-event-resubmission.md)(이벤트는 최소 한 번 처리된다), [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md)(다른 기사를 같은 사건으로 묶는 일)
@@ -37,6 +37,7 @@
 
 ### 동시성 · 결과 불변
 
+> 부분 대체(둘째 문장) — [ADR-0052](0052-article-sources-live-in-feed-entries-and-late-items-of-deleted-feeds-are-dropped.md). 지금 상태: [article Spec §5](../specs/article.md#5-규칙과-불변식) article-R3 · article-R9
 - **같은 소스의 판정은 소스 단위 트랜잭션 범위 advisory lock 안에서 한다.** guid 는 같은 피드, L2 는 같은 소스 안의 판정이라 소스 단위면 판정 대상 전체를 덮는다.
 - **소스를 건너는 같은 정규 URL 은 고유키와 `INSERT … ON CONFLICT` 가 맡는다.** 늦은 쪽은 먼저 저장된 기사에 붙는다.
 - **새 기사 행을 실제로 만든 트랜잭션에서만 `ArticleStored` 를 발행한다.** 같은 항목을 다시 처리하면 L1 이 처음 붙은 기사에 걸고, 엔트리 쓰기는 아무것도 바꾸지 않는다.

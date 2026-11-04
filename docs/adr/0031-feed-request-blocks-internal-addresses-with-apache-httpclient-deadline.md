@@ -1,6 +1,6 @@
 # ADR-0031: 피드 요청은 내부 주소를 기본으로 막고, Apache HttpClient 로 한 번의 수집 전체에 마감 · 크기 상한을 건다
 
-- 상태: 승인. 막는 대역의 종류(내부 주소 절 첫 항목)는 [ADR-0049](0049-feed-request-blocks-ipv6-reserved-space-and-local-nat64.md)가 넓힘 — IPv6 예약 공간 · 로컬 NAT64 접두 · 이름 없는 전역 도달 불가 할당. 결과의 모양 절의 막힌 주소 분류(영구)는 [ADR-0065](0065-blocked-address-fetch-failure-counts-as-temporary.md)가 대체(일시)
+- 상태: 승인. 부분 대체 — 막는 대역의 종류([ADR-0049](0049-feed-request-blocks-ipv6-reserved-space-and-local-nat64.md)) · 막힌 주소의 실패 분류([ADR-0065](0065-blocked-address-fetch-failure-counts-as-temporary.md))
 - 날짜: 2026-10-28
 - 근거: [이슈 #19](https://github.com/Theia0382/yozm-news/issues/19) — JDK 25 `HttpClient` · Apache HttpClient 5.6.5 · Jetty client 12.1.14 를 실행해 확인. 구현 `f94c1c8`(판단 규칙) · `f0006ad`(수집 구현) · `9d53e21`(설정 · 배포)
 - 관련: [ADR-0001](0001-news-source-rss.md)(공급원은 `ArticleSource` 뒤 — 이 ADR 이 이행한다), [ADR-0004](0004-tech-stack.md)(스택에 HTTP 클라이언트를 더한다), [ADR-0012](0012-swappable-external-dependencies.md)(외부 의존성 · 로컬 대체물), [ADR-0021](0021-separate-deploy-compose-with-single-app-service.md)(배포 필수 값은 `${VAR:?}`), [ADR-0030](0030-feed-xml-own-parser-and-rome-for-format-title-link.md)(받은 문서의 해석)
@@ -19,6 +19,7 @@
 
 ### 내부 주소
 
+> 부분 대체(둘째 문장) — [ADR-0049](0049-feed-request-blocks-ipv6-reserved-space-and-local-nat64.md). 지금 상태: [source Spec §5](../specs/source.md#5-규칙과-불변식) source-R33
 - **기본으로 막는다.** 루프백 · 사설 · 링크 로컬 · 공유(CGNAT) · 문서용 · 벤치마크 · 멀티캐스트 · 예약 대역과 IPv6 의 같은 종류(고유 로컬 · 링크 로컬 · Teredo 등)다. IPv4 를 품은 IPv6(IPv4 호환 · NAT64 · 6to4)는 품은 IPv4 도 본다. 대역 표의 정본은 `source` 모듈의 `AddressPolicy.BLOCKED` 다.
 - **운영 설정의 허용 목록(CIDR)만 연다.** 허용 목록은 서버 설정(`YOZMNEWS_COLLECTION_ALLOWED_NETWORKS`)이다 — 화면의 운영자 권한으로는 열 수 없다.
 - **연결하는 주소를 검사한다.** 연결 관리자의 이름 해석기가 해석 결과를 걸러, 하나라도 막힌 주소가 있으면 그 이름 전체를 거부한다. 처음 URL 과 모든 리다이렉트 홉이 같은 검사를 지난다.
@@ -46,6 +47,7 @@
 
 - 결과는 성공(정규화 결과) · 변경 없음(304) · 실패 셋이다. 입출력 실패는 예외가 아니라 결과다.
 - 영구 이동(301 · 308)을 처음 URL 에서 끊기지 않고 거쳤으면 마지막 주소를 성공 · 변경 없음 결과에 싣는다 — 프리셋 · 운영자 프로필을 고칠 단서다. 대부분의 수집은 304 라서 변경 없음에도 싣는다.
+> 부분 대체(셋째 문장) — [ADR-0065](0065-blocked-address-fetch-failure-counts-as-temporary.md). 지금 상태: [source Spec §5](../specs/source.md#5-규칙과-불변식) source-R24
 - 실패는 일시 · 영구로 나눈다. 영구는 "사람(언론사 · 운영자 · 개발팀)이 무언가를 바꾸기 전에는 다시 보내도 같은 결과가 날 것으로 보는 실패"다. 401 · 403 · 404 · 410 · 그 밖의 4xx · 예상 밖 상태 · 리다이렉트 오류 · 요청할 수 없는 주소 · 막힌 주소 · TLS 오류 · 크기 초과 · 정규화 불가는 영구, 마감 초과 · 연결 실패 · 이름 해석 실패 · 408 · 429 · 5xx 는 일시다. 표의 정본은 `FetchFailureReason.permanence()` 다.
 - 실패 문구는 응답 본문을 옮기지 않는다. URL 을 인용할 때 userinfo 를 지운다.
 

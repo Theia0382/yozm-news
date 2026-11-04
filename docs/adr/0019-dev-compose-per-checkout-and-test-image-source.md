@@ -1,6 +1,6 @@
 # ADR-0019: 개발용 Compose 는 checkout 마다 따로 뜨고, 테스트의 PostgreSQL 이미지는 그 파일에서 읽는다
 
-- 상태: 승인. 결과의 운영 배포 프로젝트 이름 문장은 [ADR-0021](0021-separate-deploy-compose-with-single-app-service.md)이 대체
+- 상태: 승인. 부분 대체 — 운영 배포의 프로젝트 이름([ADR-0021](0021-separate-deploy-compose-with-single-app-service.md))
 - 날짜: 2026-10-26
 - 근거: [이슈 #3](https://github.com/Theia0382/yozm-news/issues/3) — 기점 `3361638` 의 worktree 에 임시 Compose 파일을 두고 `bootRun` · `docker compose` 로 실측
 - 관련: [ADR-0012](0012-swappable-external-dependencies.md)(개발 환경 · 로컬 대체물), [ADR-0018](0018-local-profile-compose-connection.md)(로컬 DB 접속 정보), [ADR-0004](0004-tech-stack.md)(테스트 DB 는 Testcontainers), [ADR-0016](0016-containerized-checks.md)(컨테이너 검사)
@@ -24,6 +24,7 @@
 - 테스트는 Gradle 로 실행한다. IDE 의 JUnit 실행은 Gradle 에 위임해야 하고, 그렇지 않으면 PostgreSQL 컨테이너를 띄우는 테스트가 시스템 속성이 없다는 메시지로 실패한다.
 - `postgres` 서비스의 `image` 는 보간식 없는 리터럴이어야 한다. 서비스 이름을 바꾸거나 `image` 를 변수로 바꾸면 테스트가 실패한다.
 - 브랜치마다 개발 DB 가 따로라 마이그레이션 이력이 섞이지 않는다. 두 checkout 을 함께 띄우면 고정 호스트 포트(mock OIDC)가 겹쳐 나중 것이 실패하므로 `.env` 로 포트를 바꾼다. checkout 을 지워도 그 프로젝트의 볼륨이 남으므로 `docker compose --profile dev down -v` 로 정리한다.
+> 부분 대체(마지막 문장) — [ADR-0021](0021-separate-deploy-compose-with-single-app-service.md). 지금 상태: [`operations/deployment` "배포 구성 실행"](../operations/deployment.md#배포-구성-실행)
 - clone 직후 `.env` 없이 `local` 실행이 된다. 운영 구성이 같은 파일과 `.env` 를 쓰게 되면, 기본값 없이 받아야 하는 운영 값과 선택인 개발 값을 함께 다루는 방식은 그때 정한다. 운영 배포의 프로젝트 이름도 배포 디렉터리 이름을 따른다.
 
 ## 검토한 대안

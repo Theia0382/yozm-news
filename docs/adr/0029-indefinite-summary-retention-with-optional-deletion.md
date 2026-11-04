@@ -37,3 +37,4 @@
 ## 후속 기록
 
 - 2026-11-02: 체계를 바꿀 때의 재평가([ADR-0062](0062-tag-set-versions-from-operator-text-activated-forward-with-key-lineage-and-recent-reevaluation.md))는 결정 절의 "요약문이 남은 기사만"을 보존 정책으로 요약문을 지운 기사를 빼는 것으로 읽는다 — 처음부터 요약문이 없던 기사는 처음 평가와 같은 입력(제목만)이라 재평가 대상이다. 결과 절의 "제목 수준으로 줄어든다"는 지운 기사도 제목만으로 재평가하는 것처럼 읽혀 이 읽기와 갈린다. 자동 삭제는 아직 없어 지금은 두 읽기의 동작이 같고, 지운 요약문을 구별해 뺄지는 자동 삭제를 만드는 작업이 정한다
+- 2026-11-04: 결정 절 "요약문은 기본으로 무기한 보존한다"의 뜻 — [ADR-0051](0051-operator-hides-or-deletes-sources-and-feeds-and-deletion-removes-exclusive-articles.md) · [`data-model` "보존 정책 (초안)"](../data-model.md#보존-정책-초안)

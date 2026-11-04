@@ -1,6 +1,6 @@
 # ADR-0006: 배포: Docker Compose + Cloudflare Tunnel
 
-- 상태: 승인. 서비스 목록의 `web` · `worker`(기본 구성)는 [ADR-0021](0021-separate-deploy-compose-with-single-app-service.md)이, 공개를 Tunnel 로만 하고 Cloudflare 서비스(DNS · CDN · WAF · 요청 제한 · R2)를 쓴다는 부분은 [ADR-0012](0012-swappable-external-dependencies.md)가, 권장 시작점(서울 리전 VPS)은 [ADR-0047](0047-self-hosted-software-run-by-instance-operators.md)이, Jev 호출의 AI Gateway 경유는 [ADR-0063](0063-jev-called-through-one-system-one-schema-context-overflow-probed-with-empty-state-latest-model-alias-by-default.md)이 대체
+- 상태: 승인. 부분 대체 — 서비스 목록의 `web` · `worker`([ADR-0021](0021-separate-deploy-compose-with-single-app-service.md)) · Tunnel 로만 공개와 Cloudflare 서비스([ADR-0012](0012-swappable-external-dependencies.md)) · Jev 의 AI Gateway 경유([ADR-0063](0063-jev-called-through-one-system-one-schema-context-overflow-probed-with-empty-state-latest-model-alias-by-default.md)) · 권장 시작점([ADR-0047](0047-self-hosted-software-run-by-instance-operators.md))
 - 날짜: 2026-10-25
 
 ## 맥락
@@ -10,9 +10,13 @@
 
 ## 결정
 
+> 부분 대체 — [ADR-0021](0021-separate-deploy-compose-with-single-app-service.md). 지금 상태: [`operations/deployment` "서비스"](../operations/deployment.md#서비스)
 - 배포 단위는 **Docker Compose** 하나다(`proxy`, `web`, `worker`, `postgres`, `cloudflared`, `backup`).
+> 부분 대체 — [ADR-0012](0012-swappable-external-dependencies.md). 지금 상태: [`operations/deployment` "공개 경로와 외부 서비스"](../operations/deployment.md#공개-경로와-외부-서비스)
 - 공개는 **Cloudflare Tunnel**로만 한다. 인바운드 포트를 열지 않는다.
+> 부분 대체 — 첫 문장은 [ADR-0012](0012-swappable-external-dependencies.md), 둘째 문장은 [ADR-0063](0063-jev-called-through-one-system-one-schema-context-overflow-probed-with-empty-state-latest-model-alias-by-default.md). 지금 상태: [`operations/deployment` "공개 경로와 외부 서비스"](../operations/deployment.md#공개-경로와-외부-서비스) · [evaluation Spec §7](../specs/evaluation.md#7-설정)
 - Cloudflare에서 DNS·CDN·WAF·요청 제한, R2(백업)를 쓴다. Jev 호출은 선택적으로 AI Gateway를 경유한다.
+> 부분 대체(첫 문장) — [ADR-0047](0047-self-hosted-software-run-by-instance-operators.md). 지금 상태: [`operations/deployment` "호스트 요건"](../operations/deployment.md#호스트-요건)
 - 권장 시작점은 서울 리전 VPS 한 대다. 이미지는 amd64와 arm64로 빌드한다.
 
 ## 결과

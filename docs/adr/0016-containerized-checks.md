@@ -1,6 +1,6 @@
 # ADR-0016: 검사는 컨테이너에서 돌리고, CI 와 로컬이 같은 Compose 정의를 쓴다
 
-- 상태: 승인. 검사 서비스 목록은 [ADR-0035](0035-public-markdown-links-and-anchors-checked-by-separate-check-service.md)가 대체
+- 상태: 승인. 부분 대체 — 검사 서비스 목록([ADR-0035](0035-public-markdown-links-and-anchors-checked-by-separate-check-service.md))
 - 날짜: 2026-10-25
 - 근거: [이슈 #1](https://github.com/Theia0382/yozm-news/issues/1) — 기점 `6cd2477` 의 저장소 사본에서 시제품으로 실측
 - 관련: [ADR-0004](0004-tech-stack.md)(빌드 · 테스트 도구), [ADR-0006](0006-deployment-compose-cloudflare.md)(배포 Compose)
@@ -13,6 +13,7 @@
 
 ## 결정
 
+> 부분 대체(둘째 문장) — [ADR-0035](0035-public-markdown-links-and-anchors-checked-by-separate-check-service.md). 지금 상태: [`development/infrastructure` "검사 환경"](../development/infrastructure.md#검사-환경)
 - **검사 정의는 저장소 루트의 `compose.check.yaml` 하나다.** 서비스는 `backend` · `frontend` · `docker`(DinD). CI(GitHub Actions)와 로컬이 같은 정의를 `docker compose` 명령으로 부른다. 검사에 필요한 호스트 도구는 Docker 뿐이다. CI 는 같은 정의로 이미지를 먼저 빌드해 계층 캐시를 붙인다.
 - **소스는 이미지에 복사한다.** 작업 트리를 bind mount 하지 않는다. 빌드 컨텍스트는 저장소 루트이고, 검사 이미지마다 허용 목록 `.dockerignore` 로 필요한 파일만 넣는다 — 비공개 설정 · 작업 산출물 · 비밀 값 파일은 들어가지 않는다.
 - **Testcontainers 는 정의 안의 DinD 엔진을 쓴다.** 호스트 Docker 소켓과 host 네트워크를 쓰지 않는다. DinD 는 privileged 로 돌고, 공개 포트 없이 정의의 내부 네트워크에만 열린다.
@@ -38,3 +39,7 @@
 | 호스트 Docker 소켓 공유(형제 컨테이너) | 호스트 종류마다 다른 설정을 기여자에게 넘긴다. 호스트 Docker 의 전체 권한을 넘긴다 |
 | 이미지가 버전 정본 파일을 읽어 도구를 설치 | 사본은 없어지지만 설치 스크립트 · Gradle toolchain 내려받기 설정이 더해지고, 호스트 Gradle 에도 내려받기 설정이 적용된다 |
 | 버전 정본을 이미지 정의로 옮김 | 호스트 도구(IDE · nvm)가 읽는 정본을 바꿔야 한다 |
+
+## 후속 기록
+
+- 2026-11-04: 결정 절 "베이스 이미지는 메이저 태그로 고정한다"를 검사 이미지 밖에 적용하는 범위 — [ADR-0038](0038-container-images-use-major-tags-and-revisit-pinning-at-publication.md) · [`development/infrastructure` "이미지 버전"](../development/infrastructure.md#이미지-버전)

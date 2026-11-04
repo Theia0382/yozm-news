@@ -1,6 +1,6 @@
 # ADR-0026: 사건 묶기는 로컬 임베딩과 고유명사 산식으로 하고, 애매한 구간만 Jev 로 판정한다
 
-- 상태: 승인. 관문의 접속 설정 가운데 AI Gateway 경유는 [ADR-0063](0063-jev-called-through-one-system-one-schema-context-overflow-probed-with-empty-state-latest-model-alias-by-default.md)이 대체(System One 스키마의 기본 주소 교체만)
+- 상태: 승인. 부분 대체 — 접속 설정의 AI Gateway 경유([ADR-0063](0063-jev-called-through-one-system-one-schema-context-overflow-probed-with-empty-state-latest-model-alias-by-default.md))
 - 날짜: 2026-10-27
 - 근거: [이슈 #36](https://github.com/Theia0382/yozm-news/issues/36) — 기점 `e4dbe0d` 의 설계 문서 · ADR 과 Spring Modulith 2.1.1 의 모듈 순환 판정을 대조해 확인
 - 관련: [ADR-0025](0025-long-term-personal-news-history-in-v1.md)(공유 사건), [ADR-0002](0002-shared-evaluation-with-jev.md)(Jev 공유 평가 — 평가 항목 목록을 이 ADR 이 부분 대체한다), [ADR-0010](0010-tag-taxonomy.md)(질문 묶음), [ADR-0012](0012-swappable-external-dependencies.md)(교체 가능한 외부 의존성), [ADR-0027](0027-pgvector-for-vector-storage.md)(벡터 저장)
@@ -12,6 +12,7 @@
 - 임베딩은 표현이 달라도 같은 사건을 잘 찾지만, 같은 주제의 서로 다른 사건(예: 다른 날의 금리 기사)도 가깝게 본다. 한국어 기사 제목은 인명 · 기관명 · 지명이 촘촘해서 고유명사의 겹침이 이 둘을 가른다.
 - Jev 는 Yes/No 판정을 확률과 함께 내고, 한 요청에 질문 여러 개를 묶을 수 있다([ADR-0010](0010-tag-taxonomy.md)). 판정할 후보를 스스로 찾지는 못한다.
 - 다이제스트는 사용자 일정에 따라 수시로 만들어지므로, 기사가 들어오는 대로 묶여 있어야 한다.
+> 부분 대체(둘째 문장) — [ADR-0063](0063-jev-called-through-one-system-one-schema-context-overflow-probed-with-empty-state-latest-model-alias-by-default.md). 지금 상태: [evaluation Spec §7](../specs/evaluation.md#7-설정)
 - Jev 를 부르는 곳은 `ArticleEvaluator` 하나다([ADR-0002](0002-shared-evaluation-with-jev.md), [ADR-0012](0012-swappable-external-dependencies.md) 의존성 표). 접속 설정(직접 · AI Gateway) · 로컬 대체물 · 판정 원본 기록이 그 관문에 있다.
 - 묶기의 임계값을 정하려면 정답이 있는 표본이 필요하다. 실제 기사로 만든 표본은 언론사 콘텐츠다.
 

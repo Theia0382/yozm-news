@@ -1,6 +1,6 @@
 # ADR-0023: 백그라운드 작업은 JobRunr OSS 로 돌리고, 프레임워크 스키마는 라이브러리 원문을 Flyway 에 담으며, 실패한 이벤트는 반복 작업이 상한까지 다시 처리한다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 재제출할 발행의 범위([ADR-0050](0050-operator-resubmits-once-or-discards-stranded-event-publications-read-from-registry.md))
 - 날짜: 2026-10-27
 - 근거: [이슈 #16](https://github.com/Theia0382/yozm-news/issues/16) — 기점 `ca8479f` 의 저장소와 JobRunr 9.0.2(바이너리 · 소스 jar, Maven Central SHA-1 대조) · Spring Modulith 2.1.1(events-api · core · jdbc 소스 jar)을 읽어 확인
 - 관련: [ADR-0004](0004-tech-stack.md)(백그라운드 작업 = JobRunr), [ADR-0013](0013-architecture-patterns.md)(도메인 이벤트 · 멱등 작업), [ADR-0014](0014-spring-data-jdbc.md)(스키마 정본 = Flyway)
@@ -32,6 +32,7 @@
 - **대시보드는 기본으로 끈다.** 익명 사용 통계도 끈다. 대시보드는 운영자 접근 통제가 생긴 뒤에 연다.
 - **작업 서버는 기본 설정에서 켠다.** 기본 배포 구성은 두 역할을 함께 하는 프로세스 하나다. 역할별로 나누는 일은 역할 profile 이 맡는다. 작업 서버를 켠 프로세스는 서버가 멈추면 `/actuator/health` 가 DOWN 이다.
 - **실패한 이벤트 발행은 JobRunr 반복 작업이 주기적으로 다시 처리한다.**
+  > 부분 대체(첫 문장) — [ADR-0050](0050-operator-resubmits-once-or-discards-stranded-event-publications-read-from-registry.md). 지금 상태: [platform Spec §5](../specs/platform.md#5-규칙과-불변식) platform-R1
   - 반복 작업은 미완료 발행 전체를 읽는 공개 API(`IncompleteEventPublications`)로 `FAILED` 발행만 골라 재제출한다. 재제출은 조건부 UPDATE 를 거치므로 인스턴스가 여럿이어도 한 발행은 한 곳에서만 재제출된다.
   - 재시작 때 미완료 발행을 다시 보내는 설정은 켜지 않는다.
   - 반복 작업 자체는 재시도하지 않는다. 실패하면 다음 주기가 재시도다.
