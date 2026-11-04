@@ -35,3 +35,7 @@
 | 사용자별 Jev 관련성 판별 | 비용이 사용자 수에 비례한다 |
 | 사용자 관심사를 묶어 그룹별로 판별 | 그룹을 나누는 방식이 복잡하고, 결국 카테고리 체계와 비슷해진다 |
 | 운영자 LLM으로 분류 | Jev보다 비싸고 느리며, 신뢰할 수 있는 확률값을 얻기 어렵다 |
+
+## 후속 기록
+
+- 2026-11-04: 결과 절 "체계를 바꾸면 최근 기사만 재평가한다"의 방식 — [ADR-0062](0062-tag-set-versions-from-operator-text-activated-forward-with-key-lineage-and-recent-reevaluation.md) · [`operations/tag-sets` "재평가 기간"](../operations/tag-sets.md#재평가-기간)

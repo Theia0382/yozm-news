@@ -39,3 +39,7 @@
 | 호스트 Docker 소켓 공유(형제 컨테이너) | 호스트 종류마다 다른 설정을 기여자에게 넘긴다. 호스트 Docker 의 전체 권한을 넘긴다 |
 | 이미지가 버전 정본 파일을 읽어 도구를 설치 | 사본은 없어지지만 설치 스크립트 · Gradle toolchain 내려받기 설정이 더해지고, 호스트 Gradle 에도 내려받기 설정이 적용된다 |
 | 버전 정본을 이미지 정의로 옮김 | 호스트 도구(IDE · nvm)가 읽는 정본을 바꿔야 한다 |
+
+## 후속 기록
+
+- 2026-11-04: 결정 절 "베이스 이미지는 메이저 태그로 고정한다"를 검사 이미지 밖에 적용하는 범위 — [ADR-0038](0038-container-images-use-major-tags-and-revisit-pinning-at-publication.md) · [`development/infrastructure` "이미지 버전"](../development/infrastructure.md#이미지-버전)

@@ -45,3 +45,4 @@
 ## 후속 기록
 
 - 2026-10-27: 착수 때 다시 확인한 JobRunr 의 라이선스 · OSS 기능 범위와 도입 방식은 [ADR-0023](0023-jobrunr-oss-framework-schema-and-event-resubmission.md)에 있다.
+- 2026-11-04: 결정 표에 없는 피드 요청의 HTTP 클라이언트 — [ADR-0031](0031-feed-request-blocks-internal-addresses-with-apache-httpclient-deadline.md) · [`overview` §7](../overview.md#7-기술-스택)

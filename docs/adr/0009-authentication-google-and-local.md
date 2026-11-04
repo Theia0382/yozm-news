@@ -41,3 +41,4 @@
 ## 후속 기록
 
 - 2026-10-31: 누가 계정을 만들 수 있는가(가입 자격)와 첫 운영자 계정을 만드는 방법은 [ADR-0048](0048-sign-up-closed-by-default-with-invitations-and-operator-bootstrap.md)에 있다.
+- 2026-11-04: 계정 인증이 생기기 전의 운영자 경로 — [ADR-0043](0043-admin-functions-guarded-by-env-bearer-token-until-account-roles.md) · [platform Spec §5](../specs/platform.md#5-규칙과-불변식) platform-R10
