@@ -19,6 +19,9 @@ import org.jspecify.annotations.Nullable;
  */
 public record ItemComparison(List<FetchedArticle> newArticles, List<ItemKey> currentKeys, boolean overflowSuspected) {
 
+	/** 넘침 의심을 보는 최소 키 수 — 직전 · 이번 모두 — source-R21 */
+	private static final int OVERFLOW_MINIMUM_KEYS = 10;
+
 	public ItemComparison {
 		newArticles = List.copyOf(newArticles);
 		currentKeys = List.copyOf(currentKeys);
@@ -39,7 +42,7 @@ public record ItemComparison(List<FetchedArticle> newArticles, List<ItemKey> cur
 				fresh.add(article);
 			}
 		}
-		boolean overflow = previous != null && !previous.isEmpty() && !current.isEmpty()
+		boolean overflow = seen.size() >= OVERFLOW_MINIMUM_KEYS && current.size() >= OVERFLOW_MINIMUM_KEYS
 				&& current.stream().noneMatch(seen::contains);
 		return new ItemComparison(fresh, List.copyOf(current), overflow);
 	}

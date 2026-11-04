@@ -43,7 +43,7 @@
 | 읽을 곳 | 기사 값 하나를 피드 항목의 어느 요소에서 읽는지의 목록. `$standard` 는 그 피드 형식의 명세가 정한 요소다 |
 | 항목 키 | 같은 피드 안에서 항목을 가르는 키 — guid 가 있으면 `g:` + guid, 없으면 `l:` + 기사 링크 |
 | 새 항목 | 그 피드의 직전 성공 수집의 항목 키에 없던 항목 |
-| 넘침 의심 | 직전 성공 수집과 겹치는 항목이 하나도 없는 수집 — 수집 간격 동안 피드가 싣는 건수보다 많은 기사가 나와 일부를 놓쳤을 수 있다 |
+| 넘침 의심 | 직전 성공 수집과 이번 수집이 모두 최소 키 수(source-R21) 이상의 키를 싣는데 겹치는 항목이 하나도 없는 수집 — 수집 간격 동안 피드가 싣는 건수보다 많은 기사가 나와 일부를 놓쳤을 수 있다 |
 | 영구 이동 주소 | 처음 URL 에서 끊기지 않고 이어진 영구 이동(301 · 308)의 마지막 대상 |
 | 일시 · 영구 실패 | 영구 실패는 사람이 무언가를 바꾸기 전에는 다시 보내도 같은 결과가 날 것으로 보는 실패, 그 밖은 일시 실패다 |
 | 피드 상태 | 피드가 기준 안에서 수집되는지(`ACTIVE`), 계속 실패하는지(`DEGRADED`), 응답은 정상이지만 오래 새 기사가 없는지(`STALE`) |
@@ -572,7 +572,7 @@ sequenceDiagram
 - `FeedPollState` — 피드 하나의 수집 상태. aggregate 가 아닌 상태 객체로, 전이(`claim` 점유 · `complete` 결과 반영 · `deferForUnavailableProfile` 미룸)가 다음 상태를 계산한다. 저장은 `FeedPollStateRepository` 가 점유 토큰을 조건으로 한다(source-R15 · source-R16 · source-R19 ~ source-R27 · source-R30 · source-R31)
 - `PollSchedule` — 수집 일정 산식과 상수의 정본(점유 기간 · 같은 소스 요청 간격 · 프로필 재확인 · 백오프 상한)(source-R15 · source-R18 · source-R19 · source-R25)
 - `PollSlots` — 같은 소스에서 이번 회차에 수집할 피드들의 예약 시각을 띄운다(source-R18)
-- `ItemComparison` · `ItemKey` — 새 항목 판정과 넘침 의심(source-R20 · source-R21)
+- `ItemComparison` · `ItemKey` — 새 항목 판정과 넘침 의심. 넘침 의심의 최소 키 수 상수의 정본(source-R20 · source-R21)
 - `FeedStatusRule` — 피드 상태 판정의 규칙과 기준값 상수의 정본(연속 실패 · 그 가운데 영구 실패 · 무소식 기간 · 재판정 간격 `RECHECK_INTERVAL` — 반복 작업과 공개 기준값이 가리킨다). 수집 상태와 지금 시각으로 상태를 판정하고, 저장된 상태에서 바뀌는지 본다(source-R30 · source-R31 · source-R47)
 - `FeedPollStateRepository` — 수집 상태 저장소. 수집 작업이 쓴다 — 대상 잠금 · 점유 확인 · 토큰 조건 반영. 피드 상태 열은 쓰지 않는다(source-R6 · source-R15 · source-R16 · source-R48)
 - `FeedStatusRepository` — 피드 상태 저장소. 피드 건강 검사만 쓴다(source-R47 · source-R48)
@@ -757,7 +757,7 @@ public sealed interface FetchResult {
 ### 새 항목
 
 - **source-R20** — 새 항목은 그 피드의 직전 성공 수집의 항목 키에 없던 항목이다. 항목 키는 guid 가 있으면 `g:` + guid, 없으면 `l:` + 기사 링크(source-R40 의 값)다 — 같은 피드 안의 비교라 정규 URL 을 쓰지 않는다. 한 수집 안에서 같은 키는 문서 순서로 처음 것만 쓴다. 첫 수집(직전 키 없음)은 받은 항목을 모두 새 항목으로 넘긴다. 피드에서 빠졌다가 다시 실린 항목도 다시 넘어간다. 성공한 수집이 이번 키 목록을 다음 비교의 직전 키로 남긴다(빈 피드면 빈 목록 — 직전 키 없음과 다르다)
-- **source-R21** — 넘침 의심은 직전 키가 있고 비어 있지 않고, 이번 키가 있고, 겹치는 키가 하나도 없을 때다(첫 수집 · 빈 피드 · 직전이 빈 피드는 제외). 수집 상태에 마지막 시각 · 횟수로 남기고 경고 로그를 남긴다 — 수집 주기를 다시 판단하는 운영 데이터다
+- **source-R21** — 넘침 의심은 직전 키 수와 이번 키 수(서로 다른 항목 키의 수 — source-R20)가 모두 10 이상이고 겹치는 키가 하나도 없을 때다(첫 수집 · 빈 피드 · 직전이 빈 피드는 키 수가 0 이라 빠진다). 수집 상태에 마지막 시각 · 횟수로 남기고 경고 로그를 남긴다 — 수집 주기를 다시 판단하는 운영 데이터다. 최소 키 수를 정한 근거는 [ADR-0066](../adr/0066-overflow-suspected-only-when-previous-and-current-fetches-both-have-ten-or-more-keys.md)에 있다
 
 ### 요청과 결과
 
@@ -933,3 +933,4 @@ RSS 품질이 피드마다 크게 다르므로 사전 보정 → 파싱 → 필�
 | [0053](../adr/0053-source-records-last-confirmed-name-apart-from-operating-settings.md) | 출처는 source 가 프로필에서 마지막으로 확인한 소스 이름을 운영 설정과 다른 테이블에 기록한다 |
 | [0056](../adr/0056-platform-reads-yaml-text-and-applies-common-rejection.md) | YAML 원문 읽기와 공통 거부는 `platform` 이 맡고, 문서별 형식 · 검증은 각 모듈의 `domain` 이 한다 |
 | [0065](../adr/0065-blocked-address-fetch-failure-counts-as-temporary.md) | 막힌 주소로 가는 피드 요청은 일시 실패로 센다 |
+| [0066](../adr/0066-overflow-suspected-only-when-previous-and-current-fetches-both-have-ten-or-more-keys.md) | 넘침 의심은 직전 · 이번 수집의 키가 모두 10개 이상일 때만 본다 |
