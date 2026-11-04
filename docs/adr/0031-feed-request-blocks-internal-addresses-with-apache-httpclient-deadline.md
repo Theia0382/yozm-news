@@ -1,6 +1,6 @@
 # ADR-0031: 피드 요청은 내부 주소를 기본으로 막고, Apache HttpClient 로 한 번의 수집 전체에 마감 · 크기 상한을 건다
 
-- 상태: 승인. 막는 대역의 종류(내부 주소 절 첫 항목)는 [ADR-0049](0049-feed-request-blocks-ipv6-reserved-space-and-local-nat64.md)가 넓힘 — IPv6 예약 공간 · 로컬 NAT64 접두 · 이름 없는 전역 도달 불가 할당
+- 상태: 승인. 막는 대역의 종류(내부 주소 절 첫 항목)는 [ADR-0049](0049-feed-request-blocks-ipv6-reserved-space-and-local-nat64.md)가 넓힘 — IPv6 예약 공간 · 로컬 NAT64 접두 · 이름 없는 전역 도달 불가 할당. 결과의 모양 절의 막힌 주소 분류(영구)는 [ADR-0065](0065-blocked-address-fetch-failure-counts-as-temporary.md)가 대체(일시)
 - 날짜: 2026-10-28
 - 근거: [이슈 #19](https://github.com/Theia0382/yozm-news/issues/19) — JDK 25 `HttpClient` · Apache HttpClient 5.6.5 · Jetty client 12.1.14 를 실행해 확인. 구현 `f94c1c8`(판단 규칙) · `f0006ad`(수집 구현) · `9d53e21`(설정 · 배포)
 - 관련: [ADR-0001](0001-news-source-rss.md)(공급원은 `ArticleSource` 뒤 — 이 ADR 이 이행한다), [ADR-0004](0004-tech-stack.md)(스택에 HTTP 클라이언트를 더한다), [ADR-0012](0012-swappable-external-dependencies.md)(외부 의존성 · 로컬 대체물), [ADR-0021](0021-separate-deploy-compose-with-single-app-service.md)(배포 필수 값은 `${VAR:?}`), [ADR-0030](0030-feed-xml-own-parser-and-rome-for-format-title-link.md)(받은 문서의 해석)

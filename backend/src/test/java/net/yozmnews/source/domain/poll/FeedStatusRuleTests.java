@@ -22,7 +22,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 /**
  * 피드 상태 판정 — 기대값은 판정 시각 2026-10-30T00:00:00Z 에서 손으로 센 기준 경계다.
  * <p>
- * 지키는 규칙: source-R30 · source-R31 · source-R47
+ * 지키는 규칙: source-R24 · source-R30 · source-R31 · source-R47
  */
 class FeedStatusRuleTests {
 
@@ -93,6 +93,22 @@ class FeedStatusRuleTests {
 		assertThat(state.consecutiveFailures()).isEqualTo(3);
 		assertThat(state.consecutivePermanentFailures()).isEqualTo(2);
 		assertThat(FeedStatusRule.judge(state, NOW)).isEqualTo(FeedStatus.DEGRADED);
+	}
+
+	@Test
+	void blockedAddressFailuresAreDegradedOnlyAtFiveInARow() {
+		FetchFailure unresolved = FetchFailure.of(FetchFailureReason.NAME_NOT_RESOLVED, "www.khan.co.kr");
+		FetchFailure blocked = FetchFailure.of(FetchFailureReason.BLOCKED_ADDRESS, "www.khan.co.kr → 10.0.0.1");
+		FeedPollState fourUnresolved = failAll(state(0, 0, RECENT, RECENT, RECENT), unresolved, unresolved, unresolved,
+				unresolved);
+		FeedPollState four = failAll(state(0, 0, RECENT, RECENT, RECENT), blocked, blocked, blocked, blocked);
+		FeedPollState five = failAll(four, blocked);
+
+		assertThat(FeedStatusRule.judge(fourUnresolved, NOW)).isEqualTo(FeedStatus.ACTIVE);
+		assertThat(four.consecutiveFailures()).isEqualTo(4);
+		assertThat(FeedStatusRule.judge(five, NOW)).isEqualTo(FeedStatus.DEGRADED);
+		assertThat(four.consecutivePermanentFailures()).isZero();
+		assertThat(FeedStatusRule.judge(four, NOW)).isEqualTo(FeedStatus.ACTIVE);
 	}
 
 	@Test
