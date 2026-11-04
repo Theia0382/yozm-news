@@ -12,12 +12,22 @@ import java.util.Map;
 
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.evaluation.AskedTag;
+import net.yozmnews.evaluation.FormatChoice;
+import net.yozmnews.evaluation.FormatOption;
+import net.yozmnews.evaluation.ImportanceLevel;
+import net.yozmnews.evaluation.ImportanceScale;
 import net.yozmnews.evaluation.MultiTagKind;
 import net.yozmnews.evaluation.TagSetId;
+import net.yozmnews.evaluation.TagSetView;
+import net.yozmnews.evaluation.TopicCategory;
 import net.yozmnews.evaluation.application.TagSetRows;
+import net.yozmnews.evaluation.domain.evaluator.Evaluation;
+import net.yozmnews.evaluation.domain.jev.JevResponse;
 import net.yozmnews.evaluation.domain.overview.EvaluationSample;
 import net.yozmnews.evaluation.domain.result.EvaluationRecord;
 import net.yozmnews.evaluation.domain.result.StoredEvaluation;
+import net.yozmnews.evaluation.domain.result.StoredResponse;
 import net.yozmnews.evaluation.domain.result.StoredTag;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,8 +45,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * 평가 결과 저장소 — 평가 · 태그 행과 {@code jsonb} 왕복, (기사, 버전) 고유, 최근 버전 조회, 버전 · 기간 흘려 받기, 첫 평가 시각으로 기사
- * 흘려 받기, 지운 기사 따르기를 Flyway 가 적용된 실제 PostgreSQL 에서 본다. 테스트는 테스트 트랜잭션 안에서 돈다 — 흘려 받기의 트랜잭션 밖
- * 갈래는 그 트랜잭션을 잠시 멈추고 부른다.
+ * 흘려 받기, 지운 기사 따르기, 채움의 잠금 읽기 · 빠진 태그 더하기 · 버전별 수 · 원본 응답 왕복을 Flyway 가 적용된 실제 PostgreSQL 에서
+ * 본다. 테스트는 테스트 트랜잭션 안에서 돈다 — 흘려 받기의 트랜잭션 밖 갈래는 그 트랜잭션을 잠시 멈추고 부른다. 지우기와 채움의 잠금
+ * 순서는 두 연결이 필요해 {@code EvaluationDeletionLockTests} 가 본다.
  * <p>
  * 지키는 규칙: evaluation-R15 · evaluation-R21 · evaluation-R29 · evaluation-R30
  */
@@ -46,6 +57,15 @@ import org.springframework.transaction.support.TransactionTemplate;
 class JdbcEvaluationResultRepositoryTests {
 
 	private static final Instant AT = Instant.parse("2026-11-02T00:00:00Z");
+
+	/** jsonb 왕복 시험의 체계 — 주제 · 지역 하나씩, 형식 둘, 중요도 둘 */
+	private static final TagSetView ROUND_TRIP_TAG_SET = new TagSetView(new TagSetId(1), 1,
+			List.of(new TopicCategory("politics", "정치", "정치",
+					List.of(new AskedTag("politics.assembly", "국회", "국회", "국회를 다루는가")))),
+			List.of(new AskedTag("domestic", "국내", "국내", "국내의 일인가")),
+			new FormatChoice("형식은", List.of(new FormatOption("straight", "스트레이트", "사실", false),
+					new FormatOption("opinion", "오피니언", "의견", true))),
+			new ImportanceScale("중요도는", List.of(new ImportanceLevel(1, "작다"), new ImportanceLevel(2, "크다"))));
 
 	@Autowired
 	JdbcEvaluationResultRepository repository;
@@ -237,6 +257,79 @@ class JdbcEvaluationResultRepositoryTests {
 		assertThat(this.jdbc.sql("select article_id from article_evaluations").query(Long.class).list())
 			.containsExactly(43L);
 		assertThat(this.jdbc.sql("select article_id from article_tags").query(Long.class).list()).containsExactly(43L);
+	}
+
+	@Test
+	void locksTheEvaluationsOfThePeriodInIdOrderAfterTheCursor() {
+		this.repository.insert(record(42, this.first, AT, 1, List.of()));
+		this.repository.insert(record(43, this.second, AT.plusSeconds(10), 1, List.of()));
+		this.repository.insert(record(44, this.first, AT.plusSeconds(20), 1, List.of()));
+		// 범위 밖 — 시작 직전과 끝
+		this.repository.insert(record(45, this.first, AT.minusSeconds(1), 1, List.of()));
+		this.repository.insert(record(46, this.first, AT.plusSeconds(30), 1, List.of()));
+		List<Long> ids = this.jdbc.sql("select id from article_evaluations order by article_id").query(Long.class).list();
+
+		List<StoredResponse> firstTwo = this.repository.lockResponses(AT, AT.plusSeconds(30), 0, 2);
+		List<StoredResponse> rest = this.repository.lockResponses(AT, AT.plusSeconds(30),
+				firstTwo.getLast().evaluationId(), 2);
+
+		assertThat(firstTwo).extracting(StoredResponse::evaluationId).containsExactly(ids.get(0), ids.get(1));
+		assertThat(firstTwo.getFirst()).isEqualTo(
+				new StoredResponse(ids.get(0), new ArticleId(42), this.first, "jev", "{}"));
+		assertThat(rest).extracting(StoredResponse::articleId).containsExactly(new ArticleId(44));
+	}
+
+	@Test
+	void addsOnlyTheMissingTagRows() {
+		this.repository.insert(record(42, this.first, 3.0, "{}",
+				List.of(new StoredTag(MultiTagKind.TOPIC, "politics.assembly", 0.5))));
+		long id = this.jdbc.sql("select id from article_evaluations").query(Long.class).single();
+
+		int added = this.repository.addMissingTags(id, new ArticleId(42),
+				List.of(new StoredTag(MultiTagKind.TOPIC, "politics.assembly", 0.5),
+						new StoredTag(MultiTagKind.TOPIC, "economy.finance", 0.25),
+						new StoredTag(MultiTagKind.REGION, "domestic", 0.125)));
+
+		assertThat(added).isEqualTo(2);
+		assertThat(this.jdbc.sql("select tag_kind, tag_key, probability from article_tags order by tag_kind, tag_key")
+			.query()
+			.listOfRows()).containsExactly(Map.of("tag_kind", "REGION", "tag_key", "domestic", "probability", 0.125),
+					Map.of("tag_kind", "TOPIC", "tag_key", "economy.finance", "probability", 0.25),
+					Map.of("tag_kind", "TOPIC", "tag_key", "politics.assembly", "probability", 0.5));
+		assertThat(this.repository.addMissingTags(id, new ArticleId(42),
+				List.of(new StoredTag(MultiTagKind.TOPIC, "economy.finance", 0.25)))).isZero();
+	}
+
+	@Test
+	void countsTheEvaluationsOfThePeriodByVersion() {
+		this.repository.insert(record(42, this.first, AT, 1, List.of()));
+		this.repository.insert(record(43, this.first, AT.plusSeconds(10), 1, List.of()));
+		this.repository.insert(record(44, this.second, AT.plusSeconds(20), 1, List.of()));
+		this.repository.insert(record(45, this.second, AT.plusSeconds(30), 1, List.of()));
+
+		assertThat(this.repository.countByVersion(AT, AT.plusSeconds(30)))
+			.isEqualTo(Map.of(this.first, 2L, this.second, 1L));
+		assertThat(this.repository.countByVersion(AT.plusSeconds(40), AT.plusSeconds(50))).isEmpty();
+	}
+
+	@Test
+	void theStoredRawResponseIsReadBackToTheSameProbabilities() {
+		// jsonb 는 공백 · 키 순서를 바꾸지만 수치는 numeric 으로 자릿수를 지킨다 — 같은 파서가 같은 double 을 읽는다
+		String raw = """
+				{"model":"jev-1.14.0","answers":{\
+				"topic.politics.assembly":{"type":"noul","noul":0.12345678901234568},\
+				"region.domestic":{"type":"noul","noul":1.0E-5},\
+				"format":{"type":"choice","probabilities":{"straight":0.75,"opinion":0.25}},\
+				"importance":{"type":"score","probabilities":{"0":0.5,"1":0.5}}},\
+				"usage":{"input_tokens":10}}""";
+		this.repository.insert(record(42, this.first, 3.0, raw, List.of()));
+
+		String stored = this.repository.lockResponses(AT, AT.plusSeconds(1), 0, 1).getFirst().rawResponse();
+
+		assertThat(stored).isNotEqualTo(raw);
+		Evaluation read = (Evaluation) JevResponse.read(stored, null, ROUND_TRIP_TAG_SET);
+		assertThat(read.topics()).isEqualTo(Map.of("politics.assembly", 0.12345678901234568));
+		assertThat(read.regions()).isEqualTo(Map.of("domestic", 1.0E-5));
 	}
 
 	// jsonb 가 받지 않는 원문 — 저장 전에 ResultCheck 가 걸러야 한다. 실패한 문장은 테스트 트랜잭션을 깨뜨리므로 원문마다 테스트를 나눈다

@@ -789,6 +789,23 @@ class EvaluationFlowTests {
 		}
 
 		@Override
+		public List<net.yozmnews.evaluation.domain.result.StoredResponse> lockResponses(Instant from, Instant to,
+				long afterId, int limit) {
+			return this.delegate.lockResponses(from, to, afterId, limit);
+		}
+
+		@Override
+		public int addMissingTags(long evaluationId, ArticleId articleId,
+				List<net.yozmnews.evaluation.domain.result.StoredTag> tags) {
+			return this.delegate.addMissingTags(evaluationId, articleId, tags);
+		}
+
+		@Override
+		public Map<net.yozmnews.evaluation.TagSetId, Long> countByVersion(Instant from, Instant to) {
+			return this.delegate.countByVersion(from, to);
+		}
+
+		@Override
 		public void deleteByArticles(java.util.Collection<ArticleId> articleIds) {
 			this.delegate.deleteByArticles(articleIds);
 		}

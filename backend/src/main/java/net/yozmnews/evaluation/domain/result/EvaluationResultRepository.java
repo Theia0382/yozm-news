@@ -2,6 +2,8 @@ package net.yozmnews.evaluation.domain.result;
 
 import java.time.Instant;
 import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
 
@@ -37,7 +39,22 @@ public interface EvaluationResultRepository {
 	 */
 	void streamFirstEvaluatedIn(Instant from, Instant to, Consumer<StoredEvaluation> sink);
 
-	/** 기사들의 평가 · 태그 행을 지운다 — 지운 기사를 따른다 */
+	/**
+	 * 평가 시각이 {@code [from, to)} 이고 평가 ID 가 {@code afterId} 보다 큰 평가를 평가 ID 순으로 {@code limit} 건 읽는다 — 평가 행을
+	 * 키 공유 잠금으로 잡아 그 트랜잭션 동안 지우기가 기다린다. 트랜잭션 안에서 부른다
+	 */
+	List<StoredResponse> lockResponses(Instant from, Instant to, long afterId, int limit);
+
+	/** 그 평가에 없는 태그 행만 더한다 — 더한 행 수. 있는 행은 그대로다 */
+	int addMissingTags(long evaluationId, ArticleId articleId, List<StoredTag> tags);
+
+	/** 평가 시각이 {@code [from, to)} 인 평가 수를 버전별로 센다 */
+	Map<TagSetId, Long> countByVersion(Instant from, Instant to);
+
+	/**
+	 * 기사들의 평가 · 태그 행을 지운다 — 지운 기사를 따른다. 평가 행을 평가 ID 순으로 먼저 잠근 뒤 태그 행 · 평가 행 순으로 지운다 — 그 평가를
+	 * 잠근 채움이 있으면 그 커밋을 기다려 채움이 더한 행까지 지운다
+	 */
 	void deleteByArticles(Collection<ArticleId> articleIds);
 
 }

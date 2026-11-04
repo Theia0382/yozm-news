@@ -50,7 +50,7 @@ class WebRoleTests {
 	@Test
 	void runsNoBackgroundJobs() {
 		assertThat(this.context.getBeanNamesForType(BackgroundJobServer.class)).isEmpty();
-		assertThat(RoleProbe.jobEntryPointBeans(this.context)).hasSize(5)
+		assertThat(RoleProbe.jobEntryPointBeans(this.context)).hasSize(6)
 			.allSatisfy((type, beans) -> assertThat(beans).as(type.getName()).isZero());
 		assertThat(RoleProbe.recurringJobIds(this.jdbc)).isEmpty();
 		assertThat(this.context.containsBean("presetFeedReconciliation")).isFalse();

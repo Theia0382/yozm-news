@@ -8,7 +8,9 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.TreeMap;
@@ -21,6 +23,7 @@ import net.yozmnews.evaluation.domain.overview.EvaluationSample;
 import net.yozmnews.evaluation.domain.result.EvaluationRecord;
 import net.yozmnews.evaluation.domain.result.EvaluationResultRepository;
 import net.yozmnews.evaluation.domain.result.StoredEvaluation;
+import net.yozmnews.evaluation.domain.result.StoredResponse;
 import net.yozmnews.evaluation.domain.result.StoredTag;
 import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -31,8 +34,9 @@ import tools.jackson.databind.json.JsonMapper;
 /**
  * {@link EvaluationResultRepository} 의 JdbcClient 구현 — docs/specs/evaluation.md §4.
  * <p>
- * 평가 행과 태그 행은 넣기 한 번이고 갱신하지 않는다 — aggregate 가 없다. 분포 · 원본 응답은 {@code jsonb} 로 쓴다(분포의 키는 형식 키 ·
- * 중요도 수준). 지우기는 태그 행 → 평가 행 순이다.
+ * 평가 행은 넣기 한 번이고 갱신하지 않는다 — aggregate 가 없다. 태그 행은 평가와 함께 넣고, 빠진 태그 채움이 없는 행만 더한다. 분포 ·
+ * 원본 응답은 {@code jsonb} 로 쓴다(분포의 키는 형식 키 · 중요도 수준). 지우기는 평가 행을 평가 ID 순으로 잠근 뒤 태그 행 → 평가 행
+ * 순이다 — 채움의 잠금 읽기도 평가 ID 순이라 서로 엇갈려 기다리지 않는다.
  * <p>
  * 기간 흘려 받기는 SQL 한 문장을 {@link #STREAM_FETCH_SIZE} 행씩 커서로 받아 평가 ID 가 바뀔 때 한 건을 넘긴다(태그 행은 조회와 같은 순서). PgJDBC 는 autocommit 이
  * 꺼진 연결(트랜잭션 안)에서 fetch size 가 있을 때만 나눠 받고, 아니면 결과 전체를 메모리에 담는다 — 그래서 트랜잭션 밖 호출은 막는다.
@@ -171,11 +175,70 @@ class JdbcEvaluationResultRepository implements EvaluationResultRepository {
 	}
 
 	@Override
+	public List<StoredResponse> lockResponses(Instant from, Instant to, long afterId, int limit) {
+		return this.jdbc.sql("""
+				select id, article_id, tag_set_id, evaluator, raw_response::text as raw_response
+				from article_evaluations
+				where evaluated_at >= :from and evaluated_at < :to and id > :after
+				order by id
+				limit :limit
+				for key share
+				""")
+			.param("from", timestamp(from))
+			.param("to", timestamp(to))
+			.param("after", afterId)
+			.param("limit", limit)
+			.query((rs, row) -> new StoredResponse(rs.getLong("id"), new ArticleId(rs.getLong("article_id")),
+					new TagSetId(rs.getLong("tag_set_id")), rs.getString("evaluator"), rs.getString("raw_response")))
+			.list();
+	}
+
+	@Override
+	public int addMissingTags(long evaluationId, ArticleId articleId, List<StoredTag> tags) {
+		int added = 0;
+		for (StoredTag tag : tags) {
+			added += this.jdbc.sql("""
+					insert into article_tags (evaluation_id, article_id, tag_kind, tag_key, probability)
+					values (:evaluation, :article, :kind, :key, :probability)
+					on conflict (evaluation_id, tag_kind, tag_key) do nothing
+					""")
+				.param("evaluation", evaluationId)
+				.param("article", articleId.value())
+				.param("kind", tag.kind().name())
+				.param("key", tag.key())
+				.param("probability", tag.probability())
+				.update();
+		}
+		return added;
+	}
+
+	@Override
+	public Map<TagSetId, Long> countByVersion(Instant from, Instant to) {
+		Map<TagSetId, Long> counts = new LinkedHashMap<>();
+		this.jdbc.sql("""
+				select tag_set_id, count(*) as evaluations from article_evaluations
+				where evaluated_at >= :from and evaluated_at < :to
+				group by tag_set_id order by tag_set_id
+				""")
+			.param("from", timestamp(from))
+			.param("to", timestamp(to))
+			.query(rs -> {
+				counts.put(new TagSetId(rs.getLong("tag_set_id")), rs.getLong("evaluations"));
+			});
+		return counts;
+	}
+
+	@Override
 	public void deleteByArticles(Collection<ArticleId> articleIds) {
 		if (articleIds.isEmpty()) {
 			return;
 		}
 		Long[] ids = articleIds.stream().map(ArticleId::value).toArray(Long[]::new);
+		// 채움과 같은 평가 ID 순으로 먼저 잠근다 — 채움이 그 사이에 태그 행을 더해 평가 행 삭제가 외래 키에 걸리지 않게
+		this.jdbc.sql("select id from article_evaluations where article_id = any(:ids) order by id for update")
+			.param("ids", ids)
+			.query(Long.class)
+			.list();
 		this.jdbc.sql("delete from article_tags where article_id = any(:ids)").param("ids", ids).update();
 		this.jdbc.sql("delete from article_evaluations where article_id = any(:ids)").param("ids", ids).update();
 	}
