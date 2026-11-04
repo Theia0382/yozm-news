@@ -9,6 +9,7 @@ import { EVALUATION_KEY } from "@/features/admin/evaluationQueries";
 import { topicStatusLabels } from "@/features/admin/labels";
 import { safeLink } from "@/features/admin/links";
 import { formatProbability } from "@/features/admin/metrics";
+import { REVIEW_TABLE } from "@/features/admin/tables";
 import { formatDateTime } from "@/shared/lib/dateTime";
 
 type Detail = Schemas["EvaluationDetailResponse"];
@@ -148,10 +149,7 @@ function ArticleView({ detail }: { detail: Detail }) {
 
 function StoredTable({ label, tags }: { label: string; tags: StoredTag[] }) {
   return (
-    <table
-      aria-label={label}
-      className="w-full text-left [&_td]:px-2 [&_td]:py-1 [&_th]:px-2 [&_th]:py-1"
-    >
+    <table aria-label={label} className={`w-full text-left ${REVIEW_TABLE}`}>
       <caption className="text-left text-muted-foreground">{label}</caption>
       <thead>
         <tr>

@@ -20,6 +20,7 @@ import {
 } from "@/features/admin/tagSetVersions";
 import { VersionSelect } from "@/features/admin/VersionSelect";
 import { formatProbability } from "@/features/admin/metrics";
+import { REVIEW_TABLE } from "@/features/admin/tables";
 import { formatDateTime } from "@/shared/lib/dateTime";
 
 type Row = Schemas["EvaluationRowResponse"];
@@ -226,7 +227,7 @@ function RowsTable({ rows }: { rows: Row[] }) {
   return (
     <table
       aria-label="평가 결과"
-      className="w-full text-left text-sm [&_td]:px-2 [&_td]:py-1 [&_th]:px-2 [&_th]:py-1"
+      className={`w-full text-left text-sm ${REVIEW_TABLE}`}
     >
       <thead>
         <tr>

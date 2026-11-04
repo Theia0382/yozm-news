@@ -15,6 +15,7 @@ import {
 } from "@/features/admin/labels";
 import { PeriodFields } from "@/features/admin/PeriodFields";
 import { browserZone, defaultFirst, today } from "@/features/admin/periods";
+import { REVIEW_TABLE } from "@/features/admin/tables";
 import { formatDateTime } from "@/shared/lib/dateTime";
 
 type Kind = Schemas["ThresholdPreviewRequest"]["kind"];
@@ -275,10 +276,7 @@ function StatusView({ status }: { status: Status }) {
           </div>
         );
       })}
-      <table
-        aria-label="이력"
-        className="w-full text-left [&_td]:px-2 [&_td]:py-1 [&_th]:px-2 [&_th]:py-1"
-      >
+      <table aria-label="이력" className={`w-full text-left ${REVIEW_TABLE}`}>
         <caption className="text-left font-medium">이력 — 최근 것부터</caption>
         <thead>
           <tr>
@@ -395,10 +393,7 @@ function Comparison({
   }
   const changed = rows.filter((row) => row.before !== row.after);
   return (
-    <table
-      aria-label="전후"
-      className="w-full text-left [&_td]:px-2 [&_td]:py-1 [&_th]:px-2 [&_th]:py-1"
-    >
+    <table aria-label="전후" className={`w-full text-left ${REVIEW_TABLE}`}>
       <caption className="text-left text-muted-foreground">
         지금 기준 → 새 기준의 평가 수 — 바뀐 줄만
       </caption>

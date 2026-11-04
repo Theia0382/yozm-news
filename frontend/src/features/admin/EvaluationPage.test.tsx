@@ -297,23 +297,25 @@ describe("EvaluationPage", () => {
       "5개 이상3 · 75.0%",
     );
     expect(bars("형식(대표 형식)")).toHaveTextContent("스트레이트4 · 100.0%");
-    expect(bars("중요도 기대값 칸별 평가 수")).toHaveTextContent(
+    expect(bars("중요도 기대값 구간별 평가 수")).toHaveTextContent(
       "4.5 이상 5.0 이하3 · 75.0%",
     );
     expect(screen.getByText("기대값 없음 1건")).toBeInTheDocument();
     expect(
       screen.getByText("평균 1,425.5 · 최소 900 · 최대 2,100"),
     ).toBeInTheDocument();
-    expect(bars("입력 토큰 칸별 평가 수")).toHaveTextContent(
+    expect(bars("입력 토큰 구간별 평가 수")).toHaveTextContent(
       "750 이상 1,000 미만1",
     );
   });
 
-  it("저장 기준 아래 칸은 저장하지 않음, 걸친 칸은 일부 저장, 기준이 바뀐 버전은 알린다", async () => {
+  it("저장 기준 아래 구간은 저장하지 않음, 걸친 구간은 일부 저장, 저장 기준이 섞인 기간은 알린다", async () => {
     renderPage();
     await screen.findByText("평가 4건");
 
-    const buckets = within(bars("주제 확률 칸별 수")).getAllByRole("listitem");
+    const buckets = within(bars("주제 확률 구간별 수")).getAllByRole(
+      "listitem",
+    );
     expect(buckets[0]).toHaveTextContent("0.0 이상 0.1 미만0저장하지 않음");
     expect(buckets[1]).toHaveTextContent("0.1 이상 0.2 미만2일부 저장");
     expect(buckets[2]).toHaveTextContent("0.9 이상 1.0 이하7");
@@ -323,7 +325,9 @@ describe("EvaluationPage", () => {
     // 형식은 저장 기준이 없어 기준 문구를 붙이지 않는다
     expect(screen.getByText("형식(대표 형식의 확률)")).toBeInTheDocument();
     expect(
-      screen.getAllByText(/이 버전에서 저장 기준이 바뀐 적이 있다/),
+      screen.getAllByText(
+        "이 기간의 평가는 서로 다른 저장 기준으로 저장됐다 — 이전 저장 기준의 분포가 섞여 있다",
+      ),
     ).toHaveLength(1);
   });
 

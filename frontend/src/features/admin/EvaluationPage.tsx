@@ -242,7 +242,7 @@ function OverviewView({ overview }: { overview: Overview }) {
       </Block>
       <Block title="중요도 — 기대값의 분포">
         <DistributionBars
-          label="중요도 기대값 칸별 평가 수"
+          label="중요도 기대값 구간별 평가 수"
           rows={overview.importance.map((bucket) => valueRow(bucket))}
         />
         <p className="text-sm">
@@ -336,12 +336,12 @@ function Probabilities({
       </p>
       {histogram.storeThresholdChanged && (
         <p className="text-sm">
-          이 버전에서 저장 기준이 바뀐 적이 있다 — 저장 기준 근처 칸의 수는
-          평가마다 다른 기준으로 저장된 것이다
+          이 기간의 평가는 서로 다른 저장 기준으로 저장됐다 — 이전 저장 기준의
+          분포가 섞여 있다
         </p>
       )}
       <DistributionBars
-        label={`${label} 확률 칸별 수`}
+        label={`${label} 확률 구간별 수`}
         rows={histogram.buckets.map((bucket) => ({
           key: String(bucket.lower),
           label: rangeLabel(
@@ -382,7 +382,7 @@ function Tokens({ tokens }: { tokens: TokenSummary }) {
         {number(tokens.max)}
       </p>
       <DistributionBars
-        label="입력 토큰 칸별 평가 수"
+        label="입력 토큰 구간별 평가 수"
         rows={tokens.buckets.map((bucket) => ({
           key: String(bucket.lower),
           label: rangeLabel(
