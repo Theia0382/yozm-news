@@ -33,6 +33,7 @@ import net.yozmnews.evaluation.TopicStatusCounts;
 import net.yozmnews.evaluation.ValueBucket;
 import net.yozmnews.evaluation.domain.result.StoredEvaluation;
 import net.yozmnews.evaluation.domain.result.StoredTag;
+import net.yozmnews.evaluation.domain.threshold.StoreFloors;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
@@ -50,6 +51,13 @@ class OverviewTallyTests {
 
 	private static final EvaluationPeriod PERIOD = new EvaluationPeriod(Instant.parse("2026-10-27T15:00:00Z"),
 			Instant.parse("2026-11-03T15:00:00Z"));
+
+	/** 기간 전 처음 값 그대로인 저장 바닥 — 기간 안 바닥이 하나다 */
+	private static final StoreFloors UNIFORM_TOPIC = StoreFloors.of(MultiTagKind.TOPIC,
+			List.of(initial(MultiTagKind.TOPIC)), List.of());
+
+	private static final StoreFloors UNIFORM_REGION = StoreFloors.of(MultiTagKind.REGION,
+			List.of(initial(MultiTagKind.REGION)), List.of());
 
 	@Test
 	void fourEvaluationsAreJudgedAndCountedWithTheCurrentThresholds() {
@@ -99,7 +107,8 @@ class OverviewTallyTests {
 				new AskedTag("r4", "지역4", "지역4", "지역4인가"), new AskedTag("r5", "지역5", "지역5", "지역5인가"),
 				new AskedTag("r6", "지역6", "지역6", "지역6인가"));
 		TagSetView tagSet = new TagSetView(VERSION, 1, TAG_SET.topics(), regions, TAG_SET.format(), TAG_SET.importance());
-		OverviewTally tally = new OverviewTally(tagSet, thresholds("0.5", "0.1", "0.5", "0.1"), List.of(), PERIOD);
+		OverviewTally tally = new OverviewTally(tagSet, thresholds("0.5", "0.1", "0.5", "0.1"), UNIFORM_TOPIC,
+				UNIFORM_REGION, PERIOD);
 		// 붙은 지역 여섯 · 다섯 — 둘 다 "5 이상" 칸
 		tally.add(sample(List.of(region("r1", 0.9), region("r2", 0.9), region("r3", 0.9), region("r4", 0.9),
 				region("r5", 0.9), region("r6", 0.9)), "straight", 0.9, 3.0, 1_000));
@@ -155,7 +164,8 @@ class OverviewTallyTests {
 
 	@Test
 	void raisingTheTagThresholdChangesTheJudgementAtQueryTime() {
-		OverviewTally tally = new OverviewTally(TAG_SET, thresholds("0.95", "0.1", "0.5", "0.1"), List.of(), PERIOD);
+		OverviewTally tally = new OverviewTally(TAG_SET, thresholds("0.95", "0.1", "0.5", "0.1"), UNIFORM_TOPIC,
+				UNIFORM_REGION, PERIOD);
 		tally.add(sample(List.of(topic(EXECUTIVE, 0.9), topic(ASSEMBLY, 0.6)), "straight", 0.9, 3.0, 1_000));
 
 		// 태그 기준 0.95 면 저장 기준 이상인 가장 높은 행 하나(행정부 0.9)로 low_confidence
@@ -167,8 +177,8 @@ class OverviewTallyTests {
 
 	@Test
 	void noEvaluationsGiveZeroCountsAndNoRatios() {
-		EvaluationOverview overview = new OverviewTally(TAG_SET, thresholds("0.5", "0.1", "0.5", "0.1"), List.of(),
-				PERIOD)
+		EvaluationOverview overview = new OverviewTally(TAG_SET, thresholds("0.5", "0.1", "0.5", "0.1"), UNIFORM_TOPIC,
+				UNIFORM_REGION, PERIOD)
 			.overview();
 
 		assertThat(overview.evaluations()).isZero();
@@ -186,28 +196,27 @@ class OverviewTallyTests {
 	}
 
 	@Test
-	void aChangedStoreThresholdIsFlaggedPerTagKind() {
-		Instant at = Instant.parse("2026-11-01T00:00:00Z");
-		List<ThresholdChangeView> changes = List.of(
+	void aMixedStoreFloorWithinThePeriodIsFlaggedPerTagKind() {
+		// 주제는 기간 안(2026-11-01)에 저장 기준을 바꿨고, 지역은 처음 값 그대로다
+		StoreFloors topic = StoreFloors.of(MultiTagKind.TOPIC, List.of(
 				new ThresholdChangeView(MultiTagKind.TOPIC, new BigDecimal("0.5"), new BigDecimal("0.1"),
-						new BigDecimal("0.5"), new BigDecimal("0.2"), ChangeActor.OPERATOR, at),
-				new ThresholdChangeView(MultiTagKind.REGION, new BigDecimal("0.5"), new BigDecimal("0.1"),
-						new BigDecimal("0.6"), new BigDecimal("0.10"), ChangeActor.OPERATOR, at),
-				new ThresholdChangeView(MultiTagKind.REGION, null, null, new BigDecimal("0.5"), new BigDecimal("0.1"),
-						ChangeActor.SYSTEM, at));
+						new BigDecimal("0.5"), new BigDecimal("0.2"), ChangeActor.OPERATOR,
+						Instant.parse("2026-11-01T00:00:00Z")),
+				initial(MultiTagKind.TOPIC)), List.of());
 
-		EvaluationOverview overview = new OverviewTally(TAG_SET, thresholds("0.5", "0.2", "0.6", "0.1"), changes,
-				PERIOD)
+		EvaluationOverview overview = new OverviewTally(TAG_SET, thresholds("0.5", "0.2", "0.6", "0.1"), topic,
+				UNIFORM_REGION, PERIOD)
 			.overview();
 
 		assertThat(overview.topicProbabilities().storeThresholdChanged()).isTrue();
-		// 지역은 태그 기준만 바뀌었다(0.1 과 0.10 은 같은 저장 기준). 처음 값 행은 바뀐 것이 아니다
 		assertThat(overview.regionProbabilities().storeThresholdChanged()).isFalse();
+		assertThat(overview.formatProbabilities().storeThresholdChanged()).isFalse();
 	}
 
 	@Test
 	void anEvaluationOfAnotherVersionOrWithAnUnknownFormatIsACallerDefect() {
-		OverviewTally tally = new OverviewTally(TAG_SET, thresholds("0.5", "0.1", "0.5", "0.1"), List.of(), PERIOD);
+		OverviewTally tally = new OverviewTally(TAG_SET, thresholds("0.5", "0.1", "0.5", "0.1"), UNIFORM_TOPIC,
+				UNIFORM_REGION, PERIOD);
 
 		assertThatIllegalArgumentException().isThrownBy(() -> tally.add(new EvaluationSample(
 				new StoredEvaluation(new ArticleId(1), new TagSetId(2), "straight", 3.0, List.of()), 0.9, 100)));
@@ -216,17 +225,23 @@ class OverviewTallyTests {
 		assertThatIllegalArgumentException().isThrownBy(
 				() -> new OverviewTally(TAG_SET, new net.yozmnews.evaluation.TagSetThresholds(new TagSetId(2),
 						thresholds("0.5", "0.1", "0.5", "0.1").topic(), thresholds("0.5", "0.1", "0.5", "0.1").region()),
-						List.of(), PERIOD));
+						UNIFORM_TOPIC, UNIFORM_REGION, PERIOD));
 	}
 
 	private static EvaluationOverview fourEvaluations() {
-		OverviewTally tally = new OverviewTally(TAG_SET, thresholds("0.5", "0.1", "0.5", "0.1"), List.of(), PERIOD);
+		OverviewTally tally = new OverviewTally(TAG_SET, thresholds("0.5", "0.1", "0.5", "0.1"), UNIFORM_TOPIC,
+				UNIFORM_REGION, PERIOD);
 		tally.add(sample(List.of(topic(EXECUTIVE, 0.9), topic(ASSEMBLY, 0.6), topic(FINANCE, 0.2),
 				region("world", 0.8), region("domestic", 0.7)), "straight", 0.85, 4.2, 1_200));
 		tally.add(sample(List.of(topic(FINANCE, 0.7), region("domestic", 0.3)), "opinion", 0.6, 1.0, 1_500));
 		tally.add(sample(List.of(topic(EXECUTIVE, 0.3)), "straight", 0.4, null, 900));
 		tally.add(sample(List.of(region("world", 0.55)), "feature", 0.95, 5.0, 2_100));
 		return tally.overview();
+	}
+
+	private static ThresholdChangeView initial(MultiTagKind kind) {
+		return new ThresholdChangeView(kind, null, null, new BigDecimal("0.5"), new BigDecimal("0.1"), ChangeActor.SYSTEM,
+				Instant.parse("2026-10-01T00:00:00Z"));
 	}
 
 	private static EvaluationSample sample(List<StoredTag> tags, String format, double formatProbability,

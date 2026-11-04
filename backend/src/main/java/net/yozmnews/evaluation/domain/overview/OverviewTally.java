@@ -12,13 +12,11 @@ import net.yozmnews.evaluation.CountBucket;
 import net.yozmnews.evaluation.EvaluationOverview;
 import net.yozmnews.evaluation.EvaluationPeriod;
 import net.yozmnews.evaluation.FormatOption;
-import net.yozmnews.evaluation.MultiTagKind;
 import net.yozmnews.evaluation.Share;
 import net.yozmnews.evaluation.TagProbability;
 import net.yozmnews.evaluation.TagSetThresholds;
 import net.yozmnews.evaluation.TagSetView;
 import net.yozmnews.evaluation.TagShare;
-import net.yozmnews.evaluation.ThresholdChangeView;
 import net.yozmnews.evaluation.TopicCategory;
 import net.yozmnews.evaluation.TopicStatus;
 import net.yozmnews.evaluation.TopicStatusCounts;
@@ -27,6 +25,7 @@ import net.yozmnews.evaluation.domain.result.StoredTag;
 import net.yozmnews.evaluation.domain.result.TagJudgement;
 import net.yozmnews.evaluation.domain.result.TagJudgement.Judged;
 import net.yozmnews.evaluation.domain.result.VersionMatch;
+import net.yozmnews.evaluation.domain.threshold.StoreFloors;
 
 /**
  * 평가 현황 집계 — 버전 하나의 평가를 한 건씩 받아 판정 · 태그 분포 · 태그 수 · 확률 · 중요도 · 입력 토큰을 센다 ·
@@ -89,17 +88,18 @@ public final class OverviewTally {
 
 	/**
 	 * @param thresholds 그 버전의 지금 태그 기준 · 저장 기준
-	 * @param changes 그 버전의 태그 기준 · 저장 기준 이력
+	 * @param topicFloors 그 버전 주제의 저장 바닥 — 기간 안 평가의 바닥이 섞였는지를 낸다
+	 * @param regionFloors 그 버전 지역의 저장 바닥
 	 * @throws IllegalArgumentException 기준의 버전이 체계와 다를 때
 	 */
-	public OverviewTally(TagSetView tagSet, TagSetThresholds thresholds, List<ThresholdChangeView> changes,
-			EvaluationPeriod period) {
+	public OverviewTally(TagSetView tagSet, TagSetThresholds thresholds, StoreFloors topicFloors,
+			StoreFloors regionFloors, EvaluationPeriod period) {
 		this.tagSet = Objects.requireNonNull(tagSet, "tagSet");
 		this.thresholds = Objects.requireNonNull(thresholds, "thresholds");
 		this.period = Objects.requireNonNull(period, "period");
 		VersionMatch.require(thresholds, tagSet);
-		this.topicStoreChanged = storeThresholdChanged(changes, MultiTagKind.TOPIC);
-		this.regionStoreChanged = storeThresholdChanged(changes, MultiTagKind.REGION);
+		this.topicStoreChanged = topicFloors.mixed(period.from(), period.to());
+		this.regionStoreChanged = regionFloors.mixed(period.from(), period.to());
 		for (TopicCategory category : tagSet.topics()) {
 			this.categories.put(category.key(), 0L);
 			this.categoryNames.put(category.key(), category.name());
@@ -173,14 +173,6 @@ public final class OverviewTally {
 				this.regionProbabilities.histogram(this.thresholds.region().storeThreshold(), this.regionStoreChanged),
 				this.formatProbabilities.histogram(null, false), this.importance.buckets(this.evaluations),
 				this.importanceMissing, this.inputTokens.summary());
-	}
-
-	/** 이력에 그 태그 종류의 저장 기준이 바뀐 행이 있는가 — 처음 값 행(이전 값 없음)은 바뀐 것이 아니다 */
-	static boolean storeThresholdChanged(List<ThresholdChangeView> changes, MultiTagKind kind) {
-		return changes.stream()
-			.filter(change -> change.kind() == kind)
-			.anyMatch(change -> change.previousStoreThreshold() != null
-					&& change.previousStoreThreshold().compareTo(change.storeThreshold()) != 0);
 	}
 
 	private Share status(TopicStatus status) {

@@ -1,6 +1,5 @@
 package net.yozmnews.evaluation.domain.threshold;
 
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -26,12 +25,6 @@ public interface ThresholdRepository {
 	 * @return 행이 없으면 빈 값
 	 */
 	Optional<ThresholdValues> lockCurrent(TagSetId version, MultiTagKind kind);
-
-	/**
-	 * 이력 전체의 저장 기준 최댓값을 돌려준다.
-	 * @throws IllegalStateException 이력이 없을 때 — 처음 값이 첫 행이라는 불변식이 깨진 것이다
-	 */
-	BigDecimal maxStoreThreshold(TagSetId version, MultiTagKind kind);
 
 	/** 지금 행을 새 값으로 바꾸고 이력 행을 더한다 */
 	void apply(TagSetId version, MultiTagKind kind, ThresholdValues previous, ThresholdValues next, ChangeActor actor,

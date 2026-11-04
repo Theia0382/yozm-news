@@ -20,6 +20,7 @@ import net.yozmnews.evaluation.TagThresholds;
 import net.yozmnews.evaluation.ThresholdChangeResult;
 import net.yozmnews.evaluation.ThresholdChangeView;
 import net.yozmnews.evaluation.ThresholdWarning;
+import net.yozmnews.evaluation.domain.backfill.TagBackfillRepository;
 import net.yozmnews.evaluation.domain.tagset.TagSetRepository;
 import net.yozmnews.evaluation.domain.threshold.ThresholdRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -34,7 +35,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * 태그 기준 · 저장 기준 변경과 이력 — 실제 PostgreSQL 에서 이전 값 · 새 값 · 행위자 · 시각, 경고, 바꾸지 않는 결과, 활성 전환과의
- * 줄 서기, 동시 변경의 줄 서기를 본다.
+ * 줄 서기, 동시 변경의 줄 서기, 끝난 채움이 지난 저장 기준 최댓값을 내리는 것을 본다.
  * <p>
  * 지키는 규칙: evaluation-R11 ~ evaluation-R13
  */
@@ -43,6 +44,11 @@ import org.springframework.transaction.support.TransactionTemplate;
 class TagSetAdministrationTests {
 
 	private static final Instant NOW = Instant.parse("2026-11-02T03:00:00Z");
+
+	/** 처음 값(첫 기동 적재 — 시험 실행 시각)과 NOW 의 변경을 모두 덮는 범위 */
+	private static final Instant COVERED_FROM = Instant.parse("2026-01-01T00:00:00Z");
+
+	private static final Instant COVERED_TO = Instant.parse("2100-01-01T00:00:00Z");
 
 	@Autowired
 	TagSetRepository tagSets;
@@ -62,18 +68,23 @@ class TagSetAdministrationTests {
 	@Autowired
 	TagSetVersioning versioning;
 
+	@Autowired
+	TagBackfillRepository backfills;
+
 	private TagSetAdministrationService administration;
 
 	@BeforeEach
 	void startFromTheInitialThresholds() {
+		TagBackfillRows.removeAll(this.jdbc);
 		TagSetRows.resetThresholds(this.jdbc);
 		this.administration = new TagSetAdministrationService(this.tagSets, this.thresholds,
 				new TransactionTemplate(this.transactionManager), InstantSource.fixed(NOW),
-				this.versioning);
+				this.versioning, this.backfills);
 	}
 
 	@AfterEach
 	void restoreTheInitialThresholds() {
+		TagBackfillRows.removeAll(this.jdbc);
 		TagSetRows.resetThresholds(this.jdbc);
 	}
 
@@ -98,6 +109,40 @@ class TagSetAdministrationTests {
 		assertThat(result).isInstanceOf(ThresholdChangeResult.Changed.class);
 		assertThat(((ThresholdChangeResult.Changed) result).warnings())
 			.containsExactly(ThresholdWarning.STORE_THRESHOLD_LOWERED);
+	}
+
+	@Test
+	void aFinishedBackfillOfTheWholeVersionLiftsTheWarningAboutThePastStoreThreshold() {
+		change(MultiTagKind.TOPIC, "0.5", "0.3");
+		change(MultiTagKind.TOPIC, "0.5", "0.1");
+		TagBackfillRows.insertFinished(this.jdbc, this.directory.activeTagSet().id(), COVERED_FROM, COVERED_TO, "0.1",
+				0);
+
+		assertThat(change(MultiTagKind.TOPIC, "0.2", "0.1")).isEqualTo(new ThresholdChangeResult.Changed(
+				thresholds(MultiTagKind.TOPIC, "0.500", "0.100"), thresholds(MultiTagKind.TOPIC, "0.200", "0.100"),
+				Set.of()));
+	}
+
+	@Test
+	void withoutABackfillTheTagThresholdBelowThePastStoreThresholdIsWarned() {
+		// 대조 — 덮음이 없으면 0.3 으로 저장된 평가가 남아 있다
+		change(MultiTagKind.TOPIC, "0.5", "0.3");
+		change(MultiTagKind.TOPIC, "0.5", "0.1");
+
+		assertThat(change(MultiTagKind.TOPIC, "0.2", "0.1")).isEqualTo(new ThresholdChangeResult.Changed(
+				thresholds(MultiTagKind.TOPIC, "0.500", "0.100"), thresholds(MultiTagKind.TOPIC, "0.200", "0.100"),
+				Set.of(ThresholdWarning.TAG_BELOW_PAST_STORE)));
+	}
+
+	@Test
+	void aBackfillThatSkippedEvaluationsOfTheVersionDoesNotCover() {
+		change(MultiTagKind.TOPIC, "0.5", "0.3");
+		change(MultiTagKind.TOPIC, "0.5", "0.1");
+		TagBackfillRows.insertFinished(this.jdbc, this.directory.activeTagSet().id(), COVERED_FROM, COVERED_TO, "0.1",
+				1);
+
+		assertThat(((ThresholdChangeResult.Changed) change(MultiTagKind.TOPIC, "0.2", "0.1")).warnings())
+			.containsExactly(ThresholdWarning.TAG_BELOW_PAST_STORE);
 	}
 
 	@Test
