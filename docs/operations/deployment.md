@@ -21,14 +21,16 @@
 |---|---|---|
 | `proxy` | `frontend/Dockerfile` target `proxy` — Caddy 에 SPA 빌드 결과를 담은 이미지 | SPA 정적 파일을 내려주고 백엔드 경로만 `app` 으로 넘긴다. 넘기지 않는 경로(관리 엔드포인트 포함)는 SPA 가 답한다([넘기는 경로](../development/infrastructure.md#proxy-가-넘기는-경로)) |
 | `app` | `backend/Dockerfile` target `app` | 화면용 API 와 백그라운드 작업(작업 서버)을 한 프로세스에서 맡는다 — 정의가 두 역할 profile 을 켠다(`SPRING_PROFILES_ACTIVE: web,worker`, [platform Spec](../specs/platform.md#역할)). **(미구현)** 인증(로그인)도 이 프로세스가 맡는다 |
-| `postgres` | 루트 `compose.yaml` 의 PostgreSQL 이미지 | 데이터. 호스트에 공개하지 않는다 |
+| `postgres` | 루트 `compose.yaml` 의 PostgreSQL 이미지(pgvector 확장이 든 이미지) | 데이터. 호스트에 공개하지 않는다 |
 | **(미구현)** `cloudflared` | Cloudflare Tunnel | `proxy` 로만 연결한다([공개 경로와 외부 서비스](#공개-경로와-외부-서비스)) |
 | **(미구현)** `backup` | `pg_dump` + S3 호환 업로드 | [백업과 복구](#백업과-복구) |
 
 - `app` 과 `postgres` 는 호스트에 공개하지 않는다. 공개하는 것은 `proxy` 하나다
 - **(미구현)** 역할을 나눠 띄우는 구성 — 같은 이미지를 `web` · `worker` 두 서비스로 띄우고 각 서비스가 `SPRING_PROFILES_ACTIVE` 로 자기 역할 하나를 켠다([overview.md §4](../overview.md#4-시스템-구성)). proxy 가 넘길 곳(`app` 고정)과 스모크가 아직 이 구성을 모른다
 - **외부 DB** — 배포 구성은 DB 접속 정보를 Compose 정의 안에서 `postgres` 서비스에 맞춰 고정해 넘긴다([DB 접속](configuration.md#db-접속)). 관리형 DB 를 쓰려면 `postgres` 서비스와 `app` 의 `depends_on` 을 빼고 접속 정보를 바꾼 정의를 써야 한다 — 지금 배포 구성에는 `deploy/.env` 만으로 바꾸는 경로가 없다
-- **(미구현)** 사건 묶기가 생기면 DB 에 pgvector 확장이 필요하다. 확장 설치에 superuser 권한이 필요하므로, 앱 계정에 그 권한이 없는 외부 DB 에서는 DBA 가 먼저 설치한다([ADR-0027](../adr/0027-pgvector-for-vector-storage.md))
+- **DB 확장** — 앱은 DB 의 pgvector 확장(`vector`, 0.8 이상)을 쓴다([ADR-0027](../adr/0027-pgvector-for-vector-storage.md)). 앱이 기동할 때 마이그레이션이 확장을 설치하는데, 설치에는 superuser 권한이 필요하다. 배포 구성의 DB 계정은 superuser 라 따로 할 일이 없다. 앱 계정이 superuser 가 아닌 외부 DB 에서는 DBA 가 먼저 `CREATE EXTENSION vector` 로 설치한다 — 앱 계정의 검색 경로(`search_path`)에 있는 스키마(기본 `public`)에 둔다. 검색 경로 밖에 두면 확장의 타입(`vector`)을 스키마 이름 없이 쓸 수 없다
+  - 앱 계정이 superuser 가 아닌데 확장이 설치되어 있지 않으면 마이그레이션이 권한 오류로 실패해 앱이 뜨지 않는다
+  - 설치된 확장이 0.8 보다 낮으면 앱이 기동을 멈추고 로그에 할 일을 남긴다 — DBA(확장 소유자)가 `ALTER EXTENSION vector UPDATE` 로 올린다. DB 서버에 0.8 이상의 pgvector 가 있어야 한다([platform Spec](../specs/platform.md#db-확장))
 
 ## 배포 구성 실행
 

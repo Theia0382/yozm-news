@@ -41,3 +41,7 @@
 | `postgres:18` 위에 패키지를 설치한 이미지를 직접 만든다 | 실행 단계에서 명령을 돌려야 해 에뮬레이션 없는 arm64 빌드가 실패한다([ADR-0022](0022-image-targets-per-side-dockerfile-without-run-in-runtime-stage.md)) |
 | 기사 벡터를 무기한 보관한다 | 저장 공간과 백업이 크게 늘어난다. 장기 검색은 사건 단위로 충분하다 |
 | 사건 배정에 HNSW 인덱스를 쓴다 | 근사 검색이라 같은 입력에서 배정이 달라질 수 있어 판단 근거를 재현하기 어렵다 |
+
+## 후속 기록
+
+- 2026-11-05: 결과 절 "Testcontainers 는 `postgres` 가 아닌 이미지 이름을 거부하므로 호환 선언이 필요하다"의 전제는 지금 Testcontainers 와 다르다(`pgvector/pgvector` 는 선언 없이도 받는다). 호환 선언은 결정 절에 따라 둔다 — [`development/infrastructure` "PostgreSQL 이미지 정본"](../development/infrastructure.md#postgresql-이미지-정본)
