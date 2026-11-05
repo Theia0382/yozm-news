@@ -5,11 +5,14 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.regex.Pattern;
 
 import net.yozmnews.evaluation.AskedTag;
 import net.yozmnews.evaluation.EvaluatorFailureKind;
@@ -18,13 +21,18 @@ import net.yozmnews.evaluation.ImportanceLevel;
 import net.yozmnews.evaluation.TagSetView;
 import net.yozmnews.evaluation.TopicCategory;
 import net.yozmnews.evaluation.domain.evaluator.ArticleEvaluator;
+import net.yozmnews.evaluation.domain.evaluator.CandidateEvent;
 import net.yozmnews.evaluation.domain.evaluator.Evaluation;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationFailure;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationInput;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationResult;
 import net.yozmnews.evaluation.domain.evaluator.FeedContext;
+import net.yozmnews.evaluation.domain.evaluator.Membership;
+import net.yozmnews.evaluation.domain.evaluator.MembershipInput;
+import net.yozmnews.evaluation.domain.evaluator.MembershipResult;
 import net.yozmnews.evaluation.domain.evaluator.RereadFailure;
 import net.yozmnews.evaluation.domain.evaluator.RereadResult;
+import org.jspecify.annotations.Nullable;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -52,6 +60,12 @@ import tools.jackson.databind.json.JsonMapper;
  * 2로 나눠 올린 값. 실제 토큰 수가 아니다</li>
  * <li>원본 응답 — 평가기 이름 · 버전과 태그 종류별 확률을 키 순으로 담은 JSON. 다시 읽기는 넘긴 체계의 키마다 그 확률을 읽고,
  * 입력 토큰은 원본에 없어 0 이다</li>
+ * <li>사건 소속 판정 — 조각은 제목을 문자 · 숫자가 아닌 문자로 나눈 {@value #MIN_PIECE_CODE_POINTS} 코드 포인트 이상의 조각(중복
+ * 없음)이다. 판정할 기사 제목의 조각 집합 A 와 그 후보 서술 제목들의 조각 합집합 D 에 대해 확률은
+ * {@code MEMBERSHIP_FLOOR + MEMBERSHIP_SPAN * |A ∩ D| / |A|} 를 이 순서(곱한 뒤 나누고 더한다)로 계산한 값이다
+ * ({@value #MEMBERSHIP_FLOOR} · {@value #MEMBERSHIP_SPAN}). A 가 비면 {@value #MEMBERSHIP_FLOOR} 다</li>
+ * <li>판정 입력 토큰 — 제목 · 요약과 후보마다 질문 문장의 코드 포인트 합을 2로 나눠 올린 값</li>
+ * <li>판정 원본 응답 — 평가기 이름 · 버전과 사건 ID 순의 확률({@code events})을 담은 JSON</li>
  * </ul>
  * 넘긴 체계는 검증된 체계다 — 주제 · 중분류 · 지역이 하나 이상, 형식 선택지가 둘 이상이다.
  */
@@ -76,6 +90,8 @@ public final class FakeArticleEvaluator implements ArticleEvaluator {
 
 	private static final String RAW_IMPORTANCE = "importance";
 
+	private static final String RAW_EVENTS = "events";
+
 	/** 이름이 일치한 태그의 확률 */
 	static final double NAME_MATCH = 0.9;
 
@@ -94,12 +110,21 @@ public final class FakeArticleEvaluator implements ArticleEvaluator {
 	/** 고른 중요도 수준의 확률 */
 	static final double IMPORTANCE_CHOSEN = 0.6;
 
+	/** 사건 소속 판정에서 조각 겹침이 없을 때의 확률 */
+	static final double MEMBERSHIP_FLOOR = 0.05;
+
+	/** 사건 소속 판정에서 조각이 모두 겹칠 때 더하는 확률 */
+	static final double MEMBERSHIP_SPAN = 0.9;
+
 	/** 실패 표지에 따른 실패의 문구 */
 	static final String FAILURE_MESSAGE = "Fake 평가기 표지에 따른 실패";
 
 	private static final String NAME_SEPARATOR = "·";
 
 	private static final int MIN_PIECE_CODE_POINTS = 2;
+
+	/** 판정 조각의 경계 — 문자 · 숫자가 아닌 문자 */
+	private static final Pattern PIECE_BOUNDARY = Pattern.compile("[^\\p{L}\\p{N}]+");
 
 	private static final JsonMapper JSON = JsonMapper.builder().build();
 
@@ -108,10 +133,9 @@ public final class FakeArticleEvaluator implements ArticleEvaluator {
 		Objects.requireNonNull(input, "input");
 		Objects.requireNonNull(tagSet, "tagSet");
 		String title = input.title();
-		for (EvaluatorFailureKind kind : EvaluatorFailureKind.values()) {
-			if (title.contains(marker(kind))) {
-				return new EvaluationFailure(kind, FAILURE_MESSAGE);
-			}
+		EvaluationFailure failure = failure(title);
+		if (failure != null) {
+			return failure;
 		}
 		String text = matchText(input);
 		Map<String, Double> topics = topics(title, tagSet.topics(), text);
@@ -137,6 +161,64 @@ public final class FakeArticleEvaluator implements ArticleEvaluator {
 		catch (Unreadable ex) {
 			return new RereadFailure(RereadFailure.Kind.UNREADABLE, "Fake 원본 응답을 읽을 수 없다 — " + ex.getMessage());
 		}
+	}
+
+	/** 판정할 기사 제목과 후보 서술 제목의 조각 겹침으로 판정한다 */
+	@Override
+	public MembershipResult judgeMembership(MembershipInput input) {
+		Objects.requireNonNull(input, "input");
+		EvaluationFailure failure = failure(input.title());
+		if (failure != null) {
+			return failure;
+		}
+		Set<String> asked = pieces(input.title());
+		Map<Long, Double> probabilities = new LinkedHashMap<>();
+		List<String> texts = new ArrayList<>();
+		texts.add(input.title());
+		if (input.summary() != null) {
+			texts.add(input.summary());
+		}
+		for (CandidateEvent candidate : input.candidates()) {
+			Set<String> described = new HashSet<>();
+			candidate.titles().forEach(title -> described.addAll(pieces(title)));
+			probabilities.put(candidate.eventId(), membership(asked, described));
+			texts.add(input.wording().question(candidate.titles()));
+		}
+		Map<String, Object> raw = new LinkedHashMap<>();
+		raw.put(RAW_EVALUATOR, NAME);
+		raw.put(RAW_MODEL_VERSION, MODEL_VERSION);
+		raw.put(RAW_EVENTS, new TreeMap<>(probabilities));
+		return new Membership(probabilities, NAME, MODEL_VERSION, tokens(texts), JSON.writeValueAsString(raw));
+	}
+
+	/** 제목의 첫 실패 표지(갈래 선언 순서)에 따른 실패 — 없으면 null */
+	private static @Nullable EvaluationFailure failure(String title) {
+		for (EvaluatorFailureKind kind : EvaluatorFailureKind.values()) {
+			if (title.contains(marker(kind))) {
+				return new EvaluationFailure(kind, FAILURE_MESSAGE);
+			}
+		}
+		return null;
+	}
+
+	/** {@code MEMBERSHIP_FLOOR + MEMBERSHIP_SPAN * |A ∩ D| / |A|} — 이 순서로 계산한다 */
+	private static double membership(Set<String> asked, Set<String> described) {
+		if (asked.isEmpty()) {
+			return MEMBERSHIP_FLOOR;
+		}
+		long shared = asked.stream().filter(described::contains).count();
+		return MEMBERSHIP_FLOOR + MEMBERSHIP_SPAN * shared / asked.size();
+	}
+
+	/** 제목의 판정 조각 — 문자 · 숫자가 아닌 문자로 나눈 {@value #MIN_PIECE_CODE_POINTS} 코드 포인트 이상의 조각 */
+	private static Set<String> pieces(String title) {
+		Set<String> pieces = new HashSet<>();
+		for (String piece : PIECE_BOUNDARY.split(title)) {
+			if (piece.codePointCount(0, piece.length()) >= MIN_PIECE_CODE_POINTS) {
+				pieces.add(piece);
+			}
+		}
+		return pieces;
 	}
 
 	/** 실패 갈래의 표지 — docs/specs/evaluation.md §4 */
@@ -267,6 +349,11 @@ public final class FakeArticleEvaluator implements ArticleEvaluator {
 		tagSet.format().options().forEach(option -> texts.add(option.name()));
 		texts.add(tagSet.importance().question());
 		tagSet.importance().levels().forEach(level -> texts.add(level.description()));
+		return tokens(texts);
+	}
+
+	/** 글 목록의 코드 포인트 합을 2로 나눠 올린 값 — 평가 · 판정이 함께 쓴다 */
+	private static int tokens(List<String> texts) {
 		long codePoints = texts.stream().mapToLong(text -> text.codePointCount(0, text.length())).sum();
 		return Math.toIntExact((codePoints + 1) / 2);
 	}

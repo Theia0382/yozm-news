@@ -196,8 +196,7 @@ public class EvaluationRound {
 			return FeedContext.limited((label != null) ? label.sourceName() : null,
 					(label != null) ? label.section() : null, entry.categories());
 		}).toList();
-		String summary = content.summary();
-		return new EvaluationInput(content.title(), (summary == null || summary.isBlank()) ? null : summary, feeds);
+		return new EvaluationInput(content.title(), EvaluationInput.presentSummary(content.summary()), feeds);
 	}
 
 	/** {@link #writeIfCurrent(List, int, TagSetId, Runnable, Runnable)} — 은퇴했을 때 점유를 푸는 것 말고는 쓰지 않는다 */

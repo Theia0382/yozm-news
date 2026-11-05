@@ -48,6 +48,8 @@ import net.yozmnews.evaluation.domain.evaluator.Evaluation;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationInput;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationResult;
 import net.yozmnews.evaluation.domain.evaluator.FeedContext;
+import net.yozmnews.evaluation.domain.evaluator.MembershipInput;
+import net.yozmnews.evaluation.domain.evaluator.MembershipResult;
 import net.yozmnews.evaluation.domain.evaluator.RereadResult;
 import net.yozmnews.evaluation.domain.queue.EvaluationQueueRepository;
 import net.yozmnews.evaluation.domain.result.EvaluationRecord;
@@ -838,13 +840,18 @@ class EvaluationFlowTests {
 
 	}
 
-	/** 평가만 하는 시험 평가기 — 이 시험은 원본 응답을 다시 읽지 않으므로 다시 읽기는 크게 실패한다 */
+	/** 평가만 하는 시험 평가기 — 이 시험은 원본 응답을 다시 읽거나 사건 소속을 판정하지 않으므로 그 둘은 크게 실패한다 */
 	@FunctionalInterface
 	private interface EvaluateOnly extends ArticleEvaluator {
 
 		@Override
 		default RereadResult reread(String evaluator, String rawResponse, TagSetView tagSet) {
 			throw new UnsupportedOperationException("이 시험 평가기는 원본 응답을 다시 읽지 않는다");
+		}
+
+		@Override
+		default MembershipResult judgeMembership(MembershipInput input) {
+			throw new UnsupportedOperationException("이 시험 평가기는 사건 소속을 판정하지 않는다");
 		}
 
 	}

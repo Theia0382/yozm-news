@@ -56,21 +56,13 @@ public record FeedContext(@Nullable String sourceName, @Nullable String section,
 			if (kept.size() == MAX_CATEGORIES) {
 				break;
 			}
-			String cut = truncate(category).stripTrailing();
+			String cut = CodePoints.prefix(Objects.requireNonNull(category, "category"), MAX_CATEGORY_CODE_POINTS)
+				.stripTrailing();
 			if (!cut.isBlank()) {
 				kept.add(cut);
 			}
 		}
 		return new FeedContext(blankToNull(sourceName), blankToNull(section), kept);
-	}
-
-	/** 앞 {@value #MAX_CATEGORY_CODE_POINTS} 코드 포인트 — 서로게이트 쌍을 가르지 않는다 */
-	private static String truncate(String text) {
-		Objects.requireNonNull(text, "category");
-		if (text.codePointCount(0, text.length()) <= MAX_CATEGORY_CODE_POINTS) {
-			return text;
-		}
-		return text.substring(0, text.offsetByCodePoints(0, MAX_CATEGORY_CODE_POINTS));
 	}
 
 	private static @Nullable String blankToNull(@Nullable String text) {

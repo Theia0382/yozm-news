@@ -10,9 +10,13 @@ import net.yozmnews.evaluation.FormatOption;
 import net.yozmnews.evaluation.ImportanceLevel;
 import net.yozmnews.evaluation.TagSetView;
 import net.yozmnews.evaluation.TopicCategory;
+import net.yozmnews.evaluation.domain.evaluator.CandidateEvent;
 import net.yozmnews.evaluation.domain.evaluator.Evaluation;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationFailure;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationResult;
+import net.yozmnews.evaluation.domain.evaluator.Membership;
+import net.yozmnews.evaluation.domain.evaluator.MembershipInput;
+import net.yozmnews.evaluation.domain.evaluator.MembershipResult;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
@@ -21,8 +25,9 @@ import tools.jackson.databind.json.JsonMapper;
 /**
  * Jev 의 200 응답을 포트 결과로 옮긴다 — docs/specs/evaluation.md §4.
  * <p>
- * 답은 {@link JevRequest} 의 질문 이름으로 읽는다. 중요도는 수준 위치({@code "0"} 부터)를 체계의 수준 순서로 되찾는다. 체계에 없는 여분의
- * 답은 읽지 않는다 — 원본 응답째 저장된다. 응답의 모양은 기사와 무관하므로 읽을 수 없으면 평가기 사용 불가다.
+ * 답은 {@link JevRequest} 의 질문 이름으로 읽는다 — 평가는 넘긴 체계의 질문, 사건 소속 판정은 물은 후보 사건의 질문이다. 중요도는 수준
+ * 위치({@code "0"} 부터)를 체계의 수준 순서로 되찾는다. 묻지 않은 여분의 답은 읽지 않는다 — 원본 응답째 저장된다. 응답의 모양은 기사와
+ * 무관하므로 읽을 수 없으면 평가기 사용 불가다.
  */
 public final class JevResponse {
 
@@ -36,20 +41,73 @@ public final class JevResponse {
 
 	/**
 	 * @return 넘긴 체계의 모든 질문에 기대한 종류의 답과 0 ~ 1 의 유한 확률이 있으면 {@link Evaluation}, 아니면 평가기 사용 불가 실패 —
-	 * 문구는 첫 문제 하나(체계 키만)와 요청 ID
+	 * 문구는 첫 문제 하나(질문 이름만)와 요청 ID
 	 */
 	public static EvaluationResult read(String body, @Nullable String requestId, TagSetView tagSet) {
 		try {
 			return evaluation(body, tagSet);
 		}
 		catch (Unreadable ex) {
-			return new EvaluationFailure(EvaluatorFailureKind.EVALUATOR_UNAVAILABLE,
-					JevErrors.clean(JevErrors.withRequestId("Jev 응답을 읽을 수 없다 — " + ex.getMessage(), requestId),
-							JevErrors.MAX_MESSAGE_CODE_POINTS));
+			return unavailable(ex, requestId);
 		}
 	}
 
+	/**
+	 * @return 물은 후보 사건마다 Yes/No 답과 0 ~ 1 의 유한 확률이 있으면 {@link Membership}, 아니면 평가기 사용 불가 실패 — 문구는 첫 문제
+	 * 하나(질문 이름만)와 요청 ID
+	 */
+	public static MembershipResult readMembership(String body, @Nullable String requestId, MembershipInput input) {
+		try {
+			Envelope envelope = envelope(body);
+			Map<Long, Double> probabilities = new LinkedHashMap<>();
+			for (CandidateEvent candidate : input.candidates()) {
+				probabilities.put(candidate.eventId(),
+						yes(envelope.answers(), JevRequest.EVENT_PREFIX + candidate.eventId()));
+			}
+			return new Membership(probabilities, EVALUATOR, envelope.model(), envelope.inputTokens(), body);
+		}
+		catch (Unreadable ex) {
+			return unavailable(ex, requestId);
+		}
+	}
+
+	private static EvaluationFailure unavailable(Unreadable ex, @Nullable String requestId) {
+		return new EvaluationFailure(EvaluatorFailureKind.EVALUATOR_UNAVAILABLE,
+				JevErrors.clean(JevErrors.withRequestId("Jev 응답을 읽을 수 없다 — " + ex.getMessage(), requestId),
+						JevErrors.MAX_MESSAGE_CODE_POINTS));
+	}
+
 	private static Evaluation evaluation(String body, TagSetView tagSet) {
+		Envelope envelope = envelope(body);
+		JsonNode answers = envelope.answers();
+		Map<String, Double> topics = new LinkedHashMap<>();
+		for (TopicCategory category : tagSet.topics()) {
+			for (AskedTag subtopic : category.subtopics()) {
+				topics.put(subtopic.key(), yes(answers, JevRequest.TOPIC_PREFIX + subtopic.key()));
+			}
+		}
+		Map<String, Double> regions = new LinkedHashMap<>();
+		for (AskedTag region : tagSet.regions()) {
+			regions.put(region.key(), yes(answers, JevRequest.REGION_PREFIX + region.key()));
+		}
+		JsonNode format = probabilities(answers, JevRequest.FORMAT, "choice");
+		Map<String, Double> formats = new LinkedHashMap<>();
+		for (FormatOption option : tagSet.format().options()) {
+			formats.put(option.key(), probability(format.get(option.key()), JevRequest.FORMAT + "." + option.key()));
+		}
+		JsonNode importance = probabilities(answers, JevRequest.IMPORTANCE, "score");
+		List<ImportanceLevel> levels = tagSet.importance().levels();
+		Map<Integer, Double> importanceByLevel = new LinkedHashMap<>();
+		for (int position = 0; position < levels.size(); position++) {
+			importanceByLevel.put(levels.get(position).level(), probability(
+					importance.get(Integer.toString(position)), JevRequest.IMPORTANCE + "." + position));
+		}
+		return new Evaluation(topics, regions, formats, importanceByLevel, EVALUATOR, envelope.model(),
+				envelope.inputTokens(), body);
+	}
+
+	/** 응답 머리 — 모델 · 입력 토큰 · 답 묶음을 읽는다. 평가 · 판정 읽기가 함께 쓰는 정본 */
+	private static Envelope envelope(String body) {
 		JsonNode root;
 		try {
 			root = JSON.readTree(body);
@@ -73,30 +131,7 @@ public final class JevResponse {
 		if (answers == null || !answers.isObject()) {
 			throw new Unreadable("answers 가 없다");
 		}
-		Map<String, Double> topics = new LinkedHashMap<>();
-		for (TopicCategory category : tagSet.topics()) {
-			for (AskedTag subtopic : category.subtopics()) {
-				topics.put(subtopic.key(), yes(answers, JevRequest.TOPIC_PREFIX + subtopic.key()));
-			}
-		}
-		Map<String, Double> regions = new LinkedHashMap<>();
-		for (AskedTag region : tagSet.regions()) {
-			regions.put(region.key(), yes(answers, JevRequest.REGION_PREFIX + region.key()));
-		}
-		JsonNode format = probabilities(answers, JevRequest.FORMAT, "choice");
-		Map<String, Double> formats = new LinkedHashMap<>();
-		for (FormatOption option : tagSet.format().options()) {
-			formats.put(option.key(), probability(format.get(option.key()), JevRequest.FORMAT + "." + option.key()));
-		}
-		JsonNode importance = probabilities(answers, JevRequest.IMPORTANCE, "score");
-		List<ImportanceLevel> levels = tagSet.importance().levels();
-		Map<Integer, Double> importanceByLevel = new LinkedHashMap<>();
-		for (int position = 0; position < levels.size(); position++) {
-			importanceByLevel.put(levels.get(position).level(), probability(
-					importance.get(Integer.toString(position)), JevRequest.IMPORTANCE + "." + position));
-		}
-		return new Evaluation(topics, regions, formats, importanceByLevel, EVALUATOR, model.stringValue(),
-				tokens.intValue(), body);
+		return new Envelope(model.stringValue(), tokens.intValue(), answers);
 	}
 
 	private static double yes(JsonNode answers, String name) {
@@ -134,7 +169,12 @@ public final class JevResponse {
 		return value;
 	}
 
-	/** 응답을 읽을 수 없는 까닭 — 문구는 체계 키와 고정 문구만 담는다 */
+	/** 응답 머리 — 모델 버전 · 입력 토큰 · 답 묶음 */
+	private record Envelope(String model, int inputTokens, JsonNode answers) {
+
+	}
+
+	/** 응답을 읽을 수 없는 까닭 — 문구는 질문 이름과 고정 문구만 담는다 */
 	private static final class Unreadable extends RuntimeException {
 
 		Unreadable(String message) {

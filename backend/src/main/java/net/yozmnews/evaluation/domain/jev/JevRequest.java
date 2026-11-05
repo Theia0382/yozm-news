@@ -10,15 +10,19 @@ import net.yozmnews.evaluation.FormatOption;
 import net.yozmnews.evaluation.ImportanceLevel;
 import net.yozmnews.evaluation.TagSetView;
 import net.yozmnews.evaluation.TopicCategory;
+import net.yozmnews.evaluation.domain.evaluator.CandidateEvent;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationInput;
 import net.yozmnews.evaluation.domain.evaluator.FeedContext;
+import net.yozmnews.evaluation.domain.evaluator.MembershipInput;
+import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Jev 요청 본문 — docs/specs/evaluation.md §4 ArticleEvaluator · evaluation-R14.
+ * Jev 요청 본문 — docs/specs/evaluation.md §4 ArticleEvaluator · evaluation-R14 · evaluation-R37.
  * <p>
- * 질문은 넘긴 체계에서 읽는다. 질문 이름은 태그 종류 접두에 태그 키를 붙인 것이고, 응답은 같은 이름으로 답을 돌려준다. 형식 선택지는 체계
- * 순서, 중요도 수준 설명은 수준 순이다 — 응답의 수준 위치는 이 순서로 되찾는다({@link JevResponse}).
+ * 평가의 질문은 넘긴 체계에서 읽는다. 질문 이름은 태그 종류 접두에 태그 키를 붙인 것이고, 응답은 같은 이름으로 답을 돌려준다. 형식 선택지는
+ * 체계 순서, 중요도 수준 설명은 수준 순이다 — 응답의 수준 위치는 이 순서로 되찾는다({@link JevResponse}). 사건 소속 판정의 질문은 후보
+ * 사건마다 Yes/No 하나이고, 이름은 {@value #EVENT_PREFIX} 에 사건 ID 를 붙인 것, 문장은 넘긴 문구로 만든다.
  */
 public final class JevRequest {
 
@@ -33,6 +37,9 @@ public final class JevRequest {
 
 	/** 중요도 질문 이름 */
 	public static final String IMPORTANCE = "importance";
+
+	/** 사건 소속 질문 이름의 접두 */
+	public static final String EVENT_PREFIX = "event.";
 
 	/** state 의 출처 줄에서 조각 사이 */
 	private static final String PART_SEPARATOR = " / ";
@@ -53,6 +60,16 @@ public final class JevRequest {
 	/** 문맥 초과 확인 요청 — 같은 질문, 빈 state */
 	public static String probeBody(String model, TagSetView tagSet) {
 		return write(model, "", tagSet);
+	}
+
+	/** 사건 소속 판정 요청 — state 는 제목 줄 · 요약 줄, 질문은 후보 사건마다 Yes/No 하나(넘긴 순서) */
+	public static String membershipBody(String model, MembershipInput input) {
+		return write(model, String.join("\n", articleLines(input.title(), input.summary())), membershipQuestions(input));
+	}
+
+	/** 사건 소속 판정의 문맥 초과 확인 요청 — 같은 질문, 빈 state */
+	public static String membershipProbeBody(String model, MembershipInput input) {
+		return write(model, "", membershipQuestions(input));
 	}
 
 	/**
@@ -76,11 +93,21 @@ public final class JevRequest {
 				lines.add(String.join(PART_SEPARATOR, parts));
 			}
 		}
-		lines.add("제목: " + input.title());
-		if (input.summary() != null) {
-			lines.add("요약: " + input.summary());
-		}
+		lines.addAll(articleLines(input.title(), input.summary()));
 		return String.join("\n", lines);
+	}
+
+	/** state 의 제목 줄과 요약 줄 — 요약이 없으면 요약 줄은 뺀다. 평가 · 판정의 state 가 함께 쓰는 정본 */
+	private static List<String> articleLines(String title, @Nullable String summary) {
+		return (summary == null) ? List.of("제목: " + title) : List.of("제목: " + title, "요약: " + summary);
+	}
+
+	private static Map<String, Object> membershipQuestions(MembershipInput input) {
+		Map<String, Object> questions = new LinkedHashMap<>();
+		for (CandidateEvent candidate : input.candidates()) {
+			questions.put(EVENT_PREFIX + candidate.eventId(), yesNo(input.wording().question(candidate.titles())));
+		}
+		return questions;
 	}
 
 	private static String write(String model, String state, TagSetView tagSet) {
@@ -100,6 +127,10 @@ public final class JevRequest {
 		questions.put(FORMAT, question("choice", tagSet.format().question(), options));
 		List<String> levels = tagSet.importance().levels().stream().map(ImportanceLevel::description).toList();
 		questions.put(IMPORTANCE, question("score", tagSet.importance().question(), levels));
+		return write(model, state, questions);
+	}
+
+	private static String write(String model, String state, Map<String, Object> questions) {
 		Map<String, Object> root = new LinkedHashMap<>();
 		root.put("model", model);
 		root.put("state", state);
