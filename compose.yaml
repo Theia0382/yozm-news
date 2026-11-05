@@ -2,9 +2,12 @@
 # 바꿀 수 있는 값은 .env.example 에 있다. .env 가 없어도 아래 기본값으로 뜬다.
 services:
   postgres:
-    # PostgreSQL 이미지의 정본 — docs/development/infrastructure.md "PostgreSQL 이미지 정본".
+    # PostgreSQL 이미지의 정본(pgvector 확장이 든 이미지) — docs/development/infrastructure.md "PostgreSQL 이미지 정본".
     # 메이저를 바꾸기 전에 배포 DB 를 옮긴다 — docs/operations/deployment.md "업데이트"
-    image: postgres:18
+    image: pgvector/pgvector:pg18-trixie
+    labels:
+      # local 의 Compose 연동이 이 서비스를 PostgreSQL 로 알아보게 한다(이미지 이름이 postgres 가 아니다) — docs/development/infrastructure.md "개발용 Compose"
+      org.springframework.boot.service-connection: postgres
     profiles: [dev]
     environment:
       POSTGRES_DB: yozmnews
