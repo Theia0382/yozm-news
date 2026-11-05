@@ -55,3 +55,7 @@
 | 애매한 구간을 운영자 LLM 으로 판정한다 | 운영자 키와 생성형 LLM 비용이 생기고 셀프 호스팅 요건이 늘어난다. 피할 수 없고 비용이 적을 때만 다시 검토한다 |
 | `event` 에 별도 판정 포트와 Jev 어댑터를 둔다 | Jev 를 부르는 곳이 둘이 되어 접속 설정 · 로컬 대체물 · 판정 기록이 두 곳에 생긴다 |
 | 외부 임베딩 API 를 기본으로 쓴다 | 운영자 API 비용과 외부 의존이 생긴다. 포트 뒤에 두어 설정으로 바꿀 수 있게만 한다 |
+
+## 후속 기록
+
+- 2026-11-05: 결정 절 "Jev 관문은 하나로 둔다"의 인자 · 반환 타입 — [ADR-0071](0071-event-membership-judged-from-article-ids-with-questions-built-in-evaluation.md) · [evaluation Spec §5](../specs/evaluation.md#5-규칙과-불변식) evaluation-R37 · R38

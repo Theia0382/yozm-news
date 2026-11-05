@@ -5,14 +5,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 
+import net.yozmnews.evaluation.domain.evaluator.CandidateEvent;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationInput;
 import net.yozmnews.evaluation.domain.evaluator.FeedContext;
+import net.yozmnews.evaluation.domain.evaluator.MembershipInput;
+import net.yozmnews.evaluation.domain.evaluator.MembershipWording;
 import org.junit.jupiter.api.Test;
 
 /**
- * Jev 요청 본문 — 질문 이름 · 질문 문장 · 선택지 · 수준 순서, state 형식.
+ * Jev 요청 본문 — 질문 이름 · 질문 문장 · 선택지 · 수준 순서, state 형식. 사건 소속 판정의 질문 · state.
  * <p>
- * 지키는 규칙: evaluation-R14
+ * 지키는 규칙: evaluation-R14 · evaluation-R37
  */
 class JevRequestTests {
 
@@ -67,6 +70,39 @@ class JevRequestTests {
 	@Test
 	void writesOnlyTheTitleWithoutFeeds() {
 		assertThat(JevRequest.state(new EvaluationInput("제목", null, List.of()))).isEqualTo("제목: 제목");
+	}
+
+	@Test
+	void asksOneYesNoQuestionPerCandidateEventInTheGivenOrder() {
+		MembershipInput input = new MembershipInput("서울 시장 선거 결과", "개표가 끝났다",
+				List.of(new CandidateEvent(15, List.of("부산 항만 파업", "부산항 물류 차질")),
+						new CandidateEvent(12, List.of("서울 시장 선거 개표"))),
+				new MembershipWording("w-test", "같은 사건인가"));
+
+		assertThat(JevRequest.membershipBody("jev-latest", input)).isEqualTo("{\"model\":\"jev-latest\","
+				+ "\"state\":\"제목: 서울 시장 선거 결과\\n요약: 개표가 끝났다\",\"questions\":{"
+				+ "\"event.15\":{\"type\":\"noul\",\"instructions\":\"같은 사건인가\\n- 부산 항만 파업\\n- 부산항 물류 차질\"},"
+				+ "\"event.12\":{\"type\":\"noul\",\"instructions\":\"같은 사건인가\\n- 서울 시장 선거 개표\"}}}");
+	}
+
+	@Test
+	void leavesOutTheSummaryLineOfTheJudgedArticleWithoutASummary() {
+		MembershipInput input = new MembershipInput("서울 시장 선거 결과", null,
+				List.of(new CandidateEvent(12, List.of("서울 시장 선거 개표"))), new MembershipWording("w-test", "같은 사건인가"));
+
+		assertThat(JevRequest.membershipBody("jev-latest", input)).isEqualTo("{\"model\":\"jev-latest\","
+				+ "\"state\":\"제목: 서울 시장 선거 결과\",\"questions\":{"
+				+ "\"event.12\":{\"type\":\"noul\",\"instructions\":\"같은 사건인가\\n- 서울 시장 선거 개표\"}}}");
+	}
+
+	@Test
+	void probesTheMembershipWithTheSameQuestionsAndAnEmptyState() {
+		MembershipInput input = new MembershipInput("서울 시장 선거 결과", "개표가 끝났다",
+				List.of(new CandidateEvent(12, List.of("서울 시장 선거 개표"))), new MembershipWording("w-test", "같은 사건인가"));
+
+		assertThat(JevRequest.membershipProbeBody("jev-1.14.0", input)).isEqualTo("{\"model\":\"jev-1.14.0\","
+				+ "\"state\":\"\",\"questions\":{"
+				+ "\"event.12\":{\"type\":\"noul\",\"instructions\":\"같은 사건인가\\n- 서울 시장 선거 개표\"}}}");
 	}
 
 }

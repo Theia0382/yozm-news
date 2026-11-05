@@ -27,4 +27,11 @@ public record EvaluationInput(String title, @Nullable String summary, List<FeedC
 		feeds = List.copyOf(feeds);
 	}
 
+	/**
+	 * 저장된 요약을 평가 입력의 요약으로 — 공백뿐인 요약은 없는 요약이다(evaluation-R19). 평가 회차 · 사건 소속 판정이 함께 쓰는 정본
+	 */
+	public static @Nullable String presentSummary(@Nullable String summary) {
+		return (summary == null || summary.isBlank()) ? null : summary;
+	}
+
 }

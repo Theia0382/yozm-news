@@ -3,16 +3,22 @@ package net.yozmnews.evaluation.domain.jev;
 import static net.yozmnews.evaluation.domain.jev.JevFixtures.TAG_SET;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
 import java.util.Map;
 
+import net.yozmnews.evaluation.EvaluatorFailureKind;
+import net.yozmnews.evaluation.domain.evaluator.CandidateEvent;
 import net.yozmnews.evaluation.domain.evaluator.Evaluation;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationFailure;
+import net.yozmnews.evaluation.domain.evaluator.Membership;
+import net.yozmnews.evaluation.domain.evaluator.MembershipInput;
+import net.yozmnews.evaluation.domain.evaluator.MembershipWording;
 import org.junit.jupiter.api.Test;
 
 /**
- * Jev 의 200 응답을 포트 결과로 — 답의 이름 · 종류 · 수준 위치, 읽을 수 없는 응답은 평가기 사용 불가.
+ * Jev 의 200 응답을 포트 결과로 — 답의 이름 · 종류 · 수준 위치, 읽을 수 없는 응답은 평가기 사용 불가. 사건 소속 판정의 응답.
  * <p>
- * 지키는 규칙: evaluation-R14 · evaluation-R15(포트는 분포만)
+ * 지키는 규칙: evaluation-R14 · evaluation-R15(포트는 분포만) · evaluation-R38
  */
 class JevResponseTests {
 
@@ -28,6 +34,41 @@ class JevResponseTests {
 			"probabilities":{"0":0.04,"1":0.37,"2":0.59}},\
 			"topic.removed":{"type":"noul","noul":0.5}},\
 			"usage":{"input_tokens":3245,"output_tokens":1077}}""";
+
+	/** 사건 소속 판정 응답 — 묻지 않은 후보(event.99)의 답을 함께 둔다 */
+	private static final String MEMBERSHIP_BODY = """
+			{"model":"jev-1.14.0","answers":{\
+			"event.12":{"type":"noul","noul":0.83},\
+			"event.15":{"type":"noul","noul":0.07},\
+			"event.99":{"type":"noul","noul":0.5}},\
+			"usage":{"input_tokens":812,"output_tokens":40}}""";
+
+	private static final MembershipInput MEMBERSHIP = new MembershipInput("서울 시장 선거 결과", null,
+			List.of(new CandidateEvent(12, List.of("서울 시장 선거 개표")), new CandidateEvent(15, List.of("부산 항만 파업"))),
+			new MembershipWording("w-test", "같은 사건인가"));
+
+	@Test
+	void readsTheAnswerOfEveryAskedEventAndIgnoresOthers() {
+		assertThat(JevResponse.readMembership(MEMBERSHIP_BODY, "req_1", MEMBERSHIP))
+			.isEqualTo(new Membership(Map.of(12L, 0.83, 15L, 0.07), "jev", "jev-1.14.0", 812, MEMBERSHIP_BODY));
+	}
+
+	@Test
+	void aMembershipAnswerThatIsMissingOrMalformedIsUnavailable() {
+		assertThat(JevResponse.readMembership(MEMBERSHIP_BODY.replace("\"event.15\":{\"type\":\"noul\",\"noul\":0.07},", ""),
+				"req_1", MEMBERSHIP))
+			.isEqualTo(unavailable("답이 없다 — event.15 (요청 req_1)"));
+		assertThat(JevResponse.readMembership(MEMBERSHIP_BODY.replace("\"event.12\":{\"type\":\"noul\"",
+				"\"event.12\":{\"type\":\"choice\""), null, MEMBERSHIP))
+			.isEqualTo(unavailable("답의 종류가 다르다 (기대 noul) — event.12"));
+		assertThat(JevResponse.readMembership(MEMBERSHIP_BODY.replace("0.83", "1.2"), null, MEMBERSHIP))
+			.isEqualTo(unavailable("확률이 0 ~ 1 이 아니다 — event.12"));
+		assertThat(JevResponse.readMembership(MEMBERSHIP_BODY.replace("0.83", "\"NaN\""), null, MEMBERSHIP))
+			.isEqualTo(unavailable("확률이 없거나 숫자가 아니다 — event.12"));
+		assertThat(JevResponse.readMembership(MEMBERSHIP_BODY.replace("\"model\":\"jev-1.14.0\",", ""), null,
+				MEMBERSHIP))
+			.isEqualTo(unavailable("model 이 없거나 비었다"));
+	}
 
 	@Test
 	void readsEveryAnswerIntoTheEvaluation() {
@@ -121,7 +162,7 @@ class JevResponseTests {
 	}
 
 	private static EvaluationFailure unavailable(String problem) {
-		return new EvaluationFailure(EvaluationFailure.Kind.EVALUATOR_UNAVAILABLE, "Jev 응답을 읽을 수 없다 — " + problem);
+		return new EvaluationFailure(EvaluatorFailureKind.EVALUATOR_UNAVAILABLE, "Jev 응답을 읽을 수 없다 — " + problem);
 	}
 
 }

@@ -26,6 +26,8 @@ import net.yozmnews.evaluation.domain.evaluator.ArticleEvaluator;
 import net.yozmnews.evaluation.domain.evaluator.Evaluation;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationInput;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationResult;
+import net.yozmnews.evaluation.domain.evaluator.MembershipInput;
+import net.yozmnews.evaluation.domain.evaluator.MembershipResult;
 import net.yozmnews.evaluation.domain.evaluator.RereadResult;
 import net.yozmnews.evaluation.domain.result.EvaluationResultRepository;
 import net.yozmnews.evaluation.domain.tagset.TagSetRepository;
@@ -241,7 +243,7 @@ class TagBackfillRoundTests {
 			.single();
 	}
 
-	/** 다시 읽기만 하는 시험 평가기 — 실제 Jev 평가기에 맡긴다. 평가는 크게 실패한다 */
+	/** 다시 읽기만 하는 시험 평가기 — 실제 Jev 평가기에 맡긴다. 평가 · 사건 소속 판정은 크게 실패한다 */
 	private static class Rereading implements ArticleEvaluator {
 
 		private final ArticleEvaluator delegate;
@@ -258,6 +260,11 @@ class TagBackfillRoundTests {
 		@Override
 		public RereadResult reread(String evaluator, String rawResponse, TagSetView tagSet) {
 			return this.delegate.reread(evaluator, rawResponse, tagSet);
+		}
+
+		@Override
+		public MembershipResult judgeMembership(MembershipInput input) {
+			throw new UnsupportedOperationException("이 시험 평가기는 사건 소속을 판정하지 않는다");
 		}
 
 	}

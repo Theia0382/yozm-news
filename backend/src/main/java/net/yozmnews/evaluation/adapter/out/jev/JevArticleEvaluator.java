@@ -19,14 +19,18 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Flow;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
+import net.yozmnews.evaluation.EvaluatorFailureKind;
 import net.yozmnews.evaluation.TagSetView;
 import net.yozmnews.evaluation.domain.evaluator.ArticleEvaluator;
 import net.yozmnews.evaluation.domain.evaluator.Evaluation;
-import net.yozmnews.evaluation.domain.evaluator.EvaluationFailure.Kind;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationFailure;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationInput;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationResult;
+import net.yozmnews.evaluation.domain.evaluator.MembershipInput;
+import net.yozmnews.evaluation.domain.evaluator.MembershipResult;
 import net.yozmnews.evaluation.domain.evaluator.RereadFailure;
 import net.yozmnews.evaluation.domain.evaluator.RereadResult;
 import net.yozmnews.evaluation.domain.jev.JevApiKey;
@@ -39,9 +43,10 @@ import org.jspecify.annotations.Nullable;
 /**
  * Jev(TypeSafe System One) 평가기 — docs/specs/evaluation.md §4 구현과 로컬 대체물.
  * <p>
- * 기사 하나에 요청 하나를 보낸다. 문맥 초과면 같은 질문을 빈 state 로 한 번 더 물어 기사 탓인지 체계 탓인지 가른다 — 확인 요청의 답은
- * 평가로 쓰지 않는다. 요청 하나(헤더 · 본문 전부)에 마감을 걸고, 응답 본문은 상한까지만 받는다. 클라이언트는 리다이렉트를 따르지 않고 시스템
- * 프록시를 읽지 않으며, 요청을 다시 보내지 않는다 — 재시도는 평가 대기가 한다.
+ * 평가 · 사건 소속 판정마다 기사 하나에 요청 하나를 보낸다. 문맥 초과면 같은 질문을 빈 state 로 한 번 더 물어 기사(state) 탓인지 질문
+ * 쪽(체계 · 서술) 탓인지 가른다 — 확인 요청의 답은 결과로 쓰지 않는다. 요청 하나(헤더 · 본문 전부)에 마감을 걸고, 응답 본문은 상한까지만
+ * 받는다. 클라이언트는 리다이렉트를 따르지 않고 시스템 프록시를 읽지 않으며, 요청을 다시 보내지 않는다 — 재시도는 부르는 쪽(평가 대기 · 판정을
+ * 부른 작업)이 한다.
  * <p>
  * 키는 {@code Authorization} 헤더로만 나간다. 실패 문구에는 요청 헤더 · 요청 본문 · 응답 본문 원문을 담지 않는다.
  */
@@ -108,16 +113,17 @@ public final class JevArticleEvaluator implements ArticleEvaluator, AutoCloseabl
 	public EvaluationResult evaluate(EvaluationInput input, TagSetView tagSet) {
 		Objects.requireNonNull(input, "input");
 		Objects.requireNonNull(tagSet, "tagSet");
-		return switch (send(JevRequest.body(this.model, input, tagSet))) {
-			case Exchange.Broken broken -> new EvaluationFailure(Kind.TRANSIENT, broken.message());
-			case Exchange.TooLarge tooLarge -> new EvaluationFailure(Kind.EVALUATOR_UNAVAILABLE, BODY_TOO_LARGE);
-			case Exchange.Answered answered when answered.status() == 200 ->
-				JevResponse.read(answered.body(), answered.requestId(), tagSet);
-			case Exchange.Answered answered -> switch (JevErrors.classify(answered.status(), answered.body())) {
-				case JevOutcome.Failed failed -> new EvaluationFailure(failed.kind(), message(REQUEST_FAILED, answered));
-				case JevOutcome.ContextExceeded exceeded -> probe(answered, tagSet);
-			};
-		};
+		return exchange(JevRequest.body(this.model, input, tagSet), () -> JevRequest.probeBody(this.model, tagSet),
+				answered -> JevResponse.read(answered.body(), answered.requestId(), tagSet), failure -> failure);
+	}
+
+	@Override
+	public MembershipResult judgeMembership(MembershipInput input) {
+		Objects.requireNonNull(input, "input");
+		return exchange(JevRequest.membershipBody(this.model, input),
+				() -> JevRequest.membershipProbeBody(this.model, input),
+				answered -> JevResponse.readMembership(answered.body(), answered.requestId(), input),
+				failure -> failure);
 	}
 
 	/** 저장된 Jev 응답 본문을 넘긴 체계로 다시 읽는다 — 요청을 보내지 않는다 */
@@ -135,15 +141,40 @@ public final class JevArticleEvaluator implements ArticleEvaluator, AutoCloseabl
 		};
 	}
 
-	/** 문맥 초과의 원인을 같은 질문 · 빈 state 로 가른다 */
-	private EvaluationFailure probe(Exchange.Answered original, TagSetView tagSet) {
-		return switch (send(JevRequest.probeBody(this.model, tagSet))) {
-			case Exchange.Broken broken -> new EvaluationFailure(Kind.TRANSIENT,
+	/**
+	 * 요청 하나를 보내고 결말을 가른다 — 평가 · 판정이 함께 쓰는 정본. 200 은 {@code read} 로 읽고, 그 밖은 실패다. 문맥 초과면
+	 * {@code probeBody} 로 확인 요청을 보낸다.
+	 * @param failed 실패를 그 연산의 결과로 — 실패 레코드는 두 결과 타입을 함께 구현한다
+	 */
+	private <R> R exchange(String body, Supplier<String> probeBody, Function<Exchange.Answered, R> read,
+			Function<EvaluationFailure, R> failed) {
+		return switch (send(body)) {
+			case Exchange.Broken broken ->
+				failed.apply(new EvaluationFailure(EvaluatorFailureKind.TRANSIENT, broken.message()));
+			case Exchange.TooLarge tooLarge ->
+				failed.apply(new EvaluationFailure(EvaluatorFailureKind.EVALUATOR_UNAVAILABLE, BODY_TOO_LARGE));
+			case Exchange.Answered answered when answered.status() == 200 -> read.apply(answered);
+			case Exchange.Answered answered -> failed.apply(refused(answered, probeBody));
+		};
+	}
+
+	/** 200 이 아닌 응답의 실패 — 문맥 초과면 확인 요청으로 가른다 */
+	private EvaluationFailure refused(Exchange.Answered answered, Supplier<String> probeBody) {
+		return switch (JevErrors.classify(answered.status(), answered.body())) {
+			case JevOutcome.Failed failure -> new EvaluationFailure(failure.kind(), message(REQUEST_FAILED, answered));
+			case JevOutcome.ContextExceeded exceeded -> probe(answered, probeBody.get());
+		};
+	}
+
+	/** 문맥 초과의 원인을 같은 질문 · 빈 state 의 확인 요청으로 가른다 */
+	private EvaluationFailure probe(Exchange.Answered original, String probeBody) {
+		return switch (send(probeBody)) {
+			case Exchange.Broken broken -> new EvaluationFailure(EvaluatorFailureKind.TRANSIENT,
 					message("Jev 문맥 초과 — 빈 state 확인 요청이 실패했다: " + broken.message(), original));
-			case Exchange.TooLarge tooLarge -> new EvaluationFailure(Kind.EVALUATOR_UNAVAILABLE,
+			case Exchange.TooLarge tooLarge -> new EvaluationFailure(EvaluatorFailureKind.EVALUATOR_UNAVAILABLE,
 					"Jev 문맥 초과 — 빈 state 확인 요청: " + BODY_TOO_LARGE);
 			case Exchange.Answered probe -> {
-				Kind kind = JevErrors.afterProbe(probe.status(), probe.body());
+				EvaluatorFailureKind kind = JevErrors.afterProbe(probe.status(), probe.body());
 				yield new EvaluationFailure(kind, switch (kind) {
 					case ARTICLE_REJECTED -> message(ARTICLE_TOO_LONG, original);
 					case TRANSIENT, EVALUATOR_UNAVAILABLE -> message(PROBE_FAILED, probe);

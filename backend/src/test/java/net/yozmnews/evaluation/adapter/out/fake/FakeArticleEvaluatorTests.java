@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 import net.yozmnews.evaluation.AskedTag;
+import net.yozmnews.evaluation.EvaluatorFailureKind;
 import net.yozmnews.evaluation.FormatChoice;
 import net.yozmnews.evaluation.FormatOption;
 import net.yozmnews.evaluation.ImportanceLevel;
@@ -15,18 +16,22 @@ import net.yozmnews.evaluation.ImportanceScale;
 import net.yozmnews.evaluation.TagSetId;
 import net.yozmnews.evaluation.TagSetView;
 import net.yozmnews.evaluation.TopicCategory;
+import net.yozmnews.evaluation.domain.evaluator.CandidateEvent;
 import net.yozmnews.evaluation.domain.evaluator.Evaluation;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationFailure;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationInput;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationResult;
 import net.yozmnews.evaluation.domain.evaluator.FeedContext;
+import net.yozmnews.evaluation.domain.evaluator.Membership;
+import net.yozmnews.evaluation.domain.evaluator.MembershipInput;
+import net.yozmnews.evaluation.domain.evaluator.MembershipWording;
 import net.yozmnews.evaluation.domain.evaluator.RereadFailure;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * 고정 규칙 평가기 — 결정성 · 채움 · 이름 일치 · 실패 표지 · 입력 토큰 · 원본 응답과 그 다시 읽기. 해시로 고른 위치는 단언하지 않고 개수와 규칙이 정한
- * 값을 본다.
+ * 고정 규칙 평가기 — 결정성 · 채움 · 이름 일치 · 실패 표지 · 입력 토큰 · 원본 응답과 그 다시 읽기, 사건 소속 판정의 조각 겹침. 해시로 고른
+ * 위치는 단언하지 않고 개수와 규칙이 정한 값을 본다.
  */
 class FakeArticleEvaluatorTests {
 
@@ -229,17 +234,17 @@ class FakeArticleEvaluatorTests {
 	@Test
 	void failsWithTheKindOfTheMarkerInTheTitle() {
 		assertThat(this.evaluator.evaluate(input("[fake:transient] 속보", "정치"), TAG_SET))
-			.isEqualTo(new EvaluationFailure(EvaluationFailure.Kind.TRANSIENT, "Fake 평가기 표지에 따른 실패"));
+			.isEqualTo(new EvaluationFailure(EvaluatorFailureKind.TRANSIENT, "Fake 평가기 표지에 따른 실패"));
 		assertThat(this.evaluator.evaluate(input("속보 [fake:article-rejected]", "정치"), TAG_SET))
-			.isEqualTo(new EvaluationFailure(EvaluationFailure.Kind.ARTICLE_REJECTED, "Fake 평가기 표지에 따른 실패"));
+			.isEqualTo(new EvaluationFailure(EvaluatorFailureKind.ARTICLE_REJECTED, "Fake 평가기 표지에 따른 실패"));
 		assertThat(this.evaluator.evaluate(input("[fake:evaluator-unavailable]", "정치"), TAG_SET))
-			.isEqualTo(new EvaluationFailure(EvaluationFailure.Kind.EVALUATOR_UNAVAILABLE, "Fake 평가기 표지에 따른 실패"));
+			.isEqualTo(new EvaluationFailure(EvaluatorFailureKind.EVALUATOR_UNAVAILABLE, "Fake 평가기 표지에 따른 실패"));
 	}
 
 	@Test
 	void takesTheFirstKindWhenTwoMarkersArePresent() {
 		assertThat(this.evaluator.evaluate(input("[fake:evaluator-unavailable] [fake:transient]", "정치"), TAG_SET))
-			.isEqualTo(new EvaluationFailure(EvaluationFailure.Kind.TRANSIENT, "Fake 평가기 표지에 따른 실패"));
+			.isEqualTo(new EvaluationFailure(EvaluatorFailureKind.TRANSIENT, "Fake 평가기 표지에 따른 실패"));
 	}
 
 	@Test
@@ -285,6 +290,38 @@ class FakeArticleEvaluatorTests {
 		assertThat(keys(raw, "regions")).containsExactly("domestic", "world");
 		assertThat(keys(raw, "formats")).containsExactly("feature", "opinion", "straight");
 		assertThat(keys(raw, "importance")).containsExactly("1", "2", "3", "4", "5");
+	}
+
+	@Test
+	void judgesMembershipByTheSharedPiecesOfTheTitles() {
+		MembershipInput input = membership("서울 시장 선거 결과 발표");
+		String raw = "{\"evaluator\":\"fake\",\"modelVersion\":\"fake-rules-2\",\"events\":{\"12\":0.41,\"15\":0.05}}";
+
+		assertThat(this.evaluator.judgeMembership(input))
+			.isEqualTo(new Membership(Map.of(12L, 0.41, 15L, 0.05), "fake", "fake-rules-2", 25, raw));
+		assertThat(this.evaluator.judgeMembership(input)).isEqualTo(this.evaluator.judgeMembership(input));
+	}
+
+	@Test
+	void judgesMembershipAtTheFloorWithoutPiecesInTheJudgedTitle() {
+		assertThat(((Membership) this.evaluator.judgeMembership(membership("가 · 나"))).probabilities())
+			.isEqualTo(Map.of(12L, 0.05, 15L, 0.05));
+	}
+
+	@Test
+	void failsTheMembershipWithTheKindOfTheFirstMarkerInTheJudgedTitle() {
+		assertThat(this.evaluator.judgeMembership(membership("[fake:article-rejected] 서울 시장")))
+			.isEqualTo(new EvaluationFailure(EvaluatorFailureKind.ARTICLE_REJECTED, "Fake 평가기 표지에 따른 실패"));
+		assertThat(this.evaluator.judgeMembership(membership("[fake:evaluator-unavailable] [fake:transient]")))
+			.isEqualTo(new EvaluationFailure(EvaluatorFailureKind.TRANSIENT, "Fake 평가기 표지에 따른 실패"));
+		assertThat(this.evaluator.judgeMembership(membership("서울 [fake:evaluator-unavailable]")))
+			.isEqualTo(new EvaluationFailure(EvaluatorFailureKind.EVALUATOR_UNAVAILABLE, "Fake 평가기 표지에 따른 실패"));
+	}
+
+	/** 후보 12(서술 "서울 시장 개표") · 15(서술 "부산 항만 파업"), 요약 없음 */
+	private static MembershipInput membership(String title) {
+		return new MembershipInput(title, null, List.of(new CandidateEvent(12, List.of("서울 시장 개표")),
+				new CandidateEvent(15, List.of("부산 항만 파업"))), new MembershipWording("w-test", "같은 사건인가"));
 	}
 
 	private Evaluation evaluate(EvaluationInput input) {

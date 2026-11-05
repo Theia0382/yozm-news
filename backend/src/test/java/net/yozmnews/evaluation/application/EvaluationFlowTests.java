@@ -48,7 +48,12 @@ import net.yozmnews.evaluation.domain.evaluator.Evaluation;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationInput;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationResult;
 import net.yozmnews.evaluation.domain.evaluator.FeedContext;
+import net.yozmnews.evaluation.domain.evaluator.MembershipInput;
+import net.yozmnews.evaluation.domain.evaluator.MembershipResult;
 import net.yozmnews.evaluation.domain.evaluator.RereadResult;
+import net.yozmnews.evaluation.domain.membership.EventJudgementRepository;
+import net.yozmnews.evaluation.domain.membership.JudgedCandidate;
+import net.yozmnews.evaluation.domain.membership.MembershipRecord;
 import net.yozmnews.evaluation.domain.queue.EvaluationQueueRepository;
 import net.yozmnews.evaluation.domain.result.EvaluationRecord;
 import net.yozmnews.evaluation.domain.result.EvaluationResultRepository;
@@ -116,6 +121,9 @@ class EvaluationFlowTests {
 	EvaluationQueueRepository queue;
 
 	@Autowired
+	EventJudgementRepository judgements;
+
+	@Autowired
 	TagSetRepository tagSets;
 
 	@Autowired
@@ -144,6 +152,7 @@ class EvaluationFlowTests {
 	@BeforeEach
 	@AfterEach
 	void reset() {
+		this.jdbc.sql("delete from article_event_judgements").update();
 		this.jdbc.sql("delete from article_tags").update();
 		this.jdbc.sql("delete from article_evaluations").update();
 		this.jdbc.sql("delete from evaluation_queue").update();
@@ -494,20 +503,25 @@ class EvaluationFlowTests {
 		long kept = enqueued("날씨 맑음", 32, 321);
 		round(new FakeArticleEvaluator()).run();
 		this.queue.enqueue(new ArticleId(gone), T);
+		// 판정 원본 — 지울 기사를 판정한 행, 남길 기사를 판정하며 지울 기사를 서술로 쓴 행
+		this.judgements.insert(judgement(gone, kept));
+		this.judgements.insert(judgement(kept, gone));
 
 		this.transaction.executeWithoutResult(status -> this.events.publishEvent(new SourceDeleted(new SourceId(31))));
-		await().atMost(Duration.ofSeconds(10)).until(() -> evaluatedArticles().equals(List.of(kept)));
+		await().atMost(Duration.ofSeconds(10)).until(() -> evaluatedArticles().equals(List.of(kept))
+				&& judgedArticles().equals(List.of(kept)));
 
 		assertThat(this.jdbc.sql("select id from articles").query(Long.class).list()).containsExactly(kept);
 		assertThat(this.jdbc.sql("select distinct article_id from article_tags").query(Long.class).list())
 			.containsExactly(kept);
 		assertThat(queueRows()).isZero();
+		assertThat(judgedArticles()).containsExactly(kept);
 	}
 
 	@Test
 	void aResultIsDiscardedWhenTheArticleIsRemovedDuringItsEvaluation() {
 		long article = enqueued("경제 지표 발표");
-		ArticleEventsListener listener = new ArticleEventsListener(this.queue, this.results);
+		ArticleEventsListener listener = new ArticleEventsListener(this.queue, this.results, this.judgements);
 		EvaluateOnly removing = (input, tagSet) -> {
 			this.transaction.executeWithoutResult(
 					status -> listener.on(new ArticlesRemoved(List.of(new ArticleId(article)))));
@@ -526,7 +540,7 @@ class EvaluationFlowTests {
 		CountDownLatch inserted = new CountDownLatch(1);
 		CountDownLatch release = new CountDownLatch(1);
 		EvaluationResultRepository pausing = new Pausing(this.results, inserted, release);
-		ArticleEventsListener listener = new ArticleEventsListener(this.queue, this.results);
+		ArticleEventsListener listener = new ArticleEventsListener(this.queue, this.results, this.judgements);
 		try {
 			CompletableFuture<Void> saving = CompletableFuture.runAsync(() -> round(new FakeArticleEvaluator(), pausing).run());
 			assertThat(inserted.await(10, TimeUnit.SECONDS)).isTrue();
@@ -628,6 +642,34 @@ class EvaluationFlowTests {
 
 	private long queueRows() {
 		return this.jdbc.sql("select count(*) from evaluation_queue").query(Long.class).single();
+	}
+
+	@Test
+	void removingArticlesRemovesTheirMembershipJudgementsOnlyAndAgainChangesNothing() {
+		ArticleEventsListener listener = new ArticleEventsListener(this.queue, this.results, this.judgements);
+		this.judgements.insert(judgement(41, 43));
+		this.judgements.insert(judgement(41, 44));
+		this.judgements.insert(judgement(42, 41));
+		ArticlesRemoved removed = new ArticlesRemoved(List.of(new ArticleId(41)));
+
+		this.transaction.executeWithoutResult(status -> listener.on(removed));
+		assertThat(judgedArticles()).containsExactly(42L);
+		this.transaction.executeWithoutResult(status -> listener.on(removed));
+		assertThat(judgedArticles()).containsExactly(42L);
+	}
+
+	/** 기사 하나를 사건 12 에 대해 판정한 원본 — 서술 기사 하나 */
+	private static MembershipRecord judgement(long article, long described) {
+		return new MembershipRecord(new ArticleId(article),
+				List.of(new JudgedCandidate(12, List.of(new ArticleId(described)), 0.8)), "fake", "fake-rules-2",
+				"membership-1", 10, "{\"events\":{\"12\":0.8}}", T);
+	}
+
+	/** 판정 원본이 있는 기사 — 기사 ID 순, 한 번씩 */
+	private List<Long> judgedArticles() {
+		return this.jdbc.sql("select distinct article_id from article_event_judgements order by article_id")
+			.query(Long.class)
+			.list();
 	}
 
 	private long evaluationRows() {
@@ -838,13 +880,18 @@ class EvaluationFlowTests {
 
 	}
 
-	/** 평가만 하는 시험 평가기 — 이 시험은 원본 응답을 다시 읽지 않으므로 다시 읽기는 크게 실패한다 */
+	/** 평가만 하는 시험 평가기 — 이 시험은 원본 응답을 다시 읽거나 사건 소속을 판정하지 않으므로 그 둘은 크게 실패한다 */
 	@FunctionalInterface
 	private interface EvaluateOnly extends ArticleEvaluator {
 
 		@Override
 		default RereadResult reread(String evaluator, String rawResponse, TagSetView tagSet) {
 			throw new UnsupportedOperationException("이 시험 평가기는 원본 응답을 다시 읽지 않는다");
+		}
+
+		@Override
+		default MembershipResult judgeMembership(MembershipInput input) {
+			throw new UnsupportedOperationException("이 시험 평가기는 사건 소속을 판정하지 않는다");
 		}
 
 	}
