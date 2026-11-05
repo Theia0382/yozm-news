@@ -71,7 +71,7 @@ docker compose --profile dev down -v                                            
 - 바꿀 수 있는 값(호스트 포트)은 `.env.example` 에 있다. 필요한 줄만 `.env` 로 옮긴다 — `.env` 는 없어도 된다
 - 컨테이너 · 볼륨은 checkout(작업 디렉터리)마다 따로 생긴다. 두 checkout 의 환경을 함께 띄우면 mock OIDC 서버의 호스트 포트가 겹치니 한쪽의 `.env` 에서 바꾼다. checkout 을 지우기 전에 그 checkout 에서 `down -v` 로 정리한다
 - 운영자 화면(`/admin`)을 쓰려면 운영자 토큰을 준다 — 예: `export YOZMNEWS_ADMIN_TOKEN=$(openssl rand -hex 32)` 로 두고 실행한 뒤 화면에 `echo $YOZMNEWS_ADMIN_TOKEN` 의 값을 넣는다. 없으면 운영자 기능이 닫힌다([운영 설정 — 운영자](docs/operations/configuration.md#운영자))
-- 자기 PostgreSQL 을 쓰려면 Compose 연동을 끄고(`SPRING_DOCKER_COMPOSE_ENABLED=false`) DB 접속 환경 변수(`SPRING_DATASOURCE_*` — [운영 설정 — DB 접속](docs/operations/configuration.md#db-접속))를 준다
+- 자기 PostgreSQL 을 쓰려면 Compose 연동을 끄고(`SPRING_DOCKER_COMPOSE_ENABLED=false`) DB 접속 환경 변수(`SPRING_DATASOURCE_*` — [운영 설정 — DB 접속](docs/operations/configuration.md#db-접속))를 준다. 그 DB 에는 pgvector 확장(0.8 이상)이 있어야 한다 — 설치 조건은 [배포와 운영 "서비스"](docs/operations/deployment.md#서비스)
 - PostgreSQL 이미지는 `compose.yaml` 이 정한다([PostgreSQL 이미지 정본](docs/development/infrastructure.md#postgresql-이미지-정본)). 메이저 버전을 올린 뒤에는 `down -v` 로 개발 DB 를 다시 만든다
 
 **프론트엔드**
