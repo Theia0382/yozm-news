@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 import net.yozmnews.evaluation.AskedTag;
+import net.yozmnews.evaluation.EvaluatorFailureKind;
 import net.yozmnews.evaluation.FormatChoice;
 import net.yozmnews.evaluation.FormatOption;
 import net.yozmnews.evaluation.ImportanceLevel;
@@ -229,17 +230,17 @@ class FakeArticleEvaluatorTests {
 	@Test
 	void failsWithTheKindOfTheMarkerInTheTitle() {
 		assertThat(this.evaluator.evaluate(input("[fake:transient] 속보", "정치"), TAG_SET))
-			.isEqualTo(new EvaluationFailure(EvaluationFailure.Kind.TRANSIENT, "Fake 평가기 표지에 따른 실패"));
+			.isEqualTo(new EvaluationFailure(EvaluatorFailureKind.TRANSIENT, "Fake 평가기 표지에 따른 실패"));
 		assertThat(this.evaluator.evaluate(input("속보 [fake:article-rejected]", "정치"), TAG_SET))
-			.isEqualTo(new EvaluationFailure(EvaluationFailure.Kind.ARTICLE_REJECTED, "Fake 평가기 표지에 따른 실패"));
+			.isEqualTo(new EvaluationFailure(EvaluatorFailureKind.ARTICLE_REJECTED, "Fake 평가기 표지에 따른 실패"));
 		assertThat(this.evaluator.evaluate(input("[fake:evaluator-unavailable]", "정치"), TAG_SET))
-			.isEqualTo(new EvaluationFailure(EvaluationFailure.Kind.EVALUATOR_UNAVAILABLE, "Fake 평가기 표지에 따른 실패"));
+			.isEqualTo(new EvaluationFailure(EvaluatorFailureKind.EVALUATOR_UNAVAILABLE, "Fake 평가기 표지에 따른 실패"));
 	}
 
 	@Test
 	void takesTheFirstKindWhenTwoMarkersArePresent() {
 		assertThat(this.evaluator.evaluate(input("[fake:evaluator-unavailable] [fake:transient]", "정치"), TAG_SET))
-			.isEqualTo(new EvaluationFailure(EvaluationFailure.Kind.TRANSIENT, "Fake 평가기 표지에 따른 실패"));
+			.isEqualTo(new EvaluationFailure(EvaluatorFailureKind.TRANSIENT, "Fake 평가기 표지에 따른 실패"));
 	}
 
 	@Test

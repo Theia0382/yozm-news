@@ -1,6 +1,6 @@
 package net.yozmnews.evaluation.domain.jev;
 
-import net.yozmnews.evaluation.domain.evaluator.EvaluationFailure;
+import net.yozmnews.evaluation.EvaluatorFailureKind;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
@@ -40,21 +40,21 @@ public final class JevErrors {
 			return new JevOutcome.ContextExceeded();
 		}
 		if (status == 408 || status == 429 || (status >= 500 && status <= 599)) {
-			return new JevOutcome.Failed(EvaluationFailure.Kind.TRANSIENT);
+			return new JevOutcome.Failed(EvaluatorFailureKind.TRANSIENT);
 		}
-		return new JevOutcome.Failed(EvaluationFailure.Kind.EVALUATOR_UNAVAILABLE);
+		return new JevOutcome.Failed(EvaluatorFailureKind.EVALUATOR_UNAVAILABLE);
 	}
 
 	/**
 	 * 문맥 초과 확인 요청(같은 질문 · 빈 state)의 응답으로 원래 기사의 갈래를 정한다 — 받으면 기사 탓, 그것도 넘으면 체계 탓, 그 밖은 그
 	 * 응답의 갈래(원인을 가르지 못했으므로 다음 시도에서 다시 가른다)
 	 */
-	public static EvaluationFailure.Kind afterProbe(int probeStatus, String probeBody) {
+	public static EvaluatorFailureKind afterProbe(int probeStatus, String probeBody) {
 		if (probeStatus == 200) {
-			return EvaluationFailure.Kind.ARTICLE_REJECTED;
+			return EvaluatorFailureKind.ARTICLE_REJECTED;
 		}
 		return switch (classify(probeStatus, probeBody)) {
-			case JevOutcome.ContextExceeded exceeded -> EvaluationFailure.Kind.EVALUATOR_UNAVAILABLE;
+			case JevOutcome.ContextExceeded exceeded -> EvaluatorFailureKind.EVALUATOR_UNAVAILABLE;
 			case JevOutcome.Failed failed -> failed.kind();
 		};
 	}

@@ -20,10 +20,10 @@ import java.util.concurrent.Flow;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import net.yozmnews.evaluation.EvaluatorFailureKind;
 import net.yozmnews.evaluation.TagSetView;
 import net.yozmnews.evaluation.domain.evaluator.ArticleEvaluator;
 import net.yozmnews.evaluation.domain.evaluator.Evaluation;
-import net.yozmnews.evaluation.domain.evaluator.EvaluationFailure.Kind;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationFailure;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationInput;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationResult;
@@ -109,8 +109,9 @@ public final class JevArticleEvaluator implements ArticleEvaluator, AutoCloseabl
 		Objects.requireNonNull(input, "input");
 		Objects.requireNonNull(tagSet, "tagSet");
 		return switch (send(JevRequest.body(this.model, input, tagSet))) {
-			case Exchange.Broken broken -> new EvaluationFailure(Kind.TRANSIENT, broken.message());
-			case Exchange.TooLarge tooLarge -> new EvaluationFailure(Kind.EVALUATOR_UNAVAILABLE, BODY_TOO_LARGE);
+			case Exchange.Broken broken -> new EvaluationFailure(EvaluatorFailureKind.TRANSIENT, broken.message());
+			case Exchange.TooLarge tooLarge ->
+				new EvaluationFailure(EvaluatorFailureKind.EVALUATOR_UNAVAILABLE, BODY_TOO_LARGE);
 			case Exchange.Answered answered when answered.status() == 200 ->
 				JevResponse.read(answered.body(), answered.requestId(), tagSet);
 			case Exchange.Answered answered -> switch (JevErrors.classify(answered.status(), answered.body())) {
@@ -138,12 +139,12 @@ public final class JevArticleEvaluator implements ArticleEvaluator, AutoCloseabl
 	/** 문맥 초과의 원인을 같은 질문 · 빈 state 로 가른다 */
 	private EvaluationFailure probe(Exchange.Answered original, TagSetView tagSet) {
 		return switch (send(JevRequest.probeBody(this.model, tagSet))) {
-			case Exchange.Broken broken -> new EvaluationFailure(Kind.TRANSIENT,
+			case Exchange.Broken broken -> new EvaluationFailure(EvaluatorFailureKind.TRANSIENT,
 					message("Jev 문맥 초과 — 빈 state 확인 요청이 실패했다: " + broken.message(), original));
-			case Exchange.TooLarge tooLarge -> new EvaluationFailure(Kind.EVALUATOR_UNAVAILABLE,
+			case Exchange.TooLarge tooLarge -> new EvaluationFailure(EvaluatorFailureKind.EVALUATOR_UNAVAILABLE,
 					"Jev 문맥 초과 — 빈 state 확인 요청: " + BODY_TOO_LARGE);
 			case Exchange.Answered probe -> {
-				Kind kind = JevErrors.afterProbe(probe.status(), probe.body());
+				EvaluatorFailureKind kind = JevErrors.afterProbe(probe.status(), probe.body());
 				yield new EvaluationFailure(kind, switch (kind) {
 					case ARTICLE_REJECTED -> message(ARTICLE_TOO_LONG, original);
 					case TRANSIENT, EVALUATOR_UNAVAILABLE -> message(PROBE_FAILED, probe);

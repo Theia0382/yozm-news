@@ -1,8 +1,10 @@
 package net.yozmnews.evaluation.domain.jev;
 
+import static net.yozmnews.evaluation.EvaluatorFailureKind.ARTICLE_REJECTED;
+import static net.yozmnews.evaluation.EvaluatorFailureKind.EVALUATOR_UNAVAILABLE;
+import static net.yozmnews.evaluation.EvaluatorFailureKind.TRANSIENT;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import net.yozmnews.evaluation.domain.evaluator.EvaluationFailure.Kind;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -32,40 +34,40 @@ class JevErrorsTests {
 
 	@Test
 	void treatsAnotherBadRequestAsUnavailable() {
-		assertThat(JevErrors.classify(400, UNKNOWN_MODEL)).isEqualTo(new JevOutcome.Failed(Kind.EVALUATOR_UNAVAILABLE));
+		assertThat(JevErrors.classify(400, UNKNOWN_MODEL)).isEqualTo(new JevOutcome.Failed(EVALUATOR_UNAVAILABLE));
 	}
 
 	@ParameterizedTest
 	@ValueSource(ints = { 401, 402, 403, 404, 413, 415, 422, 302, 204 })
 	void treatsRequestAndSettingErrorsAsUnavailable(int status) {
-		assertThat(JevErrors.classify(status, BAD_KEY)).isEqualTo(new JevOutcome.Failed(Kind.EVALUATOR_UNAVAILABLE));
+		assertThat(JevErrors.classify(status, BAD_KEY)).isEqualTo(new JevOutcome.Failed(EVALUATOR_UNAVAILABLE));
 	}
 
 	@ParameterizedTest
 	@ValueSource(ints = { 408, 429, 500, 502, 503, 529, 599 })
 	void treatsTimeoutsLimitsAndServerErrorsAsTransient(int status) {
-		assertThat(JevErrors.classify(status, "")).isEqualTo(new JevOutcome.Failed(Kind.TRANSIENT));
+		assertThat(JevErrors.classify(status, "")).isEqualTo(new JevOutcome.Failed(TRANSIENT));
 	}
 
 	@Test
 	void doesNotProbeAContextExceededMarkerOnAnotherStatus() {
-		assertThat(JevErrors.classify(422, CONTEXT_EXCEEDED)).isEqualTo(new JevOutcome.Failed(Kind.EVALUATOR_UNAVAILABLE));
+		assertThat(JevErrors.classify(422, CONTEXT_EXCEEDED)).isEqualTo(new JevOutcome.Failed(EVALUATOR_UNAVAILABLE));
 	}
 
 	@Test
 	void blamesTheArticleWhenTheProbeIsAccepted() {
-		assertThat(JevErrors.afterProbe(200, "{}")).isEqualTo(Kind.ARTICLE_REJECTED);
+		assertThat(JevErrors.afterProbe(200, "{}")).isEqualTo(ARTICLE_REJECTED);
 	}
 
 	@Test
 	void blamesTheTagSetWhenTheProbeAlsoExceedsTheContext() {
-		assertThat(JevErrors.afterProbe(400, CONTEXT_EXCEEDED)).isEqualTo(Kind.EVALUATOR_UNAVAILABLE);
+		assertThat(JevErrors.afterProbe(400, CONTEXT_EXCEEDED)).isEqualTo(EVALUATOR_UNAVAILABLE);
 	}
 
 	@Test
 	void keepsTheProbeFailureKindOtherwise() {
-		assertThat(JevErrors.afterProbe(503, "")).isEqualTo(Kind.TRANSIENT);
-		assertThat(JevErrors.afterProbe(401, BAD_KEY)).isEqualTo(Kind.EVALUATOR_UNAVAILABLE);
+		assertThat(JevErrors.afterProbe(503, "")).isEqualTo(TRANSIENT);
+		assertThat(JevErrors.afterProbe(401, BAD_KEY)).isEqualTo(EVALUATOR_UNAVAILABLE);
 	}
 
 	@Test

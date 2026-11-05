@@ -2,7 +2,7 @@ package net.yozmnews.evaluation.domain.jev;
 
 import java.util.Objects;
 
-import net.yozmnews.evaluation.domain.evaluator.EvaluationFailure;
+import net.yozmnews.evaluation.EvaluatorFailureKind;
 
 /**
  * 200 이 아닌 Jev 응답의 갈래 — docs/specs/evaluation.md §4 Jev 대응표
@@ -10,7 +10,7 @@ import net.yozmnews.evaluation.domain.evaluator.EvaluationFailure;
 public sealed interface JevOutcome permits JevOutcome.Failed, JevOutcome.ContextExceeded {
 
 	/** 그 갈래의 실패다 */
-	record Failed(EvaluationFailure.Kind kind) implements JevOutcome {
+	record Failed(EvaluatorFailureKind kind) implements JevOutcome {
 
 		public Failed {
 			Objects.requireNonNull(kind, "kind");

@@ -11,6 +11,9 @@ import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
+import static net.yozmnews.evaluation.EvaluatorFailureKind.ARTICLE_REJECTED;
+import static net.yozmnews.evaluation.EvaluatorFailureKind.EVALUATOR_UNAVAILABLE;
+import static net.yozmnews.evaluation.EvaluatorFailureKind.TRANSIENT;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
@@ -32,7 +35,6 @@ import net.yozmnews.evaluation.TagSetId;
 import net.yozmnews.evaluation.TagSetView;
 import net.yozmnews.evaluation.TopicCategory;
 import net.yozmnews.evaluation.domain.evaluator.Evaluation;
-import net.yozmnews.evaluation.domain.evaluator.EvaluationFailure.Kind;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationFailure;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationInput;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationResult;
@@ -121,7 +123,7 @@ class JevArticleEvaluatorTests {
 	void reportsABadKeyAsUnavailable() {
 		server.stubFor(post(PATH).willReturn(json(401, BAD_KEY).withHeader("x-typesafe-request-id", "req_401")));
 
-		assertThat(evaluator().evaluate(INPUT, TAG_SET)).isEqualTo(new EvaluationFailure(Kind.EVALUATOR_UNAVAILABLE,
+		assertThat(evaluator().evaluate(INPUT, TAG_SET)).isEqualTo(new EvaluationFailure(EVALUATOR_UNAVAILABLE,
 				"Jev 가 평가 요청을 받지 않았다 — Jev 응답 401 authentication_error: Cannot authenticate with the server. "
 						+ "Please check your API key and try again. (요청 req_401)"));
 	}
@@ -130,12 +132,12 @@ class JevArticleEvaluatorTests {
 	void reportsAMissingKeyAndAValidationErrorAsUnavailable() {
 		server.stubFor(post(PATH).willReturn(json(403,
 				"{\"detail\":{\"error_type\":\"authentication_error\",\"message\":\"Must supply an API key! Check your request and try again.\"}}")));
-		assertThat(evaluator().evaluate(INPUT, TAG_SET)).isEqualTo(new EvaluationFailure(Kind.EVALUATOR_UNAVAILABLE,
+		assertThat(evaluator().evaluate(INPUT, TAG_SET)).isEqualTo(new EvaluationFailure(EVALUATOR_UNAVAILABLE,
 				"Jev 가 평가 요청을 받지 않았다 — Jev 응답 403 authentication_error: Must supply an API key! Check your request and try again."));
 
 		server.stubFor(post(PATH).willReturn(json(422,
 				"{\"detail\":[{\"type\":\"missing\",\"loc\":[\"body\",\"state\"],\"msg\":\"Field required\",\"input\":\"공동시행자 관리 강화\"}]}")));
-		assertThat(evaluator().evaluate(INPUT, TAG_SET)).isEqualTo(new EvaluationFailure(Kind.EVALUATOR_UNAVAILABLE,
+		assertThat(evaluator().evaluate(INPUT, TAG_SET)).isEqualTo(new EvaluationFailure(EVALUATOR_UNAVAILABLE,
 				"Jev 가 평가 요청을 받지 않았다 — Jev 응답 422 missing: Field required"));
 	}
 
@@ -144,7 +146,7 @@ class JevArticleEvaluatorTests {
 		server.stubFor(post(PATH).willReturn(aResponse().withStatus(429).withHeader("Retry-After", "7")
 			.withHeader("x-typesafe-request-id", "req_429")));
 
-		assertThat(evaluator().evaluate(INPUT, TAG_SET)).isEqualTo(new EvaluationFailure(Kind.TRANSIENT,
+		assertThat(evaluator().evaluate(INPUT, TAG_SET)).isEqualTo(new EvaluationFailure(TRANSIENT,
 				"Jev 가 평가 요청을 받지 않았다 — Jev 응답 429 · Retry-After 7 (요청 req_429)"));
 	}
 
@@ -152,11 +154,11 @@ class JevArticleEvaluatorTests {
 	void reportsServerErrorsAsTransient() {
 		server.stubFor(post(PATH).willReturn(aResponse().withStatus(503).withBody("<html>unavailable</html>")));
 		assertThat(evaluator().evaluate(INPUT, TAG_SET))
-			.isEqualTo(new EvaluationFailure(Kind.TRANSIENT, "Jev 가 평가 요청을 받지 않았다 — Jev 응답 503"));
+			.isEqualTo(new EvaluationFailure(TRANSIENT, "Jev 가 평가 요청을 받지 않았다 — Jev 응답 503"));
 
 		server.stubFor(post(PATH).willReturn(aResponse().withStatus(529)));
 		assertThat(evaluator().evaluate(INPUT, TAG_SET))
-			.isEqualTo(new EvaluationFailure(Kind.TRANSIENT, "Jev 가 평가 요청을 받지 않았다 — Jev 응답 529"));
+			.isEqualTo(new EvaluationFailure(TRANSIENT, "Jev 가 평가 요청을 받지 않았다 — Jev 응답 529"));
 	}
 
 	@Test
@@ -167,7 +169,7 @@ class JevArticleEvaluatorTests {
 		}
 
 		assertThat(evaluator(URI.create("http://127.0.0.1:" + closedPort), SHORT).evaluate(INPUT, TAG_SET))
-			.isEqualTo(new EvaluationFailure(Kind.TRANSIENT, "Jev 와 주고받지 못했다 — ConnectException"));
+			.isEqualTo(new EvaluationFailure(TRANSIENT, "Jev 와 주고받지 못했다 — ConnectException"));
 	}
 
 	@Test
@@ -175,7 +177,7 @@ class JevArticleEvaluatorTests {
 		server.stubFor(post(PATH).willReturn(json(200, ANSWER).withFixedDelay(2_000)));
 
 		assertThat(evaluator(SHORT).evaluate(INPUT, TAG_SET))
-			.isEqualTo(new EvaluationFailure(Kind.TRANSIENT, "Jev 응답 마감(1초)을 넘었다"));
+			.isEqualTo(new EvaluationFailure(TRANSIENT, "Jev 응답 마감(1초)을 넘었다"));
 	}
 
 	@Test
@@ -185,7 +187,7 @@ class JevArticleEvaluatorTests {
 		long start = System.nanoTime();
 		EvaluationResult result = evaluator(SHORT).evaluate(INPUT, TAG_SET);
 
-		assertThat(result).isEqualTo(new EvaluationFailure(Kind.TRANSIENT, "Jev 응답 마감(1초)을 넘었다"));
+		assertThat(result).isEqualTo(new EvaluationFailure(TRANSIENT, "Jev 응답 마감(1초)을 넘었다"));
 		assertThat(Duration.ofNanos(System.nanoTime() - start)).isLessThan(Duration.ofSeconds(2));
 	}
 
@@ -201,7 +203,7 @@ class JevArticleEvaluatorTests {
 		server.stubFor(post(PATH).willReturn(
 				aResponse().withStatus(200).withHeader("Content-Length", "1048577").withBody("a".repeat(1_048_577))));
 
-		assertThat(evaluator().evaluate(INPUT, TAG_SET)).isEqualTo(new EvaluationFailure(Kind.EVALUATOR_UNAVAILABLE,
+		assertThat(evaluator().evaluate(INPUT, TAG_SET)).isEqualTo(new EvaluationFailure(EVALUATOR_UNAVAILABLE,
 				"Jev 응답 본문이 상한(1048576 바이트)을 넘는다"));
 	}
 
@@ -210,7 +212,7 @@ class JevArticleEvaluatorTests {
 		server.stubFor(post(PATH)
 			.willReturn(aResponse().withStatus(200).withBody("a".repeat(1_048_577)).withChunkedDribbleDelay(4, 200)));
 
-		assertThat(evaluator().evaluate(INPUT, TAG_SET)).isEqualTo(new EvaluationFailure(Kind.EVALUATOR_UNAVAILABLE,
+		assertThat(evaluator().evaluate(INPUT, TAG_SET)).isEqualTo(new EvaluationFailure(EVALUATOR_UNAVAILABLE,
 				"Jev 응답 본문이 상한(1048576 바이트)을 넘는다"));
 	}
 
@@ -219,14 +221,14 @@ class JevArticleEvaluatorTests {
 		server.stubFor(post(PATH).willReturn(aResponse().withStatus(200).withBody("a".repeat(1_048_576))));
 
 		assertThat(evaluator().evaluate(INPUT, TAG_SET)).isEqualTo(
-				new EvaluationFailure(Kind.EVALUATOR_UNAVAILABLE, "Jev 응답을 읽을 수 없다 — JSON 이 아니다"));
+				new EvaluationFailure(EVALUATOR_UNAVAILABLE, "Jev 응답을 읽을 수 없다 — JSON 이 아니다"));
 	}
 
 	@Test
 	void blamesTheArticleWhenTheEmptyStateFits() {
 		contextExceededThenProbe(json(200, ANSWER).withHeader("x-typesafe-request-id", "req_probe"));
 
-		assertThat(evaluator().evaluate(INPUT, TAG_SET)).isEqualTo(new EvaluationFailure(Kind.ARTICLE_REJECTED,
+		assertThat(evaluator().evaluate(INPUT, TAG_SET)).isEqualTo(new EvaluationFailure(ARTICLE_REJECTED,
 				"기사가 Jev 문맥 한도를 넘는다 — 빈 state 확인 요청은 받았다 — Jev 응답 400 max_tokens_exceeded (요청 req_first)"));
 		assertProbed();
 	}
@@ -235,7 +237,7 @@ class JevArticleEvaluatorTests {
 	void blamesTheTagSetWhenTheEmptyStateAlsoExceeds() {
 		contextExceededThenProbe(json(400, CONTEXT_EXCEEDED).withHeader("x-typesafe-request-id", "req_probe"));
 
-		assertThat(evaluator().evaluate(INPUT, TAG_SET)).isEqualTo(new EvaluationFailure(Kind.EVALUATOR_UNAVAILABLE,
+		assertThat(evaluator().evaluate(INPUT, TAG_SET)).isEqualTo(new EvaluationFailure(EVALUATOR_UNAVAILABLE,
 				"Jev 문맥 초과 — 빈 state 확인 요청도 받지 않았다 — Jev 응답 400 max_tokens_exceeded (요청 req_probe)"));
 		assertProbed();
 	}
@@ -244,7 +246,7 @@ class JevArticleEvaluatorTests {
 	void retriesLaterWhenTheProbeFailsForAWhile() {
 		contextExceededThenProbe(aResponse().withStatus(503));
 
-		assertThat(evaluator().evaluate(INPUT, TAG_SET)).isEqualTo(new EvaluationFailure(Kind.TRANSIENT,
+		assertThat(evaluator().evaluate(INPUT, TAG_SET)).isEqualTo(new EvaluationFailure(TRANSIENT,
 				"Jev 문맥 초과 — 빈 state 확인 요청도 받지 않았다 — Jev 응답 503"));
 		assertProbed();
 	}
@@ -253,7 +255,7 @@ class JevArticleEvaluatorTests {
 	void retriesLaterWhenTheProbeMissesTheDeadline() {
 		contextExceededThenProbe(json(200, ANSWER).withFixedDelay(2_000));
 
-		assertThat(evaluator(SHORT).evaluate(INPUT, TAG_SET)).isEqualTo(new EvaluationFailure(Kind.TRANSIENT,
+		assertThat(evaluator(SHORT).evaluate(INPUT, TAG_SET)).isEqualTo(new EvaluationFailure(TRANSIENT,
 				"Jev 문맥 초과 — 빈 state 확인 요청이 실패했다: Jev 응답 마감(1초)을 넘었다 — Jev 응답 400 max_tokens_exceeded (요청 req_first)"));
 		assertProbed();
 	}
@@ -262,7 +264,7 @@ class JevArticleEvaluatorTests {
 	void reportsAProbeBodyOverTheLimitAsUnavailable() {
 		contextExceededThenProbe(aResponse().withStatus(200).withBody("a".repeat(1_048_577)));
 
-		assertThat(evaluator().evaluate(INPUT, TAG_SET)).isEqualTo(new EvaluationFailure(Kind.EVALUATOR_UNAVAILABLE,
+		assertThat(evaluator().evaluate(INPUT, TAG_SET)).isEqualTo(new EvaluationFailure(EVALUATOR_UNAVAILABLE,
 				"Jev 문맥 초과 — 빈 state 확인 요청: Jev 응답 본문이 상한(1048576 바이트)을 넘는다"));
 		assertProbed();
 	}

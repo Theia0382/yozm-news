@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Map;
 
+import net.yozmnews.evaluation.EvaluatorFailureKind;
 import net.yozmnews.evaluation.domain.evaluator.Evaluation;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationFailure;
 import org.junit.jupiter.api.Test;
@@ -121,7 +122,7 @@ class JevResponseTests {
 	}
 
 	private static EvaluationFailure unavailable(String problem) {
-		return new EvaluationFailure(EvaluationFailure.Kind.EVALUATOR_UNAVAILABLE, "Jev 응답을 읽을 수 없다 — " + problem);
+		return new EvaluationFailure(EvaluatorFailureKind.EVALUATOR_UNAVAILABLE, "Jev 응답을 읽을 수 없다 — " + problem);
 	}
 
 }

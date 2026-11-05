@@ -12,6 +12,7 @@ import java.util.Objects;
 import java.util.TreeMap;
 
 import net.yozmnews.evaluation.AskedTag;
+import net.yozmnews.evaluation.EvaluatorFailureKind;
 import net.yozmnews.evaluation.FormatOption;
 import net.yozmnews.evaluation.ImportanceLevel;
 import net.yozmnews.evaluation.TagSetView;
@@ -107,7 +108,7 @@ public final class FakeArticleEvaluator implements ArticleEvaluator {
 		Objects.requireNonNull(input, "input");
 		Objects.requireNonNull(tagSet, "tagSet");
 		String title = input.title();
-		for (EvaluationFailure.Kind kind : EvaluationFailure.Kind.values()) {
+		for (EvaluatorFailureKind kind : EvaluatorFailureKind.values()) {
 			if (title.contains(marker(kind))) {
 				return new EvaluationFailure(kind, FAILURE_MESSAGE);
 			}
@@ -139,7 +140,7 @@ public final class FakeArticleEvaluator implements ArticleEvaluator {
 	}
 
 	/** 실패 갈래의 표지 — docs/specs/evaluation.md §4 */
-	static String marker(EvaluationFailure.Kind kind) {
+	static String marker(EvaluatorFailureKind kind) {
 		String name = switch (kind) {
 			case TRANSIENT -> "transient";
 			case ARTICLE_REJECTED -> "article-rejected";

@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 
 import net.yozmnews.evaluation.AskedTag;
+import net.yozmnews.evaluation.EvaluatorFailureKind;
 import net.yozmnews.evaluation.FormatOption;
 import net.yozmnews.evaluation.ImportanceLevel;
 import net.yozmnews.evaluation.TagSetView;
@@ -42,7 +43,7 @@ public final class JevResponse {
 			return evaluation(body, tagSet);
 		}
 		catch (Unreadable ex) {
-			return new EvaluationFailure(EvaluationFailure.Kind.EVALUATOR_UNAVAILABLE,
+			return new EvaluationFailure(EvaluatorFailureKind.EVALUATOR_UNAVAILABLE,
 					JevErrors.clean(JevErrors.withRequestId("Jev 응답을 읽을 수 없다 — " + ex.getMessage(), requestId),
 							JevErrors.MAX_MESSAGE_CODE_POINTS));
 		}
