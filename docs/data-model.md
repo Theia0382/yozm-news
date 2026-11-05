@@ -41,6 +41,7 @@ erDiagram
     tag_sets ||--o{ tag_key_lineage : ""
     articles ||--o{ article_event_judgements : ""
 
+    articles ||--o| event_intake_queue : ""
     articles ||--o{ article_match_features : ""
     events ||--o{ event_articles : ""
     articles ||--o| event_articles : ""
@@ -87,11 +88,7 @@ erDiagram
 
 ## 사건
 
-| 테이블 | 주요 컬럼 | 비고 |
-|---|---|---|
-| `article_match_features` | article_id, model_version, embedding(`vector`), entities, created_at | 사건 배정 입력(임베딩 · 고유명사). 기사 × 모델 버전마다 1행. 짧게 보관하고 요약문으로 다시 계산한다 |
-| `events` | id, status(`OPEN`/`CLOSED`), centroid(`halfvec`), entities, model_version, first_article_at, last_article_at, merged_into, created_at, closed_at | 공유 사건. 장기 검색용 HNSW 인덱스는 `centroid` 에만 둔다. 합쳐진 사건은 `merged_into` 로 남는 사건을 가리킨다 |
-| `event_articles` | event_id, article_id(고유), score, decided_by(`FORMULA`/`EVALUATOR`), assigned_at | 기사당 한 사건. 사건이 합쳐지면 남는 사건으로 옮긴다 |
+사건 묶기 대기 · 기사 표현 테이블(`event_intake_queue` · `article_match_features`)과 사건 테이블(`events` · `event_articles` — 미구현)은 [event Spec §6](specs/event.md#6-데이터)에 있다.
 
 ## 다이제스트
 

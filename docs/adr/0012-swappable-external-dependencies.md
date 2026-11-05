@@ -60,4 +60,4 @@
 
 ## 후속 기록
 
-- 2026-11-04: 의존성 표에 없는 임베딩 — [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md) · [`architecture` "핵심 인터페이스"](../architecture.md#핵심-인터페이스)
+- 2026-11-04: 의존성 표에 없는 임베딩 — [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md) · [event Spec `ArticleEmbedder`](../specs/event.md#articleembedder)
