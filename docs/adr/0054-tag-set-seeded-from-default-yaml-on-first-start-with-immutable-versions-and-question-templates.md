@@ -44,3 +44,4 @@
 ## 후속 기록
 
 - 2026-11-02: 결과 절이 남긴 "파일 개정을 알릴지"의 답 — 버전이 이미 있고 기본 체계 파일과 내용이 같은 버전이 하나도 없으면 기동 때 정보 로그 한 줄을 남긴다(태그 기준 · 저장 기준은 비교하지 않는다). 체계 변경의 방식은 [ADR-0062](0062-tag-set-versions-from-operator-text-activated-forward-with-key-lineage-and-recent-reevaluation.md)
+- 2026-11-05: 결정 절 "형식 Choice · 중요도 Score 의 질문 문구도 버전에 둔다"의 범위 밖인 사건 소속 질문 문구 — [ADR-0072](0072-event-membership-question-wording-as-one-code-constant-with-its-version-in-raw-records.md) · [evaluation Spec §5](../specs/evaluation.md#5-규칙과-불변식) evaluation-R37
