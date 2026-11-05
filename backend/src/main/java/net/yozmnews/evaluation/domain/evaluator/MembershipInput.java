@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
+import net.yozmnews.evaluation.MembershipQuery;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -19,7 +20,8 @@ public record MembershipInput(String title, @Nullable String summary, List<Candi
 		MembershipWording wording) {
 
 	/**
-	 * @throws IllegalArgumentException 제목이 공백뿐이거나, 요약이 공백뿐이거나, 후보가 없거나 사건 ID 가 겹칠 때
+	 * @throws IllegalArgumentException 제목이 공백뿐이거나, 요약이 공백뿐이거나, 후보가 없거나
+	 * {@value MembershipQuery#MAX_CANDIDATES}개를 넘거나, 사건 ID 가 겹칠 때
 	 */
 	public MembershipInput {
 		Objects.requireNonNull(title, "title");
@@ -32,6 +34,10 @@ public record MembershipInput(String title, @Nullable String summary, List<Candi
 		candidates = List.copyOf(candidates);
 		if (candidates.isEmpty()) {
 			throw new IllegalArgumentException("물을 후보 사건이 없다");
+		}
+		if (candidates.size() > MembershipQuery.MAX_CANDIDATES) {
+			throw new IllegalArgumentException(
+					"후보 사건은 " + MembershipQuery.MAX_CANDIDATES + "개까지다: " + candidates.size());
 		}
 		Set<Long> eventIds = new HashSet<>();
 		for (CandidateEvent candidate : candidates) {

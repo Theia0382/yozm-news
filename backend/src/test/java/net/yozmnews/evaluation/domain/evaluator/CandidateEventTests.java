@@ -52,6 +52,13 @@ class CandidateEventTests {
 	}
 
 	@Test
+	void acceptsFiveTitlesAndRefusesSix() {
+		assertThat(new CandidateEvent(12, List.of("가", "나", "다", "라", "마")).titles()).hasSize(5);
+		assertThatIllegalArgumentException()
+			.isThrownBy(() -> new CandidateEvent(12, List.of("가", "나", "다", "라", "마", "바")));
+	}
+
+	@Test
 	void refusesAnEventIdBelowOneNoTitlesABlankTitleOrATitleOverTheLimit() {
 		assertThatIllegalArgumentException().isThrownBy(() -> new CandidateEvent(0, List.of("제목")));
 		assertThatIllegalArgumentException().isThrownBy(() -> new CandidateEvent(12, List.of()));

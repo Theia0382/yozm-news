@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+import net.yozmnews.evaluation.EventDescriptor;
+
 /**
  * 사건 소속 판정에서 물을 후보 사건 하나 — 사건 ID 와 서술 기사의 제목 · docs/specs/evaluation.md §4 · evaluation-R37.
  *
@@ -17,8 +19,8 @@ public record CandidateEvent(long eventId, List<String> titles) {
 	public static final int MAX_TITLE_CODE_POINTS = 200;
 
 	/**
-	 * @throws IllegalArgumentException 사건 ID 가 1 미만이거나, 제목이 없거나, 공백뿐이거나 상한을 넘는 제목이 있을 때 — 상한을 모르는 입력은
-	 * {@link #limited} 로 만든다
+	 * @throws IllegalArgumentException 사건 ID 가 1 미만이거나, 제목이 없거나 {@value EventDescriptor#MAX_ARTICLES}개를 넘거나,
+	 * 공백뿐이거나 상한을 넘는 제목이 있을 때 — 상한을 모르는 제목은 {@link #limited} 로 만든다
 	 */
 	public CandidateEvent {
 		if (eventId < 1) {
@@ -27,6 +29,9 @@ public record CandidateEvent(long eventId, List<String> titles) {
 		titles = List.copyOf(titles);
 		if (titles.isEmpty()) {
 			throw new IllegalArgumentException("서술 제목이 없다");
+		}
+		if (titles.size() > EventDescriptor.MAX_ARTICLES) {
+			throw new IllegalArgumentException("서술 제목은 " + EventDescriptor.MAX_ARTICLES + "개까지다: " + titles.size());
 		}
 		for (String title : titles) {
 			if (title.isBlank()) {

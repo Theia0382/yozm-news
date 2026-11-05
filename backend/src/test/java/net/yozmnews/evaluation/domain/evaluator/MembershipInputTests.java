@@ -3,6 +3,7 @@ package net.yozmnews.evaluation.domain.evaluator;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -41,6 +42,13 @@ class MembershipInputTests {
 	}
 
 	@Test
+	void acceptsTenCandidatesAndRefusesEleven() {
+		assertThat(new MembershipInput("제목", null, candidates(10), WORDING).candidates()).hasSize(10);
+		assertThatIllegalArgumentException()
+			.isThrownBy(() -> new MembershipInput("제목", null, candidates(11), WORDING));
+	}
+
+	@Test
 	void refusesProbabilitiesOutsideZeroToOneAndBlankNames() {
 		assertThatIllegalArgumentException()
 			.isThrownBy(() -> new Membership(Map.of(12L, 1.2), "jev", "jev-1.14.0", 0, "{}"));
@@ -51,6 +59,14 @@ class MembershipInputTests {
 		assertThatIllegalArgumentException()
 			.isThrownBy(() -> new Membership(Map.of(12L, 0.5), "jev", "jev-1.14.0", -1, "{}"));
 		assertThat(new Membership(Map.of(), "jev", "jev-1.14.0", 0, "{}").probabilities()).isEmpty();
+	}
+
+	private static List<CandidateEvent> candidates(int count) {
+		List<CandidateEvent> candidates = new ArrayList<>();
+		for (int i = 0; i < count; i++) {
+			candidates.add(new CandidateEvent(12 + i, List.of("제목 " + i)));
+		}
+		return candidates;
 	}
 
 }
