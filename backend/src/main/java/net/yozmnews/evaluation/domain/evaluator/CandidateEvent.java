@@ -6,6 +6,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 import net.yozmnews.evaluation.EventDescriptor;
+import net.yozmnews.platform.CodePoints;
 
 /**
  * 사건 소속 판정에서 물을 후보 사건 하나 — 사건 ID 와 서술 기사의 제목 · docs/specs/evaluation.md §4 · evaluation-R37.

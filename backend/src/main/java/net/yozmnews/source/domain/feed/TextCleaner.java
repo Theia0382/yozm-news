@@ -2,6 +2,7 @@ package net.yozmnews.source.domain.feed;
 
 import java.util.Optional;
 
+import net.yozmnews.platform.CodePoints;
 import net.yozmnews.source.FetchedArticle;
 import org.jsoup.Jsoup;
 
@@ -31,10 +32,8 @@ final class TextCleaner {
 	}
 
 	private static String truncate(String text) {
-		if (text.codePointCount(0, text.length()) <= FetchedArticle.SUMMARY_MAX_CODE_POINTS) {
-			return text;
-		}
-		return text.substring(0, text.offsetByCodePoints(0, FetchedArticle.SUMMARY_MAX_CODE_POINTS)).stripTrailing();
+		String cut = CodePoints.prefix(text, FetchedArticle.SUMMARY_MAX_CODE_POINTS);
+		return (cut.length() == text.length()) ? text : cut.stripTrailing();
 	}
 
 	private static String collapseWhitespace(String text) {

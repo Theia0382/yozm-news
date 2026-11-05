@@ -2,6 +2,7 @@ package net.yozmnews.event.domain.feature;
 
 import java.util.Objects;
 
+import net.yozmnews.platform.CodePoints;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -31,11 +32,7 @@ public final class MatchText {
 		if (summary == null || summary.isBlank()) {
 			return title;
 		}
-		String stripped = summary.strip();
-		if (stripped.codePointCount(0, stripped.length()) > SUMMARY_PREFIX_CODE_POINTS) {
-			stripped = stripped.substring(0, stripped.offsetByCodePoints(0, SUMMARY_PREFIX_CODE_POINTS));
-		}
-		return title + "\n" + stripped;
+		return title + "\n" + CodePoints.prefix(summary.strip(), SUMMARY_PREFIX_CODE_POINTS);
 	}
 
 }
