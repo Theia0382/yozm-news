@@ -43,6 +43,8 @@ dependencies {
 	implementation("org.jsoup:jsoup:1.23.2")
 	// RSS · Atom 형식 판별과 제목 · 링크. Spring Boot 가 버전을 관리하지 않아 직접 고정한다
 	implementation("com.rometools:rome:2.1.0")
+	// 기사 표현의 핵심 말 — 한국어 형태소 분석(Lucene Nori). Spring Boot 가 버전을 관리하지 않아 직접 고정한다
+	implementation("org.apache.lucene:lucene-analysis-nori:10.6.0")
 	// 피드 수집 HTTP 클라이언트 — 버전은 Spring Boot 의존성 관리
 	implementation("org.apache.httpcomponents.client5:httpclient5")
 	developmentOnly("org.springframework.boot:spring-boot-docker-compose")

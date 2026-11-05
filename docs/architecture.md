@@ -4,15 +4,9 @@
 
 ## 핵심 인터페이스
 
-`evaluation` 의 공유 평가 포트 `ArticleEvaluator` 와 평가 작업은 [evaluation Spec](specs/evaluation.md#articleevaluator)에 있다.
+`evaluation` 의 공유 평가 포트 `ArticleEvaluator` 와 평가 작업은 [evaluation Spec](specs/evaluation.md#articleevaluator)에, `event` 의 기사 임베딩 포트 `ArticleEmbedder` 와 사건 묶기 작업은 [event Spec](specs/event.md#articleembedder)에 있다.
 
 ```java
-// event: 사건 묶기용 기사 임베딩. 사용자 정보를 받지 않는다.
-public interface ArticleEmbedder {
-    EmbedderInfo info();                                         // 이름, 모델 버전, 차원
-    List<Embedding> embed(List<EmbeddingInput> inputs);          // 제목 + 요약문 앞부분(없으면 제목만)
-}
-
 // digest: 사용자별 종합 다이제스트 생성.
 public interface DigestGenerator {
     GeneratedDigest generate(DigestRequest request, LlmHandle llm); // 후보 + 자유 텍스트 관심사 + 진행 중인 이슈
@@ -30,7 +24,6 @@ public interface LlmClientFactory {
 }
 ```
 
-- `ArticleEmbedder`의 v1 구현체는 로컬 모델을 ONNX Runtime 으로 돌리는 구현이고, 설정으로 외부 임베딩 API 구현으로 바꿀 수 있다. 개발 · 테스트는 고정 규칙 기반 로컬 대체물을 쓴다.
 - `DigestGenerator`의 v1 구현체는 Spring AI `ChatClient` 기반 `LlmDigestGenerator`. 공급자별 차이는 Spring AI가 흡수한다.
 - `ReportGenerator`의 v1 구현체는 `DigestGenerator` 와 같은 방식의 LLM 구현이고, Spring profile `local` 은 고정 응답 로컬 대체물을 쓴다 ([ADR-0025](adr/0025-long-term-personal-news-history-in-v1.md)).
 - Spring AI의 `ChatModel`은 보통 애플리케이션 전역 빈으로 쓰지만, BYOK에서는 **요청마다 사용자 키로 인스턴스를 만든다**. `LlmClientFactory`가 이 차이를 감춘다.
@@ -39,9 +32,6 @@ public interface LlmClientFactory {
 
 | 작업 | 주기/계기 | 내용 |
 |---|---|---|
-| `AssignArticleToEvent` | `ArticleStored` | 기사 표현(임베딩 · 고유명사) → 사건 후보 → 판정 → 배정 또는 새 사건 ([pipeline.md](pipeline.md) §8) |
-| `MergeEvents` | 주기 | 가까운 열린 사건끼리 합친다 |
-| `CloseEvents` | 하루 1회 | 새 기사가 일정 기간 없는 사건을 닫는다 |
 | `ScheduleDueDigests` | 1분마다 | 생성 시각이 다가온 사용자의 다이제스트 생성 작업 등록 |
 | `GenerateDigest(userId, date)` | 위에서 등록 / 사용자 수동 요청 | 후보 선별 → LLM 호출 → 검증 → 저장 → 이슈(`storyline`) 연결 적용 |
 | `MarkDormantStorylines` | 하루 1회 | 새 연결이 기준 일수 동안 없는 이슈를 휴면으로 바꾼다. 마지막 연결 날짜는 `digest` 의 타임라인에서 오고, 전이는 `storyline` API 로 한다. 이 작업을 어느 모듈에 둘지는 구현에서 정한다 — 어느 쪽이든 `storyline` 이 `digest` 를 읽어서는 안 된다 |

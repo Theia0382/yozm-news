@@ -782,7 +782,7 @@ public enum EvaluatorFailureKind { TRANSIENT, ARTICLE_REJECTED, EVALUATOR_UNAVAI
 | `domain/tagset` | 태그 체계 정의와 그 읽기 · 검증 · 원문 쓰기, 질문 틀, 기준 버전 대조, 태그 키 계보 해석, 버전 aggregate 와 그 저장소 |
 | `domain/threshold` | 태그 기준 · 저장 기준의 값 규칙과 변경 판정, 저장 바닥 계산, 어긋난 상태 판정, 태그 기준 · 저장 기준 저장소 |
 | `domain/backfill` | 빠진 태그 채움 행과 그 점유 · 일정, 채움 저장소 |
-| `domain/evaluator` | 공유 평가 · 사건 소속 판정의 포트와 그 입력 · 결과 · 실패, 피드 맥락의 카테고리 상한 · 서술 제목 상한과 코드 포인트 자르기, 사건 소속 질문 문구 |
+| `domain/evaluator` | 공유 평가 · 사건 소속 판정의 포트와 그 입력 · 결과 · 실패, 피드 맥락의 카테고리 상한 · 서술 제목 상한, 사건 소속 질문 문구 |
 | `domain/jev` | Jev 요청 본문 · 응답 읽기 · 오류 갈래 · 키 형식의 판정 |
 | `domain/queue` | 평가 대기의 일정(정착 · 점유 · 재시도)과 대기 행의 전이, 대기 저장소 |
 | `domain/result` | 결과와 체계의 일치 검사, 결과 해석(저장 기준 거르기 · 대표값), 조회 시점 판정, 결과 저장소(채움의 잠금 읽기 · 태그 더하기 포함) |
@@ -992,8 +992,7 @@ sequenceDiagram
 
 - 포트 `ArticleEvaluator`(나가는 쪽)와 그 값 · 결과: `EvaluationInput` · `FeedContext` · `EvaluationResult` · `Evaluation` · `EvaluationFailure` · `RereadResult` · `RereadFailure` · `MembershipInput` · `CandidateEvent` · `MembershipWording` · `MembershipResult` · `Membership`
 - `FeedContext.limited` — 피드 맥락의 카테고리 상한을 적용하는 정본(evaluation-R17)
-- `CandidateEvent.limited` — 서술 제목 상한을 적용하는 정본(evaluation-R37)
-- `CodePoints.prefix` — 앞 몇 코드 포인트로 자르기(서로게이트 쌍을 가르지 않는다)의 정본 — 카테고리 · 서술 제목이 함께 쓴다
+- `CandidateEvent.limited` — 서술 제목 상한을 적용하는 정본(evaluation-R37). 카테고리 · 서술 제목의 자르기는 `platform` 의 `CodePoints` 다
 - `EvaluationInput.presentSummary` — 공백뿐인 요약은 없는 요약이라는 규칙의 정본 — 평가 회차 · 판정이 함께 쓴다
 - `MembershipWording` — 사건 소속 질문 문구 · 판(`CURRENT`)과 질문 문장 조립(`question`)의 정본(evaluation-R37)
 

@@ -16,6 +16,7 @@
 - **운영자 접근 통제** — 운영자 경로(`/api/admin/**`)를 운영자 토큰으로 막고, 그 밖의 경로는 연다. 보안 구성은 두 역할 공통이다
 - **오류 응답 형식** — 화면용 API 의 오류 본문(`ApiProblem`)과 그것을 만드는 정본(`ProblemResponses`), 컨트롤러 오류 · 보안 거부의 문제 응답
 - **YAML 원문 읽기** — YAML 원문을 이벤트 API 로 읽어 트리로 옮기고, 문서 종류와 무관한 공통 거부(앵커 · 별칭 · 명시 태그 · 중복 키 · 알 수 없는 키 · 빈 값 · 형 오류 등)를 하는 공개 타입. 수집 프로필(`source`)과 기본 태그 체계(`evaluation`)가 쓴다
+- **코드 포인트 자르기** — 텍스트를 앞 몇 코드 포인트로 자르는 공개 타입(`CodePoints`). 피드 요약문(`source`) · 평가 입력(`evaluation`) · 기사 표현 텍스트(`event`)의 길이 상한이 쓴다
 
 하지 않는 것:
 
@@ -25,6 +26,7 @@
 - 각 모듈 구성요소의 역할을 정하지 않는다 — 역할 애너테이션은 각 모듈이 자기 구성요소에 단다. 이 모듈은 그 표시와 소속 규칙(platform-R9)을 갖는다
 - 로컬 대체물을 갖지 않는다 — 각 모듈이 자기 대체물의 결선에 `@LocalDevelopment` 를 단다(platform-R18)
 - 확장을 쓰는 테이블 · 검색은 갖지 않는다 — 쓰는 모듈의 것이다. 이 모듈은 확장이 있고 최소 버전 이상인지만 본다(platform-R19)
+- 길이 상한 값을 갖지 않는다 — 상한은 쓰는 모듈의 정본이고, 이 모듈은 자르는 방법만 갖는다
 
 다른 모듈과의 의존과 이벤트 흐름은 [overview.md §5](../overview.md#5-모듈-지도)에 있다.
 
@@ -46,7 +48,7 @@
 
 ## 3. 공개 인터페이스
 
-모듈 최상위 패키지 `net.yozmnews.platform` 의 공개 타입은 역할 애너테이션 둘, 로컬 개발 애너테이션 하나, 문제 응답 둘(`ApiProblem` · `ProblemResponses`), 이벤트 발행 운영 API(`EventPublicationAdministration` 과 결과 타입 — 파일 9개, 중첩 레코드를 더하면 타입 11개), YAML 원문 읽기(파일 8개)다.
+모듈 최상위 패키지 `net.yozmnews.platform` 의 공개 타입은 역할 애너테이션 둘, 로컬 개발 애너테이션 하나, 문제 응답 둘(`ApiProblem` · `ProblemResponses`), 이벤트 발행 운영 API(`EventPublicationAdministration` 과 결과 타입 — 파일 9개, 중첩 레코드를 더하면 타입 11개), YAML 원문 읽기(파일 8개), 코드 포인트 자르기 하나(`CodePoints`)다.
 
 | 타입 | 형태 | 용도 |
 |---|---|---|
@@ -191,6 +193,23 @@ public final class StrictYamlBinding {
 
 관련 규칙: platform-R17.
 
+### CodePoints
+
+텍스트를 앞 몇 코드 포인트로 자른다 — 빈이 아닌 정적 함수다.
+
+```java
+public final class CodePoints {
+    public static String prefix(String text, int max);
+}
+```
+
+- 계약
+  - 텍스트가 `max` 코드 포인트 이하면 그 텍스트를 그대로 돌려준다(같은 인스턴스)
+  - 넘으면 앞 `max` 코드 포인트를 돌려준다 — 코드 포인트 단위라 서로게이트 쌍을 가르지 않는다. 공백을 걷지 않는다
+  - `max` 가 음수면 `IllegalArgumentException`, 텍스트가 null 이면 `NullPointerException`
+
+관련 규칙: 없음. 상한 값은 쓰는 모듈이 갖는다.
+
 ### EventPublicationAdministration
 
 남겨진 발행의 목록 · 다시 처리 · 폐기 — `admin` 의 운영자 API 가 부른다. 구현은 `application` 의 `EventPublicationAdministrationService` 다.
@@ -246,14 +265,14 @@ HTTP 엔드포인트:
 
 | 패키지 | 책임 |
 |---|---|
-| (최상위) | 역할 애너테이션 · 문제 응답 · 이벤트 발행 운영 API · YAML 원문 읽기(§3) |
+| (최상위) | 역할 애너테이션 · 문제 응답 · 이벤트 발행 운영 API · YAML 원문 읽기 · 코드 포인트 자르기(§3) |
 | `adapter/in/job` | 이벤트 발행 재처리 반복 작업 |
 | `adapter/in/web` | API 계약 확인 엔드포인트, 화면용 API 명세 설정, 컨트롤러 오류의 문제 응답 |
 | `adapter/out/persistence` | 이벤트 발행 레지스트리 행의 읽기 · 조건부 삭제, 설치된 DB 확장의 버전 읽기 |
 | `application` | 재처리 유스케이스, 남겨진 발행의 운영 유스케이스, 재처리 설정과 정책 결선, 역할 검사 결선, DB 확장 요건 검사 결선, 작업 역할의 스케줄링, 보안 구성과 운영자 토큰 인증 |
 | `domain` | 재처리 대상 · 남겨진 발행 판정과 그 설정 조건, 이벤트를 읽을 수 있는지의 판정, 레지스트리 행 저장 인터페이스, 역할 판정, 운영자 자격 판정, pgvector 확장 판정과 설치된 확장 저장 인터페이스 |
 
-협력: `EventResubmissionJob` 이 `EventResubmissionService` 를 부르고, 서비스는 Spring Modulith 의 미완료 발행 전체를 읽어 `EventResubmissionPolicy` 의 판정대로 재제출한다 — 실패 발행은 재제출 전에 `EventReading` 으로 이벤트를 읽어 본다. `admin` 의 운영자 API 는 `EventPublicationAdministrationService` 를 부른다 — 이 서비스는 `RegistryRows`(구현 `JdbcRegistryRows` — 본문은 Spring Modulith 의 `EventSerializer` 로 읽어 `EventReading` 으로 판정한다)로 레지스트리 행을 읽어 같은 정책으로 남겨진 발행을 가르고, 다시 처리는 Spring Modulith 의 재제출 경로로, 폐기는 `RegistryRows` 의 조건부 삭제로 한다. 정책은 `EventResubmissionConfiguration` 이 설정 값(`EventResubmissionProperties`)으로 만든다. `RoleConfiguration` 이 켜진 profile 로 `ActiveRoles` 를 만든다. `VectorExtensionConfiguration` 이 `DatabaseExtensions`(구현 `JdbcDatabaseExtensions`)로 설치된 pgvector 확장의 버전을 읽어 `VectorExtension` 을 만든다. `SecurityConfiguration` 이 설정 값(`AdminSecurityProperties`)으로 `AdminCredential` 을 만들고, 운영자 체인의 `AdminTokenFilter` 가 제시된 토큰을 `AdminTokenAuthenticationProvider` 에 맡겨 대조한다. 보안 진입점과 `ProblemResponseAdvice` 는 `ProblemResponses` 로 문제 응답을 쓴다. YAML 원문 읽기는 다른 구성 요소와 협력하지 않는다 — 다른 모듈이 `YamlTextReader` 로 읽은 트리를 `StrictYamlBinding` 으로 바인딩한다.
+협력: `EventResubmissionJob` 이 `EventResubmissionService` 를 부르고, 서비스는 Spring Modulith 의 미완료 발행 전체를 읽어 `EventResubmissionPolicy` 의 판정대로 재제출한다 — 실패 발행은 재제출 전에 `EventReading` 으로 이벤트를 읽어 본다. `admin` 의 운영자 API 는 `EventPublicationAdministrationService` 를 부른다 — 이 서비스는 `RegistryRows`(구현 `JdbcRegistryRows` — 본문은 Spring Modulith 의 `EventSerializer` 로 읽어 `EventReading` 으로 판정한다)로 레지스트리 행을 읽어 같은 정책으로 남겨진 발행을 가르고, 다시 처리는 Spring Modulith 의 재제출 경로로, 폐기는 `RegistryRows` 의 조건부 삭제로 한다. 정책은 `EventResubmissionConfiguration` 이 설정 값(`EventResubmissionProperties`)으로 만든다. `RoleConfiguration` 이 켜진 profile 로 `ActiveRoles` 를 만든다. `VectorExtensionConfiguration` 이 `DatabaseExtensions`(구현 `JdbcDatabaseExtensions`)로 설치된 pgvector 확장의 버전을 읽어 `VectorExtension` 을 만든다. `SecurityConfiguration` 이 설정 값(`AdminSecurityProperties`)으로 `AdminCredential` 을 만들고, 운영자 체인의 `AdminTokenFilter` 가 제시된 토큰을 `AdminTokenAuthenticationProvider` 에 맡겨 대조한다. 보안 진입점과 `ProblemResponseAdvice` 는 `ProblemResponses` 로 문제 응답을 쓴다. YAML 원문 읽기는 다른 구성 요소와 협력하지 않는다 — 다른 모듈이 `YamlTextReader` 로 읽은 트리를 `StrictYamlBinding` 으로 바인딩한다. `CodePoints` 도 협력하지 않는다.
 
 역할: `EventResubmissionJob` 과 `WorkerSchedulingConfiguration` 은 작업 역할, `PingController` · `OpenApiConfiguration` · `ProblemResponseAdvice` 는 화면 역할에서만 켜진다. `EventPublicationAdministrationService` · `JdbcRegistryRows` · `VectorExtensionConfiguration` · `JdbcDatabaseExtensions` 는 공통이다. 보안 구성을 포함한 나머지는 두 역할 공통이다(platform-R9 · platform-R10). YAML 원문 읽기 타입은 빈이 아니다.
 
