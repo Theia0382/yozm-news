@@ -19,6 +19,14 @@ public final class EventArticles {
 	 * @return 기사 ID
 	 */
 	public static long insert(JdbcClient jdbc, String title, @Nullable String summary) {
+		return insert(jdbc, title, summary, 1, 11);
+	}
+
+	/**
+	 * 기사 하나와 엔트리 하나(고른 소스 · 피드)를 넣는다.
+	 * @return 기사 ID
+	 */
+	public static long insert(JdbcClient jdbc, String title, @Nullable String summary, long source, long feed) {
 		String url = "https://event.example/" + UUID.randomUUID();
 		long id = jdbc.sql("""
 				insert into articles (canonical_url, url_hash, title, title_key_hash, summary_text, published_at,
@@ -32,8 +40,9 @@ public final class EventArticles {
 		jdbc.sql("""
 				insert into article_feed_entries (article_id, feed_id, source_id, item_url_hash, feed_categories,
 				    published_at_estimated, match_kind, seen_at)
-				values (:article, 11, 1, sha256(convert_to(:url, 'UTF8')), '{}', false, 'NEW', '2026-11-05T00:00:00Z')
-				""").param("article", id).param("url", url).update();
+				values (:article, :feed, :source, sha256(convert_to(:url, 'UTF8')), '{}', false, 'NEW',
+				    '2026-11-05T00:00:00Z')
+				""").param("article", id).param("feed", feed).param("source", source).param("url", url).update();
 		return id;
 	}
 

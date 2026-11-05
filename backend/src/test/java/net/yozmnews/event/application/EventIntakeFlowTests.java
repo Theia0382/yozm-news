@@ -27,6 +27,8 @@ import net.yozmnews.event.domain.feature.KeyTermExtractor;
 import net.yozmnews.event.domain.feature.MatchFeatures;
 import net.yozmnews.event.domain.feature.MatchFeaturesRepository;
 import net.yozmnews.event.domain.intake.IntakeQueueRepository;
+import net.yozmnews.source.SourceDeleted;
+import net.yozmnews.source.SourceId;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -49,6 +51,9 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 회차는 시험이 고정 시계와 임베더를 넣어 직접 만든다 — 작업 서버를 꺼 반복 작업이 시험의 회차와 겹치지 않고, profile {@code local} 이
  * 없어 임베더 빈은 없다. 회차가 넘긴 텍스트는 대체물을 감싼 기록 임베더로 보고, 벡터는 {@code embedding::text} 로 되읽는다. 시험 문장은
  * 지어낸 것이다.
+ * <p>
+ * 지운 기사 따르기는 리스너를 직접 부르는 시험과 별도로 소스 삭제 이벤트를 발행해 {@code ArticlesRemoved} 가 발행 레지스트리를 거쳐 오는
+ * 길로도 본다.
  * <p>
  * 지키는 규칙: event-R1 · event-R2 · event-R3 · event-R4 · event-R5 · event-R6 · event-R8
  */
@@ -171,6 +176,27 @@ class EventIntakeFlowTests {
 		assertThat(this.jdbc.sql("select article_id from article_match_features").query(Long.class).list())
 			.containsExactly(kept);
 		assertThat(queueRows()).isZero();
+	}
+
+	@Test
+	void deletingASourceRemovesTheQueueRowsAndRepresentationsOfItsArticlesThroughTheEvents() {
+		long gone = EventArticles.insert(this.jdbc, TITLE, SUMMARY, 31, 311);
+		long kept = EventArticles.insert(this.jdbc, "축구 결승 진출", null, 32, 321);
+		this.queue.enqueue(new ArticleId(gone), NOW);
+		this.queue.enqueue(new ArticleId(kept), NOW);
+		round().run(new FakeArticleEmbedder());
+		this.queue.enqueue(new ArticleId(gone), NOW);
+		this.queue.enqueue(new ArticleId(kept), NOW);
+
+		// source → article(SourceDeleted) → event(ArticlesRemoved) — 리스너를 직접 부르지 않고 발행 레지스트리를 거친다
+		this.transaction.executeWithoutResult(status -> this.events.publishEvent(new SourceDeleted(new SourceId(31))));
+		await().atMost(Duration.ofSeconds(10))
+			.until(() -> this.jdbc.sql("select article_id from article_match_features").query(Long.class).list()
+				.equals(List.of(kept)) && queueRows() == 1);
+
+		assertThat(this.jdbc.sql("select id from articles").query(Long.class).list()).containsExactly(kept);
+		assertThat(this.jdbc.sql("select article_id from event_intake_queue").query(Long.class).list())
+			.containsExactly(kept);
 	}
 
 	@Test
