@@ -17,7 +17,6 @@ import net.yozmnews.event.domain.event.EventArticleRepository;
 import net.yozmnews.event.domain.event.EventRepository;
 import net.yozmnews.event.domain.event.EventShrink;
 import net.yozmnews.event.domain.event.LockedEvent;
-import net.yozmnews.event.domain.event.PublishedSpan;
 import net.yozmnews.event.domain.feature.MatchFeatures;
 import net.yozmnews.event.domain.feature.MatchFeaturesRepository;
 import net.yozmnews.event.domain.intake.IntakeQueueRepository;
@@ -32,7 +31,7 @@ import org.springframework.stereotype.Component;
  * <p>
  * 지울 때는 한 트랜잭션에서 사건 묶기 대기 · 배정 대기 행 → 배정 행(기사 ID 순) → 사건(사건 ID 순) 순으로 잡는다 — 진행 중인 회차의 쓰기
  * 트랜잭션이 대기 행을 잡고 있으면 그 커밋을 기다려, 커밋 직전의 표현 · 배정을 놓치지 않는다. 지운 기사의 표현을 읽어 사건마다 새 값을 정하고
- * ({@link EventShrink}), 배정 · 후보를 지운 뒤 사건을 고치거나(첫 · 마지막 시각은 남은 배정에서) 지우고, 표현 행은 마지막에 지운다.
+ * ({@link EventShrink}), 배정 · 후보를 지운 뒤 사건을 고치거나 지우고({@link EventShrinkWriter}), 표현 행은 마지막에 지운다.
  */
 @Component
 class EventIntakeListener {
@@ -47,22 +46,26 @@ class EventIntakeListener {
 
 	private final EventArticleRepository assignments;
 
+	private final EventShrinkWriter shrinks;
+
 	private final InstantSource clock;
 
 	@Autowired
 	EventIntakeListener(IntakeQueueRepository queue, AssignmentQueueRepository assignmentQueue,
-			MatchFeaturesRepository features, EventRepository events, EventArticleRepository assignments) {
-		this(queue, assignmentQueue, features, events, assignments, InstantSource.system());
+			MatchFeaturesRepository features, EventRepository events, EventArticleRepository assignments,
+			EventShrinkWriter shrinks) {
+		this(queue, assignmentQueue, features, events, assignments, shrinks, InstantSource.system());
 	}
 
 	EventIntakeListener(IntakeQueueRepository queue, AssignmentQueueRepository assignmentQueue,
 			MatchFeaturesRepository features, EventRepository events, EventArticleRepository assignments,
-			InstantSource clock) {
+			EventShrinkWriter shrinks, InstantSource clock) {
 		this.queue = queue;
 		this.assignmentQueue = assignmentQueue;
 		this.features = features;
 		this.events = events;
 		this.assignments = assignments;
+		this.shrinks = shrinks;
 		this.clock = clock;
 	}
 
@@ -91,22 +94,7 @@ class EventIntakeListener {
 		}
 		this.assignments.deleteByArticles(removed);
 		for (Planned plan : plans) {
-			LockedEvent locked = plan.locked();
-			switch (plan.shrink()) {
-				case EventShrink.Emptied emptied -> this.events.delete(locked.id());
-				case EventShrink.Shrunk shrunk -> {
-					PublishedSpan span = this.assignments.publishedSpan(locked.id()).orElse(null);
-					if (span == null) {
-						// 수가 남았다는데 배정이 없다 — 남은 배정이 정본이라 사건을 지운다
-						this.events.delete(locked.id());
-					}
-					else {
-						this.events.update(new LockedEvent(locked.id(), locked.status(), locked.modelVersion(),
-								shrunk.centroid(), shrunk.articleCount(), span.first(), span.last()), List.of(),
-								shrunk.removedTerms());
-					}
-				}
-			}
+			this.shrinks.write(plan.locked(), plan.shrink());
 		}
 		this.features.deleteByArticles(removed);
 	}

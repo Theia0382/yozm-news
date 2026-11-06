@@ -10,6 +10,7 @@ import net.yozmnews.event.EventArticles;
 import net.yozmnews.event.adapter.out.fake.FakeArticleEmbedder;
 import net.yozmnews.event.application.AssignmentRound;
 import net.yozmnews.event.application.EventIntakeRound;
+import net.yozmnews.event.application.RejudgementRound;
 import net.yozmnews.event.domain.feature.ArticleEmbedder;
 import net.yozmnews.event.domain.intake.IntakeQueueRepository;
 import org.jspecify.annotations.Nullable;
@@ -46,6 +47,9 @@ class IntakeArticlesJobTests {
 	AssignmentRound assignment;
 
 	@Autowired
+	RejudgementRound rejudgement;
+
+	@Autowired
 	IntakeQueueRepository queue;
 
 	@Autowired
@@ -62,7 +66,7 @@ class IntakeArticlesJobTests {
 		long article = enqueued();
 		// 컨텍스트의 작업 빈도 기동 때 같은 경고를 남길 수 있다 — 이 시험이 만든 작업의 몫만 센다
 		int before = warnings(output);
-		IntakeArticlesJob job = new IntakeArticlesJob(this.round, this.assignment, provider(null));
+		IntakeArticlesJob job = new IntakeArticlesJob(this.round, this.assignment, this.rejudgement, provider(null));
 
 		job.run();
 		job.run();
@@ -78,7 +82,7 @@ class IntakeArticlesJobTests {
 	@Test
 	void withAnEmbedderTheJobRunsTheIntakeRoundAndThenTheAssignmentRound() {
 		long article = enqueued();
-		IntakeArticlesJob job = new IntakeArticlesJob(this.round, this.assignment, provider(new FakeArticleEmbedder()));
+		IntakeArticlesJob job = new IntakeArticlesJob(this.round, this.assignment, this.rejudgement, provider(new FakeArticleEmbedder()));
 
 		job.run();
 

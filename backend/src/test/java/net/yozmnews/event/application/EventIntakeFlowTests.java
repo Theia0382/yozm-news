@@ -90,6 +90,9 @@ class EventIntakeFlowTests {
 	EventArticleRepository eventArticles;
 
 	@Autowired
+	EventShrinkWriter shrinks;
+
+	@Autowired
 	ArticleDirectory articles;
 
 	@Autowired
@@ -343,7 +346,7 @@ class EventIntakeFlowTests {
 
 	private EventIntakeListener listener() {
 		return new EventIntakeListener(this.queue, this.assignmentQueue, this.features, this.eventRepository,
-				this.eventArticles, (InstantSource) () -> NOW);
+				this.eventArticles, this.shrinks, (InstantSource) () -> NOW);
 	}
 
 	private long enqueued(String title, @Nullable String summary) {

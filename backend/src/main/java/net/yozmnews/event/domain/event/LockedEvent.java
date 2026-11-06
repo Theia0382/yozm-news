@@ -3,6 +3,8 @@ package net.yozmnews.event.domain.event;
 import java.time.Instant;
 import java.util.Objects;
 
+import net.yozmnews.event.domain.assignment.CentroidUpdate;
+
 /**
  * 잠근 사건 한 행 — 갱신의 입력이자 결과 · docs/specs/event.md §4.
  *
@@ -38,6 +40,18 @@ public record LockedEvent(long id, EventStatus status, String modelVersion, floa
 	@Override
 	public float[] centroid() {
 		return this.centroid.clone();
+	}
+
+	/**
+	 * 기사 하나를 더한 사건 — 중심은 그 벡터를 더한 평균({@link CentroidUpdate#add}), 수 + 1, 첫 · 마지막 기사 시각은 그 발행 시각까지
+	 * 넓힌다. 배정과 재판정의 옮기기가 함께 쓰는 정본이다.
+	 * @throws IllegalArgumentException 벡터 길이가 중심과 다를 때
+	 */
+	public LockedEvent joined(float[] vector, Instant publishedAt) {
+		return new LockedEvent(this.id, this.status, this.modelVersion,
+				CentroidUpdate.add(this.centroid, this.articleCount, vector), this.articleCount + 1,
+				publishedAt.isBefore(this.firstArticleAt) ? publishedAt : this.firstArticleAt,
+				publishedAt.isAfter(this.lastArticleAt) ? publishedAt : this.lastArticleAt);
 	}
 
 }

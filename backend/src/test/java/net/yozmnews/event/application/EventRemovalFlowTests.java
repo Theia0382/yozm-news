@@ -85,6 +85,9 @@ class EventRemovalFlowTests {
 	CriteriaRepository criteriaHistory;
 
 	@Autowired
+	EventShrinkWriter shrinks;
+
+	@Autowired
 	ArticleDirectory articles;
 
 	@Autowired
@@ -268,7 +271,7 @@ class EventRemovalFlowTests {
 	private void remove(long... articles) {
 		List<ArticleId> ids = Arrays.stream(articles).mapToObj(ArticleId::new).toList();
 		EventIntakeListener listener = new EventIntakeListener(this.intake, this.queue, this.features, this.events,
-				this.assignments, () -> NOW);
+				this.assignments, this.shrinks, () -> NOW);
 		this.transaction.executeWithoutResult(status -> listener.on(new ArticlesRemoved(ids)));
 	}
 

@@ -27,7 +27,7 @@ public interface EventArticleRepository {
 
 	/**
 	 * 기준이 {@code criteriaId} 가 아닌 배정을 기사 ID 순으로 {@code limit} 개까지 잠근다(다른 트랜잭션이 잡은 행은 건너뛴다). 저장 후보는
-	 * 사라진 사건을 뺀다. 트랜잭션 안에서 부른다.
+	 * 사라진 사건을 뺀다. 사건은 잠그지 않는다 — 사건의 기사 수가 필요한 적용은 사건을 잠근 뒤 읽는다. 트랜잭션 안에서 부른다.
 	 */
 	List<RejudgeTarget> lockRejudgeTargets(long criteriaId, int limit);
 

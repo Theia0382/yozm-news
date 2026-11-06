@@ -106,16 +106,9 @@ class JdbcEventArticleRepository implements EventArticleRepository {
 						.add(new StoredCandidate(rs.getLong("event_id"), rs.getDouble("score"),
 								rs.getObject("probability", Double.class)));
 				});
-		Map<Long, Integer> counts = new HashMap<>();
-		this.jdbc.sql("select id, article_count from events where id = any(:events)")
-			.param("events", assignments.stream().map(EventArticle::eventId).distinct().toArray(Long[]::new))
-			.query((ResultSet rs) -> {
-				counts.put(rs.getLong("id"), rs.getInt("article_count"));
-			});
 		return assignments.stream()
 			.map(assignment -> new RejudgeTarget(assignment,
-					stored.getOrDefault(assignment.articleId().value(), List.of()),
-					counts.getOrDefault(assignment.eventId(), 0)))
+					stored.getOrDefault(assignment.articleId().value(), List.of())))
 			.toList();
 	}
 

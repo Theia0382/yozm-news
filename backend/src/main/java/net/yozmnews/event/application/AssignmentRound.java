@@ -22,7 +22,6 @@ import net.yozmnews.event.domain.assignment.AssignmentQueueRepository;
 import net.yozmnews.event.domain.assignment.AssignmentRule;
 import net.yozmnews.event.domain.assignment.AssignmentSchedule;
 import net.yozmnews.event.domain.assignment.CandidateScoring;
-import net.yozmnews.event.domain.assignment.CentroidUpdate;
 import net.yozmnews.event.domain.assignment.CriteriaRepository;
 import net.yozmnews.event.domain.assignment.DecidedBy;
 import net.yozmnews.event.domain.assignment.Decision;
@@ -302,10 +301,7 @@ public class AssignmentRound {
 						yield null;
 					}
 					LockedEvent event = locked.get();
-					this.events.update(new LockedEvent(event.id(), event.status(), event.modelVersion(),
-							CentroidUpdate.add(event.centroid(), event.articleCount(), vector), event.articleCount() + 1,
-							min(event.firstArticleAt(), draft.publishedAt()),
-							max(event.lastArticleAt(), draft.publishedAt())), terms, List.of());
+					this.events.update(event.joined(vector, draft.publishedAt()), terms, List.of());
 					yield new EventArticle(draft.article(), event.id(), draft.publishedAt(), attach.score(), attach.by(),
 							draft.criteriaId(), now);
 				}
@@ -345,14 +341,6 @@ public class AssignmentRound {
 		for (PendingAssignment claim : claims) {
 			this.transaction.executeWithoutResult(status -> this.queue.releaseIfLeased(claim.articleId(), token(claim)));
 		}
-	}
-
-	private static Instant min(Instant a, Instant b) {
-		return a.isBefore(b) ? a : b;
-	}
-
-	private static Instant max(Instant a, Instant b) {
-		return a.isAfter(b) ? a : b;
 	}
 
 	private static UUID token(PendingAssignment claim) {

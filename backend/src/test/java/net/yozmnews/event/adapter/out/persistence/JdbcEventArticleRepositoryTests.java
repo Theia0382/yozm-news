@@ -22,7 +22,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 /**
- * 배정 저장소 — 배정과 후보의 쓰기(있으면 그대로), 재판정 대상(기준이 다른 배정 · 기사 ID 순 · 사라진 사건의 후보 제외 · 사건 기사 수),
+ * 배정 저장소 — 배정과 후보의 쓰기(있으면 그대로), 재판정 대상(기준이 다른 배정 · 기사 ID 순 · 사라진 사건의 후보 제외),
  * 다시 적기 · 기준만 적기, 남은 배정의 발행 시각 범위, 잠금 · 지우기를 Flyway 가 적용된 실제 PostgreSQL 에서 본다.
  * <p>
  * 지키는 규칙: event-R12
@@ -100,11 +100,9 @@ class JdbcEventArticleRepositoryTests {
 		assertThat(targets).extracting(target -> target.assignment().articleId())
 			.containsExactly(new ArticleId(11), new ArticleId(13));
 		assertThat(targets.get(0).stored()).isEmpty();
-		assertThat(targets.get(0).currentEventArticles()).isEqualTo(1);
 		// 사라진 사건(other + 1000)의 후보는 빠진다
 		assertThat(targets.get(1).stored()).containsExactly(new StoredCandidate(this.event, 0.70, 0.6),
 				new StoredCandidate(this.other, 0.60, null));
-		assertThat(targets.get(1).currentEventArticles()).isEqualTo(3);
 		assertThat(this.repository.lockRejudgeTargets(this.criteria, 10)).extracting(t -> t.assignment().articleId())
 			.containsExactly(new ArticleId(11), new ArticleId(13), new ArticleId(14));
 	}
