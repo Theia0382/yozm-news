@@ -3,14 +3,16 @@ package net.yozmnews.event.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 
-import java.sql.Types;
+import java.sql.ResultSet;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.InstantSource;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 import net.yozmnews.TestcontainersConfiguration;
@@ -283,6 +285,21 @@ class EventAssignmentFlowTests {
 	}
 
 	@Test
+	void eachArticleUsesTheTimeItIsProcessed() {
+		firstEvent();
+		long banded = queued("[4,3]");
+		// 회차 시작(점유)은 00:00, 그 뒤 시계는 00:05 — 기사를 처리한 때부터 1분 뒤에 다시 판정한다
+		AtomicInteger reads = new AtomicInteger();
+		InstantSource ticking = () -> (reads.getAndIncrement() == 0) ? NOW : NOW.plusSeconds(300);
+
+		round(new Scripted(query -> new MembershipJudgement.Failed(EvaluatorFailureKind.TRANSIENT, "시간 초과")),
+				ticking)
+			.run(MODEL_A);
+
+		assertThat(queueRow(banded)).containsEntry("attempts", 1).containsEntry("available", "2026-11-06T00:06:00Z");
+	}
+
+	@Test
 	void aRejectedArticleEndsInAFailedEventAtOnce() {
 		long event = eventOf(firstEvent());
 		long banded = queued("[4,3]");
@@ -379,8 +396,12 @@ class EventAssignmentFlowTests {
 	}
 
 	private AssignmentRound round(EventMembership membership) {
+		return round(membership, () -> NOW);
+	}
+
+	private AssignmentRound round(EventMembership membership, InstantSource clock) {
 		return new AssignmentRound(this.queue, this.intake, this.features, this.events, this.assignments,
-				this.criteriaHistory, CRITERIA, this.articles, membership, this.transaction, (InstantSource) () -> NOW);
+				this.criteriaHistory, CRITERIA, this.articles, membership, this.transaction, clock);
 	}
 
 	private long queued(String vector, String... terms) {
@@ -435,10 +456,10 @@ class EventAssignmentFlowTests {
 	}
 
 	private Map<String, Integer> termCounts(long event) {
-		Map<String, Integer> counts = new java.util.HashMap<>();
+		Map<String, Integer> counts = new HashMap<>();
 		this.jdbc.sql("select term, article_count from event_key_terms where event_id = :event")
 			.param("event", event)
-			.query((java.sql.ResultSet rs) -> {
+			.query((ResultSet rs) -> {
 				counts.put(rs.getString("term"), rs.getInt("article_count"));
 			});
 		return counts;

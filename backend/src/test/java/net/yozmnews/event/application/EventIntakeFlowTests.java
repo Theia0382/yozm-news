@@ -23,6 +23,8 @@ import net.yozmnews.article.ArticlesRemoved;
 import net.yozmnews.event.EventArticles;
 import net.yozmnews.event.adapter.out.fake.FakeArticleEmbedder;
 import net.yozmnews.event.domain.assignment.AssignmentQueueRepository;
+import net.yozmnews.event.domain.event.EventArticleRepository;
+import net.yozmnews.event.domain.event.EventRepository;
 import net.yozmnews.event.domain.feature.ArticleEmbedder;
 import net.yozmnews.event.domain.feature.EmbedderInfo;
 import net.yozmnews.event.domain.feature.Embedding;
@@ -80,6 +82,12 @@ class EventIntakeFlowTests {
 
 	@Autowired
 	AssignmentQueueRepository assignmentQueue;
+
+	@Autowired
+	EventRepository eventRepository;
+
+	@Autowired
+	EventArticleRepository eventArticles;
 
 	@Autowired
 	ArticleDirectory articles;
@@ -334,7 +342,8 @@ class EventIntakeFlowTests {
 	}
 
 	private EventIntakeListener listener() {
-		return new EventIntakeListener(this.queue, this.features, (InstantSource) () -> NOW);
+		return new EventIntakeListener(this.queue, this.assignmentQueue, this.features, this.eventRepository,
+				this.eventArticles, (InstantSource) () -> NOW);
 	}
 
 	private long enqueued(String title, @Nullable String summary) {

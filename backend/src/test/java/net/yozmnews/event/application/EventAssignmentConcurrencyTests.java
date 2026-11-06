@@ -7,7 +7,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.InstantSource;
 import java.time.ZoneOffset;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -22,18 +21,15 @@ import net.yozmnews.event.EventArticles;
 import net.yozmnews.event.domain.assignment.AssignmentCriteria;
 import net.yozmnews.event.domain.assignment.AssignmentQueueRepository;
 import net.yozmnews.event.domain.assignment.CriteriaRepository;
-import net.yozmnews.event.domain.assignment.DecidedBy;
 import net.yozmnews.event.domain.assignment.StoredCandidate;
 import net.yozmnews.event.domain.event.EventArticle;
 import net.yozmnews.event.domain.event.EventArticleRepository;
 import net.yozmnews.event.domain.event.EventRepository;
-import net.yozmnews.event.domain.event.RejudgeTarget;
 import net.yozmnews.event.domain.feature.ArticleEmbedder;
 import net.yozmnews.event.domain.feature.EmbedderInfo;
 import net.yozmnews.event.domain.feature.Embedding;
 import net.yozmnews.event.domain.feature.MatchFeaturesRepository;
 import net.yozmnews.event.domain.intake.IntakeQueueRepository;
-import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -170,56 +166,23 @@ class EventAssignmentConcurrencyTests {
 	}
 
 	/** 배정 행을 넣기 직전(사건을 잠그고 고친 뒤) 신호를 보내고 풀릴 때까지 기다린다 — 쓰기 트랜잭션을 커밋 전에 세운다 */
-	private static final class Pausing implements EventArticleRepository {
-
-		private final EventArticleRepository delegate;
+	private static final class Pausing extends ForwardingEventArticleRepository {
 
 		private final CountDownLatch paused;
 
 		private final CountDownLatch resume;
 
 		Pausing(EventArticleRepository delegate, CountDownLatch paused, CountDownLatch resume) {
-			this.delegate = delegate;
+			super(delegate);
 			this.paused = paused;
 			this.resume = resume;
-		}
-
-		@Override
-		public boolean exists(ArticleId articleId) {
-			return this.delegate.exists(articleId);
 		}
 
 		@Override
 		public boolean insertIfAbsent(EventArticle row, List<StoredCandidate> stored) {
 			this.paused.countDown();
 			awaitQuietly(this.resume);
-			return this.delegate.insertIfAbsent(row, stored);
-		}
-
-		@Override
-		public List<RejudgeTarget> lockRejudgeTargets(long criteriaId, int limit) {
-			return this.delegate.lockRejudgeTargets(criteriaId, limit);
-		}
-
-		@Override
-		public void reassign(ArticleId articleId, long eventId, @Nullable Double score, DecidedBy by, long criteriaId,
-				Instant now) {
-			this.delegate.reassign(articleId, eventId, score, by, criteriaId, now);
-		}
-
-		@Override
-		public void keep(ArticleId articleId, long criteriaId) {
-			this.delegate.keep(articleId, criteriaId);
-		}
-
-		@Override
-		public List<EventArticle> lockByArticles(Collection<ArticleId> articleIds) {
-			return this.delegate.lockByArticles(articleIds);
-		}
-
-		@Override
-		public void deleteByArticles(Collection<ArticleId> articleIds) {
-			this.delegate.deleteByArticles(articleIds);
+			return super.insertIfAbsent(row, stored);
 		}
 
 	}

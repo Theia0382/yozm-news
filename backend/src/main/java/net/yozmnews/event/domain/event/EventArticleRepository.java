@@ -3,6 +3,7 @@ package net.yozmnews.event.domain.event;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.event.domain.assignment.DecidedBy;
@@ -39,6 +40,9 @@ public interface EventArticleRepository {
 
 	/** 기사들의 배정을 기사 ID 순으로 잠근다 — 배정이 없는 기사는 결과에 없다. 트랜잭션 안에서 부른다 */
 	List<EventArticle> lockByArticles(Collection<ArticleId> articleIds);
+
+	/** 사건에 남은 배정의 발행 시각 범위 — 배정이 없으면 빈 값 */
+	Optional<PublishedSpan> publishedSpan(long eventId);
 
 	/** 기사들의 배정과 그 기사들의 배정 후보를 지운다 */
 	void deleteByArticles(Collection<ArticleId> articleIds);

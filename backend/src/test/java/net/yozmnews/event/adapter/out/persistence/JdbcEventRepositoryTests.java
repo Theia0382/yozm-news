@@ -124,7 +124,7 @@ class JdbcEventRepositoryTests {
 	}
 
 	@Test
-	void updateWritesTheEventAndCountsTermsOnce() {
+	void updateWritesTheEventAndCountsTermsByOccurrence() {
 		long id = event("OPEN", "model-a", "[1,0]", "2026-11-05T00:00:00Z", "2026-11-05T00:00:00Z");
 		terms(id, Map.of("금리", 2, "동결", 1, "물가", 3));
 		LockedEvent locked = this.repository.lock(id).orElseThrow();
@@ -138,7 +138,8 @@ class JdbcEventRepositoryTests {
 		assertThat(updated.articleCount()).isEqualTo(4);
 		assertThat(updated.firstArticleAt()).isEqualTo(Instant.parse("2026-11-04T00:00:00Z"));
 		assertThat(updated.lastArticleAt()).isEqualTo(Instant.parse("2026-11-05T12:00:00Z"));
-		assertThat(termCounts(id)).containsExactlyInAnyOrderEntriesOf(Map.of("금리", 3, "환율", 1, "물가", 2));
+		// 금리 2 + 1, 환율 새로 2(두 기사), 동결 1 − 1 → 지움, 물가 3 − 2
+		assertThat(termCounts(id)).containsExactlyInAnyOrderEntriesOf(Map.of("금리", 3, "환율", 2, "물가", 1));
 	}
 
 	@Test

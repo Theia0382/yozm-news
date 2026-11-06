@@ -123,7 +123,8 @@ public class AssignmentRound {
 			PendingAssignment claim = claimed.get(i);
 			Step step;
 			try {
-				step = assign(claim, contents.get(claim.articleId()), model, criteriaId, now);
+				// 기사마다 시계를 다시 읽는다 — 회차가 길어도 재시도 시각 · 배정 시각이 그 기사를 처리한 때다
+				step = assign(claim, contents.get(claim.articleId()), model, criteriaId, this.clock.instant());
 			}
 			catch (RuntimeException ex) {
 				release(claimed.subList(i, claimed.size()));

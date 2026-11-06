@@ -11,12 +11,14 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.event.domain.assignment.DecidedBy;
 import net.yozmnews.event.domain.assignment.StoredCandidate;
 import net.yozmnews.event.domain.event.EventArticle;
 import net.yozmnews.event.domain.event.EventArticleRepository;
+import net.yozmnews.event.domain.event.PublishedSpan;
 import net.yozmnews.event.domain.event.RejudgeTarget;
 import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -152,6 +154,17 @@ class JdbcEventArticleRepository implements EventArticleRepository {
 			.param("ids", ids(articleIds))
 			.query(JdbcEventArticleRepository::row)
 			.list();
+	}
+
+	@Override
+	public Optional<PublishedSpan> publishedSpan(long eventId) {
+		return this.jdbc.sql("""
+				select min(published_at) as first, max(published_at) as last from event_articles where event_id = :event
+				having count(*) > 0
+				""")
+			.param("event", eventId)
+			.query((rs, row) -> new PublishedSpan(instant(rs, "first"), instant(rs, "last")))
+			.optional();
 	}
 
 	@Override

@@ -41,8 +41,8 @@ public interface EventRepository {
 	long open(String modelVersion, float[] centroid, Instant publishedAt, List<String> keyTerms, Instant now);
 
 	/**
-	 * 잠근 사건을 고쳐 쓴다 — 중심 · 기사 수 · 첫 · 마지막 기사 시각. 핵심 말은 더한 기사의 말마다 수를 하나 늘리고, 뺀 기사의 말마다 하나
-	 * 줄여 0 이 되면 지운다. 같은 말은 한 번 센다.
+	 * 잠근 사건을 고쳐 쓴다 — 중심 · 기사 수 · 첫 · 마지막 기사 시각. 핵심 말은 더한 말 목록에 나온 수만큼 늘리고, 뺀 말 목록에 나온 수만큼
+	 * 줄여 0 이 되면 지운다. 기사 하나의 핵심 말에는 같은 말이 없으므로, 기사마다 이어 붙인 목록이면 말마다 그 말을 가진 기사 수만큼 바뀐다.
 	 */
 	void update(LockedEvent next, List<String> addedTerms, List<String> removedTerms);
 

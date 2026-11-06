@@ -111,7 +111,8 @@ class JdbcEventRepository implements EventRepository {
 			.param("now", timestamp(now))
 			.query(Long.class)
 			.single();
-		addTerms(id, keyTerms);
+		// 기사 하나의 핵심 말이다 — 같은 말은 한 번 센다
+		addTerms(id, List.copyOf(new LinkedHashSet<>(keyTerms)));
 		return id;
 	}
 
@@ -144,27 +145,27 @@ class JdbcEventRepository implements EventRepository {
 		}
 		this.jdbc.sql("""
 				insert into event_key_terms (event_id, term, article_count)
-				select :id, t.term, 1 from (select distinct unnest(cast(:terms as text[])) as term) t
-				on conflict (event_id, term) do update set article_count = event_key_terms.article_count + 1
-				""").param("id", eventId).param("terms", distinct(terms)).update();
+				select :id, t.term, count(*) from unnest(cast(:terms as text[])) as t(term) group by t.term
+				on conflict (event_id, term) do update set article_count = event_key_terms.article_count + excluded.article_count
+				""").param("id", eventId).param("terms", terms.toArray(String[]::new)).update();
 	}
 
 	private void removeTerms(long eventId, List<String> terms) {
 		if (terms.isEmpty()) {
 			return;
 		}
-		String[] distinct = distinct(terms);
-		this.jdbc.sql("delete from event_key_terms where event_id = :id and term = any(:terms) and article_count = 1")
-			.param("id", eventId)
-			.param("terms", distinct)
-			.update();
+		String[] removed = terms.toArray(String[]::new);
+		// 0 이하가 될 말을 먼저 지운다 — 남는 말만 줄여 CHECK (article_count >= 1) 를 어기지 않는다
 		this.jdbc.sql("""
-				update event_key_terms set article_count = article_count - 1 where event_id = :id and term = any(:terms)
-				""").param("id", eventId).param("terms", distinct).update();
-	}
-
-	private static String[] distinct(List<String> terms) {
-		return new LinkedHashSet<>(terms).toArray(String[]::new);
+				delete from event_key_terms k
+				using (select t.term, count(*) as n from unnest(cast(:terms as text[])) as t(term) group by t.term) c
+				where k.event_id = :id and k.term = c.term and k.article_count <= c.n
+				""").param("id", eventId).param("terms", removed).update();
+		this.jdbc.sql("""
+				update event_key_terms k set article_count = k.article_count - c.n
+				from (select t.term, count(*) as n from unnest(cast(:terms as text[])) as t(term) group by t.term) c
+				where k.event_id = :id and k.term = c.term
+				""").param("id", eventId).param("terms", removed).update();
 	}
 
 	private static LockedEvent event(ResultSet rs, int row) throws SQLException {

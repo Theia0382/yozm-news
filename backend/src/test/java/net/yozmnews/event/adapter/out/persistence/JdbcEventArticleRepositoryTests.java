@@ -11,6 +11,7 @@ import net.yozmnews.article.ArticleId;
 import net.yozmnews.event.domain.assignment.DecidedBy;
 import net.yozmnews.event.domain.assignment.StoredCandidate;
 import net.yozmnews.event.domain.event.EventArticle;
+import net.yozmnews.event.domain.event.PublishedSpan;
 import net.yozmnews.event.domain.event.RejudgeTarget;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,7 +23,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 
 /**
  * 배정 저장소 — 배정과 후보의 쓰기(있으면 그대로), 재판정 대상(기준이 다른 배정 · 기사 ID 순 · 사라진 사건의 후보 제외 · 사건 기사 수),
- * 다시 적기 · 기준만 적기, 잠금 · 지우기를 Flyway 가 적용된 실제 PostgreSQL 에서 본다.
+ * 다시 적기 · 기준만 적기, 남은 배정의 발행 시각 범위, 잠금 · 지우기를 Flyway 가 적용된 실제 PostgreSQL 에서 본다.
  * <p>
  * 지키는 규칙: event-R12
  */
@@ -122,6 +123,20 @@ class JdbcEventArticleRepositoryTests {
 						Instant.parse("2026-11-06T00:00:00Z")),
 				new EventArticle(new ArticleId(22), this.event, PUBLISHED, 0.5, DecidedBy.FORMULA, this.criteria,
 						ASSIGNED));
+	}
+
+	@Test
+	void thePublishedSpanCoversTheRemainingAssignmentsOfTheEvent() {
+		this.repository.insertIfAbsent(new EventArticle(new ArticleId(41), this.event, Instant.parse("2026-11-05T03:00:00Z"),
+				null, DecidedBy.FORMULA, this.criteria, ASSIGNED), List.of());
+		this.repository.insertIfAbsent(new EventArticle(new ArticleId(42), this.event, Instant.parse("2026-11-04T21:00:00Z"),
+				null, DecidedBy.FORMULA, this.criteria, ASSIGNED), List.of());
+		this.repository.insertIfAbsent(new EventArticle(new ArticleId(43), this.other, Instant.parse("2026-11-01T00:00:00Z"),
+				null, DecidedBy.FORMULA, this.criteria, ASSIGNED), List.of());
+
+		assertThat(this.repository.publishedSpan(this.event)).contains(
+				new PublishedSpan(Instant.parse("2026-11-04T21:00:00Z"), Instant.parse("2026-11-05T03:00:00Z")));
+		assertThat(this.repository.publishedSpan(this.other + 1_000)).isEmpty();
 	}
 
 	@Test
