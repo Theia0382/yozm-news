@@ -8,6 +8,7 @@ import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.event.EventArticles;
 import net.yozmnews.event.adapter.out.fake.FakeArticleEmbedder;
+import net.yozmnews.event.application.AssignmentRound;
 import net.yozmnews.event.application.EventIntakeRound;
 import net.yozmnews.event.domain.feature.ArticleEmbedder;
 import net.yozmnews.event.domain.intake.IntakeQueueRepository;
@@ -27,8 +28,8 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.TestPropertySource;
 
 /**
- * 사건 묶기 대기 반복 작업 — 임베더가 없으면 경고를 한 번 남기고 회차를 건너뛰어 기사가 대기에 남고, 있으면 회차를 돌린다. 실제 회차 · 대기 ·
- * PostgreSQL 을 쓰고, 작업은 시험이 임베더 제공자를 넣어 직접 만든다(작업 서버는 끈다).
+ * 사건 묶기 대기 반복 작업 — 임베더가 없으면 경고를 한 번 남기고 회차를 건너뛰어 기사가 대기에 남고, 있으면 표현 회차와 배정 회차를
+ * 차례로 돌린다. 실제 회차 · 대기 · PostgreSQL 을 쓰고, 작업은 시험이 임베더 제공자를 넣어 직접 만든다(작업 서버는 끈다).
  * <p>
  * 지키는 규칙: event-R7
  */
@@ -40,6 +41,9 @@ class IntakeArticlesJobTests {
 
 	@Autowired
 	EventIntakeRound round;
+
+	@Autowired
+	AssignmentRound assignment;
 
 	@Autowired
 	IntakeQueueRepository queue;
@@ -58,7 +62,7 @@ class IntakeArticlesJobTests {
 		long article = enqueued();
 		// 컨텍스트의 작업 빈도 기동 때 같은 경고를 남길 수 있다 — 이 시험이 만든 작업의 몫만 센다
 		int before = warnings(output);
-		IntakeArticlesJob job = new IntakeArticlesJob(this.round, provider(null));
+		IntakeArticlesJob job = new IntakeArticlesJob(this.round, this.assignment, provider(null));
 
 		job.run();
 		job.run();
@@ -72,15 +76,18 @@ class IntakeArticlesJobTests {
 	}
 
 	@Test
-	void withAnEmbedderTheJobRunsTheRound() {
+	void withAnEmbedderTheJobRunsTheIntakeRoundAndThenTheAssignmentRound() {
 		long article = enqueued();
-		IntakeArticlesJob job = new IntakeArticlesJob(this.round, provider(new FakeArticleEmbedder()));
+		IntakeArticlesJob job = new IntakeArticlesJob(this.round, this.assignment, provider(new FakeArticleEmbedder()));
 
 		job.run();
 
 		assertThat(this.jdbc.sql("select article_id from article_match_features").query(Long.class).list())
 			.containsExactly(article);
 		assertThat(this.jdbc.sql("select count(*) from event_intake_queue").query(Long.class).single()).isZero();
+		// 같은 실행의 배정 회차가 표현을 쓴 기사를 배정했다 — 후보가 없어 새 사건
+		assertThat(this.jdbc.sql("select article_id from event_articles").query(Long.class).list()).containsExactly(article);
+		assertThat(this.jdbc.sql("select count(*) from event_assignment_queue").query(Long.class).single()).isZero();
 	}
 
 	private long enqueued() {
