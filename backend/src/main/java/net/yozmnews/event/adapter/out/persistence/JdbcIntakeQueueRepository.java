@@ -41,6 +41,22 @@ class JdbcIntakeQueueRepository implements IntakeQueueRepository {
 	}
 
 	@Override
+	public int enqueueUnassigned(Collection<ArticleId> articleIds, Instant now) {
+		if (articleIds.isEmpty()) {
+			return 0;
+		}
+		return this.jdbc.sql("""
+				insert into event_intake_queue (article_id, enqueued_at)
+				select id, :now from unnest(cast(:ids as bigint[])) as id
+				where not exists (select 1 from event_articles a where a.article_id = id)
+				on conflict (article_id) do nothing
+				""")
+			.param("ids", articleIds.stream().map(ArticleId::value).toArray(Long[]::new))
+			.param("now", timestamp(now))
+			.update();
+	}
+
+	@Override
 	public List<PendingArticle> lockDue(Instant now, int limit) {
 		return this.jdbc.sql("""
 				select article_id, enqueued_at, lease_token, lease_expires_at from event_intake_queue

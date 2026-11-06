@@ -16,6 +16,12 @@ public interface IntakeQueueRepository {
 	void enqueue(ArticleId articleId, Instant now);
 
 	/**
+	 * 배정이 없는 기사만 대기에 넣는다 — 이미 대기에 있으면 그대로. 운영자의 채우기가 쓴다.
+	 * @return 새로 넣은 행 수
+	 */
+	int enqueueUnassigned(Collection<ArticleId> articleIds, Instant now);
+
+	/**
 	 * 점유가 없거나 만료된(만료 시각 ≤ {@code now}) 행을 넣은 시각 · 기사 ID 순으로 {@code limit} 개까지 잠근다. 다른 트랜잭션이 잠근 행은
 	 * 건너뛴다. 트랜잭션 안에서 부른다.
 	 */

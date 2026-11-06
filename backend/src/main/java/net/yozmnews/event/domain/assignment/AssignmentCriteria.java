@@ -16,13 +16,13 @@ import java.util.Objects;
 public record AssignmentCriteria(Duration window, double upper, double lower, double store, double probability) {
 
 	/**
-	 * @throws IllegalArgumentException 창이 0 이하이거나, {@code 0 ≤ store ≤ lower ≤ upper ≤ 1} 이 아니거나, 확률 기준이
-	 * {@code (0, 1]} 밖일 때 — 값이 숫자가 아니어도(NaN) 같다
+	 * @throws IllegalArgumentException 창이 0 이하이거나 초 단위가 아니거나(기준 이력이 초로 적는다),
+	 * {@code 0 ≤ store ≤ lower ≤ upper ≤ 1} 이 아니거나, 확률 기준이 {@code (0, 1]} 밖일 때 — 값이 숫자가 아니어도(NaN) 같다
 	 */
 	public AssignmentCriteria {
 		Objects.requireNonNull(window, "window");
-		if (window.isZero() || window.isNegative()) {
-			throw new IllegalArgumentException("시간 창은 0 보다 커야 한다: " + window);
+		if (window.isZero() || window.isNegative() || window.getNano() != 0) {
+			throw new IllegalArgumentException("시간 창은 0 보다 큰 초 단위여야 한다: " + window);
 		}
 		if (!(0 <= store && store <= lower && lower <= upper && upper <= 1)) {
 			throw new IllegalArgumentException("기준은 0 ≤ 저장 기준 ≤ 아래 기준 ≤ 위 기준 ≤ 1 이어야 한다: 저장 " + store + " · 아래 "

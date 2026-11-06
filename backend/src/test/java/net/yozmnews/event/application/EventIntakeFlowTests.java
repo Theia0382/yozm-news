@@ -9,6 +9,7 @@ import java.time.InstantSource;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -406,6 +407,16 @@ class EventIntakeFlowTests {
 				Thread.currentThread().interrupt();
 			}
 			return result;
+		}
+
+		@Override
+		public Optional<MatchFeatures> find(ArticleId articleId, String modelVersion) {
+			return this.delegate.find(articleId, modelVersion);
+		}
+
+		@Override
+		public List<MatchFeatures> findAll(Collection<ArticleId> articleIds, String modelVersion) {
+			return this.delegate.findAll(articleIds, modelVersion);
 		}
 
 		@Override

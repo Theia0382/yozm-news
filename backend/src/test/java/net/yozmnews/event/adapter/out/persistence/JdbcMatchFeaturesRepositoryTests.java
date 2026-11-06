@@ -20,7 +20,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 
 /**
  * 기사 표현 저장소 — 벡터의 텍스트 표현이 실제 pgvector 에 들어가는지, (기사, 모델 버전)마다 한 행 · 먼저 쓴 것이 남음, 차원이 다른 모델
- * 버전의 공존, 핵심 말 배열, 지우기를 Flyway 가 적용된 실제 PostgreSQL 에서 본다. 벡터는 {@code embedding::text} 로 되읽은 리터럴과
+ * 버전의 공존, 핵심 말 배열, 모델 버전별 읽기, 지우기를 Flyway 가 적용된 실제 PostgreSQL 에서 본다. 벡터는 {@code embedding::text} 로 되읽은 리터럴과
  * 비교한다.
  * <p>
  * 지키는 규칙: event-R4 · event-R8
@@ -86,6 +86,21 @@ class JdbcMatchFeaturesRepositoryTests {
 
 		assertThat(this.jdbc.sql("select article_id from article_match_features").query(Long.class).list())
 			.containsExactly(6L);
+	}
+
+	@Test
+	void findsTheRowsOfTheGivenModelVersionInArticleOrder() {
+		this.repository.insertIfAbsent(features(8, "model-a", new float[] { 0.25f, -0.5f, 1.0E-5f }, List.of("금리")));
+		this.repository.insertIfAbsent(features(7, "model-a", new float[] { 1f, 0f, 0f }, List.of()));
+		this.repository.insertIfAbsent(features(7, "model-b", new float[] { 0f, 1f }, List.of("환율")));
+
+		assertThat(this.repository.findAll(List.of(new ArticleId(8), new ArticleId(7), new ArticleId(9)), "model-a"))
+			.containsExactly(features(7, "model-a", new float[] { 1f, 0f, 0f }, List.of()),
+					features(8, "model-a", new float[] { 0.25f, -0.5f, 1.0E-5f }, List.of("금리")));
+		assertThat(this.repository.find(new ArticleId(7), "model-b"))
+			.contains(features(7, "model-b", new float[] { 0f, 1f }, List.of("환율")));
+		assertThat(this.repository.find(new ArticleId(8), "model-b")).isEmpty();
+		assertThat(this.repository.findAll(List.of(), "model-a")).isEmpty();
 	}
 
 	private static MatchFeatures features(long article, String model, float[] vector, List<String> entities) {

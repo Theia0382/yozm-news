@@ -1,9 +1,15 @@
 package net.yozmnews.event.adapter.out.persistence;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
 
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.event.domain.feature.Embedding;
 import net.yozmnews.event.domain.feature.MatchFeatures;
 import net.yozmnews.event.domain.feature.MatchFeaturesRepository;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -13,7 +19,7 @@ import org.springframework.stereotype.Repository;
  * {@link MatchFeaturesRepository} 의 JdbcClient 구현 — docs/specs/event.md §4.
  * <p>
  * 넣기는 {@code INSERT … ON CONFLICT (article_id, model_version) DO NOTHING}. 벡터는 {@link VectorText} 의 텍스트 표현을 SQL 이
- * {@code vector} 로 바꾸고, 핵심 말은 {@code text[]} 다.
+ * {@code vector} 로 바꾸고 {@code embedding::text} 로 되읽는다. 핵심 말은 {@code text[]} 다.
  */
 @Repository
 class JdbcMatchFeaturesRepository implements MatchFeaturesRepository {
@@ -40,6 +46,28 @@ class JdbcMatchFeaturesRepository implements MatchFeaturesRepository {
 	}
 
 	@Override
+	public Optional<MatchFeatures> find(ArticleId articleId, String modelVersion) {
+		return findAll(List.of(articleId), modelVersion).stream().findFirst();
+	}
+
+	@Override
+	public List<MatchFeatures> findAll(Collection<ArticleId> articleIds, String modelVersion) {
+		if (articleIds.isEmpty()) {
+			return List.of();
+		}
+		return this.jdbc.sql("""
+				select article_id, model_version, embedding::text as embedding, entities, created_at
+				from article_match_features
+				where article_id = any(:ids) and model_version = :model
+				order by article_id
+				""")
+			.param("ids", articleIds.stream().map(ArticleId::value).toArray(Long[]::new))
+			.param("model", modelVersion)
+			.query(JdbcMatchFeaturesRepository::row)
+			.list();
+	}
+
+	@Override
 	public void deleteByArticles(Collection<ArticleId> articleIds) {
 		if (articleIds.isEmpty()) {
 			return;
@@ -47,6 +75,13 @@ class JdbcMatchFeaturesRepository implements MatchFeaturesRepository {
 		this.jdbc.sql("delete from article_match_features where article_id = any(:ids)")
 			.param("ids", articleIds.stream().map(ArticleId::value).toArray(Long[]::new))
 			.update();
+	}
+
+	private static MatchFeatures row(ResultSet rs, int row) throws SQLException {
+		return new MatchFeatures(new ArticleId(rs.getLong("article_id")), rs.getString("model_version"),
+				Embedding.of(VectorText.parse(rs.getString("embedding"))),
+				List.of((String[]) rs.getArray("entities").getArray()),
+				rs.getObject("created_at", OffsetDateTime.class).toInstant());
 	}
 
 }

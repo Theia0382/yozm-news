@@ -52,4 +52,10 @@ class AssignmentCriteriaTests {
 			.isThrownBy(() -> new AssignmentCriteria(Duration.ofHours(-1), 0.80, 0.55, 0.40, 0.50));
 	}
 
+	@Test
+	void aWindowWithAFractionOfASecondIsRejected() {
+		assertThatIllegalArgumentException()
+			.isThrownBy(() -> new AssignmentCriteria(Duration.ofMillis(72_000_500), 0.80, 0.55, 0.40, 0.50));
+	}
+
 }
