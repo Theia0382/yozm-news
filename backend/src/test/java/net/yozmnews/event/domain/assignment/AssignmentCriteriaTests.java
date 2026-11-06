@@ -9,6 +9,8 @@ import org.junit.jupiter.api.Test;
 
 /**
  * 기준의 범위 · 관계 — 어기면 만들 수 없다(설정이면 기동하지 않는다).
+ * <p>
+ * 지키는 규칙: event-R17
  */
 class AssignmentCriteriaTests {
 

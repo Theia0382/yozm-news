@@ -8,7 +8,7 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * 후보 점수 산식의 정본 — docs/specs/event.md §5.
+ * 후보 점수 산식의 정본 — docs/specs/event.md §4 · event-R10.
  * <p>
  * 점수 = 감쇠 × ((1 − {@link #KEY_TERM_WEIGHT}) × max(코사인, 0) + {@link #KEY_TERM_WEIGHT} × 핵심 말 겹침).
  * <ul>

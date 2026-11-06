@@ -9,7 +9,7 @@ import net.yozmnews.event.domain.assignment.CentroidUpdate;
 import net.yozmnews.event.domain.feature.MatchFeatures;
 
 /**
- * 구성 기사를 지운 뒤 사건의 새 값 — 정본은 {@link #of} · docs/specs/event.md §5.
+ * 구성 기사를 지운 뒤 사건의 새 값 — 정본은 {@link #of} · docs/specs/event.md §4 · event-R8 · event-R18.
  */
 public sealed interface EventShrink {
 

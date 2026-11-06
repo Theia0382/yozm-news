@@ -23,6 +23,8 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 /**
  * 배정 대기 저장소 — 넣기 · 잠금 대상(판정 가능 시각 · 점유)과 순서 · 토큰 조건의 반영(지우기 · 풀기 · 재시도) · 지우기를 Flyway 가
  * 적용된 실제 PostgreSQL 에서 본다.
+ * <p>
+ * 지키는 규칙: event-R16
  */
 @JdbcTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)

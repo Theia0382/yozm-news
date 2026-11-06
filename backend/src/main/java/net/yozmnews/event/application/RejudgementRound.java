@@ -34,7 +34,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 재판정 회차 하나 — 지금 기준과 다른 기준으로 판정된 배정을 저장된 후보 점수 · 확률로 다시 판정한다 · docs/specs/event.md §4.
+ * 재판정 회차 하나 — 지금 기준과 다른 기준으로 판정된 배정을 저장된 후보 점수 · 확률로 다시 판정한다 · docs/specs/event.md §4 ·
+ * event-R18.
  * <p>
  * 사건 소속 판정 · 임베더를 부르지 않는다. 배정 하나마다 짧은 트랜잭션에서 배정 행 → 사건(ID 순)을 잠그고 결과를 적용한다 — 판정은
  * {@link AssignmentRule}, 적용 방식은 {@link Reassignment} 가 정한다. 옮기거나 떼어 낼 때의 기사 벡터는 지금 임베더가 아니라 그 배정이

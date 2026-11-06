@@ -6,7 +6,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 /**
- * 배정 판정의 정본 — 처음 판정과 재판정이 같은 함수를 쓴다 · docs/specs/event.md §5.
+ * 배정 판정의 정본 — 처음 판정과 재판정이 같은 함수를 쓴다 · docs/specs/event.md §4 · event-R11 · event-R18.
  * <ol>
  * <li>점수가 가장 높은 후보(같으면 사건 ID 가 작은 것)가 위 기준 이상이면 산식으로 붙인다</li>
  * <li>띠(아래 기준 ≤ 점수 &lt; 위 기준)의 후보 가운데 확률이 가장 높은 것(같으면 점수가 높은 것, 그다음 사건 ID 가 작은 것)이 확률 기준

@@ -43,8 +43,12 @@ erDiagram
 
     articles ||--o| event_intake_queue : ""
     articles ||--o{ article_match_features : ""
+    articles ||--o| event_assignment_queue : ""
     events ||--o{ event_articles : ""
     articles ||--o| event_articles : ""
+    events ||--o{ event_key_terms : ""
+    event_assignment_criteria ||--o{ event_articles : ""
+    articles ||--o{ event_article_candidates : ""
 
     storylines ||--o{ storyline_tracking_events : ""
     storylines ||--o{ digest_sections : ""
@@ -88,7 +92,7 @@ erDiagram
 
 ## 사건
 
-사건 묶기 대기 · 기사 표현 테이블(`event_intake_queue` · `article_match_features`)과 사건 테이블(`events` · `event_articles` — 미구현)은 [event Spec §6](specs/event.md#6-데이터)에 있다.
+사건 묶기 대기 · 기사 표현 테이블(`event_intake_queue` · `article_match_features`)과 사건 · 배정 테이블(`events` · `event_key_terms` · `event_assignment_criteria` · `event_articles` · `event_article_candidates` · `event_assignment_queue`)은 [event Spec §6](specs/event.md#6-데이터)에 있다.
 
 ## 다이제스트
 
@@ -136,7 +140,8 @@ erDiagram
 | 주제 · 지역 태그(`article_tags`), 태그 체계, 태그 기준 · 저장 기준과 그 변경 이력, 태그 키 계보 | 무기한 | 주제별 보도량과 관심사 히스토리의 근거 |
 | 빠진 태그 채움 기록(`tag_backfills` · `tag_backfill_versions`) | 무기한 | 끝난 채움이 저장 바닥 계산의 입력이다 — 지우면 태그 기준 · 저장 기준의 경고와 평가 현황 표시가 바뀐다([evaluation-R32](specs/evaluation.md#빠진-태그-채움--저장-바닥)) |
 | 사건 배정 입력 (`article_match_features`) | 사건 배정 시간 창 + 여유 | 요약문으로 다시 계산한다 |
-| 사건 (`events` · `event_articles`) | 무기한 | 사건 · 이슈 보도량의 근거 |
+| 사건 (`events` · `event_key_terms` · `event_articles`) · 저장 후보 (`event_article_candidates`) · 기준 이력 (`event_assignment_criteria`) | 무기한 | 사건 · 이슈 보도량의 근거. 저장 후보 · 기준 이력은 기준을 바꿀 때 재판정의 재료다 |
+| 배정 대기 (`event_assignment_queue`) | 배정하면 지운다 | 처리할 기사의 목록이다 |
 | 사건 소속 판정 원본 (`article_event_judgements`) | 180일 | 평가 원본 응답과 같다 |
 | 평가 원본 응답 (`raw_response`) | 180일 | 태그 기준 · 저장 기준 분석과 저장 기준을 낮춘 뒤 빠진 태그 채움([evaluation-R31](specs/evaluation.md#빠진-태그-채움--저장-바닥) — 채울 기간의 상한도 180일)에 충분한 기간. **(미설계)** 지운 뒤 원본이 없는 평가의 채움 처분은 보존을 구현하는 작업이 정한다 |
 | 다이제스트 | 사용자 탈퇴 시까지 | 주요 뉴스 섹션은 이슈 타임라인의 정본, 인용 항목은 노출 기록이다 |
@@ -146,6 +151,6 @@ erDiagram
 | JobRunr 작업 기록 | 성공하고 36시간 뒤 삭제 상태, 다시 72시간 뒤 영구 삭제. 실패한 작업은 남는다 | JobRunr 기본값. 작업의 결과는 각 모듈의 데이터에 남는다 |
 | 이벤트 발행 기록 (`event_publication`) | 완료 즉시 삭제. 실패한 발행은 운영자가 폐기할 때까지 남는다 | 결과는 각 모듈의 데이터에 남고, 실패한 발행은 재처리와 원인 조사의 근거다([ADR-0023](adr/0023-jobrunr-oss-framework-schema-and-event-resubmission.md) · [ADR-0050](adr/0050-operator-resubmits-once-or-discards-stranded-event-publications-read-from-registry.md)) |
 
-- **무기한은 자동으로 지우지 않는다는 뜻이다.** 숨긴 소스 · 피드의 기사도 남는다. 운영자가 소스 · 피드를 지우면 그 소스 · 피드만 가진 기사(메타데이터 · 요약문 · 엔트리)가 함께 지워지고, 다른 소스 · 피드도 가진 기사는 남는다([source Spec 숨김과 삭제](specs/source.md#숨김과-삭제) · [article Spec](specs/article.md#지운-소스--피드) · [ADR-0051](adr/0051-operator-hides-or-deletes-sources-and-feeds-and-deletion-removes-exclusive-articles.md) · [ADR-0052](adr/0052-article-sources-live-in-feed-entries-and-late-items-of-deleted-feeds-are-dropped.md)). 기사를 가리키는 다른 모듈의 데이터는 `article` 이 알리는 지운 기사 ID 로 함께 지워진다 — 지금은 평가 대기 · 평가 · 태그 · 사건 소속 판정 원본([overview.md §5](overview.md#5-모듈-지도) · [ADR-0060](adr/0060-article-deletion-announced-by-removed-article-ids-and-followed-by-referencing-modules.md))
+- **무기한은 자동으로 지우지 않는다는 뜻이다.** 숨긴 소스 · 피드의 기사도 남는다. 운영자가 소스 · 피드를 지우면 그 소스 · 피드만 가진 기사(메타데이터 · 요약문 · 엔트리)가 함께 지워지고, 다른 소스 · 피드도 가진 기사는 남는다([source Spec 숨김과 삭제](specs/source.md#숨김과-삭제) · [article Spec](specs/article.md#지운-소스--피드) · [ADR-0051](adr/0051-operator-hides-or-deletes-sources-and-feeds-and-deletion-removes-exclusive-articles.md) · [ADR-0052](adr/0052-article-sources-live-in-feed-entries-and-late-items-of-deleted-feeds-are-dropped.md)). 기사를 가리키는 다른 모듈의 데이터는 `article` 이 알리는 지운 기사 ID 로 함께 지워진다 — 지금은 평가 대기 · 평가 · 태그 · 사건 소속 판정 원본 · 사건 묶기 대기 · 배정 대기 · 기사 표현 · 배정 · 저장 후보([overview.md §5](overview.md#5-모듈-지도) · [ADR-0060](adr/0060-article-deletion-announced-by-removed-article-ids-and-followed-by-referencing-modules.md))
 
 보존 기간은 [open-questions.md](open-questions.md)에서 확정한다.

@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test;
  * 배정 판정 — 위 기준 · 띠 · 확률 기준의 경계(포함), 같은 값의 순서, 판정의 때마다 확률 없는 띠 후보의 처리. 기준은 위 0.80 · 아래
  * 0.55 · 저장 0.40 · 확률 0.50 이다.
  * <p>
- * 지키는 규칙: event-R11
+ * 지키는 규칙: event-R11 · event-R18
  */
 class AssignmentRuleTests {
 

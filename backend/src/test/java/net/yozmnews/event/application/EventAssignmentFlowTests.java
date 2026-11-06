@@ -60,7 +60,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * <p>
  * 점수 = 감쇠 × (0.7 × 코사인 + 0.3 × 핵심 말 겹침). 같은 발행 시각이면 감쇠는 1 이다.
  * <p>
- * 지키는 규칙: event-R10 · event-R11 · event-R12
+ * 지키는 규칙: event-R10 · event-R11 · event-R12 · event-R16
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest

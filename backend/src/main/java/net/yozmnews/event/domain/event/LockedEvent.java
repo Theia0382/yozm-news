@@ -6,7 +6,7 @@ import java.util.Objects;
 import net.yozmnews.event.domain.assignment.CentroidUpdate;
 
 /**
- * 잠근 사건 한 행 — 갱신의 입력이자 결과 · docs/specs/event.md §4.
+ * 잠근 사건 한 행 — 갱신의 입력이자 결과 · docs/specs/event.md §4 · event-R12.
  *
  * @param modelVersion 사건을 연 기사 표현의 모델 버전 — 같은 모델 버전의 기사만 붙인다
  * @param centroid 중심 벡터 — 구성 기사 벡터의 평균. 복사해 받고 복사해 낸다

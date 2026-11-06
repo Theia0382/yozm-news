@@ -9,6 +9,8 @@ import org.junit.jupiter.api.Test;
 
 /**
  * 일시 실패 뒤의 재시도 시각 — 1분부터 두 배씩, 1시간에서 멈춘다.
+ * <p>
+ * 지키는 규칙: event-R16
  */
 class AssignmentScheduleTests {
 

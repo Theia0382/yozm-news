@@ -5,7 +5,7 @@ import java.util.List;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 재판정 결과를 지금 배정에 적용하는 방식 — 정본은 {@link #of} · docs/specs/event.md §5.
+ * 재판정 결과를 지금 배정에 적용하는 방식 — 정본은 {@link #of} · docs/specs/event.md §4 · event-R18.
  */
 public sealed interface Reassignment {
 

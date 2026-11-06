@@ -9,7 +9,7 @@ import net.yozmnews.event.domain.intake.IntakeLease;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 배정 대기 행 하나와 그 전이 — 점유 · 일시 실패 · docs/specs/event.md §5.
+ * 배정 대기 행 하나와 그 전이 — 점유 · 일시 실패 · docs/specs/event.md §4 · event-R16.
  *
  * @param enqueuedAt 대기에 넣은 시각
  * @param attempts 지금까지의 일시 실패 수

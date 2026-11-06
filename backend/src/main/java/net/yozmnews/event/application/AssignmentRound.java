@@ -45,7 +45,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 배정 회차 하나 — docs/specs/event.md §4.
+ * 배정 회차 하나 — docs/specs/event.md §4 · event-R10 ~ event-R12 · event-R16.
  * <p>
  * 배정 대기를 점유해 커밋한 뒤, 기사마다 점유 순으로 하나씩 판정하고 짧은 트랜잭션에서 쓴다 — 앞 기사가 연 사건을 뒤 기사가 후보로 본다.
  * 사건 소속 판정은 트랜잭션 밖에서 부른다. 판정 · 적용 규칙은 {@code domain/assignment} 가 정하고, 이 클래스는 순서 · 트랜잭션 경계 ·

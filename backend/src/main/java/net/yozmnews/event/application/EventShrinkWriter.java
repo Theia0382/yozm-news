@@ -11,7 +11,8 @@ import net.yozmnews.event.domain.event.PublishedSpan;
 import org.springframework.stereotype.Component;
 
 /**
- * 기사를 뺀 사건을 쓴다 — 지운 기사 따르기와 재판정의 옮기기 · 떼어 내기가 함께 쓰는 정본 · docs/specs/event.md §4.
+ * 기사를 뺀 사건을 쓴다 — 지운 기사 따르기와 재판정의 옮기기 · 떼어 내기가 함께 쓰는 정본 · docs/specs/event.md §4 ·
+ * event-R8 · event-R18.
  * <p>
  * 뺀 기사의 배정이 이미 지워지거나 옮겨진 뒤, 잠근 사건에 대해 같은 트랜잭션에서 부른다. 비면 사건을 지우고(그 사건을 가리키는 후보와
  * 함께), 아니면 새 중심 · 수 · 핵심 말과 남은 배정의 발행 시각 범위를 쓴다. 남은 수가 있는데 배정이 없으면 남은 배정이 정본이라 지운다.

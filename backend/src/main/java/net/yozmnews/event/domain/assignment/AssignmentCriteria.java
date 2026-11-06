@@ -4,7 +4,7 @@ import java.time.Duration;
 import java.util.Objects;
 
 /**
- * 사건 기준 · 저장 기준 — docs/specs/event.md §5. 기본값의 정본은 설정({@code EventAssignmentProperties})이고, 이 타입은 검증과
+ * 사건 기준 · 저장 기준 — docs/specs/event.md §4 · event-R17. 기본값의 정본은 설정({@code EventAssignmentProperties})이고, 이 타입은 검증과
  * 운반을 맡는다.
  *
  * @param window 시간 창 — 기사의 발행 시각과 사건의 첫 · 마지막 기사 시각의 차가 이 안이어야 후보다

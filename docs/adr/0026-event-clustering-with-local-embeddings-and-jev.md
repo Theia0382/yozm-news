@@ -60,3 +60,4 @@
 
 - 2026-11-05: 결정 절 "Jev 관문은 하나로 둔다"의 인자 · 반환 타입 — [ADR-0071](0071-event-membership-judged-from-article-ids-with-questions-built-in-evaluation.md) · [evaluation Spec §5](../specs/evaluation.md#5-규칙과-불변식) evaluation-R37 · R38
 - 2026-11-05: 결정 절 "고유명사는 형태소 분석기 Lucene Nori 로 뽑는다"의 분해 모드 · 고르는 품사 — [ADR-0076](0076-key-terms-from-nori-without-decompounding-proper-common-and-foreign-nouns.md) · [event Spec §5](../specs/event.md#기사-표현) event-R2
+- 2026-11-06: 결과 절 "운영자가 표본을 검수해 임계값을 조정한다" — [ADR-0081](0081-event-assignment-criteria-in-settings-and-rejudgement-within-stored-scores.md) · [event Spec §5](../specs/event.md#기준과-재판정) event-R17 · R18

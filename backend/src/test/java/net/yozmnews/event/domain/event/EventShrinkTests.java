@@ -14,6 +14,8 @@ import org.junit.jupiter.api.Test;
 /**
  * 구성 기사를 지운 뒤 사건의 새 값 — 남는 기사가 없으면 지우고, 표현이 있는 기사만 중심 · 핵심 말에서 빼며, 기사 수는 지운 수만큼 줄인다.
  * 사건은 [1,0] · [1,0] · [4,3] 세 기사로 중심 [2,1] 이다.
+ * <p>
+ * 지키는 규칙: event-R8 · event-R12
  */
 class EventShrinkTests {
 

@@ -14,7 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
- * 공개 운영 API {@link EventIntakeAdministration} 의 구현 — docs/specs/event.md §4. 역할 애너테이션이 없다(두 역할 공통).
+ * 공개 운영 API {@link EventIntakeAdministration} 의 구현 — docs/specs/event.md §4 · event-R19. 역할 애너테이션이 없다(두 역할 공통).
  * <p>
  * 기사는 {@code article} 의 공개 조회로 고르고(표 전체 읽기 — 드문 운영 연산), 배정이 없는 기사만 한 문장으로 넣는다.
  */

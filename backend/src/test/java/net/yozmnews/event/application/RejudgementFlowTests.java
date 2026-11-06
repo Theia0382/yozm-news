@@ -49,6 +49,8 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 01:00 에 돈다.
  * <p>
  * 사건 E 는 기사 a([1,0])가 연다. 기사 x([4,3], 핵심 말 없음)의 E 점수는 0.7 × 0.8 = 0.56(띠)이다. 벡터는 반 정밀도로 정확한 값이다.
+ * <p>
+ * 지키는 규칙: event-R18
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest

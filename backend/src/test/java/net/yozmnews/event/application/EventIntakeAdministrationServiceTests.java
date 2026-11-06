@@ -24,6 +24,8 @@ import org.springframework.test.context.TestPropertySource;
 /**
  * 사건 묶기 채우기 — 기간(지금 − 일수 × 24시간 이후, 그 시각 포함)에 처음 본 기사 가운데 배정이 없는 기사만 대기에 넣고, 이미 대기에
  * 있는 기사는 그대로 두며 세지 않는다. 일수는 1 ~ 30 이다. 실제 PostgreSQL 과 공개 조회로 본다.
+ * <p>
+ * 지키는 규칙: event-R19
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest

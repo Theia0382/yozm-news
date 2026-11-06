@@ -25,7 +25,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
  * 배정 저장소 — 배정과 후보의 쓰기(있으면 그대로), 재판정 대상(기준이 다른 배정 · 기사 ID 순 · 사라진 사건의 후보 제외),
  * 다시 적기 · 기준만 적기, 남은 배정의 발행 시각 범위, 잠금 · 지우기를 Flyway 가 적용된 실제 PostgreSQL 에서 본다.
  * <p>
- * 지키는 규칙: event-R12
+ * 지키는 규칙: event-R12 · event-R18
  */
 @JdbcTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)

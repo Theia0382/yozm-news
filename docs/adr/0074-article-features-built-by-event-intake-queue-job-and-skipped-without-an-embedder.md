@@ -36,3 +36,8 @@
 | `ArticleStored` 리스너가 그 자리에서 표현을 계산해 저장한다 | 운영 임베더가 없는 구성에서 기사마다 발행이 실패해 시도 상한 뒤 운영자 처리 화면에 쌓인다. 모델 추론은 짧은 처리가 아니고, 기사 하나씩이라 묶음 추론을 못 쓴다. 배정은 어차피 작업으로 돌아 표현과 배정의 계기가 갈린다 |
 | 리스너가 기사마다 JobRunr 작업을 등록한다 | 임베더가 없으면 작업이 기사마다 실패해 JobRunr 실패 작업으로 쌓인다. 묶음 추론을 못 쓰고, 지운 기사와 늦은 쓰기의 엇갈림을 막을 장치가 따로 필요하다 |
 | 임베더가 없으면 작업 역할이 뜨지 않게 한다 | 운영 임베더가 들어오기 전까지 배포 구성이 뜨지 않아 배포 스모크가 깨진다([ADR-0061](0061-worker-role-does-not-run-without-an-evaluator.md)의 같은 대안과 같다) |
+
+## 후속 기록
+
+- 2026-11-06: 결과 절 "사건 배정이 같은 대기를 이어 쓸 수 있다" — [ADR-0077](0077-event-assignment-queue-judged-one-article-at-a-time-with-evaluation-failure-kinds.md) · [event Spec §5](../specs/event.md#사건-배정) event-R16
+- 2026-11-06: 결과 절 "이 모듈이 생기기 전에 저장된 기사는 대기에 들어가지 않아 표현이 없다" — [event Spec §5](../specs/event.md#사건-묶기-대기와-회차) event-R5 · R19

@@ -19,6 +19,8 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 /**
  * 배정 기준 이력 — 같은 값은 한 행 · 같은 ID, 값이 하나라도 다르면 새 행, 창은 초로 적는다. Flyway 가 적용된 실제 PostgreSQL 에서
  * 본다.
+ * <p>
+ * 지키는 규칙: event-R17
  */
 @JdbcTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)

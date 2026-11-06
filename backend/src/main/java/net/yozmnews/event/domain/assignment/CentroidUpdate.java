@@ -1,7 +1,7 @@
 package net.yozmnews.event.domain.assignment;
 
 /**
- * 사건 중심 벡터의 누적 갱신 정본 — 중심은 구성 기사 벡터의 평균이다 · docs/specs/event.md §5.
+ * 사건 중심 벡터의 누적 갱신 정본 — 중심은 구성 기사 벡터의 평균이다 · docs/specs/event.md §4 · event-R12.
  */
 public final class CentroidUpdate {
 

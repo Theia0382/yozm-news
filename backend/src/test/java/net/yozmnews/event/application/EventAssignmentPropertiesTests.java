@@ -12,6 +12,8 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 /**
  * 사건 기준 · 저장 기준 설정 — 아무것도 주지 않으면 기본값(창 72시간 · 위 0.80 · 아래 0.55 · 저장 0.40 · 확률 0.50), 하나를 주면 그
  * 값만 바뀌고, 범위 · 관계를 어기면 컨텍스트가 뜨지 않는다.
+ * <p>
+ * 지키는 규칙: event-R17
  */
 class EventAssignmentPropertiesTests {
 

@@ -46,6 +46,8 @@ import org.springframework.transaction.support.TransactionTemplate;
  * <p>
  * 사건 E 는 기사 하나([1,0])로 시작한다. 첫째 회차의 기사는 [1,0], 둘째 회차의 기사는 [4,3] 이고 둘 다 핵심 말 {@code 금리} 가 사건과
  * 겹쳐 산식으로 붙는다(1.0 · 0.86). 기대 중심은 ([1,0] + [1,0] + [4,3]) / 3 = [2,1], 수 3.
+ * <p>
+ * 지키는 규칙: event-R12 · event-R16
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest

@@ -12,6 +12,8 @@ import org.junit.jupiter.api.Test;
 
 /**
  * 배정 대기 행의 전이 — 점유는 20분, 일시 실패는 시도 수를 늘려 미루고 점유를 풀며, 다섯 번째에 상한이다.
+ * <p>
+ * 지키는 규칙: event-R16
  */
 class PendingAssignmentTests {
 

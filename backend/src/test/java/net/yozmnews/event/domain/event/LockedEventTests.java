@@ -8,6 +8,8 @@ import org.junit.jupiter.api.Test;
 
 /**
  * 기사 하나를 더한 사건 — 중심은 평균, 수 + 1, 첫 · 마지막 기사 시각은 그 발행 시각까지 넓힌다.
+ * <p>
+ * 지키는 규칙: event-R12
  */
 class LockedEventTests {
 

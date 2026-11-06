@@ -13,6 +13,8 @@ import org.junit.jupiter.api.Test;
 
 /**
  * 재판정 결과의 적용 — 유지 · 다시 적기 · 옮기기 · 떼어 내기, 사건을 연 기사는 떼어 내지 않는다.
+ * <p>
+ * 지키는 규칙: event-R18
  */
 class ReassignmentTests {
 
