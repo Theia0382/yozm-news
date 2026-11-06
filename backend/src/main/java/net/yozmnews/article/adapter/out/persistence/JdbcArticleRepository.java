@@ -200,12 +200,13 @@ class JdbcArticleRepository implements ArticleRepository {
 								List.of((String[]) rs.getArray("feed_categories").getArray())));
 				});
 		Map<ArticleId, ArticleContent> contents = new LinkedHashMap<>();
-		this.jdbc.sql("select id, title, summary_text, canonical_url from articles where id = any(:ids) order by id")
+		this.jdbc.sql("select id, title, summary_text, canonical_url, published_at from articles where id = any(:ids) order by id")
 			.param("ids", ids)
 			.query((ResultSet rs) -> {
 				ArticleId id = new ArticleId(rs.getLong("id"));
 				contents.put(id, new ArticleContent(id, rs.getString("title"), rs.getString("summary_text"),
-						URI.create(rs.getString("canonical_url")), entries.getOrDefault(id.value(), List.of())));
+						URI.create(rs.getString("canonical_url")), instant(rs, "published_at"),
+						entries.getOrDefault(id.value(), List.of())));
 			});
 		return Collections.unmodifiableMap(contents);
 	}

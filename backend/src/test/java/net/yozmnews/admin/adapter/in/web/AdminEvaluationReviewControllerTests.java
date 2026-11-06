@@ -95,7 +95,7 @@ class AdminEvaluationReviewControllerTests {
 		this.articles.reset();
 		this.labels.reset();
 		this.articles.contents.put(new ArticleId(41), new ArticleContent(new ArticleId(41), "국회 본회의 통과",
-				"<b>요약</b> 원문", URI.create("https://news.example/a/41"),
+				"<b>요약</b> 원문", URI.create("https://news.example/a/41"), Instant.parse("2026-10-28T00:00:00Z"),
 				List.of(new ArticleEntryView(new SourceId(3), new FeedId(5), List.of("정치", "국회")),
 						new ArticleEntryView(new SourceId(3), new FeedId(6), List.of()),
 						new ArticleEntryView(new SourceId(3), new FeedId(7), List.of("사회")))));

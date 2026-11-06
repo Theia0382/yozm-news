@@ -55,7 +55,7 @@ public interface ArticleRepository {
 	List<ArticleId> deleteArticlesWithoutEntries(Collection<ArticleId> articleIds);
 
 	/**
-	 * 기사들의 제목 · 요약문 · 정규 URL · 엔트리를 읽는다.
+	 * 기사들의 제목 · 요약문 · 정규 URL · 발행 시각 · 엔트리를 읽는다.
 	 * @return 기사 ID → 내용 — 없는 기사는 빠진다. 엔트리는 받은 시각 순, 같으면 피드 ID 순
 	 */
 	Map<ArticleId, ArticleContent> findContents(Collection<ArticleId> articleIds);

@@ -305,7 +305,7 @@ class JdbcArticleRepositoryTests {
 	}
 
 	@Test
-	void readsTitleSummaryCanonicalUrlAndEntriesInTheOrderTheyWereSeen() {
+	void readsTitleSummaryCanonicalUrlPublishedAtAndEntriesInTheOrderTheyWereSeen() {
 		Instant earlier = Instant.parse("2026-10-28T00:30:00Z");
 		// 기사 A — 피드 6 에서 먼저(00:30), 피드 5 에서 나중(01:00) 본다. 피드 ID 순과 받은 시각 순이 엇갈린다
 		IncomingItem first = IncomingItem.from(new ArticleFetched(SOURCE, OTHER_FEED, earlier,
@@ -316,7 +316,7 @@ class JdbcArticleRepositoryTests {
 				PUBLISHED_AT, FETCHED_AT, List.of("속보")), MatchKind.URL);
 		// 기사 B — 요약문 없음, 엔트리 하나. 항목 링크는 정규화되는 모양이다 — 내용의 정규 URL 은 항목 링크가 아니라 저장된 정규 URL 이다
 		ArticleId b = store(item(SOURCE, FEED, "https://A.example:443/news/2?utm_source=rss", null, "경제 지표 발표",
-				PUBLISHED_AT, FETCHED_AT, List.of()), MatchKind.NEW);
+				Instant.parse("2026-10-27T09:15:00Z"), FETCHED_AT, List.of()), MatchKind.NEW);
 		// 기사 C — 같은 시각에 받은 두 엔트리는 피드 ID 순이다(피드 6 을 먼저 넣는다)
 		ArticleId c = store(item(SOURCE, OTHER_FEED, "https://a.example/news/3", null, "날씨", PUBLISHED_AT,
 				FETCHED_AT, List.of("생활")), MatchKind.NEW);
@@ -328,11 +328,11 @@ class JdbcArticleRepositoryTests {
 
 		assertThat(contents).containsOnlyKeys(a, b, c);
 		assertThat(contents.get(a)).isEqualTo(new ArticleContent(a, "국회 본회의 통과", "요약",
-				URI.create("https://a.example/news/1"),
+				URI.create("https://a.example/news/1"), Instant.parse("2026-10-28T00:00:00Z"),
 				List.of(new ArticleEntryView(new SourceId(3), new FeedId(6), List.of("정치", "국회")),
 						new ArticleEntryView(new SourceId(4), new FeedId(5), List.of("속보")))));
 		assertThat(contents.get(b)).isEqualTo(new ArticleContent(b, "경제 지표 발표", null,
-				URI.create("https://a.example/news/2"),
+				URI.create("https://a.example/news/2"), Instant.parse("2026-10-27T09:15:00Z"),
 				List.of(new ArticleEntryView(new SourceId(3), new FeedId(5), List.of()))));
 		assertThat(contents.get(c).entries()).extracting(ArticleEntryView::feedId)
 			.containsExactly(new FeedId(5), new FeedId(6));

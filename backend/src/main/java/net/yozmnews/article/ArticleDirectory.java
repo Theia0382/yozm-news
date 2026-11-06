@@ -13,7 +13,7 @@ import java.util.Map;
 public interface ArticleDirectory {
 
 	/**
-	 * 기사들의 제목 · 요약문 · 정규 URL · 엔트리를 읽는다.
+	 * 기사들의 제목 · 요약문 · 정규 URL · 발행 시각 · 엔트리를 읽는다.
 	 * @return 기사 ID → 내용 — 없는(지운) 기사는 결과에 없다. 빈 입력이면 빈 맵
 	 */
 	Map<ArticleId, ArticleContent> findAll(Collection<ArticleId> ids);
