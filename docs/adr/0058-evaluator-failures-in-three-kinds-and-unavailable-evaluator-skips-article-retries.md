@@ -37,3 +37,4 @@
 ## 후속 기록
 
 - 2026-11-02: 기사 거부 · 시도 소진으로 남은 행도, 체계를 활성으로 바꿀 때 재평가 기간 안이면 대기로 되돌린다 — 새 버전은 질문이 다른 요청이다([ADR-0062](0062-tag-set-versions-from-operator-text-activated-forward-with-key-lineage-and-recent-reevaluation.md)). 회차가 실패로 남은 행을 다시 평가하지 않는 것은 그대로다
+- 2026-11-06: 결정 절의 갈래별 처리 — 사건 소속 판정 실패에 쓰는 것은 [ADR-0077](0077-event-assignment-queue-judged-one-article-at-a-time-with-evaluation-failure-kinds.md), 기사 거부의 "그 기사를 실패로 남긴다"를 배정에서 무엇으로 남기는지는 [ADR-0078](0078-articles-ending-in-a-judgement-failure-open-a-new-event-marked-as-failed.md) · [event Spec §5](../specs/event.md#사건-배정) event-R16

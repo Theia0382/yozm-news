@@ -11,7 +11,7 @@
 - **피드별 기록** — 같은 기사로 판정한 항목도 버리지 않고 기사 · 피드마다 한 번 기록한다
 - **엔트리 집계** — 피드별 기록을 집계 기간 · 칸마다 세어 중복률 · 날짜 추정 비율 · 제목 판정 비율 · guid 재사용을 운영 기능의 공개 API(`ArticleAdministration`)로 낸다
 - **지운 소스 · 피드의 기사 삭제** — 운영자가 소스 · 피드를 지우면 그 소스(피드)의 엔트리와, 엔트리가 남지 않은 기사를 지우고 지운 기사를 `ArticlesRemoved` 로 알린다. 지우기 전에 함께 지워질 기사 수를 공개 API 로 센다(article-R15). 지운 피드의 늦은 항목은 저장하지 않는다(article-R16)
-- **기사 조회** — 다른 모듈이 기사의 제목 · 요약문 · 정규 URL · 엔트리(소스 · 피드 · 카테고리)를 공개 조회(`ArticleDirectory`)로 읽는다
+- **기사 조회** — 다른 모듈이 기사의 제목 · 요약문 · 정규 URL · 발행 시각 · 엔트리(소스 · 피드 · 카테고리)를 공개 조회(`ArticleDirectory`)로 읽는다
 - **(미구현)** 본문 추출 — 자리만 있고 v1 에서는 하지 않는다(article-R12)
 
 하지 않는 것:
@@ -103,7 +103,7 @@ public record ArticlesRemoved(List<ArticleId> articleIds) {}
 
 ### ArticleDirectory · ArticleContent · ArticleEntryView
 
-기사 조회 — 다른 모듈이 기사의 제목 · 요약문 · 정규 URL · 엔트리를 읽고, 처음 본 시각으로 기사를 찾는다. 구현은 `application` 의 `ArticleDirectoryService` 다.
+기사 조회 — 다른 모듈이 기사의 제목 · 요약문 · 정규 URL · 발행 시각 · 엔트리를 읽고, 처음 본 시각으로 기사를 찾는다. 구현은 `application` 의 `ArticleDirectoryService` 다.
 
 ```java
 public interface ArticleDirectory {
@@ -112,7 +112,7 @@ public interface ArticleDirectory {
 }
 
 public record ArticleContent(ArticleId id, String title, @Nullable String summary, URI canonicalUrl,
-        List<ArticleEntryView> entries) {}
+        Instant publishedAt, List<ArticleEntryView> entries) {}
 
 public record ArticleEntryView(SourceId sourceId, FeedId feedId, List<String> categories) {}
 ```
@@ -120,15 +120,16 @@ public record ArticleEntryView(SourceId sourceId, FeedId feedId, List<String> ca
 | 타입 · 멤버 | 뜻 |
 |---|---|
 | `findAll` | 기사들의 내용 — 없는(지운) 기사는 결과에 없다. 빈 입력이면 빈 맵 |
-| `firstSeenSince` | 처음 본 시각(`first_seen_at`)이 `since` 이상인 기사의 ID — ID 순. `evaluation` 이 체계를 바꿀 때 재평가 대상을 고른다 |
+| `firstSeenSince` | 처음 본 시각(`first_seen_at`)이 `since` 이상인 기사의 ID — ID 순. `evaluation` 이 체계를 바꿀 때 재평가 대상을, `event` 가 사건 묶기 채우기 대상을 고른다 |
 | `ArticleContent.summary` | 저장된 RSS 요약문 — 없으면 null |
 | `ArticleContent.canonicalUrl` | 기사의 정규 URL(article-R1) — 원문 링크. 언제나 http · https 다 |
+| `ArticleContent.publishedAt` | 기사의 발행 시각 — 처음 저장한 값(article-R8). 해석하지 못한 항목이면 받은 시각이다(source-R40). 추정했는지는 내지 않는다 |
 | `ArticleContent.entries` | 기사의 엔트리 — 받은 시각 순, 같으면 피드 ID 순 |
 | `ArticleEntryView.categories` | 그 피드에서 처음 본 항목의 RSS 카테고리 — 피드 순서 그대로 |
 
 - 계약
   - 트랜잭션을 열지 않는다 — `findAll` 은 엔트리 · 기사 두 질의로 읽고, 각 질의는 그 순간의 값이다. 엔트리를 먼저 읽으므로 두 질의 사이에 지운 기사는 결과에서 빠진다. `firstSeenSince` 는 질의 하나다
-  - `first_seen_at` 에는 인덱스가 없다 — `firstSeenSince` 는 표 전체를 읽는다. 드문 운영 연산(체계 변경)이 부른다
+  - `first_seen_at` 에는 인덱스가 없다 — `firstSeenSince` 는 표 전체를 읽는다. 드문 운영 연산(체계 변경 · 사건 묶기 채우기)이 부른다
   - 출처 이름 · 피드 섹션은 담지 않는다 — `source` 의 공개 조회가 낸다
 
 관련 규칙: article-R7 · article-R8.

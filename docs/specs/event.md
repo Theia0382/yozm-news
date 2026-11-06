@@ -8,8 +8,10 @@
 
 - **사건 묶기 대기** — 새 기사를 대기에 넣고, 작업 역할의 반복 작업이 대기를 묶음으로 점유해 처리한다(event-R5 · R6 · R7, [ADR-0074](../adr/0074-article-features-built-by-event-intake-queue-job-and-skipped-without-an-embedder.md))
 - **기사 표현** — 기사의 제목과 요약문 앞부분으로 텍스트 하나를 만들고, 그 텍스트의 임베딩(포트 `ArticleEmbedder`)과 핵심 말(Lucene Nori)을 임베딩 모델 버전과 함께 저장한다. 사건 배정의 입력이다(event-R1 ~ R4, [ADR-0075](../adr/0075-article-vectors-in-a-dimensionless-vector-column-one-row-per-model-version.md) · [ADR-0076](../adr/0076-key-terms-from-nori-without-decompounding-proper-common-and-foreign-nouns.md))
-- **지운 기사 따르기** — `article` 이 기사를 지우면 그 기사의 대기 행과 표현을 지운다(event-R8)
-- **(미구현)** **사건 배정** — 표현으로 시간 창 안의 열린 사건 가운데 후보를 고르고, 산식으로 판정하거나 애매한 구간을 `evaluation` 의 사건 소속 판정으로 판정해, 사건에 붙이거나 새 사건을 연다(event-R10 ~ R12)
+- **사건 배정** — 표현을 쓴 기사를 배정 대기에 넣고, 같은 반복 작업이 기사 하나씩 시간 창 안의 열린 사건 가운데 후보를 골라 산식으로 판정하거나 애매한 구간을 `evaluation` 의 사건 소속 판정으로 판정해, 사건에 붙이거나 새 사건을 연다(event-R10 ~ R12 · R16, [ADR-0077](../adr/0077-event-assignment-queue-judged-one-article-at-a-time-with-evaluation-failure-kinds.md) · [ADR-0078](../adr/0078-articles-ending-in-a-judgement-failure-open-a-new-event-marked-as-failed.md) · [ADR-0079](../adr/0079-event-centroids-in-a-dimensionless-halfvec-column-with-a-model-version-per-event.md) · [ADR-0080](../adr/0080-event-centroids-and-key-terms-accumulated-with-article-counts-and-updated-incrementally.md))
+- **기준과 재판정** — 사건 기준 · 저장 기준은 설정이다. 배정은 저장 기준 이상인 후보의 점수 · 확률과 판정에 쓴 기준을 남기고, 기준이 바뀌면 그 저장값으로 배정을 다시 판정한다(event-R17 · R18, [ADR-0081](../adr/0081-event-assignment-criteria-in-settings-and-rejudgement-within-stored-scores.md))
+- **채우기** — 운영자가 기간을 정해, 그 기간에 처음 본 기사 가운데 배정이 없는 기사를 사건 묶기 대기에 넣는다(event-R19)
+- **지운 기사 따르기** — `article` 이 기사를 지우면 그 기사의 대기 행 · 배정 · 후보 · 표현을 지우고 사건을 다시 맞춘다(event-R8)
 - **(미구현)** **사건 정리** — 잘게 쪼개진 열린 사건을 합치고, 새 기사가 일정 기간 없는 사건을 닫는다(event-R13)
 - **(미구현)** **대표 기사 · 큰 사건 · 사건 조회** — 사건의 대표 기사를 고르고, 큰 사건을 조회할 때 판정하고, 사건을 다른 모듈에 낸다(event-R14 · R15)
 
@@ -19,7 +21,7 @@
 - Jev 를 직접 부르지 않는다 — 사건 소속 판정은 `evaluation` 의 공개 API 를 부른다([ADR-0026](../adr/0026-event-clustering-with-local-embeddings-and-jev.md) · [ADR-0071](../adr/0071-event-membership-judged-from-article-ids-with-questions-built-in-evaluation.md))
 - 기사 내용을 갖지 않는다. 제목 · 요약문은 `article` 의 공개 조회로 읽고, 표현 행에는 벡터와 핵심 말만 남긴다
 
-시간 창 · 위 · 아래 기준 · 큰 사건 기준 · 닫는 기간 · 임베딩 모델은 운영하면서 정한다([open-questions.md](../open-questions.md)). 묶기 품질은 수집한 기사 표본에 사건 라벨을 붙인 평가 세트로 잰다 — 증거로서의 자격은 [테스트 전략](../qa/test-strategy.md) ⑪, 표본의 실제 기사 텍스트를 공개 저장소에 두지 않는 규칙은 [security.md](../security.md)에 있다.
+사건 기준 · 저장 기준의 기본값은 측정 전 목표다(§7). 큰 사건 기준 · 닫는 기간 · 임베딩 모델은 운영하면서 정한다([open-questions.md](../open-questions.md)). 묶기 품질은 수집한 기사 표본에 사건 라벨을 붙인 평가 세트로 잰다 — 증거로서의 자격은 [테스트 전략](../qa/test-strategy.md) ⑪, 표본의 실제 기사 텍스트를 공개 저장소에 두지 않는 규칙은 [security.md](../security.md)에 있다.
 
 다른 모듈과의 의존과 이벤트 흐름은 [overview.md §5](../overview.md#5-모듈-지도)에 있다.
 
@@ -34,12 +36,48 @@
 | 핵심 말 | 표현 텍스트에서 Nori 로 뽑은 고유명사 · 일반명사 · 외국어(event-R2). 고유명사 겹침 점수의 입력이다 |
 | 임베더 | 텍스트를 벡터로 바꾸는 외부 의존 — 포트 `ArticleEmbedder`. 이름 · 모델 버전 · 차원을 밝힌다(event-R3) |
 | 사건 묶기 대기 | 처리할 기사의 목록(`event_intake_queue` — 기사마다 한 행). 넣은 시각과 점유를 갖는다(event-R5) |
-| 회차 | 반복 작업이 한 번 돌 때 대기를 점유해 표현을 만드는 일 하나(event-R6) |
-| 점유 | 회차가 대기 행을 가져갔다는 표시 — 토큰 · 만료 시각. 만료되면 다른 회차가 다시 가져간다(event-R6) |
+| 회차 | 반복 작업이 한 번 돌 때 하는 일 하나 — 표현 회차(대기를 점유해 표현을 만든다, event-R6) · 배정 회차(배정 대기를 점유해 배정한다, event-R16) · 재판정 회차(event-R18)를 차례로 돈다 |
+| 점유 | 회차가 대기 행을 가져갔다는 표시 — 토큰 · 만료 시각. 만료되면 다른 회차가 다시 가져간다(event-R6 · R16) |
+| 배정 | 기사 하나가 속한 사건(`event_articles` 한 행) — 기사마다 하나. 점수 · 정한 것(산식 · 판정 · 판정 실패) · 판정에 쓴 기준 · 배정 시각을 갖는다(event-R12) |
+| 배정 대기 | 표현을 쓴 뒤 배정할 기사의 목록(`event_assignment_queue` — 기사마다 한 행). 시도 수 · 판정 가능 시각 · 점유를 갖는다(event-R16) |
+| 사건 기준 | 판정에 쓰는 값 — 시간 창 · 위 기준 · 아래 기준 · 확률 기준(event-R17) |
+| 저장 기준 | 배정과 함께 후보를 남기는 점수의 바닥 — 이 이상인 후보의 점수 · 판정 확률을 남긴다(event-R17) |
+| 띠 | 아래 기준 이상 · 위 기준 미만인 점수 — 사건 소속 판정에 묻는 구간(event-R11) |
+| 저장 후보 | 배정과 함께 남긴 후보(`event_article_candidates`) — 사건 · 점수 · 판정 확률(묻지 않았으면 없음). 재판정의 재료다(event-R18) |
+| 기준 이력 | 회차가 판정에 쓴 사건 기준 · 저장 기준 값의 목록(`event_assignment_criteria`) — 같은 값이면 한 행이고, 배정이 그 ID 를 가리킨다(event-R17) |
+| 재판정 | 지금 기준과 다른 기준으로 판정된 배정을 저장 후보로 다시 판정하는 일(event-R18) |
+| 채우기 | 운영자가 정한 기간에 처음 본 기사 가운데 배정이 없는 기사를 사건 묶기 대기에 넣는 운영 기능(event-R19) |
 
 ## 3. 공개 인터페이스
 
-공개 타입(모듈 최상위 패키지의 타입)이 없다. 이 모듈은 `article` 의 이벤트를 받기만 하고 아무것도 내놓지 않는다.
+이 모듈은 `article` 의 이벤트를 받고, 운영 기능 하나를 공개 운영 API 로 낸다 — `admin` 이 운영자 요청으로 부른다([ADR-0045](../adr/0045-admin-module-serves-operator-api-over-module-public-operation-apis.md)).
+
+### EventIntakeAdministration · IntakeFillResult
+
+사건 묶기 채우기의 운영(event-R19). 구현은 `application` 의 `EventIntakeAdministrationService` 다.
+
+```java
+public interface EventIntakeAdministration {
+    int MAX_DAYS = 30;                       // 채울 기간의 상한(일) — 정본
+    IntakeFillResult fill(int days);
+}
+
+public sealed interface IntakeFillResult {
+    record Filled(int articles, int enqueued) implements IntakeFillResult {}
+    record DaysOutOfRange(int max) implements IntakeFillResult {}
+}
+```
+
+| 타입 · 멤버 | 뜻 |
+|---|---|
+| `fill` | 처음 본 시각이 지금 − 일수 × 24시간 이후(그 시각 포함)이고 배정이 없는 기사를 사건 묶기 대기에 넣는다. 이미 대기에 있으면 그대로다 |
+| `Filled.articles` | 기간에 처음 본 기사 수 |
+| `Filled.enqueued` | 그 가운데 새로 대기에 넣은 기사 수 — 배정이 있거나 이미 대기에 있는 기사는 세지 않는다 |
+| `DaysOutOfRange.max` | 일수가 1 ~ `max` 밖이라 아무것도 하지 않았다 — `max` 는 `MAX_DAYS` |
+
+- 계약
+  - 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통). 기사 고르기는 `article` 의 공개 조회 하나(표 전체 읽기 — 드문 운영 연산)이고, 넣기는 SQL 한 문장이다
+  - 넣은 기사는 표현 회차가 표현을 만든 뒤 배정 대기로 넘긴다 — 표현이 이미 있으면 그대로 두고 넘긴다(event-R4 · R6)
 
 - **(미설계)** 사건 조회 · 큰 사건 판정의 공개 API — `digest` · `report` · `admin` 이 쓴다(event-R14 · R15)
 
@@ -51,15 +89,19 @@ HTTP 엔드포인트는 없다.
 
 | 패키지 | 책임 |
 |---|---|
-| (최상위) | 모듈 선언(`package-info`) — 공개 타입 없음 |
+| (최상위) | 모듈 선언(`package-info`), 공개 운영 API `EventIntakeAdministration` · `IntakeFillResult` |
 | `domain/feature` | 기사 표현 — 임베더 포트와 그 정보 · 벡터 값, 표현 텍스트 구성 · 핵심 말 추출 · 임베더 결과 확인의 정본, 표현 행과 그 저장소 |
 | `domain/intake` | 사건 묶기 대기 — 대기 행과 그 점유, 대기 상수, 대기 저장소 |
-| `application` | 기사 이벤트 리스너, 회차, 핵심 말 추출기의 결선 |
-| `adapter/in/job` | 사건 묶기 대기 반복 작업(작업 역할) |
-| `adapter/out/persistence` | 대기 · 표현 저장소의 JdbcClient 구현, 벡터의 pgvector 텍스트 표현 |
+| `domain/assignment` | 사건 배정의 판단 — 기준, 후보 점수 산식, 판정 규칙, 재판정 적용 규칙, 중심 누적 갱신, 배정 대기 행과 그 일정, 배정 대기 · 기준 이력 저장소 |
+| `domain/event` | 사건과 배정 — 잠근 사건 행과 기사 하나 더하기, 기사를 뺀 사건의 새 값, 배정 행, 사건 · 배정 저장소 |
+| `application` | 기사 이벤트 리스너, 표현 · 배정 · 재판정 회차, 기사를 뺀 사건 쓰기, 기준 설정과 결선, 공개 운영 API 의 구현, 핵심 말 추출기의 결선 |
+| `adapter/in/job` | 사건 묶기 대기 반복 작업(작업 역할) — 세 회차를 차례로 |
+| `adapter/out/persistence` | 대기 · 표현 · 배정 대기 · 기준 이력 · 사건 · 배정 저장소의 JdbcClient 구현, 벡터의 pgvector 텍스트 표현 |
 | `adapter/out/fake` | 임베더 포트의 로컬 대체물과 그 결선(`local` 에서만) |
 
-협력: `EventIntakeListener` 가 `ArticleStored` 로 기사를 `IntakeQueueRepository` 에 넣고, `ArticlesRemoved` 로 대기 행과 표현 행(`MatchFeaturesRepository`)을 지운다. 작업 역할의 `IntakeArticlesJob` 이 1분마다 임베더를 찾아 있으면 `EventIntakeRound` 에 넘겨 돌린다. 회차는 `IntakeQueueRepository` 로 대기를 점유하고(`PendingArticle.claim` · `IntakeSchedule`), `article` 의 `ArticleDirectory` 로 제목 · 요약문을 읽어, 기사마다 `MatchText` 로 표현 텍스트를, `KeyTermExtractor` 로 핵심 말을 만든다. 포트 `ArticleEmbedder` 로 텍스트 묶음을 한 번에 벡터로 바꾸고 `EmbeddingCheck` 로 결과를 확인한 뒤, 기사마다 `IntakeQueueRepository.deleteIfLeased` 가 대기 행을 지웠을 때만 `MatchFeaturesRepository.insertIfAbsent` 로 표현을 쓴다. 임베더는 `local` 에서 `FakeArticleEmbedderConfiguration` 이 `FakeArticleEmbedder` 를 포트로 등록한다. `KeyTermExtractor` 는 `KeyTermConfiguration` 이 빈으로 둔다.
+협력: `EventIntakeListener` 가 `ArticleStored` 로 기사를 `IntakeQueueRepository` 에 넣고, `ArticlesRemoved` 로 대기 행과 표현 행(`MatchFeaturesRepository`)을 지운다. 작업 역할의 `IntakeArticlesJob` 이 1분마다 임베더를 찾아 있으면 `EventIntakeRound` 에 넘겨 돌린다. 회차는 `IntakeQueueRepository` 로 대기를 점유하고(`PendingArticle.claim` · `IntakeSchedule`), `article` 의 `ArticleDirectory` 로 제목 · 요약문을 읽어, 기사마다 `MatchText` 로 표현 텍스트를, `KeyTermExtractor` 로 핵심 말을 만든다. 포트 `ArticleEmbedder` 로 텍스트 묶음을 한 번에 벡터로 바꾸고 `EmbeddingCheck` 로 결과를 확인한 뒤, 기사마다 `IntakeQueueRepository.deleteIfLeased` 가 대기 행을 지웠을 때만 `MatchFeaturesRepository.insertIfAbsent` 로 표현을 쓴다. 임베더는 `local` 에서 `FakeArticleEmbedderConfiguration` 이 `FakeArticleEmbedder` 를 포트로 등록한다. `KeyTermExtractor` 는 `KeyTermConfiguration` 이 빈으로 둔다. 표현을 쓰는 같은 트랜잭션에서 `AssignmentQueueRepository.enqueue` 로 그 기사를 배정 대기에 넣는다.
+
+배정: 반복 작업이 표현 회차 다음에 `AssignmentRound` 를 돌린다. 회차는 `AssignmentQueueRepository` 로 배정 대기를 점유하고(`PendingAssignment.claim` · `AssignmentSchedule`), `CriteriaRepository` 에 지금 기준(`AssignmentCriteria` — `EventAssignmentProperties` 를 `AssignmentConfiguration` 이 빈으로 바꾼 것)을 등록하고, `ArticleDirectory` 로 발행 시각을 읽는다. 기사마다 `MatchFeaturesRepository.find` 로 지금 모델 버전의 표현을 읽어 `EventRepository.candidates` 로 후보 사건을 얻고, `CandidateScoring` 으로 점수를 매겨 `AssignmentRule` 로 판정한다. 띠면 `EventRepository.describers` 로 서술 기사를 골라 `evaluation` 의 `EventMembership` 에 묻는다. 쓰기는 `EventRepository.lock` · `update`(`LockedEvent.joined`) 또는 `open` 과 `EventArticleRepository.insertIfAbsent` 다. 이어서 `RejudgementRound` 가 `EventArticleRepository.lockRejudgeTargets` 로 기준이 다른 배정을 잠가 `AssignmentRule` · `Reassignment` 로 다시 판정하고, 옮기거나 떼어 내면 옛 사건을 `EventShrinkWriter` 로 쓴다. 지운 기사 따르기는 `EventIntakeListener` 가 `EventShrink` 로 사건의 새 값을 정해 `EventShrinkWriter` 로 쓴다. 채우기는 `EventIntakeAdministrationService` 가 `ArticleDirectory.firstSeenSince` 와 `IntakeQueueRepository.enqueueUnassigned` 로 한다.
 
 #### 회차 흐름
 
@@ -84,8 +126,40 @@ sequenceDiagram
     else 성공
         loop 기사마다
             R->>Q: 트랜잭션 — 토큰이 맞으면 대기 행 삭제
-            R->>F: 같은 트랜잭션 — 지웠으면 표현 쓰기, 있으면 그대로 (event-R4)
+            R->>F: 같은 트랜잭션 — 지웠으면 표현 쓰기, 있으면 그대로 (event-R4) · 배정 대기에 넣기 (event-R16)
         end
+    end
+```
+
+#### 배정 회차 흐름
+
+```mermaid
+sequenceDiagram
+    participant J as IntakeArticlesJob
+    participant R as AssignmentRound
+    participant Q as AssignmentQueueRepository
+    participant A as ArticleDirectory
+    participant V as EventRepository
+    participant M as EventMembership
+    participant B as EventArticleRepository
+
+    J->>R: 표현 회차 다음 — 임베더를 넘겨 회차
+    R->>Q: 트랜잭션 — 배정 대기 잠금 · 점유 쓰기 · 커밋 (event-R16)
+    R->>A: 발행 시각 (트랜잭션 밖)
+    loop 기사마다 점유 순서로
+        R->>V: 후보 사건 — 열림 · 모델 버전 · 시간 창, 정확한 코사인 (event-R10)
+        R->>R: 점수 · 판정 (event-R10 · R11)
+        opt 띠
+            R->>M: 사건 소속 판정 (트랜잭션 밖)
+            alt 일시 실패 · 상한 전
+                R->>Q: 트랜잭션 — 시도 수 · 판정 가능 시각, 다음 기사
+            else 평가기 사용 불가
+                R->>Q: 이 기사부터 남은 점유 해제 — 회차 끝
+            end
+        end
+        R->>Q: 트랜잭션 — 토큰이 맞으면 대기 행 삭제
+        R->>V: 같은 트랜잭션 — 붙일 사건 잠금 · 갱신 또는 새 사건 (event-R12)
+        R->>B: 같은 트랜잭션 — 배정 · 저장 후보 쓰기, 이미 있으면 롤백 (event-R12)
     end
 ```
 
@@ -93,9 +167,9 @@ sequenceDiagram
 
 | 진입점 | 구성 요소 | 계기 | 내용 |
 |---|---|---|---|
-| `ArticleStored` · `ArticlesRemoved` 리스너 | `EventIntakeListener`(`application`) | `article` 의 `ArticleStored` · `ArticlesRemoved` | 새 기사를 대기에 넣고(event-R5), 지운 기사의 대기 · 표현 행을 지운다(event-R8). 비동기 · 새 트랜잭션이고 이벤트 발행 레지스트리에 기록된다(Spring Modulith `@ApplicationModuleListener`). 실패한 발행은 `platform` 의 이벤트 재처리 작업이 다시 처리하고, 다시 처리해도 결과가 같다. 임베더 · Nori 를 쓰지 않는다 — 화면 역할에서 돌아도 된다 |
-| 사건 묶기 대기 반복 작업 | `IntakeArticlesJob`(`adapter/in/job`, 작업 역할) | JobRunr 반복 작업 `event-intake` — 1분마다, 재시도 없음 | 임베더를 부를 때 찾아 `EventIntakeRound` 에 넘겨 돌린다. 없으면 건너뛴다 — 기동 때 경고 한 번(event-R7). 이전 실행이 대기 · 처리 중이면 그 회차는 건너뛴다 |
-| **(미구현)** 사건 배정 | — | 표현을 쓴 뒤 | 후보 → 판정 → 배정 또는 새 사건(event-R10 ~ R12) |
+| `ArticleStored` · `ArticlesRemoved` 리스너 | `EventIntakeListener`(`application`) | `article` 의 `ArticleStored` · `ArticlesRemoved` | 새 기사를 대기에 넣고(event-R5), 지운 기사의 대기 · 배정 대기 · 배정 · 후보 · 표현 행을 지우고 사건을 다시 맞춘다(event-R8). 비동기 · 새 트랜잭션이고 이벤트 발행 레지스트리에 기록된다(Spring Modulith `@ApplicationModuleListener`). 실패한 발행은 `platform` 의 이벤트 재처리 작업이 다시 처리하고, 다시 처리해도 결과가 같다. 임베더 · Nori 를 쓰지 않는다 — 화면 역할에서 돌아도 된다 |
+| 사건 묶기 대기 반복 작업 | `IntakeArticlesJob`(`adapter/in/job`, 작업 역할) | JobRunr 반복 작업 `event-intake` — 1분마다, 재시도 없음 | 임베더를 부를 때 찾아 `EventIntakeRound` → `AssignmentRound` → `RejudgementRound` 를 차례로 돌린다(event-R6 · R16 · R18). 없으면 셋 다 건너뛴다 — 기동 때 경고 한 번(event-R7). 이전 실행이 대기 · 처리 중이면 그 실행은 건너뛴다 |
+| 채우기 | `EventIntakeAdministrationService`(`application`) | `admin` 의 운영자 요청(`EventIntakeAdministration.fill`) | 기간에 처음 본, 배정 없는 기사를 사건 묶기 대기에 넣는다(event-R19). 두 역할 공통 |
 | **(미구현)** 사건 병합 | — | 주기 | 가까운 열린 사건끼리 합친다(event-R13) |
 | **(미구현)** 사건 닫기 | — | 하루 1회 | 새 기사가 일정 기간 없는 사건을 닫는다(event-R13) |
 
@@ -103,8 +177,13 @@ sequenceDiagram
 
 ### `application`
 
-- `EventIntakeListener` — 리스너(들어오는 쪽). 넣기는 시각을 `InstantSource` 에서 얻는다. 지우기는 한 트랜잭션에서 대기 행을 먼저, 표현 행을 나중에 지운다(event-R8). 이름은 `evaluation` 의 리스너와 다르다 — 빈 이름은 단순 클래스 이름이다
-- `EventIntakeRound` — 회차 하나(event-R6 · R8). 임베더는 `run(ArticleEmbedder)` 의 인자로 받는다 — 작업 진입점이 넘긴다. 시각은 `InstantSource` 에서 얻는다. 점유와 쓰기는 `TransactionTemplate` 의 짧은 트랜잭션이고, 기사 조회와 임베더 호출은 트랜잭션 밖이다. 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통). 로그: `사건 묶기 대기 기사가 지워져 대기에서 뺐다 — 기사 {ID}`(정보), `임베더가 실패해 회차를 멈췄다 — {이름} {모델 버전}, 기사 {n}건: {문구}`(오류)
+- `EventIntakeListener` — 리스너(들어오는 쪽). 넣기는 시각을 `InstantSource` 에서 얻는다. 지우기는 한 트랜잭션에서 event-R8 의 순서로 한다 — 사건의 새 값은 `EventShrink`, 쓰기는 `EventShrinkWriter`. 이름은 `evaluation` 의 리스너와 다르다 — 빈 이름은 단순 클래스 이름이다
+- `EventIntakeRound` — 표현 회차 하나(event-R6 · R8). 임베더는 `run(ArticleEmbedder)` 의 인자로 받는다 — 작업 진입점이 넘긴다. 시각은 `InstantSource` 에서 얻는다. 점유와 쓰기는 `TransactionTemplate` 의 짧은 트랜잭션이고, 기사 조회와 임베더 호출은 트랜잭션 밖이다. 표현을 쓰는 트랜잭션에서 배정 대기에 넣는다. 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통). 로그: `사건 묶기 대기 기사가 지워져 대기에서 뺐다 — 기사 {ID}`(정보), `임베더가 실패해 회차를 멈췄다 — {이름} {모델 버전}, 기사 {n}건: {문구}`(오류)
+- `AssignmentRound` — 배정 회차 하나(event-R10 ~ R12 · R16). `run(ArticleEmbedder)` 의 임베더는 지금 모델 버전을 정하는 데만 쓴다. 기사마다 시계를 다시 읽는다. 점유 · 쓰기는 짧은 트랜잭션이고 기사 조회 · 사건 소속 판정은 트랜잭션 밖이다. 판정 · 실패 갈래는 `default` 없는 `switch` 식이다. 예외를 밖으로 던지지 않는다. 트랜잭션 · 역할 애너테이션이 없다. 로그: `배정 대기 기사가 지워져 대기에서 뺐다 — 기사 {ID}` · `배정 대기 기사가 판정 중에 지워져 대기에서 뺐다 — 기사 {ID}` · `사건 소속 판정이 일시 실패해 다시 시도한다 — 기사 {ID}, 시도 {n}: {문구}` · `붙일 사건이 사라졌거나 닫혀 다음 회차에 다시 판정한다 — 기사 {ID}`(정보), `사건 소속 판정의 일시 실패가 상한에 이르러 새 사건으로 끝낸다 — 기사 {ID}: {문구}` · `평가기가 기사를 거부해 새 사건으로 끝낸다 — 기사 {ID}: {문구}` · `평가기를 쓸 수 없어 배정 회차를 멈췄다 — 남은 기사 {n}건: {문구}`(경고), `배정 회차가 예상하지 못한 오류로 멈췄다 — 기사 {ID}, 남은 기사 {n}건`(오류)
+- `RejudgementRound` — 재판정 회차 하나(event-R18). 배정 하나마다 짧은 트랜잭션이다. 사건 소속 판정 · 임베더를 부르지 않는다. 트랜잭션 · 역할 애너테이션이 없다. 로그: `배정 {n}건을 지금 기준으로 다시 판정했다`(정보, 한 건 이상일 때), `재판정 회차가 예상하지 못한 오류로 멈췄다 — 이번 회차에 다시 판정한 배정 {n}건`(오류)
+- `EventShrinkWriter` — 기사를 뺀 사건 쓰기의 정본(event-R8 · R18). 뺀 기사의 배정이 지워지거나 옮겨진 뒤 같은 트랜잭션에서 부른다 — 비면 사건을 지우고, 아니면 새 중심 · 수 · 핵심 말과 남은 배정의 발행 시각 범위를 쓴다. 남은 수가 있는데 배정이 없으면 사건을 지운다
+- `EventAssignmentProperties` · `AssignmentConfiguration` — 사건 기준 · 저장 기준 설정(`yozmnews.event-assignment`, 기본값의 정본은 레코드 컴포넌트의 `@DefaultValue`)과 그것을 검증된 `AssignmentCriteria` 빈으로 바꾸는 결선(event-R17)
+- `EventIntakeAdministrationService` — 공개 운영 API `EventIntakeAdministration` 의 구현(event-R19). 시각은 `InstantSource` 에서 얻는다
 - `KeyTermConfiguration` — `KeyTermExtractor` 를 빈으로 두고, 컨텍스트가 닫을 때 닫는다
 
 ### `domain`
@@ -115,11 +194,13 @@ sequenceDiagram
 - `KeyTermExtractor` — 핵심 말 추출의 정본. 고르는 품사 `KEPT_TAGS`(`NNP` · `NNG` · `SL`). Lucene `Analyzer` 를 하나 갖고 여러 스레드에서 쓴다. 닫을 수 있다(event-R2)
 - `EmbeddingCheck` — 임베더 결과가 요청 수 · 밝힌 차원과 맞는지의 판정(event-R3)
 - `MatchFeatures` — 표현 한 행(기사 · 모델 버전 · 벡터 · 핵심 말 · 만든 시각)
-- 저장 단위: aggregate 가 없다 — 표현 행은 만든 뒤 바꾸지 않고, 저장소 `MatchFeaturesRepository` 가 넣기와 지우기만 한다
+- 저장 단위: aggregate 가 없다 — 표현 행은 만든 뒤 바꾸지 않고, 저장소 `MatchFeaturesRepository` 가 넣기 · 읽기 · 지우기만 한다
 
   ```java
   public interface MatchFeaturesRepository {
       boolean insertIfAbsent(MatchFeatures features);                 // 없으면 쓴다 — (기사, 모델 버전)이 있으면 그대로. 썼으면 true
+      Optional<MatchFeatures> find(ArticleId articleId, String modelVersion);                  // 그 모델 버전 표현 — 없으면 빈 값
+      List<MatchFeatures> findAll(Collection<ArticleId> articleIds, String modelVersion);     // 기사 ID 순, 없는 기사는 빠진다
       void deleteByArticles(Collection<ArticleId> articleIds);       // 지운 기사 따르기 — 모든 모델 버전
   }
   ```
@@ -135,6 +216,7 @@ sequenceDiagram
   ```java
   public interface IntakeQueueRepository {
       void enqueue(ArticleId articleId, Instant now);                  // 없으면 넣기. 있으면 그대로
+      int enqueueUnassigned(Collection<ArticleId> articleIds, Instant now);  // 배정이 없는 기사만 넣기 — 새로 넣은 수(event-R19)
       List<PendingArticle> lockDue(Instant now, int limit);           // 점유가 없거나 만료(≤ now)된 행 — 넣은 시각, 기사 ID 순. 잡힌 행은 건너뛴다
       void saveLocked(PendingArticle next);                            // lockDue 로 잠근 행 갱신
       boolean deleteIfLeased(ArticleId articleId, UUID token);        // 토큰이 맞을 때만 삭제
@@ -144,6 +226,89 @@ sequenceDiagram
   ```
 
 - 그 밖의 값: `IntakeLease`
+
+#### `domain/assignment`
+
+- `AssignmentCriteria(Duration window, double upper, double lower, double store, double probability)` — 사건 기준 · 저장 기준의 검증과 운반(event-R17). 창은 0 보다 큰 초 단위, `0 ≤ store ≤ lower ≤ upper ≤ 1`, `0 < probability ≤ 1` — 어기면 `IllegalArgumentException`
+- `CandidateScoring` — 후보 점수 산식의 정본(event-R10). 핵심 말 가중치 `KEY_TERM_WEIGHT`(0.3) · 감쇠 반감기 `HALF_LIFE`(24시간) · 산식에 쓰는 사건 핵심 말 수 `EVENT_KEY_TERMS`(20) — 측정 전 목표. `score(EventSnapshot, 기사 핵심 말, 발행 시각, 창)` → `Optional<ScoredCandidate>`
+- `AssignmentRule` — 판정 규칙의 정본(event-R11 · R18). 한 번에 묻는 후보 수 `MAX_ASKED`(5 — 사건 소속 판정의 후보 상한 이하). `decide(후보, 기준, DecisionPhase)` → `Decision`. 처음 판정 · 판정 뒤 · 재판정이 같은 함수를 쓴다
+- `Reassignment` — 재판정 결과를 지금 배정에 적용하는 방식의 정본(event-R18). `of(Decision, 지금 사건, 저장 후보, 잠근 지금 사건의 기사 수)`
+- `CentroidUpdate` — 중심 누적 갱신의 정본(event-R12) — `add(c, n, v)` = `(c·n + v)/(n+1)`, `remove(c, n, v)` = `(c·n − v)/(n−1)`(n ≥ 2)
+- `AssignmentSchedule` — 배정 대기 · 재판정 회차의 상수와 재시도 시각의 정본(event-R16 · R18). 값은 측정 전 목표다
+- `PendingAssignment` — 배정 대기 행 하나와 그 전이 — `claim`(점유) · `afterTransient`(일시 실패) · `exhausted`(상한에 이름)(event-R16)
+
+  ```java
+  public record EventSnapshot(long eventId, double cosine, List<String> keyTerms, Instant firstArticleAt, Instant lastArticleAt) {}
+  public record ScoredCandidate(long eventId, double score) {}
+  public record StoredCandidate(long eventId, double score, @Nullable Double probability) {}
+  public enum DecisionPhase { FIRST, AFTER_JUDGEMENT, REJUDGE }
+  public enum DecidedBy { FORMULA, EVALUATOR, JUDGEMENT_FAILED }
+  public sealed interface Decision {
+      record Attach(long eventId, double score, DecidedBy by) implements Decision {}
+      record Open(@Nullable Double bestScore, DecidedBy by) implements Decision {}
+      record Ask(List<Long> eventIds) implements Decision {}        // 처음 판정에서만
+      record Keep() implements Decision {}                          // 재판정에서만
+  }
+  public sealed interface Reassignment {
+      record Keep() implements Reassignment {}                                          // 기준만 새것으로
+      record Restamp(@Nullable Double score, DecidedBy by) implements Reassignment {}   // 같은 사건에서 다시 적기
+      record Move(long eventId, double score, DecidedBy by) implements Reassignment {}  // 저장 후보인 다른 사건으로
+      record Split(@Nullable Double bestScore, DecidedBy by) implements Reassignment {} // 새 사건으로 떼어 내기
+  }
+  public record PendingAssignment(ArticleId articleId, Instant enqueuedAt, int attempts, Instant availableAt,
+          @Nullable IntakeLease lease) {}
+  ```
+
+- 저장 단위: aggregate 가 없다 — 배정 대기 행의 전이는 `PendingAssignment` 가 계산하고 점유 토큰을 조건으로 한 SQL 로 쓴다(사건 묶기 대기와 같은 모양). 기준 이력 행은 쓰기만 한다
+
+  ```java
+  public interface AssignmentQueueRepository {
+      void enqueue(ArticleId articleId, Instant now);                               // 없으면 넣기 — 판정 가능 시각 = now
+      List<PendingAssignment> lockDue(Instant now, int limit);                     // 판정 가능 시각 ≤ now · 점유 없음/만료 — 판정 가능 시각, 기사 ID 순. 잡힌 행은 건너뛴다
+      void saveLocked(PendingAssignment next);
+      boolean deleteIfLeased(ArticleId articleId, UUID token);
+      boolean releaseIfLeased(ArticleId articleId, UUID token);                    // 시도 수 · 판정 가능 시각은 그대로
+      boolean retryIfLeased(ArticleId articleId, UUID token, int attempts, Instant availableAt);  // 일시 실패 — 점유를 푼다
+      void delete(Collection<ArticleId> articleIds);                                // 지운 기사 따르기
+  }
+
+  public interface CriteriaRepository {
+      long register(AssignmentCriteria criteria, Instant now);                      // 같은 값의 행이 있으면 그 ID, 없으면 더한다
+  }
+  ```
+
+#### `domain/event`
+
+- `LockedEvent(long id, EventStatus status, String modelVersion, float[] centroid, int articleCount, Instant firstArticleAt, Instant lastArticleAt)` — 잠근 사건 한 행. `joined(벡터, 발행 시각)` 이 기사 하나를 더한 사건의 정본이다 — 배정과 재판정의 옮기기가 쓴다(event-R12)
+- `EventShrink` — 기사를 뺀 사건의 새 값의 정본(event-R8 · R18) — `of(LockedEvent, 뺀 기사, 그 사건 모델 버전의 표현)` → `Emptied` · `Shrunk(centroid, articleCount, removedTerms)`
+- `EventStatus`(`OPEN` · `CLOSED`), `PublishedSpan(first, last)`
+
+  ```java
+  public record EventArticle(ArticleId articleId, long eventId, Instant publishedAt, @Nullable Double score,
+          DecidedBy decidedBy, long criteriaId, Instant assignedAt) {}
+  public record RejudgeTarget(EventArticle assignment, List<StoredCandidate> stored) {}
+
+  public interface EventRepository {
+      List<EventSnapshot> candidates(String modelVersion, float[] vector, Instant from, Instant to);  // event-R10, 사건 ID 순
+      List<ArticleId> describers(long eventId, String modelVersion, int limit);   // 그 모델 버전 표현이 있는 구성 기사 — 중심에 가까운 순, 같으면 기사 ID 순
+      Optional<LockedEvent> lock(long eventId);                                   // FOR UPDATE
+      List<LockedEvent> lockAll(Collection<Long> eventIds);                       // 사건 ID 순 FOR UPDATE
+      long open(String modelVersion, float[] centroid, Instant publishedAt, List<String> keyTerms, Instant now);  // 새 사건 — 같은 말은 한 번
+      void update(LockedEvent next, List<String> addedTerms, List<String> removedTerms);   // 핵심 말은 목록에 나온 수만큼 늘리고 줄여 0 이면 지운다
+      void delete(long eventId);                                                  // 사건 · 핵심 말 · 그 사건을 가리키는 후보 — 배정이 먼저 지워지거나 옮겨져 있어야 한다
+  }
+
+  public interface EventArticleRepository {
+      boolean exists(ArticleId articleId);
+      boolean insertIfAbsent(EventArticle row, List<StoredCandidate> stored);    // 배정 + 저장 후보 — 이미 있으면 그대로, 썼으면 true
+      List<RejudgeTarget> lockRejudgeTargets(long criteriaId, int limit);       // 기준 ID 가 다른 배정 — 기사 ID 순 FOR UPDATE SKIP LOCKED. 저장 후보는 사라진 사건을 뺀다. 사건은 잠그지 않는다
+      void reassign(ArticleId articleId, long eventId, @Nullable Double score, DecidedBy by, long criteriaId, Instant now);
+      void keep(ArticleId articleId, long criteriaId);                           // 기준만 새것으로
+      List<EventArticle> lockByArticles(Collection<ArticleId> articleIds);       // 기사 ID 순 FOR UPDATE
+      Optional<PublishedSpan> publishedSpan(long eventId);                       // 남은 배정의 발행 시각 범위 — 배정이 없으면 빈 값
+      void deleteByArticles(Collection<ArticleId> articleIds);                   // 배정 · 그 기사의 후보
+  }
+  ```
 
 ### 나가는 쪽
 
@@ -187,7 +352,11 @@ public final class Embedding {
 #### 저장소 구현
 
 - `JdbcIntakeQueueRepository` — 넣기는 `INSERT … ON CONFLICT DO NOTHING`, 잠금은 `FOR UPDATE SKIP LOCKED`, 점유한 회차의 반영은 점유 토큰을 조건으로 한 갱신 · 삭제다
-- `JdbcMatchFeaturesRepository` — 넣기는 `INSERT … ON CONFLICT (article_id, model_version) DO NOTHING`. 벡터는 `VectorText` 가 만든 pgvector 텍스트 표현(`[v1,v2,…]`)을 SQL 이 `vector` 로 바꾼다. 핵심 말은 `text[]`
+- `JdbcMatchFeaturesRepository` — 넣기는 `INSERT … ON CONFLICT (article_id, model_version) DO NOTHING`. 벡터는 `VectorText` 가 만든 pgvector 텍스트 표현(`[v1,v2,…]`)을 SQL 이 `vector` 로 바꾸고, `embedding::text` 를 `VectorText.parse` 로 되읽는다. 핵심 말은 `text[]`
+- `JdbcAssignmentQueueRepository` — 사건 묶기 대기 구현과 같은 모양
+- `JdbcCriteriaRepository` — 같은 값의 행을 먼저 읽고, 없을 때만 `INSERT … ON CONFLICT … DO UPDATE … RETURNING id`(동시에 같은 값을 넣어도 한 행 · 같은 ID). 창은 초로 적는다
+- `JdbcEventRepository` — 중심은 `halfvec` 이고 같은 텍스트 표현으로 쓰고 읽는다. 후보의 코사인은 `1 − (중심 <=> cast(벡터 as halfvec))` 를 열린 사건마다 센다(인덱스 없음). 사건 핵심 말 상위 수는 `CandidateScoring.EVENT_KEY_TERMS` 를 매개변수로 넘기고, 말 순은 바이트 순(`COLLATE "C"`)이다
+- `JdbcEventArticleRepository` — 배정은 `INSERT … ON CONFLICT (article_id) DO NOTHING` 이고 썼을 때만 후보를 쓴다. 재판정 대상은 `criteria_id < :c or criteria_id > :c` 로 기준 인덱스를 쓴다
 
 #### 신뢰할 수 없는 입력
 
@@ -207,17 +376,24 @@ public final class Embedding {
 
 ### 사건 묶기 대기와 회차
 
-판단의 이유는 [ADR-0074](../adr/0074-article-features-built-by-event-intake-queue-job-and-skipped-without-an-embedder.md) · [ADR-0060](../adr/0060-article-deletion-announced-by-removed-article-ids-and-followed-by-referencing-modules.md)에 있다.
+판단의 이유는 [ADR-0074](../adr/0074-article-features-built-by-event-intake-queue-job-and-skipped-without-an-embedder.md) · [ADR-0060](../adr/0060-article-deletion-announced-by-removed-article-ids-and-followed-by-referencing-modules.md) · [ADR-0080](../adr/0080-event-centroids-and-key-terms-accumulated-with-article-counts-and-updated-incrementally.md)에 있다.
 
-- **event-R5** — 대기: 새 기사(`ArticleStored`)를 대기에 넣는다. 기사마다 한 행이고 이미 있으면 그대로다 — 같은 이벤트를 다시 처리해도 결과가 같다. 정착 시간이 없다 — 기사의 제목 · 요약문은 처음 저장한 값이 남는다(article-R8). 이 모듈이 생기기 전에 저장된 기사는 대기에 넣지 않는다 — 표현이 없다
+- **event-R5** — 대기: 새 기사(`ArticleStored`)를 대기에 넣는다. 기사마다 한 행이고 이미 있으면 그대로다 — 같은 이벤트를 다시 처리해도 결과가 같다. 정착 시간이 없다 — 기사의 제목 · 요약문은 처음 저장한 값이 남는다(article-R8). 이 모듈이 생기기 전에 저장된 기사는 운영자가 채우기 전까지 대기에 들어가지 않는다(event-R19)
 - **event-R6** — 회차: 반복 작업(1분, 재시도 없음)의 회차는 점유가 없거나 만료된(만료 시각 ≤ 지금) 대기 행을 넣은 시각 · 기사 ID 순으로 64건(`IntakeSchedule.BATCH_SIZE`)까지 잠가(다른 트랜잭션이 잡은 행은 건너뛴다) 점유(토큰 · 만료 = 지금 + 10분, `IntakeSchedule.LEASE`)를 쓰고 커밋한다. 반복 작업은 이전 실행이 대기 · 처리 중이면 그 회차를 건너뛴다.
   - 기사의 제목 · 요약문을 트랜잭션 밖에서 한 번에 읽는다. 그새 지워진 기사는 토큰이 맞으면 대기 행을 지운다. 남은 기사가 없으면 임베더를 부르지 않는다
   - 임베더를 트랜잭션 밖에서 한 번 부른다. 예외를 던지거나 결과가 어긋나면(event-R3) 남은 점유를 토큰이 맞을 때 풀고 회차를 끝낸다 — 다음 회차가 다시 점유한다
-  - 기사마다 짧은 트랜잭션에서, 토큰이 맞아 대기 행을 지웠을 때만 표현을 쓴다. 토큰이 맞지 않으면(점유가 만료돼 다른 회차가 가져갔거나 기사를 지웠다) 쓰지 않는다
+  - 기사마다 짧은 트랜잭션에서, 토큰이 맞아 대기 행을 지웠을 때만 표현을 쓰고 그 기사를 배정 대기에 넣는다(event-R16) — 표현 행이 이미 있어도 넣는다. 토큰이 맞지 않으면(점유가 만료돼 다른 회차가 가져갔거나 기사를 지웠다) 쓰지 않는다
   - 회차 도중 프로세스가 죽으면 점유가 만료된 뒤 다른 회차가 가져간다
   - **(미설계)** 임베더가 같은 묶음에서 계속 실패할 때의 처분 — 지금은 회차가 넣은 시각 순으로 점유하므로 그 묶음 뒤의 기사도 처리되지 않는다
-- **event-R7** — 임베더가 없는 프로세스: 반복 작업은 임베더를 부를 때 찾고, 없으면 회차를 건너뛴다 — 기사는 대기에 남아 임베더가 생긴 뒤 처리된다. 작업 역할이 뜰 때 임베더가 없으면 경고 `임베더가 없어 사건 묶기 대기 기사를 처리하지 않는다 — 기사는 대기에 쌓인다` 를 한 번 남긴다. 리스너 · 회차는 임베더를 생성자로 받지 않는다 — 임베더 없는 화면 역할도 뜬다
-- **event-R8** — 지운 기사 따르기: `ArticlesRemoved` 를 받으면 한 트랜잭션에서 그 기사들의 대기 행을 먼저, 표현 행(모든 모델 버전)을 나중에 지운다. 진행 중인 회차의 쓰기 트랜잭션이 대기 행을 잡고 있으면 그 커밋을 기다린 뒤 표현 행을 지워 커밋 직전의 표현을 놓치지 않는다. 지우기가 먼저 커밋되면 회차의 토큰 조건이 맞지 않아 표현을 쓰지 않는다(event-R6). 다시 처리해도 결과가 같다
+- **event-R7** — 임베더가 없는 프로세스: 반복 작업은 임베더를 부를 때 찾고, 없으면 표현 · 배정 · 재판정 회차를 모두 건너뛴다 — 기사는 대기에 남아 임베더가 생긴 뒤 처리된다(배정은 지금 모델 버전을 알 수 없고, 재판정은 새 배정이 없는 동안 미뤄도 잃는 것이 없다). 작업 역할이 뜰 때 임베더가 없으면 경고 `임베더가 없어 사건 묶기 대기 기사를 처리하지 않는다 — 기사는 대기에 쌓인다` 를 한 번 남긴다. 리스너 · 회차는 임베더를 생성자로 받지 않는다 — 임베더 없는 화면 역할도 뜬다
+- **event-R8** — 지운 기사 따르기: `ArticlesRemoved` 를 받으면 한 트랜잭션에서 차례로 한다 — 다시 처리해도 결과가 같다.
+  1. 그 기사들의 사건 묶기 대기 · 배정 대기 행을 지운다. 진행 중인 회차의 쓰기 트랜잭션이 대기 행을 잡고 있으면 그 커밋을 기다려, 커밋 직전의 표현 · 배정을 놓치지 않는다. 지우기가 먼저 커밋되면 회차의 토큰 조건이 맞지 않아 쓰지 않는다(event-R6 · R16)
+  2. 그 기사들의 배정 행을 기사 ID 순으로, 그 배정의 사건을 사건 ID 순으로 잠근다
+  3. 사건마다 새 값을 정한다(`EventShrink` — 정본) — 남는 기사가 없으면 지울 사건이다. 아니면 지운 기사마다 기사 수를 하나 줄이고, 그 사건 모델 버전의 표현이 있으면 중심에서 그 벡터를 빼고(`CentroidUpdate.remove`) 그 핵심 말의 수를 줄인다. 표현이 없으면 중심 · 핵심 말은 그대로다(event-R12)
+  4. 그 기사들의 배정 · 저장 후보를 지운다
+  5. 사건을 고친다(`EventShrinkWriter` — 정본) — 빈 사건은 그 사건을 가리키는 다른 기사의 저장 후보와 함께 지우고, 나머지는 3 의 값과 남은 배정의 발행 시각 최소 · 최대(첫 · 마지막 기사 시각)를 쓴다. 남는 수가 있는데 배정이 없으면 지운다
+  6. 표현 행(모든 모델 버전)을 지운다 — 3 이 표현을 읽은 뒤다
+- **event-R19** — 채우기: 운영자가 일수(1 ~ 30, `EventIntakeAdministration.MAX_DAYS`)를 정하면, 처음 본 시각이 지금 − 일수 × 24시간 이후(그 시각 포함)인 기사 가운데 배정이 없는 기사를 SQL 한 문장으로 사건 묶기 대기에 넣는다. 이미 대기에 있으면 그대로이고 세지 않는다. 범위 밖이면 아무것도 하지 않는다. 넣은 기사는 표현 회차와 배정 회차가 처리한다
 
 ### 로컬 대체물
 
@@ -225,11 +401,47 @@ public final class Embedding {
 
 ### 사건 배정
 
-판단의 이유는 [ADR-0026](../adr/0026-event-clustering-with-local-embeddings-and-jev.md) · [ADR-0027](../adr/0027-pgvector-for-vector-storage.md)에 있다.
+판단의 이유는 [ADR-0026](../adr/0026-event-clustering-with-local-embeddings-and-jev.md) · [ADR-0027](../adr/0027-pgvector-for-vector-storage.md) · [ADR-0077](../adr/0077-event-assignment-queue-judged-one-article-at-a-time-with-evaluation-failure-kinds.md) · [ADR-0078](../adr/0078-articles-ending-in-a-judgement-failure-open-a-new-event-marked-as-failed.md) · [ADR-0079](../adr/0079-event-centroids-in-a-dimensionless-halfvec-column-with-a-model-version-per-event.md) · [ADR-0080](../adr/0080-event-centroids-and-key-terms-accumulated-with-article-counts-and-updated-incrementally.md)에 있다.
 
-- **event-R10** — **(미구현)** 후보: 시간 창 안의 열린 사건 중 가까운 사건 몇 개를 고른다. 점수는 사건 중심 벡터와의 코사인 유사도, 고유명사 겹침, 발행 시각 차이에 따른 감쇠로 계산한다. 비교는 인덱스 없는 정확 검색이라 같은 입력에서 같은 후보가 나온다. 기사 표현은 지금 임베더의 모델 버전 행만 읽는다(event-R4)
-- **event-R11** — **(미구현)** 판정: 점수가 위 기준 이상이면 가장 가까운 사건에 붙이고, 아래 기준 미만이면 새 사건을 연다. 그 사이는 `evaluation` 의 사건 소속 판정(공개 API `EventMembership` — Jev 관문은 `ArticleEvaluator`)으로 Jev 에 묻는다. 후보 사건마다 사건 중심에 가까운 기사 몇 개를 서술로 넘기고(질문에는 그 제목이 실린다), 확률이 가장 높으면서 기준을 넘는 사건에 붙인다. 넘는 사건이 없으면 새 사건을 연다. Jev 호출은 DB 트랜잭션 밖에서 하고, 판정 원본은 `evaluation` 이 남긴다
-- **event-R12** — **(미구현)** 배정: 사건에 붙이면 사건 중심 벡터 · 고유명사 · 마지막 기사 시각을 갱신한다. 배정은 사건 **중심**과의 거리로 한다 — 사건 안의 기사 하나와만 닮아도 붙이면 사건이 번진다. 같은 기사를 다시 처리해도 이미 있는 배정을 유지한다
+- **event-R10** — 후보: 기사 표현은 지금 임베더의 모델 버전 행만 읽는다(event-R4). 기준 시각은 기사의 발행 시각이다(article-R8).
+  - 후보 사건은 열린 사건 가운데 모델 버전이 같고, 구성 기사의 발행 시각 범위(첫 ~ 마지막 기사 시각)가 [발행 − 시간 창, 발행 + 시간 창] 과 겹치는 사건이다. 비교는 인덱스 없는 정확 검색이라 같은 입력에서 같은 후보가 나온다
+  - 점수(`CandidateScoring` — 정본) = 감쇠 × ((1 − w) × max(코사인, 0) + w × 핵심 말 겹침), 0 ~ 1. w 는 0.3(`CandidateScoring.KEY_TERM_WEIGHT`)이다. 코사인은 기사 벡터와 사건 중심의 코사인 유사도다(둘 다 반 정밀도로 비교한다). 핵심 말 겹침은 |기사 핵심 말 ∩ 사건 핵심 말| ÷ |기사 핵심 말|(기사 핵심 말이 없으면 0)이고, 사건 핵심 말은 기사 수가 많은 순(같으면 바이트 순) 상위 20개(`CandidateScoring.EVENT_KEY_TERMS`)다
+  - 시각 차 Δ 는 발행 시각이 마지막 기사 시각 뒤면 그 차, 첫 기사 시각 앞이면 그 차, 그 사이면 0 이다. 감쇠는 2^(−Δ ÷ 24시간)(반감기 `CandidateScoring.HALF_LIFE`)이고, Δ 가 시간 창보다 크면 후보가 아니다(같으면 후보다)
+  - 점수가 저장 기준 이상인 후보만 판정과 저장에 쓴다 — 점수를 셀 수 없으면(영 벡터 중심의 NaN) 빠진다
+- **event-R11** — 판정(`AssignmentRule` — 정본, 경계는 포함):
+  1. 점수가 가장 높은 후보(같으면 사건 ID 가 작은 것)가 위 기준 이상이면 그 사건에 붙인다 — 정한 것은 산식(`FORMULA`)
+  2. 띠(아래 기준 ≤ 점수 < 위 기준)의 후보 가운데 판정 확률이 가장 높은 것(같으면 점수가 높은 것, 그다음 사건 ID 가 작은 것)이 확률 기준 이상이면 그 사건에 붙인다 — 정한 것은 판정(`EVALUATOR`)
+  3. 띠에 확률 없는 후보가 있으면 — 처음 판정은 점수 순(같으면 사건 ID 순)으로 5개(`AssignmentRule.MAX_ASKED`)까지 `evaluation` 의 사건 소속 판정(공개 API `EventMembership` — Jev 관문은 `ArticleEvaluator`)에 묻는다. 후보 사건마다 그 모델 버전 표현이 있는 구성 기사 가운데 사건 중심에 가까운 3개(`AssignmentSchedule.DESCRIBED_ARTICLES`)를 서술로 넘긴다(질문에는 그 제목이 실린다). 서술 기사가 없는 후보는 묻지 않는다. 판정 확률을 채운 뒤 1 ~ 4 를 다시 하고, 그래도 확률이 없는 띠 후보는 붙일 수 없는 것으로 본다. 재판정은 event-R18
+  4. 그 밖에는 새 사건을 연다 — 띠에 확률이 하나라도 있으면 판정, 없으면 산식이 정한 것이다
+  - Jev 호출은 DB 트랜잭션 밖에서 하고, 판정 원본은 `evaluation` 이 남긴다
+- **event-R12** — 배정: 기사마다 한 사건이고 배정은 사건 **중심**과의 거리로 한다 — 사건 안의 기사 하나와만 닮아도 붙이면 사건이 번진다.
+  - 붙이면 한 트랜잭션에서 사건을 잠그고(`FOR UPDATE`, 배정 행을 넣기 전에), 사건이 없거나 열려 있지 않거나 모델 버전이 다르면 쓰지 않는다. 사건은 기사 수와 중심(구성 기사 벡터의 평균)을 갖고 붙일 때 그 벡터를 평균에 더한다(`LockedEvent.joined` · `CentroidUpdate.add`). 첫 · 마지막 기사 시각을 발행 시각까지 넓히고, 핵심 말은 말마다 그 말을 가진 기사 수를 하나 늘린다
+  - 새 사건은 열린 상태 · 기사 하나 · 중심은 그 기사 벡터 · 모델 버전은 그 표현의 모델 버전 · 첫 = 마지막 기사 시각은 발행 시각이다
+  - 배정 행은 사건 · 발행 시각 · 점수(붙인 후보의 점수, 새 사건이면 가장 높은 후보의 점수 — 후보가 없으면 없음) · 정한 것 · 판정에 쓴 기준 ID · 배정 시각이고, 저장 기준 이상인 후보를 점수 · 판정 확률과 함께 저장 후보로 남긴다. 같은 기사의 배정이 이미 있으면 사건 갱신까지 모두 쓰지 않는다 — 같은 기사를 다시 처리해도 배정을 유지한다
+  - 기사를 빼면(event-R8 · R18) 그 사건 모델 버전의 표현이 있을 때 기여를 뺀다(`CentroidUpdate.remove`). 반 정밀도 누적이라 많이 더한 사건에서 많이 빼면 앞선 반올림 오차가 커진다. 표현이 없는 기사를 빼면 그 기여가 중심 · 핵심 말에 남고, 그런 기사가 섞여 여러 기사를 한 번에 빼면 결과는 뺀 순서(기사 ID 순)를 따른다
+  - **(미설계)** 모델을 바꾼 뒤 열린 사건의 중심을 새 모델로 다시 계산하는 일 — 지금은 새 모델의 기사가 새 사건을 연다
+- **event-R16** — 배정 대기와 배정 회차: 표현을 쓴 기사를 배정 대기에 넣는다(event-R6) — 기사마다 한 행이고 이미 있으면 그대로, 판정 가능 시각은 넣은 시각이다. 반복 작업이 표현 회차 다음에 배정 회차를 돈다.
+  - 회차는 판정 가능 시각이 지났고 점유가 없거나 만료된 행을 판정 가능 시각 · 기사 ID 순으로 32건(`AssignmentSchedule.BATCH_SIZE`)까지 잠가 점유(만료 = 지금 + 20분, `AssignmentSchedule.LEASE` — 32 × 요청 둘 × 마감 15초 = 16분보다 길다)를 쓰고 커밋한다. 점유한 행이 있으면 지금 기준을 기준 이력에 등록한다(event-R17)
+  - 기사를 점유 순서대로 하나씩 판정하고 기사마다 짧은 트랜잭션에서 쓴다 — 같은 회차의 뒤 기사가 앞 기사가 연 사건을 후보로 본다. 시각은 기사마다 다시 읽는다. 쓰기는 토큰이 맞아 배정 대기 행을 지웠을 때만 한다
+  - 기사가 없으면 대기 행을 지운다. 배정이 이미 있으면 대기 행만 지운다. 지금 모델 버전의 표현이 없으면(모델이 바뀜) 한 트랜잭션에서 대기 행을 지우고 사건 묶기 대기에 넣는다 — 표현을 새 모델로 다시 만든다
+  - 붙일 사건이 사라졌거나 열려 있지 않거나 모델 버전이 다르면, 또는 배정이 이미 있으면 쓰기를 모두 되돌리고 새 트랜잭션에서 점유를 풀거나(다음 회차가 다시 판정) 대기 행을 지운다 — 점유 만료까지 묶이지 않는다
+  - 사건 소속 판정의 결과: 판정 → event-R11. 일시 실패 → 시도 수를 하나 늘리고 판정 가능 시각을 지금 + 1분 × 2^(시도 수 − 1)(1시간에서 멈춤, `AssignmentSchedule.retryAt` — 정본)로 미루고 점유를 푼다. 시도 수가 5(`AssignmentSchedule.MAX_ATTEMPTS`)에 이르면 판정 실패로 끝낸다. 기사 거부 → 바로 판정 실패로 끝낸다. 평가기 사용 불가 → 그 기사부터 남은 점유를 풀고 회차를 멈춘다(기사는 대기에 남는다). 기사 없음 → 대기 행을 지운다
+  - 판정 실패로 끝낸 기사는 그 기사 하나로 새 사건을 연다 — 정한 것은 판정 실패(`JUDGEMENT_FAILED`), 점수는 가장 높은 후보의 점수, 후보는 확률 없이 남긴다
+  - 예상 못한 예외(사건 소속 판정의 `IllegalStateException` 포함)면 그 기사부터 남은 점유를 풀고 회차를 멈춘다
+  - 잠금 순서는 대기 행 → 배정 행(기사 ID 순) → 사건(사건 ID 순)이다 — 배정 쓰기는 대기 행 → 사건 하나를 잡고 새 배정 행은 그 뒤에 넣으며, 지운 기사 따르기 · 재판정도 이 순서라 서로 엇갈려 기다리지 않는다
+
+### 기준과 재판정
+
+판단의 이유는 [ADR-0081](../adr/0081-event-assignment-criteria-in-settings-and-rejudgement-within-stored-scores.md)에 있다.
+
+- **event-R17** — 사건 기준 · 저장 기준: 시간 창 · 위 기준 · 아래 기준 · 저장 기준 · 확률 기준은 설정이다(§7). 창은 0 보다 큰 초 단위, 0 ≤ 저장 기준 ≤ 아래 기준 ≤ 위 기준 ≤ 1, 0 < 확률 기준 ≤ 1 이어야 하고, 어기면 기동하지 않는다(`AssignmentCriteria`). 회차는 지금 기준을 기준 이력에 등록하고(다섯 값이 같은 행이 있으면 그 행 — 창은 초로 적는다), 그 ID 를 배정에 남긴다
+- **event-R18** — 재판정: 반복 작업이 배정 회차 다음에 재판정 회차를 돈다. 지금 기준과 다른 기준 ID 의 배정을 기간 제한 없이 기사 ID 순으로 하나씩 잠가(다른 트랜잭션이 잡은 행은 건너뛴다) 짧은 트랜잭션에서 다시 판정한다 — 회차마다 200건(`AssignmentSchedule.REJUDGE_BATCH`)까지.
+  - 사건 소속 판정 · 임베더를 부르지 않는다. 재료는 그 기사의 저장 후보(사라진 사건은 뺀다)뿐이고, event-R11 의 1 · 2 · 4 를 지금 기준으로 한다. 띠에 확률 없는 후보가 있으면(묻지 않은 후보) 지금 배정을 유지한다
+  - 결과의 적용(`Reassignment` — 정본): 지금 사건에 붙으면 같은 사건에 남아 점수 · 정한 것 · 기준 · 배정 시각을 다시 적는다. 다른 사건에 붙으면 그 사건으로 옮긴다. 새 사건이면 — 지금 사건이 저장 후보에 없으면 그 기사가 판정 때 연 사건이라 다시 적고, 저장 후보에 있으면(붙었던 사건) 다른 기사가 있을 때 새 사건으로 떼어 내고 혼자면 다시 적는다. 유지면 기준 ID 만 바꾼다
+  - 옮기거나 떼어 낼 수 있는 사건을 사건 ID 순으로 잠그고, 떼어 낼지는 잠근 뒤의 기사 수로 정한다. 옮길 사건이 열려 있지 않거나 모델 버전이 다르거나, 그 배정이 속한 사건 모델 버전의 표현이 없으면 기준 ID 만 바꾼다 — 다시 대상이 되지 않는다
+  - 옮기면 옮긴 사건에 더하고(event-R12) 옛 사건에서 뺀다(event-R8 의 3 · 5 와 같은 정본) — 배정을 옮긴 뒤라 빈 옛 사건을 지울 수 있다. 떼어 내면 옛 사건 모델 버전으로 새 사건을 연다
+  - 재판정은 저장값 안이다 — 아래 기준을 판정 때의 저장 기준 아래로 내리면 그 사이 점수의 후보는 저장되지 않아 보이지 않고, 창을 줄여도 저장된 후보는 그대로다(감쇠는 판정 때 값). 판정 뒤에 생긴 사건으로는 옮기지 못한다. 창 · 저장 기준만 바꿔도 모든 배정이 한 번씩 대상이 된다
+  - **(미설계)** 닫힌 사건 안의 배정을 재판정할지 — 사건 닫기를 만드는 작업이 정한다. 지금은 옮길 사건이 열려 있지 않으면 유지만 한다
 
 ### 사건 정리
 
@@ -242,22 +454,31 @@ public final class Embedding {
 
 ## 6. 데이터
 
-컬럼 타입 · 인덱스 · 제약 문면의 정본은 `backend/src/main/resources/db/migration/V16__event_intake_and_match_features.sql`(사건 묶기 대기 · 기사 표현)이다. `article_id` 는 `article` 의 기사를 가리키지만 FK 를 두지 않는다 — 모듈 사이는 ID 로만 참조한다. 보존 기간은 [data-model.md "보존 정책"](../data-model.md#보존-정책-초안)에 있다.
+컬럼 타입 · 인덱스 · 제약 문면의 정본은 `backend/src/main/resources/db/migration/V16__event_intake_and_match_features.sql`(사건 묶기 대기 · 기사 표현)과 `V17__events_and_assignments.sql`(사건 · 사건 핵심 말 · 기준 이력 · 배정 · 저장 후보 · 배정 대기)이다. `article_id` 는 `article` 의 기사를 가리키지만 FK 를 두지 않는다 — 모듈 사이는 ID 로만 참조한다. 보존 기간은 [data-model.md "보존 정책"](../data-model.md#보존-정책-초안)에 있다.
 
 | 테이블 | 주요 컬럼 | 뜻 |
 |---|---|---|
 | `event_intake_queue` | article_id(기본 키), enqueued_at, lease_token, lease_expires_at | 사건 묶기 대기 — 기사마다 한 행(event-R5). 점유 둘은 함께 있거나 함께 없다(제약). 회차의 잠금은 `(enqueued_at, article_id)` 인덱스로 찾는다(event-R6). 표현을 쓰면 지운다 |
 | `article_match_features` | article_id, model_version, embedding(`vector`), entities(`text[]`), created_at | 기사 표현 — (article_id, model_version) 기본 키(event-R4). `embedding` 은 차원을 정하지 않은 `vector` 다 — 길이는 쓰기 전에 앱이 확인한다(event-R3). `entities` 는 핵심 말(event-R2) |
-| **(미구현)** `events` | id, status(`OPEN`/`CLOSED`), centroid(`halfvec`), entities, model_version, first_article_at, last_article_at, merged_into, created_at, closed_at | 공유 사건. 장기 검색용 HNSW 인덱스는 `centroid` 에만 둔다. 합쳐진 사건은 `merged_into` 로 남는 사건을 가리킨다 |
-| **(미구현)** `event_articles` | event_id, article_id(고유), score, decided_by(`FORMULA`/`EVALUATOR`), assigned_at | 기사당 한 사건. 사건이 합쳐지면 남는 사건으로 옮긴다 |
+| `events` | id, status(`OPEN`/`CLOSED`), model_version, centroid(`halfvec`), article_count(1 이상), first_article_at, last_article_at, created_at | 공유 사건. `centroid` 는 차원을 정하지 않은 `halfvec` 이다 — 같은 모델 버전끼리만 비교하고 길이는 쓰기 전에 앱이 확인한다(event-R12). 후보는 `(model_version, last_article_at)` 의 열린 사건 부분 인덱스로 거른다(event-R10). **(미구현)** 합쳐진 사건이 남는 사건을 가리키는 `merged_into` · 닫은 시각 `closed_at` · 장기 검색용 HNSW 인덱스(모델 버전별 식 · 부분 인덱스)는 사건 정리와 함께 둔다(event-R13) |
+| `event_key_terms` | event_id, term, article_count(1 이상) | 사건 핵심 말 — (event_id, term) 기본 키, 그 말을 가진 구성 기사 수(event-R12). 사건을 지우면 함께 지워진다 |
+| `event_assignment_criteria` | id, window_seconds, upper, lower, store, probability, created_at | 기준 이력 — 다섯 값이 고유하다(event-R17) |
+| `event_articles` | article_id(기본 키), event_id, published_at, score, decided_by(`FORMULA`/`EVALUATOR`/`JUDGEMENT_FAILED`), criteria_id, assigned_at | 배정 — 기사당 한 사건(event-R12). `event_id` · `criteria_id` 는 FK 이고 `ON DELETE` 가 없다 — 사건을 지우기 전에 그 배정을 지우거나 옮긴다. 재판정 대상은 `criteria_id` 인덱스로 찾는다(event-R18). **(미구현)** 사건이 합쳐지면 남는 사건으로 옮긴다 |
+| `event_article_candidates` | article_id, event_id, score, probability | 저장 후보 — (article_id, event_id) 기본 키, 판정 확률은 묻지 않았으면 없다(event-R12 · R18). `event_id` 에 FK 가 없다 — 사건을 지울 때 함께 지운다(`event_id` 인덱스) |
+| `event_assignment_queue` | article_id(기본 키), enqueued_at, attempts(0 이상), available_at, lease_token, lease_expires_at | 배정 대기 — 기사마다 한 행(event-R16). 점유 둘은 함께 있거나 함께 없다(제약). 회차의 잠금은 `(available_at, article_id)` 인덱스로 찾는다. 배정하면 지운다 |
 
 ## 7. 설정
 
 | 설정 | 바꾸는 규칙 |
 |---|---|
 | profile `local` | 로컬 대체물 `FakeArticleEmbedder` 를 `ArticleEmbedder` 로 등록한다(event-R9 · platform-R18). 그 밖의 profile 에서는 대체물이 등록되지 않는다. 로컬 대체물을 켜는 설정 키는 없다([ADR-0057](../adr/0057-local-substitutes-registered-only-in-local-profile-without-operator-switch.md)) |
+| `yozmnews.event-assignment.window` | 시간 창(`Duration` — 예 `72h`), 기본 72시간(event-R10 · R17) |
+| `yozmnews.event-assignment.upper` | 위 기준, 기본 0.80(event-R11 · R17) |
+| `yozmnews.event-assignment.lower` | 아래 기준, 기본 0.55(event-R11 · R17) |
+| `yozmnews.event-assignment.store` | 저장 기준, 기본 0.40(event-R10 · R17) |
+| `yozmnews.event-assignment.probability` | 확률 기준, 기본 0.50(event-R11 · R17) |
 
-그 밖의 설정 키는 없다.
+사건 기준 · 저장 기준 기본값의 정본은 `EventAssignmentProperties` 의 `@DefaultValue` 이고 `application.yaml` 에는 키가 없다. 기본값은 측정 전 목표다. 운영자는 환경 변수(`YOZMNEWS_EVENT_ASSIGNMENT_UPPER` 식)로 바꾸고, 범위 · 관계를 어기면 기동하지 않는다. 바꾸면 재판정 회차가 지난 배정을 다시 판정한다(event-R18). 그 밖의 설정 키는 없다.
 
 ## 8. 결정
 
@@ -267,8 +488,15 @@ public final class Embedding {
 | [0026](../adr/0026-event-clustering-with-local-embeddings-and-jev.md) | 사건 묶기는 로컬 임베딩과 고유명사 산식으로 하고, 애매한 구간만 Jev 로 판정한다 |
 | [0027](../adr/0027-pgvector-for-vector-storage.md) | 벡터 저장은 PostgreSQL pgvector 확장으로 한다 |
 | [0042](../adr/0042-app-roles-as-web-worker-profiles-marked-by-platform-annotations.md) | 앱 역할은 Spring profile `web` · `worker` 로 나누고, 소속은 `platform` 역할 애너테이션으로 표시하며, 역할이 없으면 기동하지 않는다 |
+| [0045](../adr/0045-admin-module-serves-operator-api-over-module-public-operation-apis.md) | 운영자 API 는 `admin` 모듈이 내고, 각 모듈은 운영 기능과 결과 타입을 최상위 공개 API 로 낸다 |
 | [0057](../adr/0057-local-substitutes-registered-only-in-local-profile-without-operator-switch.md) | 로컬 대체물은 `local` profile 에서만 등록하고, 운영 설정으로 켜는 스위치를 두지 않는다 |
+| [0058](../adr/0058-evaluator-failures-in-three-kinds-and-unavailable-evaluator-skips-article-retries.md) | 평가기 실패는 일시 · 기사 거부 · 평가기 사용 불가 셋으로 나누고, 평가기 사용 불가는 기사 재시도를 쓰지 않는다 |
 | [0060](../adr/0060-article-deletion-announced-by-removed-article-ids-and-followed-by-referencing-modules.md) | 기사 삭제는 지운 기사 ID 이벤트로 알리고, 기사를 가리키는 모듈이 받아 자기 행을 지운다 |
 | [0074](../adr/0074-article-features-built-by-event-intake-queue-job-and-skipped-without-an-embedder.md) | 사건 묶기의 기사 표현은 `event` 대기와 작업 역할의 반복 작업이 만들고, 임베더가 없으면 건너뛰어 대기에 쌓는다 |
 | [0075](../adr/0075-article-vectors-in-a-dimensionless-vector-column-one-row-per-model-version.md) | 기사 벡터는 차원 없는 `vector` 컬럼에 기사 × 모델 버전마다 한 행으로 두고, 모델 교체는 새 행으로 한다 |
 | [0076](../adr/0076-key-terms-from-nori-without-decompounding-proper-common-and-foreign-nouns.md) | 기사의 핵심 말은 Nori 를 분해 없이 돌려 고유명사 · 일반명사 · 외국어를 고르고 한 글자 한글 일반명사를 버린다 |
+| [0077](../adr/0077-event-assignment-queue-judged-one-article-at-a-time-with-evaluation-failure-kinds.md) | 사건 배정은 따로 둔 배정 대기를 사건 묶기 반복 작업이 기사 하나씩 판정해 커밋하고, 사건 소속 판정의 실패는 평가 작업과 같은 갈래로 처리한다 |
+| [0078](../adr/0078-articles-ending-in-a-judgement-failure-open-a-new-event-marked-as-failed.md) | 사건 소속 판정에 실패해 끝낸 기사는 실패 표지를 단 새 사건으로 연다 |
+| [0079](../adr/0079-event-centroids-in-a-dimensionless-halfvec-column-with-a-model-version-per-event.md) | 사건 중심 벡터는 차원 없는 `halfvec` 에 사건마다 모델 버전과 함께 둔다 |
+| [0080](../adr/0080-event-centroids-and-key-terms-accumulated-with-article-counts-and-updated-incrementally.md) | 사건 중심 · 핵심 말은 기사 수와 함께 누적해 붙이고 뗄 때 증분 갱신한다 |
+| [0081](../adr/0081-event-assignment-criteria-in-settings-and-rejudgement-within-stored-scores.md) | 사건 기준 · 저장 기준은 설정에 두고(기본값은 코드), 기준이 바뀌면 저장된 점수 · 확률 안에서 재판정한다 |

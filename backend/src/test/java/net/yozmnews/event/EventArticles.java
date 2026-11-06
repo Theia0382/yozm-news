@@ -46,8 +46,16 @@ public final class EventArticles {
 		return id;
 	}
 
-	/** 기사 · 엔트리와 사건 묶기 · 평가 대기, 기사 표현 행을 모두 지운다 — 기사를 저장하면 평가 대기에도 들어간다 */
+	/**
+	 * 기사 · 엔트리와 사건 묶기 · 배정 · 평가 대기, 기사 표현, 사건 · 배정 · 후보 · 기준 이력 행을 모두 지운다 — 기사를 저장하면 평가 대기에도
+	 * 들어간다
+	 */
 	public static void clear(JdbcClient jdbc) {
+		jdbc.sql("delete from event_article_candidates").update();
+		jdbc.sql("delete from event_articles").update();
+		jdbc.sql("delete from events").update();
+		jdbc.sql("delete from event_assignment_criteria").update();
+		jdbc.sql("delete from event_assignment_queue").update();
 		jdbc.sql("delete from article_match_features").update();
 		jdbc.sql("delete from event_intake_queue").update();
 		jdbc.sql("delete from evaluation_queue").update();

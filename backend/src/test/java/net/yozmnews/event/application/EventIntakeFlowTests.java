@@ -9,6 +9,8 @@ import java.time.InstantSource;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -20,6 +22,9 @@ import net.yozmnews.article.ArticleStored;
 import net.yozmnews.article.ArticlesRemoved;
 import net.yozmnews.event.EventArticles;
 import net.yozmnews.event.adapter.out.fake.FakeArticleEmbedder;
+import net.yozmnews.event.domain.assignment.AssignmentQueueRepository;
+import net.yozmnews.event.domain.event.EventArticleRepository;
+import net.yozmnews.event.domain.event.EventRepository;
 import net.yozmnews.event.domain.feature.ArticleEmbedder;
 import net.yozmnews.event.domain.feature.EmbedderInfo;
 import net.yozmnews.event.domain.feature.Embedding;
@@ -76,6 +81,18 @@ class EventIntakeFlowTests {
 	MatchFeaturesRepository features;
 
 	@Autowired
+	AssignmentQueueRepository assignmentQueue;
+
+	@Autowired
+	EventRepository eventRepository;
+
+	@Autowired
+	EventArticleRepository eventArticles;
+
+	@Autowired
+	EventShrinkWriter shrinks;
+
+	@Autowired
 	ArticleDirectory articles;
 
 	@Autowired
@@ -116,6 +133,11 @@ class EventIntakeFlowTests {
 			.containsEntry("entities", "{한국은행,기준,금리,동결}")
 			.containsEntry("created", "2026-11-05T01:00:00Z");
 		assertThat(queueRows()).isZero();
+		assertThat(this.jdbc.sql("""
+				select article_id, attempts, to_char(available_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as available
+				from event_assignment_queue
+				""").query().listOfRows()).containsExactly(
+						Map.of("article_id", article, "attempts", 0, "available", "2026-11-05T01:00:00Z"));
 	}
 
 	@Test
@@ -153,12 +175,16 @@ class EventIntakeFlowTests {
 		assertThat(queueRows()).isEqualTo(1);
 		round().run(new FakeArticleEmbedder());
 		float[] first = storedVector(article);
+		// 배정 대기를 비워 둔다 — 표현 행이 이미 있어도 다시 배정 대기에 넣는지 본다
+		this.jdbc.sql("delete from event_assignment_queue").update();
 		this.transaction.executeWithoutResult(status -> listener.on(stored));
 		round().run(new FakeArticleEmbedder());
 
 		assertThat(featureRows()).isEqualTo(1);
 		assertThat(storedVector(article)).containsExactly(first);
 		assertThat(queueRows()).isZero();
+		assertThat(this.jdbc.sql("select article_id from event_assignment_queue").query(Long.class).list())
+			.containsExactly(article);
 	}
 
 	@Test
@@ -314,12 +340,13 @@ class EventIntakeFlowTests {
 	}
 
 	private EventIntakeRound round(MatchFeaturesRepository repository) {
-		return new EventIntakeRound(this.queue, repository, this.articles, this.keyTerms, this.transaction,
-				(InstantSource) () -> NOW);
+		return new EventIntakeRound(this.queue, repository, this.assignmentQueue, this.articles, this.keyTerms,
+				this.transaction, (InstantSource) () -> NOW);
 	}
 
 	private EventIntakeListener listener() {
-		return new EventIntakeListener(this.queue, this.features, (InstantSource) () -> NOW);
+		return new EventIntakeListener(this.queue, this.assignmentQueue, this.features, this.eventRepository,
+				this.eventArticles, this.shrinks, (InstantSource) () -> NOW);
 	}
 
 	private long enqueued(String title, @Nullable String summary) {
@@ -406,6 +433,16 @@ class EventIntakeFlowTests {
 				Thread.currentThread().interrupt();
 			}
 			return result;
+		}
+
+		@Override
+		public Optional<MatchFeatures> find(ArticleId articleId, String modelVersion) {
+			return this.delegate.find(articleId, modelVersion);
+		}
+
+		@Override
+		public List<MatchFeatures> findAll(Collection<ArticleId> articleIds, String modelVersion) {
+			return this.delegate.findAll(articleIds, modelVersion);
 		}
 
 		@Override

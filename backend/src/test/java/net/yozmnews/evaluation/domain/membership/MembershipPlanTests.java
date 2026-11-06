@@ -3,6 +3,7 @@ package net.yozmnews.evaluation.domain.membership;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.URI;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -93,7 +94,8 @@ class MembershipPlanTests {
 	}
 
 	private static ArticleContent content(long id, String title, @Nullable String summary) {
-		return new ArticleContent(new ArticleId(id), title, summary, URI.create("https://plan.example/" + id), List.of());
+		return new ArticleContent(new ArticleId(id), title, summary, URI.create("https://plan.example/" + id),
+				Instant.parse("2026-10-28T00:00:00Z"), List.of());
 	}
 
 	private static Map<ArticleId, ArticleContent> found(ArticleContent... contents) {

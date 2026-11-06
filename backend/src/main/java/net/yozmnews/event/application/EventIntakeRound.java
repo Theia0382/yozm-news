@@ -12,6 +12,7 @@ import java.util.UUID;
 import net.yozmnews.article.ArticleContent;
 import net.yozmnews.article.ArticleDirectory;
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.event.domain.assignment.AssignmentQueueRepository;
 import net.yozmnews.event.domain.feature.ArticleEmbedder;
 import net.yozmnews.event.domain.feature.EmbedderInfo;
 import net.yozmnews.event.domain.feature.Embedding;
@@ -34,8 +35,9 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 사건 묶기 회차 하나 — docs/specs/event.md §4 · event-R6 · event-R8.
  * <p>
  * 대기를 점유해 커밋한 뒤, 트랜잭션 밖에서 기사를 읽고 표현 텍스트 · 핵심 말을 만들어 임베더를 한 번 부른다. 결과는 기사마다 짧은 트랜잭션에서
- * 점유 토큰이 맞아 대기 행을 지웠을 때만 쓴다. 임베더가 예외를 던지거나 결과가 어긋나면 남은 점유를 풀고 회차를 끝낸다 — 예외를 밖으로 던지지
- * 않는다. 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통).
+ * 점유 토큰이 맞아 대기 행을 지웠을 때만 쓰고, 같은 트랜잭션에서 그 기사를 배정 대기에 넣는다(표현 행이 이미 있어도 넣는다). 임베더가
+ * 예외를 던지거나 결과가 어긋나면 남은 점유를 풀고 회차를 끝낸다 — 예외를 밖으로 던지지 않는다. 트랜잭션 · 역할 애너테이션이 없다(두 역할
+ * 공통).
  */
 @Service
 public class EventIntakeRound {
@@ -46,6 +48,8 @@ public class EventIntakeRound {
 
 	private final MatchFeaturesRepository features;
 
+	private final AssignmentQueueRepository assignmentQueue;
+
 	private final ArticleDirectory articles;
 
 	private final KeyTermExtractor keyTerms;
@@ -55,16 +59,19 @@ public class EventIntakeRound {
 	private final InstantSource clock;
 
 	@Autowired
-	EventIntakeRound(IntakeQueueRepository queue, MatchFeaturesRepository features, ArticleDirectory articles,
-			KeyTermExtractor keyTerms, TransactionTemplate transaction) {
-		this(queue, features, articles, keyTerms, transaction, InstantSource.system());
+	EventIntakeRound(IntakeQueueRepository queue, MatchFeaturesRepository features,
+			AssignmentQueueRepository assignmentQueue, ArticleDirectory articles, KeyTermExtractor keyTerms,
+			TransactionTemplate transaction) {
+		this(queue, features, assignmentQueue, articles, keyTerms, transaction, InstantSource.system());
 	}
 
 	/** 시험이 시계를 넣는다 */
-	EventIntakeRound(IntakeQueueRepository queue, MatchFeaturesRepository features, ArticleDirectory articles,
-			KeyTermExtractor keyTerms, TransactionTemplate transaction, InstantSource clock) {
+	EventIntakeRound(IntakeQueueRepository queue, MatchFeaturesRepository features,
+			AssignmentQueueRepository assignmentQueue, ArticleDirectory articles, KeyTermExtractor keyTerms,
+			TransactionTemplate transaction, InstantSource clock) {
 		this.queue = queue;
 		this.features = features;
+		this.assignmentQueue = assignmentQueue;
 		this.articles = articles;
 		this.keyTerms = keyTerms;
 		this.transaction = transaction;
@@ -118,6 +125,7 @@ public class EventIntakeRound {
 			this.transaction.executeWithoutResult(status -> {
 				if (this.queue.deleteIfLeased(claim.articleId(), token(claim))) {
 					this.features.insertIfAbsent(written);
+					this.assignmentQueue.enqueue(claim.articleId(), now);
 				}
 			});
 		}

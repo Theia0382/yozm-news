@@ -1,6 +1,6 @@
 # ADR-0075: 기사 벡터는 차원 없는 `vector` 컬럼에 기사 × 모델 버전마다 한 행으로 두고, 모델 교체는 새 행으로 한다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 사건 중심 벡터의 방식([ADR-0079](0079-event-centroids-in-a-dimensionless-halfvec-column-with-a-model-version-per-event.md))
 - 날짜: 2026-11-05
 - 근거: [이슈 #94](https://github.com/Theia0382/yozm-news/issues/94) — 기사 표현 테이블을 만들며 데이터 모델 문서의 "기사 × 모델 버전마다 1행"과 [ADR-0027](0027-pgvector-for-vector-storage.md)의 "모델을 바꾸면 새 컬럼"이 다른 방식임을 확인. 운영 임베딩 모델과 그 차원은 아직 정해지지 않았다
 - 관련: [ADR-0027](0027-pgvector-for-vector-storage.md)(벡터 저장 — 결정 절 "벡터마다 임베딩 모델 버전을 기록한다" 항목의 둘째 문장을 기사 벡터에 대해 이 ADR 이 부분 대체한다), [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md)(임베딩 모델 버전 기록)
@@ -26,6 +26,7 @@
 - 로컬 대체물이 운영 모델과 다른 차원을 가져도 된다.
 - DB 가 차원을 지켜 주지 않는다 — 쓰기 경로의 확인이 유일한 장치다.
 - 기사 벡터에는 HNSW 인덱스를 걸 수 없다. 기사 단위의 근사 검색이 필요해지면 다시 본다.
+> 부분 대체 — [ADR-0079](0079-event-centroids-in-a-dimensionless-halfvec-column-with-a-model-version-per-event.md). 지금 상태: [event Spec §6](../specs/event.md#6-데이터)
 - 사건 중심 벡터에는 [ADR-0027](0027-pgvector-for-vector-storage.md)의 방식(차원을 정한 컬럼 · 모델을 바꾸면 새 컬럼)이 그대로다.
 
 ## 검토한 대안

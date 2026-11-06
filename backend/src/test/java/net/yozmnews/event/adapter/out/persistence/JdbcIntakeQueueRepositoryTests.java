@@ -31,7 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 사건 묶기 대기 저장소 — 넣기 · 잠금 대상과 순서 · 토큰 조건 반영 · 지우기 · 동시 잠금을 Flyway 가 적용된 실제 PostgreSQL 에서 본다.
+ * 사건 묶기 대기 저장소 — 넣기 · 배정 없는 기사만 넣기 · 잠금 대상과 순서 · 토큰 조건 반영 · 지우기 · 동시 잠금을 Flyway 가 적용된 실제 PostgreSQL 에서 본다.
  * <p>
  * 지키는 규칙: event-R5 · event-R6 · event-R8
  */
@@ -66,6 +66,34 @@ class JdbcIntakeQueueRepositoryTests {
 				assertThat(row).containsEntry("article_id", 1L).containsEntry("lease_token", null);
 				assertThat(instant(row.get("enqueued_at"))).isEqualTo(Instant.parse("2026-11-05T00:00:00Z"));
 			});
+	}
+
+	@Test
+	void enqueuesOnlyUnassignedArticlesAndCountsTheNewRows() {
+		long event = this.jdbc.sql("""
+				insert into events (status, model_version, centroid, article_count, first_article_at, last_article_at,
+				                    created_at)
+				values ('OPEN', 'model-a', '[1,0]', 1, now(), now(), now()) returning id
+				""").query(Long.class).single();
+		long criteria = this.jdbc.sql("""
+				insert into event_assignment_criteria (window_seconds, upper, lower, store, probability, created_at)
+				values (259200, 0.8, 0.55, 0.4, 0.5, now()) returning id
+				""").query(Long.class).single();
+		this.jdbc.sql("""
+				insert into event_articles (article_id, event_id, published_at, decided_by, criteria_id, assigned_at)
+				values (52, :event, now(), 'FORMULA', :criteria, now())
+				""").param("event", event).param("criteria", criteria).update();
+		row(53, T, null, null);
+
+		int enqueued = this.repository.enqueueUnassigned(
+				List.of(new ArticleId(51), new ArticleId(52), new ArticleId(53), new ArticleId(54)), T.plusSeconds(60));
+
+		assertThat(enqueued).isEqualTo(2);
+		assertThat(this.jdbc.sql("select article_id from event_intake_queue order by article_id").query(Long.class).list())
+			.containsExactly(51L, 53L, 54L);
+		assertThat(this.repository.lockDue(T.plusSeconds(60), 10)).extracting(PendingArticle::enqueuedAt)
+			.containsExactly(T, T.plusSeconds(60), T.plusSeconds(60));
+		assertThat(this.repository.enqueueUnassigned(List.of(), T)).isZero();
 	}
 
 	@Test

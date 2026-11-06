@@ -487,6 +487,64 @@
         "tags" : [ "admin-evaluation-review-controller" ]
       }
     },
+    "/api/admin/event-intake-fills" : {
+      "post" : {
+        "operationId" : "fill",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/EventIntakeFillRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/EventIntakeFillResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청 본문의 형식이 틀렸거나 채울 기간이 범위 밖이다"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          }
+        },
+        "tags" : [ "admin-event-intake-controller" ]
+      }
+    },
     "/api/admin/event-publications" : {
       "get" : {
         "operationId" : "strandedPublications",
@@ -3146,6 +3204,34 @@
           }
         },
         "required" : [ "from", "population", "rows", "seed", "to", "version" ]
+      },
+      "EventIntakeFillRequest" : {
+        "type" : "object",
+        "properties" : {
+          "days" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        },
+        "required" : [ "days" ]
+      },
+      "EventIntakeFillResponse" : {
+        "type" : "object",
+        "properties" : {
+          "articles" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "enqueued" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "result" : {
+            "type" : "string",
+            "enum" : [ "FILLED" ]
+          }
+        },
+        "required" : [ "articles", "enqueued", "result" ]
       },
       "EventPublicationIdsRequest" : {
         "type" : "object",
