@@ -358,6 +358,26 @@ class EventAssignmentFlowTests {
 	}
 
 	@Test
+	void anEventClosedDuringJudgementGetsNoArticleAndReleasesIt() {
+		long first = firstEvent();
+		long event = eventOf(first);
+		long banded = queued("[4,3]");
+		Scripted membership = new Scripted(query -> {
+			this.jdbc.sql("update events set status = 'CLOSED', closed_at = now() where id = :event")
+				.param("event", event)
+				.update();
+			return new MembershipJudgement.Judged(Map.of(event, 0.9));
+		});
+
+		round(membership).run(MODEL_A);
+
+		// 닫힌 사건에는 붙이지 않는다 — 쓰기를 되돌리고 점유를 풀어 다음 회차가 다시 판정한다
+		assertThat(this.assignments.exists(new ArticleId(banded))).isFalse();
+		assertThat(queueRow(banded)).containsEntry("attempts", 0).containsEntry("lease_token", null);
+		assertThat(eventRow(event)).containsEntry("status", "CLOSED").containsEntry("article_count", 1);
+	}
+
+	@Test
 	void anEventGoneDuringJudgementReleasesTheArticleForTheNextRound() {
 		long first = firstEvent();
 		long event = eventOf(first);

@@ -2,6 +2,7 @@ package net.yozmnews.event.adapter.out.persistence;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Collection;
@@ -19,7 +20,8 @@ import org.springframework.stereotype.Repository;
  * {@link MatchFeaturesRepository} 의 JdbcClient 구현 — docs/specs/event.md §4.
  * <p>
  * 넣기는 {@code INSERT … ON CONFLICT (article_id, model_version) DO NOTHING}. 벡터는 {@link VectorText} 의 텍스트 표현을 SQL 이
- * {@code vector} 로 바꾸고 {@code embedding::text} 로 되읽는다. 핵심 말은 {@code text[]} 다.
+ * {@code vector} 로 바꾸고 {@code embedding::text} 로 되읽는다. 핵심 말은 {@code text[]} 다. 정리는 지울 행을 (기사, 모델 버전) 순
+ * {@code FOR UPDATE SKIP LOCKED} 로 골라 지운다.
  */
 @Repository
 class JdbcMatchFeaturesRepository implements MatchFeaturesRepository {
@@ -75,6 +77,37 @@ class JdbcMatchFeaturesRepository implements MatchFeaturesRepository {
 		this.jdbc.sql("delete from article_match_features where article_id = any(:ids)")
 			.param("ids", articleIds.stream().map(ArticleId::value).toArray(Long[]::new))
 			.update();
+	}
+
+	@Override
+	public int deleteOfClosedEvents(int limit) {
+		return this.jdbc.sql("""
+				delete from article_match_features f
+				where (f.article_id, f.model_version) in (
+				    select g.article_id, g.model_version from article_match_features g
+				    join event_articles a on a.article_id = g.article_id
+				    join events e on e.id = a.event_id
+				    where e.status = 'CLOSED'
+				    order by g.article_id, g.model_version
+				    limit :limit
+				    for update of g skip locked)
+				""").param("limit", limit).update();
+	}
+
+	@Override
+	public int deleteUnassigned(Instant createdBefore, int limit) {
+		return this.jdbc.sql("""
+				delete from article_match_features f
+				where (f.article_id, f.model_version) in (
+				    select g.article_id, g.model_version from article_match_features g
+				    where g.created_at < :before
+				      and not exists (
+				          select 1 from event_articles a join events e on e.id = a.event_id
+				          where a.article_id = g.article_id and e.model_version = g.model_version and e.status = 'OPEN')
+				    order by g.article_id, g.model_version
+				    limit :limit
+				    for update of g skip locked)
+				""").param("before", createdBefore.atOffset(ZoneOffset.UTC)).param("limit", limit).update();
 	}
 
 	private static MatchFeatures row(ResultSet rs, int row) throws SQLException {

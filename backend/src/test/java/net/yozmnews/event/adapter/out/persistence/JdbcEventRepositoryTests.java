@@ -277,6 +277,44 @@ class JdbcEventRepositoryTests {
 	}
 
 	@Test
+	void closableAreOpenEventsIdleOrOldEnoughFromTheCursorAndCloseWritesTheRepresentative() {
+		long idle = event("OPEN", "model-a", "[1,0]", "2026-11-05T00:00:00Z", "2026-11-05T00:00:00Z");
+		long fresh = event("OPEN", "model-a", "[1,0]", "2026-11-05T00:00:00Z", "2026-11-05T00:00:00Z");
+		long old = event("OPEN", "model-a", "[1,0]", "2026-11-05T00:00:00Z", "2026-11-05T00:00:00Z");
+		long closed = event("CLOSED", "model-a", "[1,0]", "2026-11-05T00:00:00Z", "2026-11-05T00:00:00Z");
+		times(idle, "2026-11-10T00:00:00Z", "2026-11-13T00:00:00Z");
+		times(fresh, "2026-11-10T00:00:00Z", "2026-11-13T00:00:01Z");
+		times(old, "2026-11-06T00:00:00Z", "2026-11-19T00:00:00Z");
+		times(closed, "2026-11-01T00:00:00Z", "2026-11-01T00:00:00Z");
+		Instant idleBefore = Instant.parse("2026-11-13T00:00:00Z");
+		Instant openedBefore = Instant.parse("2026-11-06T00:00:00Z");
+
+		// 경계는 포함한다 — 마지막으로 붙은 시각 = idleBefore, 연 시각 = openedBefore
+		assertThat(this.repository.closable(idleBefore, openedBefore, 0, 10)).containsExactly(idle, old);
+		assertThat(this.repository.closable(idleBefore, openedBefore, 0, 1)).containsExactly(idle);
+		assertThat(this.repository.closable(idleBefore, openedBefore, idle, 10)).containsExactly(old);
+
+		this.repository.close(idle, new ArticleId(55), Instant.parse("2026-11-20T00:00:00Z"));
+		this.repository.close(old, null, Instant.parse("2026-11-20T00:00:00Z"));
+		this.repository.clearRepresentative(List.of(new ArticleId(56)));
+
+		assertThat(this.jdbc.sql("""
+				select status, representative_article_id, closed_at = '2026-11-20T00:00:00Z' as closed_now
+				from events where id = :id
+				""").param("id", idle).query().singleRow()).containsEntry("status", "CLOSED")
+			.containsEntry("representative_article_id", 55L)
+			.containsEntry("closed_now", true);
+		assertThat(this.repository.lock(old).orElseThrow().status()).isEqualTo(EventStatus.CLOSED);
+
+		this.repository.clearRepresentative(List.of(new ArticleId(55)));
+
+		assertThat(this.jdbc.sql("select representative_article_id from events where id = :id")
+			.param("id", idle)
+			.query()
+			.singleRow()).containsEntry("representative_article_id", null);
+	}
+
+	@Test
 	void describersAreMembersWithTheModelClosestToTheCentroid() {
 		long id = event("OPEN", "model-a", "[1,0]", "2026-11-05T00:00:00Z", "2026-11-05T00:00:00Z");
 		long other = event("OPEN", "model-a", "[0,1]", "2026-11-05T00:00:00Z", "2026-11-05T00:00:00Z");
@@ -311,6 +349,14 @@ class JdbcEventRepositoryTests {
 			.param("last", Instant.parse(last).atOffset(ZoneOffset.UTC))
 			.query(Long.class)
 			.single();
+	}
+
+	private void times(long event, String opened, String joined) {
+		this.jdbc.sql("update events set created_at = :opened, last_joined_at = :joined where id = :id")
+			.param("opened", Instant.parse(opened).atOffset(ZoneOffset.UTC))
+			.param("joined", Instant.parse(joined).atOffset(ZoneOffset.UTC))
+			.param("id", event)
+			.update();
 	}
 
 	private long revision(long event) {

@@ -3,6 +3,7 @@ package net.yozmnews.event.adapter.out.persistence;
 import java.sql.Array;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Types;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -18,6 +19,7 @@ import net.yozmnews.event.domain.event.EventRepository;
 import net.yozmnews.event.domain.event.EventStatus;
 import net.yozmnews.event.domain.event.LockedEvent;
 import net.yozmnews.event.domain.event.MergeSubject;
+import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
@@ -195,6 +197,44 @@ class JdbcEventRepository implements EventRepository {
 			.param("survivor", survivorNext.id())
 			.param("absorbed", absorbed.id())
 			.param("now", timestamp(now))
+			.update();
+	}
+
+	@Override
+	public List<Long> closable(Instant idleBefore, Instant openedBefore, long afterId, int limit) {
+		return this.jdbc.sql("""
+				select id from events
+				where status = 'OPEN' and id > :after and (last_joined_at <= :idle or created_at <= :opened)
+				order by id
+				limit :limit
+				""")
+			.param("after", afterId)
+			.param("idle", timestamp(idleBefore))
+			.param("opened", timestamp(openedBefore))
+			.param("limit", limit)
+			.query(Long.class)
+			.list();
+	}
+
+	@Override
+	public void close(long eventId, @Nullable ArticleId representative, Instant now) {
+		this.jdbc.sql("""
+				update events set status = 'CLOSED', closed_at = :now, representative_article_id = :representative
+				where id = :id
+				""")
+			.param("id", eventId)
+			.param("now", timestamp(now))
+			.param("representative", (representative != null) ? representative.value() : null, Types.BIGINT)
+			.update();
+	}
+
+	@Override
+	public void clearRepresentative(Collection<ArticleId> articleIds) {
+		if (articleIds.isEmpty()) {
+			return;
+		}
+		this.jdbc.sql("update events set representative_article_id = null where representative_article_id = any(:ids)")
+			.param("ids", articleIds.stream().map(ArticleId::value).toArray(Long[]::new))
 			.update();
 	}
 

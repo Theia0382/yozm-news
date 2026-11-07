@@ -450,6 +450,16 @@ class EventIntakeFlowTests {
 			this.delegate.deleteByArticles(articleIds);
 		}
 
+		@Override
+		public int deleteOfClosedEvents(int limit) {
+			return this.delegate.deleteOfClosedEvents(limit);
+		}
+
+		@Override
+		public int deleteUnassigned(Instant createdBefore, int limit) {
+			return this.delegate.deleteUnassigned(createdBefore, limit);
+		}
+
 	}
 
 }

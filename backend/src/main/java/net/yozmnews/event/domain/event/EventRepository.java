@@ -7,6 +7,7 @@ import java.util.Optional;
 
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.event.domain.assignment.EventSnapshot;
+import org.jspecify.annotations.Nullable;
 
 /**
  * 사건 저장소 — 사건 행과 사건 핵심 말 · docs/specs/event.md §4.
@@ -70,5 +71,19 @@ public interface EventRepository {
 	 * @param survivorNext 남는 사건의 합친 값 — {@link LockedEvent#absorbed}
 	 */
 	void absorb(LockedEvent survivorNext, LockedEvent absorbed, Instant now);
+
+	/**
+	 * 닫을 수 있는 열린 사건 — 마지막으로 붙은 시각 ≤ {@code idleBefore} 이거나 연 시각 ≤ {@code openedBefore}. 경계는
+	 * {@link EventClosing#due} 와 같다. 잠그지 않는다.
+	 * @param afterId 이 ID 보다 큰 사건만 — 커서
+	 * @return 사건 ID 순, {@code limit} 개까지
+	 */
+	List<Long> closable(Instant idleBefore, Instant openedBefore, long afterId, int limit);
+
+	/** 잠근 열린 사건을 닫는다 — 상태 {@code CLOSED}, 열림이 끝난 시각 {@code now}, 대표 기사(없으면 null) */
+	void close(long eventId, @Nullable ArticleId representative, Instant now);
+
+	/** 대표 기사가 이 기사들인 사건의 대표를 비운다 — 지운 기사 따르기 */
+	void clearRepresentative(Collection<ArticleId> articleIds);
 
 }

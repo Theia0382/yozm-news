@@ -198,6 +198,37 @@ class EventRemovalFlowTests {
 	}
 
 	@Test
+	void removingTheRepresentativeClearsIt() {
+		this.jdbc.sql("""
+				update events set status = 'CLOSED', closed_at = now(), representative_article_id = :a where id = :event
+				""").param("a", this.a).param("event", this.event).update();
+
+		remove(this.a);
+
+		// 닫힌 사건은 남고 대표만 빈다 — 대표를 다시 고를 표현이 없을 수 있다
+		assertThat(this.jdbc.sql("select status, article_count, representative_article_id from events where id = :event")
+			.param("event", this.event)
+			.query()
+			.singleRow()).containsEntry("status", "CLOSED")
+			.containsEntry("article_count", 2)
+			.containsEntry("representative_article_id", null);
+	}
+
+	@Test
+	void removingAnotherArticleKeepsTheRepresentative() {
+		this.jdbc.sql("""
+				update events set status = 'CLOSED', closed_at = now(), representative_article_id = :a where id = :event
+				""").param("a", this.a).param("event", this.event).update();
+
+		remove(this.c);
+
+		assertThat(this.jdbc.sql("select representative_article_id from events where id = :event")
+			.param("event", this.event)
+			.query(Long.class)
+			.single()).isEqualTo(this.a);
+	}
+
+	@Test
 	void removingAllArticlesOfASurvivorDeletesItsMergedRows() {
 		// 사건 X 가 E 에 합쳐졌다 — X 를 가리키는 저장 후보와 그 쌍의 병합 판정 기록이 있다
 		long merged = this.jdbc.sql("""
