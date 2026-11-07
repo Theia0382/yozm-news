@@ -28,3 +28,7 @@
 |---|---|
 | 차원을 정한 `halfvec(n)` 컬럼(ADR-0027 · ADR-0075 문면) | n 의 근거가 없어 운영 모델을 고를 때 새 컬럼 마이그레이션이 생기고, 로컬 대체물의 차원이 운영 모델에 묶이거나 개발과 운영의 컬럼이 달라진다 |
 | 차원 없는 `vector`(`float4`) | 누적 평균의 반올림 오차가 줄지만, 오래 남기는 벡터를 `halfvec` 으로 두기로 한 결정과 달리 저장이 두 배다 |
+
+## 후속 기록
+
+- 2026-11-07: 결과 절 "운영 모델을 고르거나 바꿔도 사건 테이블의 마이그레이션이 없다"의 장기 검색 인덱스 — [ADR-0089](0089-long-term-hnsw-indexes-on-closed-events-created-per-model-version-at-runtime-by-the-worker-role.md) · [event Spec §5](../specs/event.md#사건-정리) event-R13

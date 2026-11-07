@@ -74,6 +74,44 @@ class JdbcEventQueryRepositoryTests {
 	}
 
 	@Test
+	void aMergedEventIsFoundAsItsSurvivorAndIsNotPaged() {
+		long survivor = event("OPEN", "model-a", "[1,0]", "2026-11-03T00:00:00Z", "2026-11-05T00:00:00Z");
+		long merged = event("OPEN", "model-a", "[0,1]", "2026-11-04T00:00:00Z", "2026-11-04T00:00:00Z");
+		long criteria = criteria();
+		member(95, survivor, criteria, "2026-11-04T00:00:00Z", DecidedBy.FORMULA, 0.9);
+		this.jdbc.sql("""
+				update events set status = 'MERGED', merged_into = :survivor, closed_at = now() where id = :merged
+				""").param("survivor", survivor).param("merged", merged).update();
+
+		// 합쳐진 사건의 ID 로 찾으면 남는 사건을 낸다
+		assertThat(this.repository.find(merged)).map(view -> view.id().value()).contains(survivor);
+		assertThat(this.repository.find(merged)).isEqualTo(this.repository.find(survivor));
+		// 합쳐진 사건은 배정이 없어 목록에 나오지 않는다
+		assertThat(this.repository.page(Instant.parse("2026-11-01T00:00:00Z"), Instant.parse("2026-11-10T00:00:00Z"), null,
+				null, 10))
+			.extracting(view -> view.id().value())
+			.containsExactly(survivor);
+	}
+
+	@Test
+	void theRepresentativeLeftAtClosingComesFirst() {
+		long closed = event("CLOSED", "model-a", "[1,0]", "2026-11-05T00:00:00Z", "2026-11-05T00:00:00Z");
+		long open = event("OPEN", "model-a", "[1,0]", "2026-11-05T00:00:00Z", "2026-11-05T00:00:00Z");
+		long criteria = criteria();
+		// 닫힌 사건 — 표현이 지워져 정렬로는 발행 시각이 이른 96 이 나오지만, 닫을 때 남긴 97 이 대표다
+		member(96, closed, criteria, "2026-11-04T00:00:00Z", DecidedBy.FORMULA, 0.9);
+		member(97, closed, criteria, "2026-11-05T00:00:00Z", DecidedBy.FORMULA, 0.9);
+		this.jdbc.sql("update events set representative_article_id = 97 where id = :id").param("id", closed).update();
+		member(98, open, criteria, "2026-11-05T00:00:00Z", DecidedBy.FORMULA, 0.9);
+		vector(98, "model-a", "[1,0]");
+
+		assertThat(this.repository.representativesOfAll(List.of(closed, open)))
+			.isEqualTo(Map.of(closed, new ArticleId(97), open, new ArticleId(98)));
+		// 걸러진 기사에서 고를 때는 저장값을 쓰지 않는다
+		assertThat(this.repository.representatives(Map.of(closed, ids(96, 97)))).isEqualTo(Map.of(closed, new ArticleId(96)));
+	}
+
+	@Test
 	void readsTheEventAndItsAssignmentsInPublicationOrder() {
 		long event = event("CLOSED", "model-a", "[1,0]", "2026-11-03T00:00:00Z", "2026-11-05T00:00:00Z");
 		long criteria = criteria();
@@ -161,8 +199,9 @@ class JdbcEventQueryRepositoryTests {
 	private long event(String status, String model, String centroid, String first, String last) {
 		return this.jdbc.sql("""
 				insert into events (status, model_version, centroid, article_count, first_article_at, last_article_at,
-				                    created_at)
-				values (:status, :model, cast(:centroid as halfvec), 3, :first, :last, :first)
+				                    created_at, last_joined_at, closed_at)
+				values (:status, :model, cast(:centroid as halfvec), 3, :first, :last, :first, :first,
+				        case when :status = 'OPEN' then null else cast(:first as timestamptz) end)
 				returning id
 				""")
 			.param("status", status)
@@ -185,8 +224,9 @@ class JdbcEventQueryRepositoryTests {
 
 	private void member(long article, long event, long criteria, String published, DecidedBy by, @Nullable Double score) {
 		this.jdbc.sql("""
-				insert into event_articles (article_id, event_id, published_at, score, decided_by, criteria_id, assigned_at)
-				values (:article, :event, :published, :score, :by, :criteria, '2026-11-06T00:00:00Z')
+				insert into event_articles (article_id, event_id, published_at, score, decided_by, opened, criteria_id,
+				                            assigned_at)
+				values (:article, :event, :published, :score, :by, false, :criteria, '2026-11-06T00:00:00Z')
 				""")
 			.param("article", article)
 			.param("event", event)

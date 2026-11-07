@@ -102,16 +102,16 @@ class EventIntakeAdministrationServiceTests {
 	private void assign(long article) {
 		long event = this.jdbc.sql("""
 				insert into events (status, model_version, centroid, article_count, first_article_at, last_article_at,
-				                    created_at)
-				values ('OPEN', 'model-a', '[1,0]', 1, now(), now(), now()) returning id
+				                    created_at, last_joined_at)
+				values ('OPEN', 'model-a', '[1,0]', 1, now(), now(), now(), now()) returning id
 				""").query(Long.class).single();
 		long criteria = this.jdbc.sql("""
 				insert into event_assignment_criteria (window_seconds, upper, lower, store, probability, created_at)
 				values (259200, 0.8, 0.55, 0.4, 0.5, now()) returning id
 				""").query(Long.class).single();
 		this.jdbc.sql("""
-				insert into event_articles (article_id, event_id, published_at, decided_by, criteria_id, assigned_at)
-				values (:article, :event, now(), 'FORMULA', :criteria, now())
+				insert into event_articles (article_id, event_id, published_at, decided_by, opened, criteria_id, assigned_at)
+				values (:article, :event, now(), 'FORMULA', false, :criteria, now())
 				""").param("article", article).param("event", event).param("criteria", criteria).update();
 	}
 

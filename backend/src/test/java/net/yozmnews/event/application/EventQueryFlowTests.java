@@ -203,8 +203,8 @@ class EventQueryFlowTests {
 	private long event(String first, String last) {
 		return this.jdbc.sql("""
 				insert into events (status, model_version, centroid, article_count, first_article_at, last_article_at,
-				                    created_at)
-				values ('OPEN', 'model-a', cast('[1,0]' as halfvec), 4, :first, :last, :first)
+				                    created_at, last_joined_at)
+				values ('OPEN', 'model-a', cast('[1,0]' as halfvec), 4, :first, :last, :first, :first)
 				returning id
 				""")
 			.param("first", Instant.parse(first).atOffset(ZoneOffset.UTC))
@@ -222,8 +222,9 @@ class EventQueryFlowTests {
 
 	private void assign(long article, long event, long criteriaId, String published) {
 		this.jdbc.sql("""
-				insert into event_articles (article_id, event_id, published_at, score, decided_by, criteria_id, assigned_at)
-				values (:article, :event, :published, 0.9, 'FORMULA', :criteria, '2026-11-06T00:00:00Z')
+				insert into event_articles (article_id, event_id, published_at, score, decided_by, opened, criteria_id,
+				                            assigned_at)
+				values (:article, :event, :published, 0.9, 'FORMULA', false, :criteria, '2026-11-06T00:00:00Z')
 				""")
 			.param("article", article)
 			.param("event", event)

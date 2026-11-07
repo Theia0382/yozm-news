@@ -1,6 +1,6 @@
 # ADR-0027: 벡터 저장은 PostgreSQL pgvector 확장으로 한다
 
-- 상태: 승인. 부분 대체 — 기사 벡터의 모델 교체 방식([ADR-0075](0075-article-vectors-in-a-dimensionless-vector-column-one-row-per-model-version.md)) · 사건 중심 벡터의 모델 교체 방식([ADR-0079](0079-event-centroids-in-a-dimensionless-halfvec-column-with-a-model-version-per-event.md))
+- 상태: 승인. 부분 대체 — 기사 벡터의 보관 기간([ADR-0088](0088-article-features-kept-until-their-event-closes-and-unassigned-ones-for-the-window-plus-a-margin.md)) · 기사 벡터의 모델 교체 방식([ADR-0075](0075-article-vectors-in-a-dimensionless-vector-column-one-row-per-model-version.md)) · 사건 중심 벡터의 모델 교체 방식([ADR-0079](0079-event-centroids-in-a-dimensionless-halfvec-column-with-a-model-version-per-event.md))
 - 날짜: 2026-10-27
 - 근거: [이슈 #36](https://github.com/Theia0382/yozm-news/issues/36) — 로컬 `postgres:18` 이미지의 Debian 버전(13), Docker Hub 의 `pgvector/pgvector:pg18-trixie` 게시 플랫폼(`linux/amd64` · `linux/arm64`), pgvector 문서와 `vector.control` 을 확인
 - 관련: [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md)(사건 묶기), [ADR-0019](0019-dev-compose-per-checkout-and-test-image-source.md)(PostgreSQL 이미지의 정본은 `compose.yaml` — 그대로 성립), [ADR-0022](0022-image-targets-per-side-dockerfile-without-run-in-runtime-stage.md)(실행 단계에 명령 없음), [ADR-0029](0029-indefinite-summary-retention-with-optional-deletion.md)(요약문 보존)
@@ -20,6 +20,7 @@
 - **최소 버전은 0.8 이다**(`halfvec` 0.7, 반복 인덱스 검색 0.8). 앱은 기동할 때 확장 버전을 확인한다.
 - **설치**: 마이그레이션은 `CREATE EXTENSION IF NOT EXISTS` 로 쓴다. 앱 계정에 superuser 권한이 없는 외부 DB 에서는 DBA 가 확장을 먼저 설치한다.
 - **사건 배정은 인덱스 없이 정확 검색으로 한다.** 비교 대상이 시간 창 안의 활성 사건뿐이라 수가 작다(추정). HNSW 인덱스는 오래된 사건을 찾는 장기 검색에만 건다.
+> 부분 대체(둘째 문장) — [ADR-0088](0088-article-features-kept-until-their-event-closes-and-unassigned-ones-for-the-window-plus-a-margin.md). 지금 상태: [event Spec §5](../specs/event.md#사건-정리) event-R13 · [data-model "보존 정책"](../data-model.md#보존-정책-초안)
 - **오래 남기는 벡터는 사건 중심 벡터(`halfvec`)뿐이다.** 기사 벡터는 사건 배정에 쓰는 기간에 여유를 더한 만큼만 보관하고, 필요하면 요약문으로 다시 계산한다([ADR-0029](0029-indefinite-summary-retention-with-optional-deletion.md)).
 > 부분 대체(둘째 문장) — 기사 벡터는 [ADR-0075](0075-article-vectors-in-a-dimensionless-vector-column-one-row-per-model-version.md), 사건 중심 벡터는 [ADR-0079](0079-event-centroids-in-a-dimensionless-halfvec-column-with-a-model-version-per-event.md). 지금 상태: [event Spec §5](../specs/event.md#기사-표현) event-R4 · [event Spec §6](../specs/event.md#6-데이터)
 - **벡터마다 임베딩 모델 버전을 기록한다.** 모델을 바꾸면 새 컬럼 · 재계산 · 전환 · 이전 컬럼 삭제를 백그라운드 작업으로 한다.
@@ -46,3 +47,4 @@
 ## 후속 기록
 
 - 2026-11-05: 결과 절 "Testcontainers 는 `postgres` 가 아닌 이미지 이름을 거부하므로 호환 선언이 필요하다"의 전제는 지금 Testcontainers 와 다르다(`pgvector/pgvector` 는 선언 없이도 받는다). 호환 선언은 결정 절에 따라 둔다 — [`development/infrastructure` "PostgreSQL 이미지 정본"](../development/infrastructure.md#postgresql-이미지-정본)
+- 2026-11-07: 결정 절 "HNSW 인덱스는 오래된 사건을 찾는 장기 검색에만 건다"의 인덱스 — [ADR-0089](0089-long-term-hnsw-indexes-on-closed-events-created-per-model-version-at-runtime-by-the-worker-role.md) · [event Spec §5](../specs/event.md#사건-정리) event-R13

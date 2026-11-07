@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 /**
  * 후보 점수 — 코사인 · 핵심 말 겹침 · 발행 시각 차의 감쇠, 창 밖은 후보가 아니다. 기대값은 손으로 셈한 리터럴이다.
  * <p>
- * 지키는 규칙: event-R10
+ * 지키는 규칙: event-R10 · event-R13(구간 대 구간 — 병합)
  */
 class CandidateScoringTests {
 
@@ -26,6 +26,34 @@ class CandidateScoringTests {
 
 	/** 기사 핵심 말 넷 가운데 둘(국회 · 예산)이 사건에 있다 — 겹침 2/4 */
 	private static final List<String> ARTICLE_TERMS = List.of("국회", "예산", "통과", "정부");
+
+	@Test
+	void anOverlappingSpanIsNotDecayed() {
+		// 구간 [04T00, 05T03] 이 사건 [05T00, 05T06] 과 겹친다 — 0.78
+		assertThat(CandidateScoring.score(event(0.9), ARTICLE_TERMS, Instant.parse("2026-11-04T00:00:00Z"),
+				Instant.parse("2026-11-05T03:00:00Z"), WINDOW))
+			.hasValueSatisfying(candidate -> assertThat(candidate.score()).isCloseTo(0.78, within(1e-12)));
+	}
+
+	@Test
+	void aSeparateSpanDecaysByTheGapBetweenTheSpans() {
+		// 구간 [06T06, 07T00] 은 마지막 기사 24시간 뒤에 시작 — 0.78 × 2^(−1) = 0.39
+		assertThat(CandidateScoring.score(event(0.9), ARTICLE_TERMS, Instant.parse("2026-11-06T06:00:00Z"),
+				Instant.parse("2026-11-07T00:00:00Z"), WINDOW))
+			.hasValueSatisfying(candidate -> assertThat(candidate.score()).isCloseTo(0.39, within(1e-12)));
+		// 구간 [03T00, 04T12] 은 첫 기사 12시간 앞에서 끝난다 — 0.78 × 2^(−0.5)
+		assertThat(CandidateScoring.score(event(0.9), ARTICLE_TERMS, Instant.parse("2026-11-03T00:00:00Z"),
+				Instant.parse("2026-11-04T12:00:00Z"), WINDOW))
+			.hasValueSatisfying(
+					candidate -> assertThat(candidate.score()).isCloseTo(0.5515432893255071, within(1e-12)));
+	}
+
+	@Test
+	void aSpanStartingAfterItsEndIsRejected() {
+		org.assertj.core.api.Assertions.assertThatIllegalArgumentException()
+			.isThrownBy(() -> CandidateScoring.score(event(0.9), ARTICLE_TERMS, Instant.parse("2026-11-05T01:00:00Z"),
+					Instant.parse("2026-11-05T00:00:00Z"), WINDOW));
+	}
 
 	@Test
 	void anArticleInsideTheEventSpanIsNotDecayed() {
@@ -90,7 +118,7 @@ class CandidateScoringTests {
 	}
 
 	private static EventSnapshot event(double cosine) {
-		return new EventSnapshot(42, cosine, EVENT_TERMS, FIRST, LAST);
+		return new EventSnapshot(42, cosine, EVENT_TERMS, FIRST, LAST, 3);
 	}
 
 }

@@ -48,12 +48,15 @@ services:
       YOZMNEWS_JEV_API_KEY: ${YOZMNEWS_JEV_API_KEY:?YOZMNEWS_JEV_API_KEY 를 deploy/.env 에 적는다}
       YOZMNEWS_JEV_MODEL:
       YOZMNEWS_JEV_BASE_URL:
-      # 사건 묶기의 사건 기준 · 저장 기준 — deploy/.env 에 있을 때만 넘긴다. docs/operations/configuration.md "사건 묶기"
+      # 사건 묶기의 사건 기준 · 저장 기준 · 닫는 기간 · 최대 기간 — deploy/.env 에 있을 때만 넘긴다.
+      # docs/operations/configuration.md "사건 묶기"
       YOZMNEWS_EVENT_ASSIGNMENT_WINDOW:
       YOZMNEWS_EVENT_ASSIGNMENT_UPPER:
       YOZMNEWS_EVENT_ASSIGNMENT_LOWER:
       YOZMNEWS_EVENT_ASSIGNMENT_STORE:
       YOZMNEWS_EVENT_ASSIGNMENT_PROBABILITY:
+      YOZMNEWS_EVENT_ASSIGNMENT_CLOSE_AFTER:
+      YOZMNEWS_EVENT_ASSIGNMENT_MAX_OPEN:
     depends_on:
       postgres:
         condition: service_healthy

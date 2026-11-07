@@ -18,6 +18,7 @@ import org.jspecify.annotations.Nullable;
  */
 public interface EventQueryRepository {
 
+	/** 사건 하나 — 합쳐진 사건이면 남는 사건, 없는 사건이면 빈 값 */
 	Optional<EventView> find(long eventId);
 
 	/** 사건의 배정 전부 — 발행 시각 · 기사 ID 순 */
@@ -29,7 +30,7 @@ public interface EventQueryRepository {
 	/** 주어진 (사건, 기사) 가운데 사건마다 대표 기사 — 그 사건의 배정이 아닌 쌍은 무시한다 */
 	Map<Long, ArticleId> representatives(Map<Long, ? extends Collection<ArticleId>> among);
 
-	/** 사건 기사 전체에서 사건마다 대표 기사 */
+	/** 사건 기사 전체에서 사건마다 대표 기사 — 닫을 때 남긴 대표가 있으면 그것 */
 	Map<Long, ArticleId> representativesOfAll(Collection<Long> eventIds);
 
 	/** 기간 안 배정 — 사건 ID 순, 사건마다 발행 시각 · 기사 ID 순 */

@@ -23,7 +23,7 @@ class EventShrinkTests {
 	private static final Instant T = Instant.parse("2026-11-05T00:00:00Z");
 
 	private static final LockedEvent EVENT = new LockedEvent(9, EventStatus.OPEN, "model-a", new float[] { 2, 1 }, 3, T,
-			T);
+			T, T, T);
 
 	@Test
 	void removingEveryArticleEmptiesTheEvent() {

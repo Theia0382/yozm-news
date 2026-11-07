@@ -18,9 +18,8 @@
 | 10 | 보존 기간 ([data-model.md](data-model.md)) | 초안 값으로 시작. RSS 요약문은 결정됨(아래) |
 | 11 | 사용자 피드 추가 허용 | v1은 불가. 열 때는 사용자당 피드 수 상한, 피드 볼륨 상한, 운영자 승인 중 하나 이상이 필요하다 (Jev 비용이 운영자 부담이므로) |
 | 12 | 본문 추출 도입 | M5 품질 측정 후. 요약문이 거의 없는 소스(제목만 주는 피드)부터 검토 |
-| 20 | 사건 묶기 값: 시간 창 · 위 · 아래 · 저장 · 확률 기준의 기본값(지금은 측정 전 목표 — [event Spec §7](specs/event.md#7-설정)), 사건을 닫는 기간, 임베딩 모델 ([event Spec §1](specs/event.md#1-책임과-범위)) | M3 평가 세트로 정한다 |
+| 20 | 사건 묶기 값: 시간 창 · 위 · 아래 · 저장 · 확률 기준 · 닫는 기간 · 최대 기간의 기본값(지금은 측정 전 목표 — [event Spec §7](specs/event.md#7-설정)), 임베딩 모델 ([event Spec §1](specs/event.md#1-책임과-범위)) | M3 평가 세트로 정한다 |
 | 21 | 큰 사건 기준(소스 수 · 중요도)과 큰 사건 슬롯 수 | M3 평가 세트와 운영자 표본 검수로 시작해 M5 측정으로 조정 |
-| 22 | 사건 배정 입력(기사 벡터)의 보관 기간 | 후보 시간 창에 여유를 더한 값. M3 에서 정한다 |
 | 23 | 진행 중인 이슈(`storyline`) 구획의 상한, 이슈 휴면 기준 일수 | M5 토큰 · 연결 측정으로 정한다 |
 | 24 | 관심도 감쇠 · 가중치, 구독 제안 기준 | 중립에서 시작해 M6 측정으로 정한다 |
 | 31 | 메일 발송 서비스 선택(메일을 도입할 때) | SMTP 로 붙인다([ADR-0012](adr/0012-swappable-external-dependencies.md)). 후보 Resend · Amazon SES · Postmark. 발송 도메인에 SPF · DKIM · DMARC 를 설정한다. 자체 메일 서버는 전달률을 위해 역방향 DNS 도 필요하다 |
@@ -65,3 +64,9 @@
 | # | 내용 | 반영 |
 |---|---|---|
 | 15 | Jev 공식 자료 확인 — 가격은 입력 100만 토큰당 $0.042(출력 무료). 경로는 TypeSafe System One API(`POST /v1/systemone`)이고, OpenRouter 가 같은 스키마의 호환 경로를 둔다. Cloudflare · Vercel AI Gateway 경유는 공식 문서에 없다. 문맥 상한은 요청 전체 64k · 질문 하나 32k 토큰이고, 질문 수 상한은 없다. Choice 선택지는 1 ~ 255개, Score 수준은 1 ~ 10개다 | [evaluation Spec](specs/evaluation.md#구현과-로컬-대체물) · [ADR-0063](adr/0063-jev-called-through-one-system-one-schema-context-overflow-probed-with-empty-state-latest-model-alias-by-default.md) |
+
+## 결정됨 (2026-11-07)
+
+| # | 내용 | 반영 |
+|---|---|---|
+| 22 | 사건 배정 입력(기사 벡터)의 보관: 그 기사의 사건이 닫힐 때까지, 열린 사건에 배정되지 않은 표현은 만든 뒤 시간 창 + 여유. 사건을 닫는 기준은 마지막으로 기사가 붙은 뒤 닫는 기간 · 연 뒤 최대 기간이다(값은 20) | [ADR-0088](adr/0088-article-features-kept-until-their-event-closes-and-unassigned-ones-for-the-window-plus-a-margin.md) · [ADR-0086](adr/0086-events-close-after-an-idle-period-since-the-last-join-or-a-maximum-period-since-opening.md) · [event Spec §5](specs/event.md#사건-정리) |

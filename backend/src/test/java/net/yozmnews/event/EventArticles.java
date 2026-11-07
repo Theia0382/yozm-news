@@ -52,6 +52,7 @@ public final class EventArticles {
 	 */
 	public static void clear(JdbcClient jdbc) {
 		jdbc.sql("delete from event_article_candidates").update();
+		jdbc.sql("delete from event_merge_judgements").update();
 		jdbc.sql("delete from event_articles").update();
 		jdbc.sql("delete from events").update();
 		jdbc.sql("delete from event_assignment_criteria").update();

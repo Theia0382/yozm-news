@@ -63,3 +63,5 @@
 - 2026-11-06: 결과 절 "운영자가 표본을 검수해 임계값을 조정한다" — [ADR-0081](0081-event-assignment-criteria-in-settings-and-rejudgement-within-stored-scores.md) · [event Spec §5](../specs/event.md#기준과-재판정) event-R17 · R18
 - 2026-11-07: 결정 절 "큰 사건은 조회 시점에 판정한다"의 판정 식 — [ADR-0082](0082-big-events-judged-at-query-time-by-distinct-sources-and-mean-importance-both-reaching-criteria.md) · [event Spec §5](../specs/event.md#대표-기사--큰-사건) event-R15
 - 2026-11-07: 결정 절 "임계값은 운영자가 정한다"의 큰 사건 기준을 둘 곳 — [ADR-0083](0083-big-event-criteria-as-operator-settings-with-append-only-history-and-preview.md) · [event Spec §5](../specs/event.md#대표-기사--큰-사건) event-R21
+- 2026-11-07: 결정 절 "4. 정리"의 병합 — [ADR-0084](0084-event-merge-applies-assignment-scoring-between-events-and-keeps-merged-rows-pointing-to-survivors.md) · [event Spec §5](../specs/event.md#사건-정리) event-R13
+- 2026-11-07: 결정 절 "4. 정리"의 닫기와 "사건은 며칠 단위로 닫힌다" — [ADR-0086](0086-events-close-after-an-idle-period-since-the-last-join-or-a-maximum-period-since-opening.md) · [event Spec §5](../specs/event.md#사건-정리) event-R13

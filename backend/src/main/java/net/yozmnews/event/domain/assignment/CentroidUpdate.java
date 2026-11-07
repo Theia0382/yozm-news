@@ -32,6 +32,24 @@ public final class CentroidUpdate {
 		return combine(centroid, count, vector, -1, count - 1);
 	}
 
+	/**
+	 * 두 사건을 합친 중심 — {@code (a × nA + b × nB) / (nA + nB)}. 사건 병합의 정본이다(event-R13).
+	 * @throws IllegalArgumentException 수가 1 미만이거나 벡터 길이가 다를 때
+	 */
+	public static float[] merge(float[] a, int countA, float[] b, int countB) {
+		if (countA < 1 || countB < 1) {
+			throw new IllegalArgumentException("합칠 사건의 기사 수는 1 이상이다: " + countA + " · " + countB);
+		}
+		if (a.length != b.length) {
+			throw new IllegalArgumentException("벡터 길이가 다르다: " + a.length + " · " + b.length);
+		}
+		float[] next = new float[a.length];
+		for (int i = 0; i < a.length; i++) {
+			next[i] = (float) (((double) a[i] * countA + (double) b[i] * countB) / ((double) countA + countB));
+		}
+		return next;
+	}
+
 	private static float[] combine(float[] centroid, int count, float[] vector, int sign, int nextCount) {
 		if (centroid.length != vector.length) {
 			throw new IllegalArgumentException("벡터 길이가 다르다: 중심 " + centroid.length + " · 기사 " + vector.length);

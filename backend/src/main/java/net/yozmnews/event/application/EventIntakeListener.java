@@ -96,6 +96,8 @@ class EventIntakeListener {
 		for (Planned plan : plans) {
 			this.shrinks.write(plan.locked(), plan.shrink());
 		}
+		// 닫을 때 남긴 대표 기사가 지운 기사면 비운다 — 비는 사건은 위에서 지워졌다
+		this.events.clearRepresentative(removed);
 		this.features.deleteByArticles(removed);
 	}
 

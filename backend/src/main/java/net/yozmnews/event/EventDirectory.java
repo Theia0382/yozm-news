@@ -21,7 +21,7 @@ public interface EventDirectory {
 	int MAX_PAGE_SIZE = 100;
 
 	/**
-	 * 사건 하나. 계약: 합쳐진 사건이면 남는 사건을 낸다 — 사건 병합이 생기기 전이라 지금은 그 사건 그대로다.
+	 * 사건 하나 — 합쳐진 사건(event-R13)이면 남는 사건을 낸다.
 	 * @return 없는 사건이면 빈 값
 	 */
 	Optional<EventView> find(EventId id);
