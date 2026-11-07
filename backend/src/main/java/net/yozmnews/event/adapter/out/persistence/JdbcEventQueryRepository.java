@@ -47,7 +47,9 @@ class JdbcEventQueryRepository implements EventQueryRepository {
 
 	@Override
 	public Optional<EventView> find(long eventId) {
-		return this.jdbc.sql("select " + EVENT_COLUMNS + " from events e where e.id = :id")
+		// 합쳐진 사건이면 남는 사건 — 가리킴은 평평해 한 번이면 된다
+		return this.jdbc.sql("select " + EVENT_COLUMNS
+				+ " from events e where e.id = coalesce((select m.merged_into from events m where m.id = :id), :id)")
 			.param("id", eventId)
 			.query(JdbcEventQueryRepository::event)
 			.optional();
@@ -106,13 +108,17 @@ class JdbcEventQueryRepository implements EventQueryRepository {
 		if (eventIds.isEmpty()) {
 			return Map.of();
 		}
+		// 닫을 때 남긴 대표가 있으면 그것 — 닫힌 사건은 표현을 지워 중심에 가까운 순으로 다시 고를 수 없다
 		return firstPerEvent(this.jdbc.sql("""
-				select distinct on (a.event_id) a.event_id, a.article_id
-				from event_articles a
-				join events e on e.id = a.event_id
-				left join article_match_features f on f.article_id = a.article_id and f.model_version = e.model_version
-				where a.event_id = any(:events)
-				order by a.event_id, %s
+				select e.id as event_id, e.representative_article_id as article_id from events e
+				where e.id = any(:events) and e.representative_article_id is not null
+				union all
+				(select distinct on (a.event_id) a.event_id, a.article_id
+				 from event_articles a
+				 join events e on e.id = a.event_id
+				 left join article_match_features f on f.article_id = a.article_id and f.model_version = e.model_version
+				 where a.event_id = any(:events) and e.representative_article_id is null
+				 order by a.event_id, %s)
 				""".formatted(CentroidOrder.ORDER)).param("events", eventIds.toArray(Long[]::new)));
 	}
 

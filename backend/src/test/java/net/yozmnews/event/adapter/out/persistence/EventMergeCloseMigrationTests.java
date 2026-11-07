@@ -22,7 +22,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 사건 정리 마이그레이션(V18)의 채우기 — 실제 PostgreSQL 의 별도 스키마에 V17 까지만 올려 사건 · 배정을 넣고, 끝까지 올린 뒤 배정의 연 사건
+ * 사건 정리 마이그레이션(V19)의 채우기 — 실제 PostgreSQL 의 별도 스키마에 V18 까지만 올려 사건 · 배정을 넣고, 끝까지 올린 뒤 배정의 연 사건
  * 표지와 사건의 마지막으로 붙은 시각이 채워졌는지 본다. 앱이 쓰는 스키마와 섞이지 않게 스키마를 따로 두고 테스트 뒤 지운다.
  * <p>
  * 지키는 규칙: event-R18(연 사건 표지) · event-R13(닫기의 기준 시각)
@@ -48,7 +48,7 @@ class EventMergeCloseMigrationTests {
 
 	@Test
 	void fillsTheOpenedFlagAndTheLastJoinedTime() {
-		flyway("17").migrate();
+		flyway("18").migrate();
 		long criteria = this.jdbc.sql("insert into " + SCHEMA + ".event_assignment_criteria "
 				+ "(window_seconds, upper, lower, store, probability, created_at) "
 				+ "values (259200, 0.8, 0.55, 0.4, 0.5, now()) returning id").query(Long.class).single();

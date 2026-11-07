@@ -20,6 +20,7 @@ import net.yozmnews.event.domain.assignment.AssignmentQueueRepository;
 import net.yozmnews.event.domain.assignment.CriteriaRepository;
 import net.yozmnews.event.domain.event.EventArticleRepository;
 import net.yozmnews.event.domain.event.EventClosing;
+import net.yozmnews.event.domain.event.EventQueryRepository;
 import net.yozmnews.event.domain.event.EventRepository;
 import net.yozmnews.event.domain.event.LongTermIndexes;
 import net.yozmnews.event.domain.feature.ArticleEmbedder;
@@ -63,6 +64,9 @@ class CleanupFlowTests {
 
 	@Autowired
 	EventArticleRepository assignments;
+
+	@Autowired
+	EventQueryRepository queries;
 
 	@Autowired
 	MatchFeaturesRepository features;
@@ -114,6 +118,19 @@ class CleanupFlowTests {
 			.containsEntry("representative_article_id", old.members().get(0));
 		// 대표를 고른 뒤 닫힌 사건 기사의 표현을 지웠다 — 열린 사건 기사의 표현은 남는다
 		assertThat(featureArticles()).containsExactlyInAnyOrder(recent.members().get(0), late.members().get(0));
+	}
+
+	@Test
+	void anEventWithoutRepresentationsClosesWithItsEarliestArticle() {
+		// 두 기사 모두 표현이 없다(보존 기간이 지나 지움) — 중심에 가까운 순으로는 고를 수 없어 발행 시각 · 기사 ID 순 첫째가 대표다
+		Event bare = event("[1,0]", "2026-11-12T00:00:00Z", "2026-11-10T00:00:00Z", "2026-11-12T00:00:00Z", "[0,1]",
+				"[1,0]");
+		this.jdbc.sql("delete from article_match_features").update();
+
+		cleanup().run();
+
+		assertThat(row(bare.id())).containsEntry("status", "CLOSED")
+			.containsEntry("representative_article_id", bare.members().get(0));
 	}
 
 	@Test
@@ -184,7 +201,7 @@ class CleanupFlowTests {
 
 	private CleanupRound cleanup() {
 		LongTermIndexes none = () -> 0;
-		return new CleanupRound(this.events, this.features, none, CLOSING, CRITERIA, this.transaction,
+		return new CleanupRound(this.events, this.queries, this.features, none, CLOSING, CRITERIA, this.transaction,
 				(InstantSource) () -> NOW);
 	}
 
