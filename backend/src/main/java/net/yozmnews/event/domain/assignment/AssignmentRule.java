@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+import net.yozmnews.event.AssignmentCriteria;
 import net.yozmnews.event.DecidedBy;
 
 /**

@@ -18,9 +18,9 @@ import net.yozmnews.evaluation.EventJudgementId;
 import net.yozmnews.evaluation.EventMembership;
 import net.yozmnews.evaluation.MembershipJudgement;
 import net.yozmnews.evaluation.MembershipQuery;
+import net.yozmnews.event.AssignmentCriteria;
 import net.yozmnews.event.DecidedBy;
 import net.yozmnews.event.EventStatus;
-import net.yozmnews.event.domain.assignment.AssignmentCriteria;
 import net.yozmnews.event.domain.assignment.AssignmentQueueRepository;
 import net.yozmnews.event.domain.assignment.AssignmentRule;
 import net.yozmnews.event.domain.assignment.AssignmentSchedule;
@@ -82,10 +82,10 @@ public class AssignmentRound {
 	@Autowired
 	AssignmentRound(AssignmentQueueRepository queue, IntakeQueueRepository intake, MatchFeaturesRepository features,
 			EventRepository events, EventArticleRepository assignments, CriteriaRepository criteriaHistory,
-			AssignmentCriteria criteria, ArticleDirectory articles, EventMembership membership,
+			AssignmentSettings settings, ArticleDirectory articles, EventMembership membership,
 			TransactionTemplate transaction) {
-		this(queue, intake, features, events, assignments, criteriaHistory, criteria, articles, membership, transaction,
-				InstantSource.system());
+		this(queue, intake, features, events, assignments, criteriaHistory, settings.criteria(), articles, membership,
+				transaction, InstantSource.system());
 	}
 
 	/** 시험이 시계를 넣는다 */

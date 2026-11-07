@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.time.Duration;
 import java.util.List;
 
+import net.yozmnews.event.AssignmentCriteria;
 import net.yozmnews.event.DecidedBy;
 import net.yozmnews.event.domain.assignment.Decision.Ask;
 import net.yozmnews.event.domain.assignment.Decision.Attach;

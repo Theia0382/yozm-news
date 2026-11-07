@@ -11,8 +11,8 @@ import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import net.yozmnews.event.AssignmentCriteria;
 import net.yozmnews.event.EventStatus;
-import net.yozmnews.event.domain.assignment.AssignmentCriteria;
 import net.yozmnews.event.domain.assignment.AssignmentRule;
 import net.yozmnews.event.domain.assignment.AssignmentSchedule;
 import net.yozmnews.event.domain.assignment.CriteriaRepository;
@@ -69,9 +69,10 @@ public class RejudgementRound {
 
 	@Autowired
 	RejudgementRound(EventArticleRepository assignments, EventRepository events, MatchFeaturesRepository features,
-			CriteriaRepository criteriaHistory, AssignmentCriteria criteria, EventShrinkWriter shrinks,
+			CriteriaRepository criteriaHistory, AssignmentSettings settings, EventShrinkWriter shrinks,
 			TransactionTemplate transaction) {
-		this(assignments, events, features, criteriaHistory, criteria, shrinks, transaction, InstantSource.system());
+		this(assignments, events, features, criteriaHistory, settings.criteria(), shrinks, transaction,
+				InstantSource.system());
 	}
 
 	/** 시험이 시계를 넣는다 */
