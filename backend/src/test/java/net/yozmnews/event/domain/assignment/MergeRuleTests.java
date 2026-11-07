@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Instant;
 
-import net.yozmnews.event.domain.event.EventStatus;
+import net.yozmnews.event.EventStatus;
 import net.yozmnews.event.domain.event.LockedEvent;
 import org.junit.jupiter.api.Test;
 

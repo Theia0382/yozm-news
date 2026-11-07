@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 
 import java.util.List;
 
+import net.yozmnews.event.DecidedBy;
 import net.yozmnews.event.domain.assignment.Reassignment.Keep;
 import net.yozmnews.event.domain.assignment.Reassignment.Move;
 import net.yozmnews.event.domain.assignment.Reassignment.Restamp;

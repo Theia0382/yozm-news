@@ -6,10 +6,12 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import net.yozmnews.article.ArticleContent;
 import net.yozmnews.article.ArticleDirectory;
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.source.SourceId;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 
@@ -42,6 +44,11 @@ class FakeArticleDirectory implements ArticleDirectory {
 
 	@Override
 	public List<ArticleId> firstSeenSince(Instant since) {
+		throw new UnsupportedOperationException("운영자 컨트롤러는 부르지 않는다");
+	}
+
+	@Override
+	public Map<ArticleId, Set<SourceId>> sources(Collection<ArticleId> ids) {
 		throw new UnsupportedOperationException("운영자 컨트롤러는 부르지 않는다");
 	}
 

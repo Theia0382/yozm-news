@@ -1,5 +1,6 @@
 package net.yozmnews.event.domain.assignment;
 
+import net.yozmnews.event.DecidedBy;
 import org.jspecify.annotations.Nullable;
 
 /**

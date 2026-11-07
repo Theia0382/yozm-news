@@ -4,6 +4,9 @@ import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+
+import net.yozmnews.source.SourceId;
 
 /**
  * 다른 모듈이 기사를 읽는 조회 — docs/specs/article.md §3.
@@ -25,5 +28,11 @@ public interface ArticleDirectory {
 	 * @return 기사 ID — ID 순
 	 */
 	List<ArticleId> firstSeenSince(Instant since);
+
+	/**
+	 * 기사들의 엔트리 소스를 읽는다 — 사건 묶기가 큰 사건의 서로 다른 소스 수를 센다(event-R15).
+	 * @return 기사 ID → 그 기사의 엔트리가 가진 소스 — 엔트리가 없는(지운) 기사는 빠진다. 빈 입력이면 빈 맵
+	 */
+	Map<ArticleId, Set<SourceId>> sources(Collection<ArticleId> ids);
 
 }

@@ -6,6 +6,8 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import java.time.Duration;
 import java.time.Instant;
 
+import net.yozmnews.event.EventStatus;
+
 import org.junit.jupiter.api.Test;
 
 /**

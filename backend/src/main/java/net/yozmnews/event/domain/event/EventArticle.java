@@ -4,7 +4,7 @@ import java.time.Instant;
 import java.util.Objects;
 
 import net.yozmnews.article.ArticleId;
-import net.yozmnews.event.domain.assignment.DecidedBy;
+import net.yozmnews.event.DecidedBy;
 import org.jspecify.annotations.Nullable;
 
 /**

@@ -33,7 +33,7 @@ import net.yozmnews.event.domain.assignment.StoredCandidate;
 import net.yozmnews.event.domain.event.EventArticle;
 import net.yozmnews.event.domain.event.EventArticleRepository;
 import net.yozmnews.event.domain.event.EventRepository;
-import net.yozmnews.event.domain.event.EventStatus;
+import net.yozmnews.event.EventStatus;
 import net.yozmnews.event.domain.event.LockedEvent;
 import net.yozmnews.event.domain.event.MergeSubject;
 import org.jspecify.annotations.Nullable;

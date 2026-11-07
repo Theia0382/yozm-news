@@ -11,6 +11,7 @@ import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import net.yozmnews.event.EventStatus;
 import net.yozmnews.event.domain.assignment.AssignmentCriteria;
 import net.yozmnews.event.domain.assignment.AssignmentRule;
 import net.yozmnews.event.domain.assignment.AssignmentSchedule;
@@ -22,7 +23,6 @@ import net.yozmnews.event.domain.event.EventArticle;
 import net.yozmnews.event.domain.event.EventArticleRepository;
 import net.yozmnews.event.domain.event.EventRepository;
 import net.yozmnews.event.domain.event.EventShrink;
-import net.yozmnews.event.domain.event.EventStatus;
 import net.yozmnews.event.domain.event.LockedEvent;
 import net.yozmnews.event.domain.event.RejudgeTarget;
 import net.yozmnews.event.domain.feature.MatchFeatures;

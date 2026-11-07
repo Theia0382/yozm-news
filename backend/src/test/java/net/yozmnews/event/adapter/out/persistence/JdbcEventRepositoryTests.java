@@ -14,8 +14,8 @@ import java.util.Map;
 
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.event.EventStatus;
 import net.yozmnews.event.domain.assignment.EventSnapshot;
-import net.yozmnews.event.domain.event.EventStatus;
 import net.yozmnews.event.domain.event.LockedEvent;
 import net.yozmnews.event.domain.event.MergeSubject;
 import org.junit.jupiter.api.Test;

@@ -129,7 +129,10 @@ public record FormatChoice(String question, List<FormatOption> options) {}
 
 public record FormatOption(String key, String name, String description, boolean excludedByDefault) {}
 
-public record ImportanceScale(String question, List<ImportanceLevel> levels) {}
+public record ImportanceScale(String question, List<ImportanceLevel> levels) {
+    public static final int MIN_LEVEL = 1;      // 정본(evaluation-R7)
+    public static final int MAX_LEVEL = 5;
+}
 
 public record ImportanceLevel(int level, String description) {}
 ```
@@ -144,7 +147,7 @@ public record ImportanceLevel(int level, String description) {}
 | `TagSetView.regions` | 지역 태그 — 파일에 적힌 순서 | 1개 이상(evaluation-R7) |
 | `FormatChoice` | 형식 Choice 질문과 그 선택지 — 파일에 적힌 순서 | 선택지 2개 이상(evaluation-R7) |
 | `FormatOption.excludedByDefault` | 기본 제외 형식인가 | — |
-| `ImportanceScale` | 중요도 Score 질문과 수준별 기준 — 수준 순 | 수준 1 ~ 5 가 하나씩(evaluation-R7) |
+| `ImportanceScale` | 중요도 Score 질문과 수준별 기준 — 수준 순. `MIN_LEVEL` · `MAX_LEVEL` 은 수준 범위의 정본 — `event` 의 큰 사건 중요도 기준도 이 범위를 쓴다 | 수준 `MIN_LEVEL` ~ `MAX_LEVEL`(1 ~ 5)이 하나씩(evaluation-R7) |
 
 관련 규칙: evaluation-R6 ~ evaluation-R9.
 
@@ -242,7 +245,7 @@ public record ThresholdChangeView(MultiTagKind kind, @Nullable BigDecimal previo
 | `STORE_THRESHOLD_LOWERED` | 저장 기준을 지금 값보다 낮췄다 — 이전 기사에는 낮춘 구간의 확률이 없다 |
 | `TAG_BELOW_PAST_STORE` | 태그 기준을 내렸고 새 값이 지난 저장 기준 최댓값(evaluation-R32)보다 낮다 — 그보다 높은 저장 기준으로 저장된 평가에는 그 구간 태그가 붙지 않는다 |
 | `TAG_BELOW_STORE` | 이번 변경으로 태그 기준이 저장 기준보다 낮아졌다 — 그 구간 확률은 저장되지 않아 붙지 않는다 |
-| `ChangeActor` | 행위자 — 시스템 · 운영자 |
+| `ChangeActor` | 운영 설정을 정한 행위자 — 시스템 · 운영자. 태그 기준 · 저장 기준과 `event` 의 큰 사건 기준(event-R21)이 이력에 남긴다 |
 | `ThresholdChangeView` | 이력 한 행 — 이전 값(처음 값이면 null) · 새 값 · 행위자 · 시각 |
 
 관련 규칙: evaluation-R11 ~ evaluation-R13.
@@ -363,12 +366,14 @@ public record TagSetVersionView(TagSetId id, int number, boolean active, ChangeA
 ```java
 public interface ArticleEvaluations {
     Optional<ArticleEvaluationView> find(ArticleId articleId);
+    Map<ArticleId, Double> importances(Collection<ArticleId> articleIds);
 }
 ```
 
 | 멤버 | 뜻 |
 |---|---|
 | `find` | 기사의 평가 — 평가하지 않은 기사면 빈 값. 평가가 여러 버전이면 버전 번호가 가장 큰 것 — 버전은 앞으로만 켜므로 기사를 평가한 버전 가운데 가장 최근에 활성이던 것이다(evaluation-R16). 태그 키는 그 평가 버전의 키다 — 활성 버전의 키로 풀려면 `TagKeyLineage` |
+| `importances` | 기사들의 중요도 기대값(1 ~ 5) — `find` 와 같은 평가(버전 번호가 가장 큰 것)의 값. 평가하지 않았거나 그 평가의 중요도가 없으면 빠진다 — 이전 버전의 값으로 내려가지 않는다. 빈 입력이면 빈 맵. `event` 가 큰 사건의 중요도 평균을 센다(질의 하나) |
 
 - 계약
   - 붙었는지는 조회할 때 그 평가의 체계 버전과 그 버전의 지금 태그 기준 · 저장 기준으로 판정한다 — 태그 기준 · 저장 기준을 바꿔도 다시 평가하거나 데이터를 다시 쓰지 않는다(evaluation-R15)
@@ -1088,6 +1093,7 @@ sequenceDiagram
       boolean exists(ArticleId articleId, TagSetId tagSetId);
       void insert(EvaluationRecord record);                            // 평가 행 + 태그 행 — 기사 · 버전마다 하나
       Optional<StoredEvaluation> findLatest(ArticleId articleId);      // 버전 번호가 가장 큰 평가와 그 태그 행
+      Map<ArticleId, Double> findLatestImportances(Collection<ArticleId> articleIds);  // 기사마다 버전 번호가 가장 큰 평가의 중요도 — 없거나 null 이면 빠진다
       void streamVersionPeriod(TagSetId version, Instant from, Instant to,
               Consumer<EvaluationSample> sink);                         // 그 버전 · 평가 시각 [from, to) — 평가 ID 순
       void streamFirstEvaluatedIn(Instant from, Instant to,
@@ -1291,7 +1297,7 @@ public record Membership(Map<Long, Double> probabilities, String evaluator, Stri
 - `TagSetRepository` 는 Spring Data JDBC 저장소다. 표 잠금은 `LOCK TABLE tag_sets IN SHARE ROW EXCLUSIVE MODE`(`lockForChange`) · `IN SHARE MODE`(`lockAgainstChange`) 다. 행 잠금(`FOR SHARE`)을 쓰지 않는 것은, READ COMMITTED 에서 전환을 기다린 문장이 다시 평가할 때 끈 옛 행만 보고 새 활성 행은 보지 못하기 때문이다. `deactivate` 는 조건부 갱신(`… where id = :id and active`)이다
 - `JdbcTagBackfillRepository` — `TagBackfillRepository` 의 PostgreSQL 구현(JdbcClient). 넣기는 끝나지 않은 행의 부분 고유 인덱스에 `INSERT … ON CONFLICT DO NOTHING RETURNING id` 로 판정한다 — 위반 예외는 트랜잭션을 깨므로 쓰지 않는다. 잠금은 `FOR UPDATE SKIP LOCKED`, 회차의 쓰기는 점유 토큰을 조건으로 한 갱신이다. 덮음은 끝났고 그 버전에서 건너뛴 평가가 없는 채움만 읽는다
 - `JdbcEvaluationQueueRepository` — `EvaluationQueueRepository` 의 PostgreSQL 구현(JdbcClient). 넣기는 `INSERT … ON CONFLICT DO NOTHING`, 재평가는 `INSERT … SELECT unnest(…) ON CONFLICT … DO UPDATE … WHERE failure IS NOT NULL` 한 문장, 잠금은 `FOR UPDATE SKIP LOCKED`, 회차의 반영은 점유 토큰을 조건으로 한 갱신 · 삭제다. 평가 가능 시각의 정착 시간은 `EvaluationSchedule` 이 정한다 — SQL 에 값을 두지 않는다
-- `JdbcEvaluationResultRepository` — `EvaluationResultRepository` 의 PostgreSQL 구현(JdbcClient). 분포 · 원본 응답은 `jsonb` 로 쓰고, 지우기는 평가 행을 평가 ID 순으로 `FOR UPDATE` 로 잠근 뒤 태그 행 → 평가 행 순이다(evaluation-R21). 채움의 잠금 읽기는 `ORDER BY id LIMIT … FOR KEY SHARE`, 태그 더하기는 `INSERT … ON CONFLICT (evaluation_id, tag_kind, tag_key) DO NOTHING` 이다. 잠금 읽기의 묶음은 그새 지워진 평가 때문에 비지 않는다 — PostgreSQL 의 잠금 절은 "If a LIMIT is used, locking stops once enough rows have been returned to satisfy the limit"이고, 다시 평가해 돌려주지 않는 행은 그 수에 들지 않는다([PostgreSQL 18 SELECT — The Locking Clause](https://www.postgresql.org/docs/18/sql-select.html#SQL-FOR-UPDATE-SHARE)). 원본 응답은 `raw_response::text` 로 꺼낸다 — 공백 · 키 순서는 원문과 다르고 수치는 자릿수를 지킨다. 흘려 받기 둘은 SQL 한 문장을 `STREAM_FETCH_SIZE`(1,000행) 커서로 받아 평가마다 태그 행을 묶는 보조 하나를 함께 쓴다 — PgJDBC 는 트랜잭션 안(autocommit 꺼짐)에서 fetch size 가 있을 때만 나눠 받는다. 최신 평가 고르기의 정렬(`LATEST_VERSION_FIRST` — 버전 번호 내림차순)은 `findLatest` 와 첫 평가 흘려 받기가 함께 쓴다
+- `JdbcEvaluationResultRepository` — `EvaluationResultRepository` 의 PostgreSQL 구현(JdbcClient). 분포 · 원본 응답은 `jsonb` 로 쓰고, 지우기는 평가 행을 평가 ID 순으로 `FOR UPDATE` 로 잠근 뒤 태그 행 → 평가 행 순이다(evaluation-R21). 채움의 잠금 읽기는 `ORDER BY id LIMIT … FOR KEY SHARE`, 태그 더하기는 `INSERT … ON CONFLICT (evaluation_id, tag_kind, tag_key) DO NOTHING` 이다. 잠금 읽기의 묶음은 그새 지워진 평가 때문에 비지 않는다 — PostgreSQL 의 잠금 절은 "If a LIMIT is used, locking stops once enough rows have been returned to satisfy the limit"이고, 다시 평가해 돌려주지 않는 행은 그 수에 들지 않는다([PostgreSQL 18 SELECT — The Locking Clause](https://www.postgresql.org/docs/18/sql-select.html#SQL-FOR-UPDATE-SHARE)). 원본 응답은 `raw_response::text` 로 꺼낸다 — 공백 · 키 순서는 원문과 다르고 수치는 자릿수를 지킨다. 흘려 받기 둘은 SQL 한 문장을 `STREAM_FETCH_SIZE`(1,000행) 커서로 받아 평가마다 태그 행을 묶는 보조 하나를 함께 쓴다 — PgJDBC 는 트랜잭션 안(autocommit 꺼짐)에서 fetch size 가 있을 때만 나눠 받는다. 최신 평가 고르기의 정렬(`LATEST_VERSION_FIRST` — 버전 번호 내림차순)은 `findLatest` · `findLatestImportances`(`distinct on` 으로 기사마다 하나를 고른 뒤 null 을 거른다)와 첫 평가 흘려 받기가 함께 쓴다
 - `JdbcEventJudgementRepository` — `EventJudgementRepository` 의 PostgreSQL 구현(JdbcClient). 물은 후보 · 원본 응답은 `jsonb` 로 쓰고, 지우기는 `DELETE … WHERE article_id = any(…)` 한 문장이다 — 이 행을 잠그는 다른 쓰기가 없어 잠금 순서가 필요 없다(evaluation-R21)
 
 #### 신뢰할 수 없는 입력

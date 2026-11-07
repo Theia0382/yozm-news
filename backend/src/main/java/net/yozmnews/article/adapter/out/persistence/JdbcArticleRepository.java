@@ -12,9 +12,11 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import net.yozmnews.article.ArticleContent;
 import net.yozmnews.article.ArticleEntryView;
@@ -209,6 +211,25 @@ class JdbcArticleRepository implements ArticleRepository {
 						entries.getOrDefault(id.value(), List.of())));
 			});
 		return Collections.unmodifiableMap(contents);
+	}
+
+	@Override
+	public Map<ArticleId, Set<SourceId>> findSources(Collection<ArticleId> articleIds) {
+		if (articleIds.isEmpty()) {
+			return Map.of();
+		}
+		Map<ArticleId, Set<SourceId>> sources = new LinkedHashMap<>();
+		this.jdbc.sql("""
+				select article_id, source_id from article_feed_entries
+				where article_id = any(:ids)
+				order by article_id, source_id
+				""").param("ids", ids(articleIds)).query((ResultSet rs) -> {
+					sources.computeIfAbsent(new ArticleId(rs.getLong("article_id")), id -> new LinkedHashSet<>())
+						.add(new SourceId(rs.getLong("source_id")));
+				});
+		Map<ArticleId, Set<SourceId>> result = new LinkedHashMap<>();
+		sources.forEach((article, ofArticle) -> result.put(article, Collections.unmodifiableSet(ofArticle)));
+		return Collections.unmodifiableMap(result);
 	}
 
 	@Override

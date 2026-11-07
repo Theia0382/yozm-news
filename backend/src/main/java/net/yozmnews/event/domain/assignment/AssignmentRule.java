@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+import net.yozmnews.event.DecidedBy;
+
 /**
  * 배정 판정의 정본 — 처음 판정과 재판정이 같은 함수를 쓴다 · docs/specs/event.md §4 · event-R11 · event-R18.
  * <ol>

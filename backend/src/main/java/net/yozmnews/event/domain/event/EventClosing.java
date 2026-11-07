@@ -4,6 +4,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
 
+import net.yozmnews.event.EventStatus;
+
 /**
  * 사건 닫기 판정의 정본 — 마지막으로 기사가 붙은 뒤 닫는 기간이 지났거나, 연 뒤 최대 기간이 지난 열린 사건을 닫는다 · docs/specs/event.md §4 ·
  * event-R13.
