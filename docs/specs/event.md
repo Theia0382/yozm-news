@@ -14,6 +14,7 @@
 - **지운 기사 따르기** — `article` 이 기사를 지우면 그 기사의 대기 행 · 배정 · 후보 · 표현을 지우고 사건을 다시 맞춘다(event-R8)
 - **사건 정리** — 같은 반복 작업이 바뀐 열린 사건을 가까운 열린 사건과 합치고(배정 산식 · 판정, 애매한 구간은 사건 소속 판정), 하루 1회 정리 작업이 오래된 사건을 대표 기사와 함께 닫고, 닫힌 사건에 장기 검색 인덱스를 두고, 다 쓴 기사 표현을 지운다(event-R13, [ADR-0084](../adr/0084-event-merge-applies-assignment-scoring-between-events-and-keeps-merged-rows-pointing-to-survivors.md) · [ADR-0086](../adr/0086-events-close-after-an-idle-period-since-the-last-join-or-a-maximum-period-since-opening.md) · [ADR-0087](../adr/0087-closed-event-assignments-are-not-rejudged-and-closing-and-merging-are-not-undone.md) · [ADR-0088](../adr/0088-article-features-kept-until-their-event-closes-and-unassigned-ones-for-the-window-plus-a-margin.md) · [ADR-0089](../adr/0089-long-term-hnsw-indexes-on-closed-events-created-per-model-version-at-runtime-by-the-worker-role.md))
 - **사건 조회 · 대표 기사 · 큰 사건** — 사건 · 사건의 기사 · 기사의 사건 · 사건 목록을 공개 조회(`EventDirectory`)로 내고, 주어진 기사 가운데 대표 기사를 고르고, 기간 안의 큰 사건을 조회할 때 지금 기준으로 판정한다(event-R14 · R15 · R20, [ADR-0082](../adr/0082-big-events-judged-at-query-time-by-distinct-sources-and-mean-importance-both-reaching-criteria.md))
+- **운영자 사건 조회** — 운영자 화면에 사건 배정 기준 · 이 사건으로 합쳐진 사건 · 사건 소속 판정 원본의 쓰임을 공개 조회(`EventReview`)로 낸다. 배정 · 병합 판정 기록은 반영한 판정 원본의 ID 를 남겨, 판정의 쓰임과 지금 결과를 잇는다(event-R12 · R13 · R22, [ADR-0094](../adr/0094-event-membership-judgements-identified-by-id-read-by-operators-and-referenced-by-the-records-that-apply-them.md))
 - **큰 사건 기준** — 운영자 설정(지금 값 한 행)과 추가 전용 이력으로 두고, 기동 때 처음 값을 적재하고, 공개 운영 API(`BigEventAdministration`)로 지금 값 · 변경 · 이력 · 미리보기를 낸다(event-R21, [ADR-0083](../adr/0083-big-event-criteria-as-operator-settings-with-append-only-history-and-preview.md))
 
 하지 않는 것:
@@ -57,14 +58,15 @@
 | 최대 기간 | 사건을 연 뒤 이만큼 지나면 새 기사가 있어도 닫는다 — 설정(event-R13) |
 | 정리 작업 | 하루 1회 반복 작업 — 닫기 · 장기 검색 인덱스 · 기사 표현 정리를 차례로 한다(event-R13) |
 | 장기 검색 인덱스 | 닫힌 사건 중심의 HNSW 인덱스 — 모델 버전마다 하나이고, 정리 작업이 실행 중에 만든다(event-R13) |
-| 조회 기간 | 사건 조회 · 큰 사건 판정이 받는 기간 — 시작 포함 · 끝 제외, 31일까지(`EventPeriod`). 기간 안 기사는 배정의 발행 시각으로 고른다(event-R20) |
+| 조회 기간 | 사건 조회 · 큰 사건 판정이 받는 기간 — 시작 포함 · 끝 제외, 날짜 31일까지(`EventPeriod` — 시각 범위는 시간대 전환 여유로 32일까지). 기간 안 기사는 배정의 발행 시각으로 고른다(event-R20) |
 | 사건 집계 | 조회 기간 안 기사 수 · 그 기사들의 서로 다른 소스 수 · 중요도 평균(`EventTally`) — 큰 사건 판정의 재료(event-R15) |
 | 큰 사건 기준 | 소스 기준(서로 다른 소스 수의 하한)과 중요도 기준(중요도 평균의 하한) — 운영자 설정(event-R21) |
 | 대표 기사 | 주어진 기사 가운데 사건 중심에 가장 가까운 기사 — 사건 기사 전체에서 고를 때는 닫을 때 남긴 대표가 있으면 그것(event-R14) |
+| 판정 원본의 쓰임 | `evaluation` 의 사건 소속 판정 원본을 반영한 기록 — 배정 판정이면 그 판정으로 쓴 배정, 병합 판정이면 그 판정으로 남긴 병합 판정 기록. 기록이 원본 ID 를 가리키고, 가리키는 기록이 없는 원본은 반영되지 않은 것이다(event-R22) |
 
 ## 3. 공개 인터페이스
 
-이 모듈은 `article` 의 이벤트를 받고, 공개 조회 하나(`EventDirectory`)와 공개 운영 API 둘(`EventIntakeAdministration` · `BigEventAdministration`)을 낸다. 조회는 `digest` · `report` · `admin` 이 쓰고, 운영 API 는 `admin` 이 운영자 요청으로 부른다([ADR-0045](../adr/0045-admin-module-serves-operator-api-over-module-public-operation-apis.md)).
+이 모듈은 `article` 의 이벤트를 받고, 공개 조회 둘(`EventDirectory` · 운영자 화면의 `EventReview`)과 공개 운영 API 둘(`EventIntakeAdministration` · `BigEventAdministration`)을 낸다. `EventDirectory` 는 `digest` · `report` · `admin` 이 쓰고, `EventReview` 와 운영 API 는 `admin` 이 운영자 요청으로 부른다([ADR-0045](../adr/0045-admin-module-serves-operator-api-over-module-public-operation-apis.md)).
 
 ### EventIntakeAdministration · IntakeFillResult
 
@@ -104,6 +106,7 @@ public interface EventDirectory {
     List<EventArticleView> articles(EventId id);
     Map<ArticleId, EventId> eventsOf(Collection<ArticleId> articleIds);
     Map<EventId, ArticleId> representatives(Map<EventId, ? extends Collection<ArticleId>> among);
+    Map<EventId, ArticleId> representativesOfAll(Collection<EventId> events);
     List<BigEvent> bigEvents(EventPeriod period);
     EventPage list(EventPeriod period, @Nullable EventCursor after, int size);
 }
@@ -114,7 +117,8 @@ public interface EventDirectory {
 | `find` | 사건 하나 — 합쳐진 사건의 ID 면 남는 사건을 낸다(event-R13 · R20). 없는 사건이면 빈 값 |
 | `articles` | 사건의 배정 전부 — 발행 시각 · 기사 ID 순. 없는 사건이나 합쳐진 사건이면 빈 목록이다 — 합쳐진 사건의 기사는 남는 사건에 있으므로, 합쳐진 사건일 수 있는 ID 는 먼저 `find` 로 남는 사건을 얻는다(event-R20) |
 | `eventsOf` | 기사들의 사건 — 배정이 없는 기사는 빠진다. 빈 입력이면 빈 맵 |
-| `representatives` | 사건마다 주어진 기사 가운데 대표 기사(event-R14) — 그 사건의 기사가 아닌 것은 무시하고, 남는 기사가 없는 사건은 빠진다 |
+| `representatives` | 사건마다 주어진 기사 가운데 대표 기사(event-R14) — 그 사건의 기사가 아닌 것은 무시하고, 남는 기사가 없는 사건은 빠진다. 닫을 때 남긴 대표는 쓰지 않는다 |
+| `representativesOfAll` | 사건마다 사건 기사 전체에서 고른 대표 기사(event-R14) — 닫을 때 남긴 대표가 있으면 그것이고, `list` 의 대표와 같은 정본이다. 배정이 없는 사건(합쳐진 사건 포함) · 없는 사건은 빠지고, 빈 입력이면 빈 맵 |
 | `bigEvents` | 조회 기간 안의 큰 사건 — 지금 기준으로 판정한다(event-R15). 소스 수 내림차순, 중요도 평균 내림차순, 사건 ID 순 |
 | `list` | 조회 기간 안 기사가 있는 사건 — 마지막 기사 시각 내림차순, 사건 ID 내림차순으로 `size` 건. 집계 · 큰 사건 여부는 그 기간, 대표 기사는 사건 기사 전체에서(닫을 때 남긴 대표가 있으면 그것 — event-R14). `size` 가 1 ~ `MAX_PAGE_SIZE` 밖이면 `IllegalArgumentException` |
 
@@ -130,9 +134,10 @@ public interface EventDirectory {
 public record EventId(long value) {}                     // 1 이상 — 아니면 IllegalArgumentException
 
 public record EventPeriod(Instant from, Instant to) {    // [from, to)
-    public static final int MAX_DAYS = 31;               // 정본. 측정 전 목표
-    public static final Duration MAX_LENGTH = Duration.ofDays(MAX_DAYS);
+    public static final int MAX_DAYS = 31;               // 날짜 범위의 상한 — 정본. 측정 전 목표
+    public static final Duration MAX_LENGTH = DayRange.maxLength(MAX_DAYS);   // 시각 범위의 상한 — 32일
     public static Optional<EventPeriod> of(Instant from, Instant to);
+    public static Optional<EventPeriod> ofDays(LocalDate first, LocalDate last, ZoneId zone);
 }
 
 public record EventView(EventId id, EventStatus status, int articleCount, Instant firstArticleAt, Instant lastArticleAt,
@@ -147,7 +152,8 @@ public enum DecidedBy { FORMULA, EVALUATOR, JUDGEMENT_FAILED }
 
 | 타입 · 필드 | 뜻 |
 |---|---|
-| `EventPeriod` | 조회 기간 — 생성자는 `from < to` 이고 길이가 `MAX_LENGTH` 이하가 아니면 `IllegalArgumentException`, `of` 는 빈 값 |
+| `EventPeriod` | 조회 기간 — 생성자는 `from < to` 이고 길이가 `MAX_LENGTH`(날짜 `MAX_DAYS` 일에 시간대 전환 여유로 하루를 더한 것 — `platform` 의 `DayRange.maxLength`) 이하가 아니면 `IllegalArgumentException`, `of` 는 빈 값 |
+| `EventPeriod.ofDays` | 날짜 범위 `[first 의 그 시간대 자정, last 다음 날의 그 시간대 자정)` — 변환은 `platform` 의 `DayRange.of`([platform Spec §3](platform.md#3-공개-인터페이스)). 날짜 수가 1 ~ `MAX_DAYS` 가 아니거나 시각 범위를 만들 수 없으면 빈 값(event-R20) |
 | `EventView.articleCount` · `firstArticleAt` · `lastArticleAt` | 사건 전체의 기사 수 · 첫 · 마지막 기사 시각(기간과 무관) |
 | `EventView.createdAt` | 사건을 연 시각 — 다른 사건을 합친 사건은 두 사건 가운데 이른 쪽(event-R13) |
 | `EventArticleView.score` | 붙인 후보의 점수, 새 사건이면 가장 높은 후보의 점수 — 후보가 없었으면 null(event-R12) |
@@ -216,32 +222,70 @@ public sealed interface BigEventCriteriaChangeResult {
 
 HTTP 엔드포인트는 없다.
 
+### EventReview · AssignmentCriteria · MergedEvent · JudgementUse · MergePair
+
+운영자 화면의 사건 조회 — 사건 배정 기준 · 합쳐진 사건 · 판정 원본의 쓰임(event-R13 · R17 · R22). 구현은 `application` 의 `EventReviewService` 다.
+
+```java
+public interface EventReview {
+    AssignmentCriteria assignmentCriteria();
+    List<MergedEvent> mergedInto(EventId survivor);
+    Map<EventJudgementId, JudgementUse> judgementUses(Collection<EventJudgementId> judgements);
+}
+
+public record AssignmentCriteria(Duration window, double upper, double lower, double store, double probability) {}
+public record MergedEvent(EventId id, int articleCount, Instant firstArticleAt, Instant lastArticleAt,
+        Instant createdAt, Instant mergedAt, @Nullable Double probability) {}
+
+public sealed interface JudgementUse {
+    record Assignment(ArticleId articleId, EventId event, DecidedBy decidedBy) implements JudgementUse {}
+    record Merge(List<MergePair> pairs) implements JudgementUse {}
+}
+public record MergePair(EventId low, EventId high, double probability, @Nullable EventId survivor) {}
+```
+
+| 타입 · 멤버 | 뜻 |
+|---|---|
+| `assignmentCriteria` | 이 프로세스의 사건 기준 · 저장 기준 — 설정이다(event-R17). 화면 역할과 작업 역할을 나눠 띄우면 화면 프로세스의 설정이다 |
+| `AssignmentCriteria` | 시간 창(0 보다 큰 초 단위) · 위 · 아래 · 저장 · 확률 기준 — 생성자는 `0 ≤ store ≤ lower ≤ upper ≤ 1`, `0 < probability ≤ 1` 을 어기면 `IllegalArgumentException`(event-R17). 배정 · 재판정 · 병합 회차도 이 값을 쓴다 |
+| `mergedInto` | 이 사건으로 합쳐진 사건 — 합친 시각 · 사건 ID 순. 남는 사건이 아니거나 없는 사건이면 빈 목록 |
+| `MergedEvent` | 합쳐진 사건 하나 — 기사 수 · 시각은 합칠 때의 값, `mergedAt` 은 열림이 끝난 시각. `probability` 는 (그 사건, 지금 남는 사건) 쌍의 병합 판정 기록 — 기록이 없으면 null(위 기준 이상으로 산식이 합쳤거나, 다른 사건을 거쳐 합쳐져 가리킴이 평평해졌으면 그 쌍의 기록이 없다) |
+| `judgementUses` | 판정 원본을 반영한 기록(event-R22) — 원본 ID → 쓰임. 가리키는 기록이 없는 원본은 빠진다. 빈 입력이면 빈 맵. 한 원본을 배정과 병합 판정 기록이 함께 가리키거나 배정 둘이 가리키면 `IllegalStateException` — 불변식 위반이다 |
+| `JudgementUse.Assignment` | 배정 판정 — 그 기사의 지금 사건 · 정한 것(재판정 · 병합 뒤 값) |
+| `JudgementUse.Merge` | 병합 판정 — 그 판정으로 남긴 쌍들((작은 ID, 큰 ID) 순, 하나 이상) |
+| `MergePair.survivor` | 두 사건이 지금 같은 사건(합쳐진 사건은 남는 사건으로 읽는다)이면 그 사건, 아니면 null |
+
+- 계약
+  - 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통). 각 질의는 그 순간의 값이다
+  - 사용자 정보를 받지 않는다
+  - 판정 원본 ID(`EventJudgementId`)는 `evaluation` 의 공개 값이다 — 의존 방향은 `event` → `evaluation` 그대로다
+
 ## 4. 내부 구조
 
 ### 개관
 
 | 패키지 | 책임 |
 |---|---|
-| (최상위) | 모듈 선언(`package-info`), 공개 조회 `EventDirectory` 와 그 값 타입, 공개 운영 API `EventIntakeAdministration` · `BigEventAdministration` 과 그 결과 · 값 타입, 사건 상태 · 배정을 정한 것(`EventStatus` · `DecidedBy`) |
+| (최상위) | 모듈 선언(`package-info`), 공개 조회 `EventDirectory` · `EventReview` 와 그 값 타입, 공개 운영 API `EventIntakeAdministration` · `BigEventAdministration` 과 그 결과 · 값 타입, 사건 상태 · 배정을 정한 것(`EventStatus` · `DecidedBy`), 사건 기준 · 저장 기준(`AssignmentCriteria`) |
 | `domain/feature` | 기사 표현 — 임베더 포트와 그 정보 · 벡터 값, 표현 텍스트 구성 · 핵심 말 추출 · 임베더 결과 확인 · 표현 보관 기준의 정본, 표현 행과 그 저장소 |
 | `domain/intake` | 사건 묶기 대기 — 대기 행과 그 점유, 대기 상수, 대기 저장소 |
-| `domain/assignment` | 사건 배정의 판단 — 기준, 후보 점수 산식, 판정 규칙, 사건 대 사건 규칙(병합), 재판정 적용 규칙, 저장 후보 모으기, 중심 누적 갱신 · 합치기, 배정 대기 행과 그 일정, 배정 대기 · 기준 이력 · 병합 판정 기록 저장소 |
+| `domain/assignment` | 사건 배정의 판단 — 후보 점수 산식, 판정 규칙, 사건 대 사건 규칙(병합), 재판정 적용 규칙, 저장 후보 모으기, 중심 누적 갱신 · 합치기, 배정 대기 행과 그 일정, 배정 대기 · 기준 이력 · 병합 판정 기록 저장소 |
 | `domain/event` | 사건과 배정 — 잠근 사건 행과 기사 하나 더하기 · 사건 합치기, 기사를 뺀 사건의 새 값, 닫기 판정, 병합 회차가 읽는 사건, 배정 행, 사건 · 배정 저장소, 장기 검색 인덱스, 사건 조회 저장소 |
 | `domain/bigevent` | 큰 사건 — 판정 규칙 · 순서, 사건 집계, 큰 사건 기준 저장소 |
-| `application` | 기사 이벤트 리스너, 표현 · 배정 · 재판정 · 병합 회차, 정리 작업, 기사를 뺀 사건 쓰기, 기준 설정과 결선, 공개 조회 · 공개 운영 API 의 구현, 사건 집계 읽기, 큰 사건 기준의 처음 값 적재, 핵심 말 추출기의 결선 |
+| `application` | 기사 이벤트 리스너, 표현 · 배정 · 재판정 · 병합 회차, 정리 작업, 기사를 뺀 사건 쓰기, 기준 설정과 결선(기준을 운반하는 빈), 공개 조회 · 공개 운영 API 의 구현, 사건 집계 읽기, 큰 사건 기준의 처음 값 적재, 핵심 말 추출기의 결선 |
 | `adapter/in/job` | 사건 묶기 대기 반복 작업(작업 역할) — 네 회차를 차례로, 사건 정리 반복 작업(작업 역할) — 하루 1회 |
 | `adapter/out/persistence` | 대기 · 표현 · 배정 대기 · 기준 이력 · 병합 판정 기록 · 사건 · 배정 · 사건 조회 · 큰 사건 기준 저장소와 장기 검색 인덱스의 JdbcClient 구현, "중심에 가까운 순" 정렬 조각, 벡터의 pgvector 텍스트 표현 |
 | `adapter/out/fake` | 임베더 포트의 로컬 대체물과 그 결선(`local` 에서만) |
 
 협력: `EventIntakeListener` 가 `ArticleStored` 로 기사를 `IntakeQueueRepository` 에 넣고, `ArticlesRemoved` 로 대기 행과 표현 행(`MatchFeaturesRepository`)을 지운다. 작업 역할의 `IntakeArticlesJob` 이 1분마다 임베더를 찾아 있으면 `EventIntakeRound` 에 넘겨 돌린다. 회차는 `IntakeQueueRepository` 로 대기를 점유하고(`PendingArticle.claim` · `IntakeSchedule`), `article` 의 `ArticleDirectory` 로 제목 · 요약문을 읽어, 기사마다 `MatchText` 로 표현 텍스트를, `KeyTermExtractor` 로 핵심 말을 만든다. 포트 `ArticleEmbedder` 로 텍스트 묶음을 한 번에 벡터로 바꾸고 `EmbeddingCheck` 로 결과를 확인한 뒤, 기사마다 `IntakeQueueRepository.deleteIfLeased` 가 대기 행을 지웠을 때만 `MatchFeaturesRepository.insertIfAbsent` 로 표현을 쓴다. 임베더는 `local` 에서 `FakeArticleEmbedderConfiguration` 이 `FakeArticleEmbedder` 를 포트로 등록한다. `KeyTermExtractor` 는 `KeyTermConfiguration` 이 빈으로 둔다. 표현을 쓰는 같은 트랜잭션에서 `AssignmentQueueRepository.enqueue` 로 그 기사를 배정 대기에 넣는다.
 
-배정: 반복 작업이 표현 회차 다음에 `AssignmentRound` 를 돌린다. 회차는 `AssignmentQueueRepository` 로 배정 대기를 점유하고(`PendingAssignment.claim` · `AssignmentSchedule`), `CriteriaRepository` 에 지금 기준(`AssignmentCriteria` — `EventAssignmentProperties` 를 `AssignmentConfiguration` 이 빈으로 바꾼 것)을 등록하고, `ArticleDirectory` 로 발행 시각을 읽는다. 기사마다 `MatchFeaturesRepository.find` 로 지금 모델 버전의 표현을 읽어 `EventRepository.candidates` 로 후보 사건을 얻고, `CandidateScoring` 으로 점수를 매겨 `AssignmentRule` 로 판정한다. 띠면 `EventRepository.describers` 로 서술 기사를 골라 `evaluation` 의 `EventMembership` 에 묻는다. 쓰기는 `EventRepository.lock` · `update`(`LockedEvent.joined`) 또는 `open` 과 `EventArticleRepository.insertIfAbsent` 다. 이어서 `RejudgementRound` 가 `EventArticleRepository.keepClosed` 로 닫힌 사건의 배정을 기준만 새것으로 적고, `lockRejudgeTargets` 로 기준이 다른 배정을 잠가(저장 후보는 `RejudgeTarget` 이 `StoredCandidate.folded` 로 모은다) `AssignmentRule` · `Reassignment` 로 다시 판정하고, 옮기거나 떼어 내면 옛 사건을 `EventShrinkWriter` 로 쓴다. 지운 기사 따르기는 `EventIntakeListener` 가 `EventShrink` 로 사건의 새 값을 정해 `EventShrinkWriter` 로 쓰고, `EventRepository.clearRepresentative` 로 지운 기사인 대표를 비운다. 채우기는 `EventIntakeAdministrationService` 가 `ArticleDirectory.firstSeenSince` 와 `IntakeQueueRepository.enqueueUnassigned` 로 한다.
+배정: 반복 작업이 표현 회차 다음에 `AssignmentRound` 를 돌린다. 회차는 `AssignmentQueueRepository` 로 배정 대기를 점유하고(`PendingAssignment.claim` · `AssignmentSchedule`), `CriteriaRepository` 에 지금 기준(`AssignmentCriteria` — `AssignmentConfiguration` 이 `EventAssignmentProperties` 로 만든 `AssignmentSettings` 빈이 운반한다)을 등록하고, `ArticleDirectory` 로 발행 시각을 읽는다. 기사마다 `MatchFeaturesRepository.find` 로 지금 모델 버전의 표현을 읽어 `EventRepository.candidates` 로 후보 사건을 얻고, `CandidateScoring` 으로 점수를 매겨 `AssignmentRule` 로 판정한다. 띠면 `EventRepository.describers` 로 서술 기사를 골라 `evaluation` 의 `EventMembership` 에 묻는다. 쓰기는 `EventRepository.lock` · `update`(`LockedEvent.joined`) 또는 `open` 과 `EventArticleRepository.insertIfAbsent` 다 — 판정을 반영했으면 판정 원본 ID 를 배정에 함께 쓴다. 이어서 `RejudgementRound` 가 `EventArticleRepository.keepClosed` 로 닫힌 사건의 배정을 기준만 새것으로 적고, `lockRejudgeTargets` 로 기준이 다른 배정을 잠가(저장 후보는 `RejudgeTarget` 이 `StoredCandidate.folded` 로 모은다) `AssignmentRule` · `Reassignment` 로 다시 판정하고, 옮기거나 떼어 내면 옛 사건을 `EventShrinkWriter` 로 쓴다. 지운 기사 따르기는 `EventIntakeListener` 가 `EventShrink` 로 사건의 새 값을 정해 `EventShrinkWriter` 로 쓰고, `EventRepository.clearRepresentative` 로 지운 기사인 대표를 비운다. 채우기는 `EventIntakeAdministrationService` 가 `ArticleDirectory.firstSeenSince` 와 `IntakeQueueRepository.enqueueUnassigned` 로 한다.
 
-병합: 반복 작업이 재판정 회차 다음에 `MergeRound` 를 돌린다. 회차는 `CriteriaRepository` 에 지금 기준을 등록하고 `EventRepository.mergeDue` 로 바뀐 열린 사건(`MergeSubject`)을 읽는다. 사건마다 `EventRepository.candidates` 로 후보 사건을 얻어 `MergeRule.termsFromSubject` 로 핵심 말 겹침의 기준 쪽을 정하고 `CandidateScoring` 으로 점수를 매긴 뒤, `MergeJudgementRepository.find` 로 남긴 확률을 채워 `AssignmentRule` 로 판정한다. 띠면 `EventRepository.describers` 로 서술 기사를 골라 `EventMembership` 에 묻고 받은 확률을 `MergeJudgementRepository.save` 로 남긴다. 합치기는 `EventArticleRepository.lockByEvents` → `EventRepository.lockAll` → `MergeRule.survivor` → `EventArticleRepository.moveAll` → `EventRepository.absorb`(`LockedEvent.absorbed` · `CentroidUpdate.merge`)이고, 확인 표시는 `EventRepository.markMergeChecked` 다.
+병합: 반복 작업이 재판정 회차 다음에 `MergeRound` 를 돌린다. 회차는 `CriteriaRepository` 에 지금 기준을 등록하고 `EventRepository.mergeDue` 로 바뀐 열린 사건(`MergeSubject`)을 읽는다. 사건마다 `EventRepository.candidates` 로 후보 사건을 얻어 `MergeRule.termsFromSubject` 로 핵심 말 겹침의 기준 쪽을 정하고 `CandidateScoring` 으로 점수를 매긴 뒤, `MergeJudgementRepository.find` 로 남긴 확률을 채워 `AssignmentRule` 로 판정한다. 띠면 `EventRepository.describers` 로 서술 기사를 골라 `EventMembership` 에 묻고 받은 확률을 판정 원본 ID 와 함께 `MergeJudgementRepository.save` 로 남긴다. 합치기는 `EventArticleRepository.lockByEvents` → `EventRepository.lockAll` → `MergeRule.survivor` → `EventArticleRepository.moveAll` → `EventRepository.absorb`(`LockedEvent.absorbed` · `CentroidUpdate.merge`)이고, 확인 표시는 `EventRepository.markMergeChecked` 다.
 
 정리: 작업 역할의 `EventCleanupJob` 이 하루 1회 `CleanupRound` 를 돌린다. 닫기는 `EventRepository.closable` 로 고른 사건을 `lock` 해 `EventClosing.due` 로 다시 보고, `EventQueryRepository.representativesOfAll` 로 대표 기사를 골라 `EventRepository.close` 로 닫는다. 이어서 `LongTermIndexes.ensure` 로 장기 검색 인덱스를 만들고, `MatchFeaturesRepository.deleteOfClosedEvents` · `deleteUnassigned`(기준 시각은 `FeatureRetention`)로 기사 표현을 지운다. 닫기 기준 `EventClosing` 은 `EventAssignmentProperties` 를 `AssignmentConfiguration` 이 빈으로 바꾼 것이다.
 
-조회: `EventDirectoryService` 가 `EventQueryRepository` 로 사건(합쳐진 사건이면 남는 사건) · 배정 · 기사의 사건 · 대표 기사(정렬은 `CentroidOrder` — `describers` 와 같은 조각, 사건 기사 전체에서는 닫을 때 남긴 대표가 먼저) · 기간 안 배정 · 사건 쪽을 읽는다. 큰 사건은 기간 안 배정을 `EventTallyReader` 에 넘겨 `article` 의 `ArticleDirectory.sources` · `evaluation` 의 `ArticleEvaluations.importances` 로 재료를 한 번씩 읽고 `EventTallies` 로 센 뒤, `BigEventCriteriaRepository` 의 지금 기준으로 `BigEventRule` 이 판정 · 정렬한다. 큰 사건 기준은 `BigEventCriteriaSeeding` 이 기동 때 처음 값을 넣고, `BigEventAdministrationService` 가 변경 · 이력을 저장소로 쓰며 지금 값 읽기와 미리보기는 `EventDirectoryService` 의 것을 쓴다.
+조회: `EventDirectoryService` 가 `EventQueryRepository` 로 사건(합쳐진 사건이면 남는 사건) · 배정 · 기사의 사건 · 대표 기사(정렬은 `CentroidOrder` — `describers` 와 같은 조각, 사건 기사 전체에서는 닫을 때 남긴 대표가 먼저) · 기간 안 배정 · 사건 쪽을 읽는다. 큰 사건은 기간 안 배정을 `EventTallyReader` 에 넘겨 `article` 의 `ArticleDirectory.sources` · `evaluation` 의 `ArticleEvaluations.importances` 로 재료를 한 번씩 읽고 `EventTallies` 로 센 뒤, `BigEventCriteriaRepository` 의 지금 기준으로 `BigEventRule` 이 판정 · 정렬한다. 큰 사건 기준은 `BigEventCriteriaSeeding` 이 기동 때 처음 값을 넣고, `BigEventAdministrationService` 가 변경 · 이력을 저장소로 쓰며 지금 값 읽기와 미리보기는 `EventDirectoryService` 의 것을 쓴다. 운영자 조회는 `EventReviewService` 가 `AssignmentSettings` 의 기준과 `EventQueryRepository` 의 합쳐진 사건 · 판정 원본을 가리키는 배정 · 병합 판정 기록으로 낸다.
 
 #### 회차 흐름
 
@@ -348,6 +392,7 @@ sequenceDiagram
 | 사건 묶기 대기 반복 작업 | `IntakeArticlesJob`(`adapter/in/job`, 작업 역할) | JobRunr 반복 작업 `event-intake` — 1분마다, 재시도 없음 | 임베더를 부를 때 찾아 `EventIntakeRound` → `AssignmentRound` → `RejudgementRound` → `MergeRound` 를 차례로 돌린다(event-R6 · R16 · R18 · R13). 없으면 넷 다 건너뛴다 — 기동 때 경고 한 번(event-R7). 이전 실행이 대기 · 처리 중이면 그 실행은 건너뛴다 |
 | 채우기 | `EventIntakeAdministrationService`(`application`) | `admin` 의 운영자 요청(`EventIntakeAdministration.fill`) | 기간에 처음 본, 배정 없는 기사를 사건 묶기 대기에 넣는다(event-R19). 두 역할 공통 |
 | 사건 조회 | `EventDirectoryService`(`application`) | 다른 모듈의 `EventDirectory` 호출 | 사건 · 사건의 기사 · 기사의 사건 · 대표 기사 · 큰 사건 · 사건 목록(event-R14 · R15 · R20). 두 역할 공통 |
+| 운영자 사건 조회 | `EventReviewService`(`application`) | `admin` 의 `EventReview` 호출 | 사건 배정 기준 · 합쳐진 사건 · 판정 원본의 쓰임(event-R13 · R17 · R22). 두 역할 공통 |
 | 큰 사건 기준 운영 | `BigEventAdministrationService`(`application`) | `admin` 의 운영자 요청(`BigEventAdministration`) | 지금 값 · 변경 · 이력 · 미리보기(event-R21). 두 역할 공통 |
 | 큰 사건 기준 처음 값 | `BigEventCriteriaSeeding`(`application`) | 기동(`SmartInitializingSingleton`) | 지금 값이 없으면 처음 값과 이력 한 행을 넣는다(event-R21). 두 역할 공통 |
 | 사건 정리 반복 작업 | `EventCleanupJob`(`adapter/in/job`, 작업 역할) | JobRunr 반복 작업 `event-cleanup` — 하루 1회, 재시도 없음 | `CleanupRound` 로 닫기 · 장기 검색 인덱스 · 기사 표현 정리를 차례로 한다(event-R13). 임베더 · 평가기가 없어도 돈다. 실패하면 다음 날 다시 돈다 — 다시 돌려도 결과가 같다 |
@@ -363,9 +408,10 @@ sequenceDiagram
 - `MergeRound` — 병합 회차 하나(event-R13). 임베더를 받지 않는다 — 모델 버전은 사건의 것이다. 시각은 `InstantSource` 에서 얻는다. 기준 등록 · 판정 기록 쓰기 · 합치기는 짧은 트랜잭션이고, 사건 소속 판정은 트랜잭션 밖이다. 판정 · 실패 갈래는 `default` 없는 `switch` 식이다. 예외를 밖으로 던지지 않는다. 트랜잭션 · 역할 애너테이션이 없다. 로그: `사건 {n}건을 합쳤다` · `합칠 사건이 닫혔거나 그새 바뀌어 다음 회차에 다시 본다 — 사건 {ID} · {ID}` · `사건 병합 판정이 일시 실패해 다음 회차에 다시 본다 — 사건 {ID}: {문구}`(정보), `평가기가 기사를 거부해 병합 판정을 확률 없이 정한다 — 사건 {ID}: {문구}` · `평가기를 쓸 수 없어 병합 회차를 멈췄다 — 사건 {ID}: {문구}`(경고), `병합 회차가 예상하지 못한 오류로 멈췄다 — 사건 {ID}`(오류)
 - `CleanupRound` — 정리 작업 하나(event-R13) — 닫기 · 장기 검색 인덱스 · 기사 표현 정리를 차례로 한다. 시계는 한 번 읽는다. 닫기는 사건마다, 표현 정리는 묶음마다 짧은 트랜잭션이고, 인덱스는 트랜잭션 밖(자동 커밋)이다. 단계마다 예상 못한 예외는 그 단계에서 멈추고 다음 단계로 간다. 예외를 밖으로 던지지 않는다. 트랜잭션 · 역할 애너테이션이 없다. 로그: `사건 {n}건을 닫았다` · `장기 검색 인덱스 {n}개를 만들었다` · `기사 표현 {n}건을 지웠다`(정보, 하나라도 있을 때), `사건 닫기가 예상하지 못한 오류로 멈췄다 — 닫은 사건 {n}건` · `장기 검색 인덱스 확인이 예상하지 못한 오류로 멈췄다` · `기사 표현 정리가 예상하지 못한 오류로 멈췄다 — 지운 표현 {n}건`(오류). 인덱스의 경고 로그는 `JdbcLongTermIndexes` 가 남긴다
 - `EventShrinkWriter` — 기사를 뺀 사건 쓰기의 정본(event-R8 · R18). 뺀 기사의 배정이 지워지거나 옮겨진 뒤 같은 트랜잭션에서 부른다 — 비면 사건을 지우고, 아니면 새 중심 · 수 · 핵심 말과 남은 배정의 발행 시각 범위를 쓴다(연 시각 · 마지막으로 붙은 시각은 그대로). 남은 수가 있는데 배정이 없으면 사건을 지운다
-- `EventAssignmentProperties` · `AssignmentConfiguration` — 사건 기준 · 저장 기준 · 닫는 기간 · 최대 기간 설정(`yozmnews.event-assignment`, 기본값의 정본은 레코드 컴포넌트의 `@DefaultValue`)과 그것을 검증된 `AssignmentCriteria` · `EventClosing` 빈으로 바꾸는 결선(event-R13 · R17)
+- `EventAssignmentProperties` · `AssignmentConfiguration` · `AssignmentSettings` — 사건 기준 · 저장 기준 · 닫는 기간 · 최대 기간 설정(`yozmnews.event-assignment`, 기본값의 정본은 레코드 컴포넌트의 `@DefaultValue`)과 그것을 검증된 기준으로 바꾸는 결선(event-R13 · R17). 공개 타입 `AssignmentCriteria` 는 패키지 내부 레코드 `AssignmentSettings` 에 감싼 빈으로 운반한다. 닫기 기준은 `EventClosing` 빈이다. 두 빈 모두 기동 때 검증된다
 - `EventIntakeAdministrationService` — 공개 운영 API `EventIntakeAdministration` 의 구현(event-R19). 시각은 `InstantSource` 에서 얻는다
 - `KeyTermConfiguration` — `KeyTermExtractor` 를 빈으로 두고, 컨텍스트가 닫을 때 닫는다
+- `EventReviewService` — 공개 조회 `EventReview` 의 구현(event-R13 · R17 · R22). 판정 원본의 쓰임은 배정과 병합 판정 기록을 각각 원본 ID 로 찾아 합친다. 트랜잭션 · 역할 애너테이션이 없다
 - `EventDirectoryService` — 공개 조회 `EventDirectory` 의 구현(event-R14 · R15 · R20). 큰 사건 판정은 패키지 비공개 `bigEvents(EventPeriod, BigEventCriteria)` 하나를 공개 조회(지금 기준)와 미리보기(제안 기준)가 함께 쓴다. `list` 는 한 건 더 읽어 다음 커서를 정한다. 트랜잭션 · 역할 애너테이션이 없다
 - `EventTallyReader` — 사건별 기간 안 기사의 소스 · 중요도를 다른 모듈의 공개 조회로 한 번씩 읽어 `EventTallies` 로 세는 협력자(집계 경로 하나). 입력이 비면 부르지 않는다
 - `BigEventAdministrationService` — 공개 운영 API `BigEventAdministration` 의 구현(event-R21). 변경은 지금 값 행을 잠근 한 트랜잭션이고, 바꿨으면 정보 로그 `큰 사건 기준을 바꿨다 — 소스 {a} → {b}, 중요도 {x} → {y}, {행위자}` 를 남긴다. 시각은 `InstantSource` 에서 얻는다
@@ -417,7 +463,7 @@ sequenceDiagram
 
 #### `domain/assignment`
 
-- `AssignmentCriteria(Duration window, double upper, double lower, double store, double probability)` — 사건 기준 · 저장 기준의 검증과 운반(event-R17). 창은 0 보다 큰 초 단위, `0 ≤ store ≤ lower ≤ upper ≤ 1`, `0 < probability ≤ 1` — 어기면 `IllegalArgumentException`
+- 사건 기준 · 저장 기준 `AssignmentCriteria` 는 공개 타입이다(§3) — 이 패키지의 판단이 받는다
 - `CandidateScoring` — 후보 점수 산식의 정본(event-R10 · R13). 핵심 말 가중치 `KEY_TERM_WEIGHT`(0.3) · 감쇠 반감기 `HALF_LIFE`(24시간) · 산식에 쓰는 사건 핵심 말 수 `EVENT_KEY_TERMS`(20) — 측정 전 목표. `score(EventSnapshot, 기준 핵심 말, 구간 시작, 구간 끝, 창)` → `Optional<ScoredCandidate>` — 병합은 바뀐 사건의 첫 ~ 마지막 기사 시각을 구간으로 넘기고, 배정의 `score(EventSnapshot, 기사 핵심 말, 발행 시각, 창)` 은 발행 시각 하나의 구간으로 위임한다
 - `AssignmentRule` — 판정 규칙의 정본(event-R11 · R13 · R18). 한 번에 묻는 후보 수 `MAX_ASKED`(5 — 사건 소속 판정의 후보 상한 이하). `decide(후보, 기준, DecisionPhase)` → `Decision`. 처음 판정 · 판정 뒤 · 재판정 · 병합이 같은 함수를 쓴다
 - `MergeRule` — 사건 대 사건 판단의 정본(event-R13). `termsFromSubject(바뀐 사건 기사 수, 바뀐 사건 ID, 상대 기사 수, 상대 ID)` — 핵심 말 겹침의 기준이 바뀐 사건 쪽인가. `survivor(LockedEvent, LockedEvent)` — 남는 사건 ID
@@ -470,7 +516,7 @@ sequenceDiagram
 
   public interface MergeJudgementRepository {
       Map<Long, Double> find(long eventId, Collection<Long> others);               // 순서 없는 쌍 — 기록이 있는 상대만, 상대 사건 ID → 확률
-      void save(long eventId, Map<Long, Double> probabilities, Instant now);       // 쌍의 기록이 이미 있으면 그대로
+      void save(long eventId, Map<Long, Double> probabilities, @Nullable EventJudgementId judgement, Instant now);  // 새로 넣는 쌍에 판정 원본 ID — 쌍의 기록이 이미 있으면 그대로
   }
   ```
 
@@ -483,7 +529,8 @@ sequenceDiagram
 
   ```java
   public record EventArticle(ArticleId articleId, long eventId, Instant publishedAt, @Nullable Double score,
-          DecidedBy decidedBy, boolean opened, long criteriaId, Instant assignedAt) {}   // opened — 연 사건 표지(event-R18)
+          DecidedBy decidedBy, boolean opened, long criteriaId, Instant assignedAt,
+          @Nullable EventJudgementId judgement) {}   // opened — 연 사건 표지(event-R18), judgement — 반영한 판정 원본(event-R22)
   public record RejudgeTarget(EventArticle assignment, List<StoredCandidate> stored) {}   // 저장 후보는 StoredCandidate.folded 로 모은다
   public record MergeSubject(long id, String modelVersion, float[] centroid, int articleCount, List<String> keyTerms,
           Instant firstArticleAt, Instant lastArticleAt, long revision) {}   // 핵심 말은 후보 쪽과 같은 상위 EVENT_KEY_TERMS 개
@@ -509,12 +556,12 @@ sequenceDiagram
       boolean insertIfAbsent(EventArticle row, List<StoredCandidate> stored);    // 배정 + 저장 후보 — 이미 있으면 그대로, 썼으면 true
       List<RejudgeTarget> lockRejudgeTargets(long criteriaId, int limit);       // 기준 ID 가 다른 배정 — 기사 ID 순 FOR UPDATE SKIP LOCKED. 저장 후보는 사라진 사건을 빼고 합쳐진 사건은 남는 사건으로 읽는다. 사건은 잠그지 않는다
       void reassign(ArticleId articleId, long eventId, @Nullable Double score, DecidedBy by, boolean opened,
-              long criteriaId, Instant now);
+              long criteriaId, Instant now);                                     // 판정 원본 ID 는 그대로
       void keep(ArticleId articleId, long criteriaId);                           // 기준만 새것으로
       int keepClosed(long criteriaId, int limit);                                // 닫힌 사건의 배정 가운데 기준 ID 가 다른 것 — 기사 ID 순 FOR UPDATE SKIP LOCKED 로 limit 건까지 기준만 새것으로. 적은 수
       List<EventArticle> lockByArticles(Collection<ArticleId> articleIds);       // 기사 ID 순 FOR UPDATE
       List<EventArticle> lockByEvents(Collection<Long> eventIds);               // 기사 ID 순 FOR UPDATE — 병합이 사건보다 먼저 잠근다
-      void moveAll(long fromEventId, long toEventId);                            // 사건만 바꾼다 — 연 사건 표지 · 점수 · 정한 것 · 기준 · 배정 시각은 그대로
+      void moveAll(long fromEventId, long toEventId);                            // 사건만 바꾼다 — 연 사건 표지 · 점수 · 정한 것 · 기준 · 배정 시각 · 판정 원본 ID 는 그대로
       Optional<PublishedSpan> publishedSpan(long eventId);                       // 남은 배정의 발행 시각 범위 — 배정이 없으면 빈 값
       void deleteByArticles(Collection<ArticleId> articleIds);                   // 배정 · 그 기사의 후보
   }
@@ -536,6 +583,9 @@ sequenceDiagram
       Map<Long, List<ArticleId>> membersIn(Instant from, Instant to);              // 사건 ID 순, 사건마다 발행 시각 · 기사 ID 순
       Map<Long, List<ArticleId>> membersIn(Collection<Long> eventIds, Instant from, Instant to);
       List<EventView> page(Instant from, Instant to, @Nullable Instant afterLast, @Nullable Long afterId, int limit);  // 기간 안 배정이 있는 사건 — 마지막 기사 시각 · 사건 ID 내림차순
+      List<MergedEvent> mergedInto(long survivor);                                  // 이 사건을 가리키는 합쳐진 사건 — 합친 시각 · 사건 ID 순
+      Map<Long, JudgementUse.Assignment> assignmentsByJudgement(Collection<Long> judgementIds);  // 원본을 가리키는 배정 — 배정 둘이 가리키면 IllegalStateException
+      Map<Long, List<MergePair>> mergePairsByJudgement(Collection<Long> judgementIds);  // 원본을 가리키는 병합 판정 기록 — (작은 ID, 큰 ID) 순
   }
   ```
 
@@ -600,12 +650,12 @@ public final class Embedding {
 - `JdbcMatchFeaturesRepository` — 넣기는 `INSERT … ON CONFLICT (article_id, model_version) DO NOTHING`. 벡터는 `VectorText` 가 만든 pgvector 텍스트 표현(`[v1,v2,…]`)을 SQL 이 `vector` 로 바꾸고, `embedding::text` 를 `VectorText.parse` 로 되읽는다. 핵심 말은 `text[]`. 정리는 지울 행을 (기사, 모델 버전) 순 `FOR UPDATE SKIP LOCKED` 로 골라 지운다 — 지운 기사 따르기의 표현 지우기와 엇갈려 기다리지 않는다
 - `JdbcAssignmentQueueRepository` — 사건 묶기 대기 구현과 같은 모양
 - `JdbcCriteriaRepository` — 같은 값의 행을 먼저 읽고, 없을 때만 `INSERT … ON CONFLICT … DO UPDATE … RETURNING id`(동시에 같은 값을 넣어도 한 행 · 같은 ID). 창은 초로 적는다
-- `JdbcMergeJudgementRepository` — 쌍은 (작은 ID, 큰 ID) 한 행이다. 넣기는 `INSERT … ON CONFLICT DO NOTHING` 이라 먼저 남긴 확률이 남는다
+- `JdbcMergeJudgementRepository` — 쌍은 (작은 ID, 큰 ID) 한 행이다. 넣기는 `INSERT … ON CONFLICT DO NOTHING` 이라 먼저 남긴 확률과 그 판정 원본 ID 가 남는다
 - `JdbcEventRepository` — 중심은 `halfvec` 이고 같은 텍스트 표현으로 쓰고 읽는다. 후보의 코사인은 `1 − (중심 <=> cast(벡터 as halfvec))` 를 열린 사건마다 센다(인덱스 없음). 사건 핵심 말 상위 수는 `CandidateScoring.EVENT_KEY_TERMS` 를 매개변수로 넘기고, 말 순은 바이트 순(`COLLATE "C"`)이다 — 후보와 병합 대상이 같은 조각을 쓴다. 사건 값 쓰기는 `update` 와 병합의 남는 사건이 함께 쓰는 한 문장이고, 연 시각 · 마지막으로 붙은 시각까지 쓰고 `revision` 을 하나 늘린다. 병합은 합쳐질 사건의 핵심 말 수를 남는 사건에 더한 뒤 합쳐질 사건 행을 `MERGED` 로 남긴다
-- `JdbcEventArticleRepository` — 배정은 `INSERT … ON CONFLICT (article_id) DO NOTHING` 이고 썼을 때만 후보를 쓴다. 재판정 대상은 `criteria_id < :c or criteria_id > :c` 로 기준 인덱스를 쓴다. 저장 후보의 사건은 `coalesce(merged_into, id)` 로 읽는다. 닫힌 사건 일괄 유지는 `FOR UPDATE OF a SKIP LOCKED` 로 고른 배정의 기준만 갱신한다
+- `JdbcEventArticleRepository` — 배정은 `INSERT … ON CONFLICT (article_id) DO NOTHING` 이고 썼을 때만 후보를 쓴다. 판정 원본 ID 는 넣기에서만 쓴다 — 다시 적기 · 기준만 적기 · 옮기기는 그 컬럼을 건드리지 않는다. 재판정 대상은 `criteria_id < :c or criteria_id > :c` 로 기준 인덱스를 쓴다. 저장 후보의 사건은 `coalesce(merged_into, id)` 로 읽는다. 닫힌 사건 일괄 유지는 `FOR UPDATE OF a SKIP LOCKED` 로 고른 배정의 기준만 갱신한다
 - `JdbcLongTermIndexes` — 장기 검색 인덱스의 이름 · 식 · 조건의 정본. 이름은 `events_closed_centroid_` + 모델 버전 SHA-256 앞 16 hex, 식은 `centroid::halfvec(차원)` 의 `halfvec_cosine_ops` HNSW, 조건은 `status = 'CLOSED' AND model_version = '모델 버전'`(작은따옴표는 둘로)이다. 차원은 그 모델 버전 닫힌 사건의 `vector_dims(centroid)` 다. `CREATE INDEX CONCURRENTLY IF NOT EXISTS` 라 자동 커밋 연결에서 한 문장씩 돌고, 쓸 수 없는(invalid) 같은 이름의 인덱스는 `DROP INDEX CONCURRENTLY` 뒤 다시 만든다. 로그: `닫힌 사건의 중심 차원이 모델 버전 안에서 달라 장기 검색 인덱스를 만들지 않았다 — {모델 버전}: {최소} ~ {최대}` · `장기 검색 인덱스를 만들지 못했다 — {모델 버전}: {문구}`(경고)
 - `CentroidOrder` — "중심에 가까운 순" 정렬의 정본 SQL 조각(event-R11 · R14). 사건 모델 버전의 표현이 있는 기사를 거리 순 · 같으면 기사 ID 순으로 먼저, 없는 기사는 그 뒤에 발행 시각 · 기사 ID 순. `JdbcEventRepository.describers`(내부 조인 — 표현이 있는 기사만)와 `JdbcEventQueryRepository` 의 대표 기사(왼쪽 조인)가 쓴다
-- `JdbcEventQueryRepository` — `find` 는 합쳐진 사건의 `merged_into` 를 한 번 따른다(가리킴이 평평하다). 대표 기사는 (사건, 기사) 두 배열을 `unnest` 해 배정과 조인하고 `distinct on (사건)` 으로 사건마다 첫째를 고른다. 사건 기사 전체의 대표는 `representative_article_id` 가 있는 사건은 그 값, 없는 사건만 정렬로 고른다(`union all`). 기간은 `published_at` 범위(인덱스 `event_articles_published_idx`), 쪽은 `exists`(기간 안 배정)와 커서 `(last_article_at, id) <` 조건
+- `JdbcEventQueryRepository` — `find` 는 합쳐진 사건의 `merged_into` 를 한 번 따른다(가리킴이 평평하다). 대표 기사는 (사건, 기사) 두 배열을 `unnest` 해 배정과 조인하고 `distinct on (사건)` 으로 사건마다 첫째를 고른다. 사건 기사 전체의 대표는 `representative_article_id` 가 있는 사건은 그 값, 없는 사건만 정렬로 고른다(`union all`). 기간은 `published_at` 범위(인덱스 `event_articles_published_idx`), 쪽은 `exists`(기간 안 배정)와 커서 `(last_article_at, id) <` 조건. 합쳐진 사건은 `merged_into` 인덱스로 찾고 병합 판정 기록을 `(least, greatest)` 쌍으로 왼쪽 조인한다. 판정 원본의 쓰임은 `judgement_id` 부분 인덱스로 찾고, 병합 판정 기록의 두 사건은 `coalesce(merged_into, id)` 로 남는 사건으로 읽는다
 - `JdbcBigEventCriteriaRepository` — 지금 값은 ID 1 인 한 행이다. 처음 값은 `INSERT … ON CONFLICT (id) DO NOTHING` 이 넣었을 때만 이력을 쓴다(동시에 떠도 한 행). 중요도는 `NUMERIC(3, 2)` 를 `BigDecimal` 로 읽고 쓴다
 
 #### 신뢰할 수 없는 입력
@@ -668,7 +718,7 @@ public final class Embedding {
 - **event-R12** — 배정: 기사마다 한 사건이고 배정은 사건 **중심**과의 거리로 한다 — 사건 안의 기사 하나와만 닮아도 붙이면 사건이 번진다.
   - 붙이면 한 트랜잭션에서 사건을 잠그고(`FOR UPDATE`, 배정 행을 넣기 전에), 사건이 없거나 열려 있지 않거나 모델 버전이 다르면 쓰지 않는다. 사건은 기사 수와 중심(구성 기사 벡터의 평균)을 갖고 붙일 때 그 벡터를 평균에 더한다(`LockedEvent.joined` · `CentroidUpdate.add`). 첫 · 마지막 기사 시각을 발행 시각까지 넓히고, 마지막으로 붙은 시각은 지금이며, 핵심 말은 말마다 그 말을 가진 기사 수를 하나 늘린다
   - 새 사건은 열린 상태 · 기사 하나 · 중심은 그 기사 벡터 · 모델 버전은 그 표현의 모델 버전 · 첫 = 마지막 기사 시각은 발행 시각 · 연 시각 = 마지막으로 붙은 시각은 지금이다
-  - 배정 행은 사건 · 발행 시각 · 점수(붙인 후보의 점수, 새 사건이면 가장 높은 후보의 점수 — 후보가 없으면 없음) · 정한 것 · 연 사건 표지(새 사건이면 참, 붙이면 거짓 — event-R18) · 판정에 쓴 기준 ID · 배정 시각이고, 저장 기준 이상인 후보를 점수 · 판정 확률과 함께 저장 후보로 남긴다. 같은 기사의 배정이 이미 있으면 사건 갱신까지 모두 쓰지 않는다 — 같은 기사를 다시 처리해도 배정을 유지한다
+  - 배정 행은 사건 · 발행 시각 · 점수(붙인 후보의 점수, 새 사건이면 가장 높은 후보의 점수 — 후보가 없으면 없음) · 정한 것 · 연 사건 표지(새 사건이면 참, 붙이면 거짓 — event-R18) · 판정에 쓴 기준 ID · 배정 시각 · 반영한 판정 원본 ID(이 배정을 쓸 때 사건 소속 판정을 반영했으면 — event-R22)이고, 저장 기준 이상인 후보를 점수 · 판정 확률과 함께 저장 후보로 남긴다. 같은 기사의 배정이 이미 있으면 사건 갱신까지 모두 쓰지 않는다 — 같은 기사를 다시 처리해도 배정을 유지한다
   - 기사를 빼면(event-R8 · R18) 그 사건 모델 버전의 표현이 있을 때 기여를 뺀다(`CentroidUpdate.remove`). 반 정밀도 누적이라 많이 더한 사건에서 많이 빼면 앞선 반올림 오차가 커진다. 표현이 없는 기사를 빼면 그 기여가 중심 · 핵심 말에 남고, 그런 기사가 섞여 여러 기사를 한 번에 빼면 결과는 뺀 순서(기사 ID 순)를 따른다
   - **(미설계)** 모델을 바꾼 뒤 열린 사건의 중심을 새 모델로 다시 계산하는 일 — 지금은 새 모델의 기사가 새 사건을 연다
 - **event-R16** — 배정 대기와 배정 회차: 표현을 쓴 기사를 배정 대기에 넣는다(event-R6) — 기사마다 한 행이고 이미 있으면 그대로, 판정 가능 시각은 넣은 시각이다. 반복 작업이 표현 회차 다음에 배정 회차를 돈다.
@@ -701,7 +751,7 @@ public final class Embedding {
 - **event-R13** — 사건 정리: 열린 사건끼리 합치는 병합과, 사건을 닫고 그 뒤를 정리하는 정리 작업이다. 닫기 · 병합은 한 방향이다 — 닫힌 사건을 다시 열거나 합친 사건을 나누지 않고, 기준(사건 기준 · 닫는 기간 · 최대 기간)이 바뀌면 그 뒤의 닫기 · 병합에만 쓴다. 몇 주에 걸친 전개는 이슈가 잇는다([pipeline.md §9](../pipeline.md#9-이슈)).
   - 병합 대상: 반복 작업이 재판정 회차 다음에 병합 회차를 돈다. 사건의 고친 횟수(`revision`)는 열 때 1 이고, 사건 값을 쓸 때마다(붙이기 · 빼기 · 옮기기 · 합치기) 하나 는다. 회차는 지금 기준을 기준 이력에 등록하고, 열린 사건 가운데 확인한 고친 횟수가 지금보다 작거나 다른 기준으로 확인한 사건을 사건 ID 순으로 16개(`AssignmentSchedule.MERGE_BATCH`)까지 본다. 이 회차에서 앞서 합친 두 사건은 다시 보지 않는다
   - 병합 점수: 바뀐 사건 S 를 기사 자리에 둔 배정의 산식이다(event-R10 — `CandidateScoring` 정본). 후보는 S 와 모델 버전이 같은 다른 열린 사건 가운데 첫 ~ 마지막 기사 시각 범위가 [S 의 첫 기사 시각 − 창, S 의 마지막 기사 시각 + 창] 과 겹치는 사건이다. 코사인은 두 중심의 코사인이고, 시각 차 Δ 는 두 시각 범위 사이의 간격(겹치면 0)이다. 핵심 말 겹침은 기사 수가 적은 사건(같으면 ID 가 큰 사건)의 핵심 말을 기준으로 센다(`MergeRule.termsFromSubject` — 정본) — 두 사건 모두 상위 20개 핵심 말을 쓰므로 어느 쪽이 바뀌어 보든 같은 쌍은 같은 점수다. 저장 기준 이상인 후보만 판정에 쓴다
-  - 병합 판정: event-R11 의 처음 판정 그대로다(`AssignmentRule` — 위 · 아래 · 확률 기준, 묻는 후보 수 5). 띠에 확률 없는 후보가 있으면 S 의 서술 기사 하나(그 모델 버전 표현이 있는 구성 기사 가운데 중심에 가장 가까운 기사)를 판정할 기사로, 후보 사건마다 서술 기사 3개(`AssignmentSchedule.DESCRIBED_ARTICLES`)를 서술로 `evaluation` 의 사건 소속 판정에 묻는다. 받은 확률은 순서 없는 쌍마다 병합 판정 기록에 한 번 남기고, 기록이 있는 쌍은 사건이 바뀌어도 다시 묻지 않고 그 확률을 쓴다. S 의 서술 기사가 없거나 서술 기사가 있는 후보가 없으면 묻지 않는다. 묻고 나면(묻지 못했으면 그대로) event-R11 의 판정 뒤 규칙으로 정한다 — 확률 없는 띠 후보는 붙일 수 없다. 붙임이면 합치고, 새 사건이면 합치지 않고 S 의 확인을 표시한다. Jev 호출은 DB 트랜잭션 밖에서 한다
+  - 병합 판정: event-R11 의 처음 판정 그대로다(`AssignmentRule` — 위 · 아래 · 확률 기준, 묻는 후보 수 5). 띠에 확률 없는 후보가 있으면 S 의 서술 기사 하나(그 모델 버전 표현이 있는 구성 기사 가운데 중심에 가장 가까운 기사)를 판정할 기사로, 후보 사건마다 서술 기사 3개(`AssignmentSchedule.DESCRIBED_ARTICLES`)를 서술로 `evaluation` 의 사건 소속 판정에 묻는다. 받은 확률은 순서 없는 쌍마다 병합 판정 기록에 그 판정 원본 ID 와 함께 한 번 남기고, 기록이 있는 쌍은 사건이 바뀌어도 다시 묻지 않고 그 확률을 쓴다. S 의 서술 기사가 없거나 서술 기사가 있는 후보가 없으면 묻지 않는다. 묻고 나면(묻지 못했으면 그대로) event-R11 의 판정 뒤 규칙으로 정한다 — 확률 없는 띠 후보는 붙일 수 없다. 붙임이면 합치고, 새 사건이면 합치지 않고 S 의 확인을 표시한다. Jev 호출은 DB 트랜잭션 밖에서 한다
   - 판정 실패: 일시 실패 · 판정할 기사 없음 → S 를 표시하지 않고 다음 사건으로 간다(다음 회차가 다시 본다). 기사 거부 → 확률 없이 판정 뒤 규칙으로 정하고 표시한다. 평가기 사용 불가 · 예상 못한 예외 → 회차를 멈춘다
   - 합치기: 한 트랜잭션에서 두 사건의 배정 행을 기사 ID 순으로, 두 사건을 사건 ID 순으로 잠그고(지운 기사 따르기 · 재판정과 같은 순서 — event-R16), 두 사건이 모두 있고 열려 있고 모델 버전이 같고 잠근 배정 수가 각 사건의 기사 수와 같을 때만 합친다. 아니면 되돌리고 표시하지 않는다 — 다음 회차가 다시 본다. 남는 사건은 기사 수가 많은 쪽, 같으면 ID 가 작은 쪽이다(`MergeRule.survivor` — 정본). 합쳐질 사건의 배정은 사건만 남는 사건으로 바꾼다 — 연 사건 표지 · 점수 · 정한 것 · 기준 · 배정 시각은 그대로다
   - 합친 값(`LockedEvent.absorbed` — 정본): 중심은 기사 수 가중 평균(`CentroidUpdate.merge`), 기사 수는 합, 첫 기사 시각 · 연 시각은 이른 쪽, 마지막 기사 시각 · 마지막으로 붙은 시각은 늦은 쪽이고, 핵심 말은 말마다 그 말을 가진 기사 수를 더한다. 기사 표현을 읽지 않는다. 합친 뒤 남는 사건은 고친 횟수가 늘어 다음 회차가 다시 본다 — 여러 사건이 차례로 한 사건에 모일 수 있다
@@ -716,7 +766,7 @@ public final class Embedding {
 
 판단의 이유는 [ADR-0082](../adr/0082-big-events-judged-at-query-time-by-distinct-sources-and-mean-importance-both-reaching-criteria.md) · [ADR-0083](../adr/0083-big-event-criteria-as-operator-settings-with-append-only-history-and-preview.md)에 있다.
 
-- **event-R14** — 대표 기사: 주어진 기사들 가운데 사건 중심에 가장 가까운 기사다. 후보 선별([pipeline.md §6](../pipeline.md#6-다이제스트-생성))에서는 그 사용자의 제외 조건(소스 · 지역 · 형식 · 싫어요)을 통과한 기사 가운데서 고르고, 운영자 화면은 사건의 기사 전체에서 고른다.
+- **event-R14** — 대표 기사: 주어진 기사들 가운데 사건 중심에 가장 가까운 기사다. 후보 선별([pipeline.md §6](../pipeline.md#6-다이제스트-생성))에서는 그 사용자의 제외 조건(소스 · 지역 · 형식 · 싫어요)을 통과한 기사 가운데서 고르고, 운영자 화면은 사건의 기사 전체에서 고른다(`representativesOfAll` — 목록 · 상세 · 큰 사건이 같은 대표를 보인다).
   - 사건 모델 버전의 표현이 있는 기사를 중심과의 거리 순(같으면 기사 ID 순)으로 먼저, 표현이 없는 기사(지웠거나 다른 모델 버전의 표현만 있다)는 그 뒤에 발행 시각 · 기사 ID 순으로 두고 첫째를 고른다(`CentroidOrder` — 서술 기사와 같은 정본)
   - 사건 기사 전체에서 고를 때는 닫을 때 남긴 대표 기사(event-R13)가 있으면 그것이다 — 닫힌 사건은 기사 표현을 지운다. 걸러진 기사에서 고를 때는 남긴 대표를 쓰지 않는다
   - 주어진 기사 가운데 그 사건의 기사가 아닌 것은 무시하고, 남는 기사가 없는 사건은 대표가 없다
@@ -725,15 +775,26 @@ public final class Embedding {
   - 중요도 평균은 기간 안 기사 가운데 중요도가 있는 기사(`ArticleEvaluations.importances` — 버전 번호가 가장 큰 평가의 기대값)의 평균이다. 소수 산술로 세어 기준과 같은 수 체계로 비교한다(`EventTallies` 정본). 중요도가 없는 기사는 평균에서 빼고 소스 수에는 넣는다
   - 순서는 소스 수 · 중요도 평균 내림차순, 사건 ID 오름차순(`BigEventRule.ORDER`). 몇 개를 쓸지는 부르는 쪽이 정한다
   - 사건의 상태 · 모델 버전 · 정한 것과 무관하다 — 닫힌 사건, 판정 실패로 연 사건, 다른 모델 버전의 사건도 같은 규칙이다
-- **event-R20** — 사건 조회: 조회 기간은 시작 포함 · 끝 제외이고 31일(`EventPeriod.MAX_DAYS`)까지다. 기간 안 기사는 배정의 발행 시각으로 고른다. 사건 목록은 기간 안 기사가 있는 사건을 마지막 기사 시각 · 사건 ID 내림차순으로 한 쪽 100건(`EventDirectory.MAX_PAGE_SIZE`)까지 낸다 — 집계 · 큰 사건 여부는 그 기간, 대표 기사는 사건 기사 전체에서. 기사의 사건은 배정을 따른다. 사건 ID 로 찾는 조회는 합쳐진 사건이면 남는 사건을 낸다(event-R13) — 가리킴이 평평해 한 번 따른다. 합쳐진 사건은 배정이 모두 남는 사건으로 옮겨져, 사건의 기사 조회는 빈 목록이고 사건 목록 · 큰 사건 · 기사의 사건에 나오지 않는다 — 합쳐진 사건일 수 있는 ID 는 먼저 사건 ID 로 찾아 남는 사건을 얻는다
+- **event-R20** — 사건 조회: 조회 기간은 시작 포함 · 끝 제외이고 날짜 31일(`EventPeriod.MAX_DAYS`)까지다. 날짜 범위는 그 시간대 자정으로 옮기고(`EventPeriod.ofDays` — `platform` 의 `DayRange`), 시각 범위의 상한은 시간대 전환 여유로 하루를 더한 32일이다 — 서머타임이 끝나는 날이 든 31일도 받는다. 기간 안 기사는 배정의 발행 시각으로 고른다. 사건 목록은 기간 안 기사가 있는 사건을 마지막 기사 시각 · 사건 ID 내림차순으로 한 쪽 100건(`EventDirectory.MAX_PAGE_SIZE`)까지 낸다 — 집계 · 큰 사건 여부는 그 기간, 대표 기사는 사건 기사 전체에서. 기사의 사건은 배정을 따른다. 사건 ID 로 찾는 조회는 합쳐진 사건이면 남는 사건을 낸다(event-R13) — 가리킴이 평평해 한 번 따른다. 합쳐진 사건은 배정이 모두 남는 사건으로 옮겨져, 사건의 기사 조회는 빈 목록이고 사건 목록 · 큰 사건 · 기사의 사건에 나오지 않는다 — 합쳐진 사건일 수 있는 ID 는 먼저 사건 ID 로 찾아 남는 사건을 얻는다
 - **event-R21** — 큰 사건 기준: 소스 기준(1 이상)과 중요도 기준(중요도 수준 범위 안, 소수 둘째 자리까지)은 운영자 설정이다 — 지금 값 한 행과 추가 전용 이력(이전 값 · 새 값 · 행위자 종류 · 시각).
   - 처음 값은 `BigEventCriteria.DEFAULT`(소스 3 · 중요도 3.00 — 측정 전 목표)이고, 기동 때 지금 값이 없으면 넣고 그때만 행위자 `SYSTEM` 의 이력 한 행을 남긴다. 두 역할이 동시에 떠도 한 행이다
   - 변경은 지금 값 행을 잠근 한 트랜잭션이다 — 동시 변경이 줄을 서 이력의 이전 값이 바로 앞 변경의 새 값이다. 같은 값이면 바꾸지 않고, 범위 밖이면 거부한다. 둘 다 이력을 남기지 않는다
   - 바꾸면 다음 조회부터 모든 기간에 적용된다 — 재판정이 없다. 미리보기는 제안 기준으로 같은 판정을 하고 아무것도 쓰지 않는다
 
+### 판정 원본의 쓰임
+
+판단의 이유는 [ADR-0094](../adr/0094-event-membership-judgements-identified-by-id-read-by-operators-and-referenced-by-the-records-that-apply-them.md)에 있다.
+
+- **event-R22** — 판정 원본의 쓰임: 사건 소속 판정의 결과는 남긴 판정 원본의 ID 를 싣는다(`evaluation` 의 evaluation-R38). 그 판정을 반영한 기록이 ID 를 남긴다.
+  - 배정 판정 — 배정 회차가 판정을 반영해 배정을 쓰면 배정 행에 원본 ID 를 남긴다(산식 · 판정 실패 · 서술 기사가 없어 묻지 않은 배정은 없다). 쓰기를 되돌리면(붙일 사건이 사라졌거나 열려 있지 않거나 모델 버전이 다름 · 다른 경로가 먼저 배정 — event-R16) 그 원본을 가리키는 배정이 남지 않는다. 재판정 · 병합으로 다시 적거나 옮겨도 원본 ID 는 그대로다 — 결과는 그 기사의 지금 배정이다
+  - 병합 판정 — 병합 회차가 새로 남기는 쌍의 기록에 원본 ID 를 남긴다. 쌍의 기록이 이미 있으면 그대로 두어 그 판정의 원본 ID 는 남지 않는다. 결과는 쌍의 두 사건이 지금 같은 사건인지다
+  - 가리키는 기록이 없는 원본은 반영되지 않은 것이다 — 배정은 쓰기를 되돌렸거나 이 기록을 남기기 전(V21 전)의 원본, 병합은 쌍의 사건이 비어 지워져 기록이 함께 지워졌거나(event-R8 · R13) 쌍의 기록이 이미 있었거나 V21 전의 원본이다
+  - 한 원본을 배정과 병합 판정 기록이 함께 가리키지 않는다 — 배정 판정의 판정할 기사는 배정 대기의 기사이고 병합 판정은 병합 판정 기록에만 쓴다. 어기면 조회가 `IllegalStateException` 이다
+  - 판정 원본의 보존(180일)과 배정 · 병합 판정 기록의 보존(무기한)은 다르다 — 원본이 지워져도 기록의 ID 는 남는다([data-model 보존 정책](../data-model.md#보존-정책-초안))
+
 ## 6. 데이터
 
-컬럼 타입 · 인덱스 · 제약 문면의 정본은 `backend/src/main/resources/db/migration/V16__event_intake_and_match_features.sql`(사건 묶기 대기 · 기사 표현)과 `V17__events_and_assignments.sql`(사건 · 사건 핵심 말 · 기준 이력 · 배정 · 저장 후보 · 배정 대기), `V18__event_queries_and_big_criteria.sql`(배정의 발행 시각 인덱스 · 큰 사건 기준 · 큰 사건 기준 이력), `V19__event_merge_close_and_retention.sql`(사건의 합쳐짐 · 닫기 · 병합 확인 · 대표 기사 컬럼, 배정의 연 사건 표지, 병합 판정 기록)이다. 장기 검색 인덱스는 마이그레이션이 아니라 정리 작업이 만든다(event-R13). `article_id` 는 `article` 의 기사를 가리키지만 FK 를 두지 않는다 — 모듈 사이는 ID 로만 참조한다. 보존 기간은 [data-model.md "보존 정책"](../data-model.md#보존-정책-초안)에 있다.
+컬럼 타입 · 인덱스 · 제약 문면의 정본은 `backend/src/main/resources/db/migration/V16__event_intake_and_match_features.sql`(사건 묶기 대기 · 기사 표현)과 `V17__events_and_assignments.sql`(사건 · 사건 핵심 말 · 기준 이력 · 배정 · 저장 후보 · 배정 대기), `V18__event_queries_and_big_criteria.sql`(배정의 발행 시각 인덱스 · 큰 사건 기준 · 큰 사건 기준 이력), `V19__event_merge_close_and_retention.sql`(사건의 합쳐짐 · 닫기 · 병합 확인 · 대표 기사 컬럼, 배정의 연 사건 표지, 병합 판정 기록), `V21__event_judgement_references.sql`(배정 · 병합 판정 기록이 반영한 판정 원본 ID)이다. 장기 검색 인덱스는 마이그레이션이 아니라 정리 작업이 만든다(event-R13). `article_id` 는 `article` 의 기사를 가리키지만 FK 를 두지 않는다 — 모듈 사이는 ID 로만 참조한다. 보존 기간은 [data-model.md "보존 정책"](../data-model.md#보존-정책-초안)에 있다.
 
 | 테이블 | 주요 컬럼 | 뜻 |
 |---|---|---|
@@ -742,9 +803,9 @@ public final class Embedding {
 | `events` | id, status(`OPEN`/`CLOSED`/`MERGED`), model_version, centroid(`halfvec`), article_count(1 이상), first_article_at, last_article_at, created_at, last_joined_at, closed_at, merged_into, revision, merge_checked_revision, merge_checked_criteria_id, representative_article_id | 공유 사건. `centroid` 는 차원을 정하지 않은 `halfvec` 이다 — 같은 모델 버전끼리만 비교하고 길이는 쓰기 전에 앱이 확인한다(event-R12). 후보는 `(model_version, last_article_at)` 의 열린 사건 부분 인덱스로 거른다(event-R10). `created_at` 은 사건을 연 시각이다 — 합치면 두 사건 가운데 이른 쪽(event-R13). `last_joined_at` 은 마지막으로 기사가 붙은 시각(붙이기 · 옮기기 · 합치기)이고 닫기의 기준이다. `closed_at` 은 열림이 끝난 시각(닫기 · 합쳐짐)이고 열린 사건에만 없다(제약). `merged_into` 는 합쳐진 사건이 가리키는 남는 사건이다 — `MERGED` 일 때만 있고 자기 자신이 아니다(제약), FK 다. `revision` 은 사건 값을 쓸 때마다 늘고, 병합 회차가 확인한 값 · 기준(`merge_checked_revision` · `merge_checked_criteria_id`)과 비교해 바뀐 사건을 고른다(event-R13). `representative_article_id` 는 닫을 때 남긴 대표 기사다 — `article` 의 기사를 가리키지만 FK 가 없다(event-R14). 장기 검색 HNSW 인덱스(모델 버전별 식 · 닫힌 사건 부분 인덱스)는 정리 작업이 만든다(event-R13) |
 | `event_key_terms` | event_id, term, article_count(1 이상) | 사건 핵심 말 — (event_id, term) 기본 키, 그 말을 가진 구성 기사 수(event-R12). 사건을 지우면 함께 지워진다 |
 | `event_assignment_criteria` | id, window_seconds, upper, lower, store, probability, created_at | 기준 이력 — 다섯 값이 고유하다(event-R17) |
-| `event_articles` | article_id(기본 키), event_id, published_at, score, decided_by(`FORMULA`/`EVALUATOR`/`JUDGEMENT_FAILED`), opened, criteria_id, assigned_at | 배정 — 기사당 한 사건(event-R12). `opened` 는 연 사건 표지다(event-R18). `event_id` · `criteria_id` 는 FK 이고 `ON DELETE` 가 없다 — 사건을 지우기 전에 그 배정을 지우거나 옮긴다. 사건이 합쳐지면 배정의 사건만 남는 사건으로 바꾼다(event-R13). 재판정 대상은 `criteria_id` 인덱스로 찾는다(event-R18). 조회 기간은 `published_at` 인덱스로 고른다(event-R20) |
+| `event_articles` | article_id(기본 키), event_id, published_at, score, decided_by(`FORMULA`/`EVALUATOR`/`JUDGEMENT_FAILED`), opened, criteria_id, assigned_at, judgement_id | 배정 — 기사당 한 사건(event-R12). `opened` 는 연 사건 표지다(event-R18). `judgement_id` 는 반영한 사건 소속 판정 원본(`evaluation` 의 `article_event_judgements`)이다 — FK 가 없고, 넣기에서만 쓰며, 부분 인덱스(`judgement_id IS NOT NULL`)로 찾는다(event-R22). `event_id` · `criteria_id` 는 FK 이고 `ON DELETE` 가 없다 — 사건을 지우기 전에 그 배정을 지우거나 옮긴다. 사건이 합쳐지면 배정의 사건만 남는 사건으로 바꾼다(event-R13). 재판정 대상은 `criteria_id` 인덱스로 찾는다(event-R18). 조회 기간은 `published_at` 인덱스로 고른다(event-R20) |
 | `event_article_candidates` | article_id, event_id, score, probability | 저장 후보 — (article_id, event_id) 기본 키, 판정 확률은 묻지 않았으면 없다(event-R12 · R18). 합쳐진 사건을 가리키는 후보는 고치지 않는다 — 재판정이 남는 사건으로 읽는다(event-R18). `event_id` 에 FK 가 없다 — 사건을 지울 때 함께 지운다(`event_id` 인덱스) |
-| `event_merge_judgements` | event_low, event_high, probability, judged_at | 병합 판정 기록 — 순서 없는 쌍 (event_low, event_high) 기본 키, 작은 ID < 큰 ID(제약), 확률은 0 ~ 1(event-R13). 사건 FK 가 없다 — 쌍의 사건을 지울 때 함께 지운다(`event_high` 인덱스) |
+| `event_merge_judgements` | event_low, event_high, probability, judged_at, judgement_id | 병합 판정 기록 — 순서 없는 쌍 (event_low, event_high) 기본 키, 작은 ID < 큰 ID(제약), 확률은 0 ~ 1(event-R13). `judgement_id` 는 그 확률을 낸 판정 원본이다 — FK 가 없고, V21 전의 행은 없다. 부분 인덱스로 찾는다(event-R22). 사건 FK 가 없다 — 쌍의 사건을 지울 때 함께 지운다(`event_high` 인덱스) |
 | `event_assignment_queue` | article_id(기본 키), enqueued_at, attempts(0 이상), available_at, lease_token, lease_expires_at | 배정 대기 — 기사마다 한 행(event-R16). 점유 둘은 함께 있거나 함께 없다(제약). 회차의 잠금은 `(available_at, article_id)` 인덱스로 찾는다. 배정하면 지운다 |
 | `event_big_criteria` | id(1 만), min_sources(1 이상), min_importance(`NUMERIC(3, 2)`, 1 ~ 5), changed_at | 큰 사건 기준의 지금 값 — 한 행(event-R21) |
 | `event_big_criteria_changes` | id, previous_min_sources, previous_min_importance, min_sources, min_importance, actor(`SYSTEM`/`OPERATOR`), changed_at | 큰 사건 기준 이력 — 추가만 한다(event-R21). 이전 값 둘은 함께 있거나 함께 없다(처음 값) |
@@ -792,3 +853,4 @@ public final class Embedding {
 | [0087](../adr/0087-closed-event-assignments-are-not-rejudged-and-closing-and-merging-are-not-undone.md) | 닫힌 사건의 배정은 재판정하지 않고, 닫기 · 병합은 기준이 바뀌어도 되돌리지 않는다 |
 | [0088](../adr/0088-article-features-kept-until-their-event-closes-and-unassigned-ones-for-the-window-plus-a-margin.md) | 기사 표현은 그 기사의 사건이 닫힐 때까지 보관하고, 배정 없는 표현은 만든 뒤 시간 창 + 여유만큼 보관한다 |
 | [0089](../adr/0089-long-term-hnsw-indexes-on-closed-events-created-per-model-version-at-runtime-by-the-worker-role.md) | 장기 검색 HNSW 인덱스는 닫힌 사건에 모델 버전마다 작업 역할이 실행 중에 만든다 |
+| [0094](../adr/0094-event-membership-judgements-identified-by-id-read-by-operators-and-referenced-by-the-records-that-apply-them.md) | 사건 소속 판정 원본은 ID 로 식별되어 운영자 조회로 읽히고, 판정을 반영한 `event` 기록이 그 ID 를 가리켜 판정의 쓰임과 결과를 잇는다 |
