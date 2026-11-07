@@ -1,3 +1,14 @@
+import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+import java.security.MessageDigest
+import java.time.Duration
+import java.util.HexFormat
+import java.util.Properties
+
 plugins {
 	java
 	id("org.springframework.boot") version "4.1.2"
@@ -45,6 +56,9 @@ dependencies {
 	implementation("com.rometools:rome:2.1.0")
 	// 기사 표현의 핵심 말 — 한국어 형태소 분석(Lucene Nori). Spring Boot 가 버전을 관리하지 않아 직접 고정한다
 	implementation("org.apache.lucene:lucene-analysis-nori:10.6.0")
+	// 기본 로컬 임베딩 — ONNX Runtime(linux-x64 · linux-aarch64 네이티브 포함)과 HF 토크나이저(DJL, 네이티브 포함). Spring Boot 가 버전을 관리하지 않아 직접 고정한다 — ADR-0091
+	implementation("com.microsoft.onnxruntime:onnxruntime:1.31.1")
+	implementation("ai.djl.huggingface:tokenizers:0.40.0")
 	// 피드 수집 HTTP 클라이언트 — 버전은 Spring Boot 의존성 관리
 	implementation("org.apache.httpcomponents.client5:httpclient5")
 	developmentOnly("org.springframework.boot:spring-boot-docker-compose")
@@ -156,4 +170,100 @@ tasks.withType<Javadoc>().configureEach {
 
 tasks.named("check") {
 	dependsOn(tasks.named("javadoc"), javadocTest)
+}
+
+// 기본 로컬 임베딩 모델 — 정본은 backend/embedding-model.properties(앱의 EmbeddingModel 도 같은 파일을 읽는다) · ADR-0091.
+// 고정 리비전의 파일을 받아 sha256 을 확인하고 Gradle 사용자 홈에 해시로 캐시한 뒤, 생성 리소스 embedding-model/ 로 놓는다.
+// 결선은 docs/development/infrastructure.md "테스트가 저장소 파일을 읽는 결선"
+val embeddingModelFile = layout.projectDirectory.file("embedding-model.properties")
+val embeddingModelDir = layout.buildDirectory.dir("generated/embedding-model")
+
+val fetchEmbeddingModel = tasks.register("fetchEmbeddingModel") {
+	description = "기본 로컬 임베딩 모델 · 토크나이저를 고정 리비전 · 해시로 받아 생성 리소스로 놓는다."
+	group = "build"
+	inputs.file(embeddingModelFile).withPropertyName("embeddingModelFile").withPathSensitivity(PathSensitivity.NONE)
+	outputs.dir(embeddingModelDir)
+	val cacheRoot = gradle.gradleUserHomeDir.resolve("caches/yozmnews-embedding-model")
+	doLast {
+		val properties = Properties()
+		embeddingModelFile.asFile.inputStream().use { properties.load(it) }
+		fun required(key: String): String =
+			properties.getProperty(key) ?: throw GradleException("embedding-model.properties 에 $key 가 없다")
+		val repository = required("repository")
+		val revision = required("revision")
+		val target = embeddingModelDir.get().asFile.resolve("embedding-model")
+		target.deleteRecursively()
+		target.mkdirs()
+		val client = HttpClient.newBuilder()
+			.followRedirects(HttpClient.Redirect.NORMAL)
+			.connectTimeout(Duration.ofSeconds(30))
+			.build()
+		fun sha256(file: File): String {
+			val digest = MessageDigest.getInstance("SHA-256")
+			file.inputStream().use { input ->
+				val buffer = ByteArray(1 shl 16)
+				while (true) {
+					val read = input.read(buffer)
+					if (read < 0) break
+					digest.update(buffer, 0, read)
+				}
+			}
+			return HexFormat.of().formatHex(digest.digest())
+		}
+		for ((name, key) in listOf("model.onnx" to "model", "tokenizer.json" to "tokenizer")) {
+			val path = required("$key.path")
+			val expected = required("$key.sha256")
+			val cached = cacheRoot.resolve(expected).resolve(name)
+			if (!cached.isFile || sha256(cached) != expected) {
+				cached.parentFile.mkdirs()
+				val partial = File(cached.parentFile, "$name.part")
+				val uri = URI.create("https://huggingface.co/$repository/resolve/$revision/$path")
+				val request = HttpRequest.newBuilder(uri).timeout(Duration.ofMinutes(10)).GET().build()
+				val response = client.send(request, HttpResponse.BodyHandlers.ofFile(partial.toPath()))
+				if (response.statusCode() != 200) {
+					throw GradleException("임베딩 모델 파일을 받지 못했다 — $uri: 상태 ${response.statusCode()}")
+				}
+				val actual = sha256(partial)
+				if (actual != expected) {
+					partial.delete()
+					throw GradleException("임베딩 모델 파일의 sha256 이 다르다 — $uri: $actual (기대 $expected)")
+				}
+				Files.move(partial.toPath(), cached.toPath(), StandardCopyOption.REPLACE_EXISTING)
+			}
+			cached.copyTo(target.resolve(name), overwrite = true)
+		}
+		embeddingModelFile.asFile.copyTo(target.resolve("model.properties"), overwrite = true)
+	}
+}
+
+sourceSets.main {
+	resources.srcDir(fetchEmbeddingModel.map { embeddingModelDir })
+}
+
+// 로컬 임베딩은 ONNX Runtime 텔레메트리를 끄는 이 환경 변수가 없으면 모델을 열지 않는다(정본은 OnnxArticleEmbedder). 네이티브를 올리는 JNA · ONNX Runtime 의 제한 메서드 경고를 끈다 — ADR-0091
+tasks.withType<Test> {
+	environment("ORT_DISABLE_TELEMETRY", "1")
+	jvmArgs("--enable-native-access=ALL-UNNAMED")
+}
+
+// 모델 파일은 따로 계층을 둔다 — 코드만 바뀌면 이 계층(약 135 MB)을 다시 받지 않는다. 계층 이름은 backend/Dockerfile 이 쓴다
+tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
+	layered {
+		application {
+			intoLayer("spring-boot-loader") {
+				include("org/springframework/boot/loader/**")
+			}
+			intoLayer("embedding-model") {
+				include("BOOT-INF/classes/embedding-model/**")
+			}
+			intoLayer("application")
+		}
+		dependencies {
+			intoLayer("snapshot-dependencies") {
+				include("*:*:*SNAPSHOT")
+			}
+			intoLayer("dependencies")
+		}
+		layerOrder.set(listOf("dependencies", "spring-boot-loader", "snapshot-dependencies", "embedding-model", "application"))
+	}
 }

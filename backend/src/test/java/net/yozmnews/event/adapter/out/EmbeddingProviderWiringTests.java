@@ -8,7 +8,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
 /**
- * 임베더 결선 — (profile, provider) 조합마다 어떤 임베더가 등록되는지 본다. 결선 클래스는 각 패키지에서 이름으로 올린다.
+ * 임베더 결선 — (profile, provider) 조합마다 어떤 임베더가 등록되는지 본다. 결선 클래스는 각 패키지에서 이름으로 올린다. 기본 provider 의
+ * 작업 역할은 빌드가 넣은 실제 모델을 연다 — Gradle 시험 작업이 텔레메트리 변수를 넣는다.
  * <p>
  * 지키는 규칙: event-R7 · event-R9 · platform-R18
  */
@@ -18,13 +19,15 @@ class EmbeddingProviderWiringTests {
 
 	private static final String FAKE = "net.yozmnews.event.adapter.out.fake.FakeArticleEmbedderConfiguration";
 
+	private static final String ONNX = "net.yozmnews.event.adapter.out.onnx.OnnxArticleEmbedderConfiguration";
+
 	private static final String[] EXTERNAL = { "yozmnews.embedding.provider=openai-compatible",
 			"yozmnews.embedding.openai-compatible.base-url=https://api.example.test/v1",
 			"yozmnews.embedding.openai-compatible.model=m-1", "yozmnews.embedding.openai-compatible.dimensions=256" };
 
 	private final ApplicationContextRunner runner = new ApplicationContextRunner()
 		.withPropertyValues("spring.profiles.default=web,worker")
-		.withUserConfiguration(load(OPENAI), load(FAKE));
+		.withUserConfiguration(load(OPENAI), load(FAKE), load(ONNX));
 
 	@Test
 	void localDevelopmentWithTheDefaultProviderUsesTheFake() {
@@ -32,6 +35,20 @@ class EmbeddingProviderWiringTests {
 			assertThat(context).hasSingleBean(ArticleEmbedder.class);
 			assertThat(context.getBean(ArticleEmbedder.class)).isInstanceOf(FakeArticleEmbedder.class);
 		});
+	}
+
+	@Test
+	void theWorkerRoleWithTheDefaultProviderUsesTheLocalModel() {
+		this.runner.withPropertyValues("spring.profiles.active=web,worker").run(context -> {
+			assertThat(context).hasSingleBean(ArticleEmbedder.class);
+			assertThat(context.getBean(ArticleEmbedder.class).info().name()).isEqualTo("onnx");
+		});
+	}
+
+	@Test
+	void theWebRoleAloneWithTheDefaultProviderHasNoEmbedder() {
+		this.runner.withPropertyValues("spring.profiles.active=web")
+			.run(context -> assertThat(context).doesNotHaveBean(ArticleEmbedder.class));
 	}
 
 	@Test
