@@ -3,6 +3,7 @@ package net.yozmnews.event.domain.event;
 import java.time.Instant;
 import java.util.Objects;
 
+import net.yozmnews.event.EventStatus;
 import net.yozmnews.event.domain.assignment.CentroidUpdate;
 
 /**

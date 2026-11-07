@@ -7,6 +7,7 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.IntStream;
 
 import net.yozmnews.TestcontainersConfiguration;
@@ -337,6 +338,25 @@ class JdbcArticleRepositoryTests {
 		assertThat(contents.get(c).entries()).extracting(ArticleEntryView::feedId)
 			.containsExactly(new FeedId(5), new FeedId(6));
 		assertThat(this.repository.findContents(List.of())).isEmpty();
+	}
+
+	@Test
+	void readsTheSourcesOfTheEntriesOfEachArticle() {
+		// 기사 A — 소스 3(피드 6) · 소스 4(피드 7)의 엔트리
+		ArticleId a = store(item(SOURCE, OTHER_FEED, "https://a.example/news/41", null, "소스 둘", PUBLISHED_AT,
+				FETCHED_AT, List.of()), MatchKind.NEW);
+		this.repository.insertEntryIfAbsent(a, item(new SourceId(4), new FeedId(7), "https://a.example/news/41", null,
+				"소스 둘", PUBLISHED_AT, FETCHED_AT, List.of()), MatchKind.URL);
+		// 기사 C — 같은 소스 3 의 두 피드: 소스는 하나다
+		ArticleId c = store(item(SOURCE, OTHER_FEED, "https://a.example/news/43", null, "피드 둘", PUBLISHED_AT,
+				FETCHED_AT, List.of()), MatchKind.NEW);
+		this.repository.insertEntryIfAbsent(c, item(SOURCE, FEED, "https://a.example/news/43", null, "피드 둘",
+				PUBLISHED_AT, FETCHED_AT, List.of()), MatchKind.URL);
+		ArticleId missing = new ArticleId(a.value() + c.value() + 1_000);
+
+		assertThat(this.repository.findSources(List.of(missing, c, a))).containsOnly(
+				Map.entry(a, Set.of(new SourceId(3), new SourceId(4))), Map.entry(c, Set.of(new SourceId(3))));
+		assertThat(this.repository.findSources(List.of())).isEmpty();
 	}
 
 	@Test

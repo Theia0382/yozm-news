@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import net.yozmnews.article.ArticleContent;
 import net.yozmnews.article.ArticleDirectory;
@@ -18,6 +19,7 @@ import net.yozmnews.evaluation.MembershipQuery;
 import net.yozmnews.evaluation.adapter.out.fake.FakeArticleEvaluator;
 import net.yozmnews.evaluation.domain.membership.EventJudgementRepository;
 import net.yozmnews.evaluation.domain.membership.MembershipRecord;
+import net.yozmnews.source.SourceId;
 import org.junit.jupiter.api.Test;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -65,6 +67,11 @@ class EventMembershipServiceTests {
 
 		@Override
 		public List<ArticleId> firstSeenSince(Instant since) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public Map<ArticleId, Set<SourceId>> sources(Collection<ArticleId> ids) {
 			throw new UnsupportedOperationException();
 		}
 

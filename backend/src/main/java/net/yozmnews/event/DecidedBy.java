@@ -1,4 +1,4 @@
-package net.yozmnews.event.domain.assignment;
+package net.yozmnews.event;
 
 /** 배정을 정한 것 — 배정 행의 {@code decided_by} */
 public enum DecidedBy {

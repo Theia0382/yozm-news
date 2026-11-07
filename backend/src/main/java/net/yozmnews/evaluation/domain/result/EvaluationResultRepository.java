@@ -32,6 +32,12 @@ public interface EvaluationResultRepository {
 	Optional<StoredEvaluation> findLatest(ArticleId articleId);
 
 	/**
+	 * 기사들의 버전 번호가 가장 큰 평가의 중요도 기대값.
+	 * @return 기사 ID → 중요도 — 평가가 없거나 그 평가의 중요도가 null 이면 빠진다
+	 */
+	Map<ArticleId, Double> findLatestImportances(Collection<ArticleId> articleIds);
+
+	/**
 	 * 그 버전의 평가 가운데 평가 시각이 {@code [from, to)} 인 것과 그 태그 행을 평가 ID 순으로 한 건씩 넘긴다 — 결과를 담아 두지 않고 커서로
 	 * 나눠 받는다. 커서는 트랜잭션 안에서만 나눠 받으므로 트랜잭션 안에서 부른다.
 	 * @throws IllegalStateException 트랜잭션 밖에서 불렀을 때

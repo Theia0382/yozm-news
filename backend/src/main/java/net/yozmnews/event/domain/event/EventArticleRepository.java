@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Optional;
 
 import net.yozmnews.article.ArticleId;
-import net.yozmnews.event.domain.assignment.DecidedBy;
+import net.yozmnews.event.DecidedBy;
 import net.yozmnews.event.domain.assignment.StoredCandidate;
 import org.jspecify.annotations.Nullable;
 

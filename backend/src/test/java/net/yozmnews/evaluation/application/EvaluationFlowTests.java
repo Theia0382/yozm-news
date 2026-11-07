@@ -241,6 +241,11 @@ class EvaluationFlowTests {
 			public List<ArticleId> firstSeenSince(Instant since) {
 				return EvaluationFlowTests.this.articles.firstSeenSince(since);
 			}
+
+			@Override
+			public Map<ArticleId, java.util.Set<net.yozmnews.source.SourceId>> sources(java.util.Collection<ArticleId> ids) {
+				return EvaluationFlowTests.this.articles.sources(ids);
+			}
 		};
 
 		round(counting, switchingArticles).run();
@@ -817,6 +822,11 @@ class EvaluationFlowTests {
 		@Override
 		public Optional<StoredEvaluation> findLatest(ArticleId articleId) {
 			return this.delegate.findLatest(articleId);
+		}
+
+		@Override
+		public Map<ArticleId, Double> findLatestImportances(java.util.Collection<ArticleId> articleIds) {
+			return this.delegate.findLatestImportances(articleIds);
 		}
 
 		@Override

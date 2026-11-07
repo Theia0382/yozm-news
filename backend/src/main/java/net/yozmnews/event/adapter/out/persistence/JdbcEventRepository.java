@@ -12,10 +12,10 @@ import java.util.List;
 import java.util.Optional;
 
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.event.EventStatus;
 import net.yozmnews.event.domain.assignment.CandidateScoring;
 import net.yozmnews.event.domain.assignment.EventSnapshot;
 import net.yozmnews.event.domain.event.EventRepository;
-import net.yozmnews.event.domain.event.EventStatus;
 import net.yozmnews.event.domain.event.LockedEvent;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
@@ -68,9 +68,9 @@ class JdbcEventRepository implements EventRepository {
 				join events e on e.id = a.event_id
 				join article_match_features f on f.article_id = a.article_id and f.model_version = :model
 				where a.event_id = :event
-				order by cast(f.embedding as halfvec) <=> e.centroid, a.article_id
+				order by %s
 				limit :limit
-				""")
+				""".formatted(CentroidOrder.ORDER))
 			.param("event", eventId)
 			.param("model", modelVersion)
 			.param("limit", limit)

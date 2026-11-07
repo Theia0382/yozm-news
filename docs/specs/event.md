@@ -13,7 +13,8 @@
 - **채우기** — 운영자가 기간을 정해, 그 기간에 처음 본 기사 가운데 배정이 없는 기사를 사건 묶기 대기에 넣는다(event-R19)
 - **지운 기사 따르기** — `article` 이 기사를 지우면 그 기사의 대기 행 · 배정 · 후보 · 표현을 지우고 사건을 다시 맞춘다(event-R8)
 - **(미구현)** **사건 정리** — 잘게 쪼개진 열린 사건을 합치고, 새 기사가 일정 기간 없는 사건을 닫는다(event-R13)
-- **(미구현)** **대표 기사 · 큰 사건 · 사건 조회** — 사건의 대표 기사를 고르고, 큰 사건을 조회할 때 판정하고, 사건을 다른 모듈에 낸다(event-R14 · R15)
+- **사건 조회 · 대표 기사 · 큰 사건** — 사건 · 사건의 기사 · 기사의 사건 · 사건 목록을 공개 조회(`EventDirectory`)로 내고, 주어진 기사 가운데 대표 기사를 고르고, 기간 안의 큰 사건을 조회할 때 지금 기준으로 판정한다(event-R14 · R15 · R20, [ADR-0082](../adr/0082-big-events-judged-at-query-time-by-distinct-sources-and-mean-importance-both-reaching-criteria.md))
+- **큰 사건 기준** — 운영자 설정(지금 값 한 행)과 추가 전용 이력으로 두고, 기동 때 처음 값을 적재하고, 공개 운영 API(`BigEventAdministration`)로 지금 값 · 변경 · 이력 · 미리보기를 낸다(event-R21, [ADR-0083](../adr/0083-big-event-criteria-as-operator-settings-with-append-only-history-and-preview.md))
 
 하지 않는 것:
 
@@ -21,7 +22,7 @@
 - Jev 를 직접 부르지 않는다 — 사건 소속 판정은 `evaluation` 의 공개 API 를 부른다([ADR-0026](../adr/0026-event-clustering-with-local-embeddings-and-jev.md) · [ADR-0071](../adr/0071-event-membership-judged-from-article-ids-with-questions-built-in-evaluation.md))
 - 기사 내용을 갖지 않는다. 제목 · 요약문은 `article` 의 공개 조회로 읽고, 표현 행에는 벡터와 핵심 말만 남긴다
 
-사건 기준 · 저장 기준의 기본값은 측정 전 목표다(§7). 큰 사건 기준 · 닫는 기간 · 임베딩 모델은 운영하면서 정한다([open-questions.md](../open-questions.md)). 묶기 품질은 수집한 기사 표본에 사건 라벨을 붙인 평가 세트로 잰다 — 증거로서의 자격은 [테스트 전략](../qa/test-strategy.md) ⑪, 표본의 실제 기사 텍스트를 공개 저장소에 두지 않는 규칙은 [security.md](../security.md)에 있다.
+사건 기준 · 저장 기준의 기본값(§7)과 큰 사건 기준의 처음 값(event-R21)은 측정 전 목표다. 큰 사건 기준 · 닫는 기간 · 임베딩 모델은 운영하면서 정한다([open-questions.md](../open-questions.md)). 묶기 품질은 수집한 기사 표본에 사건 라벨을 붙인 평가 세트로 잰다 — 증거로서의 자격은 [테스트 전략](../qa/test-strategy.md) ⑪, 표본의 실제 기사 텍스트를 공개 저장소에 두지 않는 규칙은 [security.md](../security.md)에 있다.
 
 다른 모듈과의 의존과 이벤트 흐름은 [overview.md §5](../overview.md#5-모듈-지도)에 있다.
 
@@ -47,10 +48,14 @@
 | 기준 이력 | 회차가 판정에 쓴 사건 기준 · 저장 기준 값의 목록(`event_assignment_criteria`) — 같은 값이면 한 행이고, 배정이 그 ID 를 가리킨다(event-R17) |
 | 재판정 | 지금 기준과 다른 기준으로 판정된 배정을 저장 후보로 다시 판정하는 일(event-R18) |
 | 채우기 | 운영자가 정한 기간에 처음 본 기사 가운데 배정이 없는 기사를 사건 묶기 대기에 넣는 운영 기능(event-R19) |
+| 조회 기간 | 사건 조회 · 큰 사건 판정이 받는 기간 — 시작 포함 · 끝 제외, 31일까지(`EventPeriod`). 기간 안 기사는 배정의 발행 시각으로 고른다(event-R20) |
+| 사건 집계 | 조회 기간 안 기사 수 · 그 기사들의 서로 다른 소스 수 · 중요도 평균(`EventTally`) — 큰 사건 판정의 재료(event-R15) |
+| 큰 사건 기준 | 소스 기준(서로 다른 소스 수의 하한)과 중요도 기준(중요도 평균의 하한) — 운영자 설정(event-R21) |
+| 대표 기사 | 주어진 기사 가운데 사건 중심에 가장 가까운 기사(event-R14) |
 
 ## 3. 공개 인터페이스
 
-이 모듈은 `article` 의 이벤트를 받고, 운영 기능 하나를 공개 운영 API 로 낸다 — `admin` 이 운영자 요청으로 부른다([ADR-0045](../adr/0045-admin-module-serves-operator-api-over-module-public-operation-apis.md)).
+이 모듈은 `article` 의 이벤트를 받고, 공개 조회 하나(`EventDirectory`)와 공개 운영 API 둘(`EventIntakeAdministration` · `BigEventAdministration`)을 낸다. 조회는 `digest` · `report` · `admin` 이 쓰고, 운영 API 는 `admin` 이 운영자 요청으로 부른다([ADR-0045](../adr/0045-admin-module-serves-operator-api-over-module-public-operation-apis.md)).
 
 ### EventIntakeAdministration · IntakeFillResult
 
@@ -79,7 +84,125 @@ public sealed interface IntakeFillResult {
   - 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통). 기사 고르기는 `article` 의 공개 조회 하나(표 전체 읽기 — 드문 운영 연산)이고, 넣기는 SQL 한 문장이다
   - 넣은 기사는 표현 회차가 표현을 만든 뒤 배정 대기로 넘긴다 — 표현이 이미 있으면 그대로 두고 넘긴다(event-R4 · R6)
 
-- **(미설계)** 사건 조회 · 큰 사건 판정의 공개 API — `digest` · `report` · `admin` 이 쓴다(event-R14 · R15)
+### EventDirectory
+
+사건 조회 — 다른 모듈이 사건 · 사건의 기사 · 기사의 사건 · 대표 기사 · 큰 사건 · 사건 목록을 읽는다(event-R14 · R15 · R20). 구현은 `application` 의 `EventDirectoryService` 다.
+
+```java
+public interface EventDirectory {
+    int MAX_PAGE_SIZE = 100;                                  // 사건 목록 한 쪽의 상한 — 정본. 측정 전 목표
+    Optional<EventView> find(EventId id);
+    List<EventArticleView> articles(EventId id);
+    Map<ArticleId, EventId> eventsOf(Collection<ArticleId> articleIds);
+    Map<EventId, ArticleId> representatives(Map<EventId, ? extends Collection<ArticleId>> among);
+    List<BigEvent> bigEvents(EventPeriod period);
+    EventPage list(EventPeriod period, @Nullable EventCursor after, int size);
+}
+```
+
+| 멤버 | 뜻 |
+|---|---|
+| `find` | 사건 하나 — 없는 사건이면 빈 값. **(미구현)** 합쳐진 사건의 ID 면 남는 사건을 낸다 — 사건 병합(event-R13)이 생기기 전이라 지금은 그 사건 그대로다 |
+| `articles` | 사건의 배정 전부 — 발행 시각 · 기사 ID 순. 없는 사건이면 빈 목록 |
+| `eventsOf` | 기사들의 사건 — 배정이 없는 기사는 빠진다. 빈 입력이면 빈 맵 |
+| `representatives` | 사건마다 주어진 기사 가운데 대표 기사(event-R14) — 그 사건의 기사가 아닌 것은 무시하고, 남는 기사가 없는 사건은 빠진다 |
+| `bigEvents` | 조회 기간 안의 큰 사건 — 지금 기준으로 판정한다(event-R15). 소스 수 내림차순, 중요도 평균 내림차순, 사건 ID 순 |
+| `list` | 조회 기간 안 기사가 있는 사건 — 마지막 기사 시각 내림차순, 사건 ID 내림차순으로 `size` 건. 집계 · 큰 사건 여부는 그 기간, 대표 기사는 사건 기사 전체에서. `size` 가 1 ~ `MAX_PAGE_SIZE` 밖이면 `IllegalArgumentException` |
+
+- 계약
+  - 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통). 사용자 정보를 받지 않는다 — 사용자 제외 조건은 부르는 쪽이 기사를 걸러 `representatives` 에 넘긴다
+  - 각 질의는 그 순간의 값이다. 큰 사건의 재료(소스 · 중요도)는 `article` 의 `ArticleDirectory.sources` 와 `evaluation` 의 `ArticleEvaluations.importances` 로 따로 읽는다 — 한 스냅숏이 아니다
+  - `bigEvents` · `list` 는 큰 사건 기준의 처음 값을 적재하기 전이면 `IllegalStateException`(`list` 는 쪽에 사건이 있을 때)
+  - `list` 의 커서는 앞 쪽 마지막 사건의 (마지막 기사 시각, 사건 ID)다 — 쪽 사이에 마지막 기사 시각이 바뀐 사건은 건너뛰거나 다시 나올 수 있다
+
+### EventId · EventPeriod · EventView · EventArticleView · EventStatus · DecidedBy
+
+```java
+public record EventId(long value) {}                     // 1 이상 — 아니면 IllegalArgumentException
+
+public record EventPeriod(Instant from, Instant to) {    // [from, to)
+    public static final int MAX_DAYS = 31;               // 정본. 측정 전 목표
+    public static final Duration MAX_LENGTH = Duration.ofDays(MAX_DAYS);
+    public static Optional<EventPeriod> of(Instant from, Instant to);
+}
+
+public record EventView(EventId id, EventStatus status, int articleCount, Instant firstArticleAt, Instant lastArticleAt,
+        Instant createdAt) {}
+
+public record EventArticleView(ArticleId articleId, Instant publishedAt, @Nullable Double score, DecidedBy decidedBy,
+        Instant assignedAt) {}
+
+public enum EventStatus { OPEN, CLOSED }
+public enum DecidedBy { FORMULA, EVALUATOR, JUDGEMENT_FAILED }
+```
+
+| 타입 · 필드 | 뜻 |
+|---|---|
+| `EventPeriod` | 조회 기간 — 생성자는 `from < to` 이고 길이가 `MAX_LENGTH` 이하가 아니면 `IllegalArgumentException`, `of` 는 빈 값 |
+| `EventView.articleCount` · `firstArticleAt` · `lastArticleAt` | 사건 전체의 기사 수 · 첫 · 마지막 기사 시각(기간과 무관) |
+| `EventArticleView.score` | 붙인 후보의 점수, 새 사건이면 가장 높은 후보의 점수 — 후보가 없었으면 null(event-R12) |
+| `EventArticleView.decidedBy` | 배정을 정한 것 — 산식 · 판정 · 판정 실패(event-R11 · R16) |
+| `EventStatus` | 사건의 상태 — 열린 사건에만 기사를 붙인다 |
+
+### EventTally · BigEvent · EventSummary · EventCursor · EventPage
+
+```java
+public record EventTally(int articles, int sources, @Nullable BigDecimal importance) {}
+public record BigEvent(EventId id, List<ArticleId> articles, EventTally tally) {}
+public record EventSummary(EventView event, EventTally tally, boolean big, @Nullable ArticleId representative) {}
+public record EventCursor(Instant lastArticleAt, EventId id) {}
+public record EventPage(List<EventSummary> events, @Nullable EventCursor next) {}
+```
+
+| 타입 · 필드 | 뜻 |
+|---|---|
+| `EventTally` | 조회 기간 안 사건 집계(event-R15) — 기사 수, 서로 다른 소스 수, 중요도가 있는 기사의 중요도 평균(없으면 null) |
+| `BigEvent.articles` | 조회 기간 안 기사 — 발행 시각 · 기사 ID 순 |
+| `EventSummary.big` | 목록 기간 · 지금 기준으로 큰 사건인가 |
+| `EventSummary.representative` | 사건 기사 전체에서 고른 대표 기사 — 배정이 없으면 null |
+| `EventPage.next` | 다음 쪽의 커서 — 더 없으면 null |
+
+### BigEventAdministration · BigEventCriteria · BigEventCriteriaChange · BigEventCriteriaChangeResult
+
+큰 사건 기준의 운영(event-R21) — 운영자 화면이 부른다. 구현은 `application` 의 `BigEventAdministrationService` 다.
+
+```java
+public interface BigEventAdministration {
+    BigEventCriteria criteria();
+    BigEventCriteriaChangeResult change(int minSources, BigDecimal minImportance, ChangeActor actor);
+    List<BigEventCriteriaChange> changes();
+    List<BigEvent> preview(BigEventCriteria proposed, EventPeriod period);
+}
+
+public record BigEventCriteria(int minSources, BigDecimal minImportance) {
+    public static final int IMPORTANCE_SCALE = 2;                       // 중요도 기준의 소수 자릿수 — 정본
+    public static final BigEventCriteria DEFAULT;                       // (3, 3.00) — 처음 값의 정본. 측정 전 목표
+    public static Optional<BigEventCriteria> of(int minSources, BigDecimal minImportance);
+}
+
+public record BigEventCriteriaChange(@Nullable BigEventCriteria previous, BigEventCriteria current, ChangeActor actor,
+        Instant changedAt) {}
+
+public sealed interface BigEventCriteriaChangeResult {
+    record Changed(BigEventCriteria previous, BigEventCriteria current) implements BigEventCriteriaChangeResult {}
+    record Unchanged(BigEventCriteria current) implements BigEventCriteriaChangeResult {}
+    record OutOfRange() implements BigEventCriteriaChangeResult {}
+}
+```
+
+| 타입 · 멤버 | 뜻 |
+|---|---|
+| `criteria` | 지금 기준 |
+| `change` | 기준을 바꾼다 — 범위 밖이면 `OutOfRange`, 지금 값과 같으면 `Unchanged` 이고 둘 다 아무것도 쓰지 않는다 |
+| `changes` | 이력 — 최근 것부터, 같은 시각이면 나중에 쓴 것부터 |
+| `preview` | 제안 기준으로 판정한 조회 기간 안의 큰 사건 — 판정 · 순서는 `EventDirectory.bigEvents` 와 같고 아무것도 쓰지 않는다 |
+| `BigEventCriteria` | 생성자는 소스 기준 1 이상, 중요도 기준이 중요도 수준의 범위(`ImportanceScale.MIN_LEVEL` ~ `MAX_LEVEL`) 안 · 소수 둘째 자리까지가 아니면 `IllegalArgumentException`. 중요도 기준은 둘째 자리로 맞춘다 — 같은 값이면 같다. `of` 는 범위 밖이면 빈 값 |
+| `BigEventCriteriaChange.previous` | 바꾸기 전 값 — 처음 값이면 null |
+
+- 계약
+  - `change` 는 한 트랜잭션이다. 지금 값 행을 잠가 동시 변경이 줄을 서므로, 이력의 이전 값이 바로 앞 변경의 새 값이다
+  - 행위자는 `evaluation` 의 `ChangeActor` 다 — 운영자 요청은 `OPERATOR`, 기동 적재는 `SYSTEM`
+  - `criteria` · `change`(범위 안의 값) 는 처음 값을 적재하기 전이면 `IllegalStateException`. 역할 애너테이션이 없다(두 역할 공통)
 
 HTTP 엔드포인트는 없다.
 
@@ -89,19 +212,22 @@ HTTP 엔드포인트는 없다.
 
 | 패키지 | 책임 |
 |---|---|
-| (최상위) | 모듈 선언(`package-info`), 공개 운영 API `EventIntakeAdministration` · `IntakeFillResult` |
+| (최상위) | 모듈 선언(`package-info`), 공개 조회 `EventDirectory` 와 그 값 타입, 공개 운영 API `EventIntakeAdministration` · `BigEventAdministration` 과 그 결과 · 값 타입, 사건 상태 · 배정을 정한 것(`EventStatus` · `DecidedBy`) |
 | `domain/feature` | 기사 표현 — 임베더 포트와 그 정보 · 벡터 값, 표현 텍스트 구성 · 핵심 말 추출 · 임베더 결과 확인의 정본, 표현 행과 그 저장소 |
 | `domain/intake` | 사건 묶기 대기 — 대기 행과 그 점유, 대기 상수, 대기 저장소 |
 | `domain/assignment` | 사건 배정의 판단 — 기준, 후보 점수 산식, 판정 규칙, 재판정 적용 규칙, 중심 누적 갱신, 배정 대기 행과 그 일정, 배정 대기 · 기준 이력 저장소 |
-| `domain/event` | 사건과 배정 — 잠근 사건 행과 기사 하나 더하기, 기사를 뺀 사건의 새 값, 배정 행, 사건 · 배정 저장소 |
-| `application` | 기사 이벤트 리스너, 표현 · 배정 · 재판정 회차, 기사를 뺀 사건 쓰기, 기준 설정과 결선, 공개 운영 API 의 구현, 핵심 말 추출기의 결선 |
+| `domain/event` | 사건과 배정 — 잠근 사건 행과 기사 하나 더하기, 기사를 뺀 사건의 새 값, 배정 행, 사건 · 배정 저장소, 사건 조회 저장소 |
+| `domain/bigevent` | 큰 사건 — 판정 규칙 · 순서, 사건 집계, 큰 사건 기준 저장소 |
+| `application` | 기사 이벤트 리스너, 표현 · 배정 · 재판정 회차, 기사를 뺀 사건 쓰기, 기준 설정과 결선, 공개 조회 · 공개 운영 API 의 구현, 사건 집계 읽기, 큰 사건 기준의 처음 값 적재, 핵심 말 추출기의 결선 |
 | `adapter/in/job` | 사건 묶기 대기 반복 작업(작업 역할) — 세 회차를 차례로 |
-| `adapter/out/persistence` | 대기 · 표현 · 배정 대기 · 기준 이력 · 사건 · 배정 저장소의 JdbcClient 구현, 벡터의 pgvector 텍스트 표현 |
+| `adapter/out/persistence` | 대기 · 표현 · 배정 대기 · 기준 이력 · 사건 · 배정 · 사건 조회 · 큰 사건 기준 저장소의 JdbcClient 구현, "중심에 가까운 순" 정렬 조각, 벡터의 pgvector 텍스트 표현 |
 | `adapter/out/fake` | 임베더 포트의 로컬 대체물과 그 결선(`local` 에서만) |
 
 협력: `EventIntakeListener` 가 `ArticleStored` 로 기사를 `IntakeQueueRepository` 에 넣고, `ArticlesRemoved` 로 대기 행과 표현 행(`MatchFeaturesRepository`)을 지운다. 작업 역할의 `IntakeArticlesJob` 이 1분마다 임베더를 찾아 있으면 `EventIntakeRound` 에 넘겨 돌린다. 회차는 `IntakeQueueRepository` 로 대기를 점유하고(`PendingArticle.claim` · `IntakeSchedule`), `article` 의 `ArticleDirectory` 로 제목 · 요약문을 읽어, 기사마다 `MatchText` 로 표현 텍스트를, `KeyTermExtractor` 로 핵심 말을 만든다. 포트 `ArticleEmbedder` 로 텍스트 묶음을 한 번에 벡터로 바꾸고 `EmbeddingCheck` 로 결과를 확인한 뒤, 기사마다 `IntakeQueueRepository.deleteIfLeased` 가 대기 행을 지웠을 때만 `MatchFeaturesRepository.insertIfAbsent` 로 표현을 쓴다. 임베더는 `local` 에서 `FakeArticleEmbedderConfiguration` 이 `FakeArticleEmbedder` 를 포트로 등록한다. `KeyTermExtractor` 는 `KeyTermConfiguration` 이 빈으로 둔다. 표현을 쓰는 같은 트랜잭션에서 `AssignmentQueueRepository.enqueue` 로 그 기사를 배정 대기에 넣는다.
 
 배정: 반복 작업이 표현 회차 다음에 `AssignmentRound` 를 돌린다. 회차는 `AssignmentQueueRepository` 로 배정 대기를 점유하고(`PendingAssignment.claim` · `AssignmentSchedule`), `CriteriaRepository` 에 지금 기준(`AssignmentCriteria` — `EventAssignmentProperties` 를 `AssignmentConfiguration` 이 빈으로 바꾼 것)을 등록하고, `ArticleDirectory` 로 발행 시각을 읽는다. 기사마다 `MatchFeaturesRepository.find` 로 지금 모델 버전의 표현을 읽어 `EventRepository.candidates` 로 후보 사건을 얻고, `CandidateScoring` 으로 점수를 매겨 `AssignmentRule` 로 판정한다. 띠면 `EventRepository.describers` 로 서술 기사를 골라 `evaluation` 의 `EventMembership` 에 묻는다. 쓰기는 `EventRepository.lock` · `update`(`LockedEvent.joined`) 또는 `open` 과 `EventArticleRepository.insertIfAbsent` 다. 이어서 `RejudgementRound` 가 `EventArticleRepository.lockRejudgeTargets` 로 기준이 다른 배정을 잠가 `AssignmentRule` · `Reassignment` 로 다시 판정하고, 옮기거나 떼어 내면 옛 사건을 `EventShrinkWriter` 로 쓴다. 지운 기사 따르기는 `EventIntakeListener` 가 `EventShrink` 로 사건의 새 값을 정해 `EventShrinkWriter` 로 쓴다. 채우기는 `EventIntakeAdministrationService` 가 `ArticleDirectory.firstSeenSince` 와 `IntakeQueueRepository.enqueueUnassigned` 로 한다.
+
+조회: `EventDirectoryService` 가 `EventQueryRepository` 로 사건 · 배정 · 기사의 사건 · 대표 기사(정렬은 `CentroidOrder` — `describers` 와 같은 조각) · 기간 안 배정 · 사건 쪽을 읽는다. 큰 사건은 기간 안 배정을 `EventTallyReader` 에 넘겨 `article` 의 `ArticleDirectory.sources` · `evaluation` 의 `ArticleEvaluations.importances` 로 재료를 한 번씩 읽고 `EventTallies` 로 센 뒤, `BigEventCriteriaRepository` 의 지금 기준으로 `BigEventRule` 이 판정 · 정렬한다. 큰 사건 기준은 `BigEventCriteriaSeeding` 이 기동 때 처음 값을 넣고, `BigEventAdministrationService` 가 변경 · 이력을 저장소로 쓰며 지금 값 읽기와 미리보기는 `EventDirectoryService` 의 것을 쓴다.
 
 #### 회차 흐름
 
@@ -170,6 +296,9 @@ sequenceDiagram
 | `ArticleStored` · `ArticlesRemoved` 리스너 | `EventIntakeListener`(`application`) | `article` 의 `ArticleStored` · `ArticlesRemoved` | 새 기사를 대기에 넣고(event-R5), 지운 기사의 대기 · 배정 대기 · 배정 · 후보 · 표현 행을 지우고 사건을 다시 맞춘다(event-R8). 비동기 · 새 트랜잭션이고 이벤트 발행 레지스트리에 기록된다(Spring Modulith `@ApplicationModuleListener`). 실패한 발행은 `platform` 의 이벤트 재처리 작업이 다시 처리하고, 다시 처리해도 결과가 같다. 임베더 · Nori 를 쓰지 않는다 — 화면 역할에서 돌아도 된다 |
 | 사건 묶기 대기 반복 작업 | `IntakeArticlesJob`(`adapter/in/job`, 작업 역할) | JobRunr 반복 작업 `event-intake` — 1분마다, 재시도 없음 | 임베더를 부를 때 찾아 `EventIntakeRound` → `AssignmentRound` → `RejudgementRound` 를 차례로 돌린다(event-R6 · R16 · R18). 없으면 셋 다 건너뛴다 — 기동 때 경고 한 번(event-R7). 이전 실행이 대기 · 처리 중이면 그 실행은 건너뛴다 |
 | 채우기 | `EventIntakeAdministrationService`(`application`) | `admin` 의 운영자 요청(`EventIntakeAdministration.fill`) | 기간에 처음 본, 배정 없는 기사를 사건 묶기 대기에 넣는다(event-R19). 두 역할 공통 |
+| 사건 조회 | `EventDirectoryService`(`application`) | 다른 모듈의 `EventDirectory` 호출 | 사건 · 사건의 기사 · 기사의 사건 · 대표 기사 · 큰 사건 · 사건 목록(event-R14 · R15 · R20). 두 역할 공통 |
+| 큰 사건 기준 운영 | `BigEventAdministrationService`(`application`) | `admin` 의 운영자 요청(`BigEventAdministration`) | 지금 값 · 변경 · 이력 · 미리보기(event-R21). 두 역할 공통 |
+| 큰 사건 기준 처음 값 | `BigEventCriteriaSeeding`(`application`) | 기동(`SmartInitializingSingleton`) | 지금 값이 없으면 처음 값과 이력 한 행을 넣는다(event-R21). 두 역할 공통 |
 | **(미구현)** 사건 병합 | — | 주기 | 가까운 열린 사건끼리 합친다(event-R13) |
 | **(미구현)** 사건 닫기 | — | 하루 1회 | 새 기사가 일정 기간 없는 사건을 닫는다(event-R13) |
 
@@ -185,6 +314,10 @@ sequenceDiagram
 - `EventAssignmentProperties` · `AssignmentConfiguration` — 사건 기준 · 저장 기준 설정(`yozmnews.event-assignment`, 기본값의 정본은 레코드 컴포넌트의 `@DefaultValue`)과 그것을 검증된 `AssignmentCriteria` 빈으로 바꾸는 결선(event-R17)
 - `EventIntakeAdministrationService` — 공개 운영 API `EventIntakeAdministration` 의 구현(event-R19). 시각은 `InstantSource` 에서 얻는다
 - `KeyTermConfiguration` — `KeyTermExtractor` 를 빈으로 두고, 컨텍스트가 닫을 때 닫는다
+- `EventDirectoryService` — 공개 조회 `EventDirectory` 의 구현(event-R14 · R15 · R20). 큰 사건 판정은 패키지 비공개 `bigEvents(EventPeriod, BigEventCriteria)` 하나를 공개 조회(지금 기준)와 미리보기(제안 기준)가 함께 쓴다. `list` 는 한 건 더 읽어 다음 커서를 정한다. 트랜잭션 · 역할 애너테이션이 없다
+- `EventTallyReader` — 사건별 기간 안 기사의 소스 · 중요도를 다른 모듈의 공개 조회로 한 번씩 읽어 `EventTallies` 로 세는 협력자(집계 경로 하나). 입력이 비면 부르지 않는다
+- `BigEventAdministrationService` — 공개 운영 API `BigEventAdministration` 의 구현(event-R21). 변경은 지금 값 행을 잠근 한 트랜잭션이고, 바꿨으면 정보 로그 `큰 사건 기준을 바꿨다 — 소스 {a} → {b}, 중요도 {x} → {y}, {행위자}` 를 남긴다. 시각은 `InstantSource` 에서 얻는다
+- `BigEventCriteriaSeeding` — 기동 때 한 트랜잭션에서 처음 값(`BigEventCriteria.DEFAULT`)을 넣는다(event-R21). 넣었으면 정보 로그 `큰 사건 기준의 처음 값을 적재했다 — 소스 {n} · 중요도 {x}`
 
 ### `domain`
 
@@ -242,7 +375,6 @@ sequenceDiagram
   public record ScoredCandidate(long eventId, double score) {}
   public record StoredCandidate(long eventId, double score, @Nullable Double probability) {}
   public enum DecisionPhase { FIRST, AFTER_JUDGEMENT, REJUDGE }
-  public enum DecidedBy { FORMULA, EVALUATOR, JUDGEMENT_FAILED }
   public sealed interface Decision {
       record Attach(long eventId, double score, DecidedBy by) implements Decision {}
       record Open(@Nullable Double bestScore, DecidedBy by) implements Decision {}
@@ -281,7 +413,7 @@ sequenceDiagram
 
 - `LockedEvent(long id, EventStatus status, String modelVersion, float[] centroid, int articleCount, Instant firstArticleAt, Instant lastArticleAt)` — 잠근 사건 한 행. `joined(벡터, 발행 시각)` 이 기사 하나를 더한 사건의 정본이다 — 배정과 재판정의 옮기기가 쓴다(event-R12)
 - `EventShrink` — 기사를 뺀 사건의 새 값의 정본(event-R8 · R18) — `of(LockedEvent, 뺀 기사, 그 사건 모델 버전의 표현)` → `Emptied` · `Shrunk(centroid, articleCount, removedTerms)`
-- `EventStatus`(`OPEN` · `CLOSED`), `PublishedSpan(first, last)`
+- `PublishedSpan(first, last)` — 사건 상태 `EventStatus` · 배정을 정한 것 `DecidedBy` 는 공개 타입이다(§3)
 
   ```java
   public record EventArticle(ArticleId articleId, long eventId, Instant publishedAt, @Nullable Double score,
@@ -290,7 +422,7 @@ sequenceDiagram
 
   public interface EventRepository {
       List<EventSnapshot> candidates(String modelVersion, float[] vector, Instant from, Instant to);  // event-R10, 사건 ID 순
-      List<ArticleId> describers(long eventId, String modelVersion, int limit);   // 그 모델 버전 표현이 있는 구성 기사 — 중심에 가까운 순, 같으면 기사 ID 순
+      List<ArticleId> describers(long eventId, String modelVersion, int limit);   // 그 모델 버전 표현이 있는 구성 기사 — 중심에 가까운 순, 같으면 기사 ID 순(CentroidOrder)
       Optional<LockedEvent> lock(long eventId);                                   // FOR UPDATE
       List<LockedEvent> lockAll(Collection<Long> eventIds);                       // 사건 ID 순 FOR UPDATE
       long open(String modelVersion, float[] centroid, Instant publishedAt, List<String> keyTerms, Instant now);  // 새 사건 — 같은 말은 한 번
@@ -307,6 +439,37 @@ sequenceDiagram
       List<EventArticle> lockByArticles(Collection<ArticleId> articleIds);       // 기사 ID 순 FOR UPDATE
       Optional<PublishedSpan> publishedSpan(long eventId);                       // 남은 배정의 발행 시각 범위 — 배정이 없으면 빈 값
       void deleteByArticles(Collection<ArticleId> articleIds);                   // 배정 · 그 기사의 후보
+  }
+  ```
+
+- 사건 조회 저장소 `EventQueryRepository` — 공개 조회의 읽기 전용 질의(배정 쓰기용 `EventRepository` 와 나눈다). 기간은 배정의 발행 시각으로 고른다(시작 포함 · 끝 제외)
+
+  ```java
+  public interface EventQueryRepository {
+      Optional<EventView> find(long eventId);
+      List<EventArticleView> articles(long eventId);                                // 발행 시각 · 기사 ID 순
+      Map<ArticleId, Long> eventsOf(Collection<ArticleId> articleIds);             // 배정이 없는 기사는 빠진다
+      Map<Long, ArticleId> representatives(Map<Long, ? extends Collection<ArticleId>> among);  // 그 사건의 배정이 아닌 쌍은 무시
+      Map<Long, ArticleId> representativesOfAll(Collection<Long> eventIds);        // 사건 기사 전체에서
+      Map<Long, List<ArticleId>> membersIn(Instant from, Instant to);              // 사건 ID 순, 사건마다 발행 시각 · 기사 ID 순
+      Map<Long, List<ArticleId>> membersIn(Collection<Long> eventIds, Instant from, Instant to);
+      List<EventView> page(Instant from, Instant to, @Nullable Instant afterLast, @Nullable Long afterId, int limit);  // 기간 안 배정이 있는 사건 — 마지막 기사 시각 · 사건 ID 내림차순
+  }
+  ```
+
+#### `domain/bigevent`
+
+- `BigEventRule` — 큰 사건 판정 규칙의 정본(event-R15) — `isBig(EventTally, BigEventCriteria)`, 순서 `ORDER`(소스 수 · 중요도 평균 내림차순, 사건 ID 오름차순)
+- `EventTallies` — 사건 집계의 정본(event-R15) — `tally(사건별 기사, 기사별 소스, 기사별 중요도)` → 사건별 `EventTally`. 평균은 `BigDecimal`(`MathContext.DECIMAL64`)로 센다
+- 저장 단위: aggregate 가 없다 — 지금 값 한 행과 추가 전용 이력을 저장소 `BigEventCriteriaRepository` 가 쓴다(부르는 쪽 트랜잭션 안)
+
+  ```java
+  public interface BigEventCriteriaRepository {
+      boolean seedIfAbsent(BigEventCriteria criteria, Instant now);   // 없으면 지금 값 · 이력(SYSTEM, 이전 값 없음) — 넣었으면 true
+      Optional<BigEventCriteria> current();
+      BigEventCriteria lockCurrent();                                  // FOR UPDATE — 없으면 IllegalStateException
+      void change(BigEventCriteria previous, BigEventCriteria next, ChangeActor actor, Instant now);  // 지금 값 갱신 + 이력 한 행
+      List<BigEventCriteriaChange> changes();                          // 최근 것부터, 같은 시각이면 나중에 넣은 것부터
   }
   ```
 
@@ -357,6 +520,9 @@ public final class Embedding {
 - `JdbcCriteriaRepository` — 같은 값의 행을 먼저 읽고, 없을 때만 `INSERT … ON CONFLICT … DO UPDATE … RETURNING id`(동시에 같은 값을 넣어도 한 행 · 같은 ID). 창은 초로 적는다
 - `JdbcEventRepository` — 중심은 `halfvec` 이고 같은 텍스트 표현으로 쓰고 읽는다. 후보의 코사인은 `1 − (중심 <=> cast(벡터 as halfvec))` 를 열린 사건마다 센다(인덱스 없음). 사건 핵심 말 상위 수는 `CandidateScoring.EVENT_KEY_TERMS` 를 매개변수로 넘기고, 말 순은 바이트 순(`COLLATE "C"`)이다
 - `JdbcEventArticleRepository` — 배정은 `INSERT … ON CONFLICT (article_id) DO NOTHING` 이고 썼을 때만 후보를 쓴다. 재판정 대상은 `criteria_id < :c or criteria_id > :c` 로 기준 인덱스를 쓴다
+- `CentroidOrder` — "중심에 가까운 순" 정렬의 정본 SQL 조각(event-R11 · R14). 사건 모델 버전의 표현이 있는 기사를 거리 순 · 같으면 기사 ID 순으로 먼저, 없는 기사는 그 뒤에 발행 시각 · 기사 ID 순. `JdbcEventRepository.describers`(내부 조인 — 표현이 있는 기사만)와 `JdbcEventQueryRepository` 의 대표 기사(왼쪽 조인)가 쓴다
+- `JdbcEventQueryRepository` — 대표 기사는 (사건, 기사) 두 배열을 `unnest` 해 배정과 조인하고 `distinct on (사건)` 으로 사건마다 첫째를 고른다. 기간은 `published_at` 범위(인덱스 `event_articles_published_idx`), 쪽은 `exists`(기간 안 배정)와 커서 `(last_article_at, id) <` 조건
+- `JdbcBigEventCriteriaRepository` — 지금 값은 ID 1 인 한 행이다. 처음 값은 `INSERT … ON CONFLICT (id) DO NOTHING` 이 넣었을 때만 이력을 쓴다(동시에 떠도 한 행). 중요도는 `NUMERIC(3, 2)` 를 `BigDecimal` 로 읽고 쓴다
 
 #### 신뢰할 수 없는 입력
 
@@ -449,12 +615,25 @@ public final class Embedding {
 
 ### 대표 기사 · 큰 사건
 
-- **event-R14** — **(미구현)** 대표 기사: 주어진 기사들 가운데 사건 중심에 가장 가까운 기사다. 후보 선별([pipeline.md §6](../pipeline.md#6-다이제스트-생성))에서는 그 사용자의 제외 조건(소스 · 지역 · 형식 · 싫어요)을 통과한 기사 가운데서 고르고, 운영자 화면은 사건의 기사 전체에서 고른다
-- **event-R15** — **(미구현)** 큰 사건: 조회할 때 판정한다. 기간 안에서 사건을 다룬 서로 다른 소스 수와 기사들의 Jev 중요도가 운영자가 정한 기준을 넘는 사건이다
+판단의 이유는 [ADR-0082](../adr/0082-big-events-judged-at-query-time-by-distinct-sources-and-mean-importance-both-reaching-criteria.md) · [ADR-0083](../adr/0083-big-event-criteria-as-operator-settings-with-append-only-history-and-preview.md)에 있다.
+
+- **event-R14** — 대표 기사: 주어진 기사들 가운데 사건 중심에 가장 가까운 기사다. 후보 선별([pipeline.md §6](../pipeline.md#6-다이제스트-생성))에서는 그 사용자의 제외 조건(소스 · 지역 · 형식 · 싫어요)을 통과한 기사 가운데서 고르고, 운영자 화면은 사건의 기사 전체에서 고른다.
+  - 사건 모델 버전의 표현이 있는 기사를 중심과의 거리 순(같으면 기사 ID 순)으로 먼저, 표현이 없는 기사(보관 기간이 지났거나 다른 모델 버전의 표현만 있다)는 그 뒤에 발행 시각 · 기사 ID 순으로 두고 첫째를 고른다(`CentroidOrder` — 서술 기사와 같은 정본)
+  - 주어진 기사 가운데 그 사건의 기사가 아닌 것은 무시하고, 남는 기사가 없는 사건은 대표가 없다
+- **event-R15** — 큰 사건: 조회할 때 지금 기준(event-R21)으로 판정하고 결과를 저장하지 않는다. 조회 기간 안 기사(event-R20)로 센 서로 다른 소스 수가 소스 기준 이상이고, 중요도 평균이 있고 중요도 기준 이상이면 큰 사건이다(경계 포함 — `BigEventRule` 정본).
+  - 소스 수는 기간 안 기사들의 엔트리 소스(`ArticleDirectory.sources`)의 서로 다른 수다 — 다른 매체의 전재 기사는 다른 기사라 매체마다 하나씩 센다
+  - 중요도 평균은 기간 안 기사 가운데 중요도가 있는 기사(`ArticleEvaluations.importances` — 버전 번호가 가장 큰 평가의 기대값)의 평균이다. 소수 산술로 세어 기준과 같은 수 체계로 비교한다(`EventTallies` 정본). 중요도가 없는 기사는 평균에서 빼고 소스 수에는 넣는다
+  - 순서는 소스 수 · 중요도 평균 내림차순, 사건 ID 오름차순(`BigEventRule.ORDER`). 몇 개를 쓸지는 부르는 쪽이 정한다
+  - 사건의 상태 · 모델 버전 · 정한 것과 무관하다 — 닫힌 사건, 판정 실패로 연 사건, 다른 모델 버전의 사건도 같은 규칙이다
+- **event-R20** — 사건 조회: 조회 기간은 시작 포함 · 끝 제외이고 31일(`EventPeriod.MAX_DAYS`)까지다. 기간 안 기사는 배정의 발행 시각으로 고른다. 사건 목록은 기간 안 기사가 있는 사건을 마지막 기사 시각 · 사건 ID 내림차순으로 한 쪽 100건(`EventDirectory.MAX_PAGE_SIZE`)까지 낸다 — 집계 · 큰 사건 여부는 그 기간, 대표 기사는 사건 기사 전체에서. 기사의 사건은 배정을 따른다. 사건 ID 로 찾는 조회는 **(미구현)** 합쳐진 사건이면 남는 사건을 낸다 — 사건 병합(event-R13)과 함께 둔다
+- **event-R21** — 큰 사건 기준: 소스 기준(1 이상)과 중요도 기준(중요도 수준 범위 안, 소수 둘째 자리까지)은 운영자 설정이다 — 지금 값 한 행과 추가 전용 이력(이전 값 · 새 값 · 행위자 종류 · 시각).
+  - 처음 값은 `BigEventCriteria.DEFAULT`(소스 3 · 중요도 3.00 — 측정 전 목표)이고, 기동 때 지금 값이 없으면 넣고 그때만 행위자 `SYSTEM` 의 이력 한 행을 남긴다. 두 역할이 동시에 떠도 한 행이다
+  - 변경은 지금 값 행을 잠근 한 트랜잭션이다 — 동시 변경이 줄을 서 이력의 이전 값이 바로 앞 변경의 새 값이다. 같은 값이면 바꾸지 않고, 범위 밖이면 거부한다. 둘 다 이력을 남기지 않는다
+  - 바꾸면 다음 조회부터 모든 기간에 적용된다 — 재판정이 없다. 미리보기는 제안 기준으로 같은 판정을 하고 아무것도 쓰지 않는다
 
 ## 6. 데이터
 
-컬럼 타입 · 인덱스 · 제약 문면의 정본은 `backend/src/main/resources/db/migration/V16__event_intake_and_match_features.sql`(사건 묶기 대기 · 기사 표현)과 `V17__events_and_assignments.sql`(사건 · 사건 핵심 말 · 기준 이력 · 배정 · 저장 후보 · 배정 대기)이다. `article_id` 는 `article` 의 기사를 가리키지만 FK 를 두지 않는다 — 모듈 사이는 ID 로만 참조한다. 보존 기간은 [data-model.md "보존 정책"](../data-model.md#보존-정책-초안)에 있다.
+컬럼 타입 · 인덱스 · 제약 문면의 정본은 `backend/src/main/resources/db/migration/V16__event_intake_and_match_features.sql`(사건 묶기 대기 · 기사 표현)과 `V17__events_and_assignments.sql`(사건 · 사건 핵심 말 · 기준 이력 · 배정 · 저장 후보 · 배정 대기), `V18__event_queries_and_big_criteria.sql`(배정의 발행 시각 인덱스 · 큰 사건 기준 · 큰 사건 기준 이력)이다. `article_id` 는 `article` 의 기사를 가리키지만 FK 를 두지 않는다 — 모듈 사이는 ID 로만 참조한다. 보존 기간은 [data-model.md "보존 정책"](../data-model.md#보존-정책-초안)에 있다.
 
 | 테이블 | 주요 컬럼 | 뜻 |
 |---|---|---|
@@ -463,9 +642,11 @@ public final class Embedding {
 | `events` | id, status(`OPEN`/`CLOSED`), model_version, centroid(`halfvec`), article_count(1 이상), first_article_at, last_article_at, created_at | 공유 사건. `centroid` 는 차원을 정하지 않은 `halfvec` 이다 — 같은 모델 버전끼리만 비교하고 길이는 쓰기 전에 앱이 확인한다(event-R12). 후보는 `(model_version, last_article_at)` 의 열린 사건 부분 인덱스로 거른다(event-R10). **(미구현)** 합쳐진 사건이 남는 사건을 가리키는 `merged_into` · 닫은 시각 `closed_at` · 장기 검색용 HNSW 인덱스(모델 버전별 식 · 부분 인덱스)는 사건 정리와 함께 둔다(event-R13) |
 | `event_key_terms` | event_id, term, article_count(1 이상) | 사건 핵심 말 — (event_id, term) 기본 키, 그 말을 가진 구성 기사 수(event-R12). 사건을 지우면 함께 지워진다 |
 | `event_assignment_criteria` | id, window_seconds, upper, lower, store, probability, created_at | 기준 이력 — 다섯 값이 고유하다(event-R17) |
-| `event_articles` | article_id(기본 키), event_id, published_at, score, decided_by(`FORMULA`/`EVALUATOR`/`JUDGEMENT_FAILED`), criteria_id, assigned_at | 배정 — 기사당 한 사건(event-R12). `event_id` · `criteria_id` 는 FK 이고 `ON DELETE` 가 없다 — 사건을 지우기 전에 그 배정을 지우거나 옮긴다. 재판정 대상은 `criteria_id` 인덱스로 찾는다(event-R18). **(미구현)** 사건이 합쳐지면 남는 사건으로 옮긴다 |
+| `event_articles` | article_id(기본 키), event_id, published_at, score, decided_by(`FORMULA`/`EVALUATOR`/`JUDGEMENT_FAILED`), criteria_id, assigned_at | 배정 — 기사당 한 사건(event-R12). `event_id` · `criteria_id` 는 FK 이고 `ON DELETE` 가 없다 — 사건을 지우기 전에 그 배정을 지우거나 옮긴다. 재판정 대상은 `criteria_id` 인덱스로 찾는다(event-R18). 조회 기간은 `published_at` 인덱스로 고른다(event-R20). **(미구현)** 사건이 합쳐지면 남는 사건으로 옮긴다 |
 | `event_article_candidates` | article_id, event_id, score, probability | 저장 후보 — (article_id, event_id) 기본 키, 판정 확률은 묻지 않았으면 없다(event-R12 · R18). `event_id` 에 FK 가 없다 — 사건을 지울 때 함께 지운다(`event_id` 인덱스) |
 | `event_assignment_queue` | article_id(기본 키), enqueued_at, attempts(0 이상), available_at, lease_token, lease_expires_at | 배정 대기 — 기사마다 한 행(event-R16). 점유 둘은 함께 있거나 함께 없다(제약). 회차의 잠금은 `(available_at, article_id)` 인덱스로 찾는다. 배정하면 지운다 |
+| `event_big_criteria` | id(1 만), min_sources(1 이상), min_importance(`NUMERIC(3, 2)`, 1 ~ 5), changed_at | 큰 사건 기준의 지금 값 — 한 행(event-R21) |
+| `event_big_criteria_changes` | id, previous_min_sources, previous_min_importance, min_sources, min_importance, actor(`SYSTEM`/`OPERATOR`), changed_at | 큰 사건 기준 이력 — 추가만 한다(event-R21). 이전 값 둘은 함께 있거나 함께 없다(처음 값) |
 
 ## 7. 설정
 
@@ -478,7 +659,7 @@ public final class Embedding {
 | `yozmnews.event-assignment.store` | 저장 기준, 기본 0.40(event-R10 · R17) |
 | `yozmnews.event-assignment.probability` | 확률 기준, 기본 0.50(event-R11 · R17) |
 
-사건 기준 · 저장 기준 기본값의 정본은 `EventAssignmentProperties` 의 `@DefaultValue` 이고 `application.yaml` 에는 키가 없다. 기본값은 측정 전 목표다. 운영자는 환경 변수(`YOZMNEWS_EVENT_ASSIGNMENT_UPPER` 식)로 바꾸고, 범위 · 관계를 어기면 기동하지 않는다. 바꾸면 재판정 회차가 지난 배정을 다시 판정한다(event-R18). 그 밖의 설정 키는 없다.
+사건 기준 · 저장 기준 기본값의 정본은 `EventAssignmentProperties` 의 `@DefaultValue` 이고 `application.yaml` 에는 키가 없다. 기본값은 측정 전 목표다. 운영자는 환경 변수(`YOZMNEWS_EVENT_ASSIGNMENT_UPPER` 식)로 바꾸고, 범위 · 관계를 어기면 기동하지 않는다. 바꾸면 재판정 회차가 지난 배정을 다시 판정한다(event-R18). 그 밖의 설정 키는 없다 — 큰 사건 기준은 설정이 아니라 운영자 설정이다(event-R21).
 
 ## 8. 결정
 
@@ -500,3 +681,5 @@ public final class Embedding {
 | [0079](../adr/0079-event-centroids-in-a-dimensionless-halfvec-column-with-a-model-version-per-event.md) | 사건 중심 벡터는 차원 없는 `halfvec` 에 사건마다 모델 버전과 함께 둔다 |
 | [0080](../adr/0080-event-centroids-and-key-terms-accumulated-with-article-counts-and-updated-incrementally.md) | 사건 중심 · 핵심 말은 기사 수와 함께 누적해 붙이고 뗄 때 증분 갱신한다 |
 | [0081](../adr/0081-event-assignment-criteria-in-settings-and-rejudgement-within-stored-scores.md) | 사건 기준 · 저장 기준은 설정에 두고(기본값은 코드), 기준이 바뀌면 저장된 점수 · 확률 안에서 재판정한다 |
+| [0082](../adr/0082-big-events-judged-at-query-time-by-distinct-sources-and-mean-importance-both-reaching-criteria.md) | 큰 사건은 기간 안의 서로 다른 소스 수와 중요도 평균이 둘 다 기준 이상인 사건이고, 조회할 때 지금 기준으로 판정한다 |
+| [0083](../adr/0083-big-event-criteria-as-operator-settings-with-append-only-history-and-preview.md) | 큰 사건 기준은 운영자 설정으로 두고 추가 전용 이력과 미리보기를 둔다 |

@@ -13,6 +13,7 @@ import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import net.yozmnews.evaluation.ImportanceScale;
 import net.yozmnews.evaluation.LineageKind;
 import net.yozmnews.evaluation.MultiTagKind;
 import net.yozmnews.evaluation.TagKind;
@@ -50,10 +51,10 @@ final class TagSetValidator {
 	/** 형식 선택지 수의 하한 — evaluation-R7 */
 	static final int MIN_FORMATS = 2;
 
-	/** 중요도 수준 — evaluation-R7 */
-	static final int MIN_LEVEL = 1;
+	/** 중요도 수준 — 정본은 {@link ImportanceScale} */
+	static final int MIN_LEVEL = ImportanceScale.MIN_LEVEL;
 
-	static final int MAX_LEVEL = 5;
+	static final int MAX_LEVEL = ImportanceScale.MAX_LEVEL;
 
 	private final List<TagSetProblem> problems = new ArrayList<>();
 

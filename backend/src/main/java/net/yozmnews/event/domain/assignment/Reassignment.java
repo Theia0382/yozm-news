@@ -2,6 +2,7 @@ package net.yozmnews.event.domain.assignment;
 
 import java.util.List;
 
+import net.yozmnews.event.DecidedBy;
 import org.jspecify.annotations.Nullable;
 
 /**
