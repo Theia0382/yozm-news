@@ -1,5 +1,7 @@
 package net.yozmnews.evaluation.application;
 
+import java.util.Collection;
+import java.util.Map;
 import java.util.Optional;
 
 import net.yozmnews.article.ArticleId;
@@ -35,6 +37,11 @@ class ArticleEvaluationsService implements ArticleEvaluations {
 	@Override
 	public Optional<ArticleEvaluationView> find(ArticleId articleId) {
 		return this.results.findLatest(articleId).map(this::view);
+	}
+
+	@Override
+	public Map<ArticleId, Double> importances(Collection<ArticleId> articleIds) {
+		return this.results.findLatestImportances(articleIds);
 	}
 
 	private ArticleEvaluationView view(StoredEvaluation stored) {

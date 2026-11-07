@@ -4,11 +4,13 @@ import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import net.yozmnews.article.ArticleContent;
 import net.yozmnews.article.ArticleDirectory;
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.article.domain.ArticleRepository;
+import net.yozmnews.source.SourceId;
 import org.springframework.stereotype.Service;
 
 /**
@@ -31,6 +33,11 @@ class ArticleDirectoryService implements ArticleDirectory {
 	@Override
 	public List<ArticleId> firstSeenSince(Instant since) {
 		return this.repository.findFirstSeenSince(since);
+	}
+
+	@Override
+	public Map<ArticleId, Set<SourceId>> sources(Collection<ArticleId> ids) {
+		return this.repository.findSources(ids);
 	}
 
 }

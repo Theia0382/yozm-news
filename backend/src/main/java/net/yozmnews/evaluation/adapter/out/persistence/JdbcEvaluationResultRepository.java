@@ -8,6 +8,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -136,6 +137,29 @@ class JdbcEvaluationResultRepository implements EvaluationResultRepository {
 					return new StoredEvaluation(articleId, new TagSetId(rs.getLong("tag_set_id")), rs.getString("format_key"),
 							rs.getObject("importance", Double.class), tags(id));
 				}).optional();
+	}
+
+	@Override
+	public Map<ArticleId, Double> findLatestImportances(Collection<ArticleId> articleIds) {
+		if (articleIds.isEmpty()) {
+			return Map.of();
+		}
+		// 기사마다 가장 큰 버전 하나를 먼저 고르고 그 중요도가 없으면 뺀다 — 이전 버전의 값으로 내려가지 않는다
+		Map<ArticleId, Double> importances = new LinkedHashMap<>();
+		this.jdbc.sql("""
+				select distinct on (e.article_id) e.article_id, e.importance from article_evaluations e
+				join tag_sets s on s.id = e.tag_set_id
+				where e.article_id = any(:ids)
+				order by e.article_id, %s
+				""".formatted(LATEST_VERSION_FIRST))
+			.param("ids", articleIds.stream().map(ArticleId::value).toArray(Long[]::new))
+			.query((ResultSet rs) -> {
+				Double importance = rs.getObject("importance", Double.class);
+				if (importance != null) {
+					importances.put(new ArticleId(rs.getLong("article_id")), importance);
+				}
+			});
+		return Collections.unmodifiableMap(importances);
 	}
 
 	@Override

@@ -144,6 +144,23 @@ class JdbcEvaluationResultRepositoryTests {
 	}
 
 	@Test
+	void readsTheImportanceOfTheHighestVersionAndDoesNotFallBackToAnOlderOne() {
+		// 51 — 버전 1 만: 그 값
+		this.repository.insert(record(51, this.first, 2.5, "{}", List.of()));
+		// 52 — 버전 1 은 4.0, 버전 2 는 중요도 없음: 빠진다(버전 1 의 4.0 을 내지 않는다)
+		this.repository.insert(record(52, this.first, 4.0, "{}", List.of()));
+		this.repository.insert(record(52, this.second, null, "{}", List.of()));
+		// 53 — 대조: 버전 2 는 3.0, 버전 1 은 4.0 — 버전 2 의 값. 버전 2 를 먼저 넣어 평가 ID 순과 버전 번호 순이 어긋난다
+		this.repository.insert(record(53, this.second, 3.0, "{}", List.of()));
+		this.repository.insert(record(53, this.first, 4.0, "{}", List.of()));
+
+		assertThat(this.repository.findLatestImportances(
+				List.of(new ArticleId(51), new ArticleId(52), new ArticleId(53), new ArticleId(54))))
+			.containsExactlyInAnyOrderEntriesOf(Map.of(new ArticleId(51), 2.5, new ArticleId(53), 3.0));
+		assertThat(this.repository.findLatestImportances(List.of())).isEmpty();
+	}
+
+	@Test
 	void streamsTheEvaluationsOfTheVersionWhoseEvaluationTimeIsInThePeriod() {
 		Instant from = Instant.parse("2026-10-27T15:00:00Z");
 		Instant to = Instant.parse("2026-11-03T15:00:00Z");
