@@ -18,8 +18,8 @@ import net.yozmnews.evaluation.EventDescriptor;
 import net.yozmnews.evaluation.EventMembership;
 import net.yozmnews.evaluation.MembershipJudgement;
 import net.yozmnews.evaluation.MembershipQuery;
+import net.yozmnews.event.AssignmentCriteria;
 import net.yozmnews.event.EventStatus;
-import net.yozmnews.event.domain.assignment.AssignmentCriteria;
 import net.yozmnews.event.domain.assignment.AssignmentRule;
 import net.yozmnews.event.domain.assignment.AssignmentSchedule;
 import net.yozmnews.event.domain.assignment.CandidateScoring;
@@ -76,9 +76,9 @@ public class MergeRound {
 
 	@Autowired
 	MergeRound(EventRepository events, EventArticleRepository assignments, MergeJudgementRepository judgements,
-			CriteriaRepository criteriaHistory, AssignmentCriteria criteria, EventMembership membership,
+			CriteriaRepository criteriaHistory, AssignmentSettings settings, EventMembership membership,
 			TransactionTemplate transaction) {
-		this(events, assignments, judgements, criteriaHistory, criteria, membership, transaction,
+		this(events, assignments, judgements, criteriaHistory, settings.criteria(), membership, transaction,
 				InstantSource.system());
 	}
 
@@ -228,7 +228,7 @@ public class MergeRound {
 		return switch (this.membership.judge(new MembershipQuery(own.get(0), descriptors))) {
 			case MembershipJudgement.Judged judged -> {
 				this.transaction.executeWithoutResult(
-						status -> this.judgements.save(subject.id(), judged.probabilities(), now));
+						status -> this.judgements.save(subject.id(), judged.probabilities(), judged.judgement(), now));
 				List<StoredCandidate> judgedStored = stored.stream()
 					.map(candidate -> new StoredCandidate(candidate.eventId(), candidate.score(),
 							judged.probabilities().getOrDefault(candidate.eventId(), candidate.probability())))

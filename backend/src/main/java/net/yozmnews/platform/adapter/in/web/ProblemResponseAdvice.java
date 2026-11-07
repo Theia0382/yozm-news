@@ -17,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.ServletWebRequest;
@@ -27,12 +28,15 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
  * 컨트롤러 오류를 {@link ApiProblem} 으로 낸다 — docs/specs/platform.md §4 · platform-R12.
  * <p>
  * 프레임워크 예외(형식 오류 · 없는 경로 · {@code ResponseStatusException} 등)는 상위 클래스가 받고 {@link #createResponseEntity} 가
- * 본문을 바꾼다. 다른 모듈의 조언이 먼저 받도록 우선순위를 가장 낮게 둔다.
+ * 본문을 바꾼다. 본문 형식 오류만 설명을 {@link #UNREADABLE_BODY} 로 바꾼다. 다른 모듈의 조언이 먼저 받도록 우선순위를 가장 낮게 둔다.
  */
 @WebRole
 @RestControllerAdvice
 @Order(Ordered.LOWEST_PRECEDENCE)
 class ProblemResponseAdvice extends ResponseEntityExceptionHandler {
+
+	/** 요청 본문을 읽지 못한 400 의 설명 — 깨진 JSON · 빈 본문 · 칸과 다른 종류의 값 */
+	static final String UNREADABLE_BODY = "요청 본문의 형식이 틀렸다";
 
 	private static final Logger logger = LoggerFactory.getLogger(ProblemResponseAdvice.class);
 
@@ -52,6 +56,13 @@ class ProblemResponseAdvice extends ResponseEntityExceptionHandler {
 	ResponseEntity<ApiProblem> unexpected(Exception ex, HttpServletRequest request) {
 		logger.error("요청을 처리하지 못했다: {}", request.getRequestURI(), ex);
 		return this.problems.entity(HttpStatus.INTERNAL_SERVER_ERROR, "서버에서 요청을 처리하지 못했다", request);
+	}
+
+	@Override
+	protected @Nullable ResponseEntity<Object> handleHttpMessageNotReadable(HttpMessageNotReadableException ex,
+			HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+		return handleExceptionInternal(ex, ProblemDetail.forStatusAndDetail(status, UNREADABLE_BODY), headers, status,
+				request);
 	}
 
 	@Override

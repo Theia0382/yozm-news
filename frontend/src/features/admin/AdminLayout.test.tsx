@@ -131,6 +131,9 @@ describe("AdminLayout", () => {
       ["평가 결과", "/admin/evaluations"],
       ["표본 검수", "/admin/samples"],
       ["태그 기준", "/admin/thresholds"],
+      ["사건", "/admin/events"],
+      ["큰 사건", "/admin/big-events"],
+      ["판정 기록", "/admin/event-judgements"],
     ]) {
       const link = within(menu).getByRole("link", { name });
       expect(link).toHaveAttribute("href", href);

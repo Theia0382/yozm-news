@@ -80,6 +80,8 @@ class EventQueryFlowTests {
 
 	private long x4;
 
+	private long y1;
+
 	private long eventX;
 
 	private long eventY;
@@ -102,7 +104,8 @@ class EventQueryFlowTests {
 		assign(this.x3, this.eventX, criteriaId, "2026-11-05T20:00:00Z");
 		assign(this.x4, this.eventX, criteriaId, "2026-11-06T00:00:00Z");
 		// 사건 Y — 소스 둘(1 · 2), 중요도 5.0 · 5.0
-		assign(article(1, 5.0), this.eventY, criteriaId, "2026-11-05T15:00:00Z");
+		this.y1 = article(1, 5.0);
+		assign(this.y1, this.eventY, criteriaId, "2026-11-05T15:00:00Z");
 		assign(article(2, 5.0), this.eventY, criteriaId, "2026-11-05T15:00:00Z");
 	}
 
@@ -174,6 +177,28 @@ class EventQueryFlowTests {
 			.containsExactly(Map.entry(new EventId(this.eventX), new ArticleId(this.x2)));
 		assertThat(this.directory.find(new EventId(this.eventY))).isPresent();
 		assertThat(this.directory.articles(new EventId(this.eventX))).hasSize(4);
+	}
+
+	@Test
+	void theWholeEventRepresentativeIsTheOneKeptAtClosingLikeTheList() {
+		// X 를 닫으며 x3 을 대표로 남겼다 — 닫힌 사건은 표현이 없어 전체 기사에서 다시 고르면 가장 먼저 발행한 x1 이 된다
+		this.jdbc.sql("""
+				update events set status = 'CLOSED', closed_at = '2026-11-07T00:00:00Z', representative_article_id = :x3
+				where id = :event
+				""").param("x3", this.x3).param("event", this.eventX).update();
+		List<ArticleId> all = List.of(new ArticleId(this.x1), new ArticleId(this.x2), new ArticleId(this.x3),
+				new ArticleId(this.x4));
+
+		assertThat(this.directory.representativesOfAll(List.of(new EventId(this.eventX), new EventId(this.eventY))))
+			.containsOnly(Map.entry(new EventId(this.eventX), new ArticleId(this.x3)),
+					// 열린 Y 는 남긴 대표가 없다 — 같은 시각에 발행한 두 기사 가운데 ID 가 작은 y1
+					Map.entry(new EventId(this.eventY), new ArticleId(this.y1)));
+		assertThat(this.directory.representatives(Map.of(new EventId(this.eventX), all)))
+			.containsExactly(Map.entry(new EventId(this.eventX), new ArticleId(this.x1)));
+		assertThat(this.directory.list(PERIOD, null, 1).events().getFirst().representative())
+			.isEqualTo(new ArticleId(this.x3));
+		assertThat(this.directory.representativesOfAll(List.of())).isEmpty();
+		assertThat(this.directory.representativesOfAll(List.of(new EventId(999_999)))).isEmpty();
 	}
 
 	private void clear() {

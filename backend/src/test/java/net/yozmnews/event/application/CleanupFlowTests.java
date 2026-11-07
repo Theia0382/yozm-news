@@ -14,8 +14,8 @@ import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleDirectory;
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.evaluation.MembershipJudgement;
+import net.yozmnews.event.AssignmentCriteria;
 import net.yozmnews.event.EventArticles;
-import net.yozmnews.event.domain.assignment.AssignmentCriteria;
 import net.yozmnews.event.domain.assignment.AssignmentQueueRepository;
 import net.yozmnews.event.domain.assignment.CriteriaRepository;
 import net.yozmnews.event.domain.event.EventArticleRepository;
@@ -207,7 +207,7 @@ class CleanupFlowTests {
 
 	private void assign() {
 		new AssignmentRound(this.queue, this.intake, this.features, this.events, this.assignments, this.criteriaHistory,
-				CRITERIA, this.articles, query -> new MembershipJudgement.Judged(Map.of()), this.transaction,
+				CRITERIA, this.articles, query -> new MembershipJudgement.Judged(null, Map.of()), this.transaction,
 				(InstantSource) () -> NOW)
 			.run(new ModelOnly());
 	}

@@ -31,7 +31,7 @@ public interface EventArticleRepository {
 	 */
 	List<RejudgeTarget> lockRejudgeTargets(long criteriaId, int limit);
 
-	/** 잠근 배정을 다시 적는다 — 사건 · 점수 · 정한 것 · 연 사건 표지 · 기준 · 배정 시각 */
+	/** 잠근 배정을 다시 적는다 — 사건 · 점수 · 정한 것 · 연 사건 표지 · 기준 · 배정 시각. 판정 원본은 그대로 */
 	void reassign(ArticleId articleId, long eventId, @Nullable Double score, DecidedBy by, boolean opened,
 			long criteriaId, Instant now);
 
@@ -51,7 +51,7 @@ public interface EventArticleRepository {
 	/** 사건들의 배정을 기사 ID 순으로 잠근다 — 병합이 사건보다 먼저 잠근다. 트랜잭션 안에서 부른다 */
 	List<EventArticle> lockByEvents(Collection<Long> eventIds);
 
-	/** 한 사건의 배정을 모두 다른 사건으로 옮긴다 — 사건만 바꾸고 연 사건 표지 · 점수 · 정한 것 · 기준 · 배정 시각은 그대로 */
+	/** 한 사건의 배정을 모두 다른 사건으로 옮긴다 — 사건만 바꾸고 연 사건 표지 · 점수 · 정한 것 · 기준 · 배정 시각 · 판정 원본은 그대로 */
 	void moveAll(long fromEventId, long toEventId);
 
 	/** 사건에 남은 배정의 발행 시각 범위 — 배정이 없으면 빈 값 */

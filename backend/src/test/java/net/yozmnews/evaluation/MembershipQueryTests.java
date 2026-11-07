@@ -57,9 +57,11 @@ class MembershipQueryTests {
 
 	@Test
 	void aJudgementHoldsProbabilitiesOfEventsOnly() {
-		assertThat(new MembershipJudgement.Judged(Map.of()).probabilities()).isEmpty();
-		assertThatIllegalArgumentException().isThrownBy(() -> new MembershipJudgement.Judged(Map.of(0L, 0.5)));
-		assertThatIllegalArgumentException().isThrownBy(() -> new MembershipJudgement.Judged(Map.of(12L, 1.5)));
+		assertThat(new MembershipJudgement.Judged(null, Map.of()).probabilities()).isEmpty();
+		assertThatIllegalArgumentException()
+			.isThrownBy(() -> new MembershipJudgement.Judged(new EventJudgementId(1), Map.of(0L, 0.5)));
+		assertThatIllegalArgumentException()
+			.isThrownBy(() -> new MembershipJudgement.Judged(new EventJudgementId(1), Map.of(12L, 1.5)));
 		assertThatIllegalArgumentException()
 			.isThrownBy(() -> new MembershipJudgement.Failed(EvaluatorFailureKind.TRANSIENT, " "));
 	}

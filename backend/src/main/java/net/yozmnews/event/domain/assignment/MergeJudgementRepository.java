@@ -4,6 +4,9 @@ import java.time.Instant;
 import java.util.Collection;
 import java.util.Map;
 
+import net.yozmnews.evaluation.EventJudgementId;
+import org.jspecify.annotations.Nullable;
+
 /**
  * 병합 판정 기록 저장소 — 띠에 든 사건 쌍의 사건 소속 판정 확률. 쌍은 순서가 없다 · docs/specs/event.md §4 · event-R13.
  * <p>
@@ -14,7 +17,10 @@ public interface MergeJudgementRepository {
 	/** 사건 하나와 상대 사건들의 판정 확률 — 기록이 있는 상대만, 상대 사건 ID → 확률 */
 	Map<Long, Double> find(long eventId, Collection<Long> others);
 
-	/** 사건 하나와 상대 사건들의 판정 확률을 남긴다 — 그 쌍의 기록이 이미 있으면 그대로 */
-	void save(long eventId, Map<Long, Double> probabilities, Instant now);
+	/**
+	 * 사건 하나와 상대 사건들의 판정 확률을 남긴다 — 그 쌍의 기록이 이미 있으면 그대로.
+	 * @param judgement 확률을 낸 사건 소속 판정 원본 — 새로 넣는 쌍에 남긴다
+	 */
+	void save(long eventId, Map<Long, Double> probabilities, @Nullable EventJudgementId judgement, Instant now);
 
 }

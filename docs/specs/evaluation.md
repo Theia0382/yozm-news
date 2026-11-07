@@ -20,7 +20,8 @@
 - **저장 바닥** — 이력과 끝난 채움으로 평가 시각마다 어느 확률까지 저장돼 있는지를 계산해, 태그 기준 · 저장 기준의 경고(지난 저장 기준 최댓값)와 평가 현황의 "저장 기준이 섞였다" 표시를 낸다(evaluation-R12 · R29 · R32)
 - **체계 변경** — 운영자 원문을 지금 활성 버전과 대조해 확인하거나, 새 버전으로 저장해 곧바로 활성으로 바꾼다. 버전은 앞으로만 켠다. 활성으로 바꿀 때 운영자가 정한 일수 안에 처음 본 기사를 재평가 대기에 넣는다. 버전 목록과 버전의 원문을 공개 운영 API(`TagSetAdministration`)로 낸다(evaluation-R16 · R22 ~ R25 · R27)
 - **태그 키 계보** — 키 이름 변경 · 분할 · 병합을 새 버전과 함께 기록하고, 옛 버전의 키를 활성 버전의 키로 푸는 표를 공개 API(`TagKeyLineage`)로 낸다(evaluation-R22 · R23 · R26)
-- **사건 소속 판정** — 기사 하나가 후보 사건마다 그 사건을 다루는지 평가기에 묻는 공개 API(`EventMembership`)를 사건 묶기에 낸다. 판정할 기사와 후보 사건의 서술 기사를 ID 로 받아 질문을 만들고, 성공한 판정의 원본을 남긴다(evaluation-R37 · R38, [ADR-0026](../adr/0026-event-clustering-with-local-embeddings-and-jev.md) · [ADR-0071](../adr/0071-event-membership-judged-from-article-ids-with-questions-built-in-evaluation.md))
+- **사건 소속 판정** — 기사 하나가 후보 사건마다 그 사건을 다루는지 평가기에 묻는 공개 API(`EventMembership`)를 사건 묶기에 낸다. 판정할 기사와 후보 사건의 서술 기사를 ID 로 받아 질문을 만들고, 성공한 판정의 원본을 남겨 그 ID 를 결과에 싣는다(evaluation-R37 · R38, [ADR-0026](../adr/0026-event-clustering-with-local-embeddings-and-jev.md) · [ADR-0071](../adr/0071-event-membership-judged-from-article-ids-with-questions-built-in-evaluation.md) · [ADR-0094](../adr/0094-event-membership-judgements-identified-by-id-read-by-operators-and-referenced-by-the-records-that-apply-them.md))
+- **판정 원본 조회** — 판정 시각이 기간 안인 판정 원본을 운영자 화면에 공개 조회(`EventJudgementLog`)로 낸다 — 판정의 쓰임 · 결과는 `event` 가 낸다(evaluation-R39)
 
 하지 않는 것:
 
@@ -77,12 +78,12 @@
 | 사건 소속 판정 | 기사 하나가 후보 사건마다 그 사건을 다루는지 평가기에 묻는 것 — 후보마다 Yes/No 확률 하나. 받아들일지는 부르는 쪽(사건 묶기)이 정한다(evaluation-R37 · R38) |
 | 후보 사건 · 서술 기사 | 판정에서 묻는 사건(사건 ID)과 그 사건을 설명하는 기사. 부르는 쪽이 사건 중심에 가까운 기사를 고르고, 질문에는 그 제목이 실린다(evaluation-R37) |
 | 문구 판 | 사건 소속 질문 문구의 버전 문자열. 문구나 질문 조립 모양을 바꾸면 올리고, 판정 원본마다 남는다(evaluation-R37) |
-| 판정 원본 | 성공한 판정 한 번의 기록 — 물은 후보마다 사건 ID · 서술 기사 ID · 확률, 원본 응답 · 모델 버전 · 문구 판 · 입력 토큰(evaluation-R38) |
+| 판정 원본 | 성공한 판정 한 번의 기록 — 물은 후보마다 사건 ID · 서술 기사 ID · 확률, 원본 응답 · 모델 버전 · 문구 판 · 입력 토큰. 판정 원본 ID(`EventJudgementId`)로 식별되고, 판정을 반영한 사건 묶기 기록이 그 ID 를 가리킨다(evaluation-R38) |
 | 어긋난 상태 | 지금 태그 기준 · 저장 기준과 그 이력 · 끝난 채움 때문에 태그 기준을 넘는 확률이 저장되지 않아 태그가 붙지 않을 수 있는 상태 — 경고(evaluation-R12)는 변경할 때 한 번 나오고, 상태는 남아 있는 동안 나온다(evaluation-R36) |
 
 ## 3. 공개 인터페이스
 
-모듈 최상위 패키지 `net.yozmnews.evaluation` 의 공개 타입은 활성 체계 조회 `TagSetDirectory`, 태그 체계의 운영 API `TagSetAdministration`(태그 기준 · 저장 기준 · 버전), 태그 키 계보 조회 `TagKeyLineage`, 평가 결과 조회 `ArticleEvaluations`, 평가 대기 · 평가 현황의 운영 API `EvaluationAdministration`, 평가 검수의 운영 API `EvaluationReview`, 빠진 태그 채움의 운영 API `TagBackfillAdministration`, 주제별 보도량 조회 `TopicCoverage`, 사건 소속 판정 `EventMembership`, 집계 기간 `EvaluationPeriod`, 그 값 · 결과 타입과 평가기 실패 갈래 `EvaluatorFailureKind` 다. 이벤트는 내지 않는다 — 활성 전환을 알리는 이벤트는 받는 모듈(사용자 선호)의 작업이 정한다.
+모듈 최상위 패키지 `net.yozmnews.evaluation` 의 공개 타입은 활성 체계 조회 `TagSetDirectory`, 태그 체계의 운영 API `TagSetAdministration`(태그 기준 · 저장 기준 · 버전), 태그 키 계보 조회 `TagKeyLineage`, 평가 결과 조회 `ArticleEvaluations`, 평가 대기 · 평가 현황의 운영 API `EvaluationAdministration`, 평가 검수의 운영 API `EvaluationReview`, 빠진 태그 채움의 운영 API `TagBackfillAdministration`, 주제별 보도량 조회 `TopicCoverage`, 사건 소속 판정 `EventMembership`, 판정 원본 조회 `EventJudgementLog`, 집계 기간 `EvaluationPeriod`, 그 값 · 결과 타입과 평가기 실패 갈래 `EvaluatorFailureKind` 다. 이벤트는 내지 않는다 — 활성 전환을 알리는 이벤트는 받는 모듈(사용자 선호)의 작업이 정한다.
 
 받는 이벤트는 `article` 의 `ArticleStored` · `ArticlesRemoved` 이고, 평가 · 사건 소속 판정의 입력과 재평가 대상은 `article` 의 공개 조회 `ArticleDirectory`(`findAll` · `firstSeenSince`) 와 `source` 의 공개 조회 `FeedLabels` 로 읽는다([article Spec §3](article.md#3-공개-인터페이스) · [source Spec §3](source.md#3-공개-인터페이스)).
 
@@ -412,7 +413,7 @@ public record TagProbability(String key, double probability) {}
 ```java
 public record EvaluationPeriod(Instant from, Instant to) {
     public static final int MAX_DAYS = 31;
-    public static final Duration MAX_LENGTH = Duration.ofDays(MAX_DAYS + 1);
+    public static final Duration MAX_LENGTH = DayRange.maxLength(MAX_DAYS);
     public static Optional<EvaluationPeriod> of(Instant from, Instant to);
     public static Optional<EvaluationPeriod> ofDays(LocalDate first, LocalDate last, ZoneId zone);
 }
@@ -422,10 +423,10 @@ public record EvaluationPeriod(Instant from, Instant to) {
 |---|---|
 | `from` · `to` | `[from, to)` — 시작 포함 · 끝 제외, 시간대 없음 |
 | `MAX_DAYS` | 날짜 범위의 상한(일) — 정본(evaluation-R28) |
-| `MAX_LENGTH` | 시각 범위의 상한 — `MAX_DAYS` + 1일 |
+| `MAX_LENGTH` | 시각 범위의 상한 — 날짜 `MAX_DAYS` 일 범위의 시각 길이 상한(`platform` 의 `DayRange.maxLength` — 시간대 전환 여유로 하루를 더한다) |
 | 생성자 | `from < to` 이고 길이가 `MAX_LENGTH` 이하가 아니면 `IllegalArgumentException` — 범위 밖 기간은 만들어지지 않는다 |
 | `of` | 시각 범위 — 범위 밖이면 빈 값 |
-| `ofDays` | 날짜 범위 `[first 의 그 시간대 자정, last 다음 날의 그 시간대 자정)` — 날짜 수가 1 ~ `MAX_DAYS` 가 아니거나, 만든 시각 범위가 `of` 의 규칙을 어기면(하루가 통째로 없는 날) 빈 값. 시간대는 결과에 남지 않는다 |
+| `ofDays` | 날짜 범위 `[first 의 그 시간대 자정, last 다음 날의 그 시간대 자정)` — 변환은 `platform` 의 `DayRange.of` 다([platform Spec §3](platform.md#3-공개-인터페이스)). 날짜 수가 1 ~ `MAX_DAYS` 가 아니거나, 만든 시각 범위가 `of` 의 규칙을 어기면(하루가 통째로 없는 날) 빈 값. 시간대는 결과에 남지 않는다 |
 
 관련 규칙: evaluation-R28.
 
@@ -748,7 +749,7 @@ public record EventDescriptor(long eventId, List<ArticleId> articleIds) {
 }
 
 public sealed interface MembershipJudgement {
-    record Judged(Map<Long, Double> probabilities) implements MembershipJudgement {}
+    record Judged(@Nullable EventJudgementId judgement, Map<Long, Double> probabilities) implements MembershipJudgement {}
     record Failed(EvaluatorFailureKind kind, String message) implements MembershipJudgement {}
     record ArticleMissing() implements MembershipJudgement {}
 }
@@ -763,6 +764,7 @@ public enum EvaluatorFailureKind { TRANSIENT, ARTICLE_REJECTED, EVALUATOR_UNAVAI
 | `MembershipQuery.candidates` | 후보 사건 — 이 순서로 묻는다 | 1 ~ `MAX_CANDIDATES`(10)개, 사건 ID 가 겹치지 않는다 |
 | `EventDescriptor.eventId` | 후보 사건 ID — `event` 의 사건을 가리키는 값이고 `evaluation` 은 그 뜻을 모른다 | 1 이상 |
 | `EventDescriptor.articleIds` | 서술 기사 — 사건 중심에 가까운 기사(부르는 쪽이 고른다). 이 순서로 제목을 질문에 싣는다 | 1 ~ `MAX_ARTICLES`(5)개, 겹치지 않는다 |
+| `Judged.judgement` | 남긴 판정 원본의 ID — 평가기를 부르지 않았으면(확률이 빈 맵) null. 판정을 반영한 쪽이 자기 기록에 남긴다(evaluation-R38) | 원본이 없는 것 ⇔ 확률이 빈 맵 — 어기면 `IllegalArgumentException` |
 | `Judged.probabilities` | 물은 후보의 사건 ID → 그 사건에 속할 확률. 서술 기사가 모두 지워진 후보는 묻지 않아 없다 — 그런 후보뿐이면 빈 맵이고 평가기를 부르지 않았다 | 사건 ID 는 1 이상, 확률은 0 ~ 1 의 유한값 |
 | `Failed` | 평가기의 예상한 실패 — 갈래와 운영자용 문구. 판정 원본을 남기지 않았다 | 문구는 공백뿐이 아니고 비밀 값을 담지 않는다 |
 | `ArticleMissing` | 판정할 기사가 없다 — 부르기 전에 지워졌거나 판정 중에 지워졌다. 판정 원본은 남지 않는다 | — |
@@ -777,13 +779,48 @@ public enum EvaluatorFailureKind { TRANSIENT, ARTICLE_REJECTED, EVALUATOR_UNAVAI
 
 관련 규칙: evaluation-R21 · evaluation-R37 · evaluation-R38.
 
+### EventJudgementLog · EventJudgementId · EventJudgementView · JudgedEvent · EventJudgementCursor · EventJudgementPage
+
+판정 원본 조회 — 운영자 화면이 기간의 판정 원본을 훑는다. 구현은 `application` 의 `EventJudgementLogService` 다.
+
+```java
+public interface EventJudgementLog {
+    int MAX_PAGE_SIZE = 100;                                 // 한 쪽의 상한 — 정본. 측정 전 목표
+    EventJudgementPage list(EvaluationPeriod period, @Nullable EventJudgementCursor after, int size);
+}
+
+public record EventJudgementId(long value) {}                // 1 이상 — 아니면 IllegalArgumentException
+public record EventJudgementView(EventJudgementId id, ArticleId articleId, List<JudgedEvent> candidates,
+        String evaluator, String modelVersion, String wordingVersion, int inputTokens, Instant judgedAt) {}
+public record JudgedEvent(long eventId, List<ArticleId> describedArticles, double probability) {}
+public record EventJudgementCursor(Instant judgedAt, EventJudgementId id) {}
+public record EventJudgementPage(List<EventJudgementView> judgements, @Nullable EventJudgementCursor next) {}
+```
+
+| 타입 · 멤버 | 뜻 |
+|---|---|
+| `list` | 판정 시각이 기간 안인 판정 원본 — (판정 시각, ID) 내림차순. `size` 가 1 ~ `MAX_PAGE_SIZE` 밖이면 `IllegalArgumentException`(evaluation-R39) |
+| `EventJudgementView.candidates` | 물은 후보 — 요청 순서 |
+| `EventJudgementView.inputTokens` | 판정 요청의 입력 토큰 — 출력 토큰은 남기지 않는다(Jev 는 출력이 무료 — [ADR-0002](../adr/0002-shared-evaluation-with-jev.md)) |
+| `JudgedEvent.eventId` | 판정 당시의 후보 사건 ID — `event` 의 사건을 가리키는 값이고 `evaluation` 은 그 뜻을 모른다. 그 뒤 합쳐졌거나 지워졌을 수 있다 |
+| `JudgedEvent.describedArticles` | 질문에 제목을 쓴 서술 기사 — 요청 순서 |
+| `JudgedEvent` 생성자 | 사건 ID 1 미만 · 서술 기사 없음 · 확률이 0 ~ 1 의 유한값이 아니면 `IllegalArgumentException` — 저장할 판정 원본(`MembershipRecord`)도 이 값으로 후보를 담는다 |
+| `EventJudgementPage.next` | 다음 쪽의 커서 — 더 없으면 null |
+
+- 계약
+  - 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통) — 질의 하나다
+  - 원본 응답은 내지 않는다. 판정의 쓰임(배정 · 병합)과 결과는 `event` 의 `EventReview.judgementUses` 가 원본 ID 로 낸다([event Spec §3](event.md#3-공개-인터페이스))
+  - 사용자 정보를 받지 않는다
+
+관련 규칙: evaluation-R38 · evaluation-R39.
+
 ## 4. 내부 구조
 
 ### 개관
 
 | 패키지 | 책임 |
 |---|---|
-| (최상위) | 공개 API `TagSetDirectory` · `TagSetAdministration` · `TagKeyLineage` · `ArticleEvaluations` · `EvaluationAdministration` · `EvaluationReview` · `TagBackfillAdministration` · `TopicCoverage` · `EventMembership` 과 집계 기간 `EvaluationPeriod`, 그 값 · 결과 타입과 실패 갈래 `EvaluatorFailureKind`(§3) |
+| (최상위) | 공개 API `TagSetDirectory` · `TagSetAdministration` · `TagKeyLineage` · `ArticleEvaluations` · `EvaluationAdministration` · `EvaluationReview` · `TagBackfillAdministration` · `TopicCoverage` · `EventMembership` · `EventJudgementLog` 와 집계 기간 `EvaluationPeriod`, 그 값 · 결과 타입과 실패 갈래 `EvaluatorFailureKind`(§3) |
 | `domain/tagset` | 태그 체계 정의와 그 읽기 · 검증 · 원문 쓰기, 질문 틀, 기준 버전 대조, 태그 키 계보 해석, 버전 aggregate 와 그 저장소 |
 | `domain/threshold` | 태그 기준 · 저장 기준의 값 규칙과 변경 판정, 저장 바닥 계산, 어긋난 상태 판정, 태그 기준 · 저장 기준 저장소 |
 | `domain/backfill` | 빠진 태그 채움 행과 그 점유 · 일정, 채움 저장소 |
@@ -804,7 +841,7 @@ public enum EvaluatorFailureKind { TRANSIENT, ARTICLE_REJECTED, EVALUATOR_UNAVAI
 
 평가: `ArticleEventsListener` 가 `ArticleStored` 로 기사를 `EvaluationQueueRepository` 에 넣고, `ArticlesRemoved` 로 대기 · 결과 행과 판정 원본을 지운다. 작업 역할의 `EvaluatePendingArticlesJob` 이 1분마다 `EvaluationRound` 를 돌린다. 회차는 `PendingEvaluations` 로 대기를 점유하고(`PendingEvaluation` 의 전이 · `EvaluationSchedule` 의 일정), `TagSetDirectory` · `ThresholdRepository` 로 활성 체계와 그 버전의 태그 기준 · 저장 기준을, `article` 의 `ArticleDirectory` 와 `source` 의 `FeedLabels` 로 입력을 읽어 포트 `ArticleEvaluator` 를 부른다. 결과는 `ResultCheck` 로 체계와 대조하고 `EvaluationRecord` 로 저장할 모양을 만들어 `EvaluationResultRepository` 에 쓰고, 실패는 대기 행의 전이로 쓴다. 쓰기마다 `TagSetRepository` 로 표를 잠가 회차가 읽은 버전이 아직 활성인지 본다(evaluation-R19). `ArticleEvaluationsService` 는 `EvaluationResultRepository` 로 평가를 읽어 `TagSetViews` · `ThresholdRepository` 로 그 버전의 체계와 태그 기준 · 저장 기준을 얻고 `TagJudgement` 로 판정한다. 채움: `TagBackfillAdministrationService` 가 `EvaluationResultRepository.countByVersion` 으로 범위의 평가 수를 세고, 요청이면 `TagSetRepository` 로 표를 잠가 모든 버전의 `ThresholdRepository.current` 저장 기준을 채울 기준으로 `TagBackfillRepository` 에 기록한다. 작업 역할의 `BackfillMissingTagsJob` 이 1분마다 `TagBackfillRound` 를 돌린다. 회차는 `TagBackfillRepository` 로 채움을 점유하고(`TagBackfill.claim` · `BackfillSchedule` 의 일정), 버전마다 `TagSetViews` 와 채울 기준을 한 번 읽은 뒤, 묶음마다 `EvaluationResultRepository.lockResponses` 로 평가를 잠가 읽어 포트 `ArticleEvaluator.reread` 로 원본 응답을 다시 읽고, `ResultCheck` 로 대조한 결과를 `EvaluationRecord.storedTags` 로 걸러 `addMissingTags` 로 더한다. 진행은 `TagBackfillRepository.advance` 로 점유 토큰이 맞을 때만 쓴다. 평가기는 Jev 키가 있으면 `JevArticleEvaluatorConfiguration` 이 `JevArticleEvaluator` 를, `local` 이면서 키가 없으면 `FakeArticleEvaluatorConfiguration` 이 `FakeArticleEvaluator` 를 포트로 등록한다 — 키가 있는가는 `JevKeyCondition` 이 정한다. `JevArticleEvaluator` 는 `JevRequest` 로 요청 본문을, `JevResponse` 로 결과를, `JevErrors` 로 오류 갈래 · 문구를 만든다.
 
-판정: `EventMembershipService` 는 트랜잭션 밖인지 · 평가기가 있는지(`ObjectProvider` 로 부를 때 찾는다) 본 뒤, `article` 의 `ArticleDirectory.findAll` 로 판정할 기사와 서술 기사를 한 번에 읽는다. `MembershipPlan` 이 물을 후보와 포트 입력(`MembershipInput` — 서술 제목은 `CandidateEvent.limited`, 문구는 `MembershipWording.CURRENT`)을 만들고 포트 `ArticleEvaluator.judgeMembership` 을 부른다. 성공이면 `MembershipCheck` 로 물은 후보와 대조하고 `MembershipRecord` 로 저장할 모양을 만들어 `EventJudgementRepository` 에 쓴 뒤, 커밋 뒤 `findAll` 로 기사를 다시 본다. Jev 구현은 `JevRequest.membershipBody` · `membershipProbeBody` 로 요청 본문을, `JevResponse.readMembership` 으로 결과를 만든다.
+판정: `EventMembershipService` 는 트랜잭션 밖인지 · 평가기가 있는지(`ObjectProvider` 로 부를 때 찾는다) 본 뒤, `article` 의 `ArticleDirectory.findAll` 로 판정할 기사와 서술 기사를 한 번에 읽는다. `MembershipPlan` 이 물을 후보와 포트 입력(`MembershipInput` — 서술 제목은 `CandidateEvent.limited`, 문구는 `MembershipWording.CURRENT`)을 만들고 포트 `ArticleEvaluator.judgeMembership` 을 부른다. 성공이면 `MembershipCheck` 로 물은 후보와 대조하고 `MembershipRecord` 로 저장할 모양을 만들어 `EventJudgementRepository` 에 쓰고(넣은 행의 ID 를 결과에 싣는다), 커밋 뒤 `findAll` 로 기사를 다시 본다. 판정 원본 조회는 `EventJudgementLogService` 가 `EventJudgementRepository.page` 를 부른다. Jev 구현은 `JevRequest.membershipBody` · `membershipProbeBody` 로 요청 본문을, `JevResponse.readMembership` 으로 결과를 만든다.
 
 집계: `EvaluationAdministrationService.overview` 와 `TopicCoverageService` 는 각자 읽기 전용 `REPEATABLE READ` 트랜잭션 하나(`TransactionTemplate`)를 연다. 평가 현황은 `TagSetRepository.existsById` 로 버전을 보고, `TagSetViews` · `ThresholdRepository`(`current` · `changes`)와 `StoreFloorsReader` 가 낸 태그 종류별 `StoreFloors` 로 `OverviewTally` 를 만들어 `EvaluationResultRepository.streamVersionPeriod` 의 평가를 하나씩 넣는다 — 판정은 `TagJudgement` 가 한다. 보도량은 `TagSetDirectory` 로 활성 버전을 읽고 `CoverageTally.unknownTopics` 로 고른 키를 본 뒤, `streamFirstEvaluatedIn` 의 기사마다 그 평가 버전의 `TagSetViews` · `ThresholdRepository.current` · `TagKeyLineage.toActive` 를(버전마다 한 번) 얻어 `TagJudgement` 의 판정과 계보 표를 `CoverageTally` 에 넣는다. 결과 저장소는 평가 행을 fetch size 커서로 나눠 받는다.
 
@@ -947,12 +984,13 @@ sequenceDiagram
 - `PendingEvaluations` — 대기 점유. `claimDue(now)` 가 한 트랜잭션에서 평가할 수 있는 대기를 `CLAIM_BATCH`(50 — 측정 전 목표, 정본)까지 잠그고 점유를 써 커밋한다(evaluation-R19)
 - `EvaluationRound` — 평가 회차 하나(evaluation-R19 · R20). 평가기는 `run(ArticleEvaluator)` 의 인자로 받는다 — 작업 진입점이 넘긴다. 시각은 `InstantSource` 에서 얻는다. 로그: `평가 대기 기사가 지워져 대기에서 뺐다 — 기사 {ID}` · `활성 태그 체계가 바뀌어 회차를 멈췄다 — 기사 {ID}`(정보), `평가기를 쓸 수 없어 회차를 멈췄다 — 기사 {ID}: {문구}`(경고), `평가 결과가 체계와 맞지 않아 회차를 멈췄다 — 기사 {ID}: {어긋남}` · `평가기가 예상 못한 예외를 던져 회차를 멈췄다 — 기사 {ID}`(오류)
 - `ArticleEvaluationsService` — 공개 API `ArticleEvaluations` 의 구현(evaluation-R15)
+- `EventJudgementLogService` — 공개 조회 `EventJudgementLog` 의 구현(evaluation-R39). 쪽 크기를 판정하고 한 건 더 읽어 다음 쪽 커서를 만든다
 - `EventMembershipService` — 공개 API `EventMembership` 의 구현(evaluation-R37 · R38). 트랜잭션 안에서 부르면 `IllegalStateException`. 평가기는 `ObjectProvider` 로 부를 때 찾고 없으면 `IllegalStateException` — 생성자에서 요구하지 않아 평가기 없는 화면 역할도 뜬다. 원본 쓰기와 다시 본 뒤의 지우기는 각각 `TransactionTemplate` 의 짧은 트랜잭션이다. 시각은 `InstantSource` 에서 얻는다. 로그: `판정 중 기사가 지워져 판정 원본을 지웠다 — 기사 {ID}`(정보)
 - `EvaluationAdministrationService` — 공개 운영 API `EvaluationAdministration` 의 구현. `overview` 는 `PlatformTransactionManager` 로 만든 읽기 전용 `REPEATABLE READ` `TransactionTemplate` 안에서 센다 — 저장 바닥은 `StoreFloorsReader` 에서 얻는다(evaluation-R29)
 - `TopicCoverageService` — 공개 조회 `TopicCoverage` 의 구현. 같은 모양의 트랜잭션 안에서 센다 — 평가에 나온 버전마다 체계 · 지금 기준 · 계보 표를 한 번씩 읽는다(호출 하나 안). 역할 애너테이션이 없다(evaluation-R30)
 - `TagBackfillAdministrationService` — 공개 운영 API `TagBackfillAdministration` 의 구현(evaluation-R31). 요청은 한 트랜잭션에서 `tag_sets` 표를 `SHARE` 로 잠근 뒤 모든 버전의 지금 저장 기준과 범위의 평가 수로 버전별 계획을 만들어 기록한다. 기록하지 못하면 끝나지 않은 채움을 읽어 `AlreadyOpen` 으로 — 그 사이 끝나 읽기가 비면 기록을 한 번 더 한다. 시각은 `InstantSource` 에서 얻는다
 - `TagBackfillRound` — 채움 회차 하나(evaluation-R31). 평가기는 `run(ArticleEvaluator)` 의 인자로 받는다. 점유를 커밋한 뒤 버전마다 체계와 채울 기준(저장 기준은 계획의 값, 태그 기준은 거르기에 쓰이지 않아 지금 값)을 한 번 읽고, 묶음마다 한 트랜잭션에서 잠가 읽기 → 다시 읽기 → 대조 → 더하기 → 진행 쓰기를 한다. 멈춤 갈래는 셋이다 — 남은 평가가 없으면 끝냄, 진행 쓰기에서 토큰이 맞지 않으면 그 묶음을 되돌리고 멈춤(점유를 다른 회차가 가져갔다), 그 밖의 예외(계획에 없는 버전의 평가 · DB 오류)면 그 묶음을 되돌리고 점유를 풀고 멈춤. 다시 읽기의 예상 못한 예외는 그 평가를 읽을 수 없음으로 세고 이어 간다. 로그: `빠진 태그 채움 {ID} 을 끝냈다 — 평가 {n}건, 더한 태그 {m}건, 건너뜀 {k}건` · `빠진 태그 채움 {ID} 의 점유를 다른 회차가 가져가 멈췄다`(정보), `빠진 태그 채움 {ID} 에서 평가기가 원본 응답을 다시 읽다 예상 못한 예외를 던졌다 — 평가 {ID}` · `빠진 태그 채움 {ID} 을 멈췄다 — 다음 회차가 이어서 한다`(오류)
-- `TagSetViews` · `PendingEvaluations` · `EvaluationRound` · `ArticleEvaluationsService` · `EvaluationAdministrationService` · `TagBackfillAdministrationService` · `TagBackfillRound` · `TopicCoverageService` · `EventMembershipService` 는 트랜잭션 · 역할 애너테이션이 없다 — 두 역할 공통이고, 점유 · 회차 · 집계 · 채움 요청 · 판정 원본 쓰기는 `TransactionTemplate` 으로 트랜잭션을 연다. `ArticleEventsListener` 는 리스너마다 새 트랜잭션이다
+- `TagSetViews` · `PendingEvaluations` · `EvaluationRound` · `ArticleEvaluationsService` · `EvaluationAdministrationService` · `TagBackfillAdministrationService` · `TagBackfillRound` · `TopicCoverageService` · `EventMembershipService` · `EventJudgementLogService` 는 트랜잭션 · 역할 애너테이션이 없다 — 두 역할 공통이고, 점유 · 회차 · 집계 · 채움 요청 · 판정 원본 쓰기는 `TransactionTemplate` 으로 트랜잭션을 연다. `ArticleEventsListener` 는 리스너마다 새 트랜잭션이다
 - `TagSetAdministrationService` — 공개 API `TagSetAdministration` 의 구현. 태그 기준 · 저장 기준 변경은 한 트랜잭션에서 표 잠금(활성 전환과 줄 서기) → 활성 버전 조회 → 태그 기준 · 저장 기준 행 잠금 → 지난 저장 기준 최댓값(`StoreFloorsReader` 의 `StoreFloors.pastMax` — 이력과 끝난 채움) → 판정 → 쓰기다. 시각은 `InstantSource` 에서 얻는다(evaluation-R11 ~ R13). 버전 연산은 `TagSetVersioning` 에 맡긴다
 - `TagSetVersioning` — 버전 목록 · 원문 내보내기 · 확인 · 활성화(evaluation-R16 · R22 ~ R25 · R27). 활성화는 재평가 대상 기사를 트랜잭션 밖에서 읽은 뒤 한 트랜잭션(`TransactionTemplate`)에서 표 잠금 → 대조 → 쓰기다. 시각은 `InstantSource` 에서 얻는다. 활성화하면 정보 로그 `태그 체계 버전 {번호}를 활성으로 바꿨다 — 재평가 대기 {건}건` 을 남긴다
 - `TagSetVersionStore` — 새 버전 쓰기(버전 행과 그 버전의 처음 태그 기준 · 저장 기준 · 이력 첫 행)의 정본(evaluation-R2 · R3 · R13 · R16). 첫 적재(`TagSetSeeding`)는 버전 1 을, 활성화(`TagSetVersioning`)는 기준 버전을 끈 뒤 다음 버전을 쓴다. 트랜잭션을 열지 않는다 — 부르는 쪽의 트랜잭션 · 표 잠금 안에서 쓴다. 빈이 아니다
@@ -1121,12 +1159,14 @@ sequenceDiagram
 
 - `MembershipPlan` — 물을 후보 고르기의 정본(evaluation-R38). 후보마다 서술 기사 가운데 아직 있는 것의 제목을 요청 순서로 자르고, 지워진 서술 기사와 자른 뒤 공백뿐인 제목의 서술 기사는 질문 · 기록에서 뺀다. 남은 제목이 없는 후보는 묻지 않는다 — 모두 빠지면 `NothingToAsk`
 - `MembershipCheck` — 판정 결과와 물은 후보의 대조의 정본(evaluation-R38) — 사건 ID 집합(`ResultCheck.keyDifference`)과 원본 응답의 저장 가능성(`ResultCheck.rawResponseProblem`)
-- `MembershipRecord` · `JudgedCandidate` — 저장할 판정 원본(`of` — 후보는 물은 순서, 확률은 판정 결과에서)
+- `MembershipRecord` — 저장할 판정 원본(`of` — 후보는 물은 순서, 확률은 판정 결과에서). 후보는 공개 값 `JudgedEvent` 로 담는다(§3)
 - 저장 단위: aggregate 가 없다 — 판정 원본은 넣기 한 번이고 갱신하지 않는다
 
   ```java
   public interface EventJudgementRepository {
-      void insert(MembershipRecord record);                    // 한 행 — 같은 기사의 판정이 여러 번이면 행도 여러 개
+      EventJudgementId insert(MembershipRecord record);        // 한 행 — 같은 기사의 판정이 여러 번이면 행도 여러 개. 넣은 행의 ID
+      List<EventJudgementView> page(Instant from, Instant to, @Nullable Instant afterJudgedAt,
+              @Nullable Long afterId, int limit);              // 판정 시각 [from, to), (판정 시각, ID) 내림차순, 커서 미만
       void deleteByArticles(Collection<ArticleId> articleIds); // 지운 기사 따르기 — 판정할 기사 ID 로 지운다
   }
   ```
@@ -1245,7 +1285,7 @@ public record Membership(Map<Long, Double> probabilities, String evaluator, Stri
   - 판정 성공이면 넘긴 후보마다 확률이 하나씩 있고 다른 사건은 없다. 결과 레코드는 값 하나하나만 검사하고, 물은 후보와 맞는지는 부르는 쪽이 `MembershipCheck` 로 본다
   - 외부 호출을 하므로 부르는 쪽은 DB 트랜잭션 밖에서 부른다. 구현은 트랜잭션을 열지 않는다
   - 형식 · 중요도는 분포만 돌려준다. 대표값 고르기 · 저장 기준 거르기 · `low_confidence` 는 저장 쪽 규칙이다(evaluation-R15)
-- 사건 소속 판정의 포트 입력 · 결과는 내부 타입이고, `event` 는 공개 API `EventMembership` 을 거친다(§3) — 공개 값은 사건 ID · 기사 ID · 확률 · 실패 갈래만 담는다. 인자 · 반환 타입은 `evaluation` 이 소유한다 — `event` 의 타입을 받으면 모듈 순환이 된다([ADR-0026](../adr/0026-event-clustering-with-local-embeddings-and-jev.md) · [ADR-0071](../adr/0071-event-membership-judged-from-article-ids-with-questions-built-in-evaluation.md))
+- 사건 소속 판정의 포트 입력 · 결과는 내부 타입이고, `event` 는 공개 API `EventMembership` 을 거친다(§3) — 공개 값은 사건 ID · 기사 ID · 확률 · 실패 갈래와 판정 원본 ID 를 담는다(원본 응답 · 모델 버전 · 입력 토큰은 판정 결과가 아니라 판정 원본 조회 `EventJudgementLog` 가 낸다 — [ADR-0094](../adr/0094-event-membership-judgements-identified-by-id-read-by-operators-and-referenced-by-the-records-that-apply-them.md)). 인자 · 반환 타입은 `evaluation` 이 소유한다 — `event` 의 타입을 받으면 모듈 순환이 된다([ADR-0026](../adr/0026-event-clustering-with-local-embeddings-and-jev.md) · [ADR-0071](../adr/0071-event-membership-judged-from-article-ids-with-questions-built-in-evaluation.md))
 - 입력(state)은 기사마다 한 번 보낸다. 피드 맥락마다 출처 줄 하나이고, 없는 값과 요약이 없을 때의 요약 줄은 뺀다. 값이 하나도 없는 피드는 줄을 내지 않고, 카테고리는 `, ` 로 잇는다:
 
   ```
@@ -1298,7 +1338,7 @@ public record Membership(Map<Long, Double> probabilities, String evaluator, Stri
 - `JdbcTagBackfillRepository` — `TagBackfillRepository` 의 PostgreSQL 구현(JdbcClient). 넣기는 끝나지 않은 행의 부분 고유 인덱스에 `INSERT … ON CONFLICT DO NOTHING RETURNING id` 로 판정한다 — 위반 예외는 트랜잭션을 깨므로 쓰지 않는다. 잠금은 `FOR UPDATE SKIP LOCKED`, 회차의 쓰기는 점유 토큰을 조건으로 한 갱신이다. 덮음은 끝났고 그 버전에서 건너뛴 평가가 없는 채움만 읽는다
 - `JdbcEvaluationQueueRepository` — `EvaluationQueueRepository` 의 PostgreSQL 구현(JdbcClient). 넣기는 `INSERT … ON CONFLICT DO NOTHING`, 재평가는 `INSERT … SELECT unnest(…) ON CONFLICT … DO UPDATE … WHERE failure IS NOT NULL` 한 문장, 잠금은 `FOR UPDATE SKIP LOCKED`, 회차의 반영은 점유 토큰을 조건으로 한 갱신 · 삭제다. 평가 가능 시각의 정착 시간은 `EvaluationSchedule` 이 정한다 — SQL 에 값을 두지 않는다
 - `JdbcEvaluationResultRepository` — `EvaluationResultRepository` 의 PostgreSQL 구현(JdbcClient). 분포 · 원본 응답은 `jsonb` 로 쓰고, 지우기는 평가 행을 평가 ID 순으로 `FOR UPDATE` 로 잠근 뒤 태그 행 → 평가 행 순이다(evaluation-R21). 채움의 잠금 읽기는 `ORDER BY id LIMIT … FOR KEY SHARE`, 태그 더하기는 `INSERT … ON CONFLICT (evaluation_id, tag_kind, tag_key) DO NOTHING` 이다. 잠금 읽기의 묶음은 그새 지워진 평가 때문에 비지 않는다 — PostgreSQL 의 잠금 절은 "If a LIMIT is used, locking stops once enough rows have been returned to satisfy the limit"이고, 다시 평가해 돌려주지 않는 행은 그 수에 들지 않는다([PostgreSQL 18 SELECT — The Locking Clause](https://www.postgresql.org/docs/18/sql-select.html#SQL-FOR-UPDATE-SHARE)). 원본 응답은 `raw_response::text` 로 꺼낸다 — 공백 · 키 순서는 원문과 다르고 수치는 자릿수를 지킨다. 흘려 받기 둘은 SQL 한 문장을 `STREAM_FETCH_SIZE`(1,000행) 커서로 받아 평가마다 태그 행을 묶는 보조 하나를 함께 쓴다 — PgJDBC 는 트랜잭션 안(autocommit 꺼짐)에서 fetch size 가 있을 때만 나눠 받는다. 최신 평가 고르기의 정렬(`LATEST_VERSION_FIRST` — 버전 번호 내림차순)은 `findLatest` · `findLatestImportances`(`distinct on` 으로 기사마다 하나를 고른 뒤 null 을 거른다)와 첫 평가 흘려 받기가 함께 쓴다
-- `JdbcEventJudgementRepository` — `EventJudgementRepository` 의 PostgreSQL 구현(JdbcClient). 물은 후보 · 원본 응답은 `jsonb` 로 쓰고, 지우기는 `DELETE … WHERE article_id = any(…)` 한 문장이다 — 이 행을 잠그는 다른 쓰기가 없어 잠금 순서가 필요 없다(evaluation-R21)
+- `JdbcEventJudgementRepository` — `EventJudgementRepository` 의 PostgreSQL 구현(JdbcClient). 물은 후보 · 원본 응답은 `jsonb` 로 쓰고 넣은 행의 ID 를 `returning id` 로 낸다. 물은 후보의 쓰기 · 읽기는 저장 모양 레코드 하나(`eventId` · `articleIds` · `probability`)를 함께 쓴다. 기간 읽기는 `(judged_at, id)` 인덱스를 거꾸로 훑는다. 지우기는 `DELETE … WHERE article_id = any(…)` 한 문장이다 — 이 행을 잠그는 다른 쓰기가 없어 잠금 순서가 필요 없다(evaluation-R21)
 
 #### 신뢰할 수 없는 입력
 
@@ -1516,7 +1556,7 @@ public record Membership(Map<Long, Double> probabilities, String evaluator, Stri
 
 ### 사건 소속 판정
 
-판단의 이유는 [ADR-0026](../adr/0026-event-clustering-with-local-embeddings-and-jev.md) · [ADR-0071](../adr/0071-event-membership-judged-from-article-ids-with-questions-built-in-evaluation.md) · [ADR-0072](../adr/0072-event-membership-question-wording-as-one-code-constant-with-its-version-in-raw-records.md) · [ADR-0073](../adr/0073-event-membership-api-in-both-roles-looks-up-the-evaluator-on-call-and-fails-without-one.md)에 있다.
+판단의 이유는 [ADR-0026](../adr/0026-event-clustering-with-local-embeddings-and-jev.md) · [ADR-0071](../adr/0071-event-membership-judged-from-article-ids-with-questions-built-in-evaluation.md) · [ADR-0072](../adr/0072-event-membership-question-wording-as-one-code-constant-with-its-version-in-raw-records.md) · [ADR-0073](../adr/0073-event-membership-api-in-both-roles-looks-up-the-evaluator-on-call-and-fails-without-one.md) · [ADR-0094](../adr/0094-event-membership-judgements-identified-by-id-read-by-operators-and-referenced-by-the-records-that-apply-them.md)에 있다.
 
 - **evaluation-R37** — 판정 요청과 질문:
   - 판정할 기사(ID)와 후보 사건(사건 ID와 서술 기사 ID)을 받는다. 후보는 1 ~ 10개(`MembershipQuery.MAX_CANDIDATES`), 후보마다 서술 기사 1 ~ 5개(`EventDescriptor.MAX_ARTICLES`)다. 사건 ID · 서술 기사는 겹치지 않고, 판정할 기사는 서술 기사가 아니다 — 어기면 `IllegalArgumentException` 이다. 상한은 측정 전 목표다
@@ -1531,11 +1571,16 @@ public record Membership(Map<Long, Double> probabilities, String evaluator, Stri
   - 평가기의 예상한 실패는 갈래와 문구로 돌려주고 원본을 남기지 않는다. 평가기의 예상 못한 예외는 그대로 던진다
   - 성공이면 결과를 물은 후보와 대조한다 — 사건 ID 집합이 같고, 원본 응답을 `jsonb` 로 저장할 수 있어야 한다(정본 `MembershipCheck`). 어긋나면 원본을 남기지 않고 `IllegalStateException` 이다
   - 맞으면 짧은 트랜잭션 하나로 판정 원본 한 행을 쓴다 — 판정할 기사, 물은 후보마다 사건 ID · 질문에 제목을 쓴 서술 기사 ID · 확률(요청 순서), 평가기 · 모델 버전 · 문구 판 · 원본 응답 · 입력 토큰 · 판정 시각. 서술 제목 텍스트는 남기지 않는다. 같은 기사의 판정이 여러 번이면 행도 여러 개다
+  - 판정 결과에 남긴 판정 원본의 ID 를 싣는다 — 평가기를 부르지 않은 빈 판정은 ID 가 없다. 무엇을 위해 물었는지(배정 · 병합)와 그 판정을 반영했는지는 부르는 쪽이 원본 ID 로 기록한다([event-R22](event.md#판정-원본의-쓰임))
   - 커밋 뒤 판정할 기사를 다시 본다 — 그새 지워졌으면 그 기사의 판정 원본을 지우고 "기사 없음"이다(정보 로그, evaluation-R21)
+- **evaluation-R39** — 판정 원본 조회:
+  - 판정 시각이 기간(`EvaluationPeriod` — 시작 포함 · 끝 제외) 안인 판정 원본을 (판정 시각, ID) 내림차순으로 한 쪽 100건(`EventJudgementLog.MAX_PAGE_SIZE`)까지 낸다. 커서는 앞 쪽 마지막 원본의 (판정 시각, ID)이고 그보다 작은 것부터 잇는다
+  - 원본마다 ID · 판정할 기사 · 물은 후보(판정 당시 사건 ID · 서술 기사 ID · 확률, 요청 순서) · 평가기 · 모델 버전 · 문구 판 · 입력 토큰 · 판정 시각을 낸다. 원본 응답은 내지 않는다
+  - 지운 원본(지운 기사 따르기 — evaluation-R21)은 나오지 않는다. 판정 원본의 보존 기간은 [data-model 보존 정책](../data-model.md#보존-정책-초안)에 있다
 
 ## 6. 데이터
 
-컬럼 타입 · 인덱스 · 제약 문면의 정본은 `backend/src/main/resources/db/migration/V9__tag_sets.sql`(태그 체계 · 태그 기준 · 저장 기준)과 `V10__evaluation_queue_and_results.sql`(평가 대기 · 평가 · 태그), `V11__tag_key_lineage.sql`(태그 키 계보), `V12__article_evaluations_period_indexes.sql`(기간 집계의 인덱스), `V13__tag_backfills.sql`(빠진 태그 채움), `V15__article_event_judgements.sql`(사건 소속 판정 원본)이다. 태그 종류 · 행위자 · 실패 까닭 · 계보 종류 값은 대문자 상수 이름(`TOPIC` · `REGION` · `FORMAT` · `SYSTEM` · `OPERATOR` · `ARTICLE_REJECTED` · `RETRIES_EXHAUSTED` · `RENAME` · `SPLIT` · `MERGE`)으로 저장한다.
+컬럼 타입 · 인덱스 · 제약 문면의 정본은 `backend/src/main/resources/db/migration/V9__tag_sets.sql`(태그 체계 · 태그 기준 · 저장 기준)과 `V10__evaluation_queue_and_results.sql`(평가 대기 · 평가 · 태그), `V11__tag_key_lineage.sql`(태그 키 계보), `V12__article_evaluations_period_indexes.sql`(기간 집계의 인덱스), `V13__tag_backfills.sql`(빠진 태그 채움), `V15__article_event_judgements.sql`(사건 소속 판정 원본), `V20__article_event_judgements_judged_index.sql`(판정 원본의 기간 조회 인덱스)이다. 태그 종류 · 행위자 · 실패 까닭 · 계보 종류 값은 대문자 상수 이름(`TOPIC` · `REGION` · `FORMAT` · `SYSTEM` · `OPERATOR` · `ARTICLE_REJECTED` · `RETRIES_EXHAUSTED` · `RENAME` · `SPLIT` · `MERGE`)으로 저장한다.
 
 | 테이블 | 주요 컬럼 | 뜻 |
 |---|---|---|
@@ -1550,7 +1595,7 @@ public record Membership(Map<Long, Double> probabilities, String evaluator, Stri
 | `tag_key_lineage` | tag_set_id, tag_kind(`TOPIC`/`REGION`/`FORMAT`), from_key, to_key, kind(`RENAME`/`SPLIT`/`MERGE`) | 태그 키 계보 — (tag_set_id, tag_kind, from_key, to_key) 기본 키. 이 버전에서 기준 버전(번호 − 1)의 이전 키가 어느 새 키로 이어지는지(evaluation-R22 · R23). 새 키는 같은 버전 · 같은 태그 종류의 태그 행이다(커밋 때 확인하는 FK). 이전 키는 기준 버전의 키라 FK 가 없다 — 활성화가 확인한다. 버전과 함께 한 번 쓰고 바꾸지 않는다. 사용자 선호와 주제별 시계열이 따라간다(evaluation-R26) |
 | `tag_backfills` | id, days, covered_from, covered_to, eligible_at, cursor_id, lease_token, lease_expires_at, started_at, finished_at | 빠진 태그 채움 — 요청 하나가 한 행(evaluation-R31). 덮는 평가 시각 `[covered_from, covered_to)`(`covered_to` 는 요청 시각), 시작 가능 시각, 처리한 마지막 평가 ID, 점유. 끝나지 않은 행은 하나다(부분 고유 인덱스). 점유 둘은 함께 있거나 함께 없고, 끝난 행은 점유가 없다(제약). 지우지 않는다 — 저장 바닥 계산의 입력이다(evaluation-R32) |
 | `tag_backfill_versions` | backfill_id, tag_set_id, topic_store_threshold, region_store_threshold, evaluations, processed, tags_added, skipped_other, skipped_unreadable | 채움의 버전별 기록 — (backfill_id, tag_set_id) 기본 키. 요청 때 모든 버전의 채울 저장 기준과 대상 평가 수, 실행이 더하는 버전별 건수. 건너뛴 평가가 있는 버전은 덮음이 아니다(evaluation-R32) |
-| `article_event_judgements` | id, article_id, evaluator, model_version, wording_version, candidates(jsonb — 물은 후보마다 사건 ID · 서술 기사 ID · 확률, 요청 순서), raw_response(jsonb), input_tokens, judged_at | 사건 소속 판정 원본 — 성공한 판정마다 한 행이고 고유 제약이 없다(evaluation-R38). `article_id` 인덱스. 사건 ID 는 `event` 의 사건을 가리키지만 FK 가 없다. 지운 기사(판정한 기사)의 행은 함께 지운다(evaluation-R21). 배정 결과는 `event` 가 갖는다 |
+| `article_event_judgements` | id, article_id, evaluator, model_version, wording_version, candidates(jsonb — 물은 후보마다 사건 ID · 서술 기사 ID · 확률, 요청 순서), raw_response(jsonb), input_tokens, judged_at | 사건 소속 판정 원본 — 성공한 판정마다 한 행이고 고유 제약이 없다(evaluation-R38). `article_id` 인덱스, 기간 조회의 `(judged_at, id)` 인덱스(evaluation-R39). 사건 ID 는 `event` 의 사건을 가리키지만 FK 가 없다. 지운 기사(판정한 기사)의 행은 함께 지운다(evaluation-R21). 배정 결과는 `event` 가 갖는다 |
 
 `article_id` 는 `article` 의 기사를 가리키지만 FK 를 두지 않는다 — 모듈 사이는 ID 로만 참조한다. 보존 기간은 [data-model.md "보존 정책"](../data-model.md#보존-정책-초안)에 있다.
 
@@ -1588,3 +1633,4 @@ public record Membership(Map<Long, Double> probabilities, String evaluator, Stri
 | [0071](../adr/0071-event-membership-judged-from-article-ids-with-questions-built-in-evaluation.md) | 사건 소속 판정은 판정할 기사와 후보 사건의 서술 기사를 ID 로 받아 `evaluation` 이 질문을 만들고, 판정 원본에는 ID 만 남긴다 |
 | [0072](../adr/0072-event-membership-question-wording-as-one-code-constant-with-its-version-in-raw-records.md) | 사건 소속 질문 문구는 코드 상수 하나로 두고 판정 원본에 문구 판을 남긴다 |
 | [0073](../adr/0073-event-membership-api-in-both-roles-looks-up-the-evaluator-on-call-and-fails-without-one.md) | 사건 소속 판정 공개 API 는 두 역할 공통 빈으로 두고, 평가기는 부를 때 찾아 없으면 예외로 드러낸다 |
+| [0094](../adr/0094-event-membership-judgements-identified-by-id-read-by-operators-and-referenced-by-the-records-that-apply-them.md) | 사건 소속 판정 원본은 ID 로 식별되어 운영자 조회로 읽히고, 판정을 반영한 `event` 기록이 그 ID 를 가리켜 판정의 쓰임과 결과를 잇는다 |

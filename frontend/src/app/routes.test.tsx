@@ -3,11 +3,15 @@ import { createMemoryRouter } from "react-router";
 import { RouterProvider } from "react-router/dom";
 import { describe, expect, it } from "vitest";
 import { routes } from "@/app/routes";
+import { BigEventsPage } from "@/features/admin/BigEventsPage";
 import { CollectionPage } from "@/features/admin/CollectionPage";
 import { EvaluationDetailPage } from "@/features/admin/EvaluationDetailPage";
 import { EvaluationListPage } from "@/features/admin/EvaluationListPage";
 import { EvaluationPage } from "@/features/admin/EvaluationPage";
+import { EventDetailPage } from "@/features/admin/EventDetailPage";
+import { EventJudgementsPage } from "@/features/admin/EventJudgementsPage";
 import { EventPublicationsPage } from "@/features/admin/EventPublicationsPage";
+import { EventsPage } from "@/features/admin/EventsPage";
 import { SamplePage } from "@/features/admin/SamplePage";
 import { ThresholdsPage } from "@/features/admin/ThresholdsPage";
 
@@ -50,6 +54,10 @@ describe("routes", () => {
     ["evaluations/:id", "EvaluationDetailPage", () => EvaluationDetailPage],
     ["samples", "SamplePage", () => SamplePage],
     ["thresholds", "ThresholdsPage", () => ThresholdsPage],
+    ["events", "EventsPage", () => EventsPage],
+    ["events/:id", "EventDetailPage", () => EventDetailPage],
+    ["big-events", "BigEventsPage", () => BigEventsPage],
+    ["event-judgements", "EventJudgementsPage", () => EventJudgementsPage],
   ])(
     "운영자 화면 아래 %s 경로가 %s 를 내려받는다",
     async (path, _name, component) => {

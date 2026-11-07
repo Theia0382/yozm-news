@@ -2,7 +2,7 @@ import { useId } from "react";
 import { periodHint } from "@/features/admin/periods";
 
 /**
- * 기간 입력 — 시작일 · 종료일(포함)과 시간대 안내, 보내기 전 안내. 운영자 화면 넷이 함께 쓴다.
+ * 기간 입력 — 시작일 · 종료일(포함)과 시간대 안내, 보내기 전 안내. 기간을 고르는 운영자 화면이 함께 쓴다.
  *
  * @param maxDays 서버가 알려 준 상한 — 모르면 null(안내만 줄고, 정본은 서버의 400)
  */

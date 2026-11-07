@@ -2,7 +2,7 @@ package net.yozmnews.event.application;
 
 import java.time.Duration;
 
-import net.yozmnews.event.domain.assignment.AssignmentCriteria;
+import net.yozmnews.event.AssignmentCriteria;
 import net.yozmnews.event.domain.event.EventClosing;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;

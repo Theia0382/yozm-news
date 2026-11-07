@@ -46,6 +46,12 @@ public interface EventDirectory {
 	Map<EventId, ArticleId> representatives(Map<EventId, ? extends Collection<ArticleId>> among);
 
 	/**
+	 * 사건마다 사건 기사 전체에서 고른 대표 기사(event-R14) — 닫을 때 남긴 대표가 있으면 그것이다. {@link #list} 의 대표와 같은 정본이다.
+	 * @return 사건 ID → 대표 기사 — 배정이 없는 사건(합쳐진 사건 포함) · 없는 사건은 빠진다. 빈 입력이면 빈 맵
+	 */
+	Map<EventId, ArticleId> representativesOfAll(Collection<EventId> events);
+
+	/**
 	 * 기간 안의 큰 사건 — 지금 기준으로 판정한다(event-R15). 소스 수 내림차순, 중요도 내림차순, 사건 ID 순.
 	 * @throws IllegalStateException 큰 사건 기준의 처음 값을 적재하기 전일 때
 	 */

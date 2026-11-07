@@ -17,8 +17,8 @@ import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleDirectory;
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.evaluation.MembershipJudgement;
+import net.yozmnews.event.AssignmentCriteria;
 import net.yozmnews.event.EventArticles;
-import net.yozmnews.event.domain.assignment.AssignmentCriteria;
 import net.yozmnews.event.domain.assignment.AssignmentQueueRepository;
 import net.yozmnews.event.domain.assignment.CriteriaRepository;
 import net.yozmnews.event.domain.assignment.StoredCandidate;
@@ -140,7 +140,7 @@ class EventAssignmentConcurrencyTests {
 	private AssignmentRound round(EventArticleRepository assignments, Instant now) {
 		return new AssignmentRound(this.queue, this.intake, this.features, this.events, assignments,
 				this.criteriaHistory, CRITERIA, this.articles,
-				query -> new MembershipJudgement.Judged(Map.of()), this.transaction, (InstantSource) () -> now);
+				query -> new MembershipJudgement.Judged(null, Map.of()), this.transaction, (InstantSource) () -> now);
 	}
 
 	private long article(String vector, Instant availableAt) {

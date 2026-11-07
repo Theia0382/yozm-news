@@ -19,6 +19,9 @@ import net.yozmnews.event.EventArticleView;
 import net.yozmnews.event.EventId;
 import net.yozmnews.event.EventStatus;
 import net.yozmnews.event.EventView;
+import net.yozmnews.event.JudgementUse;
+import net.yozmnews.event.MergePair;
+import net.yozmnews.event.MergedEvent;
 import net.yozmnews.event.domain.event.EventQueryRepository;
 import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -163,6 +166,72 @@ class JdbcEventQueryRepository implements EventQueryRepository {
 			statement = statement.param("afterLast", timestamp(afterLast)).param("afterId", afterId);
 		}
 		return statement.query(JdbcEventQueryRepository::event).list();
+	}
+
+	@Override
+	public List<MergedEvent> mergedInto(long survivor) {
+		return this.jdbc.sql("""
+				select e.id, e.article_count, e.first_article_at, e.last_article_at, e.created_at, e.closed_at,
+				       j.probability
+				from events e
+				left join event_merge_judgements j
+				  on j.event_low = least(e.id, e.merged_into) and j.event_high = greatest(e.id, e.merged_into)
+				where e.merged_into = :survivor
+				order by e.closed_at, e.id
+				""").param("survivor", survivor).query((rs, row) -> new MergedEvent(new EventId(rs.getLong("id")),
+				rs.getInt("article_count"), instant(rs, "first_article_at"), instant(rs, "last_article_at"),
+				instant(rs, "created_at"), instant(rs, "closed_at"), rs.getObject("probability", Double.class)))
+			.list();
+	}
+
+	@Override
+	public Map<Long, JudgementUse.Assignment> assignmentsByJudgement(Collection<Long> judgementIds) {
+		if (judgementIds.isEmpty()) {
+			return Map.of();
+		}
+		Map<Long, JudgementUse.Assignment> assignments = new LinkedHashMap<>();
+		this.jdbc.sql("""
+				select judgement_id, article_id, event_id, decided_by from event_articles
+				where judgement_id = any(:ids)
+				order by judgement_id, article_id
+				""").param("ids", judgementIds.toArray(Long[]::new)).query((ResultSet rs) -> {
+					long judgement = rs.getLong("judgement_id");
+					JudgementUse.Assignment assignment = new JudgementUse.Assignment(
+							new ArticleId(rs.getLong("article_id")), new EventId(rs.getLong("event_id")),
+							DecidedBy.valueOf(rs.getString("decided_by")));
+					if (assignments.putIfAbsent(judgement, assignment) != null) {
+						throw new IllegalStateException("판정 원본 하나를 배정 둘이 가리킨다: " + judgement);
+					}
+				});
+		return Collections.unmodifiableMap(assignments);
+	}
+
+	@Override
+	public Map<Long, List<MergePair>> mergePairsByJudgement(Collection<Long> judgementIds) {
+		if (judgementIds.isEmpty()) {
+			return Map.of();
+		}
+		// 두 사건을 각각 남는 사건으로 읽는다 — 가리킴은 평평해 한 번이면 된다
+		Map<Long, List<MergePair>> pairs = new LinkedHashMap<>();
+		this.jdbc.sql("""
+				select j.judgement_id, j.event_low, j.event_high, j.probability,
+				       coalesce(l.merged_into, l.id) as low_now, coalesce(h.merged_into, h.id) as high_now
+				from event_merge_judgements j
+				left join events l on l.id = j.event_low
+				left join events h on h.id = j.event_high
+				where j.judgement_id = any(:ids)
+				order by j.judgement_id, j.event_low, j.event_high
+				""").param("ids", judgementIds.toArray(Long[]::new)).query((ResultSet rs) -> {
+					Long low = rs.getObject("low_now", Long.class);
+					Long high = rs.getObject("high_now", Long.class);
+					EventId survivor = (low != null && low.equals(high)) ? new EventId(low) : null;
+					pairs.computeIfAbsent(rs.getLong("judgement_id"), judgement -> new ArrayList<>())
+						.add(new MergePair(new EventId(rs.getLong("event_low")), new EventId(rs.getLong("event_high")),
+								rs.getDouble("probability"), survivor));
+				});
+		Map<Long, List<MergePair>> result = new LinkedHashMap<>();
+		pairs.forEach((judgement, found) -> result.put(judgement, List.copyOf(found)));
+		return Collections.unmodifiableMap(result);
 	}
 
 	private static Map<Long, ArticleId> firstPerEvent(JdbcClient.StatementSpec statement) {

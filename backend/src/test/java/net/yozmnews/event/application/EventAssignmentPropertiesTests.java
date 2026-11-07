@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
 
-import net.yozmnews.event.domain.assignment.AssignmentCriteria;
+import net.yozmnews.event.AssignmentCriteria;
 import net.yozmnews.event.domain.event.EventClosing;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.context.annotation.UserConfigurations;
@@ -23,7 +23,7 @@ class EventAssignmentPropertiesTests {
 
 	@Test
 	void withoutPropertiesTheDefaultsApply() {
-		this.runner.run(context -> assertThat(context.getBean(AssignmentCriteria.class))
+		this.runner.run(context -> assertThat(context.getBean(AssignmentSettings.class).criteria())
 			.isEqualTo(new AssignmentCriteria(Duration.ofHours(72), 0.80, 0.55, 0.40, 0.50)));
 		this.runner.run(context -> assertThat(context.getBean(EventClosing.class))
 			.isEqualTo(new EventClosing(Duration.ofDays(7), Duration.ofDays(14))));
@@ -51,10 +51,10 @@ class EventAssignmentPropertiesTests {
 	@Test
 	void oneGivenPropertyChangesOnlyThatValue() {
 		this.runner.withPropertyValues("yozmnews.event-assignment.upper=0.85")
-			.run(context -> assertThat(context.getBean(AssignmentCriteria.class))
+			.run(context -> assertThat(context.getBean(AssignmentSettings.class).criteria())
 				.isEqualTo(new AssignmentCriteria(Duration.ofHours(72), 0.85, 0.55, 0.40, 0.50)));
 		this.runner.withPropertyValues("yozmnews.event-assignment.window=48h")
-			.run(context -> assertThat(context.getBean(AssignmentCriteria.class))
+			.run(context -> assertThat(context.getBean(AssignmentSettings.class).criteria())
 				.isEqualTo(new AssignmentCriteria(Duration.ofHours(48), 0.80, 0.55, 0.40, 0.50)));
 	}
 

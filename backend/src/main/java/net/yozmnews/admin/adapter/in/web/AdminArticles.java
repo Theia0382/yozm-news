@@ -20,19 +20,19 @@ import net.yozmnews.source.FeedLabels;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 평가 검수 응답의 기사 정보 맞붙이기 — 정본이다 · docs/specs/admin.md §5 admin-R6.
+ * 운영자 응답의 기사 정보 맞붙이기(평가 검수 · 사건 · 큰 사건 · 판정 기록) — 정본이다 · docs/specs/admin.md §5 admin-R6.
  * <p>
  * 기사 ID 를 모아 {@code article} 의 {@link ArticleDirectory#findAll} 을 한 번, 그 엔트리의 피드 ID 를 모아 {@code source} 의
  * {@link FeedLabels#labels} 를 한 번 부른다. 그새 지운 기사는 결과에 없다 — 응답의 기사 정보가 {@code null} 이다. 요약문 원문은 운영자 화면에만
  * 보인다(ADR-0068).
  */
-final class ReviewArticles {
+final class AdminArticles {
 
 	private final ArticleDirectory articles;
 
 	private final FeedLabels labels;
 
-	ReviewArticles(ArticleDirectory articles, FeedLabels labels) {
+	AdminArticles(ArticleDirectory articles, FeedLabels labels) {
 		this.articles = Objects.requireNonNull(articles, "articles");
 		this.labels = Objects.requireNonNull(labels, "labels");
 	}

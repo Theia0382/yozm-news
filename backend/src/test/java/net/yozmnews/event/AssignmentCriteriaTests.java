@@ -1,4 +1,4 @@
-package net.yozmnews.event.domain.assignment;
+package net.yozmnews.event;
 
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatNoException;

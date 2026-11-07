@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.evaluation.JudgedEvent;
 import net.yozmnews.evaluation.domain.evaluator.Membership;
 
 /**
@@ -17,7 +18,7 @@ import net.yozmnews.evaluation.domain.evaluator.Membership;
  * @param wordingVersion 질문 문구의 판
  * @param rawResponse 평가기의 원본 응답 — JSON 텍스트
  */
-public record MembershipRecord(ArticleId articleId, List<JudgedCandidate> candidates, String evaluator,
+public record MembershipRecord(ArticleId articleId, List<JudgedEvent> candidates, String evaluator,
 		String modelVersion, String wordingVersion, int inputTokens, String rawResponse, Instant judgedAt) {
 
 	/**
@@ -50,13 +51,13 @@ public record MembershipRecord(ArticleId articleId, List<JudgedCandidate> candid
 	 */
 	public static MembershipRecord of(ArticleId articleId, Map<Long, List<ArticleId>> asked, Membership membership,
 			String wordingVersion, Instant judgedAt) {
-		List<JudgedCandidate> candidates = new ArrayList<>();
+		List<JudgedEvent> candidates = new ArrayList<>();
 		asked.forEach((eventId, articleIds) -> {
 			Double probability = membership.probabilities().get(eventId);
 			if (probability == null) {
 				throw new IllegalArgumentException("물은 후보의 확률이 없다: " + eventId);
 			}
-			candidates.add(new JudgedCandidate(eventId, articleIds, probability));
+			candidates.add(new JudgedEvent(eventId, articleIds, probability));
 		});
 		return new MembershipRecord(articleId, candidates, membership.evaluator(), membership.modelVersion(),
 				wordingVersion, membership.inputTokens(), membership.rawResponse(), judgedAt);

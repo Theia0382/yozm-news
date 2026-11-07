@@ -9,6 +9,9 @@ import java.util.Optional;
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.event.EventArticleView;
 import net.yozmnews.event.EventView;
+import net.yozmnews.event.JudgementUse;
+import net.yozmnews.event.MergePair;
+import net.yozmnews.event.MergedEvent;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -45,5 +48,17 @@ public interface EventQueryRepository {
 	 * @param limit 가져올 행 수
 	 */
 	List<EventView> page(Instant from, Instant to, @Nullable Instant afterLast, @Nullable Long afterId, int limit);
+
+	/** 이 사건을 가리키는 합쳐진 사건 — 합친 시각 · 사건 ID 순. 확률은 (그 사건, 이 사건) 쌍의 병합 판정 기록 */
+	List<MergedEvent> mergedInto(long survivor);
+
+	/**
+	 * 판정 원본을 가리키는 배정 — 원본 ID → 그 기사의 지금 배정.
+	 * @throws IllegalStateException 한 원본을 배정 둘이 가리킬 때
+	 */
+	Map<Long, JudgementUse.Assignment> assignmentsByJudgement(Collection<Long> judgementIds);
+
+	/** 판정 원본을 가리키는 병합 판정 기록 — 원본 ID → 쌍들((작은 ID, 큰 ID) 순)과 지금 같은 사건인지 */
+	Map<Long, List<MergePair>> mergePairsByJudgement(Collection<Long> judgementIds);
 
 }

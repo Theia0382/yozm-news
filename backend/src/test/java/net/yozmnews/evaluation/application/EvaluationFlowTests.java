@@ -35,6 +35,7 @@ import net.yozmnews.evaluation.EvaluationAdministration;
 import net.yozmnews.evaluation.EvaluationQueueCounts;
 import net.yozmnews.evaluation.FormatOption;
 import net.yozmnews.evaluation.ImportanceLevel;
+import net.yozmnews.evaluation.JudgedEvent;
 import net.yozmnews.evaluation.MultiTagKind;
 import net.yozmnews.evaluation.TagProbability;
 import net.yozmnews.evaluation.TagSetAdministration;
@@ -52,7 +53,6 @@ import net.yozmnews.evaluation.domain.evaluator.MembershipInput;
 import net.yozmnews.evaluation.domain.evaluator.MembershipResult;
 import net.yozmnews.evaluation.domain.evaluator.RereadResult;
 import net.yozmnews.evaluation.domain.membership.EventJudgementRepository;
-import net.yozmnews.evaluation.domain.membership.JudgedCandidate;
 import net.yozmnews.evaluation.domain.membership.MembershipRecord;
 import net.yozmnews.evaluation.domain.queue.EvaluationQueueRepository;
 import net.yozmnews.evaluation.domain.result.EvaluationRecord;
@@ -666,7 +666,7 @@ class EvaluationFlowTests {
 	/** 기사 하나를 사건 12 에 대해 판정한 원본 — 서술 기사 하나 */
 	private static MembershipRecord judgement(long article, long described) {
 		return new MembershipRecord(new ArticleId(article),
-				List.of(new JudgedCandidate(12, List.of(new ArticleId(described)), 0.8)), "fake", "fake-rules-2",
+				List.of(new JudgedEvent(12, List.of(new ArticleId(described)), 0.8)), "fake", "fake-rules-2",
 				"membership-1", 10, "{\"events\":{\"12\":0.8}}", T);
 	}
 
