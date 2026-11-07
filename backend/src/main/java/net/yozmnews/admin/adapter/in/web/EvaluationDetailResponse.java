@@ -23,15 +23,15 @@ record EvaluationDetailResponse(long id, long articleId, long version, int versi
 		TagThresholds regionThresholds, TopicStatus topicStatus, List<StoredTagView> topics,
 		List<TagName> topicCategories, List<StoredTagView> regions, List<DistributionShare> formats, String format,
 		List<DistributionShare> importanceLevels, @Nullable Double importance,
-		@Nullable ReviewArticleDetailResponse article) {
+		@Nullable ArticleDetailResponse article) {
 
-	static EvaluationDetailResponse of(EvaluationDetailView detail, ReviewArticles.@Nullable Detail article) {
+	static EvaluationDetailResponse of(EvaluationDetailView detail, AdminArticles.@Nullable Detail article) {
 		return new EvaluationDetailResponse(detail.id().value(), detail.articleId().value(), detail.version().value(),
 				detail.versionNumber(), detail.evaluator(), detail.modelVersion(), detail.evaluatedAt(),
 				detail.inputTokens(), detail.thresholds().topic(), detail.thresholds().region(), detail.topicStatus(),
 				detail.topics(), detail.topicCategories(), detail.regions(), detail.formats(), detail.format(),
 				detail.importanceLevels(), detail.importance(),
-				(article == null) ? null : ReviewArticleDetailResponse.of(article));
+				(article == null) ? null : ArticleDetailResponse.of(article));
 	}
 
 }

@@ -20,10 +20,11 @@ import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleDirectory;
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.article.ArticlesRemoved;
+import net.yozmnews.evaluation.EventJudgementId;
 import net.yozmnews.evaluation.EventMembership;
 import net.yozmnews.evaluation.MembershipJudgement;
+import net.yozmnews.event.AssignmentCriteria;
 import net.yozmnews.event.EventArticles;
-import net.yozmnews.event.domain.assignment.AssignmentCriteria;
 import net.yozmnews.event.domain.assignment.AssignmentQueueRepository;
 import net.yozmnews.event.domain.assignment.CriteriaRepository;
 import net.yozmnews.event.domain.assignment.StoredCandidate;
@@ -181,7 +182,7 @@ class EventRemovalFlowTests {
 	void anEmptiedEventGoesWithTheCandidatesPointingToIt() {
 		// y([0,1], 금리, 03:00) 는 띠에 들어 판정 확률 0.1 로 새 사건을 열고, 후보 E 를 남긴다
 		long y = queued("[0,1]", "2026-11-05T03:00:00Z", "금리");
-		round(this.assignments, query -> new MembershipJudgement.Judged(Map.of(this.event, 0.1))).run(new ModelOnly());
+		round(this.assignments, query -> new MembershipJudgement.Judged(new EventJudgementId(1), Map.of(this.event, 0.1))).run(new ModelOnly());
 		long other = eventOf(y);
 		assertThat(other).isNotEqualTo(this.event);
 		assertThat(count("select count(*) from event_article_candidates where article_id = " + y + " and event_id = "
@@ -256,7 +257,7 @@ class EventRemovalFlowTests {
 	void oneRemovalOverTwoEventsShrinksOneAndDeletesTheOther() {
 		// y([0,1], 금리, 03:00) 는 판정 확률 0.1 로 혼자 새 사건을 연다 — c 와 y 를 한 번에 지우면 E 는 줄고 y 의 사건은 빈다
 		long y = queued("[0,1]", "2026-11-05T03:00:00Z", "금리");
-		round(this.assignments, query -> new MembershipJudgement.Judged(Map.of(this.event, 0.1))).run(new ModelOnly());
+		round(this.assignments, query -> new MembershipJudgement.Judged(new EventJudgementId(1), Map.of(this.event, 0.1))).run(new ModelOnly());
 		long other = eventOf(y);
 		assertThat(other).isNotEqualTo(this.event);
 
@@ -313,7 +314,7 @@ class EventRemovalFlowTests {
 		long z = queued("[0,1]", "2026-11-05T02:00:00Z", "금리");
 		EventMembership removing = query -> {
 			remove(z);
-			return new MembershipJudgement.Judged(Map.of(this.event, 0.9));
+			return new MembershipJudgement.Judged(new EventJudgementId(1), Map.of(this.event, 0.9));
 		};
 
 		round(this.assignments, removing).run(new ModelOnly());

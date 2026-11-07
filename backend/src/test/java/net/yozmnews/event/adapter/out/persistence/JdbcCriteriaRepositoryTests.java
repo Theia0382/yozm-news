@@ -7,7 +7,7 @@ import java.time.Instant;
 import java.util.Map;
 
 import net.yozmnews.TestcontainersConfiguration;
-import net.yozmnews.event.domain.assignment.AssignmentCriteria;
+import net.yozmnews.event.AssignmentCriteria;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

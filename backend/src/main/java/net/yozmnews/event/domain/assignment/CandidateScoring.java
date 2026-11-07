@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import net.yozmnews.event.AssignmentCriteria;
+
 /**
  * 후보 점수 산식의 정본 — docs/specs/event.md §4 · event-R10.
  * <p>

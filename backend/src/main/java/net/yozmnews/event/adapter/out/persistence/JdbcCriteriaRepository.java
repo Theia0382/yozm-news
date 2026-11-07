@@ -4,7 +4,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.Optional;
 
-import net.yozmnews.event.domain.assignment.AssignmentCriteria;
+import net.yozmnews.event.AssignmentCriteria;
 import net.yozmnews.event.domain.assignment.CriteriaRepository;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;

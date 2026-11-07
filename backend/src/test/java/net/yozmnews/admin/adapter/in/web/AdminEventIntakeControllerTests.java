@@ -70,6 +70,10 @@ class AdminEventIntakeControllerTests {
 		this.mockMvc.perform(json(post("/api/admin/event-intake-fills"), "{\"days\":\"seven\"}"))
 			.andExpect(status().isBadRequest())
 			.andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON));
+		// 소수는 버림해 받지 않는다 — 7.5 일이 7 일 채우기가 되지 않는다
+		this.mockMvc.perform(json(post("/api/admin/event-intake-fills"), "{\"days\":7.5}"))
+			.andExpect(status().isBadRequest())
+			.andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON));
 
 		assertThat(this.administration.calls).isEmpty();
 	}

@@ -1,6 +1,6 @@
 # ADR-0071: 사건 소속 판정은 판정할 기사와 후보 사건의 서술 기사를 ID 로 받아 `evaluation` 이 질문을 만들고, 판정 원본에는 ID 만 남긴다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 공개 값의 범위([ADR-0094](0094-event-membership-judgements-identified-by-id-read-by-operators-and-referenced-by-the-records-that-apply-them.md))
 - 날짜: 2026-11-05
 - 근거: [이슈 #96](https://github.com/Theia0382/yozm-news/issues/96) — 사건 소속 판정을 `ArticleEvaluator` 연산과 `evaluation` 공개 API 로 만들며 정한 계약. 구현 `a84cc1a`
 - 관련: [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md)(사건 묶기 — 미뤄 둔 인자 · 반환 타입의 모양을 이 ADR 이 정한다), [ADR-0060](0060-article-deletion-announced-by-removed-article-ids-and-followed-by-referencing-modules.md)(지운 기사 ID 로 따라 지우기)
@@ -17,6 +17,7 @@
 - **판정할 기사와 서술 기사를 기사 ID 로 받는다.** `evaluation` 이 `article` 의 공개 조회로 제목 · 요약을 읽어 질문 · state 를 만든다. 서술 기사를 고르는 일은 부르는 쪽(사건 중심을 아는 쪽)이 한다.
 - **판정 원본에는 서술 기사 ID 와 확률만 남긴다.** 서술 제목 텍스트는 남기지 않는다. 판정 원본은 판정할 기사 ID 로만 지운다 — 서술로만 쓰인 기사가 지워져도 다른 기사의 판정 원본은 남는다.
 - **질문은 후보 사건마다 Yes/No 하나다.** ADR-0026 의 문면 그대로다 — 확률은 후보마다 독립이고, 받아들일지(기준 · 최댓값)는 부르는 쪽이 정한다.
+> 부분 대체(둘째 · 셋째 문장) — [ADR-0094](0094-event-membership-judgements-identified-by-id-read-by-operators-and-referenced-by-the-records-that-apply-them.md). 지금 상태: [`evaluation` §3](../specs/evaluation.md#3-공개-인터페이스)(evaluation-R38 · R39)
 - **공개 타입과 포트 타입을 나눈다.** 공개 API 는 사건 ID · 기사 ID · 확률 · 실패 갈래만 주고받는다. 원본 응답 · 모델 버전 · 입력 토큰은 포트 결과에만 있고 `evaluation` 이 기록으로만 쓴다. 실패 갈래 enum 은 공개 패키지에 하나다.
 
 ## 결과

@@ -2,6 +2,8 @@ package net.yozmnews.event.domain.assignment;
 
 import java.time.Instant;
 
+import net.yozmnews.event.AssignmentCriteria;
+
 /**
  * 배정 기준 이력 저장소 — docs/specs/event.md §4
  */

@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Map;
 
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.evaluation.EventJudgementId;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
@@ -34,7 +36,7 @@ class JdbcMergeJudgementRepositoryTests {
 
 	@Test
 	void aPairIsOneRowReadFromEitherSide() {
-		this.repository.save(20, Map.of(10L, 0.8, 30L, 0.3), NOW);
+		this.repository.save(20, Map.of(10L, 0.8, 30L, 0.3), new EventJudgementId(5), NOW);
 
 		assertThat(this.repository.find(20, List.of(10L, 30L, 40L))).containsExactlyInAnyOrderEntriesOf(
 				Map.of(10L, 0.8, 30L, 0.3));
@@ -49,10 +51,30 @@ class JdbcMergeJudgementRepositoryTests {
 
 	@Test
 	void theFirstProbabilityOfAPairStays() {
-		this.repository.save(20, Map.of(10L, 0.8), NOW);
-		this.repository.save(10, Map.of(20L, 0.1), NOW.plusSeconds(60));
+		this.repository.save(20, Map.of(10L, 0.8), new EventJudgementId(5), NOW);
+		this.repository.save(10, Map.of(20L, 0.1), new EventJudgementId(6), NOW.plusSeconds(60));
 
 		assertThat(this.repository.find(20, List.of(10L))).containsExactlyEntriesOf(Map.of(10L, 0.8));
+		assertThat(judgementOf(10, 20)).isEqualTo(5L);
+	}
+
+	@Test
+	void eachNewPairKeepsTheJudgementThatGaveItsProbability() {
+		this.repository.save(20, Map.of(10L, 0.8, 30L, 0.3), new EventJudgementId(5), NOW);
+		this.repository.save(40, Map.of(20L, 0.6), null, NOW);
+
+		assertThat(judgementOf(10, 20)).isEqualTo(5L);
+		assertThat(judgementOf(20, 30)).isEqualTo(5L);
+		assertThat(judgementOf(20, 40)).isNull();
+	}
+
+	private @Nullable Long judgementOf(long low, long high) {
+		return (Long) this.jdbc.sql("select judgement_id from event_merge_judgements where event_low = :low and event_high = :high")
+			.param("low", low)
+			.param("high", high)
+			.query()
+			.singleRow()
+			.get("judgement_id");
 	}
 
 }

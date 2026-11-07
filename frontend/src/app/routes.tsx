@@ -65,6 +65,34 @@ export const routes: RouteObject[] = [
             }),
           },
           {
+            path: "events",
+            lazy: async () => ({
+              Component: (await import("@/features/admin/EventsPage"))
+                .EventsPage,
+            }),
+          },
+          {
+            path: "events/:id",
+            lazy: async () => ({
+              Component: (await import("@/features/admin/EventDetailPage"))
+                .EventDetailPage,
+            }),
+          },
+          {
+            path: "big-events",
+            lazy: async () => ({
+              Component: (await import("@/features/admin/BigEventsPage"))
+                .BigEventsPage,
+            }),
+          },
+          {
+            path: "event-judgements",
+            lazy: async () => ({
+              Component: (await import("@/features/admin/EventJudgementsPage"))
+                .EventJudgementsPage,
+            }),
+          },
+          {
             path: "event-publications",
             lazy: async () => ({
               Component: (

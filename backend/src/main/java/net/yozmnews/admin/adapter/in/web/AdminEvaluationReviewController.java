@@ -1,7 +1,5 @@
 package net.yozmnews.admin.adapter.in.web;
 
-import java.time.Instant;
-import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -39,7 +37,7 @@ import org.springframework.web.server.ResponseStatusException;
 /**
  * 운영자 API — 평가 검수: 버전 · 기간의 평가 목록(거르기 · 커서), 표본, 평가 하나의 상세. docs/specs/admin.md §3.
  * <p>
- * {@code evaluation} 의 공개 운영 API 를 불러 옮기고, 기사 정보는 {@link ReviewArticles} 가 맞붙인다(admin-R6). 범위 · 없는 태그의 판정은 공개
+ * {@code evaluation} 의 공개 운영 API 를 불러 옮기고, 기사 정보는 {@link AdminArticles} 가 맞붙인다(admin-R6). 범위 · 없는 태그의 판정은 공개
  * API 가 하고 컨트롤러는 그 결과를 400 · 404 로 옮긴다. 트랜잭션을 열지 않는다.
  */
 @WebRole
@@ -51,11 +49,11 @@ class AdminEvaluationReviewController {
 
 	private final EvaluationReview review;
 
-	private final ReviewArticles articles;
+	private final AdminArticles articles;
 
 	AdminEvaluationReviewController(EvaluationReview review, ArticleDirectory articles, FeedLabels labels) {
 		this.review = Objects.requireNonNull(review, "review");
-		this.articles = new ReviewArticles(articles, labels);
+		this.articles = new AdminArticles(articles, labels);
 	}
 
 	@GetMapping("/api/admin/evaluations")
@@ -137,7 +135,7 @@ class AdminEvaluationReviewController {
 
 	/** 행마다 기사 정보를 맞붙인다 — 기사 조회 · 피드 조회 한 번씩 */
 	private List<EvaluationRowResponse> rows(List<EvaluationRow> rows) {
-		Map<ArticleId, ReviewArticles.Summary> summaries = this.articles
+		Map<ArticleId, AdminArticles.Summary> summaries = this.articles
 			.summaries(rows.stream().map(EvaluationRow::articleId).toList());
 		return rows.stream().map(row -> EvaluationRowResponse.of(row, summaries.get(row.articleId()))).toList();
 	}
@@ -150,24 +148,8 @@ class AdminEvaluationReviewController {
 	}
 
 	private static @Nullable EvaluationCursor cursor(@Nullable String evaluatedAt, @Nullable Long id) {
-		if ((evaluatedAt == null) != (id == null)) {
-			throw badRequest("afterEvaluatedAt 과 afterId 는 함께 준다");
-		}
-		if (evaluatedAt == null) {
-			return null;
-		}
-		Instant at;
-		try {
-			at = Instant.parse(evaluatedAt);
-		}
-		catch (DateTimeParseException ex) {
-			throw badRequest("시각은 ISO-8601 형식이다: " + evaluatedAt);
-		}
-		long value = Objects.requireNonNull(id);
-		if (value < 1) {
-			throw badRequest("평가 ID 는 1 이상이다: " + value);
-		}
-		return new EvaluationCursor(at, new EvaluationId(value));
+		AdminCursor cursor = AdminCursor.of(evaluatedAt, id, "afterEvaluatedAt", "평가");
+		return (cursor == null) ? null : new EvaluationCursor(cursor.at(), new EvaluationId(cursor.id()));
 	}
 
 	private static ResponseStatusException badRequest(String detail) {

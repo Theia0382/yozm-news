@@ -2,6 +2,7 @@ package net.yozmnews.platform.adapter.in.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -19,6 +20,8 @@ import org.springframework.test.json.JsonCompareMode;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -65,6 +68,29 @@ class ProblemResponseAdviceTests {
 	}
 
 	@Test
+	void decimalInAnIntegerBodyFieldIsAnUnreadableBody() throws Exception {
+		this.mockMvc.perform(post("/api/test/count").contentType(MediaType.APPLICATION_JSON).content("""
+				{"count":3.5}
+				"""))
+			.andExpect(status().isBadRequest())
+			.andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+			.andExpect(content().json("""
+					{"type":"about:blank","title":"Bad Request","status":400,
+					 "detail":"요청 본문의 형식이 틀렸다","instance":"/api/test/count"}
+					""", JsonCompareMode.STRICT));
+	}
+
+	@Test
+	void brokenJsonBodyIsAnUnreadableBody() throws Exception {
+		this.mockMvc.perform(post("/api/test/count").contentType(MediaType.APPLICATION_JSON).content("{\"count\":"))
+			.andExpect(status().isBadRequest())
+			.andExpect(content().json("""
+					{"type":"about:blank","title":"Bad Request","status":400,
+					 "detail":"요청 본문의 형식이 틀렸다","instance":"/api/test/count"}
+					""", JsonCompareMode.STRICT));
+	}
+
+	@Test
 	void concurrentChangeIsAConflict() throws Exception {
 		this.mockMvc.perform(get("/api/test/conflict"))
 			.andExpect(status().isConflict())
@@ -101,6 +127,11 @@ class ProblemResponseAdviceTests {
 			return Long.toString(value);
 		}
 
+		@PostMapping("/api/test/count")
+		String count(@RequestBody Count body) {
+			return Integer.toString(body.count());
+		}
+
 		@GetMapping("/api/test/conflict")
 		String conflict() {
 			throw new OptimisticLockingFailureException("version 3");
@@ -111,6 +142,9 @@ class ProblemResponseAdviceTests {
 			throw new IllegalStateException("db-password-hunter2");
 		}
 
+	}
+
+	record Count(int count) {
 	}
 
 }

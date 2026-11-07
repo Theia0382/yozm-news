@@ -1,6 +1,5 @@
 package net.yozmnews.event.application;
 
-import net.yozmnews.event.domain.assignment.AssignmentCriteria;
 import net.yozmnews.event.domain.event.EventClosing;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -15,8 +14,8 @@ import org.springframework.context.annotation.Configuration;
 class AssignmentConfiguration {
 
 	@Bean
-	AssignmentCriteria assignmentCriteria(EventAssignmentProperties properties) {
-		return properties.criteria();
+	AssignmentSettings assignmentSettings(EventAssignmentProperties properties) {
+		return new AssignmentSettings(properties.criteria());
 	}
 
 	@Bean

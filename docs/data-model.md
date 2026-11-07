@@ -49,6 +49,8 @@ erDiagram
     events ||--o{ event_key_terms : ""
     event_assignment_criteria ||--o{ event_articles : ""
     articles ||--o{ event_article_candidates : ""
+    article_event_judgements |o--o{ event_articles : ""
+    article_event_judgements |o--o{ event_merge_judgements : ""
 
     storylines ||--o{ storyline_tracking_events : ""
     storylines ||--o{ digest_sections : ""

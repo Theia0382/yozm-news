@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.Objects;
 
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.evaluation.EventJudgementId;
 import net.yozmnews.event.DecidedBy;
 import org.jspecify.annotations.Nullable;
 
@@ -16,9 +17,11 @@ import org.jspecify.annotations.Nullable;
  * 사건이 바뀌어도 그대로다. 재판정이 "새 사건" 결과를 적용하는 갈래를 정한다
  * @param criteriaId 판정에 쓴 기준(기준 이력)
  * @param assignedAt 배정을 정한 시각
+ * @param judgement 이 배정을 쓸 때 반영한 사건 소속 판정 원본 — 판정을 부르지 않았거나 판정 원본을 남기지 않은 배정이면 null. 재판정 ·
+ * 병합으로 다시 적거나 옮겨도 그대로다
  */
 public record EventArticle(ArticleId articleId, long eventId, Instant publishedAt, @Nullable Double score,
-		DecidedBy decidedBy, boolean opened, long criteriaId, Instant assignedAt) {
+		DecidedBy decidedBy, boolean opened, long criteriaId, Instant assignedAt, @Nullable EventJudgementId judgement) {
 
 	public EventArticle {
 		Objects.requireNonNull(articleId, "articleId");

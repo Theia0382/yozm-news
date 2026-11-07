@@ -126,7 +126,10 @@ export function AdminLayout({ baseUrl, fetch }: AdminLayoutProps) {
             <Link to="/admin" className="text-2xl font-bold">
               운영자
             </Link>
-            <nav aria-label="운영자 메뉴" className="flex gap-4">
+            <nav
+              aria-label="운영자 메뉴"
+              className="flex flex-wrap gap-x-4 gap-y-1"
+            >
               <NavLink to="/admin" end className={navLinkClass}>
                 소스 · 피드
               </NavLink>
@@ -144,6 +147,15 @@ export function AdminLayout({ baseUrl, fetch }: AdminLayoutProps) {
               </NavLink>
               <NavLink to="/admin/thresholds" className={navLinkClass}>
                 태그 기준
+              </NavLink>
+              <NavLink to="/admin/events" className={navLinkClass}>
+                사건
+              </NavLink>
+              <NavLink to="/admin/big-events" className={navLinkClass}>
+                큰 사건
+              </NavLink>
+              <NavLink to="/admin/event-judgements" className={navLinkClass}>
+                판정 기록
               </NavLink>
               <NavLink to="/admin/event-publications" className={navLinkClass}>
                 이벤트 발행
