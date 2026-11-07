@@ -115,6 +115,9 @@ class JdbcEventRepositoryTests {
 		assertThat(opened.articleCount()).isEqualTo(1);
 		assertThat(opened.firstArticleAt()).isEqualTo(T);
 		assertThat(opened.lastArticleAt()).isEqualTo(T);
+		assertThat(opened.openedAt()).isEqualTo(Instant.parse("2026-11-06T00:00:00Z"));
+		assertThat(opened.lastJoinedAt()).isEqualTo(Instant.parse("2026-11-06T00:00:00Z"));
+		assertThat(revision(id)).isEqualTo(1);
 		assertThat(termCounts(id)).containsExactlyInAnyOrderEntriesOf(Map.of("금리", 1, "한국은행", 1));
 		assertThat(this.jdbc.sql("select created_at from events where id = :id")
 			.param("id", id)
@@ -130,7 +133,8 @@ class JdbcEventRepositoryTests {
 		LockedEvent locked = this.repository.lock(id).orElseThrow();
 
 		this.repository.update(new LockedEvent(id, locked.status(), locked.modelVersion(), new float[] { 0.5f, 0.5f }, 4,
-				Instant.parse("2026-11-04T00:00:00Z"), Instant.parse("2026-11-05T12:00:00Z")),
+				Instant.parse("2026-11-04T00:00:00Z"), Instant.parse("2026-11-05T12:00:00Z"), locked.openedAt(),
+				Instant.parse("2026-11-06T07:00:00Z")),
 				List.of("금리", "환율", "환율"), List.of("동결", "물가", "물가"));
 
 		LockedEvent updated = this.repository.lock(id).orElseThrow();
@@ -138,6 +142,9 @@ class JdbcEventRepositoryTests {
 		assertThat(updated.articleCount()).isEqualTo(4);
 		assertThat(updated.firstArticleAt()).isEqualTo(Instant.parse("2026-11-04T00:00:00Z"));
 		assertThat(updated.lastArticleAt()).isEqualTo(Instant.parse("2026-11-05T12:00:00Z"));
+		assertThat(updated.openedAt()).isEqualTo(Instant.parse("2026-11-05T00:00:00Z"));
+		assertThat(updated.lastJoinedAt()).isEqualTo(Instant.parse("2026-11-06T07:00:00Z"));
+		assertThat(revision(id)).isEqualTo(2);
 		// 금리 2 + 1, 환율 새로 2(두 기사), 동결 1 − 1 → 지움, 물가 3 − 2
 		assertThat(termCounts(id)).containsExactlyInAnyOrderEntriesOf(Map.of("금리", 3, "환율", 2, "물가", 1));
 	}
@@ -198,8 +205,9 @@ class JdbcEventRepositoryTests {
 	private long event(String status, String model, String centroid, String first, String last) {
 		return this.jdbc.sql("""
 				insert into events (status, model_version, centroid, article_count, first_article_at, last_article_at,
-				                    created_at)
-				values (:status, :model, cast(:centroid as halfvec), 1, :first, :last, :first)
+				                    created_at, last_joined_at, closed_at)
+				values (:status, :model, cast(:centroid as halfvec), 1, :first, :last, :first, :first,
+				        case when :status = 'OPEN' then null else cast(:first as timestamptz) end)
 				returning id
 				""")
 			.param("status", status)
@@ -209,6 +217,10 @@ class JdbcEventRepositoryTests {
 			.param("last", Instant.parse(last).atOffset(ZoneOffset.UTC))
 			.query(Long.class)
 			.single();
+	}
+
+	private long revision(long event) {
+		return this.jdbc.sql("select revision from events where id = :id").param("id", event).query(Long.class).single();
 	}
 
 	private void terms(long event, Map<String, Integer> counts) {
@@ -246,8 +258,8 @@ class JdbcEventRepositoryTests {
 
 	private void member(long article, long event, long criteria, String model, String embedding) {
 		this.jdbc.sql("""
-				insert into event_articles (article_id, event_id, published_at, decided_by, criteria_id, assigned_at)
-				values (:article, :event, now(), 'FORMULA', :criteria, now())
+				insert into event_articles (article_id, event_id, published_at, decided_by, opened, criteria_id, assigned_at)
+				values (:article, :event, now(), 'FORMULA', false, :criteria, now())
 				""").param("article", article).param("event", event).param("criteria", criteria).update();
 		this.jdbc.sql("""
 				insert into article_match_features (article_id, model_version, embedding, entities, created_at)

@@ -4,7 +4,7 @@ import java.time.Duration;
 import java.time.Instant;
 
 /**
- * 배정 대기 · 재판정 회차의 상수 — 점유 기간 · 회차 크기 · 재시도 간격과 상한 · 서술 기사 수의 정본 · docs/specs/event.md §4 · event-R16 · event-R18.
+ * 배정 대기 · 재판정 회차의 상수 — 점유 기간 · 회차 크기 · 재시도 간격과 상한 · 서술 기사 수 · 닫힌 사건 일괄 유지 수의 정본 · docs/specs/event.md §4 · event-R16 · event-R18.
  * <p>
  * 값은 모두 측정 전 목표다. 점유 기간은 회차 한 묶음이 기사마다 판정 요청 둘을 마감(15초)까지 기다려도 안에 들게 잡는다 — 32 × 2 × 15초 =
  * 16분 &lt; 20분.
@@ -31,6 +31,9 @@ public final class AssignmentSchedule {
 
 	/** 재판정 회차 하나가 다시 판정하는 배정 수의 상한 */
 	public static final int REJUDGE_BATCH = 200;
+
+	/** 재판정 회차 하나가 닫힌 사건의 배정을 기준만 새것으로 적는 수의 상한 — 하나씩 다시 판정하는 대상 앞을 막지 않게 한꺼번에 */
+	public static final int CLOSED_KEEP_BATCH = 5_000;
 
 	private AssignmentSchedule() {
 	}

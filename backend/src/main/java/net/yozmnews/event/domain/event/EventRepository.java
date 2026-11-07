@@ -34,14 +34,16 @@ public interface EventRepository {
 	List<LockedEvent> lockAll(Collection<Long> eventIds);
 
 	/**
-	 * 새 사건을 연다 — 열린 상태, 기사 하나, 중심은 그 기사 벡터, 첫 · 마지막 기사 시각은 그 기사의 발행 시각.
+	 * 새 사건을 연다 — 열린 상태, 기사 하나, 중심은 그 기사 벡터, 첫 · 마지막 기사 시각은 그 기사의 발행 시각, 연 시각 · 마지막으로 붙은
+	 * 시각은 {@code now}.
 	 * @param keyTerms 그 기사의 핵심 말 — 같은 말은 한 번 센다
 	 * @return 새 사건 ID
 	 */
 	long open(String modelVersion, float[] centroid, Instant publishedAt, List<String> keyTerms, Instant now);
 
 	/**
-	 * 잠근 사건을 고쳐 쓴다 — 중심 · 기사 수 · 첫 · 마지막 기사 시각. 핵심 말은 더한 말 목록에 나온 수만큼 늘리고, 뺀 말 목록에 나온 수만큼
+	 * 잠근 사건을 고쳐 쓴다 — 중심 · 기사 수 · 첫 · 마지막 기사 시각 · 마지막으로 붙은 시각, 그리고 {@code revision} 을 하나 늘린다(병합
+	 * 회차가 바뀐 사건을 고른다). 핵심 말은 더한 말 목록에 나온 수만큼 늘리고, 뺀 말 목록에 나온 수만큼
 	 * 줄여 0 이 되면 지운다. 기사 하나의 핵심 말에는 같은 말이 없으므로, 기사마다 이어 붙인 목록이면 말마다 그 말을 가진 기사 수만큼 바뀐다.
 	 */
 	void update(LockedEvent next, List<String> addedTerms, List<String> removedTerms);

@@ -31,7 +31,8 @@ import org.springframework.stereotype.Repository;
 class JdbcEventRepository implements EventRepository {
 
 	private static final String EVENT_COLUMNS = """
-			id, status, model_version, centroid::text as centroid, article_count, first_article_at, last_article_at
+			id, status, model_version, centroid::text as centroid, article_count, first_article_at, last_article_at,
+			created_at, last_joined_at
 			""";
 
 	private final JdbcClient jdbc;
@@ -101,8 +102,8 @@ class JdbcEventRepository implements EventRepository {
 	public long open(String modelVersion, float[] centroid, Instant publishedAt, List<String> keyTerms, Instant now) {
 		long id = this.jdbc.sql("""
 				insert into events (status, model_version, centroid, article_count, first_article_at, last_article_at,
-				                    created_at)
-				values ('OPEN', :model, cast(:centroid as halfvec), 1, :published, :published, :now)
+				                    created_at, last_joined_at)
+				values ('OPEN', :model, cast(:centroid as halfvec), 1, :published, :published, :now, :now)
 				returning id
 				""")
 			.param("model", modelVersion)
@@ -120,7 +121,8 @@ class JdbcEventRepository implements EventRepository {
 	public void update(LockedEvent next, List<String> addedTerms, List<String> removedTerms) {
 		this.jdbc.sql("""
 				update events set centroid = cast(:centroid as halfvec), article_count = :count,
-				                  first_article_at = :first, last_article_at = :last
+				                  first_article_at = :first, last_article_at = :last, last_joined_at = :joined,
+				                  revision = revision + 1
 				where id = :id
 				""")
 			.param("id", next.id())
@@ -128,6 +130,7 @@ class JdbcEventRepository implements EventRepository {
 			.param("count", next.articleCount())
 			.param("first", timestamp(next.firstArticleAt()))
 			.param("last", timestamp(next.lastArticleAt()))
+			.param("joined", timestamp(next.lastJoinedAt()))
 			.update();
 		addTerms(next.id(), addedTerms);
 		removeTerms(next.id(), removedTerms);
@@ -171,7 +174,8 @@ class JdbcEventRepository implements EventRepository {
 	private static LockedEvent event(ResultSet rs, int row) throws SQLException {
 		return new LockedEvent(rs.getLong("id"), EventStatus.valueOf(rs.getString("status")),
 				rs.getString("model_version"), VectorText.parse(rs.getString("centroid")), rs.getInt("article_count"),
-				instant(rs, "first_article_at"), instant(rs, "last_article_at"));
+				instant(rs, "first_article_at"), instant(rs, "last_article_at"), instant(rs, "created_at"),
+				instant(rs, "last_joined_at"));
 	}
 
 	private static List<String> strings(Array array) throws SQLException {

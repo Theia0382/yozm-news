@@ -39,14 +39,19 @@ class ForwardingEventArticleRepository implements EventArticleRepository {
 	}
 
 	@Override
-	public void reassign(ArticleId articleId, long eventId, @Nullable Double score, DecidedBy by, long criteriaId,
-			Instant now) {
-		this.delegate.reassign(articleId, eventId, score, by, criteriaId, now);
+	public void reassign(ArticleId articleId, long eventId, @Nullable Double score, DecidedBy by, boolean opened,
+			long criteriaId, Instant now) {
+		this.delegate.reassign(articleId, eventId, score, by, opened, criteriaId, now);
 	}
 
 	@Override
 	public void keep(ArticleId articleId, long criteriaId) {
 		this.delegate.keep(articleId, criteriaId);
+	}
+
+	@Override
+	public int keepClosed(long criteriaId, int limit) {
+		return this.delegate.keepClosed(criteriaId, limit);
 	}
 
 	@Override

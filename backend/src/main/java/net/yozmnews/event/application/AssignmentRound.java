@@ -301,14 +301,14 @@ public class AssignmentRound {
 						yield null;
 					}
 					LockedEvent event = locked.get();
-					this.events.update(event.joined(vector, draft.publishedAt()), terms, List.of());
+					this.events.update(event.joined(vector, draft.publishedAt(), now), terms, List.of());
 					yield new EventArticle(draft.article(), event.id(), draft.publishedAt(), attach.score(), attach.by(),
-							draft.criteriaId(), now);
+							false, draft.criteriaId(), now);
 				}
 				case Decision.Open open -> {
 					long eventId = this.events.open(model, vector, draft.publishedAt(), terms, now);
 					yield new EventArticle(draft.article(), eventId, draft.publishedAt(), open.bestScore(), open.by(),
-							draft.criteriaId(), now);
+							true, draft.criteriaId(), now);
 				}
 				case Decision.Ask ask -> throw new IllegalStateException("물을 후보가 남은 채 쓰려 했다: " + ask);
 				case Decision.Keep keep -> throw new IllegalStateException("처음 판정은 유지를 내지 않는다");

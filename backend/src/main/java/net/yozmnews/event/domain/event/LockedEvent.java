@@ -13,9 +13,11 @@ import net.yozmnews.event.domain.assignment.CentroidUpdate;
  * @param articleCount 구성 기사 수 — 1 이상
  * @param firstArticleAt 구성 기사 가운데 가장 이른 발행 시각
  * @param lastArticleAt 구성 기사 가운데 가장 늦은 발행 시각
+ * @param openedAt 사건을 연 시각 — 최대 기간으로 닫는 기준
+ * @param lastJoinedAt 마지막으로 기사가 붙은 시각 — 닫는 기간의 기준
  */
 public record LockedEvent(long id, EventStatus status, String modelVersion, float[] centroid, int articleCount,
-		Instant firstArticleAt, Instant lastArticleAt) {
+		Instant firstArticleAt, Instant lastArticleAt, Instant openedAt, Instant lastJoinedAt) {
 
 	/**
 	 * @throws IllegalArgumentException 중심이 비었거나 기사 수가 1 미만이거나 첫 시각이 마지막 시각보다 늦을 때
@@ -25,6 +27,8 @@ public record LockedEvent(long id, EventStatus status, String modelVersion, floa
 		Objects.requireNonNull(modelVersion, "modelVersion");
 		Objects.requireNonNull(firstArticleAt, "firstArticleAt");
 		Objects.requireNonNull(lastArticleAt, "lastArticleAt");
+		Objects.requireNonNull(openedAt, "openedAt");
+		Objects.requireNonNull(lastJoinedAt, "lastJoinedAt");
 		if (centroid.length == 0) {
 			throw new IllegalArgumentException("중심 벡터가 비었다");
 		}
@@ -44,14 +48,15 @@ public record LockedEvent(long id, EventStatus status, String modelVersion, floa
 
 	/**
 	 * 기사 하나를 더한 사건 — 중심은 그 벡터를 더한 평균({@link CentroidUpdate#add}), 수 + 1, 첫 · 마지막 기사 시각은 그 발행 시각까지
-	 * 넓힌다. 배정과 재판정의 옮기기가 함께 쓰는 정본이다.
+	 * 넓히고, 마지막으로 붙은 시각은 지금이다. 배정과 재판정의 옮기기가 함께 쓰는 정본이다.
+	 * @param now 붙인 시각
 	 * @throws IllegalArgumentException 벡터 길이가 중심과 다를 때
 	 */
-	public LockedEvent joined(float[] vector, Instant publishedAt) {
+	public LockedEvent joined(float[] vector, Instant publishedAt, Instant now) {
 		return new LockedEvent(this.id, this.status, this.modelVersion,
 				CentroidUpdate.add(this.centroid, this.articleCount, vector), this.articleCount + 1,
 				publishedAt.isBefore(this.firstArticleAt) ? publishedAt : this.firstArticleAt,
-				publishedAt.isAfter(this.lastArticleAt) ? publishedAt : this.lastArticleAt);
+				publishedAt.isAfter(this.lastArticleAt) ? publishedAt : this.lastArticleAt, this.openedAt, now);
 	}
 
 }

@@ -27,16 +27,23 @@ public interface EventArticleRepository {
 
 	/**
 	 * 기준이 {@code criteriaId} 가 아닌 배정을 기사 ID 순으로 {@code limit} 개까지 잠근다(다른 트랜잭션이 잡은 행은 건너뛴다). 저장 후보는
-	 * 사라진 사건을 뺀다. 사건은 잠그지 않는다 — 사건의 기사 수가 필요한 적용은 사건을 잠근 뒤 읽는다. 트랜잭션 안에서 부른다.
+	 * 사라진 사건을 빼고, 합쳐진 사건은 남는 사건({@code merged_into})으로 읽는다. 사건은 잠그지 않는다 — 사건의 기사 수가 필요한 적용은 사건을 잠근 뒤 읽는다. 트랜잭션 안에서 부른다.
 	 */
 	List<RejudgeTarget> lockRejudgeTargets(long criteriaId, int limit);
 
-	/** 잠근 배정을 다시 적는다 — 사건 · 점수 · 정한 것 · 기준 · 배정 시각 */
-	void reassign(ArticleId articleId, long eventId, @Nullable Double score, DecidedBy by, long criteriaId,
-			Instant now);
+	/** 잠근 배정을 다시 적는다 — 사건 · 점수 · 정한 것 · 연 사건 표지 · 기준 · 배정 시각 */
+	void reassign(ArticleId articleId, long eventId, @Nullable Double score, DecidedBy by, boolean opened,
+			long criteriaId, Instant now);
 
 	/** 잠근 배정의 기준만 새것으로 적는다 — 배정은 그대로 */
 	void keep(ArticleId articleId, long criteriaId);
+
+	/**
+	 * 닫힌 사건의 배정 가운데 기준이 {@code criteriaId} 가 아닌 것을 기사 ID 순으로 {@code limit} 개까지 잠가(다른 트랜잭션이 잡은 행은
+	 * 건너뛴다) 기준만 새것으로 적는다 — 닫힌 사건의 배정은 재판정하지 않는다. 트랜잭션 안에서 부른다.
+	 * @return 적은 수
+	 */
+	int keepClosed(long criteriaId, int limit);
 
 	/** 기사들의 배정을 기사 ID 순으로 잠근다 — 배정이 없는 기사는 결과에 없다. 트랜잭션 안에서 부른다 */
 	List<EventArticle> lockByArticles(Collection<ArticleId> articleIds);

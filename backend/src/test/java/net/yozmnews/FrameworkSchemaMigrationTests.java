@@ -49,7 +49,7 @@ class FrameworkSchemaMigrationTests {
 				select version from flyway_schema_history where success order by installed_rank
 				""").query(String.class).list())
 			.containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16",
-					"17");
+					"17", "18");
 		assertThat(this.jdbc.sql("""
 				select table_name from information_schema.tables
 				where table_schema = 'public' and table_type = 'BASE TABLE'
@@ -61,7 +61,8 @@ class FrameworkSchemaMigrationTests {
 					"tag_set_threshold_changes", "evaluation_queue", "article_evaluations", "article_tags",
 					"tag_key_lineage", "tag_backfills", "tag_backfill_versions", "article_event_judgements",
 					"event_intake_queue", "article_match_features", "events", "event_key_terms",
-					"event_assignment_criteria", "event_articles", "event_article_candidates", "event_assignment_queue");
+					"event_assignment_criteria", "event_articles", "event_article_candidates", "event_assignment_queue",
+					"event_merge_judgements");
 		assertThat(this.jdbc.sql("""
 				select table_name from information_schema.tables
 				where table_schema = 'public' and table_type = 'VIEW'

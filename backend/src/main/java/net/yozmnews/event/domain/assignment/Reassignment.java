@@ -1,7 +1,5 @@
 package net.yozmnews.event.domain.assignment;
 
-import java.util.List;
-
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -30,27 +28,24 @@ public sealed interface Reassignment {
 	 * <ul>
 	 * <li>유지 → 그대로</li>
 	 * <li>지금 사건에 붙임 → 같은 사건에서 다시 적기, 다른 사건에 붙임 → 옮기기</li>
-	 * <li>새 사건 — 지금 사건이 저장 후보에 없으면 그 기사가 판정 때 연 사건이라 다시 적기. 저장 후보에 있으면(붙었던 사건) 다른 기사가 있을 때
-	 * 떼어 내고, 혼자면 다시 적기</li>
+	 * <li>새 사건 — 그 기사가 판정으로 지금 사건을 열었으면 다시 적기. 아니면(붙었던 사건) 다른 기사가 있을 때 떼어 내고, 혼자면 다시
+	 * 적기</li>
 	 * </ul>
+	 * 연 사건인지는 배정의 표지로 안다 — 병합 뒤에는 저장 후보로 추론할 수 없다(합쳐진 사건을 연 기사의 저장 후보에 남는 사건이 있을 수 있다).
 	 * @param decision 재판정({@link DecisionPhase#REJUDGE})의 결과
 	 * @param currentEventId 지금 배정된 사건
-	 * @param stored 그 기사의 저장 후보 — 사라진 사건은 뺀 것
+	 * @param opened 그 기사가 판정으로 지금 배정의 사건을 열었다 — 배정의 표지
 	 * @param currentEventArticles 지금 사건의 기사 수
 	 * @throws IllegalArgumentException 결과가 묻기일 때 — 재판정은 묻지 않는다
 	 */
-	static Reassignment of(Decision decision, long currentEventId, List<StoredCandidate> stored,
-			int currentEventArticles) {
+	static Reassignment of(Decision decision, long currentEventId, boolean opened, int currentEventArticles) {
 		return switch (decision) {
 			case Decision.Keep keep -> new Keep();
 			case Decision.Attach attach -> (attach.eventId() == currentEventId)
 					? new Restamp(attach.score(), attach.by())
 					: new Move(attach.eventId(), attach.score(), attach.by());
-			case Decision.Open open -> {
-				boolean openedHere = stored.stream().noneMatch(candidate -> candidate.eventId() == currentEventId);
-				yield (!openedHere && currentEventArticles > 1) ? new Split(open.bestScore(), open.by())
-						: new Restamp(open.bestScore(), open.by());
-			}
+			case Decision.Open open -> (!opened && currentEventArticles > 1) ? new Split(open.bestScore(), open.by())
+					: new Restamp(open.bestScore(), open.by());
 			case Decision.Ask ask -> throw new IllegalArgumentException("재판정은 사건 소속 판정에 묻지 않는다: " + ask);
 		};
 	}

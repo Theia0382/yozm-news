@@ -126,10 +126,13 @@ class EventAssignmentFlowTests {
 
 		long event = eventOf(first);
 		assertThat(eventOf(second)).isEqualTo(event);
-		assertThat(assignment(first)).containsEntry("score", null).containsEntry("decided_by", "FORMULA");
+		// 새 사건을 연 기사는 연 사건 표지가 참, 붙인 기사는 거짓이다
+		assertThat(assignment(first)).containsEntry("score", null)
+			.containsEntry("decided_by", "FORMULA")
+			.containsEntry("opened", true);
 		// 0.7 × 1 + 0.3 × 2/2 = 1.0
 		assertThat((Double) assignment(second).get("score")).isCloseTo(1.0, within(1e-6));
-		assertThat(assignment(second)).containsEntry("decided_by", "FORMULA");
+		assertThat(assignment(second)).containsEntry("decided_by", "FORMULA").containsEntry("opened", false);
 		assertThat(eventRow(event)).containsEntry("centroid", "[1,0]")
 			.containsEntry("article_count", 2)
 			.containsEntry("status", "OPEN")
@@ -197,8 +200,8 @@ class EventAssignmentFlowTests {
 		// 다른 모델 버전의 열린 사건 — 중심이 같아도 후보가 아니다
 		long otherModel = this.jdbc.sql("""
 				insert into events (status, model_version, centroid, article_count, first_article_at, last_article_at,
-				                    created_at)
-				values ('OPEN', 'model-b', '[1,0]', 1, :t, :t, :t) returning id
+				                    created_at, last_joined_at)
+				values ('OPEN', 'model-b', '[1,0]', 1, :t, :t, :t, :t) returning id
 				""").param("t", PUBLISHED.atOffset(ZoneOffset.UTC)).query(Long.class).single();
 		// 하루 뒤 발행 — 감쇠 1/2: 0.5 × (0.7 + 0.3) = 0.5 → 띠 아래라 새 사건 / 12시간 앞 발행 — 2^(−0.5) × 1 ≈ 0.707(띠)
 		long later = queued("[1,0]", Instant.parse("2026-11-06T00:00:00Z"), "금리");
@@ -440,7 +443,7 @@ class EventAssignmentFlowTests {
 	}
 
 	private Map<String, @Nullable Object> assignment(long article) {
-		return this.jdbc.sql("select score, decided_by from event_articles where article_id = :article")
+		return this.jdbc.sql("select score, decided_by, opened from event_articles where article_id = :article")
 			.param("article", article)
 			.query()
 			.singleRow();

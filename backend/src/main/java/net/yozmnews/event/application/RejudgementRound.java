@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -37,10 +38,13 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 재판정 회차 하나 — 지금 기준과 다른 기준으로 판정된 배정을 저장된 후보 점수 · 확률로 다시 판정한다 · docs/specs/event.md §4 ·
  * event-R18.
  * <p>
- * 사건 소속 판정 · 임베더를 부르지 않는다. 배정 하나마다 짧은 트랜잭션에서 배정 행 → 사건(ID 순)을 잠그고 결과를 적용한다 — 판정은
- * {@link AssignmentRule}, 적용 방식은 {@link Reassignment} 가 정한다. 옮기거나 떼어 낼 때의 기사 벡터는 지금 임베더가 아니라 그 배정이
- * 속한 사건의 모델 버전 표현이고, 없으면(보존 기간이 지나 지움) 옮기지 못해 기준만 새것으로 적는다. 회차마다
- * {@link AssignmentSchedule#REJUDGE_BATCH} 건까지 한다. 예외를 밖으로 던지지 않는다. 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통).
+ * 사건 소속 판정 · 임베더를 부르지 않는다. 먼저 닫힌 사건의 배정을 한꺼번에 기준만 새것으로 적고(닫힌 사건은 재판정하지 않는다), 이어서
+ * 배정 하나마다 짧은 트랜잭션에서 배정 행 → 사건(지금 사건 포함, ID 순)을 잠그고 결과를 적용한다 — 판정은 {@link AssignmentRule}, 적용
+ * 방식은 {@link Reassignment} 가 정한다. 잠근 지금 사건이 열려 있지 않으면 기준만 새것으로 적는다. 그 기사가 사건을 열었는지는 배정의
+ * 표지로 안다. 옮기거나 떼어 낼 때의 기사 벡터는 지금 임베더가 아니라 그 배정이 속한 사건의 모델 버전 표현이고, 없으면(보존 기간이
+ * 지나 지움) 옮기지 못해 기준만 새것으로 적는다. 회차마다 닫힌 사건의 배정은 {@link AssignmentSchedule#CLOSED_KEEP_BATCH} 건,
+ * 하나씩 다시 판정하는 배정은 {@link AssignmentSchedule#REJUDGE_BATCH} 건까지 한다. 예외를 밖으로 던지지 않는다. 트랜잭션 · 역할
+ * 애너테이션이 없다(두 역할 공통).
  */
 @Service
 public class RejudgementRound {
@@ -91,6 +95,11 @@ public class RejudgementRound {
 				"criteriaId");
 		int rejudged = 0;
 		try {
+			int kept = Objects.requireNonNull(this.transaction.execute(
+					status -> this.assignments.keepClosed(criteriaId, AssignmentSchedule.CLOSED_KEEP_BATCH)), "kept");
+			if (kept > 0) {
+				logger.info("닫힌 사건의 배정 {}건은 기준만 새것으로 적었다", kept);
+			}
 			while (rejudged < AssignmentSchedule.REJUDGE_BATCH) {
 				Instant now = this.clock.instant();
 				Boolean found = this.transaction.execute(status -> {
@@ -121,9 +130,9 @@ public class RejudgementRound {
 		EventArticle assignment = target.assignment();
 		long current = assignment.eventId();
 		Decision decision = AssignmentRule.decide(target.stored(), this.criteria, DecisionPhase.REJUDGE);
-		// 사건을 고칠 수 있으면 관련 사건을 ID 순으로 잠근다 — 떼어 낼지는 잠근 뒤의 기사 수로 정한다
+		// 지금 사건과 옮길 사건을 ID 순으로 잠근다 — 지금 사건이 열려 있는지 · 떼어 낼지는 잠근 뒤에 본다. 유지는 결과가 같아 잠그지 않는다
 		Set<Long> touched = switch (decision) {
-			case Decision.Attach attach -> (attach.eventId() == current) ? Set.of() : Set.of(current, attach.eventId());
+			case Decision.Attach attach -> new TreeSet<>(List.of(current, attach.eventId()));
 			case Decision.Open open -> Set.of(current);
 			case Decision.Keep keep -> Set.of();
 			case Decision.Ask ask -> throw new IllegalStateException("재판정은 묻지 않는다: " + ask);
@@ -132,47 +141,50 @@ public class RejudgementRound {
 			.stream()
 			.collect(Collectors.toMap(LockedEvent::id, Function.identity()));
 		@Nullable LockedEvent currentEvent = locked.get(current);
-		int currentArticles = (currentEvent != null) ? currentEvent.articleCount() : 0;
-		Reassignment reassignment = Reassignment.of(decision, current, target.stored(), currentArticles);
+		if (currentEvent == null || currentEvent.status() != EventStatus.OPEN) {
+			// 유지라 잠그지 않았거나, 지금 사건이 닫혔다 — 닫힌 사건의 배정은 재판정하지 않는다
+			this.assignments.keep(assignment.articleId(), criteriaId);
+			return;
+		}
+		Reassignment reassignment = Reassignment.of(decision, current, assignment.opened(),
+				currentEvent.articleCount());
 		switch (reassignment) {
 			case Reassignment.Keep keep -> this.assignments.keep(assignment.articleId(), criteriaId);
 			case Reassignment.Restamp restamp -> this.assignments.reassign(assignment.articleId(), current,
-					restamp.score(), restamp.by(), criteriaId, now);
+					restamp.score(), restamp.by(), assignment.opened(), criteriaId, now);
 			case Reassignment.Move move -> {
 				LockedEvent destination = locked.get(move.eventId());
 				Optional<MatchFeatures> representation = representation(assignment, currentEvent);
-				if (currentEvent == null || destination == null || destination.status() != EventStatus.OPEN
+				if (destination == null || destination.status() != EventStatus.OPEN
 						|| !destination.modelVersion().equals(currentEvent.modelVersion()) || representation.isEmpty()) {
 					this.assignments.keep(assignment.articleId(), criteriaId);
 					return;
 				}
 				MatchFeatures features = representation.get();
-				this.assignments.reassign(assignment.articleId(), destination.id(), move.score(), move.by(), criteriaId,
-						now);
-				this.events.update(destination.joined(features.embedding().values(), assignment.publishedAt()),
+				this.assignments.reassign(assignment.articleId(), destination.id(), move.score(), move.by(), false,
+						criteriaId, now);
+				this.events.update(destination.joined(features.embedding().values(), assignment.publishedAt(), now),
 						features.entities(), List.of());
 				leave(currentEvent, assignment, features);
 			}
 			case Reassignment.Split split -> {
 				Optional<MatchFeatures> representation = representation(assignment, currentEvent);
-				if (currentEvent == null || representation.isEmpty()) {
+				if (representation.isEmpty()) {
 					this.assignments.keep(assignment.articleId(), criteriaId);
 					return;
 				}
 				MatchFeatures features = representation.get();
 				long opened = this.events.open(currentEvent.modelVersion(), features.embedding().values(),
 						assignment.publishedAt(), features.entities(), now);
-				this.assignments.reassign(assignment.articleId(), opened, split.bestScore(), split.by(), criteriaId, now);
+				this.assignments.reassign(assignment.articleId(), opened, split.bestScore(), split.by(), true,
+						criteriaId, now);
 				leave(currentEvent, assignment, features);
 			}
 		}
 	}
 
 	/** 그 배정이 속한 사건의 모델 버전 표현 */
-	private Optional<MatchFeatures> representation(EventArticle assignment, @Nullable LockedEvent currentEvent) {
-		if (currentEvent == null) {
-			return Optional.empty();
-		}
+	private Optional<MatchFeatures> representation(EventArticle assignment, LockedEvent currentEvent) {
 		return this.features.find(assignment.articleId(), currentEvent.modelVersion());
 	}
 

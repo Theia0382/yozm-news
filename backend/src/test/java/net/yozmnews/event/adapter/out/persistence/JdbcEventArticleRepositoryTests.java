@@ -61,12 +61,12 @@ class JdbcEventArticleRepositoryTests {
 	@Test
 	void insertsTheAssignmentAndItsCandidatesOnce() {
 		EventArticle row = new EventArticle(new ArticleId(1), this.event, PUBLISHED, 0.72, DecidedBy.EVALUATOR,
-				this.criteria, ASSIGNED);
+				false, this.criteria, ASSIGNED);
 
 		boolean inserted = this.repository.insertIfAbsent(row, List.of(new StoredCandidate(this.event, 0.72, 0.6),
 				new StoredCandidate(this.other, 0.45, null)));
 		boolean again = this.repository.insertIfAbsent(new EventArticle(new ArticleId(1), this.other, PUBLISHED, null,
-				DecidedBy.FORMULA, this.criteria, ASSIGNED), List.of(new StoredCandidate(this.other, 0.9, null)));
+				DecidedBy.FORMULA, false, this.criteria, ASSIGNED), List.of(new StoredCandidate(this.other, 0.9, null)));
 
 		assertThat(inserted).isTrue();
 		assertThat(again).isFalse();
@@ -80,7 +80,7 @@ class JdbcEventArticleRepositoryTests {
 	@Test
 	void anAssignmentWithoutScoreKeepsNull() {
 		EventArticle row = new EventArticle(new ArticleId(3), this.event, PUBLISHED, null, DecidedBy.JUDGEMENT_FAILED,
-				this.criteria, ASSIGNED);
+				true, this.criteria, ASSIGNED);
 		this.repository.insertIfAbsent(row, List.of());
 
 		assertThat(this.repository.lockByArticles(List.of(new ArticleId(3)))).containsExactly(row);
@@ -112,25 +112,25 @@ class JdbcEventArticleRepositoryTests {
 		assign(21, this.event, this.oldCriteria, List.of());
 		assign(22, this.event, this.oldCriteria, List.of());
 
-		this.repository.reassign(new ArticleId(21), this.other, null, DecidedBy.EVALUATOR, this.criteria,
+		this.repository.reassign(new ArticleId(21), this.other, null, DecidedBy.EVALUATOR, true, this.criteria,
 				Instant.parse("2026-11-06T00:00:00Z"));
 		this.repository.keep(new ArticleId(22), this.criteria);
 
 		assertThat(this.repository.lockByArticles(List.of(new ArticleId(22), new ArticleId(21)))).containsExactly(
-				new EventArticle(new ArticleId(21), this.other, PUBLISHED, null, DecidedBy.EVALUATOR, this.criteria,
+				new EventArticle(new ArticleId(21), this.other, PUBLISHED, null, DecidedBy.EVALUATOR, true, this.criteria,
 						Instant.parse("2026-11-06T00:00:00Z")),
-				new EventArticle(new ArticleId(22), this.event, PUBLISHED, 0.5, DecidedBy.FORMULA, this.criteria,
+				new EventArticle(new ArticleId(22), this.event, PUBLISHED, 0.5, DecidedBy.FORMULA, false, this.criteria,
 						ASSIGNED));
 	}
 
 	@Test
 	void thePublishedSpanCoversTheRemainingAssignmentsOfTheEvent() {
 		this.repository.insertIfAbsent(new EventArticle(new ArticleId(41), this.event, Instant.parse("2026-11-05T03:00:00Z"),
-				null, DecidedBy.FORMULA, this.criteria, ASSIGNED), List.of());
+				null, DecidedBy.FORMULA, false, this.criteria, ASSIGNED), List.of());
 		this.repository.insertIfAbsent(new EventArticle(new ArticleId(42), this.event, Instant.parse("2026-11-04T21:00:00Z"),
-				null, DecidedBy.FORMULA, this.criteria, ASSIGNED), List.of());
+				null, DecidedBy.FORMULA, false, this.criteria, ASSIGNED), List.of());
 		this.repository.insertIfAbsent(new EventArticle(new ArticleId(43), this.other, Instant.parse("2026-11-01T00:00:00Z"),
-				null, DecidedBy.FORMULA, this.criteria, ASSIGNED), List.of());
+				null, DecidedBy.FORMULA, false, this.criteria, ASSIGNED), List.of());
 
 		assertThat(this.repository.publishedSpan(this.event)).contains(
 				new PublishedSpan(Instant.parse("2026-11-04T21:00:00Z"), Instant.parse("2026-11-05T03:00:00Z")));
@@ -152,9 +152,46 @@ class JdbcEventArticleRepositoryTests {
 		assertThat(this.repository.lockByArticles(List.of())).isEmpty();
 	}
 
+	@Test
+	void aCandidateOfAMergedEventIsReadAsItsSurvivorAndFolded() {
+		long merged = event(1);
+		this.jdbc.sql("""
+				update events set status = 'MERGED', merged_into = :survivor, closed_at = now() where id = :merged
+				""").param("survivor", this.event).param("merged", merged).update();
+		assign(51, this.event, this.oldCriteria, List.of(new StoredCandidate(this.event, 0.60, 0.6),
+				new StoredCandidate(merged, 0.62, 0.9), new StoredCandidate(this.other, 0.45, null)));
+
+		List<RejudgeTarget> targets = this.repository.lockRejudgeTargets(this.criteria, 10);
+
+		// 합쳐진 사건(0.62 · 0.9)을 남는 사건으로 읽어 지금 사건의 후보(0.60 · 0.6)와 하나로 모은다 — 점수 · 확률 모두 큰 값
+		assertThat(targets).singleElement()
+			.extracting(RejudgeTarget::stored)
+			.isEqualTo(List.of(new StoredCandidate(this.event, 0.62, 0.9), new StoredCandidate(this.other, 0.45, null)));
+	}
+
+	@Test
+	void keepClosedRewritesOnlyTheCriteriaOfAssignmentsInClosedEvents() {
+		this.jdbc.sql("update events set status = 'CLOSED', closed_at = now() where id = :id")
+			.param("id", this.other)
+			.update();
+		assign(61, this.other, this.oldCriteria, List.of());
+		assign(62, this.other, this.oldCriteria, List.of());
+		assign(63, this.other, this.criteria, List.of());
+		assign(64, this.event, this.oldCriteria, List.of());
+
+		int first = this.repository.keepClosed(this.criteria, 1);
+		int rest = this.repository.keepClosed(this.criteria, 10);
+
+		assertThat(first).isEqualTo(1);
+		assertThat(rest).isEqualTo(1);
+		assertThat(this.repository.lockByArticles(List.of(new ArticleId(61), new ArticleId(62), new ArticleId(64))))
+			.extracting(EventArticle::criteriaId)
+			.containsExactly(this.criteria, this.criteria, this.oldCriteria);
+	}
+
 	private void assign(long article, long event, long criteria, List<StoredCandidate> stored) {
 		this.repository.insertIfAbsent(new EventArticle(new ArticleId(article), event, PUBLISHED, 0.5, DecidedBy.FORMULA,
-				criteria, ASSIGNED), stored);
+				false, criteria, ASSIGNED), stored);
 	}
 
 	private List<StoredCandidate> candidates(long article) {
@@ -171,8 +208,8 @@ class JdbcEventArticleRepositoryTests {
 	private long event(int articles) {
 		return this.jdbc.sql("""
 				insert into events (status, model_version, centroid, article_count, first_article_at, last_article_at,
-				                    created_at)
-				values ('OPEN', 'model-a', '[1,0]', :count, :t, :t, :t) returning id
+				                    created_at, last_joined_at)
+				values ('OPEN', 'model-a', '[1,0]', :count, :t, :t, :t, :t) returning id
 				""").param("count", articles).param("t", PUBLISHED.atOffset(ZoneOffset.UTC)).query(Long.class).single();
 	}
 

@@ -39,7 +39,8 @@ class EventShrinkWriter {
 					return;
 				}
 				this.events.update(new LockedEvent(locked.id(), locked.status(), locked.modelVersion(), shrunk.centroid(),
-						shrunk.articleCount(), span.get().first(), span.get().last()), List.of(), shrunk.removedTerms());
+						shrunk.articleCount(), span.get().first(), span.get().last(), locked.openedAt(),
+						locked.lastJoinedAt()), List.of(), shrunk.removedTerms());
 			}
 		}
 	}
