@@ -18,6 +18,7 @@ import net.yozmnews.article.ArticleDirectory;
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.evaluation.EvaluatorFailureKind;
 import net.yozmnews.evaluation.EventDescriptor;
+import net.yozmnews.evaluation.EventJudgementId;
 import net.yozmnews.evaluation.MembershipJudgement;
 import net.yozmnews.evaluation.MembershipQuery;
 import net.yozmnews.evaluation.TagSetView;
@@ -100,7 +101,8 @@ class EventMembershipFlowTests {
 				List.of(new EventDescriptor(12, List.of(new ArticleId(counting), new ArticleId(winner))),
 						new EventDescriptor(15, List.of(new ArticleId(strike))))));
 
-		assertThat(judgement).isEqualTo(new MembershipJudgement.Judged(Map.of(12L, 0.83, 15L, 0.07)));
+		assertThat(judgement).isEqualTo(new MembershipJudgement.Judged(new EventJudgementId(judgementId()),
+				Map.of(12L, 0.83, 15L, 0.07)));
 		assertThat(stub.inputs).containsExactly(new MembershipInput("서울 시장 선거 결과", "개표가 끝났다",
 				List.of(new CandidateEvent(12, List.of("서울 시장 선거 개표", "서울 시장 당선 확정")),
 						new CandidateEvent(15, List.of("부산 항만 파업"))),
@@ -168,7 +170,8 @@ class EventMembershipFlowTests {
 				List.of(new EventDescriptor(12, List.of(new ArticleId(counting), new ArticleId(999_998))),
 						new EventDescriptor(15, List.of(new ArticleId(999_999))))));
 
-		assertThat(judgement).isEqualTo(new MembershipJudgement.Judged(Map.of(12L, 0.83)));
+		assertThat(judgement)
+			.isEqualTo(new MembershipJudgement.Judged(new EventJudgementId(judgementId()), Map.of(12L, 0.83)));
 		assertThat(stub.inputs).singleElement()
 			.extracting(MembershipInput::candidates)
 			.isEqualTo(List.of(new CandidateEvent(12, List.of("서울 시장 선거 개표"))));
@@ -182,7 +185,7 @@ class EventMembershipFlowTests {
 		Stub stub = new Stub(input -> new Membership(Map.of(12L, 0.83), "jev", "jev-1.14.0", 812, RAW));
 
 		assertThat(service(stub).judge(query(judged, 12, 999_999)))
-			.isEqualTo(new MembershipJudgement.Judged(Map.of()));
+			.isEqualTo(new MembershipJudgement.Judged(null, Map.of()));
 		assertThat(stub.inputs).isEmpty();
 		assertThat(judgementRows()).isZero();
 	}
@@ -298,6 +301,11 @@ class EventMembershipFlowTests {
 
 	private long judgementRows() {
 		return this.jdbc.sql("select count(*) from article_event_judgements").query(Long.class).single();
+	}
+
+	/** 하나뿐인 판정 원본의 ID — DB 가 매긴 값 */
+	private long judgementId() {
+		return this.jdbc.sql("select id from article_event_judgements").query(Long.class).single();
 	}
 
 	/** 사건 소속만 판정하는 시험 평가기 — 받은 입력을 모은다. 평가 · 다시 읽기는 크게 실패한다 */

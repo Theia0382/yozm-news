@@ -140,7 +140,7 @@ class EventAssignmentConcurrencyTests {
 	private AssignmentRound round(EventArticleRepository assignments, Instant now) {
 		return new AssignmentRound(this.queue, this.intake, this.features, this.events, assignments,
 				this.criteriaHistory, CRITERIA, this.articles,
-				query -> new MembershipJudgement.Judged(Map.of()), this.transaction, (InstantSource) () -> now);
+				query -> new MembershipJudgement.Judged(null, Map.of()), this.transaction, (InstantSource) () -> now);
 	}
 
 	private long article(String vector, Instant availableAt) {

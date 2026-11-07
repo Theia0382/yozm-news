@@ -207,7 +207,7 @@ class CleanupFlowTests {
 
 	private void assign() {
 		new AssignmentRound(this.queue, this.intake, this.features, this.events, this.assignments, this.criteriaHistory,
-				CRITERIA, this.articles, query -> new MembershipJudgement.Judged(Map.of()), this.transaction,
+				CRITERIA, this.articles, query -> new MembershipJudgement.Judged(null, Map.of()), this.transaction,
 				(InstantSource) () -> NOW)
 			.run(new ModelOnly());
 	}

@@ -14,12 +14,15 @@ import net.yozmnews.article.ArticleContent;
 import net.yozmnews.article.ArticleDirectory;
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.evaluation.EventDescriptor;
+import net.yozmnews.evaluation.EventJudgementId;
+import net.yozmnews.evaluation.EventJudgementView;
 import net.yozmnews.evaluation.MembershipJudgement;
 import net.yozmnews.evaluation.MembershipQuery;
 import net.yozmnews.evaluation.adapter.out.fake.FakeArticleEvaluator;
 import net.yozmnews.evaluation.domain.membership.EventJudgementRepository;
 import net.yozmnews.evaluation.domain.membership.MembershipRecord;
 import net.yozmnews.source.SourceId;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -81,8 +84,14 @@ class EventMembershipServiceTests {
 	private static final class NoJudgements implements EventJudgementRepository {
 
 		@Override
-		public void insert(MembershipRecord record) {
+		public EventJudgementId insert(MembershipRecord record) {
 			throw new UnsupportedOperationException("쓰지 않는다");
+		}
+
+		@Override
+		public List<EventJudgementView> page(Instant from, Instant to, @Nullable Instant afterJudgedAt,
+				@Nullable Long afterId, int limit) {
+			throw new UnsupportedOperationException("읽지 않는다");
 		}
 
 		@Override

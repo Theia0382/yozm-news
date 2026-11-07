@@ -20,6 +20,7 @@ import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleDirectory;
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.article.ArticlesRemoved;
+import net.yozmnews.evaluation.EventJudgementId;
 import net.yozmnews.evaluation.EventMembership;
 import net.yozmnews.evaluation.MembershipJudgement;
 import net.yozmnews.event.DecidedBy;
@@ -483,7 +484,7 @@ class RejudgementFlowTests {
 			if (probability == null) {
 				throw new AssertionError("묻지 않아야 한다: " + query);
 			}
-			return new MembershipJudgement.Judged(
+			return new MembershipJudgement.Judged(new EventJudgementId(1),
 					Map.of(query.candidates().get(0).eventId(), probability));
 		};
 		new AssignmentRound(this.queue, this.intake, this.features, this.events, this.assignments, this.criteriaHistory,

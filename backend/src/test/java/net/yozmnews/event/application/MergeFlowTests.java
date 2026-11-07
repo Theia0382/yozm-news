@@ -15,6 +15,7 @@ import java.util.function.Function;
 
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.evaluation.EvaluatorFailureKind;
+import net.yozmnews.evaluation.EventJudgementId;
 import net.yozmnews.evaluation.EventMembership;
 import net.yozmnews.evaluation.MembershipJudgement;
 import net.yozmnews.evaluation.MembershipQuery;
@@ -123,7 +124,7 @@ class MergeFlowTests {
 		// 핵심 말이 겹치지 않는다 — 0.7 × 0.8 = 0.56(띠)
 		long large = event("[1,0]", T, T, Map.of("국회", 2), "[1,0]", "[1,0]");
 		long small = event("[0.8,0.6]", T, T, Map.of("금리", 1), "[0.8,0.6]");
-		Scripted membership = new Scripted(query -> new MembershipJudgement.Judged(Map.of(small, 0.8)));
+		Scripted membership = new Scripted(query -> new MembershipJudgement.Judged(new EventJudgementId(1), Map.of(small, 0.8)));
 		List<Long> largeMembers = members(large);
 		List<Long> smallMembers = members(small);
 
@@ -146,7 +147,7 @@ class MergeFlowTests {
 	void aLowProbabilityKeepsThePairApartAndIsNotAskedAgain() {
 		long large = event("[1,0]", T, T, Map.of("국회", 2), "[1,0]", "[1,0]");
 		long small = event("[0.8,0.6]", T, T, Map.of("금리", 1), "[0.8,0.6]");
-		Scripted membership = new Scripted(query -> new MembershipJudgement.Judged(Map.of(small, 0.3)));
+		Scripted membership = new Scripted(query -> new MembershipJudgement.Judged(new EventJudgementId(1), Map.of(small, 0.3)));
 
 		round(membership).run();
 		// 두 사건이 모두 바뀌었다고 표시해도 남은 확률로 정해 다시 묻지 않는다
@@ -184,7 +185,7 @@ class MergeFlowTests {
 		long large = event("[1,0]", T, T, Map.of("금리", 3, "동결", 3), "[1,0]", "[1,0]", "[1,0]");
 		event("[0.8,0.6]", T, T, Map.of("금리", 1), "[0.8,0.6]");
 		event("[0,1]", T, T, Map.of("환율", 1), "[0,1]");
-		Scripted membership = new Scripted(query -> new MembershipJudgement.Judged(Map.of()));
+		Scripted membership = new Scripted(query -> new MembershipJudgement.Judged(null, Map.of()));
 		round(membership).run();
 		// 남는 사건은 revision 이 늘어 한 번 더 본다 — 그 뒤로는 볼 것이 없다
 		round(membership).run();

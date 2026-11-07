@@ -173,12 +173,12 @@ class EventMergeConcurrencyTests {
 
 	private MergeRound merge(EventArticleRepository assignments) {
 		return new MergeRound(this.events, assignments, this.judgements, this.criteriaHistory, CRITERIA,
-				query -> new MembershipJudgement.Judged(Map.of()), this.transaction, (InstantSource) () -> NOW);
+				query -> new MembershipJudgement.Judged(null, Map.of()), this.transaction, (InstantSource) () -> NOW);
 	}
 
 	private AssignmentRound assign() {
 		return new AssignmentRound(this.queue, this.intake, this.features, this.events, this.assignments,
-				this.criteriaHistory, CRITERIA, this.articles, query -> new MembershipJudgement.Judged(Map.of()),
+				this.criteriaHistory, CRITERIA, this.articles, query -> new MembershipJudgement.Judged(null, Map.of()),
 				this.transaction, (InstantSource) () -> NOW);
 	}
 

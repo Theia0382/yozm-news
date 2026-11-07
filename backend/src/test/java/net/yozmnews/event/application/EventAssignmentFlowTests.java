@@ -18,9 +18,10 @@ import java.util.function.Function;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleDirectory;
 import net.yozmnews.article.ArticleId;
-import net.yozmnews.evaluation.EventDescriptor;
-import net.yozmnews.evaluation.EventMembership;
 import net.yozmnews.evaluation.EvaluatorFailureKind;
+import net.yozmnews.evaluation.EventDescriptor;
+import net.yozmnews.evaluation.EventJudgementId;
+import net.yozmnews.evaluation.EventMembership;
 import net.yozmnews.evaluation.MembershipJudgement;
 import net.yozmnews.evaluation.MembershipQuery;
 import net.yozmnews.event.EventArticles;
@@ -120,7 +121,7 @@ class EventAssignmentFlowTests {
 	void aLaterArticleOfTheSameRoundAttachesToTheEventTheFirstOpened() {
 		long first = queued("[1,0]", "국회", "예산");
 		long second = queued("[1,0]", "국회", "예산");
-		Scripted membership = new Scripted(query -> new MembershipJudgement.Judged(Map.of()));
+		Scripted membership = new Scripted(query -> new MembershipJudgement.Judged(null, Map.of()));
 
 		round(membership).run(MODEL_A);
 
@@ -152,11 +153,11 @@ class EventAssignmentFlowTests {
 	@Test
 	void aBandArticleIsJudgedOutsideATransactionAndAttachedByTheEvaluator() {
 		long first = queued("[1,0]");
-		round(new Scripted(query -> new MembershipJudgement.Judged(Map.of()))).run(MODEL_A);
+		round(new Scripted(query -> new MembershipJudgement.Judged(null, Map.of()))).run(MODEL_A);
 		long event = eventOf(first);
 		// [4,3] 과 [1,0] 의 코사인 0.8, 핵심 말 없음 — 0.7 × 0.8 = 0.56(띠)
 		long banded = queued("[4,3]");
-		Scripted membership = new Scripted(query -> new MembershipJudgement.Judged(Map.of(event, 0.7)));
+		Scripted membership = new Scripted(query -> new MembershipJudgement.Judged(new EventJudgementId(1), Map.of(event, 0.7)));
 
 		round(membership).run(MODEL_A);
 
@@ -176,11 +177,11 @@ class EventAssignmentFlowTests {
 	@Test
 	void aLowProbabilityOpensANewEventByTheEvaluator() {
 		long first = queued("[1,0]");
-		round(new Scripted(query -> new MembershipJudgement.Judged(Map.of()))).run(MODEL_A);
+		round(new Scripted(query -> new MembershipJudgement.Judged(null, Map.of()))).run(MODEL_A);
 		long event = eventOf(first);
 		long banded = queued("[4,3]");
 
-		round(new Scripted(query -> new MembershipJudgement.Judged(Map.of(event, 0.3)))).run(MODEL_A);
+		round(new Scripted(query -> new MembershipJudgement.Judged(new EventJudgementId(1), Map.of(event, 0.3)))).run(MODEL_A);
 
 		assertThat(eventOf(banded)).isNotEqualTo(event);
 		assertThat((Double) assignment(banded).get("score")).isCloseTo(0.56, within(1e-3));
@@ -195,7 +196,7 @@ class EventAssignmentFlowTests {
 	@Test
 	void timesFollowThePublicationAndOtherModelsAreNoCandidates() {
 		long first = queued("[1,0]", "금리");
-		round(new Scripted(query -> new MembershipJudgement.Judged(Map.of()))).run(MODEL_A);
+		round(new Scripted(query -> new MembershipJudgement.Judged(null, Map.of()))).run(MODEL_A);
 		long event = eventOf(first);
 		// 다른 모델 버전의 열린 사건 — 중심이 같아도 후보가 아니다
 		long otherModel = this.jdbc.sql("""
@@ -205,7 +206,7 @@ class EventAssignmentFlowTests {
 				""").param("t", PUBLISHED.atOffset(ZoneOffset.UTC)).query(Long.class).single();
 		// 하루 뒤 발행 — 감쇠 1/2: 0.5 × (0.7 + 0.3) = 0.5 → 띠 아래라 새 사건 / 12시간 앞 발행 — 2^(−0.5) × 1 ≈ 0.707(띠)
 		long later = queued("[1,0]", Instant.parse("2026-11-06T00:00:00Z"), "금리");
-		Scripted membership = new Scripted(query -> new MembershipJudgement.Judged(Map.of(event, 0.9)));
+		Scripted membership = new Scripted(query -> new MembershipJudgement.Judged(new EventJudgementId(1), Map.of(event, 0.9)));
 		long earlier = queued("[1,0]", Instant.parse("2026-11-04T12:00:00Z"), "금리");
 
 		round(membership).run(MODEL_A);
@@ -223,11 +224,11 @@ class EventAssignmentFlowTests {
 	@Test
 	void anAssignedArticleQueuedAgainKeepsItsAssignment() {
 		long first = queued("[1,0]");
-		round(new Scripted(query -> new MembershipJudgement.Judged(Map.of()))).run(MODEL_A);
+		round(new Scripted(query -> new MembershipJudgement.Judged(null, Map.of()))).run(MODEL_A);
 		long event = eventOf(first);
 		this.queue.enqueue(new ArticleId(first), NOW);
 
-		round(new Scripted(query -> new MembershipJudgement.Judged(Map.of()))).run(MODEL_A);
+		round(new Scripted(query -> new MembershipJudgement.Judged(null, Map.of()))).run(MODEL_A);
 
 		assertThat(eventOf(first)).isEqualTo(event);
 		assertThat(eventRow(event)).containsEntry("article_count", 1);
@@ -241,7 +242,7 @@ class EventAssignmentFlowTests {
 		represent(article, "model-old", "[1,0]");
 		this.queue.enqueue(new ArticleId(article), NOW);
 
-		round(new Scripted(query -> new MembershipJudgement.Judged(Map.of()))).run(MODEL_A);
+		round(new Scripted(query -> new MembershipJudgement.Judged(null, Map.of()))).run(MODEL_A);
 
 		assertThat(queueRows()).isZero();
 		assertThat(this.jdbc.sql("select article_id from event_intake_queue").query(Long.class).list())
@@ -253,7 +254,7 @@ class EventAssignmentFlowTests {
 	void aDeletedArticleLeavesTheQueue() {
 		this.queue.enqueue(new ArticleId(987_654_321L), NOW);
 
-		round(new Scripted(query -> new MembershipJudgement.Judged(Map.of()))).run(MODEL_A);
+		round(new Scripted(query -> new MembershipJudgement.Judged(null, Map.of()))).run(MODEL_A);
 
 		assertThat(queueRows()).isZero();
 	}
@@ -366,7 +367,7 @@ class EventAssignmentFlowTests {
 			this.jdbc.sql("update events set status = 'CLOSED', closed_at = now() where id = :event")
 				.param("event", event)
 				.update();
-			return new MembershipJudgement.Judged(Map.of(event, 0.9));
+			return new MembershipJudgement.Judged(new EventJudgementId(1), Map.of(event, 0.9));
 		});
 
 		round(membership).run(MODEL_A);
@@ -386,7 +387,7 @@ class EventAssignmentFlowTests {
 			this.jdbc.sql("delete from event_article_candidates where event_id = :event").param("event", event).update();
 			this.jdbc.sql("delete from event_articles where event_id = :event").param("event", event).update();
 			this.jdbc.sql("delete from events where id = :event").param("event", event).update();
-			return new MembershipJudgement.Judged(Map.of(event, 0.9));
+			return new MembershipJudgement.Judged(new EventJudgementId(1), Map.of(event, 0.9));
 		});
 
 		round(membership).run(MODEL_A);
@@ -402,7 +403,7 @@ class EventAssignmentFlowTests {
 		long event = eventOf(first);
 		this.jdbc.sql("delete from article_match_features where article_id = :article").param("article", first).update();
 		long banded = queued("[4,3]");
-		Scripted membership = new Scripted(query -> new MembershipJudgement.Judged(Map.of()));
+		Scripted membership = new Scripted(query -> new MembershipJudgement.Judged(null, Map.of()));
 
 		round(membership).run(MODEL_A);
 
@@ -414,7 +415,7 @@ class EventAssignmentFlowTests {
 	/** 핵심 말 없는 [1,0] 기사로 사건 하나를 연다 */
 	private long firstEvent() {
 		long first = queued("[1,0]");
-		round(new Scripted(query -> new MembershipJudgement.Judged(Map.of()))).run(MODEL_A);
+		round(new Scripted(query -> new MembershipJudgement.Judged(null, Map.of()))).run(MODEL_A);
 		return first;
 	}
 
