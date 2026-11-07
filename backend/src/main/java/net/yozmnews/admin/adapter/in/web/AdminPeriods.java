@@ -6,13 +6,14 @@ import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 
 import net.yozmnews.evaluation.EvaluationPeriod;
+import net.yozmnews.event.EventPeriod;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
- * 운영자 API 의 집계 기간 매개변수 — 시작일 · 종료일({@code yyyy-MM-dd})과 시간대(IANA ID)를 읽어 {@link EvaluationPeriod#ofDays} 에
- * 넘긴다. 형식 · 없는 시간대 · 범위 밖은 400 이다 — 범위는 공개 타입이 판정하고, 설명의 상한은 {@link EvaluationPeriod#MAX_DAYS} 에서
- * 읽는다(admin-R3).
+ * 운영자 API 의 기간 매개변수 — 시작일 · 종료일({@code yyyy-MM-dd})과 시간대(IANA ID)를 읽어 {@link EvaluationPeriod#ofDays}
+ * (평가 · 판정 기록) 또는 {@link EventPeriod#ofDays}(사건 · 큰 사건)에 넘긴다. 형식 · 없는 시간대 · 범위 밖은 400 이다 — 범위는 공개
+ * 타입이 판정하고, 설명의 상한은 그 타입의 {@code MAX_DAYS} 에서 읽는다(admin-R3).
  */
 final class AdminPeriods {
 
@@ -25,6 +26,12 @@ final class AdminPeriods {
 	static EvaluationPeriod of(String from, String to, String zone) {
 		return EvaluationPeriod.ofDays(date(from), date(to), zone(zone))
 			.orElseThrow(() -> badRequest("기간은 1일에서 " + EvaluationPeriod.MAX_DAYS + "일까지다"));
+	}
+
+	/** 사건 조회의 기간 — 범위는 {@link EventPeriod#ofDays} 가 판정하고 설명의 상한은 {@link EventPeriod#MAX_DAYS} 에서 읽는다 */
+	static EventPeriod events(String from, String to, String zone) {
+		return EventPeriod.ofDays(date(from), date(to), zone(zone))
+			.orElseThrow(() -> badRequest("기간은 1일에서 " + EventPeriod.MAX_DAYS + "일까지다"));
 	}
 
 	private static LocalDate date(String value) {

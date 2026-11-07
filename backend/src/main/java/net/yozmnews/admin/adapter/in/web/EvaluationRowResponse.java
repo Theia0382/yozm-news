@@ -16,12 +16,12 @@ import org.jspecify.annotations.Nullable;
  */
 record EvaluationRowResponse(long id, long articleId, Instant evaluatedAt, TopicStatus topicStatus,
 		List<NamedTag> topics, List<TagName> topicCategories, List<NamedTag> regions, NamedTag format,
-		@Nullable Double importance, @Nullable ReviewArticleResponse article) {
+		@Nullable Double importance, @Nullable ArticleSummaryResponse article) {
 
-	static EvaluationRowResponse of(EvaluationRow row, ReviewArticles.@Nullable Summary article) {
+	static EvaluationRowResponse of(EvaluationRow row, AdminArticles.@Nullable Summary article) {
 		return new EvaluationRowResponse(row.id().value(), row.articleId().value(), row.evaluatedAt(),
 				row.topicStatus(), row.topics(), row.topicCategories(), row.regions(), row.format(), row.importance(),
-				(article == null) ? null : ReviewArticleResponse.of(article));
+				(article == null) ? null : ArticleSummaryResponse.of(article));
 	}
 
 }
