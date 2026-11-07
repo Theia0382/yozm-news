@@ -253,8 +253,9 @@ tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
 			intoLayer("spring-boot-loader") {
 				include("org/springframework/boot/loader/**")
 			}
+			// 패턴은 jar 안 경로(BOOT-INF/classes/…)가 아니라 classpath 기준 경로에 맞는다 — jar 의 BOOT-INF/layers.idx 로 확인한다
 			intoLayer("embedding-model") {
-				include("BOOT-INF/classes/embedding-model/**")
+				include("embedding-model/**")
 			}
 			intoLayer("application")
 		}

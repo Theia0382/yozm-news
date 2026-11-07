@@ -57,6 +57,16 @@ services:
       YOZMNEWS_EVENT_ASSIGNMENT_PROBABILITY:
       YOZMNEWS_EVENT_ASSIGNMENT_CLOSE_AFTER:
       YOZMNEWS_EVENT_ASSIGNMENT_MAX_OPEN:
+      # 사건 묶기의 임베딩 방식(기본 onnx — 이미지 안의 로컬 모델)과 외부 방식(openai-compatible)의 주소 · 모델 · 키(비밀 값) · 차원 ·
+      # 차원 전송 · 입력 앞 문자열 · 묶음 크기 — deploy/.env 에 있을 때만 넘긴다. docs/operations/configuration.md "사건 묶기"
+      YOZMNEWS_EMBEDDING_PROVIDER:
+      YOZMNEWS_EMBEDDING_OPENAI_COMPATIBLE_BASE_URL:
+      YOZMNEWS_EMBEDDING_OPENAI_COMPATIBLE_MODEL:
+      YOZMNEWS_EMBEDDING_OPENAI_COMPATIBLE_API_KEY:
+      YOZMNEWS_EMBEDDING_OPENAI_COMPATIBLE_DIMENSIONS:
+      YOZMNEWS_EMBEDDING_OPENAI_COMPATIBLE_SEND_DIMENSIONS:
+      YOZMNEWS_EMBEDDING_OPENAI_COMPATIBLE_INPUT_PREFIX:
+      YOZMNEWS_EMBEDDING_OPENAI_COMPATIBLE_BATCH_SIZE:
     depends_on:
       postgres:
         condition: service_healthy
