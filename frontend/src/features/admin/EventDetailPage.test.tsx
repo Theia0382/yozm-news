@@ -118,7 +118,7 @@ describe("EventDetailPage", () => {
       await screen.findByRole("heading", { name: "사건 7" }),
     ).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent(
-      "사건 3은 사건 7에 합쳐졌다 — 남는 사건을 보인다",
+      "합쳐진 사건 3 대신 남는 사건을 보인다",
     );
     expect(
       screen.getByText("이 사건으로 합쳐진 사건이 없다"),

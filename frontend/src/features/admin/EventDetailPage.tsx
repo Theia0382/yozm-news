@@ -49,8 +49,7 @@ function DetailView({ detail }: { detail: Detail }) {
       <h2 className="text-xl font-semibold">사건 {detail.id}</h2>
       {detail.requestedId !== detail.id && (
         <p role="status" className="text-sm">
-          사건 {detail.requestedId}은 사건 {detail.id}에 합쳐졌다 — 남는 사건을
-          보인다
+          합쳐진 사건 {detail.requestedId} 대신 남는 사건을 보인다
         </p>
       )}
       <dl
