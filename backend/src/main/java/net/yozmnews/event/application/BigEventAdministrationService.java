@@ -7,10 +7,12 @@ import java.util.Objects;
 import java.util.Optional;
 
 import net.yozmnews.evaluation.ChangeActor;
+import net.yozmnews.event.BigEvent;
 import net.yozmnews.event.BigEventAdministration;
 import net.yozmnews.event.BigEventCriteria;
 import net.yozmnews.event.BigEventCriteriaChange;
 import net.yozmnews.event.BigEventCriteriaChangeResult;
+import net.yozmnews.event.EventPeriod;
 import net.yozmnews.event.domain.bigevent.BigEventCriteriaRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,7 +23,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 /**
  * 공개 운영 API {@link BigEventAdministration} 의 구현 — docs/specs/event.md §4 · event-R21.
  * <p>
- * 변경은 지금 값 행을 잠근 한 트랜잭션이다. 역할 애너테이션이 없다(두 역할 공통).
+ * 변경은 지금 값 행을 잠근 한 트랜잭션이다. 지금 값 읽기와 미리보기의 판정은 {@link EventDirectoryService} 의 것을 쓴다. 역할 애너테이션이
+ * 없다(두 역할 공통).
  */
 @Service
 class BigEventAdministrationService implements BigEventAdministration {
@@ -30,25 +33,29 @@ class BigEventAdministrationService implements BigEventAdministration {
 
 	private final BigEventCriteriaRepository criteria;
 
+	private final EventDirectoryService directory;
+
 	private final TransactionTemplate transaction;
 
 	private final InstantSource clock;
 
 	@Autowired
-	BigEventAdministrationService(BigEventCriteriaRepository criteria, TransactionTemplate transaction) {
-		this(criteria, transaction, InstantSource.system());
+	BigEventAdministrationService(BigEventCriteriaRepository criteria, EventDirectoryService directory,
+			TransactionTemplate transaction) {
+		this(criteria, directory, transaction, InstantSource.system());
 	}
 
-	BigEventAdministrationService(BigEventCriteriaRepository criteria, TransactionTemplate transaction,
-			InstantSource clock) {
+	BigEventAdministrationService(BigEventCriteriaRepository criteria, EventDirectoryService directory,
+			TransactionTemplate transaction, InstantSource clock) {
 		this.criteria = criteria;
+		this.directory = directory;
 		this.transaction = transaction;
 		this.clock = clock;
 	}
 
 	@Override
 	public BigEventCriteria criteria() {
-		return this.criteria.current().orElseThrow(() -> new IllegalStateException("큰 사건 기준의 처음 값이 없다"));
+		return this.directory.currentCriteria();
 	}
 
 	@Override
@@ -78,6 +85,11 @@ class BigEventAdministrationService implements BigEventAdministration {
 	@Override
 	public List<BigEventCriteriaChange> changes() {
 		return this.criteria.changes();
+	}
+
+	@Override
+	public List<BigEvent> preview(BigEventCriteria proposed, EventPeriod period) {
+		return this.directory.bigEvents(period, proposed);
 	}
 
 }

@@ -51,6 +51,9 @@ class BigEventAdministrationServiceTests {
 	BigEventCriteriaRepository criteria;
 
 	@Autowired
+	EventDirectoryService directory;
+
+	@Autowired
 	TransactionTemplate transaction;
 
 	@Autowired
@@ -161,7 +164,7 @@ class BigEventAdministrationServiceTests {
 	}
 
 	private BigEventAdministrationService service(BigEventCriteriaRepository repository) {
-		return new BigEventAdministrationService(repository, this.transaction, InstantSource.fixed(CHANGED));
+		return new BigEventAdministrationService(repository, this.directory, this.transaction, InstantSource.fixed(CHANGED));
 	}
 
 	/** 지금 값을 바꾼 뒤(행을 잠근 채) 신호를 보내고 풀릴 때까지 기다린다 — 변경 트랜잭션을 커밋 전에 세운다 */

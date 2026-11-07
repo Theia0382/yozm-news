@@ -28,4 +28,9 @@ public interface BigEventAdministration {
 	/** 이력 — 최근 것부터(같은 시각이면 나중에 쓴 것부터) */
 	List<BigEventCriteriaChange> changes();
 
+	/**
+	 * 미리보기 — 제안 기준으로 판정한 기간 안의 큰 사건. 판정 · 순서는 {@link EventDirectory#bigEvents} 와 같고, 아무것도 쓰지 않는다.
+	 */
+	List<BigEvent> preview(BigEventCriteria proposed, EventPeriod period);
+
 }
