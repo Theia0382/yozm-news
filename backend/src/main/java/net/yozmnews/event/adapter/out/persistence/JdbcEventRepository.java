@@ -17,6 +17,7 @@ import net.yozmnews.event.domain.assignment.EventSnapshot;
 import net.yozmnews.event.domain.event.EventRepository;
 import net.yozmnews.event.domain.event.EventStatus;
 import net.yozmnews.event.domain.event.LockedEvent;
+import net.yozmnews.event.domain.event.MergeSubject;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
@@ -25,7 +26,8 @@ import org.springframework.stereotype.Repository;
  * <p>
  * 중심은 차원 없는 {@code halfvec} 이고 {@link VectorText} 의 텍스트 표현으로 쓰고 읽는다. 코사인 유사도는 {@code 1 − (중심 <=> 벡터)}
  * 를 열린 사건마다 센다(인덱스를 쓰지 않는 정확 검색). 사건 핵심 말의 상위 수는 {@link CandidateScoring#EVENT_KEY_TERMS} 를 매개변수로
- * 넘긴다. 말 순은 바이트 순({@code COLLATE "C"})이라 DB 의 정렬 규칙과 무관하다.
+ * 넘긴다. 말 순은 바이트 순({@code COLLATE "C"})이라 DB 의 정렬 규칙과 무관하다. 병합은 남는 사건의 값을 쓰고 합쳐질 사건의 핵심 말
+ * 수를 더한 뒤, 합쳐질 사건 행을 {@code MERGED} 로 남겨 남는 사건을 바로 가리키게 한다(사슬 없음).
  */
 @Repository
 class JdbcEventRepository implements EventRepository {
@@ -33,6 +35,12 @@ class JdbcEventRepository implements EventRepository {
 	private static final String EVENT_COLUMNS = """
 			id, status, model_version, centroid::text as centroid, article_count, first_article_at, last_article_at,
 			created_at, last_joined_at
+			""";
+
+	/** 사건 {@code e} 의 핵심 말 상위 {@code :terms} 개 — 후보와 병합 대상이 같은 말을 쓴다 */
+	private static final String TOP_TERMS = """
+			array(select k.term from event_key_terms k where k.event_id = e.id
+			      order by k.article_count desc, k.term collate "C" limit :terms) as key_terms
 			""";
 
 	private final JdbcClient jdbc;
@@ -43,10 +51,8 @@ class JdbcEventRepository implements EventRepository {
 
 	@Override
 	public List<EventSnapshot> candidates(String modelVersion, float[] vector, Instant from, Instant to) {
-		return this.jdbc.sql("""
-				select e.id, 1 - (e.centroid <=> cast(:vector as halfvec)) as cosine, e.first_article_at, e.last_article_at,
-				       array(select k.term from event_key_terms k where k.event_id = e.id
-				             order by k.article_count desc, k.term collate "C" limit :terms) as key_terms
+		return this.jdbc.sql("select e.id, 1 - (e.centroid <=> cast(:vector as halfvec)) as cosine, e.first_article_at, "
+				+ "e.last_article_at, e.article_count, " + TOP_TERMS + """
 				from events e
 				where e.status = 'OPEN' and e.model_version = :model
 				  and e.last_article_at >= :from and e.first_article_at <= :to
@@ -58,7 +64,7 @@ class JdbcEventRepository implements EventRepository {
 			.param("from", timestamp(from))
 			.param("to", timestamp(to))
 			.query((rs, row) -> new EventSnapshot(rs.getLong("id"), rs.getDouble("cosine"), strings(rs.getArray("key_terms")),
-					instant(rs, "first_article_at"), instant(rs, "last_article_at")))
+					instant(rs, "first_article_at"), instant(rs, "last_article_at"), rs.getInt("article_count")))
 			.list();
 	}
 
@@ -119,10 +125,85 @@ class JdbcEventRepository implements EventRepository {
 
 	@Override
 	public void update(LockedEvent next, List<String> addedTerms, List<String> removedTerms) {
+		write(next);
+		addTerms(next.id(), addedTerms);
+		removeTerms(next.id(), removedTerms);
+	}
+
+	@Override
+	public void delete(long eventId) {
+		// 이 사건과 이 사건에 합쳐진 사건 행 — 합쳐진 행이 이 사건을 가리키므로(FK) 먼저 지운다
+		Long[] ids = this.jdbc.sql("select id from events where id = :id or merged_into = :id")
+			.param("id", eventId)
+			.query(Long.class)
+			.list()
+			.toArray(Long[]::new);
+		this.jdbc.sql("delete from event_article_candidates where event_id = any(:ids)").param("ids", ids).update();
+		this.jdbc.sql("delete from event_merge_judgements where event_low = any(:ids) or event_high = any(:ids)")
+			.param("ids", ids)
+			.update();
+		this.jdbc.sql("delete from events where merged_into = :id").param("id", eventId).update();
+		this.jdbc.sql("delete from events where id = :id").param("id", eventId).update();
+	}
+
+	@Override
+	public List<MergeSubject> mergeDue(long criteriaId, int limit) {
+		return this.jdbc.sql("select e.id, e.model_version, e.centroid::text as centroid, e.article_count, "
+				+ "e.first_article_at, e.last_article_at, e.revision, " + TOP_TERMS + """
+				from events e
+				where e.status = 'OPEN'
+				  and (e.merge_checked_revision < e.revision or e.merge_checked_criteria_id is distinct from :criteria)
+				order by e.id
+				limit :limit
+				""")
+			.param("terms", CandidateScoring.EVENT_KEY_TERMS)
+			.param("criteria", criteriaId)
+			.param("limit", limit)
+			.query((rs, row) -> new MergeSubject(rs.getLong("id"), rs.getString("model_version"),
+					VectorText.parse(rs.getString("centroid")), rs.getInt("article_count"),
+					strings(rs.getArray("key_terms")), instant(rs, "first_article_at"), instant(rs, "last_article_at"),
+					rs.getLong("revision")))
+			.list();
+	}
+
+	@Override
+	public void markMergeChecked(long eventId, long revision, long criteriaId) {
+		this.jdbc.sql("""
+				update events set merge_checked_revision = :revision, merge_checked_criteria_id = :criteria
+				where id = :id and revision = :revision
+				""").param("id", eventId).param("revision", revision).param("criteria", criteriaId).update();
+	}
+
+	@Override
+	public void absorb(LockedEvent survivorNext, LockedEvent absorbed, Instant now) {
+		write(survivorNext);
+		this.jdbc.sql("""
+				insert into event_key_terms (event_id, term, article_count)
+				select :survivor, term, article_count from event_key_terms where event_id = :absorbed
+				on conflict (event_id, term) do update set article_count = event_key_terms.article_count + excluded.article_count
+				""").param("survivor", survivorNext.id()).param("absorbed", absorbed.id()).update();
+		this.jdbc.sql("delete from event_key_terms where event_id = :absorbed").param("absorbed", absorbed.id()).update();
+		// 사슬을 두지 않는다 — 합쳐질 사건을 가리키던 행도 남는 사건을 바로 가리킨다
+		this.jdbc.sql("update events set merged_into = :survivor where merged_into = :absorbed")
+			.param("survivor", survivorNext.id())
+			.param("absorbed", absorbed.id())
+			.update();
+		this.jdbc.sql("""
+				update events set status = 'MERGED', merged_into = :survivor, closed_at = :now, revision = revision + 1
+				where id = :absorbed
+				""")
+			.param("survivor", survivorNext.id())
+			.param("absorbed", absorbed.id())
+			.param("now", timestamp(now))
+			.update();
+	}
+
+	/** 잠근 사건의 값을 쓴다 — 고칠 때마다 {@code revision} 을 하나 늘린다. 연 시각은 합치면 이른 쪽이 된다 */
+	private void write(LockedEvent next) {
 		this.jdbc.sql("""
 				update events set centroid = cast(:centroid as halfvec), article_count = :count,
-				                  first_article_at = :first, last_article_at = :last, last_joined_at = :joined,
-				                  revision = revision + 1
+				                  first_article_at = :first, last_article_at = :last, created_at = :opened,
+				                  last_joined_at = :joined, revision = revision + 1
 				where id = :id
 				""")
 			.param("id", next.id())
@@ -130,16 +211,9 @@ class JdbcEventRepository implements EventRepository {
 			.param("count", next.articleCount())
 			.param("first", timestamp(next.firstArticleAt()))
 			.param("last", timestamp(next.lastArticleAt()))
+			.param("opened", timestamp(next.openedAt()))
 			.param("joined", timestamp(next.lastJoinedAt()))
 			.update();
-		addTerms(next.id(), addedTerms);
-		removeTerms(next.id(), removedTerms);
-	}
-
-	@Override
-	public void delete(long eventId) {
-		this.jdbc.sql("delete from event_article_candidates where event_id = :id").param("id", eventId).update();
-		this.jdbc.sql("delete from events where id = :id").param("id", eventId).update();
 	}
 
 	private void addTerms(long eventId, List<String> terms) {

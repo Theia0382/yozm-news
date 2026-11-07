@@ -169,6 +169,26 @@ class JdbcEventArticleRepository implements EventArticleRepository {
 	}
 
 	@Override
+	public List<EventArticle> lockByEvents(Collection<Long> eventIds) {
+		if (eventIds.isEmpty()) {
+			return List.of();
+		}
+		return this.jdbc
+			.sql("select " + COLUMNS + " from event_articles where event_id = any(:ids) order by article_id for update")
+			.param("ids", eventIds.toArray(Long[]::new))
+			.query(JdbcEventArticleRepository::row)
+			.list();
+	}
+
+	@Override
+	public void moveAll(long fromEventId, long toEventId) {
+		this.jdbc.sql("update event_articles set event_id = :to where event_id = :from")
+			.param("from", fromEventId)
+			.param("to", toEventId)
+			.update();
+	}
+
+	@Override
 	public Optional<PublishedSpan> publishedSpan(long eventId) {
 		return this.jdbc.sql("""
 				select min(published_at) as first, max(published_at) as last from event_articles where event_id = :event

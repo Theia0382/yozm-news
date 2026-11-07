@@ -58,4 +58,21 @@ class CentroidUpdateTests {
 		return rounded;
 	}
 
+	@Test
+	void mergingTwoEventsWeighsTheirCentroidsByCount() {
+		// ([1,0] × 3 + [0,1] × 1) / 4 = [0.75, 0.25]
+		assertThat(CentroidUpdate.merge(new float[] { 1, 0 }, 3, new float[] { 0, 1 }, 1)).containsExactly(0.75f, 0.25f);
+		// ([1,0] × 3 + [0.8,0.6] × 1) / 4 = [0.95, 0.15]
+		assertThat(CentroidUpdate.merge(new float[] { 1, 0 }, 3, new float[] { 0.8f, 0.6f }, 1))
+			.containsExactly(new float[] { 0.95f, 0.15f }, org.assertj.core.data.Offset.offset(1e-6f));
+	}
+
+	@Test
+	void mergingChecksCountsAndLengths() {
+		org.assertj.core.api.Assertions.assertThatIllegalArgumentException()
+			.isThrownBy(() -> CentroidUpdate.merge(new float[] { 1, 0 }, 0, new float[] { 0, 1 }, 1));
+		org.assertj.core.api.Assertions.assertThatIllegalArgumentException()
+			.isThrownBy(() -> CentroidUpdate.merge(new float[] { 1, 0 }, 1, new float[] { 0, 1, 0 }, 1));
+	}
+
 }

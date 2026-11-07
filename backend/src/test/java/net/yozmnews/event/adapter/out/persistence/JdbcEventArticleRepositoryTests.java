@@ -189,6 +189,33 @@ class JdbcEventArticleRepositoryTests {
 			.containsExactly(this.criteria, this.criteria, this.oldCriteria);
 	}
 
+	@Test
+	void lockByEventsLocksTheAssignmentsOfTheEventsAndMoveAllKeepsTheRest() {
+		assign(73, this.event, this.oldCriteria, List.of());
+		assign(71, this.other, this.criteria, List.of());
+		this.repository.insertIfAbsent(new EventArticle(new ArticleId(72), this.event, PUBLISHED, null,
+				DecidedBy.JUDGEMENT_FAILED, true, this.criteria, ASSIGNED), List.of());
+		long third = event(1);
+		assign(74, third, this.criteria, List.of());
+
+		assertThat(this.repository.lockByEvents(List.of(this.event, this.other)))
+			.extracting(EventArticle::articleId)
+			.containsExactly(new ArticleId(71), new ArticleId(72), new ArticleId(73));
+		assertThat(this.repository.lockByEvents(List.of())).isEmpty();
+
+		this.repository.moveAll(this.event, this.other);
+
+		// 사건만 바뀌고 연 사건 표지 · 점수 · 정한 것 · 기준 · 배정 시각은 그대로다
+		assertThat(this.repository.lockByArticles(List.of(new ArticleId(72), new ArticleId(73), new ArticleId(74))))
+			.containsExactly(
+					new EventArticle(new ArticleId(72), this.other, PUBLISHED, null, DecidedBy.JUDGEMENT_FAILED, true,
+							this.criteria, ASSIGNED),
+					new EventArticle(new ArticleId(73), this.other, PUBLISHED, 0.5, DecidedBy.FORMULA, false,
+							this.oldCriteria, ASSIGNED),
+					new EventArticle(new ArticleId(74), third, PUBLISHED, 0.5, DecidedBy.FORMULA, false, this.criteria,
+							ASSIGNED));
+	}
+
 	private void assign(long article, long event, long criteria, List<StoredCandidate> stored) {
 		this.repository.insertIfAbsent(new EventArticle(new ArticleId(article), event, PUBLISHED, 0.5, DecidedBy.FORMULA,
 				false, criteria, ASSIGNED), stored);

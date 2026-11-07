@@ -198,6 +198,30 @@ class EventRemovalFlowTests {
 	}
 
 	@Test
+	void removingAllArticlesOfASurvivorDeletesItsMergedRows() {
+		// 사건 X 가 E 에 합쳐졌다 — X 를 가리키는 저장 후보와 그 쌍의 병합 판정 기록이 있다
+		long merged = this.jdbc.sql("""
+				insert into events (status, model_version, centroid, article_count, first_article_at, last_article_at,
+				                    created_at, last_joined_at, merged_into, closed_at)
+				values ('MERGED', 'model-a', '[0,1]', 1, now(), now(), now(), now(), :survivor, now()) returning id
+				""").param("survivor", this.event).query(Long.class).single();
+		this.jdbc.sql("""
+				insert into event_article_candidates (article_id, event_id, score, probability)
+				values (999, :merged, 0.6, null), (999, :survivor, 0.5, null)
+				""").param("merged", merged).param("survivor", this.event).update();
+		this.jdbc.sql("""
+				insert into event_merge_judgements (event_low, event_high, probability, judged_at)
+				values (:low, :high, 0.7, now())
+				""").param("low", Math.min(merged, this.event)).param("high", Math.max(merged, this.event)).update();
+
+		remove(this.a, this.b, this.c);
+
+		assertThat(count("select count(*) from events where id in (" + this.event + ", " + merged + ")")).isZero();
+		assertThat(count("select count(*) from event_article_candidates where article_id = 999")).isZero();
+		assertThat(count("select count(*) from event_merge_judgements")).isZero();
+	}
+
+	@Test
 	void oneRemovalOverTwoEventsShrinksOneAndDeletesTheOther() {
 		// y([0,1], 금리, 03:00) 는 판정 확률 0.1 로 혼자 새 사건을 연다 — c 와 y 를 한 번에 지우면 E 는 줄고 y 의 사건은 빈다
 		long y = queued("[0,1]", "2026-11-05T03:00:00Z", "금리");

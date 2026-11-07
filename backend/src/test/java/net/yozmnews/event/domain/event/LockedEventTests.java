@@ -40,4 +40,24 @@ class LockedEventTests {
 			.isEqualTo(Instant.parse("2026-11-05T03:00:00Z"));
 	}
 
+	@Test
+	void absorbingAnotherEventKeepsThisIdentityAndCombinesTheValues() {
+		LockedEvent other = new LockedEvent(4, EventStatus.OPEN, "model-a", new float[] { 0, 1 }, 3,
+				Instant.parse("2026-11-04T22:00:00Z"), Instant.parse("2026-11-05T01:30:00Z"),
+				Instant.parse("2026-11-05T02:00:00Z"), Instant.parse("2026-11-06T08:00:00Z"));
+
+		LockedEvent merged = EVENT.absorbed(other);
+
+		assertThat(merged.id()).isEqualTo(9);
+		assertThat(merged.status()).isEqualTo(EventStatus.OPEN);
+		assertThat(merged.modelVersion()).isEqualTo("model-a");
+		// ([1,0] × 1 + [0,1] × 3) / 4 = [0.25, 0.75]
+		assertThat(merged.centroid()).containsExactly(0.25f, 0.75f);
+		assertThat(merged.articleCount()).isEqualTo(4);
+		assertThat(merged.firstArticleAt()).isEqualTo(Instant.parse("2026-11-04T22:00:00Z"));
+		assertThat(merged.lastArticleAt()).isEqualTo(Instant.parse("2026-11-05T02:00:00Z"));
+		assertThat(merged.openedAt()).isEqualTo(Instant.parse("2026-11-05T02:00:00Z"));
+		assertThat(merged.lastJoinedAt()).isEqualTo(Instant.parse("2026-11-06T08:00:00Z"));
+	}
+
 }

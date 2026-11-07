@@ -60,6 +60,16 @@ class ForwardingEventArticleRepository implements EventArticleRepository {
 	}
 
 	@Override
+	public List<EventArticle> lockByEvents(Collection<Long> eventIds) {
+		return this.delegate.lockByEvents(eventIds);
+	}
+
+	@Override
+	public void moveAll(long fromEventId, long toEventId) {
+		this.delegate.moveAll(fromEventId, toEventId);
+	}
+
+	@Override
 	public Optional<PublishedSpan> publishedSpan(long eventId) {
 		return this.delegate.publishedSpan(eventId);
 	}

@@ -17,6 +17,7 @@ import net.yozmnews.article.ArticleId;
 import net.yozmnews.event.domain.assignment.EventSnapshot;
 import net.yozmnews.event.domain.event.EventStatus;
 import net.yozmnews.event.domain.event.LockedEvent;
+import net.yozmnews.event.domain.event.MergeSubject;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
@@ -183,6 +184,99 @@ class JdbcEventRepositoryTests {
 	}
 
 	@Test
+	void mergeDueAreOpenEventsChangedSinceTheirCheckOrCheckedByOtherCriteria() {
+		long criteria = criteria(0.8);
+		long other = criteria(0.9);
+		long fresh = event("OPEN", "model-a", "[1,0]", "2026-11-05T00:00:00Z", "2026-11-05T06:00:00Z");
+		long checked = event("OPEN", "model-b", "[0,1]", "2026-11-05T00:00:00Z", "2026-11-05T00:00:00Z");
+		long otherCriteria = event("OPEN", "model-a", "[0,1]", "2026-11-05T00:00:00Z", "2026-11-05T00:00:00Z");
+		event("CLOSED", "model-a", "[0,1]", "2026-11-05T00:00:00Z", "2026-11-05T00:00:00Z");
+		terms(fresh, Map.of("금리", 2, "동결", 1));
+		this.repository.markMergeChecked(checked, 1, criteria);
+		this.repository.markMergeChecked(otherCriteria, 1, other);
+		// revision 이 다르면 표시하지 않는다 — 그새 바뀐 사건은 다시 본다
+		this.repository.markMergeChecked(fresh, 2, criteria);
+
+		List<MergeSubject> due = this.repository.mergeDue(criteria, 10);
+
+		assertThat(due).extracting(MergeSubject::id).containsExactly(fresh, otherCriteria);
+		MergeSubject subject = due.get(0);
+		assertThat(subject.modelVersion()).isEqualTo("model-a");
+		assertThat(subject.centroid()).containsExactly(1f, 0f);
+		assertThat(subject.articleCount()).isEqualTo(1);
+		assertThat(subject.keyTerms()).containsExactly("금리", "동결");
+		assertThat(subject.firstArticleAt()).isEqualTo(Instant.parse("2026-11-05T00:00:00Z"));
+		assertThat(subject.lastArticleAt()).isEqualTo(Instant.parse("2026-11-05T06:00:00Z"));
+		assertThat(subject.revision()).isEqualTo(1);
+		assertThat(this.repository.mergeDue(criteria, 1)).extracting(MergeSubject::id).containsExactly(fresh);
+	}
+
+	@Test
+	void absorbWritesTheSurvivorAndLeavesTheAbsorbedPointingToIt() {
+		long survivor = event("OPEN", "model-a", "[1,0]", "2026-11-05T00:00:00Z", "2026-11-05T00:00:00Z");
+		long absorbed = event("OPEN", "model-a", "[0,1]", "2026-11-04T00:00:00Z", "2026-11-04T00:00:00Z");
+		long earlier = event("OPEN", "model-a", "[0,1]", "2026-11-03T00:00:00Z", "2026-11-03T00:00:00Z");
+		terms(survivor, Map.of("금리", 2, "동결", 1));
+		terms(absorbed, Map.of("금리", 1, "환율", 1));
+		// 앞서 absorbed 에 합쳐진 사건 — 남는 사건으로 다시 가리켜야 한다
+		this.jdbc.sql("update events set status = 'MERGED', merged_into = :into, closed_at = now() where id = :id")
+			.param("into", absorbed)
+			.param("id", earlier)
+			.update();
+		LockedEvent kept = this.repository.lock(survivor).orElseThrow();
+		LockedEvent gone = this.repository.lock(absorbed).orElseThrow();
+		Instant now = Instant.parse("2026-11-06T09:00:00Z");
+
+		this.repository.absorb(kept.absorbed(gone), gone, now);
+
+		LockedEvent written = this.repository.lock(survivor).orElseThrow();
+		assertThat(written.articleCount()).isEqualTo(2);
+		assertThat(written.centroid()).containsExactly(0.5f, 0.5f);
+		assertThat(written.firstArticleAt()).isEqualTo(Instant.parse("2026-11-04T00:00:00Z"));
+		assertThat(written.openedAt()).isEqualTo(Instant.parse("2026-11-04T00:00:00Z"));
+		assertThat(revision(survivor)).isEqualTo(2);
+		assertThat(termCounts(survivor)).containsExactlyInAnyOrderEntriesOf(Map.of("금리", 3, "동결", 1, "환율", 1));
+		assertThat(termCounts(absorbed)).isEmpty();
+		assertThat(this.jdbc.sql("""
+				select status, merged_into, closed_at = :now as closed_now from events where id = :id
+				""").param("id", absorbed).param("now", now.atOffset(ZoneOffset.UTC)).query().singleRow())
+			.containsEntry("status", "MERGED")
+			.containsEntry("merged_into", survivor)
+			.containsEntry("closed_now", true);
+		assertThat(this.jdbc.sql("select merged_into from events where id = :id")
+			.param("id", earlier)
+			.query(Long.class)
+			.single()).isEqualTo(survivor);
+	}
+
+	@Test
+	void deletingASurvivorTakesItsMergedRowsCandidatesAndJudgements() {
+		long survivor = event("OPEN", "model-a", "[1,0]", "2026-11-05T00:00:00Z", "2026-11-05T00:00:00Z");
+		long merged = event("OPEN", "model-a", "[0,1]", "2026-11-05T00:00:00Z", "2026-11-05T00:00:00Z");
+		long kept = event("OPEN", "model-a", "[0,1]", "2026-11-05T00:00:00Z", "2026-11-05T00:00:00Z");
+		this.jdbc.sql("update events set status = 'MERGED', merged_into = :into, closed_at = now() where id = :id")
+			.param("into", survivor)
+			.param("id", merged)
+			.update();
+		candidate(80, merged);
+		candidate(80, kept);
+		this.jdbc.sql("""
+				insert into event_merge_judgements (event_low, event_high, probability, judged_at)
+				values (:a, :b, 0.4, now()), (:c, :d, 0.6, now())
+				""").param("a", Math.min(merged, kept)).param("b", Math.max(merged, kept))
+			.param("c", Math.min(survivor, kept)).param("d", Math.max(survivor, kept))
+			.update();
+
+		this.repository.delete(survivor);
+
+		assertThat(this.jdbc.sql("select id from events").query(Long.class).list()).containsExactly(kept);
+		assertThat(this.jdbc.sql("select event_id from event_article_candidates where article_id = 80")
+			.query(Long.class)
+			.list()).containsExactly(kept);
+		assertThat(this.jdbc.sql("select count(*) from event_merge_judgements").query(Long.class).single()).isZero();
+	}
+
+	@Test
 	void describersAreMembersWithTheModelClosestToTheCentroid() {
 		long id = event("OPEN", "model-a", "[1,0]", "2026-11-05T00:00:00Z", "2026-11-05T00:00:00Z");
 		long other = event("OPEN", "model-a", "[0,1]", "2026-11-05T00:00:00Z", "2026-11-05T00:00:00Z");
@@ -250,10 +344,14 @@ class JdbcEventRepositoryTests {
 	}
 
 	private long criteria() {
+		return criteria(0.8);
+	}
+
+	private long criteria(double upper) {
 		return this.jdbc.sql("""
 				insert into event_assignment_criteria (window_seconds, upper, lower, store, probability, created_at)
-				values (259200, 0.8, 0.55, 0.4, 0.5, now()) returning id
-				""").query(Long.class).single();
+				values (259200, :upper, 0.55, 0.4, 0.5, now()) returning id
+				""").param("upper", upper).query(Long.class).single();
 	}
 
 	private void member(long article, long event, long criteria, String model, String embedding) {

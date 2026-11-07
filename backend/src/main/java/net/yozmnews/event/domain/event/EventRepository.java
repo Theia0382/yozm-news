@@ -48,7 +48,27 @@ public interface EventRepository {
 	 */
 	void update(LockedEvent next, List<String> addedTerms, List<String> removedTerms);
 
-	/** 사건과 그 핵심 말, 그 사건을 가리키는 배정 후보를 지운다 — 그 사건의 배정이 먼저 지워지거나 옮겨져 있어야 한다 */
+	/**
+	 * 사건과 그 핵심 말을 지운다 — 그 사건에 합쳐진 사건 행, 이 사건들을 가리키는 배정 후보와 병합 판정 기록도 함께. 그 사건의 배정이 먼저
+	 * 지워지거나 옮겨져 있어야 한다
+	 */
 	void delete(long eventId);
+
+	/**
+	 * 병합 회차가 볼 바뀐 열린 사건 — 지난 확인 뒤 고쳐졌거나({@code revision}) 다른 기준으로 확인한 사건. 잠그지 않는다.
+	 * @return 사건 ID 순, {@code limit} 개까지
+	 */
+	List<MergeSubject> mergeDue(long criteriaId, int limit);
+
+	/** 병합 확인을 표시한다 — 사건의 {@code revision} 이 읽은 값 그대로일 때만. 그새 바뀌었으면 다음 회차가 다시 본다 */
+	void markMergeChecked(long eventId, long revision, long criteriaId);
+
+	/**
+	 * 잠근 두 사건을 합쳐 쓴다 — 트랜잭션 안에서, 합쳐질 사건의 배정을 남는 사건으로 옮긴 뒤 부른다. 남는 사건에 합친 값을 쓰고(연 시각 포함,
+	 * {@code revision} + 1), 합쳐질 사건의 핵심 말 수를 남는 사건에 더한 뒤 지운다. 합쳐질 사건은 {@code MERGED} 로 남는 사건을 가리키고
+	 * 열림이 끝난 시각은 {@code now} 다. 합쳐질 사건을 가리키던 합쳐진 사건 행도 남는 사건을 가리킨다.
+	 * @param survivorNext 남는 사건의 합친 값 — {@link LockedEvent#absorbed}
+	 */
+	void absorb(LockedEvent survivorNext, LockedEvent absorbed, Instant now);
 
 }

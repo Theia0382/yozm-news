@@ -11,9 +11,10 @@ import java.util.Objects;
  * @param keyTerms 사건 핵심 말 — 기사 수가 많은 순 상위 {@link CandidateScoring#EVENT_KEY_TERMS} 개
  * @param firstArticleAt 사건 기사 가운데 가장 이른 발행 시각
  * @param lastArticleAt 사건 기사 가운데 가장 늦은 발행 시각
+ * @param articleCount 사건의 기사 수 — 병합이 핵심 말 겹침의 기준 쪽을 정한다({@link MergeRule#termsFromSubject})
  */
 public record EventSnapshot(long eventId, double cosine, List<String> keyTerms, Instant firstArticleAt,
-		Instant lastArticleAt) {
+		Instant lastArticleAt, int articleCount) {
 
 	public EventSnapshot {
 		keyTerms = List.copyOf(keyTerms);

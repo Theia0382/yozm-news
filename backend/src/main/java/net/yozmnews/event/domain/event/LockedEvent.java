@@ -59,4 +59,25 @@ public record LockedEvent(long id, EventStatus status, String modelVersion, floa
 				publishedAt.isAfter(this.lastArticleAt) ? publishedAt : this.lastArticleAt, this.openedAt, now);
 	}
 
+	/**
+	 * 다른 사건을 합친 이 사건 — 합친 사건의 정본이다(event-R13). 중심은 기사 수 가중 평균({@link CentroidUpdate#merge}), 수는 합, 첫 ·
+	 * 마지막 기사 시각과 연 시각은 이른 쪽 · 늦은 쪽 · 이른 쪽, 마지막으로 붙은 시각은 늦은 쪽이다. ID · 상태 · 모델 버전은 이 사건의 것이다.
+	 * @throws IllegalArgumentException 중심 길이가 다를 때
+	 */
+	public LockedEvent absorbed(LockedEvent other) {
+		return new LockedEvent(this.id, this.status, this.modelVersion,
+				CentroidUpdate.merge(this.centroid, this.articleCount, other.centroid, other.articleCount),
+				this.articleCount + other.articleCount, earlier(this.firstArticleAt, other.firstArticleAt),
+				later(this.lastArticleAt, other.lastArticleAt), earlier(this.openedAt, other.openedAt),
+				later(this.lastJoinedAt, other.lastJoinedAt));
+	}
+
+	private static Instant earlier(Instant a, Instant b) {
+		return b.isBefore(a) ? b : a;
+	}
+
+	private static Instant later(Instant a, Instant b) {
+		return b.isAfter(a) ? b : a;
+	}
+
 }
