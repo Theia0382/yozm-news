@@ -22,7 +22,7 @@
 - Jev 를 직접 부르지 않는다 — 사건 소속 판정은 `evaluation` 의 공개 API 를 부른다([ADR-0026](../adr/0026-event-clustering-with-local-embeddings-and-jev.md) · [ADR-0071](../adr/0071-event-membership-judged-from-article-ids-with-questions-built-in-evaluation.md))
 - 기사 내용을 갖지 않는다. 제목 · 요약문은 `article` 의 공개 조회로 읽고, 표현 행에는 벡터와 핵심 말만 남긴다
 
-사건 기준 · 저장 기준 · 닫는 기간 · 최대 기간의 기본값(§7)과 큰 사건 기준의 처음 값(event-R21)은 측정 전 목표다. 큰 사건 기준 · 닫는 기간 · 최대 기간 · 임베딩 모델은 운영하면서 정한다([open-questions.md](../open-questions.md)). 묶기 품질은 수집한 기사 표본에 사건 라벨을 붙인 평가 세트로 잰다 — 증거로서의 자격은 [테스트 전략](../qa/test-strategy.md) ⑪, 표본의 실제 기사 텍스트를 공개 저장소에 두지 않는 규칙은 [security.md](../security.md)에 있다.
+사건 기준 · 저장 기준 · 닫는 기간 · 최대 기간의 기본값(§7)과 큰 사건 기준의 처음 값(event-R21)은 측정 전 목표다. 큰 사건 기준 · 닫는 기간 · 최대 기간은 운영하면서 정한다([open-questions.md](../open-questions.md)). 기본 임베딩 모델([ADR-0091](../adr/0091-local-embedding-model-is-multilingual-e5-small-int8-fetched-at-build-into-the-image-with-onnx-telemetry-off.md))도 평가 세트로 다시 본다. 묶기 품질은 수집한 기사 표본에 사건 라벨을 붙인 평가 세트로 잰다 — 증거로서의 자격은 [테스트 전략](../qa/test-strategy.md) ⑪, 표본의 실제 기사 텍스트를 공개 저장소에 두지 않는 규칙은 [security.md](../security.md)에 있다.
 
 다른 모듈과의 의존과 이벤트 흐름은 [overview.md §5](../overview.md#5-모듈-지도)에 있다.
 
@@ -35,7 +35,8 @@
 | 기사 표현 | 사건 배정의 입력 — 기사 하나의 임베딩 벡터 · 핵심 말 · 임베딩 모델 버전(`article_match_features` 한 행). 기사 × 모델 버전마다 하나다(event-R4) |
 | 표현 텍스트 | 제목과 요약문 앞부분으로 만든 텍스트 하나. 임베딩과 핵심 말이 같은 텍스트를 쓴다(event-R1) |
 | 핵심 말 | 표현 텍스트에서 Nori 로 뽑은 고유명사 · 일반명사 · 외국어(event-R2). 고유명사 겹침 점수의 입력이다 |
-| 임베더 | 텍스트를 벡터로 바꾸는 외부 의존 — 포트 `ArticleEmbedder`. 이름 · 모델 버전 · 차원을 밝힌다(event-R3) |
+| 임베더 | 텍스트를 벡터로 바꾸는 외부 의존 — 포트 `ArticleEmbedder`. 이름 · 모델 버전 · 차원을 밝힌다(event-R3). 운영 구현은 로컬 모델(기본)과 OpenAI 호환 외부 API 둘이다 |
+| 거부 수 | 임베더가 그 기사의 입력을 거부한 횟수(`event_intake_queue.rejections`) — 상한에 이르면 대기에서 뺀다(event-R6) |
 | 사건 묶기 대기 | 처리할 기사의 목록(`event_intake_queue` — 기사마다 한 행). 넣은 시각과 점유를 갖는다(event-R5) |
 | 회차 | 반복 작업이 한 번 돌 때 하는 일 하나 — 표현 회차(대기를 점유해 표현을 만든다, event-R6) · 배정 회차(배정 대기를 점유해 배정한다, event-R16) · 재판정 회차(event-R18) · 병합 회차(event-R13)를 차례로 돈다 |
 | 점유 | 회차가 대기 행을 가져갔다는 표시 — 토큰 · 만료 시각. 만료되면 다른 회차가 다시 가져간다(event-R6 · R16) |
@@ -223,17 +224,20 @@ HTTP 엔드포인트는 없다.
 | 패키지 | 책임 |
 |---|---|
 | (최상위) | 모듈 선언(`package-info`), 공개 조회 `EventDirectory` 와 그 값 타입, 공개 운영 API `EventIntakeAdministration` · `BigEventAdministration` 과 그 결과 · 값 타입, 사건 상태 · 배정을 정한 것(`EventStatus` · `DecidedBy`) |
-| `domain/feature` | 기사 표현 — 임베더 포트와 그 정보 · 벡터 값, 표현 텍스트 구성 · 핵심 말 추출 · 임베더 결과 확인 · 표현 보관 기준의 정본, 표현 행과 그 저장소 |
-| `domain/intake` | 사건 묶기 대기 — 대기 행과 그 점유, 대기 상수, 대기 저장소 |
+| `domain/feature` | 기사 표현 — 임베더 포트와 그 정보 · 벡터 값 · 결과(성공 · 실패 갈래), 표현 텍스트 구성 · 핵심 말 추출 · 임베더 결과 확인 · 벡터 정규화 · 표현 보관 기준의 정본, 표현 행과 그 저장소 |
+| `domain/intake` | 사건 묶기 대기 — 대기 행과 그 점유, 대기 상수 · 거부 상한, 대기 저장소 |
 | `domain/assignment` | 사건 배정의 판단 — 기준, 후보 점수 산식, 판정 규칙, 사건 대 사건 규칙(병합), 재판정 적용 규칙, 저장 후보 모으기, 중심 누적 갱신 · 합치기, 배정 대기 행과 그 일정, 배정 대기 · 기준 이력 · 병합 판정 기록 저장소 |
 | `domain/event` | 사건과 배정 — 잠근 사건 행과 기사 하나 더하기 · 사건 합치기, 기사를 뺀 사건의 새 값, 닫기 판정, 병합 회차가 읽는 사건, 배정 행, 사건 · 배정 저장소, 장기 검색 인덱스, 사건 조회 저장소 |
 | `domain/bigevent` | 큰 사건 — 판정 규칙 · 순서, 사건 집계, 큰 사건 기준 저장소 |
-| `application` | 기사 이벤트 리스너, 표현 · 배정 · 재판정 · 병합 회차, 정리 작업, 기사를 뺀 사건 쓰기, 기준 설정과 결선, 공개 조회 · 공개 운영 API 의 구현, 사건 집계 읽기, 큰 사건 기준의 처음 값 적재, 핵심 말 추출기의 결선 |
+| `domain/openai` | OpenAI 호환 외부 임베딩의 판단 — 요청 본문, 응답 읽기, 상태 코드 갈래, 키 형식, 모델 버전 규칙 |
+| `application` | 기사 이벤트 리스너, 표현 · 배정 · 재판정 · 병합 회차, 정리 작업, 기사를 뺀 사건 쓰기, 기준 설정과 결선, 공개 조회 · 공개 운영 API 의 구현, 사건 집계 읽기, 큰 사건 기준의 처음 값 적재, 핵심 말 추출기의 결선, 임베딩 provider 설정과 결선 조건 |
 | `adapter/in/job` | 사건 묶기 대기 반복 작업(작업 역할) — 네 회차를 차례로, 사건 정리 반복 작업(작업 역할) — 하루 1회 |
 | `adapter/out/persistence` | 대기 · 표현 · 배정 대기 · 기준 이력 · 병합 판정 기록 · 사건 · 배정 · 사건 조회 · 큰 사건 기준 저장소와 장기 검색 인덱스의 JdbcClient 구현, "중심에 가까운 순" 정렬 조각, 벡터의 pgvector 텍스트 표현 |
+| `adapter/out/openai` | 임베더 포트의 OpenAI 호환 외부 구현 — HTTP 연결 · 설정 · 결선(작업 역할) |
+| `adapter/out/onnx` | 임베더 포트의 로컬 모델 구현 — 모델 파일 정보 · 토크나이저 · ONNX Runtime 추론 · 결선(작업 역할, `local` 밖) |
 | `adapter/out/fake` | 임베더 포트의 로컬 대체물과 그 결선(`local` 에서만) |
 
-협력: `EventIntakeListener` 가 `ArticleStored` 로 기사를 `IntakeQueueRepository` 에 넣고, `ArticlesRemoved` 로 대기 행과 표현 행(`MatchFeaturesRepository`)을 지운다. 작업 역할의 `IntakeArticlesJob` 이 1분마다 임베더를 찾아 있으면 `EventIntakeRound` 에 넘겨 돌린다. 회차는 `IntakeQueueRepository` 로 대기를 점유하고(`PendingArticle.claim` · `IntakeSchedule`), `article` 의 `ArticleDirectory` 로 제목 · 요약문을 읽어, 기사마다 `MatchText` 로 표현 텍스트를, `KeyTermExtractor` 로 핵심 말을 만든다. 포트 `ArticleEmbedder` 로 텍스트 묶음을 한 번에 벡터로 바꾸고 `EmbeddingCheck` 로 결과를 확인한 뒤, 기사마다 `IntakeQueueRepository.deleteIfLeased` 가 대기 행을 지웠을 때만 `MatchFeaturesRepository.insertIfAbsent` 로 표현을 쓴다. 임베더는 `local` 에서 `FakeArticleEmbedderConfiguration` 이 `FakeArticleEmbedder` 를 포트로 등록한다. `KeyTermExtractor` 는 `KeyTermConfiguration` 이 빈으로 둔다. 표현을 쓰는 같은 트랜잭션에서 `AssignmentQueueRepository.enqueue` 로 그 기사를 배정 대기에 넣는다.
+협력: `EventIntakeListener` 가 `ArticleStored` 로 기사를 `IntakeQueueRepository` 에 넣고, `ArticlesRemoved` 로 대기 행과 표현 행(`MatchFeaturesRepository`)을 지운다. 작업 역할의 `IntakeArticlesJob` 이 생성자로 받은 임베더를 1분마다 `EventIntakeRound` 에 넘겨 돌린다. 회차는 `IntakeQueueRepository` 로 대기를 점유하고(`PendingArticle.claim` · `IntakeSchedule`), `article` 의 `ArticleDirectory` 로 제목 · 요약문을 읽어, 기사마다 `MatchText` 로 표현 텍스트를, `KeyTermExtractor` 로 핵심 말을 만든다. 포트 `ArticleEmbedder` 로 텍스트 묶음을 한 번에 벡터로 바꾸고 `EmbeddingCheck` 로 결과를 확인한 뒤, 기사마다 `IntakeQueueRepository.deleteIfLeased` 가 대기 행을 지웠을 때만 `MatchFeaturesRepository.insertIfAbsent` 로 표현을 쓴다. 결과가 입력 거부면 기사 하나씩 다시 불러, 거부된 기사는 `IntakeQueueRepository.recordRejectionIfLeased` 로 거부 수를 올리고 상한(`IntakeSchedule.rejectionsExhausted`)이면 `delete` 로 뺀다. 임베더는 provider 설정(`EmbeddingProperties` — 결선 조건은 `EmbeddingProviderCondition`)에 따라 작업 역할에서 `OnnxArticleEmbedderConfiguration`(기본, `local` 밖) 또는 `OpenAiCompatibleEmbedderConfiguration` 이, `local` 에서 provider 가 기본이면 `FakeArticleEmbedderConfiguration` 이 포트로 등록한다. `KeyTermExtractor` 는 `KeyTermConfiguration` 이 빈으로 둔다. 표현을 쓰는 같은 트랜잭션에서 `AssignmentQueueRepository.enqueue` 로 그 기사를 배정 대기에 넣는다.
 
 배정: 반복 작업이 표현 회차 다음에 `AssignmentRound` 를 돌린다. 회차는 `AssignmentQueueRepository` 로 배정 대기를 점유하고(`PendingAssignment.claim` · `AssignmentSchedule`), `CriteriaRepository` 에 지금 기준(`AssignmentCriteria` — `EventAssignmentProperties` 를 `AssignmentConfiguration` 이 빈으로 바꾼 것)을 등록하고, `ArticleDirectory` 로 발행 시각을 읽는다. 기사마다 `MatchFeaturesRepository.find` 로 지금 모델 버전의 표현을 읽어 `EventRepository.candidates` 로 후보 사건을 얻고, `CandidateScoring` 으로 점수를 매겨 `AssignmentRule` 로 판정한다. 띠면 `EventRepository.describers` 로 서술 기사를 골라 `evaluation` 의 `EventMembership` 에 묻는다. 쓰기는 `EventRepository.lock` · `update`(`LockedEvent.joined`) 또는 `open` 과 `EventArticleRepository.insertIfAbsent` 다. 이어서 `RejudgementRound` 가 `EventArticleRepository.keepClosed` 로 닫힌 사건의 배정을 기준만 새것으로 적고, `lockRejudgeTargets` 로 기준이 다른 배정을 잠가(저장 후보는 `RejudgeTarget` 이 `StoredCandidate.folded` 로 모은다) `AssignmentRule` · `Reassignment` 로 다시 판정하고, 옮기거나 떼어 내면 옛 사건을 `EventShrinkWriter` 로 쓴다. 지운 기사 따르기는 `EventIntakeListener` 가 `EventShrink` 로 사건의 새 값을 정해 `EventShrinkWriter` 로 쓰고, `EventRepository.clearRepresentative` 로 지운 기사인 대표를 비운다. 채우기는 `EventIntakeAdministrationService` 가 `ArticleDirectory.firstSeenSince` 와 `IntakeQueueRepository.enqueueUnassigned` 로 한다.
 
@@ -254,15 +258,22 @@ sequenceDiagram
     participant E as ArticleEmbedder
     participant F as MatchFeaturesRepository
 
-    J->>J: 1분마다 (작업 역할) — 임베더가 없으면 건너뜀 (event-R7)
+    J->>J: 1분마다 (작업 역할) — 임베더는 생성자로 받았다 (event-R7)
     J->>R: 임베더를 넘겨 회차
     R->>Q: 트랜잭션 — 대기 잠금 · 점유 쓰기 · 커밋 (event-R6)
     R->>A: 제목 · 요약문 (트랜잭션 밖)
     R->>Q: 없는 기사 — 트랜잭션, 토큰이 맞으면 대기 행 삭제 (event-R6)
     R->>R: 표현 텍스트 · 핵심 말 (event-R1 · R2)
-    R->>E: 텍스트 묶음 → 벡터 (트랜잭션 밖, 한 번)
-    alt 예외 · 결과 어긋남 (event-R3)
+    R->>E: 텍스트 묶음 → 결과 (트랜잭션 밖, 한 번)
+    alt 일시 · 사용 불가 · 예외 · 결과 어긋남 (event-R3 · R6)
         R->>Q: 남은 점유 해제 — 회차 끝 (event-R6)
+    else 입력 거부 (event-R6)
+        loop 기사마다 하나씩
+            R->>E: 텍스트 하나 → 결과 (트랜잭션 밖)
+            R->>Q: 거부면 트랜잭션 — 거부 수 +1 · 점유 해제, 상한이면 대기 행 삭제
+            R->>F: 성공이면 아래 성공 갈래와 같은 쓰기
+            R->>Q: 그 밖의 실패면 남은 점유 해제 — 회차 끝
+        end
     else 성공
         loop 기사마다
             R->>Q: 트랜잭션 — 토큰이 맞으면 대기 행 삭제
@@ -345,19 +356,19 @@ sequenceDiagram
 | 진입점 | 구성 요소 | 계기 | 내용 |
 |---|---|---|---|
 | `ArticleStored` · `ArticlesRemoved` 리스너 | `EventIntakeListener`(`application`) | `article` 의 `ArticleStored` · `ArticlesRemoved` | 새 기사를 대기에 넣고(event-R5), 지운 기사의 대기 · 배정 대기 · 배정 · 후보 · 표현 행을 지우고 사건을 다시 맞춘다(event-R8). 비동기 · 새 트랜잭션이고 이벤트 발행 레지스트리에 기록된다(Spring Modulith `@ApplicationModuleListener`). 실패한 발행은 `platform` 의 이벤트 재처리 작업이 다시 처리하고, 다시 처리해도 결과가 같다. 임베더 · Nori 를 쓰지 않는다 — 화면 역할에서 돌아도 된다 |
-| 사건 묶기 대기 반복 작업 | `IntakeArticlesJob`(`adapter/in/job`, 작업 역할) | JobRunr 반복 작업 `event-intake` — 1분마다, 재시도 없음 | 임베더를 부를 때 찾아 `EventIntakeRound` → `AssignmentRound` → `RejudgementRound` → `MergeRound` 를 차례로 돌린다(event-R6 · R16 · R18 · R13). 없으면 넷 다 건너뛴다 — 기동 때 경고 한 번(event-R7). 이전 실행이 대기 · 처리 중이면 그 실행은 건너뛴다 |
+| 사건 묶기 대기 반복 작업 | `IntakeArticlesJob`(`adapter/in/job`, 작업 역할) | JobRunr 반복 작업 `event-intake` — 1분마다, 재시도 없음 | 생성자로 받은 임베더로 `EventIntakeRound` → `AssignmentRound` → `RejudgementRound` → `MergeRound` 를 차례로 돌린다(event-R6 · R16 · R18 · R13). 임베더가 없으면 작업 역할이 뜨지 않는다(event-R7). 이전 실행이 대기 · 처리 중이면 그 실행은 건너뛴다 |
 | 채우기 | `EventIntakeAdministrationService`(`application`) | `admin` 의 운영자 요청(`EventIntakeAdministration.fill`) | 기간에 처음 본, 배정 없는 기사를 사건 묶기 대기에 넣는다(event-R19). 두 역할 공통 |
 | 사건 조회 | `EventDirectoryService`(`application`) | 다른 모듈의 `EventDirectory` 호출 | 사건 · 사건의 기사 · 기사의 사건 · 대표 기사 · 큰 사건 · 사건 목록(event-R14 · R15 · R20). 두 역할 공통 |
 | 큰 사건 기준 운영 | `BigEventAdministrationService`(`application`) | `admin` 의 운영자 요청(`BigEventAdministration`) | 지금 값 · 변경 · 이력 · 미리보기(event-R21). 두 역할 공통 |
 | 큰 사건 기준 처음 값 | `BigEventCriteriaSeeding`(`application`) | 기동(`SmartInitializingSingleton`) | 지금 값이 없으면 처음 값과 이력 한 행을 넣는다(event-R21). 두 역할 공통 |
-| 사건 정리 반복 작업 | `EventCleanupJob`(`adapter/in/job`, 작업 역할) | JobRunr 반복 작업 `event-cleanup` — 하루 1회, 재시도 없음 | `CleanupRound` 로 닫기 · 장기 검색 인덱스 · 기사 표현 정리를 차례로 한다(event-R13). 임베더 · 평가기가 없어도 돈다. 실패하면 다음 날 다시 돈다 — 다시 돌려도 결과가 같다 |
+| 사건 정리 반복 작업 | `EventCleanupJob`(`adapter/in/job`, 작업 역할) | JobRunr 반복 작업 `event-cleanup` — 하루 1회, 재시도 없음 | `CleanupRound` 로 닫기 · 장기 검색 인덱스 · 기사 표현 정리를 차례로 한다(event-R13). 임베더 · 평가기를 쓰지 않는다. 실패하면 다음 날 다시 돈다 — 다시 돌려도 결과가 같다 |
 
 컨트롤러는 없다.
 
 ### `application`
 
 - `EventIntakeListener` — 리스너(들어오는 쪽). 넣기는 시각을 `InstantSource` 에서 얻는다. 지우기는 한 트랜잭션에서 event-R8 의 순서로 한다 — 사건의 새 값은 `EventShrink`, 쓰기는 `EventShrinkWriter`, 대표 비우기는 `EventRepository.clearRepresentative`. 이름은 `evaluation` 의 리스너와 다르다 — 빈 이름은 단순 클래스 이름이다
-- `EventIntakeRound` — 표현 회차 하나(event-R6 · R8). 임베더는 `run(ArticleEmbedder)` 의 인자로 받는다 — 작업 진입점이 넘긴다. 시각은 `InstantSource` 에서 얻는다. 점유와 쓰기는 `TransactionTemplate` 의 짧은 트랜잭션이고, 기사 조회와 임베더 호출은 트랜잭션 밖이다. 표현을 쓰는 트랜잭션에서 배정 대기에 넣는다. 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통). 로그: `사건 묶기 대기 기사가 지워져 대기에서 뺐다 — 기사 {ID}`(정보), `임베더가 실패해 회차를 멈췄다 — {이름} {모델 버전}, 기사 {n}건: {문구}`(오류)
+- `EventIntakeRound` — 표현 회차 하나(event-R6 · R8). 임베더는 `run(ArticleEmbedder)` 의 인자로 받는다 — 작업 진입점이 넘긴다. 시각은 `InstantSource` 에서 얻는다. 점유와 쓰기는 `TransactionTemplate` 의 짧은 트랜잭션이고, 기사 조회와 임베더 호출은 트랜잭션 밖이다. 표현을 쓰는 트랜잭션에서 배정 대기에 넣는다. 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통). 결과 · 실패 갈래는 `default` 없는 `switch` 식이다. 로그(`{n}건` 은 남은 점유 수, `{문구}` 는 실패 결과의 운영자용 문구): `사건 묶기 대기 기사가 지워져 대기에서 뺐다 — 기사 {ID}` · `임베더가 기사를 거부했다 — 기사 {ID}, 거부 {n}회: {문구}`(정보), `임베더가 일시 실패해 회차를 멈췄다 — {이름} {모델 버전}, 기사 {n}건: {문구}` · `임베더를 쓸 수 없어 회차를 멈췄다 — {이름} {모델 버전}, 기사 {n}건: {문구}` · `임베더가 기사를 거부해 사건 묶기에서 뺐다 — 기사 {ID}, 거부 {n}회: {문구}`(경고), `임베더가 실패해 회차를 멈췄다 — {이름} {모델 버전}, 기사 {n}건: {사유}`(오류 — 사유는 예외면 예외 클래스 이름과 스택, 결과가 어긋나면 어긋남 문구)
 - `AssignmentRound` — 배정 회차 하나(event-R10 ~ R12 · R16). `run(ArticleEmbedder)` 의 임베더는 지금 모델 버전을 정하는 데만 쓴다. 기사마다 시계를 다시 읽는다. 점유 · 쓰기는 짧은 트랜잭션이고 기사 조회 · 사건 소속 판정은 트랜잭션 밖이다. 판정 · 실패 갈래는 `default` 없는 `switch` 식이다. 예외를 밖으로 던지지 않는다. 트랜잭션 · 역할 애너테이션이 없다. 로그: `배정 대기 기사가 지워져 대기에서 뺐다 — 기사 {ID}` · `배정 대기 기사가 판정 중에 지워져 대기에서 뺐다 — 기사 {ID}` · `사건 소속 판정이 일시 실패해 다시 시도한다 — 기사 {ID}, 시도 {n}: {문구}` · `붙일 사건이 사라졌거나 닫혀 다음 회차에 다시 판정한다 — 기사 {ID}`(정보), `사건 소속 판정의 일시 실패가 상한에 이르러 새 사건으로 끝낸다 — 기사 {ID}: {문구}` · `평가기가 기사를 거부해 새 사건으로 끝낸다 — 기사 {ID}: {문구}` · `평가기를 쓸 수 없어 배정 회차를 멈췄다 — 남은 기사 {n}건: {문구}`(경고), `배정 회차가 예상하지 못한 오류로 멈췄다 — 기사 {ID}, 남은 기사 {n}건`(오류)
 - `RejudgementRound` — 재판정 회차 하나(event-R18). 먼저 닫힌 사건의 배정을 한 트랜잭션에서 기준만 새것으로 적고, 이어서 배정 하나마다 짧은 트랜잭션이다. 사건 소속 판정 · 임베더를 부르지 않는다. 트랜잭션 · 역할 애너테이션이 없다. 로그: `닫힌 사건의 배정 {n}건은 기준만 새것으로 적었다` · `배정 {n}건을 지금 기준으로 다시 판정했다`(정보, 한 건 이상일 때), `재판정 회차가 예상하지 못한 오류로 멈췄다 — 이번 회차에 다시 판정한 배정 {n}건`(오류)
 - `MergeRound` — 병합 회차 하나(event-R13). 임베더를 받지 않는다 — 모델 버전은 사건의 것이다. 시각은 `InstantSource` 에서 얻는다. 기준 등록 · 판정 기록 쓰기 · 합치기는 짧은 트랜잭션이고, 사건 소속 판정은 트랜잭션 밖이다. 판정 · 실패 갈래는 `default` 없는 `switch` 식이다. 예외를 밖으로 던지지 않는다. 트랜잭션 · 역할 애너테이션이 없다. 로그: `사건 {n}건을 합쳤다` · `합칠 사건이 닫혔거나 그새 바뀌어 다음 회차에 다시 본다 — 사건 {ID} · {ID}` · `사건 병합 판정이 일시 실패해 다음 회차에 다시 본다 — 사건 {ID}: {문구}`(정보), `평가기가 기사를 거부해 병합 판정을 확률 없이 정한다 — 사건 {ID}: {문구}` · `평가기를 쓸 수 없어 병합 회차를 멈췄다 — 사건 {ID}: {문구}`(경고), `병합 회차가 예상하지 못한 오류로 멈췄다 — 사건 {ID}`(오류)
@@ -366,6 +377,7 @@ sequenceDiagram
 - `EventAssignmentProperties` · `AssignmentConfiguration` — 사건 기준 · 저장 기준 · 닫는 기간 · 최대 기간 설정(`yozmnews.event-assignment`, 기본값의 정본은 레코드 컴포넌트의 `@DefaultValue`)과 그것을 검증된 `AssignmentCriteria` · `EventClosing` 빈으로 바꾸는 결선(event-R13 · R17)
 - `EventIntakeAdministrationService` — 공개 운영 API `EventIntakeAdministration` 의 구현(event-R19). 시각은 `InstantSource` 에서 얻는다
 - `KeyTermConfiguration` — `KeyTermExtractor` 를 빈으로 두고, 컨텍스트가 닫을 때 닫는다
+- `EmbeddingProperties` · `EmbeddingProviderCondition` — 임베딩 provider 설정(`yozmnews.embedding.provider` — `onnx` 기본 · `openai-compatible`, 기본값의 정본은 레코드 컴포넌트의 `@DefaultValue`)과 그것을 읽는 결선 조건의 정본(`Onnx` · `OpenAiCompatible`). 조건은 `Binder` 로 같은 레코드에 묶어 읽는다 — 값이 틀리면 기동하지 않는다
 - `EventDirectoryService` — 공개 조회 `EventDirectory` 의 구현(event-R14 · R15 · R20). 큰 사건 판정은 패키지 비공개 `bigEvents(EventPeriod, BigEventCriteria)` 하나를 공개 조회(지금 기준)와 미리보기(제안 기준)가 함께 쓴다. `list` 는 한 건 더 읽어 다음 커서를 정한다. 트랜잭션 · 역할 애너테이션이 없다
 - `EventTallyReader` — 사건별 기간 안 기사의 소스 · 중요도를 다른 모듈의 공개 조회로 한 번씩 읽어 `EventTallies` 로 세는 협력자(집계 경로 하나). 입력이 비면 부르지 않는다
 - `BigEventAdministrationService` — 공개 운영 API `BigEventAdministration` 의 구현(event-R21). 변경은 지금 값 행을 잠근 한 트랜잭션이고, 바꿨으면 정보 로그 `큰 사건 기준을 바꿨다 — 소스 {a} → {b}, 중요도 {x} → {y}, {행위자}` 를 남긴다. 시각은 `InstantSource` 에서 얻는다
@@ -378,6 +390,7 @@ sequenceDiagram
 - `MatchText` — 표현 텍스트 구성의 정본. 요약문 앞부분 길이 `SUMMARY_PREFIX_CODE_POINTS`(300 코드 포인트 — 측정 전 목표)(event-R1). 자르기는 `platform` 의 `CodePoints` 다
 - `KeyTermExtractor` — 핵심 말 추출의 정본. 고르는 품사 `KEPT_TAGS`(`NNP` · `NNG` · `SL`). Lucene `Analyzer` 를 하나 갖고 여러 스레드에서 쓴다. 닫을 수 있다(event-R2)
 - `EmbeddingCheck` — 임베더 결과가 요청 수 · 밝힌 차원과 맞는지의 판정(event-R3)
+- `Embedding.normalized` — L2 정규화의 정본. 합 · 나눗셈은 `double`, 결과는 `float`. 빈 배열 · 유한하지 않은 값 · 영벡터는 거부한다. 로컬 대체물 · 외부 · 로컬 모델 구현이 함께 쓴다
 - `FeatureRetention` — 표현 보관 기준의 정본(event-R13). 배정되지 않은 표현의 여유 `MARGIN`(1일 — 측정 전 목표), `unassignedBefore(지금, 창)` = 지금 − 창 − 여유
 - `MatchFeatures` — 표현 한 행(기사 · 모델 버전 · 벡터 · 핵심 말 · 만든 시각)
 - 저장 단위: aggregate 가 없다 — 표현 행은 만든 뒤 바꾸지 않고, 저장소 `MatchFeaturesRepository` 가 넣기 · 읽기 · 지우기만 한다
@@ -393,11 +406,11 @@ sequenceDiagram
   }
   ```
 
-- 그 밖의 값: `EmbedderInfo` · `Embedding`(포트 — 나가는 쪽)
+- 그 밖의 값: `EmbedderInfo` · `Embedding` · `EmbeddingResult` · `Embeddings` · `EmbeddingFailure` · `EmbedderFailureKind`(포트 — 나가는 쪽)
 
 #### `domain/intake`
 
-- `IntakeSchedule` — 점유 기간(`LEASE` 10분) · 회차의 점유 상한(`BATCH_SIZE` 64)의 정본. 값은 측정 전 목표다(event-R6)
+- `IntakeSchedule` — 점유 기간(`LEASE` 10분) · 회차의 점유 상한(`BATCH_SIZE` 64) · 거부 상한(`MAX_REJECTIONS` 3)과 판정 `rejectionsExhausted(거부 수)` = 거부 수 ≥ 상한의 정본. 값은 측정 전 목표다(event-R6)
 - `PendingArticle` — 대기 행 하나와 그 전이 `claim`(event-R6)
 - 저장 단위: aggregate 가 없다 — 대기 행의 전이는 `PendingArticle` 이 계산하고, 점유 토큰을 조건으로 한 SQL 갱신 · 삭제로 쓴다(평가 대기와 같은 모양 — [ADR-0059](../adr/0059-evaluation-job-limits-concurrency-and-retries-with-db-leases-on-queue-rows.md)). 저장소 `IntakeQueueRepository` 가 쓴다
 
@@ -409,6 +422,7 @@ sequenceDiagram
       void saveLocked(PendingArticle next);                            // lockDue 로 잠근 행 갱신
       boolean deleteIfLeased(ArticleId articleId, UUID token);        // 토큰이 맞을 때만 삭제
       boolean releaseIfLeased(ArticleId articleId, UUID token);       // 토큰이 맞을 때만 점유 해제
+      OptionalInt recordRejectionIfLeased(ArticleId articleId, UUID token);  // 토큰이 맞을 때만 거부 수 +1 · 점유 해제 — 올린 뒤의 거부 수, 안 맞으면 빈 값. 트랜잭션 안에서 부른다
       void delete(Collection<ArticleId> articleIds);                   // 지운 기사 따르기
   }
   ```
@@ -555,6 +569,16 @@ sequenceDiagram
   }
   ```
 
+#### `domain/openai`
+
+OpenAI 호환 외부 임베딩의 판단이다. 스프링 없이 단위 시험하고, `adapter/out/openai` 가 쓴다([ADR-0090](../adr/0090-article-embedding-defaults-to-an-in-app-local-model-with-an-openai-compatible-api-by-setting.md)).
+
+- `OpenAiEmbeddingRequest.body(모델, 입력, 차원 또는 없음)` — 요청 본문 JSON 의 정본. `model` · `input`(입력 앞 문자열을 붙인 텍스트), 차원을 넘기면 `dimensions`. `encoding_format` 은 넣지 않는다
+- `OpenAiEmbeddingResponse.read(본문, 기대 수)` — 2xx 본문 읽기의 정본. `data[]` 를 `index` 로 정렬하고 수를 확인해 `Embedding.normalized` 로 정규화한 `Embeddings` 를 낸다. 읽을 수 없는 JSON · 수 불일치 · 빠지거나 겹친 `index` · 수 배열이 아닌 `embedding` · 유한하지 않은 값 · 영벡터는 `EmbeddingFailure`(`EMBEDDER_UNAVAILABLE`)다. 문구에 본문 조각을 싣지 않는다
+- `OpenAiEmbeddingErrors.classify(상태 코드)` — 2xx 가 아닌 상태의 갈래 정본: 400 · 413 · 422 → `INPUT_REJECTED`, 401 · 403 · 404 → `EMBEDDER_UNAVAILABLE`, 408 · 409 · 429 · 5xx → `TRANSIENT`, 그 밖의 3xx · 4xx → `EMBEDDER_UNAVAILABLE`
+- `EmbeddingApiKey` — 키 형식(비어 있지 않음, 공백 · 제어 문자 · ASCII 밖 문자 없음, 512자 이하)의 정본. `authorization()` 은 `Bearer {키}`, `toString()` 은 값을 숨긴다. 형식 오류 문구에 값이 없다
+- `OpenAiModelVersion.of(모델, 차원, 주소, 입력 앞 문자열, 차원 요청 여부)` — 외부 모델 버전 규칙의 정본: `openai-compatible:{모델}:{차원}:` + SHA-256(`{끝의 / 를 뗀 주소}\n{입력 앞 문자열}\n{차원 요청 여부}`) 앞 12 hex. 같은 모델 이름이라도 주소 · 입력 앞 문자열 · 차원 · 차원 요청 여부가 다르면 다른 버전이다
+
 ### 나가는 쪽
 
 #### `ArticleEmbedder`
@@ -564,35 +588,52 @@ sequenceDiagram
 ```java
 public interface ArticleEmbedder {
     EmbedderInfo info();                          // 이름 · 모델 버전 · 차원 — 부를 때마다 같은 값
-    List<Embedding> embed(List<String> texts);    // 텍스트마다 벡터 하나 — 같은 순서 · 같은 수, 차원은 info().dimensions()
+    EmbeddingResult embed(List<String> texts);    // 텍스트마다 벡터 하나 — 예상한 실패는 결과 값
 }
 
-public record EmbedderInfo(String name, String modelVersion, int dimensions) {}
+public record EmbedderInfo(String name, String modelVersion, int dimensions) {
+    public static final int MAX_DIMENSIONS = 4000;
+}
 
 public final class Embedding {
-    public static Embedding of(float[] values);   // 값을 복사해 받는다
+    public static Embedding of(float[] values);          // 값을 복사해 받는다
+    public static Embedding normalized(float[] values);  // L2 길이 1 로 나눠 받는다
     public int dimensions();
-    public float[] values();                      // 복사해 낸다
+    public float[] values();                             // 복사해 낸다
 }
+
+public sealed interface EmbeddingResult permits Embeddings, EmbeddingFailure {}
+
+public record Embeddings(List<Embedding> vectors) implements EmbeddingResult {}                  // 넘긴 순서 · 같은 수
+public record EmbeddingFailure(EmbedderFailureKind kind, String message) implements EmbeddingResult {}
+
+public enum EmbedderFailureKind { TRANSIENT, INPUT_REJECTED, EMBEDDER_UNAVAILABLE }
 ```
 
 | 값 | 뜻 | 제약 |
 |---|---|---|
 | `EmbedderInfo.name` | 임베더 이름(로그용) | 비어 있지 않다 |
 | `EmbedderInfo.modelVersion` | 모델을 가리키는 값 — 표현 행의 `model_version`. 다른 모델과 겹치지 않는다 | 비어 있지 않다 |
-| `EmbedderInfo.dimensions` | 벡터 차원 | 1 이상 |
+| `EmbedderInfo.dimensions` | 벡터 차원 | 1 이상 · `MAX_DIMENSIONS`(4,000 — 장기 검색 인덱스 `halfvec` HNSW 의 상한) 이하 |
 | `Embedding` | 벡터 하나. 같은 값이면 같다(`equals`) | 길이 1 이상, 값은 모두 유한한 `float` |
+| `Embeddings.vectors` | 넘긴 텍스트마다 벡터 하나 | 복사해 받는다, null 원소 없음 |
+| `EmbeddingFailure.message` | 운영자용 문구 | 비어 있지 않다. 비밀 값 · 응답 본문 · 입력 텍스트를 담지 않는다 |
+| `EmbedderFailureKind` | `TRANSIENT` — 시간이 지나면 풀릴 수 있다(연결 · 마감 · 요청 제한 · 서버 오류). `INPUT_REJECTED` — 넘긴 입력 때문이라 같은 입력을 다시 보내도 같다. `EMBEDDER_UNAVAILABLE` — 임베더 자체를 쓸 수 없다(키 무효 · 모델 없음 · 읽을 수 없는 응답 · 추론 오류) | 갈래마다 무엇을 할지는 부르는 쪽이 정한다(event-R6) |
 
 - 계약
-  - `embed` 는 계산하지 못하면 `RuntimeException` 을 던진다. 실패 갈래는 정하지 않는다
-  - **(미설계)** 운영 구현의 실패 갈래 · 재시도 · 건너뜀
+  - `embed` 는 예상한 실패를 `EmbeddingFailure` 로 돌려준다. 오류 원인을 갈래에 대응시키는 것은 구현이 한다. 예상 못한 예외는 구현 결함이고, 구현은 예외 문구에 비밀 값 · 응답 본문 · 입력 텍스트를 싣지 않는다
   - 결과의 수 · 차원이 맞는지는 부르는 쪽이 `EmbeddingCheck` 로 확인한다(event-R3)
-- v1 운영 구현: **(미구현)** — 로컬 모델(ONNX Runtime)이 기본이고 설정으로 외부 임베딩 API 로 바꿀 수 있다([ADR-0026](../adr/0026-event-clustering-with-local-embeddings-and-jev.md)). 운영 구현이 없는 동안 `local` 이 아닌 구성에는 임베더가 없다(event-R7)
+- v1 운영 구현: 로컬 모델(기본)과 OpenAI 호환 외부 API — 설정으로 고른다([ADR-0090](../adr/0090-article-embedding-defaults-to-an-in-app-local-model-with-an-openai-compatible-api-by-setting.md) · [ADR-0091](../adr/0091-local-embedding-model-is-multilingual-e5-small-int8-fetched-at-build-into-the-image-with-onnx-telemetry-off.md)). 작업 역할에서만 만든다(event-R7)
 
 #### 구현과 로컬 대체물
 
 - `FakeArticleEmbedder`(`adapter/out/fake`) — 로컬 대체물. 문자 2-그램 특징 해싱(event-R9). 이름 `fake` · 모델 버전 `fake-char-bigram-256-1` · 차원 256. 같은 텍스트면 같은 벡터, 겹치는 2-그램이 많을수록 코사인이 크다 — 의미가 아니라 표면 겹침이라 운영 모델과 분포가 다르다. 사건 배정의 기준을 이 유사도로 정하지 않는다
-- `FakeArticleEmbedderConfiguration`(`adapter/out/fake`) — 대체물의 결선. `@LocalDevelopment` — profile `local` 에서만 등록한다(platform-R18)
+- `FakeArticleEmbedderConfiguration`(`adapter/out/fake`) — 대체물의 결선. `@LocalDevelopment` — profile `local` 에서만, provider 가 `onnx`(기본)일 때 등록한다(platform-R18). `local` 에서 provider 를 `openai-compatible` 로 주면 외부 구현만 등록된다
+- `OnnxArticleEmbedder`(`adapter/out/onnx`) — 로컬 모델 구현([ADR-0091](../adr/0091-local-embedding-model-is-multilingual-e5-small-int8-fetched-at-build-into-the-image-with-onnx-telemetry-off.md)). `multilingual-e5-small` int8 을 DJL 토크나이저(최대 512 토큰에서 자름)와 ONNX Runtime 으로 돌린다 — 입력마다 접두사(`query: `)를 붙이고, 8건씩 추론해 마지막 은닉 상태를 마스크로 평균 풀링한 뒤 `Embedding.normalized` 로 정규화한다. 연산 스레드는 가용 CPU 와 4 가운데 작은 값이다. 이름 `onnx`, 모델 버전 · 차원(384) · 접두사는 모델 정보를 따른다. 추론 · 토크나이저 예외는 `EMBEDDER_UNAVAILABLE`(문구는 예외 클래스 이름)이고 `INPUT_REJECTED` 는 내지 않는다. 생성자는 ONNX Runtime 을 올리기 전에 환경 변수 `ORT_DISABLE_TELEMETRY` 가 `1` 인지 보고, 아니면 `IllegalStateException` 이다
+- `EmbeddingModel`(`adapter/out/onnx`) — 모델 정보 읽기. classpath `embedding-model/model.properties`(원본 `backend/embedding-model.properties` — 저장소 · 리비전 · 파일과 sha256 · 모델 버전 · 차원 · 접두사의 정본)와 같은 자리의 모델 · 토크나이저 파일을 `Path` 로 찾고 sha256 을 확인한다. 파일이 아니거나(`jar:`) 해시가 다르면 `IllegalStateException`. 파일은 빌드가 고정 리비전 · 해시로 받아 넣는다
+- `OnnxArticleEmbedderConfiguration`(`adapter/out/onnx`) — 로컬 모델 구현의 결선. `@WorkerRole`, profile `local` 밖, provider 가 `onnx`(기본)일 때. 열지 못하면 `IllegalStateException`(`임베딩 모델을 읽지 못해 작업 역할을 띄울 수 없다 — {예외 클래스}`)
+- `OpenAiCompatibleEmbedder`(`adapter/out/openai`) — OpenAI 호환 외부 구현([ADR-0090](../adr/0090-article-embedding-defaults-to-an-in-app-local-model-with-an-openai-compatible-api-by-setting.md)). JDK `HttpClient` — 연결 마감 5초 · 요청 하나의 마감 30초 · 응답 본문 상한 32 MiB · 리다이렉트 없음. `POST {주소}/embeddings` 를 한 요청의 입력 수로 나눠 차례로 보내고, 한 요청이라도 실패하면 그 실패가 전체 결과다. 키가 있으면 `Authorization` 을 보낸다. 판단은 `domain/openai` 가 하고, 연결 · 마감 · 입출력 실패는 `TRANSIENT`, 본문 상한 초과는 `EMBEDDER_UNAVAILABLE` 로 스스로 바꾼다. 실패 문구는 고정 문구 · 상태 코드 · 예외 클래스 이름만이다. 이름 `openai-compatible`, 모델 버전은 `OpenAiModelVersion`, 차원은 설정
+- `OpenAiCompatibleEmbedderConfiguration`(`adapter/out/openai`) — 외부 구현의 결선. `@WorkerRole`, provider 가 `openai-compatible` 일 때(모든 profile). 설정은 `OpenAiCompatibleProperties`(`yozmnews.embedding.openai-compatible`, 기본값의 정본은 레코드 컴포넌트의 `@DefaultValue`)다. 필수 값 · 형식이 틀리면 `IllegalStateException` — 문구에 설정 이름 · 환경 변수 이름만 있고 키 값은 없다. 설정 레코드의 `toString` 은 키를 숨긴다
 
 #### 저장소 구현
 
@@ -612,6 +653,7 @@ public final class Embedding {
 
 - 기사 제목 · 요약문은 피드 텍스트다 — `source` 가 길이를 제한해 저장하고(제목 · 요약문 상한 — [source Spec](source.md)), 이 모듈은 요약문을 앞 300 코드 포인트로 잘라 쓴다(event-R1). Nori 와 임베더에 넘기는 텍스트는 이 텍스트뿐이다
 - 임베더 결과는 저장 전에 수 · 차원 · 유한한 값을 확인한다(event-R3)
+- 외부 임베딩 응답은 신뢰할 수 없는 입력이다 — 본문은 32 MiB 까지만 읽고, 읽을 수 없거나 모양이 어긋나면 `EMBEDDER_UNAVAILABLE` 이다. 본문 · 키 · 입력 텍스트를 로그 · 실패 문구에 싣지 않는다
 
 ## 5. 규칙과 불변식
 
@@ -621,21 +663,24 @@ public final class Embedding {
 
 - **event-R1** — 표현 텍스트: 제목에, 요약문이 있으면 줄바꿈 하나와 요약문 앞 300 코드 포인트(`MatchText.SUMMARY_PREFIX_CODE_POINTS` — 정본)를 잇는다. 요약문은 앞뒤 공백(`String.strip`)을 걷은 뒤 자르고, 코드 포인트 단위라 서로게이트 쌍을 가르지 않는다. 요약문이 없거나 공백뿐이면 제목만이다. 제목은 고치지 않고, 공백뿐인 제목은 거부한다. 임베딩과 핵심 말은 같은 텍스트를 쓴다
 - **event-R2** — 핵심 말: 표현 텍스트를 Lucene Nori `KoreanTokenizer`(사용자 사전 없음 · 복합어를 나누지 않음(`DecompoundMode.NONE`) · 미등록어를 한 글자씩 나누지 않음 · 구두점 버림)로 나누고, 토큰의 왼쪽 품사가 고유명사(`NNP`) · 일반명사(`NNG`) · 외국어(`SL`)인 것을 고른다(`KeyTermExtractor.KEPT_TAGS` — 정본). 한 코드 포인트짜리 한글(`Character.UnicodeScript.HANGUL`) 일반명사는 버리고, 한 코드 포인트라도 고유명사 · 한자 · 영문은 남긴다. 외국어는 `Locale.ROOT` 소문자로 바꾼다. 처음 나온 순서이고 같은 말은 한 번이다. 뽑을 말이 없으면 빈 목록이고, 빈 목록도 유효한 표현이다
-- **event-R3** — 임베딩: 회차는 임베더의 정보(이름 · 모델 버전 · 차원)를 한 번 읽고 표현 텍스트 묶음을 한 번에 넘긴다. 결과가 넘긴 수와 다르거나, 밝힌 차원과 다른 벡터가 있으면(`EmbeddingCheck` — 정본) 저장하지 않는다. 벡터 값은 유한해야 한다(`Embedding`)
+- **event-R3** — 임베딩: 임베더의 차원은 1 ~ 4,000(`EmbedderInfo.MAX_DIMENSIONS`)이다. 회차는 임베더의 정보(이름 · 모델 버전 · 차원)를 한 번 읽고 표현 텍스트 묶음을 한 번에 넘긴다. 결과가 넘긴 수와 다르거나, 밝힌 차원과 다른 벡터가 있으면(`EmbeddingCheck` — 정본) 저장하지 않는다. 벡터 값은 유한해야 한다(`Embedding`)
 - **event-R4** — 표현 행: 기사 × 임베딩 모델 버전마다 한 행이다. 모델 버전은 임베더가 밝힌 값이다. 이미 있으면 그대로다 — 먼저 쓴 것이 남고, 같은 기사를 다시 처리해도 결과가 같다. 모델이 바뀌면 같은 컬럼에 새 모델 버전의 행이 생긴다 — 벡터 컬럼은 차원을 정하지 않는다. 표현 텍스트 · 핵심 말 규칙의 변경은 모델 버전에 넣지 않는다 — 그 뒤 기사부터 새 규칙을 쓴다
 
 ### 사건 묶기 대기와 회차
 
-판단의 이유는 [ADR-0074](../adr/0074-article-features-built-by-event-intake-queue-job-and-skipped-without-an-embedder.md) · [ADR-0060](../adr/0060-article-deletion-announced-by-removed-article-ids-and-followed-by-referencing-modules.md) · [ADR-0080](../adr/0080-event-centroids-and-key-terms-accumulated-with-article-counts-and-updated-incrementally.md)에 있다.
+판단의 이유는 [ADR-0074](../adr/0074-article-features-built-by-event-intake-queue-job-and-skipped-without-an-embedder.md) · [ADR-0060](../adr/0060-article-deletion-announced-by-removed-article-ids-and-followed-by-referencing-modules.md) · [ADR-0080](../adr/0080-event-centroids-and-key-terms-accumulated-with-article-counts-and-updated-incrementally.md) · [ADR-0092](../adr/0092-embedder-failures-in-three-kinds-with-rejected-articles-isolated-and-dropped-after-a-limit.md) · [ADR-0093](../adr/0093-worker-role-does-not-run-without-an-embedder-built-only-in-the-worker-role.md)에 있다.
 
 - **event-R5** — 대기: 새 기사(`ArticleStored`)를 대기에 넣는다. 기사마다 한 행이고 이미 있으면 그대로다 — 같은 이벤트를 다시 처리해도 결과가 같다. 정착 시간이 없다 — 기사의 제목 · 요약문은 처음 저장한 값이 남는다(article-R8). 이 모듈이 생기기 전에 저장된 기사는 운영자가 채우기 전까지 대기에 들어가지 않는다(event-R19)
 - **event-R6** — 회차: 반복 작업(1분, 재시도 없음)의 회차는 점유가 없거나 만료된(만료 시각 ≤ 지금) 대기 행을 넣은 시각 · 기사 ID 순으로 64건(`IntakeSchedule.BATCH_SIZE`)까지 잠가(다른 트랜잭션이 잡은 행은 건너뛴다) 점유(토큰 · 만료 = 지금 + 10분, `IntakeSchedule.LEASE`)를 쓰고 커밋한다. 반복 작업은 이전 실행이 대기 · 처리 중이면 그 회차를 건너뛴다.
   - 기사의 제목 · 요약문을 트랜잭션 밖에서 한 번에 읽는다. 그새 지워진 기사는 토큰이 맞으면 대기 행을 지운다. 남은 기사가 없으면 임베더를 부르지 않는다
-  - 임베더를 트랜잭션 밖에서 한 번 부른다. 예외를 던지거나 결과가 어긋나면(event-R3) 남은 점유를 토큰이 맞을 때 풀고 회차를 끝낸다 — 다음 회차가 다시 점유한다
+  - 임베더를 트랜잭션 밖에서 한 번 부른다. 결과에 따라([ADR-0092](../adr/0092-embedder-failures-in-three-kinds-with-rejected-articles-isolated-and-dropped-after-a-limit.md))
+    - 성공이고 결과가 맞으면(event-R3) 아래처럼 쓴다
+    - 일시 실패 · 임베더 사용 불가 · 예외 · 결과 어긋남이면 남은 점유를 토큰이 맞을 때 풀고 회차를 끝낸다 — 다음 회차가 다시 점유한다. 거부 수는 그대로다
+    - 입력 거부면 점유 순서대로 기사 하나씩 다시 부른다. 성공하면 쓰고, 입력 거부면 한 트랜잭션에서 토큰이 맞을 때 거부 수를 하나 올리고 점유를 푼다 — 올린 거부 수가 상한(3, `IntakeSchedule.MAX_REJECTIONS`)에 이르면 그 대기 행을 지운다(표현 · 배정 없음, 경고). 묶음이 기사 하나면 다시 부르지 않고 바로 거부로 센다. 다시 부르는 도중 일시 실패 · 사용 불가 · 예외 · 결과 어긋남이 나면 그 기사부터 남은 점유를 풀고 회차를 끝낸다
+    - 거부 수가 상한에 이르러 뺀 기사는 운영자 채우기(event-R19)가 거부 수 0 으로 다시 넣을 수 있다
   - 기사마다 짧은 트랜잭션에서, 토큰이 맞아 대기 행을 지웠을 때만 표현을 쓰고 그 기사를 배정 대기에 넣는다(event-R16) — 표현 행이 이미 있어도 넣는다. 토큰이 맞지 않으면(점유가 만료돼 다른 회차가 가져갔거나 기사를 지웠다) 쓰지 않는다
   - 회차 도중 프로세스가 죽으면 점유가 만료된 뒤 다른 회차가 가져간다
-  - **(미설계)** 임베더가 같은 묶음에서 계속 실패할 때의 처분 — 지금은 회차가 넣은 시각 순으로 점유하므로 그 묶음 뒤의 기사도 처리되지 않는다
-- **event-R7** — 임베더가 없는 프로세스: 반복 작업은 임베더를 부를 때 찾고, 없으면 표현 · 배정 · 재판정 · 병합 회차를 모두 건너뛴다 — 기사는 대기에 남아 임베더가 생긴 뒤 처리된다(배정은 지금 모델 버전을 알 수 없고, 재판정 · 병합은 새 배정이 없는 동안 미뤄도 잃는 것이 없다). 정리 작업(event-R13)은 임베더와 무관하게 돈다. 작업 역할이 뜰 때 임베더가 없으면 경고 `임베더가 없어 사건 묶기 대기 기사를 처리하지 않는다 — 기사는 대기에 쌓인다` 를 한 번 남긴다. 리스너 · 회차는 임베더를 생성자로 받지 않는다 — 임베더 없는 화면 역할도 뜬다
+- **event-R7** — 작업 역할의 임베더([ADR-0093](../adr/0093-worker-role-does-not-run-without-an-embedder-built-only-in-the-worker-role.md)): 작업 역할은 임베더 없이 뜨지 않는다 — 반복 작업이 임베더를 생성자로 받는다. 운영 임베더(로컬 모델 · 외부)는 작업 역할에서만 만들고, provider · 외부 설정이 틀리거나 로컬 모델을 열지 못하면 기동하지 않는다. 화면 역할만 띄운 프로세스는 임베더를 요구하지 않는다 — 리스너 · 회차는 임베더를 생성자로 받지 않는다. 임베더가 없던 동안 쌓인 기사는 따로 처분하지 않고 넣은 순서로 처리한다. 정리 작업(event-R13)은 임베더를 쓰지 않는다
 - **event-R8** — 지운 기사 따르기: `ArticlesRemoved` 를 받으면 한 트랜잭션에서 차례로 한다 — 다시 처리해도 결과가 같다.
   1. 그 기사들의 사건 묶기 대기 · 배정 대기 행을 지운다. 진행 중인 회차의 쓰기 트랜잭션이 대기 행을 잡고 있으면 그 커밋을 기다려, 커밋 직전의 표현 · 배정을 놓치지 않는다. 지우기가 먼저 커밋되면 회차의 토큰 조건이 맞지 않아 쓰지 않는다(event-R6 · R16)
   2. 그 기사들의 배정 행을 기사 ID 순으로, 그 배정의 사건을 사건 ID 순으로 잠근다
@@ -710,7 +755,7 @@ public final class Embedding {
   - 대표 기사 저장: 닫을 때 사건 기사 전체에서 고른 대표 기사(event-R14 의 정렬)를 사건에 남긴다 — 배정이 없으면 없다. 그 기사를 지우면 비운다(event-R8)
   - 장기 검색 인덱스: 정리 작업이 닫기 다음에, 닫힌 사건이 있는 모델 버전마다 장기 검색 인덱스가 쓸 수 있는 상태로 없으면 만든다 — HNSW, 그 모델 버전 닫힌 사건 중심의 차원을 정한 식, 닫힌 사건 · 그 모델 버전의 부분 조건, 코사인 거리(이름 · 식 · 조건의 정본은 `JdbcLongTermIndexes`). 동시 생성이라 트랜잭션 밖에서 쓰기를 막지 않고 만들고, 쓸 수 없는 같은 이름의 인덱스는 지우고 다시 만든다. 한 모델 버전 닫힌 사건의 중심 차원이 하나가 아니면 만들지 않고 경고한다. 만들지 못하면(권한 · 잠금) 경고하고 다음 모델 버전으로 간다 — 인덱스는 결과를 바꾸지 않는다. 기사 표현과 열린 사건에는 인덱스를 두지 않는다 — 배정 후보는 인덱스 없는 정확 검색이다(event-R10)
   - 표현 정리: 정리 작업이 인덱스 다음에 지운다 — 배정의 사건이 닫힌 기사의 표현(모든 모델 버전)과, 만든 시각이 지금 − (창 + 여유) 보다 이르고 그 기사가 그 모델 버전의 열린 사건에 배정되어 있지 않은 표현이다(`FeatureRetention` 정본, 여유 1일). 뒤쪽에는 배정 대기에 있는 기사 · 옛 모델 버전 표현만 남은 기사의 표현이 든다 — 배정 대기 기사의 표현은 배정 회차가 그 기사를 사건 묶기 대기로 돌려보내 다시 만든다(event-R16). 묶음(1,000건)마다 한 트랜잭션에서 지울 행을 (기사, 모델 버전) 순으로 잠그고, 다른 트랜잭션이 잡은 행은 건너뛴다. 표현은 닫을 때 대표 기사를 고른 뒤에 지운다
-  - 정리 작업의 세 단계는 차례로 돌고, 예상 못한 예외가 나면 그 단계에서 멈추고 다음 단계로 간다. 임베더 · 평가기가 없어도 돈다. 다시 돌려도 결과가 같다
+  - 정리 작업의 세 단계는 차례로 돌고, 예상 못한 예외가 나면 그 단계에서 멈추고 다음 단계로 간다. 임베더 · 평가기를 쓰지 않는다. 다시 돌려도 결과가 같다
 
 ### 대표 기사 · 큰 사건
 
@@ -733,11 +778,11 @@ public final class Embedding {
 
 ## 6. 데이터
 
-컬럼 타입 · 인덱스 · 제약 문면의 정본은 `backend/src/main/resources/db/migration/V16__event_intake_and_match_features.sql`(사건 묶기 대기 · 기사 표현)과 `V17__events_and_assignments.sql`(사건 · 사건 핵심 말 · 기준 이력 · 배정 · 저장 후보 · 배정 대기), `V18__event_queries_and_big_criteria.sql`(배정의 발행 시각 인덱스 · 큰 사건 기준 · 큰 사건 기준 이력), `V19__event_merge_close_and_retention.sql`(사건의 합쳐짐 · 닫기 · 병합 확인 · 대표 기사 컬럼, 배정의 연 사건 표지, 병합 판정 기록)이다. 장기 검색 인덱스는 마이그레이션이 아니라 정리 작업이 만든다(event-R13). `article_id` 는 `article` 의 기사를 가리키지만 FK 를 두지 않는다 — 모듈 사이는 ID 로만 참조한다. 보존 기간은 [data-model.md "보존 정책"](../data-model.md#보존-정책-초안)에 있다.
+컬럼 타입 · 인덱스 · 제약 문면의 정본은 `backend/src/main/resources/db/migration/V16__event_intake_and_match_features.sql`(사건 묶기 대기 · 기사 표현)과 `V17__events_and_assignments.sql`(사건 · 사건 핵심 말 · 기준 이력 · 배정 · 저장 후보 · 배정 대기), `V18__event_queries_and_big_criteria.sql`(배정의 발행 시각 인덱스 · 큰 사건 기준 · 큰 사건 기준 이력), `V19__event_merge_close_and_retention.sql`(사건의 합쳐짐 · 닫기 · 병합 확인 · 대표 기사 컬럼, 배정의 연 사건 표지, 병합 판정 기록), `V20__event_intake_rejections.sql`(사건 묶기 대기의 거부 수)이다. 장기 검색 인덱스는 마이그레이션이 아니라 정리 작업이 만든다(event-R13). `article_id` 는 `article` 의 기사를 가리키지만 FK 를 두지 않는다 — 모듈 사이는 ID 로만 참조한다. 보존 기간은 [data-model.md "보존 정책"](../data-model.md#보존-정책-초안)에 있다.
 
 | 테이블 | 주요 컬럼 | 뜻 |
 |---|---|---|
-| `event_intake_queue` | article_id(기본 키), enqueued_at, lease_token, lease_expires_at | 사건 묶기 대기 — 기사마다 한 행(event-R5). 점유 둘은 함께 있거나 함께 없다(제약). 회차의 잠금은 `(enqueued_at, article_id)` 인덱스로 찾는다(event-R6). 표현을 쓰면 지운다 |
+| `event_intake_queue` | article_id(기본 키), enqueued_at, rejections(0 이상), lease_token, lease_expires_at | 사건 묶기 대기 — 기사마다 한 행(event-R5). 점유 둘은 함께 있거나 함께 없다(제약). 회차의 잠금은 `(enqueued_at, article_id)` 인덱스로 찾는다(event-R6). `rejections` 는 거부 수다 — 상한에 이르면 행을 지운다(event-R6). 표현을 쓰면 지운다 |
 | `article_match_features` | article_id, model_version, embedding(`vector`), entities(`text[]`), created_at | 기사 표현 — (article_id, model_version) 기본 키(event-R4). `embedding` 은 차원을 정하지 않은 `vector` 다 — 길이는 쓰기 전에 앱이 확인한다(event-R3). `entities` 는 핵심 말(event-R2) |
 | `events` | id, status(`OPEN`/`CLOSED`/`MERGED`), model_version, centroid(`halfvec`), article_count(1 이상), first_article_at, last_article_at, created_at, last_joined_at, closed_at, merged_into, revision, merge_checked_revision, merge_checked_criteria_id, representative_article_id | 공유 사건. `centroid` 는 차원을 정하지 않은 `halfvec` 이다 — 같은 모델 버전끼리만 비교하고 길이는 쓰기 전에 앱이 확인한다(event-R12). 후보는 `(model_version, last_article_at)` 의 열린 사건 부분 인덱스로 거른다(event-R10). `created_at` 은 사건을 연 시각이다 — 합치면 두 사건 가운데 이른 쪽(event-R13). `last_joined_at` 은 마지막으로 기사가 붙은 시각(붙이기 · 옮기기 · 합치기)이고 닫기의 기준이다. `closed_at` 은 열림이 끝난 시각(닫기 · 합쳐짐)이고 열린 사건에만 없다(제약). `merged_into` 는 합쳐진 사건이 가리키는 남는 사건이다 — `MERGED` 일 때만 있고 자기 자신이 아니다(제약), FK 다. `revision` 은 사건 값을 쓸 때마다 늘고, 병합 회차가 확인한 값 · 기준(`merge_checked_revision` · `merge_checked_criteria_id`)과 비교해 바뀐 사건을 고른다(event-R13). `representative_article_id` 는 닫을 때 남긴 대표 기사다 — `article` 의 기사를 가리키지만 FK 가 없다(event-R14). 장기 검색 HNSW 인덱스(모델 버전별 식 · 닫힌 사건 부분 인덱스)는 정리 작업이 만든다(event-R13) |
 | `event_key_terms` | event_id, term, article_count(1 이상) | 사건 핵심 말 — (event_id, term) 기본 키, 그 말을 가진 구성 기사 수(event-R12). 사건을 지우면 함께 지워진다 |
@@ -753,7 +798,16 @@ public final class Embedding {
 
 | 설정 | 바꾸는 규칙 |
 |---|---|
-| profile `local` | 로컬 대체물 `FakeArticleEmbedder` 를 `ArticleEmbedder` 로 등록한다(event-R9 · platform-R18). 그 밖의 profile 에서는 대체물이 등록되지 않는다. 로컬 대체물을 켜는 설정 키는 없다([ADR-0057](../adr/0057-local-substitutes-registered-only-in-local-profile-without-operator-switch.md)) |
+| profile `local` | provider 가 `onnx`(기본)이면 로컬 대체물 `FakeArticleEmbedder` 를 `ArticleEmbedder` 로 등록하고, 로컬 모델 구현은 등록하지 않는다(event-R9 · platform-R18). 그 밖의 profile 에서는 대체물이 등록되지 않는다. 로컬 대체물을 켜는 설정 키는 없다([ADR-0057](../adr/0057-local-substitutes-registered-only-in-local-profile-without-operator-switch.md)) |
+| `yozmnews.embedding.provider` | 임베더 — `onnx`(기본, 앱 안 로컬 모델) · `openai-compatible`(외부 API). 그 밖의 값이면 기동하지 않는다(event-R7) |
+| `yozmnews.embedding.openai-compatible.base-url` | 외부 API 의 주소 — `/embeddings` 를 그 뒤에 붙인다. 외부 방식에서 필수, 호스트가 있고 질의 · 조각이 없는 http · https |
+| `yozmnews.embedding.openai-compatible.model` | 외부 모델 이름. 외부 방식에서 필수 |
+| `yozmnews.embedding.openai-compatible.api-key` | 외부 API 키 — 비밀 값. 비면 `Authorization` 을 보내지 않는다 |
+| `yozmnews.embedding.openai-compatible.dimensions` | 외부 모델의 벡터 차원 — 외부 방식에서 필수, 1 ~ 4,000(event-R3) |
+| `yozmnews.embedding.openai-compatible.send-dimensions` | `true` 면 요청에 `dimensions` 를 담는다. 기본 `false` |
+| `yozmnews.embedding.openai-compatible.input-prefix` | 텍스트마다 앞에 붙일 문자열. 기본 없음 |
+| `yozmnews.embedding.openai-compatible.batch-size` | 한 요청의 입력 수 — 1 ~ 256, 기본 32 |
+| 환경 변수 `ORT_DISABLE_TELEMETRY` | `1` 이 아니면 로컬 모델 구현이 ONNX Runtime 을 올리지 않는다 — 배포 이미지가 갖는다([ADR-0091](../adr/0091-local-embedding-model-is-multilingual-e5-small-int8-fetched-at-build-into-the-image-with-onnx-telemetry-off.md)) |
 | `yozmnews.event-assignment.window` | 시간 창(`Duration` — 예 `72h`), 기본 72시간(event-R10 · R17) |
 | `yozmnews.event-assignment.upper` | 위 기준, 기본 0.80(event-R11 · R17) |
 | `yozmnews.event-assignment.lower` | 아래 기준, 기본 0.55(event-R11 · R17) |
@@ -762,7 +816,7 @@ public final class Embedding {
 | `yozmnews.event-assignment.close-after` | 닫는 기간(`Duration` — 예 `7d`), 기본 7일(event-R13) |
 | `yozmnews.event-assignment.max-open` | 최대 기간(`Duration`), 기본 14일(event-R13) |
 
-사건 기준 · 저장 기준 · 닫는 기간 · 최대 기간 기본값의 정본은 `EventAssignmentProperties` 의 `@DefaultValue` 이고 `application.yaml` 에는 키가 없다. 기본값은 측정 전 목표다. 운영자는 환경 변수(`YOZMNEWS_EVENT_ASSIGNMENT_UPPER` 식)로 바꾸고, 범위 · 관계를 어기면 기동하지 않는다 — 닫는 기간 · 최대 기간은 0 보다 큰 초 단위이고 시간 창 ≤ 닫는 기간 ≤ 최대 기간이어야 한다(`EventClosing`). 사건 기준 · 저장 기준을 바꾸면 재판정 회차가 지난 배정을 다시 판정하고(event-R18), 병합 회차가 열린 사건을 한 번씩 다시 본다(event-R13). 닫는 기간 · 최대 기간을 바꾸면 그 뒤의 닫기에만 쓴다(event-R13). 그 밖의 설정 키는 없다 — 큰 사건 기준은 설정이 아니라 운영자 설정이다(event-R21).
+사건 기준 · 저장 기준 · 닫는 기간 · 최대 기간 기본값의 정본은 `EventAssignmentProperties` 의 `@DefaultValue` 이고 `application.yaml` 에는 키가 없다. 기본값은 측정 전 목표다. 운영자는 환경 변수(`YOZMNEWS_EVENT_ASSIGNMENT_UPPER` 식)로 바꾸고, 범위 · 관계를 어기면 기동하지 않는다 — 닫는 기간 · 최대 기간은 0 보다 큰 초 단위이고 시간 창 ≤ 닫는 기간 ≤ 최대 기간이어야 한다(`EventClosing`). 사건 기준 · 저장 기준을 바꾸면 재판정 회차가 지난 배정을 다시 판정하고(event-R18), 병합 회차가 열린 사건을 한 번씩 다시 본다(event-R13). 닫는 기간 · 최대 기간을 바꾸면 그 뒤의 닫기에만 쓴다(event-R13). 임베딩 설정의 기본값은 `EmbeddingProperties` · `OpenAiCompatibleProperties` 의 `@DefaultValue` 가 정본이다. 방식 · 외부 모델 · 주소 · 입력 앞 문자열 · 차원 · 차원 요청 여부를 바꾸면 모델 버전이 바뀌어 새 기사는 새 사건을 연다(event-R4 · R10). 그 밖의 설정 키는 없다 — 큰 사건 기준은 설정이 아니라 운영자 설정이다(event-R21).
 
 ## 8. 결정
 
@@ -792,3 +846,7 @@ public final class Embedding {
 | [0087](../adr/0087-closed-event-assignments-are-not-rejudged-and-closing-and-merging-are-not-undone.md) | 닫힌 사건의 배정은 재판정하지 않고, 닫기 · 병합은 기준이 바뀌어도 되돌리지 않는다 |
 | [0088](../adr/0088-article-features-kept-until-their-event-closes-and-unassigned-ones-for-the-window-plus-a-margin.md) | 기사 표현은 그 기사의 사건이 닫힐 때까지 보관하고, 배정 없는 표현은 만든 뒤 시간 창 + 여유만큼 보관한다 |
 | [0089](../adr/0089-long-term-hnsw-indexes-on-closed-events-created-per-model-version-at-runtime-by-the-worker-role.md) | 장기 검색 HNSW 인덱스는 닫힌 사건에 모델 버전마다 작업 역할이 실행 중에 만든다 |
+| [0090](../adr/0090-article-embedding-defaults-to-an-in-app-local-model-with-an-openai-compatible-api-by-setting.md) | 기사 임베딩의 기본은 앱 안 로컬 모델이고, OpenAI 호환 외부 API 를 설정으로 고르며, 외부 방식의 차원은 운영자가 정한다 |
+| [0091](../adr/0091-local-embedding-model-is-multilingual-e5-small-int8-fetched-at-build-into-the-image-with-onnx-telemetry-off.md) | 기본 로컬 모델은 multilingual-e5-small int8 을 DJL 토크나이저로 돌리고, 고정 리비전 · 해시로 빌드 때 받아 이미지에 담으며, ONNX Runtime 텔레메트리를 끄는 환경 변수가 없으면 모델을 열지 않는다 |
+| [0092](../adr/0092-embedder-failures-in-three-kinds-with-rejected-articles-isolated-and-dropped-after-a-limit.md) | 임베더 실패는 일시 · 입력 거부 · 사용 불가 셋으로 나누고, 입력 거부는 기사 하나씩 다시 불러 가린 뒤 거부 수가 상한에 이르면 사건 묶기 대기에서 뺀다 |
+| [0093](../adr/0093-worker-role-does-not-run-without-an-embedder-built-only-in-the-worker-role.md) | 작업 역할은 임베더 없이 운영하지 않는다 — 운영 임베더는 작업 역할에서만 만들고, 반복 작업이 생성자로 받는다 |
