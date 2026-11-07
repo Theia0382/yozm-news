@@ -1,6 +1,5 @@
 package net.yozmnews.evaluation.adapter.out.jev;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -8,15 +7,11 @@ import java.net.http.HttpConnectTimeoutException;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpTimeoutException;
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Flow;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
@@ -38,6 +33,7 @@ import net.yozmnews.evaluation.domain.jev.JevErrors;
 import net.yozmnews.evaluation.domain.jev.JevOutcome;
 import net.yozmnews.evaluation.domain.jev.JevRequest;
 import net.yozmnews.evaluation.domain.jev.JevResponse;
+import net.yozmnews.platform.CappedBody;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -264,76 +260,6 @@ public final class JevArticleEvaluator implements ArticleEvaluator, AutoCloseabl
 
 		/** 연결 · 마감 · 입출력으로 응답을 받지 못했다 — 문구는 고정 문구와 예외 클래스 이름만 */
 		record Broken(String message) implements Exchange {
-
-		}
-
-	}
-
-	/**
-	 * 상한까지 모으는 본문 수신자 — 상한을 넘으면 받기를 멈추고 넘김을 결과로 남긴다(입출력 오류와 섞지 않는다). 본문을 끝까지 받아야 완료되므로
-	 * 요청의 마감이 본문 읽기까지 덮는다.
-	 */
-	private static final class CappedBody implements HttpResponse.BodySubscriber<CappedBody.Result> {
-
-		private final int max;
-
-		private final ByteArrayOutputStream received = new ByteArrayOutputStream();
-
-		private final CompletableFuture<Result> result = new CompletableFuture<>();
-
-		private Flow.@Nullable Subscription subscription;
-
-		CappedBody(int max) {
-			this.max = max;
-		}
-
-		@Override
-		public CompletionStage<Result> getBody() {
-			return this.result;
-		}
-
-		@Override
-		public void onSubscribe(Flow.Subscription subscription) {
-			this.subscription = subscription;
-			subscription.request(Long.MAX_VALUE);
-		}
-
-		@Override
-		public void onNext(List<ByteBuffer> items) {
-			if (this.result.isDone()) {
-				return;
-			}
-			for (ByteBuffer item : items) {
-				if (this.received.size() + item.remaining() > this.max) {
-					this.result.complete(new Result.Overflow());
-					Objects.requireNonNull(this.subscription, "subscription").cancel();
-					return;
-				}
-				byte[] bytes = new byte[item.remaining()];
-				item.get(bytes);
-				this.received.writeBytes(bytes);
-			}
-		}
-
-		@Override
-		public void onError(Throwable throwable) {
-			this.result.completeExceptionally(throwable);
-		}
-
-		@Override
-		public void onComplete() {
-			this.result.complete(new Result.Complete(this.received.toString(StandardCharsets.UTF_8)));
-		}
-
-		sealed interface Result {
-
-			record Complete(String text) implements Result {
-
-			}
-
-			record Overflow() implements Result {
-
-			}
 
 		}
 

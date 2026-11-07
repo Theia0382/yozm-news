@@ -29,6 +29,12 @@ class EmbedderInfoTests {
 	}
 
 	@Test
+	void acceptsUpTo4000DimensionsAndRefusesMore() {
+		assertThat(new EmbedderInfo("test", "model-1", 4000).dimensions()).isEqualTo(4000);
+		assertThatIllegalArgumentException().isThrownBy(() -> new EmbedderInfo("test", "model-1", 4001));
+	}
+
+	@Test
 	void acceptsOneDimension() {
 		EmbedderInfo info = new EmbedderInfo("test", "model-1", 1);
 

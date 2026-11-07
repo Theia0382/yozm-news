@@ -3,6 +3,7 @@
 !backend/gradle/
 !backend/settings.gradle.kts
 !backend/build.gradle.kts
+!backend/embedding-model.properties
 !backend/src/
 !compose.yaml
 !api/openapi.json

@@ -7,6 +7,7 @@ import static org.assertj.core.api.Assertions.within;
 import java.util.List;
 
 import net.yozmnews.event.domain.feature.EmbedderInfo;
+import net.yozmnews.event.domain.feature.Embeddings;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -83,11 +84,12 @@ class FakeArticleEmbedderTests {
 	@Test
 	void textsGetVectorsInTheirOrder() {
 		assertThat(this.embedder.embed(List.of("ab", "기준금리 동결")))
-			.containsExactly(this.embedder.embed(List.of("ab")).get(0), this.embedder.embed(List.of("기준금리 동결")).get(0));
+			.isEqualTo(new Embeddings(List.of(this.embedder.embed(List.of("ab")).vectors().get(0),
+					this.embedder.embed(List.of("기준금리 동결")).vectors().get(0))));
 	}
 
 	private float[] vector(String text) {
-		return this.embedder.embed(List.of(text)).get(0).values();
+		return this.embedder.embed(List.of(text)).vectors().get(0).values();
 	}
 
 	private static double length(float[] values) {

@@ -57,7 +57,35 @@
 - 값을 바꿔 앱을 다시 띄우면, 앱이 지난 배정을 저장해 둔 점수 · 확률로 1분마다 200건씩 다시 판정한다 — Jev 를 부르지 않는다. 닫힌 사건의 배정은 다시 판정하지 않고 기준만 새것으로 적는다. 저장 기준보다 낮은 점수의 후보는 남아 있지 않아, 아래 기준을 판정 때의 저장 기준 아래로 내린 효과는 지난 배정에 보이지 않는다
 - 사건은 하루 1회 정리 작업이 닫는다. 닫는 기간 · 최대 기간을 바꾸면 그 뒤의 닫기에만 쓰고, 이미 닫힌 사건은 다시 열지 않는다. 같은 작업이 닫힌 사건 기사의 기사 표현과, 만든 지 시간 창에 여유를 더한 기간이 지났는데 열린 사건에 배정되지 않은 기사 표현을 지운다
 - 정리 작업은 닫힌 사건을 찾는 장기 검색 인덱스를 모델 버전마다 하나 만든다. 만들려면 앱의 DB 계정이 `events` 테이블의 소유자여야 한다 — 배포 구성의 DB 계정은 마이그레이션으로 테이블을 만든 계정이라 따로 할 일이 없다. 외부 DB 에서 앱 계정이 소유자가 아니면 인덱스를 만들지 못하고 앱 로그에 경고 `장기 검색 인덱스를 만들지 못했다` 를 남긴다 — 사건 묶기의 결과는 같고 장기 검색만 느리다. 앱은 다음 날 다시 만들어 본다
-- 사건 묶기를 켜기 전에 저장된 기사는 사건이 없다. 운영자 API `POST /api/admin/event-intake-fills`(본문 `{"days": 일수}`, 1 ~ 30일)로 그 기간에 처음 본 기사 가운데 사건이 없는 기사를 사건 묶기에 넣는다 — 화면은 아직 없다. 임베더가 없는 배포에서는 넣어도 처리되지 않고 쌓인다
+- 사건 묶기를 켜기 전에 저장된 기사는 사건이 없다. 운영자 API `POST /api/admin/event-intake-fills`(본문 `{"days": 일수}`, 1 ~ 30일)로 그 기간에 처음 본 기사 가운데 사건이 없는 기사를 사건 묶기에 넣는다 — 화면은 아직 없다
+
+### 임베딩
+
+| 변수 | 필수 | 쓰는 곳 | 값 예시 | 바꾸는 것 |
+|---|---|---|---|---|
+| `YOZMNEWS_EMBEDDING_PROVIDER` | 아니오 | `app` → `yozmnews.embedding.provider` | `openai-compatible` | 기사 임베딩 방식 — `onnx`(기본, 이미지 안의 로컬 모델) · `openai-compatible`(외부 API) |
+| `YOZMNEWS_EMBEDDING_OPENAI_COMPATIBLE_BASE_URL` | 외부 방식에서 예 | `app` → `yozmnews.embedding.openai-compatible.base-url` | `https://api.upstage.ai/v1` · `https://openrouter.ai/api/v1` | 외부 API 주소 — 앱이 뒤에 `/embeddings` 를 붙인다 |
+| `YOZMNEWS_EMBEDDING_OPENAI_COMPATIBLE_MODEL` | 외부 방식에서 예 | `app` → `yozmnews.embedding.openai-compatible.model` | `solar-embedding-2-query` · `qwen/qwen3-embedding-4b` | 외부 모델 이름 |
+| `YOZMNEWS_EMBEDDING_OPENAI_COMPATIBLE_API_KEY` | 아니오 | `app` → `yozmnews.embedding.openai-compatible.api-key` | 제공자 콘솔에서 만든 키 | 외부 API 키 — [비밀 값](#비밀-값). 비면 인증 헤더를 보내지 않는다(키 없이 받는 직접 띄운 서버) |
+| `YOZMNEWS_EMBEDDING_OPENAI_COMPATIBLE_DIMENSIONS` | 외부 방식에서 예 | `app` → `yozmnews.embedding.openai-compatible.dimensions` | `1024` | 모델이 내는 벡터 차원 — 1 ~ 4,000 |
+| `YOZMNEWS_EMBEDDING_OPENAI_COMPATIBLE_SEND_DIMENSIONS` | 아니오 | `app` → `yozmnews.embedding.openai-compatible.send-dimensions` | `true` | 요청에 차원(`dimensions`)을 담는다 — 기본 `false`. 차원을 줄여 받는 모델에서만 켠다 |
+| `YOZMNEWS_EMBEDDING_OPENAI_COMPATIBLE_INPUT_PREFIX` | 아니오 | `app` → `yozmnews.embedding.openai-compatible.input-prefix` | `query: ` | 텍스트마다 앞에 붙일 문자열 — 기본 없음 |
+| `YOZMNEWS_EMBEDDING_OPENAI_COMPATIBLE_BATCH_SIZE` | 아니오 | `app` → `yozmnews.embedding.openai-compatible.batch-size` | `16` | 한 요청에 담는 기사 수 — 1 ~ 256, 기본 32 |
+
+- 기본(`onnx`)은 이미지에 든 `multilingual-e5-small` int8 모델로 앱 안에서 임베딩한다 — 실행 중 외부로 나가는 요청이 없고 추가 비용이 없다. 앱 메모리가 약 0.3 ~ 0.4 GiB 는다([앱 메모리와 이미지 크기](deployment.md#앱-메모리와-이미지-크기))([ADR-0090](../adr/0090-article-embedding-defaults-to-an-in-app-local-model-with-an-openai-compatible-api-by-setting.md) · [ADR-0091](../adr/0091-local-embedding-model-is-multilingual-e5-small-int8-fetched-at-build-into-the-image-with-onnx-telemetry-off.md))
+- **외부 방식은 기사 제목과 요약문 앞부분을 그 API 제공자에게 보낸다.** 비용은 그 키의 계정에 청구된다. 제공자의 데이터 이용 조건(입력을 학습에 쓰는지 등)은 운영자가 확인한다. 공유 평가도 같은 기사 제목 · 요약문을 Jev 에 보낸다
+- 외부 방식은 OpenAI 의 `/embeddings` 와 같은 요청 · 응답을 받는 API 면 쓸 수 있다 — 상용 API · OpenRouter 같은 중계 · 직접 띄운 임베딩 서버. 모델에 따라 품질이 크게 다르다 — 측정한 모델별 품질 · 비용은 [임베딩 모델 조사](../research/2026-11-embedding-models.md)에 있다. 응답 벡터는 앱이 정규화하므로 정규화하지 않는 API 도 된다
+- 차원은 모델의 문서에서 확인해 적는다. 응답 벡터의 차원이 이 값과 다르면 앱 로그에 `임베더가 실패해 회차를 멈췄다` 가 남고 처리하지 않는다. 차원 전송은 차원을 줄여 받을 수 있는 모델(OpenAI text-embedding-3 등)에서만 켠다 — 받지 않는 API 는 요청을 거부한다
+- 입력 앞 문자열은 모델이 요구할 때만 적는다(예: e5 계열은 `query: `). 끝 공백도 값에 든다 — `deploy/.env` 에서 따옴표로 감싸 적는다
+- 설정이 틀리면 앱이 뜨지 않는다 — 방식 이름이 다르거나, 외부 방식에서 주소 · 모델 · 차원이 없거나 범위를 벗어나거나, 키에 공백 · 제어 문자 · ASCII 밖의 문자가 있거나 512자를 넘으면 기동 로그에 설정 이름과 환경 변수 이름이 나온다. 키가 맞는지는 임베딩 때 드러난다
+- 실행 중 실패는 갈래마다 다르게 처리한다([ADR-0092](../adr/0092-embedder-failures-in-three-kinds-with-rejected-articles-isolated-and-dropped-after-a-limit.md))
+  - 연결 실패 · 시간 초과 · 요청 제한 · 서버 오류 — 경고 `임베더가 일시 실패해 회차를 멈췄다`. 기사는 대기에 남아 1분 뒤 다시 시도한다
+  - 틀린 키 · 권한 · 없는 모델 · 읽을 수 없는 응답 — 경고 `임베더를 쓸 수 없어 회차를 멈췄다`. 설정을 고쳐 앱을 다시 띄우면 대기의 기사를 그대로 처리한다
+  - 입력을 거부한 기사(API 의 400 · 413 · 422 응답) — 그 기사만 가려 거부 수를 세고, 세 번째 거부에 경고 `임베더가 기사를 거부해 사건 묶기에서 뺐다` 를 남기고 사건 묶기에서 뺀다. 뺀 기사는 [채우기](#사건-묶기)로 다시 넣을 수 있다
+  - API 가 설정 때문에 요청을 거부해도(예: 받지 않는 차원 전송) 같은 응답이라 기사마다 거부로 센다 — 정보 로그 `임베더가 기사를 거부했다` 가 여러 기사에 이어지면 설정을 고쳐 앱을 다시 띄우고, 그새 뺀 기사는 채우기로 다시 넣는다
+- 외부 방식은 시스템 프록시 설정을 읽지 않고 리다이렉트를 따르지 않는다. 바깥 연결이 프록시를 거쳐야만 하는 망에서는 쓸 수 없다
+- **방식 · 모델을 바꾸면 새 기사는 새 사건을 연다.** 사건은 모델 버전마다 따로라, 바꾼 뒤의 기사는 바꾸기 전 사건에 붙지 않는다. 모델마다 코사인 분포가 크게 달라 [사건 기준](#사건-묶기)도 새 모델에 맞춰 다시 본다 — 지금 기본값은 어느 모델에도 맞춰지지 않은 측정 전 목표다
+- 로컬 모델은 ONNX Runtime 의 사용 통계 전송을 끄는 환경 변수(`ORT_DISABLE_TELEMETRY=1`)가 없으면 열리지 않는다 — 배포 이미지가 이 값을 갖고 있어 따로 할 일이 없다
 
 ## 백그라운드 작업
 
@@ -110,7 +138,7 @@
 
 ## 비밀 값
 
-- 지금 배포 구성의 비밀 값은 `POSTGRES_PASSWORD`, [운영자 토큰](#운영자)(`YOZMNEWS_ADMIN_TOKEN`), [Jev API 키](#공유-평가)(`YOZMNEWS_JEV_API_KEY`) 셋이다
+- 지금 배포 구성의 비밀 값은 `POSTGRES_PASSWORD`, [운영자 토큰](#운영자)(`YOZMNEWS_ADMIN_TOKEN`), [Jev API 키](#공유-평가)(`YOZMNEWS_JEV_API_KEY`), 외부 임베딩 방식을 쓸 때의 [임베딩 API 키](#임베딩)(`YOZMNEWS_EMBEDDING_OPENAI_COMPATIBLE_API_KEY`)다
 - **(미구현)** OIDC 공급자의 client secret, 봇 차단(Turnstile) secret, Tunnel 토큰, BYOK 키 암호화용 KEK, 첫 운영자 초기 비밀번호
 - 비밀 값은 호스트의 환경 파일(`deploy/.env`)에 두고 저장소에 커밋하지 않는다
 - **(미구현)** 비밀 값을 Docker secrets 로도 받는다

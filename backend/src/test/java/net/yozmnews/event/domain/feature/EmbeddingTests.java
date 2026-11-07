@@ -29,6 +29,19 @@ class EmbeddingTests {
 	}
 
 	@Test
+	void normalizedDividesByTheLength() {
+		assertThat(Embedding.normalized(new float[] { 3f, 4f }).values()).containsExactly(0.6f, 0.8f);
+	}
+
+	@Test
+	void normalizedRefusesAZeroVectorAndNotANumber() {
+		assertThatThrownBy(() -> Embedding.normalized(new float[] { 0f, 0f })).isInstanceOf(IllegalArgumentException.class);
+		assertThatThrownBy(() -> Embedding.normalized(new float[] { 1f, Float.NaN }))
+			.isInstanceOf(IllegalArgumentException.class);
+		assertThatThrownBy(() -> Embedding.normalized(new float[0])).isInstanceOf(IllegalArgumentException.class);
+	}
+
+	@Test
 	void valuesAreCopiedInAndOut() {
 		float[] source = { 0.25f, -0.5f };
 		Embedding embedding = Embedding.of(source);

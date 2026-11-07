@@ -8,6 +8,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Collection;
 import java.util.List;
+import java.util.OptionalInt;
 import java.util.UUID;
 
 import net.yozmnews.article.ArticleId;
@@ -93,6 +94,22 @@ class JdbcIntakeQueueRepository implements IntakeQueueRepository {
 				update event_intake_queue set lease_token = null, lease_expires_at = null
 				where article_id = :article and lease_token = :token
 				""").param("article", articleId.value()).param("token", token).update() == 1;
+	}
+
+	@Override
+	public OptionalInt recordRejectionIfLeased(ArticleId articleId, UUID token) {
+		return this.jdbc.sql("""
+				update event_intake_queue
+				set rejections = rejections + 1, lease_token = null, lease_expires_at = null
+				where article_id = :article and lease_token = :token
+				returning rejections
+				""")
+			.param("article", articleId.value())
+			.param("token", token)
+			.query(Integer.class)
+			.optional()
+			.map(OptionalInt::of)
+			.orElseGet(OptionalInt::empty);
 	}
 
 	@Override

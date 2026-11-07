@@ -7,6 +7,7 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.List;
 
+import net.yozmnews.event.domain.feature.ArticleEmbedder;
 import net.yozmnews.platform.WorkerRole;
 import net.yozmnews.platform.domain.ActiveRoles;
 import org.jobrunr.server.BackgroundJobServer;
@@ -58,6 +59,11 @@ class WorkerRoleTests {
 		assertThat(RoleProbe.recurringJobIds(this.jdbc)).containsExactlyInAnyOrder("poll-due-feeds",
 				"feed-health-check", "event-publication-resubmission", "evaluate-pending-articles",
 				"backfill-missing-tags", "event-intake", "event-cleanup");
+	}
+
+	@Test
+	void hasOneEmbedder() {
+		assertThat(this.context.getBeansOfType(ArticleEmbedder.class)).hasSize(1);
 	}
 
 	@Test

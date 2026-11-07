@@ -16,6 +16,9 @@ RUN chmod +x backend/gradlew \
  && backend/gradlew -p backend dependencies --no-daemon --console=plain > /dev/null \
  && backend/gradlew -p backend help --write-verification-metadata sha256 --dry-run --no-daemon --console=plain > /dev/null \
  && rm backend/gradle/verification-metadata.dryrun.xml
+# 기본 로컬 임베딩 모델 — 고정 리비전 · sha256 으로 받는다(정본 backend/embedding-model.properties · ADR-0091). 모델 정보가 그대로면 캐시를 재사용한다.
+COPY backend/embedding-model.properties backend/
+RUN backend/gradlew -p backend fetchEmbeddingModel --no-daemon --console=plain
 
 FROM deps AS check
 # 테스트가 PostgreSQL 이미지를 읽는 개발용 Compose 파일(backend/build.gradle.kts 의 devComposeFile)
@@ -31,9 +34,11 @@ CMD ["backend/gradlew", "-p", "backend", "build", "--no-daemon", "--console=plai
 
 FROM deps AS build
 COPY backend/src backend/src
-# 실행 jar 를 Spring Boot 계층(의존성 · 로더 · 스냅샷 의존성 · 애플리케이션)으로 푼다 — jar 이름(버전)은 적지 않는다.
+# 실행 jar 를 계층(의존성 · 로더 · 스냅샷 의존성 · 임베딩 모델 · 애플리케이션 — backend/build.gradle.kts 의 bootJar)으로 푼다 — jar 이름(버전)은 적지 않는다.
+# 모델 파일은 풀린 파일 그대로 읽힌다(jar 안에서는 열지 않는다). 모델이 자기 계층에 들지 않으면(계층 패턴이 빗나가면) 여기서 멈춘다.
 RUN backend/gradlew -p backend bootJar --no-daemon --console=plain \
- && java -Djarmode=tools -jar backend/build/libs/*.jar extract --layers --launcher --destination /extracted
+ && java -Djarmode=tools -jar backend/build/libs/*.jar extract --layers --launcher --destination /extracted \
+ && test -s /extracted/embedding-model/BOOT-INF/classes/embedding-model/model.onnx
 
 # 실행 단계에는 복사와 메타데이터만 둔다(RUN 없음) — docs/development/infrastructure.md "이미지"
 FROM eclipse-temurin:${JAVA_VERSION}-jre AS app
@@ -41,8 +46,12 @@ WORKDIR /app
 COPY --from=build /extracted/dependencies/ ./
 COPY --from=build /extracted/spring-boot-loader/ ./
 COPY --from=build /extracted/snapshot-dependencies/ ./
+COPY --from=build /extracted/embedding-model/ ./
 COPY --from=build /extracted/application/ ./
+# ONNX Runtime 텔레메트리를 끈다 — 없으면 로컬 임베딩 모델을 열지 않는다(정본 OnnxArticleEmbedder · ADR-0091)
+ENV ORT_DISABLE_TELEMETRY=1
 # 비root(nobody) — 계정을 만드는 명령 없이 숫자 uid 로 실행한다
 USER 65534:65534
 EXPOSE 8080
-ENTRYPOINT ["java", "org.springframework.boot.loader.launch.JarLauncher"]
+# ONNX Runtime · DJL 토크나이저가 네이티브를 올린다 — 제한 메서드 경고를 끈다
+ENTRYPOINT ["java", "--enable-native-access=ALL-UNNAMED", "org.springframework.boot.loader.launch.JarLauncher"]

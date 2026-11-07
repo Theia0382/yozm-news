@@ -60,6 +60,8 @@ PostgreSQL 이미지는 `compose.yaml` 의 `postgres` 서비스 `image` 한 줄�
 
 IDE 에서 테스트를 Gradle 에 맡기는 것은 1 때문이다([CONTRIBUTING.md §1](../../CONTRIBUTING.md#1-개발-환경)). 4 가 빠지면 복사할 파일이 빌드 컨텍스트에 없어 검사 이미지 빌드가 실패하고, 3 이 빠지면 이미지는 만들어지지만 그 안의 백엔드 검사가 파일이 없어 실패한다.
 
+빌드 자체도 저장소 파일 하나를 읽는다 — 기본 로컬 임베딩 모델의 정보 `backend/embedding-model.properties`. Gradle `fetchEmbeddingModel` 이 이 파일로 모델을 받아 생성 리소스(`build/generated/embedding-model/`)로 놓고, 시험과 `bootJar` 가 그 리소스를 쓴다. 그래서 백엔드 허용 목록과 의존성 단계의 `COPY` 에 이 파일이 있어야 하고, 빠지면 검사 · 배포 이미지 빌드가 모두 실패한다. 모델 파일은 Gradle 사용자 홈(`caches/yozmnews-embedding-model/`)에 해시로 캐시한다. Gradle 의 시험 작업은 로컬 모델을 여는 시험을 위해 `ORT_DISABLE_TELEMETRY=1` 과 `--enable-native-access=ALL-UNNAMED` 를 넣는다.
+
 ### 문서 링크 검사
 
 `tools/docs-check` 는 공개 마크다운의 상대 링크와 앵커를 확인한다([ADR-0035](../adr/0035-public-markdown-links-and-anchors-checked-by-separate-check-service.md)).
@@ -72,7 +74,11 @@ IDE 에서 테스트를 Gradle 에 맡기는 것은 1 때문이다([CONTRIBUTING
 
 - **측별 Dockerfile 하나** — `backend/Dockerfile` 은 target `check` · `app`, `frontend/Dockerfile` 은 target `check` · `proxy` 를 갖는다. 의존성 단계를 검사 target 과 배포 빌드가 함께 쓴다. 문서 검사 이미지는 검사 전용 `tools/docs-check/Dockerfile` 하나다([ADR-0022](../adr/0022-image-targets-per-side-dockerfile-without-run-in-runtime-stage.md))
 - **두 아키텍처** — 배포 이미지는 `linux/amd64` · `linux/arm64` 로 빌드한다([ADR-0006](../adr/0006-deployment-compose-cloudflare.md)). 빌드 단계는 빌더 플랫폼에서 돌고(jar · 정적 파일은 아키텍처와 무관하다), 실행 단계는 대상 플랫폼 이미지에 복사와 메타데이터만 둔다. 실행 단계에 명령(`RUN`)이 있으면 에뮬레이션이 없는 빌더에서 빌더와 다른 아키텍처의 빌드가 깨진다
-- 두 아키텍처 빌드는 buildx bake 로 `deploy/` 에서 한다 — bake 는 `extends` 대상과 빌드 컨텍스트를 작업 디렉터리 기준으로 읽는다([ADR-0021](../adr/0021-separate-deploy-compose-with-single-app-service.md)). 결과가 어디에 남는지는 빌더 드라이버에 따라 다르다 — `docker` 드라이버에 containerd 이미지 저장소면 두 아키텍처 이미지가 로컬 이미지로 남고, `docker-container` 드라이버면 빌드 캐시에만 남는다
+- 두 아키텍처 빌드는 buildx bake 로 `deploy/` 에서 한다 — bake 는 `extends` 대상과 빌드 컨텍스트를 작업 디렉터리 기준으로 읽는다([ADR-0021](../adr/0021-separate-deploy-compose-with-single-app-service.md)). 빌드 컨텍스트가 작업 디렉터리의 상위(저장소 루트)라, 파일 시스템 권한을 검사하는 buildx 는 `--allow=fs.read=..` 로 그 읽기를 허락해야 한다. 결과가 어디에 남는지는 빌더 드라이버에 따라 다르다 — `docker` 드라이버에 containerd 이미지 저장소면 두 아키텍처 이미지가 로컬 이미지로 남고, `docker-container` 드라이버면 빌드 캐시에만 남는다
+- **기본 로컬 임베딩 모델** — 백엔드 의존성 단계가 모델 정보의 정본 `backend/embedding-model.properties` 를 복사하고 Gradle `fetchEmbeddingModel` 로 고정 리비전의 모델 · 토크나이저를 받아 sha256 을 확인한다. 정보 파일이 그대로면 그 계층을 다시 쓴다([ADR-0091](../adr/0091-local-embedding-model-is-multilingual-e5-small-int8-fetched-at-build-into-the-image-with-onnx-telemetry-off.md))
+  - 모델 파일은 jar 의 사용자 정의 계층 `embedding-model` 에 든다(`backend/build.gradle.kts` 의 `bootJar`). 계층 패턴은 jar 안 경로가 아니라 classpath 기준 경로(`embedding-model/**`)에 맞는다. build 단계가 계층을 푼 뒤 모델 파일이 그 계층에 있는지 확인하고, 없으면 빌드가 멈춘다
+  - 실행 단계는 그 계층을 따로 복사한다 — 코드만 바뀌면 모델 계층(약 135 MB)은 그대로다. 앱은 풀린 파일을 읽고 기동 때 해시를 다시 확인한다
+  - 실행 단계는 ONNX Runtime 의 사용 통계 전송을 끄는 `ENV ORT_DISABLE_TELEMETRY=1` 과, 네이티브 라이브러리를 올리는 JVM 인자 `--enable-native-access=ALL-UNNAMED`(`ENTRYPOINT`)를 갖는다. 변수가 없으면 앱이 로컬 모델을 열지 않는다. ONNX Runtime 의 네이티브는 실행 계정(root 아님)으로 `/tmp` 에 풀린다
 - **실행 계정** — 우리가 만드는 이미지(`app` · `proxy`)는 root 가 아닌 숫자 uid 로 돈다. 계정을 만드는 명령 없이 `USER` 로 정한다(값은 각 Dockerfile). proxy 는 이 계정으로 돌 수 있게 관리 API 를 열지 않고 설정을 디스크에 저장하지 않는다(`frontend/proxy/Caddyfile`)
 
 ### 이미지 버전
@@ -133,7 +139,12 @@ IDE 에서 테스트를 Gradle 에 맡기는 것은 1 때문이다([CONTRIBUTING
 | 역할이 하나도 켜지지 않으면 기동하지 않는다 | 테스트 `ActiveRolesTests` · `RoleConfigurationTests` | [platform Spec](../specs/platform.md#역할) |
 | DB 의 pgvector 확장이 없거나 최소 버전보다 낮으면 앱이 기동하지 않는다 | 테스트 `VectorExtensionTests` · `VectorExtensionConfigurationTests` · `JdbcDatabaseExtensionsTests` | [platform Spec](../specs/platform.md#db-확장) |
 | `local` 의 Compose 연동이 PostgreSQL 서비스를 알아본다 | 없음 — 서비스 연결 라벨이 빠지면 `local` 기동이 DB 접속 정보 없이 실패한다 | `compose.yaml` |
-| 로컬 대체물은 profile `local` 에서만, Jev 키가 없을 때만 등록된다 | 테스트 `FakeArticleEvaluatorConfigurationTests` · `JevArticleEvaluatorConfigurationTests` | [platform Spec](../specs/platform.md#로컬-개발) |
+| 로컬 대체물은 profile `local` 에서만 등록된다 — 평가기는 Jev 키가 없을 때만, 임베더는 임베딩 방식이 기본(`onnx`)일 때만 | 테스트 `FakeArticleEvaluatorConfigurationTests` · `JevArticleEvaluatorConfigurationTests` · `FakeArticleEmbedderConfigurationTests` · `EmbeddingProviderWiringTests` | [platform Spec](../specs/platform.md#로컬-개발) |
+| 작업 역할은 임베더 없이 뜨지 않고, 임베더는 작업 역할에서만 만든다 | 테스트 `IntakeArticlesJobWiringTests` · `EmbeddingProviderWiringTests` · `WorkerRoleTests` + 스모크 K1 · K11 | [ADR-0093](../adr/0093-worker-role-does-not-run-without-an-embedder-built-only-in-the-worker-role.md) |
+| 로컬 임베딩 모델 파일은 정보 파일의 고정 리비전 · sha256 과 같다 | 빌드 실패(`fetchEmbeddingModel` 의 해시 대조) + 기동 실패(앱의 해시 재확인) + 테스트 `EmbeddingModelTests` | `backend/embedding-model.properties` |
+| 모델 파일은 이미지의 별도 계층에 든다 | 빌드 실패 — build 단계가 푼 계층에 모델 파일이 없으면 멈춘다 | `backend/build.gradle.kts` · `backend/Dockerfile` |
+| ONNX Runtime 은 사용 통계 전송을 끄는 환경 변수 없이 열리지 않는다 | 테스트 `OnnxArticleEmbedderTests`(변수가 없거나 `1` 이 아니면 생성자가 거부) + 배포 이미지 · Gradle 시험 작업의 변수 | `OnnxArticleEmbedder` · `backend/Dockerfile` · `backend/build.gradle.kts` |
+| 로컬 임베딩 모델이 독립 계산한 기준 벡터와 맞는다 | 테스트 `OnnxArticleEmbedderTests`(시험 리소스의 기준 벡터와 코사인 ≥ 0.99) | `backend/src/test/resources/net/yozmnews/event/adapter/out/onnx/` |
 | 역할 조합마다 켜지는 구성요소가 정해져 있다(작업 서버 · 작업 진입점 · 기동 대조 · 스케줄링 · 화면용 API) | 테스트 `WebRoleTests` · `WorkerRoleTests` · `BothRolesTests` | `application.yaml` · `application-worker.yaml` |
 | 웹 · 작업 패키지의 구성요소는 맞는 역할을 달고, 리스너는 역할을 달지 않는다 | 테스트 `RoleMembershipTests` | [platform Spec](../specs/platform.md#역할) |
 | 배포 구성의 세 서비스가 순서대로 healthy 가 된다 | 구조(`depends_on` 의 healthy 조건) + `up --wait` + 스모크 K1 | [배포 구성 실행](../operations/deployment.md#배포-구성-실행) |

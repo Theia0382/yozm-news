@@ -1,6 +1,6 @@
 # ADR-0084: 사건 병합은 배정 산식 · 판정을 사건 대 사건에 쓰고, 합쳐진 사건은 남는 사건을 가리키는 행으로 남긴다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 임베더가 없는 프로세스의 건너뜀([ADR-0093](0093-worker-role-does-not-run-without-an-embedder-built-only-in-the-worker-role.md))
 - 날짜: 2026-11-07
 - 근거: [이슈 #98](https://github.com/Theia0382/yozm-news/issues/98) — 병합의 판정 기준 · 실행 자리 · 합쳐진 사건 행을 리드와 정하고 구현(`8eba5ca` · `bb34862` · `ac942e1`)
 - 관련: [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md)(결정 절 "4. 정리"의 병합을 정한다, 후속 기록), [ADR-0071](0071-event-membership-judged-from-article-ids-with-questions-built-in-evaluation.md)(사건 소속 판정 — 공개 API 를 바꾸지 않고 쓴다), [ADR-0080](0080-event-centroids-and-key-terms-accumulated-with-article-counts-and-updated-incrementally.md)(누적 갱신 — 합친 중심은 기사 수 가중 평균), [ADR-0081](0081-event-assignment-criteria-in-settings-and-rejudgement-within-stored-scores.md)(사건 기준 — 병합도 같은 기준을 쓴다), [ADR-0087](0087-closed-event-assignments-are-not-rejudged-and-closing-and-merging-are-not-undone.md)(합치기는 되돌리지 않는다)
@@ -29,6 +29,7 @@
 - 합쳐진 사건 ID 를 가진 쪽은 사건 ID 로 찾아 남는 사건을 얻는다. 합쳐진 사건의 기사 조회는 빈 목록이다.
 - 합칠 때마다 남는 사건의 고친 횟수가 늘어 다음 회차가 다시 본다. 열린 사건 수가 줄기만 하므로 사슬 병합은 끝난다.
 - 기준을 바꾼 뒤에는 열린 사건 모두가 대상이라, 회차 상한만큼씩 지나는 동안 새로 바뀐 사건이 뒤에 선다(열린 사건 수는 측정 전).
+> 부분 대체 — [ADR-0093](0093-worker-role-does-not-run-without-an-embedder-built-only-in-the-worker-role.md). 지금 상태: [event Spec §5](../specs/event.md#사건-묶기-대기와-회차) event-R7
 - 임베더가 없는 프로세스에서는 다른 회차와 함께 건너뛴다.
 - 합친 사건을 사건 단위로 다시 나누는 경로는 없다([ADR-0087](0087-closed-event-assignments-are-not-rejudged-and-closing-and-merging-are-not-undone.md)). 합친 사건 안의 기사는 기사 단위로 재판정된다([ADR-0085](0085-rejudgement-knows-opened-events-from-an-assignment-flag-and-reads-merged-candidates-as-survivors.md)).
 
