@@ -12,10 +12,10 @@ import java.util.List;
 import java.util.Optional;
 
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.event.EventStatus;
 import net.yozmnews.event.domain.assignment.CandidateScoring;
 import net.yozmnews.event.domain.assignment.EventSnapshot;
 import net.yozmnews.event.domain.event.EventRepository;
-import net.yozmnews.event.domain.event.EventStatus;
 import net.yozmnews.event.domain.event.LockedEvent;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;

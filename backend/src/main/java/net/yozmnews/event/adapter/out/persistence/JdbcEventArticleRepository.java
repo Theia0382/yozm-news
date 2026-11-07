@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import net.yozmnews.article.ArticleId;
-import net.yozmnews.event.domain.assignment.DecidedBy;
+import net.yozmnews.event.DecidedBy;
 import net.yozmnews.event.domain.assignment.StoredCandidate;
 import net.yozmnews.event.domain.event.EventArticle;
 import net.yozmnews.event.domain.event.EventArticleRepository;
