@@ -29,6 +29,7 @@ import java.time.InstantSource;
 import java.util.List;
 import java.util.zip.GZIPOutputStream;
 
+import com.github.tomakehurst.wiremock.http.Fault;
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import net.yozmnews.source.DocumentProblemKind;
 import net.yozmnews.source.FailurePermanence;
@@ -441,9 +442,23 @@ class RssArticleSourceTests {
 			port = socket.getLocalPort();
 		}
 
-		assertFailure(source(FetchLimits.DEFAULT, LOOPBACK)
+		FetchFailure failure = assertFailure(source(FetchLimits.DEFAULT, LOOPBACK)
 			.fetch(new FeedDescriptor(URI.create("http://127.0.0.1:" + port + "/feed"), PROFILE), FetchState.NONE),
 				FetchFailureReason.CONNECTION_FAILED, null);
+
+		assertThat(failure.message())
+			.isEqualTo("연결하지 못했거나 연결이 끊겼다: http://127.0.0.1:" + port + "/feed (HttpHostConnectException)");
+	}
+
+	@Test
+	void aConnectionClosedWithoutAResponseNamesTheErrorKindButNotItsMessage() {
+		server.stubFor(get("/empty").willReturn(aResponse().withFault(Fault.EMPTY_RESPONSE)));
+
+		FetchFailure failure = assertFailure(fetch("/empty", FetchState.NONE), FetchFailureReason.CONNECTION_FAILED,
+				null);
+
+		assertThat(failure.message())
+			.isEqualTo("연결하지 못했거나 연결이 끊겼다: " + url("/empty") + " (NoHttpResponseException)");
 	}
 
 	@Test

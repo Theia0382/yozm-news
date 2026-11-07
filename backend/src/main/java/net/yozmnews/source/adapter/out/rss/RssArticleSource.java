@@ -284,8 +284,14 @@ public final class RssArticleSource implements ArticleSource, AutoCloseable {
 		if (ex instanceof SocketTimeoutException || ex instanceof ConnectionRequestTimeoutException) {
 			return timeout();
 		}
-		// 연결 거부 · 끊김, 응답 형식 위반, 요청하지 않은 Content-Encoding 등 그 밖의 입출력 오류
-		return FetchFailure.of(FetchFailureReason.CONNECTION_FAILED, display(url));
+		// 연결 거부 · 끊김, 응답 형식 위반, 요청하지 않은 Content-Encoding 등 그 밖의 입출력 오류 — 예외 종류로 가른다
+		return FetchFailure.of(FetchFailureReason.CONNECTION_FAILED, display(url) + " (" + kind(ex) + ")");
+	}
+
+	/** 입출력 오류의 종류 — 예외 클래스 이름이다. 예외 문구는 옮기지 않는다(source-R37) */
+	private static String kind(IOException ex) {
+		String simple = ex.getClass().getSimpleName();
+		return simple.isEmpty() ? ex.getClass().getName() : simple;
 	}
 
 	private FetchFailure timeout() {
