@@ -21,6 +21,11 @@ type TopicStatus = Schemas["EvaluationRowResponse"]["topicStatus"];
 type ThresholdWarning = Schemas["ThresholdChangeResponse"]["warnings"][number];
 type ThresholdCondition = Schemas["ThresholdKindStatus"]["conditions"][number];
 type MultiTagKind = Schemas["ThresholdPreviewRequest"]["kind"];
+type EventStatus = Schemas["EventRowResponse"]["status"];
+type DecidedBy = Schemas["EventArticleResponse"]["decidedBy"];
+type JudgementUse = Schemas["EventJudgementRowResponse"]["use"];
+type BigEventCriteriaActor =
+  Schemas["BigEventCriteriaHistoryResponse"]["actor"];
 
 export const refusalLabels = {
   PROFILE_UNAVAILABLE:
@@ -166,3 +171,30 @@ export const thresholdConditionLabels = {
   STORE_THRESHOLD_CHANGED:
     "이 버전의 평가마다 저장된 확률 범위가 다르다 — 저장 기준이 바뀌었고 빠진 태그 채움이 그 차이를 다 메우지 않았다",
 } as const satisfies Record<ThresholdCondition, string>;
+
+/** 사건의 상태 — 조회는 합쳐진 사건 ID 를 남는 사건으로 잇는다 */
+export const eventStatusLabels = {
+  OPEN: "열림",
+  CLOSED: "닫힘",
+  MERGED: "합쳐짐",
+} as const satisfies Record<EventStatus, string>;
+
+/** 배정을 정한 것 — 판정 실패는 Jev 판정을 끝내지 못해 새 사건을 연 배정이다 */
+export const decidedByLabels = {
+  FORMULA: "산식",
+  EVALUATOR: "Jev",
+  JUDGEMENT_FAILED: "판정 실패",
+} as const satisfies Record<DecidedBy, string>;
+
+/** 판정 기록의 쓰임 — 지금 결과다 */
+export const judgementUseLabels = {
+  ASSIGNMENT: "배정",
+  MERGE: "병합",
+  UNUSED: "반영 안 됨",
+} as const satisfies Record<JudgementUse, string>;
+
+/** 큰 사건 기준을 적은 쪽 — 시스템은 처음 값을 적재한 것이다 */
+export const bigEventCriteriaActorLabels = {
+  OPERATOR: "운영자",
+  SYSTEM: "처음 값",
+} as const satisfies Record<BigEventCriteriaActor, string>;
