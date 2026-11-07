@@ -130,10 +130,13 @@ class EventAssignmentFlowTests {
 		// 새 사건을 연 기사는 연 사건 표지가 참, 붙인 기사는 거짓이다
 		assertThat(assignment(first)).containsEntry("score", null)
 			.containsEntry("decided_by", "FORMULA")
-			.containsEntry("opened", true);
+			.containsEntry("opened", true)
+			.containsEntry("judgement_id", null);
 		// 0.7 × 1 + 0.3 × 2/2 = 1.0
 		assertThat((Double) assignment(second).get("score")).isCloseTo(1.0, within(1e-6));
-		assertThat(assignment(second)).containsEntry("decided_by", "FORMULA").containsEntry("opened", false);
+		assertThat(assignment(second)).containsEntry("decided_by", "FORMULA")
+			.containsEntry("opened", false)
+			.containsEntry("judgement_id", null);
 		assertThat(eventRow(event)).containsEntry("centroid", "[1,0]")
 			.containsEntry("article_count", 2)
 			.containsEntry("status", "OPEN")
@@ -157,7 +160,8 @@ class EventAssignmentFlowTests {
 		long event = eventOf(first);
 		// [4,3] 과 [1,0] 의 코사인 0.8, 핵심 말 없음 — 0.7 × 0.8 = 0.56(띠)
 		long banded = queued("[4,3]");
-		Scripted membership = new Scripted(query -> new MembershipJudgement.Judged(new EventJudgementId(1), Map.of(event, 0.7)));
+		Scripted membership = new Scripted(
+				query -> new MembershipJudgement.Judged(new EventJudgementId(41), Map.of(event, 0.7)));
 
 		round(membership).run(MODEL_A);
 
@@ -166,7 +170,8 @@ class EventAssignmentFlowTests {
 		assertThat(membership.inTransaction).containsExactly(false);
 		assertThat(eventOf(banded)).isEqualTo(event);
 		assertThat((Double) assignment(banded).get("score")).isCloseTo(0.56, within(1e-3));
-		assertThat(assignment(banded)).containsEntry("decided_by", "EVALUATOR");
+		// 붙인 배정은 반영한 판정 원본을 가리킨다
+		assertThat(assignment(banded)).containsEntry("decided_by", "EVALUATOR").containsEntry("judgement_id", 41L);
 		assertThat(candidates(banded)).hasSize(1).first().satisfies(candidate -> {
 			assertThat(candidate).containsEntry("event_id", event).containsEntry("probability", 0.7);
 		});
@@ -181,11 +186,13 @@ class EventAssignmentFlowTests {
 		long event = eventOf(first);
 		long banded = queued("[4,3]");
 
-		round(new Scripted(query -> new MembershipJudgement.Judged(new EventJudgementId(1), Map.of(event, 0.3)))).run(MODEL_A);
+		round(new Scripted(query -> new MembershipJudgement.Judged(new EventJudgementId(42), Map.of(event, 0.3))))
+			.run(MODEL_A);
 
 		assertThat(eventOf(banded)).isNotEqualTo(event);
 		assertThat((Double) assignment(banded).get("score")).isCloseTo(0.56, within(1e-3));
-		assertThat(assignment(banded)).containsEntry("decided_by", "EVALUATOR");
+		// 판정으로 연 새 사건의 배정도 그 판정 원본을 가리킨다
+		assertThat(assignment(banded)).containsEntry("decided_by", "EVALUATOR").containsEntry("judgement_id", 42L);
 		assertThat(candidates(banded)).hasSize(1).first().satisfies(candidate -> {
 			assertThat(candidate).containsEntry("event_id", event).containsEntry("probability", 0.3);
 		});
@@ -281,7 +288,7 @@ class EventAssignmentFlowTests {
 
 		assertThat(eventOf(banded)).isNotEqualTo(event);
 		assertThat((Double) assignment(banded).get("score")).isCloseTo(0.56, within(1e-3));
-		assertThat(assignment(banded)).containsEntry("decided_by", "JUDGEMENT_FAILED");
+		assertThat(assignment(banded)).containsEntry("decided_by", "JUDGEMENT_FAILED").containsEntry("judgement_id", null);
 		assertThat(candidates(banded)).hasSize(1).first().satisfies(candidate -> {
 			assertThat(candidate).containsEntry("event_id", event).containsEntry("probability", null);
 		});
@@ -312,7 +319,7 @@ class EventAssignmentFlowTests {
 			.run(MODEL_A);
 
 		assertThat(eventOf(banded)).isNotEqualTo(event);
-		assertThat(assignment(banded)).containsEntry("decided_by", "JUDGEMENT_FAILED");
+		assertThat(assignment(banded)).containsEntry("decided_by", "JUDGEMENT_FAILED").containsEntry("judgement_id", null);
 		assertThat(queueRows()).isZero();
 	}
 
@@ -367,7 +374,7 @@ class EventAssignmentFlowTests {
 			this.jdbc.sql("update events set status = 'CLOSED', closed_at = now() where id = :event")
 				.param("event", event)
 				.update();
-			return new MembershipJudgement.Judged(new EventJudgementId(1), Map.of(event, 0.9));
+			return new MembershipJudgement.Judged(new EventJudgementId(43), Map.of(event, 0.9));
 		});
 
 		round(membership).run(MODEL_A);
@@ -376,6 +383,20 @@ class EventAssignmentFlowTests {
 		assertThat(this.assignments.exists(new ArticleId(banded))).isFalse();
 		assertThat(queueRow(banded)).containsEntry("attempts", 0).containsEntry("lease_token", null);
 		assertThat(eventRow(event)).containsEntry("status", "CLOSED").containsEntry("article_count", 1);
+		// 되돌린 판정의 원본은 어느 배정도 가리키지 않는다
+		assertThat(this.jdbc.sql("select count(*) from event_articles where judgement_id is not null")
+			.query(Long.class)
+			.single()).isZero();
+
+		// 사건을 다시 열면 다음 회차의 새 판정이 배정에 남는다
+		this.jdbc.sql("update events set status = 'OPEN', closed_at = null where id = :event")
+			.param("event", event)
+			.update();
+		round(new Scripted(query -> new MembershipJudgement.Judged(new EventJudgementId(44), Map.of(event, 0.9))))
+			.run(MODEL_A);
+
+		assertThat(eventOf(banded)).isEqualTo(event);
+		assertThat(assignment(banded)).containsEntry("decided_by", "EVALUATOR").containsEntry("judgement_id", 44L);
 	}
 
 	@Test
@@ -409,7 +430,7 @@ class EventAssignmentFlowTests {
 
 		assertThat(membership.queries).isEmpty();
 		assertThat(eventOf(banded)).isNotEqualTo(event);
-		assertThat(assignment(banded)).containsEntry("decided_by", "FORMULA");
+		assertThat(assignment(banded)).containsEntry("decided_by", "FORMULA").containsEntry("judgement_id", null);
 	}
 
 	/** 핵심 말 없는 [1,0] 기사로 사건 하나를 연다 */
@@ -464,7 +485,7 @@ class EventAssignmentFlowTests {
 	}
 
 	private Map<String, @Nullable Object> assignment(long article) {
-		return this.jdbc.sql("select score, decided_by, opened from event_articles where article_id = :article")
+		return this.jdbc.sql("select score, decided_by, opened, judgement_id from event_articles where article_id = :article")
 			.param("article", article)
 			.query()
 			.singleRow();

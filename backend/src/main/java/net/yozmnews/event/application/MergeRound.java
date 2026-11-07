@@ -228,7 +228,7 @@ public class MergeRound {
 		return switch (this.membership.judge(new MembershipQuery(own.get(0), descriptors))) {
 			case MembershipJudgement.Judged judged -> {
 				this.transaction.executeWithoutResult(
-						status -> this.judgements.save(subject.id(), judged.probabilities(), now));
+						status -> this.judgements.save(subject.id(), judged.probabilities(), judged.judgement(), now));
 				List<StoredCandidate> judgedStored = stored.stream()
 					.map(candidate -> new StoredCandidate(candidate.eventId(), candidate.score(),
 							judged.probabilities().getOrDefault(candidate.eventId(), candidate.probability())))

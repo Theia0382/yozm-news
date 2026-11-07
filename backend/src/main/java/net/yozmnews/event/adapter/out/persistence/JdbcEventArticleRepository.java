@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.evaluation.EventJudgementId;
 import net.yozmnews.event.DecidedBy;
 import net.yozmnews.event.domain.assignment.StoredCandidate;
 import net.yozmnews.event.domain.event.EventArticle;
@@ -35,7 +36,7 @@ import org.springframework.stereotype.Repository;
 class JdbcEventArticleRepository implements EventArticleRepository {
 
 	private static final String COLUMNS = """
-			article_id, event_id, published_at, score, decided_by, opened, criteria_id, assigned_at
+			article_id, event_id, published_at, score, decided_by, opened, criteria_id, assigned_at, judgement_id
 			""";
 
 	private final JdbcClient jdbc;
@@ -56,8 +57,8 @@ class JdbcEventArticleRepository implements EventArticleRepository {
 	public boolean insertIfAbsent(EventArticle row, List<StoredCandidate> stored) {
 		boolean inserted = this.jdbc.sql("""
 				insert into event_articles (article_id, event_id, published_at, score, decided_by, opened, criteria_id,
-				                            assigned_at)
-				values (:article, :event, :published, :score, :by, :opened, :criteria, :assigned)
+				                            assigned_at, judgement_id)
+				values (:article, :event, :published, :score, :by, :opened, :criteria, :assigned, :judgement)
 				on conflict (article_id) do nothing
 				""")
 			.param("article", row.articleId().value())
@@ -68,6 +69,7 @@ class JdbcEventArticleRepository implements EventArticleRepository {
 			.param("opened", row.opened())
 			.param("criteria", row.criteriaId())
 			.param("assigned", timestamp(row.assignedAt()))
+			.param("judgement", (row.judgement() == null) ? null : row.judgement().value(), Types.BIGINT)
 			.update() == 1;
 		if (inserted) {
 			for (StoredCandidate candidate : stored) {
@@ -217,7 +219,11 @@ class JdbcEventArticleRepository implements EventArticleRepository {
 		return new EventArticle(new ArticleId(rs.getLong("article_id")), rs.getLong("event_id"),
 				instant(rs, "published_at"), rs.getObject("score", Double.class),
 				DecidedBy.valueOf(rs.getString("decided_by")), rs.getBoolean("opened"), rs.getLong("criteria_id"),
-				instant(rs, "assigned_at"));
+				instant(rs, "assigned_at"), judgement(rs.getObject("judgement_id", Long.class)));
+	}
+
+	private static @Nullable EventJudgementId judgement(@Nullable Long id) {
+		return (id == null) ? null : new EventJudgementId(id);
 	}
 
 	private static OffsetDateTime timestamp(Instant instant) {

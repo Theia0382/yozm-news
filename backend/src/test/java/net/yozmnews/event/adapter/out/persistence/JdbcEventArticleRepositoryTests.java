@@ -8,6 +8,7 @@ import java.util.List;
 
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.evaluation.EventJudgementId;
 import net.yozmnews.event.DecidedBy;
 import net.yozmnews.event.domain.assignment.StoredCandidate;
 import net.yozmnews.event.domain.event.EventArticle;
@@ -61,12 +62,12 @@ class JdbcEventArticleRepositoryTests {
 	@Test
 	void insertsTheAssignmentAndItsCandidatesOnce() {
 		EventArticle row = new EventArticle(new ArticleId(1), this.event, PUBLISHED, 0.72, DecidedBy.EVALUATOR,
-				false, this.criteria, ASSIGNED);
+				false, this.criteria, ASSIGNED, new EventJudgementId(9));
 
 		boolean inserted = this.repository.insertIfAbsent(row, List.of(new StoredCandidate(this.event, 0.72, 0.6),
 				new StoredCandidate(this.other, 0.45, null)));
 		boolean again = this.repository.insertIfAbsent(new EventArticle(new ArticleId(1), this.other, PUBLISHED, null,
-				DecidedBy.FORMULA, false, this.criteria, ASSIGNED), List.of(new StoredCandidate(this.other, 0.9, null)));
+				DecidedBy.FORMULA, false, this.criteria, ASSIGNED, null), List.of(new StoredCandidate(this.other, 0.9, null)));
 
 		assertThat(inserted).isTrue();
 		assertThat(again).isFalse();
@@ -80,7 +81,7 @@ class JdbcEventArticleRepositoryTests {
 	@Test
 	void anAssignmentWithoutScoreKeepsNull() {
 		EventArticle row = new EventArticle(new ArticleId(3), this.event, PUBLISHED, null, DecidedBy.JUDGEMENT_FAILED,
-				true, this.criteria, ASSIGNED);
+				true, this.criteria, ASSIGNED, null);
 		this.repository.insertIfAbsent(row, List.of());
 
 		assertThat(this.repository.lockByArticles(List.of(new ArticleId(3)))).containsExactly(row);
@@ -118,19 +119,19 @@ class JdbcEventArticleRepositoryTests {
 
 		assertThat(this.repository.lockByArticles(List.of(new ArticleId(22), new ArticleId(21)))).containsExactly(
 				new EventArticle(new ArticleId(21), this.other, PUBLISHED, null, DecidedBy.EVALUATOR, true, this.criteria,
-						Instant.parse("2026-11-06T00:00:00Z")),
+						Instant.parse("2026-11-06T00:00:00Z"), null),
 				new EventArticle(new ArticleId(22), this.event, PUBLISHED, 0.5, DecidedBy.FORMULA, false, this.criteria,
-						ASSIGNED));
+						ASSIGNED, null));
 	}
 
 	@Test
 	void thePublishedSpanCoversTheRemainingAssignmentsOfTheEvent() {
 		this.repository.insertIfAbsent(new EventArticle(new ArticleId(41), this.event, Instant.parse("2026-11-05T03:00:00Z"),
-				null, DecidedBy.FORMULA, false, this.criteria, ASSIGNED), List.of());
+				null, DecidedBy.FORMULA, false, this.criteria, ASSIGNED, null), List.of());
 		this.repository.insertIfAbsent(new EventArticle(new ArticleId(42), this.event, Instant.parse("2026-11-04T21:00:00Z"),
-				null, DecidedBy.FORMULA, false, this.criteria, ASSIGNED), List.of());
+				null, DecidedBy.FORMULA, false, this.criteria, ASSIGNED, null), List.of());
 		this.repository.insertIfAbsent(new EventArticle(new ArticleId(43), this.other, Instant.parse("2026-11-01T00:00:00Z"),
-				null, DecidedBy.FORMULA, false, this.criteria, ASSIGNED), List.of());
+				null, DecidedBy.FORMULA, false, this.criteria, ASSIGNED, null), List.of());
 
 		assertThat(this.repository.publishedSpan(this.event)).contains(
 				new PublishedSpan(Instant.parse("2026-11-04T21:00:00Z"), Instant.parse("2026-11-05T03:00:00Z")));
@@ -194,7 +195,7 @@ class JdbcEventArticleRepositoryTests {
 		assign(73, this.event, this.oldCriteria, List.of());
 		assign(71, this.other, this.criteria, List.of());
 		this.repository.insertIfAbsent(new EventArticle(new ArticleId(72), this.event, PUBLISHED, null,
-				DecidedBy.JUDGEMENT_FAILED, true, this.criteria, ASSIGNED), List.of());
+				DecidedBy.JUDGEMENT_FAILED, true, this.criteria, ASSIGNED, null), List.of());
 		long third = event(1);
 		assign(74, third, this.criteria, List.of());
 
@@ -209,16 +210,16 @@ class JdbcEventArticleRepositoryTests {
 		assertThat(this.repository.lockByArticles(List.of(new ArticleId(72), new ArticleId(73), new ArticleId(74))))
 			.containsExactly(
 					new EventArticle(new ArticleId(72), this.other, PUBLISHED, null, DecidedBy.JUDGEMENT_FAILED, true,
-							this.criteria, ASSIGNED),
+							this.criteria, ASSIGNED, null),
 					new EventArticle(new ArticleId(73), this.other, PUBLISHED, 0.5, DecidedBy.FORMULA, false,
-							this.oldCriteria, ASSIGNED),
+							this.oldCriteria, ASSIGNED, null),
 					new EventArticle(new ArticleId(74), third, PUBLISHED, 0.5, DecidedBy.FORMULA, false, this.criteria,
-							ASSIGNED));
+							ASSIGNED, null));
 	}
 
 	private void assign(long article, long event, long criteria, List<StoredCandidate> stored) {
 		this.repository.insertIfAbsent(new EventArticle(new ArticleId(article), event, PUBLISHED, 0.5, DecidedBy.FORMULA,
-				false, criteria, ASSIGNED), stored);
+				false, criteria, ASSIGNED, null), stored);
 	}
 
 	private List<StoredCandidate> candidates(long article) {

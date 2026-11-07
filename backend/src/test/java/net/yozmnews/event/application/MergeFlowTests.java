@@ -124,9 +124,12 @@ class MergeFlowTests {
 		// 핵심 말이 겹치지 않는다 — 0.7 × 0.8 = 0.56(띠)
 		long large = event("[1,0]", T, T, Map.of("국회", 2), "[1,0]", "[1,0]");
 		long small = event("[0.8,0.6]", T, T, Map.of("금리", 1), "[0.8,0.6]");
-		Scripted membership = new Scripted(query -> new MembershipJudgement.Judged(new EventJudgementId(1), Map.of(small, 0.8)));
+		Scripted membership = new Scripted(
+				query -> new MembershipJudgement.Judged(new EventJudgementId(71), Map.of(small, 0.8)));
 		List<Long> largeMembers = members(large);
 		List<Long> smallMembers = members(small);
+		// 합쳐질 사건의 배정이 반영한 판정 원본 — 옮겨도 그대로다
+		this.jdbc.sql("update event_articles set judgement_id = 72 where event_id = :event").param("event", small).update();
 
 		round(membership).run();
 
@@ -140,14 +143,21 @@ class MergeFlowTests {
 		});
 		assertThat(membership.inTransaction).containsExactly(false);
 		assertThat(eventRow(small)).containsEntry("status", "MERGED").containsEntry("merged_into", large);
-		assertThat(judgementRows()).containsExactly(Map.of("event_low", large, "event_high", small, "probability", 0.8));
+		// 쌍의 기록은 확률을 낸 판정 원본을 가리킨다
+		assertThat(judgementRows()).containsExactly(
+				Map.of("event_low", large, "event_high", small, "probability", 0.8, "judgement_id", 71L));
+		assertThat(this.jdbc.sql("select event_id, judgement_id from event_articles where article_id = any(:articles)")
+			.param("articles", smallMembers.toArray(Long[]::new))
+			.query()
+			.listOfRows()).containsExactly(Map.of("event_id", large, "judgement_id", 72L));
 	}
 
 	@Test
 	void aLowProbabilityKeepsThePairApartAndIsNotAskedAgain() {
 		long large = event("[1,0]", T, T, Map.of("국회", 2), "[1,0]", "[1,0]");
 		long small = event("[0.8,0.6]", T, T, Map.of("금리", 1), "[0.8,0.6]");
-		Scripted membership = new Scripted(query -> new MembershipJudgement.Judged(new EventJudgementId(1), Map.of(small, 0.3)));
+		Scripted membership = new Scripted(
+				query -> new MembershipJudgement.Judged(new EventJudgementId(1), Map.of(small, 0.3)));
 
 		round(membership).run();
 		// 두 사건이 모두 바뀌었다고 표시해도 남은 확률로 정해 다시 묻지 않는다
@@ -368,7 +378,9 @@ class MergeFlowTests {
 	}
 
 	private List<Map<String, Object>> judgementRows() {
-		return this.jdbc.sql("select event_low, event_high, probability from event_merge_judgements order by event_low")
+		return this.jdbc.sql("""
+				select event_low, event_high, probability, judgement_id from event_merge_judgements order by event_low
+				""")
 			.query()
 			.listOfRows();
 	}

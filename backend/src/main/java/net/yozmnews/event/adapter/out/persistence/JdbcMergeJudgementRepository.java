@@ -1,13 +1,16 @@
 package net.yozmnews.event.adapter.out.persistence;
 
 import java.sql.ResultSet;
+import java.sql.Types;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
+import net.yozmnews.evaluation.EventJudgementId;
 import net.yozmnews.event.domain.assignment.MergeJudgementRepository;
+import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
@@ -42,16 +45,18 @@ class JdbcMergeJudgementRepository implements MergeJudgementRepository {
 	}
 
 	@Override
-	public void save(long eventId, Map<Long, Double> probabilities, Instant now) {
+	public void save(long eventId, Map<Long, Double> probabilities, @Nullable EventJudgementId judgement,
+			Instant now) {
 		probabilities.forEach((other, probability) -> this.jdbc.sql("""
-				insert into event_merge_judgements (event_low, event_high, probability, judged_at)
-				values (:low, :high, :probability, :now)
+				insert into event_merge_judgements (event_low, event_high, probability, judged_at, judgement_id)
+				values (:low, :high, :probability, :now, :judgement)
 				on conflict (event_low, event_high) do nothing
 				""")
 			.param("low", Math.min(eventId, other))
 			.param("high", Math.max(eventId, other))
 			.param("probability", probability)
 			.param("now", now.atOffset(ZoneOffset.UTC))
+			.param("judgement", (judgement == null) ? null : judgement.value(), Types.BIGINT)
 			.update());
 	}
 

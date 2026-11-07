@@ -14,6 +14,7 @@ import net.yozmnews.article.ArticleContent;
 import net.yozmnews.article.ArticleDirectory;
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.evaluation.EventDescriptor;
+import net.yozmnews.evaluation.EventJudgementId;
 import net.yozmnews.evaluation.EventMembership;
 import net.yozmnews.evaluation.MembershipJudgement;
 import net.yozmnews.evaluation.MembershipQuery;
@@ -183,14 +184,14 @@ public class AssignmentRound {
 		List<StoredCandidate> stored = scored(representation, content.publishedAt(), model);
 		Resolution resolution = switch (AssignmentRule.decide(stored, this.criteria, DecisionPhase.FIRST)) {
 			case Decision.Ask ask -> judge(claim, ask, stored, model, now);
-			case Decision.Attach attach -> new Resolution.Decided(attach, stored);
-			case Decision.Open open -> new Resolution.Decided(open, stored);
+			case Decision.Attach attach -> new Resolution.Decided(attach, stored, null);
+			case Decision.Open open -> new Resolution.Decided(open, stored, null);
 			case Decision.Keep keep -> throw new IllegalStateException("처음 판정은 유지를 내지 않는다");
 		};
 		return switch (resolution) {
 			case Resolution.Decided decided -> {
 				write(claim, decided.decision(), new EventArticleDraft(article, content.publishedAt(), representation,
-						decided.stored(), criteriaId), model, now);
+						decided.stored(), criteriaId), decided.judgement(), model, now);
 				yield new Step.Next();
 			}
 			case Resolution.Finished finished -> finished.step();
@@ -207,7 +208,7 @@ public class AssignmentRound {
 		List<EventDescriptor> descriptors = describe(ask.eventIds(), model);
 		if (descriptors.isEmpty()) {
 			return new Resolution.Decided(AssignmentRule.decide(stored, this.criteria, DecisionPhase.AFTER_JUDGEMENT),
-					stored);
+					stored, null);
 		}
 		return switch (this.membership.judge(new MembershipQuery(article, descriptors))) {
 			case MembershipJudgement.Judged judged -> {
@@ -216,7 +217,8 @@ public class AssignmentRound {
 							judged.probabilities().getOrDefault(candidate.eventId(), candidate.probability())))
 					.toList();
 				yield new Resolution.Decided(
-						AssignmentRule.decide(judgedStored, this.criteria, DecisionPhase.AFTER_JUDGEMENT), judgedStored);
+						AssignmentRule.decide(judgedStored, this.criteria, DecisionPhase.AFTER_JUDGEMENT), judgedStored,
+						judged.judgement());
 			}
 			case MembershipJudgement.Failed failed -> switch (failed.kind()) {
 				case TRANSIENT -> {
@@ -248,7 +250,7 @@ public class AssignmentRound {
 
 	/** 판정 실패로 끝낸 기사 — 실패 표지를 단 새 사건. 후보는 확률 없이 남긴다 */
 	private static Resolution failedOpen(List<StoredCandidate> stored) {
-		return new Resolution.Decided(new Decision.Open(bestScore(stored), DecidedBy.JUDGEMENT_FAILED), stored);
+		return new Resolution.Decided(new Decision.Open(bestScore(stored), DecidedBy.JUDGEMENT_FAILED), stored, null);
 	}
 
 	/** 후보 점수를 매기고 저장 기준 이상만 남긴다 — 점수가 NaN 이면(영 벡터 중심) 비교가 거짓이라 빠진다 */
@@ -283,9 +285,12 @@ public class AssignmentRound {
 
 	/**
 	 * 판정을 쓴다 — 점유 토큰이 맞아 대기 행을 지웠을 때만. 붙일 사건이 사라졌거나 열려 있지 않거나 모델 버전이 다르면, 또는 다른 경로가 먼저
-	 * 배정했으면 롤백하고 새 트랜잭션에서 점유를 풀거나(다음 회차가 다시 판정) 대기 행을 지운다.
+	 * 배정했으면 롤백하고 새 트랜잭션에서 점유를 풀거나(다음 회차가 다시 판정) 대기 행을 지운다 — 그러면 반영한 판정 원본을 가리키는 배정이
+	 * 남지 않는다.
+	 * @param judgement 이 판정에 반영한 사건 소속 판정 원본 — 판정을 부르지 않았으면 null
 	 */
-	private void write(PendingAssignment claim, Decision decision, EventArticleDraft draft, String model, Instant now) {
+	private void write(PendingAssignment claim, Decision decision, EventArticleDraft draft,
+			@Nullable EventJudgementId judgement, String model, Instant now) {
 		UUID token = token(claim);
 		Written written = Objects.requireNonNull(this.transaction.execute(status -> {
 			if (!this.queue.deleteIfLeased(draft.article(), token)) {
@@ -303,12 +308,12 @@ public class AssignmentRound {
 					LockedEvent event = locked.get();
 					this.events.update(event.joined(vector, draft.publishedAt(), now), terms, List.of());
 					yield new EventArticle(draft.article(), event.id(), draft.publishedAt(), attach.score(), attach.by(),
-							false, draft.criteriaId(), now);
+							false, draft.criteriaId(), now, judgement);
 				}
 				case Decision.Open open -> {
 					long eventId = this.events.open(model, vector, draft.publishedAt(), terms, now);
 					yield new EventArticle(draft.article(), eventId, draft.publishedAt(), open.bestScore(), open.by(),
-							true, draft.criteriaId(), now);
+							true, draft.criteriaId(), now, judgement);
 				}
 				case Decision.Ask ask -> throw new IllegalStateException("물을 후보가 남은 채 쓰려 했다: " + ask);
 				case Decision.Keep keep -> throw new IllegalStateException("처음 판정은 유지를 내지 않는다");
@@ -363,8 +368,12 @@ public class AssignmentRound {
 	/** 판정을 마친 결과 — 쓸 판정이거나, 쓰지 않고 끝낸 처리 */
 	private sealed interface Resolution {
 
-		/** 쓸 판정과 함께 남길 후보 */
-		record Decided(Decision decision, List<StoredCandidate> stored) implements Resolution {
+		/**
+		 * 쓸 판정과 함께 남길 후보.
+		 * @param judgement 이 판정에 반영한 사건 소속 판정 원본 — 판정을 부르지 않았으면(산식 · 판정 실패 · 서술 기사 없음) null
+		 */
+		record Decided(Decision decision, List<StoredCandidate> stored, @Nullable EventJudgementId judgement)
+				implements Resolution {
 		}
 
 		/** 쓰지 않고 끝냈다 — 재시도로 미뤘거나 기사가 없거나 회차를 멈춘다 */

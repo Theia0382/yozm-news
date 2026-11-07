@@ -115,10 +115,11 @@ class RejudgementFlowTests {
 		rejudge(new AssignmentCriteria(Duration.ofHours(72), 0.55, 0.50, 0.40, 0.50));
 
 		assertThat(eventOf(x)).isEqualTo(event);
-		// x 는 판정 때 연 사건에서 옮겨졌다 — 연 사건 표지가 거짓이 된다
+		// x 는 판정 때 연 사건에서 옮겨졌다 — 연 사건 표지가 거짓이 된다. 판정 원본은 처음 판정의 것 그대로다
 		assertThat(assignment(x)).containsEntry("decided_by", "FORMULA")
 			.containsEntry("assigned", "2026-11-06T01:00:00Z")
-			.containsEntry("opened", false);
+			.containsEntry("opened", false)
+			.containsEntry("judgement_id", 61L);
 		assertThat((Double) assignment(x).get("score")).isCloseTo(0.56, within(1e-3));
 		// ([1,0] + [4,3]) / 2
 		assertThat(eventRow(event)).containsEntry("centroid", "[2.5,1.5]").containsEntry("article_count", 2);
@@ -127,7 +128,8 @@ class RejudgementFlowTests {
 		assertThat(eventOf(a)).isEqualTo(event);
 		assertThat(assignment(a)).containsEntry("decided_by", "FORMULA")
 			.containsEntry("assigned", "2026-11-06T01:00:00Z")
-			.containsEntry("opened", true);
+			.containsEntry("opened", true)
+			.containsEntry("judgement_id", null);
 		assertThat(count("select count(distinct criteria_id) from event_articles")).isEqualTo(1);
 		assertThat(criteriaOf(a)).isNotEqualTo(firstCriteria());
 	}
@@ -145,8 +147,10 @@ class RejudgementFlowTests {
 
 		long split = eventOf(x);
 		assertThat(split).isNotEqualTo(event);
-		// 떼어 낸 새 사건은 그 기사가 연 사건이다
-		assertThat(assignment(x)).containsEntry("decided_by", "EVALUATOR").containsEntry("opened", true);
+		// 떼어 낸 새 사건은 그 기사가 연 사건이다. 판정 원본은 그대로다
+		assertThat(assignment(x)).containsEntry("decided_by", "EVALUATOR")
+			.containsEntry("opened", true)
+			.containsEntry("judgement_id", 61L);
 		assertThat(eventRow(split)).containsEntry("centroid", "[4,3]")
 			.containsEntry("article_count", 1)
 			.containsEntry("model_version", "model-a");
@@ -168,7 +172,10 @@ class RejudgementFlowTests {
 		rejudge(new AssignmentCriteria(Duration.ofHours(72), 0.55, 0.50, 0.40, 0.50));
 
 		assertThat(eventOf(x)).isEqualTo(opened);
-		assertThat(assignment(x)).containsEntry("decided_by", "EVALUATOR").containsEntry("assigned", "2026-11-06T00:00:00Z");
+		// 기준만 새것으로 적은 배정도 판정 원본은 그대로다
+		assertThat(assignment(x)).containsEntry("decided_by", "EVALUATOR")
+			.containsEntry("assigned", "2026-11-06T00:00:00Z")
+			.containsEntry("judgement_id", 61L);
 		assertThat(criteriaOf(x)).isNotEqualTo(firstCriteria());
 		assertThat(eventRow(event)).containsEntry("article_count", 1);
 		assertThat(eventRow(opened)).containsEntry("article_count", 1);
@@ -484,7 +491,7 @@ class RejudgementFlowTests {
 			if (probability == null) {
 				throw new AssertionError("묻지 않아야 한다: " + query);
 			}
-			return new MembershipJudgement.Judged(new EventJudgementId(1),
+			return new MembershipJudgement.Judged(new EventJudgementId(61),
 					Map.of(query.candidates().get(0).eventId(), probability));
 		};
 		new AssignmentRound(this.queue, this.intake, this.features, this.events, this.assignments, this.criteriaHistory,
@@ -534,7 +541,7 @@ class RejudgementFlowTests {
 
 	private Map<String, @Nullable Object> assignment(long article) {
 		return this.jdbc.sql("""
-				select score, decided_by, opened,
+				select score, decided_by, opened, judgement_id,
 				    to_char(assigned_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as assigned
 				from event_articles where article_id = :article
 				""").param("article", article).query().singleRow();
