@@ -31,7 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 사건 묶기 대기 저장소 — 넣기 · 배정 없는 기사만 넣기 · 잠금 대상과 순서 · 토큰 조건 반영 · 지우기 · 동시 잠금을 Flyway 가 적용된 실제 PostgreSQL 에서 본다.
+ * 사건 묶기 대기 저장소 — 넣기 · 배정 없는 기사만 넣기 · 잠금 대상과 순서 · 토큰 조건 반영 · 거부 수 · 지우기 · 동시 잠금을 Flyway 가 적용된 실제 PostgreSQL 에서 본다.
  * <p>
  * 지키는 규칙: event-R5 · event-R6 · event-R8
  */
@@ -144,6 +144,24 @@ class JdbcIntakeQueueRepositoryTests {
 	}
 
 	@Test
+	void recordsARejectionOnlyWithTheMatchingTokenAndReleasesTheLease() {
+		row(71, T, TOKEN, T.plusSeconds(600));
+
+		assertThat(this.repository.recordRejectionIfLeased(new ArticleId(71), OTHER)).isEmpty();
+		assertThat(lease(71)).containsEntry("lease_token", TOKEN).containsEntry("rejections", 0);
+		assertThat(this.repository.recordRejectionIfLeased(new ArticleId(71), TOKEN)).hasValue(1);
+		assertThat(lease(71)).containsEntry("lease_token", null)
+			.containsEntry("lease_expires_at", null)
+			.containsEntry("rejections", 1);
+		this.jdbc.sql("update event_intake_queue set lease_token = :token, lease_expires_at = :expires where article_id = 71")
+			.param("token", TOKEN, Types.OTHER)
+			.param("expires", T.plusSeconds(600).atOffset(ZoneOffset.UTC))
+			.update();
+		assertThat(this.repository.recordRejectionIfLeased(new ArticleId(71), TOKEN)).hasValue(2);
+		assertThat(this.repository.recordRejectionIfLeased(new ArticleId(72), TOKEN)).isEmpty();
+	}
+
+	@Test
 	void deletesTheGivenArticlesOnly() {
 		row(51, T, null, null);
 		row(52, T, TOKEN, T.plusSeconds(600));
@@ -205,7 +223,7 @@ class JdbcIntakeQueueRepositoryTests {
 	}
 
 	private Map<String, @Nullable Object> lease(long article) {
-		return this.jdbc.sql("select lease_token, lease_expires_at from event_intake_queue where article_id = :article")
+		return this.jdbc.sql("select lease_token, lease_expires_at, rejections from event_intake_queue where article_id = :article")
 			.param("article", article)
 			.query()
 			.singleRow();

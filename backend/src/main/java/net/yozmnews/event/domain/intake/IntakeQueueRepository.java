@@ -3,6 +3,7 @@ package net.yozmnews.event.domain.intake;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
+import java.util.OptionalInt;
 import java.util.UUID;
 
 import net.yozmnews.article.ArticleId;
@@ -41,6 +42,12 @@ public interface IntakeQueueRepository {
 	 * @return 풀었으면 true
 	 */
 	boolean releaseIfLeased(ArticleId articleId, UUID token);
+
+	/**
+	 * 점유 토큰이 맞을 때만 거부 수를 하나 올리고 점유를 푼다. 트랜잭션 안에서 부른다.
+	 * @return 올린 뒤의 거부 수 — 토큰이 맞지 않으면 빈 값
+	 */
+	OptionalInt recordRejectionIfLeased(ArticleId articleId, UUID token);
 
 	/** 기사들의 대기 행을 지운다 — 지운 기사 따르기 */
 	void delete(Collection<ArticleId> articleIds);

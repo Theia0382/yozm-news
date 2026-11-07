@@ -8,6 +8,7 @@ import java.time.Instant;
 import java.time.InstantSource;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -26,8 +27,12 @@ import net.yozmnews.event.domain.assignment.AssignmentQueueRepository;
 import net.yozmnews.event.domain.event.EventArticleRepository;
 import net.yozmnews.event.domain.event.EventRepository;
 import net.yozmnews.event.domain.feature.ArticleEmbedder;
+import net.yozmnews.event.domain.feature.EmbedderFailureKind;
 import net.yozmnews.event.domain.feature.EmbedderInfo;
 import net.yozmnews.event.domain.feature.Embedding;
+import net.yozmnews.event.domain.feature.EmbeddingFailure;
+import net.yozmnews.event.domain.feature.EmbeddingResult;
+import net.yozmnews.event.domain.feature.Embeddings;
 import net.yozmnews.event.domain.feature.KeyTermExtractor;
 import net.yozmnews.event.domain.feature.MatchFeatures;
 import net.yozmnews.event.domain.feature.MatchFeaturesRepository;
@@ -233,7 +238,7 @@ class EventIntakeFlowTests {
 		ArticleEmbedder removing = new Recording() {
 
 			@Override
-			public List<Embedding> embed(List<String> texts) {
+			public EmbeddingResult embed(List<String> texts) {
 				EventIntakeFlowTests.this.transaction.executeWithoutResult(
 						status -> listener.on(new ArticlesRemoved(List.of(new ArticleId(removed)))));
 				return super.embed(texts);
@@ -296,7 +301,7 @@ class EventIntakeFlowTests {
 		ArticleEmbedder failing = new Recording() {
 
 			@Override
-			public List<Embedding> embed(List<String> texts) {
+			public EmbeddingResult embed(List<String> texts) {
 				throw new IllegalStateException("모델을 읽지 못했다");
 			}
 
@@ -306,8 +311,9 @@ class EventIntakeFlowTests {
 
 		assertThat(featureRows()).isZero();
 		assertThat(waitingWithoutLease(article)).isTrue();
-		assertThat(output).contains(
-				"임베더가 실패해 회차를 멈췄다 — fake fake-char-bigram-256-1, 기사 1건: java.lang.IllegalStateException: 모델을 읽지 못했다");
+		// 로그 줄의 사유는 예외 클래스 이름이고, 예외 문구는 그 뒤 스택에만 있다
+		assertThat(output).contains("임베더가 실패해 회차를 멈췄다 — fake fake-char-bigram-256-1, 기사 1건: java.lang.IllegalStateException"
+				+ System.lineSeparator());
 	}
 
 	@Test
@@ -321,8 +327,8 @@ class EventIntakeFlowTests {
 			}
 
 			@Override
-			public List<Embedding> embed(List<String> texts) {
-				return texts.stream().map(text -> Embedding.of(new float[] { 1f, 0f, 0f })).toList();
+			public EmbeddingResult embed(List<String> texts) {
+				return new Embeddings(texts.stream().map(text -> Embedding.of(new float[] { 1f, 0f, 0f })).toList());
 			}
 
 		};
@@ -333,6 +339,168 @@ class EventIntakeFlowTests {
 		assertThat(waitingWithoutLease(article)).isTrue();
 		assertThat(output).contains(
 				"임베더가 실패해 회차를 멈췄다 — short short-1, 기사 1건: 벡터 차원이 임베더가 밝힌 차원과 다르다 — 0번째 3, 밝힌 차원 4");
+	}
+
+	@Test
+	void aRejectedBatchIsEmbeddedOneByOneAndOnlyTheRejectedArticleCountsARejection(CapturedOutput output) {
+		long first = enqueued("기사 하나", null);
+		long second = enqueued("기사 둘", null);
+		long third = enqueued("기사 셋", null);
+		Scripted embedder = new Scripted().when(List.of("기사 하나", "기사 둘", "기사 셋"), rejected())
+			.when(List.of("기사 둘"), rejected());
+
+		round().run(embedder);
+
+		assertThat(embedder.calls).containsExactly(List.of("기사 하나", "기사 둘", "기사 셋"), List.of("기사 하나"),
+				List.of("기사 둘"), List.of("기사 셋"));
+		assertThat(this.jdbc.sql("select article_id from article_match_features order by article_id")
+			.query(Long.class)
+			.list()).containsExactly(first, third);
+		assertThat(this.jdbc.sql("select article_id from event_assignment_queue order by article_id")
+			.query(Long.class)
+			.list()).containsExactly(first, third);
+		assertThat(rejections(second)).isEqualTo(1);
+		assertThat(waitingWithoutLease(second)).isTrue();
+		assertThat(output).contains("임베더가 기사를 거부했다 — 기사 " + second + ", 거부 1회: 입력이 거부됐다");
+	}
+
+	@Test
+	void anArticleRejectedThreeTimesLeavesTheQueueWithoutARepresentation(CapturedOutput output) {
+		long article = enqueued("기사 둘", null);
+		Scripted embedder = new Scripted().when(List.of("기사 둘"), rejected());
+
+		round().run(embedder);
+		round().run(embedder);
+
+		assertThat(rejections(article)).isEqualTo(2);
+		assertThat(waitingWithoutLease(article)).isTrue();
+		assertThat(output).doesNotContain("임베더가 기사를 거부해 사건 묶기에서 뺐다");
+
+		round().run(embedder);
+
+		assertThat(embedder.calls).containsExactly(List.of("기사 둘"), List.of("기사 둘"), List.of("기사 둘"));
+		assertThat(queueRows()).isZero();
+		assertThat(featureRows()).isZero();
+		assertThat(output).contains("임베더가 기사를 거부해 사건 묶기에서 뺐다 — 기사 " + article + ", 거부 3회: 입력이 거부됐다");
+	}
+
+	@Test
+	void aTransientFailureReleasesTheBatchWithoutCountingRejectionsAndTheNextRoundWritesIt(CapturedOutput output) {
+		long first = enqueued("기사 하나", null);
+		long second = enqueued("기사 둘", null);
+		long third = enqueued("기사 셋", null);
+		Scripted failing = new Scripted().when(List.of("기사 하나", "기사 둘", "기사 셋"),
+				new EmbeddingFailure(EmbedderFailureKind.TRANSIENT, "일시 실패"));
+
+		round().run(failing);
+
+		assertThat(failing.calls).containsExactly(List.of("기사 하나", "기사 둘", "기사 셋"));
+		assertThat(featureRows()).isZero();
+		for (long article : List.of(first, second, third)) {
+			assertThat(waitingWithoutLease(article)).isTrue();
+			assertThat(rejections(article)).isZero();
+		}
+		assertThat(output).contains("임베더가 일시 실패해 회차를 멈췄다 — fake fake-char-bigram-256-1, 기사 3건: 일시 실패");
+
+		round().run(new Scripted());
+
+		assertThat(featureRows()).isEqualTo(3);
+		assertThat(queueRows()).isZero();
+	}
+
+	@Test
+	void anUnavailableEmbedderReleasesTheBatchWithoutCountingRejections(CapturedOutput output) {
+		long first = enqueued("기사 하나", null);
+		long second = enqueued("기사 둘", null);
+		Scripted failing = new Scripted().when(List.of("기사 하나", "기사 둘"),
+				new EmbeddingFailure(EmbedderFailureKind.EMBEDDER_UNAVAILABLE, "키가 틀렸다"));
+
+		round().run(failing);
+
+		assertThat(failing.calls).containsExactly(List.of("기사 하나", "기사 둘"));
+		assertThat(featureRows()).isZero();
+		for (long article : List.of(first, second)) {
+			assertThat(waitingWithoutLease(article)).isTrue();
+			assertThat(rejections(article)).isZero();
+		}
+		assertThat(output).contains("임베더를 쓸 수 없어 회차를 멈췄다 — fake fake-char-bigram-256-1, 기사 2건: 키가 틀렸다");
+	}
+
+	@Test
+	void aTransientFailureWhileEmbeddingOneByOneReleasesTheRestWithoutCountingRejections(CapturedOutput output) {
+		long first = enqueued("기사 하나", null);
+		long second = enqueued("기사 둘", null);
+		long third = enqueued("기사 셋", null);
+		Scripted embedder = new Scripted().when(List.of("기사 하나", "기사 둘", "기사 셋"), rejected())
+			.when(List.of("기사 둘"), new EmbeddingFailure(EmbedderFailureKind.TRANSIENT, "일시 실패"));
+
+		round().run(embedder);
+
+		assertThat(embedder.calls).containsExactly(List.of("기사 하나", "기사 둘", "기사 셋"), List.of("기사 하나"),
+				List.of("기사 둘"));
+		assertThat(this.jdbc.sql("select article_id from article_match_features").query(Long.class).list())
+			.containsExactly(first);
+		for (long article : List.of(second, third)) {
+			assertThat(waitingWithoutLease(article)).isTrue();
+			assertThat(rejections(article)).isZero();
+		}
+		assertThat(output).contains("임베더가 일시 실패해 회차를 멈췄다 — fake fake-char-bigram-256-1, 기사 2건: 일시 실패");
+	}
+
+	@Test
+	void anUnavailableEmbedderWhileEmbeddingOneByOneReleasesTheRestWithoutCountingRejections(CapturedOutput output) {
+		long first = enqueued("기사 하나", null);
+		long second = enqueued("기사 둘", null);
+		long third = enqueued("기사 셋", null);
+		Scripted embedder = new Scripted().when(List.of("기사 하나", "기사 둘", "기사 셋"), rejected())
+			.when(List.of("기사 둘"), new EmbeddingFailure(EmbedderFailureKind.EMBEDDER_UNAVAILABLE, "키가 틀렸다"));
+
+		round().run(embedder);
+
+		assertThat(embedder.calls).containsExactly(List.of("기사 하나", "기사 둘", "기사 셋"), List.of("기사 하나"),
+				List.of("기사 둘"));
+		assertThat(this.jdbc.sql("select article_id from article_match_features").query(Long.class).list())
+			.containsExactly(first);
+		for (long article : List.of(second, third)) {
+			assertThat(waitingWithoutLease(article)).isTrue();
+			assertThat(rejections(article)).isZero();
+		}
+		assertThat(output).contains("임베더를 쓸 수 없어 회차를 멈췄다 — fake fake-char-bigram-256-1, 기사 2건: 키가 틀렸다");
+	}
+
+	@Test
+	void anExceptionWhileEmbeddingOneByOneReleasesTheRestWithoutCountingRejections(CapturedOutput output) {
+		long first = enqueued("기사 하나", null);
+		long second = enqueued("기사 둘", null);
+		long third = enqueued("기사 셋", null);
+		Scripted scripted = new Scripted().when(List.of("기사 하나", "기사 둘", "기사 셋"), rejected());
+		ArticleEmbedder throwing = new ArticleEmbedder() {
+
+			@Override
+			public EmbedderInfo info() {
+				return scripted.info();
+			}
+
+			@Override
+			public EmbeddingResult embed(List<String> texts) {
+				if (texts.equals(List.of("기사 둘"))) {
+					throw new IllegalStateException("추론이 멈췄다");
+				}
+				return scripted.embed(texts);
+			}
+
+		};
+
+		round().run(throwing);
+
+		assertThat(this.jdbc.sql("select article_id from article_match_features").query(Long.class).list())
+			.containsExactly(first);
+		for (long article : List.of(second, third)) {
+			assertThat(waitingWithoutLease(article)).isTrue();
+			assertThat(rejections(article)).isZero();
+		}
+		assertThat(output).contains("임베더가 실패해 회차를 멈췄다 — fake fake-char-bigram-256-1, 기사 2건: java.lang.IllegalStateException"
+				+ System.lineSeparator());
 	}
 
 	private EventIntakeRound round() {
@@ -356,7 +524,7 @@ class EventIntakeFlowTests {
 	}
 
 	private static float[] fake(String text) {
-		return new FakeArticleEmbedder().embed(List.of(text)).get(0).values();
+		return new FakeArticleEmbedder().embed(List.of(text)).vectors().get(0).values();
 	}
 
 	private float[] storedVector(long article) {
@@ -387,6 +555,46 @@ class EventIntakeFlowTests {
 			.single() == 1;
 	}
 
+	private @Nullable Integer rejections(long article) {
+		return this.jdbc.sql("select rejections from event_intake_queue where article_id = :article")
+			.param("article", article)
+			.query(Integer.class)
+			.optional()
+			.orElse(null);
+	}
+
+	private static EmbeddingFailure rejected() {
+		return new EmbeddingFailure(EmbedderFailureKind.INPUT_REJECTED, "입력이 거부됐다");
+	}
+
+	/** 묶음마다 정해 둔 결과를 내고, 정하지 않은 묶음은 대체물로 임베딩한다 — 부른 묶음을 차례로 남긴다. 외부 경계의 시험 대역이다 */
+	private static final class Scripted implements ArticleEmbedder {
+
+		private final FakeArticleEmbedder delegate = new FakeArticleEmbedder();
+
+		private final Map<List<String>, EmbeddingResult> script = new HashMap<>();
+
+		final List<List<String>> calls = new ArrayList<>();
+
+		Scripted when(List<String> texts, EmbeddingResult result) {
+			this.script.put(List.copyOf(texts), result);
+			return this;
+		}
+
+		@Override
+		public EmbedderInfo info() {
+			return this.delegate.info();
+		}
+
+		@Override
+		public EmbeddingResult embed(List<String> texts) {
+			this.calls.add(List.copyOf(texts));
+			EmbeddingResult scripted = this.script.get(texts);
+			return (scripted != null) ? scripted : this.delegate.embed(texts);
+		}
+
+	}
+
 	/** 대체물을 감싸 회차가 넘긴 텍스트를 남기는 임베더 */
 	private static class Recording implements ArticleEmbedder {
 
@@ -400,7 +608,7 @@ class EventIntakeFlowTests {
 		}
 
 		@Override
-		public List<Embedding> embed(List<String> texts) {
+		public EmbeddingResult embed(List<String> texts) {
 			this.texts.addAll(texts);
 			return this.delegate.embed(texts);
 		}

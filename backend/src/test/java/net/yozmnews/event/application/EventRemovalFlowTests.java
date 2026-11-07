@@ -32,7 +32,7 @@ import net.yozmnews.event.domain.event.EventArticleRepository;
 import net.yozmnews.event.domain.event.EventRepository;
 import net.yozmnews.event.domain.feature.ArticleEmbedder;
 import net.yozmnews.event.domain.feature.EmbedderInfo;
-import net.yozmnews.event.domain.feature.Embedding;
+import net.yozmnews.event.domain.feature.EmbeddingResult;
 import net.yozmnews.event.domain.feature.MatchFeaturesRepository;
 import net.yozmnews.event.domain.intake.IntakeQueueRepository;
 import org.jspecify.annotations.Nullable;
@@ -398,7 +398,7 @@ class EventRemovalFlowTests {
 		}
 
 		@Override
-		public List<Embedding> embed(List<String> texts) {
+		public EmbeddingResult embed(List<String> texts) {
 			throw new AssertionError("배정 회차는 임베딩하지 않는다");
 		}
 

@@ -8,6 +8,7 @@ import java.util.Objects;
 import net.yozmnews.event.domain.feature.ArticleEmbedder;
 import net.yozmnews.event.domain.feature.EmbedderInfo;
 import net.yozmnews.event.domain.feature.Embedding;
+import net.yozmnews.event.domain.feature.Embeddings;
 
 /**
  * 임베더의 로컬 대체물 — 문자 2-그램 특징 해싱 · docs/specs/event.md §4 · event-R9.
@@ -36,12 +37,12 @@ public final class FakeArticleEmbedder implements ArticleEmbedder {
 	 * @throws IllegalArgumentException 2-그램이 하나도 없는(공백뿐인) 텍스트가 있을 때
 	 */
 	@Override
-	public List<Embedding> embed(List<String> texts) {
+	public Embeddings embed(List<String> texts) {
 		List<Embedding> embeddings = new ArrayList<>(texts.size());
 		for (String text : texts) {
 			embeddings.add(embed(text));
 		}
-		return List.copyOf(embeddings);
+		return new Embeddings(embeddings);
 	}
 
 	private static Embedding embed(String text) {

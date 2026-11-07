@@ -10,7 +10,7 @@ public interface ArticleEmbedder {
 	/** 이름 · 모델 버전 · 차원을 낸다 — docs/specs/event.md §4 */
 	EmbedderInfo info();
 
-	/** 텍스트마다 벡터 하나를 낸다 — docs/specs/event.md §4 */
-	List<Embedding> embed(List<String> texts);
+	/** 텍스트마다 벡터 하나를 낸다 — 예상한 실패는 결과 값이다 · docs/specs/event.md §4 */
+	EmbeddingResult embed(List<String> texts);
 
 }
