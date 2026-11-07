@@ -1,6 +1,6 @@
 # ADR-0014: 데이터 접근은 Spring Data JDBC + JdbcClient
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 스키마 정본의 장기 검색 인덱스([ADR-0089](0089-long-term-hnsw-indexes-on-closed-events-created-per-model-version-at-runtime-by-the-worker-role.md))
 - 날짜: 2026-10-25
 - 관련: [ADR-0004](0004-tech-stack.md)의 데이터 접근 항목(Spring Data JPA)을 대체한다
 
@@ -14,6 +14,8 @@
 - 스키마는 Flyway로 직접 관리하므로 JPA의 스키마 생성 기능은 쓰지 않는다.
 
 ## 결정
+
+> 부분 대체("스키마" 행) — [ADR-0089](0089-long-term-hnsw-indexes-on-closed-events-created-per-model-version-at-runtime-by-the-worker-role.md). 지금 상태: [`overview` §6](../overview.md#6-횡단-규약) "데이터 접근" · [event Spec §5](../specs/event.md#사건-정리) event-R13
 
 | 용도 | 기술 |
 |---|---|

@@ -37,7 +37,7 @@ public interface LlmClientFactory {
 | `MarkDormantStorylines` | 하루 1회 | 새 연결이 기준 일수 동안 없는 이슈를 휴면으로 바꾼다. 마지막 연결 날짜는 `digest` 의 타임라인에서 오고, 전이는 `storyline` API 로 한다. 이 작업을 어느 모듈에 둘지는 구현에서 정한다 — 어느 쪽이든 `storyline` 이 `digest` 를 읽어서는 안 된다 |
 | `ScheduleDueReports` | 1시간마다 | 리포트 시점이 된 사용자의 변화 리포트 생성 작업 등록 |
 | `GenerateReport(userId, period)` | 위에서 등록 | 통계 집계 → 스냅숏 → LLM 호출 → 검증 → 저장 |
-| `Retention` | 하루 1회 | 보존 기간이 지난 데이터 정리 ([data-model.md](data-model.md)) — 사건 배정 입력, 요약문(운영 설정을 켰을 때) 포함 |
+| `Retention` | 하루 1회 | 보존 기간이 지난 데이터 정리 ([data-model.md](data-model.md)) — 요약문(운영 설정을 켰을 때) 포함. 사건 배정 입력(기사 표현)은 `event` 의 사건 정리 작업이 지운다([event Spec](specs/event.md#사건-정리)) |
 
 ## 외부 API와 MCP (v1 이후)
 
