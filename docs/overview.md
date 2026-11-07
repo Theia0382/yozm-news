@@ -129,7 +129,7 @@ flowchart LR
 | `feedback` | 좋아요 / 싫어요 — 추가 전용 기록과 현재 상태 |
 | [`admin`](specs/admin.md) | 운영자 기능의 HTTP API(소스 · 피드 관리, 수집 현황, 이벤트 발행, 태그 체계 버전, 평가 현황, 평가 검수, 태그 기준 · 저장 기준, 빠진 태그 채움, 사건 묶기 채우기, (미구현) 그 밖의 사건) — 각 모듈의 공개 API(운영 API · 공개 조회)를 부른다 |
 | [`platform`](specs/platform.md) | 여러 모듈에 걸친 것: 실패한 이벤트 발행 재처리와 남겨진 발행의 운영자 처리, 화면용 API 명세 설정 · API 계약 확인 엔드포인트, 역할(profile `web` · `worker`)과 그 기동 검사, DB 확장(pgvector) 요건 검사, 로컬 개발 표시(profile `local` — 로컬 대체물 등록), 보안 설정, 오류 응답 형식, YAML 원문 읽기 |
-| [`event`](specs/event.md) | 공유 사건 묶기 — 사건 묶기 대기, 기사 표현(임베딩 · 핵심 말, `ArticleEmbedder`), 사건 배정과 재판정, (미구현) 병합 · 닫기, 큰 사건 판정, 사건 조회. 사용자를 모른다 |
+| [`event`](specs/event.md) | 공유 사건 묶기 — 사건 묶기 대기, 기사 표현(임베딩 · 핵심 말, `ArticleEmbedder`), 사건 배정과 재판정, 사건 조회 · 대표 기사 · 큰 사건 판정(기준은 운영자 설정), (미구현) 병합 · 닫기. 사용자를 모른다 |
 | `storyline` | 사용자별 이슈 — 제목 · 현재 상태 요약 · 상태 전이 · 추적 · 해제와 그 이력 |
 | `report` | 변화 리포트 일정 · 생성(`ReportGenerator`) · 저장 · 조회 |
 
@@ -150,13 +150,13 @@ flowchart LR
 - 이벤트는 Spring Modulith 이벤트 발행 레지스트리(JDBC)에 기록된다. 리스너가 실패한 발행은 반복 작업이 주기적으로 다시 처리하고, 처리 도중 프로세스가 죽어 멈춘 발행은 정해진 시간이 지나면 실패로 바뀌어 같은 경로로 다시 처리된다. 정해진 횟수를 넘긴 발행과 이벤트를 읽을 수 없는 발행은 다시 처리하지 않고 남기며, 운영자가 화면에서 다시 처리하거나 폐기한다 — 규칙은 [platform Spec](specs/platform.md#이벤트-발행-재처리)([ADR-0023](adr/0023-jobrunr-oss-framework-schema-and-event-resubmission.md))
 - **(미설계)** `ArticleEvaluated` · `UserSettingsChanged` · `CredentialInvalidated` 는 발행 주체 · 시점 · 내용이 아직 설계되지 않았다
 - `ArticleEvaluated` 를 받은 `digest` 는 즉시 생성하지 않는다. 다이제스트는 사용자 일정에 따라 생성되고, 이 이벤트는 지표 갱신에만 쓴다
-- 그림은 이벤트만 그린다. **모듈 사이 의존(공개 API · 이벤트)의 정본은 이 절이다** — 각 모듈 Spec 은 그 모듈이 내놓는 것(공개 인터페이스 · 발행 이벤트)만 갖고 의존은 이 절을 가리킨다. 각 모듈의 화면 · 작업 진입점은 `platform` 의 역할 애너테이션(공개 타입)에 의존한다 — 그래서 `platform` 은 다른 모듈의 타입에 의존하지 않는다([ADR-0042](adr/0042-app-roles-as-web-worker-profiles-marked-by-platform-annotations.md)). 사건 · 이슈 · 관심도 · 변화 리포트에 걸친 공개 API 의존은 `digest` → `event` · `storyline` · `feedback` · `user` · `evaluation` · `llm`, `event` → `article` · `evaluation`, `report` → `digest` · `event` · `evaluation` · `storyline` · `user` · `llm`, `admin` → `event` 다
+- 그림은 이벤트만 그린다. **모듈 사이 의존(공개 API · 이벤트)의 정본은 이 절이다** — 각 모듈 Spec 은 그 모듈이 내놓는 것(공개 인터페이스 · 발행 이벤트)만 갖고 의존은 이 절을 가리킨다. 각 모듈의 화면 · 작업 진입점은 `platform` 의 역할 애너테이션(공개 타입)에 의존한다 — 그래서 `platform` 은 다른 모듈의 타입에 의존하지 않는다([ADR-0042](adr/0042-app-roles-as-web-worker-profiles-marked-by-platform-annotations.md)). 사건 · 이슈 · 관심도 · 변화 리포트에 걸친 공개 API 의존은 `digest` → `event` · `storyline` · `feedback` · `user` · `evaluation` · `llm`, `event` → `article` · `evaluation` · `source`, `report` → `digest` · `event` · `evaluation` · `storyline` · `user` · `llm`, `admin` → `event` 다
 - `source` · `evaluation` → `platform` 의 공개 API 의존은 YAML 원문 읽기(`YamlTextReader` · `StrictYamlBinding`)다 — 수집 프로필과 기본 태그 체계 파일을 같은 공통 거부로 읽는다. `source` · `evaluation` · `event` 는 길이 상한을 코드 포인트로 자를 때 `platform` 의 `CodePoints` 를 쓴다
 - `article` → `source` 의 공개 API 의존은 `SourceDirectory`(피드가 아직 있는지 — 지운 피드의 늦은 항목을 버린다)다. 기사의 출처 이름은 `source` 가 기록한다
 - 운영자가 소스 · 피드를 지우면 `article` 이 그 소스 · 피드만 가진 기사를 지우고 지운 기사 ID 를 `ArticlesRemoved` 로 알린다. 기사를 ID 로 가리키는 모듈은 그 이벤트를 받아 자기 행을 지운다 — 지금은 `evaluation`(평가 대기 · 평가 · 태그 · 사건 소속 판정 원본)과 `event`(사건 묶기 대기 · 배정 대기 · 기사 표현 · 배정 · 저장 후보, 그리고 그 기사를 뺀 사건)이고, 다이제스트도 같은 이벤트를 받는다([ADR-0060](adr/0060-article-deletion-announced-by-removed-article-ids-and-followed-by-referencing-modules.md))
 - `evaluation` → `article` · `source` 의 공개 API 의존은 평가 · 사건 소속 판정의 입력이다 — 기사의 제목 · 요약문 · 엔트리(판정할 기사와 서술 기사 포함)는 `article` 의 `ArticleDirectory` 가, 피드의 출처 이름 · 섹션은 `source` 의 `FeedLabels` 가 낸다. 체계를 바꿀 때의 재평가 대상(처음 본 시각이 기간 안인 기사)도 `article` 의 `ArticleDirectory` 가 낸다
-- `event` → `article` 의 공개 API 의존은 기사 표현 · 배정의 입력이다 — 기사의 제목 · 요약문 · 발행 시각과 채우기 대상(처음 본 시각이 기간 안인 기사)은 `article` 의 `ArticleDirectory` 가 낸다
-- `event` → `evaluation` 의 공개 API 의존은 사건 소속 판정(`EventMembership`)이다 — 사건 배정이 애매한 구간의 기사를 작업 역할에서 트랜잭션 밖으로 묻는다. 요청 · 결과 타입은 `evaluation` 이 소유한다
+- `event` → `article` 의 공개 API 의존은 기사 표현 · 배정 · 큰 사건 판정의 입력이다 — 기사의 제목 · 요약문 · 발행 시각, 채우기 대상(처음 본 시각이 기간 안인 기사), 큰 사건의 소스 수를 셀 기사의 엔트리 소스(`sources`)는 `article` 의 `ArticleDirectory` 가 낸다. 그 소스의 값 타입(`SourceId`)이 `event` → `source` 의존이다
+- `event` → `evaluation` 의 공개 API 의존은 사건 소속 판정(`EventMembership`)과 큰 사건 판정의 중요도다 — 사건 배정이 애매한 구간의 기사를 작업 역할에서 트랜잭션 밖으로 묻고, 큰 사건의 중요도 평균을 셀 기사의 중요도는 `ArticleEvaluations.importances` 가 낸다. 요청 · 결과 타입은 `evaluation` 이 소유한다. 큰 사건 기준 이력의 행위자 종류(`ChangeActor`)와 중요도 기준의 범위(`ImportanceScale`)도 `evaluation` 의 공개 타입을 쓴다
 - `admin` 은 운영자 기능을 가진 모듈의 공개 운영 API 를 부른다 — 지금은 `source` 의 `SourceAdministration`(소스 · 피드 관리 · 숨김 · 삭제 · 수집 상태), `article` 의 `ArticleAdministration`(엔트리 집계 · 삭제하면 함께 지워질 기사 수), `evaluation` 의 `TagSetAdministration`(태그 체계 버전 목록 · 원문 · 확인 · 활성화, 태그 기준 · 저장 기준의 상태 · 미리보기 · 변경) · `EvaluationAdministration`(평가 대기 · 평가 현황) · `TagBackfillAdministration`(빠진 태그 채움의 확인 · 요청 · 목록) · `EvaluationReview`(평가 결과 목록 · 표본 · 상세), `event` 의 `EventIntakeAdministration`(사건 묶기 채우기), `platform` 의 `EventPublicationAdministration`(남겨진 이벤트 발행의 다시 처리 · 폐기). 운영자 화면에 기사 정보를 맞붙이려고 공개 조회도 부른다 — `evaluation` 의 `TopicCoverage`(주제별 보도량), `article` 의 `ArticleDirectory`(제목 · 요약문 · 정규 URL · 발행 시각 · 엔트리), `source` 의 `FeedLabels`(출처 이름 · 섹션). 운영 결과의 타입은 그 모듈이 공개하고 HTTP 응답 모양은 `admin` 이 정한다([ADR-0045](adr/0045-admin-module-serves-operator-api-over-module-public-operation-apis.md))
 - **(미설계)** 그 밖의 공개 API 의존(예: 후보 선별이 기사 · 소스를 읽는 의존)과 여러 모듈의 데이터에 걸친 작업(보존 정리 · 휴면 이슈 전환)의 소속은 아직 설계되지 않았다
 - 모듈 사이 순환 의존은 Modulith 검증 테스트가 실패로 판정하고, 다른 모듈의 이벤트 타입을 받는 것도 의존으로 센다. 그래서 이슈 타임라인은 그 정본인 주요 뉴스 섹션을 가진 `digest` 가, 관심도는 노출 기록을 가진 `digest` 가 내주고, `storyline` 은 `digest` 를 모르며, `report` 는 다른 모듈을 읽기만 한다. 사건 소속 판정의 인자 · 반환 타입은 `evaluation` 이 소유한다 ([ADR-0025](adr/0025-long-term-personal-news-history-in-v1.md) · [ADR-0026](adr/0026-event-clustering-with-local-embeddings-and-jev.md))
@@ -217,7 +217,7 @@ flowchart LR
 | 다이제스트(Digest) | 한 사용자의 한 기간(기본: 하루)에 대해 LLM 이 여러 기사를 종합해 만든 결과물 |
 | BYOK | Bring Your Own Key. 사용자가 자기 LLM API 키를 등록해 다이제스트 · 변화 리포트 생성 비용을 직접 부담하는 방식 |
 | 사건(Event) | 같은 사건을 다룬 기사를 사용자와 무관하게 묶은 며칠 단위의 공유 묶음. 비용은 운영자가 부담 |
-| 큰 사건 | 판정 기준을 넘는 사건. 구독과 무관하게 후보에 들어간다. 판정 규칙은 [event Spec](specs/event.md#대표-기사--큰-사건) |
+| 큰 사건 | 판정 기준에 이르는 사건. 구독과 무관하게 후보에 들어간다. 판정 규칙은 [event Spec](specs/event.md#대표-기사--큰-사건) |
 | 이슈(`storyline`) | 한 사용자가 몇 주에서 몇 달에 걸쳐 따라가는 전개. 다이제스트가 그날의 주요 뉴스를 이어 붙인다. GitHub 이슈와 다른 말이다 |
 | 주요 뉴스(`top_stories`) | 다이제스트 하루치에서 여러 기사를 종합한 섹션. 주요 뉴스 하나가 이슈의 한 장면이 된다 |
 | 주제 | 태그 체계의 주제 태그(대분류 · 중분류). 보도량과 관심도를 세는 단위이고, Topic 이라는 별도 용어를 두지 않는다 |

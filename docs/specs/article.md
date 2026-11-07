@@ -109,6 +109,7 @@ public record ArticlesRemoved(List<ArticleId> articleIds) {}
 public interface ArticleDirectory {
     Map<ArticleId, ArticleContent> findAll(Collection<ArticleId> ids);
     List<ArticleId> firstSeenSince(Instant since);
+    Map<ArticleId, Set<SourceId>> sources(Collection<ArticleId> ids);
 }
 
 public record ArticleContent(ArticleId id, String title, @Nullable String summary, URI canonicalUrl,
@@ -121,6 +122,7 @@ public record ArticleEntryView(SourceId sourceId, FeedId feedId, List<String> ca
 |---|---|
 | `findAll` | 기사들의 내용 — 없는(지운) 기사는 결과에 없다. 빈 입력이면 빈 맵 |
 | `firstSeenSince` | 처음 본 시각(`first_seen_at`)이 `since` 이상인 기사의 ID — ID 순. `evaluation` 이 체계를 바꿀 때 재평가 대상을, `event` 가 사건 묶기 채우기 대상을 고른다 |
+| `sources` | 기사들의 엔트리가 가진 소스 — 엔트리가 없는(지운) 기사는 결과에 없다. 빈 입력이면 빈 맵. `event` 가 큰 사건의 서로 다른 소스 수를 센다 |
 | `ArticleContent.summary` | 저장된 RSS 요약문 — 없으면 null |
 | `ArticleContent.canonicalUrl` | 기사의 정규 URL(article-R1) — 원문 링크. 언제나 http · https 다 |
 | `ArticleContent.publishedAt` | 기사의 발행 시각 — 처음 저장한 값(article-R8). 해석하지 못한 항목이면 받은 시각이다(source-R40). 추정했는지는 내지 않는다 |
@@ -128,7 +130,7 @@ public record ArticleEntryView(SourceId sourceId, FeedId feedId, List<String> ca
 | `ArticleEntryView.categories` | 그 피드에서 처음 본 항목의 RSS 카테고리 — 피드 순서 그대로 |
 
 - 계약
-  - 트랜잭션을 열지 않는다 — `findAll` 은 엔트리 · 기사 두 질의로 읽고, 각 질의는 그 순간의 값이다. 엔트리를 먼저 읽으므로 두 질의 사이에 지운 기사는 결과에서 빠진다. `firstSeenSince` 는 질의 하나다
+  - 트랜잭션을 열지 않는다 — `findAll` 은 엔트리 · 기사 두 질의로 읽고, 각 질의는 그 순간의 값이다. 엔트리를 먼저 읽으므로 두 질의 사이에 지운 기사는 결과에서 빠진다. `firstSeenSince` · `sources` 는 질의 하나다
   - `first_seen_at` 에는 인덱스가 없다 — `firstSeenSince` 는 표 전체를 읽는다. 드문 운영 연산(체계 변경 · 사건 묶기 채우기)이 부른다
   - 출처 이름 · 피드 섹션은 담지 않는다 — `source` 의 공개 조회가 낸다
 
@@ -283,6 +285,7 @@ sequenceDiagram
       long countArticlesOnlyIn(SourceId sourceId, FeedId feedId);
       Map<ArticleId, ArticleContent> findContents(Collection<ArticleId> articleIds);  // 없는 기사는 빠진다 — 엔트리는 받은 시각 · 피드 ID 순
       List<ArticleId> findFirstSeenSince(Instant since);                               // first_seen_at >= since — ID 순
+      Map<ArticleId, Set<SourceId>> findSources(Collection<ArticleId> articleIds);    // 엔트리의 소스 — 엔트리가 없는 기사는 빠진다
   }
   ```
 
