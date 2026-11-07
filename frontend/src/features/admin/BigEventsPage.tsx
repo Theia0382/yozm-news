@@ -99,7 +99,7 @@ export function BigEventsPage() {
   });
 
   // 빈 칸은 Number("") 로 0 이 되어 조용히 나간다 — 수로 읽히는 입력만 보낸다(범위는 서버가 판정한다). 소스 수는 정수만 보낸다 —
-  // 서버의 본문 읽기가 소수를 정수로 잘라 받는다
+  // 서버는 소수를 본문 형식 400 으로 거부하는데, 그 설명보다 먼저 입력 안내로 알린다
   const numeric = isInteger(minSources) && isNumber(minImportance);
   const previewed =
     preview.data !== undefined && asked !== null && sameAsked(asked, request);

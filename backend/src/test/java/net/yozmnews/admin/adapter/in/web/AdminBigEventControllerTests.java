@@ -201,6 +201,25 @@ class AdminBigEventControllerTests {
 	}
 
 	@Test
+	void aFractionalSourceCountIsABadRequestNotATruncation() throws Exception {
+		this.administration.change = new BigEventCriteriaChangeResult.Unchanged(BigEventCriteria.DEFAULT);
+		// 대조 — 소수점 없는 정수는 그대로 받는다
+		this.mockMvc.perform(json(put("/api/admin/big-event-criteria"), "{\"minSources\":3,\"minImportance\":3}"))
+			.andExpect(status().isOk());
+
+		this.mockMvc.perform(json(put("/api/admin/big-event-criteria"), "{\"minSources\":3.5,\"minImportance\":3}"))
+			.andExpect(status().isBadRequest())
+			.andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON));
+		this.mockMvc
+			.perform(json(post("/api/admin/big-event-criteria-previews"),
+					"{\"minSources\":2.5,\"minImportance\":3,\"from\":\"2026-11-01\",\"to\":\"2026-11-07\","
+							+ "\"zone\":\"Asia/Seoul\"}"))
+			.andExpect(status().isBadRequest())
+			.andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON));
+		assertThat(this.administration.calls).containsExactly("change 3 3 OPERATOR");
+	}
+
+	@Test
 	void theBigEventsNeedTheOperatorToken() throws Exception {
 		this.mockMvc.perform(get("/api/admin/big-events?" + PERIOD)).andExpect(status().isUnauthorized());
 		this.mockMvc.perform(get("/api/admin/big-event-criteria")).andExpect(status().isUnauthorized());
