@@ -17,6 +17,7 @@
 - **오류 응답 형식** — 화면용 API 의 오류 본문(`ApiProblem`)과 그것을 만드는 정본(`ProblemResponses`), 컨트롤러 오류 · 보안 거부의 문제 응답
 - **YAML 원문 읽기** — YAML 원문을 이벤트 API 로 읽어 트리로 옮기고, 문서 종류와 무관한 공통 거부(앵커 · 별칭 · 명시 태그 · 중복 키 · 알 수 없는 키 · 빈 값 · 형 오류 등)를 하는 공개 타입. 수집 프로필(`source`)과 기본 태그 체계(`evaluation`)가 쓴다
 - **코드 포인트 자르기** — 텍스트를 앞 몇 코드 포인트로 자르는 공개 타입(`CodePoints`). 피드 요약문(`source`) · 평가 입력(`evaluation`) · 기사 표현 텍스트(`event`)의 길이 상한이 쓴다
+- **HTTP 응답 본문 상한** — JDK `HttpClient` 의 응답 본문을 상한까지만 받는 공개 타입(`CappedBody`). 외부 API 를 부르는 어댑터(`evaluation` 의 Jev · `event` 의 외부 임베딩)가 쓴다
 
 하지 않는 것:
 
@@ -48,7 +49,7 @@
 
 ## 3. 공개 인터페이스
 
-모듈 최상위 패키지 `net.yozmnews.platform` 의 공개 타입은 역할 애너테이션 둘, 로컬 개발 애너테이션 하나, 문제 응답 둘(`ApiProblem` · `ProblemResponses`), 이벤트 발행 운영 API(`EventPublicationAdministration` 과 결과 타입 — 파일 9개, 중첩 레코드를 더하면 타입 11개), YAML 원문 읽기(파일 8개), 코드 포인트 자르기 하나(`CodePoints`)다.
+모듈 최상위 패키지 `net.yozmnews.platform` 의 공개 타입은 역할 애너테이션 둘, 로컬 개발 애너테이션 하나, 문제 응답 둘(`ApiProblem` · `ProblemResponses`), 이벤트 발행 운영 API(`EventPublicationAdministration` 과 결과 타입 — 파일 9개, 중첩 레코드를 더하면 타입 11개), YAML 원문 읽기(파일 8개), 코드 포인트 자르기 하나(`CodePoints`), HTTP 응답 본문 수신자 하나(`CappedBody` — 중첩 타입을 더하면 넷)다.
 
 | 타입 | 형태 | 용도 |
 |---|---|---|
@@ -209,6 +210,29 @@ public final class CodePoints {
   - `max` 가 음수면 `IllegalArgumentException`, 텍스트가 null 이면 `NullPointerException`
 
 관련 규칙: 없음. 상한 값은 쓰는 모듈이 갖는다.
+
+### CappedBody
+
+JDK `HttpClient` 의 응답 본문을 상한까지만 모으는 수신자 — 빈이 아니고, 요청마다 새로 만든다.
+
+```java
+public final class CappedBody implements HttpResponse.BodySubscriber<CappedBody.Result> {
+    public CappedBody(int max);   // 상한(바이트)
+    public sealed interface Result {
+        record Complete(String text) implements Result {}
+        record Overflow() implements Result {}
+    }
+}
+```
+
+- 계약
+  - 받은 바이트가 상한 이하로 끝나면 `Complete` — 본문을 UTF-8 로 읽은 문자열
+  - 다음 조각을 더하면 상한을 넘을 때 받기를 멈추고(구독 취소) `Overflow` — 입출력 오류와 섞지 않는다
+  - 본문 받기가 오류로 끝나면 그 오류로 실패한다
+  - 상한이 1 미만이면 `IllegalArgumentException`
+- 본문을 끝까지 받아야 완료되므로, 부르는 쪽이 완료를 마감으로 기다리면 마감이 본문 읽기까지 덮는다
+
+관련 규칙: 없음. 상한 값은 쓰는 어댑터가 갖는다.
 
 ### EventPublicationAdministration
 

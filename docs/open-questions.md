@@ -18,7 +18,7 @@
 | 10 | 보존 기간 ([data-model.md](data-model.md)) | 초안 값으로 시작. RSS 요약문은 결정됨(아래) |
 | 11 | 사용자 피드 추가 허용 | v1은 불가. 열 때는 사용자당 피드 수 상한, 피드 볼륨 상한, 운영자 승인 중 하나 이상이 필요하다 (Jev 비용이 운영자 부담이므로) |
 | 12 | 본문 추출 도입 | M5 품질 측정 후. 요약문이 거의 없는 소스(제목만 주는 피드)부터 검토 |
-| 20 | 사건 묶기 값: 시간 창 · 위 · 아래 · 저장 · 확률 기준 · 닫는 기간 · 최대 기간의 기본값(지금은 측정 전 목표 — [event Spec §7](specs/event.md#7-설정)), 임베딩 모델 ([event Spec §1](specs/event.md#1-책임과-범위)) | M3 평가 세트로 정한다 |
+| 20 | 사건 묶기 값: 시간 창 · 위 · 아래 · 저장 · 확률 기준 · 닫는 기간 · 최대 기간의 기본값(지금은 측정 전 목표 — [event Spec §7](specs/event.md#7-설정)) | M3 평가 세트로 정한다. 기본 임베딩 모델(multilingual-e5-small)은 다른 사건의 기사 쌍도 코사인이 높아(중앙값 0.82) 지금 아래 기준으로는 시간 창 안의 거의 모든 후보가 Jev 에 묻는 구간에 든다(기사 쌍 분포로 본 근사). 모델마다 분포가 크게 달라(다른 사건 쌍 중앙값 0.06 ~ 0.83) 기준은 모델별로 맞춘다 — [임베딩 모델 조사](research/2026-11-embedding-models.md) |
 | 21 | 큰 사건 기준(소스 수 · 중요도)과 큰 사건 슬롯 수 | M3 평가 세트와 운영자 표본 검수로 시작해 M5 측정으로 조정 |
 | 23 | 진행 중인 이슈(`storyline`) 구획의 상한, 이슈 휴면 기준 일수 | M5 토큰 · 연결 측정으로 정한다 |
 | 24 | 관심도 감쇠 · 가중치, 구독 제안 기준 | 중립에서 시작해 M6 측정으로 정한다 |
@@ -31,8 +31,7 @@
 |---|---|
 | 16 | 네이버 검색 API 약관 개정 공식 원문. 보도 기준으로 결정했으며 원문은 직접 확인하지 못했다 |
 | 25 | pgvector 이미지(OS 계열을 맞춘 PG 18 태그)의 재빌드 주기 — PostgreSQL 보안 패치가 반영되는 속도 |
-| 26 | ONNX Runtime Java 배포본에 linux-aarch64 네이티브가 들어 있는지, 네이티브를 푸는 임시 경로가 root 가 아닌 컨테이너에서 쓰이는지 |
-| 27 | 한국어 임베딩 모델 후보의 크기 · 메모리 · 품질, 모델 파일의 배포 방식(이미지에 포함 · 처음 기동 때 내려받기 — [ADR-0022](adr/0022-image-targets-per-side-dockerfile-without-run-in-runtime-stage.md)) |
+| 26 | 로컬 임베딩(ONNX Runtime · DJL 토크나이저)이 arm64 실기에서 도는지 — 네이티브 포함과 QEMU 에뮬레이션 실행만 확인했다 |
 | 28 | Jev 사건 소속 판정 질문의 품질 (M3 평가 세트) |
 
 ## 결정됨 (2026-10-25)
@@ -69,4 +68,6 @@
 
 | # | 내용 | 반영 |
 |---|---|---|
+| 26 (일부) | ONNX Runtime Java 배포본에 linux-aarch64 네이티브가 들어 있고(DJL 토크나이저도), root 가 아닌 컨테이너에서 `/tmp` 에 풀려 돈다 | [ADR-0091](adr/0091-local-embedding-model-is-multilingual-e5-small-int8-fetched-at-build-into-the-image-with-onnx-telemetry-off.md) |
+| 27 · 20 (임베딩 모델) | 기본 로컬 임베딩 모델은 multilingual-e5-small int8 이고 빌드 때 받아 이미지에 담는다. OpenAI 호환 외부 API 를 설정으로 고를 수 있다. 후보의 크기 · 메모리 · 품질은 조사 자료에 있다 | [ADR-0090](adr/0090-article-embedding-defaults-to-an-in-app-local-model-with-an-openai-compatible-api-by-setting.md) · [ADR-0091](adr/0091-local-embedding-model-is-multilingual-e5-small-int8-fetched-at-build-into-the-image-with-onnx-telemetry-off.md) · [임베딩 모델 조사](research/2026-11-embedding-models.md) |
 | 22 | 사건 배정 입력(기사 벡터)의 보관: 그 기사의 사건이 닫힐 때까지, 열린 사건에 배정되지 않은 표현은 만든 뒤 시간 창 + 여유. 사건을 닫는 기준은 마지막으로 기사가 붙은 뒤 닫는 기간 · 연 뒤 최대 기간이다(값은 20) | [ADR-0088](adr/0088-article-features-kept-until-their-event-closes-and-unassigned-ones-for-the-window-plus-a-margin.md) · [ADR-0086](adr/0086-events-close-after-an-idle-period-since-the-last-join-or-a-maximum-period-since-opening.md) · [event Spec §5](specs/event.md#사건-정리) |

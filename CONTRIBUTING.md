@@ -33,7 +33,7 @@ docker compose -f compose.check.yaml run --rm --build docs       # 문서: 공�
 배포 구성 검사는 배포 구성을 [배포 구성 실행](docs/operations/deployment.md#배포-구성-실행) 대로 띄워 스모크(`deploy/smoke.sh`)를 돌린다 — 스모크의 종료 코드가 검사 결과다. CI 는 운영자 토큰을 넣은 구성으로 `app` 을 다시 띄워 스모크를 한 번 더 돌린다. 검사가 끝나면 DB 볼륨까지 지우는 정지로 정리한다. CI 는 같은 정의로 이미지를 두 아키텍처(`linux/amd64` · `linux/arm64`)로도 빌드한다 — 로컬에서는 `deploy/` 에서 실행한다([개발 인프라 — 이미지](docs/development/infrastructure.md#이미지)).
 
 ```sh
-docker buildx bake --set '*.platform=linux/amd64,linux/arm64' app proxy   # deploy/ 에서 — 두 아키텍처 배포 이미지 빌드
+docker buildx bake --allow=fs.read=.. --set '*.platform=linux/amd64,linux/arm64' app proxy   # deploy/ 에서 — 두 아키텍처 배포 이미지 빌드(빌드 컨텍스트가 상위 디렉터리라 읽기를 허락한다)
 ```
 
 - 배포 target 의 실행 단계에는 명령(`RUN`)을 두지 않는다 — 에뮬레이션 없는 빌더에서 다른 아키텍처의 빌드가 깨진다. 이미지 구성은 [개발 인프라 — 이미지](docs/development/infrastructure.md#이미지)
@@ -52,7 +52,9 @@ backend/gradlew -p backend build                                 # 컴파일 + �
 
 결과는 `backend/build/test-results/test/` (JUnit XML) 와 `backend/build/reports/tests/test/index.html` 에 남는다.
 
-IDE 에서 테스트를 돌릴 때도 Gradle 로 실행을 위임한다. 위임하지 않으면 저장소 파일을 읽는 테스트(PostgreSQL 컨테이너를 띄우는 테스트 포함)가 시스템 속성이 없다는 메시지로 실패한다 — [테스트가 저장소 파일을 읽는 결선](docs/development/infrastructure.md#테스트가-저장소-파일을-읽는-결선).
+처음 빌드 · 테스트는 기본 로컬 임베딩 모델(약 135 MB)을 Hugging Face 에서 받아 Gradle 사용자 홈(`~/.gradle/caches/yozmnews-embedding-model/`)에 둔다 — 인터넷 접속이 필요하고, 그 뒤에는 캐시를 쓴다. 모델 정보는 `backend/embedding-model.properties` 에 있다([개발 인프라 — 이미지](docs/development/infrastructure.md#이미지)).
+
+IDE 에서 테스트를 돌릴 때도 Gradle 로 실행을 위임한다. 위임하지 않으면 저장소 파일을 읽는 테스트(PostgreSQL 컨테이너를 띄우는 테스트 포함)가 시스템 속성이 없다는 메시지로 실패하고, 로컬 임베딩 모델을 여는 테스트가 환경 변수 `ORT_DISABLE_TELEMETRY=1` 이 없다는 메시지로 실패한다 — [테스트가 저장소 파일을 읽는 결선](docs/development/infrastructure.md#테스트가-저장소-파일을-읽는-결선).
 
 **백엔드 로컬 실행**
 
@@ -66,6 +68,7 @@ docker compose --profile dev down -v                                            
 
 - IDE 에서는 이 Gradle 태스크(`bootRun`)로 실행을 위임한다
 - 역할 profile(`web` · `worker`)을 `local` 과 함께 적는다. 한 역할만 띄워 보려면 `local,web` 또는 `local,worker` 다. `local` 만 적으면 역할이 없어 기동이 멈춘다([platform Spec](docs/specs/platform.md#역할))
+- `local` 은 사건 묶기의 임베딩에 로컬 대체물(문자 2-그램 — 의미가 아니라 표면 겹침)을 쓴다. 실제 모델은 테스트와 배포 이미지에서 돈다. 외부 임베딩 방식을 확인하려면 [운영 설정 — 임베딩](docs/operations/configuration.md#임베딩)의 값을 환경 변수로 준다
 - `local` 은 Jev 키가 없으면 고정 규칙의 대체 평가기로 기사를 평가한다. 실제 Jev 로 확인하려면 키를 넣는다 — 환경 변수 `YOZMNEWS_JEV_API_KEY`, 또는 키 파일을 `yozmnews.jev.api-key` 라는 이름으로 둔 디렉터리를 `--spring.config.import=configtree:<디렉터리>/` 로 넘긴다(키 값이 명령줄에 남지 않는다). 다른 설정은 [운영 설정 — 공유 평가](docs/operations/configuration.md#공유-평가)
 - Compose 를 먼저 띄우지 않았으면 앱이 띄우고, 앱이 끝날 때 멈춘다. 먼저 띄워 두었으면 앱이 끝나도 그대로 둔다
 - 바꿀 수 있는 값(호스트 포트)은 `.env.example` 에 있다. 필요한 줄만 `.env` 로 옮긴다 — `.env` 는 없어도 된다
