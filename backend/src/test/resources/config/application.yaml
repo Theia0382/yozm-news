@@ -9,3 +9,10 @@ yozmnews:
     # 반복 작업이 돌아도 실제 Jev 로 요청하지 않는다
     api-key: test-key-not-a-real-jev-key
     base-url: http://127.0.0.1:9
+  embedding:
+    # 작업 역할은 임베더가 필수다. 시험은 닿지 않는 주소의 외부 방식으로 띄운다 — 반복 작업이 돌아도 실제로 요청하지 않는다
+    provider: openai-compatible
+    openai-compatible:
+      base-url: http://127.0.0.1:9
+      model: test-model
+      dimensions: 256

@@ -32,6 +32,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -47,6 +48,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
+@TestPropertySource(properties = "jobrunr.background-job-server.enabled=false")
 class EventQueryFlowTests {
 
 	/** 기간 [11-05T00, 11-06T00) */

@@ -64,16 +64,11 @@ public final class FakeArticleEmbedder implements ArticleEmbedder {
 		if (grams == 0) {
 			throw new IllegalArgumentException("2-그램이 없는 텍스트다");
 		}
-		double norm = 0;
-		for (double count : counts) {
-			norm += count * count;
-		}
-		norm = Math.sqrt(norm);
 		float[] values = new float[DIMENSIONS];
 		for (int i = 0; i < DIMENSIONS; i++) {
-			values[i] = (float) (counts[i] / norm);
+			values[i] = (float) counts[i];
 		}
-		return Embedding.of(values);
+		return Embedding.normalized(values);
 	}
 
 	private static void add(double[] counts, String gram) {

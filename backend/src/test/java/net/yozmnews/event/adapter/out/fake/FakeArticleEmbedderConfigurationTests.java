@@ -27,6 +27,14 @@ class FakeArticleEmbedderConfigurationTests {
 	}
 
 	@Test
+	void doesNotRegisterTheFakeInLocalDevelopmentWithTheExternalProvider() {
+		this.runner
+			.withPropertyValues("spring.profiles.default=web,worker", "spring.profiles.active=local,web,worker",
+					"yozmnews.embedding.provider=openai-compatible")
+			.run(context -> assertThat(context).doesNotHaveBean(ArticleEmbedder.class));
+	}
+
+	@Test
 	void doesNotRegisterTheFakeWithOnlyRoleProfiles() {
 		this.runner.withPropertyValues("spring.profiles.default=web,worker", "spring.profiles.active=web,worker")
 			.run(context -> assertThat(context).doesNotHaveBean(ArticleEmbedder.class));
