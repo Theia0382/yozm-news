@@ -1,6 +1,6 @@
 # ADR-0035: 공개 마크다운의 상대 링크와 앵커는 별도 검사 서비스가 확인한다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 검사 서비스 목록 · 검사기 단위 테스트를 돌리는 검사([ADR-0100](0100-repository-tool-unit-tests-run-in-one-tools-check-service-and-docs-check-checks-links-only.md))
 - 날짜: 2026-10-29
 - 근거: [이슈 #41](https://github.com/Theia0382/yozm-news/issues/41) — 기점 `cfd13e3` 의 공개 마크다운 53개 · 링크 474개(상대 455 · 앵커 15)를 집계하고, 구현 `02bec79` 의 검사기로 같은 수와 깨진 링크 0 을 확인. 무시 대상을 심은 작업 트리에서 빌드한 검사 이미지의 파일 목록을 추적 파일 목록과 대조
 - 관련: [ADR-0016](0016-containerized-checks.md)(컨테이너 검사 · 허용 목록 `.dockerignore` · 메이저 태그 베이스 이미지 — 검사 서비스 목록을 이 ADR 이 대체), [ADR-0022](0022-image-targets-per-side-dockerfile-without-run-in-runtime-stage.md)(측별 Dockerfile — 문서 검사는 검사 전용 Dockerfile 하나), [ADR-0034](0034-module-spec-as-public-interface-specification-and-docs-by-kind.md)(문서 체계)
@@ -14,7 +14,12 @@
 
 ## 결정
 
+> 부분 대체(둘째 문장) — [ADR-0100](0100-repository-tool-unit-tests-run-in-one-tools-check-service-and-docs-check-checks-links-only.md). 지금 상태: [`development/infrastructure` "검사 환경"](../development/infrastructure.md#검사-환경)
+
 - **검사 서비스 `docs` 를 따로 둔다.** `compose.check.yaml` 의 서비스는 `backend` · `frontend` · `docs` · `docker`(DinD)다. CI 는 같은 정의로 job `docs` 를 돌리고, 로컬은 같은 명령(`docker compose -f compose.check.yaml run --rm --build docs`)을 쓴다. 이 서비스 목록이 ADR-0016 의 서비스 목록을 대체한다 — 나머지 ADR-0016 결정(이미지 복사 · 허용 목록 · 메이저 태그 · 호스트 도구는 Docker 뿐)은 그대로 따른다.
+
+> 부분 대체(셋째 문장) — [ADR-0100](0100-repository-tool-unit-tests-run-in-one-tools-check-service-and-docs-check-checks-links-only.md). 지금 상태: [`development/infrastructure` "저장소 도구 검사"](../development/infrastructure.md#저장소-도구-검사)
+
 - **검사기는 표준 라이브러리만 쓰는 Python 이다**(`tools/docs-check/check_links.py`, 단위 테스트 `test_check_links.py`). 이미지는 `python:3-slim` 이고 설치 단계가 없다. 컨테이너는 단위 테스트와 저장소 검사를 모두 돌리고, 하나라도 실패하면 실패한다.
 - **대상과 판정**
   - 대상은 저장소 루트의 `*.md` 와 `docs/` · `.github/` 아래의 `*.md` 다. 코드 블록 · 인라인 코드 안의 링크는 링크가 아니다.
