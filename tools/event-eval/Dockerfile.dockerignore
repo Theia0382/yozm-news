@@ -1,7 +1,0 @@
-*
-!tools/event-eval/
-# 도구가 대조하는 저장소 파일 — 운영자 API 명세와 라벨 기준의 판을 적은 운영 안내
-!api/openapi.json
-!docs/operations/event-evaluation.md
-# 저장소가 추적하지 않는 것을 다시 뺀다
-**/__pycache__

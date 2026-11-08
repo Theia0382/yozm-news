@@ -29,11 +29,11 @@ services:
       context: .
       dockerfile: tools/docs-check/Dockerfile
 
-  event-eval:
-    image: yozmnews-check-event-eval
+  tools:
+    image: yozmnews-check-tools
     build:
       context: .
-      dockerfile: tools/event-eval/Dockerfile
+      dockerfile: tools/Dockerfile
 
   docker:
     image: docker:29-dind

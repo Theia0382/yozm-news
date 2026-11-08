@@ -23,7 +23,7 @@ PR 을 올리기 전에 돌리는 검사다. CI 와 같은 정의(`compose.check
 docker compose -f compose.check.yaml up --build --force-recreate --attach backend --abort-on-container-exit --exit-code-from backend backend docker   # 백엔드: backend/gradlew -p backend build
 docker compose -f compose.check.yaml run --rm --build frontend   # 프론트엔드: 의존성 고정 설치 뒤 build · lint · format:check · test
 docker compose -f compose.check.yaml run --rm --build docs       # 문서: 공개 마크다운의 상대 링크 · 앵커
-docker compose -f compose.check.yaml run --rm --build event-eval # 사건 평가 도구: 단위 테스트 · 운영자 API 명세 대조 · 라벨 기준 판 대조
+docker compose -f compose.check.yaml run --rm --build tools      # 저장소 도구: 도구마다 단위 테스트(사건 평가 도구의 운영자 API 명세 대조 · 라벨 기준 판 대조 포함)
 ```
 
 - 종료 코드가 검사 결과다. 백엔드 로그에 `> Task :test` 가 `UP-TO-DATE` 없이 찍혀야 테스트가 실제로 돈 것이다
@@ -178,7 +178,7 @@ Issue: #12
 - **대상**은 `main`. 하나의 이슈에 PR 하나
 - **제목**은 커밋 메시지 제목과 같은 형식: `{유형}({영역}): {요지}`
 - **본문**은 [PR 템플릿](.github/pull_request_template.md)을 따른다 — 변경 요약, `Closes #{이슈 번호}`, 확인 사항. 리뷰어가 읽고 PR 에 남는 변경 기록이므로 저장소의 변경을 정리해 쓴다
-- **CI**: PR 과 `main` 에서 GitHub Actions(`.github/workflows/ci.yml`)가 §1 의 검사를 돌리고, 결과가 체크 `backend` · `frontend` · `deploy` · `docs` · `event-eval` 로 표시된다. **다섯 체크가 통과해야 merge 한다**
+- **CI**: PR 과 `main` 에서 GitHub Actions(`.github/workflows/ci.yml`)가 §1 의 검사를 돌리고, 결과가 체크 `backend` · `frontend` · `deploy` · `docs` · `tools` 로 표시된다. **다섯 체크가 통과해야 merge 한다**
 - **merge** 는 리드가 한다. 방식은 **merge commit** 만 쓴다(squash · rebase merge 를 쓰지 않는다 — 작업 브랜치의 커밋을 그대로 남긴다). merge 커밋 메시지는 저장소 설정이 만든다 — 제목 `Merge pull request #{번호} from {소유자}/{작업 브랜치}`, 본문은 PR 제목. merge 커밋은 [§4](#4-커밋-메시지) 형식을 따르지 않는다
 - **리뷰**: 리드가 GitHub 에서 검토하고, 필요하면 로컬로 받아 확인한다(`gh pr checkout {번호}`). 코드 · 주석은 [§7](#7-코드)을 기준으로 본다
 - **충돌 · 동기화**: 작업 브랜치에 `main` 을 merge 해서 해소하고 다시 push 한다. 이 merge 커밋의 메시지는 `Merge origin/main into {작업 브랜치}` 이고, 마지막 문단에 `Issue: #{이슈 번호}` 를 둔다. force push 하지 않는다
