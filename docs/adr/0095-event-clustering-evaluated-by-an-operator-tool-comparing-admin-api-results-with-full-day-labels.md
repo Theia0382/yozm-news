@@ -1,6 +1,6 @@
 # ADR-0095: 사건 묶기 평가는 운영자 API 의 결과를 날짜 단위 전수 라벨과 견주는 운영자 도구로 한다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 큰 사건 정답의 표시([ADR-0098](0098-label-rule-2-samples-hold-no-big-event-gold-and-big-event-precision-is-not-measured-without-marks.md))
 - 날짜: 2026-11-08
 - 근거: [이슈 #100](https://github.com/Theia0382/yozm-news/issues/100) — 사건 묶기의 판정 규칙 · 운영자 API · 재판정의 범위를 조사하고 리드와 정해 구현(`d4e2db7`)
 - 관련: [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md)(결정 절 "임계값 · 시간 창 · 모델은 평가 세트로 정한다"의 방법을 정한다 — 보충), [ADR-0082](0082-big-events-judged-at-query-time-by-distinct-sources-and-mean-importance-both-reaching-criteria.md) · [ADR-0084](0084-event-merge-applies-assignment-scoring-between-events-and-keeps-merged-rows-pointing-to-survivors.md) · [ADR-0086](0086-events-close-after-an-idle-period-since-the-last-join-or-a-maximum-period-since-opening.md)(평가 세트로 미룬 비교 가운데 이 도구가 재지 않는 것 — 보충), [ADR-0081](0081-event-assignment-criteria-in-settings-and-rejudgement-within-stored-scores.md) · [ADR-0087](0087-closed-event-assignments-are-not-rejudged-and-closing-and-merging-are-not-undone.md)(재판정의 범위), [ADR-0096](0096-instance-bound-evaluation-data-kept-out-of-the-public-repository-and-defaults-cite-only-the-evaluation-set.md)(평가 데이터의 자리)
@@ -19,6 +19,7 @@
 - **평가는 운영자가 자기 인스턴스에서 쓰는 도구로 한다.** 저장소의 `tools/event-eval` 이다. 개발팀이 기본값을 정할 때도 측정 인스턴스의 운영자로서 같은 도구를 쓴다.
 - **도구는 판정 규칙을 계산하지 않는다.** 시스템의 결과를 운영자 API 로 받아 라벨과 견준다 — 묶음은 사건별 배정 기사, 큰 사건은 지금 기준의 목록과 제안 기준의 미리보기다. 기준을 비교할 때는 기준을 바꾼 시스템의 결과마다 다시 잰다.
 - **표본은 날짜 단위 전수다.** 시간대의 하루(또는 이어진 며칠)에 발행된 기사 전부에 라벨을 붙인다. 묶음 정확도는 라벨 기사(뺀 기사 제외)로 세고, 배정이 없는 기사는 그 기사 혼자인 묶음으로 센다.
+> 부분 대체(첫 문장) — [ADR-0098](0098-label-rule-2-samples-hold-no-big-event-gold-and-big-event-precision-is-not-measured-without-marks.md). 지금 상태: [사건 묶기 평가하기](../operations/event-evaluation.md#재는-것)
 - **큰 사건의 정답은 라벨러가 정답 사건 × 날짜로 표시한다.** 정밀도는 날짜마다 시스템이 낸 큰 사건을 그 사건의 그날 라벨 기사에서 가장 많은 정답 사건과 견준다. 동률은 틀림으로 세고 95% Wilson 구간을 함께 낸다.
 
 ## 결과
@@ -38,3 +39,7 @@
 | 여러 날 가운데 주제 몇 개만 전수로 붙인다 | 다른 주제 기사와의 잘못된 묶음이 보이지 않고, 큰 사건 판정은 주제 밖 소스까지 센다. 표본 경계가 평가 결과(태그)에 기댄다 |
 | 정답 묶음에 지금 큰 사건 규칙을 적용해 정답 큰 사건을 유도한다 | 판정 규칙의 사본이고, 기준값이 맞는지는 말하지 못한다 |
 | 라벨 시트에 시스템의 사건을 함께 싣는다 | 라벨러가 시스템 묶음을 따라가 정답이 시스템을 닮는다 |
+
+## 후속 기록
+
+- 2026-11-08: 결정 절 "표본은 날짜 단위 전수다"의 정답 사건의 범위 — [ADR-0097](0097-event-clustering-evaluation-labels-reports-of-one-happening-narrower-than-the-system-event.md) · [사건 묶기 평가하기](../operations/event-evaluation.md)
