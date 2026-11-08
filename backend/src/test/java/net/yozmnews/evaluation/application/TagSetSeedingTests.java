@@ -93,7 +93,7 @@ class TagSetSeedingTests {
 
 		assertThat(this.directory.activeTagSet().number()).isEqualTo(1);
 		assertThat(TagSetRows.count(this.jdbc, "tag_sets")).isEqualTo(1);
-		assertThat(TagSetRows.count(this.jdbc, "tags")).isEqualTo(9 + 46 + 7 + 6);
+		assertThat(TagSetRows.count(this.jdbc, "tags")).isEqualTo(9 + 48 + 7 + 6);
 		assertThat(TagSetRows.count(this.jdbc, "importance_rubrics")).isEqualTo(5);
 		assertThat(TagSetRows.count(this.jdbc, "tag_set_thresholds")).isEqualTo(2);
 		assertThat(TagSetRows.count(this.jdbc, "tag_set_threshold_changes")).isEqualTo(2);

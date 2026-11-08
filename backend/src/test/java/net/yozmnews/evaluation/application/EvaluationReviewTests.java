@@ -274,7 +274,8 @@ class EvaluationReviewTests {
 			.containsExactly(tuple("1", 0.0), tuple("2", 0.25),
 					tuple("3", 0.75), tuple("4", 0.0),
 					tuple("5", 0.0));
-		assertThat(detail.importanceLevels().get(2).name()).isEqualTo("여러 분야나 많은 사람에게 영향을 주는 소식");
+		assertThat(detail.importanceLevels().get(2).name())
+			.isEqualTo("영향이 여러 업계 · 지역 · 집단에 걸치지만 사회 전반의 제도나 흐름은 바꾸지 않는 사안, 결과가 아직 정해지지 않은 다툼 · 주장");
 		assertThat(detail.importance()).isEqualTo(2.75);
 	}
 
