@@ -29,6 +29,12 @@ services:
       context: .
       dockerfile: tools/docs-check/Dockerfile
 
+  event-eval:
+    image: yozmnews-check-event-eval
+    build:
+      context: .
+      dockerfile: tools/event-eval/Dockerfile
+
   docker:
     image: docker:29-dind
     privileged: true

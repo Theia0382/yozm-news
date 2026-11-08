@@ -89,6 +89,26 @@ jobs:
       - name: Check
         run: docker compose -f compose.check.yaml run --rm docs
 
+  # 사건 묶기 평가 도구의 단위 시험 · 운영자 API 명세 대조 · 라벨 기준 판 대조(tools/event-eval)
+  event-eval:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - name: Build image
+        uses: docker/bake-action@v7
+        with:
+          source: .
+          files: compose.check.yaml
+          targets: event-eval
+          load: true
+          set: |
+            *.cache-from=type=gha,scope=event-eval
+            *.cache-to=type=gha,scope=event-eval,mode=max
+      - name: Check
+        run: docker compose -f compose.check.yaml run --rm event-eval
+
   # 배포 구성의 두 아키텍처 빌드 · 기동 · 스모크 — docs/development/infrastructure.md "CI"
   deploy:
     runs-on: ubuntu-24.04
