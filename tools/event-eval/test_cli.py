@@ -40,6 +40,7 @@ LABELS = ("article_id,published_at,sources,title,event,note\n"
 LABELS_SHA256 = "b04be93d39d4bef86f0347a17bab1451cd8f730b94f41620ebf73870ed2d6ce0"
 MARKS = "event,day,big,name\na,2026-11-04,1,\nb,2026-11-05,0,\n"
 MARKS_SHA256 = "d1b2d9a1be1d18cddd3139547cd235aa4e42869ab3803e45e28b5f992373ffd6"
+MARKS_NONE = "event,day,big,name\na,2026-11-04,0,\nb,2026-11-05,0,\n"  # 큰 사건 표시가 없는 표본
 SAMPLE = '{"labelRule": 1, "start": "2026-11-04", "end": "2026-11-05", "zone": "Asia/Seoul"}'
 
 SHEET = ("article_id,published_at,sources,title,event,note\n"
@@ -241,7 +242,7 @@ class CliTest(unittest.TestCase):
         code, out, err = self.run_tool("measure", "--embedding-model", "onnx/e5-small", "--note", "app=abc123")
         self.assertEqual((code, err), (0, ""), err)
         record = json.loads((self.data / "results" / "20261107-030000.json").read_text(encoding="utf-8"))
-        self.assertEqual(record["format"], 1)
+        self.assertEqual(record["format"], 2)
         self.assertEqual(record["measuredAt"], "2026-11-07T03:00:00Z")
         self.assertEqual(record["sample"], {"start": "2026-11-04", "end": "2026-11-05", "zone": ZONE, "labelRule": 1})
         self.assertEqual(record["labels"], {"articlesSha256": LABELS_SHA256, "eventsSha256": MARKS_SHA256})
@@ -287,6 +288,33 @@ class CliTest(unittest.TestCase):
                          (2, 1, 0, 1, 1.0))
         previews = [request for request in self.fake.requests if request[1].endswith("previews")]
         self.assertEqual(len(previews), 2)
+
+    def test_measure_without_big_marks_does_not_measure_big_events(self):
+        self.write_fixture()
+        (self.data / "events.csv").write_text(MARKS_NONE, encoding="utf-8")
+        code, out, err = self.run_tool("measure", "--embedding-model", "onnx/e5-small")
+        self.assertEqual((code, err), (0, ""), err)
+        paths = [request[1] for request in self.fake.requests]
+        # 아래 부정 단언이 빈 요청 목록으로 통과하지 않게 — 묶음은 쟀다
+        self.assertIn("/api/admin/events", paths)
+        self.assertNotIn("/api/admin/big-events", paths)
+        self.assertNotIn("/api/admin/big-event-criteria-previews", paths)
+        record = json.loads((self.data / "results" / "20261107-030000.json").read_text(encoding="utf-8"))
+        self.assertIsNone(record["big"])
+        self.assertIsNone(record["settings"]["bigCriteria"])
+        self.assertEqual(record["counts"]["bigMarks"], 0)
+        self.assertIn("큰 사건 정밀도 — 표본에 큰 사건 표시가 없어 재지 않았다\n", out)
+        self.assertEqual(record["format"], 2)
+
+    def test_big_criteria_without_big_marks_stops(self):
+        self.write_fixture()
+        (self.data / "events.csv").write_text(MARKS_NONE, encoding="utf-8")
+        code, _, err = self.run_tool("measure", "--embedding-model", "onnx/e5-small", "--big-criteria", "2:2.5")
+        self.assertEqual(code, 2)
+        self.assertEqual(err, "멈춤 — 표본에 큰 사건 표시가 없다 — --big-criteria 로 견줄 큰 사건 정답이 없다\n")
+        self.assertFalse((self.data / "results").exists())
+        # 운영자 API 를 부르기 전에 멈춘다
+        self.assertEqual(self.fake.requests, [])
 
     def test_article_in_two_events_stops(self):
         self.write_fixture()

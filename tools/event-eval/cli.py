@@ -29,7 +29,7 @@ EXIT_API: Final = 3
 
 
 class MeasureError(Exception):
-    """라벨과 시스템 결과가 어긋난다(한 기사가 두 사건 · 발행 시각 불일치)."""
+    """라벨과 시스템 결과가 어긋나거나(한 기사가 두 사건 · 발행 시각 불일치) 표본으로 잴 수 없는 측정을 요청했다."""
 
 
 def main(argv: Sequence[str] | None = None, *, environ: Mapping[str, str] = os.environ,
@@ -223,6 +223,8 @@ def _measure(args: argparse.Namespace, api: AdminApi, clock: Callable[[], dateti
     sample = read_sample(directory)
     labels = read_labels(directory / ARTICLES_FILE, sample)
     gold_big = read_big_marks(directory / EVENTS_FILE, labels, sample)
+    if not gold_big and args.big_criteria is not None:
+        raise MeasureError("표본에 큰 사건 표시가 없다 — --big-criteria 로 견줄 큰 사건 정답이 없다")
     details = _collect(api, sample)
     placed = _assignments(details)
     problems = [f"기사 {label.article_id} 의 발행 시각이 라벨 {format_instant(label.published_at)} · "
@@ -243,15 +245,18 @@ def _measure(args: argparse.Namespace, api: AdminApi, clock: Callable[[], dateti
     closed = sum(1 for event_id in {event for event in system.values() if event is not None}
                  if details[event_id].status == "CLOSED")
 
-    verdicts = []
+    # 큰 사건 표시가 없는 표본은 큰 사건 정답이 없다 — 시스템 큰 사건을 모두 틀림으로 세지 않고 재지 않는다
+    big = None
     used_big = None
-    for day in sample.days():
-        used_big, event_ids = api.big_events(day, sample.zone, args.big_criteria)
-        for event_id in event_ids:
-            counts = Counter(label.event for label in kept
-                             if system[label.article_id] == event_id and sample.day_of(label.published_at) == day)
-            verdicts.append(BigVerdict(day, event_id, counts))
-    big = big_precision(verdicts, gold_big)
+    if gold_big:
+        verdicts = []
+        for day in sample.days():
+            used_big, event_ids = api.big_events(day, sample.zone, args.big_criteria)
+            for event_id in event_ids:
+                counts = Counter(label.event for label in kept
+                                 if system[label.article_id] == event_id and sample.day_of(label.published_at) == day)
+                verdicts.append(BigVerdict(day, event_id, counts))
+        big = big_precision(verdicts, gold_big)
 
     measured_at = clock()
     today = measured_at.astimezone(_zone(sample.zone)).date()
@@ -276,10 +281,13 @@ def _measure(args: argparse.Namespace, api: AdminApi, clock: Callable[[], dateti
     print(f"기록 {path}", file=out)
     print(f"B-cubed P {bcubed.precision:.4f} · R {bcubed.recall:.4f} · F1 {bcubed.f1:.4f} — 기사 {bcubed.articles} · "
           f"정답 사건 {bcubed.gold_events} · 시스템 사건 {bcubed.system_events} · 배정 없음 {bcubed.unassigned}", file=out)
-    interval = "구간 없음" if big.low is None else f"[{big.low:.4f}, {big.high:.4f}]"
-    precision = "없음" if big.precision is None else f"{big.precision:.4f}"
-    print(f"큰 사건 정밀도 {precision} {interval} — 판정 {big.judged} · 맞음 {big.correct} · 동률 {big.tied} · "
-          f"라벨 없음 {big.unlabeled}", file=out)
+    if big is None:
+        print("큰 사건 정밀도 — 표본에 큰 사건 표시가 없어 재지 않았다", file=out)
+    else:
+        interval = "구간 없음" if big.low is None else f"[{big.low:.4f}, {big.high:.4f}]"
+        precision = "없음" if big.precision is None else f"{big.precision:.4f}"
+        print(f"큰 사건 정밀도 {precision} {interval} — 판정 {big.judged} · 맞음 {big.correct} · 동률 {big.tied} · "
+              f"라벨 없음 {big.unlabeled}", file=out)
     if unlabeled_system or closed or bcubed.unassigned:
         print(f"주의 — 라벨 밖 시스템 기사 {unlabeled_system} · 닫힌 시스템 사건 {closed} · 배정 없는 라벨 기사 "
               f"{bcubed.unassigned}", file=out)
