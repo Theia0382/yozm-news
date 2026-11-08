@@ -1,11 +1,11 @@
 # 기본 태그 체계 — 첫 기동에 버전이 하나도 없으면 버전 1로 들어간다(docs/specs/evaluation.md §5 · evaluation-R1 · R2).
-# 이미 적재한 인스턴스는 이 파일이 바뀌어도 따라가지 않는다. 문구는 파일럿 전 초안이다.
+# 이미 적재한 인스턴스는 이 파일이 바뀌어도 따라가지 않는다.
 # 형식은 evaluation-R5 — 중분류 key 는 조각만 적고, 저장 키는 대분류 키를 붙인 전체 키(politics.executive)다.
 questions:
   topic: "이 기사가 주요하게 다루는 주제가 다음에 해당하는가: {description}"
   region: "이 기사의 주요 무대가 다음에 해당하는가: {description}"
   format: "이 기사의 형식은 무엇인가"
-  importance: "이 기사가 다루는 사안은 얼마나 중요한가"
+  importance: "이 기사가 다루는 사안은 얼마나 중요한가. 등장하는 인물이나 다루는 주제가 아니라 사안이 실제로 바꾸거나 일으킨 일의 크기와 그 영향이 미치는 범위로 판단한다. 발언 · 주장 · 반응은 그것이 일으킨 일만큼으로 본다"
 thresholds:
   topic:
     tagThreshold: 0.5
@@ -80,6 +80,9 @@ topics:
       - key: corporate
         name: "기업경영·재계"
         description: "대기업 집단 · 지배구조 · 실적 · 인수합병 · 경영진"
+      - key: healthcare
+        name: "의료·헬스케어 서비스"
+        description: "병원 · 의료 서비스 기업의 경영과 디지털 헬스케어 산업"
   - key: tech
     name: "IT·과학"
     description: "정보기술 · 인터넷 · 과학"
@@ -111,7 +114,7 @@ topics:
     subtopics:
       - key: incidents
         name: "사건·사고·재난"
-        description: "범죄 · 사고 · 화재 · 자연재해와 재난 대응"
+        description: "국내에서 일어난 범죄 · 사고 · 화재 · 자연재해의 발생과 피해, 재난 대응"
       - key: law
         name: "법조·수사"
         description: "수사 · 재판 · 판결과 법원 · 검찰"
@@ -129,7 +132,7 @@ topics:
         description: "의료 제도 · 건강보험 · 의료계 · 감염병 대응"
       - key: regional
         name: "지역"
-        description: "수도권 밖 지방자치단체 · 지역 개발 · 지역 사회 소식"
+        description: "수도권 밖 지방자치단체의 행정 · 지역 개발 · 지역 현안"
   - key: environment
     name: "기후·환경"
     description: "기후변화와 환경"
@@ -139,14 +142,14 @@ topics:
         description: "기후변화 · 탄소 감축 · 재생에너지 전환 정책"
       - key: ecology
         name: "환경·생태"
-        description: "대기 · 수질 · 폐기물 · 생태계 보전"
+        description: "대기 · 수질 · 토양 오염과 폐기물, 야생 생물 · 자연 생태계 보전"
   - key: world
     name: "국제"
     description: "해외 정치 · 외교 · 분쟁 · 사회(해외 경제 · 기술은 해당 주제)"
     subtopics:
       - key: politics
         name: "국제정치·외교"
-        description: "외국 정부의 정치와 나라 사이의 외교(한국 정부의 외교는 제외)"
+        description: "북한 밖 외국 정부의 정치와 외국끼리의 외교"
       - key: conflict
         name: "분쟁·안보"
         description: "해외 전쟁 · 무력 충돌 · 테러 · 국제 안보"
@@ -159,7 +162,7 @@ topics:
     subtopics:
       - key: health
         name: "건강·의학 정보"
-        description: "질병 · 건강 관리 · 의학 연구 정보"
+        description: "개인이 참고할 질병 · 건강 관리 · 의학 정보"
       - key: leisure
         name: "여행·레저·음식"
         description: "여행 · 레저 · 음식 · 맛집"
@@ -175,6 +178,9 @@ topics:
       - key: entertainment
         name: "연예·방송"
         description: "연예인 · 방송 프로그램 · 영화 · 대중음악"
+      - key: family
+        name: "가족·관계"
+        description: "일반인의 가족 · 부부 · 세대 관계와 갈등"
   - key: sports
     name: "스포츠"
     description: "스포츠 종목과 체육"
@@ -209,7 +215,7 @@ regions:
     description: "유럽 나라들과 유럽연합 · 러시아"
   - key: other-foreign
     name: "기타 해외"
-    description: "위 지역 밖의 해외(중동 · 동남아시아 · 중남미 · 아프리카 · 오세아니아 등)"
+    description: "위 지역 밖의 해외(중동 · 동남아시아 · 중남미 · 아프리카 · 오세아니아 등)와 여러 나라에 걸친 국제 동향"
 formats:
   - key: straight
     name: "스트레이트"
@@ -233,12 +239,12 @@ formats:
     excludedByDefault: true
 importance:
   - level: 1
-    description: "개인이나 소수에게만 관련된 소식, 가벼운 화제"
+    description: "결과도 관심도 당사자와 그 주변에 그치는 사안"
   - level: 2
-    description: "특정 업계 · 지역 · 관심층에 관련된 소식"
+    description: "영향이나 관심이 한 업계 · 지역 · 집단 안에 머무는 사안"
   - level: 3
-    description: "여러 분야나 많은 사람에게 영향을 주는 소식"
+    description: "영향이 여러 업계 · 지역 · 집단에 걸치지만 사회 전반의 제도나 흐름은 바꾸지 않는 사안, 결과가 아직 정해지지 않은 다툼 · 주장"
   - level: 4
-    description: "사회 전반에 큰 영향을 주는 주요 정책 · 사건"
+    description: "사회 전반의 제도나 정치 · 경제의 흐름을 바꾸거나 바꿀 것이 분명한 사안"
   - level: 5
-    description: "나라 전체나 국제적으로 매우 큰 영향을 주는 사안(대형 재난 · 전쟁 · 정권 교체 등)"
+    description: "나라 전체의 진로나 국제 질서를 크게 바꾸는 사안"

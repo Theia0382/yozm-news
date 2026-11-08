@@ -54,9 +54,16 @@ class CollectionWithArticleIntakeTests {
 
 	private static final Logger logger = LoggerFactory.getLogger(CollectionWithArticleIntakeTests.class);
 
+	/**
+	 * 피드 서버의 유휴 연결 제한 — 이 클래스 전체보다 길다. 피드를 켤 때 미리보기가 남긴 연결을 수집이 다시 쓰는 순간 서버가 그 연결을
+	 * 닫으면 수집 하나가 {@code CONNECTION_FAILED} 로 미뤄진다(재시도 없음 — ADR-0031). 기본값(30초)은 미리보기와 수집 사이 간격과
+	 * 겹칠 수 있다
+	 */
+	private static final Duration SERVER_IDLE_TIMEOUT = Duration.ofMinutes(10);
+
 	@RegisterExtension
 	static WireMockExtension server = WireMockExtension.newInstance()
-		.options(wireMockConfig().dynamicPort().gzipDisabled(true))
+		.options(wireMockConfig().dynamicPort().gzipDisabled(true).jettyIdleTimeout(SERVER_IDLE_TIMEOUT.toMillis()))
 		.build();
 
 	@Autowired

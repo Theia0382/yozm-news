@@ -104,6 +104,7 @@
 | [0096](0096-instance-bound-evaluation-data-kept-out-of-the-public-repository-and-defaults-cite-only-the-evaluation-set.md) | 인스턴스에 묶인 평가 데이터는 공개 저장소 밖에 두고, 기본값의 근거는 "평가 세트로 정했다"로 적는다 | 승인 |
 | [0097](0097-event-clustering-evaluation-labels-reports-of-one-happening-narrower-than-the-system-event.md) | 사건 묶기 평가의 정답 사건은 한 번 일어난 일을 다룬 보도들로 붙이고, 지금 시스템의 사건보다 좁은 차이는 정밀도 손실로 읽는다 | 승인 |
 | [0098](0098-label-rule-2-samples-hold-no-big-event-gold-and-big-event-precision-is-not-measured-without-marks.md) | 라벨 기준 2판 표본에는 큰 사건 정답을 두지 않고, 큰 사건 표시가 없는 표본은 큰 사건 정밀도를 재지 않는다 | 승인 |
+| [0099](0099-importance-judged-by-what-the-matter-changes-and-its-reach-with-levels-written-as-reach-without-article-type-examples.md) | 중요도는 사안이 실제로 바꾸거나 일으킨 일의 크기와 영향 범위로 매기고, 수준 설명은 기사 종류 예시 없이 영향 범위로 쓴다 | 승인 |
 | [0100](0100-repository-tool-unit-tests-run-in-one-tools-check-service-and-docs-check-checks-links-only.md) | 저장소 도구의 단위 테스트는 검사 서비스 `tools` 하나가 돌리고, 문서 검사는 링크와 앵커만 본다 | 승인 |
 
 ## 운영 규칙

@@ -6,7 +6,6 @@
 
 | # | 질문 | 권장안 | 필요 시점 |
 |---|---|---|---|
-| 1 | 초기 태그 체계 세부 문구(태그 설명, 중요도 기준) | 구조는 확정([ADR-0010](adr/0010-tag-taxonomy.md)). 초안 어휘로 파일럿 후 문구 확정 | M2 |
 | 33 | 사건의 중요도를 큰 사건 여부보다 세분화할지 | 등급을 쓰는 곳(큰 사건 슬롯 · 관심도 순위 · 변화 리포트)과 함께 정한다. 큰 사건은 조회할 때 사건 집계(기사 수 · 소스 수 · 중요도 평균)로 판정하고 저장하지 않으므로([event Spec](specs/event.md#대표-기사--큰-사건)), 같은 집계로 등급을 매긴다면 저장된 데이터를 바꾸지 않는다 | M5 후보 선별 · M6 관심도 |
 | 34 | 사건에 주제 · 지역 태그를 줄지 — 사용자 관심사(구독 주제)와 사건을 잇는 축 | 사건 중심 벡터는 비슷한 것 찾기(자유 텍스트 관심사 · 관련 사건)에 쓰고, 주제별 관심도 · 보도량에는 이름 있는 축이 필요하다. 기사 태그를 조회할 때 모으는 방식부터 검토하고, 여러 주제에 걸친 사건의 집계 규칙을 정한다 | M6 관심도 |
 
@@ -14,7 +13,6 @@
 
 | # | 질문 | 권장안 |
 |---|---|---|
-| 7 | 주제 · 지역의 태그 기준 · 저장 기준, 중요도 기준 | M2에서 표본 검수 후 결정 |
 | 8 | 다이제스트 주기: 하루 1회 고정인가, 사용자가 여러 번 받을 수 있는가 | v1은 하루 1회 + 수동 재생성 |
 | 9 | 기본 후보 수와 모델별 토큰 예산 | 60건에서 시작해 M5 측정 결과로 조정 |
 | 10 | 보존 기간 ([data-model.md](data-model.md)) | 초안 값으로 시작. RSS 요약문은 결정됨(아래) |
@@ -73,3 +71,10 @@
 | 26 (일부) | ONNX Runtime Java 배포본에 linux-aarch64 네이티브가 들어 있고(DJL 토크나이저도), root 가 아닌 컨테이너에서 `/tmp` 에 풀려 돈다 | [ADR-0091](adr/0091-local-embedding-model-is-multilingual-e5-small-int8-fetched-at-build-into-the-image-with-onnx-telemetry-off.md) |
 | 27 · 20 (임베딩 모델) | 기본 로컬 임베딩 모델은 multilingual-e5-small int8 이고 빌드 때 받아 이미지에 담는다. OpenAI 호환 외부 API 를 설정으로 고를 수 있다. 후보의 크기 · 메모리 · 품질은 조사 자료에 있다 | [ADR-0090](adr/0090-article-embedding-defaults-to-an-in-app-local-model-with-an-openai-compatible-api-by-setting.md) · [ADR-0091](adr/0091-local-embedding-model-is-multilingual-e5-small-int8-fetched-at-build-into-the-image-with-onnx-telemetry-off.md) · [임베딩 모델 조사](research/2026-11-embedding-models.md) |
 | 22 | 사건 배정 입력(기사 벡터)의 보관: 그 기사의 사건이 닫힐 때까지, 열린 사건에 배정되지 않은 표현은 만든 뒤 시간 창 + 여유. 사건을 닫는 기준은 마지막으로 기사가 붙은 뒤 닫는 기간 · 연 뒤 최대 기간이다(값은 20) | [ADR-0088](adr/0088-article-features-kept-until-their-event-closes-and-unassigned-ones-for-the-window-plus-a-margin.md) · [ADR-0086](adr/0086-events-close-after-an-idle-period-since-the-last-join-or-a-maximum-period-since-opening.md) · [event Spec §5](specs/event.md#사건-정리) |
+
+## 결정됨 (2026-11-08)
+
+| # | 내용 | 반영 |
+|---|---|---|
+| 1 | 첫 체계의 태그 설명 · 중요도 기준 문구를 평가 세트로 정했다 — 주제 중분류 둘(의료·헬스케어 서비스 · 가족·관계)을 더하고, 설명은 제외 목록 없이 태그가 무엇인지만 짧게 쓴다. 중요도는 사안이 실제로 바꾸거나 일으킨 일의 크기와 영향 범위로 매긴다 | 기본 체계 파일 · [ADR-0099](adr/0099-importance-judged-by-what-the-matter-changes-and-its-reach-with-levels-written-as-reach-without-article-type-examples.md) |
+| 7 | 주제 · 지역의 태그 기준 · 저장 기준은 표본 검수로 기본 체계 파일의 처음 값 그대로 둔다. 중요도 기준 문구는 1 과 같다 | 기본 체계 파일 |
