@@ -41,7 +41,7 @@ LABELS_SHA256 = "b04be93d39d4bef86f0347a17bab1451cd8f730b94f41620ebf73870ed2d6ce
 MARKS = "event,day,big,name\na,2026-11-04,1,\nb,2026-11-05,0,\n"
 MARKS_SHA256 = "d1b2d9a1be1d18cddd3139547cd235aa4e42869ab3803e45e28b5f992373ffd6"
 MARKS_NONE = "event,day,big,name\na,2026-11-04,0,\nb,2026-11-05,0,\n"  # 큰 사건 표시가 없는 표본
-SAMPLE = '{"labelRule": 1, "start": "2026-11-04", "end": "2026-11-05", "zone": "Asia/Seoul"}'
+SAMPLE = '{"labelRule": 2, "start": "2026-11-04", "end": "2026-11-05", "zone": "Asia/Seoul"}'
 
 SHEET = ("article_id,published_at,sources,title,event,note\n"
          "101,2026-11-04T01:00:00Z,동아,첫 사건 기사 하나,,\n"
@@ -176,7 +176,7 @@ class CliTest(unittest.TestCase):
         # 시트 전체를 리터럴과 견준다 — 사건 ID 칸이 없고, 표본 밖 199 · 지운 107 이 없고, 합쳐진 13 의 기사는 한 번만 있다
         self.assertEqual((self.data / "articles.csv").read_text(encoding="utf-8"), SHEET)
         self.assertEqual(json.loads((self.data / "sample.json").read_text(encoding="utf-8")),
-                         {"labelRule": 1, "start": "2026-11-04", "end": "2026-11-05", "zone": ZONE})
+                         {"labelRule": 2, "start": "2026-11-04", "end": "2026-11-05", "zone": ZONE})
         self.assertIn("기사 6건(기사 정보가 없어 뺀 기사 1건)", out)
         code, _, err = self.run_tool("sheet", "--from", "2026-11-04", "--to", "2026-11-05", "--zone", ZONE)
         self.assertEqual(code, 2)
@@ -244,7 +244,7 @@ class CliTest(unittest.TestCase):
         record = json.loads((self.data / "results" / "20261107-030000.json").read_text(encoding="utf-8"))
         self.assertEqual(record["format"], 2)
         self.assertEqual(record["measuredAt"], "2026-11-07T03:00:00Z")
-        self.assertEqual(record["sample"], {"start": "2026-11-04", "end": "2026-11-05", "zone": ZONE, "labelRule": 1})
+        self.assertEqual(record["sample"], {"start": "2026-11-04", "end": "2026-11-05", "zone": ZONE, "labelRule": 2})
         self.assertEqual(record["labels"], {"articlesSha256": LABELS_SHA256, "eventsSha256": MARKS_SHA256})
         self.assertEqual(record["counts"], {
             "articles": 4, "excluded": 1, "goldEvents": 2, "bigMarks": 1,
@@ -329,6 +329,16 @@ class CliTest(unittest.TestCase):
         code, _, err = self.run_tool("measure", "--embedding-model", "m")
         self.assertEqual(code, 2)
         self.assertIn("기사 101 의 발행 시각이", err)
+
+    def test_sample_of_another_label_rule_stops(self):
+        # 다른 판의 라벨 기준으로 만든 표본은 재지 않는다 — 판이 다른 결과를 견주지 않게
+        self.write_fixture()
+        (self.data / "sample.json").write_text(SAMPLE.replace('"labelRule": 2', '"labelRule": 1'), encoding="utf-8")
+        code, _, err = self.run_tool("measure", "--embedding-model", "m")
+        self.assertEqual(code, 2)
+        self.assertEqual(err, f"멈춤 — {self.data / 'sample.json'}: 라벨 기준 1판으로 만든 표본이다 — 이 도구는 2판이다\n")
+        self.assertFalse((self.data / "results").exists())
+        self.assertEqual(self.fake.requests, [])
 
     def test_wrong_token(self):
         self.write_fixture()

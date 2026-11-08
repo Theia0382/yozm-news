@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Final
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-LABEL_RULE_VERSION: Final = 1
+LABEL_RULE_VERSION: Final = 2
 """운영 안내 "라벨 기준"의 판 — 운영 안내의 판 표기와 같아야 한다(test_label_rule.py 가 대조한다)."""
 
 EXCLUDED: Final = "-"
