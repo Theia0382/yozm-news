@@ -11,6 +11,8 @@
 !backend/
 !deploy/
 !frontend/
+!tools/event-eval/
+!tools/Dockerfile
 # 저장소가 추적하지 않는 것(.gitignore 의 대상)을 다시 뺀다 — docs/development/infrastructure.md "검사 환경"
 **/.env
 **/.env.*

@@ -4,5 +4,5 @@ FROM python:3-slim
 ENV TZ=UTC LANG=C.UTF-8 LC_ALL=C.UTF-8 PYTHONDONTWRITEBYTECODE=1
 WORKDIR /workspace
 COPY . .
-# 단위 테스트와 저장소 검사를 모두 돌리고, 하나라도 실패하면 실패로 끝낸다.
-CMD ["sh", "-c", "s=0; python -m unittest discover -s tools/docs-check || s=1; python tools/docs-check/check_links.py || s=1; exit $s"]
+# 검사기의 단위 테스트는 저장소 도구 검사(tools/Dockerfile)가 돌린다.
+CMD ["python", "tools/docs-check/check_links.py"]

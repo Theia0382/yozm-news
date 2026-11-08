@@ -10,7 +10,7 @@
 | [.env.example](../../.env.example) | 개발용 Compose 가 읽는 값의 목록 | 바꿀 수 있는 호스트 포트 |
 | [compose.check.yaml](../../compose.check.yaml) | 검사 정의 — CI 와 로컬이 함께 쓴다 | 검사 서비스 목록 |
 | [backend/Dockerfile](../../backend/Dockerfile) · [frontend/Dockerfile](../../frontend/Dockerfile) | 측별 이미지 — 검사 target 과 배포 target | 빌드 환경(기반 이미지 · 버전 대조 · 의존성 설치) |
-| [tools/docs-check/Dockerfile](../../tools/docs-check/Dockerfile) | 문서 검사 이미지 | 검사 실행 환경(기반 이미지 · 검사 명령) |
+| [tools/docs-check/Dockerfile](../../tools/docs-check/Dockerfile) · [tools/Dockerfile](../../tools/Dockerfile) | 문서 검사 이미지 · 저장소 도구 검사 이미지 | 검사 실행 환경(기반 이미지 · 검사 명령) |
 | 각 Dockerfile 옆의 `Dockerfile.dockerignore` | 이미지에 들어가는 파일의 허용 목록 | 검사 · 빌드 입력 |
 | [.github/workflows/ci.yml](../../.github/workflows/ci.yml) | CI | job · 계기 · 캐시 · 보고서 |
 | [frontend/proxy/](../../frontend/proxy/) | 배포 proxy(Caddy) 설정 | 앱으로 넘기는 경로(`backend-paths.caddy`) |
@@ -40,13 +40,14 @@ PostgreSQL 이미지는 `compose.yaml` 의 `postgres` 서비스 `image` 한 줄�
 |---|---|
 | `backend` | 백엔드 검사 이미지(target `check`)에서 Gradle `build` — 컴파일 · 전체 테스트 · 검사(Javadoc 형식 검사 포함) |
 | `frontend` | 프론트엔드 검사 이미지(target `check`)에서 `build` · `lint` · `format:check` · `test` 를 모두 돌리고 하나라도 실패하면 실패 |
-| `docs` | 문서 검사 이미지에서 검사기 단위 테스트와 저장소의 링크 검사를 모두 돌린다 |
+| `docs` | 문서 검사 이미지에서 저장소의 링크 검사를 돌린다 |
+| `tools` | 저장소 도구 검사 이미지에서 `tools/` 아래 도구마다 단위 테스트를 돌리고 하나라도 실패하면 실패 |
 | `docker` | 백엔드 테스트의 Testcontainers 가 쓰는 Docker 엔진(DinD) |
 
 - **소스는 이미지에 복사한다.** 작업 트리를 bind mount 하지 않는다. 빌드 컨텍스트는 저장소 루트이고, 각 Dockerfile 의 `Dockerfile.dockerignore` 가 이미지에 넣을 파일의 허용 목록이다. Dockerfile 하나가 검사 target 과 배포 target 을 함께 가지므로 허용 목록은 두 용도의 합집합이다([ADR-0022](../adr/0022-image-targets-per-side-dockerfile-without-run-in-runtime-stage.md))
 - 허용 목록 안에서 저장소가 추적하지 않는 파일(`.gitignore` 의 대상)을 다시 빼는 줄은 `.gitignore` 를 손으로 옮긴 사본이다. CI 의 체크아웃과 같은 입력으로 검사하려고 두는 것이라, `.gitignore` 를 바꾸면 이 줄들도 맞춘다
 - **DinD** — Testcontainers 는 호스트 Docker 가 아니라 검사 정의 안의 엔진을 쓴다. 그래서 호스트 종류(rootful · rootless · Docker Desktop)와 무관하게 구성이 같다. 엔진은 privileged 로 돌고, 공개 포트 없이 검사 정의의 내부 네트워크에만 열린다
-- 세 검사 이미지는 시간대 · 로캘을 같은 값으로 고정한다(각 Dockerfile 의 `ENV`)
+- 네 검사 이미지는 시간대 · 로캘을 같은 값으로 고정한다(각 Dockerfile 의 `ENV`)
 - 도구 버전은 공식 이미지의 태그가 갖는다. JDK 태그는 Gradle toolchain 의, Node 태그는 `frontend/.nvmrc` 의 사본이고, 어긋나면 이미지 빌드가 실패한다. pnpm 은 corepack 이 `frontend/package.json` 의 `packageManager` 를 읽어 받는다
 
 ### 테스트가 저장소 파일을 읽는 결선
@@ -60,19 +61,32 @@ PostgreSQL 이미지는 `compose.yaml` 의 `postgres` 서비스 `image` 한 줄�
 
 IDE 에서 테스트를 Gradle 에 맡기는 것은 1 때문이다([CONTRIBUTING.md §1](../../CONTRIBUTING.md#1-개발-환경)). 4 가 빠지면 복사할 파일이 빌드 컨텍스트에 없어 검사 이미지 빌드가 실패하고, 3 이 빠지면 이미지는 만들어지지만 그 안의 백엔드 검사가 파일이 없어 실패한다.
 
+사건 평가 도구의 테스트는 저장소 파일 둘을 읽는다 — 도구가 읽는 응답 필드와 대조하는 `api/openapi.json`, 도구의 라벨 기준 판과 대조하는 운영 안내 `docs/operations/event-evaluation.md`. 테스트가 자기 파일 위치에서 저장소 루트를 찾아 읽고, 검사 이미지는 빌드 컨텍스트를 저장소 구조 그대로 복사하므로 맞물리는 곳은 저장소 도구 검사의 허용 목록(`tools/Dockerfile.dockerignore`) 하나다. 빠지면 이미지는 만들어지지만 그 안의 테스트가 파일이 없어 실패한다.
+
 빌드 자체도 저장소 파일 하나를 읽는다 — 기본 로컬 임베딩 모델의 정보 `backend/embedding-model.properties`. Gradle `fetchEmbeddingModel` 이 이 파일로 모델을 받아 생성 리소스(`build/generated/embedding-model/`)로 놓고, 시험과 `bootJar` 가 그 리소스를 쓴다. 그래서 백엔드 허용 목록과 의존성 단계의 `COPY` 에 이 파일이 있어야 하고, 빠지면 검사 · 배포 이미지 빌드가 모두 실패한다. 모델 파일은 Gradle 사용자 홈(`caches/yozmnews-embedding-model/`)에 해시로 캐시한다. Gradle 의 시험 작업은 로컬 모델을 여는 시험을 위해 `ORT_DISABLE_TELEMETRY=1` 과 `--enable-native-access=ALL-UNNAMED` 를 넣는다.
 
 ### 문서 링크 검사
 
 `tools/docs-check` 는 공개 마크다운의 상대 링크와 앵커를 확인한다([ADR-0035](../adr/0035-public-markdown-links-and-anchors-checked-by-separate-check-service.md)).
 
-- 검사기(`check_links.py`)는 표준 라이브러리만 쓰는 Python 이라 이미지에 설치 단계가 없다. 컨테이너는 검사기의 단위 테스트(`test_check_links.py`)와 저장소 검사를 모두 돌린다
+- 검사기(`check_links.py`)는 표준 라이브러리만 쓰는 Python 이라 이미지에 설치 단계가 없다. 컨테이너는 저장소 검사만 돌리고, 검사기의 단위 테스트(`test_check_links.py`)는 [저장소 도구 검사](#저장소-도구-검사)가 돌린다
 - 검사한 마크다운이 없거나 `docs/README.md` 가 대상에 없으면 실패한다 — 허용 목록이 문서를 빠뜨린 이미지가 링크 0개로 통과하지 않게 하는 하한이다
 - 이미지에는 검사기 · 대상 문서 · 문서가 가리키는 문서 밖 경로만 들어간다(`tools/docs-check/Dockerfile.dockerignore`). 문서가 허용 목록에 없는 경로를 가리키면 "경로 없음"으로 실패한다. 경로를 더하는 절차는 [CONTRIBUTING.md §1](../../CONTRIBUTING.md#1-개발-환경), 검사가 읽는 링크 형식은 [docs/README.md §4](../README.md#4-작성-규칙)
 
+### 저장소 도구 검사
+
+`tools/` 아래 도구마다 단위 테스트를 돌린다([ADR-0100](../adr/0100-repository-tool-unit-tests-run-in-one-tools-check-service-and-docs-check-checks-links-only.md)).
+
+- 컨테이너는 도구 디렉터리마다 테스트를 찾아 돌리고, 하나라도 실패하면(테스트가 없는 도구 포함) 실패한다. 새 도구는 `tools/` 에 디렉터리를 더하면 이 검사에 든다
+- 도구는 모두 표준 라이브러리 Python 이라 이미지에 설치 단계가 없다
+- 이미지에는 `tools/` 와 도구의 테스트가 읽는 저장소 파일만 들어간다(`tools/Dockerfile.dockerignore`, [위 결선](#테스트가-저장소-파일을-읽는-결선)). 실제 앱 · 실제 기사로 재는 측정은 검사에 없다
+- 도구와 테스트
+  - `tools/docs-check` — 문서 링크 검사기([문서 링크 검사](#문서-링크-검사)). 단위 테스트 `test_check_links.py`
+  - `tools/event-eval` — 운영자가 사건 묶기를 라벨과 견주는 도구([사건 묶기 평가하기](../operations/event-evaluation.md) · [ADR-0095](../adr/0095-event-clustering-evaluated-by-an-operator-tool-comparing-admin-api-results-with-full-day-labels.md)). 가짜 운영자 API 서버로 도는 명령 테스트, 도구가 읽는 응답 필드를 `api/openapi.json` 의 스키마와 대조하는 계약 테스트(`test_contract.py`), 도구의 라벨 기준 판을 운영 안내의 판 제목과 대조하는 테스트(`test_label_rule.py`)
+
 ## 이미지
 
-- **측별 Dockerfile 하나** — `backend/Dockerfile` 은 target `check` · `app`, `frontend/Dockerfile` 은 target `check` · `proxy` 를 갖는다. 의존성 단계를 검사 target 과 배포 빌드가 함께 쓴다. 문서 검사 이미지는 검사 전용 `tools/docs-check/Dockerfile` 하나다([ADR-0022](../adr/0022-image-targets-per-side-dockerfile-without-run-in-runtime-stage.md))
+- **측별 Dockerfile 하나** — `backend/Dockerfile` 은 target `check` · `app`, `frontend/Dockerfile` 은 target `check` · `proxy` 를 갖는다. 의존성 단계를 검사 target 과 배포 빌드가 함께 쓴다. 검사 전용 이미지는 문서 검사 `tools/docs-check/Dockerfile` 과 저장소 도구 검사 `tools/Dockerfile` 이다([ADR-0022](../adr/0022-image-targets-per-side-dockerfile-without-run-in-runtime-stage.md))
 - **두 아키텍처** — 배포 이미지는 `linux/amd64` · `linux/arm64` 로 빌드한다([ADR-0006](../adr/0006-deployment-compose-cloudflare.md)). 빌드 단계는 빌더 플랫폼에서 돌고(jar · 정적 파일은 아키텍처와 무관하다), 실행 단계는 대상 플랫폼 이미지에 복사와 메타데이터만 둔다. 실행 단계에 명령(`RUN`)이 있으면 에뮬레이션이 없는 빌더에서 빌더와 다른 아키텍처의 빌드가 깨진다
 - 두 아키텍처 빌드는 buildx bake 로 `deploy/` 에서 한다 — bake 는 `extends` 대상과 빌드 컨텍스트를 작업 디렉터리 기준으로 읽는다([ADR-0021](../adr/0021-separate-deploy-compose-with-single-app-service.md)). 빌드 컨텍스트가 작업 디렉터리의 상위(저장소 루트)라, 파일 시스템 권한을 검사하는 buildx 는 `--allow=fs.read=..` 로 그 읽기를 허락해야 한다. 결과가 어디에 남는지는 빌더 드라이버에 따라 다르다 — `docker` 드라이버에 containerd 이미지 저장소면 두 아키텍처 이미지가 로컬 이미지로 남고, `docker-container` 드라이버면 빌드 캐시에만 남는다
 - **기본 로컬 임베딩 모델** — 백엔드 의존성 단계가 모델 정보의 정본 `backend/embedding-model.properties` 를 복사하고 Gradle `fetchEmbeddingModel` 로 고정 리비전의 모델 · 토크나이저를 받아 sha256 을 확인한다. 정보 파일이 그대로면 그 계층을 다시 쓴다([ADR-0091](../adr/0091-local-embedding-model-is-multilingual-e5-small-int8-fetched-at-build-into-the-image-with-onnx-telemetry-off.md))
@@ -105,9 +119,10 @@ IDE 에서 테스트를 Gradle 에 맡기는 것은 1 때문이다([CONTRIBUTING
 | `backend` | 검사 정의의 `backend` · `docker` 로 백엔드 검사 |
 | `frontend` | 검사 정의의 `frontend` |
 | `docs` | 검사 정의의 `docs` |
+| `tools` | 검사 정의의 `tools` |
 | `deploy` | 배포 이미지를 두 아키텍처로 빌드하고, 배포 구성을 띄워 healthcheck 를 기다린 뒤 `deploy/smoke.sh`, 이어서 운영자 토큰을 넣어 `app` 을 다시 띄우고 한 번 더 `deploy/smoke.sh` |
 
-- **필수 체크** — 네 job 모두 `main` 의 필수 체크다. 필수 여부는 저장소 설정(branch protection)이 정한다
+- **필수 체크** — 다섯 job 모두 `main` 의 필수 체크다. 필수 여부는 저장소 설정(branch protection)이 정한다
 - **캐시** — 각 job 은 검사를 돌리기 전에 같은 정의로 이미지를 buildx bake 로 먼저 빌드해, GitHub Actions 캐시를 계층 캐시로 쓴다. 캐시 범위는 job 마다 따로다(`ci.yml`)
 - **실패 보고서** — `backend` 검사 단계가 실패했을 때만 검사 컨테이너에서 테스트 보고서(HTML · JUnit XML)를 꺼내 artifact 로 올린다. 이미지 빌드 실패처럼 보고서가 없는 실패에서는 꺼내지 않는다. `deploy` 가 실패하면 배포 구성의 로그를 출력한다
 - **빌더 확인** — `deploy` 는 빌드 전에 빌더에 arm64 에뮬레이션이 없음을 확인한다. 에뮬레이션이 있으면 실행 단계의 `RUN` 이 두 아키텍처 빌드에서 드러나지 않기 때문이다
@@ -126,7 +141,9 @@ IDE 에서 테스트를 Gradle 에 맡기는 것은 1 때문이다([CONTRIBUTING
 | PostgreSQL 이미지는 `compose.yaml` 한 줄이 정하고 테스트가 그 값을 PostgreSQL 호환 이미지로 선언해 쓴다 | 구조 + 테스트 `DevComposeFileTests`(파일 · 서비스 · 이미지가 없거나 보간 · 시스템 속성 없음은 실패) | `compose.yaml` · `backend/build.gradle.kts` |
 | 배포 구성의 PostgreSQL 이 같은 이미지를 쓴다 | 구조(`extends`) + 스모크 K9 | `deploy/compose.yaml` · `deploy/smoke.sh` |
 | 배포 이미지가 저장소의 프리셋을 모두 적재한다 | 스모크 K12 — 앱의 적재 로그 줄의 수 = 저장소의 프리셋 파일 수(로그 문구는 [source-R12](../specs/source.md#수집-프로필)) | `backend/src/main/resources/source-presets/` · `deploy/smoke.sh` |
-| 테스트가 읽는 저장소 파일이 검사 이미지에 있다 | 빌드 실패(허용 목록에 없으면 복사가 실패) · 검사 실패(복사하지 않으면 이미지 안에 파일이 없다) | [결선](#테스트가-저장소-파일을-읽는-결선) |
+| 테스트가 읽는 저장소 파일이 검사 이미지에 있다 | 빌드 실패(허용 목록에 없으면 복사가 실패) · 검사 실패(복사하지 않으면 이미지 안에 파일이 없다). 저장소 도구 검사는 검사 실패만 — 빌드 컨텍스트를 통째로 복사한다 | [결선](#테스트가-저장소-파일을-읽는-결선) |
+| 사건 평가 도구가 읽는 운영자 API 응답 필드가 커밋된 명세에 있고 필수다 | 테스트 `test_contract.py`(도구의 필드 목록 `USED_FIELDS` 를 명세의 스키마와 대조 — 도구는 응답 필드를 이 목록을 거쳐서만 읽는다). 부분 — 요청의 경로 · 질의 이름 · 본문은 대조하지 않는다 | `tools/event-eval/admin_api.py` · `api/openapi.json` |
+| 사건 평가 도구의 라벨 기준 판 = 운영 안내의 판 | 테스트 `test_label_rule.py`(운영 안내의 판 제목은 한 번). 문면만 고치고 판을 그대로 둔 것은 잡지 못한다 | `tools/event-eval/labels.py` · [사건 묶기 평가하기](../operations/event-evaluation.md) |
 | 커밋된 화면용 API 명세 = 코드의 명세 | 테스트 `OpenApiSpecTests` | `api/openapi.json` · `backend/build.gradle.kts` |
 | 운영 안내서의 예시 프로필이 지금의 검증기를 통과한다 | 테스트 `SourcesGuideExampleTests`(코드 블록은 `yaml` · `sh` 만, `yaml` 블록 1개 이상) | `docs/operations/sources.md` · `backend/build.gradle.kts` |
 | 태그 체계 안내서의 예시 원문을 기본 체계에 적용하면 확인을 통과한다 | 테스트 `TagSetsGuideExampleTests`(코드 블록은 `yaml` · `sh` 만, 받은 원문의 같은 절을 `yaml` 블록으로 바꾸거나 끝에 더한 원문이 형식 검증과 기본 체계와의 대조를 통과하고 계보가 하나 이상) | `docs/operations/tag-sets.md` · `backend/build.gradle.kts` |
@@ -160,7 +177,7 @@ IDE 에서 테스트를 Gradle 에 맡기는 것은 1 때문이다([CONTRIBUTING
 | 검사 이미지에 저장소가 추적하지 않는 파일이 들어가지 않는다 | 없음 — 허용 목록의 무시 줄은 `.gitignore` 의 손 사본이다 | 각 `Dockerfile.dockerignore` |
 | 작업 서버가 멈추면 `health` 가 `DOWN` 이 된다 | 없음 — 테스트는 집계에 DB 가 들어 있는지만 본다 | `application-worker.yaml` |
 | DinD 엔진은 공개 포트 없이 검사 정의 안에만 열린다 | 없음 | `compose.check.yaml` |
-| 검사 결과가 호스트의 시간대 · 로캘과 무관하다 | 없음 — 세 검사 이미지가 같은 `ENV` 를 각자 둔다 | 세 Dockerfile |
+| 검사 결과가 호스트의 시간대 · 로캘과 무관하다 | 없음 — 네 검사 이미지가 같은 `ENV` 를 각자 둔다 | 네 Dockerfile |
 | 개발용 Compose 의 포트는 호스트 루프백에만 열린다 | 없음 | `compose.yaml` |
 | PostgreSQL 메이저를 바꾸기 전에 배포 DB 를 옮긴다 | 없음 — 절차 | [업데이트](../operations/deployment.md#업데이트) |
 | 작업 서버 동시 실행 수 변수를 빈 값 줄로 두지 않는다 | 없음 | [백그라운드 작업](../operations/configuration.md#백그라운드-작업) |

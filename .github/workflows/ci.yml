@@ -89,6 +89,26 @@ jobs:
       - name: Check
         run: docker compose -f compose.check.yaml run --rm docs
 
+  # 저장소 도구(tools/)마다 단위 테스트 — 사건 평가 도구의 운영자 API 명세 대조 · 라벨 기준 판 대조 포함
+  tools:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - name: Build image
+        uses: docker/bake-action@v7
+        with:
+          source: .
+          files: compose.check.yaml
+          targets: tools
+          load: true
+          set: |
+            *.cache-from=type=gha,scope=tools
+            *.cache-to=type=gha,scope=tools,mode=max
+      - name: Check
+        run: docker compose -f compose.check.yaml run --rm tools
+
   # 배포 구성의 두 아키텍처 빌드 · 기동 · 스모크 — docs/development/infrastructure.md "CI"
   deploy:
     runs-on: ubuntu-24.04
