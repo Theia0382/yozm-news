@@ -9,12 +9,12 @@
 ```java
 // digest: 사용자별 종합 다이제스트 생성.
 public interface DigestGenerator {
-    GeneratedDigest generate(DigestRequest request, LlmHandle llm); // 후보 + 자유 텍스트 관심사 + 진행 중인 이슈
+    GeneratedDigest generate(DigestRequest request, LlmHandle llm); // 후보 + 사용자 프로필(자유 텍스트 관심사 포함)
 }
 
 // report: 사용자별 변화 리포트 생성.
 public interface ReportGenerator {
-    GeneratedReport generate(ReportRequest request, LlmHandle llm); // 기간 통계 + 이슈 변화 + 직전 리포트 요약
+    GeneratedReport generate(ReportRequest request, LlmHandle llm); // 기간 통계 + 구독한 스토리라인의 변화 + 직전 리포트 요약
 }
 
 // llm: 사용자 키로 호출 가능한 모델 핸들을 만든다. 키 평문은 이 모듈 밖으로 나가지 않는다.
@@ -33,8 +33,8 @@ public interface LlmClientFactory {
 | 작업 | 주기/계기 | 내용 |
 |---|---|---|
 | `ScheduleDueDigests` | 1분마다 | 생성 시각이 다가온 사용자의 다이제스트 생성 작업 등록 |
-| `GenerateDigest(userId, date)` | 위에서 등록 / 사용자 수동 요청 | 후보 선별 → LLM 호출 → 검증 → 저장 → 이슈(`storyline`) 연결 적용 |
-| `MarkDormantStorylines` | 하루 1회 | 새 연결이 기준 일수 동안 없는 이슈를 휴면으로 바꾼다. 마지막 연결 날짜는 `digest` 의 타임라인에서 오고, 전이는 `storyline` API 로 한다. 이 작업을 어느 모듈에 둘지는 구현에서 정한다 — 어느 쪽이든 `storyline` 이 `digest` 를 읽어서는 안 된다 |
+| `GenerateDigest(userId, date)` | 위에서 등록 / 사용자 수동 요청 | 후보 선별 → LLM 호출 → 검증 → 저장 |
+| **(미설계)** 스토리라인 잇기 · 상태 작업 | — | 사건을 스토리라인으로 잇고 상태를 바꾼다. 일정 · 진입점은 `storyline` 을 만들 때 정한다([ADR-0101](adr/0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)) |
 | `ScheduleDueReports` | 1시간마다 | 리포트 시점이 된 사용자의 변화 리포트 생성 작업 등록 |
 | `GenerateReport(userId, period)` | 위에서 등록 | 통계 집계 → 스냅숏 → LLM 호출 → 검증 → 저장 |
 | `Retention` | 하루 1회 | 보존 기간이 지난 데이터 정리 ([data-model.md](data-model.md)) — 요약문(운영 설정을 켰을 때) 포함. 사건 배정 입력(기사 표현)은 `event` 의 사건 정리 작업이 지운다([event Spec](specs/event.md#사건-정리)) |
@@ -44,7 +44,7 @@ public interface LlmClientFactory {
 - 경로를 분리한다: 화면용 `/api/**`(세션 쿠키), 외부용 `/public-api/v1/**`(Personal Access Token), MCP `/mcp`(OAuth 2.1).
 - 화면용 API와 외부 API는 계약을 따로 관리한다. 외부 API는 하위 호환을 지켜야 하는 공개 계약이고, 화면용 API는 프론트엔드와 함께 자유롭게 바뀐다. 화면용 API 계약의 정본은 커밋된 OpenAPI 명세(`api/openapi.json`)이고, 프론트엔드 타입은 그 명세에서 생성한다 ([ADR-0020](adr/0020-screen-api-contract-from-committed-openapi-spec.md)).
 - MCP 서버는 Spring AI의 MCP 서버 기능(Streamable HTTP)으로 구현하고, 내부적으로는 외부 API와 같은 서비스 계층을 호출한다. ChatGPT 등 원격 MCP 클라이언트 연결에는 OAuth 2.1 인가 서버(Spring Authorization Server)가 필요하다.
-- 조회 대상: 다이제스트(주요 뉴스 · 추가 헤드라인), 기사 메타데이터 · 검색, 사건, 이슈와 타임라인, 관심사 히스토리, 변화 리포트. 사용자 데이터(다이제스트 · 이슈 · 관심사 히스토리 · 리포트)는 토큰 주인의 범위로 한정한다.
+- 조회 대상: 다이제스트(주요 뉴스 · 추가 헤드라인), 기사 메타데이터 · 검색, 사건, 스토리라인과 타임라인, 관심사 히스토리, 변화 리포트. 사용자 데이터(다이제스트 · 스토리라인 구독 · 관심사 히스토리 · 리포트)는 토큰 주인의 범위로 한정한다.
 - 외부에는 **다이제스트 · 리포트의 LLM 종합문, 기사 메타데이터, 원문 링크**만 제공한다. RSS 요약문 원문은 외부 API로 내보내지 않는다 ([security.md](security.md)).
 
 ## 모듈 이벤트
