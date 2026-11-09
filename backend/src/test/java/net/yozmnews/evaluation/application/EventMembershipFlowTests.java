@@ -115,7 +115,7 @@ class EventMembershipFlowTests {
 		assertThat(row).containsEntry("article_id", judged)
 			.containsEntry("evaluator", "jev")
 			.containsEntry("model_version", "jev-1.14.0")
-			.containsEntry("wording_version", "membership-1")
+			.containsEntry("wording_version", "membership-2")
 			.containsEntry("candidates", "[{\"eventId\": 12, \"articleIds\": [" + counting + ", " + winner
 					+ "], \"probability\": 0.83}, {\"eventId\": 15, \"articleIds\": [" + strike + "], \"probability\": 0.07}]")
 			.containsEntry("input_tokens", 812);

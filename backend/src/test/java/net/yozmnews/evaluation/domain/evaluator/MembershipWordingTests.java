@@ -15,9 +15,9 @@ import org.junit.jupiter.api.Test;
 class MembershipWordingTests {
 
 	@Test
-	void theCurrentWordingIsTheEnglishQuestionOfTheFirstVersion() {
-		assertThat(MembershipWording.CURRENT).isEqualTo(new MembershipWording("membership-1",
-				"Does this article report on the same news event (the same incident, announcement or decision, or its direct follow-up) as the following articles?"));
+	void theCurrentWordingAsksWhetherTheArticleReportsNoNewHappeningInTheSecondVersion() {
+		assertThat(MembershipWording.CURRENT).isEqualTo(new MembershipWording("membership-2",
+				"Do the following articles already report the happening this article reports, so that this article reports no new happening beyond them? A happening is one thing that occurred once: one act, occurrence, statement or decision. A response by someone else, another act in the same matter, or a similar occurrence elsewhere is a new happening. If neither this article nor the following articles report a particular happening, answer yes if they describe the same trend."));
 	}
 
 	@Test
