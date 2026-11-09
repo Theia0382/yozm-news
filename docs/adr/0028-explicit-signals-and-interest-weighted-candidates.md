@@ -1,6 +1,6 @@
 # ADR-0028: 관심 신호는 명시적 행동만 쓰고, 관심도를 후보 순위에 반영하되 큰 사건을 끼워 넣는다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 관심 신호의 이슈 추적 · 해제와 그 기록 모듈([ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)) · 후보 선별과 구독 밖 노출의 큰 사건 슬롯([ADR-0103](0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md))
 - 날짜: 2026-10-27
 - 근거: [이슈 #36](https://github.com/Theia0382/yozm-news/issues/36) — 기점 `e4dbe0d` 의 설계 문서 · ADR 과 Spring Modulith 2.1.1 의 모듈 순환 판정을 대조해 확인
 - 관련: [ADR-0002](0002-shared-evaluation-with-jev.md)(개인화 주체 — 이 ADR 이 부분 대체한다), [ADR-0010](0010-tag-taxonomy.md)(주제 구독), [ADR-0025](0025-long-term-personal-news-history-in-v1.md)(관심사 히스토리 · 이슈), [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md)(큰 사건)
@@ -15,9 +15,11 @@
 
 ## 결정
 
+> 부분 대체(아래 두 항목의 이슈 추적 · 해제, 추적 여부, `storyline`) — [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md). 지금 상태: [`overview` §6](../overview.md#6-횡단-규약)
 - **관심 신호는 사용자의 명시적 행동만 쓴다.** 기사 좋아요 / 싫어요, 이슈 추적 · 해제, 구독 설정 변경이다. 클릭 · 열람은 추적하지 않고, 원문 링크는 원문으로 바로 이동한다.
 - **신호는 추가 전용 이벤트 기록이 정본이다.** 현재 상태(기사 피드백 · 추적 여부 · 구독)는 그 투영이다. 신호는 각 모듈이 자기 것을 기록한다(`feedback` · `storyline` · `user`).
 - **관심도**는 기간 × 주제마다 신호를 노출 수로 나눈 값이고, 최근 신호에 더 큰 가중치를 준다. 노출은 서비스가 보여 준 다이제스트 항목이라 행동 추적이 아니다. 관심도는 조회할 때 계산한다. 산식은 노출 기록을 가진 `digest` 의 `domain` 한 곳에 둔다. 신호가 없으면 중립이다.
+> 부분 대체(아래 두 항목의 큰 사건 슬롯) — [ADR-0103](0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md). 지금 상태: [`pipeline` 후보 선별](../pipeline.md#후보-선별)
 - **후보 선별 순서**: 구독 필터(유지) → 관심 순위(중요도 × 관심도) → 큰 사건 슬롯(구독과 무관, 사용자가 제외한 소스 · 지역 · 형식은 지킨다) → 사건 단위 중복 제거 → 다양성 상한(유지) → 기사마다 선정 이유 기록 · 표시.
 - **구독은 사용자가 정한 필터로 남는다.** 구독 밖 주제에 관심이 반복되면 그 주제의 구독을 제안하고, 구독 여부는 사용자가 정한다. 별도의 무작위 탐색 슬롯은 두지 않는다 — 구독 밖 노출은 큰 사건 슬롯이 맡는다.
 

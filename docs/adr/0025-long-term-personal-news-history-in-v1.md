@@ -1,6 +1,6 @@
 # ADR-0025: 장기 개인 뉴스 히스토리를 v1 핵심 가치로 둔다 — 공유 사건 · 사용자별 이슈 · 변화 리포트
 
-- 상태: 승인. 부분 대체 — "공개 전부터" 쌓는 이력 데이터([ADR-0047](0047-self-hosted-software-run-by-instance-operators.md))
+- 상태: 승인. 부분 대체 — 이슈 층([ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)) · 다이제스트 호출의 이슈 입출력([ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)) · 변화 리포트 입력의 이슈 변화([ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)) · `storyline` 모듈과 이슈 타임라인([ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)) · 이슈의 결과([ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)) · "공개 전부터" 쌓는 이력 데이터([ADR-0047](0047-self-hosted-software-run-by-instance-operators.md)) · 장기 개념의 이름([ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md))
 - 날짜: 2026-10-27
 - 근거: [이슈 #36](https://github.com/Theia0382/yozm-news/issues/36) — 기점 `e4dbe0d` 의 설계 문서 · ADR 과 Spring Modulith 2.1.1 의 모듈 순환 판정(`ApplicationModules`)을 대조해 확인
 - 관련: [ADR-0007](0007-defer-event-clustering.md)(같은 사건 묶기 — 이 ADR 이 대체한다), [ADR-0003](0003-byok-personalized-digest.md)(BYOK 다이제스트 — 결정은 유지하고 호출의 입출력이 넓어진다), [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md)(사건 묶기 방법), [ADR-0028](0028-explicit-signals-and-interest-weighted-candidates.md)(관심 신호 · 후보 선별), [ADR-0029](0029-indefinite-summary-retention-with-optional-deletion.md)(요약문 보존)
@@ -18,17 +18,22 @@
 - **목적을 둘로 적는다.** 매일 받는 다이제스트는 사용자가 서비스로 들어오는 기본 기능이고, 오래 쌓이는 개인 뉴스 히스토리가 장기적인 차별점이다. 장기 기능(사건 · 이슈 · 관심사 히스토리 · 변화 리포트)을 v1(공개 베타) 범위에 넣는다.
 - **세 층으로 나눈다.**
   - **사건** — 같은 사건을 다룬 기사를 사용자와 무관하게 묶은 며칠 단위의 공유 묶음이다. 생성형 LLM 없이 묶고 비용은 운영자가 낸다. 묶는 방법은 [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md).
+  > 부분 대체 — [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md). 지금 상태: [`overview` §8](../overview.md#8-용어)
   - **이슈**(`storyline`) — 한 사용자가 몇 주에서 몇 달에 걸쳐 따라가는 전개다. 다이제스트를 만드는 같은 LLM 호출이 그 사용자의 진행 중 이슈 목록을 받아, 그날의 주요 뉴스를 기존 이슈에 잇거나 새 이슈를 연다. 비용은 사용자가 낸다(BYOK).
   - **주요 뉴스**(`top_stories`) — 하루치 다이제스트에서 여러 기사를 종합한 섹션이다. [ADR-0003](0003-byok-personalized-digest.md) · [ADR-0007](0007-defer-event-clustering.md)이 "주요 이슈" · "하나의 이슈"라고 부른 것이 이것이다.
+> 부분 대체(셋째 문장) — [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md). 지금 상태: [`pipeline` §6](../pipeline.md#6-다이제스트-생성)
 - **다이제스트 호출의 단위는 그대로다.** (사용자, 기간)마다 LLM 을 한 번 호출한다. 입력에 진행 중 이슈 목록이, 출력에 이슈 연결이 더해진다. 사용자 사이에 공유하는 생성물은 여전히 없다.
+> 부분 대체(다섯째 문장의 이슈의 변화) — [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md). 지금 상태: [`overview` §5](../overview.md#5-모듈-지도)
 - **변화 리포트**를 둔다. 사용자별 · BYOK 이고 (사용자, 리포트 기간)마다 LLM 을 한 번 호출한다. 호출은 `LlmClientFactory` 를 거치는 리포트 생성 포트(`ReportGenerator`)로 한다. v1 은 주간 · 월간이다. 입력에 원문은 없다 — 이슈의 변화, 사건 · 주제의 보도량, 관심도의 변화, 직전 리포트의 요약이다. 생성에 쓴 통계 스냅숏을 리포트와 함께 저장하고, 월간 리포트는 주간 리포트를 입력으로 삼아 계층으로 쌓는다.
 - **운영자는 생성형 LLM 을 쓰지 않는다.** 운영자 비용은 사용자 수와 무관한 공유 작업(수집 · 평가 · 사건 묶기 · 임베딩)뿐이다. 운영자 LLM 은 피할 수 없고 비용이 적을 때만 다시 검토한다.
+> 부분 대체(`storyline` 과 이슈 타임라인 문장) — [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md). 지금 상태: [`overview` §5](../overview.md#5-모듈-지도)
 - **모듈**: `event`(공유 사건), `storyline`(이슈 aggregate — 제목 · 현재 상태 · 상태 전이 · 추적), `report`(변화 리포트)를 둔다. 이슈 타임라인의 정본은 다이제스트의 주요 뉴스 섹션이고, 타임라인 조회는 `digest` 가 한다. `storyline` 은 `digest` 를 모르고, `report` 는 다른 모듈을 읽기만 한다.
 - 외부 API · MCP 는 v1 다음 단계로 둔다.
 
 ## 결과
 
 - 같은 사건 묶기를 다이제스트 LLM 에만 맡기던 [ADR-0007](0007-defer-event-clustering.md)을 대체한다. 다이제스트 LLM 은 여전히 그날 후보 안에서 같은 사건 기사를 주요 뉴스 하나로 묶는다.
+> 부분 대체(아래 세 항목) — [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md). 지금 상태: [`overview` §8](../overview.md#8-용어)
 - 다이제스트 프롬프트에 이슈 목록이 들어가 입력 토큰이 늘어난다. 이슈 수 상한과 토큰 예산은 다이제스트를 만들 때 측정해 정한다.
 - 이슈는 그 사용자의 다이제스트에 들어온 기사로만 이어진다. 보도량은 사건 단위로 세고, 이슈는 인용한 기사를 거쳐 사건에 닿는다.
 - 이슈 화면은 `storyline`(목록 · 상태 · 추적)과 `digest`(타임라인) 두 API 를 조합한다.
@@ -37,6 +42,8 @@
 - 로드맵에 사건 묶기 · 변화 리포트 단계가 생기고 공개가 늦어진다.
 
 ## 검토한 대안
+
+> 부분 대체(장기 개념의 이름을 정한 행) — [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md). 지금 상태: [`overview` §8](../overview.md#8-용어)
 
 | 대안 | 기각 이유 |
 |---|---|

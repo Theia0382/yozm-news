@@ -43,3 +43,4 @@
 ## 후속 기록
 
 - 2026-11-08: 결정 절 "표본은 날짜 단위 전수다"의 정답 사건의 범위 — [ADR-0097](0097-event-clustering-evaluation-labels-reports-of-one-happening-narrower-than-the-system-event.md) · [사건 묶기 평가하기](../operations/event-evaluation.md)
+- 2026-11-09: 맥락 첫 항목의 큰 사건 판정 정밀도와 결정 절의 큰 사건 정답의 단위 — [ADR-0103](0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md) · [로드맵](../roadmap.md)

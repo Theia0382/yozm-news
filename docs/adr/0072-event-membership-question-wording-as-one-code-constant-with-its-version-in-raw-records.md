@@ -32,3 +32,7 @@
 | 태그 체계 파일에 사건 소속 질문 키를 더한다 | 문구 하나에 새 체계 버전이 필요하고, 필수 키면 운영자 원문이 활성화되지 않으며 선택 키면 기본 문구가 코드에 다시 생긴다 |
 | 설정(환경 변수)으로 둔다 | 여러 줄 문구를 다루기 어렵고, 기록이 없으면 언제 바뀌었는지 모른다 |
 | 한국어 문구 | 표본에서 같은 사건과 다른 사건의 분리가 영어보다 작았다 |
+
+## 후속 기록
+
+- 2026-11-09: 결정 절 "첫 문구는 영어 문장이다(판 `membership-1`)"의 다음 판 — [ADR-0102](0102-an-event-is-the-reports-of-one-happening-narrowed-by-the-event-membership-question-wording.md) · [evaluation Spec 사건 소속 판정](../specs/evaluation.md#사건-소속-판정) evaluation-R37

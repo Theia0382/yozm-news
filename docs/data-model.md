@@ -18,7 +18,6 @@ erDiagram
     users ||--o{ feedback : ""
     users ||--o{ feedback_events : ""
     users ||--o{ user_tag_preference_events : ""
-    users ||--o{ storylines : ""
     users ||--o{ reports : ""
 
     sources ||--o{ feeds : ""
@@ -51,9 +50,6 @@ erDiagram
     articles ||--o{ event_article_candidates : ""
     article_event_judgements |o--o{ event_articles : ""
     article_event_judgements |o--o{ event_merge_judgements : ""
-
-    storylines ||--o{ storyline_tracking_events : ""
-    storylines ||--o{ digest_sections : ""
 
     digests ||--o{ digest_sections : ""
     digest_sections ||--o{ digest_items : ""
@@ -101,16 +97,14 @@ erDiagram
 | 테이블 | 주요 컬럼 | 비고 |
 |---|---|---|
 | `digests` | id, user_id, digest_date, period_start, period_end, status(`SCHEDULED`/`RUNNING`/`READY`/`EMPTY`/`FAILED`), trigger(`SCHEDULED`/`MANUAL`), provider, model, candidate_count, input_tokens, output_tokens, duration_ms, error_code, error_message, created_at, completed_at | (user_id, digest_date, trigger, 순번)으로 여러 번 생성 이력을 남긴다. 화면에는 날짜별 최신 `READY`를 보여준다 |
-| `digest_sections` | id, digest_id, kind(`OVERVIEW`/`TOP_STORY`/`MORE_HEADLINES`), position, title, body, storyline_id | `TOP_STORY` 가 주요 뉴스다. `storyline_id` 는 이슈(`storyline`)에 이은 주요 뉴스만 갖는다 — 이슈 타임라인의 정본 |
-| `digest_items` | digest_section_id, article_id, position, note, selection_reason(`SUBSCRIBED`/`INTEREST`/`MAJOR_EVENT`) | 섹션이 인용한 기사와 선정 이유. 노출 기록이다 |
+| `digest_sections` | id, digest_id, kind(`OVERVIEW`/`TOP_STORY`/`MORE_HEADLINES`), position, title, body | `TOP_STORY` 가 주요 뉴스다 |
+| `digest_items` | digest_section_id, article_id, position, note, selection_reason(`SUBSCRIBED`/`INTEREST`/`MAJOR_STORYLINE`) | 섹션이 인용한 기사와 선정 이유. 노출 기록이다 |
 | `digest_candidates` | digest_id, article_id, alias | 이번 생성에 넣은 후보와 별칭. 디버깅과 품질 분석용 |
 
-## 이슈
+## 스토리라인
 
-| 테이블 | 주요 컬럼 | 비고 |
-|---|---|---|
-| `storylines` | id, user_id, title, state_summary, status(`ACTIVE`/`DORMANT`/`RESOLVED`), tracked, created_at, updated_at | 사용자별 이슈. 연결 날짜는 저장하지 않는다 — 타임라인은 `digest_sections.storyline_id` 가 정본이다 |
-| `storyline_tracking_events` | id, storyline_id, user_id, action(`TRACK`/`UNTRACK`), occurred_at | 추적 · 해제 이력. 추가만 한다. `storylines.tracked` 는 그 투영 |
+- **(미설계)** 공유 스토리라인(`storylines` — 사용자를 모른다), 사건의 소속(사건 하나가 스토리라인 여럿에 든다), 스토리라인 사이 관계의 테이블은 `storyline` 을 만들 때 정한다([ADR-0101](adr/0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md))
+- **(미설계)** 스토리라인 구독과 그 변경 이력(추가 전용 — 현재 구독은 그 투영)은 `user` 의 테이블이다. 스토리라인은 ID 로만 가리킨다
 
 ## 피드백
 
@@ -125,7 +119,7 @@ erDiagram
 |---|---|---|
 | `reports` | id, user_id, period_kind(`WEEK`/`MONTH`), period_start, period_end, status(`SCHEDULED`/`RUNNING`/`READY`/`EMPTY`/`FAILED`), provider, model, input_tokens, output_tokens, stats_snapshot(jsonb), error_code, error_message, created_at, completed_at | 생성에 쓴 통계를 `stats_snapshot` 에 함께 저장한다. 이전 리포트와의 비교는 이 스냅숏으로 한다 |
 | `report_sections` | id, report_id, kind, position, title, body | |
-| `report_items` | report_section_id, position, storyline_id, article_id | 섹션이 인용한 이슈 · 기사(둘 중 하나) |
+| `report_items` | report_section_id, position, storyline_id, article_id | 섹션이 인용한 스토리라인 · 기사(둘 중 하나) |
 
 ## 프레임워크 테이블
 
@@ -142,13 +136,13 @@ erDiagram
 | 주제 · 지역 태그(`article_tags`), 태그 체계, 태그 기준 · 저장 기준과 그 변경 이력, 태그 키 계보 | 무기한 | 주제별 보도량과 관심사 히스토리의 근거 |
 | 빠진 태그 채움 기록(`tag_backfills` · `tag_backfill_versions`) | 무기한 | 끝난 채움이 저장 바닥 계산의 입력이다 — 지우면 태그 기준 · 저장 기준의 경고와 평가 현황 표시가 바뀐다([evaluation-R32](specs/evaluation.md#빠진-태그-채움--저장-바닥)) |
 | 사건 배정 입력 (`article_match_features`) | 그 기사의 사건이 닫힐 때까지. 그 모델 버전의 열린 사건에 배정되지 않은 표현은 만든 뒤 사건 배정 시간 창 + 여유 | 열린 사건의 서술 기사 · 재판정 · 기사 빼기에 쓴다. 배정 대기 기사의 표현은 지우면 다시 만든다([event-R13](specs/event.md#사건-정리) · [ADR-0088](adr/0088-article-features-kept-until-their-event-closes-and-unassigned-ones-for-the-window-plus-a-margin.md)) |
-| 사건 (`events` · `event_key_terms` · `event_articles`) · 저장 후보 (`event_article_candidates`) · 기준 이력 (`event_assignment_criteria`) · 병합 판정 기록 (`event_merge_judgements`) | 무기한. 합쳐진 사건 행과 병합 판정 기록은 가리키는 사건(남는 사건 · 쌍의 사건)을 지울 때 함께 지운다 | 사건 · 이슈 보도량의 근거. 저장 후보 · 기준 이력은 기준을 바꿀 때 재판정의 재료다. 병합 판정 기록은 같은 사건 쌍을 다시 묻지 않게 한다 |
+| 사건 (`events` · `event_key_terms` · `event_articles`) · 저장 후보 (`event_article_candidates`) · 기준 이력 (`event_assignment_criteria`) · 병합 판정 기록 (`event_merge_judgements`) | 무기한. 합쳐진 사건 행과 병합 판정 기록은 가리키는 사건(남는 사건 · 쌍의 사건)을 지울 때 함께 지운다 | 사건 · 스토리라인 보도량의 근거. 저장 후보 · 기준 이력은 기준을 바꿀 때 재판정의 재료다. 병합 판정 기록은 같은 사건 쌍을 다시 묻지 않게 한다 |
 | 배정 대기 (`event_assignment_queue`) | 배정하면 지운다 | 처리할 기사의 목록이다 |
 | 큰 사건 기준과 그 변경 이력 (`event_big_criteria` · `event_big_criteria_changes`) | 무기한 | 운영자가 조정한 이력 — 태그 기준 · 저장 기준의 이력과 같다 |
 | 사건 소속 판정 원본 (`article_event_judgements`) | 180일 | 평가 원본 응답과 같다 |
 | 평가 원본 응답 (`raw_response`) | 180일 | 태그 기준 · 저장 기준 분석과 저장 기준을 낮춘 뒤 빠진 태그 채움([evaluation-R31](specs/evaluation.md#빠진-태그-채움--저장-바닥) — 채울 기간의 상한도 180일)에 충분한 기간. **(미설계)** 지운 뒤 원본이 없는 평가의 채움 처분은 보존을 구현하는 작업이 정한다 |
-| 다이제스트 | 사용자 탈퇴 시까지 | 주요 뉴스 섹션은 이슈 타임라인의 정본, 인용 항목은 노출 기록이다 |
-| 이슈 · 관심 신호 이력(`feedback_events` · `storyline_tracking_events` · `user_tag_preference_events`) · 변화 리포트 | 사용자 탈퇴 시까지 | 관심사 히스토리 · 리포트의 근거 |
+| 다이제스트 | 사용자 탈퇴 시까지 | 인용 항목은 노출 기록이다 |
+| 관심 신호 이력(`feedback_events` · `user_tag_preference_events` · 스토리라인 구독 이력) · 변화 리포트 | 사용자 탈퇴 시까지 | 관심사 히스토리 · 리포트의 근거 |
 | `digest_candidates` | 30일 | 디버깅용 |
 | 탈퇴 사용자 | 즉시 비식별화, 30일 후 완전 삭제 | 실수로 탈퇴한 경우의 복구 기간 |
 | JobRunr 작업 기록 | 성공하고 36시간 뒤 삭제 상태, 다시 72시간 뒤 영구 삭제. 실패한 작업은 남는다 | JobRunr 기본값. 작업의 결과는 각 모듈의 데이터에 남는다 |

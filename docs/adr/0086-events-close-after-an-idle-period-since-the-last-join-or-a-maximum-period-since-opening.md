@@ -1,6 +1,6 @@
 # ADR-0086: 사건은 마지막으로 기사가 붙은 뒤 닫는 기간이 지나거나 연 뒤 최대 기간이 지나면 닫는다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 긴 전개를 잇는 단위([ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md))
 - 날짜: 2026-11-07
 - 근거: [이슈 #98](https://github.com/Theia0382/yozm-news/issues/98) — 닫는 기준 시각과 계속 이어지는 사건을 리드와 정하고 구현(`8eba5ca` · `0551eb3`)
 - 관련: [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md)(결정 절 "4. 정리"의 닫기와 "사건은 며칠 단위로 닫힌다", 후속 기록), [ADR-0081](0081-event-assignment-criteria-in-settings-and-rejudgement-within-stored-scores.md)(설정 자리 — 사건 기준과 같다), [ADR-0087](0087-closed-event-assignments-are-not-rejudged-and-closing-and-merging-are-not-undone.md)(닫힘은 되돌리지 않는다)
@@ -15,6 +15,7 @@
 ## 결정
 
 - **닫는 기준 시각은 마지막으로 기사가 붙은 시각이다.** 발행 시각이 아니다. 붙이기 · 옮기기 · 합치기가 이 시각을 고친다.
+> 부분 대체(셋째 문장의 긴 전개를 잇는 단위) — [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md). 지금 상태: [`overview` §8](../overview.md#8-용어)
 - **연 시각부터 최대 기간이 지나면 새 기사가 있어도 닫는다.** 연 시각은 그 인스턴스가 사건을 연 시각이고, 합치면 이른 쪽이다. 그 뒤 기사는 새 사건을 열고, 긴 전개는 이슈가 잇는다.
 - **닫는 기간 · 최대 기간은 사건 기준과 같은 설정이다.** 기본값은 코드에 있고(측정 전 목표), 운영자는 환경 변수로 바꾼다. 둘 다 초 단위이고 시간 창 ≤ 닫는 기간 ≤ 최대 기간이어야 하며, 어기면 기동하지 않는다.
 - **작업 역할의 하루 1회 정리 작업이 닫는다.** 사건마다 잠가 다시 판정한 뒤 닫는다. 다시 돌려도 결과가 같다. 닫힌 사건에는 기사를 붙이지 않고 병합하지 않는다.
@@ -28,6 +29,8 @@
 - 사건에 마지막으로 붙은 시각 · 닫은 시각 컬럼이 생기고 설정이 둘 는다. 값은 평가 세트로 정한다.
 
 ## 검토한 대안
+
+> 부분 대체(둘째 행의 긴 전개를 잇는 단위) — [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md). 지금 상태: [`overview` §8](../overview.md#8-용어)
 
 | 대안 | 기각 이유 |
 |---|---|

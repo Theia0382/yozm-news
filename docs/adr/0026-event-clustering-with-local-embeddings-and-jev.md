@@ -1,6 +1,6 @@
 # ADR-0026: 사건 묶기는 로컬 임베딩과 고유명사 산식으로 하고, 애매한 구간만 Jev 로 판정한다
 
-- 상태: 승인. 부분 대체 — 접속 설정의 AI Gateway 경유([ADR-0063](0063-jev-called-through-one-system-one-schema-context-overflow-probed-with-empty-state-latest-model-alias-by-default.md))
+- 상태: 승인. 부분 대체 — 접속 설정의 AI Gateway 경유([ADR-0063](0063-jev-called-through-one-system-one-schema-context-overflow-probed-with-empty-state-latest-model-alias-by-default.md)) · 사건보다 긴 전개를 잇는 단위([ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)) · 큰 사건 판정과 그 정밀도의 단위([ADR-0103](0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md))
 - 날짜: 2026-10-27
 - 근거: [이슈 #36](https://github.com/Theia0382/yozm-news/issues/36) — 기점 `e4dbe0d` 의 설계 문서 · ADR 과 Spring Modulith 2.1.1 의 모듈 순환 판정을 대조해 확인
 - 관련: [ADR-0025](0025-long-term-personal-news-history-in-v1.md)(공유 사건), [ADR-0002](0002-shared-evaluation-with-jev.md)(Jev 공유 평가 — 평가 항목 목록을 이 ADR 이 부분 대체한다), [ADR-0010](0010-tag-taxonomy.md)(질문 묶음), [ADR-0012](0012-swappable-external-dependencies.md)(교체 가능한 외부 의존성), [ADR-0027](0027-pgvector-for-vector-storage.md)(벡터 저장)
@@ -24,12 +24,15 @@
   3. 판정 — 점수가 확실하면 산식으로 그 사건에 붙이거나 새 사건을 연다. 그 사이 애매한 구간만 Jev 에 "이 기사는 사건 X를 다루는가"를 묻고, 후보 사건 여럿을 한 요청에 묶는다
   4. 정리 — 주기적으로 잘게 쪼개진 사건끼리 합치고, 새 기사가 일정 기간 없는 사건을 닫는다
 - **배정 기준은 사건 중심이다.** 사건 안의 기사 하나와만 닮아도 붙이는 방식은 사건이 번지기 쉽다.
+> 부분 대체(둘째 문장) — [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md). 지금 상태: [`overview` §8](../overview.md#8-용어)
 - 사건은 며칠 단위로 닫힌다. 그보다 긴 전개는 사용자별 이슈가 잇는다([ADR-0025](0025-long-term-personal-news-history-in-v1.md)).
+> 부분 대체(판정의 단위) — [ADR-0103](0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md). 지금 상태: [event Spec 대표 기사 · 큰 사건](../specs/event.md#대표-기사--큰-사건) event-R15
 - **큰 사건은 조회 시점에 판정한다.** 사건의 서로 다른 소스 수와 기사의 Jev 중요도로 판정하고, 임계값은 운영자가 정한다.
 - **Jev 관문은 하나로 둔다.** 사건 소속 판정은 `ArticleEvaluator` 의 연산이다. 그 인자 · 반환 타입은 `evaluation` 이 소유한다 — `event` 의 타입을 받으면 `evaluation → event` 가 생겨 `event → evaluation` 과 순환이 된다. `event` 는 `evaluation` 의 공개 API 를 부른다. [ADR-0012](0012-swappable-external-dependencies.md) 의존성 표의 Jev 행(`ArticleEvaluator`)은 그대로 성립한다.
 - **임베딩은 `event` 의 `ArticleEmbedder` 포트 뒤에 둔다.** 기본 구현은 로컬 모델(ONNX Runtime)이고, 설정으로 외부 임베딩 API 로 바꿀 수 있다. 개발 · 테스트는 로컬 대체물을 쓴다. [ADR-0012](0012-swappable-external-dependencies.md) 의존성 표에 없는 이 행을 이 ADR 이 기록한다.
 - 고유명사는 형태소 분석기 Lucene Nori 로 뽑는다. Java 라이브러리라 별도 서버가 없다.
 - 운영자 LLM 은 쓰지 않는다.
+> 부분 대체(둘째 문장의 큰 사건 판정 정밀도) — [ADR-0103](0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md). 지금 상태: [로드맵](../roadmap.md)
 - **임계값 · 시간 창 · 모델은 평가 세트로 정한다.** 수집한 실제 기사 표본에 사건 라벨을 붙이고 묶음 정확도(B-cubed F1)와 큰 사건 판정 정밀도를 잰다. 평가 세트의 실제 기사 텍스트는 공개 저장소에 넣지 않는다.
 - 판정 원본(Jev 응답), 임베딩 모델 버전을 기록한다.
 
@@ -68,3 +71,4 @@
 - 2026-11-07: 결정 절 "기본 구현은 로컬 모델(ONNX Runtime)이고, 설정으로 외부 임베딩 API 로 바꿀 수 있다" 의 방식 · 모델 · 배포 — [ADR-0090](0090-article-embedding-defaults-to-an-in-app-local-model-with-an-openai-compatible-api-by-setting.md) · [ADR-0091](0091-local-embedding-model-is-multilingual-e5-small-int8-fetched-at-build-into-the-image-with-onnx-telemetry-off.md) · [event Spec §4](../specs/event.md#구현과-로컬-대체물)
 - 2026-11-08: 결정 절 "임계값 · 시간 창 · 모델은 평가 세트로 정한다"의 평가 방법 — [ADR-0095](0095-event-clustering-evaluated-by-an-operator-tool-comparing-admin-api-results-with-full-day-labels.md) · [사건 묶기 평가하기](../operations/event-evaluation.md)
 - 2026-11-08: 결정 절 "평가 세트의 실제 기사 텍스트는 공개 저장소에 넣지 않는다"에 더한 라벨 · 결과 기록의 자리 — [ADR-0096](0096-instance-bound-evaluation-data-kept-out-of-the-public-repository-and-defaults-cite-only-the-evaluation-set.md) · [security.md](../security.md#저작권과-소스-이용조건)
+- 2026-11-09: 결정 절 "묶기는 네 단계다"의 판정이 묻는 같은 사건의 범위 — [ADR-0102](0102-an-event-is-the-reports-of-one-happening-narrowed-by-the-event-membership-question-wording.md) · [evaluation Spec 사건 소속 판정](../specs/evaluation.md#사건-소속-판정) evaluation-R37
