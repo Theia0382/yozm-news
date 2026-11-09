@@ -39,7 +39,7 @@
 | 설계 | [specs/](specs/README.md) | 모듈 Spec (2층) — 목록 · 공통 구조 · 쓰는 규칙 |
 | | [adr/](adr/README.md) | 아키텍처 결정 기록 |
 | | [architecture.md](architecture.md) | 모듈 인터페이스 초안, 백그라운드 작업, 외부 API · MCP (전환 중) |
-| | [pipeline.md](pipeline.md) | 수집 → 평가 → 사건 묶기 → 다이제스트 생성 파이프라인, 관심 신호 · 이슈 · 변화 리포트 상세 (전환 중) |
+| | [pipeline.md](pipeline.md) | 수집 → 평가 → 사건 묶기 → 다이제스트 생성 파이프라인, 관심 신호 · 스토리라인 · 변화 리포트 상세 (전환 중) |
 | | [data-model.md](data-model.md) | 데이터 모델과 보존 정책 (전환 중) |
 | | [security.md](security.md) | 인증 · 인가, BYOK 키 보관, 저작권 · 개인정보 (전환 중) |
 | 개발 | [CONTRIBUTING.md](../CONTRIBUTING.md) | 개발 환경 · 검사 명령, 이슈 · 브랜치 · 커밋 · PR 규약 |

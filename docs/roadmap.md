@@ -31,9 +31,17 @@
 - `ArticleEmbedder` 와 로컬 임베딩 구현 · 로컬 대체물, 고유명사 추출, 산식 판정과 애매한 구간의 Jev 사건 소속 판정, 사건 병합 · 닫기, 큰 사건 판정 ([ADR-0026](adr/0026-event-clustering-with-local-embeddings-and-jev.md))
 - 운영자 화면: 사건 목록, 사건별 기사, 애매한 판정 기록, 큰 사건 판정 결과
 - 수집한 기사로 사건 라벨 평가 세트를 만든다
-- **완료 기준**: 평가 세트로 묶음 정확도(B-cubed F1)와 큰 사건 판정 정밀도를 재고, 운영자가 표본을 검수해 임계값을 정한다. arm64 지원 방향(실행 검사 추가 또는 지원 철회)을 정한다.
+- **완료 기준**: 평가 세트로 묶음 정확도(B-cubed F1)를 재고, 운영자가 표본을 검수해 임계값을 정한다. arm64 지원 방향(실행 검사 추가 또는 지원 철회)을 정한다.
 
-## M4. 사용자와 키
+## M4. 스토리라인
+
+- 사건들을 잇는 공유 스토리라인 — 사용자와 무관, 운영자 비용, 생성형 LLM 없음. 잇는 방법(사건의 소속 여럿, 스토리라인 사이의 포함과 이어짐(인과))을 이 마일스톤이 정한다 ([ADR-0101](adr/0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md))
+- 스토리라인의 큰 판정 — `event` 의 큰 사건 판정 · 기준 · 운영자 API · 화면과 평가 도구의 큰 사건 측정을 거둔다 ([ADR-0103](adr/0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md))
+- 운영자 화면: 스토리라인 목록, 스토리라인별 사건, 큰 판정 결과
+- 스토리라인 라벨 평가 세트를 만든다
+- **완료 기준**: 평가 세트로 스토리라인 잇기 품질과 큰 판정 정밀도를 재고, 운영자가 표본을 검수해 기준을 정한다.
+
+## M5. 사용자와 키
 
 - OIDC 로그인(운영 기본 Google, 개발은 mock 서버), 자체 로그인(복구 코드, 봇 차단), 가입 정책(기본 닫힘 · 공개 가입 설정, 초대 링크, 운영자 계정 생성, 첫 운영자), 외부 계정 연결, 세션, CSRF
 - 운영자 경로(`/api/admin/**`)의 인증을 운영자 토큰에서 `ADMIN` 역할 계정의 세션으로 바꾸고 CSRF 를 켠다 — 경로와 역할 판정은 그대로다([ADR-0043](adr/0043-admin-functions-guarded-by-env-bearer-token-until-account-roles.md))
@@ -44,31 +52,31 @@
 - 개인정보 고지: 외부 전송 항목과 수집 항목(신호 이력 포함)
 - **완료 기준**: 사용자 간 데이터 격리 테스트 통과, 로그·오류 응답에 키가 남지 않음을 테스트로 확인한다. 계정 존재 노출 방지와 로그인 실패 지연이 테스트로 확인된다. 닫힌 가입에서 초대 없는 가입과 처음 보는 OIDC 계정이 거부되고, 공개 가입을 켠 경로의 방어가 동작하는 것이 테스트로 확인된다.
 
-## M5. 다이제스트와 이슈
+## M6. 다이제스트
 
-- `DigestGenerator` + Spring profile `local`의 `FakeDigestGenerator`, 후보 선별(구독 필터 · 큰 사건 슬롯 · 사건 단위 중복 제거 · 선정 이유 — 관심도는 중립), 프롬프트, 구조화 출력 검증, 저장
-- 이슈(`storyline`) 연결(진행 중 이슈를 프롬프트에 넣고 주요 뉴스를 잇는다), 이슈 상태 전이 ([ADR-0025](adr/0025-long-term-personal-news-history-in-v1.md))
+- `DigestGenerator` + Spring profile `local`의 `FakeDigestGenerator`, 후보 선별(구독 필터 · 큰 스토리라인 슬롯 · 사건 단위 중복 제거 · 선정 이유 — 관심도는 중립), 프롬프트, 구조화 출력 검증, 저장
+- 다이제스트가 스토리라인을 쓰는 방법(큰 슬롯에 넣는 기사, 사용자마다 달라지는 스토리라인 정보) ([ADR-0101](adr/0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md) · [ADR-0103](adr/0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md))
 - 일정 기반 생성과 수동 재생성(횟수 제한)
-- 웹 UI: 오늘의 다이제스트, 지난 다이제스트, 원문 링크, 생성 상태와 토큰 사용량, 이슈 목록 · 타임라인
+- 웹 UI: 오늘의 다이제스트, 지난 다이제스트, 원문 링크, 생성 상태와 토큰 사용량, 스토리라인 목록 · 타임라인
 - 이 마일스톤부터 테스트 사용자의 이력 데이터를 버리지 않는다. 이후 스키마 변경은 이 데이터를 보존하는 마이그레이션으로 한다
-- **완료 기준**: 테스트 사용자 몇 명이 1주일간 매일 다이제스트를 받는다. 실패율과 평균 토큰 사용량, 이슈 연결이 날짜를 넘어 이어지는 비율을 측정한다.
+- **완료 기준**: 테스트 사용자 몇 명이 1주일간 매일 다이제스트를 받는다. 실패율과 평균 토큰 사용량을 측정한다.
 
-## M6. 피드백과 관심사 히스토리
+## M7. 피드백과 관심사 히스토리
 
-- 좋아요/싫어요, 싫어요 기사 후보 제외, 이슈 추적 · 해제, 구독 변경 이력 — 추가 전용 기록 ([ADR-0028](adr/0028-explicit-signals-and-interest-weighted-candidates.md))
+- 좋아요/싫어요, 싫어요 기사 후보 제외, 스토리라인 구독 · 해제, 구독 변경 이력 — 추가 전용 기록 ([ADR-0028](adr/0028-explicit-signals-and-interest-weighted-candidates.md) · [ADR-0101](adr/0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md))
 - 관심도 계산과 후보 순위 반영, 구독 제안
 - 웹 UI: 관심사 히스토리(기간별 주제 관심도, 새로 생긴 관심 · 사라진 관심)
 - **완료 기준**: 신호가 쌓인 테스트 사용자의 후보 순위에 관심도가 반영된다. 선정 이유별 반응(좋아요 / 싫어요)을 측정한다.
 
-## M7. 변화 리포트
+## M8. 변화 리포트
 
 - `ReportGenerator` + 로컬 대체물, 일정 기반 주간 · 월간 리포트 생성(월간은 주간을 입력으로), 통계 스냅숏 저장
 - 웹 UI: 리포트 열람, 이전 리포트와 비교
 - **완료 기준**: 테스트 사용자가 2주 이상 쌓인 데이터로 주간 리포트를, 그 주간 리포트로 월간 리포트를 받는다.
 
-## M8. 릴리스 준비
+## M9. 릴리스 준비
 
-- 탈퇴·데이터 삭제(이슈 · 신호 이력 · 리포트 포함)
+- 탈퇴·데이터 삭제(스토리라인 구독 · 신호 이력 · 리포트 포함)
 - 개인정보처리방침 · 이용약관 링크 설정
 - 이미지 레지스트리 게시(두 아키텍처), 설치 문서
 - 백업과 복구 리허설, 선택 구성인 Cloudflare Tunnel 연결
@@ -81,6 +89,6 @@
 | 외부 API | Personal Access Token, `/public-api/v1` 읽기 전용, 요청 제한. 조회 대상은 [architecture.md](architecture.md) |
 | MCP 어댑터 | Spring AI MCP 서버 + OAuth 2.1 인가 서버. ChatGPT 등에서 다이제스트를 불러와 후속 대화 |
 | 리포트 확장 | 분기 · 연간 변화 리포트(월간 리포트를 입력으로) |
-| 구독 확장 | 사건 · 키워드 구독 |
+| 구독 확장 | 키워드 구독 |
 | 소스 확장 | 사용자 피드 추가(상한 포함), 해외 뉴스, 본문 추출(허용 소스 한정) |
 | 메일 | 이메일 인증, 메일 기반 비밀번호 재설정, 다이제스트 알림 ([ADR-0011](adr/0011-no-email-in-v1.md)) |
