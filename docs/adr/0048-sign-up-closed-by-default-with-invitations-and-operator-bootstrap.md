@@ -58,3 +58,4 @@
 ## 후속 기록
 
 - 2026-10-31: 계정 인증 전까지 운영자 기능은 운영자 토큰(`YOZMNEWS_ADMIN_TOKEN`)으로 막는다 — [ADR-0043](0043-admin-functions-guarded-by-env-bearer-token-until-account-roles.md). 계정 인증이 생기면 운영자 경로는 이 ADR 의 `ADMIN` 계정이 연다.
+- 2026-11-09: 결과 절 "M4 가 정할 것"의 마일스톤 번호(지금 M5) — [ADR-0103](0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md) · [로드맵](../roadmap.md)

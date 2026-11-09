@@ -1,6 +1,6 @@
 # ADR-0097: 사건 묶기 평가의 정답 사건은 한 번 일어난 일을 다룬 보도들로 붙이고, 지금 시스템의 사건보다 좁은 차이는 정밀도 손실로 읽는다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 시스템의 사건 범위([ADR-0102](0102-an-event-is-the-reports-of-one-happening-narrowed-by-the-event-membership-question-wording.md))
 - 날짜: 2026-11-08
 - 근거: [이슈 #100](https://github.com/Theia0382/yozm-news/issues/100) — 개발팀 표본에 첫 라벨 기준으로 라벨을 붙여 리드와 검토하고, 정답 사건의 범위를 다시 정함
 - 관련: [ADR-0095](0095-event-clustering-evaluated-by-an-operator-tool-comparing-admin-api-results-with-full-day-labels.md)(평가 방법에 정답 사건의 범위를 더한다 — 보충), [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md) · [ADR-0072](0072-event-membership-question-wording-as-one-code-constant-with-its-version-in-raw-records.md)(지금 시스템의 사건 범위 — 바꾸지 않는다)
@@ -15,11 +15,13 @@
 ## 결정
 
 - **정답 사건은 한 번 일어난 일을 다룬 보도들이다.** 같은 일의 속보 · 종합 · 추가 사실은 같은 사건이고, 다른 주체의 반응 · 입장과 같은 안건의 다음 단계는 날짜와 무관하게 별개 사건이다. 여러 일을 다룬 기사 · 행사 안의 발표 · 일이 없는 경향 기사의 처리를 포함한 문면은 [사건 묶기 평가하기](../operations/event-evaluation.md)의 라벨 기준이 정본이다(2판).
+> 부분 대체 — [ADR-0102](0102-an-event-is-the-reports-of-one-happening-narrowed-by-the-event-membership-question-wording.md). 지금 상태: [evaluation Spec 사건 소속 판정](../specs/evaluation.md#사건-소속-판정) evaluation-R37
 - **시스템은 바꾸지 않는다.** 정답 사건은 지금 시스템의 사건(사건 소속 질문의 범위)보다 좁다. 시스템이 같은 일의 후속을 원래 사건에 붙인 묶음은 이 정답과 견주면 정밀도 손실로 잡히고, 이것은 정의의 차이로 읽는다.
 - **라벨 기준의 판이 다른 결과는 견주지 않는다.** 결과 기록은 쓴 판을 적는다.
 
 ## 결과
 
+> 부분 대체 — [ADR-0102](0102-an-event-is-the-reports-of-one-happening-narrowed-by-the-event-membership-question-wording.md). 지금 상태: [사건 묶기 평가하기](../operations/event-evaluation.md)
 - 평가가 재는 정밀도는 시스템이 목표 범위(한 번 일어난 일)로 묶는 정도다. 지금 시스템의 범위(직접 후속 포함)로 맞추려는 기준값 조정은 이 정답에서 정의 차이만큼 손해를 본다 — 기준값 조정은 시스템의 사건 범위를 바꾸는 일과 순서를 맞춘다.
 - 첫 판으로 붙인 표본과 결과는 새 판의 결과와 견주지 않는다. 같은 기간을 새 판으로 다시 붙인다.
 - 사건 소속 질문 · 사건 수명 같은 시스템의 사건 범위를 바꾸면 라벨 기준의 "지금 시스템과의 차이" 문장도 함께 고친다.

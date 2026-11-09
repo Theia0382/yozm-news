@@ -1,6 +1,6 @@
 # ADR-0029: RSS 요약문은 기본 무기한 보존하고, 자동 삭제는 운영 설정으로 켠다
 
-- 상태: 승인. 부분 대체 — 요약문 노출 금지([ADR-0068](0068-rss-summaries-shown-only-on-operator-screens-and-users-get-processed-information.md))
+- 상태: 승인. 부분 대체 — 요약문 노출 금지([ADR-0068](0068-rss-summaries-shown-only-on-operator-screens-and-users-get-processed-information.md)) · 다이제스트 호출에 넘기는 이슈 상태 요약([ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md))
 - 날짜: 2026-10-27
 - 근거: [이슈 #36](https://github.com/Theia0382/yozm-news/issues/36) — 기점 `e4dbe0d` 의 보존 정책 초안([data-model.md](../data-model.md)) · 저작권 규칙([security.md](../security.md))을 확인
 - 관련: [ADR-0025](0025-long-term-personal-news-history-in-v1.md)(장기 기능), [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md)(사건 묶기 — 요약문으로 임베딩), [ADR-0027](0027-pgvector-for-vector-storage.md)(기사 벡터 재계산)
@@ -20,6 +20,7 @@
 - **자동 삭제는 운영 설정(보존 일수, 기본 꺼짐)으로 켠다.**
 > 부분 대체("화면 · 외부 API 에 요약문을 노출하지 않는 규칙") — [ADR-0068](0068-rss-summaries-shown-only-on-operator-screens-and-users-get-processed-information.md). 지금 상태: [`security` "저작권과 소스 이용조건"](../security.md#저작권과-소스-이용조건)
 - 화면 · 외부 API 에 요약문을 노출하지 않는 규칙과, 언론사가 삭제를 요청하면 요약문을 지우는 운영자 기능은 그대로 둔다.
+> 부분 대체(셋째 문장의 이슈를 잇는 부분) — [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md). 지금 상태: [`pipeline` §6](../pipeline.md#6-다이제스트-생성)
 - **장기 기능은 요약문이 없는 기사에서도 동작한다.** 재평가 · 벡터 재계산은 요약문이 남은 기사만 대상으로 하고, 검색은 제목 · 메타데이터로 대신한다. 이슈를 이을 때는 과거 기사의 요약문 대신 이슈마다 저장한 현재 상태 요약을 다이제스트 호출에 넘기고, 변화 리포트의 입력에는 원래 요약문이 들어가지 않는다.
 
 ## 결과
