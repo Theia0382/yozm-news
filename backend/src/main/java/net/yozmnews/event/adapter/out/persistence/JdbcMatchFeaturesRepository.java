@@ -13,6 +13,7 @@ import net.yozmnews.article.ArticleId;
 import net.yozmnews.event.domain.feature.Embedding;
 import net.yozmnews.event.domain.feature.MatchFeatures;
 import net.yozmnews.event.domain.feature.MatchFeaturesRepository;
+import net.yozmnews.platform.VectorText;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
@@ -41,7 +42,7 @@ class JdbcMatchFeaturesRepository implements MatchFeaturesRepository {
 				""")
 			.param("article", features.articleId().value())
 			.param("model", features.modelVersion())
-			.param("embedding", VectorText.of(features.embedding()))
+			.param("embedding", VectorText.of(features.embedding().values()))
 			.param("entities", features.entities().toArray(String[]::new))
 			.param("created", features.createdAt().atOffset(ZoneOffset.UTC))
 			.update() == 1;

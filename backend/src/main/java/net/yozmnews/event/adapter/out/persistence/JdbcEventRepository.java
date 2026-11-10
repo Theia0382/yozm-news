@@ -19,6 +19,7 @@ import net.yozmnews.event.domain.assignment.EventSnapshot;
 import net.yozmnews.event.domain.event.EventRepository;
 import net.yozmnews.event.domain.event.LockedEvent;
 import net.yozmnews.event.domain.event.MergeSubject;
+import net.yozmnews.platform.VectorText;
 import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
