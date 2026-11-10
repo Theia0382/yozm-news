@@ -146,7 +146,7 @@ erDiagram
 | 사건 (`events` · `event_key_terms` · `event_articles`) · 저장 후보 (`event_article_candidates`) · 기준 이력 (`event_assignment_criteria`) · 병합 판정 기록 (`event_merge_judgements`) | 무기한. 합쳐진 사건 행과 병합 판정 기록은 가리키는 사건(남는 사건 · 쌍의 사건)을 지울 때 함께 지운다 | 사건 · 스토리라인 보도량의 근거. 저장 후보 · 기준 이력은 기준을 바꿀 때 재판정의 재료다. 병합 판정 기록은 같은 사건 쌍을 다시 묻지 않게 한다 |
 | 배정 대기 (`event_assignment_queue`) | 배정하면 지운다 | 처리할 기사의 목록이다 |
 | 큰 사건 기준과 그 변경 이력 (`event_big_criteria` · `event_big_criteria_changes`) | 무기한 | 운영자가 조정한 이력 — 태그 기준 · 저장 기준의 이력과 같다 |
-| 스토리라인 (`storylines` · `storyline_key_terms`) · 소속 (`storyline_members`) · 기준 이력 (`storyline_linking_criteria`) | 무기한. 구성 사건이 지워지면 그 소속을, 구성 사건이 남지 않으면 스토리라인을 지운다 | 구독 · 타임라인이 스토리라인 ID 를 가리킨다([storyline-R6](specs/storyline.md#사건-변화-따르기) · [storyline-R13](specs/storyline.md#임시-잇기-규칙)) |
+| 스토리라인 (`storylines` · `storyline_key_terms`) · 소속 (`storyline_members`) · 기준 이력 (`storyline_linking_criteria`) | 무기한. 구성 사건이 지워지면 그 소속을 지운다. 구성 사건이 남지 않으면 스토리라인을 지우고, 사건 하나만 남으면 그 사건을 가진 다른 스토리라인에 합치거나 풀어 지운다. 합칠 때 합쳐진 쪽의 소속 · 핵심 말은 지우고(같은 사건이 남는 쪽에 있다) 행은 남는 스토리라인을 가리키며 남는다 — 남는 스토리라인을 지울 때 함께 지운다 | 구독 · 타임라인 · 리포트 인용이 스토리라인 ID 를 가리킨다 — 합쳐진 ID 는 남는 스토리라인으로 따라간다([storyline-R6](specs/storyline.md#사건-변화-따르기) · [storyline-R17 · R18](specs/storyline.md#정돈)) |
 | 잇기 대기 (`storyline_linking_queue`) | 판정하면 지운다. 판정이 거듭 실패하면 뺀다 | 판정할 사건의 목록이다([storyline-R3](specs/storyline.md#잇기-대기와-회차) · [storyline-R4](specs/storyline.md#잇기-대기와-회차)) |
 | 사건 소속 판정 원본 (`article_event_judgements`) | 180일 | 평가 원본 응답과 같다 |
 | 평가 원본 응답 (`raw_response`) | 180일 | 태그 기준 · 저장 기준 분석과 저장 기준을 낮춘 뒤 빠진 태그 채움([evaluation-R31](specs/evaluation.md#빠진-태그-채움--저장-바닥) — 채울 기간의 상한도 180일)에 충분한 기간. **(미설계)** 지운 뒤 원본이 없는 평가의 채움 처분은 보존을 구현하는 작업이 정한다 |
