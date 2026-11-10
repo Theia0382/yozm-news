@@ -120,12 +120,14 @@ IDE 에서 테스트를 Gradle 에 맡기는 것은 1 때문이다([CONTRIBUTING
 | `frontend` | 검사 정의의 `frontend` |
 | `docs` | 검사 정의의 `docs` |
 | `tools` | 검사 정의의 `tools` |
-| `deploy` | 배포 이미지를 두 아키텍처로 빌드하고, 배포 구성을 띄워 healthcheck 를 기다린 뒤 `deploy/smoke.sh`, 이어서 운영자 토큰을 넣어 `app` 을 다시 띄우고 한 번 더 `deploy/smoke.sh` |
+| `deploy-amd64` · `deploy-arm64` | 같은 job 정의(`deploy`)를 아키텍처마다 그 아키텍처의 러너에서 돌린다. 배포 이미지를 두 아키텍처로 빌드하고, 스모크 덧씌우기를 얹어 배포 구성을 자기 아키텍처로 띄워 healthcheck 를 기다린 뒤 `deploy/smoke.sh`, 이어서 운영자 토큰을 넣어 `app` 을 다시 띄우고 K14 를 요구하는 표지와 함께 한 번 더 `deploy/smoke.sh`. 두 job 은 러너와 상대 아키텍처만 다르고, 한쪽의 실패가 다른 쪽을 취소하지 않는다([ADR-0104](../adr/0104-arm64-run-checked-on-arm64-runners-with-a-symmetric-deploy-check-per-architecture.md)) |
 
-- **필수 체크** — 다섯 job 모두 `main` 의 필수 체크다. 필수 여부는 저장소 설정(branch protection)이 정한다
+- **필수 체크** — 여섯 체크(`backend` · `frontend` · `docs` · `tools` · `deploy-amd64` · `deploy-arm64`) 모두 `main` 의 필수 체크다. 필수 여부는 저장소 설정(branch protection)이 정한다
 - **캐시** — 각 job 은 검사를 돌리기 전에 같은 정의로 이미지를 buildx bake 로 먼저 빌드해, GitHub Actions 캐시를 계층 캐시로 쓴다. 캐시 범위는 job 마다 따로다(`ci.yml`)
-- **실패 보고서** — `backend` 검사 단계가 실패했을 때만 검사 컨테이너에서 테스트 보고서(HTML · JUnit XML)를 꺼내 artifact 로 올린다. 이미지 빌드 실패처럼 보고서가 없는 실패에서는 꺼내지 않는다. `deploy` 가 실패하면 배포 구성의 로그를 출력한다
-- **빌더 확인** — `deploy` 는 빌드 전에 빌더에 arm64 에뮬레이션이 없음을 확인한다. 에뮬레이션이 있으면 실행 단계의 `RUN` 이 두 아키텍처 빌드에서 드러나지 않기 때문이다
+- **실패 보고서** — `backend` 검사 단계가 실패했을 때만 검사 컨테이너에서 테스트 보고서(HTML · JUnit XML)를 꺼내 artifact 로 올린다. 이미지 빌드 실패처럼 보고서가 없는 실패에서는 꺼내지 않는다. 배포 검사가 실패하면 배포 구성의 로그를 출력한다
+- **빌더 확인** — 배포 검사는 빌드 전에 빌더에 상대 아키텍처(`deploy-amd64` 는 arm64, `deploy-arm64` 는 amd64)의 에뮬레이션이 없음을 확인한다. 에뮬레이션이 있으면 실행 단계의 `RUN` 이 두 아키텍처 빌드에서 드러나지 않기 때문이다
+- **스모크 덧씌우기** — `deploy/smoke/compose.yaml` 은 배포 구성에 시험 피드 서버 `feeds`(정적 서버, `deploy/smoke/feeds/` 의 합성 피드)와 고정 서브넷을 더하고, `app` 의 수집 허용 대역을 그 서브넷으로, Jev 주소를 닿지 않는 곳으로 둔다(CI 의 가짜 키를 Jev 로 보내지 않는다). 배포 검사는 기동 · `app` 재기동 · 로그 출력에 이 파일을 함께 주고, 스모크에도 `SMOKE_OVERLAY` 로 경로를 넘긴다. 운영 인스턴스에는 얹지 않는다
+- **스모크 K14** — 시험 피드 서버가 떠 있고 운영자 토큰이 있으면, 스모크가 운영자 API 로 시험 소스(`deploy/smoke/smoke-profile.yaml`)를 등록 · 켜고 시험 기사 하나가 수집 · 표현까지 가기를 최대 5분 기다린다. 표현의 모델 버전이 `backend/embedding-model.properties` 의 `model-version` 과 같으면 통과다. 조건이 맞지 않으면 건너뛰고, `SMOKE_REQUIRE_K14=1` 이면 건너뛰지 않고 실패한다 — CI 의 토큰 스모크가 이 표지를 준다
 - 시간 제한 · 캐시 범위 이름 · 보고서 보관 기간 같은 값은 `ci.yml` 에 있다
 
 ## 불변식과 지키는 장치
@@ -137,9 +139,11 @@ IDE 에서 테스트를 Gradle 에 맡기는 것은 1 때문이다([CONTRIBUTING
 | 이미지의 JDK 메이저 = Gradle toolchain | 빌드 실패 — 의존성 단계가 JDK 를 내려받지 않아 다르면 실패 | `backend/Dockerfile` · `backend/build.gradle.kts` |
 | 이미지의 Node 메이저 = `frontend/.nvmrc` | 빌드 실패 — 의존성 단계의 버전 대조 | `frontend/Dockerfile` |
 | 프론트엔드 의존성은 lockfile 그대로 설치한다 | 빌드 실패 — `--frozen-lockfile` | `frontend/Dockerfile` |
-| 배포 target 의 실행 단계에 `RUN` 이 없다 | CI 단계 — `deploy` 의 두 아키텍처 빌드와 빌더 에뮬레이션 확인 | `backend/Dockerfile` · `frontend/Dockerfile` · `ci.yml` |
+| 배포 target 의 실행 단계에 `RUN` 이 없다 | CI 단계 — `deploy-amd64` · `deploy-arm64` 의 두 아키텍처 빌드와 상대 아키텍처 에뮬레이션 확인 | `backend/Dockerfile` · `frontend/Dockerfile` · `ci.yml` |
 | PostgreSQL 이미지는 `compose.yaml` 한 줄이 정하고 테스트가 그 값을 PostgreSQL 호환 이미지로 선언해 쓴다 | 구조 + 테스트 `DevComposeFileTests`(파일 · 서비스 · 이미지가 없거나 보간 · 시스템 속성 없음은 실패) | `compose.yaml` · `backend/build.gradle.kts` |
 | 배포 구성의 PostgreSQL 이 같은 이미지를 쓴다 | 구조(`extends`) + 스모크 K9 | `deploy/compose.yaml` · `deploy/smoke.sh` |
+| 배포 이미지가 두 아키텍처에서 기본 로컬 임베딩 모델로 추론하고, 표현의 모델 버전이 정보 파일과 같다 | 스모크 K14 — CI 의 두 배포 검사가 각 아키텍처의 러너에서 요구 표지와 함께 돈다. 부분 — 러너 CPU 에 없는 명령어 조합의 코어는 확인하지 않는다 | `deploy/smoke.sh` · `deploy/smoke/` · `backend/embedding-model.properties` |
+| 운영 인스턴스에서 스모크를 돌려도 시험 소스를 등록하지 않는다 | 구조 — K14 는 시험 피드 서버(스모크 덧씌우기)가 떠 있을 때만 돈다 | `deploy/smoke.sh` |
 | 배포 이미지가 저장소의 프리셋을 모두 적재한다 | 스모크 K12 — 앱의 적재 로그 줄의 수 = 저장소의 프리셋 파일 수(로그 문구는 [source-R12](../specs/source.md#수집-프로필)) | `backend/src/main/resources/source-presets/` · `deploy/smoke.sh` |
 | 테스트가 읽는 저장소 파일이 검사 이미지에 있다 | 빌드 실패(허용 목록에 없으면 복사가 실패) · 검사 실패(복사하지 않으면 이미지 안에 파일이 없다). 저장소 도구 검사는 검사 실패만 — 빌드 컨텍스트를 통째로 복사한다 | [결선](#테스트가-저장소-파일을-읽는-결선) |
 | 사건 평가 도구가 읽는 운영자 API 응답 필드가 커밋된 명세에 있고 필수다 | 테스트 `test_contract.py`(도구의 필드 목록 `USED_FIELDS` 를 명세의 스키마와 대조 — 도구는 응답 필드를 이 목록을 거쳐서만 읽는다). 부분 — 요청의 경로 · 질의 이름 · 본문은 대조하지 않는다 | `tools/event-eval/admin_api.py` · `api/openapi.json` |

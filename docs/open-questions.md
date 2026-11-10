@@ -30,7 +30,6 @@
 |---|---|
 | 16 | 네이버 검색 API 약관 개정 공식 원문. 보도 기준으로 결정했으며 원문은 직접 확인하지 못했다 |
 | 25 | pgvector 이미지(OS 계열을 맞춘 PG 18 태그)의 재빌드 주기 — PostgreSQL 보안 패치가 반영되는 속도 |
-| 26 | 로컬 임베딩(ONNX Runtime · DJL 토크나이저)이 arm64 실기에서 도는지 — 네이티브 포함과 QEMU 에뮬레이션 실행만 확인했다 |
 | 28 | Jev 사건 소속 판정 질문의 품질 (M3 평가 세트) |
 
 ## 결정됨 (2026-10-25)
@@ -67,7 +66,6 @@
 
 | # | 내용 | 반영 |
 |---|---|---|
-| 26 (일부) | ONNX Runtime Java 배포본에 linux-aarch64 네이티브가 들어 있고(DJL 토크나이저도), root 가 아닌 컨테이너에서 `/tmp` 에 풀려 돈다 | [ADR-0091](adr/0091-local-embedding-model-is-multilingual-e5-small-int8-fetched-at-build-into-the-image-with-onnx-telemetry-off.md) |
 | 27 · 20 (임베딩 모델) | 기본 로컬 임베딩 모델은 multilingual-e5-small int8 이고 빌드 때 받아 이미지에 담는다. OpenAI 호환 외부 API 를 설정으로 고를 수 있다. 후보의 크기 · 메모리 · 품질은 조사 자료에 있다 | [ADR-0090](adr/0090-article-embedding-defaults-to-an-in-app-local-model-with-an-openai-compatible-api-by-setting.md) · [ADR-0091](adr/0091-local-embedding-model-is-multilingual-e5-small-int8-fetched-at-build-into-the-image-with-onnx-telemetry-off.md) · [임베딩 모델 조사](research/2026-11-embedding-models.md) |
 | 22 | 사건 배정 입력(기사 벡터)의 보관: 그 기사의 사건이 닫힐 때까지, 열린 사건에 배정되지 않은 표현은 만든 뒤 시간 창 + 여유. 사건을 닫는 기준은 마지막으로 기사가 붙은 뒤 닫는 기간 · 연 뒤 최대 기간이다(값은 20) | [ADR-0088](adr/0088-article-features-kept-until-their-event-closes-and-unassigned-ones-for-the-window-plus-a-margin.md) · [ADR-0086](adr/0086-events-close-after-an-idle-period-since-the-last-join-or-a-maximum-period-since-opening.md) · [event Spec §5](specs/event.md#사건-정리) |
 
@@ -77,3 +75,9 @@
 |---|---|---|
 | 1 | 첫 체계의 태그 설명 · 중요도 기준 문구를 평가 세트로 정했다 — 주제 중분류 둘(의료·헬스케어 서비스 · 가족·관계)을 더하고, 설명은 제외 목록 없이 태그가 무엇인지만 짧게 쓴다. 중요도는 사안이 실제로 바꾸거나 일으킨 일의 크기와 영향 범위로 매긴다 | 기본 체계 파일 · [ADR-0099](adr/0099-importance-judged-by-what-the-matter-changes-and-its-reach-with-levels-written-as-reach-without-article-type-examples.md) |
 | 7 | 주제 · 지역의 태그 기준 · 저장 기준은 표본 검수로 기본 체계 파일의 처음 값 그대로 둔다. 중요도 기준 문구는 1 과 같다 | 기본 체계 파일 |
+
+## 결정됨 (2026-11-10)
+
+| # | 내용 | 반영 |
+|---|---|---|
+| 26 | 로컬 임베딩(ONNX Runtime · DJL 토크나이저)은 linux-aarch64 네이티브를 담아 root 가 아닌 컨테이너에서 `/tmp` 에 풀려 돈다. arm64 실기에서 기동하고 로컬 모델로 추론하는지는 CI 의 arm64 러너가 PR 마다 확인한다 — 러너 CPU 에 없는 명령어 조합의 오래된 코어는 확인 범위 밖이다 | [ADR-0091](adr/0091-local-embedding-model-is-multilingual-e5-small-int8-fetched-at-build-into-the-image-with-onnx-telemetry-off.md) · [ADR-0104](adr/0104-arm64-run-checked-on-arm64-runners-with-a-symmetric-deploy-check-per-architecture.md) · [개발 인프라 — CI](development/infrastructure.md#ci) |
