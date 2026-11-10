@@ -38,8 +38,11 @@ class LinkingPropertiesTests {
 		this.runner.withPropertyValues("yozmnews.storyline-linking.threshold=1.1")
 			.run(context -> assertThat(context).hasFailed());
 		this.runner.withPropertyValues("yozmnews.storyline-linking.window=0s").run(context -> assertThat(context).hasFailed());
-		this.runner.withPropertyValues("yozmnews.storyline-linking.window=1d500ms")
-			.run(context -> assertThat(context).hasFailed());
+		// 기간으로 읽히는 값이어야 기준의 초 단위 검증까지 닿는다 — 실패 원인의 문면으로 확인한다
+		this.runner.withPropertyValues("yozmnews.storyline-linking.window=P1DT0.5S")
+			.run(context -> assertThat(context).getFailure()
+				.rootCause()
+				.hasMessage("시간 창은 0 보다 큰 초 단위여야 한다: PT24H0.5S"));
 	}
 
 }
