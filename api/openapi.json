@@ -2481,6 +2481,64 @@
         "tags" : [ "admin-deletion-impact-controller" ]
       }
     },
+    "/api/admin/storyline-linking-fills" : {
+      "post" : {
+        "operationId" : "fillStorylineLinking",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/StorylineLinkingFillRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StorylineLinkingFillResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청 본문의 형식이 틀렸거나 채울 기간이 범위 밖이다"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          }
+        },
+        "tags" : [ "admin-storyline-linking-controller" ]
+      }
+    },
     "/api/admin/tag-backfill-reviews" : {
       "post" : {
         "operationId" : "review_1",
@@ -5015,6 +5073,34 @@
           }
         },
         "required" : [ "attached", "key", "name", "probability" ]
+      },
+      "StorylineLinkingFillRequest" : {
+        "type" : "object",
+        "properties" : {
+          "days" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        },
+        "required" : [ "days" ]
+      },
+      "StorylineLinkingFillResponse" : {
+        "type" : "object",
+        "properties" : {
+          "enqueued" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "events" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "result" : {
+            "type" : "string",
+            "enum" : [ "FILLED" ]
+          }
+        },
+        "required" : [ "enqueued", "events", "result" ]
       },
       "StrandedPublicationListResponse" : {
         "type" : "object",

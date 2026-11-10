@@ -1,7 +1,6 @@
 package net.yozmnews.admin.adapter.in.web;
 
 import net.yozmnews.event.IntakeFillResult;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
@@ -22,8 +21,7 @@ record EventIntakeFillResponse(Outcome result, int articles, int enqueued) {
 		return switch (result) {
 			case IntakeFillResult.Filled filled ->
 				new EventIntakeFillResponse(Outcome.FILLED, filled.articles(), filled.enqueued());
-			case IntakeFillResult.DaysOutOfRange outOfRange -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-					"채울 기간은 1일에서 " + outOfRange.max() + "일까지다");
+			case IntakeFillResult.DaysOutOfRange outOfRange -> throw BackfillDays.outOfRange(outOfRange.max());
 		};
 	}
 
