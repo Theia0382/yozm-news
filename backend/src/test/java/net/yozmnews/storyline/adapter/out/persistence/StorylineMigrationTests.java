@@ -12,9 +12,10 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 /**
- * V24 의 제약 — 점유 둘은 함께, 옮긴 소속(MERGE)은 점수 · 기준이 없고 판정한 소속은 넷 모두 있다, 기준 범위, 스토리라인의 시각 순서.
+ * V24 · V25 의 제약 — 점유 둘은 함께, 옮긴 소속(MERGE)은 점수 · 기준이 없고 판정한 소속은 넷 모두 있다, 기준 범위, 스토리라인의 시각 순서,
+ * 합쳐진 스토리라인의 가리킴과 합친 시각은 함께이고 자기를 가리키지 않는다.
  * <p>
- * 지키는 규칙: storyline-R3 · storyline-R14
+ * 지키는 규칙: storyline-R3 · storyline-R14 · storyline-R18
  */
 @JdbcTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -74,6 +75,35 @@ class StorylineMigrationTests {
 				                        representative_event_id, created_at, updated_at)
 				values ('m', cast('[1,0]' as halfvec), 1, '2026-11-02T00:00:00Z', '2026-11-01T00:00:00Z', 1, now(), now())
 				""").update()).isInstanceOf(DataIntegrityViolationException.class);
+	}
+
+	@Test
+	void aMergeIsPointerAndTimeTogether() {
+		long survivor = storyline();
+		long merged = storyline();
+
+		assertThatThrownBy(() -> this.jdbc.sql("update storylines set merged_into = :s where id = :m")
+			.param("s", survivor)
+			.param("m", merged)
+			.update()).isInstanceOf(DataIntegrityViolationException.class);
+	}
+
+	@Test
+	void aMergeTimeNeedsAPointer() {
+		long merged = storyline();
+
+		assertThatThrownBy(() -> this.jdbc.sql("update storylines set merged_at = now() where id = :m")
+			.param("m", merged)
+			.update()).isInstanceOf(DataIntegrityViolationException.class);
+	}
+
+	@Test
+	void aStorylineDoesNotPointAtItself() {
+		long merged = storyline();
+
+		assertThatThrownBy(() -> this.jdbc.sql("update storylines set merged_into = :m, merged_at = now() where id = :m")
+			.param("m", merged)
+			.update()).isInstanceOf(DataIntegrityViolationException.class);
 	}
 
 	private long storyline() {

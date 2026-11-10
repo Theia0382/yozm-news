@@ -23,10 +23,10 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 
 /**
  * 스토리라인 저장소 — 후보의 조건(모델 버전 · 시각 범위 겹침 · 코사인 하한 · NaN 제외)과 순서, 핵심 말 상위 수와 순서, 표현 쓰기(핵심 말을
- * 통째로 바꾼다), 소속 더하기 · 옮기기 · 지우기, 스토리라인 지우기, 모듈 잠금을 Flyway 가 적용된 실제 PostgreSQL 에서 본다. 모델 버전을
- * 시험마다 따로 써 다른 시험의 행과 겹치지 않게 한다.
+ * 통째로 바꾼다), 소속 더하기 · 옮기기 · 지우기, 스토리라인 지우기, 합치기(평평한 가리킴 · 남는 쪽을 지우면 가리키는 행도 · 후보에서 빠짐),
+ * 모듈 잠금을 Flyway 가 적용된 실제 PostgreSQL 에서 본다. 모델 버전을 시험마다 따로 써 다른 시험의 행과 겹치지 않게 한다.
  * <p>
- * 지키는 규칙: storyline-R5 · storyline-R6 · storyline-R7 · storyline-R9 · storyline-R13 · storyline-R14
+ * 지키는 규칙: storyline-R5 · storyline-R6 · storyline-R7 · storyline-R9 · storyline-R13 · storyline-R14 · storyline-R18
  */
 @JdbcTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -139,6 +139,75 @@ class JdbcStorylineRepositoryTests {
 	}
 
 	@Test
+	void mergePointsAtTheSurvivorAndDropsMembers() {
+		long l1 = open("merge-m", new float[] { 1, 0 }, "2026-11-01T00:00:00Z", "2026-11-01T00:00:00Z",
+				Map.of("금리", 2));
+		long l2 = open("merge-m", new float[] { 1, 0 }, "2026-11-01T00:00:00Z", "2026-11-01T00:00:00Z",
+				Map.of("금리", 2));
+		long l3 = open("merge-m", new float[] { 1, 0 }, "2026-11-01T00:00:00Z", "2026-11-01T00:00:00Z",
+				Map.of("금리", 2));
+		for (long storyline : List.of(l1, l2, l3)) {
+			this.repository.addMember(storyline, 8301, LinkJudgement.merged(NOW));
+			this.repository.addMember(storyline, 8302, LinkJudgement.merged(NOW));
+		}
+		Instant first = Instant.parse("2026-11-10T01:00:00Z");
+		Instant second = Instant.parse("2026-11-10T02:00:00Z");
+
+		this.repository.merge(l3, l2, first);
+		this.repository.merge(l2, l1, second);
+
+		// 가리킴은 평평하다 — l3 도 l1 을 가리키고, l3 의 합친 시각은 처음 그대로다
+		assertThat(merge(l2)).containsEntry("merged_into", l1).containsEntry("merged_at", "2026-11-10T02:00:00Z");
+		assertThat(merge(l3)).containsEntry("merged_into", l1).containsEntry("merged_at", "2026-11-10T01:00:00Z");
+		assertThat(merge(l1)).containsEntry("merged_into", null).containsEntry("merged_at", null);
+		for (long gone : List.of(l2, l3)) {
+			assertThat(count("select count(*) from storyline_members where storyline_id = " + gone)).isZero();
+			assertThat(count("select count(*) from storyline_key_terms where storyline_id = " + gone)).isZero();
+		}
+		assertThat(this.repository.members(List.of(l1, l2, l3))).containsExactly(Map.entry(l1, List.of(8301L, 8302L)));
+		assertThat(terms(l1)).containsExactlyInAnyOrderEntriesOf(Map.of("금리", 2));
+		assertThat(this.repository.storylinesOf(8301)).containsExactly(l1);
+	}
+
+	@Test
+	void deletingTheSurvivorTakesTheMergedRows() {
+		long l1 = open("merge-delete-m", new float[] { 1, 0 }, "2026-11-01T00:00:00Z", "2026-11-01T00:00:00Z",
+				Map.of());
+		long l2 = open("merge-delete-m", new float[] { 1, 0 }, "2026-11-01T00:00:00Z", "2026-11-01T00:00:00Z",
+				Map.of());
+		long l3 = open("merge-delete-m", new float[] { 1, 0 }, "2026-11-01T00:00:00Z", "2026-11-01T00:00:00Z",
+				Map.of());
+		long other = open("merge-delete-m", new float[] { 1, 0 }, "2026-11-01T00:00:00Z", "2026-11-01T00:00:00Z",
+				Map.of());
+		this.repository.merge(l3, l2, NOW);
+		this.repository.merge(l2, l1, NOW);
+
+		this.repository.delete(l1);
+
+		assertThat(count("select count(*) from storylines where model_version = 'merge-delete-m'")).isEqualTo(1);
+		assertThat(count("select count(*) from storylines where id = " + other)).isEqualTo(1);
+	}
+
+	@Test
+	void candidatesSkipMergedStorylines() {
+		long l1 = open("merge-cand-m", new float[] { 1, 0 }, "2026-11-01T00:00:00Z", "2026-11-02T00:00:00Z",
+				Map.of());
+		long l2 = open("merge-cand-m", new float[] { 1, 0 }, "2026-11-01T00:00:00Z", "2026-11-02T00:00:00Z",
+				Map.of());
+		Instant from = Instant.parse("2026-10-31T00:00:00Z");
+		Instant to = Instant.parse("2026-11-03T00:00:00Z");
+		assertThat(this.repository.candidates("merge-cand-m", new float[] { 1, 0 }, from, to, 0.5, 2))
+			.extracting(StorylineSnapshot::id)
+			.containsExactly(l1, l2);
+
+		this.repository.merge(l2, l1, NOW);
+
+		assertThat(this.repository.candidates("merge-cand-m", new float[] { 1, 0 }, from, to, 0.5, 2))
+			.extracting(StorylineSnapshot::id)
+			.containsExactly(l1);
+	}
+
+	@Test
 	void lockLinkingHoldsTheModuleAdvisoryLock() {
 		this.repository.lockLinking();
 
@@ -177,6 +246,13 @@ class JdbcStorylineRepositoryTests {
 				select linked_by, score, cosine, key_term_overlap, criteria_id from storyline_members
 				where storyline_id = :storyline and event_id = :event
 				""").param("storyline", storyline).param("event", event).query().singleRow();
+	}
+
+	private Map<String, Object> merge(long storyline) {
+		return this.jdbc.sql("""
+				select merged_into, to_char(merged_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as merged_at
+				from storylines where id = :id
+				""").param("id", storyline).query().singleRow();
 	}
 
 	private long count(String sql) {
