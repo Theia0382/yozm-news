@@ -1,6 +1,6 @@
 # ADR-0106: 스토리라인의 임시 잇기 규칙 — 다른 사건과 이어질 때만 열고, 기준 이상 가운데 가장 높은 하나를 더하며 빼지 않는다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 사건 하나인 스토리라인 · 같은 흐름이 둘로 열린 스토리라인이 남는다는 결과([ADR-0108](0108-storylines-with-the-same-events-merge-and-a-storyline-left-with-one-event-merges-or-dissolves.md))
 - 날짜: 2026-11-10
 - 근거: [이슈 #127](https://github.com/Theia0382/yozm-news/issues/127) — 잇는 방법을 평가 세트로 견줄 기준선. 소속 판정의 꼴 · 붙일 곳 없는 사건 · 짝 찾기를 리드와 정함
 - 관련: [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)(결정 "소속을 정하는 방법은 스토리라인을 구현할 때 정한다" — 보충, 임시 판), [ADR-0105](0105-storylines-link-incrementally-from-event-change-notifications-and-events-publish-changed-event-ids.md)(이 규칙이 도는 틀)
@@ -24,6 +24,7 @@
 
 ## 결과
 
+> 부분 대체(둘째 문장) — [ADR-0108](0108-storylines-with-the-same-events-merge-and-a-storyline-left-with-one-event-merges-or-dissolves.md). 지금 상태: [storyline Spec §5](../specs/storyline.md#정돈)(storyline-R17)
 - 스토리라인은 둘 이상의 사건으로만 생긴다. 다만 구성 사건이 합쳐지거나 지워지면 사건 하나인 스토리라인이 남을 수 있고, 같은 흐름이 둘로 열린 스토리라인은 스토리라인 합치기를 만들 때까지 남는다.
 - 사건 하나일 때 붙은 소속이 나중에 틀려도 남는다. 처음부터 두 흐름에 걸친 사건은 두 번째 소속을 얻지 못할 수 있다.
 - 사건 하나와는 가깝지만 흐름 전체와는 먼 사건은 소속 없이 남는다.
@@ -43,3 +44,7 @@
 | 소속 없는 짝이 없으면 가장 가까운 이웃의 스토리라인에 붙인다 | 사건 하나씩 사슬로 이어져 서로 다른 흐름이 하나로 뭉칠 수 있고, 기준이 사건 하나와의 거리로 우회된다 — 잇는 방법의 성격을 바꾸는 선택이라 평가 세트로 견줄 후보다 |
 | 구성 사건이 자라 표현이 움직일 때도 기다리는 사건을 다시 판정한다 | 기사 하나가 붙을 때마다 스토리라인과 가까운 사건 조회가 더 든다. 닫힌 사건의 판정 시점과 함께 잇는 방법을 정할 때 다시 볼 자리다 |
 | 스토리라인 표현을 합으로 저장해 사건의 기여를 빼고 견준다 | 반 정밀도 중심에서 되돌려 빼면 오차가 쌓인다. 구성 사건을 다시 읽어 빼는 쪽이 정확하고, 다시 계산할 때 어차피 읽는다 |
+
+## 후속 기록
+
+- 2026-11-10: 결정 "판정으로 소속이 늘면 … 다시 판정한다"의 계기 — 정돈이 사건 하나만 남은 스토리라인을 풀면 그 사건도 다시 판정한다([ADR-0108](0108-storylines-with-the-same-events-merge-and-a-storyline-left-with-one-event-merges-or-dissolves.md)), 지금 상태는 [storyline Spec "정돈"](../specs/storyline.md#정돈)(storyline-R17)

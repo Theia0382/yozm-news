@@ -25,8 +25,14 @@ import net.yozmnews.platform.VectorText;
 import net.yozmnews.storyline.StorylineRows;
 import net.yozmnews.storyline.domain.linking.LinkingCriteria;
 import net.yozmnews.storyline.domain.linking.LinkingCriteriaRepository;
+import net.yozmnews.storyline.domain.linking.Representation;
+import net.yozmnews.storyline.domain.linking.Score;
 import net.yozmnews.storyline.domain.queue.LinkingQueueRepository;
+import net.yozmnews.storyline.domain.storyline.LinkJudgement;
+import net.yozmnews.storyline.domain.storyline.LinkedBy;
+import net.yozmnews.storyline.domain.storyline.StateCriteria;
 import net.yozmnews.storyline.domain.storyline.StorylineRepository;
+import net.yozmnews.storyline.domain.storyline.StorylineState;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,14 +48,15 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 잇기 회차의 흐름 — 짝으로 열기, 붙이기, 소속 없이 남기, 합쳐진 사건 · 지워진 사건 따르기와 빈 스토리라인 지우기, 소속이 늘 때 이웃 다시
- * 넣기와 옮기기는 계기가 아님, 처리 중에 다시 온 알림, 실패 상한, 리스너의 순서 키를 실제 PostgreSQL 과 실제 저장소 · 사건 조회로 본다.
+ * 잇기 회차의 흐름 — 짝으로 열기, 붙이기, 소속 없이 남기, 합쳐진 사건 · 지워진 사건 따르기와 정돈(구성 사건이 같은 스토리라인 합치기 · 사건
+ * 하나만 남은 스토리라인 합치기 · 풀기, 사건 둘 이상 포함은 그대로), 끝난 스토리라인도 후보, 소속이 늘 때 이웃 다시 넣기와 옮기기는 계기가
+ * 아님, 처리 중에 다시 온 알림, 실패 상한, 리스너의 순서 키를 실제 PostgreSQL 과 실제 저장소 · 사건 조회로 본다.
  * 사건은 SQL 로 넣고 대기에는 시험이 직접 넣는다. 회차 · 판정은 시험이 고정 시계로 직접 만든다(작업 서버는 끈다). 다른 시험 클래스의 비동기
  * 리스너가 남긴 대기 행이 섞일 수 있어, 대기 · 스토리라인 단언은 이 시험의 사건 · 모델 버전으로 좁힌다.
  * <p>
  * 기준: 창 14일 · 기준 0.65 — 점수 = 감쇠 × (0.7 × 코사인 + 0.3 × 겹침). 벡터는 반 정밀도에서 정확한 성분이다.
  * <p>
- * 지키는 규칙: storyline-R1 ~ storyline-R14
+ * 지키는 규칙: storyline-R1 ~ storyline-R14 · storyline-R16 · storyline-R17 · storyline-R18
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -62,6 +69,8 @@ class LinkingFlowTests {
 	private static final String MODEL = "link-m";
 
 	private static final LinkingCriteria CRITERIA = new LinkingCriteria(Duration.ofDays(14), 0.65);
+
+	private static final StateCriteria STATE = new StateCriteria(Duration.ofDays(7), Duration.ofDays(30));
 
 	@Autowired
 	EventDirectory directory;
@@ -171,24 +180,31 @@ class LinkingFlowTests {
 			.containsEntry("criteria_id", null);
 		// e1 [1,0] × 3 + e9 [1,0] × 2
 		assertThat(storylineRow(storyline)).containsEntry("centroid", "[1,0]").containsEntry("article_count", 5);
+		// 사건 둘이 남아 정돈은 그대로 둔다(대조 — storyline-R17)
+		assertThat(mergedInto(storyline)).isNull();
 	}
 
 	@Test
-	void aMergedEventIntoAMemberLeavesOneMembership() {
+	void aPairThatWasOneHappeningIsDissolved() {
 		Pair pair = openPair();
-		long storyline = onlyStoryline();
 		StorylineRows.merge(this.jdbc, pair.e2(), pair.e1());
 		this.queue.enqueue(pair.e2(), null, NOW);
 
 		round(this.directory).run();
 
-		assertThat(memberIds(storyline)).containsExactly(pair.e1());
-		assertThat(member(storyline, pair.e1())).containsEntry("linked_by", "PAIR");
-		assertThat(storylineRow(storyline)).containsEntry("centroid", "[1,0]").containsEntry("article_count", 3);
+		// e2 를 e1 에 합쳐 사건 하나만 남았고 e1 은 다른 스토리라인에 없다 — 풀고 e1 을 첫 기사 시각으로 다시 넣는다(storyline-R17)
+		assertThat(storylineIds()).isEmpty();
+		assertThat(queued(pair.e1())).hasValueSatisfying(row -> assertThat(row).containsEntry("order_at", "2026-11-05T00:00:00Z"));
+
+		round(this.directory).run();
+
+		// e1 은 이웃이 없어 소속 없이 남는다 — 풀기가 다시 이어지지 않는다
+		assertThat(storylineIds()).isEmpty();
+		assertThat(queued(pair.e1())).isEmpty();
 	}
 
 	@Test
-	void deletedEventsLeaveAndTheEmptiedStorylineGoes() {
+	void aPartnerDeletionDissolvesTheStoryline() {
 		Pair pair = openPair();
 		long storyline = onlyStoryline();
 		StorylineRows.delete(this.jdbc, pair.e1());
@@ -196,16 +212,9 @@ class LinkingFlowTests {
 
 		round(this.directory).run();
 
-		assertThat(memberIds(storyline)).containsExactly(pair.e2());
-		assertThat(storylineRow(storyline)).containsEntry("centroid", "[4,3]")
-			.containsEntry("article_count", 1)
-			.containsEntry("representative_event_id", pair.e2());
-
-		StorylineRows.delete(this.jdbc, pair.e2());
-		this.queue.enqueue(pair.e2(), null, NOW);
-		round(this.directory).run();
-
+		// e2 하나만 남았고 다른 스토리라인에 없다 — 풀고 e2 를 다시 넣는다. e2 에는 알림이 없어 이 넣기가 유일한 계기다(storyline-R17)
 		assertThat(storylineIds()).isEmpty();
+		assertThat(queued(pair.e2())).hasValueSatisfying(row -> assertThat(row).containsEntry("order_at", "2026-11-05T03:00:00Z"));
 		assertThat(this.jdbc.sql("select count(*) from storyline_key_terms where storyline_id = :id")
 			.param("id", storyline)
 			.query(Long.class)
@@ -214,6 +223,163 @@ class LinkingFlowTests {
 			.param("id", storyline)
 			.query(Long.class)
 			.single()).isZero();
+	}
+
+	@Test
+	void aDeletionLeavingTwoKeepsTheStoryline() {
+		Pair pair = openPair();
+		long storyline = onlyStoryline();
+		long e3 = StorylineRows.event(this.jdbc, "OPEN", MODEL, "[1,0]", 1, "2026-11-05T04:00:00Z",
+				"2026-11-05T04:00:00Z", Map.of("금리", 1));
+		this.queue.enqueue(e3, Instant.parse("2026-11-05T04:00:00Z"), NOW);
+		round(this.directory).run();
+		assertThat(memberIds(storyline)).containsExactly(pair.e1(), pair.e2(), e3);
+		StorylineRows.delete(this.jdbc, pair.e1());
+		this.queue.enqueue(pair.e1(), null, NOW);
+
+		round(this.directory).run();
+
+		// 사건 둘이 남아 정돈은 그대로 둔다(대조 — storyline-R17)
+		assertThat(storylineIds()).containsExactly(storyline);
+		assertThat(memberIds(storyline)).containsExactly(pair.e2(), e3);
+		assertThat(storylineRow(storyline)).containsEntry("article_count", 2);
+		assertThat(mergedInto(storyline)).isNull();
+		assertThat(queued(pair.e2())).isEmpty();
+		assertThat(queued(e3)).isEmpty();
+	}
+
+	@Test
+	void equalStorylinesAfterEventMergesBecomeOne() {
+		Pair pair = openPair();
+		long l1 = onlyStoryline();
+		Pair other = openOtherPair();
+		long l2 = otherStoryline(l1);
+		StorylineRows.merge(this.jdbc, other.e1(), pair.e1());
+		StorylineRows.merge(this.jdbc, other.e2(), pair.e2());
+		this.queue.enqueue(other.e1(), null, NOW);
+		this.queue.enqueue(other.e2(), null, NOW);
+
+		round(this.directory).run();
+
+		// L2 = {e1, e2} 가 L1 과 같아 ID 가 작은 L1 에 합친다(storyline-R17 · R18)
+		assertThat(mergedInto(l2)).isEqualTo(l1);
+		assertThat(mergedAt(l2)).isEqualTo("2026-11-10T00:00:00Z");
+		assertThat(memberIds(l2)).isEmpty();
+		assertThat(terms(l2)).isEmpty();
+		assertThat(memberIds(l1)).containsExactly(pair.e1(), pair.e2());
+		assertThat(mergedInto(l1)).isNull();
+		assertThat(liveStorylineIds()).containsExactly(l1);
+	}
+
+	@Test
+	void aSingleLeftoverJoinsTheStorylineHoldingItsEvent() {
+		Pair pair = openPair();
+		long l1 = onlyStoryline();
+		Pair other = openOtherPair();
+		long l2 = otherStoryline(l1);
+		StorylineRows.merge(this.jdbc, other.e1(), pair.e1());
+		StorylineRows.merge(this.jdbc, other.e2(), pair.e1());
+		this.queue.enqueue(other.e1(), null, NOW);
+		this.queue.enqueue(other.e2(), null, NOW);
+
+		round(this.directory).run();
+
+		// L2 = {e1} 이고 e1 은 L1 에 있다 — 풀지 않고 L1 에 합친다(storyline-R17)
+		assertThat(mergedInto(l2)).isEqualTo(l1);
+		assertThat(memberIds(l2)).isEmpty();
+		assertThat(memberIds(l1)).containsExactly(pair.e1(), pair.e2());
+		assertThat(liveStorylineIds()).containsExactly(l1);
+		assertThat(queued(pair.e1())).isEmpty();
+	}
+
+	@Test
+	void anAttachMakingEqualStorylinesMergesThem() {
+		long a = sameEvent();
+		long b = sameEvent();
+		long c = sameEvent();
+		long l2 = seed(a, b);
+		long l1 = seed(a, b, c);
+		this.queue.enqueue(c, Instant.parse("2026-11-05T00:00:00Z"), NOW);
+
+		round(this.directory).run();
+
+		// L1 − c 와 L2 의 점수가 같아(코사인 1 · 겹침 1) ID 가 작은 L2 에 붙고, L2 = L1 이 되어 L1 을 L2 에 합친다
+		assertThat(member(l2, c)).containsEntry("linked_by", "RULE");
+		assertThat(mergedInto(l1)).isEqualTo(l2);
+		assertThat(memberIds(l1)).isEmpty();
+		assertThat(memberIds(l2)).containsExactly(a, b, c);
+		// 남는 L2 의 표현을 다시 정했다 — a · b · c 기사 하나씩
+		assertThat(storylineRow(l2)).containsEntry("centroid", "[1,0]").containsEntry("article_count", 3);
+		assertThat(terms(l2)).containsExactlyInAnyOrderEntriesOf(Map.of("금리", 3));
+		assertThat(liveStorylineIds()).containsExactly(l2);
+	}
+
+	@Test
+	void anAttachLeavingAContainedStorylineKeepsBoth() {
+		long a = sameEvent();
+		long b = sameEvent();
+		long c = sameEvent();
+		long d = sameEvent();
+		long l2 = seed(a, b);
+		long l1 = seed(a, b, c, d);
+		this.queue.enqueue(c, Instant.parse("2026-11-05T00:00:00Z"), NOW);
+
+		round(this.directory).run();
+
+		// c 가 L2 에 붙어 L2 = {a, b, c} ⊂ L1 — 사건 둘 이상의 포함은 합치지 않는다(대조 — storyline-R17)
+		assertThat(member(l2, c)).containsEntry("linked_by", "RULE");
+		assertThat(mergedInto(l1)).isNull();
+		assertThat(mergedInto(l2)).isNull();
+		assertThat(memberIds(l2)).containsExactly(a, b, c);
+		assertThat(memberIds(l1)).containsExactly(a, b, c, d);
+	}
+
+	@Test
+	void anEndedStorylineStillTakesAFollowUp() {
+		long e1 = StorylineRows.event(this.jdbc, "CLOSED", MODEL, "[1,0]", 1, "2026-09-01T00:00:00Z",
+				"2026-09-01T00:00:00Z", Map.of("금리", 1));
+		long e2 = StorylineRows.event(this.jdbc, "CLOSED", MODEL, "[1,0]", 1, "2026-09-01T06:00:00Z",
+				"2026-09-01T06:00:00Z", Map.of("금리", 1));
+		this.queue.enqueue(e1, Instant.parse("2026-09-01T00:00:00Z"), NOW);
+		this.queue.enqueue(e2, Instant.parse("2026-09-01T06:00:00Z"), NOW);
+		round(this.directory).run();
+		long storyline = onlyStoryline();
+		assertThat(STATE.stateOf(Instant.parse("2026-09-01T06:00:00Z"), NOW)).isEqualTo(StorylineState.ENDED);
+		// 채우기처럼 그 무렵의 지난 사건을 넣는다
+		long e3 = StorylineRows.event(this.jdbc, "CLOSED", MODEL, "[1,0]", 1, "2026-09-02T00:00:00Z",
+				"2026-09-02T00:00:00Z", Map.of("금리", 1));
+		this.queue.enqueue(e3, Instant.parse("2026-09-02T00:00:00Z"), NOW);
+
+		round(this.directory).run();
+
+		// 끝난 스토리라인도 후보다 — 붙는다. 마지막 기사가 09-02 라 상태는 끝남 그대로(storyline-R16)
+		assertThat(member(storyline, e3)).containsEntry("linked_by", "RULE");
+		assertThat(storylineRow(storyline)).containsEntry("last", "2026-09-02T00:00:00Z");
+		assertThat(STATE.stateOf(Instant.parse("2026-09-02T00:00:00Z"), NOW)).isEqualTo(StorylineState.ENDED);
+	}
+
+	@Test
+	void aWiderReachReopensAnEndedStoryline() {
+		long e1 = StorylineRows.event(this.jdbc, "CLOSED", MODEL, "[1,0]", 1, "2026-10-01T00:00:00Z",
+				"2026-10-01T00:00:00Z", Map.of("금리", 1));
+		long e2 = StorylineRows.event(this.jdbc, "CLOSED", MODEL, "[1,0]", 1, "2026-10-01T06:00:00Z",
+				"2026-10-01T06:00:00Z", Map.of("금리", 1));
+		this.queue.enqueue(e1, Instant.parse("2026-10-01T00:00:00Z"), NOW);
+		this.queue.enqueue(e2, Instant.parse("2026-10-01T06:00:00Z"), NOW);
+		round(this.directory).run();
+		long storyline = onlyStoryline();
+		assertThat(STATE.stateOf(Instant.parse("2026-10-01T06:00:00Z"), NOW)).isEqualTo(StorylineState.ENDED);
+		long e3 = StorylineRows.event(this.jdbc, "OPEN", MODEL, "[1,0]", 1, "2026-11-09T00:00:00Z",
+				"2026-11-09T00:00:00Z", Map.of("금리", 1));
+		this.queue.enqueue(e3, Instant.parse("2026-11-09T00:00:00Z"), NOW);
+
+		round(this.directory, new LinkingCriteria(Duration.ofDays(60), 0.10)).run();
+
+		// 간격 38.75일 — 2^(−38.75 ÷ 14) ≈ 0.14682, 코사인 1 · 겹침 1. 같은 스토리라인이 다시 진행이다(storyline-R16)
+		assertThat(member(storyline, e3)).containsEntry("linked_by", "RULE");
+		assertThat((Double) member(storyline, e3).get("score")).isCloseTo(0.14682, within(1e-4));
+		assertThat(storylineRow(storyline)).containsEntry("last", "2026-11-09T00:00:00Z");
+		assertThat(STATE.stateOf(Instant.parse("2026-11-09T00:00:00Z"), NOW)).isEqualTo(StorylineState.ACTIVE);
 	}
 
 	@Test
@@ -405,7 +571,11 @@ class LinkingFlowTests {
 	}
 
 	private LinkingRound round(EventDirectory events) {
-		return new LinkingRound(this.queue, this.criteria, CRITERIA,
+		return round(events, CRITERIA);
+	}
+
+	private LinkingRound round(EventDirectory events, LinkingCriteria criteria) {
+		return new LinkingRound(this.queue, this.criteria, criteria,
 				new StorylineLinker(events, this.storylines, this.queue), this.transaction, InstantSource.fixed(NOW));
 	}
 
@@ -413,6 +583,65 @@ class LinkingFlowTests {
 		return this.jdbc.sql("select id from storyline_linking_criteria where window_seconds = 1209600 and threshold = 0.65")
 			.query(Long.class)
 			.single();
+	}
+
+	/** openPair 와 다른 흐름의 짝 — [0,1] · 환율, openPair 의 스토리라인에는 기준 미만이라 따로 연다 */
+	private Pair openOtherPair() {
+		long e3 = StorylineRows.event(this.jdbc, "OPEN", MODEL, "[0,1]", 1, "2026-11-05T01:00:00Z",
+				"2026-11-05T01:00:00Z", Map.of("환율", 1));
+		long e4 = StorylineRows.event(this.jdbc, "OPEN", MODEL, "[0,1]", 1, "2026-11-05T02:00:00Z",
+				"2026-11-05T02:00:00Z", Map.of("환율", 1));
+		this.queue.enqueue(e3, Instant.parse("2026-11-05T01:00:00Z"), NOW);
+		this.queue.enqueue(e4, Instant.parse("2026-11-05T02:00:00Z"), NOW);
+		round(this.directory).run();
+		return new Pair(e3, e4);
+	}
+
+	private long otherStoryline(long first) {
+		List<Long> ids = storylineIds();
+		assertThat(ids).hasSize(2).contains(first);
+		return ids.stream().filter(id -> id != first).findFirst().orElseThrow();
+	}
+
+	/** [1,0] · 기사 하나 · 금리 · 2026-11-05T00:00Z — 같은 사건끼리는 점수가 1 이다 */
+	private long sameEvent() {
+		return StorylineRows.event(this.jdbc, "OPEN", MODEL, "[1,0]", 1, "2026-11-05T00:00:00Z", "2026-11-05T00:00:00Z",
+				Map.of("금리", 1));
+	}
+
+	/** 저장소로 스토리라인을 심는다 — 표현은 [1,0] · 사건마다 기사 하나 · 금리 */
+	private long seed(long... events) {
+		Instant at = Instant.parse("2026-11-05T00:00:00Z");
+		long storyline = this.storylines.open(new Representation(MODEL, new float[] { 1, 0 }, events.length, at, at,
+				Map.of("금리", events.length), events[0]), NOW);
+		long criteriaId = this.criteria.register(CRITERIA, NOW);
+		for (long event : events) {
+			this.storylines.addMember(storyline, event,
+					LinkJudgement.judged(LinkedBy.PAIR, new Score(1.0, 1.0, 1.0), criteriaId, NOW));
+		}
+		return storyline;
+	}
+
+	private List<Long> liveStorylineIds() {
+		return this.jdbc.sql("select id from storylines where model_version = :model and merged_into is null order by id")
+			.param("model", MODEL)
+			.query(Long.class)
+			.list();
+	}
+
+	private @Nullable Long mergedInto(long storyline) {
+		return (Long) this.jdbc.sql("select merged_into from storylines where id = :id")
+			.param("id", storyline)
+			.query()
+			.singleRow()
+			.get("merged_into");
+	}
+
+	private @Nullable String mergedAt(long storyline) {
+		return (String) this.jdbc.sql("""
+				select to_char(merged_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as merged_at
+				from storylines where id = :id
+				""").param("id", storyline).query().singleRow().get("merged_at");
 	}
 
 	private List<Long> storylineIds() {

@@ -28,7 +28,7 @@ import org.springframework.stereotype.Repository;
 /**
  * {@link StorylineRepository} 의 JdbcClient 구현 — docs/specs/storyline.md §4.
  * <p>
- * 중심은 차원 없는 {@code halfvec} 이고 {@link VectorText} 의 텍스트 표현으로 쓰고 읽는다. 후보의 코사인은
+ * 중심은 차원 없는 {@code halfvec} 이고 {@link VectorText} 의 텍스트 표현으로 쓰고 읽는다. 후보는 합쳐지지 않은 행만 보고, 코사인은
  * {@code 1 − (중심 <=> 벡터)} 를 스토리라인마다 센다(인덱스를 쓰지 않는 정확 검색) — 거리가 NaN(영 벡터)인 행은 뺀다. 핵심 말 상위 수는
  * 매개변수이고 말 순은 바이트 순({@code COLLATE "C"})이다. 모듈 잠금은 트랜잭션 advisory 잠금 하나다.
  */
@@ -97,7 +97,7 @@ class JdbcStorylineRepository implements StorylineRepository {
 				       array(select k.term from storyline_key_terms k where k.storyline_id = s.id
 				             order by k.article_count desc, k.term collate "C" limit :terms) as key_terms
 				from storylines s
-				where s.model_version = :model
+				where s.model_version = :model and s.merged_into is null
 				  and s.last_article_at >= :from and s.first_article_at <= :to
 				  and (s.centroid <=> cast(:vector as halfvec)) <> 'NaN'
 				  and 1 - (s.centroid <=> cast(:vector as halfvec)) >= :min
@@ -199,8 +199,22 @@ class JdbcStorylineRepository implements StorylineRepository {
 	}
 
 	@Override
+	public void merge(long merged, long survivor, Instant now) {
+		// 가리킴을 평평하게 — merged 를 가리키던 행을 먼저 survivor 로 돌린다(그 행들의 합친 시각은 그대로)
+		this.jdbc.sql("update storylines set merged_into = :survivor where merged_into = :merged")
+			.param("survivor", survivor)
+			.param("merged", merged)
+			.update();
+		this.jdbc.sql("delete from storyline_members where storyline_id = :merged").param("merged", merged).update();
+		this.jdbc.sql("delete from storyline_key_terms where storyline_id = :merged").param("merged", merged).update();
+		this.jdbc.sql("""
+				update storylines set merged_into = :survivor, merged_at = :now, updated_at = :now where id = :merged
+				""").param("survivor", survivor).param("now", timestamp(now)).param("merged", merged).update();
+	}
+
+	@Override
 	public void delete(long storylineId) {
-		// 핵심 말 · 소속은 FK ON DELETE CASCADE 로 함께 지워진다
+		// 핵심 말 · 소속과 이 스토리라인을 가리키는 합쳐진 행은 FK ON DELETE CASCADE 로 함께 지워진다
 		this.jdbc.sql("delete from storylines where id = :id").param("id", storylineId).update();
 	}
 

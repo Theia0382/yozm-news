@@ -6,10 +6,9 @@ import java.util.Comparator;
 
 import net.yozmnews.event.EventDirectory;
 import net.yozmnews.event.EventId;
-import net.yozmnews.event.EventView;
 import net.yozmnews.event.EventsChanged;
 import net.yozmnews.storyline.domain.queue.LinkingQueueRepository;
-import org.jspecify.annotations.Nullable;
+import net.yozmnews.storyline.domain.queue.PendingEvent;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
@@ -46,12 +45,7 @@ class StorylineLinkingListener {
 		changed.eventIds()
 			.stream()
 			.sorted(Comparator.comparingLong(EventId::value))
-			.forEach(id -> this.queue.enqueue(id.value(), orderAt(id), now));
-	}
-
-	/** 그대로인 사건이면 첫 기사 시각, 지워졌거나 합쳐졌으면 없음(맨 앞) — storyline-R1 */
-	private @Nullable Instant orderAt(EventId id) {
-		return this.events.find(id).filter(view -> view.id().equals(id)).map(EventView::firstArticleAt).orElse(null);
+			.forEach(id -> this.queue.enqueue(id.value(), PendingEvent.orderAt(id, this.events.find(id)), now));
 	}
 
 }

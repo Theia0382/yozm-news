@@ -3,12 +3,14 @@ package net.yozmnews.storyline.application;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 import net.yozmnews.event.EventDirectory;
 import net.yozmnews.event.EventId;
@@ -25,18 +27,22 @@ import net.yozmnews.storyline.domain.linking.Representation;
 import net.yozmnews.storyline.domain.linking.Scored;
 import net.yozmnews.storyline.domain.linking.Subject;
 import net.yozmnews.storyline.domain.queue.LinkingQueueRepository;
+import net.yozmnews.storyline.domain.queue.PendingEvent;
 import net.yozmnews.storyline.domain.storyline.LinkJudgement;
 import net.yozmnews.storyline.domain.storyline.LinkedBy;
 import net.yozmnews.storyline.domain.storyline.StorylineRepository;
 import net.yozmnews.storyline.domain.storyline.StorylineSnapshot;
+import net.yozmnews.storyline.domain.storyline.Tidying;
 import org.springframework.stereotype.Component;
 
 /**
- * 사건 하나의 따르기 · 판정 · 쓰기 — docs/specs/storyline.md §4 · storyline-R5 ~ storyline-R14.
+ * 사건 하나의 따르기 · 판정 · 정돈 · 쓰기 — docs/specs/storyline.md §4 · storyline-R5 ~ storyline-R14 · storyline-R17 ·
+ * storyline-R18.
  * <p>
  * 트랜잭션 안에서 부른다. 첫 문장이 모듈 잠금이라 판정은 한 번에 하나다. 사건의 지금 상태({@link EventDirectory#find})로 지워짐 ·
- * 합쳐짐 · 그대로를 가르고, 그대로면 그 사건이 든 스토리라인의 표현을 다시 정한 뒤 붙이기 · 짝 · 다시 넣기를 판정한다. 판단은
- * {@code domain/linking} 이 하고, 이 클래스는 읽기 · 쓰기를 잇는다.
+ * 합쳐짐 · 그대로를 가르고, 그대로면 그 사건이 든 스토리라인의 표현을 다시 정한 뒤 붙이기 · 짝 · 다시 넣기를 판정한다. 끝으로 소속이
+ * 바뀌었거나 그 사건이 든 스토리라인을 정돈한다. 판단은 {@code domain/linking} · {@code domain/storyline} 이 하고, 이 클래스는
+ * 읽기 · 쓰기를 잇는다.
  */
 @Component
 class StorylineLinker {
@@ -63,11 +69,12 @@ class StorylineLinker {
 		EventId id = new EventId(eventId);
 		Optional<EventView> current = this.events.find(id);
 		if (current.isEmpty()) {
-			// 지워진 사건 — 소속을 지운다(storyline-R6)
-			for (long storyline : this.storylines.storylinesOf(eventId)) {
+			// 지워진 사건 — 소속을 지우고 그 스토리라인들을 정돈한다(storyline-R6 · R17)
+			List<Long> owned = this.storylines.storylinesOf(eventId);
+			for (long storyline : owned) {
 				this.storylines.removeMember(storyline, eventId);
-				refresh(storyline, now);
 			}
+			tidy(owned, Set.copyOf(owned), now);
 			return;
 		}
 		long survivor = current.get().id().value();
@@ -78,7 +85,10 @@ class StorylineLinker {
 		judge(id, criteria, criteriaId, now);
 	}
 
-	/** 합쳐진 사건 — 소속을 남는 사건으로 옮기거나, 남는 사건이 이미 구성 사건이면 지운다(storyline-R6). 다시 넣기의 계기가 아니다 */
+	/**
+	 * 합쳐진 사건 — 소속을 남는 사건으로 옮기거나, 남는 사건이 이미 구성 사건이면 지운 뒤 그 스토리라인들을 정돈한다(storyline-R6 ·
+	 * R17). 다시 넣기의 계기가 아니다
+	 */
 	private void follow(long merged, long survivor, Instant now) {
 		List<Long> owned = this.storylines.storylinesOf(merged);
 		Map<Long, List<Long>> members = this.storylines.members(owned);
@@ -89,8 +99,8 @@ class StorylineLinker {
 			else {
 				this.storylines.moveMember(storyline, merged, survivor, now);
 			}
-			refresh(storyline, now);
 		}
+		tidy(owned, Set.copyOf(owned), now);
 	}
 
 	private void judge(EventId id, LinkingCriteria criteria, long criteriaId, Instant now) {
@@ -132,13 +142,14 @@ class StorylineLinker {
 
 		Map<Long, List<EventNeighbor>> neighbours = new TreeMap<>();
 		Map<Long, EventProfile> gained = new TreeMap<>();
+		Set<Long> attached = new TreeSet<>();
 		Optional<Scored> attach = LinkingRule.attach(scored, Set.copyOf(own), threshold);
 		if (attach.isPresent()) {
 			// 붙이기(storyline-R10)
 			long storyline = attach.get().id();
 			this.storylines.addMember(storyline, eventId,
 					LinkJudgement.judged(LinkedBy.RULE, attach.get().score(), criteriaId, now));
-			refresh(storyline, now);
+			attached.add(storyline);
 			gained.put(eventId, profile);
 		}
 		else if (own.isEmpty()) {
@@ -163,6 +174,10 @@ class StorylineLinker {
 			}
 		}
 		requeue(gained, neighbours, criteria, now);
+		// 정돈 — 이미 든 스토리라인은 앞에서 표현을 다시 정했으므로 정돈만, 붙인 스토리라인은 표현까지(storyline-R17)
+		Set<Long> tidied = new TreeSet<>(own);
+		tidied.addAll(attached);
+		tidy(tidied, attached, now);
 	}
 
 	/** 소속이 는 사건마다 기준 이상이고 소속 없는 이웃을 사건 ID 오름차순으로 다시 넣는다(storyline-R12) */
@@ -194,13 +209,57 @@ class StorylineLinker {
 		toRequeue.forEach((event, orderAt) -> this.queue.enqueue(event, orderAt, now));
 	}
 
-	/** 구성 사건이 없으면 스토리라인을 지우고, 있으면 표현을 다시 정한다 — 읽을 구성 사건이 없으면 그대로 둔다(storyline-R7 · R13) */
-	private void refresh(long storyline, Instant now) {
-		List<Long> members = this.storylines.members(List.of(storyline)).getOrDefault(storyline, List.of());
-		if (members.isEmpty()) {
-			this.storylines.delete(storyline);
-			return;
+	/**
+	 * 스토리라인들을 ID 순으로 정돈한다(storyline-R13 · R17 · R18) — 판단은 {@link Tidying#decide} 가 한다. 이 정돈에서 이미 지웠거나
+	 * 합친 스토리라인은 건너뛰고, 견줄 스토리라인에서도 뺀다.
+	 * @param represent 남길 때 표현을 다시 정할 스토리라인(소속이 바뀐 것)
+	 */
+	private void tidy(Collection<Long> storylineIds, Set<Long> represent, Instant now) {
+		Set<Long> gone = new HashSet<>();
+		for (long storyline : new TreeSet<>(storylineIds)) {
+			if (gone.contains(storyline)) {
+				continue;
+			}
+			List<Long> members = this.storylines.members(List.of(storyline)).getOrDefault(storyline, List.of());
+			Map<Long, List<Long>> sharing = Map.of();
+			if (!members.isEmpty()) {
+				List<Long> others = new ArrayList<>(this.storylines.storylinesOf(members.get(0)));
+				others.remove(storyline);
+				others.removeAll(gone);
+				sharing = this.storylines.members(others);
+			}
+			switch (Tidying.decide(storyline, members, sharing)) {
+				case Tidying.Keep keep -> {
+					if (represent.contains(storyline)) {
+						represent(storyline, members, now);
+					}
+				}
+				case Tidying.Remove remove -> {
+					this.storylines.delete(storyline);
+					gone.add(storyline);
+				}
+				case Tidying.Dissolve dissolve -> {
+					// 풀기 — 지우고 남은 사건을 다시 판정한다. 순서 키는 지금 상태로(storyline-R1)
+					this.storylines.delete(storyline);
+					gone.add(storyline);
+					EventId event = new EventId(dissolve.eventId());
+					this.queue.enqueue(dissolve.eventId(), PendingEvent.orderAt(event, this.events.find(event)), now);
+				}
+				case Tidying.MergeInto merge -> {
+					for (long merged : merge.merged()) {
+						this.storylines.merge(merged, merge.survivor(), now);
+						gone.add(merged);
+					}
+					if (merge.survivor() == storyline && represent.contains(storyline)) {
+						represent(storyline, members, now);
+					}
+				}
+			}
 		}
+	}
+
+	/** 구성 사건의 지금 표현으로 스토리라인 표현을 다시 정한다 — 읽을 구성 사건이 없으면 그대로 둔다(storyline-R7) */
+	private void represent(long storyline, List<Long> members, Instant now) {
 		List<EventProfile> readable = readable(members, this.events.profiles(ids(members), LinkingScoring.KEY_TERMS));
 		if (!readable.isEmpty()) {
 			this.storylines.save(storyline, Representation.of(readable), now);
