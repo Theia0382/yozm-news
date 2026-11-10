@@ -26,10 +26,10 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * 기사 삭제가 스토리라인까지 따라오는 한 흐름 — {@code ArticlesRemoved} 를 {@code event} 가 받아 기사 하나뿐인 사건을 지우고
- * {@code EventsChanged} 를 발행하면, {@code storyline} 리스너가 그 사건을 잇기 대기에 넣고, 회차가 소속을 지운다. 리스너는 실제
- * 비동기 리스너다(작업 서버는 끄고 회차는 시험이 부른다).
+ * {@code EventsChanged} 를 발행하면, {@code storyline} 리스너가 그 사건을 잇기 대기에 넣고, 회차가 소속을 지운 뒤 사건 하나만 남은
+ * 스토리라인을 풀어 남은 사건을 다시 넣는다. 리스너는 실제 비동기 리스너다(작업 서버는 끄고 회차는 시험이 부른다).
  * <p>
- * 지키는 규칙: storyline-R1 · storyline-R6 · event-R8 · event-R23
+ * 지키는 규칙: storyline-R1 · storyline-R6 · storyline-R17 · event-R8 · event-R23
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -86,7 +86,16 @@ class StorylineModuleFlowTests {
 
 		this.round.run();
 
-		assertThat(members(storyline)).containsExactly(e2);
+		// e2 하나만 남았고 다른 스토리라인에 없다 — 스토리라인을 풀고 e2 를 첫 기사 시각으로 다시 넣는다(storyline-R17)
+		assertThat(members(storyline)).isEmpty();
+		assertThat(this.jdbc.sql("select count(*) from storylines where id = :id")
+			.param("id", storyline)
+			.query(Long.class)
+			.single()).isZero();
+		assertThat(this.jdbc.sql("""
+				select to_char(order_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') from storyline_linking_queue
+				where event_id = :id
+				""").param("id", e2).query(String.class).single()).isEqualTo("2026-11-05T00:00:00Z");
 	}
 
 	private void assign(long article, long event) {
