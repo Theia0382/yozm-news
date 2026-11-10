@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
 # 배포 구성 스모크 — 띄운 배포 구성(deploy/compose.yaml)이 갖춰야 할 것을 확인한다. 공개 주소는 기본값이어야 하고, 운영자 토큰은 넣어도 넣지 않아도 된다.
-# CI(.github/workflows/ci.yml 의 deploy job)와 로컬이 같은 파일을 쓴다. 필요한 호스트 도구: bash · docker · curl.
+# CI(.github/workflows/ci.yml 의 deploy-amd64 · deploy-arm64 job)와 로컬이 같은 파일을 쓴다. 필요한 호스트 도구: bash · docker · curl · sed.
 # 사용: 배포 구성을 띄운 뒤(PROXY_HOST_ADDRESS 는 기본값) bash deploy/smoke.sh — 종료 코드 0 이면 전 항목 통과다.
+# K14(로컬 모델 추론 한 건)는 스모크 덧씌우기(deploy/smoke/compose.yaml)의 시험 피드 서버 feeds 가 떠 있고 운영자 토큰이 있을 때만 돈다. 덧씌우기 경로를 SMOKE_OVERLAY 로 주면 스모크의 compose 명령에도 얹는다.
+# 아니면 건너뛴다 — 운영 인스턴스에서 돌려도 시험 소스를 등록하지 않는다. SMOKE_REQUIRE_K14=1 이면 건너뛰지 않고 실패한다(CI).
 set -uo pipefail
 
 deploy_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 repo_dir=$(dirname "$deploy_dir")
 compose=(docker compose -f "$deploy_dir/compose.yaml")
+if [[ -n ${SMOKE_OVERLAY:-} ]]; then compose+=(-f "$SMOKE_OVERLAY"); fi
 body_file=$(mktemp)
 trap 'rm -f "$body_file"' EXIT
 failures=0
@@ -16,6 +19,7 @@ fail() {
   printf 'FAIL  %s — 기대: %s / 실제: %s\n' "$1" "$2" "$3"
   failures=$((failures + 1))
 }
+skip() { printf 'skip  %s — %s\n' "$1" "$2"; }
 
 # 서비스마다 "상태 [공개 주소 …]" — 공개하지 않은 포트는 나오지 않는다
 services=$("${compose[@]}" ps --format '{{.Service}} {{.Health}} [{{range .Publishers}}{{if .PublishedPort}}{{.URL}}:{{.PublishedPort}} {{end}}{{end}}]')
@@ -107,6 +111,77 @@ preset_files=("$repo_dir"/backend/src/main/resources/source-presets/*.yaml)
 [[ -e ${preset_files[0]} ]] || preset_files=()
 loaded=$("${compose[@]}" logs --no-color app 2>&1 | grep -o '프리셋 [0-9]*개를 적재했다' | tail -n 1)
 if [[ $loaded == "프리셋 ${#preset_files[@]}개를 적재했다" ]]; then pass "K12 프리셋 적재 (${#preset_files[@]}개)"; else fail "K12 프리셋 적재" "프리셋 ${#preset_files[@]}개를 적재했다" "${loaded:-적재 로그 없음}"; fi
+
+# K14 이미지의 로컬 임베딩 모델이 이 아키텍처에서 추론한다 — 시험 피드의 기사 하나가 수집 · 표현까지 가고, 표현의 모델 버전이 저장소의 정본과 같다
+# 시험 소스를 운영자 API 로 등록 · 켠다. 요청은 app 컨테이너 안의 bash 가 컨테이너의 토큰으로 보낸다(이미지에 curl 이 없다 — healthcheck 와 같은 /dev/tcp) — 토큰 값은 이 스크립트로 나오지 않는다
+# 본문은 표준 입력으로 넘기고, 응답은 상태 코드 한 줄 다음 본문이다
+admin_request() {
+  "${compose[@]}" exec -T app bash -c '
+    IFS= read -r -d "" body || true
+    export LC_ALL=C
+    exec 3<>/dev/tcp/127.0.0.1/8080 || exit 9
+    printf "%s %s HTTP/1.0\r\nHost: localhost\r\nAuthorization: Bearer %s\r\nContent-Type: application/json\r\nContent-Length: %d\r\n\r\n%s" "$1" "$2" "$YOZMNEWS_ADMIN_TOKEN" "${#body}" "$body" >&3
+    IFS=" " read -r _ status _ <&3
+    status=${status%$'"'"'\r'"'"'}
+    while IFS= read -r line <&3 && [[ -n ${line%$'"'"'\r'"'"'} ]]; do :; done
+    printf "%s\n" "$status"
+    cat <&3
+  ' admin "$1" "$2"
+}
+# DB 조회 한 줄 — 계정 · DB 이름은 postgres 컨테이너의 정의(deploy/compose.yaml 의 x-database)를 쓴다. 조회 오류는 표준 오류로 보이고 종료 코드가 0 이 아니다
+db_query() {
+  "${compose[@]}" exec -T postgres bash -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -X -A -t -c "$1"' db "$1"
+}
+k14="K14 로컬 모델 표현 한 건"
+feeds_up=0
+if "${compose[@]}" ps --services --status running 2>/dev/null | grep -qx feeds; then feeds_up=1; fi
+if [[ $token_read == 1 && $token_marker == set && $feeds_up == 1 ]]; then
+  expected_model=$(sed -n 's/^model-version=//p' "$repo_dir/backend/embedding-model.properties")
+  profile_json=$(sed -e ':a' -e 'N' -e '$!ba' -e 's/\n/\\n/g' "$deploy_dir/smoke/smoke-profile.yaml")
+  registration=$(admin_request POST /api/admin/sources <<<"{\"profile\":\"$profile_json\"}")
+  if [[ $(head -n 1 <<<"$registration") != 200 ]] || ! grep -qE '"result":"(REGISTERED|ALREADY_REGISTERED)"' <<<"$registration"; then
+    fail "$k14" "시험 소스 등록 200 REGISTERED" "$(tr '\n' ' ' <<<"$registration" | head -c 300)"
+  else
+    source_id=$(db_query "select id from sources where profile like '%http://feeds/smoke.xml%' order by id limit 1")
+    feed_id=$(db_query "select id from feeds where source_id = ${source_id:-0} order by id limit 1")
+    source_enable=$(admin_request POST "/api/admin/sources/$source_id/enable" </dev/null)
+    feed_enable=$(admin_request POST "/api/admin/feeds/$feed_id/enable" </dev/null)
+    if ! grep -q '"result":"ENABLED"' <<<"$source_enable" || ! grep -q '"result":"ENABLED"' <<<"$feed_enable"; then
+      fail "$k14" "소스 · 피드 켜기 ENABLED" "소스 $(tr '\n' ' ' <<<"$source_enable" | head -c 200) / 피드 $(tr '\n' ' ' <<<"$feed_enable" | head -c 300)"
+    else
+      # 수집(1분 주기) → 사건 묶기 대기(1분 주기) → 표현까지 최대 5분 기다린다 — 작업마다 백그라운드 작업 서버의 픽업 지연이 더해진다
+      # 기사는 피드별 기록(article_feed_entries)으로 시험 피드에 잇는다. 조회가 실패하면 기다리지 않고 실패한다
+      model=""
+      query_failed=0
+      started=$SECONDS
+      for _ in $(seq 1 60); do
+        if ! model=$(db_query "select f.model_version from article_match_features f join article_feed_entries e on e.article_id = f.article_id where e.feed_id = $feed_id order by f.created_at limit 1"); then
+          query_failed=1
+          break
+        fi
+        [[ -n $model ]] && break
+        sleep 5
+      done
+      if ((query_failed)); then
+        fail "$k14" "표현 행 조회 성공" "조회 실패(위 오류)"
+      elif [[ -n $expected_model && $model == "$expected_model" ]]; then
+        pass "$k14 ($model, 켜고 $((SECONDS - started))초)"
+      else
+        fail "$k14" "${expected_model:-정본 파일에 model-version 없음}" "${model:-5분 안에 표현 행이 없다}"
+        # 어느 단계에서 멈췄는지 — 시험 피드에서 수집한 기사 수 · 그중 사건 묶기 대기 수 · 피드의 마지막 수집
+        printf '      기사 %s · 사건 묶기 대기 %s · 마지막 수집 %s\n' \
+          "$(db_query "select count(*) from article_feed_entries where feed_id = $feed_id")" \
+          "$(db_query "select count(*) from event_intake_queue q join article_feed_entries e on e.article_id = q.article_id where e.feed_id = $feed_id")" \
+          "$(db_query "select coalesce(last_polled_at::text, '없음') from feed_poll_states where feed_id = $feed_id")"
+        "${compose[@]}" logs --no-color app 2>&1 | grep -iE 'onnx|임베더|embed' | tail -n 5
+      fi
+    fi
+  fi
+elif [[ ${SMOKE_REQUIRE_K14:-} == 1 ]]; then
+  fail "$k14" "시험 피드 서버(SMOKE_OVERLAY)와 운영자 토큰" "시험 피드 서버 실행 ${feeds_up} · 토큰 ${token_marker:-읽지 못함}"
+else
+  skip "$k14" "시험 피드 서버(SMOKE_OVERLAY) 또는 운영자 토큰이 없다"
+fi
 
 if ((failures > 0)); then
   printf '%d 항목 실패\n' "$failures"
