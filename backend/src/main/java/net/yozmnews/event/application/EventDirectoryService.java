@@ -1,5 +1,6 @@
 package net.yozmnews.event.application;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -16,8 +17,10 @@ import net.yozmnews.event.EventArticleView;
 import net.yozmnews.event.EventCursor;
 import net.yozmnews.event.EventDirectory;
 import net.yozmnews.event.EventId;
+import net.yozmnews.event.EventNeighbor;
 import net.yozmnews.event.EventPage;
 import net.yozmnews.event.EventPeriod;
+import net.yozmnews.event.EventProfile;
 import net.yozmnews.event.EventSummary;
 import net.yozmnews.event.EventTally;
 import net.yozmnews.event.EventView;
@@ -28,7 +31,7 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 
 /**
- * 공개 조회 {@link EventDirectory} 의 구현 — docs/specs/event.md §4 · event-R14 · event-R15 · event-R20.
+ * 공개 조회 {@link EventDirectory} 의 구현 — docs/specs/event.md §4 · event-R14 · event-R15 · event-R20 · event-R24.
  * <p>
  * 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통). 큰 사건 판정은 {@link #bigEvents(EventPeriod, BigEventCriteria)} 하나를 공개 조회와
  * 미리보기가 함께 쓴다.
@@ -117,6 +120,43 @@ class EventDirectoryService implements EventDirectory {
 		EventView last = page.getLast();
 		EventCursor next = rows.size() > size ? new EventCursor(last.lastArticleAt(), last.id()) : null;
 		return new EventPage(summaries, next);
+	}
+
+	@Override
+	public Map<EventId, EventProfile> profiles(Collection<EventId> ids, int keyTerms) {
+		requireKeyTerms(keyTerms);
+		if (ids.isEmpty()) {
+			return Map.of();
+		}
+		Map<EventId, EventProfile> result = new LinkedHashMap<>();
+		this.events.profiles(ids.stream().map(EventId::value).distinct().toList(), keyTerms)
+			.forEach((event, profile) -> result.put(new EventId(event), profile));
+		return Collections.unmodifiableMap(result);
+	}
+
+	@Override
+	public List<EventNeighbor> neighbors(EventId id, Instant from, Instant to, double minCosine, int keyTerms,
+			int limit) {
+		Objects.requireNonNull(id, "id");
+		if (from.isAfter(to)) {
+			throw new IllegalArgumentException("구간의 시작이 끝보다 늦다: " + from + " > " + to);
+		}
+		requireKeyTerms(keyTerms);
+		if (limit < 1 || limit > MAX_NEIGHBORS) {
+			throw new IllegalArgumentException("이웃 사건은 한 번에 1 ~ " + MAX_NEIGHBORS + "건이다: " + limit);
+		}
+		return this.events.neighbors(id.value(), from, to, minCosine, keyTerms, limit);
+	}
+
+	@Override
+	public List<EventView> lastArticleSince(Instant since) {
+		return this.events.lastArticleSince(Objects.requireNonNull(since, "since"));
+	}
+
+	private static void requireKeyTerms(int keyTerms) {
+		if (keyTerms < 1 || keyTerms > MAX_KEY_TERMS) {
+			throw new IllegalArgumentException("핵심 말 수는 1 ~ " + MAX_KEY_TERMS + "개다: " + keyTerms);
+		}
 	}
 
 	/** 기간 안의 큰 사건을 주어진 기준으로 판정한다 — 공개 조회(지금 기준)와 미리보기(제안 기준)가 함께 쓴다 */

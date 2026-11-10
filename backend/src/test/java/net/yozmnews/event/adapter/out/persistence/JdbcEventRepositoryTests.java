@@ -1,6 +1,7 @@
 package net.yozmnews.event.adapter.out.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.assertj.core.api.Assertions.within;
 
@@ -14,7 +15,9 @@ import java.util.Map;
 
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.event.EventId;
 import net.yozmnews.event.EventStatus;
+import net.yozmnews.event.EventsChanged;
 import net.yozmnews.event.domain.assignment.EventSnapshot;
 import net.yozmnews.event.domain.event.LockedEvent;
 import net.yozmnews.event.domain.event.MergeSubject;
@@ -24,14 +27,21 @@ import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabas
 import org.springframework.boot.jdbc.test.autoconfigure.JdbcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.test.context.event.ApplicationEvents;
+import org.springframework.test.context.event.RecordApplicationEvents;
+import org.springframework.transaction.IllegalTransactionStateException;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 사건 저장소 — 후보 사건의 조건(열림 · 모델 버전 · 시각 범위)과 순서, 사건 핵심 말 상위 수와 순서, 정확한 코사인, 반 정밀도 중심의
- * 왕복, 서술 기사 순서, 잠금 · 열기 · 고치기 · 지우기를 Flyway 가 적용된 실제 PostgreSQL 에서 본다.
+ * 왕복, 서술 기사 순서, 잠금 · 열기 · 고치기 · 지우기를 Flyway 가 적용된 실제 PostgreSQL 에서 본다. 사건을 열고 · 고치고 ·
+ * 지우고 · 합치고 · 닫는 쓰기가 바뀐 사건 ID 를 한 번 알리고, 트랜잭션 밖에서는 실패하는지도 본다.
  * <p>
- * 지키는 규칙: event-R10 · event-R11 · event-R12
+ * 지키는 규칙: event-R10 · event-R11 · event-R12 · event-R23
  */
 @JdbcTest
+@RecordApplicationEvents
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({ TestcontainersConfiguration.class, JdbcEventRepository.class })
 class JdbcEventRepositoryTests {
@@ -43,6 +53,69 @@ class JdbcEventRepositoryTests {
 
 	@Autowired
 	JdbcClient jdbc;
+
+	@Autowired
+	ApplicationEvents published;
+
+	@Test
+	void eachWriteAnnouncesTheEventsItChanged() {
+		long id = this.repository.open("model-a", new float[] { 1f, 0f }, T, List.of("금리"), T);
+		assertThat(changes()).containsExactly(List.of(id));
+
+		LockedEvent locked = this.repository.lock(id).orElseThrow();
+		this.repository.update(locked.joined(new float[] { 0f, 1f }, T, T), List.of("물가"), List.of());
+		assertThat(changes()).containsExactly(List.of(id), List.of(id));
+
+		long other = event("OPEN", "model-a", "[0,1]", "2026-11-05T00:00:00Z", "2026-11-05T00:00:00Z");
+		LockedEvent kept = this.repository.lock(id).orElseThrow();
+		LockedEvent gone = this.repository.lock(other).orElseThrow();
+		this.repository.absorb(kept.absorbed(gone), gone, T);
+		assertThat(changes()).last().isEqualTo(List.of(id, other));
+
+		this.repository.close(id, null, T);
+		assertThat(changes()).last().isEqualTo(List.of(id));
+
+		// 합쳐진 사건 행을 함께 지운다 — 둘 다 알린다
+		this.repository.delete(id);
+		assertThat(changes().getLast()).containsExactlyInAnyOrder(id, other);
+		assertThat(changes()).hasSize(5);
+	}
+
+	@Test
+	void markingAndClearingDoNotAnnounce() {
+		long id = event("CLOSED", "model-a", "[1,0]", "2026-11-05T00:00:00Z", "2026-11-05T00:00:00Z");
+		this.jdbc.sql("update events set representative_article_id = 55 where id = :id").param("id", id).update();
+
+		long criteria = this.jdbc.sql("""
+				insert into event_assignment_criteria (window_seconds, upper, lower, store, probability, created_at)
+				values (259200, 0.8, 0.55, 0.4, 0.5, now()) returning id
+				""").query(Long.class).single();
+
+		this.repository.markMergeChecked(id, 1, criteria);
+		this.repository.clearRepresentative(List.of(new ArticleId(55)));
+
+		assertThat(changes()).isEmpty();
+	}
+
+	@Test
+	@Transactional(propagation = Propagation.NOT_SUPPORTED)
+	void writesOutsideATransactionFail() {
+		long before = this.jdbc.sql("select count(*) from events").query(Long.class).single();
+
+		assertThatThrownBy(() -> this.repository.open("model-a", new float[] { 1f, 0f }, T, List.of(), T))
+			.isInstanceOf(IllegalTransactionStateException.class);
+		assertThatThrownBy(() -> this.repository.close(1, null, T)).isInstanceOf(IllegalTransactionStateException.class);
+
+		assertThat(this.jdbc.sql("select count(*) from events").query(Long.class).single()).isEqualTo(before);
+		assertThat(changes()).isEmpty();
+	}
+
+	/** 알림마다 사건 ID 목록 — 발행 순 */
+	private List<List<Long>> changes() {
+		return this.published.stream(EventsChanged.class)
+			.map(changed -> changed.eventIds().stream().map(EventId::value).toList())
+			.toList();
+	}
 
 	@Test
 	void candidatesAreOpenEventsOfTheModelOverlappingTheRangeInIdOrder() {

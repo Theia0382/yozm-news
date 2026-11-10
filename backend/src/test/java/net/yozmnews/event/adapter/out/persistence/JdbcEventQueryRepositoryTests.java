@@ -1,6 +1,7 @@
 package net.yozmnews.event.adapter.out.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 
 import java.sql.Types;
 import java.time.Instant;
@@ -15,6 +16,9 @@ import net.yozmnews.article.ArticleId;
 import net.yozmnews.event.DecidedBy;
 import net.yozmnews.event.EventArticleView;
 import net.yozmnews.event.EventId;
+import net.yozmnews.event.EventKeyTerm;
+import net.yozmnews.event.EventNeighbor;
+import net.yozmnews.event.EventProfile;
 import net.yozmnews.event.EventStatus;
 import net.yozmnews.event.EventView;
 import org.jspecify.annotations.Nullable;
@@ -30,7 +34,10 @@ import org.springframework.jdbc.core.simple.JdbcClient;
  * 읽기, 기사의 사건, 기간 안 배정, 사건 쪽 넘기기를 Flyway 가 적용된 실제 PostgreSQL 에서 본다. 시험은 시험 트랜잭션 안에서 돌고
  * 되돌린다 — 기간 조회는 다른 시험의 행과 겹치지 않게 먼 시각(2031년)을 쓴다.
  * <p>
- * 지키는 규칙: event-R14 · event-R20
+ * 사건 표현 · 이웃 사건 · 채우기 대상(스토리라인 잇기의 재료)도 본다 — 모델 버전을 시험마다 따로 써 다른 시험의 행과 겹치지 않게 하고,
+ * 채우기 대상은 먼 시각(2032년)을 쓴다.
+ * <p>
+ * 지키는 규칙: event-R14 · event-R20 · event-R24
  */
 @JdbcTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -190,6 +197,91 @@ class JdbcEventQueryRepositoryTests {
 		assertThat(this.repository.page(from, to, last.lastArticleAt(), last.id().value(), 2))
 			.extracting(view -> view.id().value())
 			.containsExactly(early);
+	}
+
+	@Test
+	void profilesSkipMergedAndMissingEvents() {
+		long open = event("OPEN", "profile-m", "[1,0.5]", "2026-11-01T00:00:00Z", "2026-11-02T00:00:00Z");
+		long closed = event("CLOSED", "profile-m", "[0,1]", "2026-11-03T00:00:00Z", "2026-11-03T00:00:00Z");
+		long merged = event("OPEN", "profile-m", "[1,0]", "2026-11-01T00:00:00Z", "2026-11-01T00:00:00Z");
+		merge(merged, open);
+		terms(open, Map.of("물가", 1, "금리", 3, "환율", 1));
+
+		Map<Long, EventProfile> profiles = this.repository.profiles(List.of(open, closed, merged, 999_999L), 2);
+
+		assertThat(profiles).containsOnlyKeys(open, closed);
+		EventProfile profile = profiles.get(open);
+		assertThat(profile.id()).isEqualTo(new EventId(open));
+		assertThat(profile.status()).isEqualTo(EventStatus.OPEN);
+		assertThat(profile.modelVersion()).isEqualTo("profile-m");
+		assertThat(profile.centroid()).containsExactly(1f, 0.5f);
+		assertThat(profile.articleCount()).isEqualTo(3);
+		assertThat(profile.firstArticleAt()).isEqualTo(Instant.parse("2026-11-01T00:00:00Z"));
+		assertThat(profile.lastArticleAt()).isEqualTo(Instant.parse("2026-11-02T00:00:00Z"));
+		// 기사 수가 많은 순, 같으면 말 바이트 순(물 U+BB3C < 환 U+D658) — 상위 2개
+		assertThat(profile.keyTerms()).containsExactly(new EventKeyTerm("금리", 3), new EventKeyTerm("물가", 1));
+		assertThat(profiles.get(closed).status()).isEqualTo(EventStatus.CLOSED);
+		assertThat(profiles.get(closed).keyTerms()).isEmpty();
+		assertThat(this.repository.profiles(List.of(), 20)).isEmpty();
+	}
+
+	@Test
+	void neighborsAreSameModelUnmergedEventsInTheRangeAboveTheFloor() {
+		long base = event("OPEN", "near-m", "[1,0]", "2026-11-01T00:00:00Z", "2026-11-02T00:00:00Z");
+		// 정수 성분 — 반 정밀도에서도 코사인이 정확하다: [4,3] 0.8, [3,4] 0.6
+		long near = event("CLOSED", "near-m", "[4,3]", "2026-11-05T00:00:00Z", "2026-11-05T00:00:00Z");
+		long far = event("OPEN", "near-m", "[3,4]", "2026-11-01T00:00:00Z", "2026-11-01T00:00:00Z");
+		event("OPEN", "near-other", "[1,0]", "2026-11-01T00:00:00Z", "2026-11-01T00:00:00Z");
+		long merged = event("OPEN", "near-m", "[1,0]", "2026-11-01T00:00:00Z", "2026-11-01T00:00:00Z");
+		merge(merged, far);
+		event("OPEN", "near-m", "[0,0]", "2026-11-01T00:00:00Z", "2026-11-01T00:00:00Z");
+		event("OPEN", "near-m", "[1,0]", "2026-11-06T00:00:00Z", "2026-11-07T00:00:00Z");
+		event("OPEN", "near-m", "[1,0]", "2026-10-27T00:00:00Z", "2026-10-28T23:59:59Z");
+		terms(near, Map.of("국회", 2));
+		Instant from = Instant.parse("2026-10-29T00:00:00Z");
+		Instant to = Instant.parse("2026-11-05T00:00:00Z");
+
+		List<EventNeighbor> above = this.repository.neighbors(base, from, to, 0.7, 20, 10);
+		assertThat(above).extracting(EventNeighbor::id).containsExactly(new EventId(near));
+		assertThat(above.get(0).cosine()).isCloseTo(0.8, within(1e-6));
+		assertThat(above.get(0).articleCount()).isEqualTo(3);
+		assertThat(above.get(0).keyTerms()).containsExactly(new EventKeyTerm("국회", 2));
+		// 영 벡터 중심은 코사인이 NaN 이라 하한 −1 이어도 빠진다. 범위 밖(11-06 ~ · ~ 10-28)과 다른 모델 버전 · 합쳐진 사건 · 자기 자신도
+		// 빠진다
+		assertThat(this.repository.neighbors(base, from, to, -1, 20, 10)).extracting(EventNeighbor::id)
+			.containsExactly(new EventId(near), new EventId(far));
+		assertThat(this.repository.neighbors(base, from, to, -1, 20, 1)).extracting(EventNeighbor::id)
+			.containsExactly(new EventId(near));
+		assertThat(this.repository.neighbors(merged, from, to, -1, 20, 10)).isEmpty();
+		assertThat(this.repository.neighbors(999_999L, from, to, -1, 20, 10)).isEmpty();
+	}
+
+	@Test
+	void lastArticleSinceIsUnmergedEventsEndingFromTheTimeInFirstArticleOrder() {
+		long late = event("CLOSED", "since-m", "[1,0]", "2032-01-01T00:00:00Z", "2032-01-03T00:00:00Z");
+		long early = event("OPEN", "since-m", "[1,0]", "2031-12-30T00:00:00Z", "2032-01-02T00:00:00Z");
+		event("OPEN", "since-m", "[1,0]", "2031-12-01T00:00:00Z", "2032-01-01T23:59:59Z");
+		long merged = event("OPEN", "since-m", "[1,0]", "2032-01-04T00:00:00Z", "2032-01-04T00:00:00Z");
+		merge(merged, early);
+
+		assertThat(this.repository.lastArticleSince(Instant.parse("2032-01-02T00:00:00Z"))).extracting(EventView::id)
+			.containsExactly(new EventId(early), new EventId(late));
+	}
+
+	private void merge(long merged, long survivor) {
+		this.jdbc.sql("update events set status = 'MERGED', merged_into = :into, closed_at = now() where id = :id")
+			.param("into", survivor)
+			.param("id", merged)
+			.update();
+	}
+
+	private void terms(long event, Map<String, Integer> counts) {
+		counts.forEach((term, count) -> this.jdbc.sql(
+				"insert into event_key_terms (event_id, term, article_count) values (:event, :term, :count)")
+			.param("event", event)
+			.param("term", term)
+			.param("count", count)
+			.update());
 	}
 
 	private static List<ArticleId> ids(long... values) {

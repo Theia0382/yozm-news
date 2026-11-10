@@ -7,21 +7,28 @@ import java.sql.Types;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.event.EventId;
 import net.yozmnews.event.EventStatus;
+import net.yozmnews.event.EventsChanged;
 import net.yozmnews.event.domain.assignment.CandidateScoring;
 import net.yozmnews.event.domain.assignment.EventSnapshot;
 import net.yozmnews.event.domain.event.EventRepository;
 import net.yozmnews.event.domain.event.LockedEvent;
 import net.yozmnews.event.domain.event.MergeSubject;
+import net.yozmnews.platform.VectorText;
 import org.jspecify.annotations.Nullable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * {@link EventRepository} 의 JdbcClient 구현 — docs/specs/event.md §4.
@@ -30,6 +37,9 @@ import org.springframework.stereotype.Repository;
  * 를 열린 사건마다 센다(인덱스를 쓰지 않는 정확 검색). 사건 핵심 말의 상위 수는 {@link CandidateScoring#EVENT_KEY_TERMS} 를 매개변수로
  * 넘긴다. 말 순은 바이트 순({@code COLLATE "C"})이라 DB 의 정렬 규칙과 무관하다. 병합은 남는 사건의 값을 쓰고 합쳐질 사건의 핵심 말
  * 수를 더한 뒤, 합쳐질 사건 행을 {@code MERGED} 로 남겨 남는 사건을 바로 가리키게 한다(사슬 없음).
+ * <p>
+ * 사건을 열고 · 고치고 · 지우고 · 합치고 · 닫는 다섯 메서드는 트랜잭션 안에서만 돌고({@link Propagation#MANDATORY}), 끝에
+ * {@link EventsChanged} 를 한 번 발행한다(event-R23) — 트랜잭션 밖이면 커밋 뒤 리스너가 불리지 않아 알림이 조용히 빠진다.
  */
 @Repository
 class JdbcEventRepository implements EventRepository {
@@ -47,8 +57,11 @@ class JdbcEventRepository implements EventRepository {
 
 	private final JdbcClient jdbc;
 
-	JdbcEventRepository(JdbcClient jdbc) {
+	private final ApplicationEventPublisher publisher;
+
+	JdbcEventRepository(JdbcClient jdbc, ApplicationEventPublisher publisher) {
 		this.jdbc = jdbc;
+		this.publisher = publisher;
 	}
 
 	@Override
@@ -107,6 +120,7 @@ class JdbcEventRepository implements EventRepository {
 	}
 
 	@Override
+	@Transactional(propagation = Propagation.MANDATORY)
 	public long open(String modelVersion, float[] centroid, Instant publishedAt, List<String> keyTerms, Instant now) {
 		long id = this.jdbc.sql("""
 				insert into events (status, model_version, centroid, article_count, first_article_at, last_article_at,
@@ -122,17 +136,21 @@ class JdbcEventRepository implements EventRepository {
 			.single();
 		// 기사 하나의 핵심 말이다 — 같은 말은 한 번 센다
 		addTerms(id, List.copyOf(new LinkedHashSet<>(keyTerms)));
+		changed(id);
 		return id;
 	}
 
 	@Override
+	@Transactional(propagation = Propagation.MANDATORY)
 	public void update(LockedEvent next, List<String> addedTerms, List<String> removedTerms) {
 		write(next);
 		addTerms(next.id(), addedTerms);
 		removeTerms(next.id(), removedTerms);
+		changed(next.id());
 	}
 
 	@Override
+	@Transactional(propagation = Propagation.MANDATORY)
 	public void delete(long eventId) {
 		// 이 사건과 이 사건에 합쳐진 사건 행 — 합쳐진 행이 이 사건을 가리키므로(FK) 먼저 지운다
 		Long[] ids = this.jdbc.sql("select id from events where id = :id or merged_into = :id")
@@ -146,6 +164,7 @@ class JdbcEventRepository implements EventRepository {
 			.update();
 		this.jdbc.sql("delete from events where merged_into = :id").param("id", eventId).update();
 		this.jdbc.sql("delete from events where id = :id").param("id", eventId).update();
+		changed(ids);
 	}
 
 	@Override
@@ -177,6 +196,7 @@ class JdbcEventRepository implements EventRepository {
 	}
 
 	@Override
+	@Transactional(propagation = Propagation.MANDATORY)
 	public void absorb(LockedEvent survivorNext, LockedEvent absorbed, Instant now) {
 		write(survivorNext);
 		this.jdbc.sql("""
@@ -198,6 +218,7 @@ class JdbcEventRepository implements EventRepository {
 			.param("absorbed", absorbed.id())
 			.param("now", timestamp(now))
 			.update();
+		changed(survivorNext.id(), absorbed.id());
 	}
 
 	@Override
@@ -217,6 +238,7 @@ class JdbcEventRepository implements EventRepository {
 	}
 
 	@Override
+	@Transactional(propagation = Propagation.MANDATORY)
 	public void close(long eventId, @Nullable ArticleId representative, Instant now) {
 		this.jdbc.sql("""
 				update events set status = 'CLOSED', closed_at = :now, representative_article_id = :representative
@@ -226,6 +248,7 @@ class JdbcEventRepository implements EventRepository {
 			.param("now", timestamp(now))
 			.param("representative", (representative != null) ? representative.value() : null, Types.BIGINT)
 			.update();
+		changed(eventId);
 	}
 
 	@Override
@@ -236,6 +259,19 @@ class JdbcEventRepository implements EventRepository {
 		this.jdbc.sql("update events set representative_article_id = null where representative_article_id = any(:ids)")
 			.param("ids", articleIds.stream().map(ArticleId::value).toArray(Long[]::new))
 			.update();
+	}
+
+	/** 바뀐 사건을 알린다 — 부르는 트랜잭션의 발행 레지스트리에 남는다(event-R23) */
+	private void changed(long... eventIds) {
+		this.publisher.publishEvent(new EventsChanged(Arrays.stream(eventIds).mapToObj(EventId::new).toList()));
+	}
+
+	/** 지운 행이 없으면(이미 없는 사건) 알리지 않는다 */
+	private void changed(Long[] eventIds) {
+		if (eventIds.length == 0) {
+			return;
+		}
+		changed(Arrays.stream(eventIds).mapToLong(Long::longValue).toArray());
 	}
 
 	/** 잠근 사건의 값을 쓴다 — 고칠 때마다 {@code revision} 을 하나 늘린다. 연 시각은 합치면 이른 쪽이 된다 */

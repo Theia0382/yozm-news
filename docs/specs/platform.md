@@ -19,6 +19,7 @@
 - **코드 포인트 자르기** — 텍스트를 앞 몇 코드 포인트로 자르는 공개 타입(`CodePoints`). 피드 요약문(`source`) · 평가 입력(`evaluation`) · 기사 표현 텍스트(`event`)의 길이 상한이 쓴다
 - **날짜 범위 변환** — 날짜 범위를 시간대의 자정으로 시각 범위에 옮기고, 시간대 전환 여유를 더한 시각 길이 상한을 내는 공개 타입(`DayRange`). 집계 기간(`evaluation` 의 `EvaluationPeriod`)과 사건 조회 기간(`event` 의 `EventPeriod`)이 쓴다
 - **HTTP 응답 본문 상한** — JDK `HttpClient` 의 응답 본문을 상한까지만 받는 공개 타입(`CappedBody`). 외부 API 를 부르는 어댑터(`evaluation` 의 Jev · `event` 의 외부 임베딩)가 쓴다
+- **벡터의 pgvector 텍스트 표현** — 벡터를 pgvector 의 텍스트 표현으로 쓰고 되읽는 공개 타입(`VectorText`). 기사 표현 · 사건 중심(`event`)과 스토리라인 중심(`storyline`)의 저장소가 쓴다
 
 하지 않는 것:
 
@@ -50,7 +51,7 @@
 
 ## 3. 공개 인터페이스
 
-모듈 최상위 패키지 `net.yozmnews.platform` 의 공개 타입은 역할 애너테이션 둘, 로컬 개발 애너테이션 하나, 문제 응답 둘(`ApiProblem` · `ProblemResponses`), 이벤트 발행 운영 API(`EventPublicationAdministration` 과 결과 타입 — 파일 9개, 중첩 레코드를 더하면 타입 11개), YAML 원문 읽기(파일 8개), 코드 포인트 자르기 하나(`CodePoints`), 날짜 범위 변환 하나(`DayRange`), HTTP 응답 본문 수신자 하나(`CappedBody` — 중첩 타입을 더하면 넷)다.
+모듈 최상위 패키지 `net.yozmnews.platform` 의 공개 타입은 역할 애너테이션 둘, 로컬 개발 애너테이션 하나, 문제 응답 둘(`ApiProblem` · `ProblemResponses`), 이벤트 발행 운영 API(`EventPublicationAdministration` 과 결과 타입 — 파일 9개, 중첩 레코드를 더하면 타입 11개), YAML 원문 읽기(파일 8개), 코드 포인트 자르기 하나(`CodePoints`), 날짜 범위 변환 하나(`DayRange`), HTTP 응답 본문 수신자 하나(`CappedBody` — 중첩 타입을 더하면 넷), 벡터의 pgvector 텍스트 표현 하나(`VectorText`)다.
 
 | 타입 | 형태 | 용도 |
 |---|---|---|
@@ -254,6 +255,24 @@ public record DayRange(Instant from, Instant to) {
 
 관련 규칙: 없음. 날짜 수의 상한과 기간 규칙은 쓰는 모듈이 갖는다(evaluation-R28 · event-R20).
 
+### VectorText
+
+벡터의 pgvector 텍스트 표현 — 빈이 아닌 정적 함수다. SQL 이 이 텍스트를 `vector` · `halfvec` 로 바꾸고, `::text` 로 되읽은 값을 `parse` 가 읽는다.
+
+```java
+public final class VectorText {
+    public static String of(float[] values);
+    public static float[] parse(String text);
+}
+```
+
+- 계약
+  - `of` 는 `[v1,v2,…]` — 값은 `Float.toString` 이다. 지수 표기(`1.0E-5`)는 pgvector 의 입력 파서가 받는다. 빈 배열이거나 NaN · 무한이 있으면 `IllegalArgumentException`
+  - `parse` 는 `[ … ]` 꼴의 쉼표로 나눈 값을 읽는다. 그 꼴이 아니거나 값이 비었으면 `IllegalArgumentException`
+  - 벡터 값의 의미(차원 · 정규화)는 갖지 않는다 — 쓰는 모듈이 갖는다
+
+관련 규칙: 없음. 벡터를 쓰는 테이블 · 검색은 쓰는 모듈의 것이다(platform-R19).
+
 ### EventPublicationAdministration
 
 남겨진 발행의 목록 · 다시 처리 · 폐기 — `admin` 의 운영자 API 가 부른다. 구현은 `application` 의 `EventPublicationAdministrationService` 다.
@@ -309,7 +328,7 @@ HTTP 엔드포인트:
 
 | 패키지 | 책임 |
 |---|---|
-| (최상위) | 역할 애너테이션 · 문제 응답 · 이벤트 발행 운영 API · YAML 원문 읽기 · 코드 포인트 자르기 · 날짜 범위 변환(§3) |
+| (최상위) | 역할 애너테이션 · 문제 응답 · 이벤트 발행 운영 API · YAML 원문 읽기 · 코드 포인트 자르기 · 날짜 범위 변환 · HTTP 응답 본문 상한 · 벡터의 pgvector 텍스트 표현(§3) |
 | `adapter/in/job` | 이벤트 발행 재처리 반복 작업 |
 | `adapter/in/web` | API 계약 확인 엔드포인트, 화면용 API 명세 설정, 컨트롤러 오류의 문제 응답 |
 | `adapter/out/persistence` | 이벤트 발행 레지스트리 행의 읽기 · 조건부 삭제, 설치된 DB 확장의 버전 읽기 |

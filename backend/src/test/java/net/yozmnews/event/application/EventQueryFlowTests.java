@@ -32,9 +32,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.TestPropertySource;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
@@ -164,6 +164,25 @@ class EventQueryFlowTests {
 		assertThatIllegalArgumentException()
 			.isThrownBy(() -> this.directory.list(PERIOD, null, EventDirectory.MAX_PAGE_SIZE + 1));
 		assertThat(this.directory.list(PERIOD, null, EventDirectory.MAX_PAGE_SIZE).events()).hasSize(2);
+	}
+
+	@Test
+	void theLinkingMaterialQueriesCheckTheirRanges() {
+		EventId x = new EventId(this.eventX);
+		Instant at = Instant.parse("2026-11-05T00:00:00Z");
+		assertThatIllegalArgumentException().isThrownBy(() -> this.directory.profiles(List.of(x), 0));
+		assertThatIllegalArgumentException()
+			.isThrownBy(() -> this.directory.profiles(List.of(x), EventDirectory.MAX_KEY_TERMS + 1));
+		assertThat(this.directory.profiles(List.of(x), EventDirectory.MAX_KEY_TERMS)).containsOnlyKeys(x);
+		assertThat(this.directory.profiles(List.of(), 1)).isEmpty();
+		assertThatIllegalArgumentException()
+			.isThrownBy(() -> this.directory.neighbors(x, at.plusSeconds(1), at, -1, 20, 10));
+		assertThatIllegalArgumentException().isThrownBy(() -> this.directory.neighbors(x, at, at, -1, 0, 10));
+		assertThatIllegalArgumentException().isThrownBy(() -> this.directory.neighbors(x, at, at, -1, 20, 0));
+		assertThatIllegalArgumentException()
+			.isThrownBy(() -> this.directory.neighbors(x, at, at, -1, 20, EventDirectory.MAX_NEIGHBORS + 1));
+		assertThat(this.directory.neighbors(x, at, at, -1, EventDirectory.MAX_KEY_TERMS, EventDirectory.MAX_NEIGHBORS))
+			.isNotNull();
 	}
 
 	@Test

@@ -1,5 +1,6 @@
 package net.yozmnews.event.adapter.out.persistence;
 
+import java.sql.Array;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
@@ -17,12 +18,16 @@ import net.yozmnews.article.ArticleId;
 import net.yozmnews.event.DecidedBy;
 import net.yozmnews.event.EventArticleView;
 import net.yozmnews.event.EventId;
+import net.yozmnews.event.EventKeyTerm;
+import net.yozmnews.event.EventNeighbor;
+import net.yozmnews.event.EventProfile;
 import net.yozmnews.event.EventStatus;
 import net.yozmnews.event.EventView;
 import net.yozmnews.event.JudgementUse;
 import net.yozmnews.event.MergePair;
 import net.yozmnews.event.MergedEvent;
 import net.yozmnews.event.domain.event.EventQueryRepository;
+import net.yozmnews.platform.VectorText;
 import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
@@ -31,13 +36,23 @@ import org.springframework.stereotype.Repository;
  * {@link EventQueryRepository} 의 JdbcClient 구현 — docs/specs/event.md §4.
  * <p>
  * 대표 기사의 정렬은 {@link CentroidOrder#ORDER} 다 — 표현은 사건 모델 버전의 행만 왼쪽 조인한다. 기간은
- * {@code event_articles.published_at} 범위로 고른다(인덱스 {@code event_articles_published_idx}).
+ * {@code event_articles.published_at} 범위로 고른다(인덱스 {@code event_articles_published_idx}). 이웃 사건은 기준 사건과 같은 모델
+ * 버전의 합쳐지지 않은 사건마다 코사인을 센다(인덱스 없음) — 거리가 NaN(영 벡터 중심)인 행은 뺀다. 이웃 · 채우기 대상의 시각 조건은
+ * {@code events_unmerged_idx} 로 거른다.
  */
 @Repository
 class JdbcEventQueryRepository implements EventQueryRepository {
 
 	private static final String EVENT_COLUMNS = """
 			e.id, e.status, e.article_count, e.first_article_at, e.last_article_at, e.created_at
+			""";
+
+	/** 사건 {@code e} 의 핵심 말과 그 기사 수 상위 {@code :terms} 개 — 두 배열의 순서가 같다 */
+	private static final String TOP_TERMS_WITH_COUNTS = """
+			array(select k.term from event_key_terms k where k.event_id = e.id
+			      order by k.article_count desc, k.term collate "C" limit :terms) as key_terms,
+			array(select k.article_count from event_key_terms k where k.event_id = e.id
+			      order by k.article_count desc, k.term collate "C" limit :terms) as key_counts
 			""";
 
 	private static final String IN_PERIOD = "a.published_at >= :from and a.published_at < :to";
@@ -234,6 +249,65 @@ class JdbcEventQueryRepository implements EventQueryRepository {
 		return Collections.unmodifiableMap(result);
 	}
 
+	@Override
+	public Map<Long, EventProfile> profiles(Collection<Long> eventIds, int keyTerms) {
+		if (eventIds.isEmpty()) {
+			return Map.of();
+		}
+		Map<Long, EventProfile> profiles = new LinkedHashMap<>();
+		this.jdbc.sql("select e.id, e.status, e.model_version, e.centroid::text as centroid, e.article_count, "
+				+ "e.first_article_at, e.last_article_at, " + TOP_TERMS_WITH_COUNTS + """
+				from events e
+				where e.id = any(:ids) and e.status <> 'MERGED'
+				order by e.id
+				""")
+			.param("ids", eventIds.toArray(Long[]::new))
+			.param("terms", keyTerms)
+			.query((ResultSet rs) -> {
+				long id = rs.getLong("id");
+				profiles.put(id, new EventProfile(new EventId(id), EventStatus.valueOf(rs.getString("status")),
+						rs.getString("model_version"), VectorText.parse(rs.getString("centroid")),
+						rs.getInt("article_count"), instant(rs, "first_article_at"), instant(rs, "last_article_at"),
+						keyTerms(rs)));
+			});
+		return Collections.unmodifiableMap(profiles);
+	}
+
+	@Override
+	public List<EventNeighbor> neighbors(long eventId, Instant from, Instant to, double minCosine, int keyTerms,
+			int limit) {
+		return this.jdbc.sql("select e.id, 1 - (e.centroid <=> b.centroid) as cosine, e.article_count, "
+				+ "e.first_article_at, e.last_article_at, " + TOP_TERMS_WITH_COUNTS + """
+				from events b
+				join events e on e.model_version = b.model_version and e.id <> b.id and e.status <> 'MERGED'
+				where b.id = :id and b.status <> 'MERGED'
+				  and e.last_article_at >= :from and e.first_article_at <= :to
+				  and (e.centroid <=> b.centroid) <> 'NaN'
+				  and 1 - (e.centroid <=> b.centroid) >= :min
+				order by cosine desc, e.id
+				limit :limit
+				""")
+			.param("id", eventId)
+			.param("from", timestamp(from))
+			.param("to", timestamp(to))
+			.param("min", minCosine)
+			.param("terms", keyTerms)
+			.param("limit", limit)
+			.query((rs, row) -> new EventNeighbor(new EventId(rs.getLong("id")), rs.getDouble("cosine"),
+					rs.getInt("article_count"), instant(rs, "first_article_at"), instant(rs, "last_article_at"),
+					keyTerms(rs)))
+			.list();
+	}
+
+	@Override
+	public List<EventView> lastArticleSince(Instant since) {
+		return this.jdbc.sql("select " + EVENT_COLUMNS + """
+				from events e
+				where e.status <> 'MERGED' and e.last_article_at >= :since
+				order by e.first_article_at, e.id
+				""").param("since", timestamp(since)).query(JdbcEventQueryRepository::event).list();
+	}
+
 	private static Map<Long, ArticleId> firstPerEvent(JdbcClient.StatementSpec statement) {
 		Map<Long, ArticleId> representatives = new LinkedHashMap<>();
 		statement.query((ResultSet rs) -> {
@@ -257,6 +331,20 @@ class JdbcEventQueryRepository implements EventQueryRepository {
 		return new EventView(new EventId(rs.getLong("id")), EventStatus.valueOf(rs.getString("status")),
 				rs.getInt("article_count"), instant(rs, "first_article_at"), instant(rs, "last_article_at"),
 				instant(rs, "created_at"));
+	}
+
+	private static List<EventKeyTerm> keyTerms(ResultSet rs) throws SQLException {
+		String[] terms = strings(rs.getArray("key_terms"));
+		Integer[] counts = (Integer[]) rs.getArray("key_counts").getArray();
+		List<EventKeyTerm> keyTerms = new ArrayList<>(terms.length);
+		for (int i = 0; i < terms.length; i++) {
+			keyTerms.add(new EventKeyTerm(terms[i], counts[i]));
+		}
+		return List.copyOf(keyTerms);
+	}
+
+	private static String[] strings(Array array) throws SQLException {
+		return (String[]) array.getArray();
 	}
 
 	private static OffsetDateTime timestamp(Instant instant) {

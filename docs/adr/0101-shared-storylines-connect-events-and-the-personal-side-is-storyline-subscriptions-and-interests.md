@@ -47,3 +47,8 @@
 | `storyline` 이 공유 층과 사용자별 구독까지 갖는다 | 공유 층이 사용자를 알게 된다 — 사건(`event`)과 같은 "사용자를 모른다" 경계를 잃는다 |
 | 새 모듈(예: `subscription`)이 스토리라인 구독과 사용자별 정보를 갖는다 | 주제 구독은 `user` 에 남아 구독이 두 모듈로 갈리고, 모듈이 늘어난다 |
 | 공유 층의 이름을 "이슈"(`issue`)로 둔다 | GitHub 이슈와 겹친다 |
+
+## 후속 기록
+
+- 2026-11-10: 결정 "공유 스토리라인의 책임 · 계약은 구현할 때 정한다" — [ADR-0105](0105-storylines-link-incrementally-from-event-change-notifications-and-events-publish-changed-event-ids.md)(증분 잇기 · 사건 변화 알림 · 소속 데이터의 틀), 지금 상태는 [storyline Spec](../specs/storyline.md)
+- 2026-11-10: 결정 "소속을 정하는 방법은 스토리라인을 구현할 때 정한다" — [ADR-0106](0106-provisional-storyline-linking-opens-only-with-a-partner-event-and-adds-the-single-best-storyline-without-removal.md)(임시 판 — 주 소속 · 합계 규칙 · 평가 지표는 정하지 않았다), 지금 상태는 [storyline Spec "임시 잇기 규칙"](../specs/storyline.md#임시-잇기-규칙)

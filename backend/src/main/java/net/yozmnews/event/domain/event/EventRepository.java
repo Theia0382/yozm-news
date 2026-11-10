@@ -11,6 +11,10 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * 사건 저장소 — 사건 행과 사건 핵심 말 · docs/specs/event.md §4.
+ * <p>
+ * 사건을 열고 · 고치고 · 지우고 · 합치고 · 닫는 메서드({@link #open} · {@link #update} · {@link #delete} · {@link #absorb} ·
+ * {@link #close})는 트랜잭션 안에서 부르고, 같은 트랜잭션에서 바뀐 사건 ID 를 {@link net.yozmnews.event.EventsChanged} 로 발행한다
+ * (event-R23). 트랜잭션 밖에서 부르면 실패한다.
  */
 public interface EventRepository {
 

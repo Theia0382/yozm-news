@@ -1,5 +1,6 @@
 package net.yozmnews.admin.adapter.in.web;
 
+import net.yozmnews.evaluation.TagBackfillAdministration;
 import net.yozmnews.evaluation.TagBackfillRequestResult;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -21,7 +22,7 @@ record TagBackfillResponse(Outcome result, TagBackfillRunResponse run) {
 				new TagBackfillResponse(Outcome.REQUESTED, TagBackfillRunResponse.of(requested.run()));
 			case TagBackfillRequestResult.AlreadyOpen open ->
 				new TagBackfillResponse(Outcome.ALREADY_OPEN, TagBackfillRunResponse.of(open.run()));
-			case TagBackfillRequestResult.DaysOutOfRange outOfRange -> throw BackfillDays.outOfRange();
+			case TagBackfillRequestResult.DaysOutOfRange outOfRange -> throw BackfillDays.outOfRange(TagBackfillAdministration.MAX_DAYS);
 		};
 	}
 
