@@ -1,5 +1,6 @@
 package net.yozmnews.event;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -9,8 +10,8 @@ import net.yozmnews.article.ArticleId;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 다른 모듈이 사건을 읽는 조회 — 사건 · 사건의 기사 · 기사의 사건 · 대표 기사 · 큰 사건 · 사건 목록 · docs/specs/event.md §3 ·
- * event-R14 · event-R15 · event-R20.
+ * 다른 모듈이 사건을 읽는 조회 — 사건 · 사건의 기사 · 기사의 사건 · 대표 기사 · 큰 사건 · 사건 목록과 스토리라인 잇기의 재료(사건 표현 ·
+ * 이웃 사건 · 채우기 대상) · docs/specs/event.md §3 · event-R14 · event-R15 · event-R20 · event-R24.
  * <p>
  * 사용자 정보를 받지 않는다. 트랜잭션을 열지 않는다 — 각 질의는 그 순간의 값이고, 큰 사건의 재료(소스 · 중요도)는 다른 모듈의 공개 조회로
  * 따로 읽는다.
@@ -19,6 +20,12 @@ public interface EventDirectory {
 
 	/** 사건 목록 한 쪽의 상한 — 정본. 측정 전 목표 */
 	int MAX_PAGE_SIZE = 100;
+
+	/** 표현 · 이웃 조회의 핵심 말 수 상한 — 정본 */
+	int MAX_KEY_TERMS = 100;
+
+	/** 이웃 조회 한 번의 상한 — 정본 */
+	int MAX_NEIGHBORS = 100;
 
 	/**
 	 * 사건 하나 — 합쳐진 사건(event-R13)이면 남는 사건을 낸다.
@@ -65,5 +72,28 @@ public interface EventDirectory {
 	 * @throws IllegalStateException 쪽에 사건이 있는데 큰 사건 기준의 처음 값을 적재하기 전일 때
 	 */
 	EventPage list(EventPeriod period, @Nullable EventCursor after, int size);
+
+	/**
+	 * 사건들의 표현 — 핵심 말은 기사 수가 많은 순(같으면 말 바이트 순) 상위 {@code keyTerms} 개(event-R24).
+	 * @return 사건 ID → 표현 — 합쳐진 사건 · 없는 사건은 빠진다. 빈 입력이면 빈 맵
+	 * @throws IllegalArgumentException {@code keyTerms} 가 1 ~ {@link #MAX_KEY_TERMS} 밖일 때
+	 */
+	Map<EventId, EventProfile> profiles(Collection<EventId> ids, int keyTerms);
+
+	/**
+	 * 사건과 가까운 사건 — 같은 모델 버전이고 합쳐지지 않았고(열림 · 닫힘), 첫 ~ 마지막 기사 시각이 {@code [from, to]} 와 겹치고, 중심의
+	 * 코사인 유사도가 {@code minCosine} 이상인 사건(event-R24). 그 사건 자신과 코사인을 셀 수 없는 사건(영 벡터 중심)은 빠진다. 코사인
+	 * 내림차순, 사건 ID 순으로 {@code limit} 개까지.
+	 * @return 그 사건이 합쳐졌거나 없으면 빈 목록
+	 * @throws IllegalArgumentException {@code from} 이 {@code to} 보다 늦거나, {@code keyTerms} 가 1 ~
+	 * {@link #MAX_KEY_TERMS} 밖이거나, {@code limit} 이 1 ~ {@link #MAX_NEIGHBORS} 밖일 때
+	 */
+	List<EventNeighbor> neighbors(EventId id, Instant from, Instant to, double minCosine, int keyTerms, int limit);
+
+	/**
+	 * 마지막 기사 시각이 {@code since} 이후(같으면 포함)인, 합쳐지지 않은 사건 — 첫 기사 시각 · 사건 ID 순(event-R24). 스토리라인 채우기가
+	 * 쓴다.
+	 */
+	List<EventView> lastArticleSince(Instant since);
 
 }

@@ -26,6 +26,8 @@ import net.yozmnews.evaluation.MembershipJudgement;
 import net.yozmnews.evaluation.MembershipQuery;
 import net.yozmnews.event.AssignmentCriteria;
 import net.yozmnews.event.EventArticles;
+import net.yozmnews.event.EventId;
+import net.yozmnews.event.EventsChanged;
 import net.yozmnews.event.domain.assignment.AssignmentQueueRepository;
 import net.yozmnews.event.domain.assignment.AssignmentRule;
 import net.yozmnews.event.domain.assignment.AssignmentSchedule;
@@ -49,6 +51,8 @@ import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.event.ApplicationEvents;
+import org.springframework.test.context.event.RecordApplicationEvents;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -65,6 +69,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
+@RecordApplicationEvents
 @TestPropertySource(properties = "jobrunr.background-job-server.enabled=false")
 @ExtendWith(OutputCaptureExtension.class)
 class EventAssignmentFlowTests {
@@ -77,6 +82,9 @@ class EventAssignmentFlowTests {
 			0.50);
 
 	private static final ArticleEmbedder MODEL_A = new ModelOnly("model-a");
+
+	@Autowired
+	ApplicationEvents published;
 
 	@Autowired
 	AssignmentQueueRepository queue;
@@ -127,6 +135,8 @@ class EventAssignmentFlowTests {
 
 		long event = eventOf(first);
 		assertThat(eventOf(second)).isEqualTo(event);
+		// 열기 · 붙이기가 각각 그 사건을 알린다(event-R23)
+		assertThat(changes()).containsExactly(List.of(event), List.of(event));
 		// 새 사건을 연 기사는 연 사건 표지가 참, 붙인 기사는 거짓이다
 		assertThat(assignment(first)).containsEntry("score", null)
 			.containsEntry("decided_by", "FORMULA")
@@ -564,6 +574,13 @@ class EventAssignmentFlowTests {
 			return this.answer.apply(query);
 		}
 
+	}
+
+	/** 알림마다 사건 ID 목록 — 발행 순(event-R23) */
+	private List<List<Long>> changes() {
+		return this.published.stream(EventsChanged.class)
+			.map(changed -> changed.eventIds().stream().map(EventId::value).toList())
+			.toList();
 	}
 
 }

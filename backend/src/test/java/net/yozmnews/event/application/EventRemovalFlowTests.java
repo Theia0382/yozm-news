@@ -25,6 +25,8 @@ import net.yozmnews.evaluation.EventMembership;
 import net.yozmnews.evaluation.MembershipJudgement;
 import net.yozmnews.event.AssignmentCriteria;
 import net.yozmnews.event.EventArticles;
+import net.yozmnews.event.EventId;
+import net.yozmnews.event.EventsChanged;
 import net.yozmnews.event.domain.assignment.AssignmentQueueRepository;
 import net.yozmnews.event.domain.assignment.CriteriaRepository;
 import net.yozmnews.event.domain.assignment.StoredCandidate;
@@ -45,6 +47,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.event.ApplicationEvents;
+import org.springframework.test.context.event.RecordApplicationEvents;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
@@ -59,6 +63,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
+@RecordApplicationEvents
 @TestPropertySource(properties = "jobrunr.background-job-server.enabled=false")
 class EventRemovalFlowTests {
 
@@ -66,6 +71,9 @@ class EventRemovalFlowTests {
 
 	private static final AssignmentCriteria CRITERIA = new AssignmentCriteria(Duration.ofHours(72), 0.80, 0.55, 0.40,
 			0.50);
+
+	@Autowired
+	ApplicationEvents published;
 
 	@Autowired
 	AssignmentQueueRepository queue;
@@ -260,8 +268,12 @@ class EventRemovalFlowTests {
 		round(this.assignments, query -> new MembershipJudgement.Judged(new EventJudgementId(1), Map.of(this.event, 0.1))).run(new ModelOnly());
 		long other = eventOf(y);
 		assertThat(other).isNotEqualTo(this.event);
+		this.published.clear();
 
 		remove(this.c, y);
+
+		// 기사 삭제 따르기 — 줄인 사건과 비어 지운 사건을 알린다(event-R23)
+		assertThat(changes()).containsExactlyInAnyOrder(List.of(this.event), List.of(other));
 
 		assertThat(eventRow(this.event)).containsEntry("centroid", "[1,0]")
 			.containsEntry("article_count", 2)
@@ -426,6 +438,13 @@ class EventRemovalFlowTests {
 			return result;
 		}
 
+	}
+
+	/** 알림마다 사건 ID 목록 — 발행 순(event-R23) */
+	private List<List<Long>> changes() {
+		return this.published.stream(EventsChanged.class)
+			.map(changed -> changed.eventIds().stream().map(EventId::value).toList())
+			.toList();
 	}
 
 }

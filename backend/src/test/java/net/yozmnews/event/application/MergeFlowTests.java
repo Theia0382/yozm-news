@@ -21,6 +21,8 @@ import net.yozmnews.evaluation.MembershipJudgement;
 import net.yozmnews.evaluation.MembershipQuery;
 import net.yozmnews.event.AssignmentCriteria;
 import net.yozmnews.event.EventArticles;
+import net.yozmnews.event.EventId;
+import net.yozmnews.event.EventsChanged;
 import net.yozmnews.event.domain.assignment.CriteriaRepository;
 import net.yozmnews.event.domain.assignment.MergeJudgementRepository;
 import net.yozmnews.event.domain.event.EventArticleRepository;
@@ -37,6 +39,8 @@ import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.event.ApplicationEvents;
+import org.springframework.test.context.event.RecordApplicationEvents;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -49,6 +53,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
+@RecordApplicationEvents
 @TestPropertySource(properties = "jobrunr.background-job-server.enabled=false")
 @ExtendWith(OutputCaptureExtension.class)
 class MergeFlowTests {
@@ -59,6 +64,9 @@ class MergeFlowTests {
 
 	private static final AssignmentCriteria CRITERIA = new AssignmentCriteria(Duration.ofHours(72), 0.80, 0.55, 0.40,
 			0.50);
+
+	@Autowired
+	ApplicationEvents published;
 
 	@Autowired
 	EventRepository events;
@@ -95,8 +103,12 @@ class MergeFlowTests {
 			throw new AssertionError("산식으로 합치므로 묻지 않는다: " + query);
 		});
 
+		this.published.clear();
+
 		round(membership).run();
 
+		// 합치기 — 남는 사건과 합쳐진 사건을 함께 알린다(event-R23)
+		assertThat(changes()).containsExactly(List.of(large, small));
 		assertThat(eventRow(small)).containsEntry("status", "MERGED")
 			.containsEntry("merged_into", large)
 			.containsEntry("closed", "2026-11-06T00:00:00Z");
@@ -418,6 +430,13 @@ class MergeFlowTests {
 			return this.answer.apply(query);
 		}
 
+	}
+
+	/** 알림마다 사건 ID 목록 — 발행 순(event-R23) */
+	private List<List<Long>> changes() {
+		return this.published.stream(EventsChanged.class)
+			.map(changed -> changed.eventIds().stream().map(EventId::value).toList())
+			.toList();
 	}
 
 }

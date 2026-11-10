@@ -1,5 +1,6 @@
 package net.yozmnews.admin.adapter.in.web;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -13,8 +14,10 @@ import net.yozmnews.event.EventArticleView;
 import net.yozmnews.event.EventCursor;
 import net.yozmnews.event.EventDirectory;
 import net.yozmnews.event.EventId;
+import net.yozmnews.event.EventNeighbor;
 import net.yozmnews.event.EventPage;
 import net.yozmnews.event.EventPeriod;
+import net.yozmnews.event.EventProfile;
 import net.yozmnews.event.EventView;
 import org.jspecify.annotations.Nullable;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -93,6 +96,23 @@ class FakeEventDirectory implements EventDirectory {
 		this.calls.add("list " + period.from() + " ~ " + period.to() + " after "
 				+ ((after == null) ? null : after.lastArticleAt() + "/" + after.id().value()) + " size " + size);
 		return FakeResults.given(this.page);
+	}
+
+	/** 운영자 API 는 스토리라인 잇기의 재료를 읽지 않는다 */
+	@Override
+	public Map<EventId, EventProfile> profiles(Collection<EventId> ids, int keyTerms) {
+		throw new UnsupportedOperationException("운영자 API 는 사건 표현을 읽지 않는다");
+	}
+
+	@Override
+	public List<EventNeighbor> neighbors(EventId id, Instant from, Instant to, double minCosine, int keyTerms,
+			int limit) {
+		throw new UnsupportedOperationException("운영자 API 는 이웃 사건을 읽지 않는다");
+	}
+
+	@Override
+	public List<EventView> lastArticleSince(Instant since) {
+		throw new UnsupportedOperationException("운영자 API 는 채우기 대상을 읽지 않는다");
 	}
 
 	/** 운영자 API 슬라이스에 대역을 싣는다 */
