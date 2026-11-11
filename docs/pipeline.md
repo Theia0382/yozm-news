@@ -135,7 +135,7 @@
 
 ## 8. 사건 묶기
 
-사건 묶기는 `event` 모듈이 한다 — event Spec 의 [기사 표현](specs/event.md#기사-표현) · [사건 묶기 대기와 회차](specs/event.md#사건-묶기-대기와-회차) · [사건 배정](specs/event.md#사건-배정) · [사건 정리](specs/event.md#사건-정리) · [대표 기사 · 큰 사건](specs/event.md#대표-기사--큰-사건), 포트는 [`ArticleEmbedder`](specs/event.md#articleembedder)에 있다.
+사건 묶기는 `event` 모듈이 한다 — event Spec 의 [기사 표현](specs/event.md#기사-표현) · [사건 묶기 대기와 회차](specs/event.md#사건-묶기-대기와-회차) · [사건 배정](specs/event.md#사건-배정) · [사건 정리](specs/event.md#사건-정리) · [대표 기사 · 큰 사건](specs/event.md#대표-기사--큰-사건), 임베딩은 `evaluation` 의 공개 API 이고 포트는 [`ArticleEmbedder`](specs/evaluation.md#articleembedder)에 있다.
 
 ## 9. 스토리라인
 
