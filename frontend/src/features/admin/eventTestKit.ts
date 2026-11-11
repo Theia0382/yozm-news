@@ -20,7 +20,6 @@ export function eventRow(
     periodArticles: 3,
     periodSources: 2,
     importance: 3.5,
-    big: false,
     representativeId: 41,
     representative: ARTICLE,
     ...changes,

@@ -171,7 +171,7 @@ class JdbcEventQueryRepositoryTests {
 		Map<Long, List<ArticleId>> expected = new LinkedHashMap<>();
 		expected.put(first, ids(112, 113));
 		expected.put(second, ids(115));
-		assertThat(this.repository.membersIn(from, to)).containsExactlyEntriesOf(expected);
+		assertThat(this.repository.membersIn(List.of(second, first), from, to)).containsExactlyEntriesOf(expected);
 		assertThat(this.repository.membersIn(List.of(second), from, to)).containsExactlyEntriesOf(Map.of(second, ids(115)));
 		assertThat(this.repository.membersIn(List.of(), from, to)).isEmpty();
 	}

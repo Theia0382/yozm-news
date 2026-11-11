@@ -14,7 +14,7 @@ import org.springframework.web.server.ResponseStatusException;
 /**
  * 운영자 API 의 기간 매개변수 — 시작일 · 종료일({@code yyyy-MM-dd})과 시간대(IANA ID)를 읽어 {@link EvaluationPeriod#ofDays}
  * (평가 현황 · 보도량 · 검수 · 기준 미리보기), {@link JudgementPeriod#ofDays}(판정 기록) 또는 {@link EventPeriod#ofDays}(사건 ·
- * 큰 사건)에 넘긴다. 형식 · 없는 시간대 · 범위 밖은 400 이다 — 범위는 공개 타입이 판정하고, 설명의 상한은 그 타입의 {@code MAX_DAYS}
+ * 큰 스토리라인)에 넘긴다. 형식 · 없는 시간대 · 범위 밖은 400 이다 — 범위는 공개 타입이 판정하고, 설명의 상한은 그 타입의 {@code MAX_DAYS}
  * 에서 읽는다(admin-R3).
  */
 final class AdminPeriods {

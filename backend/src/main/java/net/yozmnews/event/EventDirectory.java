@@ -10,11 +10,11 @@ import net.yozmnews.article.ArticleId;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 다른 모듈이 사건을 읽는 조회 — 사건 · 사건의 기사 · 기사의 사건 · 대표 기사 · 큰 사건 · 사건 목록 · 기간 안 사건 · 사건 묶음의 기간
+ * 다른 모듈이 사건을 읽는 조회 — 사건 · 사건의 기사 · 기사의 사건 · 대표 기사 · 사건 목록 · 기간 안 사건 · 사건 묶음의 기간
  * 집계와 스토리라인 잇기의 재료(사건 표현 · 이웃 사건 · 채우기 대상) · docs/specs/event.md §3 · event-R14 · event-R15 · event-R20 ·
  * event-R24.
  * <p>
- * 사용자 정보를 받지 않는다. 트랜잭션을 열지 않는다 — 각 질의는 그 순간의 값이고, 큰 사건의 재료(소스 · 중요도)는 다른 모듈의 공개 조회로
+ * 사용자 정보를 받지 않는다. 트랜잭션을 열지 않는다 — 각 질의는 그 순간의 값이고, 기간 집계의 재료(소스 · 중요도)는 다른 모듈의 공개 조회로
  * 따로 읽는다.
  */
 public interface EventDirectory {
@@ -66,12 +66,6 @@ public interface EventDirectory {
 	Map<EventId, ArticleId> representativesOfAll(Collection<EventId> events);
 
 	/**
-	 * 기간 안의 큰 사건 — 지금 기준으로 판정한다(event-R15). 소스 수 내림차순, 중요도 내림차순, 사건 ID 순.
-	 * @throws IllegalStateException 큰 사건 기준의 처음 값을 적재하기 전일 때
-	 */
-	List<BigEvent> bigEvents(EventPeriod period);
-
-	/**
 	 * 기간 안 기사가 있는 사건과 그 기간 안 기사 수 — 사건 ID 순(event-R20). 합쳐진 사건은 배정이 없어 나오지 않는다.
 	 */
 	Map<EventId, Integer> articleCountsIn(EventPeriod period);
@@ -84,11 +78,10 @@ public interface EventDirectory {
 	<K> Map<K, EventTally> tallies(Map<K, ? extends Collection<EventId>> groups, EventPeriod period);
 
 	/**
-	 * 기간 안 기사가 있는 사건 — 마지막 기사 시각 내림차순, 사건 ID 내림차순. 집계 · 큰 사건 여부는 이 기간, 대표 기사는 사건 기사 전체에서.
+	 * 기간 안 기사가 있는 사건 — 마지막 기사 시각 내림차순, 사건 ID 내림차순. 집계는 이 기간, 대표 기사는 사건 기사 전체에서.
 	 * 쪽 사이에 마지막 기사 시각이 바뀐 사건은 건너뛰거나 다시 나올 수 있다.
 	 * @param after 앞 쪽의 {@link EventPage#next()} — 첫 쪽이면 null
 	 * @throws IllegalArgumentException {@code size} 가 1 ~ {@link #MAX_PAGE_SIZE} 밖일 때
-	 * @throws IllegalStateException 쪽에 사건이 있는데 큰 사건 기준의 처음 값을 적재하기 전일 때
 	 */
 	EventPage list(EventPeriod period, @Nullable EventCursor after, int size);
 

@@ -89,9 +89,9 @@ class AdminEventControllerTests {
 	@Test
 	void theListCarriesEachEventWithItsPeriodTallyAndRepresentative() throws Exception {
 		this.directory.page = new EventPage(List.of(
-				new EventSummary(SEVEN, new EventTally(3, 2, new BigDecimal("3.5")), true, new ArticleId(41)),
+				new EventSummary(SEVEN, new EventTally(3, 2, new BigDecimal("3.5")), new ArticleId(41)),
 				new EventSummary(new EventView(new EventId(5), EventStatus.OPEN, 1, T, T, T), new EventTally(1, 1, null),
-						false, new ArticleId(42))),
+						new ArticleId(42))),
 				new EventCursor(T, new EventId(5)));
 
 		this.mockMvc.perform(authorized(get("/api/admin/events?" + PERIOD)))
@@ -100,10 +100,10 @@ class AdminEventControllerTests {
 					{"events":[
 					  {"id":7,"status":"CLOSED","articleCount":5,"firstArticleAt":"2026-11-05T00:00:00Z",
 					   "lastArticleAt":"2026-11-06T00:00:00Z","periodArticles":3,"periodSources":2,"importance":3.5,
-					   "big":true,"representativeId":41,"representative":{"title":"국회 본회의 통과","sources":["한겨레"]}},
+					   "representativeId":41,"representative":{"title":"국회 본회의 통과","sources":["한겨레"]}},
 					  {"id":5,"status":"OPEN","articleCount":1,"firstArticleAt":"2026-11-05T00:00:00Z",
 					   "lastArticleAt":"2026-11-05T00:00:00Z","periodArticles":1,"periodSources":1,"importance":null,
-					   "big":false,"representativeId":42,"representative":null}],
+					   "representativeId":42,"representative":null}],
 					 "next":{"lastArticleAt":"2026-11-05T00:00:00Z","id":5},"maxDays":31}
 					""", JsonCompareMode.STRICT));
 		assertThat(this.directory.calls)

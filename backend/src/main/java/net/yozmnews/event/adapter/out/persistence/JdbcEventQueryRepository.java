@@ -156,15 +156,6 @@ class JdbcEventQueryRepository implements EventQueryRepository {
 	}
 
 	@Override
-	public Map<Long, List<ArticleId>> membersIn(Instant from, Instant to) {
-		return members(this.jdbc.sql("""
-				select a.event_id, a.article_id from event_articles a
-				where %s
-				order by a.event_id, a.published_at, a.article_id
-				""".formatted(IN_PERIOD)).param("from", timestamp(from)).param("to", timestamp(to)));
-	}
-
-	@Override
 	public Map<Long, Integer> articleCountsIn(Instant from, Instant to) {
 		Map<Long, Integer> counts = new LinkedHashMap<>();
 		this.jdbc.sql("""

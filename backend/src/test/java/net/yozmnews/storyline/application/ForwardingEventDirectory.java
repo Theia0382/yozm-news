@@ -7,7 +7,6 @@ import java.util.Map;
 import java.util.Optional;
 
 import net.yozmnews.article.ArticleId;
-import net.yozmnews.event.BigEvent;
 import net.yozmnews.event.EventArticleView;
 import net.yozmnews.event.EventCursor;
 import net.yozmnews.event.EventDirectory;
@@ -57,11 +56,6 @@ class ForwardingEventDirectory implements EventDirectory {
 	@Override
 	public Map<EventId, ArticleId> representativesOfAll(Collection<EventId> events) {
 		return this.delegate.representativesOfAll(events);
-	}
-
-	@Override
-	public List<BigEvent> bigEvents(EventPeriod period) {
-		return this.delegate.bigEvents(period);
 	}
 
 	@Override

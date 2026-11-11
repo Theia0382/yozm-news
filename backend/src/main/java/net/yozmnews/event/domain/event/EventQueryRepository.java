@@ -41,9 +41,6 @@ public interface EventQueryRepository {
 	/** 사건 기사 전체에서 사건마다 대표 기사 — 닫을 때 남긴 대표가 있으면 그것 */
 	Map<Long, ArticleId> representativesOfAll(Collection<Long> eventIds);
 
-	/** 기간 안 배정 — 사건 ID 순, 사건마다 발행 시각 · 기사 ID 순 */
-	Map<Long, List<ArticleId>> membersIn(Instant from, Instant to);
-
 	/** 기간 안 배정이 있는 사건과 그 기간 안 배정 수 — 사건 ID 순 */
 	Map<Long, Integer> articleCountsIn(Instant from, Instant to);
 

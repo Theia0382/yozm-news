@@ -9,7 +9,6 @@ import java.util.Map;
 import java.util.Optional;
 
 import net.yozmnews.article.ArticleId;
-import net.yozmnews.event.BigEvent;
 import net.yozmnews.event.EventArticleView;
 import net.yozmnews.event.EventCursor;
 import net.yozmnews.event.EventDirectory;
@@ -38,8 +37,6 @@ class FakeEventDirectory implements EventDirectory {
 
 	@Nullable EventPage page;
 
-	List<BigEvent> bigEvents = List.of();
-
 	final List<String> calls = new ArrayList<>();
 
 	void reset() {
@@ -47,7 +44,6 @@ class FakeEventDirectory implements EventDirectory {
 		this.articles.clear();
 		this.representatives.clear();
 		this.page = null;
-		this.bigEvents = List.of();
 		this.calls.clear();
 	}
 
@@ -84,12 +80,6 @@ class FakeEventDirectory implements EventDirectory {
 			}
 		});
 		return found;
-	}
-
-	@Override
-	public List<BigEvent> bigEvents(EventPeriod period) {
-		this.calls.add("bigEvents " + period.from() + " ~ " + period.to());
-		return this.bigEvents;
 	}
 
 	@Override

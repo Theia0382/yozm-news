@@ -1,4 +1,4 @@
-package net.yozmnews.event.domain.bigevent;
+package net.yozmnews.event.domain.tally;
 
 import java.math.BigDecimal;
 import java.math.MathContext;
