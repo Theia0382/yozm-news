@@ -27,7 +27,7 @@
 | [0019](0019-dev-compose-per-checkout-and-test-image-source.md) | 개발용 Compose 는 checkout 마다 따로 뜨고, 테스트의 PostgreSQL 이미지는 그 파일에서 읽는다 | 승인 (부분 대체: 0021) |
 | [0020](0020-screen-api-contract-from-committed-openapi-spec.md) | 화면용 API 계약은 커밋된 OpenAPI 명세가 정본이고, 프론트엔드 타입은 그 명세에서 생성한다 | 승인 |
 | [0021](0021-separate-deploy-compose-with-single-app-service.md) | 배포 구성은 개발용과 따로 둔 Compose 파일이고, 앱은 서비스 `app` 하나로 띄운다 | 승인 |
-| [0022](0022-image-targets-per-side-dockerfile-without-run-in-runtime-stage.md) | 컨테이너 이미지는 측별 Dockerfile 하나에 검사 · 배포 target 으로 두고, 실행 단계는 명령 없이 조립한다 | 승인 |
+| [0022](0022-image-targets-per-side-dockerfile-without-run-in-runtime-stage.md) | 컨테이너 이미지는 측별 Dockerfile 하나에 검사 · 배포 target 으로 두고, 실행 단계는 명령 없이 조립한다 | 승인 (부분 대체: 0104) |
 | [0023](0023-jobrunr-oss-framework-schema-and-event-resubmission.md) | 백그라운드 작업은 JobRunr OSS 로 돌리고, 프레임워크 스키마는 라이브러리 원문을 Flyway 에 담으며, 실패한 이벤트는 반복 작업이 상한까지 다시 처리한다 | 승인 (부분 대체: 0050) |
 | [0024](0024-collection-profile-yaml-and-preset-reference-or-own-profile.md) | 수집 프로필은 YAML 로 쓰고, 소스는 프리셋을 참조하거나 자기 프로필을 갖는다 | 승인 (부분 대체: 0056) |
 | [0025](0025-long-term-personal-news-history-in-v1.md) | 장기 개인 뉴스 히스토리를 v1 핵심 가치로 둔다 — 공유 사건 · 사용자별 이슈 · 변화 리포트 | 승인 (부분 대체: 0047 · 0101) |
@@ -105,14 +105,16 @@
 | [0097](0097-event-clustering-evaluation-labels-reports-of-one-happening-narrower-than-the-system-event.md) | 사건 묶기 평가의 정답 사건은 한 번 일어난 일을 다룬 보도들로 붙이고, 지금 시스템의 사건보다 좁은 차이는 정밀도 손실로 읽는다 | 승인 (부분 대체: 0102) |
 | [0098](0098-label-rule-2-samples-hold-no-big-event-gold-and-big-event-precision-is-not-measured-without-marks.md) | 라벨 기준 2판 표본에는 큰 사건 정답을 두지 않고, 큰 사건 표시가 없는 표본은 큰 사건 정밀도를 재지 않는다 | 승인 |
 | [0099](0099-importance-judged-by-what-the-matter-changes-and-its-reach-with-levels-written-as-reach-without-article-type-examples.md) | 중요도는 사안이 실제로 바꾸거나 일으킨 일의 크기와 영향 범위로 매기고, 수준 설명은 기사 종류 예시 없이 영향 범위로 쓴다 | 승인 |
-| [0100](0100-repository-tool-unit-tests-run-in-one-tools-check-service-and-docs-check-checks-links-only.md) | 저장소 도구의 단위 테스트는 검사 서비스 `tools` 하나가 돌리고, 문서 검사는 링크와 앵커만 본다 | 승인 |
+| [0100](0100-repository-tool-unit-tests-run-in-one-tools-check-service-and-docs-check-checks-links-only.md) | 저장소 도구의 단위 테스트는 검사 서비스 `tools` 하나가 돌리고, 문서 검사는 링크와 앵커만 본다 | 승인 (부분 대체: 0104) |
 | [0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md) | 사건을 잇는 흐름은 모든 사용자가 공유하는 스토리라인이 맡고, 개인 쪽은 스토리라인 구독과 관심사로 나눈다 | 승인 |
 | [0102](0102-an-event-is-the-reports-of-one-happening-narrowed-by-the-event-membership-question-wording.md) | 사건은 한 번 일어난 일을 다룬 보도들이고, 시스템의 사건 범위는 사건 소속 질문 문구로 좁힌다 | 승인 |
 | [0103](0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md) | 큰 판정은 스토리라인 단위로 하고, 사건 묶기 바로 뒤 스토리라인 마일스톤이 사건의 큰 사건 판정을 거둔다 | 승인 |
+| [0104](0104-arm64-run-checked-on-arm64-runners-with-a-symmetric-deploy-check-per-architecture.md) | arm64 실행은 arm64 러너의 배포 검사로 확인하고, 배포 검사는 아키텍처마다 대칭 job 으로 둔다 | 승인 |
 | [0105](0105-storylines-link-incrementally-from-event-change-notifications-and-events-publish-changed-event-ids.md) | 스토리라인은 사건 변화 알림으로 증분으로 잇고, `event` 는 바뀐 사건 ID 를 발행한다 | 승인 |
 | [0106](0106-provisional-storyline-linking-opens-only-with-a-partner-event-and-adds-the-single-best-storyline-without-removal.md) | 스토리라인의 임시 잇기 규칙 — 다른 사건과 이어질 때만 열고, 기준 이상 가운데 가장 높은 하나를 더하며 빼지 않는다 | 승인 (부분 대체: 0108) |
 | [0107](0107-storyline-state-is-judged-at-query-time-from-the-last-article-and-an-ended-storyline-still-links.md) | 스토리라인 상태는 저장하지 않고 조회 때 마지막 기사 시각으로 진행 · 잠잠 · 끝남을 가르며, 끝나도 잇기를 막지 않는다 | 승인 |
 | [0108](0108-storylines-with-the-same-events-merge-and-a-storyline-left-with-one-event-merges-or-dissolves.md) | 구성 사건이 같은 스토리라인은 합치고, 사건 하나만 남은 스토리라인은 그 사건을 가진 스토리라인에 합치거나 풀며, 합쳐진 스토리라인은 남는 쪽을 가리킨다 | 승인 |
+| [0109](0109-event-clustering-defaults-chosen-on-the-evaluation-set-with-operator-review-and-closing-from-operating-records.md) | 사건 묶기 기본값은 기본 임베딩 모델에 맞춰 평가 세트로 견주고 운영자 표본 검수로 확인해 정하며, 반감기는 상수로 두고 닫는 기간은 시간 창에 늦은 수집의 여유를 더한다 | 승인 |
 | [0110](0110-storyline-evaluation-labels-system-events-of-a-fixed-dump-and-measures-overlapping-clusters-from-random-seed-events.md) | 스토리라인 평가는 고정 덤프의 시스템 사건에 라벨을 붙이고, 무작위 씨앗 사건과 그 스토리라인의 기간 전수로 겹치는 묶음을 잰다 | 승인 |
 | [0111](0111-storyline-gold-links-by-matter-with-mixed-events-on-their-central-happening-and-events-without-a-happening-following-their-matter.md) | 스토리라인 정답은 사안 단위로 잇고, 섞인 사건은 중심 일, 일이 없는 사건은 다룬 사안을 따른다 | 승인 |
 

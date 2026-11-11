@@ -32,3 +32,7 @@
 | Kubernetes | 규모에 비해 과하다 |
 | 관리형 컨테이너 플랫폼(Fly.io, Railway, Cloud Run 등) | 가능하다. 다만 환경마다 구성이 달라지고 상시 실행 JVM 비용이 든다. 필요하면 이전할 수 있다 |
 | Cloudflare Containers | 2026년 4월 정식 출시. Workers 앞단을 전제로 한 실행 모델이라, 상시 실행 worker와 DB 연결 구성에는 아직 맞지 않는다 |
+
+## 후속 기록
+
+- 2026-11-10: 결정 절 "이미지는 amd64와 arm64로 빌드한다"의 실행 확인 — [ADR-0104](0104-arm64-run-checked-on-arm64-runners-with-a-symmetric-deploy-check-per-architecture.md) · [개발 인프라 "CI"](../development/infrastructure.md#ci)

@@ -31,7 +31,7 @@ docker compose -f compose.check.yaml run --rm --build tools      # 저장소 도
 - 정리: `docker compose -f compose.check.yaml down -v` — 멈춘 컨테이너와 검사용 Docker 엔진의 데이터 볼륨을 지운다(다음 백엔드 검사가 PostgreSQL 이미지를 다시 받는다)
 - 문서 검사 이미지에는 문서와 문서가 가리키는 경로만 들어간다. 문서가 새 경로(예: 새 최상위 디렉터리)를 가리켜 "경로 없음"으로 실패하면 그 경로를 허용 목록 `tools/docs-check/Dockerfile.dockerignore` 에 더한다
 
-배포 구성 검사는 배포 구성을 [배포 구성 실행](docs/operations/deployment.md#배포-구성-실행) 대로 띄워 스모크(`deploy/smoke.sh`)를 돌린다 — 스모크의 종료 코드가 검사 결과다. CI 는 운영자 토큰을 넣은 구성으로 `app` 을 다시 띄워 스모크를 한 번 더 돌린다. 검사가 끝나면 DB 볼륨까지 지우는 정지로 정리한다. CI 는 같은 정의로 이미지를 두 아키텍처(`linux/amd64` · `linux/arm64`)로도 빌드한다 — 로컬에서는 `deploy/` 에서 실행한다([개발 인프라 — 이미지](docs/development/infrastructure.md#이미지)).
+배포 구성 검사는 배포 구성을 [배포 구성 실행](docs/operations/deployment.md#배포-구성-실행) 대로 띄워 스모크(`deploy/smoke.sh`)를 돌린다 — 스모크의 종료 코드가 검사 결과다. CI 는 스모크 덧씌우기(`deploy/smoke/compose.yaml` — 시험 피드 서버)를 얹어 띄우고, 운영자 토큰을 넣은 구성으로 `app` 을 다시 띄워 스모크를 한 번 더 돌린다 — 이때 K14(시험 기사 하나의 로컬 모델 추론)를 반드시 돌린다. 로컬에서 K14 까지 보려면 같은 덧씌우기를 얹고 운영자 토큰을 넣어 띄운다([개발 인프라 — CI](docs/development/infrastructure.md#ci)). 검사가 끝나면 DB 볼륨까지 지우는 정지로 정리한다. CI 는 같은 정의로 이미지를 두 아키텍처(`linux/amd64` · `linux/arm64`)로도 빌드하고, 아키텍처마다 그 아키텍처의 러너에서 띄워 스모크를 돈다 — 두 아키텍처 빌드는 로컬에서 `deploy/` 에서 실행한다([개발 인프라 — 이미지](docs/development/infrastructure.md#이미지)).
 
 ```sh
 docker buildx bake --allow=fs.read=.. --set '*.platform=linux/amd64,linux/arm64' app proxy   # deploy/ 에서 — 두 아키텍처 배포 이미지 빌드(빌드 컨텍스트가 상위 디렉터리라 읽기를 허락한다)
@@ -178,7 +178,7 @@ Issue: #12
 - **대상**은 `main`. 하나의 이슈에 PR 하나
 - **제목**은 커밋 메시지 제목과 같은 형식: `{유형}({영역}): {요지}`
 - **본문**은 [PR 템플릿](.github/pull_request_template.md)을 따른다 — 변경 요약, `Closes #{이슈 번호}`, 확인 사항. 리뷰어가 읽고 PR 에 남는 변경 기록이므로 저장소의 변경을 정리해 쓴다
-- **CI**: PR 과 `main` 에서 GitHub Actions(`.github/workflows/ci.yml`)가 §1 의 검사를 돌리고, 결과가 체크 `backend` · `frontend` · `deploy` · `docs` · `tools` 로 표시된다. **다섯 체크가 통과해야 merge 한다**
+- **CI**: PR 과 `main` 에서 GitHub Actions(`.github/workflows/ci.yml`)가 §1 의 검사를 돌리고, 결과가 체크 `backend` · `frontend` · `docs` · `tools` · `deploy-amd64` · `deploy-arm64` 로 표시된다. **여섯 체크가 통과해야 merge 한다**
 - **merge** 는 리드가 한다. 방식은 **merge commit** 만 쓴다(squash · rebase merge 를 쓰지 않는다 — 작업 브랜치의 커밋을 그대로 남긴다). merge 커밋 메시지는 저장소 설정이 만든다 — 제목 `Merge pull request #{번호} from {소유자}/{작업 브랜치}`, 본문은 PR 제목. merge 커밋은 [§4](#4-커밋-메시지) 형식을 따르지 않는다
 - **리뷰**: 리드가 GitHub 에서 검토하고, 필요하면 로컬로 받아 확인한다(`gh pr checkout {번호}`). 코드 · 주석은 [§7](#7-코드)을 기준으로 본다
 - **충돌 · 동기화**: 작업 브랜치에 `main` 을 merge 해서 해소하고 다시 push 한다. 이 merge 커밋의 메시지는 `Merge origin/main into {작업 브랜치}` 이고, 마지막 문단에 `Issue: #{이슈 번호}` 를 둔다. force push 하지 않는다

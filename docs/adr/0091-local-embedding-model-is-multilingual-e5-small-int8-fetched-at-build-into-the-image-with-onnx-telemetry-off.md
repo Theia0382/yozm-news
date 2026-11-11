@@ -50,3 +50,7 @@
 | 운영자가 모델 파일을 두고 경로를 설정한다 | 기본 구성으로 돌지 않고, 같은 모델 버전 문자열에 다른 파일이 올 수 있다 |
 | 텔레메트리를 API 로 끈다 | 실측에서 연결 시도가 남았다 |
 | 텔레메트리 변수가 없으면 경고만 남긴다 | 운영자가 모르는 외부 연결이 생긴다 |
+
+## 후속 기록
+
+- 2026-11-10: 결과 절 "arm64 실기 실행은 확인되지 않았다" — [ADR-0104](0104-arm64-run-checked-on-arm64-runners-with-a-symmetric-deploy-check-per-architecture.md) · [개발 인프라 "CI"](../development/infrastructure.md#ci)

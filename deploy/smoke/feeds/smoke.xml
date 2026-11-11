@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 배포 구성 스모크 K14 의 시험 피드 — 합성, 실제 기사가 아니다. 발행 시각은 과거 고정 값이다(받은 시각보다 1시간 넘게 미래면 해석 실패 — 피드를 켤 수 없다) -->
+<rss version="2.0">
+<channel>
+<title>스모크 시험 소스</title>
+<link>https://smoke.example</link>
+<description>배포 구성 스모크의 합성 피드</description>
+<item>
+<title>시험 도시, 새 도서관 문 열어</title>
+<link>https://smoke.example/news/1</link>
+<guid isPermaLink="false">smoke-1</guid>
+<description>시험 도시가 시민을 위한 새 도서관을 열었다. 도서관은 하루 종일 문을 연다.</description>
+<pubDate>Mon, 02 Nov 2026 09:00:00 +0900</pubDate>
+</item>
+</channel>
+</rss>

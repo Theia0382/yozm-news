@@ -37,13 +37,13 @@ class CandidateScoringTests {
 
 	@Test
 	void aSeparateSpanDecaysByTheGapBetweenTheSpans() {
-		// 구간 [06T06, 07T00] 은 마지막 기사 24시간 뒤에 시작 — 0.78 × 2^(−1) = 0.39
-		assertThat(CandidateScoring.score(event(0.9), ARTICLE_TERMS, Instant.parse("2026-11-06T06:00:00Z"),
-				Instant.parse("2026-11-07T00:00:00Z"), WINDOW))
+		// 구간 [06T18, 07T06] 은 마지막 기사 36시간 뒤에 시작 — 0.78 × 2^(−36/36) = 0.39
+		assertThat(CandidateScoring.score(event(0.9), ARTICLE_TERMS, Instant.parse("2026-11-06T18:00:00Z"),
+				Instant.parse("2026-11-07T06:00:00Z"), WINDOW))
 			.hasValueSatisfying(candidate -> assertThat(candidate.score()).isCloseTo(0.39, within(1e-12)));
-		// 구간 [03T00, 04T12] 은 첫 기사 12시간 앞에서 끝난다 — 0.78 × 2^(−0.5)
+		// 구간 [03T00, 04T06] 은 첫 기사 18시간 앞에서 끝난다 — 0.78 × 2^(−18/36)
 		assertThat(CandidateScoring.score(event(0.9), ARTICLE_TERMS, Instant.parse("2026-11-03T00:00:00Z"),
-				Instant.parse("2026-11-04T12:00:00Z"), WINDOW))
+				Instant.parse("2026-11-04T06:00:00Z"), WINDOW))
 			.hasValueSatisfying(
 					candidate -> assertThat(candidate.score()).isCloseTo(0.5515432893255071, within(1e-12)));
 	}
@@ -62,24 +62,24 @@ class CandidateScoringTests {
 	}
 
 	@Test
-	void aDayAfterTheLastArticleHalvesTheScore() {
-		// 0.78 × 2^(−24/24) = 0.39
-		assertThat(score(0.9, ARTICLE_TERMS, Instant.parse("2026-11-06T06:00:00Z"))).isCloseTo(0.39, within(1e-12));
+	void oneHalfLifeAfterTheLastArticleHalvesTheScore() {
+		// 마지막 기사 36시간 뒤 — 0.78 × 2^(−36/36) = 0.39
+		assertThat(score(0.9, ARTICLE_TERMS, Instant.parse("2026-11-06T18:00:00Z"))).isCloseTo(0.39, within(1e-12));
 	}
 
 	@Test
 	void anArticleBeforeTheFirstArticleDecaysByTheGapToTheFirst() {
-		// 첫 기사 12시간 앞 — 0.78 × 2^(−0.5) = 0.78 × 0.7071067811865476 = 0.5515432893255071
-		assertThat(score(0.9, ARTICLE_TERMS, Instant.parse("2026-11-04T12:00:00Z"))).isCloseTo(0.5515432893255071,
+		// 첫 기사 18시간 앞 — 0.78 × 2^(−18/36) = 0.78 × 0.7071067811865476 = 0.5515432893255071
+		assertThat(score(0.9, ARTICLE_TERMS, Instant.parse("2026-11-04T06:00:00Z"))).isCloseTo(0.5515432893255071,
 				within(1e-12));
 	}
 
 	@Test
 	void theWindowBoundaryIsInsideAndOneSecondPastIsNoCandidate() {
 		EventSnapshot event = event(0.9);
-		// 마지막 기사 + 72시간 — 0.78 × 2^(−3) = 0.0975
+		// 마지막 기사 + 72시간 — 0.78 × 2^(−72/36) = 0.195
 		assertThat(CandidateScoring.score(event, ARTICLE_TERMS, Instant.parse("2026-11-08T06:00:00Z"), WINDOW))
-			.hasValueSatisfying(candidate -> assertThat(candidate.score()).isCloseTo(0.0975, within(1e-12)));
+			.hasValueSatisfying(candidate -> assertThat(candidate.score()).isCloseTo(0.195, within(1e-12)));
 		assertThat(CandidateScoring.score(event, ARTICLE_TERMS, Instant.parse("2026-11-08T06:00:01Z"), WINDOW))
 			.isEmpty();
 		assertThat(CandidateScoring.score(event, ARTICLE_TERMS, Instant.parse("2026-11-02T00:00:00Z"), WINDOW))

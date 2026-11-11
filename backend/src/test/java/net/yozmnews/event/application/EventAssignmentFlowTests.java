@@ -221,10 +221,10 @@ class EventAssignmentFlowTests {
 				                    created_at, last_joined_at)
 				values ('OPEN', 'model-b', '[1,0]', 1, :t, :t, :t, :t) returning id
 				""").param("t", PUBLISHED.atOffset(ZoneOffset.UTC)).query(Long.class).single();
-		// 하루 뒤 발행 — 감쇠 1/2: 0.5 × (0.7 + 0.3) = 0.5 → 띠 아래라 새 사건 / 12시간 앞 발행 — 2^(−0.5) × 1 ≈ 0.707(띠)
-		long later = queued("[1,0]", Instant.parse("2026-11-06T00:00:00Z"), "금리");
+		// 36시간(반감기) 뒤 발행 — 감쇠 1/2: 0.5 × (0.7 + 0.3) = 0.5 → 띠 아래라 새 사건 / 18시간 앞 발행 — 2^(−18/36) × 1 ≈ 0.707(띠)
+		long later = queued("[1,0]", Instant.parse("2026-11-06T12:00:00Z"), "금리");
 		Scripted membership = new Scripted(query -> new MembershipJudgement.Judged(new EventJudgementId(1), Map.of(event, 0.9)));
-		long earlier = queued("[1,0]", Instant.parse("2026-11-04T12:00:00Z"), "금리");
+		long earlier = queued("[1,0]", Instant.parse("2026-11-04T06:00:00Z"), "금리");
 
 		round(membership).run(MODEL_A);
 
@@ -232,7 +232,7 @@ class EventAssignmentFlowTests {
 		assertThat((Double) assignment(later).get("score")).isCloseTo(0.5, within(1e-6));
 		assertThat(eventOf(earlier)).isEqualTo(event);
 		assertThat((Double) assignment(earlier).get("score")).isCloseTo(0.7071067811865476, within(1e-6));
-		assertThat(eventRow(event)).containsEntry("first", "2026-11-04T12:00:00Z")
+		assertThat(eventRow(event)).containsEntry("first", "2026-11-04T06:00:00Z")
 			.containsEntry("last", "2026-11-05T00:00:00Z")
 			.containsEntry("article_count", 2);
 		assertThat(membership.queries).extracting(MembershipQuery::articleId).containsExactly(new ArticleId(earlier));

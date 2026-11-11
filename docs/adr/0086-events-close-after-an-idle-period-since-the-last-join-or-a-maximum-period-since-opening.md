@@ -41,3 +41,4 @@
 ## 후속 기록
 
 - 2026-11-08: 결과 절 "값은 평가 세트로 정한다"의 닫는 기간 · 최대 기간 — 평가 도구는 이 비교를 재지 않는다([ADR-0095](0095-event-clustering-evaluated-by-an-operator-tool-comparing-admin-api-results-with-full-day-labels.md) 결과 절)
+- 2026-11-11: 결정 절 "기본값은 코드에 있고(측정 전 목표)"와 결과 절 "값은 평가 세트로 정한다"의 닫는 기간 · 최대 기간 — [ADR-0109](0109-event-clustering-defaults-chosen-on-the-evaluation-set-with-operator-review-and-closing-from-operating-records.md) · [event Spec §7](../specs/event.md#7-설정)

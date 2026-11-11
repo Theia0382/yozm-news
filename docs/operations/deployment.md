@@ -11,7 +11,7 @@
 ## 호스트 요건
 
 - Docker 와 Compose 플러그인
-- `linux/amd64` 또는 `linux/arm64` — 이미지는 두 아키텍처로 빌드된다
+- `linux/amd64` 또는 `linux/arm64` — 이미지는 두 아키텍처로 빌드되고, CI 가 아키텍처마다 그 아키텍처의 러너에서 기동과 기본 로컬 임베딩 모델의 추론까지 확인한다([ADR-0104](../adr/0104-arm64-run-checked-on-arm64-runners-with-a-symmetric-deploy-check-per-architecture.md)). 러너 CPU 에 없는 명령어 조합의 오래된 arm64 코어는 확인 범위 밖이다
 - 저장소 전체 — 이미지를 레지스트리에서 받지 않고 소스에서 빌드한다. 배포 구성의 `postgres` 가 루트 `compose.yaml` 을 물려받으므로 `deploy/` 만으로는 뜨지 않는다([ADR-0021](../adr/0021-separate-deploy-compose-with-single-app-service.md))
 - 인바운드 포트는 필요 없다(Tunnel). Tunnel 없이 직접 공개하면 proxy 의 포트를 연다([공개](configuration.md#공개))
 - 이미지를 빌드할 때 Hugging Face(`huggingface.co`)에 닿아야 한다 — 빌드가 기본 로컬 임베딩 모델(약 135 MB)을 고정 리비전으로 받아 해시를 확인한다. 받지 못하거나 해시가 다르면 빌드가 실패한다. 실행 중에는 받지 않는다
@@ -56,10 +56,10 @@
    ```sh
    cp deploy/.env.example deploy/.env                            # 처음 한 번 — 필수 값과 운영자 토큰을 적는다
    docker compose -f deploy/compose.yaml up -d --build --wait   # 호스트 플랫폼 이미지를 빌드하고 postgres → app → proxy 가 healthy 가 될 때까지 기다린다
-   bash deploy/smoke.sh                                          # 기동 상태 · 공개 범위 · 라우팅 · 운영자 경로 · 앱 역할 · 프리셋 적재 확인 — 종료 코드 0 이면 통과 (bash · docker · curl 필요)
+   bash deploy/smoke.sh                                          # 기동 상태 · 공개 범위 · 라우팅 · 운영자 경로 · 앱 역할 · 프리셋 적재 확인 — 종료 코드 0 이면 통과 (bash · docker · curl · sed 필요)
    ```
 
-   `deploy/` 에서는 `-f` 없이 `docker compose up -d --build --wait` 로 같다. 스모크는 공개 주소를 기본값(루프백)으로 둔 구성을 확인한다 — [공개](configuration.md#공개) 주소를 바꾼 구성에서는 공개 범위 항목이 실패한다. 운영자 토큰은 넣은 구성 · 넣지 않은 구성 모두 확인한다.
+   `deploy/` 에서는 `-f` 없이 `docker compose up -d --build --wait` 로 같다. 스모크는 공개 주소를 기본값(루프백)으로 둔 구성을 확인한다 — [공개](configuration.md#공개) 주소를 바꾼 구성에서는 공개 범위 항목이 실패한다. 운영자 토큰은 넣은 구성 · 넣지 않은 구성 모두 확인한다. 로컬 모델 추론 항목(K14)은 개발용 시험 피드 서버가 있을 때만 돌고, 운영 인스턴스에서는 건너뛴다(`skip`) — 시험 소스를 등록하지 않는다([개발 인프라 — CI](../development/infrastructure.md#ci)).
 3. 브라우저로 proxy 의 공개 주소를 연다 — 기본은 이 호스트의 루프백이다([공개](configuration.md#공개)). 운영자 화면은 `/admin` 이고, 운영자 토큰을 넣어 연다
 4. 소스를 등록하고 켠다 — [소스 등록](sources.md). 소스와 피드를 켜기 전에는 아무것도 수집하지 않는다
 5. **(미구현)** 첫 운영자 계정을 만든다 — 처음 띄우면 `app` 로그(`docker compose -f deploy/compose.yaml logs app`)에 운영자 초대 링크가 나온다. 만료 전에 열어 가입한다. 만료되면 `app` 을 다시 시작해 새 링크를 받는다. 운영 설정으로 이메일 · 초기 비밀번호를 줬으면 그 값으로 로그인한다([계정과 고지](configuration.md#계정과-고지))
