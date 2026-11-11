@@ -33,3 +33,4 @@
 ## 후속 기록
 
 - 2026-11-09: 결정 절 "큰 사건 정답의 단위와 표시는 사건보다 큰 단위를 설계할 때 함께 정한다"의 단위(스토리라인)와 결과 절의 사건 묶기 완료 기준 — [ADR-0103](0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md) · [로드맵](../roadmap.md)
+- 2026-11-11: 결정 절 "큰 사건 정답의 단위와 표시는 사건보다 큰 단위를 설계할 때 함께 정한다"의 표시(스토리라인 × 날짜, 날마다 전수) — [ADR-0110](0110-storyline-evaluation-labels-system-events-of-a-fixed-dump-and-measures-overlapping-clusters-from-random-seed-events.md)
