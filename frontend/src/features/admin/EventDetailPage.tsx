@@ -123,8 +123,8 @@ function DetailView({ detail }: { detail: Detail }) {
         ) : (
           <>
             <p className="text-sm text-muted-foreground">
-              기사 수 · 시각은 합칠 때의 값이다. 병합 판정 확률은 Jev 에 물어
-              합친 쌍만 있다
+              기사 수 · 시각은 합칠 때의 값이다. 병합 판정 확률은 그 쌍을 Jev 에
+              물어 받은 확률이다 — 산식으로 합친 쌍도 앞서 물은 적이 있으면 있다
             </p>
             <table
               aria-label="합쳐진 사건"
