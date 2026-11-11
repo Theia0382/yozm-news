@@ -1,6 +1,6 @@
 package net.yozmnews.admin.adapter.in.web;
 
-import net.yozmnews.evaluation.TagSetAdministration;
+import net.yozmnews.tag.TagSetAdministration;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 

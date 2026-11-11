@@ -3,10 +3,10 @@ package net.yozmnews.admin.adapter.in.web;
 import java.util.ArrayList;
 import java.util.List;
 
-import net.yozmnews.evaluation.EvaluationPeriod;
 import net.yozmnews.evaluation.EventJudgementCursor;
 import net.yozmnews.evaluation.EventJudgementLog;
 import net.yozmnews.evaluation.EventJudgementPage;
+import net.yozmnews.evaluation.JudgementPeriod;
 import org.jspecify.annotations.Nullable;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
@@ -26,7 +26,7 @@ class FakeEventJudgementLog implements EventJudgementLog {
 	}
 
 	@Override
-	public EventJudgementPage list(EvaluationPeriod period, @Nullable EventJudgementCursor after, int size) {
+	public EventJudgementPage list(JudgementPeriod period, @Nullable EventJudgementCursor after, int size) {
 		this.calls.add("list " + period.from() + " ~ " + period.to() + " after "
 				+ ((after == null) ? null : after.judgedAt() + "/" + after.id().value()) + " size " + size);
 		return FakeResults.given(this.page);

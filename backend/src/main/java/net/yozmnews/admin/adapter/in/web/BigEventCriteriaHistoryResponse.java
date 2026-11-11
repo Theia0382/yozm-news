@@ -2,8 +2,8 @@ package net.yozmnews.admin.adapter.in.web;
 
 import java.time.Instant;
 
-import net.yozmnews.evaluation.ChangeActor;
 import net.yozmnews.event.BigEventCriteriaChange;
+import net.yozmnews.platform.ChangeActor;
 import org.jspecify.annotations.Nullable;
 
 /**

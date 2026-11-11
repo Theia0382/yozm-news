@@ -1,6 +1,6 @@
-# 기본 태그 체계 — 첫 기동에 버전이 하나도 없으면 버전 1로 들어간다(docs/specs/evaluation.md §5 · evaluation-R1 · R2).
+# 기본 태그 체계 — 첫 기동에 버전이 하나도 없으면 버전 1로 들어간다(docs/specs/tag.md §5 · tag-R1 · R2).
 # 이미 적재한 인스턴스는 이 파일이 바뀌어도 따라가지 않는다.
-# 형식은 evaluation-R5 — 중분류 key 는 조각만 적고, 저장 키는 대분류 키를 붙인 전체 키(politics.executive)다.
+# 형식은 tag-R5 — 중분류 key 는 조각만 적고, 저장 키는 대분류 키를 붙인 전체 키(politics.executive)다.
 questions:
   topic: "이 기사가 주요하게 다루는 주제가 다음에 해당하는가: {description}"
   region: "이 기사의 주요 무대가 다음에 해당하는가: {description}"

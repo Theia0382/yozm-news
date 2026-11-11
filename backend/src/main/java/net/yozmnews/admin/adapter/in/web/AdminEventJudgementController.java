@@ -10,12 +10,12 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import net.yozmnews.article.ArticleDirectory;
 import net.yozmnews.article.ArticleId;
-import net.yozmnews.evaluation.EvaluationPeriod;
 import net.yozmnews.evaluation.EventJudgementCursor;
 import net.yozmnews.evaluation.EventJudgementId;
 import net.yozmnews.evaluation.EventJudgementLog;
 import net.yozmnews.evaluation.EventJudgementPage;
 import net.yozmnews.evaluation.EventJudgementView;
+import net.yozmnews.evaluation.JudgementPeriod;
 import net.yozmnews.event.EventReview;
 import net.yozmnews.event.JudgementUse;
 import net.yozmnews.platform.ApiProblem;
@@ -66,7 +66,7 @@ class AdminEventJudgementController {
 					required = false) @Nullable String afterJudgedAt,
 			@Parameter(description = "이어 받을 커서의 판정 원본 ID — afterJudgedAt 과 함께") @RequestParam(
 					required = false) @Nullable Long afterId) {
-		EvaluationPeriod period = AdminPeriods.of(from, to, zone);
+		JudgementPeriod period = AdminPeriods.judgements(from, to, zone);
 		AdminCursor cursor = AdminCursor.of(afterJudgedAt, afterId, "afterJudgedAt", "판정 원본");
 		EventJudgementPage page = this.log.list(period,
 				(cursor == null) ? null : new EventJudgementCursor(cursor.at(), new EventJudgementId(cursor.id())),

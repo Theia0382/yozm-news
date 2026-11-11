@@ -35,5 +35,5 @@
 
 ## 후속 기록
 
-- 2026-11-04: 로컬 대체물도 운영 구현도 등록되지 않았을 때의 동작 — [ADR-0061](0061-worker-role-does-not-run-without-an-evaluator.md) · [evaluation Spec §5](../specs/evaluation.md#5-규칙과-불변식) evaluation-R20
+- 2026-11-04: 로컬 대체물도 운영 구현도 등록되지 않았을 때의 동작 — [ADR-0061](0061-worker-role-does-not-run-without-an-evaluator.md) · [evaluation Spec §5](../specs/evaluation.md#5-규칙과-불변식) evaluation-R43
 - 2026-11-05: 결과 절 "실제 구현이 아직 없는 외부 의존은 … 그때의 동작은 그 포트를 쓰는 쪽이 정한다"의 임베더 — [ADR-0074](0074-article-features-built-by-event-intake-queue-job-and-skipped-without-an-embedder.md) · [event Spec §5](../specs/event.md#사건-묶기-대기와-회차) event-R7

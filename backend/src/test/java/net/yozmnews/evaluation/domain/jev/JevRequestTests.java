@@ -1,6 +1,6 @@
 package net.yozmnews.evaluation.domain.jev;
 
-import static net.yozmnews.evaluation.domain.jev.JevFixtures.TAG_SET;
+import static net.yozmnews.evaluation.domain.jev.JevFixtures.QUESTIONS;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
 /**
  * Jev 요청 본문 — 질문 이름 · 질문 문장 · 선택지 · 수준 순서, state 형식. 사건 소속 판정의 질문 · state.
  * <p>
- * 지키는 규칙: evaluation-R14 · evaluation-R37
+ * 지키는 규칙: evaluation-R37 · evaluation-R40
  */
 class JevRequestTests {
 
@@ -24,7 +24,7 @@ class JevRequestTests {
 
 	@Test
 	void asksEveryQuestionOfTheTagSetInOneRequest() {
-		assertThat(JevRequest.body("jev-latest", INPUT, TAG_SET)).isEqualTo("{\"model\":\"jev-latest\","
+		assertThat(JevRequest.body("jev-latest", INPUT, QUESTIONS)).isEqualTo("{\"model\":\"jev-latest\","
 				+ "\"state\":\"출처: 경향신문 / 피드 섹션: 정치 / 카테고리: 정치일반, 국회\\n출처: 동아일보\\n제목: 합당론 내놓은 대표\\n요약: 지도부 안에서 불쾌 기류가 돈다\","
 				+ "\"questions\":{"
 				+ "\"topic.politics.executive\":{\"type\":\"noul\",\"instructions\":\"주제가 대통령실과 행정부인가\"},"
@@ -39,7 +39,7 @@ class JevRequestTests {
 
 	@Test
 	void probesWithTheSameQuestionsAndAnEmptyState() {
-		assertThat(JevRequest.probeBody("jev-1.14.0", TAG_SET)).startsWith("{\"model\":\"jev-1.14.0\",\"state\":\"\","
+		assertThat(JevRequest.probeBody("jev-1.14.0", QUESTIONS)).startsWith("{\"model\":\"jev-1.14.0\",\"state\":\"\","
 				+ "\"questions\":{\"topic.politics.executive\":{\"type\":\"noul\",\"instructions\":\"주제가 대통령실과 행정부인가\"},")
 			.endsWith("\"criteria\":[\"가벼운 화제\",\"업계 소식\",\"사회 전반\"]}}}");
 	}

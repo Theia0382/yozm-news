@@ -8,13 +8,13 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import net.yozmnews.evaluation.EvaluationAdministration;
-import net.yozmnews.evaluation.EvaluationPeriod;
-import net.yozmnews.evaluation.TagSetId;
-import net.yozmnews.evaluation.TopicCoverage;
-import net.yozmnews.evaluation.TopicCoverageResult;
 import net.yozmnews.platform.ApiProblem;
 import net.yozmnews.platform.WebRole;
+import net.yozmnews.tag.EvaluationAdministration;
+import net.yozmnews.tag.EvaluationPeriod;
+import net.yozmnews.tag.TagSetId;
+import net.yozmnews.tag.TopicCoverage;
+import net.yozmnews.tag.TopicCoverageResult;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,7 +25,7 @@ import org.springframework.web.server.ResponseStatusException;
 /**
  * 운영자 API — 평가 현황(버전 · 기간의 품질 지표), 주제별 보도량, 평가 대기 · 실패 건수. docs/specs/admin.md §3.
  * <p>
- * {@code evaluation} 의 공개 운영 API · 공개 조회를 불러 응답으로 옮기기만 한다. 트랜잭션을 열지 않는다 — 집계의 트랜잭션은 공개 API 가
+ * {@code tag} 의 공개 운영 API · 공개 조회를 불러 응답으로 옮기기만 한다. 트랜잭션을 열지 않는다 — 집계의 트랜잭션은 공개 API 가
  * 연다. 기간은 시작일 · 종료일 · 시간대로 받는다({@link AdminPeriods}).
  */
 @WebRole

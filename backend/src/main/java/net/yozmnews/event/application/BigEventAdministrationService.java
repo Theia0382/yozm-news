@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-import net.yozmnews.evaluation.ChangeActor;
 import net.yozmnews.event.BigEvent;
 import net.yozmnews.event.BigEventAdministration;
 import net.yozmnews.event.BigEventCriteria;
@@ -14,6 +13,7 @@ import net.yozmnews.event.BigEventCriteriaChange;
 import net.yozmnews.event.BigEventCriteriaChangeResult;
 import net.yozmnews.event.EventPeriod;
 import net.yozmnews.event.domain.bigevent.BigEventCriteriaRepository;
+import net.yozmnews.platform.ChangeActor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;

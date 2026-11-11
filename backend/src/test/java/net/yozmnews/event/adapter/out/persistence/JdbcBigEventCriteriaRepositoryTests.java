@@ -7,10 +7,10 @@ import java.math.BigDecimal;
 import java.time.Instant;
 
 import net.yozmnews.TestcontainersConfiguration;
-import net.yozmnews.evaluation.ChangeActor;
 import net.yozmnews.event.BigEventCriteria;
 import net.yozmnews.event.BigEventCriteriaChange;
 import net.yozmnews.event.BigEventCriteriaRows;
+import net.yozmnews.platform.ChangeActor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

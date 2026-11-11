@@ -7,9 +7,9 @@ import java.util.Set;
 
 import net.yozmnews.article.ArticleDirectory;
 import net.yozmnews.article.ArticleId;
-import net.yozmnews.evaluation.ArticleEvaluations;
 import net.yozmnews.event.EventTally;
 import net.yozmnews.event.domain.bigevent.EventTallies;
+import net.yozmnews.tag.ArticleEvaluations;
 import org.springframework.stereotype.Component;
 
 /**

@@ -12,7 +12,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 /**
  * Jev 오류 응답의 갈래와 운영자용 문구 — 본문은 실측 응답의 모양이다.
  * <p>
- * 지키는 규칙: evaluation-R20(실패 갈래) · ADR-0058
+ * 지키는 규칙: evaluation-R41(실패 갈래) · ADR-0058
  */
 class JevErrorsTests {
 

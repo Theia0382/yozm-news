@@ -8,10 +8,10 @@ import java.util.Objects;
  */
 public record ImportanceScale(String question, List<ImportanceLevel> levels) {
 
-	/** 가장 낮은 중요도 수준 — 정본(evaluation-R7) */
+	/** 가장 낮은 중요도 수준 — 정본(tag-R7) */
 	public static final int MIN_LEVEL = 1;
 
-	/** 가장 높은 중요도 수준 — 정본(evaluation-R7) */
+	/** 가장 높은 중요도 수준 — 정본(tag-R7) */
 	public static final int MAX_LEVEL = 5;
 
 	public ImportanceScale {

@@ -4,13 +4,13 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
-import net.yozmnews.evaluation.ChangeActor;
 import net.yozmnews.event.BigEvent;
 import net.yozmnews.event.BigEventAdministration;
 import net.yozmnews.event.BigEventCriteria;
 import net.yozmnews.event.BigEventCriteriaChange;
 import net.yozmnews.event.BigEventCriteriaChangeResult;
 import net.yozmnews.event.EventPeriod;
+import net.yozmnews.platform.ChangeActor;
 import org.jspecify.annotations.Nullable;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;

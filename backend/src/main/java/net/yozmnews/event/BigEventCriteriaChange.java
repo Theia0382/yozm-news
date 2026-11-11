@@ -3,7 +3,7 @@ package net.yozmnews.event;
 import java.time.Instant;
 import java.util.Objects;
 
-import net.yozmnews.evaluation.ChangeActor;
+import net.yozmnews.platform.ChangeActor;
 import org.jspecify.annotations.Nullable;
 
 /**

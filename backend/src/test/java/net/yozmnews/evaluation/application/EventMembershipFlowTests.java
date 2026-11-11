@@ -16,12 +16,14 @@ import java.util.function.Function;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleDirectory;
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.article.ArticlesRemoved;
 import net.yozmnews.evaluation.EvaluatorFailureKind;
 import net.yozmnews.evaluation.EventDescriptor;
 import net.yozmnews.evaluation.EventJudgementId;
+import net.yozmnews.evaluation.JudgedEvent;
 import net.yozmnews.evaluation.MembershipJudgement;
 import net.yozmnews.evaluation.MembershipQuery;
-import net.yozmnews.evaluation.TagSetView;
+import net.yozmnews.evaluation.TagQuestions;
 import net.yozmnews.evaluation.domain.evaluator.ArticleEvaluator;
 import net.yozmnews.evaluation.domain.evaluator.CandidateEvent;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationFailure;
@@ -33,6 +35,7 @@ import net.yozmnews.evaluation.domain.evaluator.MembershipResult;
 import net.yozmnews.evaluation.domain.evaluator.MembershipWording;
 import net.yozmnews.evaluation.domain.evaluator.RereadResult;
 import net.yozmnews.evaluation.domain.membership.EventJudgementRepository;
+import net.yozmnews.evaluation.domain.membership.MembershipRecord;
 import net.yozmnews.source.SourceDeleted;
 import net.yozmnews.source.SourceId;
 import org.jspecify.annotations.Nullable;
@@ -51,10 +54,11 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 사건 소속 판정 공개 API — 기사 · 서술 기사 읽기, 물을 후보 고르기, 결과 갈래, 판정 원본 기록, 판정 중 지운 기사를 실제 PostgreSQL 과
- * 결선된 저장소 · 기사 조회로 본다. 평가기는 시험이 넣는다. 커밋 경계를 지나므로 시험을 트랜잭션으로 감싸지 않는다.
+ * 사건 소속 판정 공개 API — 기사 · 서술 기사 읽기, 물을 후보 고르기, 결과 갈래, 판정 원본 기록, 판정 중 지운 기사, 지운 기사의 판정
+ * 원본 지우기를 실제 PostgreSQL 과 결선된 저장소 · 기사 조회로 본다. 평가기는 시험이 넣는다. 커밋 경계를 지나므로 시험을 트랜잭션으로 감싸지
+ * 않는다.
  * <p>
- * 지키는 규칙: evaluation-R21 · evaluation-R37 · evaluation-R38
+ * 지키는 규칙: evaluation-R37 · evaluation-R38 · evaluation-R44
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -85,6 +89,7 @@ class EventMembershipFlowTests {
 	@AfterEach
 	void reset() {
 		this.jdbc.sql("delete from article_event_judgements").update();
+		this.jdbc.sql("delete from article_tag_judgements").update();
 		this.jdbc.sql("delete from article_feed_entries").update();
 		this.jdbc.sql("delete from articles").update();
 	}
@@ -254,6 +259,60 @@ class EventMembershipFlowTests {
 		assertThat(judgementRows()).isZero();
 	}
 
+	@Test
+	void removingArticlesRemovesTheirMembershipAndTagJudgementsOnlyAndAgainChangesNothing() {
+		this.judgements.insert(judgement(41, 43));
+		this.judgements.insert(judgement(41, 44));
+		this.judgements.insert(judgement(42, 41));
+		tagJudgement(41);
+		tagJudgement(42);
+		ArticlesRemoved removed = new ArticlesRemoved(List.of(new ArticleId(41)));
+
+		// 41 을 서술 기사로만 쓴 42 의 판정 원본은 남는다
+		publish(removed);
+		assertThat(judgedArticles()).containsExactly(42L);
+		assertThat(tagJudgedArticles()).containsExactly(42L);
+		publish(removed);
+		assertThat(judgedArticles()).containsExactly(42L);
+		assertThat(tagJudgedArticles()).containsExactly(42L);
+	}
+
+	/** 공개 경로로 기사 삭제를 알리고 리스너들이 끝나기를 기다린다 */
+	private void publish(ArticlesRemoved removed) {
+		this.transaction.executeWithoutResult(status -> this.events.publishEvent(removed));
+		await().atMost(Duration.ofSeconds(10)).until(() -> publications() == 0);
+	}
+
+	/** 기사 하나를 사건 12 에 대해 판정한 원본 — 서술 기사 하나 */
+	private static MembershipRecord judgement(long article, long described) {
+		return new MembershipRecord(new ArticleId(article),
+				List.of(new JudgedEvent(12, List.of(new ArticleId(described)), 0.8)), "fake", "fake-rules-2",
+				"membership-1", 10, "{\"events\":{\"12\":0.8}}", AT);
+	}
+
+	/** 기사 하나의 태그 판정 원본 */
+	private void tagJudgement(long article) {
+		this.jdbc.sql("""
+				insert into article_tag_judgements (article_id, evaluator, model_version, raw_response, input_tokens,
+				    judged_at)
+				values (:article, 'fake', 'fake-rules-2', '{}', 10, now())
+				""").param("article", article).update();
+	}
+
+	/** 사건 소속 판정 원본이 있는 기사 — 기사 ID 순, 한 번씩 */
+	private List<Long> judgedArticles() {
+		return this.jdbc.sql("select distinct article_id from article_event_judgements order by article_id")
+			.query(Long.class)
+			.list();
+	}
+
+	/** 태그 판정 원본이 있는 기사 — 기사 ID 순, 한 번씩 */
+	private List<Long> tagJudgedArticles() {
+		return this.jdbc.sql("select distinct article_id from article_tag_judgements order by article_id")
+			.query(Long.class)
+			.list();
+	}
+
 	private EventMembershipService service(ArticleEvaluator evaluator) {
 		return new EventMembershipService(() -> evaluator, this.articles, this.judgements, this.transaction,
 				() -> AT);
@@ -320,12 +379,12 @@ class EventMembershipFlowTests {
 		}
 
 		@Override
-		public EvaluationResult evaluate(EvaluationInput input, TagSetView tagSet) {
+		public EvaluationResult evaluate(EvaluationInput input, TagQuestions tagSet) {
 			throw new UnsupportedOperationException("이 시험 평가기는 평가하지 않는다");
 		}
 
 		@Override
-		public RereadResult reread(String evaluator, String rawResponse, TagSetView tagSet) {
+		public RereadResult reread(String evaluator, String rawResponse, TagQuestions tagSet) {
 			throw new UnsupportedOperationException("이 시험 평가기는 원본 응답을 다시 읽지 않는다");
 		}
 

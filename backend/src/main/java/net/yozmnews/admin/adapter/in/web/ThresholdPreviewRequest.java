@@ -3,7 +3,7 @@ package net.yozmnews.admin.adapter.in.web;
 import java.math.BigDecimal;
 
 import jakarta.validation.constraints.NotNull;
-import net.yozmnews.evaluation.MultiTagKind;
+import net.yozmnews.tag.MultiTagKind;
 
 /**
  * 기준 미리보기 요청 — 태그 종류 하나의 제안 값과 기간(시작일 · 종료일 · 시간대) · docs/specs/admin.md §3.

@@ -9,14 +9,14 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import net.yozmnews.evaluation.adapter.in.job.BackfillMissingTagsJob;
-import net.yozmnews.evaluation.adapter.in.job.EvaluatePendingArticlesJob;
 import net.yozmnews.event.adapter.in.job.EventCleanupJob;
 import net.yozmnews.event.adapter.in.job.IntakeArticlesJob;
 import net.yozmnews.platform.adapter.in.job.EventResubmissionJob;
 import net.yozmnews.source.adapter.in.job.FeedHealthCheckJob;
 import net.yozmnews.source.adapter.in.job.PollDueFeedsJob;
 import net.yozmnews.source.adapter.in.job.PollFeedJob;
+import net.yozmnews.tag.adapter.in.job.BackfillMissingTagsJob;
+import net.yozmnews.tag.adapter.in.job.EvaluatePendingArticlesJob;
 import org.springframework.context.ApplicationContext;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.scheduling.config.ScheduledTask;

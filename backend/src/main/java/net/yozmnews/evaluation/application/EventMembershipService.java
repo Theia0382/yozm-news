@@ -37,7 +37,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 공개 API {@link EventMembership} 의 구현 — docs/specs/evaluation.md §4 · evaluation-R21 · evaluation-R37 · evaluation-R38.
+ * 공개 API {@link EventMembership} 의 구현 — docs/specs/evaluation.md §4 · evaluation-R37 · evaluation-R38 · evaluation-R44.
  * <p>
  * 트랜잭션 밖에서 판정할 기사와 서술 기사를 한 번에 읽고, 물을 후보를 골라 평가기를 부른다. 성공이면 결과를 물은 후보와 대조한 뒤 짧은
  * 트랜잭션 하나로 판정 원본을 쓰고 그 ID 를 결과에 싣는다. 커밋 뒤 기사가 아직 있는지 다시 본다 — 그새 지워졌으면 방금 쓴 원본을 지운다. 지우기 리스너는 기사 삭제

@@ -6,7 +6,7 @@ import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
 /**
- * 작업 역할의 기동 검사 — 작업 역할은 평가기 없이 운영하지 않는다(ADR-0061) · docs/specs/evaluation.md evaluation-R20.
+ * 작업 역할의 기동 검사 — 작업 역할은 평가기 없이 운영하지 않는다(ADR-0061) · docs/specs/evaluation.md evaluation-R43.
  * <p>
  * 키가 없으면 로컬 개발(profile {@code local})이 아닌 한 작업 역할이 뜨지 않는다. 화면 역할만 띄운 프로세스는 키를 요구하지 않는다. 키가
  * 맞는지는 평가 때 드러난다.
