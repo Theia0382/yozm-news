@@ -8,7 +8,7 @@ import java.util.Map;
 
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleId;
-import net.yozmnews.event.domain.feature.Embedding;
+import net.yozmnews.evaluation.Embedding;
 import net.yozmnews.event.domain.feature.MatchFeatures;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;

@@ -6,21 +6,19 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.UUID;
 
 import net.yozmnews.article.ArticleContent;
 import net.yozmnews.article.ArticleDirectory;
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.evaluation.EmbedderInfo;
+import net.yozmnews.evaluation.Embedding;
+import net.yozmnews.evaluation.EmbeddingFailure;
+import net.yozmnews.evaluation.EmbeddingResult;
+import net.yozmnews.evaluation.Embeddings;
+import net.yozmnews.evaluation.TextEmbedding;
 import net.yozmnews.event.domain.assignment.AssignmentQueueRepository;
-import net.yozmnews.event.domain.feature.ArticleEmbedder;
-import net.yozmnews.event.domain.feature.EmbedderInfo;
-import net.yozmnews.event.domain.feature.Embedding;
-import net.yozmnews.event.domain.feature.EmbeddingCheck;
-import net.yozmnews.event.domain.feature.EmbeddingFailure;
-import net.yozmnews.event.domain.feature.EmbeddingResult;
-import net.yozmnews.event.domain.feature.Embeddings;
 import net.yozmnews.event.domain.feature.KeyTermExtractor;
 import net.yozmnews.event.domain.feature.MatchFeatures;
 import net.yozmnews.event.domain.feature.MatchFeaturesRepository;
@@ -65,6 +63,8 @@ public class EventIntakeRound {
 
 	private final KeyTermExtractor keyTerms;
 
+	private final TextEmbedding embedding;
+
 	private final TransactionTemplate transaction;
 
 	private final InstantSource clock;
@@ -72,26 +72,26 @@ public class EventIntakeRound {
 	@Autowired
 	EventIntakeRound(IntakeQueueRepository queue, MatchFeaturesRepository features,
 			AssignmentQueueRepository assignmentQueue, ArticleDirectory articles, KeyTermExtractor keyTerms,
-			TransactionTemplate transaction) {
-		this(queue, features, assignmentQueue, articles, keyTerms, transaction, InstantSource.system());
+			TextEmbedding embedding, TransactionTemplate transaction) {
+		this(queue, features, assignmentQueue, articles, keyTerms, embedding, transaction, InstantSource.system());
 	}
 
 	/** 시험이 시계를 넣는다 */
 	EventIntakeRound(IntakeQueueRepository queue, MatchFeaturesRepository features,
 			AssignmentQueueRepository assignmentQueue, ArticleDirectory articles, KeyTermExtractor keyTerms,
-			TransactionTemplate transaction, InstantSource clock) {
+			TextEmbedding embedding, TransactionTemplate transaction, InstantSource clock) {
 		this.queue = queue;
 		this.features = features;
 		this.assignmentQueue = assignmentQueue;
 		this.articles = articles;
 		this.keyTerms = keyTerms;
+		this.embedding = embedding;
 		this.transaction = transaction;
 		this.clock = clock;
 	}
 
-	/** 회차 하나를 돈다 — 임베더는 작업 진입점이 넘긴다 */
-	public void run(ArticleEmbedder embedder) {
-		Objects.requireNonNull(embedder, "embedder");
+	/** 회차 하나를 돈다 — 임베딩은 생성자로 받은 {@link TextEmbedding} 으로 얻는다 */
+	public void run() {
 		Instant now = this.clock.instant();
 		List<PendingArticle> claimed = claim(now);
 		if (claimed.isEmpty()) {
@@ -115,10 +115,10 @@ public class EventIntakeRound {
 			return;
 		}
 		List<List<String>> terms = texts.stream().map(this.keyTerms::extract).toList();
-		EmbedderInfo info = embedder.info();
+		EmbedderInfo info = this.embedding.info();
 		EmbeddingResult result;
 		try {
-			result = embedder.embed(texts);
+			result = this.embedding.embed(texts);
 		}
 		catch (RuntimeException ex) {
 			stopOnError(present, info, ex.getClass().getName(), ex);
@@ -126,11 +126,6 @@ public class EventIntakeRound {
 		}
 		switch (result) {
 			case Embeddings embeddings -> {
-				Optional<String> mismatch = EmbeddingCheck.mismatch(info, texts.size(), embeddings.vectors());
-				if (mismatch.isPresent()) {
-					stopOnError(present, info, mismatch.get(), null);
-					return;
-				}
 				for (int i = 0; i < present.size(); i++) {
 					write(present.get(i), info, embeddings.vectors().get(i), terms.get(i), now);
 				}
@@ -144,7 +139,7 @@ public class EventIntakeRound {
 					reject(present.getFirst(), failure);
 				}
 				else {
-					isolate(embedder, info, present, texts, terms, now);
+					isolate(info, present, texts, terms, now);
 				}
 			}
 		}
@@ -154,14 +149,14 @@ public class EventIntakeRound {
 	 * 묶음이 입력 거부일 때 기사 하나씩 다시 불러 거부된 기사를 가린다 — 성공은 쓰고 입력 거부는 거부 수를 센다. 그 밖의 실패 · 예외 · 결과
 	 * 어긋남이면 그 기사부터 남은 점유를 풀고 회차를 끝낸다(event-R6).
 	 */
-	private void isolate(ArticleEmbedder embedder, EmbedderInfo info, List<PendingArticle> present, List<String> texts,
-			List<List<String>> terms, Instant now) {
+	private void isolate(EmbedderInfo info, List<PendingArticle> present, List<String> texts, List<List<String>> terms,
+			Instant now) {
 		for (int i = 0; i < present.size(); i++) {
 			PendingArticle claim = present.get(i);
 			List<PendingArticle> remaining = present.subList(i, present.size());
 			EmbeddingResult result;
 			try {
-				result = embedder.embed(List.of(texts.get(i)));
+				result = this.embedding.embed(List.of(texts.get(i)));
 			}
 			catch (RuntimeException ex) {
 				stopOnError(remaining, info, ex.getClass().getName(), ex);
@@ -169,11 +164,6 @@ public class EventIntakeRound {
 			}
 			switch (result) {
 				case Embeddings embeddings -> {
-					Optional<String> mismatch = EmbeddingCheck.mismatch(info, 1, embeddings.vectors());
-					if (mismatch.isPresent()) {
-						stopOnError(remaining, info, mismatch.get(), null);
-						return;
-					}
 					write(claim, info, embeddings.vectors().getFirst(), terms.get(i), now);
 				}
 				case EmbeddingFailure failure -> {
@@ -253,9 +243,8 @@ public class EventIntakeRound {
 		logger.warn(phrase, info.name(), info.modelVersion(), remaining.size(), failure.message());
 	}
 
-	/** 예상 못한 예외 · 결과 어긋남 — 남은 점유를 풀고 회차를 끝낸다. 사유는 예외 클래스 이름이거나 어긋남 문구다 */
-	private void stopOnError(List<PendingArticle> remaining, EmbedderInfo info, String reason,
-			@Nullable RuntimeException cause) {
+	/** 예상 못한 예외 · 결과 어긋남 — 남은 점유를 풀고 회차를 끝낸다. 사유는 예외 클래스 이름이다 — 결과 어긋남도 관문의 예외로 온다 */
+	private void stopOnError(List<PendingArticle> remaining, EmbedderInfo info, String reason, RuntimeException cause) {
 		release(remaining);
 		logger.error("임베더가 실패해 회차를 멈췄다 — {} {}, 기사 {}건: {}", info.name(), info.modelVersion(), remaining.size(),
 				reason, cause);

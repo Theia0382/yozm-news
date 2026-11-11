@@ -6,8 +6,9 @@ import java.time.Instant;
 
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.evaluation.TextEmbedding;
 import net.yozmnews.event.EventArticles;
-import net.yozmnews.event.adapter.out.fake.FakeArticleEmbedder;
+import net.yozmnews.event.EventEmbeddings;
 import net.yozmnews.event.application.AssignmentRound;
 import net.yozmnews.event.application.EventIntakeRound;
 import net.yozmnews.event.application.MergeRound;
@@ -18,14 +19,17 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.TestPropertySource;
 
 /**
- * 사건 묶기 대기 반복 작업 — 생성자로 받은 임베더로 표현 회차 · 배정 회차 · 재판정 회차 · 병합 회차를 차례로 돌린다. 실제 회차 · 대기 ·
- * PostgreSQL 을 쓰고, 작업은 시험이 임베더를 넣어 직접 만든다(작업 서버는 끈다). 임베더 없이 뜨지 않음은 {@code IntakeArticlesJobWiringTests}
- * 가 본다.
+ * 사건 묶기 대기 반복 작업 — 표현 회차 · 배정 회차 · 재판정 회차 · 병합 회차를 차례로 돌린다. 실제 회차 · 대기 · PostgreSQL 을 쓰고,
+ * 작업은 시험이 회차를 넣어 직접 만든다(작업 서버는 끈다). 회차가 생성자로 받는 {@link TextEmbedding} 은 시험 구성의 대역이다 — 시험 문맥의
+ * 임베더는 닿지 않는 외부 방식이다. 작업 역할이 임베더 없이 뜨지 않음은 {@code EmbedderRequirementTests} 가 본다.
  * <p>
  * 지키는 규칙: event-R7 · event-R13
  */
@@ -61,8 +65,7 @@ class IntakeArticlesJobTests {
 	@Test
 	void withAnEmbedderTheJobRunsTheIntakeRoundAndThenTheAssignmentRound() {
 		long article = enqueued();
-		IntakeArticlesJob job = new IntakeArticlesJob(this.round, this.assignment, this.rejudgement, this.merge,
-				new FakeArticleEmbedder());
+		IntakeArticlesJob job = new IntakeArticlesJob(this.round, this.assignment, this.rejudgement, this.merge);
 
 		job.run();
 
@@ -81,6 +84,18 @@ class IntakeArticlesJobTests {
 		long article = EventArticles.insert(this.jdbc, "한국은행 기준금리 동결", "한국은행이 기준금리를 연 3.25%로 동결했다.");
 		this.queue.enqueue(new ArticleId(article), Instant.parse("2026-11-05T00:00:00Z"));
 		return article;
+	}
+
+	@TestConfiguration(proxyBeanMethods = false)
+	static class HashingEmbedding {
+
+		/** 회차가 받는 임베딩 대역 — 표현 회차와 배정 회차가 같은 모델 버전을 읽는다 */
+		@Bean
+		@Primary
+		TextEmbedding hashingEmbedding() {
+			return EventEmbeddings.hashing();
+		}
+
 	}
 
 }
