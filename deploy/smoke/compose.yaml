@@ -1,0 +1,22 @@
+# 배포 구성 스모크의 덧씌우기 — deploy/compose.yaml 위에 얹어 스모크 K14(로컬 모델 추론 한 건)를 돌린다.
+# CI 와 개발자의 확인에만 쓰고 운영 인스턴스에는 얹지 않는다 — docs/development/infrastructure.md "CI"
+# 사용: docker compose -f deploy/compose.yaml -f deploy/smoke/compose.yaml up -d --wait 뒤 SMOKE_OVERLAY=deploy/smoke/compose.yaml bash deploy/smoke.sh
+# 상대 경로는 첫 파일(deploy/compose.yaml)의 디렉터리 기준이다
+services:
+  app:
+    environment:
+      # 수집은 시험 피드 서버가 있는 이 프로젝트의 네트워크에만 연결한다 — 다른 내부 주소는 그대로 막힌다
+      YOZMNEWS_COLLECTION_ALLOWED_NETWORKS: 10.230.0.0/24
+      # 시험 기사의 태그 평가가 형식만 맞는 키를 실제 Jev 로 보내지 않게 닿지 않는 주소로 둔다
+      YOZMNEWS_JEV_BASE_URL: http://127.0.0.1:9
+  # 시험 피드를 내보내는 정적 서버 — 앱에서는 http://feeds/smoke.xml 로 닿는다
+  feeds:
+    image: caddy:2
+    command: ["caddy", "file-server", "--root", "/srv", "--listen", ":80"]
+    volumes:
+      - ./smoke/feeds:/srv:ro,z
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 10.230.0.0/24

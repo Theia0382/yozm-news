@@ -11,7 +11,8 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * 사건 기준 · 저장 기준 · 닫기 설정({@code yozmnews.event-assignment}) — 기본값의 정본이다 · docs/specs/event.md §4 ·
  * event-R13 · event-R17.
  * <p>
- * 기본값은 측정 전 목표다. 운영자는 환경 변수({@code YOZMNEWS_EVENT_ASSIGNMENT_UPPER} 식)로 바꾸고, 범위 · 관계를 어기면 기동하지
+ * 사건 기준 · 저장 기준의 기본값은 기본 임베딩 모델에 맞춰 평가 세트로, 닫는 기간은 운영 기록으로 정했고, 최대 기간은 측정 전
+ * 목표다(ADR-0109). 운영자는 환경 변수({@code YOZMNEWS_EVENT_ASSIGNMENT_UPPER} 식)로 바꾸고, 범위 · 관계를 어기면 기동하지
  * 않는다({@link AssignmentCriteria} · {@link EventClosing}).
  *
  * @param window 시간 창
@@ -23,9 +24,9 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param maxOpen 최대 기간 — 연 뒤 이만큼 지나면 닫는다
  */
 @ConfigurationProperties("yozmnews.event-assignment")
-public record EventAssignmentProperties(@DefaultValue("72h") Duration window, @DefaultValue("0.80") double upper,
-		@DefaultValue("0.55") double lower, @DefaultValue("0.40") double store,
-		@DefaultValue("0.50") double probability, @DefaultValue("7d") Duration closeAfter,
+public record EventAssignmentProperties(@DefaultValue("72h") Duration window, @DefaultValue("0.90") double upper,
+		@DefaultValue("0.65") double lower, @DefaultValue("0.40") double store,
+		@DefaultValue("0.40") double probability, @DefaultValue("4d") Duration closeAfter,
 		@DefaultValue("14d") Duration maxOpen) {
 
 	/**

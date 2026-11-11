@@ -1,6 +1,6 @@
 # ADR-0022: 컨테이너 이미지는 측별 Dockerfile 하나에 검사 · 배포 target 으로 두고, 실행 단계는 명령 없이 조립한다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — CI 의 빌더 확인([ADR-0104](0104-arm64-run-checked-on-arm64-runners-with-a-symmetric-deploy-check-per-architecture.md))
 - 날짜: 2026-10-26
 - 근거: [이슈 #5](https://github.com/Theia0382/yozm-news/issues/5) — 기점 `c119b1f` 의 저장소에서 시제품 Dockerfile 로 에뮬레이션 없는 빌더의 교차 빌드 · 계층 캐시 · 비root 실행을 실측
 - 관련: [ADR-0016](0016-containerized-checks.md)(검사 이미지 · 도구 버전 태그), [ADR-0006](0006-deployment-compose-cloudflare.md)(amd64 · arm64 이미지), [ADR-0021](0021-separate-deploy-compose-with-single-app-service.md)(배포 Compose)
@@ -22,6 +22,7 @@
 
 - 검사를 통과한 빌드 환경과 배포 이미지를 만드는 빌드 환경이 같은 정의다. 배포 target 은 검사 이미지의 의존성 계층을 그대로 재사용한다.
 - 에뮬레이션이 없는 빌더(기여자 머신 · CI)에서도 두 아키텍처가 빌드된다. 대신 실행 이미지에 패키지를 설치할 수 없다 — 필요해지면 그 도구가 든 기반 이미지를 고르거나 빌드 단계에서 만든 결과를 복사한다.
+> 부분 대체(둘째 문장) — [ADR-0104](0104-arm64-run-checked-on-arm64-runners-with-a-symmetric-deploy-check-per-architecture.md). 지금 상태: [개발 인프라 "CI"](../development/infrastructure.md#ci)
 - 이 규칙의 가드는 에뮬레이션이 없는 빌더의 두 아키텍처 빌드다. 빌더에 에뮬레이션이 있으면 규칙 위반이 드러나지 않으므로, CI 는 빌더에 arm64 에뮬레이션이 없음을 먼저 확인한다.
 - `<Dockerfile>.dockerignore` 는 Dockerfile 마다 하나라, 허용 목록이 검사 · 배포 두 용도의 합집합이다. 배포 단계가 복사하지 않는 파일은 배포 계층 캐시에 영향을 주지 않는다.
 

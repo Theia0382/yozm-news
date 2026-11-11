@@ -19,7 +19,7 @@ import net.yozmnews.event.AssignmentCriteria;
  * <li>감쇠 = 2^(−Δ / {@link #HALF_LIFE})</li>
  * <li>핵심 말 겹침 = |기준 핵심 말 ∩ 사건 핵심 말| ÷ |기준 핵심 말| — 기준 핵심 말이 없으면 0. 배정은 기사의 핵심 말이 기준이다</li>
  * </ul>
- * 가중치 · 반감기 · 사건 핵심 말 수는 측정 전 목표다.
+ * 가중치 · 반감기는 기본 임베딩 모델에 맞춰 평가 세트로 정한 상수다(ADR-0109). 사건 핵심 말 수는 측정 전 목표다.
  */
 public final class CandidateScoring {
 
@@ -27,7 +27,7 @@ public final class CandidateScoring {
 	public static final double KEY_TERM_WEIGHT = 0.3;
 
 	/** 감쇠의 반감기 — 시각 차가 이만큼이면 점수가 반이 된다 */
-	public static final Duration HALF_LIFE = Duration.ofHours(24);
+	public static final Duration HALF_LIFE = Duration.ofHours(36);
 
 	/** 산식에 쓰는 사건 핵심 말 수 — 기사 수가 많은 순(같으면 말 순) 상위. 저장소의 질의에 매개변수로 넘긴다 */
 	public static final int EVENT_KEY_TERMS = 20;

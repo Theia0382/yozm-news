@@ -1,0 +1,11 @@
+# 배포 구성 스모크 K14 의 시험 소스 수집 프로필 — 시험 피드 서버(deploy/smoke/compose.yaml)의 피드 하나
+# 스모크가 이 원문을 JSON 문자열로 옮겨 보낸다 — 큰따옴표 · 역슬래시를 쓰지 않는다
+source:
+  name: 스모크 시험 소스
+  homepage: https://smoke.example
+  language: ko
+termsReviewedAt: 2026-11-10
+feeds:
+  - key: smoke
+    url: http://feeds/smoke.xml
+    section: 시험
