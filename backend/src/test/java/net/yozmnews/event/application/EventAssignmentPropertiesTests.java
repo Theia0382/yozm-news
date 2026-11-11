@@ -44,8 +44,11 @@ class EventAssignmentPropertiesTests {
 		// 최대 기간 < 닫는 기간
 		this.runner.withPropertyValues("yozmnews.event-assignment.max-open=5d")
 			.run(context -> assertThat(context).hasFailed());
-		this.runner.withPropertyValues("yozmnews.event-assignment.close-after=7d500ms")
-			.run(context -> assertThat(context).hasFailed());
+		// 기간으로 읽히는 값이어야 닫기 기준의 초 단위 검증까지 닿는다 — 실패 원인의 문면으로 확인한다
+		this.runner.withPropertyValues("yozmnews.event-assignment.close-after=P7DT0.5S")
+			.run(context -> assertThat(context).getFailure()
+				.rootCause()
+				.hasMessage("닫는 기간 · 최대 기간은 0 보다 큰 초 단위여야 한다: PT168H0.5S"));
 	}
 
 	@Test

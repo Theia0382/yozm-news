@@ -57,6 +57,12 @@ services:
       YOZMNEWS_EVENT_ASSIGNMENT_PROBABILITY:
       YOZMNEWS_EVENT_ASSIGNMENT_CLOSE_AFTER:
       YOZMNEWS_EVENT_ASSIGNMENT_MAX_OPEN:
+      # 스토리라인 잇기의 시간 창 · 기준 점수 — deploy/.env 에 있을 때만 넘긴다. docs/operations/configuration.md "스토리라인 잇기"
+      YOZMNEWS_STORYLINE_LINKING_WINDOW:
+      YOZMNEWS_STORYLINE_LINKING_THRESHOLD:
+      # 스토리라인 상태의 잠잠 기간 · 끝남 기간 — deploy/.env 에 있을 때만 넘긴다. docs/operations/configuration.md "스토리라인 상태"
+      YOZMNEWS_STORYLINE_STATE_QUIET_AFTER:
+      YOZMNEWS_STORYLINE_STATE_ENDED_AFTER:
       # 사건 묶기의 임베딩 방식(기본 onnx — 이미지 안의 로컬 모델)과 외부 방식(openai-compatible)의 주소 · 모델 · 키(비밀 값) · 차원 ·
       # 차원 전송 · 입력 앞 문자열 · 묶음 크기 — deploy/.env 에 있을 때만 넘긴다. docs/operations/configuration.md "사건 묶기"
       YOZMNEWS_EMBEDDING_PROVIDER:

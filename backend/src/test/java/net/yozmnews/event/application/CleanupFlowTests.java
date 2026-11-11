@@ -16,6 +16,8 @@ import net.yozmnews.article.ArticleId;
 import net.yozmnews.evaluation.MembershipJudgement;
 import net.yozmnews.event.AssignmentCriteria;
 import net.yozmnews.event.EventArticles;
+import net.yozmnews.event.EventId;
+import net.yozmnews.event.EventsChanged;
 import net.yozmnews.event.domain.assignment.AssignmentQueueRepository;
 import net.yozmnews.event.domain.assignment.CriteriaRepository;
 import net.yozmnews.event.domain.event.EventArticleRepository;
@@ -37,6 +39,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.event.ApplicationEvents;
+import org.springframework.test.context.event.RecordApplicationEvents;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
@@ -48,6 +52,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
+@RecordApplicationEvents
 @TestPropertySource(properties = "jobrunr.background-job-server.enabled=false")
 class CleanupFlowTests {
 
@@ -58,6 +63,9 @@ class CleanupFlowTests {
 
 	private static final EventClosing CLOSING = EventClosing.of(Duration.ofDays(7), Duration.ofDays(14),
 			CRITERIA.window());
+
+	@Autowired
+	ApplicationEvents published;
 
 	@Autowired
 	EventRepository events;
@@ -107,8 +115,12 @@ class CleanupFlowTests {
 		// 연 지 15일 — 어제 붙었어도 닫는다
 		Event old = event("[0,1]", "2026-11-19T00:00:00Z", "2026-11-05T00:00:00Z", "2026-11-19T00:00:00Z", "[0,1]");
 
+		this.published.clear();
+
 		cleanup().run();
 
+		// 닫기 — 닫은 사건마다 알린다(event-R23)
+		assertThat(changes()).containsExactlyInAnyOrder(List.of(idle.id()), List.of(old.id()));
 		assertThat(row(idle.id())).containsEntry("status", "CLOSED")
 			.containsEntry("closed", "2026-11-20T00:00:00Z")
 			.containsEntry("representative_article_id", idle.members().get(1));
@@ -313,6 +325,13 @@ class CleanupFlowTests {
 			throw new AssertionError("배정 회차는 임베딩하지 않는다");
 		}
 
+	}
+
+	/** 알림마다 사건 ID 목록 — 발행 순(event-R23) */
+	private List<List<Long>> changes() {
+		return this.published.stream(EventsChanged.class)
+			.map(changed -> changed.eventIds().stream().map(EventId::value).toList())
+			.toList();
 	}
 
 }

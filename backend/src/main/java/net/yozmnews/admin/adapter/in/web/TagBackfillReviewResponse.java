@@ -3,6 +3,7 @@ package net.yozmnews.admin.adapter.in.web;
 import java.time.Instant;
 import java.util.List;
 
+import net.yozmnews.evaluation.TagBackfillAdministration;
 import net.yozmnews.evaluation.TagBackfillReviewResult;
 import net.yozmnews.evaluation.TagBackfillVersionCount;
 import org.springframework.web.server.ResponseStatusException;
@@ -24,7 +25,7 @@ record TagBackfillReviewResponse(Outcome result, Instant from, Instant to, long 
 		return switch (result) {
 			case TagBackfillReviewResult.Ready ready -> new TagBackfillReviewResponse(Outcome.READY, ready.from(),
 					ready.to(), ready.evaluations(), ready.versions().stream().map(VersionCount::of).toList());
-			case TagBackfillReviewResult.DaysOutOfRange outOfRange -> throw BackfillDays.outOfRange();
+			case TagBackfillReviewResult.DaysOutOfRange outOfRange -> throw BackfillDays.outOfRange(TagBackfillAdministration.MAX_DAYS);
 		};
 	}
 

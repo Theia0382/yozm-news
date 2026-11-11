@@ -147,7 +147,9 @@
 - **주제** — 주제(태그)는 기사의 분류이고 흐름이 아니라 스토리라인 층 밖이다. 스토리라인에 주제 · 지역 태그를 줄지는 [미결 사항](open-questions.md)이다
 - **구독** — 사용자가 스토리라인을 구독하고 해제한다. 구독과 그 변경 이력은 `user` 가 스토리라인 ID 로 갖고, 구독 변경은 관심 신호(§7)다
 - **큰 판정** — 구독과 무관하게 알릴 만한 스토리라인을 고른다. 다이제스트의 큰 슬롯 · 선정 이유(§6), 구독 제안(§7), 변화 리포트의 보도량(§10)이 쓴다. 만들 때 `event` 의 큰 사건 판정 · 기준을 거둔다([ADR-0103](adr/0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md))
-- **(미설계)** 잇는 방법(사건의 소속을 정하는 법, 주 소속을 둘지, 스토리라인 사이 관계를 나타내고 판정하는 법), 상태, 큰 판정의 식과 기준, 타임라인, 여러 스토리라인의 합계에서 같은 사건을 한 번만 세는 규칙, 겹치는 묶음의 평가 지표, 계기(사건 병합 · 기사 삭제 등)별 처리. 잇는 방법은 몇 주에 걸쳐 내용이 바뀌어 가는 전개를 이어야 한다 — 임베딩 기반 묶음만으로는 잘 잇지 못하는 일이다([ADR-0025](adr/0025-long-term-personal-news-history-in-v1.md))
+- **잇기** — 사건이 생기거나 바뀌면 그 사건을 판정해 스토리라인에 더 붙이거나 다른 사건과 짝을 지어 새 스토리라인을 연다. 기간을 통째로 다시 묶지 않는다 — 구독 · 타임라인이 스토리라인 ID 를 가리킨다. 사건이 지워지거나 합쳐지면 소속을 따라 맞추고, 기사 삭제는 사건의 변화로 따른다. 그 결과 같은 사건들로 된 스토리라인은 하나로 합치고, 사건 하나만 남은 스토리라인은 그 사건을 가진 다른 스토리라인에 합치거나 풀어 그 사건을 다시 판정한다([ADR-0108](adr/0108-storylines-with-the-same-events-merge-and-a-storyline-left-with-one-event-merges-or-dissolves.md)). 지금 소속을 정하는 법은 잇는 방법을 평가 세트로 정하기 전의 임시 규칙이다 — 규칙과 계기별 처리는 [storyline Spec](specs/storyline.md#5-규칙과-불변식)에 있다([ADR-0105](adr/0105-storylines-link-incrementally-from-event-change-notifications-and-events-publish-changed-event-ids.md) · [ADR-0106](adr/0106-provisional-storyline-linking-opens-only-with-a-partner-event-and-adds-the-single-best-storyline-without-removal.md))
+- **상태** — 진행 · 잠잠 · 끝남을 저장하지 않고 볼 때마다 마지막 기사 시각으로 정한다. 끝나도 잇기를 막지 않는다 — 최근 기사가 있는 사건이 붙으면 같은 스토리라인이 다시 진행이 된다. 기간은 설정이다([storyline Spec](specs/storyline.md#상태) · [ADR-0107](adr/0107-storyline-state-is-judged-at-query-time-from-the-last-article-and-an-ended-storyline-still-links.md))
+- **(미설계)** 잇는 방법의 최종(주 소속을 둘지, 판정 시점, 새 스토리라인을 여는 조건), 스토리라인 사이 관계를 나타내고 판정하는 법, 큰 판정의 식과 기준, 타임라인, 여러 스토리라인의 합계에서 같은 사건을 한 번만 세는 규칙, 겹치는 묶음의 평가 지표. 잇는 방법은 몇 주에 걸쳐 내용이 바뀌어 가는 전개를 이어야 한다 — 임베딩 기반 묶음만으로는 잘 잇지 못하는 일이다([ADR-0025](adr/0025-long-term-personal-news-history-in-v1.md))
 
 ## 10. 변화 리포트
 

@@ -8,6 +8,8 @@ import java.util.Optional;
 
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.event.EventArticleView;
+import net.yozmnews.event.EventNeighbor;
+import net.yozmnews.event.EventProfile;
 import net.yozmnews.event.EventView;
 import net.yozmnews.event.JudgementUse;
 import net.yozmnews.event.MergePair;
@@ -60,5 +62,17 @@ public interface EventQueryRepository {
 
 	/** 판정 원본을 가리키는 병합 판정 기록 — 원본 ID → 쌍들((작은 ID, 큰 ID) 순)과 지금 같은 사건인지 */
 	Map<Long, List<MergePair>> mergePairsByJudgement(Collection<Long> judgementIds);
+
+	/** 사건들의 표현 — 핵심 말 상위 {@code keyTerms} 개. 합쳐진 사건 · 없는 사건은 빠진다(event-R24) */
+	Map<Long, EventProfile> profiles(Collection<Long> eventIds, int keyTerms);
+
+	/**
+	 * 이웃 사건 — 같은 모델 버전 · 합쳐지지 않음 · 시각 범위가 {@code [from, to]} 와 겹침 · 코사인 ≥ {@code minCosine}(NaN 은 빠진다).
+	 * 그 사건 자신은 빠지고, 그 사건이 합쳐졌거나 없으면 빈 목록. 코사인 내림차순 · 사건 ID 순(event-R24)
+	 */
+	List<EventNeighbor> neighbors(long eventId, Instant from, Instant to, double minCosine, int keyTerms, int limit);
+
+	/** 마지막 기사 시각이 {@code since} 이후(같으면 포함)인, 합쳐지지 않은 사건 — 첫 기사 시각 · 사건 ID 순(event-R24) */
+	List<EventView> lastArticleSince(Instant since);
 
 }

@@ -43,8 +43,8 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 방식은 {@link Reassignment} 가 정한다. 잠근 지금 사건이 열려 있지 않으면 기준만 새것으로 적는다. 그 기사가 사건을 열었는지는 배정의
  * 표지로 안다. 옮기거나 떼어 낼 때의 기사 벡터는 지금 임베더가 아니라 그 배정이 속한 사건의 모델 버전 표현이고, 없으면(보존 기간이
  * 지나 지움) 옮기지 못해 기준만 새것으로 적는다. 회차마다 닫힌 사건의 배정은 {@link AssignmentSchedule#CLOSED_KEEP_BATCH} 건,
- * 하나씩 다시 판정하는 배정은 {@link AssignmentSchedule#REJUDGE_BATCH} 건까지 한다. 예외를 밖으로 던지지 않는다. 트랜잭션 · 역할
- * 애너테이션이 없다(두 역할 공통).
+ * 하나씩 다시 판정하는 배정은 {@link AssignmentSchedule#REJUDGE_BATCH} 건까지 한다. 기준 등록 뒤의 예외를 밖으로 던지지 않는다 — 기준
+ * 등록의 예외는 회차 밖으로 나가고 다음 회차가 다시 돈다. 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통).
  */
 @Service
 public class RejudgementRound {
