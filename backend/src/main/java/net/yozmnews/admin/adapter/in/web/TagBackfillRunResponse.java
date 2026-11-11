@@ -4,9 +4,9 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 
-import net.yozmnews.evaluation.TagBackfillRunView;
-import net.yozmnews.evaluation.TagBackfillState;
-import net.yozmnews.evaluation.TagBackfillVersionView;
+import net.yozmnews.tag.TagBackfillRunView;
+import net.yozmnews.tag.TagBackfillState;
+import net.yozmnews.tag.TagBackfillVersionView;
 import org.jspecify.annotations.Nullable;
 
 /**

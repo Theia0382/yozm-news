@@ -18,7 +18,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import net.yozmnews.evaluation.EvaluatorFailureKind;
-import net.yozmnews.evaluation.TagSetView;
+import net.yozmnews.evaluation.TagQuestions;
 import net.yozmnews.evaluation.domain.evaluator.ArticleEvaluator;
 import net.yozmnews.evaluation.domain.evaluator.Evaluation;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationFailure;
@@ -52,8 +52,8 @@ public final class JevArticleEvaluator implements ArticleEvaluator, AutoCloseabl
 	static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(5);
 
 	/**
-	 * 요청 하나(헤더 · 본문 전부)의 마감 — 회차 한 묶음({@code PendingEvaluations.CLAIM_BATCH}) × 기사당 요청 둘 × 이 마감이 점유 기간
-	 * ({@link net.yozmnews.evaluation.domain.queue.EvaluationSchedule#LEASE}) 안에 들어야 한다
+	 * 요청 하나(헤더 · 본문 전부)의 마감 — 부르는 쪽 회차가 한 점유 안에서 차례로 판정하는 기사 수 × 기사당 요청 둘 × 이 마감이 그
+	 * 점유 기간 안에 들어야 한다(docs/specs/evaluation.md §4)
 	 */
 	static final Duration RESPONSE_DEADLINE = Duration.ofSeconds(15);
 
@@ -106,11 +106,11 @@ public final class JevArticleEvaluator implements ArticleEvaluator, AutoCloseabl
 	}
 
 	@Override
-	public EvaluationResult evaluate(EvaluationInput input, TagSetView tagSet) {
+	public EvaluationResult evaluate(EvaluationInput input, TagQuestions questions) {
 		Objects.requireNonNull(input, "input");
-		Objects.requireNonNull(tagSet, "tagSet");
-		return exchange(JevRequest.body(this.model, input, tagSet), () -> JevRequest.probeBody(this.model, tagSet),
-				answered -> JevResponse.read(answered.body(), answered.requestId(), tagSet), failure -> failure);
+		Objects.requireNonNull(questions, "questions");
+		return exchange(JevRequest.body(this.model, input, questions), () -> JevRequest.probeBody(this.model, questions),
+				answered -> JevResponse.read(answered.body(), answered.requestId(), questions), failure -> failure);
 	}
 
 	@Override
@@ -122,16 +122,16 @@ public final class JevArticleEvaluator implements ArticleEvaluator, AutoCloseabl
 				failure -> failure);
 	}
 
-	/** 저장된 Jev 응답 본문을 넘긴 체계로 다시 읽는다 — 요청을 보내지 않는다 */
+	/** 저장된 Jev 응답 본문을 넘긴 질문 묶음로 다시 읽는다 — 요청을 보내지 않는다 */
 	@Override
-	public RereadResult reread(String evaluator, String rawResponse, TagSetView tagSet) {
+	public RereadResult reread(String evaluator, String rawResponse, TagQuestions questions) {
 		Objects.requireNonNull(evaluator, "evaluator");
 		Objects.requireNonNull(rawResponse, "rawResponse");
-		Objects.requireNonNull(tagSet, "tagSet");
+		Objects.requireNonNull(questions, "questions");
 		if (!JevResponse.EVALUATOR.equals(evaluator)) {
 			return new RereadFailure(RereadFailure.Kind.OTHER_EVALUATOR, "Jev 가 남긴 원본 응답이 아니다 — 평가기 " + evaluator);
 		}
-		return switch (JevResponse.read(rawResponse, null, tagSet)) {
+		return switch (JevResponse.read(rawResponse, null, questions)) {
 			case Evaluation evaluation -> evaluation;
 			case EvaluationFailure failure -> new RereadFailure(RereadFailure.Kind.UNREADABLE, failure.message());
 		};

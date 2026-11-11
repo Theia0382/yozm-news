@@ -31,8 +31,7 @@ import net.yozmnews.evaluation.FormatChoice;
 import net.yozmnews.evaluation.FormatOption;
 import net.yozmnews.evaluation.ImportanceLevel;
 import net.yozmnews.evaluation.ImportanceScale;
-import net.yozmnews.evaluation.TagSetId;
-import net.yozmnews.evaluation.TagSetView;
+import net.yozmnews.evaluation.TagQuestions;
 import net.yozmnews.evaluation.TopicCategory;
 import net.yozmnews.evaluation.domain.evaluator.CandidateEvent;
 import net.yozmnews.evaluation.domain.evaluator.Evaluation;
@@ -57,7 +56,7 @@ import org.springframework.boot.test.system.OutputCaptureExtension;
  * 사건 소속 판정도 같은 전송 · 갈래를 지나는지 본다.
  * 응답 본문은 실측 응답 · 공식 문서의 모양이다. 기본 주소에 경로가 있는 경우(OpenRouter 의 호환 경로처럼)를 쓴다.
  * <p>
- * 지키는 규칙: evaluation-R14 · evaluation-R20 · evaluation-R37 · evaluation-R38 · ADR-0058 · docs/security.md(키가 로그 · 문구에 남지
+ * 지키는 규칙: evaluation-R37 · evaluation-R38 · evaluation-R40 · evaluation-R41 · ADR-0058 · docs/security.md(키가 로그 · 문구에 남지
  * 않는다)
  */
 @ExtendWith(OutputCaptureExtension.class)
@@ -74,7 +73,7 @@ class JevArticleEvaluatorTests {
 
 	private static final Duration SHORT = Duration.ofSeconds(1);
 
-	private static final TagSetView TAG_SET = new TagSetView(new TagSetId(1), 1,
+	private static final TagQuestions QUESTIONS = new TagQuestions(
 			List.of(new TopicCategory("economy", "경제", "경제",
 					List.of(new AskedTag("economy.real-estate", "부동산", "부동산 시장", "주제가 부동산 시장인가")))),
 			List.of(new AskedTag("domestic", "국내", "대한민국", "무대가 대한민국인가")),
@@ -133,7 +132,7 @@ class JevArticleEvaluatorTests {
 	void sendsOneRequestWithTheKeyAndReadsTheAnswer() {
 		server.stubFor(post(PATH).willReturn(json(200, ANSWER).withHeader("x-typesafe-request-id", "req_ok")));
 
-		EvaluationResult result = evaluator().evaluate(INPUT, TAG_SET);
+		EvaluationResult result = evaluator().evaluate(INPUT, QUESTIONS);
 
 		assertThat(result).isEqualTo(new Evaluation(Map.of("economy.real-estate", 0.93), Map.of("domestic", 0.99),
 				Map.of("straight", 0.98, "opinion", 0.02), Map.of(1, 0.79, 2, 0.21), "jev", "jev-1.14.0", 3208, ANSWER));
@@ -147,7 +146,7 @@ class JevArticleEvaluatorTests {
 	void reportsABadKeyAsUnavailable() {
 		server.stubFor(post(PATH).willReturn(json(401, BAD_KEY).withHeader("x-typesafe-request-id", "req_401")));
 
-		assertThat(evaluator().evaluate(INPUT, TAG_SET)).isEqualTo(new EvaluationFailure(EVALUATOR_UNAVAILABLE,
+		assertThat(evaluator().evaluate(INPUT, QUESTIONS)).isEqualTo(new EvaluationFailure(EVALUATOR_UNAVAILABLE,
 				"Jev 가 평가 요청을 받지 않았다 — Jev 응답 401 authentication_error: Cannot authenticate with the server. "
 						+ "Please check your API key and try again. (요청 req_401)"));
 	}
@@ -156,12 +155,12 @@ class JevArticleEvaluatorTests {
 	void reportsAMissingKeyAndAValidationErrorAsUnavailable() {
 		server.stubFor(post(PATH).willReturn(json(403,
 				"{\"detail\":{\"error_type\":\"authentication_error\",\"message\":\"Must supply an API key! Check your request and try again.\"}}")));
-		assertThat(evaluator().evaluate(INPUT, TAG_SET)).isEqualTo(new EvaluationFailure(EVALUATOR_UNAVAILABLE,
+		assertThat(evaluator().evaluate(INPUT, QUESTIONS)).isEqualTo(new EvaluationFailure(EVALUATOR_UNAVAILABLE,
 				"Jev 가 평가 요청을 받지 않았다 — Jev 응답 403 authentication_error: Must supply an API key! Check your request and try again."));
 
 		server.stubFor(post(PATH).willReturn(json(422,
 				"{\"detail\":[{\"type\":\"missing\",\"loc\":[\"body\",\"state\"],\"msg\":\"Field required\",\"input\":\"공동시행자 관리 강화\"}]}")));
-		assertThat(evaluator().evaluate(INPUT, TAG_SET)).isEqualTo(new EvaluationFailure(EVALUATOR_UNAVAILABLE,
+		assertThat(evaluator().evaluate(INPUT, QUESTIONS)).isEqualTo(new EvaluationFailure(EVALUATOR_UNAVAILABLE,
 				"Jev 가 평가 요청을 받지 않았다 — Jev 응답 422 missing: Field required"));
 	}
 
@@ -170,18 +169,18 @@ class JevArticleEvaluatorTests {
 		server.stubFor(post(PATH).willReturn(aResponse().withStatus(429).withHeader("Retry-After", "7")
 			.withHeader("x-typesafe-request-id", "req_429")));
 
-		assertThat(evaluator().evaluate(INPUT, TAG_SET)).isEqualTo(new EvaluationFailure(TRANSIENT,
+		assertThat(evaluator().evaluate(INPUT, QUESTIONS)).isEqualTo(new EvaluationFailure(TRANSIENT,
 				"Jev 가 평가 요청을 받지 않았다 — Jev 응답 429 · Retry-After 7 (요청 req_429)"));
 	}
 
 	@Test
 	void reportsServerErrorsAsTransient() {
 		server.stubFor(post(PATH).willReturn(aResponse().withStatus(503).withBody("<html>unavailable</html>")));
-		assertThat(evaluator().evaluate(INPUT, TAG_SET))
+		assertThat(evaluator().evaluate(INPUT, QUESTIONS))
 			.isEqualTo(new EvaluationFailure(TRANSIENT, "Jev 가 평가 요청을 받지 않았다 — Jev 응답 503"));
 
 		server.stubFor(post(PATH).willReturn(aResponse().withStatus(529)));
-		assertThat(evaluator().evaluate(INPUT, TAG_SET))
+		assertThat(evaluator().evaluate(INPUT, QUESTIONS))
 			.isEqualTo(new EvaluationFailure(TRANSIENT, "Jev 가 평가 요청을 받지 않았다 — Jev 응답 529"));
 	}
 
@@ -192,7 +191,7 @@ class JevArticleEvaluatorTests {
 			closedPort = socket.getLocalPort();
 		}
 
-		assertThat(evaluator(URI.create("http://127.0.0.1:" + closedPort), SHORT).evaluate(INPUT, TAG_SET))
+		assertThat(evaluator(URI.create("http://127.0.0.1:" + closedPort), SHORT).evaluate(INPUT, QUESTIONS))
 			.isEqualTo(new EvaluationFailure(TRANSIENT, "Jev 와 주고받지 못했다 — ConnectException"));
 	}
 
@@ -200,7 +199,7 @@ class JevArticleEvaluatorTests {
 	void reportsLateHeadersAsTransient() {
 		server.stubFor(post(PATH).willReturn(json(200, ANSWER).withFixedDelay(2_000)));
 
-		assertThat(evaluator(SHORT).evaluate(INPUT, TAG_SET))
+		assertThat(evaluator(SHORT).evaluate(INPUT, QUESTIONS))
 			.isEqualTo(new EvaluationFailure(TRANSIENT, "Jev 응답 마감(1초)을 넘었다"));
 	}
 
@@ -209,7 +208,7 @@ class JevArticleEvaluatorTests {
 		server.stubFor(post(PATH).willReturn(json(200, ANSWER).withChunkedDribbleDelay(10, 3_000)));
 
 		long start = System.nanoTime();
-		EvaluationResult result = evaluator(SHORT).evaluate(INPUT, TAG_SET);
+		EvaluationResult result = evaluator(SHORT).evaluate(INPUT, QUESTIONS);
 
 		assertThat(result).isEqualTo(new EvaluationFailure(TRANSIENT, "Jev 응답 마감(1초)을 넘었다"));
 		assertThat(Duration.ofNanos(System.nanoTime() - start)).isLessThan(Duration.ofSeconds(2));
@@ -219,7 +218,7 @@ class JevArticleEvaluatorTests {
 	void readsTheSameAnswerWithoutDelayUnderTheShortDeadline() {
 		server.stubFor(post(PATH).willReturn(json(200, ANSWER)));
 
-		assertThat(evaluator(SHORT).evaluate(INPUT, TAG_SET)).isInstanceOf(Evaluation.class);
+		assertThat(evaluator(SHORT).evaluate(INPUT, QUESTIONS)).isInstanceOf(Evaluation.class);
 	}
 
 	@Test
@@ -227,7 +226,7 @@ class JevArticleEvaluatorTests {
 		server.stubFor(post(PATH).willReturn(
 				aResponse().withStatus(200).withHeader("Content-Length", "1048577").withBody("a".repeat(1_048_577))));
 
-		assertThat(evaluator().evaluate(INPUT, TAG_SET)).isEqualTo(new EvaluationFailure(EVALUATOR_UNAVAILABLE,
+		assertThat(evaluator().evaluate(INPUT, QUESTIONS)).isEqualTo(new EvaluationFailure(EVALUATOR_UNAVAILABLE,
 				"Jev 응답 본문이 상한(1048576 바이트)을 넘는다"));
 	}
 
@@ -236,7 +235,7 @@ class JevArticleEvaluatorTests {
 		server.stubFor(post(PATH)
 			.willReturn(aResponse().withStatus(200).withBody("a".repeat(1_048_577)).withChunkedDribbleDelay(4, 200)));
 
-		assertThat(evaluator().evaluate(INPUT, TAG_SET)).isEqualTo(new EvaluationFailure(EVALUATOR_UNAVAILABLE,
+		assertThat(evaluator().evaluate(INPUT, QUESTIONS)).isEqualTo(new EvaluationFailure(EVALUATOR_UNAVAILABLE,
 				"Jev 응답 본문이 상한(1048576 바이트)을 넘는다"));
 	}
 
@@ -244,7 +243,7 @@ class JevArticleEvaluatorTests {
 	void readsABodyOfExactlyTheLimit() {
 		server.stubFor(post(PATH).willReturn(aResponse().withStatus(200).withBody("a".repeat(1_048_576))));
 
-		assertThat(evaluator().evaluate(INPUT, TAG_SET)).isEqualTo(
+		assertThat(evaluator().evaluate(INPUT, QUESTIONS)).isEqualTo(
 				new EvaluationFailure(EVALUATOR_UNAVAILABLE, "Jev 응답을 읽을 수 없다 — JSON 이 아니다"));
 	}
 
@@ -252,7 +251,7 @@ class JevArticleEvaluatorTests {
 	void blamesTheArticleWhenTheEmptyStateFits() {
 		contextExceededThenProbe(json(200, ANSWER).withHeader("x-typesafe-request-id", "req_probe"));
 
-		assertThat(evaluator().evaluate(INPUT, TAG_SET)).isEqualTo(new EvaluationFailure(ARTICLE_REJECTED,
+		assertThat(evaluator().evaluate(INPUT, QUESTIONS)).isEqualTo(new EvaluationFailure(ARTICLE_REJECTED,
 				"기사가 Jev 문맥 한도를 넘는다 — 빈 state 확인 요청은 받았다 — Jev 응답 400 max_tokens_exceeded (요청 req_first)"));
 		assertProbed();
 	}
@@ -261,7 +260,7 @@ class JevArticleEvaluatorTests {
 	void blamesTheTagSetWhenTheEmptyStateAlsoExceeds() {
 		contextExceededThenProbe(json(400, CONTEXT_EXCEEDED).withHeader("x-typesafe-request-id", "req_probe"));
 
-		assertThat(evaluator().evaluate(INPUT, TAG_SET)).isEqualTo(new EvaluationFailure(EVALUATOR_UNAVAILABLE,
+		assertThat(evaluator().evaluate(INPUT, QUESTIONS)).isEqualTo(new EvaluationFailure(EVALUATOR_UNAVAILABLE,
 				"Jev 문맥 초과 — 빈 state 확인 요청도 받지 않았다 — Jev 응답 400 max_tokens_exceeded (요청 req_probe)"));
 		assertProbed();
 	}
@@ -270,7 +269,7 @@ class JevArticleEvaluatorTests {
 	void retriesLaterWhenTheProbeFailsForAWhile() {
 		contextExceededThenProbe(aResponse().withStatus(503));
 
-		assertThat(evaluator().evaluate(INPUT, TAG_SET)).isEqualTo(new EvaluationFailure(TRANSIENT,
+		assertThat(evaluator().evaluate(INPUT, QUESTIONS)).isEqualTo(new EvaluationFailure(TRANSIENT,
 				"Jev 문맥 초과 — 빈 state 확인 요청도 받지 않았다 — Jev 응답 503"));
 		assertProbed();
 	}
@@ -279,7 +278,7 @@ class JevArticleEvaluatorTests {
 	void retriesLaterWhenTheProbeMissesTheDeadline() {
 		contextExceededThenProbe(json(200, ANSWER).withFixedDelay(2_000));
 
-		assertThat(evaluator(SHORT).evaluate(INPUT, TAG_SET)).isEqualTo(new EvaluationFailure(TRANSIENT,
+		assertThat(evaluator(SHORT).evaluate(INPUT, QUESTIONS)).isEqualTo(new EvaluationFailure(TRANSIENT,
 				"Jev 문맥 초과 — 빈 state 확인 요청이 실패했다: Jev 응답 마감(1초)을 넘었다 — Jev 응답 400 max_tokens_exceeded (요청 req_first)"));
 		assertProbed();
 	}
@@ -288,7 +287,7 @@ class JevArticleEvaluatorTests {
 	void reportsAProbeBodyOverTheLimitAsUnavailable() {
 		contextExceededThenProbe(aResponse().withStatus(200).withBody("a".repeat(1_048_577)));
 
-		assertThat(evaluator().evaluate(INPUT, TAG_SET)).isEqualTo(new EvaluationFailure(EVALUATOR_UNAVAILABLE,
+		assertThat(evaluator().evaluate(INPUT, QUESTIONS)).isEqualTo(new EvaluationFailure(EVALUATOR_UNAVAILABLE,
 				"Jev 문맥 초과 — 빈 state 확인 요청: Jev 응답 본문이 상한(1048576 바이트)을 넘는다"));
 		assertProbed();
 	}
@@ -300,10 +299,10 @@ class JevArticleEvaluatorTests {
 				aResponse().withStatus(429).withHeader("Retry-After", "1"), aResponse().withStatus(500),
 				json(200, "{\"model\":\"jev-1.14.0\"}"), json(400, CONTEXT_EXCEEDED))) {
 			server.stubFor(post(PATH).willReturn(response));
-			messages.add(((EvaluationFailure) evaluator().evaluate(INPUT, TAG_SET)).message());
+			messages.add(((EvaluationFailure) evaluator().evaluate(INPUT, QUESTIONS)).message());
 		}
 		server.stubFor(post(PATH).willReturn(json(200, ANSWER).withFixedDelay(2_000)));
-		messages.add(((EvaluationFailure) evaluator(SHORT).evaluate(INPUT, TAG_SET)).message());
+		messages.add(((EvaluationFailure) evaluator(SHORT).evaluate(INPUT, QUESTIONS)).message());
 
 		server.verify(postRequestedFor(urlEqualTo(PATH)).withHeader("Authorization", equalTo("Bearer " + KEY)));
 		assertThat(messages).hasSize(7).allSatisfy(message -> assertThat(message).isNotBlank().doesNotContain(KEY));
@@ -312,7 +311,7 @@ class JevArticleEvaluatorTests {
 
 	@Test
 	void rereadsAStoredAnswerWithoutSendingARequest() {
-		assertThat(evaluator().reread("jev", ANSWER, TAG_SET)).isEqualTo(new Evaluation(
+		assertThat(evaluator().reread("jev", ANSWER, QUESTIONS)).isEqualTo(new Evaluation(
 				Map.of("economy.real-estate", 0.93), Map.of("domestic", 0.99), Map.of("straight", 0.98, "opinion", 0.02),
 				Map.of(1, 0.79, 2, 0.21), "jev", "jev-1.14.0", 3208, ANSWER));
 		server.verify(0, anyRequestedFor(anyUrl()));
@@ -320,7 +319,7 @@ class JevArticleEvaluatorTests {
 
 	@Test
 	void doesNotRereadTheResponseOfAnotherEvaluator() {
-		assertThat(evaluator().reread("fake", ANSWER, TAG_SET)).isEqualTo(
+		assertThat(evaluator().reread("fake", ANSWER, QUESTIONS)).isEqualTo(
 				new RereadFailure(RereadFailure.Kind.OTHER_EVALUATOR, "Jev 가 남긴 원본 응답이 아니다 — 평가기 fake"));
 	}
 
@@ -328,7 +327,7 @@ class JevArticleEvaluatorTests {
 	void aStoredAnswerWithoutAnAnswerOfTheTagSetIsUnreadable() {
 		String answer = ANSWER.replace("\"region.domestic\":{\"type\":\"noul\",\"noul\":0.99},", "");
 
-		assertThat(evaluator().reread("jev", answer, TAG_SET)).isEqualTo(new RereadFailure(RereadFailure.Kind.UNREADABLE,
+		assertThat(evaluator().reread("jev", answer, QUESTIONS)).isEqualTo(new RereadFailure(RereadFailure.Kind.UNREADABLE,
 				"Jev 응답을 읽을 수 없다 — 답이 없다 — region.domestic"));
 		server.verify(0, anyRequestedFor(anyUrl()));
 	}

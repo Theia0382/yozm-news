@@ -13,7 +13,6 @@ import java.util.Map;
 
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleId;
-import net.yozmnews.evaluation.ChangeActor;
 import net.yozmnews.event.BigEvent;
 import net.yozmnews.event.BigEventAdministration;
 import net.yozmnews.event.BigEventCriteria;
@@ -26,6 +25,7 @@ import net.yozmnews.event.EventPeriod;
 import net.yozmnews.event.EventSummary;
 import net.yozmnews.event.EventTally;
 import net.yozmnews.event.domain.bigevent.BigEventCriteriaRepository;
+import net.yozmnews.platform.ChangeActor;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -235,11 +235,10 @@ class EventQueryFlowTests {
 		long article = EventArticles.insert(this.jdbc, "사건 조회 시험 기사", null, source, 10 + source);
 		if (importance != null) {
 			this.jdbc.sql("""
-					insert into article_evaluations (article_id, tag_set_id, evaluator, model_version, format_key,
-					    format_probability, format_distribution, importance, importance_distribution, raw_response,
-					    input_tokens, evaluated_at)
-					values (:article, (select id from tag_sets order by number desc limit 1), 'fake', 'fake-1', 'straight',
-					    1.0, '{}', :importance, '{}', '{}', 0, '2026-11-05T00:00:00Z')
+					insert into article_evaluations (article_id, tag_set_id, judgement_id, format_key, format_probability,
+					    format_distribution, importance, importance_distribution, evaluated_at)
+					values (:article, (select id from tag_sets order by number desc limit 1), :article, 'straight', 1.0,
+					    '{}', :importance, '{}', '2026-11-05T00:00:00Z')
 					""").param("article", article).param("importance", importance).update();
 			this.evaluated.add(article);
 		}

@@ -39,6 +39,8 @@ erDiagram
     tags ||--o{ user_tag_preferences : ""
     tag_sets ||--o{ tag_key_lineage : ""
     articles ||--o{ article_event_judgements : ""
+    articles ||--o{ article_tag_judgements : ""
+    article_tag_judgements ||--o| article_evaluations : ""
 
     articles ||--o| event_intake_queue : ""
     articles ||--o{ article_match_features : ""
@@ -92,7 +94,7 @@ erDiagram
 
 ## 평가
 
-태그 체계 테이블(`tag_sets` · `tags` · `importance_rubrics` · `tag_set_thresholds` · `tag_set_threshold_changes`)과 평가 대기 · 평가 결과 테이블(`evaluation_queue` · `article_evaluations` · `article_tags` · `tag_key_lineage` · `article_event_judgements`)은 [evaluation Spec §6](specs/evaluation.md#6-데이터)에 있다.
+태그 체계 테이블(`tag_sets` · `tags` · `importance_rubrics` · `tag_set_thresholds` · `tag_set_threshold_changes`)과 평가 대기 · 평가 결과 테이블(`evaluation_queue` · `article_evaluations` · `article_tags` · `tag_key_lineage` · `tag_backfills` · `tag_backfill_versions`)은 [tag Spec §6](specs/tag.md#6-데이터)에, 판정 원본 테이블(`article_tag_judgements` · `article_event_judgements`)은 [evaluation Spec §6](specs/evaluation.md#6-데이터)에 있다. 평가 행(`article_evaluations.judgement_id`)은 태그 판정 원본을 ID 로 가리킨다 — 모듈 사이라 FK 가 없다.
 
 ## 사건
 
@@ -141,15 +143,15 @@ erDiagram
 | 기사 메타데이터 (제목, 링크, 시각, 출처) | 무기한 | 지난 다이제스트의 링크를 유지하기 위해. 출처는 그 기사의 엔트리가 가리키는 소스들의 이름이다 — 프로필을 얻지 못하면 기록된 출처 이름([source Spec 출처 이름](specs/source.md#출처-이름) · [ADR-0053](adr/0053-source-records-last-confirmed-name-apart-from-operating-settings.md)) |
 | 기사 요약문 (`summary_text`) | 기본 무기한. 운영 설정(보존 일수, 기본 꺼짐)을 켜면 그 뒤 삭제 | 재평가 · 임베딩 재계산 · 검색에 쓴다. 사용자 화면 · 외부 API 에는 노출하지 않고 운영자 화면에서만 보인다. 지워진 기사도 장기 기능에서 처리된다 ([ADR-0029](adr/0029-indefinite-summary-retention-with-optional-deletion.md) · [ADR-0068](adr/0068-rss-summaries-shown-only-on-operator-screens-and-users-get-processed-information.md)) |
 | 주제 · 지역 태그(`article_tags`), 태그 체계, 태그 기준 · 저장 기준과 그 변경 이력, 태그 키 계보 | 무기한 | 주제별 보도량과 관심사 히스토리의 근거 |
-| 빠진 태그 채움 기록(`tag_backfills` · `tag_backfill_versions`) | 무기한 | 끝난 채움이 저장 바닥 계산의 입력이다 — 지우면 태그 기준 · 저장 기준의 경고와 평가 현황 표시가 바뀐다([evaluation-R32](specs/evaluation.md#빠진-태그-채움--저장-바닥)) |
+| 빠진 태그 채움 기록(`tag_backfills` · `tag_backfill_versions`) | 무기한 | 끝난 채움이 저장 바닥 계산의 입력이다 — 지우면 태그 기준 · 저장 기준의 경고와 평가 현황 표시가 바뀐다([tag-R32](specs/tag.md#빠진-태그-채움--저장-바닥)) |
 | 사건 배정 입력 (`article_match_features`) | 그 기사의 사건이 닫힐 때까지. 그 모델 버전의 열린 사건에 배정되지 않은 표현은 만든 뒤 사건 배정 시간 창 + 여유 | 열린 사건의 서술 기사 · 재판정 · 기사 빼기에 쓴다. 배정 대기 기사의 표현은 지우면 다시 만든다([event-R13](specs/event.md#사건-정리) · [ADR-0088](adr/0088-article-features-kept-until-their-event-closes-and-unassigned-ones-for-the-window-plus-a-margin.md)) |
 | 사건 (`events` · `event_key_terms` · `event_articles`) · 저장 후보 (`event_article_candidates`) · 기준 이력 (`event_assignment_criteria`) · 병합 판정 기록 (`event_merge_judgements`) | 무기한. 합쳐진 사건 행과 병합 판정 기록은 가리키는 사건(남는 사건 · 쌍의 사건)을 지울 때 함께 지운다 | 사건 · 스토리라인 보도량의 근거. 저장 후보 · 기준 이력은 기준을 바꿀 때 재판정의 재료다. 병합 판정 기록은 같은 사건 쌍을 다시 묻지 않게 한다 |
 | 배정 대기 (`event_assignment_queue`) | 배정하면 지운다 | 처리할 기사의 목록이다 |
 | 큰 사건 기준과 그 변경 이력 (`event_big_criteria` · `event_big_criteria_changes`) | 무기한 | 운영자가 조정한 이력 — 태그 기준 · 저장 기준의 이력과 같다 |
 | 스토리라인 (`storylines` · `storyline_key_terms`) · 소속 (`storyline_members`) · 기준 이력 (`storyline_linking_criteria`) | 무기한. 구성 사건이 지워지면 그 소속을 지운다. 구성 사건이 남지 않으면 스토리라인을 지우고, 사건 하나만 남으면 그 사건을 가진 다른 스토리라인에 합치거나 풀어 지운다. 합칠 때 합쳐진 쪽의 소속 · 핵심 말은 지우고(같은 사건이 남는 쪽에 있다) 행은 남는 스토리라인을 가리키며 남는다 — 남는 스토리라인을 지울 때 함께 지운다 | 구독 · 타임라인 · 리포트 인용이 스토리라인 ID 를 가리킨다 — 합쳐진 ID 는 남는 스토리라인으로 따라간다([storyline-R6](specs/storyline.md#사건-변화-따르기) · [storyline-R17 · R18](specs/storyline.md#정돈)) |
 | 잇기 대기 (`storyline_linking_queue`) | 판정하면 지운다. 판정이 거듭 실패하면 뺀다 | 판정할 사건의 목록이다([storyline-R3](specs/storyline.md#잇기-대기와-회차) · [storyline-R4](specs/storyline.md#잇기-대기와-회차)) |
-| 사건 소속 판정 원본 (`article_event_judgements`) | 180일 | 평가 원본 응답과 같다 |
-| 평가 원본 응답 (`raw_response`) | 180일 | 태그 기준 · 저장 기준 분석과 저장 기준을 낮춘 뒤 빠진 태그 채움([evaluation-R31](specs/evaluation.md#빠진-태그-채움--저장-바닥) — 채울 기간의 상한도 180일)에 충분한 기간. **(미설계)** 지운 뒤 원본이 없는 평가의 채움 처분은 보존을 구현하는 작업이 정한다 |
+| 사건 소속 판정 원본 (`article_event_judgements`) | 180일 | 태그 판정 원본과 같다 |
+| 태그 판정 원본 (`article_tag_judgements`) | 180일 | 태그 기준 · 저장 기준 분석과 저장 기준을 낮춘 뒤 빠진 태그 채움([tag-R31](specs/tag.md#빠진-태그-채움--저장-바닥) — 채울 기간의 상한도 180일)에 충분한 기간. **(미설계)** 지운 뒤 원본이 없는 평가의 채움 처분은 보존을 구현하는 작업이 정한다 |
 | 다이제스트 | 사용자 탈퇴 시까지 | 인용 항목은 노출 기록이다 |
 | 관심 신호 이력(`feedback_events` · `user_tag_preference_events` · 스토리라인 구독 이력) · 변화 리포트 | 사용자 탈퇴 시까지 | 관심사 히스토리 · 리포트의 근거 |
 | `digest_candidates` | 30일 | 디버깅용 |
@@ -157,6 +159,6 @@ erDiagram
 | JobRunr 작업 기록 | 성공하고 36시간 뒤 삭제 상태, 다시 72시간 뒤 영구 삭제. 실패한 작업은 남는다 | JobRunr 기본값. 작업의 결과는 각 모듈의 데이터에 남는다 |
 | 이벤트 발행 기록 (`event_publication`) | 완료 즉시 삭제. 실패한 발행은 운영자가 폐기할 때까지 남는다 | 결과는 각 모듈의 데이터에 남고, 실패한 발행은 재처리와 원인 조사의 근거다([ADR-0023](adr/0023-jobrunr-oss-framework-schema-and-event-resubmission.md) · [ADR-0050](adr/0050-operator-resubmits-once-or-discards-stranded-event-publications-read-from-registry.md)) |
 
-- **무기한은 자동으로 지우지 않는다는 뜻이다.** 숨긴 소스 · 피드의 기사도 남는다. 운영자가 소스 · 피드를 지우면 그 소스 · 피드만 가진 기사(메타데이터 · 요약문 · 엔트리)가 함께 지워지고, 다른 소스 · 피드도 가진 기사는 남는다([source Spec 숨김과 삭제](specs/source.md#숨김과-삭제) · [article Spec](specs/article.md#지운-소스--피드) · [ADR-0051](adr/0051-operator-hides-or-deletes-sources-and-feeds-and-deletion-removes-exclusive-articles.md) · [ADR-0052](adr/0052-article-sources-live-in-feed-entries-and-late-items-of-deleted-feeds-are-dropped.md)). 기사를 가리키는 다른 모듈의 데이터는 `article` 이 알리는 지운 기사 ID 로 함께 지워진다 — 지금은 평가 대기 · 평가 · 태그 · 사건 소속 판정 원본 · 사건 묶기 대기 · 배정 대기 · 기사 표현 · 배정 · 저장 후보, 그리고 사건에 남긴 대표 기사(비운다)([overview.md §5](overview.md#5-모듈-지도) · [ADR-0060](adr/0060-article-deletion-announced-by-removed-article-ids-and-followed-by-referencing-modules.md))
+- **무기한은 자동으로 지우지 않는다는 뜻이다.** 숨긴 소스 · 피드의 기사도 남는다. 운영자가 소스 · 피드를 지우면 그 소스 · 피드만 가진 기사(메타데이터 · 요약문 · 엔트리)가 함께 지워지고, 다른 소스 · 피드도 가진 기사는 남는다([source Spec 숨김과 삭제](specs/source.md#숨김과-삭제) · [article Spec](specs/article.md#지운-소스--피드) · [ADR-0051](adr/0051-operator-hides-or-deletes-sources-and-feeds-and-deletion-removes-exclusive-articles.md) · [ADR-0052](adr/0052-article-sources-live-in-feed-entries-and-late-items-of-deleted-feeds-are-dropped.md)). 기사를 가리키는 다른 모듈의 데이터는 `article` 이 알리는 지운 기사 ID 로 함께 지워진다 — 지금은 평가 대기 · 평가 · 태그 · 태그 판정 원본 · 사건 소속 판정 원본 · 사건 묶기 대기 · 배정 대기 · 기사 표현 · 배정 · 저장 후보, 그리고 사건에 남긴 대표 기사(비운다)([overview.md §5](overview.md#5-모듈-지도) · [ADR-0060](adr/0060-article-deletion-announced-by-removed-article-ids-and-followed-by-referencing-modules.md))
 
 보존 기간은 [open-questions.md](open-questions.md)에서 확정한다.

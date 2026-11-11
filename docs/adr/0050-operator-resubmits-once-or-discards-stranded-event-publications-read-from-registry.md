@@ -51,3 +51,7 @@
 | 상한에 이른 발행만 다룬다 | 이벤트 클래스가 없는 행은 여전히 DB 로만 지울 수 있다. 그 사이 매 회차 Modulith 경고가 반복된다 |
 | 읽을 수 없는 발행을 "앱이 읽은 행 − Modulith 가 재제출 필터에 넘긴 행"으로 가른다 | 재제출 메서드를 목록용으로 부르는 오용이다. 두 읽기 사이에 경합이 생긴다 |
 | 재제출 직후 정해진 시간 동안 다시 처리를 막는다 | 정책에 새 기준 시간이 생긴다. 실패가 확실한 발행도 그 시간 동안 다시 처리할 수 없다 |
+
+## 후속 기록
+
+- 2026-11-11: 결정 절 "다시 처리는 지금 한 번 재제출한다"가 옮긴 리스너의 발행에도 이어지는 조건 — [ADR-0113](0113-moving-listeners-or-jobs-between-modules-migrates-pending-publication-listener-ids-and-drops-pending-jobs-of-the-old-class.md) · [platform Spec §5](../specs/platform.md#5-규칙과-불변식) platform-R20

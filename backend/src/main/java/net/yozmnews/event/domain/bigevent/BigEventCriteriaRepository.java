@@ -4,9 +4,9 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
-import net.yozmnews.evaluation.ChangeActor;
 import net.yozmnews.event.BigEventCriteria;
 import net.yozmnews.event.BigEventCriteriaChange;
+import net.yozmnews.platform.ChangeActor;
 
 /**
  * 큰 사건 기준 저장소 — 지금 값 한 행과 추가 전용 이력 · docs/specs/event.md §4 · event-R21.

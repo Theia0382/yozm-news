@@ -3,11 +3,14 @@ package net.yozmnews;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.http.HttpResponse;
+import java.util.List;
 
+import net.yozmnews.evaluation.ArticleTagging;
 import net.yozmnews.evaluation.EventMembership;
-import net.yozmnews.evaluation.TagSetDirectory;
+import net.yozmnews.evaluation.TagJudgementId;
 import net.yozmnews.platform.WebRole;
 import net.yozmnews.platform.domain.ActiveRoles;
+import net.yozmnews.tag.TagSetDirectory;
 import org.jobrunr.scheduling.JobScheduler;
 import org.jobrunr.server.BackgroundJobServer;
 import org.junit.jupiter.api.Test;
@@ -27,7 +30,7 @@ import org.springframework.test.context.ActiveProfiles;
 /**
  * 화면 역할만 켠 프로세스 — 실제 PostgreSQL 로 띄운 앱의 구성요소와 HTTP 응답을 본다.
  * <p>
- * 지키는 규칙: platform-R8 · platform-R9 · evaluation-R2 · evaluation-R37
+ * 지키는 규칙: platform-R8 · platform-R9 · tag-R2 · evaluation-R37
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -61,7 +64,7 @@ class WebRoleTests {
 
 	@Test
 	void seedsTheDefaultTagSetOnItsOwn() {
-		// 이 컨텍스트는 새 컨테이너의 빈 DB 로 뜬다 — 화면 역할만 켠 프로세스도 기동 때 첫 버전을 적재한다(evaluation-R2)
+		// 이 컨텍스트는 새 컨테이너의 빈 DB 로 뜬다 — 화면 역할만 켠 프로세스도 기동 때 첫 버전을 적재한다(tag-R2)
 		assertThat(this.context.getBean(TagSetDirectory.class).activeTagSet().number()).isEqualTo(1);
 	}
 
@@ -69,6 +72,14 @@ class WebRoleTests {
 	void keepsTheMembershipJudgementApiLikeEveryApplicationService() {
 		// 판정 공개 API 는 두 역할 공통이다 — 평가기는 부를 때 찾는다(evaluation-R37)
 		assertThat(this.context.getBeanNamesForType(EventMembership.class)).hasSize(1);
+	}
+
+	@Test
+	void keepsTheTaggingApiLikeEveryApplicationService() {
+		// 태그 판정 공개 API 도 두 역할 공통이다 — 화면 역할의 평가 현황 · 검수가 판정 원본 조회를 평가기 없이 쓴다(evaluation-R42).
+		// 평가기가 없을 때 판정을 거절하는 것은 ArticleTaggingServiceTests 가 본다
+		assertThat(this.context.getBeanNamesForType(ArticleTagging.class)).hasSize(1);
+		assertThat(this.context.getBean(ArticleTagging.class).find(List.of(new TagJudgementId(987_654_321)))).isEmpty();
 	}
 
 	@Test

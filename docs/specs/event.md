@@ -153,7 +153,7 @@ public interface EventDirectory {
 
 - 계약
   - 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통). 사용자 정보를 받지 않는다 — 사용자 제외 조건은 부르는 쪽이 기사를 걸러 `representatives` 에 넘긴다
-  - 각 질의는 그 순간의 값이다. 큰 사건의 재료(소스 · 중요도)는 `article` 의 `ArticleDirectory.sources` 와 `evaluation` 의 `ArticleEvaluations.importances` 로 따로 읽는다 — 한 스냅숏이 아니다
+  - 각 질의는 그 순간의 값이다. 큰 사건의 재료(소스 · 중요도)는 `article` 의 `ArticleDirectory.sources` 와 `tag` 의 `ArticleEvaluations.importances` 로 따로 읽는다 — 한 스냅숏이 아니다
   - `bigEvents` · `list` 는 큰 사건 기준의 처음 값을 적재하기 전이면 `IllegalStateException`(`list` 는 쪽에 사건이 있을 때)
   - `list` 의 커서는 앞 쪽 마지막 사건의 (마지막 기사 시각, 사건 ID)다 — 쪽 사이에 마지막 기사 시각이 바뀐 사건은 건너뛰거나 다시 나올 수 있다
   - `profiles` · `neighbors` 는 사용자를 모르는 잇기의 재료다 — 점수 · 판정은 부르는 쪽이 한다. `neighbors` 의 코사인 하한과 상한 수는 부르는 쪽이 정한다
@@ -265,7 +265,7 @@ public sealed interface BigEventCriteriaChangeResult {
 
 - 계약
   - `change` 는 한 트랜잭션이다. 지금 값 행을 잠가 동시 변경이 줄을 서므로, 이력의 이전 값이 바로 앞 변경의 새 값이다
-  - 행위자는 `evaluation` 의 `ChangeActor` 다 — 운영자 요청은 `OPERATOR`, 기동 적재는 `SYSTEM`
+  - 행위자는 `platform` 의 `ChangeActor` 다 — 운영자 요청은 `OPERATOR`, 기동 적재는 `SYSTEM`
   - `criteria` · `change`(범위 안의 값) 는 처음 값을 적재하기 전이면 `IllegalStateException`. 역할 애너테이션이 없다(두 역할 공통)
 
 HTTP 엔드포인트는 없다.
@@ -336,7 +336,7 @@ public record MergePair(EventId low, EventId high, double probability, @Nullable
 
 정리: 작업 역할의 `EventCleanupJob` 이 하루 1회 `CleanupRound` 를 돌린다. 닫기는 `EventRepository.closable` 로 고른 사건을 `lock` 해 `EventClosing.due` 로 다시 보고, `EventQueryRepository.representativesOfAll` 로 대표 기사를 골라 `EventRepository.close` 로 닫는다. 이어서 `LongTermIndexes.ensure` 로 장기 검색 인덱스를 만들고, `MatchFeaturesRepository.deleteOfClosedEvents` · `deleteUnassigned`(기준 시각은 `FeatureRetention`)로 기사 표현을 지운다. 닫기 기준 `EventClosing` 은 `EventAssignmentProperties` 를 `AssignmentConfiguration` 이 빈으로 바꾼 것이다.
 
-조회: `EventDirectoryService` 가 `EventQueryRepository` 로 사건(합쳐진 사건이면 남는 사건) · 배정 · 기사의 사건 · 사건 표현 · 이웃 사건 · 채우기 대상 · 대표 기사(정렬은 `CentroidOrder` — `describers` 와 같은 조각, 사건 기사 전체에서는 닫을 때 남긴 대표가 먼저) · 기간 안 배정 · 사건 쪽을 읽는다. 큰 사건은 기간 안 배정을 `EventTallyReader` 에 넘겨 `article` 의 `ArticleDirectory.sources` · `evaluation` 의 `ArticleEvaluations.importances` 로 재료를 한 번씩 읽고 `EventTallies` 로 센 뒤, `BigEventCriteriaRepository` 의 지금 기준으로 `BigEventRule` 이 판정 · 정렬한다. 큰 사건 기준은 `BigEventCriteriaSeeding` 이 기동 때 처음 값을 넣고, `BigEventAdministrationService` 가 변경 · 이력을 저장소로 쓰며 지금 값 읽기와 미리보기는 `EventDirectoryService` 의 것을 쓴다. 사건 변화 알림: 사건을 열고 · 고치고 · 지우고 · 합치고 · 닫는 `EventRepository` 의 다섯 메서드(`open` · `update` · `delete` · `absorb` · `close`)가 같은 트랜잭션에서 `EventsChanged` 를 발행한다 — 위의 회차 · 리스너 · `EventShrinkWriter` 의 사건 쓰기가 모두 이 메서드를 지나간다(event-R23). 운영자 조회는 `EventReviewService` 가 `AssignmentSettings` 의 기준과 `EventQueryRepository` 의 합쳐진 사건 · 판정 원본을 가리키는 배정 · 병합 판정 기록으로 낸다.
+조회: `EventDirectoryService` 가 `EventQueryRepository` 로 사건(합쳐진 사건이면 남는 사건) · 배정 · 기사의 사건 · 사건 표현 · 이웃 사건 · 채우기 대상 · 대표 기사(정렬은 `CentroidOrder` — `describers` 와 같은 조각, 사건 기사 전체에서는 닫을 때 남긴 대표가 먼저) · 기간 안 배정 · 사건 쪽을 읽는다. 큰 사건은 기간 안 배정을 `EventTallyReader` 에 넘겨 `article` 의 `ArticleDirectory.sources` · `tag` 의 `ArticleEvaluations.importances` 로 재료를 한 번씩 읽고 `EventTallies` 로 센 뒤, `BigEventCriteriaRepository` 의 지금 기준으로 `BigEventRule` 이 판정 · 정렬한다. 큰 사건 기준은 `BigEventCriteriaSeeding` 이 기동 때 처음 값을 넣고, `BigEventAdministrationService` 가 변경 · 이력을 저장소로 쓰며 지금 값 읽기와 미리보기는 `EventDirectoryService` 의 것을 쓴다. 사건 변화 알림: 사건을 열고 · 고치고 · 지우고 · 합치고 · 닫는 `EventRepository` 의 다섯 메서드(`open` · `update` · `delete` · `absorb` · `close`)가 같은 트랜잭션에서 `EventsChanged` 를 발행한다 — 위의 회차 · 리스너 · `EventShrinkWriter` 의 사건 쓰기가 모두 이 메서드를 지나간다(event-R23). 운영자 조회는 `EventReviewService` 가 `AssignmentSettings` 의 기준과 `EventQueryRepository` 의 합쳐진 사건 · 판정 원본을 가리키는 배정 · 병합 판정 기록으로 낸다.
 
 #### 회차 흐름
 
@@ -459,7 +459,7 @@ sequenceDiagram
 
 ### `application`
 
-- `EventIntakeListener` — 리스너(들어오는 쪽). 넣기는 시각을 `InstantSource` 에서 얻는다. 지우기는 한 트랜잭션에서 event-R8 의 순서로 한다 — 사건의 새 값은 `EventShrink`, 쓰기는 `EventShrinkWriter`, 대표 비우기는 `EventRepository.clearRepresentative`. 이름은 `evaluation` 의 리스너와 다르다 — 빈 이름은 단순 클래스 이름이다
+- `EventIntakeListener` — 리스너(들어오는 쪽). 넣기는 시각을 `InstantSource` 에서 얻는다. 지우기는 한 트랜잭션에서 event-R8 의 순서로 한다 — 사건의 새 값은 `EventShrink`, 쓰기는 `EventShrinkWriter`, 대표 비우기는 `EventRepository.clearRepresentative`. 이름은 `tag` · `evaluation` 의 리스너와 다르다 — 빈 이름은 단순 클래스 이름이다
 - `EventIntakeRound` — 표현 회차 하나(event-R6 · R8). 임베더는 `run(ArticleEmbedder)` 의 인자로 받는다 — 작업 진입점이 넘긴다. 시각은 `InstantSource` 에서 얻는다. 점유와 쓰기는 `TransactionTemplate` 의 짧은 트랜잭션이고, 기사 조회와 임베더 호출은 트랜잭션 밖이다. 표현을 쓰는 트랜잭션에서 배정 대기에 넣는다. 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통). 결과 · 실패 갈래는 `default` 없는 `switch` 식이다. 로그(`{n}건` 은 남은 점유 수, `{문구}` 는 실패 결과의 운영자용 문구): `사건 묶기 대기 기사가 지워져 대기에서 뺐다 — 기사 {ID}` · `임베더가 기사를 거부했다 — 기사 {ID}, 거부 {n}회: {문구}`(정보), `임베더가 일시 실패해 회차를 멈췄다 — {이름} {모델 버전}, 기사 {n}건: {문구}` · `임베더를 쓸 수 없어 회차를 멈췄다 — {이름} {모델 버전}, 기사 {n}건: {문구}` · `임베더가 기사를 거부해 사건 묶기에서 뺐다 — 기사 {ID}, 거부 {n}회: {문구}`(경고), `임베더가 실패해 회차를 멈췄다 — {이름} {모델 버전}, 기사 {n}건: {사유}`(오류 — 사유는 예외면 예외 클래스 이름과 스택, 결과가 어긋나면 어긋남 문구)
 - `AssignmentRound` — 배정 회차 하나(event-R10 ~ R12 · R16). `run(ArticleEmbedder)` 의 임베더는 지금 모델 버전을 정하는 데만 쓴다. 기사마다 시계를 다시 읽는다. 점유 · 쓰기는 짧은 트랜잭션이고 기사 조회 · 사건 소속 판정은 트랜잭션 밖이다. 판정 · 실패 갈래는 `default` 없는 `switch` 식이다. 판정의 예외를 밖으로 던지지 않는다 — 점유 · 기준 등록 · 기사 조회 · 점유 풀기의 예외는 회차 밖으로 나간다. 그때 점유한 기사는 점유가 만료된 뒤 다시 처리된다. 트랜잭션 · 역할 애너테이션이 없다. 로그: `배정 대기 기사가 지워져 대기에서 뺐다 — 기사 {ID}` · `배정 대기 기사가 판정 중에 지워져 대기에서 뺐다 — 기사 {ID}` · `사건 소속 판정이 일시 실패해 다시 시도한다 — 기사 {ID}, 시도 {n}: {문구}` · `붙일 사건이 사라졌거나 닫혀 다음 회차에 다시 판정한다 — 기사 {ID}`(정보), `사건 소속 판정의 일시 실패가 상한에 이르러 새 사건으로 끝낸다 — 기사 {ID}: {문구}` · `평가기가 기사를 거부해 새 사건으로 끝낸다 — 기사 {ID}: {문구}` · `평가기를 쓸 수 없어 배정 회차를 멈췄다 — 남은 기사 {n}건: {문구}`(경고), `배정 회차가 예상하지 못한 오류로 멈췄다 — 기사 {ID}, 남은 기사 {n}건`(오류)
 - `RejudgementRound` — 재판정 회차 하나(event-R18). 먼저 닫힌 사건의 배정을 한 트랜잭션에서 기준만 새것으로 적고, 이어서 배정 하나마다 짧은 트랜잭션이다. 사건 소속 판정 · 임베더를 부르지 않는다. 트랜잭션 · 역할 애너테이션이 없다. 로그: `닫힌 사건의 배정 {n}건은 기준만 새것으로 적었다` · `배정 {n}건을 지금 기준으로 다시 판정했다`(정보, 한 건 이상일 때), `재판정 회차가 예상하지 못한 오류로 멈췄다 — 이번 회차에 다시 판정한 배정 {n}건`(오류)
@@ -867,7 +867,7 @@ public enum EmbedderFailureKind { TRANSIENT, INPUT_REJECTED, EMBEDDER_UNAVAILABL
   - 주어진 기사 가운데 그 사건의 기사가 아닌 것은 무시하고, 남는 기사가 없는 사건은 대표가 없다
 - **event-R15** — 큰 사건: 조회할 때 지금 기준(event-R21)으로 판정하고 결과를 저장하지 않는다. 조회 기간 안 기사(event-R20)로 센 서로 다른 소스 수가 소스 기준 이상이고, 중요도 평균이 있고 중요도 기준 이상이면 큰 사건이다(경계 포함 — `BigEventRule` 정본).
   - 소스 수는 기간 안 기사들의 엔트리 소스(`ArticleDirectory.sources`)의 서로 다른 수다 — 다른 매체의 전재 기사는 다른 기사라 매체마다 하나씩 센다
-  - 중요도 평균은 기간 안 기사 가운데 중요도가 있는 기사(`ArticleEvaluations.importances` — 버전 번호가 가장 큰 평가의 기대값)의 평균이다. 소수 산술로 세어 기준과 같은 수 체계로 비교한다(`EventTallies` 정본). 중요도가 없는 기사는 평균에서 빼고 소스 수에는 넣는다
+  - 중요도 평균은 기간 안 기사 가운데 중요도가 있는 기사(`tag` 의 `ArticleEvaluations.importances` — 버전 번호가 가장 큰 평가의 기대값)의 평균이다. 소수 산술로 세어 기준과 같은 수 체계로 비교한다(`EventTallies` 정본). 중요도가 없는 기사는 평균에서 빼고 소스 수에는 넣는다
   - 순서는 소스 수 · 중요도 평균 내림차순, 사건 ID 오름차순(`BigEventRule.ORDER`). 몇 개를 쓸지는 부르는 쪽이 정한다
   - 사건의 상태 · 모델 버전 · 정한 것과 무관하다 — 닫힌 사건, 판정 실패로 연 사건, 다른 모델 버전의 사건도 같은 규칙이다
 - **event-R20** — 사건 조회: 조회 기간은 시작 포함 · 끝 제외이고 날짜 31일(`EventPeriod.MAX_DAYS`)까지다. 날짜 범위는 그 시간대 자정으로 옮기고(`EventPeriod.ofDays` — `platform` 의 `DayRange`), 시각 범위의 상한은 시간대 전환 여유로 하루를 더한 32일이다 — 서머타임이 끝나는 날이 든 31일도 받는다. 기간 안 기사는 배정의 발행 시각으로 고른다. 사건 목록은 기간 안 기사가 있는 사건을 마지막 기사 시각 · 사건 ID 내림차순으로 한 쪽 100건(`EventDirectory.MAX_PAGE_SIZE`)까지 낸다 — 집계 · 큰 사건 여부는 그 기간, 대표 기사는 사건 기사 전체에서. 기사의 사건은 배정을 따른다. 사건 ID 로 찾는 조회는 합쳐진 사건이면 남는 사건을 낸다(event-R13) — 가리킴이 평평해 한 번 따른다. 합쳐진 사건은 배정이 모두 남는 사건으로 옮겨져, 사건의 기사 조회는 빈 목록이고 사건 목록 · 큰 사건 · 기사의 사건에 나오지 않는다 — 합쳐진 사건일 수 있는 ID 는 먼저 사건 ID 로 찾아 남는 사건을 얻는다

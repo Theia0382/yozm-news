@@ -66,19 +66,19 @@ HTTP 엔드포인트 — 모두 운영자 경로다(운영자 토큰 필요 — 
 | `POST /api/admin/event-publications/resubmission` | 고른 발행(본문 `ids`) 다시 처리 — 발행마다 결과 |
 | `POST /api/admin/event-publications/discard` | 고른 발행(본문 `ids`) 폐기 — 발행마다 결과 |
 | `GET /api/admin/tag-sets` | 태그 체계 버전 목록(번호가 큰 것부터)과 재평가 기간의 상한 |
-| `GET /api/admin/tag-sets/{id}/text` | 버전의 원문 — 그 버전의 내용과 지금 태그 기준 · 저장 기준으로 만든다([evaluation-R27](evaluation.md#체계-변경)) |
+| `GET /api/admin/tag-sets/{id}/text` | 버전의 원문 — 그 버전의 내용과 지금 태그 기준 · 저장 기준으로 만든다([tag-R27](tag.md#체계-변경)) |
 | `POST /api/admin/tag-set-reviews` | 운영자 원문(본문 `text`)의 확인 — 아무것도 쓰지 않는다. 본문 `recentDays` 는 재평가 기간(없으면 0) |
 | `POST /api/admin/tag-sets` | 운영자 원문(본문 `text`)으로 새 버전을 만들어 활성으로 바꾼다. 본문 `recentDays` 는 재평가 기간(없으면 0 — 재평가하지 않는다) |
-| `GET /api/admin/topic-coverage` | 주제별 보도량 — 질의 `from` · `to`(시작일 · 종료일, `yyyy-MM-dd`, 끝 포함) · `zone`(날짜를 해석할 시간대) · 선택 `topic`(되풀이 — 없으면 모든 주제). 활성 버전 ID 와 날짜 범위의 상한(`maxDays`)을 함께 낸다([evaluation-R28](evaluation.md#평가-현황--주제별-보도량) · R30) |
-| `GET /api/admin/evaluation-overview` | 평가 현황 — 질의 `version`(태그 체계 버전 ID) · `from` · `to` · `zone`([evaluation-R29](evaluation.md#평가-현황--주제별-보도량)) |
+| `GET /api/admin/topic-coverage` | 주제별 보도량 — 질의 `from` · `to`(시작일 · 종료일, `yyyy-MM-dd`, 끝 포함) · `zone`(날짜를 해석할 시간대) · 선택 `topic`(되풀이 — 없으면 모든 주제). 활성 버전 ID 와 날짜 범위의 상한(`maxDays`)을 함께 낸다([tag-R28](tag.md#평가-현황--주제별-보도량) · R30) |
+| `GET /api/admin/evaluation-overview` | 평가 현황 — 질의 `version`(태그 체계 버전 ID) · `from` · `to` · `zone`([tag-R29](tag.md#평가-현황--주제별-보도량)) |
 | `GET /api/admin/evaluation-queue` | 지금의 평가 대기 · 실패 건수 — 기간과 무관하다 |
-| `GET /api/admin/evaluations` | 평가 목록 — 질의 `version` · `from` · `to` · `zone`, 선택 `tagKind` · `tag`(함께) · `topicStatus` · 커서 `afterEvaluatedAt` · `afterId`(함께) · `limit`(기본 20). 행마다 판정과 기사의 제목 · 출처([evaluation-R33](evaluation.md#평가-검수--기준-미리보기)) |
+| `GET /api/admin/evaluations` | 평가 목록 — 질의 `version` · `from` · `to` · `zone`, 선택 `tagKind` · `tag`(함께) · `topicStatus` · 커서 `afterEvaluatedAt` · `afterId`(함께) · `limit`(기본 20). 행마다 판정과 기사의 제목 · 출처([tag-R33](tag.md#평가-검수--기준-미리보기)) |
 | `GET /api/admin/evaluations/{id}` | 평가 하나의 상세와 기사의 제목 · 요약문 · 정규 URL · 엔트리별 출처 이름 · 섹션 · RSS 카테고리 |
-| `GET /api/admin/evaluation-samples` | 표본 — 질의 `version` · `from` · `to` · `zone` · `seed` · `size`(기본 `EvaluationReview.DEFAULT_SAMPLE_SIZE`). 행 모양은 목록과 같다([evaluation-R34](evaluation.md#평가-검수--기준-미리보기)) |
-| `GET /api/admin/thresholds` | 활성 버전의 태그 기준 · 저장 기준 — 태그 종류마다 지금 값 · 지난 저장 기준 최댓값 · 어긋난 상태, 이력([evaluation-R36](evaluation.md#평가-검수--기준-미리보기)) |
-| `POST /api/admin/threshold-previews` | 기준 미리보기 — 본문 `kind` · `tagThreshold` · `storeThreshold` · `from` · `to` · `zone`. 아무것도 쓰지 않는다([evaluation-R35](evaluation.md#평가-검수--기준-미리보기)) |
-| `PUT /api/admin/thresholds/{kind}` | 활성 버전의 한 태그 종류(`TOPIC` · `REGION`)의 태그 기준 · 저장 기준 변경 — 본문 `tagThreshold` · `storeThreshold`, 행위자는 운영자([evaluation-R11](evaluation.md#태그-기준--저장-기준) · R12) |
-| `POST /api/admin/tag-backfill-reviews` | 빠진 태그 채움의 확인 — 본문 `days`(채울 기간, 일). 덮을 평가 시각 범위와 버전별 평가 수. 아무것도 쓰지 않는다([evaluation-R31](evaluation.md#빠진-태그-채움--저장-바닥)) |
+| `GET /api/admin/evaluation-samples` | 표본 — 질의 `version` · `from` · `to` · `zone` · `seed` · `size`(기본 `EvaluationReview.DEFAULT_SAMPLE_SIZE`). 행 모양은 목록과 같다([tag-R34](tag.md#평가-검수--기준-미리보기)) |
+| `GET /api/admin/thresholds` | 활성 버전의 태그 기준 · 저장 기준 — 태그 종류마다 지금 값 · 지난 저장 기준 최댓값 · 어긋난 상태, 이력([tag-R36](tag.md#평가-검수--기준-미리보기)) |
+| `POST /api/admin/threshold-previews` | 기준 미리보기 — 본문 `kind` · `tagThreshold` · `storeThreshold` · `from` · `to` · `zone`. 아무것도 쓰지 않는다([tag-R35](tag.md#평가-검수--기준-미리보기)) |
+| `PUT /api/admin/thresholds/{kind}` | 활성 버전의 한 태그 종류(`TOPIC` · `REGION`)의 태그 기준 · 저장 기준 변경 — 본문 `tagThreshold` · `storeThreshold`, 행위자는 운영자([tag-R11](tag.md#태그-기준--저장-기준) · R12) |
+| `POST /api/admin/tag-backfill-reviews` | 빠진 태그 채움의 확인 — 본문 `days`(채울 기간, 일). 덮을 평가 시각 범위와 버전별 평가 수. 아무것도 쓰지 않는다([tag-R31](tag.md#빠진-태그-채움--저장-바닥)) |
 | `POST /api/admin/tag-backfills` | 빠진 태그 채움 요청 — 본문 `days`. 기록한 채움, 또는 끝나지 않은 채움이 있으면 그것 |
 | `GET /api/admin/tag-backfills` | 빠진 태그 채움 목록(최근 것부터) — 덮는 범위 · 상태 · 버전별 채울 저장 기준과 건수, 채울 기간의 상한(`maxDays`) |
 | `POST /api/admin/event-intake-fills` | 사건 묶기 채우기 — 본문 `days`(채울 기간, 일). 기간에 처음 본 기사 수와 새로 사건 묶기 대기에 넣은 수([event-R19](event.md#사건-묶기-대기와-회차)) |
@@ -99,10 +99,10 @@ HTTP 엔드포인트 — 모두 운영자 경로다(운영자 토큰 필요 — 
 
 | 패키지 | 책임 |
 |---|---|
-| (최상위) | 모듈 선언 — 의존을 `source` · `article` · `evaluation` · `event` · `storyline` · `platform` 으로 둔다(`package-info`) |
+| (최상위) | 모듈 선언 — 의존을 `source` · `article` · `tag` · `evaluation` · `event` · `storyline` · `platform` 으로 둔다(`package-info`) |
 | `adapter/in/web` | 운영자 컨트롤러, 결과 · 목록의 응답 레코드, 요청 매개변수 읽기, 없는 대상의 404 |
 
-협력: 컨트롤러는 `source` 의 공개 운영 API `SourceAdministration`, `article` 의 공개 운영 API `ArticleAdministration`, `evaluation` 의 공개 운영 API `TagSetAdministration` · `EvaluationAdministration` · `EvaluationReview` · `TagBackfillAdministration` 과 공개 조회 `TopicCoverage` · `EventJudgementLog`, `event` 의 공개 운영 API `EventIntakeAdministration` · `BigEventAdministration` 과 공개 조회 `EventDirectory` · `EventReview`, `storyline` 의 공개 운영 API `StorylineLinkingAdministration`, `article` 의 공개 조회 `ArticleDirectory`, `source` 의 공개 조회 `FeedLabels`, `platform` 의 공개 운영 API `EventPublicationAdministration` 만 부르고, 결과를 응답 레코드의 정적 팩토리로 옮긴다. 오류 응답은 `platform` 의 `ProblemResponses` 로 만든다. `application` · `domain` 이 없다 — 판단이 없다.
+협력: 컨트롤러는 `source` 의 공개 운영 API `SourceAdministration`, `article` 의 공개 운영 API `ArticleAdministration`, `tag` 의 공개 운영 API `TagSetAdministration` · `EvaluationAdministration` · `EvaluationReview` · `TagBackfillAdministration` 과 공개 조회 `TopicCoverage`, `evaluation` 의 공개 조회 `EventJudgementLog`, `event` 의 공개 운영 API `EventIntakeAdministration` · `BigEventAdministration` 과 공개 조회 `EventDirectory` · `EventReview`, `storyline` 의 공개 운영 API `StorylineLinkingAdministration`, `article` 의 공개 조회 `ArticleDirectory`, `source` 의 공개 조회 `FeedLabels`, `platform` 의 공개 운영 API `EventPublicationAdministration` 만 부르고, 결과를 응답 레코드의 정적 팩토리로 옮긴다. 오류 응답은 `platform` 의 `ProblemResponses` 로 만든다. `application` · `domain` 이 없다 — 판단이 없다.
 
 역할: 모든 구성 요소가 화면 역할(`@WebRole`)이다(platform-R9).
 
@@ -130,7 +130,7 @@ HTTP 엔드포인트 — 모두 운영자 경로다(운영자 토큰 필요 — 
 
 컨트롤러는 트랜잭션을 열지 않는다 — 피드 켜기 · 원문 미리보기는 피드를 받으므로 응답까지 걸린다(source-R9).
 
-`adapter/in/web` 의 그 밖의 타입: 응답 `PresetResponse` · `SourceListResponse` · `SourceResponse`(`FeedResponse`) · `RegistrationResponse` · `RevisionResponse` · `SourceEnableResponse` · `FeedEnableResponse` · `PreviewResponse` · `FeedRemovalResponse` · `DeletionImpactResponse` · `CollectionStatusResponse`(`StatusCriteriaResponse` · `SourceCollectionResponse` · `FeedCollectionResponse` · `EntryMetricsResponse` · `EntryBucketResponse`) · `StrandedPublicationListResponse`(`StrandedPublicationResponse`) · `ResubmissionListResponse`(`ResubmissionItemResponse`) · `DiscardListResponse`(`DiscardItemResponse`) · `TagSetListResponse`(`TagSetVersionItem`) · `TagSetText` · `TagSetReviewResponse` · `TagSetActivationResponse` · `TopicCoverageResponse` · `EvaluationOverviewResponse` · `EvaluationQueueResponse` · `EvaluationListResponse` · `EvaluationRowResponse` · `EvaluationSampleResponse` · `EvaluationDetailResponse` · `ArticleSummaryResponse` · `ArticleDetailResponse` · `ArticleEntryResponse` · `EventListResponse` · `EventRowResponse` · `EventCursorResponse` · `EventDetailResponse` · `EventArticleResponse` · `MergedEventResponse` · `BigEventListResponse` · `BigEventRowResponse` · `BigEventCriteriaResponse` · `BigEventCriteriaStatusResponse` · `BigEventCriteriaHistoryResponse` · `BigEventPreviewResponse` · `BigEventCriteriaChangeResponse` · `EventJudgementListResponse` · `EventJudgementRowResponse` · `JudgedEventResponse` · `MergePairResponse` · `JudgementCursorResponse` · `AssignmentCriteriaResponse` · `ThresholdStatusResponse` · `ThresholdPreviewResponse` · `ThresholdChangeResponse` · `TagBackfillReviewResponse` · `TagBackfillResponse` · `TagBackfillListResponse` · `TagBackfillRunResponse`(채움 하나 — 요청 · 목록 응답이 함께 쓴다), 요청 `ProfileText` · `PreviewRequest` · `PollIntervalRequest` · `EventPublicationIdsRequest` · `TagSetRequest` · `ThresholdPreviewRequest` · `ThresholdChangeRequest` · `TagBackfillRequest` · `BigEventPreviewRequest` · `BigEventCriteriaChangeRequest`, 보조 `AdminIds`(경로 ID) · `PollIntervals`(하한 미만의 400) · `ReevaluationDays`(범위 밖 재평가 기간의 400) · `BackfillDays`(범위 밖 채울 기간의 400) · `AdminPeriods`(기간 매개변수 — 날짜 · 시간대 읽기와 그 400, 집계 기간 `EvaluationPeriod` · 사건 조회 기간 `EventPeriod`) · `AdminCursor`(목록 커서 — 시각 · ID 읽기와 그 400, 평가 목록 · 사건 목록 · 판정 기록이 함께 쓴다) · `AdminArticles`(운영자 응답의 기사 정보 맞붙이기 — admin-R6) · `ThresholdValuesProblem`(범위 밖 태그 기준 · 저장 기준의 400) · `BigEventCriteriaProblem`(범위 밖 큰 사건 기준의 400).
+`adapter/in/web` 의 그 밖의 타입: 응답 `PresetResponse` · `SourceListResponse` · `SourceResponse`(`FeedResponse`) · `RegistrationResponse` · `RevisionResponse` · `SourceEnableResponse` · `FeedEnableResponse` · `PreviewResponse` · `FeedRemovalResponse` · `DeletionImpactResponse` · `CollectionStatusResponse`(`StatusCriteriaResponse` · `SourceCollectionResponse` · `FeedCollectionResponse` · `EntryMetricsResponse` · `EntryBucketResponse`) · `StrandedPublicationListResponse`(`StrandedPublicationResponse`) · `ResubmissionListResponse`(`ResubmissionItemResponse`) · `DiscardListResponse`(`DiscardItemResponse`) · `TagSetListResponse`(`TagSetVersionItem`) · `TagSetText` · `TagSetReviewResponse` · `TagSetActivationResponse` · `TopicCoverageResponse` · `EvaluationOverviewResponse` · `EvaluationQueueResponse` · `EvaluationListResponse` · `EvaluationRowResponse` · `EvaluationSampleResponse` · `EvaluationDetailResponse` · `ArticleSummaryResponse` · `ArticleDetailResponse` · `ArticleEntryResponse` · `EventListResponse` · `EventRowResponse` · `EventCursorResponse` · `EventDetailResponse` · `EventArticleResponse` · `MergedEventResponse` · `BigEventListResponse` · `BigEventRowResponse` · `BigEventCriteriaResponse` · `BigEventCriteriaStatusResponse` · `BigEventCriteriaHistoryResponse` · `BigEventPreviewResponse` · `BigEventCriteriaChangeResponse` · `EventJudgementListResponse` · `EventJudgementRowResponse` · `JudgedEventResponse` · `MergePairResponse` · `JudgementCursorResponse` · `AssignmentCriteriaResponse` · `ThresholdStatusResponse` · `ThresholdPreviewResponse` · `ThresholdChangeResponse` · `TagBackfillReviewResponse` · `TagBackfillResponse` · `TagBackfillListResponse` · `TagBackfillRunResponse`(채움 하나 — 요청 · 목록 응답이 함께 쓴다), 요청 `ProfileText` · `PreviewRequest` · `PollIntervalRequest` · `EventPublicationIdsRequest` · `TagSetRequest` · `ThresholdPreviewRequest` · `ThresholdChangeRequest` · `TagBackfillRequest` · `BigEventPreviewRequest` · `BigEventCriteriaChangeRequest`, 보조 `AdminIds`(경로 ID) · `PollIntervals`(하한 미만의 400) · `ReevaluationDays`(범위 밖 재평가 기간의 400) · `BackfillDays`(범위 밖 채울 기간의 400) · `AdminPeriods`(기간 매개변수 — 날짜 · 시간대 읽기와 그 400, 집계 기간 `EvaluationPeriod` · 판정 원본 조회 기간 `JudgementPeriod` · 사건 조회 기간 `EventPeriod`) · `AdminCursor`(목록 커서 — 시각 · ID 읽기와 그 400, 평가 목록 · 사건 목록 · 판정 기록이 함께 쓴다) · `AdminArticles`(운영자 응답의 기사 정보 맞붙이기 — admin-R6) · `ThresholdValuesProblem`(범위 밖 태그 기준 · 저장 기준의 400) · `BigEventCriteriaProblem`(범위 밖 큰 사건 기준의 400).
 
 ### `application`
 
@@ -138,7 +138,7 @@ HTTP 엔드포인트 — 모두 운영자 경로다(운영자 토큰 필요 — 
 
 ### `domain`
 
-해당 없음 — 판단과 저장은 그 기능을 가진 모듈(`source` · `article` · `evaluation` · `event` · `platform`)에 있다.
+해당 없음 — 판단과 저장은 그 기능을 가진 모듈(`source` · `article` · `tag` · `evaluation` · `event` · `platform`)에 있다.
 
 ### 나가는 쪽
 
@@ -180,9 +180,9 @@ HTTP 엔드포인트 — 모두 운영자 경로다(운영자 토큰 필요 — 
 
 ### 평가 현황
 
-- **admin-R5** — 평가 현황 · 주제별 보도량 · 대기 건수 응답은 `evaluation` 의 결과를 옮기기만 한다:
+- **admin-R5** — 평가 현황 · 주제별 보도량 · 대기 건수 응답은 `tag` 의 결과를 옮기기만 한다:
   - 버전 · 활성 버전 ID 만 JSON 수로 옮기고, 수 · 비율 · 칸 · 주제의 값 레코드는 ID 가 없는 값이라 그대로 싣는다
-  - 비율은 공개 결과의 값이다 — 다시 나누지 않고, 평가가 없으면 `null` 이다(evaluation-R29)
+  - 비율은 공개 결과의 값이다 — 다시 나누지 않고, 평가가 없으면 `null` 이다(tag-R29)
   - 날짜 범위의 상한(`maxDays`)은 `EvaluationPeriod.MAX_DAYS` 에서 온다
   - 컨트롤러는 트랜잭션을 열지 않는다 — 집계의 읽기 전용 트랜잭션은 공개 API 가 연다
 
@@ -197,7 +197,7 @@ HTTP 엔드포인트 — 모두 운영자 경로다(운영자 토큰 필요 — 
 ### 사건 · 큰 사건 · 판정 기록
 
 - **admin-R7** — 사건 · 큰 사건 · 판정 기록 응답은 `event` · `evaluation` 의 결과를 옮기고 기사 정보를 맞붙인다(admin-R6):
-  - 사건 · 기사 · 판정 원본 ID 는 JSON 수다. 날짜 범위의 상한(`maxDays`)은 사건 · 큰 사건이 `EventPeriod.MAX_DAYS`, 판정 기록이 `EvaluationPeriod.MAX_DAYS` 에서 온다
+  - 사건 · 기사 · 판정 원본 ID 는 JSON 수다. 날짜 범위의 상한(`maxDays`)은 사건 · 큰 사건이 `EventPeriod.MAX_DAYS`, 판정 기록이 `JudgementPeriod.MAX_DAYS` 에서 온다
   - 사건 목록 행은 사건 전체의 기사 수와 기간 안 기사 수 · 소스 수 · 중요도 평균(`EventTally`), 기간 · 지금 기준의 큰 사건 여부, 사건 기사 전체에서 고른 대표 기사를 싣는다. 쪽 크기는 질의로 받지 않는다 — 컨트롤러 상수가 공개 상한 이하다
   - 사건 상세는 경로의 ID 를 `requestedId` 로 싣는다 — 합쳐진 사건의 ID 면 남는 사건(`id`)과 다르다. 대표 기사는 사건 기사 전체에서(`representativesOfAll` — 목록과 같은 정본), 합쳐진 사건은 합친 시각 순이고 병합 판정 확률이 없으면 `null` 이다
   - 큰 사건 행 · 미리보기 행의 대표 기사도 사건 기사 전체에서 고른다. 미리보기는 같은 기간을 지금 기준과 제안 기준으로 판정한 두 목록을 싣는다 — 들어오고 빠지는 사건은 화면이 사건 ID 로 가린다

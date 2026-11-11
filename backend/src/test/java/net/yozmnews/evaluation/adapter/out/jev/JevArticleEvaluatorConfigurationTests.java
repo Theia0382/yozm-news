@@ -19,8 +19,7 @@ import net.yozmnews.evaluation.FormatChoice;
 import net.yozmnews.evaluation.FormatOption;
 import net.yozmnews.evaluation.ImportanceLevel;
 import net.yozmnews.evaluation.ImportanceScale;
-import net.yozmnews.evaluation.TagSetId;
-import net.yozmnews.evaluation.TagSetView;
+import net.yozmnews.evaluation.TagQuestions;
 import net.yozmnews.evaluation.TopicCategory;
 import net.yozmnews.evaluation.adapter.out.fake.FakeArticleEvaluator;
 import net.yozmnews.evaluation.domain.evaluator.ArticleEvaluator;
@@ -128,7 +127,7 @@ class JevArticleEvaluatorConfigurationTests {
 	@Test
 	void sendsTheConfiguredModelToTheConfiguredAddress() {
 		server.stubFor(post("/v1/systemone").willReturn(aResponse().withStatus(503)));
-		TagSetView tagSet = new TagSetView(new TagSetId(1), 1,
+		TagQuestions questions = new TagQuestions(
 				List.of(new TopicCategory("economy", "경제", "경제", List.of(new AskedTag("economy.macro", "거시", "거시", "거시인가")))),
 				List.of(new AskedTag("domestic", "국내", "국내", "국내인가")),
 				new FormatChoice("형식은", List.of(new FormatOption("straight", "스트레이트", "사실 보도", false))),
@@ -137,7 +136,7 @@ class JevArticleEvaluatorConfigurationTests {
 		this.runner.withPropertyValues(ROLES, "yozmnews.jev.api-key=" + KEY, "yozmnews.jev.model=jev-1.13.0",
 				"yozmnews.jev.base-url=" + server.baseUrl())
 			.run(context -> context.getBean(ArticleEvaluator.class)
-				.evaluate(new EvaluationInput("제목", null, List.of()), tagSet));
+				.evaluate(new EvaluationInput("제목", null, List.of()), questions));
 
 		server.verify(1, postRequestedFor(urlEqualTo("/v1/systemone"))
 			.withRequestBody(matchingJsonPath("$.model", equalTo("jev-1.13.0"))));

@@ -4,7 +4,7 @@
 
 ## 핵심 인터페이스
 
-`evaluation` 의 공유 평가 포트 `ArticleEvaluator` 와 평가 작업은 [evaluation Spec](specs/evaluation.md#articleevaluator)에, `event` 의 기사 임베딩 포트 `ArticleEmbedder` 와 사건 묶기 작업은 [event Spec](specs/event.md#articleembedder)에 있다.
+`evaluation` 의 모델 평가 포트 `ArticleEvaluator` 는 [evaluation Spec](specs/evaluation.md#articleevaluator)에, `tag` 의 평가 작업은 [tag Spec](specs/tag.md#평가-대기와-평가-작업)에, `event` 의 기사 임베딩 포트 `ArticleEmbedder` 와 사건 묶기 작업은 [event Spec](specs/event.md#articleembedder)에 있다.
 
 ```java
 // digest: 사용자별 종합 다이제스트 생성.

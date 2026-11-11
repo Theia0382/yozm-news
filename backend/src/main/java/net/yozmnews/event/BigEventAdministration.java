@@ -3,7 +3,7 @@ package net.yozmnews.event;
 import java.math.BigDecimal;
 import java.util.List;
 
-import net.yozmnews.evaluation.ChangeActor;
+import net.yozmnews.platform.ChangeActor;
 
 /**
  * 큰 사건 기준의 운영 — 지금 값 · 변경 · 이력 · docs/specs/event.md §3 · event-R21.

@@ -31,3 +31,7 @@
 | 평가기가 없으면 "평가기 사용 불가" 실패를 돌려준다 | 배치 결함이 키 문제와 같은 갈래로 보여 부르는 쪽의 멈춤 · 재시도에 조용히 흡수된다 |
 | 공개 API 빈을 작업 역할 결선으로만 등록한다 | 애플리케이션 서비스를 작업 역할에만 두는 새 소속이라 역할 규칙을 고쳐야 하고, 부르는 쪽 공통 서비스가 이 API 를 생성자로 받을 수 없다 |
 | 비동기로 한다 — 판정 요청을 대기에 받아 `evaluation` 의 작업이 판정하고 결과를 이벤트로 알린다 | 부르는 쪽 배정이 요청과 결과 받기의 두 단계가 되고, 대기 · 작업 · 이벤트가 새로 생긴다 |
+
+## 후속 기록
+
+- 2026-11-11: 결정 절 "판정 공개 API 는 역할 애너테이션 없는 공통 빈이다" · "평가기가 없는 프로세스에서 부르면 예외다"를 태그 판정 공개 API 에도 씀 — [ADR-0112](0112-tags-split-into-a-tag-module-and-evaluation-is-the-model-gateway-that-assembles-calls-and-records-each-judgement.md) · [evaluation Spec "태그 판정"](../specs/evaluation.md#태그-판정) evaluation-R40 · R42

@@ -9,13 +9,13 @@ import java.util.Collection;
 import java.util.List;
 
 import net.yozmnews.article.ArticleId;
-import net.yozmnews.evaluation.EvaluationPeriod;
 import net.yozmnews.evaluation.EventJudgementCursor;
 import net.yozmnews.evaluation.EventJudgementId;
 import net.yozmnews.evaluation.EventJudgementLog;
 import net.yozmnews.evaluation.EventJudgementPage;
 import net.yozmnews.evaluation.EventJudgementView;
 import net.yozmnews.evaluation.JudgedEvent;
+import net.yozmnews.evaluation.JudgementPeriod;
 import net.yozmnews.evaluation.domain.membership.EventJudgementRepository;
 import net.yozmnews.evaluation.domain.membership.MembershipRecord;
 import org.jspecify.annotations.Nullable;
@@ -28,7 +28,7 @@ import org.junit.jupiter.api.Test;
  */
 class EventJudgementLogServiceTests {
 
-	private static final EvaluationPeriod PERIOD = new EvaluationPeriod(Instant.parse("2026-11-01T00:00:00Z"),
+	private static final JudgementPeriod PERIOD = new JudgementPeriod(Instant.parse("2026-11-01T00:00:00Z"),
 			Instant.parse("2026-11-08T00:00:00Z"));
 
 	private final Rows rows = new Rows();

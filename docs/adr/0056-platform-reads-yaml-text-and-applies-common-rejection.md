@@ -1,6 +1,6 @@
 # ADR-0056: YAML 원문 읽기와 공통 거부는 `platform` 이 맡고, 문서별 형식 · 검증은 각 모듈의 `domain` 이 한다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — YAML 읽기를 함께 쓰는 모듈([ADR-0112](0112-tags-split-into-a-tag-module-and-evaluation-is-the-model-gateway-that-assembles-calls-and-records-each-judgement.md))
 - 날짜: 2026-11-02
 - 근거: [이슈 #68](https://github.com/Theia0382/yozm-news/issues/68) — 기점 `385aaef` 의 `source` 수집 프로필 읽기기와 바인더(`ProfileBinder`)에서 문서 종류와 무관한 판정을 가려 확인
 - 관련: [ADR-0024](0024-collection-profile-yaml-and-preset-reference-or-own-profile.md)(수집 프로필 YAML — "거부는 `source` 모듈의 `domain` 코드가 한다" 가운데 공통 거부의 자리를 이 ADR 이 대체한다), [ADR-0054](0054-tag-set-seeded-from-default-yaml-on-first-start-with-immutable-versions-and-question-templates.md)(기본 태그 체계 파일)
@@ -20,6 +20,7 @@
 
 ## 결과
 
+> 부분 대체(첫 문장) — [ADR-0112](0112-tags-split-into-a-tag-module-and-evaluation-is-the-model-gateway-that-assembles-calls-and-records-each-judgement.md). 지금 상태: [overview.md §5](../overview.md#5-모듈-지도)
 - `source` 와 `evaluation` 이 같은 읽기 · 거부를 쓴다. 다른 YAML 문서가 생겨도 같다.
 - 수집 프로필의 운영자 화면 결과(문제 종류 이름 · 문구 · 위치 · 순서)는 그대로다. 길이 상한 초과 문구만 문서 종류를 모르는 문구로 바뀐다.
 - `platform` 은 다른 모듈의 타입에 의존하지 않는다 — 공통 타입은 문서 종류를 모른다.

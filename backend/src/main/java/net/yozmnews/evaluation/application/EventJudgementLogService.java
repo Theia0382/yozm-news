@@ -3,11 +3,11 @@ package net.yozmnews.evaluation.application;
 import java.util.List;
 import java.util.Objects;
 
-import net.yozmnews.evaluation.EvaluationPeriod;
 import net.yozmnews.evaluation.EventJudgementCursor;
 import net.yozmnews.evaluation.EventJudgementLog;
 import net.yozmnews.evaluation.EventJudgementPage;
 import net.yozmnews.evaluation.EventJudgementView;
+import net.yozmnews.evaluation.JudgementPeriod;
 import net.yozmnews.evaluation.domain.membership.EventJudgementRepository;
 import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
@@ -27,7 +27,7 @@ class EventJudgementLogService implements EventJudgementLog {
 	}
 
 	@Override
-	public EventJudgementPage list(EvaluationPeriod period, @Nullable EventJudgementCursor after, int size) {
+	public EventJudgementPage list(JudgementPeriod period, @Nullable EventJudgementCursor after, int size) {
 		Objects.requireNonNull(period, "period");
 		if (size < 1 || size > MAX_PAGE_SIZE) {
 			throw new IllegalArgumentException("판정 원본 목록은 한 쪽에 1 ~ " + MAX_PAGE_SIZE + "건이다: " + size);

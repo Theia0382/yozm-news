@@ -35,7 +35,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
  * 롤백한다. 해시 기대값은 {@code sha256sum} 으로 따로 계산한 16진수다.
  * <p>
  * 지키는 규칙: article-R2 · article-R3 · article-R6 · article-R7 · article-R8 · article-R9 · article-R15 ·
- * evaluation-R25(재평가 대상 조회)
+ * tag-R25(재평가 대상 조회)
  */
 @JdbcTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
