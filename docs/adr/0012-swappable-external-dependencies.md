@@ -14,7 +14,7 @@
 
 ### 원칙
 
-> 부분 대체(첫 문장의 평가기) — [ADR-0061](0061-worker-role-does-not-run-without-an-evaluator.md). 지금 상태: [evaluation Spec §5](../specs/evaluation.md#5-규칙과-불변식) evaluation-R20
+> 부분 대체(첫 문장의 평가기) — [ADR-0061](0061-worker-role-does-not-run-without-an-evaluator.md). 지금 상태: [evaluation Spec §5](../specs/evaluation.md#5-규칙과-불변식) evaluation-R43
 1. 외부 서비스는 모두 **설정으로 교체하거나 끌 수 있어야** 한다. 코드는 특정 공급자가 아니라 표준 프로토콜이나 자체 인터페이스에 의존한다.
 2. 꺼도 서비스가 동작해야 하는 것(선택 기능)과, 대체 구현이 반드시 있어야 하는 것(필수 기능)을 구분한다.
 3. 개발과 테스트에는 **로컬 대체물**을 두어, 외부 계정이나 비밀 값 없이 전체 흐름을 돌릴 수 있게 한다.
@@ -43,7 +43,7 @@
 
 ## 결과
 
-> 부분 대체(첫 문장) — [ADR-0061](0061-worker-role-does-not-run-without-an-evaluator.md). 지금 상태: [evaluation Spec §5](../specs/evaluation.md#5-규칙과-불변식) evaluation-R20
+> 부분 대체(첫 문장) — [ADR-0061](0061-worker-role-does-not-run-without-an-evaluator.md). 지금 상태: [evaluation Spec §5](../specs/evaluation.md#5-규칙과-불변식) evaluation-R43
 - 셀프 호스팅 운영자는 Google, Cloudflare, 상용 메일 서비스, Jev 키 없이도 서비스를 띄울 수 있다. Jev가 없으면 평가 품질은 떨어지고, 이 경우 대체 평가기를 써야 한다.
 - 새 개발자는 `docker compose --profile dev up`과 IDE 실행만으로 로그인부터 다이제스트 생성까지 전체 흐름을 볼 수 있다.
 - 공급자 이름("Google")이 도메인 코드나 DB 스키마에 하드코딩되지 않는다. `user_identities.provider`는 설정의 registration ID를 저장한다.

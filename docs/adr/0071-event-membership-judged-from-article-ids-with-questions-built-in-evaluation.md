@@ -35,3 +35,7 @@
 | 서술을 제목 텍스트로 받는다 | 원본에 텍스트를 남기면 지운 기사의 제목이 남고, 남기지 않으면 무엇을 물었는지 원본으로 알 수 없다 |
 | 후보 전체를 선택 질문 하나로 묻는다(후보들 + "어느 것도 아니다") | 분포 합이 1 이라 확률이 후보 수에 따라 묽어져 고정 기준과 맞지 않는다. ADR-0026 의 Yes/No 문면과 다르다 |
 | 포트 결과를 그대로 공개한다 | 원본 응답 · 토큰이 부르는 쪽으로 새고, 판정 원본을 누가 남기는지가 흐려진다 |
+
+## 후속 기록
+
+- 2026-11-11: 결정 절 "판정할 기사와 서술 기사를 기사 ID 로 받는다"의 꼴을 태그 판정으로 넓힘 — 기사 ID 를 받아 `evaluation` 이 기사 · 피드를 읽는다 — [ADR-0112](0112-tags-split-into-a-tag-module-and-evaluation-is-the-model-gateway-that-assembles-calls-and-records-each-judgement.md) · [evaluation Spec "태그 판정"](../specs/evaluation.md#태그-판정) evaluation-R40

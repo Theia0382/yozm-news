@@ -11,7 +11,7 @@
 
 ## 결정
 
-> 부분 대체(둘째 문장) — [ADR-0010](0010-tag-taxonomy.md) · [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md). 지금 상태: [evaluation Spec §1](../specs/evaluation.md#1-책임과-범위)
+> 부분 대체(둘째 문장) — [ADR-0010](0010-tag-taxonomy.md) · [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md). 지금 상태: [tag Spec §1](../specs/tag.md#1-책임과-범위) · [evaluation Spec §1](../specs/evaluation.md#1-책임과-범위)
 - Jev는 **사용자 정보 없이 기사마다 한 번만** 평가한다. 평가 항목은 카테고리 분류, 중요도, 다이제스트 적합성이다.
 - 카테고리 체계는 운영자가 관리하고 버전을 붙인다. 사용자는 카테고리를 구독한다.
 > 부분 대체 — [ADR-0028](0028-explicit-signals-and-interest-weighted-candidates.md). 지금 상태: [`pipeline` §6](../pipeline.md#6-다이제스트-생성)
@@ -23,7 +23,7 @@
 
 - 운영자 비용이 사용자 수가 아니라 기사 수에만 비례한다. 피드 20개, 하루 4,000건 기준 월 약 $5로 추정한다.
 - 카테고리 체계의 품질이 개인화 품질의 상한이 된다. 체계가 너무 거칠면 후보에 관심 없는 기사가 많아지고, 너무 세밀하면 분류 정확도가 떨어진다.
-> 부분 대체 — [ADR-0010](0010-tag-taxonomy.md). 지금 상태: [evaluation Spec §5](../specs/evaluation.md#5-규칙과-불변식) evaluation-R14
+> 부분 대체 — [ADR-0010](0010-tag-taxonomy.md). 지금 상태: [tag Spec §5](../specs/tag.md#5-규칙과-불변식) tag-R14
 - 경계에 걸친 기사를 위해 다중 카테고리(확률 상위 최대 2개)를 허용한다.
 - 체계를 바꾸면 최근 기사만 재평가한다.
 - confidence가 낮은 판정을 LLM으로 재평가하는 방안은 운영자 비용이 드므로 v1에서 하지 않는다.

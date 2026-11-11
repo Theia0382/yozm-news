@@ -1,6 +1,6 @@
 # ADR-0064: 주제별 보도량은 기사의 첫 평가 시각으로 기간에 넣고, 최신 평가의 조회 시점 판정을 계보로 활성 버전 키에 이어 앱에서 센다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 판정 · 세기를 하는 모듈([ADR-0112](0112-tags-split-into-a-tag-module-and-evaluation-is-the-model-gateway-that-assembles-calls-and-records-each-judgement.md))
 - 날짜: 2026-11-03
 - 근거: [이슈 #72](https://github.com/Theia0382/yozm-news/issues/72) — 기점 `29bccac` 의 평가 결과 저장(기사 · 버전마다 넣기 한 번, 갱신 · 버전 단위 삭제 없음 — 지운 기사를 따라서만 지운다), 조회 시점 판정(`TagJudgement` — 태그 기준 · 저장 기준을 저장하지 않고 조회 때 적용), 최신 평가(버전 번호가 가장 큰 것), 태그 키 계보 해석(버전 → 활성 버전 키 집합의 표)을 확인. 구현 `55e832b`(집계 기간 · 평가 현황 · 커서 흘려 받기 · 읽기 전용 스냅숏) · `1c1976d`(주제별 보도량) · `4e4c3d2`(운영자 HTTP)
 - 관련: [ADR-0062](0062-tag-set-versions-from-operator-text-activated-forward-with-key-lineage-and-recent-reevaluation.md)(버전은 앞으로만 켜고 키 계보로 옛 키를 잇는다 — 보도량이 그 해석을 쓴다), [ADR-0055](0055-tag-and-store-thresholds-change-with-history-and-warn-instead-of-blocking.md)(태그 기준 · 저장 기준은 조회 시점에 적용), [ADR-0045](0045-admin-module-serves-operator-api-over-module-public-operation-apis.md)(운영자 HTTP 는 `admin`), [ADR-0002](0002-shared-evaluation-with-jev.md)(공유 평가)
@@ -17,6 +17,7 @@
 ## 결정
 
 - **기간 축은 기사의 첫 평가 시각이다.** 기간 안에 첫 평가가 있는 기사를 센다 — 재평가는 기사를 옮기지 않는다. 기사는 그 기사의 최신 평가(버전 번호가 가장 큰 것)로 센다.
+> 부분 대체(둘째 문장) — [ADR-0112](0112-tags-split-into-a-tag-module-and-evaluation-is-the-model-gateway-that-assembles-calls-and-records-each-judgement.md). 지금 상태: [tag Spec §4](../specs/tag.md#4-내부-구조)
 - **판정은 조회 시점에 Java 정본을 부른다.** SQL 은 평가 행과 태그 행을 가져오기만 하고, 판정 · 계보 풀기 · 세기는 `evaluation` 의 `domain` 이 한다 — SQL 에 판정의 두 번째 사본을 두지 않는다. `low_confidence` 로 붙은 주제도 센다.
 - **계보로 활성 버전의 키에 이어 센다.** 분할된 키의 기사는 새 키마다 하나씩, 병합된 키들을 가진 기사는 한 번 센다. 계보 없이 지운 키만 가진 기사와 미분류 기사는 "활성 주제에 이어지지 않은 기사"로 따로 센다. 대분류의 수는 하위 중분류 수의 합이 아니라 하위 어느 것이든 붙은 기사 수다.
 - **보도량은 공개 조회다.** 입력은 시간대 없는 `[from, to)` 시각 범위와 주제 집합(빈 집합이면 모든 주제, 대분류 키는 하위로 펼친다)이다. 활성 버전에 없는 키는 결과 종류 하나로 돌려준다. 사용자를 모른다.
