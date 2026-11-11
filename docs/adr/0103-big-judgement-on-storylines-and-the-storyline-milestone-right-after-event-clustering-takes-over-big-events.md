@@ -40,4 +40,4 @@
 
 ## 후속 기록
 
-- 2026-11-11: 결과 "큰 판정 정답의 단위는 스토리라인이다"의 표시와 정밀도 — [ADR-0110](0110-storyline-evaluation-labels-system-events-of-a-fixed-dump-and-measures-overlapping-clusters-from-random-seed-events.md)
+- 2026-11-11: 결과 "큰 판정 정답의 단위는 스토리라인이다"의 표시와 정밀도 — [ADR-0110](0110-storyline-evaluation-labels-system-events-of-a-fixed-dump-and-measures-overlapping-clusters-from-random-seed-events.md), 지금 상태는 [스토리라인 평가하기 "재는 것"](../operations/storyline-evaluation.md#재는-것)

@@ -114,7 +114,7 @@ KEK (환경 비밀 값, 버전 관리)
 - 소스(언론사)마다 RSS 이용조건 검토 날짜를 수집 프로필의 `termsReviewedAt` 에 기록한다 — 프리셋은 개발팀이 반드시 적고, 운영자 프로필은 운영자가 적는다. 검토일과 소스 활성화의 규칙은 [source Spec](specs/source.md#등록과-켜기)에 있다.
 - 프리셋의 이용조건 검토는 개인 · 비상업 셀프 호스팅 인스턴스에서의 이용을 전제로 한다. 프리셋이 있는 소스를 실제로 켤지는 인스턴스 운영자가 자기 인스턴스의 이용 형태로 판단한다.
 - 언론사가 삭제를 요청하면 운영자는 그 소스를 지울 수 있다 — 그 소스만 가진 기사가 요약문과 함께 지워지고, 다른 소스도 가진 기사는 남는다([source Spec 숨김과 삭제](specs/source.md#숨김과-삭제)). 수집만 멈추고 기사를 남기려면 숨긴다. 요약문의 보존 기간은 [data-model.md](data-model.md) 보존 정책을 따른다 ([ADR-0029](adr/0029-indefinite-summary-retention-with-optional-deletion.md)).
-- 사건 묶기 평가 세트(사건 라벨을 붙인 기사 표본)의 실제 기사 제목 · 요약문은 공개 저장소에 넣지 않는다. 라벨 파일 · 결과 기록도 인스턴스에 묶인 데이터라 공개 저장소에 두지 않고 운영자가 고른 디렉터리에 둔다 ([ADR-0026](adr/0026-event-clustering-with-local-embeddings-and-jev.md) · [ADR-0096](adr/0096-instance-bound-evaluation-data-kept-out-of-the-public-repository-and-defaults-cite-only-the-evaluation-set.md)).
+- 사건 묶기 평가 세트(사건 라벨을 붙인 기사 표본)와 스토리라인 평가 세트(덤프의 사건에 스토리라인 라벨을 붙인 표본)의 실제 기사 제목 · 요약문은 공개 저장소에 넣지 않는다. 라벨 파일 · 결과 파일 · 결과 기록 · 덤프도 인스턴스에 묶인 데이터라 공개 저장소에 두지 않고 운영자가 고른 디렉터리에 둔다 ([ADR-0026](adr/0026-event-clustering-with-local-embeddings-and-jev.md) · [ADR-0096](adr/0096-instance-bound-evaluation-data-kept-out-of-the-public-repository-and-defaults-cite-only-the-evaluation-set.md)).
 - 네이버 검색 API를 쓰지 않기로 한 결정은 [ADR-0001](adr/0001-news-source-rss.md) 참고.
 
 ## 운영자 프로필 입력
