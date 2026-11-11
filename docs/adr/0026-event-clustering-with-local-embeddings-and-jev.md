@@ -26,7 +26,7 @@
 - **배정 기준은 사건 중심이다.** 사건 안의 기사 하나와만 닮아도 붙이는 방식은 사건이 번지기 쉽다.
 > 부분 대체(둘째 문장) — [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md). 지금 상태: [`overview` §8](../overview.md#8-용어)
 - 사건은 며칠 단위로 닫힌다. 그보다 긴 전개는 사용자별 이슈가 잇는다([ADR-0025](0025-long-term-personal-news-history-in-v1.md)).
-> 부분 대체(판정의 단위) — [ADR-0103](0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md). 지금 상태: [event Spec 대표 기사 · 큰 사건](../specs/event.md#대표-기사--큰-사건) event-R15
+> 부분 대체(판정의 단위) — [ADR-0103](0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md). 지금 상태: [storyline Spec 큰 판정](../specs/storyline.md#큰-판정) storyline-R19
 - **큰 사건은 조회 시점에 판정한다.** 사건의 서로 다른 소스 수와 기사의 Jev 중요도로 판정하고, 임계값은 운영자가 정한다.
 - **Jev 관문은 하나로 둔다.** 사건 소속 판정은 `ArticleEvaluator` 의 연산이다. 그 인자 · 반환 타입은 `evaluation` 이 소유한다 — `event` 의 타입을 받으면 `evaluation → event` 가 생겨 `event → evaluation` 과 순환이 된다. `event` 는 `evaluation` 의 공개 API 를 부른다. [ADR-0012](0012-swappable-external-dependencies.md) 의존성 표의 Jev 행(`ArticleEvaluator`)은 그대로 성립한다.
 > 부분 대체(첫 문장) — [ADR-0114](0114-article-embedding-is-a-gateway-operation-of-evaluation-taking-callers-texts-checking-results-and-recording-nothing.md). 지금 상태: [evaluation Spec §5](../specs/evaluation.md#기사-임베딩) evaluation-R45
@@ -65,8 +65,8 @@
 - 2026-11-05: 결정 절 "Jev 관문은 하나로 둔다"의 인자 · 반환 타입 — [ADR-0071](0071-event-membership-judged-from-article-ids-with-questions-built-in-evaluation.md) · [evaluation Spec §5](../specs/evaluation.md#5-규칙과-불변식) evaluation-R37 · R38
 - 2026-11-05: 결정 절 "고유명사는 형태소 분석기 Lucene Nori 로 뽑는다"의 분해 모드 · 고르는 품사 — [ADR-0076](0076-key-terms-from-nori-without-decompounding-proper-common-and-foreign-nouns.md) · [event Spec §5](../specs/event.md#기사-표현) event-R2
 - 2026-11-06: 결과 절 "운영자가 표본을 검수해 임계값을 조정한다" — [ADR-0081](0081-event-assignment-criteria-in-settings-and-rejudgement-within-stored-scores.md) · [event Spec §5](../specs/event.md#기준과-재판정) event-R17 · R18
-- 2026-11-07: 결정 절 "큰 사건은 조회 시점에 판정한다"의 판정 식 — [ADR-0082](0082-big-events-judged-at-query-time-by-distinct-sources-and-mean-importance-both-reaching-criteria.md) · [event Spec §5](../specs/event.md#대표-기사--큰-사건) event-R15
-- 2026-11-07: 결정 절 "임계값은 운영자가 정한다"의 큰 사건 기준을 둘 곳 — [ADR-0083](0083-big-event-criteria-as-operator-settings-with-append-only-history-and-preview.md) · [event Spec §5](../specs/event.md#대표-기사--큰-사건) event-R21
+- 2026-11-07: 결정 절 "큰 사건은 조회 시점에 판정한다"의 판정 식 — [ADR-0082](0082-big-events-judged-at-query-time-by-distinct-sources-and-mean-importance-both-reaching-criteria.md) · [storyline Spec 큰 판정](../specs/storyline.md#큰-판정) storyline-R19
+- 2026-11-07: 결정 절 "임계값은 운영자가 정한다"의 큰 사건 기준을 둘 곳 — [ADR-0083](0083-big-event-criteria-as-operator-settings-with-append-only-history-and-preview.md) · [storyline Spec 큰 판정](../specs/storyline.md#큰-판정) storyline-R20
 - 2026-11-07: 결정 절 "4. 정리"의 병합 — [ADR-0084](0084-event-merge-applies-assignment-scoring-between-events-and-keeps-merged-rows-pointing-to-survivors.md) · [event Spec §5](../specs/event.md#사건-정리) event-R13
 - 2026-11-07: 결정 절 "4. 정리"의 닫기와 "사건은 며칠 단위로 닫힌다" — [ADR-0086](0086-events-close-after-an-idle-period-since-the-last-join-or-a-maximum-period-since-opening.md) · [event Spec §5](../specs/event.md#사건-정리) event-R13
 - 2026-11-07: 결정 절 "기본 구현은 로컬 모델(ONNX Runtime)이고, 설정으로 외부 임베딩 API 로 바꿀 수 있다" 의 방식 · 모델 · 배포 — [ADR-0090](0090-article-embedding-defaults-to-an-in-app-local-model-with-an-openai-compatible-api-by-setting.md) · [ADR-0091](0091-local-embedding-model-is-multilingual-e5-small-int8-fetched-at-build-into-the-image-with-onnx-telemetry-off.md) · [evaluation Spec §4](../specs/evaluation.md#임베더-구현과-로컬-대체물)

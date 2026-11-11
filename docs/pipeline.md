@@ -127,7 +127,7 @@
 - 신호는 각 모듈이 추가 전용 이벤트로 기록하고, 현재 상태는 그 투영이다. 피드백을 "없음"으로 되돌리는 것도 이벤트로 남는다. 피드백에는 어느 다이제스트에서 눌렀는지도 남긴다.
 - 싫어요를 누른 기사는 후보에서 뺀다(§6).
 - **관심도**: 사용자 × 주제 × 기간마다 계산한다.
-  - 입력은 그 주제 태그(태그 기준 이상, 대분류는 하위로 펼침)가 붙은 기사의 좋아요 · 싫어요와 노출 수(다이제스트가 인용한 기사), 그 주제의 구독 변경이다. **(미설계)** 스토리라인 구독이 주제별 관심도에 들어가는 방법은 스토리라인에 주제를 줄지([미결 사항](open-questions.md))와 함께 정한다.
+  - 입력은 그 주제 태그(태그 기준 이상, 대분류는 하위로 펼침)가 붙은 기사의 좋아요 · 싫어요와 노출 수(다이제스트가 인용한 기사), 그 주제의 구독 변경이다. **(미설계)** 스토리라인 구독이 주제별 관심도에 들어가는 방법은 스토리라인의 주제를 정하는 법([미결 사항](open-questions.md))과 함께 정한다 — 스토리라인에 태그를 저장하지 않고 쓸 때 구성 기사의 태그로 모으는 방식부터 본다.
   - 신호를 노출 수로 나눠 정규화하고, 최근 신호에 더 큰 가중치를 준다. 신호가 없으면 중립이다.
   - 조회할 때 계산한다. 산식은 노출 기록을 가진 `digest` 의 `domain` 한 곳에 두고, 감쇠 · 가중치 값은 운영하면서 정한다.
 - **관심사 히스토리**: 기간별 주제 관심도, 새로 생긴 관심과 사라진 관심, 대분류에서 중분류로 넓어진 흐름을 보여 준다. 주제는 태그 키 계보(§5)를 따라 이어진다.
@@ -135,7 +135,7 @@
 
 ## 8. 사건 묶기
 
-사건 묶기는 `event` 모듈이 한다 — event Spec 의 [기사 표현](specs/event.md#기사-표현) · [사건 묶기 대기와 회차](specs/event.md#사건-묶기-대기와-회차) · [사건 배정](specs/event.md#사건-배정) · [사건 정리](specs/event.md#사건-정리) · [대표 기사 · 큰 사건](specs/event.md#대표-기사--큰-사건), 임베딩은 `evaluation` 의 공개 API 이고 포트는 [`ArticleEmbedder`](specs/evaluation.md#articleembedder)에 있다.
+사건 묶기는 `event` 모듈이 한다 — event Spec 의 [기사 표현](specs/event.md#기사-표현) · [사건 묶기 대기와 회차](specs/event.md#사건-묶기-대기와-회차) · [사건 배정](specs/event.md#사건-배정) · [사건 정리](specs/event.md#사건-정리) · [대표 기사 · 기간 집계](specs/event.md#대표-기사--기간-집계), 임베딩은 `evaluation` 의 공개 API 이고 포트는 [`ArticleEmbedder`](specs/evaluation.md#articleembedder)에 있다.
 
 ## 9. 스토리라인
 
@@ -146,10 +146,11 @@
 - **행사** — 포럼 · 박람회 같은 행사는 스토리라인이다. 강연 · 발표 · 행사 자체를 다룬 보도는 각각 사건이고 그 행사의 스토리라인에 든다. 발표 사건은 그 내용의 흐름에도 들 수 있다
 - **주제** — 주제(태그)는 기사의 분류이고 흐름이 아니라 스토리라인 층 밖이다. 스토리라인에 주제 · 지역 태그를 줄지는 [미결 사항](open-questions.md)이다
 - **구독** — 사용자가 스토리라인을 구독하고 해제한다. 구독과 그 변경 이력은 `user` 가 스토리라인 ID 로 갖고, 구독 변경은 관심 신호(§7)다
-- **큰 판정** — 구독과 무관하게 알릴 만한 스토리라인을 고른다. 다이제스트의 큰 슬롯 · 선정 이유(§6), 구독 제안(§7), 변화 리포트의 보도량(§10)이 쓴다. 만들 때 `event` 의 큰 사건 판정 · 기준을 거둔다([ADR-0103](adr/0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md))
+- **큰 판정** — 구독과 무관하게 알릴 만한 스토리라인을 고른다. 다이제스트의 큰 슬롯 · 선정 이유(§6), 구독 제안(§7), 변화 리포트의 보도량(§10)이 쓴다. 조회 기간 안 구성 사건 기사의 서로 다른 소스 수와 중요도 평균이 둘 다 운영자 설정 기준 이상인 스토리라인이고, 조회할 때 판정한다 — 식을 평가 세트로 정하기 전의 임시 산식이다. 기간 안 기사는 `event` 가 사건 묶음 단위로 세고, 스토리라인에 들지 않은 사건은 판정에 들지 않는다. 규칙은 [storyline Spec](specs/storyline.md#큰-판정)에 있다([ADR-0103](adr/0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md) · [ADR-0116](adr/0116-storyline-big-judgement-starts-with-a-provisional-rule-of-distinct-sources-and-mean-importance-judged-at-query-time.md) · [ADR-0117](adr/0117-big-judgement-materials-are-tallied-by-event-per-group-of-events-and-storyline-passes-only-event-ids.md) · [ADR-0118](adr/0118-big-judgement-criteria-are-storyline-operator-settings-and-do-not-inherit-event-criteria-values-or-history.md))
+- **조회** — 다른 모듈은 스토리라인 · 스토리라인의 사건(타임라인) · 사건의 스토리라인 · 기간의 스토리라인 목록 · 큰 스토리라인을 `storyline` 의 공개 조회로 읽는다. 여러 스토리라인의 합계는 구성 사건의 합집합으로 세어 같은 사건을 한 번만 센다([storyline Spec](specs/storyline.md#공개-조회))
 - **잇기** — 사건이 생기거나 바뀌면 그 사건을 판정해 스토리라인에 더 붙이거나 다른 사건과 짝을 지어 새 스토리라인을 연다. 기간을 통째로 다시 묶지 않는다 — 구독 · 타임라인이 스토리라인 ID 를 가리킨다. 사건이 지워지거나 합쳐지면 소속을 따라 맞추고, 기사 삭제는 사건의 변화로 따른다. 그 결과 같은 사건들로 된 스토리라인은 하나로 합치고, 사건 하나만 남은 스토리라인은 그 사건을 가진 다른 스토리라인에 합치거나 풀어 그 사건을 다시 판정한다([ADR-0108](adr/0108-storylines-with-the-same-events-merge-and-a-storyline-left-with-one-event-merges-or-dissolves.md)). 지금 소속을 정하는 법은 잇는 방법을 평가 세트로 정하기 전의 임시 규칙이다 — 규칙과 계기별 처리는 [storyline Spec](specs/storyline.md#5-규칙과-불변식)에 있다([ADR-0105](adr/0105-storylines-link-incrementally-from-event-change-notifications-and-events-publish-changed-event-ids.md) · [ADR-0106](adr/0106-provisional-storyline-linking-opens-only-with-a-partner-event-and-adds-the-single-best-storyline-without-removal.md))
 - **상태** — 진행 · 잠잠 · 끝남을 저장하지 않고 볼 때마다 마지막 기사 시각으로 정한다. 끝나도 잇기를 막지 않는다 — 최근 기사가 있는 사건이 붙으면 같은 스토리라인이 다시 진행이 된다. 기간은 설정이다([storyline Spec](specs/storyline.md#상태) · [ADR-0107](adr/0107-storyline-state-is-judged-at-query-time-from-the-last-article-and-an-ended-storyline-still-links.md))
-- **(미설계)** 잇는 방법의 최종(주 소속을 둘지, 판정 시점, 새 스토리라인을 여는 조건), 스토리라인 사이 관계를 나타내고 판정하는 법, 큰 판정의 식과 기준, 타임라인, 여러 스토리라인의 합계에서 같은 사건을 한 번만 세는 규칙. 잇는 방법은 몇 주에 걸쳐 내용이 바뀌어 가는 전개를 이어야 한다 — 임베딩 기반 묶음만으로는 잘 잇지 못하는 일이다([ADR-0025](adr/0025-long-term-personal-news-history-in-v1.md)). 잇는 방법은 정답 라벨을 붙인 평가 세트로 견준다 — [스토리라인 평가하기](operations/storyline-evaluation.md)
+- **(미설계)** 잇는 방법의 최종(주 소속을 둘지, 판정 시점, 새 스토리라인을 여는 조건), 스토리라인 사이 관계를 나타내고 판정하는 법, 큰 판정의 식, 포함 관계에서 상위 스토리라인이 하위를 세는 법. 잇는 방법은 몇 주에 걸쳐 내용이 바뀌어 가는 전개를 이어야 한다 — 임베딩 기반 묶음만으로는 잘 잇지 못하는 일이다([ADR-0025](adr/0025-long-term-personal-news-history-in-v1.md)). 잇는 방법은 정답 라벨을 붙인 평가 세트로 견준다 — [스토리라인 평가하기](operations/storyline-evaluation.md)
 
 ## 10. 변화 리포트
 
