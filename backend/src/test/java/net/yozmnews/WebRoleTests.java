@@ -8,9 +8,9 @@ import java.util.List;
 import net.yozmnews.evaluation.ArticleTagging;
 import net.yozmnews.evaluation.EventMembership;
 import net.yozmnews.evaluation.TagJudgementId;
-import net.yozmnews.evaluation.TagSetDirectory;
 import net.yozmnews.platform.WebRole;
 import net.yozmnews.platform.domain.ActiveRoles;
+import net.yozmnews.tag.TagSetDirectory;
 import org.jobrunr.scheduling.JobScheduler;
 import org.jobrunr.server.BackgroundJobServer;
 import org.junit.jupiter.api.Test;
@@ -30,7 +30,7 @@ import org.springframework.test.context.ActiveProfiles;
 /**
  * 화면 역할만 켠 프로세스 — 실제 PostgreSQL 로 띄운 앱의 구성요소와 HTTP 응답을 본다.
  * <p>
- * 지키는 규칙: platform-R8 · platform-R9 · evaluation-R2 · evaluation-R37
+ * 지키는 규칙: platform-R8 · platform-R9 · tag-R2 · evaluation-R37
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -64,7 +64,7 @@ class WebRoleTests {
 
 	@Test
 	void seedsTheDefaultTagSetOnItsOwn() {
-		// 이 컨텍스트는 새 컨테이너의 빈 DB 로 뜬다 — 화면 역할만 켠 프로세스도 기동 때 첫 버전을 적재한다(evaluation-R2)
+		// 이 컨텍스트는 새 컨테이너의 빈 DB 로 뜬다 — 화면 역할만 켠 프로세스도 기동 때 첫 버전을 적재한다(tag-R2)
 		assertThat(this.context.getBean(TagSetDirectory.class).activeTagSet().number()).isEqualTo(1);
 	}
 

@@ -3,9 +3,9 @@ package net.yozmnews.admin.adapter.in.web;
 import java.time.Instant;
 import java.util.List;
 
-import net.yozmnews.evaluation.TagSetAdministration;
-import net.yozmnews.evaluation.TagSetVersionView;
 import net.yozmnews.platform.ChangeActor;
+import net.yozmnews.tag.TagSetAdministration;
+import net.yozmnews.tag.TagSetVersionView;
 
 /**
  * 태그 체계 버전 목록(번호가 큰 것부터)과 재평가 기간의 상한 — docs/specs/admin.md §3. 상한은

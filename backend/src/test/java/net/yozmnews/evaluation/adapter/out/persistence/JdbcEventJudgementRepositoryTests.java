@@ -24,7 +24,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
  * 사건 소속 판정 원본 저장소 — 행 · {@code jsonb} 쓰기, 기간 읽기, 지운 기사 따르기를 Flyway 가 적용된 실제 PostgreSQL 에서 본다. 테스트는
  * 테스트 트랜잭션 안에서 돈다.
  * <p>
- * 지키는 규칙: evaluation-R21 · evaluation-R38 · evaluation-R39
+ * 지키는 규칙: evaluation-R38 · evaluation-R39 · evaluation-R44
  */
 @JdbcTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)

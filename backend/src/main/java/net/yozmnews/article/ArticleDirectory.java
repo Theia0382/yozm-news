@@ -22,7 +22,7 @@ public interface ArticleDirectory {
 	Map<ArticleId, ArticleContent> findAll(Collection<ArticleId> ids);
 
 	/**
-	 * 처음 본 시각이 {@code since} 이상인 기사를 찾는다 — 체계를 바꿀 때의 재평가 대상(evaluation-R25) · 사건 묶기 채우기 대상(event-R19).
+	 * 처음 본 시각이 {@code since} 이상인 기사를 찾는다 — 체계를 바꿀 때의 재평가 대상(tag-R25) · 사건 묶기 채우기 대상(event-R19).
 	 * <p>
 	 * 처음 본 시각에는 인덱스가 없어 표 전체를 읽는다 — 드문 운영 연산이 부른다.
 	 * @return 기사 ID — ID 순

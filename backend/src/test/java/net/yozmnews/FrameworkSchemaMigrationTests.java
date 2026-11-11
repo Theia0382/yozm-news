@@ -49,7 +49,7 @@ class FrameworkSchemaMigrationTests {
 				select version from flyway_schema_history where success order by installed_rank
 				""").query(String.class).list())
 			.containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16",
-					"17", "18", "19", "20", "21", "22", "23", "24", "25", "26");
+					"17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27");
 		assertThat(this.jdbc.sql("""
 				select table_name from information_schema.tables
 				where table_schema = 'public' and table_type = 'BASE TABLE'

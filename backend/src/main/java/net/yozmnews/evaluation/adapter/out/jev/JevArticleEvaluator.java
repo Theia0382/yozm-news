@@ -53,7 +53,7 @@ public final class JevArticleEvaluator implements ArticleEvaluator, AutoCloseabl
 
 	/**
 	 * 요청 하나(헤더 · 본문 전부)의 마감 — 회차 한 묶음({@code PendingEvaluations.CLAIM_BATCH}) × 기사당 요청 둘 × 이 마감이 점유 기간
-	 * ({@link net.yozmnews.evaluation.domain.queue.EvaluationSchedule#LEASE}) 안에 들어야 한다
+	 * ({@link net.yozmnews.tag.domain.queue.EvaluationSchedule#LEASE}) 안에 들어야 한다
 	 */
 	static final Duration RESPONSE_DEADLINE = Duration.ofSeconds(15);
 

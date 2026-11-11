@@ -9,7 +9,7 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
  * 작업 역할의 기동 검사 — 로컬 개발이 아닌 작업 역할은 Jev 키 없이 뜨지 않고, 화면 역할만 띄운 프로세스는 키를 요구하지 않는다. 켜진
  * profile 을 바꿔 컨텍스트를 띄워 본다.
  * <p>
- * 지키는 규칙: evaluation-R20 · ADR-0061
+ * 지키는 규칙: evaluation-R43 · ADR-0061
  */
 class JevKeyRequirementTests {
 

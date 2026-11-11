@@ -12,24 +12,24 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-import net.yozmnews.evaluation.CategoryCoverage;
-import net.yozmnews.evaluation.CountBucket;
-import net.yozmnews.evaluation.EvaluationOverview;
-import net.yozmnews.evaluation.EvaluationQueueCounts;
-import net.yozmnews.evaluation.ProbabilityBucket;
-import net.yozmnews.evaluation.ProbabilityHistogram;
-import net.yozmnews.evaluation.Share;
-import net.yozmnews.evaluation.StoredRange;
-import net.yozmnews.evaluation.SubtopicCoverage;
-import net.yozmnews.evaluation.TagSetId;
-import net.yozmnews.evaluation.TagShare;
-import net.yozmnews.evaluation.TokenBucket;
-import net.yozmnews.evaluation.TokenSummary;
-import net.yozmnews.evaluation.TopicCoverageResult;
-import net.yozmnews.evaluation.TopicCoverageView;
-import net.yozmnews.evaluation.TopicStatusCounts;
-import net.yozmnews.evaluation.ValueBucket;
 import net.yozmnews.platform.application.WebSliceSecurity;
+import net.yozmnews.tag.CategoryCoverage;
+import net.yozmnews.tag.CountBucket;
+import net.yozmnews.tag.EvaluationOverview;
+import net.yozmnews.tag.EvaluationQueueCounts;
+import net.yozmnews.tag.ProbabilityBucket;
+import net.yozmnews.tag.ProbabilityHistogram;
+import net.yozmnews.tag.Share;
+import net.yozmnews.tag.StoredRange;
+import net.yozmnews.tag.SubtopicCoverage;
+import net.yozmnews.tag.TagSetId;
+import net.yozmnews.tag.TagShare;
+import net.yozmnews.tag.TokenBucket;
+import net.yozmnews.tag.TokenSummary;
+import net.yozmnews.tag.TopicCoverageResult;
+import net.yozmnews.tag.TopicCoverageView;
+import net.yozmnews.tag.TopicStatusCounts;
+import net.yozmnews.tag.ValueBucket;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,7 +44,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * <p>
  * 기간은 {@code Asia/Seoul} 10-28 ~ 11-03 → {@code [2026-10-27T15:00Z, 2026-11-03T15:00Z)} 로 공개 API 에 간다.
  * <p>
- * 지키는 규칙: admin-R1 · admin-R2 · admin-R3 · evaluation-R28
+ * 지키는 규칙: admin-R1 · admin-R2 · admin-R3 · tag-R28
  */
 @WebMvcTest(controllers = AdminEvaluationController.class, properties = AdminRequests.TOKEN_PROPERTY)
 @Import({ WebSliceSecurity.class, FakeEvaluationAdministration.Config.class })

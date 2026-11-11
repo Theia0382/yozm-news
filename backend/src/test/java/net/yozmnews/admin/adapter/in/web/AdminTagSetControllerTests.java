@@ -13,21 +13,21 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
-import net.yozmnews.evaluation.LineageKind;
-import net.yozmnews.evaluation.MultiTagKind;
-import net.yozmnews.evaluation.TagKind;
-import net.yozmnews.evaluation.TagLineageView;
-import net.yozmnews.evaluation.TagRef;
-import net.yozmnews.evaluation.TagSetActivationResult;
-import net.yozmnews.evaluation.TagSetChanges;
-import net.yozmnews.evaluation.TagSetId;
-import net.yozmnews.evaluation.TagSetProblemView;
-import net.yozmnews.evaluation.TagSetReviewResult;
-import net.yozmnews.evaluation.TagSetVersionView;
-import net.yozmnews.evaluation.TagThresholds;
-import net.yozmnews.evaluation.ThresholdDifference;
 import net.yozmnews.platform.ChangeActor;
 import net.yozmnews.platform.application.WebSliceSecurity;
+import net.yozmnews.tag.LineageKind;
+import net.yozmnews.tag.MultiTagKind;
+import net.yozmnews.tag.TagKind;
+import net.yozmnews.tag.TagLineageView;
+import net.yozmnews.tag.TagRef;
+import net.yozmnews.tag.TagSetActivationResult;
+import net.yozmnews.tag.TagSetChanges;
+import net.yozmnews.tag.TagSetId;
+import net.yozmnews.tag.TagSetProblemView;
+import net.yozmnews.tag.TagSetReviewResult;
+import net.yozmnews.tag.TagSetVersionView;
+import net.yozmnews.tag.TagThresholds;
+import net.yozmnews.tag.ThresholdDifference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,7 +40,7 @@ import org.springframework.test.web.servlet.MockMvc;
 /**
  * 운영자 API 의 태그 체계 — 버전 목록 · 원문, 원문의 확인 · 활성화의 판별자 · 속성 · 400 · 404.
  * <p>
- * 지키는 규칙: admin-R1 · admin-R2 · admin-R3 · evaluation-R16 · evaluation-R25
+ * 지키는 규칙: admin-R1 · admin-R2 · admin-R3 · tag-R16 · tag-R25
  */
 @WebMvcTest(controllers = AdminTagSetController.class, properties = AdminRequests.TOKEN_PROPERTY)
 @Import({ WebSliceSecurity.class, FakeTagSetAdministration.Config.class })

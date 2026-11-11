@@ -3,10 +3,10 @@ package net.yozmnews.admin.adapter.in.web;
 import java.time.Instant;
 import java.util.List;
 
-import net.yozmnews.evaluation.EvaluationRow;
-import net.yozmnews.evaluation.NamedTag;
-import net.yozmnews.evaluation.TagName;
-import net.yozmnews.evaluation.TopicStatus;
+import net.yozmnews.tag.EvaluationRow;
+import net.yozmnews.tag.NamedTag;
+import net.yozmnews.tag.TagName;
+import net.yozmnews.tag.TopicStatus;
 import org.jspecify.annotations.Nullable;
 
 /**

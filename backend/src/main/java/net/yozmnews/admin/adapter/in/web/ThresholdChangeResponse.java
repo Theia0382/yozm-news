@@ -2,13 +2,13 @@ package net.yozmnews.admin.adapter.in.web;
 
 import java.util.Set;
 
-import net.yozmnews.evaluation.TagThresholds;
-import net.yozmnews.evaluation.ThresholdChangeResult;
-import net.yozmnews.evaluation.ThresholdWarning;
+import net.yozmnews.tag.TagThresholds;
+import net.yozmnews.tag.ThresholdChangeResult;
+import net.yozmnews.tag.ThresholdWarning;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 기준 변경의 결과 — docs/specs/admin.md §3 · admin-R1 · evaluation-R11 · evaluation-R12.
+ * 기준 변경의 결과 — docs/specs/admin.md §3 · admin-R1 · tag-R11 · tag-R12.
  * <p>
  * {@code CHANGED} 면 이전 값 · 새 값 · 경고, {@code UNCHANGED} 면 지금 값이 있다. 범위 밖 값은 결과가 아니라 400 이다.
  *

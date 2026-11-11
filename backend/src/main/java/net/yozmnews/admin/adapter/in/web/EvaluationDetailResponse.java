@@ -3,12 +3,12 @@ package net.yozmnews.admin.adapter.in.web;
 import java.time.Instant;
 import java.util.List;
 
-import net.yozmnews.evaluation.DistributionShare;
-import net.yozmnews.evaluation.EvaluationDetailView;
-import net.yozmnews.evaluation.StoredTagView;
-import net.yozmnews.evaluation.TagName;
-import net.yozmnews.evaluation.TagThresholds;
-import net.yozmnews.evaluation.TopicStatus;
+import net.yozmnews.tag.DistributionShare;
+import net.yozmnews.tag.EvaluationDetailView;
+import net.yozmnews.tag.StoredTagView;
+import net.yozmnews.tag.TagName;
+import net.yozmnews.tag.TagThresholds;
+import net.yozmnews.tag.TopicStatus;
 import org.jspecify.annotations.Nullable;
 
 /**

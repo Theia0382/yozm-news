@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
 /**
  * Jev 요청 본문 — 질문 이름 · 질문 문장 · 선택지 · 수준 순서, state 형식. 사건 소속 판정의 질문 · state.
  * <p>
- * 지키는 규칙: evaluation-R14 · evaluation-R37
+ * 지키는 규칙: evaluation-R37 · evaluation-R40
  */
 class JevRequestTests {
 

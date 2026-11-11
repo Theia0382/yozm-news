@@ -1,7 +1,7 @@
 package net.yozmnews.admin.adapter.in.web;
 
-import net.yozmnews.evaluation.TagBackfillAdministration;
-import net.yozmnews.evaluation.TagBackfillRequestResult;
+import net.yozmnews.tag.TagBackfillAdministration;
+import net.yozmnews.tag.TagBackfillRequestResult;
 import org.springframework.web.server.ResponseStatusException;
 
 /**

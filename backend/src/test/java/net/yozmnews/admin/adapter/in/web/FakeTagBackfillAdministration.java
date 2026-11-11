@@ -5,10 +5,10 @@ import static net.yozmnews.admin.adapter.in.web.FakeResults.given;
 import java.util.ArrayList;
 import java.util.List;
 
-import net.yozmnews.evaluation.TagBackfillAdministration;
-import net.yozmnews.evaluation.TagBackfillRequestResult;
-import net.yozmnews.evaluation.TagBackfillReviewResult;
-import net.yozmnews.evaluation.TagBackfillRunView;
+import net.yozmnews.tag.TagBackfillAdministration;
+import net.yozmnews.tag.TagBackfillRequestResult;
+import net.yozmnews.tag.TagBackfillReviewResult;
+import net.yozmnews.tag.TagBackfillRunView;
 import org.jspecify.annotations.Nullable;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;

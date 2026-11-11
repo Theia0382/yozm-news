@@ -58,7 +58,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 원본 지우기를 실제 PostgreSQL 과 결선된 저장소 · 기사 조회로 본다. 평가기는 시험이 넣는다. 커밋 경계를 지나므로 시험을 트랜잭션으로 감싸지
  * 않는다.
  * <p>
- * 지키는 규칙: evaluation-R21 · evaluation-R37 · evaluation-R38 · evaluation-R44
+ * 지키는 규칙: evaluation-R37 · evaluation-R38 · evaluation-R44
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest

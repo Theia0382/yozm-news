@@ -1,9 +1,9 @@
 package net.yozmnews.admin.adapter.in.web;
 
-import net.yozmnews.evaluation.EvaluationQueueCounts;
+import net.yozmnews.tag.EvaluationQueueCounts;
 
 /**
- * 지금의 평가 대기 · 실패 건수 — docs/specs/admin.md §3. {@code evaluation} 의 결과를 옮기기만 한다.
+ * 지금의 평가 대기 · 실패 건수 — docs/specs/admin.md §3. {@code tag} 의 결과를 옮기기만 한다.
  *
  * @param waiting 실패로 남지 않은 대기 — 점유 중 포함
  * @param rejected 기사 거부로 실패로 남은 대기

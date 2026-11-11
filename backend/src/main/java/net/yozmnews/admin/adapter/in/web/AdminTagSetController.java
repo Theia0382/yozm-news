@@ -6,10 +6,10 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;
-import net.yozmnews.evaluation.TagSetAdministration;
 import net.yozmnews.platform.ApiProblem;
 import net.yozmnews.platform.ChangeActor;
 import net.yozmnews.platform.WebRole;
+import net.yozmnews.tag.TagSetAdministration;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * 운영자 API — 태그 체계 버전 목록 · 버전 원문, 운영자 원문의 확인 · 활성화. docs/specs/admin.md §3.
  * <p>
- * 트랜잭션을 열지 않는다 — 활성화의 트랜잭션은 {@code evaluation} 의 공개 운영 API 가 연다. 운영자 요청은 행위자
+ * 트랜잭션을 열지 않는다 — 활성화의 트랜잭션은 {@code tag} 의 공개 운영 API 가 연다. 운영자 요청은 행위자
  * {@link ChangeActor#OPERATOR} 로 부른다.
  */
 @WebRole

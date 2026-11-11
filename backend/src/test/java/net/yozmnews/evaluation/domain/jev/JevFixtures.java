@@ -7,9 +7,9 @@ import net.yozmnews.evaluation.FormatChoice;
 import net.yozmnews.evaluation.FormatOption;
 import net.yozmnews.evaluation.ImportanceLevel;
 import net.yozmnews.evaluation.ImportanceScale;
-import net.yozmnews.evaluation.TagSetId;
-import net.yozmnews.evaluation.TagSetView;
 import net.yozmnews.evaluation.TopicCategory;
+import net.yozmnews.tag.TagSetId;
+import net.yozmnews.tag.TagSetView;
 
 /**
  * Jev 판정 시험이 함께 쓰는 작은 체계 — 주제 중분류 2 · 지역 2 · 형식 2 · 중요도 수준 3. 지역 · 형식은 체계 순서와 키 순서가 다르다.

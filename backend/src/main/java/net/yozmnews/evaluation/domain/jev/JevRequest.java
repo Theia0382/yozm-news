@@ -18,7 +18,7 @@ import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Jev 요청 본문 — docs/specs/evaluation.md §4 ArticleEvaluator · evaluation-R14 · evaluation-R37.
+ * Jev 요청 본문 — docs/specs/evaluation.md §4 ArticleEvaluator · evaluation-R37 · evaluation-R40.
  * <p>
  * 평가의 질문은 넘긴 질문 묶음에서 읽는다. 질문 이름은 태그 종류 접두에 태그 키를 붙인 것이고, 응답은 같은 이름으로 답을 돌려준다. 형식 선택지는
  * 질문 묶음 순서, 중요도 수준 설명은 수준 순이다 — 응답의 수준 위치는 이 순서로 되찾는다({@link JevResponse}). 사건 소속 판정의 질문은 후보

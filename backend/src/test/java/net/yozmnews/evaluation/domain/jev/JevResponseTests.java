@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Test;
 /**
  * Jev 의 200 응답을 포트 결과로 — 답의 이름 · 종류 · 수준 위치, 읽을 수 없는 응답은 평가기 사용 불가. 사건 소속 판정의 응답.
  * <p>
- * 지키는 규칙: evaluation-R14 · evaluation-R15(포트는 분포만) · evaluation-R38
+ * 지키는 규칙: evaluation-R38 · evaluation-R40 · evaluation-R41(포트는 분포만)
  */
 class JevResponseTests {
 

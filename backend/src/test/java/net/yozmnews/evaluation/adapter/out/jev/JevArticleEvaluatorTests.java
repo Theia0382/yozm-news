@@ -31,8 +31,6 @@ import net.yozmnews.evaluation.FormatChoice;
 import net.yozmnews.evaluation.FormatOption;
 import net.yozmnews.evaluation.ImportanceLevel;
 import net.yozmnews.evaluation.ImportanceScale;
-import net.yozmnews.evaluation.TagSetId;
-import net.yozmnews.evaluation.TagSetView;
 import net.yozmnews.evaluation.TopicCategory;
 import net.yozmnews.evaluation.domain.evaluator.CandidateEvent;
 import net.yozmnews.evaluation.domain.evaluator.Evaluation;
@@ -45,6 +43,8 @@ import net.yozmnews.evaluation.domain.evaluator.MembershipInput;
 import net.yozmnews.evaluation.domain.evaluator.MembershipWording;
 import net.yozmnews.evaluation.domain.evaluator.RereadFailure;
 import net.yozmnews.evaluation.domain.jev.JevApiKey;
+import net.yozmnews.tag.TagSetId;
+import net.yozmnews.tag.TagSetView;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -57,7 +57,7 @@ import org.springframework.boot.test.system.OutputCaptureExtension;
  * 사건 소속 판정도 같은 전송 · 갈래를 지나는지 본다.
  * 응답 본문은 실측 응답 · 공식 문서의 모양이다. 기본 주소에 경로가 있는 경우(OpenRouter 의 호환 경로처럼)를 쓴다.
  * <p>
- * 지키는 규칙: evaluation-R14 · evaluation-R20 · evaluation-R37 · evaluation-R38 · ADR-0058 · docs/security.md(키가 로그 · 문구에 남지
+ * 지키는 규칙: evaluation-R37 · evaluation-R38 · evaluation-R40 · evaluation-R41 · ADR-0058 · docs/security.md(키가 로그 · 문구에 남지
  * 않는다)
  */
 @ExtendWith(OutputCaptureExtension.class)

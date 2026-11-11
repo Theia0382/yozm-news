@@ -1,9 +1,9 @@
 package net.yozmnews.evaluation.domain.evaluator;
 
-import static net.yozmnews.evaluation.domain.result.ResultTagSet.ASSEMBLY;
-import static net.yozmnews.evaluation.domain.result.ResultTagSet.EXECUTIVE;
-import static net.yozmnews.evaluation.domain.result.ResultTagSet.FINANCE;
-import static net.yozmnews.evaluation.domain.result.ResultTagSet.TAG_SET;
+import static net.yozmnews.tag.domain.result.ResultTagSet.ASSEMBLY;
+import static net.yozmnews.tag.domain.result.ResultTagSet.EXECUTIVE;
+import static net.yozmnews.tag.domain.result.ResultTagSet.FINANCE;
+import static net.yozmnews.tag.domain.result.ResultTagSet.TAG_SET;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
 /**
  * 결과와 체계의 일치 — 태그 종류마다 키 집합이 정확히 같고, 원본 응답이 JSON 이고 U+0000 이 없는가.
  * <p>
- * 지키는 규칙: evaluation-R15
+ * 지키는 규칙: evaluation-R41
  */
 class ResultCheckTests {
 

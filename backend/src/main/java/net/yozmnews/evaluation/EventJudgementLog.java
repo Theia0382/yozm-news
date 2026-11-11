@@ -17,6 +17,6 @@ public interface EventJudgementLog {
 	 * @param after 앞 쪽의 {@link EventJudgementPage#next()} — 첫 쪽이면 null
 	 * @throws IllegalArgumentException {@code size} 가 1 ~ {@link #MAX_PAGE_SIZE} 밖일 때
 	 */
-	EventJudgementPage list(EvaluationPeriod period, @Nullable EventJudgementCursor after, int size);
+	EventJudgementPage list(JudgementPeriod period, @Nullable EventJudgementCursor after, int size);
 
 }

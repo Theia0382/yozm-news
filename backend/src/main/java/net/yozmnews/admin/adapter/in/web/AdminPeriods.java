@@ -5,8 +5,9 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 
-import net.yozmnews.evaluation.EvaluationPeriod;
+import net.yozmnews.evaluation.JudgementPeriod;
 import net.yozmnews.event.EventPeriod;
+import net.yozmnews.tag.EvaluationPeriod;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -26,6 +27,12 @@ final class AdminPeriods {
 	static EvaluationPeriod of(String from, String to, String zone) {
 		return EvaluationPeriod.ofDays(date(from), date(to), zone(zone))
 			.orElseThrow(() -> badRequest("기간은 1일에서 " + EvaluationPeriod.MAX_DAYS + "일까지다"));
+	}
+
+	/** 판정 원본 조회의 기간 — 범위는 {@link JudgementPeriod#ofDays} 가 판정하고 설명의 상한은 {@link JudgementPeriod#MAX_DAYS} 에서 읽는다 */
+	static JudgementPeriod judgements(String from, String to, String zone) {
+		return JudgementPeriod.ofDays(date(from), date(to), zone(zone))
+			.orElseThrow(() -> badRequest("기간은 1일에서 " + JudgementPeriod.MAX_DAYS + "일까지다"));
 	}
 
 	/** 사건 조회의 기간 — 범위는 {@link EventPeriod#ofDays} 가 판정하고 설명의 상한은 {@link EventPeriod#MAX_DAYS} 에서 읽는다 */

@@ -13,8 +13,6 @@ import net.yozmnews.evaluation.FormatChoice;
 import net.yozmnews.evaluation.FormatOption;
 import net.yozmnews.evaluation.ImportanceLevel;
 import net.yozmnews.evaluation.ImportanceScale;
-import net.yozmnews.evaluation.TagSetId;
-import net.yozmnews.evaluation.TagSetView;
 import net.yozmnews.evaluation.TopicCategory;
 import net.yozmnews.evaluation.domain.evaluator.CandidateEvent;
 import net.yozmnews.evaluation.domain.evaluator.Evaluation;
@@ -26,6 +24,8 @@ import net.yozmnews.evaluation.domain.evaluator.Membership;
 import net.yozmnews.evaluation.domain.evaluator.MembershipInput;
 import net.yozmnews.evaluation.domain.evaluator.MembershipWording;
 import net.yozmnews.evaluation.domain.evaluator.RereadFailure;
+import net.yozmnews.tag.TagSetId;
+import net.yozmnews.tag.TagSetView;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.json.JsonMapper;
 
