@@ -283,6 +283,8 @@ def read_seeds(directory: Path, sheet: Sheet) -> Seeds:
         raise LabelError([f"{path}: 읽을 수 없다 — {error}"]) from error
     events = sheet.events()
     problems = [f"{path.name}: 씨앗 사건 {event_id} 가 시트에 없다" for event_id in seeds.events if event_id not in events]
+    if not seeds.events:
+        problems.append(f"{path.name}: 씨앗 사건이 없다")
     if len(set(seeds.events)) != len(seeds.events):
         problems.append(f"{path.name}: 씨앗 사건이 겹친다")
     if problems:

@@ -10,7 +10,7 @@ from pathlib import Path
 from unittest import mock
 
 from storyline_cli import main
-from test_cli import TOKEN, ZONE, FakeAdmin
+from test_cli import CLOCK, TOKEN, ZONE, FakeAdmin
 
 DUMP_SHA256 = "d23a270e3d8c876b29f7d4a11b8ddcc0c883a6abf35a161963bef36be50e7871"  # b"fixed-dump-bytes\n" — sha256sum
 LINEAGE_SHA256 = "b4dc6e0605759e13b6890bdcf71f094ce548e1e33902fdb998e4bc0a2b7307a0"  # b"lineage-dump-bytes\n"
@@ -30,6 +30,41 @@ SHEET_ARTICLES = ("event_id,article_id,published_at,sources,title\n"
                   "12,106,2026-11-05T03:00:00Z,SBS,라벨 밖 기사\n")
 
 # random.Random(7).shuffle([10, 11, 12]) 를 인터프리터에서 직접 돌린 순서: [12, 10, 11]
+# 같은 덤프 결과 — s1 은 사건 10 · 11 을 기사로 펼친 것, s2 의 999 는 시트 밖. 관계 없음, 큰 표시 s1 11-04
+SAME_RESULT = ('{"format": 1, "meta": {"lineage": "' + LINEAGE_SHA256 + '", "dump": "' + DUMP_SHA256 + '", '
+               '"method": "baseline", "createdAt": "2026-11-20T03:00:00Z", "eventCriteria": {"upper": 0.8}, '
+               '"embeddingModel": "onnx/e5-small", "judgementModels": ["jev-a"], "linking": {"window": 14}}, '
+               '"storylines": [{"id": "s1", "articles": [101, 102, 103, 104]}, {"id": "s2", "articles": [105, 999]}], '
+               '"relations": [], "big": [{"storyline": "s1", "day": "2026-11-04"}]}\n')
+# 같은 계보의 다른 실행 — 기사 104 를 s2 로 옮겼다
+OTHER_RESULT = (SAME_RESULT.replace('"' + DUMP_SHA256 + '"', "null")
+                .replace("[101, 102, 103, 104]", "[101, 102, 103]").replace("[105, 999]", "[104, 105]"))
+
+# sha256sum 으로 셈한 값 — label() 뒤의 평가 디렉터리 파일과 SAME_RESULT
+FILE_SHA256 = {
+    "sheet.csv": "212e9ba64ef9eddb44a20e4e1a8ef0ff56584d0a3c3adbddda9f2262b385d4a5",
+    "sheet-articles.csv": "3d1da784e972845ab74a07a81d16ed445562288380231b2a2d6c4ded985222a3",
+    "seeds.json": "bc3ccd2855504179ac288935e7bb615fa717ff66c7dc3d5ec8dc36d97d0cb4f3",
+    "labels.csv": "1c1e8790ead07e3e92684251c607dd29cadaa7a9483755875c1a340865392cdc",
+    "storylines.csv": "fd988af5971809251636526b8126c1f1892ce1be7facfb1792b1afa02165aa33",
+    "relations.csv": "efe643c15af0db2e8b2d632d993df5595f6fda0f87f836894e1476c5af71b5d7",
+    "big.csv": "8e850e5723618f91277ce941a66fb281d2de6527037628a90b13634e8e68a462",
+    "result": "d718f57d3e98542c87476649345121feeb5956f2f4fb2167ba442fac74a9b0d4",
+}
+
+# OTHER_RESULT 의 대응: s1(101 · 102 · 103) · s2(104 · 105) 모두 x(같으면 표지 순 앞) — 사건 12 는 시스템만, y 는 대응 없음
+AGAINST = """대조 other.json — 실행 종류 OTHER_RUN, 시트 밖 기사 0
+== x 첫 흐름 · 대응 s1, s2
+  시스템만 1
+    12 · 11-05 11:00 · 2건 · 오늘의 주요 뉴스
+  정답만 0
+== y 큰 흐름 · 대응 없음
+  시스템만 0
+  정답만 2
+    10 · 11-04 10:00 · 2건 · 첫 사건 기사 하나
+    11 · 11-04 12:00 · 2건 · 첫 사건 기사 셋
+"""
+
 REVIEW = """== x 첫 흐름 · 사건 2 · 큰 날짜 없음
   상위: y
   *  10 · 11-04 10:00 · 2건
@@ -79,7 +114,7 @@ class StorylineCliTest(unittest.TestCase):
     def run_tool(self, *args, token=None):
         out, err = io.StringIO(), io.StringIO()
         code = main([*args, "--data", str(self.data)], environ={"YOZMNEWS_ADMIN_TOKEN": token} if token else {},
-                    stdout=out, stderr=err)
+                    stdout=out, stderr=err, clock=lambda: CLOCK)
         return code, out.getvalue(), err.getvalue()
 
     def sheet(self, token=TOKEN, dump=None):
@@ -196,6 +231,121 @@ class StorylineCliTest(unittest.TestCase):
                                    "sample/sheet-articles.csv", "sample/sheet.csv", "sample/storylines.csv"])
         # 덤프 파일은 읽기만 한다
         self.assertEqual((self.root / "dumps" / "fixed.dump").read_bytes(), b"fixed-dump-bytes\n")
+
+    def write_result(self, name, text):
+        path = self.root / "candidate" / name
+        path.parent.mkdir(exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+        return path
+
+    def record(self):
+        return json.loads(self.read("results/20261107-030000.json"))
+
+    def test_measure_record(self):
+        # 손 셈(사건 가중 — 기사마다 0.5): 정답 모든 층 10 · 11 = {x, y}, 12 는 없음. 시스템 s1 = {101 ~ 104}, s2 = {105}
+        # ALL 정밀도 — 101 ~ 104 는 s1 동반 넷이 모두 min(1, 2) ÷ 1 = 1, 105 · 106 은 저 혼자 — 1
+        # ALL 재현율 — 101 ~ 104 는 동반 넷이 min(1, 2) ÷ 2 = 0.5, 105 는 (1 + 0) ÷ 2, 106 도 0.5 — 0.5, F1 2/3
+        # TOP · LEAF 는 10 · 11 의 표지가 하나(y · x) — 재현율 (4·0.5·1 + 2·0.5·0.5) ÷ 3 = 5/6, F1 10/11
+        self.label()
+        calls = len(self.fake.requests)
+        result = self.write_result("same.json", SAME_RESULT)
+        code, out, err = self.run_tool("measure", "--result", str(result), "--note", "app=abc123")
+        self.assertEqual((code, err), (0, ""), err)
+        record = self.record()
+        self.assertEqual(record["format"], 1)
+        self.assertEqual(record["measuredAt"], "2026-11-07T03:00:00Z")
+        self.assertEqual(record["sample"], {"start": "2026-11-04", "end": "2026-11-05", "zone": ZONE, "labelRule": 1,
+                                            "dump": {"name": "fixed.dump", "sha256": DUMP_SHA256},
+                                            "lineage": {"name": "lineage.dump", "sha256": LINEAGE_SHA256}})
+        self.assertEqual(record["files"], FILE_SHA256)
+        self.assertEqual(record["result"], {"runKind": "SAME_DUMP", "meta": {
+            "lineage": LINEAGE_SHA256, "dump": DUMP_SHA256, "method": "baseline", "createdAt": "2026-11-20T03:00:00Z",
+            "eventCriteria": {"upper": 0.8}, "embeddingModel": "onnx/e5-small", "judgementModels": ["jev-a"],
+            "linking": {"window": 14}}})
+        self.assertEqual(record["counts"], {
+            "sheetEvents": 3, "sheetArticles": 6, "seedEvents": 3, "seedArticles": 6, "seedsWithoutStoryline": 1,
+            "labeledEvents": 3, "memberEvents": 2, "goldStorylines": {"ALL": 2, "TOP": 1, "LEAF": 1}, "relations": 1,
+            "bigMarks": 1, "ambiguousEvents": 1, "againstEvents": 1, "systemStorylines": 2,
+            "matchedSystemStorylines": 1, "resultArticlesOutsideSheet": 1,
+            "bySource": {"JTBC": 1, "SBS": 2, "경향": 1, "동아": 2}, "byDay": {"2026-11-04": 3, "2026-11-05": 3}})
+        self.assertEqual(record["settings"], {"farPairDays": 5, "matchFloor": 0.5, "bootstrapRounds": 1000,
+                                              "bootstrapSeed": 20261111})
+        self.assertEqual(record["notes"], {"app": "abc123"})
+        views = record["metrics"]["views"]
+        expected = {"ALL": (1.0, 0.5, 2 / 3), "TOP": (1.0, 5 / 6, 10 / 11), "LEAF": (1.0, 5 / 6, 10 / 11)}
+        for view, (precision, recall, f1) in expected.items():
+            event = views[view]["bCubed"]["event"]
+            for key, value in (("precision", precision), ("recall", recall), ("f1", f1)):
+                self.assertAlmostEqual(event[key], value, places=12, msg=f"{view} {key}")
+        # 씨앗 사건 셋의 ALL 정밀도 · 재현율이 모두 같아 부트스트랩 구간이 값에 붙는다
+        for key, value in (("precision", 1.0), ("recall", 0.5), ("f1", 2 / 3)):
+            for bound in views["ALL"]["bCubed"]["event"]["interval"][key]:
+                self.assertAlmostEqual(bound, value, places=12)
+        article = views["ALL"]["bCubed"]["article"]
+        self.assertAlmostEqual(article["precision"], 1.0, places=12)
+        self.assertAlmostEqual(article["recall"], 0.5, places=12)
+        # 정답 스토리라인별 대응 — ALL 은 x · y 둘, TOP 은 y 하나 · LEAF 는 x 하나, 모두 s1 이 같은 기사
+        self.assertEqual([views[view]["matches"]["storylines"] for view in ("ALL", "TOP", "LEAF")], [2, 1, 1])
+        for bound in ("mean", "min"):
+            for value in views["ALL"]["matches"][bound].values():
+                self.assertAlmostEqual(value, 1.0, places=12)
+        # 이틀 표본 — 5일 이상 쌍이 없다
+        self.assertEqual(views["ALL"]["farPairs"], {"recall": None, "pairs": 0})
+        # s1 은 x 에 대응(자카드 x · y 같음 — 표지 순 앞). 정답 관계 y ⊃ x 는 결과에 관계가 없어 못 찾음
+        self.assertEqual(record["metrics"]["relations"], {"judged": 0, "correct": 0, "unmapped": 0, "precision": None,
+                                                          "gold": 1, "found": 0, "recall": 0.0})
+        # 큰 표시 (s1 → x, 11-04) 는 정답 (y, 11-04) 와 달라 틀림 — 0/1, Wilson 상한은 산식을 따로 셈한 값
+        big = record["metrics"]["big"]
+        self.assertEqual((big["judged"], big["correct"], big["outside"], big["precision"]), (1, 0, 0, 0.0))
+        self.assertEqual(big["interval"][0], 0.0)
+        self.assertAlmostEqual(big["interval"][1], 0.793451, places=6)
+        self.assertIn("기록 ", out)
+        self.assertIn("주의 — 결과 파일의 시트 밖 기사 1", out)
+        # 운영자 API 를 부르지 않았고 토큰 없이 돌았다(run_tool 은 토큰을 주지 않는다), 기록에 제목이 없다
+        self.assertEqual(len(self.fake.requests), calls)
+        self.assertNotIn("첫 사건 기사", self.read("results/20261107-030000.json"))
+
+    def test_other_run_is_measured_by_article(self):
+        self.label()
+        same = self.write_result("same.json", SAME_RESULT)
+        other = self.write_result("other.json", OTHER_RESULT)
+        self.assertEqual(self.run_tool("measure", "--result", str(same))[0], 0)
+        same_precision = self.record()["metrics"]["views"]["ALL"]["bCubed"]["event"]["precision"]
+        (self.data / "results" / "20261107-030000.json").unlink()
+        code, _, err = self.run_tool("measure", "--result", str(other))
+        self.assertEqual((code, err), (0, ""), err)
+        record = self.record()
+        self.assertEqual(record["result"]["runKind"], "OTHER_RUN")
+        # 기사 104 하나를 옮긴 결과는 값이 다르다 — 104 의 정밀도가 (0.5 + 0) ÷ 1
+        self.assertNotEqual(record["metrics"]["views"]["ALL"]["bCubed"]["event"]["precision"], same_precision)
+
+    def test_result_of_another_lineage_stops(self):
+        self.label()
+        result = self.write_result("far.json", SAME_RESULT.replace(LINEAGE_SHA256, "c" * 64))
+        code, _, err = self.run_tool("measure", "--result", str(result))
+        self.assertEqual(code, 2)
+        self.assertIn("다른 계보의 결과는 기사 ID 가 다른 기사일 수 있다", err)
+        self.assertFalse((self.data / "results").exists())
+        code, _, err = self.run_tool("review", "--against", str(result))
+        self.assertEqual(code, 2)
+        self.assertIn("다른 계보", err)
+
+    def test_review_against_a_result(self):
+        self.label()
+        code, out, err = self.run_tool("review", "--against", str(self.write_result("other.json", OTHER_RESULT)))
+        self.assertEqual((code, err), (0, ""), err)
+        self.assertEqual(out, AGAINST)
+
+    def test_measure_and_review_write_only_the_record_inside_the_data_directory(self):
+        self.label()
+        same = self.write_result("same.json", SAME_RESULT)
+        before = sorted(str(path.relative_to(self.root)) for path in self.root.rglob("*") if path.is_file())
+        calls = len(self.fake.requests)
+        self.assertEqual(self.run_tool("review", "--against", str(same))[0], 0)
+        self.assertEqual(self.run_tool("measure", "--result", str(same))[0], 0)
+        after = sorted(str(path.relative_to(self.root)) for path in self.root.rglob("*") if path.is_file())
+        self.assertEqual(sorted(set(after) - set(before)), ["sample/results/20261107-030000.json"])
+        self.assertEqual(len(self.fake.requests), calls)
 
 
 if __name__ == "__main__":

@@ -183,6 +183,10 @@ class StorylineLabelsTest(unittest.TestCase):
         with self.assertRaises(LabelError) as caught:
             read_seeds(self.directory, self.sheet_of(8))
         self.assertIn("씨앗 사건 9 가 시트에 없다", str(caught.exception))
+        self.write("seeds.json", '{"seed": 7, "events": []}')
+        with self.assertRaises(LabelError) as caught:
+            read_seeds(self.directory, self.sheet_of(8))
+        self.assertIn("seeds.json: 씨앗 사건이 없다", str(caught.exception))
 
     def test_label_templates_add_only_new_seed_rows(self):
         self.assertEqual(write_label_templates(self.directory, Seeds(7, (7, 8))), 2)
