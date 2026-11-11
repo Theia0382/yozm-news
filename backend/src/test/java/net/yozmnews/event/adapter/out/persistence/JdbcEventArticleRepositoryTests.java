@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
 
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleId;
@@ -155,10 +156,7 @@ class JdbcEventArticleRepositoryTests {
 
 	@Test
 	void aCandidateOfAMergedEventIsReadAsItsSurvivorAndFolded() {
-		long merged = event(1);
-		this.jdbc.sql("""
-				update events set status = 'MERGED', merged_into = :survivor, closed_at = now() where id = :merged
-				""").param("survivor", this.event).param("merged", merged).update();
+		long merged = merged(this.event);
 		assign(51, this.event, this.oldCriteria, List.of(new StoredCandidate(this.event, 0.60, 0.6),
 				new StoredCandidate(merged, 0.62, 0.9), new StoredCandidate(this.other, 0.45, null)));
 
@@ -168,6 +166,28 @@ class JdbcEventArticleRepositoryTests {
 		assertThat(targets).singleElement()
 			.extracting(RejudgeTarget::stored)
 			.isEqualTo(List.of(new StoredCandidate(this.event, 0.62, 0.9), new StoredCandidate(this.other, 0.45, null)));
+	}
+
+	@Test
+	void priorProbabilitiesReadBothSidesFoldMergedEventsAndKeepTheHighest() {
+		long third = event(1);
+		long unrelated = event(1);
+		long unjudged = event(1);
+		long mergedIntoOther = merged(this.other);
+		long mergedIntoEvent = merged(this.event);
+		// 이 사건의 기사 — other 0.3, other 로 합쳐진 사건 0.5, third 확률 없음, 사라진 사건 0.9, 묻지 않은 사건 0.95,
+		// 확률 없는 후보뿐인 사건
+		assign(61, this.event, this.criteria, List.of(new StoredCandidate(this.other, 0.60, 0.3),
+				new StoredCandidate(mergedIntoOther, 0.60, 0.5), new StoredCandidate(third, 0.60, null),
+				new StoredCandidate(999_999, 0.60, 0.9), new StoredCandidate(unrelated, 0.60, 0.95),
+				new StoredCandidate(unjudged, 0.60, null)));
+		// 상대 사건의 기사 — other 의 기사가 이 사건 0.4, third 의 기사가 이 사건으로 합쳐진 사건 0.7
+		assign(62, this.other, this.criteria, List.of(new StoredCandidate(this.event, 0.60, 0.4)));
+		assign(63, third, this.criteria, List.of(new StoredCandidate(mergedIntoEvent, 0.60, 0.7)));
+
+		assertThat(this.repository.priorProbabilities(this.event, List.of(this.other, third, unjudged, 999_999L)))
+			.containsExactlyInAnyOrderEntriesOf(Map.of(this.other, 0.5, third, 0.7));
+		assertThat(this.repository.priorProbabilities(this.event, List.of())).isEmpty();
 	}
 
 	@Test
@@ -239,6 +259,15 @@ class JdbcEventArticleRepositoryTests {
 				                    created_at, last_joined_at)
 				values ('OPEN', 'model-a', '[1,0]', :count, :t, :t, :t, :t) returning id
 				""").param("count", articles).param("t", PUBLISHED.atOffset(ZoneOffset.UTC)).query(Long.class).single();
+	}
+
+	/** 기사 없이 {@code survivor} 에 합쳐진 사건 */
+	private long merged(long survivor) {
+		long merged = event(1);
+		this.jdbc.sql("""
+				update events set status = 'MERGED', merged_into = :survivor, closed_at = now() where id = :merged
+				""").param("survivor", survivor).param("merged", merged).update();
+		return merged;
 	}
 
 	private long criteria(double upper) {

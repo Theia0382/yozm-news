@@ -43,6 +43,14 @@ class AssignmentRuleTests {
 	}
 
 	@Test
+	void theBandIncludesTheLowerBoundaryAndExcludesTheUpper() {
+		assertThat(AssignmentRule.inBand(0.55, CRITERIA)).isTrue();
+		assertThat(AssignmentRule.inBand(0.7999, CRITERIA)).isTrue();
+		assertThat(AssignmentRule.inBand(0.80, CRITERIA)).isFalse();
+		assertThat(AssignmentRule.inBand(0.5499, CRITERIA)).isFalse();
+	}
+
+	@Test
 	void noCandidateOpensByFormulaWithoutAScore() {
 		assertThat(decide(DecisionPhase.FIRST)).isEqualTo(new Open(null, DecidedBy.FORMULA));
 	}

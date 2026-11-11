@@ -48,6 +48,8 @@ import org.springframework.transaction.support.TransactionTemplate;
  * <p>
  * 사건 하나를 기사 자리에 둔 배정이다 — 점수는 {@link CandidateScoring}(구간 대 구간), 판정은 {@link AssignmentRule}, 띠는 사건 소속
  * 판정({@link EventMembership})에 묻는다. 판정할 기사는 바뀐 사건의 서술 기사 하나이고, 받은 확률은 쌍마다 한 번 남겨 다시 묻지 않는다.
+ * 기록이 없는 띠 쌍에 배정 때 받은 확률이 있으면({@link EventArticleRepository#priorProbabilities}) 그 확률을 판정 원본 없이 남기고
+ * 묻지 않는다.
  * 핵심 말 겹침의 기준 쪽과 남는 사건은 {@link MergeRule} 이 정한다. 쓰기는 쌍마다 한 트랜잭션에서 배정 행(기사 ID 순) → 사건(ID 순)을
  * 잠그고, 둘 다 열려 있고 모델 버전이 같고 잠근 배정 수가 사건의 기사 수와 같을 때만 합친다 — 아니면 표시하지 않아 다음 회차가 다시 본다.
  * 사건 소속 판정은 트랜잭션 밖에서 부른다. 회차마다 {@link AssignmentSchedule#MERGE_BATCH} 사건까지 본다. 예외를 밖으로 던지지 않는다.
@@ -140,7 +142,13 @@ public class MergeRound {
 
 	/** 바뀐 사건 하나를 본다 — 판정은 트랜잭션 밖, 합치기는 한 트랜잭션 */
 	private Step check(MergeSubject subject, long criteriaId, Instant now) {
-		List<StoredCandidate> stored = scored(subject);
+		Scored scored = scored(subject);
+		if (!scored.prior().isEmpty()) {
+			// 배정 때 받은 확률 — 판정 원본은 그 기사의 배정이 이미 가리킨다
+			this.transaction.executeWithoutResult(
+					status -> this.judgements.save(subject.id(), scored.prior(), null, now));
+		}
+		List<StoredCandidate> stored = scored.stored();
 		Resolution resolution = switch (AssignmentRule.decide(stored, this.criteria, DecisionPhase.FIRST)) {
 			case Decision.Ask ask -> judge(subject, ask, stored, now);
 			case Decision.Attach attach -> new Resolution.Decided(attach);
@@ -178,8 +186,11 @@ public class MergeRound {
 		};
 	}
 
-	/** 후보 사건의 점수를 매겨 저장 기준 이상만 남기고, 쌍마다 남긴 판정 확률을 채운다 */
-	private List<StoredCandidate> scored(MergeSubject subject) {
+	/**
+	 * 후보 사건의 점수를 매겨 저장 기준 이상만 남기고, 쌍마다 남긴 판정 확률을 채운다. 기록이 없는 띠 후보는 배정 때 받은 확률로 채우고, 그
+	 * 확률을 기록할 몫으로 따로 낸다.
+	 */
+	private Scored scored(MergeSubject subject) {
 		Duration window = this.criteria.window();
 		List<ScoredCandidate> scored = this.events
 			.candidates(subject.modelVersion(), subject.centroid(), subject.firstArticleAt().minus(window),
@@ -191,9 +202,19 @@ public class MergeRound {
 			.toList();
 		Map<Long, Double> known = this.judgements.find(subject.id(),
 				scored.stream().map(ScoredCandidate::eventId).toList());
-		return scored.stream()
-			.map(candidate -> new StoredCandidate(candidate.eventId(), candidate.score(), known.get(candidate.eventId())))
+		List<Long> unknownInBand = scored.stream()
+			.filter(candidate -> !known.containsKey(candidate.eventId())
+					&& AssignmentRule.inBand(candidate.score(), this.criteria))
+			.map(ScoredCandidate::eventId)
 			.toList();
+		Map<Long, Double> prior = unknownInBand.isEmpty() ? Map.of()
+				: this.assignments.priorProbabilities(subject.id(), unknownInBand);
+		List<StoredCandidate> stored = scored.stream().map(candidate -> {
+			@Nullable Double probability = known.containsKey(candidate.eventId()) ? known.get(candidate.eventId())
+					: prior.get(candidate.eventId());
+			return new StoredCandidate(candidate.eventId(), candidate.score(), probability);
+		}).toList();
+		return new Scored(stored, prior);
 	}
 
 	/** 쌍의 점수 — 핵심 말 겹침의 기준 쪽을 {@link MergeRule#termsFromSubject} 로 정해, 어느 쪽에서 보아도 같은 점수다 */
@@ -284,6 +305,14 @@ public class MergeRound {
 
 	private static long members(List<EventArticle> rows, LockedEvent event) {
 		return rows.stream().filter(row -> row.eventId() == event.id()).count();
+	}
+
+	/**
+	 * 점수 매긴 후보
+	 * @param stored 저장 기준 이상인 후보와 그 확률
+	 * @param prior 그 가운데 배정 때 받은 확률로 채운 띠 후보 — 상대 사건 ID → 확률
+	 */
+	private record Scored(List<StoredCandidate> stored, Map<Long, Double> prior) {
 	}
 
 	/** 사건 하나를 본 뒤 회차가 할 일 */

@@ -19,7 +19,7 @@ public interface MergeJudgementRepository {
 
 	/**
 	 * 사건 하나와 상대 사건들의 판정 확률을 남긴다 — 그 쌍의 기록이 이미 있으면 그대로.
-	 * @param judgement 확률을 낸 사건 소속 판정 원본 — 새로 넣는 쌍에 남긴다
+	 * @param judgement 확률을 낸 사건 소속 판정 원본 — 새로 넣는 쌍에 남긴다. 배정 때 받은 확률을 옮기면 null(그 원본은 배정이 가리킨다)
 	 */
 	void save(long eventId, Map<Long, Double> probabilities, @Nullable EventJudgementId judgement, Instant now);
 

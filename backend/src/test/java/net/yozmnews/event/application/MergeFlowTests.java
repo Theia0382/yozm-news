@@ -22,6 +22,8 @@ import net.yozmnews.evaluation.MembershipQuery;
 import net.yozmnews.event.AssignmentCriteria;
 import net.yozmnews.event.EventArticles;
 import net.yozmnews.event.EventId;
+import net.yozmnews.event.EventReview;
+import net.yozmnews.event.JudgementUse;
 import net.yozmnews.event.EventsChanged;
 import net.yozmnews.event.domain.assignment.CriteriaRepository;
 import net.yozmnews.event.domain.assignment.MergeJudgementRepository;
@@ -47,7 +49,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 /**
  * 사건 병합 — 바뀐 열린 사건마다 가까운 열린 사건을 배정 산식 · 위 기준으로 합치고, 띠는 사건 소속 판정에 한 번 묻는다. 기사 수가 많은
  * 사건이 남고, 합쳐진 사건은 남는 사건을 가리킨다. 사건 · 배정 · 표현은 SQL 로 넣는다(기준 위 0.80 · 아래 0.55 · 저장 0.40 · 확률 0.50 ·
- * 창 72시간). 벡터는 반 정밀도로 정확한 값이다.
+ * 창 72시간). 벡터는 반 정밀도로 정확한 값이다. 기록이 없는 띠 쌍에 배정 때 받은 확률이 있으면 묻지 않고 그 확률로 정한다.
  * <p>
  * 지키는 규칙: event-R13
  */
@@ -85,6 +87,9 @@ class MergeFlowTests {
 
 	@Autowired
 	JdbcClient jdbc;
+
+	@Autowired
+	EventReview review;
 
 	@BeforeEach
 	@AfterEach
@@ -182,6 +187,129 @@ class MergeFlowTests {
 		assertThat(this.jdbc.sql("select count(*) from events where merge_checked_revision = revision")
 			.query(Long.class)
 			.single()).isEqualTo(2);
+	}
+
+	@Test
+	void aPriorAssignmentProbabilityDecidesTheBandPairWithoutAsking() {
+		// 띠 쌍(0.56) — 바뀐 사건(large)의 기사가 배정 때 small 을 후보로 받아 0.8 을 남겼다. 물으면 0.1 이 온다
+		long large = event("[1,0]", T, T, Map.of("국회", 2), "[1,0]", "[1,0]");
+		long small = event("[0.8,0.6]", T, T, Map.of("금리", 1), "[0.8,0.6]");
+		long asked = members(large).get(0);
+		prior(asked, small, 0.8);
+		// 그 확률을 낸 판정 원본은 그 기사의 배정이 가리킨다
+		this.jdbc.sql("update event_articles set judgement_id = 73 where article_id = :article")
+			.param("article", asked)
+			.update();
+		Scripted membership = answering(small, 0.1);
+
+		round(membership).run();
+
+		assertThat(eventRow(small)).containsEntry("status", "MERGED").containsEntry("merged_into", large);
+		assertThat(judgementRows()).singleElement().satisfies(row -> pair(row, large, small, 0.8));
+		assertThat(membership.queries).isEmpty();
+		// 원본 하나 · 쓰임 하나 — 병합 기록은 원본을 가리키지 않는다(event-R22)
+		Map<EventJudgementId, JudgementUse> uses = this.review.judgementUses(List.of(new EventJudgementId(73)));
+		assertThat(uses).containsOnlyKeys(new EventJudgementId(73));
+		assertThat(uses.get(new EventJudgementId(73))).isInstanceOf(JudgementUse.Assignment.class);
+	}
+
+	@Test
+	void aPriorProbabilityFromTheOtherSideDecidesTheBandPair() {
+		long large = event("[1,0]", T, T, Map.of("국회", 2), "[1,0]", "[1,0]");
+		long small = event("[0.8,0.6]", T, T, Map.of("금리", 1), "[0.8,0.6]");
+		// 상대 사건(small)의 기사가 배정 때 바뀐 사건(large)을 후보로 받았다
+		prior(members(small).get(0), large, 0.8);
+		Scripted membership = answering(small, 0.1);
+
+		round(membership).run();
+
+		assertThat(eventRow(small)).containsEntry("status", "MERGED").containsEntry("merged_into", large);
+		assertThat(judgementRows()).singleElement().satisfies(row -> pair(row, large, small, 0.8));
+		assertThat(membership.queries).isEmpty();
+	}
+
+	@Test
+	void aPriorProbabilityForAMergedEventCountsForItsSurvivor() {
+		long large = event("[1,0]", T, T, Map.of("국회", 2), "[1,0]", "[1,0]");
+		long small = event("[0.8,0.6]", T, T, Map.of("금리", 1), "[0.8,0.6]");
+		// large 의 기사가 받은 후보 사건 x 는 그 뒤 small 에 합쳐졌다
+		long x = mergedInto(small);
+		prior(members(large).get(0), x, 0.8);
+		Scripted membership = answering(small, 0.1);
+
+		round(membership).run();
+
+		assertThat(eventRow(small)).containsEntry("status", "MERGED").containsEntry("merged_into", large);
+		assertThat(judgementRows()).singleElement().satisfies(row -> pair(row, large, small, 0.8));
+		assertThat(membership.queries).isEmpty();
+	}
+
+	@Test
+	void aPriorProbabilityForAnotherOpenEventIsNotUsedForThePair() {
+		long large = event("[1,0]", T, T, Map.of("국회", 2), "[1,0]", "[1,0]");
+		long small = event("[0.8,0.6]", T, T, Map.of("금리", 1), "[0.8,0.6]");
+		// 다른 열린 사건 — 어느 사건과도 점수가 저장 기준 아래라 후보가 아니다
+		long other = event("[0,1]", T, T, Map.of("환율", 1), "[0,1]");
+		prior(members(large).get(0), other, 0.8);
+		Scripted membership = answering(small, 0.1);
+
+		round(membership).run();
+
+		// (large, small) 쌍의 앞선 확률이 없어 지금처럼 묻는다
+		assertThat(membership.queries).hasSize(1);
+		assertThat(eventRow(small)).containsEntry("status", "OPEN");
+		assertThat(judgementRows()).singleElement().satisfies(row -> {
+			assertThat(row).containsEntry("event_low", large).containsEntry("event_high", small);
+			assertThat(row).containsEntry("probability", 0.1).containsEntry("judgement_id", 71L);
+		});
+	}
+
+	@Test
+	void aLowPriorProbabilityKeepsThePairApartWithoutAsking() {
+		long large = event("[1,0]", T, T, Map.of("국회", 2), "[1,0]", "[1,0]");
+		long small = event("[0.8,0.6]", T, T, Map.of("금리", 1), "[0.8,0.6]");
+		prior(members(large).get(0), small, 0.2);
+		Scripted membership = answering(small, 0.9);
+
+		round(membership).run();
+
+		assertThat(eventRow(large)).containsEntry("status", "OPEN");
+		assertThat(eventRow(small)).containsEntry("status", "OPEN");
+		assertThat(judgementRows()).singleElement().satisfies(row -> pair(row, large, small, 0.2));
+		assertThat(membership.queries).isEmpty();
+	}
+
+	@Test
+	void theHighestPriorProbabilityOfBothSidesDecides() {
+		long large = event("[1,0]", T, T, Map.of("국회", 2), "[1,0]", "[1,0]");
+		long small = event("[0.8,0.6]", T, T, Map.of("금리", 1), "[0.8,0.6]");
+		prior(members(large).get(0), small, 0.2);
+		prior(members(small).get(0), large, 0.7);
+		Scripted membership = answering(small, 0.1);
+
+		round(membership).run();
+
+		assertThat(eventRow(small)).containsEntry("status", "MERGED").containsEntry("merged_into", large);
+		assertThat(judgementRows()).singleElement().satisfies(row -> pair(row, large, small, 0.7));
+		assertThat(membership.queries).isEmpty();
+	}
+
+	@Test
+	void aPriorProbabilityAboveTheBandIsNotRecorded() {
+		// 0.86 ≥ 위 기준 — 산식으로 합치고, 띠 밖이라 앞선 확률을 병합 판정 기록에 남기지 않는다
+		long large = event("[1,0]", Instant.parse("2026-11-05T02:00:00Z"), Instant.parse("2026-11-05T03:00:00Z"),
+				Map.of("금리", 3, "동결", 3), "[1,0]", "[1,0]", "[1,0]");
+		long small = event("[0.8,0.6]", Instant.parse("2026-11-05T01:00:00Z"), Instant.parse("2026-11-05T04:00:00Z"),
+				Map.of("금리", 1), "[0.8,0.6]");
+		prior(members(large).get(0), small, 0.2);
+		Scripted membership = new Scripted(query -> {
+			throw new AssertionError("산식으로 합치므로 묻지 않는다: " + query);
+		});
+
+		round(membership).run();
+
+		assertThat(eventRow(small)).containsEntry("status", "MERGED").containsEntry("merged_into", large);
+		assertThat(judgementRows()).isEmpty();
 	}
 
 	@Test
@@ -347,6 +475,37 @@ class MergeFlowTests {
 				.update();
 		}
 		return event;
+	}
+
+	/** 기사가 배정 때 받은 후보 사건과 그 확률 — 저장 후보 행 */
+	private void prior(long article, long event, double probability) {
+		this.jdbc.sql("""
+				insert into event_article_candidates (article_id, event_id, score, probability)
+				values (:article, :event, 0.6, :probability)
+				""").param("article", article).param("event", event).param("probability", probability).update();
+	}
+
+	/** {@code survivor} 에 합쳐진 사건 하나 — 배정은 이미 남는 사건으로 옮겨 남지 않았다 */
+	private long mergedInto(long survivor) {
+		return this.jdbc.sql("""
+				insert into events (status, model_version, centroid, article_count, first_article_at, last_article_at,
+				                    created_at, last_joined_at, closed_at, merged_into)
+				values ('MERGED', 'model-a', cast('[0,1]' as halfvec), 1, :t, :t, :t, :t, :t, :survivor) returning id
+				""").param("survivor", survivor).param("t", T.atOffset(ZoneOffset.UTC)).query(Long.class).single();
+	}
+
+	/** 물으면 판정 원본 71 로 {@code event} 에 정해 둔 확률을 낸다 */
+	private static Scripted answering(long event, double probability) {
+		return new Scripted(
+				query -> new MembershipJudgement.Judged(new EventJudgementId(71), Map.of(event, probability)));
+	}
+
+	/** 쌍의 기록 — 확률은 배정 때 받은 값이고 판정 원본을 가리키지 않는다 */
+	private static void pair(Map<String, Object> row, long low, long high, double probability) {
+		assertThat(row).containsEntry("event_low", low)
+			.containsEntry("event_high", high)
+			.containsEntry("probability", probability);
+		assertThat(row.get("judgement_id")).isNull();
 	}
 
 	private Map<String, @Nullable Object> eventRow(long event) {
