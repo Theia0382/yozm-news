@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 
 import net.yozmnews.article.ArticleId;
-import net.yozmnews.evaluation.ChangeActor;
 import net.yozmnews.evaluation.MultiTagKind;
 import net.yozmnews.evaluation.TagSetAdministration;
 import net.yozmnews.evaluation.TagSetId;
@@ -17,6 +16,7 @@ import net.yozmnews.evaluation.domain.result.StoredTag;
 import net.yozmnews.evaluation.domain.tagset.TagSetRepository;
 import net.yozmnews.evaluation.domain.threshold.ThresholdRepository;
 import net.yozmnews.evaluation.domain.threshold.ThresholdValues;
+import net.yozmnews.platform.ChangeActor;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.transaction.support.TransactionTemplate;
 

@@ -12,7 +12,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import net.yozmnews.TestcontainersConfiguration;
-import net.yozmnews.evaluation.ChangeActor;
 import net.yozmnews.evaluation.MultiTagKind;
 import net.yozmnews.evaluation.TagSetAdministration;
 import net.yozmnews.evaluation.TagSetDirectory;
@@ -21,6 +20,7 @@ import net.yozmnews.evaluation.domain.tagset.TagSetRepository;
 import net.yozmnews.evaluation.domain.tagset.TagSetTexts;
 import net.yozmnews.evaluation.domain.tagset.TagSetWriter;
 import net.yozmnews.evaluation.domain.threshold.ThresholdRepository;
+import net.yozmnews.platform.ChangeActor;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

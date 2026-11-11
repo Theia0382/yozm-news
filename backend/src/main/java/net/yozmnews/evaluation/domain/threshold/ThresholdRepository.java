@@ -4,11 +4,11 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
-import net.yozmnews.evaluation.ChangeActor;
 import net.yozmnews.evaluation.MultiTagKind;
 import net.yozmnews.evaluation.TagSetId;
 import net.yozmnews.evaluation.TagSetThresholds;
 import net.yozmnews.evaluation.ThresholdChangeView;
+import net.yozmnews.platform.ChangeActor;
 
 /**
  * 태그 기준 · 저장 기준 저장소 — 지금 행과 추가 전용 이력 — docs/specs/evaluation.md §4 · evaluation-R11 · evaluation-R13.

@@ -4,11 +4,11 @@ import java.time.InstantSource;
 import java.util.ArrayList;
 import java.util.List;
 
-import net.yozmnews.evaluation.ChangeActor;
 import net.yozmnews.evaluation.domain.tagset.TagSetContent;
 import net.yozmnews.evaluation.domain.tagset.TagSetDefinition;
 import net.yozmnews.evaluation.domain.tagset.TagSetRepository;
 import net.yozmnews.evaluation.domain.threshold.ThresholdRepository;
+import net.yozmnews.platform.ChangeActor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.SmartInitializingSingleton;

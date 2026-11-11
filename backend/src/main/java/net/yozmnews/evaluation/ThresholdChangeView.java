@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Objects;
 
+import net.yozmnews.platform.ChangeActor;
 import org.jspecify.annotations.Nullable;
 
 /**

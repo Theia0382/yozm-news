@@ -2,13 +2,13 @@ package net.yozmnews.evaluation.application;
 
 import java.time.Instant;
 
-import net.yozmnews.evaluation.ChangeActor;
 import net.yozmnews.evaluation.TagSetId;
 import net.yozmnews.evaluation.domain.tagset.TagSet;
 import net.yozmnews.evaluation.domain.tagset.TagSetDefinition;
 import net.yozmnews.evaluation.domain.tagset.TagSetRepository;
 import net.yozmnews.evaluation.domain.tagset.TagSetTexts;
 import net.yozmnews.evaluation.domain.threshold.ThresholdRepository;
+import net.yozmnews.platform.ChangeActor;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**

@@ -13,7 +13,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
-import net.yozmnews.evaluation.ChangeActor;
 import net.yozmnews.evaluation.LineageKind;
 import net.yozmnews.evaluation.MultiTagKind;
 import net.yozmnews.evaluation.TagKind;
@@ -27,6 +26,7 @@ import net.yozmnews.evaluation.TagSetReviewResult;
 import net.yozmnews.evaluation.TagSetVersionView;
 import net.yozmnews.evaluation.TagThresholds;
 import net.yozmnews.evaluation.ThresholdDifference;
+import net.yozmnews.platform.ChangeActor;
 import net.yozmnews.platform.application.WebSliceSecurity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

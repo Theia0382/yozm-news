@@ -7,7 +7,6 @@ import java.util.List;
 
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.evaluation.AskedTag;
-import net.yozmnews.evaluation.ChangeActor;
 import net.yozmnews.evaluation.ImportanceLevel;
 import net.yozmnews.evaluation.MultiTagKind;
 import net.yozmnews.evaluation.TagSetAdministration;
@@ -15,6 +14,7 @@ import net.yozmnews.evaluation.TagSetDirectory;
 import net.yozmnews.evaluation.TagSetThresholds;
 import net.yozmnews.evaluation.TagSetView;
 import net.yozmnews.evaluation.ThresholdChangeView;
+import net.yozmnews.platform.ChangeActor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

@@ -7,7 +7,6 @@ import java.time.Instant;
 import java.util.List;
 
 import net.yozmnews.TestcontainersConfiguration;
-import net.yozmnews.evaluation.ChangeActor;
 import net.yozmnews.evaluation.LineageKind;
 import net.yozmnews.evaluation.MultiTagKind;
 import net.yozmnews.evaluation.TagKind;
@@ -23,6 +22,7 @@ import net.yozmnews.evaluation.domain.tagset.TagSetParser;
 import net.yozmnews.evaluation.domain.tagset.TagSetRepository;
 import net.yozmnews.evaluation.domain.tagset.TagSetTexts;
 import net.yozmnews.evaluation.domain.threshold.ThresholdRepository;
+import net.yozmnews.platform.ChangeActor;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import net.yozmnews.evaluation.ChangeActor;
 import net.yozmnews.evaluation.MultiTagKind;
 import net.yozmnews.evaluation.TagSetId;
 import net.yozmnews.evaluation.TagSetThresholds;
@@ -16,6 +15,7 @@ import net.yozmnews.evaluation.TagThresholds;
 import net.yozmnews.evaluation.ThresholdChangeView;
 import net.yozmnews.evaluation.domain.threshold.ThresholdRepository;
 import net.yozmnews.evaluation.domain.threshold.ThresholdValues;
+import net.yozmnews.platform.ChangeActor;
 import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;

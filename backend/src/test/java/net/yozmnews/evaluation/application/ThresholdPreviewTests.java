@@ -10,7 +10,6 @@ import java.util.Map;
 
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleId;
-import net.yozmnews.evaluation.ChangeActor;
 import net.yozmnews.evaluation.EvaluationPeriod;
 import net.yozmnews.evaluation.MultiTagKind;
 import net.yozmnews.evaluation.TagSetAdministration;
@@ -25,6 +24,7 @@ import net.yozmnews.evaluation.domain.result.EvaluationResultRepository;
 import net.yozmnews.evaluation.domain.result.StoredTag;
 import net.yozmnews.evaluation.domain.tagset.TagSetRepository;
 import net.yozmnews.evaluation.domain.threshold.ThresholdRepository;
+import net.yozmnews.platform.ChangeActor;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

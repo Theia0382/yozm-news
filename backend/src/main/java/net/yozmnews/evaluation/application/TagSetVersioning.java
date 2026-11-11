@@ -9,7 +9,6 @@ import java.util.Optional;
 
 import net.yozmnews.article.ArticleDirectory;
 import net.yozmnews.article.ArticleId;
-import net.yozmnews.evaluation.ChangeActor;
 import net.yozmnews.evaluation.TagSetActivationResult;
 import net.yozmnews.evaluation.TagSetAdministration;
 import net.yozmnews.evaluation.TagSetId;
@@ -27,6 +26,7 @@ import net.yozmnews.evaluation.domain.tagset.TagSetRevision;
 import net.yozmnews.evaluation.domain.tagset.TagSetRevision.Revision;
 import net.yozmnews.evaluation.domain.tagset.TagSetWriter;
 import net.yozmnews.evaluation.domain.threshold.ThresholdRepository;
+import net.yozmnews.platform.ChangeActor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;

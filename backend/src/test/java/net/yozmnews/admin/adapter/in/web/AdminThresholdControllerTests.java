@@ -14,7 +14,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 
-import net.yozmnews.evaluation.ChangeActor;
 import net.yozmnews.evaluation.CountBucket;
 import net.yozmnews.evaluation.EvaluationOverview;
 import net.yozmnews.evaluation.MultiTagKind;
@@ -31,6 +30,7 @@ import net.yozmnews.evaluation.ThresholdStatusView;
 import net.yozmnews.evaluation.ThresholdWarning;
 import net.yozmnews.evaluation.TokenSummary;
 import net.yozmnews.evaluation.TopicStatusCounts;
+import net.yozmnews.platform.ChangeActor;
 import net.yozmnews.platform.application.WebSliceSecurity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

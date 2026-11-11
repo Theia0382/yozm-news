@@ -4,6 +4,8 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
+import net.yozmnews.platform.ChangeActor;
+
 /**
  * 태그 체계의 운영 — 태그 기준 · 저장 기준과 버전. admin 이 운영자 요청으로 부른다 — docs/specs/evaluation.md §3.
  * <p>

@@ -3,13 +3,13 @@ package net.yozmnews.evaluation.application;
 import java.time.Instant;
 import java.util.Objects;
 
-import net.yozmnews.evaluation.ChangeActor;
 import net.yozmnews.evaluation.MultiTagKind;
 import net.yozmnews.evaluation.domain.tagset.TagSet;
 import net.yozmnews.evaluation.domain.tagset.TagSetDefinition;
 import net.yozmnews.evaluation.domain.tagset.TagSetRepository;
 import net.yozmnews.evaluation.domain.threshold.ThresholdRepository;
 import net.yozmnews.evaluation.domain.threshold.ThresholdValues;
+import net.yozmnews.platform.ChangeActor;
 
 /**
  * 새 태그 체계 버전 쓰기의 정본 — 버전 행과 그 버전의 처음 태그 기준 · 저장 기준 · 이력 첫 행 — docs/specs/evaluation.md §4 ·

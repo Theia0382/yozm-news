@@ -8,9 +8,9 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 
-import net.yozmnews.evaluation.ChangeActor;
 import net.yozmnews.evaluation.MultiTagKind;
 import net.yozmnews.evaluation.ThresholdChangeView;
+import net.yozmnews.platform.ChangeActor;
 import org.junit.jupiter.api.Test;
 
 /**

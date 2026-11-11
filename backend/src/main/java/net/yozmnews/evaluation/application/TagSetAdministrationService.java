@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-import net.yozmnews.evaluation.ChangeActor;
 import net.yozmnews.evaluation.EvaluationPeriod;
 import net.yozmnews.evaluation.MultiTagKind;
 import net.yozmnews.evaluation.TagSetActivationResult;
@@ -29,6 +28,7 @@ import net.yozmnews.evaluation.domain.threshold.ThresholdRepository;
 import net.yozmnews.evaluation.domain.threshold.ThresholdRule;
 import net.yozmnews.evaluation.domain.threshold.ThresholdStanding;
 import net.yozmnews.evaluation.domain.threshold.ThresholdValues;
+import net.yozmnews.platform.ChangeActor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.TransactionDefinition;

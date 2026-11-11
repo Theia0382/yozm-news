@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import net.yozmnews.evaluation.ChangeActor;
 import net.yozmnews.evaluation.EvaluationPeriod;
 import net.yozmnews.evaluation.MultiTagKind;
 import net.yozmnews.evaluation.TagSetActivationResult;
@@ -19,6 +18,7 @@ import net.yozmnews.evaluation.ThresholdChangeResult;
 import net.yozmnews.evaluation.ThresholdChangeView;
 import net.yozmnews.evaluation.ThresholdPreviewResult;
 import net.yozmnews.evaluation.ThresholdStatusView;
+import net.yozmnews.platform.ChangeActor;
 import org.jspecify.annotations.Nullable;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;

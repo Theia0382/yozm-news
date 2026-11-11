@@ -13,7 +13,6 @@ import java.util.Map;
 
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleId;
-import net.yozmnews.evaluation.ChangeActor;
 import net.yozmnews.event.BigEvent;
 import net.yozmnews.event.BigEventAdministration;
 import net.yozmnews.event.BigEventCriteria;
@@ -26,6 +25,7 @@ import net.yozmnews.event.EventPeriod;
 import net.yozmnews.event.EventSummary;
 import net.yozmnews.event.EventTally;
 import net.yozmnews.event.domain.bigevent.BigEventCriteriaRepository;
+import net.yozmnews.platform.ChangeActor;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;

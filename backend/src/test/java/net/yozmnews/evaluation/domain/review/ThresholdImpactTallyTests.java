@@ -15,7 +15,6 @@ import java.time.Instant;
 import java.util.List;
 
 import net.yozmnews.article.ArticleId;
-import net.yozmnews.evaluation.ChangeActor;
 import net.yozmnews.evaluation.EvaluationOverview;
 import net.yozmnews.evaluation.EvaluationPeriod;
 import net.yozmnews.evaluation.MultiTagKind;
@@ -25,6 +24,7 @@ import net.yozmnews.evaluation.domain.overview.EvaluationSample;
 import net.yozmnews.evaluation.domain.result.StoredEvaluation;
 import net.yozmnews.evaluation.domain.result.StoredTag;
 import net.yozmnews.evaluation.domain.threshold.StoreFloors;
+import net.yozmnews.platform.ChangeActor;
 import org.junit.jupiter.api.Test;
 
 /**

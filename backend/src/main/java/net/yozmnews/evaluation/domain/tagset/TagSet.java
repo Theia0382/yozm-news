@@ -10,9 +10,9 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import net.yozmnews.evaluation.ChangeActor;
 import net.yozmnews.evaluation.TagKind;
 import net.yozmnews.evaluation.TagSetId;
+import net.yozmnews.platform.ChangeActor;
 import org.jspecify.annotations.Nullable;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.PersistenceCreator;
