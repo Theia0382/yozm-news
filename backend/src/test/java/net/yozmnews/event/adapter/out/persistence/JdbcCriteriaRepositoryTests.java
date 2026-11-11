@@ -27,7 +27,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 @Import({ TestcontainersConfiguration.class, JdbcCriteriaRepository.class })
 class JdbcCriteriaRepositoryTests {
 
-	private static final AssignmentCriteria DEFAULTS = new AssignmentCriteria(Duration.ofHours(72), 0.80, 0.55, 0.40,
+	private static final AssignmentCriteria BASE = new AssignmentCriteria(Duration.ofHours(72), 0.80, 0.55, 0.40,
 			0.50);
 
 	@Autowired
@@ -38,7 +38,7 @@ class JdbcCriteriaRepositoryTests {
 
 	@Test
 	void theSameValuesRegisterOnceAndKeepTheFirstTime() {
-		long first = this.repository.register(DEFAULTS, Instant.parse("2026-11-06T00:00:00Z"));
+		long first = this.repository.register(BASE, Instant.parse("2026-11-06T00:00:00Z"));
 		long again = this.repository.register(new AssignmentCriteria(Duration.ofMinutes(4320), 0.80, 0.55, 0.40, 0.50),
 				Instant.parse("2026-11-06T01:00:00Z"));
 
@@ -53,7 +53,7 @@ class JdbcCriteriaRepositoryTests {
 
 	@Test
 	void anyDifferentValueIsANewRow() {
-		long base = this.repository.register(DEFAULTS, Instant.parse("2026-11-06T00:00:00Z"));
+		long base = this.repository.register(BASE, Instant.parse("2026-11-06T00:00:00Z"));
 
 		assertThat(this.repository.register(new AssignmentCriteria(Duration.ofHours(48), 0.80, 0.55, 0.40, 0.50),
 				Instant.parse("2026-11-06T00:00:00Z"))).isNotEqualTo(base);
