@@ -8,6 +8,7 @@ import java.time.Instant;
 import java.time.InstantSource;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -49,7 +50,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 /**
  * 사건 병합 — 바뀐 열린 사건마다 가까운 열린 사건을 배정 산식 · 위 기준으로 합치고, 띠는 사건 소속 판정에 한 번 묻는다. 기사 수가 많은
  * 사건이 남고, 합쳐진 사건은 남는 사건을 가리킨다. 사건 · 배정 · 표현은 SQL 로 넣는다(기준 위 0.80 · 아래 0.55 · 저장 0.40 · 확률 0.50 ·
- * 창 72시간). 벡터는 반 정밀도로 정확한 값이다. 기록이 없는 띠 쌍에 배정 때 받은 확률이 있으면 묻지 않고 그 확률로 정한다.
+ * 창 72시간). 벡터는 반 정밀도로 정확한 값이다. 기록이 없는 띠 쌍은 배정 때 받은 확률(두 방향 · 최댓값)이 확률 기준 미만이면 묻지
+ * 않고 합치지 않으며 남기지 않는다. 기준 이상이면 묻는다 — 앞선 확률로는 합치지 않는다.
  * <p>
  * 지키는 규칙: event-R13
  */
@@ -190,58 +192,66 @@ class MergeFlowTests {
 	}
 
 	@Test
-	void aPriorAssignmentProbabilityDecidesTheBandPairWithoutAsking() {
-		// 띠 쌍(0.56) — 바뀐 사건(large)의 기사가 배정 때 small 을 후보로 받아 0.8 을 남겼다. 물으면 0.1 이 온다
+	void aPriorProbabilityAtOrAboveTheThresholdIsAskedInsteadOfMerging() {
+		// 띠 쌍(0.56) — 바뀐 사건(large)의 기사가 배정 때 small 을 후보로 받아 0.8 을 남겼다. 앞선 확률로는 합치지 않고 묻는다
 		long large = event("[1,0]", T, T, Map.of("국회", 2), "[1,0]", "[1,0]");
 		long small = event("[0.8,0.6]", T, T, Map.of("금리", 1), "[0.8,0.6]");
-		long asked = members(large).get(0);
-		prior(asked, small, 0.8);
-		// 그 확률을 낸 판정 원본은 그 기사의 배정이 가리킨다
-		this.jdbc.sql("update event_articles set judgement_id = 73 where article_id = :article")
-			.param("article", asked)
-			.update();
+		prior(members(large).get(0), small, 0.8);
 		Scripted membership = answering(small, 0.1);
 
 		round(membership).run();
 
-		assertThat(eventRow(small)).containsEntry("status", "MERGED").containsEntry("merged_into", large);
-		assertThat(judgementRows()).singleElement().satisfies(row -> pair(row, large, small, 0.8));
-		assertThat(membership.queries).isEmpty();
-		// 원본 하나 · 쓰임 하나 — 병합 기록은 원본을 가리키지 않는다(event-R22)
-		Map<EventJudgementId, JudgementUse> uses = this.review.judgementUses(List.of(new EventJudgementId(73)));
-		assertThat(uses).containsOnlyKeys(new EventJudgementId(73));
-		assertThat(uses.get(new EventJudgementId(73))).isInstanceOf(JudgementUse.Assignment.class);
+		assertThat(membership.queries).hasSize(1);
+		assertThat(eventRow(small)).containsEntry("status", "OPEN");
+		assertThat(judgementRows()).containsExactly(
+				Map.of("event_low", large, "event_high", small, "probability", 0.1, "judgement_id", 71L));
 	}
 
 	@Test
-	void aPriorProbabilityFromTheOtherSideDecidesTheBandPair() {
+	void aPriorProbabilityFromTheOtherSideIsAskedToo() {
 		long large = event("[1,0]", T, T, Map.of("국회", 2), "[1,0]", "[1,0]");
 		long small = event("[0.8,0.6]", T, T, Map.of("금리", 1), "[0.8,0.6]");
 		// 상대 사건(small)의 기사가 배정 때 바뀐 사건(large)을 후보로 받았다
 		prior(members(small).get(0), large, 0.8);
-		Scripted membership = answering(small, 0.1);
+		Scripted membership = answering(small, 0.9);
 
 		round(membership).run();
 
+		assertThat(membership.queries).hasSize(1);
 		assertThat(eventRow(small)).containsEntry("status", "MERGED").containsEntry("merged_into", large);
-		assertThat(judgementRows()).singleElement().satisfies(row -> pair(row, large, small, 0.8));
-		assertThat(membership.queries).isEmpty();
+		assertThat(judgementRows()).containsExactly(
+				Map.of("event_low", large, "event_high", small, "probability", 0.9, "judgement_id", 71L));
 	}
 
 	@Test
 	void aPriorProbabilityForAMergedEventCountsForItsSurvivor() {
 		long large = event("[1,0]", T, T, Map.of("국회", 2), "[1,0]", "[1,0]");
 		long small = event("[0.8,0.6]", T, T, Map.of("금리", 1), "[0.8,0.6]");
-		// large 의 기사가 받은 후보 사건 x 는 그 뒤 small 에 합쳐졌다
+		// large 의 기사가 받은 후보 사건 x 는 그 뒤 small 에 합쳐졌다 — (large, small) 쌍의 앞선 확률 0.8 이라 묻는다
 		long x = mergedInto(small);
 		prior(members(large).get(0), x, 0.8);
 		Scripted membership = answering(small, 0.1);
 
 		round(membership).run();
 
-		assertThat(eventRow(small)).containsEntry("status", "MERGED").containsEntry("merged_into", large);
-		assertThat(judgementRows()).singleElement().satisfies(row -> pair(row, large, small, 0.8));
+		assertThat(membership.queries).hasSize(1);
+		assertThat(eventRow(small)).containsEntry("status", "OPEN");
+	}
+
+	@Test
+	void aLowPriorProbabilityForAMergedEventKeepsItsSurvivorApart() {
+		long large = event("[1,0]", T, T, Map.of("국회", 2), "[1,0]", "[1,0]");
+		long small = event("[0.8,0.6]", T, T, Map.of("금리", 1), "[0.8,0.6]");
+		// large 의 기사가 받은 후보 사건 x 는 그 뒤 small 에 합쳐졌다 — (large, small) 쌍의 앞선 확률 0.2 라 묻지 않는다
+		long x = mergedInto(small);
+		prior(members(large).get(0), x, 0.2);
+		Scripted membership = answering(small, 0.9);
+
+		round(membership).run();
+
 		assertThat(membership.queries).isEmpty();
+		assertThat(eventRow(small)).containsEntry("status", "OPEN");
+		assertThat(judgementRows()).isEmpty();
 	}
 
 	@Test
@@ -265,38 +275,116 @@ class MergeFlowTests {
 	}
 
 	@Test
-	void aLowPriorProbabilityKeepsThePairApartWithoutAsking() {
+	void aLowPriorProbabilityKeepsThePairApartWithoutAskingOrRecording() {
 		long large = event("[1,0]", T, T, Map.of("국회", 2), "[1,0]", "[1,0]");
 		long small = event("[0.8,0.6]", T, T, Map.of("금리", 1), "[0.8,0.6]");
-		prior(members(large).get(0), small, 0.2);
+		long asked = members(large).get(0);
+		prior(asked, small, 0.2);
+		// 그 확률을 낸 판정 원본은 그 기사의 배정이 가리킨다
+		this.jdbc.sql("update event_articles set judgement_id = 73 where article_id = :article")
+			.param("article", asked)
+			.update();
 		Scripted membership = answering(small, 0.9);
 
 		round(membership).run();
 
+		assertThat(membership.queries).isEmpty();
 		assertThat(eventRow(large)).containsEntry("status", "OPEN");
 		assertThat(eventRow(small)).containsEntry("status", "OPEN");
-		assertThat(judgementRows()).singleElement().satisfies(row -> pair(row, large, small, 0.2));
-		assertThat(membership.queries).isEmpty();
+		assertThat(judgementRows()).isEmpty();
+		// 원본 하나 · 쓰임 하나 — 배정만 그 원본을 가리킨다(event-R22)
+		Map<EventJudgementId, JudgementUse> uses = this.review.judgementUses(List.of(new EventJudgementId(73)));
+		assertThat(uses).containsOnlyKeys(new EventJudgementId(73));
+		assertThat(uses.get(new EventJudgementId(73))).isInstanceOf(JudgementUse.Assignment.class);
 	}
 
 	@Test
-	void theHighestPriorProbabilityOfBothSidesDecides() {
+	void aPriorProbabilityAtTheThresholdIsAsked() {
 		long large = event("[1,0]", T, T, Map.of("국회", 2), "[1,0]", "[1,0]");
 		long small = event("[0.8,0.6]", T, T, Map.of("금리", 1), "[0.8,0.6]");
+		// 확률 기준(0.50)과 같다 — 경계는 기준 이상이다
+		prior(members(large).get(0), small, 0.50);
+		Scripted membership = answering(small, 0.1);
+
+		round(membership).run();
+
+		assertThat(membership.queries).hasSize(1);
+		assertThat(eventRow(small)).containsEntry("status", "OPEN");
+	}
+
+	@Test
+	void aPriorProbabilityJustBelowTheThresholdIsNotAsked() {
+		long large = event("[1,0]", T, T, Map.of("국회", 2), "[1,0]", "[1,0]");
+		long small = event("[0.8,0.6]", T, T, Map.of("금리", 1), "[0.8,0.6]");
+		prior(members(large).get(0), small, 0.4999);
+		Scripted membership = answering(small, 0.9);
+
+		round(membership).run();
+
+		assertThat(membership.queries).isEmpty();
+		assertThat(eventRow(small)).containsEntry("status", "OPEN");
+		assertThat(judgementRows()).isEmpty();
+	}
+
+	@Test
+	void aLoweredThresholdDoesNotMergeOnAnEarlierPriorProbability() {
+		long large = event("[1,0]", T, T, Map.of("국회", 2), "[1,0]", "[1,0]");
+		long small = event("[0.8,0.6]", T, T, Map.of("금리", 1), "[0.8,0.6]");
+		prior(members(large).get(0), small, 0.45);
+		Scripted membership = answering(small, 0.1);
+
+		// 확률 기준 0.50 — 0.45 는 기준 미만이라 묻지 않고 합치지 않는다
+		round(membership).run();
+
+		assertThat(membership.queries).isEmpty();
+		assertThat(eventRow(small)).containsEntry("status", "OPEN");
+
+		// 확률 기준을 0.40 으로 낮춘다 — 기준이 바뀌어 두 사건을 다시 보고, 0.45 는 이제 기준 이상이라 묻는다
+		round(membership, new AssignmentCriteria(Duration.ofHours(72), 0.80, 0.55, 0.40, 0.40)).run();
+
+		assertThat(membership.queries).hasSize(1);
+		assertThat(eventRow(small)).containsEntry("status", "OPEN");
+		assertThat(judgementRows()).containsExactly(
+				Map.of("event_low", large, "event_high", small, "probability", 0.1, "judgement_id", 71L));
+	}
+
+	@Test
+	void theHighestPriorProbabilityOfBothSidesIsCompared() {
+		long large = event("[1,0]", T, T, Map.of("국회", 2), "[1,0]", "[1,0]");
+		long small = event("[0.8,0.6]", T, T, Map.of("금리", 1), "[0.8,0.6]");
+		// 0.2 만 보면 묻지 않지만 최댓값 0.7 은 기준 이상이다
 		prior(members(large).get(0), small, 0.2);
 		prior(members(small).get(0), large, 0.7);
 		Scripted membership = answering(small, 0.1);
 
 		round(membership).run();
 
-		assertThat(eventRow(small)).containsEntry("status", "MERGED").containsEntry("merged_into", large);
-		assertThat(judgementRows()).singleElement().satisfies(row -> pair(row, large, small, 0.7));
-		assertThat(membership.queries).isEmpty();
+		assertThat(membership.queries).hasSize(1);
+		assertThat(eventRow(small)).containsEntry("status", "OPEN");
+		assertThat(judgementRows()).containsExactly(
+				Map.of("event_low", large, "event_high", small, "probability", 0.1, "judgement_id", 71L));
 	}
 
 	@Test
-	void aPriorProbabilityAboveTheBandIsNotRecorded() {
-		// 0.86 ≥ 위 기준 — 산식으로 합치고, 띠 밖이라 앞선 확률을 병합 판정 기록에 남기지 않는다
+	void onlyBandCandidatesWithoutALowPriorProbabilityAreAsked() {
+		long large = event("[1,0]", T, T, Map.of("국회", 2), "[1,0]", "[1,0]");
+		long small = event("[0.8,0.6]", T, T, Map.of("금리", 1), "[0.8,0.6]");
+		// large 와 띠(0.7 × 0.8 = 0.56), small 과는 0.7 × 0.28 = 0.196 — 저장 기준 아래
+		long third = event("[0.8,-0.6]", T, T, Map.of("환율", 1), "[0.8,-0.6]");
+		prior(members(large).get(0), small, 0.2);
+		Scripted membership = answering(third, 0.1);
+
+		round(membership).run();
+
+		// large 를 볼 때 small 은 기준 미만 앞선 확률이라 묻지 않고, 앞선 확률이 없는 third 만 묻는다
+		assertThat(membership.queries).singleElement()
+			.satisfies(query -> assertThat(query.candidates()).extracting(candidate -> candidate.eventId())
+				.containsExactly(third));
+	}
+
+	@Test
+	void aLowPriorProbabilityDoesNotKeepAPairAboveTheBandApart() {
+		// 0.86 ≥ 위 기준 — 앞선 확률(0.2)이 확률 기준 미만이어도 산식으로 합친다. 앞선 확률은 띠 쌍에만 쓴다
 		long large = event("[1,0]", Instant.parse("2026-11-05T02:00:00Z"), Instant.parse("2026-11-05T03:00:00Z"),
 				Map.of("금리", 3, "동결", 3), "[1,0]", "[1,0]", "[1,0]");
 		long small = event("[0.8,0.6]", Instant.parse("2026-11-05T01:00:00Z"), Instant.parse("2026-11-05T04:00:00Z"),
@@ -305,11 +393,23 @@ class MergeFlowTests {
 		Scripted membership = new Scripted(query -> {
 			throw new AssertionError("산식으로 합치므로 묻지 않는다: " + query);
 		});
+		List<List<Long>> lookedUp = new ArrayList<>();
+		EventArticleRepository recording = new ForwardingEventArticleRepository(this.assignments) {
+			@Override
+			public Map<Long, Double> priorProbabilities(long eventId, Collection<Long> others) {
+				lookedUp.add(List.copyOf(others));
+				return super.priorProbabilities(eventId, others);
+			}
+		};
 
-		round(membership).run();
+		new MergeRound(this.events, recording, this.judgements, this.criteriaHistory, CRITERIA, membership,
+				this.transaction, (InstantSource) () -> NOW)
+			.run();
 
 		assertThat(eventRow(small)).containsEntry("status", "MERGED").containsEntry("merged_into", large);
 		assertThat(judgementRows()).isEmpty();
+		// 띠 밖 후보는 앞선 확률을 찾지 않는다
+		assertThat(lookedUp).isEmpty();
 	}
 
 	@Test
@@ -425,7 +525,11 @@ class MergeFlowTests {
 	}
 
 	private MergeRound round(EventMembership membership) {
-		return new MergeRound(this.events, this.assignments, this.judgements, this.criteriaHistory, CRITERIA, membership,
+		return round(membership, CRITERIA);
+	}
+
+	private MergeRound round(EventMembership membership, AssignmentCriteria criteria) {
+		return new MergeRound(this.events, this.assignments, this.judgements, this.criteriaHistory, criteria, membership,
 				this.transaction, (InstantSource) () -> NOW);
 	}
 
@@ -498,14 +602,6 @@ class MergeFlowTests {
 	private static Scripted answering(long event, double probability) {
 		return new Scripted(
 				query -> new MembershipJudgement.Judged(new EventJudgementId(71), Map.of(event, probability)));
-	}
-
-	/** 쌍의 기록 — 확률은 배정 때 받은 값이고 판정 원본을 가리키지 않는다 */
-	private static void pair(Map<String, Object> row, long low, long high, double probability) {
-		assertThat(row).containsEntry("event_low", low)
-			.containsEntry("event_high", high)
-			.containsEntry("probability", probability);
-		assertThat(row.get("judgement_id")).isNull();
 	}
 
 	private Map<String, @Nullable Object> eventRow(long event) {

@@ -45,6 +45,13 @@ public final class AssignmentRule {
 	}
 
 	/**
+	 * 확률 기준을 넘는다 — 확률 ≥ 확률 기준(경계 포함). 확률 기준의 비교는 여기 하나다(배정 · 재판정 · 병합).
+	 */
+	public static boolean passes(double probability, AssignmentCriteria criteria) {
+		return probability >= criteria.probability();
+	}
+
+	/**
 	 * 판정한다.
 	 * @param candidates 저장 기준 이상인 후보
 	 */
@@ -58,7 +65,7 @@ public final class AssignmentRule {
 			.toList();
 		List<StoredCandidate> judged = band.stream().filter(candidate -> candidate.probability() != null).toList();
 		Optional<StoredCandidate> likeliest = judged.stream().min(BY_PROBABILITY);
-		if (likeliest.isPresent() && Objects.requireNonNull(likeliest.get().probability()) >= criteria.probability()) {
+		if (likeliest.isPresent() && passes(Objects.requireNonNull(likeliest.get().probability()), criteria)) {
 			return new Decision.Attach(likeliest.get().eventId(), likeliest.get().score(), DecidedBy.EVALUATOR);
 		}
 		List<StoredCandidate> unasked = band.stream().filter(candidate -> candidate.probability() == null).toList();

@@ -69,6 +69,12 @@ class AssignmentRuleTests {
 	}
 
 	@Test
+	void theProbabilityThresholdIsInclusive() {
+		assertThat(AssignmentRule.passes(0.50, CRITERIA)).isTrue();
+		assertThat(AssignmentRule.passes(0.4999, CRITERIA)).isFalse();
+	}
+
+	@Test
 	void theProbabilityBoundaryAttachesByEvaluator() {
 		assertThat(decide(DecisionPhase.AFTER_JUDGEMENT, judged(7, 0.60, 0.50), judged(3, 0.70, 0.4999)))
 			.isEqualTo(new Attach(7, 0.60, DecidedBy.EVALUATOR));
