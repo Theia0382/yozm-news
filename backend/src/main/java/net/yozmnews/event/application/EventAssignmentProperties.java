@@ -26,7 +26,7 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 @ConfigurationProperties("yozmnews.event-assignment")
 public record EventAssignmentProperties(@DefaultValue("72h") Duration window, @DefaultValue("0.90") double upper,
 		@DefaultValue("0.65") double lower, @DefaultValue("0.40") double store,
-		@DefaultValue("0.40") double probability, @DefaultValue("4d") Duration closeAfter,
+		@DefaultValue("0.50") double probability, @DefaultValue("4d") Duration closeAfter,
 		@DefaultValue("14d") Duration maxOpen) {
 
 	/**

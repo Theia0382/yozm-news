@@ -80,7 +80,7 @@ class EventReviewFlowTests {
 	@Test
 	void theCriteriaAreTheSettingsOfThisProcess() {
 		assertThat(this.review.assignmentCriteria())
-			.isEqualTo(new AssignmentCriteria(Duration.ofHours(72), 0.90, 0.65, 0.40, 0.40));
+			.isEqualTo(new AssignmentCriteria(Duration.ofHours(72), 0.90, 0.65, 0.40, 0.50));
 	}
 
 	@Test
