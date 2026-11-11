@@ -1,6 +1,7 @@
 package net.yozmnews.event.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.assertj.core.api.Assertions.within;
 
 import java.time.Duration;
@@ -15,6 +16,7 @@ import java.util.Map;
 import java.util.function.Function;
 
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.article.ArticleId;
 import net.yozmnews.evaluation.EvaluatorFailureKind;
 import net.yozmnews.evaluation.EventJudgementId;
 import net.yozmnews.evaluation.EventMembership;
@@ -25,10 +27,12 @@ import net.yozmnews.event.EventArticles;
 import net.yozmnews.event.EventId;
 import net.yozmnews.event.EventReview;
 import net.yozmnews.event.JudgementUse;
+import net.yozmnews.event.MergedEvent;
 import net.yozmnews.event.EventsChanged;
 import net.yozmnews.event.domain.assignment.CriteriaRepository;
 import net.yozmnews.event.domain.assignment.MergeJudgementRepository;
 import net.yozmnews.event.domain.event.EventArticleRepository;
+import net.yozmnews.event.domain.event.EventQueryRepository;
 import net.yozmnews.event.domain.event.EventRepository;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
@@ -74,6 +78,9 @@ class MergeFlowTests {
 
 	@Autowired
 	EventRepository events;
+
+	@Autowired
+	EventQueryRepository queries;
 
 	@Autowired
 	EventArticleRepository assignments;
@@ -136,6 +143,31 @@ class MergeFlowTests {
 					Map.of("event_id", large, "opened", false), Map.of("event_id", large, "opened", false),
 					Map.of("event_id", large, "opened", true));
 		assertThat(membership.queries).isEmpty();
+	}
+
+	@Test
+	void theAbsorbedEventKeepsTheRepresentativeItHadBeforeItsArticlesMoved() {
+		long large = event("[1,0]", T, T, Map.of("금리", 3), "[1,0]", "[1,0]", "[1,0]");
+		// 합쳐질 사건의 기사 둘 — 중심 [0.8,0.6] 에 가까운 것은 둘째다. 0.7 × 0.8 + 0.3 × 1 = 0.86 ≥ 위 기준
+		long small = event("[0.8,0.6]", T, T, Map.of("금리", 2), "[0,1]", "[0.8,0.6]");
+		List<Long> members = this.jdbc.sql("select article_id from event_articles where event_id = :event order by article_id")
+			.param("event", small)
+			.query(Long.class)
+			.list();
+		long nearest = members.get(1);
+
+		round(new Scripted(query -> {
+			throw new AssertionError("산식으로 합치므로 묻지 않는다: " + query);
+		})).run();
+
+		assertThat(eventRow(small)).containsEntry("status", "MERGED").containsEntry("merged_into", large);
+		assertThat(representativeColumn(small)).isEqualTo(nearest);
+		// 남는 사건은 열려 있어 대표를 남기지 않는다
+		assertThat(representativeColumn(large)).isNull();
+		assertThat(this.review.mergedInto(new EventId(large))).extracting(MergedEvent::id, MergedEvent::representative)
+			.containsExactly(tuple(new EventId(small), new ArticleId(nearest)));
+		// 사건 기사 전체의 대표 조회에는 합쳐진 사건이 나오지 않는다
+		assertThat(this.queries.representativesOfAll(List.of(small))).isEmpty();
 	}
 
 	@Test
@@ -402,7 +434,7 @@ class MergeFlowTests {
 			}
 		};
 
-		new MergeRound(this.events, recording, this.judgements, this.criteriaHistory, CRITERIA, membership,
+		new MergeRound(this.events, this.queries, recording, this.judgements, this.criteriaHistory, CRITERIA, membership,
 				this.transaction, (InstantSource) () -> NOW)
 			.run();
 
@@ -529,8 +561,8 @@ class MergeFlowTests {
 	}
 
 	private MergeRound round(EventMembership membership, AssignmentCriteria criteria) {
-		return new MergeRound(this.events, this.assignments, this.judgements, this.criteriaHistory, criteria, membership,
-				this.transaction, (InstantSource) () -> NOW);
+		return new MergeRound(this.events, this.queries, this.assignments, this.judgements, this.criteriaHistory, criteria,
+				membership, this.transaction, (InstantSource) () -> NOW);
 	}
 
 	/**
@@ -612,6 +644,14 @@ class MergeFlowTests {
 				    to_char(last_joined_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as joined
 				from events where id = :event
 				""").param("event", event).query().singleRow();
+	}
+
+	private @Nullable Object representativeColumn(long event) {
+		return this.jdbc.sql("select representative_article_id from events where id = :event")
+			.param("event", event)
+			.query()
+			.singleRow()
+			.get("representative_article_id");
 	}
 
 	private float[] centroid(long event) {

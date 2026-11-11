@@ -4571,9 +4571,20 @@
           "probability" : {
             "type" : [ "number", "null" ],
             "format" : "double"
+          },
+          "representative" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/ArticleSummaryResponse"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "representativeId" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int64"
           }
         },
-        "required" : [ "articleCount", "createdAt", "firstArticleAt", "id", "lastArticleAt", "mergedAt", "probability" ]
+        "required" : [ "articleCount", "createdAt", "firstArticleAt", "id", "lastArticleAt", "mergedAt", "probability", "representative", "representativeId" ]
       },
       "NamedTag" : {
         "type" : "object",

@@ -50,6 +50,8 @@ const DETAIL: Schemas["EventDetailResponse"] = {
       lastArticleAt: "2026-11-05T00:00:00Z",
       createdAt: "2026-11-05T00:00:00Z",
       mergedAt: "2026-11-06T06:00:00Z",
+      representativeId: 44,
+      representative: { title: "기준금리 동결", sources: ["연합뉴스"] },
       probability: 0.74,
     },
     {
@@ -59,6 +61,8 @@ const DETAIL: Schemas["EventDetailResponse"] = {
       lastArticleAt: "2026-11-05T00:00:00Z",
       createdAt: "2026-11-05T00:00:00Z",
       mergedAt: "2026-11-06T07:00:00Z",
+      representativeId: null,
+      representative: null,
       probability: null,
     },
   ],
@@ -103,10 +107,16 @@ describe("EventDetailPage", () => {
     expect(within(merged[1]!).getAllByRole("cell")[0]).toHaveTextContent(
       /^사건 3$/,
     );
-    expect(within(merged[1]!).getAllByRole("cell")[5]).toHaveTextContent(
+    expect(within(merged[1]!).getAllByRole("cell")[1]).toHaveTextContent(
+      /^기준금리 동결연합뉴스$/,
+    );
+    expect(within(merged[1]!).getAllByRole("cell")[6]).toHaveTextContent(
       /^0\.74$/,
     );
-    expect(within(merged[2]!).getAllByRole("cell")[5]).toHaveTextContent(
+    expect(within(merged[2]!).getAllByRole("cell")[1]).toHaveTextContent(
+      /^기록 없음$/,
+    );
+    expect(within(merged[2]!).getAllByRole("cell")[6]).toHaveTextContent(
       /^기록 없음$/,
     );
   });

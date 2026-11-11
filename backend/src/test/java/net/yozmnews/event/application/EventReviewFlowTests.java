@@ -86,10 +86,13 @@ class EventReviewFlowTests {
 	@Test
 	void mergedEventsAreListedByMergeTimeWithTheirPairProbability() {
 		mergeRecord(this.later, this.survivor, 0.74, null);
+		// 합칠 때 남긴 대표 — 남기지 않은 사건은 없다
+		this.jdbc.sql("update events set representative_article_id = 61 where id = :id").param("id", this.later).update();
 
 		assertThat(this.review.mergedInto(new EventId(this.survivor))).containsExactly(
-				new MergedEvent(new EventId(this.earlier), 1, T, T, T, Instant.parse("2026-11-06T06:00:00Z"), null),
-				new MergedEvent(new EventId(this.later), 2, T, T, T, Instant.parse("2026-11-06T12:00:00Z"), 0.74));
+				new MergedEvent(new EventId(this.earlier), 1, T, T, T, Instant.parse("2026-11-06T06:00:00Z"), null, null),
+				new MergedEvent(new EventId(this.later), 2, T, T, T, Instant.parse("2026-11-06T12:00:00Z"),
+						new ArticleId(61), 0.74));
 		assertThat(this.review.mergedInto(new EventId(this.later))).isEmpty();
 		assertThat(this.review.mergedInto(new EventId(this.apart))).isEmpty();
 		assertThat(this.review.mergedInto(new EventId(999_999))).isEmpty();
