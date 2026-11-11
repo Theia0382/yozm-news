@@ -3,7 +3,7 @@ import { createMemoryRouter } from "react-router";
 import { RouterProvider } from "react-router/dom";
 import { describe, expect, it } from "vitest";
 import { routes } from "@/app/routes";
-import { BigEventsPage } from "@/features/admin/BigEventsPage";
+import { BigStorylinesPage } from "@/features/admin/BigStorylinesPage";
 import { CollectionPage } from "@/features/admin/CollectionPage";
 import { EvaluationDetailPage } from "@/features/admin/EvaluationDetailPage";
 import { EvaluationListPage } from "@/features/admin/EvaluationListPage";
@@ -56,7 +56,7 @@ describe("routes", () => {
     ["thresholds", "ThresholdsPage", () => ThresholdsPage],
     ["events", "EventsPage", () => EventsPage],
     ["events/:id", "EventDetailPage", () => EventDetailPage],
-    ["big-events", "BigEventsPage", () => BigEventsPage],
+    ["big-storylines", "BigStorylinesPage", () => BigStorylinesPage],
     ["event-judgements", "EventJudgementsPage", () => EventJudgementsPage],
   ])(
     "운영자 화면 아래 %s 경로가 %s 를 내려받는다",

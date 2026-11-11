@@ -1,27 +1,30 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
-import { Link } from "react-router";
 import {
   failureText,
   type Schemas,
   unwrap,
 } from "@/features/admin/adminClient";
-import { useAdminClient } from "@/features/admin/adminSession";
+import { ADMIN_QUERY_KEY, useAdminClient } from "@/features/admin/adminSession";
 import { ArticleTitle } from "@/features/admin/ArticleTitle";
-import { EVENT_KEY, eventPath } from "@/features/admin/eventQueries";
-import { bigEventCriteriaActorLabels } from "@/features/admin/labels";
+import {
+  bigStorylineCriteriaActorLabels,
+  storylineStateLabels,
+} from "@/features/admin/labels";
 import { formatProbability } from "@/features/admin/metrics";
 import { PeriodFields } from "@/features/admin/PeriodFields";
 import { browserZone, defaultFirst, today } from "@/features/admin/periods";
 import { REVIEW_TABLE } from "@/features/admin/tables";
 import { formatDateTime } from "@/shared/lib/dateTime";
 
-type Criteria = Schemas["BigEventCriteriaResponse"];
-type Row = Schemas["BigEventRowResponse"];
-type Status = Schemas["BigEventCriteriaStatusResponse"];
-type Change = Schemas["BigEventCriteriaChangeResponse"];
+type Criteria = Schemas["BigStorylineCriteriaResponse"];
+type Row = Schemas["BigStorylineRowResponse"];
+type Status = Schemas["BigStorylineCriteriaStatusResponse"];
+type Change = Schemas["BigStorylineCriteriaChangeResponse"];
 
-const CRITERIA_KEY = [...EVENT_KEY, "big-criteria"];
+/** 큰 스토리라인 화면 조회 키의 접두 — 큰 판정 기준을 바꾸면 이 접두로 한꺼번에 버린다 */
+const BIG_KEY = [...ADMIN_QUERY_KEY, "big-storylines"];
+const CRITERIA_KEY = [...BIG_KEY, "criteria"];
 
 /** 미리보기를 낸 입력 — 저장은 이 입력 그대로 한다 */
 type Asked = {
@@ -32,10 +35,10 @@ type Asked = {
 };
 
 /**
- * 큰 사건 — 고른 기간의 큰 사건을 지금 기준으로 보고, 제안 기준으로 같은 기간을 미리 판정해 견준 뒤 기준을 바꾼다. 큰 사건은 조회할 때 판정하므로
- * 바꾸면 다음 조회부터 모든 기간에 반영된다.
+ * 큰 스토리라인 — 고른 기간의 큰 스토리라인을 지금 기준으로 보고, 제안 기준으로 같은 기간을 미리 판정해 견준 뒤 기준을 바꾼다. 큰 판정은 조회할 때
+ * 하므로 바꾸면 다음 조회부터 모든 기간에 반영된다. 스토리라인에 들지 않은 사건은 판정에 들지 않아 그 수를 함께 보인다.
  */
-export function BigEventsPage() {
+export function BigStorylinesPage() {
   const client = useAdminClient();
   const queries = useQueryClient();
   const [zone] = useState(browserZone);
@@ -52,13 +55,13 @@ export function BigEventsPage() {
 
   const status = useQuery({
     queryKey: CRITERIA_KEY,
-    queryFn: () => unwrap(client.GET("/api/admin/big-event-criteria")),
+    queryFn: () => unwrap(client.GET("/api/admin/big-storyline-criteria")),
   });
   const big = useQuery({
-    queryKey: [...EVENT_KEY, "big", period],
+    queryKey: [...BIG_KEY, "list", period],
     queryFn: () =>
       unwrap(
-        client.GET("/api/admin/big-events", { params: { query: period } }),
+        client.GET("/api/admin/big-storylines", { params: { query: period } }),
       ),
     enabled: filled,
   });
@@ -74,7 +77,7 @@ export function BigEventsPage() {
   const preview = useMutation({
     mutationFn: (input: Asked) =>
       unwrap(
-        client.POST("/api/admin/big-event-criteria-previews", {
+        client.POST("/api/admin/big-storyline-criteria-previews", {
           body: {
             minSources: Number(input.minSources),
             minImportance: Number(input.minImportance),
@@ -88,14 +91,14 @@ export function BigEventsPage() {
   const save = useMutation({
     mutationFn: (input: Asked) =>
       unwrap(
-        client.PUT("/api/admin/big-event-criteria", {
+        client.PUT("/api/admin/big-storyline-criteria", {
           body: {
             minSources: Number(input.minSources),
             minImportance: Number(input.minImportance),
           },
         }),
       ),
-    onSuccess: () => queries.invalidateQueries({ queryKey: EVENT_KEY }),
+    onSuccess: () => queries.invalidateQueries({ queryKey: BIG_KEY }),
   });
 
   // 빈 칸은 Number("") 로 0 이 되어 조용히 나간다 — 수로 읽히는 입력만 보낸다(범위는 서버가 판정한다). 소스 수는 정수만 보낸다 —
@@ -106,7 +109,7 @@ export function BigEventsPage() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-semibold">큰 사건</h2>
+      <h2 className="text-xl font-semibold">큰 스토리라인</h2>
       <PeriodFields
         first={first}
         last={last}
@@ -117,16 +120,21 @@ export function BigEventsPage() {
       />
       {big.error && <p role="alert">{failureText(big.error)}</p>}
       {big.data && (
-        <section aria-label="기간의 큰 사건" className="space-y-2">
+        <section aria-label="기간의 큰 스토리라인" className="space-y-2">
           <h3 className="text-lg font-semibold">
-            기간의 큰 사건 — 지금 기준 {criteriaText(big.data.criteria)}
+            기간의 큰 스토리라인 — 지금 기준 {criteriaText(big.data.criteria)}
           </h3>
-          {big.data.events.length === 0 ? (
-            <p className="text-sm">이 기간에 큰 사건이 없다</p>
+          <p className="text-sm text-muted-foreground">
+            스토리라인에 들지 않은 사건 {big.data.unlinked.events}건 · 기사{" "}
+            {big.data.unlinked.articles}건 — 이 기간에 기사가 있지만 어느
+            스토리라인에도 들지 않아 큰 판정에 들지 않는다
+          </p>
+          {big.data.storylines.length === 0 ? (
+            <p className="text-sm">이 기간에 큰 스토리라인이 없다</p>
           ) : (
             <BigTable
-              label="기간의 큰 사건"
-              rows={big.data.events}
+              label="기간의 큰 스토리라인"
+              rows={big.data.storylines}
               marks={null}
             />
           )}
@@ -138,9 +146,10 @@ export function BigEventsPage() {
         <section aria-label="기준 바꾸기" className="space-y-3">
           <h3 className="text-lg font-semibold">기준 바꾸기</h3>
           <p className="text-sm text-muted-foreground">
-            기간 안 기사의 서로 다른 소스 수가 소스 기준 이상이고 중요도 평균이
-            중요도 기준 이상이면 큰 사건이다. 미리보기는 위 기간을 제안 기준으로
-            다시 판정해 지금 결과와 견주고, 아무것도 바꾸지 않는다
+            스토리라인에 든 사건들의 기간 안 기사를 모아, 서로 다른 소스 수가
+            소스 기준 이상이고 중요도 평균이 중요도 기준 이상이면 큰
+            스토리라인이다. 미리보기는 위 기간을 제안 기준으로 다시 판정해 지금
+            결과와 견주고, 아무것도 바꾸지 않는다
           </p>
           <div className="flex flex-wrap items-end gap-4 text-sm">
             <label htmlFor={sourcesId} className="space-y-1">
@@ -205,36 +214,38 @@ export function BigEventsPage() {
 function PreviewView({
   preview,
 }: {
-  preview: Schemas["BigEventPreviewResponse"];
+  preview: Schemas["BigStorylinePreviewResponse"];
 }) {
-  const now = new Set(preview.currentEvents.map((row) => row.id));
-  const then = new Set(preview.proposedEvents.map((row) => row.id));
-  const added = preview.proposedEvents.filter((row) => !now.has(row.id)).length;
-  const removed = preview.currentEvents.filter(
+  const now = new Set(preview.currentStorylines.map((row) => row.id));
+  const then = new Set(preview.proposedStorylines.map((row) => row.id));
+  const added = preview.proposedStorylines.filter(
+    (row) => !now.has(row.id),
+  ).length;
+  const removed = preview.currentStorylines.filter(
     (row) => !then.has(row.id),
   ).length;
   return (
     <section aria-label="미리보기" className="space-y-3">
       <p className="text-sm">
         지금 기준 {criteriaText(preview.current)}:{" "}
-        {preview.currentEvents.length}건 → 제안 기준{" "}
-        {criteriaText(preview.proposed)}: {preview.proposedEvents.length}건 —
-        새로 드는 사건 {added}건, 빠지는 사건 {removed}건
+        {preview.currentStorylines.length}건 → 제안 기준{" "}
+        {criteriaText(preview.proposed)}: {preview.proposedStorylines.length}건
+        — 새로 드는 스토리라인 {added}건, 빠지는 스토리라인 {removed}건
       </p>
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="space-y-1">
           <h4 className="font-medium">지금 기준</h4>
           <BigTable
-            label="지금 기준의 큰 사건"
-            rows={preview.currentEvents}
+            label="지금 기준의 큰 스토리라인"
+            rows={preview.currentStorylines}
             marks={(row) => (then.has(row.id) ? null : "빠짐")}
           />
         </div>
         <div className="space-y-1">
           <h4 className="font-medium">제안 기준</h4>
           <BigTable
-            label="제안 기준의 큰 사건"
-            rows={preview.proposedEvents}
+            label="제안 기준의 큰 스토리라인"
+            rows={preview.proposedStorylines}
             marks={(row) => (now.has(row.id) ? null : "새로 듦")}
           />
         </div>
@@ -269,7 +280,7 @@ function HistoryView({ status }: { status: Status }) {
         {status.changes.map((change) => (
           <li key={change.changedAt + criteriaText(change.current)}>
             {formatDateTime(change.changedAt)} ·{" "}
-            {bigEventCriteriaActorLabels[change.actor]} ·{" "}
+            {bigStorylineCriteriaActorLabels[change.actor]} ·{" "}
             {change.previous ? `${criteriaText(change.previous)} → ` : ""}
             {criteriaText(change.current)}
           </li>
@@ -295,10 +306,12 @@ function BigTable({
     >
       <thead>
         <tr>
-          <th className="font-medium">사건</th>
-          <th className="font-medium">소스 수</th>
-          <th className="font-medium">중요도 평균</th>
-          <th className="font-medium">기사 수</th>
+          <th className="font-medium">스토리라인</th>
+          <th className="font-medium">상태</th>
+          <th className="font-medium">사건 수</th>
+          <th className="font-medium">소스 수(기간)</th>
+          <th className="font-medium">중요도 평균(기간)</th>
+          <th className="font-medium">기사 수(기간 / 전체)</th>
           <th className="font-medium">대표 기사</th>
           {marks && <th className="font-medium">변화</th>}
         </tr>
@@ -306,19 +319,19 @@ function BigTable({
       <tbody>
         {rows.map((row) => (
           <tr key={row.id} className="align-top">
-            <td>
-              <Link to={eventPath(row.id)} className="underline">
-                사건 {row.id}
-              </Link>
-            </td>
-            <td className="tabular-nums">{row.sources}</td>
+            <td>스토리라인 {row.id}</td>
+            <td>{storylineStateLabels[row.state]}</td>
+            <td className="tabular-nums">{row.eventCount}</td>
+            <td className="tabular-nums">{row.periodSources}</td>
             <td className="tabular-nums">
               {formatProbability(row.importance)}
             </td>
-            <td className="tabular-nums">{row.articles}</td>
+            <td className="tabular-nums">
+              {row.periodArticles} / {row.articleCount}
+            </td>
             <td>
               <ArticleTitle
-                id={row.representativeId}
+                id={row.representativeArticleId}
                 article={row.representative}
               />
             </td>

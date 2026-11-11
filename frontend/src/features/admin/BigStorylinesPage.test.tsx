@@ -3,13 +3,13 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import type { Schemas } from "@/features/admin/adminClient";
 import { json, problem } from "@/features/admin/adminTestServer";
-import { BigEventsPage } from "@/features/admin/BigEventsPage";
+import { BigStorylinesPage } from "@/features/admin/BigStorylinesPage";
 import { bigRow } from "@/features/admin/eventTestKit";
 import { renderAdminRoutes } from "@/features/admin/reviewTestKit";
 
 const DEFAULT = { minSources: 3, minImportance: 3 };
 
-const STATUS: Schemas["BigEventCriteriaStatusResponse"] = {
+const STATUS: Schemas["BigStorylineCriteriaStatusResponse"] = {
   current: DEFAULT,
   changes: [
     {
@@ -29,27 +29,33 @@ function renderPage(
 ) {
   let status = STATUS;
   return renderAdminRoutes(
-    [{ path: "/admin/big-events", element: <BigEventsPage /> }],
-    "/admin/big-events",
+    [{ path: "/admin/big-storylines", element: <BigStorylinesPage /> }],
+    "/admin/big-storylines",
     {
-      "GET /api/admin/big-events": () =>
+      "GET /api/admin/big-storylines": () =>
         json({
           criteria: status.current,
-          events: [
+          storylines: [
             bigRow(7),
-            bigRow(9, { representativeId: null, representative: null }),
+            bigRow(9, {
+              state: "ENDED",
+              importance: null,
+              representativeArticleId: null,
+              representative: null,
+            }),
           ],
+          unlinked: { events: 2, articles: 5 },
           maxDays: 31,
         }),
-      "GET /api/admin/big-event-criteria": () => json(status),
-      "POST /api/admin/big-event-criteria-previews": () =>
+      "GET /api/admin/big-storyline-criteria": () => json(status),
+      "POST /api/admin/big-storyline-criteria-previews": () =>
         json({
           current: DEFAULT,
           proposed: { minSources: 2, minImportance: 3 },
-          currentEvents: [bigRow(7), bigRow(9)],
-          proposedEvents: [bigRow(7), bigRow(11)],
+          currentStorylines: [bigRow(7), bigRow(9)],
+          proposedStorylines: [bigRow(7), bigRow(11)],
         }),
-      "PUT /api/admin/big-event-criteria": () => {
+      "PUT /api/admin/big-storyline-criteria": () => {
         status = {
           current: { minSources: 2, minImportance: 3 },
           changes: [
@@ -73,20 +79,30 @@ function renderPage(
   ).server;
 }
 
-describe("BigEventsPage", () => {
-  it("기간의 큰 사건을 지금 기준과 함께 보이고 기준 입력은 지금 값에서 시작한다", async () => {
+describe("BigStorylinesPage", () => {
+  it("기간의 큰 스토리라인을 지금 기준 · 소속 없는 사건 수와 함께 보이고 기준 입력은 지금 값에서 시작한다", async () => {
     renderPage();
 
     const section = await screen.findByRole("region", {
-      name: "기간의 큰 사건",
+      name: "기간의 큰 스토리라인",
     });
     expect(section).toHaveTextContent("지금 기준 소스 3 이상 · 중요도 3 이상");
+    expect(section).toHaveTextContent(
+      "스토리라인에 들지 않은 사건 2건 · 기사 5건",
+    );
     const rows = within(within(section).getByRole("table")).getAllByRole("row");
-    expect(
-      within(rows[1]!).getByRole("link", { name: "사건 7" }),
-    ).toHaveAttribute("href", "/admin/events/7");
-    expect(within(rows[1]!).getAllByRole("cell")[1]).toHaveTextContent(/^4$/);
-    expect(within(rows[2]!).getAllByRole("cell")[4]).toHaveTextContent(/^$/);
+    const first = within(rows[1]!).getAllByRole("cell");
+    expect(first[0]).toHaveTextContent(/^스토리라인 7$/);
+    expect(first[1]).toHaveTextContent(/^진행$/);
+    expect(first[2]).toHaveTextContent(/^2$/);
+    expect(first[3]).toHaveTextContent(/^4$/);
+    expect(first[4]).toHaveTextContent(/^3\.75$/);
+    expect(first[5]).toHaveTextContent(/^3 \/ 12$/);
+    expect(first[6]).toHaveTextContent("국회 본회의 통과");
+    const second = within(rows[2]!).getAllByRole("cell");
+    expect(second[1]).toHaveTextContent(/^끝남$/);
+    expect(second[4]).toHaveTextContent(/^없음$/);
+    expect(second[6]).toHaveTextContent(/^$/);
     expect(await screen.findByLabelText("소스 기준")).toHaveValue("3");
     expect(screen.getByLabelText("중요도 기준")).toHaveValue("3");
     expect(screen.getByRole("region", { name: "기준 이력" })).toHaveTextContent(
@@ -95,7 +111,7 @@ describe("BigEventsPage", () => {
     expect(screen.getByRole("button", { name: "저장" })).toBeDisabled();
   });
 
-  it("미리보기가 두 목록과 들어오고 빠지는 사건을 보이고, 저장 뒤 기준 · 이력을 다시 읽는다", async () => {
+  it("미리보기가 두 목록과 들어오고 빠지는 스토리라인을 보이고, 저장 뒤 기준 · 이력을 다시 읽는다", async () => {
     const server = renderPage();
     const sources = await screen.findByLabelText("소스 기준");
     await waitFor(() => expect(sources).toHaveValue("3"));
@@ -105,20 +121,22 @@ describe("BigEventsPage", () => {
     await userEvent.click(screen.getByRole("button", { name: "미리보기" }));
 
     const preview = await screen.findByRole("region", { name: "미리보기" });
-    expect(preview).toHaveTextContent("새로 드는 사건 1건, 빠지는 사건 1건");
+    expect(preview).toHaveTextContent(
+      "새로 드는 스토리라인 1건, 빠지는 스토리라인 1건",
+    );
     const now = within(
-      within(preview).getByRole("table", { name: "지금 기준의 큰 사건" }),
+      within(preview).getByRole("table", { name: "지금 기준의 큰 스토리라인" }),
     ).getAllByRole("row");
-    expect(within(now[2]!).getAllByRole("cell")[5]).toHaveTextContent(/^빠짐$/);
+    expect(within(now[2]!).getAllByRole("cell")[7]).toHaveTextContent(/^빠짐$/);
     const then = within(
-      within(preview).getByRole("table", { name: "제안 기준의 큰 사건" }),
+      within(preview).getByRole("table", { name: "제안 기준의 큰 스토리라인" }),
     ).getAllByRole("row");
-    expect(within(then[1]!).getAllByRole("cell")[5]).toHaveTextContent(/^$/);
-    expect(within(then[2]!).getAllByRole("cell")[5]).toHaveTextContent(
+    expect(within(then[1]!).getAllByRole("cell")[7]).toHaveTextContent(/^$/);
+    expect(within(then[2]!).getAllByRole("cell")[7]).toHaveTextContent(
       /^새로 듦$/,
     );
     const previewRequest = server.requests.find(
-      (r) => r.path === "/api/admin/big-event-criteria-previews",
+      (r) => r.path === "/api/admin/big-storyline-criteria-previews",
     );
     expect(JSON.parse(previewRequest!.body)).toMatchObject({
       minSources: 2,
@@ -165,17 +183,17 @@ describe("BigEventsPage", () => {
     ).toBeInTheDocument();
     expect(
       server.requests.filter(
-        (r) => r.path === "/api/admin/big-event-criteria-previews",
+        (r) => r.path === "/api/admin/big-storyline-criteria-previews",
       ),
     ).toHaveLength(0);
   });
 
   it("범위 밖 기준의 400 설명을 보인다", async () => {
     renderPage({
-      "POST /api/admin/big-event-criteria-previews": () =>
+      "POST /api/admin/big-storyline-criteria-previews": () =>
         problem(
           400,
-          "큰 사건 기준은 소스 1 이상, 중요도 1 ~ 5 의 소수 2자리까지다",
+          "큰 판정 기준은 소스 1 이상, 중요도 1 ~ 5 의 소수 2자리까지다",
         ),
     });
     const sources = await screen.findByLabelText("소스 기준");
@@ -186,7 +204,7 @@ describe("BigEventsPage", () => {
     await userEvent.click(screen.getByRole("button", { name: "미리보기" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "큰 사건 기준은 소스 1 이상, 중요도 1 ~ 5 의 소수 2자리까지다",
+      "큰 판정 기준은 소스 1 이상, 중요도 1 ~ 5 의 소수 2자리까지다",
     );
     expect(screen.getByRole("button", { name: "저장" })).toBeDisabled();
   });
