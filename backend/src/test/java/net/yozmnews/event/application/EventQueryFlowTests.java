@@ -8,6 +8,7 @@ import java.time.Instant;
 import java.time.InstantSource;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -24,6 +25,7 @@ import net.yozmnews.event.EventPage;
 import net.yozmnews.event.EventPeriod;
 import net.yozmnews.event.EventSummary;
 import net.yozmnews.event.EventTally;
+import net.yozmnews.event.EventView;
 import net.yozmnews.event.domain.bigevent.BigEventCriteriaRepository;
 import net.yozmnews.platform.ChangeActor;
 import org.jspecify.annotations.Nullable;
@@ -39,8 +41,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * 사건 조회와 큰 사건 판정의 흐름 — 기사 · 엔트리 · 평가 · 사건 · 배정 행을 SQL 로 넣고, 공개 조회가 다른 모듈의 공개 조회로 소스 · 중요도를
- * 읽어 기간 안에서 판정하는지, 기준을 바꾸면 다음 조회부터 새 기준으로 판정하는지, 미리보기가 아무것도 쓰지 않는지, 사건 목록의 쪽 넘기기를
- * 실제 PostgreSQL 에서 본다.
+ * 읽어 기간 안에서 판정하는지, 기준을 바꾸면 다음 조회부터 새 기준으로 판정하는지, 미리보기가 아무것도 쓰지 않는지, 사건 목록의 쪽 넘기기,
+ * 사건 묶음의 기간 집계(같은 사건 한 번 · 기간 밖 기사 제외)와 기간 안 사건 · 사건 묶음 조회를 실제 PostgreSQL 에서 본다.
  * <p>
  * 기준은 인스턴스에 한 행이라 시작과 끝에 비우고 처음 값을 다시 적재한다. 사건 · 기사 행과 이 시험이 넣은 평가 행도 시작과 끝에 지운다.
  * <p>
@@ -120,6 +122,52 @@ class EventQueryFlowTests {
 		assertThat(this.directory.bigEvents(PERIOD)).containsExactly(new BigEvent(new EventId(this.eventX),
 				List.of(new ArticleId(this.x1), new ArticleId(this.x2), new ArticleId(this.x3)),
 				new EventTally(3, 3, new BigDecimal("3.5"))));
+	}
+
+	@Test
+	void aGroupOfEventsIsTalliedOnceOverItsArticlesInThePeriod() {
+		EventId x = new EventId(this.eventX);
+		EventId y = new EventId(this.eventY);
+		Map<String, List<EventId>> groups = new LinkedHashMap<>();
+		// X(소스 1 · 2 · 3, 중요도 3.0 · 4.0 · 없음)와 Y(소스 1 · 2, 중요도 5.0 · 5.0) — 사건별 소스 수를 더하면 5 다
+		groups.put("both", List.of(x, y));
+		// 같은 사건을 두 번 넘겨도 한 번만 센다
+		groups.put("twice", List.of(x, x));
+		// 한 사건이 여러 묶음에 들면 묶음마다 센다
+		groups.put("y", List.of(y));
+		// 없는 사건뿐인 묶음
+		groups.put("none", List.of(new EventId(999_999_999L)));
+
+		Map<String, EventTally> tallies = this.directory.tallies(groups, PERIOD);
+
+		assertThat(tallies.keySet()).containsExactly("both", "twice", "y", "none");
+		// 기간 밖 기사(X 의 넷째 — 소스 4, 중요도 5.0)는 들지 않는다
+		assertThat(tallies.get("both").articles()).isEqualTo(5);
+		assertThat(tallies.get("both").sources()).isEqualTo(3);
+		assertThat(tallies.get("both").importance()).isEqualByComparingTo("4.25");
+		assertThat(tallies.get("twice")).isEqualTo(new EventTally(3, 3, new BigDecimal("3.5")));
+		assertThat(tallies.get("y").articles()).isEqualTo(2);
+		assertThat(tallies.get("y").sources()).isEqualTo(2);
+		assertThat(tallies.get("y").importance()).isEqualByComparingTo("5");
+		assertThat(tallies.get("none")).isEqualTo(new EventTally(0, 0, null));
+		assertThat(this.directory.tallies(Map.<String, List<EventId>>of(), PERIOD)).isEmpty();
+	}
+
+	@Test
+	void eventsWithArticlesInThePeriodAreListedWithTheirCountsAndViews() {
+		EventId x = new EventId(this.eventX);
+		EventId y = new EventId(this.eventY);
+
+		// 사건 ID 순 — Y 를 먼저 열었다. X 의 기간 밖 기사는 세지 않는다
+		Map<EventId, Integer> expected = new LinkedHashMap<>();
+		expected.put(y, 2);
+		expected.put(x, 3);
+		assertThat(this.directory.articleCountsIn(PERIOD)).containsExactlyEntriesOf(expected);
+
+		Map<EventId, EventView> views = this.directory.views(List.of(x, y, new EventId(999_999_999L)));
+		assertThat(views.keySet()).containsExactly(y, x);
+		assertThat(views.get(x)).isEqualTo(this.directory.find(x).orElseThrow());
+		assertThat(this.directory.views(List.of())).isEmpty();
 	}
 
 	@Test

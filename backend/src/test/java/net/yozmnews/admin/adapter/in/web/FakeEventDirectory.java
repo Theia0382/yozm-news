@@ -17,6 +17,7 @@ import net.yozmnews.event.EventId;
 import net.yozmnews.event.EventNeighbor;
 import net.yozmnews.event.EventPage;
 import net.yozmnews.event.EventPeriod;
+import net.yozmnews.event.EventTally;
 import net.yozmnews.event.EventProfile;
 import net.yozmnews.event.EventView;
 import org.jspecify.annotations.Nullable;
@@ -108,6 +109,21 @@ class FakeEventDirectory implements EventDirectory {
 	public List<EventNeighbor> neighbors(EventId id, Instant from, Instant to, double minCosine, int keyTerms,
 			int limit) {
 		throw new UnsupportedOperationException("운영자 API 는 이웃 사건을 읽지 않는다");
+	}
+
+	@Override
+	public Map<EventId, EventView> views(Collection<EventId> ids) {
+		throw new UnsupportedOperationException("운영자 API 는 사건 묶음을 읽지 않는다");
+	}
+
+	@Override
+	public Map<EventId, Integer> articleCountsIn(EventPeriod period) {
+		throw new UnsupportedOperationException("운영자 API 는 기간 안 사건을 읽지 않는다");
+	}
+
+	@Override
+	public <K> Map<K, EventTally> tallies(Map<K, ? extends Collection<EventId>> groups, EventPeriod period) {
+		throw new UnsupportedOperationException("운영자 API 는 사건 묶음 집계를 읽지 않는다");
 	}
 
 	@Override

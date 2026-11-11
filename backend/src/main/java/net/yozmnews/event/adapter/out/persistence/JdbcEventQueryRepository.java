@@ -74,6 +74,21 @@ class JdbcEventQueryRepository implements EventQueryRepository {
 	}
 
 	@Override
+	public Map<Long, EventView> views(Collection<Long> eventIds) {
+		if (eventIds.isEmpty()) {
+			return Map.of();
+		}
+		Map<Long, EventView> views = new LinkedHashMap<>();
+		this.jdbc.sql("select " + EVENT_COLUMNS + """
+				from events e
+				where e.id = any(:ids) and e.status <> 'MERGED'
+				order by e.id
+				""").param("ids", eventIds.toArray(Long[]::new)).query(JdbcEventQueryRepository::event).list().forEach(
+				view -> views.put(view.id().value(), view));
+		return Collections.unmodifiableMap(views);
+	}
+
+	@Override
 	public List<EventArticleView> articles(long eventId) {
 		return this.jdbc.sql("""
 				select a.article_id, a.published_at, a.score, a.decided_by, a.assigned_at from event_articles a
@@ -147,6 +162,20 @@ class JdbcEventQueryRepository implements EventQueryRepository {
 				where %s
 				order by a.event_id, a.published_at, a.article_id
 				""".formatted(IN_PERIOD)).param("from", timestamp(from)).param("to", timestamp(to)));
+	}
+
+	@Override
+	public Map<Long, Integer> articleCountsIn(Instant from, Instant to) {
+		Map<Long, Integer> counts = new LinkedHashMap<>();
+		this.jdbc.sql("""
+				select a.event_id, count(*) as articles from event_articles a
+				where %s
+				group by a.event_id
+				order by a.event_id
+				""".formatted(IN_PERIOD)).param("from", timestamp(from)).param("to", timestamp(to)).query((ResultSet rs) -> {
+			counts.put(rs.getLong("event_id"), rs.getInt("articles"));
+		});
+		return Collections.unmodifiableMap(counts);
 	}
 
 	@Override
