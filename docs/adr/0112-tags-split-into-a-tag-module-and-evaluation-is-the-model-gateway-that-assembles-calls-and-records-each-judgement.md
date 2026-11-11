@@ -47,3 +47,7 @@
 | 관문 입력을 태그를 모르는 일반 질문 목록(Yes/No · Choice · Score)으로 둔다 | 질문 이름 규약 · 응답 해석(중요도 수준 되찾기)이 `tag` 로 간다. 로컬 대체물의 태그 구조 규칙을 일반 규칙으로 바꿔 결과가 달라진다 |
 | 부르는 쪽이 기사 내용(제목 · 요약 · 피드 맥락)을 넘긴다 | 회차의 일괄 읽기는 그대로지만, 사건 소속 판정과 입력 꼴이 갈리고 `tag` 가 `source` 에 기댄다 |
 | 원본 응답만 판정 원본으로 옮기고 평가기 · 모델 버전 · 입력 토큰은 평가 행에 남긴다 | 판정 원본 하나가 판정의 사실을 다 담지 못하고, 다시 읽기에 필요한 평가기 이름이 두 곳에 놓인다 |
+
+## 후속 기록
+
+- 2026-11-11: 결정 절 "`evaluation` 은 판정마다 공개 API 하나를 내는 관문이다"의 연산 범위(판정 원본이 없는 기사 임베딩) — [ADR-0114](0114-article-embedding-is-a-gateway-operation-of-evaluation-taking-callers-texts-checking-results-and-recording-nothing.md) · [ADR-0115](0115-embedding-api-in-both-roles-looks-up-the-embedder-on-call-and-a-worker-startup-check-requires-one.md) · [evaluation Spec §5](../specs/evaluation.md#기사-임베딩)

@@ -24,8 +24,10 @@ import net.yozmnews.evaluation.EventJudgementId;
 import net.yozmnews.evaluation.EventMembership;
 import net.yozmnews.evaluation.MembershipJudgement;
 import net.yozmnews.evaluation.MembershipQuery;
+import net.yozmnews.evaluation.TextEmbedding;
 import net.yozmnews.event.AssignmentCriteria;
 import net.yozmnews.event.EventArticles;
+import net.yozmnews.event.EventEmbeddings;
 import net.yozmnews.event.EventId;
 import net.yozmnews.event.EventsChanged;
 import net.yozmnews.event.domain.assignment.AssignmentQueueRepository;
@@ -34,9 +36,6 @@ import net.yozmnews.event.domain.assignment.AssignmentSchedule;
 import net.yozmnews.event.domain.assignment.CriteriaRepository;
 import net.yozmnews.event.domain.event.EventArticleRepository;
 import net.yozmnews.event.domain.event.EventRepository;
-import net.yozmnews.event.domain.feature.ArticleEmbedder;
-import net.yozmnews.event.domain.feature.EmbedderInfo;
-import net.yozmnews.event.domain.feature.EmbeddingResult;
 import net.yozmnews.event.domain.feature.MatchFeaturesRepository;
 import net.yozmnews.event.domain.intake.IntakeQueueRepository;
 import org.jspecify.annotations.Nullable;
@@ -81,7 +80,7 @@ class EventAssignmentFlowTests {
 	private static final AssignmentCriteria CRITERIA = new AssignmentCriteria(Duration.ofHours(72), 0.80, 0.55, 0.40,
 			0.50);
 
-	private static final ArticleEmbedder MODEL_A = new ModelOnly("model-a");
+	private static final TextEmbedding MODEL_A = EventEmbeddings.modelOnly("model-a");
 
 	@Autowired
 	ApplicationEvents published;
@@ -131,7 +130,7 @@ class EventAssignmentFlowTests {
 		long second = queued("[1,0]", "국회", "예산");
 		Scripted membership = new Scripted(query -> new MembershipJudgement.Judged(null, Map.of()));
 
-		round(membership).run(MODEL_A);
+		round(membership).run();
 
 		long event = eventOf(first);
 		assertThat(eventOf(second)).isEqualTo(event);
@@ -166,14 +165,14 @@ class EventAssignmentFlowTests {
 	@Test
 	void aBandArticleIsJudgedOutsideATransactionAndAttachedByTheEvaluator() {
 		long first = queued("[1,0]");
-		round(new Scripted(query -> new MembershipJudgement.Judged(null, Map.of()))).run(MODEL_A);
+		round(new Scripted(query -> new MembershipJudgement.Judged(null, Map.of()))).run();
 		long event = eventOf(first);
 		// [4,3] 과 [1,0] 의 코사인 0.8, 핵심 말 없음 — 0.7 × 0.8 = 0.56(띠)
 		long banded = queued("[4,3]");
 		Scripted membership = new Scripted(
 				query -> new MembershipJudgement.Judged(new EventJudgementId(41), Map.of(event, 0.7)));
 
-		round(membership).run(MODEL_A);
+		round(membership).run();
 
 		assertThat(membership.queries).containsExactly(new MembershipQuery(new ArticleId(banded),
 				List.of(new EventDescriptor(event, List.of(new ArticleId(first))))));
@@ -192,12 +191,12 @@ class EventAssignmentFlowTests {
 	@Test
 	void aLowProbabilityOpensANewEventByTheEvaluator() {
 		long first = queued("[1,0]");
-		round(new Scripted(query -> new MembershipJudgement.Judged(null, Map.of()))).run(MODEL_A);
+		round(new Scripted(query -> new MembershipJudgement.Judged(null, Map.of()))).run();
 		long event = eventOf(first);
 		long banded = queued("[4,3]");
 
 		round(new Scripted(query -> new MembershipJudgement.Judged(new EventJudgementId(42), Map.of(event, 0.3))))
-			.run(MODEL_A);
+			.run();
 
 		assertThat(eventOf(banded)).isNotEqualTo(event);
 		assertThat((Double) assignment(banded).get("score")).isCloseTo(0.56, within(1e-3));
@@ -213,7 +212,7 @@ class EventAssignmentFlowTests {
 	@Test
 	void timesFollowThePublicationAndOtherModelsAreNoCandidates() {
 		long first = queued("[1,0]", "금리");
-		round(new Scripted(query -> new MembershipJudgement.Judged(null, Map.of()))).run(MODEL_A);
+		round(new Scripted(query -> new MembershipJudgement.Judged(null, Map.of()))).run();
 		long event = eventOf(first);
 		// 다른 모델 버전의 열린 사건 — 중심이 같아도 후보가 아니다
 		long otherModel = this.jdbc.sql("""
@@ -226,7 +225,7 @@ class EventAssignmentFlowTests {
 		Scripted membership = new Scripted(query -> new MembershipJudgement.Judged(new EventJudgementId(1), Map.of(event, 0.9)));
 		long earlier = queued("[1,0]", Instant.parse("2026-11-04T06:00:00Z"), "금리");
 
-		round(membership).run(MODEL_A);
+		round(membership).run();
 
 		assertThat(eventOf(later)).isNotIn(event, otherModel);
 		assertThat((Double) assignment(later).get("score")).isCloseTo(0.5, within(1e-6));
@@ -241,11 +240,11 @@ class EventAssignmentFlowTests {
 	@Test
 	void anAssignedArticleQueuedAgainKeepsItsAssignment() {
 		long first = queued("[1,0]");
-		round(new Scripted(query -> new MembershipJudgement.Judged(null, Map.of()))).run(MODEL_A);
+		round(new Scripted(query -> new MembershipJudgement.Judged(null, Map.of()))).run();
 		long event = eventOf(first);
 		this.queue.enqueue(new ArticleId(first), NOW);
 
-		round(new Scripted(query -> new MembershipJudgement.Judged(null, Map.of()))).run(MODEL_A);
+		round(new Scripted(query -> new MembershipJudgement.Judged(null, Map.of()))).run();
 
 		assertThat(eventOf(first)).isEqualTo(event);
 		assertThat(eventRow(event)).containsEntry("article_count", 1);
@@ -259,7 +258,7 @@ class EventAssignmentFlowTests {
 		represent(article, "model-old", "[1,0]");
 		this.queue.enqueue(new ArticleId(article), NOW);
 
-		round(new Scripted(query -> new MembershipJudgement.Judged(null, Map.of()))).run(MODEL_A);
+		round(new Scripted(query -> new MembershipJudgement.Judged(null, Map.of()))).run();
 
 		assertThat(queueRows()).isZero();
 		assertThat(this.jdbc.sql("select article_id from event_intake_queue").query(Long.class).list())
@@ -271,7 +270,7 @@ class EventAssignmentFlowTests {
 	void aDeletedArticleLeavesTheQueue() {
 		this.queue.enqueue(new ArticleId(987_654_321L), NOW);
 
-		round(new Scripted(query -> new MembershipJudgement.Judged(null, Map.of()))).run(MODEL_A);
+		round(new Scripted(query -> new MembershipJudgement.Judged(null, Map.of()))).run();
 
 		assertThat(queueRows()).isZero();
 	}
@@ -283,7 +282,7 @@ class EventAssignmentFlowTests {
 		Scripted transientFailure = new Scripted(
 				query -> new MembershipJudgement.Failed(EvaluatorFailureKind.TRANSIENT, "시간 초과"));
 
-		round(transientFailure).run(MODEL_A);
+		round(transientFailure).run();
 
 		assertThat(queueRow(banded)).containsEntry("attempts", 1)
 			.containsEntry("available", "2026-11-06T00:01:00Z")
@@ -294,7 +293,7 @@ class EventAssignmentFlowTests {
 			.param("now", NOW.atOffset(ZoneOffset.UTC))
 			.param("article", banded)
 			.update();
-		round(transientFailure).run(MODEL_A);
+		round(transientFailure).run();
 
 		assertThat(eventOf(banded)).isNotEqualTo(event);
 		assertThat((Double) assignment(banded).get("score")).isCloseTo(0.56, within(1e-3));
@@ -315,7 +314,7 @@ class EventAssignmentFlowTests {
 
 		round(new Scripted(query -> new MembershipJudgement.Failed(EvaluatorFailureKind.TRANSIENT, "시간 초과")),
 				ticking)
-			.run(MODEL_A);
+			.run();
 
 		assertThat(queueRow(banded)).containsEntry("attempts", 1).containsEntry("available", "2026-11-06T00:06:00Z");
 	}
@@ -326,7 +325,7 @@ class EventAssignmentFlowTests {
 		long banded = queued("[4,3]");
 
 		round(new Scripted(query -> new MembershipJudgement.Failed(EvaluatorFailureKind.ARTICLE_REJECTED, "입력 거부")))
-			.run(MODEL_A);
+			.run();
 
 		assertThat(eventOf(banded)).isNotEqualTo(event);
 		assertThat(assignment(banded)).containsEntry("decided_by", "JUDGEMENT_FAILED").containsEntry("judgement_id", null);
@@ -341,7 +340,7 @@ class EventAssignmentFlowTests {
 		Scripted membership = new Scripted(
 				query -> new MembershipJudgement.Failed(EvaluatorFailureKind.EVALUATOR_UNAVAILABLE, "키 무효"));
 
-		round(membership).run(MODEL_A);
+		round(membership).run();
 
 		assertThat(membership.queries).hasSize(1);
 		assertThat(queueRow(banded)).containsEntry("attempts", 0).containsEntry("lease_token", null);
@@ -358,7 +357,7 @@ class EventAssignmentFlowTests {
 			throw new IllegalStateException("평가기가 없는 프로세스");
 		});
 
-		round(membership).run(MODEL_A);
+		round(membership).run();
 
 		assertThat(queueRow(banded)).containsEntry("lease_token", null);
 		assertThat(output.getOut()).contains("배정 회차가 예상하지 못한 오류로 멈췄다");
@@ -369,7 +368,7 @@ class EventAssignmentFlowTests {
 		firstEvent();
 		long banded = queued("[4,3]");
 
-		round(new Scripted(query -> new MembershipJudgement.ArticleMissing())).run(MODEL_A);
+		round(new Scripted(query -> new MembershipJudgement.ArticleMissing())).run();
 
 		assertThat(queueRows()).isZero();
 		assertThat(this.assignments.exists(new ArticleId(banded))).isFalse();
@@ -387,7 +386,7 @@ class EventAssignmentFlowTests {
 			return new MembershipJudgement.Judged(new EventJudgementId(43), Map.of(event, 0.9));
 		});
 
-		round(membership).run(MODEL_A);
+		round(membership).run();
 
 		// 닫힌 사건에는 붙이지 않는다 — 쓰기를 되돌리고 점유를 풀어 다음 회차가 다시 판정한다
 		assertThat(this.assignments.exists(new ArticleId(banded))).isFalse();
@@ -403,7 +402,7 @@ class EventAssignmentFlowTests {
 			.param("event", event)
 			.update();
 		round(new Scripted(query -> new MembershipJudgement.Judged(new EventJudgementId(44), Map.of(event, 0.9))))
-			.run(MODEL_A);
+			.run();
 
 		assertThat(eventOf(banded)).isEqualTo(event);
 		assertThat(assignment(banded)).containsEntry("decided_by", "EVALUATOR").containsEntry("judgement_id", 44L);
@@ -421,7 +420,7 @@ class EventAssignmentFlowTests {
 			return new MembershipJudgement.Judged(new EventJudgementId(1), Map.of(event, 0.9));
 		});
 
-		round(membership).run(MODEL_A);
+		round(membership).run();
 
 		assertThat(this.assignments.exists(new ArticleId(banded))).isFalse();
 		assertThat(queueRow(banded)).containsEntry("attempts", 0).containsEntry("lease_token", null);
@@ -436,7 +435,7 @@ class EventAssignmentFlowTests {
 		long banded = queued("[4,3]");
 		Scripted membership = new Scripted(query -> new MembershipJudgement.Judged(null, Map.of()));
 
-		round(membership).run(MODEL_A);
+		round(membership).run();
 
 		assertThat(membership.queries).isEmpty();
 		assertThat(eventOf(banded)).isNotEqualTo(event);
@@ -446,7 +445,7 @@ class EventAssignmentFlowTests {
 	/** 핵심 말 없는 [1,0] 기사로 사건 하나를 연다 */
 	private long firstEvent() {
 		long first = queued("[1,0]");
-		round(new Scripted(query -> new MembershipJudgement.Judged(null, Map.of()))).run(MODEL_A);
+		round(new Scripted(query -> new MembershipJudgement.Judged(null, Map.of()))).run();
 		return first;
 	}
 
@@ -456,7 +455,7 @@ class EventAssignmentFlowTests {
 
 	private AssignmentRound round(EventMembership membership, InstantSource clock) {
 		return new AssignmentRound(this.queue, this.intake, this.features, this.events, this.assignments,
-				this.criteriaHistory, CRITERIA, this.articles, membership, this.transaction, clock);
+				this.criteriaHistory, CRITERIA, this.articles, membership, MODEL_A, this.transaction, clock);
 	}
 
 	private long queued(String vector, String... terms) {
@@ -537,21 +536,6 @@ class EventAssignmentFlowTests {
 
 	private long queueRows() {
 		return this.jdbc.sql("select count(*) from event_assignment_queue").query(Long.class).single();
-	}
-
-	/** 모델 버전만 밝히는 임베더 — 배정 회차는 임베딩하지 않는다 */
-	private record ModelOnly(String model) implements ArticleEmbedder {
-
-		@Override
-		public EmbedderInfo info() {
-			return new EmbedderInfo("시험", this.model, 2);
-		}
-
-		@Override
-		public EmbeddingResult embed(List<String> texts) {
-			throw new AssertionError("배정 회차는 임베딩하지 않는다");
-		}
-
 	}
 
 	/** 정해 둔 답을 내고, 받은 요청과 그때 트랜잭션이 있었는지를 기록한다 */

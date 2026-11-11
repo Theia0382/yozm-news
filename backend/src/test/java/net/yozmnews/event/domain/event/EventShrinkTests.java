@@ -7,8 +7,8 @@ import java.util.List;
 import java.util.Map;
 
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.evaluation.Embedding;
 import net.yozmnews.event.EventStatus;
-import net.yozmnews.event.domain.feature.Embedding;
 import net.yozmnews.event.domain.feature.MatchFeatures;
 import org.junit.jupiter.api.Test;
 

@@ -55,3 +55,4 @@
 ## 후속 기록
 
 - 2026-11-11: 결과 절 "평가 세트로 외부 우위가 확인되면 기본값 · 배포 정의만 바꾼다" — [ADR-0109](0109-event-clustering-defaults-chosen-on-the-evaluation-set-with-operator-review-and-closing-from-operating-records.md)
+- 2026-11-11: 결정 절의 운영 구현 · 설정이 속한 모듈 — [ADR-0114](0114-article-embedding-is-a-gateway-operation-of-evaluation-taking-callers-texts-checking-results-and-recording-nothing.md) · [evaluation Spec §4](../specs/evaluation.md#임베더-구현과-로컬-대체물)

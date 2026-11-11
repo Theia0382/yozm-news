@@ -19,15 +19,13 @@ import net.yozmnews.article.ArticleId;
 import net.yozmnews.evaluation.MembershipJudgement;
 import net.yozmnews.event.AssignmentCriteria;
 import net.yozmnews.event.EventArticles;
+import net.yozmnews.event.EventEmbeddings;
 import net.yozmnews.event.domain.assignment.AssignmentQueueRepository;
 import net.yozmnews.event.domain.assignment.CriteriaRepository;
 import net.yozmnews.event.domain.assignment.StoredCandidate;
 import net.yozmnews.event.domain.event.EventArticle;
 import net.yozmnews.event.domain.event.EventArticleRepository;
 import net.yozmnews.event.domain.event.EventRepository;
-import net.yozmnews.event.domain.feature.ArticleEmbedder;
-import net.yozmnews.event.domain.feature.EmbedderInfo;
-import net.yozmnews.event.domain.feature.EmbeddingResult;
 import net.yozmnews.event.domain.feature.MatchFeaturesRepository;
 import net.yozmnews.event.domain.intake.IntakeQueueRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -95,7 +93,7 @@ class EventAssignmentConcurrencyTests {
 	@Test
 	void aSecondAttachmentWaitsForTheFirstAndAddsOnTopOfIt() throws Exception {
 		long seed = article("[1,0]", NOW);
-		round(this.assignments, NOW).run(new ModelOnly());
+		round(this.assignments, NOW).run();
 		long event = this.jdbc.sql("select event_id from event_articles where article_id = :a")
 			.param("a", seed)
 			.query(Long.class)
@@ -107,11 +105,11 @@ class EventAssignmentConcurrencyTests {
 		CountDownLatch resume = new CountDownLatch(1);
 		Pausing pausing = new Pausing(this.assignments, paused, resume);
 
-		CompletableFuture<Void> firstRound = CompletableFuture.runAsync(() -> round(pausing, NOW).run(new ModelOnly()));
+		CompletableFuture<Void> firstRound = CompletableFuture.runAsync(() -> round(pausing, NOW).run());
 		try {
 			assertThat(paused.await(10, TimeUnit.SECONDS)).isTrue();
 			CompletableFuture<Void> secondRound = CompletableFuture
-				.runAsync(() -> round(this.assignments, NOW.plusSeconds(1)).run(new ModelOnly()));
+				.runAsync(() -> round(this.assignments, NOW.plusSeconds(1)).run());
 			Thread.sleep(500);
 			assertThat(secondRound).as("첫 회차가 사건을 잡은 동안 둘째 회차가 기다린다").isNotDone();
 			resume.countDown();
@@ -140,7 +138,8 @@ class EventAssignmentConcurrencyTests {
 	private AssignmentRound round(EventArticleRepository assignments, Instant now) {
 		return new AssignmentRound(this.queue, this.intake, this.features, this.events, assignments,
 				this.criteriaHistory, CRITERIA, this.articles,
-				query -> new MembershipJudgement.Judged(null, Map.of()), this.transaction, (InstantSource) () -> now);
+				query -> new MembershipJudgement.Judged(null, Map.of()), EventEmbeddings.modelOnly("model-a"),
+				this.transaction, (InstantSource) () -> now);
 	}
 
 	private long article(String vector, Instant availableAt) {
@@ -151,20 +150,6 @@ class EventAssignmentConcurrencyTests {
 				""").param("article", article).param("vector", vector).param("now", NOW.atOffset(ZoneOffset.UTC)).update();
 		this.queue.enqueue(new ArticleId(article), availableAt);
 		return article;
-	}
-
-	private record ModelOnly() implements ArticleEmbedder {
-
-		@Override
-		public EmbedderInfo info() {
-			return new EmbedderInfo("시험", "model-a", 2);
-		}
-
-		@Override
-		public EmbeddingResult embed(List<String> texts) {
-			throw new AssertionError("배정 회차는 임베딩하지 않는다");
-		}
-
 	}
 
 	/** 배정 행을 넣기 직전(사건을 잠그고 고친 뒤) 신호를 보내고 풀릴 때까지 기다린다 — 쓰기 트랜잭션을 커밋 전에 세운다 */

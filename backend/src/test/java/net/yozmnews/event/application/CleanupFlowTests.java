@@ -16,6 +16,7 @@ import net.yozmnews.article.ArticleId;
 import net.yozmnews.evaluation.MembershipJudgement;
 import net.yozmnews.event.AssignmentCriteria;
 import net.yozmnews.event.EventArticles;
+import net.yozmnews.event.EventEmbeddings;
 import net.yozmnews.event.EventId;
 import net.yozmnews.event.EventsChanged;
 import net.yozmnews.event.domain.assignment.AssignmentQueueRepository;
@@ -25,9 +26,6 @@ import net.yozmnews.event.domain.event.EventClosing;
 import net.yozmnews.event.domain.event.EventQueryRepository;
 import net.yozmnews.event.domain.event.EventRepository;
 import net.yozmnews.event.domain.event.LongTermIndexes;
-import net.yozmnews.event.domain.feature.ArticleEmbedder;
-import net.yozmnews.event.domain.feature.EmbedderInfo;
-import net.yozmnews.event.domain.feature.EmbeddingResult;
 import net.yozmnews.event.domain.feature.MatchFeaturesRepository;
 import net.yozmnews.event.domain.intake.IntakeQueueRepository;
 import org.jspecify.annotations.Nullable;
@@ -219,9 +217,9 @@ class CleanupFlowTests {
 
 	private void assign() {
 		new AssignmentRound(this.queue, this.intake, this.features, this.events, this.assignments, this.criteriaHistory,
-				CRITERIA, this.articles, query -> new MembershipJudgement.Judged(null, Map.of()), this.transaction,
-				(InstantSource) () -> NOW)
-			.run(new ModelOnly());
+				CRITERIA, this.articles, query -> new MembershipJudgement.Judged(null, Map.of()),
+				EventEmbeddings.modelOnly("model-a"), this.transaction, (InstantSource) () -> NOW)
+			.run();
 	}
 
 	/**
@@ -311,20 +309,6 @@ class CleanupFlowTests {
 	}
 
 	private record Event(long id, List<Long> members) {
-	}
-
-	private record ModelOnly() implements ArticleEmbedder {
-
-		@Override
-		public EmbedderInfo info() {
-			return new EmbedderInfo("시험", "model-a", 2);
-		}
-
-		@Override
-		public EmbeddingResult embed(List<String> texts) {
-			throw new AssertionError("배정 회차는 임베딩하지 않는다");
-		}
-
 	}
 
 	/** 알림마다 사건 ID 목록 — 발행 순(event-R23) */

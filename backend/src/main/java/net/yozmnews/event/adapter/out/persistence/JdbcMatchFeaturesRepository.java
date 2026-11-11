@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Optional;
 
 import net.yozmnews.article.ArticleId;
-import net.yozmnews.event.domain.feature.Embedding;
+import net.yozmnews.evaluation.Embedding;
 import net.yozmnews.event.domain.feature.MatchFeatures;
 import net.yozmnews.event.domain.feature.MatchFeaturesRepository;
 import net.yozmnews.platform.VectorText;

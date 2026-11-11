@@ -21,15 +21,13 @@ import net.yozmnews.article.ArticlesRemoved;
 import net.yozmnews.evaluation.MembershipJudgement;
 import net.yozmnews.event.AssignmentCriteria;
 import net.yozmnews.event.EventArticles;
+import net.yozmnews.event.EventEmbeddings;
 import net.yozmnews.event.domain.assignment.AssignmentQueueRepository;
 import net.yozmnews.event.domain.assignment.CriteriaRepository;
 import net.yozmnews.event.domain.assignment.MergeJudgementRepository;
 import net.yozmnews.event.domain.event.EventArticle;
 import net.yozmnews.event.domain.event.EventArticleRepository;
 import net.yozmnews.event.domain.event.EventRepository;
-import net.yozmnews.event.domain.feature.ArticleEmbedder;
-import net.yozmnews.event.domain.feature.EmbedderInfo;
-import net.yozmnews.event.domain.feature.EmbeddingResult;
 import net.yozmnews.event.domain.feature.MatchFeaturesRepository;
 import net.yozmnews.event.domain.intake.IntakeQueueRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -119,7 +117,7 @@ class EventMergeConcurrencyTests {
 		try {
 			assertThat(paused.await(10, TimeUnit.SECONDS)).isTrue();
 			// 병합은 아직 사건을 잠그지 않았다 — 배정은 기다리지 않고 S 에 붙여 커밋한다
-			CompletableFuture.runAsync(() -> assign().run(new ModelOnly())).get(10, TimeUnit.SECONDS);
+			CompletableFuture.runAsync(() -> assign().run()).get(10, TimeUnit.SECONDS);
 			assertThat(eventOf(late)).isEqualTo(small);
 			resume.countDown();
 			merging.get(10, TimeUnit.SECONDS);
@@ -179,7 +177,7 @@ class EventMergeConcurrencyTests {
 	private AssignmentRound assign() {
 		return new AssignmentRound(this.queue, this.intake, this.features, this.events, this.assignments,
 				this.criteriaHistory, CRITERIA, this.articles, query -> new MembershipJudgement.Judged(null, Map.of()),
-				this.transaction, (InstantSource) () -> NOW);
+				EventEmbeddings.modelOnly("model-a"), this.transaction, (InstantSource) () -> NOW);
 	}
 
 	private void remove(long article) {
@@ -265,20 +263,6 @@ class EventMergeConcurrencyTests {
 			.param("event", event)
 			.query(Integer.class)
 			.single();
-	}
-
-	private record ModelOnly() implements ArticleEmbedder {
-
-		@Override
-		public EmbedderInfo info() {
-			return new EmbedderInfo("시험", "model-a", 2);
-		}
-
-		@Override
-		public EmbeddingResult embed(List<String> texts) {
-			throw new AssertionError("배정 회차는 임베딩하지 않는다");
-		}
-
 	}
 
 	/** 병합이 배정 행을 잠근 직후(사건을 잠그기 전) 신호를 보내고 풀릴 때까지 기다린다 — 병합 트랜잭션을 그 자리에 세운다 */

@@ -25,6 +25,7 @@ import net.yozmnews.evaluation.EventMembership;
 import net.yozmnews.evaluation.MembershipJudgement;
 import net.yozmnews.event.AssignmentCriteria;
 import net.yozmnews.event.EventArticles;
+import net.yozmnews.event.EventEmbeddings;
 import net.yozmnews.event.EventId;
 import net.yozmnews.event.EventsChanged;
 import net.yozmnews.event.domain.assignment.AssignmentQueueRepository;
@@ -33,9 +34,6 @@ import net.yozmnews.event.domain.assignment.StoredCandidate;
 import net.yozmnews.event.domain.event.EventArticle;
 import net.yozmnews.event.domain.event.EventArticleRepository;
 import net.yozmnews.event.domain.event.EventRepository;
-import net.yozmnews.event.domain.feature.ArticleEmbedder;
-import net.yozmnews.event.domain.feature.EmbedderInfo;
-import net.yozmnews.event.domain.feature.EmbeddingResult;
 import net.yozmnews.event.domain.feature.MatchFeaturesRepository;
 import net.yozmnews.event.domain.intake.IntakeQueueRepository;
 import org.jspecify.annotations.Nullable;
@@ -119,7 +117,7 @@ class EventRemovalFlowTests {
 		this.a = queued("[1,0]", "2026-11-05T00:00:00Z", "금리", "물가");
 		this.b = queued("[1,0]", "2026-11-05T01:00:00Z", "금리");
 		this.c = queued("[4,3]", "2026-11-05T02:00:00Z", "금리");
-		round(this.assignments, unasked()).run(new ModelOnly());
+		round(this.assignments, unasked()).run();
 		this.event = eventOf(this.a);
 		assertThat(List.of(eventOf(this.b), eventOf(this.c))).containsOnly(this.event);
 		assertThat(eventRow(this.event)).containsEntry("centroid", "[2,1]").containsEntry("article_count", 3);
@@ -190,7 +188,7 @@ class EventRemovalFlowTests {
 	void anEmptiedEventGoesWithTheCandidatesPointingToIt() {
 		// y([0,1], 금리, 03:00) 는 띠에 들어 판정 확률 0.1 로 새 사건을 열고, 후보 E 를 남긴다
 		long y = queued("[0,1]", "2026-11-05T03:00:00Z", "금리");
-		round(this.assignments, query -> new MembershipJudgement.Judged(new EventJudgementId(1), Map.of(this.event, 0.1))).run(new ModelOnly());
+		round(this.assignments, query -> new MembershipJudgement.Judged(new EventJudgementId(1), Map.of(this.event, 0.1))).run();
 		long other = eventOf(y);
 		assertThat(other).isNotEqualTo(this.event);
 		assertThat(count("select count(*) from event_article_candidates where article_id = " + y + " and event_id = "
@@ -265,7 +263,7 @@ class EventRemovalFlowTests {
 	void oneRemovalOverTwoEventsShrinksOneAndDeletesTheOther() {
 		// y([0,1], 금리, 03:00) 는 판정 확률 0.1 로 혼자 새 사건을 연다 — c 와 y 를 한 번에 지우면 E 는 줄고 y 의 사건은 빈다
 		long y = queued("[0,1]", "2026-11-05T03:00:00Z", "금리");
-		round(this.assignments, query -> new MembershipJudgement.Judged(new EventJudgementId(1), Map.of(this.event, 0.1))).run(new ModelOnly());
+		round(this.assignments, query -> new MembershipJudgement.Judged(new EventJudgementId(1), Map.of(this.event, 0.1))).run();
 		long other = eventOf(y);
 		assertThat(other).isNotEqualTo(this.event);
 		this.published.clear();
@@ -301,7 +299,7 @@ class EventRemovalFlowTests {
 		Pausing pausing = new Pausing(this.assignments, inserted, resume);
 		try {
 			CompletableFuture<Void> writing = CompletableFuture
-				.runAsync(() -> round(pausing, unasked()).run(new ModelOnly()));
+				.runAsync(() -> round(pausing, unasked()).run());
 			assertThat(inserted.await(10, TimeUnit.SECONDS)).isTrue();
 			// 쓰기 트랜잭션이 배정 대기 행을 지우고 새 사건 · 배정을 넣은 채 커밋 전이다 — 지우기는 대기 행에서 기다린다
 			CompletableFuture<Void> removing = CompletableFuture.runAsync(() -> remove(z));
@@ -329,7 +327,7 @@ class EventRemovalFlowTests {
 			return new MembershipJudgement.Judged(new EventJudgementId(1), Map.of(this.event, 0.9));
 		};
 
-		round(this.assignments, removing).run(new ModelOnly());
+		round(this.assignments, removing).run();
 
 		assertThat(this.assignments.exists(new ArticleId(z))).isFalse();
 		assertThat(eventRow(this.event)).containsEntry("article_count", 3).containsEntry("centroid", "[2,1]");
@@ -345,7 +343,8 @@ class EventRemovalFlowTests {
 
 	private AssignmentRound round(EventArticleRepository assignments, EventMembership membership) {
 		return new AssignmentRound(this.queue, this.intake, this.features, this.events, assignments,
-				this.criteriaHistory, CRITERIA, this.articles, membership, this.transaction, (InstantSource) () -> NOW);
+				this.criteriaHistory, CRITERIA, this.articles, membership, EventEmbeddings.modelOnly("model-a"),
+				this.transaction, (InstantSource) () -> NOW);
 	}
 
 	private static EventMembership unasked() {
@@ -401,20 +400,6 @@ class EventRemovalFlowTests {
 
 	private long count(String sql) {
 		return this.jdbc.sql(sql).query(Long.class).single();
-	}
-
-	private record ModelOnly() implements ArticleEmbedder {
-
-		@Override
-		public EmbedderInfo info() {
-			return new EmbedderInfo("시험", "model-a", 2);
-		}
-
-		@Override
-		public EmbeddingResult embed(List<String> texts) {
-			throw new AssertionError("배정 회차는 임베딩하지 않는다");
-		}
-
 	}
 
 	/** 배정 행을 넣은 뒤(커밋 전) 신호를 보내고 풀릴 때까지 기다린다 */

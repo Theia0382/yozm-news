@@ -8,6 +8,8 @@ import java.util.List;
 import net.yozmnews.evaluation.ArticleTagging;
 import net.yozmnews.evaluation.EventMembership;
 import net.yozmnews.evaluation.TagJudgementId;
+import net.yozmnews.evaluation.TextEmbedding;
+import net.yozmnews.evaluation.domain.embedder.ArticleEmbedder;
 import net.yozmnews.platform.WebRole;
 import net.yozmnews.platform.domain.ActiveRoles;
 import net.yozmnews.tag.TagSetDirectory;
@@ -30,7 +32,7 @@ import org.springframework.test.context.ActiveProfiles;
 /**
  * 화면 역할만 켠 프로세스 — 실제 PostgreSQL 로 띄운 앱의 구성요소와 HTTP 응답을 본다.
  * <p>
- * 지키는 규칙: platform-R8 · platform-R9 · tag-R2 · evaluation-R37
+ * 지키는 규칙: platform-R8 · platform-R9 · tag-R2 · evaluation-R37 · evaluation-R46
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -80,6 +82,14 @@ class WebRoleTests {
 		// 평가기가 없을 때 판정을 거절하는 것은 ArticleTaggingServiceTests 가 본다
 		assertThat(this.context.getBeanNamesForType(ArticleTagging.class)).hasSize(1);
 		assertThat(this.context.getBean(ArticleTagging.class).find(List.of(new TagJudgementId(987_654_321)))).isEmpty();
+	}
+
+	@Test
+	void loadsNoEmbedderButKeepsTheEmbeddingApi() {
+		// 운영 임베더는 작업 역할에서만 만든다 — 화면 역할은 모델을 올리지 않는다. 임베딩 공개 API 는 두 역할 공통이고 임베더는 부를 때
+		// 찾는다(evaluation-R46)
+		assertThat(this.context.getBeanNamesForType(ArticleEmbedder.class)).isEmpty();
+		assertThat(this.context.getBeanNamesForType(TextEmbedding.class)).hasSize(1);
 	}
 
 	@Test

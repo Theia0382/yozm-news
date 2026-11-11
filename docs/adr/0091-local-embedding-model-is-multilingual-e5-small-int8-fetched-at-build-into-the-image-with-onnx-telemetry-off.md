@@ -54,3 +54,4 @@
 ## 후속 기록
 
 - 2026-11-10: 결과 절 "arm64 실기 실행은 확인되지 않았다" — [ADR-0104](0104-arm64-run-checked-on-arm64-runners-with-a-symmetric-deploy-check-per-architecture.md) · [개발 인프라 "CI"](../development/infrastructure.md#ci)
+- 2026-11-11: 결정 절의 로컬 모델 구현이 속한 모듈 — [ADR-0114](0114-article-embedding-is-a-gateway-operation-of-evaluation-taking-callers-texts-checking-results-and-recording-nothing.md) · [evaluation Spec §4](../specs/evaluation.md#임베더-구현과-로컬-대체물)

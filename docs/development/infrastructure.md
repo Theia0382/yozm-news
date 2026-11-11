@@ -161,11 +161,11 @@ IDE 에서 테스트를 Gradle 에 맡기는 것은 1 때문이다([CONTRIBUTING
 | DB 의 pgvector 확장이 없거나 최소 버전보다 낮으면 앱이 기동하지 않는다 | 테스트 `VectorExtensionTests` · `VectorExtensionConfigurationTests` · `JdbcDatabaseExtensionsTests` | [platform Spec](../specs/platform.md#db-확장) |
 | `local` 의 Compose 연동이 PostgreSQL 서비스를 알아본다 | 없음 — 서비스 연결 라벨이 빠지면 `local` 기동이 DB 접속 정보 없이 실패한다 | `compose.yaml` |
 | 로컬 대체물은 profile `local` 에서만 등록된다 — 평가기는 Jev 키가 없을 때만, 임베더는 임베딩 방식이 기본(`onnx`)일 때만 | 테스트 `FakeArticleEvaluatorConfigurationTests` · `JevArticleEvaluatorConfigurationTests` · `FakeArticleEmbedderConfigurationTests` · `EmbeddingProviderWiringTests` | [platform Spec](../specs/platform.md#로컬-개발) |
-| 작업 역할은 임베더 없이 뜨지 않고, 임베더는 작업 역할에서만 만든다 | 테스트 `IntakeArticlesJobWiringTests` · `EmbeddingProviderWiringTests` · `WorkerRoleTests` + 스모크 K1 · K11 | [ADR-0093](../adr/0093-worker-role-does-not-run-without-an-embedder-built-only-in-the-worker-role.md) |
+| 작업 역할은 임베더 없이 뜨지 않고, 임베더는 작업 역할에서만 만든다 | 테스트 `EmbedderRequirementTests` · `EmbeddingProviderWiringTests` · `WorkerRoleTests` · `WebRoleTests` + 스모크 K1 · K11 | [ADR-0115](../adr/0115-embedding-api-in-both-roles-looks-up-the-embedder-on-call-and-a-worker-startup-check-requires-one.md) |
 | 로컬 임베딩 모델 파일은 정보 파일의 고정 리비전 · sha256 과 같다 | 빌드 실패(`fetchEmbeddingModel` 의 해시 대조) + 기동 실패(앱의 해시 재확인) + 테스트 `EmbeddingModelTests` | `backend/embedding-model.properties` |
 | 모델 파일은 이미지의 별도 계층에 든다 | 빌드 실패 — build 단계가 푼 계층에 모델 파일이 없으면 멈춘다 | `backend/build.gradle.kts` · `backend/Dockerfile` |
 | ONNX Runtime 은 사용 통계 전송을 끄는 환경 변수 없이 열리지 않는다 | 테스트 `OnnxArticleEmbedderTests`(변수가 없거나 `1` 이 아니면 생성자가 거부) + 배포 이미지 · Gradle 시험 작업의 변수 | `OnnxArticleEmbedder` · `backend/Dockerfile` · `backend/build.gradle.kts` |
-| 로컬 임베딩 모델이 독립 계산한 기준 벡터와 맞는다 | 테스트 `OnnxArticleEmbedderTests`(시험 리소스의 기준 벡터와 코사인 ≥ 0.99) | `backend/src/test/resources/net/yozmnews/event/adapter/out/onnx/` |
+| 로컬 임베딩 모델이 독립 계산한 기준 벡터와 맞는다 | 테스트 `OnnxArticleEmbedderTests`(시험 리소스의 기준 벡터와 코사인 ≥ 0.99) | `backend/src/test/resources/net/yozmnews/evaluation/adapter/out/onnx/` |
 | 역할 조합마다 켜지는 구성요소가 정해져 있다(작업 서버 · 작업 진입점 · 기동 대조 · 스케줄링 · 화면용 API) | 테스트 `WebRoleTests` · `WorkerRoleTests` · `BothRolesTests` | `application.yaml` · `application-worker.yaml` |
 | 웹 · 작업 패키지의 구성요소는 맞는 역할을 달고, 리스너는 역할을 달지 않는다 | 테스트 `RoleMembershipTests` | [platform Spec](../specs/platform.md#역할) |
 | 배포 구성의 세 서비스가 순서대로 healthy 가 된다 | 구조(`depends_on` 의 healthy 조건) + `up --wait` + 스모크 K1 | [배포 구성 실행](../operations/deployment.md#배포-구성-실행) |
