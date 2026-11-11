@@ -1,8 +1,7 @@
-package net.yozmnews.storyline.domain.storyline;
+package net.yozmnews.storyline;
 
 /**
- * 스토리라인의 상태 — 저장하지 않고 조회 때 마지막 기사 시각으로 정한다({@link StateCriteria}) · docs/specs/storyline.md §4 ·
- * storyline-R16.
+ * 스토리라인의 상태 — 저장하지 않고 조회 때 마지막 기사 시각으로 정한다 · docs/specs/storyline.md §3 · storyline-R16.
  */
 public enum StorylineState {
 
