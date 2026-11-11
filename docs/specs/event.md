@@ -793,7 +793,7 @@ sequenceDiagram
 | `yozmnews.event-assignment.close-after` | 닫는 기간(`Duration` — 예 `4d`), 기본 4일(event-R13) |
 | `yozmnews.event-assignment.max-open` | 최대 기간(`Duration`), 기본 14일(event-R13) |
 
-사건 기준 · 저장 기준 · 닫는 기간 · 최대 기간 기본값의 정본은 `EventAssignmentProperties` 의 `@DefaultValue` 이고 `application.yaml` 에는 키가 없다. 사건 기준 · 저장 기준의 기본값은 기본 임베딩 모델에 맞춰 평가 세트로, 닫는 기간은 운영 기록으로 정했고, 최대 기간은 측정 전 목표다([ADR-0109](../adr/0109-event-clustering-defaults-chosen-on-the-evaluation-set-with-operator-review-and-closing-from-operating-records.md)). 다른 임베딩 모델로 바꾸면 기준도 그 모델에 맞춰 다시 본다. 운영자는 환경 변수(`YOZMNEWS_EVENT_ASSIGNMENT_UPPER` 식)로 바꾸고, 범위 · 관계를 어기면 기동하지 않는다 — 닫는 기간 · 최대 기간은 0 보다 큰 초 단위이고 시간 창 ≤ 닫는 기간 ≤ 최대 기간이어야 한다(`EventClosing`). 사건 기준 · 저장 기준을 바꾸면 재판정 회차가 지난 배정을 다시 판정하고(event-R18), 병합 회차가 열린 사건을 한 번씩 다시 본다(event-R13). 닫는 기간 · 최대 기간을 바꾸면 그 뒤의 닫기에만 쓴다(event-R13). 그 밖의 설정 키는 없다 — 큰 사건 기준은 설정이 아니라 운영자 설정이다(event-R21).
+사건 기준 · 저장 기준 · 닫는 기간 · 최대 기간 기본값의 정본은 `EventAssignmentProperties` 의 `@DefaultValue` 이고 `application.yaml` 에는 키가 없다. 사건 기준 · 저장 기준의 기본값은 기본 임베딩 모델에 맞춰 평가 세트로, 닫는 기간은 운영 기록으로 정했고, 최대 기간은 측정 전 목표다([ADR-0109](../adr/0109-event-clustering-defaults-chosen-on-the-evaluation-set-with-operator-review-and-closing-from-operating-records.md)). 다른 임베딩 모델로 바꾸면 기준도 그 모델에 맞춰 다시 본다. 운영자는 환경 변수(`YOZMNEWS_EVENT_ASSIGNMENT_UPPER` 식)로 바꾸고, 범위 · 관계를 어기면 기동하지 않는다 — 닫는 기간 · 최대 기간은 0 보다 큰 초 단위이고 시간 창 ≤ 닫는 기간 ≤ 최대 기간이어야 한다(`EventClosing`). 사건 기준 · 저장 기준을 바꾸면 재판정 회차가 지난 배정을 다시 판정하고(event-R18), 병합 회차가 열린 사건을 한 번씩 다시 본다(event-R13). 닫는 기간 · 최대 기간을 바꾸면 그 뒤의 닫기에만 쓴다(event-R13). 그 밖의 설정 키는 없다.
 
 ## 8. 결정
 
