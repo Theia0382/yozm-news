@@ -60,9 +60,6 @@ class TagBackfillAdministrationTests {
 	TagBackfillRepository backfills;
 
 	@Autowired
-	TagSetViews views;
-
-	@Autowired
 	TransactionTemplate transaction;
 
 	@Autowired
@@ -79,7 +76,7 @@ class TagBackfillAdministrationTests {
 	@BeforeEach
 	void twoVersionsWithEvaluationsAroundTheRange() {
 		this.scenario = new BackfillScenario(this.tagSetAdministration, this.tagSets, this.thresholds, this.results,
-				this.views, this.transaction, this.jdbc);
+				this.transaction, this.jdbc);
 		this.scenario.reset();
 		this.administration = new TagBackfillAdministrationService(this.tagSets, this.thresholds, this.results,
 				this.backfills, this.transaction, InstantSource.fixed(NOW));
@@ -87,11 +84,11 @@ class TagBackfillAdministrationTests {
 		this.second = this.scenario.nextVersionAt(Instant.parse("2026-05-01T00:00:00Z"));
 		this.scenario.changeTopicStoreAt(this.second, "0.25", Instant.parse("2026-05-02T00:00:00Z"));
 		// 180일 안: 버전 1 둘 · 버전 2 하나. 범위 밖: 180일 직전 · 지금(끝 제외)
-		this.scenario.insert(this.first, 1, NOW.minus(Duration.ofDays(180)), "jev", "{}", List.of());
-		this.scenario.insert(this.first, 2, NOW.minus(Duration.ofHours(1)), "jev", "{}", List.of());
-		this.scenario.insert(this.second, 3, NOW.minus(Duration.ofDays(2)), "jev", "{}", List.of());
-		this.scenario.insert(this.first, 4, NOW.minus(Duration.ofDays(180)).minusSeconds(1), "jev", "{}", List.of());
-		this.scenario.insert(this.second, 5, NOW, "jev", "{}", List.of());
+		this.scenario.insert(this.first, 1, NOW.minus(Duration.ofDays(180)), "jev", List.of());
+		this.scenario.insert(this.first, 2, NOW.minus(Duration.ofHours(1)), "jev", List.of());
+		this.scenario.insert(this.second, 3, NOW.minus(Duration.ofDays(2)), "jev", List.of());
+		this.scenario.insert(this.first, 4, NOW.minus(Duration.ofDays(180)).minusSeconds(1), "jev", List.of());
+		this.scenario.insert(this.second, 5, NOW, "jev", List.of());
 	}
 
 	@AfterEach

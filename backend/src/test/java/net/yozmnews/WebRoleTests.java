@@ -3,8 +3,11 @@ package net.yozmnews;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.http.HttpResponse;
+import java.util.List;
 
+import net.yozmnews.evaluation.ArticleTagging;
 import net.yozmnews.evaluation.EventMembership;
+import net.yozmnews.evaluation.TagJudgementId;
 import net.yozmnews.evaluation.TagSetDirectory;
 import net.yozmnews.platform.WebRole;
 import net.yozmnews.platform.domain.ActiveRoles;
@@ -69,6 +72,14 @@ class WebRoleTests {
 	void keepsTheMembershipJudgementApiLikeEveryApplicationService() {
 		// 판정 공개 API 는 두 역할 공통이다 — 평가기는 부를 때 찾는다(evaluation-R37)
 		assertThat(this.context.getBeanNamesForType(EventMembership.class)).hasSize(1);
+	}
+
+	@Test
+	void keepsTheTaggingApiLikeEveryApplicationService() {
+		// 태그 판정 공개 API 도 두 역할 공통이다 — 화면 역할의 평가 현황 · 검수가 판정 원본 조회를 평가기 없이 쓴다(evaluation-R42).
+		// 평가기가 없을 때 판정을 거절하는 것은 ArticleTaggingServiceTests 가 본다
+		assertThat(this.context.getBeanNamesForType(ArticleTagging.class)).hasSize(1);
+		assertThat(this.context.getBean(ArticleTagging.class).find(List.of(new TagJudgementId(987_654_321)))).isEmpty();
 	}
 
 	@Test

@@ -8,7 +8,7 @@ import java.util.Map;
 import net.yozmnews.evaluation.AskedTag;
 import net.yozmnews.evaluation.FormatOption;
 import net.yozmnews.evaluation.ImportanceLevel;
-import net.yozmnews.evaluation.TagSetView;
+import net.yozmnews.evaluation.TagQuestions;
 import net.yozmnews.evaluation.TopicCategory;
 import net.yozmnews.evaluation.domain.evaluator.CandidateEvent;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationInput;
@@ -20,8 +20,8 @@ import tools.jackson.databind.json.JsonMapper;
 /**
  * Jev 요청 본문 — docs/specs/evaluation.md §4 ArticleEvaluator · evaluation-R14 · evaluation-R37.
  * <p>
- * 평가의 질문은 넘긴 체계에서 읽는다. 질문 이름은 태그 종류 접두에 태그 키를 붙인 것이고, 응답은 같은 이름으로 답을 돌려준다. 형식 선택지는
- * 체계 순서, 중요도 수준 설명은 수준 순이다 — 응답의 수준 위치는 이 순서로 되찾는다({@link JevResponse}). 사건 소속 판정의 질문은 후보
+ * 평가의 질문은 넘긴 질문 묶음에서 읽는다. 질문 이름은 태그 종류 접두에 태그 키를 붙인 것이고, 응답은 같은 이름으로 답을 돌려준다. 형식 선택지는
+ * 질문 묶음 순서, 중요도 수준 설명은 수준 순이다 — 응답의 수준 위치는 이 순서로 되찾는다({@link JevResponse}). 사건 소속 판정의 질문은 후보
  * 사건마다 Yes/No 하나이고, 이름은 {@value #EVENT_PREFIX} 에 사건 ID 를 붙인 것, 문장은 넘긴 문구로 만든다.
  */
 public final class JevRequest {
@@ -52,14 +52,14 @@ public final class JevRequest {
 	private JevRequest() {
 	}
 
-	/** 평가 요청 — state 는 {@link #state}, 질문은 체계의 모든 질문 */
-	public static String body(String model, EvaluationInput input, TagSetView tagSet) {
-		return write(model, state(input), tagSet);
+	/** 평가 요청 — state 는 {@link #state}, 질문은 질문 묶음의 모든 질문 */
+	public static String body(String model, EvaluationInput input, TagQuestions questions) {
+		return write(model, state(input), questions);
 	}
 
 	/** 문맥 초과 확인 요청 — 같은 질문, 빈 state */
-	public static String probeBody(String model, TagSetView tagSet) {
-		return write(model, "", tagSet);
+	public static String probeBody(String model, TagQuestions questions) {
+		return write(model, "", questions);
 	}
 
 	/** 사건 소속 판정 요청 — state 는 제목 줄 · 요약 줄, 질문은 후보 사건마다 Yes/No 하나(넘긴 순서) */
@@ -110,23 +110,23 @@ public final class JevRequest {
 		return questions;
 	}
 
-	private static String write(String model, String state, TagSetView tagSet) {
+	private static String write(String model, String state, TagQuestions asked) {
 		Map<String, Object> questions = new LinkedHashMap<>();
-		for (TopicCategory category : tagSet.topics()) {
+		for (TopicCategory category : asked.topics()) {
 			for (AskedTag subtopic : category.subtopics()) {
 				questions.put(TOPIC_PREFIX + subtopic.key(), yesNo(subtopic.question()));
 			}
 		}
-		for (AskedTag region : tagSet.regions()) {
+		for (AskedTag region : asked.regions()) {
 			questions.put(REGION_PREFIX + region.key(), yesNo(region.question()));
 		}
 		Map<String, String> options = new LinkedHashMap<>();
-		for (FormatOption option : tagSet.format().options()) {
+		for (FormatOption option : asked.format().options()) {
 			options.put(option.key(), option.description());
 		}
-		questions.put(FORMAT, question("choice", tagSet.format().question(), options));
-		List<String> levels = tagSet.importance().levels().stream().map(ImportanceLevel::description).toList();
-		questions.put(IMPORTANCE, question("score", tagSet.importance().question(), levels));
+		questions.put(FORMAT, question("choice", asked.format().question(), options));
+		List<String> levels = asked.importance().levels().stream().map(ImportanceLevel::description).toList();
+		questions.put(IMPORTANCE, question("score", asked.importance().question(), levels));
 		return write(model, state, questions);
 	}
 

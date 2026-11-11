@@ -24,7 +24,7 @@ class JevRequestTests {
 
 	@Test
 	void asksEveryQuestionOfTheTagSetInOneRequest() {
-		assertThat(JevRequest.body("jev-latest", INPUT, TAG_SET)).isEqualTo("{\"model\":\"jev-latest\","
+		assertThat(JevRequest.body("jev-latest", INPUT, TAG_SET.questions())).isEqualTo("{\"model\":\"jev-latest\","
 				+ "\"state\":\"출처: 경향신문 / 피드 섹션: 정치 / 카테고리: 정치일반, 국회\\n출처: 동아일보\\n제목: 합당론 내놓은 대표\\n요약: 지도부 안에서 불쾌 기류가 돈다\","
 				+ "\"questions\":{"
 				+ "\"topic.politics.executive\":{\"type\":\"noul\",\"instructions\":\"주제가 대통령실과 행정부인가\"},"
@@ -39,7 +39,7 @@ class JevRequestTests {
 
 	@Test
 	void probesWithTheSameQuestionsAndAnEmptyState() {
-		assertThat(JevRequest.probeBody("jev-1.14.0", TAG_SET)).startsWith("{\"model\":\"jev-1.14.0\",\"state\":\"\","
+		assertThat(JevRequest.probeBody("jev-1.14.0", TAG_SET.questions())).startsWith("{\"model\":\"jev-1.14.0\",\"state\":\"\","
 				+ "\"questions\":{\"topic.politics.executive\":{\"type\":\"noul\",\"instructions\":\"주제가 대통령실과 행정부인가\"},")
 			.endsWith("\"criteria\":[\"가벼운 화제\",\"업계 소식\",\"사회 전반\"]}}}");
 	}

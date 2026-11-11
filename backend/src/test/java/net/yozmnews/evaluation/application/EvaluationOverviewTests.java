@@ -15,6 +15,7 @@ import net.yozmnews.evaluation.EvaluationOverview;
 import net.yozmnews.evaluation.EvaluationPeriod;
 import net.yozmnews.evaluation.MultiTagKind;
 import net.yozmnews.evaluation.Share;
+import net.yozmnews.evaluation.TagJudgementId;
 import net.yozmnews.evaluation.TagSetAdministration;
 import net.yozmnews.evaluation.TagSetDirectory;
 import net.yozmnews.evaluation.TagSetId;
@@ -88,6 +89,7 @@ class EvaluationOverviewTests {
 	void reset() {
 		this.jdbc.sql("delete from article_tags").update();
 		this.jdbc.sql("delete from article_evaluations").update();
+		this.jdbc.sql("delete from article_tag_judgements").update();
 		TagBackfillRows.removeAll(this.jdbc);
 		TagSetRows.removeVersionsAfterFirst(this.jdbc);
 		TagSetRows.resetThresholds(this.jdbc);
@@ -106,6 +108,37 @@ class EvaluationOverviewTests {
 		// 기간 밖 둘 — 시작 직전 · 끝
 		insert(3, Instant.parse("2026-10-27T14:59:59Z"), 3.0, 2_000, List.of(topic("politics.executive", 0.9)));
 		insert(4, Instant.parse("2026-11-03T15:00:00Z"), 3.0, 2_000, List.of(topic("politics.executive", 0.9)));
+	}
+
+	@Test
+	void inputTokensAreReadFromTheJudgementsAcrossCursorBatchesAndAnEvaluationWithoutOneIsLeftOut() {
+		// 기간 안 1,001건을 더한다 — 흘려 받기 커서 한 묶음(1,000행)과 판정 원본 조회 한 묶음(1,000건)을 넘는다.
+		// 모두 1,250 토큰이라 기존 기간 안 둘(1,000 · 1,500)과 합친 평균도 1,250 이다
+		this.jdbc.sql("""
+				with judged as (
+				  insert into article_tag_judgements (article_id, evaluator, model_version, raw_response, input_tokens,
+				      judged_at)
+				  select 10_000 + n, 'fake', 'fake-1', '{}', 1250, cast(:at as timestamptz)
+				  from generate_series(1, 1001) n
+				  returning id, article_id
+				)
+				insert into article_evaluations (article_id, tag_set_id, judgement_id, format_key, format_probability,
+				    format_distribution, importance, importance_distribution, evaluated_at)
+				select article_id, :version, id, 'straight', 0.7, '{}', 3.0, '{}', cast(:at as timestamptz) from judged
+				""").param("at", "2026-11-02T00:00:00Z").param("version", this.first.value()).update();
+		// 판정 원본이 없는 평가 — 지운 기사 따르기의 두 트랜잭션 사이에 보일 수 있다. 세지 않는다(tag-R29)
+		this.jdbc.sql("""
+				insert into article_evaluations (article_id, tag_set_id, judgement_id, format_key, format_probability,
+				    format_distribution, importance, importance_distribution, evaluated_at)
+				values (20_000, :version, 987_654_321, 'straight', 0.7, '{}', 3.0, '{}', '2026-11-02T00:00:00Z')
+				""").param("version", this.first.value()).update();
+
+		EvaluationOverview overview = this.administration.overview(this.first, PERIOD).orElseThrow();
+
+		assertThat(overview.evaluations()).isEqualTo(1_003);
+		assertThat(overview.inputTokens().mean()).isEqualTo(1_250.0);
+		assertThat(overview.inputTokens().min()).isEqualTo(1_000);
+		assertThat(overview.inputTokens().max()).isEqualTo(1_500);
 	}
 
 	@Test
@@ -216,8 +249,9 @@ class EvaluationOverviewTests {
 	}
 
 	private void insert(long article, Instant at, @Nullable Double importance, int tokens, List<StoredTag> tags) {
-		this.results.insert(new EvaluationRecord(new ArticleId(article), this.first, "fake", "fake-1", "straight", 0.7,
-				Map.of("straight", 0.7, "opinion", 0.3), importance, Map.of(3, 1.0), tags, "{}", tokens, at));
+		TagJudgementId judgement = TagJudgementRows.insert(this.jdbc, article, "fake", "fake-1", "{}", tokens, at);
+		this.results.insert(new EvaluationRecord(new ArticleId(article), this.first, judgement, "straight", 0.7,
+				Map.of("straight", 0.7, "opinion", 0.3), importance, Map.of(3, 1.0), tags, at));
 	}
 
 	private static StoredTag topic(String key, double probability) {

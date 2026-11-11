@@ -1,7 +1,6 @@
 package net.yozmnews.evaluation.adapter.in.job;
 
 import net.yozmnews.evaluation.application.TagBackfillRound;
-import net.yozmnews.evaluation.domain.evaluator.ArticleEvaluator;
 import net.yozmnews.platform.WorkerRole;
 import org.jobrunr.jobs.annotations.Job;
 import org.jobrunr.jobs.annotations.Recurring;
@@ -21,17 +20,15 @@ public class BackfillMissingTagsJob {
 
 	private final TagBackfillRound round;
 
-	private final ArticleEvaluator evaluator;
 
-	BackfillMissingTagsJob(TagBackfillRound round, ArticleEvaluator evaluator) {
+	BackfillMissingTagsJob(TagBackfillRound round) {
 		this.round = round;
-		this.evaluator = evaluator;
 	}
 
 	@Recurring(id = ID, interval = "PT1M")
 	@Job(name = "빠진 태그 채움", retries = 0)
 	public void run() {
-		this.round.run(this.evaluator);
+		this.round.run();
 	}
 
 }

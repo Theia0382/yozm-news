@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import net.yozmnews.evaluation.ArticleTagging;
 import net.yozmnews.evaluation.EvaluationCursor;
 import net.yozmnews.evaluation.EvaluationDetailView;
 import net.yozmnews.evaluation.EvaluationFilter;
@@ -55,14 +56,17 @@ class EvaluationReviewService implements EvaluationReview {
 
 	private final ThresholdRepository thresholds;
 
+	private final ArticleTagging tagging;
+
 	private final TransactionTemplate snapshot;
 
 	EvaluationReviewService(EvaluationResultRepository results, TagSetRepository tagSets, TagSetViews views,
-			ThresholdRepository thresholds, PlatformTransactionManager transactions) {
+			ThresholdRepository thresholds, ArticleTagging tagging, PlatformTransactionManager transactions) {
 		this.results = results;
 		this.tagSets = tagSets;
 		this.views = views;
 		this.thresholds = thresholds;
+		this.tagging = tagging;
 		this.snapshot = new TransactionTemplate(transactions);
 		this.snapshot.setReadOnly(true);
 		this.snapshot.setIsolationLevel(TransactionDefinition.ISOLATION_REPEATABLE_READ);
@@ -152,12 +156,14 @@ class EvaluationReviewService implements EvaluationReview {
 	@Override
 	public Optional<EvaluationDetailView> detail(EvaluationId id) {
 		Objects.requireNonNull(id, "id");
-		return Objects.requireNonNull(this.snapshot.execute(status -> this.results.findDetail(id).map(detail -> {
+		// 판정 원본이 없는 평가(지운 기사 따르기의 두 트랜잭션 사이)는 빈 값이다(tag-R21)
+		return Objects.requireNonNull(this.snapshot.execute(status -> this.results.findDetail(id).flatMap(detail -> {
 			TagSetId version = detail.evaluation().tagSetId();
 			TagSetView tagSet = this.views.of(version);
 			TagSetThresholds current = this.thresholds.current(version);
 			Judged judged = TagJudgement.judge(detail.evaluation().tags(), tagSet, current);
-			return EvaluationReviewViews.detail(detail, tagSet, current, judged);
+			return Optional.ofNullable(this.tagging.find(List.of(detail.judgementId())).get(detail.judgementId()))
+				.map(judgement -> EvaluationReviewViews.detail(detail, judgement, tagSet, current, judged));
 		})));
 	}
 

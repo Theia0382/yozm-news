@@ -45,16 +45,19 @@ class ThresholdPreviews {
 
 	private final StoreFloorsReader floors;
 
+	private final JudgedSamples samples;
+
 	private final TransactionTemplate snapshot;
 
 	ThresholdPreviews(TagSetRepository tagSets, TagSetViews views, ThresholdRepository thresholds,
-			EvaluationResultRepository results, StoreFloorsReader floors,
+			EvaluationResultRepository results, StoreFloorsReader floors, JudgedSamples samples,
 			PlatformTransactionManager transactions) {
 		this.tagSets = tagSets;
 		this.views = views;
 		this.thresholds = thresholds;
 		this.results = results;
 		this.floors = floors;
+		this.samples = samples;
 		this.snapshot = new TransactionTemplate(transactions);
 		this.snapshot.setReadOnly(true);
 		this.snapshot.setIsolationLevel(TransactionDefinition.ISOLATION_REPEATABLE_READ);
@@ -96,7 +99,8 @@ class ThresholdPreviews {
 					};
 					ThresholdImpactTally tally = new ThresholdImpactTally(this.views.of(version), current, proposed,
 							kind, topicFloors, regionFloors, period);
-					this.results.streamVersionPeriod(version, period.from(), period.to(), tally::add);
+					this.samples.stream(
+							rows -> this.results.streamVersionPeriod(version, period.from(), period.to(), rows), tally::add);
 					EvaluationOverview before = tally.before();
 					yield new ThresholdPreviewResult.Previewed(version, currentKind, proposedKind, change.warnings(),
 							before.evaluations(), tally.changed(), before, tally.after());

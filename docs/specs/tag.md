@@ -886,7 +886,7 @@ sequenceDiagram
 - `TagKeyLineageService` — 공개 API `TagKeyLineage` 의 구현(tag-R26). 트랜잭션 · 역할 애너테이션이 없다
 - `EvaluationReviewService` — 공개 운영 API `EvaluationReview` 의 구현(tag-R33 · R34). 읽기 전용 `REPEATABLE READ` `TransactionTemplate` 안에서 읽는다. 역할 애너테이션이 없다
 - `EvaluationReviewViews` — 저장된 평가와 판정을 검수의 공개 값(`EvaluationRow` · `EvaluationDetailView`)으로 옮기는 정본
-- `JudgedSamples` — 흘려 받은 `SampleRow` 를 묶음마다 모아 `ArticleTagging.find` 로 판정 원본의 입력 토큰을 붙여 `EvaluationSample` 로 넘기는 정본 — 평가 현황 · 기준 미리보기가 쓴다. 부르는 쪽 트랜잭션 안에서 읽는다. 판정 원본이 없는 평가(지운 기사 따르기가 두 모듈의 두 트랜잭션이라 그 사이에 보일 수 있다)는 넘기지 않는다(tag-R29)
+- `JudgedSamples` — 흘려 받은 `SampleRow` 를 묶음(`JudgedSamples.BATCH`(1,000 — 판정 원본 조회 묶음, 측정 전 목표))마다 모아 `ArticleTagging.find` 로 판정 원본의 입력 토큰을 붙여 `EvaluationSample` 로 넘기는 정본 — 평가 현황 · 기준 미리보기가 쓴다. 부르는 쪽 트랜잭션 안에서 읽는다. 판정 원본이 없는 평가(지운 기사 따르기가 두 모듈의 두 트랜잭션이라 그 사이에 보일 수 있다)는 넘기지 않는다(tag-R29)
 - `ThresholdPreviews` — 기준 미리보기(tag-R35). 읽기 전용 `REPEATABLE READ` `TransactionTemplate` 안에서 읽는다 — 저장 바닥은 `StoreFloorsReader` 에서 얻는다. `TagSetAdministrationService` 가 맡긴다
 - `StoreFloorsReader` — 저장 바닥 결선(tag-R32). 그 버전 · 태그 종류의 이력(부르는 쪽이 같은 트랜잭션에서 읽어 넘긴다)과 `TagBackfillRepository.coverages` 로 `StoreFloors` 를 만든다. 트랜잭션을 열지 않는다 — 부르는 쪽의 트랜잭션 안에서 읽는다. 역할 애너테이션이 없다(두 역할 공통). 기준 변경 · 기준 상태 · 기준 미리보기 · 평가 현황이 쓴다
 
@@ -1028,7 +1028,7 @@ sequenceDiagram
   흘려 받기(`streamVersionPeriod` · `streamFirstEvaluatedIn` · `scanNewestFirst` · `streamIds`)는 결과를 담아 두지 않고 커서로 나눠 받으므로 트랜잭션 안에서 부른다 — 밖이면 `IllegalStateException`(tag-R29 · R30 · R33 · R34). `scanNewestFirst` 의 `required` 는 거르기의 필요조건(그 태그 종류의 그 키들 가운데 하나의 저장 행이 있다)이고 `formatKey` 는 저장된 대표 형식이 그것인 평가만이다 — 붙었는지는 판정이 정한다(tag-R33)
 
 - 그 밖의 값: `StoredTag` · `StoredEvaluation` · `SampleRow`(저장된 평가 · 대표 형식의 확률 · 판정 원본 ID) · `ListedEvaluation`(평가 ID · 평가 시각 · `SampleRow`) · `StoredEvaluationDetail`(평가 ID · 평가 시각 · 판정 원본 ID · 형식 분포 · 중요도 분포 · `StoredEvaluation`) · `BackfillTarget`(채움이 다시 읽을 평가 — 평가 ID · 기사 · 버전 · 판정 원본 ID)
-- 평가기 · 모델 버전 · 원본 응답 · 입력 토큰은 이 저장소에 없다 — 판정 원본(`evaluation`)에 있고, 평가 행은 판정 원본 ID(`judgement_id`)만 갖는다. 입력 토큰이 필요한 집계(평가 현황 · 기준 미리보기)는 `application` 의 `JudgedSamples` 가 `SampleRow` 를 묶음(`STREAM_FETCH_SIZE`)마다 모아 `ArticleTagging.find` 로 입력 토큰을 붙여 `EvaluationSample` 로 옮긴다 — 커서를 연 같은 트랜잭션 · 같은 연결에서 읽는다
+- 평가기 · 모델 버전 · 원본 응답 · 입력 토큰은 이 저장소에 없다 — 판정 원본(`evaluation`)에 있고, 평가 행은 판정 원본 ID(`judgement_id`)만 갖는다. 입력 토큰이 필요한 집계(평가 현황 · 기준 미리보기)는 `application` 의 `JudgedSamples` 가 `SampleRow` 를 묶음(`JudgedSamples.BATCH`(1,000 — 판정 원본 조회 묶음, 측정 전 목표))마다 모아 `ArticleTagging.find` 로 입력 토큰을 붙여 `EvaluationSample` 로 옮긴다 — 커서를 연 같은 트랜잭션 · 같은 연결에서 읽는다
 
 #### `domain/overview`
 

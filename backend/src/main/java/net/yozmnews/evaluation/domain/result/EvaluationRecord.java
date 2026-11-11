@@ -10,11 +10,12 @@ import net.yozmnews.article.ArticleId;
 import net.yozmnews.evaluation.AskedTag;
 import net.yozmnews.evaluation.FormatOption;
 import net.yozmnews.evaluation.MultiTagKind;
+import net.yozmnews.evaluation.TagAnswers;
+import net.yozmnews.evaluation.TagJudgementId;
 import net.yozmnews.evaluation.TagSetId;
 import net.yozmnews.evaluation.TagSetThresholds;
 import net.yozmnews.evaluation.TagSetView;
 import net.yozmnews.evaluation.TagThresholds;
-import net.yozmnews.evaluation.domain.evaluator.Evaluation;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -25,36 +26,34 @@ import org.jspecify.annotations.Nullable;
  * @param importance 중요도 기대값 — 확률 합이 0 이면 null
  * @param tags 저장 기준 이상인 주제 · 지역 태그 — 주제 다음 지역, 체계 순서
  */
-public record EvaluationRecord(ArticleId articleId, TagSetId tagSetId, String evaluator, String modelVersion,
-		String formatKey, double formatProbability, Map<String, Double> formatDistribution,
-		@Nullable Double importance, Map<Integer, Double> importanceDistribution, List<StoredTag> tags,
-		String rawResponse, int inputTokens, Instant evaluatedAt) {
+public record EvaluationRecord(ArticleId articleId, TagSetId tagSetId, TagJudgementId judgementId, String formatKey,
+		double formatProbability, Map<String, Double> formatDistribution, @Nullable Double importance,
+		Map<Integer, Double> importanceDistribution, List<StoredTag> tags, Instant evaluatedAt) {
 
 	public EvaluationRecord {
 		Objects.requireNonNull(articleId, "articleId");
 		Objects.requireNonNull(tagSetId, "tagSetId");
-		Objects.requireNonNull(evaluator, "evaluator");
-		Objects.requireNonNull(modelVersion, "modelVersion");
+		Objects.requireNonNull(judgementId, "judgementId");
 		Objects.requireNonNull(formatKey, "formatKey");
 		formatDistribution = Map.copyOf(formatDistribution);
 		importanceDistribution = Map.copyOf(importanceDistribution);
 		tags = List.copyOf(tags);
-		Objects.requireNonNull(rawResponse, "rawResponse");
 		Objects.requireNonNull(evaluatedAt, "evaluatedAt");
 	}
 
 	/**
-	 * 평가 결과를 저장할 모양으로 옮긴다. 결과는 {@link ResultCheck} 로 체계와 맞는지 본 것이어야 한다.
+	 * 태그 판정의 답을 저장할 모양으로 옮긴다. 답은 판정 때 {@code evaluation} 이 질문 묶음과 대조한 것이다.
+	 * @param judgementId 판정 원본 — {@code evaluation} 이 남긴 것
 	 * @param thresholds 평가 때의 태그 기준 · 저장 기준 — 체계와 같은 버전
 	 * @throws IllegalArgumentException 기준의 버전이 체계와 다를 때
 	 */
-	public static EvaluationRecord of(ArticleId articleId, Evaluation evaluation, TagSetView tagSet,
-			TagSetThresholds thresholds, Instant evaluatedAt) {
-		List<StoredTag> tags = storedTags(evaluation, tagSet, thresholds);
+	public static EvaluationRecord of(ArticleId articleId, TagJudgementId judgementId, TagAnswers answers,
+			TagSetView tagSet, TagSetThresholds thresholds, Instant evaluatedAt) {
+		List<StoredTag> tags = storedTags(answers, tagSet, thresholds);
 		FormatOption chosen = null;
 		double chosenProbability = 0;
 		for (FormatOption option : tagSet.format().options()) {
-			double probability = evaluation.formats().get(option.key());
+			double probability = answers.formats().get(option.key());
 			if (chosen == null || probability > chosenProbability) {
 				chosen = option;
 				chosenProbability = probability;
@@ -63,9 +62,8 @@ public record EvaluationRecord(ArticleId articleId, TagSetId tagSetId, String ev
 		if (chosen == null) {
 			throw new IllegalArgumentException("형식 선택지가 없다");
 		}
-		return new EvaluationRecord(articleId, tagSet.id(), evaluation.evaluator(), evaluation.modelVersion(),
-				chosen.key(), chosenProbability, evaluation.formats(), ImportanceScore.expected(evaluation.importance()),
-				evaluation.importance(), tags, evaluation.rawResponse(), evaluation.inputTokens(), evaluatedAt);
+		return new EvaluationRecord(articleId, tagSet.id(), judgementId, chosen.key(), chosenProbability,
+				answers.formats(), ImportanceScore.expected(answers.importance()), answers.importance(), tags, evaluatedAt);
 	}
 
 	/**
@@ -73,12 +71,12 @@ public record EvaluationRecord(ArticleId articleId, TagSetId tagSetId, String ev
 	 * @param thresholds 거를 저장 기준 — 체계와 같은 버전. 태그 기준은 쓰지 않는다
 	 * @throws IllegalArgumentException 기준의 버전이 체계와 다를 때
 	 */
-	public static List<StoredTag> storedTags(Evaluation evaluation, TagSetView tagSet, TagSetThresholds thresholds) {
+	public static List<StoredTag> storedTags(TagAnswers answers, TagSetView tagSet, TagSetThresholds thresholds) {
 		VersionMatch.require(thresholds, tagSet);
 		List<StoredTag> tags = new ArrayList<>();
 		List<AskedTag> subtopics = tagSet.topics().stream().flatMap(category -> category.subtopics().stream()).toList();
-		stored(tags, thresholds.topic(), subtopics, evaluation.topics());
-		stored(tags, thresholds.region(), tagSet.regions(), evaluation.regions());
+		stored(tags, thresholds.topic(), subtopics, answers.topics());
+		stored(tags, thresholds.region(), tagSet.regions(), answers.regions());
 		return tags;
 	}
 

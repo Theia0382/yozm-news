@@ -12,17 +12,17 @@ import java.util.List;
 import java.util.Map;
 
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.evaluation.ArticleTagging;
 import net.yozmnews.evaluation.MultiTagKind;
 import net.yozmnews.evaluation.TagBackfillRequestResult;
 import net.yozmnews.evaluation.TagBackfillRunView;
 import net.yozmnews.evaluation.TagBackfillState;
 import net.yozmnews.evaluation.TagBackfillVersionView;
+import net.yozmnews.evaluation.TagReread;
 import net.yozmnews.evaluation.TagSetAdministration;
 import net.yozmnews.evaluation.TagSetId;
 import net.yozmnews.evaluation.ThresholdChangeResult;
 import net.yozmnews.evaluation.ThresholdWarning;
-import net.yozmnews.evaluation.adapter.out.jev.JevArticleEvaluator;
-import net.yozmnews.evaluation.adapter.out.jev.JevEvaluators;
 import net.yozmnews.evaluation.domain.backfill.TagBackfillRepository;
 import net.yozmnews.evaluation.domain.result.EvaluationResultRepository;
 import net.yozmnews.evaluation.domain.tagset.TagSetRepository;
@@ -40,7 +40,8 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 빠진 태그 채움의 흐름 — 요청 → 회차 → 결과를 실제 Jev 평가기의 다시 읽기와 실제 PostgreSQL 로 본다. 버전 2 는 2026-10-01 에 처음 값(저장
+ * 빠진 태그 채움의 흐름 — 요청 → 회차 → 결과를 실제 PostgreSQL 로 본다. 다시 읽기의 결과(읽음 · 다른 평가기 · 읽을 수 없음)는
+ * 대역({@link ScriptedTagging})의 대본이다 — 원본 응답 해석은 관문 시험이 본다. 버전 2 는 2026-10-01 에 처음 값(저장
  * 기준 0.1)으로 만들고 10-02 에 주제 저장 기준을 0.3 으로 올려 10-05 에 평가한 뒤 10-25 에 0.1 로 내렸다 — 그 평가에는 0.3 이상 주제만
  * 저장돼 있다. 버전 1 은 은퇴했고 저장 기준이 0.1 이다.
  */
@@ -88,9 +89,10 @@ class TagBackfillFlowTests {
 	TransactionTemplate transaction;
 
 	@Autowired
-	JdbcClient jdbc;
+	ArticleTagging tagging;
 
-	private final JevArticleEvaluator jev = JevEvaluators.offline();
+	@Autowired
+	JdbcClient jdbc;
 
 	private BackfillScenario scenario;
 
@@ -101,7 +103,7 @@ class TagBackfillFlowTests {
 	@BeforeEach
 	void aVersionWhoseStoreThresholdWasRaisedAndLowered() {
 		this.scenario = new BackfillScenario(this.tagSetAdministration, this.tagSets, this.thresholds, this.results,
-				this.views, this.transaction, this.jdbc);
+				this.transaction, this.jdbc);
 		this.scenario.reset();
 		this.first = this.tagSets.findByActiveTrue().orElseThrow().id();
 		this.second = this.scenario.nextVersionAt(CREATED);
@@ -111,22 +113,22 @@ class TagBackfillFlowTests {
 	@AfterEach
 	void reset() {
 		this.scenario.reset();
-		this.jev.close();
 	}
 
 	@Test
 	void theStoredRawResponsesFillTheMissingTagsOfEveryVersionInTheRange() {
-		this.scenario.insertJev(this.second, 7001, EVALUATED,
+		this.scenario.insertRead(this.second, 7001, EVALUATED,
 				Map.of("politics.executive", 0.45, "politics.legislature", 0.25, "politics.north-korea", 0.12,
 						"economy.finance", 0.05),
 				Map.of("domestic", 0.9), List.of(topic("politics.executive", 0.45), region("domestic", 0.9)));
 		// 은퇴한 버전 1 의 평가 — 그 버전의 지금 저장 기준(0.1)까지 채운다
-		this.scenario.insertJev(this.first, 7002, EVALUATED, Map.of("politics.executive", 0.45, "economy.finance", 0.2),
-				Map.of(), List.of(topic("politics.executive", 0.45)));
-		this.scenario.insert(this.first, 7003, EVALUATED, "fake", "{\"evaluator\":\"fake\"}", List.of());
-		this.scenario.insert(this.first, 7004, EVALUATED, "jev", "{\"model\":\"jev-1.14.0\"}", List.of());
+		this.scenario.insertRead(this.first, 7002, EVALUATED,
+				Map.of("politics.executive", 0.45, "economy.finance", 0.2), Map.of(),
+				List.of(topic("politics.executive", 0.45)));
+		this.scenario.insertUnread(this.first, 7003, EVALUATED, TagReread.Unread.Reason.OTHER_EVALUATOR, List.of());
+		this.scenario.insertUnread(this.first, 7004, EVALUATED, TagReread.Unread.Reason.UNREADABLE, List.of());
 		// 범위(10-01 ~ 10-31) 밖 — 손대지 않는다
-		this.scenario.insertJev(this.second, 7005, CREATED.minusSeconds(1), Map.of("politics.legislature", 0.25),
+		this.scenario.insertRead(this.second, 7005, CREATED.minusSeconds(1), Map.of("politics.legislature", 0.25),
 				Map.of(), List.of());
 		this.scenario.changeTopicStoreAt(this.second, "0.1", LOWERED);
 
@@ -152,7 +154,7 @@ class TagBackfillFlowTests {
 
 	@Test
 	void runningAgainAddsNothing() {
-		this.scenario.insertJev(this.second, 7001, EVALUATED, Map.of("politics.legislature", 0.25), Map.of(),
+		this.scenario.insertRead(this.second, 7001, EVALUATED, Map.of("politics.legislature", 0.25), Map.of(),
 				List.of());
 		this.scenario.changeTopicStoreAt(this.second, "0.1", LOWERED);
 		requestAndRun(REQUESTED, 30);
@@ -166,7 +168,7 @@ class TagBackfillFlowTests {
 
 	@Test
 	void afterTheBackfillTheTagThresholdBelowThePastStoreThresholdIsNotWarned() {
-		this.scenario.insertJev(this.second, 7001, EVALUATED, Map.of("politics.legislature", 0.25), Map.of(),
+		this.scenario.insertRead(this.second, 7001, EVALUATED, Map.of("politics.legislature", 0.25), Map.of(),
 				List.of());
 		this.scenario.changeTopicStoreAt(this.second, "0.1", LOWERED);
 		requestAndRun(REQUESTED, 30);
@@ -177,7 +179,7 @@ class TagBackfillFlowTests {
 	@Test
 	void aBackfillRequestedWithinTheReadLagOfTheLoweringLeavesTheWarning() {
 		// 대조 — 내린 뒤 10분에 요청하면 "요청 시각 ~ 내린 시각 + 30분" 의 평가는 옛 기준(0.3)으로 저장됐을 수 있다
-		this.scenario.insertJev(this.second, 7001, EVALUATED, Map.of("politics.legislature", 0.25), Map.of(),
+		this.scenario.insertRead(this.second, 7001, EVALUATED, Map.of("politics.legislature", 0.25), Map.of(),
 				List.of());
 		this.scenario.changeTopicStoreAt(this.second, "0.1", LOWERED);
 		requestAndRun(LOWERED.plus(Duration.ofMinutes(10)), 30);
@@ -191,9 +193,10 @@ class TagBackfillFlowTests {
 		TagBackfillAdministrationService administration = new TagBackfillAdministrationService(this.tagSets,
 				this.thresholds, this.results, this.backfills, this.transaction, InstantSource.fixed(at));
 		TagBackfillRunView requested = ((TagBackfillRequestResult.Requested) administration.request(days)).run();
-		new TagBackfillRound(this.backfills, this.results, this.thresholds, this.views, this.transaction,
+		new TagBackfillRound(this.backfills, this.results, this.thresholds, this.views,
+				new ScriptedTagging(this.tagging).rereading(this.scenario::reread), this.transaction,
 				InstantSource.fixed(at.plus(Duration.ofMinutes(2))))
-			.run(this.jev);
+			.run();
 		return this.backfills.run(requested.id()).orElseThrow();
 	}
 

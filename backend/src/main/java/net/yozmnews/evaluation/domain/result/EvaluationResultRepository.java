@@ -13,7 +13,6 @@ import net.yozmnews.article.ArticleId;
 import net.yozmnews.evaluation.EvaluationCursor;
 import net.yozmnews.evaluation.EvaluationId;
 import net.yozmnews.evaluation.TagSetId;
-import net.yozmnews.evaluation.domain.overview.EvaluationSample;
 import net.yozmnews.evaluation.domain.review.StoredKeys;
 import org.jspecify.annotations.Nullable;
 
@@ -42,7 +41,7 @@ public interface EvaluationResultRepository {
 	 * 나눠 받는다. 커서는 트랜잭션 안에서만 나눠 받으므로 트랜잭션 안에서 부른다.
 	 * @throws IllegalStateException 트랜잭션 밖에서 불렀을 때
 	 */
-	void streamVersionPeriod(TagSetId version, Instant from, Instant to, Consumer<EvaluationSample> sink);
+	void streamVersionPeriod(TagSetId version, Instant from, Instant to, Consumer<SampleRow> sink);
 
 	/**
 	 * 첫 평가 시각(그 기사 평가 행의 가장 이른 평가 시각)이 {@code [from, to)} 인 기사마다 최신 버전 평가와 그 주제 태그 행을 기사 ID 순으로
@@ -78,7 +77,7 @@ public interface EvaluationResultRepository {
 	 * 평가 시각이 {@code [from, to)} 이고 평가 ID 가 {@code afterId} 보다 큰 평가를 평가 ID 순으로 {@code limit} 건 읽는다 — 평가 행을
 	 * 키 공유 잠금으로 잡아 그 트랜잭션 동안 지우기가 기다린다. 트랜잭션 안에서 부른다
 	 */
-	List<StoredResponse> lockResponses(Instant from, Instant to, long afterId, int limit);
+	List<BackfillTarget> lockForBackfill(Instant from, Instant to, long afterId, int limit);
 
 	/** 그 평가에 없는 태그 행만 더한다 — 더한 행 수. 있는 행은 그대로다 */
 	int addMissingTags(long evaluationId, ArticleId articleId, List<StoredTag> tags);

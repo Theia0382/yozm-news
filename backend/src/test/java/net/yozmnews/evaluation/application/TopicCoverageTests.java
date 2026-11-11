@@ -14,6 +14,7 @@ import net.yozmnews.evaluation.CategoryCoverage;
 import net.yozmnews.evaluation.EvaluationPeriod;
 import net.yozmnews.evaluation.MultiTagKind;
 import net.yozmnews.evaluation.SubtopicCoverage;
+import net.yozmnews.evaluation.TagJudgementId;
 import net.yozmnews.evaluation.TagSetAdministration;
 import net.yozmnews.evaluation.TagSetDirectory;
 import net.yozmnews.evaluation.TagSetId;
@@ -86,6 +87,7 @@ class TopicCoverageTests {
 	void reset() {
 		this.jdbc.sql("delete from article_tags").update();
 		this.jdbc.sql("delete from article_evaluations").update();
+		this.jdbc.sql("delete from article_tag_judgements").update();
 		TagSetRows.removeVersionsAfterFirst(this.jdbc);
 		TagSetRows.resetThresholds(this.jdbc);
 		this.settings.seen.clear();
@@ -181,8 +183,10 @@ class TopicCoverageTests {
 	}
 
 	private void insert(long article, TagSetId version, String at, List<StoredTag> tags) {
-		this.results.insert(new EvaluationRecord(new ArticleId(article), version, "fake", "fake-1", "straight", 0.7,
-				Map.of("straight", 0.7, "opinion", 0.3), 3.0, Map.of(3, 1.0), tags, "{}", 1_000, Instant.parse(at)));
+		TagJudgementId judgement = TagJudgementRows.insert(this.jdbc, article, "fake", "fake-1", "{}", 1_000,
+				Instant.parse(at));
+		this.results.insert(new EvaluationRecord(new ArticleId(article), version, judgement, "straight", 0.7,
+				Map.of("straight", 0.7, "opinion", 0.3), 3.0, Map.of(3, 1.0), tags, Instant.parse(at)));
 	}
 
 	private static StoredTag topic(String key, double probability) {

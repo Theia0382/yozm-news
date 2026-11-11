@@ -25,6 +25,7 @@ import net.yozmnews.evaluation.EvaluationSampleView;
 import net.yozmnews.evaluation.MultiTagKind;
 import net.yozmnews.evaluation.NamedTag;
 import net.yozmnews.evaluation.StoredTagView;
+import net.yozmnews.evaluation.TagJudgementId;
 import net.yozmnews.evaluation.TagKind;
 import net.yozmnews.evaluation.TagName;
 import net.yozmnews.evaluation.TagRef;
@@ -109,6 +110,7 @@ class EvaluationReviewTests {
 	void reset() {
 		this.jdbc.sql("delete from article_tags").update();
 		this.jdbc.sql("delete from article_evaluations").update();
+		this.jdbc.sql("delete from article_tag_judgements").update();
 		TagSetRows.removeVersionsAfterFirst(this.jdbc);
 		TagSetRows.resetThresholds(this.jdbc);
 		this.settings.seen.clear();
@@ -331,8 +333,9 @@ class EvaluationReviewTests {
 
 	private void insert(TagSetId version, long article, Instant at, String format, double formatProbability,
 			Map<String, Double> formats, List<StoredTag> tags) {
-		this.results.insert(new EvaluationRecord(new ArticleId(article), version, "fake", "fake-1", format,
-				formatProbability, formats, 2.75, IMPORTANCE, tags, "{}", 1_234, at));
+		TagJudgementId judgement = TagJudgementRows.insert(this.jdbc, article, "fake", "fake-1", "{}", 1_234, at);
+		this.results.insert(new EvaluationRecord(new ArticleId(article), version, judgement, format, formatProbability,
+				formats, 2.75, IMPORTANCE, tags, at));
 	}
 
 	private static StoredTag topic(String key, double probability) {

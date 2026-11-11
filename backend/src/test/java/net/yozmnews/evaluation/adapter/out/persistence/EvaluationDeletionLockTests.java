@@ -13,9 +13,10 @@ import java.util.concurrent.TimeUnit;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.evaluation.MultiTagKind;
+import net.yozmnews.evaluation.TagJudgementId;
 import net.yozmnews.evaluation.TagSetId;
+import net.yozmnews.evaluation.domain.result.BackfillTarget;
 import net.yozmnews.evaluation.domain.result.EvaluationRecord;
-import net.yozmnews.evaluation.domain.result.StoredResponse;
 import net.yozmnews.evaluation.domain.result.StoredTag;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -67,9 +68,9 @@ class EvaluationDeletionLockTests {
 				values (9001, false, '{description}', '{description}', '형식', '중요도', 'SYSTEM', now())
 				returning id
 				""").query(Long.class).single());
-		this.repository.insert(new EvaluationRecord(ARTICLE, this.version, "jev", "jev-1", "straight", 0.5,
+		this.repository.insert(new EvaluationRecord(ARTICLE, this.version, new TagJudgementId(1), "straight", 0.5,
 				Map.of("straight", 0.5, "opinion", 0.5), 3.0, Map.of(3, 1.0),
-				List.of(new StoredTag(MultiTagKind.TOPIC, "politics.assembly", 0.5)), "{}", 1, AT));
+				List.of(new StoredTag(MultiTagKind.TOPIC, "politics.assembly", 0.5)), AT));
 	}
 
 	@AfterEach
@@ -86,7 +87,7 @@ class EvaluationDeletionLockTests {
 		CountDownLatch locked = new CountDownLatch(1);
 		CountDownLatch commit = new CountDownLatch(1);
 		CompletableFuture<Void> backfill = CompletableFuture.runAsync(() -> transaction().executeWithoutResult(status -> {
-			StoredResponse response = this.repository.lockResponses(AT, AT.plusSeconds(1), 0, 10).getFirst();
+			BackfillTarget response = this.repository.lockForBackfill(AT, AT.plusSeconds(1), 0, 10).getFirst();
 			this.repository.addMissingTags(response.evaluationId(), ARTICLE,
 					List.of(new StoredTag(MultiTagKind.TOPIC, "economy.finance", 0.25)));
 			locked.countDown();
@@ -118,11 +119,11 @@ class EvaluationDeletionLockTests {
 			deleted.countDown();
 			awaitQuietly(commit);
 		}));
-		CompletableFuture<List<StoredResponse>> backfill;
+		CompletableFuture<List<BackfillTarget>> backfill;
 		try {
 			assertThat(deleted.await(10, TimeUnit.SECONDS)).isTrue();
 			backfill = CompletableFuture.supplyAsync(() -> transaction()
-				.execute(status -> this.repository.lockResponses(AT, AT.plusSeconds(1), 0, 10)));
+				.execute(status -> this.repository.lockForBackfill(AT, AT.plusSeconds(1), 0, 10)));
 			Thread.sleep(300);
 			assertThat(backfill).as("지우기가 평가 행을 잡은 동안 채움이 기다린다").isNotDone();
 			commit.countDown();

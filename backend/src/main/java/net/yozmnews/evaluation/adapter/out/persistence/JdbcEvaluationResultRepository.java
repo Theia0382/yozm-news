@@ -23,14 +23,15 @@ import net.yozmnews.article.ArticleId;
 import net.yozmnews.evaluation.EvaluationCursor;
 import net.yozmnews.evaluation.EvaluationId;
 import net.yozmnews.evaluation.MultiTagKind;
+import net.yozmnews.evaluation.TagJudgementId;
 import net.yozmnews.evaluation.TagSetId;
-import net.yozmnews.evaluation.domain.overview.EvaluationSample;
+import net.yozmnews.evaluation.domain.result.BackfillTarget;
 import net.yozmnews.evaluation.domain.result.EvaluationRecord;
 import net.yozmnews.evaluation.domain.result.EvaluationResultRepository;
 import net.yozmnews.evaluation.domain.result.ListedEvaluation;
+import net.yozmnews.evaluation.domain.result.SampleRow;
 import net.yozmnews.evaluation.domain.result.StoredEvaluation;
 import net.yozmnews.evaluation.domain.result.StoredEvaluationDetail;
-import net.yozmnews.evaluation.domain.result.StoredResponse;
 import net.yozmnews.evaluation.domain.result.StoredTag;
 import net.yozmnews.evaluation.domain.review.StoredKeys;
 import org.jspecify.annotations.Nullable;
@@ -43,8 +44,9 @@ import tools.jackson.databind.json.JsonMapper;
 /**
  * {@link EvaluationResultRepository} 의 JdbcClient 구현 — docs/specs/evaluation.md §4.
  * <p>
- * 평가 행은 넣기 한 번이고 갱신하지 않는다 — aggregate 가 없다. 태그 행은 평가와 함께 넣고, 빠진 태그 채움이 없는 행만 더한다. 분포 ·
- * 원본 응답은 {@code jsonb} 로 쓴다(분포의 키는 형식 키 · 중요도 수준). 지우기는 평가 행을 평가 ID 순으로 잠근 뒤 태그 행 → 평가 행
+ * 평가 행은 넣기 한 번이고 갱신하지 않는다 — aggregate 가 없다. 태그 행은 평가와 함께 넣고, 빠진 태그 채움이 없는 행만 더한다. 분포는
+ * {@code jsonb} 로 쓴다(분포의 키는 형식 키 · 중요도 수준). 원본 응답 · 평가기 · 모델 버전 · 입력 토큰은 판정 원본({@code evaluation})에
+ * 있고, 평가 행은 판정 원본 ID 만 갖는다. 지우기는 평가 행을 평가 ID 순으로 잠근 뒤 태그 행 → 평가 행
  * 순이다 — 채움의 잠금 읽기도 평가 ID 순이라 서로 엇갈려 기다리지 않는다.
  * <p>
  * 기간 흘려 받기는 SQL 한 문장을 {@link #STREAM_FETCH_SIZE} 행씩 커서로 받아 평가 ID 가 바뀔 때 한 건을 넘긴다(태그 행은 조회와 같은 순서). PgJDBC 는 autocommit 이
@@ -60,7 +62,7 @@ class JdbcEvaluationResultRepository implements EvaluationResultRepository {
 
 	/** 평가 단위로 모아 받는 조회의 열 — 평가 행 {@code e} 와 태그 행 {@code t}. 모으기 하나({@code Streamed})가 읽는다 */
 	private static final String COLUMNS = """
-			e.id, e.article_id, e.tag_set_id, e.format_key, e.format_probability, e.importance, e.input_tokens,
+			e.id, e.article_id, e.tag_set_id, e.format_key, e.format_probability, e.importance, e.judgement_id,
 			       e.evaluated_at, t.tag_kind, t.tag_key, t.probability""";
 
 	private static final TypeReference<Map<String, Double>> FORMAT_DISTRIBUTION = new TypeReference<>() {
@@ -88,25 +90,20 @@ class JdbcEvaluationResultRepository implements EvaluationResultRepository {
 	@Override
 	public void insert(EvaluationRecord record) {
 		long evaluationId = this.jdbc.sql("""
-				insert into article_evaluations (article_id, tag_set_id, evaluator, model_version, format_key,
-				    format_probability, format_distribution, importance, importance_distribution, raw_response,
-				    input_tokens, evaluated_at)
-				values (:article, :version, :evaluator, :modelVersion, :formatKey, :formatProbability,
-				    cast(:formatDistribution as jsonb), :importance, cast(:importanceDistribution as jsonb),
-				    cast(:rawResponse as jsonb), :inputTokens, :evaluatedAt)
+				insert into article_evaluations (article_id, tag_set_id, judgement_id, format_key, format_probability,
+				    format_distribution, importance, importance_distribution, evaluated_at)
+				values (:article, :version, :judgement, :formatKey, :formatProbability, cast(:formatDistribution as jsonb),
+				    :importance, cast(:importanceDistribution as jsonb), :evaluatedAt)
 				returning id
 				""")
 			.param("article", record.articleId().value())
 			.param("version", record.tagSetId().value())
-			.param("evaluator", record.evaluator())
-			.param("modelVersion", record.modelVersion())
+			.param("judgement", record.judgementId().value())
 			.param("formatKey", record.formatKey())
 			.param("formatProbability", record.formatProbability())
 			.param("formatDistribution", JSON.writeValueAsString(new TreeMap<>(record.formatDistribution())))
 			.param("importance", record.importance(), Types.DOUBLE)
 			.param("importanceDistribution", JSON.writeValueAsString(new TreeMap<>(record.importanceDistribution())))
-			.param("rawResponse", record.rawResponse())
-			.param("inputTokens", record.inputTokens())
 			.param("evaluatedAt", timestamp(record.evaluatedAt()))
 			.query(Long.class)
 			.single();
@@ -163,7 +160,7 @@ class JdbcEvaluationResultRepository implements EvaluationResultRepository {
 	}
 
 	@Override
-	public void streamVersionPeriod(TagSetId version, Instant from, Instant to, Consumer<EvaluationSample> sink) {
+	public void streamVersionPeriod(TagSetId version, Instant from, Instant to, Consumer<SampleRow> sink) {
 		scan(this.jdbc.sql("""
 				select %s
 				from article_evaluations e
@@ -188,7 +185,7 @@ class JdbcEvaluationResultRepository implements EvaluationResultRepository {
 				                    where p.article_id = c.article_id and p.evaluated_at < c.evaluated_at)
 				), latest as (
 				  select distinct on (e.article_id) e.id, e.article_id, e.tag_set_id, e.format_key, e.format_probability,
-				         e.importance, e.input_tokens, e.evaluated_at
+				         e.importance, e.judgement_id, e.evaluated_at
 				  from article_evaluations e join tag_sets s on s.id = e.tag_set_id
 				  where e.article_id in (select article_id from firsts)
 				  order by e.article_id, %s
@@ -278,8 +275,8 @@ class JdbcEvaluationResultRepository implements EvaluationResultRepository {
 	@Override
 	public Optional<StoredEvaluationDetail> findDetail(EvaluationId id) {
 		return this.jdbc.sql("""
-				select e.id, e.article_id, e.tag_set_id, e.format_key, e.importance, e.input_tokens, e.evaluated_at,
-				       e.evaluator, e.model_version, e.format_distribution::text as format_distribution,
+				select e.id, e.article_id, e.tag_set_id, e.format_key, e.importance, e.judgement_id, e.evaluated_at,
+				       e.format_distribution::text as format_distribution,
 				       e.importance_distribution::text as importance_distribution
 				from article_evaluations e
 				where e.id = :id
@@ -287,8 +284,7 @@ class JdbcEvaluationResultRepository implements EvaluationResultRepository {
 					StoredEvaluation evaluation = new StoredEvaluation(new ArticleId(rs.getLong("article_id")),
 							new TagSetId(rs.getLong("tag_set_id")), rs.getString("format_key"),
 							rs.getObject("importance", Double.class), tags(id.value()));
-					return new StoredEvaluationDetail(id, instant(rs), rs.getString("evaluator"),
-							rs.getString("model_version"), rs.getInt("input_tokens"),
+					return new StoredEvaluationDetail(id, instant(rs), new TagJudgementId(rs.getLong("judgement_id")),
 							JSON.readValue(rs.getString("format_distribution"), FORMAT_DISTRIBUTION),
 							JSON.readValue(rs.getString("importance_distribution"), IMPORTANCE_DISTRIBUTION),
 							evaluation);
@@ -326,9 +322,9 @@ class JdbcEvaluationResultRepository implements EvaluationResultRepository {
 	}
 
 	@Override
-	public List<StoredResponse> lockResponses(Instant from, Instant to, long afterId, int limit) {
+	public List<BackfillTarget> lockForBackfill(Instant from, Instant to, long afterId, int limit) {
 		return this.jdbc.sql("""
-				select id, article_id, tag_set_id, evaluator, raw_response::text as raw_response
+				select id, article_id, tag_set_id, judgement_id
 				from article_evaluations
 				where evaluated_at >= :from and evaluated_at < :to and id > :after
 				order by id
@@ -339,8 +335,8 @@ class JdbcEvaluationResultRepository implements EvaluationResultRepository {
 			.param("to", timestamp(to))
 			.param("after", afterId)
 			.param("limit", limit)
-			.query((rs, row) -> new StoredResponse(rs.getLong("id"), new ArticleId(rs.getLong("article_id")),
-					new TagSetId(rs.getLong("tag_set_id")), rs.getString("evaluator"), rs.getString("raw_response")))
+			.query((rs, row) -> new BackfillTarget(rs.getLong("id"), new ArticleId(rs.getLong("article_id")),
+					new TagSetId(rs.getLong("tag_set_id")), new TagJudgementId(rs.getLong("judgement_id"))))
 			.list();
 	}
 
@@ -436,7 +432,7 @@ class JdbcEvaluationResultRepository implements EvaluationResultRepository {
 
 		private @Nullable Double importance;
 
-		private int inputTokens;
+		private long judgementId;
 
 		private @Nullable Instant evaluatedAt;
 
@@ -453,7 +449,7 @@ class JdbcEvaluationResultRepository implements EvaluationResultRepository {
 			this.formatKey = rs.getString("format_key");
 			this.formatProbability = rs.getDouble("format_probability");
 			this.importance = rs.getObject("importance", Double.class);
-			this.inputTokens = rs.getInt("input_tokens");
+			this.judgementId = rs.getLong("judgement_id");
 			this.evaluatedAt = instant(rs);
 			this.tags.clear();
 		}
@@ -463,10 +459,10 @@ class JdbcEvaluationResultRepository implements EvaluationResultRepository {
 			if (this.article == null) {
 				return true;
 			}
-			EvaluationSample sample = new EvaluationSample(new StoredEvaluation(this.article,
+			SampleRow sample = new SampleRow(new StoredEvaluation(this.article,
 					Objects.requireNonNull(this.version, "tag_set_id"),
 					Objects.requireNonNull(this.formatKey, "format_key"), this.importance, this.tags),
-					this.formatProbability, this.inputTokens);
+					this.formatProbability, new TagJudgementId(this.judgementId));
 			this.article = null;
 			return sink.test(new ListedEvaluation(new EvaluationId(this.id),
 					Objects.requireNonNull(this.evaluatedAt, "evaluated_at"), sample));

@@ -42,17 +42,20 @@ class EvaluationAdministrationService implements EvaluationAdministration {
 
 	private final StoreFloorsReader floors;
 
+	private final JudgedSamples samples;
+
 	private final TransactionTemplate snapshot;
 
 	EvaluationAdministrationService(EvaluationQueueRepository queue, TagSetRepository tagSets, TagSetViews views,
 			ThresholdRepository thresholds, EvaluationResultRepository results, StoreFloorsReader floors,
-			PlatformTransactionManager transactions) {
+			JudgedSamples samples, PlatformTransactionManager transactions) {
 		this.queue = queue;
 		this.tagSets = tagSets;
 		this.views = views;
 		this.thresholds = thresholds;
 		this.results = results;
 		this.floors = floors;
+		this.samples = samples;
 		this.snapshot = new TransactionTemplate(transactions);
 		this.snapshot.setReadOnly(true);
 		this.snapshot.setIsolationLevel(TransactionDefinition.ISOLATION_REPEATABLE_READ);
@@ -76,7 +79,8 @@ class EvaluationAdministrationService implements EvaluationAdministration {
 					this.floors.floors(version, MultiTagKind.TOPIC, changes),
 					this.floors.floors(version, MultiTagKind.REGION, changes),
 					period);
-			this.results.streamVersionPeriod(version, period.from(), period.to(), tally::add);
+			this.samples.stream(rows -> this.results.streamVersionPeriod(version, period.from(), period.to(), rows),
+					tally::add);
 			return Optional.of(tally.overview());
 		}));
 	}

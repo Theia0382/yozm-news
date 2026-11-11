@@ -2,38 +2,24 @@ package net.yozmnews.evaluation.application;
 
 import java.time.InstantSource;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
-import net.yozmnews.article.ArticleContent;
-import net.yozmnews.article.ArticleDirectory;
-import net.yozmnews.article.ArticleEntryView;
-import net.yozmnews.article.ArticleId;
+import net.yozmnews.evaluation.ArticleTagging;
+import net.yozmnews.evaluation.TagQuestions;
 import net.yozmnews.evaluation.TagSetDirectory;
 import net.yozmnews.evaluation.TagSetId;
 import net.yozmnews.evaluation.TagSetThresholds;
 import net.yozmnews.evaluation.TagSetView;
-import net.yozmnews.evaluation.domain.evaluator.ArticleEvaluator;
-import net.yozmnews.evaluation.domain.evaluator.Evaluation;
-import net.yozmnews.evaluation.domain.evaluator.EvaluationFailure;
-import net.yozmnews.evaluation.domain.evaluator.EvaluationInput;
-import net.yozmnews.evaluation.domain.evaluator.EvaluationResult;
-import net.yozmnews.evaluation.domain.evaluator.FeedContext;
+import net.yozmnews.evaluation.TaggingJudgement;
+import net.yozmnews.evaluation.TaggingQuery;
 import net.yozmnews.evaluation.domain.queue.EvaluationLease;
 import net.yozmnews.evaluation.domain.queue.EvaluationQueueRepository;
 import net.yozmnews.evaluation.domain.queue.PendingEvaluation;
 import net.yozmnews.evaluation.domain.result.EvaluationRecord;
 import net.yozmnews.evaluation.domain.result.EvaluationResultRepository;
-import net.yozmnews.evaluation.domain.result.ResultCheck;
 import net.yozmnews.evaluation.domain.tagset.TagSetRepository;
 import net.yozmnews.evaluation.domain.threshold.ThresholdRepository;
-import net.yozmnews.source.FeedId;
-import net.yozmnews.source.FeedLabel;
-import net.yozmnews.source.FeedLabels;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,14 +28,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 평가 회차 하나 — docs/specs/evaluation.md §4 · evaluation-R19 · evaluation-R20.
+ * 평가 회차 하나 — docs/specs/tag.md §4 · tag-R19 · tag-R20.
  * <p>
- * 대기를 점유해 커밋한 뒤, 트랜잭션 밖에서 기사 · 피드 맥락을 읽고 기사마다 차례로 평가기를 부른다. 결과는 기사마다 새 트랜잭션에서 점유 토큰이
- * 맞을 때만 반영한다. 평가기 사용 불가 · 결과가 체계와 어긋남 · 평가기의 예상 못한 예외면 그 기사부터 남은 점유를 풀고 회차를 멈춘다.
+ * 대기를 점유해 커밋한 뒤, 기사마다 차례로 {@code evaluation} 의 태그 판정을 트랜잭션 밖에서 부른다 — 기사 내용 · 피드 맥락은 관문이
+ * 기사 ID 로 읽는다. 결과는 기사마다 새 트랜잭션에서 점유 토큰이 맞을 때만 반영한다. 평가기 사용 불가 · 태그 판정의 예외(결과가 질문
+ * 묶음과 어긋남 · 평가기의 예상 못한 예외)면 그 기사부터 남은 점유를 풀고 회차를 멈춘다.
  * <p>
- * 결과를 반영하는 트랜잭션은 먼저 표를 잠가 회차가 읽은 버전이 아직 활성인지 본다. 은퇴했으면 그 기사의 점유만 풀고(성공이면 그 버전의
- * 평가는 저장한다) 남은 점유를 풀어 회차를 멈춘다 — 대기 행은 기사에 지금 활성 버전의 평가가 있게 된 트랜잭션에서만 지운다
- * (evaluation-R19).
+ * 결과를 반영하는 트랜잭션은 먼저 표를 잠가 회차가 읽은 버전이 아직 활성인지 본다. 은퇴했으면 그 기사의 점유만 풀고(판정됐으면 그 버전의
+ * 평가는 저장한다) 남은 점유를 풀어 회차를 멈춘다 — 대기 행은 기사에 지금 활성 버전의 평가가 있게 된 트랜잭션에서만 지운다(tag-R19).
  */
 @Service
 public class EvaluationRound {
@@ -62,9 +48,7 @@ public class EvaluationRound {
 
 	private final ThresholdRepository thresholds;
 
-	private final ArticleDirectory articles;
-
-	private final FeedLabels feedLabels;
+	private final ArticleTagging tagging;
 
 	private final EvaluationResultRepository results;
 
@@ -78,21 +62,18 @@ public class EvaluationRound {
 
 	@Autowired
 	EvaluationRound(PendingEvaluations pending, TagSetDirectory directory, ThresholdRepository thresholds,
-			ArticleDirectory articles, FeedLabels feedLabels, EvaluationResultRepository results,
-			EvaluationQueueRepository queue, TagSetRepository tagSets, TransactionTemplate transaction) {
-		this(pending, directory, thresholds, articles, feedLabels, results, queue, tagSets, transaction,
-				InstantSource.system());
+			ArticleTagging tagging, EvaluationResultRepository results, EvaluationQueueRepository queue,
+			TagSetRepository tagSets, TransactionTemplate transaction) {
+		this(pending, directory, thresholds, tagging, results, queue, tagSets, transaction, InstantSource.system());
 	}
 
 	EvaluationRound(PendingEvaluations pending, TagSetDirectory directory, ThresholdRepository thresholds,
-			ArticleDirectory articles, FeedLabels feedLabels, EvaluationResultRepository results,
-			EvaluationQueueRepository queue, TagSetRepository tagSets, TransactionTemplate transaction,
-			InstantSource clock) {
+			ArticleTagging tagging, EvaluationResultRepository results, EvaluationQueueRepository queue,
+			TagSetRepository tagSets, TransactionTemplate transaction, InstantSource clock) {
 		this.pending = pending;
 		this.directory = directory;
 		this.thresholds = thresholds;
-		this.articles = articles;
-		this.feedLabels = feedLabels;
+		this.tagging = tagging;
 		this.results = results;
 		this.queue = queue;
 		this.tagSets = tagSets;
@@ -100,31 +81,17 @@ public class EvaluationRound {
 		this.clock = clock;
 	}
 
-	/** 회차 하나를 돈다 — 평가기는 작업 진입점이 넘긴다 */
-	public void run(ArticleEvaluator evaluator) {
-		Objects.requireNonNull(evaluator, "evaluator");
+	/** 회차 하나를 돈다 */
+	public void run() {
 		List<PendingEvaluation> claimed = this.pending.claimDue(this.clock.instant());
 		if (claimed.isEmpty()) {
 			return;
 		}
 		TagSetView tagSet = this.directory.activeTagSet();
 		TagSetThresholds thresholds = this.thresholds.current(tagSet.id());
-		Map<ArticleId, ArticleContent> contents = this.articles
-			.findAll(claimed.stream().map(PendingEvaluation::articleId).toList());
-		Set<FeedId> feeds = contents.values()
-			.stream()
-			.flatMap(content -> content.entries().stream())
-			.map(ArticleEntryView::feedId)
-			.collect(Collectors.toSet());
-		Map<FeedId, FeedLabel> labels = this.feedLabels.labels(feeds);
+		TagQuestions questions = tagSet.questions();
 		for (int i = 0; i < claimed.size(); i++) {
 			PendingEvaluation claim = claimed.get(i);
-			ArticleContent content = contents.get(claim.articleId());
-			if (content == null) {
-				delete(claim);
-				logger.info("평가 대기 기사가 지워져 대기에서 뺐다 — 기사 {}", claim.articleId().value());
-				continue;
-			}
 			if (this.results.exists(claim.articleId(), tagSet.id())) {
 				if (!writeIfCurrent(claimed, i, tagSet.id(),
 						() -> this.queue.deleteIfLeased(claim.articleId(), token(claim)))) {
@@ -132,27 +99,23 @@ public class EvaluationRound {
 				}
 				continue;
 			}
-			EvaluationInput input = input(content, labels);
-			EvaluationResult result;
+			TaggingJudgement judgement;
 			try {
-				result = evaluator.evaluate(input, tagSet);
+				judgement = this.tagging.judge(new TaggingQuery(claim.articleId(), questions));
 			}
 			catch (RuntimeException ex) {
 				release(claimed.subList(i, claimed.size()));
-				logger.error("평가기가 예상 못한 예외를 던져 회차를 멈췄다 — 기사 {}", claim.articleId().value(), ex);
+				logger.error("태그 판정이 실패해 회차를 멈췄다 — 기사 {}", claim.articleId().value(), ex);
 				return;
 			}
-			switch (result) {
-				case Evaluation evaluation -> {
-					Optional<String> mismatch = ResultCheck.mismatch(evaluation, tagSet);
-					if (mismatch.isPresent()) {
-						release(claimed.subList(i, claimed.size()));
-						logger.error("평가 결과가 체계와 맞지 않아 회차를 멈췄다 — 기사 {}: {}", claim.articleId().value(),
-								mismatch.get());
-						return;
-					}
-					EvaluationRecord record = EvaluationRecord.of(claim.articleId(), evaluation, tagSet, thresholds,
-							this.clock.instant());
+			switch (judgement) {
+				case TaggingJudgement.ArticleMissing missing -> {
+					delete(claim);
+					logger.info("평가 대기 기사가 지워져 대기에서 뺐다 — 기사 {}", claim.articleId().value());
+				}
+				case TaggingJudgement.Judged judged -> {
+					EvaluationRecord record = EvaluationRecord.of(claim.articleId(), judged.judgement(), judged.answers(),
+							tagSet, thresholds, this.clock.instant());
 					if (!writeIfCurrent(claimed, i, tagSet.id(), () -> {
 						if (this.queue.deleteIfLeased(claim.articleId(), token(claim))) {
 							this.results.insert(record);
@@ -166,7 +129,7 @@ public class EvaluationRound {
 						return;
 					}
 				}
-				case EvaluationFailure failure -> {
+				case TaggingJudgement.Failed failure -> {
 					@Nullable PendingEvaluation failed = switch (failure.kind()) {
 						case TRANSIENT -> claim.afterTransient(failure.message(), this.clock.instant());
 						case ARTICLE_REJECTED -> claim.afterRejected(failure.message());
@@ -187,16 +150,6 @@ public class EvaluationRound {
 				}
 			}
 		}
-	}
-
-	/** 평가 입력 — 피드 맥락은 엔트리 순서 그대로, 이름 · 섹션이 없는 피드(그새 지움)는 비운다 */
-	private static EvaluationInput input(ArticleContent content, Map<FeedId, FeedLabel> labels) {
-		List<FeedContext> feeds = content.entries().stream().map(entry -> {
-			@Nullable FeedLabel label = labels.get(entry.feedId());
-			return FeedContext.limited((label != null) ? label.sourceName() : null,
-					(label != null) ? label.section() : null, entry.categories());
-		}).toList();
-		return new EvaluationInput(content.title(), EvaluationInput.presentSummary(content.summary()), feeds);
 	}
 
 	/** {@link #writeIfCurrent(List, int, TagSetId, Runnable, Runnable)} — 은퇴했을 때 점유를 푸는 것 말고는 쓰지 않는다 */

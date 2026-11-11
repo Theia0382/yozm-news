@@ -15,9 +15,10 @@ import java.util.List;
 import java.util.Map;
 
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.evaluation.TagAnswers;
+import net.yozmnews.evaluation.TagJudgementId;
 import net.yozmnews.evaluation.TagSetId;
 import net.yozmnews.evaluation.TagSetThresholds;
-import net.yozmnews.evaluation.domain.evaluator.Evaluation;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -31,15 +32,17 @@ class EvaluationRecordTests {
 
 	private static final Instant AT = Instant.parse("2026-11-02T00:00:00Z");
 
+	private static final TagJudgementId JUDGEMENT = new TagJudgementId(7);
+
 	/** 저장 기준 0.1 (주제 · 지역) */
 	private static final TagSetThresholds STORE_0_1 = thresholds("0.5", "0.1", "0.5", "0.1");
 
 	@Test
 	void storesTopicsAndRegionsAtOrAboveTheStoreThresholdInTagSetOrder() {
-		Evaluation evaluation = evaluation(Map.of(EXECUTIVE, 0.09, ASSEMBLY, 0.1, FINANCE, 0.7),
+		TagAnswers evaluation = evaluation(Map.of(EXECUTIVE, 0.09, ASSEMBLY, 0.1, FINANCE, 0.7),
 				Map.of("world", 0.05, "domestic", 0.9), Map.of("straight", 0.5, "opinion", 0.25, "feature", 0.25));
 
-		EvaluationRecord record = EvaluationRecord.of(ARTICLE, evaluation, TAG_SET, STORE_0_1, AT);
+		EvaluationRecord record = EvaluationRecord.of(ARTICLE, JUDGEMENT, evaluation, TAG_SET, STORE_0_1, AT);
 
 		assertThat(record.tags()).containsExactly(topic(ASSEMBLY, 0.1), topic(FINANCE, 0.7), region("domestic", 0.9));
 	}
@@ -47,11 +50,11 @@ class EvaluationRecordTests {
 	@Test
 	void eachTagKindIsStoredByItsOwnStoreThreshold() {
 		// 주제 저장 기준 0.1 · 지역 저장 기준 0.3 — 같은 확률 0.25 가 주제로는 남고 지역으로는 버려진다
-		Evaluation evaluation = evaluation(Map.of(EXECUTIVE, 0.25, ASSEMBLY, 0.0, FINANCE, 0.0),
+		TagAnswers evaluation = evaluation(Map.of(EXECUTIVE, 0.25, ASSEMBLY, 0.0, FINANCE, 0.0),
 				Map.of("world", 0.25, "domestic", 0.375), Map.of("straight", 0.5, "opinion", 0.25, "feature", 0.25));
 
-		EvaluationRecord record = EvaluationRecord.of(ARTICLE, evaluation, TAG_SET, thresholds("0.5", "0.1", "0.5", "0.3"),
-				AT);
+		EvaluationRecord record = EvaluationRecord.of(ARTICLE, JUDGEMENT, evaluation, TAG_SET,
+				thresholds("0.5", "0.1", "0.5", "0.3"), AT);
 
 		assertThat(record.tags()).containsExactly(topic(EXECUTIVE, 0.25), region("domestic", 0.375));
 	}
@@ -59,7 +62,7 @@ class EvaluationRecordTests {
 	@Test
 	void storedTagsFilterByTheGivenStoreThresholdIncludingTheBoundary() {
 		// 채움이 넘기는 저장 기준(0.05)으로 거른다 — 0.05 는 0.050 이상이고 태그 기준은 쓰지 않는다
-		Evaluation evaluation = evaluation(Map.of(EXECUTIVE, 0.04, ASSEMBLY, 0.05, FINANCE, 0.7),
+		TagAnswers evaluation = evaluation(Map.of(EXECUTIVE, 0.04, ASSEMBLY, 0.05, FINANCE, 0.7),
 				Map.of("world", 0.049, "domestic", 0.05), Map.of("straight", 0.5, "opinion", 0.25, "feature", 0.25));
 
 		assertThat(EvaluationRecord.storedTags(evaluation, TAG_SET, thresholds("0.9", "0.05", "0.9", "0.050")))
@@ -68,7 +71,7 @@ class EvaluationRecordTests {
 
 	@Test
 	void storedTagsOfAnotherVersionAreACallerDefect() {
-		Evaluation evaluation = evaluation(Map.of(EXECUTIVE, 0.5, ASSEMBLY, 0.5, FINANCE, 0.5),
+		TagAnswers evaluation = evaluation(Map.of(EXECUTIVE, 0.5, ASSEMBLY, 0.5, FINANCE, 0.5),
 				Map.of("world", 0.5, "domestic", 0.5), Map.of("straight", 0.5, "opinion", 0.25, "feature", 0.25));
 
 		assertThatIllegalArgumentException().isThrownBy(() -> EvaluationRecord.storedTags(evaluation, TAG_SET,
@@ -77,13 +80,13 @@ class EvaluationRecordTests {
 
 	@Test
 	void theRepresentativeFormatIsTheMostLikelyAndATieGoesToTheEarlierOption() {
-		Evaluation tie = evaluation(Map.of(EXECUTIVE, 0.5, ASSEMBLY, 0.5, FINANCE, 0.5), Map.of("world", 0.5,
+		TagAnswers tie = evaluation(Map.of(EXECUTIVE, 0.5, ASSEMBLY, 0.5, FINANCE, 0.5), Map.of("world", 0.5,
 				"domestic", 0.5), Map.of("feature", 0.2, "opinion", 0.4, "straight", 0.4));
-		Evaluation clear = evaluation(Map.of(EXECUTIVE, 0.5, ASSEMBLY, 0.5, FINANCE, 0.5), Map.of("world", 0.5,
+		TagAnswers clear = evaluation(Map.of(EXECUTIVE, 0.5, ASSEMBLY, 0.5, FINANCE, 0.5), Map.of("world", 0.5,
 				"domestic", 0.5), Map.of("straight", 0.25, "opinion", 0.25, "feature", 0.5));
 
-		EvaluationRecord tied = EvaluationRecord.of(ARTICLE, tie, TAG_SET, STORE_0_1, AT);
-		EvaluationRecord chosen = EvaluationRecord.of(ARTICLE, clear, TAG_SET, STORE_0_1, AT);
+		EvaluationRecord tied = EvaluationRecord.of(ARTICLE, JUDGEMENT, tie, TAG_SET, STORE_0_1, AT);
+		EvaluationRecord chosen = EvaluationRecord.of(ARTICLE, JUDGEMENT, clear, TAG_SET, STORE_0_1, AT);
 
 		assertThat(tied.formatKey()).isEqualTo("straight");
 		assertThat(tied.formatProbability()).isEqualTo(0.4);
@@ -93,19 +96,16 @@ class EvaluationRecordTests {
 	}
 
 	@Test
-	void carriesTheEvidenceAndTheImportanceExpectation() {
-		Evaluation evaluation = new Evaluation(Map.of(EXECUTIVE, 0.5, ASSEMBLY, 0.5, FINANCE, 0.5),
+	void carriesTheJudgementAndTheImportanceExpectation() {
+		TagAnswers evaluation = new TagAnswers(Map.of(EXECUTIVE, 0.5, ASSEMBLY, 0.5, FINANCE, 0.5),
 				Map.of("world", 0.5, "domestic", 0.5), Map.of("straight", 0.5, "opinion", 0.25, "feature", 0.25),
-				Map.of(1, 0.5, 2, 0.0, 3, 0.5, 4, 0.0, 5, 0.0), "jev", "jev-2026-10", 1700, "{\"ok\":true}");
+				Map.of(1, 0.5, 2, 0.0, 3, 0.5, 4, 0.0, 5, 0.0));
 
-		EvaluationRecord record = EvaluationRecord.of(ARTICLE, evaluation, TAG_SET, STORE_0_1, AT);
+		EvaluationRecord record = EvaluationRecord.of(ARTICLE, JUDGEMENT, evaluation, TAG_SET, STORE_0_1, AT);
 
 		assertThat(record.articleId()).isEqualTo(ARTICLE);
 		assertThat(record.tagSetId()).isEqualTo(new TagSetId(1));
-		assertThat(record.evaluator()).isEqualTo("jev");
-		assertThat(record.modelVersion()).isEqualTo("jev-2026-10");
-		assertThat(record.inputTokens()).isEqualTo(1700);
-		assertThat(record.rawResponse()).isEqualTo("{\"ok\":true}");
+		assertThat(record.judgementId()).isEqualTo(new TagJudgementId(7));
 		assertThat(record.evaluatedAt()).isEqualTo(AT);
 		assertThat(record.importance()).isEqualTo(2.0);
 		assertThat(record.importanceDistribution()).isEqualTo(Map.of(1, 0.5, 2, 0.0, 3, 0.5, 4, 0.0, 5, 0.0));
@@ -114,17 +114,16 @@ class EvaluationRecordTests {
 	@Test
 	void rejectsThresholdsOfAnotherVersion() {
 		TagSetThresholds other = new TagSetThresholds(new TagSetId(2), STORE_0_1.topic(), STORE_0_1.region());
-		Evaluation evaluation = evaluation(Map.of(EXECUTIVE, 0.5, ASSEMBLY, 0.5, FINANCE, 0.5),
+		TagAnswers evaluation = evaluation(Map.of(EXECUTIVE, 0.5, ASSEMBLY, 0.5, FINANCE, 0.5),
 				Map.of("world", 0.5, "domestic", 0.5), Map.of("straight", 0.5, "opinion", 0.25, "feature", 0.25));
 
-		assertThatIllegalArgumentException().isThrownBy(() -> EvaluationRecord.of(ARTICLE, evaluation, TAG_SET, other,
-				AT));
+		assertThatIllegalArgumentException()
+			.isThrownBy(() -> EvaluationRecord.of(ARTICLE, JUDGEMENT, evaluation, TAG_SET, other, AT));
 	}
 
-	private static Evaluation evaluation(Map<String, Double> topics, Map<String, Double> regions,
+	private static TagAnswers evaluation(Map<String, Double> topics, Map<String, Double> regions,
 			Map<String, Double> formats) {
-		return new Evaluation(topics, regions, formats, Map.of(1, 0.2, 2, 0.2, 3, 0.2, 4, 0.2, 5, 0.2), "fake",
-				"fake-rules-2", 10, "{}");
+		return new TagAnswers(topics, regions, formats, Map.of(1, 0.2, 2, 0.2, 3, 0.2, 4, 0.2, 5, 0.2));
 	}
 
 }

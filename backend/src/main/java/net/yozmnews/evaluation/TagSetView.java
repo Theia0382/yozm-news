@@ -21,4 +21,9 @@ public record TagSetView(TagSetId id, int number, List<TopicCategory> topics, Li
 		Objects.requireNonNull(importance, "importance");
 	}
 
+	/** 이 버전의 질문 묶음 — 태그 판정 · 다시 읽기에 넘긴다(tag-R14) */
+	public TagQuestions questions() {
+		return new TagQuestions(this.topics, this.regions, this.format, this.importance);
+	}
+
 }

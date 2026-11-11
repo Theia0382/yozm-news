@@ -4,7 +4,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import net.yozmnews.evaluation.domain.evaluator.Membership;
-import net.yozmnews.evaluation.domain.result.ResultCheck;
+import net.yozmnews.evaluation.domain.evaluator.ResultCheck;
 
 /**
  * 판정 결과가 물은 후보와 맞는지 — docs/specs/evaluation.md §4 · evaluation-R38.

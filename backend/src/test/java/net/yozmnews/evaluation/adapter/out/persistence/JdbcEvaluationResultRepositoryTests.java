@@ -12,22 +12,14 @@ import java.util.Map;
 
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleId;
-import net.yozmnews.evaluation.AskedTag;
-import net.yozmnews.evaluation.FormatChoice;
-import net.yozmnews.evaluation.FormatOption;
-import net.yozmnews.evaluation.ImportanceLevel;
-import net.yozmnews.evaluation.ImportanceScale;
 import net.yozmnews.evaluation.MultiTagKind;
+import net.yozmnews.evaluation.TagJudgementId;
 import net.yozmnews.evaluation.TagSetId;
-import net.yozmnews.evaluation.TagSetView;
-import net.yozmnews.evaluation.TopicCategory;
 import net.yozmnews.evaluation.application.TagSetRows;
-import net.yozmnews.evaluation.domain.evaluator.Evaluation;
-import net.yozmnews.evaluation.domain.jev.JevResponse;
-import net.yozmnews.evaluation.domain.overview.EvaluationSample;
+import net.yozmnews.evaluation.domain.result.BackfillTarget;
 import net.yozmnews.evaluation.domain.result.EvaluationRecord;
+import net.yozmnews.evaluation.domain.result.SampleRow;
 import net.yozmnews.evaluation.domain.result.StoredEvaluation;
-import net.yozmnews.evaluation.domain.result.StoredResponse;
 import net.yozmnews.evaluation.domain.result.StoredTag;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,7 +28,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.jdbc.test.autoconfigure.JdbcTest;
 import org.springframework.context.annotation.Import;
-import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -45,7 +36,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * 평가 결과 저장소 — 평가 · 태그 행과 {@code jsonb} 왕복, (기사, 버전) 고유, 최근 버전 조회, 버전 · 기간 흘려 받기, 첫 평가 시각으로 기사
- * 흘려 받기, 지운 기사 따르기, 채움의 잠금 읽기 · 빠진 태그 더하기 · 버전별 수 · 원본 응답 왕복을 Flyway 가 적용된 실제 PostgreSQL 에서
+ * 흘려 받기, 지운 기사 따르기, 채움의 잠금 읽기 · 빠진 태그 더하기 · 버전별 수를 Flyway 가 적용된 실제 PostgreSQL 에서
  * 본다. 테스트는 테스트 트랜잭션 안에서 돈다 — 흘려 받기의 트랜잭션 밖 갈래는 그 트랜잭션을 잠시 멈추고 부른다. 지우기와 채움의 잠금
  * 순서는 두 연결이 필요해 {@code EvaluationDeletionLockTests} 가 본다.
  * <p>
@@ -58,15 +49,6 @@ class JdbcEvaluationResultRepositoryTests {
 
 	private static final Instant AT = Instant.parse("2026-11-02T00:00:00Z");
 
-	/** jsonb 왕복 시험의 체계 — 주제 · 지역 하나씩, 형식 둘, 중요도 둘 */
-	private static final TagSetView ROUND_TRIP_TAG_SET = new TagSetView(new TagSetId(1), 1,
-			List.of(new TopicCategory("politics", "정치", "정치",
-					List.of(new AskedTag("politics.assembly", "국회", "국회", "국회를 다루는가")))),
-			List.of(new AskedTag("domestic", "국내", "국내", "국내의 일인가")),
-			new FormatChoice("형식은", List.of(new FormatOption("straight", "스트레이트", "사실", false),
-					new FormatOption("opinion", "오피니언", "의견", true))),
-			new ImportanceScale("중요도는", List.of(new ImportanceLevel(1, "작다"), new ImportanceLevel(2, "크다"))));
-
 	@Autowired
 	JdbcEvaluationResultRepository repository;
 
@@ -77,6 +59,9 @@ class JdbcEvaluationResultRepositoryTests {
 	PlatformTransactionManager transactionManager;
 
 	TagSetId first;
+
+	/** 평가마다 붙일 판정 원본 ID — 시험마다 테스트 트랜잭션이 되돌린다 */
+	long nextJudgement = 900_000;
 
 	TagSetId second;
 
@@ -90,28 +75,25 @@ class JdbcEvaluationResultRepositoryTests {
 
 	@Test
 	void storesTheEvaluationWithItsTagsAndJsonDistributions() {
-		this.repository.insert(record(42, this.first, 3.25, "{\"answers\": [1, 2]}",
+		this.repository.insert(record(42, this.first, 3.25,
 				List.of(new StoredTag(MultiTagKind.TOPIC, "politics.assembly", 0.5),
 						new StoredTag(MultiTagKind.REGION, "domestic", 0.75))));
 
 		Map<String, Object> row = this.jdbc.sql("""
-				select article_id, tag_set_id, evaluator, model_version, format_key, format_probability,
+				select article_id, tag_set_id, judgement_id, format_key, format_probability,
 				    format_distribution::text as format_distribution, importance,
-				    importance_distribution::text as importance_distribution, raw_response::text as raw_response,
-				    input_tokens, evaluated_at
+				    importance_distribution::text as importance_distribution, evaluated_at
 				from article_evaluations
 				""").query().singleRow();
 		assertThat(row).containsEntry("article_id", 42L)
 			.containsEntry("tag_set_id", this.first.value())
-			.containsEntry("evaluator", "jev")
-			.containsEntry("model_version", "jev-1")
+			.containsEntry("judgement_id", 900_000L)
 			.containsEntry("format_key", "straight")
 			.containsEntry("format_probability", 0.5)
 			.containsEntry("format_distribution", "{\"opinion\": 0.25, \"straight\": 0.5}")
 			.containsEntry("importance", 3.25)
 			.containsEntry("importance_distribution", "{\"1\": 0.25, \"5\": 0.75}")
-			.containsEntry("raw_response", "{\"answers\": [1, 2]}")
-			.containsEntry("input_tokens", 1700);
+			.doesNotContainKeys("evaluator", "model_version", "raw_response", "input_tokens");
 		assertThat(instant(row.get("evaluated_at"))).isEqualTo(Instant.parse("2026-11-02T00:00:00Z"));
 		assertThat(this.jdbc.sql("""
 				select article_id, tag_kind, tag_key, probability from article_tags order by tag_kind, tag_key
@@ -122,20 +104,20 @@ class JdbcEvaluationResultRepositoryTests {
 
 	@Test
 	void allowsOneEvaluationPerArticleAndVersion() {
-		this.repository.insert(record(42, this.first, 3.0, "{}", List.of()));
+		this.repository.insert(record(42, this.first, 3.0, List.of()));
 
 		assertThat(this.repository.exists(new ArticleId(42), this.first)).isTrue();
 		assertThat(this.repository.exists(new ArticleId(42), this.second)).isFalse();
 		assertThat(this.repository.exists(new ArticleId(43), this.first)).isFalse();
 		assertThatExceptionOfType(DuplicateKeyException.class)
-			.isThrownBy(() -> this.repository.insert(record(42, this.first, 3.0, "{}", List.of())));
+			.isThrownBy(() -> this.repository.insert(record(42, this.first, 3.0, List.of())));
 	}
 
 	@Test
 	void findsTheEvaluationOfTheHighestVersionWithItsTags() {
-		this.repository.insert(record(42, this.second, null, "{}",
+		this.repository.insert(record(42, this.second, null,
 				List.of(new StoredTag(MultiTagKind.TOPIC, "economy.finance", 0.625))));
-		this.repository.insert(record(42, this.first, 3.0, "{}",
+		this.repository.insert(record(42, this.first, 3.0,
 				List.of(new StoredTag(MultiTagKind.TOPIC, "politics.assembly", 0.5))));
 
 		assertThat(this.repository.findLatest(new ArticleId(42))).contains(new StoredEvaluation(new ArticleId(42),
@@ -146,13 +128,13 @@ class JdbcEvaluationResultRepositoryTests {
 	@Test
 	void readsTheImportanceOfTheHighestVersionAndDoesNotFallBackToAnOlderOne() {
 		// 51 — 버전 1 만: 그 값
-		this.repository.insert(record(51, this.first, 2.5, "{}", List.of()));
+		this.repository.insert(record(51, this.first, 2.5, List.of()));
 		// 52 — 버전 1 은 4.0, 버전 2 는 중요도 없음: 빠진다(버전 1 의 4.0 을 내지 않는다)
-		this.repository.insert(record(52, this.first, 4.0, "{}", List.of()));
-		this.repository.insert(record(52, this.second, null, "{}", List.of()));
+		this.repository.insert(record(52, this.first, 4.0, List.of()));
+		this.repository.insert(record(52, this.second, null, List.of()));
 		// 53 — 대조: 버전 2 는 3.0, 버전 1 은 4.0 — 버전 2 의 값. 버전 2 를 먼저 넣어 평가 ID 순과 버전 번호 순이 어긋난다
-		this.repository.insert(record(53, this.second, 3.0, "{}", List.of()));
-		this.repository.insert(record(53, this.first, 4.0, "{}", List.of()));
+		this.repository.insert(record(53, this.second, 3.0, List.of()));
+		this.repository.insert(record(53, this.first, 4.0, List.of()));
 
 		assertThat(this.repository.findLatestImportances(
 				List.of(new ArticleId(51), new ArticleId(52), new ArticleId(53), new ArticleId(54))))
@@ -174,28 +156,27 @@ class JdbcEvaluationResultRepositoryTests {
 		this.repository.insert(record(42, this.second, Instant.parse("2026-10-30T00:00:00Z"), 1_400,
 				List.of(new StoredTag(MultiTagKind.TOPIC, "politics.assembly", 0.5))));
 
-		List<EvaluationSample> streamed = new ArrayList<>();
+		List<SampleRow> streamed = new ArrayList<>();
 		this.repository.streamVersionPeriod(this.first, from, to, streamed::add);
 
 		// 시작은 포함 · 끝은 제외, 다른 버전 제외. 태그 행은 평가마다 모이고 태그 없는 평가도 나온다
 		assertThat(streamed).containsExactly(
-				new EvaluationSample(new StoredEvaluation(new ArticleId(42), this.first, "straight", 3.0,
+				new SampleRow(new StoredEvaluation(new ArticleId(42), this.first, "straight", 3.0,
 						List.of(new StoredTag(MultiTagKind.REGION, "domestic", 0.75),
 								new StoredTag(MultiTagKind.TOPIC, "economy.finance", 0.25),
 								new StoredTag(MultiTagKind.TOPIC, "politics.assembly", 0.5))),
-						0.5, 1_100),
-				new EvaluationSample(new StoredEvaluation(new ArticleId(43), this.first, "straight", 3.0, List.of()), 0.5,
-						1_200));
+						0.5, new TagJudgementId(1_100)),
+				new SampleRow(new StoredEvaluation(new ArticleId(43), this.first, "straight", 3.0, List.of()), 0.5,
+						new TagJudgementId(1_200)));
 	}
 
 	@Test
 	void streamsEachEvaluationOnceAcrossCursorBatches() {
 		// 평가 700건 × 태그 행 2 = 1,400행 — 커서 한 묶음(1,000행)을 넘는다
 		long evaluations = this.jdbc.sql("""
-				insert into article_evaluations (article_id, tag_set_id, evaluator, model_version, format_key,
-				    format_probability, format_distribution, importance, importance_distribution, raw_response,
-				    input_tokens, evaluated_at)
-				select n, :version, 'jev', 'jev-1', 'straight', 0.5, '{}', 3.0, '{}', '{}', n, :at
+				insert into article_evaluations (article_id, tag_set_id, judgement_id, format_key, format_probability,
+				    format_distribution, importance, importance_distribution, evaluated_at)
+				select n, :version, n, 'straight', 0.5, '{}', 3.0, '{}', :at
 				from generate_series(1, 700) n
 				""").param("version", this.first.value()).param("at", AT.atOffset(java.time.ZoneOffset.UTC)).update();
 		this.jdbc.sql("""
@@ -204,7 +185,7 @@ class JdbcEvaluationResultRepositoryTests {
 				cross join (values ('TOPIC', 'politics.assembly'), ('REGION', 'domestic')) as k(kind, key)
 				""").update();
 
-		List<EvaluationSample> streamed = new ArrayList<>();
+		List<SampleRow> streamed = new ArrayList<>();
 		this.repository.streamVersionPeriod(this.first, AT, AT.plusSeconds(1), streamed::add);
 
 		assertThat(evaluations).isEqualTo(700);
@@ -215,17 +196,17 @@ class JdbcEvaluationResultRepositoryTests {
 	@Test
 	void streamsTheLatestEvaluationOfArticlesFirstEvaluatedInThePeriod() {
 		// 51: 버전 1 을 10월 1일, 버전 2 를 11월 3일에 평가 — 재평가가 첫 평가 시각을 옮기지 않는다
-		this.repository.insert(record(51, this.first, Instant.parse("2026-10-01T00:00:00Z"), 1_000,
+		this.repository.insert(record(51, this.first, Instant.parse("2026-10-01T00:00:00Z"), 1_001,
 				List.of(new StoredTag(MultiTagKind.TOPIC, "politics.assembly", 0.5))));
-		this.repository.insert(record(51, this.second, Instant.parse("2026-11-03T00:00:00Z"), 1_000,
+		this.repository.insert(record(51, this.second, Instant.parse("2026-11-03T00:00:00Z"), 1_002,
 				List.of(new StoredTag(MultiTagKind.TOPIC, "economy.finance", 0.75),
 						new StoredTag(MultiTagKind.REGION, "domestic", 0.75),
 						new StoredTag(MultiTagKind.TOPIC, "politics.assembly", 0.25))));
 		// 52: 버전 2 만 11월 3일에
-		this.repository.insert(record(52, this.second, Instant.parse("2026-11-03T00:00:00Z"), 1_000, List.of()));
+		this.repository.insert(record(52, this.second, Instant.parse("2026-11-03T00:00:00Z"), 1_003, List.of()));
 		// 53: 두 버전을 같은 시각에 — 기사는 한 번
-		this.repository.insert(record(53, this.first, Instant.parse("2026-10-05T00:00:00Z"), 1_000, List.of()));
-		this.repository.insert(record(53, this.second, Instant.parse("2026-10-05T00:00:00Z"), 1_000, List.of()));
+		this.repository.insert(record(53, this.first, Instant.parse("2026-10-05T00:00:00Z"), 1_004, List.of()));
+		this.repository.insert(record(53, this.second, Instant.parse("2026-10-05T00:00:00Z"), 1_005, List.of()));
 
 		List<StoredEvaluation> october = new ArrayList<>();
 		this.repository.streamFirstEvaluatedIn(Instant.parse("2026-10-01T00:00:00Z"),
@@ -263,9 +244,9 @@ class JdbcEvaluationResultRepositoryTests {
 
 	@Test
 	void deletesTheEvaluationsAndTagsOfTheGivenArticlesOnly() {
-		this.repository.insert(record(42, this.first, 3.0, "{}",
+		this.repository.insert(record(42, this.first, 3.0,
 				List.of(new StoredTag(MultiTagKind.TOPIC, "politics.assembly", 0.5))));
-		this.repository.insert(record(43, this.first, 3.0, "{}",
+		this.repository.insert(record(43, this.first, 3.0,
 				List.of(new StoredTag(MultiTagKind.TOPIC, "politics.assembly", 0.5))));
 
 		this.repository.deleteByArticles(List.of(new ArticleId(42), new ArticleId(99)));
@@ -279,26 +260,26 @@ class JdbcEvaluationResultRepositoryTests {
 	@Test
 	void locksTheEvaluationsOfThePeriodInIdOrderAfterTheCursor() {
 		this.repository.insert(record(42, this.first, AT, 1, List.of()));
-		this.repository.insert(record(43, this.second, AT.plusSeconds(10), 1, List.of()));
-		this.repository.insert(record(44, this.first, AT.plusSeconds(20), 1, List.of()));
+		this.repository.insert(record(43, this.second, AT.plusSeconds(10), 2, List.of()));
+		this.repository.insert(record(44, this.first, AT.plusSeconds(20), 3, List.of()));
 		// 범위 밖 — 시작 직전과 끝
-		this.repository.insert(record(45, this.first, AT.minusSeconds(1), 1, List.of()));
-		this.repository.insert(record(46, this.first, AT.plusSeconds(30), 1, List.of()));
+		this.repository.insert(record(45, this.first, AT.minusSeconds(1), 4, List.of()));
+		this.repository.insert(record(46, this.first, AT.plusSeconds(30), 5, List.of()));
 		List<Long> ids = this.jdbc.sql("select id from article_evaluations order by article_id").query(Long.class).list();
 
-		List<StoredResponse> firstTwo = this.repository.lockResponses(AT, AT.plusSeconds(30), 0, 2);
-		List<StoredResponse> rest = this.repository.lockResponses(AT, AT.plusSeconds(30),
+		List<BackfillTarget> firstTwo = this.repository.lockForBackfill(AT, AT.plusSeconds(30), 0, 2);
+		List<BackfillTarget> rest = this.repository.lockForBackfill(AT, AT.plusSeconds(30),
 				firstTwo.getLast().evaluationId(), 2);
 
-		assertThat(firstTwo).extracting(StoredResponse::evaluationId).containsExactly(ids.get(0), ids.get(1));
+		assertThat(firstTwo).extracting(BackfillTarget::evaluationId).containsExactly(ids.get(0), ids.get(1));
 		assertThat(firstTwo.getFirst()).isEqualTo(
-				new StoredResponse(ids.get(0), new ArticleId(42), this.first, "jev", "{}"));
-		assertThat(rest).extracting(StoredResponse::articleId).containsExactly(new ArticleId(44));
+				new BackfillTarget(ids.get(0), new ArticleId(42), this.first, new TagJudgementId(1)));
+		assertThat(rest).extracting(BackfillTarget::articleId).containsExactly(new ArticleId(44));
 	}
 
 	@Test
 	void addsOnlyTheMissingTagRows() {
-		this.repository.insert(record(42, this.first, 3.0, "{}",
+		this.repository.insert(record(42, this.first, 3.0,
 				List.of(new StoredTag(MultiTagKind.TOPIC, "politics.assembly", 0.5))));
 		long id = this.jdbc.sql("select id from article_evaluations").query(Long.class).single();
 
@@ -320,56 +301,13 @@ class JdbcEvaluationResultRepositoryTests {
 	@Test
 	void countsTheEvaluationsOfThePeriodByVersion() {
 		this.repository.insert(record(42, this.first, AT, 1, List.of()));
-		this.repository.insert(record(43, this.first, AT.plusSeconds(10), 1, List.of()));
-		this.repository.insert(record(44, this.second, AT.plusSeconds(20), 1, List.of()));
-		this.repository.insert(record(45, this.second, AT.plusSeconds(30), 1, List.of()));
+		this.repository.insert(record(43, this.first, AT.plusSeconds(10), 2, List.of()));
+		this.repository.insert(record(44, this.second, AT.plusSeconds(20), 3, List.of()));
+		this.repository.insert(record(45, this.second, AT.plusSeconds(30), 4, List.of()));
 
 		assertThat(this.repository.countByVersion(AT, AT.plusSeconds(30)))
 			.isEqualTo(Map.of(this.first, 2L, this.second, 1L));
 		assertThat(this.repository.countByVersion(AT.plusSeconds(40), AT.plusSeconds(50))).isEmpty();
-	}
-
-	@Test
-	void theStoredRawResponseIsReadBackToTheSameProbabilities() {
-		// jsonb 는 공백 · 키 순서를 바꾸지만 수치는 numeric 으로 자릿수를 지킨다 — 같은 파서가 같은 double 을 읽는다
-		String raw = """
-				{"model":"jev-1.14.0","answers":{\
-				"topic.politics.assembly":{"type":"noul","noul":0.12345678901234568},\
-				"region.domestic":{"type":"noul","noul":1.0E-5},\
-				"format":{"type":"choice","probabilities":{"straight":0.75,"opinion":0.25}},\
-				"importance":{"type":"score","probabilities":{"0":0.5,"1":0.5}}},\
-				"usage":{"input_tokens":10}}""";
-		this.repository.insert(record(42, this.first, 3.0, raw, List.of()));
-
-		String stored = this.repository.lockResponses(AT, AT.plusSeconds(1), 0, 1).getFirst().rawResponse();
-
-		assertThat(stored).isNotEqualTo(raw);
-		Evaluation read = (Evaluation) JevResponse.read(stored, null, ROUND_TRIP_TAG_SET);
-		assertThat(read.topics()).isEqualTo(Map.of("politics.assembly", 0.12345678901234568));
-		assertThat(read.regions()).isEqualTo(Map.of("domestic", 1.0E-5));
-	}
-
-	// jsonb 가 받지 않는 원문 — 저장 전에 ResultCheck 가 걸러야 한다. 실패한 문장은 테스트 트랜잭션을 깨뜨리므로 원문마다 테스트를 나눈다
-	@Test
-	void postgresRejectsANulCharacterEscapeInTheRawResponse() {
-		assertThatExceptionOfType(DataAccessException.class)
-			.isThrownBy(() -> this.repository.insert(record(42, this.first, 3.0, "{\"a\": \"\\u0000\"}", List.of())))
-			.withMessageContaining("\\u0000 cannot be converted to text");
-	}
-
-	@Test
-	void postgresRejectsAnUnpairedSurrogateEscapeInTheRawResponse() {
-		assertThatExceptionOfType(DataAccessException.class)
-			.isThrownBy(() -> this.repository.insert(record(42, this.first, 3.0, "{\"a\": \"\\ud800\"}", List.of())))
-			.withMessageContaining("surrogate");
-	}
-
-	@Test
-	void postgresAcceptsAPairedSurrogateEscapeInTheRawResponse() {
-		this.repository.insert(record(42, this.first, 3.0, "{\"a\": \"\\ud83d\\ude00\"}", List.of()));
-
-		assertThat(this.jdbc.sql("select raw_response ->> 'a' from article_evaluations").query(String.class).single())
-			.isEqualTo("\uD83D\uDE00");
 	}
 
 	private TagSetId tagSet(int number, boolean active) {
@@ -381,16 +319,18 @@ class JdbcEvaluationResultRepositoryTests {
 				""").param("number", number).param("active", active).query(Long.class).single());
 	}
 
-	private static EvaluationRecord record(long article, TagSetId version, @Nullable Double importance, String raw,
+	/** 판정 원본 ID 를 차례로 붙인 평가 — 판정 원본 행은 두지 않는다(모듈 사이 ID 라 FK 가 없다) */
+	private EvaluationRecord record(long article, TagSetId version, @Nullable Double importance,
 			List<StoredTag> tags) {
-		return new EvaluationRecord(new ArticleId(article), version, "jev", "jev-1", "straight", 0.5,
-				Map.of("straight", 0.5, "opinion", 0.25), importance, Map.of(5, 0.75, 1, 0.25), tags, raw, 1700, AT);
+		return new EvaluationRecord(new ArticleId(article), version, new TagJudgementId(this.nextJudgement++),
+				"straight", 0.5, Map.of("straight", 0.5, "opinion", 0.25), importance, Map.of(5, 0.75, 1, 0.25), tags,
+				AT);
 	}
 
-	private static EvaluationRecord record(long article, TagSetId version, Instant at, int tokens,
+	private static EvaluationRecord record(long article, TagSetId version, Instant at, long judgement,
 			List<StoredTag> tags) {
-		return new EvaluationRecord(new ArticleId(article), version, "jev", "jev-1", "straight", 0.5,
-				Map.of("straight", 0.5, "opinion", 0.25), 3.0, Map.of(5, 0.75, 1, 0.25), tags, "{}", tokens, at);
+		return new EvaluationRecord(new ArticleId(article), version, new TagJudgementId(judgement), "straight", 0.5,
+				Map.of("straight", 0.5, "opinion", 0.25), 3.0, Map.of(5, 0.75, 1, 0.25), tags, at);
 	}
 
 	private static Instant instant(@Nullable Object timestamp) {

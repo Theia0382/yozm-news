@@ -17,6 +17,7 @@ import net.yozmnews.evaluation.ImportanceLevel;
 import net.yozmnews.evaluation.MultiTagKind;
 import net.yozmnews.evaluation.NamedTag;
 import net.yozmnews.evaluation.StoredTagView;
+import net.yozmnews.evaluation.TagJudgementView;
 import net.yozmnews.evaluation.TagName;
 import net.yozmnews.evaluation.TagProbability;
 import net.yozmnews.evaluation.TagSetThresholds;
@@ -52,8 +53,8 @@ final class EvaluationReviewViews {
 	}
 
 	/** 상세 — 저장 행 전부와 붙었는지, 형식 · 중요도 분포 */
-	static EvaluationDetailView detail(StoredEvaluationDetail detail, TagSetView tagSet, TagSetThresholds thresholds,
-			Judged judged) {
+	static EvaluationDetailView detail(StoredEvaluationDetail detail, TagJudgementView judgement, TagSetView tagSet,
+			TagSetThresholds thresholds, Judged judged) {
 		StoredEvaluation evaluation = detail.evaluation();
 		Names names = new Names(tagSet);
 		List<DistributionShare> formats = new ArrayList<>();
@@ -67,7 +68,7 @@ final class EvaluationReviewViews {
 					share(detail.importanceDistribution(), level.level())));
 		}
 		return new EvaluationDetailView(detail.id(), evaluation.articleId(), tagSet.id(), tagSet.number(),
-				detail.evaluator(), detail.modelVersion(), detail.evaluatedAt(), detail.inputTokens(), thresholds,
+				judgement.evaluator(), judgement.modelVersion(), detail.evaluatedAt(), judgement.inputTokens(), thresholds,
 				judged.status(), stored(evaluation, MultiTagKind.TOPIC, tagSet, names.subtopics, judged.topics()),
 				categories(judged, names),
 				stored(evaluation, MultiTagKind.REGION, tagSet, names.regions, judged.regions()),

@@ -1,4 +1,4 @@
-package net.yozmnews.evaluation.domain.result;
+package net.yozmnews.evaluation.domain.evaluator;
 
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -10,16 +10,15 @@ import java.util.stream.Collectors;
 import net.yozmnews.evaluation.AskedTag;
 import net.yozmnews.evaluation.FormatOption;
 import net.yozmnews.evaluation.ImportanceLevel;
-import net.yozmnews.evaluation.TagSetView;
-import net.yozmnews.evaluation.domain.evaluator.Evaluation;
+import net.yozmnews.evaluation.TagQuestions;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * 평가 결과가 넘긴 체계와 맞는지 — docs/specs/evaluation.md §5.
+ * 태그 판정 결과가 넘긴 질문 묶음과 맞는지 — 정본 · docs/specs/evaluation.md §4 · evaluation-R41 · evaluation-R42.
  * <p>
- * 주제 중분류 · 지역 · 형식 선택지 · 중요도 수준의 키 집합이 체계와 정확히 같아야 하고, 원본 응답은 JSON 이고 어디에도 문자 U+0000 과 짝
+ * 주제 중분류 · 지역 · 형식 선택지 · 중요도 수준의 키 집합이 질문 묶음과 정확히 같아야 하고, 원본 응답은 JSON 이고 어디에도 문자 U+0000 과 짝
  * 없는 서로게이트가 없어야 한다(PostgreSQL {@code jsonb} 가 둘 다 받지 않는다). 어긋남의 문구는 태그 종류 · 키만 담는다.
  */
 public final class ResultCheck {
@@ -32,15 +31,15 @@ public final class ResultCheck {
 	/**
 	 * @return 어긋남의 운영자용 문구 — 맞으면 빈 값
 	 */
-	public static Optional<String> mismatch(Evaluation evaluation, TagSetView tagSet) {
-		Set<String> topics = tagSet.topics()
+	public static Optional<String> mismatch(Evaluation evaluation, TagQuestions questions) {
+		Set<String> topics = questions.topics()
 			.stream()
 			.flatMap(category -> category.subtopics().stream())
 			.map(AskedTag::key)
 			.collect(Collectors.toCollection(LinkedHashSet::new));
-		Set<String> regions = tagSet.regions().stream().map(AskedTag::key).collect(Collectors.toSet());
-		Set<String> formats = tagSet.format().options().stream().map(FormatOption::key).collect(Collectors.toSet());
-		Set<Integer> levels = tagSet.importance().levels().stream().map(ImportanceLevel::level).collect(Collectors.toSet());
+		Set<String> regions = questions.regions().stream().map(AskedTag::key).collect(Collectors.toSet());
+		Set<String> formats = questions.format().options().stream().map(FormatOption::key).collect(Collectors.toSet());
+		Set<Integer> levels = questions.importance().levels().stream().map(ImportanceLevel::level).collect(Collectors.toSet());
 		return keys("주제", topics, evaluation.topics())
 			.or(() -> keys("지역", regions, evaluation.regions()))
 			.or(() -> keys("형식", formats, evaluation.formats()))

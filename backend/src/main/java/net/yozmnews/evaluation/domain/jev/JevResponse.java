@@ -8,7 +8,7 @@ import net.yozmnews.evaluation.AskedTag;
 import net.yozmnews.evaluation.EvaluatorFailureKind;
 import net.yozmnews.evaluation.FormatOption;
 import net.yozmnews.evaluation.ImportanceLevel;
-import net.yozmnews.evaluation.TagSetView;
+import net.yozmnews.evaluation.TagQuestions;
 import net.yozmnews.evaluation.TopicCategory;
 import net.yozmnews.evaluation.domain.evaluator.CandidateEvent;
 import net.yozmnews.evaluation.domain.evaluator.Evaluation;
@@ -25,8 +25,8 @@ import tools.jackson.databind.json.JsonMapper;
 /**
  * Jev 의 200 응답을 포트 결과로 옮긴다 — docs/specs/evaluation.md §4.
  * <p>
- * 답은 {@link JevRequest} 의 질문 이름으로 읽는다 — 평가는 넘긴 체계의 질문, 사건 소속 판정은 물은 후보 사건의 질문이다. 중요도는 수준
- * 위치({@code "0"} 부터)를 체계의 수준 순서로 되찾는다. 묻지 않은 여분의 답은 읽지 않는다 — 원본 응답째 저장된다. 응답의 모양은 기사와
+ * 답은 {@link JevRequest} 의 질문 이름으로 읽는다 — 평가는 넘긴 질문 묶음, 사건 소속 판정은 물은 후보 사건의 질문이다. 중요도는 수준
+ * 위치({@code "0"} 부터)를 질문 묶음의 수준 순서로 되찾는다. 묻지 않은 여분의 답은 읽지 않는다 — 원본 응답째 저장된다. 응답의 모양은 기사와
  * 무관하므로 읽을 수 없으면 평가기 사용 불가다.
  */
 public final class JevResponse {
@@ -40,12 +40,12 @@ public final class JevResponse {
 	}
 
 	/**
-	 * @return 넘긴 체계의 모든 질문에 기대한 종류의 답과 0 ~ 1 의 유한 확률이 있으면 {@link Evaluation}, 아니면 평가기 사용 불가 실패 —
+	 * @return 넘긴 질문 묶음의 모든 질문에 기대한 종류의 답과 0 ~ 1 의 유한 확률이 있으면 {@link Evaluation}, 아니면 평가기 사용 불가 실패 —
 	 * 문구는 첫 문제 하나(질문 이름만)와 요청 ID
 	 */
-	public static EvaluationResult read(String body, @Nullable String requestId, TagSetView tagSet) {
+	public static EvaluationResult read(String body, @Nullable String requestId, TagQuestions questions) {
 		try {
-			return evaluation(body, tagSet);
+			return evaluation(body, questions);
 		}
 		catch (Unreadable ex) {
 			return unavailable(ex, requestId);
@@ -77,26 +77,26 @@ public final class JevResponse {
 						JevErrors.MAX_MESSAGE_CODE_POINTS));
 	}
 
-	private static Evaluation evaluation(String body, TagSetView tagSet) {
+	private static Evaluation evaluation(String body, TagQuestions questions) {
 		Envelope envelope = envelope(body);
 		JsonNode answers = envelope.answers();
 		Map<String, Double> topics = new LinkedHashMap<>();
-		for (TopicCategory category : tagSet.topics()) {
+		for (TopicCategory category : questions.topics()) {
 			for (AskedTag subtopic : category.subtopics()) {
 				topics.put(subtopic.key(), yes(answers, JevRequest.TOPIC_PREFIX + subtopic.key()));
 			}
 		}
 		Map<String, Double> regions = new LinkedHashMap<>();
-		for (AskedTag region : tagSet.regions()) {
+		for (AskedTag region : questions.regions()) {
 			regions.put(region.key(), yes(answers, JevRequest.REGION_PREFIX + region.key()));
 		}
 		JsonNode format = probabilities(answers, JevRequest.FORMAT, "choice");
 		Map<String, Double> formats = new LinkedHashMap<>();
-		for (FormatOption option : tagSet.format().options()) {
+		for (FormatOption option : questions.format().options()) {
 			formats.put(option.key(), probability(format.get(option.key()), JevRequest.FORMAT + "." + option.key()));
 		}
 		JsonNode importance = probabilities(answers, JevRequest.IMPORTANCE, "score");
-		List<ImportanceLevel> levels = tagSet.importance().levels();
+		List<ImportanceLevel> levels = questions.importance().levels();
 		Map<Integer, Double> importanceByLevel = new LinkedHashMap<>();
 		for (int position = 0; position < levels.size(); position++) {
 			importanceByLevel.put(levels.get(position).level(), probability(

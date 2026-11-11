@@ -9,8 +9,10 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
+import net.yozmnews.evaluation.ArticleTagging;
 import net.yozmnews.evaluation.MultiTagKind;
 import net.yozmnews.evaluation.TagBackfillRunView;
+import net.yozmnews.evaluation.TagReread;
 import net.yozmnews.evaluation.TagSetId;
 import net.yozmnews.evaluation.TagSetThresholds;
 import net.yozmnews.evaluation.TagSetView;
@@ -20,14 +22,9 @@ import net.yozmnews.evaluation.domain.backfill.BackfillSchedule;
 import net.yozmnews.evaluation.domain.backfill.BackfillVersionPlan;
 import net.yozmnews.evaluation.domain.backfill.TagBackfill;
 import net.yozmnews.evaluation.domain.backfill.TagBackfillRepository;
-import net.yozmnews.evaluation.domain.evaluator.ArticleEvaluator;
-import net.yozmnews.evaluation.domain.evaluator.Evaluation;
-import net.yozmnews.evaluation.domain.evaluator.RereadFailure;
-import net.yozmnews.evaluation.domain.evaluator.RereadResult;
+import net.yozmnews.evaluation.domain.result.BackfillTarget;
 import net.yozmnews.evaluation.domain.result.EvaluationRecord;
 import net.yozmnews.evaluation.domain.result.EvaluationResultRepository;
-import net.yozmnews.evaluation.domain.result.ResultCheck;
-import net.yozmnews.evaluation.domain.result.StoredResponse;
 import net.yozmnews.evaluation.domain.threshold.ThresholdRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,7 +36,8 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 빠진 태그 채움 회차 하나 — docs/specs/evaluation.md §4.
  * <p>
  * 시작할 수 있는 채움을 점유해 커밋한 뒤, 덮는 범위의 평가를 평가 ID 순으로 {@link BackfillSchedule#BATCH} 건씩 묶음마다 한 트랜잭션에서
- * 잠가 읽는다. 평가마다 평가기가 원본 응답을 다시 읽고, 체계와 맞으면 그 버전의 채울 저장 기준으로 거른 태그 가운데 없는 행만 더한다. 묶음 끝에
+ * 잠가 읽는다. 평가마다 {@code evaluation} 이 판정 원본을 그 버전의 질문 묶음으로 다시 읽고(대조까지 한다), 읽히면 그 버전의 채울 저장
+ * 기준으로 거른 태그 가운데 없는 행만 더한다. 묶음 끝에
  * 커서 · 버전별 건수 · 점유를 토큰이 맞을 때만 쓴다 — 점유를 잃었으면 그 묶음을 되돌리고 멈춘다. 다 돌면 끝낸다.
  * <p>
  * 다시 읽기의 예상 못한 예외는 그 평가를 읽을 수 없음으로 세고 이어 간다 — 저장된 행만 보는 결정적 계산이라 멈추면 같은 커서에서 다시 멈춘다.
@@ -58,29 +56,33 @@ public class TagBackfillRound {
 
 	private final TagSetViews views;
 
+	private final ArticleTagging tagging;
+
 	private final TransactionTemplate transaction;
 
 	private final InstantSource clock;
 
 	@Autowired
 	TagBackfillRound(TagBackfillRepository backfills, EvaluationResultRepository results,
-			ThresholdRepository thresholds, TagSetViews views, TransactionTemplate transaction) {
-		this(backfills, results, thresholds, views, transaction, InstantSource.system());
+			ThresholdRepository thresholds, TagSetViews views, ArticleTagging tagging,
+			TransactionTemplate transaction) {
+		this(backfills, results, thresholds, views, tagging, transaction, InstantSource.system());
 	}
 
 	TagBackfillRound(TagBackfillRepository backfills, EvaluationResultRepository results,
-			ThresholdRepository thresholds, TagSetViews views, TransactionTemplate transaction, InstantSource clock) {
+			ThresholdRepository thresholds, TagSetViews views, ArticleTagging tagging, TransactionTemplate transaction,
+			InstantSource clock) {
 		this.backfills = backfills;
 		this.results = results;
 		this.thresholds = thresholds;
 		this.views = views;
+		this.tagging = tagging;
 		this.transaction = transaction;
 		this.clock = clock;
 	}
 
-	/** 회차 하나를 돈다 — 평가기는 작업 진입점이 넘긴다 */
-	public void run(ArticleEvaluator evaluator) {
-		Objects.requireNonNull(evaluator, "evaluator");
+	/** 회차 하나를 돈다 */
+	public void run() {
 		UUID token = UUID.randomUUID();
 		Optional<TagBackfill> claimed = this.transaction.execute(status -> this.backfills
 			.lockDue(this.clock.instant())
@@ -100,7 +102,7 @@ public class TagBackfillRound {
 		while (true) {
 			Batch batch;
 			try {
-				batch = batch(evaluator, backfill, token, cursor, targets);
+				batch = batch(backfill, token, cursor, targets);
 			}
 			catch (RuntimeException ex) {
 				this.transaction.executeWithoutResult(status -> this.backfills.release(backfill.id(), token));
@@ -122,22 +124,21 @@ public class TagBackfillRound {
 	}
 
 	/** 묶음 하나 — 한 트랜잭션에서 잠가 읽고 더하고 진행을 쓴다 */
-	private Batch batch(ArticleEvaluator evaluator, TagBackfill backfill, UUID token, long cursor,
-			Map<TagSetId, Target> targets) {
+	private Batch batch(TagBackfill backfill, UUID token, long cursor, Map<TagSetId, Target> targets) {
 		return Objects.requireNonNull(this.transaction.execute(status -> {
-			List<StoredResponse> responses = this.results.lockResponses(backfill.from(), backfill.to(), cursor,
+			List<BackfillTarget> responses = this.results.lockForBackfill(backfill.from(), backfill.to(), cursor,
 					BackfillSchedule.BATCH);
 			if (responses.isEmpty()) {
 				return this.backfills.finish(backfill.id(), token, this.clock.instant()) ? new Batch.Finished()
 						: new Batch.LeaseLost();
 			}
 			Map<TagSetId, BackfillCounts> counts = new LinkedHashMap<>();
-			for (StoredResponse response : responses) {
+			for (BackfillTarget response : responses) {
 				Target target = targets.get(response.tagSetId());
 				if (target == null) {
 					throw new IllegalStateException("채움 계획에 없는 버전의 평가다 — 평가 " + response.evaluationId());
 				}
-				counts.merge(response.tagSetId(), fill(evaluator, backfill, response, target), BackfillCounts::plus);
+				counts.merge(response.tagSetId(), fill(backfill, response, target), BackfillCounts::plus);
 			}
 			long last = responses.getLast().evaluationId();
 			if (!this.backfills.advance(backfill.id(), token, last, counts,
@@ -150,27 +151,23 @@ public class TagBackfillRound {
 	}
 
 	/** 평가 하나를 다시 읽어 빠진 태그를 더한다 — 그 평가의 건수 */
-	private BackfillCounts fill(ArticleEvaluator evaluator, TagBackfill backfill, StoredResponse response,
-			Target target) {
-		RereadResult result;
+	private BackfillCounts fill(TagBackfill backfill, BackfillTarget response, Target target) {
+		TagReread result;
 		try {
-			result = evaluator.reread(response.evaluator(), response.rawResponse(), target.tagSet());
+			result = this.tagging.reread(response.judgementId(), target.tagSet().questions());
 		}
 		catch (RuntimeException ex) {
-			logger.error("빠진 태그 채움 {} 에서 평가기가 원본 응답을 다시 읽다 예상 못한 예외를 던졌다 — 평가 {}", backfill.id(),
+			logger.error("빠진 태그 채움 {} 에서 판정 원본을 다시 읽다 예상 못한 예외가 났다 — 평가 {}", backfill.id(),
 					response.evaluationId(), ex);
 			return new BackfillCounts(1, 0, 0, 1);
 		}
 		return switch (result) {
-			case Evaluation evaluation -> {
-				if (ResultCheck.mismatch(evaluation, target.tagSet()).isPresent()) {
-					yield new BackfillCounts(1, 0, 0, 1);
-				}
+			case TagReread.Read read -> {
 				int added = this.results.addMissingTags(response.evaluationId(), response.articleId(),
-						EvaluationRecord.storedTags(evaluation, target.tagSet(), target.thresholds()));
+						EvaluationRecord.storedTags(read.answers(), target.tagSet(), target.thresholds()));
 				yield new BackfillCounts(1, added, 0, 0);
 			}
-			case RereadFailure failure -> switch (failure.kind()) {
+			case TagReread.Unread unread -> switch (unread.reason()) {
 				case OTHER_EVALUATOR -> new BackfillCounts(1, 0, 1, 0);
 				case UNREADABLE -> new BackfillCounts(1, 0, 0, 1);
 			};

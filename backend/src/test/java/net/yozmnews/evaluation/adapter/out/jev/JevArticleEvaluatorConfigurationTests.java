@@ -137,7 +137,7 @@ class JevArticleEvaluatorConfigurationTests {
 		this.runner.withPropertyValues(ROLES, "yozmnews.jev.api-key=" + KEY, "yozmnews.jev.model=jev-1.13.0",
 				"yozmnews.jev.base-url=" + server.baseUrl())
 			.run(context -> context.getBean(ArticleEvaluator.class)
-				.evaluate(new EvaluationInput("제목", null, List.of()), tagSet));
+				.evaluate(new EvaluationInput("제목", null, List.of()), tagSet.questions()));
 
 		server.verify(1, postRequestedFor(urlEqualTo("/v1/systemone"))
 			.withRequestBody(matchingJsonPath("$.model", equalTo("jev-1.13.0"))));

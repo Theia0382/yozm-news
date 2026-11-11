@@ -18,7 +18,7 @@ import net.yozmnews.evaluation.AskedTag;
 import net.yozmnews.evaluation.EvaluatorFailureKind;
 import net.yozmnews.evaluation.FormatOption;
 import net.yozmnews.evaluation.ImportanceLevel;
-import net.yozmnews.evaluation.TagSetView;
+import net.yozmnews.evaluation.TagQuestions;
 import net.yozmnews.evaluation.TopicCategory;
 import net.yozmnews.evaluation.domain.evaluator.ArticleEvaluator;
 import net.yozmnews.evaluation.domain.evaluator.CandidateEvent;
@@ -49,16 +49,16 @@ import tools.jackson.databind.json.JsonMapper;
  * <li>주제 — 중분류 이름이 일치하면 그 중분류 {@value #NAME_MATCH}. 대분류 이름이 일치하고 그 대분류에 일치한 중분류가 없으면 그
  * 대분류의 중분류 가운데 해시로 고른 하나 {@value #CATEGORY_MATCH}. 둘 다 없으면 전체 중분류 가운데 해시로 고른 하나
  * {@value #PICKED}. 나머지는 {@value #LOW_BOUND} 미만의 해시값</li>
- * <li>지역 — 이름이 일치하면 {@value #NAME_MATCH}, 하나도 없으면 체계 순서의 첫 지역 {@value #PICKED}, 나머지는
+ * <li>지역 — 이름이 일치하면 {@value #NAME_MATCH}, 하나도 없으면 질문 묶음 순서의 첫 지역 {@value #PICKED}, 나머지는
  * {@value #LOW_BOUND} 미만의 해시값</li>
- * <li>형식 — 이름이 일치한 첫 선택지, 없으면 체계 순서의 첫 선택지가 {@value #FORMAT_CHOSEN}, 나머지 선택지가 그 나머지를
+ * <li>형식 — 이름이 일치한 첫 선택지, 없으면 질문 묶음 순서의 첫 선택지가 {@value #FORMAT_CHOSEN}, 나머지 선택지가 그 나머지를
  * 똑같이 나눈다</li>
  * <li>중요도 — 해시로 고른 수준이 {@value #IMPORTANCE_CHOSEN}, 나머지 수준이 그 나머지를 똑같이 나눈다</li>
  * <li>해시 — {@code SHA-256(제목 + "\n" + 구분자 + "\n" + 키)} 의 앞 8바이트를 0 이상 1 미만으로 옮긴 값. 해시로 고르면 해시값이
- * 가장 큰 키(같으면 체계 순서가 앞선 키)다</li>
+ * 가장 큰 키(같으면 질문 묶음 순서가 앞선 키)다</li>
  * <li>입력 토큰 — 제목 · 요약 · 출처 이름 · 섹션 · 카테고리와 체계의 질문 문장 · 형식 선택지 이름 · 중요도 기준의 코드 포인트 합을
  * 2로 나눠 올린 값. 실제 토큰 수가 아니다</li>
- * <li>원본 응답 — 평가기 이름 · 버전과 태그 종류별 확률을 키 순으로 담은 JSON. 다시 읽기는 넘긴 체계의 키마다 그 확률을 읽고,
+ * <li>원본 응답 — 평가기 이름 · 버전과 태그 종류별 확률을 키 순으로 담은 JSON. 다시 읽기는 넘긴 질문 묶음의 키마다 그 확률을 읽고,
  * 입력 토큰은 원본에 없어 0 이다</li>
  * <li>사건 소속 판정 — 조각은 제목을 문자 · 숫자가 아닌 문자로 나눈 {@value #MIN_PIECE_CODE_POINTS} 코드 포인트 이상의 조각(중복
  * 없음)이다. 판정할 기사 제목의 조각 집합 A 와 그 후보 서술 제목들의 조각 합집합 D 에 대해 확률은
@@ -67,7 +67,7 @@ import tools.jackson.databind.json.JsonMapper;
  * <li>판정 입력 토큰 — 제목 · 요약과 후보마다 질문 문장의 코드 포인트 합을 2로 나눠 올린 값</li>
  * <li>판정 원본 응답 — 평가기 이름 · 버전과 사건 ID 순의 확률({@code events})을 담은 JSON</li>
  * </ul>
- * 넘긴 체계는 검증된 체계다 — 주제 · 중분류 · 지역이 하나 이상, 형식 선택지가 둘 이상이다.
+ * 넘긴 질문 묶음은 검증된 체계에서 왔다 — 주제 · 중분류 · 지역이 하나 이상, 형식 선택지가 둘 이상이다.
  */
 public final class FakeArticleEvaluator implements ArticleEvaluator {
 
@@ -129,34 +129,34 @@ public final class FakeArticleEvaluator implements ArticleEvaluator {
 	private static final JsonMapper JSON = JsonMapper.builder().build();
 
 	@Override
-	public EvaluationResult evaluate(EvaluationInput input, TagSetView tagSet) {
+	public EvaluationResult evaluate(EvaluationInput input, TagQuestions questions) {
 		Objects.requireNonNull(input, "input");
-		Objects.requireNonNull(tagSet, "tagSet");
+		Objects.requireNonNull(questions, "questions");
 		String title = input.title();
 		EvaluationFailure failure = failure(title);
 		if (failure != null) {
 			return failure;
 		}
 		String text = matchText(input);
-		Map<String, Double> topics = topics(title, tagSet.topics(), text);
-		Map<String, Double> regions = regions(title, tagSet.regions(), text);
-		Map<String, Double> formats = formats(tagSet.format().options(), text);
-		Map<Integer, Double> importance = importance(title, tagSet.importance().levels());
-		return new Evaluation(topics, regions, formats, importance, NAME, MODEL_VERSION, tokens(input, tagSet),
+		Map<String, Double> topics = topics(title, questions.topics(), text);
+		Map<String, Double> regions = regions(title, questions.regions(), text);
+		Map<String, Double> formats = formats(questions.format().options(), text);
+		Map<Integer, Double> importance = importance(title, questions.importance().levels());
+		return new Evaluation(topics, regions, formats, importance, NAME, MODEL_VERSION, tokens(input, questions),
 				rawResponse(topics, regions, formats, importance));
 	}
 
-	/** 자기가 남긴 원본 응답을 넘긴 체계로 다시 읽는다 */
+	/** 자기가 남긴 원본 응답을 넘긴 질문 묶음로 다시 읽는다 */
 	@Override
-	public RereadResult reread(String evaluator, String rawResponse, TagSetView tagSet) {
+	public RereadResult reread(String evaluator, String rawResponse, TagQuestions questions) {
 		Objects.requireNonNull(evaluator, "evaluator");
 		Objects.requireNonNull(rawResponse, "rawResponse");
-		Objects.requireNonNull(tagSet, "tagSet");
+		Objects.requireNonNull(questions, "questions");
 		if (!NAME.equals(evaluator)) {
 			return new RereadFailure(RereadFailure.Kind.OTHER_EVALUATOR, "Fake 가 남긴 원본 응답이 아니다 — 평가기 " + evaluator);
 		}
 		try {
-			return reread(rawResponse, tagSet);
+			return reread(rawResponse, questions);
 		}
 		catch (Unreadable ex) {
 			return new RereadFailure(RereadFailure.Kind.UNREADABLE, "Fake 원본 응답을 읽을 수 없다 — " + ex.getMessage());
@@ -328,7 +328,7 @@ public final class FakeArticleEvaluator implements ArticleEvaluator {
 		return result;
 	}
 
-	private static int tokens(EvaluationInput input, TagSetView tagSet) {
+	private static int tokens(EvaluationInput input, TagQuestions questions) {
 		List<String> texts = new ArrayList<>();
 		texts.add(input.title());
 		if (input.summary() != null) {
@@ -343,12 +343,12 @@ public final class FakeArticleEvaluator implements ArticleEvaluator {
 			}
 			texts.addAll(feed.categories());
 		}
-		tagSet.topics().forEach(category -> category.subtopics().forEach(subtopic -> texts.add(subtopic.question())));
-		tagSet.regions().forEach(region -> texts.add(region.question()));
-		texts.add(tagSet.format().question());
-		tagSet.format().options().forEach(option -> texts.add(option.name()));
-		texts.add(tagSet.importance().question());
-		tagSet.importance().levels().forEach(level -> texts.add(level.description()));
+		questions.topics().forEach(category -> category.subtopics().forEach(subtopic -> texts.add(subtopic.question())));
+		questions.regions().forEach(region -> texts.add(region.question()));
+		texts.add(questions.format().question());
+		questions.format().options().forEach(option -> texts.add(option.name()));
+		texts.add(questions.importance().question());
+		questions.importance().levels().forEach(level -> texts.add(level.description()));
 		return tokens(texts);
 	}
 
@@ -370,8 +370,8 @@ public final class FakeArticleEvaluator implements ArticleEvaluator {
 		return JSON.writeValueAsString(root);
 	}
 
-	/** 원본 응답에서 넘긴 체계의 키마다 확률을 읽는다 — 중요도 키는 수준의 문자열 */
-	private static Evaluation reread(String rawResponse, TagSetView tagSet) {
+	/** 원본 응답에서 넘긴 질문 묶음의 키마다 확률을 읽는다 — 중요도 키는 수준의 문자열 */
+	private static Evaluation reread(String rawResponse, TagQuestions questions) {
 		JsonNode root;
 		try {
 			root = JSON.readTree(rawResponse);
@@ -387,21 +387,21 @@ public final class FakeArticleEvaluator implements ArticleEvaluator {
 			throw new Unreadable(RAW_MODEL_VERSION + " 이 없거나 비었다");
 		}
 		Map<String, Double> topics = new LinkedHashMap<>();
-		for (TopicCategory category : tagSet.topics()) {
+		for (TopicCategory category : questions.topics()) {
 			for (AskedTag subtopic : category.subtopics()) {
 				topics.put(subtopic.key(), probability(root, RAW_TOPICS, subtopic.key()));
 			}
 		}
 		Map<String, Double> regions = new LinkedHashMap<>();
-		for (AskedTag region : tagSet.regions()) {
+		for (AskedTag region : questions.regions()) {
 			regions.put(region.key(), probability(root, RAW_REGIONS, region.key()));
 		}
 		Map<String, Double> formats = new LinkedHashMap<>();
-		for (FormatOption option : tagSet.format().options()) {
+		for (FormatOption option : questions.format().options()) {
 			formats.put(option.key(), probability(root, RAW_FORMATS, option.key()));
 		}
 		Map<Integer, Double> importance = new LinkedHashMap<>();
-		for (ImportanceLevel level : tagSet.importance().levels()) {
+		for (ImportanceLevel level : questions.importance().levels()) {
 			importance.put(level.level(), probability(root, RAW_IMPORTANCE, Integer.toString(level.level())));
 		}
 		// 입력 토큰은 원본 응답에 없다 — 다시 읽기는 토큰 수를 쓰지 않는다

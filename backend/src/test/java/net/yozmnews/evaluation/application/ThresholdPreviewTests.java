@@ -12,6 +12,7 @@ import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.evaluation.EvaluationPeriod;
 import net.yozmnews.evaluation.MultiTagKind;
+import net.yozmnews.evaluation.TagJudgementId;
 import net.yozmnews.evaluation.TagSetAdministration;
 import net.yozmnews.evaluation.TagSetDirectory;
 import net.yozmnews.evaluation.TagSetId;
@@ -85,6 +86,7 @@ class ThresholdPreviewTests {
 		TagBackfillRows.removeAll(this.jdbc);
 		this.jdbc.sql("delete from article_tags").update();
 		this.jdbc.sql("delete from article_evaluations").update();
+		this.jdbc.sql("delete from article_tag_judgements").update();
 		TagSetRows.removeVersionsAfterFirst(this.jdbc);
 		TagSetRows.resetThresholds(this.jdbc);
 		this.settings.seen.clear();
@@ -221,8 +223,9 @@ class ThresholdPreviewTests {
 	}
 
 	private void insert(TagSetId version, long article, Instant at, List<StoredTag> tags) {
-		this.results.insert(new EvaluationRecord(new ArticleId(article), version, "fake", "fake-1", "straight", 0.7,
-				Map.of("straight", 0.7), 3.0, Map.of(3, 1.0), tags, "{}", 1_000, at));
+		TagJudgementId judgement = TagJudgementRows.insert(this.jdbc, article, "fake", "fake-1", "{}", 1_000, at);
+		this.results.insert(new EvaluationRecord(new ArticleId(article), version, judgement, "straight", 0.7,
+				Map.of("straight", 0.7), 3.0, Map.of(3, 1.0), tags, at));
 	}
 
 	private static StoredTag topic(String key, double probability) {

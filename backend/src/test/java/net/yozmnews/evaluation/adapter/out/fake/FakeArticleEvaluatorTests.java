@@ -63,7 +63,7 @@ class FakeArticleEvaluatorTests {
 
 	@Test
 	void rereadsItsOwnRawResponseForTheTagSet() {
-		assertThat(this.evaluator.reread("fake", RAW, TAG_SET)).isEqualTo(new Evaluation(
+		assertThat(this.evaluator.reread("fake", RAW, TAG_SET.questions())).isEqualTo(new Evaluation(
 				Map.of("politics.executive", 0.7, "politics.assembly", 0.9, "economy.finance", 0.05,
 						"economy.realestate", 0.11),
 				Map.of("world", 0.03, "domestic", 0.9), Map.of("straight", 0.8, "opinion", 0.1, "feature", 0.1),
@@ -74,7 +74,7 @@ class FakeArticleEvaluatorTests {
 	void rereadingAnEvaluationGivesItsProbabilitiesBack() {
 		Evaluation evaluation = evaluate(input("대통령 시정연설", "정치"));
 
-		Evaluation reread = (Evaluation) this.evaluator.reread("fake", evaluation.rawResponse(), TAG_SET);
+		Evaluation reread = (Evaluation) this.evaluator.reread("fake", evaluation.rawResponse(), TAG_SET.questions());
 
 		assertThat(reread.topics()).isEqualTo(evaluation.topics());
 		assertThat(reread.regions()).isEqualTo(evaluation.regions());
@@ -84,18 +84,18 @@ class FakeArticleEvaluatorTests {
 
 	@Test
 	void doesNotRereadTheResponseOfAnotherEvaluator() {
-		assertThat(this.evaluator.reread("jev", RAW, TAG_SET)).isEqualTo(
+		assertThat(this.evaluator.reread("jev", RAW, TAG_SET.questions())).isEqualTo(
 				new RereadFailure(RereadFailure.Kind.OTHER_EVALUATOR, "Fake 가 남긴 원본 응답이 아니다 — 평가기 jev"));
 	}
 
 	@Test
 	void aRawResponseWithoutAProbabilityOfTheTagSetIsUnreadable() {
-		assertThat(this.evaluator.reread("fake", RAW.replace(",\"world\":0.03", ""), TAG_SET)).isEqualTo(
+		assertThat(this.evaluator.reread("fake", RAW.replace(",\"world\":0.03", ""), TAG_SET.questions())).isEqualTo(
 				new RereadFailure(RereadFailure.Kind.UNREADABLE,
 						"Fake 원본 응답을 읽을 수 없다 — 확률이 없거나 숫자가 아니다 — regions.world"));
-		assertThat(this.evaluator.reread("fake", RAW.replace("\"5\":0.1", "\"5\":1.5"), TAG_SET)).isEqualTo(
+		assertThat(this.evaluator.reread("fake", RAW.replace("\"5\":0.1", "\"5\":1.5"), TAG_SET.questions())).isEqualTo(
 				new RereadFailure(RereadFailure.Kind.UNREADABLE, "Fake 원본 응답을 읽을 수 없다 — 확률이 0 ~ 1 이 아니다 — importance.5"));
-		assertThat(this.evaluator.reread("fake", "[]", TAG_SET))
+		assertThat(this.evaluator.reread("fake", "[]", TAG_SET.questions()))
 			.isEqualTo(new RereadFailure(RereadFailure.Kind.UNREADABLE, "Fake 원본 응답을 읽을 수 없다 — JSON 객체가 아니다"));
 	}
 
@@ -103,8 +103,8 @@ class FakeArticleEvaluatorTests {
 	void givesTheSameResultForTheSameInput() {
 		EvaluationInput input = input("날씨 맑음", "전체기사");
 
-		assertThat(this.evaluator.evaluate(input, TAG_SET)).isEqualTo(this.evaluator.evaluate(input, TAG_SET))
-			.isEqualTo(new FakeArticleEvaluator().evaluate(input, TAG_SET));
+		assertThat(this.evaluator.evaluate(input, TAG_SET.questions())).isEqualTo(this.evaluator.evaluate(input, TAG_SET.questions()))
+			.isEqualTo(new FakeArticleEvaluator().evaluate(input, TAG_SET.questions()));
 	}
 
 	@Test
@@ -179,8 +179,8 @@ class FakeArticleEvaluatorTests {
 				List.of(new AskedTag("korea", "한", "한국", "한국의 일인가"), new AskedTag("world", "국제", "국외", "국외의 일인가")),
 				TAG_SET.format(), TAG_SET.importance());
 
-		Evaluation oneCharacterOnly = (Evaluation) this.evaluator.evaluate(input("한파 경보", "전체기사"), oneCharacter);
-		Evaluation twoCharacters = (Evaluation) this.evaluator.evaluate(input("국제 유가", "전체기사"), oneCharacter);
+		Evaluation oneCharacterOnly = (Evaluation) this.evaluator.evaluate(input("한파 경보", "전체기사"), oneCharacter.questions());
+		Evaluation twoCharacters = (Evaluation) this.evaluator.evaluate(input("국제 유가", "전체기사"), oneCharacter.questions());
 
 		assertThat(oneCharacterOnly.regions().values()).doesNotContain(0.9);
 		assertThat(twoCharacters.regions()).containsEntry("world", 0.9);
@@ -233,24 +233,24 @@ class FakeArticleEvaluatorTests {
 
 	@Test
 	void failsWithTheKindOfTheMarkerInTheTitle() {
-		assertThat(this.evaluator.evaluate(input("[fake:transient] 속보", "정치"), TAG_SET))
+		assertThat(this.evaluator.evaluate(input("[fake:transient] 속보", "정치"), TAG_SET.questions()))
 			.isEqualTo(new EvaluationFailure(EvaluatorFailureKind.TRANSIENT, "Fake 평가기 표지에 따른 실패"));
-		assertThat(this.evaluator.evaluate(input("속보 [fake:article-rejected]", "정치"), TAG_SET))
+		assertThat(this.evaluator.evaluate(input("속보 [fake:article-rejected]", "정치"), TAG_SET.questions()))
 			.isEqualTo(new EvaluationFailure(EvaluatorFailureKind.ARTICLE_REJECTED, "Fake 평가기 표지에 따른 실패"));
-		assertThat(this.evaluator.evaluate(input("[fake:evaluator-unavailable]", "정치"), TAG_SET))
+		assertThat(this.evaluator.evaluate(input("[fake:evaluator-unavailable]", "정치"), TAG_SET.questions()))
 			.isEqualTo(new EvaluationFailure(EvaluatorFailureKind.EVALUATOR_UNAVAILABLE, "Fake 평가기 표지에 따른 실패"));
 	}
 
 	@Test
 	void takesTheFirstKindWhenTwoMarkersArePresent() {
-		assertThat(this.evaluator.evaluate(input("[fake:evaluator-unavailable] [fake:transient]", "정치"), TAG_SET))
+		assertThat(this.evaluator.evaluate(input("[fake:evaluator-unavailable] [fake:transient]", "정치"), TAG_SET.questions()))
 			.isEqualTo(new EvaluationFailure(EvaluatorFailureKind.TRANSIENT, "Fake 평가기 표지에 따른 실패"));
 	}
 
 	@Test
 	void evaluatesAnUnknownMarkerOrAMarkerOutsideTheTitle() {
-		assertThat(this.evaluator.evaluate(input("[fake:unknown] 속보", "정치"), TAG_SET)).isInstanceOf(Evaluation.class);
-		assertThat(this.evaluator.evaluate(input("속보", "[fake:transient]"), TAG_SET)).isInstanceOf(Evaluation.class);
+		assertThat(this.evaluator.evaluate(input("[fake:unknown] 속보", "정치"), TAG_SET.questions())).isInstanceOf(Evaluation.class);
+		assertThat(this.evaluator.evaluate(input("속보", "[fake:transient]"), TAG_SET.questions())).isInstanceOf(Evaluation.class);
 	}
 
 	@Test
@@ -266,13 +266,13 @@ class FakeArticleEvaluatorTests {
 		EvaluationInput input = new EvaluationInput("가나다", null, List.of(new FeedContext("다", "라", List.of("마"))));
 
 		// 제목 3 + 출처 · 섹션 · 카테고리 3 + 중분류 질문 1 + 지역 질문 1 + 형식 질문 1 + 선택지 이름 2 + 중요도 질문 1 + 기준 5 = 17
-		Evaluation evaluation = (Evaluation) this.evaluator.evaluate(input, small);
+		Evaluation evaluation = (Evaluation) this.evaluator.evaluate(input, small.questions());
 
 		assertThat(evaluation.inputTokens()).isEqualTo(9);
 		// 요약 2 를 더하면 19
 		EvaluationInput withSummary = new EvaluationInput("가나다", "바사",
 				List.of(new FeedContext("다", "라", List.of("마"))));
-		assertThat(((Evaluation) this.evaluator.evaluate(withSummary, small)).inputTokens()).isEqualTo(10);
+		assertThat(((Evaluation) this.evaluator.evaluate(withSummary, small.questions())).inputTokens()).isEqualTo(10);
 	}
 
 	@Test
@@ -325,7 +325,7 @@ class FakeArticleEvaluatorTests {
 	}
 
 	private Evaluation evaluate(EvaluationInput input) {
-		EvaluationResult result = this.evaluator.evaluate(input, TAG_SET);
+		EvaluationResult result = this.evaluator.evaluate(input, TAG_SET.questions());
 		assertThat(result).isInstanceOf(Evaluation.class);
 		return (Evaluation) result;
 	}
