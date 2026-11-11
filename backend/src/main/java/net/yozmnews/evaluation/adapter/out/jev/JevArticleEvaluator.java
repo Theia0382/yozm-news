@@ -52,8 +52,8 @@ public final class JevArticleEvaluator implements ArticleEvaluator, AutoCloseabl
 	static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(5);
 
 	/**
-	 * 요청 하나(헤더 · 본문 전부)의 마감 — 회차 한 묶음({@code PendingEvaluations.CLAIM_BATCH}) × 기사당 요청 둘 × 이 마감이 점유 기간
-	 * ({@link net.yozmnews.tag.domain.queue.EvaluationSchedule#LEASE}) 안에 들어야 한다
+	 * 요청 하나(헤더 · 본문 전부)의 마감 — 부르는 쪽 회차가 한 점유 안에서 차례로 판정하는 기사 수 × 기사당 요청 둘 × 이 마감이 그
+	 * 점유 기간 안에 들어야 한다(docs/specs/evaluation.md §4)
 	 */
 	static final Duration RESPONSE_DEADLINE = Duration.ofSeconds(15);
 

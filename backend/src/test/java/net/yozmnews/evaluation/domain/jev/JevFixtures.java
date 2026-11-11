@@ -7,16 +7,15 @@ import net.yozmnews.evaluation.FormatChoice;
 import net.yozmnews.evaluation.FormatOption;
 import net.yozmnews.evaluation.ImportanceLevel;
 import net.yozmnews.evaluation.ImportanceScale;
+import net.yozmnews.evaluation.TagQuestions;
 import net.yozmnews.evaluation.TopicCategory;
-import net.yozmnews.tag.TagSetId;
-import net.yozmnews.tag.TagSetView;
 
 /**
- * Jev 판정 시험이 함께 쓰는 작은 체계 — 주제 중분류 2 · 지역 2 · 형식 2 · 중요도 수준 3. 지역 · 형식은 체계 순서와 키 순서가 다르다.
+ * Jev 판정 시험이 함께 쓰는 작은 질문 묶음 — 주제 중분류 2 · 지역 2 · 형식 2 · 중요도 수준 3. 지역 · 형식은 체계 순서와 키 순서가 다르다.
  */
 final class JevFixtures {
 
-	static final TagSetView TAG_SET = new TagSetView(new TagSetId(1), 1,
+	static final TagQuestions QUESTIONS = new TagQuestions(
 			List.of(new TopicCategory("politics", "정치", "국내 정치", List.of(
 					new AskedTag("politics.executive", "대통령실·행정부", "대통령실과 행정부", "주제가 대통령실과 행정부인가"),
 					new AskedTag("politics.legislature", "국회·정당", "국회와 정당", "주제가 국회와 정당인가")))),
