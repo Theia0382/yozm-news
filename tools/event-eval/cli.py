@@ -8,6 +8,7 @@ import random
 import sys
 from collections import Counter, defaultdict
 from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
@@ -38,12 +39,12 @@ def main(argv: Sequence[str] | None = None, *, environ: Mapping[str, str] = os.e
     args = _parser().parse_args(argv)
     try:
         if args.command == "sheet":
-            return _sheet(args, _api(args, environ, open_url), stdout)
+            return _sheet(args, connect(args, environ, open_url), stdout)
         if args.command == "events":
             return _events(args, stdout)
         if args.command == "review":
             return _review(args, stdout)
-        return _measure(args, _api(args, environ, open_url), clock, stdout)
+        return _measure(args, connect(args, environ, open_url), clock, stdout)
     except (LabelError, MeasureError) as error:
         print(f"멈춤 — {error}", file=stderr)
         return EXIT_MISMATCH
@@ -56,31 +57,31 @@ def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="event_eval.py", description="사건 묶기 평가 — 라벨 시트 · 검토 · 측정")
     commands = parser.add_subparsers(dest="command", required=True)
     sheet = commands.add_parser("sheet", help="기간의 배정된 기사로 라벨 시트를 만든다")
-    _data(sheet)
+    add_data_argument(sheet)
     sheet.add_argument("--from", dest="start", required=True, type=date.fromisoformat, help="시작일(포함, yyyy-MM-dd)")
     sheet.add_argument("--to", dest="end", required=True, type=date.fromisoformat, help="종료일(포함, yyyy-MM-dd)")
     sheet.add_argument("--zone", required=True, help="날짜를 해석할 시간대(IANA ID)")
-    _base_url(sheet)
-    _data(commands.add_parser("events", help="정답 사건 × 날짜의 큰 사건 표시 파일을 만들거나 맞춘다"))
+    add_base_url_argument(sheet)
+    add_data_argument(commands.add_parser("events", help="정답 사건 × 날짜의 큰 사건 표시 파일을 만들거나 맞춘다"))
     review = commands.add_parser("review", help="정답 사건별 제목 목록을 보인다")
-    _data(review)
-    review.add_argument("--sample", type=_count, help="기사 2건 이상인 정답 사건을 이만큼 무작위로(+ 애매한 기사 · 큰 사건 표시)")
+    add_data_argument(review)
+    review.add_argument("--sample", type=parse_count, help="기사 2건 이상인 정답 사건을 이만큼 무작위로(+ 애매한 기사 · 큰 사건 표시)")
     review.add_argument("--seed", type=int, help="--sample 의 씨앗 — 없으면 정해 출력한다")
     measure = commands.add_parser("measure", help="B-cubed 와 큰 사건 정밀도를 재고 결과 기록을 쓴다")
-    _data(measure)
+    add_data_argument(measure)
     measure.add_argument("--embedding-model", required=True, help="이 인스턴스의 임베딩 방식 · 모델(기록에 남긴다)")
     measure.add_argument("--big-criteria", type=_big_criteria,
                          help="제안 큰 사건 기준 SOURCES:IMPORTANCE — 미리보기 결과를 잰다(없으면 지금 기준)")
-    measure.add_argument("--note", action="append", default=[], type=_note, help="기록에 남길 메모 KEY=VALUE(되풀이)")
-    _base_url(measure)
+    measure.add_argument("--note", action="append", default=[], type=parse_note, help="기록에 남길 메모 KEY=VALUE(되풀이)")
+    add_base_url_argument(measure)
     return parser
 
 
-def _data(parser: argparse.ArgumentParser) -> None:
+def add_data_argument(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--data", required=True, type=Path, help="인스턴스 쪽 표본 디렉터리(공개 저장소 밖)")
 
 
-def _base_url(parser: argparse.ArgumentParser) -> None:
+def add_base_url_argument(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--base-url", default=DEFAULT_BASE_URL, help=f"운영자 API 의 주소(기본 {DEFAULT_BASE_URL})")
 
 
@@ -92,7 +93,7 @@ def _big_criteria(text: str) -> tuple[int, Decimal]:
         raise argparse.ArgumentTypeError(f"SOURCES:IMPORTANCE 꼴이 아니다 — {text}") from error
 
 
-def _count(text: str) -> int:
+def parse_count(text: str) -> int:
     try:
         value = int(text)
     except ValueError as error:
@@ -102,21 +103,21 @@ def _count(text: str) -> int:
     return value
 
 
-def _note(text: str) -> tuple[str, str]:
+def parse_note(text: str) -> tuple[str, str]:
     key, separator, value = text.partition("=")
     if not separator or not key:
         raise argparse.ArgumentTypeError(f"KEY=VALUE 꼴이 아니다 — {text}")
     return key, value
 
 
-def _api(args: argparse.Namespace, environ: Mapping[str, str], open_url: Callable | None) -> AdminApi:
+def connect(args: argparse.Namespace, environ: Mapping[str, str], open_url: Callable | None) -> AdminApi:
     token = environ.get(TOKEN_ENV, "")
     if not token:
         raise LabelError([f"환경 변수 {TOKEN_ENV} 에 운영자 토큰이 없다"])
     return AdminApi(args.base_url, token, open_url=open_url)
 
 
-def _collect(api: AdminApi, sample: Sample) -> dict[int, EventDetail]:
+def collect(api: AdminApi, sample: Sample) -> dict[int, EventDetail]:
     """표본 기간의 사건 상세 — 합쳐진 사건(요청과 다른 ID 의 응답)이 이미 받은 사건이면 건너뛴다."""
     details: dict[int, EventDetail] = {}
     for event_id in api.event_ids(sample.start, sample.end, sample.zone):
@@ -125,7 +126,7 @@ def _collect(api: AdminApi, sample: Sample) -> dict[int, EventDetail]:
     return details
 
 
-def _assignments(details: Mapping[int, EventDetail]) -> dict[int, tuple[int, EventArticle]]:
+def assignments(details: Mapping[int, EventDetail]) -> dict[int, tuple[int, EventArticle]]:
     """기사 → (사건 ID, 그 사건의 기사). 한 기사가 두 사건에 나오면 MeasureError."""
     placed: dict[int, tuple[int, EventArticle]] = {}
     for detail in details.values():
@@ -137,27 +138,47 @@ def _assignments(details: Mapping[int, EventDetail]) -> dict[int, tuple[int, Eve
     return placed
 
 
+@dataclass(frozen=True)
+class PeriodArticles:
+    """시트에 싣는 기사 — 표본 기간의 사건에 든 기사 가운데 기간 안이고 기사 정보가 있는 것."""
+
+    placed: dict[int, tuple[int, EventArticle]]
+    """기사 → (사건 ID, 그 사건의 기사)."""
+    removed: int
+    """기사 정보가 없어 뺀 기사 수."""
+    outside: int
+    """기간 밖이라 뺀 기사 수 — 사건 목록은 기간 안 기사가 있는 사건이고, 그 사건의 기간 밖 기사도 응답에 있다."""
+
+
+def period_articles(api: AdminApi, sample: Sample) -> PeriodArticles:
+    """표본 기간의 사건에 든 기사(collect · assignments)에서 기간 밖 기사와 기사 정보가 없는 기사를 뺀다."""
+    days = set(sample.days())
+    placed: dict[int, tuple[int, EventArticle]] = {}
+    removed = outside = 0
+    for article_id, (event_id, article) in assignments(collect(api, sample)).items():
+        if sample.day_of(article.published_at) not in days:
+            outside += 1
+        elif article.title is None:
+            removed += 1
+        else:
+            placed[article_id] = (event_id, article)
+    return PeriodArticles(placed, removed, outside)
+
+
 def _sheet(args: argparse.Namespace, api: AdminApi, out: TextIO) -> int:
     directory: Path = args.data
     sample = new_sample(args.start, args.end, args.zone)
     for name in (SAMPLE_FILE, ARTICLES_FILE):
         if (directory / name).exists():
             raise LabelError([f"{directory / name} 가 이미 있다 — 덮지 않는다"])
-    days = set(sample.days())
-    rows: list[SheetRow] = []
-    removed = 0
-    for article_id, (_, article) in _assignments(_collect(api, sample)).items():
-        if sample.day_of(article.published_at) not in days:
-            continue
-        if article.title is None:
-            removed += 1
-            continue
-        rows.append(SheetRow(article_id, article.published_at, article.sources, article.title))
-    rows.sort(key=lambda row: (row.published_at, row.article_id))
+    articles = period_articles(api, sample)
+    rows = sorted((SheetRow(article_id, article.published_at, article.sources, article.title)
+                   for article_id, (_, article) in articles.placed.items()),
+                  key=lambda row: (row.published_at, row.article_id))
     directory.mkdir(parents=True, exist_ok=True)
     write_sample(directory, sample)
     write_sheet(directory / ARTICLES_FILE, rows)
-    print(f"시트 {directory / ARTICLES_FILE}: 기사 {len(rows)}건(기사 정보가 없어 뺀 기사 {removed}건). "
+    print(f"시트 {directory / ARTICLES_FILE}: 기사 {len(rows)}건(기사 정보가 없어 뺀 기사 {articles.removed}건). "
           f"사건에 배정된 기사만 담는다", file=out)
     return 0
 
@@ -225,8 +246,8 @@ def _measure(args: argparse.Namespace, api: AdminApi, clock: Callable[[], dateti
     gold_big = read_big_marks(directory / EVENTS_FILE, labels, sample)
     if not gold_big and args.big_criteria is not None:
         raise MeasureError("표본에 큰 사건 표시가 없다 — --big-criteria 로 견줄 큰 사건 정답이 없다")
-    details = _collect(api, sample)
-    placed = _assignments(details)
+    details = collect(api, sample)
+    placed = assignments(details)
     problems = [f"기사 {label.article_id} 의 발행 시각이 라벨 {format_instant(label.published_at)} · "
                 f"API {format_instant(placed[label.article_id][1].published_at)} 로 다르다 — 다른 인스턴스의 라벨일 수 있다"
                 for label in labels

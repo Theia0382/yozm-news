@@ -15,10 +15,11 @@
 - **로컬 개발 표시** — 로컬 대체물의 결선을 개발용 profile `local` 에서만 등록하는 표시(`@LocalDevelopment`)와 그 규칙(platform-R18)
 - **운영자 접근 통제** — 운영자 경로(`/api/admin/**`)를 운영자 토큰으로 막고, 그 밖의 경로는 연다. 보안 구성은 두 역할 공통이다
 - **오류 응답 형식** — 화면용 API 의 오류 본문(`ApiProblem`)과 그것을 만드는 정본(`ProblemResponses`), 컨트롤러 오류 · 보안 거부의 문제 응답
-- **YAML 원문 읽기** — YAML 원문을 이벤트 API 로 읽어 트리로 옮기고, 문서 종류와 무관한 공통 거부(앵커 · 별칭 · 명시 태그 · 중복 키 · 알 수 없는 키 · 빈 값 · 형 오류 등)를 하는 공개 타입. 수집 프로필(`source`)과 기본 태그 체계(`evaluation`)가 쓴다
-- **코드 포인트 자르기** — 텍스트를 앞 몇 코드 포인트로 자르는 공개 타입(`CodePoints`). 피드 요약문(`source`) · 평가 입력(`evaluation`) · 기사 표현 텍스트(`event`)의 길이 상한이 쓴다
-- **날짜 범위 변환** — 날짜 범위를 시간대의 자정으로 시각 범위에 옮기고, 시간대 전환 여유를 더한 시각 길이 상한을 내는 공개 타입(`DayRange`). 집계 기간(`evaluation` 의 `EvaluationPeriod`)과 사건 조회 기간(`event` 의 `EventPeriod`)이 쓴다
-- **HTTP 응답 본문 상한** — JDK `HttpClient` 의 응답 본문을 상한까지만 받는 공개 타입(`CappedBody`). 외부 API 를 부르는 어댑터(`evaluation` 의 Jev · `event` 의 외부 임베딩)가 쓴다
+- **YAML 원문 읽기** — YAML 원문을 이벤트 API 로 읽어 트리로 옮기고, 문서 종류와 무관한 공통 거부(앵커 · 별칭 · 명시 태그 · 중복 키 · 알 수 없는 키 · 빈 값 · 형 오류 등)를 하는 공개 타입. 수집 프로필(`source`)과 기본 태그 체계(`tag`)가 쓴다
+- **코드 포인트 자르기** — 텍스트를 앞 몇 코드 포인트로 자르는 공개 타입(`CodePoints`). 피드 요약문(`source`) · 판정 입력(`evaluation`) · 기사 표현 텍스트(`event`)의 길이 상한이 쓴다
+- **날짜 범위 변환** — 날짜 범위를 시간대의 자정으로 시각 범위에 옮기고, 시간대 전환 여유를 더한 시각 길이 상한을 내는 공개 타입(`DayRange`). 집계 기간(`tag` 의 `EvaluationPeriod`) · 판정 원본 조회 기간(`evaluation` 의 `JudgementPeriod`) · 사건 조회 기간(`event` 의 `EventPeriod`)이 쓴다
+- **운영 설정의 행위자 종류** — 운영 설정을 정한 주체의 종류(`ChangeActor` — 시스템 · 운영자). 태그 기준 · 저장 기준 · 태그 체계 버전(`tag`)과 큰 사건 기준(`event`)의 이력이 쓴다
+- **HTTP 응답 본문 상한** — JDK `HttpClient` 의 응답 본문을 상한까지만 받는 공개 타입(`CappedBody`). 외부 API 를 부르는 어댑터(`evaluation` 의 Jev · 외부 임베딩)가 쓴다
 - **벡터의 pgvector 텍스트 표현** — 벡터를 pgvector 의 텍스트 표현으로 쓰고 되읽는 공개 타입(`VectorText`). 기사 표현 · 사건 중심(`event`)과 스토리라인 중심(`storyline`)의 저장소가 쓴다
 
 하지 않는 것:
@@ -51,7 +52,7 @@
 
 ## 3. 공개 인터페이스
 
-모듈 최상위 패키지 `net.yozmnews.platform` 의 공개 타입은 역할 애너테이션 둘, 로컬 개발 애너테이션 하나, 문제 응답 둘(`ApiProblem` · `ProblemResponses`), 이벤트 발행 운영 API(`EventPublicationAdministration` 과 결과 타입 — 파일 9개, 중첩 레코드를 더하면 타입 11개), YAML 원문 읽기(파일 8개), 코드 포인트 자르기 하나(`CodePoints`), 날짜 범위 변환 하나(`DayRange`), HTTP 응답 본문 수신자 하나(`CappedBody` — 중첩 타입을 더하면 넷), 벡터의 pgvector 텍스트 표현 하나(`VectorText`)다.
+모듈 최상위 패키지 `net.yozmnews.platform` 의 공개 타입은 역할 애너테이션 둘, 로컬 개발 애너테이션 하나, 문제 응답 둘(`ApiProblem` · `ProblemResponses`), 이벤트 발행 운영 API(`EventPublicationAdministration` 과 결과 타입 — 파일 9개, 중첩 레코드를 더하면 타입 11개), YAML 원문 읽기(파일 8개), 코드 포인트 자르기 하나(`CodePoints`), 날짜 범위 변환 하나(`DayRange`), HTTP 응답 본문 수신자 하나(`CappedBody` — 중첩 타입을 더하면 넷), 벡터의 pgvector 텍스트 표현 하나(`VectorText`), 운영 설정의 행위자 종류 하나(`ChangeActor`)다.
 
 | 타입 | 형태 | 용도 |
 |---|---|---|
@@ -253,7 +254,26 @@ public record DayRange(Instant from, Instant to) {
 | `of` | `[first 의 그 시간대 자정, last 다음 날의 그 시간대 자정)`. 자정이 없는 날은 그날의 첫 유효 시각이다(`LocalDate#atStartOfDay(ZoneId)`). 날짜 수(`last − first + 1`)가 1 ~ `maxDays` 가 아니거나, `last` 가 `LocalDate.MAX` 이거나, 만든 시각 범위가 `from < to` 가 아니면(하루가 통째로 없는 날) 빈 값. 시간대는 결과에 남지 않는다 |
 | `maxLength` | 날짜 `maxDays` 일 범위가 가질 수 있는 시각 길이의 상한 — `maxDays` + 1일(시간대 전환 여유). `maxDays` 가 1 미만이면 `IllegalArgumentException` |
 
-관련 규칙: 없음. 날짜 수의 상한과 기간 규칙은 쓰는 모듈이 갖는다(evaluation-R28 · event-R20).
+관련 규칙: 없음. 날짜 수의 상한과 기간 규칙은 쓰는 모듈이 갖는다(tag-R28 · evaluation-R39 · event-R20).
+
+### ChangeActor
+
+운영 설정을 정한 행위자의 종류 — 운영 설정의 이력이 남긴다.
+
+```java
+public enum ChangeActor { SYSTEM, OPERATOR }
+```
+
+| 값 | 뜻 |
+|---|---|
+| `SYSTEM` | 첫 기동 적재 |
+| `OPERATOR` | 공개 운영 API 를 거친 운영자 |
+
+- 계약
+  - 사용자를 가리키지 않는다 — 지금 운영자는 토큰 하나라 사람을 구별하지 않는다
+  - 저장 값은 상수 이름(`SYSTEM` · `OPERATOR`)이다 — 쓰는 모듈의 이력 테이블이 이 이름으로 저장한다([tag-R13](tag.md#태그-기준--저장-기준) · [event-R21](event.md#대표-기사--큰-사건))
+
+관련 규칙: 없음 — 이력 규칙은 쓰는 모듈이 갖는다.
 
 ### VectorText
 
@@ -417,6 +437,7 @@ stateDiagram-v2
 - **platform-R2** — 처리 도중 멈춘 발행은 Spring Modulith 의 멈춤 감시가 발행 시각에서 멈춤 기준 시간(30분)이 지나면 실패로 바꾸고, 그 뒤 platform-R1 의 경로로 다시 처리된다. 감시는 작업 역할에서만 돈다(platform-R9). 멈춤 기준은 발행 · 처리 중 · 재제출 세 상태에 같은 값이다 — 감시는 기간이 하나라도 있으면 세 상태를 모두 판정하고, 비운 상태는 발행 전부를 멈춤으로 본다
 - **platform-R3** — 재제출 주기와 멈춤 기준은 0 보다 크고, (처리 시도 상한 − 1) × 재제출 주기가 멈춤 기준보다 짧아야 한다 — 감시는 발행 시각으로 멈춤을 판정하므로, 마지막 재제출이 멈춤 기준 안에 있어야 정상 운영에서 재처리 중인 발행을 멈춤으로 오판하지 않는다. 기동 때 확인하고 어기면 기동하지 않는다
 - **platform-R4** — 재처리는 미완료 발행 전체를 읽어 고른다 — 상한에 이른 실패 발행이 쌓여도 새 실패 발행이 밀리지 않는다. 고르는 필터는 조건부 갱신 전에 실패 발행의 이벤트를 읽어 보고, 읽지 못한 발행은 갱신 · 재제출하지 않는다 — 본문을 읽을 수 없는 발행이 재제출 도중 예외로 그 회차의 나머지를 끊지 않고, 처리 시도도 늘지 않는다. 같은 발행은 여러 인스턴스가 동시에 재처리해도 한 곳에서만 재제출된다(Spring Modulith 의 조건부 상태 갱신). 재제출은 리스너의 처리 끝을 기다리지 않는다
+- **platform-R20** — 리스너를 다른 패키지로 옮기는 변경은 같은 변경에 Flyway 마이그레이션을 둔다 — 완료되지 않은 발행의 리스너 ID(Spring 의 기본 ID — 클래스 전체 이름 · 메서드 · 인자 타입)를 옛 ID 에서 새 ID 로 바꾸고, 리스너 하나가 둘로 나뉘면 남은 행을 새 리스너마다 하나씩 되도록 복제한다. 옮긴 반복 작업의 남은 예약 · 대기 작업 행은 같은 마이그레이션이 지운다. 재처리 · 운영자의 다시 처리는 발행의 리스너 ID 와 같은 리스너만 부르기 때문이다 — 없으면 발행이 실패로 남는다([ADR-0113](../adr/0113-moving-listeners-or-jobs-between-modules-migrates-pending-publication-listener-ids-and-drops-pending-jobs-of-the-old-class.md))
 - **platform-R5** — 완료된 발행은 바로 지운다 — 결과는 각 모듈의 데이터에 남는다. 실패한 발행은 운영자가 폐기할 때까지(platform-R15) 남아 재처리와 원인 조사의 근거가 된다. 이 보존 기간은 [data-model.md "보존 정책"](../data-model.md#보존-정책-초안)의 이벤트 발행 기록 행이다
 
 ### 남겨진 발행의 운영자 처리
@@ -430,7 +451,7 @@ stateDiagram-v2
 - **platform-R8** — 앱 역할은 Spring profile `web`(화면 역할) · `worker`(작업 역할) 둘이다. 두 profile 을 함께 켜면 한 프로세스가 두 역할을 다 한다. 역할 profile 을 하나도 켜지 않으면(활성 profile 이 없으면) 기본 profile 로 두 역할을 함께 한다. 다른 profile 만 켜 역할이 하나도 켜지지 않으면 기동하지 않고, 켜는 방법(예: `--spring.profiles.active=local,web,worker`)을 알린다
 - **platform-R9** — 역할 소속:
   - 화면 역할 — 각 모듈 `adapter/in/web` 의 구성요소(화면용 API 컨트롤러 · 명세 설정). `@WebRole` 을 단다
-  - 작업 역할 — 각 모듈 `adapter/in/job` 의 구성요소(작업 진입점 — 반복 작업 등록 포함), JobRunr 작업 서버, 프리셋 기동 대조, 평가기 키 기동 검사, 운영 임베더(`event` 의 로컬 모델 · 외부 구현의 결선), Spring 스케줄링과 멈춤 감시. 구성요소에는 `@WorkerRole` 을 단다
+  - 작업 역할 — 각 모듈 `adapter/in/job` 의 구성요소(작업 진입점 — 반복 작업 등록 포함), JobRunr 작업 서버, 프리셋 기동 대조, 평가기 키 기동 검사 · 임베더 기동 검사, 운영 임베더(`evaluation` 의 로컬 모델 · 외부 구현의 결선), Spring 스케줄링과 멈춤 감시. 구성요소에는 `@WorkerRole` 을 단다
   - 공통 — 애플리케이션 서비스 · 도메인 · 저장소, 작업 등록(`JobScheduler`), 피드 요청 관문과 같은 언론사 요청 예약, 이벤트 리스너, 기본 태그 체계의 기동 검증 · 첫 기동 적재, Flyway 마이그레이션, 관리 엔드포인트(health), 역할 검사, DB 확장 요건 검사, 보안 구성(platform-R10). 이벤트 리스너에는 역할을 달지 않는다 — 리스너는 발행한 프로세스에서 돌고 발행 기록도 그 프로세스의 리스너에 대해서만 생기므로, 한 역할에서 빼면 그 역할이 발행한 이벤트가 처리되지 않는다. 재제출한 발행의 리스너는 재제출한 프로세스에서 돈다 — 재처리 작업이면 작업 역할, 운영자의 다시 처리면 화면 역할
   - 한 구성요소가 두 역할을 함께 달지 않는다. 역할이 켜는 설정은 작업 역할 설정 파일(§7)에만 두고 기본은 꺼진 값이다 — 역할 설정 파일은 활성화 순서대로 덮어쓰므로 역할끼리 같은 키를 다르게 쓰지 않는다
   - 주기 실행은 JobRunr 반복 작업으로 둔다. Spring 스케줄링은 작업 역할에서만 켜지므로, 공통 구성요소의 `@Scheduled` 는 화면 역할만 켠 프로세스에서 돌지 않는다
@@ -505,3 +526,4 @@ stateDiagram-v2
 | [0050](../adr/0050-operator-resubmits-once-or-discards-stranded-event-publications-read-from-registry.md) | 이벤트를 읽을 수 없는 발행은 재제출 전에 거르고, 상한에 이른 · 읽을 수 없는 발행은 운영자가 즉시 1회 재제출하거나 기록 없이 폐기하며, 목록 · 폐기는 `platform` 이 레지스트리 테이블을 직접 다룬다 |
 | [0056](../adr/0056-platform-reads-yaml-text-and-applies-common-rejection.md) | YAML 원문 읽기와 공통 거부는 `platform` 이 맡고, 문서별 형식 · 검증은 각 모듈의 `domain` 이 한다 |
 | [0057](../adr/0057-local-substitutes-registered-only-in-local-profile-without-operator-switch.md) | 로컬 대체물은 `local` profile 에서만 등록하고, 운영 설정으로 켜는 스위치를 두지 않는다 |
+| [0113](../adr/0113-moving-listeners-or-jobs-between-modules-migrates-pending-publication-listener-ids-and-drops-pending-jobs-of-the-old-class.md) | 모듈 사이로 리스너 · 반복 작업을 옮기면 미완료 발행의 리스너 ID 를 마이그레이션으로 옮기고, 옛 클래스의 남은 예약 작업을 지운다 |

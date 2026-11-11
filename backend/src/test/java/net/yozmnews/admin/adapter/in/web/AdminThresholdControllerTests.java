@@ -14,24 +14,24 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 
-import net.yozmnews.evaluation.ChangeActor;
-import net.yozmnews.evaluation.CountBucket;
-import net.yozmnews.evaluation.EvaluationOverview;
-import net.yozmnews.evaluation.MultiTagKind;
-import net.yozmnews.evaluation.ProbabilityHistogram;
-import net.yozmnews.evaluation.Share;
-import net.yozmnews.evaluation.TagSetId;
-import net.yozmnews.evaluation.TagThresholds;
-import net.yozmnews.evaluation.ThresholdChangeResult;
-import net.yozmnews.evaluation.ThresholdChangeView;
-import net.yozmnews.evaluation.ThresholdCondition;
-import net.yozmnews.evaluation.ThresholdKindStatus;
-import net.yozmnews.evaluation.ThresholdPreviewResult;
-import net.yozmnews.evaluation.ThresholdStatusView;
-import net.yozmnews.evaluation.ThresholdWarning;
-import net.yozmnews.evaluation.TokenSummary;
-import net.yozmnews.evaluation.TopicStatusCounts;
+import net.yozmnews.platform.ChangeActor;
 import net.yozmnews.platform.application.WebSliceSecurity;
+import net.yozmnews.tag.CountBucket;
+import net.yozmnews.tag.EvaluationOverview;
+import net.yozmnews.tag.MultiTagKind;
+import net.yozmnews.tag.ProbabilityHistogram;
+import net.yozmnews.tag.Share;
+import net.yozmnews.tag.TagSetId;
+import net.yozmnews.tag.TagThresholds;
+import net.yozmnews.tag.ThresholdChangeResult;
+import net.yozmnews.tag.ThresholdChangeView;
+import net.yozmnews.tag.ThresholdCondition;
+import net.yozmnews.tag.ThresholdKindStatus;
+import net.yozmnews.tag.ThresholdPreviewResult;
+import net.yozmnews.tag.ThresholdStatusView;
+import net.yozmnews.tag.ThresholdWarning;
+import net.yozmnews.tag.TokenSummary;
+import net.yozmnews.tag.TopicStatusCounts;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,7 +43,7 @@ import org.springframework.test.web.servlet.MockMvc;
 /**
  * 운영자 API 의 태그 기준 · 저장 기준 — 상태 · 미리보기 · 변경의 JSON 모양과 판별자, 운영자 행위자, 범위 밖 값 · 본문 · 경로의 400, 토큰.
  * <p>
- * 지키는 규칙: admin-R1 · admin-R3 · evaluation-R11 · evaluation-R35 · evaluation-R36
+ * 지키는 규칙: admin-R1 · admin-R3 · tag-R11 · tag-R35 · tag-R36
  */
 @WebMvcTest(controllers = AdminThresholdController.class, properties = AdminRequests.TOKEN_PROPERTY)
 @Import({ WebSliceSecurity.class, FakeTagSetAdministration.Config.class })

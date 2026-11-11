@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Objects;
 
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.evaluation.Embedding;
 
 /**
  * 기사 표현 한 행 — (기사, 모델 버전)마다 하나 · docs/specs/event.md §4.

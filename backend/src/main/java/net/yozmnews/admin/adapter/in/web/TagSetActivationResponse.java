@@ -2,9 +2,9 @@ package net.yozmnews.admin.adapter.in.web;
 
 import java.util.List;
 
-import net.yozmnews.evaluation.TagSetActivationResult;
-import net.yozmnews.evaluation.TagSetChanges;
-import net.yozmnews.evaluation.TagSetProblemView;
+import net.yozmnews.tag.TagSetActivationResult;
+import net.yozmnews.tag.TagSetChanges;
+import net.yozmnews.tag.TagSetProblemView;
 import org.jspecify.annotations.Nullable;
 import org.springframework.web.server.ResponseStatusException;
 

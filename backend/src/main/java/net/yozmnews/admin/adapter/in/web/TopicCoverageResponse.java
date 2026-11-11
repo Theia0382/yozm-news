@@ -3,12 +3,12 @@ package net.yozmnews.admin.adapter.in.web;
 import java.time.Instant;
 import java.util.List;
 
-import net.yozmnews.evaluation.CategoryCoverage;
-import net.yozmnews.evaluation.EvaluationPeriod;
-import net.yozmnews.evaluation.TopicCoverageView;
+import net.yozmnews.tag.CategoryCoverage;
+import net.yozmnews.tag.EvaluationPeriod;
+import net.yozmnews.tag.TopicCoverageView;
 
 /**
- * 주제별 보도량과 날짜 범위의 상한 — docs/specs/admin.md §3. {@code evaluation} 의 결과를 옮기기만 한다 — 활성 버전 ID 는 JSON 수다
+ * 주제별 보도량과 날짜 범위의 상한 — docs/specs/admin.md §3. {@code tag} 의 결과를 옮기기만 한다 — 활성 버전 ID 는 JSON 수다
  * (admin-R1), 주제 값 레코드는 그대로 싣는다. 상한은 {@link EvaluationPeriod#MAX_DAYS} 에서 읽는다.
  *
  * @param from 집계 기간의 시작(포함)

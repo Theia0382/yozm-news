@@ -18,6 +18,7 @@ import net.yozmnews.evaluation.EventJudgementId;
 import net.yozmnews.evaluation.EventMembership;
 import net.yozmnews.evaluation.MembershipJudgement;
 import net.yozmnews.evaluation.MembershipQuery;
+import net.yozmnews.evaluation.TextEmbedding;
 import net.yozmnews.event.AssignmentCriteria;
 import net.yozmnews.event.DecidedBy;
 import net.yozmnews.event.EventStatus;
@@ -34,7 +35,6 @@ import net.yozmnews.event.domain.event.EventArticle;
 import net.yozmnews.event.domain.event.EventArticleRepository;
 import net.yozmnews.event.domain.event.EventRepository;
 import net.yozmnews.event.domain.event.LockedEvent;
-import net.yozmnews.event.domain.feature.ArticleEmbedder;
 import net.yozmnews.event.domain.feature.MatchFeatures;
 import net.yozmnews.event.domain.feature.MatchFeaturesRepository;
 import net.yozmnews.event.domain.intake.IntakeQueueRepository;
@@ -76,6 +76,8 @@ public class AssignmentRound {
 
 	private final EventMembership membership;
 
+	private final TextEmbedding embedding;
+
 	private final TransactionTemplate transaction;
 
 	private final InstantSource clock;
@@ -83,16 +85,16 @@ public class AssignmentRound {
 	@Autowired
 	AssignmentRound(AssignmentQueueRepository queue, IntakeQueueRepository intake, MatchFeaturesRepository features,
 			EventRepository events, EventArticleRepository assignments, CriteriaRepository criteriaHistory,
-			AssignmentSettings settings, ArticleDirectory articles, EventMembership membership,
+			AssignmentSettings settings, ArticleDirectory articles, EventMembership membership, TextEmbedding embedding,
 			TransactionTemplate transaction) {
 		this(queue, intake, features, events, assignments, criteriaHistory, settings.criteria(), articles, membership,
-				transaction, InstantSource.system());
+				embedding, transaction, InstantSource.system());
 	}
 
 	/** 시험이 시계를 넣는다 */
 	AssignmentRound(AssignmentQueueRepository queue, IntakeQueueRepository intake, MatchFeaturesRepository features,
 			EventRepository events, EventArticleRepository assignments, CriteriaRepository criteriaHistory,
-			AssignmentCriteria criteria, ArticleDirectory articles, EventMembership membership,
+			AssignmentCriteria criteria, ArticleDirectory articles, EventMembership membership, TextEmbedding embedding,
 			TransactionTemplate transaction, InstantSource clock) {
 		this.queue = queue;
 		this.intake = intake;
@@ -103,14 +105,14 @@ public class AssignmentRound {
 		this.criteria = criteria;
 		this.articles = articles;
 		this.membership = membership;
+		this.embedding = embedding;
 		this.transaction = transaction;
 		this.clock = clock;
 	}
 
-	/** 회차 하나를 돈다 — 임베더는 작업 진입점이 넘기고, 지금 모델 버전을 정한다 */
-	public void run(ArticleEmbedder embedder) {
-		Objects.requireNonNull(embedder, "embedder");
-		String model = embedder.info().modelVersion();
+	/** 회차 하나를 돈다 — 생성자로 받은 {@link TextEmbedding} 의 정보가 지금 모델 버전을 정한다 */
+	public void run() {
+		String model = this.embedding.info().modelVersion();
 		Instant now = this.clock.instant();
 		List<PendingAssignment> claimed = claim(now);
 		if (claimed.isEmpty()) {

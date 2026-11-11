@@ -10,21 +10,21 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import net.yozmnews.article.ArticleDirectory;
 import net.yozmnews.article.ArticleId;
-import net.yozmnews.evaluation.EvaluationCursor;
-import net.yozmnews.evaluation.EvaluationFilter;
-import net.yozmnews.evaluation.EvaluationId;
-import net.yozmnews.evaluation.EvaluationListResult;
-import net.yozmnews.evaluation.EvaluationPeriod;
-import net.yozmnews.evaluation.EvaluationReview;
-import net.yozmnews.evaluation.EvaluationRow;
-import net.yozmnews.evaluation.EvaluationSampleResult;
-import net.yozmnews.evaluation.TagKind;
-import net.yozmnews.evaluation.TagRef;
-import net.yozmnews.evaluation.TagSetId;
-import net.yozmnews.evaluation.TopicStatus;
 import net.yozmnews.platform.ApiProblem;
 import net.yozmnews.platform.WebRole;
 import net.yozmnews.source.FeedLabels;
+import net.yozmnews.tag.EvaluationCursor;
+import net.yozmnews.tag.EvaluationFilter;
+import net.yozmnews.tag.EvaluationId;
+import net.yozmnews.tag.EvaluationListResult;
+import net.yozmnews.tag.EvaluationPeriod;
+import net.yozmnews.tag.EvaluationReview;
+import net.yozmnews.tag.EvaluationRow;
+import net.yozmnews.tag.EvaluationSampleResult;
+import net.yozmnews.tag.TagKind;
+import net.yozmnews.tag.TagRef;
+import net.yozmnews.tag.TagSetId;
+import net.yozmnews.tag.TopicStatus;
 import org.jspecify.annotations.Nullable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -37,7 +37,7 @@ import org.springframework.web.server.ResponseStatusException;
 /**
  * 운영자 API — 평가 검수: 버전 · 기간의 평가 목록(거르기 · 커서), 표본, 평가 하나의 상세. docs/specs/admin.md §3.
  * <p>
- * {@code evaluation} 의 공개 운영 API 를 불러 옮기고, 기사 정보는 {@link AdminArticles} 가 맞붙인다(admin-R6). 범위 · 없는 태그의 판정은 공개
+ * {@code tag} 의 공개 운영 API 를 불러 옮기고, 기사 정보는 {@link AdminArticles} 가 맞붙인다(admin-R6). 범위 · 없는 태그의 판정은 공개
  * API 가 하고 컨트롤러는 그 결과를 400 · 404 로 옮긴다. 트랜잭션을 열지 않는다.
  */
 @WebRole

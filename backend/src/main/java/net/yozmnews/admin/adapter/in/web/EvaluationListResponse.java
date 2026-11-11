@@ -3,11 +3,11 @@ package net.yozmnews.admin.adapter.in.web;
 import java.time.Instant;
 import java.util.List;
 
-import net.yozmnews.evaluation.EvaluationListing;
+import net.yozmnews.tag.EvaluationListing;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 평가 목록 한 번 — 평가 시각 · ID 내림차순 · docs/specs/admin.md §3 · evaluation-R33.
+ * 평가 목록 한 번 — 평가 시각 · ID 내림차순 · docs/specs/admin.md §3 · tag-R33.
  *
  * @param nextEvaluatedAt 이어 받을 커서의 평가 시각 — 더 없으면 null
  * @param nextId 이어 받을 커서의 평가 ID — 더 없으면 null

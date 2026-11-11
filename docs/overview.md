@@ -59,7 +59,7 @@
 
 ## 3. 품질 목표와 제약
 
-1. **교체 가능한 경계** — 뉴스 공급원(`ArticleSource`), 본문 추출(`ContentExtractor`), 평가(`ArticleEvaluator` — 사건 소속 판정 포함), 기사 임베딩(`ArticleEmbedder`), 다이제스트 생성(`DigestGenerator`), 변화 리포트 생성(`ReportGenerator`)은 인터페이스 뒤에 둔다. 특정 공급자의 API 형태가 도메인 모델로 새어 들어오지 않는다
+1. **교체 가능한 경계** — 뉴스 공급원(`ArticleSource`), 본문 추출(`ContentExtractor`), 모델 평가(`ArticleEvaluator` — 태그 판정 · 사건 소속 판정), 기사 임베딩(`ArticleEmbedder` — `evaluation` 의 임베딩 공개 API 뒤), 다이제스트 생성(`DigestGenerator`), 변화 리포트 생성(`ReportGenerator`)은 인터페이스 뒤에 둔다. 특정 공급자의 API 형태가 도메인 모델로 새어 들어오지 않는다
 2. **셀프 호스팅 가능** — 외부 서비스(로그인 · 메일 · 봇 차단 · Cloudflare 등)는 표준 프로토콜(OIDC · SMTP · S3)이나 자체 인터페이스로 연결하고, 설정으로 교체하거나 끌 수 있다. 개발과 테스트는 외부 계정 없이 로컬 대체물로 돈다 ([ADR-0012](adr/0012-swappable-external-dependencies.md))
 3. **도메인은 관심 분야를 모른다** — 다루는 주제는 코드가 아니라 태그 체계와 사용자 설정으로 정해진다
 4. **비용 주체에 따라 단계를 나눈다** — 사용자 수와 무관한 일(수집 · 공유 평가 · 사건 묶기 · 스토리라인 잇기)은 운영자 비용, 사용자 수에 비례하는 일(다이제스트 · 변화 리포트 생성)은 사용자 비용이다. 운영자는 생성형 LLM 을 쓰지 않는다. 운영자 비용은 사용자 수가 늘어도 일정하다 ([ADR-0002](adr/0002-shared-evaluation-with-jev.md) · [ADR-0003](adr/0003-byok-personalized-digest.md) · [ADR-0025](adr/0025-long-term-personal-news-history-in-v1.md) · [ADR-0101](adr/0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md))
@@ -122,7 +122,8 @@ flowchart LR
 |---|---|
 | [`source`](specs/source.md) | 소스 등록(수집 프로필 · 프리셋) · 켜기 · 끄기 · 숨김 · 삭제 · 피드 상태, 출처 이름 기록, 수집 스케줄, RSS 파싱 · 정규화(`ArticleSource` — 모든 피드 수집이 거치는 포트) |
 | [`article`](specs/article.md) | 같은 기사 판정(정규 URL · 제목 비교 키) · 중복 제거, 기사 저장 · 조회, 피드별 엔트리 집계(중복률 · 날짜 추정 비율), 지운 소스 · 피드의 기사 삭제, 본문 추출(`ContentExtractor` — v1 비활성) |
-| [`evaluation`](specs/evaluation.md) | 태그 체계(기본 체계 적재 · 태그 기준 · 저장 기준과 그 변경 이력)와 태그 키 계보, 공유 평가(`ArticleEvaluator` — Jev 를 부르는 유일한 포트. 태그 · 형식 · 중요도와 사건 소속 판정), 평가 결과, 저장 기준을 낮춘 뒤 빠진 태그 채움 |
+| [`tag`](specs/tag.md) | 태그 체계(기본 체계 적재 · 태그 기준 · 저장 기준과 그 변경 이력)와 태그 키 계보, 공유 평가(평가 대기 · 회차 — 판정은 `evaluation` 의 태그 판정), 평가 결과와 조회 시점 판정, 평가 현황 · 주제별 보도량 · 검수 · 기준 미리보기, 저장 기준을 낮춘 뒤 빠진 태그 채움 |
+| [`evaluation`](specs/evaluation.md) | 모델 평가 관문 — 판정마다 공개 API 하나로 모델 요청을 조립해 부르고 결과를 대조해 판정 원본을 기록한다(`ArticleEvaluator` — Jev 를 부르는 유일한 포트). 태그 판정(`ArticleTagging`) · 사건 소속 판정(`EventMembership`)과 판정 원본 조회, 기사 임베딩(`TextEmbedding` — 임베더 포트 `ArticleEmbedder`, 결과를 확인하고 기록하지 않는다), 지운 기사의 판정 원본 지우기. 사용자 · 태그 체계 · 사건을 모른다 |
 | `digest` | 후보 선별(관심도 · 큰 스토리라인 · 사건 단위 중복 제거 · 선정 이유), 프롬프트 구성, 다이제스트 생성(`DigestGenerator`) · 검증 · 저장, 관심도 산식과 관심사 히스토리 조회. **(미설계)** 사용자마다 달라지는 스토리라인 정보(그 사용자가 받은 소식 등) |
 | `llm` | 공급자 · 모델 목록, 사용자 키로 LLM 클라이언트 생성(`LlmClientFactory` — 모든 LLM 호출과 BYOK 키 복호화가 거치는 관문), 키 검증 |
 | `credential` | BYOK 키 암호화 보관(envelope encryption) |
@@ -130,7 +131,7 @@ flowchart LR
 | `feedback` | 좋아요 / 싫어요 — 추가 전용 기록과 현재 상태 |
 | [`admin`](specs/admin.md) | 운영자 기능의 HTTP API(소스 · 피드 관리, 수집 현황, 이벤트 발행, 태그 체계 버전, 평가 현황, 평가 검수, 태그 기준 · 저장 기준, 빠진 태그 채움, 사건 묶기 채우기, 사건 조회 · 큰 사건 기준 · 판정 기록, 스토리라인 잇기 채우기) — 각 모듈의 공개 API(운영 API · 공개 조회)를 부른다 |
 | [`platform`](specs/platform.md) | 여러 모듈에 걸친 것: 실패한 이벤트 발행 재처리와 남겨진 발행의 운영자 처리, 화면용 API 명세 설정 · API 계약 확인 엔드포인트, 역할(profile `web` · `worker`)과 그 기동 검사, DB 확장(pgvector) 요건 검사, 로컬 개발 표시(profile `local` — 로컬 대체물 등록), 보안 설정, 오류 응답 형식, YAML 원문 읽기, 날짜 범위 변환, 벡터의 pgvector 텍스트 표현 |
-| [`event`](specs/event.md) | 공유 사건 묶기 — 사건 묶기 대기, 기사 표현(임베딩 · 핵심 말, `ArticleEmbedder`), 사건 배정과 재판정, 사건 조회 · 대표 기사 · 큰 사건 판정(기준은 운영자 설정), 사건 정리(병합 · 닫기 · 장기 검색 인덱스 · 기사 표현 정리), 사건 변화 알림(`EventsChanged`)과 스토리라인 잇기의 재료 조회. 사용자를 모른다 |
+| [`event`](specs/event.md) | 공유 사건 묶기 — 사건 묶기 대기, 기사 표현(표현 텍스트 · 핵심 말과 임베딩 벡터의 저장), 사건 배정과 재판정, 사건 조회 · 대표 기사 · 큰 사건 판정(기준은 운영자 설정), 사건 정리(병합 · 닫기 · 장기 검색 인덱스 · 기사 표현 정리), 사건 변화 알림(`EventsChanged`)과 스토리라인 잇기의 재료 조회. 사용자를 모른다 |
 | [`storyline`](specs/storyline.md) | 공유 스토리라인 — 사건 변화를 따라 사건들을 흐름으로 잇기(사건은 스토리라인 0개 이상에 든다 — 지금은 임시 잇기 규칙), 소속과 그 판정 근거, 정돈(같은 사건들로 된 스토리라인 합치기 · 사건 하나만 남은 스토리라인 합치기 · 풀기), 조회 때 정하는 상태(진행 · 잠잠 · 끝남), 운영자 채우기. **(미설계)** 스토리라인 사이의 포함과 이어짐(인과), 타임라인, 큰 판정(만들 때 `event` 의 큰 사건 판정 · 기준을 거둔다 — [ADR-0103](adr/0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md)), 운영자 조회. 사용자를 모른다 ([ADR-0101](adr/0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)) |
 | `report` | 변화 리포트 일정 · 생성(`ReportGenerator`) · 저장 · 조회. 입력은 [pipeline.md §10](pipeline.md#10-변화-리포트) |
 
@@ -138,31 +139,33 @@ flowchart LR
 flowchart LR
     source -- ArticleFetched --> article
     source -- SourceDeleted · FeedDeleted --> article
-    article -- ArticleStored --> evaluation
+    article -- ArticleStored --> tag
+    article -- ArticlesRemoved --> tag
     article -- ArticlesRemoved --> evaluation
     article -- ArticleStored --> event
     article -- ArticlesRemoved --> event
     event -- EventsChanged --> storyline
-    evaluation -- ArticleEvaluated --> digest
+    tag -- ArticleEvaluated --> digest
     user -- UserSettingsChanged --> digest
     credential -- CredentialInvalidated --> user
 ```
 
 - 모듈 간에는 **공개 API(모듈 최상위 패키지의 타입)와 도메인 이벤트로만** 연결한다. 다른 모듈의 하위 패키지 접근은 Modulith 검증 테스트가 막는다
 - 이벤트는 Spring Modulith 이벤트 발행 레지스트리(JDBC)에 기록된다. 리스너가 실패한 발행은 반복 작업이 주기적으로 다시 처리하고, 처리 도중 프로세스가 죽어 멈춘 발행은 정해진 시간이 지나면 실패로 바뀌어 같은 경로로 다시 처리된다. 정해진 횟수를 넘긴 발행과 이벤트를 읽을 수 없는 발행은 다시 처리하지 않고 남기며, 운영자가 화면에서 다시 처리하거나 폐기한다 — 규칙은 [platform Spec](specs/platform.md#이벤트-발행-재처리)([ADR-0023](adr/0023-jobrunr-oss-framework-schema-and-event-resubmission.md))
-- **(미설계)** `ArticleEvaluated` · `UserSettingsChanged` · `CredentialInvalidated` 는 발행 주체 · 시점 · 내용이 아직 설계되지 않았다
+- `ArticleEvaluated` 는 `tag` 가 낸다 — **(미설계)** 발행 시점 · 내용. **(미설계)** `UserSettingsChanged` · `CredentialInvalidated` 는 발행 주체 · 시점 · 내용이 아직 설계되지 않았다
 - `ArticleEvaluated` 를 받은 `digest` 는 즉시 생성하지 않는다. 다이제스트는 사용자 일정에 따라 생성되고, 이 이벤트는 지표 갱신에만 쓴다
-- 그림은 이벤트만 그린다. **모듈 사이 의존(공개 API · 이벤트)의 정본은 이 절이다** — 각 모듈 Spec 은 그 모듈이 내놓는 것(공개 인터페이스 · 발행 이벤트)만 갖고 의존은 이 절을 가리킨다. 각 모듈의 화면 · 작업 진입점은 `platform` 의 역할 애너테이션(공개 타입)에 의존한다 — 그래서 `platform` 은 다른 모듈의 타입에 의존하지 않는다([ADR-0042](adr/0042-app-roles-as-web-worker-profiles-marked-by-platform-annotations.md)). 사건 · 스토리라인 · 관심도 · 변화 리포트에 걸친 공개 API 의존은 `digest` → `event` · `storyline` · `feedback` · `user` · `evaluation` · `llm`, `event` → `article` · `evaluation` · `source`, `report` → `digest` · `event` · `evaluation` · `storyline` · `user` · `llm`, `storyline` → `event` · `platform`, `admin` → `event` · `storyline` 이다
-- `source` · `evaluation` → `platform` 의 공개 API 의존은 YAML 원문 읽기(`YamlTextReader` · `StrictYamlBinding`)다 — 수집 프로필과 기본 태그 체계 파일을 같은 공통 거부로 읽는다. `source` · `evaluation` · `event` 는 길이 상한을 코드 포인트로 자를 때 `platform` 의 `CodePoints` 를 쓴다. `evaluation` · `event` 는 날짜 범위를 시각 범위로 옮길 때 `platform` 의 `DayRange` 를 쓴다(집계 기간 · 사건 조회 기간). `evaluation` · `event` 는 외부 API 응답 본문의 상한에 `CappedBody` 를 쓴다
+- 그림은 이벤트만 그린다. **모듈 사이 의존(공개 API · 이벤트)의 정본은 이 절이다** — 각 모듈 Spec 은 그 모듈이 내놓는 것(공개 인터페이스 · 발행 이벤트)만 갖고 의존은 이 절을 가리킨다. 각 모듈의 화면 · 작업 진입점은 `platform` 의 역할 애너테이션(공개 타입)에 의존한다 — 그래서 `platform` 은 다른 모듈의 타입에 의존하지 않는다([ADR-0042](adr/0042-app-roles-as-web-worker-profiles-marked-by-platform-annotations.md)). 사건 · 스토리라인 · 관심도 · 변화 리포트에 걸친 공개 API 의존은 `digest` → `event` · `storyline` · `feedback` · `user` · `tag` · `llm`, `event` → `article` · `tag` · `evaluation` · `source` · `platform`, `report` → `digest` · `event` · `tag` · `storyline` · `user` · `llm`, `storyline` → `event` · `platform`, `admin` → `tag` · `evaluation` · `event` · `storyline` 이다
+- `source` · `tag` → `platform` 의 공개 API 의존은 YAML 원문 읽기(`YamlTextReader` · `StrictYamlBinding`)다 — 수집 프로필과 기본 태그 체계 파일을 같은 공통 거부로 읽는다. `source` · `evaluation` · `event` 는 길이 상한을 코드 포인트로 자를 때 `platform` 의 `CodePoints` 를 쓴다. `tag` · `evaluation` · `event` 는 날짜 범위를 시각 범위로 옮길 때 `platform` 의 `DayRange` 를 쓴다(집계 기간 · 판정 원본 조회 기간 · 사건 조회 기간). `evaluation` · `event` 는 외부 API 응답 본문의 상한에 `CappedBody` 를 쓴다. `tag` · `event` 는 운영 설정 이력의 행위자 종류로 `platform` 의 `ChangeActor` 를 쓴다
 - `article` → `source` 의 공개 API 의존은 `SourceDirectory`(피드가 아직 있는지 — 지운 피드의 늦은 항목을 버린다)다. 기사의 출처 이름은 `source` 가 기록한다
-- 운영자가 소스 · 피드를 지우면 `article` 이 그 소스 · 피드만 가진 기사를 지우고 지운 기사 ID 를 `ArticlesRemoved` 로 알린다. 기사를 ID 로 가리키는 모듈은 그 이벤트를 받아 자기 행을 지운다 — 지금은 `evaluation`(평가 대기 · 평가 · 태그 · 사건 소속 판정 원본)과 `event`(사건 묶기 대기 · 배정 대기 · 기사 표현 · 배정 · 저장 후보, 그리고 그 기사를 뺀 사건)이고, 다이제스트도 같은 이벤트를 받는다([ADR-0060](adr/0060-article-deletion-announced-by-removed-article-ids-and-followed-by-referencing-modules.md))
-- `evaluation` → `article` · `source` 의 공개 API 의존은 평가 · 사건 소속 판정의 입력이다 — 기사의 제목 · 요약문 · 엔트리(판정할 기사와 서술 기사 포함)는 `article` 의 `ArticleDirectory` 가, 피드의 출처 이름 · 섹션은 `source` 의 `FeedLabels` 가 낸다. 체계를 바꿀 때의 재평가 대상(처음 본 시각이 기간 안인 기사)도 `article` 의 `ArticleDirectory` 가 낸다
+- 운영자가 소스 · 피드를 지우면 `article` 이 그 소스 · 피드만 가진 기사를 지우고 지운 기사 ID 를 `ArticlesRemoved` 로 알린다. 기사를 ID 로 가리키는 모듈은 그 이벤트를 받아 자기 행을 지운다 — 지금은 `tag`(평가 대기 · 평가 · 태그), `evaluation`(태그 판정 원본 · 사건 소속 판정 원본)과 `event`(사건 묶기 대기 · 배정 대기 · 기사 표현 · 배정 · 저장 후보, 그리고 그 기사를 뺀 사건)이고, 다이제스트도 같은 이벤트를 받는다([ADR-0060](adr/0060-article-deletion-announced-by-removed-article-ids-and-followed-by-referencing-modules.md))
+- `tag` → `evaluation` 의 공개 API 의존은 태그 판정(`ArticleTagging`)과 그 질문 묶음 타입(`TagQuestions` 와 값 타입)이다 — 평가 회차가 기사 ID 와 활성 버전의 질문 묶음을 작업 역할에서 트랜잭션 밖으로 묻고, 빠진 태그 채움이 판정 원본을 다시 읽고, 평가 현황 · 검수가 판정 원본의 평가기 · 모델 버전 · 입력 토큰을 읽는다. 질문 묶음 타입은 `evaluation` 이 소유하고 `tag` 의 체계 내용 타입이 그것을 품는다. 평가 행은 판정 원본 ID 를 가리킨다([ADR-0112](adr/0112-tags-split-into-a-tag-module-and-evaluation-is-the-model-gateway-that-assembles-calls-and-records-each-judgement.md)). `tag` → `article` 의 공개 API 의존은 재평가 대상(처음 본 시각이 기간 안인 기사 — `ArticleDirectory.firstSeenSince`)이다
+- `evaluation` → `article` · `source` 의 공개 API 의존은 판정의 입력이다 — 기사의 제목 · 요약문 · 엔트리(판정할 기사와 서술 기사 포함)는 `article` 의 `ArticleDirectory` 가, 피드의 출처 이름 · 섹션은 `source` 의 `FeedLabels` 가 낸다
 - `event` → `article` 의 공개 API 의존은 기사 표현 · 배정 · 큰 사건 판정의 입력이다 — 기사의 제목 · 요약문 · 발행 시각, 채우기 대상(처음 본 시각이 기간 안인 기사), 큰 사건의 소스 수를 셀 기사의 엔트리 소스(`sources`)는 `article` 의 `ArticleDirectory` 가 낸다. 그 소스의 값 타입(`SourceId`)이 `event` → `source` 의존이다
-- `event` → `evaluation` 의 공개 API 의존은 사건 소속 판정(`EventMembership`)과 큰 사건 판정의 중요도다 — 사건 배정이 애매한 구간의 기사를, 사건 병합이 애매한 구간의 사건 쌍을(바뀐 사건의 서술 기사 하나를 판정할 기사로) 작업 역할에서 트랜잭션 밖으로 묻고, 큰 사건의 중요도 평균을 셀 기사의 중요도는 `ArticleEvaluations.importances` 가 낸다. 요청 · 결과 타입은 `evaluation` 이 소유한다. 큰 사건 기준 이력의 행위자 종류(`ChangeActor`)와 중요도 기준의 범위(`ImportanceScale`)도 `evaluation` 의 공개 타입을 쓴다
-- `admin` 은 운영자 기능을 가진 모듈의 공개 운영 API 를 부른다 — 지금은 `source` 의 `SourceAdministration`(소스 · 피드 관리 · 숨김 · 삭제 · 수집 상태), `article` 의 `ArticleAdministration`(엔트리 집계 · 삭제하면 함께 지워질 기사 수), `evaluation` 의 `TagSetAdministration`(태그 체계 버전 목록 · 원문 · 확인 · 활성화, 태그 기준 · 저장 기준의 상태 · 미리보기 · 변경) · `EvaluationAdministration`(평가 대기 · 평가 현황) · `TagBackfillAdministration`(빠진 태그 채움의 확인 · 요청 · 목록) · `EvaluationReview`(평가 결과 목록 · 표본 · 상세), `event` 의 `EventIntakeAdministration`(사건 묶기 채우기) · `BigEventAdministration`(큰 사건 기준의 지금 값 · 변경 · 이력 · 미리보기), `storyline` 의 `StorylineLinkingAdministration`(스토리라인 잇기 채우기), `platform` 의 `EventPublicationAdministration`(남겨진 이벤트 발행의 다시 처리 · 폐기). 운영자 화면에 기사 정보를 맞붙이려고 공개 조회도 부른다 — `evaluation` 의 `TopicCoverage`(주제별 보도량) · `EventJudgementLog`(사건 소속 판정 원본), `event` 의 `EventDirectory`(사건 목록 · 사건 · 대표 기사 · 큰 사건) · `EventReview`(사건 배정 기준 · 합쳐진 사건 · 판정 원본의 쓰임), `article` 의 `ArticleDirectory`(제목 · 요약문 · 정규 URL · 발행 시각 · 엔트리), `source` 의 `FeedLabels`(출처 이름 · 섹션). 운영 결과의 타입은 그 모듈이 공개하고 HTTP 응답 모양은 `admin` 이 정한다([ADR-0045](adr/0045-admin-module-serves-operator-api-over-module-public-operation-apis.md))
+- `event` → `evaluation` 의 공개 API 의존은 기사 임베딩(`TextEmbedding`)과 사건 소속 판정(`EventMembership`)이고, `event` → `tag` 의 공개 API 의존은 큰 사건 판정의 중요도다 — 사건 배정이 애매한 구간의 기사를, 사건 병합이 애매한 구간의 사건 쌍을(바뀐 사건의 서술 기사 하나를 판정할 기사로) 작업 역할에서 트랜잭션 밖으로 묻고, 큰 사건의 중요도 평균을 셀 기사의 중요도는 `tag` 의 `ArticleEvaluations.importances` 가 낸다. 표현 회차가 표현 텍스트 묶음을, 배정 회차가 지금 모델 버전을 작업 역할에서 트랜잭션 밖으로 임베딩에 묻는다 — 임베딩 결과는 `evaluation` 이 기록하지 않고 `event` 가 저장한다([ADR-0114](adr/0114-article-embedding-is-a-gateway-operation-of-evaluation-taking-callers-texts-checking-results-and-recording-nothing.md)). 요청 · 결과 타입(벡터 값 타입 `Embedding` 포함)은 `evaluation` 이 소유한다. 큰 사건 기준 이력의 행위자 종류는 `platform` 의 `ChangeActor`, 중요도 기준의 범위는 `evaluation` 의 `ImportanceScale` 이다
+- `admin` 은 운영자 기능을 가진 모듈의 공개 운영 API 를 부른다 — 지금은 `source` 의 `SourceAdministration`(소스 · 피드 관리 · 숨김 · 삭제 · 수집 상태), `article` 의 `ArticleAdministration`(엔트리 집계 · 삭제하면 함께 지워질 기사 수), `tag` 의 `TagSetAdministration`(태그 체계 버전 목록 · 원문 · 확인 · 활성화, 태그 기준 · 저장 기준의 상태 · 미리보기 · 변경) · `EvaluationAdministration`(평가 대기 · 평가 현황) · `TagBackfillAdministration`(빠진 태그 채움의 확인 · 요청 · 목록) · `EvaluationReview`(평가 결과 목록 · 표본 · 상세), `event` 의 `EventIntakeAdministration`(사건 묶기 채우기) · `BigEventAdministration`(큰 사건 기준의 지금 값 · 변경 · 이력 · 미리보기), `storyline` 의 `StorylineLinkingAdministration`(스토리라인 잇기 채우기), `platform` 의 `EventPublicationAdministration`(남겨진 이벤트 발행의 다시 처리 · 폐기). 운영자 화면에 기사 정보를 맞붙이려고 공개 조회도 부른다 — `tag` 의 `TopicCoverage`(주제별 보도량), `evaluation` 의 `EventJudgementLog`(사건 소속 판정 원본), `event` 의 `EventDirectory`(사건 목록 · 사건 · 대표 기사 · 큰 사건) · `EventReview`(사건 배정 기준 · 합쳐진 사건 · 판정 원본의 쓰임), `article` 의 `ArticleDirectory`(제목 · 요약문 · 정규 URL · 발행 시각 · 엔트리), `source` 의 `FeedLabels`(출처 이름 · 섹션). 운영 결과의 타입은 그 모듈이 공개하고 HTTP 응답 모양은 `admin` 이 정한다([ADR-0045](adr/0045-admin-module-serves-operator-api-over-module-public-operation-apis.md))
 - **(미설계)** 그 밖의 공개 API 의존(예: 후보 선별이 기사 · 소스를 읽는 의존)과 여러 모듈의 데이터에 걸친 작업(보존 정리)의 소속은 아직 설계되지 않았다
 - `event` 는 사건을 열고 · 고치고 · 지우고 · 합치고 · 닫을 때마다 바뀐 사건 ID 를 `EventsChanged` 로 알린다. `storyline` 은 그 알림을 받아 사건을 잇기 대기에 넣고, `storyline` → `event` 의 공개 API 의존은 잇기의 재료다 — 사건의 지금 상태(`find`), 사건 표현 · 이웃 사건 · 채우기 대상(`EventDirectory` 의 `profiles` · `neighbors` · `lastArticleSince`). 스토리라인은 사건 ID 만 가리키고 기사를 모른다 — 기사 삭제는 `event` 가 사건을 줄이거나 지워 알리는 것으로 따른다([ADR-0105](adr/0105-storylines-link-incrementally-from-event-change-notifications-and-events-publish-changed-event-ids.md)). `storyline` → `platform` 의 공개 API 의존은 벡터의 pgvector 텍스트 표현(`VectorText`)이고, `event` 도 같은 타입을 쓴다
-- 모듈 사이 순환 의존은 Modulith 검증 테스트가 실패로 판정하고, 다른 모듈의 이벤트 타입을 받는 것도 의존으로 센다. 그래서 관심도는 노출 기록을 가진 `digest` 가 내주고, `storyline` 은 `digest` · `user` 를 모르며(구독은 `user` 가 스토리라인 ID 로 갖는다), `report` 는 다른 모듈을 읽기만 한다. 사건 소속 판정의 인자 · 반환 타입은 `evaluation` 이 소유한다 ([ADR-0025](adr/0025-long-term-personal-news-history-in-v1.md) · [ADR-0026](adr/0026-event-clustering-with-local-embeddings-and-jev.md) · [ADR-0101](adr/0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md))
+- 모듈 사이 순환 의존은 Modulith 검증 테스트가 실패로 판정하고, 다른 모듈의 이벤트 타입을 받는 것도 의존으로 센다. 그래서 관심도는 노출 기록을 가진 `digest` 가 내주고, `storyline` 은 `digest` · `user` 를 모르며(구독은 `user` 가 스토리라인 ID 로 갖는다), `report` 는 다른 모듈을 읽기만 한다. 사건 소속 판정 · 태그 판정 · 임베딩의 인자 · 반환 타입은 `evaluation` 이 소유한다 ([ADR-0025](adr/0025-long-term-personal-news-history-in-v1.md) · [ADR-0026](adr/0026-event-clustering-with-local-embeddings-and-jev.md) · [ADR-0101](adr/0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md))
 
 코드가 있는 모듈의 공개 인터페이스 · 작업은 그 모듈 Spec 에, 아직 모듈이 없는 포트 · 백그라운드 작업의 초안은 [architecture.md](architecture.md)에 있다.
 
@@ -215,7 +218,7 @@ flowchart LR
 | 공유 평가 | 사용자와 무관하게 기사마다 한 번만 수행하는 Jev 평가(태그 · 형식 · 중요도). 비용은 운영자가 부담 |
 | 태그 체계(Tag set) | 운영자가 관리하는 통제 어휘. 주제(2단계) · 지역 · 형식의 태그 종류로 나뉘고 버전을 가진다. 기사에는 여러 태그가 붙을 수 있다 |
 | 태그 종류 | 태그 체계의 갈래 — 주제 · 지역 · 형식. 기사는 종류마다 따로 태그를 받는다. 주제 · 지역은 여러 태그가, 형식은 하나가 붙는다 |
-| 태그 기준 | 주제 · 지역 태그가 기사에 붙었는지 가르는 확률 값. 조회할 때 적용하므로 바꿔도 다시 평가하지 않는다 — 규칙은 [evaluation Spec](specs/evaluation.md) |
+| 태그 기준 | 주제 · 지역 태그가 기사에 붙었는지 가르는 확률 값. 조회할 때 적용하므로 바꿔도 다시 평가하지 않는다 — 규칙은 [tag Spec](specs/tag.md) |
 | 후보(Candidate) | 다이제스트 생성 시 한 사용자에게 LLM 입력으로 넘기는 기사 집합 |
 | 다이제스트(Digest) | 한 사용자의 한 기간(기본: 하루)에 대해 LLM 이 여러 기사를 종합해 만든 결과물 |
 | BYOK | Bring Your Own Key. 사용자가 자기 LLM API 키를 등록해 다이제스트 · 변화 리포트 생성 비용을 직접 부담하는 방식 |

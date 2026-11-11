@@ -1,6 +1,6 @@
 # ADR-0074: 사건 묶기의 기사 표현은 `event` 대기와 작업 역할의 반복 작업이 만들고, 임베더가 없으면 건너뛰어 대기에 쌓는다
 
-- 상태: 승인. 부분 대체 — 임베더의 입력 거부 때 회차를 끝냄([ADR-0092](0092-embedder-failures-in-three-kinds-with-rejected-articles-isolated-and-dropped-after-a-limit.md)) · 임베더가 없으면 건너뜀([ADR-0093](0093-worker-role-does-not-run-without-an-embedder-built-only-in-the-worker-role.md))
+- 상태: 승인. 부분 대체 — 임베더의 입력 거부 때 회차를 끝냄([ADR-0092](0092-embedder-failures-in-three-kinds-with-rejected-articles-isolated-and-dropped-after-a-limit.md)) · 임베더가 없으면 건너뜀([ADR-0093](0093-worker-role-does-not-run-without-an-embedder-built-only-in-the-worker-role.md)) · 회차가 임베더를 생성자로 받지 않음([ADR-0115](0115-embedding-api-in-both-roles-looks-up-the-embedder-on-call-and-a-worker-startup-check-requires-one.md))
 - 날짜: 2026-11-05
 - 근거: [이슈 #94](https://github.com/Theia0382/yozm-news/issues/94) — `event` 모듈을 열며 `ArticleStored` 의 발행 · 처리 역할, 이벤트 발행 재처리의 시도 상한, 평가 대기 · 평가 작업의 모양, 운영 임베더가 아직 없는 배포 구성을 확인
 - 관련: [ADR-0042](0042-app-roles-as-web-worker-profiles-marked-by-platform-annotations.md)(리스너는 짧은 처리 · 무거운 일은 작업으로 — 그대로 적용한다), [ADR-0057](0057-local-substitutes-registered-only-in-local-profile-without-operator-switch.md)(구현이 없는 외부 의존의 동작은 포트를 쓰는 쪽이 정한다 — 임베더의 그 동작을 이 ADR 이 정한다), [ADR-0059](0059-evaluation-job-limits-concurrency-and-retries-with-db-leases-on-queue-rows.md)(대기 행의 DB 점유), [ADR-0060](0060-article-deletion-announced-by-removed-article-ids-and-followed-by-referencing-modules.md)(지운 기사 따르기), [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md)(사건 묶기)
@@ -19,7 +19,7 @@
 - **리스너는 `event` 의 대기 테이블에 기사 ID 만 넣는다.** 기사마다 한 행이고, 이미 있으면 그대로다.
 > 부분 대체(셋째 문장의 입력 거부) — [ADR-0092](0092-embedder-failures-in-three-kinds-with-rejected-articles-isolated-and-dropped-after-a-limit.md). 지금 상태: [event Spec §5](../specs/event.md#사건-묶기-대기와-회차) event-R6
 - **작업 역할의 반복 작업이 대기를 묶음으로 점유해 표현을 만든다.** 점유를 커밋한 뒤 트랜잭션 밖에서 기사를 읽고 임베더를 한 번 부르며, 기사마다 짧은 트랜잭션에서 점유 토큰이 맞아 대기 행을 지웠을 때만 표현을 쓴다. 임베더가 실패하거나 결과가 어긋나면 점유를 풀고 회차를 끝낸다.
-> 부분 대체(첫 세 문장) — [ADR-0093](0093-worker-role-does-not-run-without-an-embedder-built-only-in-the-worker-role.md). 지금 상태: [event Spec §5](../specs/event.md#사건-묶기-대기와-회차) event-R7
+> 부분 대체 — 첫 세 문장은 [ADR-0093](0093-worker-role-does-not-run-without-an-embedder-built-only-in-the-worker-role.md), 넷째 문장은 [ADR-0115](0115-embedding-api-in-both-roles-looks-up-the-embedder-on-call-and-a-worker-startup-check-requires-one.md). 지금 상태: [event Spec §5](../specs/event.md#사건-묶기-대기와-회차) event-R7 · [evaluation Spec §5](../specs/evaluation.md#기사-임베딩) evaluation-R46
 - **임베더는 부를 때 찾는다. 없으면 회차를 건너뛰고 기사는 대기에 남는다.** 작업 역할이 뜰 때 경고를 한 번 남긴다. 리스너와 회차는 임베더를 생성자로 받지 않는다 — 임베더 없는 화면 역할도 뜬다.
 - **지운 기사는 리스너가 한 트랜잭션에서 대기 행을 먼저, 표현 행을 나중에 지운다.** 진행 중인 쓰기가 대기 행을 잡고 있으면 그 커밋을 기다린 뒤 표현을 지운다.
 

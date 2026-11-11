@@ -34,3 +34,7 @@
 | 구별하지 않고 판정할 기사의 지금 배정을 결과로 맞붙인다 | 병합 판정 행의 결과가 판정과 무관하다 — 운영자를 오도한다 |
 | 판정 원본에 용도(배정 · 병합)를 남긴다 | `evaluation` 이 `event` 의 처리 갈래를 알게 된다(모듈은 자기 지식만). 되돌린 배정 판정에도 나중 판정의 배정이 결과로 보인다 |
 | `event` 의 저장 후보 · 병합 판정 기록을 원천으로 하고 토큰만 판정 원본에서 찾는다 | 한 기사에 원본이 여럿일 때 토큰이 어느 판정의 것인지 정해지지 않는다. 병합 판정 하나가 쌍 여럿으로 흩어진다 |
+
+## 후속 기록
+
+- 2026-11-11: 결정 절 "판정을 반영한 `event` 기록이 원본 ID 를 남긴다"의 꼴을 태그 판정으로 넓힘 — `tag` 의 평가 행이 태그 판정 원본 ID 를 가리킨다 — [ADR-0112](0112-tags-split-into-a-tag-module-and-evaluation-is-the-model-gateway-that-assembles-calls-and-records-each-judgement.md) · [tag Spec §5](../specs/tag.md#5-규칙과-불변식) tag-R15 · [evaluation Spec "태그 판정"](../specs/evaluation.md#태그-판정) evaluation-R41

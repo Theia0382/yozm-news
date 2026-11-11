@@ -2,11 +2,11 @@ package net.yozmnews.admin.adapter.in.web;
 
 import java.util.function.LongFunction;
 
-import net.yozmnews.evaluation.EvaluationId;
-import net.yozmnews.evaluation.TagSetId;
 import net.yozmnews.event.EventId;
 import net.yozmnews.source.FeedId;
 import net.yozmnews.source.SourceId;
+import net.yozmnews.tag.EvaluationId;
+import net.yozmnews.tag.TagSetId;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 

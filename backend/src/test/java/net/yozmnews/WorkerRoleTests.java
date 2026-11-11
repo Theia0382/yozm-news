@@ -7,7 +7,7 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.List;
 
-import net.yozmnews.event.domain.feature.ArticleEmbedder;
+import net.yozmnews.evaluation.domain.embedder.ArticleEmbedder;
 import net.yozmnews.platform.WorkerRole;
 import net.yozmnews.platform.domain.ActiveRoles;
 import org.jobrunr.server.BackgroundJobServer;
