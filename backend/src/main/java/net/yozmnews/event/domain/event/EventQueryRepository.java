@@ -10,6 +10,7 @@ import net.yozmnews.article.ArticleId;
 import net.yozmnews.event.EventArticleView;
 import net.yozmnews.event.EventNeighbor;
 import net.yozmnews.event.EventProfile;
+import net.yozmnews.event.EventTermCounts;
 import net.yozmnews.event.EventView;
 import net.yozmnews.event.JudgementUse;
 import net.yozmnews.event.MergePair;
@@ -71,6 +72,12 @@ public interface EventQueryRepository {
 	 * 그 사건 자신은 빠지고, 그 사건이 합쳐졌거나 없으면 빈 목록. 코사인 내림차순 · 사건 ID 순(event-R24)
 	 */
 	List<EventNeighbor> neighbors(long eventId, Instant from, Instant to, double minCosine, int keyTerms, int limit);
+
+	/**
+	 * 말 수 — 시각 범위가 {@code [from, to]} 와 겹치는 합쳐지지 않은 사건의 수와, 그 가운데 말마다 그 말을 핵심 말로 가진 사건 수. 모델 버전을
+	 * 가리지 않는다. 물은 말마다 수를 낸다 — 없는 말은 0(event-R24)
+	 */
+	EventTermCounts termCounts(Collection<String> terms, Instant from, Instant to);
 
 	/** 마지막 기사 시각이 {@code since} 이후(같으면 포함)인, 합쳐지지 않은 사건 — 첫 기사 시각 · 사건 ID 순(event-R24) */
 	List<EventView> lastArticleSince(Instant since);

@@ -18,6 +18,7 @@ import net.yozmnews.event.EventNeighbor;
 import net.yozmnews.event.EventPage;
 import net.yozmnews.event.EventPeriod;
 import net.yozmnews.event.EventProfile;
+import net.yozmnews.event.EventTermCounts;
 import net.yozmnews.event.EventView;
 import org.jspecify.annotations.Nullable;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -108,6 +109,11 @@ class FakeEventDirectory implements EventDirectory {
 	public List<EventNeighbor> neighbors(EventId id, Instant from, Instant to, double minCosine, int keyTerms,
 			int limit) {
 		throw new UnsupportedOperationException("운영자 API 는 이웃 사건을 읽지 않는다");
+	}
+
+	@Override
+	public EventTermCounts termCounts(Collection<String> terms, Instant from, Instant to) {
+		throw new UnsupportedOperationException("운영자 API 는 말 수를 읽지 않는다");
 	}
 
 	@Override
