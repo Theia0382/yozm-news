@@ -270,6 +270,73 @@ public record JudgementPeriod(Instant from, Instant to) {
 
 지운 기사: `JudgementRemovalListener` 가 `ArticlesRemoved` 로 그 기사의 사건 소속 · 태그 판정 원본을 지운다.
 
+#### 태그 판정의 흐름
+
+```mermaid
+sequenceDiagram
+    participant C as 부르는 쪽 (tag 의 회차)
+    participant S as ArticleTaggingService
+    participant A as ArticleDirectory · FeedLabels
+    participant P as ArticleEvaluator
+    participant J as TagJudgementRepository
+
+    C->>S: judge(기사 ID, 질문 묶음) — 트랜잭션 밖
+    S->>S: 트랜잭션 안이거나 평가기가 없으면 IllegalStateException (evaluation-R40)
+    S->>A: 기사 · 엔트리 피드의 출처 이름 · 섹션 읽기 (evaluation-R40)
+    alt 기사가 없음
+        S-->>C: 기사 없음 — 평가기를 부르지 않는다 (evaluation-R40)
+    end
+    S->>P: evaluate(TaggingInput, 질문 묶음) — 트랜잭션 밖 (evaluation-R40)
+    alt 예상한 실패
+        S-->>C: 실패 갈래 · 문구 — 원본 없음 (evaluation-R41)
+    end
+    S->>S: ResultCheck — 어긋나면 원본 없이 IllegalStateException (evaluation-R41)
+    S->>J: 짧은 트랜잭션 — 판정 원본 한 행 쓰기 · 커밋 (evaluation-R41)
+    S->>A: 커밋 뒤 기사 다시 보기 (evaluation-R41)
+    alt 그새 지워짐
+        S->>J: 짧은 트랜잭션 — 방금 쓴 원본 지우기 · 정보 로그 (evaluation-R44)
+        S-->>C: 기사 없음
+    else 기사가 있음
+        S-->>C: 판정됨 — 원본 ID · 질문마다의 확률 (evaluation-R41)
+    end
+```
+
+#### 사건 소속 판정의 흐름
+
+```mermaid
+sequenceDiagram
+    participant C as 부르는 쪽 (event 의 배정 · 병합)
+    participant S as EventMembershipService
+    participant A as ArticleDirectory
+    participant M as MembershipPlan
+    participant P as ArticleEvaluator
+    participant J as EventJudgementRepository
+
+    C->>S: judge(판정할 기사 ID, 후보 사건 · 서술 기사 ID) — 트랜잭션 밖
+    S->>S: 트랜잭션 안이거나 평가기가 없으면 IllegalStateException (evaluation-R37)
+    S->>A: 판정할 기사와 서술 기사를 한 번에 읽기 (evaluation-R37)
+    alt 판정할 기사가 없음
+        S-->>C: 기사 없음 — 평가기를 부르지 않는다 (evaluation-R38)
+    end
+    S->>M: 물을 후보 고르기 — 지운 · 빈 제목 서술 빼기, 서술이 없는 후보 빼기 (evaluation-R38)
+    alt 물을 후보가 없음
+        S-->>C: 빈 판정 — 평가기를 부르지 않고 원본 ID 없음 (evaluation-R38)
+    end
+    S->>P: judgeMembership(MembershipInput) — 트랜잭션 밖 (evaluation-R37)
+    alt 예상한 실패
+        S-->>C: 실패 갈래 · 문구 — 원본 없음 (evaluation-R38)
+    end
+    S->>S: MembershipCheck — 어긋나면 원본 없이 IllegalStateException (evaluation-R38)
+    S->>J: 짧은 트랜잭션 — 판정 원본 한 행 쓰기 · 커밋 (evaluation-R38)
+    S->>A: 커밋 뒤 판정할 기사 다시 보기 (evaluation-R38)
+    alt 그새 지워짐
+        S->>J: 짧은 트랜잭션 — 그 기사의 원본 지우기 · 정보 로그 (evaluation-R44)
+        S-->>C: 기사 없음
+    else 기사가 있음
+        S-->>C: 판정됨 — 원본 ID · 물은 후보마다의 확률 (evaluation-R38)
+    end
+```
+
 ### 들어오는 쪽
 
 | 진입점 | 구성 요소 | 계기 | 내용 |
