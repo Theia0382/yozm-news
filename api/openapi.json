@@ -10,7 +10,7 @@
   "paths" : {
     "/api/admin/big-event-criteria" : {
       "get" : {
-        "operationId" : "criteria",
+        "operationId" : "criteria_1",
         "responses" : {
           "200" : {
             "content" : {
@@ -46,7 +46,7 @@
         "tags" : [ "admin-big-event-controller" ]
       },
       "put" : {
-        "operationId" : "change",
+        "operationId" : "change_1",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -104,7 +104,7 @@
     },
     "/api/admin/big-event-criteria-previews" : {
       "post" : {
-        "operationId" : "preview_1",
+        "operationId" : "preview_2",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -231,6 +231,231 @@
           }
         },
         "tags" : [ "admin-big-event-controller" ]
+      }
+    },
+    "/api/admin/big-storyline-criteria" : {
+      "get" : {
+        "operationId" : "criteria",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BigStorylineCriteriaStatusResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          }
+        },
+        "tags" : [ "admin-big-storyline-controller" ]
+      },
+      "put" : {
+        "operationId" : "change",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/BigStorylineCriteriaChangeRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BigStorylineCriteriaChangeResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청 본문의 형식이 틀렸거나 큰 판정 기준이 범위 밖이다"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          }
+        },
+        "tags" : [ "admin-big-storyline-controller" ]
+      }
+    },
+    "/api/admin/big-storyline-criteria-previews" : {
+      "post" : {
+        "operationId" : "preview_1",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/BigStorylinePreviewRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BigStorylinePreviewResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청 본문의 형식이 틀렸거나, 날짜 · 시간대 · 기간 · 큰 판정 기준이 범위 밖이다"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          }
+        },
+        "tags" : [ "admin-big-storyline-controller" ]
+      }
+    },
+    "/api/admin/big-storylines" : {
+      "get" : {
+        "operationId" : "bigStorylines",
+        "parameters" : [ {
+          "description" : "시작일(yyyy-MM-dd)",
+          "in" : "query",
+          "name" : "from",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "종료일(yyyy-MM-dd, 포함)",
+          "in" : "query",
+          "name" : "to",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "날짜를 해석할 시간대(IANA ID)",
+          "in" : "query",
+          "name" : "zone",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BigStorylineListResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "날짜 · 시간대의 형식이 틀렸거나 기간이 범위 밖이다"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          }
+        },
+        "tags" : [ "admin-big-storyline-controller" ]
       }
     },
     "/api/admin/collection-status" : {
@@ -3470,6 +3695,211 @@
         },
         "required" : [ "articles", "id", "importance", "representative", "representativeId", "sources" ]
       },
+      "BigStorylineCriteriaChangeRequest" : {
+        "type" : "object",
+        "properties" : {
+          "minImportance" : {
+            "type" : "number"
+          },
+          "minSources" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        },
+        "required" : [ "minImportance", "minSources" ]
+      },
+      "BigStorylineCriteriaChangeResponse" : {
+        "type" : "object",
+        "properties" : {
+          "current" : {
+            "$ref" : "#/components/schemas/BigStorylineCriteriaResponse"
+          },
+          "previous" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/BigStorylineCriteriaResponse"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "result" : {
+            "type" : "string",
+            "enum" : [ "CHANGED", "UNCHANGED" ]
+          }
+        },
+        "required" : [ "current", "previous", "result" ]
+      },
+      "BigStorylineCriteriaHistoryResponse" : {
+        "type" : "object",
+        "properties" : {
+          "actor" : {
+            "type" : "string",
+            "enum" : [ "SYSTEM", "OPERATOR" ]
+          },
+          "changedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "current" : {
+            "$ref" : "#/components/schemas/BigStorylineCriteriaResponse"
+          },
+          "previous" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/BigStorylineCriteriaResponse"
+            }, {
+              "type" : "null"
+            } ]
+          }
+        },
+        "required" : [ "actor", "changedAt", "current", "previous" ]
+      },
+      "BigStorylineCriteriaResponse" : {
+        "type" : "object",
+        "properties" : {
+          "minImportance" : {
+            "type" : "number"
+          },
+          "minSources" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        },
+        "required" : [ "minImportance", "minSources" ]
+      },
+      "BigStorylineCriteriaStatusResponse" : {
+        "type" : "object",
+        "properties" : {
+          "changes" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/BigStorylineCriteriaHistoryResponse"
+            }
+          },
+          "current" : {
+            "$ref" : "#/components/schemas/BigStorylineCriteriaResponse"
+          }
+        },
+        "required" : [ "changes", "current" ]
+      },
+      "BigStorylineListResponse" : {
+        "type" : "object",
+        "properties" : {
+          "criteria" : {
+            "$ref" : "#/components/schemas/BigStorylineCriteriaResponse"
+          },
+          "maxDays" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "storylines" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/BigStorylineRowResponse"
+            }
+          },
+          "unlinked" : {
+            "$ref" : "#/components/schemas/UnlinkedEventsResponse"
+          }
+        },
+        "required" : [ "criteria", "maxDays", "storylines", "unlinked" ]
+      },
+      "BigStorylinePreviewRequest" : {
+        "type" : "object",
+        "properties" : {
+          "from" : {
+            "type" : "string"
+          },
+          "minImportance" : {
+            "type" : "number"
+          },
+          "minSources" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "to" : {
+            "type" : "string"
+          },
+          "zone" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "from", "minImportance", "minSources", "to", "zone" ]
+      },
+      "BigStorylinePreviewResponse" : {
+        "type" : "object",
+        "properties" : {
+          "current" : {
+            "$ref" : "#/components/schemas/BigStorylineCriteriaResponse"
+          },
+          "currentStorylines" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/BigStorylineRowResponse"
+            }
+          },
+          "proposed" : {
+            "$ref" : "#/components/schemas/BigStorylineCriteriaResponse"
+          },
+          "proposedStorylines" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/BigStorylineRowResponse"
+            }
+          }
+        },
+        "required" : [ "current", "currentStorylines", "proposed", "proposedStorylines" ]
+      },
+      "BigStorylineRowResponse" : {
+        "type" : "object",
+        "properties" : {
+          "articleCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "eventCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "firstArticleAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "importance" : {
+            "type" : [ "number", "null" ]
+          },
+          "lastArticleAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "periodArticles" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "periodSources" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "representative" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/ArticleSummaryResponse"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "representativeArticleId" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int64"
+          },
+          "state" : {
+            "type" : "string",
+            "enum" : [ "ACTIVE", "QUIET", "ENDED" ]
+          }
+        },
+        "required" : [ "articleCount", "eventCount", "firstArticleAt", "id", "importance", "lastArticleAt", "periodArticles", "periodSources", "representative", "representativeArticleId", "state" ]
+      },
       "CategoryCoverage" : {
         "type" : "object",
         "properties" : {
@@ -5901,6 +6331,20 @@
           }
         },
         "required" : [ "lowConfidence", "tagged", "unclassified" ]
+      },
+      "UnlinkedEventsResponse" : {
+        "type" : "object",
+        "properties" : {
+          "articles" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "events" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        },
+        "required" : [ "articles", "events" ]
       },
       "ValueBucket" : {
         "type" : "object",
