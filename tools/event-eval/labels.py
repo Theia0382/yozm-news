@@ -74,8 +74,8 @@ class Sample:
                 "zone": self.zone}
 
 
-def new_sample(start: date, end: date, zone: str) -> Sample:
-    """지금 라벨 기준으로 새 표본을 정한다. 시작이 끝보다 늦거나 시간대를 모르면 LabelError."""
+def new_sample(start: date, end: date, zone: str, *, label_rule: int = LABEL_RULE_VERSION) -> Sample:
+    """label_rule 판(기본은 사건 라벨 기준의 지금 판)으로 새 표본을 정한다. 시작이 끝보다 늦거나 시간대를 모르면 LabelError."""
     problems = []
     if start > end:
         problems.append(f"시작일 {start} 이 종료일 {end} 보다 늦다")
@@ -85,7 +85,7 @@ def new_sample(start: date, end: date, zone: str) -> Sample:
         problems.append(f"모르는 시간대: {zone}")
     if problems:
         raise LabelError(problems)
-    return Sample(LABEL_RULE_VERSION, start, end, zone)
+    return Sample(label_rule, start, end, zone)
 
 
 @dataclass(frozen=True)
@@ -132,7 +132,8 @@ def parse_instant(text: str) -> datetime:
     return value.astimezone(UTC)
 
 
-def read_sample(directory: Path) -> Sample:
+def read_sample(directory: Path, *, label_rule: int = LABEL_RULE_VERSION) -> Sample:
+    """sample.json 의 기간 · 시간대 · 판을 읽는다. 판이 label_rule(기본은 사건 라벨 기준의 지금 판)과 다르면 LabelError."""
     path = directory / SAMPLE_FILE
     if not path.is_file():
         raise LabelError([f"{path} 가 없다 — sheet 로 먼저 만든다"])
@@ -145,27 +146,27 @@ def read_sample(directory: Path) -> Sample:
         raise LabelError([f"{path}: 읽을 수 없다 — {error}"]) from error
     if sample.start > sample.end:
         raise LabelError([f"{path}: 시작일이 종료일보다 늦다"])
-    if sample.label_rule != LABEL_RULE_VERSION:
-        raise LabelError([f"{path}: 라벨 기준 {sample.label_rule}판으로 만든 표본이다 — 이 도구는 {LABEL_RULE_VERSION}판이다"])
+    if sample.label_rule != label_rule:
+        raise LabelError([f"{path}: 라벨 기준 {sample.label_rule}판으로 만든 표본이다 — 이 도구는 {label_rule}판이다"])
     return sample
 
 
 def write_sample(directory: Path, sample: Sample) -> None:
     """sample.json 을 쓴다. 이미 있으면 덮지 않고 LabelError."""
-    _write_new(directory / SAMPLE_FILE, json.dumps(sample.to_json(), ensure_ascii=False, indent=2) + "\n")
+    write_new(directory / SAMPLE_FILE, json.dumps(sample.to_json(), ensure_ascii=False, indent=2) + "\n")
 
 
 def write_sheet(path: Path, rows: Sequence[SheetRow]) -> None:
     """라벨 시트를 쓴다. 이미 있으면 라벨을 덮지 않도록 LabelError."""
-    lines = _csv_text([ARTICLE_COLUMNS] + [
+    lines = csv_text([ARTICLE_COLUMNS] + [
         (str(row.article_id), format_instant(row.published_at), SOURCE_SEPARATOR.join(row.sources), row.title, "", "")
         for row in rows])
-    _write_new(path, lines)
+    write_new(path, lines)
 
 
 def read_labels(path: Path, sample: Sample) -> list[ArticleLabel]:
     """articles.csv 를 읽어 검증한다 — 머리줄 · 기사 ID · 발행 시각 · 표본 날짜 · 빈 event · 중복 ID."""
-    rows = _read_rows(path, ARTICLE_COLUMNS)
+    rows = read_rows(path, ARTICLE_COLUMNS)
     problems: list[str] = []
     labels: list[ArticleLabel] = []
     seen: dict[int, int] = {}
@@ -205,7 +206,7 @@ def read_labels(path: Path, sample: Sample) -> list[ArticleLabel]:
 def read_titles(path: Path) -> dict[int, tuple[str, str]]:
     """검토 화면용 — 기사 ID 별 (제목, note). 측정은 이 칸을 읽지 않는다."""
     titles = {}
-    for _, row in _read_rows(path, ARTICLE_COLUMNS):
+    for _, row in read_rows(path, ARTICLE_COLUMNS):
         try:
             titles[int(row["article_id"])] = (row["title"], row["note"].strip())
         except ValueError:
@@ -225,7 +226,7 @@ def read_marks(path: Path) -> list[BigMark]:
     problems: list[str] = []
     marks: list[BigMark] = []
     seen: set[tuple[str, date]] = set()
-    for line, row in _read_rows(path, EVENT_COLUMNS):
+    for line, row in read_rows(path, EVENT_COLUMNS):
         event = row["event"].strip()
         try:
             day = date.fromisoformat(row["day"].strip())
@@ -248,11 +249,8 @@ def read_marks(path: Path) -> list[BigMark]:
 
 def write_marks(path: Path, marks: Sequence[BigMark]) -> None:
     """events.csv 를 쓴다(바꿔 쓰기 — 임시 파일을 쓴 뒤 옮긴다)."""
-    text = _csv_text([EVENT_COLUMNS] + [(mark.event, mark.day.isoformat(), "1" if mark.big else "0", mark.name)
-                                        for mark in marks])
-    temporary = path.with_name(path.name + ".tmp")
-    temporary.write_text(text, encoding="utf-8", newline="")
-    os.replace(temporary, path)
+    replace_file(path, csv_text([EVENT_COLUMNS] + [
+        (mark.event, mark.day.isoformat(), "1" if mark.big else "0", mark.name) for mark in marks]))
 
 
 def read_big_marks(path: Path, labels: Sequence[ArticleLabel], sample: Sample) -> set[tuple[str, date]]:
@@ -271,10 +269,13 @@ def read_big_marks(path: Path, labels: Sequence[ArticleLabel], sample: Sample) -
 
 
 def file_digest(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    """파일의 sha256 — 파일 전체를 메모리에 올리지 않고 읽는다(덤프 파일에도 쓴다)."""
+    with path.open("rb") as handle:
+        return hashlib.file_digest(handle, "sha256").hexdigest()
 
 
-def _read_rows(path: Path, columns: Sequence[str]) -> list[tuple[int, dict[str, str]]]:
+def read_rows(path: Path, columns: Sequence[str]) -> list[tuple[int, dict[str, str]]]:
+    """머리줄이 columns 인 CSV 의 (줄 번호, 칸) 목록. 파일이 없거나 머리줄이 다르면 LabelError."""
     if not path.is_file():
         raise LabelError([f"{path} 가 없다"])
     with path.open(encoding="utf-8", newline="") as handle:
@@ -284,16 +285,25 @@ def _read_rows(path: Path, columns: Sequence[str]) -> list[tuple[int, dict[str, 
         return [(index + 2, {key: (value or "") for key, value in row.items()}) for index, row in enumerate(reader)]
 
 
-def _csv_text(rows: Iterable[Sequence[str]]) -> str:
+def csv_text(rows: Iterable[Sequence[str]]) -> str:
+    """줄들을 CSV 글로 — 줄 끝은 "\\n"."""
     buffer = StringIO()
     writer = csv.writer(buffer, lineterminator="\n")
     writer.writerows(rows)
     return buffer.getvalue()
 
 
-def _write_new(path: Path, text: str) -> None:
+def write_new(path: Path, text: str) -> None:
+    """새 파일로 쓴다. 이미 있으면 덮지 않고 LabelError."""
     try:
         with path.open("x", encoding="utf-8", newline="") as handle:
             handle.write(text)
     except FileExistsError as error:
         raise LabelError([f"{path} 가 이미 있다 — 덮지 않는다"]) from error
+
+
+def replace_file(path: Path, text: str) -> None:
+    """파일을 바꿔 쓴다 — 임시 파일을 쓴 뒤 옮겨, 쓰다 멈춰도 앞의 내용이 반쯤 지워지지 않게 한다."""
+    temporary = path.with_name(path.name + ".tmp")
+    temporary.write_text(text, encoding="utf-8", newline="")
+    os.replace(temporary, path)
