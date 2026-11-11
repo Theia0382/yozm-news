@@ -25,7 +25,7 @@
 - Jev 를 직접 부르지 않는다 — 사건 소속 판정은 `evaluation` 의 공개 API 를 부른다([ADR-0026](../adr/0026-event-clustering-with-local-embeddings-and-jev.md) · [ADR-0071](../adr/0071-event-membership-judged-from-article-ids-with-questions-built-in-evaluation.md))
 - 기사 내용을 갖지 않는다. 제목 · 요약문은 `article` 의 공개 조회로 읽고, 표현 행에는 벡터와 핵심 말만 남긴다
 
-사건 기준 · 저장 기준 · 닫는 기간 · 최대 기간의 기본값(§7)과 큰 사건 기준의 처음 값(event-R21)은 측정 전 목표다. 큰 사건 기준 · 닫는 기간 · 최대 기간은 운영하면서 정한다([open-questions.md](../open-questions.md)). 기본 임베딩 모델([ADR-0091](../adr/0091-local-embedding-model-is-multilingual-e5-small-int8-fetched-at-build-into-the-image-with-onnx-telemetry-off.md))도 평가 세트로 다시 본다. 묶기 품질은 수집한 기사 표본에 사건 라벨을 붙인 평가 세트로 잰다 — 증거로서의 자격은 [테스트 전략](../qa/test-strategy.md) ⑪, 표본의 실제 기사 텍스트를 공개 저장소에 두지 않는 규칙은 [security.md](../security.md)에 있다.
+사건 기준 · 저장 기준의 기본값(§7)과 점수 산식의 반감기 · 핵심 말 가중치(§4 `CandidateScoring`)는 기본 임베딩 모델([ADR-0091](../adr/0091-local-embedding-model-is-multilingual-e5-small-int8-fetched-at-build-into-the-image-with-onnx-telemetry-off.md))에 맞춰 평가 세트로 정했고 운영자 표본 검수로 확인했다. 닫는 기간의 기본값은 운영 기록으로 정했다. 기본 임베딩 모델은 같은 평가 세트에서 외부 모델과 견줘 그대로 두었다([ADR-0109](../adr/0109-event-clustering-defaults-chosen-on-the-evaluation-set-with-operator-review-and-closing-from-operating-records.md)). 최대 기간의 기본값과 큰 사건 기준의 처음 값(event-R21)은 측정 전 목표다. 큰 사건 기준 · 최대 기간은 운영하면서 정한다([open-questions.md](../open-questions.md)). 묶기 품질은 수집한 기사 표본에 사건 라벨을 붙인 평가 세트로 잰다 — 증거로서의 자격은 [테스트 전략](../qa/test-strategy.md) ⑪, 표본의 실제 기사 텍스트를 공개 저장소에 두지 않는 규칙은 [security.md](../security.md)에 있다.
 
 다른 모듈과의 의존과 이벤트 흐름은 [overview.md §5](../overview.md#5-모듈-지도)에 있다.
 
@@ -525,7 +525,7 @@ sequenceDiagram
 #### `domain/assignment`
 
 - 사건 기준 · 저장 기준 `AssignmentCriteria` 는 공개 타입이다(§3) — 이 패키지의 판단이 받는다
-- `CandidateScoring` — 후보 점수 산식의 정본(event-R10 · R13). 핵심 말 가중치 `KEY_TERM_WEIGHT`(0.3) · 감쇠 반감기 `HALF_LIFE`(24시간) · 산식에 쓰는 사건 핵심 말 수 `EVENT_KEY_TERMS`(20) — 측정 전 목표. `score(EventSnapshot, 기준 핵심 말, 구간 시작, 구간 끝, 창)` → `Optional<ScoredCandidate>` — 병합은 바뀐 사건의 첫 ~ 마지막 기사 시각을 구간으로 넘기고, 배정의 `score(EventSnapshot, 기사 핵심 말, 발행 시각, 창)` 은 발행 시각 하나의 구간으로 위임한다
+- `CandidateScoring` — 후보 점수 산식의 정본(event-R10 · R13). 핵심 말 가중치 `KEY_TERM_WEIGHT`(0.3) · 감쇠 반감기 `HALF_LIFE`(36시간) — 평가 세트로 정했다([ADR-0109](../adr/0109-event-clustering-defaults-chosen-on-the-evaluation-set-with-operator-review-and-closing-from-operating-records.md)). 산식에 쓰는 사건 핵심 말 수 `EVENT_KEY_TERMS`(20) — 측정 전 목표. `score(EventSnapshot, 기준 핵심 말, 구간 시작, 구간 끝, 창)` → `Optional<ScoredCandidate>` — 병합은 바뀐 사건의 첫 ~ 마지막 기사 시각을 구간으로 넘기고, 배정의 `score(EventSnapshot, 기사 핵심 말, 발행 시각, 창)` 은 발행 시각 하나의 구간으로 위임한다
 - `AssignmentRule` — 판정 규칙의 정본(event-R11 · R13 · R18). 한 번에 묻는 후보 수 `MAX_ASKED`(5 — 사건 소속 판정의 후보 상한 이하). `decide(후보, 기준, DecisionPhase)` → `Decision`. 처음 판정 · 판정 뒤 · 재판정 · 병합이 같은 함수를 쓴다
 - `MergeRule` — 사건 대 사건 판단의 정본(event-R13). `termsFromSubject(바뀐 사건 기사 수, 바뀐 사건 ID, 상대 기사 수, 상대 ID)` — 핵심 말 겹침의 기준이 바뀐 사건 쪽인가. `survivor(LockedEvent, LockedEvent)` — 남는 사건 ID
 - `Reassignment` — 재판정 결과를 지금 배정에 적용하는 방식의 정본(event-R18). `of(Decision, 지금 사건, 연 사건 표지, 잠근 지금 사건의 기사 수)`
@@ -802,7 +802,7 @@ public enum EmbedderFailureKind { TRANSIENT, INPUT_REJECTED, EMBEDDER_UNAVAILABL
 - **event-R10** — 후보: 기사 표현은 지금 임베더의 모델 버전 행만 읽는다(event-R4). 기준 시각은 기사의 발행 시각이다(article-R8).
   - 후보 사건은 열린 사건 가운데 모델 버전이 같고, 구성 기사의 발행 시각 범위(첫 ~ 마지막 기사 시각)가 [발행 − 시간 창, 발행 + 시간 창] 과 겹치는 사건이다. 비교는 인덱스 없는 정확 검색이라 같은 입력에서 같은 후보가 나온다
   - 점수(`CandidateScoring` — 정본) = 감쇠 × ((1 − w) × max(코사인, 0) + w × 핵심 말 겹침), 0 ~ 1. w 는 0.3(`CandidateScoring.KEY_TERM_WEIGHT`)이다. 코사인은 기사 벡터와 사건 중심의 코사인 유사도다(둘 다 반 정밀도로 비교한다). 핵심 말 겹침은 |기사 핵심 말 ∩ 사건 핵심 말| ÷ |기사 핵심 말|(기사 핵심 말이 없으면 0)이고, 사건 핵심 말은 기사 수가 많은 순(같으면 바이트 순) 상위 20개(`CandidateScoring.EVENT_KEY_TERMS`)다
-  - 시각 차 Δ 는 발행 시각이 마지막 기사 시각 뒤면 그 차, 첫 기사 시각 앞이면 그 차, 그 사이면 0 이다. 감쇠는 2^(−Δ ÷ 24시간)(반감기 `CandidateScoring.HALF_LIFE`)이고, Δ 가 시간 창보다 크면 후보가 아니다(같으면 후보다)
+  - 시각 차 Δ 는 발행 시각이 마지막 기사 시각 뒤면 그 차, 첫 기사 시각 앞이면 그 차, 그 사이면 0 이다. 감쇠는 2^(−Δ ÷ 36시간)(반감기 `CandidateScoring.HALF_LIFE`)이고, Δ 가 시간 창보다 크면 후보가 아니다(같으면 후보다)
   - 점수가 저장 기준 이상인 후보만 판정과 저장에 쓴다 — 점수를 셀 수 없으면(영 벡터 중심의 NaN) 빠진다
 - **event-R11** — 판정(`AssignmentRule` — 정본, 경계는 포함):
   1. 점수가 가장 높은 후보(같으면 사건 ID 가 작은 것)가 위 기준 이상이면 그 사건에 붙인다 — 정한 것은 산식(`FORMULA`)
@@ -927,14 +927,14 @@ public enum EmbedderFailureKind { TRANSIENT, INPUT_REJECTED, EMBEDDER_UNAVAILABL
 | `yozmnews.embedding.openai-compatible.batch-size` | 한 요청의 입력 수 — 1 ~ 256, 기본 32 |
 | 환경 변수 `ORT_DISABLE_TELEMETRY` | `1` 이 아니면 로컬 모델 구현이 ONNX Runtime 을 올리지 않는다 — 배포 이미지가 갖는다([ADR-0091](../adr/0091-local-embedding-model-is-multilingual-e5-small-int8-fetched-at-build-into-the-image-with-onnx-telemetry-off.md)) |
 | `yozmnews.event-assignment.window` | 시간 창(`Duration` — 예 `72h`), 기본 72시간(event-R10 · R17) |
-| `yozmnews.event-assignment.upper` | 위 기준, 기본 0.80(event-R11 · R17) |
-| `yozmnews.event-assignment.lower` | 아래 기준, 기본 0.55(event-R11 · R17) |
+| `yozmnews.event-assignment.upper` | 위 기준, 기본 0.90(event-R11 · R17) |
+| `yozmnews.event-assignment.lower` | 아래 기준, 기본 0.65(event-R11 · R17) |
 | `yozmnews.event-assignment.store` | 저장 기준, 기본 0.40(event-R10 · R17) |
-| `yozmnews.event-assignment.probability` | 확률 기준, 기본 0.50(event-R11 · R17) |
-| `yozmnews.event-assignment.close-after` | 닫는 기간(`Duration` — 예 `7d`), 기본 7일(event-R13) |
+| `yozmnews.event-assignment.probability` | 확률 기준, 기본 0.40(event-R11 · R17) |
+| `yozmnews.event-assignment.close-after` | 닫는 기간(`Duration` — 예 `4d`), 기본 4일(event-R13) |
 | `yozmnews.event-assignment.max-open` | 최대 기간(`Duration`), 기본 14일(event-R13) |
 
-사건 기준 · 저장 기준 · 닫는 기간 · 최대 기간 기본값의 정본은 `EventAssignmentProperties` 의 `@DefaultValue` 이고 `application.yaml` 에는 키가 없다. 기본값은 측정 전 목표다. 운영자는 환경 변수(`YOZMNEWS_EVENT_ASSIGNMENT_UPPER` 식)로 바꾸고, 범위 · 관계를 어기면 기동하지 않는다 — 닫는 기간 · 최대 기간은 0 보다 큰 초 단위이고 시간 창 ≤ 닫는 기간 ≤ 최대 기간이어야 한다(`EventClosing`). 사건 기준 · 저장 기준을 바꾸면 재판정 회차가 지난 배정을 다시 판정하고(event-R18), 병합 회차가 열린 사건을 한 번씩 다시 본다(event-R13). 닫는 기간 · 최대 기간을 바꾸면 그 뒤의 닫기에만 쓴다(event-R13). 임베딩 설정의 기본값은 `EmbeddingProperties` · `OpenAiCompatibleProperties` 의 `@DefaultValue` 가 정본이다. 방식 · 외부 모델 · 주소 · 입력 앞 문자열 · 차원 · 차원 요청 여부를 바꾸면 모델 버전이 바뀌어 새 기사는 새 사건을 연다(event-R4 · R10). 그 밖의 설정 키는 없다 — 큰 사건 기준은 설정이 아니라 운영자 설정이다(event-R21).
+사건 기준 · 저장 기준 · 닫는 기간 · 최대 기간 기본값의 정본은 `EventAssignmentProperties` 의 `@DefaultValue` 이고 `application.yaml` 에는 키가 없다. 사건 기준 · 저장 기준의 기본값은 기본 임베딩 모델에 맞춰 평가 세트로, 닫는 기간은 운영 기록으로 정했고, 최대 기간은 측정 전 목표다([ADR-0109](../adr/0109-event-clustering-defaults-chosen-on-the-evaluation-set-with-operator-review-and-closing-from-operating-records.md)). 다른 임베딩 모델로 바꾸면 기준도 그 모델에 맞춰 다시 본다. 운영자는 환경 변수(`YOZMNEWS_EVENT_ASSIGNMENT_UPPER` 식)로 바꾸고, 범위 · 관계를 어기면 기동하지 않는다 — 닫는 기간 · 최대 기간은 0 보다 큰 초 단위이고 시간 창 ≤ 닫는 기간 ≤ 최대 기간이어야 한다(`EventClosing`). 사건 기준 · 저장 기준을 바꾸면 재판정 회차가 지난 배정을 다시 판정하고(event-R18), 병합 회차가 열린 사건을 한 번씩 다시 본다(event-R13). 닫는 기간 · 최대 기간을 바꾸면 그 뒤의 닫기에만 쓴다(event-R13). 임베딩 설정의 기본값은 `EmbeddingProperties` · `OpenAiCompatibleProperties` 의 `@DefaultValue` 가 정본이다. 방식 · 외부 모델 · 주소 · 입력 앞 문자열 · 차원 · 차원 요청 여부를 바꾸면 모델 버전이 바뀌어 새 기사는 새 사건을 연다(event-R4 · R10). 그 밖의 설정 키는 없다 — 큰 사건 기준은 설정이 아니라 운영자 설정이다(event-R21).
 
 ## 8. 결정
 
@@ -973,3 +973,4 @@ public enum EmbedderFailureKind { TRANSIENT, INPUT_REJECTED, EMBEDDER_UNAVAILABL
 | [0102](../adr/0102-an-event-is-the-reports-of-one-happening-narrowed-by-the-event-membership-question-wording.md) | 사건은 한 번 일어난 일을 다룬 보도들이고, 시스템의 사건 범위는 사건 소속 질문 문구로 좁힌다 |
 | [0103](../adr/0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md) | 큰 판정은 스토리라인 단위로 하고, 사건 묶기 바로 뒤 스토리라인 마일스톤이 사건의 큰 사건 판정을 거둔다 |
 | [0105](../adr/0105-storylines-link-incrementally-from-event-change-notifications-and-events-publish-changed-event-ids.md) | 스토리라인은 사건 변화 알림으로 증분으로 잇고, `event` 는 바뀐 사건 ID 를 발행한다 |
+| [0109](../adr/0109-event-clustering-defaults-chosen-on-the-evaluation-set-with-operator-review-and-closing-from-operating-records.md) | 사건 묶기 기본값은 기본 임베딩 모델에 맞춰 평가 세트로 견주고 운영자 표본 검수로 확인해 정하며, 반감기는 상수로 두고 닫는 기간은 시간 창에 늦은 수집의 여유를 더한다 |

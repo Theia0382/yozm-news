@@ -44,3 +44,4 @@
 
 - 2026-11-07: 결정 절 "재판정은 자동이다"의 연 사건을 아는 방법과 합쳐진 사건의 저장 후보 — [ADR-0085](0085-rejudgement-knows-opened-events-from-an-assignment-flag-and-reads-merged-candidates-as-survivors.md) · [event Spec §5](../specs/event.md#기준과-재판정) event-R18
 - 2026-11-07: 결과 절 "닫힌 사건 안의 배정을 재판정할지는 사건 닫기를 만드는 작업이 정한다" — [ADR-0087](0087-closed-event-assignments-are-not-rejudged-and-closing-and-merging-are-not-undone.md) · [event Spec §5](../specs/event.md#기준과-재판정) event-R18
+- 2026-11-11: 맥락 절 "값은 측정 전 목표이고 측정 뒤 바뀐다"와 결정 절 "기본값의 정본은 설정 클래스이고(측정 전 목표)"의 사건 기준 · 저장 기준 값 — [ADR-0109](0109-event-clustering-defaults-chosen-on-the-evaluation-set-with-operator-review-and-closing-from-operating-records.md) · [event Spec §7](../specs/event.md#7-설정)

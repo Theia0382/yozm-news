@@ -72,3 +72,4 @@
 - 2026-11-08: 결정 절 "임계값 · 시간 창 · 모델은 평가 세트로 정한다"의 평가 방법 — [ADR-0095](0095-event-clustering-evaluated-by-an-operator-tool-comparing-admin-api-results-with-full-day-labels.md) · [사건 묶기 평가하기](../operations/event-evaluation.md)
 - 2026-11-08: 결정 절 "평가 세트의 실제 기사 텍스트는 공개 저장소에 넣지 않는다"에 더한 라벨 · 결과 기록의 자리 — [ADR-0096](0096-instance-bound-evaluation-data-kept-out-of-the-public-repository-and-defaults-cite-only-the-evaluation-set.md) · [security.md](../security.md#저작권과-소스-이용조건)
 - 2026-11-09: 결정 절 "묶기는 네 단계다"의 판정이 묻는 같은 사건의 범위 — [ADR-0102](0102-an-event-is-the-reports-of-one-happening-narrowed-by-the-event-membership-question-wording.md) · [evaluation Spec 사건 소속 판정](../specs/evaluation.md#사건-소속-판정) evaluation-R37
+- 2026-11-11: 결정 절 "임계값 · 시간 창 · 모델은 평가 세트로 정한다"와 결과 절 "운영자가 표본을 검수해 임계값을 조정한다"의 첫 값 — [ADR-0109](0109-event-clustering-defaults-chosen-on-the-evaluation-set-with-operator-review-and-closing-from-operating-records.md) · [event Spec §7](../specs/event.md#7-설정)

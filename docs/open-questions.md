@@ -18,7 +18,7 @@
 | 10 | 보존 기간 ([data-model.md](data-model.md)) | 초안 값으로 시작. RSS 요약문은 결정됨(아래) |
 | 11 | 사용자 피드 추가 허용 | v1은 불가. 열 때는 사용자당 피드 수 상한, 피드 볼륨 상한, 운영자 승인 중 하나 이상이 필요하다 (Jev 비용이 운영자 부담이므로) |
 | 12 | 본문 추출 도입 | M6 품질 측정 후. 요약문이 거의 없는 소스(제목만 주는 피드)부터 검토 |
-| 20 | 사건 묶기 값: 시간 창 · 위 · 아래 · 저장 · 확률 기준 · 닫는 기간 · 최대 기간의 기본값(지금은 측정 전 목표 — [event Spec §7](specs/event.md#7-설정))과 시간 감쇠의 반감기(코드 상수 `CandidateScoring.HALF_LIFE`) | M3 평가 세트로 정한다. 반감기는 시간 창과 함께 견준다 — 같은 글이라도 시각 차가 커지면 감쇠로 점수가 아래 기준 밑으로 떨어지므로, 시간 쪽 사건 범위는 시간 창보다 반감기가 정한다. 기본 임베딩 모델(multilingual-e5-small)은 다른 사건의 기사 쌍도 코사인이 높아(중앙값 0.82) 지금 아래 기준으로는 시각이 가까운 후보의 거의 모두가 Jev 에 묻는 구간에 든다(기사 쌍 분포로 본 근사). 모델마다 분포가 크게 달라(다른 사건 쌍 중앙값 0.06 ~ 0.83) 기준은 모델별로 맞춘다 — [임베딩 모델 조사](research/2026-11-embedding-models.md) |
+| 20 | 사건의 최대 기간(연 뒤 이만큼 지나면 새 기사가 있어도 닫는다 — 기본값은 측정 전 목표, [event Spec §7](specs/event.md#7-설정)). 나머지 사건 묶기 값은 결정됨(아래) | 평가 세트의 다시 묶기는 며칠치라 이 길이를 담지 못한다. 운영 기록에서 연 뒤 오래 이어지는 사건이 보이면 정한다 |
 | 21 | 스토리라인의 큰 판정 기준과 다이제스트의 큰 슬롯 수 | M4 평가 세트와 운영자 표본 검수로 시작해 M6 측정으로 조정 |
 | 24 | 관심도 감쇠 · 가중치, 구독 제안 기준 | 중립에서 시작해 M7 측정으로 정한다 |
 | 31 | 메일 발송 서비스 선택(메일을 도입할 때) | SMTP 로 붙인다([ADR-0012](adr/0012-swappable-external-dependencies.md)). 후보 Resend · Amazon SES · Postmark. 발송 도메인에 SPF · DKIM · DMARC 를 설정한다. 자체 메일 서버는 전달률을 위해 역방향 DNS 도 필요하다 |
@@ -30,7 +30,7 @@
 |---|---|
 | 16 | 네이버 검색 API 약관 개정 공식 원문. 보도 기준으로 결정했으며 원문은 직접 확인하지 못했다 |
 | 25 | pgvector 이미지(OS 계열을 맞춘 PG 18 태그)의 재빌드 주기 — PostgreSQL 보안 패치가 반영되는 속도 |
-| 28 | Jev 사건 소속 판정 질문의 품질 (M3 평가 세트) |
+| 28 | Jev 병합 판정의 품질 — 평가 세트에서 같은 일인 사건 쌍에도 낮은 확률을 줘 대부분 합치지 않았다. 질문의 꼴(사건 하나의 대표 기사와 다른 사건의 기사들)을 바꿀지 본다. 배정 판정의 품질은 결정됨(아래) |
 
 ## 결정됨 (2026-10-25)
 
@@ -81,3 +81,10 @@
 | # | 내용 | 반영 |
 |---|---|---|
 | 26 | 로컬 임베딩(ONNX Runtime · DJL 토크나이저)은 linux-aarch64 네이티브를 담아 root 가 아닌 컨테이너에서 `/tmp` 에 풀려 돈다. arm64 실기에서 기동하고 로컬 모델로 추론하는지는 CI 의 arm64 러너가 PR 마다 확인한다 — 러너 CPU 에 없는 명령어 조합의 오래된 코어는 확인 범위 밖이다 | [ADR-0091](adr/0091-local-embedding-model-is-multilingual-e5-small-int8-fetched-at-build-into-the-image-with-onnx-telemetry-off.md) · [ADR-0104](adr/0104-arm64-run-checked-on-arm64-runners-with-a-symmetric-deploy-check-per-architecture.md) · [개발 인프라 — CI](development/infrastructure.md#ci) |
+
+## 결정됨 (2026-11-11)
+
+| # | 내용 | 반영 |
+|---|---|---|
+| 20 (일부) | 사건 기준(시간 창 · 위 · 아래 · 확률 기준) · 저장 기준의 기본값과 점수 산식의 반감기 · 핵심 말 가중치는 기본 임베딩 모델에 맞춰 평가 세트와 운영자 표본 검수로 정했다 — 반감기 · 가중치는 코드 상수로 둔다. 닫는 기간은 시간 창에 늦게 수집되는 기사를 덮는 여유를 더한 값으로 운영 기록으로 정했다. 기본 임베딩 모델은 외부 모델 둘과 견줘 그대로 두고, 그 둘의 권장 기준은 운영 안내에 둔다 | [ADR-0109](adr/0109-event-clustering-defaults-chosen-on-the-evaluation-set-with-operator-review-and-closing-from-operating-records.md) · [event Spec §7](specs/event.md#7-설정) · [운영 설정 — 사건 묶기](operations/configuration.md#사건-묶기) |
+| 28 (일부) | Jev 사건 소속 판정 가운데 배정 판정(기사 하나와 후보 사건의 기사들)은 평가 세트에서 같은 일과 다른 일을 가른다. 확률 기준에 따른 판정 품질의 차이는 작아, 확률 기준은 다시 묶어 확인한 값으로 정했다 | [ADR-0109](adr/0109-event-clustering-defaults-chosen-on-the-evaluation-set-with-operator-review-and-closing-from-operating-records.md) · [event Spec §7](specs/event.md#7-설정) |

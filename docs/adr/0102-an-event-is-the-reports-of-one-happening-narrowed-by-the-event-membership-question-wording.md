@@ -44,3 +44,7 @@
 | 분야별 단계 · 반응의 예시 목록을 문구에 넣는다 | 표본의 분야에 맞춘 문구가 되어 다른 분야에서 갈리지 않는다 |
 | "같은 일인가"를 묻는 문구 | 표본에서 정확도는 비슷했지만 다른 사건에 잘못 붙이는 쪽으로 틀렸다 |
 | 제목으로 기사가 다루는 일을 고르게 하는 문구 | 표본에서 효과가 없었다 |
+
+## 후속 기록
+
+- 2026-11-11: 결정 절 "반감기는 코드 상수로 두고, 값은 평가 세트에서 시간 창과 함께 견줘 정한다"의 값 — [ADR-0109](0109-event-clustering-defaults-chosen-on-the-evaluation-set-with-operator-review-and-closing-from-operating-records.md) · [event Spec §4](../specs/event.md#4-내부-구조) `CandidateScoring`
