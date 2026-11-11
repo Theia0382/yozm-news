@@ -61,7 +61,7 @@ PostgreSQL 이미지는 `compose.yaml` 의 `postgres` 서비스 `image` 한 줄�
 
 IDE 에서 테스트를 Gradle 에 맡기는 것은 1 때문이다([CONTRIBUTING.md §1](../../CONTRIBUTING.md#1-개발-환경)). 4 가 빠지면 복사할 파일이 빌드 컨텍스트에 없어 검사 이미지 빌드가 실패하고, 3 이 빠지면 이미지는 만들어지지만 그 안의 백엔드 검사가 파일이 없어 실패한다.
 
-사건 평가 도구의 테스트는 저장소 파일 둘을 읽는다 — 도구가 읽는 응답 필드와 대조하는 `api/openapi.json`, 도구의 라벨 기준 판과 대조하는 운영 안내 `docs/operations/event-evaluation.md`. 테스트가 자기 파일 위치에서 저장소 루트를 찾아 읽고, 검사 이미지는 빌드 컨텍스트를 저장소 구조 그대로 복사하므로 맞물리는 곳은 저장소 도구 검사의 허용 목록(`tools/Dockerfile.dockerignore`) 하나다. 빠지면 이미지는 만들어지지만 그 안의 테스트가 파일이 없어 실패한다.
+사건 · 스토리라인 평가 도구의 테스트는 저장소 파일 셋을 읽는다 — 도구가 읽는 응답 필드와 대조하는 `api/openapi.json`, 도구의 라벨 기준 판과 대조하는 운영 안내 `docs/operations/event-evaluation.md` · `docs/operations/storyline-evaluation.md`. 테스트가 자기 파일 위치에서 저장소 루트를 찾아 읽고, 검사 이미지는 빌드 컨텍스트를 저장소 구조 그대로 복사하므로 맞물리는 곳은 저장소 도구 검사의 허용 목록(`tools/Dockerfile.dockerignore`) 하나다. 빠지면 이미지는 만들어지지만 그 안의 테스트가 파일이 없어 실패한다.
 
 빌드 자체도 저장소 파일 하나를 읽는다 — 기본 로컬 임베딩 모델의 정보 `backend/embedding-model.properties`. Gradle `fetchEmbeddingModel` 이 이 파일로 모델을 받아 생성 리소스(`build/generated/embedding-model/`)로 놓고, 시험과 `bootJar` 가 그 리소스를 쓴다. 그래서 백엔드 허용 목록과 의존성 단계의 `COPY` 에 이 파일이 있어야 하고, 빠지면 검사 · 배포 이미지 빌드가 모두 실패한다. 모델 파일은 Gradle 사용자 홈(`caches/yozmnews-embedding-model/`)에 해시로 캐시한다. Gradle 의 시험 작업은 로컬 모델을 여는 시험을 위해 `ORT_DISABLE_TELEMETRY=1` 과 `--enable-native-access=ALL-UNNAMED` 를 넣는다.
 
@@ -82,7 +82,7 @@ IDE 에서 테스트를 Gradle 에 맡기는 것은 1 때문이다([CONTRIBUTING
 - 이미지에는 `tools/` 와 도구의 테스트가 읽는 저장소 파일만 들어간다(`tools/Dockerfile.dockerignore`, [위 결선](#테스트가-저장소-파일을-읽는-결선)). 실제 앱 · 실제 기사로 재는 측정은 검사에 없다
 - 도구와 테스트
   - `tools/docs-check` — 문서 링크 검사기([문서 링크 검사](#문서-링크-검사)). 단위 테스트 `test_check_links.py`
-  - `tools/event-eval` — 운영자가 사건 묶기를 라벨과 견주는 도구([사건 묶기 평가하기](../operations/event-evaluation.md) · [ADR-0095](../adr/0095-event-clustering-evaluated-by-an-operator-tool-comparing-admin-api-results-with-full-day-labels.md)). 가짜 운영자 API 서버로 도는 명령 테스트, 도구가 읽는 응답 필드를 `api/openapi.json` 의 스키마와 대조하는 계약 테스트(`test_contract.py`), 도구의 라벨 기준 판을 운영 안내의 판 제목과 대조하는 테스트(`test_label_rule.py`)
+  - `tools/event-eval` — 운영자가 사건 묶기 · 스토리라인 잇기를 라벨과 견주는 도구([사건 묶기 평가하기](../operations/event-evaluation.md) · [스토리라인 평가하기](../operations/storyline-evaluation.md) · [ADR-0095](../adr/0095-event-clustering-evaluated-by-an-operator-tool-comparing-admin-api-results-with-full-day-labels.md) · [ADR-0110](../adr/0110-storyline-evaluation-labels-system-events-of-a-fixed-dump-and-measures-overlapping-clusters-from-random-seed-events.md)). 가짜 운영자 API 서버로 도는 명령 테스트, 손 셈 리터럴로 스토리라인 지표 · 라벨 · 결과 파일을 검증하는 테스트(`test_storyline_*.py`), 도구가 읽는 응답 필드를 `api/openapi.json` 의 스키마와 대조하는 계약 테스트(`test_contract.py`), 두 도구의 라벨 기준 판을 저마다의 운영 안내의 판 제목과 대조하는 테스트(`test_label_rule.py`)
 
 ## 이미지
 
@@ -142,8 +142,9 @@ IDE 에서 테스트를 Gradle 에 맡기는 것은 1 때문이다([CONTRIBUTING
 | 배포 구성의 PostgreSQL 이 같은 이미지를 쓴다 | 구조(`extends`) + 스모크 K9 | `deploy/compose.yaml` · `deploy/smoke.sh` |
 | 배포 이미지가 저장소의 프리셋을 모두 적재한다 | 스모크 K12 — 앱의 적재 로그 줄의 수 = 저장소의 프리셋 파일 수(로그 문구는 [source-R12](../specs/source.md#수집-프로필)) | `backend/src/main/resources/source-presets/` · `deploy/smoke.sh` |
 | 테스트가 읽는 저장소 파일이 검사 이미지에 있다 | 빌드 실패(허용 목록에 없으면 복사가 실패) · 검사 실패(복사하지 않으면 이미지 안에 파일이 없다). 저장소 도구 검사는 검사 실패만 — 빌드 컨텍스트를 통째로 복사한다 | [결선](#테스트가-저장소-파일을-읽는-결선) |
-| 사건 평가 도구가 읽는 운영자 API 응답 필드가 커밋된 명세에 있고 필수다 | 테스트 `test_contract.py`(도구의 필드 목록 `USED_FIELDS` 를 명세의 스키마와 대조 — 도구는 응답 필드를 이 목록을 거쳐서만 읽는다). 부분 — 요청의 경로 · 질의 이름 · 본문은 대조하지 않는다 | `tools/event-eval/admin_api.py` · `api/openapi.json` |
+| 사건 · 스토리라인 평가 도구가 읽는 운영자 API 응답 필드가 커밋된 명세에 있고 필수다 | 테스트 `test_contract.py`(도구의 필드 목록 `USED_FIELDS` 를 명세의 스키마와 대조 — 도구는 응답 필드를 이 목록을 거쳐서만 읽는다). 부분 — 요청의 경로 · 질의 이름 · 본문은 대조하지 않는다 | `tools/event-eval/admin_api.py` · `api/openapi.json` |
 | 사건 평가 도구의 라벨 기준 판 = 운영 안내의 판 | 테스트 `test_label_rule.py`(운영 안내의 판 제목은 한 번). 문면만 고치고 판을 그대로 둔 것은 잡지 못한다 | `tools/event-eval/labels.py` · [사건 묶기 평가하기](../operations/event-evaluation.md) |
+| 스토리라인 평가 도구의 라벨 기준 판 = 운영 안내의 판 | 테스트 `test_label_rule.py`(같은 정규식 — 운영 안내의 판 제목은 한 번). 문면만 고치고 판을 그대로 둔 것은 잡지 못한다 | `tools/event-eval/storyline_labels.py` · [스토리라인 평가하기](../operations/storyline-evaluation.md) |
 | 커밋된 화면용 API 명세 = 코드의 명세 | 테스트 `OpenApiSpecTests` | `api/openapi.json` · `backend/build.gradle.kts` |
 | 운영 안내서의 예시 프로필이 지금의 검증기를 통과한다 | 테스트 `SourcesGuideExampleTests`(코드 블록은 `yaml` · `sh` 만, `yaml` 블록 1개 이상) | `docs/operations/sources.md` · `backend/build.gradle.kts` |
 | 태그 체계 안내서의 예시 원문을 기본 체계에 적용하면 확인을 통과한다 | 테스트 `TagSetsGuideExampleTests`(코드 블록은 `yaml` · `sh` 만, 받은 원문의 같은 절을 `yaml` 블록으로 바꾸거나 끝에 더한 원문이 형식 검증과 기본 체계와의 대조를 통과하고 계보가 하나 이상) | `docs/operations/tag-sets.md` · `backend/build.gradle.kts` |
