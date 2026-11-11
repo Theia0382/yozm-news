@@ -17,3 +17,4 @@
 | [tag-sets.md](tag-sets.md) | 태그 체계 바꾸기 — 원문의 확인 · 활성화, 계보, 재평가 기간과 예시, 평가 결과 · 표본 검수, 태그 기준 · 저장 기준 바꾸기 |
 | [events.md](events.md) | 사건 화면 읽기 — 사건 목록 · 상세, 판정 기록, 큰 사건, 큰 사건 기준 · 사건 배정 기준 조정 |
 | [event-evaluation.md](event-evaluation.md) | 사건 묶기 평가하기 — 평가 도구, 표본 고르기, 라벨 기준, 측정과 기준 비교, 파일 · 결과 기록 형식 |
+| [storyline-evaluation.md](storyline-evaluation.md) | 스토리라인 평가하기 — 재는 것, 평가 인스턴스, 표본과 씨앗, 라벨 기준, 대조 검토와 측정, 결과 파일 · 파일 · 결과 기록 형식 |
