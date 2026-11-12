@@ -38,6 +38,20 @@ public final class AssignmentRule {
 	}
 
 	/**
+	 * 띠다 — 아래 기준 ≤ 점수 &lt; 위 기준. 띠의 정의는 여기 하나다(배정 · 재판정 · 병합).
+	 */
+	public static boolean inBand(double score, AssignmentCriteria criteria) {
+		return score >= criteria.lower() && score < criteria.upper();
+	}
+
+	/**
+	 * 확률 기준을 넘는다 — 확률 ≥ 확률 기준(경계 포함). 확률 기준의 비교는 여기 하나다(배정 · 재판정 · 병합).
+	 */
+	public static boolean passes(double probability, AssignmentCriteria criteria) {
+		return probability >= criteria.probability();
+	}
+
+	/**
 	 * 판정한다.
 	 * @param candidates 저장 기준 이상인 후보
 	 */
@@ -47,11 +61,11 @@ public final class AssignmentRule {
 			return new Decision.Attach(best.get().eventId(), best.get().score(), DecidedBy.FORMULA);
 		}
 		List<StoredCandidate> band = candidates.stream()
-			.filter(candidate -> candidate.score() >= criteria.lower() && candidate.score() < criteria.upper())
+			.filter(candidate -> inBand(candidate.score(), criteria))
 			.toList();
 		List<StoredCandidate> judged = band.stream().filter(candidate -> candidate.probability() != null).toList();
 		Optional<StoredCandidate> likeliest = judged.stream().min(BY_PROBABILITY);
-		if (likeliest.isPresent() && Objects.requireNonNull(likeliest.get().probability()) >= criteria.probability()) {
+		if (likeliest.isPresent() && passes(Objects.requireNonNull(likeliest.get().probability()), criteria)) {
 			return new Decision.Attach(likeliest.get().eventId(), likeliest.get().score(), DecidedBy.EVALUATOR);
 		}
 		List<StoredCandidate> unasked = band.stream().filter(candidate -> candidate.probability() == null).toList();

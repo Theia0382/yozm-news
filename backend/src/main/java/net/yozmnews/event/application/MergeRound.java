@@ -33,6 +33,7 @@ import net.yozmnews.event.domain.assignment.ScoredCandidate;
 import net.yozmnews.event.domain.assignment.StoredCandidate;
 import net.yozmnews.event.domain.event.EventArticle;
 import net.yozmnews.event.domain.event.EventArticleRepository;
+import net.yozmnews.event.domain.event.EventQueryRepository;
 import net.yozmnews.event.domain.event.EventRepository;
 import net.yozmnews.event.domain.event.LockedEvent;
 import net.yozmnews.event.domain.event.MergeSubject;
@@ -48,8 +49,11 @@ import org.springframework.transaction.support.TransactionTemplate;
  * <p>
  * 사건 하나를 기사 자리에 둔 배정이다 — 점수는 {@link CandidateScoring}(구간 대 구간), 판정은 {@link AssignmentRule}, 띠는 사건 소속
  * 판정({@link EventMembership})에 묻는다. 판정할 기사는 바뀐 사건의 서술 기사 하나이고, 받은 확률은 쌍마다 한 번 남겨 다시 묻지 않는다.
+ * 기록이 없는 띠 쌍은 배정 때 받은 확률({@link EventArticleRepository#priorProbabilities})이 확률 기준 미만이면 묻지 않고 합치지
+ * 않는다 — 남기지 않아 확인할 때마다 그때 기준과 견준다. 기준 이상이면 묻는다({@link MergeRule#priorProbability}).
  * 핵심 말 겹침의 기준 쪽과 남는 사건은 {@link MergeRule} 이 정한다. 쓰기는 쌍마다 한 트랜잭션에서 배정 행(기사 ID 순) → 사건(ID 순)을
  * 잠그고, 둘 다 열려 있고 모델 버전이 같고 잠근 배정 수가 사건의 기사 수와 같을 때만 합친다 — 아니면 표시하지 않아 다음 회차가 다시 본다.
+ * 합쳐질 사건에는 합치기 직전의 대표 기사({@link EventQueryRepository#representativesOfAll})를 남긴다.
  * 사건 소속 판정은 트랜잭션 밖에서 부른다. 회차마다 {@link AssignmentSchedule#MERGE_BATCH} 사건까지 본다. 예외를 밖으로 던지지 않는다.
  * 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통).
  */
@@ -59,6 +63,8 @@ public class MergeRound {
 	private static final Logger logger = LoggerFactory.getLogger(MergeRound.class);
 
 	private final EventRepository events;
+
+	private final EventQueryRepository queries;
 
 	private final EventArticleRepository assignments;
 
@@ -75,18 +81,21 @@ public class MergeRound {
 	private final InstantSource clock;
 
 	@Autowired
-	MergeRound(EventRepository events, EventArticleRepository assignments, MergeJudgementRepository judgements,
+	MergeRound(EventRepository events, EventQueryRepository queries, EventArticleRepository assignments,
+			MergeJudgementRepository judgements,
 			CriteriaRepository criteriaHistory, AssignmentSettings settings, EventMembership membership,
 			TransactionTemplate transaction) {
-		this(events, assignments, judgements, criteriaHistory, settings.criteria(), membership, transaction,
+		this(events, queries, assignments, judgements, criteriaHistory, settings.criteria(), membership, transaction,
 				InstantSource.system());
 	}
 
 	/** 시험이 시계를 넣는다 */
-	MergeRound(EventRepository events, EventArticleRepository assignments, MergeJudgementRepository judgements,
+	MergeRound(EventRepository events, EventQueryRepository queries, EventArticleRepository assignments,
+			MergeJudgementRepository judgements,
 			CriteriaRepository criteriaHistory, AssignmentCriteria criteria, EventMembership membership,
 			TransactionTemplate transaction, InstantSource clock) {
 		this.events = events;
+		this.queries = queries;
 		this.assignments = assignments;
 		this.judgements = judgements;
 		this.criteriaHistory = criteriaHistory;
@@ -178,7 +187,10 @@ public class MergeRound {
 		};
 	}
 
-	/** 후보 사건의 점수를 매겨 저장 기준 이상만 남기고, 쌍마다 남긴 판정 확률을 채운다 */
+	/**
+	 * 후보 사건의 점수를 매겨 저장 기준 이상만 남기고, 쌍마다 남긴 판정 확률을 채운다. 기록이 없는 띠 후보는 배정 때 받은 확률이 확률 기준
+	 * 미만일 때만 그 확률로 채운다 — 기준 이상이거나 없으면 확률 없는 후보로 두어 묻는다.
+	 */
 	private List<StoredCandidate> scored(MergeSubject subject) {
 		Duration window = this.criteria.window();
 		List<ScoredCandidate> scored = this.events
@@ -191,9 +203,18 @@ public class MergeRound {
 			.toList();
 		Map<Long, Double> known = this.judgements.find(subject.id(),
 				scored.stream().map(ScoredCandidate::eventId).toList());
-		return scored.stream()
-			.map(candidate -> new StoredCandidate(candidate.eventId(), candidate.score(), known.get(candidate.eventId())))
+		List<Long> unknownInBand = scored.stream()
+			.filter(candidate -> !known.containsKey(candidate.eventId())
+					&& AssignmentRule.inBand(candidate.score(), this.criteria))
+			.map(ScoredCandidate::eventId)
 			.toList();
+		Map<Long, Double> prior = unknownInBand.isEmpty() ? Map.of()
+				: this.assignments.priorProbabilities(subject.id(), unknownInBand);
+		return scored.stream().map(candidate -> {
+			@Nullable Double probability = known.containsKey(candidate.eventId()) ? known.get(candidate.eventId())
+					: MergeRule.priorProbability(prior.get(candidate.eventId()), this.criteria);
+			return new StoredCandidate(candidate.eventId(), candidate.score(), probability);
+		}).toList();
 	}
 
 	/** 쌍의 점수 — 핵심 말 겹침의 기준 쪽을 {@link MergeRule#termsFromSubject} 로 정해, 어느 쪽에서 보아도 같은 점수다 */
@@ -275,8 +296,10 @@ public class MergeRound {
 			}
 			LockedEvent survivor = (MergeRule.survivor(a, b) == a.id()) ? a : b;
 			LockedEvent absorbed = (survivor == a) ? b : a;
+			// 배정을 옮기기 전에 고른다 — 옮긴 뒤에는 합쳐질 사건에 기사가 없다
+			@Nullable ArticleId representative = this.queries.representativesOfAll(List.of(absorbed.id())).get(absorbed.id());
 			this.assignments.moveAll(absorbed.id(), survivor.id());
-			this.events.absorb(survivor.absorbed(absorbed), absorbed, now);
+			this.events.absorb(survivor.absorbed(absorbed), absorbed, representative, now);
 			return new Step.Merged(survivor.id(), absorbed.id());
 		});
 		return Optional.ofNullable(done);

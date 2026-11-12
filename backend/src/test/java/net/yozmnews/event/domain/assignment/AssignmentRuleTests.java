@@ -43,6 +43,14 @@ class AssignmentRuleTests {
 	}
 
 	@Test
+	void theBandIncludesTheLowerBoundaryAndExcludesTheUpper() {
+		assertThat(AssignmentRule.inBand(0.55, CRITERIA)).isTrue();
+		assertThat(AssignmentRule.inBand(0.7999, CRITERIA)).isTrue();
+		assertThat(AssignmentRule.inBand(0.80, CRITERIA)).isFalse();
+		assertThat(AssignmentRule.inBand(0.5499, CRITERIA)).isFalse();
+	}
+
+	@Test
 	void noCandidateOpensByFormulaWithoutAScore() {
 		assertThat(decide(DecisionPhase.FIRST)).isEqualTo(new Open(null, DecidedBy.FORMULA));
 	}
@@ -58,6 +66,12 @@ class AssignmentRuleTests {
 		assertThat(decide(DecisionPhase.FIRST, candidate(1, 0.56), candidate(2, 0.70), candidate(3, 0.60),
 				candidate(4, 0.70), candidate(5, 0.79), candidate(6, 0.58), candidate(8, 0.45)))
 			.isEqualTo(new Ask(List.of(5L, 2L, 4L, 3L, 6L)));
+	}
+
+	@Test
+	void theProbabilityThresholdIsInclusive() {
+		assertThat(AssignmentRule.passes(0.50, CRITERIA)).isTrue();
+		assertThat(AssignmentRule.passes(0.4999, CRITERIA)).isFalse();
 	}
 
 	@Test

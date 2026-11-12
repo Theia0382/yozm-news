@@ -1,6 +1,6 @@
 # ADR-0084: 사건 병합은 배정 산식 · 판정을 사건 대 사건에 쓰고, 합쳐진 사건은 남는 사건을 가리키는 행으로 남긴다
 
-- 상태: 승인. 부분 대체 — 임베더가 없는 프로세스의 건너뜀([ADR-0093](0093-worker-role-does-not-run-without-an-embedder-built-only-in-the-worker-role.md))
+- 상태: 승인. 부분 대체 — 임베더가 없는 프로세스의 건너뜀([ADR-0093](0093-worker-role-does-not-run-without-an-embedder-built-only-in-the-worker-role.md)) · 병합이 묻는 띠 쌍의 범위([ADR-0119](0119-event-merge-does-not-ask-band-pairs-whose-prior-assignment-probability-is-below-the-probability-threshold.md))
 - 날짜: 2026-11-07
 - 근거: [이슈 #98](https://github.com/Theia0382/yozm-news/issues/98) — 병합의 판정 기준 · 실행 자리 · 합쳐진 사건 행을 리드와 정하고 구현(`8eba5ca` · `bb34862` · `ac942e1`)
 - 관련: [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md)(결정 절 "4. 정리"의 병합을 정한다, 후속 기록), [ADR-0071](0071-event-membership-judged-from-article-ids-with-questions-built-in-evaluation.md)(사건 소속 판정 — 공개 API 를 바꾸지 않고 쓴다), [ADR-0080](0080-event-centroids-and-key-terms-accumulated-with-article-counts-and-updated-incrementally.md)(누적 갱신 — 합친 중심은 기사 수 가중 평균), [ADR-0081](0081-event-assignment-criteria-in-settings-and-rejudgement-within-stored-scores.md)(사건 기준 — 병합도 같은 기준을 쓴다), [ADR-0087](0087-closed-event-assignments-are-not-rejudged-and-closing-and-merging-are-not-undone.md)(합치기는 되돌리지 않는다)
@@ -15,7 +15,9 @@
 
 ## 결정
 
+> 부분 대체(셋째 문장) — [ADR-0119](0119-event-merge-does-not-ask-band-pairs-whose-prior-assignment-probability-is-below-the-probability-threshold.md). 지금 상태: [event Spec §5](../specs/event.md#사건-정리) event-R13
 - **병합은 사건 하나를 기사 자리에 둔 배정이다.** 점수는 배정 산식(코사인 · 핵심 말 겹침 · 시각 감쇠)을, 판정은 배정의 판정 규칙과 위 · 아래 · 확률 기준을 그대로 쓴다. 위 기준 이상이면 합치고, 띠는 사건 소속 판정에 묻는다. 사건 대 사건에만 필요한 것만 더한다 — 시각 차는 두 시각 범위 사이의 간격이고, 핵심 말 겹침은 기사 수가 적은 쪽(같으면 나중에 연 쪽)의 핵심 말을 기준으로 세어, 어느 쪽에서 보아도 같은 쌍은 같은 점수다.
+> 부분 대체(셋째 문장) — [ADR-0119](0119-event-merge-does-not-ask-band-pairs-whose-prior-assignment-probability-is-below-the-probability-threshold.md). 지금 상태: [event Spec §5](../specs/event.md#사건-정리) event-R13
 - **묻기는 사건 소속 판정 공개 API 를 바꾸지 않고 쓴다.** 판정할 기사는 바뀐 사건의 서술 기사 하나이고, 후보는 상대 사건과 그 서술 기사다. 받은 확률은 순서 없는 쌍마다 한 번 남기고, 사건이 바뀌어도 다시 묻지 않는다. 판정 원본은 그 기사의 판정으로 `evaluation` 이 남긴다.
 - **병합은 사건 묶기 반복 작업의 네 번째 회차다.** 재판정 회차 다음에, 지난 확인 뒤 고쳐진 열린 사건만 본다 — 사건 값을 쓸 때마다 느는 정수(고친 횟수)를 확인한 값 · 기준과 비교한다. 기준이 바뀌면 열린 사건을 한 번씩 다시 본다. 회차마다 보는 사건 수에 상한이 있다.
 - **같은 모델 버전의 열린 사건끼리만 합친다. 남는 사건은 기사 수가 많은 쪽, 같으면 먼저 연(ID 가 작은) 쪽이다.** 합친 값은 중심이 기사 수 가중 평균, 수는 합, 첫 기사 시각 · 연 시각은 이른 쪽, 마지막 기사 시각 · 마지막으로 붙은 시각은 늦은 쪽, 핵심 말은 말마다 수를 더한 것이다. 기사 표현을 읽지 않는다.
@@ -25,6 +27,7 @@
 ## 결과
 
 - 들어온 순서 때문에 쪼개진 사건이 배정 직후 합쳐져, 뒤 기사가 합친 사건을 후보로 본다. 병합 기준이 배정과 같아 새 설정 · 측정 대상이 없다. 배정 산식을 사건 대 사건에 쓰는 근거는 측정 전이고, 평가 세트로 병합 전후의 묶음 정확도를 잰다.
+> 부분 대체(첫 문장) — [ADR-0119](0119-event-merge-does-not-ask-band-pairs-whose-prior-assignment-probability-is-below-the-probability-threshold.md). 지금 상태: [event Spec §5](../specs/event.md#사건-정리) event-R13
 - 띠 쌍마다 Jev 요청이 한 번 는다(운영자 비용) — 바뀐 사건 하나에 요청 하나다. 묻는 쪽은 비대칭(바뀐 사건의 서술 기사)이고 기록은 순서 없는 쌍이다.
 - 합쳐진 사건 ID 를 가진 쪽은 사건 ID 로 찾아 남는 사건을 얻는다. 합쳐진 사건의 기사 조회는 빈 목록이다.
 - 합칠 때마다 남는 사건의 고친 횟수가 늘어 다음 회차가 다시 본다. 열린 사건 수가 줄기만 하므로 사슬 병합은 끝난다.

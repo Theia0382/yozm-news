@@ -3,6 +3,7 @@ package net.yozmnews.event.application;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import net.yozmnews.article.ArticleId;
@@ -72,6 +73,11 @@ class ForwardingEventArticleRepository implements EventArticleRepository {
 	@Override
 	public Optional<PublishedSpan> publishedSpan(long eventId) {
 		return this.delegate.publishedSpan(eventId);
+	}
+
+	@Override
+	public Map<Long, Double> priorProbabilities(long eventId, Collection<Long> others) {
+		return this.delegate.priorProbabilities(eventId, others);
 	}
 
 	@Override
