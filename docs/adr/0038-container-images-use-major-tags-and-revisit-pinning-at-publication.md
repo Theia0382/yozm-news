@@ -34,3 +34,7 @@
 | 정확한 버전(패치까지)으로 고정하고, Dependabot 이 갱신 PR 을 올린다 | CI 가 검사한 버전이 그대로 쓰이지만, 갱신 PR 이 꾸준히 생기고 merge 하지 않으면 보안 패치가 멈춘다. `FROM …:${JAVA_VERSION}-jdk` 처럼 보간한 태그를 Dependabot 이 갱신하는지 확인되지 않았다 — 갱신하지 못하면 JDK 버전을 Dockerfile 안에 두 번 적어야 한다. 이미지를 게시하지 않는 지금은 고정의 이득(같은 이미지의 재현)을 받는 사람이 없다 |
 | 다이제스트로 고정하고 Dependabot 으로 갱신한다 | 재현성 · 공급망 고정이 가장 강하지만 위 부담에 더해 태그의 메이저 의미가 문면에서 사라진다 |
 | ADR-0016 대로 검사 베이스 이미지만 메이저 태그로 두고 나머지는 이미지마다 정한다 | 이미지마다 방식이 갈려, 정확한 버전 하나가 이유 없이 남은 지금 상태가 반복된다 |
+
+## 후속 기록
+
+- 2026-11-12: 결과 절의 개발용 OIDC 공급자(지금 개발용 Compose 에 없다) — [ADR-0123](0123-v1-login-is-local-only-and-oidc-and-account-linking-come-after-v1.md) · [`development/infrastructure` "개발용 Compose"](../development/infrastructure.md#개발용-compose)
