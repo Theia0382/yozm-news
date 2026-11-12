@@ -69,7 +69,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 보는 시험은 말의 무게를 모두 같게 한 사건 조회({@link #evenly()})로 돌리고(무게가 같으면 겹침은 말 수의 비율이다), 실제 말 수로 도는
  * 시험은 다른 시험이 쓰지 않는 먼 시각(2036년)에 사건을 둔다.
  * <p>
- * 지키는 규칙: storyline-R1 ~ storyline-R14 · storyline-R16 · storyline-R17 · storyline-R18 · storyline-R32
+ * 지키는 규칙: storyline-R1 ~ storyline-R14 · storyline-R16 · storyline-R17 · storyline-R18 · storyline-R26 · storyline-R32
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -326,11 +326,11 @@ class LinkingFlowTests {
 			.param("l2", l2)
 			.query(Long.class)
 			.single()).isZero();
-		// 합쳐진 스토리라인의 물은 기록과 관계 대기 행은 지워지고 남의 것은 남는다
+		// 합쳐진 스토리라인의 물은 기록과 관계 대기 행은 지워지고 남의 것은 남는다. 남는 쪽 L1 은 관계 대기에 든다(storyline-R26)
 		assertThat(this.relations.askedAtSmallerEvents(l3)).isEqualTo(Map.of(l1, 2));
 		assertThat(this.jdbc.sql("select storyline_id from storyline_relation_queue order by storyline_id")
 			.query(Long.class)
-			.list()).containsExactly(l3);
+			.list()).containsExactly(l1, l3);
 	}
 
 	@Test
@@ -353,6 +353,24 @@ class LinkingFlowTests {
 		assertThat(this.relations.all()).isEmpty();
 		assertThat(this.relations.askedAtSmallerEvents(l3)).isEmpty();
 		assertThat(this.jdbc.sql("select count(*) from storyline_relation_queue").query(Long.class).single()).isZero();
+	}
+
+	@Test
+	void anOpenedOrKeptStorylineIsQueuedForRelations() {
+		Pair pair = openPair();
+		long storyline = onlyStoryline();
+
+		// 짝으로 연 스토리라인이 관계 대기에 들고, 같은 회차에서 짝의 다른 사건을 판정한 정돈이 한 번 더 넣는다
+		assertThat(relationQueued(storyline)).contains(1);
+
+		long e3 = StorylineRows.event(this.jdbc, "OPEN", MODEL, "[1,0]", 1, "2026-11-05T04:00:00Z",
+				"2026-11-05T04:00:00Z", Map.of("금리", 1));
+		this.queue.enqueue(e3, Instant.parse("2026-11-05T04:00:00Z"), NOW);
+		round(evenly()).run();
+
+		// 사건이 붙어 정돈에서 남은 스토리라인이 다시 든다 — 이미 있으면 다시 알림 수가 오른다(storyline-R26)
+		assertThat(memberIds(storyline)).containsExactly(pair.e1(), pair.e2(), e3);
+		assertThat(relationQueued(storyline)).contains(2);
 	}
 
 	@Test
@@ -830,6 +848,14 @@ class LinkingFlowTests {
 					LinkJudgement.judged(LinkedBy.PAIR, new Score(1.0, 1.0, 1.0), criteriaId, NOW));
 		}
 		return storyline;
+	}
+
+	/** 관계 대기 행의 다시 알림 수 — 없으면 빈 값 */
+	private Optional<Integer> relationQueued(long storyline) {
+		return this.jdbc.sql("select notifications from storyline_relation_queue where storyline_id = :id")
+			.param("id", storyline)
+			.query(Integer.class)
+			.optional();
 	}
 
 	private List<Long> liveStorylineIds() {

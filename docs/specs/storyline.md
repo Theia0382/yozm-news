@@ -376,7 +376,7 @@ sequenceDiagram
 - `StoredRelation(Relation relation, Instant linkedAt)` — 읽은 관계
 - `RelationCriteria(double probability, double oneMatter, int minEvents, double candidateScore, Duration window)` — 관계 기준. 확률 기준 · 후보 점수 기준은 0 보다 크고 1 이하, 한 사안 기준은 0 ~ 1, 사건 수 하한은 2 이상, 창은 0 보다 큰 초 단위(storyline-R27 · R29)
 - `RelationGraph` — 구조 제약의 정본(storyline-R25). 지금 관계의 목록으로 만들고, 상위(`parentOf`) · 하위 전부(`descendants`) · 상위들(`ancestors` — 가까운 순) · 넣으면 순환이 되는가(`closesCycle` — 같은 종류의 고리를 따라 `target` 에서 `source` 로 닿는가)를 답한다. 그 쌍의 관계(`between`)와 그 쌍의 관계를 뺀 그래프(`without`)도 낸다
-- `RelationCandidates` — 후보 쌍의 정본(storyline-R27 · R28 · R30) — `partners` · `due` · `firstIs`
+- `RelationCandidates` — 후보 쌍의 정본(storyline-R27 · R28 · R30) — `partners` · `due` · `firstIs` · `subjectIs`
 - `RelationRule` — 판정의 정본(storyline-R29). `decide` 가 `Link(관계, 확률)` 이나 `None(사유)` 를 낸다(sealed). 사유는 `NOT_RELATED` · `LOW_PROBABILITY` · `NOT_ONE_MATTER` · `CYCLE` · `SECOND_PARENT`
 - `RelationMove` — 합칠 때 관계를 옮기는 계획의 정본(storyline-R32). `plan(지금 관계, 합쳐질 스토리라인, 남는 스토리라인)` 이 지울 관계와 끝을 바꿀 관계(`Moved(from, to)` — 확률 · 판정 원본 · 기준은 그대로 간다)를 낸다. 옮길 관계는 종류 · 앞 · 뒤 순으로 하나씩 본다
 - `RelationDescription` — 서술 사건 고르기의 정본(storyline-R28). `of(직접 소속 사건)` 이 서술 사건(사건 ID · 첫 기사 시각 · 요약문을 싣는가)을 시각 순으로 낸다
@@ -390,6 +390,7 @@ sequenceDiagram
               Map<Long, Integer> eventCounts, Map<Long, Integer> askedAtSmallerEvents, RelationCriteria criteria);
       public static boolean due(@Nullable Integer askedAtSmallerEvents, int smallerEventsNow);
       public static boolean firstIs(long a, Instant aFirst, long b, Instant bFirst);   // a 가 요청의 first 인가
+      public static boolean subjectIs(long a, int aEvents, long b, int bEvents);        // a 가 점수의 판정할 쪽인가
   }
 
   public final class RelationRule {

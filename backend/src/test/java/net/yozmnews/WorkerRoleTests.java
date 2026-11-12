@@ -58,7 +58,8 @@ class WorkerRoleTests {
 			.allSatisfy((type, beans) -> assertThat(beans).as(type.getName()).isEqualTo(1));
 		assertThat(RoleProbe.recurringJobIds(this.jdbc)).containsExactlyInAnyOrder("poll-due-feeds",
 				"feed-health-check", "event-publication-resubmission", "evaluate-pending-articles",
-				"backfill-missing-tags", "event-intake", "event-cleanup", "storyline-linking");
+				"backfill-missing-tags", "event-intake", "event-cleanup", "storyline-linking",
+				"storyline-relation");
 	}
 
 	@Test
