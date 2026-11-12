@@ -48,8 +48,8 @@ final class RoleProbe {
 	}
 
 	/**
-	 * 저장소에 등록된 반복 작업 ID — 컨텍스트마다 DB 컨테이너가 따로라 이 프로세스가 등록한 것이다. 열이 고정 길이 문자열이라 뒤
-	 * 공백을 지운다
+	 * 저장소에 등록된 반복 작업 ID — 컨텍스트마다 데이터베이스가 따로라 이 프로세스가 등록한 것이다. 열이 고정 길이 문자열이라 뒤
+	 * 공백을 지운다.
 	 */
 	static Set<String> recurringJobIds(JdbcClient jdbc) {
 		return Set.copyOf(jdbc.sql("select rtrim(id) from jobrunr_recurring_jobs").query(String.class).list());
