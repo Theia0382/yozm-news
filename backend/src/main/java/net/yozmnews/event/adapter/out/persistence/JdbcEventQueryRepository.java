@@ -131,10 +131,11 @@ class JdbcEventQueryRepository implements EventQueryRepository {
 		if (eventIds.isEmpty()) {
 			return Map.of();
 		}
-		// 닫을 때 남긴 대표가 있으면 그것 — 닫힌 사건은 표현을 지워 중심에 가까운 순으로 다시 고를 수 없다
+		// 닫을 때 남긴 대표가 있으면 그것 — 닫힌 사건은 표현을 지워 중심에 가까운 순으로 다시 고를 수 없다.
+		// 합쳐진 사건은 뺀다 — 그 대표는 합쳐진 사건 조회(mergedInto)가 낸다
 		return firstPerEvent(this.jdbc.sql("""
 				select e.id as event_id, e.representative_article_id as article_id from events e
-				where e.id = any(:events) and e.representative_article_id is not null
+				where e.id = any(:events) and e.representative_article_id is not null and e.status <> 'MERGED'
 				union all
 				(select distinct on (a.event_id) a.event_id, a.article_id
 				 from event_articles a
@@ -192,7 +193,7 @@ class JdbcEventQueryRepository implements EventQueryRepository {
 	public List<MergedEvent> mergedInto(long survivor) {
 		return this.jdbc.sql("""
 				select e.id, e.article_count, e.first_article_at, e.last_article_at, e.created_at, e.closed_at,
-				       j.probability
+				       e.representative_article_id, j.probability
 				from events e
 				left join event_merge_judgements j
 				  on j.event_low = least(e.id, e.merged_into) and j.event_high = greatest(e.id, e.merged_into)
@@ -200,7 +201,8 @@ class JdbcEventQueryRepository implements EventQueryRepository {
 				order by e.closed_at, e.id
 				""").param("survivor", survivor).query((rs, row) -> new MergedEvent(new EventId(rs.getLong("id")),
 				rs.getInt("article_count"), instant(rs, "first_article_at"), instant(rs, "last_article_at"),
-				instant(rs, "created_at"), instant(rs, "closed_at"), rs.getObject("probability", Double.class)))
+				instant(rs, "created_at"), instant(rs, "closed_at"), representative(rs),
+				rs.getObject("probability", Double.class)))
 			.list();
 	}
 
@@ -379,6 +381,11 @@ class JdbcEventQueryRepository implements EventQueryRepository {
 
 	private static OffsetDateTime timestamp(Instant instant) {
 		return instant.atOffset(ZoneOffset.UTC);
+	}
+
+	private static @Nullable ArticleId representative(ResultSet rs) throws SQLException {
+		long id = rs.getLong("representative_article_id");
+		return rs.wasNull() ? null : new ArticleId(id);
 	}
 
 	private static Instant instant(ResultSet rs, String column) throws SQLException {

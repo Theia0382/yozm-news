@@ -162,8 +162,14 @@ class AdminEventControllerTests {
 						new EventArticleView(new ArticleId(42), Instant.parse("2026-11-06T00:00:00Z"), null,
 								DecidedBy.JUDGEMENT_FAILED, Instant.parse("2026-11-06T01:00:00Z"))));
 		this.directory.representatives.put(new EventId(7), new ArticleId(41));
+		// 합쳐진 사건의 대표 43 은 재판정으로 이 사건을 떠나 사건의 기사에 없다 — 따로 물어 맞붙인다. 4 는 대표를 남기지 않았다
+		this.articles.contents.put(new ArticleId(43), new ArticleContent(new ArticleId(43), "기준금리 동결", null,
+				URI.create("https://news.example/43"), T,
+				List.of(new ArticleEntryView(new SourceId(3), new FeedId(5), List.of()))));
 		this.review.merged.put(new EventId(7),
-				List.of(new MergedEvent(new EventId(3), 2, T, T, T, Instant.parse("2026-11-06T06:00:00Z"), 0.74)));
+				List.of(new MergedEvent(new EventId(3), 2, T, T, T, Instant.parse("2026-11-06T06:00:00Z"), new ArticleId(43),
+						0.74),
+						new MergedEvent(new EventId(4), 1, T, T, T, Instant.parse("2026-11-06T07:00:00Z"), null, null)));
 
 		this.mockMvc.perform(authorized(get("/api/admin/events/7")))
 			.andExpect(status().isOk())
@@ -180,11 +186,16 @@ class AdminEventControllerTests {
 					 "mergedEvents":[
 					   {"id":3,"articleCount":2,"firstArticleAt":"2026-11-05T00:00:00Z",
 					    "lastArticleAt":"2026-11-05T00:00:00Z","createdAt":"2026-11-05T00:00:00Z",
-					    "mergedAt":"2026-11-06T06:00:00Z","probability":0.74}]}
+					    "mergedAt":"2026-11-06T06:00:00Z","representativeId":43,
+					    "representative":{"title":"기준금리 동결","sources":["한겨레"]},"probability":0.74},
+					   {"id":4,"articleCount":1,"firstArticleAt":"2026-11-05T00:00:00Z",
+					    "lastArticleAt":"2026-11-05T00:00:00Z","createdAt":"2026-11-05T00:00:00Z",
+					    "mergedAt":"2026-11-06T07:00:00Z","representativeId":null,"representative":null,
+					    "probability":null}]}
 					""", JsonCompareMode.STRICT));
 		assertThat(this.directory.calls).containsExactly("find 7", "articles 7", "representativesOfAll [7]");
 		assertThat(this.review.calls).containsExactly("mergedInto 7");
-		assertThat(this.articles.calls).containsExactly("findAll [41, 42]");
+		assertThat(this.articles.calls).containsExactly("findAll [41, 42, 43]");
 	}
 
 	@Test

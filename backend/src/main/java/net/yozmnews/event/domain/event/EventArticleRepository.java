@@ -3,6 +3,7 @@ package net.yozmnews.event.domain.event;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import net.yozmnews.article.ArticleId;
@@ -56,6 +57,13 @@ public interface EventArticleRepository {
 
 	/** 사건에 남은 배정의 발행 시각 범위 — 배정이 없으면 빈 값 */
 	Optional<PublishedSpan> publishedSpan(long eventId);
+
+	/**
+	 * 사건 하나와 상대 사건들 사이의 앞선 배정 확률 — 한 사건의 기사가 배정 때 다른 사건을 후보로 받아 남긴 확률(두 방향). 후보 사건이
+	 * 합쳐진 사건이면 남는 사건으로 읽고, 사라진 사건을 가리키는 후보는 뺀다. 쌍마다 가장 높은 값, 확률이 남은 쌍만.
+	 * @return 상대 사건 ID → 확률 — {@code others} 가 비면 빈 맵
+	 */
+	Map<Long, Double> priorProbabilities(long eventId, Collection<Long> others);
 
 	/** 기사들의 배정과 그 기사들의 배정 후보를 지운다 */
 	void deleteByArticles(Collection<ArticleId> articleIds);

@@ -22,6 +22,7 @@ import net.yozmnews.event.EventProfile;
 import net.yozmnews.event.EventStatus;
 import net.yozmnews.event.EventTermCounts;
 import net.yozmnews.event.EventView;
+import net.yozmnews.event.MergedEvent;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -115,6 +116,14 @@ class JdbcEventQueryRepositoryTests {
 
 		assertThat(this.repository.representativesOfAll(List.of(closed, open)))
 			.isEqualTo(Map.of(closed, new ArticleId(97), open, new ArticleId(98)));
+		// 합쳐진 사건에 남긴 대표는 이 조회에 나오지 않는다 — 합쳐진 사건 조회가 낸다
+		long merged = event("OPEN", "model-a", "[1,0]", "2026-11-05T00:00:00Z", "2026-11-05T00:00:00Z");
+		this.jdbc.sql("""
+				update events set status = 'MERGED', merged_into = :open, closed_at = now(), representative_article_id = 98
+				where id = :merged
+				""").param("open", open).param("merged", merged).update();
+		assertThat(this.repository.representativesOfAll(List.of(merged))).isEmpty();
+		assertThat(this.repository.mergedInto(open)).extracting(MergedEvent::representative).containsExactly(new ArticleId(98));
 		// 걸러진 기사에서 고를 때는 저장값을 쓰지 않는다
 		assertThat(this.repository.representatives(Map.of(closed, ids(96, 97)))).isEqualTo(Map.of(closed, new ArticleId(96)));
 	}

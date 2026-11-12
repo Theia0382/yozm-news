@@ -42,3 +42,8 @@
 | 날짜를 더 라벨링해 상위 후보를 가른다 | 표본을 늘려도 구간이 줄어드는 폭이 상위 후보 사이의 차이를 가르기에 모자란다 |
 | 표본 검수에서 갈림도 판정한다 | 갈린 조각을 표본 사건 곁에 정확히 보일 방법이 없어 판정이 어렵고, 평가 세트의 재현율이 더 잘 잰다 |
 | 닫는 기간을 시간 창과 같게 둔다 | 늦게 수집된 기사가 창 끝에서 붙을 여지가 없어진다 |
+
+## 후속 기록
+
+- 2026-11-12: 결과 절 "병합 질문의 꼴 … 에서 오는 것으로 보고 따로 본다" — 조사해 보니 원인은 질문의 꼴이 아니라 병합에 올라오는 쌍의 구성이었다. 병합이 묻던 띠 쌍의 다수는 배정 때 이미 확률 기준 미만의 답을 받고 갈린 쌍이어서, 그런 쌍은 묻지 않기로 했다([ADR-0119](0119-event-merge-does-not-ask-band-pairs-whose-prior-assignment-probability-is-below-the-probability-threshold.md))
+- 2026-11-12: 결정 절 "같은 품질의 후보 가운데서는 … 고른다" — 확률 기준의 기본값은 묶음 정확도에서 구별되지 않는 값 가운데 병합 판정의 정밀이 높은 값으로 다시 골랐고, 같은 방법(처음부터 다시 묶기 · 운영자 표본 검수)으로 확인했다([ADR-0120](0120-event-membership-probability-threshold-default-chosen-by-merge-precision-among-values-indistinguishable-in-assignment.md))

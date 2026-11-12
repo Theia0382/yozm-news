@@ -27,6 +27,7 @@ import net.yozmnews.event.domain.assignment.CriteriaRepository;
 import net.yozmnews.event.domain.assignment.MergeJudgementRepository;
 import net.yozmnews.event.domain.event.EventArticle;
 import net.yozmnews.event.domain.event.EventArticleRepository;
+import net.yozmnews.event.domain.event.EventQueryRepository;
 import net.yozmnews.event.domain.event.EventRepository;
 import net.yozmnews.event.domain.feature.MatchFeaturesRepository;
 import net.yozmnews.event.domain.intake.IntakeQueueRepository;
@@ -75,6 +76,9 @@ class EventMergeConcurrencyTests {
 
 	@Autowired
 	EventRepository events;
+
+	@Autowired
+	EventQueryRepository queries;
 
 	@Autowired
 	EventArticleRepository assignments;
@@ -170,7 +174,7 @@ class EventMergeConcurrencyTests {
 	}
 
 	private MergeRound merge(EventArticleRepository assignments) {
-		return new MergeRound(this.events, assignments, this.judgements, this.criteriaHistory, CRITERIA,
+		return new MergeRound(this.events, this.queries, assignments, this.judgements, this.criteriaHistory, CRITERIA,
 				query -> new MembershipJudgement.Judged(null, Map.of()), this.transaction, (InstantSource) () -> NOW);
 	}
 

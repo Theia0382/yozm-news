@@ -31,7 +31,6 @@
 |---|---|
 | 16 | 네이버 검색 API 약관 개정 공식 원문. 보도 기준으로 결정했으며 원문은 직접 확인하지 못했다 |
 | 25 | pgvector 이미지(OS 계열을 맞춘 PG 18 태그)의 재빌드 주기 — PostgreSQL 보안 패치가 반영되는 속도 |
-| 28 | Jev 병합 판정의 품질 — 평가 세트에서 같은 일인 사건 쌍에도 낮은 확률을 줘 대부분 합치지 않았다. 질문의 꼴(사건 하나의 대표 기사와 다른 사건의 기사들)을 바꿀지 본다. 배정 판정의 품질은 결정됨(아래) |
 
 ## 결정됨 (2026-10-25)
 
@@ -88,4 +87,9 @@
 | # | 내용 | 반영 |
 |---|---|---|
 | 20 (일부) | 사건 기준(시간 창 · 위 · 아래 · 확률 기준) · 저장 기준의 기본값과 점수 산식의 반감기 · 핵심 말 가중치는 기본 임베딩 모델에 맞춰 평가 세트와 운영자 표본 검수로 정했다 — 반감기 · 가중치는 코드 상수로 둔다. 닫는 기간은 시간 창에 늦게 수집되는 기사를 덮는 여유를 더한 값으로 운영 기록으로 정했다. 기본 임베딩 모델은 외부 모델 둘과 견줘 그대로 두고, 그 둘의 권장 기준은 운영 안내에 둔다 | [ADR-0109](adr/0109-event-clustering-defaults-chosen-on-the-evaluation-set-with-operator-review-and-closing-from-operating-records.md) · [event Spec §7](specs/event.md#7-설정) · [운영 설정 — 사건 묶기](operations/configuration.md#사건-묶기) |
-| 28 (일부) | Jev 사건 소속 판정 가운데 배정 판정(기사 하나와 후보 사건의 기사들)은 평가 세트에서 같은 일과 다른 일을 가른다. 확률 기준에 따른 판정 품질의 차이는 작아, 확률 기준은 다시 묶어 확인한 값으로 정했다 | [ADR-0109](adr/0109-event-clustering-defaults-chosen-on-the-evaluation-set-with-operator-review-and-closing-from-operating-records.md) · [event Spec §7](specs/event.md#7-설정) |
+
+## 결정됨 (2026-11-12)
+
+| # | 내용 | 반영 |
+|---|---|---|
+| 28 | Jev 사건 소속 판정 가운데 배정 판정(기사 하나와 후보 사건의 기사들)은 평가 세트에서 같은 일과 다른 일을 가른다. 병합 판정이 같은 일인 사건 쌍을 대부분 합치지 않은 것은 질문의 꼴 때문이 아니라 병합에 올라오는 쌍의 구성 때문이었다 — 다수가 배정 때 이미 확률 기준 미만의 답을 받고 갈린 쌍이다. 병합은 그런 쌍을 묻지 않고, 확률 기준의 기본값은 병합 판정의 정밀이 높은 값으로 다시 골랐다. 병합 판정의 품질이 더 필요해지면 사건 대 사건을 묻는 질문을 다음 대안으로 본다 | [ADR-0119](adr/0119-event-merge-does-not-ask-band-pairs-whose-prior-assignment-probability-is-below-the-probability-threshold.md) · [ADR-0120](adr/0120-event-membership-probability-threshold-default-chosen-by-merge-precision-among-values-indistinguishable-in-assignment.md) · [ADR-0109](adr/0109-event-clustering-defaults-chosen-on-the-evaluation-set-with-operator-review-and-closing-from-operating-records.md) · [event Spec §5](specs/event.md#사건-정리) event-R13 · [event Spec §7](specs/event.md#7-설정) |
