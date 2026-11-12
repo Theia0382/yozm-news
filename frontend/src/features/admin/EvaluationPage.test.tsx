@@ -13,7 +13,7 @@ import {
   problem,
   type RecordedRequest,
   TEST_BASE_URL,
-} from "@/features/admin/adminTestServer";
+} from "@/test/fakeServer";
 import { EvaluationPage } from "@/features/admin/EvaluationPage";
 
 type Overview = Schemas["EvaluationOverviewResponse"];

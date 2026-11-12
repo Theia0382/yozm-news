@@ -12,7 +12,7 @@ import {
   json,
   problem,
   TEST_BASE_URL,
-} from "@/features/admin/adminTestServer";
+} from "@/test/fakeServer";
 import { EventPublicationsPage } from "@/features/admin/EventPublicationsPage";
 
 type Listing = Schemas["StrandedPublicationListResponse"];

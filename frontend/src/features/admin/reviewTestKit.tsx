@@ -6,11 +6,7 @@ import { createMemoryRouter, type RouteObject } from "react-router";
 import { RouterProvider } from "react-router/dom";
 import { createAdminClient, type Schemas } from "@/features/admin/adminClient";
 import { AdminSessionContext } from "@/features/admin/adminSession";
-import {
-  fakeServer,
-  type Handler,
-  TEST_BASE_URL,
-} from "@/features/admin/adminTestServer";
+import { fakeServer, type Handler, TEST_BASE_URL } from "@/test/fakeServer";
 
 export const TAG_SETS: Schemas["TagSetListResponse"] = {
   versions: [

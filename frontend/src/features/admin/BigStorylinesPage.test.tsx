@@ -2,7 +2,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import type { Schemas } from "@/features/admin/adminClient";
-import { json, problem } from "@/features/admin/adminTestServer";
+import { json, problem } from "@/test/fakeServer";
 import { BigStorylinesPage } from "@/features/admin/BigStorylinesPage";
 import { bigRow } from "@/features/admin/eventTestKit";
 import { renderAdminRoutes } from "@/features/admin/reviewTestKit";

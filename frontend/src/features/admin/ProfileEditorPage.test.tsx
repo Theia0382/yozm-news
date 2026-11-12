@@ -11,7 +11,7 @@ import {
   type Handler,
   json,
   TEST_BASE_URL,
-} from "@/features/admin/adminTestServer";
+} from "@/test/fakeServer";
 import { ProfileEditorPage } from "@/features/admin/ProfileEditorPage";
 
 const PROBLEM = {
