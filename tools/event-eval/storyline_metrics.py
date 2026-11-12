@@ -2,7 +2,8 @@
 
 정의의 정본은 이 모듈이다(운영 안내 docs/operations/storyline-evaluation.md 가 문장으로 설명한다). 항목은 시트의
 기사이고, 정답은 고정 덤프의 사건에 붙인 라벨을 그 사건의 시트 기사로 펼친 것이다. 시스템 결과는 결과 파일로 받기만
-한다 — 잇기 규칙을 계산하지 않는다.
+한다 — 잇기 규칙을 계산하지 않는다. 결과 파일의 스토리라인은 직접 가진 기사이고, 정답과 같은 규칙으로 CONTAINS 를 따라
+위로 닫아 보기마다 좁힌다.
 """
 
 from __future__ import annotations
@@ -17,7 +18,7 @@ from enum import Enum
 from typing import Final
 
 from metrics import wilson
-from storyline_labels import Labels, Relation, Sheet
+from storyline_labels import Labels, Relation, Sheet, close_upward, contains_parents
 
 FAR_PAIR_DAYS: Final = 5
 """먼 쌍의 발행 시각 차 하한(일, 포함) — 측정 전 목표."""
@@ -76,21 +77,44 @@ def system_on_sheet(universe: Universe,
 
 def gold_view(labels: Labels, view: View) -> dict[int, frozenset[str]]:
     """사건 → 그 보기의 정답 표지. labels.csv 에 줄이 있는 사건만(없음이면 빈 집합)."""
+    return _view_of(labels.written, labels.relations, view)
+
+
+def system_view(storylines: Mapping[str, frozenset[int]], relations: Iterable[tuple[str, str, Relation]],
+                view: View) -> dict[str, frozenset[int]]:
+    """결과의 스토리라인(직접 가진 기사)을 그 보기의 스토리라인 → 기사로. 기사가 직접 든 스토리라인을 CONTAINS 를 따라
+    위로 닫고 정답과 같은 규칙으로 좁힌다 — 하위의 기사는 상위에도 든다. 그 보기에서 기사가 남지 않는 스토리라인은
+    뺀다. CONTAINS 가 없으면 세 보기가 입력과 같다."""
+    direct: dict[int, set[str]] = defaultdict(set)
+    for storyline, articles in storylines.items():
+        for article in articles:
+            direct[article].add(storyline)
+    members: dict[str, set[int]] = defaultdict(set)
+    for article, chosen in _view_of(direct, relations, view).items():
+        for storyline in chosen:
+            members[storyline].add(article)
+    return {storyline: frozenset(members[storyline]) for storyline in storylines if members[storyline]}
+
+
+def _view_of(written: Mapping[int, Iterable[str]], relations: Iterable[tuple[str, str, Relation]],
+             view: View) -> dict[int, frozenset[str]]:
+    """항목 → 그 보기의 표지 — 정답(사건 → 정답 표지)과 시스템(기사 → 스토리라인)이 함께 쓰는 정본. 적은 표지를
+    CONTAINS 를 따라 위로 닫고, 최상위는 그 집합에 상위가 없는 것, 말단은 그 집합에 하위가 없는 것이다."""
+    relations = list(relations)
+    parents = contains_parents(relations)
     children: dict[str, set[str]] = defaultdict(set)
-    parents: dict[str, set[str]] = defaultdict(set)
-    for source, target, kind in labels.relations:
-        if kind is Relation.CONTAINS:
-            children[source].add(target)
-            parents[target].add(source)
+    for label, above in parents.items():
+        for parent in above:
+            children[parent].add(label)
     result = {}
-    for event_id in labels.written:
-        closed = labels.closed(event_id)
+    for item, labels in written.items():
+        closed = close_upward(labels, parents)
         if view is View.ALL:
-            result[event_id] = closed
+            result[item] = closed
         elif view is View.TOP:
-            result[event_id] = frozenset(label for label in closed if not parents[label] & closed)
+            result[item] = frozenset(label for label in closed if not parents.get(label, set()) & closed)
         else:
-            result[event_id] = frozenset(label for label in closed if not children[label] & closed)
+            result[item] = frozenset(label for label in closed if not children.get(label, set()) & closed)
     return result
 
 
@@ -252,10 +276,13 @@ def match_system(universe: Universe, gold: Mapping[int, frozenset[str]],
 @dataclass(frozen=True)
 class RelationScores:
     judged: int
-    """양 끝이 모두 대응된 시스템 관계 수."""
+    """양 끝이 서로 다른 정답 스토리라인에 대응된 시스템 관계 수."""
     correct: int
     unmapped: int
     """끝이 대응되지 않아 분모에서 뺀 시스템 관계 수."""
+    same_gold: int
+    """양 끝이 같은 정답 스토리라인에 대응돼 분모에서 뺀 시스템 관계 수 — 정답 하나를 갈래로 나눠 이은 것이라 정답
+    라벨로는 맞는지 가르지 못한다."""
     precision: float | None
     gold: int
     found: int
@@ -268,16 +295,19 @@ def relation_scores(gold_relations: Iterable[tuple[str, str, Relation]],
                     mapping: Mapping[str, str]) -> RelationScores:
     gold = set(gold_relations)
     translated = []
-    unmapped = 0
+    unmapped = same_gold = 0
     for source, target, kind in system_relations:
-        if source in mapping and target in mapping:
-            translated.append((mapping[source], mapping[target], kind))
-        else:
+        if source not in mapping or target not in mapping:
             unmapped += 1
+        elif mapping[source] == mapping[target]:
+            same_gold += 1
+        else:
+            translated.append((mapping[source], mapping[target], kind))
     correct = sum(1 for relation in translated if relation in gold)
     found = len(gold & set(translated))
-    return RelationScores(len(translated), correct, unmapped, correct / len(translated) if translated else None,
-                          len(gold), found, found / len(gold) if gold else None)
+    return RelationScores(len(translated), correct, unmapped, same_gold,
+                          correct / len(translated) if translated else None, len(gold), found,
+                          found / len(gold) if gold else None)
 
 
 @dataclass(frozen=True)

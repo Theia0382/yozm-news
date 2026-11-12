@@ -14,7 +14,7 @@ from storyline_metrics import (BOOTSTRAP_ROUNDS, BOOTSTRAP_SEED, FAR_PAIR_DAYS, 
                                MatchSummary, Rate, RelationScores, View)
 from storyline_result import RunKind
 
-STORYLINE_RECORD_FORMAT: Final = 1
+STORYLINE_RECORD_FORMAT: Final = 2
 
 
 @dataclass(frozen=True)
@@ -44,8 +44,8 @@ def build_storyline_record(*, sample: StorylineSample, digests: Mapping[str, str
         "metrics": {
             "views": {view.value: _view(views[view]) for view in View},
             "relations": {"judged": relations.judged, "correct": relations.correct, "unmapped": relations.unmapped,
-                          "precision": relations.precision, "gold": relations.gold, "found": relations.found,
-                          "recall": relations.recall},
+                          "sameGold": relations.same_gold, "precision": relations.precision, "gold": relations.gold,
+                          "found": relations.found, "recall": relations.recall},
             "big": None if big is None else {
                 "judged": big.judged, "correct": big.correct, "outside": big.outside, "precision": big.precision,
                 "interval": None if big.low is None else [big.low, big.high]},

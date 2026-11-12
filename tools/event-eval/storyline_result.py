@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Final
 
 from labels import LabelError, parse_instant
-from storyline_labels import Relation, StorylineSample
+from storyline_labels import Relation, StorylineSample, contains_cycle
 
 RESULT_FORMAT: Final = 1
 
@@ -35,7 +35,7 @@ class RunKind(Enum):
 class Result:
     meta: Mapping[str, object]
     storylines: Mapping[str, frozenset[int]]
-    """스토리라인 ID → 기사 ID."""
+    """스토리라인 ID → 그 스토리라인이 직접 가진 기사 ID — 포함의 상위에 하위의 기사를 다시 담지 않는다."""
     relations: frozenset[tuple[str, str, Relation]]
     big: frozenset[tuple[str, date]]
 
@@ -152,6 +152,9 @@ def _relations(value: object, storylines: Mapping[str, frozenset[int]], name: st
             problems.append(f"{where}: 같은 관계가 둘이다")
             continue
         relations.add(relation)
+    cycle = contains_cycle(relations)
+    if cycle:
+        problems.append(f"{name}: relations 의 CONTAINS 가 돌아 제자리로 온다 — " + " ⊃ ".join(cycle))
     return frozenset(relations)
 
 
