@@ -1,6 +1,6 @@
 # ADR-0082: 큰 사건은 기간 안의 서로 다른 소스 수와 중요도 평균이 둘 다 기준 이상인 사건이고, 조회할 때 지금 기준으로 판정한다
 
-- 상태: 승인. 부분 대체 — 판정의 단위([ADR-0103](0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md))
+- 상태: 대체됨([ADR-0116](0116-storyline-big-judgement-starts-with-a-provisional-rule-of-distinct-sources-and-mean-importance-judged-at-query-time.md))
 - 날짜: 2026-11-07
 - 근거: [이슈 #99](https://github.com/Theia0382/yozm-news/issues/99) — 판정 재료(배정 · 기사 소스 · 중요도)의 위치와 다이제스트 · 운영자 화면 · 리포트의 요구를 조사해 리드와 정하고 구현(`1434b77` · `bd84e7d`)
 - 관련: [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md)(결정 절 "큰 사건은 조회 시점에 판정한다 — 사건의 서로 다른 소스 수와 기사의 Jev 중요도"의 식을 정한다, 후속 기록), [ADR-0083](0083-big-event-criteria-as-operator-settings-with-append-only-history-and-preview.md)(기준을 둘 곳)
@@ -14,7 +14,7 @@
 
 ## 결정
 
-> 부분 대체(판정의 단위) — [ADR-0103](0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md). 지금 상태: [event Spec 대표 기사 · 큰 사건](../specs/event.md#대표-기사--큰-사건) event-R15
+> 부분 대체(판정의 단위) — [ADR-0103](0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md). 지금 상태: [storyline Spec 큰 판정](../specs/storyline.md#큰-판정) storyline-R19
 - **큰 사건 = 기간 안 서로 다른 소스 수 ≥ 소스 기준, 그리고 기간 안 중요도 평균 ≥ 중요도 기준(경계 포함).** 두 기준을 따로 둔다 — 얼마나 널리 다뤘는가와 얼마나 중요하게 평가됐는가는 뜻이 달라 따로 조정한다.
 - **중요도는 기간 안 기사 가운데 중요도가 있는 기사의 평균이다.** 평균은 소수 산술로 세어 기준과 같은 수 체계로 비교한다. 중요도가 없는 기사는 평균에서 빼고 소스 수에는 넣는다. 중요도가 있는 기사가 없으면 큰 사건이 아니다.
 - **소스 수는 기간 안 기사들의 엔트리 소스의 서로 다른 수다.** 전재 기사는 다른 기사라 매체마다 하나씩 센다.

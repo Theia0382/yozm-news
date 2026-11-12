@@ -7,7 +7,6 @@ import java.util.Map;
 import java.util.Optional;
 
 import net.yozmnews.article.ArticleId;
-import net.yozmnews.event.BigEvent;
 import net.yozmnews.event.EventArticleView;
 import net.yozmnews.event.EventCursor;
 import net.yozmnews.event.EventDirectory;
@@ -15,6 +14,7 @@ import net.yozmnews.event.EventId;
 import net.yozmnews.event.EventNeighbor;
 import net.yozmnews.event.EventPage;
 import net.yozmnews.event.EventPeriod;
+import net.yozmnews.event.EventTally;
 import net.yozmnews.event.EventProfile;
 import net.yozmnews.event.EventTermCounts;
 import net.yozmnews.event.EventView;
@@ -32,6 +32,11 @@ class ForwardingEventDirectory implements EventDirectory {
 	@Override
 	public Optional<EventView> find(EventId id) {
 		return this.delegate.find(id);
+	}
+
+	@Override
+	public Map<EventId, EventView> views(Collection<EventId> ids) {
+		return this.delegate.views(ids);
 	}
 
 	@Override
@@ -55,8 +60,13 @@ class ForwardingEventDirectory implements EventDirectory {
 	}
 
 	@Override
-	public List<BigEvent> bigEvents(EventPeriod period) {
-		return this.delegate.bigEvents(period);
+	public Map<EventId, Integer> articleCountsIn(EventPeriod period) {
+		return this.delegate.articleCountsIn(period);
+	}
+
+	@Override
+	public <K> Map<K, EventTally> tallies(Map<K, ? extends Collection<EventId>> groups, EventPeriod period) {
+		return this.delegate.tallies(groups, period);
 	}
 
 	@Override

@@ -30,7 +30,7 @@ public interface ArticleDirectory {
 	List<ArticleId> firstSeenSince(Instant since);
 
 	/**
-	 * 기사들의 엔트리 소스를 읽는다 — 사건 묶기가 큰 사건의 서로 다른 소스 수를 센다(event-R15).
+	 * 기사들의 엔트리 소스를 읽는다 — 사건 묶기가 기간 집계의 서로 다른 소스 수를 센다(event-R15).
 	 * @return 기사 ID → 그 기사의 엔트리가 가진 소스 — 엔트리가 없는(지운) 기사는 빠진다. 빈 입력이면 빈 맵
 	 */
 	Map<ArticleId, Set<SourceId>> sources(Collection<ArticleId> ids);

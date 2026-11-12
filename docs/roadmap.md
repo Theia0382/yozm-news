@@ -28,8 +28,8 @@
 ## M3. 사건 묶기
 
 - PostgreSQL 이미지를 pgvector 이미지로 바꾸고 확장을 설치한다 ([ADR-0027](adr/0027-pgvector-for-vector-storage.md))
-- `ArticleEmbedder` 와 로컬 임베딩 구현 · 로컬 대체물, 고유명사 추출, 산식 판정과 애매한 구간의 Jev 사건 소속 판정, 사건 병합 · 닫기, 큰 사건 판정 ([ADR-0026](adr/0026-event-clustering-with-local-embeddings-and-jev.md))
-- 운영자 화면: 사건 목록, 사건별 기사, 애매한 판정 기록, 큰 사건 판정 결과
+- `ArticleEmbedder` 와 로컬 임베딩 구현 · 로컬 대체물, 고유명사 추출, 산식 판정과 애매한 구간의 Jev 사건 소속 판정, 사건 병합 · 닫기 ([ADR-0026](adr/0026-event-clustering-with-local-embeddings-and-jev.md))
+- 운영자 화면: 사건 목록, 사건별 기사, 애매한 판정 기록
 - 수집한 기사로 사건 라벨 평가 세트를 만든다
 - **완료 기준**: 평가 세트로 묶음 정확도(B-cubed F1)를 재고, 운영자가 표본을 검수해 임계값을 정한다. arm64 지원 방향(실행 검사 추가 또는 지원 철회)을 정한다.
 

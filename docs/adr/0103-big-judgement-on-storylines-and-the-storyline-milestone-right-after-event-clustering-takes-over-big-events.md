@@ -41,3 +41,4 @@
 ## 후속 기록
 
 - 2026-11-11: 결과 "큰 판정 정답의 단위는 스토리라인이다"의 표시와 정밀도 — [ADR-0110](0110-storyline-evaluation-labels-system-events-of-a-fixed-dump-and-measures-overlapping-clusters-from-random-seed-events.md), 지금 상태는 [스토리라인 평가하기 "재는 것"](../operations/storyline-evaluation.md#재는-것)
+- 2026-11-12: 결정 "스토리라인의 큰 판정을 만드는 작업이 `event` 의 큰 사건 판정 · 기준 · 운영자 API · 화면을 함께 거둔다"와 결과 · 대안 표의 "집계도 스토리라인으로 옮겨질 수 있다" — 큰 판정의 임시 산식([ADR-0116](0116-storyline-big-judgement-starts-with-a-provisional-rule-of-distinct-sources-and-mean-importance-judged-at-query-time.md)), 재료를 세는 곳([ADR-0117](0117-big-judgement-materials-are-tallied-by-event-per-group-of-events-and-storyline-passes-only-event-ids.md)), 기준([ADR-0118](0118-big-judgement-criteria-are-storyline-operator-settings-and-do-not-inherit-event-criteria-values-or-history.md)), 지금 상태는 [storyline Spec "큰 판정"](../specs/storyline.md#큰-판정)(storyline-R19 · R20)

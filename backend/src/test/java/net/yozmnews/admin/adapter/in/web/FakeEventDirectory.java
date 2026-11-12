@@ -9,7 +9,6 @@ import java.util.Map;
 import java.util.Optional;
 
 import net.yozmnews.article.ArticleId;
-import net.yozmnews.event.BigEvent;
 import net.yozmnews.event.EventArticleView;
 import net.yozmnews.event.EventCursor;
 import net.yozmnews.event.EventDirectory;
@@ -17,6 +16,7 @@ import net.yozmnews.event.EventId;
 import net.yozmnews.event.EventNeighbor;
 import net.yozmnews.event.EventPage;
 import net.yozmnews.event.EventPeriod;
+import net.yozmnews.event.EventTally;
 import net.yozmnews.event.EventProfile;
 import net.yozmnews.event.EventTermCounts;
 import net.yozmnews.event.EventView;
@@ -38,8 +38,6 @@ class FakeEventDirectory implements EventDirectory {
 
 	@Nullable EventPage page;
 
-	List<BigEvent> bigEvents = List.of();
-
 	final List<String> calls = new ArrayList<>();
 
 	void reset() {
@@ -47,7 +45,6 @@ class FakeEventDirectory implements EventDirectory {
 		this.articles.clear();
 		this.representatives.clear();
 		this.page = null;
-		this.bigEvents = List.of();
 		this.calls.clear();
 	}
 
@@ -87,12 +84,6 @@ class FakeEventDirectory implements EventDirectory {
 	}
 
 	@Override
-	public List<BigEvent> bigEvents(EventPeriod period) {
-		this.calls.add("bigEvents " + period.from() + " ~ " + period.to());
-		return this.bigEvents;
-	}
-
-	@Override
 	public EventPage list(EventPeriod period, @Nullable EventCursor after, int size) {
 		this.calls.add("list " + period.from() + " ~ " + period.to() + " after "
 				+ ((after == null) ? null : after.lastArticleAt() + "/" + after.id().value()) + " size " + size);
@@ -114,6 +105,21 @@ class FakeEventDirectory implements EventDirectory {
 	@Override
 	public EventTermCounts termCounts(Collection<String> terms, Instant from, Instant to) {
 		throw new UnsupportedOperationException("운영자 API 는 말 수를 읽지 않는다");
+	}
+
+	@Override
+	public Map<EventId, EventView> views(Collection<EventId> ids) {
+		throw new UnsupportedOperationException("운영자 API 는 사건 묶음을 읽지 않는다");
+	}
+
+	@Override
+	public Map<EventId, Integer> articleCountsIn(EventPeriod period) {
+		throw new UnsupportedOperationException("운영자 API 는 기간 안 사건을 읽지 않는다");
+	}
+
+	@Override
+	public <K> Map<K, EventTally> tallies(Map<K, ? extends Collection<EventId>> groups, EventPeriod period) {
+		throw new UnsupportedOperationException("운영자 API 는 사건 묶음 집계를 읽지 않는다");
 	}
 
 	@Override

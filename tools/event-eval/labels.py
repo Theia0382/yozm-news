@@ -26,10 +26,8 @@ EXCLUDED: Final = "-"
 
 SAMPLE_FILE: Final = "sample.json"
 ARTICLES_FILE: Final = "articles.csv"
-EVENTS_FILE: Final = "events.csv"
 
 ARTICLE_COLUMNS: Final = ("article_id", "published_at", "sources", "title", "event", "note")
-EVENT_COLUMNS: Final = ("event", "day", "big", "name")
 SOURCE_SEPARATOR: Final = ";"
 AMBIGUOUS_MARK: Final = "?"
 
@@ -107,16 +105,6 @@ class ArticleLabel:
     sources: tuple[str, ...]
     event: str | None
     ambiguous: bool
-
-
-@dataclass(frozen=True)
-class BigMark:
-    """events.csv 한 줄 — 정답 사건이 그 날짜에 큰 사건인가. name 은 라벨러가 적는 사람용 칸이다."""
-
-    event: str
-    day: date
-    big: bool
-    name: str = ""
 
 
 def format_instant(instant: datetime) -> str:
@@ -212,60 +200,6 @@ def read_titles(path: Path) -> dict[int, tuple[str, str]]:
         except ValueError:
             continue
     return titles
-
-
-def build_event_days(labels: Iterable[ArticleLabel], sample: Sample, existing: Sequence[BigMark]) -> list[BigMark]:
-    """정답 사건 × 기사가 있는 날짜의 줄. 같은 줄의 기존 표시 · 이름은 남기고, 라벨에서 사라진 줄은 버린다."""
-    kept = {(mark.event, mark.day): mark for mark in existing}
-    pairs = sorted({(label.event, sample.day_of(label.published_at)) for label in labels if label.event is not None})
-    return [kept.get(pair, BigMark(pair[0], pair[1], False)) for pair in pairs]
-
-
-def read_marks(path: Path) -> list[BigMark]:
-    """events.csv 를 읽는다 — 형식만 본다(라벨과의 대조는 read_big_marks)."""
-    problems: list[str] = []
-    marks: list[BigMark] = []
-    seen: set[tuple[str, date]] = set()
-    for line, row in read_rows(path, EVENT_COLUMNS):
-        event = row["event"].strip()
-        try:
-            day = date.fromisoformat(row["day"].strip())
-        except ValueError:
-            problems.append(f"{path.name}:{line}: 날짜를 읽을 수 없다 — {row['day']!r}")
-            continue
-        big = row["big"].strip()
-        if big not in ("0", "1"):
-            problems.append(f"{path.name}:{line}: big 은 0 이나 1 이다 — {row['big']!r}")
-            continue
-        if (event, day) in seen:
-            problems.append(f"{path.name}:{line}: ({event}, {day}) 줄이 둘이다")
-            continue
-        seen.add((event, day))
-        marks.append(BigMark(event, day, big == "1", row["name"]))
-    if problems:
-        raise LabelError(problems)
-    return marks
-
-
-def write_marks(path: Path, marks: Sequence[BigMark]) -> None:
-    """events.csv 를 쓴다(바꿔 쓰기 — 임시 파일을 쓴 뒤 옮긴다)."""
-    replace_file(path, csv_text([EVENT_COLUMNS] + [
-        (mark.event, mark.day.isoformat(), "1" if mark.big else "0", mark.name) for mark in marks]))
-
-
-def read_big_marks(path: Path, labels: Sequence[ArticleLabel], sample: Sample) -> set[tuple[str, date]]:
-    """big=1 인 (정답 사건, 날짜). events.csv 와 라벨이 맞지 않으면 LabelError — 라벨을 고친 뒤 events 를 다시 돌린다."""
-    if not path.is_file():
-        raise LabelError([f"{path} 가 없다 — events 로 먼저 만든다"])
-    marks = read_marks(path)
-    expected = {(mark.event, mark.day) for mark in build_event_days(labels, sample, [])}
-    present = {(mark.event, mark.day) for mark in marks}
-    problems = [f"{path.name}: ({event}, {day}) 는 라벨에 없다" for event, day in sorted(present - expected)]
-    problems += [f"{path.name}: ({event}, {day}) 줄이 없다 — events 를 다시 돌린다" for event, day in
-                 sorted(expected - present)]
-    if problems:
-        raise LabelError(problems)
-    return {(mark.event, mark.day) for mark in marks if mark.big}
 
 
 def file_digest(path: Path) -> str:

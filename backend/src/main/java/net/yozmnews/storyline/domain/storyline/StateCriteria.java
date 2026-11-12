@@ -4,6 +4,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
 
+import net.yozmnews.storyline.StorylineState;
+
 /**
  * 상태 판정의 정본 — 기본값의 정본은 설정({@code StorylineStateProperties})이고, 이 타입은 검증과 판정을 맡는다 ·
  * docs/specs/storyline.md §4 · storyline-R16.
