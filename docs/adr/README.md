@@ -123,6 +123,7 @@
 | [0115](0115-embedding-api-in-both-roles-looks-up-the-embedder-on-call-and-a-worker-startup-check-requires-one.md) | 기사 임베딩 공개 API 는 두 역할 공통 빈으로 두고 임베더는 부를 때 찾으며, 작업 역할의 임베더 요구는 `evaluation` 의 기동 검사가 맡는다 | 승인 |
 | [0119](0119-event-merge-does-not-ask-band-pairs-whose-prior-assignment-probability-is-below-the-probability-threshold.md) | 사건 병합은 배정 때 받은 확률이 확률 기준 미만인 띠 쌍을 다시 묻지 않는다 | 승인 |
 | [0120](0120-event-membership-probability-threshold-default-chosen-by-merge-precision-among-values-indistinguishable-in-assignment.md) | 사건 소속 판정의 확률 기준 기본값은 배정에서 구별되지 않는 값 가운데 병합 판정의 정밀이 높은 값으로 정한다 | 승인 |
+| [0122](0122-test-postgresql-container-shared-per-test-jvm-with-an-empty-database-per-context.md) | 테스트의 PostgreSQL 컨테이너는 테스트 JVM 이 함께 쓰고, 컨텍스트마다 빈 데이터베이스를 만든다 | 승인 |
 
 ## 운영 규칙
 

@@ -28,7 +28,7 @@
 
 PostgreSQL 이미지는 `compose.yaml` 의 `postgres` 서비스 `image` 한 줄이 정한다([ADR-0019](../adr/0019-dev-compose-per-checkout-and-test-image-source.md)). 이미지는 pgvector 확장이 든 이미지(`pgvector/pgvector:pg{메이저}-{OS 계열}`)다([ADR-0027](../adr/0027-pgvector-for-vector-storage.md)). 같은 값을 세 곳이 읽는다.
 
-- **테스트** — Gradle 이 그 파일의 경로를 시스템 속성으로 넘기고 테스트 입력으로 등록한다(`backend/build.gradle.kts`). 테스트 설정이 파일에서 이미지를 읽어 PostgreSQL 호환 이미지로 선언해 Testcontainers 에 넘긴다. 파일만 바뀌어도 테스트가 다시 돈다
+- **테스트** — Gradle 이 그 파일의 경로를 시스템 속성으로 넘기고 테스트 입력으로 등록한다(`backend/build.gradle.kts`). 테스트 설정이 파일에서 이미지를 읽어 PostgreSQL 호환 이미지로 선언해 Testcontainers 에 넘긴다. 파일만 바뀌어도 테스트가 다시 돈다. 그 이미지로 띄우는 컨테이너와 데이터베이스의 구성은 [테스트 DB](#테스트-db)에 있다
 - **백엔드 검사 이미지** — 검사 target 이 `compose.yaml` 을 이미지에 복사한다([아래 결선](#테스트가-저장소-파일을-읽는-결선))
 - **배포 구성** — `deploy/compose.yaml` 의 `postgres` 가 `extends` 로 이 서비스를 물려받는다([ADR-0021](../adr/0021-separate-deploy-compose-with-single-app-service.md))
 
@@ -49,6 +49,16 @@ PostgreSQL 이미지는 `compose.yaml` 의 `postgres` 서비스 `image` 한 줄�
 - **DinD** — Testcontainers 는 호스트 Docker 가 아니라 검사 정의 안의 엔진을 쓴다. 그래서 호스트 종류(rootful · rootless · Docker Desktop)와 무관하게 구성이 같다. 엔진은 privileged 로 돌고, 공개 포트 없이 검사 정의의 내부 네트워크에만 열린다
 - 네 검사 이미지는 시간대 · 로캘을 같은 값으로 고정한다(각 Dockerfile 의 `ENV`)
 - 도구 버전은 공식 이미지의 태그가 갖는다. JDK 태그는 Gradle toolchain 의, Node 태그는 `frontend/.nvmrc` 의 사본이고, 어긋나면 이미지 빌드가 실패한다. pnpm 은 corepack 이 `frontend/package.json` 의 `packageManager` 를 읽어 받는다
+
+### 테스트 DB
+
+백엔드 테스트는 Testcontainers 로 띄운 PostgreSQL 에서 돈다. 컨테이너는 테스트 JVM 하나가 함께 쓰고, 스프링 컨텍스트마다 그 안에 빈 데이터베이스를 따로 갖는다([ADR-0122](../adr/0122-test-postgresql-container-shared-per-test-jvm-with-an-empty-database-per-context.md)).
+
+- **컨테이너** — 테스트 JVM 에서 DB 를 쓰는 첫 컨텍스트가 뜰 때 한 번 띄우고, JVM 이 끝날 때 Testcontainers 가 치운다(`SharedPostgres`). 이미지는 [PostgreSQL 이미지 정본](#postgresql-이미지-정본)의 값이다
+- **데이터베이스** — 컨텍스트가 만들어질 때마다 빈 데이터베이스를 새로 만들어 그 접속 정보를 컨텍스트에 준다(`TestcontainersConfiguration`). 컨텍스트는 그 데이터베이스에 마이그레이션을 처음부터 적용한다. 컨텍스트가 닫혀도 데이터베이스는 지우지 않는다
+- **연결 수 한도** — 컨텍스트 캐시에 남은 컨텍스트마다 연결 풀이 하나씩 붙으므로 서버의 연결 수 한도를 올려 띄운다. 값은 스프링 컨텍스트 캐시의 기본 크기와 연결 풀의 기본 크기에서 계산한다(`SharedPostgres`). 캐시 크기나 풀 크기를 바꾸면 이 값도 맞춘다
+- **한 서버를 함께 쓴다** — 서버 전체에 걸친 것(역할 · 서버 설정 · 다른 데이터베이스의 연결)을 만들거나 읽는 테스트는 자기 데이터베이스 · 자기 연결로 좁혀 읽는다
+- 호스트에서 돌리는 테스트와 `bootTestRun` 도 같은 구성을 쓴다
 
 ### 테스트가 저장소 파일을 읽는 결선
 
@@ -123,7 +133,7 @@ IDE 에서 테스트를 Gradle 에 맡기는 것은 1 때문이다([CONTRIBUTING
 | `deploy-amd64` · `deploy-arm64` | 같은 job 정의(`deploy`)를 아키텍처마다 그 아키텍처의 러너에서 돌린다. 배포 이미지를 두 아키텍처로 빌드하고, 스모크 덧씌우기를 얹어 배포 구성을 자기 아키텍처로 띄워 healthcheck 를 기다린 뒤 `deploy/smoke.sh`, 이어서 운영자 토큰을 넣어 `app` 을 다시 띄우고 K14 를 요구하는 표지와 함께 한 번 더 `deploy/smoke.sh`. 두 job 은 러너와 상대 아키텍처만 다르고, 한쪽의 실패가 다른 쪽을 취소하지 않는다([ADR-0104](../adr/0104-arm64-run-checked-on-arm64-runners-with-a-symmetric-deploy-check-per-architecture.md)) |
 
 - **필수 체크** — 여섯 체크(`backend` · `frontend` · `docs` · `tools` · `deploy-amd64` · `deploy-arm64`) 모두 `main` 의 필수 체크다. 필수 여부는 저장소 설정(branch protection)이 정한다
-- **캐시** — 각 job 은 검사를 돌리기 전에 같은 정의로 이미지를 buildx bake 로 먼저 빌드해, GitHub Actions 캐시를 계층 캐시로 쓴다. 캐시 범위는 job 마다 따로다(`ci.yml`)
+- **캐시** — 각 job 은 검사를 돌리기 전에 같은 정의로 이미지를 buildx bake 로 먼저 빌드해, GitHub Actions 캐시를 계층 캐시로 쓴다. 캐시 범위는 job 마다 따로다(`ci.yml`). 캐시에 계층을 저장하는 것은 `main` 의 실행뿐이고 PR 의 실행은 캐시를 읽기만 한다 — 이미지의 의존성 계층을 바꾼 PR 은 merge 될 때까지 실행마다 그 계층을 다시 만든다
 - **실패 보고서** — `backend` 검사 단계가 실패했을 때만 검사 컨테이너에서 테스트 보고서(HTML · JUnit XML)를 꺼내 artifact 로 올린다. 이미지 빌드 실패처럼 보고서가 없는 실패에서는 꺼내지 않는다. 배포 검사가 실패하면 배포 구성의 로그를 출력한다
 - **빌더 확인** — 배포 검사는 빌드 전에 빌더에 상대 아키텍처(`deploy-amd64` 는 arm64, `deploy-arm64` 는 amd64)의 에뮬레이션이 없음을 확인한다. 에뮬레이션이 있으면 실행 단계의 `RUN` 이 두 아키텍처 빌드에서 드러나지 않기 때문이다
 - **스모크 덧씌우기** — `deploy/smoke/compose.yaml` 은 배포 구성에 시험 피드 서버 `feeds`(정적 서버, `deploy/smoke/feeds/` 의 합성 피드)와 고정 서브넷을 더하고, `app` 의 수집 허용 대역을 그 서브넷으로, Jev 주소를 닿지 않는 곳으로 둔다(CI 의 가짜 키를 Jev 로 보내지 않는다). 배포 검사는 기동 · `app` 재기동 · 로그 출력에 이 파일을 함께 주고, 스모크에도 `SMOKE_OVERLAY` 로 경로를 넘긴다. 운영 인스턴스에는 얹지 않는다
@@ -141,6 +151,7 @@ IDE 에서 테스트를 Gradle 에 맡기는 것은 1 때문이다([CONTRIBUTING
 | 프론트엔드 의존성은 lockfile 그대로 설치한다 | 빌드 실패 — `--frozen-lockfile` | `frontend/Dockerfile` |
 | 배포 target 의 실행 단계에 `RUN` 이 없다 | CI 단계 — `deploy-amd64` · `deploy-arm64` 의 두 아키텍처 빌드와 상대 아키텍처 에뮬레이션 확인 | `backend/Dockerfile` · `frontend/Dockerfile` · `ci.yml` |
 | PostgreSQL 이미지는 `compose.yaml` 한 줄이 정하고 테스트가 그 값을 PostgreSQL 호환 이미지로 선언해 쓴다 | 구조 + 테스트 `DevComposeFileTests`(파일 · 서비스 · 이미지가 없거나 보간 · 시스템 속성 없음은 실패) | `compose.yaml` · `backend/build.gradle.kts` |
+| 테스트의 스프링 컨텍스트마다 빈 데이터베이스를 따로 쓰고, 그 서버는 캐시에 남는 컨텍스트들의 연결 풀을 받는다 | 구조(컨텍스트의 접속 정보 빈이 데이터베이스를 새로 만든다) + 테스트 `SharedPostgresTests`(부를 때마다 같은 서버의 새 데이터베이스 · 새 데이터베이스는 비어 있고 서로 격리 · 서버의 연결 수 한도) | [테스트 DB](#테스트-db) |
 | 배포 구성의 PostgreSQL 이 같은 이미지를 쓴다 | 구조(`extends`) + 스모크 K9 | `deploy/compose.yaml` · `deploy/smoke.sh` |
 | 배포 이미지가 두 아키텍처에서 기본 로컬 임베딩 모델로 추론하고, 표현의 모델 버전이 정보 파일과 같다 | 스모크 K14 — CI 의 두 배포 검사가 각 아키텍처의 러너에서 요구 표지와 함께 돈다. 부분 — 러너 CPU 에 없는 명령어 조합의 코어는 확인하지 않는다 | `deploy/smoke.sh` · `deploy/smoke/` · `backend/embedding-model.properties` |
 | 운영 인스턴스에서 스모크를 돌려도 시험 소스를 등록하지 않는다 | 구조 — K14 는 시험 피드 서버(스모크 덧씌우기)가 떠 있을 때만 돈다 | `deploy/smoke.sh` |
