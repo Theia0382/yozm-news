@@ -69,7 +69,7 @@ class JdbcEventRepositoryTests {
 		long other = event("OPEN", "model-a", "[0,1]", "2026-11-05T00:00:00Z", "2026-11-05T00:00:00Z");
 		LockedEvent kept = this.repository.lock(id).orElseThrow();
 		LockedEvent gone = this.repository.lock(other).orElseThrow();
-		this.repository.absorb(kept.absorbed(gone), gone, T);
+		this.repository.absorb(kept.absorbed(gone), gone, null, T);
 		assertThat(changes()).last().isEqualTo(List.of(id, other));
 
 		this.repository.close(id, null, T);
@@ -292,7 +292,10 @@ class JdbcEventRepositoryTests {
 		terms(survivor, Map.of("금리", 2, "동결", 1));
 		terms(absorbed, Map.of("금리", 1, "환율", 1));
 		// 앞서 absorbed 에 합쳐진 사건 — 남는 사건으로 다시 가리켜야 한다
-		this.jdbc.sql("update events set status = 'MERGED', merged_into = :into, closed_at = now() where id = :id")
+		this.jdbc.sql("""
+				update events set status = 'MERGED', merged_into = :into, closed_at = now(), representative_article_id = 55
+				where id = :id
+				""")
 			.param("into", absorbed)
 			.param("id", earlier)
 			.update();
@@ -300,7 +303,7 @@ class JdbcEventRepositoryTests {
 		LockedEvent gone = this.repository.lock(absorbed).orElseThrow();
 		Instant now = Instant.parse("2026-11-06T09:00:00Z");
 
-		this.repository.absorb(kept.absorbed(gone), gone, now);
+		this.repository.absorb(kept.absorbed(gone), gone, new ArticleId(77), now);
 
 		LockedEvent written = this.repository.lock(survivor).orElseThrow();
 		assertThat(written.articleCount()).isEqualTo(2);
@@ -320,6 +323,10 @@ class JdbcEventRepositoryTests {
 			.param("id", earlier)
 			.query(Long.class)
 			.single()).isEqualTo(survivor);
+		// 합쳐진 사건에 대표를 남긴다 — 앞서 합쳐진 사건은 제 대표를 그대로 갖고, 남는 사건에는 남기지 않는다
+		assertThat(this.jdbc.sql("select id, representative_article_id from events order by id").query().listOfRows())
+			.extracting(row -> row.get("id"), row -> row.get("representative_article_id"))
+			.containsExactly(tuple(survivor, null), tuple(absorbed, 77L), tuple(earlier, 55L));
 	}
 
 	@Test

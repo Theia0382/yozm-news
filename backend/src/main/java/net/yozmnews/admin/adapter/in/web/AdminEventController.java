@@ -3,6 +3,7 @@ package net.yozmnews.admin.adapter.in.web;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Stream;
 
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -19,6 +20,7 @@ import net.yozmnews.event.EventPeriod;
 import net.yozmnews.event.EventReview;
 import net.yozmnews.event.EventSummary;
 import net.yozmnews.event.EventView;
+import net.yozmnews.event.MergedEvent;
 import net.yozmnews.platform.ApiProblem;
 import net.yozmnews.platform.WebRole;
 import net.yozmnews.source.FeedLabels;
@@ -99,13 +101,21 @@ class AdminEventController {
 		EventView event = this.directory.find(requested).orElseThrow(() -> AdminIds.unknownEvent(id));
 		List<EventArticleView> assigned = this.directory.articles(event.id());
 		ArticleId representative = this.directory.representativesOfAll(List.of(event.id())).get(event.id());
-		// 대표는 사건의 기사다 — 기사 정보 조회 한 번으로 함께 맞붙인다(그새 바뀐 배정이면 기사 정보가 null 이다)
-		Map<ArticleId, AdminArticles.Summary> summaries = this.articles
-			.summaries(assigned.stream().map(EventArticleView::articleId).toList());
+		List<MergedEvent> merged = this.review.mergedInto(event.id());
+		// 대표는 사건의 기사다 — 기사 정보 조회 한 번으로 함께 맞붙인다(그새 바뀐 배정이면 기사 정보가 null 이다).
+		// 합쳐진 사건의 대표도 남는 사건으로 옮겨진 기사라 보통 이 안에 있지만, 재판정으로 떠났을 수 있어 함께 묻는다
+		Map<ArticleId, AdminArticles.Summary> summaries = this.articles.summaries(Stream
+			.concat(assigned.stream().map(EventArticleView::articleId),
+					merged.stream().map(MergedEvent::representative).filter(Objects::nonNull))
+			.distinct()
+			.toList());
 		return EventDetailResponse.of(id, event, (representative == null) ? null : representative.value(),
 				(representative == null) ? null : summaries.get(representative),
 				assigned.stream().map(view -> EventArticleResponse.of(view, summaries.get(view.articleId()))).toList(),
-				this.review.mergedInto(event.id()).stream().map(MergedEventResponse::of).toList());
+				merged.stream()
+					.map(one -> MergedEventResponse.of(one,
+							(one.representative() == null) ? null : summaries.get(one.representative())))
+					.toList());
 	}
 
 }

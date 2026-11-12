@@ -197,7 +197,8 @@ class JdbcEventRepository implements EventRepository {
 
 	@Override
 	@Transactional(propagation = Propagation.MANDATORY)
-	public void absorb(LockedEvent survivorNext, LockedEvent absorbed, Instant now) {
+	public void absorb(LockedEvent survivorNext, LockedEvent absorbed, @Nullable ArticleId absorbedRepresentative,
+			Instant now) {
 		write(survivorNext);
 		this.jdbc.sql("""
 				insert into event_key_terms (event_id, term, article_count)
@@ -211,12 +212,14 @@ class JdbcEventRepository implements EventRepository {
 			.param("absorbed", absorbed.id())
 			.update();
 		this.jdbc.sql("""
-				update events set status = 'MERGED', merged_into = :survivor, closed_at = :now, revision = revision + 1
+				update events set status = 'MERGED', merged_into = :survivor, closed_at = :now, revision = revision + 1,
+				       representative_article_id = :representative
 				where id = :absorbed
 				""")
 			.param("survivor", survivorNext.id())
 			.param("absorbed", absorbed.id())
 			.param("now", timestamp(now))
+			.param("representative", (absorbedRepresentative != null) ? absorbedRepresentative.value() : null, Types.BIGINT)
 			.update();
 		changed(survivorNext.id(), absorbed.id());
 	}

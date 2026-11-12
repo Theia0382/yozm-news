@@ -201,6 +201,39 @@ class JdbcEventArticleRepository implements EventArticleRepository {
 			.optional();
 	}
 
+	/** 두 방향을 한 질의로 — 후보 사건은 {@code coalesce(merged_into, id)} 로 남는 사건을 읽는다(가리킴은 평평하다) */
+	@Override
+	public Map<Long, Double> priorProbabilities(long eventId, Collection<Long> others) {
+		Map<Long, Double> found = new HashMap<>();
+		if (others.isEmpty()) {
+			return found;
+		}
+		this.jdbc.sql("""
+				select other, max(probability) as probability from (
+				  select coalesce(e.merged_into, e.id) as other, c.probability
+				  from event_articles a
+				  join event_article_candidates c on c.article_id = a.article_id
+				  join events e on e.id = c.event_id
+				  where a.event_id = :event and c.probability is not null
+				    and coalesce(e.merged_into, e.id) = any(:others)
+				  union all
+				  select a.event_id as other, c.probability
+				  from event_articles a
+				  join event_article_candidates c on c.article_id = a.article_id
+				  join events e on e.id = c.event_id
+				  where a.event_id = any(:others) and c.probability is not null
+				    and coalesce(e.merged_into, e.id) = :event
+				) prior
+				group by other
+				""")
+			.param("event", eventId)
+			.param("others", others.toArray(Long[]::new))
+			.query((ResultSet rs) -> {
+				found.put(rs.getLong("other"), rs.getDouble("probability"));
+			});
+		return found;
+	}
+
 	@Override
 	public void deleteByArticles(Collection<ArticleId> articleIds) {
 		if (articleIds.isEmpty()) {

@@ -72,9 +72,10 @@ public interface EventRepository {
 	 * 잠근 두 사건을 합쳐 쓴다 — 트랜잭션 안에서, 합쳐질 사건의 배정을 남는 사건으로 옮긴 뒤 부른다. 남는 사건에 합친 값을 쓰고(연 시각 포함,
 	 * {@code revision} + 1), 합쳐질 사건의 핵심 말 수를 남는 사건에 더한 뒤 지운다. 합쳐질 사건은 {@code MERGED} 로 남는 사건을 가리키고
 	 * 열림이 끝난 시각은 {@code now} 다. 합쳐질 사건을 가리키던 합쳐진 사건 행도 남는 사건을 가리킨다.
+	 * @param absorbedRepresentative 합쳐질 사건의 대표 기사 — 배정을 옮기기 전에 고른 것이고 합쳐진 사건 행에 남긴다(없으면 null)
 	 * @param survivorNext 남는 사건의 합친 값 — {@link LockedEvent#absorbed}
 	 */
-	void absorb(LockedEvent survivorNext, LockedEvent absorbed, Instant now);
+	void absorb(LockedEvent survivorNext, LockedEvent absorbed, @Nullable ArticleId absorbedRepresentative, Instant now);
 
 	/**
 	 * 닫을 수 있는 열린 사건 — 마지막으로 붙은 시각 ≤ {@code idleBefore} 이거나 연 시각 ≤ {@code openedBefore}. 경계는
@@ -87,7 +88,7 @@ public interface EventRepository {
 	/** 잠근 열린 사건을 닫는다 — 상태 {@code CLOSED}, 열림이 끝난 시각 {@code now}, 대표 기사(없으면 null) */
 	void close(long eventId, @Nullable ArticleId representative, Instant now);
 
-	/** 대표 기사가 이 기사들인 사건의 대표를 비운다 — 지운 기사 따르기 */
+	/** 대표 기사가 이 기사들인 사건(닫힌 사건 · 합쳐진 사건)의 대표를 비운다 — 지운 기사 따르기 */
 	void clearRepresentative(Collection<ArticleId> articleIds);
 
 }

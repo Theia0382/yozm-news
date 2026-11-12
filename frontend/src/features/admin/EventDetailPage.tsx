@@ -123,40 +123,54 @@ function DetailView({ detail }: { detail: Detail }) {
         ) : (
           <>
             <p className="text-sm text-muted-foreground">
-              기사 수 · 시각은 합칠 때의 값이다. 병합 판정 확률은 Jev 에 물어
-              합친 쌍만 있다
+              기사 수 · 시각 · 대표 기사는 합칠 때의 값이다. 병합 판정 확률은 그
+              쌍을 Jev 에 물어 받은 확률이다 — 산식으로 합친 쌍도 앞서 물은 적이
+              있으면 있다
             </p>
-            <table
-              aria-label="합쳐진 사건"
-              className={`w-full text-left text-sm ${REVIEW_TABLE}`}
-            >
-              <thead>
-                <tr>
-                  <th className="font-medium">사건</th>
-                  <th className="font-medium">합친 시각</th>
-                  <th className="font-medium">기사 수</th>
-                  <th className="font-medium">첫 기사</th>
-                  <th className="font-medium">마지막 기사</th>
-                  <th className="font-medium">병합 판정 확률</th>
-                </tr>
-              </thead>
-              <tbody>
-                {detail.mergedEvents.map((merged) => (
-                  <tr key={merged.id} className="align-top">
-                    <td>사건 {merged.id}</td>
-                    <td>{formatDateTime(merged.mergedAt)}</td>
-                    <td className="tabular-nums">{merged.articleCount}</td>
-                    <td>{formatDateTime(merged.firstArticleAt)}</td>
-                    <td>{formatDateTime(merged.lastArticleAt)}</td>
-                    <td className="tabular-nums">
-                      {merged.probability === null
-                        ? "기록 없음"
-                        : formatProbability(merged.probability)}
-                    </td>
+            <div className="overflow-x-auto">
+              <table
+                aria-label="합쳐진 사건"
+                className={`w-full text-left text-sm ${REVIEW_TABLE}`}
+              >
+                <thead>
+                  <tr>
+                    <th className="font-medium">사건</th>
+                    <th className="font-medium">대표 기사</th>
+                    <th className="font-medium">합친 시각</th>
+                    <th className="font-medium">기사 수</th>
+                    <th className="font-medium">첫 기사</th>
+                    <th className="font-medium">마지막 기사</th>
+                    <th className="font-medium">병합 판정 확률</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {detail.mergedEvents.map((merged) => (
+                    <tr key={merged.id} className="align-top">
+                      <td>사건 {merged.id}</td>
+                      <td>
+                        {merged.representativeId === null ? (
+                          "기록 없음"
+                        ) : (
+                          <ArticleTitle
+                            id={merged.representativeId}
+                            article={merged.representative}
+                          />
+                        )}
+                      </td>
+                      <td>{formatDateTime(merged.mergedAt)}</td>
+                      <td className="tabular-nums">{merged.articleCount}</td>
+                      <td>{formatDateTime(merged.firstArticleAt)}</td>
+                      <td>{formatDateTime(merged.lastArticleAt)}</td>
+                      <td className="tabular-nums">
+                        {merged.probability === null
+                          ? "기록 없음"
+                          : formatProbability(merged.probability)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </>
         )}
       </section>
