@@ -15,7 +15,7 @@ import java.util.Map;
 import net.yozmnews.article.EntryBucket;
 import net.yozmnews.article.EntryCounts;
 import net.yozmnews.article.EntryStatistics;
-import net.yozmnews.platform.application.WebSliceSecurity;
+import net.yozmnews.user.application.WebSliceSecurity;
 import net.yozmnews.source.FailurePermanence;
 import net.yozmnews.source.FeedHealthView;
 import net.yozmnews.source.FeedId;

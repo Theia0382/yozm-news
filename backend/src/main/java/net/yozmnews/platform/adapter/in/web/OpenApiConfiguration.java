@@ -14,8 +14,8 @@ import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.responses.ApiResponse;
 import io.swagger.v3.oas.models.responses.ApiResponses;
 import io.swagger.v3.oas.models.servers.Server;
+import net.yozmnews.platform.ApiPaths;
 import net.yozmnews.platform.WebRole;
-import net.yozmnews.platform.application.SecurityConfiguration;
 import org.springdoc.core.customizers.OpenApiCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -56,12 +56,12 @@ class OpenApiConfiguration {
 	}
 
 	/**
-	 * 운영자 경로의 모든 연산에 401 · 403 문제 응답을 단다 — 운영자 경로는 {@link SecurityConfiguration#ADMIN_PATHS} 가 정본이다.
+	 * 운영자 경로의 모든 연산에 401 · 403 문제 응답을 단다 — 운영자 경로는 {@link ApiPaths#ADMIN} 가 정본이다.
 	 * @throws IllegalStateException 연산이 401 · 403 을 이미 가질 때(정본이 둘이 된다), 문제 응답 스키마가 없을 때
 	 */
 	@Bean
 	OpenApiCustomizer adminResponses() {
-		PathPattern adminPaths = PathPatternParser.defaultInstance.parse(SecurityConfiguration.ADMIN_PATHS);
+		PathPattern adminPaths = PathPatternParser.defaultInstance.parse(ApiPaths.ADMIN);
 		return openApi -> {
 			if (openApi.getPaths() == null) {
 				return;

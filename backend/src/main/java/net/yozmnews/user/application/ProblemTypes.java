@@ -1,9 +1,9 @@
-package net.yozmnews.platform.application;
+package net.yozmnews.user.application;
 
 import java.net.URI;
 
 /**
- * 운영자 접근 통제가 내는 문제 유형과 제목 — 정본. 그 밖의 문제는 {@code about:blank} 다(docs/specs/platform.md §4 · platform-R13).
+ * 운영자 접근 통제가 내는 문제 유형과 제목 — 정본. 그 밖의 문제는 {@code about:blank} 다(docs/specs/user.md §4 · user-R3).
  */
 final class ProblemTypes {
 

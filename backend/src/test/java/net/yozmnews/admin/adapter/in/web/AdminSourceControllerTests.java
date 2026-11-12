@@ -15,7 +15,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
-import net.yozmnews.platform.application.WebSliceSecurity;
+import net.yozmnews.user.application.WebSliceSecurity;
 import net.yozmnews.source.ActivationRefusal;
 import net.yozmnews.source.FailurePermanence;
 import net.yozmnews.source.FeedHealthView;

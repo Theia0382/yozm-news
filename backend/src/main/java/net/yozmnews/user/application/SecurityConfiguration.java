@@ -1,9 +1,10 @@
-package net.yozmnews.platform.application;
+package net.yozmnews.user.application;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import net.yozmnews.platform.ApiPaths;
 import net.yozmnews.platform.ProblemResponses;
-import net.yozmnews.platform.domain.AdminCredential;
+import net.yozmnews.user.domain.AdminCredential;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -20,16 +21,13 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.intercept.AuthorizationFilter;
 
 /**
- * 보안 구성 — 운영자 경로만 운영자 토큰을 요구하고 나머지는 연다. docs/specs/platform.md §4 · platform-R10 · platform-R11.
+ * 보안 구성 — 운영자 경로만 운영자 토큰을 요구하고 나머지는 연다. docs/specs/user.md §4 · user-R1 · user-R2 · user-R4.
  * <p>
  * 두 역할 공통이다 — 역할에 묶으면 그 역할이 없는 프로세스에 Spring Boot 의 기본 보안(모든 요청 인증 · 생성 비밀번호)이 선다.
  */
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(AdminSecurityProperties.class)
-public class SecurityConfiguration {
-
-	/** 운영자 경로 — 정본. 화면용 API 명세 설정도 이 값으로 운영자 연산을 가른다 */
-	public static final String ADMIN_PATHS = "/api/admin/**";
+class SecurityConfiguration {
 
 	/** 운영자 역할 이름 */
 	static final String ADMIN_ROLE = "ADMIN";
@@ -62,7 +60,7 @@ public class SecurityConfiguration {
 	@Order(1)
 	SecurityFilterChain adminChain(HttpSecurity http, AdminCredential credential,
 			AuthenticationProvider adminTokenAuthenticationProvider, ProblemResponses problems) throws Exception {
-		http.securityMatcher(ADMIN_PATHS)
+		http.securityMatcher(ApiPaths.ADMIN)
 			.authorizeHttpRequests(requests -> requests.anyRequest().hasRole(ADMIN_ROLE))
 			.addFilterBefore(new AdminTokenFilter(adminTokenAuthenticationProvider), AuthorizationFilter.class)
 			.exceptionHandling(exceptions -> exceptions

@@ -67,8 +67,6 @@ springdoc:
   api-docs:
     # 명세 엔드포인트는 기본으로 끈다 — docs/specs/platform.md §5 · platform-R6
     enabled: false
-  # 화면용 API 만 명세에 넣는다 — platform-R6
-  paths-to-match: /api/**
   default-produces-media-type: application/json
   # 출력을 고정한다 — platform-R6
   writer-with-order-by-keys: true

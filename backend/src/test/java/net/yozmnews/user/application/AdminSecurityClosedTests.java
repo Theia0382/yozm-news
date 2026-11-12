@@ -1,4 +1,4 @@
-package net.yozmnews.platform.application;
+package net.yozmnews.user.application;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -17,7 +17,7 @@ import org.springframework.test.web.servlet.MockMvc;
 /**
  * 운영자 토큰을 설정하지 않은 인스턴스 — 운영자 경로는 어떤 토큰으로도 열리지 않고 닫힘을 알린다.
  * <p>
- * 지키는 규칙: platform-R10 · platform-R11 · platform-R13
+ * 지키는 규칙: user-R1 · user-R2 · user-R3
  */
 @WebMvcTest(controllers = AdminSecurityTests.ProbeController.class)
 @Import({ WebSliceSecurity.class, AdminSecurityTests.ProbeController.class })

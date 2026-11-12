@@ -15,7 +15,7 @@ import java.util.Optional;
 import net.yozmnews.article.ArticleContent;
 import net.yozmnews.article.ArticleEntryView;
 import net.yozmnews.article.ArticleId;
-import net.yozmnews.platform.application.WebSliceSecurity;
+import net.yozmnews.user.application.WebSliceSecurity;
 import net.yozmnews.source.FeedId;
 import net.yozmnews.source.FeedLabel;
 import net.yozmnews.source.SourceId;

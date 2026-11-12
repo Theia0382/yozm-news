@@ -8,7 +8,7 @@
 
 - **이벤트 발행 재처리** — 모듈 사이 이벤트의 리스너가 실패한 발행을 주기적으로 다시 처리하고, 상한을 넘긴 발행을 알린다
 - **남겨진 발행의 운영자 처리** — 재처리가 더 이상 다루지 않는 발행을 운영자가 보고 다시 처리하거나 폐기하는 공개 운영 API
-- **화면용 API 명세 설정** — 백엔드 코드가 만드는 화면용 API 명세의 고정 값과 속성 규칙, 운영자 경로 · 세션 경로 연산의 거부 응답. 구현은 이 모듈의 `OpenApiConfiguration` 과 `springdoc` 설정이다(정본 규약은 [overview.md §6](../overview.md#6-횡단-규약) "화면용 API 계약")
+- **화면용 API 명세 설정** — 백엔드 코드가 만드는 화면용 API 명세의 고정 값과 속성 규칙, 운영자 경로 · 세션 경로 연산의 거부 응답. 구현은 이 모듈의 `OpenApiConfiguration` · `OpenApiPathsConfiguration` 과 `springdoc` 설정이다(정본 규약은 [overview.md §6](../overview.md#6-횡단-규약) "화면용 API 계약")
 - **API 계약 확인 엔드포인트** — 명세 → 프론트엔드 생성 타입의 파이프라인을 확인하는 엔드포인트
 - **역할** — 앱 역할 profile(`web` · `worker`)과 구성요소의 역할 표시, 역할이 하나도 켜지지 않았을 때의 기동 검사, 작업 역할의 스케줄링
 - **DB 확장 요건** — DB 에 pgvector 확장을 설치하는 마이그레이션과, 설치된 확장이 최소 버전 이상인지 기동 때 확인하는 검사(platform-R19)
@@ -371,7 +371,7 @@ HTTP 엔드포인트:
 | `adapter/in/job` | 이벤트 발행 재처리 반복 작업 |
 | `adapter/in/web` | API 계약 확인 엔드포인트, 화면용 API 명세 설정, 컨트롤러 오류의 문제 응답 |
 | `adapter/out/persistence` | 이벤트 발행 레지스트리 행의 읽기 · 조건부 삭제, 설치된 DB 확장의 버전 읽기 |
-| `application` | 재처리 유스케이스, 남겨진 발행의 운영 유스케이스, 재처리 설정과 정책 결선, 역할 검사 결선, DB 확장 요건 검사 결선, 작업 역할의 스케줄링 |
+| `application` | 재처리 유스케이스, 남겨진 발행의 운영 유스케이스, 재처리 설정과 정책 결선, 역할 검사 결선, DB 확장 요건 검사 결선, 작업 역할의 스케줄링, 명세가 담는 경로 |
 | `domain` | 재처리 대상 · 남겨진 발행 판정과 그 설정 조건, 이벤트를 읽을 수 있는지의 판정, 레지스트리 행 저장 인터페이스, 역할 판정, pgvector 확장 판정과 설치된 확장 저장 인터페이스 |
 
 협력: `EventResubmissionJob` 이 `EventResubmissionService` 를 부르고, 서비스는 Spring Modulith 의 미완료 발행 전체를 읽어 `EventResubmissionPolicy` 의 판정대로 재제출한다 — 실패 발행은 재제출 전에 `EventReading` 으로 이벤트를 읽어 본다. `admin` 의 운영자 API 는 `EventPublicationAdministrationService` 를 부른다 — 이 서비스는 `RegistryRows`(구현 `JdbcRegistryRows` — 본문은 Spring Modulith 의 `EventSerializer` 로 읽어 `EventReading` 으로 판정한다)로 레지스트리 행을 읽어 같은 정책으로 남겨진 발행을 가르고, 다시 처리는 Spring Modulith 의 재제출 경로로, 폐기는 `RegistryRows` 의 조건부 삭제로 한다. 정책은 `EventResubmissionConfiguration` 이 설정 값(`EventResubmissionProperties`)으로 만든다. `RoleConfiguration` 이 켜진 profile 로 `ActiveRoles` 를 만든다. `VectorExtensionConfiguration` 이 `DatabaseExtensions`(구현 `JdbcDatabaseExtensions`)로 설치된 pgvector 확장의 버전을 읽어 `VectorExtension` 을 만든다. `user` 의 보안 진입점과 이 모듈의 `ProblemResponseAdvice` 는 `ProblemResponses` 로 문제 응답을 쓴다. YAML 원문 읽기는 다른 구성 요소와 협력하지 않는다 — 다른 모듈이 `YamlTextReader` 로 읽은 트리를 `StrictYamlBinding` 으로 바인딩한다. `CodePoints` · `DayRange` 도 협력하지 않는다.
@@ -422,6 +422,7 @@ stateDiagram-v2
 - `RoleConfiguration` — 켜진 profile 로 `ActiveRoles` 를 만든다. 활성 profile 이 없으면 기본 profile 이다(platform-R8)
 - `VectorExtensionConfiguration` — 설치된 pgvector 확장의 버전을 읽어 `VectorExtension` 을 만들고, 통과하면 버전을 정보 로그 한 줄로 남긴다. 빈을 만들 때 판정하고, 읽기가 받는 `JdbcClient` 가 마이그레이션 뒤에 만들어지므로 첫 기동에서도 마이그레이션이 설치한 확장을 본다(platform-R19)
 - `WorkerSchedulingConfiguration` — 작업 역할에서 Spring 스케줄링을 켠다. 스케줄링을 켜는 곳은 이것 하나다(platform-R9)
+- `OpenApiPathsConfiguration` — 화면용 API 명세가 담는 경로를 `ApiPaths.API` 로 springdoc 설정에 넣는다. 두 역할 공통이라 작업 역할만 켠 프로세스의 명세도 같은 경로만 담는다(platform-R6 · platform-R21)
 
 ### `domain`
 
@@ -521,7 +522,7 @@ stateDiagram-v2
 | `spring.jackson.deserialization.accept-float-as-int` | `false` — 요청 본문의 정수 칸에 온 소수를 본문 형식 400 으로 거부한다(platform-R12). 앱의 JSON 매퍼(요청 본문 · 이벤트 발행 기록 · 문제 응답) 전체에 걸린다 |
 | `application-worker.yaml` 의 `jobrunr.background-job-server.enabled` · `spring.modulith.events.staleness.*` | 작업 역할에서만 작업 서버와 멈춤 감시를 켠다. 기본 파일은 작업 서버 `false` · 감시 기간 없음(platform-R9) |
 | `spring.modulith.moments.enabled` | `false` — Spring Modulith 의 시간 이벤트를 쓰지 않는다. 스케줄링은 작업 역할이 켠다(platform-R9) |
-| `springdoc.api-docs.enabled` · `springdoc.writer-with-*` · `springdoc.model-converters.java-nullable-property-customizer.enabled` | 명세 엔드포인트 기본 꺼짐 · 출력 고정 · `@Nullable` 속성을 null 허용 타입으로(platform-R6). 명세가 담는 경로(`ApiPaths.API`)는 설정이 아니라 명세 설정(`OpenApiConfiguration`)이 정한다(platform-R21). 역할에 묶지 않는다 — 작업 역할만 켠 `local` 실행에서는 경로 없는 명세가 열린다 |
+| `springdoc.api-docs.enabled` · `springdoc.writer-with-*` · `springdoc.model-converters.java-nullable-property-customizer.enabled` | 명세 엔드포인트 기본 꺼짐 · 출력 고정 · `@Nullable` 속성을 null 허용 타입으로(platform-R6). 명세가 담는 경로(`ApiPaths.API`)는 설정 파일이 아니라 `OpenApiPathsConfiguration` 이 springdoc 설정에 넣는다(platform-R21). 역할에 묶지 않는다 — 작업 역할만 켠 `local` 실행에서는 경로 없는 명세가 열린다 |
 
 ## 8. 결정
 

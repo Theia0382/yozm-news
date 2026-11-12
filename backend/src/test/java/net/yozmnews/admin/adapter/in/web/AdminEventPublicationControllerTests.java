@@ -21,7 +21,7 @@ import net.yozmnews.platform.ResubmissionResult;
 import net.yozmnews.platform.StrandedPublication;
 import net.yozmnews.platform.StrandedPublications;
 import net.yozmnews.platform.StrandedReason;
-import net.yozmnews.platform.application.WebSliceSecurity;
+import net.yozmnews.user.application.WebSliceSecurity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

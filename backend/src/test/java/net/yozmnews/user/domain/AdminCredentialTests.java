@@ -1,4 +1,4 @@
-package net.yozmnews.platform.domain;
+package net.yozmnews.user.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
@@ -10,7 +10,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 /**
  * 운영자 자격의 형식 · 열림 · 대조.
  * <p>
- * 지키는 규칙: platform-R11
+ * 지키는 규칙: user-R2
  */
 class AdminCredentialTests {
 

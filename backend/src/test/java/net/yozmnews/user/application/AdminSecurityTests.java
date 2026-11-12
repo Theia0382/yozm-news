@@ -1,4 +1,4 @@
-package net.yozmnews.platform.application;
+package net.yozmnews.user.application;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * 운영자 토큰을 설정한 인스턴스의 운영자 경로 — 토큰 없음 · 틀림 · 다른 스킴은 401, 맞으면 통과. 운영자 경로 밖은 토큰 없이 열린다.
  * <p>
- * 지키는 규칙: platform-R10 · platform-R11 · platform-R12 · platform-R13
+ * 지키는 규칙: user-R1 · user-R2 · platform-R12 · user-R3
  */
 @WebMvcTest(controllers = AdminSecurityTests.ProbeController.class,
 		properties = "yozmnews.admin.token=" + AdminSecurityTests.TOKEN)

@@ -1,8 +1,8 @@
-package net.yozmnews.platform.application;
+package net.yozmnews.user.application;
 
 import java.util.Objects;
 
-import net.yozmnews.platform.domain.AdminCredential;
+import net.yozmnews.user.domain.AdminCredential;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;

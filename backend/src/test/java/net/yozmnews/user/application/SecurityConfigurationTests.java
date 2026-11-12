@@ -1,9 +1,9 @@
-package net.yozmnews.platform.application;
+package net.yozmnews.user.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 import net.yozmnews.platform.ProblemResponses;
-import net.yozmnews.platform.domain.AdminCredential;
+import net.yozmnews.user.domain.AdminCredential;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration;
@@ -17,7 +17,7 @@ import org.springframework.security.web.SecurityFilterChain;
 /**
  * 보안 구성의 기동 — 잘못된 운영자 토큰은 기동을 멈추고, 기본 사용자 · 생성 비밀번호가 생기지 않는다.
  * <p>
- * 지키는 규칙: platform-R10 · platform-R11
+ * 지키는 규칙: user-R1 · user-R2 · user-R4
  */
 class SecurityConfigurationTests {
 

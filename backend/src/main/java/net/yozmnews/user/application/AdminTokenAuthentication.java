@@ -1,4 +1,4 @@
-package net.yozmnews.platform.application;
+package net.yozmnews.user.application;
 
 import java.util.List;
 
