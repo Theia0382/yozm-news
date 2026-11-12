@@ -416,9 +416,13 @@ class FeedPollingIntegrationTests {
 		return claims.stream().filter(claim -> claim.feedId().value() == feed).findFirst().orElseThrow();
 	}
 
-	/** 다음 수집 시각을 지금 이전으로 당기고 점유해 바로 수집한다 */
+	/**
+	 * 다음 수집 시각을 지금 이전으로 당기고 점유해 바로 수집한다. 앞 수집이 남긴 요청 예약도 지운다 — 요청 간격은 이 도우미를 쓰는
+	 * 테스트의 확인 대상이 아니다.
+	 */
 	private void pollNow(long feed) {
 		makeDue(feed);
+		new RegistryRows(this.jdbc).clearFetchSlot(sourceOf(feed).value());
 		ClaimedPoll claim = claim(feed);
 		this.pollFeedJob.run(feed, claim.token());
 	}

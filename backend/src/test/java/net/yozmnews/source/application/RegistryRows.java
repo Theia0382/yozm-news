@@ -53,13 +53,18 @@ final class RegistryRows {
 				""").param("source", source).param("key", key).query(Long.class).single();
 	}
 
+	/** 소스의 요청 예약을 지운다 — 다음 요청이 간격을 기다리지 않고 바로 나간다 */
+	void clearFetchSlot(long source) {
+		this.jdbc.sql("delete from source_fetch_slots where source_id = :source").param("source", source).update();
+	}
+
 	/** 소스와 그 행을 자식부터 지운다 — 다른 쪽이 그 소스를 지운 것처럼 */
 	void deleteSource(long source) {
 		this.jdbc.sql("delete from feed_poll_states where feed_id in (select id from feeds where source_id = :source)")
 			.param("source", source)
 			.update();
 		this.jdbc.sql("delete from feeds where source_id = :source").param("source", source).update();
-		this.jdbc.sql("delete from source_fetch_slots where source_id = :source").param("source", source).update();
+		clearFetchSlot(source);
 		this.jdbc.sql("delete from source_attributions where source_id = :source").param("source", source).update();
 		this.jdbc.sql("delete from sources where id = :source").param("source", source).update();
 	}

@@ -34,3 +34,7 @@
 | URL 만 기본값으로 두고 계정 · 비밀번호는 환경 변수로 받는다 | 개발자마다 IDE 실행 구성에 환경 변수를 넣는 절차가 생기고, URL 은 여전히 두 곳에 있다 |
 | 개발용 Compose 파일을 `backend/compose.yaml` 에 두고 기본 탐색에 맡긴다 | 개발용 Compose 를 저장소 루트에서 `docker compose --profile dev up` 으로 띄우는 구성과 어긋난다 |
 | 수명주기 `start-only`(앱이 멈춰도 Compose 를 멈추지 않음) | 기본값이 앱이 띄운 것만 멈추고 개발자가 먼저 띄운 것은 두므로, 두 사용 방식이 모두 자연스럽다 |
+
+## 후속 기록
+
+- 2026-11-12: 맥락의 "테스트가 Testcontainers 의 `@ServiceConnection` 으로 접속 정보를 받는 것과 같은 기제다" — [ADR-0122](0122-test-postgresql-container-shared-per-test-jvm-with-an-empty-database-per-context.md) · [개발 인프라 — 테스트 DB](../development/infrastructure.md#테스트-db)

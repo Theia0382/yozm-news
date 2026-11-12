@@ -66,7 +66,7 @@ class WebRoleTests {
 
 	@Test
 	void seedsTheDefaultTagSetOnItsOwn() {
-		// 이 컨텍스트는 새 컨테이너의 빈 DB 로 뜬다 — 화면 역할만 켠 프로세스도 기동 때 첫 버전을 적재한다(tag-R2)
+		// 이 컨텍스트는 새로 만든 빈 데이터베이스로 뜬다 — 화면 역할만 켠 프로세스도 기동 때 첫 버전을 적재한다(tag-R2)
 		assertThat(this.context.getBean(TagSetDirectory.class).activeTagSet().number()).isEqualTo(1);
 	}
 

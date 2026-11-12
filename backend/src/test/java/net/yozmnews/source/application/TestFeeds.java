@@ -81,7 +81,7 @@ final class TestFeeds {
 		assertThat(this.operations.enableFeed(feed)).isInstanceOf(FeedActivation.Activated.class);
 		this.server.removeStub(preview);
 		this.server.removeServeEventsMatching(getRequestedFor(urlEqualTo(path)).build());
-		this.jdbc.sql("delete from source_fetch_slots where source_id = :source").param("source", source.value()).update();
+		new RegistryRows(this.jdbc).clearFetchSlot(source.value());
 	}
 
 	int requests(String path) {
