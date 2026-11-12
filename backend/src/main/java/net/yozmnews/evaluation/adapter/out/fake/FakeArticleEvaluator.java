@@ -5,6 +5,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -18,6 +19,7 @@ import net.yozmnews.evaluation.AskedTag;
 import net.yozmnews.evaluation.EvaluatorFailureKind;
 import net.yozmnews.evaluation.FormatOption;
 import net.yozmnews.evaluation.ImportanceLevel;
+import net.yozmnews.evaluation.RelationAnswer;
 import net.yozmnews.evaluation.TagQuestions;
 import net.yozmnews.evaluation.TopicCategory;
 import net.yozmnews.evaluation.domain.evaluator.ArticleEvaluator;
@@ -29,7 +31,13 @@ import net.yozmnews.evaluation.domain.evaluator.EvaluationResult;
 import net.yozmnews.evaluation.domain.evaluator.FeedContext;
 import net.yozmnews.evaluation.domain.evaluator.Membership;
 import net.yozmnews.evaluation.domain.evaluator.MembershipInput;
+import net.yozmnews.evaluation.domain.evaluator.FlowText;
+import net.yozmnews.evaluation.domain.evaluator.HappeningText;
 import net.yozmnews.evaluation.domain.evaluator.MembershipResult;
+import net.yozmnews.evaluation.domain.evaluator.Relation;
+import net.yozmnews.evaluation.domain.evaluator.RelationInput;
+import net.yozmnews.evaluation.domain.evaluator.RelationResult;
+import net.yozmnews.evaluation.domain.evaluator.RelationWording;
 import net.yozmnews.evaluation.domain.evaluator.RereadFailure;
 import net.yozmnews.evaluation.domain.evaluator.RereadResult;
 import org.jspecify.annotations.Nullable;
@@ -66,6 +74,16 @@ import tools.jackson.databind.json.JsonMapper;
  * ({@value #MEMBERSHIP_FLOOR} · {@value #MEMBERSHIP_SPAN}). A 가 비면 {@value #MEMBERSHIP_FLOOR} 다</li>
  * <li>판정 입력 토큰 — 제목 · 요약과 후보마다 질문 문장의 코드 포인트 합을 2로 나눠 올린 값</li>
  * <li>판정 원본 응답 — 평가기 이름 · 버전과 사건 ID 순의 확률({@code events})을 담은 JSON</li>
+ * <li>관계 판정 — 흐름의 조각은 그 흐름 서술 제목들의 조각 합집합이다. 두 흐름의 조각 집합 A · B 의 겹침은
+ * {@code |A ∩ B| / min(|A|, |B|)} 이다(한쪽이 비면 0). 겹침이 0 이면 해당 없음이 {@value #RELATION_NONE} 이고 나머지 넷이 그
+ * 나머지를 똑같이 나눈다. 겹침이 있으면 서술 사건이 적은 흐름이 많은 흐름의 부분이라는 답(같으면 second 가 first 의 부분)이
+ * {@code RELATION_FLOOR + RELATION_SPAN * 겹침}({@value #RELATION_FLOOR} · {@value #RELATION_SPAN})이고 나머지 넷이 그 나머지를
+ * 똑같이 나눈다</li>
+ * <li>한 사안 확률 — 서술 제목이 하나면 {@value #ONE_MATTER_SINGLE}. 둘 이상이면 그 흐름의 다른 서술 제목과 조각을 하나라도 함께 가진
+ * 제목의 비율 r 로 {@code ONE_MATTER_FLOOR + ONE_MATTER_SPAN * r}({@value #ONE_MATTER_FLOOR} · {@value #ONE_MATTER_SPAN})</li>
+ * <li>관계 판정 입력 토큰 — state 와 관계 질문 · 선택지 다섯 · 한 사안 질문 둘의 코드 포인트 합을 2로 나눠 올린 값</li>
+ * <li>관계 판정 원본 응답 — 평가기 이름 · 버전과 답 이름 순의 확률({@code relation}), 두 한 사안 확률({@code oneMatter})을 담은
+ * JSON</li>
  * </ul>
  * 넘긴 질문 묶음은 검증된 체계에서 왔다 — 주제 · 중분류 · 지역이 하나 이상, 형식 선택지가 둘 이상이다.
  */
@@ -92,6 +110,10 @@ public final class FakeArticleEvaluator implements ArticleEvaluator {
 
 	private static final String RAW_EVENTS = "events";
 
+	private static final String RAW_RELATION = "relation";
+
+	private static final String RAW_ONE_MATTER = "oneMatter";
+
 	/** 이름이 일치한 태그의 확률 */
 	static final double NAME_MATCH = 0.9;
 
@@ -115,6 +137,24 @@ public final class FakeArticleEvaluator implements ArticleEvaluator {
 
 	/** 사건 소속 판정에서 조각이 모두 겹칠 때 더하는 확률 */
 	static final double MEMBERSHIP_SPAN = 0.9;
+
+	/** 관계 판정에서 조각 겹침이 없을 때 해당 없음의 확률 */
+	static final double RELATION_NONE = 0.9;
+
+	/** 관계 판정에서 조각이 겹칠 때 고른 답의 바닥 확률 */
+	static final double RELATION_FLOOR = 0.5;
+
+	/** 관계 판정에서 조각이 모두 겹칠 때 고른 답에 더하는 확률 */
+	static final double RELATION_SPAN = 0.4;
+
+	/** 서술 제목이 하나인 흐름의 한 사안 확률 */
+	static final double ONE_MATTER_SINGLE = 0.9;
+
+	/** 서술 제목끼리 겹침이 없는 흐름의 한 사안 확률 */
+	static final double ONE_MATTER_FLOOR = 0.1;
+
+	/** 서술 제목이 모두 다른 제목과 겹칠 때 더하는 한 사안 확률 */
+	static final double ONE_MATTER_SPAN = 0.8;
 
 	/** 실패 표지에 따른 실패의 문구 */
 	static final String FAILURE_MESSAGE = "Fake 평가기 표지에 따른 실패";
@@ -189,6 +229,82 @@ public final class FakeArticleEvaluator implements ArticleEvaluator {
 		raw.put(RAW_MODEL_VERSION, MODEL_VERSION);
 		raw.put(RAW_EVENTS, new TreeMap<>(probabilities));
 		return new Membership(probabilities, NAME, MODEL_VERSION, tokens(texts), JSON.writeValueAsString(raw));
+	}
+
+	/** 두 흐름 서술 제목의 조각 겹침으로 판정한다 — 실패 표지는 first 의 첫 서술 제목에서 본다 */
+	@Override
+	public RelationResult judgeRelation(RelationInput input) {
+		Objects.requireNonNull(input, "input");
+		EvaluationFailure failure = failure(input.first().described().getFirst().title());
+		if (failure != null) {
+			return failure;
+		}
+		Map<RelationAnswer, Double> probabilities = relation(input.first(), input.second());
+		double firstOneMatter = oneMatter(input.first());
+		double secondOneMatter = oneMatter(input.second());
+		List<String> texts = new ArrayList<>();
+		texts.add(input.wording().state(input.first(), input.second()));
+		texts.add(input.wording().question());
+		texts.addAll(input.wording().options().values());
+		texts.add(input.wording().oneMatterQuestion(RelationWording.FIRST_NAME));
+		texts.add(input.wording().oneMatterQuestion(RelationWording.SECOND_NAME));
+		Map<String, Object> raw = new LinkedHashMap<>();
+		raw.put(RAW_EVALUATOR, NAME);
+		raw.put(RAW_MODEL_VERSION, MODEL_VERSION);
+		Map<String, Double> byName = new TreeMap<>();
+		probabilities.forEach((answer, probability) -> byName.put(answer.name(), probability));
+		raw.put(RAW_RELATION, byName);
+		raw.put(RAW_ONE_MATTER, List.of(firstOneMatter, secondOneMatter));
+		return new Relation(probabilities, firstOneMatter, secondOneMatter, NAME, MODEL_VERSION, tokens(texts),
+				JSON.writeValueAsString(raw));
+	}
+
+	/** 답 다섯의 확률 — 겹침이 없으면 해당 없음, 있으면 서술 사건이 적은 흐름이 많은 흐름의 부분 */
+	private static Map<RelationAnswer, Double> relation(FlowText first, FlowText second) {
+		Set<String> a = flowPieces(first);
+		Set<String> b = flowPieces(second);
+		long shared = a.stream().filter(b::contains).count();
+		RelationAnswer chosen;
+		double probability;
+		if (shared == 0) {
+			chosen = RelationAnswer.NONE;
+			probability = RELATION_NONE;
+		}
+		else {
+			chosen = (first.described().size() < second.described().size()) ? RelationAnswer.FIRST_PART_OF_SECOND
+					: RelationAnswer.SECOND_PART_OF_FIRST;
+			probability = RELATION_FLOOR + RELATION_SPAN * shared / Math.min(a.size(), b.size());
+		}
+		Map<RelationAnswer, Double> probabilities = new EnumMap<>(RelationAnswer.class);
+		RelationAnswer[] answers = RelationAnswer.values();
+		for (RelationAnswer answer : answers) {
+			probabilities.put(answer, (answer == chosen) ? probability : (1 - probability) / (answers.length - 1));
+		}
+		return probabilities;
+	}
+
+	/** 그 흐름이 한 사안일 확률 — 다른 서술 제목과 조각을 함께 가진 제목의 비율로 */
+	private static double oneMatter(FlowText flow) {
+		List<Set<String>> titles = flow.described().stream().map(HappeningText::title).map(FakeArticleEvaluator::pieces).toList();
+		if (titles.size() == 1) {
+			return ONE_MATTER_SINGLE;
+		}
+		long linked = 0;
+		for (int i = 0; i < titles.size(); i++) {
+			for (int j = 0; j < titles.size(); j++) {
+				if (i != j && titles.get(i).stream().anyMatch(titles.get(j)::contains)) {
+					linked++;
+					break;
+				}
+			}
+		}
+		return ONE_MATTER_FLOOR + ONE_MATTER_SPAN * linked / titles.size();
+	}
+
+	private static Set<String> flowPieces(FlowText flow) {
+		Set<String> pieces = new HashSet<>();
+		flow.described().forEach(happening -> pieces.addAll(pieces(happening.title())));
+		return pieces;
 	}
 
 	/** 제목의 첫 실패 표지(갈래 선언 순서)에 따른 실패 — 없으면 null */

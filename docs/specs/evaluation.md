@@ -634,6 +634,9 @@ public record HappeningText(Instant at, String title, @Nullable String summary) 
 
 public record RelationWording(String version, String question, Map<RelationAnswer, String> options, String oneMatter) {
     public static final RelationWording CURRENT;
+    public static final String FLOW_NAME = "{flow}";
+    public static final String FIRST_NAME = "A";
+    public static final String SECOND_NAME = "B";
     public String state(FlowText first, FlowText second);
     public String oneMatterQuestion(String flowName);
 }
@@ -674,7 +677,7 @@ public record Relation(Map<RelationAnswer, Double> probabilities, double firstOn
 | `RelationInput.first` · `second` | 두 흐름의 서술 — first 가 요청의 A, second 가 B | 흐름마다 서술이 하나 이상이다 |
 | `FlowText.happenings` · `firstAt` · `lastAt` | 흐름의 사건 수 · 첫 · 마지막 기사 시각 | `FlowDescriptor` 의 같은 값과 같다 |
 | `HappeningText.title` · `summary` | 서술 사건의 대표 기사 제목 · 요약문(싣지 않으면 null) | 제목은 공백뿐이 아니고 `CandidateEvent.MAX_TITLE_CODE_POINTS` 코드 포인트 이하, 요약문은 공백뿐이 아니고 `MAX_SUMMARY_CODE_POINTS`(160) 코드 포인트 이하. 상한을 모르는 값은 `limited` 로 만든다 |
-| `RelationWording` | 문구 판 · 관계 질문 · 선택지 다섯의 문장 · 한 사안 질문의 틀. `state` 는 두 흐름의 서술, `oneMatterQuestion` 은 흐름 이름(`A` · `B`)을 넣은 질문 문장 | 판 · 문장은 공백뿐이 아니고 선택지는 답 다섯 모두다 |
+| `RelationWording` | 문구 판 · 관계 질문 · 선택지 다섯의 문장 · 한 사안 질문의 틀. `state` 는 두 흐름의 서술, `oneMatterQuestion` 은 한 사안 질문의 틀에서 `FLOW_NAME` 자리에 흐름 이름(`FIRST_NAME` · `SECOND_NAME` — 요청에서 first · second 를 부르는 이름)을 넣은 질문 문장 | 판 · 문장은 공백뿐이 아니고 선택지는 답 다섯 모두이며 한 사안 질문의 틀에 `FLOW_NAME` 자리가 있다 |
 | `Relation.probabilities` | 답 → 확률 | 0 이상 1 이하의 유한값 |
 | `Relation.firstOneMatter` · `secondOneMatter` | 흐름마다 한 사안일 확률 | 0 이상 1 이하의 유한값 |
 

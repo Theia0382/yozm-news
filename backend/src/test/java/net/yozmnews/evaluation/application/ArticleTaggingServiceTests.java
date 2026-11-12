@@ -35,6 +35,8 @@ import net.yozmnews.evaluation.domain.evaluator.EvaluationResult;
 import net.yozmnews.evaluation.domain.evaluator.FeedContext;
 import net.yozmnews.evaluation.domain.evaluator.MembershipInput;
 import net.yozmnews.evaluation.domain.evaluator.MembershipResult;
+import net.yozmnews.evaluation.domain.evaluator.RelationInput;
+import net.yozmnews.evaluation.domain.evaluator.RelationResult;
 import net.yozmnews.evaluation.domain.evaluator.RereadFailure;
 import net.yozmnews.evaluation.domain.evaluator.RereadResult;
 import net.yozmnews.evaluation.domain.tagging.TagJudgementRecord;
@@ -383,6 +385,11 @@ class ArticleTaggingServiceTests {
 		@Override
 		public MembershipResult judgeMembership(MembershipInput input) {
 			throw new AssertionError("사건 소속 판정을 부르지 않는다");
+		}
+
+		@Override
+		public RelationResult judgeRelation(RelationInput input) {
+			throw new AssertionError("관계 판정을 부르지 않는다");
 		}
 
 	}

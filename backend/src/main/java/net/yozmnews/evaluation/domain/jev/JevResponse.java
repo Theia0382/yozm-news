@@ -8,6 +8,7 @@ import net.yozmnews.evaluation.AskedTag;
 import net.yozmnews.evaluation.EvaluatorFailureKind;
 import net.yozmnews.evaluation.FormatOption;
 import net.yozmnews.evaluation.ImportanceLevel;
+import net.yozmnews.evaluation.RelationAnswer;
 import net.yozmnews.evaluation.TagQuestions;
 import net.yozmnews.evaluation.TopicCategory;
 import net.yozmnews.evaluation.domain.evaluator.CandidateEvent;
@@ -17,6 +18,8 @@ import net.yozmnews.evaluation.domain.evaluator.EvaluationResult;
 import net.yozmnews.evaluation.domain.evaluator.Membership;
 import net.yozmnews.evaluation.domain.evaluator.MembershipInput;
 import net.yozmnews.evaluation.domain.evaluator.MembershipResult;
+import net.yozmnews.evaluation.domain.evaluator.Relation;
+import net.yozmnews.evaluation.domain.evaluator.RelationResult;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
@@ -25,7 +28,8 @@ import tools.jackson.databind.json.JsonMapper;
 /**
  * Jev 의 200 응답을 포트 결과로 옮긴다 — docs/specs/evaluation.md §4.
  * <p>
- * 답은 {@link JevRequest} 의 질문 이름으로 읽는다 — 평가는 넘긴 질문 묶음, 사건 소속 판정은 물은 후보 사건의 질문이다. 중요도는 수준
+ * 답은 {@link JevRequest} 의 질문 이름으로 읽는다 — 평가는 넘긴 질문 묶음, 사건 소속 판정은 물은 후보 사건의 질문, 관계 판정은 관계와
+ * 흐름마다 한 사안인가의 질문이다. 중요도는 수준
  * 위치({@code "0"} 부터)를 질문 묶음의 수준 순서로 되찾는다. 묻지 않은 여분의 답은 읽지 않는다 — 원본 응답째 저장된다. 응답의 모양은 기사와
  * 무관하므로 읽을 수 없으면 평가기 사용 불가다.
  */
@@ -71,6 +75,28 @@ public final class JevResponse {
 		}
 	}
 
+	/**
+	 * @return 관계 질문의 선택지 다섯과 두 흐름의 한 사안 질문에 0 ~ 1 의 유한 확률이 있으면 {@link Relation}, 아니면 평가기 사용 불가
+	 * 실패 — 문구는 첫 문제 하나(질문 이름만)와 요청 ID
+	 */
+	public static RelationResult readRelation(String body, @Nullable String requestId) {
+		try {
+			Envelope envelope = envelope(body);
+			JsonNode relation = probabilities(envelope.answers(), JevRequest.RELATION, "choice");
+			Map<RelationAnswer, Double> probabilities = new LinkedHashMap<>();
+			for (RelationAnswer answer : JevRequest.RELATION_OPTIONS) {
+				String key = JevRequest.relationOption(answer);
+				probabilities.put(answer, probability(relation.get(key), JevRequest.RELATION + "." + key));
+			}
+			return new Relation(probabilities, yes(envelope.answers(), JevRequest.FIRST_ONE_MATTER),
+					yes(envelope.answers(), JevRequest.SECOND_ONE_MATTER), EVALUATOR, envelope.model(),
+					envelope.inputTokens(), body);
+		}
+		catch (Unreadable ex) {
+			return unavailable(ex, requestId);
+		}
+	}
+
 	private static EvaluationFailure unavailable(Unreadable ex, @Nullable String requestId) {
 		return new EvaluationFailure(EvaluatorFailureKind.EVALUATOR_UNAVAILABLE,
 				JevErrors.clean(JevErrors.withRequestId("Jev 응답을 읽을 수 없다 — " + ex.getMessage(), requestId),
@@ -106,7 +132,7 @@ public final class JevResponse {
 				envelope.inputTokens(), body);
 	}
 
-	/** 응답 머리 — 모델 · 입력 토큰 · 답 묶음을 읽는다. 평가 · 판정 읽기가 함께 쓰는 정본 */
+	/** 응답 머리 — 모델 · 입력 토큰 · 답 묶음을 읽는다. 세 판정의 읽기가 함께 쓰는 정본 */
 	private static Envelope envelope(String body) {
 		JsonNode root;
 		try {
