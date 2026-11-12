@@ -323,7 +323,7 @@ sequenceDiagram
 | 설정 | 바꾸는 규칙 |
 |---|---|
 | `yozmnews.storyline-linking.window` | 시간 창(`Duration` — 예 `14d`), 기본 14일(storyline-R8 · R9) |
-| `yozmnews.storyline-linking.threshold` | 기준 점수, 기본 0.85(storyline-R8 ~ R12) |
+| `yozmnews.storyline-linking.threshold` | 기준 점수, 기본 0.84(storyline-R8 ~ R12) |
 | `yozmnews.storyline-state.quiet-after` | 잠잠 기간(`Duration`), 기본 7일(storyline-R16) |
 | `yozmnews.storyline-state.ended-after` | 끝남 기간(`Duration`), 기본 30일(storyline-R16) |
 

@@ -98,7 +98,7 @@
 | 변수 | 필수 | 쓰는 곳 | 값 예시 | 바꾸는 것 |
 |---|---|---|---|---|
 | `YOZMNEWS_STORYLINE_LINKING_WINDOW` | 아니오 | `app` → `yozmnews.storyline-linking.window` | `21d` | 시간 창 — 판정할 사건의 첫 · 마지막 기사 시각에서 이만큼 떨어진 스토리라인 · 사건까지 견준다. 기본 14일 |
-| `YOZMNEWS_STORYLINE_LINKING_THRESHOLD` | 아니오 | `app` → `yozmnews.storyline-linking.threshold` | `0.86` | 기준 점수 — 이 이상이어야 스토리라인에 붙이거나 짝으로 새 스토리라인을 연다. 기본 0.85 |
+| `YOZMNEWS_STORYLINE_LINKING_THRESHOLD` | 아니오 | `app` → `yozmnews.storyline-linking.threshold` | `0.86` | 기준 점수 — 이 이상이어야 스토리라인에 붙이거나 짝으로 새 스토리라인을 연다. 기본 0.84 |
 
 - 기본값은 측정 전 목표다. 기준 점수의 기본값은 기본 임베딩 모델에 맞춰 평가 세트에서 고른 값이다. 값의 뜻과 규칙은 [storyline Spec §5](../specs/storyline.md#잇기-규칙)에 있다
 - 기준 점수는 작은 차이에 민감하다 — 점수의 대부분이 사건 중심의 코사인이고, 기본 임베딩 모델에서는 코사인이 좁은 범위에 몰려 있다. 값을 내리면 서로 다른 사안이 큰 스토리라인으로 뭉치고, 올리면 이어져야 할 사건이 소속 없이 남는다. 임베딩 모델을 바꾸면 값을 다시 정한다
