@@ -160,3 +160,14 @@
 - [ADR-0016](../adr/0016-containerized-checks.md) — 검사 실행 환경(컨테이너 · CI 와 로컬의 공용 정의)
 - [ADR-0026](../adr/0026-event-clustering-with-local-embeddings-and-jev.md) — 사건 묶기 평가 세트(⑪)
 - [ADR-0110](../adr/0110-storyline-evaluation-labels-system-events-of-a-fixed-dump-and-measures-overlapping-clusters-from-random-seed-events.md) — 스토리라인 평가 세트(⑪)
+- [ADR-0125](../adr/0125-screen-api-handlers-need-a-session-unless-marked-public-and-take-the-user-only-as-a-session-filled-argument.md) — 사용자 격리 시험의 등록 가드(§13)
+
+---
+
+## 13. 사용자 격리 시험
+
+사용자 A 의 세션으로 사용자 B 의 데이터에 닿는 경로가 없음을 증명하는 시험이다([security.md "인가와 데이터 격리"](../security.md#인가와-데이터-격리)).
+
+- **등록이 의무다.** 운영자 경로 밖의 화면용 API 처리기(`/api/**`)는 공개 표시(`@PublicApi` — 이유 필수)가 있거나, 메서드 · 경로를 그 처리기의 격리 시험 클래스와 함께 `UserScopedEndpoints` 에 등록한다 — 둘 다 아니거나 둘 다면 실패한다. 사용자 데이터를 다루는 처리기를 더하는 작업이 같은 변경에 격리 시험과 등록을 더한다
+- **등록 가드** — `UserScopeTests`(⑤ · ④)가 앱의 처리기 매핑을 열거해 위 규칙과 낡은 등록(처리기가 없는 등록)을 확인한다. 처리기가 사용자 ID 를 요청(경로 · 질의 · 본문 · 헤더 · 쿠키)에서 받는지도 확인한다 — 사용자는 세션에서 채우는 인자 `UserId` 로만 받는다([user Spec](../specs/user.md#화면용-api-의-공개와-세션-사용자) user-R6). 열거한 처리기 수의 하한을 먼저 단언해 빈 열거가 통과하지 못하게 한다(§6)
+- **격리 시험의 꼴** — 실제 세션(로그인 API 로 만든 두 사용자 A · B — 시험 도우미 `SignedInUsers`)으로 A 가 만든 데이터를 B 의 세션으로 읽고 · 바꾸고 · 지우는 요청이 실패하거나 B 의 데이터만 돌려주는지 본다. 세션 없이 부르면 401 인지도 함께 본다

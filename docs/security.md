@@ -20,21 +20,24 @@ v1은 **자체 로그인(이메일·비밀번호)** 하나를 지원한다 ([ADR
 
 ### 공통
 
-- 세션 쿠키: `HttpOnly`, `Secure`, `SameSite=Lax`. 세션은 Spring Session JDBC로 DB에 저장한다.
+- 세션 쿠키: `HttpOnly`, `Secure`, `SameSite=Lax`. 세션은 Spring Session JDBC로 DB에 저장하고, 세션에는 사용자 ID 만 담는다 — 역할 · 상태는 요청마다 계정에서 읽어, 정지 · 탈퇴 · 역할 변경이 다음 요청부터 적용된다([ADR-0126](adr/0126-user-paths-authenticate-with-a-jdbc-session-holding-only-the-user-id-and-cookie-csrf-reading-the-account-per-request.md)).
+- 세션 · CSRF 쿠키의 `Secure` 는 언제나 단다. 앞단(Cloudflare Tunnel 또는 운영자의 리버스 프록시)이 TLS 를 맡는다는 전제라, TLS 없이 HTTP 로 연 인스턴스에서는 로그인할 수 없다(브라우저가 `localhost` 만 예외로 둔다 — [ADR-0128](adr/0128-session-and-csrf-cookies-are-always-secure-assuming-tls-in-front.md)).
+- 세션은 마지막 요청 뒤 비활성 기간이 지나면 끝나고 절대 상한은 없다. 로그인 때 "로그인 유지"를 고르면 7일 · 지속 쿠키, 고르지 않으면 2시간 · 브라우저 세션 쿠키다([ADR-0127](adr/0127-sessions-idle-out-after-seven-days-without-an-absolute-limit-and-without-keep-signed-in-use-a-browser-cookie-and-two-hours.md)).
 - 로그인에 성공하면 세션 ID를 새로 발급한다(세션 고정 방지).
-- CSRF: Spring Security의 쿠키 기반 CSRF 토큰을 SPA가 헤더로 돌려보낸다.
+- CSRF: Spring Security의 쿠키 기반 CSRF 토큰을 SPA가 헤더로 돌려보낸다. 로그인 · 로그아웃 요청에도 건다.
+- 세션 · 쿠키 · CSRF 의 규칙은 [user Spec "세션"](specs/user.md#세션)에 있다.
 
 ### 자체 로그인
 
 | 항목 | 정책 |
 |---|---|
-| 비밀번호 저장 | Argon2id 해시. 파라미터는 서버 사양에 맞춰 로그인 1회가 수백 ms 이내가 되도록 조정하고, 파라미터를 해시 문자열에 함께 저장한다 |
-| 비밀번호 규칙 | 최소 10자, 최대 128자. 문자 종류 강제 규칙은 두지 않는다(NIST SP 800-63B 방향). 흔한 비밀번호 목록과 대조한다 |
+| 비밀번호 저장 | Argon2id 해시. 파라미터는 서버 사양에 맞춰 로그인 1회가 수백 ms 이내가 되도록 조정하고, 파라미터를 해시 문자열에 함께 저장한다. 값은 [user Spec](specs/user.md#계정과-자격) user-R15 |
+| 비밀번호 규칙 | 최소 8자, 최대 128자(NFKC 정규화 뒤 코드 포인트). 문자 종류 강제 규칙은 두지 않고 흔한 비밀번호 목록과 대조하지 않는다([ADR-0129](adr/0129-passwords-are-free-form-from-eight-to-128-code-points-without-a-common-password-list.md) · [user Spec](specs/user.md#계정과-자격) user-R14) |
 | 이메일 | 로그인 식별자로만 쓰고 인증하지 않는다. 신원 근거로 쓰지 않는다 |
 | 복구 코드 | 가입 직후(초기 비밀번호로 만든 계정은 첫 로그인에서 비밀번호를 바꾼 직후) 한 번 보여주는 무작위 코드(128비트 이상). 해시로만 저장. 복구 코드로 비밀번호를 재설정하면 기존 코드는 폐기하고 새 코드를 보여주며, 다른 세션을 모두 끊는다. 설정 화면에서 재발급할 수 있다(현재 비밀번호 확인 필요) |
 | 계정 복구 | 복구 코드로만 가능하다. 복구 코드가 없으면 복구할 수 없음을 가입 화면(초기 비밀번호로 만든 계정은 첫 로그인 화면)에서 안내한다 |
 | 계정 존재 노출 방지 | 로그인 실패와 복구 코드 실패에 같은 응답을 준다. 가입(공개 가입 · 초대 링크로 가입) 시 이메일 중복은 메일 없이는 숨길 수 없으므로 "가입할 수 없는 이메일"이라는 일반 문구를 쓰고, 가입 요청 제한을 강하게 건다 |
-| 무차별 대입 방어 | 계정별 연속 실패 시 지연을 점점 늘린다(잠금이 아니라 지연). IP별 요청 제한, 로그인 · 복구 코드 사용과 공개 가입에 봇 차단(Turnstile 등 — 교체 · 끄기 가능, [ADR-0012](adr/0012-swappable-external-dependencies.md)) |
+| 무차별 대입 방어 | 연속 실패 시 지연을 점점 늘린다(잠금이 아니라 지연). 실패는 제출된 이메일마다 세어, 계정이 없는 이메일도 같은 기록 · 같은 지연을 받는다 — 지연 중에는 비밀번호를 대조하지 않고 남은 시간을 알린다([ADR-0130](adr/0130-sign-in-failure-delays-count-per-digest-of-the-submitted-normalized-email-regardless-of-account.md) · [user Spec](specs/user.md#로그인) user-R19). IP별 요청 제한, 로그인 · 복구 코드 사용과 공개 가입에 봇 차단(Turnstile 등 — 교체 · 끄기 가능, [ADR-0012](adr/0012-swappable-external-dependencies.md)) |
 | 초기 비밀번호 | 운영자가 만든 계정과 운영 설정으로 만든 첫 운영자 계정(초기 비밀번호로 만든 계정)은 첫 로그인 때 비밀번호를 바꿔야 한다. 바꾸기 전에는 비밀번호 변경 화면만 쓸 수 있다 |
 | 비밀번호 변경 | 현재 비밀번호 확인 필수. 변경 시 다른 세션 종료, 화면 내 알림 기록 |
 | 2단계 인증 | v1 범위 밖. 이후 TOTP 추가 검토 |
@@ -42,11 +45,12 @@ v1은 **자체 로그인(이메일·비밀번호)** 하나를 지원한다 ([ADR
 ## 인가와 데이터 격리
 
 - 화면 · API 요청의 사용자 데이터 조회는 세션의 `userId`로 범위를 제한한다. 요청 파라미터로 받은 사용자 ID를 신뢰하지 않는다.
-- 사용자 범위가 없는 조회는 백그라운드 작업(다이제스트 일정 · 보존 정리 등) 전용 조회 모델에만 두고, 화면 · API 경로에서는 쓰지 않는다. 사용자 A로 사용자 B의 다이제스트·키·피드백·스토리라인 구독·관심사 히스토리·변화 리포트에 접근하는 테스트를 기본 테스트 세트에 포함한다.
+- 화면용 API 처리기는 사용자를 세션에서 채우는 인자로만 받고, 공개 표시가 없는 처리기는 세션을 요구한다([user Spec](specs/user.md#화면용-api-의-공개와-세션-사용자) user-R5 · user-R6).
+- 사용자 범위가 없는 조회는 백그라운드 작업(다이제스트 일정 · 보존 정리 등) 전용 조회 모델에만 두고, 화면 · API 경로에서는 쓰지 않는다. 사용자 A로 사용자 B의 다이제스트·키·피드백·스토리라인 구독·관심사 히스토리·변화 리포트에 접근하는 테스트를 기본 테스트 세트에 포함한다 — 운영자 경로 밖의 처리기는 공개 표시가 있거나 격리 시험에 등록되어야 하고, 등록 가드가 앱의 처리기를 열거해 확인한다([test-strategy](qa/test-strategy.md#13-사용자-격리-시험)).
 - 운영자 기능(`/api/admin/**`)은 `ADMIN` 역할만 접근할 수 있다. 운영자도 사용자의 LLM 키 평문은 볼 수 없다.
 - 초대 링크 발급 · 취소와 계정 생성은 `ADMIN` 만 할 수 있다.
-- 계정 · 역할 인증 전까지는 운영자 토큰(서버 설정 하나)이 `ADMIN` 역할을 준다 — 화면이 `Authorization: Bearer` 로 보내고, 토큰을 설정하지 않은 인스턴스는 운영자 기능이 닫힌다. 토큰 형식 · 대조 · 거부 응답의 규칙은 [platform Spec "운영자 접근 통제"](specs/platform.md#운영자-접근-통제)에 있다([ADR-0043](adr/0043-admin-functions-guarded-by-env-bearer-token-until-account-roles.md)).
-- 계정 · 역할 인증을 들이면 운영자 경로와 `ADMIN` 역할 판정은 그대로 두고 토큰 인증을 세션 인증으로 바꾼다. 쿠키 세션과 함께 CSRF 토큰(공통 절)을 켠다 — 그 전까지는 브라우저가 자동으로 붙이는 자격이 없어 CSRF 를 쓰지 않는다.
+- 운영자 경로가 계정 세션으로 인증하기 전까지는 운영자 토큰(서버 설정 하나)이 `ADMIN` 역할을 준다 — 화면이 `Authorization: Bearer` 로 보내고, 토큰을 설정하지 않은 인스턴스는 운영자 기능이 닫힌다. 토큰 형식 · 대조 · 거부 응답의 규칙은 [user Spec "운영자 접근 통제"](specs/user.md#운영자-접근-통제)에 있다([ADR-0043](adr/0043-admin-functions-guarded-by-env-bearer-token-until-account-roles.md)).
+- 운영자 경로도 계정 세션으로 인증하게 되면 운영자 경로와 `ADMIN` 역할 판정은 그대로 두고 토큰 인증을 세션 인증으로 바꾸며, 그 경로에도 CSRF 토큰(공통 절)을 켠다. 그 전까지 운영자 경로는 브라우저가 자동으로 붙이는 자격(세션 쿠키)을 읽지 않아 CSRF 를 쓰지 않는다.
 
 ## BYOK 키 보관
 
