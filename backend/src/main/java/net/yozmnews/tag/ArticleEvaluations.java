@@ -20,8 +20,8 @@ public interface ArticleEvaluations {
 	Optional<ArticleEvaluationView> find(ArticleId articleId);
 
 	/**
-	 * 기사들의 중요도 기대값을 읽는다 — 기사마다 버전 번호가 가장 큰 평가의 값({@link #find} 와 같은 평가). 사건 묶기가 큰 사건을
-	 * 판정한다(event-R15).
+	 * 기사들의 중요도 기대값을 읽는다 — 기사마다 버전 번호가 가장 큰 평가의 값({@link #find} 와 같은 평가). 사건 묶기가 기간 집계의
+	 * 중요도 평균을 센다(event-R15).
 	 * @return 기사 ID → 중요도 기대값(1 ~ 5) — 평가하지 않았거나 그 평가의 중요도가 없으면 빠진다(이전 버전의 값을 쓰지 않는다). 빈
 	 *     입력이면 빈 맵
 	 */

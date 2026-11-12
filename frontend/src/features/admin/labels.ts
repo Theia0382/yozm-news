@@ -24,8 +24,9 @@ type MultiTagKind = Schemas["ThresholdPreviewRequest"]["kind"];
 type EventStatus = Schemas["EventRowResponse"]["status"];
 type DecidedBy = Schemas["EventArticleResponse"]["decidedBy"];
 type JudgementUse = Schemas["EventJudgementRowResponse"]["use"];
-type BigEventCriteriaActor =
-  Schemas["BigEventCriteriaHistoryResponse"]["actor"];
+type BigStorylineCriteriaActor =
+  Schemas["BigStorylineCriteriaHistoryResponse"]["actor"];
+type StorylineState = Schemas["BigStorylineRowResponse"]["state"];
 
 export const refusalLabels = {
   PROFILE_UNAVAILABLE:
@@ -193,8 +194,15 @@ export const judgementUseLabels = {
   UNUSED: "반영 안 됨",
 } as const satisfies Record<JudgementUse, string>;
 
-/** 큰 사건 기준을 적은 쪽 — 시스템은 처음 값을 적재한 것이다 */
-export const bigEventCriteriaActorLabels = {
+/** 큰 판정 기준을 적은 쪽 — 시스템은 처음 값을 적재한 것이다 */
+export const bigStorylineCriteriaActorLabels = {
   OPERATOR: "운영자",
   SYSTEM: "처음 값",
-} as const satisfies Record<BigEventCriteriaActor, string>;
+} as const satisfies Record<BigStorylineCriteriaActor, string>;
+
+/** 스토리라인의 상태 — 마지막 기사 뒤 지난 시간으로 조회할 때 정해진다 */
+export const storylineStateLabels = {
+  ACTIVE: "진행",
+  QUIET: "잠잠",
+  ENDED: "끝남",
+} as const satisfies Record<StorylineState, string>;

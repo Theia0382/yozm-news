@@ -1,16 +1,15 @@
-"""묶음 정확도(B-cubed)와 큰 사건 판정 정밀도.
+"""묶음 정확도(B-cubed)와 비율의 Wilson 구간.
 
-시스템의 판정(배정 · 병합 · 큰 사건)은 운영자 API 가 낸 결과를 받기만 한다 — 판정 규칙은 앱의 event 모듈이 정본이고 이
+시스템의 판정(배정 · 병합)은 운영자 API 가 낸 결과를 받기만 한다 — 판정 규칙은 앱의 event 모듈이 정본이고 이
 모듈은 그 규칙을 계산하지 않는다.
 """
 
 from __future__ import annotations
 
 import math
-from collections import Counter, defaultdict
-from collections.abc import Mapping, Sequence
+from collections import defaultdict
+from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import date
 from typing import Final
 
 WILSON_Z: Final = 1.959963984540054
@@ -72,50 +71,6 @@ def b_cubed(gold: Mapping[int, str], system: Mapping[int, int | None]) -> BCubed
         gold_singletons=sum(1 for members in gold_members.values() if len(members) == 1),
         system_singletons=sum(1 for members in system_members.values() if len(members) == 1),
     )
-
-
-@dataclass(frozen=True)
-class BigVerdict:
-    """시스템이 그 날짜에 큰 사건으로 낸 사건 하나와, 그 사건의 그 날짜 라벨 기사(뺀 기사 제외)의 정답 표지별 수."""
-
-    day: date
-    event_id: int
-    labeled: Mapping[str, int]
-
-
-@dataclass(frozen=True)
-class BigPrecision:
-    """judged 는 시스템 큰 사건 수, unlabeled 는 그 가운데 라벨 기사가 없어 분모에서 뺀 수, tied 는 최다 정답 사건이 둘
-    이상이라 틀림으로 센 수다. 분모가 0 이면 정밀도 · 구간이 없다."""
-
-    judged: int
-    correct: int
-    tied: int
-    unlabeled: int
-    precision: float | None
-    low: float | None
-    high: float | None
-
-
-def big_precision(verdicts: Sequence[BigVerdict], gold_big: set[tuple[str, date]]) -> BigPrecision:
-    """맞음 = 라벨 기사의 최다 정답 사건이 하나이고 그 사건이 그 날짜의 정답 큰 사건이다."""
-    correct = tied = unlabeled = 0
-    for verdict in verdicts:
-        counts = Counter({label: number for label, number in verdict.labeled.items() if number > 0})
-        if not counts:
-            unlabeled += 1
-            continue
-        top = max(counts.values())
-        leaders = [label for label, number in counts.items() if number == top]
-        if len(leaders) > 1:
-            tied += 1
-        elif (leaders[0], verdict.day) in gold_big:
-            correct += 1
-    total = len(verdicts) - unlabeled
-    if total == 0:
-        return BigPrecision(len(verdicts), correct, tied, unlabeled, None, None, None)
-    low, high = wilson(correct, total)
-    return BigPrecision(len(verdicts), correct, tied, unlabeled, correct / total, low, high)
 
 
 def wilson(successes: int, total: int) -> tuple[float, float]:

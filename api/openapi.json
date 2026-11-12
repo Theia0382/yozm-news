@@ -8,7 +8,7 @@
     "url" : "/"
   } ],
   "paths" : {
-    "/api/admin/big-event-criteria" : {
+    "/api/admin/big-storyline-criteria" : {
       "get" : {
         "operationId" : "criteria",
         "responses" : {
@@ -16,7 +16,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/BigEventCriteriaStatusResponse"
+                  "$ref" : "#/components/schemas/BigStorylineCriteriaStatusResponse"
                 }
               }
             },
@@ -43,7 +43,7 @@
             "description" : "운영자 기능이 닫혀 있다"
           }
         },
-        "tags" : [ "admin-big-event-controller" ]
+        "tags" : [ "admin-big-storyline-controller" ]
       },
       "put" : {
         "operationId" : "change",
@@ -51,7 +51,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/BigEventCriteriaChangeRequest"
+                "$ref" : "#/components/schemas/BigStorylineCriteriaChangeRequest"
               }
             }
           },
@@ -62,7 +62,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/BigEventCriteriaChangeResponse"
+                  "$ref" : "#/components/schemas/BigStorylineCriteriaChangeResponse"
                 }
               }
             },
@@ -76,7 +76,7 @@
                 }
               }
             },
-            "description" : "요청 본문의 형식이 틀렸거나 큰 사건 기준이 범위 밖이다"
+            "description" : "요청 본문의 형식이 틀렸거나 큰 판정 기준이 범위 밖이다"
           },
           "401" : {
             "content" : {
@@ -99,17 +99,17 @@
             "description" : "운영자 기능이 닫혀 있다"
           }
         },
-        "tags" : [ "admin-big-event-controller" ]
+        "tags" : [ "admin-big-storyline-controller" ]
       }
     },
-    "/api/admin/big-event-criteria-previews" : {
+    "/api/admin/big-storyline-criteria-previews" : {
       "post" : {
         "operationId" : "preview_1",
         "requestBody" : {
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/BigEventPreviewRequest"
+                "$ref" : "#/components/schemas/BigStorylinePreviewRequest"
               }
             }
           },
@@ -120,7 +120,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/BigEventPreviewResponse"
+                  "$ref" : "#/components/schemas/BigStorylinePreviewResponse"
                 }
               }
             },
@@ -134,7 +134,7 @@
                 }
               }
             },
-            "description" : "요청 본문의 형식이 틀렸거나, 날짜 · 시간대 · 기간 · 큰 사건 기준이 범위 밖이다"
+            "description" : "요청 본문의 형식이 틀렸거나, 날짜 · 시간대 · 기간 · 큰 판정 기준이 범위 밖이다"
           },
           "401" : {
             "content" : {
@@ -157,12 +157,12 @@
             "description" : "운영자 기능이 닫혀 있다"
           }
         },
-        "tags" : [ "admin-big-event-controller" ]
+        "tags" : [ "admin-big-storyline-controller" ]
       }
     },
-    "/api/admin/big-events" : {
+    "/api/admin/big-storylines" : {
       "get" : {
-        "operationId" : "bigEvents",
+        "operationId" : "bigStorylines",
         "parameters" : [ {
           "description" : "시작일(yyyy-MM-dd)",
           "in" : "query",
@@ -193,7 +193,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/BigEventListResponse"
+                  "$ref" : "#/components/schemas/BigStorylineListResponse"
                 }
               }
             },
@@ -230,7 +230,7 @@
             "description" : "운영자 기능이 닫혀 있다"
           }
         },
-        "tags" : [ "admin-big-event-controller" ]
+        "tags" : [ "admin-big-storyline-controller" ]
       }
     },
     "/api/admin/collection-status" : {
@@ -3288,7 +3288,7 @@
         },
         "required" : [ "lower", "probability", "store", "upper", "windowSeconds" ]
       },
-      "BigEventCriteriaChangeRequest" : {
+      "BigStorylineCriteriaChangeRequest" : {
         "type" : "object",
         "properties" : {
           "minImportance" : {
@@ -3301,15 +3301,15 @@
         },
         "required" : [ "minImportance", "minSources" ]
       },
-      "BigEventCriteriaChangeResponse" : {
+      "BigStorylineCriteriaChangeResponse" : {
         "type" : "object",
         "properties" : {
           "current" : {
-            "$ref" : "#/components/schemas/BigEventCriteriaResponse"
+            "$ref" : "#/components/schemas/BigStorylineCriteriaResponse"
           },
           "previous" : {
             "oneOf" : [ {
-              "$ref" : "#/components/schemas/BigEventCriteriaResponse"
+              "$ref" : "#/components/schemas/BigStorylineCriteriaResponse"
             }, {
               "type" : "null"
             } ]
@@ -3321,7 +3321,7 @@
         },
         "required" : [ "current", "previous", "result" ]
       },
-      "BigEventCriteriaHistoryResponse" : {
+      "BigStorylineCriteriaHistoryResponse" : {
         "type" : "object",
         "properties" : {
           "actor" : {
@@ -3333,11 +3333,11 @@
             "format" : "date-time"
           },
           "current" : {
-            "$ref" : "#/components/schemas/BigEventCriteriaResponse"
+            "$ref" : "#/components/schemas/BigStorylineCriteriaResponse"
           },
           "previous" : {
             "oneOf" : [ {
-              "$ref" : "#/components/schemas/BigEventCriteriaResponse"
+              "$ref" : "#/components/schemas/BigStorylineCriteriaResponse"
             }, {
               "type" : "null"
             } ]
@@ -3345,7 +3345,7 @@
         },
         "required" : [ "actor", "changedAt", "current", "previous" ]
       },
-      "BigEventCriteriaResponse" : {
+      "BigStorylineCriteriaResponse" : {
         "type" : "object",
         "properties" : {
           "minImportance" : {
@@ -3358,41 +3358,44 @@
         },
         "required" : [ "minImportance", "minSources" ]
       },
-      "BigEventCriteriaStatusResponse" : {
+      "BigStorylineCriteriaStatusResponse" : {
         "type" : "object",
         "properties" : {
           "changes" : {
             "type" : "array",
             "items" : {
-              "$ref" : "#/components/schemas/BigEventCriteriaHistoryResponse"
+              "$ref" : "#/components/schemas/BigStorylineCriteriaHistoryResponse"
             }
           },
           "current" : {
-            "$ref" : "#/components/schemas/BigEventCriteriaResponse"
+            "$ref" : "#/components/schemas/BigStorylineCriteriaResponse"
           }
         },
         "required" : [ "changes", "current" ]
       },
-      "BigEventListResponse" : {
+      "BigStorylineListResponse" : {
         "type" : "object",
         "properties" : {
           "criteria" : {
-            "$ref" : "#/components/schemas/BigEventCriteriaResponse"
-          },
-          "events" : {
-            "type" : "array",
-            "items" : {
-              "$ref" : "#/components/schemas/BigEventRowResponse"
-            }
+            "$ref" : "#/components/schemas/BigStorylineCriteriaResponse"
           },
           "maxDays" : {
             "type" : "integer",
             "format" : "int32"
+          },
+          "storylines" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/BigStorylineRowResponse"
+            }
+          },
+          "unlinked" : {
+            "$ref" : "#/components/schemas/UnlinkedEventsResponse"
           }
         },
-        "required" : [ "criteria", "events", "maxDays" ]
+        "required" : [ "criteria", "maxDays", "storylines", "unlinked" ]
       },
-      "BigEventPreviewRequest" : {
+      "BigStorylinePreviewRequest" : {
         "type" : "object",
         "properties" : {
           "from" : {
@@ -3414,36 +3417,44 @@
         },
         "required" : [ "from", "minImportance", "minSources", "to", "zone" ]
       },
-      "BigEventPreviewResponse" : {
+      "BigStorylinePreviewResponse" : {
         "type" : "object",
         "properties" : {
           "current" : {
-            "$ref" : "#/components/schemas/BigEventCriteriaResponse"
+            "$ref" : "#/components/schemas/BigStorylineCriteriaResponse"
           },
-          "currentEvents" : {
+          "currentStorylines" : {
             "type" : "array",
             "items" : {
-              "$ref" : "#/components/schemas/BigEventRowResponse"
+              "$ref" : "#/components/schemas/BigStorylineRowResponse"
             }
           },
           "proposed" : {
-            "$ref" : "#/components/schemas/BigEventCriteriaResponse"
+            "$ref" : "#/components/schemas/BigStorylineCriteriaResponse"
           },
-          "proposedEvents" : {
+          "proposedStorylines" : {
             "type" : "array",
             "items" : {
-              "$ref" : "#/components/schemas/BigEventRowResponse"
+              "$ref" : "#/components/schemas/BigStorylineRowResponse"
             }
           }
         },
-        "required" : [ "current", "currentEvents", "proposed", "proposedEvents" ]
+        "required" : [ "current", "currentStorylines", "proposed", "proposedStorylines" ]
       },
-      "BigEventRowResponse" : {
+      "BigStorylineRowResponse" : {
         "type" : "object",
         "properties" : {
-          "articles" : {
+          "articleCount" : {
             "type" : "integer",
             "format" : "int32"
+          },
+          "eventCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "firstArticleAt" : {
+            "type" : "string",
+            "format" : "date-time"
           },
           "id" : {
             "type" : "integer",
@@ -3452,6 +3463,18 @@
           "importance" : {
             "type" : [ "number", "null" ]
           },
+          "lastArticleAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "periodArticles" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "periodSources" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
           "representative" : {
             "oneOf" : [ {
               "$ref" : "#/components/schemas/ArticleSummaryResponse"
@@ -3459,16 +3482,16 @@
               "type" : "null"
             } ]
           },
-          "representativeId" : {
+          "representativeArticleId" : {
             "type" : [ "integer", "null" ],
             "format" : "int64"
           },
-          "sources" : {
-            "type" : "integer",
-            "format" : "int32"
+          "state" : {
+            "type" : "string",
+            "enum" : [ "ACTIVE", "QUIET", "ENDED" ]
           }
         },
-        "required" : [ "articles", "id", "importance", "representative", "representativeId", "sources" ]
+        "required" : [ "articleCount", "eventCount", "firstArticleAt", "id", "importance", "lastArticleAt", "periodArticles", "periodSources", "representative", "representativeArticleId", "state" ]
       },
       "CategoryCoverage" : {
         "type" : "object",
@@ -4246,9 +4269,6 @@
             "type" : "integer",
             "format" : "int32"
           },
-          "big" : {
-            "type" : "boolean"
-          },
           "firstArticleAt" : {
             "type" : "string",
             "format" : "date-time"
@@ -4288,7 +4308,7 @@
             "enum" : [ "OPEN", "CLOSED", "MERGED" ]
           }
         },
-        "required" : [ "articleCount", "big", "firstArticleAt", "id", "importance", "lastArticleAt", "periodArticles", "periodSources", "representative", "representativeId", "status" ]
+        "required" : [ "articleCount", "firstArticleAt", "id", "importance", "lastArticleAt", "periodArticles", "periodSources", "representative", "representativeId", "status" ]
       },
       "FeedCollectionResponse" : {
         "type" : "object",
@@ -5912,6 +5932,20 @@
           }
         },
         "required" : [ "lowConfidence", "tagged", "unclassified" ]
+      },
+      "UnlinkedEventsResponse" : {
+        "type" : "object",
+        "properties" : {
+          "articles" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "events" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        },
+        "required" : [ "articles", "events" ]
       },
       "ValueBucket" : {
         "type" : "object",

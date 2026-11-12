@@ -38,9 +38,6 @@ LABELS = ("article_id,published_at,sources,title,event,note\n"
           "104,2026-11-05T01:00:00Z,JTBC,둘째 사건 기사,b,\n"
           "105,2026-11-05T02:00:00Z,동아,오늘의 주요 뉴스,-,\n")
 LABELS_SHA256 = "b04be93d39d4bef86f0347a17bab1451cd8f730b94f41620ebf73870ed2d6ce0"
-MARKS = "event,day,big,name\na,2026-11-04,1,\nb,2026-11-05,0,\n"
-MARKS_SHA256 = "d1b2d9a1be1d18cddd3139547cd235aa4e42869ab3803e45e28b5f992373ffd6"
-MARKS_NONE = "event,day,big,name\na,2026-11-04,0,\nb,2026-11-05,0,\n"  # 큰 사건 표시가 없는 표본
 SAMPLE = '{"labelRule": 2, "start": "2026-11-04", "end": "2026-11-05", "zone": "Asia/Seoul"}'
 
 SHEET = ("article_id,published_at,sources,title,event,note\n"
@@ -111,15 +108,6 @@ class FakeAdmin:
                  "article": None if ARTICLES[article][2] is None else {"title": ARTICLES[article][2],
                                                                        "sources": ARTICLES[article][1]}}
                 for article in members]})
-        if url.path == "/api/admin/big-events":
-            ids = {"2026-11-04": [10], "2026-11-05": [11]}[query["from"]]
-            return self._send(request, 200, {"criteria": {"minSources": 3, "minImportance": 3.00},
-                                             "events": [{"id": event_id} for event_id in ids]})
-        if url.path == "/api/admin/big-event-criteria-previews":
-            ids = {"2026-11-04": [10, 12], "2026-11-05": []}[query["from"]]
-            return self._send(request, 200, {"proposed": {"minSources": query["minSources"],
-                                                          "minImportance": query["minImportance"]},
-                                             "proposedEvents": [{"id": event_id} for event_id in ids]})
         if url.path == "/api/admin/event-judgements":
             criteria = {"windowSeconds": 259200, "upper": 0.80, "lower": 0.55, "store": 0.40, "probability": 0.50}
             pages = {"2026-11-04": [[(101, "jev-a")]], "2026-11-05": [[(999, "jev-other")]],
@@ -168,7 +156,6 @@ class CliTest(unittest.TestCase):
         self.data.mkdir()
         (self.data / "sample.json").write_text(SAMPLE, encoding="utf-8")
         (self.data / "articles.csv").write_text(labels, encoding="utf-8")
-        (self.data / "events.csv").write_text(MARKS, encoding="utf-8")
 
     def test_sheet_writes_assigned_articles_of_the_period(self):
         code, out, err = self.run_tool("sheet", "--from", "2026-11-04", "--to", "2026-11-05", "--zone", ZONE)
@@ -182,27 +169,24 @@ class CliTest(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn("이미 있다", err)
 
-    def test_events_then_review(self):
+    def test_review(self):
         self.write_fixture()
-        (self.data / "events.csv").unlink()
-        code, out, _ = self.run_tool("events")
-        self.assertEqual(code, 0)
-        self.assertEqual((self.data / "events.csv").read_text(encoding="utf-8"),
-                         "event,day,big,name\na,2026-11-04,0,\nb,2026-11-05,0,\n")
         code, out, _ = self.run_tool("review")
         self.assertEqual(code, 0)
-        self.assertIn("== a · 3건 · 큰 사건 없음", out)
+        self.assertIn("== a · 3건\n", out)
+        self.assertIn("== b · 1건\n", out)
         self.assertIn("첫 사건 기사 하나", out)  # 검토 화면에는 제목이 있다 — 아래 measure 검사의 대조 leg
         self.assertIn("== 뺀 기사 1건", out)
 
     def test_review_sample_includes_ambiguous_excluded_articles(self):
-        self.write_fixture(LABELS.replace("오늘의 주요 뉴스,-,", "오늘의 주요 뉴스,-,? 여러 일을 모은 기사"))
+        self.write_fixture(LABELS.replace("오늘의 주요 뉴스,-,", "오늘의 주요 뉴스,-,? 여러 일을 모은 기사")
+                           .replace("첫 사건 기사 하나,a,", "첫 사건 기사 하나,a,? 갈래가 애매하다"))
         code, out, _ = self.run_tool("review", "--sample", "0", "--seed", "1")
         self.assertEqual(code, 0)
         self.assertIn("씨앗 1", out)
         # 뺀 기사에 단 ? 도 검토 대상이다
         self.assertIn("105 오늘의 주요 뉴스  (? 여러 일을 모은 기사)", out)
-        # 대조 — 큰 사건 표시가 있는 a 는 나오고, 표본 0 · 애매하지 않은 · 큰 사건 아닌 b 는 나오지 않는다
+        # 대조 — 애매한 기사가 든 a 는 나오고, 표본 0 · 애매한 기사가 없는 b 는 나오지 않는다
         self.assertIn("첫 사건 기사 하나", out)
         self.assertNotIn("둘째 사건 기사", out)
 
@@ -213,7 +197,7 @@ class CliTest(unittest.TestCase):
         self.assertEqual(caught.exception.code, 2)
 
     def label_sheet_and_measure(self):
-        """sheet 가 쓴 시트에 라벨을 붙이고(101 ~ 103 은 a, 104 는 b, 나머지는 뺀다) events · measure 까지 돌린다."""
+        """sheet 가 쓴 시트에 라벨을 붙이고(101 ~ 103 은 a, 104 는 b, 나머지는 뺀다) measure 까지 돌린다."""
         code, _, err = self.run_tool("sheet", "--from", "2026-11-04", "--to", "2026-11-05", "--zone", ZONE)
         self.assertEqual((code, err), (0, ""), err)
         path = self.data / "articles.csv"
@@ -223,7 +207,6 @@ class CliTest(unittest.TestCase):
             row[4] = {"101": "a", "102": "a", "103": "a", "104": "b"}.get(row[0], "-")
         with path.open("w", encoding="utf-8", newline="") as handle:
             csv.writer(handle, lineterminator="\n").writerows(rows)
-        self.assertEqual(self.run_tool("events")[0], 0)
         code, _, err = self.run_tool("measure", "--embedding-model", "m")
         self.assertEqual((code, err), (0, ""), err)
         return path.read_text(encoding="utf-8")
@@ -242,19 +225,18 @@ class CliTest(unittest.TestCase):
         code, out, err = self.run_tool("measure", "--embedding-model", "onnx/e5-small", "--note", "app=abc123")
         self.assertEqual((code, err), (0, ""), err)
         record = json.loads((self.data / "results" / "20261107-030000.json").read_text(encoding="utf-8"))
-        self.assertEqual(record["format"], 2)
+        self.assertEqual(record["format"], 3)
         self.assertEqual(record["measuredAt"], "2026-11-07T03:00:00Z")
         self.assertEqual(record["sample"], {"start": "2026-11-04", "end": "2026-11-05", "zone": ZONE, "labelRule": 2})
-        self.assertEqual(record["labels"], {"articlesSha256": LABELS_SHA256, "eventsSha256": MARKS_SHA256})
+        self.assertEqual(record["labels"], {"articlesSha256": LABELS_SHA256})
         self.assertEqual(record["counts"], {
-            "articles": 4, "excluded": 1, "goldEvents": 2, "bigMarks": 1,
+            "articles": 4, "excluded": 1, "goldEvents": 2,
             "bySource": {"JTBC": 1, "SBS": 1, "경향": 1, "동아": 1},
             "byDay": {"2026-11-04": 3, "2026-11-05": 1},
             "unlabeledSystemArticles": 2, "closedSystemEvents": 1})
         self.assertEqual(record["settings"], {
             "assignment": {"windowSeconds": 259200, "upper": 0.8, "lower": 0.55, "store": 0.4, "probability": 0.5},
             "judgementModels": ["jev-a", "jev-b"],
-            "bigCriteria": {"minSources": 3, "minImportance": 3.0, "proposed": False},
             "embeddingModel": "onnx/e5-small", "notes": {"app": "abc123"}})
         bcubed = record["bCubed"]
         self.assertAlmostEqual(bcubed["precision"], 3 / 4, places=12)
@@ -262,58 +244,27 @@ class CliTest(unittest.TestCase):
         self.assertAlmostEqual(bcubed["f1"], 12 / 17, places=12)
         self.assertEqual((bcubed["systemEvents"], bcubed["unassigned"], bcubed["goldSingletons"],
                           bcubed["systemSingletons"]), (2, 0, 1, 0))
-        big = record["big"]
-        self.assertEqual((big["judged"], big["correct"], big["tied"], big["unlabeled"], big["precision"]),
-                         (2, 1, 0, 0, 0.5))
-        self.assertAlmostEqual(big["interval"][0], 0.094531, places=6)
-        self.assertAlmostEqual(big["interval"][1], 0.905469, places=6)
+        # 큰 판정은 재지 않는다 — 기록에 그 칸이 없고, 큰 판정 엔드포인트를 부르지 않는다
+        self.assertEqual(sorted(record), ["bCubed", "counts", "format", "labels", "measuredAt", "sample", "settings"])
+        paths = {request[1] for request in self.fake.requests}
+        self.assertIn("/api/admin/events", paths)
+        self.assertEqual({path for path in paths if "big" in path}, set())
+        self.assertNotIn("큰 ", out)
         # 측정은 기사 텍스트를 내지 않고, 토큰을 출력 · 기록에 싣지 않는다(AC4 · 비밀 값)
         text = out + (self.data / "results" / "20261107-030000.json").read_text(encoding="utf-8")
         for title in TITLES:
             self.assertNotIn(title, text)
         self.assertNotIn(TOKEN, text)
 
-    def test_measure_proposed_big_criteria(self):
+    def test_removed_commands_are_rejected(self):
         self.write_fixture()
-        code, _, err = self.run_tool("measure", "--embedding-model", "onnx/e5-small", "--big-criteria", "2:2.5",
-                                     clock=CLOCK.replace(microsecond=500000))
-        self.assertEqual((code, err), (0, ""), err)
-        # 측정 시각은 초까지 — 기록 파일 이름과 같다
-        record = json.loads((self.data / "results" / "20261107-030000.json").read_text(encoding="utf-8"))
-        self.assertEqual(record["measuredAt"], "2026-11-07T03:00:00Z")
-        self.assertEqual(record["settings"]["bigCriteria"], {"minSources": 2, "minImportance": 2.5, "proposed": True})
-        big = record["big"]
-        # 11-04 의 10(a 2건 — 맞음) · 12(그날 라벨 기사 없음), 11-05 없음
-        self.assertEqual((big["judged"], big["correct"], big["tied"], big["unlabeled"], big["precision"]),
-                         (2, 1, 0, 1, 1.0))
-        previews = [request for request in self.fake.requests if request[1].endswith("previews")]
-        self.assertEqual(len(previews), 2)
-
-    def test_measure_without_big_marks_does_not_measure_big_events(self):
-        self.write_fixture()
-        (self.data / "events.csv").write_text(MARKS_NONE, encoding="utf-8")
-        code, out, err = self.run_tool("measure", "--embedding-model", "onnx/e5-small")
-        self.assertEqual((code, err), (0, ""), err)
-        paths = [request[1] for request in self.fake.requests]
-        # 아래 부정 단언이 빈 요청 목록으로 통과하지 않게 — 묶음은 쟀다
-        self.assertIn("/api/admin/events", paths)
-        self.assertNotIn("/api/admin/big-events", paths)
-        self.assertNotIn("/api/admin/big-event-criteria-previews", paths)
-        record = json.loads((self.data / "results" / "20261107-030000.json").read_text(encoding="utf-8"))
-        self.assertIsNone(record["big"])
-        self.assertIsNone(record["settings"]["bigCriteria"])
-        self.assertEqual(record["counts"]["bigMarks"], 0)
-        self.assertIn("큰 사건 정밀도 — 표본에 큰 사건 표시가 없어 재지 않았다\n", out)
-        self.assertEqual(record["format"], 2)
-
-    def test_big_criteria_without_big_marks_stops(self):
-        self.write_fixture()
-        (self.data / "events.csv").write_text(MARKS_NONE, encoding="utf-8")
-        code, _, err = self.run_tool("measure", "--embedding-model", "onnx/e5-small", "--big-criteria", "2:2.5")
-        self.assertEqual(code, 2)
-        self.assertEqual(err, "멈춤 — 표본에 큰 사건 표시가 없다 — --big-criteria 로 견줄 큰 사건 정답이 없다\n")
-        self.assertFalse((self.data / "results").exists())
-        # 운영자 API 를 부르기 전에 멈춘다
+        for arguments in (("events",), ("measure", "--embedding-model", "m", "--big-criteria", "2:2.5")):
+            with self.assertRaises(SystemExit) as caught, contextlib.redirect_stderr(io.StringIO()) as usage:
+                self.run_tool(*arguments)
+            self.assertEqual(caught.exception.code, 2)
+            self.assertIn("events" if arguments == ("events",) else "--big-criteria", usage.getvalue())
+        # 대조 — 같은 표본으로 남은 명령은 돈다
+        self.assertEqual(self.run_tool("review")[0], 0)
         self.assertEqual(self.fake.requests, [])
 
     def test_article_in_two_events_stops(self):

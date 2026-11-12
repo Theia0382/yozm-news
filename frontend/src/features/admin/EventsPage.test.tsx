@@ -29,11 +29,11 @@ function listRequests(server: ReturnType<typeof renderPage>) {
 }
 
 describe("EventsPage", () => {
-  it("주소의 기간으로 사건을 받아 상태 · 기간 / 전체 기사 수 · 소스 수 · 큰 사건 · 대표 기사를 보인다", async () => {
+  it("주소의 기간으로 사건을 받아 상태 · 기간 / 전체 기사 수 · 소스 수 · 대표 기사를 여덟 칸으로 보인다", async () => {
     const server = renderPage([
       {
         events: [
-          eventRow(7, { status: "CLOSED", big: true }),
+          eventRow(7, { status: "CLOSED" }),
           eventRow(5, {
             articleCount: 1,
             periodArticles: 1,
@@ -58,14 +58,14 @@ describe("EventsPage", () => {
     expect(first[2]).toHaveTextContent(/^3 \/ 5$/);
     expect(first[3]).toHaveTextContent(/^2$/);
     expect(first[4]).toHaveTextContent(/^3\.5$/);
-    expect(first[7]).toHaveTextContent(/^큰 사건$/);
-    expect(first[8]).toHaveTextContent("국회 본회의 통과");
-    expect(first[8]).toHaveTextContent("한겨레 · 경향신문");
+    expect(first).toHaveLength(8);
+    expect(first[7]).toHaveTextContent("국회 본회의 통과");
+    expect(first[7]).toHaveTextContent("한겨레 · 경향신문");
+    expect(within(rows[0]!).getAllByRole("columnheader")).toHaveLength(8);
     const second = within(rows[2]!).getAllByRole("cell");
     expect(second[1]).toHaveTextContent(/^열림$/);
     expect(second[4]).toHaveTextContent(/^없음$/);
-    expect(second[7]).toHaveTextContent(/^$/);
-    expect(second[8]).toHaveTextContent(/^지운 기사 42$/);
+    expect(second[7]).toHaveTextContent(/^지운 기사 42$/);
     const [request] = listRequests(server);
     expect(request?.get("from")).toBe("2026-11-01");
     expect(request?.get("to")).toBe("2026-11-07");

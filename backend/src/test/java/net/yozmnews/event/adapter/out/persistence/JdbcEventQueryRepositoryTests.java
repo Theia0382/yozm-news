@@ -180,9 +180,49 @@ class JdbcEventQueryRepositoryTests {
 		Map<Long, List<ArticleId>> expected = new LinkedHashMap<>();
 		expected.put(first, ids(112, 113));
 		expected.put(second, ids(115));
-		assertThat(this.repository.membersIn(from, to)).containsExactlyEntriesOf(expected);
+		assertThat(this.repository.membersIn(List.of(second, first), from, to)).containsExactlyEntriesOf(expected);
 		assertThat(this.repository.membersIn(List.of(second), from, to)).containsExactlyEntriesOf(Map.of(second, ids(115)));
 		assertThat(this.repository.membersIn(List.of(), from, to)).isEmpty();
+	}
+
+	@Test
+	void articleCountsInAPeriodAreGroupedByEventAndExcludeTheEnd() {
+		Instant from = Instant.parse("2031-03-01T00:00:00Z");
+		Instant to = Instant.parse("2031-03-02T00:00:00Z");
+		long first = event("OPEN", "model-a", "[1,0]", "2031-02-28T23:59:59Z", "2031-03-02T00:00:00Z");
+		long second = event("CLOSED", "model-b", "[1,0]", "2031-03-01T12:00:00Z", "2031-03-01T12:00:00Z");
+		long outside = event("OPEN", "model-a", "[1,0]", "2031-03-02T00:00:00Z", "2031-03-02T00:00:00Z");
+		long criteria = criteria();
+		member(131, first, criteria, "2031-02-28T23:59:59Z", DecidedBy.FORMULA, 0.9);
+		member(132, first, criteria, "2031-03-01T00:00:00Z", DecidedBy.FORMULA, 0.9);
+		member(133, first, criteria, "2031-03-01T23:59:59Z", DecidedBy.FORMULA, 0.9);
+		member(134, first, criteria, "2031-03-02T00:00:00Z", DecidedBy.FORMULA, 0.9);
+		member(135, second, criteria, "2031-03-01T12:00:00Z", DecidedBy.FORMULA, 0.9);
+		member(136, outside, criteria, "2031-03-02T00:00:00Z", DecidedBy.FORMULA, 0.9);
+
+		Map<Long, Integer> expected = new LinkedHashMap<>();
+		expected.put(first, 2);
+		expected.put(second, 1);
+		assertThat(this.repository.articleCountsIn(from, to)).containsExactlyEntriesOf(expected);
+		assertThat(this.repository.articleCountsIn(to.plusSeconds(86_400), to.plusSeconds(172_800))).isEmpty();
+	}
+
+	@Test
+	void viewsSkipMergedAndMissingEvents() {
+		long open = event("OPEN", "view-a", "[1,0]", "2031-04-01T00:00:00Z", "2031-04-02T00:00:00Z");
+		long closed = event("CLOSED", "view-b", "[1,0]", "2031-04-03T00:00:00Z", "2031-04-03T00:00:00Z");
+		long merged = event("OPEN", "view-m", "[1,0]", "2031-04-01T00:00:00Z", "2031-04-01T00:00:00Z");
+		merge(merged, open);
+
+		Map<Long, EventView> views = this.repository.views(List.of(closed, merged, open, 999_999L));
+
+		assertThat(views.keySet()).containsExactly(open, closed);
+		assertThat(views.get(open)).isEqualTo(this.repository.find(open).orElseThrow());
+		assertThat(views.get(open).status()).isEqualTo(EventStatus.OPEN);
+		assertThat(views.get(open).lastArticleAt()).isEqualTo(Instant.parse("2031-04-02T00:00:00Z"));
+		assertThat(views.get(closed).status()).isEqualTo(EventStatus.CLOSED);
+		assertThat(views.get(closed).firstArticleAt()).isEqualTo(Instant.parse("2031-04-03T00:00:00Z"));
+		assertThat(this.repository.views(List.of())).isEmpty();
 	}
 
 	@Test

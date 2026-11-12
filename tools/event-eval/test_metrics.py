@@ -3,7 +3,7 @@
 import unittest
 from datetime import date
 
-from metrics import BigVerdict, b_cubed, big_precision, wilson
+from metrics import b_cubed, wilson
 
 GOLD = {1: "a", 2: "a", 3: "a", 4: "b"}
 D1 = date(2026, 11, 4)
@@ -42,27 +42,6 @@ class BCubedTest(unittest.TestCase):
             b_cubed(GOLD, {1: 10, 2: 10, 3: 10})
         with self.assertRaises(ValueError):
             b_cubed({}, {})
-
-
-class BigPrecisionTest(unittest.TestCase):
-
-    def test_correct_wrong_tied_and_unlabeled(self):
-        gold_big = {("a", D1), ("b", D2)}
-        verdicts = [BigVerdict(D1, 100 + n, {"a": 2}) for n in range(8)]  # 맞음 8
-        verdicts.append(BigVerdict(D1, 200, {"b": 3}))  # 틀림 — b 는 D1 에 큰 사건이 아니다
-        verdicts.append(BigVerdict(D2, 201, {"a": 1, "b": 1}))  # 동률 — 틀림으로 센다
-        verdicts.append(BigVerdict(D2, 202, {}))  # 라벨 없음 — 분모 밖
-        result = big_precision(verdicts, gold_big)
-        self.assertEqual((result.judged, result.correct, result.tied, result.unlabeled), (11, 8, 1, 1))
-        self.assertAlmostEqual(result.precision, 0.8, places=12)
-        self.assertAlmostEqual(result.low, 0.490162, places=6)
-        self.assertAlmostEqual(result.high, 0.943318, places=6)
-
-    def test_no_labeled_verdict_has_no_precision(self):
-        result = big_precision([BigVerdict(D1, 1, {})], set())
-        self.assertEqual((result.judged, result.unlabeled), (1, 1))
-        self.assertIsNone(result.precision)
-        self.assertIsNone(result.low)
 
 
 class WilsonTest(unittest.TestCase):

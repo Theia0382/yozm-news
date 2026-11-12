@@ -1,6 +1,6 @@
 # ADR-0083: 큰 사건 기준은 운영자 설정으로 두고 추가 전용 이력과 미리보기를 둔다
 
-- 상태: 승인. 부분 대체 — 기준을 둘 곳([ADR-0103](0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md))
+- 상태: 대체됨([ADR-0118](0118-big-judgement-criteria-are-storyline-operator-settings-and-do-not-inherit-event-criteria-values-or-history.md))
 - 날짜: 2026-11-07
 - 근거: [이슈 #99](https://github.com/Theia0382/yozm-news/issues/99) — 기준을 둘 곳과 변경 이력을 리드와 정하고 구현(`413dbfd` · `bd84e7d`)
 - 관련: [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md)(결정 절 "임계값은 운영자가 정한다"의 큰 사건 기준을 둘 곳, 후속 기록), [ADR-0055](0055-tag-and-store-thresholds-change-with-history-and-warn-instead-of-blocking.md)(태그 기준 · 저장 기준 — 같은 모양), [ADR-0081](0081-event-assignment-criteria-in-settings-and-rejudgement-within-stored-scores.md)(사건 배정 기준은 설정 — 근거가 달라 대체하지 않는다), [ADR-0082](0082-big-events-judged-at-query-time-by-distinct-sources-and-mean-importance-both-reaching-criteria.md)(판정 식)
@@ -14,7 +14,7 @@
 
 ## 결정
 
-> 부분 대체(첫 문장) — [ADR-0103](0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md). 지금 상태: [event Spec 대표 기사 · 큰 사건](../specs/event.md#대표-기사--큰-사건) event-R21
+> 부분 대체(첫 문장) — [ADR-0103](0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md). 지금 상태: [storyline Spec 큰 판정](../specs/storyline.md#큰-판정) storyline-R20
 - **큰 사건 기준은 `event` 의 운영자 설정이다.** 지금 값 한 행과 추가 전용 이력(이전 값 · 새 값 · 행위자 종류 · 시각)을 둔다. 변경은 공개 운영 API 가 받는다 — 지금 값 행을 잠근 한 트랜잭션이라 동시 변경이 줄을 서고 이력의 이전 값이 맞는다. 같은 값이면 바꾸지 않고, 범위 밖이면 거부한다. HTTP · 화면은 `admin` 이 맡는다.
 - **처음 값은 코드 상수이고 기동 때 지금 값이 없으면 넣는다.** 넣었을 때만 행위자 `SYSTEM` 의 이력 한 행을 남긴다. 처음 값은 측정 전 목표다.
 - **미리보기는 제안 기준으로 기간 안 큰 사건을 같은 판정으로 낸다.** 아무것도 쓰지 않는다.

@@ -79,10 +79,10 @@ export const routes: RouteObject[] = [
             }),
           },
           {
-            path: "big-events",
+            path: "big-storylines",
             lazy: async () => ({
-              Component: (await import("@/features/admin/BigEventsPage"))
-                .BigEventsPage,
+              Component: (await import("@/features/admin/BigStorylinesPage"))
+                .BigStorylinesPage,
             }),
           },
           {

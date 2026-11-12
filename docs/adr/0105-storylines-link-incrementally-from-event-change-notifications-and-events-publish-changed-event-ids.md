@@ -53,3 +53,4 @@
 ## 후속 기록
 
 - 2026-11-10: 결정 "구성 사건이 없는 스토리라인은 지운다" — 사건 하나만 남은 스토리라인의 합치기 · 풀기와 합쳐진 스토리라인의 가리킴([ADR-0108](0108-storylines-with-the-same-events-merge-and-a-storyline-left-with-one-event-merges-or-dissolves.md)), 지금 상태는 [storyline Spec "정돈"](../specs/storyline.md#정돈)(storyline-R17 · R18)
+- 2026-11-12: 결정 "스토리라인은 사건 ID 만 가리킨다" — 큰 판정의 재료(기간 안 기사의 소스 · 중요도)는 `event` 가 사건 묶음 단위로 센다([ADR-0117](0117-big-judgement-materials-are-tallied-by-event-per-group-of-events-and-storyline-passes-only-event-ids.md)), 지금 상태는 [storyline Spec "큰 판정"](../specs/storyline.md#큰-판정)(storyline-R19)

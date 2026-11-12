@@ -26,6 +26,9 @@ public interface EventQueryRepository {
 	/** 사건 하나 — 합쳐진 사건이면 남는 사건, 없는 사건이면 빈 값 */
 	Optional<EventView> find(long eventId);
 
+	/** 사건들 — 사건 ID 순. 합쳐진 사건 · 없는 사건은 빠진다 */
+	Map<Long, EventView> views(Collection<Long> eventIds);
+
 	/** 사건의 배정 전부 — 발행 시각 · 기사 ID 순 */
 	List<EventArticleView> articles(long eventId);
 
@@ -38,8 +41,8 @@ public interface EventQueryRepository {
 	/** 사건 기사 전체에서 사건마다 대표 기사 — 닫을 때 남긴 대표가 있으면 그것 */
 	Map<Long, ArticleId> representativesOfAll(Collection<Long> eventIds);
 
-	/** 기간 안 배정 — 사건 ID 순, 사건마다 발행 시각 · 기사 ID 순 */
-	Map<Long, List<ArticleId>> membersIn(Instant from, Instant to);
+	/** 기간 안 배정이 있는 사건과 그 기간 안 배정 수 — 사건 ID 순 */
+	Map<Long, Integer> articleCountsIn(Instant from, Instant to);
 
 	/** 주어진 사건들의 기간 안 배정 — 사건 ID 순, 사건마다 발행 시각 · 기사 ID 순 */
 	Map<Long, List<ArticleId>> membersIn(Collection<Long> eventIds, Instant from, Instant to);

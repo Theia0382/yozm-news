@@ -122,7 +122,7 @@ public record ArticleEntryView(SourceId sourceId, FeedId feedId, List<String> ca
 |---|---|
 | `findAll` | 기사들의 내용 — 없는(지운) 기사는 결과에 없다. 빈 입력이면 빈 맵 |
 | `firstSeenSince` | 처음 본 시각(`first_seen_at`)이 `since` 이상인 기사의 ID — ID 순. `tag` 가 체계를 바꿀 때 재평가 대상을, `event` 가 사건 묶기 채우기 대상을 고른다 |
-| `sources` | 기사들의 엔트리가 가진 소스 — 엔트리가 없는(지운) 기사는 결과에 없다. 빈 입력이면 빈 맵. `event` 가 큰 사건의 서로 다른 소스 수를 센다 |
+| `sources` | 기사들의 엔트리가 가진 소스 — 엔트리가 없는(지운) 기사는 결과에 없다. 빈 입력이면 빈 맵. `event` 가 기간 집계의 서로 다른 소스 수를 센다 |
 | `ArticleContent.summary` | 저장된 RSS 요약문 — 없으면 null |
 | `ArticleContent.canonicalUrl` | 기사의 정규 URL(article-R1) — 원문 링크. 언제나 http · https 다 |
 | `ArticleContent.publishedAt` | 기사의 발행 시각 — 처음 저장한 값(article-R8). 해석하지 못한 항목이면 받은 시각이다(source-R40). 추정했는지는 내지 않는다 |
