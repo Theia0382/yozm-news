@@ -72,8 +72,9 @@ check "K4 SPA 딥 링크" /smoke/deep/link 200 text/html
 check "K5 /api/ping 을 앱으로" /api/ping 200 application/json
 body=$(cat "$body_file")
 if [[ $body == '{"message":"pong"}' ]]; then pass "K5 /api/ping 응답"; else fail "K5 /api/ping 응답" '{"message":"pong"}' "$body"; fi
-# K6 로그인 경로는 앱으로 넘긴다(앱이 문제 응답으로 답한다 — docs/specs/platform.md "오류 응답 형식")
-check "K6 /login/oauth2/… 를 앱으로" /login/oauth2/code/smoke "*" application/problem+json
+# K6 OIDC 로그인 경로는 넘기지 않는다(SPA 가 답한다)
+check "K6 /login/oauth2/… 는 넘기지 않음" /login/oauth2/code/smoke 200 text/html
+check "K6 /oauth2/… 는 넘기지 않음" /oauth2/authorization/smoke 200 text/html
 # K13 운영자 경로는 토큰 없는 요청에 열리지 않는다 — 토큰이 없는 배포는 닫혀 있고, 토큰을 넣은 배포는 인증을 요구한다(docs/specs/platform.md "운영자 접근 통제")
 # 토큰 유무는 실행 중인 app 의 환경을 컨테이너 안의 bash 가 보고 표지(set · unset)만 내보낸다 — 토큰 값은 이 스크립트로 나오지 않는다
 # 종료 코드 0 과 표지가 함께 있어야 판정한 것이다 — app 이 떠 있지 않아도 exec 가 실패하므로, 읽지 못한 것을 토큰 없음으로 넘기지 않는다
@@ -92,8 +93,8 @@ fi
 # K7 · K8 관리 · 명세 엔드포인트는 넘기지 않는다(SPA 가 답한다)
 check "K7 /actuator/health 는 넘기지 않음" /actuator/health 200 text/html
 check "K8 /v3/api-docs 는 넘기지 않음" /v3/api-docs 200 text/html
-# K10 넘기는 경로의 경계 — /login/* 만 넘기고 /login 자체는 SPA
-check "K10 /login 은 넘기지 않음" /login 200 text/html
+# K10 넘기는 경로의 경계 — /api/* 만 넘기고 /api 자체는 SPA
+check "K10 /api 는 넘기지 않음" /api 200 text/html
 
 # K9 배포 postgres 는 개발용 정의의 이미지를 그대로 쓴다(정본: 저장소 루트 compose.yaml)
 # 두 명령이 모두 성공해야 비교한다 — 같은 오류 메시지끼리 같다고 통과하지 않는다
