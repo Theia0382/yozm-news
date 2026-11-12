@@ -18,7 +18,8 @@ import org.springframework.stereotype.Repository;
 /**
  * {@link StorylineQueryRepository} 의 JdbcClient 구현 — docs/specs/storyline.md §4.
  * <p>
- * 행의 투영({@link #COLUMNS} — 구성 사건 수는 소속 행 수)과 "합쳐지지 않은 · 주어진 사건이 든" 조건({@link #HAVING_EVENTS})이 한 벌이다.
+ * 행의 투영({@link #COLUMNS} — 구성 사건 수는 소속 행 수)이 한 벌이다. 쪽은 주어진 스토리라인 ID 가운데 {@code (last_article_at, id)}
+ * 커서다.
  * 찾기는 합쳐진 행이면 {@code merged_into} 를 한 번 따른다 — 가리킴이 평평하다(storyline-R18).
  */
 @Repository
@@ -32,6 +33,10 @@ class JdbcStorylineQueryRepository implements StorylineQueryRepository {
 	private static final String HAVING_EVENTS = """
 			s.merged_into is null
 			and exists (select 1 from storyline_members m where m.storyline_id = s.id and m.event_id = any(:events))
+			""";
+
+	private static final String AMONG = """
+			s.merged_into is null and s.id = any(:ids)
 			""";
 
 	private final JdbcClient jdbc;
@@ -60,16 +65,27 @@ class JdbcStorylineQueryRepository implements StorylineQueryRepository {
 	}
 
 	@Override
-	public List<StoredStoryline> page(Collection<Long> eventIds, @Nullable Instant afterLast, @Nullable Long afterId,
-			int limit) {
-		if (eventIds.isEmpty()) {
+	public List<StoredStoryline> byIds(Collection<Long> storylineIds) {
+		if (storylineIds.isEmpty()) {
+			return List.of();
+		}
+		return this.jdbc.sql("select " + COLUMNS + " from storylines s where " + AMONG + " order by s.id")
+			.param("ids", storylineIds.toArray(Long[]::new))
+			.query(JdbcStorylineQueryRepository::storyline)
+			.list();
+	}
+
+	@Override
+	public List<StoredStoryline> pageOf(Collection<Long> storylineIds, @Nullable Instant afterLast,
+			@Nullable Long afterId, int limit) {
+		if (storylineIds.isEmpty()) {
 			return List.of();
 		}
 		String after = afterLast == null ? "" : "and (s.last_article_at, s.id) < (:afterLast, :afterId)";
 		JdbcClient.StatementSpec statement = this.jdbc
-			.sql("select " + COLUMNS + " from storylines s where " + HAVING_EVENTS + after
+			.sql("select " + COLUMNS + " from storylines s where " + AMONG + after
 					+ " order by s.last_article_at desc, s.id desc limit :limit")
-			.param("events", eventIds.toArray(Long[]::new))
+			.param("ids", storylineIds.toArray(Long[]::new))
 			.param("limit", limit);
 		if (afterLast != null) {
 			statement = statement.param("afterLast", afterLast.atOffset(ZoneOffset.UTC)).param("afterId", afterId);

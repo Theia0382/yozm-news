@@ -83,14 +83,33 @@ class JdbcStorylineQueryRepositoryTests {
 		member(lateB, 882_003);
 		long outside = storyline(3, "2026-11-01T00:00:00Z", "2026-11-09T00:00:00Z", 882_004);
 		member(outside, 882_004);
-		List<Long> events = List.of(882_001L, 882_002L, 882_003L);
+		List<Long> among = List.of(early, lateA, lateB);
 
-		List<StoredStoryline> first = this.repository.page(events, null, null, 2);
+		List<StoredStoryline> first = this.repository.pageOf(among, null, null, 2);
 		assertThat(first).extracting(StoredStoryline::id).containsExactly(lateB, lateA);
 		StoredStoryline last = first.getLast();
-		assertThat(this.repository.page(events, last.lastArticleAt(), last.id(), 2)).extracting(StoredStoryline::id)
+		assertThat(this.repository.pageOf(among, last.lastArticleAt(), last.id(), 2)).extracting(StoredStoryline::id)
 			.containsExactly(early);
-		assertThat(this.repository.page(List.of(), null, null, 2)).isEmpty();
+		assertThat(this.repository.pageOf(List.of(), null, null, 2)).isEmpty();
+		// 주어진 스토리라인만 — outside 는 마지막 기사가 가장 늦지만 나오지 않는다
+		assertThat(this.repository.pageOf(List.of(outside, early), null, null, 5)).extracting(StoredStoryline::id)
+			.containsExactly(outside, early);
+	}
+
+	@Test
+	void readsTheGivenStorylinesThatAreNotMergedInIdOrder() {
+		long a = storyline(3, "2026-11-01T00:00:00Z", "2026-11-03T00:00:00Z", 883_001);
+		member(a, 883_001);
+		long b = storyline(1, "2026-11-01T00:00:00Z", "2026-11-04T00:00:00Z", 883_002);
+		long gone = storyline(1, "2026-11-01T00:00:00Z", "2026-11-04T00:00:00Z", 883_003);
+		merge(gone, a);
+
+		List<StoredStoryline> found = this.repository.byIds(List.of(b, gone, a, 999_999_999L));
+
+		assertThat(found).extracting(StoredStoryline::id).containsExactly(a, b);
+		assertThat(found.getFirst().eventCount()).isEqualTo(1);
+		assertThat(found.getLast().eventCount()).isZero();
+		assertThat(this.repository.byIds(List.of())).isEmpty();
 	}
 
 	private long storyline(int articles, String first, String last, long representative) {

@@ -245,7 +245,7 @@ public sealed interface BigStorylineCriteriaChangeResult {
 
 상태는 `StateCriteria.stateOf`(`StorylineStateConfiguration` 이 `StorylineStateProperties` 로 만든 빈)가 정한다 — 공개 조회가 스토리라인을 낼 때마다 지금 시각으로 부른다.
 
-조회: `StorylineDirectoryService` 가 `StorylineQueryRepository` 로 스토리라인(합쳐진 스토리라인이면 남는 스토리라인) · 사건들이 든 스토리라인 · 그 쪽을 읽고, `StorylineRepository.members` · `affiliated` 로 구성 사건 · 소속 여부를 읽는다. 기간의 스토리라인은 `event` 의 `EventDirectory.articleCountsIn` 이 낸 기간 안 사건으로 고르고, 기간 집계는 스토리라인마다 구성 사건을 `EventDirectory.tallies` 에 넘겨 받는다. 큰 판정은 `BigStorylineCriteriaRepository` 의 지금 기준으로 `BigStorylineRule` 이 판정 · 정렬한다. 타임라인은 구성 사건을 `EventDirectory.views` 로 읽어 첫 기사 시각 순으로 놓고, 사건의 스토리라인은 `EventDirectory.find` 로 남는 사건을 얻어 찾는다. 큰 판정 기준은 `BigStorylineCriteriaSeeding` 이 기동 때 처음 값을 넣고, `BigStorylineAdministrationService` 가 변경 · 이력을 저장소로 쓰며 지금 값 읽기와 미리보기는 `StorylineDirectoryService` 의 것을 쓴다.
+조회: `StorylineDirectoryService` 가 `StorylineQueryRepository` 로 스토리라인(합쳐진 스토리라인이면 남는 스토리라인) · 사건들이 직접 든 스토리라인 · 주어진 스토리라인들과 그 쪽을 읽고, `StorylineRepository.members` · `affiliated` 로 직접 소속 · 소속 여부를 읽는다. 기간의 스토리라인은 `event` 의 `EventDirectory.articleCountsIn` 이 낸 기간 안 사건이 직접 든 스토리라인과 그 상위이고, 기간 집계는 스토리라인마다 닫은 사건 집합을 `EventDirectory.tallies` 에 넘겨 받는다(아래 "닫은 조회"). 큰 판정은 `BigStorylineCriteriaRepository` 의 지금 기준으로 `BigStorylineRule` 이 판정 · 정렬한다. 타임라인은 닫은 사건 집합을 `EventDirectory.views` 로 읽어 첫 기사 시각 순으로 놓고, 사건의 스토리라인은 `EventDirectory.find` 로 남는 사건을 얻어 찾는다. 스토리라인의 관계는 남는 스토리라인을 찾은 뒤 `RelationRepository.of` 로 읽는다. 큰 판정 기준은 `BigStorylineCriteriaSeeding` 이 기동 때 처음 값을 넣고, `BigStorylineAdministrationService` 가 변경 · 이력을 저장소로 쓰며 지금 값 읽기와 미리보기는 `StorylineDirectoryService` 의 것을 쓴다.
 
 채우기는 `StorylineLinkingAdministrationService` 가 `EventDirectory.lastArticleSince` 와 `LinkingQueueRepository.enqueueAll` 로 한다.
 
@@ -622,7 +622,7 @@ sequenceDiagram
   - M 의 물은 기록과 관계 대기 행을 지우고, S 를 관계 대기에 넣는다(storyline-R26 — S 는 정돈에서 남는 쪽이다)
   - 스토리라인을 지우면(빈 스토리라인 · 풀기) 그 관계 · 물은 기록 · 관계 대기 행이 함께 지워진다
 - **storyline-R33** — 닫은 사건 집합(조회): 공개 조회는 스토리라인의 사건을 닫은 사건 집합으로 본다 — 직접 소속과, 포함을 따라 내려간 모든 하위의 직접 소속을 사건 ID 로 합친 것이다. 저장하지 않고 조회할 때 관계와 소속에서 만든다.
-  - 스토리라인 값(`StorylineView`)의 사건 수 · 기사 수 · 첫 · 마지막 기사 시각은 닫은 사건 집합의 사건(`EventDirectory.views`)으로 센다 — 사건 수는 집합의 크기, 기사 수는 합, 시각은 최소 · 최대다. 하위가 없으면 저장된 표현의 값이다. 상태(storyline-R16)는 그 마지막 기사 시각으로 정한다. 대표 사건은 직접 소속의 것이다
+  - 스토리라인 값(`StorylineView`)의 사건 수 · 기사 수 · 첫 · 마지막 기사 시각은 닫은 사건 집합의 사건(`EventDirectory.views`)으로 센다 — 사건 수는 집합의 크기, 기사 수는 합, 시각은 최소 · 최대다. 하위가 없으면 저장된 표현의 값이다. 하위가 있어도 닫은 사건 집합에 읽히는 사건이 하나도 없으면 기사 수 · 시각은 저장된 표현의 값으로 둔다. 상태(storyline-R16)는 그 마지막 기사 시각으로 정한다. 대표 사건은 직접 소속의 것이다
   - 타임라인(`events`)은 닫은 사건 집합이고, 사건마다 직접 소속인지 싣는다 — 직접 소속이면서 하위에도 든 사건은 직접이다
   - 사건의 스토리라인(`storylinesOf`)은 사건이 직접 든 스토리라인과 그 상위 전부다 — 스토리라인마다 직접 든 것인지 싣는다
   - 기간의 스토리라인 · 기간 집계 · 큰 판정(storyline-R19 · R22)은 닫은 사건 집합으로 센다
