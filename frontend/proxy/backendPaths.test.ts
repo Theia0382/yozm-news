@@ -20,7 +20,7 @@ describe("parseBackendPathPrefixes", () => {
   it("정본 파일에서 앱으로 넘기는 경로 접두사를 꺼낸다", () => {
     expect(
       parseBackendPathPrefixes(readFileSync(backendPathsFile, "utf8")),
-    ).toEqual(["/api/", "/oauth2/", "/login/"]);
+    ).toEqual(["/api/"]);
   });
 
   it("형태가 맞는 한 줄은 그 경로들을 돌려준다", () => {
@@ -42,10 +42,7 @@ describe("parseBackendPathPrefixes", () => {
 });
 
 describe("viteProxyEntries", () => {
-  const entries = viteProxyEntries(
-    ["/api/", "/oauth2/", "/login/"],
-    "http://backend",
-  );
+  const entries = viteProxyEntries(["/api/", "/other/"], "http://backend");
 
   it("모든 항목이 같은 대상으로 간다", () => {
     expect(new Set(Object.values(entries))).toEqual(
@@ -53,15 +50,11 @@ describe("viteProxyEntries", () => {
     );
   });
 
-  it.each([
-    "/api/ping",
-    "/oauth2/authorization/google",
-    "/login/oauth2/code/x",
-  ])("%s 는 백엔드로 넘긴다", (pathname) => {
+  it.each(["/api/ping", "/other/x"])("%s 는 백엔드로 넘긴다", (pathname) => {
     expect(matches(entries, pathname)).toBe(true);
   });
 
-  it.each(["/api", "/apix", "/login", "/actuator/health", "/v3/api-docs", "/"])(
+  it.each(["/api", "/apix", "/other", "/actuator/health", "/v3/api-docs", "/"])(
     "%s 는 넘기지 않는다",
     (pathname) => {
       expect(matches(entries, pathname)).toBe(false);

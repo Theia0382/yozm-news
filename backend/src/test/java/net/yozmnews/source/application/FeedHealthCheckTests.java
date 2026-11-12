@@ -230,7 +230,7 @@ class FeedHealthCheckTests {
 	/** 피드를 켠다 — 미리보기를 통과한 뒤 그 소스의 요청 시작 시각 예약을 지운다 */
 	private void enable(FeedId feed, SourceId source) {
 		assertThat(this.operations.enableFeed(feed)).isInstanceOf(FeedActivation.Activated.class);
-		this.jdbc.sql("delete from source_fetch_slots where source_id = :source").param("source", source.value()).update();
+		new RegistryRows(this.jdbc).clearFetchSlot(source.value());
 	}
 
 	/** 수집 상태의 판정 입력 — 새 항목의 발행 시각은 마지막 새 항목 시각과 같게 둔다 */
