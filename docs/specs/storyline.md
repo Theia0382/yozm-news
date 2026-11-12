@@ -376,7 +376,7 @@ sequenceDiagram
 - `StoredRelation(Relation relation, Instant linkedAt)` — 읽은 관계
 - `RelationCriteria(double probability, double oneMatter, int minEvents, double candidateScore, Duration window)` — 관계 기준. 확률 기준 · 후보 점수 기준은 0 보다 크고 1 이하, 한 사안 기준은 0 ~ 1, 사건 수 하한은 2 이상, 창은 0 보다 큰 초 단위(storyline-R27 · R29)
 - `RelationGraph` — 구조 제약의 정본(storyline-R25). 지금 관계의 목록으로 만들고, 상위(`parentOf`) · 하위 전부(`descendants`) · 상위들(`ancestors` — 가까운 순) · 넣으면 순환이 되는가(`closesCycle` — 같은 종류의 고리를 따라 `target` 에서 `source` 로 닿는가)를 답한다. 그 쌍의 관계(`between`)와 그 쌍의 관계를 뺀 그래프(`without`)도 낸다
-- `RelationCandidates` — 후보 쌍의 정본(storyline-R27 · R28 · R30) — `partners` · `due` · `firstIs` · `subjectIs`
+- `RelationCandidates` — 후보 쌍의 정본(storyline-R27 · R28 · R30) — `partners` · `askable` · `due` · `firstIs` · `subjectIs`
 - `RelationRule` — 판정의 정본(storyline-R29). `decide` 가 `Link(관계, 확률)` 이나 `None(사유)` 를 낸다(sealed). 사유는 `NOT_RELATED` · `LOW_PROBABILITY` · `NOT_ONE_MATTER` · `CYCLE` · `SECOND_PARENT`
 - `RelationMove` — 합칠 때 관계를 옮기는 계획의 정본(storyline-R32). `plan(지금 관계, 합쳐질 스토리라인, 남는 스토리라인)` 이 지울 관계와 끝을 바꿀 관계(`Moved(from, to)` — 확률 · 판정 원본 · 기준은 그대로 간다)를 낸다. 옮길 관계는 종류 · 앞 · 뒤 순으로 하나씩 본다
 - `RelationDescription` — 서술 사건 고르기의 정본(storyline-R28). `of(직접 소속 사건)` 이 서술 사건(사건 ID · 첫 기사 시각 · 요약문을 싣는가)을 시각 순으로 낸다
@@ -388,6 +388,8 @@ sequenceDiagram
       /** 물을 상대 — 사건을 함께 가진 쌍 먼저(함께 가진 사건 수 내림차순, 같으면 ID 순), 그다음 점수 내림차순(같으면 ID 순) */
       public static List<Long> partners(long storylineId, int events, Map<Long, Integer> sharing, List<Scored> scored,
               Map<Long, Integer> eventCounts, Map<Long, Integer> askedAtSmallerEvents, RelationCriteria criteria);
+      public static boolean askable(int events, @Nullable Integer partnerEvents, @Nullable Integer askedAtSmallerEvents,
+              RelationCriteria criteria);                                 // 두 쪽 모두 사건 수 하한 이상이고 다시 물을 때인가
       public static boolean due(@Nullable Integer askedAtSmallerEvents, int smallerEventsNow);
       public static boolean firstIs(long a, Instant aFirst, long b, Instant bFirst);   // a 가 요청의 first 인가
       public static boolean subjectIs(long a, int aEvents, long b, int bEvents);        // a 가 점수의 판정할 쪽인가
@@ -592,6 +594,7 @@ sequenceDiagram
   - 점수는 잇기의 산식 그대로다(`LinkingScoring` — storyline-R8). 쌍 가운데 구성 사건 수가 적은 스토리라인(같으면 ID 가 큰 쪽)을 판정할 쪽으로, 다른 쪽을 견줄 것으로 둔다. 판정할 쪽이 S 가 아닌 쌍은 그 상대의 표현을 읽어 같은 식으로 매긴다
   - 점수 후보는 판정할 쪽과 모델 버전이 같고, 시각 범위가 [판정할 쪽의 첫 기사 시각 − 창, 마지막 기사 시각 + 창] 과 겹치고, 코사인이 `LinkingScoring.cosineFloor(후보 점수 기준)` 이상인 스토리라인이다(`StorylineRepository.candidates`). 말의 무게는 같은 구간의 말 수로 센다(`EventDirectory.termCounts`). 창은 관계 기준의 시간 창이다
   - 사건을 함께 가진 상대는 창 밖이거나 점수를 셀 수 없어도 후보다. 모델 버전이 다르면 후보가 아니다
+  - 점수는 물을 수 있는 상대(`RelationCandidates.askable` — 두 쪽 모두 사건 수 하한 이상이고 다시 물을 때)에만 매긴다 — 그 밖의 상대는 말 수를 읽지 않는다. 말의 무게는 회차 안에서 판정할 쪽 스토리라인마다 한 번만 읽는다. 점수 후보의 구성 사건 수는 `StorylineRepository.members` 한 번으로 센다
   - 순서는 사건을 함께 가진 쌍이 먼저(함께 가진 사건 수 내림차순, 같으면 스토리라인 ID 순), 그다음 점수 내림차순(같으면 ID 순)이다
   - 구성 사건 수 · 표현 · 시각은 모두 직접 소속의 것이다 — 닫은 사건 집합(storyline-R33)이 아니다
 - **storyline-R28** — 묻기: 쌍마다 `evaluation` 의 `FlowRelation.judge` 에 묻는다 — DB 트랜잭션 밖이다.

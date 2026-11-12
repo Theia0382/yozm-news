@@ -65,6 +65,13 @@ class RelationCandidatesTests {
 		assertThat(RelationCandidates.partners(1, 8, Map.of(20L, 1, 21L, 1, 22L, 1), List.of(),
 				Map.of(20L, 5, 21L, 6, 22L, 3), Map.of(20L, 3, 21L, 3), CRITERIA))
 			.containsExactly(21L, 22L);
+		// 점수를 매기기 전에 거르는 물음도 같은 규칙이다
+		assertThat(RelationCandidates.askable(8, 5, 3, CRITERIA)).isFalse();
+		assertThat(RelationCandidates.askable(8, 6, 3, CRITERIA)).isTrue();
+		assertThat(RelationCandidates.askable(8, 3, null, CRITERIA)).isTrue();
+		assertThat(RelationCandidates.askable(8, 2, null, CRITERIA)).isFalse();
+		assertThat(RelationCandidates.askable(2, 8, null, CRITERIA)).isFalse();
+		assertThat(RelationCandidates.askable(8, null, null, CRITERIA)).isFalse();
 		assertThat(RelationCandidates.due(null, 3)).isTrue();
 		assertThat(RelationCandidates.due(3, 5)).isFalse();
 		assertThat(RelationCandidates.due(3, 6)).isTrue();

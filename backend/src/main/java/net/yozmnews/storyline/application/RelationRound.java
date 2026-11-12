@@ -103,8 +103,9 @@ public class RelationRound {
 		Instant now = this.clock.instant();
 		long criteriaId = Objects
 			.requireNonNull(this.transaction.execute(status -> this.relations.registerCriteria(this.criteria, now)));
+		Map<Long, TermWeights> weights = new HashMap<>();
 		for (PendingStoryline claim : claim(now)) {
-			if (relate(claim, criteriaId) == Next.STOP) {
+			if (relate(claim, criteriaId, weights) == Next.STOP) {
 				return;
 			}
 		}
@@ -123,10 +124,10 @@ public class RelationRound {
 	}
 
 	/** 스토리라인 하나의 후보 쌍을 묻고 반영한다 */
-	private Next relate(PendingStoryline claim, long criteriaId) {
+	private Next relate(PendingStoryline claim, long criteriaId, Map<Long, TermWeights> weights) {
 		long storylineId = claim.storylineId();
 		UUID token = Objects.requireNonNull(claim.lease(), "lease").token();
-		List<Pair> pairs = Objects.requireNonNull(this.transaction.execute(status -> pairs(storylineId)));
+		List<Pair> pairs = Objects.requireNonNull(this.transaction.execute(status -> pairs(storylineId, weights)));
 		for (Pair pair : pairs.stream().limit(RelationSchedule.MAX_PAIRS).toList()) {
 			Optional<RelationQuery> query = query(pair);
 			RelationJudgement judgement = query.isPresent() ? this.judge.judge(query.get())
@@ -170,60 +171,67 @@ public class RelationRound {
 	}
 
 	/**
-	 * 후보 쌍(storyline-R27) — 사건을 함께 가진 스토리라인과 점수 후보에서 {@link RelationCandidates#partners} 가 고른 순서대로. 트랜잭션
-	 * 안에서 부른다
+	 * 후보 쌍(storyline-R27) — 사건을 함께 가진 스토리라인과 점수 후보에서 {@link RelationCandidates#partners} 가 고른 순서대로. 점수는
+	 * 물을 수 있는 상대({@link RelationCandidates#askable})에만 매긴다 — 코사인 하한을 넘는 스토리라인이 많아도 말 수를 묻는 것은 그
+	 * 상대뿐이다. 트랜잭션 안에서 부른다
+	 * @param weights 이 회차에서 읽은 말의 무게 — 판정할 쪽 스토리라인마다 한 번만 읽는다
 	 */
-	private List<Pair> pairs(long storylineId) {
+	private List<Pair> pairs(long storylineId, Map<Long, TermWeights> weights) {
 		Optional<StorylineProfile> found = this.storylines.profile(storylineId, LinkingScoring.KEY_TERMS);
 		if (found.isEmpty() || found.get().events() < this.criteria.minEvents()) {
 			return List.of();
 		}
 		StorylineProfile own = found.get();
+		Map<Long, Integer> asked = this.relations.askedAtSmallerEvents(storylineId);
 		Map<Long, StorylineProfile> profiles = new HashMap<>();
+		Map<Long, Integer> eventCounts = new HashMap<>();
 		Map<Long, Integer> sharing = new LinkedHashMap<>();
 		for (long event : members(storylineId)) {
 			for (long other : this.storylines.storylinesOf(event)) {
 				if (other != storylineId && comparable(own, other, profiles)) {
 					sharing.merge(other, 1, Integer::sum);
+					eventCounts.put(other, profiles.get(other).events());
 				}
 			}
 		}
-		List<Scored> scored = new ArrayList<>();
-		TermWeights ownWeights = null;
-		for (StorylineSnapshot candidate : this.storylines.candidates(own.modelVersion(), own.centroid(),
+		List<StorylineSnapshot> candidates = this.storylines.candidates(own.modelVersion(), own.centroid(),
 				LinkingScoring.windowFrom(own.firstArticleAt(), this.criteria.window()),
 				LinkingScoring.windowTo(own.lastArticleAt(), this.criteria.window()),
-				LinkingScoring.cosineFloor(this.criteria.candidateScore()), LinkingScoring.KEY_TERMS)) {
-			if (candidate.id() == storylineId || !comparable(own, candidate.id(), profiles)) {
+				LinkingScoring.cosineFloor(this.criteria.candidateScore()), LinkingScoring.KEY_TERMS);
+		Map<Long, List<Long>> candidateMembers = this.storylines
+			.members(candidates.stream().map(StorylineSnapshot::id).toList());
+		List<Scored> scored = new ArrayList<>();
+		for (StorylineSnapshot candidate : candidates) {
+			long other = candidate.id();
+			int otherEvents = candidateMembers.getOrDefault(other, List.of()).size();
+			// 사건을 함께 가진 상대는 점수와 무관하게 후보다 — 점수는 그 밖의 물을 수 있는 상대에만 매긴다
+			if (other == storylineId || sharing.containsKey(other)
+					|| !RelationCandidates.askable(own.events(), otherEvents, asked.get(other), this.criteria)) {
 				continue;
 			}
-			StorylineProfile other = profiles.get(candidate.id());
-			double cosine = Cosine.of(own.centroid(), other.centroid());
+			eventCounts.put(other, otherEvents);
+			double cosine = Cosine.of(own.centroid(), candidate.centroid());
 			// 구성 사건 수가 적은 쪽을 판정할 쪽으로 둔다 — 말의 무게는 판정할 쪽의 구간으로 센다(storyline-R27)
-			boolean ownIsSubject = RelationCandidates.subjectIs(storylineId, own.events(), other.id(), other.events());
-			StorylineProfile subject = ownIsSubject ? own : other;
-			StorylineProfile against = ownIsSubject ? other : own;
-			TermWeights weights;
-			if (ownIsSubject) {
-				ownWeights = (ownWeights != null) ? ownWeights : weights(own);
-				weights = ownWeights;
-			}
-			else {
-				weights = weights(other);
-			}
+			Subject ownSide = new Subject(own.centroid(), own.firstArticleAt(), own.lastArticleAt(), own.keyTerms());
+			Subject otherSide = new Subject(candidate.centroid(), candidate.firstArticleAt(), candidate.lastArticleAt(),
+					candidate.keyTerms());
+			boolean ownIsSubject = RelationCandidates.subjectIs(storylineId, own.events(), other, otherEvents);
+			Subject subject = ownIsSubject ? ownSide : otherSide;
+			Subject against = ownIsSubject ? otherSide : ownSide;
+			long subjectId = ownIsSubject ? storylineId : other;
+			long againstId = ownIsSubject ? other : storylineId;
+			TermWeights subjectWeights = weights.computeIfAbsent(subjectId, id -> weights(subject));
 			LinkingScoring
-				.score(new Subject(subject.centroid(), subject.firstArticleAt(), subject.lastArticleAt(),
-						subject.keyTerms()),
-						new Compared(against.id(), cosine, against.firstArticleAt(), against.lastArticleAt(),
-								against.keyTerms()),
-						this.criteria.window(), weights)
-				.ifPresent(score -> scored.add(new Scored(other.id(), score)));
+				.score(subject, new Compared(againstId, cosine, against.firstArticleAt(), against.lastArticleAt(),
+						against.keyTerms()), this.criteria.window(), subjectWeights)
+				.ifPresent(score -> scored.add(new Scored(other, score)));
 		}
-		Map<Long, Integer> eventCounts = new HashMap<>();
-		profiles.forEach((id, profile) -> eventCounts.put(id, profile.events()));
 		List<Pair> pairs = new ArrayList<>();
-		for (long partner : RelationCandidates.partners(storylineId, own.events(), sharing, scored, eventCounts,
-				this.relations.askedAtSmallerEvents(storylineId), this.criteria)) {
+		for (long partner : RelationCandidates.partners(storylineId, own.events(), sharing, scored, eventCounts, asked,
+				this.criteria)) {
+			if (!comparable(own, partner, profiles)) {
+				continue;
+			}
 			StorylineProfile other = profiles.get(partner);
 			boolean ownFirst = RelationCandidates.firstIs(storylineId, own.firstArticleAt(), partner,
 					other.firstArticleAt());
@@ -247,7 +255,7 @@ public class RelationRound {
 	}
 
 	/** 판정할 쪽의 말의 무게 — 그 스토리라인의 구간과 겹치는 사건으로 센 수에서(storyline-R27) */
-	private TermWeights weights(StorylineProfile subject) {
+	private TermWeights weights(Subject subject) {
 		EventTermCounts counts = this.events.termCounts(subject.keyTerms(),
 				LinkingScoring.windowFrom(subject.firstArticleAt(), this.criteria.window()),
 				LinkingScoring.windowTo(subject.lastArticleAt(), this.criteria.window()));

@@ -50,15 +50,24 @@ public final class RelationCandidates {
 			.forEach(one -> ordered.add(one.id()));
 		List<Long> partners = new ArrayList<>();
 		for (long partner : ordered) {
-			Integer count = eventCounts.get(partner);
-			if (partner == storylineId || count == null || count < criteria.minEvents()) {
-				continue;
-			}
-			if (due(askedAtSmallerEvents.get(partner), Math.min(events, count))) {
+			if (partner != storylineId
+					&& askable(events, eventCounts.get(partner), askedAtSmallerEvents.get(partner), criteria)) {
 				partners.add(partner);
 			}
 		}
 		return partners;
+	}
+
+	/**
+	 * 그 상대와의 쌍을 물을 수 있는가 — 두 스토리라인 모두 구성 사건 수가 사건 수 하한 이상이고 다시 물을 때다. 점수를 매기기 전에 거를 때와
+	 * {@link #partners} 가 함께 쓰는 정본.
+	 * @param partnerEvents 상대의 구성 사건 수 — 모르면 null(후보가 아니다)
+	 * @param askedAtSmallerEvents 물었을 때 작은 쪽의 구성 사건 수 — 물은 적이 없으면 null
+	 */
+	public static boolean askable(int events, @Nullable Integer partnerEvents, @Nullable Integer askedAtSmallerEvents,
+			RelationCriteria criteria) {
+		return events >= criteria.minEvents() && partnerEvents != null && partnerEvents >= criteria.minEvents()
+				&& due(askedAtSmallerEvents, Math.min(events, partnerEvents));
 	}
 
 	/**

@@ -103,6 +103,9 @@ class RelationRoundFlowTests {
 
 	private final List<RelationQuery> asked = new ArrayList<>();
 
+	/** 말 수 조회를 부른 횟수 */
+	private int termCountCalls;
+
 	@BeforeEach
 	@AfterEach
 	void reset() {
@@ -156,6 +159,31 @@ class RelationRoundFlowTests {
 		assertThat(this.asked).hasSize(1);
 		// 시작이 같아 ID 가 작은 a 가 first 다
 		assertThat(this.relations.all()).containsExactly(new Relation(a, near, RelationKind.FOLLOWS));
+	}
+
+	@Test
+	void countsTermsOnlyForPartnersItCanAskAndOncePerSubjectInARound() {
+		// 중심이 같은 스토리라인 넷 — a · b · c 는 사건 셋, small 은 사건 둘이라 물을 수 없다
+		long a = storyline("[1,0]", EARLY, LATE, event(EARLY, 1), event(EARLY, 1), event(EARLY, 1));
+		long b = storyline("[1,0]", EARLY, LATE, event(EARLY, 1), event(EARLY, 1), event(EARLY, 1));
+		long c = storyline("[1,0]", EARLY, LATE, event(EARLY, 1), event(EARLY, 1), event(EARLY, 1));
+		storyline("[1,0]", EARLY, LATE, event(EARLY, 1), event(EARLY, 1));
+		this.queue.enqueue(a, NOW);
+		this.queue.enqueue(b, NOW);
+		this.queue.enqueue(c, NOW);
+
+		round(answer(RelationAnswer.NONE, 0.9, 0.9, 0.9, 60)).run();
+
+		// 쌍은 (a, b) · (a, c) · (b, c) 셋이다. 사건 수가 같아 판정할 쪽은 ID 가 큰 쪽 — b · c 둘의 말 수만 한 번씩 읽는다
+		assertThat(this.asked).hasSize(3);
+		assertThat(this.termCountCalls).isEqualTo(2);
+
+		// 모두 물은 뒤에는 점수를 매길 상대가 없어 말 수를 묻지 않는다
+		this.queue.enqueue(a, NOW);
+		this.queue.enqueue(b, NOW);
+		round(answer(RelationAnswer.NONE, 0.9, 0.9, 0.9, 61)).run();
+		assertThat(this.asked).hasSize(3);
+		assertThat(this.termCountCalls).isEqualTo(2);
 	}
 
 	@Test
@@ -430,10 +458,11 @@ class RelationRoundFlowTests {
 	}
 
 	/** 말의 무게를 모두 같게 한 사건 조회 — 사건 수 1, 말마다 0건 */
-	private static EventDirectory evenly(EventDirectory events) {
+	private EventDirectory evenly(EventDirectory events) {
 		return new ForwardingEventDirectory(events) {
 			@Override
 			public EventTermCounts termCounts(Collection<String> terms, Instant from, Instant to) {
+				RelationRoundFlowTests.this.termCountCalls++;
 				Map<String, Long> none = new HashMap<>();
 				terms.forEach(term -> none.put(term, 0L));
 				return new EventTermCounts(1, none);
