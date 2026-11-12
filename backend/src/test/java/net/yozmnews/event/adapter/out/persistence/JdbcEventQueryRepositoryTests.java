@@ -20,6 +20,7 @@ import net.yozmnews.event.EventKeyTerm;
 import net.yozmnews.event.EventNeighbor;
 import net.yozmnews.event.EventProfile;
 import net.yozmnews.event.EventStatus;
+import net.yozmnews.event.EventTermCounts;
 import net.yozmnews.event.EventView;
 import net.yozmnews.event.MergedEvent;
 import org.jspecify.annotations.Nullable;
@@ -35,8 +36,8 @@ import org.springframework.jdbc.core.simple.JdbcClient;
  * 읽기, 기사의 사건, 기간 안 배정, 사건 쪽 넘기기를 Flyway 가 적용된 실제 PostgreSQL 에서 본다. 시험은 시험 트랜잭션 안에서 돌고
  * 되돌린다 — 기간 조회는 다른 시험의 행과 겹치지 않게 먼 시각(2031년)을 쓴다.
  * <p>
- * 사건 표현 · 이웃 사건 · 채우기 대상(스토리라인 잇기의 재료)도 본다 — 모델 버전을 시험마다 따로 써 다른 시험의 행과 겹치지 않게 하고,
- * 채우기 대상은 먼 시각(2032년)을 쓴다.
+ * 사건 표현 · 이웃 사건 · 말 수 · 채우기 대상(스토리라인 잇기의 재료)도 본다 — 모델 버전을 시험마다 따로 써 다른 시험의 행과 겹치지 않게
+ * 하고, 채우기 대상은 먼 시각(2032년)을, 모델 버전을 가리지 않는 말 수는 먼 시각(2035년)을 쓴다.
  * <p>
  * 지키는 규칙: event-R14 · event-R20 · event-R24
  */
@@ -315,6 +316,45 @@ class JdbcEventQueryRepositoryTests {
 
 		assertThat(this.repository.lastArticleSince(Instant.parse("2032-01-02T00:00:00Z"))).extracting(EventView::id)
 			.containsExactly(new EventId(early), new EventId(late));
+	}
+
+	@Test
+	void termCountsAreUnmergedEventsOverlappingTheRangeAndThoseHavingEachTerm() {
+		long open = event("OPEN", "count-m", "[1,0]", "2035-03-01T00:00:00Z", "2035-03-02T00:00:00Z");
+		long closed = event("CLOSED", "count-m", "[1,0]", "2035-03-05T00:00:00Z", "2035-03-06T00:00:00Z");
+		long otherModel = event("OPEN", "count-other", "[1,0]", "2035-03-03T00:00:00Z", "2035-03-03T00:00:00Z");
+		long endsAtFrom = event("OPEN", "count-m", "[1,0]", "2035-02-25T00:00:00Z", "2035-02-27T00:00:00Z");
+		long before = event("OPEN", "count-m", "[1,0]", "2035-02-20T00:00:00Z", "2035-02-26T23:59:59Z");
+		long after = event("OPEN", "count-m", "[1,0]", "2035-03-05T00:00:01Z", "2035-03-07T00:00:00Z");
+		long merged = event("OPEN", "count-m", "[1,0]", "2035-03-01T00:00:00Z", "2035-03-01T00:00:00Z");
+		terms(open, Map.of("국회", 2, "예산", 1));
+		terms(closed, Map.of("국회", 1));
+		terms(otherModel, Map.of("국회", 1));
+		terms(endsAtFrom, Map.of("예산", 3));
+		terms(before, Map.of("국회", 1));
+		terms(after, Map.of("예산", 1));
+		// 합쳐진 사건에 핵심 말 행이 남아 있어도 세지 않는다
+		terms(merged, Map.of("국회", 1));
+		merge(merged, open);
+		Instant from = Instant.parse("2035-02-27T00:00:00Z");
+		Instant to = Instant.parse("2035-03-05T00:00:00Z");
+
+		EventTermCounts counts = this.repository.termCounts(List.of("국회", "예산", "없는말"), from, to);
+
+		// 범위와 겹치는 사건: 열림 · 닫힘(첫 기사가 끝과 같다) · 다른 모델 버전 · 마지막 기사가 시작과 같은 사건 — 범위 앞 · 뒤와 합쳐진 사건은 빠진다
+		assertThat(counts.events()).isEqualTo(4);
+		assertThat(counts.eventsByTerm()).containsOnly(Map.entry("국회", 3L), Map.entry("예산", 2L), Map.entry("없는말", 0L));
+		EventTermCounts none = this.repository.termCounts(List.of(), from, to);
+		assertThat(none.events()).isEqualTo(4);
+		assertThat(none.eventsByTerm()).isEmpty();
+	}
+
+	@Test
+	void keyTermsAreIndexedByTerm() {
+		assertThat(this.jdbc.sql("select indexdef from pg_indexes where indexname = 'event_key_terms_term_idx'")
+			.query(String.class)
+			.list())
+			.containsExactly("CREATE INDEX event_key_terms_term_idx ON public.event_key_terms USING btree (term)");
 	}
 
 	private void merge(long merged, long survivor) {

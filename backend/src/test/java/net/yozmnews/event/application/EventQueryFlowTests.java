@@ -187,6 +187,18 @@ class EventQueryFlowTests {
 			.isThrownBy(() -> this.directory.neighbors(x, at, at, -1, 20, EventDirectory.MAX_NEIGHBORS + 1));
 		assertThat(this.directory.neighbors(x, at, at, -1, EventDirectory.MAX_KEY_TERMS, EventDirectory.MAX_NEIGHBORS))
 			.isNotNull();
+		assertThatIllegalArgumentException()
+			.isThrownBy(() -> this.directory.termCounts(List.of("말"), at.plusSeconds(1), at));
+		List<String> terms = new ArrayList<>();
+		for (int i = 0; i < EventDirectory.MAX_TERMS; i++) {
+			terms.add("말" + i);
+		}
+		// 겹친 말은 한 번만 센다 — 서로 다른 말이 상한이면 받는다
+		terms.add("말0");
+		assertThat(this.directory.termCounts(terms, at, at).eventsByTerm()).hasSize(EventDirectory.MAX_TERMS);
+		terms.add("말" + EventDirectory.MAX_TERMS);
+		assertThatIllegalArgumentException().isThrownBy(() -> this.directory.termCounts(terms, at, at));
+		assertThat(this.directory.termCounts(List.of(), at, at).eventsByTerm()).isEmpty();
 	}
 
 	@Test

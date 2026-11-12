@@ -23,6 +23,7 @@ import net.yozmnews.event.EventPeriod;
 import net.yozmnews.event.EventProfile;
 import net.yozmnews.event.EventSummary;
 import net.yozmnews.event.EventTally;
+import net.yozmnews.event.EventTermCounts;
 import net.yozmnews.event.EventView;
 import net.yozmnews.event.domain.event.EventQueryRepository;
 import org.jspecify.annotations.Nullable;
@@ -177,9 +178,7 @@ class EventDirectoryService implements EventDirectory {
 	public List<EventNeighbor> neighbors(EventId id, Instant from, Instant to, double minCosine, int keyTerms,
 			int limit) {
 		Objects.requireNonNull(id, "id");
-		if (from.isAfter(to)) {
-			throw new IllegalArgumentException("구간의 시작이 끝보다 늦다: " + from + " > " + to);
-		}
+		requireRange(from, to);
 		requireKeyTerms(keyTerms);
 		if (limit < 1 || limit > MAX_NEIGHBORS) {
 			throw new IllegalArgumentException("이웃 사건은 한 번에 1 ~ " + MAX_NEIGHBORS + "건이다: " + limit);
@@ -188,8 +187,24 @@ class EventDirectoryService implements EventDirectory {
 	}
 
 	@Override
+	public EventTermCounts termCounts(Collection<String> terms, Instant from, Instant to) {
+		requireRange(from, to);
+		List<String> distinct = terms.stream().distinct().toList();
+		if (distinct.size() > MAX_TERMS) {
+			throw new IllegalArgumentException("말 수는 한 번에 " + MAX_TERMS + "개까지 묻는다: " + distinct.size());
+		}
+		return this.events.termCounts(distinct, from, to);
+	}
+
+	@Override
 	public List<EventView> lastArticleSince(Instant since) {
 		return this.events.lastArticleSince(Objects.requireNonNull(since, "since"));
+	}
+
+	private static void requireRange(Instant from, Instant to) {
+		if (from.isAfter(to)) {
+			throw new IllegalArgumentException("구간의 시작이 끝보다 늦다: " + from + " > " + to);
+		}
 	}
 
 	private static void requireKeyTerms(int keyTerms) {

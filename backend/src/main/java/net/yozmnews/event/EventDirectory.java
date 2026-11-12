@@ -11,7 +11,7 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * 다른 모듈이 사건을 읽는 조회 — 사건 · 사건의 기사 · 기사의 사건 · 대표 기사 · 사건 목록 · 기간 안 사건 · 사건 묶음의 기간
- * 집계와 스토리라인 잇기의 재료(사건 표현 · 이웃 사건 · 채우기 대상) · docs/specs/event.md §3 · event-R14 · event-R15 · event-R20 ·
+ * 집계와 스토리라인 잇기의 재료(사건 표현 · 이웃 사건 · 말 수 · 채우기 대상) · docs/specs/event.md §3 · event-R14 · event-R15 · event-R20 ·
  * event-R24.
  * <p>
  * 사용자 정보를 받지 않는다. 트랜잭션을 열지 않는다 — 각 질의는 그 순간의 값이고, 기간 집계의 재료(소스 · 중요도)는 다른 모듈의 공개 조회로
@@ -27,6 +27,9 @@ public interface EventDirectory {
 
 	/** 이웃 조회 한 번의 상한 — 정본 */
 	int MAX_NEIGHBORS = 100;
+
+	/** 말 수 조회 한 번에 묻는 말의 상한 — 정본. {@link #MAX_KEY_TERMS}(표현 · 이웃이 내는 핵심 말 수)와 다른 값이다 */
+	int MAX_TERMS = 100;
 
 	/**
 	 * 사건 하나 — 합쳐진 사건(event-R13)이면 남는 사건을 낸다.
@@ -101,6 +104,14 @@ public interface EventDirectory {
 	 * {@link #MAX_KEY_TERMS} 밖이거나, {@code limit} 이 1 ~ {@link #MAX_NEIGHBORS} 밖일 때
 	 */
 	List<EventNeighbor> neighbors(EventId id, Instant from, Instant to, double minCosine, int keyTerms, int limit);
+
+	/**
+	 * 말 수 — 첫 ~ 마지막 기사 시각이 {@code [from, to]} 와 겹치는 합쳐지지 않은 사건(열림 · 닫힘)의 수와, 그 가운데 말마다 그 말을 핵심 말로
+	 * 가진 사건 수(event-R24). 모델 버전을 가리지 않는다. 겹친 말은 한 번만 센다.
+	 * @return 물은 말마다 수 — 어느 사건에도 없는 말은 0. 빈 입력이면 사건 수와 빈 맵
+	 * @throws IllegalArgumentException {@code from} 이 {@code to} 보다 늦거나, 서로 다른 말이 {@link #MAX_TERMS} 개를 넘을 때
+	 */
+	EventTermCounts termCounts(Collection<String> terms, Instant from, Instant to);
 
 	/**
 	 * 마지막 기사 시각이 {@code since} 이후(같으면 포함)인, 합쳐지지 않은 사건 — 첫 기사 시각 · 사건 ID 순(event-R24). 스토리라인 채우기가

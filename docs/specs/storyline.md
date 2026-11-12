@@ -8,7 +8,7 @@
 
 - **사건 변화 따르기** — `event` 가 바뀐 사건 ID 를 알리면(`EventsChanged`) 그 사건을 잇기 대기에 넣는다. 작업 역할의 반복 작업이 대기를 사건의 시각 순으로 점유해 사건마다 지금 상태를 읽어 판정한다 — 기간을 통째로 다시 묶지 않는다(storyline-R1 ~ R5, [ADR-0105](../adr/0105-storylines-link-incrementally-from-event-change-notifications-and-events-publish-changed-event-ids.md))
 - **소속 맞추기** — 사건이 지워지면 그 소속을 지우고, 다른 사건에 합쳐지면 소속을 남는 사건으로 옮긴다(storyline-R6)
-- **잇기** — 임시 잇기 규칙으로 사건을 스토리라인에 더 붙이거나, 다른 사건과 짝을 지어 새 스토리라인을 연다. 소속을 빼지 않는다. 소속이 늘면 기다리는 이웃 사건을 다시 본다(storyline-R7 ~ R12, [ADR-0106](../adr/0106-provisional-storyline-linking-opens-only-with-a-partner-event-and-adds-the-single-best-storyline-without-removal.md))
+- **잇기** — 사건 중심의 코사인과 무게를 준 핵심 말 겹침으로 점수를 매겨, 사건을 스토리라인에 더 붙이거나 다른 사건과 짝을 지어 새 스토리라인을 연다. 소속을 빼지 않는다. 소속이 늘면 기다리는 이웃 사건을 다시 본다(storyline-R7 ~ R12, [ADR-0106](../adr/0106-provisional-storyline-linking-opens-only-with-a-partner-event-and-adds-the-single-best-storyline-without-removal.md) · [ADR-0121](../adr/0121-storyline-linking-scores-centroid-cosine-plus-idf-weighted-key-term-overlap-without-time-decay-jev-or-topic-tags.md))
 - **정돈** — 소속이 바뀐 스토리라인을 정돈한다. 구성 사건이 없으면 지우고, 구성 사건이 같은 스토리라인은 하나로 합치며, 사건 하나만 남으면 그 사건을 가진 다른 스토리라인에 합치거나 풀어 그 사건을 다시 판정한다. 합쳐진 스토리라인은 남는 스토리라인을 가리킨다(storyline-R13 · R17 · R18, [ADR-0108](../adr/0108-storylines-with-the-same-events-merge-and-a-storyline-left-with-one-event-merges-or-dissolves.md))
 - **상태** — 스토리라인의 상태(진행 · 잠잠 · 끝남)를 저장하지 않고 조회 때 마지막 기사 시각으로 정한다. 끝나도 잇기를 막지 않는다(storyline-R16, [ADR-0107](../adr/0107-storyline-state-is-judged-at-query-time-from-the-last-article-and-an-ended-storyline-still-links.md))
 - **판정 근거** — 소속마다 정한 것 · 점수 · 판정에 쓴 기준을 남긴다(storyline-R14)
@@ -24,11 +24,11 @@
 - 기사를 세지 않는다 — 큰 판정의 재료(기간 안 기사의 소스 · 중요도)는 `event` 의 사건 묶음 집계로 받는다(storyline-R19)
 - 스토리라인 사이 관계(포함 · 이어짐), 큰 판정의 식(지금은 임시 산식이다), 포함 관계에서 상위 스토리라인이 하위를 세는 법, 스토리라인의 주제 · 지역 태그, 스토리라인 목록 · 타임라인을 보이는 운영자 화면은 아직 없다 — **(미설계)**
 - 스토리라인에 들지 않은 사건은 큰 판정에 들지 않는다 — 그 수만 낸다(storyline-R23)
-- 잇는 방법의 최종(주 소속 · 판정 시점 · 새 스토리라인을 여는 조건 · Jev 판정)은 정하지 않았다 — 지금 규칙은 평가 세트로 견줄 기준선이다([ADR-0106](../adr/0106-provisional-storyline-linking-opens-only-with-a-partner-event-and-adds-the-single-best-storyline-without-removal.md))
+- Jev 판정 · 주제 태그로 잇지 않고, 주 소속을 두지 않는다([ADR-0121](../adr/0121-storyline-linking-scores-centroid-cosine-plus-idf-weighted-key-term-overlap-without-time-decay-jev-or-topic-tags.md))
 - 표현만 비슷한 두 스토리라인, 사건 둘 이상이 다른 스토리라인에 포함된 스토리라인은 합치지 않는다 — 같은 흐름인지 갈래인지 구조로 가를 수 없다(storyline-R17)
 - 따로 도는 정리 작업이 없다 — 상태는 조회 때 정하고, 정돈은 판정 트랜잭션에서 한다
 
-잇기 기준 · 상태 기간(§7)과 산식 상수(storyline-R8), 큰 판정의 식 · 기준의 처음 값(storyline-R19 · R20), 목록 한 쪽의 상한(storyline-R22)은 측정 전 목표다. 큰 판정 · 목록 조회의 시간은 재지 않았다.
+기준 점수의 기본값(§7)과 핵심 말 가중치(storyline-R8)는 기본 임베딩 모델에 맞춰 평가 세트에서 고른 값이다 — 평가 세트가 며칠치라 몇 주에 걸친 전개는 재지 못했고, 운영하면서 다시 본다([미결 사항](../open-questions.md) 35). 이 값들과 시간 창 · 상태 기간(§7), 큰 판정의 식 · 기준의 처음 값(storyline-R19 · R20), 목록 한 쪽의 상한(storyline-R22)은 측정 전 목표다. 큰 판정 · 목록 조회의 시간은 재지 않았다.
 
 다른 모듈과의 의존과 이벤트 흐름은 [overview.md §5](../overview.md#5-모듈-지도)에 있다.
 
@@ -47,6 +47,7 @@
 | 점유 | 회차가 대기 행을 가져갔다는 표시 — 토큰 · 만료 시각(storyline-R3) |
 | 스토리라인 표현 | 구성 사건으로 정한 스토리라인의 중심 · 기사 수 · 시각 범위 · 핵심 말 · 대표 사건(storyline-R7) |
 | 대표 사건 | 스토리라인을 알아보게 하는 구성 사건 하나 — 기사 수가 가장 많은 사건(storyline-R7) |
+| 말의 무게 | 핵심 말이 얼마나 드문지 — 판정할 사건의 시각 ± 시간 창 안의 사건 가운데 그 말을 가진 사건이 적을수록 크다(storyline-R8) |
 | 잇기 기준 | 시간 창과 기준 점수 — 설정(storyline-R9 · §7) |
 | 기준 이력 | 회차가 판정에 쓴 잇기 기준 값의 목록(`storyline_linking_criteria`) — 같은 값이면 한 행이고, 소속이 그 ID 를 가리킨다(storyline-R14) |
 | 짝 | 붙일 스토리라인이 없는 사건과 함께 새 스토리라인을 여는 사건 — 소속이 없어야 한다(storyline-R11) |
@@ -203,7 +204,7 @@ public sealed interface BigStorylineCriteriaChangeResult {
 | 패키지 | 책임 |
 |---|---|
 | (최상위) | 모듈 선언(`package-info`), 공개 조회 `StorylineDirectory` 와 그 값 타입(스토리라인 ID · 상태 포함), 공개 운영 API `StorylineLinkingAdministration` · `BigStorylineAdministration` 과 그 결과 · 값 타입 |
-| `domain/linking` | 잇기의 판단 — 점수 산식 · 코사인 하한, 판정(붙이기 · 짝 · 다시 넣기), 스토리라인 표현과 대표 사건, 잇기 기준, 기준 이력 저장소 |
+| `domain/linking` | 잇기의 판단 — 점수 산식 · 말의 무게 · 코사인 하한, 판정(붙이기 · 짝 · 다시 넣기), 스토리라인 표현과 대표 사건, 잇기 기준, 기준 이력 저장소 |
 | `domain/storyline` | 스토리라인과 소속 — 소속의 판정 근거와 정한 것, 후보로 읽는 스토리라인, 정돈 판정, 상태 판정, 스토리라인 저장소, 조회로 읽는 스토리라인과 조회 저장소 |
 | `domain/big` | 큰 판정 — 판정 규칙 · 순서, 큰 판정 기준 저장소 |
 | `domain/queue` | 잇기 대기 — 대기 행과 그 점유, 순서 키 규칙, 대기 상수 · 실패 상한, 대기 저장소 |
@@ -213,7 +214,7 @@ public sealed interface BigStorylineCriteriaChangeResult {
 
 협력: `StorylineLinkingListener` 가 `EventsChanged` 를 받아 사건마다 `event` 의 `EventDirectory.find` 로 지금 상태를 읽어 `PendingEvent.orderAt` 으로 순서 키를 정하고 `LinkingQueueRepository.enqueue` 로 넣는다. 작업 역할의 `LinkStorylinesJob` 이 1분마다 `LinkingRound` 를 돌린다. 회차는 `LinkingCriteriaRepository` 에 지금 기준(`LinkingCriteria` — `LinkingConfiguration` 이 `LinkingProperties` 로 만든 빈)을 등록하고, `LinkingQueueRepository` 로 대기를 점유한 뒤(`PendingEvent.claim` · `LinkingSchedule`), 사건마다 한 트랜잭션에서 `StorylineLinker.link` 를 부르고 `deleteIfUnchanged` · `releaseIfLeased` 로 대기 행을 마무리한다. 예외면 `recordFailureIfLeased` 로 실패를 세고 상한(`LinkingSchedule.failuresExhausted`)이면 `delete` 로 뺀다.
 
-`StorylineLinker` 는 먼저 `StorylineRepository.lockLinking` 으로 모듈 잠금을 잡고, `EventDirectory.find` 로 사건의 지금 상태를 가른다. 지워졌거나 합쳐졌으면 `StorylineRepository.storylinesOf` 의 스토리라인마다 `removeMember` · `moveMember` 로 소속을 맞추고 그 스토리라인들을 정돈한다. 그대로면 `EventDirectory.profiles` 로 사건과 그 사건이 든 스토리라인의 구성 사건 표현을 읽어 `Representation.of` 로 표현을 다시 저장하고(`save`), `Representation.without` 으로 그 사건을 뺀 비교 대상을 만든다. `StorylineRepository.candidates` 로 창 안 후보 스토리라인을 읽어 `LinkingScoring` 으로 점수를 매기고 `LinkingRule.attach` 로 붙일 곳을 정한다(`addMember`). 붙일 곳이 없고 소속이 없으면 `EventDirectory.neighbors` 로 이웃을 읽어 `StorylineRepository.affiliated` 와 `LinkingRule.pair` 로 짝을 정해 `open` · `addMember` 로 연다. 소속이 늘었으면 `LinkingRule.requeue` 로 고른 이웃을 `LinkingQueueRepository.enqueue` 로 다시 넣는다. 끝으로 그 사건이 든 스토리라인과 붙인 스토리라인을 정돈한다.
+`StorylineLinker` 는 먼저 `StorylineRepository.lockLinking` 으로 모듈 잠금을 잡고, `EventDirectory.find` 로 사건의 지금 상태를 가른다. 지워졌거나 합쳐졌으면 `StorylineRepository.storylinesOf` 의 스토리라인마다 `removeMember` · `moveMember` 로 소속을 맞추고 그 스토리라인들을 정돈한다. 그대로면 `EventDirectory.profiles` 로 사건과 그 사건이 든 스토리라인의 구성 사건 표현을 읽어 `Representation.of` 로 표현을 다시 저장하고(`save`), `Representation.without` 으로 그 사건을 뺀 비교 대상을 만든다. `EventDirectory.termCounts` 로 그 사건 상위 핵심 말의 사건 수를 읽어 말의 무게(`TermWeights`)를 만든다. `StorylineRepository.candidates` 로 창 안 후보 스토리라인을 읽어 `LinkingScoring` 으로 점수를 매기고 `LinkingRule.attach` 로 붙일 곳을 정한다(`addMember`). 붙일 곳이 없고 소속이 없으면 `EventDirectory.neighbors` 로 이웃을 읽어 `StorylineRepository.affiliated` 와 `LinkingRule.pair` 로 짝을 정해 `open` · `addMember` 로 연다. 소속이 늘었으면 `LinkingRule.requeue` 로 고른 이웃을 `LinkingQueueRepository.enqueue` 로 다시 넣는다 — 짝으로 연 상대 사건의 이웃은 그 사건의 말의 무게를 따로 읽어 점수를 매긴다. 끝으로 그 사건이 든 스토리라인과 붙인 스토리라인을 정돈한다.
 
 정돈은 스토리라인마다 `StorylineRepository.members` 로 구성 사건을, `storylinesOf`(첫 구성 사건) · `members` 로 그 사건을 가진 다른 스토리라인의 구성 사건을 읽어 `Tidying.decide` 로 정하고, 결과에 따라 표현을 다시 정하거나(`save`) · 지우거나(`delete`) · 합치거나(`merge`) · 풀어 그 사건을 `PendingEvent.orderAt` 의 순서 키로 다시 넣는다(`delete` · `enqueue`). 한 정돈에서 이미 지웠거나 합친 스토리라인은 건너뛴다.
 
@@ -242,6 +243,7 @@ sequenceDiagram
         else 그대로
             L->>D: profiles (사건 · 구성 사건)
             L->>S: save (storyline-R7)
+            L->>D: termCounts (storyline-R8)
             L->>S: candidates (storyline-R9)
             alt 붙일 곳 있음
                 L->>S: addMember (storyline-R10)
@@ -288,7 +290,8 @@ sequenceDiagram
 #### `domain/linking`
 
 - `LinkingCriteria(Duration window, double threshold)` — 잇기 기준. 창은 0 보다 큰 초 단위, 기준은 0 보다 크고 1 이하(storyline-R9)
-- `LinkingScoring` — 점수 산식 · 코사인 하한의 정본(storyline-R8). 상수 `KEY_TERM_WEIGHT` · `HALF_LIFE` · `KEY_TERMS` · `NEIGHBORS` · `COSINE_MARGIN`. 판정할 사건(`Subject`)과 견줄 것(`Compared`)의 점수(`Score` — 점수 · 코사인 · 핵심 말 겹침)
+- `LinkingScoring` — 점수 산식 · 코사인 하한의 정본(storyline-R8). 상수 `KEY_TERM_WEIGHT` · `KEY_TERMS` · `NEIGHBORS` · `COSINE_MARGIN`. 판정할 사건(`Subject`)과 견줄 것(`Compared`)을 시간 창 · 말의 무게로 견준 점수(`Score` — 점수 · 코사인 · 핵심 말 겹침)
+- `TermWeights` — 말의 무게의 정본(storyline-R8) — `of(사건 수, 말마다 그 말을 가진 사건 수)` · `weight(말)`
 - `Cosine` — 두 벡터의 코사인 유사도 — 어느 한쪽이 영 벡터면 NaN
 - `LinkingRule` — 판정의 정본(storyline-R10 ~ R12) — `attach` · `pair` · `requeue`. 점수를 매긴 것은 `Scored(id, Score)`
 - `Representation` — 스토리라인 표현과 대표 사건의 정본(storyline-R7) — `of(구성 사건 표현)` · `without(구성 사건 표현, 뺄 사건)` · `topTerms(n)`
@@ -367,7 +370,7 @@ sequenceDiagram
 
 ### 나가는 쪽
 
-포트가 없다 — 외부 의존이 없다. `event` 는 공개 조회 `EventDirectory` 로 읽는다 — 잇기는 `find` · `profiles` · `neighbors` · `lastArticleSince`, 조회는 `find` · `views` · `articleCountsIn` · `tallies`.
+포트가 없다 — 외부 의존이 없다. `event` 는 공개 조회 `EventDirectory` 로 읽는다 — 잇기는 `find` · `profiles` · `neighbors` · `termCounts` · `lastArticleSince`, 조회는 `find` · `views` · `articleCountsIn` · `tallies`.
 
 #### 저장소 구현
 
@@ -402,22 +405,23 @@ sequenceDiagram
   - 소속이 바뀐 스토리라인은 정돈한다(storyline-R17)
   - 기사 삭제는 따로 받지 않는다 — `event` 가 사건을 줄이거나 지우고 알린다(event-R8 · event-R23)
 
-### 임시 잇기 규칙
+### 잇기 규칙
 
-판단의 이유는 [ADR-0106](../adr/0106-provisional-storyline-linking-opens-only-with-a-partner-event-and-adds-the-single-best-storyline-without-removal.md)에 있다. 이 절의 규칙은 잇는 방법을 평가 세트로 정하기 전의 기준선이다.
+판단의 이유는 [ADR-0106](../adr/0106-provisional-storyline-linking-opens-only-with-a-partner-event-and-adds-the-single-best-storyline-without-removal.md)(붙이기 · 짝 · 다시 넣기의 꼴)과 [ADR-0121](../adr/0121-storyline-linking-scores-centroid-cosine-plus-idf-weighted-key-term-overlap-without-time-decay-jev-or-topic-tags.md)(점수)에 있다.
 
 - **storyline-R7** — 표현(`Representation` — 정본): 스토리라인은 모델 버전 하나를 갖는다(구성 사건의 모델 버전). 중심은 구성 사건 중심의 기사 수 가중 평균, 기사 수는 합, 첫 · 마지막 기사 시각은 구성 사건의 최소 · 최대, 핵심 말은 구성 사건마다 상위 20개(`LinkingScoring.KEY_TERMS`)의 기사 수를 말마다 합한 것이다. 대표 사건은 기사 수가 가장 많은 구성 사건(같으면 사건 ID 가 작은 것)이다([ADR-0105](../adr/0105-storylines-link-incrementally-from-event-change-notifications-and-events-publish-changed-event-ids.md)). 표현은 구성 사건이 바뀔 때마다 그 사건들의 지금 표현(`EventDirectory.profiles` — 합쳐진 사건 · 없는 사건은 빠진다)으로 다시 정해 저장한다. 읽을 수 있는 구성 사건이 하나도 없으면 저장한 표현을 그대로 둔다 — 그 사건들의 알림이 대기에 있다
-- **storyline-R8** — 점수(`LinkingScoring` — 정본) = 감쇠 × ((1 − w) × max(코사인, 0) + w × 핵심 말 겹침), 0 ~ 1. w 는 0.3(`KEY_TERM_WEIGHT`)이다.
+- **storyline-R8** — 점수(`LinkingScoring` — 정본) = (1 − w) × max(코사인, 0) + w × 핵심 말 겹침, 0 ~ 1. w 는 0.11(`KEY_TERM_WEIGHT`)이다.
   - 코사인은 판정할 사건의 중심과 견줄 것(스토리라인 표현 · 이웃 사건)의 중심의 코사인 유사도다. 어느 한쪽이 영 벡터면 점수를 셀 수 없어(NaN) 어느 판정에도 들지 않는다
-  - 핵심 말 겹침은 |판정할 사건 상위 핵심 말 ∩ 견줄 것 상위 핵심 말| ÷ |판정할 사건 상위 핵심 말|(판정할 사건의 핵심 말이 없으면 0)이다. 상위는 기사 수가 많은 순(같으면 바이트 순) 20개(`KEY_TERMS`)다
-  - 시각 차 Δ 는 두 시각 범위(첫 ~ 마지막 기사 시각)의 간격이다 — 겹치면 0. 감쇠는 2^(−Δ ÷ 14일)(반감기 `HALF_LIFE`)이고, Δ 가 시간 창보다 크면 견줄 것이 아니다(같으면 견준다)
-  - 코사인 하한(`cosineFloor`) = (기준 − w) ÷ (1 − w) − 0.01(`COSINE_MARGIN` — 반 정밀도 여유). 기준이 w 이하면 −1(거르지 않는다). 감쇠 ≤ 1 · 겹침 ≤ 1 이라 하한 밑의 것은 기준에 닿을 수 없다
+  - 핵심 말 겹침은 Σ 무게(판정할 사건 상위 핵심 말 ∩ 견줄 것 상위 핵심 말) ÷ Σ 무게(판정할 사건 상위 핵심 말)이다 — 분모가 0 이면(핵심 말이 없거나 무게가 모두 0) 0 이다. 상위는 기사 수가 많은 순(같으면 바이트 순) 20개(`KEY_TERMS`)다
+  - 말의 무게(`TermWeights` — 정본) = ln((N + 1) ÷ (n + 1)), 0 이상. N 은 첫 ~ 마지막 기사 시각이 판정할 사건의 구간(storyline-R9)과 겹치는 합쳐지지 않은 사건 수, n 은 그 가운데 그 말을 핵심 말로 가진 사건 수다(`EventDirectory.termCounts` — 판정할 사건의 상위 핵심 말만 묻는다). 많은 사건에 있는 말일수록 작다. 무게는 판정할 사건마다 그 사건의 구간과 말로 센다 — 다시 넣기(storyline-R12)에서 짝으로 연 상대 사건도 같다
+  - 시각 차 Δ 는 두 시각 범위(첫 ~ 마지막 기사 시각)의 간격이다 — 겹치면 0. Δ 가 시간 창보다 크면 견줄 것이 아니다(같으면 견준다). 창 안이면 시각 차는 점수를 바꾸지 않는다
+  - 코사인 하한(`cosineFloor`) = (기준 − w) ÷ (1 − w) − 0.01(`COSINE_MARGIN` — 반 정밀도 여유). 기준이 w 이하면 −1(거르지 않는다). 겹침 ≤ 1 이라 하한 밑의 것은 기준에 닿을 수 없다
 - **storyline-R9** — 후보: 시간 창 W 는 판정할 사건 E 의 시각을 기준으로 한다 — [E 의 첫 기사 시각 − W, E 의 마지막 기사 시각 + W]. 후보 스토리라인은 E 와 모델 버전이 같고, 시각 범위가 그 구간과 겹치고, 코사인이 하한 이상인 스토리라인이다. E 가 이미 든 스토리라인은 E 를 뺀 표현(`Representation.without`)과 견준다 — E 를 빼면 남는 구성 사건이 없는 스토리라인은 후보가 아니다. 점수가 기준 이상인 것만 판정에 쓴다
 - **storyline-R10** — 붙이기(`LinkingRule.attach`): 기준 이상인 후보 가운데 점수가 가장 높은 것(같으면 스토리라인 ID 가 작은 것)이 E 의 소속이 아니면 그 스토리라인에 붙인다(`RULE`). 가장 높은 것이 이미 소속이면 아무것도 하지 않는다. 소속을 빼지 않는다
 - **storyline-R11** — 짝(`LinkingRule.pair`): 붙일 곳이 없고 E 에 소속이 없으면, 이웃 사건(`EventDirectory.neighbors` — E 와 같은 모델 버전 · 합쳐지지 않은 사건(열림 · 닫힘) · 시각 범위가 R9 의 구간과 겹침 · 코사인이 하한 이상, 코사인 순 상위 50개 — `LinkingScoring.NEIGHBORS`)에 점수를 매겨, 기준 이상인 이웃을 점수 순(같으면 사건 ID 순)으로 보아 소속 없는 첫 사건 P 와 새 스토리라인을 연다 — 표현은 E · P 로 정하고, 두 소속의 근거는 `PAIR` 와 E · P 사이 점수다. 짝이 없으면 E 는 소속 없이 남는다
 - **storyline-R12** — 다시 넣기(`LinkingRule.requeue`): 판정으로 소속이 는 사건(붙은 E, 또는 짝으로 연 E · P)마다 그 사건의 이웃을 읽어, 기준 이상이고 소속 없는 이웃(소속이 는 사건은 빼고)을 사건 ID 오름차순으로 대기에 넣는다(storyline-R2 — 순서 키는 그 이웃의 첫 기사 시각). 계기는 소속이 늘 때뿐이다 — 구성 사건이 자라 표현이 움직여도 다시 넣지 않는다. 소속은 사건 삭제 · 합쳐짐과 정돈(storyline-R17 — 합치기 · 풀기는 되돌리지 않는다)으로만 줄어 한 방향이라 다시 넣기는 끝난다
 - **storyline-R13** — 빈 스토리라인: 구성 사건이 남지 않은 스토리라인은 표현 · 핵심 말과 함께 지운다(정돈의 한 갈래 — storyline-R17). 스토리라인 ID 는 다시 쓰지 않는다([ADR-0105](../adr/0105-storylines-link-incrementally-from-event-change-notifications-and-events-publish-changed-event-ids.md))
-- **storyline-R14** — 판정 근거: 소속마다 정한 것(`RULE` · `PAIR` · `MERGE`), 점수 · 코사인 · 핵심 말 겹침, 판정에 쓴 기준 이력 ID, 시각을 남긴다. `MERGE` 는 점수 · 코사인 · 겹침 · 기준이 없고, 나머지는 넷이 모두 있다. 기준 이력은 (창, 기준) 값마다 한 행이다 — 같은 값이면 같은 ID 다. 기준을 바꿔도 지난 소속을 다시 판정하지 않는다([ADR-0105](../adr/0105-storylines-link-incrementally-from-event-change-notifications-and-events-publish-changed-event-ids.md))
+- **storyline-R14** — 판정 근거: 소속마다 정한 것(`RULE` · `PAIR` · `MERGE`), 점수 · 코사인 · 핵심 말 겹침(무게를 준 값 — storyline-R8), 판정에 쓴 기준 이력 ID, 시각을 남긴다. `MERGE` 는 점수 · 코사인 · 겹침 · 기준이 없고, 나머지는 넷이 모두 있다. 기준 이력은 (창, 기준) 값마다 한 행이다 — 같은 값이면 같은 ID 다. 기준을 바꿔도 지난 소속을 다시 판정하지 않는다([ADR-0105](../adr/0105-storylines-link-incrementally-from-event-change-notifications-and-events-publish-changed-event-ids.md))
 
 ### 운영자 채우기
 
@@ -499,11 +503,11 @@ sequenceDiagram
 | 설정 | 바꾸는 규칙 |
 |---|---|
 | `yozmnews.storyline-linking.window` | 시간 창(`Duration` — 예 `14d`), 기본 14일(storyline-R8 · R9) |
-| `yozmnews.storyline-linking.threshold` | 기준 점수, 기본 0.65(storyline-R8 ~ R12) |
+| `yozmnews.storyline-linking.threshold` | 기준 점수, 기본 0.84(storyline-R8 ~ R12) |
 | `yozmnews.storyline-state.quiet-after` | 잠잠 기간(`Duration`), 기본 7일(storyline-R16) |
 | `yozmnews.storyline-state.ended-after` | 끝남 기간(`Duration`), 기본 30일(storyline-R16) |
 
-기본값의 정본은 `LinkingProperties` · `StorylineStateProperties` 의 `@DefaultValue` 이고 `application.yaml` 에는 키가 없다. 기본값은 측정 전 목표다. 운영자는 환경 변수(`YOZMNEWS_STORYLINE_LINKING_WINDOW` · `YOZMNEWS_STORYLINE_LINKING_THRESHOLD` · `YOZMNEWS_STORYLINE_STATE_QUIET_AFTER` · `YOZMNEWS_STORYLINE_STATE_ENDED_AFTER`)로 바꾼다. 창이 0 이하이거나 초 단위가 아니거나 기준이 0 보다 크고 1 이하가 아니면 기동하지 않는다. 잠잠 · 끝남 기간이 0 이하이거나 초 단위가 아니거나 잠잠 기간 ≥ 끝남 기간이면 기동하지 않는다. 바꾼 잇기 기준은 그 뒤 판정에만 쓴다 — 지난 소속을 다시 판정하지 않는다(storyline-R14). 바꾼 상태 기간은 조회 때 바로 쓴다(storyline-R16). 그 밖의 설정 키는 없다. 큰 판정 기준은 설정이 아니라 운영자 설정이다 — 운영자가 화면에서 바꾼다(storyline-R20).
+기본값의 정본은 `LinkingProperties` · `StorylineStateProperties` 의 `@DefaultValue` 이고 `application.yaml` 에는 키가 없다. 기본값은 측정 전 목표다. 기준 점수의 기본값은 기본 임베딩 모델의 코사인 범위에 맞춰 평가 세트에서 고른 값이다 — 임베딩 모델을 바꾸면 다시 정한다. 운영자는 환경 변수(`YOZMNEWS_STORYLINE_LINKING_WINDOW` · `YOZMNEWS_STORYLINE_LINKING_THRESHOLD` · `YOZMNEWS_STORYLINE_STATE_QUIET_AFTER` · `YOZMNEWS_STORYLINE_STATE_ENDED_AFTER`)로 바꾼다. 창이 0 이하이거나 초 단위가 아니거나 기준이 0 보다 크고 1 이하가 아니면 기동하지 않는다. 잠잠 · 끝남 기간이 0 이하이거나 초 단위가 아니거나 잠잠 기간 ≥ 끝남 기간이면 기동하지 않는다. 바꾼 잇기 기준은 그 뒤 판정에만 쓴다 — 지난 소속을 다시 판정하지 않는다(storyline-R14). 바꾼 상태 기간은 조회 때 바로 쓴다(storyline-R16). 그 밖의 설정 키는 없다. 큰 판정 기준은 설정이 아니라 운영자 설정이다 — 운영자가 화면에서 바꾼다(storyline-R20).
 
 ## 8. 결정
 
@@ -520,3 +524,4 @@ sequenceDiagram
 | [0116](../adr/0116-storyline-big-judgement-starts-with-a-provisional-rule-of-distinct-sources-and-mean-importance-judged-at-query-time.md) | 스토리라인의 큰 판정은 기간 안 서로 다른 소스 수와 중요도 평균이 둘 다 기준 이상인지를 조회할 때 판정하는 임시 산식으로 시작한다 |
 | [0117](../adr/0117-big-judgement-materials-are-tallied-by-event-per-group-of-events-and-storyline-passes-only-event-ids.md) | 큰 판정의 재료는 `event` 가 사건 묶음 단위로 세고 `storyline` 은 사건 ID 만 넘긴다 |
 | [0118](../adr/0118-big-judgement-criteria-are-storyline-operator-settings-and-do-not-inherit-event-criteria-values-or-history.md) | 큰 판정 기준은 `storyline` 의 운영자 설정으로 두고 사건 기준의 값 · 이력을 이어받지 않는다 |
+| [0121](../adr/0121-storyline-linking-scores-centroid-cosine-plus-idf-weighted-key-term-overlap-without-time-decay-jev-or-topic-tags.md) | 스토리라인 잇기의 점수는 사건 중심 코사인과 IDF 로 가중한 핵심 말 겹침이고, 시각 감쇠 · Jev · 주제 태그를 쓰지 않는다 |

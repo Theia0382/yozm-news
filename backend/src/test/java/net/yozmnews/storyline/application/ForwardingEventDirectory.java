@@ -16,6 +16,7 @@ import net.yozmnews.event.EventPage;
 import net.yozmnews.event.EventPeriod;
 import net.yozmnews.event.EventTally;
 import net.yozmnews.event.EventProfile;
+import net.yozmnews.event.EventTermCounts;
 import net.yozmnews.event.EventView;
 import org.jspecify.annotations.Nullable;
 
@@ -82,6 +83,11 @@ class ForwardingEventDirectory implements EventDirectory {
 	public List<EventNeighbor> neighbors(EventId id, Instant from, Instant to, double minCosine, int keyTerms,
 			int limit) {
 		return this.delegate.neighbors(id, from, to, minCosine, keyTerms, limit);
+	}
+
+	@Override
+	public EventTermCounts termCounts(Collection<String> terms, Instant from, Instant to) {
+		return this.delegate.termCounts(terms, from, to);
 	}
 
 	@Override
