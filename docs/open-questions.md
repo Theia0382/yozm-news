@@ -7,7 +7,7 @@
 | # | 질문 | 권장안 | 필요 시점 |
 |---|---|---|---|
 | 33 | 스토리라인의 중요도를 큰 판정 여부보다 세분화할지 | 등급을 쓰는 곳(큰 슬롯 · 관심도 순위 · 변화 리포트)과 함께 스토리라인의 큰 판정을 설계할 때 정한다([ADR-0103](adr/0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md)) | M4 스토리라인 · M6 후보 선별 · M7 관심도 |
-| 34 | 스토리라인에 주제 · 지역 태그를 줄지 — 사용자 관심사(구독 주제)와 스토리라인을 잇는 축 | 주제는 스토리라인과 다른 축이다([ADR-0101](adr/0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)). 주제별 관심도 · 보도량에는 이름 있는 축이 필요하다 — 구성 기사의 태그를 조회할 때 모으는 방식부터 검토하고, 여러 주제에 걸친 스토리라인의 집계 규칙을 정한다 | M4 스토리라인 · M7 관심도 |
+| 34 | 스토리라인에 주제 · 지역 태그를 줄지 — 사용자 관심사(구독 주제)와 스토리라인을 잇는 축 | 주제는 스토리라인과 다른 축이다([ADR-0101](adr/0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)). 스토리라인에 태그를 저장하지 않고, 쓸 때 구성 기사의 태그로 모으는 방식부터 한다 — 스토리라인은 사건이 붙고 합쳐질 때마다, 기사 태그는 태그 체계 · 기준이 바뀔 때마다 달라져 저장하면 그때마다 다시 맞춰야 한다. 좋아요 / 싫어요와 주제별 보도량은 기사에 붙어 기사 태그로 세므로, 스토리라인의 주제가 필요한 곳은 스토리라인 구독을 주제별 관심도에 넣는 일이다. 재료가 기사 단위라 `storyline` 은 직접 모으지 못한다 — 모으는 곳과 여러 주제에 걸친 스토리라인의 집계 규칙(주제마다 어느 만큼의 기사가 있어야 그 주제로 보는지)을 정한다. 스토리라인을 주제로 거르는 화면이 생기면 저장을 다시 본다 | M7 관심도 |
 
 ## 운영하면서 결정
 
@@ -21,6 +21,7 @@
 | 20 | 사건의 최대 기간(연 뒤 이만큼 지나면 새 기사가 있어도 닫는다 — 기본값은 측정 전 목표, [event Spec §7](specs/event.md#7-설정)). 나머지 사건 묶기 값은 결정됨(아래) | 평가 세트의 다시 묶기는 며칠치라 이 길이를 담지 못한다. 운영 기록에서 연 뒤 오래 이어지는 사건이 보이면 정한다 |
 | 21 | 스토리라인의 큰 판정 기준과 다이제스트의 큰 슬롯 수 | M4 평가 세트와 운영자 표본 검수로 시작해 M6 측정으로 조정 |
 | 24 | 관심도 감쇠 · 가중치, 구독 제안 기준 | 중립에서 시작해 M7 측정으로 정한다 |
+| 35 | 스토리라인 잇기의 기준 점수 · 핵심 말 가중치 · 시간 창과 몇 주에 걸친 전개([storyline Spec §5](specs/storyline.md#잇기-규칙) · [§7](specs/storyline.md#7-설정)) — 평가 세트가 며칠치라 긴 전개, 사건이 자라는 동안의 판정, 말의 흔함을 세는 범위, 사건이 쌓였을 때의 말 수 조회 비용을 재지 못했다([ADR-0121](adr/0121-storyline-linking-scores-centroid-cosine-plus-idf-weighted-key-term-overlap-without-time-decay-jev-or-topic-tags.md)) | 평가 세트에서 고른 값으로 시작해 M4 실측의 운영 기록과 운영자 표본 검수로 다시 본다. 애매한 구간의 Jev 판정을 더할지도 그때 본다 |
 | 31 | 메일 발송 서비스 선택(메일을 도입할 때) | SMTP 로 붙인다([ADR-0012](adr/0012-swappable-external-dependencies.md)). 후보 Resend · Amazon SES · Postmark. 발송 도메인에 SPF · DKIM · DMARC 를 설정한다. 자체 메일 서버는 전달률을 위해 역방향 DNS 도 필요하다 |
 | 32 | 키가 없는 사용자에게 Jev 평가 결과 기반 헤드라인 목록을 보여 줄지 | 보류 — 생성형 LLM 을 쓰지 않아 운영자 비용이 늘지 않는다. 지금은 키 등록 페이지만 보여 준다([ADR-0003](adr/0003-byok-personalized-digest.md)) |
 

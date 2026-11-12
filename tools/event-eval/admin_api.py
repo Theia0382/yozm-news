@@ -1,4 +1,4 @@
-"""운영자 API 읽기 — 사건 · 큰 사건 · 판정 기록.
+"""운영자 API 읽기 — 사건 · 판정 기록.
 
 응답 계약의 정본은 저장소의 api/openapi.json 이다. 이 모듈이 읽는 필드는 USED_FIELDS 가 모두 적고(test_contract.py 가
 명세와 대조한다), 응답 필드는 field() 로만 읽는다.
@@ -29,10 +29,6 @@ USED_FIELDS: Final[Mapping[str, tuple[str, ...]]] = {
     "EventDetailResponse": ("id", "status", "articles"),
     "EventArticleResponse": ("articleId", "article", "publishedAt"),
     "ArticleSummaryResponse": ("title", "sources"),
-    "BigEventListResponse": ("criteria", "events"),
-    "BigEventPreviewResponse": ("proposed", "proposedEvents"),
-    "BigEventRowResponse": ("id",),
-    "BigEventCriteriaResponse": ("minSources", "minImportance"),
     "EventJudgementListResponse": ("criteria", "judgements", "next"),
     "EventJudgementRowResponse": ("articleId", "modelVersion"),
     "JudgementCursorResponse": ("judgedAt", "id"),
@@ -41,8 +37,6 @@ USED_FIELDS: Final[Mapping[str, tuple[str, ...]]] = {
 """스키마 이름 → 도구가 읽는 필드."""
 
 _EVENTS: Final = "/api/admin/events"
-_BIG_EVENTS: Final = "/api/admin/big-events"
-_BIG_PREVIEWS: Final = "/api/admin/big-event-criteria-previews"
 _JUDGEMENTS: Final = "/api/admin/event-judgements"
 
 
@@ -78,13 +72,6 @@ class EventDetail:
     event_id: int
     status: str
     articles: tuple[EventArticle, ...]
-
-
-@dataclass(frozen=True)
-class BigCriteria:
-    min_sources: int
-    min_importance: Decimal
-    proposed: bool
 
 
 @dataclass(frozen=True)
@@ -150,20 +137,6 @@ class AdminApi:
         return EventDetail(int(field(detail, "EventDetailResponse", "id")),
                            str(field(detail, "EventDetailResponse", "status")), tuple(articles))
 
-    def big_events(self, day: date, zone: str,
-                   criteria: tuple[int, Decimal] | None) -> tuple[BigCriteria, list[int]]:
-        """그 날짜 하루의 큰 사건 ID — criteria 가 없으면 지금 기준, 있으면 그 제안 기준의 미리보기."""
-        if criteria is None:
-            page = self._get(_BIG_EVENTS, {"from": day.isoformat(), "to": day.isoformat(), "zone": zone})
-            used = _big_criteria(field(page, "BigEventListResponse", "criteria"), proposed=False)
-            rows = field(page, "BigEventListResponse", "events")
-        else:
-            page = self._post(_BIG_PREVIEWS, {"from": day.isoformat(), "to": day.isoformat(), "zone": zone,
-                                              "minSources": criteria[0], "minImportance": criteria[1]})
-            used = _big_criteria(field(page, "BigEventPreviewResponse", "proposed"), proposed=True)
-            rows = field(page, "BigEventPreviewResponse", "proposedEvents")
-        return used, [int(field(row, "BigEventRowResponse", "id")) for row in rows]
-
     def assignment_criteria(self, day: date, zone: str) -> AssignmentCriteria:
         """지금 앱의 사건 배정 기준 — 판정 기록 응답이 함께 낸다(기간과 무관한 지금 값)."""
         page = self._get(_JUDGEMENTS, {"from": day.isoformat(), "to": day.isoformat(), "zone": zone})
@@ -202,12 +175,6 @@ class AdminApi:
         url = self._base + path + ("?" + urllib.parse.urlencode(query) if query else "")
         return self._send(path, urllib.request.Request(url, method="GET"))
 
-    def _post(self, path: str, body: Mapping[str, object]) -> object:
-        data = json.dumps(body, default=_json_default).encode("utf-8")
-        request = urllib.request.Request(self._base + path, data=data, method="POST")
-        request.add_header("Content-Type", "application/json")
-        return self._send(path, request)
-
     def _send(self, path: str, request: urllib.request.Request) -> object:
         request.add_header("Authorization", f"Bearer {self._token}")
         request.add_header("Accept", "application/json")
@@ -241,16 +208,6 @@ def _problem_detail(error: urllib.error.HTTPError) -> str:
     return error.reason if isinstance(error.reason, str) else "요청이 실패했다"
 
 
-def _big_criteria(value: object, *, proposed: bool) -> BigCriteria:
-    return BigCriteria(int(field(value, "BigEventCriteriaResponse", "minSources")),
-                       _decimal(field(value, "BigEventCriteriaResponse", "minImportance")), proposed)
-
-
 def _decimal(value: object) -> Decimal:
     return value if isinstance(value, Decimal) else Decimal(str(value))
 
-
-def _json_default(value: object) -> object:
-    if isinstance(value, Decimal):
-        return float(value)
-    raise TypeError(f"JSON 으로 쓸 수 없다: {type(value).__name__}")

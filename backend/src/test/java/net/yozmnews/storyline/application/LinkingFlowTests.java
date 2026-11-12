@@ -8,6 +8,7 @@ import java.time.Instant;
 import java.time.InstantSource;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -19,10 +20,12 @@ import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.event.EventDirectory;
 import net.yozmnews.event.EventId;
 import net.yozmnews.event.EventProfile;
+import net.yozmnews.event.EventTermCounts;
 import net.yozmnews.event.EventView;
 import net.yozmnews.event.EventsChanged;
 import net.yozmnews.platform.VectorText;
 import net.yozmnews.storyline.StorylineRows;
+import net.yozmnews.storyline.StorylineState;
 import net.yozmnews.storyline.domain.linking.LinkingCriteria;
 import net.yozmnews.storyline.domain.linking.LinkingCriteriaRepository;
 import net.yozmnews.storyline.domain.linking.Representation;
@@ -32,7 +35,6 @@ import net.yozmnews.storyline.domain.storyline.LinkJudgement;
 import net.yozmnews.storyline.domain.storyline.LinkedBy;
 import net.yozmnews.storyline.domain.storyline.StateCriteria;
 import net.yozmnews.storyline.domain.storyline.StorylineRepository;
-import net.yozmnews.storyline.domain.storyline.StorylineState;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,11 +52,16 @@ import org.springframework.transaction.support.TransactionTemplate;
 /**
  * 잇기 회차의 흐름 — 짝으로 열기, 붙이기, 소속 없이 남기, 합쳐진 사건 · 지워진 사건 따르기와 정돈(구성 사건이 같은 스토리라인 합치기 · 사건
  * 하나만 남은 스토리라인 합치기 · 풀기, 사건 둘 이상 포함은 그대로), 끝난 스토리라인도 후보, 소속이 늘 때 이웃 다시 넣기와 옮기기는 계기가
- * 아님, 처리 중에 다시 온 알림, 실패 상한, 리스너의 순서 키를 실제 PostgreSQL 과 실제 저장소 · 사건 조회로 본다.
+ * 아님, 흔한 말과 드문 말의 겹침, 말 수를 묻는 범위, 처리 중에 다시 온 알림, 실패 상한, 리스너의 순서 키를 실제 PostgreSQL 과 실제 저장소 ·
+ * 사건 조회로 본다.
  * 사건은 SQL 로 넣고 대기에는 시험이 직접 넣는다. 회차 · 판정은 시험이 고정 시계로 직접 만든다(작업 서버는 끈다). 다른 시험 클래스의 비동기
  * 리스너가 남긴 대기 행이 섞일 수 있어, 대기 · 스토리라인 단언은 이 시험의 사건 · 모델 버전으로 좁힌다.
  * <p>
- * 기준: 창 14일 · 기준 0.65 — 점수 = 감쇠 × (0.7 × 코사인 + 0.3 × 겹침). 벡터는 반 정밀도에서 정확한 성분이다.
+ * 기준: 창 14일 · 기준 0.80 — 점수 = 0.89 × 코사인 + 0.11 × 겹침. 벡터는 반 정밀도에서 정확한 성분이다.
+ * <p>
+ * 말의 무게는 판정할 사건의 구간과 겹치는 모든 사건으로 센다 — 이 클래스와 다른 시험이 남긴 사건이 그 수에 섞인다. 그래서 점수를 리터럴로
+ * 보는 시험은 말의 무게를 모두 같게 한 사건 조회({@link #evenly()})로 돌리고(무게가 같으면 겹침은 말 수의 비율이다), 실제 말 수로 도는
+ * 시험은 다른 시험이 쓰지 않는 먼 시각(2036년)에 사건을 둔다.
  * <p>
  * 지키는 규칙: storyline-R1 ~ storyline-R14 · storyline-R16 · storyline-R17 · storyline-R18
  */
@@ -68,7 +75,7 @@ class LinkingFlowTests {
 
 	private static final String MODEL = "link-m";
 
-	private static final LinkingCriteria CRITERIA = new LinkingCriteria(Duration.ofDays(14), 0.65);
+	private static final LinkingCriteria CRITERIA = new LinkingCriteria(Duration.ofDays(14), 0.80);
 
 	private static final StateCriteria STATE = new StateCriteria(Duration.ofDays(7), Duration.ofDays(30));
 
@@ -101,12 +108,12 @@ class LinkingFlowTests {
 		Pair pair = openPair();
 
 		long storyline = onlyStoryline();
-		// cos([1,0], [4,3]) = 0.8, 핵심 말 둘이 모두 겹친다 — 0.7 × 0.8 + 0.3 × 1 = 0.86
+		// cos([1,0], [4,3]) = 0.8, 핵심 말 둘이 모두 겹친다 — 0.89 × 0.8 + 0.11 × 1 = 0.822
 		assertThat(member(storyline, pair.e1())).containsEntry("linked_by", "PAIR")
 			.containsEntry("cosine", 0.8)
 			.containsEntry("key_term_overlap", 1.0)
 			.containsEntry("criteria_id", criteriaId());
-		assertThat((Double) member(storyline, pair.e1()).get("score")).isCloseTo(0.86, within(1e-6));
+		assertThat((Double) member(storyline, pair.e1()).get("score")).isCloseTo(0.822, within(1e-6));
 		assertThat(member(storyline, pair.e2())).containsEntry("linked_by", "PAIR");
 		// ([1,0] × 3 + [4,3] × 1) / 4 = [1.75, 0.75] — 대표는 기사 셋인 e1
 		assertThat(storylineRow(storyline)).containsEntry("centroid", "[1.75,0.75]")
@@ -121,7 +128,7 @@ class LinkingFlowTests {
 		// 같은 사건을 다시 판정해도 스토리라인은 하나이고 ID 가 그대로다(증분)
 		this.queue.enqueue(pair.e1(), null, NOW);
 		this.queue.enqueue(pair.e2(), null, NOW);
-		round(this.directory).run();
+		round(evenly()).run();
 		assertThat(onlyStoryline()).isEqualTo(storyline);
 		assertThat(memberIds(storyline)).containsExactly(pair.e1(), pair.e2());
 	}
@@ -134,11 +141,11 @@ class LinkingFlowTests {
 				"2026-11-05T04:00:00Z", Map.of("금리", 1));
 		this.queue.enqueue(e3, Instant.parse("2026-11-05T04:00:00Z"), NOW);
 
-		round(this.directory).run();
+		round(evenly()).run();
 
-		// cos([1,0], [1.75,0.75]) = 1.75 / √3.625 ≈ 0.919145, 겹침 1, 범위 안 — 0.7 × 0.919145 + 0.3 = 0.94340
+		// cos([1,0], [1.75,0.75]) = 1.75 / √3.625 ≈ 0.919145, 겹침 1 — 0.89 × 0.919145 + 0.11 = 0.92804
 		assertThat(member(storyline, e3)).containsEntry("linked_by", "RULE");
-		assertThat((Double) member(storyline, e3).get("score")).isCloseTo(0.94340, within(1e-4));
+		assertThat((Double) member(storyline, e3).get("score")).isCloseTo(0.92804, within(1e-4));
 		assertThat(memberIds(storyline)).containsExactly(pair.e1(), pair.e2(), e3);
 		// ([1,0] × 3 + [4,3] + [1,0]) / 5 = [1.6, 0.6] — 반 정밀도로 저장해 1e-3 안
 		assertThat(storylineRow(storyline)).containsEntry("article_count", 5);
@@ -156,7 +163,7 @@ class LinkingFlowTests {
 		this.queue.enqueue(e1, Instant.parse("2026-11-05T00:00:00Z"), NOW);
 		this.queue.enqueue(e2, Instant.parse("2026-11-05T00:00:00Z"), NOW);
 
-		round(this.directory).run();
+		round(evenly()).run();
 
 		assertThat(storylineIds()).isEmpty();
 		assertThat(queued(e1)).isEmpty();
@@ -172,7 +179,7 @@ class LinkingFlowTests {
 		StorylineRows.merge(this.jdbc, pair.e2(), e9);
 		this.queue.enqueue(pair.e2(), null, NOW);
 
-		round(this.directory).run();
+		round(evenly()).run();
 
 		assertThat(memberIds(storyline)).containsExactly(pair.e1(), e9);
 		assertThat(member(storyline, e9)).containsEntry("linked_by", "MERGE")
@@ -190,13 +197,13 @@ class LinkingFlowTests {
 		StorylineRows.merge(this.jdbc, pair.e2(), pair.e1());
 		this.queue.enqueue(pair.e2(), null, NOW);
 
-		round(this.directory).run();
+		round(evenly()).run();
 
 		// e2 를 e1 에 합쳐 사건 하나만 남았고 e1 은 다른 스토리라인에 없다 — 풀고 e1 을 첫 기사 시각으로 다시 넣는다(storyline-R17)
 		assertThat(storylineIds()).isEmpty();
 		assertThat(queued(pair.e1())).hasValueSatisfying(row -> assertThat(row).containsEntry("order_at", "2026-11-05T00:00:00Z"));
 
-		round(this.directory).run();
+		round(evenly()).run();
 
 		// e1 은 이웃이 없어 소속 없이 남는다 — 풀기가 다시 이어지지 않는다
 		assertThat(storylineIds()).isEmpty();
@@ -210,7 +217,7 @@ class LinkingFlowTests {
 		StorylineRows.delete(this.jdbc, pair.e1());
 		this.queue.enqueue(pair.e1(), null, NOW);
 
-		round(this.directory).run();
+		round(evenly()).run();
 
 		// e2 하나만 남았고 다른 스토리라인에 없다 — 풀고 e2 를 다시 넣는다. e2 에는 알림이 없어 이 넣기가 유일한 계기다(storyline-R17)
 		assertThat(storylineIds()).isEmpty();
@@ -232,12 +239,12 @@ class LinkingFlowTests {
 		long e3 = StorylineRows.event(this.jdbc, "OPEN", MODEL, "[1,0]", 1, "2026-11-05T04:00:00Z",
 				"2026-11-05T04:00:00Z", Map.of("금리", 1));
 		this.queue.enqueue(e3, Instant.parse("2026-11-05T04:00:00Z"), NOW);
-		round(this.directory).run();
+		round(evenly()).run();
 		assertThat(memberIds(storyline)).containsExactly(pair.e1(), pair.e2(), e3);
 		StorylineRows.delete(this.jdbc, pair.e1());
 		this.queue.enqueue(pair.e1(), null, NOW);
 
-		round(this.directory).run();
+		round(evenly()).run();
 
 		// 사건 둘이 남아 정돈은 그대로 둔다(대조 — storyline-R17)
 		assertThat(storylineIds()).containsExactly(storyline);
@@ -259,7 +266,7 @@ class LinkingFlowTests {
 		this.queue.enqueue(other.e1(), null, NOW);
 		this.queue.enqueue(other.e2(), null, NOW);
 
-		round(this.directory).run();
+		round(evenly()).run();
 
 		// L2 = {e1, e2} 가 L1 과 같아 ID 가 작은 L1 에 합친다(storyline-R17 · R18)
 		assertThat(mergedInto(l2)).isEqualTo(l1);
@@ -282,7 +289,7 @@ class LinkingFlowTests {
 		this.queue.enqueue(other.e1(), null, NOW);
 		this.queue.enqueue(other.e2(), null, NOW);
 
-		round(this.directory).run();
+		round(evenly()).run();
 
 		// L2 = {e1} 이고 e1 은 L1 에 있다 — 풀지 않고 L1 에 합친다(storyline-R17)
 		assertThat(mergedInto(l2)).isEqualTo(l1);
@@ -301,7 +308,7 @@ class LinkingFlowTests {
 		long l1 = seed(a, b, c);
 		this.queue.enqueue(c, Instant.parse("2026-11-05T00:00:00Z"), NOW);
 
-		round(this.directory).run();
+		round(evenly()).run();
 
 		// L1 − c 와 L2 의 점수가 같아(코사인 1 · 겹침 1) ID 가 작은 L2 에 붙고, L2 = L1 이 되어 L1 을 L2 에 합친다
 		assertThat(member(l2, c)).containsEntry("linked_by", "RULE");
@@ -324,7 +331,7 @@ class LinkingFlowTests {
 		long l1 = seed(a, b, c, d);
 		this.queue.enqueue(c, Instant.parse("2026-11-05T00:00:00Z"), NOW);
 
-		round(this.directory).run();
+		round(evenly()).run();
 
 		// c 가 L2 에 붙어 L2 = {a, b, c} ⊂ L1 — 사건 둘 이상의 포함은 합치지 않는다(대조 — storyline-R17)
 		assertThat(member(l2, c)).containsEntry("linked_by", "RULE");
@@ -342,7 +349,7 @@ class LinkingFlowTests {
 				"2026-09-01T06:00:00Z", Map.of("금리", 1));
 		this.queue.enqueue(e1, Instant.parse("2026-09-01T00:00:00Z"), NOW);
 		this.queue.enqueue(e2, Instant.parse("2026-09-01T06:00:00Z"), NOW);
-		round(this.directory).run();
+		round(evenly()).run();
 		long storyline = onlyStoryline();
 		assertThat(STATE.stateOf(Instant.parse("2026-09-01T06:00:00Z"), NOW)).isEqualTo(StorylineState.ENDED);
 		// 채우기처럼 그 무렵의 지난 사건을 넣는다
@@ -350,7 +357,7 @@ class LinkingFlowTests {
 				"2026-09-02T00:00:00Z", Map.of("금리", 1));
 		this.queue.enqueue(e3, Instant.parse("2026-09-02T00:00:00Z"), NOW);
 
-		round(this.directory).run();
+		round(evenly()).run();
 
 		// 끝난 스토리라인도 후보다 — 붙는다. 마지막 기사가 09-02 라 상태는 끝남 그대로(storyline-R16)
 		assertThat(member(storyline, e3)).containsEntry("linked_by", "RULE");
@@ -366,18 +373,24 @@ class LinkingFlowTests {
 				"2026-10-01T06:00:00Z", Map.of("금리", 1));
 		this.queue.enqueue(e1, Instant.parse("2026-10-01T00:00:00Z"), NOW);
 		this.queue.enqueue(e2, Instant.parse("2026-10-01T06:00:00Z"), NOW);
-		round(this.directory).run();
+		round(evenly()).run();
 		long storyline = onlyStoryline();
 		assertThat(STATE.stateOf(Instant.parse("2026-10-01T06:00:00Z"), NOW)).isEqualTo(StorylineState.ENDED);
 		long e3 = StorylineRows.event(this.jdbc, "OPEN", MODEL, "[1,0]", 1, "2026-11-09T00:00:00Z",
 				"2026-11-09T00:00:00Z", Map.of("금리", 1));
 		this.queue.enqueue(e3, Instant.parse("2026-11-09T00:00:00Z"), NOW);
 
-		round(this.directory, new LinkingCriteria(Duration.ofDays(60), 0.10)).run();
+		// 간격 38.75일 — 창 14일 밖이라 견주지 않는다(대조)
+		round(evenly()).run();
+		assertThat(memberIds(storyline)).containsExactly(e1, e2);
+		assertThat(queued(e3)).isEmpty();
+		this.queue.enqueue(e3, Instant.parse("2026-11-09T00:00:00Z"), NOW);
 
-		// 간격 38.75일 — 2^(−38.75 ÷ 14) ≈ 0.14682, 코사인 1 · 겹침 1. 같은 스토리라인이 다시 진행이다(storyline-R16)
+		round(evenly(), new LinkingCriteria(Duration.ofDays(60), 0.80)).run();
+
+		// 창 60일 안 — 시각 차는 점수를 바꾸지 않는다: 코사인 1 · 겹침 1 이라 1.0. 같은 스토리라인이 다시 진행이다(storyline-R16)
 		assertThat(member(storyline, e3)).containsEntry("linked_by", "RULE");
-		assertThat((Double) member(storyline, e3).get("score")).isCloseTo(0.14682, within(1e-4));
+		assertThat((Double) member(storyline, e3).get("score")).isCloseTo(1.0, within(1e-6));
 		assertThat(storylineRow(storyline)).containsEntry("last", "2026-11-09T00:00:00Z");
 		assertThat(STATE.stateOf(Instant.parse("2026-11-09T00:00:00Z"), NOW)).isEqualTo(StorylineState.ACTIVE);
 	}
@@ -388,26 +401,26 @@ class LinkingFlowTests {
 		long e1 = StorylineRows.event(this.jdbc, "CLOSED", MODEL, "[4,3]", 1, "2026-11-01T00:00:00Z",
 				"2026-11-01T00:00:00Z", Map.of("금리", 1));
 		this.queue.enqueue(e1, Instant.parse("2026-11-01T00:00:00Z"), NOW);
-		round(this.directory).run();
+		round(evenly()).run();
 		assertThat(storylineIds()).isEmpty();
 		assertThat(queued(e1)).isEmpty();
 
-		// e2 · e3 이 생긴다 — e2 의 짝은 e3(코사인 1, 점수 1.0)이고, e1 은 e2 와 0.86 × 2^(−1/14) ≈ 0.818 로 기준 이상이다
+		// e2 · e3 이 생긴다 — e2 의 짝은 e3(코사인 1, 점수 1.0)이고, e1 은 e2 와 코사인 0.8 · 겹침 1 이라 0.822 로 기준 이상이다
 		long e2 = StorylineRows.event(this.jdbc, "OPEN", MODEL, "[1,0]", 2, "2026-11-02T00:00:00Z",
 				"2026-11-02T00:00:00Z", Map.of("금리", 2));
 		long e3 = StorylineRows.event(this.jdbc, "OPEN", MODEL, "[1,0]", 1, "2026-11-02T00:00:00Z",
 				"2026-11-02T00:00:00Z", Map.of("금리", 1));
 		this.queue.enqueue(e2, Instant.parse("2026-11-02T00:00:00Z"), NOW);
-		round(this.directory).run();
+		round(evenly()).run();
 
 		long storyline = onlyStoryline();
 		assertThat(memberIds(storyline)).containsExactly(e2, e3);
 		// 소속이 늘어 e1 을 다시 넣었다 — 순서 키는 e1 의 첫 기사 시각
 		assertThat(queued(e1)).hasValueSatisfying(row -> assertThat(row).containsEntry("order_at", "2026-11-01T00:00:00Z"));
 
-		round(this.directory).run();
+		round(evenly()).run();
 
-		// e1 과 표현 [1,0] 의 점수도 ≈ 0.818 — 붙는다
+		// e1 과 표현 [1,0] 의 점수도 0.822 — 붙는다
 		assertThat(memberIds(storyline)).containsExactly(e1, e2, e3);
 		assertThat(member(storyline, e1)).containsEntry("linked_by", "RULE");
 	}
@@ -422,10 +435,117 @@ class LinkingFlowTests {
 				Map.of("금리", 1));
 		this.queue.enqueue(e2, Instant.parse("2026-11-02T00:00:00Z"), NOW);
 
-		round(this.directory).run();
+		round(evenly()).run();
 
 		assertThat(storylineIds()).hasSize(1);
 		assertThat(queued(e1)).isEmpty();
+	}
+
+	@Test
+	void aCommonTermOverlapDoesNotLinkButARareTermOverlapDoes() {
+		// 다른 시험이 쓰지 않는 시각이라 구간 안 사건은 이 시험의 24건뿐이다 — 채움 20 · p1 · p2 · x · y
+		String at = "2036-05-05T00:00:00Z";
+		Map<String, Integer> common = new HashMap<>();
+		for (int i = 1; i <= 9; i++) {
+			common.put("흔한말" + i, 1);
+		}
+		Map<String, Integer> filler = new HashMap<>(common);
+		filler.put("채움말", 1);
+		for (int i = 0; i < 20; i++) {
+			// [0,1] — 아래 사건들과 코사인이 하한 밑이라 후보 · 이웃이 되지 않고 말 수에만 든다
+			StorylineRows.event(this.jdbc, "CLOSED", MODEL, "[0,1]", 1, at, at, filler);
+		}
+		Map<String, Integer> flow = new HashMap<>(common);
+		flow.put("드문말", 1);
+		long p1 = StorylineRows.event(this.jdbc, "OPEN", MODEL, "[1,0]", 1, at, at, flow);
+		long p2 = StorylineRows.event(this.jdbc, "OPEN", MODEL, "[1,0]", 1, at, at, flow);
+		// x 는 흔한 말 아홉이 겹친다(말 수로는 9/10) — y 는 드문 말 하나가 겹친다(말 수로는 1/2). 둘 다 흐름과 코사인 0.8, 서로는 0.28
+		Map<String, Integer> xTerms = new HashMap<>(common);
+		xTerms.put("엑스말", 1);
+		long x = StorylineRows.event(this.jdbc, "OPEN", MODEL, "[4,3]", 1, at, at, xTerms);
+		long y = StorylineRows.event(this.jdbc, "OPEN", MODEL, "[4,-3]", 1, at, at, Map.of("드문말", 1, "채움말", 1));
+		this.queue.enqueue(p1, Instant.parse("2036-05-05T00:00:00Z"), NOW);
+		this.queue.enqueue(p2, Instant.parse("2036-05-05T00:00:01Z"), NOW);
+		this.queue.enqueue(x, Instant.parse("2036-05-05T00:00:02Z"), NOW);
+		this.queue.enqueue(y, Instant.parse("2036-05-05T00:00:03Z"), NOW);
+
+		round(this.directory).run();
+
+		// 사건 24 — 흔한 말은 23건(채움 20 · p1 · p2 · x)에 있어 무게 ln(25 ÷ 24) = 0.040822, 엑스말은 x 뿐이라 ln(25 ÷ 2) = 2.525729.
+		// x 의 겹침 = 9 × 0.040822 ÷ (9 × 0.040822 + 2.525729) = 0.126990 — 0.89 × 0.8 + 0.11 × 0.126990 = 0.725969 < 0.80.
+		// 드문 말은 3건(p1 · p2 · y)이라 ln(25 ÷ 4) = 1.832581, 채움말은 21건(채움 20 · y)이라 ln(25 ÷ 22) = 0.127833.
+		// y 의 겹침 = 1.832581 ÷ (1.832581 + 0.127833) = 0.934793 — 0.712 + 0.11 × 0.934793 = 0.814827 ≥ 0.80
+		long storyline = onlyStoryline();
+		assertThat(memberIds(storyline)).containsExactly(p1, p2, y);
+		assertThat(member(storyline, y)).containsEntry("linked_by", "RULE");
+		assertThat((Double) member(storyline, y).get("key_term_overlap")).isCloseTo(0.934793, within(1e-5));
+		assertThat((Double) member(storyline, y).get("score")).isCloseTo(0.814827, within(1e-5));
+		// x 는 다시 넣을 이웃도 아니다 — 대기에서 빠졌다
+		assertThat(memberIds(storyline)).doesNotContain(x);
+		assertThat(queued(x)).isEmpty();
+	}
+
+	@Test
+	void theTermCountsAreAskedForTheSubjectsTermsOverItsWindow() {
+		List<List<Object>> asked = new ArrayList<>();
+		EventDirectory recording = new ForwardingEventDirectory(evenly()) {
+			@Override
+			public EventTermCounts termCounts(Collection<String> terms, Instant from, Instant to) {
+				asked.add(List.of(List.copyOf(terms), from, to));
+				return super.termCounts(terms, from, to);
+			}
+		};
+		// openPair 와 같은 두 사건 — e1(11-05 00:00 ~ 06:00)이 먼저 판정되어 e2(11-05 03:00)와 짝으로 연다
+		long e1 = StorylineRows.event(this.jdbc, "OPEN", MODEL, "[1,0]", 3, "2026-11-05T00:00:00Z",
+				"2026-11-05T06:00:00Z", Map.of("금리", 3, "물가", 2));
+		long e2 = StorylineRows.event(this.jdbc, "OPEN", MODEL, "[4,3]", 1, "2026-11-05T03:00:00Z",
+				"2026-11-05T03:00:00Z", Map.of("금리", 1, "물가", 1));
+		this.queue.enqueue(e1, Instant.parse("2026-11-05T00:00:00Z"), NOW);
+		this.queue.enqueue(e2, Instant.parse("2026-11-05T03:00:00Z"), NOW);
+
+		round(recording).run();
+
+		// e1 의 판정(첫 기사 − 14일 ~ 마지막 기사 + 14일), 다시 넣기에서 짝 e2 의 구간, 이어서 e2 자신의 판정
+		List<Object> forE1 = List.of(List.of("금리", "물가"), Instant.parse("2026-10-22T00:00:00Z"),
+				Instant.parse("2026-11-19T06:00:00Z"));
+		List<Object> forE2 = List.of(List.of("금리", "물가"), Instant.parse("2026-10-22T03:00:00Z"),
+				Instant.parse("2026-11-19T03:00:00Z"));
+		assertThat(asked).containsExactly(forE1, forE2, forE2);
+		assertThat(memberIds(onlyStoryline())).containsExactly(e1, e2);
+	}
+
+	@Test
+	void thePairPartnersNeighboursAreScoredWithThePartnersOwnWeights() {
+		// 사건 99 — "흔한말"은 98건에 있어 무게 ln(100 ÷ 99) = 0.010050, 그 밖의 말은 어느 사건에도 없어 ln(100 ÷ 1) = 4.605170
+		EventDirectory counting = new ForwardingEventDirectory(this.directory) {
+			@Override
+			public EventTermCounts termCounts(Collection<String> terms, Instant from, Instant to) {
+				Map<String, Long> counts = new HashMap<>();
+				terms.forEach(term -> counts.put(term, term.equals("흔한말") ? 98L : 0L));
+				return new EventTermCounts(99, counts);
+			}
+		};
+		// e 는 드문말만 갖고, 짝이 될 p 는 드문말 · 흔한말을 갖는다. p 는 대기에 없다 — e 의 판정이 짝으로 연다(코사인 1 · 겹침 1)
+		long e = StorylineRows.event(this.jdbc, "OPEN", MODEL, "[1,0]", 1, "2026-11-05T00:00:00Z",
+				"2026-11-05T00:00:00Z", Map.of("드문말", 1));
+		long p = StorylineRows.event(this.jdbc, "OPEN", MODEL, "[1,0]", 1, "2026-11-05T00:00:00Z",
+				"2026-11-10T00:00:00Z", Map.of("드문말", 1, "흔한말", 1));
+		// p 의 이웃 둘 — cos([1,0], [15,8]) = 15 ÷ 17 = 0.882353. common 은 흔한말만, rare 는 드문말만 겹친다.
+		// rare 는 e 의 구간(11-19 까지) 밖이고 p 의 구간(11-24 까지) 안이다 — p 의 이웃으로만 읽힌다
+		long common = StorylineRows.event(this.jdbc, "CLOSED", MODEL, "[15,8]", 1, "2026-11-05T00:00:00Z",
+				"2026-11-05T00:00:00Z", Map.of("흔한말", 1));
+		long rare = StorylineRows.event(this.jdbc, "CLOSED", MODEL, "[15,8]", 1, "2026-11-22T00:00:00Z",
+				"2026-11-22T00:00:00Z", Map.of("드문말", 1));
+		this.queue.enqueue(e, Instant.parse("2026-11-05T00:00:00Z"), NOW);
+
+		round(counting).run();
+
+		assertThat(memberIds(onlyStoryline())).containsExactly(e, p);
+		// p 의 무게로: rare 의 겹침 4.605170 ÷ 4.615220 = 0.997822 — 0.89 × 0.882353 + 0.11 × 0.997822 = 0.895055 ≥ 0.80, 다시 넣는다
+		assertThat(queued(rare)).hasValueSatisfying(row -> assertThat(row).containsEntry("order_at", "2026-11-22T00:00:00Z"));
+		// common 의 겹침 0.010050 ÷ 4.615220 = 0.002178 — 0.785294 + 0.11 × 0.002178 = 0.785534 < 0.80, 다시 넣지 않는다.
+		// e 의 무게를 p 에 쓰면 흔한말이 모르는 말이라 드문 말로 세어져 겹침 0.5 · 0.840294 로 다시 넣게 된다
+		assertThat(queued(common)).isEmpty();
 	}
 
 	@Test
@@ -442,7 +562,7 @@ class LinkingFlowTests {
 		this.queue.enqueue(pair.e2(), null, NOW);
 		this.queue.enqueue(e9, Instant.parse("2026-11-05T01:00:00Z"), NOW);
 
-		round(this.directory).run();
+		round(evenly()).run();
 
 		assertThat(memberIds(storyline)).containsExactly(pair.e1(), e9);
 		assertThat(queued(e5)).isEmpty();
@@ -455,7 +575,7 @@ class LinkingFlowTests {
 				"2026-11-05T00:00:00Z", Map.of("금리", 1));
 		this.queue.enqueue(e1, Instant.parse("2026-11-05T00:00:00Z"), NOW);
 		List<Long> held = new ArrayList<>();
-		EventDirectory observing = new ForwardingEventDirectory(this.directory) {
+		EventDirectory observing = new ForwardingEventDirectory(evenly()) {
 			@Override
 			public Optional<EventView> find(EventId id) {
 				// 판정 트랜잭션 안 — 같은 연결에서 이 모듈의 advisory 잠금('STRY', 0)을 본다
@@ -479,7 +599,7 @@ class LinkingFlowTests {
 				"2026-11-05T00:00:00Z", Map.of("금리", 1));
 		this.queue.enqueue(e1, Instant.parse("2026-11-05T00:00:00Z"), NOW);
 		AtomicBoolean interrupted = new AtomicBoolean();
-		EventDirectory notifying = new ForwardingEventDirectory(this.directory) {
+		EventDirectory notifying = new ForwardingEventDirectory(evenly()) {
 			@Override
 			public Map<EventId, EventProfile> profiles(Collection<EventId> ids, int keyTerms) {
 				if (interrupted.compareAndSet(false, true)) {
@@ -499,7 +619,7 @@ class LinkingFlowTests {
 		assertThat(queued(e1)).hasValueSatisfying(
 				row -> assertThat(row).containsEntry("notifications", 1).containsEntry("lease_token", null));
 
-		round(this.directory).run();
+		round(evenly()).run();
 		assertThat(queued(e1)).isEmpty();
 	}
 
@@ -511,7 +631,7 @@ class LinkingFlowTests {
 				"2026-11-02T00:00:00Z", Map.of("환율", 1));
 		this.queue.enqueue(e1, Instant.parse("2026-11-01T00:00:00Z"), NOW);
 		this.queue.enqueue(e2, Instant.parse("2026-11-02T00:00:00Z"), NOW);
-		EventDirectory failing = new ForwardingEventDirectory(this.directory) {
+		EventDirectory failing = new ForwardingEventDirectory(evenly()) {
 			@Override
 			public Optional<EventView> find(EventId id) {
 				if (id.value() == e1) {
@@ -566,12 +686,24 @@ class LinkingFlowTests {
 				"2026-11-05T03:00:00Z", Map.of("금리", 1, "물가", 1));
 		this.queue.enqueue(e1, Instant.parse("2026-11-05T00:00:00Z"), NOW);
 		this.queue.enqueue(e2, Instant.parse("2026-11-05T03:00:00Z"), NOW);
-		round(this.directory).run();
+		round(evenly()).run();
 		return new Pair(e1, e2);
 	}
 
 	private LinkingRound round(EventDirectory events) {
 		return round(events, CRITERIA);
+	}
+
+	/** 말의 무게를 모두 같게 한 사건 조회 — 사건 수 1, 말마다 0건이라 무게가 모두 ln 2 다. 그 밖의 조회는 실제 조회다 */
+	private EventDirectory evenly() {
+		return new ForwardingEventDirectory(this.directory) {
+			@Override
+			public EventTermCounts termCounts(Collection<String> terms, Instant from, Instant to) {
+				Map<String, Long> none = new HashMap<>();
+				terms.forEach(term -> none.put(term, 0L));
+				return new EventTermCounts(1, none);
+			}
+		};
 	}
 
 	private LinkingRound round(EventDirectory events, LinkingCriteria criteria) {
@@ -580,7 +712,7 @@ class LinkingFlowTests {
 	}
 
 	private long criteriaId() {
-		return this.jdbc.sql("select id from storyline_linking_criteria where window_seconds = 1209600 and threshold = 0.65")
+		return this.jdbc.sql("select id from storyline_linking_criteria where window_seconds = 1209600 and threshold = 0.80")
 			.query(Long.class)
 			.single();
 	}
@@ -593,7 +725,7 @@ class LinkingFlowTests {
 				"2026-11-05T02:00:00Z", Map.of("환율", 1));
 		this.queue.enqueue(e3, Instant.parse("2026-11-05T01:00:00Z"), NOW);
 		this.queue.enqueue(e4, Instant.parse("2026-11-05T02:00:00Z"), NOW);
-		round(this.directory).run();
+		round(evenly()).run();
 		return new Pair(e3, e4);
 	}
 

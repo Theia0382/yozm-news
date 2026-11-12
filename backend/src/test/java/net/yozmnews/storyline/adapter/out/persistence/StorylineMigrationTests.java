@@ -12,10 +12,11 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 /**
- * V24 · V25 의 제약 — 점유 둘은 함께, 옮긴 소속(MERGE)은 점수 · 기준이 없고 판정한 소속은 넷 모두 있다, 기준 범위, 스토리라인의 시각 순서,
- * 합쳐진 스토리라인의 가리킴과 합친 시각은 함께이고 자기를 가리키지 않는다.
+ * V24 · V25 · V28 의 제약 — 점유 둘은 함께, 옮긴 소속(MERGE)은 점수 · 기준이 없고 판정한 소속은 넷 모두 있다, 기준 범위, 스토리라인의 시각
+ * 순서, 합쳐진 스토리라인의 가리킴과 합친 시각은 함께이고 자기를 가리키지 않는다, 큰 판정 기준의 지금 값은 ID 1 한 행이고 범위 안이며 이력의
+ * 이전 값 둘은 함께 있거나 함께 없다.
  * <p>
- * 지키는 규칙: storyline-R3 · storyline-R14 · storyline-R18
+ * 지키는 규칙: storyline-R3 · storyline-R14 · storyline-R18 · storyline-R20
  */
 @JdbcTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -24,6 +25,40 @@ class StorylineMigrationTests {
 
 	@Autowired
 	JdbcClient jdbc;
+
+	@Test
+	void theCurrentBigCriteriaIsTheSingleRowWithIdOne() {
+		assertThatThrownBy(() -> this.jdbc.sql("""
+				insert into storyline_big_criteria (id, min_sources, min_importance, changed_at) values (2, 3, 3.00, now())
+				""").update()).isInstanceOf(DataIntegrityViolationException.class);
+	}
+
+	@Test
+	void theBigSourceCriterionIsAtLeastOne() {
+		this.jdbc.sql("delete from storyline_big_criteria").update();
+
+		assertThatThrownBy(() -> this.jdbc.sql("""
+				insert into storyline_big_criteria (id, min_sources, min_importance, changed_at) values (1, 0, 3.00, now())
+				""").update()).isInstanceOf(DataIntegrityViolationException.class);
+	}
+
+	@Test
+	void theBigImportanceCriterionIsWithinTheLevels() {
+		this.jdbc.sql("delete from storyline_big_criteria").update();
+
+		assertThatThrownBy(() -> this.jdbc.sql("""
+				insert into storyline_big_criteria (id, min_sources, min_importance, changed_at) values (1, 3, 5.01, now())
+				""").update()).isInstanceOf(DataIntegrityViolationException.class);
+	}
+
+	@Test
+	void aBigCriteriaChangeHasBothPreviousValuesOrNeither() {
+		assertThatThrownBy(() -> this.jdbc.sql("""
+				insert into storyline_big_criteria_changes (previous_min_sources, min_sources, min_importance, actor,
+				                                            changed_at)
+				values (3, 4, 3.00, 'OPERATOR', now())
+				""").update()).isInstanceOf(DataIntegrityViolationException.class);
+	}
 
 	@Test
 	void aLeaseIsTokenAndExpiryTogether() {

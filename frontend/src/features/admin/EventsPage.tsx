@@ -19,8 +19,8 @@ import { formatDateTime } from "@/shared/lib/dateTime";
 type Row = Schemas["EventRowResponse"];
 
 /**
- * 사건 목록 — 고른 기간에 기사가 있는 사건을 마지막 기사 시각이 늦은 것부터 본다. 기간 안 기사 수 · 소스 수 · 중요도 평균 · 큰 사건 여부는
- * 그 기간의 기사로 세고, 전체 기사 수와 대표 기사는 사건 전체에서 낸다. 기간은 주소 질의에 둔다.
+ * 사건 목록 — 고른 기간에 기사가 있는 사건을 마지막 기사 시각이 늦은 것부터 본다. 기간 안 기사 수 · 소스 수 · 중요도 평균은 그 기간의 기사로
+ * 세고, 전체 기사 수와 대표 기사는 사건 전체에서 낸다. 기간은 주소 질의에 둔다.
  */
 export function EventsPage() {
   const client = useAdminClient();
@@ -77,8 +77,8 @@ export function EventsPage() {
         onLast={(value) => update("to", value)}
       />
       <p className="text-sm text-muted-foreground">
-        기간 안 기사 수 · 소스 수 · 중요도 평균 · 큰 사건 여부는 고른 기간의
-        기사로 센다. 전체 기사 수와 대표 기사는 사건의 모든 기사에서 낸다
+        기간 안 기사 수 · 소스 수 · 중요도 평균은 고른 기간의 기사로 센다. 전체
+        기사 수와 대표 기사는 사건의 모든 기사에서 낸다
       </p>
       {list.error && <p role="alert">{failureText(list.error)}</p>}
       {list.data && rows.length === 0 && (
@@ -114,7 +114,6 @@ function EventsTable({ rows }: { rows: Row[] }) {
           <th className="font-medium">중요도 평균(기간)</th>
           <th className="font-medium">첫 기사</th>
           <th className="font-medium">마지막 기사</th>
-          <th className="font-medium">큰 사건</th>
           <th className="font-medium">대표 기사</th>
         </tr>
       </thead>
@@ -136,7 +135,6 @@ function EventsTable({ rows }: { rows: Row[] }) {
             </td>
             <td>{formatDateTime(row.firstArticleAt)}</td>
             <td>{formatDateTime(row.lastArticleAt)}</td>
-            <td>{row.big ? "큰 사건" : ""}</td>
             <td>
               <ArticleTitle
                 id={row.representativeId}

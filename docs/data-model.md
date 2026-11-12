@@ -98,7 +98,7 @@ erDiagram
 
 ## 사건
 
-사건 묶기 대기 · 기사 표현 테이블(`event_intake_queue` · `article_match_features`)과 사건 · 배정 테이블(`events` · `event_key_terms` · `event_assignment_criteria` · `event_articles` · `event_article_candidates` · `event_assignment_queue` · `event_merge_judgements`), 큰 사건 기준 테이블(`event_big_criteria` · `event_big_criteria_changes`)은 [event Spec §6](specs/event.md#6-데이터)에 있다.
+사건 묶기 대기 · 기사 표현 테이블(`event_intake_queue` · `article_match_features`)과 사건 · 배정 테이블(`events` · `event_key_terms` · `event_assignment_criteria` · `event_articles` · `event_article_candidates` · `event_assignment_queue` · `event_merge_judgements`)은 [event Spec §6](specs/event.md#6-데이터)에 있다.
 
 ## 다이제스트
 
@@ -111,7 +111,7 @@ erDiagram
 
 ## 스토리라인
 
-- 공유 스토리라인 테이블(`storylines` · `storyline_key_terms` — 사용자를 모른다), 사건의 소속(`storyline_members` — 사건 하나가 스토리라인 0개 이상에 든다), 잇기 대기(`storyline_linking_queue`), 기준 이력(`storyline_linking_criteria`)은 [storyline Spec §6](specs/storyline.md#6-데이터)에 있다. 사건은 ID 로만 가리킨다
+- 공유 스토리라인 테이블(`storylines` · `storyline_key_terms` — 사용자를 모른다), 사건의 소속(`storyline_members` — 사건 하나가 스토리라인 0개 이상에 든다), 잇기 대기(`storyline_linking_queue`), 기준 이력(`storyline_linking_criteria`), 큰 판정 기준 테이블(`storyline_big_criteria` · `storyline_big_criteria_changes`)은 [storyline Spec §6](specs/storyline.md#6-데이터)에 있다. 사건은 ID 로만 가리킨다
 - **(미설계)** 스토리라인 사이 관계의 테이블은 관계를 정할 때 정한다([ADR-0101](adr/0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md))
 - **(미설계)** 스토리라인 구독과 그 변경 이력(추가 전용 — 현재 구독은 그 투영)은 `user` 의 테이블이다. 스토리라인은 ID 로만 가리킨다
 
@@ -147,7 +147,7 @@ erDiagram
 | 사건 배정 입력 (`article_match_features`) | 그 기사의 사건이 닫힐 때까지. 그 모델 버전의 열린 사건에 배정되지 않은 표현은 만든 뒤 사건 배정 시간 창 + 여유 | 열린 사건의 서술 기사 · 재판정 · 기사 빼기에 쓴다. 배정 대기 기사의 표현은 지우면 다시 만든다([event-R13](specs/event.md#사건-정리) · [ADR-0088](adr/0088-article-features-kept-until-their-event-closes-and-unassigned-ones-for-the-window-plus-a-margin.md)) |
 | 사건 (`events` · `event_key_terms` · `event_articles`) · 저장 후보 (`event_article_candidates`) · 기준 이력 (`event_assignment_criteria`) · 병합 판정 기록 (`event_merge_judgements`) | 무기한. 합쳐진 사건 행과 병합 판정 기록은 가리키는 사건(남는 사건 · 쌍의 사건)을 지울 때 함께 지운다 | 사건 · 스토리라인 보도량의 근거. 저장 후보 · 기준 이력은 기준을 바꿀 때 재판정의 재료다. 저장 후보의 판정 확률은 병합이 사건 쌍을 물을지 정할 때도 읽는다. 병합 판정 기록은 같은 사건 쌍을 다시 묻지 않게 한다 |
 | 배정 대기 (`event_assignment_queue`) | 배정하면 지운다 | 처리할 기사의 목록이다 |
-| 큰 사건 기준과 그 변경 이력 (`event_big_criteria` · `event_big_criteria_changes`) | 무기한 | 운영자가 조정한 이력 — 태그 기준 · 저장 기준의 이력과 같다 |
+| 큰 판정 기준과 그 변경 이력 (`storyline_big_criteria` · `storyline_big_criteria_changes`) | 무기한 | 운영자가 조정한 이력 — 태그 기준 · 저장 기준의 이력과 같다 |
 | 스토리라인 (`storylines` · `storyline_key_terms`) · 소속 (`storyline_members`) · 기준 이력 (`storyline_linking_criteria`) | 무기한. 구성 사건이 지워지면 그 소속을 지운다. 구성 사건이 남지 않으면 스토리라인을 지우고, 사건 하나만 남으면 그 사건을 가진 다른 스토리라인에 합치거나 풀어 지운다. 합칠 때 합쳐진 쪽의 소속 · 핵심 말은 지우고(같은 사건이 남는 쪽에 있다) 행은 남는 스토리라인을 가리키며 남는다 — 남는 스토리라인을 지울 때 함께 지운다 | 구독 · 타임라인 · 리포트 인용이 스토리라인 ID 를 가리킨다 — 합쳐진 ID 는 남는 스토리라인으로 따라간다([storyline-R6](specs/storyline.md#사건-변화-따르기) · [storyline-R17 · R18](specs/storyline.md#정돈)) |
 | 잇기 대기 (`storyline_linking_queue`) | 판정하면 지운다. 판정이 거듭 실패하면 뺀다 | 판정할 사건의 목록이다([storyline-R3](specs/storyline.md#잇기-대기와-회차) · [storyline-R4](specs/storyline.md#잇기-대기와-회차)) |
 | 사건 소속 판정 원본 (`article_event_judgements`) | 180일 | 태그 판정 원본과 같다 |

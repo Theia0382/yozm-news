@@ -1,6 +1,6 @@
 # ADR-0098: 라벨 기준 2판 표본에는 큰 사건 정답을 두지 않고, 큰 사건 표시가 없는 표본은 큰 사건 정밀도를 재지 않는다
 
-- 상태: 승인
+- 상태: 대체됨([ADR-0116](0116-storyline-big-judgement-starts-with-a-provisional-rule-of-distinct-sources-and-mean-importance-judged-at-query-time.md))
 - 날짜: 2026-11-08
 - 근거: [이슈 #100](https://github.com/Theia0382/yozm-news/issues/100) — 정답 사건의 범위를 좁히며 큰 사건 정답의 단위를 리드와 다시 정하고 도구를 그에 맞춤(`144b11d`)
 - 관련: [ADR-0095](0095-event-clustering-evaluated-by-an-operator-tool-comparing-admin-api-results-with-full-day-labels.md)(결정 넷째 항목의 첫 문장 "큰 사건의 정답은 라벨러가 정답 사건 × 날짜로 표시한다" — 부분 대체), [ADR-0097](0097-event-clustering-evaluation-labels-reports-of-one-happening-narrower-than-the-system-event.md)(정답 사건의 범위), [ADR-0082](0082-big-events-judged-at-query-time-by-distinct-sources-and-mean-importance-both-reaching-criteria.md)(지금 시스템의 큰 사건 판정 — 바꾸지 않는다)

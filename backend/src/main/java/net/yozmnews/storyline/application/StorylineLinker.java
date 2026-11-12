@@ -17,6 +17,7 @@ import net.yozmnews.event.EventId;
 import net.yozmnews.event.EventKeyTerm;
 import net.yozmnews.event.EventNeighbor;
 import net.yozmnews.event.EventProfile;
+import net.yozmnews.event.EventTermCounts;
 import net.yozmnews.event.EventView;
 import net.yozmnews.storyline.domain.linking.Compared;
 import net.yozmnews.storyline.domain.linking.Cosine;
@@ -26,6 +27,7 @@ import net.yozmnews.storyline.domain.linking.LinkingScoring;
 import net.yozmnews.storyline.domain.linking.Representation;
 import net.yozmnews.storyline.domain.linking.Scored;
 import net.yozmnews.storyline.domain.linking.Subject;
+import net.yozmnews.storyline.domain.linking.TermWeights;
 import net.yozmnews.storyline.domain.queue.LinkingQueueRepository;
 import net.yozmnews.storyline.domain.queue.PendingEvent;
 import net.yozmnews.storyline.domain.storyline.LinkJudgement;
@@ -40,9 +42,9 @@ import org.springframework.stereotype.Component;
  * storyline-R18.
  * <p>
  * 트랜잭션 안에서 부른다. 첫 문장이 모듈 잠금이라 판정은 한 번에 하나다. 사건의 지금 상태({@link EventDirectory#find})로 지워짐 ·
- * 합쳐짐 · 그대로를 가르고, 그대로면 그 사건이 든 스토리라인의 표현을 다시 정한 뒤 붙이기 · 짝 · 다시 넣기를 판정한다. 끝으로 소속이
- * 바뀌었거나 그 사건이 든 스토리라인을 정돈한다. 판단은 {@code domain/linking} · {@code domain/storyline} 이 하고, 이 클래스는
- * 읽기 · 쓰기를 잇는다.
+ * 합쳐짐 · 그대로를 가르고, 그대로면 그 사건이 든 스토리라인의 표현을 다시 정하고 그 사건의 말의 무게를 읽은 뒤 붙이기 · 짝 · 다시 넣기를
+ * 판정한다. 끝으로 소속이 바뀌었거나 그 사건이 든 스토리라인을 정돈한다. 판단은 {@code domain/linking} ·
+ * {@code domain/storyline} 이 하고, 이 클래스는 읽기 · 쓰기를 잇는다.
  */
 @Component
 class StorylineLinker {
@@ -131,6 +133,8 @@ class StorylineLinker {
 			}
 			Representation.without(readable, id).ifPresent(rest -> compared.add(rest.comparedTo(storyline, subject)));
 		}
+		Map<Long, TermWeights> weights = new TreeMap<>();
+		weights.put(eventId, weights(subject, criteria));
 		for (StorylineSnapshot candidate : this.storylines.candidates(profile.modelVersion(), profile.centroid(), from, to,
 				floor, LinkingScoring.KEY_TERMS)) {
 			if (!own.contains(candidate.id())) {
@@ -138,7 +142,7 @@ class StorylineLinker {
 						candidate.firstArticleAt(), candidate.lastArticleAt(), candidate.keyTerms()));
 			}
 		}
-		List<Scored> scored = score(subject, compared, criteria);
+		List<Scored> scored = score(subject, compared, criteria, weights.get(eventId));
 
 		Map<Long, List<EventNeighbor>> neighbours = new TreeMap<>();
 		Map<Long, EventProfile> gained = new TreeMap<>();
@@ -157,7 +161,7 @@ class StorylineLinker {
 			List<EventNeighbor> near = this.events.neighbors(id, from, to, floor, LinkingScoring.KEY_TERMS,
 					LinkingScoring.NEIGHBORS);
 			neighbours.put(eventId, near);
-			List<Scored> scoredNear = score(subject, compared(near), criteria);
+			List<Scored> scoredNear = score(subject, compared(near), criteria, weights.get(eventId));
 			Optional<Scored> pair = LinkingRule.pair(scoredNear, this.storylines.affiliated(neighbourIds(near)),
 					threshold);
 			if (pair.isPresent()) {
@@ -173,16 +177,19 @@ class StorylineLinker {
 				}
 			}
 		}
-		requeue(gained, neighbours, criteria, now);
+		requeue(gained, neighbours, weights, criteria, now);
 		// 정돈 — 이미 든 스토리라인은 앞에서 표현을 다시 정했으므로 정돈만, 붙인 스토리라인은 표현까지(storyline-R17)
 		Set<Long> tidied = new TreeSet<>(own);
 		tidied.addAll(attached);
 		tidy(tidied, attached, now);
 	}
 
-	/** 소속이 는 사건마다 기준 이상이고 소속 없는 이웃을 사건 ID 오름차순으로 다시 넣는다(storyline-R12) */
+	/**
+	 * 소속이 는 사건마다 기준 이상이고 소속 없는 이웃을 사건 ID 오름차순으로 다시 넣는다(storyline-R12). 점수는 소속이 는 사건이 판정할
+	 * 쪽이다 — 이웃 · 말의 무게를 이미 읽은 사건은 그것을 쓰고, 짝으로 연 상대 사건은 자기 구간 · 말로 새로 읽는다
+	 */
 	private void requeue(Map<Long, EventProfile> gained, Map<Long, List<EventNeighbor>> neighbours,
-			LinkingCriteria criteria, Instant now) {
+			Map<Long, TermWeights> weights, LinkingCriteria criteria, Instant now) {
 		if (gained.isEmpty()) {
 			return;
 		}
@@ -197,7 +204,11 @@ class StorylineLinker {
 						LinkingScoring.cosineFloor(criteria.threshold()), LinkingScoring.KEY_TERMS,
 						LinkingScoring.NEIGHBORS);
 			}
-			List<Scored> scored = score(subject, compared(near), criteria);
+			TermWeights own = weights.get(entry.getKey());
+			if (own == null) {
+				own = weights(subject, criteria);
+			}
+			List<Scored> scored = score(subject, compared(near), criteria, own);
 			List<Long> chosen = LinkingRule.requeue(scored, this.storylines.affiliated(neighbourIds(near)),
 					gained.keySet(), criteria.threshold());
 			for (EventNeighbor neighbour : near) {
@@ -266,10 +277,19 @@ class StorylineLinker {
 		}
 	}
 
-	private static List<Scored> score(Subject subject, List<Compared> compared, LinkingCriteria criteria) {
+	/** 판정할 사건의 말의 무게 — 그 사건의 구간(storyline-R9)과 겹치는 사건으로 센 수에서(storyline-R8) */
+	private TermWeights weights(Subject subject, LinkingCriteria criteria) {
+		EventTermCounts counts = this.events.termCounts(subject.keyTerms(),
+				LinkingScoring.windowFrom(subject.firstArticleAt(), criteria.window()),
+				LinkingScoring.windowTo(subject.lastArticleAt(), criteria.window()));
+		return TermWeights.of(counts.events(), counts.eventsByTerm());
+	}
+
+	private static List<Scored> score(Subject subject, List<Compared> compared, LinkingCriteria criteria,
+			TermWeights weights) {
 		List<Scored> scored = new ArrayList<>();
 		for (Compared other : compared) {
-			LinkingScoring.score(subject, other, criteria.window())
+			LinkingScoring.score(subject, other, criteria.window(), weights)
 				.ifPresent(score -> scored.add(new Scored(other.id(), score)));
 		}
 		return scored;

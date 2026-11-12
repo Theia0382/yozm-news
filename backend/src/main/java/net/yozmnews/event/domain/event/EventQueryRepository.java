@@ -10,6 +10,7 @@ import net.yozmnews.article.ArticleId;
 import net.yozmnews.event.EventArticleView;
 import net.yozmnews.event.EventNeighbor;
 import net.yozmnews.event.EventProfile;
+import net.yozmnews.event.EventTermCounts;
 import net.yozmnews.event.EventView;
 import net.yozmnews.event.JudgementUse;
 import net.yozmnews.event.MergePair;
@@ -26,6 +27,9 @@ public interface EventQueryRepository {
 	/** 사건 하나 — 합쳐진 사건이면 남는 사건, 없는 사건이면 빈 값 */
 	Optional<EventView> find(long eventId);
 
+	/** 사건들 — 사건 ID 순. 합쳐진 사건 · 없는 사건은 빠진다 */
+	Map<Long, EventView> views(Collection<Long> eventIds);
+
 	/** 사건의 배정 전부 — 발행 시각 · 기사 ID 순 */
 	List<EventArticleView> articles(long eventId);
 
@@ -38,8 +42,8 @@ public interface EventQueryRepository {
 	/** 사건 기사 전체에서 사건마다 대표 기사 — 닫을 때 남긴 대표가 있으면 그것 */
 	Map<Long, ArticleId> representativesOfAll(Collection<Long> eventIds);
 
-	/** 기간 안 배정 — 사건 ID 순, 사건마다 발행 시각 · 기사 ID 순 */
-	Map<Long, List<ArticleId>> membersIn(Instant from, Instant to);
+	/** 기간 안 배정이 있는 사건과 그 기간 안 배정 수 — 사건 ID 순 */
+	Map<Long, Integer> articleCountsIn(Instant from, Instant to);
 
 	/** 주어진 사건들의 기간 안 배정 — 사건 ID 순, 사건마다 발행 시각 · 기사 ID 순 */
 	Map<Long, List<ArticleId>> membersIn(Collection<Long> eventIds, Instant from, Instant to);
@@ -71,6 +75,12 @@ public interface EventQueryRepository {
 	 * 그 사건 자신은 빠지고, 그 사건이 합쳐졌거나 없으면 빈 목록. 코사인 내림차순 · 사건 ID 순(event-R24)
 	 */
 	List<EventNeighbor> neighbors(long eventId, Instant from, Instant to, double minCosine, int keyTerms, int limit);
+
+	/**
+	 * 말 수 — 시각 범위가 {@code [from, to]} 와 겹치는 합쳐지지 않은 사건의 수와, 그 가운데 말마다 그 말을 핵심 말로 가진 사건 수. 모델 버전을
+	 * 가리지 않는다. 물은 말마다 수를 낸다 — 없는 말은 0(event-R24)
+	 */
+	EventTermCounts termCounts(Collection<String> terms, Instant from, Instant to);
 
 	/** 마지막 기사 시각이 {@code since} 이후(같으면 포함)인, 합쳐지지 않은 사건 — 첫 기사 시각 · 사건 ID 순(event-R24) */
 	List<EventView> lastArticleSince(Instant since);

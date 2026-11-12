@@ -22,6 +22,7 @@ import net.yozmnews.event.EventKeyTerm;
 import net.yozmnews.event.EventNeighbor;
 import net.yozmnews.event.EventProfile;
 import net.yozmnews.event.EventStatus;
+import net.yozmnews.event.EventTermCounts;
 import net.yozmnews.event.EventView;
 import net.yozmnews.event.JudgementUse;
 import net.yozmnews.event.MergePair;
@@ -38,7 +39,8 @@ import org.springframework.stereotype.Repository;
  * 대표 기사의 정렬은 {@link CentroidOrder#ORDER} 다 — 표현은 사건 모델 버전의 행만 왼쪽 조인한다. 기간은
  * {@code event_articles.published_at} 범위로 고른다(인덱스 {@code event_articles_published_idx}). 이웃 사건은 기준 사건과 같은 모델
  * 버전의 합쳐지지 않은 사건마다 코사인을 센다(인덱스 없음) — 거리가 NaN(영 벡터 중심)인 행은 뺀다. 이웃 · 채우기 대상의 시각 조건은
- * {@code events_unmerged_idx} 로 거른다.
+ * {@code events_unmerged_idx} 로 거른다. 말 수는 두 문장이다 — 범위와 겹치는 합쳐지지 않은 사건을 세는 문장과, 물은 말의 핵심 말 행(인덱스
+ * {@code event_key_terms_term_idx})을 그 사건들과 조인해 말마다 세는 문장.
  */
 @Repository
 class JdbcEventQueryRepository implements EventQueryRepository {
@@ -57,6 +59,9 @@ class JdbcEventQueryRepository implements EventQueryRepository {
 
 	private static final String IN_PERIOD = "a.published_at >= :from and a.published_at < :to";
 
+	/** 합쳐지지 않았고 첫 ~ 마지막 기사 시각이 [from, to] 와 겹치는 사건 — 말 수의 두 문장이 같은 조건을 쓴다(event-R24) */
+	private static final String UNMERGED_IN_RANGE = "e.status <> 'MERGED' and e.last_article_at >= :from and e.first_article_at <= :to";
+
 	private final JdbcClient jdbc;
 
 	JdbcEventQueryRepository(JdbcClient jdbc) {
@@ -71,6 +76,21 @@ class JdbcEventQueryRepository implements EventQueryRepository {
 			.param("id", eventId)
 			.query(JdbcEventQueryRepository::event)
 			.optional();
+	}
+
+	@Override
+	public Map<Long, EventView> views(Collection<Long> eventIds) {
+		if (eventIds.isEmpty()) {
+			return Map.of();
+		}
+		Map<Long, EventView> views = new LinkedHashMap<>();
+		this.jdbc.sql("select " + EVENT_COLUMNS + """
+				from events e
+				where e.id = any(:ids) and e.status <> 'MERGED'
+				order by e.id
+				""").param("ids", eventIds.toArray(Long[]::new)).query(JdbcEventQueryRepository::event).list().forEach(
+				view -> views.put(view.id().value(), view));
+		return Collections.unmodifiableMap(views);
 	}
 
 	@Override
@@ -142,12 +162,17 @@ class JdbcEventQueryRepository implements EventQueryRepository {
 	}
 
 	@Override
-	public Map<Long, List<ArticleId>> membersIn(Instant from, Instant to) {
-		return members(this.jdbc.sql("""
-				select a.event_id, a.article_id from event_articles a
+	public Map<Long, Integer> articleCountsIn(Instant from, Instant to) {
+		Map<Long, Integer> counts = new LinkedHashMap<>();
+		this.jdbc.sql("""
+				select a.event_id, count(*) as articles from event_articles a
 				where %s
-				order by a.event_id, a.published_at, a.article_id
-				""".formatted(IN_PERIOD)).param("from", timestamp(from)).param("to", timestamp(to)));
+				group by a.event_id
+				order by a.event_id
+				""".formatted(IN_PERIOD)).param("from", timestamp(from)).param("to", timestamp(to)).query((ResultSet rs) -> {
+			counts.put(rs.getLong("event_id"), rs.getInt("articles"));
+		});
+		return Collections.unmodifiableMap(counts);
 	}
 
 	@Override
@@ -299,6 +324,31 @@ class JdbcEventQueryRepository implements EventQueryRepository {
 					rs.getInt("article_count"), instant(rs, "first_article_at"), instant(rs, "last_article_at"),
 					keyTerms(rs)))
 			.list();
+	}
+
+	@Override
+	public EventTermCounts termCounts(Collection<String> terms, Instant from, Instant to) {
+		long events = this.jdbc.sql("select count(*) from events e where " + UNMERGED_IN_RANGE)
+			.param("from", timestamp(from))
+			.param("to", timestamp(to))
+			.query(Long.class)
+			.single();
+		Map<String, Long> eventsByTerm = new LinkedHashMap<>();
+		terms.forEach(term -> eventsByTerm.put(term, 0L));
+		if (!eventsByTerm.isEmpty()) {
+			this.jdbc.sql("""
+					select k.term, count(*) as events
+					from event_key_terms k
+					join events e on e.id = k.event_id
+					where k.term = any(:terms) and\s""" + UNMERGED_IN_RANGE + " group by k.term")
+				.param("terms", eventsByTerm.keySet().toArray(String[]::new))
+				.param("from", timestamp(from))
+				.param("to", timestamp(to))
+				.query((ResultSet rs) -> {
+					eventsByTerm.put(rs.getString("term"), rs.getLong("events"));
+				});
+		}
+		return new EventTermCounts(events, eventsByTerm);
 	}
 
 	@Override
