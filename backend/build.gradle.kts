@@ -61,6 +61,8 @@ dependencies {
 	implementation("ai.djl.huggingface:tokenizers:0.40.0")
 	// 피드 수집 HTTP 클라이언트 — 버전은 Spring Boot 의존성 관리
 	implementation("org.apache.httpcomponents.client5:httpclient5")
+	// 비밀번호 해시(Argon2id) — Spring Security 의 Argon2PasswordEncoder 가 쓴다. Spring Boot 가 버전을 관리하지 않아 직접 고정한다
+	implementation("org.bouncycastle:bcprov-jdk18on:1.86")
 	developmentOnly("org.springframework.boot:spring-boot-docker-compose")
 	runtimeOnly("org.postgresql:postgresql")
 	runtimeOnly("org.springframework.modulith:spring-modulith-actuator")

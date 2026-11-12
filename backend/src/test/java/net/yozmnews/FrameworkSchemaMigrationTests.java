@@ -49,7 +49,7 @@ class FrameworkSchemaMigrationTests {
 				select version from flyway_schema_history where success order by installed_rank
 				""").query(String.class).list())
 			.containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16",
-					"17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30");
+					"17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31");
 		assertThat(this.jdbc.sql("""
 				select table_name from information_schema.tables
 				where table_schema = 'public' and table_type = 'BASE TABLE'
@@ -65,7 +65,7 @@ class FrameworkSchemaMigrationTests {
 					"event_assignment_criteria", "event_articles", "event_article_candidates", "event_assignment_queue",
 					"event_merge_judgements", "storyline_linking_criteria",
 					"storylines", "storyline_key_terms", "storyline_members", "storyline_linking_queue",
-					"storyline_big_criteria", "storyline_big_criteria_changes");
+					"storyline_big_criteria", "storyline_big_criteria_changes", "users", "user_password_credentials");
 		assertThat(this.jdbc.sql("""
 				select table_name from information_schema.tables
 				where table_schema = 'public' and table_type = 'VIEW'
