@@ -38,7 +38,7 @@
 
 - 운영자가 켠 소스의 RSS 피드에서 기사 수집, 정규화, 중복 제거, 피드 상태 모니터링(실패 · 방치된 피드 감지). 소스는 수집 프로필로 등록하고, 주요 언론사는 프리셋으로 제공한다([ADR-0015](adr/0015-source-presets-and-collection-profiles.md))
 - 운영자가 관리하는 태그 체계(주제 2단계 · 지역 · 형식)와 Jev 공유 평가(주제 · 지역 다중 태그, 기사 형식, 중요도)
-- 가입 · 로그인: 운영자의 초대 링크 · 계정 생성으로 가입(공개 가입은 운영 설정으로 연다), OIDC 로그인(기본 Google), 자체 로그인(이메일 · 비밀번호, 복구 코드)
+- 가입 · 로그인: 운영자의 초대 링크 · 계정 생성으로 가입(공개 가입은 운영 설정으로 연다), 자체 로그인(이메일 · 비밀번호, 복구 코드)
 - LLM API 키 등록(BYOK — OpenAI · Anthropic). 키가 없는 사용자에게는 키 등록 페이지만 보여준다
 - 관심 설정: 구독 주제, 지역 · 형식 제외, 자유 텍스트 관심사, 제외할 소스, 다이제스트 생성 시각
 - 한 번 일어난 일을 다룬 기사의 공유 묶기(사건) ([ADR-0026](adr/0026-event-clustering-with-local-embeddings-and-jev.md) · [ADR-0102](adr/0102-an-event-is-the-reports-of-one-happening-narrowed-by-the-event-membership-question-wording.md))
@@ -53,6 +53,7 @@
 ### v1 제외
 
 - 외부 API(제3자 조회용)와 MCP 어댑터 — [로드맵](roadmap.md)
+- 외부 로그인(OIDC 공급자 로그인 · 외부 계정 연결) — [로드맵](roadmap.md)
 - 사용자 피드 추가, 기사 본문 추출(파이프라인 자리만 둔다)
 - 분기 · 연간 변화 리포트, 키워드 구독
 - 메일 발송(이메일 인증 · 메일 기반 비밀번호 재설정 · 알림 — [ADR-0011](adr/0011-no-email-in-v1.md)), 메신저 알림, 모바일 앱
@@ -89,11 +90,10 @@ flowchart LR
     feeds[[언론사 RSS 피드]]
     jev[[Jev<br/>TypeSafe System One API]]
     llm[[LLM 공급자<br/>OpenAI · Anthropic]]
-    oauth[[OIDC 공급자<br/>기본: Google]]
 
     user --> edge --> tunnel --> proxy
     admin --> edge
-    proxy -->|/api, /oauth2, /login| web
+    proxy -->|/api| web
     web --> db
     worker --> db
     worker --> feeds
@@ -101,17 +101,16 @@ flowchart LR
     worker --> jev
     worker -->|사용자 키| llm
     web -->|키 검증| llm
-    web --> oauth
 ```
 
-- 브라우저에는 **단일 오리진**으로 서비스한다. `proxy` 가 React SPA 정적 파일을 내려주고 `/api/**` · `/oauth2/**` · `/login/**` 을 `web` 으로 넘긴다
+- 브라우저에는 **단일 오리진**으로 서비스한다. `proxy` 가 React SPA 정적 파일을 내려주고 `/api/**` 를 `web` 으로 넘긴다
 - `web` 과 `worker` 는 **같은 컨테이너 이미지**를 Spring profile 로 역할만 나눠 실행한다. 기본 배포 구성은 두 profile 을 함께 켠 프로세스 하나(서비스 `app`)이고, 나눠 띄울 때는 `web` · `worker` 두 서비스로 둔다 ([operations/deployment.md](operations/deployment.md#서비스))
 - 역할 profile 을 하나도 켜지 않으면 두 역할을 함께 하고, 다른 profile 만 켜 역할이 하나도 없으면 기동하지 않는다. 어느 구성요소가 어느 역할에 속하는지는 [platform Spec](specs/platform.md#역할)(platform-R8 · R9, [ADR-0042](adr/0042-app-roles-as-web-worker-profiles-marked-by-platform-annotations.md))에 있다. `web` 도 피드 켜기의 미리보기로 피드에 요청한다([ADR-0041](adr/0041-activation-gate-previews-a-feed-on-enable-and-judges-by-code-constants.md))
 - Cloudflare 는 권장 구성이며 필수가 아니다 — 일반 리버스 프록시나 다른 터널로 대체할 수 있다 ([operations/deployment.md](operations/deployment.md#공개-경로와-외부-서비스))
 
 | 역할 | 하는 일 | 확장 |
 |---|---|---|
-| `web` | 화면용 REST API, 로그인(OIDC · 자체), 세션, 키 등록 · 검증, 운영자 API | 무상태(세션은 DB). 여러 개로 늘릴 수 있다 |
+| `web` | 화면용 REST API, 로그인(자체), 세션, 키 등록 · 검증, 운영자 API | 무상태(세션은 DB). 여러 개로 늘릴 수 있다 |
 | `worker` | 백그라운드 작업: 피드 수집, Jev 평가, 사건 묶기, 스토리라인 잇기, 다이제스트 · 변화 리포트 생성, 정리 작업 | 작업 큐가 DB 로 작업을 분배하므로 여러 개로 늘릴 수 있다 |
 
 ## 5. 모듈 지도
@@ -127,7 +126,7 @@ flowchart LR
 | `digest` | 후보 선별(관심도 · 큰 스토리라인 · 사건 단위 중복 제거 · 선정 이유), 프롬프트 구성, 다이제스트 생성(`DigestGenerator`) · 검증 · 저장, 관심도 산식과 관심사 히스토리 조회. **(미설계)** 사용자마다 달라지는 스토리라인 정보(그 사용자가 받은 소식 등) |
 | `llm` | 공급자 · 모델 목록, 사용자 키로 LLM 클라이언트 생성(`LlmClientFactory` — 모든 LLM 호출과 BYOK 키 복호화가 거치는 관문), 키 검증 |
 | `credential` | BYOK 키 암호화 보관(envelope encryption) |
-| `user` | 계정, OIDC 연동, 자체 로그인(비밀번호 · 복구 코드), 화면 내 알림, 사용자 설정 · 태그 선호와 구독 변경 이력, 리포트 설정. **(미설계)** 스토리라인 구독과 그 변경 이력 |
+| `user` | 계정, 자체 로그인(비밀번호 · 복구 코드), 화면 내 알림, 사용자 설정 · 태그 선호와 구독 변경 이력, 리포트 설정. **(미설계)** 스토리라인 구독과 그 변경 이력 |
 | `feedback` | 좋아요 / 싫어요 — 추가 전용 기록과 현재 상태 |
 | [`admin`](specs/admin.md) | 운영자 기능의 HTTP API(소스 · 피드 관리, 수집 현황, 이벤트 발행, 태그 체계 버전, 평가 현황, 평가 검수, 태그 기준 · 저장 기준, 빠진 태그 채움, 사건 묶기 채우기, 사건 조회 · 판정 기록, 스토리라인 잇기 채우기, 큰 스토리라인 · 큰 판정 기준) — 각 모듈의 공개 API(운영 API · 공개 조회)를 부른다 |
 | [`platform`](specs/platform.md) | 여러 모듈에 걸친 것: 실패한 이벤트 발행 재처리와 남겨진 발행의 운영자 처리, 화면용 API 명세 설정 · API 계약 확인 엔드포인트, 역할(profile `web` · `worker`)과 그 기동 검사, DB 확장(pgvector) 요건 검사, 로컬 개발 표시(profile `local` — 로컬 대체물 등록), 보안 설정, 오류 응답 형식, YAML 원문 읽기, 날짜 범위 변환, 벡터의 pgvector 텍스트 표현 |
@@ -195,7 +194,7 @@ flowchart LR
 | 데이터 | PostgreSQL(pgvector 확장), Flyway, Spring Data JDBC + JdbcClient | [ADR-0004](adr/0004-tech-stack.md) · [ADR-0014](adr/0014-spring-data-jdbc.md) · [ADR-0027](adr/0027-pgvector-for-vector-storage.md) |
 | 사건 묶기 | ONNX Runtime · DJL tokenizers(로컬 임베딩 — multilingual-e5-small int8, 기본) 또는 OpenAI 호환 임베딩 API(설정), Lucene Nori(고유명사) | [ADR-0026](adr/0026-event-clustering-with-local-embeddings-and-jev.md) · [ADR-0090](adr/0090-article-embedding-defaults-to-an-in-app-local-model-with-an-openai-compatible-api-by-setting.md) · [ADR-0091](adr/0091-local-embedding-model-is-multilingual-e5-small-int8-fetched-at-build-into-the-image-with-onnx-telemetry-off.md) |
 | LLM · 평가 | Spring AI 2.x(OpenAI · Anthropic), Jev | [ADR-0008](adr/0008-v1-llm-providers.md) · [ADR-0002](adr/0002-shared-evaluation-with-jev.md) |
-| 인증 | Spring Security(OIDC + 이메일 · 비밀번호), Spring Session JDBC | [ADR-0009](adr/0009-authentication-google-and-local.md) · [ADR-0011](adr/0011-no-email-in-v1.md) |
+| 인증 | Spring Security(이메일 · 비밀번호), Spring Session JDBC | [ADR-0009](adr/0009-authentication-google-and-local.md) · [ADR-0011](adr/0011-no-email-in-v1.md) · [ADR-0123](adr/0123-v1-login-is-local-only-and-oidc-and-account-linking-come-after-v1.md) |
 | 백그라운드 작업 · RSS | JobRunr OSS(PostgreSQL 저장소), Apache HttpClient 5(피드 요청), Rome(피드 형식 판별 · 제목 · 링크), jsoup(피드 텍스트의 HTML 제거), snakeyaml-engine(수집 프로필 YAML) | [ADR-0004](adr/0004-tech-stack.md) · [ADR-0023](adr/0023-jobrunr-oss-framework-schema-and-event-resubmission.md) · [ADR-0024](adr/0024-collection-profile-yaml-and-preset-reference-or-own-profile.md) · [ADR-0030](adr/0030-feed-xml-own-parser-and-rome-for-format-title-link.md) · [ADR-0031](adr/0031-feed-request-blocks-internal-addresses-with-apache-httpclient-deadline.md) |
 | 빌드 · 테스트 | Gradle(Kotlin DSL), JUnit 5, Testcontainers, WireMock. 검사는 컨테이너에서 돌고 CI(GitHub Actions)와 로컬이 같은 Compose 정의를 쓴다 | [ADR-0004](adr/0004-tech-stack.md) · [ADR-0016](adr/0016-containerized-checks.md) · [테스트 전략](qa/test-strategy.md) |
 | 프론트엔드 | React + TypeScript + Vite, React Router, TanStack Query, Tailwind + shadcn/ui, OpenAPI → TS 타입 생성 | [ADR-0005](adr/0005-frontend-react-spa.md) · [ADR-0020](adr/0020-screen-api-contract-from-committed-openapi-spec.md) |

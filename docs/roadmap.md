@@ -1,12 +1,12 @@
 # 로드맵
 
-각 마일스톤은 "완료 기준"을 만족해야 다음으로 넘어간다. 일정은 정하지 않는다.
+일정은 정하지 않는다.
 
 ## M0. 골격
 
 - Gradle 멀티 모듈(또는 단일 모듈 + Modulith 패키지), Spring Boot 4, Flyway, Testcontainers 기반 테스트
 - React + Vite 프로젝트, OpenAPI → TS 타입 생성 파이프라인
-- Compose `dev` 프로필(Postgres, mock-oauth2-server), Spring profile `local`, Dockerfile(멀티 아키텍처), GitHub Actions 테스트
+- Compose `dev` 프로필(Postgres), Spring profile `local`, Dockerfile(멀티 아키텍처), GitHub Actions 테스트
 - **완료 기준**: 배포 구성(`docker compose -f deploy/compose.yaml up`)으로 빈 앱이 뜨고 헬스 체크가 통과한다. Modulith 구조 검증 테스트가 CI에서 돈다.
 
 ## M1. 수집
@@ -43,14 +43,14 @@
 
 ## M5. 사용자와 키
 
-- OIDC 로그인(운영 기본 Google, 개발은 mock 서버), 자체 로그인(복구 코드, 봇 차단), 가입 정책(기본 닫힘 · 공개 가입 설정, 초대 링크, 운영자 계정 생성, 첫 운영자), 외부 계정 연결, 세션, CSRF
+- 자체 로그인(복구 코드, 봇 차단), 가입 정책(기본 닫힘 · 공개 가입 설정, 초대 링크, 운영자 계정 생성, 첫 운영자), 세션, CSRF
 - 운영자 경로(`/api/admin/**`)의 인증을 운영자 토큰에서 `ADMIN` 역할 계정의 세션으로 바꾸고 CSRF 를 켠다 — 경로와 역할 판정은 그대로다([ADR-0043](adr/0043-admin-functions-guarded-by-env-bearer-token-until-account-roles.md))
 - 화면 내 알림(비밀번호 변경, 키 무효, 다이제스트 실패, 피드 상태 변화 — 운영자)
 - BYOK 키 등록·검증·삭제(OpenAI, Anthropic), envelope encryption, API 키 발급 안내
 - 키가 없는 사용자는 키 등록 페이지로만 이동
 - 관심 설정: 구독 주제, 지역·형식 제외, 자유 텍스트 관심사, 제외 소스, 생성 시각, 변화 리포트 설정
 - 개인정보 고지: 외부 전송 항목과 수집 항목(신호 이력 포함)
-- **완료 기준**: 사용자 간 데이터 격리 테스트 통과, 로그·오류 응답에 키가 남지 않음을 테스트로 확인한다. 계정 존재 노출 방지와 로그인 실패 지연이 테스트로 확인된다. 닫힌 가입에서 초대 없는 가입과 처음 보는 OIDC 계정이 거부되고, 공개 가입을 켠 경로의 방어가 동작하는 것이 테스트로 확인된다.
+- **완료 기준**: 사용자 간 데이터 격리 테스트 통과, 로그·오류 응답에 키가 남지 않음을 테스트로 확인한다. 계정 존재 노출 방지와 로그인 실패 지연이 테스트로 확인된다. 닫힌 가입에서 초대 없는 가입이 거부되고, 공개 가입을 켠 경로의 방어가 동작하는 것이 테스트로 확인된다.
 
 ## M6. 다이제스트
 
@@ -92,3 +92,4 @@
 | 구독 확장 | 키워드 구독 |
 | 소스 확장 | 사용자 피드 추가(상한 포함), 해외 뉴스, 본문 추출(허용 소스 한정) |
 | 메일 | 이메일 인증, 메일 기반 비밀번호 재설정, 다이제스트 알림 ([ADR-0011](adr/0011-no-email-in-v1.md)) |
+| 외부 로그인 | OIDC 공급자 로그인(기본 Google), 외부 계정 연결 ([ADR-0123](adr/0123-v1-login-is-local-only-and-oidc-and-account-linking-come-after-v1.md)) |

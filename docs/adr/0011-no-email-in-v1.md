@@ -1,6 +1,6 @@
 # ADR-0011: v1에서는 메일 발송을 하지 않는다
 
-- 상태: 승인. 부분 대체 — 복구 코드를 보여 주는 때([ADR-0048](0048-sign-up-closed-by-default-with-invitations-and-operator-bootstrap.md)) · 봇 가입의 주 방어선([ADR-0048](0048-sign-up-closed-by-default-with-invitations-and-operator-bootstrap.md))
+- 상태: 승인. 부분 대체 — 복구 코드를 보여 주는 때([ADR-0048](0048-sign-up-closed-by-default-with-invitations-and-operator-bootstrap.md)) · 복구 수단의 Google 계정 연결([ADR-0123](0123-v1-login-is-local-only-and-oidc-and-account-linking-come-after-v1.md)) · 봇 가입의 주 방어선([ADR-0048](0048-sign-up-closed-by-default-with-invitations-and-operator-bootstrap.md))
 - 날짜: 2026-10-25
 - 관련: [ADR-0009](0009-authentication-google-and-local.md)의 이메일 인증, 비밀번호 재설정, 메일 발송 서비스 부분을 대체한다
 
@@ -16,6 +16,7 @@
 - **비밀번호 분실 대비**:
   > 부분 대체(첫 문장) — [ADR-0048](0048-sign-up-closed-by-default-with-invitations-and-operator-bootstrap.md). 지금 상태: [`security` "자체 로그인"](../security.md#자체-로그인) 복구 코드 행
   - 가입 직후 **복구 코드**를 한 번 보여준다. 코드는 해시로만 저장하고, 쓰면 새 코드를 발급한다. 복구 코드로 비밀번호를 재설정할 수 있다.
+  > 부분 대체(아래 두 항목) — [ADR-0123](0123-v1-login-is-local-only-and-oidc-and-account-linking-come-after-v1.md). 지금 상태: [`security` "자체 로그인"](../security.md#자체-로그인) 계정 복구 행
   - Google 계정 연결을 권장한다. 연결해 두면 비밀번호를 잊어도 Google로 로그인할 수 있다.
   - 둘 다 없으면 계정을 복구할 수 없다. 가입 화면에서 이 점을 안내한다.
 - 보안 알림 메일(비밀번호 변경 등)은 보내지 않는다. 대신 다음 로그인 때 화면 안 알림으로 보여준다.

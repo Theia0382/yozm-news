@@ -18,11 +18,11 @@
 
 ## 개발용 Compose
 
-- 루트 `compose.yaml` 의 서비스는 모두 프로필 `dev` 에 있다 — PostgreSQL 과 로컬 OIDC 공급자(`mock-oauth2-server`)
+- 루트 `compose.yaml` 의 서비스는 모두 프로필 `dev` 에 있다 — PostgreSQL
 - **(미구현)** 메일을 도입하면 발송 메일을 확인할 `mailpit` 이 더해진다([ADR-0012](../adr/0012-swappable-external-dependencies.md))
 - 백엔드를 Spring profile `local` 로 실행하면 앱이 이 Compose 를 띄우고, 컨테이너에서 PostgreSQL 접속 정보를 읽는다. 이 연동은 이미지 이름으로 PostgreSQL 서비스를 알아보는데, 이미지 이름이 `postgres` 가 아니므로 `postgres` 서비스에 서비스 연결 라벨(`org.springframework.boot.service-connection: postgres`)을 둔다. 이 연동이 켜져 있는 동안 DB 접속 환경 변수는 쓰이지 않는다([ADR-0018](../adr/0018-local-profile-compose-connection.md)). `local` 의 나머지 값(명세 엔드포인트 열기 · 수집 연락처)은 `backend/src/main/resources/application-local.yaml` 에 있다. `local` 은 Jev 키가 없으면 로컬 대체물(평가기 `FakeArticleEvaluator`)을 등록한다([evaluation Spec](../specs/evaluation.md#구현과-로컬-대체물), [platform Spec](../specs/platform.md#로컬-개발)). `local` 은 역할 profile 이 아니므로 역할(`web` · `worker`)을 함께 켠다 — `local` 만 켜면 역할 검사가 기동을 멈춘다([platform Spec](../specs/platform.md#역할))
 - Compose 프로젝트 이름을 정하지 않으므로 checkout(작업 디렉터리) 이름이 프로젝트 이름이 된다. 그래서 checkout 마다 컨테이너 · 네트워크 · 개발 DB 볼륨이 따로 생긴다([ADR-0019](../adr/0019-dev-compose-per-checkout-and-test-image-source.md)). 호스트 포트는 루프백에만 연다
-- mock OIDC 서버의 issuer 가 호스트 포트로 만들어지므로 그 포트는 고정이다. PostgreSQL 의 호스트 포트는 비워 두면 Docker 가 고르고, 앱은 공개된 포트를 읽어 접속한다
+- PostgreSQL 의 호스트 포트는 비워 두면 Docker 가 고르고, 앱은 공개된 포트를 읽어 접속한다
 
 ### PostgreSQL 이미지 정본
 
