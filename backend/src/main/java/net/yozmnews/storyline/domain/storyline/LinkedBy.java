@@ -3,7 +3,7 @@ package net.yozmnews.storyline.domain.storyline;
 /** 소속을 정한 것 — docs/specs/storyline.md §4 · storyline-R14 */
 public enum LinkedBy {
 
-	/** 임시 잇기 규칙으로 붙였다(storyline-R10) */
+	/** 잇기 규칙으로 붙였다(storyline-R10) */
 	RULE,
 
 	/** 짝으로 새 스토리라인을 열었다(storyline-R11) */

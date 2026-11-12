@@ -16,7 +16,7 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param threshold 기준 점수
  */
 @ConfigurationProperties("yozmnews.storyline-linking")
-record LinkingProperties(@DefaultValue("14d") Duration window, @DefaultValue("0.65") double threshold) {
+record LinkingProperties(@DefaultValue("14d") Duration window, @DefaultValue("0.85") double threshold) {
 
 	/**
 	 * @throws IllegalArgumentException 범위를 어길 때

@@ -5,7 +5,7 @@ package net.yozmnews.storyline.domain.linking;
  *
  * @param score 점수 — 0 ~ 1, 코사인을 셀 수 없으면 NaN
  * @param cosine 중심의 코사인 유사도
- * @param overlap 핵심 말 겹침 — 0 ~ 1
+ * @param overlap 무게를 준 핵심 말 겹침 — 0 ~ 1
  */
 public record Score(double score, double cosine, double overlap) {
 
