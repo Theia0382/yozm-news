@@ -30,6 +30,9 @@ import net.yozmnews.storyline.domain.linking.Subject;
 import net.yozmnews.storyline.domain.linking.TermWeights;
 import net.yozmnews.storyline.domain.queue.LinkingQueueRepository;
 import net.yozmnews.storyline.domain.queue.PendingEvent;
+import net.yozmnews.storyline.domain.relation.RelationMove;
+import net.yozmnews.storyline.domain.relation.RelationQueueRepository;
+import net.yozmnews.storyline.domain.relation.RelationRepository;
 import net.yozmnews.storyline.domain.storyline.LinkJudgement;
 import net.yozmnews.storyline.domain.storyline.LinkedBy;
 import net.yozmnews.storyline.domain.storyline.StorylineRepository;
@@ -39,12 +42,13 @@ import org.springframework.stereotype.Component;
 
 /**
  * 사건 하나의 따르기 · 판정 · 정돈 · 쓰기 — docs/specs/storyline.md §4 · storyline-R5 ~ storyline-R14 · storyline-R17 ·
- * storyline-R18.
+ * storyline-R18 · storyline-R32.
  * <p>
  * 트랜잭션 안에서 부른다. 첫 문장이 모듈 잠금이라 판정은 한 번에 하나다. 사건의 지금 상태({@link EventDirectory#find})로 지워짐 ·
  * 합쳐짐 · 그대로를 가르고, 그대로면 그 사건이 든 스토리라인의 표현을 다시 정하고 그 사건의 말의 무게를 읽은 뒤 붙이기 · 짝 · 다시 넣기를
  * 판정한다. 끝으로 소속이 바뀌었거나 그 사건이 든 스토리라인을 정돈한다. 판단은 {@code domain/linking} ·
- * {@code domain/storyline} 이 하고, 이 클래스는 읽기 · 쓰기를 잇는다.
+ * {@code domain/storyline} 이 하고, 이 클래스는 읽기 · 쓰기를 잇는다. 스토리라인을 합칠 때는 합쳐질 쪽의 관계를 남는 쪽으로 옮긴다 — 옮길
+ * 계획은 {@code domain/relation} 이 정한다.
  */
 @Component
 class StorylineLinker {
@@ -55,10 +59,17 @@ class StorylineLinker {
 
 	private final LinkingQueueRepository queue;
 
-	StorylineLinker(EventDirectory events, StorylineRepository storylines, LinkingQueueRepository queue) {
+	private final RelationRepository relations;
+
+	private final RelationQueueRepository relationQueue;
+
+	StorylineLinker(EventDirectory events, StorylineRepository storylines, LinkingQueueRepository queue,
+			RelationRepository relations, RelationQueueRepository relationQueue) {
 		this.events = events;
 		this.storylines = storylines;
 		this.queue = queue;
+		this.relations = relations;
+		this.relationQueue = relationQueue;
 	}
 
 	/**
@@ -258,6 +269,7 @@ class StorylineLinker {
 				}
 				case Tidying.MergeInto merge -> {
 					for (long merged : merge.merged()) {
+						followMerge(merged, merge.survivor(), now);
 						this.storylines.merge(merged, merge.survivor(), now);
 						gone.add(merged);
 					}
@@ -267,6 +279,16 @@ class StorylineLinker {
 				}
 			}
 		}
+	}
+
+	/**
+	 * 합쳐질 스토리라인의 관계를 남는 스토리라인으로 옮기고, 그 물은 기록과 관계 대기 행을 지운다(storyline-R32) — 합쳐진 행은 남으므로 FK
+	 * 연쇄가 돌지 않는다. 합치기 전에 부른다
+	 */
+	private void followMerge(long merged, long survivor, Instant now) {
+		this.relations.applyMove(RelationMove.plan(this.relations.all(), merged, survivor), now);
+		this.relations.forgetAsked(merged);
+		this.relationQueue.delete(merged);
 	}
 
 	/** 구성 사건의 지금 표현으로 스토리라인 표현을 다시 정한다 — 읽을 구성 사건이 없으면 그대로 둔다(storyline-R7) */

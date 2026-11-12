@@ -58,7 +58,10 @@ public interface StorylineRepository {
 	 */
 	void merge(long merged, long survivor, Instant now);
 
-	/** 스토리라인과 그 핵심 말 · 소속, 이 스토리라인을 가리키는 합쳐진 행을 지운다(storyline-R13 · R17 · R18) */
+	/**
+	 * 스토리라인과 그 핵심 말 · 소속, 이 스토리라인을 가리키는 합쳐진 행을 지운다(storyline-R13 · R17 · R18). 그 관계 · 물은 기록 · 관계 대기
+	 * 행도 함께 지워진다(storyline-R32)
+	 */
 	void delete(long storylineId);
 
 }

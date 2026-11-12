@@ -214,7 +214,7 @@ class JdbcStorylineRepository implements StorylineRepository {
 
 	@Override
 	public void delete(long storylineId) {
-		// 핵심 말 · 소속과 이 스토리라인을 가리키는 합쳐진 행은 FK ON DELETE CASCADE 로 함께 지워진다
+		// 핵심 말 · 소속 · 관계 · 물은 기록 · 관계 대기 행과 이 스토리라인을 가리키는 합쳐진 행은 FK ON DELETE CASCADE 로 함께 지워진다
 		this.jdbc.sql("delete from storylines where id = :id").param("id", storylineId).update();
 	}
 
