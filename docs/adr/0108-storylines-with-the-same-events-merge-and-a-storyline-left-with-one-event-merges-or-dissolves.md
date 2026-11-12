@@ -43,3 +43,7 @@
 | 합칠 때 소속을 남는 쪽으로 옮긴다 | 같은 집합 · 사건 하나의 포함에서는 남는 쪽이 그 사건들을 이미 가진다 |
 | 같은 집합 찾기를 모든 구성 사건의 스토리라인으로 넓힌다 | 같은 집합은 첫 구성 사건을 반드시 가지므로 첫 사건 하나로 충분하다. 큰 스토리라인에서 조회가 구성 사건 수만큼 는다 |
 | 이 결정 전 데이터를 마이그레이션에서 정돈한다 | 풀기의 다시 넣기가 사건 시각을 읽어야 해 `event` 의 테이블을 직접 읽는다 — 모듈 경계를 넘는다 |
+
+## 후속 기록
+
+- 2026-11-13: 결과 "표현만 비슷한 두 스토리라인과 사건 둘 이상의 포함은 남는다 — 잇는 방법 · 스토리라인 사이 관계가 다루지 않으면 계속 남는다" — 큰 흐름과 그 갈래는 관계로 잇고, 한 사안이 둘로 열린 스토리라인은 관계로도 다루지 않아 남는다([ADR-0131](0131-storyline-relations-are-explicit-links-with-containment-as-a-single-parent-tree-gathered-at-query-time.md) · [ADR-0132](0132-storyline-relations-are-judged-by-jev-on-candidate-pairs-and-linked-only-above-a-probability-threshold.md))

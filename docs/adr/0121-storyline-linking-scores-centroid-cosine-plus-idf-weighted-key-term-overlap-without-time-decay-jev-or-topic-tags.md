@@ -1,6 +1,6 @@
 # ADR-0121: 스토리라인 잇기의 점수는 사건 중심 코사인과 IDF 로 가중한 핵심 말 겹침이고, 시각 감쇠 · Jev · 주제 태그를 쓰지 않는다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — `storyline` 이 `evaluation` 에 의존하지 않는다는 문장([ADR-0132](0132-storyline-relations-are-judged-by-jev-on-candidate-pairs-and-linked-only-above-a-probability-threshold.md))
 - 날짜: 2026-11-12
 - 근거: [이슈 #121](https://github.com/Theia0382/yozm-news/issues/121) — 스토리라인 평가 세트로 임시 잇기 규칙과 후보 방법(점수의 재료 · 스토리라인과 견주는 법 · 붙이는 수 · 짝 기준 · 애매한 구간의 Jev 판정)을 견주고 리드와 정함
 - 관련: [ADR-0106](0106-provisional-storyline-linking-opens-only-with-a-partner-event-and-adds-the-single-best-storyline-without-removal.md)(결정의 점수 산식과 "이 규칙은 기준선이다. 잇는 방법을 평가 세트로 정하면 대체될 수 있다" — 부분 대체), [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)(결정 "소속을 정하는 방법은 스토리라인을 구현할 때 정한다" — 보충), [ADR-0107](0107-storyline-state-is-judged-at-query-time-from-the-last-article-and-an-ended-storyline-still-links.md)(맥락의 잇기 도달 범위 — 보충), [ADR-0105](0105-storylines-link-incrementally-from-event-change-notifications-and-events-publish-changed-event-ids.md)(이 규칙이 도는 틀 — 잇기의 재료를 `event` 의 공개 조회로 읽는다), [ADR-0110](0110-storyline-evaluation-labels-system-events-of-a-fixed-dump-and-measures-overlapping-clusters-from-random-seed-events.md) · [ADR-0111](0111-storyline-gold-links-by-matter-with-mixed-events-on-their-central-happening-and-events-without-a-happening-following-their-matter.md)(견준 평가 세트), [ADR-0096](0096-instance-bound-evaluation-data-kept-out-of-the-public-repository-and-defaults-cite-only-the-evaluation-set.md)(근거 수치를 공개 문서에 적지 않는다)
@@ -20,6 +20,7 @@
 - **점수는 (1 − w) × 코사인 + w × 핵심 말 겹침이고, 겹침은 말의 무게(IDF)로 센다.** 겹침은 겹친 말의 무게 합 ÷ 판정할 사건의 말의 무게 합이다. 많은 사건에 있는 말일수록 무게가 작아, 흔한 말만 겹치는 사건은 겹침이 작다.
 - **말의 흔함은 판정할 사건의 시각 ± 시간 창 안의 사건으로 센다.** 후보를 찾는 범위와 같다. `event` 는 말마다 그 말을 가진 사건 수와 범위 안의 사건 수만 내고, 무게의 식은 `storyline` 이 갖는다.
 - **시각 감쇠를 점수에서 뺀다.** 시각 차는 시간 창을 넘는지만 본다.
+> 부분 대체(둘째 문장) — [ADR-0132](0132-storyline-relations-are-judged-by-jev-on-candidate-pairs-and-linked-only-above-a-probability-threshold.md). 지금 상태: [storyline Spec "스토리라인 사이 관계"](../specs/storyline.md#스토리라인-사이-관계)
 - **Jev 판정과 주제 태그를 쓰지 않는다.** `storyline` 은 `evaluation` · `tag` 에 의존하지 않는다.
 - **판정의 꼴은 임시 규칙의 것을 그대로 확정한다.** 스토리라인 표현(중심 · 합친 핵심 말)과 견주고, 기준 이상 가운데 가장 높은 하나를 더하며 빼지 않고, 주 소속을 두지 않고, 사건이 바뀔 때마다 판정하고, 붙일 곳 없는 사건은 붙이기와 같은 기준으로 소속 없는 이웃과 짝을 지어 연다. 다시 넣기와 정돈도 그대로다.
 - **가중치 w 는 코드 상수, 기준 점수와 시간 창은 설정이고, 가중치와 기준 점수의 값은 평가 세트로 정했다.** 이 값들은 측정 전 목표다 — 운영하면서 다시 본다. 시간 창은 평가 세트의 기간으로 가를 수 없어 임시 규칙의 값을 그대로 둔다. 차이는 씨앗 단위로 다시 뽑은 구간으로 보고, 구간 안의 차이는 같은 품질로 본다. 같은 품질의 후보 가운데서는 구조를 덜 바꾸고 운영자 비용이 없는 쪽을 고른다. 값의 정본은 [storyline Spec §5](../specs/storyline.md#잇기-규칙) · [§7](../specs/storyline.md#7-설정)이고, 근거 수치는 공개 문서에 적지 않는다([ADR-0096](0096-instance-bound-evaluation-data-kept-out-of-the-public-repository-and-defaults-cite-only-the-evaluation-set.md)).

@@ -36,3 +36,4 @@
 ## 후속 기록
 
 - 2026-11-09: 결정 절 "첫 문구는 영어 문장이다(판 `membership-1`)"의 다음 판 — [ADR-0102](0102-an-event-is-the-reports-of-one-happening-narrowed-by-the-event-membership-question-wording.md) · [evaluation Spec 사건 소속 판정](../specs/evaluation.md#사건-소속-판정) evaluation-R37
+- 2026-11-13: 결정 절의 "문구는 코드 상수 하나이고 판을 판정 원본에 남긴다"를 스토리라인 관계 판정의 문구에도 쓴다 — [ADR-0132](0132-storyline-relations-are-judged-by-jev-on-candidate-pairs-and-linked-only-above-a-probability-threshold.md) · [evaluation Spec 관계 판정](../specs/evaluation.md#관계-판정)
