@@ -3,7 +3,8 @@ package net.yozmnews.user.application;
 import java.net.URI;
 
 /**
- * 운영자 접근 통제가 내는 문제 유형과 제목 — 정본. 그 밖의 문제는 {@code about:blank} 다(docs/specs/user.md §4 · user-R3).
+ * 보안 거부(운영자 접근 통제 · 세션 체인)가 내는 문제 유형과 제목 — 정본. 그 밖의 문제는 {@code about:blank} 다(docs/specs/user.md §4 ·
+ * user-R3).
  */
 final class ProblemTypes {
 
@@ -21,6 +22,16 @@ final class ProblemTypes {
 	static final URI ADMIN_FORBIDDEN = URI.create("urn:yozmnews:problem:admin-forbidden");
 
 	static final String ADMIN_FORBIDDEN_TITLE = "운영자 권한이 없다";
+
+	/** 세션이 없거나 만료됐다 — 401 */
+	static final URI UNAUTHENTICATED = URI.create("urn:yozmnews:problem:unauthenticated");
+
+	static final String UNAUTHENTICATED_TITLE = "로그인이 필요하다";
+
+	/** CSRF 토큰이 없거나 맞지 않는다 — 403 */
+	static final URI CSRF_REJECTED = URI.create("urn:yozmnews:problem:csrf-rejected");
+
+	static final String CSRF_REJECTED_TITLE = "요청 보호 토큰이 맞지 않는다";
 
 	private ProblemTypes() {
 	}

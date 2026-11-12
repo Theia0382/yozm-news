@@ -23,10 +23,10 @@ import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 /**
- * 프레임워크 테이블(JobRunr · Modulith 이벤트 발행 레지스트리)의 마이그레이션 — 실제 PostgreSQL 의 빈 DB 에 적용하고, 마이그레이션의
- * 구획을 두 라이브러리의 스키마 원문과 대조한다. 라이브러리를 올려 원문이 바뀌거나 새 스크립트가 생기면 실패한다.
+ * 프레임워크 테이블(JobRunr · Modulith 이벤트 발행 레지스트리 · Spring Session)의 마이그레이션 — 실제 PostgreSQL 의 빈 DB 에 적용하고,
+ * 마이그레이션의 구획을 세 라이브러리의 스키마 원문과 대조한다. 라이브러리를 올려 원문이 바뀌거나 새 스크립트가 생기면 실패한다.
  * <p>
- * 구획 규칙은 {@code V1__jobrunr_and_event_publication.sql} 머리 주석, 결정은 ADR-0023 에 있다.
+ * 구획 규칙은 {@code V1__jobrunr_and_event_publication.sql} · {@code V32__spring_session.sql} 머리 주석, 결정은 ADR-0023 에 있다.
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -40,6 +40,8 @@ class FrameworkSchemaMigrationTests {
 
 	private static final String MODULITH_SCHEMA_ROOT = "org/springframework/modulith/events/jdbc/schemas/";
 
+	private static final String SESSION_SCHEMA = "-- spring-session-schema: ";
+
 	@Autowired
 	JdbcClient jdbc;
 
@@ -49,7 +51,7 @@ class FrameworkSchemaMigrationTests {
 				select version from flyway_schema_history where success order by installed_rank
 				""").query(String.class).list())
 			.containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16",
-					"17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31");
+					"17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32");
 		assertThat(this.jdbc.sql("""
 				select table_name from information_schema.tables
 				where table_schema = 'public' and table_type = 'BASE TABLE'
@@ -65,7 +67,8 @@ class FrameworkSchemaMigrationTests {
 					"event_assignment_criteria", "event_articles", "event_article_candidates", "event_assignment_queue",
 					"event_merge_judgements", "storyline_linking_criteria",
 					"storylines", "storyline_key_terms", "storyline_members", "storyline_linking_queue",
-					"storyline_big_criteria", "storyline_big_criteria_changes", "users", "user_password_credentials");
+					"storyline_big_criteria", "storyline_big_criteria_changes", "users", "user_password_credentials", "spring_session",
+					"spring_session_attributes");
 		assertThat(this.jdbc.sql("""
 				select table_name from information_schema.tables
 				where table_schema = 'public' and table_type = 'VIEW'
@@ -89,6 +92,13 @@ class FrameworkSchemaMigrationTests {
 			assertThat(section.getValue()).as(section.getKey())
 				.isNotBlank()
 				.isEqualTo(read(new ClassPathResource(MODULITH_SCHEMA_ROOT + section.getKey())).strip());
+		}
+
+		assertThat(sections.session()).containsOnlyKeys("org/springframework/session/jdbc/schema-postgresql.sql");
+		for (Map.Entry<String, String> section : sections.session().entrySet()) {
+			assertThat(section.getValue()).as(section.getKey())
+				.isNotBlank()
+				.isEqualTo(read(new ClassPathResource(section.getKey())).strip());
 		}
 	}
 
@@ -114,12 +124,12 @@ class FrameworkSchemaMigrationTests {
 	}
 
 	/** 마이그레이션 파일 전체에서 모은 구획 본문. 키는 표시 줄의 스크립트 이름 · 스키마 경로. */
-	private record Sections(Map<String, String> jobrunr, Map<String, String> modulith) {
+	private record Sections(Map<String, String> jobrunr, Map<String, String> modulith, Map<String, String> session) {
 
 		static Sections read() throws IOException {
 			Resource[] files = new PathMatchingResourcePatternResolver().getResources("classpath*:db/migration/*.sql");
 			assertThat(files).isNotEmpty();
-			Sections sections = new Sections(new LinkedHashMap<>(), new LinkedHashMap<>());
+			Sections sections = new Sections(new LinkedHashMap<>(), new LinkedHashMap<>(), new LinkedHashMap<>());
 			for (Resource file : files) {
 				sections.collect(FrameworkSchemaMigrationTests.read(file));
 			}
@@ -132,7 +142,7 @@ class FrameworkSchemaMigrationTests {
 			List<String> body = new ArrayList<>();
 			for (String line : content.split("\n", -1)) {
 				boolean marker = line.startsWith(JOBRUNR_MIGRATION) || line.equals(JOBRUNR_MIGRATION_RECORD)
-						|| line.startsWith(MODULITH_SCHEMA);
+						|| line.startsWith(MODULITH_SCHEMA) || line.startsWith(SESSION_SCHEMA);
 				if (!marker) {
 					body.add(line);
 					continue;
@@ -146,6 +156,10 @@ class FrameworkSchemaMigrationTests {
 				else if (line.startsWith(MODULITH_SCHEMA)) {
 					target = this.modulith;
 					key = line.substring(MODULITH_SCHEMA.length()).strip();
+				}
+				else if (line.startsWith(SESSION_SCHEMA)) {
+					target = this.session;
+					key = line.substring(SESSION_SCHEMA.length()).strip();
 				}
 				else {
 					target = null;

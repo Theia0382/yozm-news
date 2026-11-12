@@ -1,9 +1,11 @@
 package net.yozmnews.user.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 import net.yozmnews.platform.ProblemResponses;
 import net.yozmnews.user.domain.AdminCredential;
+import net.yozmnews.user.domain.account.AccountRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration;
@@ -11,6 +13,7 @@ import org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration
 import org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration;
 import org.springframework.boot.security.autoconfigure.web.servlet.ServletWebSecurityAutoConfiguration;
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
+import org.springframework.boot.webmvc.autoconfigure.WebMvcAutoConfiguration;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.SecurityFilterChain;
 
@@ -21,10 +24,13 @@ import org.springframework.security.web.SecurityFilterChain;
  */
 class SecurityConfigurationTests {
 
+	// 세션 체인이 처리기 매핑과 계정 저장소를 받는다 — 매핑은 MVC 자동 구성이, 저장소는 비어 있는 대역이 준다
 	private final WebApplicationContextRunner runner = new WebApplicationContextRunner()
 		.withConfiguration(AutoConfigurations.of(JacksonAutoConfiguration.class, SecurityAutoConfiguration.class,
-				ServletWebSecurityAutoConfiguration.class, UserDetailsServiceAutoConfiguration.class))
-		.withUserConfiguration(SecurityConfiguration.class, ProblemResponses.class);
+				ServletWebSecurityAutoConfiguration.class, UserDetailsServiceAutoConfiguration.class,
+				WebMvcAutoConfiguration.class))
+		.withUserConfiguration(SecurityConfiguration.class, ProblemResponses.class)
+		.withBean(AccountRepository.class, () -> mock(AccountRepository.class));
 
 	@Test
 	void malformedTokenStopsTheStartupWithoutQuotingIt() {
@@ -57,10 +63,11 @@ class SecurityConfigurationTests {
 	}
 
 	@Test
-	void createsNoDefaultUserAndOnlyTheTwoChains() {
+	void createsNoDefaultUserAndOnlyTheThreeChains() {
 		this.runner.run(context -> {
 			assertThat(context).doesNotHaveBean(UserDetailsService.class);
-			assertThat(context.getBeansOfType(SecurityFilterChain.class)).containsOnlyKeys("adminChain", "defaultChain");
+			assertThat(context.getBeansOfType(SecurityFilterChain.class)).containsOnlyKeys("adminChain", "sessionChain",
+					"defaultChain");
 		});
 	}
 

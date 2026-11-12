@@ -52,7 +52,7 @@
 
 ## 3. 공개 인터페이스
 
-모듈 최상위 패키지 `net.yozmnews.platform` 의 공개 타입은 역할 애너테이션 둘, 로컬 개발 애너테이션 하나, 화면용 API 경로 규약 하나(`ApiPaths`), 공개 처리기 표시 하나(`PublicApi`), 문제 응답 둘(`ApiProblem` · `ProblemResponses`), 이벤트 발행 운영 API(`EventPublicationAdministration` 과 결과 타입 — 파일 9개, 중첩 레코드를 더하면 타입 11개), YAML 원문 읽기(파일 8개), 코드 포인트 자르기 하나(`CodePoints`), 날짜 범위 변환 하나(`DayRange`), HTTP 응답 본문 수신자 하나(`CappedBody` — 중첩 타입을 더하면 넷), 벡터의 pgvector 텍스트 표현 하나(`VectorText`), 운영 설정의 행위자 종류 하나(`ChangeActor`)다.
+모듈 최상위 패키지 `net.yozmnews.platform` 의 공개 타입은 역할 애너테이션 둘, 로컬 개발 애너테이션 하나, 화면용 API 경로 규약 하나(`ApiPaths`), 공개 처리기 표시 하나(`PublicApi`)와 그 판정 하나(`PublicApis`), 문제 응답 둘(`ApiProblem` · `ProblemResponses`), 이벤트 발행 운영 API(`EventPublicationAdministration` 과 결과 타입 — 파일 9개, 중첩 레코드를 더하면 타입 11개), YAML 원문 읽기(파일 8개), 코드 포인트 자르기 하나(`CodePoints`), 날짜 범위 변환 하나(`DayRange`), HTTP 응답 본문 수신자 하나(`CappedBody` — 중첩 타입을 더하면 넷), 벡터의 pgvector 텍스트 표현 하나(`VectorText`), 운영 설정의 행위자 종류 하나(`ChangeActor`)다.
 
 | 타입 | 형태 | 용도 |
 |---|---|---|
@@ -80,6 +80,18 @@ public final class ApiPaths {
 | `ADMIN` | 운영자 경로 — `user` 의 운영자 체인이 맡고([user Spec](user.md#운영자-접근-통제) user-R1), 명세 설정이 거부 응답을 단다 |
 
 관련 규칙: platform-R6 · platform-R21.
+
+### PublicApis
+
+처리기가 공개 처리기인지의 판정 정본 — 메서드나 그 클래스에 `PublicApi` 가 있으면 공개다(platform-R21). `user` 의 세션 체인 인가 · 명세 설정 · 사용자 격리 등록 가드가 이 판정 하나를 쓴다.
+
+```java
+public final class PublicApis {
+	public static boolean isPublic(HandlerMethod handler);
+}
+```
+
+관련 규칙: platform-R21.
 
 ### ApiProblem
 
@@ -367,7 +379,7 @@ HTTP 엔드포인트:
 
 | 패키지 | 책임 |
 |---|---|
-| (최상위) | 역할 애너테이션 · 화면용 API 경로 규약 · 공개 처리기 표시 · 문제 응답 · 이벤트 발행 운영 API · YAML 원문 읽기 · 코드 포인트 자르기 · 날짜 범위 변환 · HTTP 응답 본문 상한 · 벡터의 pgvector 텍스트 표현(§3) |
+| (최상위) | 역할 애너테이션 · 화면용 API 경로 규약 · 공개 처리기 표시와 그 판정 · 문제 응답 · 이벤트 발행 운영 API · YAML 원문 읽기 · 코드 포인트 자르기 · 날짜 범위 변환 · HTTP 응답 본문 상한 · 벡터의 pgvector 텍스트 표현(§3) |
 | `adapter/in/job` | 이벤트 발행 재처리 반복 작업 |
 | `adapter/in/web` | API 계약 확인 엔드포인트, 화면용 API 명세 설정, 컨트롤러 오류의 문제 응답 |
 | `adapter/out/persistence` | 이벤트 발행 레지스트리 행의 읽기 · 조건부 삭제, 설치된 DB 확장의 버전 읽기 |

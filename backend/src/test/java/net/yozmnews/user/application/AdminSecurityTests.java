@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import net.yozmnews.platform.PublicApi;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -98,6 +99,7 @@ class AdminSecurityTests {
 			return "admin";
 		}
 
+		@PublicApi(reason = "시험 — 운영자 경로 밖의 공개 처리기")
 		@GetMapping("/api/probe-open")
 		String open() {
 			return "open";

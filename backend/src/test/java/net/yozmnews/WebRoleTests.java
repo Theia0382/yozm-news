@@ -56,7 +56,7 @@ class WebRoleTests {
 	@Test
 	void runsNoBackgroundJobs() {
 		assertThat(this.context.getBeanNamesForType(BackgroundJobServer.class)).isEmpty();
-		assertThat(RoleProbe.jobEntryPointBeans(this.context)).hasSize(8)
+		assertThat(RoleProbe.jobEntryPointBeans(this.context)).hasSize(9)
 			.allSatisfy((type, beans) -> assertThat(beans).as(type.getName()).isZero());
 		assertThat(RoleProbe.recurringJobIds(this.jdbc)).isEmpty();
 		assertThat(this.context.containsBean("presetFeedReconciliation")).isFalse();
@@ -119,7 +119,8 @@ class WebRoleTests {
 		assertThat(admin.headers().firstValue("Content-Type")).hasValueSatisfying(
 				type -> assertThat(type).startsWith("application/problem+json"));
 		assertThat(this.context.getBeanNamesForType(UserDetailsService.class)).isEmpty();
-		assertThat(this.context.getBeansOfType(SecurityFilterChain.class)).containsOnlyKeys("adminChain", "defaultChain");
+		assertThat(this.context.getBeansOfType(SecurityFilterChain.class)).containsOnlyKeys("adminChain", "sessionChain",
+				"defaultChain");
 	}
 
 }
