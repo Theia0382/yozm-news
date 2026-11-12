@@ -18,6 +18,7 @@ import net.yozmnews.source.adapter.in.job.PollFeedJob;
 import net.yozmnews.tag.adapter.in.job.BackfillMissingTagsJob;
 import net.yozmnews.tag.adapter.in.job.EvaluatePendingArticlesJob;
 import net.yozmnews.user.adapter.in.job.ExpireSessionsJob;
+import net.yozmnews.user.adapter.in.job.ForgetLoginFailuresJob;
 import org.springframework.context.ApplicationContext;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.scheduling.config.ScheduledTask;
@@ -31,7 +32,8 @@ final class RoleProbe {
 	/** 작업 진입점 — 작업 역할에서만 빈이다 */
 	static final List<Class<?>> JOB_ENTRY_POINTS = List.of(PollDueFeedsJob.class, PollFeedJob.class,
 			FeedHealthCheckJob.class, EventResubmissionJob.class, EvaluatePendingArticlesJob.class,
-			BackfillMissingTagsJob.class, IntakeArticlesJob.class, EventCleanupJob.class, ExpireSessionsJob.class);
+			BackfillMissingTagsJob.class, IntakeArticlesJob.class, EventCleanupJob.class, ExpireSessionsJob.class,
+			ForgetLoginFailuresJob.class);
 
 	/** Spring Modulith 멈춤 감시 작업의 설명 접두 — 작업은 이 구성의 람다다 */
 	private static final String STALENESS_MONITOR =

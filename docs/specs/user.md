@@ -122,6 +122,7 @@ sequenceDiagram
 - `SignIn` — 로그인 유스케이스. 한 번의 시도가 트랜잭션 하나이고, 실패 기록 행 잠금이 대조 동안 이어진다(user-R17 · R18)
 - `PasswordHashing` — Argon2id 해시 · 대조와 더미 해시 대조(user-R15 · R17)
 - `SessionExpiry` · `LoginFailureCleanup` — 정리 유스케이스(user-R12 · R19)
+- `AccountQueries` — 쓰는 계정 조회. 로그인 상태 조회가 세션 사용자의 계정을 읽는다(user-R20)
 - `ProblemTypes` — 보안 거부의 문제 유형 URI 와 제목의 정본(user-R3)
 - 그 밖의 값: `AdminSecurityProperties`(설정 `yozmnews.admin` — §7) · `AdminTokenAuthentication`(제시된 토큰 · 운영자 인증) · `AccountAuthentication`(세션 사용자 인증 — 세션에 직렬화되는 유일한 앱 타입) · `SignInOutcome`(로그인됨 · 거절 · 대기)
 
