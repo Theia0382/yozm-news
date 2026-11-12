@@ -31,7 +31,7 @@ jobs:
           load: true
           set: |
             *.cache-from=type=gha,scope=backend
-            *.cache-to=type=gha,scope=backend,mode=max
+            ${{ github.event_name == 'push' && '*.cache-to=type=gha,scope=backend,mode=max' || '' }}
       - name: Check
         id: check
         run: docker compose -f compose.check.yaml up --force-recreate --attach backend --abort-on-container-exit --exit-code-from backend backend docker
@@ -65,7 +65,7 @@ jobs:
           load: true
           set: |
             *.cache-from=type=gha,scope=frontend
-            *.cache-to=type=gha,scope=frontend,mode=max
+            ${{ github.event_name == 'push' && '*.cache-to=type=gha,scope=frontend,mode=max' || '' }}
       - name: Check
         run: docker compose -f compose.check.yaml run --rm frontend
 
@@ -85,7 +85,7 @@ jobs:
           load: true
           set: |
             *.cache-from=type=gha,scope=docs
-            *.cache-to=type=gha,scope=docs,mode=max
+            ${{ github.event_name == 'push' && '*.cache-to=type=gha,scope=docs,mode=max' || '' }}
       - name: Check
         run: docker compose -f compose.check.yaml run --rm docs
 
@@ -105,7 +105,7 @@ jobs:
           load: true
           set: |
             *.cache-from=type=gha,scope=tools
-            *.cache-to=type=gha,scope=tools,mode=max
+            ${{ github.event_name == 'push' && '*.cache-to=type=gha,scope=tools,mode=max' || '' }}
       - name: Check
         run: docker compose -f compose.check.yaml run --rm tools
 
@@ -157,7 +157,7 @@ jobs:
           set: |
             *.platform=linux/amd64,linux/arm64
             *.cache-from=type=gha,scope=deploy-${{ matrix.native }}
-            *.cache-to=type=gha,scope=deploy-${{ matrix.native }},mode=max
+            ${{ github.event_name == 'push' && format('*.cache-to=type=gha,scope=deploy-{0},mode=max', matrix.native) || '' }}
       - name: Load images (linux/${{ matrix.native }})
         uses: docker/bake-action@v7
         with:
