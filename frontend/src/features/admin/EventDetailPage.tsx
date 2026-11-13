@@ -8,8 +8,13 @@ import {
 import { useAdminClient } from "@/features/admin/adminSession";
 import { ArticleTitle } from "@/features/admin/ArticleTitle";
 import { EVENT_KEY } from "@/features/admin/eventQueries";
-import { decidedByLabels, eventStatusLabels } from "@/features/admin/labels";
+import {
+  decidedByLabels,
+  eventStatusLabels,
+  storylineStateLabels,
+} from "@/features/admin/labels";
 import { formatProbability } from "@/features/admin/metrics";
+import { storylinePath } from "@/features/admin/storylineQueries";
 import { REVIEW_TABLE } from "@/features/admin/tables";
 import { formatDateTime } from "@/shared/lib/dateTime";
 
@@ -114,6 +119,29 @@ function DetailView({ detail }: { detail: Detail }) {
             ))}
           </tbody>
         </table>
+      </section>
+
+      <section aria-label="사건의 스토리라인" className="space-y-2">
+        <h3 className="text-lg font-semibold">스토리라인</h3>
+        {detail.storylines.length === 0 ? (
+          <p className="text-sm">
+            이 사건이 든 스토리라인이 없다 — 방금 바뀐 사건은 다음 잇기 회차가
+            판정할 때까지 비어 있을 수 있다
+          </p>
+        ) : (
+          <ul className="space-y-1 text-sm">
+            {detail.storylines.map((storyline) => (
+              <li key={storyline.id}>
+                <Link to={storylinePath(storyline.id)} className="underline">
+                  스토리라인 {storyline.id}
+                </Link>{" "}
+                · {storylineStateLabels[storyline.state]} · 사건{" "}
+                {storyline.eventCount}
+                {!storyline.direct && " · 상위"}
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <section aria-label="합쳐진 사건" className="space-y-2">
