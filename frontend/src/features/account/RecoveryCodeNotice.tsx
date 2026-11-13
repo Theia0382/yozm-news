@@ -34,6 +34,10 @@ export function RecoveryCodeNotice({ code, onDone }: RecoveryCodeNoticeProps) {
         떠나면 코드를 다시 볼 수 없으니 안전한 곳에 적어 두세요. 코드를 새로
         받거나 이 코드로 재설정하면 이 코드는 더 쓸 수 없습니다.
       </p>
+      <p className="text-sm font-medium">
+        이 코드를 잃고 비밀번호도 잊으면 계정을 되찾을 수 없습니다 — 메일로
+        재설정하지 않습니다.
+      </p>
       <p
         aria-label="복구 코드 값"
         className="rounded-md border bg-muted px-3 py-2 font-mono text-base break-all select-all"

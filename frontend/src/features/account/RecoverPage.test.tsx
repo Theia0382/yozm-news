@@ -88,6 +88,12 @@ describe("RecoverPage", () => {
   it("거절은 계정 유무와 무관하게 같은 문구다", async () => {
     renderRecover(result("REJECTED"));
 
+    expect(
+      await screen.findByText(
+        /복구 코드가 없으면 비밀번호를 되찾을 수 없습니다/,
+      ),
+    ).toBeInTheDocument();
+
     await fill();
 
     expect(await screen.findByRole("alert")).toHaveTextContent(

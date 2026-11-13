@@ -90,7 +90,8 @@ function RecoverForm({
   return (
     <form onSubmit={send} className="max-w-sm space-y-4">
       <p className="text-sm text-muted-foreground">
-        복구 코드가 없으면 운영자에게 문의하세요.
+        복구 코드가 없으면 비밀번호를 되찾을 수 없습니다. 운영자가 만든 계정으로
+        아직 첫 로그인을 하지 않았다면 운영자에게 초기 비밀번호를 다시 받으세요.
       </p>
       {message && (
         <p role="alert" className="text-destructive">

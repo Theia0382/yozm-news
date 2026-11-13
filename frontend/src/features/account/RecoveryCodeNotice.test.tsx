@@ -13,6 +13,11 @@ describe("RecoveryCodeNotice", () => {
 
     expect(screen.getByLabelText("복구 코드 값")).toHaveTextContent(CODE);
     expect(screen.getByText(/다시 볼 수 없으니/)).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /이 코드를 잃고 비밀번호도 잊으면 계정을 되찾을 수 없습니다/,
+      ),
+    ).toBeInTheDocument();
     const next = screen.getByRole("button", { name: "계속" });
     expect(next).toBeDisabled();
 
