@@ -3,6 +3,7 @@ package net.yozmnews.storyline.domain.storyline;
 import java.time.Instant;
 import java.util.Objects;
 
+import net.yozmnews.storyline.LinkedBy;
 import net.yozmnews.storyline.domain.linking.Score;
 import org.jspecify.annotations.Nullable;
 

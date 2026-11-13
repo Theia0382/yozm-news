@@ -1,9 +1,11 @@
 package net.yozmnews.storyline.domain.relation;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
+import net.yozmnews.storyline.RelationOutcome;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -28,10 +30,16 @@ public interface RelationRepository {
 	/** 이 스토리라인과 물은 상대 → 물었을 때 작은 쪽의 구성 사건 수 */
 	Map<Long, Integer> askedAtSmallerEvents(long storylineId);
 
+	/** 관계 기준 이력 ID → 값 — 없는 ID 는 빠진다(storyline-R34) */
+	Map<Long, RelationCriteria> criteria(Collection<Long> ids);
+
+	/** 이 스토리라인이 든 물은 기록 — 상대 ID 순(storyline-R30 · R34) */
+	List<StoredAsked> askedOf(long storylineId);
+
 	/**
 	 * 물은 기록을 남긴다 — 쌍마다 한 행이고 다시 물으면 덮어쓴다.
 	 * @param smallerEvents 물었을 때 작은 쪽의 구성 사건 수
-	 * @param judgementId 판정 원본 — 평가기를 부르지 않았으면 null
+	 * @param judgementId 판정 원본 ID — 원본이 남지 않은 결말(물을 것 없음 · 입력 거부)이면 null
 	 */
 	void recordAsked(long a, long b, int smallerEvents, @Nullable Long judgementId, long criteriaId,
 			RelationOutcome outcome, Instant now);

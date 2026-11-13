@@ -293,7 +293,7 @@ public sealed interface BigStorylineCriteriaChangeResult {
 
 상태는 `StateCriteria.stateOf`(`StorylineStateConfiguration` 이 `StorylineStateProperties` 로 만든 빈)가 정한다 — 공개 조회가 스토리라인을 낼 때마다 지금 시각으로 부른다.
 
-조회: `StorylineDirectoryService` 가 `StorylineQueryRepository` 로 스토리라인(합쳐진 스토리라인이면 남는 스토리라인) · 사건들이 직접 든 스토리라인 · 주어진 스토리라인들과 그 쪽을 읽고, `StorylineRepository.members` · `affiliated` 로 직접 소속 · 소속 여부를 읽는다. 기간의 스토리라인은 `event` 의 `EventDirectory.articleCountsIn` 이 낸 기간 안 사건이 직접 든 스토리라인과 그 상위이고, 기간 집계는 스토리라인마다 닫은 사건 집합을 `EventDirectory.tallies` 에 넘겨 받는다(아래 "닫은 조회"). 큰 판정은 `BigStorylineCriteriaRepository` 의 지금 기준으로 `BigStorylineRule` 이 판정 · 정렬한다. 타임라인은 닫은 사건 집합을 `EventDirectory.views` 로 읽어 첫 기사 시각 순으로 놓고, 사건의 스토리라인은 `EventDirectory.find` 로 남는 사건을 얻어 찾는다. 스토리라인의 관계는 남는 스토리라인을 찾은 뒤 `RelationRepository.of` 로 읽는다 — 읽은 관계를 공개 값으로 옮기는 것은 두 조회가 함께 쓰는 정본 하나(`application` 의 패키지 비공개 정적 메서드)다. 큰 판정 기준은 `BigStorylineCriteriaSeeding` 이 기동 때 처음 값을 넣고, `BigStorylineAdministrationService` 가 변경 · 이력을 저장소로 쓰며 지금 값 읽기와 미리보기는 `StorylineDirectoryService` 의 것을 쓴다.
+조회: `StorylineDirectoryService` 가 `StorylineQueryRepository` 로 스토리라인(합쳐진 스토리라인이면 남는 스토리라인) · 사건들이 직접 든 스토리라인 · 주어진 스토리라인들과 그 쪽을 읽고, `StorylineRepository.members` · `affiliated` 로 직접 소속 · 소속 여부를 읽는다. 기간의 스토리라인은 `event` 의 `EventDirectory.articleCountsIn` 이 낸 기간 안 사건이 직접 든 스토리라인과 그 상위이고, 기간 집계는 스토리라인마다 닫은 사건 집합을 `EventDirectory.tallies` 에 넘겨 받는다(아래 "닫은 조회"). 큰 판정은 `BigStorylineCriteriaRepository` 의 지금 기준으로 `BigStorylineRule` 이 판정 · 정렬한다. 타임라인은 닫은 사건 집합을 `EventDirectory.views` 로 읽어 첫 기사 시각 순으로 놓고, 사건의 스토리라인은 `EventDirectory.find` 로 남는 사건을 얻어 찾는다. 스토리라인의 관계는 남는 스토리라인을 찾은 뒤 `RelationRepository.of` 로 읽는다 — 읽은 관계를 공개 값으로 옮기는 것은 두 조회가 함께 쓰는 정본 하나(`application` 의 패키지 비공개 `RelationViews.of`)다. 큰 판정 기준은 `BigStorylineCriteriaSeeding` 이 기동 때 처음 값을 넣고, `BigStorylineAdministrationService` 가 변경 · 이력을 저장소로 쓰며 지금 값 읽기와 미리보기는 `StorylineDirectoryService` 의 것을 쓴다.
 
 운영자 조회: `StorylineReviewService` 가 `StorylineQueryRepository.find` 로 남는 스토리라인을 찾고, 소속 근거는 `ClosedMembers.families` 로 정한 가족(자기와 모든 하위)의 `StorylineRepository.judgements` 와 기준 이력 값(`LinkingCriteriaRepository.findAll`)으로, 관계는 `RelationRepository.of` 와 관계 기준 이력 값(`RelationRepository.criteria`)으로, 물은 기록은 `RelationRepository.askedOf` 로 읽는다. 지금 기준은 `LinkingCriteria` · `RelationCriteria` 빈이다.
 
@@ -363,7 +363,7 @@ sequenceDiagram
 - `RelationProperties` · `RelationConfiguration` — 관계 기준 설정(`yozmnews.storyline-relation`, 기본값의 정본은 레코드 컴포넌트의 `@DefaultValue`)과 그것을 검증된 `RelationCriteria` 빈으로 바꾸는 결선. 값이 틀리면 기동하지 않는다. 역할 애너테이션이 없다
 - `StorylineLinkingAdministrationService` — 공개 운영 API `StorylineLinkingAdministration` 의 구현(storyline-R15). 시각은 `InstantSource` 에서 얻는다
 - `StorylineDirectoryService` — 공개 조회 `StorylineDirectory` 의 구현(storyline-R19 · R21 ~ R23 · R33). 닫은 사건 집합(`ClosedMembers`)을 만드는 길 하나를 스토리라인 값 · 타임라인 · 사건의 스토리라인 · 기간 집계가 함께 쓴다. 큰 판정은 패키지 비공개 `bigStorylines(EventPeriod, BigStorylineCriteria)` 하나를 공개 조회(지금 기준)와 미리보기(제안 기준)가 함께 쓰고, 기간의 스토리라인에 기간 집계를 다는 길 하나를 목록과 큰 판정이 함께 쓴다. `list` 는 한 건 더 읽어 다음 커서를 정한다. 시각은 `InstantSource` 에서 얻는다. 트랜잭션 · 역할 애너테이션이 없다
-- `StorylineReviewService` — 운영자 조회 `StorylineReview` 의 구현(storyline-R34). 가족은 `ClosedMembers.families`, 관계를 공개 값으로 옮기는 것은 `StorylineDirectoryService` 와 같은 정본이다. 트랜잭션 · 역할 애너테이션이 없다
+- `StorylineReviewService` — 운영자 조회 `StorylineReview` 의 구현(storyline-R34). 가족은 `ClosedMembers.families`, 관계를 공개 값으로 옮기는 것은 `StorylineDirectoryService` 와 같은 정본(`RelationViews.of`)이다. 트랜잭션 · 역할 애너테이션이 없다
 - `BigStorylineAdministrationService` — 공개 운영 API `BigStorylineAdministration` 의 구현(storyline-R20). 변경은 지금 값 행을 잠근 한 트랜잭션이고, 바꿨으면 정보 로그 `큰 판정 기준을 바꿨다 — 소스 {a} → {b}, 중요도 {x} → {y}, {행위자}` 를 남긴다. 시각은 `InstantSource` 에서 얻는다
 - `BigStorylineCriteriaSeeding` — 기동 때 한 트랜잭션에서 처음 값(`BigStorylineCriteria.DEFAULT`)을 넣는다(storyline-R20). 넣었으면 정보 로그 `큰 판정 기준의 처음 값을 적재했다 — 소스 {n} · 중요도 {x}`
 - `LinkingProperties` · `LinkingConfiguration` — 잇기 기준 설정(`yozmnews.storyline-linking`, 기본값의 정본은 레코드 컴포넌트의 `@DefaultValue`)과 그것을 검증된 `LinkingCriteria` 빈으로 바꾸는 결선. 값이 틀리면 기동하지 않는다
@@ -384,7 +384,7 @@ sequenceDiagram
 #### `domain/storyline`
 
 - `LinkJudgement(LinkedBy linkedBy, @Nullable Score score, @Nullable Long criteriaId, Instant linkedAt)` — 소속 하나의 판정 근거(storyline-R14). 정한 것은 최상위 `LinkedBy` 다
-- `ClosedMembers(Map<Long, Set<Long>> families, Map<Long, List<Long>> members)` — 닫은 사건 집합의 정본(storyline-R33). 정적 `families(스토리라인 ID, RelationGraph)` 가 스토리라인마다 자기와 모든 하위를 정하고, `direct` · `closed` · `hasChildren` 이 직접 소속 · 닫은 사건 집합 · 하위 여부를 낸다
+- `ClosedMembers(Map<Long, Set<Long>> families, Map<Long, List<Long>> members)` — 닫은 사건 집합의 정본(storyline-R33). 정적 `families(스토리라인 ID, RelationGraph)` 가 스토리라인마다 자기와 모든 하위를 정하고 `everyone(가족)` 이 소속을 한 번에 읽을 가족 모두를 내며, `direct` · `closed` · `hasChildren` 이 직접 소속 · 닫은 사건 집합 · 하위 여부를 낸다
 - `StorylineSnapshot(long id, float[] centroid, Instant firstArticleAt, Instant lastArticleAt, List<String> keyTerms)` — 후보로 읽은 스토리라인
 - `Tidying` — 정돈 판정의 정본(storyline-R13 · R17). `decide(스토리라인 ID, 구성 사건, 첫 구성 사건을 가진 다른 스토리라인의 구성 사건)` 이 `Keep` · `Remove` · `Dissolve(사건 ID)` · `MergeInto(남는 스토리라인 ID, 합쳐질 스토리라인 ID 목록)` 가운데 하나를 낸다(sealed)
 - `StateCriteria(Duration quietAfter, Duration endedAfter)` — 상태 판정의 정본(storyline-R16). 두 기간은 0 보다 큰 초 단위이고 잠잠 기간 < 끝남 기간이다. `stateOf(마지막 기사 시각, 지금)` 이 상태(최상위 `StorylineState`)를 낸다

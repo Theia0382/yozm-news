@@ -9,10 +9,10 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.storyline.LinkedBy;
 import net.yozmnews.storyline.domain.linking.Representation;
 import net.yozmnews.storyline.domain.linking.Score;
 import net.yozmnews.storyline.domain.storyline.LinkJudgement;
-import net.yozmnews.storyline.domain.storyline.LinkedBy;
 import net.yozmnews.storyline.domain.storyline.StorylineSnapshot;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

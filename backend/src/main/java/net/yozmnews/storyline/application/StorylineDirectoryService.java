@@ -27,7 +27,6 @@ import net.yozmnews.storyline.StorylineDirectory;
 import net.yozmnews.storyline.StorylineEvent;
 import net.yozmnews.storyline.StorylineId;
 import net.yozmnews.storyline.StorylinePage;
-import net.yozmnews.storyline.StorylineRelationKind;
 import net.yozmnews.storyline.StorylineRelationView;
 import net.yozmnews.storyline.StorylineSummary;
 import net.yozmnews.storyline.StorylineView;
@@ -35,8 +34,8 @@ import net.yozmnews.storyline.UnlinkedEvents;
 import net.yozmnews.storyline.domain.big.BigStorylineCriteriaRepository;
 import net.yozmnews.storyline.domain.big.BigStorylineRule;
 import net.yozmnews.storyline.domain.relation.RelationGraph;
-import net.yozmnews.storyline.domain.relation.RelationKind;
 import net.yozmnews.storyline.domain.relation.RelationRepository;
+import net.yozmnews.storyline.domain.storyline.ClosedMembers;
 import net.yozmnews.storyline.domain.storyline.StateCriteria;
 import net.yozmnews.storyline.domain.storyline.StoredStoryline;
 import net.yozmnews.storyline.domain.storyline.StorylineQueryRepository;
@@ -49,7 +48,7 @@ import org.springframework.stereotype.Service;
  * 공개 조회 {@link StorylineDirectory} 의 구현 — docs/specs/storyline.md §4 · storyline-R19 · storyline-R21 ~ R23 · storyline-R33.
  * <p>
  * 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통). 큰 판정은 {@link #bigStorylines(EventPeriod, BigStorylineCriteria)} 하나를 공개 조회와
- * 미리보기가 함께 쓴다. 스토리라인의 사건은 닫은 사건 집합({@link Closure} — 직접 소속과 포함을 따라 내려간 하위의 직접 소속)이고, 스토리라인
+ * 미리보기가 함께 쓴다. 스토리라인의 사건은 닫은 사건 집합({@link ClosedMembers} — 직접 소속과 포함을 따라 내려간 하위의 직접 소속)이고, 스토리라인
  * 값 · 타임라인 · 사건의 스토리라인 · 기간의 스토리라인 · 기간 집계가 이 한 길을 쓴다. 닫은 사건 집합은 저장하지 않고 질의마다 관계와
  * 소속에서 만든다. 기사는 {@code event} 가 세고 여기서는 사건 ID 만 넘긴다.
  */
@@ -105,7 +104,7 @@ class StorylineDirectoryService implements StorylineDirectory {
 			return List.of();
 		}
 		long storyline = stored.get().id();
-		Closure closure = closure(List.of(storyline), graph());
+		ClosedMembers closure = closure(List.of(storyline), graph());
 		Set<Long> direct = closure.direct(storyline);
 		// 합쳐졌거나 지워졌는데 아직 소속을 따르지 않은 사건은 사건 조회에 없다
 		return this.events.views(ids(closure.closed(storyline)))
@@ -148,7 +147,7 @@ class StorylineDirectoryService implements StorylineDirectory {
 		if (page.isEmpty()) {
 			return new StorylinePage(List.of(), null);
 		}
-		Closure closure = closure(page.stream().map(StoredStoryline::id).toList(), graph);
+		ClosedMembers closure = closure(page.stream().map(StoredStoryline::id).toList(), graph);
 		Map<Long, EventTally> tallies = tallied(page, closure, period);
 		BigStorylineCriteria current = currentCriteria();
 		List<StorylineView> views = views(page, graph, closure);
@@ -191,12 +190,7 @@ class StorylineDirectoryService implements StorylineDirectory {
 	public List<StorylineRelationView> relationsOf(StorylineId id) {
 		// 합쳐진 스토리라인이면 남는 쪽을 따른 뒤 읽는다 — 합칠 때 관계를 남는 쪽으로 옮겼다(storyline-R32)
 		return this.storylines.find(id.value())
-			.map(stored -> this.relations.of(stored.id())
-				.stream()
-				.map(relation -> new StorylineRelationView(kind(relation.relation().kind()),
-						new StorylineId(relation.relation().sourceId()), new StorylineId(relation.relation().targetId()),
-						relation.linkedAt()))
-				.toList())
+			.map(stored -> this.relations.of(stored.id()).stream().map(RelationViews::of).toList())
 			.orElse(List.of());
 	}
 
@@ -206,7 +200,7 @@ class StorylineDirectoryService implements StorylineDirectory {
 		Objects.requireNonNull(criteria, "criteria");
 		RelationGraph graph = graph();
 		List<StoredStoryline> rows = this.storylines.byIds(storylinesIn(period, graph));
-		Closure closure = closure(rows.stream().map(StoredStoryline::id).toList(), graph);
+		ClosedMembers closure = closure(rows.stream().map(StoredStoryline::id).toList(), graph);
 		Map<Long, EventTally> tallies = tallied(rows, closure, period);
 		List<BigStoryline> big = new ArrayList<>();
 		for (StorylineView view : views(rows, graph, closure)) {
@@ -245,7 +239,7 @@ class StorylineDirectoryService implements StorylineDirectory {
 	}
 
 	/** 스토리라인마다 기간 집계 — 닫은 사건 집합을 묶음으로 넘기고 {@code event} 가 센다(storyline-R19 · R33) */
-	private Map<Long, EventTally> tallied(List<StoredStoryline> rows, Closure closure, EventPeriod period) {
+	private Map<Long, EventTally> tallied(List<StoredStoryline> rows, ClosedMembers closure, EventPeriod period) {
 		if (rows.isEmpty()) {
 			return Map.of();
 		}
@@ -268,7 +262,7 @@ class StorylineDirectoryService implements StorylineDirectory {
 	 * 스토리라인 값(storyline-R33) — 하위가 없으면 저장된 표현의 값, 있으면 닫은 사건 집합의 사건으로 센 값이다. 상태는 그 마지막 기사 시각으로
 	 * 정한다. 대표 사건은 직접 소속의 것이다
 	 */
-	private List<StorylineView> views(List<StoredStoryline> rows, RelationGraph graph, Closure closure) {
+	private List<StorylineView> views(List<StoredStoryline> rows, RelationGraph graph, ClosedMembers closure) {
 		Instant now = this.clock.instant();
 		Set<Long> inherited = new LinkedHashSet<>();
 		for (StoredStoryline row : rows) {
@@ -308,55 +302,13 @@ class StorylineDirectoryService implements StorylineDirectory {
 	}
 
 	/** 스토리라인들의 닫은 사건 집합 — 저마다 자기와 모든 하위의 직접 소속을 한 번에 읽어 합친다 */
-	private Closure closure(Collection<Long> storylineIds, RelationGraph graph) {
-		Map<Long, Set<Long>> families = new LinkedHashMap<>();
-		Set<Long> all = new TreeSet<>();
-		for (long id : storylineIds) {
-			Set<Long> family = new TreeSet<>(graph.descendants(id));
-			family.add(id);
-			families.put(id, family);
-			all.addAll(family);
-		}
-		return new Closure(families, this.memberships.members(all));
-	}
-
-	private static StorylineRelationKind kind(RelationKind kind) {
-		return switch (kind) {
-			case CONTAINS -> StorylineRelationKind.CONTAINS;
-			case FOLLOWS -> StorylineRelationKind.FOLLOWS;
-		};
+	private ClosedMembers closure(Collection<Long> storylineIds, RelationGraph graph) {
+		Map<Long, Set<Long>> families = ClosedMembers.families(storylineIds, graph);
+		return new ClosedMembers(families, this.memberships.members(ClosedMembers.everyone(families)));
 	}
 
 	private static List<EventId> ids(Collection<Long> values) {
 		return values.stream().map(EventId::new).toList();
-	}
-
-	/**
-	 * 닫은 사건 집합을 내는 값.
-	 *
-	 * @param families 스토리라인 → 자기와 모든 하위
-	 * @param members 스토리라인 → 직접 소속 사건
-	 */
-	private record Closure(Map<Long, Set<Long>> families, Map<Long, List<Long>> members) {
-
-		/** 직접 소속 사건 */
-		Set<Long> direct(long storylineId) {
-			return new TreeSet<>(this.members.getOrDefault(storylineId, List.of()));
-		}
-
-		/** 닫은 사건 집합 — 자기와 모든 하위의 직접 소속을 사건 ID 로 합친 것 */
-		Set<Long> closed(long storylineId) {
-			Set<Long> closed = new TreeSet<>();
-			for (long member : this.families.getOrDefault(storylineId, Set.of(storylineId))) {
-				closed.addAll(this.members.getOrDefault(member, List.of()));
-			}
-			return closed;
-		}
-
-		boolean hasChildren(long storylineId) {
-			return this.families.getOrDefault(storylineId, Set.of()).size() > 1;
-		}
-
 	}
 
 }

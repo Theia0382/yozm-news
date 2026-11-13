@@ -11,13 +11,13 @@ import java.util.Map;
 import java.util.UUID;
 
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.storyline.RelationOutcome;
 import net.yozmnews.storyline.domain.queue.LinkingLease;
 import net.yozmnews.storyline.domain.relation.PendingStoryline;
 import net.yozmnews.storyline.domain.relation.Relation;
 import net.yozmnews.storyline.domain.relation.RelationCriteria;
 import net.yozmnews.storyline.domain.relation.RelationKind;
 import net.yozmnews.storyline.domain.relation.RelationMove;
-import net.yozmnews.storyline.domain.relation.RelationOutcome;
 import net.yozmnews.storyline.domain.relation.StoredRelation;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -78,7 +78,8 @@ class JdbcRelationRepositoryTests {
 
 		assertThat(mine(this.relations.all())).containsExactly(new Relation(this.b, this.a, RelationKind.FOLLOWS));
 		assertThat(this.relations.of(this.a)).containsExactly(
-				new StoredRelation(new Relation(this.b, this.a, RelationKind.FOLLOWS), NOW.plusSeconds(60)));
+				new StoredRelation(new Relation(this.b, this.a, RelationKind.FOLLOWS), 0.8, 42, this.criteriaId,
+						NOW.plusSeconds(60)));
 		Map<String, Object> row = this.jdbc
 			.sql("select probability, judgement_id, criteria_id from storyline_relations where target_id = :a")
 			.param("a", this.a)
@@ -147,7 +148,8 @@ class JdbcRelationRepositoryTests {
 				NOW.plusSeconds(300));
 
 		assertThat(this.relations.of(this.a)).containsExactly(
-				new StoredRelation(new Relation(this.a, this.c, RelationKind.CONTAINS), NOW.plusSeconds(300)));
+				new StoredRelation(new Relation(this.a, this.c, RelationKind.CONTAINS), 0.7, 41, this.criteriaId,
+						NOW.plusSeconds(300)));
 		assertThat(this.relations.of(this.b)).isEmpty();
 		assertThat(this.jdbc.sql("select judgement_id from storyline_relations where source_id = :a")
 			.param("a", this.a)
