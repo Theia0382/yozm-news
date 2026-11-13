@@ -242,9 +242,11 @@ sourceSets.main {
 }
 
 // 로컬 임베딩은 ONNX Runtime 텔레메트리를 끄는 이 환경 변수가 없으면 모델을 열지 않는다(정본은 OnnxArticleEmbedder). 네이티브를 올리는 JNA · ONNX Runtime 의 제한 메서드 경고를 끈다 — ADR-0091
+// 시험 JVM 은 Spring 시험 컨텍스트를 캐시에 쌓아 두므로 Gradle 의 기본 힙으로는 모자란다 — 상한을 정한다
 tasks.withType<Test> {
 	environment("ORT_DISABLE_TELEMETRY", "1")
 	jvmArgs("--enable-native-access=ALL-UNNAMED")
+	maxHeapSize = "2g"
 }
 
 // 모델 파일은 따로 계층을 둔다 — 코드만 바뀌면 이 계층(약 135 MB)을 다시 받지 않는다. 계층 이름은 backend/Dockerfile 이 쓴다
