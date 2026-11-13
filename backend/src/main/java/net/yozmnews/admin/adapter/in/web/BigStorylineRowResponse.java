@@ -3,7 +3,6 @@ package net.yozmnews.admin.adapter.in.web;
 import java.math.BigDecimal;
 import java.time.Instant;
 
-import net.yozmnews.article.ArticleId;
 import net.yozmnews.storyline.BigStoryline;
 import net.yozmnews.storyline.StorylineState;
 import org.jspecify.annotations.Nullable;
@@ -23,13 +22,11 @@ record BigStorylineRowResponse(long id, StorylineState state, int eventCount, in
 		Instant lastArticleAt, int periodArticles, int periodSources, @Nullable BigDecimal importance,
 		@Nullable Long representativeArticleId, @Nullable ArticleSummaryResponse representative) {
 
-	static BigStorylineRowResponse of(BigStoryline big, @Nullable ArticleId representativeArticleId,
-			AdminArticles.@Nullable Summary representative) {
+	static BigStorylineRowResponse of(BigStoryline big, AdminRepresentatives.Representative representative) {
 		return new BigStorylineRowResponse(big.storyline().id().value(), big.storyline().state(),
 				big.storyline().eventCount(), big.storyline().articleCount(), big.storyline().firstArticleAt(),
 				big.storyline().lastArticleAt(), big.tally().articles(), big.tally().sources(), big.tally().importance(),
-				(representativeArticleId == null) ? null : representativeArticleId.value(),
-				(representative == null) ? null : ArticleSummaryResponse.of(representative));
+				representative.articleId(), representative.response());
 	}
 
 }

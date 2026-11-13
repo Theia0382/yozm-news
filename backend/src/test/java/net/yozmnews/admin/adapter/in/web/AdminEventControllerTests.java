@@ -25,6 +25,10 @@ import net.yozmnews.event.EventSummary;
 import net.yozmnews.event.EventTally;
 import net.yozmnews.event.EventView;
 import net.yozmnews.event.MergedEvent;
+import net.yozmnews.storyline.EventStoryline;
+import net.yozmnews.storyline.StorylineId;
+import net.yozmnews.storyline.StorylineState;
+import net.yozmnews.storyline.StorylineView;
 import net.yozmnews.user.application.WebSliceSecurity;
 import net.yozmnews.source.FeedId;
 import net.yozmnews.source.FeedLabel;
@@ -49,6 +53,7 @@ import org.springframework.test.web.servlet.MockMvc;
  */
 @WebMvcTest(controllers = AdminEventController.class, properties = AdminRequests.TOKEN_PROPERTY)
 @Import({ WebSliceSecurity.class, FakeEventDirectory.Config.class, FakeEventReview.Config.class,
+		FakeStorylineDirectory.Config.class,
 		FakeArticleDirectory.Config.class, FakeFeedLabels.Config.class })
 class AdminEventControllerTests {
 
@@ -69,6 +74,9 @@ class AdminEventControllerTests {
 	FakeEventReview review;
 
 	@Autowired
+	FakeStorylineDirectory storylines;
+
+	@Autowired
 	FakeArticleDirectory articles;
 
 	@Autowired
@@ -78,6 +86,7 @@ class AdminEventControllerTests {
 	void reset() {
 		this.directory.reset();
 		this.review.reset();
+		this.storylines.reset();
 		this.articles.reset();
 		this.labels.reset();
 		this.articles.contents.put(new ArticleId(41), new ArticleContent(new ArticleId(41), "국회 본회의 통과", null,
@@ -166,6 +175,12 @@ class AdminEventControllerTests {
 		this.articles.contents.put(new ArticleId(43), new ArticleContent(new ArticleId(43), "기준금리 동결", null,
 				URI.create("https://news.example/43"), T,
 				List.of(new ArticleEntryView(new SourceId(3), new FeedId(5), List.of()))));
+		// 사건 7 은 스토리라인 12 에 직접 들었고, 12 를 포함하는 10 에도 든다
+		this.storylines.eventStorylines.put(7L, List.of(
+				new EventStoryline(new StorylineView(new StorylineId(10), StorylineState.QUIET, 9, 30, T, T,
+						new EventId(1), T, null), false),
+				new EventStoryline(new StorylineView(new StorylineId(12), StorylineState.ACTIVE, 3, 8, T, T,
+						new EventId(7), T, new StorylineId(10)), true)));
 		this.review.merged.put(new EventId(7),
 				List.of(new MergedEvent(new EventId(3), 2, T, T, T, Instant.parse("2026-11-06T06:00:00Z"), new ArticleId(43),
 						0.74),
@@ -191,10 +206,15 @@ class AdminEventControllerTests {
 					   {"id":4,"articleCount":1,"firstArticleAt":"2026-11-05T00:00:00Z",
 					    "lastArticleAt":"2026-11-05T00:00:00Z","createdAt":"2026-11-05T00:00:00Z",
 					    "mergedAt":"2026-11-06T07:00:00Z","representativeId":null,"representative":null,
-					    "probability":null}]}
+					    "probability":null}],
+					 "storylines":[
+					   {"id":10,"state":"QUIET","eventCount":9,"direct":false},
+					   {"id":12,"state":"ACTIVE","eventCount":3,"direct":true}]}
 					""", JsonCompareMode.STRICT));
 		assertThat(this.directory.calls).containsExactly("find 7", "articles 7", "representativesOfAll [7]");
 		assertThat(this.review.calls).containsExactly("mergedInto 7");
+		// 사건의 스토리라인은 남는 사건 ID 로 묻는다
+		assertThat(this.storylines.calls).containsExactly("storylinesOf 7");
 		assertThat(this.articles.calls).containsExactly("findAll [41, 42, 43]");
 	}
 
@@ -207,9 +227,10 @@ class AdminEventControllerTests {
 			.andExpect(status().isOk())
 			.andExpect(content().json("""
 					{"requestedId":3,"id":7,"representativeId":null,"representative":null,"articles":[],
-					 "mergedEvents":[]}
+					 "mergedEvents":[],"storylines":[]}
 					"""));
 		assertThat(this.directory.calls).containsExactly("find 3", "articles 7", "representativesOfAll [7]");
+		assertThat(this.storylines.calls).containsExactly("storylinesOf 7");
 	}
 
 	@Test
