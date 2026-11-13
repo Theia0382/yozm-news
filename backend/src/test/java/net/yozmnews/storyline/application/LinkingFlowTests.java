@@ -31,6 +31,12 @@ import net.yozmnews.storyline.domain.linking.LinkingCriteriaRepository;
 import net.yozmnews.storyline.domain.linking.Representation;
 import net.yozmnews.storyline.domain.linking.Score;
 import net.yozmnews.storyline.domain.queue.LinkingQueueRepository;
+import net.yozmnews.storyline.domain.relation.Relation;
+import net.yozmnews.storyline.domain.relation.RelationCriteria;
+import net.yozmnews.storyline.domain.relation.RelationKind;
+import net.yozmnews.storyline.domain.relation.RelationOutcome;
+import net.yozmnews.storyline.domain.relation.RelationQueueRepository;
+import net.yozmnews.storyline.domain.relation.RelationRepository;
 import net.yozmnews.storyline.domain.storyline.LinkJudgement;
 import net.yozmnews.storyline.domain.storyline.LinkedBy;
 import net.yozmnews.storyline.domain.storyline.StateCriteria;
@@ -63,7 +69,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 보는 시험은 말의 무게를 모두 같게 한 사건 조회({@link #evenly()})로 돌리고(무게가 같으면 겹침은 말 수의 비율이다), 실제 말 수로 도는
  * 시험은 다른 시험이 쓰지 않는 먼 시각(2036년)에 사건을 둔다.
  * <p>
- * 지키는 규칙: storyline-R1 ~ storyline-R14 · storyline-R16 · storyline-R17 · storyline-R18
+ * 지키는 규칙: storyline-R1 ~ storyline-R14 · storyline-R16 · storyline-R17 · storyline-R18 · storyline-R26 · storyline-R32
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -90,6 +96,12 @@ class LinkingFlowTests {
 
 	@Autowired
 	LinkingCriteriaRepository criteria;
+
+	@Autowired
+	RelationRepository relations;
+
+	@Autowired
+	RelationQueueRepository relationQueue;
 
 	@Autowired
 	TransactionTemplate transaction;
@@ -276,6 +288,89 @@ class LinkingFlowTests {
 		assertThat(memberIds(l1)).containsExactly(pair.e1(), pair.e2());
 		assertThat(mergedInto(l1)).isNull();
 		assertThat(liveStorylineIds()).containsExactly(l1);
+	}
+
+	@Test
+	void aMergedStorylinesRelationsMoveToTheSurvivor() {
+		Pair pair = openPair();
+		long l1 = onlyStoryline();
+		Pair other = openOtherPair();
+		long l2 = otherStoryline(l1);
+		long l3 = seed(sameEvent(), sameEvent(), sameEvent());
+		long l4 = seed(sameEvent(), sameEvent(), sameEvent());
+		long relationCriteria = this.relations
+			.registerCriteria(new RelationCriteria(0.60, 0.20, 3, 0.88, Duration.ofDays(14)), NOW);
+		// L2 ⊃ L3, L4 → L2, 그리고 합쳐질 둘 사이의 L1 → L2
+		this.relations.link(new Relation(l2, l3, RelationKind.CONTAINS), 0.7, 41, relationCriteria, NOW);
+		this.relations.link(new Relation(l4, l2, RelationKind.FOLLOWS), 0.8, 42, relationCriteria, NOW);
+		this.relations.link(new Relation(l1, l2, RelationKind.FOLLOWS), 0.9, 43, relationCriteria, NOW);
+		this.relations.recordAsked(l2, l3, 2, 41L, relationCriteria, RelationOutcome.LINKED, NOW);
+		this.relations.recordAsked(l1, l3, 2, 44L, relationCriteria, RelationOutcome.NOT_RELATED, NOW);
+		this.relationQueue.enqueue(l2, NOW);
+		this.relationQueue.enqueue(l3, NOW);
+		StorylineRows.merge(this.jdbc, other.e1(), pair.e1());
+		StorylineRows.merge(this.jdbc, other.e2(), pair.e2());
+		this.queue.enqueue(other.e1(), null, NOW);
+		this.queue.enqueue(other.e2(), null, NOW);
+
+		round(evenly()).run();
+
+		// L2 가 L1 에 합쳐졌다 — L2 의 관계는 L1 의 것이 되고, 둘 사이의 관계는 사라진다(storyline-R32)
+		assertThat(mergedInto(l2)).isEqualTo(l1);
+		assertThat(this.relations.all()).containsExactly(new Relation(l1, l3, RelationKind.CONTAINS),
+				new Relation(l4, l1, RelationKind.FOLLOWS));
+		assertThat(this.jdbc.sql("select judgement_id from storyline_relations order by judgement_id")
+			.query(Long.class)
+			.list()).containsExactly(41L, 42L);
+		assertThat(this.jdbc.sql("select count(*) from storyline_relations where source_id = :l2 or target_id = :l2")
+			.param("l2", l2)
+			.query(Long.class)
+			.single()).isZero();
+		// 합쳐진 스토리라인의 물은 기록과 관계 대기 행은 지워지고 남의 것은 남는다. 남는 쪽 L1 은 관계 대기에 든다(storyline-R26)
+		assertThat(this.relations.askedAtSmallerEvents(l3)).isEqualTo(Map.of(l1, 2));
+		assertThat(this.jdbc.sql("select storyline_id from storyline_relation_queue order by storyline_id")
+			.query(Long.class)
+			.list()).containsExactly(l1, l3);
+	}
+
+	@Test
+	void aDissolvedStorylineTakesItsRelationsWithIt() {
+		Pair pair = openPair();
+		long l1 = onlyStoryline();
+		long l3 = seed(sameEvent(), sameEvent(), sameEvent());
+		long relationCriteria = this.relations
+			.registerCriteria(new RelationCriteria(0.60, 0.20, 3, 0.88, Duration.ofDays(14)), NOW);
+		this.relations.link(new Relation(l3, l1, RelationKind.CONTAINS), 0.7, 41, relationCriteria, NOW);
+		this.relations.recordAsked(l1, l3, 2, 41L, relationCriteria, RelationOutcome.LINKED, NOW);
+		this.relationQueue.enqueue(l1, NOW);
+		StorylineRows.merge(this.jdbc, pair.e2(), pair.e1());
+		this.queue.enqueue(pair.e2(), null, NOW);
+
+		round(evenly()).run();
+
+		// L1 은 사건 하나만 남아 풀렸다 — 관계 · 물은 기록 · 관계 대기 행이 함께 지워진다(storyline-R32)
+		assertThat(liveStorylineIds()).doesNotContain(l1);
+		assertThat(this.relations.all()).isEmpty();
+		assertThat(this.relations.askedAtSmallerEvents(l3)).isEmpty();
+		assertThat(this.jdbc.sql("select count(*) from storyline_relation_queue").query(Long.class).single()).isZero();
+	}
+
+	@Test
+	void anOpenedOrKeptStorylineIsQueuedForRelations() {
+		Pair pair = openPair();
+		long storyline = onlyStoryline();
+
+		// 짝으로 연 스토리라인이 관계 대기에 들고, 같은 회차에서 짝의 다른 사건을 판정한 정돈이 한 번 더 넣는다
+		assertThat(relationQueued(storyline)).contains(1);
+
+		long e3 = StorylineRows.event(this.jdbc, "OPEN", MODEL, "[1,0]", 1, "2026-11-05T04:00:00Z",
+				"2026-11-05T04:00:00Z", Map.of("금리", 1));
+		this.queue.enqueue(e3, Instant.parse("2026-11-05T04:00:00Z"), NOW);
+		round(evenly()).run();
+
+		// 사건이 붙어 정돈에서 남은 스토리라인이 다시 든다 — 이미 있으면 다시 알림 수가 오른다(storyline-R26)
+		assertThat(memberIds(storyline)).containsExactly(pair.e1(), pair.e2(), e3);
+		assertThat(relationQueued(storyline)).contains(2);
 	}
 
 	@Test
@@ -708,7 +803,8 @@ class LinkingFlowTests {
 
 	private LinkingRound round(EventDirectory events, LinkingCriteria criteria) {
 		return new LinkingRound(this.queue, this.criteria, criteria,
-				new StorylineLinker(events, this.storylines, this.queue), this.transaction, InstantSource.fixed(NOW));
+				new StorylineLinker(events, this.storylines, this.queue, this.relations, this.relationQueue),
+				this.transaction, InstantSource.fixed(NOW));
 	}
 
 	private long criteriaId() {
@@ -752,6 +848,14 @@ class LinkingFlowTests {
 					LinkJudgement.judged(LinkedBy.PAIR, new Score(1.0, 1.0, 1.0), criteriaId, NOW));
 		}
 		return storyline;
+	}
+
+	/** 관계 대기 행의 다시 알림 수 — 없으면 빈 값 */
+	private Optional<Integer> relationQueued(long storyline) {
+		return this.jdbc.sql("select notifications from storyline_relation_queue where storyline_id = :id")
+			.param("id", storyline)
+			.query(Integer.class)
+			.optional();
 	}
 
 	private List<Long> liveStorylineIds() {

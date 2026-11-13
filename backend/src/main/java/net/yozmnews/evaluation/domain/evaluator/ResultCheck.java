@@ -48,8 +48,8 @@ public final class ResultCheck {
 	}
 
 	/**
-	 * 원본 응답을 {@code jsonb} 로 저장할 수 없는 까닭 — JSON 이 아니거나 문자 U+0000 · 짝 없는 서로게이트가 있다. 평가 · 사건 소속 판정의
-	 * 원본이 함께 쓰는 정본
+	 * 원본 응답을 {@code jsonb} 로 저장할 수 없는 까닭 — JSON 이 아니거나 문자 U+0000 · 짝 없는 서로게이트가 있다. 평가 · 사건 소속 판정 ·
+	 * 관계 판정의 원본이 함께 쓰는 정본
 	 * @return 저장할 수 있으면 빈 값
 	 */
 	public static Optional<String> rawResponseProblem(String rawResponse) {

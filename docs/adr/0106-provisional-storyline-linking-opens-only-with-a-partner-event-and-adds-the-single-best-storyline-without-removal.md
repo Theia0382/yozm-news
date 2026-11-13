@@ -51,3 +51,4 @@
 
 - 2026-11-10: 결정 "판정으로 소속이 늘면 … 다시 판정한다"의 계기 — 정돈이 사건 하나만 남은 스토리라인을 풀면 그 사건도 다시 판정한다([ADR-0108](0108-storylines-with-the-same-events-merge-and-a-storyline-left-with-one-event-merges-or-dissolves.md)), 지금 상태는 [storyline Spec "정돈"](../specs/storyline.md#정돈)(storyline-R17)
 - 2026-11-12: 검토한 대안 "소속 없는 짝이 없으면 가장 가까운 이웃의 스토리라인에 붙인다"(평가 세트로 견줄 후보)와 "구성 사건이 자라 표현이 움직일 때도 기다리는 사건을 다시 판정한다"(잇는 방법을 정할 때 다시 볼 자리) — [ADR-0121](0121-storyline-linking-scores-centroid-cosine-plus-idf-weighted-key-term-overlap-without-time-decay-jev-or-topic-tags.md)(앞의 것은 견줘 채택하지 않았고, 뒤의 것은 재지 못했다)
+- 2026-11-13: 결정 "스토리라인 사이 관계를 소속에서 끌어내기로 하면 … 이 결정을 다시 본다" — 관계는 소속에서 끌어내지 않는다([ADR-0131](0131-storyline-relations-are-explicit-links-with-containment-as-a-single-parent-tree-gathered-at-query-time.md))

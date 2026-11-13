@@ -18,14 +18,18 @@ public interface StorylineQueryRepository {
 	/** 스토리라인 하나 — 합쳐진 행이면 남는 행, 없으면 빈 값 */
 	Optional<StoredStoryline> find(long storylineId);
 
-	/** 이 사건 가운데 하나라도 든, 합쳐지지 않은 스토리라인 — 스토리라인 ID 순. 빈 입력이면 빈 목록 */
+	/** 이 사건 가운데 하나라도 직접 든, 합쳐지지 않은 스토리라인 — 스토리라인 ID 순. 빈 입력이면 빈 목록 */
 	List<StoredStoryline> having(Collection<Long> eventIds);
 
+	/** 이 가운데 합쳐지지 않은 스토리라인 — 스토리라인 ID 순. 빈 입력이면 빈 목록 */
+	List<StoredStoryline> byIds(Collection<Long> storylineIds);
+
 	/**
-	 * 이 사건 가운데 하나라도 든, 합쳐지지 않은 스토리라인 — 마지막 기사 시각 내림차순, 스토리라인 ID 내림차순. 빈 입력이면 빈 목록.
+	 * 이 가운데 합쳐지지 않은 스토리라인 — 마지막 기사 시각 내림차순, 스토리라인 ID 내림차순. 빈 입력이면 빈 목록.
 	 * @param afterLast 커서의 마지막 기사 시각 — 첫 쪽이면 null(그때 {@code afterId} 도 null)
 	 * @param limit 가져올 행 수
 	 */
-	List<StoredStoryline> page(Collection<Long> eventIds, @Nullable Instant afterLast, @Nullable Long afterId, int limit);
+	List<StoredStoryline> pageOf(Collection<Long> storylineIds, @Nullable Instant afterLast, @Nullable Long afterId,
+			int limit);
 
 }

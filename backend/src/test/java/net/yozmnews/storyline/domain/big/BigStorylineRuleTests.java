@@ -48,7 +48,7 @@ class BigStorylineRuleTests {
 	private static BigStoryline big(long id, int sources, String importance) {
 		Instant at = Instant.parse("2026-11-05T00:00:00Z");
 		return new BigStoryline(new StorylineView(new StorylineId(id), StorylineState.ACTIVE, 2, sources, at, at,
-				new EventId(1), at), new EventTally(sources, sources, new BigDecimal(importance)));
+				new EventId(1), at, null), new EventTally(sources, sources, new BigDecimal(importance)));
 	}
 
 }
