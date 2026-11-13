@@ -6,7 +6,7 @@ PostgreSQL 단일 DB(벡터는 pgvector 확장 — [ADR-0027](adr/0027-pgvector-
 
 ```mermaid
 erDiagram
-    users ||--o| user_password_credentials : "자체 로그인"
+    users ||--|| user_password_credentials : "자체 로그인"
     users ||--o| user_recovery_codes : ""
     users ||--o{ user_notices : ""
     users ||--|| user_settings : ""
@@ -75,10 +75,10 @@ erDiagram
 
 ## 사용자
 
+계정 · 자격 · 로그인 실패 기록 테이블(`users` · `user_password_credentials` · `login_failures`)은 [user Spec §6](specs/user.md#6-데이터)에 있다. 아래는 아직 만들지 않은 사용자 테이블이다.
+
 | 테이블 | 주요 컬럼 | 비고 |
 |---|---|---|
-| `users` | id, display_name, email, role(`USER`/`ADMIN`), status(`ACTIVE`/`SUSPENDED`/`DELETED`), created_at, deleted_at | |
-| `user_password_credentials` | user_id, email(고유, 소문자 정규화), email_verified_at(v1에서는 항상 비어 있음), password_hash, password_changed_at, failed_attempts, last_failed_at | 자체 로그인 |
 | `user_recovery_codes` | user_id, code_hash, created_at, used_at | 자체 로그인 복구 코드. 사용자당 유효한 코드 1개. 쓰면 새로 발급한다 ([ADR-0011](adr/0011-no-email-in-v1.md)) |
 | `user_notices` | id, user_id, kind(`PASSWORD_CHANGED`/`KEY_INVALID`/`DIGEST_FAILED`…), payload(jsonb), created_at, read_at | 메일 대신 쓰는 화면 내 알림 |
 | `user_settings` | user_id, timezone, digest_time, interest_text, max_candidates, llm_provider, llm_model, weekly_report_enabled, weekly_report_weekday, monthly_report_enabled, updated_at | `interest_text`는 자유 텍스트 관심사. 길이 제한 있음 |
@@ -138,7 +138,7 @@ erDiagram
 
 - 각 라이브러리가 제공하는 스키마를 Flyway 마이그레이션에 담고, 라이브러리의 스키마 자동 생성은 끈다.
 - JobRunr 작업 테이블과 Spring Modulith 이벤트 발행 레지스트리는 첫 마이그레이션 `V1` 에 라이브러리 원문 그대로 들어 있다. 원문 대조 테스트가 라이브러리가 지금 내놓는 원문과 같은지 확인한다([ADR-0023](adr/0023-jobrunr-oss-framework-schema-and-event-resubmission.md)).
-- Spring Session 테이블은 인증 기능을 더할 때 같은 방식으로 담는다.
+- Spring Session 의 세션 테이블(`spring_session` · `spring_session_attributes`)은 마이그레이션 `V32` 에 라이브러리 원문 그대로 들어 있고, 같은 원문 대조 테스트가 확인한다. 세션에 담는 값과 수명은 [user Spec](specs/user.md#세션)에 있다.
 
 ## 보존 정책 (초안)
 

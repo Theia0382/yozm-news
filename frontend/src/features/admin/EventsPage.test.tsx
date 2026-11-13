@@ -1,7 +1,7 @@
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import { json, problem } from "@/features/admin/adminTestServer";
+import { json, problem } from "@/test/fakeServer";
 import { eventRow } from "@/features/admin/eventTestKit";
 import { EventsPage } from "@/features/admin/EventsPage";
 import { renderAdminRoutes } from "@/features/admin/reviewTestKit";

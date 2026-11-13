@@ -156,7 +156,7 @@
 
 | 변수 | 필수 | 쓰는 곳 | 값 예시 | 바꾸는 것 |
 |---|---|---|---|---|
-| `YOZMNEWS_ADMIN_TOKEN` | 아니오 | `app` → `yozmnews.admin.token` | `openssl rand -hex 32` 의 출력(64자) | 운영자 화면(`/admin`)과 운영자 API 를 여는 운영자 토큰 — [비밀 값](#비밀-값) · [platform Spec §7](../specs/platform.md#7-설정) |
+| `YOZMNEWS_ADMIN_TOKEN` | 아니오 | `app` → `yozmnews.admin.token` | `openssl rand -hex 32` 의 출력(64자) | 운영자 화면(`/admin`)과 운영자 API 를 여는 운영자 토큰 — [비밀 값](#비밀-값) · [user Spec §7](../specs/user.md#7-설정) |
 
 - 줄이 없거나 값이 비면 운영자 기능이 닫힌 채 앱이 뜬다. 운영자 화면은 닫혔다고 안내한다
 - 값은 32 ~ 512자이고 영문 대소문자 · 숫자 · `-` `.` `_` `~` `+` `/` 와 끝의 `=` 만 쓴다. 어기면 앱이 뜨지 않는다. 사람이 지은 문자열이 아니라 위 명령 같은 무작위 값을 쓴다 — 틀린 토큰의 요청을 따로 제한하지 않는다

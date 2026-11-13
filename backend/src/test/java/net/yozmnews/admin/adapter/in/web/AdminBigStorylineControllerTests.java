@@ -20,7 +20,7 @@ import net.yozmnews.article.ArticleId;
 import net.yozmnews.event.EventId;
 import net.yozmnews.event.EventTally;
 import net.yozmnews.platform.ChangeActor;
-import net.yozmnews.platform.application.WebSliceSecurity;
+import net.yozmnews.user.application.WebSliceSecurity;
 import net.yozmnews.source.FeedId;
 import net.yozmnews.source.FeedLabel;
 import net.yozmnews.source.SourceId;

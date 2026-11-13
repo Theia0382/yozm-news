@@ -7,7 +7,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import net.yozmnews.platform.application.WebSliceSecurity;
+import jakarta.servlet.http.Cookie;
+import net.yozmnews.platform.PublicApi;
+import net.yozmnews.user.application.WebSliceSecurity;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -33,6 +35,11 @@ import org.springframework.web.server.ResponseStatusException;
 @WebMvcTest(controllers = ProblemResponseAdviceTests.FailingController.class)
 @Import({ WebSliceSecurity.class, ProblemResponseAdviceTests.FailingController.class })
 class ProblemResponseAdviceTests {
+
+	/** 변경 요청의 CSRF — 쿠키와 같은 값을 헤더로 돌려보낸다(user-R10). 값은 아무 문자열이어도 쿠키 저장소가 쿠키에서 읽는다 */
+	private static final String CSRF_TOKEN = "problem-response-advice-tests";
+
+	private static final Cookie CSRF_COOKIE = new Cookie("XSRF-TOKEN", CSRF_TOKEN);
 
 	@Autowired
 	MockMvc mockMvc;
@@ -69,9 +76,13 @@ class ProblemResponseAdviceTests {
 
 	@Test
 	void decimalInAnIntegerBodyFieldIsAnUnreadableBody() throws Exception {
-		this.mockMvc.perform(post("/api/test/count").contentType(MediaType.APPLICATION_JSON).content("""
-				{"count":3.5}
-				"""))
+		this.mockMvc
+			.perform(post("/api/test/count").cookie(CSRF_COOKIE)
+				.header("X-XSRF-TOKEN", CSRF_TOKEN)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{"count":3.5}
+						"""))
 			.andExpect(status().isBadRequest())
 			.andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
 			.andExpect(content().json("""
@@ -82,7 +93,10 @@ class ProblemResponseAdviceTests {
 
 	@Test
 	void brokenJsonBodyIsAnUnreadableBody() throws Exception {
-		this.mockMvc.perform(post("/api/test/count").contentType(MediaType.APPLICATION_JSON).content("{\"count\":"))
+		this.mockMvc
+			.perform(post("/api/test/count").cookie(CSRF_COOKIE).header("X-XSRF-TOKEN", CSRF_TOKEN)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"count\":"))
 			.andExpect(status().isBadRequest())
 			.andExpect(content().json("""
 					{"type":"about:blank","title":"Bad Request","status":400,
@@ -115,6 +129,7 @@ class ProblemResponseAdviceTests {
 	}
 
 	@RestController
+	@PublicApi(reason = "시험 — 오류 응답 형식만 본다")
 	static class FailingController {
 
 		@GetMapping("/api/test/missing")

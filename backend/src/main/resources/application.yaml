@@ -8,6 +8,12 @@ spring:
     deserialization:
       # 요청 본문의 정수 칸에 온 소수를 버림해 받지 않는다 — 본문 형식 400 이다 · docs/specs/platform.md §5 · platform-R12
       accept-float-as-int: false
+  session:
+    jdbc:
+      # 세션 스키마의 정본은 Flyway 마이그레이션(V32)이다 — docs/specs/user.md §7
+      initialize-schema: never
+      # Spring Session 의 자체 정리 작업을 끈다 — 작업 역할의 반복 작업이 지운다 · docs/specs/user.md §7 · user-R12
+      cleanup-cron: "-"
   docker:
     compose:
       # 개발용 Compose 연동은 local 프로필에서만 켠다 (application-local.yaml)
@@ -67,8 +73,6 @@ springdoc:
   api-docs:
     # 명세 엔드포인트는 기본으로 끈다 — docs/specs/platform.md §5 · platform-R6
     enabled: false
-  # 화면용 API 만 명세에 넣는다 — platform-R6
-  paths-to-match: /api/**
   default-produces-media-type: application/json
   # 출력을 고정한다 — platform-R6
   writer-with-order-by-keys: true

@@ -11,7 +11,7 @@ import java.net.URI;
 import java.time.LocalDate;
 import java.util.List;
 
-import net.yozmnews.platform.application.WebSliceSecurity;
+import net.yozmnews.user.application.WebSliceSecurity;
 import net.yozmnews.source.PresetView;
 import net.yozmnews.source.SourceId;
 import net.yozmnews.source.SourceRegistrationResult;

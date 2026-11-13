@@ -1,6 +1,6 @@
 # ADR-0043: 운영자 기능은 계정 인증 전까지 환경 변수의 Bearer 토큰으로 막고, 계정 인증이 생기면 같은 경로의 `ADMIN` 역할 판정으로 바꾼다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 두 보안 체인 모두 세션 · CSRF 를 쓰지 않음([ADR-0126](0126-user-paths-authenticate-with-a-jdbc-session-holding-only-the-user-id-and-cookie-csrf-reading-the-account-per-request.md)) · 운영자 경로 밖을 모두 엶([ADR-0125](0125-screen-api-handlers-need-a-session-unless-marked-public-and-take-the-user-only-as-a-session-filled-argument.md))
 - 날짜: 2026-10-31
 - 근거: [이슈 #25](https://github.com/Theia0382/yozm-news/issues/25) — 기점 `94495a8` 의 저장소와 Spring Boot 4.1.2 · Spring Security 7.1.2 의 기본 보안 동작을 시험 컨텍스트로 확인. 구현 `5193083`(보안 · 오류 응답 형식 · 배포) · `bfda950`(화면의 토큰 보관 · 전달)
 - 관련: [ADR-0009](0009-authentication-google-and-local.md)(계정 인증 — 이 ADR 의 토큰이 그 전까지를 맡는다), [ADR-0042](0042-app-roles-as-web-worker-profiles-marked-by-platform-annotations.md)(역할 — 보안 구성은 두 역할 공통이다), [ADR-0044](0044-screen-api-results-as-flat-discriminated-200-and-rfc9457-problems.md)(거부 응답의 형식), [ADR-0048](0048-sign-up-closed-by-default-with-invitations-and-operator-bootstrap.md)(첫 운영자 계정 — 계정 인증 뒤 운영자를 만드는 방법)
@@ -16,7 +16,9 @@
 - **운영자 경로(`/api/admin/**`)는 운영자 토큰 하나로 막는다.** 토큰은 환경 변수 `YOZMNEWS_ADMIN_TOKEN`(설정 `yozmnews.admin.token`)로 받고, 요청은 `Authorization: Bearer` 로 낸다. 맞으면 `ADMIN` 역할의 인증이 되고, 경로의 인가는 `hasRole(ADMIN)` 이다.
 - **토큰이 없으면 운영자 기능이 닫힌다.** 닫힌 인스턴스의 운영자 경로는 어떤 토큰에도 403(`urn:yozmnews:problem:admin-closed`)이다. 열린 인스턴스에서 토큰이 없거나 틀리면 401(`urn:yozmnews:problem:admin-unauthorized`, `WWW-Authenticate: Bearer`)이다.
 - **토큰 형식이 틀리면 기동하지 않는다.** RFC 6750 b64token 문자로 32 ~ 512 자다. 대조는 SHA-256 다이제스트를 상수 시간으로 견준다. 값은 로그 · 예외 문구 · 응답에 남기지 않는다. 무차별 대입은 길이와 무작위성으로 막고 요청 제한은 두지 않는다 — 무작위성은 운영 문서의 생성 명령(`openssl rand -hex 32`)이 맡는다.
+> 부분 대체(셋째 문장의 "두 보안 체인 모두") — [ADR-0126](0126-user-paths-authenticate-with-a-jdbc-session-holding-only-the-user-id-and-cookie-csrf-reading-the-account-per-request.md). 지금 상태: [`user` Spec "보안 구성"](../specs/user.md#보안-구성) user-R4
 - **세션 · CSRF 를 쓰지 않는다.** 토큰은 브라우저가 자동으로 붙이는 자격(쿠키 · Basic)이 아니라 화면이 헤더로 붙인다. 두 보안 체인 모두 세션을 만들지 않고, 폼 로그인 · Basic · 로그아웃 · 요청 저장 · CSRF 를 끈다.
+> 부분 대체(셋째 문장) — [ADR-0125](0125-screen-api-handlers-need-a-session-unless-marked-public-and-take-the-user-only-as-a-session-filled-argument.md). 지금 상태: [`user` Spec "화면용 API 의 공개와 세션 사용자"](../specs/user.md#화면용-api-의-공개와-세션-사용자) user-R5
 - **보안 구성은 두 역할 공통이다.** 화면 역할에만 두면 작업 역할만 켠 프로세스에 기본 체인과 생성 비밀번호가 선다. 운영자 경로 밖은 모두 연다.
 - **화면은 토큰을 탭의 `sessionStorage` 에 둔다.** 새로고침에는 남고 탭을 닫으면 사라진다. 화면은 운영자 경로 요청에만 헤더를 붙이고, 401 이면 토큰을 지우고 다시 묻는다. 첫 조회를 토큰 없이도 보내 닫힘(403)을 먼저 가른다.
 - **계정 인증이 생기면** 경로와 `hasRole(ADMIN)` 은 그대로 두고 토큰 필터를 세션 인증으로 바꾼다. 쿠키 세션을 들이는 그 작업이 CSRF 를 켠다(`security.md` 의 쿠키 기반 토큰). 첫 운영자 계정을 만드는 방법은 [ADR-0048](0048-sign-up-closed-by-default-with-invitations-and-operator-bootstrap.md)이 정한다(기동 로그의 운영자 초대 링크 · 환경 변수). 계정 인증 뒤 토큰을 남길지는 계정 인증 작업이 정한다.

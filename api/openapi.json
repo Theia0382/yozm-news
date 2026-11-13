@@ -3147,6 +3147,24 @@
         "tags" : [ "admin-evaluation-controller" ]
       }
     },
+    "/api/me" : {
+      "get" : {
+        "operationId" : "me",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MeResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "session-controller" ]
+      }
+    },
     "/api/ping" : {
       "get" : {
         "operationId" : "ping",
@@ -3163,6 +3181,63 @@
           }
         },
         "tags" : [ "ping-controller" ]
+      }
+    },
+    "/api/session" : {
+      "delete" : {
+        "operationId" : "signOut",
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청 보호 토큰이 없거나 맞지 않는다"
+          }
+        },
+        "tags" : [ "session-controller" ]
+      },
+      "post" : {
+        "operationId" : "signIn",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SignInRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SignInResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청 보호 토큰이 없거나 맞지 않는다"
+          }
+        },
+        "tags" : [ "session-controller" ]
       }
     }
   },
@@ -4539,6 +4614,30 @@
         },
         "required" : [ "at", "httpStatus", "message", "permanence", "reason" ]
       },
+      "MeResponse" : {
+        "type" : "object",
+        "properties" : {
+          "displayName" : {
+            "type" : [ "string", "null" ]
+          },
+          "email" : {
+            "type" : [ "string", "null" ]
+          },
+          "result" : {
+            "type" : "string",
+            "enum" : [ "SIGNED_IN", "ANONYMOUS" ]
+          },
+          "role" : {
+            "type" : [ "string", "null" ],
+            "enum" : [ "USER", "ADMIN" ]
+          },
+          "userId" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int64"
+          }
+        },
+        "required" : [ "displayName", "email", "result", "role", "userId" ]
+      },
       "MergePairResponse" : {
         "type" : "object",
         "properties" : {
@@ -4934,6 +5033,35 @@
           }
         },
         "required" : [ "count", "ratio" ]
+      },
+      "SignInRequest" : {
+        "type" : "object",
+        "properties" : {
+          "email" : {
+            "type" : "string"
+          },
+          "keep" : {
+            "type" : "boolean"
+          },
+          "password" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "email", "keep", "password" ]
+      },
+      "SignInResponse" : {
+        "type" : "object",
+        "properties" : {
+          "result" : {
+            "type" : "string",
+            "enum" : [ "SIGNED_IN", "REJECTED", "WAIT" ]
+          },
+          "retryAfterSeconds" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int64"
+          }
+        },
+        "required" : [ "result", "retryAfterSeconds" ]
       },
       "SkippedItemView" : {
         "type" : "object",

@@ -937,7 +937,7 @@ public interface ArticleEmbedder {
 
 ## 6. 데이터
 
-컬럼 타입 · 인덱스 · 제약 문면의 정본은 `backend/src/main/resources/db/migration/V15__article_event_judgements.sql`(사건 소속 판정 원본), `V20__article_event_judgements_judged_index.sql`(판정 원본의 기간 조회 인덱스), `V26__article_tag_judgements.sql`(태그 판정 원본 — 그 전의 평가 행에서 옮겼다), `V31__flow_relation_judgements.sql`(관계 판정 원본)이다.
+컬럼 타입 · 인덱스 · 제약 문면의 정본은 `backend/src/main/resources/db/migration/V15__article_event_judgements.sql`(사건 소속 판정 원본), `V20__article_event_judgements_judged_index.sql`(판정 원본의 기간 조회 인덱스), `V26__article_tag_judgements.sql`(태그 판정 원본 — 그 전의 평가 행에서 옮겼다), `V34__flow_relation_judgements.sql`(관계 판정 원본)이다.
 
 | 테이블 | 주요 컬럼 | 뜻 |
 |---|---|---|

@@ -1,7 +1,7 @@
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import { json } from "@/features/admin/adminTestServer";
+import { json } from "@/test/fakeServer";
 import { EvaluationListPage } from "@/features/admin/EvaluationListPage";
 import {
   OVERVIEW,

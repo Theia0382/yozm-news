@@ -11,7 +11,7 @@ import {
   json,
   problem,
   TEST_BASE_URL,
-} from "@/features/admin/adminTestServer";
+} from "@/test/fakeServer";
 
 const TOKEN = "f0e1d2c3b4a5968778695a4b3c2d1e0f";
 const STORAGE_KEY = "yozmnews.admin.token";
