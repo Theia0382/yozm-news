@@ -284,6 +284,9 @@ def _measure(args: argparse.Namespace, clock: Callable[[], datetime], out: TextI
         estimate = metrics.event
         print(f"{view.value} 확장 B-cubed(사건 가중) P {estimate.precision:.4f} · R {estimate.recall:.4f} · "
               f"F1 {estimate.f1:.4f} [{estimate.f1_interval[0]:.4f}, {estimate.f1_interval[1]:.4f}]", file=out)
+    if big is not None:
+        precision = "없음" if big.precision is None else f"{big.precision:.4f}({big.correct}/{big.judged})"
+        print(f"큰 판정 정밀도 {precision} · 재현율 {big.recall:.4f}({big.found}/{big.gold})", file=out)
     if outside:
         print(f"주의 — 결과 파일의 시트 밖 기사 {outside}", file=out)
     return 0

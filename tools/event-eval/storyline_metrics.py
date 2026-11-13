@@ -1,4 +1,4 @@
-"""스토리라인 평가 지표 — 겹치는 묶음(확장 B-cubed · 정답 스토리라인별 대응 · 먼 쌍 재현율), 관계, 큰 판정 정밀도.
+"""스토리라인 평가 지표 — 겹치는 묶음(확장 B-cubed · 정답 스토리라인별 대응 · 먼 쌍 재현율), 관계, 큰 판정 정밀도 · 재현율.
 
 정의의 정본은 이 모듈이다(운영 안내 docs/operations/storyline-evaluation.md 가 문장으로 설명한다). 항목은 시트의
 기사이고, 정답은 고정 덤프의 사건에 붙인 라벨을 그 사건의 시트 기사로 펼친 것이다. 시스템 결과는 결과 파일로 받기만
@@ -319,28 +319,43 @@ class BigScore:
     precision: float | None
     low: float | None
     high: float | None
+    found: int
+    """시스템 큰 표시가 찾은 정답 큰 표시 수 — 서로 다른 (정답, 날짜)."""
+    gold: int
+    recall: float
+    by_day: Mapping[date, tuple[int, int]]
+    """표본의 날마다 (시스템 큰 표시 수, 정답 큰 표시 수) — 표시가 없는 날은 0."""
 
 
 def big_precision(days: Iterable[date], gold_big: Iterable[tuple[str, date]], system_big: Iterable[tuple[str, date]],
                   mapping: Mapping[str, str]) -> BigScore | None:
     """시스템 큰 표시 (S, d) 마다 S 가 대응되고 (대응, d) 가 정답 큰 표시면 맞음, 그 밖은 틀림(정답 큰 표시는 날마다
-    전수). 정답 큰 표시가 없으면 재지 않는다(None)."""
+    전수). 재현율은 맞은 시스템 표시가 가리킨 서로 다른 정답 큰 표시 수 ÷ 정답 큰 표시 수 — 표본 안 시스템 표시가 없으면
+    0.0 이다. 정답 큰 표시가 없으면 재지 않는다(None)."""
     gold = set(gold_big)
     if not gold:
         return None
-    period = set(days)
+    system_by_day = {day: 0 for day in days}
+    gold_by_day = dict(system_by_day)
+    for _, day in gold:
+        gold_by_day[day] += 1
+    found: set[tuple[str, date]] = set()
     judged = correct = outside = 0
     for storyline, day in system_big:
-        if day not in period:
+        if day not in system_by_day:
             outside += 1
             continue
         judged += 1
+        system_by_day[day] += 1
         if storyline in mapping and (mapping[storyline], day) in gold:
             correct += 1
+            found.add((mapping[storyline], day))
+    by_day = {day: (number, gold_by_day[day]) for day, number in system_by_day.items()}
+    recall = len(found) / len(gold)
     if judged == 0:
-        return BigScore(0, 0, outside, None, None, None)
+        return BigScore(0, 0, outside, None, None, None, 0, len(gold), recall, by_day)
     low, high = wilson(correct, judged)
-    return BigScore(judged, correct, outside, correct / judged, low, high)
+    return BigScore(judged, correct, outside, correct / judged, low, high, len(found), len(gold), recall, by_day)
 
 
 def _gold_tokens(universe: Universe, gold: Mapping[int, frozenset[str]]) -> dict[int, frozenset[tuple[str, object]]]:
