@@ -75,12 +75,11 @@ erDiagram
 
 ## 사용자
 
-계정 · 자격 · 로그인 실패 기록 테이블(`users` · `user_password_credentials` · `login_failures`)은 [user Spec §6](specs/user.md#6-데이터)에 있다. 아래는 아직 만들지 않은 사용자 테이블이다.
+계정 · 자격 · 로그인 실패 기록 · 화면 내 알림 테이블(`users` · `user_password_credentials` · `login_failures` · `user_notices` · `user_feed_status_receipts`)은 [user Spec §6](specs/user.md#6-데이터)에 있다. 아래는 아직 만들지 않은 사용자 테이블이다.
 
 | 테이블 | 주요 컬럼 | 비고 |
 |---|---|---|
 | `user_recovery_codes` | user_id, code_hash, created_at, used_at | 자체 로그인 복구 코드. 사용자당 유효한 코드 1개. 쓰면 새로 발급한다 ([ADR-0011](adr/0011-no-email-in-v1.md)) |
-| `user_notices` | id, user_id, kind(`PASSWORD_CHANGED`/`KEY_INVALID`/`DIGEST_FAILED`…), payload(jsonb), created_at, read_at | 메일 대신 쓰는 화면 내 알림 |
 | `user_settings` | user_id, timezone, digest_time, interest_text, max_candidates, llm_provider, llm_model, weekly_report_enabled, weekly_report_weekday, monthly_report_enabled, updated_at | `interest_text`는 자유 텍스트 관심사. 길이 제한 있음 |
 | `user_tag_preferences` | user_id, tag_kind(`TOPIC`/`REGION`/`FORMAT`), tag_key, mode(`SUBSCRIBE`/`EXCLUDE`), created_at | 현재 상태 — `user_tag_preference_events` 의 투영. 태그 **키**로 연결해 체계 버전이 바뀌어도 유지된다(키가 바뀌면 태그 키 계보를 따른다). 대분류 구독은 하위 전체 구독으로 해석한다. 형식의 기본 제외값(활성 태그 체계에서 기본 제외인 형식)은 가입 시 행으로 넣는다 |
 | `user_tag_preference_events` | id, user_id, tag_kind, tag_key, mode, action(`ADD`/`REMOVE`), occurred_at | 구독 · 제외 변경 이력. 추가만 한다(관심 신호 — [ADR-0028](adr/0028-explicit-signals-and-interest-weighted-candidates.md)) |
@@ -162,6 +161,8 @@ erDiagram
 | 다이제스트 | 사용자 탈퇴 시까지 | 인용 항목은 노출 기록이다 |
 | 관심 신호 이력(`feedback_events` · `user_tag_preference_events` · 스토리라인 구독 이력) · 변화 리포트 | 사용자 탈퇴 시까지 | 관심사 히스토리 · 리포트의 근거 |
 | `digest_candidates` | 30일 | 디버깅용 |
+| 화면 내 알림 (`user_notices`) | 읽은 알림은 읽고 90일 뒤 삭제. 안 읽은 알림은 볼 때까지 남는다 | 지나간 일을 알리는 것이고 장기 기능의 근거가 아니다. 안 읽은 보안 알림은 다음 로그인 때 보여야 한다([ADR-0134](adr/0134-in-app-notices-are-one-row-per-recipient-with-a-closed-kind-and-per-kind-jsonb-content-and-read-notices-are-deleted-after-ninety-days.md)) |
+| 피드 상태 알림의 반영 기준 (`user_feed_status_receipts`) | 사용자 탈퇴 시까지 | 사용자마다 한 행이고, 다시 처리된 회차를 거르는 데 쓴다([user Spec](specs/user.md#화면-내-알림) user-R24) |
 | 탈퇴 사용자 | 즉시 비식별화, 30일 후 완전 삭제 | 실수로 탈퇴한 경우의 복구 기간 |
 | JobRunr 작업 기록 | 성공하고 36시간 뒤 삭제 상태, 다시 72시간 뒤 영구 삭제. 실패한 작업은 남는다 | JobRunr 기본값. 작업의 결과는 각 모듈의 데이터에 남는다 |
 | 이벤트 발행 기록 (`event_publication`) | 완료 즉시 삭제. 실패한 발행은 운영자가 폐기할 때까지 남는다 | 결과는 각 모듈의 데이터에 남고, 실패한 발행은 재처리와 원인 조사의 근거다([ADR-0023](adr/0023-jobrunr-oss-framework-schema-and-event-resubmission.md) · [ADR-0050](adr/0050-operator-resubmits-once-or-discards-stranded-event-publications-read-from-registry.md)) |

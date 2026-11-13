@@ -9,12 +9,15 @@ import static org.assertj.core.api.Assertions.tuple;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicReference;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.source.FeedId;
 import net.yozmnews.source.FeedStatus;
+import net.yozmnews.source.FeedStatusTransition;
+import net.yozmnews.source.FeedStatusesChanged;
 import net.yozmnews.source.SourceId;
 import net.yozmnews.source.domain.gate.FeedActivation;
 import net.yozmnews.source.domain.poll.FeedStatusRepository;
@@ -26,17 +29,23 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.transaction.event.TransactionalEventListener;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * 피드 건강 검사 — 등록한 소스의 수집 상태를 SQL 로 맞추고, 고정 시각으로 검사를 직접 부른다. 커밋 뒤의 로그를 보므로 테스트를
  * 트랜잭션으로 감싸지 않는다. 피드 켜기는 피드를 한 번 받아 미리보므로 피드는 루프백의 WireMock(수집 허용 대역
  * {@code 127.0.0.1/32})이 통과 응답을 주고, 켠 뒤 그 소스의 요청 시작 시각 예약을 지운다 — 같은 소스의 피드를 잇달아 켜도 기다리지 않는다.
+ * <p>
+ * 발행은 시험 구성의 커밋 뒤 기록기로 본다 — 커밋 뒤 리스너는 트랜잭션 안에서 발행한 이벤트만 받는다.
  * <p>
  * 지키는 규칙: source-R30 · source-R31 · source-R47 · source-R49
  */
@@ -92,6 +101,12 @@ class FeedHealthCheckTests {
 	@Autowired
 	JdbcClient jdbc;
 
+	@Autowired
+	ApplicationEventPublisher events;
+
+	@Autowired
+	CommittedFeedStatuses committed;
+
 	private final AtomicReference<Instant> clock = new AtomicReference<>(NOW);
 
 	private FeedHealthCheck check;
@@ -102,7 +117,8 @@ class FeedHealthCheckTests {
 		this.jobs.deleteRecurringJob("feed-health-check");
 		new RegistryRows(this.jdbc).deleteAll();
 		this.clock.set(NOW);
-		this.check = new FeedHealthCheck(this.statuses, this.transaction, this.clock::get);
+		this.committed.clear();
+		this.check = new FeedHealthCheck(this.statuses, this.transaction, this.events, this.clock::get);
 		server.stubFor(get(urlMatching("/health.*\\.xml")).willReturn(TestFeeds.rss("h1")));
 	}
 
@@ -129,6 +145,9 @@ class FeedHealthCheckTests {
 			.containsExactly(
 					tuple(a, FeedStatus.ACTIVE, FeedStatus.DEGRADED, NOW),
 					tuple(b, FeedStatus.ACTIVE, FeedStatus.STALE, NOW));
+		assertThat(this.committed.events()).containsExactly(new FeedStatusesChanged(NOW,
+				List.of(new FeedStatusTransition(a, FeedStatus.ACTIVE, FeedStatus.DEGRADED),
+						new FeedStatusTransition(b, FeedStatus.ACTIVE, FeedStatus.STALE))));
 		assertThat(status(a)).isEqualTo("DEGRADED 2026-10-30T00:00:00Z");
 		assertThat(status(b)).isEqualTo("STALE 2026-10-30T00:00:00Z");
 		assertThat(status(c)).isEqualTo("ACTIVE null");
@@ -160,6 +179,7 @@ class FeedHealthCheckTests {
 		assertThat(second).isEmpty();
 		assertThat(afterSecond).isEqualTo("DEGRADED 2026-10-30T00:00:00Z");
 		assertThat(later).isEmpty();
+		assertThat(this.committed.events()).extracting(FeedStatusesChanged::judgedAt).containsExactly(NOW);
 		assertThat(status(a)).isEqualTo("DEGRADED 2026-10-30T00:00:00Z");
 		assertThat(output.getOut().substring(logged)).doesNotContain("피드 상태가 바뀌었다");
 	}
@@ -180,6 +200,11 @@ class FeedHealthCheckTests {
 		List<FeedStatusChange> changes = this.check.run();
 
 		assertThat(changes).extracting(FeedStatusChange::to).containsExactly(FeedStatus.ACTIVE);
+		assertThat(this.committed.events()).containsExactly(
+				new FeedStatusesChanged(NOW,
+						List.of(new FeedStatusTransition(a, FeedStatus.ACTIVE, FeedStatus.DEGRADED))),
+				new FeedStatusesChanged(Instant.parse("2026-10-30T01:00:00Z"),
+						List.of(new FeedStatusTransition(a, FeedStatus.DEGRADED, FeedStatus.ACTIVE))));
 		assertThat(status(a)).isEqualTo("ACTIVE 2026-10-30T01:00:00Z");
 		assertThat(line(output, "피드 " + a.value() + ": DEGRADED → ACTIVE")).contains(" INFO ")
 			.contains("(연속 실패 0회 · 그중 영구 0회, 마지막 실패 NOT_FOUND(PERMANENT), 마지막 새 항목 2026-10-30T00:30:00Z, "
@@ -259,6 +284,37 @@ class FeedHealthCheckTests {
 
 	private static String line(CapturedOutput output, String fragment) {
 		return output.getOut().lines().filter(line -> line.contains(fragment)).findFirst().orElseThrow();
+	}
+
+	/** 시험 구성 — 커밋 뒤 기록기를 빈으로 둔다 */
+	@TestConfiguration(proxyBeanMethods = false)
+	static class Recording {
+
+		@Bean
+		CommittedFeedStatuses committedFeedStatuses() {
+			return new CommittedFeedStatuses();
+		}
+
+	}
+
+	/** 커밋된 트랜잭션에서 발행한 {@link FeedStatusesChanged} 를 받은 순서대로 모은다 */
+	static class CommittedFeedStatuses {
+
+		private final List<FeedStatusesChanged> events = new CopyOnWriteArrayList<>();
+
+		@TransactionalEventListener
+		public void on(FeedStatusesChanged event) {
+			this.events.add(event);
+		}
+
+		public List<FeedStatusesChanged> events() {
+			return List.copyOf(this.events);
+		}
+
+		public void clear() {
+			this.events.clear();
+		}
+
 	}
 
 }

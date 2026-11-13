@@ -3165,6 +3165,113 @@
         "tags" : [ "session-controller" ]
       }
     },
+    "/api/notices" : {
+      "get" : {
+        "operationId" : "notices",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "before",
+          "required" : false,
+          "schema" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int64",
+            "exclusiveMinimum" : 0
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/NoticePageResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "세션이 없거나 만료됐다"
+          }
+        },
+        "tags" : [ "notice-controller" ]
+      }
+    },
+    "/api/notices/read" : {
+      "post" : {
+        "operationId" : "read",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ReadNoticesRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "세션이 없거나 만료됐다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청 보호 토큰이 없거나 맞지 않는다"
+          }
+        },
+        "tags" : [ "notice-controller" ]
+      }
+    },
+    "/api/notices/unread-count" : {
+      "get" : {
+        "operationId" : "unreadCount",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UnreadNoticesResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "세션이 없거나 만료됐다"
+          }
+        },
+        "tags" : [ "notice-controller" ]
+      }
+    },
     "/api/ping" : {
       "get" : {
         "operationId" : "ping",
@@ -4533,6 +4640,54 @@
         },
         "required" : [ "effectivePollIntervalMinutes", "enabled", "feedKey", "id", "inProfile", "pollIntervalMinutes", "section", "url" ]
       },
+      "FeedStatusEntryResponse" : {
+        "type" : "object",
+        "properties" : {
+          "changes" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "feedId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "firstAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "firstFrom" : {
+            "type" : "string",
+            "enum" : [ "ACTIVE", "DEGRADED", "STALE" ]
+          },
+          "lastAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "lastTo" : {
+            "type" : "string",
+            "enum" : [ "ACTIVE", "DEGRADED", "STALE" ]
+          },
+          "section" : {
+            "type" : [ "string", "null" ]
+          },
+          "sourceName" : {
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "changes", "feedId", "firstAt", "firstFrom", "lastAt", "lastTo", "section", "sourceName" ]
+      },
+      "FeedStatusNoticeResponse" : {
+        "type" : "object",
+        "properties" : {
+          "feeds" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/FeedStatusEntryResponse"
+            }
+          }
+        },
+        "required" : [ "feeds" ]
+      },
       "FetchFailureView" : {
         "type" : "object",
         "properties" : {
@@ -4720,6 +4875,74 @@
           }
         },
         "required" : [ "key", "name", "probability" ]
+      },
+      "NoticePageResponse" : {
+        "type" : "object",
+        "properties" : {
+          "nextBefore" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int64"
+          },
+          "notices" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/NoticeResponse"
+            }
+          }
+        },
+        "required" : [ "nextBefore", "notices" ]
+      },
+      "NoticeResponse" : {
+        "type" : "object",
+        "properties" : {
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "feedStatus" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/FeedStatusNoticeResponse"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "kind" : {
+            "type" : "string",
+            "enum" : [ "FEED_STATUS" ]
+          },
+          "read" : {
+            "type" : "boolean"
+          },
+          "revision" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "updatedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        },
+        "required" : [ "createdAt", "feedStatus", "id", "kind", "read", "revision", "updatedAt" ]
+      },
+      "NoticeRevision" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64",
+            "exclusiveMinimum" : 0
+          },
+          "revision" : {
+            "type" : "integer",
+            "format" : "int32",
+            "exclusiveMinimum" : 0
+          }
+        },
+        "required" : [ "id", "revision" ]
       },
       "PingResponse" : {
         "type" : "object",
@@ -4943,6 +5166,20 @@
           }
         },
         "required" : [ "profile" ]
+      },
+      "ReadNoticesRequest" : {
+        "type" : "object",
+        "properties" : {
+          "notices" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/NoticeRevision"
+            },
+            "maxItems" : 50,
+            "minItems" : 0
+          }
+        },
+        "required" : [ "notices" ]
       },
       "RegistrationResponse" : {
         "type" : "object",
@@ -6074,6 +6311,16 @@
           }
         },
         "required" : [ "articles", "events" ]
+      },
+      "UnreadNoticesResponse" : {
+        "type" : "object",
+        "properties" : {
+          "count" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        },
+        "required" : [ "count" ]
       },
       "ValueBucket" : {
         "type" : "object",

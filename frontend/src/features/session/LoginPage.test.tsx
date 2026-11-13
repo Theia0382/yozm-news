@@ -38,6 +38,9 @@ function renderLogin(
   {
     entry = "/login?next=%2Fdigest",
     me = (() => json(ANONYMOUS)) as Handler,
+    queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    }),
   } = {},
 ) {
   let signedIn = false;
@@ -59,11 +62,7 @@ function renderLogin(
     { initialEntries: [entry] },
   );
   render(
-    <QueryClientProvider
-      client={
-        new QueryClient({ defaultOptions: { queries: { retry: false } } })
-      }
-    >
+    <QueryClientProvider client={queryClient}>
       <ApiClientContext.Provider
         value={createApiClient({ baseUrl: TEST_BASE_URL, fetch: server.fetch })}
       >
@@ -100,6 +99,23 @@ describe("LoginPage", () => {
       password: "correct horse",
       keep: true,
     });
+  });
+
+  it("로그인하면 앞서 로그인했던 사용자의 알림 조회를 버린다", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    queryClient.setQueryData(["notices", "unread"], 3);
+    queryClient.setQueryData(["admin", "kept"], 1);
+    renderLogin(() => json({ result: "SIGNED_IN", retryAfterSeconds: null }), {
+      queryClient,
+    });
+
+    await fillAndSubmit();
+
+    expect(await screen.findByText("다이제스트")).toBeInTheDocument();
+    expect(queryClient.getQueryData(["notices", "unread"])).toBeUndefined();
+    expect(queryClient.getQueryData(["admin", "kept"])).toBe(1);
   });
 
   it("로그인 유지는 기본으로 꺼져 있다", async () => {

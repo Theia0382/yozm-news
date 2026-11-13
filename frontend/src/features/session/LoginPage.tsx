@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 import { Navigate, useNavigate, useSearchParams } from "react-router";
+import { NOTICES_QUERY_KEY } from "@/features/notices/noticeQueries";
 import { safeNext } from "@/features/session/safeNext";
 import { SESSION_QUERY_KEY, useMe } from "@/features/session/sessionQueries";
 import { waitText } from "@/features/session/waitText";
@@ -47,6 +48,8 @@ export function LoginPage() {
       switch (data.result) {
         case "SIGNED_IN":
           setPassword("");
+          // 같은 창에서 앞서 로그인했던 사용자의 알림을 보이지 않는다
+          queryClient.removeQueries({ queryKey: NOTICES_QUERY_KEY });
           await queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY });
           navigate(next, { replace: true });
           return;

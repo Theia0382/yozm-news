@@ -15,6 +15,7 @@ import { EventPublicationsPage } from "@/features/admin/EventPublicationsPage";
 import { EventsPage } from "@/features/admin/EventsPage";
 import { SamplePage } from "@/features/admin/SamplePage";
 import { ThresholdsPage } from "@/features/admin/ThresholdsPage";
+import { NoticesPage } from "@/features/notices/NoticesPage";
 import { ApiClientContext, createApiClient } from "@/shared/api/client";
 import type { components } from "@/shared/api/schema";
 import { fakeServer, json, TEST_BASE_URL } from "@/test/fakeServer";
@@ -64,6 +65,20 @@ describe("routes", () => {
     ).toBeInTheDocument();
     expect(router.state.location.pathname).toBe("/login");
     expect(router.state.location.search).toBe("?next=%2F");
+  });
+
+  it("로그인 틀 아래 알림 경로가 알림 페이지를 내려받는다", async () => {
+    const signedIn = routes[0]?.children?.find(
+      (route) => route.path === undefined,
+    );
+    const notices = signedIn?.children?.find(
+      (route) => route.path === "notices",
+    );
+    const lazy = notices?.lazy;
+
+    expect(typeof lazy).toBe("function");
+    const loaded = await (lazy as () => Promise<{ Component?: unknown }>)();
+    expect(loaded.Component).toBe(NoticesPage);
   });
 
   it("운영자 화면 아래 수집 현황 경로가 수집 현황 화면을 내려받는다", async () => {

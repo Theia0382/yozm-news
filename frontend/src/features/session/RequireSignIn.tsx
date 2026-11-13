@@ -1,13 +1,14 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Navigate, Outlet, useLocation, useNavigate } from "react-router";
+import { NoticesLink } from "@/features/notices/NoticesLink";
 import { SESSION_QUERY_KEY, useMe } from "@/features/session/sessionQueries";
 import { useApiClient } from "@/shared/api/client";
 import { NARROW_WIDTH, PAGE_FRAME } from "@/shared/ui/widths";
 
 /**
- * 로그인한 사용자만 보는 화면의 틀 — 로그인하지 않았으면 로그인 화면으로 보내고(돌아올 주소를 next 로), 로그인했으면 머리줄에 이름과 로그아웃을
- * 둔다.
+ * 로그인한 사용자만 보는 화면의 틀 — 로그인하지 않았으면 로그인 화면으로 보내고(돌아올 주소를 next 로), 로그인했으면 머리줄에 알림 링크 ·
+ * 이름 · 로그아웃을 둔다.
  */
 export function RequireSignIn() {
   const me = useMe();
@@ -67,6 +68,7 @@ export function RequireSignIn() {
       <header
         className={`${PAGE_FRAME} ${NARROW_WIDTH} flex items-center justify-end gap-3 pb-6 text-sm`}
       >
+        <NoticesLink />
         <span className="text-muted-foreground">
           {me.data.displayName ?? me.data.email}
         </span>

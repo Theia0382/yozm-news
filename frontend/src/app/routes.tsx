@@ -11,7 +11,17 @@ export const routes: RouteObject[] = [
       {
         // 로그인한 사용자만 보는 화면 — 로그인하지 않았으면 로그인 화면으로 보낸다
         element: <RequireSignIn />,
-        children: [{ index: true, element: <HomePage /> }],
+        children: [
+          { index: true, element: <HomePage /> },
+          {
+            // 알림 페이지는 필요할 때 내려받는다 — 머리줄의 알림 링크만 첫 화면 묶음에 든다
+            path: "notices",
+            lazy: async () => ({
+              Component: (await import("@/features/notices/NoticesPage"))
+                .NoticesPage,
+            }),
+          },
+        ],
       },
       {
         // 로그인 화면은 로그인하지 않은 방문자만 받으므로 필요할 때 내려받는다
