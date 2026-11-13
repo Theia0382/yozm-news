@@ -1,9 +1,10 @@
-import { useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
-import { Navigate, useNavigate, useSearchParams } from "react-router";
-import { NOTICES_QUERY_KEY } from "@/features/notices/noticeQueries";
+import { Link, Navigate, useSearchParams } from "react-router";
+import { UNREACHABLE_TEXT } from "@/features/account/accountTexts";
+import { useSignUpPolicy } from "@/features/account/signUpQueries";
 import { safeNext } from "@/features/session/safeNext";
-import { SESSION_QUERY_KEY, useMe } from "@/features/session/sessionQueries";
+import { useMe } from "@/features/session/sessionQueries";
+import { useEnterSignedIn } from "@/features/session/useEnterSignedIn";
 import { waitText } from "@/features/session/waitText";
 import { useApiClient } from "@/shared/api/client";
 import { Button } from "@/shared/ui/button";
@@ -11,12 +12,13 @@ import { NARROW_WIDTH, PAGE_FRAME } from "@/shared/ui/widths";
 
 /**
  * 로그인 화면 — 이메일 · 비밀번호 · 로그인 유지. 거절은 계정 유무와 무관하게 같은 문구이고, 대기면 남은 시간을 보인다. 로그인하면 next 로 간다.
+ * 복구 코드 재설정 링크를 두고, 공개 가입이 열렸으면 가입 링크도 둔다.
  */
 export function LoginPage() {
   const client = useApiClient();
   const me = useMe();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  const policy = useSignUpPolicy();
+  const enterSignedIn = useEnterSignedIn();
   const [params] = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -48,10 +50,7 @@ export function LoginPage() {
       switch (data.result) {
         case "SIGNED_IN":
           setPassword("");
-          // 같은 창에서 앞서 로그인했던 사용자의 알림을 보이지 않는다
-          queryClient.removeQueries({ queryKey: NOTICES_QUERY_KEY });
-          await queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY });
-          navigate(next, { replace: true });
+          await enterSignedIn(next);
           return;
         case "REJECTED":
           setMessage("이메일 또는 비밀번호가 맞지 않습니다.");
@@ -63,7 +62,7 @@ export function LoginPage() {
       const unknown: never = data.result;
       setMessage(`알 수 없는 결과입니다: ${String(unknown)}`);
     } catch {
-      setMessage("서버에 닿지 못했습니다.");
+      setMessage(UNREACHABLE_TEXT);
     } finally {
       setSubmitting(false);
     }
@@ -114,6 +113,16 @@ export function LoginPage() {
         <Button type="submit" disabled={submitting}>
           로그인
         </Button>
+        <p className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+          <Link to="/recover" className="underline">
+            복구 코드로 비밀번호 재설정
+          </Link>
+          {policy.data?.open && (
+            <Link to="/sign-up" className="underline">
+              가입
+            </Link>
+          )}
+        </p>
       </form>
     </section>
   );

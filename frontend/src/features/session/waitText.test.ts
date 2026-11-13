@@ -11,4 +11,10 @@ describe("waitText", () => {
     expect(waitText(900)).toContain("15분 뒤");
     expect(waitText(null)).toContain("1초 뒤");
   });
+
+  it("막힌 시도의 이름을 바꿔 쓸 수 있다", () => {
+    expect(waitText(30, "비밀번호 확인")).toBe(
+      "비밀번호 확인 시도가 많아 잠시 막혔습니다. 30초 뒤에 다시 시도해 주세요.",
+    );
+  });
 });

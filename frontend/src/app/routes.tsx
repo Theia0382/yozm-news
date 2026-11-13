@@ -21,6 +21,21 @@ export const routes: RouteObject[] = [
                 .NoticesPage,
             }),
           },
+          {
+            path: "settings",
+            lazy: async () => ({
+              Component: (await import("@/features/account/SettingsPage"))
+                .SettingsPage,
+            }),
+          },
+          {
+            // 첫 로그인의 비밀번호 변경 — 변경이 남은 계정은 어느 주소로 와도 여기로 간다
+            path: "password",
+            lazy: async () => ({
+              Component: (await import("@/features/account/PasswordPage"))
+                .PasswordPage,
+            }),
+          },
         ],
       },
       {
@@ -28,6 +43,26 @@ export const routes: RouteObject[] = [
         path: "login",
         lazy: async () => ({
           Component: (await import("@/features/session/LoginPage")).LoginPage,
+        }),
+      },
+      {
+        // 가입 · 초대 가입 · 복구 재설정은 로그인하지 않은 방문자의 화면이라 필요할 때 내려받는다
+        path: "sign-up",
+        lazy: async () => ({
+          Component: (await import("@/features/account/SignUpPage")).SignUpPage,
+        }),
+      },
+      {
+        path: "invite",
+        lazy: async () => ({
+          Component: (await import("@/features/account/InvitePage")).InvitePage,
+        }),
+      },
+      {
+        path: "recover",
+        lazy: async () => ({
+          Component: (await import("@/features/account/RecoverPage"))
+            .RecoverPage,
         }),
       },
       {

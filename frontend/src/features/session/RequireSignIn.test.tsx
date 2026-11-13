@@ -93,11 +93,15 @@ describe("RequireSignIn", () => {
     expect(screen.queryByText("다이제스트")).not.toBeInTheDocument();
   });
 
-  it("로그인했으면 이름과 로그아웃을 두고 화면을 보인다", async () => {
+  it("로그인했으면 설정 링크 · 이름 · 로그아웃을 두고 화면을 보인다", async () => {
     renderGuarded("/digest", () => json(SIGNED_IN));
 
     expect(await screen.findByText("다이제스트")).toBeInTheDocument();
     expect(screen.getByText("앨리스")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "설정" })).toHaveAttribute(
+      "href",
+      "/settings",
+    );
   });
 
   it("로그아웃하면 세션을 지우고 로그인 화면으로 가며 보호 화면을 다시 보이지 않는다", async () => {

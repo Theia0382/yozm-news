@@ -1,14 +1,18 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Navigate, Outlet, useLocation, useNavigate } from "react-router";
+import { Link, Navigate, Outlet, useLocation, useNavigate } from "react-router";
 import { NoticesLink } from "@/features/notices/NoticesLink";
 import { SESSION_QUERY_KEY, useMe } from "@/features/session/sessionQueries";
 import { useApiClient } from "@/shared/api/client";
 import { NARROW_WIDTH, PAGE_FRAME } from "@/shared/ui/widths";
 
+/** 첫 로그인의 비밀번호 변경 화면 */
+const PASSWORD_PATH = "/password";
+
 /**
  * 로그인한 사용자만 보는 화면의 틀 — 로그인하지 않았으면 로그인 화면으로 보내고(돌아올 주소를 next 로), 로그인했으면 머리줄에 알림 링크 ·
- * 이름 · 로그아웃을 둔다.
+ * 설정 링크 · 이름 · 로그아웃을 둔다. 첫 로그인의 비밀번호 변경이 남았으면 어느 주소든 비밀번호 변경 화면으로 보내고, 머리줄에는 이름 ·
+ * 로그아웃만 둔다 — 알림 · 설정은 그 상태에서 서버가 거부하는 경로다(docs/specs/user.md §4).
  */
 export function RequireSignIn() {
   const me = useMe();
@@ -44,6 +48,10 @@ export function RequireSignIn() {
     const next = encodeURIComponent(location.pathname + location.search);
     return <Navigate to={`/login?next=${next}`} replace />;
   }
+  const mustChange = me.data.passwordChangeRequired;
+  if (mustChange && location.pathname !== PASSWORD_PATH) {
+    return <Navigate to={PASSWORD_PATH} replace />;
+  }
 
   async function signOut() {
     setSignOutFailed(false);
@@ -68,7 +76,14 @@ export function RequireSignIn() {
       <header
         className={`${PAGE_FRAME} ${NARROW_WIDTH} flex items-center justify-end gap-3 pb-6 text-sm`}
       >
-        <NoticesLink />
+        {!mustChange && (
+          <>
+            <NoticesLink />
+            <Link to="/settings" className="underline">
+              설정
+            </Link>
+          </>
+        )}
         <span className="text-muted-foreground">
           {me.data.displayName ?? me.data.email}
         </span>
