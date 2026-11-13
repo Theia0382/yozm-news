@@ -7,7 +7,7 @@ export type ApiProblem = Schemas["ApiProblem"];
 
 const ADMIN_PATH = "/api/admin/";
 
-/** 운영자 기능이 닫혔음을 뜻하는 문제 유형 — 서버와의 계약(docs/specs/platform.md platform-R13) */
+/** 운영자 기능이 닫혔음을 뜻하는 문제 유형 — 서버와의 계약(docs/specs/user.md user-R3) */
 export const ADMIN_CLOSED = "urn:yozmnews:problem:admin-closed";
 
 type AdminClientOptions = ClientOptions & {

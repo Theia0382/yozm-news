@@ -25,7 +25,7 @@ import net.yozmnews.event.DecidedBy;
 import net.yozmnews.event.EventId;
 import net.yozmnews.event.JudgementUse;
 import net.yozmnews.event.MergePair;
-import net.yozmnews.platform.application.WebSliceSecurity;
+import net.yozmnews.user.application.WebSliceSecurity;
 import net.yozmnews.source.FeedId;
 import net.yozmnews.source.FeedLabel;
 import net.yozmnews.source.SourceId;

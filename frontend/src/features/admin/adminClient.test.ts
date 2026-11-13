@@ -4,12 +4,7 @@ import {
   createAdminClient,
   unwrap,
 } from "@/features/admin/adminClient";
-import {
-  fakeServer,
-  json,
-  problem,
-  TEST_BASE_URL,
-} from "@/features/admin/adminTestServer";
+import { fakeServer, json, problem, TEST_BASE_URL } from "@/test/fakeServer";
 
 describe("createAdminClient", () => {
   it("운영자 경로에만 토큰을 붙이고 다른 화면용 API 에는 붙이지 않는다", async () => {

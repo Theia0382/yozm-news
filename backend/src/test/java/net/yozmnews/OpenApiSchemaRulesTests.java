@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
+import net.yozmnews.platform.PublicApi;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.skyscreamer.jsonassert.JSONAssert;
@@ -81,6 +82,7 @@ class OpenApiSchemaRulesTests {
 
 	// 중첩 클래스라 다른 테스트 컨텍스트의 컴포넌트 스캔에는 걸리지 않는다 — 이 컨텍스트에만 명시해 등록한다
 	@RestController
+	@PublicApi(reason = "시험 — 명세 규칙만 본다")
 	static class RulesSampleController {
 
 		@GetMapping("/api/rules-sample")

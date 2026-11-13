@@ -1,0 +1,147 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { createMemoryRouter } from "react-router";
+import { RouterProvider } from "react-router/dom";
+import { describe, expect, it } from "vitest";
+import { RequireSignIn } from "@/features/session/RequireSignIn";
+import { ApiClientContext, createApiClient } from "@/shared/api/client";
+import type { components } from "@/shared/api/schema";
+import {
+  fakeServer,
+  json,
+  noContent,
+  problem,
+  TEST_BASE_URL,
+} from "@/test/fakeServer";
+
+type Me = components["schemas"]["MeResponse"];
+
+const ANONYMOUS: Me = {
+  result: "ANONYMOUS",
+  userId: null,
+  email: null,
+  displayName: null,
+  role: null,
+};
+
+const SIGNED_IN: Me = {
+  result: "SIGNED_IN",
+  userId: 7,
+  email: "alice@example.com",
+  displayName: "앨리스",
+  role: "USER",
+};
+
+function renderGuarded(
+  entry: string,
+  me: () => Response,
+  signOut: () => Response = noContent,
+) {
+  let signedOut = false;
+  const server = fakeServer({
+    "GET /api/me": () => (signedOut ? json(ANONYMOUS) : me()),
+    "DELETE /api/session": () => {
+      const response = signOut();
+      signedOut = response.ok;
+      return response;
+    },
+  });
+  const router = createMemoryRouter(
+    [
+      {
+        element: <RequireSignIn />,
+        children: [
+          { path: "/", element: <p>첫 화면</p> },
+          { path: "/digest", element: <p>다이제스트</p> },
+        ],
+      },
+      { path: "/login", element: <p>로그인 화면</p> },
+    ],
+    { initialEntries: [entry] },
+  );
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <ApiClientContext.Provider
+        value={createApiClient({ baseUrl: TEST_BASE_URL, fetch: server.fetch })}
+      >
+        <RouterProvider router={router} />
+      </ApiClientContext.Provider>
+    </QueryClientProvider>,
+  );
+  return { server, router };
+}
+
+describe("RequireSignIn", () => {
+  it("로그인하지 않았으면 돌아올 주소를 달아 로그인 화면으로 보낸다", async () => {
+    const { router } = renderGuarded("/digest?d=2026-11-13", () =>
+      json(ANONYMOUS),
+    );
+
+    expect(await screen.findByText("로그인 화면")).toBeInTheDocument();
+    expect(router.state.location.search).toBe(
+      "?next=%2Fdigest%3Fd%3D2026-11-13",
+    );
+    expect(screen.queryByText("다이제스트")).not.toBeInTheDocument();
+  });
+
+  it("로그인했으면 이름과 로그아웃을 두고 화면을 보인다", async () => {
+    renderGuarded("/digest", () => json(SIGNED_IN));
+
+    expect(await screen.findByText("다이제스트")).toBeInTheDocument();
+    expect(screen.getByText("앨리스")).toBeInTheDocument();
+  });
+
+  it("로그아웃하면 세션을 지우고 로그인 화면으로 가며 보호 화면을 다시 보이지 않는다", async () => {
+    const { server, router } = renderGuarded("/digest", () => json(SIGNED_IN));
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole("button", { name: "로그아웃" }));
+
+    expect(await screen.findByText("로그인 화면")).toBeInTheDocument();
+    expect(
+      server.requests.some(
+        (r) => r.method === "DELETE" && r.path === "/api/session",
+      ),
+    ).toBe(true);
+
+    await router.navigate(-1);
+    expect(await screen.findByText("로그인 화면")).toBeInTheDocument();
+    expect(screen.queryByText("다이제스트")).not.toBeInTheDocument();
+  });
+
+  it("로그아웃이 거부되면 로그인한 화면에 남아 알린다", async () => {
+    const { server, router } = renderGuarded(
+      "/digest",
+      () => json(SIGNED_IN),
+      () => problem(403, "요청 보호 토큰이 없거나 맞지 않는다"),
+    );
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole("button", { name: "로그아웃" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "로그아웃하지 못했습니다. 다시 시도해 주세요.",
+    );
+    expect(router.state.location.pathname).toBe("/digest");
+    expect(screen.getByText("다이제스트")).toBeInTheDocument();
+    expect(
+      server.requests.filter((r) => r.method === "GET" && r.path === "/api/me"),
+    ).toHaveLength(2);
+  });
+
+  it("상태를 읽지 못하면 다시 시도를 둔다", async () => {
+    renderGuarded("/", () => problem(500, "서버 오류"));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "로그인 상태를 확인하지 못했습니다.",
+    );
+    expect(
+      screen.getByRole("button", { name: "다시 시도" }),
+    ).toBeInTheDocument();
+  });
+});

@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Optional;
 
 import net.yozmnews.platform.ChangeActor;
-import net.yozmnews.platform.application.WebSliceSecurity;
+import net.yozmnews.user.application.WebSliceSecurity;
 import net.yozmnews.tag.LineageKind;
 import net.yozmnews.tag.MultiTagKind;
 import net.yozmnews.tag.TagKind;

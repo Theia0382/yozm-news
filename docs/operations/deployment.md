@@ -6,6 +6,7 @@
 
 - 배포 단위는 Docker Compose 하나다. 운영자의 호스트(집 서버 · VPS · 관리형 클라우드) 어디서든 같은 정의로 띄운다([ADR-0006](../adr/0006-deployment-compose-cloudflare.md))
 - 서버 포트는 외부에 열지 않고 앞단(Cloudflare Tunnel 또는 운영자의 리버스 프록시)으로 공개한다. proxy 는 HTTP 만 받고 TLS 는 앞단이 맡는다
+- 로그인 세션 쿠키는 언제나 `Secure` 라, 앞단 TLS 없이 HTTP 주소로 연 화면에서는 로그인할 수 없다. 이 호스트의 `localhost` 로 여는 경우만 브라우저가 예외로 받는다([security.md "공통"](../security.md#공통))
 - 상태 저장소는 PostgreSQL 하나다([overview.md §3](../overview.md#3-품질-목표와-제약))
 
 ## 호스트 요건

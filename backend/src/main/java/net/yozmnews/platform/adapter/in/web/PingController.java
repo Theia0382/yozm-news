@@ -1,5 +1,6 @@
 package net.yozmnews.platform.adapter.in.web;
 
+import net.yozmnews.platform.PublicApi;
 import net.yozmnews.platform.WebRole;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -9,6 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @WebRole
 @RestController
+@PublicApi(reason = "배포 확인 — 사용자 데이터를 담지 않는다")
 class PingController {
 
 	@GetMapping("/api/ping")
