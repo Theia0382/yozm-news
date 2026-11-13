@@ -13,7 +13,7 @@
 - **피드 요청** — 조건부 GET 으로 피드를 받고, 내부 주소로 가는 요청을 막고, 한 번의 수집에 마감 · 크기 상한을 건다
 - **정규화** — 받은 문서를 수집 프로필대로 보정 · 파싱하고 항목마다 기사 값으로 정리한다
 - **새 항목 판정과 발행** — 그 피드의 직전 성공 수집에 없던 항목만 `ArticleFetched` 로 넘긴다
-- **피드 상태** — 수집 결과로 피드를 `ACTIVE` · `DEGRADED` · `STALE` 로 판정한다
+- **피드 상태** — 수집 결과로 피드를 `ACTIVE` · `DEGRADED` · `STALE` 로 판정하고, 상태가 바뀐 피드가 있는 검사 회차마다 전이를 `FeedStatusesChanged` 로 알린다
 
 하지 않는 것:
 
@@ -56,7 +56,7 @@
 
 ## 3. 공개 인터페이스
 
-모듈 최상위 패키지 `net.yozmnews.source` 의 공개 타입은 아래와 같다 — 식별자 둘 · 수집 이벤트와 그 기사, 삭제 이벤트 둘, 피드가 있는지 묻는 공개 조회 `SourceDirectory`, 피드의 출처 이름 · 섹션을 읽는 공개 조회 `FeedLabels` 와 그 값, 운영 기능의 공개 API `SourceAdministration` 과 그 결과 · 목록 타입 · 공개 열거 · 예외.
+모듈 최상위 패키지 `net.yozmnews.source` 의 공개 타입은 아래와 같다 — 식별자 둘 · 수집 이벤트와 그 기사, 삭제 이벤트 둘, 피드 상태 변화 이벤트와 그 값, 피드가 있는지 묻는 공개 조회 `SourceDirectory`, 피드의 출처 이름 · 섹션을 읽는 공개 조회 `FeedLabels` 와 그 값, 운영 기능의 공개 API `SourceAdministration` 과 그 결과 · 목록 타입 · 공개 열거 · 예외.
 
 HTTP 엔드포인트: 없음.
 
@@ -128,6 +128,28 @@ public record FeedDeleted(SourceId sourceId, FeedId feedId) {}
   - 소비자는 그 소스(피드)의 기록을 지운다. 이벤트 발행 레지스트리에 남아 실패하면 다시 처리되므로, 소비는 다시 처리해도 결과가 같아야 한다
 
 관련 규칙: source-R55.
+
+### FeedStatusesChanged · FeedStatusTransition
+
+피드 건강 검사가 피드 상태를 바꿨다(source → user).
+
+```java
+public record FeedStatusesChanged(Instant judgedAt, List<FeedStatusTransition> transitions) {}
+public record FeedStatusTransition(FeedId feedId, FeedStatus from, FeedStatus to) {}
+```
+
+| 필드 | 뜻 | 제약 |
+|---|---|---|
+| `judgedAt` | 검사 회차의 판정 시각 — 바뀐 피드에 저장한 바뀐 시각과 같다 | null 이 아니다 |
+| `transitions` | 바뀐 피드 — 피드 ID 순 | 비지 않는다 · null 원소가 없다 — 어기면 생성자가 `IllegalArgumentException` · `NullPointerException` 을 던진다 |
+| `feedId` · `from` · `to` | 피드 · 이전 상태 · 새 상태 | null 이 아니다. `from` 과 `to` 가 같으면 생성자가 `IllegalArgumentException` 을 던진다 |
+
+- 계약
+  - 검사 회차 하나에 상태가 바뀐 피드가 있을 때만, 상태를 쓴 트랜잭션에서 한 번 발행한다(source-R49) — 상태 쓰기가 커밋되면 발행도 커밋된다
+  - 무엇이 바뀌었는지(이전 → 새 상태)를 싣는다 — 받는 쪽이 지금 상태를 다시 읽어서는 이전 상태를 알 수 없다. 복귀(`ACTIVE`)도 전이다
+  - 같은 이벤트가 다시 처리되거나 회차의 처리 순서가 바뀔 수 있다(이벤트 발행 레지스트리의 재처리). 받는 쪽은 판정 시각으로 회차를 가린다. 검사 둘이 겹치면 판정 시각 순서와 커밋 순서가 어긋날 수 있다(판정 시각은 트랜잭션 전에 읽는다)
+
+관련 규칙: source-R47 · source-R49.
 
 ### SourceDirectory
 
@@ -422,7 +444,7 @@ public final class UnknownFeedException extends RuntimeException { public FeedId
 
 - **등록 · 운영 설정** — `SourceRegistration` · `SourceOperations` 가 `ProfileResolver` 로 소스의 프로필을 얻어(프리셋은 `PresetCatalog`, 운영자 원문은 `ProfileParser`) 판정하고, `SourceRepository` · `FeedRepository` 로 쓴다. 피드 행과 수집 상태 행은 `FeedProvisioner` 가 함께 만든다. 피드 켜기는 `FeedGate`(`domain/gate`)의 판정 사이에 `SourceFetchSlots` 로 요청 시작 시각을 예약하고 포트 `ArticleSource` 로 피드를 받는다. 등록 전 원문의 미리보기는 `ProfilePreviewer` 가 같은 판정으로 한다. 운영자 원문 수정은 `SourceRegistration` 이 `ProfileRevision` 으로 판정한다. 숨김 · 삭제는 `SourceRemoval` 이 `FeedRemovalRule` 로 피드 대상을 판정하고 소스 · 피드 · 수집 상태 · 요청 예약 · 출처 이름 저장소로 쓴다. 등록 · 원문 수정 · 기동 대조는 `SourceAttributionRepository` 에 출처 이름을 기록한다. 공개 API 의 구현 `SourceAdministrationService` 가 이 유스케이스들과 운영 목록(`SourceCatalog` — `SourceListingRepository` · `ProfileResolver` · `PresetCatalog` · `SourceAttributionRepository`)에 맡기고 결과를 공개 타입으로 옮긴다. 공개 조회 `SourceDirectory` 의 구현 `SourceDirectoryService` 는 `FeedRepository` 로 묻는다. 공개 조회 `FeedLabels` 의 구현 `FeedLabelService` 는 `SourceCatalog` 에 맡긴다 — 출처 이름 · 섹션의 해석은 운영 목록과 같은 함수다
 - **수집** — `PollScheduler` 가 `FeedPollStateRepository` 로 대상을 잠그고 `FeedPollState` 의 전이로 점유를 기록한다. `FeedPoller` 가 `SourceFetchSlots`(`SourceFetchSlotRepository` · `PollSchedule`)로 요청 시작 시각을 예약하고, 포트 `ArticleSource` 로 받은 결과를 `FeedPollState` 에 반영해 `ArticleFetched` 를 발행한다. `ArticleSource` 의 구현 `RssArticleSource` 는 요청 규칙(`domain/fetch`)으로 요청하고 `FeedNormalizer`(`domain/feed`)로 정규화한다
-- **피드 상태** — `FeedHealthCheck` 가 `FeedStatusRepository` 로 켜진 피드의 행을 잠그고, `FeedStatusRule` 로 다시 판정해 바뀐 행만 쓴다
+- **피드 상태** — `FeedHealthCheck` 가 `FeedStatusRepository` 로 켜진 피드의 행을 잠그고, `FeedStatusRule` 로 다시 판정해 바뀐 행만 쓰며, 바뀐 피드가 있으면 같은 트랜잭션에서 `FeedStatusesChanged` 를 발행한다
 
 #### 수집 한 회차
 
@@ -488,7 +510,7 @@ sequenceDiagram
 | 수집할 피드 등록 — 반복 작업 ID `poll-due-feeds` | `PollDueFeedsJob` | 1분마다 | 대상 피드를 점유하고 점유 토큰을 작업 ID 로 피드마다 수집 작업을 예약 시각에 등록한다(source-R15 · source-R18 · source-R19). 재시도하지 않는다 — 실패한 회차가 재시도를 기다리는 동안 작업 서버가 다음 회차를 건너뛰므로 다음 회차가 곧 재시도다. 같은 점유를 두 번 등록해도 작업 ID 가 같아 작업은 하나다 |
 | 피드 수집(피드 ID, 점유 토큰) — 작업 ID 는 점유 토큰 | `PollFeedJob` → `FeedPoller` | 위에서 등록 | 점유 확인 → 예약 시각까지 대기 → 같은 소스의 요청 시작 시각 예약 · 대기 → 트랜잭션 밖에서 요청 · 정규화 → 한 트랜잭션에서 수집 상태 반영과 새 항목마다 `ArticleFetched` 발행(source-R16 ~ source-R21). 재시도하지 않는다 |
 | 기동 대조 | `PresetFeedReconciliation`(`application`) | 작업 역할의 애플리케이션 준비 완료(`ApplicationReadyEvent`) | 숨긴 소스를 포함해 소스마다 프로필과 저장된 피드를 대조하고 출처 이름을 기록한다(source-R8 · source-R57) |
-| 피드 건강 검사 — 반복 작업 ID `feed-health-check` | `FeedHealthCheckJob` → `FeedHealthCheck` | 1시간마다 | 켜진 피드의 상태를 다시 판정해 바뀐 행만 쓰고, 커밋 뒤 전이를 로그한다(source-R30 · source-R31 · source-R47 ~ source-R49). 같은 입력이면 같은 판정이라 다시 실행해도 결과가 같다. 한 회차가 대상 행을 잠그므로 겹친 회차는 기다린다(source-R48). 재시도하지 않는다 — 다음 회차가 다시 판정한다 |
+| 피드 건강 검사 — 반복 작업 ID `feed-health-check` | `FeedHealthCheckJob` → `FeedHealthCheck` | 1시간마다 | 켜진 피드의 상태를 다시 판정해 바뀐 행만 쓰고, 바뀐 피드가 있으면 같은 트랜잭션에서 `FeedStatusesChanged` 를 발행하며, 커밋 뒤 전이를 로그한다(source-R30 · source-R31 · source-R47 ~ source-R49). 같은 입력이면 같은 판정이라 다시 실행해도 결과가 같다. 한 회차가 대상 행을 잠그므로 겹친 회차는 기다린다(source-R48). 재시도하지 않는다 — 다음 회차가 다시 판정한다 |
 
 수집 작업이 동시에 몇 개 도는지는 작업 서버의 동시 실행 수가 정한다([운영 설정 — 백그라운드 작업](../operations/configuration.md#백그라운드-작업)). 수집 작업은 기다리는 동안 DB 연결을 잡지 않는다. 컨트롤러는 없다 — 운영 기능은 공개 API `SourceAdministration`(§3)으로 들어온다.
 
@@ -514,7 +536,7 @@ sequenceDiagram
 - `SourceCatalog` — 운영 목록과 피드의 출처 이름 · 섹션. 읽기 전용 트랜잭션 하나에서 소스 · 피드 행과 피드의 수집 상태 행 · 출처 이름을 읽고, 소스마다 지금의 프로필을 얻어 상태 · 실제 주기를 정한다. 숨긴 소스와 숨기지 않은 소스, 숨긴 피드와 숨기지 않은 피드를 가른다. 수집 상태 행이 없는 피드는 목록을 실패시킨다. 이름(프로필 이름 → 기록된 출처 이름)과 섹션(프로필에 그 피드가 있을 때만)의 해석은 함수 하나씩이고 운영 목록과 `labels`(숨긴 것 포함, 수집 상태는 읽지 않음)가 함께 쓴다(source-R51 · source-R53 · source-R57)
 - `FeedProvisioner` — 피드 행과 그 수집 상태 행을 함께 만든다. 이미 있으면 아무것도 하지 않는다 — 등록 · 원문 수정 · 기동 대조가 호출자의 트랜잭션 안에서 쓴다(source-R3 · source-R8)
 - `PresetFeedReconciliation` — 기동 대조(들어오는 쪽). 숨긴 소스를 포함해 프로필을 얻은 소스마다 한 트랜잭션에서 소스 행을 공유 잠금한 뒤 출처 이름을 기록하고, 프로필에 새로 생긴 피드를 더하고, 다시 생긴 숨긴 피드를 다시 보인다. 프로필을 얻지 못한 소스는 경고 로그만 남긴다(숨긴 소스면 debug). 한 소스의 대조가 지워진 소스 · 동시 수정을 만나면 그 소스만 건너뛴다(source-R8 · source-R53 · source-R56 · source-R57)
-- `FeedHealthCheck` — 피드 건강 검사(들어오는 쪽). 대상 행 잠금 · 판정 · 바뀐 행 쓰기를 한 트랜잭션에서 하고, 전이 로그는 커밋 뒤에 남긴다(source-R30 · source-R31 · source-R47 ~ source-R49)
+- `FeedHealthCheck` — 피드 건강 검사(들어오는 쪽). 대상 행 잠금 · 판정 · 바뀐 행 쓰기 · 전이 발행을 한 트랜잭션에서 하고, 전이 로그는 커밋 뒤에 남긴다(source-R30 · source-R31 · source-R47 ~ source-R49)
 
   ```java
   public List<FeedStatusChange> run()   // 이번에 바뀐 피드 — 피드 ID 순
@@ -806,7 +828,7 @@ public sealed interface FetchResult {
   기간은 지금 시각과의 차라 시간대가 없고, 정확히 7일이 지난 순간부터 `STALE` 이다. 새 항목의 가장 늦은 발행 시각은 성공 수집의 새 항목으로만 바뀌고 직전 값보다 늦을 때만 바뀐다 — 옛 항목을 돌려 실어도 오르지 않고, 등록 때 이미 방치된 피드는 첫 수집의 옛 발행 시각이 그대로 남는다. 발행 시각을 추정한 항목(source-R40)은 받은 시각으로 센다. 프로필을 얻지 못해 수집을 미루는 켜진 피드(source-R19)도 대상이라 시간이 지나면 `STALE` 이 된다 — 원인은 미룸 경고 로그가 알린다. 실제로 2024년 이후 갱신되지 않은 피드가 있었다([조사 자료](../research/2026-10-rss-survey.md))
 - **source-R47** — 피드 건강 검사는 1시간(`FeedStatusRule.RECHECK_INTERVAL`)마다 소스 · 피드가 모두 켜진 피드 전부를 현재 기준으로 다시 판정하고, 판정이 저장된 상태와 다를 때만 상태와 바뀐 시각(판정 시각)을 쓴다. 판정 순서는 `DEGRADED`(source-R30) → `STALE`(source-R31) → `ACTIVE` 다 — 성공은 `DEGRADED` 를 풀 뿐이라 `STALE` 조건이 맞으면 `STALE` 이고, 기준 미만의 실패는 `STALE` 을 풀지 않는다. 판정은 저장된 상태를 보지 않으므로 모든 상태 쌍 사이의 전이가 있다. 꺼진 피드는 마지막 상태를 그대로 두고, 켜고 끄는 것은 상태를 바꾸지 않는다. 다시 켠 직후 첫 수집 전에 검사가 돌면 옛 입력으로 판정하고, 다음 수집 · 검사가 맞춘다. 기준을 바꿔 배포하면 다음 검사가 모든 대상을 새 기준으로 맞춘다. 새 피드의 첫 상태는 `ACTIVE` 다
 - **source-R48** — 피드 상태와 바뀐 시각은 피드 건강 검사만 쓰고, 그 밖의 수집 상태는 수집 작업만 쓴다. 검사는 한 트랜잭션에서 대상 행을 피드 ID 순으로 잠그고(먼저 잡힌 잠금을 기다린다) 판정 · 쓰기를 한다 — 잠근 동안 수집 결과 반영은 기다리고 수집 대상 잠금(source-R15)은 그 행을 건너뛰므로, 옛 입력으로 판정한 상태가 쓰이지 않는다. 검사는 재시도하지 않는다 — 다음 회차가 다시 판정한다
-- **source-R49** — 상태가 바뀐 피드만 커밋 뒤 로그를 남긴다. `DEGRADED` · `STALE` 진입은 WARN, `ACTIVE` 복귀는 INFO 이고, 문구는 피드 ID · 이전 → 새 상태 · 연속 실패 수와 그 가운데 영구 실패 수 · 마지막 실패의 이유와 분류 · 마지막 새 항목 시각 · 새 항목의 가장 늦은 발행 시각이다. 운영자에게 알리는 것은 저장된 상태(운영자 화면)와 이 로그까지이고, 화면 내 알림은 알림 기능을 만들 때 한다
+- **source-R49** — 상태가 바뀐 피드가 있는 회차는 상태를 쓴 트랜잭션에서 `FeedStatusesChanged` 를 한 번 발행한다 — 판정 시각과 바뀐 피드마다 이전 · 새 상태(피드 ID 순, 복귀 포함)다. 바뀐 피드가 없는 회차는 발행하지 않는다. 상태가 바뀐 피드만 커밋 뒤 로그를 남긴다. `DEGRADED` · `STALE` 진입은 WARN, `ACTIVE` 복귀는 INFO 이고, 문구는 피드 ID · 이전 → 새 상태 · 연속 실패 수와 그 가운데 영구 실패 수 · 마지막 실패의 이유와 분류 · 마지막 새 항목 시각 · 새 항목의 가장 늦은 발행 시각이다. 운영자에게 알리는 것은 저장된 상태(운영자 화면) · 이 로그 · 이 이벤트로 `user` 가 운영자 계정에 남기는 화면 내 알림이다([ADR-0135](../adr/0135-feed-status-changes-publish-each-check-runs-transitions-and-gather-into-one-unread-notice-per-active-admin-read-up-to-the-seen-revision.md))
 
 ### 운영자 프로필 입력
 
@@ -934,3 +956,4 @@ RSS 품질이 피드마다 크게 다르므로 사전 보정 → 파싱 → 필�
 | [0056](../adr/0056-platform-reads-yaml-text-and-applies-common-rejection.md) | YAML 원문 읽기와 공통 거부는 `platform` 이 맡고, 문서별 형식 · 검증은 각 모듈의 `domain` 이 한다 |
 | [0065](../adr/0065-blocked-address-fetch-failure-counts-as-temporary.md) | 막힌 주소로 가는 피드 요청은 일시 실패로 센다 |
 | [0066](../adr/0066-overflow-suspected-only-when-previous-and-current-fetches-both-have-ten-or-more-keys.md) | 넘침 의심은 직전 · 이번 수집의 키가 모두 10개 이상일 때만 본다 |
+| [0135](../adr/0135-feed-status-changes-publish-each-check-runs-transitions-and-gather-into-one-unread-notice-per-active-admin-read-up-to-the-seen-revision.md) | 피드 상태 변화는 검사 회차마다 전이를 실은 이벤트로 알리고, 그때의 운영자 계정마다 안 읽은 알림 하나에 모으며, 읽음은 화면이 받은 판까지다 |
