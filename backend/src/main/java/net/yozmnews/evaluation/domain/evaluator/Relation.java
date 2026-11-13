@@ -19,7 +19,8 @@ import net.yozmnews.evaluation.RelationAnswer;
  * @param rawResponse 원본 응답 — JSON 텍스트
  */
 public record Relation(Map<RelationAnswer, Double> probabilities, double firstOneMatter, double secondOneMatter,
-		String evaluator, String modelVersion, int inputTokens, String rawResponse) implements RelationResult {
+		String evaluator, String modelVersion, int inputTokens, String rawResponse)
+		implements RelationResult, RelationRereadResult {
 
 	/**
 	 * @throws IllegalArgumentException 확률이 0 이상 1 이하의 유한값이 아니거나, 이름 · 버전이 공백뿐이거나, 토큰 수가 음수일 때
