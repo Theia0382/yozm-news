@@ -39,3 +39,7 @@
 | 상한 30일 | 파일럿 때 저장 기준을 내린 뒤 오래 지나면 채울 수 없다. 비용이 없어 짧게 둘 까닭이 실행 시간뿐이다 |
 | 화면 역할이 요청 때 JobRunr 한 번 작업을 등록한다 | 화면 역할의 작업 등록 선례가 없고, 진행 · 재개를 결국 DB 에 둬야 한다 |
 | 채울 저장 기준을 실행 때 읽는다 | 요청과 실행 사이 기준이 바뀌면 운영자가 확인한 것과 다르게 채운다 |
+
+## 후속 기록
+
+- 2026-11-13: 결정 절 "원본 응답의 형식은 평가기 포트가 안다"를 관계 판정 원본에 넓힌 것 — [ADR-0138](0138-relation-judgement-probabilities-are-read-for-operators-by-the-evaluator-rereading-stored-raw-responses.md) · [evaluation Spec "관계 판정 원본 조회"](../specs/evaluation.md#관계-판정-원본-조회) evaluation-R50
