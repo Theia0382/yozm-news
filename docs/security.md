@@ -6,17 +6,17 @@ v1은 **자체 로그인(이메일·비밀번호)** 하나를 지원한다 ([ADR
 
 ### 가입
 
-누가 계정을 만들 수 있는가와 첫 운영자 계정을 만드는 방법이다 ([ADR-0048](adr/0048-sign-up-closed-by-default-with-invitations-and-operator-bootstrap.md)).
+누가 계정을 만들 수 있는가와 첫 운영자 계정을 만드는 방법이다 ([ADR-0048](adr/0048-sign-up-closed-by-default-with-invitations-and-operator-bootstrap.md)). 규칙은 [user Spec](specs/user.md#계정을-만드는-길) user-R28 ~ R35 에 있다.
 
-- 가입은 기본으로 닫혀 있다. 운영자가 운영 설정으로 공개 가입을 열 수 있고, 열면 열린 가입 방어(계정 존재 노출을 감추는 일반 문구 · 가입 요청 제한 · 가입 화면 봇 차단)를 모두 적용한다 — 아래 자체 로그인 표와 [악용 방지](#악용-방지).
+- 가입은 기본으로 닫혀 있다. 운영자가 운영자 화면에서 공개 가입을 열 수 있고(바꾼 이력이 남는다 — [ADR-0140](adr/0140-sign-up-policy-is-a-user-module-operator-setting-with-append-only-history-and-starts-closed.md)), 열면 열린 가입 방어(계정 존재 노출을 감추는 일반 문구 · 가입 요청 제한 · 가입 화면 봇 차단)를 모두 적용한다 — 아래 자체 로그인 표와 [악용 방지](#악용-방지).
 - 닫힌 가입에서 계정을 만드는 길은 둘이다.
-  - **초대 링크** — 운영자(`ADMIN`)가 만든 일회용 · 만료 있는 링크다. 운영자가 직접 전한다(메일 없음). 토큰은 추측할 수 없는 무작위 값(128비트 이상)이고 해시로만 저장한다. 운영자가 취소할 수 있고, 한 번 쓰면 다시 쓸 수 없다. 받은 사람은 자체 로그인으로 가입한다.
-  - **운영자 계정 생성** — 운영자가 이메일 · 초기 비밀번호로 자체 로그인 계정을 만든다. 첫 로그인의 규칙은 자체 로그인 표의 "초기 비밀번호" 행을 따른다.
-- **첫 운영자** — 운영자가 한 명도 없으면 앱이 기동할 때 일회용 운영자 초대 링크(짧은 만료)를 로그에 출력한다. 운영자가 생기면 출력하지 않는다.
-  - 운영 설정으로 이메일 · 초기 비밀번호를 주면 링크 대신 그 값으로 자체 로그인 운영자 계정을 만든다. 운영자가 없을 때만 적용하고, 그 뒤에는 값을 무시하고 값이 남아 있다고 경고 로그를 낸다.
-  - 이 계정의 첫 로그인도 "초기 비밀번호" 행을 따른다.
-  - 값이 비밀번호 규칙을 어기면 이유를 말하고 기동하지 않는다.
-  - 값을 주면 초대 링크를 출력하지 않는다.
+  - **초대 링크** — 운영자(`ADMIN`)가 만든 일회용 · 7일 링크다. 운영자가 직접 전한다(메일 없음). 이메일에 묶지 않고, 운영자는 메모로 가른다. 토큰은 128비트 무작위 값이고 링크의 조각(`#` 뒤 — 서버 로그 · `Referer` 에 남지 않는다)에 담으며 SHA-256 다이제스트로만 저장한다. 운영자가 취소할 수 있고, 한 번 쓰면 다시 쓸 수 없다. 받은 사람은 자체 로그인으로 가입한다([ADR-0141](adr/0141-invitation-links-are-seven-day-single-use-links-not-bound-to-an-email-with-the-token-in-the-fragment-stored-only-as-a-digest.md)).
+  - **운영자 계정 생성** — 운영자가 이메일 · 표시 이름 · 초기 비밀번호로 자체 로그인 계정을 만든다. 첫 로그인의 규칙은 자체 로그인 표의 "초기 비밀번호" 행을 따른다. 첫 로그인 전이면 운영자가 초기 비밀번호를 다시 정할 수 있고 그 계정의 세션이 끝난다 — 계정 주인이 비밀번호를 바꾼 계정은 건드리지 못한다([ADR-0143](adr/0143-operators-reset-the-initial-password-only-of-accounts-before-their-first-sign-in-and-end-their-sessions.md)).
+  - 두 길 모두 일반 사용자(`USER`) 계정만 만든다. 운영자(`ADMIN`)는 첫 운영자로만 생긴다([ADR-0142](adr/0142-invitations-and-operator-created-accounts-are-always-users-and-admins-come-only-from-the-first-admin.md)).
+- **첫 운영자** — 서버 설정(환경 변수)의 이메일 · 초기 비밀번호로만 만든다. 기동 로그에 초대 링크 같은 비밀을 내지 않는다([ADR-0139](adr/0139-first-admin-is-created-only-from-environment-variables-and-startup-warns-without-an-admin-or-about-leftover-values.md)).
+  - 쓰는 운영자 계정이 없을 때만 적용한다. 운영자도 값도 없으면 경고 로그를 남기고 뜬다. 운영자가 생긴 뒤 남은 값은 무엇이든 경고만 한다.
+  - 운영자가 없는데 값이 하나만 있거나 규칙을 어기거나, 이메일이 이미 있는 계정의 것이면 이유(변수 이름)를 말하고 기동하지 않는다 — 있는 계정을 운영자로 올리지 않는다.
+  - 이 계정의 첫 로그인도 "초기 비밀번호" 행을 따른다. 초기 비밀번호는 배포 환경 파일에 평문으로 남으므로 만든 뒤 지운다.
 
 ### 공통
 
@@ -34,12 +34,12 @@ v1은 **자체 로그인(이메일·비밀번호)** 하나를 지원한다 ([ADR
 | 비밀번호 저장 | Argon2id 해시. 파라미터는 서버 사양에 맞춰 로그인 1회가 수백 ms 이내가 되도록 조정하고, 파라미터를 해시 문자열에 함께 저장한다. 값은 [user Spec](specs/user.md#계정과-자격) user-R15 |
 | 비밀번호 규칙 | 최소 8자, 최대 128자(NFKC 정규화 뒤 코드 포인트). 문자 종류 강제 규칙은 두지 않고 흔한 비밀번호 목록과 대조하지 않는다([ADR-0129](adr/0129-passwords-are-free-form-from-eight-to-128-code-points-without-a-common-password-list.md) · [user Spec](specs/user.md#계정과-자격) user-R14) |
 | 이메일 | 로그인 식별자로만 쓰고 인증하지 않는다. 신원 근거로 쓰지 않는다 |
-| 복구 코드 | 가입 직후(초기 비밀번호로 만든 계정은 첫 로그인에서 비밀번호를 바꾼 직후) 한 번 보여주는 무작위 코드(128비트 이상). 해시로만 저장. 복구 코드로 비밀번호를 재설정하면 기존 코드는 폐기하고 새 코드를 보여주며, 다른 세션을 모두 끊는다. 설정 화면에서 재발급할 수 있다(현재 비밀번호 확인 필요) |
+| 복구 코드 | 가입 직후(초기 비밀번호로 만든 계정은 첫 로그인에서 비밀번호를 바꾼 직후) 한 번 보여주는 무작위 코드(160비트, 계정마다 하나). SHA-256 다이제스트로만 저장. 복구 코드로 비밀번호를 재설정하면 기존 코드는 폐기하고 새 코드를 보여주며, 다른 세션을 모두 끊는다. 설정 화면에서 재발급할 수 있다(현재 비밀번호 확인 필요) |
 | 계정 복구 | 복구 코드로만 가능하다. 복구 코드가 없으면 복구할 수 없음을 가입 화면(초기 비밀번호로 만든 계정은 첫 로그인 화면)에서 안내한다 |
 | 계정 존재 노출 방지 | 로그인 실패와 복구 코드 실패에 같은 응답을 준다. 가입(공개 가입 · 초대 링크로 가입) 시 이메일 중복은 메일 없이는 숨길 수 없으므로 "가입할 수 없는 이메일"이라는 일반 문구를 쓰고, 가입 요청 제한을 강하게 건다 |
-| 무차별 대입 방어 | 연속 실패 시 지연을 점점 늘린다(잠금이 아니라 지연). 실패는 제출된 이메일마다 세어, 계정이 없는 이메일도 같은 기록 · 같은 지연을 받는다 — 지연 중에는 비밀번호를 대조하지 않고 남은 시간을 알린다([ADR-0130](adr/0130-sign-in-failure-delays-count-per-digest-of-the-submitted-normalized-email-regardless-of-account.md) · [user Spec](specs/user.md#로그인) user-R19). IP별 요청 제한, 로그인 · 복구 코드 사용과 공개 가입에 봇 차단(Turnstile 등 — 교체 · 끄기 가능, [ADR-0012](adr/0012-swappable-external-dependencies.md)) |
-| 초기 비밀번호 | 운영자가 만든 계정과 운영 설정으로 만든 첫 운영자 계정(초기 비밀번호로 만든 계정)은 첫 로그인 때 비밀번호를 바꿔야 한다. 바꾸기 전에는 비밀번호 변경 화면만 쓸 수 있다 |
-| 비밀번호 변경 | 현재 비밀번호 확인 필수. 변경 시 다른 세션 종료, 화면 내 알림 기록 |
+| 무차별 대입 방어 | 연속 실패 시 지연을 점점 늘린다(잠금이 아니라 지연). 실패는 제출된 이메일마다 세어, 계정이 없는 이메일도 같은 기록 · 같은 지연을 받는다 — 지연 중에는 비밀번호를 대조하지 않고 남은 시간을 알린다. 복구 코드 실패는 같은 일정의 다른 기록으로 세고, 비밀번호 변경 · 복구 코드 재발급의 현재 비밀번호 확인 실패는 로그인 실패 기록에 센다([ADR-0144](adr/0144-recovery-code-failures-are-delayed-on-the-sign-in-schedule-in-a-separate-record-and-current-password-checks-share-the-sign-in-record.md) · [ADR-0130](adr/0130-sign-in-failure-delays-count-per-digest-of-the-submitted-normalized-email-regardless-of-account.md) · [user Spec](specs/user.md#로그인) user-R19). IP별 요청 제한, 로그인 · 복구 코드 사용과 공개 가입에 봇 차단(Turnstile 등 — 교체 · 끄기 가능, [ADR-0012](adr/0012-swappable-external-dependencies.md)) |
+| 초기 비밀번호 | 운영자가 만든 계정과 서버 설정으로 만든 첫 운영자 계정(초기 비밀번호로 만든 계정)은 첫 로그인 때 비밀번호를 바꿔야 한다. 바꾸기 전에는 서버가 비밀번호 변경 · 로그인 상태 조회 · 로그아웃만 연다([ADR-0146](adr/0146-sessions-of-accounts-with-an-initial-password-open-only-password-change-status-and-sign-out-marked-by-a-platform-annotation.md) · [user Spec](specs/user.md#비밀번호-변경과-복구-코드) user-R29) |
+| 비밀번호 변경 | 현재 비밀번호 확인 필수. 변경 시 지금 세션의 ID 를 바꾸고 다른 세션 종료, 화면 내 알림 기록(첫 로그인의 강제 변경은 알림 없음 — [ADR-0145](adr/0145-password-notices-are-left-for-password-changes-and-recovery-resets-but-not-for-the-forced-first-sign-in-change.md)) |
 | 2단계 인증 | v1 범위 밖. 이후 TOTP 추가 검토 |
 
 ## 인가와 데이터 격리
@@ -48,7 +48,7 @@ v1은 **자체 로그인(이메일·비밀번호)** 하나를 지원한다 ([ADR
 - 화면용 API 처리기는 사용자를 세션에서 채우는 인자로만 받고, 공개 표시가 없는 처리기는 세션을 요구한다([user Spec](specs/user.md#화면용-api-의-공개와-세션-사용자) user-R5 · user-R6).
 - 사용자 범위가 없는 조회는 백그라운드 작업(다이제스트 일정 · 보존 정리 등) 전용 조회 모델에만 두고, 화면 · API 경로에서는 쓰지 않는다. 사용자 A로 사용자 B의 알림·다이제스트·키·피드백·스토리라인 구독·관심사 히스토리·변화 리포트에 접근하는 테스트를 기본 테스트 세트에 포함한다 — 운영자 경로 밖의 처리기는 공개 표시가 있거나 격리 시험에 등록되어야 하고, 등록 가드가 앱의 처리기를 열거해 확인한다([test-strategy](qa/test-strategy.md#13-사용자-격리-시험)).
 - 운영자 기능(`/api/admin/**`)은 `ADMIN` 역할만 접근할 수 있다. 운영자도 사용자의 LLM 키 평문은 볼 수 없다.
-- 초대 링크 발급 · 취소와 계정 생성은 `ADMIN` 만 할 수 있다.
+- 초대 링크 발급 · 취소, 계정 생성 · 초기 비밀번호 다시 정하기, 공개 가입 켬 · 끔은 `ADMIN` 만 할 수 있다.
 - 운영자 경로가 계정 세션으로 인증하기 전까지는 운영자 토큰(서버 설정 하나)이 `ADMIN` 역할을 준다 — 화면이 `Authorization: Bearer` 로 보내고, 토큰을 설정하지 않은 인스턴스는 운영자 기능이 닫힌다. 토큰 형식 · 대조 · 거부 응답의 규칙은 [user Spec "운영자 접근 통제"](specs/user.md#운영자-접근-통제)에 있다([ADR-0043](adr/0043-admin-functions-guarded-by-env-bearer-token-until-account-roles.md)).
 - 운영자 경로도 계정 세션으로 인증하게 되면 운영자 경로와 `ADMIN` 역할 판정은 그대로 두고 토큰 인증을 세션 인증으로 바꾸며, 그 경로에도 CSRF 토큰(공통 절)을 켠다. 그 전까지 운영자 경로는 브라우저가 자동으로 붙이는 자격(세션 쿠키)을 읽지 않아 CSRF 를 쓰지 않는다.
 

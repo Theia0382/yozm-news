@@ -33,3 +33,7 @@
 | `user` 의 공개 API 로 공개 경로를 등록 | `platform`(배포 확인 처리기)이 `user` 에 의존하게 된다 |
 | 처리기 없는 요청도 세션을 요구 | 익명에게 없는 경로가 401 이 되고, 작업 역할만 켠 프로세스의 404 가 401 로 바뀐다 |
 | 공용 시험 도구만 두고 등록 가드 없음 | 새 경로가 격리 시험 없이 들어와도 아무것도 실패하지 않는다 |
+
+## 후속 기록
+
+- 2026-11-13: 공개 표시와 같은 꼴의 변경 전 허용 표시 `@AllowedBeforePasswordChange` — [ADR-0146](0146-sessions-of-accounts-with-an-initial-password-open-only-password-change-status-and-sign-out-marked-by-a-platform-annotation.md) · [`platform` platform-R21](../specs/platform.md#화면용-api-경로와-공개-처리기)
