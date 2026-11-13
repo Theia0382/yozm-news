@@ -10,7 +10,6 @@ import { ADMIN_QUERY_KEY, useAdminClient } from "@/features/admin/adminSession";
 import { BucketStrip, RateSwatch } from "@/features/admin/BucketStrip";
 import {
   failureReasonLabels,
-  feedStatusLabels,
   permanenceLabels,
   profileStateLabels,
 } from "@/features/admin/labels";
@@ -21,6 +20,7 @@ import {
   RATE_LEVEL_LEGEND,
 } from "@/features/admin/metrics";
 import { formatDateTime } from "@/shared/lib/dateTime";
+import { feedStatusLabels } from "@/shared/lib/feedStatus";
 
 type CollectionStatus = Schemas["CollectionStatusResponse"];
 type StatusCriteria = Schemas["StatusCriteriaResponse"];

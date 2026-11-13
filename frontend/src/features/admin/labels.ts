@@ -9,7 +9,6 @@ type Permanence = Schemas["FetchFailureView"]["permanence"];
 type SkipReason = Schemas["SkippedItemView"]["reason"];
 type DocumentProblemKind = Schemas["DocumentProblemView"]["kind"];
 type ProfileState = Schemas["SourceResponse"]["profileState"];
-type FeedStatus = Schemas["FeedCollectionResponse"]["status"];
 type StrandedReason = Schemas["StrandedPublicationResponse"]["reason"];
 type ResubmissionOutcome = Schemas["ResubmissionItemResponse"]["result"];
 type DiscardOutcome = Schemas["DiscardItemResponse"]["result"];
@@ -93,12 +92,6 @@ export const profileStateLabels = {
   PRESET_MISSING: "참조하던 프리셋이 사라졌습니다",
   INVALID: "운영자 원문이 검증에 걸립니다",
 } as const satisfies Record<ProfileState, string>;
-
-export const feedStatusLabels = {
-  ACTIVE: "정상",
-  DEGRADED: "계속 실패",
-  STALE: "오래 새 기사 없음",
-} as const satisfies Record<FeedStatus, string>;
 
 export const strandedReasonLabels = {
   EXHAUSTED: "처리 시도 상한에 이름",
