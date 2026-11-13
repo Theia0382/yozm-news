@@ -69,6 +69,14 @@ public final class SessionSignIn {
 		request.getSession().setMaxInactiveInterval((int) SessionLifetime.of(keep).toSeconds());
 	}
 
+	/**
+	 * 로그인한 세션의 ID 와 CSRF 토큰을 바꾼다 — 비밀번호를 바꾼 뒤(세션 고정 방지). 세션의 내용 · 수명은 그대로이고, 바뀐 ID 는 요청 끝에서
+	 * 저장된다(user-R11)
+	 */
+	public void renew(HttpServletRequest request, HttpServletResponse response) {
+		this.strategy.onAuthentication(this.contexts.getContext().getAuthentication(), request, response);
+	}
+
 	/** 로그아웃한다 — 세션이 없어도 같은 결과다 */
 	public void signOut(HttpServletRequest request, HttpServletResponse response) {
 		HttpSession session = request.getSession(false);

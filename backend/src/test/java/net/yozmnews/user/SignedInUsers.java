@@ -27,7 +27,8 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
  */
 public final class SignedInUsers {
 
-	private static final String PASSWORD = "isolation test password";
+	/** 만드는 계정의 비밀번호 */
+	static final String PASSWORD = "isolation test password";
 
 	private static final String CSRF = "signed-in-users";
 

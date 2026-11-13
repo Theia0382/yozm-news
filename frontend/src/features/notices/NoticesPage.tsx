@@ -17,6 +17,11 @@ import { NARROW_WIDTH, PAGE_FRAME } from "@/shared/ui/widths";
 
 type FeedStatusEntry = components["schemas"]["FeedStatusEntryResponse"];
 
+type PasswordChangedNotice =
+  components["schemas"]["PasswordChangedNoticeResponse"];
+
+type PasswordChangeMethod = PasswordChangedNotice["method"];
+
 /** 피드를 묶어 보이는 지금 상태의 순서 — 손볼 것부터 */
 const STATUS_ORDER: readonly FeedStatus[] = ["DEGRADED", "STALE", "ACTIVE"];
 
@@ -125,6 +130,8 @@ function noticeTitle(notice: Notice): string {
   switch (notice.kind) {
     case "FEED_STATUS":
       return "피드 상태가 바뀌었습니다";
+    case "PASSWORD_CHANGED":
+      return "비밀번호가 바뀌었습니다";
   }
 }
 
@@ -132,7 +139,36 @@ function NoticeBody({ notice }: { notice: Notice }): ReactElement {
   switch (notice.kind) {
     case "FEED_STATUS":
       return <FeedStatusBody feeds={notice.feedStatus?.feeds ?? []} />;
+    case "PASSWORD_CHANGED":
+      return <PasswordChangedBody body={notice.passwordChanged} />;
   }
+}
+
+/** 비밀번호를 바꾼 방법의 문구 */
+const passwordChangeMethodText: Record<PasswordChangeMethod, string> = {
+  CHANGE: "비밀번호 변경으로 바꿨습니다.",
+  RECOVERY: "복구 코드로 재설정했습니다.",
+};
+
+function PasswordChangedBody({
+  body,
+}: {
+  body: PasswordChangedNotice | null | undefined;
+}) {
+  if (!body) {
+    return null;
+  }
+  return (
+    <div className="space-y-1 text-sm">
+      <p>
+        {passwordChangeMethodText[body.method]}{" "}
+        <time dateTime={body.changedAt}>{formatDateTime(body.changedAt)}</time>
+      </p>
+      <p className="text-muted-foreground">
+        직접 바꾸지 않았다면 바로 비밀번호를 바꾸세요.
+      </p>
+    </div>
+  );
 }
 
 function FeedStatusBody({ feeds }: { feeds: FeedStatusEntry[] }) {

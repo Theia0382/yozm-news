@@ -2,6 +2,7 @@ package net.yozmnews;
 
 import java.util.Map;
 
+import net.yozmnews.user.AccountScopeTests;
 import net.yozmnews.user.NoticeScopeTests;
 
 /**
@@ -15,7 +16,9 @@ public final class UserScopedEndpoints {
 
 	/** 등록 — 사용자 데이터 처리기를 더하는 작업이 같은 변경에 격리 시험과 함께 한 줄을 더한다 */
 	public static final Map<String, Class<?>> ENDPOINTS = Map.of("GET /api/notices", NoticeScopeTests.class,
-			"GET /api/notices/unread-count", NoticeScopeTests.class, "POST /api/notices/read", NoticeScopeTests.class);
+			"GET /api/notices/unread-count", NoticeScopeTests.class, "POST /api/notices/read", NoticeScopeTests.class,
+			"PUT /api/account/password", AccountScopeTests.class, "POST /api/account/recovery-code",
+			AccountScopeTests.class);
 
 	private UserScopedEndpoints() {
 	}

@@ -154,7 +154,10 @@ class SessionControllerTests {
 	void waitingRefusesEvenTheRightPassword() throws Exception {
 		account("dave@example.com", AccountRole.USER);
 		// 연속 실패 10회 — 대기는 1초 × 2^6 = 64초다
-		this.jdbc.sql("insert into login_failures (email_digest, failures, last_failed_at) values (:digest, 10, :at)")
+		this.jdbc.sql("""
+				insert into login_failures (attempt, email_digest, failures, last_failed_at)
+				values ('SIGN_IN', :digest, 10, :at)
+				""")
 			.param("digest", EmailDigest.of("dave@example.com").value())
 			.param("at", Timestamp.from(Instant.now()))
 			.update();

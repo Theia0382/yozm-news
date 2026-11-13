@@ -8,6 +8,9 @@ package net.yozmnews.user.domain.notice;
 public enum NoticeKind {
 
 	/** 운영자 계정이 받는 피드 상태 변화 — 안 읽은 알림 하나에 모은다 */
-	FEED_STATUS
+	FEED_STATUS,
+
+	/** 비밀번호가 바뀌었다 — 바뀔 때마다 하나 */
+	PASSWORD_CHANGED
 
 }

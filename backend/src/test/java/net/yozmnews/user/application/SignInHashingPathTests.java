@@ -25,6 +25,7 @@ import net.yozmnews.user.domain.credential.PasswordCredentialRepository;
 import net.yozmnews.user.domain.throttle.EmailDigest;
 import net.yozmnews.user.domain.throttle.FailureRecord;
 import net.yozmnews.user.domain.throttle.LoginFailures;
+import net.yozmnews.user.domain.throttle.ThrottledAttempt;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -46,10 +47,11 @@ class SignInHashingPathTests {
 
 	private final PasswordHashing hashing = spy(new PasswordHashing());
 
-	private final SignIn signIn = new SignIn(this.accounts, this.credentials, this.hashing, this.failures);
+	private final SignIn signIn = new SignIn(this.accounts, this.credentials, this.hashing,
+			new FailureThrottle(this.failures));
 
 	SignInHashingPathTests() {
-		when(this.failures.lock(any())).thenReturn(FailureRecord.NONE);
+		when(this.failures.lock(any(), any())).thenReturn(FailureRecord.NONE);
 		Account account = Account.create(EmailAddress.parse("alice@example.com").orElseThrow(), new DisplayName("앨리스"),
 				AccountRole.USER, NOW);
 		ReflectionTestUtils.setField(account, "id", 7L);
@@ -101,7 +103,7 @@ class SignInHashingPathTests {
 
 		verify(this.hashing, times(1)).matchesNobody(anyString());
 		// 이메일로 읽을 수 없어도 앞뒤 공백을 지운 소문자로 실패 기록을 센다
-		verify(this.failures).lock(EmailDigest.of("not an email"));
+		verify(this.failures).lock(ThrottledAttempt.SIGN_IN, EmailDigest.of("not an email"));
 	}
 
 	@Test
@@ -117,8 +119,8 @@ class SignInHashingPathTests {
 	void rightPasswordSignsIn() {
 		assertThat(this.signIn.attempt(" Alice@Example.com ", "correct horse", NOW))
 			.isEqualTo(new SignInOutcome.SignedIn(new UserId(7)));
-		verify(this.failures).lock(EmailDigest.of("alice@example.com"));
-		verify(this.failures).forget(EmailDigest.of("alice@example.com"));
+		verify(this.failures).lock(ThrottledAttempt.SIGN_IN, EmailDigest.of("alice@example.com"));
+		verify(this.failures).forget(ThrottledAttempt.SIGN_IN, EmailDigest.of("alice@example.com"));
 	}
 
 }

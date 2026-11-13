@@ -25,6 +25,8 @@ import net.yozmnews.user.domain.notice.Notice;
 import net.yozmnews.user.domain.notice.NoticeKind;
 import net.yozmnews.user.domain.notice.NoticeRecipients;
 import net.yozmnews.user.domain.notice.NoticeRepository;
+import net.yozmnews.user.domain.notice.PasswordChangeMethod;
+import net.yozmnews.user.domain.notice.PasswordChangedContent;
 import net.yozmnews.user.domain.notice.SeenNotice;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -100,6 +102,25 @@ class JdbcNoticeRepositoryTests {
 				{"feeds": [{"feedId": 11, "sourceName": "알림일보", "section": "정치", "firstFrom": "ACTIVE",
 				  "lastTo": "DEGRADED", "firstAt": "2026-11-13T00:00:00Z", "lastAt": "2026-11-13T00:00:00Z",
 				  "changes": 1}]}
+				""", this.jdbc.sql("select content::text from user_notices where id = :id")
+			.param("id", older)
+			.query(String.class)
+			.single(), JSONCompareMode.STRICT);
+	}
+
+	@Test
+	void passwordNoticesAreStoredOnePerChange() throws Exception {
+		UserId alice = account("alice@example.com", AccountRole.USER);
+		PasswordChangedContent first = new PasswordChangedContent(PasswordChangeMethod.CHANGE, T1);
+		PasswordChangedContent second = new PasswordChangedContent(PasswordChangeMethod.RECOVERY, T2);
+		long older = this.notices.create(alice, first, T1);
+		long newer = this.notices.create(alice, second, T2);
+
+		assertThat(this.notices.page(alice, null, 50)).containsExactly(
+				new Notice(newer, NoticeKind.PASSWORD_CHANGED, second, 1, T2, T2, null),
+				new Notice(older, NoticeKind.PASSWORD_CHANGED, first, 1, T1, T1, null));
+		JSONAssert.assertEquals("""
+				{"method": "CHANGE", "changedAt": "2026-11-13T00:00:00Z"}
 				""", this.jdbc.sql("select content::text from user_notices where id = :id")
 			.param("id", older)
 			.query(String.class)

@@ -5,6 +5,7 @@ import java.time.Instant;
 import net.yozmnews.user.domain.notice.FeedStatusContent;
 import net.yozmnews.user.domain.notice.Notice;
 import net.yozmnews.user.domain.notice.NoticeKind;
+import net.yozmnews.user.domain.notice.PasswordChangedContent;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -17,16 +18,18 @@ import org.jspecify.annotations.Nullable;
  * @param updatedAt 내용을 마지막으로 고친 시각
  * @param read 읽었는가
  * @param feedStatus 피드 상태 알림의 본문 — 종류가 {@code FEED_STATUS} 일 때만
+ * @param passwordChanged 비밀번호 알림의 본문 — 종류가 {@code PASSWORD_CHANGED} 일 때만
  */
 record NoticeResponse(long id, NoticeKind kind, int revision, Instant createdAt, Instant updatedAt, boolean read,
-		@Nullable FeedStatusNoticeResponse feedStatus) {
+		@Nullable FeedStatusNoticeResponse feedStatus, @Nullable PasswordChangedNoticeResponse passwordChanged) {
 
 	static NoticeResponse of(Notice notice) {
-		FeedStatusNoticeResponse feedStatus = switch (notice.content()) {
-			case FeedStatusContent content -> FeedStatusNoticeResponse.of(content);
+		return switch (notice.content()) {
+			case FeedStatusContent content -> new NoticeResponse(notice.id(), notice.kind(), notice.revision(),
+					notice.createdAt(), notice.updatedAt(), notice.read(), FeedStatusNoticeResponse.of(content), null);
+			case PasswordChangedContent content -> new NoticeResponse(notice.id(), notice.kind(), notice.revision(),
+					notice.createdAt(), notice.updatedAt(), notice.read(), null, PasswordChangedNoticeResponse.of(content));
 		};
-		return new NoticeResponse(notice.id(), notice.kind(), notice.revision(), notice.createdAt(), notice.updatedAt(),
-				notice.read(), feedStatus);
 	}
 
 }

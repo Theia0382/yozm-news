@@ -17,6 +17,8 @@ import net.yozmnews.user.domain.notice.Notice;
 import net.yozmnews.user.domain.notice.NoticeContent;
 import net.yozmnews.user.domain.notice.NoticeKind;
 import net.yozmnews.user.domain.notice.NoticeRepository;
+import net.yozmnews.user.domain.notice.PasswordChangeMethod;
+import net.yozmnews.user.domain.notice.PasswordChangedContent;
 import net.yozmnews.user.domain.notice.SeenNotice;
 import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -149,6 +151,7 @@ class JdbcNoticeRepository implements NoticeRepository {
 		NoticeKind kind = NoticeKind.valueOf(rs.getString("kind"));
 		NoticeContent content = switch (kind) {
 			case FEED_STATUS -> JSON.readValue(rs.getString("content"), StoredFeedStatus.class).content();
+			case PASSWORD_CHANGED -> JSON.readValue(rs.getString("content"), StoredPasswordChanged.class).content();
 		};
 		return new Notice(rs.getLong("id"), kind, content, rs.getInt("revision"),
 				rs.getObject("created_at", OffsetDateTime.class).toInstant(),
@@ -158,6 +161,8 @@ class JdbcNoticeRepository implements NoticeRepository {
 	private static String json(NoticeContent content) {
 		return switch (content) {
 			case FeedStatusContent feedStatus -> JSON.writeValueAsString(StoredFeedStatus.of(feedStatus));
+			case PasswordChangedContent passwordChanged ->
+				JSON.writeValueAsString(StoredPasswordChanged.of(passwordChanged));
 		};
 	}
 
@@ -188,6 +193,19 @@ class JdbcNoticeRepository implements NoticeRepository {
 						entry.firstFrom(), entry.lastTo(), Instant.parse(entry.firstAt()), Instant.parse(entry.lastAt()),
 						entry.changes()))
 				.toList());
+		}
+
+	}
+
+	/** 비밀번호 알림 내용의 저장 모양 — {@code {"method":…,"changedAt":…}}, 시각은 ISO 8601 문자열 */
+	private record StoredPasswordChanged(PasswordChangeMethod method, String changedAt) {
+
+		static StoredPasswordChanged of(PasswordChangedContent content) {
+			return new StoredPasswordChanged(content.method(), content.changedAt().toString());
+		}
+
+		PasswordChangedContent content() {
+			return new PasswordChangedContent(this.method, Instant.parse(this.changedAt));
 		}
 
 	}

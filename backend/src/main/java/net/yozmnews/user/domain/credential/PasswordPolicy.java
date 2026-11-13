@@ -41,6 +41,13 @@ public final class PasswordPolicy {
 		return Optional.empty();
 	}
 
+	/**
+	 * 대조할 만한 비밀번호인가 — 최대 길이를 넘는 비밀번호는 해시와 대조하지 않고 실패로 센다(해시 비용의 상한, user-R17)
+	 */
+	public static boolean comparable(String normalized) {
+		return codePoints(normalized) <= MAX_CODE_POINTS;
+	}
+
 	private static int codePoints(String normalized) {
 		return normalized.codePointCount(0, normalized.length());
 	}
