@@ -134,6 +134,8 @@ class StorylineQueryFlowTests {
 	void startFromTheFixture() {
 		clear();
 		new BigStorylineCriteriaSeeding(this.criteria, this.transaction, InstantSource.system()).seedIfAbsent();
+		// 이 픽스처의 기간에는 소스 넷(1 · 2 · 3 · 5)에 기사가 있다 — 기준 2.00 이면 중요도 합 8 부터 크다
+		this.administration.change(new BigDecimal("2.00"), ChangeActor.OPERATOR);
 		// 잠잠 7일 · 끝남 30일, 지금은 11-10
 		this.directory = new StorylineDirectoryService(this.storylines, this.memberships, this.relations, this.criteria,
 				this.events,
@@ -192,16 +194,21 @@ class StorylineQueryFlowTests {
 	void aStorylineIsBigByTheTallyOfAllItsEventsInThePeriod() {
 		List<BigStoryline> big = this.directory.bigStorylines(PERIOD);
 
-		// 사건 A · B 는 따로 세면 소스 둘씩이다 — 묶음으로 세어야 소스 셋에 이른다
+		// wide 는 사건 A · B 의 중요도를 한데 더한다 — (5 + 5 + 2) ÷ (소스 4 × 1일) = 3.00. 사건 A 만으로는 2.50, B 만으로는 0.50 이다
 		assertThat(big).extracting(storyline -> storyline.storyline().id().value()).containsExactly(this.wide);
 		EventTally tally = big.getFirst().tally();
 		assertThat(tally.articles()).isEqualTo(4);
 		assertThat(tally.sources()).isEqualTo(3);
 		assertThat(tally.importance()).isEqualByComparingTo("4");
-		// 대조 — 사건 A 의 기사만 드는 기간이면 소스 둘이라 크지 않다
+		assertThat(tally.importanceSum()).isEqualByComparingTo("12");
+		assertThat(big.getFirst().intensity()).hasToString("3.00");
+		// 대조 — narrow 는 5 ÷ 4 = 1.25 라 기준 2.00 에 이르지 못한다. 분모의 소스에는 소속 없는 사건의 소스(5)도 든다
+		// 대조 — 기간이 반나절이면 같은 기사로 보도 강도가 두 배다: 12 ÷ (4 × 0.5일) = 6.00
 		assertThat(this.directory.bigStorylines(new EventPeriod(Instant.parse("2026-11-05T00:00:00Z"),
-				Instant.parse("2026-11-05T02:30:00Z"))))
-			.isEmpty();
+				Instant.parse("2026-11-05T12:00:00Z"))))
+			.extracting(BigStoryline::intensity)
+			.extracting(BigDecimal::toPlainString)
+			.containsExactly("6.00", "2.50");
 	}
 
 	@Test
@@ -212,6 +219,7 @@ class StorylineQueryFlowTests {
 		assertThat(first.storylines()).extracting(summary -> summary.storyline().id().value()).containsExactly(this.narrow);
 		StorylineSummary narrowRow = first.storylines().getFirst();
 		assertThat(narrowRow.tally()).isEqualTo(new EventTally(1, 1, new BigDecimal("5.0"), new BigDecimal("5.0")));
+		assertThat(narrowRow.intensity()).hasToString("1.25");
 		assertThat(narrowRow.big()).isFalse();
 		assertThat(narrowRow.storyline().eventCount()).isEqualTo(2);
 		assertThat(narrowRow.storyline().representativeEvent()).isEqualTo(new EventId(this.eventC));
@@ -220,6 +228,7 @@ class StorylineQueryFlowTests {
 
 		StorylinePage second = this.directory.list(PERIOD, first.next(), 1);
 		assertThat(second.storylines()).extracting(summary -> summary.storyline().id().value()).containsExactly(this.wide);
+		assertThat(second.storylines().getFirst().intensity()).hasToString("3.00");
 		assertThat(second.storylines().getFirst().big()).isTrue();
 		assertThat(second.next()).isNull();
 
@@ -346,12 +355,20 @@ class StorylineQueryFlowTests {
 
 		List<BigStoryline> big = this.directory.bigStorylines(PERIOD);
 
-		// wide 는 사건 C 의 기사까지 센다 — 기사 다섯 · 소스 셋 · 중요도 (5 + 5 + 2 + 5) ÷ 4. narrow 는 그대로 소스 하나다
+		// wide 는 사건 C 의 기사까지 센다 — 기사 다섯 · 소스 셋 · 중요도 합 17 · 보도 강도 17 ÷ 4 = 4.25. narrow 는 그대로 1.25 다
 		assertThat(big).extracting(storyline -> storyline.storyline().id().value()).containsExactly(this.wide);
 		EventTally tally = big.getFirst().tally();
 		assertThat(tally.articles()).isEqualTo(5);
 		assertThat(tally.sources()).isEqualTo(3);
 		assertThat(tally.importance()).isEqualByComparingTo("4.25");
+		assertThat(big.getFirst().intensity()).hasToString("4.25");
+		// 기준이 하위에도 닿으면 상위와 하위가 함께 나온다 — 상위의 보도 강도는 하위보다 낮을 수 없어 앞선다
+		List<BigStoryline> both = this.administration.preview(new BigStorylineCriteria(new BigDecimal("1.00")), PERIOD);
+		assertThat(both).extracting(storyline -> storyline.storyline().id().value()).containsExactly(this.wide, this.narrow);
+		assertThat(both.getLast().storyline().parent()).isEqualTo(new StorylineId(this.wide));
+		// 사건 C 가 상위에도 직접 들어도 상위의 합은 한 번만 센다
+		member(this.wide, this.eventC);
+		assertThat(this.directory.bigStorylines(PERIOD).getFirst().intensity()).hasToString("4.25");
 	}
 
 	@Test
@@ -443,17 +460,19 @@ class StorylineQueryFlowTests {
 
 	@Test
 	void aChangedCriterionAppliesToTheNextQueryAndThePreviewWritesNothing() {
-		this.administration.change(4, new BigDecimal("3.00"), ChangeActor.OPERATOR);
+		// wide 3.00 · narrow 1.25 — 기준 20.00 이면 아무것도 크지 않다
+		this.administration.change(new BigDecimal("20.00"), ChangeActor.OPERATOR);
 
 		assertThat(this.directory.bigStorylines(PERIOD)).isEmpty();
 		assertThat(this.directory.list(PERIOD, null, 10).storylines()).extracting(StorylineSummary::big)
 			.containsExactly(false, false);
-		// 둘 다 큰 제안 기준 — 소스 셋인 wide 가 소스 하나인 narrow 보다 앞선다(마지막 기사 시각은 narrow 가 늦다)
-		assertThat(this.administration.preview(new BigStorylineCriteria(1, new BigDecimal("1.00")), PERIOD))
+		// 둘 다 큰 제안 기준 — 보도 강도가 높은 wide 가 narrow 보다 앞선다(마지막 기사 시각은 narrow 가 늦다)
+		assertThat(this.administration.preview(new BigStorylineCriteria(new BigDecimal("1.00")), PERIOD))
 			.extracting(big -> big.storyline().id().value())
 			.containsExactly(this.wide, this.narrow);
-		assertThat(this.administration.criteria()).isEqualTo(new BigStorylineCriteria(4, new BigDecimal("3.00")));
-		assertThat(this.administration.changes()).hasSize(2);
+		assertThat(this.administration.criteria()).isEqualTo(new BigStorylineCriteria(new BigDecimal("20.00")));
+		// 처음 값 · 픽스처의 2.00 · 이 시험의 20.00
+		assertThat(this.administration.changes()).hasSize(3);
 	}
 
 	private void clear() {

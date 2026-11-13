@@ -51,7 +51,7 @@ public interface StorylineDirectory {
 	StorylinePage list(EventPeriod period, @Nullable StorylineCursor after, int size);
 
 	/**
-	 * 기간의 스토리라인 가운데 큰 스토리라인 — 지금 기준으로 판정한다(storyline-R19). 소스 수 내림차순, 중요도 평균 내림차순, 스토리라인 ID 순.
+	 * 기간의 스토리라인 가운데 큰 스토리라인 — 지금 기준으로 판정한다(storyline-R19). 보도 강도 내림차순, 스토리라인 ID 순.
 	 * 포함의 상위와 하위가 함께 나올 수 있다 — 무엇을 쓸지는 부르는 쪽이 {@link StorylineView#parent()} 로 정한다.
 	 * @throws IllegalStateException 큰 판정 기준의 처음 값을 적재하기 전일 때
 	 */

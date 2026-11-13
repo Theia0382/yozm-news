@@ -4346,15 +4346,11 @@
       "BigStorylineCriteriaChangeRequest" : {
         "type" : "object",
         "properties" : {
-          "minImportance" : {
+          "minIntensity" : {
             "type" : "number"
-          },
-          "minSources" : {
-            "type" : "integer",
-            "format" : "int32"
           }
         },
-        "required" : [ "minImportance", "minSources" ]
+        "required" : [ "minIntensity" ]
       },
       "BigStorylineCriteriaChangeResponse" : {
         "type" : "object",
@@ -4403,15 +4399,11 @@
       "BigStorylineCriteriaResponse" : {
         "type" : "object",
         "properties" : {
-          "minImportance" : {
+          "minIntensity" : {
             "type" : "number"
-          },
-          "minSources" : {
-            "type" : "integer",
-            "format" : "int32"
           }
         },
-        "required" : [ "minImportance", "minSources" ]
+        "required" : [ "minIntensity" ]
       },
       "BigStorylineCriteriaStatusResponse" : {
         "type" : "object",
@@ -4456,12 +4448,8 @@
           "from" : {
             "type" : "string"
           },
-          "minImportance" : {
+          "minIntensity" : {
             "type" : "number"
-          },
-          "minSources" : {
-            "type" : "integer",
-            "format" : "int32"
           },
           "to" : {
             "type" : "string"
@@ -4470,7 +4458,7 @@
             "type" : "string"
           }
         },
-        "required" : [ "from", "minImportance", "minSources", "to", "zone" ]
+        "required" : [ "from", "minIntensity", "to", "zone" ]
       },
       "BigStorylinePreviewResponse" : {
         "type" : "object",
@@ -4518,6 +4506,9 @@
           "importance" : {
             "type" : [ "number", "null" ]
           },
+          "intensity" : {
+            "type" : "number"
+          },
           "lastArticleAt" : {
             "type" : "string",
             "format" : "date-time"
@@ -4546,7 +4537,7 @@
             "enum" : [ "ACTIVE", "QUIET", "ENDED" ]
           }
         },
-        "required" : [ "articleCount", "eventCount", "firstArticleAt", "id", "importance", "lastArticleAt", "periodArticles", "periodSources", "representative", "representativeArticleId", "state" ]
+        "required" : [ "articleCount", "eventCount", "firstArticleAt", "id", "importance", "intensity", "lastArticleAt", "periodArticles", "periodSources", "representative", "representativeArticleId", "state" ]
       },
       "CategoryCoverage" : {
         "type" : "object",
@@ -7147,6 +7138,9 @@
           "importance" : {
             "type" : [ "number", "null" ]
           },
+          "intensity" : {
+            "type" : "number"
+          },
           "lastArticleAt" : {
             "type" : "string",
             "format" : "date-time"
@@ -7179,7 +7173,7 @@
             "enum" : [ "ACTIVE", "QUIET", "ENDED" ]
           }
         },
-        "required" : [ "articleCount", "big", "eventCount", "firstArticleAt", "id", "importance", "lastArticleAt", "parentId", "periodArticles", "periodSources", "representative", "representativeArticleId", "state" ]
+        "required" : [ "articleCount", "big", "eventCount", "firstArticleAt", "id", "importance", "intensity", "lastArticleAt", "parentId", "periodArticles", "periodSources", "representative", "representativeArticleId", "state" ]
       },
       "StrandedPublicationListResponse" : {
         "type" : "object",

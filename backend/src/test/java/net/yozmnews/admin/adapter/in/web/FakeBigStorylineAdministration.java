@@ -45,8 +45,8 @@ class FakeBigStorylineAdministration implements BigStorylineAdministration {
 	}
 
 	@Override
-	public BigStorylineCriteriaChangeResult change(int minSources, BigDecimal minImportance, ChangeActor actor) {
-		this.calls.add("change " + minSources + " " + minImportance.toPlainString() + " " + actor);
+	public BigStorylineCriteriaChangeResult change(BigDecimal minIntensity, ChangeActor actor) {
+		this.calls.add("change " + minIntensity.toPlainString() + " " + actor);
 		return FakeResults.given(this.change);
 	}
 
@@ -58,8 +58,7 @@ class FakeBigStorylineAdministration implements BigStorylineAdministration {
 
 	@Override
 	public List<BigStoryline> preview(BigStorylineCriteria proposed, EventPeriod period) {
-		this.calls.add("preview " + proposed.minSources() + " " + proposed.minImportance().toPlainString() + " "
-				+ period.from() + " ~ " + period.to());
+		this.calls.add("preview " + proposed.minIntensity().toPlainString() + " " + period.from() + " ~ " + period.to());
 		return this.preview;
 	}
 

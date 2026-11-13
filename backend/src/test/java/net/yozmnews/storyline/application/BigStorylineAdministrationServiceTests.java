@@ -45,7 +45,7 @@ class BigStorylineAdministrationServiceTests {
 
 	private static final Instant CHANGED = Instant.parse("2026-11-07T01:00:00Z");
 
-	private static final BigStorylineCriteria INITIAL = new BigStorylineCriteria(3, new BigDecimal("3.00"));
+	private static final BigStorylineCriteria INITIAL = new BigStorylineCriteria(new BigDecimal("15.00"));
 
 	@Autowired
 	BigStorylineCriteriaRepository criteria;
@@ -87,9 +87,9 @@ class BigStorylineAdministrationServiceTests {
 	void changingRecordsThePreviousValueAndTheOperator() {
 		this.seeding.seedIfAbsent();
 		BigStorylineAdministrationService service = service(this.criteria);
-		BigStorylineCriteria changed = new BigStorylineCriteria(4, new BigDecimal("3.50"));
+		BigStorylineCriteria changed = new BigStorylineCriteria(new BigDecimal("20.00"));
 
-		assertThat(service.change(4, new BigDecimal("3.5"), ChangeActor.OPERATOR))
+		assertThat(service.change(new BigDecimal("20"), ChangeActor.OPERATOR))
 			.isEqualTo(new BigStorylineCriteriaChangeResult.Changed(INITIAL, changed));
 		assertThat(service.criteria()).isEqualTo(changed);
 		assertThat(service.changes()).containsExactly(
@@ -102,7 +102,7 @@ class BigStorylineAdministrationServiceTests {
 		this.seeding.seedIfAbsent();
 		BigStorylineAdministrationService service = service(this.criteria);
 
-		assertThat(service.change(3, new BigDecimal("3"), ChangeActor.OPERATOR))
+		assertThat(service.change(new BigDecimal("15"), ChangeActor.OPERATOR))
 			.isEqualTo(new BigStorylineCriteriaChangeResult.Unchanged(INITIAL));
 		assertThat(service.changes()).hasSize(1);
 	}
@@ -112,10 +112,10 @@ class BigStorylineAdministrationServiceTests {
 		this.seeding.seedIfAbsent();
 		BigStorylineAdministrationService service = service(this.criteria);
 
-		for (BigStorylineCriteriaChangeResult result : List.of(service.change(0, new BigDecimal("3.0"), ChangeActor.OPERATOR),
-				service.change(3, new BigDecimal("0.99"), ChangeActor.OPERATOR),
-				service.change(3, new BigDecimal("5.01"), ChangeActor.OPERATOR),
-				service.change(3, new BigDecimal("3.001"), ChangeActor.OPERATOR))) {
+		for (BigStorylineCriteriaChangeResult result : List.of(service.change(new BigDecimal("0"), ChangeActor.OPERATOR),
+				service.change(new BigDecimal("-0.01"), ChangeActor.OPERATOR),
+				service.change(new BigDecimal("10000"), ChangeActor.OPERATOR),
+				service.change(new BigDecimal("15.001"), ChangeActor.OPERATOR))) {
 			assertThat(result).isEqualTo(new BigStorylineCriteriaChangeResult.OutOfRange());
 		}
 		assertThat(service.criteria()).isEqualTo(INITIAL);
@@ -128,7 +128,7 @@ class BigStorylineAdministrationServiceTests {
 
 		assertThatIllegalStateException().isThrownBy(service::criteria);
 		assertThatIllegalStateException()
-			.isThrownBy(() -> service.change(4, new BigDecimal("3.50"), ChangeActor.OPERATOR));
+			.isThrownBy(() -> service.change(new BigDecimal("20.00"), ChangeActor.OPERATOR));
 		assertThat(service.changes()).isEmpty();
 	}
 
@@ -140,12 +140,12 @@ class BigStorylineAdministrationServiceTests {
 		BigStorylineAdministrationService pausing = service(new Pausing(this.criteria, paused, resume));
 
 		CompletableFuture<BigStorylineCriteriaChangeResult> first = CompletableFuture
-			.supplyAsync(() -> pausing.change(4, new BigDecimal("3.50"), ChangeActor.OPERATOR));
+			.supplyAsync(() -> pausing.change(new BigDecimal("20.00"), ChangeActor.OPERATOR));
 		CompletableFuture<BigStorylineCriteriaChangeResult> second;
 		try {
 			assertThat(paused.await(10, TimeUnit.SECONDS)).isTrue();
 			second = CompletableFuture
-				.supplyAsync(() -> service(this.criteria).change(5, new BigDecimal("4.00"), ChangeActor.OPERATOR));
+				.supplyAsync(() -> service(this.criteria).change(new BigDecimal("25.00"), ChangeActor.OPERATOR));
 			Thread.sleep(500);
 			assertThat(second).as("첫 변경이 기준 행을 잡은 동안 둘째 변경이 기다린다").isNotDone();
 			resume.countDown();
@@ -156,8 +156,8 @@ class BigStorylineAdministrationServiceTests {
 			resume.countDown();
 		}
 
-		BigStorylineCriteria afterFirst = new BigStorylineCriteria(4, new BigDecimal("3.50"));
-		BigStorylineCriteria afterSecond = new BigStorylineCriteria(5, new BigDecimal("4.00"));
+		BigStorylineCriteria afterFirst = new BigStorylineCriteria(new BigDecimal("20.00"));
+		BigStorylineCriteria afterSecond = new BigStorylineCriteria(new BigDecimal("25.00"));
 		assertThat(second.get()).isEqualTo(new BigStorylineCriteriaChangeResult.Changed(afterFirst, afterSecond));
 		assertThat(this.criteria.changes()).extracting(BigStorylineCriteriaChange::previous)
 			.containsExactly(afterFirst, INITIAL, null);

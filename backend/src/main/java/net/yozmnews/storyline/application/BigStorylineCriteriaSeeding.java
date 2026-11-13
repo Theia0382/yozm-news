@@ -52,8 +52,7 @@ class BigStorylineCriteriaSeeding implements SmartInitializingSingleton {
 		BigStorylineCriteria initial = BigStorylineCriteria.DEFAULT;
 		Boolean seeded = this.transaction.execute(status -> this.criteria.seedIfAbsent(initial, this.clock.instant()));
 		if (Boolean.TRUE.equals(seeded)) {
-			logger.info("큰 판정 기준의 처음 값을 적재했다 — 소스 {} · 중요도 {}", initial.minSources(),
-					initial.minImportance().toPlainString());
+			logger.info("큰 판정 기준의 처음 값을 적재했다 — 보도 강도 {}", initial.minIntensity().toPlainString());
 			return true;
 		}
 		return false;

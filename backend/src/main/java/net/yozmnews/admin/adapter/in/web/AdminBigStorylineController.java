@@ -83,7 +83,7 @@ class AdminBigStorylineController {
 			content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
 					schema = @Schema(implementation = ApiProblem.class)))
 	BigStorylinePreviewResponse preview(@Valid @RequestBody BigStorylinePreviewRequest body) {
-		BigStorylineCriteria proposed = BigStorylineCriteria.of(body.minSources(), body.minImportance())
+		BigStorylineCriteria proposed = BigStorylineCriteria.of(body.minIntensity())
 			.orElseThrow(BigStorylineCriteriaProblem::outOfRange);
 		EventPeriod period = AdminPeriods.events(body.from(), body.to(), body.zone());
 		BigStorylineCriteria current = this.administration.criteria();
@@ -103,7 +103,7 @@ class AdminBigStorylineController {
 					schema = @Schema(implementation = ApiProblem.class)))
 	BigStorylineCriteriaChangeResponse change(@Valid @RequestBody BigStorylineCriteriaChangeRequest body) {
 		return BigStorylineCriteriaChangeResponse
-			.of(this.administration.change(body.minSources(), body.minImportance(), ChangeActor.OPERATOR));
+			.of(this.administration.change(body.minIntensity(), ChangeActor.OPERATOR));
 	}
 
 	/** 큰 스토리라인마다 대표 사건의 대표 기사와 그 정보 — 대표 조회 · 기사 정보 조회 한 번씩 */

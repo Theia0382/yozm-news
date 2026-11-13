@@ -24,7 +24,7 @@ public interface BigStorylineAdministration {
 	 * @return 범위 밖이면 {@code OutOfRange}, 지금 값과 같으면 {@code Unchanged} — 둘 다 아무것도 쓰지 않는다
 	 * @throws IllegalStateException 범위 안의 값인데 처음 값을 적재하기 전일 때
 	 */
-	BigStorylineCriteriaChangeResult change(int minSources, BigDecimal minImportance, ChangeActor actor);
+	BigStorylineCriteriaChangeResult change(BigDecimal minIntensity, ChangeActor actor);
 
 	/** 이력 — 최근 것부터(같은 시각이면 나중에 쓴 것부터) */
 	List<BigStorylineCriteriaChange> changes();

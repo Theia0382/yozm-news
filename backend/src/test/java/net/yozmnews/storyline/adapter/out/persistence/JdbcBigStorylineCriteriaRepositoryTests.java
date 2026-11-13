@@ -45,10 +45,10 @@ class JdbcBigStorylineCriteriaRepositoryTests {
 
 	@Test
 	void seedsOnceWithOneSystemHistoryRow() {
-		BigStorylineCriteria initial = new BigStorylineCriteria(3, new BigDecimal("3.00"));
+		BigStorylineCriteria initial = new BigStorylineCriteria(new BigDecimal("15.00"));
 
 		assertThat(this.repository.seedIfAbsent(initial, SEEDED)).isTrue();
-		assertThat(this.repository.seedIfAbsent(new BigStorylineCriteria(9, new BigDecimal("4.00")), SEEDED.plusSeconds(1)))
+		assertThat(this.repository.seedIfAbsent(new BigStorylineCriteria(new BigDecimal("45.00")), SEEDED.plusSeconds(1)))
 			.isFalse();
 
 		assertThat(this.repository.current()).contains(initial);
@@ -57,20 +57,20 @@ class JdbcBigStorylineCriteriaRepositoryTests {
 	}
 
 	@Test
-	void theImportanceRoundTripsAtTwoDecimals() {
-		this.repository.seedIfAbsent(new BigStorylineCriteria(3, new BigDecimal("3.5")), SEEDED);
+	void theIntensityRoundTripsAtTwoDecimals() {
+		this.repository.seedIfAbsent(new BigStorylineCriteria(new BigDecimal("17.5")), SEEDED);
 
 		BigStorylineCriteria read = this.repository.current().orElseThrow();
-		assertThat(read.minImportance()).hasToString("3.50");
-		assertThat(this.jdbc.sql("select min_importance::text from storyline_big_criteria").query(String.class).single())
-			.isEqualTo("3.50");
+		assertThat(read.minIntensity()).hasToString("17.50");
+		assertThat(this.jdbc.sql("select min_intensity::text from storyline_big_criteria").query(String.class).single())
+			.isEqualTo("17.50");
 	}
 
 	@Test
 	void changingWritesTheValueAndAHistoryRowListedNewestFirst() {
-		BigStorylineCriteria initial = new BigStorylineCriteria(3, new BigDecimal("3.00"));
-		BigStorylineCriteria first = new BigStorylineCriteria(4, new BigDecimal("3.50"));
-		BigStorylineCriteria second = new BigStorylineCriteria(5, new BigDecimal("4.00"));
+		BigStorylineCriteria initial = new BigStorylineCriteria(new BigDecimal("15.00"));
+		BigStorylineCriteria first = new BigStorylineCriteria(new BigDecimal("20.00"));
+		BigStorylineCriteria second = new BigStorylineCriteria(new BigDecimal("25.00"));
 		this.repository.seedIfAbsent(initial, SEEDED);
 		// 둘째 변경을 첫째와 같은 시각에 쓴다 — 나중에 넣은 것이 먼저다
 		this.repository.change(this.repository.lockCurrent(), first, ChangeActor.OPERATOR, SEEDED.plusSeconds(60));

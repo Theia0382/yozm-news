@@ -31,6 +31,7 @@ import net.yozmnews.storyline.StorylineRelationView;
 import net.yozmnews.storyline.StorylineSummary;
 import net.yozmnews.storyline.StorylineView;
 import net.yozmnews.storyline.UnlinkedEvents;
+import net.yozmnews.storyline.domain.big.BigBasis;
 import net.yozmnews.storyline.domain.big.BigStorylineCriteriaRepository;
 import net.yozmnews.storyline.domain.big.BigStorylineRule;
 import net.yozmnews.storyline.domain.relation.RelationGraph;
@@ -149,12 +150,14 @@ class StorylineDirectoryService implements StorylineDirectory {
 		}
 		ClosedMembers closure = closure(page.stream().map(StoredStoryline::id).toList(), graph);
 		Map<Long, EventTally> tallies = tallied(page, closure, period);
+		BigBasis basis = basis(period);
 		BigStorylineCriteria current = currentCriteria();
 		List<StorylineView> views = views(page, graph, closure);
 		List<StorylineSummary> summaries = new ArrayList<>();
 		for (StorylineView view : views) {
 			EventTally tally = tallies.get(view.id().value());
-			summaries.add(new StorylineSummary(view, tally, BigStorylineRule.isBig(tally, current)));
+			summaries.add(new StorylineSummary(view, tally, BigStorylineRule.intensity(tally, basis),
+					BigStorylineRule.isBig(tally, basis, current)));
 		}
 		StoredStoryline last = page.getLast();
 		StorylineCursor next = rows.size() > size ? new StorylineCursor(last.lastArticleAt(), new StorylineId(last.id()))
@@ -200,17 +203,26 @@ class StorylineDirectoryService implements StorylineDirectory {
 		Objects.requireNonNull(criteria, "criteria");
 		RelationGraph graph = graph();
 		List<StoredStoryline> rows = this.storylines.byIds(storylinesIn(period, graph));
+		if (rows.isEmpty()) {
+			return List.of();
+		}
 		ClosedMembers closure = closure(rows.stream().map(StoredStoryline::id).toList(), graph);
 		Map<Long, EventTally> tallies = tallied(rows, closure, period);
+		BigBasis basis = basis(period);
 		List<BigStoryline> big = new ArrayList<>();
 		for (StorylineView view : views(rows, graph, closure)) {
 			EventTally tally = tallies.get(view.id().value());
-			if (BigStorylineRule.isBig(tally, criteria)) {
-				big.add(new BigStoryline(view, tally));
+			if (BigStorylineRule.isBig(tally, basis, criteria)) {
+				big.add(new BigStoryline(view, tally, BigStorylineRule.intensity(tally, basis)));
 			}
 		}
 		big.sort(BigStorylineRule.ORDER);
 		return List.copyOf(big);
+	}
+
+	/** 큰 판정의 분모 — 기간 전체 집계의 소스 수는 {@code event} 가 센다(storyline-R19) */
+	private BigBasis basis(EventPeriod period) {
+		return BigBasis.of(this.events.total(period), period);
 	}
 
 	/**
