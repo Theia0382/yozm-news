@@ -106,6 +106,9 @@ class RelationRoundFlowTests {
 	/** 말 수 조회를 부른 횟수 */
 	private int termCountCalls;
 
+	/** 말 수 조회가 물은 말 — 부른 순서대로 */
+	private final List<List<String>> termCountTerms = new ArrayList<>();
+
 	@BeforeEach
 	@AfterEach
 	void reset() {
@@ -184,6 +187,74 @@ class RelationRoundFlowTests {
 		round(answer(RelationAnswer.NONE, 0.9, 0.9, 0.9, 61)).run();
 		assertThat(this.asked).hasSize(3);
 		assertThat(this.termCountCalls).isEqualTo(2);
+	}
+
+	@Test
+	void scoresFromTheStorylineWithFewerEventsWhicheverOneIsBeingProcessed() {
+		// 코사인 2 ÷ √5 ≈ 0.8944 — 점수 = 0.89 × 0.8944 + 0.11 × 겹침. 겹침이 1 이면 0.906(후보), 1/3 이면 0.833(후보 아님).
+		// 겹침은 판정할 쪽의 핵심 말 가운데 견줄 쪽에도 있는 몫이다 — 말이 하나인 쪽이 판정할 쪽이어야 1 이다
+		long narrow = storyline(new float[] { 1, 0 }, Map.of("금리", 3), event(EARLY, 1), event(EARLY, 1), event(EARLY, 1));
+		long wide = storyline(new float[] { 2, 1 }, Map.of("금리", 4, "물가", 4, "환율", 4), event(EARLY, 1), event(EARLY, 1),
+				event(EARLY, 1), event(EARLY, 1));
+		// 사건이 많은 wide 를 처리한다 — 판정할 쪽은 사건이 적은 상대 narrow 이고, 말 수도 narrow 의 말로 묻는다
+		this.queue.enqueue(wide, NOW);
+
+		round(answer(RelationAnswer.NONE, 0.9, 0.9, 0.9, 62)).run();
+
+		assertThat(this.asked).hasSize(1);
+		assertThat(this.asked.getFirst().first().flowId()).isEqualTo(narrow);
+		assertThat(this.termCountTerms).containsExactly(List.of("금리"));
+	}
+
+	@Test
+	void countsTheTermsOverTheWindowOfTheStorylineWithFewerEvents() {
+		// narrow 는 11-03 하루, wide 는 11-03 ~ 11-05 다. 말 수는 판정할 쪽 narrow 의 구간(앞뒤 14일)으로 묻는다 — 10-20 ~ 11-17.
+		// wide 의 구간으로 물으면 끝이 11-19 다
+		long narrow = storyline(new float[] { 1, 0 }, Map.of("금리", 3), EARLY, EARLY, event(EARLY, 1), event(EARLY, 1),
+				event(EARLY, 1));
+		long wide = storyline(new float[] { 2, 1 }, Map.of("금리", 4, "물가", 4, "환율", 4), EARLY, LATE, event(EARLY, 1),
+				event(EARLY, 1), event(EARLY, 1), event(EARLY, 1));
+		this.queue.enqueue(wide, NOW);
+		List<List<Instant>> windows = new ArrayList<>();
+		// 말마다 수가 다른 조회 — 사건 10건 가운데 금리는 5건, 나머지 말은 1건
+		EventDirectory uneven = new ForwardingEventDirectory(withRepresentatives()) {
+			@Override
+			public EventTermCounts termCounts(Collection<String> terms, Instant from, Instant to) {
+				windows.add(List.of(from, to));
+				Map<String, Long> counts = new HashMap<>();
+				terms.forEach(term -> counts.put(term, term.equals("금리") ? 5L : 1L));
+				return new EventTermCounts(10, counts);
+			}
+		};
+		FlowRelation recording = query -> {
+			this.asked.add(query);
+			return judged(RelationAnswer.NONE, 0.9, 0.9, 0.9, 64);
+		};
+
+		new RelationRound(this.queue, this.relations, this.storylines, uneven, recording, CRITERIA, this.transaction,
+				InstantSource.fixed(NOW))
+			.run();
+
+		// 판정할 쪽의 말은 금리 하나라 무게와 무관하게 겹침 1 — 후보다
+		assertThat(this.asked).hasSize(1);
+		assertThat(this.asked.getFirst().first().flowId()).isEqualTo(narrow);
+		assertThat(windows)
+			.containsExactly(List.of(Instant.parse("2026-10-20T00:00:00Z"), Instant.parse("2026-11-17T00:00:00Z")));
+	}
+
+	@Test
+	void doesNotAskWhenTheStorylineWithFewerEventsHasTermsTheOtherLacks() {
+		// 대조 — 같은 코사인에서 말이 셋인 쪽이 사건이 적다. 판정할 쪽의 말 셋 가운데 하나만 겹쳐 겹침 1/3, 점수 0.833 — 후보가 아니다
+		storyline(new float[] { 2, 1 }, Map.of("금리", 3, "물가", 3, "환율", 3), event(EARLY, 1), event(EARLY, 1),
+				event(EARLY, 1));
+		long many = storyline(new float[] { 1, 0 }, Map.of("금리", 4), event(EARLY, 1), event(EARLY, 1), event(EARLY, 1),
+				event(EARLY, 1));
+		this.queue.enqueue(many, NOW);
+
+		round(answer(RelationAnswer.NONE, 0.9, 0.9, 0.9, 63)).run();
+
+		assertThat(this.asked).isEmpty();
+		assertThat(this.termCountTerms).containsExactly(List.of("금리", "물가", "환율"));
 	}
 
 	@Test
@@ -463,6 +534,7 @@ class RelationRoundFlowTests {
 			@Override
 			public EventTermCounts termCounts(Collection<String> terms, Instant from, Instant to) {
 				RelationRoundFlowTests.this.termCountCalls++;
+				RelationRoundFlowTests.this.termCountTerms.add(terms.stream().sorted().toList());
 				Map<String, Long> none = new HashMap<>();
 				terms.forEach(term -> none.put(term, 0L));
 				return new EventTermCounts(1, none);
@@ -483,6 +555,22 @@ class RelationRoundFlowTests {
 		float[] vector = centroid.equals("[1,0]") ? new float[] { 1, 0 } : new float[] { 0, 1 };
 		long storyline = this.storylines.open(new Representation(MODEL, vector, events.length, Instant.parse(first),
 				Instant.parse(last), Map.of("금리", events.length), events[0]), NOW);
+		long criteriaId = this.linkingCriteria.register(new LinkingCriteria(Duration.ofDays(14), 0.80), NOW);
+		for (long event : events) {
+			this.storylines.addMember(storyline, event,
+					LinkJudgement.judged(LinkedBy.PAIR, new Score(1.0, 1.0, 1.0), criteriaId, NOW));
+		}
+		return storyline;
+	}
+
+	/** 중심과 핵심 말을 정해 스토리라인을 심는다 — 시각은 EARLY ~ LATE */
+	private long storyline(float[] centroid, Map<String, Integer> terms, long... events) {
+		return storyline(centroid, terms, EARLY, LATE, events);
+	}
+
+	private long storyline(float[] centroid, Map<String, Integer> terms, String first, String last, long... events) {
+		long storyline = this.storylines.open(new Representation(MODEL, centroid, events.length, Instant.parse(first),
+				Instant.parse(last), terms, events[0]), NOW);
 		long criteriaId = this.linkingCriteria.register(new LinkingCriteria(Duration.ofDays(14), 0.80), NOW);
 		for (long event : events) {
 			this.storylines.addMember(storyline, event,

@@ -384,6 +384,27 @@ class StorylineQueryFlowTests {
 	}
 
 	@Test
+	void aParentWithNoReadableEventInItsClosureKeepsItsStoredArticleCountAndTimes() {
+		// 상위 · 하위의 구성 사건이 모두 합쳐졌는데 아직 소속을 따르지 않았다 — 닫은 사건 집합에 읽히는 사건이 하나도 없다
+		long alsoMerged = event("2026-11-05T00:40:00Z", "2026-11-05T00:40:00Z");
+		StorylineRows.merge(this.jdbc, alsoMerged, this.eventA);
+		long parent = storyline("2026-11-02T00:00:00Z", "2026-11-02T06:00:00Z", this.eventMerged);
+		member(parent, this.eventMerged);
+		long child = storyline("2026-11-04T00:00:00Z", "2026-11-04T00:00:00Z", alsoMerged);
+		member(child, alsoMerged);
+		contains(parent, child);
+
+		StorylineView view = this.directory.find(new StorylineId(parent)).orElseThrow();
+
+		// 사건 수는 닫은 사건 집합의 크기(둘)이고, 기사 수 · 시각은 저장된 표현의 값이다
+		assertThat(view.eventCount()).isEqualTo(2);
+		assertThat(view.articleCount()).isEqualTo(1);
+		assertThat(view.firstArticleAt()).isEqualTo(Instant.parse("2026-11-02T00:00:00Z"));
+		assertThat(view.lastArticleAt()).isEqualTo(Instant.parse("2026-11-02T06:00:00Z"));
+		assertThat(this.directory.events(new StorylineId(parent))).isEmpty();
+	}
+
+	@Test
 	void theRelationsOfAStorylineAreReadWithContainmentFirst() {
 		contains(this.wide, this.narrow);
 		long criteriaId = this.relations.registerCriteria(RELATION_CRITERIA, NOW);
