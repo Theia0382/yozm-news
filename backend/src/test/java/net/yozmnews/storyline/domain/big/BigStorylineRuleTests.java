@@ -28,10 +28,10 @@ class BigStorylineRuleTests {
 
 	@Test
 	void bothBoundsMustBeReachedAndTheBoundsAreIncluded() {
-		assertThat(BigStorylineRule.isBig(new EventTally(3, 3, new BigDecimal("3.00")), CRITERIA)).isTrue();
-		assertThat(BigStorylineRule.isBig(new EventTally(9, 2, new BigDecimal("4.50")), CRITERIA)).isFalse();
-		assertThat(BigStorylineRule.isBig(new EventTally(9, 3, new BigDecimal("2.99")), CRITERIA)).isFalse();
-		assertThat(BigStorylineRule.isBig(new EventTally(9, 5, null), CRITERIA)).isFalse();
+		assertThat(BigStorylineRule.isBig(new EventTally(3, 3, new BigDecimal("3.00"), new BigDecimal("9.00")), CRITERIA)).isTrue();
+		assertThat(BigStorylineRule.isBig(new EventTally(9, 2, new BigDecimal("4.50"), new BigDecimal("40.50")), CRITERIA)).isFalse();
+		assertThat(BigStorylineRule.isBig(new EventTally(9, 3, new BigDecimal("2.99"), new BigDecimal("26.91")), CRITERIA)).isFalse();
+		assertThat(BigStorylineRule.isBig(new EventTally(9, 5, null, BigDecimal.ZERO), CRITERIA)).isFalse();
 	}
 
 	@Test
@@ -48,7 +48,7 @@ class BigStorylineRuleTests {
 	private static BigStoryline big(long id, int sources, String importance) {
 		Instant at = Instant.parse("2026-11-05T00:00:00Z");
 		return new BigStoryline(new StorylineView(new StorylineId(id), StorylineState.ACTIVE, 2, sources, at, at,
-				new EventId(1), at, null), new EventTally(sources, sources, new BigDecimal(importance)));
+				new EventId(1), at, null), new EventTally(sources, sources, new BigDecimal(importance), new BigDecimal(importance)));
 	}
 
 }

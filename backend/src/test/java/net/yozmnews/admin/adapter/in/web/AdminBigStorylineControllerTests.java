@@ -63,12 +63,12 @@ class AdminBigStorylineControllerTests {
 	private static final BigStoryline SEVEN = new BigStoryline(
 			new StorylineView(new StorylineId(7), StorylineState.ACTIVE, 3, 12, Instant.parse("2026-11-01T00:00:00Z"), T,
 					new EventId(70), Instant.parse("2026-11-01T01:00:00Z"), null),
-			new EventTally(2, 4, new BigDecimal("3.75")));
+			new EventTally(2, 4, new BigDecimal("3.75"), new BigDecimal("7.50")));
 
 	private static final BigStoryline NINE = new BigStoryline(
 			new StorylineView(new StorylineId(9), StorylineState.ENDED, 2, 5, Instant.parse("2026-09-01T00:00:00Z"),
 					Instant.parse("2026-11-03T00:00:00Z"), new EventId(90), Instant.parse("2026-09-01T01:00:00Z"), null),
-			new EventTally(1, 3, null));
+			new EventTally(1, 3, null, BigDecimal.ZERO));
 
 	@Autowired
 	MockMvc mockMvc;

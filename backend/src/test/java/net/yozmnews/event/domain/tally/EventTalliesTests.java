@@ -71,7 +71,8 @@ class EventTalliesTests {
 		assertThat(tallies.get("line").articles()).isEqualTo(3);
 		assertThat(tallies.get("line").sources()).isEqualTo(3);
 		assertThat(tallies.get("line").importance()).isEqualByComparingTo("4");
-		assertThat(tallies.get("empty")).isEqualTo(new EventTally(0, 0, null));
+		assertThat(tallies.get("line").importanceSum()).isEqualByComparingTo("12");
+		assertThat(tallies.get("empty")).isEqualTo(new EventTally(0, 0, null, BigDecimal.ZERO));
 	}
 
 	@Test
@@ -80,7 +81,18 @@ class EventTalliesTests {
 		Map<Long, EventTally> tallies = EventTallies.tally(Map.of(12L, List.of(A3, A4)),
 				Map.of(A3, Set.of(new SourceId(3))), Map.of());
 
-		assertThat(tallies.get(12L)).isEqualTo(new EventTally(2, 1, null));
+		assertThat(tallies.get(12L)).isEqualTo(new EventTally(2, 1, null, BigDecimal.ZERO));
+	}
+
+	@Test
+	void theSumAddsOnlyArticlesThatHaveAnImportance() {
+		// 중요도 3.5 · 2.5 · 없음 — 합 6.0, 평균은 중요도가 있는 둘로 3.0
+		Map<String, EventTally> tallies = EventTallies.tally(Map.of("line", List.of(A1, A2, A3)), Map.of(),
+				Map.of(A1, 3.5, A2, 2.5));
+
+		assertThat(tallies.get("line").articles()).isEqualTo(3);
+		assertThat(tallies.get("line").importanceSum()).isEqualByComparingTo("6.0");
+		assertThat(tallies.get("line").importance()).isEqualByComparingTo("3.0");
 	}
 
 }

@@ -124,8 +124,8 @@ class AdminStorylineControllerTests {
 	@Test
 	void theListCarriesEachStorylineWithItsTallyBigFlagRepresentativeAndTheCurrentCriteria() throws Exception {
 		this.directory.page = new StorylinePage(List.of(
-				new StorylineSummary(SEVEN, new EventTally(4, 3, new BigDecimal("3.75")), true),
-				new StorylineSummary(EIGHT, new EventTally(1, 1, null), false)),
+				new StorylineSummary(SEVEN, new EventTally(4, 3, new BigDecimal("3.75"), new BigDecimal("15.00")), true),
+				new StorylineSummary(EIGHT, new EventTally(1, 1, null, BigDecimal.ZERO), false)),
 				new StorylineCursor(Instant.parse("2026-11-03T00:00:00Z"), new StorylineId(8)));
 		this.directory.unlinked = new UnlinkedEvents(2, 5);
 

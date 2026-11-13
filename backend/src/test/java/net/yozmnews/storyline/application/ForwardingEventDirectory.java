@@ -70,6 +70,11 @@ class ForwardingEventDirectory implements EventDirectory {
 	}
 
 	@Override
+	public EventTally total(EventPeriod period) {
+		return this.delegate.total(period);
+	}
+
+	@Override
 	public EventPage list(EventPeriod period, @Nullable EventCursor after, int size) {
 		return this.delegate.list(period, after, size);
 	}

@@ -211,7 +211,7 @@ class StorylineQueryFlowTests {
 		// 기간의 스토리라인은 narrow · wide 둘 — spanning · quiet · ended 는 그날 기사가 있는 구성 사건이 없다
 		assertThat(first.storylines()).extracting(summary -> summary.storyline().id().value()).containsExactly(this.narrow);
 		StorylineSummary narrowRow = first.storylines().getFirst();
-		assertThat(narrowRow.tally()).isEqualTo(new EventTally(1, 1, new BigDecimal("5.0")));
+		assertThat(narrowRow.tally()).isEqualTo(new EventTally(1, 1, new BigDecimal("5.0"), new BigDecimal("5.0")));
 		assertThat(narrowRow.big()).isFalse();
 		assertThat(narrowRow.storyline().eventCount()).isEqualTo(2);
 		assertThat(narrowRow.storyline().representativeEvent()).isEqualTo(new EventId(this.eventC));

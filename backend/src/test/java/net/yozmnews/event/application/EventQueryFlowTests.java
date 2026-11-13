@@ -33,8 +33,8 @@ import org.springframework.test.context.TestPropertySource;
 
 /**
  * 사건 조회와 기간 집계의 흐름 — 기사 · 엔트리 · 평가 · 사건 · 배정 행을 SQL 로 넣고, 공개 조회가 다른 모듈의 공개 조회로 소스 · 중요도를
- * 읽어 기간 안에서 세는지, 사건 목록의 쪽 넘기기, 사건 묶음의 기간 집계(같은 사건 한 번 · 기간 밖 기사 제외)와 기간 안 사건 · 사건 묶음
- * 조회를 실제 PostgreSQL 에서 본다.
+ * 읽어 기간 안에서 세는지, 사건 목록의 쪽 넘기기, 사건 묶음의 기간 집계(같은 사건 한 번 · 기간 밖 기사 제외)와 기간 전체 집계, 기간 안
+ * 사건 · 사건 묶음 조회를 실제 PostgreSQL 에서 본다.
  * <p>
  * 사건 · 기사 행과 이 시험이 넣은 평가 행은 시작과 끝에 지운다.
  * <p>
@@ -119,12 +119,34 @@ class EventQueryFlowTests {
 		assertThat(tallies.get("both").articles()).isEqualTo(5);
 		assertThat(tallies.get("both").sources()).isEqualTo(3);
 		assertThat(tallies.get("both").importance()).isEqualByComparingTo("4.25");
-		assertThat(tallies.get("twice")).isEqualTo(new EventTally(3, 3, new BigDecimal("3.5")));
+		assertThat(tallies.get("both").importanceSum()).isEqualByComparingTo("17");
+		assertThat(tallies.get("twice")).isEqualTo(new EventTally(3, 3, new BigDecimal("3.5"), new BigDecimal("7.0")));
 		assertThat(tallies.get("y").articles()).isEqualTo(2);
 		assertThat(tallies.get("y").sources()).isEqualTo(2);
 		assertThat(tallies.get("y").importance()).isEqualByComparingTo("5");
-		assertThat(tallies.get("none")).isEqualTo(new EventTally(0, 0, null));
+		assertThat(tallies.get("none")).isEqualTo(new EventTally(0, 0, null, BigDecimal.ZERO));
 		assertThat(this.directory.tallies(Map.<String, List<EventId>>of(), PERIOD)).isEmpty();
+	}
+
+	@Test
+	void theTotalTalliesEveryEventWithArticlesInThePeriodAsOneGroup() {
+		// X(소스 1 · 2 · 3, 중요도 3.0 · 4.0 · 없음)와 Y(소스 1 · 2, 중요도 5.0 · 5.0)의 기간 안 기사 다섯 — 기간 밖 기사(소스 4)는 들지 않는다
+		EventTally total = this.directory.total(PERIOD);
+
+		assertThat(total.articles()).isEqualTo(5);
+		assertThat(total.sources()).isEqualTo(3);
+		assertThat(total.importance()).isEqualByComparingTo("4.25");
+		assertThat(total.importanceSum()).isEqualByComparingTo("17");
+		// 끝을 하루 늘리면 X 의 넷째 기사(소스 4, 중요도 5.0)가 든다 — 집계는 넘겨받은 기간을 따른다
+		EventTally wider = this.directory
+			.total(new EventPeriod(Instant.parse("2026-11-05T00:00:00Z"), Instant.parse("2026-11-07T00:00:00Z")));
+		assertThat(wider.articles()).isEqualTo(6);
+		assertThat(wider.sources()).isEqualTo(4);
+		assertThat(wider.importance()).isEqualByComparingTo("4.4");
+		assertThat(wider.importanceSum()).isEqualByComparingTo("22");
+		// 기사가 없는 기간
+		EventPeriod empty = new EventPeriod(Instant.parse("2020-01-01T00:00:00Z"), Instant.parse("2020-01-02T00:00:00Z"));
+		assertThat(this.directory.total(empty)).isEqualTo(new EventTally(0, 0, null, BigDecimal.ZERO));
 	}
 
 	@Test
@@ -152,13 +174,13 @@ class EventQueryFlowTests {
 		assertThat(first.events()).hasSize(1);
 		EventSummary x = first.events().getFirst();
 		assertThat(x.event().id()).isEqualTo(new EventId(this.eventX));
-		assertThat(x.tally()).isEqualTo(new EventTally(3, 3, new BigDecimal("3.5")));
+		assertThat(x.tally()).isEqualTo(new EventTally(3, 3, new BigDecimal("3.5"), new BigDecimal("7.0")));
 		assertThat(x.representative()).isEqualTo(new ArticleId(this.x1));
 		assertThat(first.next()).isNotNull();
 
 		EventPage second = this.directory.list(PERIOD, first.next(), 1);
 		assertThat(second.events()).extracting(summary -> summary.event().id()).containsExactly(new EventId(this.eventY));
-		assertThat(second.events().getFirst().tally()).isEqualTo(new EventTally(2, 2, new BigDecimal("5.0")));
+		assertThat(second.events().getFirst().tally()).isEqualTo(new EventTally(2, 2, new BigDecimal("5.0"), new BigDecimal("10.0")));
 		assertThat(second.next()).isNull();
 	}
 
