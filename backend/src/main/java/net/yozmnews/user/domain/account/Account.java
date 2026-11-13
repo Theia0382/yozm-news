@@ -50,8 +50,8 @@ public final class Account {
 	}
 
 	/** 쓰는 상태의 새 계정 */
-	public static Account create(EmailAddress email, String displayName, AccountRole role, Instant now) {
-		return new Account(null, email.value(), displayName, role, AccountStatus.ACTIVE, now, null, null);
+	public static Account create(EmailAddress email, DisplayName displayName, AccountRole role, Instant now) {
+		return new Account(null, email.value(), displayName.value(), role, AccountStatus.ACTIVE, now, null, null);
 	}
 
 	/**

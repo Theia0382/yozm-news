@@ -5,7 +5,7 @@ import static org.mockito.Mockito.mock;
 
 import net.yozmnews.platform.ProblemResponses;
 import net.yozmnews.user.domain.AdminCredential;
-import net.yozmnews.user.domain.account.AccountRepository;
+import net.yozmnews.user.domain.session.SessionAccounts;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration;
@@ -30,7 +30,7 @@ class SecurityConfigurationTests {
 				ServletWebSecurityAutoConfiguration.class, UserDetailsServiceAutoConfiguration.class,
 				WebMvcAutoConfiguration.class))
 		.withUserConfiguration(SecurityConfiguration.class, ProblemResponses.class)
-		.withBean(AccountRepository.class, () -> mock(AccountRepository.class));
+		.withBean(SessionAccounts.class, () -> mock(SessionAccounts.class));
 
 	@Test
 	void malformedTokenStopsTheStartupWithoutQuotingIt() {

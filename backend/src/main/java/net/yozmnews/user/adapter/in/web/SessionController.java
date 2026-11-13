@@ -80,9 +80,12 @@ class SessionController {
 	@GetMapping("/api/me")
 	MeResponse me() {
 		Authentication authentication = SecurityContextHolder.getContextHolderStrategy().getContext().getAuthentication();
-		Optional<Account> account = (authentication instanceof AccountAuthentication session)
-				? this.accounts.active(session.userId()) : Optional.empty();
-		return account.map(MeResponse::signedIn).orElseGet(MeResponse::anonymous);
+		if (!(authentication instanceof AccountAuthentication session)) {
+			return MeResponse.anonymous();
+		}
+		Optional<Account> account = this.accounts.active(session.userId());
+		return account.map(found -> MeResponse.signedIn(found, session.mustChangePassword()))
+			.orElseGet(MeResponse::anonymous);
 	}
 
 }

@@ -2,6 +2,7 @@ package net.yozmnews.user.domain.credential;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import net.yozmnews.user.PasswordProblem;
 import org.junit.jupiter.api.Test;
 
 /**

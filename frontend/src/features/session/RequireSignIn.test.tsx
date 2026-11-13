@@ -23,6 +23,7 @@ const ANONYMOUS: Me = {
   email: null,
   displayName: null,
   role: null,
+  passwordChangeRequired: false,
 };
 
 const SIGNED_IN: Me = {
@@ -31,6 +32,7 @@ const SIGNED_IN: Me = {
   email: "alice@example.com",
   displayName: "앨리스",
   role: "USER",
+  passwordChangeRequired: false,
 };
 
 function renderGuarded(

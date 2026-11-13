@@ -44,6 +44,7 @@ describe("routes", () => {
       email: "a@example.com",
       displayName: "앨리스",
       role: "USER",
+      passwordChangeRequired: false,
     });
 
     expect(
@@ -58,6 +59,7 @@ describe("routes", () => {
       email: null,
       displayName: null,
       role: null,
+      passwordChangeRequired: false,
     });
 
     expect(

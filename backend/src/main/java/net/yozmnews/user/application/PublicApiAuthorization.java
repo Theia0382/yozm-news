@@ -5,6 +5,7 @@ import java.util.function.Supplier;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
+import net.yozmnews.platform.AllowedBeforePasswordChange;
 import net.yozmnews.platform.PublicApi;
 import net.yozmnews.platform.PublicApis;
 import org.jspecify.annotations.Nullable;
@@ -21,7 +22,8 @@ import org.springframework.web.util.ServletRequestPathUtils;
 
 /**
  * 세션 체인의 인가 — 요청의 처리기에 {@link PublicApi} 가 있으면 세션 없이 열고, 처리기가 없으면 열고(404 · 405 · 415 는 MVC 가 낸다), 그
- * 밖은 세션 사용자를 요구한다. docs/specs/user.md §4 · user-R5
+ * 밖은 세션 사용자를 요구한다. 비밀번호를 바꿔야 하는 세션 사용자에게는 {@link AllowedBeforePasswordChange} 가 있는 처리기만 연다 — 거부는
+ * 인증된 사용자의 거부라 세션 체인의 거부 처리기가 403 으로 낸다. docs/specs/user.md §4 · user-R5
  * <p>
  * 체인은 {@code DispatcherServlet} 앞이라 처리기 매핑에 묻기 전에 요청 경로를 파싱해 두고, 물은 뒤 원래 상태로 돌린다.
  */
@@ -40,8 +42,11 @@ final class PublicApiAuthorization implements AuthorizationManager<RequestAuthor
 		if (handler == null || PublicApis.isPublic(handler)) {
 			return new AuthorizationDecision(true);
 		}
+		if (!(authentication.get() instanceof AccountAuthentication account && account.isAuthenticated())) {
+			return new AuthorizationDecision(false);
+		}
 		return new AuthorizationDecision(
-				authentication.get() instanceof AccountAuthentication account && account.isAuthenticated());
+				!account.mustChangePassword() || PublicApis.allowedBeforePasswordChange(handler));
 	}
 
 	private @Nullable HandlerMethod handler(HttpServletRequest request) {

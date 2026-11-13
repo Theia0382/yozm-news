@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
 
+import net.yozmnews.user.PasswordProblem;
 import net.yozmnews.user.UserId;
 import net.yozmnews.user.domain.account.Account;
 import net.yozmnews.user.domain.account.AccountRepository;
@@ -11,7 +12,6 @@ import net.yozmnews.user.domain.account.EmailAddress;
 import net.yozmnews.user.domain.credential.PasswordCredential;
 import net.yozmnews.user.domain.credential.PasswordCredentialRepository;
 import net.yozmnews.user.domain.credential.PasswordPolicy;
-import net.yozmnews.user.domain.credential.PasswordProblem;
 import net.yozmnews.user.domain.throttle.EmailDigest;
 import net.yozmnews.user.domain.throttle.FailureRecord;
 import net.yozmnews.user.domain.throttle.LoginFailures;

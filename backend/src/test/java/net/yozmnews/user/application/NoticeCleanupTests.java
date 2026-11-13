@@ -12,6 +12,7 @@ import net.yozmnews.user.UserId;
 import net.yozmnews.user.domain.account.Account;
 import net.yozmnews.user.domain.account.AccountRepository;
 import net.yozmnews.user.domain.account.AccountRole;
+import net.yozmnews.user.domain.account.DisplayName;
 import net.yozmnews.user.domain.account.EmailAddress;
 import net.yozmnews.user.domain.notice.FeedStatusContent;
 import net.yozmnews.user.domain.notice.FeedStatusEntry;
@@ -81,7 +82,8 @@ class NoticeCleanupTests {
 	}
 
 	private UserId account(String email) {
-		return this.accounts.save(Account.create(EmailAddress.parse(email).orElseThrow(), email, AccountRole.ADMIN,
+		return this.accounts.save(Account.create(EmailAddress.parse(email).orElseThrow(),
+				new DisplayName(email), AccountRole.ADMIN,
 				CREATED)).id();
 	}
 

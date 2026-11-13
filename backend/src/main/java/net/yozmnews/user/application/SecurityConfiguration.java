@@ -3,9 +3,10 @@ package net.yozmnews.user.application;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import net.yozmnews.platform.ApiPaths;
+import net.yozmnews.platform.ApiProblem;
 import net.yozmnews.platform.ProblemResponses;
 import net.yozmnews.user.domain.AdminCredential;
-import net.yozmnews.user.domain.account.AccountRepository;
+import net.yozmnews.user.domain.session.SessionAccounts;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -15,10 +16,13 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.security.web.context.SecurityContextHolderFilter;
@@ -98,12 +102,13 @@ class SecurityConfiguration {
 	}
 
 	/**
-	 * 세션 체인 — 운영자 경로 밖의 화면용 API. 세션의 사용자 ID 로 요청마다 계정을 읽고(user-R7), 공개 표시가 없는 처리기는 세션 사용자를
-	 * 요구하며(user-R5), 변경 요청은 CSRF 토큰을 요구한다(user-R10).
+	 * 세션 체인 — 운영자 경로 밖의 화면용 API. 세션의 사용자 ID 로 요청마다 계정과 비밀번호 강제 변경 여부를 읽고(user-R7), 공개 표시가
+	 * 없는 처리기는 세션 사용자를 요구하되 비밀번호를 바꿔야 하는 세션 사용자에게는 비밀번호 변경 전 허용 표시가 있는 처리기만 열며(user-R5),
+	 * 변경 요청은 CSRF 토큰을 요구한다(user-R10).
 	 */
 	@Bean
 	@Order(2)
-	SecurityFilterChain sessionChain(HttpSecurity http, AccountRepository accounts,
+	SecurityFilterChain sessionChain(HttpSecurity http, SessionAccounts accounts,
 			@Qualifier("requestMappingHandlerMapping") RequestMappingHandlerMapping handlerMapping,
 			SessionSecurityContexts sessionSecurityContexts,
 			CookieCsrfTokenRepository csrfTokenRepository, ProblemResponses problems) throws Exception {
@@ -118,13 +123,8 @@ class SecurityConfiguration {
 				.authenticationEntryPoint((request, response, ex) -> problems.write(response,
 						problems.problem(ProblemTypes.UNAUTHENTICATED, ProblemTypes.UNAUTHENTICATED_TITLE,
 								HttpStatus.UNAUTHORIZED, "로그인하지 않았거나 세션이 만료됐다", request)))
-				.accessDeniedHandler((request, response, ex) -> problems.write(response,
-						(ex instanceof CsrfException)
-								? problems.problem(ProblemTypes.CSRF_REJECTED, ProblemTypes.CSRF_REJECTED_TITLE,
-										HttpStatus.FORBIDDEN, "요청 보호 토큰(X-XSRF-TOKEN)이 없거나 맞지 않는다", request)
-								: problems.problem(ProblemResponses.BLANK,
-										ProblemResponses.standardTitle(HttpStatus.FORBIDDEN), HttpStatus.FORBIDDEN,
-										"이 요청을 할 수 없다", request))))
+				.accessDeniedHandler(
+						(request, response, ex) -> problems.write(response, sessionDenial(request, ex, problems))))
 			.formLogin(AbstractHttpConfigurer::disable)
 			.httpBasic(AbstractHttpConfigurer::disable)
 			.logout(AbstractHttpConfigurer::disable)
@@ -150,6 +150,25 @@ class SecurityConfiguration {
 			.logout(AbstractHttpConfigurer::disable)
 			.requestCache(AbstractHttpConfigurer::disable)
 			.sessionManagement(sessions -> sessions.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+	}
+
+	/**
+	 * 세션 체인의 403 — CSRF 토큰이 없거나 틀리면 {@code csrf-rejected}, 비밀번호를 바꿔야 하는 세션 사용자의 거부면
+	 * {@code password-change-required}, 그 밖은 일반 403(user-R3 · user-R10)
+	 */
+	private static ApiProblem sessionDenial(HttpServletRequest request, AccessDeniedException ex,
+			ProblemResponses problems) {
+		if (ex instanceof CsrfException) {
+			return problems.problem(ProblemTypes.CSRF_REJECTED, ProblemTypes.CSRF_REJECTED_TITLE, HttpStatus.FORBIDDEN,
+					"요청 보호 토큰(X-XSRF-TOKEN)이 없거나 맞지 않는다", request);
+		}
+		Authentication current = SecurityContextHolder.getContextHolderStrategy().getContext().getAuthentication();
+		if (current instanceof AccountAuthentication account && account.mustChangePassword()) {
+			return problems.problem(ProblemTypes.PASSWORD_CHANGE_REQUIRED, ProblemTypes.PASSWORD_CHANGE_REQUIRED_TITLE,
+					HttpStatus.FORBIDDEN, "비밀번호를 바꾸기 전에는 비밀번호 변경 · 로그인 상태 조회 · 로그아웃만 쓴다", request);
+		}
+		return problems.problem(ProblemResponses.BLANK, ProblemResponses.standardTitle(HttpStatus.FORBIDDEN),
+				HttpStatus.FORBIDDEN, "이 요청을 할 수 없다", request);
 	}
 
 	/** 인증되지 않은 운영자 요청 — 닫혔으면 403, 열렸으면 401 과 Bearer 요구 */

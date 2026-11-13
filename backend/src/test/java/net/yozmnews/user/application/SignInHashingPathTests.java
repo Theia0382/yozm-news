@@ -18,6 +18,7 @@ import net.yozmnews.user.domain.account.Account;
 import net.yozmnews.user.domain.account.AccountRepository;
 import net.yozmnews.user.domain.account.AccountRole;
 import net.yozmnews.user.domain.account.AccountStatus;
+import net.yozmnews.user.domain.account.DisplayName;
 import net.yozmnews.user.domain.account.EmailAddress;
 import net.yozmnews.user.domain.credential.PasswordCredential;
 import net.yozmnews.user.domain.credential.PasswordCredentialRepository;
@@ -49,20 +50,21 @@ class SignInHashingPathTests {
 
 	SignInHashingPathTests() {
 		when(this.failures.lock(any())).thenReturn(FailureRecord.NONE);
-		Account account = Account.create(EmailAddress.parse("alice@example.com").orElseThrow(), "앨리스",
+		Account account = Account.create(EmailAddress.parse("alice@example.com").orElseThrow(), new DisplayName("앨리스"),
 				AccountRole.USER, NOW);
 		ReflectionTestUtils.setField(account, "id", 7L);
 		when(this.accounts.findByEmail("alice@example.com")).thenReturn(Optional.of(account));
 		// 스텁 설정 안에서 spy 를 부르지 않게 해시를 먼저 만든다
-		PasswordCredential credential = PasswordCredential.of(new UserId(7), this.hashing.hash("correct horse"), NOW);
+		PasswordCredential credential = PasswordCredential.of(new UserId(7),
+				this.hashing.hash("correct horse"), false, NOW);
 		when(this.credentials.findById(7L)).thenReturn(Optional.of(credential));
-		Account suspended = Account.create(EmailAddress.parse("carol@example.com").orElseThrow(), "캐럴",
+		Account suspended = Account.create(EmailAddress.parse("carol@example.com").orElseThrow(), new DisplayName("캐럴"),
 				AccountRole.USER, NOW);
 		ReflectionTestUtils.setField(suspended, "id", 8L);
 		ReflectionTestUtils.setField(suspended, "status", AccountStatus.SUSPENDED);
 		when(this.accounts.findByEmail("carol@example.com")).thenReturn(Optional.of(suspended));
-		PasswordCredential suspendedCredential = PasswordCredential.of(new UserId(8), this.hashing.hash("correct horse"),
-				NOW);
+		PasswordCredential suspendedCredential = PasswordCredential.of(new UserId(8),
+				this.hashing.hash("correct horse"), false, NOW);
 		when(this.credentials.findById(8L)).thenReturn(Optional.of(suspendedCredential));
 	}
 

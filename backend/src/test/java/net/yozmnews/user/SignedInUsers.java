@@ -10,6 +10,7 @@ import net.yozmnews.user.application.PasswordHashing;
 import net.yozmnews.user.domain.account.Account;
 import net.yozmnews.user.domain.account.AccountRepository;
 import net.yozmnews.user.domain.account.AccountRole;
+import net.yozmnews.user.domain.account.DisplayName;
 import net.yozmnews.user.domain.account.EmailAddress;
 import net.yozmnews.user.domain.credential.PasswordCredential;
 import net.yozmnews.user.domain.credential.PasswordCredentialRepository;
@@ -55,9 +56,10 @@ public final class SignedInUsers {
 
 	/** 이 이메일 · 역할의 계정을 만들고 로그인한 사용자 */
 	public SignedInUser signIn(String email, AccountRole role) throws Exception {
-		UserId id = this.accounts.save(Account.create(EmailAddress.parse(email).orElseThrow(), email, role, CREATED))
+		UserId id = this.accounts.save(Account.create(EmailAddress.parse(email).orElseThrow(),
+				new DisplayName(email), role, CREATED))
 			.id();
-		this.credentials.save(PasswordCredential.of(id, this.hashing.hash(PASSWORD), CREATED));
+		this.credentials.save(PasswordCredential.of(id, this.hashing.hash(PASSWORD), false, CREATED));
 		MockHttpServletResponse response = this.mockMvc
 			.perform(post("/api/session").cookie(new Cookie("XSRF-TOKEN", CSRF))
 				.header("X-XSRF-TOKEN", CSRF)

@@ -33,6 +33,11 @@ final class ProblemTypes {
 
 	static final String CSRF_REJECTED_TITLE = "요청 보호 토큰이 맞지 않는다";
 
+	/** 비밀번호를 바꿔야 하는 세션 사용자의 요청을 그 전에 여는 처리기 밖에서 거부했다 — 403 */
+	static final URI PASSWORD_CHANGE_REQUIRED = URI.create("urn:yozmnews:problem:password-change-required");
+
+	static final String PASSWORD_CHANGE_REQUIRED_TITLE = "비밀번호를 바꿔야 한다";
+
 	private ProblemTypes() {
 	}
 

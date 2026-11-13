@@ -4,6 +4,8 @@ import java.text.Normalizer;
 import java.util.Objects;
 import java.util.Optional;
 
+import net.yozmnews.user.PasswordProblem;
+
 /**
  * 비밀번호 규칙의 정본 — NFKC 로 정규화한 뒤 코드 포인트로 센 길이만 본다. 문자 종류 · 흔한 비밀번호 목록은 보지 않는다. docs/specs/user.md §4 ·
  * user-R14

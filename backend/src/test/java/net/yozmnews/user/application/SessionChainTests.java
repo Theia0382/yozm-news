@@ -18,12 +18,16 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.YozmnewsApplication;
+import net.yozmnews.platform.AllowedBeforePasswordChange;
 import net.yozmnews.platform.PublicApi;
 import net.yozmnews.user.UserId;
 import net.yozmnews.user.domain.account.Account;
 import net.yozmnews.user.domain.account.AccountRepository;
 import net.yozmnews.user.domain.account.AccountRole;
+import net.yozmnews.user.domain.account.DisplayName;
 import net.yozmnews.user.domain.account.EmailAddress;
+import net.yozmnews.user.domain.credential.PasswordCredential;
+import net.yozmnews.user.domain.credential.PasswordCredentialRepository;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,7 +49,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 세션 체인 — 실제 PostgreSQL 의 Spring Session 위에서 공개 처리기 · 세션 사용자 요구, CSRF, 세션 쿠키 속성과 수명, 세션 ID 교체, 요청마다 계정
- * 확인, 로그아웃, 만료 세션 정리를 본다. 세션은 시험 처리기가 {@link SessionSignIn} 을 직접 불러 만든다.
+ * 확인(비밀번호 강제 변경 포함), 로그아웃, 만료 세션 정리를 본다. 세션은 시험 처리기가 {@link SessionSignIn} 을 직접 불러 만든다.
  * <p>
  * 지키는 규칙: user-R3 · user-R5 · user-R6 · user-R7 · user-R8 · user-R9 · user-R10 · user-R11 · user-R12
  */
@@ -61,6 +65,9 @@ class SessionChainTests {
 
 	@Autowired
 	AccountRepository accounts;
+
+	@Autowired
+	PasswordCredentialRepository credentials;
 
 	@Autowired
 	SessionExpiry expiry;
@@ -170,6 +177,48 @@ class SessionChainTests {
 	}
 
 	@Test
+	void sessionUserWhoMustChangeThePasswordReachesOnlyPublicAndAllowedHandlers() throws Exception {
+		long user = account("initial@example.com", AccountRole.ADMIN);
+		credential(user, true);
+		Cookie session = sessionCookie(signIn(user, false, null));
+
+		this.mockMvc.perform(get("/api/test/session/me").cookie(session))
+			.andExpect(status().isForbidden())
+			.andExpect(content().json("""
+					{"type":"urn:yozmnews:problem:password-change-required","title":"비밀번호를 바꿔야 한다","status":403,
+					 "detail":"비밀번호를 바꾸기 전에는 비밀번호 변경 · 로그인 상태 조회 · 로그아웃만 쓴다",
+					 "instance":"/api/test/session/me"}
+					""", JsonCompareMode.STRICT));
+		this.mockMvc.perform(get("/api/notices").cookie(session))
+			.andExpect(status().isForbidden())
+			.andExpect(content().json("""
+					{"type":"urn:yozmnews:problem:password-change-required"}"""));
+		// 허용 표시가 있는 처리기는 열리고, 그 요청의 권한에는 역할이 없다
+		this.mockMvc.perform(get("/api/test/session/before-password-change").cookie(session))
+			.andExpect(status().isOk())
+			.andExpect(content().string(user + ":PASSWORD_CHANGE_REQUIRED"));
+		this.mockMvc.perform(get("/api/test/session/open").cookie(session)).andExpect(status().isOk());
+		assertThat(sessionRows(session)).as("거부해도 세션은 남는다").isOne();
+	}
+
+	@Test
+	void passwordChangeIsReadOnEachRequest() throws Exception {
+		long user = account("changed@example.com", AccountRole.USER);
+		credential(user, true);
+		Cookie session = sessionCookie(signIn(user, false, null));
+		this.mockMvc.perform(get("/api/test/session/me").cookie(session)).andExpect(status().isForbidden());
+
+		this.jdbc.sql("update user_password_credentials set must_change = false where user_id = :id")
+			.param("id", user)
+			.update();
+
+		this.mockMvc.perform(get("/api/test/session/me").cookie(session))
+			.andExpect(status().isOk())
+			.andExpect(content().string(user + ":ROLE_USER"));
+		this.mockMvc.perform(get("/api/notices").cookie(session)).andExpect(status().isOk());
+	}
+
+	@Test
 	void inactiveAccountLosesItsSessionOnTheNextRequest() throws Exception {
 		long user = account("suspended@example.com", AccountRole.USER);
 		Cookie session = sessionCookie(signIn(user, false, null));
@@ -262,9 +311,14 @@ class SessionChainTests {
 	}
 
 	private long account(String email, AccountRole role) {
-		return this.accounts.save(Account.create(EmailAddress.parse(email).orElseThrow(), "시험", role, NOW))
+		return this.accounts.save(Account.create(EmailAddress.parse(email).orElseThrow(),
+				new DisplayName("시험"), role, NOW))
 			.id()
 			.value();
+	}
+
+	private void credential(long user, boolean mustChange) {
+		this.credentials.save(PasswordCredential.of(new UserId(user), "$argon2id$hash", mustChange, NOW));
 	}
 
 	private Cookie csrfCookie() throws Exception {
@@ -366,6 +420,12 @@ class SessionChainTests {
 		@GetMapping("/api/test/session/open")
 		String open() {
 			return "open";
+		}
+
+		@AllowedBeforePasswordChange(reason = "시험 — 비밀번호를 바꾸기 전에도 연다")
+		@GetMapping("/api/test/session/before-password-change")
+		String beforePasswordChange(UserId user) {
+			return me(user);
 		}
 
 		@GetMapping("/api/test/session/me")
