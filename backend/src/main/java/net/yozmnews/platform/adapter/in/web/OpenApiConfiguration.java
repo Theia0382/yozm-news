@@ -15,6 +15,7 @@ import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.responses.ApiResponse;
 import io.swagger.v3.oas.models.responses.ApiResponses;
 import io.swagger.v3.oas.models.servers.Server;
+import net.yozmnews.platform.AllowedBeforePasswordChange;
 import net.yozmnews.platform.ApiPaths;
 import net.yozmnews.platform.PublicApi;
 import net.yozmnews.platform.PublicApis;
@@ -97,7 +98,8 @@ class OpenApiConfiguration {
 
 	/**
 	 * 운영자 경로 밖 화면용 API 연산의 거부 응답 — 처리기에 {@link PublicApi} 가 없으면 401(세션 없음), 변경 메서드면 공개 처리기여도
-	 * 403(CSRF). 처리기의 경로 · 메서드는 처리기 매핑에서 읽는다. docs/specs/platform.md §4 · platform-R6 · platform-R21
+	 * 403(CSRF), 공개도 {@link AllowedBeforePasswordChange} 도 아니면 403(비밀번호를 바꿔야 한다). 403 은 연산마다 하나라 둘이 겹치면 한
+	 * 설명에 함께 적는다. 처리기의 경로 · 메서드는 처리기 매핑에서 읽는다. docs/specs/platform.md §4 · platform-R6 · platform-R21
 	 * @throws IllegalStateException 연산이 401 · 403 을 이미 가질 때(정본이 둘이 된다)
 	 */
 	@Bean
@@ -124,8 +126,16 @@ class OpenApiConfiguration {
 			boolean changes = mappings.stream()
 				.flatMap(mapping -> mapping.getMethodsCondition().getMethods().stream())
 				.anyMatch(UNSAFE_METHODS::contains);
-			if (changes) {
+			boolean beforePasswordChange = PublicApis.isPublic(handler)
+					|| PublicApis.allowedBeforePasswordChange(handler);
+			if (changes && beforePasswordChange) {
 				reject(operation, path, "403", "요청 보호 토큰이 없거나 맞지 않는다");
+			}
+			else if (changes) {
+				reject(operation, path, "403", "요청 보호 토큰이 없거나 맞지 않거나, 비밀번호를 바꿔야 한다");
+			}
+			else if (!beforePasswordChange) {
+				reject(operation, path, "403", "비밀번호를 바꿔야 한다");
 			}
 			return operation;
 		};

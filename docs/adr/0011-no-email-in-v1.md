@@ -38,3 +38,7 @@
 | 이메일 대신 아이디(username)로 가입 | 나중에 메일을 도입할 때 식별자를 바꿔야 한다. 이메일을 미인증 값으로 받아 두는 편이 이전이 쉽다 |
 | 복구 수단 없음 | 비밀번호를 잊은 사용자가 계정을 영구히 잃는다. 복구 코드는 구현 비용이 작다 |
 | 운영자가 수동으로 재설정 | 이메일이 미인증이라 본인 확인 수단이 없다 |
+
+## 후속 기록
+
+- 2026-11-13: 결정 절 "보안 알림 메일 … 화면 안 알림"의 비밀번호 알림을 남기는 때 — [ADR-0145](0145-password-notices-are-left-for-password-changes-and-recovery-resets-but-not-for-the-forced-first-sign-in-change.md) · [`user` user-R29](../specs/user.md#비밀번호-변경과-복구-코드)

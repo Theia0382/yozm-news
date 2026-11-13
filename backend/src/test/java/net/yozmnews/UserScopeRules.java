@@ -8,7 +8,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.function.Function;
 
+import net.yozmnews.platform.AllowedBeforePasswordChange;
 import net.yozmnews.platform.ApiPaths;
 import net.yozmnews.platform.PublicApi;
 import net.yozmnews.platform.PublicApis;
@@ -33,8 +35,8 @@ import org.springframework.web.util.pattern.PathPatternParser;
 
 /**
  * 사용자 격리 등록 가드의 판정 — 앱의 처리기 매핑을 열거해, 운영자 경로 밖 화면용 API 처리기마다 공개 표시와 격리 시험 등록 가운데 꼭 하나가
- * 있는지, 등록이 낡지 않았는지, 사용자 ID 를 요청에서 받지 않는지 본다. {@code UserScopeTests} 가 앱에, 틀 자체의 시험이 일부러 틀린 시험
- * 컨텍스트에 돌린다.
+ * 있는지, 등록이 낡지 않았는지, 사용자 ID 를 요청에서 받지 않는지, 비밀번호 변경 전 허용 표시가 세션 처리기에만 이유와 함께 달렸는지
+ * 본다. {@code UserScopeTests} 가 앱에, 틀 자체의 시험이 일부러 틀린 시험 컨텍스트에 돌린다.
  * <p>
  * 지키는 규칙: user-R5 · user-R6 · platform-R21
  */
@@ -78,8 +80,16 @@ public final class UserScopeRules {
 					violations.add(key + " — 공개 표시와 격리 시험 등록 가운데 꼭 하나가 있어야 한다(공개 " + isPublic + " · 등록 "
 							+ isRegistered + ")");
 				}
-				if (isPublic && blankReason(handler)) {
+				if (isPublic && blankReason(handler, PublicApi.class, PublicApi::reason)) {
 					violations.add(key + " — 공개 표시의 이유가 비었다");
+				}
+				if (PublicApis.allowedBeforePasswordChange(handler)) {
+					if (isPublic) {
+						violations.add(key + " — 공개 처리기에 비밀번호 변경 전 허용 표시를 달았다");
+					}
+					if (blankReason(handler, AllowedBeforePasswordChange.class, AllowedBeforePasswordChange::reason)) {
+						violations.add(key + " — 비밀번호 변경 전 허용 표시의 이유가 비었다");
+					}
 				}
 				violations.addAll(userIdInputs(key, handler));
 			}
@@ -111,12 +121,14 @@ public final class UserScopeRules {
 		return keys;
 	}
 
-	private static boolean blankReason(HandlerMethod handler) {
-		PublicApi annotation = AnnotatedElementUtils.findMergedAnnotation(handler.getMethod(), PublicApi.class);
+	/** 처리기(메서드, 없으면 그 클래스)의 표시에 이유가 비었는가 — 표시가 없어도 빈 것으로 본다 */
+	private static <A extends Annotation> boolean blankReason(HandlerMethod handler, Class<A> marker,
+			Function<A, String> reason) {
+		A annotation = AnnotatedElementUtils.findMergedAnnotation(handler.getMethod(), marker);
 		if (annotation == null) {
-			annotation = AnnotatedElementUtils.findMergedAnnotation(handler.getBeanType(), PublicApi.class);
+			annotation = AnnotatedElementUtils.findMergedAnnotation(handler.getBeanType(), marker);
 		}
-		return annotation == null || annotation.reason().isBlank();
+		return annotation == null || reason.apply(annotation).isBlank();
 	}
 
 	/** 사용자 ID 를 요청에서 받는 인자 — 사용자는 묶기 애너테이션 없는 {@link UserId} 로만 받는다(user-R6) */

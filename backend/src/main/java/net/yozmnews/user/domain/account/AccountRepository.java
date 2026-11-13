@@ -12,4 +12,7 @@ public interface AccountRepository extends CrudRepository<Account, Long> {
 	/** 정규화한 이메일의 계정 */
 	Optional<Account> findByEmail(String email);
 
+	/** 이 역할 · 상태의 계정이 있는가 — 첫 운영자 판정이 쓰는 운영자 계정을 본다 */
+	boolean existsByRoleAndStatus(AccountRole role, AccountStatus status);
+
 }

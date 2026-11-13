@@ -47,6 +47,11 @@ final class AdminIds {
 		return positive(id, "피드", FeedId::new);
 	}
 
+	/** 초대 ID — 없는 초대의 404 설명은 공개 예외와 같은 "없는 초대: {ID}" 다 */
+	static long invitation(long id) {
+		return positive(id, "초대", value -> value);
+	}
+
 	/** 없는 태그 체계 버전의 404 — 1 미만 ID 와 없는 버전의 원문이 함께 쓴다 */
 	static ResponseStatusException unknownTagSet(long id) {
 		return notFound(TAG_SET, id);

@@ -21,6 +21,7 @@ import net.yozmnews.user.UserId;
 import net.yozmnews.user.domain.account.Account;
 import net.yozmnews.user.domain.account.AccountRepository;
 import net.yozmnews.user.domain.account.AccountRole;
+import net.yozmnews.user.domain.account.DisplayName;
 import net.yozmnews.user.domain.account.EmailAddress;
 import net.yozmnews.user.domain.notice.NoticeRecipients;
 import net.yozmnews.user.domain.notice.NoticeRepository;
@@ -245,7 +246,8 @@ class FeedStatusNoticesTests {
 	}
 
 	private UserId account(String email, AccountRole role) {
-		return this.accounts.save(Account.create(EmailAddress.parse(email).orElseThrow(), email, role, T1)).id();
+		return this.accounts.save(Account.create(EmailAddress.parse(email).orElseThrow(),
+				new DisplayName(email), role, T1)).id();
 	}
 
 	private FeedId feed(SourceId source, String key) {

@@ -9,7 +9,7 @@ import {
 import { ADMIN_QUERY_KEY, useAdminClient } from "@/features/admin/adminSession";
 import { ArticleTitle } from "@/features/admin/ArticleTitle";
 import {
-  bigStorylineCriteriaActorLabels,
+  changeActorLabels,
   storylineStateLabels,
 } from "@/features/admin/labels";
 import { formatProbability } from "@/features/admin/metrics";
@@ -282,7 +282,7 @@ function HistoryView({ status }: { status: Status }) {
         {status.changes.map((change) => (
           <li key={change.changedAt + criteriaText(change.current)}>
             {formatDateTime(change.changedAt)} ·{" "}
-            {bigStorylineCriteriaActorLabels[change.actor]} ·{" "}
+            {changeActorLabels[change.actor]} ·{" "}
             {change.previous ? `${criteriaText(change.previous)} → ` : ""}
             {criteriaText(change.current)}
           </li>

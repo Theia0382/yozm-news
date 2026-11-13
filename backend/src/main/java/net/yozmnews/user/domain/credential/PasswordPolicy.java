@@ -4,6 +4,8 @@ import java.text.Normalizer;
 import java.util.Objects;
 import java.util.Optional;
 
+import net.yozmnews.user.PasswordProblem;
+
 /**
  * 비밀번호 규칙의 정본 — NFKC 로 정규화한 뒤 코드 포인트로 센 길이만 본다. 문자 종류 · 흔한 비밀번호 목록은 보지 않는다. docs/specs/user.md §4 ·
  * user-R14
@@ -37,6 +39,13 @@ public final class PasswordPolicy {
 			return Optional.of(PasswordProblem.TOO_LONG);
 		}
 		return Optional.empty();
+	}
+
+	/**
+	 * 대조할 만한 비밀번호인가 — 최대 길이를 넘는 비밀번호는 해시와 대조하지 않고 실패로 센다(해시 비용의 상한, user-R17)
+	 */
+	public static boolean comparable(String normalized) {
+		return codePoints(normalized) <= MAX_CODE_POINTS;
 	}
 
 	private static int codePoints(String normalized) {

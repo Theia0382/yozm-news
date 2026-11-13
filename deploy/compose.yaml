@@ -41,6 +41,10 @@ services:
       YOZMNEWS_COLLECTION_ALLOWED_NETWORKS: ${YOZMNEWS_COLLECTION_ALLOWED_NETWORKS:-}
       # 운영자 토큰(비밀 값) — 없으면 운영자 기능이 닫힌다. docs/operations/configuration.md "운영자"
       YOZMNEWS_ADMIN_TOKEN: ${YOZMNEWS_ADMIN_TOKEN:-}
+      # 첫 운영자 이메일 · 초기 비밀번호(비밀 값) — 운영자 계정이 없을 때 이 값으로 운영자 계정을 만든다. deploy/.env 에 있을 때만 넘긴다.
+      # docs/operations/configuration.md "계정과 고지"
+      YOZMNEWS_FIRST_ADMIN_EMAIL:
+      YOZMNEWS_FIRST_ADMIN_PASSWORD:
       # 작업 서버 동시 실행 수 — 기본값을 적지 않는다(deploy/.env 에 있을 때만 넘긴다). docs/operations/configuration.md "백그라운드 작업"
       YOZMNEWS_JOB_WORKERS:
       # 공유 평가 Jev 키(비밀 값, 필수 — 작업 역할은 키 없이 뜨지 않는다). 모델 · 기본 주소는 deploy/.env 에 있을 때만 넘긴다.

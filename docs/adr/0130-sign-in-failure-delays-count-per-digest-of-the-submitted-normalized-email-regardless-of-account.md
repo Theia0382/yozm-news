@@ -32,3 +32,7 @@
 | 계정의 자격 행에 실패 횟수 | 없는 계정에 지연이 걸리지 않아 계정 존재가 드러난다 |
 | 지연 중에도 대조하고 응답만 늦춘다 | 서버가 요청 스레드를 붙잡아, 공격자가 서버 스레드를 묶을 수 있다 |
 | 다이제스트에 운영 비밀 열쇠(HMAC) | 새 필수 비밀 설정이 필요한데, DB 를 가진 사람은 있는 계정의 이메일을 이미 본다 |
+
+## 후속 기록
+
+- 2026-11-13: 실패 지연 기록의 범위(복구 코드 · 현재 비밀번호 확인) — [ADR-0144](0144-recovery-code-failures-are-delayed-on-the-sign-in-schedule-in-a-separate-record-and-current-password-checks-share-the-sign-in-record.md) · [`user` user-R19](../specs/user.md#로그인)

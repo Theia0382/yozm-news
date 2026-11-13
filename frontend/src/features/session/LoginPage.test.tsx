@@ -23,6 +23,7 @@ const ANONYMOUS: Me = {
   email: null,
   displayName: null,
   role: null,
+  passwordChangeRequired: false,
 };
 
 const SIGNED_IN: Me = {
@@ -31,6 +32,7 @@ const SIGNED_IN: Me = {
   email: "alice@example.com",
   displayName: "앨리스",
   role: "USER",
+  passwordChangeRequired: false,
 };
 
 function renderLogin(
@@ -38,6 +40,7 @@ function renderLogin(
   {
     entry = "/login?next=%2Fdigest",
     me = (() => json(ANONYMOUS)) as Handler,
+    signUpOpen = false,
     queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     }),
@@ -46,6 +49,7 @@ function renderLogin(
   let signedIn = false;
   const server = fakeServer({
     "GET /api/me": (request) => (signedIn ? json(SIGNED_IN) : me(request)),
+    "GET /api/sign-up-policy": () => json({ open: signUpOpen }),
     "POST /api/session": async (request) => {
       const response = await signIn(request);
       const body = (await response.clone().json()) as { result?: string };
@@ -84,6 +88,26 @@ async function fillAndSubmit(keep = false) {
 }
 
 describe("LoginPage", () => {
+  it("복구 코드 재설정 링크를 두고, 공개 가입이 닫혔으면 가입 링크가 없다", async () => {
+    renderLogin(() => json({}));
+
+    expect(
+      await screen.findByRole("link", { name: "복구 코드로 비밀번호 재설정" }),
+    ).toHaveAttribute("href", "/recover");
+    expect(
+      screen.queryByRole("link", { name: "가입" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("공개 가입이 열렸으면 가입 링크를 둔다", async () => {
+    renderLogin(() => json({}), { signUpOpen: true });
+
+    expect(await screen.findByRole("link", { name: "가입" })).toHaveAttribute(
+      "href",
+      "/sign-up",
+    );
+  });
+
   it("로그인하면 로그인 유지 선택을 보내고 next 로 간다", async () => {
     const { server, router } = renderLogin(() =>
       json({ result: "SIGNED_IN", retryAfterSeconds: null }),

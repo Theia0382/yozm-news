@@ -1,6 +1,5 @@
 package net.yozmnews.user.adapter.in.web;
 
-import java.time.Duration;
 import java.time.Instant;
 
 import org.jspecify.annotations.Nullable;
@@ -23,9 +22,7 @@ record SignInResponse(SignInResult result, @Nullable Long retryAfterSeconds) {
 
 	/** 대기 — 남은 시간을 초로 올림한다(1 이상) */
 	static SignInResponse waiting(Instant retryAt, Instant now) {
-		Duration remaining = Duration.between(now, retryAt);
-		long seconds = remaining.toSeconds() + ((remaining.toNanosPart() > 0) ? 1 : 0);
-		return new SignInResponse(SignInResult.WAIT, Math.max(1, seconds));
+		return new SignInResponse(SignInResult.WAIT, RetryAfter.seconds(retryAt, now));
 	}
 
 	/** 로그인 결과의 판별자 */

@@ -69,6 +69,26 @@ public final class SessionSignIn {
 		request.getSession().setMaxInactiveInterval((int) SessionLifetime.of(keep).toSeconds());
 	}
 
+	/**
+	 * 이 요청이 들고 온 세션을 버리고 새 세션으로 로그인한다 — 계정을 새로 만든 가입 · 그 계정의 세션을 모두 지운 복구 재설정 뒤. 들고 온 세션이
+	 * 다른 계정의 것이어도, 이미 저장소에서 지워진 것이어도 새 세션이 선다(user-R11)
+	 */
+	public void signInAfresh(UserId userId, boolean keep, HttpServletRequest request, HttpServletResponse response) {
+		HttpSession carried = request.getSession(false);
+		if (carried != null) {
+			carried.invalidate();
+		}
+		signIn(userId, keep, request, response);
+	}
+
+	/**
+	 * 로그인한 세션의 ID 와 CSRF 토큰을 바꾼다 — 비밀번호를 바꾼 뒤(세션 고정 방지). 세션의 내용 · 수명은 그대로이고, 바뀐 ID 는 요청 끝에서
+	 * 저장된다(user-R11)
+	 */
+	public void renew(HttpServletRequest request, HttpServletResponse response) {
+		this.strategy.onAuthentication(this.contexts.getContext().getAuthentication(), request, response);
+	}
+
 	/** 로그아웃한다 — 세션이 없어도 같은 결과다 */
 	public void signOut(HttpServletRequest request, HttpServletResponse response) {
 		HttpSession session = request.getSession(false);

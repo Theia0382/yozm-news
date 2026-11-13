@@ -10,6 +10,7 @@ import java.util.List;
 import net.yozmnews.user.domain.throttle.EmailDigest;
 import net.yozmnews.user.domain.throttle.FailureRecord;
 import net.yozmnews.user.domain.throttle.LoginFailures;
+import net.yozmnews.user.domain.throttle.ThrottledAttempt;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -43,17 +44,17 @@ class LoginFailureCleanupTests {
 		}
 
 		@Override
-		public FailureRecord lock(EmailDigest digest) {
+		public FailureRecord lock(ThrottledAttempt attempt, EmailDigest digest) {
 			throw new UnsupportedOperationException();
 		}
 
 		@Override
-		public void record(EmailDigest digest, FailureRecord record) {
+		public void record(ThrottledAttempt attempt, EmailDigest digest, FailureRecord record) {
 			throw new UnsupportedOperationException();
 		}
 
 		@Override
-		public void forget(EmailDigest digest) {
+		public void forget(ThrottledAttempt attempt, EmailDigest digest) {
 			throw new UnsupportedOperationException();
 		}
 

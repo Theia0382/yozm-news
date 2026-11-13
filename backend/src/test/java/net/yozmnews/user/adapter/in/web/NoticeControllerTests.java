@@ -25,6 +25,8 @@ import net.yozmnews.user.domain.credential.PasswordCredentialRepository;
 import net.yozmnews.user.domain.notice.FeedStatusContent;
 import net.yozmnews.user.domain.notice.FeedStatusEntry;
 import net.yozmnews.user.domain.notice.NoticeRepository;
+import net.yozmnews.user.domain.notice.PasswordChangeMethod;
+import net.yozmnews.user.domain.notice.PasswordChangedContent;
 import net.yozmnews.user.domain.notice.SeenNotice;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -110,18 +112,36 @@ class NoticeControllerTests {
 					     {"feedId":11,"sourceName":"알림일보","section":"정치","firstFrom":"ACTIVE","lastTo":"ACTIVE",
 					      "firstAt":"2026-11-13T00:00:00Z","lastAt":"2026-11-13T01:00:00Z","changes":2},
 					     {"feedId":12,"sourceName":null,"section":null,"firstFrom":"ACTIVE","lastTo":"STALE",
-					      "firstAt":"2026-11-13T01:00:00Z","lastAt":"2026-11-13T01:00:00Z","changes":1}]}},
+					      "firstAt":"2026-11-13T01:00:00Z","lastAt":"2026-11-13T01:00:00Z","changes":1}]},
+					   "passwordChanged":null},
 					  {"id":%d,"kind":"FEED_STATUS","revision":1,"createdAt":"2026-11-13T00:00:00Z",
 					   "updatedAt":"2026-11-13T00:00:00Z","read":true,
 					   "feedStatus":{"feeds":[
 					     {"feedId":11,"sourceName":"알림일보","section":"정치","firstFrom":"ACTIVE","lastTo":"DEGRADED",
-					      "firstAt":"2026-11-13T00:00:00Z","lastAt":"2026-11-13T00:00:00Z","changes":1}]}}],
+					      "firstAt":"2026-11-13T00:00:00Z","lastAt":"2026-11-13T00:00:00Z","changes":1}]},
+					   "passwordChanged":null}],
 					 "nextBefore":null}
 					""".formatted(newer, older), JsonCompareMode.STRICT));
 		this.mockMvc.perform(get("/api/notices/unread-count").with(this.admin))
 			.andExpect(status().isOk())
 			.andExpect(content().json("""
 					{"count":1}""", JsonCompareMode.STRICT));
+	}
+
+	@Test
+	void passwordNoticeCarriesItsMethodAndTime() throws Exception {
+		long id = this.notices.create(this.admin.id(),
+				new PasswordChangedContent(PasswordChangeMethod.RECOVERY, T1), T1);
+
+		this.mockMvc.perform(get("/api/notices").with(this.admin))
+			.andExpect(status().isOk())
+			.andExpect(content().json("""
+					{"notices":[
+					  {"id":%d,"kind":"PASSWORD_CHANGED","revision":1,"createdAt":"2026-11-13T00:00:00Z",
+					   "updatedAt":"2026-11-13T00:00:00Z","read":false,"feedStatus":null,
+					   "passwordChanged":{"method":"RECOVERY","changedAt":"2026-11-13T00:00:00Z"}}],
+					 "nextBefore":null}
+					""".formatted(id), JsonCompareMode.STRICT));
 	}
 
 	@Test

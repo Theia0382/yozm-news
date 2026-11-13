@@ -42,3 +42,7 @@
 | 토큰 미설정이면 기동하지 않는다 | 운영자 기능을 쓰지 않는 배포도 비밀 값을 정해야 한다 |
 | 요청 제한(IP 별 지연 · 잠금)을 둔다 | 32자 이상 무작위 값의 대입은 제한 없이도 현실적이지 않다. 제한은 저장소 · 프록시 신뢰 경계를 함께 들여야 한다 |
 | CSRF 를 지금 켠다 | 자동으로 붙는 자격이 없어 막을 위험이 없고, 화면 · 시험에 토큰 전달만 는다 |
+
+## 후속 기록
+
+- 2026-11-13: 결정 절 "계정 인증이 생기면"의 괄호(첫 운영자를 만드는 방법) — [ADR-0139](0139-first-admin-is-created-only-from-environment-variables-and-startup-warns-without-an-admin-or-about-leftover-values.md) · [`user` user-R34](../specs/user.md#첫-운영자와-운영자의-계정-운영)

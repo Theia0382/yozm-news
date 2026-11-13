@@ -26,6 +26,7 @@ const SIGNED_IN: Me = {
   email: "admin@example.com",
   displayName: "운영자",
   role: "ADMIN",
+  passwordChangeRequired: false,
 };
 
 const ANONYMOUS: Me = {
@@ -34,6 +35,7 @@ const ANONYMOUS: Me = {
   email: null,
   displayName: null,
   role: null,
+  passwordChangeRequired: false,
 };
 
 /** 안 읽은 피드 상태 알림 — 피드 셋(지금 계속 실패 · 정상 · 오래 새 기사 없음) */
@@ -78,6 +80,7 @@ const GATHERED: Notice = {
       },
     ],
   },
+  passwordChanged: null,
 };
 
 /** 읽은 피드 상태 알림 하나 */
@@ -102,6 +105,19 @@ const OLD: Notice = {
       },
     ],
   },
+  passwordChanged: null,
+};
+
+/** 복구 코드로 재설정한 비밀번호 알림 */
+const PASSWORD: Notice = {
+  id: 20,
+  kind: "PASSWORD_CHANGED",
+  revision: 1,
+  createdAt: "2026-11-13T03:00:00Z",
+  updatedAt: "2026-11-13T03:00:00Z",
+  read: false,
+  feedStatus: null,
+  passwordChanged: { method: "RECOVERY", changedAt: "2026-11-13T03:00:00Z" },
 };
 
 function page(notices: Notice[], nextBefore: number | null = null): NoticePage {
@@ -195,6 +211,21 @@ describe("NoticesPage", () => {
         name: "운영자 화면에서 자세히 보기",
       }),
     ).toHaveAttribute("href", "/admin");
+  });
+
+  it("비밀번호 알림은 바꾼 방법과 시각을 보인다", async () => {
+    renderNotices(() => json(page([PASSWORD])));
+
+    const item = await screen.findByRole("article");
+    expect(within(item).getByRole("heading", { level: 2 })).toHaveTextContent(
+      "새 알림비밀번호가 바뀌었습니다",
+    );
+    expect(item).toHaveTextContent(
+      "복구 코드로 재설정했습니다. 2026. 11. 13. 오후 12:00 GMT+9",
+    );
+    expect(item).toHaveTextContent(
+      "직접 바꾸지 않았다면 바로 비밀번호를 바꾸세요.",
+    );
   });
 
   it("받은 쪽의 안 읽은 알림만 받은 판까지 읽음으로 보낸다", async () => {

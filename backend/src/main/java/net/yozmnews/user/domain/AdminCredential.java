@@ -1,16 +1,14 @@
 package net.yozmnews.user.domain;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.regex.Pattern;
 
+import net.yozmnews.user.domain.secret.SecretDigest;
 import org.jspecify.annotations.Nullable;
 
 /**
  * 운영자 자격 — 운영자 기능이 열렸는지와 제시된 토큰이 맞는지의 판정. docs/specs/user.md §4 · user-R2.
  * <p>
- * 값은 다이제스트로만 갖고, 예외 메시지 · {@link #toString()} 에 담지 않는다.
+ * 값은 다이제스트({@link SecretDigest})로만 갖고, 예외 메시지 · {@link #toString()} 에 담지 않는다.
  */
 public final class AdminCredential {
 
@@ -25,9 +23,9 @@ public final class AdminCredential {
 
 	private static final AdminCredential CLOSED = new AdminCredential(null);
 
-	private final byte @Nullable [] digest;
+	private final @Nullable SecretDigest digest;
 
-	private AdminCredential(byte @Nullable [] digest) {
+	private AdminCredential(@Nullable SecretDigest digest) {
 		this.digest = digest;
 	}
 
@@ -51,7 +49,7 @@ public final class AdminCredential {
 		if (!FORMAT.matcher(configured).matches()) {
 			throw new IllegalArgumentException("운영자 토큰은 영문 대소문자 · 숫자 · - . _ ~ + / 와 끝의 = 만 쓸 수 있다");
 		}
-		return new AdminCredential(digest(configured));
+		return new AdminCredential(SecretDigest.of(configured));
 	}
 
 	/** 운영자 기능이 열렸는가 */
@@ -64,21 +62,12 @@ public final class AdminCredential {
 		if (this.digest == null || presented == null) {
 			return false;
 		}
-		return MessageDigest.isEqual(this.digest, digest(presented));
+		return this.digest.matches(SecretDigest.of(presented));
 	}
 
 	@Override
 	public String toString() {
 		return open() ? "AdminCredential[open]" : "AdminCredential[closed]";
-	}
-
-	private static byte[] digest(String value) {
-		try {
-			return MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8));
-		}
-		catch (NoSuchAlgorithmException ex) {
-			throw new IllegalStateException("SHA-256 을 쓸 수 없다", ex);
-		}
 	}
 
 }

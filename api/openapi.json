@@ -8,6 +8,266 @@
     "url" : "/"
   } ],
   "paths" : {
+    "/api/account-recoveries" : {
+      "post" : {
+        "operationId" : "recover",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AccountRecoveryRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountRecoveryResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청 보호 토큰이 없거나 맞지 않는다"
+          }
+        },
+        "tags" : [ "account-controller" ]
+      }
+    },
+    "/api/account/password" : {
+      "put" : {
+        "operationId" : "changePassword",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PasswordChangeRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PasswordChangeResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "세션이 없거나 만료됐다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청 보호 토큰이 없거나 맞지 않는다"
+          }
+        },
+        "tags" : [ "account-controller" ]
+      }
+    },
+    "/api/account/recovery-code" : {
+      "post" : {
+        "operationId" : "reissueRecoveryCode",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RecoveryCodeRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RecoveryCodeResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "세션이 없거나 만료됐다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청 보호 토큰이 없거나 맞지 않거나, 비밀번호를 바꿔야 한다"
+          }
+        },
+        "tags" : [ "account-controller" ]
+      }
+    },
+    "/api/admin/accounts" : {
+      "post" : {
+        "operationId" : "createAccount",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AccountCreationRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountCreationResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청 본문의 형식이 틀렸거나, 이메일 · 표시 이름 형식 또는 초기 비밀번호 규칙을 어겼다"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          }
+        },
+        "tags" : [ "admin-account-controller" ]
+      }
+    },
+    "/api/admin/accounts/initial-password" : {
+      "put" : {
+        "operationId" : "resetInitialPassword",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/InitialPasswordResetRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/InitialPasswordResetResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청 본문의 형식이 틀렸거나 초기 비밀번호 규칙을 어겼다"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "그 이메일의 계정이 없다"
+          }
+        },
+        "tags" : [ "admin-account-controller" ]
+      }
+    },
     "/api/admin/big-storyline-criteria" : {
       "get" : {
         "operationId" : "criteria",
@@ -1553,6 +1813,157 @@
         "tags" : [ "admin-feed-controller" ]
       }
     },
+    "/api/admin/invitations" : {
+      "get" : {
+        "operationId" : "invitations",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/InvitationListResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          }
+        },
+        "tags" : [ "admin-invitation-controller" ]
+      },
+      "post" : {
+        "operationId" : "issueInvitation",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/InvitationIssueRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/InvitationIssueResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청 본문의 형식이 틀렸거나 메모가 너무 길다"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          }
+        },
+        "tags" : [ "admin-invitation-controller" ]
+      }
+    },
+    "/api/admin/invitations/{id}/revoke" : {
+      "post" : {
+        "operationId" : "revokeInvitation",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/InvitationRevocationResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "없는 초대다"
+          }
+        },
+        "tags" : [ "admin-invitation-controller" ]
+      }
+    },
     "/api/admin/presets" : {
       "get" : {
         "operationId" : "presets",
@@ -1706,6 +2117,100 @@
           }
         },
         "tags" : [ "admin-source-controller" ]
+      }
+    },
+    "/api/admin/sign-up-policy" : {
+      "get" : {
+        "operationId" : "signUpPolicyStatus",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SignUpPolicyStatusResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          }
+        },
+        "tags" : [ "admin-sign-up-policy-controller" ]
+      },
+      "put" : {
+        "operationId" : "changeSignUpPolicy",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SignUpPolicyChangeRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SignUpPolicyChangeResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청 본문의 형식이 틀렸다"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          }
+        },
+        "tags" : [ "admin-sign-up-policy-controller" ]
       }
     },
     "/api/admin/sources" : {
@@ -3295,6 +3800,82 @@
         "tags" : [ "admin-evaluation-controller" ]
       }
     },
+    "/api/invitation-acceptances" : {
+      "post" : {
+        "operationId" : "acceptInvitation",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/InvitationAcceptanceRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SignUpResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청 보호 토큰이 없거나 맞지 않는다"
+          }
+        },
+        "tags" : [ "sign-up-controller" ]
+      }
+    },
+    "/api/invitation-checks" : {
+      "post" : {
+        "operationId" : "checkInvitation",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/InvitationCheckRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/InvitationCheckResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청 보호 토큰이 없거나 맞지 않는다"
+          }
+        },
+        "tags" : [ "sign-up-controller" ]
+      }
+    },
     "/api/me" : {
       "get" : {
         "operationId" : "me",
@@ -3346,6 +3927,16 @@
               }
             },
             "description" : "세션이 없거나 만료됐다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "비밀번호를 바꿔야 한다"
           }
         },
         "tags" : [ "notice-controller" ]
@@ -3386,7 +3977,7 @@
                 }
               }
             },
-            "description" : "요청 보호 토큰이 없거나 맞지 않는다"
+            "description" : "요청 보호 토큰이 없거나 맞지 않거나, 비밀번호를 바꿔야 한다"
           }
         },
         "tags" : [ "notice-controller" ]
@@ -3415,6 +4006,16 @@
               }
             },
             "description" : "세션이 없거나 만료됐다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "비밀번호를 바꿔야 한다"
           }
         },
         "tags" : [ "notice-controller" ]
@@ -3494,10 +4095,134 @@
         },
         "tags" : [ "session-controller" ]
       }
+    },
+    "/api/sign-up-policy" : {
+      "get" : {
+        "operationId" : "signUpPolicy",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SignUpPolicyResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "sign-up-controller" ]
+      }
+    },
+    "/api/sign-ups" : {
+      "post" : {
+        "operationId" : "signUp",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SignUpRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SignUpResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청 보호 토큰이 없거나 맞지 않는다"
+          }
+        },
+        "tags" : [ "sign-up-controller" ]
+      }
     }
   },
   "components" : {
     "schemas" : {
+      "AccountCreationRequest" : {
+        "type" : "object",
+        "properties" : {
+          "displayName" : {
+            "type" : "string"
+          },
+          "email" : {
+            "type" : "string"
+          },
+          "initialPassword" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "displayName", "email", "initialPassword" ]
+      },
+      "AccountCreationResponse" : {
+        "type" : "object",
+        "properties" : {
+          "result" : {
+            "type" : "string",
+            "enum" : [ "CREATED", "EMAIL_TAKEN" ]
+          },
+          "userId" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int64"
+          }
+        },
+        "required" : [ "result", "userId" ]
+      },
+      "AccountRecoveryRequest" : {
+        "type" : "object",
+        "properties" : {
+          "email" : {
+            "type" : "string"
+          },
+          "keep" : {
+            "type" : "boolean"
+          },
+          "newPassword" : {
+            "type" : "string"
+          },
+          "recoveryCode" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "email", "keep", "newPassword", "recoveryCode" ]
+      },
+      "AccountRecoveryResponse" : {
+        "type" : "object",
+        "properties" : {
+          "passwordProblem" : {
+            "type" : [ "string", "null" ],
+            "enum" : [ "TOO_SHORT", "TOO_LONG" ]
+          },
+          "recoveryCode" : {
+            "type" : [ "string", "null" ]
+          },
+          "result" : {
+            "type" : "string",
+            "enum" : [ "RESET", "REJECTED", "WAIT", "PASSWORD_REJECTED" ]
+          },
+          "retryAfterSeconds" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int64"
+          }
+        },
+        "required" : [ "passwordProblem", "recoveryCode", "result", "retryAfterSeconds" ]
+      },
       "ApiProblem" : {
         "type" : "object",
         "properties" : {
@@ -4891,6 +5616,156 @@
         },
         "required" : [ "httpStatus", "message", "permanence", "problem", "reason" ]
       },
+      "InitialPasswordResetRequest" : {
+        "type" : "object",
+        "properties" : {
+          "email" : {
+            "type" : "string"
+          },
+          "initialPassword" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "email", "initialPassword" ]
+      },
+      "InitialPasswordResetResponse" : {
+        "type" : "object",
+        "properties" : {
+          "result" : {
+            "type" : "string",
+            "enum" : [ "RESET", "NOT_PENDING" ]
+          }
+        },
+        "required" : [ "result" ]
+      },
+      "InvitationAcceptanceRequest" : {
+        "type" : "object",
+        "properties" : {
+          "displayName" : {
+            "type" : "string"
+          },
+          "email" : {
+            "type" : "string"
+          },
+          "keep" : {
+            "type" : "boolean"
+          },
+          "password" : {
+            "type" : "string"
+          },
+          "token" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "displayName", "email", "keep", "password", "token" ]
+      },
+      "InvitationCheckRequest" : {
+        "type" : "object",
+        "properties" : {
+          "token" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "token" ]
+      },
+      "InvitationCheckResponse" : {
+        "type" : "object",
+        "properties" : {
+          "state" : {
+            "type" : "string",
+            "enum" : [ "VALID", "USED", "EXPIRED", "REVOKED", "UNKNOWN" ]
+          }
+        },
+        "required" : [ "state" ]
+      },
+      "InvitationIssueRequest" : {
+        "type" : "object",
+        "properties" : {
+          "memo" : {
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "memo" ]
+      },
+      "InvitationIssueResponse" : {
+        "type" : "object",
+        "properties" : {
+          "expiresAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "token" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "expiresAt", "id", "token" ]
+      },
+      "InvitationListResponse" : {
+        "type" : "object",
+        "properties" : {
+          "invitations" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/InvitationRowResponse"
+            }
+          }
+        },
+        "required" : [ "invitations" ]
+      },
+      "InvitationRevocationResponse" : {
+        "type" : "object",
+        "properties" : {
+          "result" : {
+            "type" : "string",
+            "enum" : [ "REVOKED", "NOT_REVOCABLE" ]
+          },
+          "state" : {
+            "type" : [ "string", "null" ],
+            "enum" : [ "VALID", "USED", "EXPIRED", "REVOKED" ]
+          }
+        },
+        "required" : [ "result", "state" ]
+      },
+      "InvitationRowResponse" : {
+        "type" : "object",
+        "properties" : {
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "expiresAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "memo" : {
+            "type" : [ "string", "null" ]
+          },
+          "revokedAt" : {
+            "type" : [ "string", "null" ],
+            "format" : "date-time"
+          },
+          "state" : {
+            "type" : "string",
+            "enum" : [ "VALID", "USED", "EXPIRED", "REVOKED" ]
+          },
+          "usedAt" : {
+            "type" : [ "string", "null" ],
+            "format" : "date-time"
+          },
+          "usedByEmail" : {
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "createdAt", "expiresAt", "id", "memo", "revokedAt", "state", "usedAt", "usedByEmail" ]
+      },
       "JudgedEventResponse" : {
         "type" : "object",
         "properties" : {
@@ -4967,6 +5842,9 @@
           "email" : {
             "type" : [ "string", "null" ]
           },
+          "passwordChangeRequired" : {
+            "type" : "boolean"
+          },
           "result" : {
             "type" : "string",
             "enum" : [ "SIGNED_IN", "ANONYMOUS" ]
@@ -4980,7 +5858,7 @@
             "format" : "int64"
           }
         },
-        "required" : [ "displayName", "email", "result", "role", "userId" ]
+        "required" : [ "displayName", "email", "passwordChangeRequired", "result", "role", "userId" ]
       },
       "MergePairResponse" : {
         "type" : "object",
@@ -5101,7 +5979,14 @@
           },
           "kind" : {
             "type" : "string",
-            "enum" : [ "FEED_STATUS" ]
+            "enum" : [ "FEED_STATUS", "PASSWORD_CHANGED" ]
+          },
+          "passwordChanged" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/PasswordChangedNoticeResponse"
+            }, {
+              "type" : "null"
+            } ]
           },
           "read" : {
             "type" : "boolean"
@@ -5115,7 +6000,7 @@
             "format" : "date-time"
           }
         },
-        "required" : [ "createdAt", "feedStatus", "id", "kind", "read", "revision", "updatedAt" ]
+        "required" : [ "createdAt", "feedStatus", "id", "kind", "passwordChanged", "read", "revision", "updatedAt" ]
       },
       "NoticeRevision" : {
         "type" : "object",
@@ -5132,6 +6017,53 @@
           }
         },
         "required" : [ "id", "revision" ]
+      },
+      "PasswordChangeRequest" : {
+        "type" : "object",
+        "properties" : {
+          "currentPassword" : {
+            "type" : "string"
+          },
+          "newPassword" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "currentPassword", "newPassword" ]
+      },
+      "PasswordChangeResponse" : {
+        "type" : "object",
+        "properties" : {
+          "passwordProblem" : {
+            "type" : [ "string", "null" ],
+            "enum" : [ "TOO_SHORT", "TOO_LONG" ]
+          },
+          "recoveryCode" : {
+            "type" : [ "string", "null" ]
+          },
+          "result" : {
+            "type" : "string",
+            "enum" : [ "CHANGED", "REJECTED", "WAIT", "PASSWORD_REJECTED" ]
+          },
+          "retryAfterSeconds" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int64"
+          }
+        },
+        "required" : [ "passwordProblem", "recoveryCode", "result", "retryAfterSeconds" ]
+      },
+      "PasswordChangedNoticeResponse" : {
+        "type" : "object",
+        "properties" : {
+          "changedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "method" : {
+            "type" : "string",
+            "enum" : [ "CHANGE", "RECOVERY" ]
+          }
+        },
+        "required" : [ "changedAt", "method" ]
       },
       "PingResponse" : {
         "type" : "object",
@@ -5370,6 +6302,32 @@
         },
         "required" : [ "notices" ]
       },
+      "RecoveryCodeRequest" : {
+        "type" : "object",
+        "properties" : {
+          "currentPassword" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "currentPassword" ]
+      },
+      "RecoveryCodeResponse" : {
+        "type" : "object",
+        "properties" : {
+          "recoveryCode" : {
+            "type" : [ "string", "null" ]
+          },
+          "result" : {
+            "type" : "string",
+            "enum" : [ "ISSUED", "REJECTED", "WAIT" ]
+          },
+          "retryAfterSeconds" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int64"
+          }
+        },
+        "required" : [ "recoveryCode", "result", "retryAfterSeconds" ]
+      },
       "RegistrationResponse" : {
         "type" : "object",
         "properties" : {
@@ -5581,6 +6539,114 @@
           }
         },
         "required" : [ "result", "retryAfterSeconds" ]
+      },
+      "SignUpPolicyChangeRequest" : {
+        "type" : "object",
+        "properties" : {
+          "open" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "open" ]
+      },
+      "SignUpPolicyChangeResponse" : {
+        "type" : "object",
+        "properties" : {
+          "open" : {
+            "type" : "boolean"
+          },
+          "previousOpen" : {
+            "type" : [ "boolean", "null" ]
+          },
+          "result" : {
+            "type" : "string",
+            "enum" : [ "CHANGED", "UNCHANGED" ]
+          }
+        },
+        "required" : [ "open", "previousOpen", "result" ]
+      },
+      "SignUpPolicyHistoryResponse" : {
+        "type" : "object",
+        "properties" : {
+          "actor" : {
+            "type" : "string",
+            "enum" : [ "SYSTEM", "OPERATOR" ]
+          },
+          "changedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "open" : {
+            "type" : "boolean"
+          },
+          "previousOpen" : {
+            "type" : [ "boolean", "null" ]
+          }
+        },
+        "required" : [ "actor", "changedAt", "open", "previousOpen" ]
+      },
+      "SignUpPolicyResponse" : {
+        "type" : "object",
+        "properties" : {
+          "open" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "open" ]
+      },
+      "SignUpPolicyStatusResponse" : {
+        "type" : "object",
+        "properties" : {
+          "changes" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/SignUpPolicyHistoryResponse"
+            }
+          },
+          "open" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "changes", "open" ]
+      },
+      "SignUpRequest" : {
+        "type" : "object",
+        "properties" : {
+          "displayName" : {
+            "type" : "string"
+          },
+          "email" : {
+            "type" : "string"
+          },
+          "keep" : {
+            "type" : "boolean"
+          },
+          "password" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "displayName", "email", "keep", "password" ]
+      },
+      "SignUpResponse" : {
+        "type" : "object",
+        "properties" : {
+          "invitation" : {
+            "type" : [ "string", "null" ],
+            "enum" : [ "VALID", "USED", "EXPIRED", "REVOKED", "UNKNOWN" ]
+          },
+          "passwordProblem" : {
+            "type" : [ "string", "null" ],
+            "enum" : [ "TOO_SHORT", "TOO_LONG" ]
+          },
+          "recoveryCode" : {
+            "type" : [ "string", "null" ]
+          },
+          "result" : {
+            "type" : "string",
+            "enum" : [ "SIGNED_UP", "CLOSED", "INVITATION_UNUSABLE", "EMAIL_UNAVAILABLE", "EMAIL_MALFORMED", "DISPLAY_NAME_MALFORMED", "PASSWORD_REJECTED" ]
+          }
+        },
+        "required" : [ "invitation", "passwordProblem", "recoveryCode", "result" ]
       },
       "SkippedItemView" : {
         "type" : "object",

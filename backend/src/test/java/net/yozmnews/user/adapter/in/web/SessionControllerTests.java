@@ -29,6 +29,7 @@ import net.yozmnews.user.application.SignInOutcome;
 import net.yozmnews.user.domain.account.Account;
 import net.yozmnews.user.domain.account.AccountRepository;
 import net.yozmnews.user.domain.account.AccountRole;
+import net.yozmnews.user.domain.account.DisplayName;
 import net.yozmnews.user.domain.account.EmailAddress;
 import net.yozmnews.user.domain.credential.PasswordCredential;
 import net.yozmnews.user.domain.credential.PasswordCredentialRepository;
@@ -98,7 +99,8 @@ class SessionControllerTests {
 		this.mockMvc.perform(get("/api/me").cookie(session))
 			.andExpect(status().isOk())
 			.andExpect(content().json("""
-					{"result":"SIGNED_IN","userId":%d,"email":"alice@example.com","displayName":"시험","role":"ADMIN"}
+					{"result":"SIGNED_IN","userId":%d,"email":"alice@example.com","displayName":"시험","role":"ADMIN",
+					 "passwordChangeRequired":false}
 					""".formatted(user), JsonCompareMode.STRICT));
 	}
 
@@ -107,8 +109,28 @@ class SessionControllerTests {
 		this.mockMvc.perform(get("/api/me"))
 			.andExpect(status().isOk())
 			.andExpect(content().json("""
-					{"result":"ANONYMOUS","userId":null,"email":null,"displayName":null,"role":null}
+					{"result":"ANONYMOUS","userId":null,"email":null,"displayName":null,"role":null,
+					 "passwordChangeRequired":false}
 					""", JsonCompareMode.STRICT));
+	}
+
+	@Test
+	void accountThatMustChangeThePasswordSignsInAndTheStateSaysSo() throws Exception {
+		long user = account("initial@example.com", AccountRole.USER, true);
+		Cookie session = sessionCookie(this.mockMvc.perform(signIn("initial@example.com", PASSWORD, false))
+			.andExpect(content().json("""
+					{"result":"SIGNED_IN","retryAfterSeconds":null}
+					""", JsonCompareMode.STRICT))
+			.andReturn()
+			.getResponse());
+
+		this.mockMvc.perform(get("/api/me").cookie(session))
+			.andExpect(status().isOk())
+			.andExpect(content().json("""
+					{"result":"SIGNED_IN","userId":%d,"email":"initial@example.com","displayName":"시험","role":"USER",
+					 "passwordChangeRequired":true}
+					""".formatted(user), JsonCompareMode.STRICT));
+		this.mockMvc.perform(withCsrf(delete("/api/session")).cookie(session)).andExpect(status().isNoContent());
 	}
 
 	@Test
@@ -132,7 +154,10 @@ class SessionControllerTests {
 	void waitingRefusesEvenTheRightPassword() throws Exception {
 		account("dave@example.com", AccountRole.USER);
 		// 연속 실패 10회 — 대기는 1초 × 2^6 = 64초다
-		this.jdbc.sql("insert into login_failures (email_digest, failures, last_failed_at) values (:digest, 10, :at)")
+		this.jdbc.sql("""
+				insert into login_failures (attempt, email_digest, failures, last_failed_at)
+				values ('SIGN_IN', :digest, 10, :at)
+				""")
 			.param("digest", EmailDigest.of("dave@example.com").value())
 			.param("at", Timestamp.from(Instant.now()))
 			.update();
@@ -219,14 +244,20 @@ class SessionControllerTests {
 		this.mockMvc.perform(withCsrf(delete("/api/session")).cookie(session)).andExpect(status().isNoContent());
 		this.mockMvc.perform(get("/api/me").cookie(session))
 			.andExpect(content().json("""
-					{"result":"ANONYMOUS","userId":null,"email":null,"displayName":null,"role":null}
+					{"result":"ANONYMOUS","userId":null,"email":null,"displayName":null,"role":null,
+					 "passwordChangeRequired":false}
 					""", JsonCompareMode.STRICT));
 		this.mockMvc.perform(withCsrf(delete("/api/session"))).andExpect(status().isNoContent());
 	}
 
 	private long account(String email, AccountRole role) {
-		UserId id = this.accounts.save(Account.create(EmailAddress.parse(email).orElseThrow(), "시험", role, NOW)).id();
-		this.credentials.save(PasswordCredential.of(id, this.hashing.hash(PASSWORD), NOW));
+		return account(email, role, false);
+	}
+
+	private long account(String email, AccountRole role, boolean mustChange) {
+		UserId id = this.accounts.save(Account.create(EmailAddress.parse(email).orElseThrow(),
+				new DisplayName("시험"), role, NOW)).id();
+		this.credentials.save(PasswordCredential.of(id, this.hashing.hash(PASSWORD), mustChange, NOW));
 		return id.value();
 	}
 

@@ -16,6 +16,7 @@ import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.UserScopeRules;
 import net.yozmnews.UserScopedEndpoints;
 import net.yozmnews.YozmnewsApplication;
+import net.yozmnews.platform.AllowedBeforePasswordChange;
 import net.yozmnews.platform.PublicApi;
 import net.yozmnews.user.application.PasswordHashing;
 import net.yozmnews.user.domain.account.AccountRepository;
@@ -39,8 +40,8 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 
 /**
  * 격리 틀 자체의 시험 — 세션 사용자 인자로 사용자별 데이터를 가르는 시험 처리기에서 A 가 쓴 것을 B 가 읽지 못하고, 등록 가드의 판정이 일부러 틀린
- * 처리기(공개도 등록도 아님 · 경로 · 질의에서 userId · 본문 · 질의 레코드의 UserId · 묶기 애너테이션을 단 UserId · 빈 공개 이유 · 낡은
- * 등록)를 모두 잡는다.
+ * 처리기(공개도 등록도 아님 · 경로 · 질의에서 userId · 본문 · 질의 레코드의 UserId · 묶기 애너테이션을 단 UserId · 빈 공개 이유 · 빈
+ * 비밀번호 변경 전 허용 이유 · 공개 처리기의 허용 표시 · 낡은 등록)를 모두 잡는다.
  * <p>
  * 지키는 규칙: user-R5 · user-R6
  */
@@ -92,6 +93,7 @@ class UserScopeFixtureTests {
 		Map<String, Class<?>> registry = new HashMap<>(UserScopedEndpoints.ENDPOINTS);
 		registry.put("GET /api/test/notes", UserScopeFixtureTests.class);
 		registry.put("POST /api/test/notes", UserScopeFixtureTests.class);
+		registry.put("GET /api/test/blank-before-change", UserScopeFixtureTests.class);
 		registry.put("GET /api/test/gone", UserScopeFixtureTests.class);
 		return Map.copyOf(registry);
 	}
@@ -102,7 +104,8 @@ class UserScopeFixtureTests {
 
 		assertThat(verdict.endpoints()).contains("GET /api/test/notes", "POST /api/test/notes",
 				"GET /api/test/careless/{userId}", "POST /api/test/careless", "GET /api/test/careless-param",
-				"GET /api/test/careless-query", "GET /api/test/careless-model", "GET /api/test/blank");
+				"GET /api/test/careless-query", "GET /api/test/careless-model", "GET /api/test/blank",
+				"GET /api/test/blank-before-change", "GET /api/test/public-before-change");
 		assertThat(verdict.violations()).containsExactlyInAnyOrder(
 				"GET /api/test/careless/{userId} — 공개 표시와 격리 시험 등록 가운데 꼭 하나가 있어야 한다(공개 false · 등록 false)",
 				"GET /api/test/careless/{userId} 의 인자 0 — 요청에서 이름 userId 를 받는다",
@@ -115,6 +118,8 @@ class UserScopeFixtureTests {
 				"GET /api/test/careless-model — 공개 표시와 격리 시험 등록 가운데 꼭 하나가 있어야 한다(공개 false · 등록 false)",
 				"GET /api/test/careless-model 의 인자 0 — UserId 에 애너테이션을 달면 요청에서 묶인다",
 				"GET /api/test/blank — 공개 표시의 이유가 비었다",
+				"GET /api/test/blank-before-change — 비밀번호 변경 전 허용 표시의 이유가 비었다",
+				"GET /api/test/public-before-change — 공개 처리기에 비밀번호 변경 전 허용 표시를 달았다",
 				"GET /api/test/gone — 등록했지만 그런 처리기가 없다(낡은 등록)");
 	}
 
@@ -171,6 +176,19 @@ class UserScopeFixtureTests {
 		@GetMapping("/api/test/blank")
 		String blank() {
 			return "blank";
+		}
+
+		@AllowedBeforePasswordChange(reason = " ")
+		@GetMapping("/api/test/blank-before-change")
+		String blankBeforeChange(UserId user) {
+			return "blank";
+		}
+
+		@PublicApi(reason = "시험 — 공개 처리기")
+		@AllowedBeforePasswordChange(reason = "시험 — 공개 처리기에는 달지 않는다")
+		@GetMapping("/api/test/public-before-change")
+		String publicBeforeChange() {
+			return "public";
 		}
 
 	}

@@ -9,7 +9,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
- * 오래된 로그인 실패 기록 정리 유스케이스 — 마지막 실패에서 잊는 기간이 지난 기록을 지운다. docs/specs/user.md §4 · user-R19
+ * 오래된 실패 기록 정리 유스케이스 — 마지막 실패에서 잊는 기간이 지난 기록을 종류(로그인 · 복구 코드)와 무관하게 지운다.
+ * docs/specs/user.md §4 · user-R19
  */
 @Service
 public class LoginFailureCleanup {

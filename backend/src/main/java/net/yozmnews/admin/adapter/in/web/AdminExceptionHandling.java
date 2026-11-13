@@ -8,6 +8,7 @@ import net.yozmnews.platform.ProblemResponses;
 import net.yozmnews.platform.WebRole;
 import net.yozmnews.source.UnknownFeedException;
 import net.yozmnews.source.UnknownSourceException;
+import net.yozmnews.user.UnknownInvitationException;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
@@ -16,7 +17,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 /**
- * 운영자 API 의 없는 소스 · 피드를 404 문제 응답으로 낸다 — docs/specs/admin.md §4 · admin-R2.
+ * 운영자 API 의 없는 소스 · 피드 · 초대를 404 문제 응답으로 낸다 — docs/specs/admin.md §4 · admin-R2.
  * <p>
  * 운영자 컨트롤러에만 적용하고, 앱 전체 조언의 처리하지 못한 예외(500)보다 먼저 받는다.
  */
@@ -38,6 +39,11 @@ class AdminExceptionHandling {
 
 	@ExceptionHandler(UnknownFeedException.class)
 	ResponseEntity<ApiProblem> unknownFeed(UnknownFeedException ex, HttpServletRequest request) {
+		return this.problems.entity(HttpStatus.NOT_FOUND, ex.getMessage(), request);
+	}
+
+	@ExceptionHandler(UnknownInvitationException.class)
+	ResponseEntity<ApiProblem> unknownInvitation(UnknownInvitationException ex, HttpServletRequest request) {
 		return this.problems.entity(HttpStatus.NOT_FOUND, ex.getMessage(), request);
 	}
 
