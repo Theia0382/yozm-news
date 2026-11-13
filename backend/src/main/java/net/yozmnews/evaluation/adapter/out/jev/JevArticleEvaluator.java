@@ -26,7 +26,9 @@ import net.yozmnews.evaluation.domain.evaluator.EvaluationInput;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationResult;
 import net.yozmnews.evaluation.domain.evaluator.MembershipInput;
 import net.yozmnews.evaluation.domain.evaluator.MembershipResult;
+import net.yozmnews.evaluation.domain.evaluator.Relation;
 import net.yozmnews.evaluation.domain.evaluator.RelationInput;
+import net.yozmnews.evaluation.domain.evaluator.RelationRereadResult;
 import net.yozmnews.evaluation.domain.evaluator.RelationResult;
 import net.yozmnews.evaluation.domain.evaluator.RereadFailure;
 import net.yozmnews.evaluation.domain.evaluator.RereadResult;
@@ -142,6 +144,20 @@ public final class JevArticleEvaluator implements ArticleEvaluator, AutoCloseabl
 		}
 		return switch (JevResponse.read(rawResponse, null, questions)) {
 			case Evaluation evaluation -> evaluation;
+			case EvaluationFailure failure -> new RereadFailure(RereadFailure.Kind.UNREADABLE, failure.message());
+		};
+	}
+
+	/** 저장된 Jev 관계 판정 응답 본문을 다시 읽는다 — 판정 때와 같은 읽기이고 요청을 보내지 않는다 */
+	@Override
+	public RelationRereadResult rereadRelation(String evaluator, String rawResponse) {
+		Objects.requireNonNull(evaluator, "evaluator");
+		Objects.requireNonNull(rawResponse, "rawResponse");
+		if (!JevResponse.EVALUATOR.equals(evaluator)) {
+			return new RereadFailure(RereadFailure.Kind.OTHER_EVALUATOR, "Jev 가 남긴 원본 응답이 아니다 — 평가기 " + evaluator);
+		}
+		return switch (JevResponse.readRelation(rawResponse, null)) {
+			case Relation relation -> relation;
 			case EvaluationFailure failure -> new RereadFailure(RereadFailure.Kind.UNREADABLE, failure.message());
 		};
 	}

@@ -93,6 +93,9 @@ describe("BigStorylinesPage", () => {
     const rows = within(within(section).getByRole("table")).getAllByRole("row");
     const first = within(rows[1]!).getAllByRole("cell");
     expect(first[0]).toHaveTextContent(/^스토리라인 7$/);
+    expect(
+      within(first[0]!).getByRole("link", { name: "스토리라인 7" }),
+    ).toHaveAttribute("href", "/admin/storylines/7");
     expect(first[1]).toHaveTextContent(/^진행$/);
     expect(first[2]).toHaveTextContent(/^2$/);
     expect(first[3]).toHaveTextContent(/^4$/);

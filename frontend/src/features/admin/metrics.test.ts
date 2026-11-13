@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatHours,
   formatMinutes,
+  formatSeconds,
   formatProbability,
   formatRate,
   RATE_LEVEL_LEGEND,
@@ -77,5 +78,14 @@ describe("formatHours · formatMinutes", () => {
     expect(formatMinutes(60)).toBe("1시간");
     expect(formatMinutes(30)).toBe("30분");
     expect(formatMinutes(90)).toBe("90분");
+  });
+});
+
+describe("formatSeconds", () => {
+  it("시간의 배수면 시간 · 일로, 아니면 초로 보인다", () => {
+    expect(formatSeconds(259200)).toBe("3일");
+    expect(formatSeconds(1209600)).toBe("14일");
+    expect(formatSeconds(7200)).toBe("2시간");
+    expect(formatSeconds(90)).toBe("90초");
   });
 });

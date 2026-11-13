@@ -3,20 +3,24 @@ package net.yozmnews.storyline.adapter.out.persistence;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import net.yozmnews.storyline.RelationOutcome;
 import net.yozmnews.storyline.domain.relation.Relation;
 import net.yozmnews.storyline.domain.relation.RelationCriteria;
 import net.yozmnews.storyline.domain.relation.RelationKind;
 import net.yozmnews.storyline.domain.relation.RelationMove;
-import net.yozmnews.storyline.domain.relation.RelationOutcome;
 import net.yozmnews.storyline.domain.relation.RelationRepository;
+import net.yozmnews.storyline.domain.relation.StoredAsked;
 import net.yozmnews.storyline.domain.relation.StoredRelation;
 import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -51,13 +55,14 @@ class JdbcRelationRepository implements RelationRepository {
 	@Override
 	public List<StoredRelation> of(long storylineId) {
 		return this.jdbc.sql("""
-				select kind, source_id, target_id, linked_at
+				select kind, source_id, target_id, probability, judgement_id, criteria_id, linked_at
 				from storyline_relations
 				where source_id = :id or target_id = :id
 				order by kind, source_id, target_id
 				""")
 			.param("id", storylineId)
-			.query((rs, row) -> new StoredRelation(relation(rs, row),
+			.query((rs, row) -> new StoredRelation(relation(rs, row), rs.getDouble("probability"),
+					rs.getLong("judgement_id"), rs.getLong("criteria_id"),
 					rs.getObject("linked_at", OffsetDateTime.class).toInstant()))
 			.list();
 	}
@@ -101,6 +106,43 @@ class JdbcRelationRepository implements RelationRepository {
 			.query((rs, row) -> asked.put(rs.getLong("partner"), rs.getInt("smaller_events")))
 			.list();
 		return asked;
+	}
+
+	@Override
+	public Map<Long, RelationCriteria> criteria(Collection<Long> ids) {
+		if (ids.isEmpty()) {
+			return Map.of();
+		}
+		Map<Long, RelationCriteria> found = new LinkedHashMap<>();
+		this.jdbc.sql("""
+				select id, probability, one_matter, min_events, candidate_score, window_seconds
+				from storyline_relation_criteria where id = any(:ids) order by id
+				""")
+			.param("ids", ids.toArray(Long[]::new))
+			.query((rs, row) -> found.put(rs.getLong("id"),
+					new RelationCriteria(rs.getDouble("probability"), rs.getDouble("one_matter"), rs.getInt("min_events"),
+							rs.getDouble("candidate_score"), Duration.ofSeconds(rs.getLong("window_seconds")))))
+			.list();
+		return Collections.unmodifiableMap(found);
+	}
+
+	@Override
+	public List<StoredAsked> askedOf(long storylineId) {
+		return this.jdbc.sql("""
+				select low_id, high_id, smaller_events, outcome, judgement_id, criteria_id, asked_at
+				from storyline_relation_asked
+				where low_id = :id or high_id = :id
+				order by case when low_id = :id then high_id else low_id end
+				""")
+			.param("id", storylineId)
+			.query((rs, row) -> {
+				long judgement = rs.getLong("judgement_id");
+				Long judgementId = rs.wasNull() ? null : judgement;
+				return new StoredAsked(rs.getLong("low_id"), rs.getLong("high_id"), rs.getInt("smaller_events"),
+						RelationOutcome.valueOf(rs.getString("outcome")), judgementId, rs.getLong("criteria_id"),
+						rs.getObject("asked_at", OffsetDateTime.class).toInstant());
+			})
+			.list();
 	}
 
 	@Override

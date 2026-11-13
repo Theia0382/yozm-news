@@ -8,7 +8,8 @@ import net.yozmnews.evaluation.domain.evaluator.Relation;
 import net.yozmnews.evaluation.domain.evaluator.ResultCheck;
 
 /**
- * 관계 판정 결과가 답 다섯과 맞는지 — docs/specs/evaluation.md §4 · evaluation-R49.
+ * 관계 판정 결과가 답 다섯과 맞는지 — 판정 때와 원본을 다시 읽을 때 함께 쓴다 · docs/specs/evaluation.md §4 · evaluation-R49 ·
+ * evaluation-R50.
  * <p>
  * 답의 집합이 {@link RelationAnswer} 다섯과 정확히 같아야 하고({@link ResultCheck#keyDifference}), 원본 응답은 {@code jsonb} 로 저장할
  * 수 있어야 한다({@link ResultCheck#rawResponseProblem}). 어긋남의 문구는 답의 이름만 담는다.

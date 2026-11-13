@@ -1,7 +1,12 @@
 package net.yozmnews.storyline.adapter.out.persistence;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
 
 import net.yozmnews.storyline.domain.linking.LinkingCriteria;
@@ -47,6 +52,20 @@ class JdbcLinkingCriteriaRepository implements LinkingCriteriaRepository {
 			.param("now", now.atOffset(ZoneOffset.UTC))
 			.query(Long.class)
 			.single();
+	}
+
+	@Override
+	public Map<Long, LinkingCriteria> findAll(Collection<Long> ids) {
+		if (ids.isEmpty()) {
+			return Map.of();
+		}
+		Map<Long, LinkingCriteria> found = new LinkedHashMap<>();
+		this.jdbc.sql("select id, window_seconds, threshold from storyline_linking_criteria where id = any(:ids) order by id")
+			.param("ids", ids.toArray(Long[]::new))
+			.query((rs, row) -> found.put(rs.getLong("id"),
+					new LinkingCriteria(Duration.ofSeconds(rs.getLong("window_seconds")), rs.getDouble("threshold"))))
+			.list();
+		return Collections.unmodifiableMap(found);
 	}
 
 }

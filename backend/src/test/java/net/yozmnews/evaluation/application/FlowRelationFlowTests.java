@@ -33,10 +33,14 @@ import net.yozmnews.evaluation.domain.evaluator.MembershipInput;
 import net.yozmnews.evaluation.domain.evaluator.MembershipResult;
 import net.yozmnews.evaluation.domain.evaluator.Relation;
 import net.yozmnews.evaluation.domain.evaluator.RelationInput;
+import net.yozmnews.evaluation.domain.evaluator.RelationRereadResult;
 import net.yozmnews.evaluation.domain.evaluator.RelationResult;
 import net.yozmnews.evaluation.domain.evaluator.RelationWording;
 import net.yozmnews.evaluation.domain.evaluator.RereadResult;
+import net.yozmnews.evaluation.domain.jev.JevResponse;
 import net.yozmnews.evaluation.domain.relation.RelationJudgementRepository;
+import net.yozmnews.evaluation.domain.relation.RelationRecord;
+import net.yozmnews.evaluation.domain.relation.StoredRelationJudgement;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -132,6 +136,41 @@ class FlowRelationFlowTests {
 			.query(OffsetDateTime.class)
 			.single()
 			.toInstant()).isEqualTo(AT);
+	}
+
+	@Test
+	void findsStoredJudgementsByIdAndTheirRawResponseStillReadsAfterJsonb() {
+		// 원본 응답은 jsonb 를 거치면 공백 · 키 순서가 바뀐다 — 그래도 Jev 형식으로 같은 확률이 읽혀야 한다
+		String body = "{\"model\": \"jev-1.14.0\", \"answers\": {\"relation\": {\"type\": \"choice\", \"choice\": \"none\", "
+				+ "\"confidence\": 0.62, \"probabilities\": {\"none\": 0.62, \"b_part_of_a\": 0.2, \"a_part_of_b\": 0.08, "
+				+ "\"a_led_to_b\": 0.06, \"b_led_to_a\": 0.04}}, \"a_one_matter\": {\"type\": \"noul\", \"noul\": 0.35}, "
+				+ "\"b_one_matter\": {\"type\": \"noul\", \"noul\": 0.77}}, \"usage\": {\"input_tokens\": 811, \"output_tokens\": 90}}";
+		RelationJudgementId first = this.transaction.execute(status -> this.judgements.insert(new RelationRecord(5, 3,
+				List.of(new RelationRecord.Described(new ArticleId(11), true)),
+				List.of(new RelationRecord.Described(new ArticleId(12), false)), "jev", "jev-1.14.0", "relation-1", 811,
+				body, AT)));
+		RelationJudgementId second = this.transaction.execute(status -> this.judgements.insert(new RelationRecord(8, 9,
+				List.of(new RelationRecord.Described(new ArticleId(13), false)),
+				List.of(new RelationRecord.Described(new ArticleId(14), false)), "fake", "fake-rules-2", "relation-1", 0,
+				"{\"evaluator\": \"fake\"}", AT)));
+
+		List<StoredRelationJudgement> found = this.judgements
+			.findAll(List.of(second, new RelationJudgementId(second.value() + 1000), first));
+
+		assertThat(found).extracting(StoredRelationJudgement::id).containsExactly(first, second);
+		StoredRelationJudgement stored = found.getFirst();
+		assertThat(stored).extracting(StoredRelationJudgement::firstFlowId, StoredRelationJudgement::secondFlowId,
+				StoredRelationJudgement::evaluator, StoredRelationJudgement::modelVersion,
+				StoredRelationJudgement::wordingVersion, StoredRelationJudgement::inputTokens,
+				StoredRelationJudgement::judgedAt)
+			.containsExactly(5L, 3L, "jev", "jev-1.14.0", "relation-1", 811, AT);
+		Relation reread = (Relation) JevResponse.readRelation(stored.rawResponse(), null);
+		assertThat(reread.probabilities()).isEqualTo(Map.of(RelationAnswer.NONE, 0.62,
+				RelationAnswer.SECOND_PART_OF_FIRST, 0.2, RelationAnswer.FIRST_PART_OF_SECOND, 0.08,
+				RelationAnswer.FIRST_LED_TO_SECOND, 0.06, RelationAnswer.SECOND_LED_TO_FIRST, 0.04));
+		assertThat(reread.firstOneMatter()).isEqualTo(0.35);
+		assertThat(reread.secondOneMatter()).isEqualTo(0.77);
+		assertThat(this.judgements.findAll(List.of())).isEmpty();
 	}
 
 	@Test
@@ -293,6 +332,11 @@ class FlowRelationFlowTests {
 		public RelationResult judgeRelation(RelationInput input) {
 			this.inputs.add(input);
 			return this.answer.apply(input);
+		}
+
+		@Override
+		public RelationRereadResult rereadRelation(String evaluator, String rawResponse) {
+			throw new UnsupportedOperationException("이 시험 평가기는 관계 판정 원본을 다시 읽지 않는다");
 		}
 
 	}

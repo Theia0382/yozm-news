@@ -1,9 +1,12 @@
 package net.yozmnews.evaluation.domain.relation;
 
+import java.util.Collection;
+import java.util.List;
+
 import net.yozmnews.evaluation.RelationJudgementId;
 
 /**
- * 관계 판정 원본 저장소 — 넣기 · docs/specs/evaluation.md §4
+ * 관계 판정 원본 저장소 — 넣기 · ID 로 읽기 · docs/specs/evaluation.md §4
  */
 public interface RelationJudgementRepository {
 
@@ -12,5 +15,8 @@ public interface RelationJudgementRepository {
 	 * @return 넣은 행의 ID
 	 */
 	RelationJudgementId insert(RelationRecord record);
+
+	/** 주어진 ID 의 원본 — 없는(지운) ID 는 빠진다. ID 순 */
+	List<StoredRelationJudgement> findAll(Collection<RelationJudgementId> ids);
 
 }

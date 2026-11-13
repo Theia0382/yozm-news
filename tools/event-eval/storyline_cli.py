@@ -1,4 +1,4 @@
-"""스토리라인 평가 도구의 명령 — sheet · seeds · review · measure. 사용법은 운영 안내 docs/operations/storyline-evaluation.md."""
+"""스토리라인 평가 도구의 명령 — sheet · seeds · review · measure · export. 사용법은 운영 안내 docs/operations/storyline-evaluation.md."""
 
 from __future__ import annotations
 
@@ -18,7 +18,8 @@ from admin_api import AdminApi, ApiError
 from cli import (EXIT_API, EXIT_MISMATCH, MeasureError, add_base_url_argument, add_data_argument, connect, parse_count,
                  parse_note, period_articles)
 from labels import AMBIGUOUS_MARK, SAMPLE_FILE, LabelError, file_digest
-from record import write_record
+from record import assignment_json, write_record
+from storyline_export import build_export, write_export
 from storyline_labels import (AGAINST_MARK, BIG_FILE, LABELS_FILE, NONE_MARK, RELATIONS_FILE, SEEDS_FILE,
                               SHEET_ARTICLES_FILE, SHEET_FILE, STORYLINE_SEPARATOR, STORYLINES_FILE, Labels, Relation,
                               Seeds, Sheet, SheetArticle, StorylineSample, draw_seeds, new_storyline_sample,
@@ -38,6 +39,8 @@ def main(argv: Sequence[str] | None = None, *, environ: Mapping[str, str] = os.e
     try:
         if args.command == "sheet":
             return _sheet(args, connect(args, environ, open_url), stdout)
+        if args.command == "export":
+            return _export(args, connect(args, environ, open_url), clock, stdout)
         if args.command == "seeds":
             return _seeds(args, stdout)
         if args.command == "review":
@@ -53,7 +56,7 @@ def main(argv: Sequence[str] | None = None, *, environ: Mapping[str, str] = os.e
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="storyline_eval.py",
-                                     description="스토리라인 평가 — 시트 · 씨앗 · 라벨 검토 · 측정")
+                                     description="스토리라인 평가 — 시트 · 씨앗 · 라벨 검토 · 측정 · 내보내기")
     commands = parser.add_subparsers(dest="command", required=True)
     sheet = commands.add_parser("sheet", help="고정 덤프를 되살린 평가 인스턴스에서 기간의 사건 · 기사로 시트를 만든다")
     add_data_argument(sheet)
@@ -75,7 +78,50 @@ def _parser() -> argparse.ArgumentParser:
     add_data_argument(measure)
     measure.add_argument("--result", required=True, type=Path, help="후보 방법의 결과 파일(JSON)")
     measure.add_argument("--note", action="append", default=[], type=parse_note, help="기록에 남길 메모 KEY=VALUE(되풀이)")
+    export = commands.add_parser("export", help="평가 인스턴스의 스토리라인을 결과 파일과 물은 쌍 파일로 낸다")
+    add_data_argument(export)
+    export.add_argument("--result", required=True, type=Path, help="쓸 결과 파일(JSON) — 이미 있으면 멈춘다")
+    export.add_argument("--pairs", required=True, type=Path, help="쓸 물은 쌍 파일(CSV) — 이미 있으면 멈춘다")
+    export.add_argument("--method", required=True, help="결과 파일 meta.method — 방법 이름")
+    export.add_argument("--embedding-model", required=True, help="결과 파일 meta.embeddingModel — 임베딩 방식 · 모델")
+    add_base_url_argument(export)
     return parser
+
+
+def _export(args: argparse.Namespace, api: AdminApi, clock: Callable[[], datetime], out: TextIO) -> int:
+    sample = read_storyline_sample(args.data)
+    period = sample.period
+    existing = [f"{path} 가 이미 있다 — 덮지 않는다" for path in (args.result, args.pairs) if path.exists()]
+    if existing:
+        raise LabelError(existing)
+    listing = api.storylines(period.start, period.end, period.zone)
+    details = []
+    seen: set[int] = set()
+    for storyline_id in listing.ids:
+        detail = api.storyline_detail(storyline_id)
+        if detail.storyline_id not in seen:
+            seen.add(detail.storyline_id)
+            details.append(detail)
+    event_articles: dict[int, tuple[int, ...]] = {}
+    for event_id in sorted({event for detail in details for event in detail.direct_events}):
+        event_articles[event_id] = tuple(article.article_id for article in api.event_articles(event_id).articles)
+    big = {day: api.big_storylines(day, period.zone) for day in period.days()}
+    created_at = clock()
+    today = created_at.astimezone(ZoneInfo(period.zone)).date()
+    articles = {article for detail in details for event in detail.direct_events
+                for article in event_articles.get(event, ())}
+    export = build_export(sample=sample, details=details, event_articles=event_articles, big=big, method=args.method,
+                          embedding_model=args.embedding_model, created_at=created_at,
+                          event_criteria=assignment_json(api.assignment_criteria(today, period.zone)),
+                          linking=listing.linking, relation=listing.relation,
+                          event_models=api.judgement_models(articles, period.start, max(today, period.end),
+                                                            period.zone))
+    write_export(export, args.result, args.pairs)
+    result = export.result
+    print(f"결과 {args.result}: 스토리라인 {len(result['storylines'])} · 관계 {len(result['relations'])} · "
+          f"큰 표시 {len(result['big'])}(직접 기사가 없어 내지 않은 스토리라인 {export.dropped})", file=out)
+    print(f"물은 쌍 {args.pairs}: {len(export.pairs)}쌍(확률 없는 쌍 {export.unread})", file=out)
+    return 0
 
 
 def _sheet(args: argparse.Namespace, api: AdminApi, out: TextIO) -> int:

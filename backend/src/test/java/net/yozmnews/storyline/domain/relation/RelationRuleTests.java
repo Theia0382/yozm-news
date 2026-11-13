@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 import net.yozmnews.evaluation.RelationAnswer;
+import net.yozmnews.storyline.RelationOutcome;
 import net.yozmnews.storyline.domain.relation.RelationRule.Decision;
 import org.junit.jupiter.api.Test;
 
@@ -113,6 +114,22 @@ class RelationRuleTests {
 	}
 
 	@Test
+	void aCycleIsReportedBeforeASecondParent() {
+		// 쌍 (1, 3) 의 1 ⊃ 3 — 3 ⊃ 2 ⊃ 1 이라 순환이고, 3 에는 이미 상위 9 가 있어 둘째 상위이기도 하다. 결말은 순환이다
+		RelationGraph both = new RelationGraph(List.of(new Relation(3, 2, RelationKind.CONTAINS),
+				new Relation(2, 1, RelationKind.CONTAINS), new Relation(9, 3, RelationKind.CONTAINS)));
+		RelationGraph parentOnly = new RelationGraph(List.of(new Relation(9, 3, RelationKind.CONTAINS)));
+
+		// 대조 — 순환이 없으면 같은 쌍이 둘째 상위로 걸린다(검사 순서와 무관하게 성립한다)
+		assertThat(RelationRule.decide(1, 3, probabilities(RelationAnswer.SECOND_PART_OF_FIRST, 0.9), 0.9, 0.9,
+				parentOnly, CRITERIA))
+			.isEqualTo(new Decision.None(Decision.Reason.SECOND_PARENT));
+		assertThat(RelationRule.decide(1, 3, probabilities(RelationAnswer.SECOND_PART_OF_FIRST, 0.9), 0.9, 0.9, both,
+				CRITERIA))
+			.isEqualTo(new Decision.None(Decision.Reason.CYCLE));
+	}
+
+	@Test
 	void aPairAskedAgainIsNotBlockedByItsOwnRelation() {
 		// 1 ⊃ 2 로 맺은 쌍을 다시 물어 방향이 뒤집혔다 — 자기 관계는 순환 · 둘째 상위로 세지 않는다
 		RelationGraph linked = new RelationGraph(List.of(new Relation(1, 2, RelationKind.CONTAINS)));
@@ -125,15 +142,15 @@ class RelationRuleTests {
 
 	@Test
 	void theOutcomeOfEachDecisionAndTheFiveAnswers() {
-		assertThat(RelationOutcome.of(new Decision.Link(new Relation(1, 2, RelationKind.FOLLOWS), 0.9)))
+		assertThat(RelationRule.outcomeOf(new Decision.Link(new Relation(1, 2, RelationKind.FOLLOWS), 0.9)))
 			.isEqualTo(RelationOutcome.LINKED);
-		assertThat(RelationOutcome.of(new Decision.None(Decision.Reason.NOT_RELATED))).isEqualTo(RelationOutcome.NOT_RELATED);
-		assertThat(RelationOutcome.of(new Decision.None(Decision.Reason.LOW_PROBABILITY)))
+		assertThat(RelationRule.outcomeOf(new Decision.None(Decision.Reason.NOT_RELATED))).isEqualTo(RelationOutcome.NOT_RELATED);
+		assertThat(RelationRule.outcomeOf(new Decision.None(Decision.Reason.LOW_PROBABILITY)))
 			.isEqualTo(RelationOutcome.LOW_PROBABILITY);
-		assertThat(RelationOutcome.of(new Decision.None(Decision.Reason.NOT_ONE_MATTER)))
+		assertThat(RelationRule.outcomeOf(new Decision.None(Decision.Reason.NOT_ONE_MATTER)))
 			.isEqualTo(RelationOutcome.NOT_ONE_MATTER);
-		assertThat(RelationOutcome.of(new Decision.None(Decision.Reason.CYCLE))).isEqualTo(RelationOutcome.CYCLE);
-		assertThat(RelationOutcome.of(new Decision.None(Decision.Reason.SECOND_PARENT)))
+		assertThat(RelationRule.outcomeOf(new Decision.None(Decision.Reason.CYCLE))).isEqualTo(RelationOutcome.CYCLE);
+		assertThat(RelationRule.outcomeOf(new Decision.None(Decision.Reason.SECOND_PARENT)))
 			.isEqualTo(RelationOutcome.SECOND_PARENT);
 		assertThatIllegalArgumentException()
 			.isThrownBy(() -> RelationRule.decide(1, 2, Map.of(RelationAnswer.NONE, 0.9), 0.9, 0.9, EMPTY, CRITERIA))

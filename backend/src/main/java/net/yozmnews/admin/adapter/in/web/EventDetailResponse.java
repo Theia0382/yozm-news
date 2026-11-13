@@ -16,18 +16,20 @@ import org.jspecify.annotations.Nullable;
  * @param representative 대표 기사의 제목 · 출처 — 대표가 없거나 그새 지웠으면 null
  * @param articles 사건의 기사 — 발행 시각 · 기사 ID 순
  * @param mergedEvents 이 사건으로 합쳐진 사건 — 합친 시각 · 사건 ID 순
+ * @param storylines 사건이 든 스토리라인 — 직접 든 것과 그 상위, 스토리라인 ID 순
  */
 record EventDetailResponse(long requestedId, long id, EventStatus status, int articleCount, Instant firstArticleAt,
 		Instant lastArticleAt, Instant createdAt, @Nullable Long representativeId,
 		@Nullable ArticleSummaryResponse representative, List<EventArticleResponse> articles,
-		List<MergedEventResponse> mergedEvents) {
+		List<MergedEventResponse> mergedEvents, List<EventStorylineResponse> storylines) {
 
 	static EventDetailResponse of(long requestedId, EventView event, @Nullable Long representativeId,
 			AdminArticles.@Nullable Summary representative, List<EventArticleResponse> articles,
-			List<MergedEventResponse> mergedEvents) {
+			List<MergedEventResponse> mergedEvents, List<EventStorylineResponse> storylines) {
 		return new EventDetailResponse(requestedId, event.id().value(), event.status(), event.articleCount(),
 				event.firstArticleAt(), event.lastArticleAt(), event.createdAt(), representativeId,
-				(representative == null) ? null : ArticleSummaryResponse.of(representative), articles, mergedEvents);
+				(representative == null) ? null : ArticleSummaryResponse.of(representative), articles, mergedEvents,
+				storylines);
 	}
 
 }

@@ -45,6 +45,9 @@ public interface StorylineRepository {
 	 */
 	Optional<StorylineProfile> profile(long storylineId, int keyTerms);
 
+	/** 스토리라인마다 소속의 판정 근거 — 스토리라인 → 사건 → 근거, ID 순(storyline-R34) */
+	Map<Long, Map<Long, LinkJudgement>> judgements(Collection<Long> storylineIds);
+
 	/** 새 스토리라인을 연다 — 표현과 핵심 말을 쓴다 */
 	long open(Representation representation, Instant now);
 

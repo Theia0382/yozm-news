@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import net.yozmnews.evaluation.RelationAnswer;
+import net.yozmnews.storyline.RelationOutcome;
 
 /**
  * 관계 판정 — 정본 · docs/specs/storyline.md §4 · storyline-R29.
@@ -15,6 +16,20 @@ import net.yozmnews.evaluation.RelationAnswer;
 public final class RelationRule {
 
 	private RelationRule() {
+	}
+
+	/** 판정의 결말 — 물은 기록에 남긴다(storyline-R30) */
+	public static RelationOutcome outcomeOf(Decision decision) {
+		return switch (decision) {
+			case Decision.Link link -> RelationOutcome.LINKED;
+			case Decision.None none -> switch (none.reason()) {
+				case NOT_RELATED -> RelationOutcome.NOT_RELATED;
+				case LOW_PROBABILITY -> RelationOutcome.LOW_PROBABILITY;
+				case NOT_ONE_MATTER -> RelationOutcome.NOT_ONE_MATTER;
+				case CYCLE -> RelationOutcome.CYCLE;
+				case SECOND_PARENT -> RelationOutcome.SECOND_PARENT;
+			};
+		};
 	}
 
 	/**

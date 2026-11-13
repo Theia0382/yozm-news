@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 
 import java.time.Instant;
 
+import net.yozmnews.storyline.LinkedBy;
 import net.yozmnews.storyline.domain.linking.Score;
 import org.junit.jupiter.api.Test;
 

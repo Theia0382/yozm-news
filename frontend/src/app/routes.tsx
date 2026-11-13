@@ -101,6 +101,20 @@ export const routes: RouteObject[] = [
             }),
           },
           {
+            path: "storylines",
+            lazy: async () => ({
+              Component: (await import("@/features/admin/StorylinesPage"))
+                .StorylinesPage,
+            }),
+          },
+          {
+            path: "storylines/:id",
+            lazy: async () => ({
+              Component: (await import("@/features/admin/StorylineDetailPage"))
+                .StorylineDetailPage,
+            }),
+          },
+          {
             path: "big-storylines",
             lazy: async () => ({
               Component: (await import("@/features/admin/BigStorylinesPage"))

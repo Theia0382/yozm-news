@@ -17,6 +17,7 @@ import net.yozmnews.evaluation.domain.evaluator.EvaluationResult;
 import net.yozmnews.evaluation.domain.evaluator.MembershipInput;
 import net.yozmnews.evaluation.domain.evaluator.MembershipResult;
 import net.yozmnews.evaluation.domain.evaluator.RelationInput;
+import net.yozmnews.evaluation.domain.evaluator.RelationRereadResult;
 import net.yozmnews.evaluation.domain.evaluator.RelationResult;
 import net.yozmnews.evaluation.domain.evaluator.RereadResult;
 import org.junit.jupiter.api.AfterEach;
@@ -125,6 +126,11 @@ class ArticleTaggingTransactionTests {
 				@Override
 				public RelationResult judgeRelation(RelationInput input) {
 					throw new UnsupportedOperationException("이 시험 평가기는 관계를 판정하지 않는다");
+				}
+
+				@Override
+				public RelationRereadResult rereadRelation(String evaluator, String rawResponse) {
+					throw new UnsupportedOperationException("이 시험 평가기는 관계 판정 원본을 다시 읽지 않는다");
 				}
 
 			};

@@ -3,6 +3,7 @@ package net.yozmnews.admin.adapter.in.web;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Stream;
 
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -10,7 +11,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;
 import net.yozmnews.article.ArticleDirectory;
-import net.yozmnews.article.ArticleId;
 import net.yozmnews.event.EventDirectory;
 import net.yozmnews.event.EventId;
 import net.yozmnews.event.EventPeriod;
@@ -33,8 +33,8 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * 운영자 API — 기간의 큰 스토리라인과 소속 없는 사건, 큰 판정 기준의 지금 값 · 이력 · 미리보기 · 변경. docs/specs/admin.md §3 · admin-R7.
  * <p>
- * {@code storyline} 의 공개 조회 · 운영 API 를 불러 옮기고, 스토리라인의 대표 사건으로 {@code event} 의 대표 기사를 읽어 그 정보를
- * {@link AdminArticles} 가 맞붙인다(admin-R6). 변경은 행위자 {@link ChangeActor#OPERATOR} 로 부른다. 기준 · 기간의 범위는 공개 타입 · 공개
+ * {@code storyline} 의 공개 조회 · 운영 API 를 불러 옮기고, 스토리라인의 대표 사건의 대표 기사와 그 정보는 {@link AdminRepresentatives} 가
+ * 맞붙인다(admin-R6). 변경은 행위자 {@link ChangeActor#OPERATOR} 로 부른다. 기준 · 기간의 범위는 공개 타입 · 공개
  * API 가 판정하고 컨트롤러는 그 결과를 400 으로 옮긴다(admin-R3). 트랜잭션을 열지 않는다.
  */
 @WebRole
@@ -45,16 +45,13 @@ class AdminBigStorylineController {
 
 	private final BigStorylineAdministration administration;
 
-	private final EventDirectory events;
-
-	private final AdminArticles articles;
+	private final AdminRepresentatives representatives;
 
 	AdminBigStorylineController(StorylineDirectory storylines, BigStorylineAdministration administration,
 			EventDirectory events, ArticleDirectory articles, FeedLabels labels) {
 		this.storylines = Objects.requireNonNull(storylines, "storylines");
 		this.administration = Objects.requireNonNull(administration, "administration");
-		this.events = Objects.requireNonNull(events, "events");
-		this.articles = new AdminArticles(articles, labels);
+		this.representatives = new AdminRepresentatives(events, new AdminArticles(articles, labels));
 	}
 
 	@GetMapping("/api/admin/big-storylines")
@@ -67,8 +64,9 @@ class AdminBigStorylineController {
 			@Parameter(description = "날짜를 해석할 시간대(IANA ID)") @RequestParam String zone) {
 		EventPeriod period = AdminPeriods.events(from, to, zone);
 		BigStorylineCriteria criteria = this.administration.criteria();
-		return BigStorylineListResponse.of(BigStorylineCriteriaResponse.of(criteria),
-				rows(this.storylines.bigStorylines(period)), UnlinkedEventsResponse.of(this.storylines.unlinked(period)));
+		List<BigStoryline> big = this.storylines.bigStorylines(period);
+		return BigStorylineListResponse.of(BigStorylineCriteriaResponse.of(criteria), rows(big, representatives(big)),
+				UnlinkedEventsResponse.of(this.storylines.unlinked(period)));
 	}
 
 	@GetMapping("/api/admin/big-storyline-criteria")
@@ -91,8 +89,11 @@ class AdminBigStorylineController {
 		BigStorylineCriteria current = this.administration.criteria();
 		List<BigStoryline> now = this.storylines.bigStorylines(period);
 		List<BigStoryline> then = this.administration.preview(proposed, period);
+		// 두 목록의 대표를 한 번에 맞붙인다
+		Map<EventId, AdminRepresentatives.Representative> representatives = representatives(
+				Stream.concat(now.stream(), then.stream()).toList());
 		return new BigStorylinePreviewResponse(BigStorylineCriteriaResponse.of(current),
-				BigStorylineCriteriaResponse.of(proposed), rows(now), rows(then));
+				BigStorylineCriteriaResponse.of(proposed), rows(now, representatives), rows(then, representatives));
 	}
 
 	@PutMapping("/api/admin/big-storyline-criteria")
@@ -106,19 +107,16 @@ class AdminBigStorylineController {
 	}
 
 	/** 큰 스토리라인마다 대표 사건의 대표 기사와 그 정보 — 대표 조회 · 기사 정보 조회 한 번씩 */
-	private List<BigStorylineRowResponse> rows(List<BigStoryline> storylines) {
-		List<EventId> representativeEvents = storylines.stream()
-			.map(big -> big.storyline().representativeEvent())
-			.distinct()
+	private Map<EventId, AdminRepresentatives.Representative> representatives(List<BigStoryline> storylines) {
+		return this.representatives.of(storylines.stream().map(big -> big.storyline().representativeEvent()).toList());
+	}
+
+	private static List<BigStorylineRowResponse> rows(List<BigStoryline> storylines,
+			Map<EventId, AdminRepresentatives.Representative> representatives) {
+		return storylines.stream()
+			.map(big -> BigStorylineRowResponse.of(big, representatives.getOrDefault(big.storyline().representativeEvent(),
+					AdminRepresentatives.Representative.NONE)))
 			.toList();
-		Map<EventId, ArticleId> representatives = this.events.representativesOfAll(representativeEvents);
-		Map<ArticleId, AdminArticles.Summary> summaries = this.articles
-			.summaries(List.copyOf(representatives.values()));
-		return storylines.stream().map(big -> {
-			ArticleId representative = representatives.get(big.storyline().representativeEvent());
-			return BigStorylineRowResponse.of(big, representative,
-					(representative == null) ? null : summaries.get(representative));
-		}).toList();
 	}
 
 }

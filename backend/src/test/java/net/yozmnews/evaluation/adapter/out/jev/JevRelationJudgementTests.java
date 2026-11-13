@@ -29,6 +29,7 @@ import net.yozmnews.evaluation.domain.evaluator.HappeningText;
 import net.yozmnews.evaluation.domain.evaluator.Relation;
 import net.yozmnews.evaluation.domain.evaluator.RelationInput;
 import net.yozmnews.evaluation.domain.evaluator.RelationWording;
+import net.yozmnews.evaluation.domain.evaluator.RereadFailure;
 import net.yozmnews.evaluation.domain.jev.JevApiKey;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -38,7 +39,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
  * Jev 평가기의 관계 판정 — 요청 하나에 질문 셋을 보내고 답을 읽는다. 실패 갈래와 문맥 초과 확인은 다른 판정과 같은 길이다. WireMock 이 Jev
  * 를 대신한다.
  * <p>
- * 지키는 규칙: evaluation-R48
+ * 지키는 규칙: evaluation-R48 · evaluation-R50(저장된 응답 본문의 다시 읽기)
  */
 class JevRelationJudgementTests {
 
@@ -90,6 +91,38 @@ class JevRelationJudgementTests {
 			.withRequestBody(matchingJsonPath("$.questions.relation.criteria.b_led_to_a"))
 			.withRequestBody(matchingJsonPath("$.questions.a_one_matter.type", equalTo("noul")))
 			.withRequestBody(matchingJsonPath("$.questions.b_one_matter.type", equalTo("noul"))));
+	}
+
+	@Test
+	void rereadsAStoredBodyWithoutSendingARequest() {
+		// 판정 때 받은 본문 그대로 — 답 다섯과 두 한 사안 확률, 모델 · 토큰도 본문의 값이다
+		assertThat(evaluator().rereadRelation("jev", ANSWER)).isEqualTo(new Relation(
+				Map.of(RelationAnswer.SECOND_PART_OF_FIRST, 0.7, RelationAnswer.FIRST_PART_OF_SECOND, 0.03,
+						RelationAnswer.FIRST_LED_TO_SECOND, 0.15, RelationAnswer.SECOND_LED_TO_FIRST, 0.02,
+						RelationAnswer.NONE, 0.1),
+				0.91, 0.84, "jev", "jev-1.14.0", 1924, ANSWER));
+		server.verify(0, anyRequestedFor(anyUrl()));
+	}
+
+	@Test
+	void doesNotReadABodyLeftByAnotherEvaluator() {
+		// 같은 본문이라도 평가기 이름이 다르면 형식을 모른다고 본다
+		assertThat(evaluator().rereadRelation("fake", ANSWER)).isEqualTo(new RereadFailure(
+				RereadFailure.Kind.OTHER_EVALUATOR, "Jev 가 남긴 원본 응답이 아니다 — 평가기 fake"));
+		server.verify(0, anyRequestedFor(anyUrl()));
+	}
+
+	@Test
+	void cannotReadABodyWithoutAllFiveAnswers() {
+		String withoutAnAnswer = ANSWER.replace("\"b_led_to_a\":0.02,", "");
+
+		RereadFailure failure = (RereadFailure) evaluator().rereadRelation("jev", withoutAnAnswer);
+
+		// 문구는 빠진 답의 자리만 말하고 본문의 값은 싣지 않는다
+		assertThat(failure).isEqualTo(new RereadFailure(RereadFailure.Kind.UNREADABLE,
+				"Jev 응답을 읽을 수 없다 — 확률이 없거나 숫자가 아니다 — relation.b_led_to_a"));
+		assertThat(failure.message()).doesNotContain("0.15").doesNotContain("b_part_of_a\":0.7");
+		server.verify(0, anyRequestedFor(anyUrl()));
 	}
 
 	@Test
