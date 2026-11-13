@@ -48,10 +48,14 @@ public final class SignedInUsers {
 		this.hashing = Objects.requireNonNull(hashing, "hashing");
 	}
 
-	/** 이 이메일의 계정을 만들고 로그인한 사용자 */
+	/** 이 이메일의 일반 계정을 만들고 로그인한 사용자 */
 	public SignedInUser signIn(String email) throws Exception {
-		UserId id = this.accounts
-			.save(Account.create(EmailAddress.parse(email).orElseThrow(), email, AccountRole.USER, CREATED))
+		return signIn(email, AccountRole.USER);
+	}
+
+	/** 이 이메일 · 역할의 계정을 만들고 로그인한 사용자 */
+	public SignedInUser signIn(String email, AccountRole role) throws Exception {
+		UserId id = this.accounts.save(Account.create(EmailAddress.parse(email).orElseThrow(), email, role, CREATED))
 			.id();
 		this.credentials.save(PasswordCredential.of(id, this.hashing.hash(PASSWORD), CREATED));
 		MockHttpServletResponse response = this.mockMvc

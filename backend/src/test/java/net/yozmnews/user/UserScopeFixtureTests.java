@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -13,6 +14,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.UserScopeRules;
+import net.yozmnews.UserScopedEndpoints;
 import net.yozmnews.YozmnewsApplication;
 import net.yozmnews.platform.PublicApi;
 import net.yozmnews.user.application.PasswordHashing;
@@ -48,9 +50,8 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 @AutoConfigureMockMvc
 class UserScopeFixtureTests {
 
-	/** 이 시험 컨텍스트의 등록 — 사용자별 메모는 등록하고, 낡은 등록 하나를 일부러 둔다 */
-	private static final Map<String, Class<?>> REGISTRY = Map.of("GET /api/test/notes", UserScopeFixtureTests.class,
-			"POST /api/test/notes", UserScopeFixtureTests.class, "GET /api/test/gone", UserScopeFixtureTests.class);
+	/** 이 시험 컨텍스트의 등록 — 앱의 등록에 사용자별 메모를 더하고, 낡은 등록 하나를 일부러 둔다 */
+	private static final Map<String, Class<?>> REGISTRY = registry();
 
 	@Autowired
 	MockMvc mockMvc;
@@ -85,6 +86,14 @@ class UserScopeFixtureTests {
 			.andExpect(content().json("""
 					["a 의 메모"]"""));
 		this.mockMvc.perform(get("/api/test/notes")).andExpect(status().isUnauthorized());
+	}
+
+	private static Map<String, Class<?>> registry() {
+		Map<String, Class<?>> registry = new HashMap<>(UserScopedEndpoints.ENDPOINTS);
+		registry.put("GET /api/test/notes", UserScopeFixtureTests.class);
+		registry.put("POST /api/test/notes", UserScopeFixtureTests.class);
+		registry.put("GET /api/test/gone", UserScopeFixtureTests.class);
+		return Map.copyOf(registry);
 	}
 
 	@Test

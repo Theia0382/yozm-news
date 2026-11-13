@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Optional;
 
 import net.yozmnews.source.FeedStatus;
+import net.yozmnews.source.FeedStatusTransition;
+import net.yozmnews.source.FeedStatusesChanged;
 import net.yozmnews.source.domain.poll.FeedPollState;
 import net.yozmnews.source.domain.poll.FeedStatusRepository;
 import net.yozmnews.source.domain.poll.FeedStatusRule;
@@ -16,12 +18,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * 켜진 피드의 상태를 다시 판정하는 피드 건강 검사 — docs/specs/source.md §4 · source-R30 · source-R31 · source-R47 ~
- * source-R49
+ * source-R49.
+ * <p>
+ * 바뀐 피드가 있으면 상태를 쓴 트랜잭션에서 {@link FeedStatusesChanged} 를 한 번 발행한다.
  */
 @Service
 public class FeedHealthCheck {
@@ -35,21 +40,25 @@ public class FeedHealthCheck {
 
 	private final TransactionTemplate transaction;
 
+	private final ApplicationEventPublisher events;
+
 	private final InstantSource clock;
 
 	@Autowired
-	FeedHealthCheck(FeedStatusRepository statuses, TransactionTemplate transaction) {
-		this(statuses, transaction, InstantSource.system());
+	FeedHealthCheck(FeedStatusRepository statuses, TransactionTemplate transaction, ApplicationEventPublisher events) {
+		this(statuses, transaction, events, InstantSource.system());
 	}
 
-	FeedHealthCheck(FeedStatusRepository statuses, TransactionTemplate transaction, InstantSource clock) {
+	FeedHealthCheck(FeedStatusRepository statuses, TransactionTemplate transaction, ApplicationEventPublisher events,
+			InstantSource clock) {
 		this.statuses = statuses;
 		this.transaction = transaction;
+		this.events = events;
 		this.clock = clock;
 	}
 
 	/**
-	 * 판정해 바뀐 피드의 상태를 쓰고, 커밋 뒤 전이를 로그한다.
+	 * 판정해 바뀐 피드의 상태를 쓰고 같은 트랜잭션에서 전이를 발행한 뒤, 커밋 뒤 전이를 로그한다.
 	 * @return 이번에 바뀐 피드 — 피드 ID 순
 	 */
 	public List<FeedStatusChange> run() {
@@ -69,6 +78,11 @@ public class FeedHealthCheck {
 				this.statuses.saveStatus(target.state().feedId(), next.get(), now);
 				changes.add(new FeedStatusChange(target.state(), target.status(), next.get(), now));
 			}
+		}
+		if (!changes.isEmpty()) {
+			this.events.publishEvent(new FeedStatusesChanged(now, changes.stream()
+				.map(change -> new FeedStatusTransition(change.state().feedId(), change.from(), change.to()))
+				.toList()));
 		}
 		return changes;
 	}
