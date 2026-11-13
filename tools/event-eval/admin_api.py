@@ -1,4 +1,4 @@
-"""운영자 API 읽기 — 사건 · 판정 기록.
+"""운영자 API 읽기 — 사건 · 판정 기록 · 스토리라인 · 큰 스토리라인.
 
 응답 계약의 정본은 저장소의 api/openapi.json 이다. 이 모듈이 읽는 필드는 USED_FIELDS 가 모두 적고(test_contract.py 가
 명세와 대조한다), 응답 필드는 field() 로만 읽는다.
@@ -33,11 +33,30 @@ USED_FIELDS: Final[Mapping[str, tuple[str, ...]]] = {
     "EventJudgementRowResponse": ("articleId", "modelVersion"),
     "JudgementCursorResponse": ("judgedAt", "id"),
     "AssignmentCriteriaResponse": ("windowSeconds", "upper", "lower", "store", "probability"),
+    "StorylineListResponse": ("storylines", "next", "linkingCriteria", "relationCriteria"),
+    "StorylineRowResponse": ("id",),
+    "StorylineCursorResponse": ("lastArticleAt", "id"),
+    "LinkingCriteriaResponse": ("windowSeconds", "threshold"),
+    "RelationCriteriaResponse": ("probability", "oneMatter", "minEvents", "candidateScore", "windowSeconds"),
+    "StorylineDetailResponse": ("id", "events", "relations", "asked"),
+    "StorylineEventResponse": ("id", "direct"),
+    "StorylineRelationResponse": ("kind", "sourceId", "targetId", "judgement"),
+    "StorylineAskedResponse": ("otherId", "smallerEvents", "outcome", "askedAt", "judgementId", "judgement"),
+    "RelationJudgementResponse": ("id", "firstId", "secondId", "modelVersion", "reading", "none", "secondPartOfFirst",
+                                  "firstPartOfSecond", "firstLedToSecond", "secondLedToFirst", "firstOneMatter",
+                                  "secondOneMatter"),
+    "BigStorylineListResponse": ("storylines",),
+    "BigStorylineRowResponse": ("id",),
 }
 """스키마 이름 → 도구가 읽는 필드."""
 
 _EVENTS: Final = "/api/admin/events"
 _JUDGEMENTS: Final = "/api/admin/event-judgements"
+_STORYLINES: Final = "/api/admin/storylines"
+_BIG_STORYLINES: Final = "/api/admin/big-storylines"
+
+ANSWERS: Final = ("none", "secondPartOfFirst", "firstPartOfSecond", "firstLedToSecond", "secondLedToFirst")
+"""관계 판정의 답 다섯 — 응답 칸 이름, 이 순서로 확률을 싣는다."""
 
 
 class ApiError(Exception):
@@ -81,6 +100,60 @@ class AssignmentCriteria:
     lower: Decimal
     store: Decimal
     probability: Decimal
+
+
+@dataclass(frozen=True)
+class StorylineList:
+    """기간의 스토리라인 ID(목록 순서)와 지금 잇기 · 관계 기준(응답 그대로 — 결과 파일 meta.linking)."""
+
+    ids: tuple[int, ...]
+    linking: dict[str, object]
+    relation: dict[str, object]
+
+
+@dataclass(frozen=True)
+class RelationJudgement:
+    """관계 판정 원본 — 확률의 방향은 first · second 기준. 읽지 못했으면(reading 이 READ 가 아님) 확률이 None."""
+
+    judgement_id: int
+    first: int
+    second: int
+    model_version: str
+    reading: str
+    probabilities: tuple[Decimal, ...] | None
+    """ANSWERS 순서의 답 다섯."""
+    first_one_matter: Decimal | None
+    second_one_matter: Decimal | None
+
+
+@dataclass(frozen=True)
+class StorylineRelation:
+    kind: str
+    source: int
+    target: int
+    judgement: RelationJudgement | None
+
+
+@dataclass(frozen=True)
+class AskedPair:
+    """물은 쌍 하나 — 상대와 마지막으로 물은 결말. 원본 ID 가 없으면 원본을 남기지 않는 결말, 있는데 원본이 없으면 지워진 원본."""
+
+    other: int
+    smaller_events: int
+    outcome: str
+    asked_at: datetime
+    judgement_id: int | None
+    judgement: RelationJudgement | None
+
+
+@dataclass(frozen=True)
+class StorylineDetail:
+    """스토리라인 하나 — 남는 스토리라인 ID, 직접 가진 사건, 관계, 물은 쌍."""
+
+    storyline_id: int
+    direct_events: tuple[int, ...]
+    relations: tuple[StorylineRelation, ...]
+    asked: tuple[AskedPair, ...]
 
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -171,6 +244,66 @@ class AdminApi:
                 passed.add(tuple(cursor.values()))
         return models
 
+    def storylines(self, start: date, end: date, zone: str) -> StorylineList:
+        """기간의 스토리라인 — 목록을 커서로 끝까지 읽는다. 같은 ID 가 두 번 오면 ApiError. 기준은 첫 쪽의 값이다."""
+        ids: list[int] = []
+        seen: set[int] = set()
+        cursor: dict[str, str] = {}
+        first: object = None
+        while True:
+            page = self._get(_STORYLINES, {"from": start.isoformat(), "to": end.isoformat(), "zone": zone, **cursor})
+            first = page if first is None else first
+            for row in field(page, "StorylineListResponse", "storylines"):
+                storyline_id = int(field(row, "StorylineRowResponse", "id"))
+                if storyline_id in seen:
+                    raise ApiError(_STORYLINES, None,
+                                   f"스토리라인 {storyline_id} 가 목록에 두 번 나왔다 — 잇기가 도는 중이면 끝난 뒤 다시 낸다")
+                seen.add(storyline_id)
+                ids.append(storyline_id)
+            following = field(page, "StorylineListResponse", "next")
+            if following is None:
+                break
+            cursor = {"afterLastArticleAt": str(field(following, "StorylineCursorResponse", "lastArticleAt")),
+                      "afterId": str(field(following, "StorylineCursorResponse", "id"))}
+        linking = field(first, "StorylineListResponse", "linkingCriteria")
+        relation = field(first, "StorylineListResponse", "relationCriteria")
+        return StorylineList(
+            tuple(ids),
+            {name: json_number(field(linking, "LinkingCriteriaResponse", name))
+             for name in USED_FIELDS["LinkingCriteriaResponse"]},
+            {name: json_number(field(relation, "RelationCriteriaResponse", name))
+             for name in USED_FIELDS["RelationCriteriaResponse"]})
+
+    def storyline_detail(self, storyline_id: int) -> StorylineDetail:
+        """스토리라인 하나 — 합쳐진 스토리라인이면 응답은 남는 스토리라인이다(storyline_id 가 요청과 다르다)."""
+        detail = self._get(f"{_STORYLINES}/{storyline_id}", {})
+        schema = "StorylineDetailResponse"
+        direct = tuple(int(field(event, "StorylineEventResponse", "id"))
+                       for event in field(detail, schema, "events")
+                       if field(event, "StorylineEventResponse", "direct") is True)
+        relations = tuple(StorylineRelation(
+            str(field(relation, "StorylineRelationResponse", "kind")),
+            int(field(relation, "StorylineRelationResponse", "sourceId")),
+            int(field(relation, "StorylineRelationResponse", "targetId")),
+            _judgement(field(relation, "StorylineRelationResponse", "judgement")))
+            for relation in field(detail, schema, "relations"))
+        asked = []
+        for pair in field(detail, schema, "asked"):
+            judgement_id = field(pair, "StorylineAskedResponse", "judgementId")
+            asked.append(AskedPair(int(field(pair, "StorylineAskedResponse", "otherId")),
+                                   int(field(pair, "StorylineAskedResponse", "smallerEvents")),
+                                   str(field(pair, "StorylineAskedResponse", "outcome")),
+                                   parse_instant(str(field(pair, "StorylineAskedResponse", "askedAt"))),
+                                   None if judgement_id is None else int(judgement_id),
+                                   _judgement(field(pair, "StorylineAskedResponse", "judgement"))))
+        return StorylineDetail(int(field(detail, schema, "id")), direct, relations, tuple(asked))
+
+    def big_storylines(self, day: date, zone: str) -> list[int]:
+        """그날 하루의 큰 스토리라인 ID — 지금 큰 판정 기준."""
+        page = self._get(_BIG_STORYLINES, {"from": day.isoformat(), "to": day.isoformat(), "zone": zone})
+        return [int(field(row, "BigStorylineRowResponse", "id"))
+                for row in field(page, "BigStorylineListResponse", "storylines")]
+
     def _get(self, path: str, query: Mapping[str, str]) -> object:
         url = self._base + path + ("?" + urllib.parse.urlencode(query) if query else "")
         return self._send(path, urllib.request.Request(url, method="GET"))
@@ -211,3 +344,26 @@ def _problem_detail(error: urllib.error.HTTPError) -> str:
 def _decimal(value: object) -> Decimal:
     return value if isinstance(value, Decimal) else Decimal(str(value))
 
+
+def _judgement(value: object) -> RelationJudgement | None:
+    """판정 원본 — None(원본 없음)이면 None."""
+    if value is None:
+        return None
+    schema = "RelationJudgementResponse"
+    reading = str(field(value, schema, "reading"))
+    read = reading == "READ"
+
+    def probability(name: str) -> Decimal | None:
+        found = field(value, schema, name)
+        return None if found is None else _decimal(found)
+
+    return RelationJudgement(int(field(value, schema, "id")), int(field(value, schema, "firstId")),
+                             int(field(value, schema, "secondId")), str(field(value, schema, "modelVersion")), reading,
+                             tuple(_decimal(field(value, schema, name)) for name in ANSWERS) if read else None,
+                             probability("firstOneMatter"), probability("secondOneMatter"))
+
+
+def json_number(value: object) -> int | float:
+    """응답의 수를 기록 · 결과 파일에 다시 쓸 꼴로 — 정수로 온 값은 int, 소수로 온 값은 float."""
+    number = _decimal(value)
+    return int(number) if number == number.to_integral_value() and "." not in str(number) else float(number)
