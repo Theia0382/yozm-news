@@ -15,9 +15,7 @@ import net.yozmnews.user.domain.invitation.Invitation;
 import net.yozmnews.user.domain.invitation.InvitationRepository;
 import net.yozmnews.user.domain.secret.InvitationToken;
 import net.yozmnews.user.domain.signup.SignUpPolicyRepository;
-import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * 가입 유스케이스 — 공개 가입과 초대 가입. 한 번의 가입이 트랜잭션 하나다. docs/specs/user.md §4.
@@ -35,14 +33,10 @@ public class SignUp {
 
 	private final InvitationRepository invitations;
 
-	private final TransactionTemplate transaction;
-
-	SignUp(AccountProvisioning provisioning, SignUpPolicyRepository policy, InvitationRepository invitations,
-			TransactionTemplate transaction) {
+	SignUp(AccountProvisioning provisioning, SignUpPolicyRepository policy, InvitationRepository invitations) {
 		this.provisioning = Objects.requireNonNull(provisioning, "provisioning");
 		this.policy = Objects.requireNonNull(policy, "policy");
 		this.invitations = Objects.requireNonNull(invitations, "invitations");
-		this.transaction = Objects.requireNonNull(transaction, "transaction");
 	}
 
 	/** 공개 가입 — 가입 정책이 열렸을 때만 */
@@ -84,12 +78,7 @@ public class SignUp {
 	}
 
 	private SignUpOutcome inTransaction(Supplier<SignUpOutcome> work) {
-		try {
-			return Objects.requireNonNull(this.transaction.execute(status -> work.get()));
-		}
-		catch (DuplicateKeyException ex) {
-			return new SignUpOutcome.EmailUnavailable();
-		}
+		return this.provisioning.inOwnTransaction(work, SignUpOutcome.EmailUnavailable::new);
 	}
 
 	private static Optional<SignUpOutcome> malformed(SignUpForm form) {

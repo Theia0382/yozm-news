@@ -9,6 +9,8 @@ import static org.mockito.Mockito.doThrow;
 import java.time.Instant;
 
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.user.AccountAdministration;
+import net.yozmnews.user.AccountCreationResult;
 import net.yozmnews.user.UserId;
 import net.yozmnews.user.domain.account.Account;
 import net.yozmnews.user.domain.account.AccountRepository;
@@ -33,7 +35,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
  * 세션 지우기가 실패하면 자격 변경이 남지 않는다 — 세션 저장소는 자기 트랜잭션으로 곧바로 커밋하므로, 유스케이스는 세션 지우기를 커밋 직전의 마지막
  * 단계로 불러 그 실패가 자격 변경 · 복구 코드 · 알림을 롤백시키게 한다.
  * <p>
- * 지키는 규칙: user-R29 · user-R30
+ * 지키는 규칙: user-R29 · user-R30 · user-R35
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -56,6 +58,9 @@ class SessionEndingFailureTests {
 
 	@Autowired
 	AccountRecovery recovery;
+
+	@Autowired
+	AccountAdministration administration;
 
 	@Autowired
 	AccountRepository accounts;
@@ -106,6 +111,19 @@ class SessionEndingFailureTests {
 		String hash = this.credentials.findById(user.value()).orElseThrow().passwordHash();
 		assertThat(this.hashing.matches(PASSWORD, hash)).isTrue();
 		assertThat(notices(user)).isZero();
+	}
+
+	@Test
+	void failedSessionEndingLeavesTheInitialPasswordAsItWas() {
+		AccountCreationResult created = this.administration.create("carol@example.com", "캐럴", PASSWORD);
+		UserId user = ((AccountCreationResult.Created) created).user();
+		doThrow(new IllegalStateException("세션 저장소 실패")).when(this.sessions).endAll(any());
+
+		assertThatIllegalStateException()
+			.isThrownBy(() -> this.administration.resetInitialPassword("carol@example.com", NEW_PASSWORD));
+
+		String hash = this.credentials.findById(user.value()).orElseThrow().passwordHash();
+		assertThat(this.hashing.matches(PASSWORD, hash)).isTrue();
 	}
 
 	private UserId account(String email) {

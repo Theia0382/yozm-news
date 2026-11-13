@@ -4,6 +4,7 @@ import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 import net.yozmnews.user.UserId;
 import net.yozmnews.user.domain.account.Account;
@@ -16,9 +17,11 @@ import net.yozmnews.user.domain.credential.PasswordCredentialRepository;
 import net.yozmnews.user.domain.credential.PasswordPolicy;
 import net.yozmnews.user.domain.recovery.RecoveryCodeRepository;
 import net.yozmnews.user.domain.secret.RecoveryCode;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * 계정을 만드는 정본 — 모든 길(공개 가입 · 초대 가입 · 운영자 계정 생성 · 첫 운영자)이 이것을 거친다. docs/specs/user.md §4.
@@ -38,14 +41,31 @@ class AccountProvisioning {
 
 	private final PasswordHashing hashing;
 
+	private final TransactionTemplate transaction;
+
 	private final SecureRandom random = new SecureRandom();
 
 	AccountProvisioning(AccountRepository accounts, PasswordCredentialRepository credentials,
-			RecoveryCodeRepository recoveryCodes, PasswordHashing hashing) {
+			RecoveryCodeRepository recoveryCodes, PasswordHashing hashing, TransactionTemplate transaction) {
 		this.accounts = Objects.requireNonNull(accounts, "accounts");
 		this.credentials = Objects.requireNonNull(credentials, "credentials");
 		this.recoveryCodes = Objects.requireNonNull(recoveryCodes, "recoveryCodes");
 		this.hashing = Objects.requireNonNull(hashing, "hashing");
+		this.transaction = Objects.requireNonNull(transaction, "transaction");
+	}
+
+	/**
+	 * 계정을 만드는 유스케이스의 트랜잭션 경계 — 일을 트랜잭션 하나에서 하고, 먼저 본 뒤 끼어든 같은 이메일이 고유 제약으로 트랜잭션을 깨면
+	 * 트랜잭션 바깥에서 같은 이메일의 결과로 옮긴다. 가입 · 운영자 계정 생성 · 첫 운영자가 함께 쓴다.
+	 * @param emailTaken 같은 이메일일 때의 결과
+	 */
+	<T> T inOwnTransaction(Supplier<T> work, Supplier<T> emailTaken) {
+		try {
+			return Objects.requireNonNull(this.transaction.execute(status -> work.get()));
+		}
+		catch (DuplicateKeyException ex) {
+			return emailTaken.get();
+		}
 	}
 
 	/**
