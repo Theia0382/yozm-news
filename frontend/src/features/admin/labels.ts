@@ -23,8 +23,10 @@ type MultiTagKind = Schemas["ThresholdPreviewRequest"]["kind"];
 type EventStatus = Schemas["EventRowResponse"]["status"];
 type DecidedBy = Schemas["EventArticleResponse"]["decidedBy"];
 type JudgementUse = Schemas["EventJudgementRowResponse"]["use"];
-type BigStorylineCriteriaActor =
-  Schemas["BigStorylineCriteriaHistoryResponse"]["actor"];
+type ChangeActor =
+  | Schemas["BigStorylineCriteriaHistoryResponse"]["actor"]
+  | Schemas["SignUpPolicyHistoryResponse"]["actor"];
+type InvitationState = Schemas["InvitationRowResponse"]["state"];
 type StorylineState = Schemas["BigStorylineRowResponse"]["state"];
 
 export const refusalLabels = {
@@ -187,11 +189,19 @@ export const judgementUseLabels = {
   UNUSED: "반영 안 됨",
 } as const satisfies Record<JudgementUse, string>;
 
-/** 큰 판정 기준을 적은 쪽 — 시스템은 처음 값을 적재한 것이다 */
-export const bigStorylineCriteriaActorLabels = {
+/** 운영 설정(큰 판정 기준 · 가입 정책)을 적은 쪽 — 시스템은 처음 값을 적재한 것이다 */
+export const changeActorLabels = {
   OPERATOR: "운영자",
   SYSTEM: "처음 값",
-} as const satisfies Record<BigStorylineCriteriaActor, string>;
+} as const satisfies Record<ChangeActor, string>;
+
+/** 초대의 조회 때 상태 */
+export const invitationStateLabels = {
+  VALID: "유효",
+  USED: "사용됨",
+  EXPIRED: "만료",
+  REVOKED: "취소",
+} as const satisfies Record<InvitationState, string>;
 
 /** 스토리라인의 상태 — 마지막 기사 뒤 지난 시간으로 조회할 때 정해진다 */
 export const storylineStateLabels = {
