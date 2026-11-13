@@ -105,6 +105,7 @@ docker compose -f deploy/compose.yaml down -v   # 정지하고 DB 볼륨까지 �
 - **PostgreSQL 메이저가 바뀐 버전으로 올릴 때** — 새 메이저는 데이터를 다른 경로에 두어, 그대로 띄우면 기존 데이터를 두고 빈 클러스터로 뜬다. 올리기 전에 `pg_dump` 로 덤프하고, 새 버전으로 띄운 뒤 복원한다([ADR-0021](../adr/0021-separate-deploy-compose-with-single-app-service.md))
 - **마이그레이션이 큰 표를 고쳐 쓰는 버전** — Flyway 는 마이그레이션마다 한 트랜잭션으로 돌고, 끝날 때까지 `app` 이 뜨지 않는다. 태그 판정 원본 응답을 평가 표에서 판정 원본 표로 옮기는 `V26` 은 평가 행 수에 비례해 걸리고, 평가 표의 모든 행을 고쳐 써 그 표는 PostgreSQL 자동 정리(autovacuum)가 옛 행 자리를 새 행에 다시 쓸 때까지 커진 채로 남는다 — 옮긴 원본만큼의 새 표도 더해진다. 올리기 전에 [백업](#백업과-복구)하고 디스크 여유를 본다
 - **큰 판정 기준이 스토리라인으로 옮겨 간 버전** — `V29` 가 사건 단위로 두던 기준의 값과 변경 이력을 지우고, 큰 판정 기준은 처음 값으로 시작한다. 조정해 둔 값이 있으면 올리기 전에 적어 두고, 올린 뒤 [큰 스토리라인 화면](events.md#큰-판정-기준)에서 미리보기로 다시 맞춘다([ADR-0118](../adr/0118-big-judgement-criteria-are-storyline-operator-settings-and-do-not-inherit-event-criteria-values-or-history.md))
+- **큰 판정 기준이 보도 강도 하나로 바뀐 버전** — `V40` 이 소스 기준 · 중요도 기준의 값과 변경 이력을 지우고, 큰 판정 기준은 처음 값으로 시작한다. 옛 두 값을 새 기준으로 옮기는 식은 없다 — 올린 뒤 [큰 스토리라인 화면](events.md#큰-판정-기준)에서 미리보기로 다시 맞춘다([ADR-0147](../adr/0147-storyline-big-judgement-compares-importance-weighted-coverage-per-source-and-day-with-one-criterion-at-query-time.md))
 - **리스너 · 반복 작업을 다른 모듈로 옮긴 버전** — 마이그레이션이 남은 이벤트 발행을 새 리스너로 옮기고, 옛 클래스로 만들어진 예약 · 대기 작업을 지운다. 다음 회차는 새 정의로 만들어지므로 운영자가 할 일은 없다([ADR-0113](../adr/0113-moving-listeners-or-jobs-between-modules-migrates-pending-publication-listener-ids-and-drops-pending-jobs-of-the-old-class.md))
 - **(미구현)** 이미지를 레지스트리(GHCR)에 두 아키텍처로 게시하고, 운영자는 새 버전을 `pull` 로 받아 띄운다. 게시는 릴리스 때 개발팀이 한다
 

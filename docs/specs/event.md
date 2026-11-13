@@ -13,7 +13,7 @@
 - **채우기** — 운영자가 기간을 정해, 그 기간에 처음 본 기사 가운데 배정이 없는 기사를 사건 묶기 대기에 넣는다(event-R19)
 - **지운 기사 따르기** — `article` 이 기사를 지우면 그 기사의 대기 행 · 배정 · 후보 · 표현을 지우고 사건을 다시 맞춘다(event-R8)
 - **사건 정리** — 같은 반복 작업이 바뀐 열린 사건을 가까운 열린 사건과 합치고(배정 산식 · 판정, 애매한 구간은 사건 소속 판정 — 배정 때 받은 확률이 확률 기준 미만인 쌍은 묻지 않는다), 하루 1회 정리 작업이 오래된 사건을 대표 기사와 함께 닫고, 닫힌 사건에 장기 검색 인덱스를 두고, 다 쓴 기사 표현을 지운다(event-R13, [ADR-0084](../adr/0084-event-merge-applies-assignment-scoring-between-events-and-keeps-merged-rows-pointing-to-survivors.md) · [ADR-0086](../adr/0086-events-close-after-an-idle-period-since-the-last-join-or-a-maximum-period-since-opening.md) · [ADR-0087](../adr/0087-closed-event-assignments-are-not-rejudged-and-closing-and-merging-are-not-undone.md) · [ADR-0088](../adr/0088-article-features-kept-until-their-event-closes-and-unassigned-ones-for-the-window-plus-a-margin.md) · [ADR-0089](../adr/0089-long-term-hnsw-indexes-on-closed-events-created-per-model-version-at-runtime-by-the-worker-role.md) · [ADR-0119](../adr/0119-event-merge-does-not-ask-band-pairs-whose-prior-assignment-probability-is-below-the-probability-threshold.md))
-- **사건 조회 · 대표 기사 · 기간 집계** — 사건 · 사건의 기사 · 기사의 사건 · 사건 목록을 공개 조회(`EventDirectory`)로 내고, 주어진 기사 가운데 대표 기사를 고르고, 사건 묶음마다 조회 기간 안 기사 수 · 서로 다른 소스 수 · 중요도 평균을 센다 — 사건 목록과 `storyline` 의 큰 판정이 이 집계를 쓴다(event-R14 · R15 · R20, [ADR-0117](../adr/0117-big-judgement-materials-are-tallied-by-event-per-group-of-events-and-storyline-passes-only-event-ids.md))
+- **사건 조회 · 대표 기사 · 기간 집계** — 사건 · 사건의 기사 · 기사의 사건 · 사건 목록을 공개 조회(`EventDirectory`)로 내고, 주어진 기사 가운데 대표 기사를 고르고, 사건 묶음마다 조회 기간 안 기사 수 · 서로 다른 소스 수 · 중요도 평균 · 중요도 합을 세고, 기간 안 기사가 있는 모든 사건을 한 묶음으로 센 기간 전체 집계를 낸다 — 사건 목록과 `storyline` 의 큰 판정이 이 집계를 쓴다(event-R14 · R15 · R20, [ADR-0117](../adr/0117-big-judgement-materials-are-tallied-by-event-per-group-of-events-and-storyline-passes-only-event-ids.md))
 - **운영자 사건 조회** — 운영자 화면에 사건 배정 기준 · 이 사건으로 합쳐진 사건 · 사건 소속 판정 원본의 쓰임을 공개 조회(`EventReview`)로 낸다. 배정 · 병합 판정 기록은 반영한 판정 원본의 ID 를 남겨, 판정의 쓰임과 지금 결과를 잇는다(event-R12 · R13 · R22, [ADR-0094](../adr/0094-event-membership-judgements-identified-by-id-read-by-operators-and-referenced-by-the-records-that-apply-them.md))
 - **사건 변화 알림** — 사건을 열고 · 고치고 · 지우고 · 합치고 · 닫으면 같은 트랜잭션에서 바뀐 사건 ID 를 발행한다(`EventsChanged`). 스토리라인 잇기의 재료(사건 표현 · 이웃 사건 · 말 수 · 채우기 대상)를 공개 조회로 낸다(event-R23 · R24, [ADR-0105](../adr/0105-storylines-link-incrementally-from-event-change-notifications-and-events-publish-changed-event-ids.md))
 
@@ -62,7 +62,7 @@
 | 정리 작업 | 하루 1회 반복 작업 — 닫기 · 장기 검색 인덱스 · 기사 표현 정리를 차례로 한다(event-R13) |
 | 장기 검색 인덱스 | 닫힌 사건 중심의 HNSW 인덱스 — 모델 버전마다 하나이고, 정리 작업이 실행 중에 만든다(event-R13) |
 | 조회 기간 | 사건 조회 · 기간 집계가 받는 기간 — 시작 포함 · 끝 제외, 날짜 31일까지(`EventPeriod` — 시각 범위는 시간대 전환 여유로 32일까지). 기간 안 기사는 배정의 발행 시각으로 고른다(event-R20) |
-| 기간 집계 | 사건 하나 또는 사건 묶음의 조회 기간 안 기사 수 · 그 기사들의 서로 다른 소스 수 · 중요도 평균(`EventTally`) — 사건 목록과 `storyline` 의 큰 판정이 쓴다(event-R15) |
+| 기간 집계 | 사건 하나 또는 사건 묶음의 조회 기간 안 기사 수 · 그 기사들의 서로 다른 소스 수 · 중요도 평균 · 중요도 합(`EventTally`) — 사건 목록과 `storyline` 의 큰 판정이 쓴다(event-R15) |
 | 대표 기사 | 주어진 기사 가운데 사건 중심에 가장 가까운 기사 — 사건 기사 전체에서 고를 때는 닫을 때 남긴 대표가 있으면 그것(event-R14) |
 | 판정 원본의 쓰임 | `evaluation` 의 사건 소속 판정 원본을 반영한 기록 — 배정 판정이면 그 판정으로 쓴 배정, 병합 판정이면 그 판정으로 남긴 병합 판정 기록. 기록이 원본 ID 를 가리키고, 가리키는 기록이 없는 원본은 반영되지 않은 것이다(event-R22) |
 
@@ -133,6 +133,7 @@ public interface EventDirectory {
     Map<EventId, EventView> views(Collection<EventId> ids);
     Map<EventId, Integer> articleCountsIn(EventPeriod period);
     <K> Map<K, EventTally> tallies(Map<K, ? extends Collection<EventId>> groups, EventPeriod period);
+    EventTally total(EventPeriod period);
     EventPage list(EventPeriod period, @Nullable EventCursor after, int size);
     Map<EventId, EventProfile> profiles(Collection<EventId> ids, int keyTerms);
     List<EventNeighbor> neighbors(EventId id, Instant from, Instant to, double minCosine, int keyTerms, int limit);
@@ -150,7 +151,8 @@ public interface EventDirectory {
 | `representativesOfAll` | 사건마다 사건 기사 전체에서 고른 대표 기사(event-R14) — 닫을 때 남긴 대표가 있으면 그것이고, `list` 의 대표와 같은 정본이다. 배정이 없는 사건(합쳐진 사건 포함 — 합칠 때 남긴 대표는 `EventReview.mergedInto` 가 낸다) · 없는 사건은 빠지고, 빈 입력이면 빈 맵 |
 | `views` | 사건들 — 합쳐진 사건 · 없는 사건은 빠진다. 빈 입력이면 빈 맵(event-R20) |
 | `articleCountsIn` | 조회 기간 안 기사가 있는 사건과 그 기간 안 기사 수 — 사건 ID 순. 합쳐진 사건은 배정이 없어 나오지 않는다(event-R20) |
-| `tallies` | 사건 묶음(묶음 키 → 사건들)마다 기간 집계 — 묶음의 사건들의 조회 기간 안 기사를 한데 모아 센다(event-R15). 한 묶음 안에서 같은 사건은 한 번만 세고, 한 사건이 여러 묶음에 들면 묶음마다 센다. 입력의 모든 키가 결과에 있다 — 기간 안 기사가 없는 묶음은 기사 0 · 소스 0 · 중요도 없음이다. 빈 입력이면 빈 맵 |
+| `tallies` | 사건 묶음(묶음 키 → 사건들)마다 기간 집계 — 묶음의 사건들의 조회 기간 안 기사를 한데 모아 센다(event-R15). 한 묶음 안에서 같은 사건은 한 번만 세고, 한 사건이 여러 묶음에 들면 묶음마다 센다. 입력의 모든 키가 결과에 있다 — 기간 안 기사가 없는 묶음은 기사 0 · 소스 0 · 중요도 없음 · 중요도 합 0 이다. 빈 입력이면 빈 맵 |
+| `total` | 기간 전체 집계 — 조회 기간 안 기사가 있는 모든 사건(`articleCountsIn` 과 같은 범위)의 기간 안 기사를 한 묶음으로 센다(event-R15). 기간 안 기사가 없으면 기사 0 · 소스 0 · 중요도 없음 · 중요도 합 0 |
 | `list` | 조회 기간 안 기사가 있는 사건 — 마지막 기사 시각 내림차순, 사건 ID 내림차순으로 `size` 건. 집계는 그 기간, 대표 기사는 사건 기사 전체에서(닫을 때 남긴 대표가 있으면 그것 — event-R14). `size` 가 1 ~ `MAX_PAGE_SIZE` 밖이면 `IllegalArgumentException` |
 | `profiles` | 사건들의 표현 — 모델 버전 · 중심 · 기사 수 · 첫 · 마지막 기사 시각 · 상태와 기사 수가 많은 순(같으면 말 바이트 순) 상위 `keyTerms` 개 핵심 말. 합쳐진 사건 · 없는 사건은 빠지고, 빈 입력이면 빈 맵(event-R24). `keyTerms` 가 1 ~ `MAX_KEY_TERMS` 밖이면 `IllegalArgumentException` |
 | `neighbors` | 사건과 가까운 사건 — 같은 모델 버전이고 합쳐지지 않았고(열림 · 닫힘), 첫 ~ 마지막 기사 시각이 `[from, to]` 와 겹치고, 중심의 코사인 유사도가 `minCosine` 이상인 사건. 그 사건 자신과 코사인을 셀 수 없는 사건(영 벡터 중심)은 빠진다. 코사인 내림차순, 사건 ID 순으로 `limit` 건까지. 그 사건이 합쳐졌거나 없으면 빈 목록(event-R24). `from` 이 `to` 보다 늦거나, `keyTerms` 가 1 ~ `MAX_KEY_TERMS` 밖이거나, `limit` 이 1 ~ `MAX_NEIGHBORS` 밖이면 `IllegalArgumentException` |
@@ -220,7 +222,7 @@ public record EventTermCounts(long events, Map<String, Long> eventsByTerm) {}
 ### EventTally · EventSummary · EventCursor · EventPage
 
 ```java
-public record EventTally(int articles, int sources, @Nullable BigDecimal importance) {}
+public record EventTally(int articles, int sources, @Nullable BigDecimal importance, BigDecimal importanceSum) {}
 public record EventSummary(EventView event, EventTally tally, @Nullable ArticleId representative) {}
 public record EventCursor(Instant lastArticleAt, EventId id) {}
 public record EventPage(List<EventSummary> events, @Nullable EventCursor next) {}
@@ -228,7 +230,7 @@ public record EventPage(List<EventSummary> events, @Nullable EventCursor next) {
 
 | 타입 · 필드 | 뜻 |
 |---|---|
-| `EventTally` | 사건 하나 또는 사건 묶음의 기간 집계(event-R15) — 조회 기간 안 기사 수, 서로 다른 소스 수, 중요도가 있는 기사의 중요도 평균(없으면 null) |
+| `EventTally` | 사건 하나 또는 사건 묶음의 기간 집계(event-R15) — 조회 기간 안 기사 수, 서로 다른 소스 수, 중요도가 있는 기사의 중요도 평균(없으면 null)과 중요도 합(없으면 0) |
 | `EventSummary.representative` | 사건 기사 전체에서 고른 대표 기사 — 닫을 때 남긴 대표가 있으면 그것(event-R14). 배정이 없으면 null |
 | `EventPage.next` | 다음 쪽의 커서 — 더 없으면 null |
 
@@ -283,7 +285,7 @@ public record MergePair(EventId low, EventId high, double probability, @Nullable
 | `domain/intake` | 사건 묶기 대기 — 대기 행과 그 점유, 대기 상수 · 거부 상한, 대기 저장소 |
 | `domain/assignment` | 사건 배정의 판단 — 후보 점수 산식, 판정 규칙, 사건 대 사건 규칙(병합), 재판정 적용 규칙, 저장 후보 모으기, 중심 누적 갱신 · 합치기, 배정 대기 행과 그 일정, 배정 대기 · 기준 이력 · 병합 판정 기록 저장소 |
 | `domain/event` | 사건과 배정 — 잠근 사건 행과 기사 하나 더하기 · 사건 합치기, 기사를 뺀 사건의 새 값, 닫기 판정, 병합 회차가 읽는 사건, 배정 행, 사건 · 배정 저장소, 장기 검색 인덱스, 사건 조회 저장소 |
-| `domain/tally` | 기간 집계 — 사건 묶음마다 기사 수 · 서로 다른 소스 수 · 중요도 평균을 세는 산식 |
+| `domain/tally` | 기간 집계 — 사건 묶음마다 기사 수 · 서로 다른 소스 수 · 중요도 평균 · 중요도 합을 세는 산식 |
 | `application` | 기사 이벤트 리스너, 표현 · 배정 · 재판정 · 병합 회차, 정리 작업, 기사를 뺀 사건 쓰기, 기준 설정과 결선(기준을 운반하는 빈), 공개 조회 · 공개 운영 API 의 구현, 기간 집계 읽기, 핵심 말 추출기의 결선 |
 | `adapter/in/job` | 사건 묶기 대기 반복 작업(작업 역할) — 네 회차를 차례로, 사건 정리 반복 작업(작업 역할) — 하루 1회 |
 | `adapter/out/persistence` | 대기 · 표현 · 배정 대기 · 기준 이력 · 병합 판정 기록 · 사건 · 배정 · 사건 조회 저장소와 장기 검색 인덱스의 JdbcClient 구현(사건 저장소가 사건 변화 알림을 발행한다), "중심에 가까운 순" 정렬 조각 |
@@ -296,7 +298,7 @@ public record MergePair(EventId low, EventId high, double probability, @Nullable
 
 정리: 작업 역할의 `EventCleanupJob` 이 하루 1회 `CleanupRound` 를 돌린다. 닫기는 `EventRepository.closable` 로 고른 사건을 `lock` 해 `EventClosing.due` 로 다시 보고, `EventQueryRepository.representativesOfAll` 로 대표 기사를 골라 `EventRepository.close` 로 닫는다. 이어서 `LongTermIndexes.ensure` 로 장기 검색 인덱스를 만들고, `MatchFeaturesRepository.deleteOfClosedEvents` · `deleteUnassigned`(기준 시각은 `FeatureRetention`)로 기사 표현을 지운다. 닫기 기준 `EventClosing` 은 `EventAssignmentProperties` 를 `AssignmentConfiguration` 이 빈으로 바꾼 것이다.
 
-조회: `EventDirectoryService` 가 `EventQueryRepository` 로 사건(합쳐진 사건이면 남는 사건) · 배정 · 기사의 사건 · 사건 표현 · 이웃 사건 · 말 수 · 채우기 대상 · 대표 기사(정렬은 `CentroidOrder` — `describers` 와 같은 조각, 사건 기사 전체에서는 닫을 때 남긴 대표가 먼저) · 기간 안 배정 · 기간 안 사건의 기사 수 · 사건 쪽을 읽는다. 기간 집계는 사건 묶음마다 구성 사건의 기간 안 배정을 모아 `EventTallyReader` 에 넘기고, `article` 의 `ArticleDirectory.sources` · `tag` 의 `ArticleEvaluations.importances` 로 재료를 한 번씩 읽어 `EventTallies` 로 센다 — 사건 목록의 집계는 사건 하나짜리 묶음이다. 사건 변화 알림: 사건을 열고 · 고치고 · 지우고 · 합치고 · 닫는 `EventRepository` 의 다섯 메서드(`open` · `update` · `delete` · `absorb` · `close`)가 같은 트랜잭션에서 `EventsChanged` 를 발행한다 — 위의 회차 · 리스너 · `EventShrinkWriter` 의 사건 쓰기가 모두 이 메서드를 지나간다(event-R23). 운영자 조회는 `EventReviewService` 가 `AssignmentSettings` 의 기준과 `EventQueryRepository` 의 합쳐진 사건 · 판정 원본을 가리키는 배정 · 병합 판정 기록으로 낸다.
+조회: `EventDirectoryService` 가 `EventQueryRepository` 로 사건(합쳐진 사건이면 남는 사건) · 배정 · 기사의 사건 · 사건 표현 · 이웃 사건 · 말 수 · 채우기 대상 · 대표 기사(정렬은 `CentroidOrder` — `describers` 와 같은 조각, 사건 기사 전체에서는 닫을 때 남긴 대표가 먼저) · 기간 안 배정 · 기간 안 사건의 기사 수 · 사건 쪽을 읽는다. 기간 집계는 사건 묶음마다 구성 사건의 기간 안 배정을 모아 `EventTallyReader` 에 넘기고, `article` 의 `ArticleDirectory.sources` · `tag` 의 `ArticleEvaluations.importances` 로 재료를 한 번씩 읽어 `EventTallies` 로 센다 — 사건 목록의 집계는 사건 하나짜리 묶음이고, 기간 전체 집계는 기간 안 사건 전부인 묶음 하나다. 사건 변화 알림: 사건을 열고 · 고치고 · 지우고 · 합치고 · 닫는 `EventRepository` 의 다섯 메서드(`open` · `update` · `delete` · `absorb` · `close`)가 같은 트랜잭션에서 `EventsChanged` 를 발행한다 — 위의 회차 · 리스너 · `EventShrinkWriter` 의 사건 쓰기가 모두 이 메서드를 지나간다(event-R23). 운영자 조회는 `EventReviewService` 가 `AssignmentSettings` 의 기준과 `EventQueryRepository` 의 합쳐진 사건 · 판정 원본을 가리키는 배정 · 병합 판정 기록으로 낸다.
 
 #### 회차 흐름
 
@@ -429,7 +431,7 @@ sequenceDiagram
 - `EventIntakeAdministrationService` — 공개 운영 API `EventIntakeAdministration` 의 구현(event-R19). 시각은 `InstantSource` 에서 얻는다
 - `KeyTermConfiguration` — `KeyTermExtractor` 를 빈으로 두고, 컨텍스트가 닫을 때 닫는다
 - `EventReviewService` — 공개 조회 `EventReview` 의 구현(event-R13 · R17 · R22). 판정 원본의 쓰임은 배정과 병합 판정 기록을 각각 원본 ID 로 찾아 합친다. 트랜잭션 · 역할 애너테이션이 없다
-- `EventDirectoryService` — 공개 조회 `EventDirectory` 의 구현(event-R14 · R15 · R20 · R24). 표현 · 이웃 · 말 수 조회의 범위를 검사한다. 기간 집계는 묶음들의 사건 ID 합집합으로 기간 안 배정을 한 번 읽고, 묶음마다 구성 사건(중복 없이)의 기사를 이어 `EventTallyReader` 에 넘긴다 — 사건 목록의 집계도 같은 길이다. `list` 는 한 건 더 읽어 다음 커서를 정한다. 트랜잭션 · 역할 애너테이션이 없다
+- `EventDirectoryService` — 공개 조회 `EventDirectory` 의 구현(event-R14 · R15 · R20 · R24). 표현 · 이웃 · 말 수 조회의 범위를 검사한다. 기간 집계는 묶음들의 사건 ID 합집합으로 기간 안 배정을 한 번 읽고, 묶음마다 구성 사건(중복 없이)의 기사를 이어 `EventTallyReader` 에 넘긴다 — 사건 목록의 집계와 기간 전체 집계(`total`)도 같은 길이다. `list` 는 한 건 더 읽어 다음 커서를 정한다. 트랜잭션 · 역할 애너테이션이 없다
 - `EventTallyReader` — 묶음별 기간 안 기사의 소스 · 중요도를 다른 모듈의 공개 조회로 한 번씩 읽어 `EventTallies` 로 세는 협력자(집계 경로 하나). 입력이 비면 부르지 않는다
 
 ### `domain`
@@ -745,11 +747,13 @@ sequenceDiagram
   - 사건 모델 버전의 표현이 있는 기사를 중심과의 거리 순(같으면 기사 ID 순)으로 먼저, 표현이 없는 기사(지웠거나 다른 모델 버전의 표현만 있다)는 그 뒤에 발행 시각 · 기사 ID 순으로 두고 첫째를 고른다(`CentroidOrder` — 서술 기사와 같은 정본)
   - 사건 기사 전체에서 고를 때는 닫을 때 남긴 대표 기사(event-R13)가 있으면 그것이다 — 닫힌 사건은 기사 표현을 지운다. 걸러진 기사에서 고를 때는 남긴 대표를 쓰지 않는다. 합쳐진 사건은 배정이 없어 이 조회에 나오지 않고, 합칠 때 남긴 대표는 합쳐진 사건 조회(`EventReview.mergedInto`)가 낸다
   - 주어진 기사 가운데 그 사건의 기사가 아닌 것은 무시하고, 남는 기사가 없는 사건은 대표가 없다
-- **event-R15** — 기간 집계(`EventTallies` — 정본): 사건 묶음마다 그 사건들의 조회 기간 안 기사(event-R20)를 한데 모아 기사 수 · 서로 다른 소스 수 · 중요도 평균을 센다. 집계는 저장하지 않고 조회할 때 센다. `event` 는 집계로 판정하지 않는다 — 무엇을 묶을지와 판정은 부르는 쪽이 한다.
+- **event-R15** — 기간 집계(`EventTallies` — 정본): 사건 묶음마다 그 사건들의 조회 기간 안 기사(event-R20)를 한데 모아 기사 수 · 서로 다른 소스 수 · 중요도 평균 · 중요도 합을 센다. 집계는 저장하지 않고 조회할 때 센다. `event` 는 집계로 판정하지 않는다 — 무엇을 묶을지와 판정은 부르는 쪽이 한다.
   - 기사 수는 묶음의 사건들의 기간 안 기사 수다. 한 묶음 안에서 같은 사건은 한 번만 세고, 기사는 사건 하나에만 배정되므로 기사도 한 번이다. 한 사건이 여러 묶음에 들면 묶음마다 센다
   - 소스 수는 그 기사들의 엔트리 소스(`ArticleDirectory.sources`)의 서로 다른 수다 — 다른 매체의 전재 기사는 다른 기사라 매체마다 하나씩 세고, 묶음의 사건 둘이 같은 소스를 가지면 한 번 센다
   - 중요도 평균은 그 기사들 가운데 중요도가 있는 기사(`tag` 의 `ArticleEvaluations.importances` — 버전 번호가 가장 큰 평가의 기대값)의 평균이다. 소수 산술로 센다 — 부르는 쪽이 소수 기준과 같은 수 체계로 비교한다. 중요도가 없는 기사는 평균에서 빼고 소스 수에는 넣는다. 중요도가 있는 기사가 없으면 평균이 없다
-  - 기간 안 기사가 없는 묶음은 기사 0 · 소스 0 · 평균 없음이다. 합쳐진 사건 · 없는 사건은 기간 안 기사가 없다
+  - 중요도 합은 평균과 같은 기사들의 중요도를 더한 값이다. 중요도가 있는 기사가 없으면 0 이다
+  - 기간 전체 집계(`total`)는 조회 기간 안 기사가 있는 모든 사건을 한 묶음으로 센 것이다 — 스토리라인에 들었는지와 무관하다
+  - 기간 안 기사가 없는 묶음은 기사 0 · 소스 0 · 평균 없음 · 합 0 이다. 합쳐진 사건 · 없는 사건은 기간 안 기사가 없다
   - 사건의 상태 · 모델 버전 · 정한 것과 무관하다 — 닫힌 사건, 판정 실패로 연 사건, 다른 모델 버전의 사건도 같은 규칙이다
   - 사건 목록의 집계는 사건 하나짜리 묶음이다
 - **event-R20** — 사건 조회: 조회 기간은 시작 포함 · 끝 제외이고 날짜 31일(`EventPeriod.MAX_DAYS`)까지다. 날짜 범위는 그 시간대 자정으로 옮기고(`EventPeriod.ofDays` — `platform` 의 `DayRange`), 시각 범위의 상한은 시간대 전환 여유로 하루를 더한 32일이다 — 서머타임이 끝나는 날이 든 31일도 받는다. 기간 안 기사는 배정의 발행 시각으로 고른다. 사건 목록은 기간 안 기사가 있는 사건을 마지막 기사 시각 · 사건 ID 내림차순으로 한 쪽 100건(`EventDirectory.MAX_PAGE_SIZE`)까지 낸다 — 집계는 그 기간, 대표 기사는 사건 기사 전체에서. 기간 안 사건 조회(`articleCountsIn`)는 조회 기간 안 기사가 있는 사건과 그 기사 수를 사건 ID 순으로 낸다. 기사의 사건은 배정을 따른다. 사건 ID 로 찾는 조회는 합쳐진 사건이면 남는 사건을 낸다(event-R13) — 가리킴이 평평해 한 번 따른다. 합쳐진 사건은 배정이 모두 남는 사건으로 옮겨져, 사건의 기사 조회는 빈 목록이고 사건 목록 · 기간 안 사건 · 사건 묶음 조회(`views`) · 기사의 사건에 나오지 않는다 — 합쳐진 사건일 수 있는 ID 는 먼저 사건 ID 로 찾아 남는 사건을 얻는다

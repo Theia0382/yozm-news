@@ -48,3 +48,7 @@
 | 목록과 큰 판정에서 최상위만 낸다 | 큰 갈래가 큰 상위에 가려진다. 쓰는 쪽이 생기기 전에 고르는 규칙을 정하게 된다 |
 | 방향을 첫 기사 시각으로 늘 다시 정한다 | 앞선 사건이 붙으면 저장한 고리의 방향이 뒤집힌다 |
 | 순환을 DB 제약으로 막는다 | 재귀 제약이라 트리거가 필요하다. 관계를 넣는 판정이 한 번에 하나라 넣을 때의 확인으로 충분하다 |
+
+## 후속 기록
+
+- 2026-11-14: 결정 "상위와 하위를 가리지 않고 낸다" — 큰 판정의 식이 정해진 뒤에도 그대로다([ADR-0147](0147-storyline-big-judgement-compares-importance-weighted-coverage-per-source-and-day-with-one-criterion-at-query-time.md)), 지금 상태는 [storyline Spec "큰 판정"](../specs/storyline.md#큰-판정)
