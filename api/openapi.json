@@ -142,6 +142,132 @@
         "tags" : [ "account-controller" ]
       }
     },
+    "/api/admin/accounts" : {
+      "post" : {
+        "operationId" : "createAccount",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AccountCreationRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountCreationResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청 본문의 형식이 틀렸거나, 이메일 · 표시 이름 형식 또는 초기 비밀번호 규칙을 어겼다"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          }
+        },
+        "tags" : [ "admin-account-controller" ]
+      }
+    },
+    "/api/admin/accounts/initial-password" : {
+      "put" : {
+        "operationId" : "resetInitialPassword",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/InitialPasswordResetRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/InitialPasswordResetResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청 본문의 형식이 틀렸거나 초기 비밀번호 규칙을 어겼다"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "그 이메일의 계정이 없다"
+          }
+        },
+        "tags" : [ "admin-account-controller" ]
+      }
+    },
     "/api/admin/big-storyline-criteria" : {
       "get" : {
         "operationId" : "criteria",
@@ -1687,6 +1813,157 @@
         "tags" : [ "admin-feed-controller" ]
       }
     },
+    "/api/admin/invitations" : {
+      "get" : {
+        "operationId" : "invitations",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/InvitationListResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          }
+        },
+        "tags" : [ "admin-invitation-controller" ]
+      },
+      "post" : {
+        "operationId" : "issueInvitation",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/InvitationIssueRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/InvitationIssueResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청 본문의 형식이 틀렸거나 메모가 너무 길다"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          }
+        },
+        "tags" : [ "admin-invitation-controller" ]
+      }
+    },
+    "/api/admin/invitations/{id}/revoke" : {
+      "post" : {
+        "operationId" : "revokeInvitation",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/InvitationRevocationResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "없는 초대다"
+          }
+        },
+        "tags" : [ "admin-invitation-controller" ]
+      }
+    },
     "/api/admin/presets" : {
       "get" : {
         "operationId" : "presets",
@@ -1840,6 +2117,100 @@
           }
         },
         "tags" : [ "admin-source-controller" ]
+      }
+    },
+    "/api/admin/sign-up-policy" : {
+      "get" : {
+        "operationId" : "signUpPolicyStatus",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SignUpPolicyStatusResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          }
+        },
+        "tags" : [ "admin-sign-up-policy-controller" ]
+      },
+      "put" : {
+        "operationId" : "changeSignUpPolicy",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SignUpPolicyChangeRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SignUpPolicyChangeResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청 본문의 형식이 틀렸다"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          }
+        },
+        "tags" : [ "admin-sign-up-policy-controller" ]
       }
     },
     "/api/admin/sources" : {
@@ -3636,6 +4007,35 @@
   },
   "components" : {
     "schemas" : {
+      "AccountCreationRequest" : {
+        "type" : "object",
+        "properties" : {
+          "displayName" : {
+            "type" : "string"
+          },
+          "email" : {
+            "type" : "string"
+          },
+          "initialPassword" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "displayName", "email", "initialPassword" ]
+      },
+      "AccountCreationResponse" : {
+        "type" : "object",
+        "properties" : {
+          "result" : {
+            "type" : "string",
+            "enum" : [ "CREATED", "EMAIL_TAKEN" ]
+          },
+          "userId" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int64"
+          }
+        },
+        "required" : [ "result", "userId" ]
+      },
       "AccountRecoveryRequest" : {
         "type" : "object",
         "properties" : {
@@ -5041,6 +5441,28 @@
         },
         "required" : [ "httpStatus", "message", "permanence", "problem", "reason" ]
       },
+      "InitialPasswordResetRequest" : {
+        "type" : "object",
+        "properties" : {
+          "email" : {
+            "type" : "string"
+          },
+          "initialPassword" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "email", "initialPassword" ]
+      },
+      "InitialPasswordResetResponse" : {
+        "type" : "object",
+        "properties" : {
+          "result" : {
+            "type" : "string",
+            "enum" : [ "RESET", "NOT_PENDING" ]
+          }
+        },
+        "required" : [ "result" ]
+      },
       "InvitationAcceptanceRequest" : {
         "type" : "object",
         "properties" : {
@@ -5080,6 +5502,94 @@
           }
         },
         "required" : [ "state" ]
+      },
+      "InvitationIssueRequest" : {
+        "type" : "object",
+        "properties" : {
+          "memo" : {
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "memo" ]
+      },
+      "InvitationIssueResponse" : {
+        "type" : "object",
+        "properties" : {
+          "expiresAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "token" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "expiresAt", "id", "token" ]
+      },
+      "InvitationListResponse" : {
+        "type" : "object",
+        "properties" : {
+          "invitations" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/InvitationRowResponse"
+            }
+          }
+        },
+        "required" : [ "invitations" ]
+      },
+      "InvitationRevocationResponse" : {
+        "type" : "object",
+        "properties" : {
+          "result" : {
+            "type" : "string",
+            "enum" : [ "REVOKED", "NOT_REVOCABLE" ]
+          },
+          "state" : {
+            "type" : [ "string", "null" ],
+            "enum" : [ "VALID", "USED", "EXPIRED", "REVOKED" ]
+          }
+        },
+        "required" : [ "result", "state" ]
+      },
+      "InvitationRowResponse" : {
+        "type" : "object",
+        "properties" : {
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "expiresAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "memo" : {
+            "type" : [ "string", "null" ]
+          },
+          "revokedAt" : {
+            "type" : [ "string", "null" ],
+            "format" : "date-time"
+          },
+          "state" : {
+            "type" : "string",
+            "enum" : [ "VALID", "USED", "EXPIRED", "REVOKED" ]
+          },
+          "usedAt" : {
+            "type" : [ "string", "null" ],
+            "format" : "date-time"
+          },
+          "usedByEmail" : {
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "createdAt", "expiresAt", "id", "memo", "revokedAt", "state", "usedAt", "usedByEmail" ]
       },
       "JudgedEventResponse" : {
         "type" : "object",
@@ -5748,6 +6258,51 @@
         },
         "required" : [ "result", "retryAfterSeconds" ]
       },
+      "SignUpPolicyChangeRequest" : {
+        "type" : "object",
+        "properties" : {
+          "open" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "open" ]
+      },
+      "SignUpPolicyChangeResponse" : {
+        "type" : "object",
+        "properties" : {
+          "open" : {
+            "type" : "boolean"
+          },
+          "previousOpen" : {
+            "type" : [ "boolean", "null" ]
+          },
+          "result" : {
+            "type" : "string",
+            "enum" : [ "CHANGED", "UNCHANGED" ]
+          }
+        },
+        "required" : [ "open", "previousOpen", "result" ]
+      },
+      "SignUpPolicyHistoryResponse" : {
+        "type" : "object",
+        "properties" : {
+          "actor" : {
+            "type" : "string",
+            "enum" : [ "SYSTEM", "OPERATOR" ]
+          },
+          "changedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "open" : {
+            "type" : "boolean"
+          },
+          "previousOpen" : {
+            "type" : [ "boolean", "null" ]
+          }
+        },
+        "required" : [ "actor", "changedAt", "open", "previousOpen" ]
+      },
       "SignUpPolicyResponse" : {
         "type" : "object",
         "properties" : {
@@ -5756,6 +6311,21 @@
           }
         },
         "required" : [ "open" ]
+      },
+      "SignUpPolicyStatusResponse" : {
+        "type" : "object",
+        "properties" : {
+          "changes" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/SignUpPolicyHistoryResponse"
+            }
+          },
+          "open" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "changes", "open" ]
       },
       "SignUpRequest" : {
         "type" : "object",
