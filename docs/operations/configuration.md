@@ -120,7 +120,7 @@
 | `YOZMNEWS_STORYLINE_RELATION_CANDIDATE_SCORE` | 아니오 | `app` → `yozmnews.storyline-relation.candidate-score` | `0.9` | 후보 점수 기준 — 사건을 함께 갖지 않은 쌍은 스토리라인 표현끼리의 점수가 이 이상이어야 묻는다. 기본 0.88 |
 | `YOZMNEWS_STORYLINE_RELATION_WINDOW` | 아니오 | `app` → `yozmnews.storyline-relation.window` | `21d` | 시간 창 — 점수로 후보를 찾을 때 스토리라인의 첫 · 마지막 기사 시각에서 이만큼 떨어진 스토리라인까지 본다. 기본 14일 |
 
-- 기본값은 측정 전 목표다 — 스토리라인 쌍을 직접 판정한 세트로 고른 값이고([스토리라인 평가하기](storyline-evaluation.md#관계를-쌍-판정으로-재기)), 다른 기간에서의 품질과 실제 토큰은 재지 않았다. 값의 뜻과 규칙은 [storyline Spec §5](../specs/storyline.md#스토리라인-사이-관계)에 있다([ADR-0132](../adr/0132-storyline-relations-are-judged-by-jev-on-candidate-pairs-and-linked-only-above-a-probability-threshold.md))
+- 기본값은 측정 전 목표다 — 스토리라인 쌍을 직접 판정한 세트로 고른 값이고([스토리라인 평가하기](storyline-evaluation.md#관계를-쌍-판정으로-재기)), 다른 기간에서의 품질과 운영하며 쌓이는 판정의 비용은 재지 않았다. 값의 뜻과 규칙은 [storyline Spec §5](../specs/storyline.md#스토리라인-사이-관계)에 있다([ADR-0132](../adr/0132-storyline-relations-are-judged-by-jev-on-candidate-pairs-and-linked-only-above-a-probability-threshold.md))
 - 확률 기준을 올리면 틀린 관계가 줄고 찾는 관계도 준다. 한 사안 기준은 종류가 비슷한 일들을 모은 스토리라인을 관계에서 거른다. 사건 수 하한 · 후보 점수 기준을 내리면 묻는 쌍이 늘어 Jev 비용이 는다
 - 후보 점수 기준은 [스토리라인 잇기](#스토리라인-잇기)의 기준 점수와 같은 눈금이다. 임베딩 모델을 바꾸면 함께 다시 정한다
 - 확률 기준 · 후보 점수 기준은 0 보다 크고 1 이하, 한 사안 기준은 0 이상 1 이하, 사건 수 하한은 2 이상, 시간 창은 0 보다 큰 초 단위여야 한다. 어기면 앱이 뜨지 않는다. 값을 비운 줄은 앱의 기본값이 되지 않으므로 쓰지 않을 때는 주석으로 둔다
