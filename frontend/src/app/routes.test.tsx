@@ -14,6 +14,8 @@ import { EventJudgementsPage } from "@/features/admin/EventJudgementsPage";
 import { EventPublicationsPage } from "@/features/admin/EventPublicationsPage";
 import { EventsPage } from "@/features/admin/EventsPage";
 import { SamplePage } from "@/features/admin/SamplePage";
+import { StorylineDetailPage } from "@/features/admin/StorylineDetailPage";
+import { StorylinesPage } from "@/features/admin/StorylinesPage";
 import { ThresholdsPage } from "@/features/admin/ThresholdsPage";
 import { NoticesPage } from "@/features/notices/NoticesPage";
 import { ApiClientContext, createApiClient } from "@/shared/api/client";
@@ -114,6 +116,8 @@ describe("routes", () => {
     ["thresholds", "ThresholdsPage", () => ThresholdsPage],
     ["events", "EventsPage", () => EventsPage],
     ["events/:id", "EventDetailPage", () => EventDetailPage],
+    ["storylines", "StorylinesPage", () => StorylinesPage],
+    ["storylines/:id", "StorylineDetailPage", () => StorylineDetailPage],
     ["big-storylines", "BigStorylinesPage", () => BigStorylinesPage],
     ["event-judgements", "EventJudgementsPage", () => EventJudgementsPage],
   ])(

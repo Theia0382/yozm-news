@@ -9,8 +9,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
- * 운영자 목록의 커서 매개변수 — 시각(ISO-8601)과 ID 를 함께 받는다 · docs/specs/admin.md §5 admin-R3. 평가 목록 · 사건 목록 · 판정 기록이 함께
- * 쓴다.
+ * 운영자 목록의 커서 매개변수 — 시각(ISO-8601)과 ID 를 함께 받는다 · docs/specs/admin.md §5 admin-R3. 평가 목록 · 사건 목록 · 스토리라인 목록 ·
+ * 판정 기록이 함께 쓴다.
  */
 record AdminCursor(Instant at, long id) {
 

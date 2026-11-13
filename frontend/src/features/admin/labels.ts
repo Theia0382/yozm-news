@@ -28,6 +28,9 @@ type ChangeActor =
   | Schemas["SignUpPolicyHistoryResponse"]["actor"];
 type InvitationState = Schemas["InvitationRowResponse"]["state"];
 type StorylineState = Schemas["BigStorylineRowResponse"]["state"];
+type LinkedBy = Schemas["StorylineMembershipResponse"]["linkedBy"];
+type RelationOutcome = Schemas["StorylineAskedResponse"]["outcome"];
+type RelationReading = Schemas["RelationJudgementResponse"]["reading"];
 
 export const refusalLabels = {
   PROFILE_UNAVAILABLE:
@@ -209,3 +212,30 @@ export const storylineStateLabels = {
   QUIET: "잠잠",
   ENDED: "끝남",
 } as const satisfies Record<StorylineState, string>;
+
+/** 스토리라인 소속을 정한 것 */
+export const linkedByLabels = {
+  RULE: "붙이기",
+  PAIR: "짝",
+  MERGE: "병합 옮김",
+} as const satisfies Record<LinkedBy, string>;
+
+/** 관계를 마지막으로 물은 결말 */
+export const relationOutcomeLabels = {
+  LINKED: "맺음",
+  NOT_RELATED: "해당 없음",
+  LOW_PROBABILITY: "확률 기준 미달",
+  NOT_ONE_MATTER: "한 사안 기준 미달",
+  CYCLE: "순환",
+  SECOND_PARENT: "둘째 상위",
+  NOTHING_TO_ASK: "물을 것 없음",
+  REJECTED: "입력 거부",
+} as const satisfies Record<RelationOutcome, string>;
+
+/** 관계 판정 원본을 다시 읽지 못한 까닭 — 읽었으면 확률을 보인다 */
+export const relationReadingLabels = {
+  READ: "읽음",
+  NO_EVALUATOR: "평가기 없음",
+  OTHER_EVALUATOR: "다른 평가기",
+  UNREADABLE: "읽을 수 없음",
+} as const satisfies Record<RelationReading, string>;

@@ -24,6 +24,7 @@ import net.yozmnews.event.MergedEvent;
 import net.yozmnews.platform.ApiProblem;
 import net.yozmnews.platform.WebRole;
 import net.yozmnews.source.FeedLabels;
+import net.yozmnews.storyline.StorylineDirectory;
 import org.jspecify.annotations.Nullable;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -32,7 +33,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 운영자 API — 사건 목록 · 사건 하나의 상세. docs/specs/admin.md §3 · admin-R7.
+ * 운영자 API — 사건 목록 · 사건 하나의 상세(사건이 든 스토리라인 포함). docs/specs/admin.md §3 · admin-R7.
  * <p>
  * {@code event} 의 공개 조회를 불러 옮기고, 기사 정보는 {@link AdminArticles} 가 맞붙인다(admin-R6). 목록의 쪽 크기는 {@link #PAGE_SIZE}
  * 로 정해 부른다 — 질의로 받지 않는다. 기간의 범위는 공개 타입이 판정하고 컨트롤러는 그 결과를 400 으로 옮긴다. 트랜잭션을 열지 않는다 — 여러
@@ -49,11 +50,15 @@ class AdminEventController {
 
 	private final EventReview review;
 
+	private final StorylineDirectory storylines;
+
 	private final AdminArticles articles;
 
-	AdminEventController(EventDirectory directory, EventReview review, ArticleDirectory articles, FeedLabels labels) {
+	AdminEventController(EventDirectory directory, EventReview review, StorylineDirectory storylines,
+			ArticleDirectory articles, FeedLabels labels) {
 		this.directory = Objects.requireNonNull(directory, "directory");
 		this.review = Objects.requireNonNull(review, "review");
+		this.storylines = Objects.requireNonNull(storylines, "storylines");
 		this.articles = new AdminArticles(articles, labels);
 	}
 
@@ -115,7 +120,8 @@ class AdminEventController {
 				merged.stream()
 					.map(one -> MergedEventResponse.of(one,
 							(one.representative() == null) ? null : summaries.get(one.representative())))
-					.toList());
+					.toList(),
+				this.storylines.storylinesOf(event.id()).stream().map(EventStorylineResponse::of).toList());
 	}
 
 }

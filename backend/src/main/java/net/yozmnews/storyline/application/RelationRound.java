@@ -22,6 +22,7 @@ import net.yozmnews.event.EventDirectory;
 import net.yozmnews.event.EventId;
 import net.yozmnews.event.EventTermCounts;
 import net.yozmnews.event.EventView;
+import net.yozmnews.storyline.RelationOutcome;
 import net.yozmnews.storyline.domain.linking.Compared;
 import net.yozmnews.storyline.domain.linking.Cosine;
 import net.yozmnews.storyline.domain.linking.LinkingScoring;
@@ -33,7 +34,6 @@ import net.yozmnews.storyline.domain.relation.RelationCandidates;
 import net.yozmnews.storyline.domain.relation.RelationCriteria;
 import net.yozmnews.storyline.domain.relation.RelationDescription;
 import net.yozmnews.storyline.domain.relation.RelationGraph;
-import net.yozmnews.storyline.domain.relation.RelationOutcome;
 import net.yozmnews.storyline.domain.relation.RelationQueueRepository;
 import net.yozmnews.storyline.domain.relation.RelationRepository;
 import net.yozmnews.storyline.domain.relation.RelationRule;
@@ -311,7 +311,7 @@ public class RelationRound {
 				case RelationRule.Decision.None none -> this.relations.unlink(first, second);
 			}
 			this.relations.recordAsked(first, second, pair.smallerEvents(), judged.judgement().value(), criteriaId,
-					RelationOutcome.of(decision), now);
+					RelationRule.outcomeOf(decision), now);
 		});
 	}
 

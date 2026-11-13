@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
+import { Link } from "react-router";
 import {
   failureText,
   type Schemas,
@@ -14,6 +15,7 @@ import {
 import { formatProbability } from "@/features/admin/metrics";
 import { PeriodFields } from "@/features/admin/PeriodFields";
 import { browserZone, defaultFirst, today } from "@/features/admin/periods";
+import { storylinePath } from "@/features/admin/storylineQueries";
 import { REVIEW_TABLE } from "@/features/admin/tables";
 import { formatDateTime } from "@/shared/lib/dateTime";
 
@@ -319,7 +321,11 @@ function BigTable({
       <tbody>
         {rows.map((row) => (
           <tr key={row.id} className="align-top">
-            <td>스토리라인 {row.id}</td>
+            <td>
+              <Link to={storylinePath(row.id)} className="underline">
+                스토리라인 {row.id}
+              </Link>
+            </td>
             <td>{storylineStateLabels[row.state]}</td>
             <td className="tabular-nums">{row.eventCount}</td>
             <td className="tabular-nums">{row.periodSources}</td>

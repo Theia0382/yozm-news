@@ -36,6 +36,7 @@ import net.yozmnews.evaluation.domain.evaluator.HappeningText;
 import net.yozmnews.evaluation.domain.evaluator.MembershipResult;
 import net.yozmnews.evaluation.domain.evaluator.Relation;
 import net.yozmnews.evaluation.domain.evaluator.RelationInput;
+import net.yozmnews.evaluation.domain.evaluator.RelationRereadResult;
 import net.yozmnews.evaluation.domain.evaluator.RelationResult;
 import net.yozmnews.evaluation.domain.evaluator.RelationWording;
 import net.yozmnews.evaluation.domain.evaluator.RereadFailure;
@@ -83,7 +84,7 @@ import tools.jackson.databind.json.JsonMapper;
  * 제목의 비율 r 로 {@code ONE_MATTER_FLOOR + ONE_MATTER_SPAN * r}({@value #ONE_MATTER_FLOOR} · {@value #ONE_MATTER_SPAN})</li>
  * <li>관계 판정 입력 토큰 — state 와 관계 질문 · 선택지 다섯 · 한 사안 질문 둘의 코드 포인트 합을 2로 나눠 올린 값</li>
  * <li>관계 판정 원본 응답 — 평가기 이름 · 버전과 답 이름 순의 확률({@code relation}), 두 한 사안 확률({@code oneMatter})을 담은
- * JSON</li>
+ * JSON. 다시 읽기는 같은 키로 답 다섯과 한 사안 확률 둘을 읽고, 입력 토큰은 원본에 없어 0 이다</li>
  * </ul>
  * 넘긴 질문 묶음은 검증된 체계에서 왔다 — 주제 · 중분류 · 지역이 하나 이상, 형식 선택지가 둘 이상이다.
  */
@@ -197,6 +198,22 @@ public final class FakeArticleEvaluator implements ArticleEvaluator {
 		}
 		try {
 			return reread(rawResponse, questions);
+		}
+		catch (Unreadable ex) {
+			return new RereadFailure(RereadFailure.Kind.UNREADABLE, "Fake 원본 응답을 읽을 수 없다 — " + ex.getMessage());
+		}
+	}
+
+	/** 자기가 남긴 관계 판정 원본 응답을 다시 읽는다 */
+	@Override
+	public RelationRereadResult rereadRelation(String evaluator, String rawResponse) {
+		Objects.requireNonNull(evaluator, "evaluator");
+		Objects.requireNonNull(rawResponse, "rawResponse");
+		if (!NAME.equals(evaluator)) {
+			return new RereadFailure(RereadFailure.Kind.OTHER_EVALUATOR, "Fake 가 남긴 원본 응답이 아니다 — 평가기 " + evaluator);
+		}
+		try {
+			return rereadRelation(rawResponse);
 		}
 		catch (Unreadable ex) {
 			return new RereadFailure(RereadFailure.Kind.UNREADABLE, "Fake 원본 응답을 읽을 수 없다 — " + ex.getMessage());
@@ -488,20 +505,8 @@ public final class FakeArticleEvaluator implements ArticleEvaluator {
 
 	/** 원본 응답에서 넘긴 질문 묶음의 키마다 확률을 읽는다 — 중요도 키는 수준의 문자열 */
 	private static Evaluation reread(String rawResponse, TagQuestions questions) {
-		JsonNode root;
-		try {
-			root = JSON.readTree(rawResponse);
-		}
-		catch (JacksonException ex) {
-			throw new Unreadable("JSON 이 아니다");
-		}
-		if (root == null || !root.isObject()) {
-			throw new Unreadable("JSON 객체가 아니다");
-		}
-		JsonNode model = root.get(RAW_MODEL_VERSION);
-		if (model == null || !model.isString() || model.stringValue().isBlank()) {
-			throw new Unreadable(RAW_MODEL_VERSION + " 이 없거나 비었다");
-		}
+		JsonNode root = root(rawResponse);
+		String model = modelVersion(root);
 		Map<String, Double> topics = new LinkedHashMap<>();
 		for (TopicCategory category : questions.topics()) {
 			for (AskedTag subtopic : category.subtopics()) {
@@ -521,18 +526,66 @@ public final class FakeArticleEvaluator implements ArticleEvaluator {
 			importance.put(level.level(), probability(root, RAW_IMPORTANCE, Integer.toString(level.level())));
 		}
 		// 입력 토큰은 원본 응답에 없다 — 다시 읽기는 토큰 수를 쓰지 않는다
-		return new Evaluation(topics, regions, formats, importance, NAME, model.stringValue(), 0, rawResponse);
+		return new Evaluation(topics, regions, formats, importance, NAME, model, 0, rawResponse);
+	}
+
+	/** 원본 응답에서 답 다섯의 확률과 두 한 사안 확률을 읽는다 — 판정 때 쓴 키 그대로 */
+	private static Relation rereadRelation(String rawResponse) {
+		JsonNode root = root(rawResponse);
+		String model = modelVersion(root);
+		Map<RelationAnswer, Double> probabilities = new EnumMap<>(RelationAnswer.class);
+		for (RelationAnswer answer : RelationAnswer.values()) {
+			probabilities.put(answer, probability(root, RAW_RELATION, answer.name()));
+		}
+		JsonNode oneMatter = root.get(RAW_ONE_MATTER);
+		if (oneMatter == null || !oneMatter.isArray() || oneMatter.size() != 2) {
+			throw new Unreadable(RAW_ONE_MATTER + " 가 두 값의 배열이 아니다");
+		}
+		// 입력 토큰은 원본 응답에 없다 — 다시 읽기는 토큰 수를 쓰지 않는다
+		return new Relation(probabilities, oneMatter(oneMatter.get(0)), oneMatter(oneMatter.get(1)), NAME, model, 0,
+				rawResponse);
+	}
+
+	private static JsonNode root(String rawResponse) {
+		JsonNode root;
+		try {
+			root = JSON.readTree(rawResponse);
+		}
+		catch (JacksonException ex) {
+			throw new Unreadable("JSON 이 아니다");
+		}
+		if (root == null || !root.isObject()) {
+			throw new Unreadable("JSON 객체가 아니다");
+		}
+		return root;
+	}
+
+	private static String modelVersion(JsonNode root) {
+		JsonNode model = root.get(RAW_MODEL_VERSION);
+		if (model == null || !model.isString() || model.stringValue().isBlank()) {
+			throw new Unreadable(RAW_MODEL_VERSION + " 이 없거나 비었다");
+		}
+		return model.stringValue();
+	}
+
+	private static double oneMatter(JsonNode value) {
+		return probability(value, RAW_ONE_MATTER);
 	}
 
 	private static double probability(JsonNode root, String kind, String key) {
 		JsonNode values = root.get(kind);
 		JsonNode value = (values != null && values.isObject()) ? values.get(key) : null;
+		return probability(value, kind + "." + key);
+	}
+
+	/** 0 이상 1 이하의 유한 확률 — 아니면 {@link Unreadable}(문구는 자리만 — 원본 응답 원문을 싣지 않는다) */
+	private static double probability(@Nullable JsonNode value, String where) {
 		if (value == null || !value.isNumber()) {
-			throw new Unreadable("확률이 없거나 숫자가 아니다 — " + kind + "." + key);
+			throw new Unreadable("확률이 없거나 숫자가 아니다 — " + where);
 		}
 		double probability = value.doubleValue();
 		if (!Double.isFinite(probability) || probability < 0 || probability > 1) {
-			throw new Unreadable("확률이 0 ~ 1 이 아니다 — " + kind + "." + key);
+			throw new Unreadable("확률이 0 ~ 1 이 아니다 — " + where);
 		}
 		return probability;
 	}

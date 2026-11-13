@@ -6,11 +6,10 @@ from __future__ import annotations
 import json
 from collections.abc import Mapping
 from datetime import datetime
-from decimal import Decimal
 from pathlib import Path
 from typing import Final
 
-from admin_api import AssignmentCriteria
+from admin_api import AssignmentCriteria, json_number
 from labels import LabelError, Sample, format_instant, parse_instant
 from metrics import BCubed
 
@@ -29,9 +28,7 @@ def build_record(*, sample: Sample, labels_digest: str, counts: Mapping[str, obj
         "labels": {"articlesSha256": labels_digest},
         "counts": dict(counts),
         "settings": {
-            "assignment": {"windowSeconds": criteria.window_seconds, "upper": _number(criteria.upper),
-                           "lower": _number(criteria.lower), "store": _number(criteria.store),
-                           "probability": _number(criteria.probability)},
+            "assignment": assignment_json(criteria),
             "judgementModels": sorted(judgement_models),
             "embeddingModel": embedding_model,
             "notes": dict(notes),
@@ -40,6 +37,13 @@ def build_record(*, sample: Sample, labels_digest: str, counts: Mapping[str, obj
                    "systemEvents": bcubed.system_events, "unassigned": bcubed.unassigned,
                    "goldSingletons": bcubed.gold_singletons, "systemSingletons": bcubed.system_singletons},
     }
+
+
+def assignment_json(criteria: AssignmentCriteria) -> dict[str, int | float]:
+    """사건 배정 기준의 기록 모양 — 결과 기록과 스토리라인 결과 파일의 meta.eventCriteria 가 함께 쓴다."""
+    return {"windowSeconds": criteria.window_seconds, "upper": json_number(criteria.upper),
+            "lower": json_number(criteria.lower), "store": json_number(criteria.store),
+            "probability": json_number(criteria.probability)}
 
 
 def write_record(directory: Path, record: Mapping[str, object]) -> Path:
@@ -56,6 +60,3 @@ def write_record(directory: Path, record: Mapping[str, object]) -> Path:
         raise LabelError([f"{path} 가 이미 있다 — 덮지 않는다"]) from error
     return path
 
-
-def _number(value: Decimal) -> int | float:
-    return int(value) if value == value.to_integral_value() and "." not in str(value) else float(value)

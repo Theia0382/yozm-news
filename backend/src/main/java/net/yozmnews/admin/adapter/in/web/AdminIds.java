@@ -5,6 +5,7 @@ import java.util.function.LongFunction;
 import net.yozmnews.event.EventId;
 import net.yozmnews.source.FeedId;
 import net.yozmnews.source.SourceId;
+import net.yozmnews.storyline.StorylineId;
 import net.yozmnews.tag.EvaluationId;
 import net.yozmnews.tag.TagSetId;
 import org.springframework.http.HttpStatus;
@@ -20,6 +21,8 @@ final class AdminIds {
 	private static final String EVALUATION = "평가";
 
 	private static final String EVENT = "사건";
+
+	private static final String STORYLINE = "스토리라인";
 
 	private AdminIds() {
 	}
@@ -62,6 +65,14 @@ final class AdminIds {
 	/** 없는 사건의 404 — 1 미만 ID 와 없는 사건의 상세가 함께 쓴다 */
 	static ResponseStatusException unknownEvent(long id) {
 		return notFound(EVENT, id);
+	}
+
+	static StorylineId storyline(long id) {
+		return positive(id, STORYLINE, StorylineId::new);
+	}
+
+	static ResponseStatusException unknownStoryline(long id) {
+		return notFound(STORYLINE, id);
 	}
 
 	private static <T> T positive(long id, String target, LongFunction<T> create) {

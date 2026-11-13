@@ -79,6 +79,11 @@ export function formatHours(hours: number): string {
   return hours % 24 === 0 ? `${hours / 24}일` : `${hours}시간`;
 }
 
+/** 초 수 표시 — 시간의 배수면 시간 · 일로(설정의 창은 초 단위다) */
+export function formatSeconds(seconds: number): string {
+  return seconds % 3600 === 0 ? formatHours(seconds / 3600) : `${seconds}초`;
+}
+
 /** 분 수 표시 — 60 의 배수면 시간으로 */
 export function formatMinutes(minutes: number): string {
   return minutes % 60 === 0 ? `${minutes / 60}시간` : `${minutes}분`;

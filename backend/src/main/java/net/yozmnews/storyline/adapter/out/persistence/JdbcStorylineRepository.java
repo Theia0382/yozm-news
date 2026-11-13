@@ -18,6 +18,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import net.yozmnews.platform.VectorText;
+import net.yozmnews.storyline.LinkedBy;
 import net.yozmnews.storyline.domain.linking.Representation;
 import net.yozmnews.storyline.domain.linking.Score;
 import net.yozmnews.storyline.domain.storyline.LinkJudgement;
@@ -251,6 +252,30 @@ class JdbcStorylineRepository implements StorylineRepository {
 			.param("terms", words.toArray(String[]::new))
 			.param("counts", words.stream().map(terms::get).toArray(Integer[]::new))
 			.update();
+	}
+
+	@Override
+	public Map<Long, Map<Long, LinkJudgement>> judgements(Collection<Long> storylineIds) {
+		if (storylineIds.isEmpty()) {
+			return Map.of();
+		}
+		Map<Long, Map<Long, LinkJudgement>> judgements = new LinkedHashMap<>();
+		this.jdbc.sql("""
+				select storyline_id, event_id, linked_by, score, cosine, key_term_overlap, criteria_id, linked_at
+				from storyline_members where storyline_id = any(:ids)
+				order by storyline_id, event_id
+				""").param("ids", storylineIds.toArray(Long[]::new)).query((ResultSet rs) -> {
+			LinkedBy linkedBy = LinkedBy.valueOf(rs.getString("linked_by"));
+			double score = rs.getDouble("score");
+			Score scored = rs.wasNull() ? null : new Score(score, rs.getDouble("cosine"), rs.getDouble("key_term_overlap"));
+			long criteria = rs.getLong("criteria_id");
+			Long criteriaId = rs.wasNull() ? null : criteria;
+			judgements.computeIfAbsent(rs.getLong("storyline_id"), id -> new LinkedHashMap<>())
+				.put(rs.getLong("event_id"), new LinkJudgement(linkedBy, scored, criteriaId, instant(rs, "linked_at")));
+		});
+		Map<Long, Map<Long, LinkJudgement>> result = new LinkedHashMap<>();
+		judgements.forEach((storyline, byEvent) -> result.put(storyline, Collections.unmodifiableMap(byEvent)));
+		return Collections.unmodifiableMap(result);
 	}
 
 	private static List<String> strings(Array array) throws SQLException {

@@ -1,6 +1,6 @@
 # ADR-0132: 스토리라인 관계는 후보 쌍을 Jev 에 물어 종류와 방향을 정하고 확률이 높은 것만 맺는다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 운영자가 관계를 고치는 길([ADR-0137](0137-storyline-relations-are-not-edited-one-by-one-by-operators-and-are-tuned-through-relation-criteria.md))
 - 날짜: 2026-11-13
 - 근거: [이슈 #122](https://github.com/Theia0382/yozm-news/issues/122) — 시스템 스토리라인 쌍을 직접 판정한 세트로 구조 규칙 · Jev(문구와 입력의 변형) · 생성형 LLM(웹 검색 포함)을 견주고 리드와 정함
 - 관련: [ADR-0121](0121-storyline-linking-scores-centroid-cosine-plus-idf-weighted-key-term-overlap-without-time-decay-jev-or-topic-tags.md)(결정 "Jev 판정과 주제 태그를 쓰지 않는다. `storyline` 은 `evaluation` · `tag` 에 의존하지 않는다" — 관계 판정에 한해 부분 대체), [ADR-0071](0071-event-membership-judged-from-article-ids-with-questions-built-in-evaluation.md) · [ADR-0072](0072-event-membership-question-wording-as-one-code-constant-with-its-version-in-raw-records.md)(판정 관문의 꼴 — 관계 판정에 같은 꼴을 쓴다, 보충), [ADR-0131](0131-storyline-relations-are-explicit-links-with-containment-as-a-single-parent-tree-gathered-at-query-time.md)(관계의 표현과 구조), [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)(생성형 LLM 없이 운영자 비용으로 잇는다), [ADR-0133](0133-storyline-evaluation-closes-system-containment-per-layer-view-and-measures-relations-by-direct-pair-judgement.md)(견준 방법), [ADR-0096](0096-instance-bound-evaluation-data-kept-out-of-the-public-repository-and-defaults-cite-only-the-evaluation-set.md)(근거 수치를 공개 문서에 적지 않는다)
@@ -34,6 +34,7 @@
 
 - `storyline` 이 판정을 위해 `evaluation` 에 의존하고 `article` 의 ID 타입을 다룬다. 잇기는 여전히 Jev 를 쓰지 않는다.
 - 관계 판정에 운영자 비용이 든다. 후보는 사건 수 하한 · 점수 기준 · 다시 묻기 규칙으로 묶인다. 실제 토큰은 운영에서 잰다.
+> 부분 대체(둘째 문장) — [ADR-0137](0137-storyline-relations-are-not-edited-one-by-one-by-operators-and-are-tuned-through-relation-criteria.md). 지금 상태: [storyline Spec §1](../specs/storyline.md#1-책임과-범위)
 - 이어짐의 일부는 포함으로 맺어지고, 관계의 적지 않은 수를 찾지 못한다. 운영자가 관계를 고치는 길이 생기기 전까지 틀린 종류로 남는다.
 - 관계는 다시 물을 때 바뀌거나 사라질 수 있다. 관계를 가리키는 쪽이 생기면 다시 본다.
 - 시간 창보다 멀리 떨어진 두 흐름은 사건을 함께 갖지 않는 한 묻지 않는다. 몇 주 뒤에 이어진 흐름을 찾는지는 재지 못했다.

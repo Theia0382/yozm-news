@@ -3044,6 +3044,154 @@
         "tags" : [ "admin-storyline-linking-controller" ]
       }
     },
+    "/api/admin/storylines" : {
+      "get" : {
+        "operationId" : "storylines",
+        "parameters" : [ {
+          "description" : "시작일(yyyy-MM-dd)",
+          "in" : "query",
+          "name" : "from",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "종료일(yyyy-MM-dd, 포함)",
+          "in" : "query",
+          "name" : "to",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "날짜를 해석할 시간대(IANA ID)",
+          "in" : "query",
+          "name" : "zone",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "이어 받을 커서의 마지막 기사 시각(ISO-8601) — afterId 와 함께",
+          "in" : "query",
+          "name" : "afterLastArticleAt",
+          "required" : false,
+          "schema" : {
+            "type" : [ "string", "null" ]
+          }
+        }, {
+          "description" : "이어 받을 커서의 스토리라인 ID — afterLastArticleAt 과 함께",
+          "in" : "query",
+          "name" : "afterId",
+          "required" : false,
+          "schema" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StorylineListResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "날짜 · 시간대의 형식이 틀렸거나 기간이 범위 밖이다, 또는 커서가 틀렸다"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          }
+        },
+        "tags" : [ "admin-storyline-controller" ]
+      }
+    },
+    "/api/admin/storylines/{id}" : {
+      "get" : {
+        "operationId" : "storyline",
+        "parameters" : [ {
+          "description" : "스토리라인 ID — 합쳐진 스토리라인이면 남는 스토리라인을 낸다",
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StorylineDetailResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 토큰이 없거나 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "운영자 기능이 닫혀 있다"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "없는 스토리라인이다"
+          }
+        },
+        "tags" : [ "admin-storyline-controller" ]
+      }
+    },
     "/api/admin/tag-backfill-reviews" : {
       "post" : {
         "operationId" : "review_1",
@@ -5019,9 +5167,15 @@
           "status" : {
             "type" : "string",
             "enum" : [ "OPEN", "CLOSED", "MERGED" ]
+          },
+          "storylines" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/EventStorylineResponse"
+            }
           }
         },
-        "required" : [ "articleCount", "articles", "createdAt", "firstArticleAt", "id", "lastArticleAt", "mergedEvents", "representative", "representativeId", "requestedId", "status" ]
+        "required" : [ "articleCount", "articles", "createdAt", "firstArticleAt", "id", "lastArticleAt", "mergedEvents", "representative", "representativeId", "requestedId", "status", "storylines" ]
       },
       "EventIntakeFillRequest" : {
         "type" : "object",
@@ -5216,6 +5370,27 @@
           }
         },
         "required" : [ "articleCount", "firstArticleAt", "id", "importance", "lastArticleAt", "periodArticles", "periodSources", "representative", "representativeId", "status" ]
+      },
+      "EventStorylineResponse" : {
+        "type" : "object",
+        "properties" : {
+          "direct" : {
+            "type" : "boolean"
+          },
+          "eventCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "state" : {
+            "type" : "string",
+            "enum" : [ "ACTIVE", "QUIET", "ENDED" ]
+          }
+        },
+        "required" : [ "direct", "eventCount", "id", "state" ]
       },
       "FeedCollectionResponse" : {
         "type" : "object",
@@ -5643,6 +5818,20 @@
           }
         },
         "required" : [ "at", "httpStatus", "message", "permanence", "reason" ]
+      },
+      "LinkingCriteriaResponse" : {
+        "type" : "object",
+        "properties" : {
+          "threshold" : {
+            "type" : "number",
+            "format" : "double"
+          },
+          "windowSeconds" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        },
+        "required" : [ "threshold", "windowSeconds" ]
       },
       "MeResponse" : {
         "type" : "object",
@@ -6159,6 +6348,99 @@
         },
         "required" : [ "problems", "result", "sourceId" ]
       },
+      "RelationCriteriaResponse" : {
+        "type" : "object",
+        "properties" : {
+          "candidateScore" : {
+            "type" : "number",
+            "format" : "double"
+          },
+          "minEvents" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "oneMatter" : {
+            "type" : "number",
+            "format" : "double"
+          },
+          "probability" : {
+            "type" : "number",
+            "format" : "double"
+          },
+          "windowSeconds" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        },
+        "required" : [ "candidateScore", "minEvents", "oneMatter", "probability", "windowSeconds" ]
+      },
+      "RelationJudgementResponse" : {
+        "type" : "object",
+        "properties" : {
+          "firstId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "firstLedToSecond" : {
+            "type" : [ "number", "null" ],
+            "format" : "double"
+          },
+          "firstOneMatter" : {
+            "type" : [ "number", "null" ],
+            "format" : "double"
+          },
+          "firstPartOfSecond" : {
+            "type" : [ "number", "null" ],
+            "format" : "double"
+          },
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "inputTokens" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "judgedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "message" : {
+            "type" : [ "string", "null" ]
+          },
+          "modelVersion" : {
+            "type" : "string"
+          },
+          "none" : {
+            "type" : [ "number", "null" ],
+            "format" : "double"
+          },
+          "reading" : {
+            "type" : "string",
+            "enum" : [ "READ", "NO_EVALUATOR", "OTHER_EVALUATOR", "UNREADABLE" ]
+          },
+          "secondId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "secondLedToFirst" : {
+            "type" : [ "number", "null" ],
+            "format" : "double"
+          },
+          "secondOneMatter" : {
+            "type" : [ "number", "null" ],
+            "format" : "double"
+          },
+          "secondPartOfFirst" : {
+            "type" : [ "number", "null" ],
+            "format" : "double"
+          },
+          "wordingVersion" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "firstId", "firstLedToSecond", "firstOneMatter", "firstPartOfSecond", "id", "inputTokens", "judgedAt", "message", "modelVersion", "none", "reading", "secondId", "secondLedToFirst", "secondOneMatter", "secondPartOfFirst", "wordingVersion" ]
+      },
       "ResubmissionItemResponse" : {
         "type" : "object",
         "properties" : {
@@ -6536,6 +6818,173 @@
         },
         "required" : [ "attached", "key", "name", "probability" ]
       },
+      "StorylineAskedResponse" : {
+        "type" : "object",
+        "properties" : {
+          "askedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "criteria" : {
+            "$ref" : "#/components/schemas/RelationCriteriaResponse"
+          },
+          "judgement" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/RelationJudgementResponse"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "judgementId" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int64"
+          },
+          "otherId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "outcome" : {
+            "type" : "string",
+            "enum" : [ "LINKED", "NOT_RELATED", "LOW_PROBABILITY", "NOT_ONE_MATTER", "CYCLE", "SECOND_PARENT", "NOTHING_TO_ASK", "REJECTED" ]
+          },
+          "smallerEvents" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        },
+        "required" : [ "askedAt", "criteria", "judgement", "judgementId", "otherId", "outcome", "smallerEvents" ]
+      },
+      "StorylineCursorResponse" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "lastArticleAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        },
+        "required" : [ "id", "lastArticleAt" ]
+      },
+      "StorylineDetailResponse" : {
+        "type" : "object",
+        "properties" : {
+          "articleCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "asked" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/StorylineAskedResponse"
+            }
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "eventCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "events" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/StorylineEventResponse"
+            }
+          },
+          "firstArticleAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "lastArticleAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "parentId" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int64"
+          },
+          "relations" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/StorylineRelationResponse"
+            }
+          },
+          "representative" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/ArticleSummaryResponse"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "representativeArticleId" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int64"
+          },
+          "requestedId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "state" : {
+            "type" : "string",
+            "enum" : [ "ACTIVE", "QUIET", "ENDED" ]
+          }
+        },
+        "required" : [ "articleCount", "asked", "createdAt", "eventCount", "events", "firstArticleAt", "id", "lastArticleAt", "parentId", "relations", "representative", "representativeArticleId", "requestedId", "state" ]
+      },
+      "StorylineEventResponse" : {
+        "type" : "object",
+        "properties" : {
+          "articleCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "direct" : {
+            "type" : "boolean"
+          },
+          "firstArticleAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "lastArticleAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "memberships" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/StorylineMembershipResponse"
+            }
+          },
+          "representative" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/ArticleSummaryResponse"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "representativeArticleId" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int64"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "OPEN", "CLOSED", "MERGED" ]
+          }
+        },
+        "required" : [ "articleCount", "direct", "firstArticleAt", "id", "lastArticleAt", "memberships", "representative", "representativeArticleId", "status" ]
+      },
       "StorylineLinkingFillRequest" : {
         "type" : "object",
         "properties" : {
@@ -6563,6 +7012,174 @@
           }
         },
         "required" : [ "enqueued", "events", "result" ]
+      },
+      "StorylineListResponse" : {
+        "type" : "object",
+        "properties" : {
+          "linkingCriteria" : {
+            "$ref" : "#/components/schemas/LinkingCriteriaResponse"
+          },
+          "maxDays" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "next" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/StorylineCursorResponse"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "relationCriteria" : {
+            "$ref" : "#/components/schemas/RelationCriteriaResponse"
+          },
+          "storylines" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/StorylineRowResponse"
+            }
+          },
+          "unlinked" : {
+            "$ref" : "#/components/schemas/UnlinkedEventsResponse"
+          }
+        },
+        "required" : [ "linkingCriteria", "maxDays", "next", "relationCriteria", "storylines", "unlinked" ]
+      },
+      "StorylineMembershipResponse" : {
+        "type" : "object",
+        "properties" : {
+          "cosine" : {
+            "type" : [ "number", "null" ],
+            "format" : "double"
+          },
+          "criteria" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/LinkingCriteriaResponse"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "keyTermOverlap" : {
+            "type" : [ "number", "null" ],
+            "format" : "double"
+          },
+          "linkedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "linkedBy" : {
+            "type" : "string",
+            "enum" : [ "RULE", "PAIR", "MERGE" ]
+          },
+          "score" : {
+            "type" : [ "number", "null" ],
+            "format" : "double"
+          },
+          "storylineId" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        },
+        "required" : [ "cosine", "criteria", "keyTermOverlap", "linkedAt", "linkedBy", "score", "storylineId" ]
+      },
+      "StorylineRelationResponse" : {
+        "type" : "object",
+        "properties" : {
+          "criteria" : {
+            "$ref" : "#/components/schemas/RelationCriteriaResponse"
+          },
+          "judgement" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/RelationJudgementResponse"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "judgementId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "kind" : {
+            "type" : "string",
+            "enum" : [ "CONTAINS", "FOLLOWS" ]
+          },
+          "linkedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "probability" : {
+            "type" : "number",
+            "format" : "double"
+          },
+          "sourceId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "targetId" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        },
+        "required" : [ "criteria", "judgement", "judgementId", "kind", "linkedAt", "probability", "sourceId", "targetId" ]
+      },
+      "StorylineRowResponse" : {
+        "type" : "object",
+        "properties" : {
+          "articleCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "big" : {
+            "type" : "boolean"
+          },
+          "eventCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "firstArticleAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "importance" : {
+            "type" : [ "number", "null" ]
+          },
+          "lastArticleAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "parentId" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int64"
+          },
+          "periodArticles" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "periodSources" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "representative" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/ArticleSummaryResponse"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "representativeArticleId" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int64"
+          },
+          "state" : {
+            "type" : "string",
+            "enum" : [ "ACTIVE", "QUIET", "ENDED" ]
+          }
+        },
+        "required" : [ "articleCount", "big", "eventCount", "firstArticleAt", "id", "importance", "lastArticleAt", "parentId", "periodArticles", "periodSources", "representative", "representativeArticleId", "state" ]
       },
       "StrandedPublicationListResponse" : {
         "type" : "object",

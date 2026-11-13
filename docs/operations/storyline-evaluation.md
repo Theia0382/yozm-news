@@ -2,7 +2,7 @@
 
 사건을 스토리라인으로 잇는 방법을 정답 라벨과 견줘 재는 방법이다 — 겹치는 묶음의 품질, 스토리라인 사이 관계, 큰 판정 정밀도. 잇는 방법과 그 기준을 고르거나 바꾼 뒤 다시 볼 때 쓴다.
 
-도구는 저장소의 [`tools/event-eval`](../../tools/event-eval/)에 있는 `storyline_eval.py` 다. 잇기 규칙은 계산하지 않는다 — 후보 방법이 낸 결과 파일을 받아 라벨과 견준다. 판단의 이유는 [ADR-0110](../adr/0110-storyline-evaluation-labels-system-events-of-a-fixed-dump-and-measures-overlapping-clusters-from-random-seed-events.md) · [ADR-0111](../adr/0111-storyline-gold-links-by-matter-with-mixed-events-on-their-central-happening-and-events-without-a-happening-following-their-matter.md) · [ADR-0133](../adr/0133-storyline-evaluation-closes-system-containment-per-layer-view-and-measures-relations-by-direct-pair-judgement.md) · [ADR-0096](../adr/0096-instance-bound-evaluation-data-kept-out-of-the-public-repository-and-defaults-cite-only-the-evaluation-set.md), 증거로서의 한계는 [테스트 전략](../qa/test-strategy.md) ⑪ 에 있다. 사건 묶기를 재는 일은 [사건 묶기 평가하기](event-evaluation.md)다.
+도구는 저장소의 [`tools/event-eval`](../../tools/event-eval/)에 있는 `storyline_eval.py` 다. 잇기 규칙은 계산하지 않는다 — 후보 방법이 낸 결과 파일을 받아 라벨과 견준다. 평가 인스턴스(운영하는 앱)의 스토리라인은 `export` 가 운영자 API 로 읽어 결과 파일로 낸다. 판단의 이유는 [ADR-0110](../adr/0110-storyline-evaluation-labels-system-events-of-a-fixed-dump-and-measures-overlapping-clusters-from-random-seed-events.md) · [ADR-0111](../adr/0111-storyline-gold-links-by-matter-with-mixed-events-on-their-central-happening-and-events-without-a-happening-following-their-matter.md) · [ADR-0133](../adr/0133-storyline-evaluation-closes-system-containment-per-layer-view-and-measures-relations-by-direct-pair-judgement.md) · [ADR-0096](../adr/0096-instance-bound-evaluation-data-kept-out-of-the-public-repository-and-defaults-cite-only-the-evaluation-set.md), 증거로서의 한계는 [테스트 전략](../qa/test-strategy.md) ⑪ 에 있다. 사건 묶기를 재는 일은 [사건 묶기 평가하기](event-evaluation.md)다.
 
 ## 재는 것
 
@@ -25,7 +25,8 @@
 - **평가 인스턴스** — 사건이 바뀌지 않는 인스턴스에서 시트를 만든다. 덤프를 되살린 인스턴스는 작업 역할 없이(`web` 만) 띄운다 — 작업 역할(수집 · 사건 묶기 · 병합 · 잇기)이 돌면 시트를 만들기 전에 사건이 바뀔 수 있고, 도구는 시트와 덤프가 같은지 검사하지 못한다
 - **고정 덤프 · 계보 덤프** — 고정 덤프는 평가 인스턴스가 되살린 덤프 파일, 계보 덤프는 그 고정 덤프를 만든 원래 인스턴스의 덤프 파일이다. 도구는 두 파일의 sha256 을 표본에 적고, 결과 파일을 견줄 때 계보 덤프로 대조한다
 - **평가 디렉터리** — 표본마다 디렉터리 하나를 체크아웃 밖에 둔다(예: `~/storyline-eval/2026-11`). 시트 · 라벨 · 결과는 이 인스턴스의 데이터라 저장소에 넣지 않는다. 덤프와 함께 백업한다. 도구는 이 경로를 `--data` 로 꼭 받는다
-- **운영자 토큰** — `sheet` 만 쓴다. [사건 묶기 평가하기 "준비"](event-evaluation.md#준비)처럼 환경 변수 `YOZMNEWS_ADMIN_TOKEN` 으로 넣는다. `seeds` · `review` · `measure` 는 토큰을 읽지 않고 운영자 API 를 부르지 않는다
+- **운영자 토큰** — `sheet` · `export` 가 쓴다. [사건 묶기 평가하기 "준비"](event-evaluation.md#준비)처럼 환경 변수 `YOZMNEWS_ADMIN_TOKEN` 으로 넣는다. `seeds` · `review` · `measure` 는 토큰을 읽지 않고 운영자 API 를 부르지 않는다
+- **평가 인스턴스의 Jev 키** — `export` 가 내는 물은 쌍의 확률은 평가 인스턴스의 평가기가 저장된 판정 원본을 다시 읽어 낸다. 다시 읽기는 Jev 를 부르지 않지만, 평가기는 Jev 키가 설정됐을 때만 결선된다 — 배포 구성은 키 없이 뜨지 않는다. 키 없이 띄운 프로세스면 모든 쌍의 확률이 비고 `reading` 이 `NO_EVALUATOR` 다
 - **실행** — 사건 묶기 평가와 같다(Python 3.12 이상, 또는 공식 이미지). 운영자 API 를 부르지 않는 명령은 네트워크 없이 돌린다:
 
   ```bash
@@ -73,7 +74,7 @@
 
 ## 결과 파일
 
-후보 방법이 내는 파일이다(JSON, UTF-8). **(미구현)** 운영 인스턴스의 스토리라인을 이 꼴로 내보내는 길 — 운영자 API 로 스토리라인을 읽는 경로가 생기면 그 결과를 이 꼴로 낸다.
+후보 방법이 내는 파일이다(JSON, UTF-8). 평가 인스턴스의 스토리라인은 [`export`](#평가-인스턴스에서-내보내기)가 이 꼴로 낸다.
 
 ```json
 {
@@ -93,6 +94,37 @@
 - `dump` 가 표본의 고정 덤프와 같으면 같은 덤프 위의 결과(`SAME_DUMP`)다. `null` 이거나 다르면 같은 계보 덤프에서 되살린 다른 실행(`OTHER_RUN`)이다 — 사건 묶음의 차이가 잡음으로 섞인다. `lineage` 가 표본의 계보 덤프와 다르면 기사 ID 가 다른 기사일 수 있어 멈춘다
 - 스토리라인은 **직접 가진 기사**의 ID 로 적는다 — 그 스토리라인에 직접 든 사건의 기사다. 포함의 상위에 하위의 기사를 다시 담지 않고, 포함은 `relations` 의 `CONTAINS` 로 낸다. 도구가 위로 닫아 견준다. 상위가 하위의 사건을 직접도 가졌으면 그 기사는 두 스토리라인에 모두 적는다. 시트에 없는 기사(기간 밖 · 사건에 들지 않음)는 빼고 그 수를 남긴다
 - 관계의 `kind` 는 `CONTAINS`(source 가 target 을 포함) · `FOLLOWS`(target 이 source 에 이어짐)다. `CONTAINS` 가 순환을 이루면 도구가 멈춘다. 하위의 상위가 여럿이어도 받는다 — 그 기사는 상위 모두에 든다
+
+### 평가 인스턴스에서 내보내기
+
+`export` 는 평가 인스턴스의 운영자 API(스토리라인 목록 · 상세, 사건 상세, 큰 스토리라인, 판정 기록)를 읽어 결과 파일과 [물은 쌍 파일](#물은-쌍-파일)을 쓴다. 두 파일 가운데 하나라도 이미 있으면 아무것도 쓰지 않고 멈춘다.
+
+```bash
+python3 tools/event-eval/storyline_eval.py export --data ~/storyline-eval/2026-11 --result ~/candidates/instance.json \
+  --pairs ~/candidates/instance-pairs.csv --method instance --embedding-model "onnx multilingual-e5-small"
+```
+
+- **스토리라인** — 표본 기간에 기사가 있는 스토리라인마다 직접 가진 사건의 기사다. 직접 기사가 하나도 남지 않은 스토리라인(기사가 그새 모두 지워짐)은 내지 않고 그 수를 출력한다. 표지는 스토리라인 번호다
+- **관계** — 내보낸 스토리라인 사이의 관계다. 한쪽 끝이 내보내지 않은 스토리라인이면 뺀다
+- **큰 표시** — 표본의 날마다 그날 하루의 큰 스토리라인(지금 큰 판정 기준)이다. 내보낸 스토리라인만 적는다
+- **`meta`** — `lineage` · `dump` 는 표본의 sha256 이다(평가 인스턴스는 고정 덤프를 되살린 것이라 같은 덤프 위의 결과다). `method` · `embeddingModel` 은 인자, `eventCriteria` 는 지금 사건 배정 기준, `linking` 은 지금 잇기 기준 · 관계 기준, `judgementModels` 는 표본 기간 사건 소속 판정과 내보낸 관계 · 물은 쌍의 판정 원본에 적힌 모델 판이다
+- 끝에 스토리라인 · 관계 · 큰 표시 · 물은 쌍 수와 확률 없는 쌍 수를 출력한다
+
+### 물은 쌍 파일
+
+`export` 가 쓰는 CSV(UTF-8)다. 내보낸 스토리라인이 든, 관계를 물은 쌍마다 한 줄이고 그 쌍에 마지막으로 물은 결말이다 — 같은 쌍을 다시 물으면 앞의 결말은 남지 않는다.
+
+| 칸 | 뜻 |
+|---|---|
+| `low` · `high` | 쌍의 두 스토리라인 번호 — 작은 쪽 · 큰 쪽 |
+| `smaller_events` | 물었을 때 작은 쪽 스토리라인의 사건 수 |
+| `outcome` | 결말 — `LINKED` · `NOT_RELATED` · `LOW_PROBABILITY` · `NOT_ONE_MATTER` · `CYCLE` · `SECOND_PARENT` · `NOTHING_TO_ASK` · `REJECTED`(뜻은 [스토리라인 상세](events.md#스토리라인-상세)의 결말 표) |
+| `asked_at` | 물은 시각(UTC ISO-8601) |
+| `judgement_id` | 판정 원본 번호 — `NOTHING_TO_ASK` · `REJECTED` 는 원본이 없어 비어 있다 |
+| `reading` | 원본을 다시 읽은 결과 — `READ` · `NO_EVALUATOR` · `OTHER_EVALUATOR` · `UNREADABLE`, 원본이 없거나 지워졌으면 비어 있다 |
+| `first` · `second` | 판정을 물을 때의 앞 · 뒤 스토리라인 번호 — 아래 확률의 방향이 이것을 기준으로 한다. 원본이 없거나 지워졌으면 비어 있다 |
+| `none` · `second_part_of_first` · `first_part_of_second` · `first_led_to_second` · `second_led_to_first` | 답 다섯의 확률 — 해당 없음, 뒤가 앞의 부분, 앞이 뒤의 부분, 앞이 뒤를 낳음, 뒤가 앞을 낳음. `reading` 이 `READ` 가 아니면 비어 있다 |
+| `first_one_matter` · `second_one_matter` | 앞 · 뒤 스토리라인이 각각 한 사안의 전개일 확률. `reading` 이 `READ` 가 아니면 비어 있다 |
 
 ## 파일
 
@@ -128,7 +160,7 @@
 정답 라벨의 관계는 기간이 짧은 표본에 몇 건뿐이라, 관계를 맺는 방법의 품질은 시스템 스토리라인 쌍을 사람이 직접 판정해 잰다([ADR-0133](../adr/0133-storyline-evaluation-closes-system-containment-per-layer-view-and-measures-relations-by-direct-pair-judgement.md)). 관계의 기준([운영 설정 — 스토리라인 관계](configuration.md#스토리라인-관계))을 고르거나 관계 판정의 문구를 바꾼 뒤 다시 볼 때 쓴다. 쌍 판정 세트는 이 인스턴스의 데이터라 저장소에 넣지 않고 평가 디렉터리에 덤프와 함께 둔다. 그 셈은 `storyline_eval.py` 가 하지 않는다 — 판정 파일과 방법이 맺은 관계를 견주는 셈은 운영자가 한다.
 
 - **쌍을 고르는 범위** — 고정 덤프의 스토리라인 가운데 관계 후보가 되는 쌍([storyline-R27](../specs/storyline.md#스토리라인-사이-관계) — 사건을 함께 가졌거나 표현 점수가 후보 점수 기준 이상이고 두 스토리라인 모두 사건 수가 하한 이상)을 모두 판정한다. 범위 밖의 관계는 세지 못한다. 범위를 쓴 기준값과 함께 적어 둔다
-- **보는 것** — 쌍마다 두 스토리라인의 사건(제목 · 시각 · 기사 수)과 함께 가진 사건을 본다. 방법이 낸 답을 보기 전에 판정한다
+- **보는 것** — 쌍마다 두 스토리라인의 사건(제목 · 시각 · 기사 수)과 함께 가진 사건을 본다. 방법이 낸 답을 보기 전에 판정한다. 운영 인스턴스의 물은 쌍과 그 결말 · 확률은 [물은 쌍 파일](#물은-쌍-파일)로 낸다 — 판정을 마친 뒤에 견준다
 - **판정** — 쌍마다 아래 가운데 하나와, 포함 · 이어짐이면 방향을 적는다
 
   | 판정 | 기준 |
@@ -143,8 +175,8 @@
 
 - **경계** — 뒤 흐름이 앞 흐름이 끝나도 이어질 사안이면 이어짐이고, 앞 흐름에 관한 것으로만 뜻이 있으면 포함이다. 정기적으로 되풀이되는 일의 한 회차(시즌 · 대회)는 스토리라인이고 그 일 전체의 하위다. 경계가 갈리는 쌍은 메모에 이유를 적는다 — 포함과 이어짐, 포함과 한 사안이 갈라진 것 사이에서 사람의 판정도 갈린다
 - **맞는 답** — 방법이 관계를 맺어야 하는 쌍은 포함 · 이어짐뿐이다. 한 사안이 갈라진 것 · 나란한 흐름 · 무관 · 주제 묶음은 맺지 않는 것이 맞다. 모름은 셈에서 뺀다
-- **셈** — 정밀도는 방법이 맺은 관계 가운데 판정과 종류 · 방향이 같은 비율, 재현율은 포함 · 이어짐으로 판정된 쌍 가운데 방법이 같은 종류 · 방향으로 맺은 비율이다. 종류를 가리지 않은 값(관계가 있는 쌍을 맺었는가)과 방향만 본 값을 함께 내면 어디서 틀리는지 보인다. 구조 제약으로 거부된 쌍(순환 · 둘째 상위)은 수를 따로 남긴다
-- **기준을 고를 때** — 쌍을 종류마다 고르게 둘로 나눠 한쪽에서 값을 고르고 다른 쪽에서 확인한다. 같은 요청도 확률이 흔들리고 두 흐름의 순서를 바꾸면 답이 달라질 수 있으므로, 값 사이의 차이가 그 흔들림보다 큰지 본다
+- **셈** — 정밀도는 방법이 맺은 관계 가운데 판정과 종류 · 방향이 같은 비율, 재현율은 포함 · 이어짐으로 판정된 쌍 가운데 방법이 같은 종류 · 방향으로 맺은 비율이다. 종류를 가리지 않은 값(관계가 있는 쌍을 맺었는가)과 방향만 본 값을 함께 내면 어디서 틀리는지 보인다. 구조 제약으로 거부된 쌍(순환 · 둘째 상위 — 물은 쌍 파일의 `outcome` 이 `CYCLE` · `SECOND_PARENT`)은 수를 따로 남긴다
+- **기준을 고를 때** — 쌍을 종류마다 고르게 둘로 나눠 한쪽에서 값을 고르고 다른 쪽에서 확인한다. 같은 요청도 확률이 흔들리고 두 흐름의 순서를 바꾸면 답이 달라질 수 있으므로, 값 사이의 차이가 그 흔들림보다 큰지 본다. 확률은 물은 쌍 파일의 답 다섯 · 한 사안 확률을 쓴다 — 기준을 바꿔 다시 묻지 않고도 그 값이면 맺었을지 셀 수 있다. 다만 구조 제약(순환 · 둘째 상위)은 맺은 관계에 따라 달라져 확률만으로는 셀 수 없다
 - **한계** — 판정은 스토리라인 ID 에 붙는다. 잇기 결과가 달라지면(기준 · 임베딩 모델 · 덤프) 쌍을 다시 대고 새 쌍을 판정해야 한다. [스토리라인 잇기 채우기](configuration.md#스토리라인-잇기)도 사건을 다시 판정해 소속을 더하므로, 판정한 쌍을 재는 동안에는 채우기를 돌리지 않는다. 판정한 사람과 표본 기간에 묶인 값이다 — 기록에 판정한 쌍 수, 판정별 수, 직접 검토한 수를 함께 적는다
 - 이 기준은 정답 스토리라인을 라벨에 적는 [라벨 기준 1판](#라벨-기준-1판)이 아니다 — 고쳐도 라벨 기준의 판은 그대로다
 
@@ -153,7 +185,7 @@
 | 종료 코드 | 뜻 |
 |---|---|
 | `0` | 성공 |
-| `2` | 표본 · 시트 · 씨앗 · 라벨 · 결과 파일이 형식에 어긋남(어긋난 줄을 보인다 — 많으면 앞부분과 나머지 수), 스토리라인 평가의 표본이 아님(`kind`), 다른 판의 라벨 기준으로 만든 표본, 계보 덤프가 다른 결과 파일, 포함이 순환하는 결과 파일, 한 기사가 두 사건에 나옴(`sheet` — 사건 묶기가 도는 중), 기간에 사건에 든 기사가 없음, 다른 씨앗 값으로 다시 뽑거나 수를 늘리지 않고 다시 뽑음, 덤프 파일 없음, 이미 있는 파일, 토큰 없음(`sheet`), 인자 오류 |
-| `3` | 운영자 API 를 읽지 못함(`sheet`) — [사건 묶기 평가하기 "멈출 때"](event-evaluation.md#멈출-때)와 같다 |
+| `2` | 표본 · 시트 · 씨앗 · 라벨 · 결과 파일이 형식에 어긋남(어긋난 줄을 보인다 — 많으면 앞부분과 나머지 수), 스토리라인 평가의 표본이 아님(`kind`), 다른 판의 라벨 기준으로 만든 표본, 계보 덤프가 다른 결과 파일, 포함이 순환하는 결과 파일, 한 기사가 두 사건에 나옴(`sheet` — 사건 묶기가 도는 중), 기간에 사건에 든 기사가 없음, 다른 씨앗 값으로 다시 뽑거나 수를 늘리지 않고 다시 뽑음, 덤프 파일 없음, 이미 있는 파일(`export` 는 결과 파일 · 물은 쌍 파일), 토큰 없음(`sheet` · `export`), 인자 오류 |
+| `3` | 운영자 API 를 읽지 못함(`sheet` · `export`) — [사건 묶기 평가하기 "멈출 때"](event-evaluation.md#멈출-때)와 같다 |
 
 결과 기록은 측정이 끝까지 성공했을 때만 쓴다.
