@@ -69,9 +69,7 @@ describe("RecoverPage", () => {
 
     const user = await fill();
 
-    expect(await screen.findByLabelText("복구 코드 값")).toHaveTextContent(
-      NEW_CODE,
-    );
+    expect(await screen.findByText(NEW_CODE)).toBeInTheDocument();
     expect(bodiesOf(server, "POST", "/api/account-recoveries")).toEqual([
       {
         email: "kim@example.com",

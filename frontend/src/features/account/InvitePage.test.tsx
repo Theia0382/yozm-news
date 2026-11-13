@@ -77,9 +77,7 @@ describe("InvitePage", () => {
 
     const user = await fill();
 
-    expect(await screen.findByLabelText("복구 코드 값")).toHaveTextContent(
-      CODE,
-    );
+    expect(await screen.findByText(CODE)).toBeInTheDocument();
     expect(bodiesOf(server, "POST", "/api/invitation-acceptances")).toEqual([
       {
         token: TOKEN,

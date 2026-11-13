@@ -84,9 +84,7 @@ describe("PasswordPage", () => {
 
     const user = await fill();
 
-    expect(await screen.findByLabelText("복구 코드 값")).toHaveTextContent(
-      CODE,
-    );
+    expect(await screen.findByText(CODE)).toBeInTheDocument();
     expect(bodiesOf(server, "PUT", "/api/account/password")).toEqual([
       {
         currentPassword: "initial horse battery",

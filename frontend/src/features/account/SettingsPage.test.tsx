@@ -75,9 +75,7 @@ describe("SettingsPage", () => {
       reissue.getByRole("button", { name: "복구 코드 새로 받기" }),
     );
 
-    expect(await screen.findByLabelText("복구 코드 값")).toHaveTextContent(
-      CODE,
-    );
+    expect(await screen.findByText(CODE)).toBeInTheDocument();
     expect(bodiesOf(server, "POST", "/api/account/recovery-code")).toEqual([
       { currentPassword: "my horse battery" },
     ]);

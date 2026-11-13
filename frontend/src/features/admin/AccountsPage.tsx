@@ -267,7 +267,8 @@ function InvitationTable({
   onRevoke: (id: number) => void;
 }) {
   return (
-    <div className="overflow-x-auto">
+    // relative — 표 안 숨은 칸 머리(sr-only, absolute)가 이 상자를 기준으로 놓여 페이지 폭을 넓히지 않는다
+    <div className="relative overflow-x-auto">
       <table
         aria-label="최근 초대"
         className={`${REVIEW_TABLE} w-full text-left text-sm`}

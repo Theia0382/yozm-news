@@ -38,11 +38,10 @@ export function RecoveryCodeNotice({ code, onDone }: RecoveryCodeNoticeProps) {
         이 코드를 잃고 비밀번호도 잊으면 계정을 되찾을 수 없습니다 — 메일로
         재설정하지 않습니다.
       </p>
-      <p
-        aria-label="복구 코드 값"
-        className="rounded-md border bg-muted px-3 py-2 font-mono text-base break-all select-all"
-      >
-        {code}
+      <p className="rounded-md border bg-muted px-3 py-2 font-mono text-base break-all">
+        {/* 문단에는 이름표가 붙지 않아 낭독용 이름을 숨은 글자로 앞에 둔다 — 선택 · 복사는 코드만 */}
+        <span className="sr-only">복구 코드 값: </span>
+        <span className="select-all">{code}</span>
       </p>
       <CopyButton value={code} />
       <label className="flex items-center gap-2 text-sm">

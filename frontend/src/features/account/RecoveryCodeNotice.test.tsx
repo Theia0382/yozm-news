@@ -11,7 +11,10 @@ describe("RecoveryCodeNotice", () => {
     const user = userEvent.setup();
     render(<RecoveryCodeNotice code={CODE} onDone={onDone} />);
 
-    expect(screen.getByLabelText("복구 코드 값")).toHaveTextContent(CODE);
+    // 낭독기는 숨은 이름과 코드를 한 문단으로 읽는다
+    expect(screen.getByText(CODE).closest("p")).toHaveTextContent(
+      `복구 코드 값: ${CODE}`,
+    );
     expect(screen.getByText(/다시 볼 수 없으니/)).toBeInTheDocument();
     expect(
       screen.getByText(
