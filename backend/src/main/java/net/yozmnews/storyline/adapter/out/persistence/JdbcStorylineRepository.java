@@ -14,12 +14,14 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import net.yozmnews.platform.VectorText;
 import net.yozmnews.storyline.domain.linking.Representation;
 import net.yozmnews.storyline.domain.linking.Score;
 import net.yozmnews.storyline.domain.storyline.LinkJudgement;
+import net.yozmnews.storyline.domain.storyline.StorylineProfile;
 import net.yozmnews.storyline.domain.storyline.StorylineRepository;
 import net.yozmnews.storyline.domain.storyline.StorylineSnapshot;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -112,6 +114,24 @@ class JdbcStorylineRepository implements StorylineRepository {
 			.query((rs, row) -> new StorylineSnapshot(rs.getLong("id"), VectorText.parse(rs.getString("centroid")),
 					instant(rs, "first_article_at"), instant(rs, "last_article_at"), strings(rs.getArray("key_terms"))))
 			.list();
+	}
+
+	@Override
+	public Optional<StorylineProfile> profile(long storylineId, int keyTerms) {
+		return this.jdbc.sql("""
+				select s.id, s.model_version, s.centroid::text as centroid, s.first_article_at, s.last_article_at,
+				       array(select k.term from storyline_key_terms k where k.storyline_id = s.id
+				             order by k.article_count desc, k.term collate "C" limit :terms) as key_terms,
+				       (select count(*) from storyline_members m where m.storyline_id = s.id) as events
+				from storylines s
+				where s.id = :id and s.merged_into is null
+				""")
+			.param("terms", keyTerms)
+			.param("id", storylineId)
+			.query((rs, row) -> new StorylineProfile(rs.getLong("id"), rs.getString("model_version"),
+					VectorText.parse(rs.getString("centroid")), instant(rs, "first_article_at"),
+					instant(rs, "last_article_at"), strings(rs.getArray("key_terms")), rs.getInt("events")))
+			.optional();
 	}
 
 	@Override
@@ -214,7 +234,7 @@ class JdbcStorylineRepository implements StorylineRepository {
 
 	@Override
 	public void delete(long storylineId) {
-		// 핵심 말 · 소속과 이 스토리라인을 가리키는 합쳐진 행은 FK ON DELETE CASCADE 로 함께 지워진다
+		// 핵심 말 · 소속 · 관계 · 물은 기록 · 관계 대기 행과 이 스토리라인을 가리키는 합쳐진 행은 FK ON DELETE CASCADE 로 함께 지워진다
 		this.jdbc.sql("delete from storylines where id = :id").param("id", storylineId).update();
 	}
 

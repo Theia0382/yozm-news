@@ -57,6 +57,12 @@ erDiagram
     storylines ||--o{ storyline_key_terms : ""
     storyline_linking_criteria |o--o{ storyline_members : ""
     events ||--o| storyline_linking_queue : ""
+    storylines ||--o{ storyline_relations : ""
+    storyline_relation_criteria ||--o{ storyline_relations : ""
+    storylines ||--o{ storyline_relation_asked : ""
+    storyline_relation_criteria ||--o{ storyline_relation_asked : ""
+    storylines ||--o| storyline_relation_queue : ""
+    flow_relation_judgements |o--o{ storyline_relations : ""
 
     digests ||--o{ digest_sections : ""
     digest_sections ||--o{ digest_items : ""
@@ -108,8 +114,8 @@ erDiagram
 
 ## 스토리라인
 
-- 공유 스토리라인 테이블(`storylines` · `storyline_key_terms` — 사용자를 모른다), 사건의 소속(`storyline_members` — 사건 하나가 스토리라인 0개 이상에 든다), 잇기 대기(`storyline_linking_queue`), 기준 이력(`storyline_linking_criteria`), 큰 판정 기준 테이블(`storyline_big_criteria` · `storyline_big_criteria_changes`)은 [storyline Spec §6](specs/storyline.md#6-데이터)에 있다. 사건은 ID 로만 가리킨다
-- **(미설계)** 스토리라인 사이 관계의 테이블은 관계를 정할 때 정한다([ADR-0101](adr/0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md))
+- 공유 스토리라인 테이블(`storylines` · `storyline_key_terms` — 사용자를 모른다), 사건의 소속(`storyline_members` — 사건 하나가 스토리라인 0개 이상에 든다), 잇기 대기(`storyline_linking_queue`), 기준 이력(`storyline_linking_criteria`), 스토리라인 사이 관계(`storyline_relations` — 포함 · 이어짐, 쌍마다 한 행), 물은 기록(`storyline_relation_asked`), 관계 대기(`storyline_relation_queue`), 관계 기준 이력(`storyline_relation_criteria`), 큰 판정 기준 테이블(`storyline_big_criteria` · `storyline_big_criteria_changes`)은 [storyline Spec §6](specs/storyline.md#6-데이터)에 있다. 사건은 ID 로만 가리킨다
+- 포함의 상위가 하위의 사건을 갖는 것은 저장하지 않는다 — 소속은 직접 소속만 있고 조회할 때 관계를 따라 모은다([ADR-0131](adr/0131-storyline-relations-are-explicit-links-with-containment-as-a-single-parent-tree-gathered-at-query-time.md)). 관계 판정 원본(`flow_relation_judgements`)은 [evaluation Spec §6](specs/evaluation.md#6-데이터)에 있다
 - **(미설계)** 스토리라인 구독과 그 변경 이력(추가 전용 — 현재 구독은 그 투영)은 `user` 의 테이블이다. 스토리라인은 ID 로만 가리킨다
 
 ## 피드백
@@ -147,7 +153,10 @@ erDiagram
 | 큰 판정 기준과 그 변경 이력 (`storyline_big_criteria` · `storyline_big_criteria_changes`) | 무기한 | 운영자가 조정한 이력 — 태그 기준 · 저장 기준의 이력과 같다 |
 | 스토리라인 (`storylines` · `storyline_key_terms`) · 소속 (`storyline_members`) · 기준 이력 (`storyline_linking_criteria`) | 무기한. 구성 사건이 지워지면 그 소속을 지운다. 구성 사건이 남지 않으면 스토리라인을 지우고, 사건 하나만 남으면 그 사건을 가진 다른 스토리라인에 합치거나 풀어 지운다. 합칠 때 합쳐진 쪽의 소속 · 핵심 말은 지우고(같은 사건이 남는 쪽에 있다) 행은 남는 스토리라인을 가리키며 남는다 — 남는 스토리라인을 지울 때 함께 지운다 | 구독 · 타임라인 · 리포트 인용이 스토리라인 ID 를 가리킨다 — 합쳐진 ID 는 남는 스토리라인으로 따라간다([storyline-R6](specs/storyline.md#사건-변화-따르기) · [storyline-R17 · R18](specs/storyline.md#정돈)) |
 | 잇기 대기 (`storyline_linking_queue`) | 판정하면 지운다. 판정이 거듭 실패하면 뺀다 | 판정할 사건의 목록이다([storyline-R3](specs/storyline.md#잇기-대기와-회차) · [storyline-R4](specs/storyline.md#잇기-대기와-회차)) |
+| 스토리라인 사이 관계 (`storyline_relations`) · 물은 기록 (`storyline_relation_asked`) · 관계 기준 이력 (`storyline_relation_criteria`) | 무기한. 스토리라인을 지우면 그 관계 · 물은 기록을 함께 지운다. 합칠 때 합쳐진 쪽의 관계는 남는 쪽으로 옮기고 물은 기록은 지운다. 다시 물은 판정이 맺지 않으면 그 관계를 지운다 | 관계는 타임라인 · 집계의 근거이고, 물은 기록은 같은 쌍을 다시 물을 때를 정한다([storyline-R29 · R30 · R32](specs/storyline.md#스토리라인-사이-관계)) |
+| 관계 대기 (`storyline_relation_queue`) | 후보를 모두 물으면 지운다. 판정이 거듭 실패하면 뺀다 | 판정할 스토리라인의 목록이다([storyline-R26 · R31](specs/storyline.md#스토리라인-사이-관계)) |
 | 사건 소속 판정 원본 (`article_event_judgements`) | 180일 | 태그 판정 원본과 같다 |
+| 관계 판정 원본 (`flow_relation_judgements`) | 180일 | 태그 판정 원본과 같다. 관계 · 물은 기록이 가리키는 원본이 먼저 지워질 수 있다 — 그 ID 는 FK 가 아니다 |
 | 태그 판정 원본 (`article_tag_judgements`) | 180일 | 태그 기준 · 저장 기준 분석과 저장 기준을 낮춘 뒤 빠진 태그 채움([tag-R31](specs/tag.md#빠진-태그-채움--저장-바닥) — 채울 기간의 상한도 180일)에 충분한 기간. **(미설계)** 지운 뒤 원본이 없는 평가의 채움 처분은 보존을 구현하는 작업이 정한다 |
 | 다이제스트 | 사용자 탈퇴 시까지 | 인용 항목은 노출 기록이다 |
 | 관심 신호 이력(`feedback_events` · `user_tag_preference_events` · 스토리라인 구독 이력) · 변화 리포트 | 사용자 탈퇴 시까지 | 관심사 히스토리 · 리포트의 근거 |

@@ -8,12 +8,15 @@ import java.util.Map;
 import net.yozmnews.evaluation.AskedTag;
 import net.yozmnews.evaluation.FormatOption;
 import net.yozmnews.evaluation.ImportanceLevel;
+import net.yozmnews.evaluation.RelationAnswer;
 import net.yozmnews.evaluation.TagQuestions;
 import net.yozmnews.evaluation.TopicCategory;
 import net.yozmnews.evaluation.domain.evaluator.CandidateEvent;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationInput;
 import net.yozmnews.evaluation.domain.evaluator.FeedContext;
 import net.yozmnews.evaluation.domain.evaluator.MembershipInput;
+import net.yozmnews.evaluation.domain.evaluator.RelationInput;
+import net.yozmnews.evaluation.domain.evaluator.RelationWording;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -22,7 +25,8 @@ import tools.jackson.databind.json.JsonMapper;
  * <p>
  * 평가의 질문은 넘긴 질문 묶음에서 읽는다. 질문 이름은 태그 종류 접두에 태그 키를 붙인 것이고, 응답은 같은 이름으로 답을 돌려준다. 형식 선택지는
  * 질문 묶음 순서, 중요도 수준 설명은 수준 순이다 — 응답의 수준 위치는 이 순서로 되찾는다({@link JevResponse}). 사건 소속 판정의 질문은 후보
- * 사건마다 Yes/No 하나이고, 이름은 {@value #EVENT_PREFIX} 에 사건 ID 를 붙인 것, 문장은 넘긴 문구로 만든다.
+ * 사건마다 Yes/No 하나이고, 이름은 {@value #EVENT_PREFIX} 에 사건 ID 를 붙인 것, 문장은 넘긴 문구로 만든다. 관계 판정의 질문은
+ * 셋이다 — {@value #RELATION}(Choice, 선택지는 {@link #RELATION_OPTIONS} 순)과 흐름마다 한 사안인가(Yes/No).
  */
 public final class JevRequest {
 
@@ -40,6 +44,20 @@ public final class JevRequest {
 
 	/** 사건 소속 질문 이름의 접두 */
 	public static final String EVENT_PREFIX = "event.";
+
+	/** 관계 질문 이름 */
+	public static final String RELATION = "relation";
+
+	/** first 가 한 사안인가의 질문 이름 */
+	public static final String FIRST_ONE_MATTER = "a_one_matter";
+
+	/** second 가 한 사안인가의 질문 이름 */
+	public static final String SECOND_ONE_MATTER = "b_one_matter";
+
+	/** 관계 질문의 선택지 — 요청에 싣는 순서 · 정본 */
+	public static final List<RelationAnswer> RELATION_OPTIONS = List.of(RelationAnswer.SECOND_PART_OF_FIRST,
+			RelationAnswer.FIRST_PART_OF_SECOND, RelationAnswer.FIRST_LED_TO_SECOND,
+			RelationAnswer.SECOND_LED_TO_FIRST, RelationAnswer.NONE);
 
 	/** state 의 출처 줄에서 조각 사이 */
 	private static final String PART_SEPARATOR = " / ";
@@ -70,6 +88,27 @@ public final class JevRequest {
 	/** 사건 소속 판정의 문맥 초과 확인 요청 — 같은 질문, 빈 state */
 	public static String membershipProbeBody(String model, MembershipInput input) {
 		return write(model, "", membershipQuestions(input));
+	}
+
+	/** 관계 판정 요청 — state 는 두 흐름의 서술, 질문은 관계와 흐름마다 한 사안인가 */
+	public static String relationBody(String model, RelationInput input) {
+		return write(model, input.wording().state(input.first(), input.second()), relationQuestions(input.wording()));
+	}
+
+	/** 관계 판정의 문맥 초과 확인 요청 — 같은 질문, 빈 state */
+	public static String relationProbeBody(String model, RelationInput input) {
+		return write(model, "", relationQuestions(input.wording()));
+	}
+
+	/** 관계 질문의 선택지 키 — 정본. 요청의 A 가 first, B 가 second 다 */
+	public static String relationOption(RelationAnswer answer) {
+		return switch (answer) {
+			case NONE -> "none";
+			case SECOND_PART_OF_FIRST -> "b_part_of_a";
+			case FIRST_PART_OF_SECOND -> "a_part_of_b";
+			case FIRST_LED_TO_SECOND -> "a_led_to_b";
+			case SECOND_LED_TO_FIRST -> "b_led_to_a";
+		};
 	}
 
 	/**
@@ -107,6 +146,18 @@ public final class JevRequest {
 		for (CandidateEvent candidate : input.candidates()) {
 			questions.put(EVENT_PREFIX + candidate.eventId(), yesNo(input.wording().question(candidate.titles())));
 		}
+		return questions;
+	}
+
+	private static Map<String, Object> relationQuestions(RelationWording wording) {
+		Map<String, String> options = new LinkedHashMap<>();
+		for (RelationAnswer answer : RELATION_OPTIONS) {
+			options.put(relationOption(answer), wording.options().get(answer));
+		}
+		Map<String, Object> questions = new LinkedHashMap<>();
+		questions.put(RELATION, question("choice", wording.question(), options));
+		questions.put(FIRST_ONE_MATTER, yesNo(wording.oneMatterQuestion(RelationWording.FIRST_NAME)));
+		questions.put(SECOND_ONE_MATTER, yesNo(wording.oneMatterQuestion(RelationWording.SECOND_NAME)));
 		return questions;
 	}
 

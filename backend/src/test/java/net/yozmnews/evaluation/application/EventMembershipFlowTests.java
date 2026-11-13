@@ -32,6 +32,8 @@ import net.yozmnews.evaluation.domain.evaluator.EvaluationResult;
 import net.yozmnews.evaluation.domain.evaluator.Membership;
 import net.yozmnews.evaluation.domain.evaluator.MembershipInput;
 import net.yozmnews.evaluation.domain.evaluator.MembershipResult;
+import net.yozmnews.evaluation.domain.evaluator.RelationInput;
+import net.yozmnews.evaluation.domain.evaluator.RelationResult;
 import net.yozmnews.evaluation.domain.evaluator.MembershipWording;
 import net.yozmnews.evaluation.domain.evaluator.RereadResult;
 import net.yozmnews.evaluation.domain.membership.EventJudgementRepository;
@@ -392,6 +394,11 @@ class EventMembershipFlowTests {
 		public MembershipResult judgeMembership(MembershipInput input) {
 			this.inputs.add(input);
 			return this.answer.apply(input);
+		}
+
+		@Override
+		public RelationResult judgeRelation(RelationInput input) {
+			throw new AssertionError("관계 판정을 부르지 않는다");
 		}
 
 	}

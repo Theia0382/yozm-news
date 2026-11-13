@@ -23,14 +23,23 @@ import net.yozmnews.storyline.BigStoryline;
 import net.yozmnews.storyline.BigStorylineAdministration;
 import net.yozmnews.storyline.BigStorylineCriteria;
 import net.yozmnews.storyline.BigStorylineCriteriaRows;
+import net.yozmnews.storyline.EventStoryline;
 import net.yozmnews.storyline.StorylineCursor;
+import net.yozmnews.storyline.StorylineEvent;
 import net.yozmnews.storyline.StorylineId;
 import net.yozmnews.storyline.StorylinePage;
+import net.yozmnews.storyline.StorylineRelationKind;
+import net.yozmnews.storyline.StorylineRelationView;
 import net.yozmnews.storyline.StorylineRows;
 import net.yozmnews.storyline.StorylineState;
 import net.yozmnews.storyline.StorylineSummary;
+import net.yozmnews.storyline.StorylineView;
 import net.yozmnews.storyline.UnlinkedEvents;
 import net.yozmnews.storyline.domain.big.BigStorylineCriteriaRepository;
+import net.yozmnews.storyline.domain.relation.Relation;
+import net.yozmnews.storyline.domain.relation.RelationCriteria;
+import net.yozmnews.storyline.domain.relation.RelationKind;
+import net.yozmnews.storyline.domain.relation.RelationRepository;
 import net.yozmnews.storyline.domain.storyline.StateCriteria;
 import net.yozmnews.storyline.domain.storyline.StorylineQueryRepository;
 import net.yozmnews.storyline.domain.storyline.StorylineRepository;
@@ -53,7 +62,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 큰 판정 기준은 인스턴스에 한 행이라 시작과 끝에 비우고 처음 값을 다시 적재한다. 사건 · 스토리라인 행과 이 시험이 넣은 평가 행도 시작과 끝에
  * 지운다. 상태는 고정 시계로 본다.
  * <p>
- * 지키는 규칙: storyline-R16 · storyline-R19 ~ R23
+ * 지키는 규칙: storyline-R16 · storyline-R19 ~ R23 · storyline-R25 · storyline-R33
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -66,6 +75,9 @@ class StorylineQueryFlowTests {
 
 	private static final Instant NOW = Instant.parse("2026-11-10T00:00:00Z");
 
+	private static final RelationCriteria RELATION_CRITERIA = new RelationCriteria(0.60, 0.20, 3, 0.88,
+			Duration.ofDays(14));
+
 	@Autowired
 	StorylineQueryRepository storylines;
 
@@ -74,6 +86,9 @@ class StorylineQueryFlowTests {
 
 	@Autowired
 	BigStorylineCriteriaRepository criteria;
+
+	@Autowired
+	RelationRepository relations;
 
 	@Autowired
 	BigStorylineAdministration administration;
@@ -120,7 +135,8 @@ class StorylineQueryFlowTests {
 		clear();
 		new BigStorylineCriteriaSeeding(this.criteria, this.transaction, InstantSource.system()).seedIfAbsent();
 		// 잠잠 7일 · 끝남 30일, 지금은 11-10
-		this.directory = new StorylineDirectoryService(this.storylines, this.memberships, this.criteria, this.events,
+		this.directory = new StorylineDirectoryService(this.storylines, this.memberships, this.relations, this.criteria,
+				this.events,
 				new StateCriteria(Duration.ofDays(7), Duration.ofDays(30)), InstantSource.fixed(NOW));
 		this.assignment = assignmentCriteria();
 		long assignment = this.assignment;
@@ -234,7 +250,7 @@ class StorylineQueryFlowTests {
 
 		assertThat(this.directory.find(new StorylineId(merged))).isEqualTo(this.directory.find(new StorylineId(this.wide)));
 		assertThat(this.directory.find(new StorylineId(merged)).orElseThrow().id()).isEqualTo(new StorylineId(this.wide));
-		assertThat(this.directory.events(new StorylineId(merged))).extracting(event -> event.id().value())
+		assertThat(this.directory.events(new StorylineId(merged))).extracting(event -> event.event().id().value())
 			.containsExactly(this.eventA, this.eventB);
 		assertThat(this.directory.find(new StorylineId(999_999_999L))).isEmpty();
 		assertThat(this.directory.events(new StorylineId(999_999_999L))).isEmpty();
@@ -243,27 +259,173 @@ class StorylineQueryFlowTests {
 	@Test
 	void theTimelineIsInFirstArticleOrderWithoutEventsNotYetFollowed() {
 		// 합쳐진 사건의 소속 행은 남아 있지만 타임라인에는 나오지 않는다 — 구성 사건 수는 소속 행 수다
-		assertThat(this.directory.events(new StorylineId(this.wide))).extracting(event -> event.id().value())
+		assertThat(this.directory.events(new StorylineId(this.wide))).extracting(event -> event.event().id().value())
 			.containsExactly(this.eventA, this.eventB);
+		// 포함이 없으면 모두 직접 소속이다
+		assertThat(this.directory.events(new StorylineId(this.wide))).extracting(StorylineEvent::direct)
+			.containsExactly(true, true);
 		assertThat(this.directory.find(new StorylineId(this.wide)).orElseThrow().eventCount()).isEqualTo(3);
 		// 첫 기사 시각 순 — 지난 사건이 사건 C 보다 먼저다(사건 ID 는 C 가 작다)
-		assertThat(this.directory.events(new StorylineId(this.narrow))).extracting(event -> event.id().value())
+		assertThat(this.directory.events(new StorylineId(this.narrow))).extracting(event -> event.event().id().value())
 			.containsExactly(this.eventOld, this.eventC);
 	}
 
 	@Test
 	void theStorylinesOfAnEventFollowAMergedEventToItsSurvivor() {
-		assertThat(this.directory.storylinesOf(new EventId(this.eventOld))).extracting(view -> view.id().value())
+		assertThat(this.directory.storylinesOf(new EventId(this.eventOld))).extracting(view -> view.storyline().id().value())
 			.containsExactly(this.narrow, this.quiet, this.ended, this.spanning);
-		assertThat(this.directory.storylinesOf(new EventId(this.eventMerged))).extracting(view -> view.id().value())
+		// 포함이 없으면 모두 직접 든 스토리라인이고 상위가 없다
+		assertThat(this.directory.storylinesOf(new EventId(this.eventOld))).extracting(EventStoryline::direct)
+			.containsOnly(true);
+		assertThat(this.directory.storylinesOf(new EventId(this.eventOld))).extracting(view -> view.storyline().parent())
+			.containsOnlyNulls();
+		assertThat(this.directory.storylinesOf(new EventId(this.eventMerged)))
+			.extracting(view -> view.storyline().id().value())
 			.containsExactly(this.wide);
 		// 소속 행이 없는 합쳐진 사건 — 자기 ID 로는 찾을 소속이 없고, 남는 사건 C 의 소속으로만 나온다
 		long followed = event("2026-11-05T05:30:00Z", "2026-11-05T05:30:00Z");
 		StorylineRows.merge(this.jdbc, followed, this.eventC);
-		assertThat(this.directory.storylinesOf(new EventId(followed))).extracting(view -> view.id().value())
+		assertThat(this.directory.storylinesOf(new EventId(followed))).extracting(view -> view.storyline().id().value())
 			.containsExactly(this.narrow);
 		assertThat(this.directory.storylinesOf(new EventId(this.eventLoose))).isEmpty();
 		assertThat(this.directory.storylinesOf(new EventId(999_999_999L))).isEmpty();
+	}
+
+	@Test
+	void aParentHoldsTheEventsOfItsChildrenAndMarksTheInheritedOnes() {
+		contains(this.wide, this.narrow);
+
+		// wide 의 닫은 사건 집합 = {A, B, 합쳐진 사건} ∪ narrow 의 {C, 지난 사건} — 타임라인에는 아직 따르지 않은 합쳐진 사건이 빠진다
+		List<StorylineEvent> timeline = this.directory.events(new StorylineId(this.wide));
+		assertThat(timeline).extracting(event -> event.event().id().value())
+			.containsExactly(this.eventOld, this.eventA, this.eventB, this.eventC);
+		assertThat(timeline).extracting(StorylineEvent::direct).containsExactly(false, true, true, false);
+		// 스토리라인 값은 닫은 사건 집합으로 센다 — 사건 다섯, 사건마다 기사 하나인 읽히는 사건 넷, 지난 사건의 첫 기사부터 사건 C 의 기사까지
+		StorylineView parent = this.directory.find(new StorylineId(this.wide)).orElseThrow();
+		assertThat(parent.eventCount()).isEqualTo(5);
+		assertThat(parent.articleCount()).isEqualTo(4);
+		assertThat(parent.firstArticleAt()).isEqualTo(Instant.parse("2026-11-03T00:00:00Z"));
+		assertThat(parent.lastArticleAt()).isEqualTo(Instant.parse("2026-11-05T05:00:00Z"));
+		assertThat(parent.representativeEvent()).isEqualTo(new EventId(this.eventA));
+		assertThat(parent.parent()).isNull();
+		// 하위는 자기 직접 소속만 갖고 상위를 싣는다
+		StorylineView child = this.directory.find(new StorylineId(this.narrow)).orElseThrow();
+		assertThat(child.eventCount()).isEqualTo(2);
+		assertThat(child.articleCount()).isEqualTo(1);
+		assertThat(child.parent()).isEqualTo(new StorylineId(this.wide));
+		assertThat(this.directory.events(new StorylineId(this.narrow))).extracting(StorylineEvent::direct)
+			.containsExactly(true, true);
+	}
+
+	@Test
+	void anEventIsInItsStorylineAndEveryAncestor() {
+		// quiet ⊃ wide ⊃ narrow
+		contains(this.wide, this.narrow);
+		contains(this.quiet, this.wide);
+
+		List<EventStoryline> ofC = this.directory.storylinesOf(new EventId(this.eventC));
+		assertThat(ofC).extracting(found -> found.storyline().id().value())
+			.containsExactly(this.wide, this.narrow, this.quiet);
+		assertThat(ofC).extracting(EventStoryline::direct).containsExactly(false, true, false);
+		assertThat(this.directory.storylinesOf(new EventId(this.eventA))).extracting(EventStoryline::direct)
+			.containsExactly(true, false);
+
+		// 상위에도 직접 든 사건은 직접이다 — 타임라인에는 한 번만 나온다
+		member(this.wide, this.eventC);
+		assertThat(this.directory.storylinesOf(new EventId(this.eventC))).extracting(EventStoryline::direct)
+			.containsExactly(true, true, false);
+		assertThat(this.directory.events(new StorylineId(this.wide)))
+			.filteredOn(event -> event.event().id().value() == this.eventC)
+			.extracting(StorylineEvent::direct)
+			.containsExactly(true);
+	}
+
+	@Test
+	void theTallyAndTheBigJudgementCountTheEventsOfTheChildren() {
+		contains(this.wide, this.narrow);
+
+		List<BigStoryline> big = this.directory.bigStorylines(PERIOD);
+
+		// wide 는 사건 C 의 기사까지 센다 — 기사 다섯 · 소스 셋 · 중요도 (5 + 5 + 2 + 5) ÷ 4. narrow 는 그대로 소스 하나다
+		assertThat(big).extracting(storyline -> storyline.storyline().id().value()).containsExactly(this.wide);
+		EventTally tally = big.getFirst().tally();
+		assertThat(tally.articles()).isEqualTo(5);
+		assertThat(tally.sources()).isEqualTo(3);
+		assertThat(tally.importance()).isEqualByComparingTo("4.25");
+	}
+
+	@Test
+	void aParentWithNoEventOfItsOwnInThePeriodIsInTheListThroughItsChild() {
+		// quiet = {지난 사건} 은 기간 안 기사가 없다 — 하위 wide 의 사건으로 기간의 스토리라인이 된다
+		contains(this.quiet, this.wide);
+
+		StorylinePage first = this.directory.list(PERIOD, null, 2);
+
+		// 순서는 직접 소속의 마지막 기사 시각이다 — narrow(11-05T05) · wide(11-05T04) · quiet(11-01)
+		assertThat(first.storylines()).extracting(summary -> summary.storyline().id().value())
+			.containsExactly(this.narrow, this.wide);
+		assertThat(first.storylines().getLast().storyline().parent()).isEqualTo(new StorylineId(this.quiet));
+		assertThat(first.next())
+			.isEqualTo(new StorylineCursor(Instant.parse("2026-11-05T04:00:00Z"), new StorylineId(this.wide)));
+		StorylinePage second = this.directory.list(PERIOD, first.next(), 2);
+		assertThat(second.storylines()).extracting(summary -> summary.storyline().id().value()).containsExactly(this.quiet);
+		assertThat(second.next()).isNull();
+		// 행의 값은 닫은 값이다 — 사건 넷, 마지막 기사는 사건 B 의 것이라 잠잠이 아니라 진행이고, 집계는 wide 와 같아 크다
+		StorylineSummary row = second.storylines().getFirst();
+		assertThat(row.storyline().eventCount()).isEqualTo(4);
+		assertThat(row.storyline().lastArticleAt()).isEqualTo(Instant.parse("2026-11-05T04:00:00Z"));
+		assertThat(row.storyline().state()).isEqualTo(StorylineState.ACTIVE);
+		assertThat(row.tally().articles()).isEqualTo(4);
+		assertThat(row.tally().sources()).isEqualTo(3);
+		assertThat(row.big()).isTrue();
+		// 상위와 하위가 함께 큰 스토리라인으로 나온다 — 집계가 같아 ID 순
+		assertThat(this.directory.bigStorylines(PERIOD)).extracting(storyline -> storyline.storyline().id().value())
+			.containsExactly(this.wide, this.quiet);
+	}
+
+	@Test
+	void aParentWithNoReadableEventInItsClosureKeepsItsStoredArticleCountAndTimes() {
+		// 상위 · 하위의 구성 사건이 모두 합쳐졌는데 아직 소속을 따르지 않았다 — 닫은 사건 집합에 읽히는 사건이 하나도 없다
+		long alsoMerged = event("2026-11-05T00:40:00Z", "2026-11-05T00:40:00Z");
+		StorylineRows.merge(this.jdbc, alsoMerged, this.eventA);
+		long parent = storyline("2026-11-02T00:00:00Z", "2026-11-02T06:00:00Z", this.eventMerged);
+		member(parent, this.eventMerged);
+		long child = storyline("2026-11-04T00:00:00Z", "2026-11-04T00:00:00Z", alsoMerged);
+		member(child, alsoMerged);
+		contains(parent, child);
+
+		StorylineView view = this.directory.find(new StorylineId(parent)).orElseThrow();
+
+		// 사건 수는 닫은 사건 집합의 크기(둘)이고, 기사 수 · 시각은 저장된 표현의 값이다
+		assertThat(view.eventCount()).isEqualTo(2);
+		assertThat(view.articleCount()).isEqualTo(1);
+		assertThat(view.firstArticleAt()).isEqualTo(Instant.parse("2026-11-02T00:00:00Z"));
+		assertThat(view.lastArticleAt()).isEqualTo(Instant.parse("2026-11-02T06:00:00Z"));
+		assertThat(this.directory.events(new StorylineId(parent))).isEmpty();
+	}
+
+	@Test
+	void theRelationsOfAStorylineAreReadWithContainmentFirst() {
+		contains(this.wide, this.narrow);
+		long criteriaId = this.relations.registerCriteria(RELATION_CRITERIA, NOW);
+		this.relations.link(new Relation(this.ended, this.wide, RelationKind.FOLLOWS), 0.8, 2, criteriaId,
+				NOW.plusSeconds(60));
+		long merged = storyline("2026-11-02T00:00:00Z", "2026-11-02T00:00:00Z", this.eventA);
+		this.jdbc.sql("update storylines set merged_into = :into, merged_at = now() where id = :id")
+			.param("into", this.wide)
+			.param("id", merged)
+			.update();
+		StorylineRelationView contains = new StorylineRelationView(StorylineRelationKind.CONTAINS,
+				new StorylineId(this.wide), new StorylineId(this.narrow), NOW);
+		StorylineRelationView follows = new StorylineRelationView(StorylineRelationKind.FOLLOWS,
+				new StorylineId(this.ended), new StorylineId(this.wide), NOW.plusSeconds(60));
+
+		assertThat(this.directory.relationsOf(new StorylineId(this.wide))).containsExactly(contains, follows);
+		assertThat(this.directory.relationsOf(new StorylineId(this.narrow))).containsExactly(contains);
+		// 합쳐진 스토리라인은 남는 쪽의 관계다
+		assertThat(this.directory.relationsOf(new StorylineId(merged))).containsExactly(contains, follows);
+		assertThat(this.directory.relationsOf(new StorylineId(this.spanning))).isEmpty();
+		assertThat(this.directory.relationsOf(new StorylineId(999_999_999L))).isEmpty();
 	}
 
 	@Test
@@ -356,6 +518,12 @@ class StorylineQueryFlowTests {
 			.param("representative", representative)
 			.query(Long.class)
 			.single();
+	}
+
+	/** 포함 관계를 심는다 — parent ⊃ child */
+	private void contains(long parent, long child) {
+		long criteriaId = this.relations.registerCriteria(RELATION_CRITERIA, NOW);
+		this.relations.link(new Relation(parent, child, RelationKind.CONTAINS), 0.7, 1, criteriaId, NOW);
 	}
 
 	private void member(long storyline, long event) {

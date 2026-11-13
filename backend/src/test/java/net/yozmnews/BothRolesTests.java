@@ -58,8 +58,8 @@ class BothRolesTests {
 			.allSatisfy((type, beans) -> assertThat(beans).as(type.getName()).isEqualTo(1));
 		assertThat(RoleProbe.recurringJobIds(this.jdbc)).containsExactlyInAnyOrder("poll-due-feeds",
 				"feed-health-check", "event-publication-resubmission", "evaluate-pending-articles",
-				"backfill-missing-tags", "event-intake", "event-cleanup", "storyline-linking", "expire-sessions",
-				"forget-login-failures", "forget-read-notices");
+				"backfill-missing-tags", "event-intake", "event-cleanup", "storyline-linking", "storyline-relation",
+				"expire-sessions", "forget-login-failures", "forget-read-notices");
 		assertThat(this.context.containsBean("presetFeedReconciliation")).isTrue();
 		assertThat(RoleProbe.stalenessMonitorTasks(this.context)).hasSize(1);
 	}

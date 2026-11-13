@@ -60,6 +60,13 @@ services:
       # 스토리라인 잇기의 시간 창 · 기준 점수 — deploy/.env 에 있을 때만 넘긴다. docs/operations/configuration.md "스토리라인 잇기"
       YOZMNEWS_STORYLINE_LINKING_WINDOW:
       YOZMNEWS_STORYLINE_LINKING_THRESHOLD:
+      # 스토리라인 관계의 확률 기준 · 한 사안 기준 · 사건 수 하한 · 후보 점수 기준 · 시간 창 — deploy/.env 에 있을 때만 넘긴다.
+      # docs/operations/configuration.md "스토리라인 관계"
+      YOZMNEWS_STORYLINE_RELATION_PROBABILITY:
+      YOZMNEWS_STORYLINE_RELATION_ONE_MATTER:
+      YOZMNEWS_STORYLINE_RELATION_MIN_EVENTS:
+      YOZMNEWS_STORYLINE_RELATION_CANDIDATE_SCORE:
+      YOZMNEWS_STORYLINE_RELATION_WINDOW:
       # 스토리라인 상태의 잠잠 기간 · 끝남 기간 — deploy/.env 에 있을 때만 넘긴다. docs/operations/configuration.md "스토리라인 상태"
       YOZMNEWS_STORYLINE_STATE_QUIET_AFTER:
       YOZMNEWS_STORYLINE_STATE_ENDED_AFTER:

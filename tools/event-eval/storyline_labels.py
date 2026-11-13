@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import random
 from collections import defaultdict
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date, datetime
 from enum import Enum
@@ -127,18 +127,29 @@ class Labels:
 
     def closed(self, event_id: int) -> frozenset[str]:
         """적은 표지와, CONTAINS 를 거슬러 오른 상위 전부(위로 닫힘). 줄이 없는 사건은 빈 집합."""
-        parents: dict[str, set[str]] = defaultdict(set)
-        for source, target, kind in self.relations:
-            if kind is Relation.CONTAINS:
-                parents[target].add(source)
-        result: set[str] = set()
-        pending = list(self.written.get(event_id, frozenset()))
-        while pending:
-            storyline = pending.pop()
-            if storyline not in result:
-                result.add(storyline)
-                pending.extend(parents[storyline])
-        return frozenset(result)
+        return close_upward(self.written.get(event_id, frozenset()), contains_parents(self.relations))
+
+
+def contains_parents(relations: Iterable[tuple[str, str, Relation]]) -> dict[str, set[str]]:
+    """표지 → CONTAINS 의 상위 표지. 상위가 여럿일 수 있다."""
+    parents: dict[str, set[str]] = defaultdict(set)
+    for source, target, kind in relations:
+        if kind is Relation.CONTAINS:
+            parents[target].add(source)
+    return parents
+
+
+def close_upward(labels: Iterable[str], parents: Mapping[str, Iterable[str]]) -> frozenset[str]:
+    """표지들과, 상위를 거슬러 오른 표지 전부(위로 닫힘) — 정답 · 시스템이 함께 쓰는 정본. 상위가 돌아 제자리로 와도
+    멈춘다."""
+    result: set[str] = set()
+    pending = list(labels)
+    while pending:
+        label = pending.pop()
+        if label not in result:
+            result.add(label)
+            pending.extend(parents.get(label, ()))
+    return frozenset(result)
 
 
 def new_storyline_sample(start: date, end: date, zone: str, dump: Path, lineage: Path) -> StorylineSample:
@@ -319,7 +330,7 @@ def read_labels(directory: Path, sheet: Sheet, seeds: Seeds, sample: StorylineSa
     big = _read_big(directory, names, sample, problems)
     if problems:
         raise LabelError(problems)
-    cycle = _contains_cycle(relations)
+    cycle = contains_cycle(relations)
     if cycle:
         raise LabelError([f"{RELATIONS_FILE}: CONTAINS 가 돌아 제자리로 온다 — " + " ⊃ ".join(cycle)])
     labels = Labels(written, notes, names, relations, big)
@@ -440,7 +451,7 @@ def _read_big(directory: Path, names: Mapping[str, str], sample: StorylineSample
     return frozenset(marks)
 
 
-def _contains_cycle(relations: frozenset[tuple[str, str, Relation]]) -> list[str]:
+def contains_cycle(relations: Iterable[tuple[str, str, Relation]]) -> list[str]:
     """CONTAINS 가 도는 길(처음 표지로 끝난다) — 없으면 빈 목록."""
     children: dict[str, list[str]] = defaultdict(list)
     for source, target, kind in sorted(relations, key=lambda item: (item[0], item[1])):

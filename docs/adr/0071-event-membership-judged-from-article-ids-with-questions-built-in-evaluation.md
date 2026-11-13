@@ -39,3 +39,4 @@
 ## 후속 기록
 
 - 2026-11-11: 결정 절 "판정할 기사와 서술 기사를 기사 ID 로 받는다"의 꼴을 태그 판정으로 넓힘 — 기사 ID 를 받아 `evaluation` 이 기사 · 피드를 읽는다 — [ADR-0112](0112-tags-split-into-a-tag-module-and-evaluation-is-the-model-gateway-that-assembles-calls-and-records-each-judgement.md) · [evaluation Spec "태그 판정"](../specs/evaluation.md#태그-판정) evaluation-R40
+- 2026-11-13: 결정 절 "판정할 기사와 서술 기사를 기사 ID 로 받는다"의 꼴을 스토리라인 관계 판정으로 넓힘 — 흐름 ID 와 서술 사건의 대표 기사 ID 를 받아 `evaluation` 이 제목 · 요약문을 읽는다 — [ADR-0132](0132-storyline-relations-are-judged-by-jev-on-candidate-pairs-and-linked-only-above-a-probability-threshold.md) · [evaluation Spec 관계 판정](../specs/evaluation.md#관계-판정)

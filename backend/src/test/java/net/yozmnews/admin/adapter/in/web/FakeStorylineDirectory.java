@@ -6,12 +6,14 @@ import java.util.Optional;
 
 import net.yozmnews.event.EventId;
 import net.yozmnews.event.EventPeriod;
-import net.yozmnews.event.EventView;
 import net.yozmnews.storyline.BigStoryline;
+import net.yozmnews.storyline.EventStoryline;
 import net.yozmnews.storyline.StorylineCursor;
 import net.yozmnews.storyline.StorylineDirectory;
+import net.yozmnews.storyline.StorylineEvent;
 import net.yozmnews.storyline.StorylineId;
 import net.yozmnews.storyline.StorylinePage;
+import net.yozmnews.storyline.StorylineRelationView;
 import net.yozmnews.storyline.StorylineView;
 import net.yozmnews.storyline.UnlinkedEvents;
 import org.jspecify.annotations.Nullable;
@@ -41,13 +43,18 @@ class FakeStorylineDirectory implements StorylineDirectory {
 	}
 
 	@Override
-	public List<EventView> events(StorylineId id) {
+	public List<StorylineEvent> events(StorylineId id) {
 		throw new UnsupportedOperationException("운영자 API 는 타임라인을 읽지 않는다");
 	}
 
 	@Override
-	public List<StorylineView> storylinesOf(EventId event) {
+	public List<EventStoryline> storylinesOf(EventId event) {
 		throw new UnsupportedOperationException("운영자 API 는 사건의 스토리라인을 읽지 않는다");
+	}
+
+	@Override
+	public List<StorylineRelationView> relationsOf(StorylineId id) {
+		throw new UnsupportedOperationException("운영자 API 는 스토리라인의 관계를 읽지 않는다");
 	}
 
 	@Override

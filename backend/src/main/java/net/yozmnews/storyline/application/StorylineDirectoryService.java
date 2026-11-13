@@ -3,13 +3,16 @@ package net.yozmnews.storyline.application;
 import java.time.Instant;
 import java.time.InstantSource;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
 
 import net.yozmnews.event.EventDirectory;
 import net.yozmnews.event.EventId;
@@ -18,15 +21,22 @@ import net.yozmnews.event.EventTally;
 import net.yozmnews.event.EventView;
 import net.yozmnews.storyline.BigStoryline;
 import net.yozmnews.storyline.BigStorylineCriteria;
+import net.yozmnews.storyline.EventStoryline;
 import net.yozmnews.storyline.StorylineCursor;
 import net.yozmnews.storyline.StorylineDirectory;
+import net.yozmnews.storyline.StorylineEvent;
 import net.yozmnews.storyline.StorylineId;
 import net.yozmnews.storyline.StorylinePage;
+import net.yozmnews.storyline.StorylineRelationKind;
+import net.yozmnews.storyline.StorylineRelationView;
 import net.yozmnews.storyline.StorylineSummary;
 import net.yozmnews.storyline.StorylineView;
 import net.yozmnews.storyline.UnlinkedEvents;
 import net.yozmnews.storyline.domain.big.BigStorylineCriteriaRepository;
 import net.yozmnews.storyline.domain.big.BigStorylineRule;
+import net.yozmnews.storyline.domain.relation.RelationGraph;
+import net.yozmnews.storyline.domain.relation.RelationKind;
+import net.yozmnews.storyline.domain.relation.RelationRepository;
 import net.yozmnews.storyline.domain.storyline.StateCriteria;
 import net.yozmnews.storyline.domain.storyline.StoredStoryline;
 import net.yozmnews.storyline.domain.storyline.StorylineQueryRepository;
@@ -36,11 +46,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
- * 공개 조회 {@link StorylineDirectory} 의 구현 — docs/specs/storyline.md §4 · storyline-R19 · storyline-R21 ~ R23.
+ * 공개 조회 {@link StorylineDirectory} 의 구현 — docs/specs/storyline.md §4 · storyline-R19 · storyline-R21 ~ R23 · storyline-R33.
  * <p>
  * 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통). 큰 판정은 {@link #bigStorylines(EventPeriod, BigStorylineCriteria)} 하나를 공개 조회와
- * 미리보기가 함께 쓰고, 기간 집계는 {@link #tallied} 하나를 목록과 큰 판정이 함께 쓴다 — 기사는 {@code event} 가 세고 여기서는 구성 사건 ID 만
- * 넘긴다.
+ * 미리보기가 함께 쓴다. 스토리라인의 사건은 닫은 사건 집합({@link Closure} — 직접 소속과 포함을 따라 내려간 하위의 직접 소속)이고, 스토리라인
+ * 값 · 타임라인 · 사건의 스토리라인 · 기간의 스토리라인 · 기간 집계가 이 한 길을 쓴다. 닫은 사건 집합은 저장하지 않고 질의마다 관계와
+ * 소속에서 만든다. 기사는 {@code event} 가 세고 여기서는 사건 ID 만 넘긴다.
  */
 @Service
 class StorylineDirectoryService implements StorylineDirectory {
@@ -53,6 +64,8 @@ class StorylineDirectoryService implements StorylineDirectory {
 
 	private final StorylineRepository memberships;
 
+	private final RelationRepository relations;
+
 	private final BigStorylineCriteriaRepository criteria;
 
 	private final EventDirectory events;
@@ -63,14 +76,17 @@ class StorylineDirectoryService implements StorylineDirectory {
 
 	@Autowired
 	StorylineDirectoryService(StorylineQueryRepository storylines, StorylineRepository memberships,
-			BigStorylineCriteriaRepository criteria, EventDirectory events, StateCriteria state) {
-		this(storylines, memberships, criteria, events, state, InstantSource.system());
+			RelationRepository relations, BigStorylineCriteriaRepository criteria, EventDirectory events,
+			StateCriteria state) {
+		this(storylines, memberships, relations, criteria, events, state, InstantSource.system());
 	}
 
 	StorylineDirectoryService(StorylineQueryRepository storylines, StorylineRepository memberships,
-			BigStorylineCriteriaRepository criteria, EventDirectory events, StateCriteria state, InstantSource clock) {
+			RelationRepository relations, BigStorylineCriteriaRepository criteria, EventDirectory events,
+			StateCriteria state, InstantSource clock) {
 		this.storylines = storylines;
 		this.memberships = memberships;
+		this.relations = relations;
 		this.criteria = criteria;
 		this.events = events;
 		this.state = state;
@@ -79,37 +95,43 @@ class StorylineDirectoryService implements StorylineDirectory {
 
 	@Override
 	public Optional<StorylineView> find(StorylineId id) {
-		Instant now = this.clock.instant();
-		return this.storylines.find(id.value()).map(stored -> view(stored, now));
+		return this.storylines.find(id.value()).map(stored -> views(List.of(stored)).getFirst());
 	}
 
 	@Override
-	public List<EventView> events(StorylineId id) {
+	public List<StorylineEvent> events(StorylineId id) {
 		Optional<StoredStoryline> stored = this.storylines.find(id.value());
 		if (stored.isEmpty()) {
 			return List.of();
 		}
 		long storyline = stored.get().id();
-		List<EventId> members = this.memberships.members(List.of(storyline))
-			.getOrDefault(storyline, List.of())
-			.stream()
-			.map(EventId::new)
-			.toList();
+		Closure closure = closure(List.of(storyline), graph());
+		Set<Long> direct = closure.direct(storyline);
 		// 합쳐졌거나 지워졌는데 아직 소속을 따르지 않은 사건은 사건 조회에 없다
-		return this.events.views(members).values().stream().sorted(TIMELINE).toList();
+		return this.events.views(ids(closure.closed(storyline)))
+			.values()
+			.stream()
+			.sorted(TIMELINE)
+			.map(event -> new StorylineEvent(event, direct.contains(event.id().value())))
+			.toList();
 	}
 
 	@Override
-	public List<StorylineView> storylinesOf(EventId event) {
+	public List<EventStoryline> storylinesOf(EventId event) {
 		Optional<EventView> survivor = this.events.find(event);
 		if (survivor.isEmpty()) {
 			return List.of();
 		}
-		Instant now = this.clock.instant();
-		return this.storylines.having(List.of(survivor.get().id().value()))
-			.stream()
-			.map(stored -> view(stored, now))
-			.toList();
+		RelationGraph graph = graph();
+		Set<Long> direct = new TreeSet<>();
+		this.storylines.having(List.of(survivor.get().id().value())).forEach(stored -> direct.add(stored.id()));
+		List<StoredStoryline> rows = this.storylines.byIds(withAncestors(direct, graph));
+		List<StorylineView> views = views(rows, graph);
+		List<EventStoryline> found = new ArrayList<>();
+		for (StorylineView view : views) {
+			found.add(new EventStoryline(view, direct.contains(view.id().value())));
+		}
+		return found;
 	}
 
 	@Override
@@ -118,20 +140,22 @@ class StorylineDirectoryService implements StorylineDirectory {
 		if (size < 1 || size > MAX_PAGE_SIZE) {
 			throw new IllegalArgumentException("스토리라인 목록은 한 쪽에 1 ~ " + MAX_PAGE_SIZE + "건이다: " + size);
 		}
-		// 한 건 더 읽어 다음 쪽이 있는지 안다
-		List<StoredStoryline> rows = this.storylines.page(eventsIn(period), after == null ? null : after.lastArticleAt(),
-				after == null ? null : after.id().value(), size + 1);
+		RelationGraph graph = graph();
+		// 한 건 더 읽어 다음 쪽이 있는지 안다. 순서 · 커서는 직접 소속의 마지막 기사 시각(저장된 값)이다
+		List<StoredStoryline> rows = this.storylines.pageOf(storylinesIn(period, graph),
+				after == null ? null : after.lastArticleAt(), after == null ? null : after.id().value(), size + 1);
 		List<StoredStoryline> page = rows.size() > size ? rows.subList(0, size) : rows;
 		if (page.isEmpty()) {
 			return new StorylinePage(List.of(), null);
 		}
-		Map<Long, EventTally> tallies = tallied(page, period);
+		Closure closure = closure(page.stream().map(StoredStoryline::id).toList(), graph);
+		Map<Long, EventTally> tallies = tallied(page, closure, period);
 		BigStorylineCriteria current = currentCriteria();
-		Instant now = this.clock.instant();
+		List<StorylineView> views = views(page, graph, closure);
 		List<StorylineSummary> summaries = new ArrayList<>();
-		for (StoredStoryline stored : page) {
-			EventTally tally = tallies.get(stored.id());
-			summaries.add(new StorylineSummary(view(stored, now), tally, BigStorylineRule.isBig(tally, current)));
+		for (StorylineView view : views) {
+			EventTally tally = tallies.get(view.id().value());
+			summaries.add(new StorylineSummary(view, tally, BigStorylineRule.isBig(tally, current)));
 		}
 		StoredStoryline last = page.getLast();
 		StorylineCursor next = rows.size() > size ? new StorylineCursor(last.lastArticleAt(), new StorylineId(last.id()))
@@ -163,18 +187,32 @@ class StorylineDirectoryService implements StorylineDirectory {
 		return new UnlinkedEvents(events, articles);
 	}
 
+	@Override
+	public List<StorylineRelationView> relationsOf(StorylineId id) {
+		// 합쳐진 스토리라인이면 남는 쪽을 따른 뒤 읽는다 — 합칠 때 관계를 남는 쪽으로 옮겼다(storyline-R32)
+		return this.storylines.find(id.value())
+			.map(stored -> this.relations.of(stored.id())
+				.stream()
+				.map(relation -> new StorylineRelationView(kind(relation.relation().kind()),
+						new StorylineId(relation.relation().sourceId()), new StorylineId(relation.relation().targetId()),
+						relation.linkedAt()))
+				.toList())
+			.orElse(List.of());
+	}
+
 	/** 기간의 큰 스토리라인을 주어진 기준으로 판정한다 — 공개 조회(지금 기준)와 미리보기(제안 기준)가 함께 쓴다 */
 	List<BigStoryline> bigStorylines(EventPeriod period, BigStorylineCriteria criteria) {
 		Objects.requireNonNull(period, "period");
 		Objects.requireNonNull(criteria, "criteria");
-		List<StoredStoryline> rows = this.storylines.having(eventsIn(period));
-		Map<Long, EventTally> tallies = tallied(rows, period);
-		Instant now = this.clock.instant();
+		RelationGraph graph = graph();
+		List<StoredStoryline> rows = this.storylines.byIds(storylinesIn(period, graph));
+		Closure closure = closure(rows.stream().map(StoredStoryline::id).toList(), graph);
+		Map<Long, EventTally> tallies = tallied(rows, closure, period);
 		List<BigStoryline> big = new ArrayList<>();
-		for (StoredStoryline stored : rows) {
-			EventTally tally = tallies.get(stored.id());
+		for (StorylineView view : views(rows, graph, closure)) {
+			EventTally tally = tallies.get(view.id().value());
 			if (BigStorylineRule.isBig(tally, criteria)) {
-				big.add(new BigStoryline(view(stored, now), tally));
+				big.add(new BigStoryline(view, tally));
 			}
 		}
 		big.sort(BigStorylineRule.ORDER);
@@ -189,29 +227,136 @@ class StorylineDirectoryService implements StorylineDirectory {
 		return this.criteria.current().orElseThrow(() -> new IllegalStateException("큰 판정 기준의 처음 값이 없다"));
 	}
 
-	/** 조회 기간 안 기사가 있는 사건 — 기간의 스토리라인을 고르는 재료(storyline-R22) */
-	private List<Long> eventsIn(EventPeriod period) {
-		return this.events.articleCountsIn(period).keySet().stream().map(EventId::value).toList();
+	/**
+	 * 기간의 스토리라인(storyline-R22 · R33) — 조회 기간 안 기사가 있는 사건이 직접 든 스토리라인과 그 상위 전부. 하위에만 기간 안 사건이
+	 * 있어도 상위가 든다
+	 */
+	private Set<Long> storylinesIn(EventPeriod period, RelationGraph graph) {
+		List<Long> inPeriod = this.events.articleCountsIn(period).keySet().stream().map(EventId::value).toList();
+		Set<Long> direct = new TreeSet<>();
+		this.storylines.having(inPeriod).forEach(stored -> direct.add(stored.id()));
+		return withAncestors(direct, graph);
 	}
 
-	/** 스토리라인마다 기간 집계 — 구성 사건 ID 를 묶음으로 넘기고 {@code event} 가 센다(storyline-R19) */
-	private Map<Long, EventTally> tallied(List<StoredStoryline> rows, EventPeriod period) {
+	private static Set<Long> withAncestors(Set<Long> storylineIds, RelationGraph graph) {
+		Set<Long> all = new TreeSet<>(storylineIds);
+		storylineIds.forEach(id -> all.addAll(graph.ancestors(id)));
+		return all;
+	}
+
+	/** 스토리라인마다 기간 집계 — 닫은 사건 집합을 묶음으로 넘기고 {@code event} 가 센다(storyline-R19 · R33) */
+	private Map<Long, EventTally> tallied(List<StoredStoryline> rows, Closure closure, EventPeriod period) {
 		if (rows.isEmpty()) {
 			return Map.of();
 		}
-		List<Long> ids = rows.stream().map(StoredStoryline::id).toList();
-		Map<Long, List<Long>> members = this.memberships.members(ids);
 		Map<Long, List<EventId>> groups = new LinkedHashMap<>();
-		for (Long id : ids) {
-			groups.put(id, members.getOrDefault(id, List.of()).stream().map(EventId::new).toList());
+		for (StoredStoryline row : rows) {
+			groups.put(row.id(), ids(closure.closed(row.id())));
 		}
 		return this.events.tallies(groups, period);
 	}
 
-	private StorylineView view(StoredStoryline stored, Instant now) {
-		return new StorylineView(new StorylineId(stored.id()), this.state.stateOf(stored.lastArticleAt(), now),
-				stored.eventCount(), stored.articleCount(), stored.firstArticleAt(), stored.lastArticleAt(),
-				new EventId(stored.representativeEventId()), stored.createdAt());
+	private List<StorylineView> views(List<StoredStoryline> rows) {
+		return views(rows, graph());
+	}
+
+	private List<StorylineView> views(List<StoredStoryline> rows, RelationGraph graph) {
+		return views(rows, graph, closure(rows.stream().map(StoredStoryline::id).toList(), graph));
+	}
+
+	/**
+	 * 스토리라인 값(storyline-R33) — 하위가 없으면 저장된 표현의 값, 있으면 닫은 사건 집합의 사건으로 센 값이다. 상태는 그 마지막 기사 시각으로
+	 * 정한다. 대표 사건은 직접 소속의 것이다
+	 */
+	private List<StorylineView> views(List<StoredStoryline> rows, RelationGraph graph, Closure closure) {
+		Instant now = this.clock.instant();
+		Set<Long> inherited = new LinkedHashSet<>();
+		for (StoredStoryline row : rows) {
+			if (closure.hasChildren(row.id())) {
+				inherited.addAll(closure.closed(row.id()));
+			}
+		}
+		Map<EventId, EventView> events = this.events.views(ids(inherited));
+		List<StorylineView> views = new ArrayList<>();
+		for (StoredStoryline row : rows) {
+			StorylineId parent = graph.parentOf(row.id()).map(StorylineId::new).orElse(null);
+			int eventCount = row.eventCount();
+			int articleCount = row.articleCount();
+			Instant first = row.firstArticleAt();
+			Instant last = row.lastArticleAt();
+			if (closure.hasChildren(row.id())) {
+				Set<Long> closed = closure.closed(row.id());
+				List<EventView> counted = closed.stream()
+					.map(event -> events.get(new EventId(event)))
+					.filter(Objects::nonNull)
+					.toList();
+				eventCount = closed.size();
+				if (!counted.isEmpty()) {
+					articleCount = counted.stream().mapToInt(EventView::articleCount).sum();
+					first = counted.stream().map(EventView::firstArticleAt).min(Comparator.naturalOrder()).orElseThrow();
+					last = counted.stream().map(EventView::lastArticleAt).max(Comparator.naturalOrder()).orElseThrow();
+				}
+			}
+			views.add(new StorylineView(new StorylineId(row.id()), this.state.stateOf(last, now), eventCount,
+					articleCount, first, last, new EventId(row.representativeEventId()), row.createdAt(), parent));
+		}
+		return views;
+	}
+
+	private RelationGraph graph() {
+		return new RelationGraph(this.relations.all());
+	}
+
+	/** 스토리라인들의 닫은 사건 집합 — 저마다 자기와 모든 하위의 직접 소속을 한 번에 읽어 합친다 */
+	private Closure closure(Collection<Long> storylineIds, RelationGraph graph) {
+		Map<Long, Set<Long>> families = new LinkedHashMap<>();
+		Set<Long> all = new TreeSet<>();
+		for (long id : storylineIds) {
+			Set<Long> family = new TreeSet<>(graph.descendants(id));
+			family.add(id);
+			families.put(id, family);
+			all.addAll(family);
+		}
+		return new Closure(families, this.memberships.members(all));
+	}
+
+	private static StorylineRelationKind kind(RelationKind kind) {
+		return switch (kind) {
+			case CONTAINS -> StorylineRelationKind.CONTAINS;
+			case FOLLOWS -> StorylineRelationKind.FOLLOWS;
+		};
+	}
+
+	private static List<EventId> ids(Collection<Long> values) {
+		return values.stream().map(EventId::new).toList();
+	}
+
+	/**
+	 * 닫은 사건 집합을 내는 값.
+	 *
+	 * @param families 스토리라인 → 자기와 모든 하위
+	 * @param members 스토리라인 → 직접 소속 사건
+	 */
+	private record Closure(Map<Long, Set<Long>> families, Map<Long, List<Long>> members) {
+
+		/** 직접 소속 사건 */
+		Set<Long> direct(long storylineId) {
+			return new TreeSet<>(this.members.getOrDefault(storylineId, List.of()));
+		}
+
+		/** 닫은 사건 집합 — 자기와 모든 하위의 직접 소속을 사건 ID 로 합친 것 */
+		Set<Long> closed(long storylineId) {
+			Set<Long> closed = new TreeSet<>();
+			for (long member : this.families.getOrDefault(storylineId, Set.of(storylineId))) {
+				closed.addAll(this.members.getOrDefault(member, List.of()));
+			}
+			return closed;
+		}
+
+		boolean hasChildren(long storylineId) {
+			return this.families.getOrDefault(storylineId, Set.of()).size() > 1;
+		}
+
 	}
 
 }

@@ -26,7 +26,7 @@ from storyline_labels import (AGAINST_MARK, BIG_FILE, LABELS_FILE, NONE_MARK, RE
                               write_seeds, write_sheet, write_storyline_sample)
 from storyline_metrics import (Universe, View, Weighting, big_precision, build_universe, extended_bcubed,
                                far_pair_recall, gold_view, match_system, relation_scores, seed_storylines,
-                               storyline_matches, system_on_sheet)
+                               storyline_matches, system_on_sheet, system_view)
 from storyline_record import ViewMetrics, build_storyline_record
 from storyline_result import Result, RunKind, read_result, run_kind
 
@@ -195,10 +195,12 @@ def _measure(args: argparse.Namespace, clock: Callable[[], datetime], out: TextI
     result, kind, universe, system = comparison.result, comparison.kind, comparison.universe, comparison.system
     outside, mapping = comparison.outside, comparison.mapping
     golds = {view: comparison.gold if view is View.ALL else gold_view(labels, view) for view in View}
-    views = {view: ViewMetrics(extended_bcubed(universe, gold, system, seeds.events, Weighting.EVENT),
-                               extended_bcubed(universe, gold, system, seeds.events, Weighting.ARTICLE),
-                               storyline_matches(universe, gold, system, seeds.events, Weighting.EVENT),
-                               far_pair_recall(universe, gold, system, seeds.events, Weighting.EVENT))
+    # 시스템 쪽도 정답과 같은 규칙으로 보기마다 좁힌다 — 포함이 없는 결과 파일은 세 보기가 같다
+    systems = {view: system if view is View.ALL else _system(universe, result, view)[0] for view in View}
+    views = {view: ViewMetrics(extended_bcubed(universe, gold, systems[view], seeds.events, Weighting.EVENT),
+                               extended_bcubed(universe, gold, systems[view], seeds.events, Weighting.ARTICLE),
+                               storyline_matches(universe, gold, systems[view], seeds.events, Weighting.EVENT),
+                               far_pair_recall(universe, gold, systems[view], seeds.events, Weighting.EVENT))
              for view, gold in golds.items()}
     relations = relation_scores(labels.relations, result.relations, mapping)
     big = big_precision(sample.period.days(), labels.big, result.big, mapping)
@@ -243,8 +245,8 @@ def _measure(args: argparse.Namespace, clock: Callable[[], datetime], out: TextI
 
 @dataclass(frozen=True)
 class _Comparison:
-    """라벨 · 시트 · 씨앗과 결과 파일 하나를 견줄 준비 — measure 와 review --against 가 함께 쓴다. gold 는 모든 층 보기,
-    mapping 은 그 보기로 정한 대응(match_system)."""
+    """라벨 · 시트 · 씨앗과 결과 파일 하나를 견줄 준비 — measure 와 review --against 가 함께 쓴다. gold · system 은 모든 층
+    보기(시스템도 포함을 따라 위로 닫은 것), mapping 은 그 보기로 정한 대응(match_system)."""
 
     sample: StorylineSample
     sheet: Sheet
@@ -260,15 +262,22 @@ class _Comparison:
 
 
 def _compare(directory: Path, result_path: Path) -> _Comparison:
-    """라벨을 검증해 읽고, 결과 파일을 읽어 계보를 대조하고(다르면 LabelError), 결과를 시트 기사로 좁혀 대응을 정한다."""
+    """라벨을 검증해 읽고, 결과 파일을 읽어 계보를 대조하고(다르면 LabelError), 결과를 위로 닫아 시트 기사로 좁혀 대응을
+    정한다."""
     sample, sheet, seeds, labels = _load(directory)
     result = read_result(result_path)
     kind = run_kind(result, sample)
     universe = build_universe(sheet)
-    system, outside = system_on_sheet(universe, result.storylines)
+    system, outside = _system(universe, result, View.ALL)
     gold = gold_view(labels, View.ALL)
     return _Comparison(sample, sheet, seeds, labels, result, kind, universe, system, outside, gold,
                        match_system(universe, gold, system))
+
+
+def _system(universe: Universe, result: Result, view: View) -> tuple[dict[str, frozenset[int]], int]:
+    """결과 파일의 그 보기 — 직접 가진 기사를 포함을 따라 위로 닫아 좁힌 뒤 시트 기사로 좁힌다. 시트 밖 기사 수를 함께
+    돌려준다."""
+    return system_on_sheet(universe, system_view(result.storylines, result.relations, view))
 
 
 def _event_members(gold: Mapping[int, frozenset[str]]) -> dict[str, list[int]]:

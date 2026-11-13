@@ -80,6 +80,19 @@ class StorylineResultTest(unittest.TestCase):
         for key in ("meta.eventCriteria", "meta.judgementModels", "meta.lineage", "meta.createdAt"):
             self.assertIn(key, message)
 
+    def test_containment_that_loops_is_a_problem(self):
+        storylines = [{"id": "s1", "articles": [101]}, {"id": "s2", "articles": [102]}, {"id": "s3", "articles": [103]}]
+        loop = [{"source": "s1", "target": "s2", "kind": "CONTAINS"}, {"source": "s2", "target": "s3", "kind": "CONTAINS"},
+                {"source": "s3", "target": "s1", "kind": "CONTAINS"}]
+        self.assertIn("relations 의 CONTAINS 가 돌아 제자리로 온다 — s1 ⊃ s2 ⊃ s3 ⊃ s1",
+                      self.problems({**RESULT, "storylines": storylines, "relations": loop}))
+        # 이어짐은 돌아도 받는다 — 닫지 않는 관계다. 하위의 상위가 둘이어도 받는다
+        follows = [{**relation, "kind": "FOLLOWS"} for relation in loop]
+        self.assertEqual(len(self.read({**RESULT, "storylines": storylines, "relations": follows}).relations), 3)
+        two_parents = [{"source": "s1", "target": "s3", "kind": "CONTAINS"},
+                       {"source": "s2", "target": "s3", "kind": "CONTAINS"}]
+        self.assertEqual(len(self.read({**RESULT, "storylines": storylines, "relations": two_parents}).relations), 2)
+
     def test_format_version(self):
         self.assertIn("형식 2 이다 — 이 도구는 1 이다", self.problems({**RESULT, "format": 2}))
 

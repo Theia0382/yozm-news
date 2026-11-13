@@ -15,7 +15,7 @@ from datetime import UTC, date, datetime, timedelta
 from storyline_labels import Labels, Relation, Sheet, SheetArticle
 from storyline_metrics import (View, Weighting, _interval, big_precision, build_universe, extended_bcubed,
                                far_pair_recall, gold_view, match_system, relation_scores, storyline_matches,
-                               system_on_sheet)
+                               system_on_sheet, system_view)
 
 START = datetime(2026, 11, 1, tzinfo=UTC)
 
@@ -107,6 +107,37 @@ class ViewTest(unittest.TestCase):
         self.assertEqual(gold_view(LAYERED, View.LEAF), {1: {"B"}, 2: {"B"}, 3: {"A"}, 4: {"C"}, 5: set(), 6: set()})
 
 
+class SystemViewTest(unittest.TestCase):
+
+    # P ⊃ Q ⊃ R, P ⊃ T. 직접 가진 기사: P = {1}, Q = {2}, R = {3}, T = {4, 2}(기사 2 는 Q 와 T 에 직접), U = {5}
+    DIRECT = {"P": frozenset({1}), "Q": frozenset({2}), "R": frozenset({3}), "T": frozenset({4, 2}), "U": frozenset({5})}
+    CONTAINS = [("P", "Q", Relation.CONTAINS), ("Q", "R", Relation.CONTAINS), ("P", "T", Relation.CONTAINS),
+                ("U", "P", Relation.FOLLOWS)]
+
+    def test_a_child_s_articles_are_in_every_ancestor(self):
+        self.assertEqual(system_view(self.DIRECT, self.CONTAINS, View.ALL),
+                         {"P": {1, 2, 3, 4}, "Q": {2, 3}, "R": {3}, "T": {4, 2}, "U": {5}})
+
+    def test_top_keeps_only_the_storylines_without_a_parent(self):
+        # 하위는 기사가 남지 않아 빠진다. 이어짐(U → P)은 닫지 않는다
+        self.assertEqual(system_view(self.DIRECT, self.CONTAINS, View.TOP), {"P": {1, 2, 3, 4}, "U": {5}})
+
+    def test_leaf_keeps_each_article_in_its_narrowest_storylines(self):
+        # 기사 1 은 P 에만 직접이라 P 가 말단 소속이다. 기사 2 는 Q · T 둘이 말단이다
+        self.assertEqual(system_view(self.DIRECT, self.CONTAINS, View.LEAF),
+                         {"P": {1}, "Q": {2}, "R": {3}, "T": {4, 2}, "U": {5}})
+
+    def test_a_child_with_two_parents_is_in_both(self):
+        system = system_view({"A": frozenset({1}), "B": frozenset({2}), "C": frozenset({3})},
+                             [("A", "C", Relation.CONTAINS), ("B", "C", Relation.CONTAINS)], View.ALL)
+        self.assertEqual(system, {"A": {1, 3}, "B": {2, 3}, "C": {3}})
+
+    def test_a_result_without_containment_is_the_same_in_every_view(self):
+        direct = {"S": frozenset({11, 12}), "T": frozenset({12, 14})}
+        for view in View:
+            self.assertEqual(system_view(direct, [("S", "T", Relation.FOLLOWS)], view), direct, view)
+
+
 class MatchTest(unittest.TestCase):
 
     def setUp(self):
@@ -172,6 +203,21 @@ class RelationAndBigTest(unittest.TestCase):
                                  self.MAPPING)
         self.assertEqual((scores.judged, scores.correct, scores.unmapped, scores.precision), (2, 1, 1, 0.5))
         self.assertEqual((scores.gold, scores.found, scores.recall), (2, 1, 0.5))
+
+    def test_relation_between_two_parts_of_one_gold_storyline_is_left_out(self):
+        # S1 · S4 가 모두 정답 B 에 대응된다 — 그 사이의 포함은 맞는지 가를 정답이 없어 판정에서 뺀다
+        scores = relation_scores(self.GOLD_RELATIONS, [("S1", "S4", Relation.CONTAINS),   # 같은 정답 — 뺀다
+                                                       ("S3", "S4", Relation.CONTAINS)],  # A ⊃ B — 맞음
+                                 {**self.MAPPING, "S4": "B"})
+        self.assertEqual((scores.judged, scores.correct, scores.precision), (1, 1, 1.0))
+        self.assertEqual((scores.gold, scores.found, scores.recall), (2, 1, 0.5))
+
+    def test_relations_left_out_are_counted(self):
+        scores = relation_scores(self.GOLD_RELATIONS, [("S1", "S4", Relation.CONTAINS),
+                                                       ("S4", "S1", Relation.FOLLOWS),
+                                                       ("S1", "S9", Relation.FOLLOWS)],
+                                 {**self.MAPPING, "S4": "B"})
+        self.assertEqual((scores.same_gold, scores.unmapped, scores.judged, scores.precision), (2, 1, 0, None))
 
     def test_result_without_relations(self):
         scores = relation_scores(self.GOLD_RELATIONS, [], self.MAPPING)

@@ -44,3 +44,7 @@
 | 운영 인스턴스의 사건을 그대로 덤프로 뜬다 | 한 기간에 사건 묶기 기준 둘이 섞인다 |
 | 결과 파일을 사건 ID 로 받는다 | 같은 덤프 위의 결과만 잴 수 있어, 판정 시점이 다른 실행을 같은 정답으로 견주지 못한다 |
 | 측정이 운영자 API 로 사건 · 기사를 다시 읽는다 | 시트가 이미 담고 있고, 측정 때의 인스턴스가 덤프와 다르면 어긋난다 |
+
+## 후속 기록
+
+- 2026-11-13: 결정의 층 보기와 관계 지표 — 시스템 쪽도 포함을 닫아 보기마다 견주고, 양 끝이 같은 정답에 대응된 관계는 판정에서 뺀다. 관계 품질은 시스템 스토리라인 쌍의 직접 판정으로 잰다 — [ADR-0133](0133-storyline-evaluation-closes-system-containment-per-layer-view-and-measures-relations-by-direct-pair-judgement.md), 지금 상태는 [스토리라인 평가하기](../operations/storyline-evaluation.md)

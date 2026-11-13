@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import net.yozmnews.storyline.domain.linking.Representation;
@@ -37,6 +38,13 @@ public interface StorylineRepository {
 	List<StorylineSnapshot> candidates(String modelVersion, float[] vector, Instant from, Instant to, double minCosine,
 			int keyTerms);
 
+	/**
+	 * 합쳐지지 않은 스토리라인 하나의 표현과 구성 사건 수 — 관계 후보의 판정할 쪽 · 견줄 쪽(storyline-R27). 핵심 말은 {@link #candidates}
+	 * 와 같은 순서로 상위 {@code keyTerms} 개.
+	 * @return 없거나 합쳐진 스토리라인이면 빈 값
+	 */
+	Optional<StorylineProfile> profile(long storylineId, int keyTerms);
+
 	/** 새 스토리라인을 연다 — 표현과 핵심 말을 쓴다 */
 	long open(Representation representation, Instant now);
 
@@ -58,7 +66,10 @@ public interface StorylineRepository {
 	 */
 	void merge(long merged, long survivor, Instant now);
 
-	/** 스토리라인과 그 핵심 말 · 소속, 이 스토리라인을 가리키는 합쳐진 행을 지운다(storyline-R13 · R17 · R18) */
+	/**
+	 * 스토리라인과 그 핵심 말 · 소속, 이 스토리라인을 가리키는 합쳐진 행을 지운다(storyline-R13 · R17 · R18). 그 관계 · 물은 기록 · 관계 대기
+	 * 행도 함께 지워진다(storyline-R32)
+	 */
 	void delete(long storylineId);
 
 }

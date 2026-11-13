@@ -52,7 +52,7 @@ class FrameworkSchemaMigrationTests {
 				""").query(String.class).list())
 			.containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16",
 					"17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", "33",
-					"34");
+					"34", "35", "36");
 		assertThat(this.jdbc.sql("""
 				select table_name from information_schema.tables
 				where table_schema = 'public' and table_type = 'BASE TABLE'
@@ -63,14 +63,15 @@ class FrameworkSchemaMigrationTests {
 					"source_attributions", "tag_sets", "tags", "importance_rubrics", "tag_set_thresholds",
 					"tag_set_threshold_changes", "evaluation_queue", "article_evaluations", "article_tags",
 					"tag_key_lineage", "tag_backfills", "tag_backfill_versions", "article_event_judgements",
-					"article_tag_judgements",
+					"article_tag_judgements", "flow_relation_judgements",
 					"event_intake_queue", "article_match_features", "events", "event_key_terms",
 					"event_assignment_criteria", "event_articles", "event_article_candidates", "event_assignment_queue",
 					"event_merge_judgements", "storyline_linking_criteria",
 					"storylines", "storyline_key_terms", "storyline_members", "storyline_linking_queue",
-					"storyline_big_criteria", "storyline_big_criteria_changes", "users", "user_password_credentials", "spring_session",
-					"spring_session_attributes", "login_failures", "user_notices",
-					"user_feed_status_receipts");
+					"storyline_big_criteria", "storyline_big_criteria_changes", "storyline_relation_criteria",
+					"storyline_relations", "storyline_relation_asked", "storyline_relation_queue", "users",
+					"user_password_credentials", "spring_session", "spring_session_attributes", "login_failures",
+					"user_notices", "user_feed_status_receipts");
 		assertThat(this.jdbc.sql("""
 				select table_name from information_schema.tables
 				where table_schema = 'public' and table_type = 'VIEW'

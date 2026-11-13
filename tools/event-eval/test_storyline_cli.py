@@ -40,6 +40,12 @@ SAME_RESULT = ('{"format": 1, "meta": {"lineage": "' + LINEAGE_SHA256 + '", "dum
 OTHER_RESULT = (SAME_RESULT.replace('"' + DUMP_SHA256 + '"', "null")
                 .replace("[101, 102, 103, 104]", "[101, 102, 103]").replace("[105, 999]", "[104, 105]"))
 
+# 포함이 있는 결과 — 직접 가진 기사만 담는다: sP = 사건 10(101 · 102), sC = 사건 11(103 · 104), sP ⊃ sC
+CONTAINING_RESULT = (SAME_RESULT.replace('{"id": "s1", "articles": [101, 102, 103, 104]}',
+                                         '{"id": "sP", "articles": [101, 102]}, {"id": "sC", "articles": [103, 104]}')
+                     .replace('"relations": []', '"relations": [{"source": "sP", "target": "sC", "kind": "CONTAINS"}]')
+                     .replace('"big": [{"storyline": "s1", "day": "2026-11-04"}]', '"big": []'))
+
 # sha256sum 으로 셈한 값 — label() 뒤의 평가 디렉터리 파일과 SAME_RESULT
 FILE_SHA256 = {
     "sheet.csv": "212e9ba64ef9eddb44a20e4e1a8ef0ff56584d0a3c3adbddda9f2262b385d4a5",
@@ -252,7 +258,7 @@ class StorylineCliTest(unittest.TestCase):
         code, out, err = self.run_tool("measure", "--result", str(result), "--note", "app=abc123")
         self.assertEqual((code, err), (0, ""), err)
         record = self.record()
-        self.assertEqual(record["format"], 1)
+        self.assertEqual(record["format"], 2)
         self.assertEqual(record["measuredAt"], "2026-11-07T03:00:00Z")
         self.assertEqual(record["sample"], {"start": "2026-11-04", "end": "2026-11-05", "zone": ZONE, "labelRule": 1,
                                             "dump": {"name": "fixed.dump", "sha256": DUMP_SHA256},
@@ -292,8 +298,8 @@ class StorylineCliTest(unittest.TestCase):
         # 이틀 표본 — 5일 이상 쌍이 없다
         self.assertEqual(views["ALL"]["farPairs"], {"recall": None, "pairs": 0})
         # s1 은 x 에 대응(자카드 x · y 같음 — 표지 순 앞). 정답 관계 y ⊃ x 는 결과에 관계가 없어 못 찾음
-        self.assertEqual(record["metrics"]["relations"], {"judged": 0, "correct": 0, "unmapped": 0, "precision": None,
-                                                          "gold": 1, "found": 0, "recall": 0.0})
+        self.assertEqual(record["metrics"]["relations"], {"judged": 0, "correct": 0, "unmapped": 0, "sameGold": 0,
+                                                          "precision": None, "gold": 1, "found": 0, "recall": 0.0})
         # 큰 표시 (s1 → x, 11-04) 는 정답 (y, 11-04) 와 달라 틀림 — 0/1, Wilson 상한은 산식을 따로 셈한 값
         big = record["metrics"]["big"]
         self.assertEqual((big["judged"], big["correct"], big["outside"], big["precision"]), (1, 0, 0, 0.0))
@@ -304,6 +310,40 @@ class StorylineCliTest(unittest.TestCase):
         # 운영자 API 를 부르지 않았고 토큰 없이 돌았다(run_tool 은 토큰을 주지 않는다), 기록에 제목이 없다
         self.assertEqual(len(self.fake.requests), calls)
         self.assertNotIn("첫 사건 기사", self.read("results/20261107-030000.json"))
+
+    def test_containment_in_the_result_is_closed_and_narrowed_per_view(self):
+        # 정답: 10 · 11 은 x, y ⊃ x. 결과: sP = {101, 102}, sC = {103, 104}, sP ⊃ sC — 도구가 위로 닫아 103 · 104 는 sP 에도 든다
+        # 손 셈(사건 가중 — 기사마다 0.5, 씨앗은 사건 10 · 11 · 12). 정밀도는 세 보기 모두 1
+        # TOP — 정답 {y}, 시스템 101 ~ 104 모두 {sP}: 사건 10 · 11 의 재현율 1, 사건 12(없음 묶음, 105 만 s2)는 0.5 — 5/6
+        #   시스템을 닫지 않으면 101 · 102 와 103 · 104 가 갈려 사건 10 · 11 이 0.5 — 1/2 가 된다
+        # LEAF — 정답 {x}, 시스템 101 · 102 는 {sP} · 103 · 104 는 {sC}: 사건 10 · 11 이 0.5 — 1/2
+        # ALL — 정답 {x, y}, 시스템 101 · 102 는 {sP} · 103 · 104 는 {sP, sC}: 101 은 동반 넷이 모두 min(2, 1) ÷ 2 = 0.5,
+        #   103 은 (0.5 + 0.5 + 1 + 1) ÷ 4 = 0.75 — (0.5 + 0.75 + 0.5) ÷ 3 = 7/12
+        self.label()
+        result = self.write_result("containing.json", CONTAINING_RESULT)
+        code, _, err = self.run_tool("measure", "--result", str(result))
+        self.assertEqual((code, err), (0, ""), err)
+        record = self.record()
+        views = record["metrics"]["views"]
+        for view, recall in (("ALL", 7 / 12), ("TOP", 5 / 6), ("LEAF", 1 / 2)):
+            event = views[view]["bCubed"]["event"]
+            self.assertAlmostEqual(event["precision"], 1.0, places=12, msg=view)
+            self.assertAlmostEqual(event["recall"], recall, places=12, msg=view)
+        # 대응은 닫은 시스템으로 정한다 — sP(101 ~ 104) · sC(103 · 104) 모두 x. 양 끝이 같은 정답인 포함은 판정에서 뺀다
+        self.assertEqual(record["metrics"]["relations"], {"judged": 0, "correct": 0, "unmapped": 0, "sameGold": 1,
+                                                          "precision": None, "gold": 1, "found": 0, "recall": 0.0})
+        self.assertEqual(record["counts"]["systemStorylines"], 3)
+        self.assertEqual(record["counts"]["matchedSystemStorylines"], 2)
+
+    def test_result_whose_containment_loops_stops(self):
+        self.label()
+        looping = CONTAINING_RESULT.replace(
+            '[{"source": "sP", "target": "sC", "kind": "CONTAINS"}]',
+            '[{"source": "sP", "target": "sC", "kind": "CONTAINS"}, {"source": "sC", "target": "sP", "kind": "CONTAINS"}]')
+        code, _, err = self.run_tool("measure", "--result", str(self.write_result("looping.json", looping)))
+        self.assertEqual(code, 2)
+        self.assertIn("relations 의 CONTAINS 가 돌아 제자리로 온다 — sC ⊃ sP ⊃ sC", err)
+        self.assertFalse((self.data / "results").exists())
 
     def test_other_run_is_measured_by_article(self):
         self.label()
