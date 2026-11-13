@@ -6,7 +6,6 @@ import java.util.Objects;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import net.yozmnews.platform.AllowedBeforePasswordChange;
 import net.yozmnews.platform.PublicApi;
@@ -89,11 +88,7 @@ class AccountController {
 		Instant now = this.clock.instant();
 		RecoveryOutcome outcome = this.recovery.reset(body.email(), body.recoveryCode(), body.newPassword(), now);
 		if (outcome instanceof RecoveryOutcome.Reset reset) {
-			HttpSession carried = request.getSession(false);
-			if (carried != null) {
-				carried.invalidate();
-			}
-			this.sessions.signIn(reset.user(), body.keep(), request, response);
+			this.sessions.signInAfresh(reset.user(), body.keep(), request, response);
 		}
 		return AccountRecoveryResponse.of(outcome, now);
 	}

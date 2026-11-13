@@ -3281,6 +3281,82 @@
         "tags" : [ "admin-evaluation-controller" ]
       }
     },
+    "/api/invitation-acceptances" : {
+      "post" : {
+        "operationId" : "acceptInvitation",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/InvitationAcceptanceRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SignUpResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청 보호 토큰이 없거나 맞지 않는다"
+          }
+        },
+        "tags" : [ "sign-up-controller" ]
+      }
+    },
+    "/api/invitation-checks" : {
+      "post" : {
+        "operationId" : "checkInvitation",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/InvitationCheckRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/InvitationCheckResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청 보호 토큰이 없거나 맞지 않는다"
+          }
+        },
+        "tags" : [ "sign-up-controller" ]
+      }
+    },
     "/api/me" : {
       "get" : {
         "operationId" : "me",
@@ -3499,6 +3575,62 @@
           }
         },
         "tags" : [ "session-controller" ]
+      }
+    },
+    "/api/sign-up-policy" : {
+      "get" : {
+        "operationId" : "signUpPolicy",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SignUpPolicyResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "sign-up-controller" ]
+      }
+    },
+    "/api/sign-ups" : {
+      "post" : {
+        "operationId" : "signUp",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SignUpRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SignUpResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청 보호 토큰이 없거나 맞지 않는다"
+          }
+        },
+        "tags" : [ "sign-up-controller" ]
       }
     }
   },
@@ -4909,6 +5041,46 @@
         },
         "required" : [ "httpStatus", "message", "permanence", "problem", "reason" ]
       },
+      "InvitationAcceptanceRequest" : {
+        "type" : "object",
+        "properties" : {
+          "displayName" : {
+            "type" : "string"
+          },
+          "email" : {
+            "type" : "string"
+          },
+          "keep" : {
+            "type" : "boolean"
+          },
+          "password" : {
+            "type" : "string"
+          },
+          "token" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "displayName", "email", "keep", "password", "token" ]
+      },
+      "InvitationCheckRequest" : {
+        "type" : "object",
+        "properties" : {
+          "token" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "token" ]
+      },
+      "InvitationCheckResponse" : {
+        "type" : "object",
+        "properties" : {
+          "state" : {
+            "type" : "string",
+            "enum" : [ "VALID", "USED", "EXPIRED", "REVOKED", "UNKNOWN" ]
+          }
+        },
+        "required" : [ "state" ]
+      },
       "JudgedEventResponse" : {
         "type" : "object",
         "properties" : {
@@ -5575,6 +5747,54 @@
           }
         },
         "required" : [ "result", "retryAfterSeconds" ]
+      },
+      "SignUpPolicyResponse" : {
+        "type" : "object",
+        "properties" : {
+          "open" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "open" ]
+      },
+      "SignUpRequest" : {
+        "type" : "object",
+        "properties" : {
+          "displayName" : {
+            "type" : "string"
+          },
+          "email" : {
+            "type" : "string"
+          },
+          "keep" : {
+            "type" : "boolean"
+          },
+          "password" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "displayName", "email", "keep", "password" ]
+      },
+      "SignUpResponse" : {
+        "type" : "object",
+        "properties" : {
+          "invitation" : {
+            "type" : [ "string", "null" ],
+            "enum" : [ "VALID", "USED", "EXPIRED", "REVOKED", "UNKNOWN" ]
+          },
+          "passwordProblem" : {
+            "type" : [ "string", "null" ],
+            "enum" : [ "TOO_SHORT", "TOO_LONG" ]
+          },
+          "recoveryCode" : {
+            "type" : [ "string", "null" ]
+          },
+          "result" : {
+            "type" : "string",
+            "enum" : [ "SIGNED_UP", "CLOSED", "INVITATION_UNUSABLE", "EMAIL_UNAVAILABLE", "EMAIL_MALFORMED", "DISPLAY_NAME_MALFORMED", "PASSWORD_REJECTED" ]
+          }
+        },
+        "required" : [ "invitation", "passwordProblem", "recoveryCode", "result" ]
       },
       "SkippedItemView" : {
         "type" : "object",
