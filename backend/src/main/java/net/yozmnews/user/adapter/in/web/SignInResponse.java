@@ -2,6 +2,7 @@ package net.yozmnews.user.adapter.in.web;
 
 import java.time.Instant;
 
+import net.yozmnews.user.domain.throttle.RetryAfter;
 import org.jspecify.annotations.Nullable;
 
 /**

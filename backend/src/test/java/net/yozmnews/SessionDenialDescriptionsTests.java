@@ -84,6 +84,25 @@ class SessionDenialDescriptionsTests {
 		assertThat(description(paths, "/api/account/password", "put", "403")).isEqualTo(CSRF);
 	}
 
+	@Test
+	void requestLimitedHandlersCarryATooManyRequestsResponseAndOthersDoNot() throws Exception {
+		JsonNode paths = paths();
+		String limited = "요청이 너무 많다 — Retry-After 뒤에 다시 시도한다";
+
+		assertThat(description(paths, "/api/session", "post", "429")).isEqualTo(limited);
+		assertThat(description(paths, "/api/account-recoveries", "post", "429")).isEqualTo(limited);
+		assertThat(description(paths, "/api/invitation-checks", "post", "429")).isEqualTo(limited);
+		assertThat(description(paths, "/api/invitation-acceptances", "post", "429")).isEqualTo(limited);
+		assertThat(description(paths, "/api/sign-ups", "post", "429")).isEqualTo(limited);
+		assertThat(description(paths, "/api/llm-keys/{provider}", "put", "429")).isEqualTo(limited);
+		assertThat(description(paths, "/api/llm-keys/{provider}/checks", "post", "429")).isEqualTo(limited);
+		// 대조 — 표시가 없는 연산에는 429 가 없다(같은 처리기 클래스의 다른 메서드 포함)
+		assertThat(paths.at("/~1api~1llm-keys/get/responses").has("429")).isFalse();
+		assertThat(paths.at("/~1api~1llm-keys~1{provider}/delete/responses").has("429")).isFalse();
+		assertThat(paths.at("/~1api~1session/delete/responses").has("429")).isFalse();
+		assertThat(paths.at("/~1api~1test~1marks~1plain/post/responses").has("429")).isFalse();
+	}
+
 	private JsonNode paths() throws Exception {
 		return JsonMapper.builder().build().readTree(body("/v3/api-docs")).path("paths");
 	}

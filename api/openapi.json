@@ -41,6 +41,16 @@
               }
             },
             "description" : "요청 보호 토큰이 없거나 맞지 않는다"
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청이 너무 많다 — Retry-After 뒤에 다시 시도한다"
           }
         },
         "tags" : [ "account-controller" ]
@@ -3833,6 +3843,16 @@
               }
             },
             "description" : "요청 보호 토큰이 없거나 맞지 않는다"
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청이 너무 많다 — Retry-After 뒤에 다시 시도한다"
           }
         },
         "tags" : [ "sign-up-controller" ]
@@ -3871,6 +3891,16 @@
               }
             },
             "description" : "요청 보호 토큰이 없거나 맞지 않는다"
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청이 너무 많다 — Retry-After 뒤에 다시 시도한다"
           }
         },
         "tags" : [ "sign-up-controller" ]
@@ -4004,6 +4034,16 @@
               }
             },
             "description" : "요청 보호 토큰이 없거나 맞지 않는다 · 비밀번호를 바꿔야 한다"
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청이 너무 많다 — Retry-After 뒤에 다시 시도한다"
           }
         },
         "tags" : [ "llm-key-controller" ]
@@ -4051,6 +4091,16 @@
               }
             },
             "description" : "요청 보호 토큰이 없거나 맞지 않는다 · 비밀번호를 바꿔야 한다"
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청이 너무 많다 — Retry-After 뒤에 다시 시도한다"
           }
         },
         "tags" : [ "llm-key-controller" ]
@@ -4271,6 +4321,16 @@
               }
             },
             "description" : "요청 보호 토큰이 없거나 맞지 않는다"
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청이 너무 많다 — Retry-After 뒤에 다시 시도한다"
           }
         },
         "tags" : [ "session-controller" ]
@@ -4327,6 +4387,16 @@
               }
             },
             "description" : "요청 보호 토큰이 없거나 맞지 않는다"
+          },
+          "429" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청이 너무 많다 — Retry-After 뒤에 다시 시도한다"
           }
         },
         "tags" : [ "sign-up-controller" ]

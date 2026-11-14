@@ -9,7 +9,9 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import net.yozmnews.platform.AllowedBeforePasswordChange;
 import net.yozmnews.platform.AllowedWithoutLlmKey;
+import net.yozmnews.platform.GuardedAction;
 import net.yozmnews.platform.PublicApi;
+import net.yozmnews.platform.RequestLimited;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.platform.WebRole;
 import net.yozmnews.user.application.AccountRecovery;
@@ -85,6 +87,7 @@ class AccountController {
 	 * 만든다 — 그 계정의 세션이었다면 재설정이 이미 저장소에서 지웠다
 	 */
 	@PublicApi(reason = "비밀번호를 잊어 로그인할 수 없는 사람이 쓴다")
+	@RequestLimited(GuardedAction.ACCOUNT_RECOVERY)
 	@PostMapping("/api/account-recoveries")
 	AccountRecoveryResponse recover(@Valid @RequestBody AccountRecoveryRequest body, HttpServletRequest request,
 			HttpServletResponse response) {

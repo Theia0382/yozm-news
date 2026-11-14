@@ -59,7 +59,8 @@ class WorkerRoleTests {
 		assertThat(RoleProbe.recurringJobIds(this.jdbc)).containsExactlyInAnyOrder("poll-due-feeds",
 				"feed-health-check", "event-publication-resubmission", "evaluate-pending-articles",
 				"backfill-missing-tags", "event-intake", "event-cleanup", "storyline-linking", "storyline-relation",
-				"expire-sessions", "forget-login-failures", "forget-read-notices", "rewrap-llm-keys");
+				"expire-sessions", "forget-login-failures", "forget-read-notices", "rewrap-llm-keys",
+				"forget-request-counts");
 	}
 
 	@Test

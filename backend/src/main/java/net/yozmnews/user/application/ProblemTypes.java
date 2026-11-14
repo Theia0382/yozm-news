@@ -3,8 +3,8 @@ package net.yozmnews.user.application;
 import java.net.URI;
 
 /**
- * 보안 거부(운영자 접근 통제 · 세션 체인)가 내는 문제 유형과 제목 — 정본. 그 밖의 문제는 {@code about:blank} 다(docs/specs/user.md §4 ·
- * user-R3).
+ * 보안 거부(운영자 접근 통제 · 세션 체인 · 요청 방어)가 내는 문제 유형과 제목 — 정본. 그 밖의 문제는 {@code about:blank} 다(docs/specs/user.md
+ * §4 · user-R3).
  */
 final class ProblemTypes {
 
@@ -42,6 +42,11 @@ final class ProblemTypes {
 	static final URI LLM_KEY_REQUIRED = URI.create("urn:yozmnews:problem:llm-key-required");
 
 	static final String LLM_KEY_REQUIRED_TITLE = "LLM 키를 등록해야 한다";
+
+	/** 처리기의 요청 제한을 넘었다 — 429 */
+	static final URI RATE_LIMITED = URI.create("urn:yozmnews:problem:rate-limited");
+
+	static final String RATE_LIMITED_TITLE = "요청이 너무 많다";
 
 	private ProblemTypes() {
 	}

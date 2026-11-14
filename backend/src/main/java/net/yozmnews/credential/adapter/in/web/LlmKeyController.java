@@ -9,6 +9,8 @@ import net.yozmnews.credential.application.KeyRegistration;
 import net.yozmnews.credential.application.KeyRemoval;
 import net.yozmnews.llm.Provider;
 import net.yozmnews.platform.AllowedWithoutLlmKey;
+import net.yozmnews.platform.GuardedAction;
+import net.yozmnews.platform.RequestLimited;
 import net.yozmnews.platform.SecretValue;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.platform.WebRole;
@@ -53,6 +55,7 @@ class LlmKeyController {
 		return new LlmKeysResponse(this.overview.of(user).stream().map(ProviderKeyResponse::of).toList());
 	}
 
+	@RequestLimited(GuardedAction.LLM_KEY_CHECK)
 	@PutMapping("/api/llm-keys/{provider}")
 	KeyRegistrationResponse register(UserId user, @PathVariable Provider provider,
 			@Valid @RequestBody KeyRegistrationRequest body) {
@@ -60,6 +63,7 @@ class LlmKeyController {
 			.of(this.registration.register(user, provider, SecretValue.of(body.key().strip())));
 	}
 
+	@RequestLimited(GuardedAction.LLM_KEY_CHECK)
 	@PostMapping("/api/llm-keys/{provider}/checks")
 	KeyCheckResponse check(UserId user, @PathVariable Provider provider) {
 		return KeyCheckResponse.of(this.recheck.recheck(user, provider));

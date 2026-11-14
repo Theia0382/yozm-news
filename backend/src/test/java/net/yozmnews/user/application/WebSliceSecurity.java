@@ -30,4 +30,10 @@ public class WebSliceSecurity {
 		return mock(LlmKeys.class);
 	}
 
+	/** 웹 계층 시험의 처리기에는 요청 제한 표시가 없어 불리지 않는다 */
+	@Bean
+	RequestLimiter requestLimiter() {
+		return mock(RequestLimiter.class);
+	}
+
 }
