@@ -40,3 +40,4 @@
 ## 후속 기록
 
 - 2026-11-04: 결정 절의 다이제스트 호출 입출력 — [ADR-0025](0025-long-term-personal-news-history-in-v1.md) · [`pipeline` §6](../pipeline.md#6-다이제스트-생성)
+- 2026-11-14: 결정 절 "LLM 키가 없는 사용자에게는 키 등록 페이지만 보여준다"의 범위(키 · 계정 · 알림 처리기는 연다) — [ADR-0160](0160-users-without-a-key-may-use-key-account-and-notice-handlers.md) · [`user` user-R5](../specs/user.md#화면용-api-의-공개와-세션-사용자)

@@ -11,11 +11,12 @@
 - **공급자 클라이언트** — 주어진 키로 공급자 클라이언트를 요청마다 만들고 쓰고 닫는다. 주소 · 키 · 로그 수준을 언제나 명시하고, 전송은 이 모듈이 직접 구현한다
 - **실패 분류** — 공급자가 답하지 못한 까닭을 종류로 가르는 정본. 검증과 생성 호출이 함께 쓴다
 - **로컬 대체물** — 로컬 개발에서 외부 계정 없이 키 검증의 결과를 재현한다
-- **(미구현)** 저장한 키로 호출하는 길 — 사용자의 키를 복호화해 호출 직전에만 쓰는 연결과, 프롬프트를 넘겨 결과를 받는 호출 API
+- **저장한 키의 길** — 사용자가 저장한 키를 공급 인터페이스로 받아 호출 직전에만 쓰고, 결과를 그 키에 알린다. 지금 이 길로 하는 일은 저장한 키의 검증이다
+- **(미구현)** 프롬프트를 넘겨 결과를 받는 호출 API — 저장한 키의 길에 더한다
 
 하지 않는 것:
 
-- 키를 저장하지 않는다 — 암호화 보관은 `credential` 의 것이다
+- 키를 저장하지 않는다 — 암호화 보관과 복호화는 `credential` 의 것이다. 이 모듈은 공급 인터페이스로 받은 평문을 호출이 끝날 때까지만 쥔다
 - 사용자가 고른 공급자 · 모델을 저장하지 않는다 — 사용자 설정은 `user` 의 것이다. 이 모듈은 목록에 그 모델이 있는지만 답한다
 - 프롬프트를 만들거나 LLM 출력을 검증하지 않는다 — 다이제스트 · 변화 리포트를 만드는 모듈의 것이다
 - 요청 제한을 걸지 않는다 — 키 검증 경로의 요청 제한은 그 경로를 가진 쪽의 것이다
@@ -34,10 +35,12 @@
 | 키 검증 | 키가 쓸 수 있는지 공급자에 물어보는 가벼운 요청 |
 | 실패 종류 | 공급자가 답하지 못한 까닭의 갈래(`LlmFailureKind`) |
 | 가짜 키 | 로컬 개발에서 로컬 대체물이 받는 정해진 접두의 키 |
+| 저장한 키 | 사용자가 등록해 `credential` 이 암호화해 보관하는 키 |
+| 공급 인터페이스 | 이 모듈이 저장한 키를 받으려고 선언하고 `credential` 이 구현하는 인터페이스(`StoredKeySource`) — 외부 의존을 가리는 포트가 아니다 |
 
 ## 3. 공개 인터페이스
 
-모듈 최상위 패키지 `net.yozmnews.llm` 의 공개 타입은 여섯이다 — 공개 API 둘(`LlmClientFactory` · `LlmModels`)과 값 타입 넷(`Provider` · `LlmModel` · `KeyValidationResult` · `LlmFailureKind`). 이 모듈이 내는 HTTP 엔드포인트 · 이벤트는 없다.
+모듈 최상위 패키지 `net.yozmnews.llm` 의 공개 타입은 아홉이다 — 공개 API 둘(`LlmClientFactory` · `LlmModels`), 값 타입 다섯(`Provider` · `LlmModel` · `KeyValidationResult` · `StoredKeyValidation` · `LlmFailureKind`), 그리고 명명 인터페이스 `stored-key` 의 둘(`StoredKeySource` · `StoredKey`)이다. 명명 인터페이스의 둘은 `credential` 에만 열린다(llm-R18). 이 모듈이 내는 HTTP 엔드포인트 · 이벤트는 없다.
 
 ### Provider
 
@@ -106,6 +109,7 @@ public interface LlmModels {
 ```java
 public interface LlmClientFactory {
     KeyValidationResult validate(Provider provider, SecretValue key);
+    StoredKeyValidation validateStored(UserId user, Provider provider);
 }
 ```
 
@@ -114,11 +118,13 @@ public interface LlmClientFactory {
   - 트랜잭션 안에서 부르면 `IllegalStateException` 이다 — 외부 호출은 트랜잭션 밖에서 한다(llm-R5)
   - 키를 저장하지 않고, 결과 · 예외 문구 · 로그에 키를 남기지 않는다(llm-R9 · R12)
   - 두 역할 공통이다. 화면 요청 안에서 불러도 되는 길이로 끝난다(llm-R7)
-- **(미구현)** 저장한 키로 호출하는 길 — 사용자의 키를 복호화해 호출 직전에만 쓰는 메서드와 프롬프트를 넘겨 결과를 받는 호출 API. 그 길도 이 인터페이스를 거친다
+  - `validateStored` 는 그 사용자 · 공급자의 저장한 키를 공급 인터페이스로 받아 같은 확인 요청을 보내고, 결과를 그 키에 알린 뒤 낸다. 저장한 키가 없으면 요청을 보내지 않고 `StoredKeyValidation.Missing` 이다(llm-R17)
+  - `validateStored` 도 트랜잭션 안에서 부르면 `IllegalStateException` 이다(llm-R5). 평문은 이 호출 안에만 있고 결과 · 예외 문구 · 로그에 남지 않는다
+- **(미구현)** 프롬프트를 넘겨 결과를 받는 호출 API — 저장한 키의 길에 더하고, 이 인터페이스를 거친다
 
-`SecretValue` 는 `platform` 의 공개 타입이다([platform Spec](platform.md#secretvalue)).
+`SecretValue` · `UserId` 는 `platform` 의 공개 타입이다(platform Spec [SecretValue](platform.md#secretvalue) · [UserId](platform.md#userid)).
 
-관련 규칙: llm-R5 ~ R14
+관련 규칙: llm-R5 ~ R14 · R17
 
 ### KeyValidationResult
 
@@ -141,6 +147,60 @@ public sealed interface KeyValidationResult {
   - `Valid` 는 그 키로 모델 목록을 조회할 수 있다는 뜻이다 — 잔액 · 지출 한도와 특정 모델을 쓸 권한은 확인하지 않는다(llm-R6)
 
 관련 규칙: llm-R6 · R8 · R9
+
+### StoredKeyValidation
+
+저장한 키의 검증 결과.
+
+```java
+public sealed interface StoredKeyValidation {
+    record Missing() implements StoredKeyValidation { }
+    record Checked(KeyValidationResult result) implements StoredKeyValidation { }
+}
+```
+
+| 갈래 | 뜻 |
+|---|---|
+| `Missing` | 그 사용자 · 공급자의 저장한 키가 없다 — 공급자에 묻지 않았다 |
+| `Checked` | 저장한 키로 물었다 — `result` 는 `validate` 와 같은 결과다 |
+
+관련 규칙: llm-R17
+
+### StoredKeySource
+
+저장한 키의 공급 인터페이스 — 이 모듈이 선언하고 `credential` 이 구현한다. 명명 인터페이스 `stored-key` 에 속한다.
+
+```java
+@NamedInterface("stored-key")
+public interface StoredKeySource {
+    Optional<StoredKey> find(UserId user, Provider provider);
+    void checked(long keyId, KeyValidationResult result);
+}
+```
+
+- 계약
+  - `find` 는 그 사용자 · 공급자의 저장한 키를 평문으로 낸다. 없으면 빈 값이다. 키를 열지 못하면 `IllegalStateException` 이고 문구에 키 · 암호문이 없다
+  - `checked` 는 `find` 가 낸 키로 공급자에 물은 결과를 그 키에 알린다. 그 키가 그 사이 지워졌거나 바뀌었으면 아무 일도 없다
+  - 이 인터페이스를 부르는 것은 이 모듈의 저장한 키의 길뿐이다(llm-R17 · R18)
+  - 구현은 하나다. 구현이 없으면 `LlmClientFactory` 의 구현이 서지 않는다
+
+관련 규칙: llm-R17 · R18
+
+### StoredKey
+
+공급 인터페이스가 건네는 저장한 키. 명명 인터페이스 `stored-key` 에 속한다.
+
+```java
+@NamedInterface("stored-key")
+public record StoredKey(long id, SecretValue value) { }
+```
+
+| 필드 | 뜻 | 제약 |
+|---|---|---|
+| `id` | 저장한 키의 ID — 결과를 알릴 때 그대로 돌려준다 | — |
+| `value` | 키의 평문 | — |
+
+관련 규칙: llm-R17
 
 ### LlmFailureKind
 
@@ -170,7 +230,7 @@ public enum LlmFailureKind { INVALID_KEY, PERMISSION_DENIED, QUOTA_EXHAUSTED, TR
 
 | 패키지 | 책임 |
 |---|---|
-| (최상위) | 공개 타입 여섯 |
+| (최상위) | 공개 타입 아홉 |
 | `domain/catalog` | 허용 모델 목록의 값(`ModelCatalog`)과 목록 파일 형식의 정본(`ModelCatalogParser` 와 결과 `ModelCatalogParse`) |
 | `domain/failure` | 실패 분류의 정본 — 공급자 오류에서 읽은 것(`ProviderError`)과 공급자마다의 분류(`OpenAiErrors` · `AnthropicErrors`) |
 | `domain/provider` | 공급자 클라이언트 포트(`LlmProviderClients` · `LlmProviderClient`)와 결과(`ProbeResult`) |
@@ -207,7 +267,7 @@ sequenceDiagram
 
 ### `application`
 
-- `LlmClientFactoryService` — `LlmClientFactory` 의 구현. 트랜잭션 밖인지 보고(llm-R5), 키의 꼴을 보고(llm-R10), 포트로 클라이언트를 열어 확인 요청을 하고 닫는다(llm-R14). 포트가 던진 예상 밖의 예외를 `UNEXPECTED` 로 바꾼다(llm-R9). 트랜잭션 · 역할 애너테이션이 없다
+- `LlmClientFactoryService` — `LlmClientFactory` 의 구현. 트랜잭션 밖인지 보고(llm-R5), 키의 꼴을 보고(llm-R10), 포트로 클라이언트를 열어 확인 요청을 하고 닫는다(llm-R14). 포트가 던진 예상 밖의 예외를 `UNEXPECTED` 로 바꾼다(llm-R9). 저장한 키의 검증은 공급 인터페이스로 키를 받아 같은 확인을 하고 결과를 알린다(llm-R17) — 주어진 키의 검증과 확인의 걸음이 하나다. 트랜잭션 · 역할 애너테이션이 없다
 - `LlmModelsService` — `LlmModels` 의 구현. `ModelCatalog` 를 그대로 읽는다
 - `ModelCatalogConfiguration` — 목록 파일(운영자 파일이 있으면 그것, 없으면 기본 파일)을 읽어 `ModelCatalog` 빈으로 낸다. 역할 애너테이션이 없다
 - `LlmProperties` — 설정 `yozmnews.llm`(§7)
@@ -258,6 +318,8 @@ v1 구현(`adapter/out/sdk`):
 
 - `LocalProviderClients` — 가짜 키는 자기가 받아 정해진 결과를 내고, 그 밖의 키는 운영 구현으로 넘긴다(llm-R16)
 - `LocalProviderClientsConfiguration` — `@LocalDevelopment` 결선. 로컬 개발에서 포트의 구현이 `LocalProviderClients` 가 된다
+
+공급 인터페이스 `StoredKeySource`(§3)는 포트가 아니다 — 외부 의존이 아니라 `credential` 이 구현하는 모듈 사이의 인터페이스이고, 구현은 [credential Spec](credential.md#application) 의 `StoredKeys` 다.
 
 신뢰할 수 없는 입력: 키(사용자가 넣는다 — llm-R10), 허용 모델 목록의 운영자 파일(llm-R2), 공급자의 응답(llm-R8 · R9 · R13).
 
@@ -315,6 +377,13 @@ v1 구현(`adapter/out/sdk`):
 
 - **llm-R16** — 로컬 개발(profile `local` — [platform-R18](platform.md#로컬-개발))에서 포트의 구현은 `LocalProviderClients` 다. 키가 `yozm-local-`(`LocalProviderClients.PREFIX`)로 시작하면 공급자에 묻지 않고, 접두 뒤의 낱말(다음 `-` 또는 끝까지)이 결과를 정한다 — `valid` 는 성공, `invalid` 는 `INVALID_KEY`, `denied` 는 `PERMISSION_DENIED`, `quota` 는 `QUOTA_EXHAUSTED`, `transient` 는 `TRANSIENT`, `unexpected` 는 `UNEXPECTED` 다. 모르는 낱말은 `INVALID_KEY` 다. 그 밖의 키는 로컬 개발에서도 운영 구현이 실제 공급자에 묻는다. 로컬 개발이 아니면 대체물이 등록되지 않아 가짜 키는 실제 공급자에서 무효로 끝난다
 
+### 저장한 키의 길
+
+판단의 이유는 [ADR-0157](../adr/0157-credential-depends-on-llm-and-stored-keys-reach-llm-through-a-supply-interface-that-llm-declares-and-credential-implements.md)에 있다.
+
+- **llm-R17** — 저장한 키의 검증은 한 번에 이 순서다: 트랜잭션 밖인지 본다(llm-R5) → `StoredKeySource.find` 로 키를 받는다 → 없으면 `Missing` 으로 끝난다 → 주어진 키의 검증과 같은 확인(llm-R6 ~ R14 — 키의 꼴 · 요청 · 분류 · 닫기)을 한다 → 결과를 `StoredKeySource.checked` 로 그 키 ID 에 알린다 → `Checked` 로 낸다. 평문은 `find` 의 반환부터 확인이 끝날 때까지만 이 호출 안에 있다. `find` 가 던진 예외는 예상 밖의 예외와 같이 `UNEXPECTED` 로 바꾸고(llm-R9) 이때 `checked` 를 부르지 않는다. `checked` 가 던진 예외는 그대로 올린다 — 결과를 알리지 못한 검증을 끝난 것으로 내지 않는다
+- **llm-R18** — `StoredKeySource` · `StoredKey` 는 명명 인터페이스 `stored-key` 이고, 그것을 허용으로 선언한 모듈은 `credential` 뿐이다. `llm` · `credential` 밖의 클래스는 두 타입에 의존하지 않고, `credential` 안에서 두 타입에 의존하는 클래스는 구현 하나다 — 모듈 검증과 구조 시험이 함께 지킨다(의존 선언이 없는 모듈은 구조 시험이 막는다)
+
 ## 6. 데이터
 
 해당 없음 — 이 모듈은 자기 테이블이 없다.
@@ -340,3 +409,5 @@ v1 구현(`adapter/out/sdk`):
 | [0153](../adr/0153-allowed-llm-models-come-from-a-bundled-file-that-an-operator-file-replaces-as-a-whole.md) | 허용 모델 목록은 앱에 든 파일이 정본이고, 운영자는 자기 파일로 통째로 바꾼다 |
 | [0154](../adr/0154-key-validation-lists-models-and-failure-kinds-are-sorted-by-one-rule-per-provider-reading-the-error-kind.md) | 키 검증은 모델 목록 조회이고, 실패 종류는 공급자마다 오류의 종류까지 읽는 정본 하나가 가른다 |
 | [0155](../adr/0155-llm-local-substitute-takes-only-keys-with-a-fixed-prefix-in-the-local-profile.md) | `llm` 의 로컬 대체물은 `local` 에서 정해진 접두의 키만 받는다 |
+| [0156](../adr/0156-user-id-is-a-platform-public-type.md) | 사용자 식별자 `UserId` 는 `platform` 의 공개 타입이다 |
+| [0157](../adr/0157-credential-depends-on-llm-and-stored-keys-reach-llm-through-a-supply-interface-that-llm-declares-and-credential-implements.md) | `credential` 이 `llm` 에 의존하고, 저장한 키는 `llm` 이 선언한 공급 인터페이스를 `credential` 이 구현해 낸다 |

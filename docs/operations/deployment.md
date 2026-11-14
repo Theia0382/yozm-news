@@ -42,7 +42,7 @@
 | **(미구현)** `backup` | `pg_dump` + S3 호환 업로드 | [백업과 복구](#백업과-복구) |
 
 - `app` 과 `postgres` 는 호스트에 공개하지 않는다. 공개하는 것은 `proxy` 하나다
-- **설정 디렉터리** — 배포 구성은 `deploy/config/` 를 `app` 의 `/etc/yozmnews` 에 읽기 전용으로 붙인다. 운영자가 앱에 넘기는 파일을 여기에 둔다 — 지금은 [허용 모델 목록](configuration.md#허용-모델-목록) 파일 하나다. 이 디렉터리의 파일은 저장소가 추적하지 않는다
+- **설정 디렉터리** — 배포 구성은 `deploy/config/` 를 `app` 의 `/etc/yozmnews` 에 읽기 전용으로 붙인다. 운영자가 앱에 넘기는 파일을 여기에 둔다 — [LLM 키 암호화](configuration.md#llm-키-암호화)의 KEK 파일(필수)과 [허용 모델 목록](configuration.md#허용-모델-목록) 파일(선택)이다. 이 디렉터리의 파일은 저장소가 추적하지 않는다
 - **(미구현)** 역할을 나눠 띄우는 구성 — 같은 이미지를 `web` · `worker` 두 서비스로 띄우고 각 서비스가 `SPRING_PROFILES_ACTIVE` 로 자기 역할 하나를 켠다([overview.md §4](../overview.md#4-시스템-구성)). proxy 가 넘길 곳(`app` 고정)과 스모크가 아직 이 구성을 모른다
 - **외부 DB** — 배포 구성은 DB 접속 정보를 Compose 정의 안에서 `postgres` 서비스에 맞춰 고정해 넘긴다([DB 접속](configuration.md#db-접속)). 관리형 DB 를 쓰려면 `postgres` 서비스와 `app` 의 `depends_on` 을 빼고 접속 정보를 바꾼 정의를 써야 한다 — 지금 배포 구성에는 `deploy/.env` 만으로 바꾸는 경로가 없다
 - **DB 확장** — 앱은 DB 의 pgvector 확장(`vector`, 0.8 이상)을 쓴다([ADR-0027](../adr/0027-pgvector-for-vector-storage.md)). 앱이 기동할 때 마이그레이션이 확장을 설치하는데, 설치에는 superuser 권한이 필요하다. 배포 구성의 DB 계정은 superuser 라 따로 할 일이 없다. 앱 계정이 superuser 가 아닌 외부 DB 에서는 DBA 가 먼저 `CREATE EXTENSION vector` 로 설치한다 — 앱 계정의 검색 경로(`search_path`)에 있는 스키마(기본 `public`)에 둔다. 검색 경로 밖에 두면 확장의 타입(`vector`)을 스키마 이름 없이 쓸 수 없다
@@ -53,11 +53,12 @@
 
 저장소 루트에서 실행한다.
 
-1. 값을 준비한다 — `deploy/.env.example` 을 `deploy/.env` 로 복사하고 필수 값을 적는다([운영 설정](configuration.md)). 필수 값이 없거나 비어 있으면 Compose 가 변수 이름을 말하며 멈춘다. 운영자 화면으로 소스를 등록하려면 [운영자 토큰](configuration.md#운영자)도 적는다
+1. 값을 준비한다 — `deploy/.env.example` 을 `deploy/.env` 로 복사하고 필수 값을 적는다([운영 설정](configuration.md)). 필수 값이 없거나 비어 있으면 Compose 가 변수 이름을 말하며 멈춘다. 운영자 화면으로 소스를 등록하려면 [운영자 토큰](configuration.md#운영자)도 적는다. LLM 키를 암호화하는 KEK 파일 `deploy/config/kek` 를 만든다 — 없으면 `app` 이 뜨지 않는다([LLM 키 암호화 키(KEK)](#llm-키-암호화-키kek))
 2. 띄우고 확인한다
 
    ```sh
    cp deploy/.env.example deploy/.env                            # 처음 한 번 — 필수 값과 운영자 토큰을 적는다
+   printf '1:%s\n' "$(openssl rand -base64 32)" > deploy/config/kek  # 처음 한 번 — LLM 키 암호화 키(KEK)
    docker compose -f deploy/compose.yaml up -d --build --wait   # 호스트 플랫폼 이미지를 빌드하고 postgres → app → proxy 가 healthy 가 될 때까지 기다린다
    bash deploy/smoke.sh                                          # 기동 상태 · 공개 범위 · 라우팅 · 운영자 경로 · 앱 역할 · 프리셋 적재 확인 — 종료 코드 0 이면 통과 (bash · docker · curl · sed 필요)
    ```
@@ -140,8 +141,31 @@ Cloudflare 는 권장 구성이지 필수가 아니다. 운영자는 Tunnel 대�
 - **(미구현)** 봇 차단(Turnstile 등)은 로그인 · 복구 코드 사용 화면과, 공개 가입을 열었을 때 가입 화면에 붙인다([security.md](../security.md#악용-방지))
 - 운영자 화면의 피드 켜기는 앱이 그 피드를 받아 확인한 뒤 답한다 — 같은 언론사의 앞선 요청을 기다린 시간(요청 하나당 최대 10초)과 받는 시간(최대 10초)이 더해진다. 배포 `proxy`(Caddy)는 응답 시간을 제한하지 않는다. 앞단(Tunnel · 리버스 프록시)에 응답 시간 제한이 있으면 그보다 길어진 켜기는 화면에 실패로 보이고, 서버의 판정 · 저장은 그대로 끝난다 — 목록을 다시 읽으면 결과가 보인다
 
+## LLM 키 암호화 키(KEK)
+
+사용자가 등록한 LLM 키는 KEK 로 감싼 키로 암호화돼 DB 에 있다. KEK 는 `deploy/config/kek` 파일에 있다 — 형식과 기동 규칙은 [운영 설정 — LLM 키 암호화](configuration.md#llm-키-암호화).
+
+- **만들기** — 처음 띄우기 전에 한 번 만든다. 이 파일은 저장소가 추적하지 않는다
+
+  ```sh
+  printf '1:%s\n' "$(openssl rand -base64 32)" > deploy/config/kek
+  ```
+- **이미 돌고 있는 인스턴스** — 이 파일 없이 돌던 인스턴스는 판을 올릴 때 파일을 만들어야 `app` 이 뜬다
+- **권한** — `app` 이 사용자 `65534` 로 파일을 읽는다. 읽지 못하면 `app` 이 뜨지 않고 기동 로그가 경로를 말한다
+- **백업** — DB 백업과 다른 위치에 둔다. DB 덤프와 KEK 가 함께 있으면 덤프를 얻은 사람이 사용자 키를 열 수 있다
+- **교체**
+  1. 파일에 더 큰 버전의 줄을 더한다(옛 줄은 그대로 둔다) — `printf '2:%s\n' "$(openssl rand -base64 32)" >> deploy/config/kek`
+  2. `app` 을 다시 띄운다. 새 키는 새 버전으로 감싸고, 작업 역할이 10분마다 옛 버전으로 감싼 키를 새 버전으로 다시 감싼다
+  3. `app` 로그에서 "KEK 재암호화 — … 남음 0" 을 확인한다. 다시 감쌀 키가 없으면 이 줄이 나오지 않는다 — 옛 줄을 지우고 띄웠을 때 뜨면 끝난 것이다
+  4. 옛 버전의 줄을 지우고 다시 띄운다. 옛 버전을 가리키는 키가 남아 있으면 `app` 이 뜨지 않고 로그가 그 버전과 키의 수를 말한다 — 줄을 되돌려 띄우고 기다린다
+- **잃었을 때** — KEK 를 잃으면 그 버전으로 감싼 키는 열 수 없고, 그 키가 남아 있는 동안 `app` 이 뜨지 않는다. 새 KEK 파일을 잃은 버전보다 큰 버전으로 만든 뒤 DB 에서 잃은 버전의 키를 지우고 띄운다 — 그 사용자들은 키를 다시 등록한다. 같은 버전 번호로 만들면 `app` 은 뜨지만 남은 키는 열리지 않는다
+
+  ```sh
+  docker compose -f deploy/compose.yaml exec postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "delete from llm_credentials where kek_version = 1"'
+  ```
+
 ## 백업과 복구
 
 - **(미구현)** 매일 `pg_dump` 를 S3 호환 저장소(기본 R2)에 올리고 30일 보관한다
 - **(미구현)** 분기마다 복구 리허설을 한다 — 새 환경에 배포 구성을 띄우고 덤프를 복원해 동작을 확인한다
-- **(미구현)** KEK 는 DB 백업과 다른 위치에 따로 백업한다([비밀 값](configuration.md#비밀-값))
+- KEK 파일(`deploy/config/kek`)은 DB 백업과 다른 위치에 따로 백업한다([LLM 키 암호화 키(KEK)](#llm-키-암호화-키kek))

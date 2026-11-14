@@ -87,9 +87,7 @@ erDiagram
 
 ## LLM 키 (BYOK)
 
-| 테이블 | 주요 컬럼 | 비고 |
-|---|---|---|
-| `llm_credentials` | id, user_id, provider(`openai`/`anthropic`), ciphertext, encrypted_dek, kek_version, key_hint(끝 4자리), status(`VALID`/`INVALID`/`UNVERIFIED`), validated_at, last_used_at, created_at | 사용자 × 공급자당 1개. 암호화 방식은 [security.md](security.md) |
+키 테이블(`llm_credentials`)은 [credential Spec §6](specs/credential.md#6-데이터)에 있다. 암호화 방식은 [security.md](security.md#byok-키-보관)에 있다.
 
 ## 소스와 기사
 

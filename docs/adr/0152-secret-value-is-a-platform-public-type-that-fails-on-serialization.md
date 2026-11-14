@@ -32,3 +32,7 @@
 | `llm` 의 공개 타입으로 둔다 | `credential` → `llm` 의존이 정해져, 저장한 키로 호출하는 길이 의존을 뒤집는 장치를 요구한다 |
 | `credential` 의 공개 타입으로 둔다 | `llm` → `credential` 의존이 정해지고, 타입 하나 때문에 모듈을 앞당겨 만든다 |
 | 직렬화할 때 그 속성을 조용히 뺀다 | 잘못 담긴 것을 알 수 없다 |
+
+## 후속 기록
+
+- 2026-11-14: 결과 절 "저장한 키의 평문이 어디까지 가는지는 … 복호화를 내놓는 쪽의 공개 API 가 막는다"의 막는 방법 — [ADR-0157](0157-credential-depends-on-llm-and-stored-keys-reach-llm-through-a-supply-interface-that-llm-declares-and-credential-implements.md) · [`credential` credential-R13](../specs/credential.md#저장한-키와-상태)
