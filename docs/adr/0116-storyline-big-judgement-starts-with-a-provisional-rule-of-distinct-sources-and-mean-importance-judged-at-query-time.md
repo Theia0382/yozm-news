@@ -1,6 +1,6 @@
 # ADR-0116: 스토리라인의 큰 판정은 기간 안 서로 다른 소스 수와 중요도 평균이 둘 다 기준 이상인지를 조회할 때 판정하는 임시 산식으로 시작한다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 큰 판정의 식([ADR-0147](0147-storyline-big-judgement-compares-importance-weighted-coverage-per-source-and-day-with-one-criterion-at-query-time.md)) · 큰 스토리라인의 순서([ADR-0147](0147-storyline-big-judgement-compares-importance-weighted-coverage-per-source-and-day-with-one-criterion-at-query-time.md))
 - 날짜: 2026-11-12
 - 근거: [이슈 #124](https://github.com/Theia0382/yozm-news/issues/124) — `event` 의 큰 사건 판정 · 운영자 API · 화면 · 평가 도구와 `storyline` 의 소속 · 잇기 규칙을 조사해 리드와 정함
 - 관련: [ADR-0082](0082-big-events-judged-at-query-time-by-distinct-sources-and-mean-importance-both-reaching-criteria.md)(큰 사건 판정 — 전체 대체), [ADR-0098](0098-label-rule-2-samples-hold-no-big-event-gold-and-big-event-precision-is-not-measured-without-marks.md)(사건 평가의 큰 사건 표시와 정밀도 — 전체 대체), [ADR-0095](0095-event-clustering-evaluated-by-an-operator-tool-comparing-admin-api-results-with-full-day-labels.md)(큰 사건 목록 · 미리보기 · 정밀도 — 부분 대체), [ADR-0103](0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md)(큰 판정의 단위와 거두는 시점 — 보충), [ADR-0106](0106-provisional-storyline-linking-opens-only-with-a-partner-event-and-adds-the-single-best-storyline-without-removal.md)(임시 잇기 규칙 — 짝이 있어야 연다), [ADR-0107](0107-storyline-state-is-judged-at-query-time-from-the-last-article-and-an-ended-storyline-still-links.md)(상태), [ADR-0110](0110-storyline-evaluation-labels-system-events-of-a-fixed-dump-and-measures-overlapping-clusters-from-random-seed-events.md)(스토리라인 평가의 큰 판정 정밀도), [ADR-0117](0117-big-judgement-materials-are-tallied-by-event-per-group-of-events-and-storyline-passes-only-event-ids.md)(재료를 세는 곳), [ADR-0118](0118-big-judgement-criteria-are-storyline-operator-settings-and-do-not-inherit-event-criteria-values-or-history.md)(기준)
@@ -16,7 +16,9 @@
 
 ## 결정
 
+> 부분 대체(항목 전체) — [ADR-0147](0147-storyline-big-judgement-compares-importance-weighted-coverage-per-source-and-day-with-one-criterion-at-query-time.md). 지금 상태: [storyline Spec "큰 판정"](../specs/storyline.md#큰-판정)
 - **큰 스토리라인 = 조회 기간 안 구성 사건 기사의 서로 다른 소스 수 ≥ 소스 기준, 그리고 그 기사들의 중요도 평균 ≥ 중요도 기준(경계 포함).** 사건의 큰 사건 판정을 스토리라인에 옮긴 임시 산식이다. 식과 기준값은 측정 전 목표이고, 식을 평가 세트로 정할 때의 비교 기준선이다.
+> 부분 대체(셋째 문장) — [ADR-0147](0147-storyline-big-judgement-compares-importance-weighted-coverage-per-source-and-day-with-one-criterion-at-query-time.md). 지금 상태: [storyline Spec "큰 판정"](../specs/storyline.md#큰-판정)
 - **조회할 때 지금 기준으로 판정하고 결과를 저장하지 않는다.** 스토리라인의 상태 · 모델 버전과 무관하다. 순서는 소스 수, 중요도 평균(둘 다 내림차순), 스토리라인 ID 순이다.
 - **판정 규칙은 `storyline` 의 `domain` 한 곳에 둔다.** 큰 스토리라인 조회 · 미리보기 · 목록의 큰 여부가 같은 규칙을 부른다.
 - **조회 기간에 드는 스토리라인은 그 기간 안 기사가 있는 구성 사건이 하나라도 있는 스토리라인이다.** 목록과 큰 판정이 같은 뜻을 쓴다. 기간의 범위 규칙은 사건 조회와 같다.

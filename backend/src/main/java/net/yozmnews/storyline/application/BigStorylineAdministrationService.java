@@ -59,10 +59,10 @@ class BigStorylineAdministrationService implements BigStorylineAdministration {
 	}
 
 	@Override
-	public BigStorylineCriteriaChangeResult change(int minSources, BigDecimal minImportance, ChangeActor actor) {
-		Objects.requireNonNull(minImportance, "minImportance");
+	public BigStorylineCriteriaChangeResult change(BigDecimal minIntensity, ChangeActor actor) {
+		Objects.requireNonNull(minIntensity, "minIntensity");
 		Objects.requireNonNull(actor, "actor");
-		Optional<BigStorylineCriteria> proposed = BigStorylineCriteria.of(minSources, minImportance);
+		Optional<BigStorylineCriteria> proposed = BigStorylineCriteria.of(minIntensity);
 		if (proposed.isEmpty()) {
 			return new BigStorylineCriteriaChangeResult.OutOfRange();
 		}
@@ -76,8 +76,8 @@ class BigStorylineAdministrationService implements BigStorylineAdministration {
 			return new BigStorylineCriteriaChangeResult.Changed(previous, next);
 		});
 		if (result instanceof BigStorylineCriteriaChangeResult.Changed(BigStorylineCriteria previous, BigStorylineCriteria current)) {
-			logger.info("큰 판정 기준을 바꿨다 — 소스 {} → {}, 중요도 {} → {}, {}", previous.minSources(), current.minSources(),
-					previous.minImportance().toPlainString(), current.minImportance().toPlainString(), actor);
+			logger.info("큰 판정 기준을 바꿨다 — 보도 강도 {} → {}, {}", previous.minIntensity().toPlainString(),
+					current.minIntensity().toPlainString(), actor);
 		}
 		return Objects.requireNonNull(result);
 	}

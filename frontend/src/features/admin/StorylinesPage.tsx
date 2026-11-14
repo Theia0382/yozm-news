@@ -28,8 +28,8 @@ type List = Schemas["StorylineListResponse"];
 
 /**
  * 스토리라인 목록 — 고른 기간에 기사가 있는 사건을 가진 스토리라인을 직접 가진 사건의 마지막 기사 시각이 늦은 것부터 본다. 기간 안 기사 수 ·
- * 소스 수 · 중요도 평균 · 큰 여부는 그 기간과 지금 기준으로 정하고, 사건 수 · 전체 기사 수 · 기간은 하위의 사건까지 센 스토리라인 전체의
- * 값이다. 목록 위에 그 기간의 소속 없는 사건과 지금 잇기 · 관계 기준(설정)을 보인다. 기간은 주소 질의에 둔다.
+ * 보도 강도 · 소스 수 · 중요도 평균 · 큰 여부는 그 기간과 지금 기준으로 정하고, 사건 수 · 전체 기사 수 · 기간은 하위의 사건까지 센
+ * 스토리라인 전체의 값이다. 목록 위에 그 기간의 소속 없는 사건과 지금 잇기 · 관계 기준(설정)을 보인다. 기간은 주소 질의에 둔다.
  */
 export function StorylinesPage() {
   const client = useAdminClient();
@@ -86,9 +86,9 @@ export function StorylinesPage() {
         onLast={(value) => update("to", value)}
       />
       <p className="text-sm text-muted-foreground">
-        기간 안 기사 수 · 소스 수 · 중요도 평균 · 큰 여부는 고른 기간과 지금 큰
-        판정 기준으로 정한다. 사건 수 · 전체 기사 수 · 기간은 하위 스토리라인의
-        사건까지 센 값이다
+        기간 안 기사 수 · 보도 강도 · 소스 수 · 중요도 평균 · 큰 여부는 고른
+        기간과 지금 큰 판정 기준으로 정한다. 사건 수 · 전체 기사 수 · 기간은
+        하위 스토리라인의 사건까지 센 값이다
       </p>
       {list.error && <p role="alert">{failureText(list.error)}</p>}
       {head && <Overview list={head} />}
@@ -147,6 +147,7 @@ function StorylinesTable({ rows }: { rows: Row[] }) {
             <th className="font-medium">상위</th>
             <th className="font-medium">사건 수</th>
             <th className="font-medium">기사 수(기간 / 전체)</th>
+            <th className="font-medium">보도 강도(기간)</th>
             <th className="font-medium">소스 수(기간)</th>
             <th className="font-medium">중요도 평균(기간)</th>
             <th className="font-medium">기간</th>
@@ -174,6 +175,7 @@ function StorylinesTable({ rows }: { rows: Row[] }) {
               <td className="tabular-nums">
                 {row.periodArticles} / {row.articleCount}
               </td>
+              <td className="tabular-nums">{row.intensity.toFixed(2)}</td>
               <td className="tabular-nums">{row.periodSources}</td>
               <td className="tabular-nums">
                 {formatProbability(row.importance)}

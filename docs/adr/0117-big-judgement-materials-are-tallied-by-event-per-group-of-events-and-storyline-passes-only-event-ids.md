@@ -35,3 +35,8 @@
 | 사건 목록의 집계는 `event` 에, 스토리라인의 집계는 `storyline` 에 둔다 | 같은 산식이 두 모듈에 생긴다 |
 | 사건별 집계를 `storyline` 이 합친다 | 소스 수는 합집합의 크기라 사건별 수를 더하면 겹치는 소스를 두 번 센다 |
 | 여러 스토리라인의 합계 조회를 지금 둔다 | 쓰는 곳이 없고, 보도량을 세는 법에 따라 조회의 모양이 달라진다 |
+
+## 후속 기록
+
+- 2026-11-14: 결정 "기사 수 · 서로 다른 소스 수 · 중요도 평균을 낸다" — 중요도 합과 기간 전체 집계를 더했다([ADR-0147](0147-storyline-big-judgement-compares-importance-weighted-coverage-per-source-and-day-with-one-criterion-at-query-time.md)), 지금 상태는 [event Spec "대표 기사 · 기간 집계"](../specs/event.md#대표-기사--기간-집계)
+- 2026-11-14: 결과 "포함 관계에서 상위 스토리라인이 하위를 세는 법과 스토리라인의 보도량을 세는 법은 큰 판정의 식과 함께 정한다" — [ADR-0147](0147-storyline-big-judgement-compares-importance-weighted-coverage-per-source-and-day-with-one-criterion-at-query-time.md) · [ADR-0148](0148-storyline-coverage-is-the-article-count-in-the-period-over-the-closed-event-set.md), 지금 상태는 [storyline Spec "큰 판정"](../specs/storyline.md#큰-판정) · ["공개 조회"](../specs/storyline.md#공개-조회)

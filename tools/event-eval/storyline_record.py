@@ -48,7 +48,10 @@ def build_storyline_record(*, sample: StorylineSample, digests: Mapping[str, str
                           "found": relations.found, "recall": relations.recall},
             "big": None if big is None else {
                 "judged": big.judged, "correct": big.correct, "outside": big.outside, "precision": big.precision,
-                "interval": None if big.low is None else [big.low, big.high]},
+                "interval": None if big.low is None else [big.low, big.high],
+                "found": big.found, "gold": big.gold, "recall": big.recall,
+                "byDay": {day.isoformat(): {"system": system, "gold": gold}
+                          for day, (system, gold) in sorted(big.by_day.items())}},
         },
         "settings": {"farPairDays": FAR_PAIR_DAYS, "matchFloor": MATCH_FLOOR, "bootstrapRounds": BOOTSTRAP_ROUNDS,
                      "bootstrapSeed": BOOTSTRAP_SEED},

@@ -237,6 +237,25 @@ class RelationAndBigTest(unittest.TestCase):
         self.assertAlmostEqual(score.low, 0.061492, places=6)
         self.assertAlmostEqual(score.high, 0.79234, places=6)
 
+    def test_big_recall_counts_each_gold_mark_once(self):
+        fourth, fifth = date(2026, 11, 4), date(2026, 11, 5)
+        gold = {("A", fourth), ("A", fifth), ("B", fourth), ("C", fifth)}
+        score = big_precision([fourth, fifth], gold,
+                              [("S1", fourth),    # A — 맞음
+                               ("S2", fourth),    # A — 맞음, 같은 정답 큰 표시라 찾은 수는 그대로
+                               ("S3", fourth)],   # 대응 없음 — 틀림
+                              {"S1": "A", "S2": "A"})
+        self.assertEqual((score.judged, score.correct, score.found, score.gold), (3, 2, 1, 4))
+        self.assertEqual(score.recall, 0.25)
+        self.assertEqual(score.by_day, {fourth: (3, 2), fifth: (0, 2)})
+
+    def test_big_recall_without_system_marks_in_the_sample_is_zero(self):
+        fourth = date(2026, 11, 4)
+        score = big_precision([fourth], {("A", fourth)}, [("S3", date(2026, 11, 6))], self.MAPPING)
+        self.assertEqual((score.judged, score.outside, score.precision), (0, 1, None))
+        self.assertEqual((score.found, score.gold, score.recall), (0, 1, 0.0))
+        self.assertEqual(score.by_day, {fourth: (0, 1)})
+
     def test_big_without_gold_marks_is_not_measured(self):
         self.assertIsNone(big_precision([date(2026, 11, 4)], set(), [("S3", date(2026, 11, 4))], self.MAPPING))
 

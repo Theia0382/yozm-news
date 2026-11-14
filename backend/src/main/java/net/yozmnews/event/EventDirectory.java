@@ -81,6 +81,13 @@ public interface EventDirectory {
 	<K> Map<K, EventTally> tallies(Map<K, ? extends Collection<EventId>> groups, EventPeriod period);
 
 	/**
+	 * 기간 전체 집계 — 조회 기간 안 기사가 있는 모든 사건({@link #articleCountsIn} 과 같은 범위)의 기간 안 기사를 한데 모아
+	 * 센다(event-R15).
+	 * @return 기간 안 기사가 없으면 기사 0 · 소스 0 · 중요도 없음 · 중요도 합 0
+	 */
+	EventTally total(EventPeriod period);
+
+	/**
 	 * 기간 안 기사가 있는 사건 — 마지막 기사 시각 내림차순, 사건 ID 내림차순. 집계는 이 기간, 대표 기사는 사건 기사 전체에서.
 	 * 쪽 사이에 마지막 기사 시각이 바뀐 사건은 건너뛰거나 다시 나올 수 있다.
 	 * @param after 앞 쪽의 {@link EventPage#next()} — 첫 쪽이면 null

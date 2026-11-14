@@ -17,7 +17,7 @@ import net.yozmnews.source.SourceId;
  * 기간 집계의 정본 — 사건 하나 또는 사건 묶음의 기간 안 기사를 센다 · docs/specs/event.md §4 · event-R15.
  * <p>
  * 기사 수는 기간 안 기사 수, 소스 수는 그 기사들의 엔트리 소스 합집합의 크기(소스가 없는 기사는 더하는 것이 없다), 중요도는 중요도가 있는
- * 기사의 평균이다. 평균은 {@link BigDecimal} 로 센다 — 중요도 하한과 같은 수 체계로 비교해 경계에서 이진 소수 오차로 뒤집히지 않는다.
+ * 기사의 평균이고, 중요도 합은 그 기사들의 합이다(그런 기사가 없으면 0). 평균은 {@link BigDecimal} 로 센다 — 중요도 하한과 같은 수 체계로 비교해 경계에서 이진 소수 오차로 뒤집히지 않는다.
  */
 public final class EventTallies {
 
@@ -46,7 +46,7 @@ public final class EventTallies {
 				}
 			}
 			BigDecimal mean = rated == 0 ? null : sum.divide(BigDecimal.valueOf(rated), MathContext.DECIMAL64);
-			tallies.put(key, new EventTally(articles.size(), distinct.size(), mean));
+			tallies.put(key, new EventTally(articles.size(), distinct.size(), mean, sum));
 		});
 		return Collections.unmodifiableMap(tallies);
 	}

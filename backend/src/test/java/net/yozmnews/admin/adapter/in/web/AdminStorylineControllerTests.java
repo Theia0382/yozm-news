@@ -124,8 +124,8 @@ class AdminStorylineControllerTests {
 	@Test
 	void theListCarriesEachStorylineWithItsTallyBigFlagRepresentativeAndTheCurrentCriteria() throws Exception {
 		this.directory.page = new StorylinePage(List.of(
-				new StorylineSummary(SEVEN, new EventTally(4, 3, new BigDecimal("3.75")), true),
-				new StorylineSummary(EIGHT, new EventTally(1, 1, null), false)),
+				new StorylineSummary(SEVEN, new EventTally(4, 3, new BigDecimal("3.75"), new BigDecimal("15.00")), new BigDecimal("18.75"), true),
+				new StorylineSummary(EIGHT, new EventTally(1, 1, null, BigDecimal.ZERO), new BigDecimal("0.00"), false)),
 				new StorylineCursor(Instant.parse("2026-11-03T00:00:00Z"), new StorylineId(8)));
 		this.directory.unlinked = new UnlinkedEvents(2, 5);
 
@@ -134,11 +134,11 @@ class AdminStorylineControllerTests {
 			.andExpect(content().json("""
 					{"storylines":[
 					   {"id":7,"state":"ACTIVE","parentId":null,"eventCount":3,"articleCount":12,
-					    "firstArticleAt":"2026-11-01T00:00:00Z","lastArticleAt":"2026-11-05T00:00:00Z","periodArticles":4,
+					    "firstArticleAt":"2026-11-01T00:00:00Z","lastArticleAt":"2026-11-05T00:00:00Z","intensity":18.75,"periodArticles":4,
 					    "periodSources":3,"importance":3.75,"big":true,"representativeArticleId":41,
 					    "representative":{"title":"국회 본회의 통과","sources":["한겨레"]}},
 					   {"id":8,"state":"QUIET","parentId":7,"eventCount":2,"articleCount":4,
-					    "firstArticleAt":"2026-11-01T00:00:00Z","lastArticleAt":"2026-11-03T00:00:00Z","periodArticles":1,
+					    "firstArticleAt":"2026-11-01T00:00:00Z","lastArticleAt":"2026-11-03T00:00:00Z","intensity":0.00,"periodArticles":1,
 					    "periodSources":1,"importance":null,"big":false,"representativeArticleId":null,
 					    "representative":null}],
 					 "next":{"lastArticleAt":"2026-11-03T00:00:00Z","id":8},

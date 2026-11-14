@@ -305,11 +305,37 @@ class StorylineCliTest(unittest.TestCase):
         self.assertEqual((big["judged"], big["correct"], big["outside"], big["precision"]), (1, 0, 0, 0.0))
         self.assertEqual(big["interval"][0], 0.0)
         self.assertAlmostEqual(big["interval"][1], 0.793451, places=6)
+        # 정답 큰 표시 하나를 못 찾았다 — 0/1. 날마다 수는 표본 이틀 모두(표시가 없는 날은 0)
+        self.assertEqual((big["found"], big["gold"], big["recall"]), (0, 1, 0.0))
+        self.assertEqual(big["byDay"], {"2026-11-04": {"system": 1, "gold": 1}, "2026-11-05": {"system": 0, "gold": 0}})
+        self.assertIn("큰 판정 정밀도 0.0000(0/1) · 재현율 0.0000(0/1)", out)
         self.assertIn("기록 ", out)
         self.assertIn("주의 — 결과 파일의 시트 밖 기사 1", out)
         # 운영자 API 를 부르지 않았고 토큰 없이 돌았다(run_tool 은 토큰을 주지 않는다), 기록에 제목이 없다
         self.assertEqual(len(self.fake.requests), calls)
         self.assertNotIn("첫 사건 기사", self.read("results/20261107-030000.json"))
+
+    def test_measure_big_recall_counts_gold_marks_not_system_marks(self):
+        # 정답 큰 표시 넷 — x · y 가 이틀 모두. 결과: sA = 사건 10(101 · 102), sB = 사건 11(103 · 104) 은 둘 다 x 에
+        # 대응하고(x · y 의 자카드가 같아 표지 순 앞), sZ = 105 는 정답이 없는 사건이라 대응이 없다. 큰 표시는 셋 모두 11-04
+        # 맞음 둘(sA · sB)이 같은 정답 큰 표시 (x, 11-04) 하나를 가리킨다 — 정밀도 2/3, 재현율 1/4
+        self.label()
+        self.write("big.csv", "storyline,day\nx,2026-11-04\nx,2026-11-05\ny,2026-11-04\ny,2026-11-05\n")
+        text = (SAME_RESULT.replace('{"id": "s1", "articles": [101, 102, 103, 104]}, {"id": "s2", "articles": [105, 999]}',
+                                    '{"id": "sA", "articles": [101, 102]}, {"id": "sB", "articles": [103, 104]}, '
+                                    '{"id": "sZ", "articles": [105]}')
+                .replace('"big": [{"storyline": "s1", "day": "2026-11-04"}]',
+                         '"big": [{"storyline": "sA", "day": "2026-11-04"}, {"storyline": "sB", "day": "2026-11-04"}, '
+                         '{"storyline": "sZ", "day": "2026-11-04"}]'))
+        self.assertIn('"sZ", "day"', text)
+        code, out, err = self.run_tool("measure", "--result", str(self.write_result("three.json", text)))
+        self.assertEqual((code, err), (0, ""), err)
+        big = self.record()["metrics"]["big"]
+        self.assertEqual((big["judged"], big["correct"], big["outside"]), (3, 2, 0))
+        self.assertAlmostEqual(big["precision"], 2 / 3, places=12)
+        self.assertEqual((big["found"], big["gold"], big["recall"]), (1, 4, 0.25))
+        self.assertEqual(big["byDay"], {"2026-11-04": {"system": 3, "gold": 2}, "2026-11-05": {"system": 0, "gold": 2}})
+        self.assertIn("큰 판정 정밀도 0.6667(2/3) · 재현율 0.2500(1/4)", out)
 
     def test_containment_in_the_result_is_closed_and_narrowed_per_view(self):
         # 정답: 10 · 11 은 x, y ⊃ x. 결과: sP = {101, 102}, sC = {103, 104}, sP ⊃ sC — 도구가 위로 닫아 103 · 104 는 sP 에도 든다
@@ -321,8 +347,10 @@ class StorylineCliTest(unittest.TestCase):
         #   103 은 (0.5 + 0.5 + 1 + 1) ÷ 4 = 0.75 — (0.5 + 0.75 + 0.5) ÷ 3 = 7/12
         self.label()
         result = self.write_result("containing.json", CONTAINING_RESULT)
-        code, _, err = self.run_tool("measure", "--result", str(result))
+        code, out, err = self.run_tool("measure", "--result", str(result))
         self.assertEqual((code, err), (0, ""), err)
+        # 결과에 큰 표시가 없다 — 정밀도는 잴 수 없고 정답 큰 표시 하나를 못 찾았다
+        self.assertIn("큰 판정 정밀도 없음 · 재현율 0.0000(0/1)", out)
         record = self.record()
         views = record["metrics"]["views"]
         for view, recall in (("ALL", 7 / 12), ("TOP", 5 / 6), ("LEAF", 1 / 2)):

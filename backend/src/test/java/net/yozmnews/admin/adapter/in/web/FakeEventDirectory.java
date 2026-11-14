@@ -123,6 +123,11 @@ class FakeEventDirectory implements EventDirectory {
 	}
 
 	@Override
+	public EventTally total(EventPeriod period) {
+		throw new UnsupportedOperationException("운영자 API 는 기간 전체 집계를 읽지 않는다");
+	}
+
+	@Override
 	public List<EventView> lastArticleSince(Instant since) {
 		throw new UnsupportedOperationException("운영자 API 는 채우기 대상을 읽지 않는다");
 	}

@@ -29,7 +29,7 @@ function listRequests(server: ReturnType<typeof renderPage>) {
 }
 
 describe("StorylinesPage", () => {
-  it("주소의 기간으로 스토리라인을 받아 상태 · 상위 · 수 · 기간 · 큰 여부 · 대표 기사를 열 칸으로 보인다", async () => {
+  it("주소의 기간으로 스토리라인을 받아 상태 · 상위 · 수 · 기간 · 큰 여부 · 대표 기사를 열한 칸으로 보인다", async () => {
     const server = renderPage([
       storylineList([
         storylineRow(7),
@@ -50,9 +50,12 @@ describe("StorylinesPage", () => {
 
     const table = await screen.findByRole("table", { name: "스토리라인" });
     const rows = within(table).getAllByRole("row");
-    expect(within(rows[0]!).getAllByRole("columnheader")).toHaveLength(10);
+    expect(within(rows[0]!).getAllByRole("columnheader")).toHaveLength(11);
+    expect(within(rows[0]!).getAllByRole("columnheader")[5]).toHaveTextContent(
+      /^보도 강도\(기간\)$/,
+    );
     const first = within(rows[1]!).getAllByRole("cell");
-    expect(first).toHaveLength(10);
+    expect(first).toHaveLength(11);
     expect(
       within(first[0]!).getByRole("link", { name: "스토리라인 7" }),
     ).toHaveAttribute("href", "/admin/storylines/7");
@@ -60,18 +63,19 @@ describe("StorylinesPage", () => {
     expect(first[2]).toHaveTextContent(/^$/);
     expect(first[3]).toHaveTextContent(/^3$/);
     expect(first[4]).toHaveTextContent(/^4 \/ 12$/);
-    expect(first[5]).toHaveTextContent(/^3$/);
-    expect(first[6]).toHaveTextContent(/^3\.75$/);
-    expect(first[8]).toHaveTextContent(/^큰 스토리라인$/);
-    expect(first[9]).toHaveTextContent("국회 본회의 통과");
+    expect(first[5]).toHaveTextContent(/^18\.75$/);
+    expect(first[6]).toHaveTextContent(/^3$/);
+    expect(first[7]).toHaveTextContent(/^3\.75$/);
+    expect(first[9]).toHaveTextContent(/^큰 스토리라인$/);
+    expect(first[10]).toHaveTextContent("국회 본회의 통과");
     const second = within(rows[2]!).getAllByRole("cell");
     expect(second[1]).toHaveTextContent(/^잠잠$/);
     expect(
       within(second[2]!).getByRole("link", { name: "스토리라인 7" }),
     ).toHaveAttribute("href", "/admin/storylines/7");
-    expect(second[6]).toHaveTextContent(/^없음$/);
-    expect(second[8]).toHaveTextContent(/^$/);
+    expect(second[7]).toHaveTextContent(/^없음$/);
     expect(second[9]).toHaveTextContent(/^$/);
+    expect(second[10]).toHaveTextContent(/^$/);
     const overview = screen.getByLabelText("기간 개요");
     expect(overview).toHaveTextContent("2건 · 기사 5건");
     expect(overview).toHaveTextContent("창 3일 · 기준 점수 0.62");

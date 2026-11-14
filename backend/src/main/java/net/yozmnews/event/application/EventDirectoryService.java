@@ -38,6 +38,9 @@ import org.springframework.stereotype.Service;
 @Service
 class EventDirectoryService implements EventDirectory {
 
+	/** 기간 전체 집계의 묶음 키 */
+	private static final String TOTAL = "total";
+
 	private final EventQueryRepository events;
 
 	private final EventTallyReader tallies;
@@ -120,7 +123,15 @@ class EventDirectoryService implements EventDirectory {
 		return tallied(eventsByGroup, period);
 	}
 
-	/** 묶음마다 기간 집계 — 사건 묶음 조회와 사건 목록이 함께 쓴다. 묶음들의 사건 합집합으로 기간 안 배정을 한 번 읽는다 */
+	@Override
+	public EventTally total(EventPeriod period) {
+		Objects.requireNonNull(period, "period");
+		// 기간 안 기사가 있는 사건 전부가 묶음 하나다 — 집계 경로는 사건 묶음 조회와 같다
+		Set<Long> all = new LinkedHashSet<>(this.events.articleCountsIn(period.from(), period.to()).keySet());
+		return tallied(Map.of(TOTAL, all), period).get(TOTAL);
+	}
+
+	/** 묶음마다 기간 집계 — 사건 묶음 조회 · 기간 전체 집계와 사건 목록이 함께 쓴다. 묶음들의 사건 합집합으로 기간 안 배정을 한 번 읽는다 */
 	private <K> Map<K, EventTally> tallied(Map<K, Set<Long>> eventsByGroup, EventPeriod period) {
 		Set<Long> all = new LinkedHashSet<>();
 		eventsByGroup.values().forEach(all::addAll);

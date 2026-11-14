@@ -98,8 +98,8 @@ class AdminEventControllerTests {
 	@Test
 	void theListCarriesEachEventWithItsPeriodTallyAndRepresentative() throws Exception {
 		this.directory.page = new EventPage(List.of(
-				new EventSummary(SEVEN, new EventTally(3, 2, new BigDecimal("3.5")), new ArticleId(41)),
-				new EventSummary(new EventView(new EventId(5), EventStatus.OPEN, 1, T, T, T), new EventTally(1, 1, null),
+				new EventSummary(SEVEN, new EventTally(3, 2, new BigDecimal("3.5"), new BigDecimal("10.5")), new ArticleId(41)),
+				new EventSummary(new EventView(new EventId(5), EventStatus.OPEN, 1, T, T, T), new EventTally(1, 1, null, BigDecimal.ZERO),
 						new ArticleId(42))),
 				new EventCursor(T, new EventId(5)));
 

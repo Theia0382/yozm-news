@@ -30,8 +30,7 @@ const CRITERIA_KEY = [...BIG_KEY, "criteria"];
 
 /** 미리보기를 낸 입력 — 저장은 이 입력 그대로 한다 */
 type Asked = {
-  minSources: string;
-  minImportance: string;
+  minIntensity: string;
   from: string;
   to: string;
 };
@@ -46,12 +45,10 @@ export function BigStorylinesPage() {
   const [zone] = useState(browserZone);
   const [first, setFirst] = useState(() => defaultFirst(zone));
   const [last, setLast] = useState(() => today(zone));
-  const [minSources, setMinSources] = useState("");
-  const [minImportance, setMinImportance] = useState("");
+  const [minIntensity, setMinIntensity] = useState("");
   const [loaded, setLoaded] = useState(false);
   const [asked, setAsked] = useState<Asked | null>(null);
-  const sourcesId = useId();
-  const importanceId = useId();
+  const intensityId = useId();
   const filled = first !== "" && last !== "";
   const period = { from: first, to: last, zone };
 
@@ -68,21 +65,19 @@ export function BigStorylinesPage() {
     enabled: filled,
   });
 
-  // 입력의 처음 값은 지금 기준이다 — 상태를 받은 렌더에서 한 번 맞춘다
+  // 입력의 처음 값은 지금 기준이다 — 상태를 받은 렌더에서 한 번 맞춘다. 기준 표시와 같은 소수 둘째 자리로 채운다
   if (status.data && !loaded) {
-    setMinSources(String(status.data.current.minSources));
-    setMinImportance(String(status.data.current.minImportance));
+    setMinIntensity(status.data.current.minIntensity.toFixed(2));
     setLoaded(true);
   }
 
-  const request: Asked = { minSources, minImportance, from: first, to: last };
+  const request: Asked = { minIntensity, from: first, to: last };
   const preview = useMutation({
     mutationFn: (input: Asked) =>
       unwrap(
         client.POST("/api/admin/big-storyline-criteria-previews", {
           body: {
-            minSources: Number(input.minSources),
-            minImportance: Number(input.minImportance),
+            minIntensity: Number(input.minIntensity),
             from: input.from,
             to: input.to,
             zone,
@@ -95,17 +90,15 @@ export function BigStorylinesPage() {
       unwrap(
         client.PUT("/api/admin/big-storyline-criteria", {
           body: {
-            minSources: Number(input.minSources),
-            minImportance: Number(input.minImportance),
+            minIntensity: Number(input.minIntensity),
           },
         }),
       ),
     onSuccess: () => queries.invalidateQueries({ queryKey: BIG_KEY }),
   });
 
-  // 빈 칸은 Number("") 로 0 이 되어 조용히 나간다 — 수로 읽히는 입력만 보낸다(범위는 서버가 판정한다). 소스 수는 정수만 보낸다 —
-  // 서버는 소수를 본문 형식 400 으로 거부하는데, 그 설명보다 먼저 입력 안내로 알린다
-  const numeric = isInteger(minSources) && isNumber(minImportance);
+  // 빈 칸은 Number("") 로 0 이 되어 조용히 나간다 — 수로 읽히는 입력만 보낸다(범위는 서버가 판정한다)
+  const numeric = isNumber(minIntensity);
   const previewed =
     preview.data !== undefined && asked !== null && sameAsked(asked, request);
 
@@ -148,29 +141,19 @@ export function BigStorylinesPage() {
         <section aria-label="기준 바꾸기" className="space-y-3">
           <h3 className="text-lg font-semibold">기준 바꾸기</h3>
           <p className="text-sm text-muted-foreground">
-            스토리라인에 든 사건들의 기간 안 기사를 모아, 서로 다른 소스 수가
-            소스 기준 이상이고 중요도 평균이 중요도 기준 이상이면 큰
-            스토리라인이다. 미리보기는 위 기간을 제안 기준으로 다시 판정해 지금
-            결과와 견주고, 아무것도 바꾸지 않는다
+            보도 강도는 스토리라인에 든 사건들의 기간 안 기사 중요도를 더해, 그
+            기간에 기사가 있는 소스 수와 기간의 일수로 나눈 값이다. 보도 강도가
+            기준 이상이면 큰 스토리라인이다. 미리보기는 위 기간을 제안 기준으로
+            다시 판정해 지금 결과와 견주고, 아무것도 바꾸지 않는다
           </p>
           <div className="flex flex-wrap items-end gap-4 text-sm">
-            <label htmlFor={sourcesId} className="space-y-1">
-              <span className="block">소스 기준</span>
+            <label htmlFor={intensityId} className="space-y-1">
+              <span className="block">보도 강도 기준</span>
               <input
-                id={sourcesId}
-                inputMode="numeric"
-                value={minSources}
-                onChange={(event) => setMinSources(event.target.value)}
-                className="w-24 rounded-md border border-input px-2 py-1"
-              />
-            </label>
-            <label htmlFor={importanceId} className="space-y-1">
-              <span className="block">중요도 기준</span>
-              <input
-                id={importanceId}
+                id={intensityId}
                 inputMode="decimal"
-                value={minImportance}
-                onChange={(event) => setMinImportance(event.target.value)}
+                value={minIntensity}
+                onChange={(event) => setMinIntensity(event.target.value)}
                 className="w-24 rounded-md border border-input px-2 py-1"
               />
             </label>
@@ -199,7 +182,7 @@ export function BigStorylinesPage() {
           </div>
           {!numeric && (
             <p className="text-sm text-muted-foreground">
-              소스 기준에는 정수, 중요도 기준에는 수를 넣는다
+              보도 강도 기준에는 수를 넣는다
             </p>
           )}
           {preview.error && <p role="alert">{failureText(preview.error)}</p>}
@@ -311,6 +294,7 @@ function BigTable({
           <th className="font-medium">스토리라인</th>
           <th className="font-medium">상태</th>
           <th className="font-medium">사건 수</th>
+          <th className="font-medium">보도 강도(기간)</th>
           <th className="font-medium">소스 수(기간)</th>
           <th className="font-medium">중요도 평균(기간)</th>
           <th className="font-medium">기사 수(기간 / 전체)</th>
@@ -328,6 +312,7 @@ function BigTable({
             </td>
             <td>{storylineStateLabels[row.state]}</td>
             <td className="tabular-nums">{row.eventCount}</td>
+            <td className="tabular-nums">{row.intensity.toFixed(2)}</td>
             <td className="tabular-nums">{row.periodSources}</td>
             <td className="tabular-nums">
               {formatProbability(row.importance)}
@@ -350,7 +335,7 @@ function BigTable({
 }
 
 function criteriaText(criteria: Criteria): string {
-  return `소스 ${criteria.minSources} 이상 · 중요도 ${criteria.minImportance} 이상`;
+  return `보도 강도 ${criteria.minIntensity.toFixed(2)} 이상`;
 }
 
 function isNumber(value: string): boolean {
@@ -358,15 +343,8 @@ function isNumber(value: string): boolean {
   return trimmed !== "" && Number.isFinite(Number(trimmed));
 }
 
-function isInteger(value: string): boolean {
-  return /^-?\d+$/.test(value.trim());
-}
-
 function sameAsked(a: Asked, b: Asked): boolean {
   return (
-    a.minSources === b.minSources &&
-    a.minImportance === b.minImportance &&
-    a.from === b.from &&
-    a.to === b.to
+    a.minIntensity === b.minIntensity && a.from === b.from && a.to === b.to
   );
 }
