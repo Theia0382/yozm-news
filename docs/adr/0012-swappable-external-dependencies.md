@@ -67,3 +67,4 @@
 ## 후속 기록
 
 - 2026-11-04: 의존성 표에 없는 임베딩 — [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md) · [evaluation Spec `ArticleEmbedder`](../specs/evaluation.md#articleembedder)
+- 2026-11-14: 의존성 표 "LLM (OpenAI, Anthropic)" 행의 개발 · 테스트 대체물 — [ADR-0155](0155-llm-local-substitute-takes-only-keys-with-a-fixed-prefix-in-the-local-profile.md) · [llm Spec](../specs/llm.md#로컬-대체물) llm-R16

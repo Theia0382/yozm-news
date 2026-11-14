@@ -188,6 +188,37 @@
 - 공개 가입은 환경 변수가 아니라 운영자 화면(`/admin/accounts`)에서 켜고 끈다. 기본은 닫혀 있다. 공개 가입에는 아직 가입 요청 제한 · 봇 차단이 없다 — 누구나 가입할 수 있는 인스턴스로 열기 전에 이 상태를 고려한다([security.md](../security.md#가입))
 - **(미구현)** 개인정보처리방침 · 이용약관 주소 — 운영자가 문서를 둘 때만 적는다. 적으면 가입 · 키 등록 화면과 바닥글에 링크가 나오고, 비우면 링크가 없다. 설정 이름은 고지 링크를 만들 때 정한다([security.md](../security.md#개인정보))
 
+## 허용 모델 목록
+
+| 변수 | 필수 | 쓰는 곳 | 값 예시 | 바꾸는 것 |
+|---|---|---|---|---|
+| `YOZMNEWS_LLM_MODELS_FILE` | 아니오 | `app` → `yozmnews.llm.models-file` | `/etc/yozmnews/llm-models.yaml` | 사용자가 고를 수 있는 LLM 모델의 목록 파일 — 없으면 앱에 든 기본 목록 · [llm Spec §7](../specs/llm.md#7-설정) |
+
+- 사용자는 자기 LLM 키(OpenAI · Anthropic)로 쓸 모델을 이 목록에서 고른다. 앱에는 기본 목록이 들어 있고, 소프트웨어를 올리면 기본 목록도 함께 바뀐다. 목록을 바꾸지 않을 운영자는 할 일이 없다
+- 목록을 바꾸려면 파일을 만들어 배포 디렉터리의 `deploy/config/` 에 두고(예: `deploy/config/llm-models.yaml`), 이 변수에 컨테이너 안 경로 `/etc/yozmnews/llm-models.yaml` 을 적는다 — 배포 구성이 `deploy/config/` 를 `app` 의 `/etc/yozmnews` 에 읽기 전용으로 붙인다. 앱은 root 가 아닌 사용자로 돌므로 파일은 누구나 읽을 수 있어야 한다(`chmod 644`)
+- 파일이 목록 전체다 — 기본 목록과 합치지 않는다. 기본 목록의 모델을 남기려면 파일에 함께 적는다. 운영자 파일을 쓰는 동안에는 소프트웨어가 올라가도 새 모델이 저절로 더해지지 않는다
+
+  ```yaml
+  providers:
+    openai:
+      models:
+        - id: gpt-6-astra
+          input-token-budget: 32000
+          structured-output: true
+    anthropic:
+      models:
+        - id: claude-sonnet-5-5
+          input-token-budget: 32000
+          structured-output: true
+  ```
+
+  - `providers` 아래는 `openai` · `anthropic` 이다. 공급자를 빼거나 `models: []` 로 두면 그 공급자의 모델을 고를 수 없다. 전체 모델은 하나 이상이어야 한다
+  - `id` 는 공급자의 모델 ID, `input-token-budget` 은 다이제스트 한 번에 그 모델로 보내는 입력의 상한(토큰 — 1 ~ 10,000,000), `structured-output` 은 그 모델이 JSON 스키마 강제 출력을 지원하는지다. 셋 다 적는다. 지원 여부는 공급자 문서로 확인한다
+  - 기본 목록의 예산은 측정 전의 잠정값이다
+- 파일은 앱이 뜰 때 한 번 읽는다 — 고친 뒤 앱을 다시 띄운다. 변수가 가리키는 파일이 없거나 형식이 틀리면 앱이 뜨지 않고 기동 로그가 변수 이름과 문제의 줄 · 까닭을 말한다. 기본 목록으로 떨어지지 않는다
+- 값을 비운 줄(`YOZMNEWS_LLM_MODELS_FILE=`)은 빈 값이 그대로 넘어가 앱이 뜨지 않는다. 쓰지 않을 때는 줄을 지우거나 주석으로 둔다
+- 사용자 키와 프롬프트가 가는 공급자 주소는 바꿀 수 없다 — 앱이 공급자(`api.openai.com` · `api.anthropic.com`)로 직접 보낸다([배포 — 공개 경로와 외부 서비스](deployment.md#공개-경로와-외부-서비스))
+
 ## Compose
 
 | 변수 | 필수 | 쓰는 곳 | 값 예시 | 바꾸는 것 |

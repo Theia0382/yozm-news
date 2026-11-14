@@ -6,6 +6,10 @@
 !.env.example
 .envrc
 
+# 배포 구성의 설정 디렉터리 — 운영자가 둔 파일은 추적하지 않는다 (docs/operations/deployment.md "서비스")
+deploy/config/*
+!deploy/config/.gitkeep
+
 # 개인 도구 설정 (각자 관리)
 .claude/
 CLAUDE.md

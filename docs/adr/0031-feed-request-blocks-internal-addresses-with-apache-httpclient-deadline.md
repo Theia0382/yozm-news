@@ -80,3 +80,7 @@
 | 리다이렉트를 따르기만 한다 | 영구 이동이 묻혀 프리셋이 낡아도 알 수 없다 |
 | 압축을 요청하지 않는다 | 피드 서버와 우리 쪽 전송량이 크다. 상한을 푼 바이트로 세면 안전성은 같다 |
 | 클라이언트가 호스트당 연결을 2개로 제한한다 | 몰리면 우리 쪽 대기가 마감을 먹어 언론사 탓이 아닌 일시 실패가 피드에 쌓인다 |
+
+## 후속 기록
+
+- 2026-11-14: 결과 절 "나중에 `RestClient` 를 쓰는 모듈(예: Spring AI 로 LLM 을 부르는 `llm`)"의 팩토리 선택 — `llm` 은 `RestClient` 를 쓰지 않는다. [ADR-0149](0149-llm-calls-use-spring-ai-2-without-the-starter-and-build-sdk-clients-with-explicit-address-key-and-log-level-and-close-them.md) · [llm Spec](../specs/llm.md#공급자-클라이언트) llm-R13

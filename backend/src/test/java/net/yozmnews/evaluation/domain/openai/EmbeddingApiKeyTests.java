@@ -29,4 +29,16 @@ class EmbeddingApiKeyTests {
 		assertThat(EmbeddingApiKey.of("k".repeat(512)).authorization()).hasSize("Bearer ".length() + 512);
 	}
 
+	@Test
+	void saysWhichRuleTheKeyBroke() {
+		assertThatIllegalArgumentException().isThrownBy(() -> EmbeddingApiKey.of(""))
+			.withMessage("임베딩 API 키는 1자 이상 512자 이하여야 한다 (지금 0자)");
+		assertThatIllegalArgumentException().isThrownBy(() -> EmbeddingApiKey.of("k".repeat(513)))
+			.withMessage("임베딩 API 키는 1자 이상 512자 이하여야 한다 (지금 513자)");
+		assertThatIllegalArgumentException().isThrownBy(() -> EmbeddingApiKey.of("sk with space"))
+			.withMessage("임베딩 API 키에는 공백 · 제어 문자 · ASCII 밖의 문자를 쓸 수 없다");
+		assertThatIllegalArgumentException().isThrownBy(() -> EmbeddingApiKey.of("sk-키"))
+			.withMessage("임베딩 API 키에는 공백 · 제어 문자 · ASCII 밖의 문자를 쓸 수 없다");
+	}
+
 }

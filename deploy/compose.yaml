@@ -84,6 +84,12 @@ services:
       YOZMNEWS_EMBEDDING_OPENAI_COMPATIBLE_SEND_DIMENSIONS:
       YOZMNEWS_EMBEDDING_OPENAI_COMPATIBLE_INPUT_PREFIX:
       YOZMNEWS_EMBEDDING_OPENAI_COMPATIBLE_BATCH_SIZE:
+      # 허용 모델 목록의 운영자 파일 — 컨테이너 안 경로(/etc/yozmnews/…). docs/operations/configuration.md "허용 모델 목록"
+      YOZMNEWS_LLM_MODELS_FILE:
+    volumes:
+      # 운영자가 앱에 넘기는 파일을 두는 설정 디렉터리 — 읽기 전용. z 는 SELinux 호스트에서 컨테이너가 읽게 한다.
+      # docs/operations/deployment.md "서비스"
+      - ./config:/etc/yozmnews:ro,z
     depends_on:
       postgres:
         condition: service_healthy
