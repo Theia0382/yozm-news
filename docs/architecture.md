@@ -16,17 +16,13 @@ public interface DigestGenerator {
 public interface ReportGenerator {
     GeneratedReport generate(ReportRequest request, LlmHandle llm); // 기간 통계 + 구독한 스토리라인의 변화 + 직전 리포트 요약
 }
-
-// llm: 사용자 키로 호출 가능한 모델 핸들을 만든다. 키 평문은 이 모듈 밖으로 나가지 않는다.
-public interface LlmClientFactory {
-    LlmHandle forUser(UserId userId);                // 키 복호화는 내부에서, 호출 직전에만
-    KeyValidationResult validate(Provider p, SecretValue key);
-}
 ```
 
-- `DigestGenerator`의 v1 구현체는 Spring AI `ChatClient` 기반 `LlmDigestGenerator`. 공급자별 차이는 Spring AI가 흡수한다.
+- LLM 관문 `LlmClientFactory` 는 [llm Spec](specs/llm.md#llmclientfactory)에 있다. 위 선언의 `LlmHandle` 은 저장한 키로 호출하는 길의 자리 표시다 — 그 길(사용자의 키를 복호화해 호출 직전에만 쓰는 연결과 호출 API)은 아직 설계되지 않았고, 설계하는 작업이 llm Spec 에 적는다. 키 평문은 `llm` 밖으로 나가지 않는다
+
+- `DigestGenerator`의 v1 구현체는 `llm` 관문의 호출 API 로 LLM 을 부르는 `LlmDigestGenerator`다. 공급자별 차이와 Spring AI 는 `llm` 안에 있다 — 생성기는 공급자 · 라이브러리를 모른다([ADR-0151](adr/0151-spring-ai-and-sdk-types-stay-inside-llm-and-the-gateway-exposes-only-its-own-types.md)).
 - `ReportGenerator`의 v1 구현체는 `DigestGenerator` 와 같은 방식의 LLM 구현이고, Spring profile `local` 은 고정 응답 로컬 대체물을 쓴다 ([ADR-0025](adr/0025-long-term-personal-news-history-in-v1.md)).
-- Spring AI의 `ChatModel`은 보통 애플리케이션 전역 빈으로 쓰지만, BYOK에서는 **요청마다 사용자 키로 인스턴스를 만든다**. `LlmClientFactory`가 이 차이를 감춘다.
+- BYOK에서는 **요청마다 사용자 키로 공급자 클라이언트를 만들고 쓰고 닫는다**. `llm` 이 이 일을 한다([llm Spec](specs/llm.md#공급자-클라이언트)).
 
 ## 주요 백그라운드 작업
 

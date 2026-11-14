@@ -19,7 +19,8 @@
 - **코드 포인트 자르기** — 텍스트를 앞 몇 코드 포인트로 자르는 공개 타입(`CodePoints`). 피드 요약문(`source`) · 판정 입력(`evaluation`) · 기사 표현 텍스트(`event`) · 첫 운영자의 표시 이름(`user`)의 길이 상한이 쓴다
 - **날짜 범위 변환** — 날짜 범위를 시간대의 자정으로 시각 범위에 옮기고, 시간대 전환 여유를 더한 시각 길이 상한을 내는 공개 타입(`DayRange`). 집계 기간(`tag` 의 `EvaluationPeriod`) · 판정 원본 조회 기간(`evaluation` 의 `JudgementPeriod`) · 사건 조회 기간(`event` 의 `EventPeriod`)이 쓴다
 - **운영 설정의 행위자 종류** — 운영 설정을 정한 주체의 종류(`ChangeActor` — 시스템 · 운영자). 태그 기준 · 저장 기준 · 태그 체계 버전(`tag`), 큰 판정 기준(`storyline`), 가입 정책(`user`)의 이력이 쓴다
-- **HTTP 응답 본문 상한** — JDK `HttpClient` 의 응답 본문을 상한까지만 받는 공개 타입(`CappedBody`). 외부 API 를 부르는 어댑터(`evaluation` 의 Jev · 외부 임베딩)가 쓴다
+- **HTTP 응답 본문 상한** — JDK `HttpClient` 의 응답 본문을 상한까지만 받는 공개 타입(`CappedBody`). 외부 API 를 부르는 어댑터(`evaluation` 의 Jev · 외부 임베딩, `llm` 의 공급자 전송)가 쓴다
+- **비밀 값** — 비밀 값 평문의 래퍼(`SecretValue` — 문자열 표현이 값을 숨기고 직렬화하면 실패한다)와 요청 헤더에 실을 값의 꼴(`HeaderValueShape`). 래퍼는 사용자 LLM 키를 다루는 모듈(`llm`)이, 꼴은 API 키를 헤더에 싣는 모듈(`evaluation` 의 Jev 키 · 임베딩 키, `llm` 의 키 검증)이 쓴다(platform-R22 · R23)
 - **벡터의 pgvector 텍스트 표현** — 벡터를 pgvector 의 텍스트 표현으로 쓰고 되읽는 공개 타입(`VectorText`). 기사 표현 · 사건 중심(`event`)과 스토리라인 중심(`storyline`)의 저장소가 쓴다
 
 하지 않는 것:
@@ -31,6 +32,7 @@
 - 로컬 대체물을 갖지 않는다 — 각 모듈이 자기 대체물의 결선에 `@LocalDevelopment` 를 단다(platform-R18)
 - 확장을 쓰는 테이블 · 검색은 갖지 않는다 — 쓰는 모듈의 것이다. 이 모듈은 확장이 있고 최소 버전 이상인지만 본다(platform-R19)
 - 길이 상한 값을 갖지 않는다 — 상한은 쓰는 모듈의 정본이고, 이 모듈은 자르는 방법만 갖는다
+- 비밀 값을 저장하거나 암호화하지 않는다 — 평문을 감싸는 타입과 헤더 값의 꼴만 갖는다
 
 다른 모듈과의 의존과 이벤트 흐름은 [overview.md §5](../overview.md#5-모듈-지도)에 있다.
 
@@ -53,7 +55,7 @@
 
 ## 3. 공개 인터페이스
 
-모듈 최상위 패키지 `net.yozmnews.platform` 의 공개 타입은 역할 애너테이션 둘, 로컬 개발 애너테이션 하나, 화면용 API 경로 규약 하나(`ApiPaths`), 공개 처리기 표시 하나(`PublicApi`), 변경 전 허용 표시 하나(`AllowedBeforePasswordChange`)와 두 표시의 판정 하나(`PublicApis`), 문제 응답 둘(`ApiProblem` · `ProblemResponses`), 이벤트 발행 운영 API(`EventPublicationAdministration` 과 결과 타입 — 파일 9개, 중첩 레코드를 더하면 타입 11개), YAML 원문 읽기(파일 8개), 코드 포인트 자르기 하나(`CodePoints`), 날짜 범위 변환 하나(`DayRange`), HTTP 응답 본문 수신자 하나(`CappedBody` — 중첩 타입을 더하면 넷), 벡터의 pgvector 텍스트 표현 하나(`VectorText`), 운영 설정의 행위자 종류 하나(`ChangeActor`)다.
+모듈 최상위 패키지 `net.yozmnews.platform` 의 공개 타입은 역할 애너테이션 둘, 로컬 개발 애너테이션 하나, 화면용 API 경로 규약 하나(`ApiPaths`), 공개 처리기 표시 하나(`PublicApi`), 변경 전 허용 표시 하나(`AllowedBeforePasswordChange`)와 두 표시의 판정 하나(`PublicApis`), 문제 응답 둘(`ApiProblem` · `ProblemResponses`), 이벤트 발행 운영 API(`EventPublicationAdministration` 과 결과 타입 — 파일 9개, 중첩 레코드를 더하면 타입 11개), YAML 원문 읽기(파일 8개), 코드 포인트 자르기 하나(`CodePoints`), 날짜 범위 변환 하나(`DayRange`), HTTP 응답 본문 수신자 하나(`CappedBody` — 중첩 타입을 더하면 넷), 벡터의 pgvector 텍스트 표현 하나(`VectorText`), 운영 설정의 행위자 종류 하나(`ChangeActor`), 비밀 값 평문의 래퍼 하나(`SecretValue`), 헤더에 실을 값의 꼴 하나(`HeaderValueShape` — 중첩 enum 을 더하면 둘)다.
 
 | 타입 | 형태 | 용도 |
 |---|---|---|
@@ -327,6 +329,52 @@ public final class VectorText {
 
 관련 규칙: 없음. 벡터를 쓰는 테이블 · 검색은 쓰는 모듈의 것이다(platform-R19).
 
+### SecretValue
+
+비밀 값 평문의 래퍼 — 빈이 아닌 값이다.
+
+```java
+public final class SecretValue {
+    public static SecretValue of(String value);
+    public String reveal();
+    public int length();
+    @Override public String toString();
+}
+```
+
+- 계약
+  - `of` 는 `null` · 빈 문자열에 `IllegalArgumentException` 이다 — 문구에 값이 없다. 그 밖의 꼴은 보지 않는다
+  - `reveal` 은 평문이다. 외부 호출에 싣는 자리에서만 부른다
+  - `length` 는 평문의 길이(문자 수)다
+  - `toString` 은 `SecretValue[숨김]` 이다 — 문자열 연결 · 로그 · 이 값을 담은 레코드의 문자열 표현에 평문이 나오지 않는다
+  - `equals` · `hashCode` 를 재정의하지 않는다 — 같은 객체일 때만 같다
+  - 직렬화하면 실패한다(platform-R22)
+
+관련 규칙: platform-R22
+
+### HeaderValueShape
+
+요청 헤더에 실을 값의 꼴 — 빈이 아닌 정적 함수다.
+
+```java
+public final class HeaderValueShape {
+    public static final int MAX_LENGTH = 512;
+    public enum Violation { LENGTH, CHARACTER }
+    public static Optional<Violation> violation(String value);
+}
+```
+
+| 값 | 뜻 |
+|---|---|
+| `LENGTH` | 비었거나 `MAX_LENGTH` 자를 넘는다 |
+| `CHARACTER` | 출력 가능한 ASCII 밖의 문자가 있다 |
+
+- 계약
+  - 꼴에 맞으면 빈 값이다. 길이를 먼저 본다 — 둘 다 어기면 `LENGTH` 다
+  - 값이 무엇인지(어느 서비스의 키인지 · 맞는 키인지)는 보지 않는다. 어긴 것을 어떤 문구 · 결과로 낼지는 쓰는 쪽이 정한다
+
+관련 규칙: platform-R23
+
 ### EventPublicationAdministration
 
 남겨진 발행의 목록 · 다시 처리 · 폐기 — `admin` 의 운영자 API 가 부른다. 구현은 `application` 의 `EventPublicationAdministrationService` 다.
@@ -518,6 +566,13 @@ stateDiagram-v2
 
 - **platform-R17** — YAML 원문은 snakeyaml-engine 의 이벤트 API 로만 읽는다 — 태그로 객체를 만드는 단계가 없다. 해석은 YAML 1.2 JSON 스키마 규칙이다 — 불리언은 소문자 `true` · `false` 뿐이고 `no` · `015` · `~` 와 따옴표 친 값은 문자열이다. 원문 길이 상한(문자 수)은 문서를 가진 모듈이 정해 넘기고, 넘으면 읽지 않는다. 문서는 하나이고 최상위는 매핑이다 — 빈 원문 · 내용 없는 문서는 빈 매핑이다. 공통 거부는 앵커 · 별칭 · 명시 태그, 같은 매핑 안 중복 키, 문자열이 아닌 키, 알 수 없는 키(무엇이 알려진 키인지는 문서를 가진 모듈이 정한다), 빈 값(`null` · 값을 적지 않음), 형 오류다. 별칭은 값을 쓸 수 없고, 앵커 · 태그가 붙은 값은 알린 뒤에도 계속 읽어 다른 문제를 함께 모은다. 문제는 경로 · 줄:열과 함께 찾은 순서대로 한 번에 모두 넘긴다 — 문서를 가진 모듈이 자기 문제와 같은 목록에 넣어 원문 순서를 지킨다
 
+### 비밀 값
+
+판단의 이유는 [ADR-0152](../adr/0152-secret-value-is-a-platform-public-type-that-fails-on-serialization.md)에 있다.
+
+- **platform-R22** — 비밀 값의 평문을 모듈 사이로 넘길 때는 `SecretValue` 로 감싼다. 문자열 표현은 값을 숨긴다(`SecretValue[숨김]`). 직렬화하면 실패한다 — Java 직렬화를 구현하지 않고, JSON 으로 쓰려 하면(Jackson 2 · 3) 예외가 나며 그 문구에 값이 없다. 속성을 조용히 빼지 않는다. 값 비교 · 해시를 내놓지 않고, 평문은 `reveal` 로만 나온다. 요청 본문에서 값을 받는 쪽은 문자열로 받아 `of` 로 감싼다 — 역직렬화로 만들지 않는다
+- **platform-R23** — 요청 헤더에 실을 비밀 값(API 키)의 꼴은 `HeaderValueShape` 하나가 정한다 — 1 ~ 512자(`MAX_LENGTH`)이고 출력 가능한 ASCII(U+0021 ~ U+007E)뿐이다. 공백 · 제어 문자(줄바꿈 포함) · ASCII 밖의 문자를 받지 않아 값이 헤더를 깨지 못한다. 키를 헤더에 싣는 모듈은 자기 검사를 두지 않고 이 판정을 읽는다
+
 ## 6. 데이터
 
 해당 없음 — 이 모듈은 자기 테이블이 없다. 이벤트 발행 레지스트리와 작업 테이블은 프레임워크 테이블이라 [data-model.md](../data-model.md)에 있다.
@@ -557,3 +612,4 @@ stateDiagram-v2
 | [0113](../adr/0113-moving-listeners-or-jobs-between-modules-migrates-pending-publication-listener-ids-and-drops-pending-jobs-of-the-old-class.md) | 모듈 사이로 리스너 · 반복 작업을 옮기면 미완료 발행의 리스너 ID 를 마이그레이션으로 옮기고, 옛 클래스의 남은 예약 작업을 지운다 |
 | [0124](../adr/0124-security-configuration-lives-in-the-user-module-and-platform-keeps-only-the-screen-api-path-convention.md) | 인증 · 보안 구성은 운영자 토큰 체인까지 `user` 모듈이 갖고, `platform` 은 화면용 API 경로 규약만 갖는다 |
 | [0125](../adr/0125-screen-api-handlers-need-a-session-unless-marked-public-and-take-the-user-only-as-a-session-filled-argument.md) | 화면용 API 처리기는 공개 표시가 없으면 세션을 요구하고, 사용자는 세션에서 채운 인자로만 받으며, 등록 가드가 공개 표시나 격리 시험 등록을 강제한다 |
+| [0152](../adr/0152-secret-value-is-a-platform-public-type-that-fails-on-serialization.md) | 비밀 값 평문의 래퍼 `SecretValue` 는 `platform` 의 공개 타입이고, 직렬화하면 실패한다 |
