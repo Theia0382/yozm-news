@@ -1,8 +1,12 @@
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { InvitePage } from "@/features/account/InvitePage";
 import { json, type Handler } from "@/test/fakeServer";
+import {
+  installFakeTurnstile,
+  uninstallFakeTurnstile,
+} from "@/test/fakeTurnstile";
 import {
   ANONYMOUS_ME,
   bodiesOf,
@@ -14,7 +18,12 @@ const TOKEN = "q1W2e3R4t5Y6u7I8o9P0aS";
 
 const CODE = "ABCD-EFGH-JKMN-PQRS-TVWX-YZ01-2345-6789";
 
-function renderInvite(entry: string, state: string, accept?: Handler) {
+function renderInvite(
+  entry: string,
+  state: string,
+  accept?: Handler,
+  extra: Record<string, Handler> = {},
+) {
   let signedUp = false;
   return renderRoutes(
     [
@@ -31,6 +40,7 @@ function renderInvite(entry: string, state: string, accept?: Handler) {
         signedUp = body.result === "SIGNED_UP";
         return response;
       },
+      ...extra,
     },
   );
 }
@@ -117,5 +127,71 @@ describe("InvitePage", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "취소된 초대 링크입니다. 운영자에게 새 링크를 받으세요.",
     );
+  });
+});
+
+describe("InvitePage 봇 차단 · 요청 제한", () => {
+  afterEach(() => uninstallFakeTurnstile());
+
+  it("봇 차단을 켠 인스턴스여도 초대 가입에는 위젯이 없고 토큰 없이 보낸다", async () => {
+    const turnstile = installFakeTurnstile();
+    const { server } = renderInvite(
+      "/invite#invite-token",
+      "VALID",
+      () =>
+        json({
+          result: "EMAIL_UNAVAILABLE",
+          recoveryCode: null,
+          passwordProblem: null,
+          invitation: null,
+        }),
+      {
+        "GET /api/human-check": () =>
+          json({ provider: "TURNSTILE", siteKey: "1x00000000000000000000AA" }),
+      },
+    );
+
+    await fill();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "가입할 수 없는 이메일입니다.",
+    );
+    expect(turnstile.rendered).toEqual([]);
+    const acceptance = server.requests.find(
+      (r) => r.path === "/api/invitation-acceptances",
+    );
+    expect(acceptance?.headers.get("X-Human-Check")).toBeNull();
+  });
+
+  it("초대 확인이 요청 제한에 걸리면 요청 제한 안내를 보인다", async () => {
+    renderInvite("/invite#invite-token", "VALID", undefined, {
+      "POST /api/invitation-checks": () =>
+        new Response(
+          JSON.stringify({ type: "urn:yozmnews:problem:rate-limited" }),
+          {
+            status: 429,
+            headers: {
+              "Content-Type": "application/problem+json",
+              "Retry-After": "30",
+            },
+          },
+        ),
+    });
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "이 네트워크에서 요청이 너무 많아 잠시 막혔습니다. 30초 뒤에 다시 시도해 주세요.",
+    );
+  });
+
+  it("서버에 닿지 못하면 브라우저의 오류 문구가 아니라 고정 안내를 보인다", async () => {
+    renderInvite("/invite#invite-token", "VALID", undefined, {
+      "POST /api/invitation-checks": () => {
+        throw new TypeError("Failed to fetch");
+      },
+    });
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("초대를 확인하지 못했습니다.");
+    expect(alert).not.toHaveTextContent("Failed to fetch");
   });
 });

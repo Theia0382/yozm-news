@@ -302,3 +302,47 @@ describe("KeysPage", () => {
     expect(await section("OpenAI")).toBeDefined();
   });
 });
+
+describe("KeysPage 요청 제한", () => {
+  it("등록 · 다시 검증이 요청 제한에 걸리면 요청 제한 안내를 보인다", async () => {
+    const limited = () =>
+      new Response(
+        JSON.stringify({ type: "urn:yozmnews:problem:rate-limited" }),
+        {
+          status: 429,
+          headers: {
+            "Content-Type": "application/problem+json",
+            "Retry-After": "1800",
+          },
+        },
+      );
+    renderKeys({
+      "GET /api/llm-keys": () =>
+        json({
+          providers: [
+            { provider: "OPENAI", key: STORED },
+            { provider: "ANTHROPIC", key: null },
+          ],
+        }),
+      "PUT /api/llm-keys/OPENAI": limited,
+      "POST /api/llm-keys/OPENAI/checks": limited,
+    });
+    const user = userEvent.setup();
+    const openai = await section("OpenAI");
+
+    await user.type(openai.getByLabelText("새 OpenAI API 키"), "sk-new");
+    await user.click(openai.getByRole("button", { name: "새 키로 바꾸기" }));
+    expect(await openai.findByRole("alert")).toHaveTextContent(
+      "이 네트워크에서 요청이 너무 많아 잠시 막혔습니다. 30분 뒤에 다시 시도해 주세요.",
+    );
+
+    await user.click(openai.getByRole("button", { name: "다시 검증" }));
+    await waitFor(() =>
+      expect(
+        openai.getAllByRole("alert").map((alert) => alert.textContent),
+      ).toContain(
+        "이 네트워크에서 요청이 너무 많아 잠시 막혔습니다. 30분 뒤에 다시 시도해 주세요.",
+      ),
+    );
+  });
+});

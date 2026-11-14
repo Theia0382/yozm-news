@@ -99,6 +99,25 @@ export function AccountsPage() {
   );
 }
 
+/** 공개 가입의 봇 차단 상태 문구 — 켬 · 끔은 서버 설정이 정한다(docs/specs/user.md user-R32) */
+function humanCheckText(
+  provider: Schemas["HumanCheckResponse"]["provider"] | undefined,
+  failed: boolean,
+): string {
+  if (failed) {
+    return "봇 차단 설정은 읽지 못했습니다.";
+  }
+  if (provider === undefined) {
+    return "봇 차단 설정을 읽는 중입니다.";
+  }
+  switch (provider) {
+    case "TURNSTILE":
+      return "봇 차단은 지금 켜져 있습니다(Turnstile).";
+    case "OFF":
+      return "봇 차단은 지금 꺼져 있습니다 — 서버 설정 YOZMNEWS_HUMAN_CHECK_PROVIDER 로 켭니다.";
+  }
+}
+
 function SignUpPolicySection() {
   const client = useAdminClient();
   const queries = useQueryClient();
@@ -111,6 +130,10 @@ function SignUpPolicySection() {
       unwrap(client.PUT("/api/admin/sign-up-policy", { body: { open } })),
     onSuccess: () => queries.invalidateQueries({ queryKey: POLICY_KEY }),
   });
+  const humanCheck = useQuery({
+    queryKey: [...ADMIN_QUERY_KEY, "human-check"],
+    queryFn: () => unwrap(client.GET("/api/human-check")),
+  });
 
   return (
     <section aria-labelledby="sign-up-policy" className="space-y-3">
@@ -119,8 +142,8 @@ function SignUpPolicySection() {
       </h3>
       <p className="text-sm text-muted-foreground">
         열면 누구나 로그인 화면에서 가입할 수 있습니다. 닫혀 있어도 초대
-        링크로는 가입할 수 있습니다. 공개 가입에는 요청 제한 · 봇 차단이
-        없습니다.
+        링크로는 가입할 수 있습니다. 공개 가입에는 IP별 요청 제한이 걸리고,{" "}
+        {humanCheckText(humanCheck.data?.provider, humanCheck.isError)}
       </p>
       {status.error && <p role="alert">{failureText(status.error)}</p>}
       {status.data && (

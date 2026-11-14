@@ -21,6 +21,7 @@ import { ExternalTransferNotice } from "@/features/privacy/ExternalTransferNotic
 import { PRIVACY_PATH } from "@/features/privacy/privacyTexts";
 import { SESSION_QUERY_KEY } from "@/features/session/sessionQueries";
 import { useApiClient } from "@/shared/api/client";
+import { guardRejectionText } from "@/shared/api/problems";
 import { formatDateTime } from "@/shared/lib/dateTime";
 import {
   AlertDialog,
@@ -131,12 +132,17 @@ function ProviderKeySection({
   function register(event: FormEvent) {
     event.preventDefault();
     void run(async () => {
-      const { data, response } = await client.PUT("/api/llm-keys/{provider}", {
-        params: { path: { provider } },
-        body: { key },
-      });
+      const { data, error, response } = await client.PUT(
+        "/api/llm-keys/{provider}",
+        { params: { path: { provider } }, body: { key } },
+      );
       if (!response.ok || !data) {
-        return { tone: "alert", text: requestFailedText(response.status) };
+        return {
+          tone: "alert",
+          text:
+            guardRejectionText(response, error) ??
+            requestFailedText(response.status),
+        };
       }
       switch (data.result) {
         case "REGISTERED":
@@ -156,12 +162,17 @@ function ProviderKeySection({
 
   function check() {
     void run(async () => {
-      const { data, response } = await client.POST(
+      const { data, error, response } = await client.POST(
         "/api/llm-keys/{provider}/checks",
         { params: { path: { provider } } },
       );
       if (!response.ok || !data) {
-        return { tone: "alert", text: requestFailedText(response.status) };
+        return {
+          tone: "alert",
+          text:
+            guardRejectionText(response, error) ??
+            requestFailedText(response.status),
+        };
       }
       await reloadKeys();
       switch (data.result) {

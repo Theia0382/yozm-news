@@ -5,8 +5,12 @@ import { RecoveryCodeFlow } from "@/features/account/RecoveryCodeFlow";
 import { SignUpForm } from "@/features/account/SignUpForm";
 import { useMe } from "@/features/session/sessionQueries";
 import { useApiClient } from "@/shared/api/client";
+import { guardRejectionText } from "@/shared/api/problems";
 import { Button } from "@/shared/ui/button";
 import { NARROW_WIDTH, PAGE_FRAME } from "@/shared/ui/widths";
+
+/** 초대 확인이 실패한 까닭 — 화면에 보일 문구를 담는다(그 밖의 오류는 고정 문구로 보인다) */
+class InvitationCheckFailure extends Error {}
 
 /**
  * 초대 가입 화면 — 토큰은 주소의 # 뒤(서버 로그 · Referer 에 실리지 않는다)에서 읽는다. 쓸 수 있는 초대면 가입 입력을, 아니면 그
@@ -21,11 +25,15 @@ export function InvitePage() {
   const check = useQuery({
     queryKey: ["invitation-check", token],
     queryFn: async () => {
-      const { data, response } = await client.POST("/api/invitation-checks", {
-        body: { token },
-      });
+      const { data, error, response } = await client.POST(
+        "/api/invitation-checks",
+        { body: { token } },
+      );
       if (!response.ok || !data) {
-        throw new Error(`초대를 확인하지 못했습니다 (HTTP ${response.status})`);
+        throw new InvitationCheckFailure(
+          guardRejectionText(response, error) ??
+            `초대를 확인하지 못했습니다 (HTTP ${response.status})`,
+        );
       }
       return data.state;
     },
@@ -44,7 +52,11 @@ export function InvitePage() {
           if (check.isError || me.isError) {
             return (
               <div className="space-y-3">
-                <p role="alert">초대를 확인하지 못했습니다.</p>
+                <p role="alert">
+                  {check.error instanceof InvitationCheckFailure
+                    ? check.error.message
+                    : "초대를 확인하지 못했습니다."}
+                </p>
                 <Button
                   type="button"
                   variant="outline"

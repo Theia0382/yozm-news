@@ -1,8 +1,12 @@
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { SignUpPage } from "@/features/account/SignUpPage";
 import { json, type Handler } from "@/test/fakeServer";
+import {
+  installFakeTurnstile,
+  uninstallFakeTurnstile,
+} from "@/test/fakeTurnstile";
 import {
   ANONYMOUS_ME,
   bodiesOf,
@@ -12,7 +16,11 @@ import {
 
 const CODE = "ABCD-EFGH-JKMN-PQRS-TVWX-YZ01-2345-6789";
 
-function renderSignUp(open: boolean, signUp: Handler) {
+function renderSignUp(
+  open: boolean,
+  signUp: Handler,
+  extra: Record<string, Handler> = {},
+) {
   let signedUp = false;
   return renderRoutes(
     [
@@ -30,6 +38,7 @@ function renderSignUp(open: boolean, signUp: Handler) {
         signedUp = body.result === "SIGNED_UP";
         return response;
       },
+      ...extra,
     },
   );
 }
@@ -135,5 +144,51 @@ describe("SignUpPage", () => {
       "비밀번호와 확인이 서로 다릅니다.",
     );
     expect(bodiesOf(server, "POST", "/api/sign-ups")).toEqual([]);
+  });
+
+  it("요청 제한에 걸리면 남은 시간을 담은 요청 제한 안내를 보인다", async () => {
+    renderSignUp(
+      true,
+      () =>
+        new Response(
+          JSON.stringify({ type: "urn:yozmnews:problem:rate-limited" }),
+          {
+            status: 429,
+            headers: {
+              "Content-Type": "application/problem+json",
+              "Retry-After": "3000",
+            },
+          },
+        ),
+    );
+
+    await fill();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "이 네트워크에서 요청이 너무 많아 잠시 막혔습니다. 50분 뒤에 다시 시도해 주세요.",
+    );
+  });
+});
+
+describe("SignUpPage 봇 차단", () => {
+  afterEach(() => uninstallFakeTurnstile());
+
+  it("켠 인스턴스는 가입 위젯의 토큰을 헤더로 싣는다", async () => {
+    const turnstile = installFakeTurnstile();
+    const { server } = renderSignUp(true, result("EMAIL_UNAVAILABLE"), {
+      "GET /api/human-check": () =>
+        json({ provider: "TURNSTILE", siteKey: "1x00000000000000000000AA" }),
+    });
+
+    await screen.findByText("사람 확인을 마치면 제출할 수 있습니다.");
+    expect(turnstile.rendered[0]?.action).toBe("sign-up");
+    turnstile.solve("0.sign-up-token");
+    await fill();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "가입할 수 없는 이메일입니다.",
+    );
+    const signUp = server.requests.find((r) => r.path === "/api/sign-ups");
+    expect(signUp?.headers.get("X-Human-Check")).toBe("0.sign-up-token");
   });
 });

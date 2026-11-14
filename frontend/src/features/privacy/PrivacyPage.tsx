@@ -1,12 +1,18 @@
 import { Link } from "react-router";
+import { useHumanCheck } from "@/features/humanCheck/humanCheckQueries";
 import { ExternalTransferNotice } from "@/features/privacy/ExternalTransferNotice";
-import { COLLECTED_ITEMS } from "@/features/privacy/privacyTexts";
+import {
+  COLLECTED_ITEMS,
+  HUMAN_CHECK_TRANSFER_ITEMS,
+} from "@/features/privacy/privacyTexts";
 import { NARROW_WIDTH, PAGE_FRAME } from "@/shared/ui/widths";
 
 /**
- * 고지 페이지 — 이 인스턴스가 저장하는 것과 LLM 공급자에게 보내는 것. 로그인 없이 본다(docs/security.md "개인정보").
+ * 고지 페이지 — 이 인스턴스가 저장하는 것과 LLM 공급자 · 봇 차단 서비스(켰을 때)에 보내는 것. 로그인 없이 본다(docs/security.md
+ * "개인정보").
  */
 export function PrivacyPage() {
+  const humanCheck = useHumanCheck();
   return (
     <section className={`${PAGE_FRAME} ${NARROW_WIDTH} space-y-8`}>
       <h1 className="text-2xl font-bold">개인정보 고지</h1>
@@ -25,6 +31,18 @@ export function PrivacyPage() {
         </p>
       </section>
       <ExternalTransferNotice headingId="external-transfer" />
+      {humanCheck.data?.provider === "TURNSTILE" && (
+        <section className="space-y-3" aria-labelledby="human-check-transfer">
+          <h2 id="human-check-transfer" className="text-xl font-bold">
+            봇 차단 서비스(Cloudflare Turnstile)에 보내는 것
+          </h2>
+          <ul className="list-disc space-y-1 pl-5 text-sm">
+            {HUMAN_CHECK_TRANSFER_ITEMS.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </section>
+      )}
       <p className="text-sm">
         <Link to="/" className="underline">
           요즘뉴스로 돌아가기

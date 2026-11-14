@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter } from "react-router";
 import { RouterProvider } from "react-router/dom";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { LoginPage } from "@/features/session/LoginPage";
 import { ApiClientContext, createApiClient } from "@/shared/api/client";
 import type { components } from "@/shared/api/schema";
@@ -14,8 +14,19 @@ import {
   problem,
   TEST_BASE_URL,
 } from "@/test/fakeServer";
+import {
+  installFakeTurnstile,
+  uninstallFakeTurnstile,
+} from "@/test/fakeTurnstile";
 
 type Me = components["schemas"]["MeResponse"];
+
+type HumanCheck = components["schemas"]["HumanCheckResponse"];
+
+const TURNSTILE: HumanCheck = {
+  provider: "TURNSTILE",
+  siteKey: "1x00000000000000000000AA",
+};
 
 const ANONYMOUS: Me = {
   result: "ANONYMOUS",
@@ -43,6 +54,7 @@ function renderLogin(
     entry = "/login?next=%2Fdigest",
     me = (() => json(ANONYMOUS)) as Handler,
     signUpOpen = false,
+    humanCheck = { provider: "OFF", siteKey: null } as HumanCheck,
     queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     }),
@@ -52,6 +64,7 @@ function renderLogin(
   const server = fakeServer({
     "GET /api/me": (request) => (signedIn ? json(SIGNED_IN) : me(request)),
     "GET /api/sign-up-policy": () => json({ open: signUpOpen }),
+    "GET /api/human-check": () => json(humanCheck),
     "POST /api/session": async (request) => {
       const response = await signIn(request);
       const body = (await response.clone().json()) as { result?: string };
@@ -206,4 +219,128 @@ describe("LoginPage", () => {
 
     expect(await screen.findByText("첫 화면")).toBeInTheDocument();
   });
+
+  it("요청 제한에 걸리면 실패 지연과 다른 요청 제한 안내를 보인다", async () => {
+    renderLogin(
+      () =>
+        new Response(
+          JSON.stringify({
+            type: "urn:yozmnews:problem:rate-limited",
+            title: "요청이 너무 많다",
+            status: 429,
+            detail: "",
+            instance: "/api/session",
+          }),
+          {
+            status: 429,
+            headers: {
+              "Content-Type": "application/problem+json",
+              "Retry-After": "540",
+            },
+          },
+        ),
+    );
+
+    await fillAndSubmit();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "이 네트워크에서 요청이 너무 많아 잠시 막혔습니다. 9분 뒤에 다시 시도해 주세요.",
+    );
+  });
 });
+
+describe("LoginPage 봇 차단", () => {
+  afterEach(() => uninstallFakeTurnstile());
+
+  it("끈 인스턴스는 위젯 없이 토큰 헤더 없이 보낸다", async () => {
+    const { server } = renderLogin(() =>
+      json({ result: "REJECTED", retryAfterSeconds: null }),
+    );
+
+    await fillAndSubmit();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "이메일 또는 비밀번호가 맞지 않습니다.",
+    );
+    expect(screen.queryByTestId("turnstile-widget")).not.toBeInTheDocument();
+    const signIn = server.requests.find((r) => r.path === "/api/session");
+    expect(signIn?.headers.get("X-Human-Check")).toBeNull();
+  });
+
+  it("켠 인스턴스는 확인을 마쳐야 제출하고, 토큰을 헤더로 실은 뒤 위젯을 다시 받는다", async () => {
+    const turnstile = installFakeTurnstile();
+    const { server } = renderLogin(
+      () => json({ result: "REJECTED", retryAfterSeconds: null }),
+      { humanCheck: TURNSTILE },
+    );
+    const user = userEvent.setup();
+
+    await user.type(
+      await screen.findByLabelText("이메일"),
+      "alice@example.com",
+    );
+    await user.type(screen.getByLabelText("비밀번호"), "correct horse");
+    expect(
+      await screen.findByText("사람 확인을 마치면 제출할 수 있습니다."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "로그인" })).toBeDisabled();
+    expect(turnstile.rendered[0]).toMatchObject({
+      sitekey: "1x00000000000000000000AA",
+      action: "sign-in",
+    });
+
+    turnstile.solve("0.human-token");
+    await user.click(screen.getByRole("button", { name: "로그인" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "이메일 또는 비밀번호가 맞지 않습니다.",
+    );
+    const signIn = server.requests.find((r) => r.path === "/api/session");
+    expect(signIn?.headers.get("X-Human-Check")).toBe("0.human-token");
+    // 토큰은 한 번만 쓰인다 — 제출 뒤 위젯을 다시 받고, 다시 확인할 때까지 제출할 수 없다
+    expect(turnstile.resets).toEqual(["widget-1"]);
+    expect(screen.getByRole("button", { name: "로그인" })).toBeDisabled();
+  });
+
+  it("사람 확인에 실패하면 그 안내를 보인다", async () => {
+    const turnstile = installFakeTurnstile();
+    renderLogin(
+      () => problem(403, "", "urn:yozmnews:problem:human-check-failed"),
+      { humanCheck: TURNSTILE },
+    );
+
+    await screen.findByText("사람 확인을 마치면 제출할 수 있습니다.");
+    turnstile.solve("0.spent-token");
+    await fillAndSubmit();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "사람 확인에 실패했습니다. 확인을 다시 마친 뒤 제출해 주세요.",
+    );
+  });
+
+  it("위젯 스크립트를 받지 못하면 제출할 수 없는 까닭을 말한다", async () => {
+    renderLogin(() => json({}), { humanCheck: TURNSTILE });
+
+    const script = await waitForScript();
+    script.dispatchEvent(new Event("error"));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "사람 확인을 불러오지 못해 지금은 제출할 수 없습니다.",
+    );
+    expect(screen.getByRole("button", { name: "로그인" })).toBeDisabled();
+  });
+});
+
+/** 위젯이 넣은 Turnstile 스크립트 */
+async function waitForScript(): Promise<HTMLScriptElement> {
+  for (let i = 0; i < 50; i++) {
+    const script = document.head.querySelector<HTMLScriptElement>(
+      'script[src^="https://challenges.cloudflare.com/turnstile/v0/api.js"]',
+    );
+    if (script) {
+      return script;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  throw new Error("Turnstile 스크립트를 넣지 않았다");
+}

@@ -10,6 +10,8 @@ export type RecordedRequest = {
   /** 질의 문자열 — `?` 포함, 없으면 빈 문자열 */
   search: string;
   authorization: string | null;
+  /** 요청 헤더 전부 */
+  headers: Headers;
   body: string;
 };
 
@@ -24,6 +26,7 @@ export function fakeServer(handlers: Record<string, Handler>) {
       path,
       search: url.search,
       authorization: request.headers.get("Authorization"),
+      headers: new Headers(request.headers),
       body: request.method === "GET" ? "" : await request.clone().text(),
     });
     const handler = handlers[`${request.method} ${path}`];

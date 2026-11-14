@@ -7,6 +7,7 @@ export const COLLECTED_ITEMS: readonly string[] = [
   "관심 신호 이력(좋아요 · 싫어요, 주제와 스토리라인의 구독 변경)",
   "다이제스트와 변화 리포트",
   "암호화한 LLM 키",
+  "요청 제한을 위한 IP 주소의 다이제스트 — 제한 창이 끝나면 지웁니다(창은 길어야 1시간)",
 ];
 
 /** 다이제스트를 만들 때 고른 공급자로 가는 것 */
@@ -19,6 +20,12 @@ export const DIGEST_TRANSFER_ITEMS: readonly string[] = [
 export const REPORT_TRANSFER_ITEMS: readonly string[] = [
   "그 기간에 구독한 스토리라인의 변화 · 보도량 · 관심도 통계",
   "직전 리포트의 요약",
+];
+
+/** 봇 차단을 켠 인스턴스에서 봇 차단 서비스(Cloudflare Turnstile)로 가는 것 */
+export const HUMAN_CHECK_TRANSFER_ITEMS: readonly string[] = [
+  "로그인 · 복구 · 가입 화면에서 브라우저가 사람 확인을 위해 Cloudflare 에 직접 보내는 정보",
+  "서버가 확인을 요청할 때 보내는 확인 토큰과 IP 주소",
 ];
 
 /** 고지 페이지의 주소 */
