@@ -153,7 +153,7 @@ sequenceDiagram
 ### `domain`
 
 - `StoredLlmKey` — 키 aggregate(`llm_credentials`). 주인 · 암호문 · 감싼 DEK · KEK 버전 · 힌트 · 상태 · 검증 시각 · 만든 시각과 그 전이(검증 결과 반영 · 재암호화). 문자열 표현은 ID · 공급자 · 상태뿐이다
-- `LlmKeyRepository` — 저장소. 주인으로 찾기 · 사용자의 키 · 사용자의 키 유무, 갱신용 잠금(ID · 주인), 활성 버전이 아닌 키의 ID, 버전마다의 키 수
+- `LlmKeyRepository` — 저장소. 주인으로 찾기 · 사용자의 키 · 사용자의 키 유무, 갱신용 잠금(ID · 주인), 활성 버전이 아닌 키의 ID 와 수, 버전마다의 키 수
 - `EnvelopeCipher` — 봉투 암호의 정본 — 봉인 · 열기 · 재암호화(credential-R1 ~ R4). JDK 의 암호 기능만 쓴다
 - `KeyEncryptionKeys` — KEK 의 집합. 활성 버전은 가장 큰 번호다. 문자열 표현은 버전 목록뿐이다
 - `KekFile` — KEK 파일 원문의 형식을 판정하는 정본(credential-R5). 문제 문구에 값이 없다

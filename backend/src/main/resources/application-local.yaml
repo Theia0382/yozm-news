@@ -16,3 +16,6 @@ yozmnews:
   collection:
     # 수집 요청의 User-Agent 에 밝히는 연락처(필수). 개발 중에 실제 피드를 받을 때 피드 운영자가 닿는 프로젝트 이슈 주소
     contact: https://github.com/Theia0382/yozm-news/issues
+  credential:
+    # 개발용 KEK — 개발 DB 의 LLM 키만 감싼다. 상대 경로는 작업 디렉터리(backend/) 기준 · CONTRIBUTING.md §1
+    kek-file: ../dev/local-kek
