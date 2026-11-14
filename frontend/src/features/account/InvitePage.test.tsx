@@ -65,6 +65,16 @@ describe("InvitePage", () => {
     ]);
   });
 
+  it("쓸 수 있는 초대의 가입 양식에 고지 페이지로 가는 링크를 둔다", async () => {
+    renderInvite(`/invite#${TOKEN}`, "VALID", () => json({}));
+
+    expect(
+      await screen.findByRole("link", {
+        name: "저장하는 것과 LLM 공급자에게 보내는 것",
+      }),
+    ).toHaveAttribute("href", "/privacy");
+  });
+
   it("쓸 수 있는 초대면 토큰을 실어 가입하고 복구 코드를 보인 뒤 첫 화면으로 간다", async () => {
     const { server } = renderInvite(`/invite#${TOKEN}`, "VALID", () =>
       json({

@@ -60,6 +60,16 @@ async function fill(password = "correct horse", confirm = password) {
 }
 
 describe("SignUpPage", () => {
+  it("가입 양식에 고지 페이지로 가는 링크를 둔다", async () => {
+    renderSignUp(true, result("SIGNED_UP"));
+
+    expect(
+      await screen.findByRole("link", {
+        name: "저장하는 것과 LLM 공급자에게 보내는 것",
+      }),
+    ).toHaveAttribute("href", "/privacy");
+  });
+
   it("공개 가입이 닫혔으면 입력 없이 초대를 받으라고 안내한다", async () => {
     renderSignUp(false, result("CLOSED"));
 

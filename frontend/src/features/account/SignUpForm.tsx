@@ -1,4 +1,5 @@
 import { type FormEvent, useState } from "react";
+import { Link } from "react-router";
 import {
   invitationStateText,
   PASSWORD_MISMATCH_TEXT,
@@ -7,6 +8,7 @@ import {
   UNREACHABLE_TEXT,
 } from "@/features/account/accountTexts";
 import { TextField } from "@/features/account/TextField";
+import { PRIVACY_PATH } from "@/features/privacy/privacyTexts";
 import { useMe } from "@/features/session/sessionQueries";
 import type { components } from "@/shared/api/schema";
 import { Button } from "@/shared/ui/button";
@@ -152,6 +154,11 @@ export function SignUpForm({ submit, onSignedUp }: SignUpFormProps) {
       <Button type="submit" disabled={submitting}>
         가입
       </Button>
+      <p className="text-sm text-muted-foreground">
+        <Link to={PRIVACY_PATH} className="underline">
+          저장하는 것과 LLM 공급자에게 보내는 것
+        </Link>
+      </p>
     </form>
   );
 }
