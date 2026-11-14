@@ -5,7 +5,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import net.yozmnews.llm.KeyValidationResult;
 import net.yozmnews.llm.LlmClientFactory;
 import net.yozmnews.llm.LlmFailureKind;
+import net.yozmnews.llm.NoStoredKeys;
 import net.yozmnews.llm.Provider;
+import net.yozmnews.llm.StoredKeySource;
 import net.yozmnews.llm.adapter.out.sdk.SdkProviderClients;
 import net.yozmnews.llm.domain.provider.LlmProviderClient;
 import net.yozmnews.llm.domain.provider.LlmProviderClients;
@@ -13,6 +15,7 @@ import net.yozmnews.llm.domain.provider.ProbeResult;
 import net.yozmnews.platform.SecretValue;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.FilterType;
@@ -81,6 +84,12 @@ class LocalProviderClientsConfigurationTests {
 							"net\\.yozmnews\\.llm\\.adapter\\.out\\.local\\.LocalProviderClientsConfiguration",
 							"net\\.yozmnews\\.llm\\.application\\.LlmClientFactoryService" }))
 	static class Wiring {
+
+		/** 관문이 요구하는 공급 인터페이스 — 이 시험은 저장한 키의 길을 부르지 않는다 */
+		@Bean
+		StoredKeySource storedKeySource() {
+			return new NoStoredKeys();
+		}
 
 	}
 
