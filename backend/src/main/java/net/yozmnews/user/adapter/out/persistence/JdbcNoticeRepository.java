@@ -8,9 +8,9 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 
+import net.yozmnews.platform.UserId;
 import net.yozmnews.source.FeedId;
 import net.yozmnews.source.FeedStatus;
-import net.yozmnews.user.UserId;
 import net.yozmnews.user.domain.notice.FeedStatusContent;
 import net.yozmnews.user.domain.notice.FeedStatusEntry;
 import net.yozmnews.user.domain.notice.Notice;

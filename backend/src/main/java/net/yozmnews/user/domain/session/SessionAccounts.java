@@ -2,7 +2,7 @@ package net.yozmnews.user.domain.session;
 
 import java.util.Optional;
 
-import net.yozmnews.user.UserId;
+import net.yozmnews.platform.UserId;
 
 /**
  * 세션 체인의 계정 조회 — 구현은 {@code adapter/out/persistence} 의 {@code JdbcSessionAccounts}. docs/specs/user.md §4 · user-R7

@@ -22,7 +22,7 @@ import java.util.concurrent.Future;
 
 import jakarta.servlet.http.Cookie;
 import net.yozmnews.TestcontainersConfiguration;
-import net.yozmnews.user.UserId;
+import net.yozmnews.platform.UserId;
 import net.yozmnews.user.application.PasswordHashing;
 import net.yozmnews.user.application.SignIn;
 import net.yozmnews.user.application.SignInOutcome;

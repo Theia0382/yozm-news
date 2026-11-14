@@ -3,7 +3,7 @@ package net.yozmnews.user.application;
 import java.time.Instant;
 import java.util.Objects;
 
-import net.yozmnews.user.UserId;
+import net.yozmnews.platform.UserId;
 import net.yozmnews.user.domain.notice.NoticeRepository;
 import net.yozmnews.user.domain.notice.PasswordChangeMethod;
 import net.yozmnews.user.domain.notice.PasswordChangedContent;

@@ -3,7 +3,7 @@ package net.yozmnews.user.application;
 import java.time.Instant;
 import java.util.Objects;
 
-import net.yozmnews.user.UserId;
+import net.yozmnews.platform.UserId;
 
 /**
  * 로그인 시도의 결과 — 로그인됨 · 거절 · 대기. docs/specs/user.md §4 · user-R17

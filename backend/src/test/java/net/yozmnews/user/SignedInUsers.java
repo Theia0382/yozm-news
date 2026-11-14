@@ -6,6 +6,7 @@ import java.time.Instant;
 import java.util.Objects;
 
 import jakarta.servlet.http.Cookie;
+import net.yozmnews.platform.UserId;
 import net.yozmnews.user.application.PasswordHashing;
 import net.yozmnews.user.domain.account.Account;
 import net.yozmnews.user.domain.account.AccountRepository;

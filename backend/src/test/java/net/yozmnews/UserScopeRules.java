@@ -14,7 +14,7 @@ import net.yozmnews.platform.AllowedBeforePasswordChange;
 import net.yozmnews.platform.ApiPaths;
 import net.yozmnews.platform.PublicApi;
 import net.yozmnews.platform.PublicApis;
-import net.yozmnews.user.UserId;
+import net.yozmnews.platform.UserId;
 import org.springframework.core.DefaultParameterNameDiscoverer;
 import org.springframework.core.MethodParameter;
 import org.springframework.core.annotation.AnnotatedElementUtils;

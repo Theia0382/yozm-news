@@ -2,6 +2,8 @@ package net.yozmnews.user;
 
 import java.util.Objects;
 
+import net.yozmnews.platform.UserId;
+
 /**
  * 운영자 계정 생성의 결과 — docs/specs/user.md §3
  */

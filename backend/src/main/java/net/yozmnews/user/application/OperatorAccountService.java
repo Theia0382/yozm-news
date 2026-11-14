@@ -5,11 +5,11 @@ import java.time.InstantSource;
 import java.util.Objects;
 import java.util.Optional;
 
+import net.yozmnews.platform.UserId;
 import net.yozmnews.user.AccountAdministration;
 import net.yozmnews.user.AccountCreationResult;
 import net.yozmnews.user.InitialPasswordResetResult;
 import net.yozmnews.user.PasswordProblem;
-import net.yozmnews.user.UserId;
 import net.yozmnews.user.domain.account.Account;
 import net.yozmnews.user.domain.account.AccountRepository;
 import net.yozmnews.user.domain.account.DisplayName;

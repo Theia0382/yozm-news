@@ -4,8 +4,8 @@ import java.util.Objects;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
+import net.yozmnews.platform.UserId;
 import net.yozmnews.platform.WebRole;
-import net.yozmnews.user.UserId;
 import net.yozmnews.user.application.NoticeInbox;
 import org.jspecify.annotations.Nullable;
 import org.springframework.http.HttpStatus;

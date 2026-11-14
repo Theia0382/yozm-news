@@ -18,6 +18,7 @@ import net.yozmnews.UserScopedEndpoints;
 import net.yozmnews.YozmnewsApplication;
 import net.yozmnews.platform.AllowedBeforePasswordChange;
 import net.yozmnews.platform.PublicApi;
+import net.yozmnews.platform.UserId;
 import net.yozmnews.user.application.PasswordHashing;
 import net.yozmnews.user.domain.account.AccountRepository;
 import net.yozmnews.user.domain.credential.PasswordCredentialRepository;

@@ -20,7 +20,7 @@ import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.YozmnewsApplication;
 import net.yozmnews.platform.AllowedBeforePasswordChange;
 import net.yozmnews.platform.PublicApi;
-import net.yozmnews.user.UserId;
+import net.yozmnews.platform.UserId;
 import net.yozmnews.user.domain.account.Account;
 import net.yozmnews.user.domain.account.AccountRepository;
 import net.yozmnews.user.domain.account.AccountRole;

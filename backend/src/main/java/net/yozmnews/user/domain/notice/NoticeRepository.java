@@ -4,7 +4,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
-import net.yozmnews.user.UserId;
+import net.yozmnews.platform.UserId;
 import org.jspecify.annotations.Nullable;
 
 /**

@@ -13,7 +13,7 @@ import java.util.List;
 
 import jakarta.servlet.http.Cookie;
 import net.yozmnews.TestcontainersConfiguration;
-import net.yozmnews.user.UserId;
+import net.yozmnews.platform.UserId;
 import net.yozmnews.user.application.PasswordHashing;
 import net.yozmnews.user.domain.account.Account;
 import net.yozmnews.user.domain.account.AccountRepository;

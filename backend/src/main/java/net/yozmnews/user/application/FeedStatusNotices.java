@@ -7,12 +7,12 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import net.yozmnews.platform.UserId;
 import net.yozmnews.source.FeedId;
 import net.yozmnews.source.FeedLabel;
 import net.yozmnews.source.FeedLabels;
 import net.yozmnews.source.FeedStatusTransition;
 import net.yozmnews.source.FeedStatusesChanged;
-import net.yozmnews.user.UserId;
 import net.yozmnews.user.domain.notice.FeedStatusContent;
 import net.yozmnews.user.domain.notice.FeedStatusReceipt;
 import net.yozmnews.user.domain.notice.Notice;

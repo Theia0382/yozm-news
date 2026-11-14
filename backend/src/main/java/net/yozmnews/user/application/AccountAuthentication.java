@@ -3,7 +3,7 @@ package net.yozmnews.user.application;
 import java.io.Serial;
 import java.util.List;
 
-import net.yozmnews.user.UserId;
+import net.yozmnews.platform.UserId;
 import net.yozmnews.user.domain.account.AccountRole;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.core.authority.AuthorityUtils;
