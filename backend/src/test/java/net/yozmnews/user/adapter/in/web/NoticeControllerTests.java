@@ -15,6 +15,7 @@ import java.util.stream.IntStream;
 
 import jakarta.servlet.http.Cookie;
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.llm.Provider;
 import net.yozmnews.source.FeedId;
 import net.yozmnews.source.FeedStatus;
 import net.yozmnews.user.SignedInUsers;
@@ -24,6 +25,7 @@ import net.yozmnews.user.domain.account.AccountRole;
 import net.yozmnews.user.domain.credential.PasswordCredentialRepository;
 import net.yozmnews.user.domain.notice.FeedStatusContent;
 import net.yozmnews.user.domain.notice.FeedStatusEntry;
+import net.yozmnews.user.domain.notice.KeyInvalidatedContent;
 import net.yozmnews.user.domain.notice.NoticeRepository;
 import net.yozmnews.user.domain.notice.PasswordChangeMethod;
 import net.yozmnews.user.domain.notice.PasswordChangedContent;
@@ -45,7 +47,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
  * 알림함 API — 목록은 최근부터 50개씩이고 다음 쪽 커서를 준다. 응답은 손으로 쓴 JSON 과 STRICT 로 견준다(피드 식별 · 상태 · 시각 · 횟수 밖의
  * 키가 없다). 읽음은 받은 판이 그대로인 알림만 바꾸고 결과와 무관하게 204 다. 질의 · 본문의 값이 틀리면 400, 요청 보호 토큰이 없으면 403 이다.
  * <p>
- * 지키는 규칙: user-R21 · user-R25 · user-R27
+ * 지키는 규칙: user-R21 · user-R25 · user-R27 · user-R36
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -113,13 +115,13 @@ class NoticeControllerTests {
 					      "firstAt":"2026-11-13T00:00:00Z","lastAt":"2026-11-13T01:00:00Z","changes":2},
 					     {"feedId":12,"sourceName":null,"section":null,"firstFrom":"ACTIVE","lastTo":"STALE",
 					      "firstAt":"2026-11-13T01:00:00Z","lastAt":"2026-11-13T01:00:00Z","changes":1}]},
-					   "passwordChanged":null},
+					   "passwordChanged":null,"keyInvalidated":null},
 					  {"id":%d,"kind":"FEED_STATUS","revision":1,"createdAt":"2026-11-13T00:00:00Z",
 					   "updatedAt":"2026-11-13T00:00:00Z","read":true,
 					   "feedStatus":{"feeds":[
 					     {"feedId":11,"sourceName":"알림일보","section":"정치","firstFrom":"ACTIVE","lastTo":"DEGRADED",
 					      "firstAt":"2026-11-13T00:00:00Z","lastAt":"2026-11-13T00:00:00Z","changes":1}]},
-					   "passwordChanged":null}],
+					   "passwordChanged":null,"keyInvalidated":null}],
 					 "nextBefore":null}
 					""".formatted(newer, older), JsonCompareMode.STRICT));
 		this.mockMvc.perform(get("/api/notices/unread-count").with(this.admin))
@@ -139,9 +141,31 @@ class NoticeControllerTests {
 					{"notices":[
 					  {"id":%d,"kind":"PASSWORD_CHANGED","revision":1,"createdAt":"2026-11-13T00:00:00Z",
 					   "updatedAt":"2026-11-13T00:00:00Z","read":false,"feedStatus":null,
-					   "passwordChanged":{"method":"RECOVERY","changedAt":"2026-11-13T00:00:00Z"}}],
+					   "passwordChanged":{"method":"RECOVERY","changedAt":"2026-11-13T00:00:00Z"},
+					   "keyInvalidated":null}],
 					 "nextBefore":null}
 					""".formatted(id), JsonCompareMode.STRICT));
+	}
+
+	@Test
+	void keyNoticeCarriesItsProviderAndTimeButNotTheKeyId() throws Exception {
+		assertThat(this.notices.createOnce(this.admin.id(),
+				new KeyInvalidatedContent(Provider.ANTHROPIC, 4_107, Instant.parse("2026-11-13T00:30:00.123456Z")), T1))
+			.isTrue();
+		long id = this.notices.page(this.admin.id(), null, 1).getFirst().id();
+
+		this.mockMvc.perform(get("/api/notices").with(this.admin))
+			.andExpect(status().isOk())
+			.andExpect(content().json("""
+					{"notices":[
+					  {"id":%d,"kind":"KEY_INVALIDATED","revision":1,"createdAt":"2026-11-13T00:00:00Z",
+					   "updatedAt":"2026-11-13T00:00:00Z","read":false,"feedStatus":null,"passwordChanged":null,
+					   "keyInvalidated":{"provider":"ANTHROPIC","invalidatedAt":"2026-11-13T00:30:00.123456Z"}}],
+					 "nextBefore":null}
+					""".formatted(id), JsonCompareMode.STRICT));
+		this.mockMvc.perform(get("/api/notices/unread-count").with(this.admin))
+			.andExpect(content().json("""
+					{"count":1}""", JsonCompareMode.STRICT));
 	}
 
 	@Test

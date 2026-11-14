@@ -3,6 +3,7 @@ package net.yozmnews.user.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
+import net.yozmnews.credential.LlmKeys;
 import net.yozmnews.platform.ProblemResponses;
 import net.yozmnews.user.domain.AdminCredential;
 import net.yozmnews.user.domain.session.SessionAccounts;
@@ -24,13 +25,14 @@ import org.springframework.security.web.SecurityFilterChain;
  */
 class SecurityConfigurationTests {
 
-	// 세션 체인이 처리기 매핑과 계정 저장소를 받는다 — 매핑은 MVC 자동 구성이, 저장소는 비어 있는 대역이 준다
+	// 세션 체인이 처리기 매핑 · 계정 저장소 · 키 유무 조회를 받는다 — 매핑은 MVC 자동 구성이, 나머지 둘은 비어 있는 대역이 준다
 	private final WebApplicationContextRunner runner = new WebApplicationContextRunner()
 		.withConfiguration(AutoConfigurations.of(JacksonAutoConfiguration.class, SecurityAutoConfiguration.class,
 				ServletWebSecurityAutoConfiguration.class, UserDetailsServiceAutoConfiguration.class,
 				WebMvcAutoConfiguration.class))
 		.withUserConfiguration(SecurityConfiguration.class, ProblemResponses.class)
-		.withBean(SessionAccounts.class, () -> mock(SessionAccounts.class));
+		.withBean(SessionAccounts.class, () -> mock(SessionAccounts.class))
+		.withBean(LlmKeys.class, () -> mock(LlmKeys.class));
 
 	@Test
 	void malformedTokenStopsTheStartupWithoutQuotingIt() {

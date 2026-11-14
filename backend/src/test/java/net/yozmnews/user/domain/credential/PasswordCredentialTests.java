@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 import java.time.Instant;
 
-import net.yozmnews.user.UserId;
+import net.yozmnews.platform.UserId;
 import org.junit.jupiter.api.Test;
 
 /**

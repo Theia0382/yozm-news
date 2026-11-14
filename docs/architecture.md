@@ -18,7 +18,7 @@ public interface ReportGenerator {
 }
 ```
 
-- LLM 관문 `LlmClientFactory` 는 [llm Spec](specs/llm.md#llmclientfactory)에 있다. 위 선언의 `LlmHandle` 은 저장한 키로 호출하는 길의 자리 표시다 — 그 길(사용자의 키를 복호화해 호출 직전에만 쓰는 연결과 호출 API)은 아직 설계되지 않았고, 설계하는 작업이 llm Spec 에 적는다. 키 평문은 `llm` 밖으로 나가지 않는다
+- LLM 관문 `LlmClientFactory` 는 [llm Spec](specs/llm.md#llmclientfactory)에 있다. 위 선언의 `LlmHandle` 은 저장한 키의 길에 생길 호출 API 의 자리 표시다 — 저장한 키를 받아 호출 직전에만 쓰는 길은 [llm Spec](specs/llm.md#저장한-키의-길)에 있고, 프롬프트를 넘겨 결과를 받는 호출 API 는 아직 설계되지 않아 설계하는 작업이 llm Spec 에 적는다. 저장한 키의 평문은 `llm` 에만 건너간다
 
 - `DigestGenerator`의 v1 구현체는 `llm` 관문의 호출 API 로 LLM 을 부르는 `LlmDigestGenerator`다. 공급자별 차이와 Spring AI 는 `llm` 안에 있다 — 생성기는 공급자 · 라이브러리를 모른다([ADR-0151](adr/0151-spring-ai-and-sdk-types-stay-inside-llm-and-the-gateway-exposes-only-its-own-types.md)).
 - `ReportGenerator`의 v1 구현체는 `DigestGenerator` 와 같은 방식의 LLM 구현이고, Spring profile `local` 은 고정 응답 로컬 대체물을 쓴다 ([ADR-0025](adr/0025-long-term-personal-news-history-in-v1.md)).

@@ -24,6 +24,7 @@ const ANONYMOUS: Me = {
   displayName: null,
   role: null,
   passwordChangeRequired: false,
+  llmKeyRequired: false,
 };
 
 const SIGNED_IN: Me = {
@@ -33,6 +34,7 @@ const SIGNED_IN: Me = {
   displayName: "앨리스",
   role: "USER",
   passwordChangeRequired: false,
+  llmKeyRequired: false,
 };
 
 function renderLogin(

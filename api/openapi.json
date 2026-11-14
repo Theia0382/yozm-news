@@ -136,7 +136,7 @@
                 }
               }
             },
-            "description" : "요청 보호 토큰이 없거나 맞지 않거나, 비밀번호를 바꿔야 한다"
+            "description" : "요청 보호 토큰이 없거나 맞지 않는다 · 비밀번호를 바꿔야 한다"
           }
         },
         "tags" : [ "account-controller" ]
@@ -2007,7 +2007,7 @@
     },
     "/api/admin/presets/{key}/registration" : {
       "post" : {
-        "operationId" : "register_1",
+        "operationId" : "register_2",
         "parameters" : [ {
           "in" : "path",
           "name" : "key",
@@ -2251,7 +2251,7 @@
         "tags" : [ "admin-source-controller" ]
       },
       "post" : {
-        "operationId" : "register",
+        "operationId" : "register_1",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -3876,6 +3876,186 @@
         "tags" : [ "sign-up-controller" ]
       }
     },
+    "/api/llm-keys" : {
+      "get" : {
+        "operationId" : "keys",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LlmKeysResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "세션이 없거나 만료됐다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "비밀번호를 바꿔야 한다"
+          }
+        },
+        "tags" : [ "llm-key-controller" ]
+      }
+    },
+    "/api/llm-keys/{provider}" : {
+      "delete" : {
+        "operationId" : "remove",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "provider",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "enum" : [ "OPENAI", "ANTHROPIC" ]
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "세션이 없거나 만료됐다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청 보호 토큰이 없거나 맞지 않는다 · 비밀번호를 바꿔야 한다"
+          }
+        },
+        "tags" : [ "llm-key-controller" ]
+      },
+      "put" : {
+        "operationId" : "register",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "provider",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "enum" : [ "OPENAI", "ANTHROPIC" ]
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/KeyRegistrationRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KeyRegistrationResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "세션이 없거나 만료됐다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청 보호 토큰이 없거나 맞지 않는다 · 비밀번호를 바꿔야 한다"
+          }
+        },
+        "tags" : [ "llm-key-controller" ]
+      }
+    },
+    "/api/llm-keys/{provider}/checks" : {
+      "post" : {
+        "operationId" : "check",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "provider",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "enum" : [ "OPENAI", "ANTHROPIC" ]
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KeyCheckResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "세션이 없거나 만료됐다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청 보호 토큰이 없거나 맞지 않는다 · 비밀번호를 바꿔야 한다"
+          }
+        },
+        "tags" : [ "llm-key-controller" ]
+      }
+    },
     "/api/me" : {
       "get" : {
         "operationId" : "me",
@@ -3977,7 +4157,7 @@
                 }
               }
             },
-            "description" : "요청 보호 토큰이 없거나 맞지 않거나, 비밀번호를 바꿔야 한다"
+            "description" : "요청 보호 토큰이 없거나 맞지 않는다 · 비밀번호를 바꿔야 한다"
           }
         },
         "tags" : [ "notice-controller" ]
@@ -5785,6 +5965,72 @@
         },
         "required" : [ "id", "judgedAt" ]
       },
+      "KeyCheckResponse" : {
+        "type" : "object",
+        "properties" : {
+          "failure" : {
+            "type" : [ "string", "null" ],
+            "enum" : [ "INVALID_KEY", "PERMISSION_DENIED", "QUOTA_EXHAUSTED", "TRANSIENT", "UNEXPECTED" ]
+          },
+          "key" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/LlmKeyResponse"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "result" : {
+            "type" : "string",
+            "enum" : [ "VALID", "INVALID", "UNDETERMINED", "MISSING" ]
+          }
+        },
+        "required" : [ "failure", "key", "result" ]
+      },
+      "KeyInvalidatedNoticeResponse" : {
+        "type" : "object",
+        "properties" : {
+          "invalidatedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "provider" : {
+            "type" : "string",
+            "enum" : [ "OPENAI", "ANTHROPIC" ]
+          }
+        },
+        "required" : [ "invalidatedAt", "provider" ]
+      },
+      "KeyRegistrationRequest" : {
+        "type" : "object",
+        "properties" : {
+          "key" : {
+            "type" : "string",
+            "minLength" : 1
+          }
+        },
+        "required" : [ "key" ]
+      },
+      "KeyRegistrationResponse" : {
+        "type" : "object",
+        "properties" : {
+          "failure" : {
+            "type" : [ "string", "null" ],
+            "enum" : [ "INVALID_KEY", "PERMISSION_DENIED", "QUOTA_EXHAUSTED", "TRANSIENT", "UNEXPECTED" ]
+          },
+          "key" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/LlmKeyResponse"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "result" : {
+            "type" : "string",
+            "enum" : [ "REGISTERED", "REJECTED" ]
+          }
+        },
+        "required" : [ "failure", "key", "result" ]
+      },
       "LastFailureView" : {
         "type" : "object",
         "properties" : {
@@ -5824,6 +6070,39 @@
         },
         "required" : [ "threshold", "windowSeconds" ]
       },
+      "LlmKeyResponse" : {
+        "type" : "object",
+        "properties" : {
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "hint" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "VALID", "INVALID" ]
+          },
+          "validatedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        },
+        "required" : [ "createdAt", "hint", "status", "validatedAt" ]
+      },
+      "LlmKeysResponse" : {
+        "type" : "object",
+        "properties" : {
+          "providers" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ProviderKeyResponse"
+            }
+          }
+        },
+        "required" : [ "providers" ]
+      },
       "MeResponse" : {
         "type" : "object",
         "properties" : {
@@ -5832,6 +6111,9 @@
           },
           "email" : {
             "type" : [ "string", "null" ]
+          },
+          "llmKeyRequired" : {
+            "type" : "boolean"
           },
           "passwordChangeRequired" : {
             "type" : "boolean"
@@ -5849,7 +6131,7 @@
             "format" : "int64"
           }
         },
-        "required" : [ "displayName", "email", "passwordChangeRequired", "result", "role", "userId" ]
+        "required" : [ "displayName", "email", "llmKeyRequired", "passwordChangeRequired", "result", "role", "userId" ]
       },
       "MergePairResponse" : {
         "type" : "object",
@@ -5968,9 +6250,16 @@
             "type" : "integer",
             "format" : "int64"
           },
+          "keyInvalidated" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/KeyInvalidatedNoticeResponse"
+            }, {
+              "type" : "null"
+            } ]
+          },
           "kind" : {
             "type" : "string",
-            "enum" : [ "FEED_STATUS", "PASSWORD_CHANGED" ]
+            "enum" : [ "FEED_STATUS", "PASSWORD_CHANGED", "KEY_INVALIDATED" ]
           },
           "passwordChanged" : {
             "oneOf" : [ {
@@ -5991,7 +6280,7 @@
             "format" : "date-time"
           }
         },
-        "required" : [ "createdAt", "feedStatus", "id", "kind", "passwordChanged", "read", "revision", "updatedAt" ]
+        "required" : [ "createdAt", "feedStatus", "id", "keyInvalidated", "kind", "passwordChanged", "read", "revision", "updatedAt" ]
       },
       "NoticeRevision" : {
         "type" : "object",
@@ -6278,6 +6567,23 @@
           }
         },
         "required" : [ "profile" ]
+      },
+      "ProviderKeyResponse" : {
+        "type" : "object",
+        "properties" : {
+          "key" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/LlmKeyResponse"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "provider" : {
+            "type" : "string",
+            "enum" : [ "OPENAI", "ANTHROPIC" ]
+          }
+        },
+        "required" : [ "key", "provider" ]
       },
       "ReadNoticesRequest" : {
         "type" : "object",

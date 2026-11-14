@@ -21,8 +21,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import jakarta.servlet.http.Cookie;
+import net.yozmnews.LlmKeyRows;
 import net.yozmnews.TestcontainersConfiguration;
-import net.yozmnews.user.UserId;
+import net.yozmnews.platform.UserId;
 import net.yozmnews.user.application.PasswordHashing;
 import net.yozmnews.user.application.SignIn;
 import net.yozmnews.user.application.SignInOutcome;
@@ -100,8 +101,33 @@ class SessionControllerTests {
 			.andExpect(status().isOk())
 			.andExpect(content().json("""
 					{"result":"SIGNED_IN","userId":%d,"email":"alice@example.com","displayName":"시험","role":"ADMIN",
-					 "passwordChangeRequired":false}
+					 "passwordChangeRequired":false,"llmKeyRequired":true}
 					""".formatted(user), JsonCompareMode.STRICT));
+	}
+
+	@Test
+	void theStateSaysWhetherTheUserHasALlmKey() throws Exception {
+		long user = account("keyed@example.com", AccountRole.USER);
+		Cookie session = sessionCookie(
+				this.mockMvc.perform(signIn("keyed@example.com", PASSWORD, false)).andReturn().getResponse());
+		this.mockMvc.perform(get("/api/me").cookie(session))
+			.andExpect(content().json("""
+					{"llmKeyRequired":true}"""));
+
+		LlmKeyRows.give(this.jdbc, user);
+
+		this.mockMvc.perform(get("/api/me").cookie(session))
+			.andExpect(status().isOk())
+			.andExpect(content().json("""
+					{"result":"SIGNED_IN","userId":%d,"email":"keyed@example.com","displayName":"시험","role":"USER",
+					 "passwordChangeRequired":false,"llmKeyRequired":false}
+					""".formatted(user), JsonCompareMode.STRICT));
+
+		// 무효가 된 키도 키다 — 상태를 보지 않는다
+		this.jdbc.sql("update llm_credentials set status = 'INVALID' where user_id = :id").param("id", user).update();
+		this.mockMvc.perform(get("/api/me").cookie(session))
+			.andExpect(content().json("""
+					{"llmKeyRequired":false}"""));
 	}
 
 	@Test
@@ -110,7 +136,7 @@ class SessionControllerTests {
 			.andExpect(status().isOk())
 			.andExpect(content().json("""
 					{"result":"ANONYMOUS","userId":null,"email":null,"displayName":null,"role":null,
-					 "passwordChangeRequired":false}
+					 "passwordChangeRequired":false,"llmKeyRequired":false}
 					""", JsonCompareMode.STRICT));
 	}
 
@@ -128,7 +154,7 @@ class SessionControllerTests {
 			.andExpect(status().isOk())
 			.andExpect(content().json("""
 					{"result":"SIGNED_IN","userId":%d,"email":"initial@example.com","displayName":"시험","role":"USER",
-					 "passwordChangeRequired":true}
+					 "passwordChangeRequired":true,"llmKeyRequired":true}
 					""".formatted(user), JsonCompareMode.STRICT));
 		this.mockMvc.perform(withCsrf(delete("/api/session")).cookie(session)).andExpect(status().isNoContent());
 	}
@@ -245,7 +271,7 @@ class SessionControllerTests {
 		this.mockMvc.perform(get("/api/me").cookie(session))
 			.andExpect(content().json("""
 					{"result":"ANONYMOUS","userId":null,"email":null,"displayName":null,"role":null,
-					 "passwordChangeRequired":false}
+					 "passwordChangeRequired":false,"llmKeyRequired":false}
 					""", JsonCompareMode.STRICT));
 		this.mockMvc.perform(withCsrf(delete("/api/session"))).andExpect(status().isNoContent());
 	}

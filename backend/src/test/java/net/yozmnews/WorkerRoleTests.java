@@ -54,12 +54,12 @@ class WorkerRoleTests {
 	void runsTheJobServerWithEveryJobEntryPoint() {
 		BackgroundJobServer server = this.context.getBean(BackgroundJobServer.class);
 		await().atMost(Duration.ofSeconds(60)).until(server::isRunning);
-		assertThat(RoleProbe.jobEntryPointBeans(this.context)).hasSize(11)
+		assertThat(RoleProbe.jobEntryPointBeans(this.context)).hasSize(12)
 			.allSatisfy((type, beans) -> assertThat(beans).as(type.getName()).isEqualTo(1));
 		assertThat(RoleProbe.recurringJobIds(this.jdbc)).containsExactlyInAnyOrder("poll-due-feeds",
 				"feed-health-check", "event-publication-resubmission", "evaluate-pending-articles",
 				"backfill-missing-tags", "event-intake", "event-cleanup", "storyline-linking", "storyline-relation",
-				"expire-sessions", "forget-login-failures", "forget-read-notices");
+				"expire-sessions", "forget-login-failures", "forget-read-notices", "rewrap-llm-keys");
 	}
 
 	@Test

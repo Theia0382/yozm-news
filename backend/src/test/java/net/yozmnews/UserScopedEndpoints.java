@@ -2,6 +2,7 @@ package net.yozmnews;
 
 import java.util.Map;
 
+import net.yozmnews.credential.LlmKeyScopeTests;
 import net.yozmnews.user.AccountScopeTests;
 import net.yozmnews.user.NoticeScopeTests;
 
@@ -18,7 +19,9 @@ public final class UserScopedEndpoints {
 	public static final Map<String, Class<?>> ENDPOINTS = Map.of("GET /api/notices", NoticeScopeTests.class,
 			"GET /api/notices/unread-count", NoticeScopeTests.class, "POST /api/notices/read", NoticeScopeTests.class,
 			"PUT /api/account/password", AccountScopeTests.class, "POST /api/account/recovery-code",
-			AccountScopeTests.class);
+			AccountScopeTests.class, "GET /api/llm-keys", LlmKeyScopeTests.class, "PUT /api/llm-keys/{provider}",
+			LlmKeyScopeTests.class, "POST /api/llm-keys/{provider}/checks", LlmKeyScopeTests.class,
+			"DELETE /api/llm-keys/{provider}", LlmKeyScopeTests.class);
 
 	private UserScopedEndpoints() {
 	}

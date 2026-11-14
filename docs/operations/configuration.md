@@ -219,6 +219,25 @@
 - 값을 비운 줄(`YOZMNEWS_LLM_MODELS_FILE=`)은 빈 값이 그대로 넘어가 앱이 뜨지 않는다. 쓰지 않을 때는 줄을 지우거나 주석으로 둔다
 - 사용자 키와 프롬프트가 가는 공급자 주소는 바꿀 수 없다 — 앱이 공급자(`api.openai.com` · `api.anthropic.com`)로 직접 보낸다([배포 — 공개 경로와 외부 서비스](deployment.md#공개-경로와-외부-서비스))
 
+## LLM 키 암호화
+
+사용자가 등록한 LLM 키는 암호화해 DB 에 둔다. 키마다의 암호화 키(DEK)를 감싸는 키(KEK)를 운영자가 파일로 준다 — 규칙은 [credential Spec](../specs/credential.md#kek) credential-R5 ~ R7 에 있다.
+
+| 변수 | 필수 | 쓰는 곳 | 값 예시 | 바꾸는 것 |
+|---|---|---|---|---|
+| `YOZMNEWS_CREDENTIAL_KEK_FILE` | 아니오 | `app` → `yozmnews.credential.kek-file` | `/etc/yozmnews/kek` | KEK 파일의 컨테이너 안 경로. 줄이 없으면 배포 구성이 `/etc/yozmnews/kek`(호스트의 `deploy/config/kek`)를 넘긴다 |
+
+- **파일은 필수다.** 변수는 경로를 바꿀 때만 적지만, 그 경로의 파일이 없으면 앱이 뜨지 않는다. 기본 경로를 쓰면 `deploy/config/kek` 를 만든다
+
+  ```sh
+  printf '1:%s\n' "$(openssl rand -base64 32)" > deploy/config/kek
+  ```
+- 파일은 한 줄에 `버전:값` 하나다 — 버전은 1 이상의 정수(겹치지 않게), 값은 32바이트를 표준 Base64 로 적은 것이다. 빈 줄과 `#` 로 시작하는 줄은 건너뛴다. 새 키는 가장 큰 버전으로 감싼다
+- 파일이 없거나 읽을 수 없거나 형식이 틀리면 앱이 뜨지 않고, 기동 로그가 변수 이름 · 경로 · 문제의 줄 번호와 까닭을 말한다(값은 찍지 않는다). 저장된 키가 가리키는 버전의 줄이 파일에 없어도 뜨지 않는다 — 로그가 그 버전과 키의 수를 말한다
+- `app` 은 사용자 `65534` 로 돈다. 파일은 그 사용자가 읽을 수 있어야 한다 — 호스트의 다른 계정에게서 가리려면 `deploy/config/` 디렉터리의 권한으로 막는다
+- 값을 비운 줄(`YOZMNEWS_CREDENTIAL_KEK_FILE=`)은 기본 경로가 된다
+- 만들기 · 백업 · 교체의 절차는 [배포 — LLM 키 암호화 키(KEK)](deployment.md#llm-키-암호화-키kek)에 있다
+
 ## Compose
 
 | 변수 | 필수 | 쓰는 곳 | 값 예시 | 바꾸는 것 |
@@ -230,10 +249,11 @@
 ## 비밀 값
 
 - 지금 배포 구성의 비밀 값은 `POSTGRES_PASSWORD`, [운영자 토큰](#운영자)(`YOZMNEWS_ADMIN_TOKEN`), [첫 운영자 초기 비밀번호](#계정과-고지)(`YOZMNEWS_FIRST_ADMIN_PASSWORD` — 계정을 만든 뒤 지운다), [Jev API 키](#공유-평가)(`YOZMNEWS_JEV_API_KEY`), 외부 임베딩 방식을 쓸 때의 [임베딩 API 키](#임베딩)(`YOZMNEWS_EMBEDDING_OPENAI_COMPATIBLE_API_KEY`)다
-- **(미구현)** 봇 차단(Turnstile) secret, Tunnel 토큰, BYOK 키 암호화용 KEK
+- [LLM 키 암호화](#llm-키-암호화)의 KEK 는 환경 파일이 아니라 설정 디렉터리의 파일(`deploy/config/kek`)에 둔다
+- **(미구현)** 봇 차단(Turnstile) secret, Tunnel 토큰
 - 비밀 값은 호스트의 환경 파일(`deploy/.env`)에 두고 저장소에 커밋하지 않는다
 - **(미구현)** 비밀 값을 Docker secrets 로도 받는다
-- **(미구현)** KEK 는 다른 비밀 값과 **별도 파일**로 두고 DB 백업에 넣지 않는다. 버전을 붙여 교체할 수 있게 하고, DB 백업과 다른 위치에 따로 백업한다. KEK 를 잃으면 저장된 사용자 키를 복호화할 수 없다 — 사용자가 키를 다시 등록하면 되므로 치명적이지는 않다. 키 암호화 구조와 KEK 교체 절차는 [security.md](../security.md)
+- KEK 파일은 DB 백업에 넣지 않고 DB 백업과 다른 위치에 따로 백업한다. KEK 를 잃으면 저장된 사용자 키를 복호화할 수 없다 — 사용자가 키를 다시 등록하면 되므로 치명적이지는 않다. 키 암호화 구조는 [security.md](../security.md#byok-키-보관)에 있다
 
 ## 데이터 보존
 

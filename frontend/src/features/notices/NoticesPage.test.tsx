@@ -27,6 +27,7 @@ const SIGNED_IN: Me = {
   displayName: "운영자",
   role: "ADMIN",
   passwordChangeRequired: false,
+  llmKeyRequired: false,
 };
 
 const ANONYMOUS: Me = {
@@ -36,6 +37,7 @@ const ANONYMOUS: Me = {
   displayName: null,
   role: null,
   passwordChangeRequired: false,
+  llmKeyRequired: false,
 };
 
 /** 안 읽은 피드 상태 알림 — 피드 셋(지금 계속 실패 · 정상 · 오래 새 기사 없음) */
@@ -81,6 +83,7 @@ const GATHERED: Notice = {
     ],
   },
   passwordChanged: null,
+  keyInvalidated: null,
 };
 
 /** 읽은 피드 상태 알림 하나 */
@@ -106,6 +109,7 @@ const OLD: Notice = {
     ],
   },
   passwordChanged: null,
+  keyInvalidated: null,
 };
 
 /** 복구 코드로 재설정한 비밀번호 알림 */
@@ -118,6 +122,23 @@ const PASSWORD: Notice = {
   read: false,
   feedStatus: null,
   passwordChanged: { method: "RECOVERY", changedAt: "2026-11-13T03:00:00Z" },
+  keyInvalidated: null,
+};
+
+/** 공급자가 받아 주지 않아 무효가 된 키의 알림 */
+const KEY_INVALIDATED: Notice = {
+  id: 30,
+  kind: "KEY_INVALIDATED",
+  revision: 1,
+  createdAt: "2026-11-13T03:00:05Z",
+  updatedAt: "2026-11-13T03:00:05Z",
+  read: false,
+  feedStatus: null,
+  passwordChanged: null,
+  keyInvalidated: {
+    provider: "ANTHROPIC",
+    invalidatedAt: "2026-11-13T03:00:00Z",
+  },
 };
 
 function page(notices: Notice[], nextBefore: number | null = null): NoticePage {
@@ -226,6 +247,24 @@ describe("NoticesPage", () => {
     expect(item).toHaveTextContent(
       "직접 바꾸지 않았다면 바로 비밀번호를 바꾸세요.",
     );
+  });
+
+  it("키 무효 알림은 공급자와 시각을 보이고 키 화면으로 잇는다", async () => {
+    renderNotices(() => json(page([KEY_INVALIDATED])));
+
+    const item = await screen.findByRole("article");
+    expect(within(item).getByRole("heading", { level: 2 })).toHaveTextContent(
+      "새 알림LLM 키가 무효가 됐습니다",
+    );
+    expect(item).toHaveTextContent(
+      "Anthropic 키를 공급자가 받아 주지 않았습니다. 2026. 11. 13. 오후 12:00 GMT+9",
+    );
+    expect(item).toHaveTextContent(
+      "새 키를 등록할 때까지 이 키로는 다이제스트를 만들지 못합니다.",
+    );
+    expect(
+      within(item).getByRole("link", { name: "LLM 키 화면에서 확인하기" }),
+    ).toHaveAttribute("href", "/keys");
   });
 
   it("받은 쪽의 안 읽은 알림만 받은 판까지 읽음으로 보낸다", async () => {

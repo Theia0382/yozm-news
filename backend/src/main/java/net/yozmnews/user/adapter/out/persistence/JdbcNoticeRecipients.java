@@ -2,7 +2,7 @@ package net.yozmnews.user.adapter.out.persistence;
 
 import java.util.List;
 
-import net.yozmnews.user.UserId;
+import net.yozmnews.platform.UserId;
 import net.yozmnews.user.domain.account.AccountRole;
 import net.yozmnews.user.domain.account.AccountStatus;
 import net.yozmnews.user.domain.notice.NoticeRecipients;

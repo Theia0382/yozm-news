@@ -3,9 +3,9 @@ package net.yozmnews.user.application;
 import java.util.Objects;
 import java.util.Optional;
 
+import net.yozmnews.platform.UserId;
 import net.yozmnews.user.InvitationState;
 import net.yozmnews.user.PasswordProblem;
-import net.yozmnews.user.UserId;
 import net.yozmnews.user.domain.secret.RecoveryCode;
 
 /**

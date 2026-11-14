@@ -88,3 +88,4 @@ net.yozmnews.<module>
 ## 후속 기록
 
 - 2026-10-29: 테스트 표의 "단위 — `domain` — 스프링 없이 순수 Java"를 읽는 법과, `domain` 이 교체하지 않는 프레임워크(Spring Data JDBC · Spring Modulith)의 타입을 쓰는 기준은 [ADR-0037](0037-domain-may-use-non-replaceable-framework-types.md)에 있다.
+- 2026-11-14: "포트와 어댑터는 외부 의존성에만"의 범위 밖 — 한 모듈이 선언하고 다른 모듈이 구현하는 모듈 사이의 공급 인터페이스 — [ADR-0157](0157-credential-depends-on-llm-and-stored-keys-reach-llm-through-a-supply-interface-that-llm-declares-and-credential-implements.md) · [`llm` llm-R17 · R18](../specs/llm.md#저장한-키의-길)

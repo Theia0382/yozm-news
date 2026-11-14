@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import net.yozmnews.credential.adapter.in.job.RewrapKeysJob;
 import net.yozmnews.event.adapter.in.job.EventCleanupJob;
 import net.yozmnews.event.adapter.in.job.IntakeArticlesJob;
 import net.yozmnews.platform.adapter.in.job.EventResubmissionJob;
@@ -34,7 +35,7 @@ final class RoleProbe {
 	static final List<Class<?>> JOB_ENTRY_POINTS = List.of(PollDueFeedsJob.class, PollFeedJob.class,
 			FeedHealthCheckJob.class, EventResubmissionJob.class, EvaluatePendingArticlesJob.class,
 			BackfillMissingTagsJob.class, IntakeArticlesJob.class, EventCleanupJob.class, ExpireSessionsJob.class,
-			ForgetLoginFailuresJob.class, ForgetReadNoticesJob.class);
+			ForgetLoginFailuresJob.class, ForgetReadNoticesJob.class, RewrapKeysJob.class);
 
 	/** Spring Modulith 멈춤 감시 작업의 설명 접두 — 작업은 이 구성의 람다다 */
 	private static final String STALENESS_MONITOR =

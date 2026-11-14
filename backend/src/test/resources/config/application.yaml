@@ -16,3 +16,6 @@ yozmnews:
       base-url: http://127.0.0.1:9
       model: test-model
       dimensions: 256
+  credential:
+    # KEK 파일은 필수다(없으면 앱이 뜨지 않는다). 시험용 파일은 시험 DB 의 키만 감싼다
+    kek-file: classpath:credential/test-kek

@@ -1,4 +1,5 @@
 import { type FormEvent, useState } from "react";
+import { Link } from "react-router";
 import {
   CURRENT_PASSWORD_ATTEMPT,
   CURRENT_PASSWORD_REJECTED_TEXT,
@@ -8,6 +9,7 @@ import {
 import { PasswordChangeForm } from "@/features/account/PasswordChangeForm";
 import { RecoveryCodeNotice } from "@/features/account/RecoveryCodeNotice";
 import { TextField } from "@/features/account/TextField";
+import { PRIVACY_PATH } from "@/features/privacy/privacyTexts";
 import { useMe } from "@/features/session/sessionQueries";
 import { waitText } from "@/features/session/waitText";
 import { useApiClient } from "@/shared/api/client";
@@ -82,6 +84,11 @@ export function SettingsPage() {
           </section>
         </>
       )}
+      <p className="text-sm">
+        <Link to={PRIVACY_PATH} className="underline">
+          저장하는 것과 LLM 공급자에게 보내는 것
+        </Link>
+      </p>
     </section>
   );
 }

@@ -47,6 +47,7 @@ describe("routes", () => {
       displayName: "앨리스",
       role: "USER",
       passwordChangeRequired: false,
+      llmKeyRequired: false,
     });
 
     expect(
@@ -62,6 +63,7 @@ describe("routes", () => {
       displayName: null,
       role: null,
       passwordChangeRequired: false,
+      llmKeyRequired: false,
     });
 
     expect(

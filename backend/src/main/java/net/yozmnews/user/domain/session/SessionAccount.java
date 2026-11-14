@@ -2,7 +2,7 @@ package net.yozmnews.user.domain.session;
 
 import java.util.Objects;
 
-import net.yozmnews.user.UserId;
+import net.yozmnews.platform.UserId;
 import net.yozmnews.user.domain.account.AccountRole;
 
 /**

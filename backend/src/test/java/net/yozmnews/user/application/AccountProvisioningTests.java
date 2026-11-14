@@ -9,7 +9,7 @@ import java.time.Instant;
 import java.util.Map;
 
 import net.yozmnews.TestcontainersConfiguration;
-import net.yozmnews.user.UserId;
+import net.yozmnews.platform.UserId;
 import net.yozmnews.user.domain.account.DisplayName;
 import net.yozmnews.user.domain.account.EmailAddress;
 import net.yozmnews.user.domain.account.Onboarding;

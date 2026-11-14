@@ -3,7 +3,7 @@ package net.yozmnews.user.application;
 import java.util.Objects;
 import java.util.Optional;
 
-import net.yozmnews.user.UserId;
+import net.yozmnews.platform.UserId;
 import net.yozmnews.user.domain.account.Account;
 import net.yozmnews.user.domain.account.AccountRepository;
 import org.springframework.stereotype.Service;

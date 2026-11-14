@@ -29,6 +29,13 @@ export const routes: RouteObject[] = [
             }),
           },
           {
+            // LLM 키 화면 — 키가 없는 사용자는 설정 · 알림 밖의 어느 주소로 와도 여기로 간다
+            path: "keys",
+            lazy: async () => ({
+              Component: (await import("@/features/keys/KeysPage")).KeysPage,
+            }),
+          },
+          {
             // 첫 로그인의 비밀번호 변경 — 변경이 남은 계정은 어느 주소로 와도 여기로 간다
             path: "password",
             lazy: async () => ({
@@ -63,6 +70,14 @@ export const routes: RouteObject[] = [
         lazy: async () => ({
           Component: (await import("@/features/account/RecoverPage"))
             .RecoverPage,
+        }),
+      },
+      {
+        // 고지 페이지는 로그인 없이 본다 — 가입 · 키 · 설정 화면이 링크한다
+        path: "privacy",
+        lazy: async () => ({
+          Component: (await import("@/features/privacy/PrivacyPage"))
+            .PrivacyPage,
         }),
       },
       {

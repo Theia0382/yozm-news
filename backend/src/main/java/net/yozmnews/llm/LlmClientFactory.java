@@ -1,11 +1,10 @@
 package net.yozmnews.llm;
 
 import net.yozmnews.platform.SecretValue;
+import net.yozmnews.platform.UserId;
 
 /**
- * 모든 LLM 호출이 거치는 관문 — docs/specs/llm.md §3.
- * <p>
- * 저장한 키로 호출하는 길은 아직 없다 — 그 길도 이 인터페이스를 거친다.
+ * 모든 LLM 호출이 거치는 관문 — docs/specs/llm.md §3
  */
 public interface LlmClientFactory {
 
@@ -15,5 +14,11 @@ public interface LlmClientFactory {
 	 * @throws IllegalStateException 트랜잭션 안에서 불렀을 때 — 요청을 보내지 않는다
 	 */
 	KeyValidationResult validate(Provider provider, SecretValue key);
+
+	/**
+	 * 그 사용자 · 공급자의 저장한 키로 같은 확인을 하고 결과를 그 키에 알린다 — llm-R17.
+	 * @throws IllegalStateException 트랜잭션 안에서 불렀을 때 — 요청을 보내지 않는다
+	 */
+	StoredKeyValidation validateStored(UserId user, Provider provider);
 
 }
