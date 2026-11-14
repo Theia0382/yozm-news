@@ -11,6 +11,9 @@ public enum NoticeKind {
 	FEED_STATUS,
 
 	/** 비밀번호가 바뀌었다 — 바뀔 때마다 하나 */
-	PASSWORD_CHANGED
+	PASSWORD_CHANGED,
+
+	/** LLM 키가 무효가 됐다 — 무효가 되는 전이마다 하나 */
+	KEY_INVALIDATED
 
 }

@@ -132,6 +132,8 @@ function noticeTitle(notice: Notice): string {
       return "피드 상태가 바뀌었습니다";
     case "PASSWORD_CHANGED":
       return "비밀번호가 바뀌었습니다";
+    case "KEY_INVALIDATED":
+      return "LLM 키가 무효가 됐습니다";
   }
 }
 
@@ -141,6 +143,9 @@ function NoticeBody({ notice }: { notice: Notice }): ReactElement {
       return <FeedStatusBody feeds={notice.feedStatus?.feeds ?? []} />;
     case "PASSWORD_CHANGED":
       return <PasswordChangedBody body={notice.passwordChanged} />;
+    case "KEY_INVALIDATED":
+      // 본문은 키 화면과 함께 둔다 — 지금은 제목과 시각만 보인다
+      return <></>;
   }
 }
 

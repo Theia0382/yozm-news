@@ -83,6 +83,7 @@ const GATHERED: Notice = {
     ],
   },
   passwordChanged: null,
+  keyInvalidated: null,
 };
 
 /** 읽은 피드 상태 알림 하나 */
@@ -108,6 +109,7 @@ const OLD: Notice = {
     ],
   },
   passwordChanged: null,
+  keyInvalidated: null,
 };
 
 /** 복구 코드로 재설정한 비밀번호 알림 */
@@ -120,6 +122,7 @@ const PASSWORD: Notice = {
   read: false,
   feedStatus: null,
   passwordChanged: { method: "RECOVERY", changedAt: "2026-11-13T03:00:00Z" },
+  keyInvalidated: null,
 };
 
 function page(notices: Notice[], nextBefore: number | null = null): NoticePage {

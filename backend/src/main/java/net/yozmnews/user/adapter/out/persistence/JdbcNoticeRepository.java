@@ -8,11 +8,13 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 
+import net.yozmnews.llm.Provider;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.source.FeedId;
 import net.yozmnews.source.FeedStatus;
 import net.yozmnews.user.domain.notice.FeedStatusContent;
 import net.yozmnews.user.domain.notice.FeedStatusEntry;
+import net.yozmnews.user.domain.notice.KeyInvalidatedContent;
 import net.yozmnews.user.domain.notice.Notice;
 import net.yozmnews.user.domain.notice.NoticeContent;
 import net.yozmnews.user.domain.notice.NoticeKind;
@@ -26,7 +28,7 @@ import org.springframework.stereotype.Repository;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * {@link NoticeRepository} 의 JdbcClient 구현 — docs/specs/user.md §4 · §6 · user-R21 · user-R23 ~ user-R26.
+ * {@link NoticeRepository} 의 JdbcClient 구현 — docs/specs/user.md §4 · §6 · user-R21 · user-R23 ~ user-R26 · user-R36.
  * <p>
  * 잠금은 aggregate 저장이 아니라 SQL 이다. 반영 기준 행은 자리 행을 {@code INSERT … ON CONFLICT DO NOTHING} 으로 넣은 뒤
  * {@code SELECT … FOR UPDATE} 로 잠근다(위반 예외는 트랜잭션을 깨므로 쓰지 않는다). 안 읽은 알림의 잠금은 조건({@code read_at is null})을
@@ -95,6 +97,21 @@ class JdbcNoticeRepository implements NoticeRepository {
 	}
 
 	@Override
+	public boolean createOnce(UserId user, KeyInvalidatedContent content, Instant now) {
+		return this.jdbc.sql("""
+				insert into user_notices (user_id, kind, content, revision, created_at, updated_at)
+				values (:user, :kind, cast(:content as jsonb), 1, :now, :now)
+				on conflict (user_id, (content ->> 'keyId'), (content ->> 'invalidatedAt'))
+				  where kind = 'KEY_INVALIDATED' do nothing
+				""")
+			.param("user", user.value())
+			.param("kind", content.kind().name())
+			.param("content", json(content))
+			.param("now", utc(now))
+			.update() == 1;
+	}
+
+	@Override
 	public void revise(long id, NoticeContent content, Instant now) {
 		this.jdbc.sql("""
 				update user_notices set content = cast(:content as jsonb), revision = revision + 1, updated_at = :now
@@ -152,6 +169,7 @@ class JdbcNoticeRepository implements NoticeRepository {
 		NoticeContent content = switch (kind) {
 			case FEED_STATUS -> JSON.readValue(rs.getString("content"), StoredFeedStatus.class).content();
 			case PASSWORD_CHANGED -> JSON.readValue(rs.getString("content"), StoredPasswordChanged.class).content();
+			case KEY_INVALIDATED -> JSON.readValue(rs.getString("content"), StoredKeyInvalidated.class).content();
 		};
 		return new Notice(rs.getLong("id"), kind, content, rs.getInt("revision"),
 				rs.getObject("created_at", OffsetDateTime.class).toInstant(),
@@ -163,6 +181,7 @@ class JdbcNoticeRepository implements NoticeRepository {
 			case FeedStatusContent feedStatus -> JSON.writeValueAsString(StoredFeedStatus.of(feedStatus));
 			case PasswordChangedContent passwordChanged ->
 				JSON.writeValueAsString(StoredPasswordChanged.of(passwordChanged));
+			case KeyInvalidatedContent keyInvalidated -> JSON.writeValueAsString(StoredKeyInvalidated.of(keyInvalidated));
 		};
 	}
 
@@ -206,6 +225,27 @@ class JdbcNoticeRepository implements NoticeRepository {
 
 		PasswordChangedContent content() {
 			return new PasswordChangedContent(this.method, Instant.parse(this.changedAt));
+		}
+
+	}
+
+	/**
+	 * 키 무효 알림 내용의 저장 모양 — {@code {"provider":…,"keyId":…,"invalidatedAt":…}}. 공급자는 그 키({@code Provider.key()}), 시각은 ISO
+	 * 8601 문자열이다. {@code keyId} · {@code invalidatedAt} 은 같은 전이의 알림을 하나로 묶는 고유 인덱스의 키다 — 이름을 바꾸면
+	 * 마이그레이션의 인덱스도 바꾼다
+	 */
+	private record StoredKeyInvalidated(String provider, long keyId, String invalidatedAt) {
+
+		static StoredKeyInvalidated of(KeyInvalidatedContent content) {
+			return new StoredKeyInvalidated(content.provider().key(), content.keyId(),
+					content.invalidatedAt().toString());
+		}
+
+		KeyInvalidatedContent content() {
+			return new KeyInvalidatedContent(
+					Provider.ofKey(this.provider)
+						.orElseThrow(() -> new IllegalStateException("모르는 공급자 키가 저장돼 있다: " + this.provider)),
+					this.keyId, Instant.parse(this.invalidatedAt));
 		}
 
 	}

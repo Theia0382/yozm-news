@@ -5986,6 +5986,20 @@
         },
         "required" : [ "failure", "key", "result" ]
       },
+      "KeyInvalidatedNoticeResponse" : {
+        "type" : "object",
+        "properties" : {
+          "invalidatedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "provider" : {
+            "type" : "string",
+            "enum" : [ "OPENAI", "ANTHROPIC" ]
+          }
+        },
+        "required" : [ "invalidatedAt", "provider" ]
+      },
       "KeyRegistrationRequest" : {
         "type" : "object",
         "properties" : {
@@ -6236,9 +6250,16 @@
             "type" : "integer",
             "format" : "int64"
           },
+          "keyInvalidated" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/KeyInvalidatedNoticeResponse"
+            }, {
+              "type" : "null"
+            } ]
+          },
           "kind" : {
             "type" : "string",
-            "enum" : [ "FEED_STATUS", "PASSWORD_CHANGED" ]
+            "enum" : [ "FEED_STATUS", "PASSWORD_CHANGED", "KEY_INVALIDATED" ]
           },
           "passwordChanged" : {
             "oneOf" : [ {
@@ -6259,7 +6280,7 @@
             "format" : "date-time"
           }
         },
-        "required" : [ "createdAt", "feedStatus", "id", "kind", "passwordChanged", "read", "revision", "updatedAt" ]
+        "required" : [ "createdAt", "feedStatus", "id", "keyInvalidated", "kind", "passwordChanged", "read", "revision", "updatedAt" ]
       },
       "NoticeRevision" : {
         "type" : "object",
