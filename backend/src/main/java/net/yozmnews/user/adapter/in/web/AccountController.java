@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import net.yozmnews.platform.AllowedBeforePasswordChange;
+import net.yozmnews.platform.AllowedWithoutLlmKey;
 import net.yozmnews.platform.PublicApi;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.platform.WebRole;
@@ -57,6 +58,7 @@ class AccountController {
 
 	/** 비밀번호 변경 — 바꾸면 이 세션의 ID 와 CSRF 토큰을 바꾸고 다른 세션은 끝난다 */
 	@AllowedBeforePasswordChange(reason = "초기 비밀번호를 바꾸는 길이다")
+	@AllowedWithoutLlmKey(reason = "계정의 비밀번호는 키와 무관하게 바꾼다")
 	@PutMapping("/api/account/password")
 	PasswordChangeResponse changePassword(UserId user, @Valid @RequestBody PasswordChangeRequest body,
 			HttpServletRequest request, HttpServletResponse response) {
@@ -71,6 +73,7 @@ class AccountController {
 	}
 
 	/** 복구 코드 재발급 — 현재 비밀번호를 확인한다 */
+	@AllowedWithoutLlmKey(reason = "계정의 복구 코드는 키와 무관하게 다시 받는다")
 	@PostMapping("/api/account/recovery-code")
 	RecoveryCodeResponse reissueRecoveryCode(UserId user, @Valid @RequestBody RecoveryCodeRequest body) {
 		Instant now = this.clock.instant();

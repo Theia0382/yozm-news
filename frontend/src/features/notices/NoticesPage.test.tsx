@@ -27,6 +27,7 @@ const SIGNED_IN: Me = {
   displayName: "운영자",
   role: "ADMIN",
   passwordChangeRequired: false,
+  llmKeyRequired: false,
 };
 
 const ANONYMOUS: Me = {
@@ -36,6 +37,7 @@ const ANONYMOUS: Me = {
   displayName: null,
   role: null,
   passwordChangeRequired: false,
+  llmKeyRequired: false,
 };
 
 /** 안 읽은 피드 상태 알림 — 피드 셋(지금 계속 실패 · 정상 · 오래 새 기사 없음) */

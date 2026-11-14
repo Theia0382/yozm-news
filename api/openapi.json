@@ -136,7 +136,7 @@
                 }
               }
             },
-            "description" : "요청 보호 토큰이 없거나 맞지 않거나, 비밀번호를 바꿔야 한다"
+            "description" : "요청 보호 토큰이 없거나 맞지 않는다 · 비밀번호를 바꿔야 한다"
           }
         },
         "tags" : [ "account-controller" ]
@@ -3977,7 +3977,7 @@
                 }
               }
             },
-            "description" : "요청 보호 토큰이 없거나 맞지 않거나, 비밀번호를 바꿔야 한다"
+            "description" : "요청 보호 토큰이 없거나 맞지 않는다 · 비밀번호를 바꿔야 한다"
           }
         },
         "tags" : [ "notice-controller" ]
@@ -5833,6 +5833,9 @@
           "email" : {
             "type" : [ "string", "null" ]
           },
+          "llmKeyRequired" : {
+            "type" : "boolean"
+          },
           "passwordChangeRequired" : {
             "type" : "boolean"
           },
@@ -5849,7 +5852,7 @@
             "format" : "int64"
           }
         },
-        "required" : [ "displayName", "email", "passwordChangeRequired", "result", "role", "userId" ]
+        "required" : [ "displayName", "email", "llmKeyRequired", "passwordChangeRequired", "result", "role", "userId" ]
       },
       "MergePairResponse" : {
         "type" : "object",

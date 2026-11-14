@@ -127,7 +127,7 @@ class SignUpControllerTests {
 		this.mockMvc.perform(get("/api/me").cookie(cookie(response, "SESSION")))
 			.andExpect(content().json("""
 					{"result":"SIGNED_IN","userId":%d,"email":"alice@example.com","displayName":"앨리스","role":"USER",
-					 "passwordChangeRequired":false}
+					 "passwordChangeRequired":false,"llmKeyRequired":true}
 					""".formatted(user), JsonCompareMode.STRICT));
 		String code = com.jayway.jsonpath.JsonPath.read(response.getContentAsString(), "$.recoveryCode");
 		assertThat(this.recoveryCodes.find(new UserId(user)).orElseThrow()

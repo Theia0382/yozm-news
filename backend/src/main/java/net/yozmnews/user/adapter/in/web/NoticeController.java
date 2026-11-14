@@ -4,6 +4,7 @@ import java.util.Objects;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
+import net.yozmnews.platform.AllowedWithoutLlmKey;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.platform.WebRole;
 import net.yozmnews.user.application.NoticeInbox;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @WebRole
 @RestController
+@AllowedWithoutLlmKey(reason = "보안 알림과 운영자의 피드 상태 알림은 키와 무관하게 본다")
 class NoticeController {
 
 	private final NoticeInbox inbox;

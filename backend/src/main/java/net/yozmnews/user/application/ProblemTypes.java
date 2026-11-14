@@ -38,6 +38,11 @@ final class ProblemTypes {
 
 	static final String PASSWORD_CHANGE_REQUIRED_TITLE = "비밀번호를 바꿔야 한다";
 
+	/** LLM 키가 없는 세션 사용자의 요청을 키 없이도 여는 처리기 밖에서 거부했다 — 403 */
+	static final URI LLM_KEY_REQUIRED = URI.create("urn:yozmnews:problem:llm-key-required");
+
+	static final String LLM_KEY_REQUIRED_TITLE = "LLM 키를 등록해야 한다";
+
 	private ProblemTypes() {
 	}
 

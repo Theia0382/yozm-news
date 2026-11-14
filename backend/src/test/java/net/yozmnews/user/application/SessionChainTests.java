@@ -16,9 +16,11 @@ import java.util.stream.Collectors;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import net.yozmnews.LlmKeyRows;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.YozmnewsApplication;
 import net.yozmnews.platform.AllowedBeforePasswordChange;
+import net.yozmnews.platform.AllowedWithoutLlmKey;
 import net.yozmnews.platform.PublicApi;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.user.domain.account.Account;
@@ -164,6 +166,7 @@ class SessionChainTests {
 	@Test
 	void sessionUserReachesTheHandlerWithTheRoleReadOnEachRequest() throws Exception {
 		long user = account("role@example.com", AccountRole.USER);
+		LlmKeyRows.give(this.jdbc, user);
 		Cookie session = sessionCookie(signIn(user, false, null));
 
 		this.mockMvc.perform(get("/api/test/session/me").cookie(session))
@@ -205,6 +208,7 @@ class SessionChainTests {
 	void passwordChangeIsReadOnEachRequest() throws Exception {
 		long user = account("changed@example.com", AccountRole.USER);
 		credential(user, true);
+		LlmKeyRows.give(this.jdbc, user);
 		Cookie session = sessionCookie(signIn(user, false, null));
 		this.mockMvc.perform(get("/api/test/session/me").cookie(session)).andExpect(status().isForbidden());
 
@@ -216,6 +220,72 @@ class SessionChainTests {
 			.andExpect(status().isOk())
 			.andExpect(content().string(user + ":ROLE_USER"));
 		this.mockMvc.perform(get("/api/notices").cookie(session)).andExpect(status().isOk());
+	}
+
+	@Test
+	void sessionUserWithoutALlmKeyReachesOnlyPublicAndAllowedHandlers() throws Exception {
+		long user = account("keyless@example.com", AccountRole.ADMIN);
+		Cookie session = sessionCookie(signIn(user, false, null));
+
+		this.mockMvc.perform(get("/api/test/session/me").cookie(session))
+			.andExpect(status().isForbidden())
+			.andExpect(content().json("""
+					{"type":"urn:yozmnews:problem:llm-key-required","title":"LLM 키를 등록해야 한다","status":403,
+					 "detail":"LLM 키를 등록하기 전에는 키 등록 · 계정 · 알림만 쓴다","instance":"/api/test/session/me"}
+					""", JsonCompareMode.STRICT));
+		// 변경 전 허용 표시는 키 관문을 열지 않는다
+		this.mockMvc.perform(get("/api/test/session/before-password-change").cookie(session))
+			.andExpect(status().isForbidden())
+			.andExpect(content().json("""
+					{"type":"urn:yozmnews:problem:llm-key-required"}"""));
+		// 키 없이 허용 표시가 있는 처리기 · 알림 · 공개 처리기는 열리고, 그 요청의 권한은 역할이다
+		this.mockMvc.perform(get("/api/test/session/without-llm-key").cookie(session))
+			.andExpect(status().isOk())
+			.andExpect(content().string(user + ":ROLE_ADMIN"));
+		this.mockMvc.perform(get("/api/notices").cookie(session)).andExpect(status().isOk());
+		this.mockMvc.perform(get("/api/test/session/open").cookie(session)).andExpect(status().isOk());
+		assertThat(sessionRows(session)).as("거부해도 세션은 남는다").isOne();
+	}
+
+	@Test
+	void llmKeyIsReadOnEachRequestAndCountsWhateverItsStatus() throws Exception {
+		long user = account("keyed@example.com", AccountRole.USER);
+		Cookie session = sessionCookie(signIn(user, false, null));
+		this.mockMvc.perform(get("/api/test/session/me").cookie(session)).andExpect(status().isForbidden());
+
+		LlmKeyRows.give(this.jdbc, user);
+
+		this.mockMvc.perform(get("/api/test/session/me").cookie(session))
+			.andExpect(status().isOk())
+			.andExpect(content().string(user + ":ROLE_USER"));
+
+		this.jdbc.sql("update llm_credentials set status = 'INVALID' where user_id = :id").param("id", user).update();
+		this.mockMvc.perform(get("/api/test/session/me").cookie(session)).andExpect(status().isOk());
+
+		this.jdbc.sql("delete from llm_credentials where user_id = :id").param("id", user).update();
+		this.mockMvc.perform(get("/api/test/session/me").cookie(session))
+			.andExpect(status().isForbidden())
+			.andExpect(content().json("""
+					{"type":"urn:yozmnews:problem:llm-key-required"}"""));
+	}
+
+	@Test
+	void passwordChangeComesBeforeTheLlmKey() throws Exception {
+		long user = account("initial-keyless@example.com", AccountRole.USER);
+		credential(user, true);
+		Cookie session = sessionCookie(signIn(user, false, null));
+
+		// 키도 없고 비밀번호도 바꿔야 하면 비밀번호가 먼저다 — 키 없이 허용 표시는 강제 변경을 열지 않는다
+		this.mockMvc.perform(get("/api/test/session/me").cookie(session))
+			.andExpect(status().isForbidden())
+			.andExpect(content().json("""
+					{"type":"urn:yozmnews:problem:password-change-required"}"""));
+		this.mockMvc.perform(get("/api/test/session/without-llm-key").cookie(session))
+			.andExpect(status().isForbidden())
+			.andExpect(content().json("""
+					{"type":"urn:yozmnews:problem:password-change-required"}"""));
+		this.mockMvc.perform(get("/api/test/session/before-password-change").cookie(session))
+			.andExpect(status().isOk());
 	}
 
 	@Test
@@ -425,6 +495,12 @@ class SessionChainTests {
 		@AllowedBeforePasswordChange(reason = "시험 — 비밀번호를 바꾸기 전에도 연다")
 		@GetMapping("/api/test/session/before-password-change")
 		String beforePasswordChange(UserId user) {
+			return me(user);
+		}
+
+		@AllowedWithoutLlmKey(reason = "시험 — LLM 키가 없어도 연다")
+		@GetMapping("/api/test/session/without-llm-key")
+		String withoutLlmKey(UserId user) {
 			return me(user);
 		}
 

@@ -8,6 +8,7 @@ import java.util.Optional;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import net.yozmnews.credential.LlmKeys;
 import net.yozmnews.platform.PublicApi;
 import net.yozmnews.platform.WebRole;
 import net.yozmnews.user.application.AccountAuthentication;
@@ -40,17 +41,21 @@ class SessionController {
 
 	private final AccountQueries accounts;
 
+	private final LlmKeys llmKeys;
+
 	private final InstantSource clock;
 
 	@Autowired
-	SessionController(SignIn signIn, SessionSignIn sessions, AccountQueries accounts) {
-		this(signIn, sessions, accounts, InstantSource.system());
+	SessionController(SignIn signIn, SessionSignIn sessions, AccountQueries accounts, LlmKeys llmKeys) {
+		this(signIn, sessions, accounts, llmKeys, InstantSource.system());
 	}
 
-	SessionController(SignIn signIn, SessionSignIn sessions, AccountQueries accounts, InstantSource clock) {
+	SessionController(SignIn signIn, SessionSignIn sessions, AccountQueries accounts, LlmKeys llmKeys,
+			InstantSource clock) {
 		this.signIn = Objects.requireNonNull(signIn, "signIn");
 		this.sessions = Objects.requireNonNull(sessions, "sessions");
 		this.accounts = Objects.requireNonNull(accounts, "accounts");
+		this.llmKeys = Objects.requireNonNull(llmKeys, "llmKeys");
 		this.clock = Objects.requireNonNull(clock, "clock");
 	}
 
@@ -84,7 +89,9 @@ class SessionController {
 			return MeResponse.anonymous();
 		}
 		Optional<Account> account = this.accounts.active(session.userId());
-		return account.map(found -> MeResponse.signedIn(found, session.mustChangePassword()))
+		return account
+			.map(found -> MeResponse.signedIn(found, session.mustChangePassword(),
+					!this.llmKeys.present(session.userId())))
 			.orElseGet(MeResponse::anonymous);
 	}
 
