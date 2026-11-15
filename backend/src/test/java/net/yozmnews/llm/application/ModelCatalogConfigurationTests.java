@@ -35,14 +35,14 @@ class ModelCatalogConfigurationTests {
 		ModelCatalog catalog = ModelCatalogConfiguration.load(null, DEFAULTS, this.parser);
 
 		assertThat(ModelCatalogConfiguration.DEFAULT_LOCATION).isEqualTo("classpath:llm-models/default.yaml");
-		assertThat(catalog.all()).containsExactly(new LlmModel(Provider.OPENAI, "gpt-6-astra", 32_000, true),
+		assertThat(catalog.all()).containsExactly(new LlmModel(Provider.OPENAI, "gpt-6.1-terra", 32_000, true),
 				new LlmModel(Provider.OPENAI, "gpt-6.1-sol", 32_000, true),
-				new LlmModel(Provider.OPENAI, "gpt-6.1-terra", 32_000, true),
 				new LlmModel(Provider.OPENAI, "gpt-6-luna", 32_000, true),
-				new LlmModel(Provider.ANTHROPIC, "claude-fable-5-2", 32_000, true),
-				new LlmModel(Provider.ANTHROPIC, "claude-opus-5-5", 32_000, true),
+				new LlmModel(Provider.OPENAI, "gpt-6-astra", 32_000, true),
 				new LlmModel(Provider.ANTHROPIC, "claude-sonnet-5-5", 32_000, true),
-				new LlmModel(Provider.ANTHROPIC, "claude-haiku-5-5", 32_000, true));
+				new LlmModel(Provider.ANTHROPIC, "claude-opus-5-5", 32_000, true),
+				new LlmModel(Provider.ANTHROPIC, "claude-haiku-5-5", 32_000, true),
+				new LlmModel(Provider.ANTHROPIC, "claude-fable-5-2", 32_000, true));
 	}
 
 	@Test

@@ -19,7 +19,7 @@ public final class TagSetRows {
 	}
 
 	/** 활성 버전의 태그 기준 · 저장 기준을 처음 값(0.5 / 0.1)으로, 이력은 태그 종류마다 시스템 첫 행만 남긴다 */
-	static void resetThresholds(JdbcClient jdbc) {
+	public static void resetThresholds(JdbcClient jdbc) {
 		jdbc.sql("""
 				update tag_set_thresholds set tag_threshold = 0.5, store_threshold = 0.1
 				where tag_set_id = (select id from tag_sets where active)
@@ -43,7 +43,7 @@ public final class TagSetRows {
 	 * 버전 2 이상과 그 행(채움의 버전별 기록 · 계보 · 태그 기준 · 저장 기준 · 이력 · 태그 · 중요도 기준 · 평가)을 지우고 버전 1 을 다시 켠다 — 버전을 만든 시험의
 	 * 뒤처리. 버전을 지우는 것은 이 픽스처뿐이다 — 프로덕션 코드에는 그 경로가 없다
 	 */
-	static void removeVersionsAfterFirst(JdbcClient jdbc) {
+	public static void removeVersionsAfterFirst(JdbcClient jdbc) {
 		String later = "(select id from tag_sets where number > 1)";
 		jdbc.sql("delete from article_tags where evaluation_id in (select id from article_evaluations where tag_set_id in "
 				+ later + ")").update();

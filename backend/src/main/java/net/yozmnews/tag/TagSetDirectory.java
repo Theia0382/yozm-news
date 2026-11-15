@@ -1,9 +1,10 @@
 package net.yozmnews.tag;
 
 /**
- * 활성 체계 조회 — 평가 · 후보 선별이 쓴다 — docs/specs/tag.md §3.
+ * 활성 체계 · 버전 내용 조회 — 평가 · 후보 선별 · 사용자 선호가 쓴다 — docs/specs/tag.md §3.
  * <p>
- * 구현은 {@code application} 의 {@code TagSetDirectoryService} 다. 활성 버전은 언제나 하나다(tag-R3).
+ * 구현은 {@code application} 의 {@code TagSetDirectoryService} 다. 활성 버전은 언제나 하나다(tag-R3). 트랜잭션을 열지 않는다 — 각 조회는
+ * 그 순간의 값이다.
  */
 public interface TagSetDirectory {
 
@@ -18,5 +19,11 @@ public interface TagSetDirectory {
 	 * @throws IllegalStateException 활성 버전이 없을 때
 	 */
 	TagSetThresholds activeThresholds();
+
+	/**
+	 * 버전 하나의 내용을 돌려준다 — 활성이 아닌 버전도 낸다. 버전 내용은 바뀌지 않으므로(tag-R4) 같은 ID 는 언제나 같은 내용이다.
+	 * @throws IllegalArgumentException 없는 버전일 때
+	 */
+	TagSetView tagSet(TagSetId id);
 
 }

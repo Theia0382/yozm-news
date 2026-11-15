@@ -76,14 +76,7 @@ erDiagram
 
 ## 사용자
 
-계정 · 자격 · 복구 코드 · 실패 기록 · 요청 제한 기록 · 화면 내 알림 · 가입 정책 · 초대 테이블(`users` · `user_password_credentials` · `user_recovery_codes` · `login_failures` · `request_limit_counts` · `user_notices` · `user_feed_status_receipts` · `user_sign_up_policy` · `user_sign_up_policy_changes` · `user_invitations`)은 [user Spec §6](specs/user.md#6-데이터)에 있다. 아래는 아직 만들지 않은 사용자 테이블이다.
-
-| 테이블 | 주요 컬럼 | 비고 |
-|---|---|---|
-| `user_settings` | user_id, timezone, digest_time, interest_text, max_candidates, llm_provider, llm_model, weekly_report_enabled, weekly_report_weekday, monthly_report_enabled, updated_at | `interest_text`는 자유 텍스트 관심사. 길이 제한 있음 |
-| `user_tag_preferences` | user_id, tag_kind(`TOPIC`/`REGION`/`FORMAT`), tag_key, mode(`SUBSCRIBE`/`EXCLUDE`), created_at | 현재 상태 — `user_tag_preference_events` 의 투영. 태그 **키**로 연결해 체계 버전이 바뀌어도 유지된다(키가 바뀌면 태그 키 계보를 따른다). 대분류 구독은 하위 전체 구독으로 해석한다. 형식의 기본 제외값(활성 태그 체계에서 기본 제외인 형식)은 가입 시 행으로 넣는다 |
-| `user_tag_preference_events` | id, user_id, tag_kind, tag_key, mode, action(`ADD`/`REMOVE`), occurred_at | 구독 · 제외 변경 이력. 추가만 한다(관심 신호 — [ADR-0028](adr/0028-explicit-signals-and-interest-weighted-candidates.md)) |
-| `user_excluded_sources` | user_id, source_id | |
+계정 · 자격 · 복구 코드 · 실패 기록 · 요청 제한 기록 · 화면 내 알림 · 가입 정책 · 초대 · 관심 설정 테이블(`users` · `user_password_credentials` · `user_recovery_codes` · `login_failures` · `request_limit_counts` · `user_notices` · `user_feed_status_receipts` · `user_sign_up_policy` · `user_sign_up_policy_changes` · `user_invitations` · `user_settings` · `user_tag_preferences` · `user_tag_preference_events` · `user_excluded_sources`)은 [user Spec §6](specs/user.md#6-데이터)에 있다. **(미설계)** 다이제스트의 최대 후보 수와 원하는 분량을 사용자 설정으로 둘지는 다이제스트 생성을 설계하는 작업이 정한다([pipeline §6](pipeline.md#후보-선별)).
 
 ## LLM 키 (BYOK)
 

@@ -95,7 +95,7 @@ public interface LlmModels {
 ```
 
 - 계약
-  - `all` 은 공급자 선언 순(`Provider` 의 순서), 공급자 안에서는 파일에 적힌 순이다
+  - `all` 은 공급자 선언 순(`Provider` 의 순서), 공급자 안에서는 파일에 적힌 순이다 — 이 순서는 `user` 의 쓸 모델 판정에서 고른 모델을 쓸 수 없을 때의 대체 순서다(공급자마다 첫 모델 — [ADR-0178](../adr/0178-the-llm-model-to-use-is-decided-at-query-time-from-the-chosen-model-the-allowed-list-and-key-status.md))
   - `of` 는 그 공급자의 모델이고, 없으면 빈 목록이다
   - `find` 는 목록에 없는 모델에 빈 값을 낸다 — 목록이 바뀌어 빠진 모델을 가리키는 쪽이 이것으로 안다
   - 목록은 기동 때 정해지고 실행 중에 바뀌지 않는다(llm-R3)

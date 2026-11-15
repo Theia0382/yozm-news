@@ -26,7 +26,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 /**
  * 계정을 만드는 정본 — 모든 길(공개 가입 · 초대 가입 · 운영자 계정 생성 · 첫 운영자)이 이것을 거친다. docs/specs/user.md §4.
  * <p>
- * 부르는 쪽의 트랜잭션 안에서 계정 · 자격(· 복구 코드)을 함께 만든다 — "계정마다 자격 하나"는 DB 가 강제하지 않으므로 같은 트랜잭션이 지킨다.
+ * 부르는 쪽의 트랜잭션 안에서 계정 · 자격(· 복구 코드)과 관심 설정 기본값(user-R43)을 함께 만든다 — "계정마다 자격 하나"는 DB 가 강제하지 않으므로 같은 트랜잭션이 지킨다.
  * 길마다의 차이(역할 · 강제 변경 · 만들 때 복구 코드)는 {@link Onboarding} 이 정한다. 비밀번호 해시는 이메일 중복과 무관하게 한 번 계산해
  * 이미 있는 이메일과 새 이메일의 계산량을 맞춘다.
  */
@@ -41,16 +41,20 @@ class AccountProvisioning {
 
 	private final PasswordHashing hashing;
 
+	private final InterestDefaultsWriter interestDefaults;
+
 	private final TransactionTemplate transaction;
 
 	private final SecureRandom random = new SecureRandom();
 
 	AccountProvisioning(AccountRepository accounts, PasswordCredentialRepository credentials,
-			RecoveryCodeRepository recoveryCodes, PasswordHashing hashing, TransactionTemplate transaction) {
+			RecoveryCodeRepository recoveryCodes, PasswordHashing hashing, InterestDefaultsWriter interestDefaults,
+			TransactionTemplate transaction) {
 		this.accounts = Objects.requireNonNull(accounts, "accounts");
 		this.credentials = Objects.requireNonNull(credentials, "credentials");
 		this.recoveryCodes = Objects.requireNonNull(recoveryCodes, "recoveryCodes");
 		this.hashing = Objects.requireNonNull(hashing, "hashing");
+		this.interestDefaults = Objects.requireNonNull(interestDefaults, "interestDefaults");
 		this.transaction = Objects.requireNonNull(transaction, "transaction");
 	}
 
@@ -92,6 +96,7 @@ class AccountProvisioning {
 			this.recoveryCodes.replace(user, code.digest(), now);
 			recoveryCode = Optional.of(code);
 		}
+		this.interestDefaults.createFor(user, now);
 		return new ProvisionResult.Created(user, recoveryCode);
 	}
 

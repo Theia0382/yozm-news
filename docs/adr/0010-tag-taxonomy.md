@@ -1,6 +1,6 @@
 # ADR-0010: 태그 체계: 축 분리 + 통제 어휘 다중 태그
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 사용자 선호의 모드([ADR-0181](0181-tag-preferences-take-only-topic-subscriptions-and-region-and-format-exclusions.md))
 - 날짜: 2026-10-25
 - 관련: [ADR-0002](0002-shared-evaluation-with-jev.md)의 "다중 카테고리(확률 상위 최대 2개)" 부분을 대체한다
 - 근거 자료: [research/2026-10-news-categories.md](../research/2026-10-news-categories.md)
@@ -37,10 +37,12 @@
   - 저장 하한(예: 0.1)을 넘는 태그는 확률과 함께 모두 저장한다.
   - "붙었는지"는 조회 시 현재 임계값으로 판단한다. 그래서 **임계값을 바꿔도 다시 평가하거나 데이터를 다시 쓸 필요가 없다.**
   - 전체 응답 원본은 `article_evaluations.raw_response`에 따로 남는다.
+> 부분 대체(`mode` 문장) — [ADR-0181](0181-tag-preferences-take-only-topic-subscriptions-and-region-and-format-exclusions.md). 지금 상태: [`user` user-R45](../specs/user.md#관심-설정)
 - 사용자 선호도 같은 방식으로 정규화한다: `user_tag_preferences(user_id, dimension, tag_key, mode)`. `mode`는 `SUBSCRIBE` 또는 `EXCLUDE`다. 대분류를 구독하면 하위 중분류 전체를 구독한 것으로 처리한다.
 
 ## 결과
 
+> 부분 대체("지역 구독자") — [ADR-0181](0181-tag-preferences-take-only-topic-subscriptions-and-region-and-format-exclusions.md). 지금 상태: [`pipeline` 후보 선별](../pipeline.md#후보-선별)
 - 경계에 걸친 기사가 해당하는 모든 주제·지역 구독자의 후보에 들어간다.
 - 질문 수가 늘어난다. 주제 45개 + 지역 7개 + 형식 + 중요도로 질문 약 54개이고, 기사당 입력은 약 1,700토큰으로 추정한다. 하루 4,000건 기준 **월 약 $9**다. 사용자 수와는 여전히 무관하다.
 - 대분류를 먼저 묻고 해당 대분류의 중분류만 다시 묻는 2단계 방식이면 토큰이 약 20% 줄어든다. 하지만 요청이 두 번이 되고 구현이 복잡해진다. 비용 차이가 월 $2 안팎이라 단일 요청을 택했다.
@@ -59,3 +61,4 @@
 
 - 2026-11-02: 첫 체계를 만들며 조사 초안(`research/2026-10-news-categories.md` 3.2)의 중분류를 다시 세니 46개였다 — 이 ADR 의 "중분류 45개" · "주제 45개 … 질문 약 54개"는 센 수의 오류이고, 초안 그대로 중분류 46 · 질문 55개다. 질문 문구 · 태그 설명의 자리와 첫 체계를 들이는 방식은 [ADR-0054](0054-tag-set-seeded-from-default-yaml-on-first-start-with-immutable-versions-and-question-templates.md), 두 값(임계값 `τ` · 저장 하한)의 변경은 [ADR-0055](0055-tag-and-store-thresholds-change-with-history-and-warn-instead-of-blocking.md)가 정했다. 이 ADR 의 이름은 지금 문서에서 이렇게 부른다 — 태그 축 · 축 → 태그 종류, 임계값 `τ` → 태그 기준, 저장 하한 → 저장 기준, `dimension` → `tag_kind`(태그 테이블은 `kind`). 태그 체계의 코드 이름은 `taxonomy` 가 아니라 `tag set` 이다 — 다른 문서의 옛 이름 `taxonomy_versions` · `TaxonomyVersion` 은 `tag_sets` · `TagSet` 이다
 - 2026-11-08: 중요도 질문 · 수준 설명의 판단 원칙(사안이 일으킨 일의 크기와 영향 범위, 기사 종류 예시 없이)은 [ADR-0099](0099-importance-judged-by-what-the-matter-changes-and-its-reach-with-levels-written-as-reach-without-article-type-examples.md)가 정했다(보충). 기본 체계의 중분류는 48 · 질문은 57개다
+- 2026-11-15: 결정 절 `user_tag_preferences(user_id, dimension, tag_key, mode)` 의 체계 버전(사용자마다 하나)과 체계 변경 때 선호가 키를 따르는 방법 — [ADR-0175](0175-tag-preferences-follow-tag-set-activation-events-and-are-rewritten-to-active-keys.md) · [`user` user-R45 · R47](../specs/user.md#관심-설정)

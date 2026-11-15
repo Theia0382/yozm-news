@@ -4,6 +4,7 @@ import java.util.Map;
 
 import net.yozmnews.credential.LlmKeyScopeTests;
 import net.yozmnews.user.AccountScopeTests;
+import net.yozmnews.user.InterestScopeTests;
 import net.yozmnews.user.NoticeScopeTests;
 
 /**
@@ -16,12 +17,24 @@ import net.yozmnews.user.NoticeScopeTests;
 public final class UserScopedEndpoints {
 
 	/** 등록 — 사용자 데이터 처리기를 더하는 작업이 같은 변경에 격리 시험과 함께 한 줄을 더한다 */
-	public static final Map<String, Class<?>> ENDPOINTS = Map.of("GET /api/notices", NoticeScopeTests.class,
-			"GET /api/notices/unread-count", NoticeScopeTests.class, "POST /api/notices/read", NoticeScopeTests.class,
-			"PUT /api/account/password", AccountScopeTests.class, "POST /api/account/recovery-code",
-			AccountScopeTests.class, "GET /api/llm-keys", LlmKeyScopeTests.class, "PUT /api/llm-keys/{provider}",
-			LlmKeyScopeTests.class, "POST /api/llm-keys/{provider}/checks", LlmKeyScopeTests.class,
-			"DELETE /api/llm-keys/{provider}", LlmKeyScopeTests.class);
+	public static final Map<String, Class<?>> ENDPOINTS = Map.ofEntries(
+			Map.entry("GET /api/notices", NoticeScopeTests.class),
+			Map.entry("GET /api/notices/unread-count", NoticeScopeTests.class),
+			Map.entry("POST /api/notices/read", NoticeScopeTests.class),
+			Map.entry("PUT /api/account/password", AccountScopeTests.class),
+			Map.entry("POST /api/account/recovery-code", AccountScopeTests.class),
+			Map.entry("GET /api/llm-keys", LlmKeyScopeTests.class),
+			Map.entry("PUT /api/llm-keys/{provider}", LlmKeyScopeTests.class),
+			Map.entry("POST /api/llm-keys/{provider}/checks", LlmKeyScopeTests.class),
+			Map.entry("DELETE /api/llm-keys/{provider}", LlmKeyScopeTests.class),
+			Map.entry("GET /api/interests/tags", InterestScopeTests.class),
+			Map.entry("PUT /api/interests/tags", InterestScopeTests.class),
+			Map.entry("GET /api/interests/sources", InterestScopeTests.class),
+			Map.entry("PUT /api/interests/sources", InterestScopeTests.class),
+			Map.entry("GET /api/interests/settings", InterestScopeTests.class),
+			Map.entry("PUT /api/interests/settings", InterestScopeTests.class),
+			Map.entry("GET /api/interests/model", InterestScopeTests.class),
+			Map.entry("PUT /api/interests/model", InterestScopeTests.class));
 
 	private UserScopedEndpoints() {
 	}

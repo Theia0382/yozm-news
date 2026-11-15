@@ -17,6 +17,7 @@ import { SamplePage } from "@/features/admin/SamplePage";
 import { StorylineDetailPage } from "@/features/admin/StorylineDetailPage";
 import { StorylinesPage } from "@/features/admin/StorylinesPage";
 import { ThresholdsPage } from "@/features/admin/ThresholdsPage";
+import { InterestsPage } from "@/features/interests/InterestsPage";
 import { NoticesPage } from "@/features/notices/NoticesPage";
 import { ApiClientContext, createApiClient } from "@/shared/api/client";
 import type { components } from "@/shared/api/schema";
@@ -85,6 +86,19 @@ describe("routes", () => {
     expect(typeof lazy).toBe("function");
     const loaded = await (lazy as () => Promise<{ Component?: unknown }>)();
     expect(loaded.Component).toBe(NoticesPage);
+  });
+
+  it("로그인 틀 아래 관심 설정 경로가 관심 설정 화면을 내려받는다", async () => {
+    const signedIn = routes[0]?.children?.find(
+      (route) => route.path === undefined,
+    );
+    const lazy = signedIn?.children?.find(
+      (route) => route.path === "interests",
+    )?.lazy;
+
+    expect(typeof lazy).toBe("function");
+    const loaded = await (lazy as () => Promise<{ Component?: unknown }>)();
+    expect(loaded.Component).toBe(InterestsPage);
   });
 
   it("운영자 화면 아래 수집 현황 경로가 수집 현황 화면을 내려받는다", async () => {

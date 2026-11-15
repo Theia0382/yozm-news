@@ -1,6 +1,7 @@
 package net.yozmnews.tag.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -12,6 +13,7 @@ import net.yozmnews.platform.ChangeActor;
 import net.yozmnews.tag.MultiTagKind;
 import net.yozmnews.tag.TagSetAdministration;
 import net.yozmnews.tag.TagSetDirectory;
+import net.yozmnews.tag.TagSetId;
 import net.yozmnews.tag.TagSetThresholds;
 import net.yozmnews.tag.TagSetView;
 import net.yozmnews.tag.ThresholdChangeView;
@@ -63,6 +65,15 @@ class TagSetDirectoryTests {
 				"이 기사가 다루는 사안은 얼마나 중요한가. 등장하는 인물이나 다루는 주제가 아니라 사안이 실제로 바꾸거나 일으킨 일의 크기와 그 영향이 미치는 범위로 판단한다. "
 						+ "발언 · 주장 · 반응은 그것이 일으킨 일만큼으로 본다");
 		assertThat(tagSet.importance().levels()).extracting(ImportanceLevel::level).containsExactly(1, 2, 3, 4, 5);
+	}
+
+	@Test
+	void servesAVersionByIdAndRejectsAnUnknownOne() {
+		TagSetView active = this.directory.activeTagSet();
+
+		assertThat(this.directory.tagSet(active.id())).isEqualTo(active);
+		assertThatIllegalArgumentException().isThrownBy(() -> this.directory.tagSet(new TagSetId(Long.MAX_VALUE)))
+			.withMessageContaining(String.valueOf(Long.MAX_VALUE));
 	}
 
 	@Test

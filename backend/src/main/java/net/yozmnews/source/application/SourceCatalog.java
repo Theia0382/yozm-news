@@ -18,6 +18,7 @@ import net.yozmnews.source.LastFailureView;
 import net.yozmnews.source.PresetView;
 import net.yozmnews.source.ProfileState;
 import net.yozmnews.source.SourceId;
+import net.yozmnews.source.SourceName;
 import net.yozmnews.source.SourceView;
 import net.yozmnews.source.UnknownSourceException;
 import net.yozmnews.source.domain.attribution.SourceAttributionRepository;
@@ -96,6 +97,21 @@ class SourceCatalog {
 	/** 숨기지 않은 소스 — 소스 ID 순 */
 	List<SourceView> sources() {
 		return list(false);
+	}
+
+	/**
+	 * 숨기지 않은 소스의 ID · 출처 이름 — 소스 ID 순. 운영 목록과 같은 이름 해석이고, 피드 · 수집 상태는 읽지 않는다(사용자가 고를 소스)
+	 */
+	List<SourceName> names() {
+		return this.readOnly.execute(status -> {
+			Map<SourceId, String> recordedNames = this.attributions.findAll();
+			return this.listing.findAllSources()
+				.stream()
+				.filter(row -> row.hiddenAt() == null)
+				.sorted(Comparator.comparingLong(row -> row.id().value()))
+				.map(row -> new SourceName(row.id(), name(this.resolver.resolve(row), recordedNames.get(row.id()))))
+				.toList();
+		});
 	}
 
 	/** 숨긴 소스 — 숨긴 시각 순, 같으면 소스 ID 순 */

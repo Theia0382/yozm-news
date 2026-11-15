@@ -45,7 +45,7 @@
 | 덮는 범위 | 채움 하나가 다루는 평가 시각 `[요청 시각 − 일수 × 24시간, 요청 시각)`(tag-R31) |
 | 채울 저장 기준 | 채움을 요청한 순간 버전마다의 지금 저장 기준 — 요청이 기록하고 실행은 이 값까지 채운다(tag-R31) |
 | 저장 바닥 | 평가 시각 t 의 평가에 저장돼 있다고 볼 수 있는 확률의 하한 — 그때 쓰였을 수 있는 저장 기준과 t 를 덮은 끝난 채움의 채울 저장 기준 가운데 작은 것(tag-R32) |
-| 기본 제외 | 형식 태그의 속성. 사용자가 따로 정하지 않으면 그 형식의 기사를 후보에서 뺀다 |
+| 기본 제외 | 형식 태그의 속성. 계정을 만들 때, 그리고 그 형식이 새로 생긴 버전을 켤 때 사용자의 제외로 넣는다([user Spec](user.md#관심-설정) user-R43 · R47) |
 | 기본 체계 파일 | 저장소의 `backend/src/main/resources/tag-sets/default.yaml`. 첫 기동에 버전 1 로 들어간다(tag-R1 · R2). 첫 체계는 [조사 초안](../research/2026-10-news-categories.md) 3.2 를 바탕으로 하고, 문구는 평가 세트로 정했다 — 중요도 문구의 판단 원칙은 [ADR-0099](../adr/0099-importance-judged-by-what-the-matter-changes-and-its-reach-with-levels-written-as-reach-without-article-type-examples.md) |
 | 첫 기동 적재 | 버전이 하나도 없을 때 기본 체계 파일을 버전 1 로 저장하는 기동 시 동작(tag-R2) |
 | 행위자 | 태그 기준 · 저장 기준을 정하거나 버전을 만든 주체의 종류 — 시스템(첫 기동 적재) · 운영자(공개 운영 API) |
@@ -79,7 +79,7 @@
 
 ## 3. 공개 인터페이스
 
-모듈 최상위 패키지 `net.yozmnews.tag` 의 공개 타입은 활성 체계 조회 `TagSetDirectory`, 태그 체계의 운영 API `TagSetAdministration`(태그 기준 · 저장 기준 · 버전), 태그 키 계보 조회 `TagKeyLineage`, 평가 결과 조회 `ArticleEvaluations`, 평가 대기 · 평가 현황의 운영 API `EvaluationAdministration`, 평가 검수의 운영 API `EvaluationReview`, 빠진 태그 채움의 운영 API `TagBackfillAdministration`, 주제별 보도량 조회 `TopicCoverage`, 집계 기간 `EvaluationPeriod` 와 그 값 · 결과 타입이다. 지금은 이벤트를 내지 않는다 — 평가 결과를 알리는 `ArticleEvaluated` 는 이 모듈이 낸다(**(미설계)** 발행 시점 · 내용 — [overview.md §5](../overview.md#5-모듈-지도)). 활성 전환을 알리는 이벤트는 받는 모듈(사용자 선호)의 작업이 정한다.
+모듈 최상위 패키지 `net.yozmnews.tag` 의 공개 타입은 활성 체계 · 버전 내용 조회 `TagSetDirectory`, 활성 전환 이벤트 `TagSetActivated`, 태그 체계의 운영 API `TagSetAdministration`(태그 기준 · 저장 기준 · 버전), 태그 키 계보 조회 `TagKeyLineage`, 평가 결과 조회 `ArticleEvaluations`, 평가 대기 · 평가 현황의 운영 API `EvaluationAdministration`, 평가 검수의 운영 API `EvaluationReview`, 빠진 태그 채움의 운영 API `TagBackfillAdministration`, 주제별 보도량 조회 `TopicCoverage`, 집계 기간 `EvaluationPeriod` 와 그 값 · 결과 타입이다. 내는 이벤트는 활성 전환 `TagSetActivated` 하나다. 평가 결과를 알리는 `ArticleEvaluated` 도 이 모듈이 낸다(**(미설계)** 발행 시점 · 내용 — [overview.md §5](../overview.md#5-모듈-지도)).
 
 받는 이벤트는 `article` 의 `ArticleStored` · `ArticlesRemoved` 이고, 재평가 대상은 `article` 의 공개 조회 `ArticleDirectory.firstSeenSince` 로 읽는다([article Spec §3](article.md#3-공개-인터페이스)). 태그 판정은 `evaluation` 의 공개 API `ArticleTagging` 으로 한다([evaluation Spec §3](evaluation.md#3-공개-인터페이스)) — 질문 묶음(`TagQuestions`)과 그 값 타입(`TopicCategory` · `AskedTag` · `FormatChoice` · `FormatOption` · `ImportanceScale` · `ImportanceLevel`)은 `evaluation` 의 공개 타입이고, 이 모듈의 `TagSetView` 가 그것으로 체계 내용을 담는다. 태그 기준 · 저장 기준 이력과 버전의 행위자 종류는 `platform` 의 `ChangeActor` 다.
 
@@ -87,12 +87,13 @@ HTTP 엔드포인트: 없음 — 운영자 HTTP API 는 `admin` 이 이 모듈�
 
 ### TagSetDirectory
 
-활성 체계 조회 — 평가 · 후보 선별이 쓴다. 구현은 `application` 의 `TagSetDirectoryService` 다.
+활성 체계 · 버전 내용 조회 — 평가 · 후보 선별 · 사용자 선호가 쓴다. 구현은 `application` 의 `TagSetDirectoryService` 다.
 
 ```java
 public interface TagSetDirectory {
     TagSetView activeTagSet();
     TagSetThresholds activeThresholds();
+    TagSetView tagSet(TagSetId id);
 }
 ```
 
@@ -100,17 +101,38 @@ public interface TagSetDirectory {
 |---|---|
 | `activeTagSet()` | 활성 버전의 내용 — 태그 · 질문 문장 · 중요도 기준 |
 | `activeThresholds()` | 활성 버전의 주제 · 지역의 태그 기준 · 저장 기준 |
+| `tagSet(id)` | 버전 하나의 내용 — 활성이 아닌 버전도 낸다. 사용자 선호가 옛 버전의 구조(대분류 · 중분류)와 이름을 읽는다 |
 
 - 계약
   - 활성 버전은 언제나 하나다. 없으면(첫 기동 적재의 불변식이 깨짐) `IllegalStateException` 이다(tag-R3)
   - 내용과 태그 기준 · 저장 기준은 다른 조회다 — 내용은 바뀌지 않고 태그 기준 · 저장 기준은 바뀐다. 둘 다 버전 ID 를 싣는다. 두 조회를 이어 부르면 그 사이 활성 전환으로 버전이 갈릴 수 있다 — 버전 ID 로 맞춘다
   - 트랜잭션을 열지 않는다. 각 조회는 그 순간의 값이다
+  - `tagSet` 은 없는 버전에 `IllegalArgumentException` 이다. 버전 내용은 바뀌지 않으므로(tag-R4) 같은 ID 는 언제나 같은 내용이다
 
 관련 규칙: tag-R3 · tag-R4 · tag-R9 · tag-R10.
 
+### TagSetActivated
+
+태그 체계의 활성 전환을 알리는 이벤트(tag → user).
+
+```java
+public record TagSetActivated(TagSetId previous, TagSetId activated) {}
+```
+
+| 필드 | 뜻 |
+|---|---|
+| `previous` | 활성화가 끈 기준 버전 |
+| `activated` | 새로 켠 버전 |
+
+- 계약
+  - 활성화가 새 버전을 쓴 트랜잭션에서 발행한다(tag-R16) — 그 트랜잭션이 커밋되면 발행도 커밋된다. 내용이 같거나 원문 · 대조 문제로 아무것도 쓰지 않은 활성화는 내지 않는다. 첫 기동 적재(tag-R2)는 내지 않는다
+  - 사용자를 모른다 — 버전 ID 둘만 싣는다. 소비자(`user`)는 이벤트 발행 레지스트리에서 다시 처리될 수 있어, 두 ID 를 믿지 않고 지금 활성 버전과 자기 기록을 대조한다
+
+관련 규칙: tag-R16.
+
 ### TagSetView · TagSetId
 
-활성 체계의 내용. 주제 · 지역 · 형식 · 중요도의 값 타입(`TopicCategory` · `AskedTag` · `FormatChoice` · `FormatOption` · `ImportanceScale` · `ImportanceLevel`)은 태그 판정이 묻는 질문 묶음의 타입이라 `evaluation` 이 소유한다([evaluation Spec §3](evaluation.md#3-공개-인터페이스)) — 이 모듈은 그 타입으로 체계 내용을 담는다.
+체계 버전의 내용(활성 버전 · 버전 하나의 조회가 낸다). 주제 · 지역 · 형식 · 중요도의 값 타입(`TopicCategory` · `AskedTag` · `FormatChoice` · `FormatOption` · `ImportanceScale` · `ImportanceLevel`)은 태그 판정이 묻는 질문 묶음의 타입이라 `evaluation` 이 소유한다([evaluation Spec §3](evaluation.md#3-공개-인터페이스)) — 이 모듈은 그 타입으로 체계 내용을 담는다.
 
 ```java
 public record TagSetId(long value) {}
@@ -869,7 +891,7 @@ sequenceDiagram
 
 - `DefaultTagSetConfiguration` — 기본 체계 파일의 기동 검증(들어오는 쪽). 읽기 · 판정은 정적 `load(Resource, TagSetParser)` 에 있고 실패하면 파일의 문제를 모두 담은 예외로 기동을 멈춘다(tag-R1)
 - `TagSetSeeding` — 첫 기동 적재(들어오는 쪽). `seedIfEmpty()` 가 한 트랜잭션에서 표를 잠그고 버전이 없을 때만 버전 1 과 처음 태그 기준 · 저장 기준을 쓴다. 적재하면 정보 로그 `기본 태그 체계를 버전 1로 적재했다` 를, 적재하지 않았고 기본 체계 파일과 내용이 같은 버전이 없으면 정보 로그 `기본 체계 파일과 내용이 같은 태그 체계 버전이 없다 — 파일의 개정을 들이려면 체계 변경으로 새 버전을 만든다` 를 남긴다(tag-R2)
-- `TagSetDirectoryService` — 공개 API `TagSetDirectory` 의 구현. 트랜잭션 · 역할 애너테이션이 없다(tag-R3)
+- `TagSetDirectoryService` — 공개 API `TagSetDirectory` 의 구현. 트랜잭션 · 역할 애너테이션이 없다(tag-R3). 버전 하나의 내용은 `TagSetViews` 로 옮긴다
 - `TagSetViews` — 체계 버전을 공개 타입(`TagSetView`)으로 옮기는 정본. 활성 버전 조회와 평가 결과의 버전 조회(`of(TagSetId)` — 없는 버전이면 `IllegalStateException`)가 함께 쓴다(tag-R9)
 - `ArticleEventsListener` — 리스너(들어오는 쪽). 넣기는 시각을 `InstantSource` 에서 얻는다. 지우기는 한 트랜잭션에서 대기 행을 먼저, 평가 · 태그 행을 나중에 지운다(tag-R21)
 - `PendingEvaluations` — 대기 점유. `claimDue(now)` 가 한 트랜잭션에서 평가할 수 있는 대기를 `CLAIM_BATCH`(50 — 측정 전 목표, 정본)까지 잠그고 점유를 써 커밋한다(tag-R19)
@@ -881,7 +903,7 @@ sequenceDiagram
 - `TagBackfillRound` — 채움 회차 하나(tag-R31). 점유를 커밋한 뒤 버전마다 체계와 채울 기준(저장 기준은 계획의 값, 태그 기준은 거르기에 쓰이지 않아 지금 값)을 한 번 읽고, 묶음마다 한 트랜잭션에서 잠가 읽기 → 다시 읽기(`ArticleTagging.reread` — 판정 원본 ID 와 그 버전의 질문 묶음, 대조까지 `evaluation` 이 한다) → 더하기 → 진행 쓰기를 한다. 멈춤 갈래는 셋이다 — 남은 평가가 없으면 끝냄, 진행 쓰기에서 토큰이 맞지 않으면 그 묶음을 되돌리고 멈춤(점유를 다른 회차가 가져갔다), 그 밖의 예외(계획에 없는 버전의 평가 · DB 오류)면 그 묶음을 되돌리고 점유를 풀고 멈춤. 다시 읽기의 예상 못한 예외는 그 평가를 읽을 수 없음으로 세고 이어 간다. 로그: `빠진 태그 채움 {ID} 을 끝냈다 — 평가 {n}건, 더한 태그 {m}건, 건너뜀 {k}건` · `빠진 태그 채움 {ID} 의 점유를 다른 회차가 가져가 멈췄다`(정보), `빠진 태그 채움 {ID} 에서 판정 원본을 다시 읽다 예상 못한 예외가 났다 — 평가 {ID}` · `빠진 태그 채움 {ID} 을 멈췄다 — 다음 회차가 이어서 한다`(오류)
 - `TagSetViews` · `PendingEvaluations` · `EvaluationRound` · `ArticleEvaluationsService` · `EvaluationAdministrationService` · `TagBackfillAdministrationService` · `TagBackfillRound` · `TopicCoverageService` 는 트랜잭션 · 역할 애너테이션이 없다 — 두 역할 공통이고, 점유 · 회차 · 집계 · 채움 요청은 `TransactionTemplate` 으로 트랜잭션을 연다. `ArticleEventsListener` 는 리스너마다 새 트랜잭션이다
 - `TagSetAdministrationService` — 공개 API `TagSetAdministration` 의 구현. 태그 기준 · 저장 기준 변경은 한 트랜잭션에서 표 잠금(활성 전환과 줄 서기) → 활성 버전 조회 → 태그 기준 · 저장 기준 행 잠금 → 지난 저장 기준 최댓값(`StoreFloorsReader` 의 `StoreFloors.pastMax` — 이력과 끝난 채움) → 판정 → 쓰기다. 시각은 `InstantSource` 에서 얻는다(tag-R11 ~ R13). 버전 연산은 `TagSetVersioning` 에 맡긴다
-- `TagSetVersioning` — 버전 목록 · 원문 내보내기 · 확인 · 활성화(tag-R16 · R22 ~ R25 · R27). 활성화는 재평가 대상 기사를 트랜잭션 밖에서 읽은 뒤 한 트랜잭션(`TransactionTemplate`)에서 표 잠금 → 대조 → 쓰기다. 시각은 `InstantSource` 에서 얻는다. 활성화하면 정보 로그 `태그 체계 버전 {번호}를 활성으로 바꿨다 — 재평가 대기 {건}건` 을 남긴다
+- `TagSetVersioning` — 버전 목록 · 원문 내보내기 · 확인 · 활성화(tag-R16 · R22 ~ R25 · R27). 활성화는 재평가 대상 기사를 트랜잭션 밖에서 읽은 뒤 한 트랜잭션(`TransactionTemplate`)에서 표 잠금 → 대조 → 쓰기 → `TagSetActivated` 발행이다. 시각은 `InstantSource` 에서 얻는다. 활성화하면 정보 로그 `태그 체계 버전 {번호}를 활성으로 바꿨다 — 재평가 대기 {건}건` 을 남긴다
 - `TagSetVersionStore` — 새 버전 쓰기(버전 행과 그 버전의 처음 태그 기준 · 저장 기준 · 이력 첫 행)의 정본(tag-R2 · R3 · R13 · R16). 첫 적재(`TagSetSeeding`)는 버전 1 을, 활성화(`TagSetVersioning`)는 기준 버전을 끈 뒤 다음 버전을 쓴다. 트랜잭션을 열지 않는다 — 부르는 쪽의 트랜잭션 · 표 잠금 안에서 쓴다. 빈이 아니다
 - `TagKeyLineageService` — 공개 API `TagKeyLineage` 의 구현(tag-R26). 트랜잭션 · 역할 애너테이션이 없다
 - `EvaluationReviewService` — 공개 운영 API `EvaluationReview` 의 구현(tag-R33 · R34). 읽기 전용 `REPEATABLE READ` `TransactionTemplate` 안에서 읽는다. 역할 애너테이션이 없다
@@ -1086,7 +1108,7 @@ sequenceDiagram
 판단의 이유는 [ADR-0054](../adr/0054-tag-set-seeded-from-default-yaml-on-first-start-with-immutable-versions-and-question-templates.md)에 있다.
 
 - **tag-R1** — 기본 체계는 `backend/src/main/resources/tag-sets/default.yaml` 하나다. 기동 때 두 역할 모두 이 파일을 읽어 검증한다. 파일이 없거나 읽을 수 없거나 검증에 걸리면 문제를 경로 · 줄:열과 함께 모두 담아 기동하지 않는다. 기본 체계 파일에는 계보 항목(`lineage` — tag-R22)을 둘 수 없다 — 항목이 있으면 같은 방식으로 기동하지 않는다. 빈 절은 계보가 없는 것과 같다(정본 `TagSetDefinition.lineageProblemForDefault`)
-- **tag-R2** — 첫 기동 적재: 버전이 하나도 없을 때만 기본 체계를 번호 1 · 활성 · 행위자 시스템의 버전으로 저장하고, 주제 · 지역의 처음 태그 기준 · 저장 기준과 그 이력 첫 행을 함께 쓴다. 한 트랜잭션이고 `tag_sets` 표 잠금(자기 자신과 충돌하는 모드) 안에서 한다 — 여러 프로세스가 동시에 떠도 하나만 적재하고, 다시 기동해도 결과가 같다. 버전이 이미 있으면 파일이 바뀌어도 적재하지 않는다 — 파일의 개정은 새 인스턴스의 시작점일 뿐이고, 이미 적재한 인스턴스는 체계 변경(tag-R16)으로 새 버전을 들인다. 두 역할 모두 적재하고, 싱글톤을 모두 만든 뒤 웹 서버 · 작업 서버가 시작하기 전에 한다 — 어느 역할의 프로세스도 활성 버전 없이 요청 · 작업을 받지 않는다. 적재하면 정보 로그 `기본 태그 체계를 버전 1로 적재했다` 를 남긴다. 버전이 이미 있고 기본 체계 파일과 내용이 같은 버전이 하나도 없으면 정보 로그 `기본 체계 파일과 내용이 같은 태그 체계 버전이 없다 — 파일의 개정을 들이려면 체계 변경으로 새 버전을 만든다` 를 남긴다 — 내용은 버전 내용(tag-R4)이고 태그 기준 · 저장 기준은 비교하지 않는다(정본 `TagSetContent.matchesAny`)
+- **tag-R2** — 첫 기동 적재: 버전이 하나도 없을 때만 기본 체계를 번호 1 · 활성 · 행위자 시스템의 버전으로 저장하고, 주제 · 지역의 처음 태그 기준 · 저장 기준과 그 이력 첫 행을 함께 쓴다. 한 트랜잭션이고 `tag_sets` 표 잠금(자기 자신과 충돌하는 모드) 안에서 한다 — 여러 프로세스가 동시에 떠도 하나만 적재하고, 다시 기동해도 결과가 같다. 버전이 이미 있으면 파일이 바뀌어도 적재하지 않는다 — 파일의 개정은 새 인스턴스의 시작점일 뿐이고, 이미 적재한 인스턴스는 체계 변경(tag-R16)으로 새 버전을 들인다. 두 역할 모두 적재하고, 싱글톤을 모두 만든 뒤 웹 서버 · 작업 서버가 시작하기 전에 한다 — 어느 역할의 프로세스도 활성 버전 없이 요청 · 작업을 받지 않는다. 적재는 `SmartInitializingSingleton` 단계다 — 기동 때 활성 체계를 읽는 다른 모듈의 작업(`user` 의 첫 운영자 · 기존 계정 채우기)은 그 뒤의 기동 단계(`SmartLifecycle`)에서 돌며 이 단계에 기댄다([ADR-0182](../adr/0182-startup-work-reading-the-active-tag-set-runs-in-a-lifecycle-phase-after-first-start-seeding-and-before-the-web-server.md) · [user Spec](user.md#관심-설정) user-R44). 적재하면 정보 로그 `기본 태그 체계를 버전 1로 적재했다` 를 남긴다. 버전이 이미 있고 기본 체계 파일과 내용이 같은 버전이 하나도 없으면 정보 로그 `기본 체계 파일과 내용이 같은 태그 체계 버전이 없다 — 파일의 개정을 들이려면 체계 변경으로 새 버전을 만든다` 를 남긴다 — 내용은 버전 내용(tag-R4)이고 태그 기준 · 저장 기준은 비교하지 않는다(정본 `TagSetContent.matchesAny`)
 - **tag-R3** — 활성 버전은 언제나 정확히 하나다 — DB 제약(활성 행 하나)이 지킨다. 활성 버전이 없으면 조회 · 변경이 `IllegalStateException` 으로 실패한다(첫 기동 적재의 불변식이 깨진 것이다)
 - **tag-R4** — 버전 내용(질문 틀 · 질문 · 태그 · 이름 · 설명 · 중요도 기준 · 기본 제외)은 만든 뒤 바뀌지 않는다. 문구 하나를 바꿔도 새 버전이다. 태그 기준 · 저장 기준만 버전의 설정으로 바뀐다(tag-R11)
 
@@ -1165,8 +1187,7 @@ sequenceDiagram
   - 활성화는 확인과 같은 판정을 한 트랜잭션에서 `tag_sets` 표 잠금(`SHARE ROW EXCLUSIVE` — 첫 기동 적재와 같은 잠금) 안에서 그 순간의 활성 버전과 다시 한다. 바뀌었으면 기준 버전을 끄고 번호 = 기준 버전 + 1 인 새 버전을 활성으로, 요청의 행위자로 저장한다. 계보 행 · 처음 태그 기준 · 저장 기준과 그 이력 첫 행(원문 `thresholds` 의 값, 같은 행위자) · 재평가 대기(tag-R25)를 같은 트랜잭션에서 쓴다. 끄기와 넣기가 한 트랜잭션이라 다른 트랜잭션은 활성 버전이 없는 순간을 보지 않는다(tag-R3)
   - 버전은 앞으로만 켠다 — 예전 버전을 다시 활성으로 바꾸지 않는다. 되돌리려면 그 버전의 원문(tag-R27)을 새 버전으로 낸다. 그래서 활성 버전은 언제나 번호가 가장 크고, 버전 n 의 기준 버전은 n − 1 이다
   - 원문의 내용이 기준 버전과 같으면 아무것도 하지 않는다 — 원문의 태그 기준 · 저장 기준만 달라도 같다. 그 변경은 tag-R11 이다
-  - 사용자 선호는 태그 키로 연결하므로, 키가 유지되거나 계보로 이어지는 한 영향이 없다(tag-R26)
-  - **(미구현)** 계보 없이 지운 키(tag-R24)의 선호는 해제하고 사용자에게 알린다 — 사용자 선호를 만드는 작업이 한다
+  - 새 버전을 쓰면 같은 트랜잭션에서 `TagSetActivated`(기준 버전 · 새 버전)를 낸다. 사용자 선호는 그 이벤트를 받은 `user` 가 계보대로 활성 키로 고쳐 쓰고, 계보 없이 지운 키(tag-R24)의 선호는 해제하고 사용자에게 알린다([ADR-0175](../adr/0175-tag-preferences-follow-tag-set-activation-events-and-are-rewritten-to-active-keys.md) · [user Spec](user.md#관심-설정) user-R47). 새 버전에서 새로 생긴 기본 제외 형식은 기존 사용자의 제외로 들어간다([ADR-0177](../adr/0177-formats-newly-excluded-by-default-on-activation-are-added-to-existing-users-exclusions.md))
   - **(미구현)** 새 주제 태그의 과거 보도량이 필요하면 운영자가 정한 기간의 과거 기사에 그 태그 질문만 다시 물을 수 있다(운영자 비용)
 - **tag-R22** — 원문의 계보 절(`lineage`)은 선택이다. 항목마다 `kind`(`topic` · `region` · `format`) · `change`(`rename` · `split` · `merge`) · `from` · `to`(키 목록)를 적는다. 원문 하나 안에서 검사한다(정본 `TagSetValidator`):
   - 키는 tag-R6 의 형식이다 — 중분류는 전체 키
@@ -1323,3 +1344,5 @@ sequenceDiagram
 | [0070](../adr/0070-past-store-threshold-maximum-and-mixed-store-floors-computed-from-history-and-finished-backfills.md) | 지난 저장 기준 최댓값과 평가 현황의 저장 기준 섞임은 이력과 끝난 채움 기록으로 평가 시각 축의 저장 바닥을 계산해 낸다 |
 | [0112](../adr/0112-tags-split-into-a-tag-module-and-evaluation-is-the-model-gateway-that-assembles-calls-and-records-each-judgement.md) | 태그는 `tag` 모듈로 떼고, `evaluation` 은 판정마다 요청 조립 · 모델 호출 · 판정 원본 기록을 맡는 관문으로 둔다 |
 | [0113](../adr/0113-moving-listeners-or-jobs-between-modules-migrates-pending-publication-listener-ids-and-drops-pending-jobs-of-the-old-class.md) | 모듈 사이로 리스너 · 반복 작업을 옮기면 미완료 발행의 리스너 ID 를 마이그레이션으로 옮기고, 옛 클래스의 남은 예약 작업을 지운다 |
+| [0175](../adr/0175-tag-preferences-follow-tag-set-activation-events-and-are-rewritten-to-active-keys.md) | 태그 선호는 체계 활성 전환 이벤트를 받아 활성 버전의 키로 고쳐 쓴다 |
+| [0182](../adr/0182-startup-work-reading-the-active-tag-set-runs-in-a-lifecycle-phase-after-first-start-seeding-and-before-the-web-server.md) | 기동 때 활성 태그 체계를 읽는 작업은 웹 서버 앞의 기동 단계에서 첫 기동 적재 뒤에 돈다 |

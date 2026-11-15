@@ -15,10 +15,12 @@
 - **키 관문** — LLM 키가 없는 세션 사용자에게는 키 없이도 여는 표시가 있는 처리기만 연다. 키 유무는 `credential` 에 묻는다(user-R5)
 - **세션 사용자 범위** — 화면용 API 처리기가 사용자를 인자 타입 `UserId` 로만 받게 한다(요청에서 사용자 ID 를 받지 않는다)
 - **자체 로그인** — 로그인 · 로그아웃 · 로그인 상태 조회. 로그인 실패는 계정 유무와 무관하게 같은 응답을 주고, 제출된 이메일마다 연속 실패에 지연을 늘린다
-- **화면 내 알림** — 메일 대신 쓰는 알림을 받는 사용자마다 저장하고, 세션 사용자의 알림함(목록 · 안 읽은 수 · 읽음)을 낸다. 지금 종류는 셋이다 — 피드 상태 알림(`source` 의 피드 상태 변화를 운영자 계정마다 안 읽은 알림 하나에 모은다), 비밀번호 알림, 키 무효 알림(`credential` 의 `CredentialInvalidated` 를 받아 남긴다)
+- **화면 내 알림** — 메일 대신 쓰는 알림을 받는 사용자마다 저장하고, 세션 사용자의 알림함(목록 · 안 읽은 수 · 읽음)을 낸다. 지금 종류는 넷이다 — 피드 상태 알림(`source` 의 피드 상태 변화를 운영자 계정마다 안 읽은 알림 하나에 모은다), 비밀번호 알림, 키 무효 알림(`credential` 의 `CredentialInvalidated` 를 받아 남긴다), 선호 조정 알림(태그 체계 활성 전환이 선호를 해제하거나 더했을 때)
 - **요청 방어** — `platform` 의 요청 방어 표시가 있는 처리기의 요청을 처리기 앞에서 클라이언트 주소 · 세션 사용자로 세고(고정 창 — PostgreSQL), 한도를 넘으면 429 로 거부한다. 봇 차단을 켠 인스턴스에서는 로그인 · 복구 · 공개 가입의 사람 확인 토큰을 봇 차단 서비스(Turnstile — 포트 `HumanVerifier`)로 확인한다. 클라이언트 주소는 배포 proxy 가 덮어쓴 헤더 하나에서 읽는다
 - **정리** — 만료 세션과 오래된 실패 기록(로그인 · 복구), 끝난 요청 제한 창, 읽은 지 오래된 알림을 지운다
-- **(미구현)** 다이제스트 실패 알림, 사용자 설정 · 태그 선호와 그 이력, 스토리라인 구독과 그 이력, 리포트 설정 — [security.md "가입"](../security.md#가입) · [data-model.md "사용자"](../data-model.md#사용자)
+- **관심 설정** — 사용자마다 설정 행 하나(선호의 체계 버전 · 일정 · 자유 텍스트 관심사 · 고른 모델 · 변화 리포트)와 태그 선호(주제 구독 · 지역 제외 · 형식 제외)의 현재 상태 · 추가 전용 이력, 제외 소스. 계정을 만들 때 기본값을 넣고(설정 행이 없는 계정은 기동 때 채운다), 태그 체계의 활성 전환을 따라 선호를 활성 키로 고쳐 쓰고 알린다. 고른 모델과 쓸 모델을 정한다
+- **(미구현)** 다이제스트 실패 알림, 스토리라인 구독과 그 이력
+- **(미설계)** 다이제스트 · 관심도 · 변화 리포트가 관심 설정을 읽는 공개 조회 — 소비자의 작업이 소비 계약과 함께 연다([ADR-0180](../adr/0180-user-settings-changes-publish-no-event-and-consumers-query.md))
 
 하지 않는 것:
 
@@ -30,6 +32,8 @@
 - 메일을 보내지 않는다 — 이메일은 인증하지 않는 로그인 식별자다([ADR-0011](../adr/0011-no-email-in-v1.md))
 - LLM 키를 보관하거나 키의 상태를 정하지 않는다 — `credential` 의 것이고, 이 모듈은 키 유무를 묻고 무효 이벤트를 알림에 담기만 한다
 - 피드 상태를 판정하지 않는다 — 판정은 `source` 가 하고, 이 모듈은 받은 전이를 알림에 담기만 한다
+- 태그 체계 · 계보 · 기본 제외를 정하지 않는다 — `tag` 의 것이고, 이 모듈은 활성 체계 · 계보를 읽어 선호를 맞춘다
+- LLM 을 부르지 않는다 — 쓸 모델은 허용 모델 목록(`llm`)과 키 상태(`credential`)를 읽어 정하기만 한다
 
 다른 모듈과의 의존과 이벤트 흐름은 [overview.md §5](../overview.md#5-모듈-지도)에 있다.
 
@@ -61,8 +65,20 @@
 | 창 | 요청 제한이 세는 고정 시간 칸 — 유닉스 기원부터 창 길이로 나눈 칸이고 시작은 포함 · 끝은 제외다(user-R39) |
 | 봇 차단 | 로그인 · 복구 · 공개 가입에서 사람 확인 토큰을 봇 차단 서비스로 확인하는 것 — 운영자 설정으로 켜고 끈다(user-R41) |
 | 사람 확인 토큰 | 화면의 봇 차단 위젯이 준 일회용 토큰 — 요청 헤더 `X-Human-Check` 로 보낸다(user-R41) |
+| 관심 설정 | 다이제스트 · 리포트가 쓸 사용자의 설정 — 태그 선호 · 제외 소스 · 일정(시간대 · 생성 시각) · 자유 텍스트 관심사 · 변화 리포트 · 고른 모델(user-R43 ~ R51) |
+| 설정 행 | 사용자마다 한 행인 관심 설정 — 선호의 체계 버전도 여기 있다. 관심 설정의 쓰기 · 조회는 이 행을 잠근다(user-R43 · R46) |
+| 태그 선호 | 주제 구독 · 지역 제외 · 형식 제외 — 태그 종류마다 모드 하나다(user-R45) |
+| 선호 버전 | 사용자의 태그 선호 전체가 그 키로 적힌 태그 체계 버전 — 설정 행의 칸 하나(user-R45) |
+| 선호 이력 | 태그 선호의 추가 전용 변경 기록 — 원인(사용자 · 계정을 만들 때 기본값 · 체계 변경)과 기록 당시 버전을 갖는다. 관심 신호는 원인이 사용자인 행만이다(user-R45) |
+| 따라가기 | 선호 버전이 지금 활성 버전과 다른 사용자의 선호를 계보대로 활성 키로 고쳐 쓰는 것(user-R47) |
+| 선호 버전 울타리 | 새 설정 행이 활성 전환의 훑기에서 빠지지 않게 하는 advisory 잠금 — 설정 행을 만드는 쪽은 공유, 훑기는 배타(user-R43 · R47) |
+| 기동 단계 | 모든 `SmartInitializingSingleton`(태그 체계 첫 기동 적재 포함) 뒤 · 웹 서버 앞의 `SmartLifecycle` 단계 — 첫 운영자 · 기존 계정 채우기가 돈다(user-R44) |
+| 제외 소스 | 사용자가 다이제스트 후보에서 뺄 소스 — 소스 단위, 이력 없음(user-R49) |
+| 쓸 모델 | 고른 모델 · 허용 모델 목록 · 키 상태로 조회 때 정하는 모델(user-R51) |
 
 ## 3. 공개 인터페이스
+
+받는 이벤트는 `source` 의 `FeedStatusesChanged` · `SourceDeleted`, `credential` 의 `CredentialInvalidated`, `tag` 의 `TagSetActivated` 이고, 내는 이벤트는 없다 — 관심 설정이 바뀌어도 이벤트를 내지 않는다([ADR-0180](../adr/0180-user-settings-changes-publish-no-event-and-consumers-query.md)).
 
 모듈 최상위 패키지 `net.yozmnews.user` 의 공개 타입은 비밀번호 규칙 위반의 까닭 하나(`PasswordProblem`), 계정 들이기의 운영 API 셋(`AccountAdministration` · `InvitationAdministration` · `SignUpPolicyAdministration`)과 그 결과 · 값 타입(`AccountCreationResult` · `InitialPasswordResetResult` · `IssuedInvitation` · `InvitationView` · `InvitationState` · `InvitationRevocationResult` · `UnknownInvitationException` · `SignUpPolicyChange` · `SignUpPolicyChangeResult`)이다. 운영 API 는 `admin` 이 운영자 경로로 낸다. 사용자 식별자 `UserId` 는 `platform` 의 공개 타입이다([platform Spec](platform.md#userid)).
 
@@ -84,8 +100,16 @@ HTTP 엔드포인트:
 | `/api/account-recoveries` | `POST` | 복구 코드로 비밀번호 재설정 — `RESET`(+새 복구 코드) · `REJECTED` · `WAIT`(+남은 초) · `PASSWORD_REJECTED`(+까닭)(user-R30) |
 | `/api/account/password` | `PUT` | 비밀번호 변경 — `CHANGED`(+강제 변경이었으면 새 복구 코드) · `REJECTED` · `WAIT` · `PASSWORD_REJECTED`(user-R29) |
 | `/api/account/recovery-code` | `POST` | 복구 코드 재발급 — `ISSUED`(+새 복구 코드) · `REJECTED` · `WAIT`(user-R30) |
+| `/api/interests/tags` | `GET` | 활성 태그 체계(주제 · 지역 · 형식과 기본 제외)와 세션 사용자의 태그 선호(user-R45 · R46) |
+| `/api/interests/tags` | `PUT` | 태그 선호 저장 — `SAVED`(+선호) · `TAG_SET_CHANGED`(+활성 버전 ID). 그 버전에 없는 키는 400(user-R46) |
+| `/api/interests/sources` | `GET` | 고를 소스(숨기지 않은 소스의 ID · 이름)와 제외 소스(user-R49) |
+| `/api/interests/sources` | `PUT` | 제외 소스 저장 — `SAVED`(+제외 소스)(user-R49) |
+| `/api/interests/settings` | `GET` | 시간대 · 생성 시각 · 자유 텍스트 관심사(와 상한) · 변화 리포트(user-R50) |
+| `/api/interests/settings` | `PUT` | 저장 — `SAVED` · `UNKNOWN_TIMEZONE` · `INTEREST_TEXT_TOO_LONG`(+상한). 시각 · 요일 형식이 틀리면 400(user-R50) |
+| `/api/interests/model` | `GET` | 고를 수 있는 모델 · 고른 모델 · 쓸 모델 · 까닭(user-R51) |
+| `/api/interests/model` | `PUT` | 모델 고르기 — `SAVED`(+조회와 같은 칸) · `PROVIDER_WITHOUT_KEY` · `MODEL_NOT_ALLOWED`(user-R51) |
 
-로그인 · 로그아웃 · 로그인 상태 조회 · 가입 정책 조회 · 봇 차단 설정 조회 · 가입 둘 · 초대 상태 · 복구 재설정은 공개 처리기다. 로그인 · 복구 재설정 · 초대 상태 · 초대 가입 · 공개 가입에는 요청 제한이 걸려 넘으면 429 이고(user-R38 · R40), 로그인 · 복구 재설정 · 공개 가입에는 봇 차단을 켠 인스턴스에서 사람 확인이 걸린다(user-R41). 알림 세 경로 · 비밀번호 변경 · 복구 코드 재발급은 세션이 필요하며 사용자 격리 시험에 등록돼 있고(user-R5 · user-R6), LLM 키가 없는 세션 사용자에게도 연다(`@AllowedWithoutLlmKey` — user-R5). 비밀번호 변경은 강제 변경 중에도 연다(`@AllowedBeforePasswordChange` — user-R29). 판정 결과는 200 이고 요청 본문의 칸이 없으면 본문 형식 400 이다. 요청 · 응답 형식은 `api/openapi.json` 에 있다.
+로그인 · 로그아웃 · 로그인 상태 조회 · 가입 정책 조회 · 봇 차단 설정 조회 · 가입 둘 · 초대 상태 · 복구 재설정은 공개 처리기다. 로그인 · 복구 재설정 · 초대 상태 · 초대 가입 · 공개 가입에는 요청 제한이 걸려 넘으면 429 이고(user-R38 · R40), 로그인 · 복구 재설정 · 공개 가입에는 봇 차단을 켠 인스턴스에서 사람 확인이 걸린다(user-R41). 알림 세 경로 · 비밀번호 변경 · 복구 코드 재발급 · 관심 설정 여덟 경로는 세션이 필요하며 사용자 격리 시험에 등록돼 있고(user-R5 · user-R6), LLM 키가 없는 세션 사용자에게도 연다(`@AllowedWithoutLlmKey` — user-R5). 비밀번호 변경은 강제 변경 중에도 연다(`@AllowedBeforePasswordChange` — user-R29). 판정 결과는 200 이고 요청 본문의 칸이 없으면 본문 형식 400 이다. 요청 · 응답 형식은 `api/openapi.json` 에 있다.
 
 ### PasswordProblem
 
@@ -177,12 +201,12 @@ public record SignUpPolicyChange(@Nullable Boolean previousOpen, boolean open, C
 |---|---|
 | (최상위) | 비밀번호 규칙 위반의 까닭 · 계정 들이기의 운영 API 셋과 그 결과 · 값(§3) |
 | `adapter/in/job` | 만료 세션 정리 · 오래된 실패 기록 정리 · 끝난 요청 제한 창 정리 · 읽은 알림 정리 반복 작업 |
-| `adapter/in/web` | 로그인 · 로그아웃 · 상태 조회 · 알림함 · 가입 · 초대 · 복구 · 비밀번호 변경 · 봇 차단 설정 조회 엔드포인트와 그 요청 · 응답 값, 세션 사용자 인자 해석과 그 인자를 화면용 API 명세에서 빼는 설정 |
-| `adapter/out/persistence` | 실패 기록의 잠금 · 기록 · 삭제, 요청 제한 기록의 더하기 · 정리, 알림 · 반영 기준 저장소, 피드 상태 알림의 받는 사람 조회, 복구 코드 저장소, 요청의 세션 계정 조회, 가입 정책 저장소, 첫 운영자 잠금 |
+| `adapter/in/web` | 로그인 · 로그아웃 · 상태 조회 · 알림함 · 가입 · 초대 · 복구 · 비밀번호 변경 · 봇 차단 설정 조회 · 관심 설정 엔드포인트와 그 요청 · 응답 값, 세션 사용자 인자 해석과 그 인자를 화면용 API 명세에서 빼는 설정 |
+| `adapter/out/persistence` | 실패 기록의 잠금 · 기록 · 삭제, 요청 제한 기록의 더하기 · 정리, 알림 · 반영 기준 저장소, 피드 상태 알림의 받는 사람 조회, 복구 코드 저장소, 요청의 세션 계정 조회, 가입 정책 저장소, 첫 운영자 잠금, 설정 행 · 태그 선호 · 선호 이력 · 제외 소스 저장소, 선호 버전 울타리 |
 | `adapter/out/turnstile` | 봇 차단 검증 포트의 Turnstile 구현, 봇 차단 설정(`yozmnews.human-check`)의 결선, 비밀 키 유무의 등록 조건 |
 | `adapter/out/local` | 로컬 개발의 항상 통과 봇 차단 검증기와 그 결선(platform-R18) |
-| `application` | 보안 구성(체인 셋 · 쿠키 · CSRF), 운영자 토큰 인증 · 운영자 경로 인가, 세션 인증 · 계정 확인 필터 · 공개 처리기 인가 · 처리기 찾기 · 요청 방어 필터 · 클라이언트 주소, 요청 제한 · 봇 차단 유스케이스, 세션 로그인 · 로그아웃, 로그인 유스케이스, 비밀번호 해시, 계정을 만드는 정본과 가입 · 운영자 계정 · 첫 운영자 유스케이스, 가입 정책 · 초대 운영, 비밀번호 변경 · 복구 재설정 · 복구 코드 재발급과 다른 세션 종료, 피드 상태 · 비밀번호 · 키 무효 알림 유스케이스, 알림함 유스케이스, 정리 유스케이스, 문제 유형 |
-| `domain` | `account`(계정 aggregate · 이메일 · 표시 이름 · 계정을 만드는 길), `credential`(자격 aggregate · 비밀번호 규칙), `secret`(비밀 다이제스트 · 복구 코드 · 초대 토큰), `recovery`(복구 코드 저장), `session`(세션 수명 · 요청의 세션 계정 · 세션 접근 판정 · 운영자 경로 접근 판정), `throttle`(실패 지연 일정 · 실패 기록 · 종류 · 남은 초), `guard`(클라이언트 주소 · 정책 표 · 축 · 규칙 · 창 · 키 · 판정 · 요청 제한 기록 저장), `humancheck`(사람 확인 토큰 · 결과 · 검증 포트 · 설정 판정 · Turnstile 응답 판정), `invitation`(초대 aggregate · 규칙), `signup`(가입 정책 저장), `bootstrap`(첫 운영자 값 · 판정 · 잠금), `notice`(알림 종류 · 내용 · 모으기 · 반영 기준 · 보존과 그 저장 · 받는 사람 조회), 최상위 운영자 자격 판정 |
+| `application` | 보안 구성(체인 셋 · 쿠키 · CSRF), 운영자 토큰 인증 · 운영자 경로 인가, 세션 인증 · 계정 확인 필터 · 공개 처리기 인가 · 처리기 찾기 · 요청 방어 필터 · 클라이언트 주소, 요청 제한 · 봇 차단 유스케이스, 세션 로그인 · 로그아웃, 로그인 유스케이스, 비밀번호 해시, 계정을 만드는 정본과 가입 · 운영자 계정 · 첫 운영자 유스케이스, 가입 정책 · 초대 운영, 비밀번호 변경 · 복구 재설정 · 복구 코드 재발급과 다른 세션 종료, 피드 상태 · 비밀번호 · 키 무효 알림 유스케이스, 알림함 유스케이스, 정리 유스케이스, 문제 유형, 관심 설정 — 기본값 쓰기 · 기존 계정 채우기 · 기동 단계 · 조회 · 저장 유스케이스 넷 · 따라가기와 그 리스너 · 소스 삭제 리스너 |
+| `domain` | `account`(계정 aggregate · 이메일 · 표시 이름 · 계정을 만드는 길), `credential`(자격 aggregate · 비밀번호 규칙), `secret`(비밀 다이제스트 · 복구 코드 · 초대 토큰), `recovery`(복구 코드 저장), `session`(세션 수명 · 요청의 세션 계정 · 세션 접근 판정 · 운영자 경로 접근 판정), `throttle`(실패 지연 일정 · 실패 기록 · 종류 · 남은 초), `guard`(클라이언트 주소 · 정책 표 · 축 · 규칙 · 창 · 키 · 판정 · 요청 제한 기록 저장), `humancheck`(사람 확인 토큰 · 결과 · 검증 포트 · 설정 판정 · Turnstile 응답 판정), `invitation`(초대 aggregate · 규칙), `signup`(가입 정책 저장), `bootstrap`(첫 운영자 값 · 판정 · 잠금), `notice`(알림 종류 · 내용 · 모으기 · 반영 기준 · 보존과 그 저장 · 받는 사람 조회), `interest`(설정 행 aggregate · 기본값 · 관심사 · 시간대 · 일정 · 리포트 · 고른 모델 · 쓸 모델 판정 · 선호 버전 울타리 · 제외 소스 저장), `preference`(태그 선호 집합 · 모드 · 원인 · 차이 · 정규화 · 따라가기 규칙과 그 저장), 최상위 운영자 자격 판정 |
 
 협력: 요청은 `SecurityConfiguration` 의 체인 셋 가운데 하나를 탄다(user-R4). 운영자 체인은 세션 체인과 같은 세션 인증 구성(세션 문맥 저장소 · `SessionAccountFilter`)으로 세션 사용자를 읽고, `Authorization` 헤더를 낸 요청은 `AdminTokenFilter` 가 제시된 토큰을 `AdminTokenAuthenticationProvider` 에 맡겨 `AdminCredential` 과 대조한 뒤, `AdminAuthorization` 이 운영자 토큰 인증 · 세션 사용자의 강제 변경 · 역할을 `AdminAccess` 에 넘겨 인가한다. 세션 체인은 Spring Session 이 DB 에서 세션을 읽은 뒤 `SessionAccountFilter` 가 세션의 사용자 ID 로 `SessionAccounts`(계정 상태 · 역할 · 강제 변경)를 읽어 요청의 인증을 정하고, `PublicApiAuthorization` 이 처리기의 공개 · 변경 전 허용 · 키 없이 허용 표시와 세션 사용자의 강제 변경 · 키 유무(`credential` 의 `LlmKeys`)를 `SessionAccess` 에 넘겨 인가한다(처리기는 `HandlerLookup` 이 찾는다). 인가 뒤 `RequestGuardFilter` 가 같은 `HandlerLookup` 으로 처리기의 요청 방어 표시(`platform` 의 `HandlerGuards`)를 읽어, `ClientAddresses` 의 주소와 세션 사용자로 `RequestLimiter` 에 세고(`RequestCounts`) 넘으면 429 로 끝내며, 봇 차단 표시가 있고 켰으면 `HumanCheck` 가 요청 헤더의 토큰을 `HumanVerifier` 로 확인한다. 로그인은 `SessionController` → `SignIn`(`FailureThrottle` 의 실패 기록 · 계정 · 자격 · `PasswordHashing`) → 성공이면 `SessionSignIn` 이 세션을 만든다. 처리기 인자 `UserId` 는 `SessionUserArgumentResolver` 가 요청의 인증에서 채운다. 보안 진입점 · 거부 처리기는 `platform` 의 `ProblemResponses` 로 문제 응답을 쓴다.
 
@@ -191,6 +215,8 @@ public record SignUpPolicyChange(@Nullable Boolean previousOpen, boolean open, C
 비밀번호: 변경(`AccountController` → `PasswordChange`) · 재발급(`RecoveryCodeReissue`)은 `CurrentPasswordCheck` 로 현재 비밀번호를 확인하고, 복구 재설정(`AccountRecovery`)은 `FailureThrottle` 의 복구 실패 기록에 걸어 복구 코드를 대조한다. 자격을 바꾼 유스케이스는 커밋 직전 마지막 단계로 `OtherSessions` 가 그 사용자의 세션을 지우고, 비밀번호 알림은 `PasswordChangedNotices` 가 남긴다.
 
 알림: `source` 의 `FeedStatusesChanged` 를 `FeedStatusNoticeListener` 가 받아 `FeedStatusNotices` 에 맡긴다. 유스케이스는 피드 이름을 `source` 의 `FeedLabels` 로, 받는 사람을 `NoticeRecipients` 로 읽고, 받는 사람마다 `NoticeRepository` 로 반영 기준 행을 잠근 뒤 `FeedStatusReceipt` 로 회차를 거르고, 안 읽은 피드 상태 알림을 `FeedStatusContent` 로 모으거나 새로 만든다. `credential` 의 `CredentialInvalidated` 는 `KeyInvalidatedNoticeListener` 가 받아 `KeyInvalidatedNotices` 에 맡기고, 유스케이스는 그 사용자에게 키 무효 알림을 전이마다 하나 남긴다. 화면은 `NoticeController` → `NoticeInbox` → `NoticeRepository` 로 세션 사용자의 알림을 읽고 읽음을 쓴다.
+
+관심 설정: 계정을 만드는 정본(`AccountProvisioning`)이 `InterestDefaultsWriter` 로 설정 행 · 형식 기본 제외를 같은 트랜잭션에서 쓴다 — 울타리(`PreferenceVersionFence`) 공유 잠금 뒤 `tag` 의 `TagSetDirectory` 로 활성 체계를 읽는다. 기존 계정은 기동 단계의 `InterestBackfill` 이 같은 쓰기로 채운다. 화면은 `InterestController` → `TagPreferences` · `ExcludedSources` · `DigestSettings` · `ModelSelection` 이고, 넷 모두 설정 행을 잠근 뒤 `PreferenceFollowups.followLocked` 로 먼저 따라간다. 따라가기는 `TagKeyLineage` 의 계보 표와 `TagSetDirectory.tagSet` 의 옛 버전 구조로 `PreferenceFollowup` 이 판정하고, `TagPreferenceRepository` 가 현재 상태 · 이력을 쓰며, 조정이 있으면 `NoticeRepository` 로 알림을 남긴다. `tag` 의 `TagSetActivated` 는 `TagSetActivationListener` → `PreferenceFollowups.followAll`, `source` 의 `SourceDeleted` 는 `SourceDeletedListener` → `ExcludedSources.forget` 이다. 고를 소스는 `source` 의 `SourceNames`, 쓸 모델은 `llm` 의 `LlmModels` 와 `credential` 의 `LlmKeys` 로 `ModelChoice` 가 정한다.
 
 ```mermaid
 sequenceDiagram
@@ -210,7 +236,7 @@ sequenceDiagram
     S-->>B: 200 결과 (Set-Cookie SESSION · XSRF-TOKEN)
 ```
 
-역할: `SessionController` · `NoticeController` · `SignUpController` · `AccountController` · `HumanCheckController` · `UserWebConfiguration` 은 화면 역할, `ExpireSessionsJob` · `ForgetLoginFailuresJob` · `ForgetRequestCountsJob` · `ForgetReadNoticesJob` 은 작업 역할에서만 켜진다. 보안 구성 · 봇 차단 결선(`HumanCheckConfiguration`)과 설정 검사 · `FeedStatusNoticeListener` · `KeyInvalidatedNoticeListener` · `SignUpPolicySeeding` · `FirstAdminBootstrap` 을 포함한 나머지는 두 역할 공통이다 — 피드 상태 변화는 작업 역할의 피드 건강 검사가 발행하므로 리스너가 작업 역할에서 받는다(user-R4 · [platform Spec](platform.md#역할) platform-R9).
+역할: `SessionController` · `NoticeController` · `SignUpController` · `AccountController` · `HumanCheckController` · `InterestController` · `UserWebConfiguration` 은 화면 역할, `ExpireSessionsJob` · `ForgetLoginFailuresJob` · `ForgetRequestCountsJob` · `ForgetReadNoticesJob` 은 작업 역할에서만 켜진다. 보안 구성 · 봇 차단 결선(`HumanCheckConfiguration`)과 설정 검사 · `FeedStatusNoticeListener` · `KeyInvalidatedNoticeListener` · `TagSetActivationListener` · `SourceDeletedListener` · `SignUpPolicySeeding` · `FirstAdminBootstrap` · `InterestBackfill` 을 포함한 나머지는 두 역할 공통이다 — 피드 상태 변화는 작업 역할의 피드 건강 검사가 발행하므로 리스너가 작업 역할에서 받는다(user-R4 · [platform Spec](platform.md#역할) platform-R9).
 
 ### 들어오는 쪽
 
@@ -227,13 +253,17 @@ sequenceDiagram
 | 복구 · 비밀번호 | `AccountController` | `POST /api/account-recoveries`, `PUT /api/account/password`, `POST /api/account/recovery-code` | user-R29 · R30. 응답 값 `AccountRecoveryResponse` · `PasswordChangeResponse` · `RecoveryCodeResponse`(대기 초는 domain 의 `RetryAfter`) |
 | 운영 API | `OperatorAccountService` · `InvitationService` · `SignUpPolicyService` | `admin` 의 운영자 경로 | §3 의 운영 API 셋의 구현(user-R31 · R32 · R35) |
 | 가입 정책 처음 값 | `SignUpPolicySeeding` | 기동 | 지금 값이 없으면 닫힘을 이력과 함께 넣는다(user-R32) |
-| 첫 운영자 | `FirstAdminBootstrap` | 기동 | 설정 `yozmnews.first-admin.*` 로 첫 운영자를 판정 · 생성하거나 경고 · 기동 실패(user-R34) |
+| 첫 운영자 | `FirstAdminBootstrap` | 기동 단계(user-R44) | 설정 `yozmnews.first-admin.*` 로 첫 운영자를 판정 · 생성하거나 경고 · 기동 실패(user-R34) |
+| 기존 계정 채우기 | `InterestBackfill` | 기동 단계(user-R44) | 설정 행이 없는 계정에 관심 설정 기본값을 넣는다(user-R43) |
+| 관심 설정 | `InterestController` → `TagPreferences` · `ExcludedSources` · `DigestSettings` · `ModelSelection` | `GET` · `PUT /api/interests/tags` · `/sources` · `/settings` · `/model` | user-R46 · R49 ~ R51. 응답 · 요청 값은 `Interest*Response` · `Interest*Request` |
+| 태그 체계 활성 전환 | `TagSetActivationListener` → `PreferenceFollowups.followAll` | `tag` 의 `TagSetActivated` | 선호 버전이 활성과 다른 사용자를 따라가게 한다(user-R47). 비동기 · 트랜잭션 없음(`NOT_SUPPORTED` — 사용자마다 트랜잭션 하나)이고 이벤트 발행 레지스트리에 기록된다 — 실패하면 다시 처리되고 남은 사용자만 고친다 |
+| 소스 삭제 | `SourceDeletedListener` → `ExcludedSources.forget` | `source` 의 `SourceDeleted` | 그 소스의 제외 행을 지운다(user-R49). 비동기 · 새 트랜잭션, 다시 처리해도 같다 |
 | 만료 세션 정리 — 반복 작업 ID `expire-sessions` | `ExpireSessionsJob` | 10분마다 | 만료 세션을 지운다(user-R12). 재시도하지 않는다 — 다음 회차가 이어 지운다 |
 | 실패 기록 정리 — 반복 작업 ID `forget-login-failures` | `ForgetLoginFailuresJob` | 1시간마다 | 마지막 실패에서 24시간이 지난 실패 기록을 지운다(user-R19). 재시도하지 않는다 |
 | 끝난 요청 제한 창 정리 — 반복 작업 ID `forget-request-counts` | `ForgetRequestCountsJob` | 10분마다 | 끝난 창의 요청 제한 기록을 지운다(user-R42). 재시도하지 않는다 — 다음 회차가 이어 지운다 |
 | 피드 상태 변화 | `FeedStatusNoticeListener` → `FeedStatusNotices` | `source` 의 `FeedStatusesChanged` | 그때 쓰는 운영자 계정마다 안 읽은 피드 상태 알림에 모은다(user-R22 ~ R24). 비동기 · 새 트랜잭션이고 이벤트 발행 레지스트리에 기록된다 — 실패하면 다시 처리되고, 반영 기준이 결과를 같게 한다 |
 | 키 무효 | `KeyInvalidatedNoticeListener` → `KeyInvalidatedNotices` | `credential` 의 `CredentialInvalidated` | 그 사용자에게 키 무효 알림을 남긴다(user-R36). 비동기 · 새 트랜잭션이고 이벤트 발행 레지스트리에 기록된다 — 실패하면 다시 처리되고, 같은 전이의 알림은 하나만 남는다 |
-| 알림함 | `NoticeController` → `NoticeInbox` | `GET /api/notices` · `GET /api/notices/unread-count` · `POST /api/notices/read` | user-R25 · R27. 응답 값 `NoticePageResponse` · `NoticeResponse` · `FeedStatusNoticeResponse` · `FeedStatusEntryResponse` · `PasswordChangedNoticeResponse` · `KeyInvalidatedNoticeResponse` · `UnreadNoticesResponse`, 요청 값 `ReadNoticesRequest` |
+| 알림함 | `NoticeController` → `NoticeInbox` | `GET /api/notices` · `GET /api/notices/unread-count` · `POST /api/notices/read` | user-R25 · R27. 응답 값 `NoticePageResponse` · `NoticeResponse` · `FeedStatusNoticeResponse` · `FeedStatusEntryResponse` · `PasswordChangedNoticeResponse` · `KeyInvalidatedNoticeResponse` · `PreferencesAdjustedNoticeResponse` · `AdjustmentResponse` · `UnreadNoticesResponse`, 요청 값 `ReadNoticesRequest` |
 | 읽은 알림 정리 — 반복 작업 ID `forget-read-notices` | `ForgetReadNoticesJob` | 하루마다 | 읽은 지 90일이 지난 알림을 지운다(user-R26). 재시도하지 않는다 — 다음 회차가 이어 지운다 |
 
 ### `application`
@@ -254,7 +284,7 @@ sequenceDiagram
 - `SessionSignIn` — 세션 로그인(세션 ID 교체 · CSRF 토큰 교체 · 보안 문맥 저장 · 수명) · 들고 온 세션을 버린 새 로그인(가입 · 복구) · 지금 세션의 ID 교체(비밀번호 변경) · 로그아웃(user-R8 · R11)
 - `SignIn` — 로그인 유스케이스. 한 번의 시도가 트랜잭션 하나이고, 실패 기록 행 잠금이 대조 동안 이어진다(user-R17 · R18)
 - `FailureThrottle` — 실패 기록에 건 대조의 정본 — 잠금 · 대기 판정 · 성공이면 지우기 · 실패면 올리기. 결과 `Throttled`(통과 · 실패 · 대기). 로그인 · 현재 비밀번호 확인 · 복구가 쓴다(user-R18 · R19)
-- `AccountProvisioning` — 계정을 만드는 정본(계정 · 자격 · 복구 코드)과 계정을 만드는 유스케이스의 트랜잭션 경계(user-R28). 결과 `ProvisionResult`(만듦 · 같은 이메일)
+- `AccountProvisioning` — 계정을 만드는 정본(계정 · 자격 · 복구 코드 · 관심 설정 기본값)과 계정을 만드는 유스케이스의 트랜잭션 경계(user-R28). 결과 `ProvisionResult`(만듦 · 같은 이메일)
 - `SignUp` — 공개 가입 · 초대 가입 유스케이스(user-R33). 입력 `SignUpForm`, 결과 `SignUpOutcome`
 - `InvitationService` — 초대 운영(`InvitationAdministration`)과 링크를 연 사람의 상태 확인(user-R31)
 - `SignUpPolicyService` · `SignUpPolicySeeding` — 가입 정책 운영(`SignUpPolicyAdministration`)과 처음 값 적재(user-R32)
@@ -273,6 +303,12 @@ sequenceDiagram
 - `NoticeInbox` — 알림함 유스케이스 — 세션 사용자의 목록 한 쪽(`NoticePage`) · 안 읽은 수 · 읽음(user-R25 · R27)
 - `AccountQueries` — 쓰는 계정 조회. 로그인 상태 조회가 세션 사용자의 계정을 읽는다(user-R20)
 - `ProblemTypes` — 보안 거부(요청 방어 포함)의 문제 유형 URI 와 제목의 정본(user-R3)
+- `InterestDefaultsWriter` — 관심 설정 기본값 쓰기의 정본 — 울타리 공유 잠금 → 활성 체계 → 설정 행 · 형식 기본 제외(이력 원인 `ONBOARDING`). 설정 행이 있으면 쓰지 않는다(user-R43)
+- `UserStartup` — 기동 단계 상수 `PHASE` 의 정본(user-R44)
+- `InterestBackfill` — 기존 계정 채우기(기동 단계)(user-R44)
+- `TagPreferences` · `ExcludedSources` · `DigestSettings` · `ModelSelection` — 관심 설정 조회 · 저장 유스케이스 넷(user-R46 · R49 ~ R51)
+- `PreferenceFollowups` — 따라가기 — 사용자 하나(`followLocked` — 정본)와 전부(`followAll`)(user-R47)
+- `TagSetActivationListener` · `SourceDeletedListener` — `TagSetActivated` · `SourceDeleted` 리스너(들어오는 쪽). 역할 애너테이션이 없다(user-R47 · R49)
 - 그 밖의 값: `AdminSecurityProperties`(설정 `yozmnews.admin` — §7) · `AdminTokenAuthentication`(제시된 토큰 · 운영자 인증) · `AccountAuthentication`(세션 사용자 인증 — 세션에 직렬화되는 유일한 앱 타입, 역할 권한 이름의 정본) · `SignInOutcome`(로그인됨 · 거절 · 대기)
 
 ### `domain`
@@ -305,7 +341,7 @@ sequenceDiagram
 - `SignUpPolicyRepository` — 가입 정책의 지금 값(적재 전 없음) · 잠금 · 바꾸기 · 이력 · 처음 값 적재. 처음 값 상수 `INITIAL_OPEN`. 구현 `JdbcSignUpPolicy`(user-R32)
 - `FirstAdminValues` · `FirstAdminDecision` — 첫 운영자 값 읽기(없음 · 하나만 · 규칙 위반 · 있음)와 기동 판정의 정본, 기동 실패 이유 문구(user-R34). 잠금 `FirstAdminLock`, 구현 `JdbcFirstAdminLock`
 - `AdminCredential` — 운영자 자격의 판정 정본 — 토큰 형식(최소 · 최대 길이 상수), 설정 여부, 상수 시간 대조. 값은 `SecretDigest` 로만 갖는다(user-R2)
-- `NoticeKind` — 알림 종류의 닫힌 집합 정본(user-R21). `NoticeContent` — 종류마다의 내용(봉인 — `FeedStatusContent` · `PasswordChangedContent` · `KeyInvalidatedContent`)
+- `NoticeKind` — 알림 종류의 닫힌 집합 정본(user-R21). `NoticeContent` — 종류마다의 내용(봉인 — `FeedStatusContent` · `PasswordChangedContent` · `KeyInvalidatedContent` · `PreferencesAdjustedContent`)
 - `PasswordChangedContent` · `PasswordChangeMethod` — 비밀번호 알림의 내용(방법 — 변경 · 복구 코드, 시각)(user-R29)
 - `KeyInvalidatedContent` — 키 무효 알림의 내용(공급자 · 키 ID · 무효 시각)(user-R36)
 - `FeedStatusContent` · `FeedStatusEntry` — 피드 상태 알림의 내용과 그 줄, 모으기 규칙의 정본(user-R23)
@@ -313,6 +349,17 @@ sequenceDiagram
 - `NoticeRetention` — 읽은 알림 보존 기간 · 알림함 쪽 크기 상수의 정본(user-R26 · R27)
 - `NoticeRepository` — 알림 · 반영 기준의 저장 인터페이스. 구현은 `adapter/out/persistence` 의 `JdbcNoticeRepository` 다(user-R21 · R23 ~ R26)
 - `NoticeRecipients` — 피드 상태 알림의 받는 사람 조회 — 사용자 범위가 없는 조회라 리스너만 쓴다. 구현은 `JdbcNoticeRecipients` 다(user-R22)
+- `InterestSettings` — 설정 행 aggregate(`user_settings`) — 선호 버전 · 일정 · 관심사 · 고른 모델 · 리포트. 저장소 `InterestSettingsRepository`(잠금 · 없을 때만 넣기 · 바꾸기 · 설정 행 없는 계정 · 선호 버전이 다른 사용자)(user-R43 · R46)
+- `InterestDefaults` — 관심 설정 기본값의 정본 — 시간대 `Asia/Seoul` · 생성 시각 07:00 · 주간 리포트 켬(월요일) · 월간 리포트 켬(user-R43)
+- `InterestText` — 자유 텍스트 관심사 규칙의 정본 — 앞뒤 공백을 지운 0 ~ 500 코드 포인트(`MAX_CODE_POINTS`)(user-R50)
+- `Timezones` · `DigestSchedule` · `ReportSettings` — 시간대 읽기(IANA 지역 ID 만) · 일정(분 단위) · 리포트 설정(user-R50)
+- `ModelRef` · `ModelChoice` · `ModelResolution` · `ModelReason` — 고른 모델과 쓸 모델 판정의 정본(user-R51)
+- `PreferenceVersionFence` — 선호 버전 울타리(공유 · 배타). 구현 `JdbcPreferenceVersionFence`(user-R43 · R47)
+- `ExcludedSourceRepository` — 제외 소스 저장 — 읽기 · 바꾸기 · 소스 잊기. 구현 `JdbcExcludedSources`(user-R49)
+- `PreferenceSet` · `PreferenceChange` · `PreferenceMode` · `PreferenceCause` · `PreferenceAction` — 태그 선호 집합 · 기본값 · 모르는 키 · 정규화 · 차이, 모드 조합 · 원인 · 더함 뺌의 정본(user-R45)
+- `PreferenceFollowup` · `FollowResult` · `Adjustment` · `AdjustmentKind` — 따라가기 규칙의 정본(user-R47)
+- `TagPreferenceRepository` — 태그 선호 현재 상태 · 이력 저장. 구현 `JdbcTagPreferences`(user-R45)
+- `PreferencesAdjustedContent` — 선호 조정 알림의 내용(user-R48)
 - 그 밖의 값: `AccountRole` · `AccountStatus` · `FailureRecord` · `EmailDigest` · `Notice`(알림 하나의 읽기 값) · `SeenNotice`(화면이 받은 알림의 판)
 
 ### 나가는 쪽
@@ -325,9 +372,9 @@ public interface HumanVerifier {
 }
 ```
 
-세션 저장소(Spring Session JDBC)와 반복 작업(JobRunr)은 프레임워크다. 저장 인터페이스의 구현(`JdbcLoginFailures` · `JdbcRequestCounts` · `JdbcNoticeRepository` · `JdbcNoticeRecipients` · `JdbcRecoveryCodes` · `JdbcSessionAccounts` · `JdbcSignUpPolicy` · `JdbcFirstAdminLock`)이 직접 읽고 쓴다(§6). 세션 지우기(`OtherSessions`)는 세션 저장소의 사용자 이름 색인을 쓴다. 피드 이름은 `source` 의 공개 조회 `FeedLabels` 로, 세션 사용자의 키 유무는 `credential` 의 공개 조회 `LlmKeys` 로 읽는다([overview §5](../overview.md#5-모듈-지도)).
+세션 저장소(Spring Session JDBC)와 반복 작업(JobRunr)은 프레임워크다. 저장 인터페이스의 구현(`JdbcLoginFailures` · `JdbcRequestCounts` · `JdbcNoticeRepository` · `JdbcNoticeRecipients` · `JdbcRecoveryCodes` · `JdbcSessionAccounts` · `JdbcSignUpPolicy` · `JdbcFirstAdminLock` · `JdbcInterestSettings` · `JdbcTagPreferences` · `JdbcExcludedSources` · `JdbcPreferenceVersionFence`)이 직접 읽고 쓴다(§6). 세션 지우기(`OtherSessions`)는 세션 저장소의 사용자 이름 색인을 쓴다. 피드 이름은 `source` 의 공개 조회 `FeedLabels` 로, 세션 사용자의 키 유무 · 키가 있는 공급자 · 쓸 수 있는 키의 공급자는 `credential` 의 공개 조회 `LlmKeys` 로, 활성 태그 체계 · 버전의 내용 · 계보 표는 `tag` 의 `TagSetDirectory` · `TagKeyLineage` 로, 고를 소스는 `source` 의 `SourceNames` 로, 허용 모델 목록은 `llm` 의 `LlmModels` 로 읽는다([overview §5](../overview.md#5-모듈-지도)).
 
-신뢰할 수 없는 입력: 로그인 요청의 이메일 · 비밀번호(user-R13 · R14 · R17), 가입 · 초대 가입의 이메일 · 표시 이름 · 비밀번호 · 토큰(user-R31 · R33), 복구 요청의 이메일 · 복구 코드 · 새 비밀번호(user-R30), 비밀번호 변경 · 재발급의 비밀번호(user-R29 · R30), 세션 쿠키 · CSRF 헤더(user-R7 · R10), 운영자 토큰 헤더(user-R1), 알림 목록의 질의 `before` · 읽음 요청 본문(user-R27), 클라이언트 주소 헤더(user-R37), 사람 확인 토큰 헤더 · Turnstile 검증 응답 본문(user-R41). 운영자 입력(메모 · 계정 생성 칸)과 첫 운영자 설정 값도 규칙으로 거른다(user-R31 · R34 · R35).
+신뢰할 수 없는 입력: 로그인 요청의 이메일 · 비밀번호(user-R13 · R14 · R17), 가입 · 초대 가입의 이메일 · 표시 이름 · 비밀번호 · 토큰(user-R31 · R33), 복구 요청의 이메일 · 복구 코드 · 새 비밀번호(user-R30), 비밀번호 변경 · 재발급의 비밀번호(user-R29 · R30), 세션 쿠키 · CSRF 헤더(user-R7 · R10), 운영자 토큰 헤더(user-R1), 알림 목록의 질의 `before` · 읽음 요청 본문(user-R27), 클라이언트 주소 헤더(user-R37), 사람 확인 토큰 헤더 · Turnstile 검증 응답 본문(user-R41), 관심 설정 저장의 키 · 소스 ID · 시간대 · 시각 · 요일 · 관심사 · 공급자 · 모델 ID(user-R46 · R49 ~ R51). 운영자 입력(메모 · 계정 생성 칸)과 첫 운영자 설정 값도 규칙으로 거른다(user-R31 · R34 · R35).
 
 ## 5. 규칙과 불변식
 
@@ -349,7 +396,7 @@ public interface HumanVerifier {
 
 판단의 이유는 [ADR-0125](../adr/0125-screen-api-handlers-need-a-session-unless-marked-public-and-take-the-user-only-as-a-session-filled-argument.md) · [ADR-0146](../adr/0146-sessions-of-accounts-with-an-initial-password-open-only-password-change-status-and-sign-out-marked-by-a-platform-annotation.md) · [ADR-0158](../adr/0158-requests-of-session-users-without-a-key-are-closed-by-default-and-handlers-open-without-a-key-carry-a-platform-annotation.md) · [ADR-0159](../adr/0159-having-a-key-means-having-any-stored-key-regardless-of-its-status.md) · [ADR-0160](../adr/0160-users-without-a-key-may-use-key-account-and-notice-handlers.md)에 있다.
 
-- **user-R5** — 세션 체인의 인가: 요청의 처리기(메서드나 그 클래스)에 `platform` 의 `@PublicApi` 가 있으면(판정 정본 `PublicApis`) 세션 없이 연다. 처리기가 없는 요청(없는 경로 · 다른 메서드 · 받지 않는 미디어 타입)은 연다 — 404 · 405 · 415 는 MVC 가 낸다(변경 요청은 그 전에 CSRF 를 본다 — user-R10). 그 밖은 세션 사용자가 있어야 하고, 없으면 401 `unauthenticated` 다. 세션 사용자가 강제 변경이면 `platform` 의 `@AllowedBeforePasswordChange` 가 있는 처리기(판정 정본 `PublicApis`)만 열고 그 밖은 403 `password-change-required` 다(user-R29). 강제 변경이 아닌 세션 사용자에게 LLM 키가 없으면(`credential` 의 `LlmKeys.present` 가 거짓 — 저장한 키가 하나도 없다) `platform` 의 `@AllowedWithoutLlmKey` 가 있는 처리기만 열고 그 밖은 403 `llm-key-required` 다 — 지금 그 표시가 있는 것은 키 처리기([credential Spec](credential.md#3-공개-인터페이스)) · 비밀번호 변경 · 복구 코드 재발급 · 알림 세 경로다. 판정의 순서는 공개 · 처리기 없음 → 세션 사용자 → 강제 변경 → 키이고 정본은 `SessionAccess` 하나다 — 키 유무는 앞 갈래에서 끝나지 않은 요청에만 묻는다. 운영자 경로는 이 판정 밖이다 — 키를 보지 않는다(user-R1). `@PublicApi` · `@AllowedBeforePasswordChange` · `@AllowedWithoutLlmKey` 의 이유는 비울 수 없고, 공개 처리기에는 뒤의 두 표시를 달지 않는다 — 등록 가드가 모두 확인한다
+- **user-R5** — 세션 체인의 인가: 요청의 처리기(메서드나 그 클래스)에 `platform` 의 `@PublicApi` 가 있으면(판정 정본 `PublicApis`) 세션 없이 연다. 처리기가 없는 요청(없는 경로 · 다른 메서드 · 받지 않는 미디어 타입)은 연다 — 404 · 405 · 415 는 MVC 가 낸다(변경 요청은 그 전에 CSRF 를 본다 — user-R10). 그 밖은 세션 사용자가 있어야 하고, 없으면 401 `unauthenticated` 다. 세션 사용자가 강제 변경이면 `platform` 의 `@AllowedBeforePasswordChange` 가 있는 처리기(판정 정본 `PublicApis`)만 열고 그 밖은 403 `password-change-required` 다(user-R29). 강제 변경이 아닌 세션 사용자에게 LLM 키가 없으면(`credential` 의 `LlmKeys.present` 가 거짓 — 저장한 키가 하나도 없다) `platform` 의 `@AllowedWithoutLlmKey` 가 있는 처리기만 열고 그 밖은 403 `llm-key-required` 다 — 지금 그 표시가 있는 것은 키 처리기([credential Spec](credential.md#3-공개-인터페이스)) · 비밀번호 변경 · 복구 코드 재발급 · 알림 세 경로 · 관심 설정 여덟 경로다([ADR-0179](../adr/0179-interest-settings-handlers-are-open-without-a-key.md)). 판정의 순서는 공개 · 처리기 없음 → 세션 사용자 → 강제 변경 → 키이고 정본은 `SessionAccess` 하나다 — 키 유무는 앞 갈래에서 끝나지 않은 요청에만 묻는다. 운영자 경로는 이 판정 밖이다 — 키를 보지 않는다(user-R1). `@PublicApi` · `@AllowedBeforePasswordChange` · `@AllowedWithoutLlmKey` 의 이유는 비울 수 없고, 공개 처리기에는 뒤의 두 표시를 달지 않는다 — 등록 가드가 모두 확인한다
 - **user-R6** — 화면용 API 처리기는 사용자를 묶기 애너테이션이 없는 인자 타입 `UserId`(`platform` 의 공개 타입 — [platform Spec](platform.md#userid))로만 받는다 — 요청의 세션 사용자로 채운다. 경로 · 질의 · 본문(본문 레코드의 구성 요소 포함) · 헤더 · 쿠키에서 사용자 ID(`UserId` 타입이나 이름 `userId`)를 받지 않는다. 운영자 경로 밖의 화면용 API 처리기는 모두 공개 처리기이거나 사용자 격리 시험에 등록된다 — 시험 `UserScopeTests` 가 앱의 처리기를 열거해 확인한다([test-strategy §13](../qa/test-strategy.md#13-사용자-격리-시험)). 세션 사용자 인자 `UserId` 는 화면용 API 명세의 요청 인자가 아니다 — `UserWebConfiguration` 이 명세에서 뺀다(명세 설정의 나머지는 [platform Spec](platform.md) 이 갖는다)
 
 ### 세션
@@ -379,19 +426,19 @@ public interface HumanVerifier {
 - **user-R17** — 로그인 결과는 200 판정 결과(`result`)다: `SIGNED_IN` · `REJECTED` · `WAIT`(남은 초 — 올림, 다른 결과에서는 null). 계정이 없거나 `ACTIVE` 가 아니거나 비밀번호가 틀리면 모두 같은 본문의 `REJECTED` 다. 계정이 없거나 `ACTIVE` 가 아니면 같은 파라미터의 더미 해시와 한 번 대조해 있는 계정과 같은 계산을 한다. 정규화한 비밀번호가 128 코드 포인트를 넘으면 대조하지 않고 실패로 센다. 요청 본문의 칸(이메일 · 비밀번호 · 로그인 유지)이 없으면 본문 형식 400 이다
 - **user-R18** — 한 번의 시도는 트랜잭션 하나다: 제출된 이메일의 그 종류 실패 기록을 잠그고(없으면 만든다) → 기다릴 때면 대조 없이 `WAIT` → 아니면 대조 → 성공이면 실패 기록을 지우고 `SIGNED_IN`, 실패면 실패 기록을 올리고 `REJECTED`. 잠금이 대조 동안 이어져 같은 이메일의 동시 시도는 줄을 선다
 - **user-R19** — 실패 기록은 종류와, 제출된 이메일을 정규화한 값(이메일로 읽을 수 없으면 앞뒤 공백을 지운 소문자)의 SHA-256 다이제스트의 짝마다 하나다 — 계정 유무와 무관하다. 종류는 로그인(`SIGN_IN`)과 복구(`RECOVERY`)다. 현재 비밀번호 확인(비밀번호 변경 · 복구 코드 재발급)은 그 계정 이메일의 로그인 기록을 쓰고, 복구 코드 대조는 복구 기록을 쓴다. 일정 · 정리는 종류와 무관하게 같다. 마지막 실패에서 24시간(`LoginThrottle.FORGET_AFTER`) 안의 연속 실패가 n 회면 다시 시도할 수 있는 때는 마지막 실패 시각 + 대기이고, 대기는 n ≤ 3(`FREE_FAILURES`)이면 0, 그 밖 `min(1초(FIRST_WAIT) × 2^(n−4), 15분(MAX_WAIT))` 이다. 24시간이 지난 기록은 실패 0 회로 보고, 작업 역할의 반복 작업이 1시간마다 종류와 무관하게 지운다
-- **user-R20** — 로그인 상태 조회는 200 판정 결과(`result`)다: `SIGNED_IN`(사용자 ID · 이메일 · 표시 이름 · 역할 · `passwordChangeRequired` · `llmKeyRequired`) · `ANONYMOUS`(나머지 null, `passwordChangeRequired` · `llmKeyRequired` 는 false). `passwordChangeRequired` 는 이 요청의 세션 체인이 정한 강제 변경이다. `llmKeyRequired` 는 그 사용자에게 LLM 키가 없다는 것이다 — 키 관문과 같은 물음(`LlmKeys.present`)이고 강제 변경 여부와 무관하다. 화면은 강제 변경을 먼저 보고, 그 다음 `llmKeyRequired` 면 키 · 설정 · 비밀번호 변경 · 알림 화면 밖의 주소를 키 화면(`/keys`)으로 보낸다 — 비밀번호 변경 화면도 키 없이 여는 계정 처리기를 쓴다(첫 로그인의 변경 뒤 돌아갈 곳으로 가게)
+- **user-R20** — 로그인 상태 조회는 200 판정 결과(`result`)다: `SIGNED_IN`(사용자 ID · 이메일 · 표시 이름 · 역할 · `passwordChangeRequired` · `llmKeyRequired`) · `ANONYMOUS`(나머지 null, `passwordChangeRequired` · `llmKeyRequired` 는 false). `passwordChangeRequired` 는 이 요청의 세션 체인이 정한 강제 변경이다. `llmKeyRequired` 는 그 사용자에게 LLM 키가 없다는 것이다 — 키 관문과 같은 물음(`LlmKeys.present`)이고 강제 변경 여부와 무관하다. 화면은 강제 변경을 먼저 보고, 그 다음 `llmKeyRequired` 면 키 · 설정 · 비밀번호 변경 · 알림 · 관심 설정(`/interests`) 화면 밖의 주소를 키 화면(`/keys`)으로 보낸다 — 비밀번호 변경 화면도 키 없이 여는 계정 처리기를 쓴다(첫 로그인의 변경 뒤 돌아갈 곳으로 가게)
 
 ### 화면 내 알림
 
 판단의 이유는 [ADR-0134](../adr/0134-in-app-notices-are-one-row-per-recipient-with-a-closed-kind-and-per-kind-jsonb-content-and-read-notices-are-deleted-after-ninety-days.md) · [ADR-0135](../adr/0135-feed-status-changes-publish-each-check-runs-transitions-and-gather-into-one-unread-notice-per-active-admin-read-up-to-the-seen-revision.md) · [ADR-0136](../adr/0136-unread-notice-count-refetches-on-navigation-and-window-focus-without-polling.md)에 있다.
 
-- **user-R21** — 알림은 받는 사용자마다 한 행이다. 종류는 닫힌 집합(`NoticeKind` — `FEED_STATUS` · `PASSWORD_CHANGED` · `KEY_INVALIDATED`)이고, 내용은 종류마다 정한 레코드를 jsonb 한 칸에 둔다. 판은 만들 때 1 이고 내용을 고칠 때마다 하나 오른다. 계정을 지우면 그 계정의 알림과 반영 기준이 함께 지워진다. 종류로 가르는 곳은 기본 갈래 없는 망라 분기다
+- **user-R21** — 알림은 받는 사용자마다 한 행이다. 종류는 닫힌 집합(`NoticeKind` — `FEED_STATUS` · `PASSWORD_CHANGED` · `KEY_INVALIDATED` · `PREFERENCES_ADJUSTED`)이고, 내용은 종류마다 정한 레코드를 jsonb 한 칸에 둔다. 판은 만들 때 1 이고 내용을 고칠 때마다 하나 오른다. 계정을 지우면 그 계정의 알림과 반영 기준이 함께 지워진다. 종류로 가르는 곳은 기본 갈래 없는 망라 분기다
 - **user-R22** — 피드 상태 알림의 받는 사람은 `FeedStatusesChanged` 를 처리할 때 쓰는(`ACTIVE`) 운영자(`ADMIN`) 계정 전부다(계정 ID 순). 이 조회는 사용자 범위가 없어 리스너만 쓴다. 나중에 운영자가 된 계정은 지난 회차를 받지 않고, 알림을 받은 뒤 역할이 바뀌어도 알림은 남는다. 이벤트 하나가 트랜잭션 하나다 — 받는 사람 전부의 반영이 함께 커밋되거나 함께 롤백된다. 받는 사람이 없으면 아무것도 쓰지 않는다. 피드 이름 · 섹션은 처리할 때 `FeedLabels` 로 읽어 내용에 적는다 — 얻지 못한 피드(지운 피드)는 이름 · 섹션이 없다. 내용은 피드 ID · 출처 이름 · 섹션 · 상태 · 판정 시각 · 바뀐 횟수만이다(피드 URL · 실패 문구 · 다른 계정의 정보는 없다)
 - **user-R23** — 모으기: 사용자마다 안 읽은 피드 상태 알림은 많아야 하나다(부분 고유 인덱스). 회차를 반영할 때 그 알림이 있으면 거기에 더하고(판 + 1, 고친 시각 = 지금), 없으면 새로 만든다. 더하기는 피드마다 — 이미 있는 피드는 마지막 새 상태 · 마지막 판정 시각을 바꾸고 바뀐 횟수를 하나 올리며(이름 · 섹션은 이번에 얻었으면 바꾸고 아니면 둔다), 없는 피드는 새 줄(처음 = 마지막, 횟수 1)이다. 줄은 피드 ID 순이다. 복귀(`ACTIVE`)도 전이라, 처음 이전 상태와 마지막 새 상태가 같은 줄(되돌아온 피드)은 횟수 2 이상이다. 더하는 회차의 판정 시각이 알림의 어느 줄의 마지막 판정 시각보다 늦지 않으면 거부한다(반영 기준이 먼저 거르므로 정상 경로에서는 일어나지 않는다)
 - **user-R24** — 반영 기준: 사용자마다 반영한 마지막 회차의 판정 시각 하나다. 회차를 반영하기 전에 그 사용자의 반영 기준 행을 잠그고(없으면 자리 행을 넣고 잠근다), 기준이 없거나 회차의 판정 시각이 기준보다 늦을 때만 반영한 뒤 기준을 그 판정 시각으로 올린다. 같은 회차의 두 번째 처리 · 늦게 온 앞선 회차는 반영하지 않는다 — 읽은 알림과 무관하다. 이 잠금이 같은 사용자에 대한 리스너들을 줄 세운다. 늦게 온 앞선 회차를 버리므로 바뀐 횟수 · 처음 이전 상태가 빠질 수 있지만 마지막 새 상태는 맞다. 검사 둘이 겹쳐 판정 시각 순서와 커밋 순서가 어긋나면 알림이 한 회차 앞의 상태로 남을 수 있다(source-R49)
 - **user-R25** — 읽음: 화면이 받은 알림의 `{id, revision}` 가운데, 세션 사용자의 알림이고 판이 그대로이며 아직 읽지 않은 것만 읽은 시각을 쓴다. 다른 사용자의 알림 · 없는 알림 · 판이 다른 알림은 바뀌지 않고 응답은 같은 204 다(존재를 드러내지 않는다). 리스너가 알림을 고치는 동안 온 옛 판의 읽음은 기다렸다가 바뀌지 않고, 읽음이 먼저 커밋되면 리스너는 새 알림을 만든다
 - **user-R26** — 읽은 알림은 읽은 지 90일(`NoticeRetention.KEEP_READ`)이 지나면 지운다 — 읽은 시각이 지금 − 90일보다 이른 알림이다(정확히 90일은 남는다). 작업 역할의 반복 작업이 하루마다 지운다. 안 읽은 알림은 기간과 무관하게 남는다
-- **user-R27** — 알림함: 세 경로 모두 세션 사용자로 범위가 정해진다(user-R6). 목록은 최근(ID 큰 것)부터 한 쪽 50개(`NoticeRetention.PAGE_SIZE`)이고, 다음 쪽이 있으면 이 쪽의 마지막 알림 ID 를 `nextBefore` 로 준다 — 다음 쪽은 `before` 로 그 값을 준다. 알림 하나는 종류 판별자와 그 종류의 본문 하나(`feedStatus` · `passwordChanged` · `keyInvalidated` — 나머지는 null)다. 읽음 요청은 50개까지다. `before` 가 1 미만이거나 숫자가 아니면, 읽음 요청이 50개를 넘거나 원소의 ID · 판이 1 미만(빠짐 포함)이거나 목록이 없으면 400 이다. 화면은 안 읽은 수를 로그인한 화면에 들어올 때 · 경로를 옮길 때 · 창으로 돌아올 때 · 다시 연결될 때 다시 읽고 주기 조회는 하지 않는다. 알림 페이지에서 읽음을 보내면 안 읽은 수를 다시 읽고, 로그인하면 같은 창에서 앞서 로그인했던 사용자의 알림 캐시를 버린다
+- **user-R27** — 알림함: 세 경로 모두 세션 사용자로 범위가 정해진다(user-R6). 목록은 최근(ID 큰 것)부터 한 쪽 50개(`NoticeRetention.PAGE_SIZE`)이고, 다음 쪽이 있으면 이 쪽의 마지막 알림 ID 를 `nextBefore` 로 준다 — 다음 쪽은 `before` 로 그 값을 준다. 알림 하나는 종류 판별자와 그 종류의 본문 하나(`feedStatus` · `passwordChanged` · `keyInvalidated` · `preferencesAdjusted` — 나머지는 null)다. 읽음 요청은 50개까지다. `before` 가 1 미만이거나 숫자가 아니면, 읽음 요청이 50개를 넘거나 원소의 ID · 판이 1 미만(빠짐 포함)이거나 목록이 없으면 400 이다. 화면은 안 읽은 수를 로그인한 화면에 들어올 때 · 경로를 옮길 때 · 창으로 돌아올 때 · 다시 연결될 때 다시 읽고 주기 조회는 하지 않는다. 알림 페이지에서 읽음을 보내면 안 읽은 수를 다시 읽고, 로그인하면 같은 창에서 앞서 로그인했던 사용자의 알림 캐시를 버린다
 - **user-R36** — 키 무효 알림: `credential` 의 `CredentialInvalidated` 하나에 그 사용자의 알림 하나를 남긴다(모으지 않는다). 내용은 공급자 · 키 ID · 무효 시각이고, 화면 응답은 공급자와 무효 시각만 낸다. 같은 사용자 · 키 ID · 무효 시각의 알림은 많아야 하나다(부분 고유 인덱스) — 같은 발행을 거듭 받아도 하나만 남는다. 이벤트 하나가 트랜잭션 하나다. 판단의 이유는 [ADR-0166](../adr/0166-credential-invalidated-is-published-on-each-transition-to-invalid-and-leaves-one-notice-per-transition.md)에 있다
 
 ### 계정을 만드는 길
@@ -407,7 +454,7 @@ public interface HumanVerifier {
   | 운영자 계정 생성 | `USER` | 초기 비밀번호 | 그렇다 | 주지 않는다 — 첫 로그인의 변경 때 준다 |
   | 첫 운영자 | `ADMIN` | 초기 비밀번호 | 그렇다 | 주지 않는다 — 첫 로그인의 변경 때 준다 |
 
-  모든 길은 정본 하나(`AccountProvisioning`)로 계정 · 자격(· 복구 코드)을 한 트랜잭션에서 만든다. 같은 이메일의 계정이 있으면 아무것도 쓰지 않고 "같은 이메일" 결과다 — 먼저 본 뒤 끼어든 같은 이메일은 `users.email` 의 고유 제약이 트랜잭션을 깨고, 트랜잭션 바깥에서 같은 결과로 옮긴다. 비밀번호 해시는 이메일 중복과 무관하게 한 번 계산한다. 표시 이름은 앞뒤 공백을 지운 1 ~ 50 코드 포인트(`DisplayName.MAX_CODE_POINTS`)다 — 가입은 본인이, 운영자 계정 생성은 운영자가 입력하고, 첫 운영자는 이메일의 `@` 앞부분(50 코드 포인트까지)이다. 역할을 바꾸는 길은 없다
+  모든 길은 정본 하나(`AccountProvisioning`)로 계정 · 자격(· 복구 코드)과 관심 설정 기본값(user-R43)을 한 트랜잭션에서 만든다. 같은 이메일의 계정이 있으면 아무것도 쓰지 않고 "같은 이메일" 결과다 — 먼저 본 뒤 끼어든 같은 이메일은 `users.email` 의 고유 제약이 트랜잭션을 깨고, 트랜잭션 바깥에서 같은 결과로 옮긴다. 비밀번호 해시는 이메일 중복과 무관하게 한 번 계산한다. 표시 이름은 앞뒤 공백을 지운 1 ~ 50 코드 포인트(`DisplayName.MAX_CODE_POINTS`)다 — 가입은 본인이, 운영자 계정 생성은 운영자가 입력하고, 첫 운영자는 이메일의 `@` 앞부분(50 코드 포인트까지)이다. 역할을 바꾸는 길은 없다
 
 ### 비밀번호 변경과 복구 코드
 
@@ -453,7 +500,7 @@ public interface HumanVerifier {
 
 판단의 이유는 [ADR-0139](../adr/0139-first-admin-is-created-only-from-environment-variables-and-startup-warns-without-an-admin-or-about-leftover-values.md) · [ADR-0143](../adr/0143-operators-reset-the-initial-password-only-of-accounts-before-their-first-sign-in-and-end-their-sessions.md)에 있다.
 
-- **user-R34** — 첫 운영자는 설정 `yozmnews.first-admin.email` · `yozmnews.first-admin.password`(§7)로만 만든다. 기동 때 두 역할 공통으로, DB 의 트랜잭션 잠금 하나 안에서 판정하고 만든다(`FirstAdminDecision`):
+- **user-R34** — 첫 운영자는 설정 `yozmnews.first-admin.email` · `yozmnews.first-admin.password`(§7)로만 만든다. 기동 단계(user-R44)에서 두 역할 공통으로, DB 의 트랜잭션 잠금 하나 안에서 판정하고 만든다(`FirstAdminDecision`):
 
   | 쓰는(`ACTIVE`) `ADMIN` 계정 | 값 | 결과 |
   |---|---|---|
@@ -492,9 +539,30 @@ public interface HumanVerifier {
 - **user-R41** — 봇 차단 설정 `yozmnews.human-check.provider`(§7)는 없음 · 빈 값 · `off`(대소문자 무관)면 끔이고 요청 제한만 남는다. `turnstile` 이면 사이트 키가 있어야 하고 검증기가 있어야 한다 — 검증기는 비밀 키가 있을 때 Turnstile 검증기이고, 로컬 개발(profile `local`)에서 비밀 키가 없으면 어떤 토큰에도 통과하는 로컬 대체물이다([platform Spec](platform.md#로컬-개발) platform-R18). 사이트 키가 없거나 검증기가 없거나 모르는 값이면 기동하지 않는다 — 문구에 설정 이름 · 환경 변수 이름이 있고 값은 없다. 비밀 키의 빈 값은 없음과 같다. 켠 인스턴스에서 `@HumanChecked` 가 있는 처리기(로그인 · 복구 재설정 · 공개 가입)는 요청 제한 뒤 헤더 `X-Human-Check` 의 토큰을 처리기의 동작 이름(`GuardedAction.actionName()`) · 클라이언트 주소와 함께 검증기에 묻는다 — 토큰이 없거나 1 ~ 2,048자가 아니면 묻지 않고 거부한다. 거부면 403 `human-check-failed`(user-R3)다. Turnstile 검증기는 코드 상수 주소(siteverify)에 비밀 키 · 토큰 · 클라이언트 주소를 폼으로 보내고(연결 3초 · 응답 5초 · 본문 64 KiB · 리다이렉트 없음 · 프록시 없음), 답을 판정한다(`TurnstileAnswers`): 연결 · 마감 실패, 본문 상한 넘김, 5xx, 읽지 못하는 본문은 닿지 못함이고 경고 로그를 남긴 뒤 처리기로 넘어간다. `success` 가 참이고 동작 이름이 같으면 통과, 동작 이름이 다르면 거부, `success` 가 거짓이면 오류 코드와 함께 거부한다(서비스 내부 오류 `internal-error` 포함) — 비밀 키 오류 코드면 ERROR 로그로 운영 설정을 확인하라고 한다. 시험 비밀 키의 답(`metadata.result_with_testing_key` 가 참 — Cloudflare 가 시험 비밀 키에만 붙이고 동작 이름을 싣지 않는다)은 동작 이름을 대조하지 않고 통과다. 거부하면 동작과 까닭(오류 코드 · `action-mismatch` · `token-unreadable`)을 INFO 로그로 남긴다. `hostname` 은 보지 않는다. 토큰 · 비밀 키는 로그 · 문구 · 문자열 표현에 남지 않는다. 봇 차단 확인은 켰을 때만 부른다. 공개 조회 `GET /api/human-check` 는 `{provider: OFF · TURNSTILE, siteKey}` 다(끔이면 `siteKey` 가 null). 화면은 TURNSTILE 이면 그 사이트 키 · 동작 이름으로 위젯을 띄워 확인을 마쳐야 제출하고 제출마다 위젯을 다시 받으며(토큰은 한 번만 쓰인다), 설정을 읽지 못했으면 칸 없이 보내고, 위젯 스크립트를 받지 못하면 제출할 수 없는 까닭을 말한다
 - **user-R42** — 끝난 창(창 끝이 지금보다 이른)의 기록은 작업 역할의 반복 작업 `forget-request-counts` 가 10분마다 지운다. 재시도하지 않는다 — 다음 회차가 이어 지운다
 
+### 관심 설정
+
+판단의 이유는 [ADR-0175](../adr/0175-tag-preferences-follow-tag-set-activation-events-and-are-rewritten-to-active-keys.md) · [ADR-0176](../adr/0176-tag-set-changes-do-not-narrow-a-users-preferences-without-telling.md) · [ADR-0177](../adr/0177-formats-newly-excluded-by-default-on-activation-are-added-to-existing-users-exclusions.md) · [ADR-0178](../adr/0178-the-llm-model-to-use-is-decided-at-query-time-from-the-chosen-model-the-allowed-list-and-key-status.md) · [ADR-0179](../adr/0179-interest-settings-handlers-are-open-without-a-key.md) · [ADR-0180](../adr/0180-user-settings-changes-publish-no-event-and-consumers-query.md) · [ADR-0181](../adr/0181-tag-preferences-take-only-topic-subscriptions-and-region-and-format-exclusions.md) · [ADR-0182](../adr/0182-startup-work-reading-the-active-tag-set-runs-in-a-lifecycle-phase-after-first-start-seeding-and-before-the-web-server.md)에 있다.
+
+- **user-R43** — 계정을 만들 때(user-R28 의 네 길 모두) 같은 트랜잭션에서 관심 설정 기본값을 쓴다(`InterestDefaultsWriter`): 선호 버전 울타리의 공유 잠금(트랜잭션 advisory 잠금)을 잡고 → 그 순간의 활성 태그 체계를 읽어 → 설정 행(선호 버전 = 활성 버전, 시간대 `Asia/Seoul` · 생성 시각 07:00 · 관심사 없음 · 고른 모델 없음 · 주간 리포트 켬 · 요일 월요일 · 월간 리포트 켬 — `InterestDefaults`)과 활성 버전에서 기본 제외인 형식 전부의 제외(이력 원인 `ONBOARDING`)를 쓴다. 주제 구독은 없다 — 화면은 처음 키를 등록하면 관심 설정(`/interests`)으로 보내고, 구독 주제가 없으면 홈 · 관심 설정 화면에 안내한다. 설정 행이 이미 있으면 아무것도 쓰지 않는다. 코드는 특정 형식 키를 알지 않는다 — 기본 제외는 체계 데이터다
+- **user-R44** — 기동 단계: 첫 운영자(user-R34)와 기존 계정 채우기(`InterestBackfill`)는 `SmartLifecycle` 의 단계 `UserStartup.PHASE`(웹 서버 시작 단계 `Integer.MAX_VALUE − 2048` 보다 작은 코드 상수)에서 두 역할 공통으로 돈다 — 모든 `SmartInitializingSingleton`(태그 체계의 첫 기동 적재 — [tag Spec](tag.md#기본-체계와-첫-기동) tag-R2 포함) 뒤 · 웹 서버 앞이다. 채우기는 설정 행이 없는 계정을 계정 ID 순 묶음으로 읽어 계정마다 트랜잭션 하나로 user-R43 의 쓰기를 한다 — 대상은 설정 행으로만 고른다 — 설정 행이 있으면 형식 제외 행이 없어도(사용자가 모두 풀었을 수 있다) 대상이 아니다. 동시에 뜬 프로세스 · 가입과 겹쳐도 한 번이다. 기동 단계의 실패(첫 운영자의 기동 거부)는 앱을 띄우지 않는다
+- **user-R45** — 태그 선호(`PreferenceSet`)는 주제 구독 · 지역 제외 · 형식 제외다 — 태그 종류마다 모드 하나(`PreferenceMode.of` — 주제 `SUBSCRIBE`, 지역 · 형식 `EXCLUDE`)이고 다른 조합은 저장 제약이 막는다. 주제 구독은 대분류 · 중분류 키를 받고, 대분류를 구독하면 하위 중분류 전체를 구독한 것이며 그 중분류 행은 두지 않는다(정규화). 현재 상태 전체가 선호 버전(설정 행의 칸 하나)의 키다. 이력(`user_tag_preference_events`)은 추가만 하고 행마다 원인(`USER` · `ONBOARDING` · `TAG_SET_CHANGE`) · 기록 당시 버전 · 종류 · 키 · 모드 · 더함 뺌 · 시각을 갖는다. 이력은 활성 키로 푼 집합이 바뀔 때만 남는다 — 이름 변경 · 정규화는 이력이 없다. 관심 신호는 원인이 `USER` 인 행만이다
+- **user-R46** — 관심 설정 조회 · 저장(태그 선호 · 제외 소스 · 일정 · 모델)은 한 트랜잭션에서 ① 설정 행이 없으면 user-R43 의 쓰기로 만들고 ② 설정 행을 잠그고(`FOR UPDATE`) ③ 선호 버전이 지금 활성 버전과 다르면 먼저 따라가게 하고(user-R47 의 사용자 하나) ④ 읽거나 쓴다. 저장은 갈래마다 통째로 바꾼다 — 태그 선호는 차이를 이력으로 남기고(user-R45), 나머지 갈래는 이력이 없다. 태그 선호 저장은 화면이 본 체계 버전 ID 를 싣고 — 지금 활성 버전과 다르면 바꾸지 않고 `TAG_SET_CHANGED`(활성 버전 ID)다(③ 의 따라가기는 커밋된다). 같으면 요청을 정규화해 저장하고 `SAVED`(저장한 선호)다. 그 버전에 없는 키 · 빈 키는 400 이다
+- **user-R47** — 따라가기: `tag` 의 `TagSetActivated` 를 받으면 울타리의 배타 잠금을 잡았다 놓은 뒤(진행 중인 user-R43 의 쓰기가 모두 끝난다) 지금 활성 버전을 읽고, 선호 버전이 다른 사용자를 ID 순 묶음으로 읽어 사용자마다 트랜잭션 하나에서 설정 행을 잠그고 고쳐 쓴다(`PreferenceFollowups`). 이벤트의 두 버전 ID 는 쓰지 않는다. 사용자 하나를 고쳐 쓰는 규칙(`PreferenceFollowup` — 입력은 현재 선호 · 그 버전 `from` 의 구조 · 활성 버전 `to` · `TagKeyLineage.toActive(from)`):
+  1. 키 하나가 활성 키 하나로만 이어지고 그 활성 키의 원천이 그 키 하나뿐이면(일대일) 새 키로 바꾼다 — 조정이 아니다. 병합 대상이 원천 가운데 하나인 계보(`a`, `b` → `a`)의 `a` 는 일대일이 아니다
+  2. 지역 · 형식 제외: 활성 키마다 원천(계보로 그 키에 닿는 `from` 키)을 모두 제외했으면 제외하고, 일부만이면 제외하지 않고 제외했던 원천을 해제한다(`RELEASED_PARTIAL_MERGE`). 이어지는 키가 없으면 해제한다(`RELEASED_REMOVED`)
+  3. 활성 버전에서 기본 제외이고 어떤 `from` 형식의 계보로도 이어지지 않은 형식을 제외로 더한다(`ADDED_DEFAULT_EXCLUDED`). 이미 있던 형식의 기본 제외가 바뀐 것은 건드리지 않는다
+  4. 주제 구독: `from` 에서 실제로 구독한 중분류 = 중분류 행 ∪ 구독한 대분류의 하위 전체. 구독한 대분류는 이어진 대분류를 구독하고, 이어지는 것이 없으면 해제한다(`RELEASED_REMOVED`). 활성 버전의 중분류마다 원천 가운데 실제로 구독한 것이 있고 그 대분류를 구독하지 않으면 구독한다 — 원천이 구독한 대분류의 하위였으면 `ADDED_MOVED_SUBTOPIC`. 계보 없이 지운 중분류 행은 해제한다(`RELEASED_REMOVED`)
+  5. 결과를 정규화한다(user-R45)
+
+  해제는 `from` 키의 뺌(버전 `from`), 더함은 활성 키의 더함(버전 `to`)으로 이력에 남기고 원인은 `TAG_SET_CHANGE` 다. 설정 행의 선호 버전을 활성 버전으로 올린다. 한 사용자의 실패는 그 사용자만 되돌리고, 이벤트가 다시 처리되면 남은 사용자만 고친다
+- **user-R48** — 선호 조정 알림: 따라가기가 사용자의 선호를 해제하거나 더했으면 그 사용자에게 알림 하나를 남긴다(`PREFERENCES_ADJUSTED` — 모으지 않는다). 내용은 활성 버전 번호와 조정 항목(종류 · 키 · 그 버전의 이름 · 모드 · 조정 종류)이다. 일대일 이어짐 · 정규화는 싣지 않는다
+- **user-R49** — 제외 소스는 소스 단위이고 이력이 없다(관심 신호가 아니다). 고를 소스는 `source` 의 `SourceNames`(숨기지 않은 소스)다. 저장은 고를 소스 안에서만 바꾼다 — 새 집합 = (지금 제외 가운데 고를 소스 밖의 것) ∪ (요청 가운데 고를 소스 안의 것)이고 고를 소스 밖의 요청은 버린다. 숨긴 소스의 제외는 남아 다시 보이면 그대로다. `source` 의 `SourceDeleted` 를 받으면 그 소스의 제외 행을 모두 지운다
+- **user-R50** — 일정 · 관심사 · 리포트: 시간대는 IANA 시간대 ID(`ZoneId.getAvailableZoneIds` 에 있는 것 — 그 밖의 값은 오프셋(`+09:00` · `Z`) · 목록에 없는 약어(`KST`)를 포함해 `UNKNOWN_TIMEZONE`), 생성 시각은 `HH:mm`(분 단위), 주간 리포트 요일은 `DayOfWeek` 이름이다 — 시각 · 요일의 형식이 틀리면 400. 자유 텍스트 관심사는 앞뒤 공백을 지운 0 ~ 500 코드 포인트이고(빈 문자열은 없음), 넘으면 `INTEREST_TEXT_TOO_LONG`(상한)이다. 리포트 설정은 저장 · 조회만 하고 일정은 리포트의 작업이 쓴다. 화면의 시각 표기는 브라우저 시간대다 — 사용자 시간대는 일정의 기준이다
+- **user-R51** — 공급자 · 모델: 고르기는 그 사용자의 키가 있는(상태 무관) 공급자의 허용 모델만 받는다 — 키가 없는 공급자면 `PROVIDER_WITHOUT_KEY`, 목록에 없는 모델이면 `MODEL_NOT_ALLOWED`. 쓸 모델은 조회 때 정한다(`ModelChoice`): 고른 모델이 허용 목록에 있고 그 공급자의 키가 `VALID` 면 그것(`CHOSEN`), 아니면 `VALID` 키가 있는 공급자(`Provider` 선언 순)의 허용 목록 첫 모델, 그것도 없으면 없음. 고른 모델을 못 쓴 까닭은 하나이고 앞의 것부터다 — `NOT_CHOSEN` → `NOT_ALLOWED`(목록에서 빠짐) → `NO_KEY` → `KEY_INVALID`. 조회는 고를 수 있는 모델(키가 있는 공급자의 허용 모델) · 고른 모델 · 쓸 모델 · 까닭을 낸다
+
 ## 6. 데이터
 
-컬럼 타입 · 인덱스 · 제약 문면의 정본은 `backend/src/main/resources/db/migration/V31__users_and_password_credentials.sql` · `V33__login_failures.sql` · `V36__user_notices.sql` · `V37__account_provisioning.sql` · `V38__password_change_and_recovery.sql` · `V39__sign_up_and_invitations.sql` · `V42__key_invalidated_notices.sql` · `V43__request_limit_counts.sql` 이다. 세션 테이블(Spring Session)은 프레임워크 테이블이라 [data-model.md](../data-model.md)에 있다.
+컬럼 타입 · 인덱스 · 제약 문면의 정본은 `backend/src/main/resources/db/migration/V31__users_and_password_credentials.sql` · `V33__login_failures.sql` · `V36__user_notices.sql` · `V37__account_provisioning.sql` · `V38__password_change_and_recovery.sql` · `V39__sign_up_and_invitations.sql` · `V42__key_invalidated_notices.sql` · `V43__request_limit_counts.sql` · `V44__interest_settings.sql` · `V45__preferences_adjusted_notices.sql` 이다. 세션 테이블(Spring Session)은 프레임워크 테이블이라 [data-model.md](../data-model.md)에 있다.
 
 | 테이블 | 주요 컬럼 | 뜻 |
 |---|---|---|
@@ -502,12 +570,16 @@ public interface HumanVerifier {
 | `user_password_credentials` | user_id(PK), password_hash, password_changed_at, must_change, version | 자체 로그인 자격 — 계정마다 하나. `user_id` 는 `users.id` 를 가리키고 계정을 지우면 함께 지워진다. `password_hash` 는 파라미터를 담은 Argon2id 해시 문자열(user-R15). `must_change` 가 참이면 강제 변경(user-R29) |
 | `user_recovery_codes` | user_id(PK), code_digest, issued_at | 복구 코드 — 사용자마다 많아야 한 행(user-R30). `code_digest` 는 정규형의 SHA-256. 계정을 지우면 함께 지워진다 |
 | `login_failures` | attempt · email_digest(PK), failures, last_failed_at | 실패 기록(user-R19). `attempt` 는 종류(`SIGN_IN`/`RECOVERY`) — 기본값이 없다. `failures` 0 · `last_failed_at` 없음은 한 시도의 트랜잭션 안에서만 있는 자리 행이고 커밋 뒤에는 남지 않는다(user-R18 — 제약이 두 칸의 짝을 지킨다) |
-| `user_notices` | id, user_id, kind(`FEED_STATUS`/`PASSWORD_CHANGED`/`KEY_INVALIDATED`), content(jsonb), revision(1 이상), created_at, updated_at, read_at | 화면 내 알림(user-R21). `user_id` 는 `users.id` 를 가리키고 계정을 지우면 함께 지워진다. 피드 상태 알림은 사용자마다 안 읽은 것이 많아야 하나다(부분 고유 인덱스 — user-R23). 키 무효 알림은 사용자 · 키 ID · 무효 시각마다 많아야 하나다(부분 고유 인덱스 — user-R36). `read_at` 이 없으면 안 읽은 알림 |
+| `user_notices` | id, user_id, kind(`FEED_STATUS`/`PASSWORD_CHANGED`/`KEY_INVALIDATED`/`PREFERENCES_ADJUSTED`), content(jsonb), revision(1 이상), created_at, updated_at, read_at | 화면 내 알림(user-R21). `user_id` 는 `users.id` 를 가리키고 계정을 지우면 함께 지워진다. 피드 상태 알림은 사용자마다 안 읽은 것이 많아야 하나다(부분 고유 인덱스 — user-R23). 키 무효 알림은 사용자 · 키 ID · 무효 시각마다 많아야 하나다(부분 고유 인덱스 — user-R36). `read_at` 이 없으면 안 읽은 알림 |
 | `user_feed_status_receipts` | user_id(PK), received_through | 피드 상태 알림의 반영 기준 — 사용자마다 한 행(user-R24). `received_through` 가 없으면 아직 반영한 회차가 없는 자리 행이다. 계정을 지우면 함께 지워진다 |
 | `user_sign_up_policy` | id(PK, 언제나 1), open, changed_at | 가입 정책의 지금 값 — 한 행(user-R32) |
 | `user_sign_up_policy_changes` | id, previous_open, open, actor(`SYSTEM`/`OPERATOR`), changed_at | 가입 정책 이력 — 추가 전용(user-R32). 처음 값 행은 `previous_open` 이 없다 |
 | `user_invitations` | id, token_digest(고유), memo, created_at, expires_at, revoked_at, used_at, used_by, version | 초대(user-R31). `token_digest` 는 토큰의 SHA-256. 쓴 것과 취소한 것은 함께 있을 수 없다(검사). `used_by` 는 가입한 계정이고, 그 계정을 지우면 비고 `used_at` 은 남는다 |
 | `request_limit_counts` | limit_key · window_start(PK), window_end, requests | 요청 제한 기록(user-R39) — 동작 · 축 · 대상의 SHA-256 다이제스트(32바이트)와 고정 창 시작마다 한 행이고 `requests` 는 1 이상이다. 대상(IP · 사용자 ID)을 평문으로 두지 않는다. 끝난 창은 `window_end` 로 찾아 지운다(user-R42) |
+| `user_settings` | user_id(PK), tag_set_id, timezone, digest_time, interest_text, llm_provider, llm_model, weekly_report, weekly_report_day, monthly_report, updated_at, version | 설정 행 — 사용자마다 하나(user-R43). `tag_set_id` 는 선호 버전(user-R45 — `tag` 의 버전 ID, FK 없음). `interest_text` 는 빈 문자열이 없음이다. `llm_provider` · `llm_model` 은 함께 있거나 함께 없다(검사). `weekly_report_day` 는 ISO 요일 1 ~ 7. 계정을 지우면 함께 지워진다 |
+| `user_tag_preferences` | user_id · tag_kind · tag_key(PK), mode, created_at | 태그 선호의 현재 상태 — 선호 이력의 투영(user-R45). `tag_kind` 는 `TOPIC`/`REGION`/`FORMAT`, `mode` 는 `TOPIC` 이면 `SUBSCRIBE` · 그 밖 `EXCLUDE`(검사). 계정을 지우면 함께 지워진다 |
+| `user_tag_preference_events` | id, user_id, cause(`USER`/`ONBOARDING`/`TAG_SET_CHANGE`), tag_set_id, tag_kind, tag_key, mode, action(`ADD`/`REMOVE`), occurred_at | 선호 이력 — 추가만 한다(user-R45). `tag_set_id` 는 기록 당시 버전. 계정을 지우면 함께 지워진다 |
+| `user_excluded_sources` | user_id · source_id(PK), created_at | 제외 소스(user-R49). `source_id` 는 `source` 의 소스 ID(FK 없음 — `SourceDeleted` 로 지운다, 소스 ID 색인). 계정을 지우면 함께 지워진다 |
 
 ## 7. 설정
 
@@ -557,6 +629,14 @@ public interface HumanVerifier {
 | [0170](../adr/0170-request-limits-count-fixed-windows-in-a-user-postgresql-table-with-a-code-constant-policy-table.md) | 요청 제한은 `user` 의 PostgreSQL 테이블에 고정 창마다 한 문장으로 세고, 한도는 코드 상수 정책 표 하나다 |
 | [0171](../adr/0171-sign-in-and-recovery-are-limited-per-ip-while-the-email-axis-stays-the-failure-delay.md) | 로그인 · 복구의 사용자 축은 이메일별 실패 지연이고, 요청 제한은 IP 로만 센다 |
 | [0172](../adr/0172-bot-checks-use-turnstile-or-off-pass-when-the-verifier-is-unreachable-and-match-the-action.md) | 봇 차단은 Turnstile · 끔(기본 끔)이고, 검증 서비스에 닿지 못하면 통과하며 동작 이름을 대조한다 |
+| [0175](../adr/0175-tag-preferences-follow-tag-set-activation-events-and-are-rewritten-to-active-keys.md) | 태그 선호는 체계 활성 전환 이벤트를 받아 활성 버전의 키로 고쳐 쓴다 |
+| [0176](../adr/0176-tag-set-changes-do-not-narrow-a-users-preferences-without-telling.md) | 체계 변경은 사용자 모르게 선호 범위를 좁히지 않는다 — 일부만 제외한 병합은 해제하고 알리고, 구독한 대분류에서 옮겨 간 중분류는 구독으로 더한다 |
+| [0177](../adr/0177-formats-newly-excluded-by-default-on-activation-are-added-to-existing-users-exclusions.md) | 활성 전환 때 새로 생긴 기본 제외 형식은 기존 사용자의 제외로 넣는다 |
+| [0178](../adr/0178-the-llm-model-to-use-is-decided-at-query-time-from-the-chosen-model-the-allowed-list-and-key-status.md) | 쓸 LLM 모델은 고른 모델 · 허용 목록 · 키 상태로 조회 때 정한다 |
+| [0179](../adr/0179-interest-settings-handlers-are-open-without-a-key.md) | 관심 설정 처리기는 키 없이 연다 |
+| [0180](../adr/0180-user-settings-changes-publish-no-event-and-consumers-query.md) | `UserSettingsChanged` 를 내지 않고 소비자가 조회한다 |
+| [0181](../adr/0181-tag-preferences-take-only-topic-subscriptions-and-region-and-format-exclusions.md) | 태그 선호는 주제 구독 · 지역 제외 · 형식 제외만 받는다 |
+| [0182](../adr/0182-startup-work-reading-the-active-tag-set-runs-in-a-lifecycle-phase-after-first-start-seeding-and-before-the-web-server.md) | 기동 때 활성 태그 체계를 읽는 작업은 웹 서버 앞의 기동 단계에서 첫 기동 적재 뒤에 돈다 |
 | [0183](../adr/0183-admin-paths-open-with-admin-account-sessions-and-keep-the-operator-token-as-an-optional-script-bearer-with-csrf-only-for-sessions.md) | 운영자 경로는 `ADMIN` 계정 세션으로 열고, 운영자 토큰은 스크립트용 선택 Bearer 로 남기며, 세션 요청에만 CSRF 를 건다 |
 | [0184](../adr/0184-admin-path-denials-share-the-session-chain-problem-types-and-only-a-wrong-operator-token-is-admin-unauthorized.md) | 운영자 경로의 거부는 세션 체인과 같은 문제 유형을 쓰고, 틀린 운영자 토큰만 `admin-unauthorized` 로 가른다 |
 | [0185](../adr/0185-admin-paths-stay-outside-the-llm-key-gate-and-look-only-at-the-role.md) | 운영자 경로는 LLM 키 관문 밖이다 — 역할만 본다 |

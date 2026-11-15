@@ -1,6 +1,9 @@
 package net.yozmnews.tag.application;
 
+import java.util.Objects;
+
 import net.yozmnews.tag.TagSetDirectory;
+import net.yozmnews.tag.TagSetId;
 import net.yozmnews.tag.TagSetThresholds;
 import net.yozmnews.tag.TagSetView;
 import net.yozmnews.tag.domain.tagset.TagSet;
@@ -11,7 +14,7 @@ import org.springframework.stereotype.Service;
 /**
  * 공개 API {@link TagSetDirectory} 의 구현 — docs/specs/tag.md §4 · tag-R3 · tag-R9.
  * <p>
- * 활성 버전을 읽어 공개 타입으로 옮긴다 — 옮기는 일은 {@link TagSetViews} 가 한다. 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통).
+ * 활성 버전 · 버전 하나를 읽어 공개 타입으로 옮긴다 — 옮기는 일은 {@link TagSetViews} 가 한다. 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통).
  */
 @Service
 class TagSetDirectoryService implements TagSetDirectory {
@@ -33,6 +36,13 @@ class TagSetDirectoryService implements TagSetDirectory {
 	@Override
 	public TagSetThresholds activeThresholds() {
 		return this.thresholds.current(active(this.tagSets).id());
+	}
+
+	@Override
+	public TagSetView tagSet(TagSetId id) {
+		Objects.requireNonNull(id, "id");
+		return TagSetViews.view(this.tagSets.findById(id.value())
+			.orElseThrow(() -> new IllegalArgumentException("없는 태그 체계 버전: " + id.value())));
 	}
 
 	/**

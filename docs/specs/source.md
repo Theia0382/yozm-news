@@ -56,7 +56,7 @@
 
 ## 3. 공개 인터페이스
 
-모듈 최상위 패키지 `net.yozmnews.source` 의 공개 타입은 아래와 같다 — 식별자 둘 · 수집 이벤트와 그 기사, 삭제 이벤트 둘, 피드 상태 변화 이벤트와 그 값, 피드가 있는지 묻는 공개 조회 `SourceDirectory`, 피드의 출처 이름 · 섹션을 읽는 공개 조회 `FeedLabels` 와 그 값, 운영 기능의 공개 API `SourceAdministration` 과 그 결과 · 목록 타입 · 공개 열거 · 예외.
+모듈 최상위 패키지 `net.yozmnews.source` 의 공개 타입은 아래와 같다 — 식별자 둘 · 수집 이벤트와 그 기사, 삭제 이벤트 둘, 피드 상태 변화 이벤트와 그 값, 피드가 있는지 묻는 공개 조회 `SourceDirectory`, 피드의 출처 이름 · 섹션을 읽는 공개 조회 `FeedLabels` 와 그 값, 사용자가 고를 소스 목록을 읽는 공개 조회 `SourceNames` 와 그 값, 운영 기능의 공개 API `SourceAdministration` 과 그 결과 · 목록 타입 · 공개 열거 · 예외.
 
 HTTP 엔드포인트: 없음.
 
@@ -193,6 +193,30 @@ public record FeedLabel(@Nullable String sourceName, @Nullable String section) {
   - 읽기 전용 트랜잭션 하나에서 읽는다. 이름 · 섹션의 해석은 운영 목록과 같다 — 정본은 `SourceCatalog` 의 해석 하나다
 
 관련 규칙: source-R51 · source-R57.
+
+### SourceNames · SourceName
+
+다른 모듈이 사용자가 고를 소스 목록을 읽는 조회 — `user` 의 제외 소스가 쓴다. 구현은 `application` 의 `SourceNameService` 다.
+
+```java
+public interface SourceNames {
+    List<SourceName> visible();
+}
+
+public record SourceName(SourceId id, @Nullable String name) {}
+```
+
+| 타입 · 멤버 | 뜻 |
+|---|---|
+| `visible` | 숨기지 않은 소스 전부(켜짐 무관), 소스 ID 순 |
+| `SourceName.name` | 출처 이름 — 운영 목록의 이름과 같다(프로필의 소스 이름, 프로필을 얻지 못하면 기록된 이름 — source-R57). 둘 다 없으면 null |
+
+- 계약
+  - 숨긴 소스는 내지 않는다(source-R53). 지운 소스는 없다
+  - 읽기 전용 트랜잭션 하나에서 읽는다. 이름의 해석은 운영 목록과 같다 — 정본은 `SourceCatalog` 의 해석 하나다
+  - 피드 · 수집 상태는 읽지 않는다 — 피드의 불변식이 깨져 운영 목록이 실패해도 고를 소스 목록은 낸다
+
+관련 규칙: source-R51 · source-R53 · source-R57.
 
 ### FetchedArticle
 
@@ -442,7 +466,7 @@ public final class UnknownFeedException extends RuntimeException { public FeedId
 
 협력:
 
-- **등록 · 운영 설정** — `SourceRegistration` · `SourceOperations` 가 `ProfileResolver` 로 소스의 프로필을 얻어(프리셋은 `PresetCatalog`, 운영자 원문은 `ProfileParser`) 판정하고, `SourceRepository` · `FeedRepository` 로 쓴다. 피드 행과 수집 상태 행은 `FeedProvisioner` 가 함께 만든다. 피드 켜기는 `FeedGate`(`domain/gate`)의 판정 사이에 `SourceFetchSlots` 로 요청 시작 시각을 예약하고 포트 `ArticleSource` 로 피드를 받는다. 등록 전 원문의 미리보기는 `ProfilePreviewer` 가 같은 판정으로 한다. 운영자 원문 수정은 `SourceRegistration` 이 `ProfileRevision` 으로 판정한다. 숨김 · 삭제는 `SourceRemoval` 이 `FeedRemovalRule` 로 피드 대상을 판정하고 소스 · 피드 · 수집 상태 · 요청 예약 · 출처 이름 저장소로 쓴다. 등록 · 원문 수정 · 기동 대조는 `SourceAttributionRepository` 에 출처 이름을 기록한다. 공개 API 의 구현 `SourceAdministrationService` 가 이 유스케이스들과 운영 목록(`SourceCatalog` — `SourceListingRepository` · `ProfileResolver` · `PresetCatalog` · `SourceAttributionRepository`)에 맡기고 결과를 공개 타입으로 옮긴다. 공개 조회 `SourceDirectory` 의 구현 `SourceDirectoryService` 는 `FeedRepository` 로 묻는다. 공개 조회 `FeedLabels` 의 구현 `FeedLabelService` 는 `SourceCatalog` 에 맡긴다 — 출처 이름 · 섹션의 해석은 운영 목록과 같은 함수다
+- **등록 · 운영 설정** — `SourceRegistration` · `SourceOperations` 가 `ProfileResolver` 로 소스의 프로필을 얻어(프리셋은 `PresetCatalog`, 운영자 원문은 `ProfileParser`) 판정하고, `SourceRepository` · `FeedRepository` 로 쓴다. 피드 행과 수집 상태 행은 `FeedProvisioner` 가 함께 만든다. 피드 켜기는 `FeedGate`(`domain/gate`)의 판정 사이에 `SourceFetchSlots` 로 요청 시작 시각을 예약하고 포트 `ArticleSource` 로 피드를 받는다. 등록 전 원문의 미리보기는 `ProfilePreviewer` 가 같은 판정으로 한다. 운영자 원문 수정은 `SourceRegistration` 이 `ProfileRevision` 으로 판정한다. 숨김 · 삭제는 `SourceRemoval` 이 `FeedRemovalRule` 로 피드 대상을 판정하고 소스 · 피드 · 수집 상태 · 요청 예약 · 출처 이름 저장소로 쓴다. 등록 · 원문 수정 · 기동 대조는 `SourceAttributionRepository` 에 출처 이름을 기록한다. 공개 API 의 구현 `SourceAdministrationService` 가 이 유스케이스들과 운영 목록(`SourceCatalog` — `SourceListingRepository` · `ProfileResolver` · `PresetCatalog` · `SourceAttributionRepository`)에 맡기고 결과를 공개 타입으로 옮긴다. 공개 조회 `SourceDirectory` 의 구현 `SourceDirectoryService` 는 `FeedRepository` 로 묻는다. 공개 조회 `FeedLabels` 의 구현 `FeedLabelService` 와 `SourceNames` 의 구현 `SourceNameService` 는 `SourceCatalog` 에 맡긴다 — 출처 이름 · 섹션의 해석은 운영 목록과 같은 함수다
 - **수집** — `PollScheduler` 가 `FeedPollStateRepository` 로 대상을 잠그고 `FeedPollState` 의 전이로 점유를 기록한다. `FeedPoller` 가 `SourceFetchSlots`(`SourceFetchSlotRepository` · `PollSchedule`)로 요청 시작 시각을 예약하고, 포트 `ArticleSource` 로 받은 결과를 `FeedPollState` 에 반영해 `ArticleFetched` 를 발행한다. `ArticleSource` 의 구현 `RssArticleSource` 는 요청 규칙(`domain/fetch`)으로 요청하고 `FeedNormalizer`(`domain/feed`)로 정규화한다
 - **피드 상태** — `FeedHealthCheck` 가 `FeedStatusRepository` 로 켜진 피드의 행을 잠그고, `FeedStatusRule` 로 다시 판정해 바뀐 행만 쓰며, 바뀐 피드가 있으면 같은 트랜잭션에서 `FeedStatusesChanged` 를 발행한다
 
@@ -531,6 +555,7 @@ sequenceDiagram
 - `SourceRemoval` — 소스 · 피드를 숨기고 다시 보이고 지운다. 연산마다 한 트랜잭션이고, 운영자의 동작은 커밋 뒤 경고 로그로 남긴다. 삭제는 소스 행을 배타 잠금한 뒤 자식 행부터 지우고 같은 트랜잭션에서 `SourceDeleted` · `FeedDeleted` 를 발행한다(source-R53 ~ source-R55)
 - `SourceDirectoryService` — 공개 조회 `SourceDirectory` 의 구현. 트랜잭션을 열지 않는다(source-R55)
 - `FeedLabelService` — 공개 조회 `FeedLabels` 의 구현. `SourceCatalog` 에 맡긴다(source-R57)
+- `SourceNameService` — 공개 조회 `SourceNames` 의 구현. `SourceCatalog` 가 숨기지 않은 소스 행과 기록된 출처 이름으로 ID · 이름을 낸다 — 피드 · 수집 상태는 읽지 않는다(source-R51 · R57)
 - `ProfilePreviewer` — 등록 전 운영자 프로필 원문의 피드 하나를 미리본다. DB 를 쓰지 않고 요청 시작 시각을 예약하지 않는다(source-R9)
 - `SourceAdministrationService` — 공개 API `SourceAdministration` 의 구현. 유스케이스 · `SourceCatalog` 에 맡기고 결과를 공개 타입으로 옮긴다. 트랜잭션을 열지 않는다 — 피드 켜기 · 원문 미리보기는 트랜잭션 밖에서 받는다(source-R51 · source-R52)
 - `SourceCatalog` — 운영 목록과 피드의 출처 이름 · 섹션. 읽기 전용 트랜잭션 하나에서 소스 · 피드 행과 피드의 수집 상태 행 · 출처 이름을 읽고, 소스마다 지금의 프로필을 얻어 상태 · 실제 주기를 정한다. 숨긴 소스와 숨기지 않은 소스, 숨긴 피드와 숨기지 않은 피드를 가른다. 수집 상태 행이 없는 피드는 목록을 실패시킨다. 이름(프로필 이름 → 기록된 출처 이름)과 섹션(프로필에 그 피드가 있을 때만)의 해석은 함수 하나씩이고 운영 목록과 `labels`(숨긴 것 포함, 수집 상태는 읽지 않음)가 함께 쓴다(source-R51 · source-R53 · source-R57)
@@ -900,7 +925,7 @@ RSS 품질이 피드마다 크게 다르므로 사전 보정 → 파싱 → 필�
 - **source-R55** — 삭제는 되돌릴 수 없다. 켜진 소스 · 피드, 숨긴 소스 · 피드도 지운다.
   - 소스 삭제: 한 트랜잭션에서 소스 행을 배타 잠금하고, 그 소스의 피드를 읽어 수집 상태 행을 피드 ID 순으로 잠근 뒤, 수집 상태 · 피드 · 요청 예약 · 출처 이름 · 소스 행을 지우고 `SourceDeleted` 를 발행한다
   - 피드 삭제: 한 트랜잭션에서 그 피드의 소스 행을 배타 잠금하고, 피드를 다시 읽어 대상(source-R54)을 판정한 뒤, 수집 상태 · 피드 행을 지우고 `FeedDeleted` 를 발행한다 — 소스 잠금이 같은 식별자를 다시 넣는 원문 수정과 줄을 세운다
-  - 소비자 `article` 이 그 소스 · 피드의 엔트리와 엔트리가 남지 않은 기사를 지운다([article-R15](article.md#지운-소스--피드)). 그 처리가 실패하면 이벤트 재처리가 다시 처리한다. 남겨진 발행을 폐기하면 기사 쪽 삭제는 일어나지 않는다
+  - 소비자 `article` 이 그 소스 · 피드의 엔트리와 엔트리가 남지 않은 기사를 지운다([article-R15](article.md#지운-소스--피드)). `user` 는 `SourceDeleted` 를 받아 그 소스의 제외 행을 지운다([user Spec](user.md#관심-설정) user-R49). 그 처리가 실패하면 이벤트 재처리가 다시 처리한다. 남겨진 발행을 폐기하면 기사 쪽 삭제는 일어나지 않는다
   - 다른 모듈은 피드가 아직 있는지를 `SourceDirectory` 로 묻는다 — 숨긴 피드는 있다
   - 운영자의 삭제는 커밋 뒤 소스 ID · 프리셋 키(있으면) · 지운 피드 ID 를 담은 경고 로그로 남긴다
 - **source-R56** — 지워진 소스를 만난 갈래. 소스 삭제는 소스 행의 배타 잠금으로, 요청 시작 시각 예약 · 기동 대조는 공유 잠금으로 줄을 선다 — 공유 잠금은 운영자의 다른 변경(키를 바꾸지 않는 갱신)과는 서로 기다리지 않는다.

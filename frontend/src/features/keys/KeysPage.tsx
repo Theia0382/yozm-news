@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useEffect, useState } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import {
   requestFailedText,
   UNREACHABLE_TEXT,
@@ -17,9 +17,10 @@ import {
   type Provider,
   providers,
 } from "@/features/keys/keyTexts";
+import { INTERESTS_PATH } from "@/features/interests/interestTexts";
 import { ExternalTransferNotice } from "@/features/privacy/ExternalTransferNotice";
 import { PRIVACY_PATH } from "@/features/privacy/privacyTexts";
-import { SESSION_QUERY_KEY } from "@/features/session/sessionQueries";
+import { SESSION_QUERY_KEY, useMe } from "@/features/session/sessionQueries";
 import { useApiClient } from "@/shared/api/client";
 import { guardRejectionText } from "@/shared/api/problems";
 import { formatDateTime } from "@/shared/lib/dateTime";
@@ -101,6 +102,8 @@ function ProviderKeySection({
   const [message, setMessage] = useState<Message | null>(null);
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const me = useMe();
+  const navigate = useNavigate();
   const { name } = providers[provider];
   const headingId = `llm-key-${provider}`;
 
@@ -131,6 +134,8 @@ function ProviderKeySection({
 
   function register(event: FormEvent) {
     event.preventDefault();
+    // 처음 키를 등록하는지는 등록 전 로그인 상태로 안다 — 등록 뒤에 다시 읽으면 키가 생겨 있다
+    const first = me.data?.llmKeyRequired === true;
     void run(async () => {
       const { data, error, response } = await client.PUT(
         "/api/llm-keys/{provider}",
@@ -148,6 +153,10 @@ function ProviderKeySection({
         case "REGISTERED":
           setKey("");
           await reload();
+          if (first) {
+            // 처음 키를 등록했으면 관심 설정으로 간다 — 구독 없이 시작한다(docs/specs/user.md user-R43)
+            void navigate(INTERESTS_PATH);
+          }
           return { tone: "status", text: "키를 확인하고 저장했습니다." };
         case "REJECTED":
           return { tone: "alert", text: failureText(data.failure) };

@@ -39,7 +39,10 @@ function renderKeys(handlers: Record<string, Handler>) {
     [
       {
         element: <RequireSignIn />,
-        children: [{ path: "/keys", element: <KeysPage /> }],
+        children: [
+          { path: "/keys", element: <KeysPage /> },
+          { path: "/interests", element: <p>관심 설정 화면</p> },
+        ],
       },
     ],
     "/keys",
@@ -86,9 +89,7 @@ describe("KeysPage", () => {
 
     const transfer = await section("LLM 공급자에게 보내는 것");
     expect(
-      transfer.getByText(
-        "구독 주제, 지역 선호, 자유 텍스트 관심사, 원하는 분량",
-      ),
+      transfer.getByText("구독 주제, 지역 선호, 자유 텍스트 관심사"),
     ).toBeInTheDocument();
     expect(transfer.getByText("후보 기사의 정보")).toBeInTheDocument();
     expect(
@@ -104,7 +105,7 @@ describe("KeysPage", () => {
 
   it("키를 등록하면 입력을 비우고 힌트와 상태만 보이며 로그인 상태를 다시 읽는다", async () => {
     let keys = NO_KEYS;
-    const { server } = renderKeys({
+    const { server, router } = renderKeys({
       "GET /api/llm-keys": () => json(keys),
       "PUT /api/llm-keys/ANTHROPIC": () => {
         keys = withAnthropic(STORED);
@@ -138,6 +139,32 @@ describe("KeysPage", () => {
         server.requests.filter((r) => r.path === "/api/me").length,
       ).toBeGreaterThan(meBefore),
     );
+    // 등록 전 로그인 상태가 키를 요구하지 않았으면(첫 키가 아니면) 키 화면에 남는다
+    expect(router.state.location.pathname).toBe("/keys");
+  });
+
+  it("처음 키를 등록하면 관심 설정 화면으로 간다", async () => {
+    let keys = NO_KEYS;
+    const { router } = renderKeys({
+      "GET /api/me": () =>
+        json({ ...SIGNED_IN_ME, llmKeyRequired: keys === NO_KEYS }),
+      "GET /api/llm-keys": () => json(keys),
+      "PUT /api/llm-keys/ANTHROPIC": () => {
+        keys = withAnthropic(STORED);
+        return json({ result: "REGISTERED", failure: null, key: STORED });
+      },
+    });
+    const user = userEvent.setup();
+    const anthropic = await section("Anthropic");
+
+    await user.type(
+      anthropic.getByLabelText("Anthropic API 키"),
+      "sk-ant-test-0123456789WXYZ",
+    );
+    await user.click(anthropic.getByRole("button", { name: "등록" }));
+
+    expect(await screen.findByText("관심 설정 화면")).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe("/interests");
   });
 
   it.each([

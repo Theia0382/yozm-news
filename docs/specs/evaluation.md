@@ -86,7 +86,7 @@ public record ImportanceLevel(int level, String description) {}
 | `TopicCategory` | 주제 대분류 — 키 · 이름 · 설명과 그 중분류. 대분류는 묻지 않는다 | — |
 | `AskedTag` | 묻는 태그(주제 중분류 · 지역) — 키 · 이름 · 설명과 질문 문장. 중분류의 키는 전체 키다 | `question` 은 `tag` 가 질문 틀에 설명을 끼운 문장이다([tag-R9](tag.md#체계-파일-형식과-검증)) |
 | `FormatChoice` | 형식 Choice 질문과 그 선택지 | — |
-| `FormatOption.excludedByDefault` | 기본 제외 형식인가 — 이 모듈은 쓰지 않는다(`tag` · 후보 선별의 값) | — |
+| `FormatOption.excludedByDefault` | 기본 제외 형식인가 — 이 모듈은 쓰지 않는다(`tag` 의 값 — `user` 가 계정을 만들 때와 그 형식이 새로 생긴 버전을 켤 때 사용자의 제외로 넣는다) | — |
 | `ImportanceScale` | 중요도 Score 질문과 수준별 기준 — 수준 순. `MIN_LEVEL` · `MAX_LEVEL` 은 수준 범위의 정본 — `tag` 의 체계 검증이 이 범위를 쓴다 | — |
 
 관련 규칙: evaluation-R40.

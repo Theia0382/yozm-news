@@ -10,13 +10,13 @@ export const COLLECTED_ITEMS: readonly string[] = [
   "요청 제한을 위한 IP 주소의 다이제스트 — 제한 창이 끝나면 지웁니다(창은 길어야 1시간)",
 ];
 
-/** 다이제스트를 만들 때 고른 공급자로 가는 것 */
+/** 다이제스트를 만들 때 쓸 모델의 공급자로 가는 것 */
 export const DIGEST_TRANSFER_ITEMS: readonly string[] = [
-  "구독 주제, 지역 선호, 자유 텍스트 관심사, 원하는 분량",
+  "구독 주제, 지역 선호, 자유 텍스트 관심사",
   "후보 기사의 정보",
 ];
 
-/** 변화 리포트를 만들 때 고른 공급자로 가는 것 */
+/** 변화 리포트를 만들 때 쓸 모델의 공급자로 가는 것 */
 export const REPORT_TRANSFER_ITEMS: readonly string[] = [
   "그 기간에 구독한 스토리라인의 변화 · 보도량 · 관심도 통계",
   "직전 리포트의 요약",

@@ -217,13 +217,14 @@
 
 - 사용자는 자기 LLM 키(OpenAI · Anthropic)로 쓸 모델을 이 목록에서 고른다. 앱에는 기본 목록이 들어 있고, 소프트웨어를 올리면 기본 목록도 함께 바뀐다. 목록을 바꾸지 않을 운영자는 할 일이 없다
 - 목록을 바꾸려면 파일을 만들어 배포 디렉터리의 `deploy/config/` 에 두고(예: `deploy/config/llm-models.yaml`), 이 변수에 컨테이너 안 경로 `/etc/yozmnews/llm-models.yaml` 을 적는다 — 배포 구성이 `deploy/config/` 를 `app` 의 `/etc/yozmnews` 에 읽기 전용으로 붙인다. 앱은 root 가 아닌 사용자로 돌므로 파일은 누구나 읽을 수 있어야 한다(`chmod 644`)
+- 공급자마다 첫 모델이 기본이다 — 사용자가 모델을 고르지 않았거나 고른 모델을 쓸 수 없으면(목록에서 빠짐 · 그 공급자의 키가 없거나 무효) 유효한 키가 있는 공급자의 첫 모델을 쓴다([user Spec](../specs/user.md#관심-설정) user-R51). 사용자의 비용이 나가는 모델이므로 첫째에 둘 모델을 고른다
 - 파일이 목록 전체다 — 기본 목록과 합치지 않는다. 기본 목록의 모델을 남기려면 파일에 함께 적는다. 운영자 파일을 쓰는 동안에는 소프트웨어가 올라가도 새 모델이 저절로 더해지지 않는다
 
   ```yaml
   providers:
     openai:
       models:
-        - id: gpt-6-astra
+        - id: gpt-6.1-terra
           input-token-budget: 32000
           structured-output: true
     anthropic:

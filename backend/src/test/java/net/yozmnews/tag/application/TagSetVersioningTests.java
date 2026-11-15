@@ -12,14 +12,17 @@ import java.util.UUID;
 
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleDirectory;
+import net.yozmnews.evaluation.AskedTag;
 import net.yozmnews.platform.ChangeActor;
 import net.yozmnews.tag.LineageKind;
 import net.yozmnews.tag.MultiTagKind;
 import net.yozmnews.tag.TagKind;
 import net.yozmnews.tag.TagLineageView;
 import net.yozmnews.tag.TagRef;
+import net.yozmnews.tag.TagSetActivated;
 import net.yozmnews.tag.TagSetActivationResult;
 import net.yozmnews.tag.TagSetChanges;
+import net.yozmnews.tag.TagSetDirectory;
 import net.yozmnews.tag.TagSetId;
 import net.yozmnews.tag.TagSetProblemView;
 import net.yozmnews.tag.TagSetReviewResult;
@@ -34,8 +37,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.test.context.event.ApplicationEvents;
+import org.springframework.test.context.event.RecordApplicationEvents;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -50,6 +56,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
+@RecordApplicationEvents
 class TagSetVersioningTests {
 
 	private static final Instant NOW = Instant.parse("2032-01-10T00:00:00Z");
@@ -77,6 +84,15 @@ class TagSetVersioningTests {
 	@Autowired
 	JdbcClient jdbc;
 
+	@Autowired
+	ApplicationEventPublisher publisher;
+
+	@Autowired
+	TagSetDirectory directory;
+
+	@Autowired
+	ApplicationEvents events;
+
 	private TagSetVersioning versioning;
 
 	private TagSetId first;
@@ -93,7 +109,7 @@ class TagSetVersioningTests {
 	void startFromTheFirstVersionWithFourArticles() {
 		clean();
 		this.versioning = new TagSetVersioning(this.tagSets, this.thresholds, this.queue, this.articles,
-				new TransactionTemplate(this.transactionManager), InstantSource.fixed(NOW));
+				new TransactionTemplate(this.transactionManager), this.publisher, InstantSource.fixed(NOW));
 		this.first = this.tagSets.findByActiveTrue().orElseThrow().id();
 		this.a = article(NOW.minus(Duration.ofDays(5)));
 		this.b = article(NOW.minus(Duration.ofDays(7)));
@@ -185,6 +201,13 @@ class TagSetVersioningTests {
 		assertThat(this.jdbc.sql("select count(*) from evaluation_queue where article_id = :d").param("d", this.d)
 			.query(Long.class).single()).isZero();
 		assertThat(TagSetRows.count(this.jdbc, "article_evaluations")).isEqualTo(evaluationsBefore);
+		// 활성 전환을 알린다 — 끈 기준 버전과 새 버전(tag-R16)
+		assertThat(this.events.stream(TagSetActivated.class)).containsExactly(new TagSetActivated(this.first, second));
+		// 끈 버전의 내용도 그대로 읽힌다 — 사용자 선호가 옛 버전의 구조를 읽는다
+		assertThat(this.directory.tagSet(this.first).regions()).extracting(AskedTag::key).contains("japan")
+			.doesNotContain("nippon");
+		assertThat(this.directory.tagSet(second).regions()).extracting(AskedTag::key).contains("nippon")
+			.doesNotContain("japan");
 	}
 
 	@Test
@@ -225,6 +248,8 @@ class TagSetVersioningTests {
 			.isEqualTo(new TagSetActivationResult.DaysOutOfRange());
 		assertThat(counts()).isEqualTo(before);
 		assertThat(this.tagSets.isActive(this.first.value())).isTrue();
+		// 아무것도 쓰지 않은 활성화는 알리지 않는다
+		assertThat(this.events.stream(TagSetActivated.class)).isEmpty();
 	}
 
 	private String firstText() {

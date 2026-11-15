@@ -68,6 +68,7 @@ function renderGuarded(
           { path: "/keys", element: <p>키 화면</p> },
           { path: "/settings", element: <p>설정 화면</p> },
           { path: "/notices", element: <p>알림 화면</p> },
+          { path: "/interests", element: <p>관심 설정 화면</p> },
           { path: "/password", element: <p>비밀번호 변경 화면</p> },
         ],
       },
@@ -170,8 +171,9 @@ describe("RequireSignIn", () => {
     ["/password", "비밀번호 변경 화면"],
     ["/notices", "알림 화면"],
     ["/keys", "키 화면"],
+    ["/interests", "관심 설정 화면"],
   ])(
-    "LLM 키가 없어도 %s 에는 가고 머리줄에 알림 · LLM 키 · 설정 링크를 둔다",
+    "LLM 키가 없어도 %s 에는 가고 머리줄에 알림 · 관심 설정 · LLM 키 · 설정 링크를 둔다",
     async (entry, text) => {
       const { router } = renderGuarded(entry, () =>
         json({ ...SIGNED_IN, llmKeyRequired: true }),
@@ -180,6 +182,10 @@ describe("RequireSignIn", () => {
       expect(await screen.findByText(text)).toBeInTheDocument();
       expect(router.state.location.pathname).toBe(entry);
       expect(screen.getByRole("link", { name: "알림" })).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: "관심 설정" })).toHaveAttribute(
+        "href",
+        "/interests",
+      );
       expect(screen.getByRole("link", { name: "LLM 키" })).toBeInTheDocument();
       expect(screen.getByRole("link", { name: "설정" })).toBeInTheDocument();
     },

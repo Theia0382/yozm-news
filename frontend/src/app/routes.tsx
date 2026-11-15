@@ -29,7 +29,15 @@ export const routes: RouteObject[] = [
             }),
           },
           {
-            // LLM 키 화면 — 키가 없는 사용자는 설정 · 알림 밖의 어느 주소로 와도 여기로 간다
+            // 관심 설정 — 키가 없어도 간다. 처음 키를 등록하면 키 화면이 여기로 보낸다
+            path: "interests",
+            lazy: async () => ({
+              Component: (await import("@/features/interests/InterestsPage"))
+                .InterestsPage,
+            }),
+          },
+          {
+            // LLM 키 화면 — 키가 없는 사용자는 설정 · 알림 · 관심 설정 밖의 어느 주소로 와도 여기로 간다
             path: "keys",
             lazy: async () => ({
               Component: (await import("@/features/keys/KeysPage")).KeysPage,
