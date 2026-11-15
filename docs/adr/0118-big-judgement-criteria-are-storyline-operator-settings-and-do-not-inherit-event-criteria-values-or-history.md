@@ -40,3 +40,4 @@
 ## 후속 기록
 
 - 2026-11-14: 결과 "`storyline` → `evaluation` 의존이 생긴다(중요도 수준 범위)" — 큰 판정은 중요도 수준 범위를 쓰지 않는다([ADR-0147](0147-storyline-big-judgement-compares-importance-weighted-coverage-per-source-and-day-with-one-criterion-at-query-time.md)), 지금 상태는 [storyline Spec "큰 판정"](../specs/storyline.md#큰-판정)
+- 2026-11-15: 맥락 절 "기준값은 측정 전 목표이고 평가 세트와 운영자의 표본 검수로 맞춘다" · 결정 절 "처음 값은 측정 전 목표다" — 처음 값을 평가 세트와 운영자의 날마다 미리보기 검수로 정했다([ADR-0174](0174-big-judgement-criterion-first-value-kept-by-operator-daily-preview-review-where-the-evaluation-set-cannot-separate-neighbours.md)), 지금 값은 [storyline Spec "큰 판정"](../specs/storyline.md#큰-판정)

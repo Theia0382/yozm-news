@@ -31,7 +31,7 @@
 - 표현만 비슷한 두 스토리라인, 사건 둘 이상이 다른 스토리라인에 포함된 스토리라인은 합치지 않는다 — 같은 흐름인지 갈래인지 구조로 가를 수 없다(storyline-R17). 한 사안이 둘로 열린 스토리라인은 관계로도 잇지 않는다(storyline-R29)
 - 따로 도는 정리 작업이 없다 — 상태는 조회 때 정하고, 정돈은 판정 트랜잭션에서 한다. 따로 도는 것은 관계 판정의 반복 작업뿐이다(storyline-R31)
 
-기준 점수의 기본값(§7)과 핵심 말 가중치(storyline-R8)는 기본 임베딩 모델에 맞춰 평가 세트에서 고른 값이다 — 평가 세트가 며칠치라 몇 주에 걸친 전개는 재지 못했고, 운영하면서 다시 본다([미결 사항](../open-questions.md) 35). 이 값들과 시간 창 · 상태 기간(§7), 큰 판정의 식 · 기준의 처음 값(storyline-R19 · R20), 목록 한 쪽의 상한(storyline-R22)은 측정 전 목표다. 큰 판정 · 목록 조회의 시간은 재지 않았다. 관계 기준(§7)은 스토리라인 쌍을 직접 판정한 세트로 고른 값이고 측정 전 목표다 — 같은 쌍으로 고르고 잰 값이라 다른 기간에서의 품질, 시간 창보다 멀리 떨어진 흐름, 스토리라인이 쌓였을 때 점수 후보를 찾는 조회의 시간은 재지 못했다([미결 사항](../open-questions.md)).
+기준 점수의 기본값(§7)은 기본 임베딩 모델에 맞춰 평가 세트의 격자와 운영자의 표본 검수로 정했다([ADR-0173](../adr/0173-storyline-linking-threshold-default-chosen-for-precision-on-an-evaluation-set-grid-and-operator-sample-review.md)). 정밀도를 앞세운 값이라 이어져야 할 사건의 일부가 소속 없이 남고 몇 주에 걸친 흐름의 앞뒤가 한 스토리라인에 남지 않는다 — 잇기 점수가 같은 분야와 같은 사안을 가르지 못해서다([미결 사항](../open-questions.md) 35). 큰 판정 기준의 처음 값(storyline-R20)은 평가 세트와 운영자의 날마다 미리보기 검수로 정했다([ADR-0174](../adr/0174-big-judgement-criterion-first-value-kept-by-operator-daily-preview-review-where-the-evaluation-set-cannot-separate-neighbours.md)). 핵심 말 가중치(storyline-R8)는 평가 세트에서 고른 값이고, 가중치와 시간 창 · 상태 기간(§7), 큰 판정의 식(storyline-R19), 목록 한 쪽의 상한(storyline-R22)은 측정 전 목표다. 평가 세트가 며칠치라 몇 주에 걸친 전개는 재지 못했다. 큰 판정 · 목록 조회의 시간은 두 주 기간까지 쟀다. 관계 기준(§7)은 스토리라인 쌍을 직접 판정한 세트로 고른 값이고 측정 전 목표다 — 같은 쌍으로 고르고 잰 값이라 다른 기간에서의 품질, 시간 창보다 멀리 떨어진 흐름은 재지 못했다([미결 사항](../open-questions.md)).
 
 다른 모듈과의 의존과 이벤트 흐름은 [overview.md §5](../overview.md#5-모듈-지도)에 있다.
 
@@ -246,7 +246,7 @@ public interface BigStorylineAdministration {
 public record BigStorylineCriteria(BigDecimal minIntensity) {
     public static final int INTENSITY_SCALE = 2;                          // 보도 강도 하한의 소수 자릿수 — 정본
     public static final BigDecimal MAX_INTENSITY;                         // 9999.99 — 상한의 정본
-    public static final BigStorylineCriteria DEFAULT;                     // 15.00 — 처음 값의 정본. 측정 전 목표
+    public static final BigStorylineCriteria DEFAULT;                     // 15.00 — 처음 값의 정본. 평가 세트와 운영자의 날마다 미리보기 검수로 정했다
     public static Optional<BigStorylineCriteria> of(BigDecimal minIntensity);
 }
 
@@ -610,7 +610,7 @@ sequenceDiagram
 
 ### 큰 판정
 
-판단의 이유는 [ADR-0116](../adr/0116-storyline-big-judgement-starts-with-a-provisional-rule-of-distinct-sources-and-mean-importance-judged-at-query-time.md) · [ADR-0117](../adr/0117-big-judgement-materials-are-tallied-by-event-per-group-of-events-and-storyline-passes-only-event-ids.md) · [ADR-0118](../adr/0118-big-judgement-criteria-are-storyline-operator-settings-and-do-not-inherit-event-criteria-values-or-history.md) · [ADR-0147](../adr/0147-storyline-big-judgement-compares-importance-weighted-coverage-per-source-and-day-with-one-criterion-at-query-time.md)에 있다. 식과 기준의 처음 값은 평가 세트로 정한 측정 전 목표다.
+판단의 이유는 [ADR-0116](../adr/0116-storyline-big-judgement-starts-with-a-provisional-rule-of-distinct-sources-and-mean-importance-judged-at-query-time.md) · [ADR-0117](../adr/0117-big-judgement-materials-are-tallied-by-event-per-group-of-events-and-storyline-passes-only-event-ids.md) · [ADR-0118](../adr/0118-big-judgement-criteria-are-storyline-operator-settings-and-do-not-inherit-event-criteria-values-or-history.md) · [ADR-0147](../adr/0147-storyline-big-judgement-compares-importance-weighted-coverage-per-source-and-day-with-one-criterion-at-query-time.md) · [ADR-0174](../adr/0174-big-judgement-criterion-first-value-kept-by-operator-daily-preview-review-where-the-evaluation-set-cannot-separate-neighbours.md)에 있다. 식은 평가 세트로 정한 측정 전 목표이고, 기준의 처음 값은 평가 세트와 운영자의 날마다 미리보기 검수로 정했다.
 
 - **storyline-R19** — 큰 판정(`BigStorylineRule` — 정본): 조회할 때 지금 기준(storyline-R20)으로 판정하고 결과를 저장하지 않는다. 기간의 스토리라인(storyline-R22)마다 보도 강도가 기준 이상이면 큰 스토리라인이다(경계 포함).
   - 보도 강도 = 기간 집계의 중요도 합 ÷ (조회 기간에 기사가 있는 서로 다른 소스 수 × 조회 기간의 길이(일)). 중요도가 없는 기사는 합에 들지 않는다
@@ -624,7 +624,7 @@ sequenceDiagram
   - 합쳐진 사건의 소속을 아직 옮기지 않은 동안(storyline-R6 — 다음 회차까지) 그 사건의 기사는 스토리라인의 기간 집계에서 빠진다 — 합쳐진 사건에는 배정이 없다([event-R20](event.md#대표-기사--기간-집계)). 분모의 소스 수에는 남는 사건의 기사로 세어진다
   - 스토리라인에 들지 않은 사건은 판정에 들지 않는다(storyline-R23)
 - **storyline-R20** — 큰 판정 기준: 보도 강도의 하한(0 보다 크고 9999.99 이하, 소수 둘째 자리까지 — `BigStorylineCriteria` 가 정본)은 운영자 설정이다 — 지금 값 한 행과 추가 전용 이력(이전 값 · 새 값 · 행위자 종류 · 시각).
-  - 처음 값은 `BigStorylineCriteria.DEFAULT`(15.00 — 측정 전 목표)이고, 기동 때 지금 값이 없으면 넣고 그때만 행위자 `SYSTEM` 의 이력 한 행을 남긴다. 두 역할이 동시에 떠도 한 행이다
+  - 처음 값은 `BigStorylineCriteria.DEFAULT`(15.00 — 평가 세트와 운영자의 날마다 미리보기 검수로 정했다)이고, 기동 때 지금 값이 없으면 넣고 그때만 행위자 `SYSTEM` 의 이력 한 행을 남긴다. 두 역할이 동시에 떠도 한 행이다
   - 변경은 지금 값 행을 잠근 한 트랜잭션이다 — 동시 변경이 줄을 서 이력의 이전 값이 바로 앞 변경의 새 값이다. 같은 값이면 바꾸지 않고, 범위 밖이면 거부한다. 둘 다 이력을 남기지 않는다
   - 바꾸면 다음 조회부터 모든 기간에 적용된다 — 재판정이 없다. 미리보기는 제안 기준으로 같은 판정을 하고 아무것도 쓰지 않는다
 
@@ -731,7 +731,7 @@ sequenceDiagram
 | 설정 | 바꾸는 규칙 |
 |---|---|
 | `yozmnews.storyline-linking.window` | 시간 창(`Duration` — 예 `14d`), 기본 14일(storyline-R8 · R9) |
-| `yozmnews.storyline-linking.threshold` | 기준 점수, 기본 0.84(storyline-R8 ~ R12) |
+| `yozmnews.storyline-linking.threshold` | 기준 점수, 기본 0.86(storyline-R8 ~ R12) |
 | `yozmnews.storyline-state.quiet-after` | 잠잠 기간(`Duration`), 기본 7일(storyline-R16) |
 | `yozmnews.storyline-state.ended-after` | 끝남 기간(`Duration`), 기본 30일(storyline-R16) |
 | `yozmnews.storyline-relation.probability` | 관계를 맺는 확률 기준, 기본 0.60(storyline-R29) |
@@ -740,7 +740,7 @@ sequenceDiagram
 | `yozmnews.storyline-relation.candidate-score` | 점수 후보의 기준, 기본 0.88(storyline-R27) |
 | `yozmnews.storyline-relation.window` | 점수 후보를 찾고 말 수를 세는 시간 창(`Duration`), 기본 14일(storyline-R27) |
 
-기본값의 정본은 `LinkingProperties` · `StorylineStateProperties` 의 `@DefaultValue` 이고 `application.yaml` 에는 키가 없다. 기본값은 측정 전 목표다. 기준 점수의 기본값은 기본 임베딩 모델의 코사인 범위에 맞춰 평가 세트에서 고른 값이다 — 임베딩 모델을 바꾸면 다시 정한다. 운영자는 환경 변수(`YOZMNEWS_STORYLINE_LINKING_WINDOW` · `YOZMNEWS_STORYLINE_LINKING_THRESHOLD` · `YOZMNEWS_STORYLINE_STATE_QUIET_AFTER` · `YOZMNEWS_STORYLINE_STATE_ENDED_AFTER`)로 바꾼다. 창이 0 이하이거나 초 단위가 아니거나 기준이 0 보다 크고 1 이하가 아니면 기동하지 않는다. 잠잠 · 끝남 기간이 0 이하이거나 초 단위가 아니거나 잠잠 기간 ≥ 끝남 기간이면 기동하지 않는다. 바꾼 잇기 기준은 그 뒤 판정에만 쓴다 — 지난 소속을 다시 판정하지 않는다(storyline-R14). 바꾼 상태 기간은 조회 때 바로 쓴다(storyline-R16). 관계 기준의 기본값의 정본은 `RelationProperties` 의 `@DefaultValue` 이고, 스토리라인 쌍을 직접 판정한 세트로 고른 측정 전 목표다([스토리라인 평가하기](../operations/storyline-evaluation.md#관계를-쌍-판정으로-재기)). 운영자는 환경 변수(`YOZMNEWS_STORYLINE_RELATION_PROBABILITY` · `YOZMNEWS_STORYLINE_RELATION_ONE_MATTER` · `YOZMNEWS_STORYLINE_RELATION_MIN_EVENTS` · `YOZMNEWS_STORYLINE_RELATION_CANDIDATE_SCORE` · `YOZMNEWS_STORYLINE_RELATION_WINDOW`)로 바꾼다. 확률 기준 · 후보 점수 기준이 0 보다 크고 1 이하가 아니거나, 한 사안 기준이 0 ~ 1 밖이거나, 사건 수 하한이 2 미만이거나, 창이 0 이하이거나 초 단위가 아니면 기동하지 않는다. 바꾼 관계 기준은 그 뒤 판정에만 쓴다(storyline-R30). 후보 점수 기준은 잇기의 기준 점수와 같은 눈금이다 — 임베딩 모델을 바꾸면 함께 다시 정한다. 그 밖의 설정 키는 없다. 큰 판정 기준은 설정이 아니라 운영자 설정이다 — 운영자가 화면에서 바꾼다(storyline-R20).
+기본값의 정본은 `LinkingProperties` · `StorylineStateProperties` 의 `@DefaultValue` 이고 `application.yaml` 에는 키가 없다. 기준 점수의 기본값은 기본 임베딩 모델의 코사인 범위에 맞춰 평가 세트와 운영자의 표본 검수로 정했다([ADR-0173](../adr/0173-storyline-linking-threshold-default-chosen-for-precision-on-an-evaluation-set-grid-and-operator-sample-review.md)) — 임베딩 모델을 바꾸면 다시 정한다. 시간 창 · 상태 기간의 기본값은 측정 전 목표다. 운영자는 환경 변수(`YOZMNEWS_STORYLINE_LINKING_WINDOW` · `YOZMNEWS_STORYLINE_LINKING_THRESHOLD` · `YOZMNEWS_STORYLINE_STATE_QUIET_AFTER` · `YOZMNEWS_STORYLINE_STATE_ENDED_AFTER`)로 바꾼다. 창이 0 이하이거나 초 단위가 아니거나 기준이 0 보다 크고 1 이하가 아니면 기동하지 않는다. 잠잠 · 끝남 기간이 0 이하이거나 초 단위가 아니거나 잠잠 기간 ≥ 끝남 기간이면 기동하지 않는다. 바꾼 잇기 기준은 그 뒤 판정에만 쓴다 — 지난 소속을 다시 판정하지 않는다(storyline-R14). 바꾼 상태 기간은 조회 때 바로 쓴다(storyline-R16). 관계 기준의 기본값의 정본은 `RelationProperties` 의 `@DefaultValue` 이고, 스토리라인 쌍을 직접 판정한 세트로 고른 측정 전 목표다([스토리라인 평가하기](../operations/storyline-evaluation.md#관계를-쌍-판정으로-재기)). 운영자는 환경 변수(`YOZMNEWS_STORYLINE_RELATION_PROBABILITY` · `YOZMNEWS_STORYLINE_RELATION_ONE_MATTER` · `YOZMNEWS_STORYLINE_RELATION_MIN_EVENTS` · `YOZMNEWS_STORYLINE_RELATION_CANDIDATE_SCORE` · `YOZMNEWS_STORYLINE_RELATION_WINDOW`)로 바꾼다. 확률 기준 · 후보 점수 기준이 0 보다 크고 1 이하가 아니거나, 한 사안 기준이 0 ~ 1 밖이거나, 사건 수 하한이 2 미만이거나, 창이 0 이하이거나 초 단위가 아니면 기동하지 않는다. 바꾼 관계 기준은 그 뒤 판정에만 쓴다(storyline-R30). 후보 점수 기준은 잇기의 기준 점수와 같은 눈금이다 — 임베딩 모델을 바꾸면 함께 다시 정한다. 그 밖의 설정 키는 없다. 큰 판정 기준은 설정이 아니라 운영자 설정이다 — 운영자가 화면에서 바꾼다(storyline-R20).
 
 ## 8. 결정
 
@@ -763,3 +763,5 @@ sequenceDiagram
 | [0137](../adr/0137-storyline-relations-are-not-edited-one-by-one-by-operators-and-are-tuned-through-relation-criteria.md) | 스토리라인 관계는 운영자가 하나씩 고치지 않고 관계 기준으로 조정한다 |
 | [0147](../adr/0147-storyline-big-judgement-compares-importance-weighted-coverage-per-source-and-day-with-one-criterion-at-query-time.md) | 큰 판정은 기간에 기사가 있는 소스 수와 일수로 나눈 중요도 가중 보도량이 기준 이상인지를 조회할 때 판정한다 |
 | [0148](../adr/0148-storyline-coverage-is-the-article-count-in-the-period-over-the-closed-event-set.md) | 스토리라인의 보도량은 닫은 사건 집합의 기간 안 기사 수로 센다 |
+| [0173](../adr/0173-storyline-linking-threshold-default-chosen-for-precision-on-an-evaluation-set-grid-and-operator-sample-review.md) | 스토리라인 잇기 기준 점수의 기본값은 평가 세트의 격자와 운영자 표본 검수로 정밀도를 앞세워 정한다 |
+| [0174](../adr/0174-big-judgement-criterion-first-value-kept-by-operator-daily-preview-review-where-the-evaluation-set-cannot-separate-neighbours.md) | 큰 판정 기준의 처음 값은 평가 세트가 이웃한 값을 가르지 못해 운영자의 날마다 미리보기 검수로 정한다 |

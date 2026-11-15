@@ -57,3 +57,7 @@
 | 시각 감쇠를 남긴다 | 사건 쌍에서 시각 차는 같은 사안인지를 거의 가르지 못했다. 새 점수에 감쇠를 넣은 꼴은 재지 않았다 |
 | 점수를 코사인 + 계수 × 겹침으로 두고 기준이 1 을 넘게 한다 | 같은 부등식을 0 ~ 1 의 꼴로 적을 수 있고, 기준 이력의 제약과 설정 검증을 고쳐야 한다 |
 | 말의 무게를 `event` 가 계산해 낸다 | 무게의 식은 잇는 방법의 지식이다. `event` 는 수만 안다 |
+
+## 후속 기록
+
+- 2026-11-15: 결정 절 "가중치와 기준 점수의 값은 평가 세트로 정했다. 이 값들은 측정 전 목표다" 가운데 기준 점수 — 기본값을 평가 세트의 격자와 운영자 표본 검수로 정했다([ADR-0173](0173-storyline-linking-threshold-default-chosen-for-precision-on-an-evaluation-set-grid-and-operator-sample-review.md)), 지금 값은 [storyline Spec §7](../specs/storyline.md#7-설정)
