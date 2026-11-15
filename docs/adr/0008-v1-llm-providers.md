@@ -30,3 +30,4 @@
 - 2026-11-14: 결정 절 "두 공급자 모두 Spring AI 2.x 구현을 쓴다"의 쓰는 방법 — [ADR-0149](0149-llm-calls-use-spring-ai-2-without-the-starter-and-build-sdk-clients-with-explicit-address-key-and-log-level-and-close-them.md) · [llm Spec](../specs/llm.md#공급자-클라이언트) llm-R11
 - 2026-11-14: 결정 절 "운영자가 공급자별 허용 모델 목록을 관리"의 관리 방법 — [ADR-0153](0153-allowed-llm-models-come-from-a-bundled-file-that-an-operator-file-replaces-as-a-whole.md) · [llm Spec](../specs/llm.md#공급자와-허용-모델-목록) llm-R2 ~ R4
 - 2026-11-14: 결과 절 "공급자별 코드는 `llm` 모듈 밖으로 나가지 않는다"의 라이브러리 타입 — [ADR-0151](0151-spring-ai-and-sdk-types-stay-inside-llm-and-the-gateway-exposes-only-its-own-types.md) · [llm Spec](../specs/llm.md#공급자-클라이언트) llm-R15
+- 2026-11-15: 결정 절 "사용자는 그중 하나를 고른다" — 고르지 않았거나 고른 모델을 쓸 수 없을 때 쓸 모델 — [ADR-0178](0178-the-llm-model-to-use-is-decided-at-query-time-from-the-chosen-model-the-allowed-list-and-key-status.md) · [`user` user-R51](../specs/user.md#관심-설정)

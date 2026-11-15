@@ -12,14 +12,14 @@
 - **다시 검증** — 저장한 키를 `llm` 의 저장한 키의 길로 확인한다
 - **상태와 무효 알림** — 키의 상태(`VALID` · `INVALID`)를 검증 결과로 전이하고, 무효가 되는 전이마다 `CredentialInvalidated` 를 낸다
 - **저장한 키의 공급** — `llm` 이 선언한 공급 인터페이스 `StoredKeySource` 를 구현해, `llm` 이 물을 때만 키를 복호화해 건넨다
-- **키 유무** — 사용자에게 저장한 키가 있는지 답한다
+- **키 유무** — 사용자에게 저장한 키가 있는지, 키가 있는 공급자와 쓸 수 있는(`VALID`) 키의 공급자를 답한다
 - **(미구현)** 생성 호출에 쓴 시각의 기록, 탈퇴한 사용자의 키 삭제
 
 하지 않는 것:
 
 - 공급자에 요청을 보내지 않는다 — 검증과 호출은 `llm` 의 것이다
 - 복호화한 키를 내놓는 공개 API 를 두지 않는다 — 평문은 `StoredKeySource` 의 구현을 거쳐 `llm` 에만 간다(credential-R13)
-- 키 없는 사용자의 요청을 막지 않는다 — 세션 체인의 관문은 `user` 의 것이고, 이 모듈은 키 유무만 답한다
+- 키 없는 사용자의 요청을 막지 않는다 — 세션 체인의 관문은 `user` 의 것이고, 이 모듈은 키 유무 · 키의 공급자를 답하기만 한다
 - 알림을 남기지 않는다 — 이벤트를 받은 `user` 가 남긴다
 - 키 등록 · 검증 경로의 요청 제한을 세지 않는다 — 두 처리기에 `platform` 의 요청 제한 표시(`@RequestLimited(LLM_KEY_CHECK)`)를 달고, 세고 거부하는 것은 `user` 의 요청 방어다([user Spec](user.md#요청-방어) user-R38 · R40)
 
@@ -56,19 +56,24 @@ HTTP 엔드포인트:
 
 ### LlmKeys
 
-사용자의 키 유무 — 두 역할 공통이고 읽기 전용이다.
+사용자의 키 유무와 키가 있는 공급자 — 두 역할 공통이고 읽기 전용이다.
 
 ```java
 public interface LlmKeys {
     boolean present(UserId user);
+    Set<Provider> providers(UserId user);
+    Set<Provider> usable(UserId user);
 }
 ```
 
 - 계약
   - `present` 는 그 사용자의 저장한 키가 하나라도 있으면 참이다 — 공급자 · 상태와 무관하다(credential-R18)
+  - `providers` 는 그 사용자의 저장한 키가 있는 공급자다 — 상태와 무관하다. `user` 의 모델 고르기가 쓴다
+  - `usable` 은 그 사용자의 상태가 `VALID` 인 키의 공급자다. `user` 의 쓸 모델 판정이 쓴다([ADR-0178](../adr/0178-the-llm-model-to-use-is-decided-at-query-time-from-the-chosen-model-the-allowed-list-and-key-status.md))
+  - 집합은 공급자 선언 순으로 돈다(`EnumSet`). 키가 없으면 빈 집합이다
   - 부르는 쪽의 트랜잭션이 있으면 거기에 들고, 없으면 조회 하나로 끝난다
 
-`UserId` 는 `platform` 의 공개 타입이다([platform Spec](platform.md#userid)).
+`Provider` 는 `llm` 의 공개 타입이다. `UserId` 는 `platform` 의 공개 타입이다([platform Spec](platform.md#userid)).
 
 관련 규칙: credential-R18
 
@@ -217,7 +222,7 @@ sequenceDiagram
 
   결과는 물은 그 키 ID 의 행에만 쓴다 — 그 사이 지워졌거나 교체돼 그 ID 의 행이 없으면 아무것도 쓰지 않는다. 행을 잠근 뒤 쓴다. 무효였던 키가 성공하면 `VALID` 로 돌아온다
 - **credential-R15** — 상태가 `VALID` 에서 `INVALID` 로 바뀌는 트랜잭션에서 `CredentialInvalidated` 를 한 번 낸다. 같은 상태로의 전이(`INVALID` → `INVALID`, `VALID` → `VALID`)와 `INVALID` → `VALID` 에는 내지 않는다
-- **credential-R18** — 키가 있다는 것은 그 사용자의 저장한 키가 하나라도 있다는 것이다 — 공급자 · 상태와 무관하다
+- **credential-R18** — 키가 있다는 것은 그 사용자의 저장한 키가 하나라도 있다는 것이다 — 공급자 · 상태와 무관하다. 공급자마다로 물으면(`providers`) 같은 뜻이고, 쓸 수 있는 키(`usable`)는 상태가 `VALID` 인 키다
 
 ## 6. 데이터
 

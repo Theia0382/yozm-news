@@ -37,3 +37,7 @@
 | 기본 파일 + 운영자 덮어쓰기(DB · 화면) | 기본과 덮어쓰기를 합치는 규칙이 생긴다. 지금 필요한 것보다 크다 |
 | 운영자가 Compose 덮어쓰기 파일로 마운트를 더한다 | 운영자가 Compose 문법을 다루고 덮어쓰기 파일을 관리해야 한다 |
 | 환경 변수에 목록 원문을 넣는다 | 한 줄에 긴 원문을 적어 읽고 고치기 어렵다 |
+
+## 후속 기록
+
+- 2026-11-15: 결과 절 "목록에서 빠진 모델을 골라 둔 사용자"의 처리 — [ADR-0178](0178-the-llm-model-to-use-is-decided-at-query-time-from-the-chosen-model-the-allowed-list-and-key-status.md) · [`user` user-R51](../specs/user.md#관심-설정)
