@@ -21,6 +21,7 @@ function renderGuarded(entry: string, forced: boolean, change?: Handler) {
           { path: "/settings", element: <p>설정 화면</p> },
         ],
       },
+      { path: "/admin", element: <p>운영자 화면</p> },
     ],
     entry,
     {
@@ -97,6 +98,45 @@ describe("PasswordPage", () => {
     expect(await screen.findByText("첫 화면")).toBeInTheDocument();
     expect(router.state.location.pathname).toBe("/");
     expect(screen.getByRole("link", { name: "설정" })).toBeInTheDocument();
+  });
+
+  it("돌아갈 곳(next)이 있으면 저장을 확인한 뒤 그리로 간다", async () => {
+    const { router } = renderGuarded("/password?next=%2Fadmin", true, () =>
+      json({
+        result: "CHANGED",
+        recoveryCode: CODE,
+        passwordProblem: null,
+        retryAfterSeconds: null,
+      }),
+    );
+
+    const user = await fill();
+    await user.click(await screen.findByLabelText("복구 코드를 저장했습니다"));
+    await user.click(screen.getByRole("button", { name: "계속" }));
+
+    expect(await screen.findByText("운영자 화면")).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe("/admin");
+  });
+
+  it("돌아갈 곳이 다른 오리진이면 첫 화면으로 간다", async () => {
+    const { router } = renderGuarded(
+      "/password?next=https%3A%2F%2Fevil.example%2F",
+      true,
+      () =>
+        json({
+          result: "CHANGED",
+          recoveryCode: CODE,
+          passwordProblem: null,
+          retryAfterSeconds: null,
+        }),
+    );
+
+    const user = await fill();
+    await user.click(await screen.findByLabelText("복구 코드를 저장했습니다"));
+    await user.click(screen.getByRole("button", { name: "계속" }));
+
+    expect(await screen.findByText("첫 화면")).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe("/");
   });
 
   it("지금 비밀번호가 틀리면 그대로 남아 알린다", async () => {

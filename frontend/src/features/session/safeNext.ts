@@ -25,3 +25,11 @@ export function safeNext(raw: string | null, origin: string): string {
   }
   return url.pathname + url.search + url.hash;
 }
+
+/** 돌아올 주소(지금 경로 · 질의)를 next 로 단 경로 — 로그인 · 비밀번호 변경 화면으로 보낼 때 쓴다. 받는 쪽은 safeNext 로 읽는다 */
+export function withNext(
+  path: string,
+  here: { pathname: string; search: string },
+): string {
+  return `${path}?next=${encodeURIComponent(here.pathname + here.search)}`;
+}
