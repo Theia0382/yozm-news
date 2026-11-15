@@ -21,10 +21,11 @@ import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 /**
- * 요청 제한 표시의 등록 — 앱의 처리기를 열거해, 표시가 있는 처리기가 손으로 적은 일곱 연산과 그 동작인지, 사용자로 세는 동작의 표시가 세션 없는
- * 공개 처리기에 달리지 않았는지 본다(달리면 요청 제한이 그 요청에서 실패한다).
+ * 요청 제한 · 봇 차단 표시의 등록 — 앱의 처리기를 열거해, 표시가 있는 처리기가 손으로 적은 연산(요청 제한 일곱 · 봇 차단 셋)과 그
+ * 동작인지, 봇 차단 처리기가 같은 동작의 요청 제한을 갖는지, 사용자로 세는 동작의 표시가 세션 없는 공개 처리기에 달리지 않았는지 본다(달리면
+ * 요청 제한이 그 요청에서 실패한다).
  * <p>
- * 지키는 규칙: platform-R25 · user-R38
+ * 지키는 규칙: platform-R25 · user-R38 · user-R41
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -70,6 +71,24 @@ class HandlerGuardsRegistrationTests {
 		assertThat(misplaced).isEmpty();
 		// 대조 — 사용자로 세는 동작이 실제로 있다(판정이 언제나 거짓이 아니다)
 		assertThat(countsByUser(GuardedAction.LLM_KEY_CHECK)).isTrue();
+	}
+
+	@Test
+	void exactlyTheThreeBotCheckedOperationsCarryTheSameActionAsTheirLimit() {
+		Map<String, String> checked = new TreeMap<>();
+		Map<String, String> limitOfChecked = new TreeMap<>();
+		for (Map.Entry<RequestMappingInfo, HandlerMethod> entry : this.mapping.getHandlerMethods().entrySet()) {
+			HandlerGuards.humanChecked(entry.getValue()).ifPresent(action -> {
+				checked.put(operation(entry.getKey()), action.name());
+				limitOfChecked.put(operation(entry.getKey()),
+						HandlerGuards.requestLimited(entry.getValue()).map(GuardedAction::name).orElse("없음"));
+			});
+		}
+
+		assertThat(checked).containsExactlyInAnyOrderEntriesOf(Map.of("POST /api/session", "SIGN_IN",
+				"POST /api/account-recoveries", "ACCOUNT_RECOVERY", "POST /api/sign-ups", "SIGN_UP"));
+		// 봇 차단 처리기는 같은 동작의 요청 제한을 가진다 — 검증(외부 요청) 앞에서 센다
+		assertThat(limitOfChecked).isEqualTo(checked);
 	}
 
 	private static boolean countsByUser(GuardedAction action) {

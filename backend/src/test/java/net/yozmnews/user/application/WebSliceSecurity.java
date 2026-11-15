@@ -36,4 +36,10 @@ public class WebSliceSecurity {
 		return mock(RequestLimiter.class);
 	}
 
+	/** 웹 계층 시험의 처리기에는 봇 차단 표시가 없어 불리지 않는다 */
+	@Bean
+	HumanCheck humanCheck() {
+		return mock(HumanCheck.class);
+	}
+
 }

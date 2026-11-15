@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import net.yozmnews.platform.AllowedBeforePasswordChange;
 import net.yozmnews.platform.AllowedWithoutLlmKey;
 import net.yozmnews.platform.GuardedAction;
+import net.yozmnews.platform.HumanChecked;
 import net.yozmnews.platform.PublicApi;
 import net.yozmnews.platform.RequestLimited;
 import net.yozmnews.platform.UserId;
@@ -88,6 +89,7 @@ class AccountController {
 	 */
 	@PublicApi(reason = "비밀번호를 잊어 로그인할 수 없는 사람이 쓴다")
 	@RequestLimited(GuardedAction.ACCOUNT_RECOVERY)
+	@HumanChecked(GuardedAction.ACCOUNT_RECOVERY)
 	@PostMapping("/api/account-recoveries")
 	AccountRecoveryResponse recover(@Valid @RequestBody AccountRecoveryRequest body, HttpServletRequest request,
 			HttpServletResponse response) {

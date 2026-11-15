@@ -40,7 +40,7 @@
                 }
               }
             },
-            "description" : "요청 보호 토큰이 없거나 맞지 않는다"
+            "description" : "요청 보호 토큰이 없거나 맞지 않는다 · 사람 확인에 실패했다(봇 차단을 켠 인스턴스)"
           },
           "429" : {
             "content" : {
@@ -3810,6 +3810,24 @@
         "tags" : [ "admin-evaluation-controller" ]
       }
     },
+    "/api/human-check" : {
+      "get" : {
+        "operationId" : "humanCheck",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/HumanCheckResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "human-check-controller" ]
+      }
+    },
     "/api/invitation-acceptances" : {
       "post" : {
         "operationId" : "acceptInvitation",
@@ -4320,7 +4338,7 @@
                 }
               }
             },
-            "description" : "요청 보호 토큰이 없거나 맞지 않는다"
+            "description" : "요청 보호 토큰이 없거나 맞지 않는다 · 사람 확인에 실패했다(봇 차단을 켠 인스턴스)"
           },
           "429" : {
             "content" : {
@@ -4386,7 +4404,7 @@
                 }
               }
             },
-            "description" : "요청 보호 토큰이 없거나 맞지 않는다"
+            "description" : "요청 보호 토큰이 없거나 맞지 않는다 · 사람 확인에 실패했다(봇 차단을 켠 인스턴스)"
           },
           "429" : {
             "content" : {
@@ -5856,6 +5874,19 @@
           }
         },
         "required" : [ "httpStatus", "message", "permanence", "problem", "reason" ]
+      },
+      "HumanCheckResponse" : {
+        "type" : "object",
+        "properties" : {
+          "provider" : {
+            "type" : "string",
+            "enum" : [ "OFF", "TURNSTILE" ]
+          },
+          "siteKey" : {
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "provider", "siteKey" ]
       },
       "InitialPasswordResetRequest" : {
         "type" : "object",

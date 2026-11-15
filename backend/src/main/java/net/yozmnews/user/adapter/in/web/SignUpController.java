@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import net.yozmnews.platform.GuardedAction;
+import net.yozmnews.platform.HumanChecked;
 import net.yozmnews.platform.PublicApi;
 import net.yozmnews.platform.RequestLimited;
 import net.yozmnews.platform.WebRole;
@@ -63,6 +64,7 @@ class SignUpController {
 
 	@PublicApi(reason = "공개 가입 — 계정이 없는 사람이 쓴다")
 	@RequestLimited(GuardedAction.SIGN_UP)
+	@HumanChecked(GuardedAction.SIGN_UP)
 	@PostMapping("/api/sign-ups")
 	SignUpResponse signUp(@Valid @RequestBody SignUpRequest body, HttpServletRequest request,
 			HttpServletResponse response) {

@@ -19,6 +19,7 @@ import net.yozmnews.platform.AllowedBeforePasswordChange;
 import net.yozmnews.platform.AllowedWithoutLlmKey;
 import net.yozmnews.platform.ApiPaths;
 import net.yozmnews.platform.HandlerGuards;
+import net.yozmnews.platform.HumanChecked;
 import net.yozmnews.platform.PublicApi;
 import net.yozmnews.platform.PublicApis;
 import net.yozmnews.platform.RequestLimited;
@@ -102,9 +103,9 @@ class OpenApiConfiguration {
 	/**
 	 * 운영자 경로 밖 화면용 API 연산의 거부 응답 — 처리기에 {@link PublicApi} 가 없으면 401(세션 없음), 변경 메서드면 공개 처리기여도
 	 * 403(CSRF), 공개도 {@link AllowedBeforePasswordChange} 도 아니면 403(비밀번호를 바꿔야 한다), 공개도 {@link AllowedWithoutLlmKey} 도
-	 * 아니면 403(LLM 키를 등록해야 한다), {@link RequestLimited} 가 있으면 429(요청이 너무 많다). 403 은 연산마다 하나라 까닭이 겹치면 한
-	 * 설명에 {@code  · } 로 이어 적는다. 처리기의 경로 · 메서드는 처리기 매핑에서 읽는다. docs/specs/platform.md §4 · platform-R6 ·
-	 * platform-R21 · platform-R25
+	 * 아니면 403(LLM 키를 등록해야 한다), {@link HumanChecked} 가 있으면 403(사람 확인 실패), {@link RequestLimited} 가 있으면 429(요청이
+	 * 너무 많다). 403 은 연산마다 하나라 까닭이 겹치면 한 설명에 {@code  · } 로 이어 적는다. 처리기의 경로 · 메서드는 처리기 매핑에서 읽는다.
+	 * docs/specs/platform.md §4 · platform-R6 · platform-R21 · platform-R25
 	 * @throws IllegalStateException 연산이 401 · 403 · 429 를 이미 가질 때(정본이 둘이 된다)
 	 */
 	@Bean
@@ -140,6 +141,9 @@ class OpenApiConfiguration {
 			}
 			if (!PublicApis.isPublic(handler) && !PublicApis.allowedWithoutLlmKey(handler)) {
 				denials.add("LLM 키를 등록해야 한다");
+			}
+			if (HandlerGuards.humanChecked(handler).isPresent()) {
+				denials.add("사람 확인에 실패했다(봇 차단을 켠 인스턴스)");
 			}
 			if (!denials.isEmpty()) {
 				reject(operation, path, "403", String.join(" · ", denials));

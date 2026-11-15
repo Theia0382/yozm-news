@@ -105,21 +105,23 @@ class SecurityConfiguration {
 	 * 세션 체인 — 운영자 경로 밖의 화면용 API. 세션의 사용자 ID 로 요청마다 계정과 비밀번호 강제 변경 여부를 읽고(user-R7), 공개 표시가
 	 * 없는 처리기는 세션 사용자를 요구하되 비밀번호를 바꿔야 하는 세션 사용자에게는 비밀번호 변경 전 허용 표시가 있는 처리기만, LLM 키가 없는
 	 * 세션 사용자에게는 키 없이 허용 표시가 있는 처리기만 열며(user-R5), 변경 요청은 CSRF 토큰을 요구한다(user-R10). 인가 뒤에는 요청 제한
-	 * 표시가 있는 처리기의 요청을 처리기 앞에서 센다(user-R40).
+	 * 표시가 있는 처리기의 요청을 처리기 앞에서 세고, 봇 차단 표시가 있으면 사람 확인 토큰을 본다(user-R40 · user-R41).
 	 */
 	@Bean
 	@Order(2)
 	SecurityFilterChain sessionChain(HttpSecurity http, SessionAccounts accounts,
 			@Qualifier("requestMappingHandlerMapping") RequestMappingHandlerMapping handlerMapping,
 			SessionSecurityContexts sessionSecurityContexts, CookieCsrfTokenRepository csrfTokenRepository,
-			LlmKeys llmKeys, RequestLimiter requestLimiter, ProblemResponses problems) throws Exception {
+			LlmKeys llmKeys, RequestLimiter requestLimiter, HumanCheck humanCheck, ProblemResponses problems)
+			throws Exception {
 		HandlerLookup handlers = new HandlerLookup(handlerMapping);
 		http.securityMatcher(ApiPaths.API)
 			.securityContext(context -> context.securityContextRepository(sessionSecurityContexts))
 			.sessionManagement(sessions -> sessions.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
 			.csrf(csrf -> csrf.spa().csrfTokenRepository(csrfTokenRepository))
 			.addFilterAfter(new SessionAccountFilter(accounts), SecurityContextHolderFilter.class)
-			.addFilterAfter(new RequestGuardFilter(handlers, requestLimiter, problems), AuthorizationFilter.class)
+			.addFilterAfter(new RequestGuardFilter(handlers, requestLimiter, humanCheck, problems),
+					AuthorizationFilter.class)
 			.authorizeHttpRequests(
 					requests -> requests.anyRequest().access(new PublicApiAuthorization(handlers, llmKeys)))
 			.exceptionHandling(exceptions -> exceptions

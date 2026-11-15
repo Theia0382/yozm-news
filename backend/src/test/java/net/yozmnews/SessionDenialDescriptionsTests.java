@@ -103,6 +103,19 @@ class SessionDenialDescriptionsTests {
 		assertThat(paths.at("/~1api~1test~1marks~1plain/post/responses").has("429")).isFalse();
 	}
 
+	@Test
+	void botCheckedHandlersAddTheHumanCheckReasonToTheirForbiddenResponse() throws Exception {
+		JsonNode paths = paths();
+		String human = "사람 확인에 실패했다(봇 차단을 켠 인스턴스)";
+
+		assertThat(description(paths, "/api/session", "post", "403")).isEqualTo(CSRF + " · " + human);
+		assertThat(description(paths, "/api/account-recoveries", "post", "403")).isEqualTo(CSRF + " · " + human);
+		assertThat(description(paths, "/api/sign-ups", "post", "403")).isEqualTo(CSRF + " · " + human);
+		// 대조 — 봇 차단 대상이 아닌 공개 처리기는 CSRF 까닭만
+		assertThat(description(paths, "/api/invitation-checks", "post", "403")).isEqualTo(CSRF);
+		assertThat(description(paths, "/api/invitation-acceptances", "post", "403")).isEqualTo(CSRF);
+	}
+
 	private JsonNode paths() throws Exception {
 		return JsonMapper.builder().build().readTree(body("/v3/api-docs")).path("paths");
 	}

@@ -10,6 +10,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import net.yozmnews.credential.LlmKeys;
 import net.yozmnews.platform.GuardedAction;
+import net.yozmnews.platform.HumanChecked;
 import net.yozmnews.platform.PublicApi;
 import net.yozmnews.platform.RequestLimited;
 import net.yozmnews.platform.WebRole;
@@ -63,6 +64,7 @@ class SessionController {
 
 	@PublicApi(reason = "로그인")
 	@RequestLimited(GuardedAction.SIGN_IN)
+	@HumanChecked(GuardedAction.SIGN_IN)
 	@PostMapping("/api/session")
 	SignInResponse signIn(@Valid @RequestBody SignInRequest body, HttpServletRequest request,
 			HttpServletResponse response) {

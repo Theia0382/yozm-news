@@ -48,6 +48,11 @@ final class ProblemTypes {
 
 	static final String RATE_LIMITED_TITLE = "요청이 너무 많다";
 
+	/** 봇 차단을 켠 인스턴스에서 사람 확인 토큰이 없거나 확인되지 않았다 — 403 */
+	static final URI HUMAN_CHECK_FAILED = URI.create("urn:yozmnews:problem:human-check-failed");
+
+	static final String HUMAN_CHECK_FAILED_TITLE = "사람 확인에 실패했다";
+
 	private ProblemTypes() {
 	}
 
