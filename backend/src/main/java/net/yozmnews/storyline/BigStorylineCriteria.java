@@ -20,7 +20,7 @@ public record BigStorylineCriteria(BigDecimal minIntensity) {
 	/** 보도 강도 하한의 상한 — 정본 */
 	public static final BigDecimal MAX_INTENSITY = new BigDecimal("9999.99");
 
-	/** 처음 값 — 정본. 측정 전 목표 */
+	/** 처음 값 — 정본. 평가 세트와 운영자의 날마다 미리보기 검수로 정했다 */
 	public static final BigStorylineCriteria DEFAULT = new BigStorylineCriteria(new BigDecimal("15.00"));
 
 	/**
