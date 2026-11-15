@@ -24,6 +24,7 @@ const ANONYMOUS: Me = {
   displayName: null,
   role: null,
   passwordChangeRequired: false,
+  llmKeyRequired: false,
 };
 
 const SIGNED_IN: Me = {
@@ -33,6 +34,7 @@ const SIGNED_IN: Me = {
   displayName: "앨리스",
   role: "USER",
   passwordChangeRequired: false,
+  llmKeyRequired: false,
 };
 
 function renderGuarded(
@@ -58,6 +60,10 @@ function renderGuarded(
         children: [
           { path: "/", element: <p>첫 화면</p> },
           { path: "/digest", element: <p>다이제스트</p> },
+          { path: "/keys", element: <p>키 화면</p> },
+          { path: "/settings", element: <p>설정 화면</p> },
+          { path: "/notices", element: <p>알림 화면</p> },
+          { path: "/password", element: <p>비밀번호 변경 화면</p> },
         ],
       },
       { path: "/login", element: <p>로그인 화면</p> },
@@ -102,6 +108,68 @@ describe("RequireSignIn", () => {
       "href",
       "/settings",
     );
+  });
+
+  it("LLM 키 링크를 머리줄에 둔다", async () => {
+    renderGuarded("/digest", () => json(SIGNED_IN));
+
+    expect(await screen.findByText("다이제스트")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "LLM 키" })).toHaveAttribute(
+      "href",
+      "/keys",
+    );
+  });
+
+  it.each(["/", "/digest", "/password"])(
+    "LLM 키가 없으면 %s 로 와도 키 화면으로 보낸다",
+    async (entry) => {
+      const { router } = renderGuarded(entry, () =>
+        json({ ...SIGNED_IN, llmKeyRequired: true }),
+      );
+
+      expect(await screen.findByText("키 화면")).toBeInTheDocument();
+      expect(router.state.location.pathname).toBe("/keys");
+      expect(screen.queryByText("다이제스트")).not.toBeInTheDocument();
+      expect(screen.queryByText("첫 화면")).not.toBeInTheDocument();
+    },
+  );
+
+  it.each([
+    ["/settings", "설정 화면"],
+    ["/notices", "알림 화면"],
+    ["/keys", "키 화면"],
+  ])(
+    "LLM 키가 없어도 %s 에는 가고 머리줄에 알림 · LLM 키 · 설정 링크를 둔다",
+    async (entry, text) => {
+      const { router } = renderGuarded(entry, () =>
+        json({ ...SIGNED_IN, llmKeyRequired: true }),
+      );
+
+      expect(await screen.findByText(text)).toBeInTheDocument();
+      expect(router.state.location.pathname).toBe(entry);
+      expect(screen.getByRole("link", { name: "알림" })).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: "LLM 키" })).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: "설정" })).toBeInTheDocument();
+    },
+  );
+
+  it("비밀번호를 바꿔야 하면 LLM 키가 없어도 비밀번호 변경 화면이 먼저다", async () => {
+    const { router } = renderGuarded("/keys", () =>
+      json({
+        ...SIGNED_IN,
+        passwordChangeRequired: true,
+        llmKeyRequired: true,
+      }),
+    );
+
+    expect(await screen.findByText("비밀번호 변경 화면")).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe("/password");
+    expect(
+      screen.queryByRole("link", { name: "LLM 키" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "설정" }),
+    ).not.toBeInTheDocument();
   });
 
   it("로그아웃하면 세션을 지우고 로그인 화면으로 가며 보호 화면을 다시 보이지 않는다", async () => {

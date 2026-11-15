@@ -9,12 +9,12 @@ import java.util.List;
 import java.util.Optional;
 
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.platform.UserId;
 import net.yozmnews.user.InvitationRevocationResult;
 import net.yozmnews.user.InvitationState;
 import net.yozmnews.user.InvitationView;
 import net.yozmnews.user.IssuedInvitation;
 import net.yozmnews.user.UnknownInvitationException;
-import net.yozmnews.user.UserId;
 import net.yozmnews.user.domain.account.Account;
 import net.yozmnews.user.domain.account.AccountRepository;
 import net.yozmnews.user.domain.account.AccountRole;

@@ -1,7 +1,7 @@
-package net.yozmnews.user;
+package net.yozmnews.platform;
 
 /**
- * 사용자 식별자 — docs/specs/user.md §3 · user-R6
+ * 사용자 식별자 — docs/specs/platform.md §3 · platform-R24
  */
 public record UserId(long value) {
 

@@ -4,7 +4,7 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.Optional;
 
-import net.yozmnews.user.UserId;
+import net.yozmnews.platform.UserId;
 import net.yozmnews.user.domain.recovery.RecoveryCodeRepository;
 import net.yozmnews.user.domain.secret.SecretDigest;
 import org.springframework.jdbc.core.simple.JdbcClient;

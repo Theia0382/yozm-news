@@ -11,10 +11,11 @@ import java.util.TreeSet;
 import java.util.function.Function;
 
 import net.yozmnews.platform.AllowedBeforePasswordChange;
+import net.yozmnews.platform.AllowedWithoutLlmKey;
 import net.yozmnews.platform.ApiPaths;
 import net.yozmnews.platform.PublicApi;
 import net.yozmnews.platform.PublicApis;
-import net.yozmnews.user.UserId;
+import net.yozmnews.platform.UserId;
 import org.springframework.core.DefaultParameterNameDiscoverer;
 import org.springframework.core.MethodParameter;
 import org.springframework.core.annotation.AnnotatedElementUtils;
@@ -89,6 +90,14 @@ public final class UserScopeRules {
 					}
 					if (blankReason(handler, AllowedBeforePasswordChange.class, AllowedBeforePasswordChange::reason)) {
 						violations.add(key + " — 비밀번호 변경 전 허용 표시의 이유가 비었다");
+					}
+				}
+				if (PublicApis.allowedWithoutLlmKey(handler)) {
+					if (isPublic) {
+						violations.add(key + " — 공개 처리기에 키 없이 허용 표시를 달았다");
+					}
+					if (blankReason(handler, AllowedWithoutLlmKey.class, AllowedWithoutLlmKey::reason)) {
+						violations.add(key + " — 키 없이 허용 표시의 이유가 비었다");
 					}
 				}
 				violations.addAll(userIdInputs(key, handler));

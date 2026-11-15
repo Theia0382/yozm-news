@@ -20,6 +20,16 @@ function section(name: string) {
 }
 
 describe("SettingsPage", () => {
+  it("고지 페이지로 가는 링크를 둔다", async () => {
+    renderSettings({});
+
+    expect(
+      await screen.findByRole("link", {
+        name: "저장하는 것과 LLM 공급자에게 보내는 것",
+      }),
+    ).toHaveAttribute("href", "/privacy");
+  });
+
   it("비밀번호를 바꾸면 다른 기기의 로그인이 끝났다고 알린다", async () => {
     const { server } = renderSettings({
       "PUT /api/account/password": () =>

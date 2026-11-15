@@ -45,6 +45,7 @@ function renderPage(handlers: Record<string, Handler> = {}) {
     {
       "GET /api/admin/sign-up-policy": () => json(CLOSED),
       "GET /api/admin/invitations": () => json({ invitations: [] }),
+      "GET /api/human-check": () => json({ provider: "OFF", siteKey: null }),
       ...handlers,
     },
   );
@@ -65,6 +66,19 @@ function bodies(
 }
 
 describe("AccountsPage", () => {
+  it("봇 차단을 켠 인스턴스면 공개 가입 옆에 켜졌다고 알린다", async () => {
+    renderPage({
+      "GET /api/human-check": () =>
+        json({ provider: "TURNSTILE", siteKey: "1x00000000000000000000AA" }),
+    });
+
+    expect(
+      await region("공개 가입").findByText(
+        /공개 가입에는 IP별 요청 제한이 걸리고, 봇 차단은 지금 켜져 있습니다\(Turnstile\)\./,
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("공개 가입의 지금 값과 이력을 보이고, 바꾸면 다시 읽는다", async () => {
     let status = CLOSED;
     const { server } = renderPage({
@@ -89,8 +103,8 @@ describe("AccountsPage", () => {
 
     expect(await screen.findByText("지금: 닫힘")).toBeInTheDocument();
     expect(
-      region("공개 가입").getByText(
-        /공개 가입에는 요청 제한 · 봇 차단이 없습니다/,
+      await region("공개 가입").findByText(
+        /공개 가입에는 IP별 요청 제한이 걸리고, 봇 차단은 지금 꺼져 있습니다 — 서버 설정 YOZMNEWS_HUMAN_CHECK_PROVIDER 로 켭니다\./,
       ),
     ).toBeInTheDocument();
     expect(

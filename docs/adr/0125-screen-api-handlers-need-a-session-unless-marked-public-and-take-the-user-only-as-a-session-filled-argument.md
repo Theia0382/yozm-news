@@ -37,3 +37,4 @@
 ## 후속 기록
 
 - 2026-11-13: 공개 표시와 같은 꼴의 변경 전 허용 표시 `@AllowedBeforePasswordChange` — [ADR-0146](0146-sessions-of-accounts-with-an-initial-password-open-only-password-change-status-and-sign-out-marked-by-a-platform-annotation.md) · [`platform` platform-R21](../specs/platform.md#화면용-api-경로와-공개-처리기)
+- 2026-11-14: 결정 절 "인자 타입 `UserId`" 의 모듈 — [ADR-0156](0156-user-id-is-a-platform-public-type.md) · [`platform` Spec](../specs/platform.md#userid)

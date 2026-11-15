@@ -29,6 +29,8 @@ COPY api/openapi.json api/openapi.json
 COPY docs/operations/sources.md docs/operations/sources.md
 # 테스트가 예시 원문을 검증하는 운영 안내서(backend/build.gradle.kts 의 tagSetsGuideFile)
 COPY docs/operations/tag-sets.md docs/operations/tag-sets.md
+# 테스트가 클라이언트 IP 헤더 · 신뢰 범위 결선을 대조하는 배포 proxy 설정(backend/build.gradle.kts 의 proxyCaddyfile)
+COPY frontend/proxy/Caddyfile frontend/proxy/Caddyfile
 COPY backend/src backend/src
 CMD ["backend/gradlew", "-p", "backend", "build", "--no-daemon", "--console=plain"]
 

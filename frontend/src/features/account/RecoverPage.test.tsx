@@ -1,8 +1,12 @@
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { RecoverPage } from "@/features/account/RecoverPage";
 import { json, type Handler } from "@/test/fakeServer";
+import {
+  installFakeTurnstile,
+  uninstallFakeTurnstile,
+} from "@/test/fakeTurnstile";
 import {
   ANONYMOUS_ME,
   bodiesOf,
@@ -14,7 +18,7 @@ const OLD_CODE = "ABCD-EFGH-JKMN-PQRS-TVWX-YZ01-2345-6789";
 
 const NEW_CODE = "ZZZZ-YYYY-XXXX-WWWW-VVVV-TTTT-SSSS-RRRR";
 
-function renderRecover(recover: Handler) {
+function renderRecover(recover: Handler, extra: Record<string, Handler> = {}) {
   let reset = false;
   return renderRoutes(
     [
@@ -30,6 +34,7 @@ function renderRecover(recover: Handler) {
         reset = body.result === "RESET";
         return response;
       },
+      ...extra,
     },
   );
 }
@@ -106,6 +111,53 @@ describe("RecoverPage", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "재설정 시도가 많아 잠시 막혔습니다. 2분 뒤에 다시 시도해 주세요.",
+    );
+  });
+});
+
+describe("RecoverPage 봇 차단 · 요청 제한", () => {
+  afterEach(() => uninstallFakeTurnstile());
+
+  it("켠 인스턴스는 재설정 위젯의 토큰을 헤더로 싣는다", async () => {
+    const turnstile = installFakeTurnstile();
+    const { server } = renderRecover(result("REJECTED"), {
+      "GET /api/human-check": () =>
+        json({ provider: "TURNSTILE", siteKey: "1x00000000000000000000AA" }),
+    });
+
+    await screen.findByText("사람 확인을 마치면 제출할 수 있습니다.");
+    expect(turnstile.rendered[0]?.action).toBe("account-recovery");
+    turnstile.solve("0.recovery-token");
+    await fill();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "이메일 또는 복구 코드가 맞지 않습니다.",
+    );
+    const recovery = server.requests.find(
+      (r) => r.path === "/api/account-recoveries",
+    );
+    expect(recovery?.headers.get("X-Human-Check")).toBe("0.recovery-token");
+  });
+
+  it("요청 제한에 걸리면 요청 제한 안내를 보인다", async () => {
+    renderRecover(
+      () =>
+        new Response(
+          JSON.stringify({ type: "urn:yozmnews:problem:rate-limited" }),
+          {
+            status: 429,
+            headers: {
+              "Content-Type": "application/problem+json",
+              "Retry-After": "3600",
+            },
+          },
+        ),
+    );
+
+    await fill();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "이 네트워크에서 요청이 너무 많아 잠시 막혔습니다. 60분 뒤에 다시 시도해 주세요.",
     );
   });
 });

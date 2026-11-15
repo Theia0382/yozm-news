@@ -9,9 +9,9 @@ import static org.mockito.Mockito.doThrow;
 import java.time.Instant;
 
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.platform.UserId;
 import net.yozmnews.user.AccountAdministration;
 import net.yozmnews.user.AccountCreationResult;
-import net.yozmnews.user.UserId;
 import net.yozmnews.user.domain.account.Account;
 import net.yozmnews.user.domain.account.AccountRepository;
 import net.yozmnews.user.domain.account.AccountRole;

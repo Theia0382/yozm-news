@@ -9,10 +9,21 @@ import { NARROW_WIDTH, PAGE_FRAME } from "@/shared/ui/widths";
 /** 첫 로그인의 비밀번호 변경 화면 */
 const PASSWORD_PATH = "/password";
 
+/** LLM 키 화면 */
+const KEYS_PATH = "/keys";
+
+/** LLM 키가 없어도 가는 화면 — 서버가 키 없이도 여는 처리기(키 · 계정 · 알림)를 쓰는 화면이다 */
+const OPEN_WITHOUT_KEY: readonly string[] = [
+  KEYS_PATH,
+  "/settings",
+  "/notices",
+];
+
 /**
  * 로그인한 사용자만 보는 화면의 틀 — 로그인하지 않았으면 로그인 화면으로 보내고(돌아올 주소를 next 로), 로그인했으면 머리줄에 알림 링크 ·
  * 설정 링크 · 이름 · 로그아웃을 둔다. 첫 로그인의 비밀번호 변경이 남았으면 어느 주소든 비밀번호 변경 화면으로 보내고, 머리줄에는 이름 ·
- * 로그아웃만 둔다 — 알림 · 설정은 그 상태에서 서버가 거부하는 경로다(docs/specs/user.md §4).
+ * 로그아웃만 둔다 — 알림 · 설정은 그 상태에서 서버가 거부하는 경로다(docs/specs/user.md §4). 그 다음으로, LLM 키가 없으면 키 · 설정 ·
+ * 알림 화면 밖의 주소를 키 화면으로 보낸다 — 그 밖의 화면이 쓰는 경로는 키가 없으면 서버가 거부한다.
  */
 export function RequireSignIn() {
   const me = useMe();
@@ -52,6 +63,13 @@ export function RequireSignIn() {
   if (mustChange && location.pathname !== PASSWORD_PATH) {
     return <Navigate to={PASSWORD_PATH} replace />;
   }
+  if (
+    !mustChange &&
+    me.data.llmKeyRequired &&
+    !OPEN_WITHOUT_KEY.includes(location.pathname)
+  ) {
+    return <Navigate to={KEYS_PATH} replace />;
+  }
 
   async function signOut() {
     setSignOutFailed(false);
@@ -79,6 +97,9 @@ export function RequireSignIn() {
         {!mustChange && (
           <>
             <NoticesLink />
+            <Link to={KEYS_PATH} className="underline">
+              LLM 키
+            </Link>
             <Link to="/settings" className="underline">
               설정
             </Link>

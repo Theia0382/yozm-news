@@ -24,3 +24,9 @@
 |---|---|
 | Google Gemini 포함 | 사용자 결정으로 v1 제외 |
 | OpenRouter 같은 중개 서비스 키 지원 | 한 키로 여러 모델을 쓸 수 있지만, 사용자의 프롬프트가 거치는 곳이 하나 더 생긴다. 이후 검토 |
+
+## 후속 기록
+
+- 2026-11-14: 결정 절 "두 공급자 모두 Spring AI 2.x 구현을 쓴다"의 쓰는 방법 — [ADR-0149](0149-llm-calls-use-spring-ai-2-without-the-starter-and-build-sdk-clients-with-explicit-address-key-and-log-level-and-close-them.md) · [llm Spec](../specs/llm.md#공급자-클라이언트) llm-R11
+- 2026-11-14: 결정 절 "운영자가 공급자별 허용 모델 목록을 관리"의 관리 방법 — [ADR-0153](0153-allowed-llm-models-come-from-a-bundled-file-that-an-operator-file-replaces-as-a-whole.md) · [llm Spec](../specs/llm.md#공급자와-허용-모델-목록) llm-R2 ~ R4
+- 2026-11-14: 결과 절 "공급자별 코드는 `llm` 모듈 밖으로 나가지 않는다"의 라이브러리 타입 — [ADR-0151](0151-spring-ai-and-sdk-types-stay-inside-llm-and-the-gateway-exposes-only-its-own-types.md) · [llm Spec](../specs/llm.md#공급자-클라이언트) llm-R15

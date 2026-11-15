@@ -1,6 +1,8 @@
 package net.yozmnews.platform;
 
 import java.io.ByteArrayOutputStream;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -9,14 +11,16 @@ import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Flow;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.jspecify.annotations.Nullable;
 
 /**
  * 상한까지 모으는 HTTP 응답 본문 수신자 — 외부 API 를 JDK {@code HttpClient} 로 부르는 어댑터가 함께 쓴다 · docs/specs/platform.md §3.
  * <p>
- * 상한을 넘으면 받기를 멈추고 넘김을 결과로 남긴다(입출력 오류와 섞지 않는다). 본문을 끝까지 받아야 완료되므로, 부르는 쪽이 이 수신자의 완료를
- * 마감으로 기다리면 마감이 본문 읽기까지 덮는다. 본문은 UTF-8 로 읽는다.
+ * 요청은 {@link #sendAsync} 로 보낸다. 상한을 넘으면 넘김을 결과로 남기고, 응답이 넘겨진 뒤에 받기를 멈춘다(구독 취소) — 넘김과 동시에
+ * 취소하면 JDK {@code HttpClient} 가 취소로 닫힌 연결을 입출력 오류로 응답에 먼저 알릴 수 있어, 넘김이 입출력 오류와 섞인다. 본문을 끝까지
+ * 받거나 넘겨야 완료되므로, 부르는 쪽이 응답을 마감으로 기다리면 마감이 본문 읽기까지 덮는다. 본문은 UTF-8 로 읽는다.
  */
 public final class CappedBody implements HttpResponse.BodySubscriber<CappedBody.Result> {
 
@@ -26,17 +30,55 @@ public final class CappedBody implements HttpResponse.BodySubscriber<CappedBody.
 
 	private final CompletableFuture<Result> result = new CompletableFuture<>();
 
-	private Flow.@Nullable Subscription subscription;
+	private volatile Flow.@Nullable Subscription subscription;
+
+	private volatile boolean overflowed;
 
 	/**
 	 * @param max 본문 상한(바이트)
 	 * @throws IllegalArgumentException 상한이 1 미만일 때
 	 */
-	public CappedBody(int max) {
+	CappedBody(int max) {
 		if (max < 1) {
 			throw new IllegalArgumentException("본문 상한은 1 이상이다: " + max);
 		}
 		this.max = max;
+	}
+
+	/**
+	 * 요청을 보내고 응답 본문을 상한까지 받는다 — 상한을 넘기면 응답이 {@link Result.Overflow} 로 넘겨진 뒤 받기를 멈춘다.
+	 * <p>
+	 * 돌려주는 미래는 {@code client} 의 것 그대로다 — 부르는 쪽이 마감을 넘겨 취소하면 요청이 끊긴다.
+	 * @param max 본문 상한(바이트)
+	 * @throws IllegalArgumentException 상한이 1 미만일 때
+	 */
+	public static CompletableFuture<HttpResponse<Result>> sendAsync(HttpClient client, HttpRequest request, int max) {
+		Objects.requireNonNull(client, "client");
+		Objects.requireNonNull(request, "request");
+		if (max < 1) {
+			throw new IllegalArgumentException("본문 상한은 1 이상이다: " + max);
+		}
+		AtomicReference<@Nullable CappedBody> receiving = new AtomicReference<>();
+		CompletableFuture<HttpResponse<Result>> response = client.sendAsync(request, info -> {
+			CappedBody body = new CappedBody(max);
+			receiving.set(body);
+			return body;
+		});
+		response.whenComplete((answer, thrown) -> {
+			CappedBody body = receiving.get();
+			if (body != null) {
+				body.stopIfOverflowed();
+			}
+		});
+		return response;
+	}
+
+	/** 상한을 넘겼으면 받기를 멈춘다 — 응답이 넘겨진 뒤에 부른다 */
+	void stopIfOverflowed() {
+		Flow.Subscription active = this.subscription;
+		if (this.overflowed && active != null) {
+			active.cancel();
+		}
 	}
 
 	@Override
@@ -57,8 +99,8 @@ public final class CappedBody implements HttpResponse.BodySubscriber<CappedBody.
 		}
 		for (ByteBuffer item : items) {
 			if (this.received.size() + item.remaining() > this.max) {
+				this.overflowed = true;
 				this.result.complete(new Result.Overflow());
-				Objects.requireNonNull(this.subscription, "subscription").cancel();
 				return;
 			}
 			byte[] bytes = new byte[item.remaining()];

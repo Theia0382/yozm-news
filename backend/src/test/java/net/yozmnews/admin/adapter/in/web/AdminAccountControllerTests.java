@@ -7,10 +7,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import net.yozmnews.platform.UserId;
 import net.yozmnews.user.AccountCreationResult;
 import net.yozmnews.user.InitialPasswordResetResult;
 import net.yozmnews.user.PasswordProblem;
-import net.yozmnews.user.UserId;
 import net.yozmnews.user.application.WebSliceSecurity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

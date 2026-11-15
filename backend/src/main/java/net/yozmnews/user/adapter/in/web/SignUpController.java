@@ -7,7 +7,10 @@ import java.util.Objects;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import net.yozmnews.platform.GuardedAction;
+import net.yozmnews.platform.HumanChecked;
 import net.yozmnews.platform.PublicApi;
+import net.yozmnews.platform.RequestLimited;
 import net.yozmnews.platform.WebRole;
 import net.yozmnews.user.SignUpPolicyAdministration;
 import net.yozmnews.user.application.InvitationService;
@@ -60,6 +63,8 @@ class SignUpController {
 	}
 
 	@PublicApi(reason = "공개 가입 — 계정이 없는 사람이 쓴다")
+	@RequestLimited(GuardedAction.SIGN_UP)
+	@HumanChecked(GuardedAction.SIGN_UP)
 	@PostMapping("/api/sign-ups")
 	SignUpResponse signUp(@Valid @RequestBody SignUpRequest body, HttpServletRequest request,
 			HttpServletResponse response) {
@@ -70,6 +75,7 @@ class SignUpController {
 	}
 
 	@PublicApi(reason = "초대 링크를 연 사람이 가입 칸을 볼지 정한다")
+	@RequestLimited(GuardedAction.INVITATION_CHECK)
 	@PostMapping("/api/invitation-checks")
 	InvitationCheckResponse checkInvitation(@Valid @RequestBody InvitationCheckRequest body) {
 		return new InvitationCheckResponse(
@@ -77,6 +83,7 @@ class SignUpController {
 	}
 
 	@PublicApi(reason = "초대 가입 — 계정이 없는 사람이 쓴다")
+	@RequestLimited(GuardedAction.INVITATION_ACCEPTANCE)
 	@PostMapping("/api/invitation-acceptances")
 	SignUpResponse acceptInvitation(@Valid @RequestBody InvitationAcceptanceRequest body, HttpServletRequest request,
 			HttpServletResponse response) {

@@ -32,3 +32,7 @@
 | `platform` 이 모든 체인을 갖고 `user` 는 Spring Security 타입의 빈(인증 provider · 공개 경로 매처 등)으로 끼운다 | 계정 지식이 컴파일러가 잡지 않는 프레임워크 타입 결선으로 넘어가고, 그 이음매가 운영자 세션 전환까지 계속 는다. 운영자 토큰이 임시 장치라 "계정과 무관한 것을 옮긴다"는 근거가 약하다(사용자 결정) |
 | 세션 체인만 `user` 가 내고 운영자 · 기본 체인은 `platform` 에 둔다 | 체인 순서가 모듈 사이 계약이 되고, 운영자 경로를 세션으로 바꿀 때 같은 세션 · CSRF 정책이 두 모듈에 필요하다 |
 | `platform` 이 공개 인터페이스(세션 사용자 확인 등)를 선언하고 `user` 가 구현한다 | 외부 의존성이 아닌 곳에 구현이 하나뿐인 포트 꼴 인터페이스가 생긴다([ADR-0013](0013-architecture-patterns.md)) |
+
+## 후속 기록
+
+- 2026-11-15: 결정 절 "보안 구성 전체를 `user` 모듈이 갖는다"의 범위(요청 방어) — [ADR-0169](0169-request-limits-and-bot-checks-are-platform-marks-applied-by-the-user-session-chain-before-the-handler.md) · [`user` "요청 방어"](../specs/user.md#요청-방어) user-R40

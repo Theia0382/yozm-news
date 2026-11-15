@@ -6,9 +6,9 @@ import java.time.Instant;
 import java.util.List;
 
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.platform.UserId;
 import net.yozmnews.source.FeedId;
 import net.yozmnews.source.FeedStatus;
-import net.yozmnews.user.UserId;
 import net.yozmnews.user.domain.account.Account;
 import net.yozmnews.user.domain.account.AccountRepository;
 import net.yozmnews.user.domain.account.AccountRole;

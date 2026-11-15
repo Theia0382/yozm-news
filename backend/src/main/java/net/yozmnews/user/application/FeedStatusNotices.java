@@ -7,14 +7,15 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import net.yozmnews.platform.UserId;
 import net.yozmnews.source.FeedId;
 import net.yozmnews.source.FeedLabel;
 import net.yozmnews.source.FeedLabels;
 import net.yozmnews.source.FeedStatusTransition;
 import net.yozmnews.source.FeedStatusesChanged;
-import net.yozmnews.user.UserId;
 import net.yozmnews.user.domain.notice.FeedStatusContent;
 import net.yozmnews.user.domain.notice.FeedStatusReceipt;
+import net.yozmnews.user.domain.notice.KeyInvalidatedContent;
 import net.yozmnews.user.domain.notice.Notice;
 import net.yozmnews.user.domain.notice.NoticeKind;
 import net.yozmnews.user.domain.notice.NoticeRecipients;
@@ -72,6 +73,7 @@ public class FeedStatusNotices {
 					case FeedStatusContent feedStatus -> feedStatus;
 					// 잠근 것은 피드 상태 종류의 알림이다
 					case PasswordChangedContent other -> throw new IllegalStateException("피드 상태 알림이 아니다");
+					case KeyInvalidatedContent other -> throw new IllegalStateException("피드 상태 알림이 아니다");
 				};
 				this.notices.revise(unread.get().id(), content.merge(changed, labels), now);
 			}

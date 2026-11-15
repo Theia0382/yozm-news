@@ -1,0 +1,32 @@
+# 기본 허용 모델 목록 — 형식과 규칙은 docs/specs/llm.md §5 "공급자와 허용 모델 목록"(llm-R2 ~ R4).
+# 운영자가 자기 파일을 가리키면 이 목록 대신 그 파일이 목록 전체가 된다 — docs/operations/configuration.md "허용 모델 목록".
+# input-token-budget 은 측정 전의 잠정값이다 — 모델의 문맥 한도가 아니라 다이제스트 한 번의 입력 상한이다(llm-R4).
+providers:
+  openai:
+    models:
+      - id: gpt-6-astra
+        input-token-budget: 32000
+        structured-output: true
+      - id: gpt-6.1-sol
+        input-token-budget: 32000
+        structured-output: true
+      - id: gpt-6.1-terra
+        input-token-budget: 32000
+        structured-output: true
+      - id: gpt-6-luna
+        input-token-budget: 32000
+        structured-output: true
+  anthropic:
+    models:
+      - id: claude-fable-5-2
+        input-token-budget: 32000
+        structured-output: true
+      - id: claude-opus-5-5
+        input-token-budget: 32000
+        structured-output: true
+      - id: claude-sonnet-5-5
+        input-token-budget: 32000
+        structured-output: true
+      - id: claude-haiku-5-5
+        input-token-budget: 32000
+        structured-output: true

@@ -12,12 +12,15 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import net.yozmnews.LlmKeyRows;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.UserScopeRules;
 import net.yozmnews.UserScopedEndpoints;
 import net.yozmnews.YozmnewsApplication;
 import net.yozmnews.platform.AllowedBeforePasswordChange;
+import net.yozmnews.platform.AllowedWithoutLlmKey;
 import net.yozmnews.platform.PublicApi;
+import net.yozmnews.platform.UserId;
 import net.yozmnews.user.application.PasswordHashing;
 import net.yozmnews.user.domain.account.AccountRepository;
 import net.yozmnews.user.domain.credential.PasswordCredentialRepository;
@@ -28,6 +31,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -67,6 +71,9 @@ class UserScopeFixtureTests {
 	PasswordHashing hashing;
 
 	@Autowired
+	JdbcClient jdbc;
+
+	@Autowired
 	@Qualifier("requestMappingHandlerMapping")
 	RequestMappingHandlerMapping mapping;
 
@@ -75,6 +82,9 @@ class UserScopeFixtureTests {
 		SignedInUsers users = new SignedInUsers(this.mockMvc, this.accounts, this.credentials, this.hashing);
 		SignedInUsers.SignedInUser a = users.signIn("isolation-a@example.com");
 		SignedInUsers.SignedInUser b = users.signIn("isolation-b@example.com");
+		// 표시 없는 처리기는 키가 있는 사용자로 부른다 — 키가 없으면 격리와 무관하게 키 관문이 막는다
+		LlmKeyRows.give(this.jdbc, a.id().value());
+		LlmKeyRows.give(this.jdbc, b.id().value());
 
 		this.mockMvc
 			.perform(post("/api/test/notes").with(a).contentType(MediaType.APPLICATION_JSON).content("""
@@ -94,6 +104,7 @@ class UserScopeFixtureTests {
 		registry.put("GET /api/test/notes", UserScopeFixtureTests.class);
 		registry.put("POST /api/test/notes", UserScopeFixtureTests.class);
 		registry.put("GET /api/test/blank-before-change", UserScopeFixtureTests.class);
+		registry.put("GET /api/test/blank-without-key", UserScopeFixtureTests.class);
 		registry.put("GET /api/test/gone", UserScopeFixtureTests.class);
 		return Map.copyOf(registry);
 	}
@@ -105,7 +116,8 @@ class UserScopeFixtureTests {
 		assertThat(verdict.endpoints()).contains("GET /api/test/notes", "POST /api/test/notes",
 				"GET /api/test/careless/{userId}", "POST /api/test/careless", "GET /api/test/careless-param",
 				"GET /api/test/careless-query", "GET /api/test/careless-model", "GET /api/test/blank",
-				"GET /api/test/blank-before-change", "GET /api/test/public-before-change");
+				"GET /api/test/blank-before-change", "GET /api/test/public-before-change",
+				"GET /api/test/blank-without-key", "GET /api/test/public-without-key");
 		assertThat(verdict.violations()).containsExactlyInAnyOrder(
 				"GET /api/test/careless/{userId} — 공개 표시와 격리 시험 등록 가운데 꼭 하나가 있어야 한다(공개 false · 등록 false)",
 				"GET /api/test/careless/{userId} 의 인자 0 — 요청에서 이름 userId 를 받는다",
@@ -120,6 +132,8 @@ class UserScopeFixtureTests {
 				"GET /api/test/blank — 공개 표시의 이유가 비었다",
 				"GET /api/test/blank-before-change — 비밀번호 변경 전 허용 표시의 이유가 비었다",
 				"GET /api/test/public-before-change — 공개 처리기에 비밀번호 변경 전 허용 표시를 달았다",
+				"GET /api/test/blank-without-key — 키 없이 허용 표시의 이유가 비었다",
+				"GET /api/test/public-without-key — 공개 처리기에 키 없이 허용 표시를 달았다",
 				"GET /api/test/gone — 등록했지만 그런 처리기가 없다(낡은 등록)");
 	}
 
@@ -188,6 +202,19 @@ class UserScopeFixtureTests {
 		@AllowedBeforePasswordChange(reason = "시험 — 공개 처리기에는 달지 않는다")
 		@GetMapping("/api/test/public-before-change")
 		String publicBeforeChange() {
+			return "public";
+		}
+
+		@AllowedWithoutLlmKey(reason = " ")
+		@GetMapping("/api/test/blank-without-key")
+		String blankWithoutKey(UserId user) {
+			return "blank";
+		}
+
+		@PublicApi(reason = "시험 — 공개 처리기")
+		@AllowedWithoutLlmKey(reason = "시험 — 공개 처리기에는 달지 않는다")
+		@GetMapping("/api/test/public-without-key")
+		String publicWithoutKey() {
 			return "public";
 		}
 

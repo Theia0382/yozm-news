@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.platform.UserId;
 import net.yozmnews.source.FeedId;
 import net.yozmnews.source.FeedLabels;
 import net.yozmnews.source.FeedStatus;
@@ -17,7 +18,6 @@ import net.yozmnews.source.FeedStatusesChanged;
 import net.yozmnews.source.SourceAdministration;
 import net.yozmnews.source.SourceId;
 import net.yozmnews.source.SourceRegistrationResult;
-import net.yozmnews.user.UserId;
 import net.yozmnews.user.domain.account.Account;
 import net.yozmnews.user.domain.account.AccountRepository;
 import net.yozmnews.user.domain.account.AccountRole;

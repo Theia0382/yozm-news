@@ -10,13 +10,13 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import net.yozmnews.platform.UserId;
 import net.yozmnews.user.InvitationAdministration;
 import net.yozmnews.user.InvitationRevocationResult;
 import net.yozmnews.user.InvitationState;
 import net.yozmnews.user.InvitationView;
 import net.yozmnews.user.IssuedInvitation;
 import net.yozmnews.user.UnknownInvitationException;
-import net.yozmnews.user.UserId;
 import net.yozmnews.user.domain.account.AccountRepository;
 import net.yozmnews.user.domain.invitation.Invitation;
 import net.yozmnews.user.domain.invitation.InvitationPolicy;

@@ -2,7 +2,7 @@ package net.yozmnews.user.application;
 
 import java.util.Objects;
 
-import net.yozmnews.user.UserId;
+import net.yozmnews.platform.UserId;
 import org.jspecify.annotations.Nullable;
 import org.springframework.session.jdbc.JdbcIndexedSessionRepository;
 import org.springframework.stereotype.Component;

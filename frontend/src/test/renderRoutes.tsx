@@ -17,6 +17,7 @@ export const ANONYMOUS_ME: Me = {
   displayName: null,
   role: null,
   passwordChangeRequired: false,
+  llmKeyRequired: false,
 };
 
 export const SIGNED_IN_ME: Me = {
@@ -26,6 +27,7 @@ export const SIGNED_IN_ME: Me = {
   displayName: "앨리스",
   role: "USER",
   passwordChangeRequired: false,
+  llmKeyRequired: false,
 };
 
 export function renderRoutes(

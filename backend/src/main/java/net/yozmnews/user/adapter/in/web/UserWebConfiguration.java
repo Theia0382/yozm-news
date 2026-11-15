@@ -2,8 +2,8 @@ package net.yozmnews.user.adapter.in.web;
 
 import java.util.List;
 
+import net.yozmnews.platform.UserId;
 import net.yozmnews.platform.WebRole;
-import net.yozmnews.user.UserId;
 import org.springdoc.core.utils.SpringDocUtils;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;

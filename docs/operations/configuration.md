@@ -171,9 +171,15 @@
 |---|---|---|---|---|
 | `PROXY_HOST_ADDRESS` | 아니오 | `proxy` 의 호스트 공개 주소 | `0.0.0.0` | proxy 를 공개할 호스트 주소 |
 | `PROXY_HOST_PORT` | 아니오 | `proxy` 의 호스트 공개 포트 | `8080` | proxy 를 공개할 호스트 포트 |
+| `YOZMNEWS_TRUSTED_PROXIES` | 아니오 | `proxy`(Caddy `trusted_proxies`) | `172.18.0.0/16` · `10.0.0.0/8 192.168.10.0/24` | 클라이언트 IP 를 믿을 앞단의 범위(CIDR, 공백으로 여럿) — 줄이 없으면 사설 대역(사설 IPv4 · IPv6 과 루프백), **값을 비우면 아무것도 믿지 않는다** |
+| `YOZMNEWS_CLIENT_IP_HEADERS` | 아니오 | `proxy`(Caddy `client_ip_headers`) | `CF-Connecting-IP X-Forwarded-For` | 신뢰한 앞단의 요청에서 클라이언트 IP 를 읽을 헤더(공백으로 여럿, 앞의 것부터 — 값이 있는 첫 헤더) — 줄이 없으면 `X-Forwarded-For` |
 
 - 기본은 이 호스트의 루프백에만 공개한다(기본 주소 · 포트는 `deploy/compose.yaml`). Tunnel 없이 proxy 포트를 직접 공개할 때만 바꾼다
-- `app` · `postgres` 는 어떤 설정으로도 호스트에 공개되지 않는다
+- `app` · `postgres` 는 어떤 설정으로도 호스트에 공개되지 않는다 — 앱은 proxy 가 넘긴 클라이언트 IP 헤더를 믿으므로 앱을 직접 공개하지 않는다
+- **클라이언트 IP** — 요청 제한은 클라이언트 IP 로 센다([security.md "악용 방지"](../security.md#악용-방지)). proxy 는 신뢰 범위 안의 연결에서 온 요청만 헤더의 IP 를 읽고, 헤더를 오른쪽부터 읽어 신뢰 범위의 주소를 건너뛴 처음 주소를 클라이언트 IP 로 정한다(클라이언트가 왼쪽에 적은 값은 믿지 않는다). 신뢰 범위 밖의 연결이면 그 연결의 주소다. 정한 IP 는 앱으로 넘길 때 `X-Real-IP` 에 덮어쓴다
+- 같은 호스트의 리버스 프록시 · Cloudflare Tunnel(`cloudflared`)처럼 앞단이 사설 주소로 proxy 에 붙는 구성은 줄을 두지 않아도 된다. 앞단이 다른 주소 대역에서 붙으면 그 대역을 적는다
+- **앞단 없이 proxy 포트를 직접 공개**하면 클라이언트가 보낸 헤더를 믿지 않도록 범위를 비운다(`YOZMNEWS_TRUSTED_PROXIES=`) — 그대로 두면 사설 주소에서 붙는 클라이언트(같은 LAN, 원래 주소를 지우는 포트 전달 뒤의 클라이언트)가 헤더로 주소를 바꿔 요청 제한을 비켜 갈 수 있다
+- 반대로 **앞단 뒤인데 범위를 비우면** 모든 사용자가 앞단 주소 하나로 세여 요청 제한의 한도를 함께 쓴다 — 한 사람이 한도를 넘기면 모두가 막힌다. `.env.example` 의 예시 줄을 값 없이 주석만 풀지 않는다
 
 ## 계정과 고지
 
@@ -185,8 +191,74 @@
 - 쓰는 운영자 계정이 없을 때만 쓴다. 두 변수를 함께 준다 — 운영자가 없는데 하나만 있거나, 이메일이 아니거나, 비밀번호가 8 ~ 128자가 아니거나, 이미 있는 계정의 이메일이면 앱이 뜨지 않고 기동 로그가 그 변수 이름과 까닭을 말한다. 절차는 [배포 — 첫 운영자](deployment.md#첫-운영자)
 - 두 변수가 없고 운영자도 없으면 앱은 뜨고 "운영자 계정이 없다" 경고를 남긴다. 운영 기능은 운영자 토큰으로 쓴다
 - 운영자 계정이 생긴 뒤에는 두 변수를 지운다. 남겨 두면 앱이 뜰 때마다 경고한다(값이 틀려도 경고만 한다)
-- 공개 가입은 환경 변수가 아니라 운영자 화면(`/admin/accounts`)에서 켜고 끈다. 기본은 닫혀 있다. 공개 가입에는 아직 가입 요청 제한 · 봇 차단이 없다 — 누구나 가입할 수 있는 인스턴스로 열기 전에 이 상태를 고려한다([security.md](../security.md#가입))
+- 공개 가입은 환경 변수가 아니라 운영자 화면(`/admin/accounts`)에서 켜고 끈다. 기본은 닫혀 있다. 공개 가입에는 IP별 요청 제한이 늘 걸리고, 봇 차단은 [봇 차단](#봇-차단) 설정을 따른다 — 누구나 가입할 수 있는 인스턴스로 열면 봇 차단을 켜는 것을 고려한다([security.md](../security.md#가입))
 - **(미구현)** 개인정보처리방침 · 이용약관 주소 — 운영자가 문서를 둘 때만 적는다. 적으면 가입 · 키 등록 화면과 바닥글에 링크가 나오고, 비우면 링크가 없다. 설정 이름은 고지 링크를 만들 때 정한다([security.md](../security.md#개인정보))
+
+## 봇 차단
+
+| 변수 | 필수 | 쓰는 곳 | 값 예시 | 바꾸는 것 |
+|---|---|---|---|---|
+| `YOZMNEWS_HUMAN_CHECK_PROVIDER` | 아니오 | `app` → `yozmnews.human-check.provider` | `turnstile` | 봇 차단 공급자 — `off`(기본) · `turnstile` — [user Spec §7](../specs/user.md#7-설정) |
+| `YOZMNEWS_HUMAN_CHECK_TURNSTILE_SITE_KEY` | `turnstile` 이면 예 | `app` → `yozmnews.human-check.turnstile.site-key` | Cloudflare 대시보드의 사이트 키 | 화면의 Turnstile 위젯이 쓰는 사이트 키(공개 값) |
+| `YOZMNEWS_HUMAN_CHECK_TURNSTILE_SECRET_KEY` | `turnstile` 이면 예 | `app` → `yozmnews.human-check.turnstile.secret-key` | Cloudflare 대시보드의 비밀 키 | 서버가 토큰을 확인할 때 보내는 비밀 키 — [비밀 값](#비밀-값) |
+
+- 줄이 없으면 봇 차단을 끈다 — 로그인 · 복구 코드 사용 · 공개 가입에는 요청 제한만 걸린다([security.md "악용 방지"](../security.md#악용-방지))
+- 켜려면 Cloudflare 대시보드의 Turnstile 에서 위젯을 만들고(호스트 이름에 인스턴스 주소), 그 사이트 키 · 비밀 키를 적는다. Cloudflare 앞단(Tunnel)을 쓰지 않는 인스턴스도 켤 수 있다 — 화면의 브라우저와 앱이 Cloudflare 에 직접 연결한다
+- `turnstile` 인데 사이트 키나 비밀 키가 없거나, 공급자가 `off` · `turnstile` 이 아니면 앱이 뜨지 않고 기동 로그가 변수 이름을 말한다
+- 켜면 로그인 · 복구 · 가입 화면에 사람 확인 위젯이 나오고, 확인을 마쳐야 제출할 수 있다. 앱이 Cloudflare 에 닿지 못하면 경고 로그를 남기고 확인 없이 통과시킨다. 비밀 키가 틀리면 모든 확인이 거부되고 오류 로그가 비밀 키 변수 이름을 말한다
+- 브라우저가 Cloudflare 에서 위젯 스크립트를 받지 못하면(그 네트워크가 Cloudflare 를 막으면) 그 화면은 제출할 수 없다
+- 시험에는 Cloudflare 의 공식 시험 키를 쓴다 — 사이트 키 `1x00000000000000000000AA` · 비밀 키 `1x0000000000000000000000000000000AA` 는 늘 통과, 비밀 키 `2x0000000000000000000000000000000AA` 는 늘 거부한다
+- 켜면 고지 페이지(`/privacy`)가 봇 차단 서비스로 가는 것을 보인다([security.md "개인정보"](../security.md#개인정보))
+
+## 허용 모델 목록
+
+| 변수 | 필수 | 쓰는 곳 | 값 예시 | 바꾸는 것 |
+|---|---|---|---|---|
+| `YOZMNEWS_LLM_MODELS_FILE` | 아니오 | `app` → `yozmnews.llm.models-file` | `/etc/yozmnews/llm-models.yaml` | 사용자가 고를 수 있는 LLM 모델의 목록 파일 — 없으면 앱에 든 기본 목록 · [llm Spec §7](../specs/llm.md#7-설정) |
+
+- 사용자는 자기 LLM 키(OpenAI · Anthropic)로 쓸 모델을 이 목록에서 고른다. 앱에는 기본 목록이 들어 있고, 소프트웨어를 올리면 기본 목록도 함께 바뀐다. 목록을 바꾸지 않을 운영자는 할 일이 없다
+- 목록을 바꾸려면 파일을 만들어 배포 디렉터리의 `deploy/config/` 에 두고(예: `deploy/config/llm-models.yaml`), 이 변수에 컨테이너 안 경로 `/etc/yozmnews/llm-models.yaml` 을 적는다 — 배포 구성이 `deploy/config/` 를 `app` 의 `/etc/yozmnews` 에 읽기 전용으로 붙인다. 앱은 root 가 아닌 사용자로 돌므로 파일은 누구나 읽을 수 있어야 한다(`chmod 644`)
+- 파일이 목록 전체다 — 기본 목록과 합치지 않는다. 기본 목록의 모델을 남기려면 파일에 함께 적는다. 운영자 파일을 쓰는 동안에는 소프트웨어가 올라가도 새 모델이 저절로 더해지지 않는다
+
+  ```yaml
+  providers:
+    openai:
+      models:
+        - id: gpt-6-astra
+          input-token-budget: 32000
+          structured-output: true
+    anthropic:
+      models:
+        - id: claude-sonnet-5-5
+          input-token-budget: 32000
+          structured-output: true
+  ```
+
+  - `providers` 아래는 `openai` · `anthropic` 이다. 공급자를 빼거나 `models: []` 로 두면 그 공급자의 모델을 고를 수 없다. 전체 모델은 하나 이상이어야 한다
+  - `id` 는 공급자의 모델 ID, `input-token-budget` 은 다이제스트 한 번에 그 모델로 보내는 입력의 상한(토큰 — 1 ~ 10,000,000), `structured-output` 은 그 모델이 JSON 스키마 강제 출력을 지원하는지다. 셋 다 적는다. 지원 여부는 공급자 문서로 확인한다
+  - 기본 목록의 예산은 측정 전의 잠정값이다
+- 파일은 앱이 뜰 때 한 번 읽는다 — 고친 뒤 앱을 다시 띄운다. 변수가 가리키는 파일이 없거나 형식이 틀리면 앱이 뜨지 않고 기동 로그가 변수 이름과 문제의 줄 · 까닭을 말한다. 기본 목록으로 떨어지지 않는다
+- 값을 비운 줄(`YOZMNEWS_LLM_MODELS_FILE=`)은 빈 값이 그대로 넘어가 앱이 뜨지 않는다. 쓰지 않을 때는 줄을 지우거나 주석으로 둔다
+- 사용자 키와 프롬프트가 가는 공급자 주소는 바꿀 수 없다 — 앱이 공급자(`api.openai.com` · `api.anthropic.com`)로 직접 보낸다([배포 — 공개 경로와 외부 서비스](deployment.md#공개-경로와-외부-서비스))
+
+## LLM 키 암호화
+
+사용자가 등록한 LLM 키는 암호화해 DB 에 둔다. 키마다의 암호화 키(DEK)를 감싸는 키(KEK)를 운영자가 파일로 준다 — 규칙은 [credential Spec](../specs/credential.md#kek) credential-R5 ~ R7 에 있다.
+
+| 변수 | 필수 | 쓰는 곳 | 값 예시 | 바꾸는 것 |
+|---|---|---|---|---|
+| `YOZMNEWS_CREDENTIAL_KEK_FILE` | 아니오 | `app` → `yozmnews.credential.kek-file` | `/etc/yozmnews/kek` | KEK 파일의 컨테이너 안 경로. 줄이 없으면 배포 구성이 `/etc/yozmnews/kek`(호스트의 `deploy/config/kek`)를 넘긴다 |
+
+- **파일은 필수다.** 변수는 경로를 바꿀 때만 적지만, 그 경로의 파일이 없으면 앱이 뜨지 않는다. 기본 경로를 쓰면 `deploy/config/kek` 를 만든다
+
+  ```sh
+  printf '1:%s\n' "$(openssl rand -base64 32)" > deploy/config/kek
+  ```
+- 파일은 한 줄에 `버전:값` 하나다 — 버전은 1 이상의 정수(겹치지 않게), 값은 32바이트를 표준 Base64 로 적은 것이다. 빈 줄과 `#` 로 시작하는 줄은 건너뛴다. 새 키는 가장 큰 버전으로 감싼다
+- 파일이 없거나 읽을 수 없거나 형식이 틀리면 앱이 뜨지 않고, 기동 로그가 변수 이름 · 경로 · 문제의 줄 번호와 까닭을 말한다(값은 찍지 않는다). 저장된 키가 가리키는 버전의 줄이 파일에 없어도 뜨지 않는다 — 로그가 그 버전과 키의 수를 말한다
+- `app` 은 사용자 `65534` 로 돈다. 파일은 그 사용자가 읽을 수 있어야 한다 — 호스트의 다른 계정에게서 가리려면 `deploy/config/` 디렉터리의 권한으로 막는다
+- 값을 비운 줄(`YOZMNEWS_CREDENTIAL_KEK_FILE=`)은 기본 경로가 된다
+- 만들기 · 백업 · 교체의 절차는 [배포 — LLM 키 암호화 키(KEK)](deployment.md#llm-키-암호화-키kek)에 있다
 
 ## Compose
 
@@ -198,11 +270,12 @@
 
 ## 비밀 값
 
-- 지금 배포 구성의 비밀 값은 `POSTGRES_PASSWORD`, [운영자 토큰](#운영자)(`YOZMNEWS_ADMIN_TOKEN`), [첫 운영자 초기 비밀번호](#계정과-고지)(`YOZMNEWS_FIRST_ADMIN_PASSWORD` — 계정을 만든 뒤 지운다), [Jev API 키](#공유-평가)(`YOZMNEWS_JEV_API_KEY`), 외부 임베딩 방식을 쓸 때의 [임베딩 API 키](#임베딩)(`YOZMNEWS_EMBEDDING_OPENAI_COMPATIBLE_API_KEY`)다
-- **(미구현)** 봇 차단(Turnstile) secret, Tunnel 토큰, BYOK 키 암호화용 KEK
+- 지금 배포 구성의 비밀 값은 `POSTGRES_PASSWORD`, [운영자 토큰](#운영자)(`YOZMNEWS_ADMIN_TOKEN`), [첫 운영자 초기 비밀번호](#계정과-고지)(`YOZMNEWS_FIRST_ADMIN_PASSWORD` — 계정을 만든 뒤 지운다), [Jev API 키](#공유-평가)(`YOZMNEWS_JEV_API_KEY`), 외부 임베딩 방식을 쓸 때의 [임베딩 API 키](#임베딩)(`YOZMNEWS_EMBEDDING_OPENAI_COMPATIBLE_API_KEY`), 봇 차단을 켤 때의 [Turnstile 비밀 키](#봇-차단)(`YOZMNEWS_HUMAN_CHECK_TURNSTILE_SECRET_KEY`)다
+- [LLM 키 암호화](#llm-키-암호화)의 KEK 는 환경 파일이 아니라 설정 디렉터리의 파일(`deploy/config/kek`)에 둔다
+- **(미구현)** Tunnel 토큰
 - 비밀 값은 호스트의 환경 파일(`deploy/.env`)에 두고 저장소에 커밋하지 않는다
 - **(미구현)** 비밀 값을 Docker secrets 로도 받는다
-- **(미구현)** KEK 는 다른 비밀 값과 **별도 파일**로 두고 DB 백업에 넣지 않는다. 버전을 붙여 교체할 수 있게 하고, DB 백업과 다른 위치에 따로 백업한다. KEK 를 잃으면 저장된 사용자 키를 복호화할 수 없다 — 사용자가 키를 다시 등록하면 되므로 치명적이지는 않다. 키 암호화 구조와 KEK 교체 절차는 [security.md](../security.md)
+- KEK 파일은 DB 백업에 넣지 않고 DB 백업과 다른 위치에 따로 백업한다. KEK 를 잃으면 저장된 사용자 키를 복호화할 수 없다 — 사용자가 키를 다시 등록하면 되므로 치명적이지는 않다. 키 암호화 구조는 [security.md](../security.md#byok-키-보관)에 있다
 
 ## 데이터 보존
 

@@ -5,8 +5,8 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
 
+import net.yozmnews.platform.UserId;
 import net.yozmnews.user.PasswordProblem;
-import net.yozmnews.user.UserId;
 import net.yozmnews.user.domain.credential.PasswordCredential;
 import net.yozmnews.user.domain.credential.PasswordCredentialRepository;
 import net.yozmnews.user.domain.credential.PasswordPolicy;

@@ -545,7 +545,7 @@ sequenceDiagram
 - `JevRequest` — Jev 요청 본문의 정본. 질문 이름은 태그 종류 접두에 키를 붙인다 — 주제 `topic.{전체 키}`, 지역 `region.{키}`, 형식 `format`, 중요도 `importance`. 질문 문장은 `instructions`, 형식 선택지는 질문 묶음 순서의 `criteria`(키 → 설명), 중요도는 수준 순의 `criteria`(설명 배열)다. state 문자열(§4 나가는 쪽)과 문맥 초과 확인 요청(같은 질문 · 빈 state)도 만든다. 사건 소속 판정은 후보마다 `event.{사건 ID}` Yes/No 질문(문장은 넘긴 문구로 만든다)이고 state 는 제목 · 요약 줄이다 — 제목 · 요약 줄은 태그 판정 state 와 함께 쓴다(evaluation-R37 · R40)
 - `JevResponse` — 200 응답을 포트 결과로 옮긴다. 평가기 이름 `jev`, 모델 버전은 응답의 `model`, 입력 토큰은 `usage.input_tokens`, 원본 응답은 본문이다. 중요도는 수준 위치(`"0"` 부터)를 질문 묶음의 수준 순서로 되찾는다. 질문마다 기대한 종류의 답과 0 ~ 1 의 유한 확률이 없으면 평가기 사용 불가다. 판정 응답은 물은 후보마다 Yes/No 답을 읽고, 묻지 않은 답은 읽지 않는다. 관계 판정 응답은 `relation` 의 선택지 다섯의 확률과 `a_one_matter` · `b_one_matter` 의 Yes/No 확률을 읽는다. 모델 · 토큰 · 답 묶음 읽기는 세 응답이 함께 쓴다
 - `JevErrors` · `JevOutcome` — 200 이 아닌 응답의 갈래(Jev 대응표 — 나가는 쪽)와 운영자용 문구
-- `JevApiKey` — 키 형식(1 ~ 512자, 공백 없는 출력 가능한 ASCII — U+0021 ~ U+007E). 값은 `Authorization` 헤더로만 내보내고 문구 · `toString` 에 담지 않는다
+- `JevApiKey` — Jev 키. 형식은 `platform` 의 `HeaderValueShape` 가 정한다([platform-R23](platform.md#비밀-값) — 1 ~ 512자, 공백 없는 출력 가능한 ASCII). 값은 `Authorization` 헤더로만 내보내고 문구 · `toString` 에 담지 않는다
 
 #### `domain/tagging`
 
@@ -610,7 +610,7 @@ OpenAI 호환 외부 임베딩의 판단이다. 스프링 없이 단위 시험�
 - `OpenAiEmbeddingRequest.body(모델, 입력, 차원 또는 없음)` — 요청 본문 JSON 의 정본. `model` · `input`(입력 앞 문자열을 붙인 텍스트), 차원을 넘기면 `dimensions`. `encoding_format` 은 넣지 않는다
 - `OpenAiEmbeddingResponse.read(본문, 기대 수)` — 2xx 본문 읽기의 정본. `data[]` 를 `index` 로 정렬하고 수를 확인해 `Embedding.normalized` 로 정규화한 `Embeddings` 를 낸다. 읽을 수 없는 JSON · 수 불일치 · 빠지거나 겹친 `index` · 수 배열이 아닌 `embedding` · 유한하지 않은 값 · 영벡터는 `EmbeddingFailure`(`EMBEDDER_UNAVAILABLE`)다. 문구에 본문 조각을 싣지 않는다
 - `OpenAiEmbeddingErrors.classify(상태 코드)` — 2xx 가 아닌 상태의 갈래 정본: 400 · 413 · 422 → `INPUT_REJECTED`, 401 · 403 · 404 → `EMBEDDER_UNAVAILABLE`, 408 · 409 · 429 · 5xx → `TRANSIENT`, 그 밖의 3xx · 4xx → `EMBEDDER_UNAVAILABLE`
-- `EmbeddingApiKey` — 키 형식(비어 있지 않음, 공백 · 제어 문자 · ASCII 밖 문자 없음, 512자 이하)의 정본. `authorization()` 은 `Bearer {키}`, `toString()` 은 값을 숨긴다. 형식 오류 문구에 값이 없다
+- `EmbeddingApiKey` — 외부 임베딩 키. 형식은 `platform` 의 `HeaderValueShape` 가 정한다([platform-R23](platform.md#비밀-값) — 비어 있지 않음, 공백 · 제어 문자 · ASCII 밖 문자 없음, 512자 이하). `authorization()` 은 `Bearer {키}`, `toString()` 은 값을 숨긴다. 형식 오류 문구에 값이 없다
 - `OpenAiModelVersion.of(모델, 차원, 주소, 입력 앞 문자열, 차원 요청 여부)` — 외부 모델 버전 규칙의 정본: `openai-compatible:{모델}:{차원}:` + SHA-256(`{끝의 / 를 뗀 주소}\n{입력 앞 문자열}\n{차원 요청 여부}`) 앞 12 hex. 같은 모델 이름이라도 주소 · 입력 앞 문자열 · 차원 · 차원 요청 여부가 다르면 다른 버전이다
 
 ### 나가는 쪽

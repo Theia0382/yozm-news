@@ -3,7 +3,7 @@ package net.yozmnews.user.domain.recovery;
 import java.time.Instant;
 import java.util.Optional;
 
-import net.yozmnews.user.UserId;
+import net.yozmnews.platform.UserId;
 import net.yozmnews.user.domain.secret.SecretDigest;
 
 /**

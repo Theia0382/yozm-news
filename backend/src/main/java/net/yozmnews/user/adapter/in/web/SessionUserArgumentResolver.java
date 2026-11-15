@@ -1,6 +1,6 @@
 package net.yozmnews.user.adapter.in.web;
 
-import net.yozmnews.user.UserId;
+import net.yozmnews.platform.UserId;
 import net.yozmnews.user.application.AccountAuthentication;
 import org.jspecify.annotations.Nullable;
 import org.springframework.core.MethodParameter;

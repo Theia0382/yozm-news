@@ -76,7 +76,7 @@ erDiagram
 
 ## 사용자
 
-계정 · 자격 · 복구 코드 · 실패 기록 · 화면 내 알림 · 가입 정책 · 초대 테이블(`users` · `user_password_credentials` · `user_recovery_codes` · `login_failures` · `user_notices` · `user_feed_status_receipts` · `user_sign_up_policy` · `user_sign_up_policy_changes` · `user_invitations`)은 [user Spec §6](specs/user.md#6-데이터)에 있다. 아래는 아직 만들지 않은 사용자 테이블이다.
+계정 · 자격 · 복구 코드 · 실패 기록 · 요청 제한 기록 · 화면 내 알림 · 가입 정책 · 초대 테이블(`users` · `user_password_credentials` · `user_recovery_codes` · `login_failures` · `request_limit_counts` · `user_notices` · `user_feed_status_receipts` · `user_sign_up_policy` · `user_sign_up_policy_changes` · `user_invitations`)은 [user Spec §6](specs/user.md#6-데이터)에 있다. 아래는 아직 만들지 않은 사용자 테이블이다.
 
 | 테이블 | 주요 컬럼 | 비고 |
 |---|---|---|
@@ -87,9 +87,7 @@ erDiagram
 
 ## LLM 키 (BYOK)
 
-| 테이블 | 주요 컬럼 | 비고 |
-|---|---|---|
-| `llm_credentials` | id, user_id, provider(`openai`/`anthropic`), ciphertext, encrypted_dek, kek_version, key_hint(끝 4자리), status(`VALID`/`INVALID`/`UNVERIFIED`), validated_at, last_used_at, created_at | 사용자 × 공급자당 1개. 암호화 방식은 [security.md](security.md) |
+키 테이블(`llm_credentials`)은 [credential Spec §6](specs/credential.md#6-데이터)에 있다. 암호화 방식은 [security.md](security.md#byok-키-보관)에 있다.
 
 ## 소스와 기사
 
@@ -167,6 +165,7 @@ erDiagram
 | 가입 정책 이력 (`user_sign_up_policy_changes`) | 무기한 | 추가 전용 — 운영 설정의 이력이다([user Spec](specs/user.md#가입-정책) user-R32) |
 | 초대 (`user_invitations`) | 무기한 — 쓴 · 만료 · 취소 초대도 지우지 않는다 | 행 수가 운영자의 발급 수에 비례한다. 가입한 계정을 지우면 그 칸만 빈다([user Spec](specs/user.md#초대) user-R31) |
 | 탈퇴 사용자 | 즉시 비식별화, 30일 후 완전 삭제 | 실수로 탈퇴한 경우의 복구 기간 |
+| 요청 제한 기록 (`request_limit_counts`) | 창이 끝나면 10분 안에 삭제(창은 길어야 1시간) | 지금 창의 요청 수만 판정에 쓴다. 대상(IP 주소 · 사용자 ID)은 다이제스트로만 둔다([user-R39 · R42](specs/user.md#요청-방어)) |
 | JobRunr 작업 기록 | 성공하고 36시간 뒤 삭제 상태, 다시 72시간 뒤 영구 삭제. 실패한 작업은 남는다 | JobRunr 기본값. 작업의 결과는 각 모듈의 데이터에 남는다 |
 | 이벤트 발행 기록 (`event_publication`) | 완료 즉시 삭제. 실패한 발행은 운영자가 폐기할 때까지 남는다 | 결과는 각 모듈의 데이터에 남고, 실패한 발행은 재처리와 원인 조사의 근거다([ADR-0023](adr/0023-jobrunr-oss-framework-schema-and-event-resubmission.md) · [ADR-0050](adr/0050-operator-resubmits-once-or-discards-stranded-event-publications-read-from-registry.md)) |
 

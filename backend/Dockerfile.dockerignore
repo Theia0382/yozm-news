@@ -9,3 +9,4 @@
 !api/openapi.json
 !docs/operations/sources.md
 !docs/operations/tag-sets.md
+!frontend/proxy/Caddyfile

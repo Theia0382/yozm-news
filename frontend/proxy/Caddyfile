@@ -3,6 +3,14 @@
 	# 관리 API 를 열지 않고, 비root 사용자가 쓸 수 없는 디렉터리에 설정을 저장하지 않는다
 	admin off
 	persist_config off
+	# 클라이언트 IP 의 신뢰 경계 — docs/operations/configuration.md "공개"
+	# 신뢰할 앞단(Tunnel · 리버스 프록시)의 범위에서 온 요청만 헤더의 클라이언트 IP 를 믿고, 헤더는 오른쪽부터 읽는다(앞단이 덧붙인 값부터).
+	# 기본은 사설 대역 — 같은 호스트의 앞단 · 컨테이너 Tunnel 이 사설 주소로 붙는다
+	servers {
+		trusted_proxies static {$YOZMNEWS_TRUSTED_PROXIES:private_ranges}
+		trusted_proxies_strict
+		client_ip_headers {$YOZMNEWS_CLIENT_IP_HEADERS:X-Forwarded-For}
+	}
 }
 
 # HTTP 만 받는다 — TLS 는 앞단(Cloudflare Tunnel 또는 운영자의 리버스 프록시)이 맡는다
@@ -10,7 +18,10 @@
 	# 앱으로 넘기는 경로(@backend) — docs/development/infrastructure.md "proxy 가 넘기는 경로"
 	import backend-paths.caddy
 	handle @backend {
-		reverse_proxy app:8080
+		reverse_proxy app:8080 {
+			# 앱은 이 헤더 하나로 클라이언트 IP 를 읽는다 — 클라이언트가 보낸 같은 헤더는 덮어쓴다(docs/specs/user.md user-R37)
+			header_up X-Real-IP {client_ip}
+		}
 	}
 	# 그 밖의 경로는 SPA — 파일이 없으면 index.html 로 응답해 라우터가 처리한다
 	handle {

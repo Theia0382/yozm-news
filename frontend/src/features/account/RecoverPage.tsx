@@ -8,15 +8,18 @@ import {
 } from "@/features/account/accountTexts";
 import { RecoveryCodeFlow } from "@/features/account/RecoveryCodeFlow";
 import { TextField } from "@/features/account/TextField";
+import { useHumanCheckField } from "@/features/humanCheck/useHumanCheckField";
 import { useMe } from "@/features/session/sessionQueries";
 import { waitText } from "@/features/session/waitText";
 import { useApiClient } from "@/shared/api/client";
+import { guardRejectionText } from "@/shared/api/problems";
 import { Button } from "@/shared/ui/button";
 import { NARROW_WIDTH, PAGE_FRAME } from "@/shared/ui/widths";
 
 /**
  * 복구 코드로 비밀번호 재설정 — 이메일 · 복구 코드 · 새 비밀번호(확인) · 로그인 유지. 거절은 계정 유무와 무관하게 같은 문구다. 재설정하면
- * 다른 기기의 로그인이 끝나고 새 복구 코드를 보인 뒤 첫 화면으로 간다.
+ * 다른 기기의 로그인이 끝나고 새 복구 코드를 보인 뒤 첫 화면으로 간다. 봇 차단을 켠 인스턴스면 사람 확인을 마쳐야 제출하고, 제출마다 확인을
+ * 다시 받는다.
  */
 export function RecoverPage() {
   return (
@@ -43,6 +46,7 @@ function RecoverForm({
   const [keep, setKeep] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const human = useHumanCheckField("account-recovery");
 
   async function send(event: FormEvent) {
     event.preventDefault();
@@ -53,11 +57,18 @@ function RecoverForm({
     setSubmitting(true);
     setMessage(null);
     try {
-      const { data, response } = await client.POST("/api/account-recoveries", {
-        body: { email, recoveryCode, newPassword, keep },
-      });
+      const { data, error, response } = await client.POST(
+        "/api/account-recoveries",
+        {
+          body: { email, recoveryCode, newPassword, keep },
+          headers: human.headers(),
+        },
+      );
       if (!response.ok || !data) {
-        setMessage(requestFailedText(response.status));
+        setMessage(
+          guardRejectionText(response, error) ??
+            requestFailedText(response.status),
+        );
         await me.refetch();
         return;
       }
@@ -84,6 +95,7 @@ function RecoverForm({
       setMessage(UNREACHABLE_TEXT);
     } finally {
       setSubmitting(false);
+      human.reset();
     }
   }
 
@@ -143,8 +155,9 @@ function RecoverForm({
         />
         로그인 유지
       </label>
+      {human.field}
       <div className="flex flex-wrap items-center gap-4">
-        <Button type="submit" disabled={submitting}>
+        <Button type="submit" disabled={submitting || !human.ready}>
           재설정
         </Button>
         <Link to="/login" className="text-sm underline">

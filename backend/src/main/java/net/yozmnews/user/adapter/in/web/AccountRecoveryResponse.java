@@ -4,6 +4,7 @@ import java.time.Instant;
 
 import net.yozmnews.user.PasswordProblem;
 import net.yozmnews.user.application.RecoveryOutcome;
+import net.yozmnews.user.domain.throttle.RetryAfter;
 import org.jspecify.annotations.Nullable;
 
 /**

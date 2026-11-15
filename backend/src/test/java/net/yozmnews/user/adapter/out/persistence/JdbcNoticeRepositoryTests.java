@@ -11,9 +11,10 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.llm.Provider;
+import net.yozmnews.platform.UserId;
 import net.yozmnews.source.FeedId;
 import net.yozmnews.source.FeedStatus;
-import net.yozmnews.user.UserId;
 import net.yozmnews.user.domain.account.Account;
 import net.yozmnews.user.domain.account.AccountRepository;
 import net.yozmnews.user.domain.account.AccountRole;
@@ -21,6 +22,7 @@ import net.yozmnews.user.domain.account.DisplayName;
 import net.yozmnews.user.domain.account.EmailAddress;
 import net.yozmnews.user.domain.notice.FeedStatusContent;
 import net.yozmnews.user.domain.notice.FeedStatusEntry;
+import net.yozmnews.user.domain.notice.KeyInvalidatedContent;
 import net.yozmnews.user.domain.notice.Notice;
 import net.yozmnews.user.domain.notice.NoticeKind;
 import net.yozmnews.user.domain.notice.NoticeRecipients;
@@ -45,7 +47,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 알림 저장소 — 안 읽은 피드 상태 알림은 사용자마다 하나, 반영 기준 잠금은 같은 사용자를 줄 세우고, 읽음은 받은 판이 그대로인 이
  * 사용자의 알림만 바꾼다. 경합은 두 트랜잭션(스레드 둘 · 래치)으로 재현한다.
  * <p>
- * 지키는 규칙: user-R21 · user-R22 · user-R24 · user-R25
+ * 지키는 규칙: user-R21 · user-R22 · user-R24 · user-R25 · user-R36
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -125,6 +127,49 @@ class JdbcNoticeRepositoryTests {
 			.param("id", older)
 			.query(String.class)
 			.single(), JSONCompareMode.STRICT);
+	}
+
+	@Test
+	void aKeyNoticeIsStoredOncePerTransition() throws Exception {
+		UserId alice = account("alice@example.com", AccountRole.USER);
+		UserId bob = account("bob@example.com", AccountRole.USER);
+		Instant invalidated = Instant.parse("2026-11-13T00:30:00.123456Z");
+		KeyInvalidatedContent content = new KeyInvalidatedContent(Provider.OPENAI, 41, invalidated);
+
+		assertThat(this.notices.createOnce(alice, content, T1)).isTrue();
+		// 같은 사용자 · 키 ID · 무효 시각 — 같은 전이를 거듭 받았다
+		assertThat(this.notices.createOnce(alice, content, T2)).isFalse();
+		// 무효 시각이 다르면 다른 전이다(무효 → 유효 → 무효), 키 ID 가 다르면 다른 키다, 사용자가 다르면 다른 사람의 알림이다
+		assertThat(this.notices.createOnce(alice, new KeyInvalidatedContent(Provider.OPENAI, 41, T2), T2)).isTrue();
+		assertThat(this.notices.createOnce(alice, new KeyInvalidatedContent(Provider.ANTHROPIC, 42, invalidated), T2))
+			.isTrue();
+		assertThat(this.notices.createOnce(bob, content, T2)).isTrue();
+
+		List<Notice> page = this.notices.page(alice, null, 50);
+		assertThat(page).extracting(Notice::content)
+			.containsExactly(new KeyInvalidatedContent(Provider.ANTHROPIC, 42, invalidated),
+					new KeyInvalidatedContent(Provider.OPENAI, 41, T2), content);
+		assertThat(page.getLast())
+			.isEqualTo(new Notice(page.getLast().id(), NoticeKind.KEY_INVALIDATED, content, 1, T1, T1, null));
+		assertThat(this.notices.page(bob, null, 50)).hasSize(1);
+		JSONAssert.assertEquals("""
+				{"provider": "openai", "keyId": 41, "invalidatedAt": "2026-11-13T00:30:00.123456Z"}
+				""", this.jdbc.sql("select content::text from user_notices where id = :id")
+			.param("id", page.getLast().id())
+			.query(String.class)
+			.single(), JSONCompareMode.STRICT);
+	}
+
+	@Test
+	void otherKindsAreNotHeldToOneByTheKeyNoticeIndex() {
+		UserId alice = account("alice@example.com", AccountRole.USER);
+		PasswordChangedContent same = new PasswordChangedContent(PasswordChangeMethod.CHANGE, T1);
+
+		// 대조 — 고유 인덱스는 키 무효 알림에만 건다. 같은 내용의 비밀번호 알림은 둘 다 남는다
+		this.notices.create(alice, same, T1);
+		this.notices.create(alice, same, T1);
+
+		assertThat(this.notices.page(alice, null, 50)).hasSize(2);
 	}
 
 	@Test

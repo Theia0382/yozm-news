@@ -64,6 +64,10 @@ dependencies {
 	implementation("org.apache.httpcomponents.client5:httpclient5")
 	// 비밀번호 해시(Argon2id) — Spring Security 의 Argon2PasswordEncoder 가 쓴다. Spring Boot 가 버전을 관리하지 않아 직접 고정한다
 	implementation("org.bouncycastle:bcprov-jdk18on:1.86")
+	// 사용자 LLM 키로 하는 호출(llm 모듈) — 공급자 공식 SDK 위의 Spring AI 공급자 모듈. 스타터(자동 구성)는 쓰지 않는다 — ADR-0149.
+	// Spring Boot 가 버전을 관리하지 않아 직접 고정한다
+	implementation("org.springframework.ai:spring-ai-openai:2.0.2")
+	implementation("org.springframework.ai:spring-ai-anthropic:2.0.2")
 	developmentOnly("org.springframework.boot:spring-boot-docker-compose")
 	runtimeOnly("org.postgresql:postgresql")
 	runtimeOnly("org.springframework.modulith:spring-modulith-actuator")
@@ -105,6 +109,16 @@ tasks.withType<Test> {
 
 tasks.named<JavaExec>("bootTestRun") {
 	systemProperty(devComposeFileProperty, devComposeFile.asFile.path)
+}
+
+// 배포 proxy 의 Caddyfile — 테스트가 앱이 읽는 클라이언트 IP 헤더 · 신뢰 범위 결선을 대조한다. 결선은 docs/development/infrastructure.md
+// "테스트가 저장소 파일을 읽는 결선"
+val proxyCaddyfile = layout.projectDirectory.file("../frontend/proxy/Caddyfile")
+val proxyCaddyfileProperty = "yozmnews.proxy-caddyfile"
+
+tasks.withType<Test> {
+	inputs.file(proxyCaddyfile).withPropertyName("proxyCaddyfile").withPathSensitivity(PathSensitivity.NONE)
+	systemProperty(proxyCaddyfileProperty, proxyCaddyfile.asFile.path)
 }
 
 // 화면용 API 명세(저장소 루트 api/openapi.json) — 결선은 docs/development/infrastructure.md "테스트가 저장소 파일을 읽는 결선".
@@ -245,8 +259,22 @@ sourceSets.main {
 // 시험 JVM 은 Spring 시험 컨텍스트를 캐시에 쌓아 두므로 Gradle 의 기본 힙으로는 모자란다 — 상한을 정한다
 tasks.withType<Test> {
 	environment("ORT_DISABLE_TELEMETRY", "1")
+	// LLM 공급자 클라이언트가 프로세스 환경 변수의 주소 · 키를 읽지 않고 SDK 요청 로그를 꺼 둠을 시험이 본다 — 닿지 않는 주소 ·
+	// 쓰이면 안 되는 값 · 켜진 로그 수준을 일부러 둔다. docs/specs/llm.md llm-R11 · R12 · docs/development/infrastructure.md "불변식과 지키는 장치"
+	environment("OPENAI_BASE_URL", "http://127.0.0.1:9")
+	environment("ANTHROPIC_BASE_URL", "http://127.0.0.1:9")
+	environment("OPENAI_API_KEY", "env-key-must-not-be-used")
+	environment("ANTHROPIC_API_KEY", "env-key-must-not-be-used")
+	environment("ANTHROPIC_AUTH_TOKEN", "env-token-must-not-be-used")
+	environment("OPENAI_LOG", "debug")
+	environment("ANTHROPIC_LOG", "debug")
 	jvmArgs("--enable-native-access=ALL-UNNAMED")
 	maxHeapSize = "2g"
+	// 실패한 시험의 단언(기대 · 실제 값)과 위치를 실행 로그에 남긴다 — CI 작업 로그만으로 실패를 읽는다
+	testLogging {
+		events(org.gradle.api.tasks.testing.logging.TestLogEvent.FAILED)
+		exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+	}
 }
 
 // 모델 파일은 따로 계층을 둔다 — 코드만 바뀌면 이 계층(약 135 MB)을 다시 받지 않는다. 계층 이름은 backend/Dockerfile 이 쓴다

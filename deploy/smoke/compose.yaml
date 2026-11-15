@@ -9,6 +9,10 @@ services:
       YOZMNEWS_COLLECTION_ALLOWED_NETWORKS: 10.230.0.0/24
       # 시험 기사의 태그 평가가 형식만 맞는 키를 실제 Jev 로 보내지 않게 닿지 않는 주소로 둔다
       YOZMNEWS_JEV_BASE_URL: http://127.0.0.1:9
+      # 스모크 전용 KEK 파일 — 배포 구성은 KEK 파일이 없으면 뜨지 않는다
+      YOZMNEWS_CREDENTIAL_KEK_FILE: /etc/yozmnews-smoke/kek
+    volumes:
+      - ./smoke/kek:/etc/yozmnews-smoke/kek:ro,z
   # 시험 피드를 내보내는 정적 서버 — 앱에서는 http://feeds/smoke.xml 로 닿는다
   feeds:
     image: caddy:2

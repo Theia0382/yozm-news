@@ -29,18 +29,20 @@
 
 - 로컬 모델 몫은 약 0.3 ~ 0.4 GiB 다. 메모리가 빠듯한 호스트는 외부 방식을 고를 수 있다([임베딩](configuration.md#임베딩))
 - `app` 이미지는 약 0.97 GB 다. 그 가운데 모델 파일 계층이 약 135 MB, 로컬 임베딩 실행 라이브러리(ONNX Runtime · 토크나이저 네이티브)가 약 69 MB 다. 모델 파일은 따로 된 계층이라 코드만 바뀐 업데이트는 그 계층을 다시 만들지 않는다
+- 위 이미지 크기는 LLM 공급자 라이브러리(OpenAI · Anthropic SDK 와 Spring AI)를 뺀 측정값이다. 그 라이브러리가 앱 jar 에 약 123 MB 를 더한다 — 더한 뒤의 이미지 크기는 재지 않았다
 
 ## 서비스
 
 | 서비스 | 이미지 | 하는 일 |
 |---|---|---|
-| `proxy` | `frontend/Dockerfile` target `proxy` — Caddy 에 SPA 빌드 결과를 담은 이미지 | SPA 정적 파일을 내려주고 백엔드 경로만 `app` 으로 넘긴다. 넘기지 않는 경로(관리 엔드포인트 포함)는 SPA 가 답한다([넘기는 경로](../development/infrastructure.md#proxy-가-넘기는-경로)) |
+| `proxy` | `frontend/Dockerfile` target `proxy` — Caddy 에 SPA 빌드 결과를 담은 이미지 | SPA 정적 파일을 내려주고 백엔드 경로만 `app` 으로 넘긴다. 넘길 때 신뢰 범위로 정한 클라이언트 IP 를 `X-Real-IP` 에 덮어쓴다([공개](configuration.md#공개)). 넘기지 않는 경로(관리 엔드포인트 포함)는 SPA 가 답한다([넘기는 경로](../development/infrastructure.md#proxy-가-넘기는-경로)) |
 | `app` | `backend/Dockerfile` target `app` | 화면용 API 와 백그라운드 작업(작업 서버)을 한 프로세스에서 맡는다 — 정의가 두 역할 profile 을 켠다(`SPRING_PROFILES_ACTIVE: web,worker`, [platform Spec](../specs/platform.md#역할)). **(미구현)** 인증(로그인)도 이 프로세스가 맡는다 |
 | `postgres` | 루트 `compose.yaml` 의 PostgreSQL 이미지(pgvector 확장이 든 이미지) | 데이터. 호스트에 공개하지 않는다 |
 | **(미구현)** `cloudflared` | Cloudflare Tunnel | `proxy` 로만 연결한다([공개 경로와 외부 서비스](#공개-경로와-외부-서비스)) |
 | **(미구현)** `backup` | `pg_dump` + S3 호환 업로드 | [백업과 복구](#백업과-복구) |
 
 - `app` 과 `postgres` 는 호스트에 공개하지 않는다. 공개하는 것은 `proxy` 하나다
+- **설정 디렉터리** — 배포 구성은 `deploy/config/` 를 `app` 의 `/etc/yozmnews` 에 읽기 전용으로 붙인다. 운영자가 앱에 넘기는 파일을 여기에 둔다 — [LLM 키 암호화](configuration.md#llm-키-암호화)의 KEK 파일(필수)과 [허용 모델 목록](configuration.md#허용-모델-목록) 파일(선택)이다. 이 디렉터리의 파일은 저장소가 추적하지 않는다
 - **(미구현)** 역할을 나눠 띄우는 구성 — 같은 이미지를 `web` · `worker` 두 서비스로 띄우고 각 서비스가 `SPRING_PROFILES_ACTIVE` 로 자기 역할 하나를 켠다([overview.md §4](../overview.md#4-시스템-구성)). proxy 가 넘길 곳(`app` 고정)과 스모크가 아직 이 구성을 모른다
 - **외부 DB** — 배포 구성은 DB 접속 정보를 Compose 정의 안에서 `postgres` 서비스에 맞춰 고정해 넘긴다([DB 접속](configuration.md#db-접속)). 관리형 DB 를 쓰려면 `postgres` 서비스와 `app` 의 `depends_on` 을 빼고 접속 정보를 바꾼 정의를 써야 한다 — 지금 배포 구성에는 `deploy/.env` 만으로 바꾸는 경로가 없다
 - **DB 확장** — 앱은 DB 의 pgvector 확장(`vector`, 0.8 이상)을 쓴다([ADR-0027](../adr/0027-pgvector-for-vector-storage.md)). 앱이 기동할 때 마이그레이션이 확장을 설치하는데, 설치에는 superuser 권한이 필요하다. 배포 구성의 DB 계정은 superuser 라 따로 할 일이 없다. 앱 계정이 superuser 가 아닌 외부 DB 에서는 DBA 가 먼저 `CREATE EXTENSION vector` 로 설치한다 — 앱 계정의 검색 경로(`search_path`)에 있는 스키마(기본 `public`)에 둔다. 검색 경로 밖에 두면 확장의 타입(`vector`)을 스키마 이름 없이 쓸 수 없다
@@ -51,11 +53,12 @@
 
 저장소 루트에서 실행한다.
 
-1. 값을 준비한다 — `deploy/.env.example` 을 `deploy/.env` 로 복사하고 필수 값을 적는다([운영 설정](configuration.md)). 필수 값이 없거나 비어 있으면 Compose 가 변수 이름을 말하며 멈춘다. 운영자 화면으로 소스를 등록하려면 [운영자 토큰](configuration.md#운영자)도 적는다
+1. 값을 준비한다 — `deploy/.env.example` 을 `deploy/.env` 로 복사하고 필수 값을 적는다([운영 설정](configuration.md)). 필수 값이 없거나 비어 있으면 Compose 가 변수 이름을 말하며 멈춘다. 운영자 화면으로 소스를 등록하려면 [운영자 토큰](configuration.md#운영자)도 적는다. LLM 키를 암호화하는 KEK 파일 `deploy/config/kek` 를 만든다 — 없으면 `app` 이 뜨지 않는다([LLM 키 암호화 키(KEK)](#llm-키-암호화-키kek))
 2. 띄우고 확인한다
 
    ```sh
    cp deploy/.env.example deploy/.env                            # 처음 한 번 — 필수 값과 운영자 토큰을 적는다
+   printf '1:%s\n' "$(openssl rand -base64 32)" > deploy/config/kek  # 처음 한 번 — LLM 키 암호화 키(KEK)
    docker compose -f deploy/compose.yaml up -d --build --wait   # 호스트 플랫폼 이미지를 빌드하고 postgres → app → proxy 가 healthy 가 될 때까지 기다린다
    bash deploy/smoke.sh                                          # 기동 상태 · 공개 범위 · 라우팅 · 운영자 경로 · 앱 역할 · 프리셋 적재 확인 — 종료 코드 0 이면 통과 (bash · docker · curl · sed 필요)
    ```
@@ -95,7 +98,7 @@ docker compose -f deploy/compose.yaml down -v   # 정지하고 DB 볼륨까지 �
 
 - **초대 링크** — 메모(누구에게 줄 링크인지)를 붙여 만들고 링크를 직접 전한다. 링크는 7일 뒤 만료되고 한 번만 쓴다. 링크는 운영자 화면을 연 주소로 만들어지므로, 받는 사람이 닿는 바깥 주소로 운영자 화면을 열고 링크의 주소를 확인한 뒤 전한다. 링크는 만든 때만 보인다 — 잃으면 취소하고 다시 만든다
 - **계정 만들기** — 이메일 · 표시 이름 · 초기 비밀번호로 만들고 초기 비밀번호를 따로 전한다. 받은 사람은 첫 로그인에서 비밀번호를 새로 정한다. 그 전에 초기 비밀번호를 잃었으면 "초기 비밀번호 다시 정하기"로 바꾼다
-- **공개 가입** — 켜면 로그인 화면에 가입 링크가 나와 누구나 가입한다. 공개 가입에는 아직 가입 요청 제한 · 봇 차단이 없다
+- **공개 가입** — 켜면 로그인 화면에 가입 링크가 나와 누구나 가입한다. 가입에는 IP별 요청 제한이 걸리고, 봇 차단은 [봇 차단](configuration.md#봇-차단) 설정을 따른다 — 운영자 화면이 지금 봇 차단 상태를 알린다
 - 비밀번호를 잊은 사용자는 로그인 화면의 "복구 코드로 비밀번호 재설정"으로 되찾는다. 복구 코드가 없으면 되찾을 수 없다 — 메일을 보내지 않는다. 운영자가 만든 계정으로 아직 첫 로그인을 하지 않았으면 "초기 비밀번호 다시 정하기"로 새 초기 비밀번호를 준다
 
 ## 업데이트
@@ -123,7 +126,7 @@ docker compose -f deploy/compose.yaml down -v   # 정지하고 DB 볼륨까지 �
 
 ## 공개 경로와 외부 서비스
 
-Cloudflare 는 권장 구성이지 필수가 아니다. 운영자는 Tunnel 대신 일반 리버스 프록시를, R2 대신 다른 S3 호환 저장소를, Turnstile 대신 다른 봇 차단 수단을 쓰거나 끌 수 있다([ADR-0012](../adr/0012-swappable-external-dependencies.md)).
+Cloudflare 는 권장 구성이지 필수가 아니다. 운영자는 Tunnel 대신 일반 리버스 프록시를, R2 대신 다른 S3 호환 저장소를 쓸 수 있고, 봇 차단(Turnstile)은 끌 수 있다([ADR-0012](../adr/0012-swappable-external-dependencies.md)) — 다른 봇 차단 수단은 앱의 검증 구현을 더해야 붙는다.
 
 | 기능 | 용도 |
 |---|---|
@@ -134,12 +137,36 @@ Cloudflare 는 권장 구성이지 필수가 아니다. 운영자는 Tunnel 대�
 
 - Jev 호출은 Cloudflare 를 거치지 않는다 — 앱이 TypeSafe System One API 로 직접 보내고, 같은 스키마를 내는 다른 경로로 바꾸려면 기본 주소를 바꾼다([공유 평가](configuration.md#공유-평가))
 - 기사 임베딩은 기본으로 앱 안에서 하고 밖으로 보내지 않는다. 외부 방식을 고르면 앱이 설정한 주소로 직접 보낸다([임베딩](configuration.md#임베딩))
-- **(미구현)** 사용자 BYOK LLM 호출은 중계 서비스를 거치지 않고 공급자에 직접 보낸다 — 사용자 키와 프롬프트가 제3자 로그에 남지 않게 하기 위해서다
-- **(미구현)** 봇 차단(Turnstile 등)은 로그인 · 복구 코드 사용 화면과, 공개 가입을 열었을 때 가입 화면에 붙인다([security.md](../security.md#악용-방지))
+- 사용자 BYOK LLM 호출(지금은 키 검증)은 중계 서비스를 거치지 않고 공급자(`api.openai.com` · `api.anthropic.com`)에 직접 보낸다 — 사용자 키와 프롬프트가 제3자 로그에 남지 않게 하기 위해서다. 주소는 설정으로 바꿀 수 없고, 프록시를 쓰지 않으며 리다이렉트를 따르지 않는다([llm Spec](../specs/llm.md#공급자-클라이언트))
+- 봇 차단(Turnstile)은 운영자가 켜면 로그인 · 복구 코드 사용 · 공개 가입 화면에 붙는다([봇 차단](configuration.md#봇-차단)). 켜면 그 화면의 브라우저가 Cloudflare 에서 위젯을 받고, 앱이 토큰을 Cloudflare(`challenges.cloudflare.com`)에 확인한다 — 앱이 닿지 못하면 확인 없이 통과시키고 경고 로그를 남긴다([security.md](../security.md#악용-방지))
+- **앞단과 클라이언트 IP** — 요청 제한은 클라이언트 IP 로 센다. Tunnel · 리버스 프록시 뒤에서는 그 앞단이 proxy 의 신뢰 범위(기본 사설 대역)에서 붙어야 하고, 앞단은 `X-Forwarded-For` 에 클라이언트 IP 를 덧붙여야 한다(Cloudflare · Caddy 는 기본으로, nginx 는 `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for`). 앞단 없이 proxy 포트를 직접 공개하면 신뢰 범위를 비운다 — [공개](configuration.md#공개)
 - 운영자 화면의 피드 켜기는 앱이 그 피드를 받아 확인한 뒤 답한다 — 같은 언론사의 앞선 요청을 기다린 시간(요청 하나당 최대 10초)과 받는 시간(최대 10초)이 더해진다. 배포 `proxy`(Caddy)는 응답 시간을 제한하지 않는다. 앞단(Tunnel · 리버스 프록시)에 응답 시간 제한이 있으면 그보다 길어진 켜기는 화면에 실패로 보이고, 서버의 판정 · 저장은 그대로 끝난다 — 목록을 다시 읽으면 결과가 보인다
+
+## LLM 키 암호화 키(KEK)
+
+사용자가 등록한 LLM 키는 KEK 로 감싼 키로 암호화돼 DB 에 있다. KEK 는 `deploy/config/kek` 파일에 있다 — 형식과 기동 규칙은 [운영 설정 — LLM 키 암호화](configuration.md#llm-키-암호화).
+
+- **만들기** — 처음 띄우기 전에 한 번 만든다. 이 파일은 저장소가 추적하지 않는다
+
+  ```sh
+  printf '1:%s\n' "$(openssl rand -base64 32)" > deploy/config/kek
+  ```
+- **이미 돌고 있는 인스턴스** — 이 파일 없이 돌던 인스턴스는 판을 올릴 때 파일을 만들어야 `app` 이 뜬다
+- **권한** — `app` 이 사용자 `65534` 로 파일을 읽는다. 읽지 못하면 `app` 이 뜨지 않고 기동 로그가 경로를 말한다
+- **백업** — DB 백업과 다른 위치에 둔다. DB 덤프와 KEK 가 함께 있으면 덤프를 얻은 사람이 사용자 키를 열 수 있다
+- **교체**
+  1. 파일에 더 큰 버전의 줄을 더한다(옛 줄은 그대로 둔다) — `printf '2:%s\n' "$(openssl rand -base64 32)" >> deploy/config/kek`
+  2. `app` 을 다시 띄운다. 새 키는 새 버전으로 감싸고, 작업 역할이 10분마다 옛 버전으로 감싼 키를 새 버전으로 다시 감싼다
+  3. `app` 로그에서 "KEK 재암호화 — … 남음 0" 을 확인한다. 다시 감쌀 키가 없으면 이 줄이 나오지 않는다 — 옛 줄을 지우고 띄웠을 때 뜨면 끝난 것이다
+  4. 옛 버전의 줄을 지우고 다시 띄운다. 옛 버전을 가리키는 키가 남아 있으면 `app` 이 뜨지 않고 로그가 그 버전과 키의 수를 말한다 — 줄을 되돌려 띄우고 기다린다
+- **잃었을 때** — KEK 를 잃으면 그 버전으로 감싼 키는 열 수 없고, 그 키가 남아 있는 동안 `app` 이 뜨지 않는다. 새 KEK 파일을 잃은 버전보다 큰 버전으로 만든 뒤 DB 에서 잃은 버전의 키를 지우고 띄운다 — 그 사용자들은 키를 다시 등록한다. 같은 버전 번호로 만들면 `app` 은 뜨지만 남은 키는 열리지 않는다
+
+  ```sh
+  docker compose -f deploy/compose.yaml exec postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "delete from llm_credentials where kek_version = 1"'
+  ```
 
 ## 백업과 복구
 
 - **(미구현)** 매일 `pg_dump` 를 S3 호환 저장소(기본 R2)에 올리고 30일 보관한다
 - **(미구현)** 분기마다 복구 리허설을 한다 — 새 환경에 배포 구성을 띄우고 덤프를 복원해 동작을 확인한다
-- **(미구현)** KEK 는 DB 백업과 다른 위치에 따로 백업한다([비밀 값](configuration.md#비밀-값))
+- KEK 파일(`deploy/config/kek`)은 DB 백업과 다른 위치에 따로 백업한다([LLM 키 암호화 키(KEK)](#llm-키-암호화-키kek))

@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { useEffect, useRef } from "react";
 import { Link } from "react-router";
+import { providers } from "@/features/keys/keyTexts";
 import {
   type Notice,
   NoticeRequestError,
@@ -21,6 +22,9 @@ type PasswordChangedNotice =
   components["schemas"]["PasswordChangedNoticeResponse"];
 
 type PasswordChangeMethod = PasswordChangedNotice["method"];
+
+type KeyInvalidatedNotice =
+  components["schemas"]["KeyInvalidatedNoticeResponse"];
 
 /** 피드를 묶어 보이는 지금 상태의 순서 — 손볼 것부터 */
 const STATUS_ORDER: readonly FeedStatus[] = ["DEGRADED", "STALE", "ACTIVE"];
@@ -132,6 +136,8 @@ function noticeTitle(notice: Notice): string {
       return "피드 상태가 바뀌었습니다";
     case "PASSWORD_CHANGED":
       return "비밀번호가 바뀌었습니다";
+    case "KEY_INVALIDATED":
+      return "LLM 키가 무효가 됐습니다";
   }
 }
 
@@ -141,6 +147,8 @@ function NoticeBody({ notice }: { notice: Notice }): ReactElement {
       return <FeedStatusBody feeds={notice.feedStatus?.feeds ?? []} />;
     case "PASSWORD_CHANGED":
       return <PasswordChangedBody body={notice.passwordChanged} />;
+    case "KEY_INVALIDATED":
+      return <KeyInvalidatedBody body={notice.keyInvalidated} />;
   }
 }
 
@@ -167,6 +175,32 @@ function PasswordChangedBody({
       <p className="text-muted-foreground">
         직접 바꾸지 않았다면 바로 비밀번호를 바꾸세요.
       </p>
+    </div>
+  );
+}
+
+function KeyInvalidatedBody({
+  body,
+}: {
+  body: KeyInvalidatedNotice | null | undefined;
+}) {
+  if (!body) {
+    return null;
+  }
+  return (
+    <div className="space-y-1 text-sm">
+      <p>
+        {providers[body.provider].name} 키를 공급자가 받아 주지 않았습니다.{" "}
+        <time dateTime={body.invalidatedAt}>
+          {formatDateTime(body.invalidatedAt)}
+        </time>
+      </p>
+      <p className="text-muted-foreground">
+        새 키를 등록할 때까지 이 키로는 다이제스트를 만들지 못합니다.
+      </p>
+      <Link to="/keys" className="underline">
+        LLM 키 화면에서 확인하기
+      </Link>
     </div>
   );
 }

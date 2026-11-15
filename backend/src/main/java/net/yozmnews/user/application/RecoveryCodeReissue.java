@@ -4,7 +4,7 @@ import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.Objects;
 
-import net.yozmnews.user.UserId;
+import net.yozmnews.platform.UserId;
 import net.yozmnews.user.domain.credential.PasswordCredential;
 import net.yozmnews.user.domain.recovery.RecoveryCodeRepository;
 import net.yozmnews.user.domain.secret.RecoveryCode;

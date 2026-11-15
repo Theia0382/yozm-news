@@ -29,3 +29,7 @@
 | 대안 | 기각 이유 |
 |---|---|
 | 환경 변수 하나 | 바꿀 때마다 다시 띄우고, 바꾼 기록이 남지 않는다 |
+
+## 후속 기록
+
+- 2026-11-15: 결과 절 "가입 요청 제한 · 봇 차단은 아직 없다" — [ADR-0169](0169-request-limits-and-bot-checks-are-platform-marks-applied-by-the-user-session-chain-before-the-handler.md) · [ADR-0170](0170-request-limits-count-fixed-windows-in-a-user-postgresql-table-with-a-code-constant-policy-table.md) · [ADR-0172](0172-bot-checks-use-turnstile-or-off-pass-when-the-verifier-is-unreachable-and-match-the-action.md) · [`user` "요청 방어"](../specs/user.md#요청-방어) user-R38 · user-R41 · [`user` user-R32](../specs/user.md#가입-정책)

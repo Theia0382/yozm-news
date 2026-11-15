@@ -1,6 +1,6 @@
 # ADR-0012: 외부 의존성은 교체 가능하게, 개발 환경에는 로컬 대체물을 둔다
 
-- 상태: 승인. 부분 대체 — 평가기를 끌 수 있다는 부분([ADR-0061](0061-worker-role-does-not-run-without-an-evaluator.md)) · 외부 로그인과 개발용 mock OIDC([ADR-0123](0123-v1-login-is-local-only-and-oidc-and-account-linking-come-after-v1.md)) · Compose 프로필 `prod`([ADR-0021](0021-separate-deploy-compose-with-single-app-service.md)) · Fake 구현을 막는 기동 시 검사([ADR-0057](0057-local-substitutes-registered-only-in-local-profile-without-operator-switch.md))
+- 상태: 승인. 부분 대체 — 평가기를 끌 수 있다는 부분([ADR-0061](0061-worker-role-does-not-run-without-an-evaluator.md)) · 외부 로그인과 개발용 mock OIDC([ADR-0123](0123-v1-login-is-local-only-and-oidc-and-account-linking-come-after-v1.md)) · Compose 프로필 `prod`([ADR-0021](0021-separate-deploy-compose-with-single-app-service.md)) · Fake 구현을 막는 기동 시 검사([ADR-0057](0057-local-substitutes-registered-only-in-local-profile-without-operator-switch.md)) · 클라이언트 IP 의 신뢰할 프록시 헤더 설정이 앱에 있다는 부분([ADR-0168](0168-client-ip-is-read-by-the-proxy-from-trusted-ranges-right-to-left-and-passed-as-one-overwritten-header.md))
 - 날짜: 2026-10-25
 - 관련: [ADR-0006](0006-deployment-compose-cloudflare.md), [ADR-0009](0009-authentication-google-and-local.md), [ADR-0011](0011-no-email-in-v1.md)
 
@@ -21,7 +21,7 @@
 
 ### 의존성별 정리
 
-> 부분 대체("외부 로그인 (Google)" 행) — [ADR-0123](0123-v1-login-is-local-only-and-oidc-and-account-linking-come-after-v1.md). 지금 상태: [`roadmap` "이후"](../roadmap.md#이후)
+> 부분 대체 — "외부 로그인 (Google)" 행은 [ADR-0123](0123-v1-login-is-local-only-and-oidc-and-account-linking-come-after-v1.md), "클라이언트 IP" 행은 [ADR-0168](0168-client-ip-is-read-by-the-proxy-from-trusted-ranges-right-to-left-and-passed-as-one-overwritten-header.md). 지금 상태: [`roadmap` "이후"](../roadmap.md#이후) · [`operations/configuration` "공개"](../operations/configuration.md#공개)
 
 | 의존성 | 코드가 의존하는 것 | 교체·비활성 | 개발·테스트 대체물 |
 |---|---|---|---|
@@ -67,3 +67,5 @@
 ## 후속 기록
 
 - 2026-11-04: 의존성 표에 없는 임베딩 — [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md) · [evaluation Spec `ArticleEmbedder`](../specs/evaluation.md#articleembedder)
+- 2026-11-14: 의존성 표 "LLM (OpenAI, Anthropic)" 행의 개발 · 테스트 대체물 — [ADR-0155](0155-llm-local-substitute-takes-only-keys-with-a-fixed-prefix-in-the-local-profile.md) · [llm Spec](../specs/llm.md#로컬-대체물) llm-R16
+- 2026-11-15: 의존성 표 "봇 차단 (Turnstile)" 행 — [ADR-0172](0172-bot-checks-use-turnstile-or-off-pass-when-the-verifier-is-unreachable-and-match-the-action.md) · [`user` "요청 방어"](../specs/user.md#요청-방어) user-R41

@@ -3,7 +3,7 @@ package net.yozmnews.user.domain.account;
 import java.time.Instant;
 import java.util.Objects;
 
-import net.yozmnews.user.UserId;
+import net.yozmnews.platform.UserId;
 import org.jspecify.annotations.Nullable;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.PersistenceCreator;

@@ -6,8 +6,8 @@ import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 import java.time.Duration;
 import java.time.Instant;
 
+import net.yozmnews.platform.UserId;
 import net.yozmnews.user.InvitationState;
-import net.yozmnews.user.UserId;
 import net.yozmnews.user.domain.secret.SecretDigest;
 import org.junit.jupiter.api.Test;
 

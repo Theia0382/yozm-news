@@ -6,6 +6,7 @@ import java.time.Instant;
 import java.util.Objects;
 
 import jakarta.servlet.http.Cookie;
+import net.yozmnews.platform.UserId;
 import net.yozmnews.user.application.PasswordHashing;
 import net.yozmnews.user.domain.account.Account;
 import net.yozmnews.user.domain.account.AccountRepository;
@@ -64,6 +65,8 @@ public final class SignedInUsers {
 		MockHttpServletResponse response = this.mockMvc
 			.perform(post("/api/session").cookie(new Cookie("XSRF-TOKEN", CSRF))
 				.header("X-XSRF-TOKEN", CSRF)
+				// 봇 차단을 켠 시험 앱(검증기는 대역)에서도 로그인한다 — 끈 앱은 이 헤더를 보지 않는다
+				.header("X-Human-Check", "signed-in-users")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 						{"email":"%s","password":"%s","keep":false}""".formatted(email, PASSWORD)))
