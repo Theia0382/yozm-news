@@ -39,3 +39,7 @@
 | 운영자가 있어도 값을 검사해 하나만 · 위반이면 기동하지 않는다 | 쓰이지 않는 값 때문에 뜨지 않는다 — 두 변수를 함께 지워야 한다 |
 | 이미 있는 이메일의 계정을 운영자로 올린다 | 이메일이 미인증이라, 운영자 이메일로 먼저 가입한 다른 사람이 운영자가 된다 |
 | 정지 · 탈퇴한 운영자도 센다 | 운영자가 모두 떠나면 운영자를 만들 길이 없다 |
+
+## 후속 기록
+
+- 2026-11-15: 결과 절 "운영자 계정이 운영의 필수가 되면 … 이 판단을 다시 본다" — [ADR-0183](0183-admin-paths-open-with-admin-account-sessions-and-keep-the-operator-token-as-an-optional-script-bearer-with-csrf-only-for-sessions.md) 결과 절 · [`user` user-R34](../specs/user.md#첫-운영자와-운영자의-계정-운영)

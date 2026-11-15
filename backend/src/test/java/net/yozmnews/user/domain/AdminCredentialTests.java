@@ -8,7 +8,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 /**
- * 운영자 자격의 형식 · 열림 · 대조.
+ * 운영자 자격의 형식 · 설정 여부 · 대조.
  * <p>
  * 지키는 규칙: user-R2
  */
@@ -17,16 +17,16 @@ class AdminCredentialTests {
 	private static final String TOKEN_32 = "0123456789abcdef0123456789abcdef";
 
 	@Test
-	void missingOrEmptyValueClosesTheAdminFunctions() {
-		assertThat(AdminCredential.of(null).open()).isFalse();
-		assertThat(AdminCredential.of("").open()).isFalse();
-		assertThat(AdminCredential.closed().open()).isFalse();
+	void missingOrEmptyValueLeavesTheTokenUnconfigured() {
+		assertThat(AdminCredential.of(null).configured()).isFalse();
+		assertThat(AdminCredential.of("").configured()).isFalse();
+		assertThat(AdminCredential.unconfigured().configured()).isFalse();
 	}
 
 	@Test
 	void acceptsTheLengthBoundaries() {
-		assertThat(AdminCredential.of(TOKEN_32).open()).isTrue();
-		assertThat(AdminCredential.of("a".repeat(512)).open()).isTrue();
+		assertThat(AdminCredential.of(TOKEN_32).configured()).isTrue();
+		assertThat(AdminCredential.of("a".repeat(512)).configured()).isTrue();
 	}
 
 	@Test
@@ -50,7 +50,7 @@ class AdminCredentialTests {
 
 	@Test
 	void acceptsEveryBearerTokenCharacterAndTrailingPadding() {
-		assertThat(AdminCredential.of("AZaz09-._~+/AZaz09-._~+/AZaz09==").open()).isTrue();
+		assertThat(AdminCredential.of("AZaz09-._~+/AZaz09-._~+/AZaz09==").configured()).isTrue();
 	}
 
 	@Test
@@ -66,15 +66,15 @@ class AdminCredentialTests {
 	}
 
 	@Test
-	void closedCredentialMatchesNothing() {
-		assertThat(AdminCredential.closed().matches(TOKEN_32)).isFalse();
-		assertThat(AdminCredential.closed().matches("")).isFalse();
+	void unconfiguredCredentialMatchesNothing() {
+		assertThat(AdminCredential.unconfigured().matches(TOKEN_32)).isFalse();
+		assertThat(AdminCredential.unconfigured().matches("")).isFalse();
 	}
 
 	@Test
 	void textDoesNotCarryTheValue() {
-		assertThat(AdminCredential.of(TOKEN_32)).hasToString("AdminCredential[open]");
-		assertThat(AdminCredential.closed()).hasToString("AdminCredential[closed]");
+		assertThat(AdminCredential.of(TOKEN_32)).hasToString("AdminCredential[configured]");
+		assertThat(AdminCredential.unconfigured()).hasToString("AdminCredential[unconfigured]");
 	}
 
 }

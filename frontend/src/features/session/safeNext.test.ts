@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { safeNext } from "@/features/session/safeNext";
+import { safeNext, withNext } from "@/features/session/safeNext";
 
 const ORIGIN = "https://news.example";
 
@@ -21,5 +21,19 @@ describe("safeNext", () => {
     expect(safeNext(null, ORIGIN)).toBe("/");
     expect(safeNext("", ORIGIN)).toBe("/");
     expect(safeNext("/login?next=%2F", ORIGIN)).toBe("/");
+  });
+});
+
+describe("withNext", () => {
+  it("지금 경로와 질의를 인코딩해 next 로 단다", () => {
+    expect(
+      withNext("/login", {
+        pathname: "/admin/events",
+        search: "?from=2026-11-01",
+      }),
+    ).toBe("/login?next=%2Fadmin%2Fevents%3Ffrom%3D2026-11-01");
+    expect(withNext("/password", { pathname: "/admin", search: "" })).toBe(
+      "/password?next=%2Fadmin",
+    );
   });
 });

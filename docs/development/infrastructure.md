@@ -131,7 +131,7 @@ IDE 에서 테스트를 Gradle 에 맡기는 것은 1 때문이다([CONTRIBUTING
 | `frontend` | 검사 정의의 `frontend` |
 | `docs` | 검사 정의의 `docs` |
 | `tools` | 검사 정의의 `tools` |
-| `deploy-amd64` · `deploy-arm64` | 같은 job 정의(`deploy`)를 아키텍처마다 그 아키텍처의 러너에서 돌린다. 배포 이미지를 두 아키텍처로 빌드하고, 스모크 덧씌우기를 얹어 배포 구성을 자기 아키텍처로 띄워 healthcheck 를 기다린 뒤 `deploy/smoke.sh`, 이어서 운영자 토큰을 넣어 `app` 을 다시 띄우고 K14 를 요구하는 표지와 함께 한 번 더 `deploy/smoke.sh`. 두 job 은 러너와 상대 아키텍처만 다르고, 한쪽의 실패가 다른 쪽을 취소하지 않는다([ADR-0104](../adr/0104-arm64-run-checked-on-arm64-runners-with-a-symmetric-deploy-check-per-architecture.md)) |
+| `deploy-amd64` · `deploy-arm64` | 같은 job 정의(`deploy`)를 아키텍처마다 그 아키텍처의 러너에서 돌린다. 배포 이미지를 두 아키텍처로 빌드하고, 스모크 덧씌우기를 얹어 배포 구성을 자기 아키텍처로 띄워 healthcheck 를 기다린 뒤 `deploy/smoke.sh`, 이어서 스크립트용 운영자 토큰을 넣어 `app` 을 다시 띄우고 K14 를 요구하는 표지와 함께 한 번 더 `deploy/smoke.sh`. 두 job 은 러너와 상대 아키텍처만 다르고, 한쪽의 실패가 다른 쪽을 취소하지 않는다([ADR-0104](../adr/0104-arm64-run-checked-on-arm64-runners-with-a-symmetric-deploy-check-per-architecture.md)) |
 
 - **필수 체크** — 여섯 체크(`backend` · `frontend` · `docs` · `tools` · `deploy-amd64` · `deploy-arm64`) 모두 `main` 의 필수 체크다. 필수 여부는 저장소 설정(branch protection)이 정한다
 - **캐시** — 각 job 은 검사를 돌리기 전에 같은 정의로 이미지를 buildx bake 로 먼저 빌드해, GitHub Actions 캐시를 계층 캐시로 쓴다. 캐시 범위는 job 마다 따로다(`ci.yml`). 캐시에 계층을 저장하는 것은 `main` 의 실행뿐이고 PR 의 실행은 캐시를 읽기만 한다 — 이미지의 의존성 계층을 바꾼 PR 은 merge 될 때까지 실행마다 그 계층을 다시 만든다
@@ -166,7 +166,7 @@ IDE 에서 테스트를 Gradle 에 맡기는 것은 1 때문이다([CONTRIBUTING
 | 태그 체계 안내서의 예시 원문을 기본 체계에 적용하면 확인을 통과한다 | 테스트 `TagSetsGuideExampleTests`(코드 블록은 `yaml` · `sh` 만, 받은 원문의 같은 절을 `yaml` 블록으로 바꾸거나 끝에 더한 원문이 형식 검증과 기본 체계와의 대조를 통과하고 계보가 하나 이상) | `docs/operations/tag-sets.md` · `backend/build.gradle.kts` |
 | Javadoc 형식 오류(깨진 참조 · HTML · 태그)가 없다 — main · 테스트 소스 | 빌드 실패 — 컴파일의 javac doclint 가 깨진 참조 · HTML 을(배포 빌드 `bootJar` 에도 걸린다), `check` 의 `javadoc` · `javadocTest` 가 그에 더해 알 수 없는 태그 · doclint 경고를 잡는다(`-Werror` 는 이 둘에만). 문서화 누락은 검사하지 않는다([ADR-0039](../adr/0039-code-comments-point-to-owning-docs-and-javadoc-format-checked-by-javac-and-javadoc.md)) | `backend/build.gradle.kts` |
 | 넘기는 경로의 정본 하나를 Caddy · Vite 가 함께 읽는다 | 테스트 `backendPaths.test.ts` + 스모크 K5 · K6 · K10 | `frontend/proxy/` |
-| 운영자 경로는 토큰 없는 요청에 열리지 않는다 — 토큰을 설정하지 않은 배포는 닫혀 있고(403 `admin-closed`), 설정한 배포는 인증을 요구한다(401 `admin-unauthorized`) | 스모크 K13 — CI 는 두 구성을 돌린다 | [운영 설정 — 운영자](../operations/configuration.md#운영자) |
+| 운영자 경로는 로그인하지 않은 요청에 열리지 않는다 — 운영자 토큰을 설정했든 안 했든 세션 없는 요청은 401 `unauthenticated`, 틀린 운영자 토큰(Bearer)은 401 `admin-unauthorized` 다 | 스모크 K13 — CI 는 두 구성을 돌린다 | [운영 설정 — 운영자](../operations/configuration.md#운영자) |
 | proxy 가 관리 · 명세 엔드포인트를 넘기지 않는다 | 스모크 K7 · K8 | `frontend/proxy/backend-paths.caddy` |
 | proxy 가 덮어쓰는 클라이언트 IP 헤더 = 앱이 읽는 헤더, 신뢰 범위의 헤더는 오른쪽부터 읽는다 | 테스트 `ProxyClientAddressTests`(Caddyfile 원문 대조). 부분 — Caddy 가 그 설정을 어떻게 해석하는지는 재지 않는다 | `frontend/proxy/Caddyfile` · `ClientAddresses` |
 | 배포 구성은 proxy 만 호스트에 공개하고 기본은 루프백이다 | 스모크 K2 | [공개](../operations/configuration.md#공개) |

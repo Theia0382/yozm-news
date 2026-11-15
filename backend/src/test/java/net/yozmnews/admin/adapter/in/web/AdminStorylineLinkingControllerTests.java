@@ -1,6 +1,7 @@
 package net.yozmnews.admin.adapter.in.web;
 
 import static net.yozmnews.admin.adapter.in.web.AdminRequests.json;
+import static net.yozmnews.admin.adapter.in.web.AdminRequests.withCsrf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -81,7 +82,7 @@ class AdminStorylineLinkingControllerTests {
 	@Test
 	void theOperatorTokenGuardsTheFillPath() throws Exception {
 		this.mockMvc
-			.perform(post("/api/admin/storyline-linking-fills").contentType(MediaType.APPLICATION_JSON).content("{\"days\":1}"))
+			.perform(withCsrf(post("/api/admin/storyline-linking-fills").contentType(MediaType.APPLICATION_JSON).content("{\"days\":1}")))
 			.andExpect(status().isUnauthorized());
 
 		assertThat(this.administration.calls).isEmpty();

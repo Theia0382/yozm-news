@@ -50,6 +50,15 @@ class OpenApiConfiguration {
 	private static final Set<RequestMethod> UNSAFE_METHODS = Set.of(RequestMethod.POST, RequestMethod.PUT,
 			RequestMethod.PATCH, RequestMethod.DELETE);
 
+	/** 401 — 세션 사용자가 없다(운영자 경로 · 세션 경로 공통) */
+	private static final String NO_SESSION = "세션이 없거나 만료됐다";
+
+	/** 403 — 변경 요청의 CSRF 토큰이 없거나 틀리다(운영자 경로 · 세션 경로 공통) */
+	private static final String CSRF_DENIAL = "요청 보호 토큰이 없거나 맞지 않는다";
+
+	/** 403 — 세션 사용자가 비밀번호를 바꿔야 한다(운영자 경로 · 세션 경로 공통) */
+	private static final String PASSWORD_CHANGE_DENIAL = "비밀번호를 바꿔야 한다";
+
 	@Bean
 	OpenAPI screenApi() {
 		return new OpenAPI().info(new Info().title("요즘뉴스 화면용 API").version("0"))
@@ -73,7 +82,9 @@ class OpenApiConfiguration {
 	}
 
 	/**
-	 * 운영자 경로의 모든 연산에 401 · 403 문제 응답을 단다 — 운영자 경로는 {@link ApiPaths#ADMIN} 가 정본이다.
+	 * 운영자 경로의 모든 연산에 401 · 403 문제 응답을 단다 — 401 은 세션 없음 · 틀린 운영자 토큰, 403 은 변경 메서드면 CSRF 와 비밀번호
+	 * 변경 필요 · 운영자 아님(서버의 판정 순서). 운영자 경로는 {@link ApiPaths#ADMIN} 가 정본이다. docs/specs/platform.md §4 ·
+	 * platform-R6
 	 * @throws IllegalStateException 연산이 401 · 403 을 이미 가질 때(정본이 둘이 된다), 문제 응답 스키마가 없을 때
 	 */
 	@Bean
@@ -92,10 +103,16 @@ class OpenApiConfiguration {
 						|| !components.getSchemas().containsKey(PROBLEM_SCHEMA)) {
 					throw new IllegalStateException("운영자 경로의 거부 응답이 가리킬 스키마가 없다: " + PROBLEM_SCHEMA);
 				}
-				for (Operation operation : item.readOperations()) {
-					reject(operation, path, "401", "운영자 토큰이 없거나 맞지 않는다");
-					reject(operation, path, "403", "운영자 기능이 닫혀 있다");
-				}
+				item.readOperationsMap().forEach((method, operation) -> {
+					reject(operation, path, "401", NO_SESSION + " · 운영자 토큰(Bearer)이 맞지 않는다");
+					List<String> denials = new ArrayList<>();
+					if (UNSAFE_METHODS.contains(RequestMethod.valueOf(method.name()))) {
+						denials.add(CSRF_DENIAL);
+					}
+					denials.add(PASSWORD_CHANGE_DENIAL);
+					denials.add("운영자 권한이 없다");
+					reject(operation, path, "403", String.join(" · ", denials));
+				});
 			});
 		};
 	}
@@ -127,17 +144,17 @@ class OpenApiConfiguration {
 			}
 			String path = paths.getFirst();
 			if (!PublicApis.isPublic(handler)) {
-				reject(operation, path, "401", "세션이 없거나 만료됐다");
+				reject(operation, path, "401", NO_SESSION);
 			}
 			boolean changes = mappings.stream()
 				.flatMap(mapping -> mapping.getMethodsCondition().getMethods().stream())
 				.anyMatch(UNSAFE_METHODS::contains);
 			List<String> denials = new ArrayList<>();
 			if (changes) {
-				denials.add("요청 보호 토큰이 없거나 맞지 않는다");
+				denials.add(CSRF_DENIAL);
 			}
 			if (!PublicApis.isPublic(handler) && !PublicApis.allowedBeforePasswordChange(handler)) {
-				denials.add("비밀번호를 바꿔야 한다");
+				denials.add(PASSWORD_CHANGE_DENIAL);
 			}
 			if (!PublicApis.isPublic(handler) && !PublicApis.allowedWithoutLlmKey(handler)) {
 				denials.add("LLM 키를 등록해야 한다");

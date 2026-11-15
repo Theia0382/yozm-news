@@ -7,13 +7,8 @@ export type ApiProblem = Schemas["ApiProblem"];
 
 const ADMIN_PATH = "/api/admin/";
 
-/** 운영자 기능이 닫혔음을 뜻하는 문제 유형 — 서버와의 계약(docs/specs/user.md user-R3) */
-export const ADMIN_CLOSED = "urn:yozmnews:problem:admin-closed";
-
 type AdminClientOptions = ClientOptions & {
-  /** 보낼 운영자 토큰 — 없으면 헤더를 붙이지 않는다 */
-  token: () => string | null;
-  /** 운영자 API 가 401 로 답했을 때 */
+  /** 운영자 API 가 401 로 답했을 때 — 세션이 없거나 끝났다 */
   onUnauthorized?: () => void;
 };
 
@@ -21,21 +16,16 @@ function isAdminPath(request: Request): boolean {
   return new URL(request.url).pathname.startsWith(ADMIN_PATH);
 }
 
-/** 운영자 API 클라이언트 — /api/admin/ 요청에만 Authorization: Bearer 를 붙인다 */
+/**
+ * 운영자 API 클라이언트 — 운영자 계정 세션(쿠키)으로 부르고, 변경 요청에는 화면용 API 클라이언트처럼 요청 보호 토큰을 붙인다.
+ * /api/admin/ 의 401 만 알린다.
+ */
 export function createAdminClient({
-  token,
   onUnauthorized,
   ...options
 }: AdminClientOptions) {
   const client = createApiClient(options);
   client.use({
-    onRequest({ request }) {
-      const value = token();
-      if (value && isAdminPath(request)) {
-        request.headers.set("Authorization", `Bearer ${value}`);
-      }
-      return request;
-    },
     onResponse({ request, response }) {
       if (response.status === 401 && isAdminPath(request)) {
         onUnauthorized?.();

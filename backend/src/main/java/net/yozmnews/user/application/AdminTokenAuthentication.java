@@ -2,8 +2,10 @@ package net.yozmnews.user.application;
 
 import java.util.List;
 
+import net.yozmnews.user.domain.account.AccountRole;
 import org.jspecify.annotations.Nullable;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.AuthorityUtils;
 
 /**
@@ -16,7 +18,8 @@ final class AdminTokenAuthentication extends AbstractAuthenticationToken {
 	private final @Nullable String token;
 
 	private AdminTokenAuthentication(@Nullable String token, boolean authenticated) {
-		super(authenticated ? AuthorityUtils.createAuthorityList("ROLE_" + SecurityConfiguration.ADMIN_ROLE) : List.of());
+		super(authenticated ? AuthorityUtils.createAuthorityList(AccountAuthentication.roleAuthority(AccountRole.ADMIN))
+				: List.of());
 		this.token = token;
 		super.setAuthenticated(authenticated);
 	}
@@ -29,6 +32,11 @@ final class AdminTokenAuthentication extends AbstractAuthenticationToken {
 	/** 운영자로 인증했다 */
 	static AdminTokenAuthentication operator() {
 		return new AdminTokenAuthentication(null, true);
+	}
+
+	/** 운영자 토큰으로 인증한 요청인가 — 운영자 경로의 인가와 CSRF 면제가 함께 읽는다 */
+	static boolean isOperator(@Nullable Authentication authentication) {
+		return authentication instanceof AdminTokenAuthentication operator && operator.isAuthenticated();
 	}
 
 	@Override

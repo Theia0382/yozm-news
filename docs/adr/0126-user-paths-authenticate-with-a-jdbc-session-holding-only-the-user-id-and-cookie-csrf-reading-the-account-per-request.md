@@ -1,6 +1,6 @@
 # ADR-0126: 사용자 경로는 사용자 ID 만 담은 JDBC 세션과 쿠키 CSRF 로 인증하고, 요청마다 계정 상태와 역할을 읽는다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 운영자 체인은 세션 · CSRF 를 쓰지 않음([ADR-0183](0183-admin-paths-open-with-admin-account-sessions-and-keep-the-operator-token-as-an-optional-script-bearer-with-csrf-only-for-sessions.md))
 - 날짜: 2026-11-13
 - 근거: [이슈 #145](https://github.com/Theia0382/yozm-news/issues/145) — 기점 `a02a205` 과 Spring Session JDBC 4.1.1 · Spring Security 7.1.2 소스로, 세션 저장소가 요청마다 마지막 접근 시각을 갱신하고 세션 인증 전략(세션 ID 교체 · CSRF 토큰 교체)이 기본으로 명시 호출을 요구함을 확인
 - 관련: [ADR-0043](0043-admin-functions-guarded-by-env-bearer-token-until-account-roles.md)(결정 넷째 항목의 "두 보안 체인 모두 세션을 만들지 않고 … CSRF 를 끈다" — 부분 대체. 운영자 체인은 그대로 무상태), [ADR-0009](0009-authentication-google-and-local.md)(세션 저장소 Spring Session JDBC — 보충), [ADR-0044](0044-screen-api-results-as-flat-discriminated-200-and-rfc9457-problems.md)(로그인 결과는 판정 결과 200)
@@ -17,6 +17,7 @@
 - **요청마다 계정을 읽는다.** 세션 체인이 세션의 사용자 ID 로 계정을 읽어, 없거나 `ACTIVE` 가 아니면 세션을 지우고 익명으로 처리하며, 그렇지 않으면 그 계정의 역할을 요청의 권한으로 둔다. 요청마다 정한 권한은 세션에 저장하지 않는다.
 - **쿠키 CSRF** — 세션 체인의 모든 변경 요청(로그인 · 로그아웃 포함)은 `XSRF-TOKEN` 쿠키와 같은 값을 `X-XSRF-TOKEN` 헤더로 보내야 한다. 화면의 API 클라이언트가 변경 요청마다 붙인다.
 - **로그인은 컨트롤러가 처리하고 세션 인증 전략을 직접 부른다** — 세션 ID 교체 · CSRF 토큰 교체 · 보안 문맥 저장. 로그아웃은 세션을 지우고 쿠키를 만료시킨다.
+> 부분 대체 — [ADR-0183](0183-admin-paths-open-with-admin-account-sessions-and-keep-the-operator-token-as-an-optional-script-bearer-with-csrf-only-for-sessions.md). 지금 상태: [`user` Spec "운영자 접근 통제"](../specs/user.md#운영자-접근-통제) user-R1
 - 운영자 체인은 바꾸지 않는다 — 세션 쿠키를 읽지 않고 CSRF 를 쓰지 않는다.
 
 ## 결과

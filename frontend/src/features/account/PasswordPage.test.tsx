@@ -8,7 +8,12 @@ import { bodiesOf, renderRoutes, SIGNED_IN_ME } from "@/test/renderRoutes";
 
 const CODE = "ABCD-EFGH-JKMN-PQRS-TVWX-YZ01-2345-6789";
 
-function renderGuarded(entry: string, forced: boolean, change?: Handler) {
+function renderGuarded(
+  entry: string,
+  forced: boolean,
+  change?: Handler,
+  { llmKeyRequired = false }: { llmKeyRequired?: boolean } = {},
+) {
   let mustChange = forced;
   return renderRoutes(
     [
@@ -19,13 +24,19 @@ function renderGuarded(entry: string, forced: boolean, change?: Handler) {
           { path: "/notices", element: <p>알림 화면</p> },
           { path: "/password", element: <PasswordPage /> },
           { path: "/settings", element: <p>설정 화면</p> },
+          { path: "/keys", element: <p>키 화면</p> },
         ],
       },
+      { path: "/admin", element: <p>운영자 화면</p> },
     ],
     entry,
     {
       "GET /api/me": () =>
-        json({ ...SIGNED_IN_ME, passwordChangeRequired: mustChange }),
+        json({
+          ...SIGNED_IN_ME,
+          passwordChangeRequired: mustChange,
+          llmKeyRequired,
+        }),
       "GET /api/notices/unread-count": () => json({ count: 0 }),
       "PUT /api/account/password": async (request) => {
         const response = await (change ?? (() => json({})))(request);
@@ -97,6 +108,74 @@ describe("PasswordPage", () => {
     expect(await screen.findByText("첫 화면")).toBeInTheDocument();
     expect(router.state.location.pathname).toBe("/");
     expect(screen.getByRole("link", { name: "설정" })).toBeInTheDocument();
+  });
+
+  it("LLM 키가 없어도 돌아갈 곳(next)이 있으면 저장을 확인한 뒤 그리로 가 머문다", async () => {
+    const { router } = renderGuarded(
+      "/password?next=%2Fadmin",
+      true,
+      () =>
+        json({
+          result: "CHANGED",
+          recoveryCode: CODE,
+          passwordProblem: null,
+          retryAfterSeconds: null,
+        }),
+      { llmKeyRequired: true },
+    );
+
+    const user = await fill();
+    await user.click(await screen.findByLabelText("복구 코드를 저장했습니다"));
+    await user.click(screen.getByRole("button", { name: "계속" }));
+
+    expect(await screen.findByText("운영자 화면")).toBeInTheDocument();
+    // 다시 읽은 로그인 상태로 변경 화면이 한 번 더 그려져도 키 화면으로 튕기지 않는다
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(router.state.location.pathname).toBe("/admin");
+    expect(screen.queryByText("키 화면")).not.toBeInTheDocument();
+  });
+
+  it("LLM 키가 없고 돌아갈 곳이 없으면 저장을 확인한 뒤 첫 화면을 거쳐 키 화면으로 간다", async () => {
+    const { router } = renderGuarded(
+      "/password",
+      true,
+      () =>
+        json({
+          result: "CHANGED",
+          recoveryCode: CODE,
+          passwordProblem: null,
+          retryAfterSeconds: null,
+        }),
+      { llmKeyRequired: true },
+    );
+
+    const user = await fill();
+    await user.click(await screen.findByLabelText("복구 코드를 저장했습니다"));
+    await user.click(screen.getByRole("button", { name: "계속" }));
+
+    expect(await screen.findByText("키 화면")).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe("/keys");
+  });
+
+  it("돌아갈 곳이 다른 오리진이면 첫 화면으로 간다", async () => {
+    const { router } = renderGuarded(
+      "/password?next=https%3A%2F%2Fevil.example%2F",
+      true,
+      () =>
+        json({
+          result: "CHANGED",
+          recoveryCode: CODE,
+          passwordProblem: null,
+          retryAfterSeconds: null,
+        }),
+    );
+
+    const user = await fill();
+    await user.click(await screen.findByLabelText("복구 코드를 저장했습니다"));
+    await user.click(screen.getByRole("button", { name: "계속" }));
+
+    expect(await screen.findByText("첫 화면")).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe("/");
   });
 
   it("지금 비밀번호가 틀리면 그대로 남아 알린다", async () => {

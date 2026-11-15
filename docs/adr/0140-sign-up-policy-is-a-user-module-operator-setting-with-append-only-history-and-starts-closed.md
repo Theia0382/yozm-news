@@ -33,3 +33,4 @@
 ## 후속 기록
 
 - 2026-11-15: 결과 절 "가입 요청 제한 · 봇 차단은 아직 없다" — [ADR-0169](0169-request-limits-and-bot-checks-are-platform-marks-applied-by-the-user-session-chain-before-the-handler.md) · [ADR-0170](0170-request-limits-count-fixed-windows-in-a-user-postgresql-table-with-a-code-constant-policy-table.md) · [ADR-0172](0172-bot-checks-use-turnstile-or-off-pass-when-the-verifier-is-unreachable-and-match-the-action.md) · [`user` "요청 방어"](../specs/user.md#요청-방어) user-R38 · user-R41 · [`user` user-R32](../specs/user.md#가입-정책)
+- 2026-11-15: 결과 절 "운영자 경로가 계정 세션이 되면 그 작업이 계정 행위자를 정한다" — [ADR-0183](0183-admin-paths-open-with-admin-account-sessions-and-keep-the-operator-token-as-an-optional-script-bearer-with-csrf-only-for-sessions.md) 결과 절 · [`user` user-R32](../specs/user.md#가입-정책)

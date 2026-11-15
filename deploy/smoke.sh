@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 배포 구성 스모크 — 띄운 배포 구성(deploy/compose.yaml)이 갖춰야 할 것을 확인한다. 공개 주소는 기본값이어야 하고, 운영자 토큰은 넣어도 넣지 않아도 된다.
+# 배포 구성 스모크 — 띄운 배포 구성(deploy/compose.yaml)이 갖춰야 할 것을 확인한다. 공개 주소는 기본값이어야 하고, 스크립트용 운영자 토큰은 넣어도 넣지 않아도 된다.
 # CI(.github/workflows/ci.yml 의 deploy-amd64 · deploy-arm64 job)와 로컬이 같은 파일을 쓴다. 필요한 호스트 도구: bash · docker · curl · sed.
 # 사용: 배포 구성을 띄운 뒤(PROXY_HOST_ADDRESS 는 기본값) bash deploy/smoke.sh — 종료 코드 0 이면 전 항목 통과다.
 # K14(로컬 모델 추론 한 건)는 스모크 덧씌우기(deploy/smoke/compose.yaml)의 시험 피드 서버 feeds 가 떠 있고 운영자 토큰이 있을 때만 돈다. 덧씌우기 경로를 SMOKE_OVERLAY 로 주면 스모크의 compose 명령에도 얹는다.
@@ -47,15 +47,17 @@ if [[ -z $address ]]; then
 fi
 base="http://$address"
 
-# 경로에 GET 을 보내 "상태 형식" 을 돌려주고 본문은 body_file 에 둔다
+# 경로에 GET 을 보내 "상태 형식" 을 돌려주고 본문은 body_file 에 둔다. 둘째 인자가 있으면 요청 헤더 한 줄로 싣는다
 request() {
-  curl -sS --max-time 10 -o "$body_file" -w '%{http_code} %{content_type}' "$base$1" 2>&1 || true
+  local headers=()
+  if [[ -n ${2:-} ]]; then headers=(-H "$2"); fi
+  curl -sS --max-time 10 -o "$body_file" -w '%{http_code} %{content_type}' "${headers[@]}" "$base$1" 2>&1 || true
 }
 
-# 이름 경로 기대-상태(* 는 아무 값) 기대-형식-접두
+# 이름 경로 기대-상태(* 는 아무 값) 기대-형식-접두 [요청 헤더]
 check() {
-  local name=$1 path=$2 status=$3 type=$4 actual
-  actual=$(request "$path")
+  local name=$1 path=$2 status=$3 type=$4 header=${5:-} actual
+  actual=$(request "$path" "$header")
   if [[ ($status == "*" || ${actual%% *} == "$status") && ${actual#* } == "$type"* ]]; then
     pass "$name"
   else
@@ -75,21 +77,14 @@ if [[ $body == '{"message":"pong"}' ]]; then pass "K5 /api/ping 응답"; else fa
 # K6 OIDC 로그인 경로는 넘기지 않는다(SPA 가 답한다)
 check "K6 /login/oauth2/… 는 넘기지 않음" /login/oauth2/code/smoke 200 text/html
 check "K6 /oauth2/… 는 넘기지 않음" /oauth2/authorization/smoke 200 text/html
-# K13 운영자 경로는 토큰 없는 요청에 열리지 않는다 — 토큰이 없는 배포는 닫혀 있고, 토큰을 넣은 배포는 인증을 요구한다(docs/specs/platform.md "운영자 접근 통제")
-# 토큰 유무는 실행 중인 app 의 환경을 컨테이너 안의 bash 가 보고 표지(set · unset)만 내보낸다 — 토큰 값은 이 스크립트로 나오지 않는다
-# 종료 코드 0 과 표지가 함께 있어야 판정한 것이다 — app 이 떠 있지 않아도 exec 가 실패하므로, 읽지 못한 것을 토큰 없음으로 넘기지 않는다
-token_marker=$("${compose[@]}" exec -T app bash -c '[[ -n ${YOZMNEWS_ADMIN_TOKEN:-} ]] && echo set || echo unset' 2>/dev/null) && token_read=1 || token_read=0
-k13_name=""
-case "$token_read:$token_marker" in
-  1:unset) k13_name="K13 운영자 경로 닫힘(토큰 없음)" k13_status=403 k13_problem=urn:yozmnews:problem:admin-closed ;;
-  1:set) k13_name="K13 운영자 경로 인증 요구(토큰 있음)" k13_status=401 k13_problem=urn:yozmnews:problem:admin-unauthorized ;;
-esac
-if [[ -z $k13_name ]]; then
-  fail "K13 운영자 토큰 설정" "app 환경의 표지 set · unset" "운영자 토큰 설정을 읽지 못했다"
-else
-  check "$k13_name" /api/admin/sources "$k13_status" application/problem+json
-  if grep -qF "\"$k13_problem\"" "$body_file"; then pass "$k13_name 문제 유형"; else fail "$k13_name 문제 유형" "$k13_problem" "$(head -c 200 "$body_file")"; fi
-fi
+# K13 운영자 경로는 로그인하지 않은 요청에 열리지 않는다 — 운영자 토큰을 넣었든 넣지 않았든 같다(docs/specs/user.md "운영자 접근 통제")
+# 세션 없는 요청은 로그인을 요구하고, 틀린 운영자 토큰(Bearer)은 토큰 인증 실패다 — 토큰을 넣지 않은 배포도 어떤 Bearer 에나 같은 답이다
+k13="K13 운영자 경로 로그인 요구"
+check "$k13" /api/admin/sources 401 application/problem+json
+if grep -qF '"urn:yozmnews:problem:unauthenticated"' "$body_file"; then pass "$k13 문제 유형"; else fail "$k13 문제 유형" "urn:yozmnews:problem:unauthenticated" "$(head -c 200 "$body_file")"; fi
+k13="K13 틀린 운영자 토큰 거부"
+check "$k13" /api/admin/sources 401 application/problem+json "Authorization: Bearer smoke-wrong-operator-token-0123456789abcdef"
+if grep -qF '"urn:yozmnews:problem:admin-unauthorized"' "$body_file"; then pass "$k13 문제 유형"; else fail "$k13 문제 유형" "urn:yozmnews:problem:admin-unauthorized" "$(head -c 200 "$body_file")"; fi
 # K7 · K8 관리 · 명세 엔드포인트는 넘기지 않는다(SPA 가 답한다)
 check "K7 /actuator/health 는 넘기지 않음" /actuator/health 200 text/html
 check "K8 /v3/api-docs 는 넘기지 않음" /v3/api-docs 200 text/html
@@ -115,6 +110,7 @@ if [[ $loaded == "프리셋 ${#preset_files[@]}개를 적재했다" ]]; then pas
 
 # K14 이미지의 로컬 임베딩 모델이 이 아키텍처에서 추론한다 — 시험 피드의 기사 하나가 수집 · 표현까지 가고, 표현의 모델 버전이 저장소의 정본과 같다
 # 시험 소스를 운영자 API 로 등록 · 켠다. 요청은 app 컨테이너 안의 bash 가 컨테이너의 토큰으로 보낸다(이미지에 curl 이 없다 — healthcheck 와 같은 /dev/tcp) — 토큰 값은 이 스크립트로 나오지 않는다
+# 운영자 토큰(Bearer)으로 인증한 변경 요청은 쿠키 자격이 아니라 요청 보호 토큰(CSRF) 없이 받는다
 # 본문은 표준 입력으로 넘기고, 응답은 상태 코드 한 줄 다음 본문이다
 admin_request() {
   "${compose[@]}" exec -T app bash -c '
@@ -134,6 +130,9 @@ db_query() {
   "${compose[@]}" exec -T postgres bash -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -X -A -t -c "$1"' db "$1"
 }
 k14="K14 로컬 모델 표현 한 건"
+# 운영자 토큰 유무는 실행 중인 app 의 환경을 컨테이너 안의 bash 가 보고 표지(set · unset)만 내보낸다 — 토큰 값은 이 스크립트로 나오지 않는다
+# 종료 코드 0 과 표지가 함께 있어야 판정한 것이다 — app 이 떠 있지 않아도 exec 가 실패하므로, 읽지 못한 것을 토큰 없음으로 넘기지 않는다
+token_marker=$("${compose[@]}" exec -T app bash -c '[[ -n ${YOZMNEWS_ADMIN_TOKEN:-} ]] && echo set || echo unset' 2>/dev/null) && token_read=1 || token_read=0
 feeds_up=0
 if "${compose[@]}" ps --services --status running 2>/dev/null | grep -qx feeds; then feeds_up=1; fi
 if [[ $token_read == 1 && $token_marker == set && $feeds_up == 1 ]]; then

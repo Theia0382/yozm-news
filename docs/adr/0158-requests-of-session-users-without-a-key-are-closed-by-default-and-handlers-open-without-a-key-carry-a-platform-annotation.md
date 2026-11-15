@@ -1,6 +1,6 @@
 # ADR-0158: 키 없는 세션 사용자의 요청은 닫힘이 기본이고, 키 없이도 여는 처리기에 `platform` 의 표시를 단다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 운영자 경로가 키 관문과 무관한 까닭([ADR-0185](0185-admin-paths-stay-outside-the-llm-key-gate-and-look-only-at-the-role.md))
 - 날짜: 2026-11-14
 - 근거: [이슈 #150](https://github.com/Theia0382/yozm-news/issues/150)
 - 관련: [ADR-0146](0146-sessions-of-accounts-with-an-initial-password-open-only-password-change-status-and-sign-out-marked-by-a-platform-annotation.md)(같은 꼴의 표시), [ADR-0125](0125-screen-api-handlers-need-a-session-unless-marked-public-and-take-the-user-only-as-a-session-filled-argument.md)(공개 처리기 표시 · 등록 가드), [ADR-0003](0003-byok-personalized-digest.md)(키 없는 사용자에게는 키 등록 페이지만), [ADR-0159](0159-having-a-key-means-having-any-stored-key-regardless-of-its-status.md)(키가 있다는 것의 뜻), [ADR-0160](0160-users-without-a-key-may-use-key-account-and-notice-handlers.md)(여는 범위)
@@ -24,6 +24,7 @@
 
 - 새 모듈의 처리기는 표시가 없으면 키 없는 사용자에게 닫힌다 — 빠뜨린 쪽이 닫힌다.
 - 표시가 없는 처리기의 요청마다 키 유무 조회가 하나 는다.
+> 부분 대체 — [ADR-0185](0185-admin-paths-stay-outside-the-llm-key-gate-and-look-only-at-the-role.md). 지금 상태: [`user` Spec "운영자 접근 통제"](../specs/user.md#운영자-접근-통제) user-R1
 - 운영자 경로는 운영자 토큰의 체인이라 이 규칙과 무관하다.
 
 ## 검토한 대안

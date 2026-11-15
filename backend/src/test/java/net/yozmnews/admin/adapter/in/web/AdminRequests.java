@@ -1,5 +1,6 @@
 package net.yozmnews.admin.adapter.in.web;
 
+import jakarta.servlet.http.Cookie;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -12,11 +13,25 @@ final class AdminRequests {
 
 	static final String TOKEN_PROPERTY = "yozmnews.admin.token=" + TOKEN;
 
+	private static final String CSRF_COOKIE = "XSRF-TOKEN";
+
+	private static final String CSRF_HEADER = "X-XSRF-TOKEN";
+
+	private static final String CSRF_VALUE = "admin-test-csrf-token";
+
 	private AdminRequests() {
 	}
 
 	static MockHttpServletRequestBuilder authorized(MockHttpServletRequestBuilder request) {
 		return request.header(HttpHeaders.AUTHORIZATION, "Bearer " + TOKEN);
+	}
+
+	/**
+	 * 요청 보호 토큰(CSRF)만 싣는다 — 운영자 토큰 없이 보내는 변경 요청이 CSRF 에 먼저 막히지 않고 인증 판정에 닿게 한다(쿠키 값과 헤더
+	 * 값이 같으면 맞다)
+	 */
+	static MockHttpServletRequestBuilder withCsrf(MockHttpServletRequestBuilder request) {
+		return request.cookie(new Cookie(CSRF_COOKIE, CSRF_VALUE)).header(CSRF_HEADER, CSRF_VALUE);
 	}
 
 	static MockHttpServletRequestBuilder json(MockHttpServletRequestBuilder request, String body) {
