@@ -111,6 +111,16 @@ tasks.named<JavaExec>("bootTestRun") {
 	systemProperty(devComposeFileProperty, devComposeFile.asFile.path)
 }
 
+// 배포 proxy 의 Caddyfile — 테스트가 앱이 읽는 클라이언트 IP 헤더 · 신뢰 범위 결선을 대조한다. 결선은 docs/development/infrastructure.md
+// "테스트가 저장소 파일을 읽는 결선"
+val proxyCaddyfile = layout.projectDirectory.file("../frontend/proxy/Caddyfile")
+val proxyCaddyfileProperty = "yozmnews.proxy-caddyfile"
+
+tasks.withType<Test> {
+	inputs.file(proxyCaddyfile).withPropertyName("proxyCaddyfile").withPathSensitivity(PathSensitivity.NONE)
+	systemProperty(proxyCaddyfileProperty, proxyCaddyfile.asFile.path)
+}
+
 // 화면용 API 명세(저장소 루트 api/openapi.json) — 결선은 docs/development/infrastructure.md "테스트가 저장소 파일을 읽는 결선".
 // 파일이 없어도 구성은 되고 테스트가 안내와 함께 실패하도록 inputs.files 로 등록한다. updateOpenApiSpec 은 같은 테스트로 파일을 다시 쓴다.
 val openApiSpecFile = layout.projectDirectory.file("../api/openapi.json")
