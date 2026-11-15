@@ -21,7 +21,7 @@
 - 복호화한 키를 내놓는 공개 API 를 두지 않는다 — 평문은 `StoredKeySource` 의 구현을 거쳐 `llm` 에만 간다(credential-R13)
 - 키 없는 사용자의 요청을 막지 않는다 — 세션 체인의 관문은 `user` 의 것이고, 이 모듈은 키 유무만 답한다
 - 알림을 남기지 않는다 — 이벤트를 받은 `user` 가 남긴다
-- 키 등록 · 검증 경로의 요청 제한을 걸지 않는다
+- 키 등록 · 검증 경로의 요청 제한을 세지 않는다 — 두 처리기에 `platform` 의 요청 제한 표시(`@RequestLimited(LLM_KEY_CHECK)`)를 달고, 세고 거부하는 것은 `user` 의 요청 방어다([user Spec](user.md#요청-방어) user-R38 · R40)
 
 다른 모듈과의 의존과 이벤트 흐름은 [overview.md §5](../overview.md#5-모듈-지도)에 있다.
 
@@ -52,7 +52,7 @@ HTTP 엔드포인트:
 | `/api/llm-keys/{provider}/checks` | `POST` | 다시 검증 — `VALID` · `INVALID` · `UNDETERMINED`(+실패 종류) · `MISSING`(credential-R12 · R14) |
 | `/api/llm-keys/{provider}` | `DELETE` | 키 삭제 — 없어도 204(credential-R16) |
 
-네 경로 모두 세션이 필요하고 사용자 격리 시험에 등록돼 있으며([user Spec](user.md#화면용-api-의-공개와-세션-사용자) user-R6), 키가 없는 세션 사용자에게도 연다(`@AllowedWithoutLlmKey` — user-R5). `{provider}` 는 `llm` 의 `Provider` 이름(`OPENAI` · `ANTHROPIC`)이고 모르는 값은 400 이다. 판정 결과는 200 이고, 요청 · 응답 형식은 `api/openapi.json` 에 있다.
+네 경로 모두 세션이 필요하고 사용자 격리 시험에 등록돼 있으며([user Spec](user.md#화면용-api-의-공개와-세션-사용자) user-R6), 키가 없는 세션 사용자에게도 연다(`@AllowedWithoutLlmKey` — user-R5). 등록 · 다시 검증은 요청마다 공급자에 한 번 묻고, 한도(세션 사용자 · 클라이언트 주소 — 둘이 함께 쓴다)를 넘으면 처리기 앞에서 429 다(user-R38 · R40). `{provider}` 는 `llm` 의 `Provider` 이름(`OPENAI` · `ANTHROPIC`)이고 모르는 값은 400 이다. 판정 결과는 200 이고, 요청 · 응답 형식은 `api/openapi.json` 에 있다.
 
 ### LlmKeys
 
@@ -103,7 +103,8 @@ public record CredentialInvalidated(UserId user, Provider provider, long keyId, 
 |---|---|
 | (최상위) | 공개 타입 둘 |
 | `domain/crypto` | 봉투 암호(`EnvelopeCipher`), KEK 의 집합(`KeyEncryptionKeys`)과 KEK 파일 형식의 정본(`KekFile`), 값 타입(`KeyOwner` · `SealedKey` · `KekFileRead`) |
-| `domain/key` | 키 aggregate(`StoredLlmKey`)와 저장소(`LlmKeyRepository`), 상태와 전이의 정본(`KeyStatus`), 힌트 규칙(`KeyHint`), 조회 값(`KekVersionUse`) |
+| `domain/key` | 키 aggregate(`StoredLlmKey`)와 저장소(`LlmKeyRepository`), 주인 잠금(`KeyOwnerLock`), 상태와 전이의 정본(`KeyStatus`), 힌트 규칙(`KeyHint`), 조회 값(`KekVersionUse`) |
+| `adapter/out/persistence` | 주인 잠금의 PostgreSQL 구현(`JdbcKeyOwnerLock` — 트랜잭션 advisory 잠금) |
 | `application` | 유스케이스(등록 · 다시 검증 · 삭제 · 조회 · 재암호화), 공급 인터페이스의 구현, 공개 API 의 구현, KEK 의 기동 적재와 검사, 설정, 결과 타입(`RegistrationOutcome` · `RecheckOutcome` · `KeyView` · `ProviderKey` · `RewrapResult`) |
 | `adapter/in/web` | 키 처리기와 요청 · 응답 타입 |
 | `adapter/in/job` | 재암호화 반복 작업 |
@@ -140,7 +141,7 @@ sequenceDiagram
 
 ### `application`
 
-- `KeyRegistration` — 키 등록 · 교체. 트랜잭션 밖에서 `llm` 의 키 검증을 부르고, 성공하면 트랜잭션 하나에서 주인의 옛 행을 지우고 새 행을 넣는다(credential-R10 · R11)
+- `KeyRegistration` — 키 등록 · 교체. 트랜잭션 밖에서 `llm` 의 키 검증을 부르고, 성공하면 트랜잭션 하나에서 주인을 잠근 뒤(`KeyOwnerLock`) 옛 행을 지우고 새 행을 넣는다(credential-R10 · R11)
 - `KeyRecheck` — 다시 검증. `llm` 의 저장한 키의 길을 부르고, 그 뒤 지금 행을 읽어 결과와 묶는다(credential-R12). 트랜잭션이 없다
 - `KeyRemoval` — 키 삭제. 트랜잭션 하나(credential-R16)
 - `KeyOverview` — 세션 사용자의 키 목록(credential-R17)
@@ -153,6 +154,7 @@ sequenceDiagram
 ### `domain`
 
 - `StoredLlmKey` — 키 aggregate(`llm_credentials`). 주인 · 암호문 · 감싼 DEK · KEK 버전 · 힌트 · 상태 · 검증 시각 · 만든 시각과 그 전이(검증 결과 반영 · 재암호화). 문자열 표현은 ID · 공급자 · 상태뿐이다
+- `KeyOwnerLock` — 한 주인(사용자 × 공급자)의 교체 잠금 — 트랜잭션 안에서 잠그고 트랜잭션이 끝나면 풀린다. 구현은 `adapter/out/persistence` 의 `JdbcKeyOwnerLock` 이다(credential-R11)
 - `LlmKeyRepository` — 저장소. 주인으로 찾기 · 사용자의 키 · 사용자의 키 유무, 갱신용 잠금(ID · 주인), 활성 버전이 아닌 키의 ID 와 수, 버전마다의 키 수
 - `EnvelopeCipher` — 봉투 암호의 정본 — 봉인 · 열기 · 재암호화(credential-R1 ~ R4). JDK 의 암호 기능만 쓴다
 - `KeyEncryptionKeys` — KEK 의 집합. 활성 버전은 가장 큰 번호다. 문자열 표현은 버전 목록뿐이다
@@ -162,7 +164,7 @@ sequenceDiagram
 
 ### 나가는 쪽
 
-포트는 없다 — 이 모듈은 외부 서비스를 부르지 않는다. 공급자에 닿는 일은 `llm` 의 공개 API 로 한다.
+포트는 없다 — 이 모듈은 외부 서비스를 부르지 않는다. 공급자에 닿는 일은 `llm` 의 공개 API 로 한다. 주인 잠금(`JdbcKeyOwnerLock`)은 DB 의 트랜잭션 advisory 잠금이다.
 
 `llm` 이 선언한 공급 인터페이스 `StoredKeySource`([llm Spec](llm.md#storedkeysource))를 `StoredKeys` 가 구현한다 — 외부 의존을 가리는 포트가 아니라, `llm` 이 저장한 키를 받으려고 선언하고 이 모듈이 구현하는 모듈 사이의 인터페이스다.
 
@@ -194,7 +196,7 @@ sequenceDiagram
 
 - **credential-R9** — 힌트는 키의 끝 4자다. 키가 20자(`KeyHint.MIN_LENGTH`)보다 짧으면 빈 문자열이다 — 짧은 값의 큰 부분을 저장하지 않는다
 - **credential-R10** — 등록은 `llm` 의 키 검증(`LlmClientFactory.validate`)이 성공할 때만 저장한다. 검증은 트랜잭션 밖에서 한다. 실패하면 아무것도 쓰지 않고 `REJECTED` 와 실패 종류를 낸다 — 이미 있던 키는 그대로다. 요청의 키는 앞뒤 공백을 지운 값이고, 비었거나 공백뿐이면 본문 형식 400 이다. 키의 꼴(길이 · 문자)은 `llm` 이 판정한다([llm Spec](llm.md#키-검증) llm-R10)
-- **credential-R11** — 주인마다 키는 많아야 하나다(고유 제약). 교체는 트랜잭션 하나에서 주인의 옛 행을 지우고 새 행을 넣는다 — 새 키는 새 ID · 새 DEK 이고 상태 `VALID`, 검증 시각과 만든 시각은 저장한 시각이다. 같은 주인의 등록 둘이 겹쳐 고유 제약이 깨지면 트랜잭션 바깥에서 한 번 다시 한다
+- **credential-R11** — 주인마다 키는 많아야 하나다(고유 제약). 교체는 트랜잭션 하나에서 주인의 옛 행을 지우고 새 행을 넣는다 — 새 키는 새 ID · 새 DEK 이고 상태 `VALID`, 검증 시각과 만든 시각은 저장한 시각이다. 교체 트랜잭션은 먼저 주인을 잠근다(트랜잭션 advisory 잠금) — 같은 주인의 등록이 몇이 겹쳐도 그 잠금에서 줄을 서 차례로 교체하고, 고유 제약에 지는 등록이 없다(다시 하기 없음). 잠금 키는 주인(사용자 ID · 공급자)에서 나와 다른 주인은 다른 잠금이다 — 키가 우연히 겹치면 차례를 설 뿐 교체는 틀리지 않는다
 - **credential-R16** — 삭제는 그 주인의 행을 곧바로 지운다(물리 삭제). 없는 키의 삭제도 같은 204 다
 - **credential-R17** — 키 목록은 공급자 선언 순(`Provider` 의 순서)으로 공급자마다 하나다 — 키가 없는 공급자는 키가 null 이다
 - **credential-R19** — 응답은 키의 힌트 · 상태 · 검증 시각 · 만든 시각과 판정 결과 · 실패 종류뿐이다. 키의 평문 · 암호문 · 감싼 DEK · `llm` 의 운영 로그용 실패 문구를 내지 않는다. 요청 본문 타입의 문자열 표현은 키를 숨기고, 이 모듈이 남기는 로그와 예외 문구에 키가 없다

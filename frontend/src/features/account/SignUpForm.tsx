@@ -8,8 +8,11 @@ import {
   UNREACHABLE_TEXT,
 } from "@/features/account/accountTexts";
 import { TextField } from "@/features/account/TextField";
+import type { HumanCheckAction } from "@/features/humanCheck/humanCheckTexts";
+import { useHumanCheckField } from "@/features/humanCheck/useHumanCheckField";
 import { PRIVACY_PATH } from "@/features/privacy/privacyTexts";
 import { useMe } from "@/features/session/sessionQueries";
+import { guardRejectionText } from "@/shared/api/problems";
 import type { components } from "@/shared/api/schema";
 import { Button } from "@/shared/ui/button";
 
@@ -23,19 +26,26 @@ export type SignUpFields = {
 type SignUpResponse = components["schemas"]["SignUpResponse"];
 
 type SignUpFormProps = {
-  /** 가입 요청 — 공개 가입과 초대 가입이 각자의 엔드포인트로 보낸다 */
+  /** 가입 요청 — 공개 가입과 초대 가입이 각자의 엔드포인트로 보낸다. headers 는 사람 확인 토큰(없으면 빈 객체) */
   submit: (
     fields: SignUpFields,
-  ) => Promise<{ data?: SignUpResponse; response: Response }>;
+    headers: Record<string, string>,
+  ) => Promise<{ data?: SignUpResponse; error?: unknown; response: Response }>;
+  /** 사람 확인을 거는 동작 — 공개 가입만(초대 가입은 대상이 아니다) */
+  humanCheck?: HumanCheckAction;
   /** 가입해 로그인했다 — 복구 코드를 넘긴다(응답에 없으면 null) */
   onSignedUp: (recoveryCode: string | null) => void;
 };
 
 /**
  * 가입 입력 — 이메일 · 표시 이름 · 비밀번호(확인) · 로그인 유지. 결과 판별자마다 안내 하나(망라 switch). 같은 이메일의 계정이 있으면
- * "가입할 수 없는 이메일"이라고만 한다.
+ * "가입할 수 없는 이메일"이라고만 한다. humanCheck 를 주면 봇 차단을 켠 인스턴스에서 사람 확인을 마쳐야 제출한다.
  */
-export function SignUpForm({ submit, onSignedUp }: SignUpFormProps) {
+export function SignUpForm({
+  submit,
+  onSignedUp,
+  humanCheck,
+}: SignUpFormProps) {
   const me = useMe();
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -44,6 +54,7 @@ export function SignUpForm({ submit, onSignedUp }: SignUpFormProps) {
   const [keep, setKeep] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const human = useHumanCheckField(humanCheck ?? null);
 
   async function send(event: FormEvent) {
     event.preventDefault();
@@ -54,14 +65,15 @@ export function SignUpForm({ submit, onSignedUp }: SignUpFormProps) {
     setSubmitting(true);
     setMessage(null);
     try {
-      const { data, response } = await submit({
-        email,
-        displayName,
-        password,
-        keep,
-      });
+      const { data, error, response } = await submit(
+        { email, displayName, password, keep },
+        human.headers(),
+      );
       if (!response.ok || !data) {
-        setMessage(requestFailedText(response.status));
+        setMessage(
+          guardRejectionText(response, error) ??
+            requestFailedText(response.status),
+        );
         // 요청 보호 토큰이 없거나 낡았으면 상태를 다시 읽어 새 토큰을 받는다
         await me.refetch();
         return;
@@ -97,6 +109,7 @@ export function SignUpForm({ submit, onSignedUp }: SignUpFormProps) {
       setMessage(UNREACHABLE_TEXT);
     } finally {
       setSubmitting(false);
+      human.reset();
     }
   }
 
@@ -151,7 +164,8 @@ export function SignUpForm({ submit, onSignedUp }: SignUpFormProps) {
         />
         로그인 유지
       </label>
-      <Button type="submit" disabled={submitting}>
+      {human.field}
+      <Button type="submit" disabled={submitting || !human.ready}>
         가입
       </Button>
       <p className="text-sm text-muted-foreground">

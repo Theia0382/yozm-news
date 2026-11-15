@@ -216,8 +216,8 @@ public final class JevArticleEvaluator implements ArticleEvaluator, AutoCloseabl
 			.header("Accept", "application/json")
 			.POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8))
 			.build();
-		CompletableFuture<HttpResponse<CappedBody.Result>> future = this.client.sendAsync(request,
-				info -> new CappedBody(MAX_RESPONSE_BYTES));
+		CompletableFuture<HttpResponse<CappedBody.Result>> future = CappedBody.sendAsync(this.client, request,
+				MAX_RESPONSE_BYTES);
 		try {
 			HttpResponse<CappedBody.Result> response = future.get(this.deadline.toNanos(), TimeUnit.NANOSECONDS);
 			return switch (response.body()) {

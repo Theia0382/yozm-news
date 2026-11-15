@@ -36,3 +36,7 @@
 | Spring `ProblemDetail` 을 그대로 직렬화 | 빈 속성이 빠지고 확장 속성이 펼쳐져 명세 스키마(모든 속성 필수)와 본문이 어긋난다 |
 | 자체 `{code, message}` 본문 | 표준이 아니고, 프레임워크 예외를 모두 직접 옮겨야 한다 |
 | 조언에서 같은 예외의 처리기를 하나 더 둔다 | 상위 처리기와 겹쳐 기동이 멈춘다 |
+
+## 후속 기록
+
+- 2026-11-15: 결정 절의 HTTP 오류 목록(요청 과다 · 사람 확인 실패) — [ADR-0169](0169-request-limits-and-bot-checks-are-platform-marks-applied-by-the-user-session-chain-before-the-handler.md) · [`user` user-R3](../specs/user.md#운영자-접근-통제)

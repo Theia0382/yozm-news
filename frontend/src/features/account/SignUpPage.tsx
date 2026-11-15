@@ -7,7 +7,8 @@ import { Button } from "@/shared/ui/button";
 import { NARROW_WIDTH, PAGE_FRAME } from "@/shared/ui/widths";
 
 /**
- * 공개 가입 화면 — 운영자가 공개 가입을 열었을 때만 입력을 보인다. 가입하면 복구 코드를 보이고 첫 화면으로 간다.
+ * 공개 가입 화면 — 운영자가 공개 가입을 열었을 때만 입력을 보인다. 봇 차단을 켠 인스턴스면 사람 확인을 마쳐야 가입한다. 가입하면 복구 코드를
+ * 보이고 첫 화면으로 간다.
  */
 export function SignUpPage() {
   const client = useApiClient();
@@ -49,10 +50,11 @@ export function SignUpPage() {
           }
           return (
             <SignUpForm
-              submit={(fields) =>
-                client.POST("/api/sign-ups", { body: fields })
+              submit={(fields, headers) =>
+                client.POST("/api/sign-ups", { body: fields, headers })
               }
               onSignedUp={onRecoveryCode}
+              humanCheck="sign-up"
             />
           );
         }}

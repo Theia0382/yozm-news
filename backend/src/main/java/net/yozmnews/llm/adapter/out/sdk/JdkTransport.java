@@ -124,7 +124,7 @@ final class JdkTransport implements AutoCloseable {
 				values.forEach(value -> builder.header(name, value));
 			}
 		});
-		return this.client.sendAsync(builder.build(), info -> new CappedBody(this.maxResponseBytes));
+		return CappedBody.sendAsync(this.client, builder.build(), this.maxResponseBytes);
 	}
 
 	private Response response(HttpResponse<CappedBody.Result> response) {

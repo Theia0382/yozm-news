@@ -35,7 +35,7 @@
 
 | 서비스 | 이미지 | 하는 일 |
 |---|---|---|
-| `proxy` | `frontend/Dockerfile` target `proxy` — Caddy 에 SPA 빌드 결과를 담은 이미지 | SPA 정적 파일을 내려주고 백엔드 경로만 `app` 으로 넘긴다. 넘기지 않는 경로(관리 엔드포인트 포함)는 SPA 가 답한다([넘기는 경로](../development/infrastructure.md#proxy-가-넘기는-경로)) |
+| `proxy` | `frontend/Dockerfile` target `proxy` — Caddy 에 SPA 빌드 결과를 담은 이미지 | SPA 정적 파일을 내려주고 백엔드 경로만 `app` 으로 넘긴다. 넘길 때 신뢰 범위로 정한 클라이언트 IP 를 `X-Real-IP` 에 덮어쓴다([공개](configuration.md#공개)). 넘기지 않는 경로(관리 엔드포인트 포함)는 SPA 가 답한다([넘기는 경로](../development/infrastructure.md#proxy-가-넘기는-경로)) |
 | `app` | `backend/Dockerfile` target `app` | 화면용 API 와 백그라운드 작업(작업 서버)을 한 프로세스에서 맡는다 — 정의가 두 역할 profile 을 켠다(`SPRING_PROFILES_ACTIVE: web,worker`, [platform Spec](../specs/platform.md#역할)). **(미구현)** 인증(로그인)도 이 프로세스가 맡는다 |
 | `postgres` | 루트 `compose.yaml` 의 PostgreSQL 이미지(pgvector 확장이 든 이미지) | 데이터. 호스트에 공개하지 않는다 |
 | **(미구현)** `cloudflared` | Cloudflare Tunnel | `proxy` 로만 연결한다([공개 경로와 외부 서비스](#공개-경로와-외부-서비스)) |
@@ -98,7 +98,7 @@ docker compose -f deploy/compose.yaml down -v   # 정지하고 DB 볼륨까지 �
 
 - **초대 링크** — 메모(누구에게 줄 링크인지)를 붙여 만들고 링크를 직접 전한다. 링크는 7일 뒤 만료되고 한 번만 쓴다. 링크는 운영자 화면을 연 주소로 만들어지므로, 받는 사람이 닿는 바깥 주소로 운영자 화면을 열고 링크의 주소를 확인한 뒤 전한다. 링크는 만든 때만 보인다 — 잃으면 취소하고 다시 만든다
 - **계정 만들기** — 이메일 · 표시 이름 · 초기 비밀번호로 만들고 초기 비밀번호를 따로 전한다. 받은 사람은 첫 로그인에서 비밀번호를 새로 정한다. 그 전에 초기 비밀번호를 잃었으면 "초기 비밀번호 다시 정하기"로 바꾼다
-- **공개 가입** — 켜면 로그인 화면에 가입 링크가 나와 누구나 가입한다. 공개 가입에는 아직 가입 요청 제한 · 봇 차단이 없다
+- **공개 가입** — 켜면 로그인 화면에 가입 링크가 나와 누구나 가입한다. 가입에는 IP별 요청 제한이 걸리고, 봇 차단은 [봇 차단](configuration.md#봇-차단) 설정을 따른다 — 운영자 화면이 지금 봇 차단 상태를 알린다
 - 비밀번호를 잊은 사용자는 로그인 화면의 "복구 코드로 비밀번호 재설정"으로 되찾는다. 복구 코드가 없으면 되찾을 수 없다 — 메일을 보내지 않는다. 운영자가 만든 계정으로 아직 첫 로그인을 하지 않았으면 "초기 비밀번호 다시 정하기"로 새 초기 비밀번호를 준다
 
 ## 업데이트
@@ -126,7 +126,7 @@ docker compose -f deploy/compose.yaml down -v   # 정지하고 DB 볼륨까지 �
 
 ## 공개 경로와 외부 서비스
 
-Cloudflare 는 권장 구성이지 필수가 아니다. 운영자는 Tunnel 대신 일반 리버스 프록시를, R2 대신 다른 S3 호환 저장소를, Turnstile 대신 다른 봇 차단 수단을 쓰거나 끌 수 있다([ADR-0012](../adr/0012-swappable-external-dependencies.md)).
+Cloudflare 는 권장 구성이지 필수가 아니다. 운영자는 Tunnel 대신 일반 리버스 프록시를, R2 대신 다른 S3 호환 저장소를 쓸 수 있고, 봇 차단(Turnstile)은 끌 수 있다([ADR-0012](../adr/0012-swappable-external-dependencies.md)) — 다른 봇 차단 수단은 앱의 검증 구현을 더해야 붙는다.
 
 | 기능 | 용도 |
 |---|---|
@@ -138,7 +138,8 @@ Cloudflare 는 권장 구성이지 필수가 아니다. 운영자는 Tunnel 대�
 - Jev 호출은 Cloudflare 를 거치지 않는다 — 앱이 TypeSafe System One API 로 직접 보내고, 같은 스키마를 내는 다른 경로로 바꾸려면 기본 주소를 바꾼다([공유 평가](configuration.md#공유-평가))
 - 기사 임베딩은 기본으로 앱 안에서 하고 밖으로 보내지 않는다. 외부 방식을 고르면 앱이 설정한 주소로 직접 보낸다([임베딩](configuration.md#임베딩))
 - 사용자 BYOK LLM 호출(지금은 키 검증)은 중계 서비스를 거치지 않고 공급자(`api.openai.com` · `api.anthropic.com`)에 직접 보낸다 — 사용자 키와 프롬프트가 제3자 로그에 남지 않게 하기 위해서다. 주소는 설정으로 바꿀 수 없고, 프록시를 쓰지 않으며 리다이렉트를 따르지 않는다([llm Spec](../specs/llm.md#공급자-클라이언트))
-- **(미구현)** 봇 차단(Turnstile 등)은 로그인 · 복구 코드 사용 화면과, 공개 가입을 열었을 때 가입 화면에 붙인다([security.md](../security.md#악용-방지))
+- 봇 차단(Turnstile)은 운영자가 켜면 로그인 · 복구 코드 사용 · 공개 가입 화면에 붙는다([봇 차단](configuration.md#봇-차단)). 켜면 그 화면의 브라우저가 Cloudflare 에서 위젯을 받고, 앱이 토큰을 Cloudflare(`challenges.cloudflare.com`)에 확인한다 — 앱이 닿지 못하면 확인 없이 통과시키고 경고 로그를 남긴다([security.md](../security.md#악용-방지))
+- **앞단과 클라이언트 IP** — 요청 제한은 클라이언트 IP 로 센다. Tunnel · 리버스 프록시 뒤에서는 그 앞단이 proxy 의 신뢰 범위(기본 사설 대역)에서 붙어야 하고, 앞단은 `X-Forwarded-For` 에 클라이언트 IP 를 덧붙여야 한다(Cloudflare · Caddy 는 기본으로, nginx 는 `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for`). 앞단 없이 proxy 포트를 직접 공개하면 신뢰 범위를 비운다 — [공개](configuration.md#공개)
 - 운영자 화면의 피드 켜기는 앱이 그 피드를 받아 확인한 뒤 답한다 — 같은 언론사의 앞선 요청을 기다린 시간(요청 하나당 최대 10초)과 받는 시간(최대 10초)이 더해진다. 배포 `proxy`(Caddy)는 응답 시간을 제한하지 않는다. 앞단(Tunnel · 리버스 프록시)에 응답 시간 제한이 있으면 그보다 길어진 켜기는 화면에 실패로 보이고, 서버의 판정 · 저장은 그대로 끝난다 — 목록을 다시 읽으면 결과가 보인다
 
 ## LLM 키 암호화 키(KEK)

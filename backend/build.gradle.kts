@@ -111,6 +111,16 @@ tasks.named<JavaExec>("bootTestRun") {
 	systemProperty(devComposeFileProperty, devComposeFile.asFile.path)
 }
 
+// 배포 proxy 의 Caddyfile — 테스트가 앱이 읽는 클라이언트 IP 헤더 · 신뢰 범위 결선을 대조한다. 결선은 docs/development/infrastructure.md
+// "테스트가 저장소 파일을 읽는 결선"
+val proxyCaddyfile = layout.projectDirectory.file("../frontend/proxy/Caddyfile")
+val proxyCaddyfileProperty = "yozmnews.proxy-caddyfile"
+
+tasks.withType<Test> {
+	inputs.file(proxyCaddyfile).withPropertyName("proxyCaddyfile").withPathSensitivity(PathSensitivity.NONE)
+	systemProperty(proxyCaddyfileProperty, proxyCaddyfile.asFile.path)
+}
+
 // 화면용 API 명세(저장소 루트 api/openapi.json) — 결선은 docs/development/infrastructure.md "테스트가 저장소 파일을 읽는 결선".
 // 파일이 없어도 구성은 되고 테스트가 안내와 함께 실패하도록 inputs.files 로 등록한다. updateOpenApiSpec 은 같은 테스트로 파일을 다시 쓴다.
 val openApiSpecFile = layout.projectDirectory.file("../api/openapi.json")
@@ -260,6 +270,11 @@ tasks.withType<Test> {
 	environment("ANTHROPIC_LOG", "debug")
 	jvmArgs("--enable-native-access=ALL-UNNAMED")
 	maxHeapSize = "2g"
+	// 실패한 시험의 단언(기대 · 실제 값)과 위치를 실행 로그에 남긴다 — CI 작업 로그만으로 실패를 읽는다
+	testLogging {
+		events(org.gradle.api.tasks.testing.logging.TestLogEvent.FAILED)
+		exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+	}
 }
 
 // 모델 파일은 따로 계층을 둔다 — 코드만 바뀌면 이 계층(약 135 MB)을 다시 받지 않는다. 계층 이름은 backend/Dockerfile 이 쓴다

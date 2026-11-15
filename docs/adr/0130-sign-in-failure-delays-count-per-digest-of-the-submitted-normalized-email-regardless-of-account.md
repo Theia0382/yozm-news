@@ -36,3 +36,4 @@
 ## 후속 기록
 
 - 2026-11-13: 실패 지연 기록의 범위(복구 코드 · 현재 비밀번호 확인) — [ADR-0144](0144-recovery-code-failures-are-delayed-on-the-sign-in-schedule-in-a-separate-record-and-current-password-checks-share-the-sign-in-record.md) · [`user` user-R19](../specs/user.md#로그인)
+- 2026-11-15: 결과 절 "IP 별 요청 제한이 함께 줄인다" — [ADR-0171](0171-sign-in-and-recovery-are-limited-per-ip-while-the-email-axis-stays-the-failure-delay.md) · [`user` "요청 방어"](../specs/user.md#요청-방어) user-R38

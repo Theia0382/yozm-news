@@ -25,6 +25,7 @@ FROM deps AS build
 RUN pnpm run build
 
 # 실행 단계에는 복사와 메타데이터만 둔다(RUN 없음) — docs/development/infrastructure.md "이미지"
+# Caddyfile 이 trusted_proxies_strict(v2.8 이상)를 쓴다 — 메이저 태그 2 는 그 위의 최신 패치를 받는다
 FROM caddy:2 AS proxy
 COPY frontend/proxy/Caddyfile frontend/proxy/backend-paths.caddy /etc/caddy/
 COPY --from=build /workspace/frontend/dist /srv
