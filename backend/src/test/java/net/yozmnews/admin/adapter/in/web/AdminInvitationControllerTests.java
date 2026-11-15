@@ -2,6 +2,7 @@ package net.yozmnews.admin.adapter.in.web;
 
 import static net.yozmnews.admin.adapter.in.web.AdminRequests.authorized;
 import static net.yozmnews.admin.adapter.in.web.AdminRequests.json;
+import static net.yozmnews.admin.adapter.in.web.AdminRequests.withCsrf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -117,9 +118,9 @@ class AdminInvitationControllerTests {
 	@Test
 	void withoutTheTokenNothingIsCalled() throws Exception {
 		this.mockMvc.perform(get("/api/admin/invitations")).andExpect(status().isUnauthorized());
-		this.mockMvc.perform(post("/api/admin/invitations").contentType(MediaType.APPLICATION_JSON).content("{}"))
+		this.mockMvc.perform(withCsrf(post("/api/admin/invitations").contentType(MediaType.APPLICATION_JSON).content("{}")))
 			.andExpect(status().isUnauthorized());
-		this.mockMvc.perform(post("/api/admin/invitations/3/revoke")).andExpect(status().isUnauthorized());
+		this.mockMvc.perform(withCsrf(post("/api/admin/invitations/3/revoke"))).andExpect(status().isUnauthorized());
 		assertThat(this.invitations.calls).isEmpty();
 	}
 

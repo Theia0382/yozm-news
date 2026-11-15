@@ -2,6 +2,7 @@ package net.yozmnews.admin.adapter.in.web;
 
 import static net.yozmnews.admin.adapter.in.web.AdminRequests.authorized;
 import static net.yozmnews.admin.adapter.in.web.AdminRequests.json;
+import static net.yozmnews.admin.adapter.in.web.AdminRequests.withCsrf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -166,12 +167,12 @@ class AdminEventPublicationControllerTests {
 	void requestWithoutTheTokenIsUnauthorizedAndCallsNothing() throws Exception {
 		this.mockMvc.perform(get("/api/admin/event-publications")).andExpect(status().isUnauthorized());
 		this.mockMvc
-			.perform(post("/api/admin/event-publications/resubmission").contentType("application/json")
-				.content("{\"ids\":[]}"))
+			.perform(withCsrf(post("/api/admin/event-publications/resubmission").contentType("application/json")
+				.content("{\"ids\":[]}")))
 			.andExpect(status().isUnauthorized());
 		this.mockMvc
-			.perform(post("/api/admin/event-publications/discard").contentType("application/json")
-				.content("{\"ids\":[]}"))
+			.perform(withCsrf(post("/api/admin/event-publications/discard").contentType("application/json")
+				.content("{\"ids\":[]}")))
 			.andExpect(status().isUnauthorized());
 		assertThat(this.administration.resubmitted).isEmpty();
 		assertThat(this.administration.discarded).isEmpty();

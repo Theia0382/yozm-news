@@ -2,6 +2,7 @@ package net.yozmnews.admin.adapter.in.web;
 
 import static net.yozmnews.admin.adapter.in.web.AdminRequests.authorized;
 import static net.yozmnews.admin.adapter.in.web.AdminRequests.json;
+import static net.yozmnews.admin.adapter.in.web.AdminRequests.withCsrf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -81,8 +82,8 @@ class AdminSignUpPolicyControllerTests {
 	@Test
 	void aMissingValueIsABadRequestAndTheTokenIsNeeded() throws Exception {
 		this.mockMvc.perform(json(put("/api/admin/sign-up-policy"), "{}")).andExpect(status().isBadRequest());
-		this.mockMvc.perform(put("/api/admin/sign-up-policy").contentType(MediaType.APPLICATION_JSON).content("""
-				{"open":true}"""))
+		this.mockMvc.perform(withCsrf(put("/api/admin/sign-up-policy").contentType(MediaType.APPLICATION_JSON).content("""
+				{"open":true}""")))
 			.andExpect(status().isUnauthorized());
 		this.mockMvc.perform(get("/api/admin/sign-up-policy")).andExpect(status().isUnauthorized());
 		assertThat(this.policy.calls).isEmpty();

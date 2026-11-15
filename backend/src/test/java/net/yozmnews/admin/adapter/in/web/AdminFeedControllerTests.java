@@ -2,6 +2,7 @@ package net.yozmnews.admin.adapter.in.web;
 
 import static net.yozmnews.admin.adapter.in.web.AdminRequests.authorized;
 import static net.yozmnews.admin.adapter.in.web.AdminRequests.json;
+import static net.yozmnews.admin.adapter.in.web.AdminRequests.withCsrf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -258,7 +259,7 @@ class AdminFeedControllerTests {
 
 	@Test
 	void requestWithoutTheTokenIsUnauthorizedAndCallsNothing() throws Exception {
-		this.mockMvc.perform(post("/api/admin/feeds/7/enable")).andExpect(status().isUnauthorized());
+		this.mockMvc.perform(withCsrf(post("/api/admin/feeds/7/enable"))).andExpect(status().isUnauthorized());
 		assertThat(this.administration.calls).isEmpty();
 	}
 

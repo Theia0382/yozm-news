@@ -20,7 +20,7 @@ final class AdminTokenAuthenticationProvider implements AuthenticationProvider {
 
 	/**
 	 * 맞으면 운영자 인증을 돌려준다.
-	 * @throws BadCredentialsException 토큰이 맞지 않거나 운영자 기능이 닫혔을 때 — 메시지에 토큰을 담지 않는다
+	 * @throws BadCredentialsException 토큰이 맞지 않거나 토큰을 설정하지 않았을 때 — 메시지에 토큰을 담지 않는다
 	 */
 	@Override
 	public Authentication authenticate(Authentication authentication) {

@@ -6,6 +6,9 @@ import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.convert.ConversionFailedException;
+import org.springframework.security.authentication.AuthenticationTrustResolver;
+import org.springframework.security.authentication.AuthenticationTrustResolverImpl;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.DeferredSecurityContext;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -18,7 +21,8 @@ import org.springframework.security.web.context.SecurityContextRepository;
  * 세션의 보안 문맥 저장소 — 세션에 담긴 보안 문맥을 읽지 못하면(배포로 직렬화 형식이 바뀐 세션 등) 그 세션을 지우고 익명으로 둔다.
  * docs/specs/user.md §4 · user-R7
  * <p>
- * 읽지 못한 세션을 그대로 두면 세션 체인을 지나는 모든 요청(로그인 포함)이 그 세션이 만료될 때까지 실패한다. 세션 ID · 내용은 로그에 싣지 않는다.
+ * 읽지 못한 세션을 그대로 두면 세션 체인 · 운영자 체인을 지나는 모든 요청(로그인 포함)이 그 세션이 만료될 때까지 실패한다. 세션 ID · 내용은
+ * 로그에 싣지 않는다. 세션에는 세션 사용자 인증만 저장한다({@link #saveContext}).
  */
 final class SessionSecurityContexts implements SecurityContextRepository {
 
@@ -27,6 +31,8 @@ final class SessionSecurityContexts implements SecurityContextRepository {
 	private final HttpSessionSecurityContextRepository delegate = new HttpSessionSecurityContextRepository();
 
 	private final SecurityContextHolderStrategy contexts = SecurityContextHolder.getContextHolderStrategy();
+
+	private final AuthenticationTrustResolver trust = new AuthenticationTrustResolverImpl();
 
 	@Override
 	public DeferredSecurityContext loadDeferredContext(HttpServletRequest request) {
@@ -57,7 +63,7 @@ final class SessionSecurityContexts implements SecurityContextRepository {
 	}
 
 	/**
-	 * @deprecated 세션 체인은 지연 읽기({@link #loadDeferredContext})만 쓴다
+	 * @deprecated 세션 체인 · 운영자 체인은 지연 읽기({@link #loadDeferredContext})만 쓴다
 	 */
 	@Override
 	@Deprecated
@@ -65,9 +71,21 @@ final class SessionSecurityContexts implements SecurityContextRepository {
 		return loadDeferredContext(holder.getRequest()).get();
 	}
 
+	/**
+	 * 보안 문맥을 세션에 저장한다 — 인증이 없거나 익명이거나 세션 사용자 인증({@link AccountAuthentication})이면 맡기고(익명은 맡긴
+	 * 저장소가 세션에 쓰지 않는다), 그 밖의 인증(운영자 토큰 인증)은 저장하지 않는다(세션을 만들지 않는다). 세션에는 사용자 ID 만
+	 * 담는다(user-R7).
+	 * <p>
+	 * 세션 생성 정책을 정한 체인에는 세션 관리 필터가 서서, 세션에 문맥이 없는 인증된 요청의 인증을 이 저장소로 저장하려 한다 — 운영자 체인의 맞는
+	 * Bearer 요청이 운영자 인증을 담은 세션을 만들지 않게 여기서 거른다.
+	 */
 	@Override
 	public void saveContext(SecurityContext context, HttpServletRequest request, HttpServletResponse response) {
-		this.delegate.saveContext(context, request, response);
+		Authentication authentication = context.getAuthentication();
+		if (authentication == null || this.trust.isAnonymous(authentication)
+				|| authentication instanceof AccountAuthentication) {
+			this.delegate.saveContext(context, request, response);
+		}
 	}
 
 	@Override

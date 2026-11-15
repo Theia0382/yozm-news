@@ -2,6 +2,7 @@ package net.yozmnews.admin.adapter.in.web;
 
 import static net.yozmnews.admin.adapter.in.web.AdminRequests.authorized;
 import static net.yozmnews.admin.adapter.in.web.AdminRequests.json;
+import static net.yozmnews.admin.adapter.in.web.AdminRequests.withCsrf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -229,8 +230,8 @@ class AdminBigStorylineControllerTests {
 		this.mockMvc.perform(get("/api/admin/big-storylines?" + PERIOD)).andExpect(status().isUnauthorized());
 		this.mockMvc.perform(get("/api/admin/big-storyline-criteria")).andExpect(status().isUnauthorized());
 		this.mockMvc
-			.perform(put("/api/admin/big-storyline-criteria").contentType(MediaType.APPLICATION_JSON)
-				.content("{\"minIntensity\":20}"))
+			.perform(withCsrf(put("/api/admin/big-storyline-criteria").contentType(MediaType.APPLICATION_JSON)
+				.content("{\"minIntensity\":20}")))
 			.andExpect(status().isUnauthorized());
 		assertThat(this.administration.calls).isEmpty();
 	}

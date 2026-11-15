@@ -2,6 +2,7 @@ package net.yozmnews.admin.adapter.in.web;
 
 import static net.yozmnews.admin.adapter.in.web.AdminRequests.authorized;
 import static net.yozmnews.admin.adapter.in.web.AdminRequests.json;
+import static net.yozmnews.admin.adapter.in.web.AdminRequests.withCsrf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -215,7 +216,7 @@ class AdminTagSetControllerTests {
 	@Test
 	void theOperatorTokenGuardsTheTagSetPaths() throws Exception {
 		this.mockMvc.perform(get("/api/admin/tag-sets")).andExpect(status().isUnauthorized());
-		this.mockMvc.perform(post("/api/admin/tag-sets").contentType(MediaType.APPLICATION_JSON).content("{\"text\":\"원문\"}"))
+		this.mockMvc.perform(withCsrf(post("/api/admin/tag-sets").contentType(MediaType.APPLICATION_JSON).content("{\"text\":\"원문\"}")))
 			.andExpect(status().isUnauthorized());
 
 		assertThat(this.administration.calls).isEmpty();

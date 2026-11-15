@@ -2,6 +2,7 @@ package net.yozmnews.admin.adapter.in.web;
 
 import static net.yozmnews.admin.adapter.in.web.AdminRequests.authorized;
 import static net.yozmnews.admin.adapter.in.web.AdminRequests.json;
+import static net.yozmnews.admin.adapter.in.web.AdminRequests.withCsrf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -206,10 +207,10 @@ class AdminThresholdControllerTests {
 	void theThresholdsNeedTheOperatorToken() throws Exception {
 		this.mockMvc.perform(get("/api/admin/thresholds")).andExpect(status().isUnauthorized());
 		this.mockMvc
-			.perform(post("/api/admin/threshold-previews").contentType(MediaType.APPLICATION_JSON).content(PREVIEW))
+			.perform(withCsrf(post("/api/admin/threshold-previews").contentType(MediaType.APPLICATION_JSON).content(PREVIEW)))
 			.andExpect(status().isUnauthorized());
-		this.mockMvc.perform(put("/api/admin/thresholds/TOPIC").contentType(MediaType.APPLICATION_JSON)
-			.content("{\"tagThreshold\":0.5,\"storeThreshold\":0.1}")).andExpect(status().isUnauthorized());
+		this.mockMvc.perform(withCsrf(put("/api/admin/thresholds/TOPIC").contentType(MediaType.APPLICATION_JSON)
+			.content("{\"tagThreshold\":0.5,\"storeThreshold\":0.1}"))).andExpect(status().isUnauthorized());
 	}
 
 	private static TagThresholds thresholds(MultiTagKind kind, String tag, String store) {
