@@ -224,7 +224,7 @@
   providers:
     openai:
       models:
-        - id: gpt-6-astra
+        - id: gpt-6.1-terra
           input-token-budget: 32000
           structured-output: true
     anthropic:
