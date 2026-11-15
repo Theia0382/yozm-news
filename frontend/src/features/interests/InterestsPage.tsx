@@ -1,0 +1,653 @@
+import { useQueryClient } from "@tanstack/react-query";
+import { type FormEvent, type ReactNode, useEffect, useState } from "react";
+import { Link } from "react-router";
+import {
+  requestFailedText,
+  UNREACHABLE_TEXT,
+} from "@/features/account/accountTexts";
+import {
+  INTEREST_MODEL_QUERY_KEY,
+  INTEREST_SETTINGS_QUERY_KEY,
+  INTEREST_SOURCES_QUERY_KEY,
+  INTEREST_TAGS_QUERY_KEY,
+  type InterestModel,
+  type InterestSettings,
+  type InterestSources,
+  type InterestTags,
+  InterestRequestError,
+  useInterestModel,
+  useInterestSettings,
+  useInterestSources,
+  useInterestTags,
+} from "@/features/interests/interestQueries";
+import {
+  modelReasonTexts,
+  NO_TOPIC_TEXT,
+  type Weekday,
+  weekdayNames,
+} from "@/features/interests/interestTexts";
+import { providers } from "@/features/keys/keyTexts";
+import { PRIVACY_PATH } from "@/features/privacy/privacyTexts";
+import { SESSION_QUERY_KEY } from "@/features/session/sessionQueries";
+import { useApiClient } from "@/shared/api/client";
+import { Button } from "@/shared/ui/button";
+import { Checkbox } from "@/shared/ui/checkbox";
+import { NARROW_WIDTH, PAGE_FRAME } from "@/shared/ui/widths";
+
+/** 한 절의 안내 — 성공은 알림(status), 실패는 경고(alert)로 읽힌다 */
+type Message = { tone: "status" | "alert"; text: string };
+
+/**
+ * 관심 설정 — 주제 구독 · 지역 · 형식 제외, 제외 소스, 일정 · 관심사 · 변화 리포트, 모델. 절마다 저장한다. 키가 없어도 쓰고, 모델 절만
+ * 키 등록을 안내한다(docs/specs/user.md §3 · user-R5).
+ */
+export function InterestsPage() {
+  const tags = useInterestTags();
+  const queryClient = useQueryClient();
+  const unauthenticated =
+    tags.error instanceof InterestRequestError && tags.error.status === 401;
+  useEffect(() => {
+    if (unauthenticated) {
+      void queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY });
+    }
+  }, [unauthenticated, queryClient]);
+
+  return (
+    <section className={`${PAGE_FRAME} ${NARROW_WIDTH} space-y-8`}>
+      <h1 className="text-2xl font-bold">관심 설정</h1>
+      <p className="text-sm text-muted-foreground">
+        다이제스트에 넣을 기사와 만드는 때를 정합니다. 절마다 저장합니다.
+      </p>
+      {tags.isPending && <p className="text-muted-foreground">읽는 중…</p>}
+      {tags.isError && !unauthenticated && (
+        <div className="space-y-3">
+          <p role="alert">관심 설정을 읽지 못했습니다.</p>
+          <Button variant="outline" onClick={() => tags.refetch()}>
+            다시 시도
+          </Button>
+        </div>
+      )}
+      {tags.data && <TagSection data={tags.data} />}
+      <SourcesSection />
+      <ScheduleSection />
+      <ModelSection />
+      <p className="text-sm">
+        <Link to={PRIVACY_PATH} className="underline">
+          저장하는 것과 LLM 공급자에게 보내는 것
+        </Link>
+      </p>
+    </section>
+  );
+}
+
+/** 서버 값이 바뀌면 절의 입력을 서버 값으로 다시 채운다 */
+function tagsKey(data: InterestTags): string {
+  return JSON.stringify([data.tagSet.id, data.preferences]);
+}
+
+function Section({
+  id,
+  title,
+  children,
+}: {
+  id: string;
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="space-y-3" aria-labelledby={id}>
+      <h2 id={id} className="text-xl font-bold">
+        {title}
+      </h2>
+      {children}
+    </section>
+  );
+}
+
+function Notice({ message }: { message: Message | null }) {
+  if (!message) {
+    return null;
+  }
+  return (
+    <p
+      role={message.tone}
+      className={message.tone === "alert" ? "text-destructive" : undefined}
+    >
+      {message.text}
+    </p>
+  );
+}
+
+function CheckField({
+  label,
+  checked,
+  disabled,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  disabled?: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <label className="flex items-center gap-2 text-sm">
+      <Checkbox
+        aria-label={label}
+        checked={checked}
+        disabled={disabled}
+        onCheckedChange={(next) => onChange(next === true)}
+      />
+      {label}
+    </label>
+  );
+}
+
+/** 저장 요청을 보내고 안내를 고른다 — 닿지 못하면 연결 안내 */
+async function attempt(
+  setBusy: (busy: boolean) => void,
+  setMessage: (message: Message | null) => void,
+  action: () => Promise<Message>,
+) {
+  setBusy(true);
+  setMessage(null);
+  try {
+    setMessage(await action());
+  } catch {
+    setMessage({ tone: "alert", text: UNREACHABLE_TEXT });
+  } finally {
+    setBusy(false);
+  }
+}
+
+/** 저장 안내는 바깥에 둔다 — 저장 뒤 다시 읽어 폼을 새로 채워도 안내가 남는다 */
+type FormProps<T> = {
+  data: T;
+  setMessage: (message: Message | null) => void;
+};
+
+function TagSection({ data }: { data: InterestTags }) {
+  const [message, setMessage] = useState<Message | null>(null);
+  return (
+    <div className="space-y-3">
+      <TagForm key={tagsKey(data)} data={data} setMessage={setMessage} />
+      <Notice message={message} />
+    </div>
+  );
+}
+
+function TagForm({ data, setMessage }: FormProps<InterestTags>) {
+  const client = useApiClient();
+  const queryClient = useQueryClient();
+  const [topics, setTopics] = useState(() => new Set(data.preferences.topics));
+  const [regions, setRegions] = useState(
+    () => new Set(data.preferences.excludedRegions),
+  );
+  const [formats, setFormats] = useState(
+    () => new Set(data.preferences.excludedFormats),
+  );
+  const [busy, setBusy] = useState(false);
+
+  function toggle(set: Set<string>, key: string, on: boolean): Set<string> {
+    const next = new Set(set);
+    if (on) {
+      next.add(key);
+    } else {
+      next.delete(key);
+    }
+    return next;
+  }
+
+  function save(event: FormEvent) {
+    event.preventDefault();
+    void attempt(setBusy, setMessage, async () => {
+      const { data: saved, response } = await client.PUT(
+        "/api/interests/tags",
+        {
+          body: {
+            tagSetId: data.tagSet.id,
+            topics: [...topics],
+            excludedRegions: [...regions],
+            excludedFormats: [...formats],
+          },
+        },
+      );
+      if (!response.ok || !saved) {
+        return { tone: "alert", text: requestFailedText(response.status) };
+      }
+      switch (saved.result) {
+        case "SAVED":
+          await queryClient.invalidateQueries({
+            queryKey: INTEREST_TAGS_QUERY_KEY,
+          });
+          return { tone: "status", text: "주제 · 지역 · 형식을 저장했습니다." };
+        case "TAG_SET_CHANGED":
+          await queryClient.invalidateQueries({
+            queryKey: INTEREST_TAGS_QUERY_KEY,
+          });
+          return {
+            tone: "alert",
+            text: "그사이 태그 체계가 바뀌었습니다. 새 체계로 다시 읽었으니 확인하고 다시 저장해 주세요.",
+          };
+      }
+      const unknown: never = saved.result;
+      return {
+        tone: "alert",
+        text: `알 수 없는 결과입니다: ${String(unknown)}`,
+      };
+    });
+  }
+
+  return (
+    <form onSubmit={save} className="space-y-8">
+      <Section id="interest-topics" title="구독할 주제">
+        <p className="text-sm text-muted-foreground">
+          분야를 고르면 그 아래 주제 전부를 구독합니다.
+        </p>
+        {data.preferences.topics.length === 0 && (
+          <p role="note">{NO_TOPIC_TEXT}</p>
+        )}
+        {data.tagSet.topics.map((category) => {
+          const whole = topics.has(category.key);
+          return (
+            <fieldset key={category.key} className="space-y-1">
+              <legend className="sr-only">{category.name}</legend>
+              <CheckField
+                label={category.name}
+                checked={whole}
+                onChange={(on) => setTopics(toggle(topics, category.key, on))}
+              />
+              <div className="grid grid-cols-2 gap-1 pl-6">
+                {category.subtopics.map((subtopic) => (
+                  <CheckField
+                    key={subtopic.key}
+                    label={subtopic.name}
+                    checked={whole || topics.has(subtopic.key)}
+                    disabled={whole}
+                    onChange={(on) =>
+                      setTopics(toggle(topics, subtopic.key, on))
+                    }
+                  />
+                ))}
+              </div>
+            </fieldset>
+          );
+        })}
+      </Section>
+      <Section id="interest-regions" title="뺄 지역">
+        <div className="grid grid-cols-2 gap-1">
+          {data.tagSet.regions.map((region) => (
+            <CheckField
+              key={region.key}
+              label={region.name}
+              checked={regions.has(region.key)}
+              onChange={(on) => setRegions(toggle(regions, region.key, on))}
+            />
+          ))}
+        </div>
+      </Section>
+      <Section id="interest-formats" title="뺄 형식">
+        <div className="grid grid-cols-2 gap-1">
+          {data.tagSet.formats.map((format) => (
+            <CheckField
+              key={format.key}
+              label={format.name}
+              checked={formats.has(format.key)}
+              onChange={(on) => setFormats(toggle(formats, format.key, on))}
+            />
+          ))}
+        </div>
+      </Section>
+      <Button type="submit" disabled={busy}>
+        주제 · 지역 · 형식 저장
+      </Button>
+    </form>
+  );
+}
+
+function SourcesSection() {
+  const sources = useInterestSources();
+  const [message, setMessage] = useState<Message | null>(null);
+  return (
+    <Section id="interest-sources" title="뺄 소스">
+      {sources.isPending && <p className="text-muted-foreground">읽는 중…</p>}
+      {sources.isError && <p role="alert">소스를 읽지 못했습니다.</p>}
+      {sources.data && (
+        <SourcesForm
+          key={JSON.stringify(sources.data.excluded)}
+          data={sources.data}
+          setMessage={setMessage}
+        />
+      )}
+      <Notice message={message} />
+    </Section>
+  );
+}
+
+function SourcesForm({ data, setMessage }: FormProps<InterestSources>) {
+  const client = useApiClient();
+  const queryClient = useQueryClient();
+  const [excluded, setExcluded] = useState(() => new Set(data.excluded));
+  const [busy, setBusy] = useState(false);
+
+  function save(event: FormEvent) {
+    event.preventDefault();
+    void attempt(setBusy, setMessage, async () => {
+      const { data: saved, response } = await client.PUT(
+        "/api/interests/sources",
+        { body: { excluded: [...excluded] } },
+      );
+      if (!response.ok || !saved) {
+        return { tone: "alert", text: requestFailedText(response.status) };
+      }
+      await queryClient.invalidateQueries({
+        queryKey: INTEREST_SOURCES_QUERY_KEY,
+      });
+      return { tone: "status", text: "뺄 소스를 저장했습니다." };
+    });
+  }
+
+  if (data.sources.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground">고를 소스가 없습니다.</p>
+    );
+  }
+  return (
+    <form onSubmit={save} className="space-y-3">
+      <div className="grid grid-cols-2 gap-1">
+        {data.sources.map((source) => (
+          <CheckField
+            key={source.id}
+            label={source.name ?? `이름 없는 소스 #${source.id}`}
+            checked={excluded.has(source.id)}
+            onChange={(on) => {
+              const next = new Set(excluded);
+              if (on) {
+                next.add(source.id);
+              } else {
+                next.delete(source.id);
+              }
+              setExcluded(next);
+            }}
+          />
+        ))}
+      </div>
+      <Button type="submit" disabled={busy}>
+        뺄 소스 저장
+      </Button>
+    </form>
+  );
+}
+
+function ScheduleSection() {
+  const settings = useInterestSettings();
+  const [message, setMessage] = useState<Message | null>(null);
+  return (
+    <Section id="interest-schedule" title="일정 · 관심사 · 변화 리포트">
+      {settings.isPending && <p className="text-muted-foreground">읽는 중…</p>}
+      {settings.isError && <p role="alert">설정을 읽지 못했습니다.</p>}
+      {settings.data && (
+        <ScheduleForm
+          key={JSON.stringify(settings.data)}
+          data={settings.data}
+          setMessage={setMessage}
+        />
+      )}
+      <Notice message={message} />
+    </Section>
+  );
+}
+
+const WEEKDAYS = Object.keys(weekdayNames) as Weekday[];
+
+function ScheduleForm({ data, setMessage }: FormProps<InterestSettings>) {
+  const client = useApiClient();
+  const queryClient = useQueryClient();
+  const [timezone, setTimezone] = useState(data.timezone);
+  const [digestTime, setDigestTime] = useState(data.digestTime);
+  const [interestText, setInterestText] = useState(data.interestText);
+  const [weeklyReport, setWeeklyReport] = useState(data.weeklyReport);
+  const [weeklyReportDay, setWeeklyReportDay] = useState(data.weeklyReportDay);
+  const [monthlyReport, setMonthlyReport] = useState(data.monthlyReport);
+  const [busy, setBusy] = useState(false);
+  const length = [...interestText.trim()].length;
+
+  function save(event: FormEvent) {
+    event.preventDefault();
+    void attempt(setBusy, setMessage, async () => {
+      const { data: saved, response } = await client.PUT(
+        "/api/interests/settings",
+        {
+          body: {
+            timezone,
+            digestTime,
+            interestText,
+            weeklyReport,
+            weeklyReportDay,
+            monthlyReport,
+          },
+        },
+      );
+      if (!response.ok || !saved) {
+        return { tone: "alert", text: requestFailedText(response.status) };
+      }
+      switch (saved.result) {
+        case "SAVED":
+          await queryClient.invalidateQueries({
+            queryKey: INTEREST_SETTINGS_QUERY_KEY,
+          });
+          return {
+            tone: "status",
+            text: "일정 · 관심사 · 리포트를 저장했습니다.",
+          };
+        case "UNKNOWN_TIMEZONE":
+          return {
+            tone: "alert",
+            text: "모르는 시간대입니다. Asia/Seoul 같은 시간대 이름을 적어 주세요.",
+          };
+        case "INTEREST_TEXT_TOO_LONG":
+          return {
+            tone: "alert",
+            text: `관심사는 ${saved.interestTextMax ?? data.interestTextMax}자까지 적을 수 있습니다.`,
+          };
+      }
+      const unknown: never = saved.result;
+      return {
+        tone: "alert",
+        text: `알 수 없는 결과입니다: ${String(unknown)}`,
+      };
+    });
+  }
+
+  return (
+    <form onSubmit={save} className="max-w-sm space-y-3">
+      <label className="block space-y-1">
+        <span className="text-sm">시간대</span>
+        <input
+          name="timezone"
+          required
+          value={timezone}
+          onChange={(event) => setTimezone(event.target.value)}
+          className="w-full rounded-md border border-input bg-background px-2 py-1"
+        />
+      </label>
+      <label className="block space-y-1">
+        <span className="text-sm">다이제스트를 만드는 시각</span>
+        <input
+          type="time"
+          name="digestTime"
+          required
+          step={60}
+          value={digestTime}
+          onChange={(event) => setDigestTime(event.target.value)}
+          className="w-full rounded-md border border-input bg-background px-2 py-1"
+        />
+      </label>
+      <div className="space-y-1">
+        <label className="block space-y-1">
+          <span className="text-sm">자유 텍스트 관심사</span>
+          <textarea
+            name="interestText"
+            rows={3}
+            value={interestText}
+            aria-describedby="interest-text-help"
+            onChange={(event) => setInterestText(event.target.value)}
+            className="w-full rounded-md border border-input bg-background px-2 py-1"
+          />
+        </label>
+        <p id="interest-text-help" className="text-sm text-muted-foreground">
+          {length} / {data.interestTextMax}자 — LLM 공급자에게 보내는 프롬프트에
+          들어갑니다.
+        </p>
+      </div>
+      <CheckField
+        label="주간 변화 리포트 받기"
+        checked={weeklyReport}
+        onChange={setWeeklyReport}
+      />
+      <label className="block space-y-1">
+        <span className="text-sm">주간 리포트 요일</span>
+        <select
+          name="weeklyReportDay"
+          value={weeklyReportDay}
+          disabled={!weeklyReport}
+          onChange={(event) =>
+            setWeeklyReportDay(event.target.value as Weekday)
+          }
+          className="w-full rounded-md border border-input bg-background px-2 py-1"
+        >
+          {WEEKDAYS.map((day) => (
+            <option key={day} value={day}>
+              {weekdayNames[day]}
+            </option>
+          ))}
+        </select>
+      </label>
+      <CheckField
+        label="월간 변화 리포트 받기"
+        checked={monthlyReport}
+        onChange={setMonthlyReport}
+      />
+      <Button type="submit" disabled={busy}>
+        일정 · 관심사 · 리포트 저장
+      </Button>
+    </form>
+  );
+}
+
+function ModelSection() {
+  const model = useInterestModel();
+  const [message, setMessage] = useState<Message | null>(null);
+  return (
+    <Section id="interest-model" title="모델">
+      {model.isPending && <p className="text-muted-foreground">읽는 중…</p>}
+      {model.isError && <p role="alert">모델을 읽지 못했습니다.</p>}
+      {model.data && (
+        <ModelForm
+          key={JSON.stringify(model.data)}
+          data={model.data}
+          setMessage={setMessage}
+        />
+      )}
+      <Notice message={message} />
+    </Section>
+  );
+}
+
+function modelValue(model: { provider: string; id: string }): string {
+  return `${model.provider}:${model.id}`;
+}
+
+function ModelForm({ data, setMessage }: FormProps<InterestModel>) {
+  const client = useApiClient();
+  const queryClient = useQueryClient();
+  const [choice, setChoice] = useState(() =>
+    data.chosen ? modelValue(data.chosen) : "",
+  );
+  const [busy, setBusy] = useState(false);
+
+  if (data.choosable.length === 0) {
+    return (
+      <p className="text-sm">
+        LLM 키를 등록하면 그 공급자의 모델을 고를 수 있습니다.{" "}
+        <Link to="/keys" className="underline">
+          LLM 키 등록하기
+        </Link>
+      </p>
+    );
+  }
+
+  function save(event: FormEvent) {
+    event.preventDefault();
+    const picked = data.choosable.find((model) => modelValue(model) === choice);
+    if (!picked) {
+      setMessage({ tone: "alert", text: "모델을 골라 주세요." });
+      return;
+    }
+    void attempt(setBusy, setMessage, async () => {
+      const { data: saved, response } = await client.PUT(
+        "/api/interests/model",
+        { body: { provider: picked.provider, modelId: picked.id } },
+      );
+      if (!response.ok || !saved) {
+        return { tone: "alert", text: requestFailedText(response.status) };
+      }
+      switch (saved.result) {
+        case "SAVED":
+          await queryClient.invalidateQueries({
+            queryKey: INTEREST_MODEL_QUERY_KEY,
+          });
+          return { tone: "status", text: "모델을 저장했습니다." };
+        case "PROVIDER_WITHOUT_KEY":
+          return {
+            tone: "alert",
+            text: "그 공급자에 등록한 키가 없습니다. 키를 먼저 등록해 주세요.",
+          };
+        case "MODEL_NOT_ALLOWED":
+          await queryClient.invalidateQueries({
+            queryKey: INTEREST_MODEL_QUERY_KEY,
+          });
+          return {
+            tone: "alert",
+            text: "이 인스턴스에서 고를 수 없는 모델입니다. 목록을 다시 읽었습니다.",
+          };
+      }
+      const unknown: never = saved.result;
+      return {
+        tone: "alert",
+        text: `알 수 없는 결과입니다: ${String(unknown)}`,
+      };
+    });
+  }
+
+  return (
+    <form onSubmit={save} className="max-w-sm space-y-3">
+      {data.reason !== "CHOSEN" && (
+        <p role="note" className="text-sm">
+          {modelReasonTexts[data.reason]}{" "}
+          {data.effective
+            ? `지금은 ${providers[data.effective.provider].name}의 ${data.effective.id} 모델을 씁니다.`
+            : "지금은 쓸 모델이 없어 다이제스트를 만들지 못합니다."}
+        </p>
+      )}
+      <label className="block space-y-1">
+        <span className="text-sm">쓸 모델</span>
+        <select
+          name="model"
+          value={choice}
+          onChange={(event) => setChoice(event.target.value)}
+          className="w-full rounded-md border border-input bg-background px-2 py-1"
+        >
+          <option value="">고르세요</option>
+          {data.choosable.map((model) => (
+            <option key={modelValue(model)} value={modelValue(model)}>
+              {providers[model.provider].name} · {model.id}
+            </option>
+          ))}
+        </select>
+      </label>
+      <Button type="submit" disabled={busy}>
+        모델 저장
+      </Button>
+    </form>
+  );
+}

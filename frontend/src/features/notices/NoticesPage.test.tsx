@@ -84,6 +84,7 @@ const GATHERED: Notice = {
   },
   passwordChanged: null,
   keyInvalidated: null,
+  preferencesAdjusted: null,
 };
 
 /** 읽은 피드 상태 알림 하나 */
@@ -110,6 +111,7 @@ const OLD: Notice = {
   },
   passwordChanged: null,
   keyInvalidated: null,
+  preferencesAdjusted: null,
 };
 
 /** 복구 코드로 재설정한 비밀번호 알림 */
@@ -123,6 +125,7 @@ const PASSWORD: Notice = {
   feedStatus: null,
   passwordChanged: { method: "RECOVERY", changedAt: "2026-11-13T03:00:00Z" },
   keyInvalidated: null,
+  preferencesAdjusted: null,
 };
 
 /** 공급자가 받아 주지 않아 무효가 된 키의 알림 */
@@ -138,6 +141,39 @@ const KEY_INVALIDATED: Notice = {
   keyInvalidated: {
     provider: "ANTHROPIC",
     invalidatedAt: "2026-11-13T03:00:00Z",
+  },
+  preferencesAdjusted: null,
+};
+
+/** 태그 체계 버전 2 를 따라 해제 · 더함이 있었던 선호 조정 알림 */
+const PREFERENCES_ADJUSTED: Notice = {
+  id: 40,
+  kind: "PREFERENCES_ADJUSTED",
+  revision: 1,
+  createdAt: "2026-11-13T04:00:00Z",
+  updatedAt: "2026-11-13T04:00:00Z",
+  read: false,
+  feedStatus: null,
+  passwordChanged: null,
+  keyInvalidated: null,
+  preferencesAdjusted: {
+    tagSetNumber: 2,
+    adjustments: [
+      {
+        kind: "REGION",
+        key: "china",
+        name: "중국",
+        mode: "EXCLUDE",
+        change: "RELEASED_REMOVED",
+      },
+      {
+        kind: "FORMAT",
+        key: "listicle",
+        name: "목록형",
+        mode: "EXCLUDE",
+        change: "ADDED_DEFAULT_EXCLUDED",
+      },
+    ],
   },
 };
 
@@ -265,6 +301,25 @@ describe("NoticesPage", () => {
     expect(
       within(item).getByRole("link", { name: "LLM 키 화면에서 확인하기" }),
     ).toHaveAttribute("href", "/keys");
+  });
+
+  it("선호 조정 알림은 버전과 조정 항목을 보이고 관심 설정으로 잇는다", async () => {
+    renderNotices(() => json(page([PREFERENCES_ADJUSTED])));
+
+    const item = await screen.findByRole("article");
+    expect(within(item).getByRole("heading", { level: 2 })).toHaveTextContent(
+      "새 알림태그 체계가 바뀌어 관심 설정을 맞췄습니다",
+    );
+    expect(item).toHaveTextContent(
+      "태그 체계 버전 2에 맞춰 관심 설정이 바뀌었습니다.",
+    );
+    expect(item).toHaveTextContent("지역 중국 — 태그가 없어져 풀었습니다");
+    expect(item).toHaveTextContent(
+      "형식 목록형 — 새로 생긴 기본 제외 형식이라 제외에 더했습니다",
+    );
+    expect(
+      within(item).getByRole("link", { name: "관심 설정에서 확인하기" }),
+    ).toHaveAttribute("href", "/interests");
   });
 
   it("받은 쪽의 안 읽은 알림만 받은 판까지 읽음으로 보낸다", async () => {

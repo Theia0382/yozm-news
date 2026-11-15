@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { useEffect, useRef } from "react";
 import { Link } from "react-router";
+import { INTERESTS_PATH } from "@/features/interests/interestTexts";
 import { providers } from "@/features/keys/keyTexts";
 import {
   type Notice,
@@ -25,6 +26,11 @@ type PasswordChangeMethod = PasswordChangedNotice["method"];
 
 type KeyInvalidatedNotice =
   components["schemas"]["KeyInvalidatedNoticeResponse"];
+
+type PreferencesAdjustedNotice =
+  components["schemas"]["PreferencesAdjustedNoticeResponse"];
+
+type Adjustment = PreferencesAdjustedNotice["adjustments"][number];
 
 /** 피드를 묶어 보이는 지금 상태의 순서 — 손볼 것부터 */
 const STATUS_ORDER: readonly FeedStatus[] = ["DEGRADED", "STALE", "ACTIVE"];
@@ -138,6 +144,8 @@ function noticeTitle(notice: Notice): string {
       return "비밀번호가 바뀌었습니다";
     case "KEY_INVALIDATED":
       return "LLM 키가 무효가 됐습니다";
+    case "PREFERENCES_ADJUSTED":
+      return "태그 체계가 바뀌어 관심 설정을 맞췄습니다";
   }
 }
 
@@ -149,6 +157,8 @@ function NoticeBody({ notice }: { notice: Notice }): ReactElement {
       return <PasswordChangedBody body={notice.passwordChanged} />;
     case "KEY_INVALIDATED":
       return <KeyInvalidatedBody body={notice.keyInvalidated} />;
+    case "PREFERENCES_ADJUSTED":
+      return <PreferencesAdjustedBody body={notice.preferencesAdjusted} />;
   }
 }
 
@@ -200,6 +210,48 @@ function KeyInvalidatedBody({
       </p>
       <Link to="/keys" className="underline">
         LLM 키 화면에서 확인하기
+      </Link>
+    </div>
+  );
+}
+
+/** 조정 종류의 문구 — 해제는 옛 버전의 이름, 더함은 새 버전의 이름이다 */
+const adjustmentText: Record<Adjustment["change"], string> = {
+  RELEASED_REMOVED: "태그가 없어져 풀었습니다",
+  RELEASED_PARTIAL_MERGE: "다른 태그와 합쳐져 제외를 풀었습니다",
+  ADDED_MOVED_SUBTOPIC: "구독하던 분야에서 옮겨 가 구독에 더했습니다",
+  ADDED_DEFAULT_EXCLUDED: "새로 생긴 기본 제외 형식이라 제외에 더했습니다",
+};
+
+/** 선호 종류의 이름 */
+const adjustmentKindName: Record<Adjustment["kind"], string> = {
+  TOPIC: "주제",
+  REGION: "지역",
+  FORMAT: "형식",
+};
+
+function PreferencesAdjustedBody({
+  body,
+}: {
+  body: PreferencesAdjustedNotice | null | undefined;
+}) {
+  if (!body) {
+    return null;
+  }
+  return (
+    <div className="space-y-2 text-sm">
+      <p>태그 체계 버전 {body.tagSetNumber}에 맞춰 관심 설정이 바뀌었습니다.</p>
+      <ul className="space-y-1">
+        {body.adjustments.map((adjustment) => (
+          <li key={`${adjustment.kind}:${adjustment.key}:${adjustment.change}`}>
+            {adjustmentKindName[adjustment.kind]}{" "}
+            <span className="font-medium">{adjustment.name}</span> —{" "}
+            {adjustmentText[adjustment.change]}
+          </li>
+        ))}
+      </ul>
+      <Link to={INTERESTS_PATH} className="underline">
+        관심 설정에서 확인하기
       </Link>
     </div>
   );

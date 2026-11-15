@@ -40,10 +40,14 @@ describe("PrivacyPage", () => {
     const transfer = within(
       screen.getByRole("region", { name: "LLM 공급자에게 보내는 것" }),
     );
+    // 받는 쪽은 쓸 모델의 공급자다 — 고른 모델을 쓸 수 없으면 키를 등록한 다른 공급자
     expect(
       transfer.getByText(
-        "구독 주제, 지역 선호, 자유 텍스트 관심사, 원하는 분량",
+        /고른 모델을 쓸 수 없으면 키를 등록한 다른 공급자에게 전송됩니다\./,
       ),
+    ).toBeInTheDocument();
+    expect(
+      transfer.getByText("구독 주제, 지역 선호, 자유 텍스트 관심사"),
     ).toBeInTheDocument();
     expect(transfer.getByText("후보 기사의 정보")).toBeInTheDocument();
     expect(
