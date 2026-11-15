@@ -85,65 +85,66 @@ export function AdminLayout({ baseUrl, fetch }: AdminLayoutProps) {
   return (
     <AdminSessionContext.Provider value={client}>
       <div className={cn(PAGE_FRAME, WIDE_WIDTH, "space-y-6")}>
-        <header className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-6">
+        {/* 두 줄 — 첫 줄은 제목과 계정 링크, 둘째 줄은 메뉴(메뉴가 길어 한 줄에 두면 계정 링크가 줄바꿈된다) */}
+        <header className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <Link to="/admin" className="text-2xl font-bold">
               운영자
             </Link>
-            <nav
-              aria-label="운영자 메뉴"
-              className="flex flex-wrap gap-x-4 gap-y-1"
-            >
-              <NavLink to="/admin" end className={navLinkClass}>
-                소스 · 피드
-              </NavLink>
-              <NavLink to="/admin/collection" className={navLinkClass}>
-                수집 현황
-              </NavLink>
-              <NavLink to="/admin/evaluation" className={navLinkClass}>
-                평가 현황
-              </NavLink>
-              <NavLink to="/admin/evaluations" className={navLinkClass}>
-                평가 결과
-              </NavLink>
-              <NavLink to="/admin/samples" className={navLinkClass}>
-                표본 검수
-              </NavLink>
-              <NavLink to="/admin/thresholds" className={navLinkClass}>
-                태그 기준
-              </NavLink>
-              <NavLink to="/admin/events" className={navLinkClass}>
-                사건
-              </NavLink>
-              <NavLink to="/admin/storylines" className={navLinkClass}>
-                스토리라인
-              </NavLink>
-              <NavLink to="/admin/big-storylines" className={navLinkClass}>
-                큰 스토리라인
-              </NavLink>
-              <NavLink to="/admin/event-judgements" className={navLinkClass}>
-                판정 기록
-              </NavLink>
-              <NavLink to="/admin/event-publications" className={navLinkClass}>
-                이벤트 발행
-              </NavLink>
-              <NavLink to="/admin/accounts" className={navLinkClass}>
-                계정
-              </NavLink>
-            </nav>
+            <div className="flex items-center gap-3 text-sm">
+              <NoticesLink />
+              <Link to="/" className="underline">
+                사용자 화면
+              </Link>
+              <span className="text-muted-foreground">
+                {me.data.displayName ?? me.data.email}
+              </span>
+              <button type="button" className="underline" onClick={signOut}>
+                로그아웃
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-3 text-sm">
-            <NoticesLink />
-            <Link to="/" className="underline">
-              사용자 화면
-            </Link>
-            <span className="text-muted-foreground">
-              {me.data.displayName ?? me.data.email}
-            </span>
-            <button type="button" className="underline" onClick={signOut}>
-              로그아웃
-            </button>
-          </div>
+          <nav
+            aria-label="운영자 메뉴"
+            className="flex flex-wrap gap-x-4 gap-y-1"
+          >
+            <NavLink to="/admin" end className={navLinkClass}>
+              소스 · 피드
+            </NavLink>
+            <NavLink to="/admin/collection" className={navLinkClass}>
+              수집 현황
+            </NavLink>
+            <NavLink to="/admin/evaluation" className={navLinkClass}>
+              평가 현황
+            </NavLink>
+            <NavLink to="/admin/evaluations" className={navLinkClass}>
+              평가 결과
+            </NavLink>
+            <NavLink to="/admin/samples" className={navLinkClass}>
+              표본 검수
+            </NavLink>
+            <NavLink to="/admin/thresholds" className={navLinkClass}>
+              태그 기준
+            </NavLink>
+            <NavLink to="/admin/events" className={navLinkClass}>
+              사건
+            </NavLink>
+            <NavLink to="/admin/storylines" className={navLinkClass}>
+              스토리라인
+            </NavLink>
+            <NavLink to="/admin/big-storylines" className={navLinkClass}>
+              큰 스토리라인
+            </NavLink>
+            <NavLink to="/admin/event-judgements" className={navLinkClass}>
+              판정 기록
+            </NavLink>
+            <NavLink to="/admin/event-publications" className={navLinkClass}>
+              이벤트 발행
+            </NavLink>
+            <NavLink to="/admin/accounts" className={navLinkClass}>
+              계정
+            </NavLink>
+          </nav>
         </header>
         {signOutFailed && (
           <p role="alert">로그아웃하지 못했습니다. 다시 시도해 주세요.</p>

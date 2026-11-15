@@ -151,7 +151,7 @@ describe("RequireSignIn", () => {
     ).not.toBeInTheDocument();
   });
 
-  it.each(["/", "/digest", "/password"])(
+  it.each(["/", "/digest"])(
     "LLM 키가 없으면 %s 로 와도 키 화면으로 보낸다",
     async (entry) => {
       const { router } = renderGuarded(entry, () =>
@@ -167,6 +167,7 @@ describe("RequireSignIn", () => {
 
   it.each([
     ["/settings", "설정 화면"],
+    ["/password", "비밀번호 변경 화면"],
     ["/notices", "알림 화면"],
     ["/keys", "키 화면"],
   ])(
