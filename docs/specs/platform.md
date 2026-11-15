@@ -20,7 +20,7 @@
 - **코드 포인트 자르기** — 텍스트를 앞 몇 코드 포인트로 자르는 공개 타입(`CodePoints`). 피드 요약문(`source`) · 판정 입력(`evaluation`) · 기사 표현 텍스트(`event`) · 첫 운영자의 표시 이름(`user`)의 길이 상한이 쓴다
 - **날짜 범위 변환** — 날짜 범위를 시간대의 자정으로 시각 범위에 옮기고, 시간대 전환 여유를 더한 시각 길이 상한을 내는 공개 타입(`DayRange`). 집계 기간(`tag` 의 `EvaluationPeriod`) · 판정 원본 조회 기간(`evaluation` 의 `JudgementPeriod`) · 사건 조회 기간(`event` 의 `EventPeriod`)이 쓴다
 - **운영 설정의 행위자 종류** — 운영 설정을 정한 주체의 종류(`ChangeActor` — 시스템 · 운영자). 태그 기준 · 저장 기준 · 태그 체계 버전(`tag`), 큰 판정 기준(`storyline`), 가입 정책(`user`)의 이력이 쓴다
-- **HTTP 응답 본문 상한** — JDK `HttpClient` 의 응답 본문을 상한까지만 받는 공개 타입(`CappedBody`). 외부 API 를 부르는 어댑터(`evaluation` 의 Jev · 외부 임베딩, `llm` 의 공급자 전송)가 쓴다
+- **HTTP 응답 본문 상한** — JDK `HttpClient` 의 응답 본문을 상한까지만 받는 공개 타입(`CappedBody`). 외부 API 를 부르는 어댑터(`evaluation` 의 Jev · 외부 임베딩, `llm` 의 공급자 전송, `user` 의 Turnstile 검증)가 쓴다
 - **사용자 식별자** — 사용자를 가리키는 값 타입(`UserId`). 사용자 데이터를 가진 모듈이 주인을 가리키고, 화면용 API 처리기가 세션 사용자를 받는 인자 타입이다(platform-R24). 세션 사용자로 인자를 채우는 일은 `user` 의 것이다
 - **비밀 값** — 비밀 값 평문의 래퍼(`SecretValue` — 문자열 표현이 값을 숨기고 직렬화하면 실패한다)와 요청 헤더에 실을 값의 꼴(`HeaderValueShape`). 래퍼는 사용자 LLM 키를 다루는 모듈(`llm` · `credential`)이, 꼴은 API 키를 헤더에 싣는 모듈(`evaluation` 의 Jev 키 · 임베딩 키, `llm` 의 키 검증)이 쓴다(platform-R22 · R23)
 - **벡터의 pgvector 텍스트 표현** — 벡터를 pgvector 의 텍스트 표현으로 쓰고 되읽는 공개 타입(`VectorText`). 기사 표현 · 사건 중심(`event`)과 스토리라인 중심(`storyline`)의 저장소가 쓴다
@@ -303,11 +303,12 @@ public final class CodePoints {
 
 ### CappedBody
 
-JDK `HttpClient` 의 응답 본문을 상한까지만 모으는 수신자 — 빈이 아니고, 요청마다 새로 만든다.
+JDK `HttpClient` 의 응답 본문을 상한까지만 모으는 수신자 — 빈이 아니고, 요청마다 `sendAsync` 가 새로 만든다(생성자는 공개하지 않는다).
 
 ```java
 public final class CappedBody implements HttpResponse.BodySubscriber<CappedBody.Result> {
-    public CappedBody(int max);   // 상한(바이트)
+    // 요청을 보내고 본문을 상한까지 받는다 — 돌려주는 미래는 client 의 것 그대로다
+    public static CompletableFuture<HttpResponse<Result>> sendAsync(HttpClient client, HttpRequest request, int max);
     public sealed interface Result {
         record Complete(String text) implements Result {}
         record Overflow() implements Result {}
@@ -317,7 +318,8 @@ public final class CappedBody implements HttpResponse.BodySubscriber<CappedBody.
 
 - 계약
   - 받은 바이트가 상한 이하로 끝나면 `Complete` — 본문을 UTF-8 로 읽은 문자열
-  - 다음 조각을 더하면 상한을 넘을 때 받기를 멈추고(구독 취소) `Overflow` — 입출력 오류와 섞지 않는다
+  - 다음 조각을 더하면 상한을 넘을 때 `Overflow` 로 넘기고, 응답이 넘겨진 뒤 받기를 멈춘다(구독 취소) — 입출력 오류와 섞지 않는다. 넘김과 동시에 취소하면 JDK `HttpClient` 가 취소로 닫힌 연결을 입출력 오류로 응답에 먼저 알릴 수 있다
+  - 부르는 쪽이 돌려받은 미래를 취소하면 요청이 끊긴다
   - 본문 받기가 오류로 끝나면 그 오류로 실패한다
   - 상한이 1 미만이면 `IllegalArgumentException`
 - 본문을 끝까지 받아야 완료되므로, 부르는 쪽이 완료를 마감으로 기다리면 마감이 본문 읽기까지 덮는다

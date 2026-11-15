@@ -270,6 +270,11 @@ tasks.withType<Test> {
 	environment("ANTHROPIC_LOG", "debug")
 	jvmArgs("--enable-native-access=ALL-UNNAMED")
 	maxHeapSize = "2g"
+	// 실패한 시험의 단언(기대 · 실제 값)과 위치를 실행 로그에 남긴다 — CI 작업 로그만으로 실패를 읽는다
+	testLogging {
+		events(org.gradle.api.tasks.testing.logging.TestLogEvent.FAILED)
+		exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+	}
 }
 
 // 모델 파일은 따로 계층을 둔다 — 코드만 바뀌면 이 계층(약 135 MB)을 다시 받지 않는다. 계층 이름은 backend/Dockerfile 이 쓴다

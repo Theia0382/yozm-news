@@ -154,8 +154,8 @@ final class OpenAiCompatibleEmbedder implements ArticleEmbedder, AutoCloseable {
 		if (this.key != null) {
 			builder.header("Authorization", this.key.authorization());
 		}
-		CompletableFuture<HttpResponse<CappedBody.Result>> future = this.client.sendAsync(builder.build(),
-				info -> new CappedBody(this.maxResponseBytes));
+		CompletableFuture<HttpResponse<CappedBody.Result>> future = CappedBody.sendAsync(this.client, builder.build(),
+				this.maxResponseBytes);
 		try {
 			HttpResponse<CappedBody.Result> response = future.get(this.deadline.toNanos(), TimeUnit.NANOSECONDS);
 			return switch (response.body()) {
