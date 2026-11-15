@@ -15,7 +15,6 @@ import net.yozmnews.tag.TagSetActivationResult;
 import net.yozmnews.tag.TagSetAdministration;
 import net.yozmnews.tag.TagSetDirectory;
 import net.yozmnews.tag.TagSetId;
-import net.yozmnews.tag.application.TagSetRows;
 import net.yozmnews.user.domain.account.DisplayName;
 import net.yozmnews.user.domain.account.EmailAddress;
 import net.yozmnews.user.domain.account.Onboarding;
@@ -52,8 +51,6 @@ class PreferenceFollowupsTests {
 
 	private static final Instant NOW = Instant.parse("2026-11-15T09:00:00Z");
 
-	private static final String LISTENER = "%TagSetActivationListener%";
-
 	@Autowired
 	PreferenceFollowups followups;
 
@@ -77,8 +74,11 @@ class PreferenceFollowupsTests {
 
 	private TagSetId first;
 
+	private SecondTagSet second;
+
 	@BeforeEach
 	void startFromTheFirstVersion() {
+		this.second = new SecondTagSet(this.administration, this.jdbc);
 		clean();
 		this.first = this.tagSets.activeTagSet().id();
 	}
@@ -189,26 +189,7 @@ class PreferenceFollowupsTests {
 		assertThat(publications()).isEqualTo(before + 1);
 	}
 
-	private TagSetId activate() {
-		TagSetActivationResult result = this.administration.activate(secondText(), 0, ChangeActor.OPERATOR);
-		assertThat(result).isInstanceOf(TagSetActivationResult.Activated.class);
-		return ((TagSetActivationResult.Activated) result).version().id();
-	}
 
-	/** 버전 1 의 원문에서 japan → nippon(계보), china 지움, 형식 listicle(기본 제외) 더함 */
-	private String secondText() {
-		String text = this.administration.versionText(this.first).orElseThrow();
-		text = text.replaceFirst("  - key: \"china\"\n(    .*\n)+?(?=  - key: )", "");
-		text = text.replace("key: \"japan\"", "key: \"nippon\"");
-		text = text.replace("importance:\n", """
-				  - key: "listicle"
-				    name: "목록형"
-				    description: "항목을 나열한 기사"
-				    excludedByDefault: true
-				importance:
-				""");
-		return text + "lineage:\n  - { kind: region, change: rename, from: [japan], to: [nippon] }\n";
-	}
 
 	private UserId account(String email) {
 		ProvisionResult result = this.transaction.execute(status -> this.provisioning.provision(Onboarding.OPEN_SIGN_UP,
@@ -276,45 +257,27 @@ class PreferenceFollowupsTests {
 			.toList();
 	}
 
-	private Long publications() {
-		return this.jdbc.sql("select count(*) from event_publication where listener_id like :listener")
-			.param("listener", LISTENER)
-			.query(Long.class)
-			.single();
+	private TagSetId activate() {
+		return this.second.activate(this.first);
 	}
 
-	/** 리스너가 끝날 때까지(마치거나 실패할 때까지) 기다린다 — 시험 뒤 버전을 지우기 전에 */
+	private String secondText() {
+		return this.second.text(this.first);
+	}
+
 	private void awaitListener() {
-		long deadline = System.nanoTime() + 20_000_000_000L;
-		while (System.nanoTime() < deadline) {
-			Long open = this.jdbc
-				.sql("""
-					select count(*) from event_publication
-					where listener_id like :listener and completion_date is null and coalesce(status, '') <> 'FAILED'
-					""")
-				.param("listener", LISTENER)
-				.query(Long.class)
-				.single();
-			if (open == 0) {
-				return;
-			}
-			try {
-				Thread.sleep(100);
-			}
-			catch (InterruptedException ex) {
-				Thread.currentThread().interrupt();
-				return;
-			}
-		}
+		this.second.awaitListener();
 	}
 
 	private void clean() {
-		this.jdbc.sql("delete from users").update();
-		this.jdbc.sql("delete from event_publication where listener_id like :listener")
-			.param("listener", LISTENER)
-			.update();
-		TagSetRows.removeVersionsAfterFirst(this.jdbc);
-		TagSetRows.resetThresholds(this.jdbc);
+		this.second.clean();
+	}
+
+	private Long publications() {
+		return this.jdbc.sql("select count(*) from event_publication where listener_id like :listener")
+			.param("listener", SecondTagSet.LISTENER)
+			.query(Long.class)
+			.single();
 	}
 
 }

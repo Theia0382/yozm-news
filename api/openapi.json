@@ -3828,6 +3828,342 @@
         "tags" : [ "human-check-controller" ]
       }
     },
+    "/api/interests/model" : {
+      "get" : {
+        "operationId" : "model",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/InterestModelResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "세션이 없거나 만료됐다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "비밀번호를 바꿔야 한다"
+          }
+        },
+        "tags" : [ "interest-controller" ]
+      },
+      "put" : {
+        "operationId" : "chooseModel",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/InterestModelRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/InterestModelSaveResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "세션이 없거나 만료됐다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청 보호 토큰이 없거나 맞지 않는다 · 비밀번호를 바꿔야 한다"
+          }
+        },
+        "tags" : [ "interest-controller" ]
+      }
+    },
+    "/api/interests/settings" : {
+      "get" : {
+        "operationId" : "settings",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/InterestSettingsResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "세션이 없거나 만료됐다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "비밀번호를 바꿔야 한다"
+          }
+        },
+        "tags" : [ "interest-controller" ]
+      },
+      "put" : {
+        "operationId" : "saveSettings",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/InterestSettingsRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/InterestSettingsSaveResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "세션이 없거나 만료됐다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청 보호 토큰이 없거나 맞지 않는다 · 비밀번호를 바꿔야 한다"
+          }
+        },
+        "tags" : [ "interest-controller" ]
+      }
+    },
+    "/api/interests/sources" : {
+      "get" : {
+        "operationId" : "interestSources",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/InterestSourcesResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "세션이 없거나 만료됐다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "비밀번호를 바꿔야 한다"
+          }
+        },
+        "tags" : [ "interest-controller" ]
+      },
+      "put" : {
+        "operationId" : "saveSources",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/InterestSourcesRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/InterestSourcesSaveResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "세션이 없거나 만료됐다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청 보호 토큰이 없거나 맞지 않는다 · 비밀번호를 바꿔야 한다"
+          }
+        },
+        "tags" : [ "interest-controller" ]
+      }
+    },
+    "/api/interests/tags" : {
+      "get" : {
+        "operationId" : "tags",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/InterestTagsResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "세션이 없거나 만료됐다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "비밀번호를 바꿔야 한다"
+          }
+        },
+        "tags" : [ "interest-controller" ]
+      },
+      "put" : {
+        "operationId" : "saveTags",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/InterestTagsRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/InterestTagsSaveResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "세션이 없거나 만료됐다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청 보호 토큰이 없거나 맞지 않는다 · 비밀번호를 바꿔야 한다"
+          }
+        },
+        "tags" : [ "interest-controller" ]
+      }
+    },
     "/api/invitation-acceptances" : {
       "post" : {
         "operationId" : "acceptInvitation",
@@ -4852,6 +5188,24 @@
           }
         },
         "required" : [ "articles", "key", "name", "subtopics" ]
+      },
+      "CategoryResponse" : {
+        "type" : "object",
+        "properties" : {
+          "key" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "subtopics" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/TagResponse"
+            }
+          }
+        },
+        "required" : [ "key", "name", "subtopics" ]
       },
       "CollectionStatusResponse" : {
         "type" : "object",
@@ -5899,6 +6253,21 @@
         },
         "required" : [ "httpStatus", "message", "permanence", "problem", "reason" ]
       },
+      "FormatResponse" : {
+        "type" : "object",
+        "properties" : {
+          "excludedByDefault" : {
+            "type" : "boolean"
+          },
+          "key" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "excludedByDefault", "key", "name" ]
+      },
       "HumanCheckResponse" : {
         "type" : "object",
         "properties" : {
@@ -5933,6 +6302,265 @@
           }
         },
         "required" : [ "result" ]
+      },
+      "InterestModelRequest" : {
+        "type" : "object",
+        "properties" : {
+          "modelId" : {
+            "type" : "string"
+          },
+          "provider" : {
+            "type" : "string",
+            "enum" : [ "OPENAI", "ANTHROPIC" ]
+          }
+        },
+        "required" : [ "modelId", "provider" ]
+      },
+      "InterestModelResponse" : {
+        "type" : "object",
+        "properties" : {
+          "choosable" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ModelResponse"
+            }
+          },
+          "chosen" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/ModelResponse"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "effective" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/ModelResponse"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "reason" : {
+            "type" : "string",
+            "enum" : [ "CHOSEN", "NOT_CHOSEN", "NOT_ALLOWED", "NO_KEY", "KEY_INVALID" ]
+          }
+        },
+        "required" : [ "choosable", "chosen", "effective", "reason" ]
+      },
+      "InterestModelSaveResponse" : {
+        "type" : "object",
+        "properties" : {
+          "model" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/InterestModelResponse"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "result" : {
+            "type" : "string",
+            "enum" : [ "SAVED", "PROVIDER_WITHOUT_KEY", "MODEL_NOT_ALLOWED" ]
+          }
+        },
+        "required" : [ "model", "result" ]
+      },
+      "InterestSettingsRequest" : {
+        "type" : "object",
+        "properties" : {
+          "digestTime" : {
+            "type" : "string"
+          },
+          "interestText" : {
+            "type" : "string"
+          },
+          "monthlyReport" : {
+            "type" : "boolean"
+          },
+          "timezone" : {
+            "type" : "string"
+          },
+          "weeklyReport" : {
+            "type" : "boolean"
+          },
+          "weeklyReportDay" : {
+            "type" : "string",
+            "enum" : [ "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY" ]
+          }
+        },
+        "required" : [ "digestTime", "interestText", "monthlyReport", "timezone", "weeklyReport", "weeklyReportDay" ]
+      },
+      "InterestSettingsResponse" : {
+        "type" : "object",
+        "properties" : {
+          "digestTime" : {
+            "type" : "string"
+          },
+          "interestText" : {
+            "type" : "string"
+          },
+          "interestTextMax" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "monthlyReport" : {
+            "type" : "boolean"
+          },
+          "timezone" : {
+            "type" : "string"
+          },
+          "weeklyReport" : {
+            "type" : "boolean"
+          },
+          "weeklyReportDay" : {
+            "type" : "string",
+            "enum" : [ "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY" ]
+          }
+        },
+        "required" : [ "digestTime", "interestText", "interestTextMax", "monthlyReport", "timezone", "weeklyReport", "weeklyReportDay" ]
+      },
+      "InterestSettingsSaveResponse" : {
+        "type" : "object",
+        "properties" : {
+          "interestTextMax" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int32"
+          },
+          "result" : {
+            "type" : "string",
+            "enum" : [ "SAVED", "UNKNOWN_TIMEZONE", "INTEREST_TEXT_TOO_LONG" ]
+          },
+          "settings" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/InterestSettingsResponse"
+            }, {
+              "type" : "null"
+            } ]
+          }
+        },
+        "required" : [ "interestTextMax", "result", "settings" ]
+      },
+      "InterestSourceResponse" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "name" : {
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "id", "name" ]
+      },
+      "InterestSourcesRequest" : {
+        "type" : "object",
+        "properties" : {
+          "excluded" : {
+            "type" : "array",
+            "items" : {
+              "type" : "integer",
+              "format" : "int64",
+              "exclusiveMinimum" : 0
+            }
+          }
+        },
+        "required" : [ "excluded" ]
+      },
+      "InterestSourcesResponse" : {
+        "type" : "object",
+        "properties" : {
+          "excluded" : {
+            "type" : "array",
+            "items" : {
+              "type" : "integer",
+              "format" : "int64"
+            }
+          },
+          "sources" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/InterestSourceResponse"
+            }
+          }
+        },
+        "required" : [ "excluded", "sources" ]
+      },
+      "InterestSourcesSaveResponse" : {
+        "type" : "object",
+        "properties" : {
+          "excluded" : {
+            "type" : "array",
+            "items" : {
+              "type" : "integer",
+              "format" : "int64"
+            }
+          },
+          "result" : {
+            "type" : "string",
+            "enum" : [ "SAVED" ]
+          }
+        },
+        "required" : [ "excluded", "result" ]
+      },
+      "InterestTagsRequest" : {
+        "type" : "object",
+        "properties" : {
+          "excludedFormats" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "excludedRegions" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "tagSetId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "topics" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          }
+        },
+        "required" : [ "excludedFormats", "excludedRegions", "tagSetId", "topics" ]
+      },
+      "InterestTagsResponse" : {
+        "type" : "object",
+        "properties" : {
+          "preferences" : {
+            "$ref" : "#/components/schemas/PreferencesResponse"
+          },
+          "tagSet" : {
+            "$ref" : "#/components/schemas/TagSetResponse"
+          }
+        },
+        "required" : [ "preferences", "tagSet" ]
+      },
+      "InterestTagsSaveResponse" : {
+        "type" : "object",
+        "properties" : {
+          "activeTagSetId" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int64"
+          },
+          "preferences" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/PreferencesResponse"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "result" : {
+            "type" : "string",
+            "enum" : [ "SAVED", "TAG_SET_CHANGED" ]
+          }
+        },
+        "required" : [ "activeTagSetId", "preferences", "result" ]
       },
       "InvitationAcceptanceRequest" : {
         "type" : "object",
@@ -6325,6 +6953,19 @@
         },
         "required" : [ "articleCount", "createdAt", "firstArticleAt", "id", "lastArticleAt", "mergedAt", "probability", "representative", "representativeId" ]
       },
+      "ModelResponse" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "provider" : {
+            "type" : "string",
+            "enum" : [ "OPENAI", "ANTHROPIC" ]
+          }
+        },
+        "required" : [ "id", "provider" ]
+      },
       "NamedTag" : {
         "type" : "object",
         "properties" : {
@@ -6511,6 +7152,30 @@
           }
         },
         "required" : [ "adjustments", "tagSetNumber" ]
+      },
+      "PreferencesResponse" : {
+        "type" : "object",
+        "properties" : {
+          "excludedFormats" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "excludedRegions" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "topics" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          }
+        },
+        "required" : [ "excludedFormats", "excludedRegions", "topics" ]
       },
       "PresetResponse" : {
         "type" : "object",
@@ -7904,6 +8569,18 @@
         },
         "required" : [ "key", "kind" ]
       },
+      "TagResponse" : {
+        "type" : "object",
+        "properties" : {
+          "key" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "key", "name" ]
+      },
       "TagSetActivationResponse" : {
         "type" : "object",
         "properties" : {
@@ -8032,6 +8709,38 @@
           }
         },
         "required" : [ "recentDays", "text" ]
+      },
+      "TagSetResponse" : {
+        "type" : "object",
+        "properties" : {
+          "formats" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/FormatResponse"
+            }
+          },
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "number" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "regions" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/TagResponse"
+            }
+          },
+          "topics" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CategoryResponse"
+            }
+          }
+        },
+        "required" : [ "formats", "id", "number", "regions", "topics" ]
       },
       "TagSetReviewResponse" : {
         "type" : "object",
