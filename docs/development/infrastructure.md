@@ -13,7 +13,7 @@
 | [tools/docs-check/Dockerfile](../../tools/docs-check/Dockerfile) · [tools/Dockerfile](../../tools/Dockerfile) | 문서 검사 이미지 · 저장소 도구 검사 이미지 | 검사 실행 환경(기반 이미지 · 검사 명령) |
 | 각 Dockerfile 옆의 `Dockerfile.dockerignore` | 이미지에 들어가는 파일의 허용 목록 | 검사 · 빌드 입력 |
 | [.github/workflows/ci.yml](../../.github/workflows/ci.yml) | CI | job · 계기 · 캐시 · 보고서 |
-| [frontend/proxy/](../../frontend/proxy/) | 배포 proxy(Caddy) 설정 | 앱으로 넘기는 경로(`backend-paths.caddy`) |
+| [frontend/proxy/](../../frontend/proxy/) | 배포 proxy(Caddy) 설정 | 앱으로 넘기는 경로(`backend-paths.caddy`), 클라이언트 IP 의 신뢰 범위 · 앱으로 넘기는 헤더(`Caddyfile`) |
 | [deploy/](../../deploy/) | 배포 구성과 스모크 — 띄우고 운영하는 방법은 [배포와 운영](../operations/deployment.md) | 배포 서비스 정의 · 운영 값 목록 |
 
 ## 개발용 Compose
@@ -62,7 +62,7 @@ PostgreSQL 이미지는 `compose.yaml` 의 `postgres` 서비스 `image` 한 줄�
 
 ### 테스트가 저장소 파일을 읽는 결선
 
-백엔드 테스트는 저장소 파일 넷을 읽는다 — PostgreSQL 이미지를 정하는 `compose.yaml`, 현재 코드의 명세와 비교하는 화면용 API 명세 `api/openapi.json`([ADR-0020](../adr/0020-screen-api-contract-from-committed-openapi-spec.md)), 예시 프로필을 실제 검증기로 통과시키는 운영 안내서 `docs/operations/sources.md`([소스 등록](../operations/sources.md#예시)), 예시 원문을 기본 체계에 적용해 확인을 통과시키는 운영 안내서 `docs/operations/tag-sets.md`([태그 체계 바꾸기](../operations/tag-sets.md#예시)). 파일마다 네 곳이 맞물린다.
+백엔드 테스트는 저장소 파일 다섯을 읽는다 — PostgreSQL 이미지를 정하는 `compose.yaml`, 앱이 읽는 클라이언트 IP 헤더 · 신뢰 범위 결선을 대조하는 배포 proxy 설정 `frontend/proxy/Caddyfile`, 현재 코드의 명세와 비교하는 화면용 API 명세 `api/openapi.json`([ADR-0020](../adr/0020-screen-api-contract-from-committed-openapi-spec.md)), 예시 프로필을 실제 검증기로 통과시키는 운영 안내서 `docs/operations/sources.md`([소스 등록](../operations/sources.md#예시)), 예시 원문을 기본 체계에 적용해 확인을 통과시키는 운영 안내서 `docs/operations/tag-sets.md`([태그 체계 바꾸기](../operations/tag-sets.md#예시)). 파일마다 네 곳이 맞물린다.
 
 1. `backend/build.gradle.kts` 가 파일 경로를 테스트에 시스템 속성으로 넘긴다
 2. 같은 파일이 Gradle 테스트 태스크의 입력으로 등록되어, 파일이 바뀌면 테스트가 다시 돈다
@@ -119,6 +119,7 @@ IDE 에서 테스트를 Gradle 에 맡기는 것은 1 때문이다([CONTRIBUTING
 - 넘기는 경로의 정본은 `frontend/proxy/backend-paths.caddy` 한 줄이다. 배포 proxy(Caddy)는 이 파일을 `import` 하고, Vite 개발 서버는 `frontend/proxy/backendPaths.ts` 가 같은 파일을 읽어 proxy 항목을 만든다
 - 두 쪽의 차이가 하나 있다 — Caddy 의 경로 일치는 대소문자를 구분하지 않고, Vite 쪽 정규식은 구분한다
 - 넘기지 않는 경로는 SPA 가 답한다. 관리 · 명세 엔드포인트(`/actuator/**` · `/v3/api-docs`)도 넘기지 않는다
+- 배포 proxy 는 넘길 때 클라이언트 IP 를 정해 `X-Real-IP` 에 덮어쓴다 — 신뢰 범위(`YOZMNEWS_TRUSTED_PROXIES`, 기본 사설 대역)의 연결에서만 헤더(`YOZMNEWS_CLIENT_IP_HEADERS`, 기본 `X-Forwarded-For`)를 오른쪽부터 읽는다(`trusted_proxies_strict` — Caddy v2.8 이상, 메이저 태그 `caddy:2` 가 충족한다). 앱은 그 헤더만 읽는다([운영 설정 "공개"](../operations/configuration.md#공개) · [user Spec](../specs/user.md#요청-방어) user-R37). Vite 개발 서버는 이 헤더를 넣지 않아 개발 중 앱은 직접 주소(루프백)로 센다
 
 ## CI
 
@@ -167,6 +168,7 @@ IDE 에서 테스트를 Gradle 에 맡기는 것은 1 때문이다([CONTRIBUTING
 | 넘기는 경로의 정본 하나를 Caddy · Vite 가 함께 읽는다 | 테스트 `backendPaths.test.ts` + 스모크 K5 · K6 · K10 | `frontend/proxy/` |
 | 운영자 경로는 토큰 없는 요청에 열리지 않는다 — 토큰을 설정하지 않은 배포는 닫혀 있고(403 `admin-closed`), 설정한 배포는 인증을 요구한다(401 `admin-unauthorized`) | 스모크 K13 — CI 는 두 구성을 돌린다 | [운영 설정 — 운영자](../operations/configuration.md#운영자) |
 | proxy 가 관리 · 명세 엔드포인트를 넘기지 않는다 | 스모크 K7 · K8 | `frontend/proxy/backend-paths.caddy` |
+| proxy 가 덮어쓰는 클라이언트 IP 헤더 = 앱이 읽는 헤더, 신뢰 범위의 헤더는 오른쪽부터 읽는다 | 테스트 `ProxyClientAddressTests`(Caddyfile 원문 대조). 부분 — Caddy 가 그 설정을 어떻게 해석하는지는 재지 않는다 | `frontend/proxy/Caddyfile` · `ClientAddresses` |
 | 배포 구성은 proxy 만 호스트에 공개하고 기본은 루프백이다 | 스모크 K2 | [공개](../operations/configuration.md#공개) |
 | 배포 구성의 `app` 은 두 역할(`web` · `worker`)을 켠다 | 스모크 K11 | `deploy/compose.yaml` |
 | 역할이 하나도 켜지지 않으면 기동하지 않는다 | 테스트 `ActiveRolesTests` · `RoleConfigurationTests` | [platform Spec](../specs/platform.md#역할) |
