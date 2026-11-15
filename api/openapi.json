@@ -4491,6 +4491,30 @@
         },
         "required" : [ "passwordProblem", "recoveryCode", "result", "retryAfterSeconds" ]
       },
+      "AdjustmentResponse" : {
+        "type" : "object",
+        "properties" : {
+          "change" : {
+            "type" : "string",
+            "enum" : [ "RELEASED_REMOVED", "RELEASED_PARTIAL_MERGE", "ADDED_MOVED_SUBTOPIC", "ADDED_DEFAULT_EXCLUDED" ]
+          },
+          "key" : {
+            "type" : "string"
+          },
+          "kind" : {
+            "type" : "string",
+            "enum" : [ "TOPIC", "REGION", "FORMAT" ]
+          },
+          "mode" : {
+            "type" : "string",
+            "enum" : [ "SUBSCRIBE", "EXCLUDE" ]
+          },
+          "name" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "change", "key", "kind", "mode", "name" ]
+      },
       "ApiProblem" : {
         "type" : "object",
         "properties" : {
@@ -6360,11 +6384,18 @@
           },
           "kind" : {
             "type" : "string",
-            "enum" : [ "FEED_STATUS", "PASSWORD_CHANGED", "KEY_INVALIDATED" ]
+            "enum" : [ "FEED_STATUS", "PASSWORD_CHANGED", "KEY_INVALIDATED", "PREFERENCES_ADJUSTED" ]
           },
           "passwordChanged" : {
             "oneOf" : [ {
               "$ref" : "#/components/schemas/PasswordChangedNoticeResponse"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "preferencesAdjusted" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/PreferencesAdjustedNoticeResponse"
             }, {
               "type" : "null"
             } ]
@@ -6381,7 +6412,7 @@
             "format" : "date-time"
           }
         },
-        "required" : [ "createdAt", "feedStatus", "id", "keyInvalidated", "kind", "passwordChanged", "read", "revision", "updatedAt" ]
+        "required" : [ "createdAt", "feedStatus", "id", "keyInvalidated", "kind", "passwordChanged", "preferencesAdjusted", "read", "revision", "updatedAt" ]
       },
       "NoticeRevision" : {
         "type" : "object",
@@ -6464,6 +6495,22 @@
           }
         },
         "required" : [ "minutes" ]
+      },
+      "PreferencesAdjustedNoticeResponse" : {
+        "type" : "object",
+        "properties" : {
+          "adjustments" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/AdjustmentResponse"
+            }
+          },
+          "tagSetNumber" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        },
+        "required" : [ "adjustments", "tagSetNumber" ]
       },
       "PresetResponse" : {
         "type" : "object",

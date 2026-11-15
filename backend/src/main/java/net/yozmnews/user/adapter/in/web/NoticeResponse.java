@@ -7,6 +7,7 @@ import net.yozmnews.user.domain.notice.KeyInvalidatedContent;
 import net.yozmnews.user.domain.notice.Notice;
 import net.yozmnews.user.domain.notice.NoticeKind;
 import net.yozmnews.user.domain.notice.PasswordChangedContent;
+import net.yozmnews.user.domain.notice.PreferencesAdjustedContent;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -22,20 +23,25 @@ import org.jspecify.annotations.Nullable;
  * @param feedStatus 피드 상태 알림의 본문 — 종류가 {@code FEED_STATUS} 일 때만
  * @param passwordChanged 비밀번호 알림의 본문 — 종류가 {@code PASSWORD_CHANGED} 일 때만
  * @param keyInvalidated 키 무효 알림의 본문 — 종류가 {@code KEY_INVALIDATED} 일 때만
+ * @param preferencesAdjusted 선호 조정 알림의 본문 — 종류가 {@code PREFERENCES_ADJUSTED} 일 때만
  */
 record NoticeResponse(long id, NoticeKind kind, int revision, Instant createdAt, Instant updatedAt, boolean read,
 		@Nullable FeedStatusNoticeResponse feedStatus, @Nullable PasswordChangedNoticeResponse passwordChanged,
-		@Nullable KeyInvalidatedNoticeResponse keyInvalidated) {
+		@Nullable KeyInvalidatedNoticeResponse keyInvalidated,
+		@Nullable PreferencesAdjustedNoticeResponse preferencesAdjusted) {
 
 	static NoticeResponse of(Notice notice) {
 		return switch (notice.content()) {
 			case FeedStatusContent content -> new NoticeResponse(notice.id(), notice.kind(), notice.revision(),
-					notice.createdAt(), notice.updatedAt(), notice.read(), FeedStatusNoticeResponse.of(content), null, null);
+					notice.createdAt(), notice.updatedAt(), notice.read(), FeedStatusNoticeResponse.of(content), null, null, null);
 			case PasswordChangedContent content -> new NoticeResponse(notice.id(), notice.kind(), notice.revision(),
-					notice.createdAt(), notice.updatedAt(), notice.read(), null, PasswordChangedNoticeResponse.of(content), null);
+					notice.createdAt(), notice.updatedAt(), notice.read(), null, PasswordChangedNoticeResponse.of(content), null, null);
 			case KeyInvalidatedContent content -> new NoticeResponse(notice.id(), notice.kind(), notice.revision(),
 					notice.createdAt(), notice.updatedAt(), notice.read(), null, null,
-					KeyInvalidatedNoticeResponse.of(content));
+					KeyInvalidatedNoticeResponse.of(content), null);
+			case PreferencesAdjustedContent content -> new NoticeResponse(notice.id(), notice.kind(), notice.revision(),
+					notice.createdAt(), notice.updatedAt(), notice.read(), null, null, null,
+					PreferencesAdjustedNoticeResponse.of(content));
 		};
 	}
 

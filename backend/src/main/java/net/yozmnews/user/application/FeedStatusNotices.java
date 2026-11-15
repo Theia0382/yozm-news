@@ -21,6 +21,7 @@ import net.yozmnews.user.domain.notice.NoticeKind;
 import net.yozmnews.user.domain.notice.NoticeRecipients;
 import net.yozmnews.user.domain.notice.NoticeRepository;
 import net.yozmnews.user.domain.notice.PasswordChangedContent;
+import net.yozmnews.user.domain.notice.PreferencesAdjustedContent;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -74,6 +75,7 @@ public class FeedStatusNotices {
 					// 잠근 것은 피드 상태 종류의 알림이다
 					case PasswordChangedContent other -> throw new IllegalStateException("피드 상태 알림이 아니다");
 					case KeyInvalidatedContent other -> throw new IllegalStateException("피드 상태 알림이 아니다");
+					case PreferencesAdjustedContent other -> throw new IllegalStateException("피드 상태 알림이 아니다");
 				};
 				this.notices.revise(unread.get().id(), content.merge(changed, labels), now);
 			}

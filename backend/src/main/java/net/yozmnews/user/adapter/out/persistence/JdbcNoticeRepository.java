@@ -12,6 +12,7 @@ import net.yozmnews.llm.Provider;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.source.FeedId;
 import net.yozmnews.source.FeedStatus;
+import net.yozmnews.tag.TagKind;
 import net.yozmnews.user.domain.notice.FeedStatusContent;
 import net.yozmnews.user.domain.notice.FeedStatusEntry;
 import net.yozmnews.user.domain.notice.KeyInvalidatedContent;
@@ -21,7 +22,11 @@ import net.yozmnews.user.domain.notice.NoticeKind;
 import net.yozmnews.user.domain.notice.NoticeRepository;
 import net.yozmnews.user.domain.notice.PasswordChangeMethod;
 import net.yozmnews.user.domain.notice.PasswordChangedContent;
+import net.yozmnews.user.domain.notice.PreferencesAdjustedContent;
 import net.yozmnews.user.domain.notice.SeenNotice;
+import net.yozmnews.user.domain.preference.Adjustment;
+import net.yozmnews.user.domain.preference.AdjustmentKind;
+import net.yozmnews.user.domain.preference.PreferenceMode;
 import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
@@ -170,6 +175,8 @@ class JdbcNoticeRepository implements NoticeRepository {
 			case FEED_STATUS -> JSON.readValue(rs.getString("content"), StoredFeedStatus.class).content();
 			case PASSWORD_CHANGED -> JSON.readValue(rs.getString("content"), StoredPasswordChanged.class).content();
 			case KEY_INVALIDATED -> JSON.readValue(rs.getString("content"), StoredKeyInvalidated.class).content();
+			case PREFERENCES_ADJUSTED ->
+				JSON.readValue(rs.getString("content"), StoredPreferencesAdjusted.class).content();
 		};
 		return new Notice(rs.getLong("id"), kind, content, rs.getInt("revision"),
 				rs.getObject("created_at", OffsetDateTime.class).toInstant(),
@@ -182,6 +189,8 @@ class JdbcNoticeRepository implements NoticeRepository {
 			case PasswordChangedContent passwordChanged ->
 				JSON.writeValueAsString(StoredPasswordChanged.of(passwordChanged));
 			case KeyInvalidatedContent keyInvalidated -> JSON.writeValueAsString(StoredKeyInvalidated.of(keyInvalidated));
+			case PreferencesAdjustedContent preferencesAdjusted ->
+				JSON.writeValueAsString(StoredPreferencesAdjusted.of(preferencesAdjusted));
 		};
 	}
 
@@ -248,6 +257,32 @@ class JdbcNoticeRepository implements NoticeRepository {
 					this.keyId, Instant.parse(this.invalidatedAt));
 		}
 
+	}
+
+	/** 선호 조정 알림 내용의 저장 모양 — {@code {"tagSetNumber":…,"adjustments":[{"kind":…,"key":…,"name":…,"mode":…,"change":…}]}} */
+	private record StoredPreferencesAdjusted(int tagSetNumber, List<StoredAdjustment> adjustments) {
+
+		static StoredPreferencesAdjusted of(PreferencesAdjustedContent content) {
+			return new StoredPreferencesAdjusted(content.tagSetNumber(),
+					content.adjustments()
+						.stream()
+						.map(adjustment -> new StoredAdjustment(adjustment.kind(), adjustment.key(), adjustment.name(),
+								adjustment.mode(), adjustment.change()))
+						.toList());
+		}
+
+		PreferencesAdjustedContent content() {
+			return new PreferencesAdjustedContent(this.tagSetNumber,
+					this.adjustments.stream()
+						.map(stored -> new Adjustment(stored.kind(), stored.key(), stored.name(), stored.mode(),
+								stored.change()))
+						.toList());
+		}
+
+	}
+
+	/** 조정 항목 하나의 저장 모양 */
+	private record StoredAdjustment(TagKind kind, String key, String name, PreferenceMode mode, AdjustmentKind change) {
 	}
 
 	/** 피드 한 줄의 저장 모양 — 시각은 ISO 8601 문자열 */

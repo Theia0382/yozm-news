@@ -14,6 +14,9 @@ public enum NoticeKind {
 	PASSWORD_CHANGED,
 
 	/** LLM 키가 무효가 됐다 — 무효가 되는 전이마다 하나 */
-	KEY_INVALIDATED
+	KEY_INVALIDATED,
+
+	/** 태그 체계의 활성 전환이 선호를 해제하거나 더했다 — 사용자 · 활성 전환마다 하나 */
+	PREFERENCES_ADJUSTED
 
 }

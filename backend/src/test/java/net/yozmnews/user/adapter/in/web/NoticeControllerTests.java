@@ -18,6 +18,7 @@ import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.llm.Provider;
 import net.yozmnews.source.FeedId;
 import net.yozmnews.source.FeedStatus;
+import net.yozmnews.tag.TagKind;
 import net.yozmnews.user.SignedInUsers;
 import net.yozmnews.user.application.PasswordHashing;
 import net.yozmnews.user.domain.account.AccountRepository;
@@ -29,7 +30,11 @@ import net.yozmnews.user.domain.notice.KeyInvalidatedContent;
 import net.yozmnews.user.domain.notice.NoticeRepository;
 import net.yozmnews.user.domain.notice.PasswordChangeMethod;
 import net.yozmnews.user.domain.notice.PasswordChangedContent;
+import net.yozmnews.user.domain.notice.PreferencesAdjustedContent;
 import net.yozmnews.user.domain.notice.SeenNotice;
+import net.yozmnews.user.domain.preference.Adjustment;
+import net.yozmnews.user.domain.preference.AdjustmentKind;
+import net.yozmnews.user.domain.preference.PreferenceMode;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -115,13 +120,13 @@ class NoticeControllerTests {
 					      "firstAt":"2026-11-13T00:00:00Z","lastAt":"2026-11-13T01:00:00Z","changes":2},
 					     {"feedId":12,"sourceName":null,"section":null,"firstFrom":"ACTIVE","lastTo":"STALE",
 					      "firstAt":"2026-11-13T01:00:00Z","lastAt":"2026-11-13T01:00:00Z","changes":1}]},
-					   "passwordChanged":null,"keyInvalidated":null},
+					   "passwordChanged":null,"keyInvalidated":null,"preferencesAdjusted":null},
 					  {"id":%d,"kind":"FEED_STATUS","revision":1,"createdAt":"2026-11-13T00:00:00Z",
 					   "updatedAt":"2026-11-13T00:00:00Z","read":true,
 					   "feedStatus":{"feeds":[
 					     {"feedId":11,"sourceName":"알림일보","section":"정치","firstFrom":"ACTIVE","lastTo":"DEGRADED",
 					      "firstAt":"2026-11-13T00:00:00Z","lastAt":"2026-11-13T00:00:00Z","changes":1}]},
-					   "passwordChanged":null,"keyInvalidated":null}],
+					   "passwordChanged":null,"keyInvalidated":null,"preferencesAdjusted":null}],
 					 "nextBefore":null}
 					""".formatted(newer, older), JsonCompareMode.STRICT));
 		this.mockMvc.perform(get("/api/notices/unread-count").with(this.admin))
@@ -142,7 +147,7 @@ class NoticeControllerTests {
 					  {"id":%d,"kind":"PASSWORD_CHANGED","revision":1,"createdAt":"2026-11-13T00:00:00Z",
 					   "updatedAt":"2026-11-13T00:00:00Z","read":false,"feedStatus":null,
 					   "passwordChanged":{"method":"RECOVERY","changedAt":"2026-11-13T00:00:00Z"},
-					   "keyInvalidated":null}],
+					   "keyInvalidated":null,"preferencesAdjusted":null}],
 					 "nextBefore":null}
 					""".formatted(id), JsonCompareMode.STRICT));
 	}
@@ -160,12 +165,35 @@ class NoticeControllerTests {
 					{"notices":[
 					  {"id":%d,"kind":"KEY_INVALIDATED","revision":1,"createdAt":"2026-11-13T00:00:00Z",
 					   "updatedAt":"2026-11-13T00:00:00Z","read":false,"feedStatus":null,"passwordChanged":null,
-					   "keyInvalidated":{"provider":"ANTHROPIC","invalidatedAt":"2026-11-13T00:30:00.123456Z"}}],
+					   "keyInvalidated":{"provider":"ANTHROPIC","invalidatedAt":"2026-11-13T00:30:00.123456Z"},
+					   "preferencesAdjusted":null}],
 					 "nextBefore":null}
 					""".formatted(id), JsonCompareMode.STRICT));
 		this.mockMvc.perform(get("/api/notices/unread-count").with(this.admin))
 			.andExpect(content().json("""
 					{"count":1}""", JsonCompareMode.STRICT));
+	}
+
+	@Test
+	void preferencesNoticeCarriesTheVersionNumberAndItsAdjustments() throws Exception {
+		long id = this.notices.create(this.admin.id(), new PreferencesAdjustedContent(4,
+				List.of(new Adjustment(TagKind.REGION, "china", "중국", PreferenceMode.EXCLUDE, AdjustmentKind.RELEASED_REMOVED),
+						new Adjustment(TagKind.FORMAT, "listicle", "목록형", PreferenceMode.EXCLUDE,
+								AdjustmentKind.ADDED_DEFAULT_EXCLUDED))),
+				T1);
+
+		this.mockMvc.perform(get("/api/notices").with(this.admin))
+			.andExpect(status().isOk())
+			.andExpect(content().json("""
+					{"notices":[
+					  {"id":%d,"kind":"PREFERENCES_ADJUSTED","revision":1,"createdAt":"2026-11-13T00:00:00Z",
+					   "updatedAt":"2026-11-13T00:00:00Z","read":false,"feedStatus":null,"passwordChanged":null,
+					   "keyInvalidated":null,
+					   "preferencesAdjusted":{"tagSetNumber":4,"adjustments":[
+					     {"kind":"REGION","key":"china","name":"중국","mode":"EXCLUDE","change":"RELEASED_REMOVED"},
+					     {"kind":"FORMAT","key":"listicle","name":"목록형","mode":"EXCLUDE","change":"ADDED_DEFAULT_EXCLUDED"}]}}],
+					 "nextBefore":null}
+					""".formatted(id), JsonCompareMode.STRICT));
 	}
 
 	@Test
