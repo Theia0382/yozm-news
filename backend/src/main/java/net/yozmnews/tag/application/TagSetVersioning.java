@@ -10,6 +10,7 @@ import java.util.Optional;
 import net.yozmnews.article.ArticleDirectory;
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.platform.ChangeActor;
+import net.yozmnews.tag.TagSetActivated;
 import net.yozmnews.tag.TagSetActivationResult;
 import net.yozmnews.tag.TagSetAdministration;
 import net.yozmnews.tag.TagSetId;
@@ -30,6 +31,7 @@ import net.yozmnews.tag.domain.threshold.ThresholdRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -38,7 +40,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * tag-R22 ~ tag-R25 · tag-R27.
  * <p>
  * {@link TagSetAdministrationService} 가 맡긴다. 확인은 트랜잭션을 열지 않는다. 활성화는 재평가 대상 기사를 트랜잭션 밖에서 읽은 뒤, 한
- * 트랜잭션({@link TransactionTemplate})에서 표 잠금 → 대조 → 쓰기다. 시각은 {@link InstantSource} 에서 얻는다. 역할 애너테이션이
+ * 트랜잭션({@link TransactionTemplate})에서 표 잠금 → 대조 → 쓰기 → {@link TagSetActivated} 발행이다. 시각은 {@link InstantSource} 에서 얻는다. 역할 애너테이션이
  * 없다(두 역할 공통).
  */
 @Component
@@ -58,24 +60,27 @@ class TagSetVersioning {
 
 	private final TransactionTemplate transaction;
 
+	private final ApplicationEventPublisher events;
+
 	private final InstantSource clock;
 
 	private final TagSetParser parser = new TagSetParser();
 
 	@Autowired
 	TagSetVersioning(TagSetRepository tagSets, ThresholdRepository thresholds, EvaluationQueueRepository queue,
-			ArticleDirectory articles, TransactionTemplate transaction) {
-		this(tagSets, thresholds, queue, articles, transaction, InstantSource.system());
+			ArticleDirectory articles, TransactionTemplate transaction, ApplicationEventPublisher events) {
+		this(tagSets, thresholds, queue, articles, transaction, events, InstantSource.system());
 	}
 
 	TagSetVersioning(TagSetRepository tagSets, ThresholdRepository thresholds, EvaluationQueueRepository queue,
-			ArticleDirectory articles, TransactionTemplate transaction, InstantSource clock) {
+			ArticleDirectory articles, TransactionTemplate transaction, ApplicationEventPublisher events, InstantSource clock) {
 		this.tagSets = tagSets;
 		this.thresholds = thresholds;
 		this.versionStore = new TagSetVersionStore(tagSets, thresholds);
 		this.queue = queue;
 		this.articles = articles;
 		this.transaction = transaction;
+		this.events = events;
 		this.clock = clock;
 	}
 
@@ -113,7 +118,10 @@ class TagSetVersioning {
 		};
 	}
 
-	/** 활성화 — 대조를 통과하면 기준 버전을 끄고 새 버전을 활성으로 넣고, 처음 태그 기준 · 저장 기준과 재평가 대기를 쓴다 */
+	/**
+	 * 활성화 — 대조를 통과하면 기준 버전을 끄고 새 버전을 활성으로 넣고, 처음 태그 기준 · 저장 기준과 재평가 대기를 쓰고, 같은 트랜잭션에서
+	 * {@link TagSetActivated} 를 낸다(tag-R16)
+	 */
 	TagSetActivationResult activate(String text, int recentDays, ChangeActor actor) {
 		Objects.requireNonNull(text, "text");
 		Objects.requireNonNull(actor, "actor");
@@ -139,6 +147,7 @@ class TagSetVersioning {
 				case Revision.Changed changed -> {
 					TagSet saved = this.versionStore.next(base, definition, actor, now);
 					int requeued = this.queue.requeue(recent, now);
+					this.events.publishEvent(new TagSetActivated(base.id(), saved.id()));
 					yield new TagSetActivationResult.Activated(view(saved), changed.changes(), requeued);
 				}
 			};

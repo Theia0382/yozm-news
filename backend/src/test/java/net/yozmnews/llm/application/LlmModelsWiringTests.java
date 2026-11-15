@@ -30,7 +30,7 @@ class LlmModelsWiringTests {
 
 			assertThat(models.all()).hasSize(8);
 			assertThat(models.of(Provider.OPENAI)).extracting(LlmModel::id)
-				.containsExactly("gpt-6-astra", "gpt-6.1-sol", "gpt-6.1-terra", "gpt-6-luna");
+				.containsExactly("gpt-6.1-terra", "gpt-6.1-sol", "gpt-6-luna", "gpt-6-astra");
 			assertThat(models.find(Provider.ANTHROPIC, "claude-haiku-5-5"))
 				.contains(new LlmModel(Provider.ANTHROPIC, "claude-haiku-5-5", 32_000, true));
 			assertThat(models.find(Provider.ANTHROPIC, "claude-unknown")).isEmpty();
