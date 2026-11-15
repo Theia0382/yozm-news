@@ -50,3 +50,7 @@
 | 큰 판정에서 최상위만 낸다 | [ADR-0131](0131-storyline-relations-are-explicit-links-with-containment-as-a-single-parent-tree-gathered-at-query-time.md)이 기각했다 — 큰 갈래가 큰 상위에 가려진다 |
 | 큰 여부 위에 등급을 둔다 | 등급의 경계가 기준을 여럿으로 늘리고, 등급을 쓰는 곳이 아직 없다. 값을 행에 실으면 쓰는 쪽이 정할 수 있다 |
 | 옛 기준을 새 기준으로 환산해 옮긴다 | 두 값을 하나로 옮기는 뜻 있는 식이 없다 |
+
+## 후속 기록
+
+- 2026-11-15: 결정 절 "처음 값은 평가 세트로 정한 측정 전 목표다" — 처음 값을 평가 세트와 운영자의 날마다 미리보기 검수로 정했다([ADR-0174](0174-big-judgement-criterion-first-value-kept-by-operator-daily-preview-review-where-the-evaluation-set-cannot-separate-neighbours.md)), 지금 값은 [storyline Spec "큰 판정"](../specs/storyline.md#큰-판정)
