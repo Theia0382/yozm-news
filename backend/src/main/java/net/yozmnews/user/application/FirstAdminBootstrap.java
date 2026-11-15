@@ -13,9 +13,9 @@ import net.yozmnews.user.domain.bootstrap.FirstAdminLock;
 import net.yozmnews.user.domain.bootstrap.FirstAdminValues;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.SmartLifecycle;
 import org.springframework.stereotype.Component;
 
 /**
@@ -23,10 +23,13 @@ import org.springframework.stereotype.Component;
  * <p>
  * 두 역할 공통이다. 판정 · 생성은 advisory 잠금 안의 트랜잭션 하나라 함께 기동한 프로세스들이 줄을 서 하나만 만들고, 나중 프로세스는 운영자를
  * 보고 값이 남았다고 경고한다. 로그 · 기동 실패 문구에 비밀번호를 싣지 않는다.
+ * <p>
+ * 기동 단계({@link UserStartup#PHASE})에서 돈다 — 계정을 만들 때 활성 태그 체계를 읽으므로 첫 기동 적재(모든
+ * {@code SmartInitializingSingleton}) 뒤이고 웹 서버 앞이다(user-R44). 기동 거부는 앱을 띄우지 않는다.
  */
 @Component
 @EnableConfigurationProperties(FirstAdminProperties.class)
-class FirstAdminBootstrap implements SmartInitializingSingleton {
+class FirstAdminBootstrap implements SmartLifecycle {
 
 	private static final Logger logger = LoggerFactory.getLogger(FirstAdminBootstrap.class);
 
@@ -39,6 +42,8 @@ class FirstAdminBootstrap implements SmartInitializingSingleton {
 	private final FirstAdminLock lock;
 
 	private final InstantSource clock;
+
+	private volatile boolean ran;
 
 	@Autowired
 	FirstAdminBootstrap(FirstAdminProperties properties, AccountProvisioning provisioning, AccountRepository accounts,
@@ -56,8 +61,27 @@ class FirstAdminBootstrap implements SmartInitializingSingleton {
 	}
 
 	@Override
-	public void afterSingletonsInstantiated() {
+	public void start() {
+		if (this.ran) {
+			return;
+		}
 		run();
+		this.ran = true;
+	}
+
+	@Override
+	public void stop() {
+		// 기동 때 한 번 하는 일이라 멈출 것이 없다
+	}
+
+	@Override
+	public boolean isRunning() {
+		return this.ran;
+	}
+
+	@Override
+	public int getPhase() {
+		return UserStartup.PHASE;
 	}
 
 	/**
