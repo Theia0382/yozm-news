@@ -2,7 +2,7 @@
 
 자기 인스턴스의 사건 묶기를 정답 라벨과 견줘 재는 방법이다 — 묶음 정확도(B-cubed). 사건 배정 기준을 맞추거나 임베딩 모델을 바꾼 뒤 다시 볼 때 쓴다. 큰 판정은 [스토리라인 평가하기](storyline-evaluation.md)가 잰다. 기본값도 이 방법으로 정한다.
 
-도구는 저장소의 [`tools/event-eval`](../../tools/event-eval/)이고, 운영자 API 를 [운영자 토큰](configuration.md#운영자)으로 읽는다. 판정 규칙은 계산하지 않는다 — 시스템이 낸 사건을 받아 라벨과 견준다. 판단의 이유는 [ADR-0095](../adr/0095-event-clustering-evaluated-by-an-operator-tool-comparing-admin-api-results-with-full-day-labels.md) · [ADR-0096](../adr/0096-instance-bound-evaluation-data-kept-out-of-the-public-repository-and-defaults-cite-only-the-evaluation-set.md) · [ADR-0097](../adr/0097-event-clustering-evaluation-labels-reports-of-one-happening-narrower-than-the-system-event.md), 증거로서의 한계는 [테스트 전략](../qa/test-strategy.md) ⑪ 에 있다.
+도구는 저장소의 [`tools/event-eval`](../../tools/event-eval/)이고, 운영자 API 를 스크립트용 [운영자 토큰](configuration.md#운영자)으로 읽는다 — 평가 도구를 쓰는 인스턴스는 토큰을 둔다. 판정 규칙은 계산하지 않는다 — 시스템이 낸 사건을 받아 라벨과 견준다. 판단의 이유는 [ADR-0095](../adr/0095-event-clustering-evaluated-by-an-operator-tool-comparing-admin-api-results-with-full-day-labels.md) · [ADR-0096](../adr/0096-instance-bound-evaluation-data-kept-out-of-the-public-repository-and-defaults-cite-only-the-evaluation-set.md) · [ADR-0097](../adr/0097-event-clustering-evaluation-labels-reports-of-one-happening-narrower-than-the-system-event.md), 증거로서의 한계는 [테스트 전략](../qa/test-strategy.md) ⑪ 에 있다.
 
 ## 재는 것
 
@@ -13,7 +13,7 @@
 ## 준비
 
 - **평가 디렉터리** — 표본마다 디렉터리 하나를 체크아웃 밖에 둔다(예: `~/event-eval/2026-11-04`). 라벨 · 결과는 이 인스턴스의 데이터라 저장소에 넣지 않는다. `deploy/.env` 와 함께 백업한다. 도구는 이 경로를 `--data` 로 꼭 받는다
-- **운영자 토큰** — 환경 변수 `YOZMNEWS_ADMIN_TOKEN` 으로만 받는다. 셸 이력에 남지 않게 넣는다:
+- **운영자 토큰** — 앱에 넣은 [운영자 토큰](configuration.md#운영자)과 같은 값을 환경 변수 `YOZMNEWS_ADMIN_TOKEN` 으로만 받는다. 운영자 계정의 로그인 세션으로는 읽지 않는다. 셸 이력에 남지 않게 넣는다:
 
   ```bash
   read -rs YOZMNEWS_ADMIN_TOKEN && export YOZMNEWS_ADMIN_TOKEN

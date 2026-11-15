@@ -50,8 +50,8 @@ v1은 **자체 로그인(이메일·비밀번호)** 하나를 지원한다 ([ADR
 - LLM 키가 없는 세션 사용자는 키 등록 · 계정(비밀번호 변경 · 복구 코드 재발급) · 알림만 쓴다 — 그 밖의 화면용 API 는 서버가 403 으로 막는다. 저장한 키가 하나라도 있으면(상태 무관) 키가 있는 것이다([user Spec](specs/user.md#화면용-api-의-공개와-세션-사용자) user-R5).
 - 운영자 기능(`/api/admin/**`)은 `ADMIN` 역할만 접근할 수 있다. 운영자도 사용자의 LLM 키 평문은 볼 수 없다.
 - 초대 링크 발급 · 취소, 계정 생성 · 초기 비밀번호 다시 정하기, 공개 가입 켬 · 끔은 `ADMIN` 만 할 수 있다.
-- 운영자 경로가 계정 세션으로 인증하기 전까지는 운영자 토큰(서버 설정 하나)이 `ADMIN` 역할을 준다 — 화면이 `Authorization: Bearer` 로 보내고, 토큰을 설정하지 않은 인스턴스는 운영자 기능이 닫힌다. 토큰 형식 · 대조 · 거부 응답의 규칙은 [user Spec "운영자 접근 통제"](specs/user.md#운영자-접근-통제)에 있다([ADR-0043](adr/0043-admin-functions-guarded-by-env-bearer-token-until-account-roles.md)).
-- 운영자 경로도 계정 세션으로 인증하게 되면 운영자 경로와 `ADMIN` 역할 판정은 그대로 두고 토큰 인증을 세션 인증으로 바꾸며, 그 경로에도 CSRF 토큰(공통 절)을 켠다. 그 전까지 운영자 경로는 브라우저가 자동으로 붙이는 자격(세션 쿠키)을 읽지 않아 CSRF 를 쓰지 않는다.
+- 운영자 경로는 `ADMIN` 계정 세션으로 인증하고, 세션으로 인증한 변경 요청에는 CSRF 토큰(공통 절)을 요구한다. 비밀번호를 바꿔야 하는 운영자는 바꾸기 전에 쓰지 못하고, LLM 키는 보지 않는다([ADR-0183](adr/0183-admin-paths-open-with-admin-account-sessions-and-keep-the-operator-token-as-an-optional-script-bearer-with-csrf-only-for-sessions.md) · [ADR-0185](adr/0185-admin-paths-stay-outside-the-llm-key-gate-and-look-only-at-the-role.md)).
+- 스크립트 · 도구(평가 도구 · 태그 체계 curl · 배포 스모크)는 선택 설정인 운영자 토큰(서버 설정 하나)을 `Authorization: Bearer` 로 보낸다 — 운영자 경로만 열고, 쿠키 자격이 아니라 CSRF 를 면하며, 세션에 남지 않는다. 틀린 토큰은 세션으로 넘어가지 않고 거부된다. 화면은 토큰을 쓰지 않는다. 토큰 형식 · 대조 · 거부 응답의 규칙은 [user Spec "운영자 접근 통제"](specs/user.md#운영자-접근-통제)에 있다.
 
 ## BYOK 키 보관
 
@@ -94,7 +94,7 @@ KEK (운영자가 주는 파일, 버전 관리)
 | 키 등록, 키 검증 | 사용자 · IP별 요청 제한 — 둘이 한도를 함께 쓴다(애플리케이션 레벨. Cloudflare 를 앞단에 두면 그 규칙을 더한다) |
 | 수동 다이제스트 재생성 | 사용자당 하루 N회 |
 | 자유 텍스트 관심사 | 길이 제한 |
-| 운영자 토큰 | 32자 이상 무작위 값으로 대입을 막는다. 대조는 상수 시간이고 요청 제한은 두지 않는다 |
+| 운영자 토큰(스크립트용 선택 설정) | 32자 이상 무작위 값으로 대입을 막는다. 대조는 상수 시간이고 요청 제한은 두지 않는다. 운영자 화면의 로그인은 자체 로그인의 실패 지연 · 요청 제한 · 봇 차단을 그대로 받는다 |
 | 운영자 비용 (Jev) | 사용자 행동과 무관하게 기사 수에만 비례한다. 사용자 피드 추가를 열 때 별도 상한이 필요하다 |
 
 - **요청 제한** — 처리기 앞에서 지키는 동작마다 클라이언트 주소 · 세션 사용자로 고정 창 하나의 요청을 세고, 넘으면 429 와 다시 시도할 때까지의 초를 준다. 세는 기록은 여러 앱 프로세스가 함께 쓰는 DB 에 있고, 대상(IP · 사용자 ID)은 다이제스트로만 둔다. 한도 · 축 · 창은 [user Spec "요청 방어"](specs/user.md#요청-방어) user-R38 이 정본이다([ADR-0169](adr/0169-request-limits-and-bot-checks-are-platform-marks-applied-by-the-user-session-chain-before-the-handler.md) · [ADR-0170](adr/0170-request-limits-count-fixed-windows-in-a-user-postgresql-table-with-a-code-constant-policy-table.md)). 창 경계 앞뒤로 한도의 두 배까지 몰릴 수 있다.
