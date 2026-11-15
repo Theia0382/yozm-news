@@ -42,7 +42,7 @@
 
 모듈 최상위 패키지 `net.yozmnews.admin` 에 공개 타입이 없다. 다른 모듈이 부르는 공개 API 는 없다.
 
-HTTP 엔드포인트 — 모두 운영자 경로다(운영자 토큰 필요 — 없거나 틀리면 401, 운영자 기능이 닫혔으면 403):
+HTTP 엔드포인트 — 모두 운영자 경로다(`ADMIN` 계정 세션 또는 스크립트용 운영자 토큰 — 거부 응답은 [user Spec "운영자 접근 통제"](user.md#운영자-접근-통제) user-R1 · user-R3):
 
 | 메서드 · 경로 | 용도 |
 |---|---|
@@ -247,3 +247,4 @@ HTTP 엔드포인트 — 모두 운영자 경로다(운영자 토큰 필요 — 
 | [0051](../adr/0051-operator-hides-or-deletes-sources-and-feeds-and-deletion-removes-exclusive-articles.md) | 운영자는 소스 · 피드를 숨기거나 삭제하고, 숨김은 끄고 남기며 삭제는 그 소스 · 피드만 가진 기사까지 지운다 |
 | [0062](../adr/0062-tag-set-versions-from-operator-text-activated-forward-with-key-lineage-and-recent-reevaluation.md) | 태그 체계는 운영자 원문으로 새 버전을 만들어 앞으로만 켜고, 키 계보를 원문에 적으며, 켤 때 정한 일수 안에 처음 본 기사를 재평가 대기에 넣는다 |
 | [0068](../adr/0068-rss-summaries-shown-only-on-operator-screens-and-users-get-processed-information.md) | RSS 요약문은 운영자 화면에만 보이고, 인스턴스 사용자와 외부 API 에는 가공한 정보만 낸다 |
+| [0183](../adr/0183-admin-paths-open-with-admin-account-sessions-and-keep-the-operator-token-as-an-optional-script-bearer-with-csrf-only-for-sessions.md) | 운영자 경로는 `ADMIN` 계정 세션으로 열고, 운영자 토큰은 스크립트용 선택 Bearer 로 남기며, 세션 요청에만 CSRF 를 건다 |

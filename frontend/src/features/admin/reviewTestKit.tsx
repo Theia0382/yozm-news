@@ -152,7 +152,6 @@ export function renderAdminRoutes(
   const client = createAdminClient({
     baseUrl: TEST_BASE_URL,
     fetch: server.fetch,
-    token: () => "token",
   });
   const router = createMemoryRouter(routes, { initialEntries: [initialEntry] });
   render(

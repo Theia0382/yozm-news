@@ -1,6 +1,7 @@
 package net.yozmnews.admin.adapter.in.web;
 
 import static net.yozmnews.admin.adapter.in.web.AdminRequests.json;
+import static net.yozmnews.admin.adapter.in.web.AdminRequests.withCsrf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -118,10 +119,10 @@ class AdminAccountControllerTests {
 
 	@Test
 	void withoutTheTokenNothingIsCalled() throws Exception {
-		this.mockMvc.perform(post("/api/admin/accounts").contentType(MediaType.APPLICATION_JSON).content(CREATE))
+		this.mockMvc.perform(withCsrf(post("/api/admin/accounts").contentType(MediaType.APPLICATION_JSON).content(CREATE)))
 			.andExpect(status().isUnauthorized());
 		this.mockMvc
-			.perform(put("/api/admin/accounts/initial-password").contentType(MediaType.APPLICATION_JSON).content(RESET))
+			.perform(withCsrf(put("/api/admin/accounts/initial-password").contentType(MediaType.APPLICATION_JSON).content(RESET)))
 			.andExpect(status().isUnauthorized());
 		assertThat(this.accounts.calls).isEmpty();
 	}

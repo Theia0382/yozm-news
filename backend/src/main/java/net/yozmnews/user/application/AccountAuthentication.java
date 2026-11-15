@@ -42,7 +42,12 @@ public final class AccountAuthentication extends AbstractAuthenticationToken {
 	 */
 	static AccountAuthentication forRequest(UserId userId, AccountRole role, boolean mustChangePassword) {
 		return new AccountAuthentication(userId.value(),
-				List.of(mustChangePassword ? PASSWORD_CHANGE_REQUIRED : "ROLE_" + role.name()));
+				List.of(mustChangePassword ? PASSWORD_CHANGE_REQUIRED : roleAuthority(role)));
+	}
+
+	/** 역할의 권한 이름 — 정본 */
+	static String roleAuthority(AccountRole role) {
+		return "ROLE_" + role.name();
 	}
 
 	/** 세션 사용자 */
@@ -53,6 +58,12 @@ public final class AccountAuthentication extends AbstractAuthenticationToken {
 	/** 이 요청의 세션 사용자가 비밀번호를 바꿔야 하는가 — 세션에 담는 형태에서는 언제나 거짓이다 */
 	public boolean mustChangePassword() {
 		return getAuthorities().stream().anyMatch(authority -> PASSWORD_CHANGE_REQUIRED.equals(authority.getAuthority()));
+	}
+
+	/** 이 요청의 세션 사용자가 그 역할인가 — 비밀번호를 바꿔야 하는 계정은 역할 권한이 없어 언제나 거짓이다 */
+	public boolean hasRole(AccountRole role) {
+		String authority = roleAuthority(role);
+		return getAuthorities().stream().anyMatch(granted -> authority.equals(granted.getAuthority()));
 	}
 
 	@Override

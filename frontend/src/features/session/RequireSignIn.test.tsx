@@ -42,6 +42,11 @@ function renderGuarded(
   me: () => Response,
   signOut: () => Response = noContent,
   unread: () => Response = () => json({ count: 0 }),
+  {
+    queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    }),
+  }: { queryClient?: QueryClient } = {},
 ) {
   let signedOut = false;
   const server = fakeServer({
@@ -71,11 +76,7 @@ function renderGuarded(
     { initialEntries: [entry] },
   );
   render(
-    <QueryClientProvider
-      client={
-        new QueryClient({ defaultOptions: { queries: { retry: false } } })
-      }
-    >
+    <QueryClientProvider client={queryClient}>
       <ApiClientContext.Provider
         value={createApiClient({ baseUrl: TEST_BASE_URL, fetch: server.fetch })}
       >
@@ -120,7 +121,37 @@ describe("RequireSignIn", () => {
     );
   });
 
-  it.each(["/", "/digest", "/password"])(
+  it("운영자 계정이면 머리줄에 운영자 화면 링크를 둔다", async () => {
+    renderGuarded("/digest", () => json({ ...SIGNED_IN, role: "ADMIN" }));
+
+    expect(await screen.findByText("다이제스트")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "운영자" })).toHaveAttribute(
+      "href",
+      "/admin",
+    );
+  });
+
+  it("사용자 계정이면 운영자 화면 링크가 없다", async () => {
+    renderGuarded("/digest", () => json(SIGNED_IN));
+
+    expect(await screen.findByText("다이제스트")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "운영자" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("비밀번호를 바꿔야 하는 운영자 계정에도 운영자 화면 링크가 없다", async () => {
+    renderGuarded("/password", () =>
+      json({ ...SIGNED_IN, role: "ADMIN", passwordChangeRequired: true }),
+    );
+
+    expect(await screen.findByText("비밀번호 변경 화면")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "운영자" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it.each(["/", "/digest"])(
     "LLM 키가 없으면 %s 로 와도 키 화면으로 보낸다",
     async (entry) => {
       const { router } = renderGuarded(entry, () =>
@@ -136,6 +167,7 @@ describe("RequireSignIn", () => {
 
   it.each([
     ["/settings", "설정 화면"],
+    ["/password", "비밀번호 변경 화면"],
     ["/notices", "알림 화면"],
     ["/keys", "키 화면"],
   ])(
@@ -188,6 +220,22 @@ describe("RequireSignIn", () => {
     await router.navigate(-1);
     expect(await screen.findByText("로그인 화면")).toBeInTheDocument();
     expect(screen.queryByText("다이제스트")).not.toBeInTheDocument();
+  });
+
+  it("로그아웃하면 조회 캐시를 모두 버린다", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    queryClient.setQueryData(["admin", "accounts"], ["운영자 데이터"]);
+    renderGuarded("/digest", () => json(SIGNED_IN), noContent, undefined, {
+      queryClient,
+    });
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole("button", { name: "로그아웃" }));
+
+    expect(await screen.findByText("로그인 화면")).toBeInTheDocument();
+    expect(queryClient.getQueryData(["admin", "accounts"])).toBeUndefined();
   });
 
   it("로그아웃이 거부되면 로그인한 화면에 남아 알린다", async () => {

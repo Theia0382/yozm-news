@@ -53,20 +53,21 @@
 
 저장소 루트에서 실행한다.
 
-1. 값을 준비한다 — `deploy/.env.example` 을 `deploy/.env` 로 복사하고 필수 값을 적는다([운영 설정](configuration.md)). 필수 값이 없거나 비어 있으면 Compose 가 변수 이름을 말하며 멈춘다. 운영자 화면으로 소스를 등록하려면 [운영자 토큰](configuration.md#운영자)도 적는다. LLM 키를 암호화하는 KEK 파일 `deploy/config/kek` 를 만든다 — 없으면 `app` 이 뜨지 않는다([LLM 키 암호화 키(KEK)](#llm-키-암호화-키kek))
+1. 값을 준비한다 — `deploy/.env.example` 을 `deploy/.env` 로 복사하고 필수 값을 적는다([운영 설정](configuration.md)). 필수 값이 없거나 비어 있으면 Compose 가 변수 이름을 말하며 멈춘다. 운영자 화면을 쓸 첫 운영자 계정의 [이메일 · 초기 비밀번호](configuration.md#계정과-고지)도 적는다 — 운영자 계정이 없으면 운영자 화면을 쓸 수 없다. 스크립트 · 도구로 운영자 API 를 부를 때만 [운영자 토큰](configuration.md#운영자)을 적는다. LLM 키를 암호화하는 KEK 파일 `deploy/config/kek` 를 만든다 — 없으면 `app` 이 뜨지 않는다([LLM 키 암호화 키(KEK)](#llm-키-암호화-키kek))
 2. 띄우고 확인한다
 
    ```sh
-   cp deploy/.env.example deploy/.env                            # 처음 한 번 — 필수 값과 운영자 토큰을 적는다
+   cp deploy/.env.example deploy/.env                            # 처음 한 번 — 필수 값과 첫 운영자 값을 적는다
    printf '1:%s\n' "$(openssl rand -base64 32)" > deploy/config/kek  # 처음 한 번 — LLM 키 암호화 키(KEK)
    docker compose -f deploy/compose.yaml up -d --build --wait   # 호스트 플랫폼 이미지를 빌드하고 postgres → app → proxy 가 healthy 가 될 때까지 기다린다
    bash deploy/smoke.sh                                          # 기동 상태 · 공개 범위 · 라우팅 · 운영자 경로 · 앱 역할 · 프리셋 적재 확인 — 종료 코드 0 이면 통과 (bash · docker · curl · sed 필요)
    ```
 
-   `deploy/` 에서는 `-f` 없이 `docker compose up -d --build --wait` 로 같다. 스모크는 공개 주소를 기본값(루프백)으로 둔 구성을 확인한다 — [공개](configuration.md#공개) 주소를 바꾼 구성에서는 공개 범위 항목이 실패한다. 운영자 토큰은 넣은 구성 · 넣지 않은 구성 모두 확인한다. 로컬 모델 추론 항목(K14)은 개발용 시험 피드 서버가 있을 때만 돌고, 운영 인스턴스에서는 건너뛴다(`skip`) — 시험 소스를 등록하지 않는다([개발 인프라 — CI](../development/infrastructure.md#ci)).
-3. 브라우저로 proxy 의 공개 주소를 연다 — 기본은 이 호스트의 루프백이다([공개](configuration.md#공개)). 운영자 화면은 `/admin` 이고, 운영자 토큰을 넣어 연다
-4. 소스를 등록하고 켠다 — [소스 등록](sources.md). 소스와 피드를 켜기 전에는 아무것도 수집하지 않는다
-5. 첫 운영자 계정을 만들고 함께 쓸 사람을 들인다 — [첫 운영자](#첫-운영자) · [사람 들이기](#사람-들이기)
+   `deploy/` 에서는 `-f` 없이 `docker compose up -d --build --wait` 로 같다. 스모크는 공개 주소를 기본값(루프백)으로 둔 구성을 확인한다 — [공개](configuration.md#공개) 주소를 바꾼 구성에서는 공개 범위 항목이 실패한다. 운영자 경로는 운영자 토큰을 넣은 구성 · 넣지 않은 구성 모두 로그인을 요구하는지 확인한다. 로컬 모델 추론 항목(K14)은 개발용 시험 피드 서버가 있을 때만 돌고, 운영 인스턴스에서는 건너뛴다(`skip`) — 시험 소스를 등록하지 않는다([개발 인프라 — CI](../development/infrastructure.md#ci)).
+3. 브라우저로 proxy 의 공개 주소를 연다 — 기본은 이 호스트의 루프백이다([공개](configuration.md#공개))
+4. 첫 운영자로 로그인해 비밀번호를 새로 정한다 — [첫 운영자](#첫-운영자). 운영자 화면은 `/admin` 이고 운영자 계정으로 연다
+5. 소스를 등록하고 켠다 — [소스 등록](sources.md). 소스와 피드를 켜기 전에는 아무것도 수집하지 않는다
+6. 함께 쓸 사람을 들인다 — [사람 들이기](#사람-들이기)
 
 정지:
 
@@ -84,7 +85,7 @@ docker compose -f deploy/compose.yaml down -v   # 정지하고 DB 볼륨까지 �
 운영자 계정은 환경 변수로만 만든다([계정과 고지](configuration.md#계정과-고지)).
 
 1. `deploy/.env` 에 `YOZMNEWS_FIRST_ADMIN_EMAIL` · `YOZMNEWS_FIRST_ADMIN_PASSWORD` 를 적고 띄운다. `app` 로그(`docker compose -f deploy/compose.yaml logs app`)에 "첫 운영자 계정을 만들었다"가 나온다
-2. 그 이메일 · 초기 비밀번호로 로그인한다 — 비밀번호를 새로 정하는 화면만 열린다. 바꾸면 복구 코드가 한 번 나온다. 운영자 계정의 복구 코드를 잃으면 비밀번호를 되찾을 길이 없으니 안전한 곳에 둔다
+2. 그 이메일 · 초기 비밀번호로 로그인한다(운영자 화면 `/admin` 을 열면 로그인 화면으로 간다) — 비밀번호를 새로 정하는 화면만 열린다. 바꾸면 복구 코드가 한 번 나오고, 저장을 확인하면 운영자 화면으로 돌아온다. 운영자 계정의 복구 코드를 잃으면 비밀번호를 되찾을 길이 없으니 안전한 곳에 둔다
 3. 두 변수를 `deploy/.env` 에서 지운다. 남겨 두면 앱이 뜰 때마다 경고한다
 
 - 로그인 · 가입 · 비밀번호 변경은 TLS 로 연 주소나 `localhost` 에서만 된다 — 세션 쿠키가 언제나 `Secure` 다([ADR-0128](../adr/0128-session-and-csrf-cookies-are-always-secure-assuming-tls-in-front.md))

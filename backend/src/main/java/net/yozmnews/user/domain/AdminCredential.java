@@ -6,7 +6,7 @@ import net.yozmnews.user.domain.secret.SecretDigest;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 운영자 자격 — 운영자 기능이 열렸는지와 제시된 토큰이 맞는지의 판정. docs/specs/user.md §4 · user-R2.
+ * 운영자 자격 — 운영자 토큰을 설정했는지와 제시된 토큰이 맞는지의 판정. docs/specs/user.md §4 · user-R2.
  * <p>
  * 값은 다이제스트({@link SecretDigest})로만 갖고, 예외 메시지 · {@link #toString()} 에 담지 않는다.
  */
@@ -21,7 +21,7 @@ public final class AdminCredential {
 	/** RFC 6750 b64token */
 	private static final Pattern FORMAT = Pattern.compile("[A-Za-z0-9\\-._~+/]+=*");
 
-	private static final AdminCredential CLOSED = new AdminCredential(null);
+	private static final AdminCredential UNCONFIGURED = new AdminCredential(null);
 
 	private final @Nullable SecretDigest digest;
 
@@ -29,18 +29,18 @@ public final class AdminCredential {
 		this.digest = digest;
 	}
 
-	/** 운영자 기능이 닫힌 자격 */
-	public static AdminCredential closed() {
-		return CLOSED;
+	/** 토큰을 설정하지 않은 자격 */
+	public static AdminCredential unconfigured() {
+		return UNCONFIGURED;
 	}
 
 	/**
-	 * 설정 값으로 자격을 만든다 — 없거나 빈 값이면 닫힘.
+	 * 설정 값으로 자격을 만든다 — 없거나 빈 값이면 설정하지 않은 자격.
 	 * @throws IllegalArgumentException 길이나 문자가 형식에 맞지 않을 때 — 메시지에 값을 담지 않는다
 	 */
 	public static AdminCredential of(@Nullable String configured) {
 		if (configured == null || configured.isEmpty()) {
-			return CLOSED;
+			return UNCONFIGURED;
 		}
 		if (configured.length() < MIN_LENGTH || configured.length() > MAX_LENGTH) {
 			throw new IllegalArgumentException("운영자 토큰은 " + MIN_LENGTH + "자 이상 " + MAX_LENGTH + "자 이하여야 한다 (지금 "
@@ -52,12 +52,12 @@ public final class AdminCredential {
 		return new AdminCredential(SecretDigest.of(configured));
 	}
 
-	/** 운영자 기능이 열렸는가 */
-	public boolean open() {
+	/** 토큰을 설정했는가 */
+	public boolean configured() {
 		return this.digest != null;
 	}
 
-	/** 제시된 토큰이 맞는가 — 닫혔으면 언제나 아니다. 다이제스트를 상수 시간으로 견준다 */
+	/** 제시된 토큰이 맞는가 — 설정하지 않았으면 언제나 아니다. 다이제스트를 상수 시간으로 견준다 */
 	public boolean matches(@Nullable String presented) {
 		if (this.digest == null || presented == null) {
 			return false;
@@ -67,7 +67,7 @@ public final class AdminCredential {
 
 	@Override
 	public String toString() {
-		return open() ? "AdminCredential[open]" : "AdminCredential[closed]";
+		return configured() ? "AdminCredential[configured]" : "AdminCredential[unconfigured]";
 	}
 
 }

@@ -52,18 +52,18 @@ class SecurityConfigurationTests {
 	}
 
 	@Test
-	void wellFormedTokenOpensTheAdminFunctions() {
+	void wellFormedTokenIsConfigured() {
 		this.runner.withPropertyValues("yozmnews.admin.token=" + AdminSecurityTests.TOKEN).run(context -> {
 			assertThat(context).hasNotFailed();
-			assertThat(context.getBean(AdminCredential.class).open()).isTrue();
+			assertThat(context.getBean(AdminCredential.class).configured()).isTrue();
 		});
 	}
 
 	@Test
-	void noTokenStartsWithTheAdminFunctionsClosed() {
+	void noTokenStartsWithoutTheBearerToken() {
 		this.runner.run(context -> {
 			assertThat(context).hasNotFailed();
-			assertThat(context.getBean(AdminCredential.class).open()).isFalse();
+			assertThat(context.getBean(AdminCredential.class).configured()).isFalse();
 		});
 	}
 

@@ -1,23 +1,14 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { type FormEvent, type ReactNode, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { type ReactNode, useMemo } from "react";
 import { cn } from "cn";
-import { Link, NavLink, Outlet } from "react-router";
-import {
-  ADMIN_CLOSED,
-  AdminApiError,
-  createAdminClient,
-  failureText,
-  unwrap,
-} from "@/features/admin/adminClient";
-import {
-  ADMIN_QUERY_KEY,
-  AdminSessionContext,
-} from "@/features/admin/adminSession";
-import {
-  clearAdminToken,
-  readAdminToken,
-  saveAdminToken,
-} from "@/features/admin/adminToken";
+import { Link, Navigate, NavLink, Outlet, useLocation } from "react-router";
+import { createAdminClient } from "@/features/admin/adminClient";
+import { AdminSessionContext } from "@/features/admin/adminSession";
+import { NoticesLink } from "@/features/notices/NoticesLink";
+import { PASSWORD_PATH } from "@/features/session/RequireSignIn";
+import { withNext } from "@/features/session/safeNext";
+import { SESSION_QUERY_KEY, useMe } from "@/features/session/sessionQueries";
+import { useSignOut } from "@/features/session/useSignOut";
 import { Button } from "@/shared/ui/button";
 import { NARROW_WIDTH, PAGE_FRAME, WIDE_WIDTH } from "@/shared/ui/widths";
 
@@ -28,91 +19,64 @@ type AdminLayoutProps = {
 };
 
 /**
- * 운영자 화면의 틀. 토큰이 없어도 첫 조회를 보내 서버의 답으로 가른다 — 403(닫힘)이면 닫힘 안내, 401 이면 토큰 입력, 성공이면 화면.
+ * 운영자 화면의 틀 — 운영자 계정 세션으로 연다. 로그인 상태를 읽어, 로그인하지 않았으면 로그인 화면으로(돌아올 주소를 next 로),
+ * 첫 로그인의 비밀번호 변경이 남았으면 비밀번호 변경 화면으로(바꾼 뒤 돌아올 주소를 next 로) 보내고, 운영자가 아니면 권한 없음을
+ * 알린다. 운영자면 머리줄에 운영자 메뉴 · 알림 링크 · 사용자 화면 링크 · 이름 · 로그아웃을 둔다. 운영자 API 가 401(세션이 끝남)로
+ * 답하면 로그인 상태를 다시 읽어 로그인 화면으로 보낸다. LLM 키는 보지 않는다 — 운영자 경로는 키 관문 밖이다(docs/specs/user.md
+ * user-R1).
  */
 export function AdminLayout({ baseUrl, fetch }: AdminLayoutProps) {
   const queryClient = useQueryClient();
-  const [token, setToken] = useState(readAdminToken);
-  const [notice, setNotice] = useState<string | null>(null);
+  const me = useMe();
+  const location = useLocation();
+  const { signOut, failed: signOutFailed } = useSignOut();
 
-  // 토큰마다 클라이언트를 새로 만든다 — 미들웨어가 그 토큰을 붙이고, 401 이면 그 토큰을 버린다
   const client = useMemo(
     () =>
       createAdminClient({
         baseUrl,
         fetch,
-        token: () => token,
         onUnauthorized: () => {
-          if (token) {
-            clearAdminToken();
-            setToken(null);
-            setNotice("토큰이 맞지 않습니다. 다시 입력해 주세요.");
-          }
+          void queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY });
         },
       }),
-    [baseUrl, fetch, token],
+    [baseUrl, fetch, queryClient],
   );
 
-  const probe = useQuery({
-    queryKey: [...ADMIN_QUERY_KEY, "session", token],
-    queryFn: () => unwrap(client.GET("/api/admin/presets")),
-    retry: false,
-  });
-
-  function open(value: string) {
-    saveAdminToken(value);
-    setNotice(null);
-    setToken(value);
-    queryClient.removeQueries({ queryKey: ADMIN_QUERY_KEY });
-  }
-
-  function lock() {
-    clearAdminToken();
-    setNotice(null);
-    setToken(null);
-    queryClient.removeQueries({ queryKey: ADMIN_QUERY_KEY });
-  }
-
-  if (probe.isPending) {
+  if (me.isPending) {
     return (
       <NarrowFrame>
-        <p className="text-muted-foreground">운영자 기능을 확인하는 중…</p>
+        <p className="text-muted-foreground">로그인 상태를 확인하는 중…</p>
       </NarrowFrame>
     );
   }
-  if (probe.error) {
-    const error = probe.error;
-    if (
-      error instanceof AdminApiError &&
-      error.status === 403 &&
-      error.problem?.type === ADMIN_CLOSED
-    ) {
-      return (
-        <NarrowFrame>
-          <section className="space-y-3">
-            <h1 className="text-2xl font-bold">운영자 기능이 닫혀 있습니다</h1>
-            <p>
-              이 인스턴스는 운영자 토큰을 설정하지 않았습니다. 서버에{" "}
-              <code>YOZMNEWS_ADMIN_TOKEN</code>을 설정하고 다시 띄우면 열립니다.
-            </p>
-          </section>
-        </NarrowFrame>
-      );
-    }
-    if (error instanceof AdminApiError && error.status === 401) {
-      return (
-        <NarrowFrame>
-          <TokenForm notice={notice} onSubmit={open} />
-        </NarrowFrame>
-      );
-    }
+  if (me.isError) {
     return (
       <NarrowFrame>
         <section className="space-y-3">
-          <p role="alert">{failureText(error)}</p>
-          <Button variant="outline" onClick={() => probe.refetch()}>
+          <p role="alert">로그인 상태를 확인하지 못했습니다.</p>
+          <Button variant="outline" onClick={() => me.refetch()}>
             다시 시도
           </Button>
+        </section>
+      </NarrowFrame>
+    );
+  }
+  if (me.data.result === "ANONYMOUS") {
+    return <Navigate to={withNext("/login", location)} replace />;
+  }
+  if (me.data.passwordChangeRequired) {
+    return <Navigate to={withNext(PASSWORD_PATH, location)} replace />;
+  }
+  if (me.data.role !== "ADMIN") {
+    return (
+      <NarrowFrame>
+        <section className="space-y-3">
+          <h1 className="text-2xl font-bold">운영자 권한이 없습니다</h1>
+          <p>운영자 화면은 운영자 계정만 씁니다.</p>
+          <Link to="/" className="underline">
+            첫 화면으로
+          </Link>
         </section>
       </NarrowFrame>
     );
@@ -121,64 +85,77 @@ export function AdminLayout({ baseUrl, fetch }: AdminLayoutProps) {
   return (
     <AdminSessionContext.Provider value={client}>
       <div className={cn(PAGE_FRAME, WIDE_WIDTH, "space-y-6")}>
-        <header className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-6">
+        {/* 두 줄 — 첫 줄은 제목과 계정 링크, 둘째 줄은 메뉴(메뉴가 길어 한 줄에 두면 계정 링크가 줄바꿈된다) */}
+        <header className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <Link to="/admin" className="text-2xl font-bold">
               운영자
             </Link>
-            <nav
-              aria-label="운영자 메뉴"
-              className="flex flex-wrap gap-x-4 gap-y-1"
-            >
-              <NavLink to="/admin" end className={navLinkClass}>
-                소스 · 피드
-              </NavLink>
-              <NavLink to="/admin/collection" className={navLinkClass}>
-                수집 현황
-              </NavLink>
-              <NavLink to="/admin/evaluation" className={navLinkClass}>
-                평가 현황
-              </NavLink>
-              <NavLink to="/admin/evaluations" className={navLinkClass}>
-                평가 결과
-              </NavLink>
-              <NavLink to="/admin/samples" className={navLinkClass}>
-                표본 검수
-              </NavLink>
-              <NavLink to="/admin/thresholds" className={navLinkClass}>
-                태그 기준
-              </NavLink>
-              <NavLink to="/admin/events" className={navLinkClass}>
-                사건
-              </NavLink>
-              <NavLink to="/admin/storylines" className={navLinkClass}>
-                스토리라인
-              </NavLink>
-              <NavLink to="/admin/big-storylines" className={navLinkClass}>
-                큰 스토리라인
-              </NavLink>
-              <NavLink to="/admin/event-judgements" className={navLinkClass}>
-                판정 기록
-              </NavLink>
-              <NavLink to="/admin/event-publications" className={navLinkClass}>
-                이벤트 발행
-              </NavLink>
-              <NavLink to="/admin/accounts" className={navLinkClass}>
-                계정
-              </NavLink>
-            </nav>
+            <div className="flex items-center gap-3 text-sm">
+              <NoticesLink />
+              <Link to="/" className="underline">
+                사용자 화면
+              </Link>
+              <span className="text-muted-foreground">
+                {me.data.displayName ?? me.data.email}
+              </span>
+              <button type="button" className="underline" onClick={signOut}>
+                로그아웃
+              </button>
+            </div>
           </div>
-          <Button variant="outline" onClick={lock}>
-            잠금
-          </Button>
+          <nav
+            aria-label="운영자 메뉴"
+            className="flex flex-wrap gap-x-4 gap-y-1"
+          >
+            <NavLink to="/admin" end className={navLinkClass}>
+              소스 · 피드
+            </NavLink>
+            <NavLink to="/admin/collection" className={navLinkClass}>
+              수집 현황
+            </NavLink>
+            <NavLink to="/admin/evaluation" className={navLinkClass}>
+              평가 현황
+            </NavLink>
+            <NavLink to="/admin/evaluations" className={navLinkClass}>
+              평가 결과
+            </NavLink>
+            <NavLink to="/admin/samples" className={navLinkClass}>
+              표본 검수
+            </NavLink>
+            <NavLink to="/admin/thresholds" className={navLinkClass}>
+              태그 기준
+            </NavLink>
+            <NavLink to="/admin/events" className={navLinkClass}>
+              사건
+            </NavLink>
+            <NavLink to="/admin/storylines" className={navLinkClass}>
+              스토리라인
+            </NavLink>
+            <NavLink to="/admin/big-storylines" className={navLinkClass}>
+              큰 스토리라인
+            </NavLink>
+            <NavLink to="/admin/event-judgements" className={navLinkClass}>
+              판정 기록
+            </NavLink>
+            <NavLink to="/admin/event-publications" className={navLinkClass}>
+              이벤트 발행
+            </NavLink>
+            <NavLink to="/admin/accounts" className={navLinkClass}>
+              계정
+            </NavLink>
+          </nav>
         </header>
+        {signOutFailed && (
+          <p role="alert">로그아웃하지 못했습니다. 다시 시도해 주세요.</p>
+        )}
         <Outlet />
       </div>
     </AdminSessionContext.Provider>
   );
 }
 
-/** 운영자 틀의 안내 화면(확인 중 · 닫힘 · 토큰 입력 · 오류)의 그릇 — 첫 화면과 같은 가운데 · 읽기 폭 */
+/** 운영자 틀의 안내 화면(확인 중 · 권한 없음 · 오류)의 그릇 — 첫 화면과 같은 가운데 · 읽기 폭 */
 function NarrowFrame({ children }: { children: ReactNode }) {
   return <div className={cn(PAGE_FRAME, NARROW_WIDTH)}>{children}</div>;
 }
@@ -186,43 +163,4 @@ function NarrowFrame({ children }: { children: ReactNode }) {
 /** 지금 화면의 메뉴는 굵게 밑줄 — NavLink 가 aria-current 도 단다 */
 function navLinkClass({ isActive }: { isActive: boolean }): string {
   return isActive ? "font-semibold underline" : "text-muted-foreground";
-}
-
-function TokenForm({
-  notice,
-  onSubmit,
-}: {
-  notice: string | null;
-  onSubmit: (token: string) => void;
-}) {
-  const [value, setValue] = useState("");
-
-  function submit(event: FormEvent) {
-    event.preventDefault();
-    if (value.trim()) {
-      onSubmit(value.trim());
-    }
-  }
-
-  return (
-    <form onSubmit={submit} className="max-w-md space-y-3">
-      <h1 className="text-2xl font-bold">운영자 토큰</h1>
-      {notice && (
-        <p role="alert" className="text-destructive">
-          {notice}
-        </p>
-      )}
-      <label className="block space-y-1">
-        <span className="text-sm">서버에 설정한 운영자 토큰</span>
-        <input
-          type="password"
-          autoComplete="off"
-          value={value}
-          onChange={(event) => setValue(event.target.value)}
-          className="w-full rounded-md border border-input bg-background px-2 py-1"
-        />
-      </label>
-      <Button type="submit">열기</Button>
-    </form>
-  );
 }

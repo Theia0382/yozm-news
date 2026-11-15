@@ -94,9 +94,10 @@ class WorkerRoleTests {
 	}
 
 	@Test
-	void closesTheAdminPathsWithoutATokenAndCreatesNoDefaultUser() throws Exception {
+	void adminPathsNeedASignInAndNoDefaultUserExists() throws Exception {
 		HttpResponse<String> admin = RoleProbe.get(this.port, "/api/admin/sources");
-		assertThat(admin.statusCode()).isEqualTo(403);
+		assertThat(admin.statusCode()).isEqualTo(401);
+		assertThat(admin.body()).contains("\"type\":\"urn:yozmnews:problem:unauthenticated\"");
 		assertThat(admin.headers().firstValue("Content-Type")).hasValueSatisfying(
 				type -> assertThat(type).startsWith("application/problem+json"));
 		assertThat(this.context.getBeanNamesForType(UserDetailsService.class)).isEmpty();

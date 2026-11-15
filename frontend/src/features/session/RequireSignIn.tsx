@@ -1,37 +1,38 @@
-import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { Link, Navigate, Outlet, useLocation, useNavigate } from "react-router";
+import { Link, Navigate, Outlet, useLocation } from "react-router";
 import { NoticesLink } from "@/features/notices/NoticesLink";
-import { SESSION_QUERY_KEY, useMe } from "@/features/session/sessionQueries";
-import { useApiClient } from "@/shared/api/client";
+import { withNext } from "@/features/session/safeNext";
+import { useMe } from "@/features/session/sessionQueries";
+import { useSignOut } from "@/features/session/useSignOut";
 import { NARROW_WIDTH, PAGE_FRAME } from "@/shared/ui/widths";
 
 /** 첫 로그인의 비밀번호 변경 화면 */
-const PASSWORD_PATH = "/password";
+export const PASSWORD_PATH = "/password";
 
 /** LLM 키 화면 */
 const KEYS_PATH = "/keys";
 
-/** LLM 키가 없어도 가는 화면 — 서버가 키 없이도 여는 처리기(키 · 계정 · 알림)를 쓰는 화면이다 */
+/**
+ * LLM 키가 없어도 가는 화면 — 서버가 키 없이도 여는 처리기(키 · 계정 · 알림)를 쓰는 화면이다. 비밀번호 변경 화면도 계정 처리기를 쓴다 — 첫
+ * 로그인의 변경을 마친 뒤 다시 읽은 로그인 상태로 그 화면이 한 번 더 그려져도 키 화면으로 보내지 않아야 돌아갈 곳(next)으로 간다
+ */
 const OPEN_WITHOUT_KEY: readonly string[] = [
   KEYS_PATH,
   "/settings",
+  PASSWORD_PATH,
   "/notices",
 ];
 
 /**
  * 로그인한 사용자만 보는 화면의 틀 — 로그인하지 않았으면 로그인 화면으로 보내고(돌아올 주소를 next 로), 로그인했으면 머리줄에 알림 링크 ·
- * 설정 링크 · 이름 · 로그아웃을 둔다. 첫 로그인의 비밀번호 변경이 남았으면 어느 주소든 비밀번호 변경 화면으로 보내고, 머리줄에는 이름 ·
- * 로그아웃만 둔다 — 알림 · 설정은 그 상태에서 서버가 거부하는 경로다(docs/specs/user.md §4). 그 다음으로, LLM 키가 없으면 키 · 설정 ·
- * 알림 화면 밖의 주소를 키 화면으로 보낸다 — 그 밖의 화면이 쓰는 경로는 키가 없으면 서버가 거부한다.
+ * 설정 링크(운영자면 운영자 화면 링크도) · 이름 · 로그아웃을 둔다. 첫 로그인의 비밀번호 변경이 남았으면 어느 주소든 비밀번호 변경
+ * 화면으로 보내고, 머리줄에는 이름 · 로그아웃만 둔다 — 알림 · 설정은 그 상태에서 서버가 거부하는 경로다(docs/specs/user.md §4). 그
+ * 다음으로, LLM 키가 없으면 키 · 설정 · 비밀번호 변경 · 알림 화면 밖의 주소를 키 화면으로 보낸다 — 그 밖의 화면이 쓰는 경로는 키가
+ * 없으면 서버가 거부한다.
  */
 export function RequireSignIn() {
   const me = useMe();
   const location = useLocation();
-  const navigate = useNavigate();
-  const client = useApiClient();
-  const queryClient = useQueryClient();
-  const [signOutFailed, setSignOutFailed] = useState(false);
+  const { signOut, failed: signOutFailed } = useSignOut();
 
   // 첫 화면 묶음에 들어가므로 cn · 공용 버튼을 들이지 않는다 — HomePage 와 같은 이유
   if (me.isPending) {
@@ -56,8 +57,7 @@ export function RequireSignIn() {
     );
   }
   if (me.data.result === "ANONYMOUS") {
-    const next = encodeURIComponent(location.pathname + location.search);
-    return <Navigate to={`/login?next=${next}`} replace />;
+    return <Navigate to={withNext("/login", location)} replace />;
   }
   const mustChange = me.data.passwordChangeRequired;
   if (mustChange && location.pathname !== PASSWORD_PATH) {
@@ -69,24 +69,6 @@ export function RequireSignIn() {
     !OPEN_WITHOUT_KEY.includes(location.pathname)
   ) {
     return <Navigate to={KEYS_PATH} replace />;
-  }
-
-  async function signOut() {
-    setSignOutFailed(false);
-    try {
-      const { response } = await client.DELETE("/api/session");
-      if (!response.ok) {
-        // 로그아웃하지 못했으면 로그인한 화면에 남아 알린다 — 상태를 다시 읽어 새 요청 보호 토큰을 받는다
-        setSignOutFailed(true);
-        await me.refetch();
-        return;
-      }
-    } catch {
-      setSignOutFailed(true);
-      return;
-    }
-    queryClient.removeQueries({ queryKey: SESSION_QUERY_KEY });
-    navigate("/login", { replace: true });
   }
 
   return (
@@ -103,6 +85,11 @@ export function RequireSignIn() {
             <Link to="/settings" className="underline">
               설정
             </Link>
+            {me.data.role === "ADMIN" && (
+              <Link to="/admin" className="underline">
+                운영자
+              </Link>
+            )}
           </>
         )}
         <span className="text-muted-foreground">

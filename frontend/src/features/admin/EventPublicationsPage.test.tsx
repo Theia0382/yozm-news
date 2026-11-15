@@ -58,7 +58,6 @@ function renderPage(
   const client = createAdminClient({
     baseUrl: TEST_BASE_URL,
     fetch: server.fetch,
-    token: () => "token",
   });
   const router = createMemoryRouter([
     { path: "/", element: <EventPublicationsPage /> },
