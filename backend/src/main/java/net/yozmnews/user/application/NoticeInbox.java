@@ -2,6 +2,7 @@ package net.yozmnews.user.application;
 
 import java.time.InstantSource;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 import net.yozmnews.platform.UserId;
@@ -16,22 +17,27 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 알림함 — 세션 사용자의 알림 목록 · 안 읽은 수 · 읽음 처리. 모든 조회와 쓰기가 그 사용자로 범위가 정해진다. docs/specs/user.md §4 ·
- * user-R25 · user-R27
+ * user-R25 · user-R27 · user-R54
+ * <p>
+ * 사라진 구독 알림은 사건 ID 만 담으므로, 쪽을 읽을 때 그 사건의 지금 대표 기사 제목을 함께 읽는다.
  */
 @Service
 public class NoticeInbox {
 
 	private final NoticeRepository notices;
 
+	private final RemovedSubscriptionTitles titles;
+
 	private final InstantSource clock;
 
 	@Autowired
-	NoticeInbox(NoticeRepository notices) {
-		this(notices, InstantSource.system());
+	NoticeInbox(NoticeRepository notices, RemovedSubscriptionTitles titles) {
+		this(notices, titles, InstantSource.system());
 	}
 
-	NoticeInbox(NoticeRepository notices, InstantSource clock) {
+	NoticeInbox(NoticeRepository notices, RemovedSubscriptionTitles titles, InstantSource clock) {
 		this.notices = Objects.requireNonNull(notices, "notices");
+		this.titles = Objects.requireNonNull(titles, "titles");
 		this.clock = Objects.requireNonNull(clock, "clock");
 	}
 
@@ -43,10 +49,10 @@ public class NoticeInbox {
 	public NoticePage page(UserId user, @Nullable Long before) {
 		List<Notice> read = this.notices.page(user, before, NoticeRetention.PAGE_SIZE + 1);
 		if (read.size() <= NoticeRetention.PAGE_SIZE) {
-			return new NoticePage(read, null);
+			return new NoticePage(read, null, this.titles.of(read));
 		}
 		List<Notice> page = read.subList(0, NoticeRetention.PAGE_SIZE);
-		return new NoticePage(page, page.get(page.size() - 1).id());
+		return new NoticePage(page, page.get(page.size() - 1).id(), this.titles.of(page));
 	}
 
 	/** 안 읽은 알림 수 */
@@ -69,11 +75,13 @@ public class NoticeInbox {
 	 *
 	 * @param notices 최근부터
 	 * @param nextBefore 다음 쪽의 커서 — 이 쪽의 마지막 알림 ID. 다음 쪽이 없으면 null
+	 * @param eventTitles 사라진 구독 알림이 가리키는 사건 ID → 지금 대표 기사 제목 — 읽지 못한 사건은 빠진다(user-R54)
 	 */
-	public record NoticePage(List<Notice> notices, @Nullable Long nextBefore) {
+	public record NoticePage(List<Notice> notices, @Nullable Long nextBefore, Map<Long, String> eventTitles) {
 
 		public NoticePage {
 			notices = List.copyOf(notices);
+			eventTitles = Map.copyOf(eventTitles);
 		}
 
 	}

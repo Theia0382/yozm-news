@@ -32,6 +32,9 @@ type PreferencesAdjustedNotice =
 
 type Adjustment = PreferencesAdjustedNotice["adjustments"][number];
 
+type StorylineSubscriptionsRemovedNotice =
+  components["schemas"]["StorylineSubscriptionsRemovedNoticeResponse"];
+
 /** 피드를 묶어 보이는 지금 상태의 순서 — 손볼 것부터 */
 const STATUS_ORDER: readonly FeedStatus[] = ["DEGRADED", "STALE", "ACTIVE"];
 
@@ -146,6 +149,8 @@ function noticeTitle(notice: Notice): string {
       return "LLM 키가 무효가 됐습니다";
     case "PREFERENCES_ADJUSTED":
       return "태그 체계가 바뀌어 관심 설정을 맞췄습니다";
+    case "STORYLINE_SUBSCRIPTIONS_REMOVED":
+      return "구독한 스토리라인이 사라졌습니다";
   }
 }
 
@@ -159,6 +164,12 @@ function NoticeBody({ notice }: { notice: Notice }): ReactElement {
       return <KeyInvalidatedBody body={notice.keyInvalidated} />;
     case "PREFERENCES_ADJUSTED":
       return <PreferencesAdjustedBody body={notice.preferencesAdjusted} />;
+    case "STORYLINE_SUBSCRIPTIONS_REMOVED":
+      return (
+        <StorylineSubscriptionsRemovedBody
+          body={notice.storylineSubscriptionsRemoved}
+        />
+      );
   }
 }
 
@@ -253,6 +264,38 @@ function PreferencesAdjustedBody({
       <Link to={INTERESTS_PATH} className="underline">
         관심 설정에서 확인하기
       </Link>
+    </div>
+  );
+}
+
+/**
+ * 사라진 구독 — 스토리라인마다 그 흐름에 남았던 기사의 지금 제목. 제목은 알림함을 열 때 읽은 값이라, 기사가 지워졌으면 비어 있다.
+ */
+function StorylineSubscriptionsRemovedBody({
+  body,
+}: {
+  body: StorylineSubscriptionsRemovedNotice | null | undefined;
+}) {
+  if (!body) {
+    return null;
+  }
+  return (
+    <div className="space-y-2 text-sm">
+      <p>
+        구독한 스토리라인이 더 이어지지 않아 구독에서 뺐습니다. 관련 소식은 다른
+        스토리라인으로 이어질 수 있습니다.
+      </p>
+      <ul className="space-y-1">
+        {body.removed.map((item) => (
+          <li key={item.storylineId}>
+            {item.title ?? (
+              <span className="text-muted-foreground">
+                제목을 알 수 없는 스토리라인
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

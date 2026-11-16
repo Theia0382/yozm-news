@@ -7025,7 +7025,7 @@
           },
           "kind" : {
             "type" : "string",
-            "enum" : [ "FEED_STATUS", "PASSWORD_CHANGED", "KEY_INVALIDATED", "PREFERENCES_ADJUSTED" ]
+            "enum" : [ "FEED_STATUS", "PASSWORD_CHANGED", "KEY_INVALIDATED", "PREFERENCES_ADJUSTED", "STORYLINE_SUBSCRIPTIONS_REMOVED" ]
           },
           "passwordChanged" : {
             "oneOf" : [ {
@@ -7048,12 +7048,19 @@
             "type" : "integer",
             "format" : "int32"
           },
+          "storylineSubscriptionsRemoved" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/StorylineSubscriptionsRemovedNoticeResponse"
+            }, {
+              "type" : "null"
+            } ]
+          },
           "updatedAt" : {
             "type" : "string",
             "format" : "date-time"
           }
         },
-        "required" : [ "createdAt", "feedStatus", "id", "keyInvalidated", "kind", "passwordChanged", "preferencesAdjusted", "read", "revision", "updatedAt" ]
+        "required" : [ "createdAt", "feedStatus", "id", "keyInvalidated", "kind", "passwordChanged", "preferencesAdjusted", "read", "revision", "storylineSubscriptionsRemoved", "updatedAt" ]
       },
       "NoticeRevision" : {
         "type" : "object",
@@ -7550,6 +7557,19 @@
           }
         },
         "required" : [ "firstId", "firstLedToSecond", "firstOneMatter", "firstPartOfSecond", "id", "inputTokens", "judgedAt", "message", "modelVersion", "none", "reading", "secondId", "secondLedToFirst", "secondOneMatter", "secondPartOfFirst", "wordingVersion" ]
+      },
+      "RemovedStorylineResponse" : {
+        "type" : "object",
+        "properties" : {
+          "storylineId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "title" : {
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "storylineId", "title" ]
       },
       "ResubmissionItemResponse" : {
         "type" : "object",
@@ -8293,6 +8313,18 @@
           }
         },
         "required" : [ "articleCount", "big", "eventCount", "firstArticleAt", "id", "importance", "intensity", "lastArticleAt", "parentId", "periodArticles", "periodSources", "representative", "representativeArticleId", "state" ]
+      },
+      "StorylineSubscriptionsRemovedNoticeResponse" : {
+        "type" : "object",
+        "properties" : {
+          "removed" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/RemovedStorylineResponse"
+            }
+          }
+        },
+        "required" : [ "removed" ]
       },
       "StrandedPublicationListResponse" : {
         "type" : "object",

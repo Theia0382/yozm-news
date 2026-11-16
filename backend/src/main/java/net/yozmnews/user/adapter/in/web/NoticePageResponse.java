@@ -14,7 +14,9 @@ import org.jspecify.annotations.Nullable;
 record NoticePageResponse(List<NoticeResponse> notices, @Nullable Long nextBefore) {
 
 	static NoticePageResponse of(NoticeInbox.NoticePage page) {
-		return new NoticePageResponse(page.notices().stream().map(NoticeResponse::of).toList(), page.nextBefore());
+		return new NoticePageResponse(
+				page.notices().stream().map(notice -> NoticeResponse.of(notice, page.eventTitles())).toList(),
+				page.nextBefore());
 	}
 
 }
