@@ -22,7 +22,7 @@ import org.springframework.context.annotation.Bean;
  */
 class FakeStorylineReview implements StorylineReview {
 
-	static final StorylineLinkingCriteria LINKING = new StorylineLinkingCriteria(Duration.ofDays(3), 0.62, 0.62, 0.5);
+	static final StorylineLinkingCriteria LINKING = new StorylineLinkingCriteria(Duration.ofDays(3), 0.6, 0.62, 0.5);
 
 	static final StorylineRelationCriteria RELATION = new StorylineRelationCriteria(0.6, 0.2, 3, 0.88,
 			Duration.ofDays(14));

@@ -78,6 +78,7 @@ describe("StorylinesPage", () => {
     expect(second[10]).toHaveTextContent(/^$/);
     const overview = screen.getByLabelText("기간 개요");
     expect(overview).toHaveTextContent("2건 · 기사 5건");
+    // 띠가 빈 잇기 기준은 기준 점수 하나로 보인다
     expect(overview).toHaveTextContent("창 3일 · 기준 점수 0.62");
     expect(overview).toHaveTextContent(
       "확률 0.6 · 한 사안 0.2 · 사건 수 3 이상 · 후보 점수 0.88 · 창 14일",
