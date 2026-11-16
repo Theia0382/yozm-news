@@ -39,3 +39,4 @@
 ## 후속 기록
 
 - 2026-11-04: 결정 절 "각 모듈의 공개 운영 API 만 부르며, 의존을 `source` · `platform` 으로 선언한다"의 지금 상태(`admin` 이 부르는 공개 운영 API · 공개 조회와 의존) — [`overview` §5](../overview.md#5-모듈-지도)
+- 2026-11-16: 결정 절 "운영자 HTTP API(`/api/admin/**`)는 `admin` 모듈이 낸다"의 꼴을 사용자 화면에 더함 — [ADR-0192](0192-reader-screens-are-composed-by-the-reader-module-over-module-public-queries.md)(독자 화면은 `reader`), 지금 상태는 [`reader` Spec](../specs/reader.md)

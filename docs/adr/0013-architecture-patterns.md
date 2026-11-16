@@ -1,6 +1,6 @@
 # ADR-0013: 아키텍처 패턴: 모듈러 모놀리스 + 실용적 헥사고날
 
-- 상태: 승인. 부분 대체 — 이벤트 재처리 시점([ADR-0023](0023-jobrunr-oss-framework-schema-and-event-resubmission.md)) · 상태 머신의 피드 상태([ADR-0040](0040-feed-status-stored-in-poll-state-and-rejudged-hourly-by-health-check.md))
+- 상태: 승인. 부분 대체 — 이벤트 재처리 시점([ADR-0023](0023-jobrunr-oss-framework-schema-and-event-resubmission.md)) · 컨트롤러의 자리([ADR-0192](0192-reader-screens-are-composed-by-the-reader-module-over-module-public-queries.md)) · 상태 머신의 피드 상태([ADR-0040](0040-feed-status-stored-in-poll-state-and-rejudged-hourly-by-health-check.md))
 - 날짜: 2026-10-25
 
 ## 맥락
@@ -40,6 +40,7 @@ net.yozmnews.<module>
 - **포트와 어댑터는 외부 의존성에만 엄격하게** 적용한다. 외부 연동은 반드시 `domain`의 포트 인터페이스 뒤에 둔다. 실제 구현과 개발용 Fake 구현은 모두 `adapter/out` 아래에 둔다.
 - **영속성은 포트로 추상화하지 않는다.** PostgreSQL은 교체 대상이 아니다. aggregate를 Spring Data JDBC 엔티티로 그대로 쓰고, 저장소 인터페이스는 `domain`에 둔다 ([ADR-0014](0014-spring-data-jdbc.md)).
 - 외부 연동이 없는 단순한 모듈(예: `feedback`)은 `domain`·`application` 구분 없이 서비스와 저장소만 둔다.
+> 부분 대체(둘째 문장) — [ADR-0192](0192-reader-screens-are-composed-by-the-reader-module-over-module-public-queries.md). 지금 상태: [`overview` §5](../overview.md#5-모듈-지도)
 - **컨트롤러는 각 모듈 안**(`adapter/in/web`)에 둔다. 별도 `web` 모듈은 두지 않는다. 보안 설정, 오류 응답 형식, 공통 타입처럼 여러 모듈에 걸친 것은 `platform` 모듈에 둔다.
 
 ### 함께 적용하는 패턴

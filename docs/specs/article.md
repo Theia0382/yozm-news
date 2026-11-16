@@ -11,7 +11,7 @@
 - **피드별 기록** — 같은 기사로 판정한 항목도 버리지 않고 기사 · 피드마다 한 번 기록한다
 - **엔트리 집계** — 피드별 기록을 집계 기간 · 칸마다 세어 중복률 · 날짜 추정 비율 · 제목 판정 비율 · guid 재사용을 운영 기능의 공개 API(`ArticleAdministration`)로 낸다
 - **지운 소스 · 피드의 기사 삭제** — 운영자가 소스 · 피드를 지우면 그 소스(피드)의 엔트리와, 엔트리가 남지 않은 기사를 지우고 지운 기사를 `ArticlesRemoved` 로 알린다. 지우기 전에 함께 지워질 기사 수를 공개 API 로 센다(article-R15). 지운 피드의 늦은 항목은 저장하지 않는다(article-R16)
-- **기사 조회** — 다른 모듈이 기사의 제목 · 요약문 · 정규 URL · 발행 시각 · 엔트리(소스 · 피드 · 카테고리)를 공개 조회(`ArticleDirectory`)로 읽는다
+- **기사 조회** — 다른 모듈이 기사의 제목 · 요약문 · 정규 URL · 발행 시각 · 엔트리(소스 · 피드 · 카테고리)를 공개 조회(`ArticleDirectory`)로 읽는다. 화면이 기사 한 줄로 보이는 헤드라인(제목 · 출처 이름 · 발행 시각 · 정규 URL)은 엔트리의 출처 이름을 엮어 낸다(article-R17)
 - **(미구현)** 본문 추출 — 자리만 있고 v1 에서는 하지 않는다(article-R12)
 
 하지 않는 것:
@@ -37,6 +37,7 @@
 | 날짜 추정 비율 | 엔트리 가운데 발행 시각을 추정한 것의 비율(article-R13 · article-R14) |
 | 제목 판정 비율 | 엔트리 가운데 판정 종류가 `TITLE` 인 것의 비율(article-R13 · article-R14) |
 | guid 재사용 | 같은 피드 · 같은 guid 의 엔트리가 다른 기사에 먼저 있는데 새 기사가 된 엔트리(article-R4 · article-R13) |
+| 헤드라인 | 화면이 기사 한 줄로 보이는 정보 — 제목 · 출처 이름 · 발행 시각 · 정규 URL(article-R17). 요약문은 담지 않는다 |
 | L1 · L2 · L3 · L4 | 같은 기사 판정의 단계 — L1 정규 URL · guid, L2 이 소스가 이미 받은 기사와 제목이 같음, L3 다른 소스의 전재, L4 같은 사건의 다른 기사. `article` 은 L1 · L2 만 합친다 |
 
 ## 3. 공개 인터페이스
@@ -101,13 +102,14 @@ public record ArticlesRemoved(List<ArticleId> articleIds) {}
 
 관련 규칙: article-R15.
 
-### ArticleDirectory · ArticleContent · ArticleEntryView
+### ArticleDirectory · ArticleContent · ArticleEntryView · ArticleHeadline
 
-기사 조회 — 다른 모듈이 기사의 제목 · 요약문 · 정규 URL · 발행 시각 · 엔트리를 읽고, 처음 본 시각으로 기사를 찾는다. 구현은 `application` 의 `ArticleDirectoryService` 다.
+기사 조회 — 다른 모듈이 기사의 제목 · 요약문 · 정규 URL · 발행 시각 · 엔트리와 헤드라인을 읽고, 처음 본 시각으로 기사를 찾는다. 구현은 `application` 의 `ArticleDirectoryService` 다.
 
 ```java
 public interface ArticleDirectory {
     Map<ArticleId, ArticleContent> findAll(Collection<ArticleId> ids);
+    Map<ArticleId, ArticleHeadline> headlines(Collection<ArticleId> ids);
     List<ArticleId> firstSeenSince(Instant since);
     Map<ArticleId, Set<SourceId>> sources(Collection<ArticleId> ids);
 }
@@ -116,11 +118,16 @@ public record ArticleContent(ArticleId id, String title, @Nullable String summar
         Instant publishedAt, List<ArticleEntryView> entries) {}
 
 public record ArticleEntryView(SourceId sourceId, FeedId feedId, List<String> categories) {}
+
+public record ArticleHeadline(ArticleId id, String title, List<String> sources, Instant publishedAt,
+        URI canonicalUrl) {}
 ```
 
 | 타입 · 멤버 | 뜻 |
 |---|---|
 | `findAll` | 기사들의 내용 — 없는(지운) 기사는 결과에 없다. 빈 입력이면 빈 맵 |
+| `headlines` | 기사들의 헤드라인 — 없는(지운) 기사는 결과에 없다. 빈 입력이면 빈 맵. 운영자 화면(`admin`)과 독자 화면(`reader`)이 기사 한 줄을 그린다(article-R17) |
+| `ArticleHeadline.sources` | 출처 이름 — 엔트리 순서, 같은 이름은 한 번, 이름이 없는 피드는 뺀다(article-R17). 비어 있을 수 있다 |
 | `firstSeenSince` | 처음 본 시각(`first_seen_at`)이 `since` 이상인 기사의 ID — ID 순. `tag` 가 체계를 바꿀 때 재평가 대상을, `event` 가 사건 묶기 채우기 대상을 고른다 |
 | `sources` | 기사들의 엔트리가 가진 소스 — 엔트리가 없는(지운) 기사는 결과에 없다. 빈 입력이면 빈 맵. `event` 가 기간 집계의 서로 다른 소스 수를 센다 |
 | `ArticleContent.summary` | 저장된 RSS 요약문 — 없으면 null |
@@ -132,9 +139,9 @@ public record ArticleEntryView(SourceId sourceId, FeedId feedId, List<String> ca
 - 계약
   - 트랜잭션을 열지 않는다 — `findAll` 은 엔트리 · 기사 두 질의로 읽고, 각 질의는 그 순간의 값이다. 엔트리를 먼저 읽으므로 두 질의 사이에 지운 기사는 결과에서 빠진다. `firstSeenSince` · `sources` 는 질의 하나다
   - `first_seen_at` 에는 인덱스가 없다 — `firstSeenSince` 는 표 전체를 읽는다. 드문 운영 연산(체계 변경 · 사건 묶기 채우기)이 부른다
-  - 출처 이름 · 피드 섹션은 담지 않는다 — `source` 의 공개 조회가 낸다
+  - `findAll` 은 출처 이름 · 피드 섹션을 담지 않는다 — `source` 의 공개 조회가 낸다. `headlines` 는 `findAll` 한 번과 `source` 의 `FeedLabels.labels` 한 번으로 출처 이름을 엮는다 — 두 질의 사이에 지운 기사 · 피드는 결과 · 이름에서 빠진다
 
-관련 규칙: article-R7 · article-R8.
+관련 규칙: article-R7 · article-R8 · article-R17.
 
 ### ArticleAdministration
 
@@ -264,7 +271,7 @@ sequenceDiagram
   ```
 
 - `ArticleFetchedListener` · `SourceRemovalListener` — 리스너(들어오는 쪽)
-- `ArticleDirectoryService` — 공개 API `ArticleDirectory` 의 구현. 저장소에 맡기고, 트랜잭션 · 역할 애너테이션이 없다
+- `ArticleDirectoryService` — 공개 API `ArticleDirectory` 의 구현. 저장소에 맡기고, 헤드라인은 `source` 의 `FeedLabels` 로 출처 이름을 엮는다(article-R17). 트랜잭션 · 역할 애너테이션이 없다
 - `ArticleAdministrationService` — 공개 API `ArticleAdministration` 의 구현. 지금 시각으로 기간을 잡아 집계 조회 하나로 세고 결과로 모은다. 기사 수는 저장소의 질의 하나로 센다. 트랜잭션 · 역할 애너테이션이 없다 — 두 역할 공통이다(article-R13 · article-R15)
 
 ### `domain`
@@ -350,6 +357,10 @@ public interface ContentExtractor {
 - **article-R9** — 같은 소스의 판정은 소스 단위 잠금(트랜잭션 범위)으로 줄을 세운다. 다른 소스가 같은 정규 URL 을 동시에 내면 정규 URL 의 고유 제약이 하나만 남기고, 늦은 쪽은 그 기사에 판정 종류 `URL` 로 붙는다
 - **article-R10** — 같은 항목을 다시 처리해도 결과가 같다. 다시 온 항목은 처음과 같은 기사에 걸리고(새 기사 · URL 로 붙은 항목은 그 정규 URL, 제목으로 붙은 항목은 자기 엔트리의 항목 URL, guid 로 붙은 항목은 바뀌지 않은 guid 후보), 엔트리는 다시 기록되지 않는다
 - **article-R11** — 새 기사를 저장했을 때만, 그 트랜잭션 안에서 `ArticleStored` 를 발행한다
+
+### 헤드라인
+
+- **article-R17** — 헤드라인(`ArticleDirectory.headlines`)은 기사의 제목 · 발행 시각 · 정규 URL 과 출처 이름이다. 출처 이름은 기사의 엔트리를 받은 시각 순(같으면 피드 ID 순 — `ArticleContent.entries` 의 순서)으로 훑어 그 피드의 출처 이름(`source` 의 `FeedLabels`)을 모은다 — 같은 이름은 처음 한 번, 이름이 없는 피드는 뺀다. 요약문은 담지 않는다 — 운영자 화면 · 독자 화면이 기사 한 줄을 이것 하나로 그린다([ADR-0068](../adr/0068-rss-summaries-shown-only-on-operator-screens-and-users-get-processed-information.md))
 
 ### 지운 소스 · 피드
 

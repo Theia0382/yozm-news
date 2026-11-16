@@ -207,8 +207,8 @@ HTTP 엔드포인트 — 모두 운영자 경로다(`ADMIN` 계정 세션 또는
 ### 평가 검수
 
 - **admin-R6** — 운영자 응답(평가 검수 · 사건 · 스토리라인 · 큰 스토리라인 · 판정 기록)은 모듈의 결과에 기사 정보를 맞붙인다(정본 `AdminArticles`):
-  - 쪽 · 표본 · 사건의 기사 ID 를 모아 `article` 의 `ArticleDirectory.findAll` 을 한 번, 그 엔트리의 피드 ID 를 모아 `source` 의 `FeedLabels.labels` 를 한 번 부른다
-  - 목록 · 표본 행과 사건 · 스토리라인 · 큰 스토리라인 · 판정 기록의 기사는 제목과 출처 이름(엔트리 순서, 같은 이름은 한 번, 이름이 없는 피드는 뺀다)을 싣는다. 상세는 제목 · 요약문 · 정규 URL 과 엔트리마다 출처 이름 · 섹션 · RSS 카테고리를 싣는다 — 요약문 원문은 운영자 화면에만 보인다([ADR-0068](../adr/0068-rss-summaries-shown-only-on-operator-screens-and-users-get-processed-information.md))
+  - 목록 · 표본 행과 사건 · 스토리라인 · 큰 스토리라인 · 판정 기록의 기사는 제목과 출처 이름을 싣는다 — 쪽 · 표본 · 사건의 기사 ID 를 모아 `article` 의 `ArticleDirectory.headlines` 를 한 번 부른다(출처 이름 엮기는 [article-R17](article.md#헤드라인))
+  - 상세는 제목 · 요약문 · 정규 URL 과 엔트리마다 출처 이름 · 섹션 · RSS 카테고리를 싣는다 — 기사 하나의 `ArticleDirectory.findAll` 과 그 엔트리의 피드 ID 로 `source` 의 `FeedLabels.labels` 를 한 번씩 부른다. 요약문 원문은 운영자 화면에만 보인다([ADR-0068](../adr/0068-rss-summaries-shown-only-on-operator-screens-and-users-get-processed-information.md))
   - 그새 지운 기사는 기사 정보가 `null` 이다 — 평가 결과는 그대로 싣는다
   - 평가 · 버전 ID 는 JSON 수로 옮기고, 판정 · 분포의 값 레코드는 그대로 싣는다
 
