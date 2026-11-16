@@ -34,3 +34,7 @@
 |---|---|
 | 로컬 개발에서는 언제나 대체물 | 로컬 개발에서 실제 공급자를 확인할 수 없다 |
 | `llm` 에 대체물을 두지 않는다 | 로컬 개발의 키 등록이 실제 키를 요구한다 |
+
+## 후속 기록
+
+- 2026-11-16: 결과 절 "로컬 개발에서 실제 키로 공급자를 확인하는 길이 남는다" — 키 등록 · 검증에 그대로이고, 다이제스트 생성은 `local` 에서 언제나 로컬 대체물이다 — [ADR-0187](0187-the-digest-generators-local-substitute-always-stands-in-the-local-profile-and-real-generators-register-only-outside-it.md) · [digest Spec "로컬 대체물"](../specs/digest.md#로컬-대체물) digest-R12

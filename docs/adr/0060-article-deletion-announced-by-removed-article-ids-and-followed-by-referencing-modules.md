@@ -31,3 +31,7 @@
 | 행을 남기고 조회할 때 기사가 있는 것만 쓴다 | 집계가 지운 소스의 기사를 계속 센다. 남는 행이 무기한 쌓인다 |
 | 각 모듈이 `SourceDeleted` · `FeedDeleted` 를 직접 받는다 | 다른 소스 · 피드의 엔트리가 남은 기사는 지워지지 않으므로, 어느 기사가 지워졌는지 알 수 없다 |
 | 모듈 사이 FK 의 cascade | 모듈 사이 참조는 ID 로만 한다 — 스키마가 모듈 경계를 넘는다 |
+
+## 후속 기록
+
+- 2026-11-16: 다이제스트가 따르는 범위(후보 · 인용 행과 인용이 남지 않은 섹션) — [ADR-0186](0186-digests-follow-removed-articles-by-deleting-their-rows-and-show-no-summary-without-any-citation.md) · [digest Spec "지운 기사 따르기"](../specs/digest.md#지운-기사-따르기) digest-R10

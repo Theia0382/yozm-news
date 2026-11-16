@@ -4,24 +4,18 @@
 
 ## 핵심 인터페이스
 
-`evaluation` 의 모델 평가 포트 `ArticleEvaluator` 와 기사 임베딩 포트 `ArticleEmbedder` 는 evaluation Spec 의 [`ArticleEvaluator`](specs/evaluation.md#articleevaluator) · [`ArticleEmbedder`](specs/evaluation.md#articleembedder)에, `tag` 의 평가 작업은 [tag Spec](specs/tag.md#평가-대기와-평가-작업)에, `event` 의 사건 묶기 작업은 [event Spec](specs/event.md#들어오는-쪽)에 있다.
+`evaluation` 의 모델 평가 포트 `ArticleEvaluator` 와 기사 임베딩 포트 `ArticleEmbedder` 는 evaluation Spec 의 [`ArticleEvaluator`](specs/evaluation.md#articleevaluator) · [`ArticleEmbedder`](specs/evaluation.md#articleembedder)에, `tag` 의 평가 작업은 [tag Spec](specs/tag.md#평가-대기와-평가-작업)에, `event` 의 사건 묶기 작업은 [event Spec](specs/event.md#들어오는-쪽)에, `digest` 의 다이제스트 생성기 포트 `DigestGenerator` 는 [digest Spec](specs/digest.md#digestgenerator)에 있다.
 
 ```java
-// digest: 사용자별 종합 다이제스트 생성.
-public interface DigestGenerator {
-    GeneratedDigest generate(DigestRequest request, LlmHandle llm); // 후보 + 사용자 프로필(자유 텍스트 관심사 포함)
-}
-
 // report: 사용자별 변화 리포트 생성.
 public interface ReportGenerator {
     GeneratedReport generate(ReportRequest request, LlmHandle llm); // 기간 통계 + 구독한 스토리라인의 변화 + 직전 리포트 요약
 }
 ```
 
-- LLM 관문 `LlmClientFactory` 는 [llm Spec](specs/llm.md#llmclientfactory)에 있다. 위 선언의 `LlmHandle` 은 저장한 키의 길에 생길 호출 API 의 자리 표시다 — 저장한 키를 받아 호출 직전에만 쓰는 길은 [llm Spec](specs/llm.md#저장한-키의-길)에 있고, 프롬프트를 넘겨 결과를 받는 호출 API 는 아직 설계되지 않아 설계하는 작업이 llm Spec 에 적는다. 저장한 키의 평문은 `llm` 에만 건너간다
+- LLM 관문 `LlmClientFactory` 는 [llm Spec](specs/llm.md#llmclientfactory)에 있다. `ReportGenerator` 선언의 `LlmHandle` 은 저장한 키의 길에 생길 호출 API 의 자리 표시다 — 저장한 키를 받아 호출 직전에만 쓰는 길은 [llm Spec](specs/llm.md#저장한-키의-길)에 있고, 프롬프트를 넘겨 결과를 받는 호출 API 는 아직 설계되지 않아 설계하는 작업이 llm Spec 에 적는다. 저장한 키의 평문은 `llm` 에만 건너간다
 
-- `DigestGenerator`의 v1 구현체는 `llm` 관문의 호출 API 로 LLM 을 부르는 `LlmDigestGenerator`다. 공급자별 차이와 Spring AI 는 `llm` 안에 있다 — 생성기는 공급자 · 라이브러리를 모른다([ADR-0151](adr/0151-spring-ai-and-sdk-types-stay-inside-llm-and-the-gateway-exposes-only-its-own-types.md)).
-- `ReportGenerator`의 v1 구현체는 `DigestGenerator` 와 같은 방식의 LLM 구현이고, Spring profile `local` 은 고정 응답 로컬 대체물을 쓴다 ([ADR-0025](adr/0025-long-term-personal-news-history-in-v1.md)).
+- `ReportGenerator`의 v1 구현체는 다이제스트 생성기([digest Spec](specs/digest.md#digestgenerator))와 같은 방식의 LLM 구현이다 — 공급자 · 라이브러리를 모른다([ADR-0151](adr/0151-spring-ai-and-sdk-types-stay-inside-llm-and-the-gateway-exposes-only-its-own-types.md)). Spring profile `local` 은 고정 응답 로컬 대체물을 쓴다 ([ADR-0025](adr/0025-long-term-personal-news-history-in-v1.md)).
 - BYOK에서는 **요청마다 사용자 키로 공급자 클라이언트를 만들고 쓰고 닫는다**. `llm` 이 이 일을 한다([llm Spec](specs/llm.md#공급자-클라이언트)).
 
 ## 주요 백그라운드 작업
@@ -32,7 +26,7 @@ public interface ReportGenerator {
 | `GenerateDigest(userId, date)` | 위에서 등록 / 사용자 수동 요청 | 후보 선별 → LLM 호출 → 검증 → 저장 |
 | `ScheduleDueReports` | 1시간마다 | 리포트 시점이 된 사용자의 변화 리포트 생성 작업 등록 |
 | `GenerateReport(userId, period)` | 위에서 등록 | 통계 집계 → 스냅숏 → LLM 호출 → 검증 → 저장 |
-| `Retention` | 하루 1회 | 보존 기간이 지난 데이터 정리 ([data-model.md](data-model.md)) — 요약문(운영 설정을 켰을 때) 포함. 사건 배정 입력(기사 표현)은 `event` 의 사건 정리 작업이 지운다([event Spec](specs/event.md#사건-정리)) |
+| `Retention` | 하루 1회 | 보존 기간이 지난 데이터 정리 ([data-model.md](data-model.md)) — 요약문(운영 설정을 켰을 때) 포함. 사건 배정 입력(기사 표현)은 `event` 의 사건 정리 작업이, 다이제스트 후보 행(`digest_candidates`)은 `digest` 의 후보 행 보존 정리가 지운다([event Spec](specs/event.md#사건-정리) · [digest Spec](specs/digest.md#후보-행-보존)) |
 
 ## 외부 API와 MCP (v1 이후)
 
