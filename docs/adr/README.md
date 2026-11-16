@@ -17,7 +17,7 @@
 | [0009](0009-authentication-google-and-local.md) | v1 인증은 Google 로그인과 자체(이메일·비밀번호) 로그인 | 승인 (부분 대체: 0011 · 0012 · 0048 · 0123) |
 | [0010](0010-tag-taxonomy.md) | 태그 체계: 축 분리 + 통제 어휘 다중 태그 | 승인 (부분 대체: 0181) |
 | [0011](0011-no-email-in-v1.md) | v1에서는 메일 발송을 하지 않는다 | 승인 (부분 대체: 0048 · 0123) |
-| [0012](0012-swappable-external-dependencies.md) | 외부 의존성은 교체 가능하게, 개발 환경에는 로컬 대체물을 둔다 | 승인 (부분 대체: 0021 · 0057 · 0061 · 0123 · 0168) |
+| [0012](0012-swappable-external-dependencies.md) | 외부 의존성은 교체 가능하게, 개발 환경에는 로컬 대체물을 둔다 | 승인 (부분 대체: 0021 · 0057 · 0061 · 0123 · 0168 · 0187) |
 | [0013](0013-architecture-patterns.md) | 아키텍처 패턴: 모듈러 모놀리스 + 실용적 헥사고날 | 승인 (부분 대체: 0023 · 0040) |
 | [0014](0014-spring-data-jdbc.md) | 데이터 접근은 Spring Data JDBC + JdbcClient | 승인 (부분 대체: 0089) |
 | [0015](0015-source-presets-and-collection-profiles.md) | 뉴스 소스는 수집 프로필로 등록하고, 주요 언론사는 프리셋으로 제공한다 | 승인 (부분 대체: 0024 · 0041) |
@@ -191,6 +191,8 @@
 | [0183](0183-admin-paths-open-with-admin-account-sessions-and-keep-the-operator-token-as-an-optional-script-bearer-with-csrf-only-for-sessions.md) | 운영자 경로는 `ADMIN` 계정 세션으로 열고, 운영자 토큰은 스크립트용 선택 Bearer 로 남기며, 세션 요청에만 CSRF 를 건다 | 승인 |
 | [0184](0184-admin-path-denials-share-the-session-chain-problem-types-and-only-a-wrong-operator-token-is-admin-unauthorized.md) | 운영자 경로의 거부는 세션 체인과 같은 문제 유형을 쓰고, 틀린 운영자 토큰만 `admin-unauthorized` 로 가른다 | 승인 |
 | [0185](0185-admin-paths-stay-outside-the-llm-key-gate-and-look-only-at-the-role.md) | 운영자 경로는 LLM 키 관문 밖이다 — 역할만 본다 | 승인 |
+| [0186](0186-digests-follow-removed-articles-by-deleting-their-rows-and-show-no-summary-without-any-citation.md) | 다이제스트는 지운 기사의 행을 따라 지우고, 인용이 하나도 없는 종합문은 생성 때도 기사 삭제 뒤에도 보이지 않는다 | 승인 |
+| [0187](0187-the-digest-generators-local-substitute-always-stands-in-the-local-profile-and-real-generators-register-only-outside-it.md) | 다이제스트 생성기의 로컬 대체물은 `local` 에서 언제나 서고, 실제 생성기는 `local` 밖에서만 등록된다 | 승인 |
 
 ## 운영 규칙
 

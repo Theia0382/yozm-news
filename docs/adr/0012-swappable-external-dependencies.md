@@ -1,6 +1,6 @@
 # ADR-0012: 외부 의존성은 교체 가능하게, 개발 환경에는 로컬 대체물을 둔다
 
-- 상태: 승인. 부분 대체 — 평가기를 끌 수 있다는 부분([ADR-0061](0061-worker-role-does-not-run-without-an-evaluator.md)) · 외부 로그인과 개발용 mock OIDC([ADR-0123](0123-v1-login-is-local-only-and-oidc-and-account-linking-come-after-v1.md)) · Compose 프로필 `prod`([ADR-0021](0021-separate-deploy-compose-with-single-app-service.md)) · Fake 구현을 막는 기동 시 검사([ADR-0057](0057-local-substitutes-registered-only-in-local-profile-without-operator-switch.md)) · 클라이언트 IP 의 신뢰할 프록시 헤더 설정이 앱에 있다는 부분([ADR-0168](0168-client-ip-is-read-by-the-proxy-from-trusted-ranges-right-to-left-and-passed-as-one-overwritten-header.md))
+- 상태: 승인. 부분 대체 — 평가기를 끌 수 있다는 부분([ADR-0061](0061-worker-role-does-not-run-without-an-evaluator.md)) · 외부 로그인과 개발용 mock OIDC([ADR-0123](0123-v1-login-is-local-only-and-oidc-and-account-linking-come-after-v1.md)) · Compose 프로필 `prod`([ADR-0021](0021-separate-deploy-compose-with-single-app-service.md)) · Fake 구현을 막는 기동 시 검사([ADR-0057](0057-local-substitutes-registered-only-in-local-profile-without-operator-switch.md)) · 클라이언트 IP 의 신뢰할 프록시 헤더 설정이 앱에 있다는 부분([ADR-0168](0168-client-ip-is-read-by-the-proxy-from-trusted-ranges-right-to-left-and-passed-as-one-overwritten-header.md)) · `local` 에서 키를 넣으면 실제 LLM 으로 다이제스트를 확인한다는 부분([ADR-0187](0187-the-digest-generators-local-substitute-always-stands-in-the-local-profile-and-real-generators-register-only-outside-it.md))
 - 날짜: 2026-10-25
 - 관련: [ADR-0006](0006-deployment-compose-cloudflare.md), [ADR-0009](0009-authentication-google-and-local.md), [ADR-0011](0011-no-email-in-v1.md)
 
@@ -41,7 +41,7 @@
   - `dev`: `postgres`, `mock-oauth2-server`, (메일 도입 후) `mailpit`
   > 부분 대체 — [ADR-0021](0021-separate-deploy-compose-with-single-app-service.md). 지금 상태: [`development/infrastructure` "개발용 Compose"](../development/infrastructure.md#개발용-compose) · [`operations/deployment` "서비스"](../operations/deployment.md#서비스)
   - `prod`: `proxy`, `web`, `worker`, `postgres`, `cloudflared`, `backup`
-> 부분 대체(첫 문장의 mock OIDC 공급자 등록) — [ADR-0123](0123-v1-login-is-local-only-and-oidc-and-account-linking-come-after-v1.md). 지금 상태: [platform Spec "로컬 개발"](../specs/platform.md#로컬-개발) platform-R18
+> 부분 대체 — 첫 문장의 mock OIDC 공급자 등록은 [ADR-0123](0123-v1-login-is-local-only-and-oidc-and-account-linking-come-after-v1.md), 둘째 문장의 LLM 부분은 [ADR-0187](0187-the-digest-generators-local-substitute-always-stands-in-the-local-profile-and-real-generators-register-only-outside-it.md). 지금 상태: [platform Spec "로컬 개발"](../specs/platform.md#로컬-개발) platform-R18 · [digest Spec "로컬 대체물"](../specs/digest.md#로컬-대체물) digest-R12
 - Spring profile `local`은 mock OIDC 공급자를 "Google" 자리에 등록하고, Jev와 LLM은 기본적으로 Fake 구현을 쓴다. 실제 Jev나 LLM으로 확인하고 싶을 때만 키를 환경 변수로 넣는다.
 > 부분 대체 — [ADR-0123](0123-v1-login-is-local-only-and-oidc-and-account-linking-come-after-v1.md)
 - 실제 Google 로그인은 스테이징·운영 환경에서만 확인한다. Google OAuth 동의 화면을 "테스트" 상태로 두면 지정한 테스트 사용자로만 로그인할 수 있어, 검수 없이 스테이징에서 쓸 수 있다.
@@ -69,3 +69,4 @@
 - 2026-11-04: 의존성 표에 없는 임베딩 — [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md) · [evaluation Spec `ArticleEmbedder`](../specs/evaluation.md#articleembedder)
 - 2026-11-14: 의존성 표 "LLM (OpenAI, Anthropic)" 행의 개발 · 테스트 대체물 — [ADR-0155](0155-llm-local-substitute-takes-only-keys-with-a-fixed-prefix-in-the-local-profile.md) · [llm Spec](../specs/llm.md#로컬-대체물) llm-R16
 - 2026-11-15: 의존성 표 "봇 차단 (Turnstile)" 행 — [ADR-0172](0172-bot-checks-use-turnstile-or-off-pass-when-the-verifier-is-unreachable-and-match-the-action.md) · [`user` "요청 방어"](../specs/user.md#요청-방어) user-R41
+- 2026-11-16: 의존성 표 "LLM (OpenAI, Anthropic)" 행의 고정 응답 다이제스트 생성기 — [ADR-0187](0187-the-digest-generators-local-substitute-always-stands-in-the-local-profile-and-real-generators-register-only-outside-it.md) · [digest Spec "로컬 대체물"](../specs/digest.md#로컬-대체물) digest-R12
