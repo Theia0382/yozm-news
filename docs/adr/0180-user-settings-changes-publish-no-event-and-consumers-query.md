@@ -26,3 +26,7 @@
 |---|---|
 | 사용자 ID 와 바뀐 갈래만 싣고 낸다 | 갈래의 단위가 맞는지 확인할 소비자가 없는데 계약이 먼저 굳는다 |
 | 바뀐 뒤의 설정 전체를 싣는다 | 설정 사본이 퍼지고 이벤트 재처리 때 옛 사본이 최신 값을 덮을 수 있다 |
+
+## 후속 기록
+
+- 2026-11-16: 결과 "소비자용 공개 조회도 소비자의 작업이 연다" — 결정 범위(사용자 설정 · 태그 선호) 밖인 스토리라인 구독의 소비자 조회는 구독을 만든 작업이 열었다([ADR-0191](0191-the-consumer-query-of-storyline-subscriptions-is-opened-with-the-subscriptions-and-resolves-ids-without-writing.md)), 지금 상태는 [user Spec "스토리라인 구독"](../specs/user.md#스토리라인-구독)(user-R55)
