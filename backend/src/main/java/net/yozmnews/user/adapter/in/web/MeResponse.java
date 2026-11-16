@@ -13,7 +13,7 @@ import org.jspecify.annotations.Nullable;
  * @param displayName 표시 이름 — 익명이면 null
  * @param role 역할 — 익명이면 null
  * @param passwordChangeRequired 비밀번호를 바꿔야 하는가 — 바꾸기 전에는 비밀번호 변경 · 로그인 상태 조회 · 로그아웃만 쓴다. 익명이면 거짓
- * @param llmKeyRequired LLM 키가 없는가 — 등록하기 전에는 키 등록 · 계정 · 알림만 쓴다. 익명이면 거짓
+ * @param llmKeyRequired LLM 키가 없는가 — 등록하기 전에는 키 등록 · 계정 · 알림 · 관심 설정만 쓴다. 익명이면 거짓
  */
 record MeResponse(MeResult result, @Nullable Long userId, @Nullable String email, @Nullable String displayName,
 		@Nullable AccountRole role, boolean passwordChangeRequired, boolean llmKeyRequired) {

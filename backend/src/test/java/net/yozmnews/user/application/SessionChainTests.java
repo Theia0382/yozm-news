@@ -231,7 +231,7 @@ class SessionChainTests {
 			.andExpect(status().isForbidden())
 			.andExpect(content().json("""
 					{"type":"urn:yozmnews:problem:llm-key-required","title":"LLM 키를 등록해야 한다","status":403,
-					 "detail":"LLM 키를 등록하기 전에는 키 등록 · 계정 · 알림만 쓴다","instance":"/api/test/session/me"}
+					 "detail":"LLM 키를 등록하기 전에는 키 등록 · 계정 · 알림 · 관심 설정만 쓴다","instance":"/api/test/session/me"}
 					""", JsonCompareMode.STRICT));
 		// 변경 전 허용 표시는 키 관문을 열지 않는다
 		this.mockMvc.perform(get("/api/test/session/before-password-change").cookie(session))

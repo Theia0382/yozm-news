@@ -232,7 +232,7 @@ class SecurityConfiguration {
 			case PASSWORD_CHANGE_REQUIRED -> passwordChangeRequired(request, problems);
 			case LLM_KEY_REQUIRED -> problems.problem(ProblemTypes.LLM_KEY_REQUIRED,
 					ProblemTypes.LLM_KEY_REQUIRED_TITLE, HttpStatus.FORBIDDEN,
-					"LLM 키를 등록하기 전에는 키 등록 · 계정 · 알림만 쓴다", request);
+					"LLM 키를 등록하기 전에는 키 등록 · 계정 · 알림 · 관심 설정만 쓴다", request);
 			// 여는 판정은 거부 처리기에 오지 않고, 세션 사용자가 없는 거부는 인증 진입점이 401 로 낸다
 			case OPEN, UNAUTHENTICATED ->
 				throw new IllegalStateException("세션 체인의 거부 처리기에 올 수 없는 판정이다: " + denial);
