@@ -6,7 +6,9 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import net.yozmnews.storyline.domain.storyline.StoredStoryline;
@@ -20,7 +22,7 @@ import org.springframework.stereotype.Repository;
  * <p>
  * 행의 투영({@link #COLUMNS} — 구성 사건 수는 소속 행 수)이 한 벌이다. 쪽은 주어진 스토리라인 ID 가운데 {@code (last_article_at, id)}
  * 커서다.
- * 찾기는 합쳐진 행이면 {@code merged_into} 를 한 번 따른다 — 가리킴이 평평하다(storyline-R18).
+ * 찾기({@link #findAll} — {@link #find} 는 그 한 건)는 합쳐진 행이면 {@code merged_into} 를 한 번 따른다 — 가리킴이 평평하다(storyline-R18).
  */
 @Repository
 class JdbcStorylineQueryRepository implements StorylineQueryRepository {
@@ -47,10 +49,26 @@ class JdbcStorylineQueryRepository implements StorylineQueryRepository {
 
 	@Override
 	public Optional<StoredStoryline> find(long storylineId) {
-		return this.jdbc.sql("select " + COLUMNS + """
-				from storylines s
-				where s.id = coalesce((select m.merged_into from storylines m where m.id = :id), :id)
-				""").param("id", storylineId).query(JdbcStorylineQueryRepository::storyline).optional();
+		return Optional.ofNullable(findAll(List.of(storylineId)).get(storylineId));
+	}
+
+	@Override
+	public Map<Long, StoredStoryline> findAll(Collection<Long> storylineIds) {
+		if (storylineIds.isEmpty()) {
+			return Map.of();
+		}
+		Map<Long, StoredStoryline> found = new LinkedHashMap<>();
+		this.jdbc.sql("select r.requested, " + COLUMNS + """
+				from (select distinct requested from unnest(:ids) as u(requested)) r
+				join storylines m on m.id = r.requested
+				join storylines s on s.id = coalesce(m.merged_into, m.id)
+				order by r.requested
+				""")
+			.param("ids", storylineIds.toArray(Long[]::new))
+			.query((rs, row) -> Map.entry(rs.getLong("requested"), storyline(rs, row)))
+			.list()
+			.forEach(entry -> found.put(entry.getKey(), entry.getValue()));
+		return found;
 	}
 
 	@Override

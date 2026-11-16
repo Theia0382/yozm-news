@@ -26,8 +26,11 @@ import net.yozmnews.event.EventsChanged;
 import net.yozmnews.platform.VectorText;
 import net.yozmnews.storyline.LinkedBy;
 import net.yozmnews.storyline.RelationOutcome;
+import net.yozmnews.storyline.RetiredStoryline;
+import net.yozmnews.storyline.StorylineId;
 import net.yozmnews.storyline.StorylineRows;
 import net.yozmnews.storyline.StorylineState;
+import net.yozmnews.storyline.StorylinesRetired;
 import net.yozmnews.storyline.domain.linking.LinkingCriteria;
 import net.yozmnews.storyline.domain.linking.LinkingCriteriaRepository;
 import net.yozmnews.storyline.domain.linking.Representation;
@@ -50,9 +53,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.event.ApplicationEvents;
+import org.springframework.test.context.event.RecordApplicationEvents;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
@@ -73,6 +79,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
+@RecordApplicationEvents
 @TestPropertySource(properties = "jobrunr.background-job-server.enabled=false")
 @ExtendWith(OutputCaptureExtension.class)
 class LinkingFlowTests {
@@ -108,6 +115,12 @@ class LinkingFlowTests {
 
 	@Autowired
 	JdbcClient jdbc;
+
+	@Autowired
+	ApplicationEventPublisher publisher;
+
+	@Autowired
+	ApplicationEvents published;
 
 	@BeforeEach
 	@AfterEach
@@ -199,13 +212,15 @@ class LinkingFlowTests {
 			.containsEntry("criteria_id", null);
 		// e1 [1,0] × 3 + e9 [1,0] × 2
 		assertThat(storylineRow(storyline)).containsEntry("centroid", "[1,0]").containsEntry("article_count", 5);
-		// 사건 둘이 남아 정돈은 그대로 둔다(대조 — storyline-R17)
+		// 사건 둘이 남아 정돈은 그대로 둔다(대조 — storyline-R17). 합치거나 지운 스토리라인이 없어 알리지 않는다(대조 — storyline-R35)
 		assertThat(mergedInto(storyline)).isNull();
+		assertThat(retired()).isEmpty();
 	}
 
 	@Test
 	void aPairThatWasOneHappeningIsDissolved() {
 		Pair pair = openPair();
+		long storyline = onlyStoryline();
 		StorylineRows.merge(this.jdbc, pair.e2(), pair.e1());
 		this.queue.enqueue(pair.e2(), null, NOW);
 
@@ -214,12 +229,15 @@ class LinkingFlowTests {
 		// e2 를 e1 에 합쳐 사건 하나만 남았고 e1 은 다른 스토리라인에 없다 — 풀고 e1 을 첫 기사 시각으로 다시 넣는다(storyline-R17)
 		assertThat(storylineIds()).isEmpty();
 		assertThat(queued(pair.e1())).hasValueSatisfying(row -> assertThat(row).containsEntry("order_at", "2026-11-05T00:00:00Z"));
+		// 푼 스토리라인을 남은 사건 e1 과 함께 알린다(storyline-R35)
+		assertThat(retired()).containsExactly(List.of(new RetiredStoryline(new StorylineId(storyline), new EventId(pair.e1()))));
 
 		round(evenly()).run();
 
 		// e1 은 이웃이 없어 소속 없이 남는다 — 풀기가 다시 이어지지 않는다
 		assertThat(storylineIds()).isEmpty();
 		assertThat(queued(pair.e1())).isEmpty();
+		assertThat(retired()).hasSize(1);
 	}
 
 	@Test
@@ -234,6 +252,7 @@ class LinkingFlowTests {
 		// e2 하나만 남았고 다른 스토리라인에 없다 — 풀고 e2 를 다시 넣는다. e2 에는 알림이 없어 이 넣기가 유일한 계기다(storyline-R17)
 		assertThat(storylineIds()).isEmpty();
 		assertThat(queued(pair.e2())).hasValueSatisfying(row -> assertThat(row).containsEntry("order_at", "2026-11-05T03:00:00Z"));
+		assertThat(retired()).containsExactly(List.of(new RetiredStoryline(new StorylineId(storyline), new EventId(pair.e2()))));
 		assertThat(this.jdbc.sql("select count(*) from storyline_key_terms where storyline_id = :id")
 			.param("id", storyline)
 			.query(Long.class)
@@ -265,6 +284,23 @@ class LinkingFlowTests {
 		assertThat(mergedInto(storyline)).isNull();
 		assertThat(queued(pair.e2())).isEmpty();
 		assertThat(queued(e3)).isEmpty();
+		assertThat(retired()).isEmpty();
+	}
+
+	@Test
+	void aStorylineLosingItsLastEventIsRemovedAndRetired() {
+		// 사건 하나짜리 스토리라인(정돈 전에 남은 것 — storyline-R17)의 마지막 사건을 지운다. 사건 둘을 한 회차에 지우면 첫 사건에서
+		// 하나가 남아 풀기가 먼저 일어나므로, 지우기는 이 꼴에서 생긴다
+		long only = sameEvent();
+		long storyline = seed(only);
+		StorylineRows.delete(this.jdbc, only);
+		this.queue.enqueue(only, null, NOW);
+
+		round(evenly()).run();
+
+		// 구성 사건이 하나도 남지 않아 지운다 — 가리킬 남은 사건이 없다(storyline-R13 · R35)
+		assertThat(storylineIds()).isEmpty();
+		assertThat(retired()).containsExactly(List.of(new RetiredStoryline(new StorylineId(storyline), null)));
 	}
 
 	@Test
@@ -288,6 +324,8 @@ class LinkingFlowTests {
 		assertThat(memberIds(l1)).containsExactly(pair.e1(), pair.e2());
 		assertThat(mergedInto(l1)).isNull();
 		assertThat(liveStorylineIds()).containsExactly(l1);
+		// 합쳐진 L2 만 알린다 — 남는 L1 은 싣지 않는다(storyline-R35)
+		assertThat(retired()).containsExactly(List.of(new RetiredStoryline(new StorylineId(l2), null)));
 	}
 
 	@Test
@@ -392,6 +430,7 @@ class LinkingFlowTests {
 		assertThat(memberIds(l1)).containsExactly(pair.e1(), pair.e2());
 		assertThat(liveStorylineIds()).containsExactly(l1);
 		assertThat(queued(pair.e1())).isEmpty();
+		assertThat(retired()).containsExactly(List.of(new RetiredStoryline(new StorylineId(l2), null)));
 	}
 
 	@Test
@@ -803,7 +842,7 @@ class LinkingFlowTests {
 
 	private LinkingRound round(EventDirectory events, LinkingCriteria criteria) {
 		return new LinkingRound(this.queue, this.criteria, criteria,
-				new StorylineLinker(events, this.storylines, this.queue, this.relations, this.relationQueue),
+				new StorylineLinker(events, this.storylines, this.queue, this.relations, this.relationQueue, this.publisher),
 				this.transaction, InstantSource.fixed(NOW));
 	}
 
@@ -938,6 +977,11 @@ class LinkingFlowTests {
 				       to_char(order_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as order_at
 				from storyline_linking_queue where event_id = :event
 				""").param("event", event).query().listOfRows().stream().findFirst();
+	}
+
+	/** 정돈마다 알린 합치거나 지운 스토리라인 — 발행 순(storyline-R35) */
+	private List<List<RetiredStoryline>> retired() {
+		return this.published.stream(StorylinesRetired.class).map(StorylinesRetired::storylines).toList();
 	}
 
 	private record Pair(long e1, long e2) {

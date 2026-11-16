@@ -99,6 +99,22 @@ class StorylineDirectoryService implements StorylineDirectory {
 	}
 
 	@Override
+	public Map<StorylineId, StorylineView> findAll(Collection<StorylineId> ids) {
+		Map<Long, StoredStoryline> found = this.storylines.findAll(ids.stream().map(StorylineId::value).toList());
+		if (found.isEmpty()) {
+			return Map.of();
+		}
+		// 남는 스토리라인마다 한 번만 값을 만든다 — 받은 ID 여럿이 같은 남는 스토리라인을 가리킬 수 있다
+		Map<Long, StoredStoryline> survivors = new LinkedHashMap<>();
+		found.values().forEach(stored -> survivors.putIfAbsent(stored.id(), stored));
+		Map<Long, StorylineView> views = new LinkedHashMap<>();
+		views(List.copyOf(survivors.values())).forEach(view -> views.put(view.id().value(), view));
+		Map<StorylineId, StorylineView> result = new LinkedHashMap<>();
+		found.forEach((requested, stored) -> result.put(new StorylineId(requested), views.get(stored.id())));
+		return result;
+	}
+
+	@Override
 	public List<StorylineEvent> events(StorylineId id) {
 		Optional<StoredStoryline> stored = this.storylines.find(id.value());
 		if (stored.isEmpty()) {
