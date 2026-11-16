@@ -1,7 +1,6 @@
 package net.yozmnews.evaluation;
 
 import java.util.Map;
-import java.util.Objects;
 
 import org.jspecify.annotations.Nullable;
 
@@ -23,21 +22,7 @@ public sealed interface MembershipJudgement {
 		 * 있거나 원본이 있는데 확률이 없을 때
 		 */
 		public Judged {
-			Objects.requireNonNull(probabilities, "probabilities");
-			if ((judgement == null) != probabilities.isEmpty()) {
-				throw new IllegalArgumentException("판정 원본은 확률이 있을 때만 있다: 원본 " + judgement + ", 확률 " + probabilities);
-			}
-			probabilities.forEach((eventId, probability) -> {
-				Objects.requireNonNull(eventId, "eventId");
-				Objects.requireNonNull(probability, "probability");
-				if (eventId < 1) {
-					throw new IllegalArgumentException("사건 ID 는 1 이상이다: " + eventId);
-				}
-				if (!Double.isFinite(probability) || probability < 0 || probability > 1) {
-					throw new IllegalArgumentException("확률은 0 ~ 1 의 유한값이다: " + probability);
-				}
-			});
-			probabilities = Map.copyOf(probabilities);
+			probabilities = MembershipChecks.judged(judgement, probabilities, "사건");
 		}
 
 	}
@@ -53,11 +38,7 @@ public sealed interface MembershipJudgement {
 		 * @throws IllegalArgumentException 문구가 공백뿐일 때
 		 */
 		public Failed {
-			Objects.requireNonNull(kind, "kind");
-			Objects.requireNonNull(message, "message");
-			if (message.isBlank()) {
-				throw new IllegalArgumentException("실패 문구가 비었다");
-			}
+			MembershipChecks.failed(kind, message);
 		}
 
 	}
