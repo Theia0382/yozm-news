@@ -7,6 +7,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 
+import net.yozmnews.evaluation.FlowMembershipJudgementId;
 import net.yozmnews.evaluation.RelationJudgementId;
 import net.yozmnews.event.EventId;
 import net.yozmnews.storyline.LinkScore;
@@ -17,6 +18,7 @@ import net.yozmnews.storyline.StorylineRelationAsked;
 import net.yozmnews.storyline.StorylineRelationCriteria;
 import net.yozmnews.storyline.StorylineRelationDetail;
 import net.yozmnews.storyline.StorylineReview;
+import net.yozmnews.storyline.domain.linking.Asked;
 import net.yozmnews.storyline.domain.linking.LinkingCriteria;
 import net.yozmnews.storyline.domain.linking.LinkingCriteriaRepository;
 import net.yozmnews.storyline.domain.linking.Score;
@@ -82,11 +84,12 @@ class StorylineReviewService implements StorylineReview {
 				.map(LinkJudgement::criteriaId)
 				.filter(criteria -> criteria != null)
 				.forEach(criteriaIds::add));
-		Map<Long, LinkingCriteria> criteria = this.linking.findAll(criteriaIds);
+		Map<Long, StorylineLinkingCriteria> criteria = this.linking.findAll(criteriaIds);
 		List<StorylineMembership> found = new ArrayList<>();
 		judgements.forEach((storyline, byEvent) -> byEvent.forEach((event, judgement) -> found
 			.add(new StorylineMembership(new StorylineId(storyline), new EventId(event), judgement.linkedBy(),
-					score(judgement.score()), linkingCriteria(criteria, judgement.criteriaId()), judgement.linkedAt()))));
+					score(judgement.score()), linkingCriteria(criteria, judgement.criteriaId()), probability(judgement),
+					judgementId(judgement), judgement.linkedAt()))));
 		return List.copyOf(found);
 	}
 
@@ -125,7 +128,8 @@ class StorylineReviewService implements StorylineReview {
 
 	@Override
 	public StorylineLinkingCriteria linkingCriteria() {
-		return new StorylineLinkingCriteria(this.currentLinking.window(), this.currentLinking.threshold());
+		return new StorylineLinkingCriteria(this.currentLinking.window(), this.currentLinking.lower(),
+				this.currentLinking.upper(), this.currentLinking.probability());
 	}
 
 	@Override
@@ -137,16 +141,27 @@ class StorylineReviewService implements StorylineReview {
 		return (score == null) ? null : new LinkScore(score.score(), score.cosine(), score.overlap());
 	}
 
-	private static @Nullable StorylineLinkingCriteria linkingCriteria(Map<Long, LinkingCriteria> criteria,
+	private static @Nullable StorylineLinkingCriteria linkingCriteria(Map<Long, StorylineLinkingCriteria> criteria,
 			@Nullable Long criteriaId) {
 		if (criteriaId == null) {
 			return null;
 		}
-		LinkingCriteria found = criteria.get(criteriaId);
+		StorylineLinkingCriteria found = criteria.get(criteriaId);
 		if (found == null) {
 			throw new IllegalStateException("소속이 가리키는 잇기 기준 이력이 없다: " + criteriaId);
 		}
-		return new StorylineLinkingCriteria(found.window(), found.threshold());
+		return found;
+	}
+
+	private static @Nullable Double probability(LinkJudgement judgement) {
+		Asked asked = judgement.asked();
+		return (asked == null) ? null : asked.probability();
+	}
+
+	private static @Nullable FlowMembershipJudgementId judgementId(LinkJudgement judgement) {
+		Asked asked = judgement.asked();
+		return (asked == null || asked.judgementId() == null) ? null
+				: new FlowMembershipJudgementId(asked.judgementId());
 	}
 
 	private static StorylineRelationCriteria relationCriteria(@Nullable RelationCriteria criteria) {

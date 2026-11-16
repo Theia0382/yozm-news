@@ -189,15 +189,15 @@ class AdminStorylineControllerTests {
 				new StorylineEvent(event(85, EventStatus.CLOSED, 1), false)));
 		this.review.memberships.put(7L, List.of(
 				new StorylineMembership(new StorylineId(7), new EventId(70), LinkedBy.RULE, new LinkScore(0.81, 0.77, 0.4),
-						FakeStorylineReview.LINKING, T),
-				new StorylineMembership(new StorylineId(7), new EventId(80), LinkedBy.MERGE, null, null, T),
+						FakeStorylineReview.LINKING, null, null, T),
+				new StorylineMembership(new StorylineId(7), new EventId(80), LinkedBy.MERGE, null, null, null, null, T),
 				new StorylineMembership(new StorylineId(8), new EventId(80), LinkedBy.PAIR, new LinkScore(0.7, 0.66, 0.2),
-						FakeStorylineReview.LINKING, T),
+						FakeStorylineReview.LINKING, null, null, T),
 				new StorylineMembership(new StorylineId(8), new EventId(85), LinkedBy.RULE, new LinkScore(0.9, 0.88, 0.5),
-						FakeStorylineReview.LINKING, T),
+						FakeStorylineReview.LINKING, null, null, T),
 				// 타임라인에 없는 사건(그새 합쳐짐)의 근거는 싣지 않는다
 				new StorylineMembership(new StorylineId(8), new EventId(99), LinkedBy.RULE, new LinkScore(0.6, 0.6, 0.1),
-						FakeStorylineReview.LINKING, T)));
+						FakeStorylineReview.LINKING, null, null, T)));
 		this.review.relations.put(7L, List.of(
 				new StorylineRelationDetail(new StorylineRelationView(StorylineRelationKind.CONTAINS, new StorylineId(7),
 						new StorylineId(8), T), 0.7, new RelationJudgementId(41), FakeStorylineReview.RELATION),

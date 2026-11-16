@@ -57,11 +57,11 @@ class StorylineReviewFlowTests {
 
 	private static final Instant LINKED_AT = Instant.parse("2026-11-06T03:00:00Z");
 
-	private static final LinkingCriteria LINKING = new LinkingCriteria(Duration.ofDays(3), 0.62);
+	private static final LinkingCriteria LINKING = new LinkingCriteria(Duration.ofDays(3), 0.62, 0.62, 0.50);
 
 	private static final RelationCriteria RELATION = new RelationCriteria(0.60, 0.20, 3, 0.88, Duration.ofDays(14));
 
-	private static final StorylineLinkingCriteria LINKING_VIEW = new StorylineLinkingCriteria(Duration.ofDays(3), 0.62);
+	private static final StorylineLinkingCriteria LINKING_VIEW = new StorylineLinkingCriteria(Duration.ofDays(3), 0.62, 0.62, 0.50);
 
 	private static final StorylineRelationCriteria RELATION_VIEW = new StorylineRelationCriteria(0.60, 0.20, 3, 0.88,
 			Duration.ofDays(14));
@@ -103,7 +103,7 @@ class StorylineReviewFlowTests {
 	void plant() {
 		StorylineRows.clear(this.jdbc);
 		this.review = new StorylineReviewService(this.storylines, this.memberships, this.relations, this.linking,
-				new LinkingCriteria(Duration.ofDays(5), 0.7),
+				new LinkingCriteria(Duration.ofDays(5), 0.7, 0.7, 0.50),
 				new RelationCriteria(0.65, 0.25, 4, 0.9, Duration.ofDays(21)));
 		this.e1 = event();
 		this.e2 = event();
@@ -116,12 +116,12 @@ class StorylineReviewFlowTests {
 		long linkingId = this.linking.register(LINKING, NOW);
 		long relationId = this.relations.registerCriteria(RELATION, NOW);
 		this.memberships.addMember(this.parent, this.e1,
-				LinkJudgement.judged(LinkedBy.RULE, new Score(0.81, 0.77, 0.4), linkingId, LINKED_AT));
+				LinkJudgement.judged(LinkedBy.RULE, new Score(0.81, 0.77, 0.4), linkingId, null, LINKED_AT));
 		this.memberships.addMember(this.parent, this.e3, LinkJudgement.merged(LINKED_AT.plusSeconds(60)));
 		this.memberships.addMember(this.child, this.e2,
-				LinkJudgement.judged(LinkedBy.PAIR, new Score(0.7, 0.66, 0.2), linkingId, LINKED_AT));
+				LinkJudgement.judged(LinkedBy.PAIR, new Score(0.7, 0.66, 0.2), linkingId, null, LINKED_AT));
 		this.memberships.addMember(this.child, this.e3,
-				LinkJudgement.judged(LinkedBy.RULE, new Score(0.9, 0.88, 0.5), linkingId, LINKED_AT));
+				LinkJudgement.judged(LinkedBy.RULE, new Score(0.9, 0.88, 0.5), linkingId, null, LINKED_AT));
 		// 포함 parent ⊃ child, 이어짐 parent → follower
 		this.relations.link(new Relation(this.parent, this.child, RelationKind.CONTAINS), 0.7, 41, relationId, NOW);
 		this.relations.link(new Relation(this.parent, this.follower, RelationKind.FOLLOWS), 0.66, 42, relationId, NOW);
@@ -143,13 +143,13 @@ class StorylineReviewFlowTests {
 	void membershipsCoverTheStorylineAndItsDescendantsWithTheirJudgements() {
 		List<StorylineMembership> expected = List.of(
 				new StorylineMembership(new StorylineId(this.parent), new EventId(this.e1), LinkedBy.RULE,
-						new LinkScore(0.81, 0.77, 0.4), LINKING_VIEW, LINKED_AT),
+						new LinkScore(0.81, 0.77, 0.4), LINKING_VIEW, null, null, LINKED_AT),
 				new StorylineMembership(new StorylineId(this.parent), new EventId(this.e3), LinkedBy.MERGE, null, null,
-						LINKED_AT.plusSeconds(60)),
+						null, null, LINKED_AT.plusSeconds(60)),
 				new StorylineMembership(new StorylineId(this.child), new EventId(this.e2), LinkedBy.PAIR,
-						new LinkScore(0.7, 0.66, 0.2), LINKING_VIEW, LINKED_AT),
+						new LinkScore(0.7, 0.66, 0.2), LINKING_VIEW, null, null, LINKED_AT),
 				new StorylineMembership(new StorylineId(this.child), new EventId(this.e3), LinkedBy.RULE,
-						new LinkScore(0.9, 0.88, 0.5), LINKING_VIEW, LINKED_AT));
+						new LinkScore(0.9, 0.88, 0.5), LINKING_VIEW, null, null, LINKED_AT));
 
 		assertThat(this.review.memberships(new StorylineId(this.parent))).isEqualTo(expected);
 		// 합쳐진 ID 는 남는 쪽을 따른다
@@ -198,7 +198,7 @@ class StorylineReviewFlowTests {
 
 	@Test
 	void theCurrentCriteriaAreTheSettings() {
-		assertThat(this.review.linkingCriteria()).isEqualTo(new StorylineLinkingCriteria(Duration.ofDays(5), 0.7));
+		assertThat(this.review.linkingCriteria()).isEqualTo(new StorylineLinkingCriteria(Duration.ofDays(5), 0.7, 0.7, 0.50));
 		assertThat(this.review.relationCriteria())
 			.isEqualTo(new StorylineRelationCriteria(0.65, 0.25, 4, 0.9, Duration.ofDays(21)));
 	}
