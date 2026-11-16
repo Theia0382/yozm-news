@@ -8,11 +8,8 @@ import {
 import { useAdminClient } from "@/features/admin/adminSession";
 import { ArticleTitle } from "@/features/admin/ArticleTitle";
 import { EVENT_KEY } from "@/features/admin/eventQueries";
-import {
-  decidedByLabels,
-  eventStatusLabels,
-  storylineStateLabels,
-} from "@/features/admin/labels";
+import { decidedByLabels, eventStatusLabels } from "@/features/admin/labels";
+import { storylineStateLabels } from "@/shared/lib/storylineState";
 import { formatProbability } from "@/features/admin/metrics";
 import { storylinePath } from "@/features/admin/storylineQueries";
 import { REVIEW_TABLE } from "@/features/admin/tables";
