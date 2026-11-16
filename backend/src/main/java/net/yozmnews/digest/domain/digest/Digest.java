@@ -7,6 +7,10 @@ import java.util.Objects;
 import java.util.Optional;
 
 import org.jspecify.annotations.Nullable;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.PersistenceCreator;
+import org.springframework.data.annotation.Version;
+import org.springframework.data.relational.core.mapping.Table;
 
 import net.yozmnews.digest.domain.generator.TokenUsage;
 import net.yozmnews.llm.LlmModel;
@@ -18,12 +22,14 @@ import net.yozmnews.platform.UserId;
  * <p>
  * 바꾸는 메서드는 새 값을 돌려준다. 공급자 · 모델은 시작할 때 요청의 쓸 모델을 적는다.
  */
+@Table("digests")
 public final class Digest {
 
 	/** 오류 메시지의 최대 코드 포인트 — 넘으면 자른다 */
 	public static final int MAX_ERROR_MESSAGE = 500;
 
-	private final @Nullable Long id;
+	@Id
+	private @Nullable Long id;
 
 	private final long userId;
 
@@ -59,8 +65,10 @@ public final class Digest {
 
 	private final @Nullable Instant completedAt;
 
-	private final @Nullable Long version;
+	@Version
+	private @Nullable Long version;
 
+	@PersistenceCreator
 	Digest(@Nullable Long id, long userId, LocalDate digestDate, Instant periodStart, Instant periodEnd,
 			DigestStatus status, DigestTrigger trigger, @Nullable String provider, @Nullable String model,
 			@Nullable Integer candidateCount, @Nullable Integer inputTokens, @Nullable Integer outputTokens,

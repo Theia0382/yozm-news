@@ -1,0 +1,199 @@
+package net.yozmnews.digest.application;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.time.InstantSource;
+import java.time.LocalDate;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.function.Supplier;
+
+import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.transaction.support.TransactionTemplate;
+
+import net.yozmnews.article.ArticleDirectory;
+import net.yozmnews.article.ArticleId;
+import net.yozmnews.digest.domain.candidate.CandidateSet;
+import net.yozmnews.digest.domain.candidate.DigestCandidate;
+import net.yozmnews.digest.domain.candidate.DigestCandidateRepository;
+import net.yozmnews.digest.domain.content.DigestSection;
+import net.yozmnews.digest.domain.content.DigestSectionRepository;
+import net.yozmnews.digest.domain.digest.Completion;
+import net.yozmnews.digest.domain.digest.Digest;
+import net.yozmnews.digest.domain.digest.DigestFailure;
+import net.yozmnews.digest.domain.digest.DigestId;
+import net.yozmnews.digest.domain.digest.DigestPeriod;
+import net.yozmnews.digest.domain.digest.DigestRepository;
+import net.yozmnews.digest.domain.digest.DigestStatus;
+import net.yozmnews.digest.domain.digest.DigestTrigger;
+import net.yozmnews.digest.domain.generator.DigestGenerator;
+import net.yozmnews.digest.domain.generator.DigestRequest;
+import net.yozmnews.digest.domain.generator.GeneratedOutput;
+import net.yozmnews.digest.domain.output.CitationCheck;
+import net.yozmnews.digest.domain.output.CitationResult;
+import net.yozmnews.digest.domain.output.DigestOutputReader;
+import net.yozmnews.digest.domain.output.OutputRead;
+import net.yozmnews.llm.LlmModel;
+import net.yozmnews.platform.UserId;
+
+/**
+ * 다이제스트 생성 유스케이스 — docs/specs/digest.md §4 · digest-R2 · digest-R8 · digest-R9
+ * <p>
+ * 시작(트랜잭션 ①) · 생성기 호출(트랜잭션 밖) · 읽기 · 검증 · 저장(트랜잭션 ②) 셋으로 나눈다. 두 트랜잭션은 다이제스트 행을 먼저, 후보
+ * 행을 다음에 잠근다. 트랜잭션 ② 는 다이제스트의 버전이 트랜잭션 ① 뒤의 값과 다르거나 이미 끝났으면 아무것도 쓰지 않는다. 생성기는 부를 때
+ * 찾는다 — 없으면 그 다이제스트를 실패로 끝낸다. 트랜잭션 안에서 부르면 거부한다.
+ */
+@Service
+public class DigestGeneration {
+
+	/** 생성기가 없을 때의 실패 메시지 */
+	static final String NO_GENERATOR = "생성기가 없다";
+
+	/** 인용이 남지 않았을 때의 실패 메시지 */
+	static final String NO_CITATION = "검증 뒤 인용이 하나도 남지 않았다";
+
+	/** 트랜잭션 안에서 불렀을 때의 예외 메시지 */
+	static final String IN_TRANSACTION = "다이제스트 생성을 트랜잭션 안에서 불렀다 — 생성기 호출은 트랜잭션 밖에서 한다";
+
+	private static final Logger logger = LoggerFactory.getLogger(DigestGeneration.class);
+
+	private final DigestRepository digests;
+
+	private final DigestSectionRepository sections;
+
+	private final DigestCandidateRepository candidates;
+
+	private final ArticleDirectory articles;
+
+	private final Supplier<@Nullable DigestGenerator> generator;
+
+	private final TransactionTemplate transaction;
+
+	private final InstantSource clock;
+
+	@Autowired
+	DigestGeneration(DigestRepository digests, DigestSectionRepository sections,
+			DigestCandidateRepository candidates, ArticleDirectory articles, ObjectProvider<DigestGenerator> generators,
+			TransactionTemplate transaction) {
+		this(digests, sections, candidates, articles, generators::getIfAvailable, transaction, InstantSource.system());
+	}
+
+	/** 시험이 생성기 공급자와 시계를 넣는다 */
+	DigestGeneration(DigestRepository digests, DigestSectionRepository sections, DigestCandidateRepository candidates,
+			ArticleDirectory articles, Supplier<@Nullable DigestGenerator> generator, TransactionTemplate transaction,
+			InstantSource clock) {
+		this.digests = digests;
+		this.sections = sections;
+		this.candidates = candidates;
+		this.articles = articles;
+		this.generator = generator;
+		this.transaction = transaction;
+		this.clock = Objects.requireNonNull(clock, "clock");
+	}
+
+	/** 생성을 기다리는 다이제스트를 만든다 */
+	public DigestId schedule(UserId user, LocalDate digestDate, DigestPeriod period, DigestTrigger trigger) {
+		return this.digests.save(Digest.schedule(user, digestDate, period, trigger, this.clock.instant())).id();
+	}
+
+	/**
+	 * 시작 → 후보가 있으면 생성 → 읽기 · 검증 → 저장. 끝난 다이제스트면 아무것도 하지 않는다.
+	 * @return 이 실행 뒤 그 다이제스트의 상태 — 다른 실행이 먼저 다시 시작했으면 그 실행 중의 상태
+	 * @throws IllegalArgumentException 없는 다이제스트이거나 후보에 같은 기사가 두 번 있을 때
+	 * @throws IllegalStateException 트랜잭션 안에서 불렀을 때 — 아무것도 쓰지 않는다
+	 */
+	public DigestStatus run(DigestId id, LlmModel model, List<DigestCandidate> candidates) {
+		Objects.requireNonNull(id, "id");
+		Objects.requireNonNull(model, "model");
+		if (TransactionSynchronizationManager.isActualTransactionActive()) {
+			throw new IllegalStateException(IN_TRANSACTION);
+		}
+		CandidateSet set = CandidateSet.of(candidates);
+		Started started = Objects.requireNonNull(this.transaction.execute(status -> start(id, model, set)));
+		if (started.finished() != null) {
+			return started.finished();
+		}
+		DigestGenerator generator = this.generator.get();
+		if (generator == null) {
+			return finish(id, started.version(),
+					() -> new Completion.Failed(DigestFailure.NO_GENERATOR, NO_GENERATOR, null, null));
+		}
+		Instant asked = this.clock.instant();
+		GeneratedOutput output = generator.generate(new DigestRequest(started.user(), model, set));
+		Duration took = Duration.between(asked, this.clock.instant());
+		return finish(id, started.version(), () -> complete(id, set, output, took));
+	}
+
+	private Started start(DigestId id, LlmModel model, CandidateSet set) {
+		Digest digest = lock(id);
+		if (digest.status().finished()) {
+			return new Started(digest.status(), digest.userId(), 0);
+		}
+		Digest running = this.digests.save(digest.start(model, set.size(), this.clock.instant()));
+		this.candidates.replace(id, set);
+		if (set.isEmpty()) {
+			Digest empty = this.digests.save(running.complete(new Completion.Empty(), this.clock.instant()));
+			return new Started(empty.status(), empty.userId(), 0);
+		}
+		return new Started(null, running.userId(), running.version().orElseThrow());
+	}
+
+	/** 다이제스트 행을 잠그고, 시작 뒤 그대로면 끝낸다 — 끝내는 방법은 잠근 뒤에 정한다 */
+	private DigestStatus finish(DigestId id, long version, Supplier<Completion> completion) {
+		return Objects.requireNonNull(this.transaction.execute(status -> {
+			Digest digest = lock(id);
+			if (digest.status().finished() || !digest.version().equals(Optional.of(version))) {
+				return digest.status();
+			}
+			return this.digests.save(digest.complete(completion.get(), this.clock.instant())).status();
+		}));
+	}
+
+	/** 트랜잭션 ② 안에서 — 후보 행 잠금 · 지운 기사 거르기 · 읽기 · 인용 검증 · 내용 저장 */
+	private Completion complete(DigestId id, CandidateSet set, GeneratedOutput output, Duration took) {
+		Set<ArticleId> kept = this.candidates.lockArticles(id);
+		Set<ArticleId> present = new HashSet<>(this.articles.findAll(kept).keySet());
+		present.retainAll(kept);
+		Set<ArticleId> gone = new HashSet<>(kept);
+		gone.removeAll(present);
+		this.candidates.delete(id, gone);
+		return switch (DigestOutputReader.read(output.text())) {
+			case OutputRead.Unreadable unreadable -> new Completion.Failed(DigestFailure.UNREADABLE_OUTPUT,
+					unreadable.reason(), output.usage(), took);
+			case OutputRead.Read read -> {
+				CitationResult cited = CitationCheck.check(read.draft(), set.retain(present));
+				if (cited.drops().removedRefs() > 0 || cited.drops().droppedItems() > 0 || read.overLimit() > 0) {
+					logger.info("다이제스트 출력에서 지운 것이 있다 — 다이제스트 {}, 지운 별칭 {}, 버린 항목 {}, 상한으로 버린 수 {}",
+							id.value(), cited.drops().removedRefs(), cited.drops().droppedItems(), read.overLimit());
+				}
+				yield switch (cited) {
+					case CitationResult.NoCitation none -> new Completion.Failed(DigestFailure.NO_CITATION,
+							NO_CITATION, output.usage(), took);
+					case CitationResult.Cited ok -> {
+						this.sections.saveAll(DigestSection.of(id, ok.digest()));
+						yield new Completion.Ready(output.usage(), took);
+					}
+				};
+			}
+		};
+	}
+
+	private Digest lock(DigestId id) {
+		return this.digests.lock(id.value())
+			.orElseThrow(() -> new IllegalArgumentException("없는 다이제스트다: " + id.value()));
+	}
+
+	/** 트랜잭션 ① 의 결과 — 끝났으면 그 상태, 아니면 생성기를 부를 사용자와 시작 뒤 버전 */
+	private record Started(@Nullable DigestStatus finished, UserId user, long version) {
+	}
+
+}

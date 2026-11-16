@@ -6,6 +6,10 @@ import java.util.Objects;
 import java.util.Optional;
 
 import org.jspecify.annotations.Nullable;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.PersistenceCreator;
+import org.springframework.data.relational.core.mapping.MappedCollection;
+import org.springframework.data.relational.core.mapping.Table;
 
 import net.yozmnews.digest.domain.candidate.DigestCandidate;
 import net.yozmnews.digest.domain.digest.DigestId;
@@ -18,9 +22,11 @@ import net.yozmnews.digest.domain.output.CitedStory;
  * <p>
  * 끝날 때 한 번 만들어 쓰고 바꾸지 않는다.
  */
+@Table("digest_sections")
 public final class DigestSection {
 
-	private final @Nullable Long id;
+	@Id
+	private @Nullable Long id;
 
 	private final long digestId;
 
@@ -32,8 +38,10 @@ public final class DigestSection {
 
 	private final @Nullable String body;
 
+	@MappedCollection(idColumn = "digest_section_id", keyColumn = "position")
 	private final List<DigestItem> items;
 
+	@PersistenceCreator
 	DigestSection(@Nullable Long id, long digestId, SectionKind kind, int position, @Nullable String title,
 			@Nullable String body, List<DigestItem> items) {
 		this.id = id;
