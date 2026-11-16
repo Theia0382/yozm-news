@@ -213,6 +213,20 @@ class SessionControllerTests {
 	}
 
 	@Test
+	void aMissingEmailWaitsLikeAnExistingAccount() throws Exception {
+		account("uma@example.com", AccountRole.USER);
+
+		// 이메일마다 네 번째 실패 뒤 바로 다섯 번째를 보낸다 — 그 사이가 요청 하나여야 1초 대기 안에 든다
+		String missing = fifthAfterFourFailures("nobody-wait@example.com");
+		String existing = fifthAfterFourFailures("uma@example.com");
+
+		assertThat(missing).isEqualTo("""
+				{"result":"WAIT","retryAfterSeconds":1}""");
+		assertThat(existing).as("있는 계정도 같은 본문 — 계정 유무가 드러나지 않는다").isEqualTo(missing);
+		assertThat(failures("nobody-wait@example.com")).as("없는 이메일도 같은 기록 — 대기 중 시도는 세지 않는다").isEqualTo(4);
+	}
+
+	@Test
 	void successForgetsTheFailures() throws Exception {
 		account("erin@example.com", AccountRole.USER);
 		this.mockMvc.perform(signIn("erin@example.com", "wrong horse battery", false)).andExpect(status().isOk());
@@ -294,6 +308,15 @@ class SessionControllerTests {
 
 	private static MockHttpServletRequestBuilder withCsrf(MockHttpServletRequestBuilder request) {
 		return request.cookie(new Cookie("XSRF-TOKEN", CSRF)).header("X-XSRF-TOKEN", CSRF);
+	}
+
+	/** 틀린 비밀번호로 네 번 실패한 뒤(각각 거절) 맞는 비밀번호로 다섯 번째 시도의 본문 */
+	private String fifthAfterFourFailures(String email) throws Exception {
+		for (int i = 0; i < 4; i++) {
+			assertThat(body(signIn(email, "wrong horse battery", false))).isEqualTo("""
+					{"result":"REJECTED","retryAfterSeconds":null}""");
+		}
+		return body(signIn(email, PASSWORD, false));
 	}
 
 	private String body(MockHttpServletRequestBuilder request) throws Exception {

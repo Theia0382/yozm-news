@@ -1,6 +1,7 @@
 package net.yozmnews.credential.adapter.in.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -27,10 +28,12 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
- * 키 경로의 응답과 로그에 키가 남지 않음 — 앱 전체를 띄워 등록(성공 · 실패 종류마다 · 예상 밖 예외 · 깨진 본문 · 빈 키) · 다시 검증 · 목록 ·
- * 삭제를 부르고, 모은 응답 본문과 캡처한 출력에 키와 그 끝 8자가 없음을 본다. 공급자 포트는 키마다 답을 정하는 대역이다.
+ * 키 경로의 응답과 로그에 키가 남지 않음 — 앱 전체를 띄워 등록(성공 · 실패 종류마다 · 예상 밖 예외 · 깨진 본문 — 하이픈 없는 키 포함 · 빈
+ * 키) · 다시 검증 · 목록 · 삭제를 부르고, 모은 응답 본문과 캡처한 출력에 키와 그 끝 8자가 없음을 본다. 공급자 포트는 키마다 답을 정하는 대역이다.
  * <p>
  * 지키는 규칙: credential-R19 · credential-R4
  */
@@ -54,6 +57,9 @@ class LlmKeyLeakTests {
 
 	@Autowired
 	ScriptedProviderClients provider;
+
+	@Autowired
+	JsonMapper json;
 
 	@Test
 	void responsesAndLogsOfEveryKeyPathCarryNoKey(CapturedOutput output) throws Exception {
@@ -98,13 +104,22 @@ class LlmKeyLeakTests {
 		this.provider.raise(stored, () -> new IllegalArgumentException("bad key " + stored));
 		bodies.add(body(post("/api/llm-keys/OPENAI/checks").with(user)));
 		bodies.add(body(delete("/api/llm-keys/OPENAI").with(user)));
+		// 깨진 본문 — 하이픈 없는 키는 파서의 "알 수 없는 토큰" 문구에 통째로 실린다. 그 문구가 로그 · 응답에 가지 않음을 본다
+		String bare = "skleakbare0123456789BAREEND";
+		keys.add(bare);
+		String bareBody = "{\"key\": " + bare + "}";
+		assertThatThrownBy(() -> this.json.readTree(bareBody)).as("파서 문구가 키를 싣는다 — 아래 부정 단언이 빈 통과가 아님")
+			.isInstanceOf(JacksonException.class)
+			.hasMessageContaining(bare);
+		bodies.add(body(put("/api/llm-keys/OPENAI").with(user).contentType(MediaType.APPLICATION_JSON).content(bareBody)));
 
 		// 대조 — 요청이 실제로 처리됐고 경고 로그가 캡처됐다. 아래의 부정 단언이 빈 응답 · 빈 출력 때문에 통과하는 것이 아니다
-		assertThat(bodies).hasSize(16);
+		assertThat(bodies).hasSize(17);
 		assertThat(bodies.get(0)).isEqualTo("""
 				{"result":"REJECTED","failure":"INVALID_KEY","key":null}""");
 		assertThat(bodies.get(10)).contains("\"result\":\"REGISTERED\"").contains("\"hint\":\"DEND\"");
 		assertThat(bodies.get(14)).contains("\"result\":\"UNDETERMINED\"").contains("\"failure\":\"UNEXPECTED\"");
+		assertThat(bodies.get(16)).contains("\"status\":400").contains("\"detail\":\"요청 본문의 형식이 틀렸다\"");
 		assertThat(output.getAll()).contains("LLM 키 확인 중 예상 못한 오류 — IllegalStateException")
 			.contains("LLM 키 확인 중 예상 못한 오류 — IllegalArgumentException");
 
