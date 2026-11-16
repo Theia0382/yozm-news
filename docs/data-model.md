@@ -68,6 +68,8 @@ erDiagram
     digests ||--o{ digest_sections : ""
     digest_sections ||--o{ digest_items : ""
     articles ||--o{ digest_items : ""
+    digests ||--o{ digest_candidates : ""
+    articles ||--o{ digest_candidates : ""
     articles ||--o{ feedback : ""
 
     reports ||--o{ report_sections : ""
@@ -96,12 +98,7 @@ erDiagram
 
 ## 다이제스트
 
-| 테이블 | 주요 컬럼 | 비고 |
-|---|---|---|
-| `digests` | id, user_id, digest_date, period_start, period_end, status(`SCHEDULED`/`RUNNING`/`READY`/`EMPTY`/`FAILED`), trigger(`SCHEDULED`/`MANUAL`), provider, model, candidate_count, input_tokens, output_tokens, duration_ms, error_code, error_message, created_at, completed_at | (user_id, digest_date, trigger, 순번)으로 여러 번 생성 이력을 남긴다. 화면에는 날짜별 최신 `READY`를 보여준다 |
-| `digest_sections` | id, digest_id, kind(`OVERVIEW`/`TOP_STORY`/`MORE_HEADLINES`), position, title, body | `TOP_STORY` 가 주요 뉴스다 |
-| `digest_items` | digest_section_id, article_id, position, note, selection_reason(`SUBSCRIBED`/`INTEREST`/`MAJOR_STORYLINE`) | 섹션이 인용한 기사와 선정 이유. 노출 기록이다 |
-| `digest_candidates` | digest_id, article_id, alias | 이번 생성에 넣은 후보와 별칭. 디버깅과 품질 분석용 |
+다이제스트 테이블(`digests` · `digest_sections` · `digest_items` · `digest_candidates`)은 [digest Spec §6](specs/digest.md#6-데이터)에 있다. 인용(`digest_items`)과 후보 행(`digest_candidates`)은 기사를 ID 로 가리킨다 — 모듈 사이라 FK 가 없고, 지운 기사는 `digest` 가 따른다([digest Spec](specs/digest.md#지운-기사-따르기) digest-R10).
 
 ## 스토리라인
 
@@ -134,7 +131,7 @@ erDiagram
 
 | 데이터 | 보존 | 이유 |
 |---|---|---|
-| 기사 메타데이터 (제목, 링크, 시각, 출처) | 무기한 | 지난 다이제스트의 링크를 유지하기 위해. 출처는 그 기사의 엔트리가 가리키는 소스들의 이름이다 — 프로필을 얻지 못하면 기록된 출처 이름([source Spec 출처 이름](specs/source.md#출처-이름) · [ADR-0053](adr/0053-source-records-last-confirmed-name-apart-from-operating-settings.md)) |
+| 기사 메타데이터 (제목, 링크, 시각, 출처) | 무기한 — 운영자가 소스 · 피드를 지우면 그것만 가진 기사는 지운다 | 지난 다이제스트의 링크를 유지하기 위해. 운영자가 지운 기사는 지난 다이제스트에서도 인용을 지운다([ADR-0186](adr/0186-digests-follow-removed-articles-by-deleting-their-rows-and-show-no-summary-without-any-citation.md)). 출처는 그 기사의 엔트리가 가리키는 소스들의 이름이다 — 프로필을 얻지 못하면 기록된 출처 이름([source Spec 출처 이름](specs/source.md#출처-이름) · [ADR-0053](adr/0053-source-records-last-confirmed-name-apart-from-operating-settings.md)) |
 | 기사 요약문 (`summary_text`) | 기본 무기한. 운영 설정(보존 일수, 기본 꺼짐)을 켜면 그 뒤 삭제 | 재평가 · 임베딩 재계산 · 검색에 쓴다. 사용자 화면 · 외부 API 에는 노출하지 않고 운영자 화면에서만 보인다. 지워진 기사도 장기 기능에서 처리된다 ([ADR-0029](adr/0029-indefinite-summary-retention-with-optional-deletion.md) · [ADR-0068](adr/0068-rss-summaries-shown-only-on-operator-screens-and-users-get-processed-information.md)) |
 | 주제 · 지역 태그(`article_tags`), 태그 체계, 태그 기준 · 저장 기준과 그 변경 이력, 태그 키 계보 | 무기한 | 주제별 보도량과 관심사 히스토리의 근거 |
 | 빠진 태그 채움 기록(`tag_backfills` · `tag_backfill_versions`) | 무기한 | 끝난 채움이 저장 바닥 계산의 입력이다 — 지우면 태그 기준 · 저장 기준의 경고와 평가 현황 표시가 바뀐다([tag-R32](specs/tag.md#빠진-태그-채움--저장-바닥)) |
@@ -149,9 +146,9 @@ erDiagram
 | 사건 소속 판정 원본 (`article_event_judgements`) | 180일 | 태그 판정 원본과 같다 |
 | 관계 판정 원본 (`flow_relation_judgements`) | 180일 | 태그 판정 원본과 같다. 관계 · 물은 기록이 가리키는 원본이 먼저 지워질 수 있다 — 그 ID 는 FK 가 아니다 |
 | 태그 판정 원본 (`article_tag_judgements`) | 180일 | 태그 기준 · 저장 기준 분석과 저장 기준을 낮춘 뒤 빠진 태그 채움([tag-R31](specs/tag.md#빠진-태그-채움--저장-바닥) — 채울 기간의 상한도 180일)에 충분한 기간. **(미설계)** 지운 뒤 원본이 없는 평가의 채움 처분은 보존을 구현하는 작업이 정한다 |
-| 다이제스트 | 사용자 탈퇴 시까지 | 인용 항목은 노출 기록이다 |
+| 다이제스트 | 사용자 탈퇴 시까지. 지운 기사의 인용과 인용이 남지 않은 섹션은 지운다 — 다이제스트 행은 남는다 | 인용 항목은 노출 기록이다([digest Spec](specs/digest.md#지운-기사-따르기) digest-R10) |
 | 관심 신호 이력(`feedback_events` · `user_tag_preference_events` · 스토리라인 구독 이력) · 변화 리포트 | 사용자 탈퇴 시까지 | 관심사 히스토리 · 리포트의 근거 |
-| `digest_candidates` | 30일 | 디버깅용 |
+| `digest_candidates` | 다이제스트를 만들고 30일. 지운 기사의 행은 곧바로 지운다 | 생성 중 지운 기사의 표시이고 그 뒤로는 디버깅용이다. `digest` 의 보존 정리가 지운다([digest Spec](specs/digest.md#후보-행-보존) digest-R11) |
 | 화면 내 알림 (`user_notices`) | 읽은 알림은 읽고 90일 뒤 삭제. 안 읽은 알림은 볼 때까지 남는다 | 지나간 일을 알리는 것이고 장기 기능의 근거가 아니다. 안 읽은 보안 알림은 다음 로그인 때 보여야 한다([ADR-0134](adr/0134-in-app-notices-are-one-row-per-recipient-with-a-closed-kind-and-per-kind-jsonb-content-and-read-notices-are-deleted-after-ninety-days.md)) |
 | 피드 상태 알림의 반영 기준 (`user_feed_status_receipts`) | 사용자 탈퇴 시까지 | 사용자마다 한 행이고, 다시 처리된 회차를 거르는 데 쓴다([user Spec](specs/user.md#화면-내-알림) user-R24) |
 | 복구 코드 (`user_recovery_codes`) | 사용자 탈퇴 시까지 — 새 코드를 주면 바뀐다 | 사용자마다 많아야 한 행([user Spec](specs/user.md#비밀번호-변경과-복구-코드) user-R30) |
