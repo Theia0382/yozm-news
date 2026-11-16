@@ -1,7 +1,10 @@
+import type { QueryClient } from "@tanstack/react-query";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { SignUpPage } from "@/features/account/SignUpPage";
+import { createQueryClient } from "@/app/queryClient";
+import { ME_QUERY_KEY } from "@/features/session/sessionQueries";
 import { json, type Handler } from "@/test/fakeServer";
 import {
   installFakeTurnstile,
@@ -20,6 +23,7 @@ function renderSignUp(
   open: boolean,
   signUp: Handler,
   extra: Record<string, Handler> = {},
+  options: { queryClient?: QueryClient } = {},
 ) {
   let signedUp = false;
   return renderRoutes(
@@ -40,6 +44,7 @@ function renderSignUp(
       },
       ...extra,
     },
+    options,
   );
 }
 
@@ -110,6 +115,43 @@ describe("SignUpPage", () => {
 
     expect(await screen.findByText("첫 화면")).toBeInTheDocument();
     expect(router.state.location.pathname).toBe("/");
+  });
+
+  it("가입해 복구 코드 저장을 확인하면 앞 사용자의 조회를 비운 뒤 첫 화면으로 간다", async () => {
+    const queryClient = createQueryClient();
+    queryClient.setDefaultOptions({ queries: { retry: false } });
+    queryClient.setQueryData(ME_QUERY_KEY, ANONYMOUS_ME);
+    queryClient.setQueryData(["llm-keys"], { providers: [] });
+    queryClient.setQueryData(["interests", "settings"], {
+      timezone: "Europe/Paris",
+    });
+    const { server } = renderSignUp(
+      true,
+      result("SIGNED_UP", { recoveryCode: CODE }),
+      {},
+      { queryClient },
+    );
+
+    const user = await fill();
+    await screen.findByText(CODE);
+    await user.click(screen.getByLabelText("복구 코드를 저장했습니다"));
+    await user.click(screen.getByRole("button", { name: "계속" }));
+
+    expect(await screen.findByText("첫 화면")).toBeInTheDocument();
+    // 로그인 상태는 비우지 않는다(대조)
+    expect(queryClient.getQueryData(ME_QUERY_KEY)).toBeDefined();
+    expect(queryClient.getQueryData(["llm-keys"])).toBeUndefined();
+    expect(queryClient.getQueryData(["interests", "settings"])).toBeUndefined();
+    // 저장 확인 때 관찰하는 화면이 없으므로 새 사용자 값은 화면을 옮기기 전의 다시 읽기로만 온다
+    expect(queryClient.getQueryData(ME_QUERY_KEY)).toEqual(SIGNED_IN_ME);
+    const signUp = server.requests.findIndex(
+      (r) => r.method === "POST" && r.path === "/api/sign-ups",
+    );
+    expect(
+      server.requests
+        .slice(signUp + 1)
+        .filter((r) => r.method === "GET" && r.path === "/api/me").length,
+    ).toBeGreaterThanOrEqual(1);
   });
 
   it("같은 이메일의 계정이 있으면 가입할 수 없는 이메일이라고만 한다", async () => {

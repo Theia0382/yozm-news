@@ -1,10 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter } from "react-router";
 import { RouterProvider } from "react-router/dom";
 import { afterEach, describe, expect, it } from "vitest";
+import { createQueryClient } from "@/app/queryClient";
 import { LoginPage } from "@/features/session/LoginPage";
+import { ME_QUERY_KEY } from "@/features/session/sessionQueries";
 import { ApiClientContext, createApiClient } from "@/shared/api/client";
 import type { components } from "@/shared/api/schema";
 import {
@@ -140,21 +142,37 @@ describe("LoginPage", () => {
     });
   });
 
-  it("로그인하면 앞서 로그인했던 사용자의 알림 조회를 버린다", async () => {
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
-    queryClient.setQueryData(["notices", "unread"], 3);
-    queryClient.setQueryData(["admin", "kept"], 1);
+  it("다른 사용자로 로그인하면 앞 사용자의 조회를 로그인 상태 밖은 모두 비운다", async () => {
+    const queryClient = createQueryClient();
+    queryClient.setDefaultOptions({ queries: { retry: false } });
     renderLogin(() => json({ result: "SIGNED_IN", retryAfterSeconds: null }), {
       queryClient,
     });
+    // 로그인 화면이 익명을 읽은 뒤에 앞 사용자의 조회를 넣는다 — 익명 → 익명은 비우지 않으므로 비움의 계기는 로그인뿐이다
+    await waitFor(() =>
+      expect(queryClient.getQueryData(ME_QUERY_KEY)).toEqual(ANONYMOUS),
+    );
+    queryClient.setQueryData(["notices", "unread"], 3);
+    queryClient.setQueryData(["llm-keys"], { providers: [] });
+    queryClient.setQueryData(["interests", "settings"], {
+      timezone: "Europe/Paris",
+    });
+    queryClient.setQueryData(["admin", "kept"], 1);
+    expect(queryClient.getQueryData(["notices", "unread"])).toBe(3);
+    expect(queryClient.getQueryData(["llm-keys"])).toEqual({ providers: [] });
+    expect(queryClient.getQueryData(["interests", "settings"])).toEqual({
+      timezone: "Europe/Paris",
+    });
+    expect(queryClient.getQueryData(["admin", "kept"])).toBe(1);
 
     await fillAndSubmit();
 
     expect(await screen.findByText("다이제스트")).toBeInTheDocument();
     expect(queryClient.getQueryData(["notices", "unread"])).toBeUndefined();
-    expect(queryClient.getQueryData(["admin", "kept"])).toBe(1);
+    expect(queryClient.getQueryData(["llm-keys"])).toBeUndefined();
+    expect(queryClient.getQueryData(["interests", "settings"])).toBeUndefined();
+    expect(queryClient.getQueryData(["admin", "kept"])).toBeUndefined();
+    expect(queryClient.getQueryData(ME_QUERY_KEY)).toEqual(SIGNED_IN);
   });
 
   it("로그인 유지는 기본으로 꺼져 있다", async () => {
