@@ -13,7 +13,7 @@ import org.jspecify.annotations.Nullable;
  */
 record ArticleEntryResponse(@Nullable String sourceName, @Nullable String section, List<String> categories) {
 
-	static ArticleEntryResponse of(AdminArticles.Entry entry) {
+	static ArticleEntryResponse of(AdminArticleDetails.Entry entry) {
 		return new ArticleEntryResponse(entry.sourceName(), entry.section(), entry.categories());
 	}
 

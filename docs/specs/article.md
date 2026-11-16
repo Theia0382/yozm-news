@@ -214,7 +214,7 @@ public record EntryCounts(int entries, int duplicates, int urlMatches, int title
 |---|---|
 | (최상위) | 공개 API `ArticleDirectory` · `ArticleAdministration` 과 그 값 · 결과 타입, 식별자 · 이벤트 |
 | `application` | `source` 의 `ArticleFetched` · `SourceDeleted` · `FeedDeleted` 를 받는 리스너와, 항목 하나를 판정 · 저장 · 기록하는 유스케이스, 지운 소스 · 피드의 기사를 지우는 유스케이스, 공개 조회 · 공개 운영 API 의 구현 |
-| `domain` | 같은 기사 판정의 키(정규 URL · 제목 비교 키 · 해시)와 판정 규칙, 기사 저장소, 엔트리 집계의 기간 · 칸과 집계 조회 |
+| `domain` | 같은 기사 판정의 키(정규 URL · 제목 비교 키 · 해시)와 판정 규칙, 기사 저장소, 엔트리 집계의 기간 · 칸과 집계 조회, 헤드라인의 출처 이름 엮기 |
 | `adapter/out/persistence` | 기사 저장소 · 집계 조회의 JdbcClient 구현 |
 
 협력: 엔트리 집계는 `ArticleAdministrationService` 가 `EntryWindow` 로 기간을 잡고 `EntryStatisticsRepository` 로 세어 `EntryWindow.statistics` 로 모은다. 기사 수는 같은 서비스가 `ArticleRepository` 로 센다. 같은 기사 판정은 `ArticleFetchedListener` 가 받은 이벤트를 `ArticleIntake` 에 넘긴다. `ArticleIntake` 는 `ArticleRepository` 로 소스를 잠그고, `source` 의 `SourceDirectory` 로 피드가 있는지 묻고, 후보를 모아 `ArticleMatching` 의 판정에 따라 기사 · 엔트리를 기록하고, 새 기사면 `ArticleStored` 를 발행한다. 판정 키(`CanonicalUrl` · `TitleKey` · `KeyHash`)는 들어온 항목(`IncomingItem`)을 만들 때 계산한다. 지운 소스 · 피드는 `SourceRemovalListener` 가 받은 이벤트를 `ArticleRemoval` 에 넘기고, `ArticleRemoval` 이 같은 소스 잠금 안에서 `ArticleRepository` 로 지운 뒤 지운 기사를 `ArticlesRemoved` 로 발행한다. 기사 조회는 `ArticleDirectoryService` 가 `ArticleRepository` 로 읽는다.
@@ -271,7 +271,7 @@ sequenceDiagram
   ```
 
 - `ArticleFetchedListener` · `SourceRemovalListener` — 리스너(들어오는 쪽)
-- `ArticleDirectoryService` — 공개 API `ArticleDirectory` 의 구현. 저장소에 맡기고, 헤드라인은 `source` 의 `FeedLabels` 로 출처 이름을 엮는다(article-R17). 트랜잭션 · 역할 애너테이션이 없다
+- `ArticleDirectoryService` — 공개 API `ArticleDirectory` 의 구현. 저장소에 맡기고, 헤드라인은 `source` 의 `FeedLabels` 로 읽은 출처 이름을 `HeadlineSources` 로 엮는다(article-R17). 트랜잭션 · 역할 애너테이션이 없다
 - `ArticleAdministrationService` — 공개 API `ArticleAdministration` 의 구현. 지금 시각으로 기간을 잡아 집계 조회 하나로 세고 결과로 모은다. 기사 수는 저장소의 질의 하나로 센다. 트랜잭션 · 역할 애너테이션이 없다 — 두 역할 공통이다(article-R13 · article-R15)
 
 ### `domain`
@@ -297,6 +297,7 @@ sequenceDiagram
   ```
 
 - `ArticleMatching` — 같은 기사 판정 규칙의 정본(article-R3 ~ article-R6)
+- `HeadlineSources` — 헤드라인의 출처 이름 엮기의 정본 — 엔트리 순서 · 같은 이름 한 번 · 이름이 없거나 이름 조회에 없는 피드 뺌(article-R17)
 - `CanonicalUrl` — 정규 URL(article-R1)
 - `TitleKey` — 제목 비교 키(article-R2)
 - `KeyHash` — 길이 상한이 없는 키(정규 URL · 제목 비교 키 · guid)의 SHA-256 — 인덱스와 비교에 쓴다

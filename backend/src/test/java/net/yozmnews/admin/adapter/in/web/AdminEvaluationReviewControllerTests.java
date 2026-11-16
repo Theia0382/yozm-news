@@ -102,6 +102,7 @@ class AdminEvaluationReviewControllerTests {
 		this.labels.labels.put(new FeedId(5), new FeedLabel("한겨레", "정치"));
 		this.labels.labels.put(new FeedId(6), new FeedLabel(null, null));
 		this.labels.labels.put(new FeedId(7), new FeedLabel("한겨레", "사회"));
+		this.articles.headlineSources.put(new ArticleId(41), List.of("한겨레"));
 	}
 
 	@Test
@@ -126,11 +127,11 @@ class AdminEvaluationReviewControllerTests {
 					   "article":null}],
 					 "nextEvaluatedAt":"2026-11-01T00:00:00Z","nextId":8}
 					""", JsonCompareMode.STRICT));
-		// 기본 쪽 크기 20, 거르기 · 커서 없음. 기사 조회 · 피드 조회는 한 번씩
+		// 기본 쪽 크기 20, 거르기 · 커서 없음. 헤드라인 조회는 한 번 — 출처 이름은 헤드라인이 엮어 오므로 피드 조회가 없다
 		assertThat(this.review.calls).containsExactly("list 1 " + FROM + " " + TO
 				+ " EvaluationFilter[tag=null, topicStatus=null] null 20");
-		assertThat(this.articles.calls).containsExactly("findAll [41, 42]");
-		assertThat(this.labels.calls).containsExactly("labels [5, 6, 7]");
+		assertThat(this.articles.calls).containsExactly("headlines [41, 42]");
+		assertThat(this.labels.calls).isEmpty();
 	}
 
 	@Test

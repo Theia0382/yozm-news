@@ -22,6 +22,14 @@ public interface ArticleDirectory {
 	Map<ArticleId, ArticleContent> findAll(Collection<ArticleId> ids);
 
 	/**
+	 * 기사들의 헤드라인(제목 · 출처 이름 · 발행 시각 · 정규 URL)을 읽는다 — 운영자 화면 · 독자 화면이 기사 한 줄을 그린다(article-R17).
+	 * <p>
+	 * 내용 한 번과 {@code source} 의 피드 이름 조회 한 번으로 읽는다 — 두 조회 사이에 지운 기사 · 피드는 결과 · 이름에서 빠진다.
+	 * @return 기사 ID → 헤드라인 — 없는(지운) 기사는 결과에 없다. 빈 입력이면 빈 맵
+	 */
+	Map<ArticleId, ArticleHeadline> headlines(Collection<ArticleId> ids);
+
+	/**
 	 * 처음 본 시각이 {@code since} 이상인 기사를 찾는다 — 체계를 바꿀 때의 재평가 대상(tag-R25) · 사건 묶기 채우기 대상(event-R19).
 	 * <p>
 	 * 처음 본 시각에는 인덱스가 없어 표 전체를 읽는다 — 드문 운영 연산이 부른다.

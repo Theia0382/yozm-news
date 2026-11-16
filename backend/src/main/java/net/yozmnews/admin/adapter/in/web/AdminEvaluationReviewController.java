@@ -51,9 +51,12 @@ class AdminEvaluationReviewController {
 
 	private final AdminArticles articles;
 
+	private final AdminArticleDetails details;
+
 	AdminEvaluationReviewController(EvaluationReview review, ArticleDirectory articles, FeedLabels labels) {
 		this.review = Objects.requireNonNull(review, "review");
-		this.articles = new AdminArticles(articles, labels);
+		this.articles = new AdminArticles(articles);
+		this.details = new AdminArticleDetails(articles, labels);
 	}
 
 	@GetMapping("/api/admin/evaluations")
@@ -101,7 +104,7 @@ class AdminEvaluationReviewController {
 	EvaluationDetailResponse evaluationDetail(@PathVariable long id) {
 		EvaluationId evaluation = AdminIds.evaluation(id);
 		return this.review.detail(evaluation)
-			.map(detail -> EvaluationDetailResponse.of(detail, this.articles.detail(detail.articleId()).orElse(null)))
+			.map(detail -> EvaluationDetailResponse.of(detail, this.details.detail(detail.articleId()).orElse(null)))
 			.orElseThrow(() -> AdminIds.unknownEvaluation(id));
 	}
 

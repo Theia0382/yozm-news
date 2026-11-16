@@ -187,6 +187,26 @@ class JdbcEventQueryRepositoryTests {
 	}
 
 	@Test
+	void articleIdsOfEventsIgnoreThePeriodAndSkipEventsWithoutAssignments() {
+		// membersIn 의 기간 밖 기사(앞 · 끝 시각)도 든다 — 기간 조건만 없는 같은 선택 · 순서
+		long first = event("OPEN", "model-a", "[1,0]", "2030-12-31T23:59:59Z", "2031-01-02T00:00:00Z");
+		long second = event("CLOSED", "model-b", "[1,0]", "2031-01-01T12:00:00Z", "2031-01-01T12:00:00Z");
+		long empty = event("OPEN", "model-a", "[1,0]", "2031-01-01T12:00:00Z", "2031-01-01T12:00:00Z");
+		long criteria = criteria();
+		member(121, first, criteria, "2030-12-31T23:59:59Z", DecidedBy.FORMULA, 0.9);
+		member(123, first, criteria, "2031-01-01T00:00:00Z", DecidedBy.FORMULA, 0.9);
+		member(122, first, criteria, "2031-01-01T00:00:00Z", DecidedBy.FORMULA, 0.9);
+		member(124, first, criteria, "2031-01-02T00:00:00Z", DecidedBy.FORMULA, 0.9);
+		member(125, second, criteria, "2031-01-01T12:00:00Z", DecidedBy.FORMULA, 0.9);
+
+		Map<Long, List<ArticleId>> expected = new LinkedHashMap<>();
+		expected.put(first, ids(121, 122, 123, 124));
+		expected.put(second, ids(125));
+		assertThat(this.repository.articleIdsOf(List.of(second, empty, first))).containsExactlyEntriesOf(expected);
+		assertThat(this.repository.articleIdsOf(List.of())).isEmpty();
+	}
+
+	@Test
 	void articleCountsInAPeriodAreGroupedByEventAndExcludeTheEnd() {
 		Instant from = Instant.parse("2031-03-01T00:00:00Z");
 		Instant to = Instant.parse("2031-03-02T00:00:00Z");

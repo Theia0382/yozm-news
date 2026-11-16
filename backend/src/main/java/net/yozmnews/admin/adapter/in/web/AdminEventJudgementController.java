@@ -20,7 +20,6 @@ import net.yozmnews.event.EventReview;
 import net.yozmnews.event.JudgementUse;
 import net.yozmnews.platform.ApiProblem;
 import net.yozmnews.platform.WebRole;
-import net.yozmnews.source.FeedLabels;
 import org.jspecify.annotations.Nullable;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -47,11 +46,10 @@ class AdminEventJudgementController {
 
 	private final AdminArticles articles;
 
-	AdminEventJudgementController(EventJudgementLog log, EventReview review, ArticleDirectory articles,
-			FeedLabels labels) {
+	AdminEventJudgementController(EventJudgementLog log, EventReview review, ArticleDirectory articles) {
 		this.log = Objects.requireNonNull(log, "log");
 		this.review = Objects.requireNonNull(review, "review");
-		this.articles = new AdminArticles(articles, labels);
+		this.articles = new AdminArticles(articles);
 	}
 
 	@GetMapping("/api/admin/event-judgements")

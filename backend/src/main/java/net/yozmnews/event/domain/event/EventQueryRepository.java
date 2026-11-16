@@ -48,6 +48,9 @@ public interface EventQueryRepository {
 	/** 주어진 사건들의 기간 안 배정 — 사건 ID 순, 사건마다 발행 시각 · 기사 ID 순 */
 	Map<Long, List<ArticleId>> membersIn(Collection<Long> eventIds, Instant from, Instant to);
 
+	/** 주어진 사건들의 배정 전부 — {@link #membersIn} 과 같은 선택 · 순서에서 기간 조건만 없다 */
+	Map<Long, List<ArticleId>> articleIdsOf(Collection<Long> eventIds);
+
 	/**
 	 * 기간 안 배정이 있는 사건 — 마지막 기사 시각 내림차순, 사건 ID 내림차순.
 	 * @param afterLast 커서의 마지막 기사 시각 — 첫 쪽이면 null(그때 {@code afterId} 도 null)
