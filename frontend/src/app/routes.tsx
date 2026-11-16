@@ -37,6 +37,21 @@ export const routes: RouteObject[] = [
             }),
           },
           {
+            // 스토리라인 — 기사 내용을 보이므로 키가 있어야 간다(키 없이 가는 화면이 아니다)
+            path: "storylines",
+            lazy: async () => ({
+              Component: (await import("@/features/storylines/StorylinesPage"))
+                .StorylinesPage,
+            }),
+          },
+          {
+            path: "storylines/:id",
+            lazy: async () => ({
+              Component: (await import("@/features/storylines/StorylinePage"))
+                .StorylinePage,
+            }),
+          },
+          {
             // LLM 키 화면 — 키가 없는 사용자는 설정 · 알림 · 관심 설정 밖의 어느 주소로 와도 여기로 간다
             path: "keys",
             lazy: async () => ({

@@ -17,7 +17,6 @@ import net.yozmnews.event.EventPeriod;
 import net.yozmnews.platform.ApiProblem;
 import net.yozmnews.platform.ChangeActor;
 import net.yozmnews.platform.WebRole;
-import net.yozmnews.source.FeedLabels;
 import net.yozmnews.storyline.BigStoryline;
 import net.yozmnews.storyline.BigStorylineAdministration;
 import net.yozmnews.storyline.BigStorylineCriteria;
@@ -48,10 +47,10 @@ class AdminBigStorylineController {
 	private final AdminRepresentatives representatives;
 
 	AdminBigStorylineController(StorylineDirectory storylines, BigStorylineAdministration administration,
-			EventDirectory events, ArticleDirectory articles, FeedLabels labels) {
+			EventDirectory events, ArticleDirectory articles) {
 		this.storylines = Objects.requireNonNull(storylines, "storylines");
 		this.administration = Objects.requireNonNull(administration, "administration");
-		this.representatives = new AdminRepresentatives(events, new AdminArticles(articles, labels));
+		this.representatives = new AdminRepresentatives(events, new AdminArticles(articles));
 	}
 
 	@GetMapping("/api/admin/big-storylines")

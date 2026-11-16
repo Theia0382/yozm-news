@@ -27,7 +27,6 @@ import net.yozmnews.event.JudgementUse;
 import net.yozmnews.event.MergePair;
 import net.yozmnews.user.application.WebSliceSecurity;
 import net.yozmnews.source.FeedId;
-import net.yozmnews.source.FeedLabel;
 import net.yozmnews.source.SourceId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -49,7 +48,7 @@ import org.springframework.test.web.servlet.MockMvc;
  */
 @WebMvcTest(controllers = AdminEventJudgementController.class, properties = AdminRequests.TOKEN_PROPERTY)
 @Import({ WebSliceSecurity.class, FakeEventJudgementLog.Config.class, FakeEventReview.Config.class,
-		FakeArticleDirectory.Config.class, FakeFeedLabels.Config.class })
+		FakeArticleDirectory.Config.class })
 class AdminEventJudgementControllerTests {
 
 	private static final String PERIOD = "from=2026-11-01&to=2026-11-07&zone=Asia/Seoul";
@@ -68,19 +67,15 @@ class AdminEventJudgementControllerTests {
 	@Autowired
 	FakeArticleDirectory articles;
 
-	@Autowired
-	FakeFeedLabels labels;
-
 	@BeforeEach
 	void reset() {
 		this.log.reset();
 		this.review.reset();
 		this.articles.reset();
-		this.labels.reset();
 		this.articles.contents.put(new ArticleId(41), new ArticleContent(new ArticleId(41), "국회 본회의 통과", null,
 				URI.create("https://news.example/41"), T,
 				List.of(new ArticleEntryView(new SourceId(3), new FeedId(5), List.of()))));
-		this.labels.labels.put(new FeedId(5), new FeedLabel("한겨레", "정치"));
+		this.articles.headlineSources.put(new ArticleId(41), List.of("한겨레"));
 	}
 
 	@Test
@@ -115,7 +110,7 @@ class AdminEventJudgementControllerTests {
 		assertThat(this.log.calls)
 			.containsExactly("list 2026-10-31T15:00:00Z ~ 2026-11-07T15:00:00Z after null size 50");
 		assertThat(this.review.calls).containsExactly("judgementUses [103, 102, 101]", "assignmentCriteria");
-		assertThat(this.articles.calls).containsExactly("findAll [41, 42, 43]");
+		assertThat(this.articles.calls).containsExactly("headlines [41, 42, 43]");
 	}
 
 	@Test

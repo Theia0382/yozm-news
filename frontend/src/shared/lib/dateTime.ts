@@ -22,3 +22,27 @@ export function formatDateTime(value: string, timeZone?: string): string {
     timeZoneName: "short",
   }).format(instant);
 }
+
+/** 날짜 문자열의 꼴 — 서버 응답의 `date`(YYYY-MM-DD) */
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * 화면의 날짜 표기 — 정본. 날짜만 그리는 곳(서버 응답의 `date`)은 모두 이 함수를 부른다.
+ *
+ * 시각 표기(formatDateTime)와 같은 지역 표기로 연 · 월 · 일만 보인다. 날짜는 시각이 아니라 시간대를 옮기지 않는다 — 받은 날짜 그대로다.
+ * 읽지 못하는 값은 받은 문자열을 그대로 돌려준다.
+ *
+ * @param value 날짜 문자열(YYYY-MM-DD)
+ */
+export function formatDate(value: string): string {
+  const instant = new Date(`${value}T00:00:00Z`);
+  if (!DATE_ONLY.test(value) || Number.isNaN(instant.getTime())) {
+    return value;
+  }
+  return new Intl.DateTimeFormat("ko-KR", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    timeZone: "UTC",
+  }).format(instant);
+}

@@ -23,7 +23,6 @@ import net.yozmnews.event.EventView;
 import net.yozmnews.event.MergedEvent;
 import net.yozmnews.platform.ApiProblem;
 import net.yozmnews.platform.WebRole;
-import net.yozmnews.source.FeedLabels;
 import net.yozmnews.storyline.StorylineDirectory;
 import org.jspecify.annotations.Nullable;
 import org.springframework.http.MediaType;
@@ -55,11 +54,11 @@ class AdminEventController {
 	private final AdminArticles articles;
 
 	AdminEventController(EventDirectory directory, EventReview review, StorylineDirectory storylines,
-			ArticleDirectory articles, FeedLabels labels) {
+			ArticleDirectory articles) {
 		this.directory = Objects.requireNonNull(directory, "directory");
 		this.review = Objects.requireNonNull(review, "review");
 		this.storylines = Objects.requireNonNull(storylines, "storylines");
-		this.articles = new AdminArticles(articles, labels);
+		this.articles = new AdminArticles(articles);
 	}
 
 	@GetMapping("/api/admin/events")

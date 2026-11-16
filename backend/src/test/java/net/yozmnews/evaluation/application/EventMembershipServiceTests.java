@@ -12,6 +12,7 @@ import java.util.Set;
 
 import net.yozmnews.article.ArticleContent;
 import net.yozmnews.article.ArticleDirectory;
+import net.yozmnews.article.ArticleHeadline;
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.evaluation.EventDescriptor;
 import net.yozmnews.evaluation.EventJudgementId;
@@ -66,6 +67,11 @@ class EventMembershipServiceTests {
 		public Map<ArticleId, ArticleContent> findAll(Collection<ArticleId> ids) {
 			this.calls.add(List.copyOf(ids));
 			return Map.of();
+		}
+
+		@Override
+		public Map<ArticleId, ArticleHeadline> headlines(Collection<ArticleId> ids) {
+			throw new UnsupportedOperationException();
 		}
 
 		@Override

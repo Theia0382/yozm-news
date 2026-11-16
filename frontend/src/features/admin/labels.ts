@@ -27,7 +27,6 @@ type ChangeActor =
   | Schemas["BigStorylineCriteriaHistoryResponse"]["actor"]
   | Schemas["SignUpPolicyHistoryResponse"]["actor"];
 type InvitationState = Schemas["InvitationRowResponse"]["state"];
-type StorylineState = Schemas["BigStorylineRowResponse"]["state"];
 type LinkedBy = Schemas["StorylineMembershipResponse"]["linkedBy"];
 type RelationOutcome = Schemas["StorylineAskedResponse"]["outcome"];
 type RelationReading = Schemas["RelationJudgementResponse"]["reading"];
@@ -205,13 +204,6 @@ export const invitationStateLabels = {
   EXPIRED: "만료",
   REVOKED: "취소",
 } as const satisfies Record<InvitationState, string>;
-
-/** 스토리라인의 상태 — 마지막 기사 뒤 지난 시간으로 조회할 때 정해진다 */
-export const storylineStateLabels = {
-  ACTIVE: "진행",
-  QUIET: "잠잠",
-  ENDED: "끝남",
-} as const satisfies Record<StorylineState, string>;
 
 /** 스토리라인 소속을 정한 것 */
 export const linkedByLabels = {

@@ -59,6 +59,13 @@ class JdbcEventQueryRepository implements EventQueryRepository {
 
 	private static final String IN_PERIOD = "a.published_at >= :from and a.published_at < :to";
 
+	/** 사건 여럿의 배정 — 고를 조건 하나를 받는다. 사건 ID 순, 사건마다 발행 시각 · 기사 ID 순({@code membersIn} · {@code articleIdsOf} 의 정본) */
+	private static final String MEMBERS = """
+			select a.event_id, a.article_id from event_articles a
+			where a.event_id = any(:events) and %s
+			order by a.event_id, a.published_at, a.article_id
+			""";
+
 	/** 합쳐지지 않았고 첫 ~ 마지막 기사 시각이 [from, to] 와 겹치는 사건 — 말 수의 두 문장이 같은 조건을 쓴다(event-R24) */
 	private static final String UNMERGED_IN_RANGE = "e.status <> 'MERGED' and e.last_article_at >= :from and e.first_article_at <= :to";
 
@@ -180,14 +187,18 @@ class JdbcEventQueryRepository implements EventQueryRepository {
 		if (eventIds.isEmpty()) {
 			return Map.of();
 		}
-		return members(this.jdbc.sql("""
-				select a.event_id, a.article_id from event_articles a
-				where a.event_id = any(:events) and %s
-				order by a.event_id, a.published_at, a.article_id
-				""".formatted(IN_PERIOD))
+		return members(this.jdbc.sql(MEMBERS.formatted(IN_PERIOD))
 			.param("events", eventIds.toArray(Long[]::new))
 			.param("from", timestamp(from))
 			.param("to", timestamp(to)));
+	}
+
+	@Override
+	public Map<Long, List<ArticleId>> articleIdsOf(Collection<Long> eventIds) {
+		if (eventIds.isEmpty()) {
+			return Map.of();
+		}
+		return members(this.jdbc.sql(MEMBERS.formatted("true")).param("events", eventIds.toArray(Long[]::new)));
 	}
 
 	@Override

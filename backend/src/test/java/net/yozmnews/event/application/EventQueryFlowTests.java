@@ -67,6 +67,8 @@ class EventQueryFlowTests {
 
 	private long y1;
 
+	private long y2;
+
 	private long eventX;
 
 	private long eventY;
@@ -90,7 +92,8 @@ class EventQueryFlowTests {
 		// 사건 Y — 소스 둘(1 · 2), 중요도 5.0 · 5.0
 		this.y1 = article(1, 5.0);
 		assign(this.y1, this.eventY, criteriaId, "2026-11-05T15:00:00Z");
-		assign(article(2, 5.0), this.eventY, criteriaId, "2026-11-05T15:00:00Z");
+		this.y2 = article(2, 5.0);
+		assign(this.y2, this.eventY, criteriaId, "2026-11-05T15:00:00Z");
 	}
 
 	@AfterEach
@@ -234,6 +237,21 @@ class EventQueryFlowTests {
 			.containsExactly(Map.entry(new EventId(this.eventX), new ArticleId(this.x2)));
 		assertThat(this.directory.find(new EventId(this.eventY))).isPresent();
 		assertThat(this.directory.articles(new EventId(this.eventX))).hasSize(4);
+	}
+
+	@Test
+	void theArticleIdsOfSeveralEventsComeInEventOrderWithoutAPeriod() {
+		// 사건 ID 순(Y 를 먼저 열었다) · 사건마다 발행 시각 · 기사 ID 순. 기간 끝 시각에 발행한 x4 도 든다 — 기간을 보지 않는다.
+		// 같은 사건은 한 번, 없는 사건은 빠진다
+		Map<EventId, List<ArticleId>> expected = new LinkedHashMap<>();
+		expected.put(new EventId(this.eventY), List.of(new ArticleId(this.y1), new ArticleId(this.y2)));
+		expected.put(new EventId(this.eventX), List.of(new ArticleId(this.x1), new ArticleId(this.x2),
+				new ArticleId(this.x3), new ArticleId(this.x4)));
+
+		assertThat(this.directory.articleIdsOf(List.of(new EventId(this.eventX), new EventId(999_999),
+				new EventId(this.eventY), new EventId(this.eventX))))
+			.containsExactlyEntriesOf(expected);
+		assertThat(this.directory.articleIdsOf(List.of())).isEmpty();
 	}
 
 	@Test

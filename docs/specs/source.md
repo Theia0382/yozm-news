@@ -172,7 +172,7 @@ public interface SourceDirectory {
 
 ### FeedLabels · FeedLabel
 
-다른 모듈이 피드의 출처 이름 · 섹션을 읽는 조회 — 평가 입력의 피드 맥락이 쓴다. 구현은 `application` 의 `FeedLabelService` 다.
+다른 모듈이 피드의 출처 이름 · 섹션을 읽는 조회 — 평가 입력의 피드 맥락, 기사 헤드라인의 출처 이름(`article` — article-R17), 운영자 화면의 기사 상세(`admin`), 알림의 출처 이름(`user`)이 쓴다. 구현은 `application` 의 `FeedLabelService` 다.
 
 ```java
 public interface FeedLabels {

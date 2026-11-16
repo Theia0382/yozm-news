@@ -86,7 +86,7 @@
 
 ## 3. 공개 인터페이스
 
-이 모듈은 `event` 의 `EventsChanged` 를 받고, 공개 조회 둘(`StorylineDirectory` · 운영자 조회 `StorylineReview`)과 공개 운영 API 둘(`StorylineLinkingAdministration` · `BigStorylineAdministration`)을 낸다. 관계 판정은 `evaluation` 의 공개 API `FlowRelation` 을 부른다. `StorylineDirectory` 는 `digest` · `report` · `admin` · `user` 가 쓰고, `StorylineReview` 와 운영 API 는 `admin` 이 운영자 요청으로 부른다([ADR-0045](../adr/0045-admin-module-serves-operator-api-over-module-public-operation-apis.md)). 발행하는 이벤트는 `StorylinesRetired` 하나다 — `user` 가 받아 스토리라인 구독을 따른다.
+이 모듈은 `event` 의 `EventsChanged` 를 받고, 공개 조회 둘(`StorylineDirectory` · 운영자 조회 `StorylineReview`)과 공개 운영 API 둘(`StorylineLinkingAdministration` · `BigStorylineAdministration`)을 낸다. 관계 판정은 `evaluation` 의 공개 API `FlowRelation` 을 부른다. `StorylineDirectory` 는 `digest` · `report` · `admin` · `user` · `reader` 가 쓰고, `StorylineReview` 와 운영 API 는 `admin` 이 운영자 요청으로 부른다([ADR-0045](../adr/0045-admin-module-serves-operator-api-over-module-public-operation-apis.md)). 발행하는 이벤트는 `StorylinesRetired` 하나다 — `user` 가 받아 스토리라인 구독을 따른다.
 
 ### StorylineLinkingAdministration · LinkingFillResult
 

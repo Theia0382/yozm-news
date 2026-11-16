@@ -25,7 +25,7 @@ record EvaluationDetailResponse(long id, long articleId, long version, int versi
 		List<DistributionShare> importanceLevels, @Nullable Double importance,
 		@Nullable ArticleDetailResponse article) {
 
-	static EvaluationDetailResponse of(EvaluationDetailView detail, AdminArticles.@Nullable Detail article) {
+	static EvaluationDetailResponse of(EvaluationDetailView detail, AdminArticleDetails.@Nullable Detail article) {
 		return new EvaluationDetailResponse(detail.id().value(), detail.articleId().value(), detail.version().value(),
 				detail.versionNumber(), detail.evaluator(), detail.modelVersion(), detail.evaluatedAt(),
 				detail.inputTokens(), detail.thresholds().topic(), detail.thresholds().region(), detail.topicStatus(),

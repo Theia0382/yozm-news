@@ -69,6 +69,7 @@ function renderGuarded(
           { path: "/settings", element: <p>설정 화면</p> },
           { path: "/notices", element: <p>알림 화면</p> },
           { path: "/interests", element: <p>관심 설정 화면</p> },
+          { path: "/storylines", element: <p>스토리라인 화면</p> },
           { path: "/password", element: <p>비밀번호 변경 화면</p> },
         ],
       },
@@ -112,6 +113,16 @@ describe("RequireSignIn", () => {
     );
   });
 
+  it("스토리라인 링크를 머리줄에 둔다", async () => {
+    renderGuarded("/", () => json(SIGNED_IN));
+
+    await screen.findByText("첫 화면");
+    expect(screen.getByRole("link", { name: "스토리라인" })).toHaveAttribute(
+      "href",
+      "/storylines",
+    );
+  });
+
   it("LLM 키 링크를 머리줄에 둔다", async () => {
     renderGuarded("/digest", () => json(SIGNED_IN));
 
@@ -152,7 +163,7 @@ describe("RequireSignIn", () => {
     ).not.toBeInTheDocument();
   });
 
-  it.each(["/", "/digest"])(
+  it.each(["/", "/digest", "/storylines"])(
     "LLM 키가 없으면 %s 로 와도 키 화면으로 보낸다",
     async (entry) => {
       const { router } = renderGuarded(entry, () =>
@@ -163,6 +174,7 @@ describe("RequireSignIn", () => {
       expect(router.state.location.pathname).toBe("/keys");
       expect(screen.queryByText("다이제스트")).not.toBeInTheDocument();
       expect(screen.queryByText("첫 화면")).not.toBeInTheDocument();
+      expect(screen.queryByText("스토리라인 화면")).not.toBeInTheDocument();
     },
   );
 

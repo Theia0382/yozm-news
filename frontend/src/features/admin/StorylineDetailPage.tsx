@@ -13,8 +13,8 @@ import {
   linkedByLabels,
   relationOutcomeLabels,
   relationReadingLabels,
-  storylineStateLabels,
 } from "@/features/admin/labels";
+import { storylineStateLabels } from "@/shared/lib/storylineState";
 import { formatProbability } from "@/features/admin/metrics";
 import {
   STORYLINE_KEY,
