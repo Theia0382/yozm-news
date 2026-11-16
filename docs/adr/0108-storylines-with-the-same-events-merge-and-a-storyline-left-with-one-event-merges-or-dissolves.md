@@ -47,3 +47,4 @@
 ## 후속 기록
 
 - 2026-11-13: 결과 "표현만 비슷한 두 스토리라인과 사건 둘 이상의 포함은 남는다 — 잇는 방법 · 스토리라인 사이 관계가 다루지 않으면 계속 남는다" — 큰 흐름과 그 갈래는 관계로 잇고, 한 사안이 둘로 열린 스토리라인은 관계로도 다루지 않아 남는다([ADR-0131](0131-storyline-relations-are-explicit-links-with-containment-as-a-single-parent-tree-gathered-at-query-time.md) · [ADR-0132](0132-storyline-relations-are-judged-by-jev-on-candidate-pairs-and-linked-only-above-a-probability-threshold.md))
+- 2026-11-16: 결과 "풀린 스토리라인의 ID 는 … 가리키는 쪽이 생기면 지운 ID 를 알리는 장치가 맡는다" — [ADR-0188](0188-storyline-subscriptions-follow-retired-storylines-by-event-and-before-each-use-and-notices-point-to-the-remaining-event.md), 지금 상태는 [storyline Spec "정돈"](../specs/storyline.md#정돈)(storyline-R35)

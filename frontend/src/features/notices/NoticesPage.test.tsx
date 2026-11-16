@@ -85,6 +85,7 @@ const GATHERED: Notice = {
   passwordChanged: null,
   keyInvalidated: null,
   preferencesAdjusted: null,
+  storylineSubscriptionsRemoved: null,
 };
 
 /** 읽은 피드 상태 알림 하나 */
@@ -112,6 +113,7 @@ const OLD: Notice = {
   passwordChanged: null,
   keyInvalidated: null,
   preferencesAdjusted: null,
+  storylineSubscriptionsRemoved: null,
 };
 
 /** 복구 코드로 재설정한 비밀번호 알림 */
@@ -126,6 +128,7 @@ const PASSWORD: Notice = {
   passwordChanged: { method: "RECOVERY", changedAt: "2026-11-13T03:00:00Z" },
   keyInvalidated: null,
   preferencesAdjusted: null,
+  storylineSubscriptionsRemoved: null,
 };
 
 /** 공급자가 받아 주지 않아 무효가 된 키의 알림 */
@@ -143,6 +146,7 @@ const KEY_INVALIDATED: Notice = {
     invalidatedAt: "2026-11-13T03:00:00Z",
   },
   preferencesAdjusted: null,
+  storylineSubscriptionsRemoved: null,
 };
 
 /** 태그 체계 버전 2 를 따라 해제 · 더함이 있었던 선호 조정 알림 */
@@ -173,6 +177,27 @@ const PREFERENCES_ADJUSTED: Notice = {
         mode: "EXCLUDE",
         change: "ADDED_DEFAULT_EXCLUDED",
       },
+    ],
+  },
+  storylineSubscriptionsRemoved: null,
+};
+
+/** 구독한 스토리라인 둘이 사라진 알림 — 하나는 남았던 기사의 제목이 있고, 하나는 알 수 없다 */
+const SUBSCRIPTIONS_REMOVED: Notice = {
+  id: 50,
+  kind: "STORYLINE_SUBSCRIPTIONS_REMOVED",
+  revision: 1,
+  createdAt: "2026-11-13T05:00:00Z",
+  updatedAt: "2026-11-13T05:00:00Z",
+  read: false,
+  feedStatus: null,
+  passwordChanged: null,
+  keyInvalidated: null,
+  preferencesAdjusted: null,
+  storylineSubscriptionsRemoved: {
+    removed: [
+      { storylineId: 31, title: "의대 정원 조정안 발표" },
+      { storylineId: 32, title: null },
     ],
   },
 };
@@ -320,6 +345,22 @@ describe("NoticesPage", () => {
     expect(
       within(item).getByRole("link", { name: "관심 설정에서 확인하기" }),
     ).toHaveAttribute("href", "/interests");
+  });
+
+  it("사라진 구독 알림은 스토리라인마다 남았던 기사 제목을 보이고 없으면 알 수 없다고 한다", async () => {
+    renderNotices(() => json(page([SUBSCRIPTIONS_REMOVED])));
+
+    const item = await screen.findByRole("article");
+    expect(within(item).getByRole("heading", { level: 2 })).toHaveTextContent(
+      "새 알림구독한 스토리라인이 사라졌습니다",
+    );
+    expect(item).toHaveTextContent(
+      "구독한 스토리라인이 더 이어지지 않아 구독에서 뺐습니다.",
+    );
+    const rows = within(item).getAllByRole("listitem");
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toHaveTextContent("의대 정원 조정안 발표");
+    expect(rows[1]).toHaveTextContent("제목을 알 수 없는 스토리라인");
   });
 
   it("받은 쪽의 안 읽은 알림만 받은 판까지 읽음으로 보낸다", async () => {

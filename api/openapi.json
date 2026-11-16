@@ -4755,6 +4755,136 @@
         },
         "tags" : [ "sign-up-controller" ]
       }
+    },
+    "/api/storyline-subscriptions" : {
+      "get" : {
+        "operationId" : "subscriptions",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StorylineSubscriptionsResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "세션이 없거나 만료됐다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "비밀번호를 바꿔야 한다"
+          }
+        },
+        "tags" : [ "storyline-subscription-controller" ]
+      }
+    },
+    "/api/storyline-subscriptions/{storylineId}" : {
+      "delete" : {
+        "operationId" : "unsubscribe",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "storylineId",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StorylineUnsubscribeResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "세션이 없거나 만료됐다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청 보호 토큰이 없거나 맞지 않는다 · 비밀번호를 바꿔야 한다"
+          }
+        },
+        "tags" : [ "storyline-subscription-controller" ]
+      },
+      "put" : {
+        "operationId" : "subscribe",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "storylineId",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StorylineSubscribeResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "세션이 없거나 만료됐다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청 보호 토큰이 없거나 맞지 않는다 · 비밀번호를 바꿔야 한다"
+          }
+        },
+        "tags" : [ "storyline-subscription-controller" ]
+      }
     }
   },
   "components" : {
@@ -7025,7 +7155,7 @@
           },
           "kind" : {
             "type" : "string",
-            "enum" : [ "FEED_STATUS", "PASSWORD_CHANGED", "KEY_INVALIDATED", "PREFERENCES_ADJUSTED" ]
+            "enum" : [ "FEED_STATUS", "PASSWORD_CHANGED", "KEY_INVALIDATED", "PREFERENCES_ADJUSTED", "STORYLINE_SUBSCRIPTIONS_REMOVED" ]
           },
           "passwordChanged" : {
             "oneOf" : [ {
@@ -7048,12 +7178,19 @@
             "type" : "integer",
             "format" : "int32"
           },
+          "storylineSubscriptionsRemoved" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/StorylineSubscriptionsRemovedNoticeResponse"
+            }, {
+              "type" : "null"
+            } ]
+          },
           "updatedAt" : {
             "type" : "string",
             "format" : "date-time"
           }
         },
-        "required" : [ "createdAt", "feedStatus", "id", "keyInvalidated", "kind", "passwordChanged", "preferencesAdjusted", "read", "revision", "updatedAt" ]
+        "required" : [ "createdAt", "feedStatus", "id", "keyInvalidated", "kind", "passwordChanged", "preferencesAdjusted", "read", "revision", "storylineSubscriptionsRemoved", "updatedAt" ]
       },
       "NoticeRevision" : {
         "type" : "object",
@@ -7550,6 +7687,19 @@
           }
         },
         "required" : [ "firstId", "firstLedToSecond", "firstOneMatter", "firstPartOfSecond", "id", "inputTokens", "judgedAt", "message", "modelVersion", "none", "reading", "secondId", "secondLedToFirst", "secondOneMatter", "secondPartOfFirst", "wordingVersion" ]
+      },
+      "RemovedStorylineResponse" : {
+        "type" : "object",
+        "properties" : {
+          "storylineId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "title" : {
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "storylineId", "title" ]
       },
       "ResubmissionItemResponse" : {
         "type" : "object",
@@ -8293,6 +8443,80 @@
           }
         },
         "required" : [ "articleCount", "big", "eventCount", "firstArticleAt", "id", "importance", "intensity", "lastArticleAt", "parentId", "periodArticles", "periodSources", "representative", "representativeArticleId", "state" ]
+      },
+      "StorylineSubscribeResponse" : {
+        "type" : "object",
+        "properties" : {
+          "limit" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int32"
+          },
+          "result" : {
+            "type" : "string",
+            "enum" : [ "SUBSCRIBED", "ALREADY_SUBSCRIBED", "UNKNOWN_STORYLINE", "LIMIT_REACHED" ]
+          },
+          "storylineId" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int64"
+          }
+        },
+        "required" : [ "limit", "result", "storylineId" ]
+      },
+      "StorylineSubscriptionItem" : {
+        "type" : "object",
+        "properties" : {
+          "state" : {
+            "type" : "string",
+            "enum" : [ "ACTIVE", "QUIET", "ENDED" ]
+          },
+          "storylineId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "subscribedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        },
+        "required" : [ "state", "storylineId", "subscribedAt" ]
+      },
+      "StorylineSubscriptionsRemovedNoticeResponse" : {
+        "type" : "object",
+        "properties" : {
+          "removed" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/RemovedStorylineResponse"
+            }
+          }
+        },
+        "required" : [ "removed" ]
+      },
+      "StorylineSubscriptionsResponse" : {
+        "type" : "object",
+        "properties" : {
+          "limit" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "subscriptions" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/StorylineSubscriptionItem"
+            }
+          }
+        },
+        "required" : [ "limit", "subscriptions" ]
+      },
+      "StorylineUnsubscribeResponse" : {
+        "type" : "object",
+        "properties" : {
+          "result" : {
+            "type" : "string",
+            "enum" : [ "UNSUBSCRIBED", "NOT_SUBSCRIBED" ]
+          }
+        },
+        "required" : [ "result" ]
       },
       "StrandedPublicationListResponse" : {
         "type" : "object",

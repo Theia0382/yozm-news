@@ -17,6 +17,9 @@ public enum NoticeKind {
 	KEY_INVALIDATED,
 
 	/** 태그 체계의 활성 전환이 선호를 해제하거나 더했다 — 사용자 · 활성 전환마다 하나 */
-	PREFERENCES_ADJUSTED
+	PREFERENCES_ADJUSTED,
+
+	/** 구독한 스토리라인이 지워져 구독에서 뺐다 — 따라가기 한 번마다 하나 */
+	STORYLINE_SUBSCRIPTIONS_REMOVED
 
 }

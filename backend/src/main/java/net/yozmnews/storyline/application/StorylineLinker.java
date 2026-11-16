@@ -20,6 +20,9 @@ import net.yozmnews.event.EventProfile;
 import net.yozmnews.event.EventTermCounts;
 import net.yozmnews.event.EventView;
 import net.yozmnews.storyline.LinkedBy;
+import net.yozmnews.storyline.RetiredStoryline;
+import net.yozmnews.storyline.StorylineId;
+import net.yozmnews.storyline.StorylinesRetired;
 import net.yozmnews.storyline.domain.linking.Compared;
 import net.yozmnews.storyline.domain.linking.Cosine;
 import net.yozmnews.storyline.domain.linking.LinkingCriteria;
@@ -38,6 +41,7 @@ import net.yozmnews.storyline.domain.storyline.LinkJudgement;
 import net.yozmnews.storyline.domain.storyline.StorylineRepository;
 import net.yozmnews.storyline.domain.storyline.StorylineSnapshot;
 import net.yozmnews.storyline.domain.storyline.Tidying;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
 /**
@@ -48,7 +52,8 @@ import org.springframework.stereotype.Component;
  * 합쳐짐 · 그대로를 가르고, 그대로면 그 사건이 든 스토리라인의 표현을 다시 정하고 그 사건의 말의 무게를 읽은 뒤 붙이기 · 짝 · 다시 넣기를
  * 판정한다. 끝으로 소속이 바뀌었거나 그 사건이 든 스토리라인을 정돈한다. 판단은 {@code domain/linking} ·
  * {@code domain/storyline} 이 하고, 이 클래스는 읽기 · 쓰기를 잇는다. 스토리라인을 합칠 때는 합쳐질 쪽의 관계를 남는 쪽으로 옮긴다 — 옮길
- * 계획은 {@code domain/relation} 이 정한다. 정돈에서 남은 스토리라인과 짝으로 연 스토리라인은 관계 대기에 넣는다.
+ * 계획은 {@code domain/relation} 이 정한다. 정돈에서 남은 스토리라인과 짝으로 연 스토리라인은 관계 대기에 넣는다. 정돈이 합치거나 지운
+ * 스토리라인은 같은 트랜잭션에서 {@link StorylinesRetired} 로 알린다(storyline-R35).
  */
 @Component
 class StorylineLinker {
@@ -63,13 +68,16 @@ class StorylineLinker {
 
 	private final RelationQueueRepository relationQueue;
 
+	private final ApplicationEventPublisher publisher;
+
 	StorylineLinker(EventDirectory events, StorylineRepository storylines, LinkingQueueRepository queue,
-			RelationRepository relations, RelationQueueRepository relationQueue) {
+			RelationRepository relations, RelationQueueRepository relationQueue, ApplicationEventPublisher publisher) {
 		this.events = events;
 		this.storylines = storylines;
 		this.queue = queue;
 		this.relations = relations;
 		this.relationQueue = relationQueue;
+		this.publisher = publisher;
 	}
 
 	/**
@@ -235,11 +243,13 @@ class StorylineLinker {
 
 	/**
 	 * 스토리라인들을 ID 순으로 정돈한다(storyline-R13 · R17 · R18) — 판단은 {@link Tidying#decide} 가 한다. 이 정돈에서 이미 지웠거나
-	 * 합친 스토리라인은 건너뛰고, 견줄 스토리라인에서도 뺀다.
+	 * 합친 스토리라인은 건너뛰고, 견줄 스토리라인에서도 뺀다. 합치거나 지운 스토리라인이 있으면 끝에 {@link StorylinesRetired} 를 한 번
+	 * 발행한다(storyline-R35) — 지운 스토리라인을 가리키던 합쳐진 행은 연쇄로 함께 지워지지만 싣지 않는다(합칠 때 이미 실렸다).
 	 * @param represent 남길 때 표현을 다시 정할 스토리라인(소속이 바뀐 것)
 	 */
 	private void tidy(Collection<Long> storylineIds, Set<Long> represent, Instant now) {
 		Set<Long> gone = new HashSet<>();
+		List<RetiredStoryline> retired = new ArrayList<>();
 		for (long storyline : new TreeSet<>(storylineIds)) {
 			if (gone.contains(storyline)) {
 				continue;
@@ -262,12 +272,14 @@ class StorylineLinker {
 				case Tidying.Remove remove -> {
 					this.storylines.delete(storyline);
 					gone.add(storyline);
+					retired.add(new RetiredStoryline(new StorylineId(storyline), null));
 				}
 				case Tidying.Dissolve dissolve -> {
 					// 풀기 — 지우고 남은 사건을 다시 판정한다. 순서 키는 지금 상태로(storyline-R1)
 					this.storylines.delete(storyline);
 					gone.add(storyline);
 					EventId event = new EventId(dissolve.eventId());
+					retired.add(new RetiredStoryline(new StorylineId(storyline), event));
 					this.queue.enqueue(dissolve.eventId(), PendingEvent.orderAt(event, this.events.find(event)), now);
 				}
 				case Tidying.MergeInto merge -> {
@@ -275,6 +287,7 @@ class StorylineLinker {
 						followMerge(merged, merge.survivor(), now);
 						this.storylines.merge(merged, merge.survivor(), now);
 						gone.add(merged);
+						retired.add(new RetiredStoryline(new StorylineId(merged), null));
 					}
 					if (merge.survivor() == storyline && represent.contains(storyline)) {
 						represent(storyline, members, now);
@@ -282,6 +295,9 @@ class StorylineLinker {
 					this.relationQueue.enqueue(merge.survivor(), now);
 				}
 			}
+		}
+		if (!retired.isEmpty()) {
+			this.publisher.publishEvent(new StorylinesRetired(retired));
 		}
 	}
 
