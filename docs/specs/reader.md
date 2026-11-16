@@ -94,7 +94,7 @@ HTTP 엔드포인트 — 모두 세션이 필요하고 키 관문 뒤다(키 없
 
 ### 스토리라인 카드
 
-- **reader-R6** — 카드 여럿: `ids` 는 1 ~ 100개(`StorylineDirectory.MAX_PAGE_SIZE`)이고 모두 1 이상이어야 한다 — 아니면 400 이다. 같은 ID 는 처음 자리 한 번만 본다. `StorylineDirectory.findAll` 의 결과를 받은 ID 순으로 싣고 행마다 받은 ID 와 카드(reader-R3)를 싣는다 — 합쳐진 ID 면 카드의 ID 가 남는 스토리라인이고, 없는 ID 는 빠진다. 기간이 없어 기간 기사 수 · 큰 여부는 싣지 않는다
+- **reader-R6** — 카드 여럿: `ids` 는 받은 값의 수(같은 ID 포함)가 1 ~ 100개(`StorylineDirectory.MAX_PAGE_SIZE`)이고 모두 1 이상이어야 한다 — 아니면 400 이다. 같은 ID 는 처음 자리 한 번만 본다. `StorylineDirectory.findAll` 의 결과를 받은 ID 순으로 싣고 행마다 받은 ID 와 카드(reader-R3)를 싣는다 — 합쳐진 ID 면 카드의 ID 가 남는 스토리라인이고, 없는 ID 는 빠진다. 기간이 없어 기간 기사 수 · 큰 여부는 싣지 않는다
 
 ### 기사 정보
 

@@ -3,6 +3,7 @@ package net.yozmnews;
 import java.util.Map;
 
 import net.yozmnews.credential.LlmKeyScopeTests;
+import net.yozmnews.reader.StorylineScreenScopeTests;
 import net.yozmnews.user.AccountScopeTests;
 import net.yozmnews.user.InterestScopeTests;
 import net.yozmnews.user.NoticeScopeTests;
@@ -38,7 +39,10 @@ public final class UserScopedEndpoints {
 			Map.entry("PUT /api/interests/model", InterestScopeTests.class),
 			Map.entry("GET /api/storyline-subscriptions", StorylineSubscriptionScopeTests.class),
 			Map.entry("PUT /api/storyline-subscriptions/{storylineId}", StorylineSubscriptionScopeTests.class),
-			Map.entry("DELETE /api/storyline-subscriptions/{storylineId}", StorylineSubscriptionScopeTests.class));
+			Map.entry("DELETE /api/storyline-subscriptions/{storylineId}", StorylineSubscriptionScopeTests.class),
+			Map.entry("GET /api/storylines", StorylineScreenScopeTests.class),
+			Map.entry("GET /api/storylines/{id}", StorylineScreenScopeTests.class),
+			Map.entry("GET /api/storyline-cards", StorylineScreenScopeTests.class));
 
 	private UserScopedEndpoints() {
 	}
