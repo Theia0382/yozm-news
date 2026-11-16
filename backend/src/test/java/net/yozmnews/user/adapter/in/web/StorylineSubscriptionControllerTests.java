@@ -1,0 +1,145 @@
+package net.yozmnews.user.adapter.in.web;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.time.Instant;
+import java.time.ZoneOffset;
+
+import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.storyline.StorylineRows;
+import net.yozmnews.user.SignedInUsers;
+import net.yozmnews.user.application.PasswordHashing;
+import net.yozmnews.user.domain.account.AccountRepository;
+import net.yozmnews.user.domain.credential.PasswordCredentialRepository;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.test.json.JsonCompareMode;
+import org.springframework.test.web.servlet.MockMvc;
+
+/**
+ * 스토리라인 구독 API — 판정 결과는 판별자 하나의 200 이고 손으로 쓴 JSON 과 STRICT 로 견준다. 경로의 스토리라인 ID 가 1 보다 작으면 400
+ * 이다. 실제 PostgreSQL 에서 본다.
+ * <p>
+ * 지키는 규칙: user-R52
+ */
+@Import(TestcontainersConfiguration.class)
+@SpringBootTest
+@AutoConfigureMockMvc
+class StorylineSubscriptionControllerTests {
+
+	@Autowired
+	MockMvc mockMvc;
+
+	@Autowired
+	AccountRepository accounts;
+
+	@Autowired
+	PasswordCredentialRepository credentials;
+
+	@Autowired
+	PasswordHashing hashing;
+
+	@Autowired
+	JdbcClient jdbc;
+
+	private SignedInUsers.SignedInUser user;
+
+	@BeforeEach
+	void signIn() throws Exception {
+		reset();
+		this.user = new SignedInUsers(this.mockMvc, this.accounts, this.credentials, this.hashing)
+			.signIn("subscriptions@example.com");
+	}
+
+	@AfterEach
+	void reset() {
+		this.jdbc.sql("delete from users").update();
+		StorylineRows.clear(this.jdbc);
+	}
+
+	@Test
+	void subscribingAnswersEachOutcome() throws Exception {
+		long storyline = storyline();
+		long merged = storyline();
+		this.jdbc.sql("update storylines set merged_into = :into, merged_at = now() where id = :id")
+			.param("into", storyline)
+			.param("id", merged)
+			.update();
+
+		this.mockMvc.perform(put("/api/storyline-subscriptions/{id}", merged).with(this.user))
+			.andExpect(status().isOk())
+			.andExpect(content().json("""
+					{"result":"SUBSCRIBED","storylineId":%d,"limit":null}""".formatted(storyline),
+					JsonCompareMode.STRICT));
+		this.mockMvc.perform(put("/api/storyline-subscriptions/{id}", storyline).with(this.user))
+			.andExpect(status().isOk())
+			.andExpect(content().json("""
+					{"result":"ALREADY_SUBSCRIBED","storylineId":%d,"limit":null}""".formatted(storyline),
+					JsonCompareMode.STRICT));
+		this.mockMvc.perform(put("/api/storyline-subscriptions/999999999").with(this.user))
+			.andExpect(status().isOk())
+			.andExpect(content().json("""
+					{"result":"UNKNOWN_STORYLINE","storylineId":null,"limit":null}""", JsonCompareMode.STRICT));
+	}
+
+	@Test
+	void aFullListAnswersLimitReached() throws Exception {
+		for (int i = 0; i < 100; i++) {
+			this.mockMvc.perform(put("/api/storyline-subscriptions/{id}", storyline()).with(this.user))
+				.andExpect(status().isOk());
+		}
+
+		this.mockMvc.perform(put("/api/storyline-subscriptions/{id}", storyline()).with(this.user))
+			.andExpect(status().isOk())
+			.andExpect(content().json("""
+					{"result":"LIMIT_REACHED","storylineId":null,"limit":100}""", JsonCompareMode.STRICT));
+	}
+
+	@Test
+	void theListCarriesIdTimeAndStateAndUnsubscribingAnswersEachOutcome() throws Exception {
+		long storyline = storyline();
+		this.mockMvc.perform(put("/api/storyline-subscriptions/{id}", storyline).with(this.user));
+
+		this.mockMvc.perform(get("/api/storyline-subscriptions").with(this.user))
+			.andExpect(status().isOk())
+			.andExpect(content().json("""
+					{"subscriptions":[{"storylineId":%d,"state":"ACTIVE"}],"limit":100}""".formatted(storyline)));
+		this.mockMvc.perform(delete("/api/storyline-subscriptions/{id}", storyline).with(this.user))
+			.andExpect(status().isOk())
+			.andExpect(content().json("""
+					{"result":"UNSUBSCRIBED"}""", JsonCompareMode.STRICT));
+		this.mockMvc.perform(delete("/api/storyline-subscriptions/{id}", storyline).with(this.user))
+			.andExpect(status().isOk())
+			.andExpect(content().json("""
+					{"result":"NOT_SUBSCRIBED"}""", JsonCompareMode.STRICT));
+	}
+
+	@Test
+	void aStorylineIdBelowOneIsABadRequest() throws Exception {
+		this.mockMvc.perform(put("/api/storyline-subscriptions/0").with(this.user)).andExpect(status().isBadRequest());
+		this.mockMvc.perform(delete("/api/storyline-subscriptions/0").with(this.user))
+			.andExpect(status().isBadRequest());
+		this.mockMvc.perform(put("/api/storyline-subscriptions/abc").with(this.user))
+			.andExpect(status().isBadRequest());
+	}
+
+	private long storyline() {
+		return this.jdbc.sql("""
+				insert into storylines (model_version, centroid, article_count, first_article_at, last_article_at,
+				                        representative_event_id, created_at, updated_at)
+				values ('model-a', cast('[1,0]' as halfvec), 1, :at, :at, 1, :at, :at)
+				returning id
+				""").param("at", Instant.now().atOffset(ZoneOffset.UTC)).query(Long.class).single();
+	}
+
+}
