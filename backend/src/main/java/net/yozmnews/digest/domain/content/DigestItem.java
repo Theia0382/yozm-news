@@ -2,10 +2,9 @@ package net.yozmnews.digest.domain.content;
 
 import java.util.Objects;
 
+import net.yozmnews.digest.domain.candidate.SelectionReason;
 import org.jspecify.annotations.Nullable;
 import org.springframework.data.relational.core.mapping.Table;
-
-import net.yozmnews.digest.domain.candidate.SelectionReason;
 
 /**
  * 섹션의 인용 한 줄 — 노출 기록 · docs/specs/digest.md §6

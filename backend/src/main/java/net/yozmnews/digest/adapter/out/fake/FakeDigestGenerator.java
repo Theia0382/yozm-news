@@ -6,14 +6,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import tools.jackson.databind.json.JsonMapper;
-
 import net.yozmnews.digest.domain.candidate.AliasedCandidate;
 import net.yozmnews.digest.domain.generator.DigestGenerator;
 import net.yozmnews.digest.domain.generator.DigestRequest;
 import net.yozmnews.digest.domain.generator.GeneratedOutput;
 import net.yozmnews.digest.domain.generator.TokenUsage;
 import net.yozmnews.digest.domain.output.DigestOutputSchema;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * 다이제스트 생성기의 로컬 대체물 — 외부 호출 없이 고정 규칙으로 출력 원문을 만든다 · docs/specs/digest.md §4 · digest-R12

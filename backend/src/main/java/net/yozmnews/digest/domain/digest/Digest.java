@@ -6,16 +6,15 @@ import java.time.LocalDate;
 import java.util.Objects;
 import java.util.Optional;
 
+import net.yozmnews.digest.domain.generator.TokenUsage;
+import net.yozmnews.llm.LlmModel;
+import net.yozmnews.platform.CodePoints;
+import net.yozmnews.platform.UserId;
 import org.jspecify.annotations.Nullable;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.PersistenceCreator;
 import org.springframework.data.annotation.Version;
 import org.springframework.data.relational.core.mapping.Table;
-
-import net.yozmnews.digest.domain.generator.TokenUsage;
-import net.yozmnews.llm.LlmModel;
-import net.yozmnews.platform.CodePoints;
-import net.yozmnews.platform.UserId;
 
 /**
  * 다이제스트 상태 aggregate — 상태 전이의 정본 · docs/specs/digest.md §4 · digest-R1

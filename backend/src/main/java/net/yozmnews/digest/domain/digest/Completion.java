@@ -3,9 +3,8 @@ package net.yozmnews.digest.domain.digest;
 import java.time.Duration;
 import java.util.Objects;
 
-import org.jspecify.annotations.Nullable;
-
 import net.yozmnews.digest.domain.generator.TokenUsage;
+import org.jspecify.annotations.Nullable;
 
 /**
  * 다이제스트를 끝내는 방법 · docs/specs/digest.md §5 · digest-R1
