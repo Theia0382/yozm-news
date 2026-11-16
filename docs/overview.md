@@ -39,7 +39,7 @@
 - 운영자가 켠 소스의 RSS 피드에서 기사 수집, 정규화, 중복 제거, 피드 상태 모니터링(실패 · 방치된 피드 감지). 소스는 수집 프로필로 등록하고, 주요 언론사는 프리셋으로 제공한다([ADR-0015](adr/0015-source-presets-and-collection-profiles.md))
 - 운영자가 관리하는 태그 체계(주제 2단계 · 지역 · 형식)와 Jev 공유 평가(주제 · 지역 다중 태그, 기사 형식, 중요도)
 - 가입 · 로그인: 운영자의 초대 링크 · 계정 생성으로 가입(공개 가입은 운영자 화면에서 연다, 첫 운영자는 환경 변수), 자체 로그인(이메일 · 비밀번호, 복구 코드 재설정, 첫 로그인의 비밀번호 변경)
-- LLM API 키 등록(BYOK — OpenAI · Anthropic). 키가 없는 사용자는 키 등록 · 계정 설정 · 알림 화면만 쓴다
+- LLM API 키 등록(BYOK — OpenAI · Anthropic). 키가 없는 사용자는 키 등록 · 계정 설정 · 알림 · 관심 설정 화면만 쓴다
 - 관심 설정: 구독 주제, 지역 · 형식 제외, 자유 텍스트 관심사, 제외할 소스, 다이제스트 생성 시각
 - 한 번 일어난 일을 다룬 기사의 공유 묶기(사건) ([ADR-0026](adr/0026-event-clustering-with-local-embeddings-and-jev.md) · [ADR-0102](adr/0102-an-event-is-the-reports-of-one-happening-narrowed-by-the-event-membership-question-wording.md))
 - 사용자별 일일 다이제스트 생성(여러 기사를 종합한 주요 뉴스 + 추가 헤드라인)과 열람(오늘 · 지난 날짜), 원문 링크

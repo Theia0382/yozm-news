@@ -337,6 +337,22 @@ class AccountControllerTests {
 	}
 
 	@Test
+	void recoveryForAMissingEmailWaitsLikeForAnExistingAccount() throws Exception {
+		long user = account("pia@example.com", false);
+		storeCode(user, CODE);
+
+		// 이메일마다 네 번째 실패 뒤 바로 다섯 번째를 보낸다 — 그 사이가 요청 하나여야 1초 대기 안에 든다
+		String missing = recoveryAfterFourFailures("nobody-recover@example.com");
+		String existing = recoveryAfterFourFailures("pia@example.com");
+
+		assertThat(missing).isEqualTo("""
+				{"result":"WAIT","recoveryCode":null,"retryAfterSeconds":1,"passwordProblem":null}""");
+		assertThat(existing).as("있는 계정도 같은 본문 — 계정 유무가 드러나지 않는다").isEqualTo(missing);
+		assertThat(failures("RECOVERY", "nobody-recover@example.com")).as("없는 이메일도 같은 기록 — 대기 중 시도는 세지 않는다")
+			.isEqualTo(4);
+	}
+
+	@Test
 	void recoveryWithANewPasswordBreakingTheRuleChecksNothing() throws Exception {
 		long user = account("nina@example.com", false);
 		storeCode(user, CODE);
@@ -417,6 +433,15 @@ class AccountControllerTests {
 		return new Recovered(com.jayway.jsonpath.JsonPath.read(body, "$.result"),
 				com.jayway.jsonpath.JsonPath.read(body, "$.recoveryCode"), (retry != null) ? retry.longValue() : null,
 				(cookieOrNull(response, "SESSION") != null) ? cookie(response, "SESSION") : null);
+	}
+
+	/** 틀린 코드로 네 번 실패한 뒤(각각 거절) 맞는 코드로 다섯 번째 재설정의 본문 */
+	private String recoveryAfterFourFailures(String email) throws Exception {
+		for (int i = 0; i < 4; i++) {
+			assertThat(recoverBody(email, "ZZZZ-4567-89AB-CDEF-GHJK-MNPQ-RSTV-WXYZ")).isEqualTo("""
+					{"result":"REJECTED","recoveryCode":null,"retryAfterSeconds":null,"passwordProblem":null}""");
+		}
+		return recoverBody(email, CODE);
 	}
 
 	private String recoverBody(String email, String code) throws Exception {

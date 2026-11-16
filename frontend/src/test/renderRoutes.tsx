@@ -34,15 +34,16 @@ export function renderRoutes(
   routes: RouteObject[],
   entry: string,
   handlers: Record<string, Handler>,
+  {
+    queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    }),
+  }: { queryClient?: QueryClient } = {},
 ) {
   const server = fakeServer(handlers);
   const router = createMemoryRouter(routes, { initialEntries: [entry] });
   render(
-    <QueryClientProvider
-      client={
-        new QueryClient({ defaultOptions: { queries: { retry: false } } })
-      }
-    >
+    <QueryClientProvider client={queryClient}>
       <ApiClientContext.Provider
         value={createApiClient({ baseUrl: TEST_BASE_URL, fetch: server.fetch })}
       >
