@@ -84,7 +84,7 @@ describe("StorylinePage", () => {
       within(events[0]!).getByText(/한겨레 · 경향신문 ·/),
     ).toBeInTheDocument();
     expect(
-      within(events[0]!).getByText("받은 소식 · 2026-11-04"),
+      within(events[0]!).getByText("받은 소식 · 2026. 11. 04."),
     ).toBeInTheDocument();
     expect(within(events[0]!).queryByText(/갈래/)).toBeNull();
     expect(within(events[1]!).getByText(/· 갈래$/)).toBeInTheDocument();

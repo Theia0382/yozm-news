@@ -1,6 +1,7 @@
 // 독자 화면의 스토리라인 문구 — 목록과 상세가 같은 문구를 쓰게 한 곳에 둔다(docs/specs/reader.md · overview §8).
 
 import type { StorylineWindow } from "@/features/storylines/storylineQueries";
+import { formatDate } from "@/shared/lib/dateTime";
 
 /** 스토리라인 목록의 주소 */
 export const STORYLINES_PATH = "/storylines";
@@ -46,7 +47,7 @@ export const INHERITED = "갈래";
 
 /** 받은 소식 — 그 사용자가 다이제스트에서 받은 날짜 */
 export function receivedOn(date: string): string {
-  return `받은 소식 · ${date}`;
+  return `받은 소식 · ${formatDate(date)}`;
 }
 
 /** 관계 머리 */

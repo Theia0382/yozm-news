@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatDateTime } from "@/shared/lib/dateTime";
+import { formatDate, formatDateTime } from "@/shared/lib/dateTime";
 
 describe("formatDateTime", () => {
   it("준 시간대의 지역 표기와 시간대 이름으로 보인다", () => {
@@ -26,5 +26,17 @@ describe("formatDateTime", () => {
 
   it("읽지 못하는 값은 받은 문자열 그대로 돌려준다", () => {
     expect(formatDateTime("시각 아님", "Asia/Seoul")).toBe("시각 아님");
+  });
+});
+
+describe("formatDate", () => {
+  it("날짜를 시각 표기와 같은 지역 표기의 연 · 월 · 일로 보인다", () => {
+    expect(formatDate("2026-11-04")).toBe("2026. 11. 04.");
+    expect(formatDate("2026-01-31")).toBe("2026. 01. 31.");
+  });
+
+  it("읽지 못하는 값은 받은 문자열 그대로 돌려준다", () => {
+    expect(formatDate("날짜 아님")).toBe("날짜 아님");
+    expect(formatDate("2026-11-04T00:00:00Z")).toBe("2026-11-04T00:00:00Z");
   });
 });

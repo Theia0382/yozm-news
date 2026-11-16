@@ -80,7 +80,7 @@ export function RequireSignIn() {
   return (
     <>
       <header
-        className={`${PAGE_FRAME} ${NARROW_WIDTH} flex items-center justify-end gap-3 pb-6 text-sm`}
+        className={`${PAGE_FRAME} ${NARROW_WIDTH} flex flex-wrap items-center justify-end gap-x-3 gap-y-1 pb-6 text-sm *:whitespace-nowrap`}
       >
         {!mustChange && (
           <>
