@@ -50,6 +50,14 @@ class JdbcInterestSettings implements InterestSettingsRepository {
 	}
 
 	@Override
+	public Optional<InterestSettings> findByUser(UserId user) {
+		return this.jdbc.sql("select " + COLUMNS + " from user_settings where user_id = :user")
+			.param("user", user.value())
+			.query(JdbcInterestSettings::row)
+			.optional();
+	}
+
+	@Override
 	public boolean insertIfAbsent(InterestSettings settings) {
 		return this.jdbc.sql("insert into user_settings (" + COLUMNS + """
 				) values (:user, :tagSet, :timezone, :digestTime, :interestText, :provider, :model, :weekly, :weeklyDay,

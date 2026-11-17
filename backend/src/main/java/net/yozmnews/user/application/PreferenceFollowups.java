@@ -134,12 +134,10 @@ class PreferenceFollowups {
 		if (from.equals(active)) {
 			return locked;
 		}
-		TagKeyMapping mapping = versions.mapping(from);
-		TagSetView fromView = versions.view(from);
-		TagSetView toView = versions.view(mapping.to());
 		UserId user = locked.user();
-		PreferenceSet current = this.preferences.load(user);
-		FollowResult result = PreferenceFollowup.follow(current, fromView, toView, mapping);
+		Followed followed = followed(from, this.preferences.load(user), versions);
+		FollowResult result = followed.result();
+		TagSetView toView = followed.view();
 		this.preferences.replace(user, result.next(), now);
 		List<PreferenceChange> removed = new ArrayList<>();
 		List<PreferenceChange> added = new ArrayList<>();
@@ -152,13 +150,36 @@ class PreferenceFollowups {
 			}
 		}
 		this.preferences.record(user, removed, PreferenceCause.TAG_SET_CHANGE, from, now);
-		this.preferences.record(user, added, PreferenceCause.TAG_SET_CHANGE, mapping.to(), now);
-		InterestSettings followed = locked.withPreferenceVersion(mapping.to(), now);
-		this.settings.update(followed);
+		this.preferences.record(user, added, PreferenceCause.TAG_SET_CHANGE, followed.version(), now);
+		this.settings.update(locked.withPreferenceVersion(followed.version(), now));
 		if (!result.adjustments().isEmpty()) {
 			this.notices.create(user, new PreferencesAdjustedContent(toView.number(), result.adjustments()), now);
 		}
 		return this.settings.lockByUser(user).orElseThrow();
+	}
+
+	/**
+	 * {@code from} 버전의 키로 적힌 선호를 지금 활성 버전으로 따라간 결과 — 쓰지 않는다. 따라가기 계산의 정본이다 — {@link #followLocked} 와
+	 * 다이제스트가 읽는 소비자 조회가 함께 쓴다. 부르는 쪽이 한 스냅숏에서 읽은 선호와 선호 버전을 넘긴다.
+	 */
+	Followed followed(TagSetId from, PreferenceSet current) {
+		return followed(from, current, new Versions());
+	}
+
+	private Followed followed(TagSetId from, PreferenceSet current, Versions versions) {
+		TagKeyMapping mapping = versions.mapping(from);
+		TagSetView toView = versions.view(mapping.to());
+		return new Followed(mapping.to(), toView,
+				PreferenceFollowup.follow(current, versions.view(from), toView, mapping));
+	}
+
+	/**
+	 * 따라간 결과
+	 * @param version 따라간 활성 버전 — 계보 표가 기준으로 삼은 버전
+	 * @param view 그 버전의 내용
+	 * @param result 따라간 선호와 조정 항목
+	 */
+	record Followed(TagSetId version, TagSetView view, FollowResult result) {
 	}
 
 	/** 호출 하나 안에서 버전마다 한 번만 읽는다 — 버전 내용은 바뀌지 않는다 */

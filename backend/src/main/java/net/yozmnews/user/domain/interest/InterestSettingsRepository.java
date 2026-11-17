@@ -15,6 +15,9 @@ public interface InterestSettingsRepository {
 	/** 그 사용자의 설정 행을 잠그고 읽는다({@code FOR UPDATE}) — 트랜잭션 안에서 부른다 */
 	Optional<InterestSettings> lockByUser(UserId user);
 
+	/** 그 사용자의 설정 행을 잠그지 않고 읽는다 — 쓰지 않는 소비자 조회가 부른다 */
+	Optional<InterestSettings> findByUser(UserId user);
+
 	/** 설정 행이 없을 때만 넣는다 — 이미 있으면(동시에 넣은 것 포함) 아무것도 하지 않는다 */
 	boolean insertIfAbsent(InterestSettings settings);
 
