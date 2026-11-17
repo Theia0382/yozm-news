@@ -9,7 +9,7 @@ import net.yozmnews.storyline.domain.linking.Score;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 소속 하나를 정한 근거 — docs/specs/storyline.md §4 · storyline-R14 · storyline-R35.
+ * 소속 하나를 정한 근거 — docs/specs/storyline.md §4 · storyline-R14 · storyline-R36.
  *
  * @param score 점수 · 코사인 · 핵심 말 겹침 — {@code MERGE} 면 없다
  * @param criteriaId 판정에 쓴 기준 이력 ID — {@code MERGE} 면 없다

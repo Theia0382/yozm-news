@@ -8,7 +8,7 @@ import net.yozmnews.evaluation.EventDescriptor;
 
 /**
  * 띠 안 후보를 물을 때의 정본 — 후보 스토리라인을 서술하는 구성 사건 고르기와 다시 물을 때 · docs/specs/storyline.md §5 ·
- * storyline-R35.
+ * storyline-R36.
  */
 public final class LinkingAsk {
 

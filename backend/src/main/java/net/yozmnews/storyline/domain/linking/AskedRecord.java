@@ -3,7 +3,7 @@ package net.yozmnews.storyline.domain.linking;
 import java.util.Objects;
 
 /**
- * 물은 기록 한 행 — 물은 결과와 물었을 때의 두 쪽 크기 · docs/specs/storyline.md §4 · storyline-R35.
+ * 물은 기록 한 행 — 물은 결과와 물었을 때의 두 쪽 크기 · docs/specs/storyline.md §4 · storyline-R36.
  *
  * @param eventArticles 물었을 때 판정할 사건의 기사 수
  * @param otherSize 물었을 때 상대의 크기 — 후보 스토리라인이면 구성 사건 수, 짝 이웃이면 기사 수

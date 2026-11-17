@@ -25,7 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 잇기 회차 하나 — docs/specs/storyline.md §4 · storyline-R3 · storyline-R4 · storyline-R35.
+ * 잇기 회차 하나 — docs/specs/storyline.md §4 · storyline-R3 · storyline-R4 · storyline-R36.
  * <p>
  * 지금 기준을 기준 이력에 등록하고, 대기를 순서 키 순으로 점유해 커밋한 뒤 사건마다 판정을 시도한다. 시도는 한 트랜잭션에서
  * {@link StorylineLinker#link} 를 부르고, 마쳤으면 점유 토큰과 다시 알림 수가 그대로일 때만 대기 행을 지운다 — 달라졌으면 점유만 푼다.

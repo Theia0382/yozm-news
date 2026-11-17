@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
  * 잇기 판정 — 위 기준 이상은 묻지 않고 가장 높은 하나, 띠 안은 물은 확률로, 붙이기는 고른 것이 지금 소속이 아닐 때만, 짝은 소속 없는
  * 이웃에서, 다시 넣기는 아래 기준 이상이고 소속 없는 이웃. 띠가 빈 기준은 0.65 · 0.65, 띠는 [0.84, 0.90) · 확률 기준 0.50.
  * <p>
- * 지키는 규칙: storyline-R10 · storyline-R11 · storyline-R12 · storyline-R35
+ * 지키는 규칙: storyline-R10 · storyline-R11 · storyline-R12 · storyline-R36
  */
 class LinkingRuleTests {
 

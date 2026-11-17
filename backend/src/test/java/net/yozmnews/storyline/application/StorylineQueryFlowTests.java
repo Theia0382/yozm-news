@@ -266,6 +266,30 @@ class StorylineQueryFlowTests {
 	}
 
 	@Test
+	void manyStorylinesAreFoundByTheRequestedIdsFollowingMergesAndDroppingMissingOnes() {
+		long merged = storyline("2026-11-02T00:00:00Z", "2026-11-02T00:00:00Z", this.eventA);
+		this.jdbc.sql("update storylines set merged_into = :into, merged_at = now() where id = :id")
+			.param("into", this.wide)
+			.param("id", merged)
+			.update();
+
+		Map<StorylineId, StorylineView> found = this.directory.findAll(List.of(new StorylineId(merged),
+				new StorylineId(this.wide), new StorylineId(this.quiet), new StorylineId(999_999_999L)));
+
+		// 키는 받은 ID 이고, 합쳐진 ID 는 남는 스토리라인을 낸다 — 없는 ID 는 빠진다(storyline-R21)
+		assertThat(found).containsOnlyKeys(new StorylineId(merged), new StorylineId(this.wide),
+				new StorylineId(this.quiet));
+		assertThat(found.get(new StorylineId(merged)).id()).isEqualTo(new StorylineId(this.wide));
+		assertThat(found.get(new StorylineId(merged))).isEqualTo(this.directory.find(new StorylineId(this.wide)).orElseThrow());
+		assertThat(found.get(new StorylineId(this.wide)).id()).isEqualTo(new StorylineId(this.wide));
+		// 합쳐지지 않은 ID 는 자기 — 한 건 찾기와 같은 값이다
+		assertThat(found.get(new StorylineId(this.quiet)).id()).isEqualTo(new StorylineId(this.quiet));
+		assertThat(found.get(new StorylineId(this.quiet))).isEqualTo(this.directory.find(new StorylineId(this.quiet)).orElseThrow());
+		assertThat(this.directory.findAll(List.of())).isEmpty();
+		assertThat(this.directory.findAll(List.of(new StorylineId(999_999_999L)))).isEmpty();
+	}
+
+	@Test
 	void theTimelineIsInFirstArticleOrderWithoutEventsNotYetFollowed() {
 		// 합쳐진 사건의 소속 행은 남아 있지만 타임라인에는 나오지 않는다 — 구성 사건 수는 소속 행 수다
 		assertThat(this.directory.events(new StorylineId(this.wide))).extracting(event -> event.event().id().value())

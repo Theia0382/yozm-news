@@ -18,11 +18,11 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 잇기 기준을 띠로 바꾸는 마이그레이션(V48) — 실제 PostgreSQL 의 별도 스키마에 V47 까지만 올려 옛 기준 이력 · 소속 · 대기 행을 넣고, 끝까지
+ * 잇기 기준을 띠로 바꾸는 마이그레이션(V49) — 실제 PostgreSQL 의 별도 스키마에 V48 까지만 올려 옛 기준 이력 · 소속 · 대기 행을 넣고, 끝까지
  * 올린 뒤 옛 기준이 띠 없는 기준(아래 = 위 = 옛 기준 점수, 확률 기준 없음)으로 읽히고 옛 소속 · 대기 행이 그대로인지 본다. 앱이 쓰는
  * 스키마와 섞이지 않게 스키마를 따로 두고 테스트 뒤 지운다.
  * <p>
- * 지키는 규칙: storyline-R14 · storyline-R35
+ * 지키는 규칙: storyline-R14 · storyline-R36
  */
 @JdbcTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
@@ -45,7 +45,7 @@ class LinkingBandMigrationTests {
 
 	@Test
 	void anOldThresholdBecomesABandlessCriteriaAndOldRowsStay() {
-		flyway("47").migrate();
+		flyway("48").migrate();
 		long criteria = this.jdbc.sql("insert into " + SCHEMA + ".storyline_linking_criteria (window_seconds, threshold, "
 				+ "created_at) values (1209600, 0.86, now()) returning id").query(Long.class).single();
 		long storyline = this.jdbc.sql("insert into " + SCHEMA + ".storylines (model_version, centroid, article_count, "

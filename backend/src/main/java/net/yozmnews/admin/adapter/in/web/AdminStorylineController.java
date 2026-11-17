@@ -20,7 +20,6 @@ import net.yozmnews.event.EventId;
 import net.yozmnews.event.EventPeriod;
 import net.yozmnews.platform.ApiProblem;
 import net.yozmnews.platform.WebRole;
-import net.yozmnews.source.FeedLabels;
 import net.yozmnews.storyline.StorylineCursor;
 import net.yozmnews.storyline.StorylineDirectory;
 import net.yozmnews.storyline.StorylineEvent;
@@ -62,11 +61,11 @@ class AdminStorylineController {
 	private final AdminRepresentatives representatives;
 
 	AdminStorylineController(StorylineDirectory directory, StorylineReview review, RelationJudgementLog judgements,
-			EventDirectory events, ArticleDirectory articles, FeedLabels labels) {
+			EventDirectory events, ArticleDirectory articles) {
 		this.directory = Objects.requireNonNull(directory, "directory");
 		this.review = Objects.requireNonNull(review, "review");
 		this.judgements = Objects.requireNonNull(judgements, "judgements");
-		this.representatives = new AdminRepresentatives(events, new AdminArticles(articles, labels));
+		this.representatives = new AdminRepresentatives(events, new AdminArticles(articles));
 	}
 
 	@GetMapping("/api/admin/storylines")

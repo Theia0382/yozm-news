@@ -78,7 +78,7 @@ erDiagram
 
 ## 사용자
 
-계정 · 자격 · 복구 코드 · 실패 기록 · 요청 제한 기록 · 화면 내 알림 · 가입 정책 · 초대 · 관심 설정 테이블(`users` · `user_password_credentials` · `user_recovery_codes` · `login_failures` · `request_limit_counts` · `user_notices` · `user_feed_status_receipts` · `user_sign_up_policy` · `user_sign_up_policy_changes` · `user_invitations` · `user_settings` · `user_tag_preferences` · `user_tag_preference_events` · `user_excluded_sources`)은 [user Spec §6](specs/user.md#6-데이터)에 있다. **(미설계)** 다이제스트의 최대 후보 수와 원하는 분량을 사용자 설정으로 둘지는 다이제스트 생성을 설계하는 작업이 정한다([pipeline §6](pipeline.md#후보-선별)).
+계정 · 자격 · 복구 코드 · 실패 기록 · 요청 제한 기록 · 화면 내 알림 · 가입 정책 · 초대 · 관심 설정 · 스토리라인 구독 테이블(`users` · `user_password_credentials` · `user_recovery_codes` · `login_failures` · `request_limit_counts` · `user_notices` · `user_feed_status_receipts` · `user_sign_up_policy` · `user_sign_up_policy_changes` · `user_invitations` · `user_settings` · `user_tag_preferences` · `user_tag_preference_events` · `user_excluded_sources` · `user_storyline_subscriptions` · `user_storyline_subscription_events`)은 [user Spec §6](specs/user.md#6-데이터)에 있다. **(미설계)** 다이제스트의 최대 후보 수와 원하는 분량을 사용자 설정으로 둘지는 다이제스트 생성을 설계하는 작업이 정한다([pipeline §6](pipeline.md#후보-선별)).
 
 ## LLM 키 (BYOK)
 
@@ -104,7 +104,7 @@ erDiagram
 
 - 공유 스토리라인 테이블(`storylines` · `storyline_key_terms` — 사용자를 모른다), 사건의 소속(`storyline_members` — 사건 하나가 스토리라인 0개 이상에 든다), 잇기 대기(`storyline_linking_queue`), 기준 이력(`storyline_linking_criteria`), 스토리라인 사이 관계(`storyline_relations` — 포함 · 이어짐, 쌍마다 한 행), 물은 기록(`storyline_relation_asked`), 관계 대기(`storyline_relation_queue`), 관계 기준 이력(`storyline_relation_criteria`), 큰 판정 기준 테이블(`storyline_big_criteria` · `storyline_big_criteria_changes`)은 [storyline Spec §6](specs/storyline.md#6-데이터)에 있다. 사건은 ID 로만 가리킨다
 - 포함의 상위가 하위의 사건을 갖는 것은 저장하지 않는다 — 소속은 직접 소속만 있고 조회할 때 관계를 따라 모은다([ADR-0131](adr/0131-storyline-relations-are-explicit-links-with-containment-as-a-single-parent-tree-gathered-at-query-time.md)). 관계 판정 원본(`flow_relation_judgements`)은 [evaluation Spec §6](specs/evaluation.md#6-데이터)에 있다
-- **(미설계)** 스토리라인 구독과 그 변경 이력(추가 전용 — 현재 구독은 그 투영)은 `user` 의 테이블이다. 스토리라인은 ID 로만 가리킨다
+- 스토리라인 구독과 그 변경 이력(`user_storyline_subscriptions` · `user_storyline_subscription_events` — 추가 전용 이력, 현재 구독은 그 투영)은 `user` 의 테이블이고 [user Spec §6](specs/user.md#6-데이터)에 있다. 스토리라인은 ID 로만 가리킨다 — 합치거나 지운 스토리라인은 `storyline` 의 알림으로 따른다
 
 ## 피드백
 
@@ -147,7 +147,7 @@ erDiagram
 | 관계 판정 원본 (`flow_relation_judgements`) | 180일 | 태그 판정 원본과 같다. 관계 · 물은 기록이 가리키는 원본이 먼저 지워질 수 있다 — 그 ID 는 FK 가 아니다 |
 | 태그 판정 원본 (`article_tag_judgements`) | 180일 | 태그 기준 · 저장 기준 분석과 저장 기준을 낮춘 뒤 빠진 태그 채움([tag-R31](specs/tag.md#빠진-태그-채움--저장-바닥) — 채울 기간의 상한도 180일)에 충분한 기간. **(미설계)** 지운 뒤 원본이 없는 평가의 채움 처분은 보존을 구현하는 작업이 정한다 |
 | 다이제스트 | 사용자 탈퇴 시까지. 지운 기사의 인용과 인용이 남지 않은 섹션은 지운다 — 다이제스트 행은 남는다 | 인용 항목은 노출 기록이다([digest Spec](specs/digest.md#지운-기사-따르기) digest-R10) |
-| 관심 신호 이력(`feedback_events` · `user_tag_preference_events` · 스토리라인 구독 이력) · 변화 리포트 | 사용자 탈퇴 시까지 | 관심사 히스토리 · 리포트의 근거 |
+| 관심 신호 이력(`feedback_events` · `user_tag_preference_events` · `user_storyline_subscription_events`) · 변화 리포트 | 사용자 탈퇴 시까지 | 관심사 히스토리 · 리포트의 근거 |
 | `digest_candidates` | 다이제스트를 만들고 30일. 지운 기사의 행은 곧바로 지운다 | 생성 중 지운 기사의 표시이고 그 뒤로는 디버깅용이다. `digest` 의 보존 정리가 지운다([digest Spec](specs/digest.md#후보-행-보존) digest-R11) |
 | 화면 내 알림 (`user_notices`) | 읽은 알림은 읽고 90일 뒤 삭제. 안 읽은 알림은 볼 때까지 남는다 | 지나간 일을 알리는 것이고 장기 기능의 근거가 아니다. 안 읽은 보안 알림은 다음 로그인 때 보여야 한다([ADR-0134](adr/0134-in-app-notices-are-one-row-per-recipient-with-a-closed-kind-and-per-kind-jsonb-content-and-read-notices-are-deleted-after-ninety-days.md)) |
 | 피드 상태 알림의 반영 기준 (`user_feed_status_receipts`) | 사용자 탈퇴 시까지 | 사용자마다 한 행이고, 다시 처리된 회차를 거르는 데 쓴다([user Spec](specs/user.md#화면-내-알림) user-R24) |

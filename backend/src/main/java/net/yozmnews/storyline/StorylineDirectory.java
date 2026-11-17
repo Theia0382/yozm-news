@@ -1,6 +1,8 @@
 package net.yozmnews.storyline;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import net.yozmnews.event.EventId;
@@ -25,6 +27,13 @@ public interface StorylineDirectory {
 	 * @return 없는 스토리라인이면 빈 값
 	 */
 	Optional<StorylineView> find(StorylineId id);
+
+	/**
+	 * 스토리라인 여럿 — 키는 받은 ID, 값은 그 ID 가 가리키는 스토리라인이다. 합쳐진 스토리라인(storyline-R18)이면 남는 스토리라인을 낸다
+	 * (storyline-R21). 받은 ID 여럿이 같은 남는 스토리라인을 가리키면 그 값이 여러 키에 실린다.
+	 * @return 없는 스토리라인(지웠거나 처음부터 없는 ID)은 결과에 없다. 빈 입력이면 빈 맵
+	 */
+	Map<StorylineId, StorylineView> findAll(Collection<StorylineId> ids);
 
 	/**
 	 * 스토리라인의 닫은 사건 집합(타임라인) — 사건마다 한 번씩, 첫 기사 시각 · 사건 ID 순. 사건마다 직접 소속인지 싣는다(storyline-R33).

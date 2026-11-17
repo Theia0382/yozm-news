@@ -10,7 +10,7 @@ import java.util.Set;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 잇기 판정의 정본 — 붙이기 · 짝 · 다시 넣기 · docs/specs/storyline.md §5 · storyline-R10 ~ storyline-R12 · storyline-R35.
+ * 잇기 판정의 정본 — 붙이기 · 짝 · 다시 넣기 · docs/specs/storyline.md §5 · storyline-R10 ~ storyline-R12 · storyline-R36.
  * <p>
  * 붙이기와 짝은 같은 규칙이다(경계 포함, 점수가 NaN 이면 어느 기준에도 닿지 않는다):
  * <ol>

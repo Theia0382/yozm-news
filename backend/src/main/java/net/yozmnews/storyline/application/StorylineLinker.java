@@ -24,6 +24,9 @@ import net.yozmnews.event.EventProfile;
 import net.yozmnews.event.EventTermCounts;
 import net.yozmnews.event.EventView;
 import net.yozmnews.storyline.LinkedBy;
+import net.yozmnews.storyline.RetiredStoryline;
+import net.yozmnews.storyline.StorylineId;
+import net.yozmnews.storyline.StorylinesRetired;
 import net.yozmnews.storyline.domain.linking.Asked;
 import net.yozmnews.storyline.domain.linking.AskedRecord;
 import net.yozmnews.storyline.domain.linking.Compared;
@@ -47,18 +50,20 @@ import net.yozmnews.storyline.domain.storyline.StorylineRepository;
 import net.yozmnews.storyline.domain.storyline.StorylineSnapshot;
 import net.yozmnews.storyline.domain.storyline.Tidying;
 import org.jspecify.annotations.Nullable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
 /**
  * 사건 하나의 따르기 · 판정 · 정돈 · 쓰기 — docs/specs/storyline.md §4 · storyline-R5 ~ storyline-R14 · storyline-R17 ·
- * storyline-R18 · storyline-R26 · storyline-R32 · storyline-R35.
+ * storyline-R18 · storyline-R26 · storyline-R32 · storyline-R35 · storyline-R36.
  * <p>
  * 트랜잭션 안에서 부른다. 첫 문장이 모듈 잠금이라 판정은 한 번에 하나다. 사건의 지금 상태({@link EventDirectory#find})로 지워짐 ·
  * 합쳐짐 · 그대로를 가르고, 그대로면 점수를 매겨 붙이기 · 짝을 판정한다. 띠 안 후보의 확률이 물은 기록에 모자라면 아무것도 쓰지 않고
- * 물을 것({@link LinkingOutcome.Ask})을 낸다 — 회차가 트랜잭션 밖에서 묻고 {@link #record} 로 기록한 뒤 다시 부른다. 판정이 정해지면
- * 그 사건이 든 스토리라인의 표현을 다시 정하고, 소속을 쓰고, 다시 넣기 · 정돈을 한다. 판단은 {@code domain/linking} ·
- * {@code domain/storyline} 이 하고, 이 클래스는 읽기 · 쓰기를 잇는다. 스토리라인을 합칠 때는 합쳐질 쪽의 관계를 남는 쪽으로 옮기고 그
- * 물은 기록을 지운다. 정돈에서 남은 스토리라인과 짝으로 연 스토리라인은 관계 대기에 넣는다.
+ * 물을 것({@link LinkingOutcome.Ask})을 낸다 — 회차가 트랜잭션 밖에서 묻고 {@link #record} 로 기록한 뒤 다시 부른다(storyline-R36).
+ * 판정이 정해지면 그 사건이 든 스토리라인의 표현을 다시 정하고, 소속을 쓰고, 다시 넣기 · 정돈을 한다. 판단은 {@code domain/linking} ·
+ * {@code domain/storyline} 이 하고, 이 클래스는 읽기 · 쓰기를 잇는다. 스토리라인을 합칠 때는 합쳐질 쪽의 관계를 남는 쪽으로 옮기고 — 옮길
+ * 계획은 {@code domain/relation} 이 정한다 — 합쳐질 쪽의 물은 기록을 지운다. 정돈에서 남은 스토리라인과 짝으로 연 스토리라인은 관계
+ * 대기에 넣는다. 정돈이 합치거나 지운 스토리라인은 같은 트랜잭션에서 {@link StorylinesRetired} 로 알린다(storyline-R35).
  */
 @Component
 class StorylineLinker {
@@ -75,14 +80,18 @@ class StorylineLinker {
 
 	private final RelationQueueRepository relationQueue;
 
+	private final ApplicationEventPublisher publisher;
+
 	StorylineLinker(EventDirectory events, StorylineRepository storylines, LinkingQueueRepository queue,
-			LinkingAskedRepository asked, RelationRepository relations, RelationQueueRepository relationQueue) {
+			LinkingAskedRepository asked, RelationRepository relations, RelationQueueRepository relationQueue,
+			ApplicationEventPublisher publisher) {
 		this.events = events;
 		this.storylines = storylines;
 		this.queue = queue;
 		this.asked = asked;
 		this.relations = relations;
 		this.relationQueue = relationQueue;
+		this.publisher = publisher;
 	}
 
 	/**
@@ -96,7 +105,7 @@ class StorylineLinker {
 		EventId id = new EventId(eventId);
 		Optional<EventView> current = this.events.find(id);
 		if (current.isEmpty()) {
-			// 지워진 사건 — 물은 기록 · 소속을 지우고 그 스토리라인들을 정돈한다(storyline-R6 · R17 · R35)
+			// 지워진 사건 — 물은 기록 · 소속을 지우고 그 스토리라인들을 정돈한다(storyline-R6 · R17 · R36)
 			this.asked.forgetEvent(eventId);
 			List<Long> owned = this.storylines.storylinesOf(eventId);
 			for (long storyline : owned) {
@@ -440,11 +449,13 @@ class StorylineLinker {
 
 	/**
 	 * 스토리라인들을 ID 순으로 정돈한다(storyline-R13 · R17 · R18) — 판단은 {@link Tidying#decide} 가 한다. 이 정돈에서 이미 지웠거나
-	 * 합친 스토리라인은 건너뛰고, 견줄 스토리라인에서도 뺀다.
+	 * 합친 스토리라인은 건너뛰고, 견줄 스토리라인에서도 뺀다. 합치거나 지운 스토리라인이 있으면 끝에 {@link StorylinesRetired} 를 한 번
+	 * 발행한다(storyline-R35) — 지운 스토리라인을 가리키던 합쳐진 행은 연쇄로 함께 지워지지만 싣지 않는다(합칠 때 이미 실렸다).
 	 * @param represent 남길 때 표현을 다시 정할 스토리라인(소속이 바뀐 것)
 	 */
 	private void tidy(Collection<Long> storylineIds, Set<Long> represent, Instant now) {
 		Set<Long> gone = new HashSet<>();
+		List<RetiredStoryline> retired = new ArrayList<>();
 		for (long storyline : new TreeSet<>(storylineIds)) {
 			if (gone.contains(storyline)) {
 				continue;
@@ -467,12 +478,14 @@ class StorylineLinker {
 				case Tidying.Remove remove -> {
 					this.storylines.delete(storyline);
 					gone.add(storyline);
+					retired.add(new RetiredStoryline(new StorylineId(storyline), null));
 				}
 				case Tidying.Dissolve dissolve -> {
 					// 풀기 — 지우고 남은 사건을 다시 판정한다. 순서 키는 지금 상태로(storyline-R1)
 					this.storylines.delete(storyline);
 					gone.add(storyline);
 					EventId event = new EventId(dissolve.eventId());
+					retired.add(new RetiredStoryline(new StorylineId(storyline), event));
 					this.queue.enqueue(dissolve.eventId(), PendingEvent.orderAt(event, this.events.find(event)), now);
 				}
 				case Tidying.MergeInto merge -> {
@@ -480,6 +493,7 @@ class StorylineLinker {
 						followMerge(merged, merge.survivor(), now);
 						this.storylines.merge(merged, merge.survivor(), now);
 						gone.add(merged);
+						retired.add(new RetiredStoryline(new StorylineId(merged), null));
 					}
 					if (merge.survivor() == storyline && represent.contains(storyline)) {
 						represent(storyline, members, now);
@@ -488,11 +502,14 @@ class StorylineLinker {
 				}
 			}
 		}
+		if (!retired.isEmpty()) {
+			this.publisher.publishEvent(new StorylinesRetired(retired));
+		}
 	}
 
 	/**
 	 * 합쳐질 스토리라인의 관계를 남는 스토리라인으로 옮기고, 그 물은 기록(관계 · 잇기)과 관계 대기 행을 지운다(storyline-R32 ·
-	 * storyline-R35) — 합쳐진 행은 남으므로 FK 연쇄가 돌지 않는다. 합치기 전에 부른다
+	 * storyline-R36) — 합쳐진 행은 남으므로 FK 연쇄가 돌지 않는다. 합치기 전에 부른다
 	 */
 	private void followMerge(long merged, long survivor, Instant now) {
 		this.relations.applyMove(RelationMove.plan(this.relations.all(), merged, survivor), now);

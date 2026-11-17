@@ -29,7 +29,9 @@ import net.yozmnews.user.domain.notice.NoticeRecipients;
 import net.yozmnews.user.domain.notice.NoticeRepository;
 import net.yozmnews.user.domain.notice.PasswordChangeMethod;
 import net.yozmnews.user.domain.notice.PasswordChangedContent;
+import net.yozmnews.user.domain.notice.RemovedSubscription;
 import net.yozmnews.user.domain.notice.SeenNotice;
+import net.yozmnews.user.domain.notice.StorylineSubscriptionsRemovedContent;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -125,6 +127,24 @@ class JdbcNoticeRepositoryTests {
 				{"method": "CHANGE", "changedAt": "2026-11-13T00:00:00Z"}
 				""", this.jdbc.sql("select content::text from user_notices where id = :id")
 			.param("id", older)
+			.query(String.class)
+			.single(), JSONCompareMode.STRICT);
+	}
+
+	@Test
+	void aRemovedSubscriptionsNoticeStoresOnlyStorylineAndEventIds() throws Exception {
+		UserId alice = account("alice@example.com", AccountRole.USER);
+		StorylineSubscriptionsRemovedContent content = new StorylineSubscriptionsRemovedContent(
+				List.of(new RemovedSubscription(31, 77L), new RemovedSubscription(32, null)));
+		long id = this.notices.create(alice, content, T1);
+
+		assertThat(this.notices.page(alice, null, 50))
+			.containsExactly(new Notice(id, NoticeKind.STORYLINE_SUBSCRIPTIONS_REMOVED, content, 1, T1, T1, null));
+		// 기사 정보(제목)는 저장하지 않는다(user-R54)
+		JSONAssert.assertEquals("""
+				{"removed": [{"storylineId": 31, "eventId": 77}, {"storylineId": 32, "eventId": null}]}
+				""", this.jdbc.sql("select content::text from user_notices where id = :id")
+			.param("id", id)
 			.query(String.class)
 			.single(), JSONCompareMode.STRICT);
 	}

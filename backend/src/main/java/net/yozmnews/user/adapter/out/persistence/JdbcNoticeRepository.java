@@ -23,7 +23,9 @@ import net.yozmnews.user.domain.notice.NoticeRepository;
 import net.yozmnews.user.domain.notice.PasswordChangeMethod;
 import net.yozmnews.user.domain.notice.PasswordChangedContent;
 import net.yozmnews.user.domain.notice.PreferencesAdjustedContent;
+import net.yozmnews.user.domain.notice.RemovedSubscription;
 import net.yozmnews.user.domain.notice.SeenNotice;
+import net.yozmnews.user.domain.notice.StorylineSubscriptionsRemovedContent;
 import net.yozmnews.user.domain.preference.Adjustment;
 import net.yozmnews.user.domain.preference.AdjustmentKind;
 import net.yozmnews.user.domain.preference.PreferenceMode;
@@ -177,6 +179,8 @@ class JdbcNoticeRepository implements NoticeRepository {
 			case KEY_INVALIDATED -> JSON.readValue(rs.getString("content"), StoredKeyInvalidated.class).content();
 			case PREFERENCES_ADJUSTED ->
 				JSON.readValue(rs.getString("content"), StoredPreferencesAdjusted.class).content();
+			case STORYLINE_SUBSCRIPTIONS_REMOVED ->
+				JSON.readValue(rs.getString("content"), StoredSubscriptionsRemoved.class).content();
 		};
 		return new Notice(rs.getLong("id"), kind, content, rs.getInt("revision"),
 				rs.getObject("created_at", OffsetDateTime.class).toInstant(),
@@ -191,6 +195,8 @@ class JdbcNoticeRepository implements NoticeRepository {
 			case KeyInvalidatedContent keyInvalidated -> JSON.writeValueAsString(StoredKeyInvalidated.of(keyInvalidated));
 			case PreferencesAdjustedContent preferencesAdjusted ->
 				JSON.writeValueAsString(StoredPreferencesAdjusted.of(preferencesAdjusted));
+			case StorylineSubscriptionsRemovedContent subscriptionsRemoved ->
+				JSON.writeValueAsString(StoredSubscriptionsRemoved.of(subscriptionsRemoved));
 		};
 	}
 
@@ -279,6 +285,31 @@ class JdbcNoticeRepository implements NoticeRepository {
 						.toList());
 		}
 
+	}
+
+	/**
+	 * 사라진 구독 알림 내용의 저장 모양 — {@code {"removed":[{"storylineId":…,"eventId":…}]}}. 기사 정보는 담지 않는다 — 제목은 알림함을
+	 * 읽을 때 사건으로 찾는다(user-R54)
+	 */
+	private record StoredSubscriptionsRemoved(List<StoredRemovedSubscription> removed) {
+
+		static StoredSubscriptionsRemoved of(StorylineSubscriptionsRemovedContent content) {
+			return new StoredSubscriptionsRemoved(content.removed()
+				.stream()
+				.map(item -> new StoredRemovedSubscription(item.storylineId(), item.eventId()))
+				.toList());
+		}
+
+		StorylineSubscriptionsRemovedContent content() {
+			return new StorylineSubscriptionsRemovedContent(this.removed.stream()
+				.map(stored -> new RemovedSubscription(stored.storylineId(), stored.eventId()))
+				.toList());
+		}
+
+	}
+
+	/** 사라진 구독 하나의 저장 모양 */
+	private record StoredRemovedSubscription(long storylineId, @Nullable Long eventId) {
 	}
 
 	/** 조정 항목 하나의 저장 모양 */

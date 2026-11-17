@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 /**
  * 잇기 기준 — 창은 0 보다 큰 초 단위, 0 &lt; 아래 기준 ≤ 위 기준 ≤ 1, 확률 기준은 0 보다 크고 1 이하. 아래 기준이 위 기준보다 작을 때만 띠가 있다.
  * <p>
- * 지키는 규칙: storyline-R9 · storyline-R35
+ * 지키는 규칙: storyline-R9 · storyline-R36
  */
 class LinkingCriteriaTests {
 

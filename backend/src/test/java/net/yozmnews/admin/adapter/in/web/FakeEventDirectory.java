@@ -61,6 +61,11 @@ class FakeEventDirectory implements EventDirectory {
 	}
 
 	@Override
+	public Map<EventId, List<ArticleId>> articleIdsOf(Collection<EventId> events) {
+		throw new UnsupportedOperationException("운영자 컨트롤러는 부르지 않는다");
+	}
+
+	@Override
 	public Map<ArticleId, EventId> eventsOf(Collection<ArticleId> articleIds) {
 		throw new UnsupportedOperationException("운영자 컨트롤러는 부르지 않는다");
 	}

@@ -10,14 +10,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import jakarta.servlet.http.Cookie;
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.event.EventArticles;
 import net.yozmnews.llm.Provider;
 import net.yozmnews.source.FeedId;
 import net.yozmnews.source.FeedStatus;
+import net.yozmnews.storyline.StorylineRows;
 import net.yozmnews.tag.TagKind;
 import net.yozmnews.user.SignedInUsers;
 import net.yozmnews.user.application.PasswordHashing;
@@ -31,7 +34,9 @@ import net.yozmnews.user.domain.notice.NoticeRepository;
 import net.yozmnews.user.domain.notice.PasswordChangeMethod;
 import net.yozmnews.user.domain.notice.PasswordChangedContent;
 import net.yozmnews.user.domain.notice.PreferencesAdjustedContent;
+import net.yozmnews.user.domain.notice.RemovedSubscription;
 import net.yozmnews.user.domain.notice.SeenNotice;
+import net.yozmnews.user.domain.notice.StorylineSubscriptionsRemovedContent;
 import net.yozmnews.user.domain.preference.Adjustment;
 import net.yozmnews.user.domain.preference.AdjustmentKind;
 import net.yozmnews.user.domain.preference.PreferenceMode;
@@ -52,7 +57,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
  * 알림함 API — 목록은 최근부터 50개씩이고 다음 쪽 커서를 준다. 응답은 손으로 쓴 JSON 과 STRICT 로 견준다(피드 식별 · 상태 · 시각 · 횟수 밖의
  * 키가 없다). 읽음은 받은 판이 그대로인 알림만 바꾸고 결과와 무관하게 204 다. 질의 · 본문의 값이 틀리면 400, 요청 보호 토큰이 없으면 403 이다.
  * <p>
- * 지키는 규칙: user-R21 · user-R25 · user-R27 · user-R36
+ * 지키는 규칙: user-R21 · user-R25 · user-R27 · user-R36 · user-R54
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -120,13 +125,13 @@ class NoticeControllerTests {
 					      "firstAt":"2026-11-13T00:00:00Z","lastAt":"2026-11-13T01:00:00Z","changes":2},
 					     {"feedId":12,"sourceName":null,"section":null,"firstFrom":"ACTIVE","lastTo":"STALE",
 					      "firstAt":"2026-11-13T01:00:00Z","lastAt":"2026-11-13T01:00:00Z","changes":1}]},
-					   "passwordChanged":null,"keyInvalidated":null,"preferencesAdjusted":null},
+					   "passwordChanged":null,"keyInvalidated":null,"preferencesAdjusted":null,"storylineSubscriptionsRemoved":null},
 					  {"id":%d,"kind":"FEED_STATUS","revision":1,"createdAt":"2026-11-13T00:00:00Z",
 					   "updatedAt":"2026-11-13T00:00:00Z","read":true,
 					   "feedStatus":{"feeds":[
 					     {"feedId":11,"sourceName":"알림일보","section":"정치","firstFrom":"ACTIVE","lastTo":"DEGRADED",
 					      "firstAt":"2026-11-13T00:00:00Z","lastAt":"2026-11-13T00:00:00Z","changes":1}]},
-					   "passwordChanged":null,"keyInvalidated":null,"preferencesAdjusted":null}],
+					   "passwordChanged":null,"keyInvalidated":null,"preferencesAdjusted":null,"storylineSubscriptionsRemoved":null}],
 					 "nextBefore":null}
 					""".formatted(newer, older), JsonCompareMode.STRICT));
 		this.mockMvc.perform(get("/api/notices/unread-count").with(this.admin))
@@ -147,7 +152,7 @@ class NoticeControllerTests {
 					  {"id":%d,"kind":"PASSWORD_CHANGED","revision":1,"createdAt":"2026-11-13T00:00:00Z",
 					   "updatedAt":"2026-11-13T00:00:00Z","read":false,"feedStatus":null,
 					   "passwordChanged":{"method":"RECOVERY","changedAt":"2026-11-13T00:00:00Z"},
-					   "keyInvalidated":null,"preferencesAdjusted":null}],
+					   "keyInvalidated":null,"preferencesAdjusted":null,"storylineSubscriptionsRemoved":null}],
 					 "nextBefore":null}
 					""".formatted(id), JsonCompareMode.STRICT));
 	}
@@ -166,7 +171,7 @@ class NoticeControllerTests {
 					  {"id":%d,"kind":"KEY_INVALIDATED","revision":1,"createdAt":"2026-11-13T00:00:00Z",
 					   "updatedAt":"2026-11-13T00:00:00Z","read":false,"feedStatus":null,"passwordChanged":null,
 					   "keyInvalidated":{"provider":"ANTHROPIC","invalidatedAt":"2026-11-13T00:30:00.123456Z"},
-					   "preferencesAdjusted":null}],
+					   "preferencesAdjusted":null,"storylineSubscriptionsRemoved":null}],
 					 "nextBefore":null}
 					""".formatted(id), JsonCompareMode.STRICT));
 		this.mockMvc.perform(get("/api/notices/unread-count").with(this.admin))
@@ -191,9 +196,48 @@ class NoticeControllerTests {
 					   "keyInvalidated":null,
 					   "preferencesAdjusted":{"tagSetNumber":4,"adjustments":[
 					     {"kind":"REGION","key":"china","name":"중국","mode":"EXCLUDE","change":"RELEASED_REMOVED"},
-					     {"kind":"FORMAT","key":"listicle","name":"목록형","mode":"EXCLUDE","change":"ADDED_DEFAULT_EXCLUDED"}]}}],
+					     {"kind":"FORMAT","key":"listicle","name":"목록형","mode":"EXCLUDE","change":"ADDED_DEFAULT_EXCLUDED"}]},
+					   "storylineSubscriptionsRemoved":null}],
 					 "nextBefore":null}
 					""".formatted(id), JsonCompareMode.STRICT));
+	}
+
+	@Test
+	void removedSubscriptionsNoticeCarriesTheTitleReadNowFromTheRemainingEvent() throws Exception {
+		long article = EventArticles.insert(this.jdbc, "풀린 흐름에 남았던 기사", null);
+		long event = StorylineRows.event(this.jdbc, "OPEN", "model-a", "[1,0]", 1, "2026-11-05T00:00:00Z",
+				"2026-11-05T00:00:00Z", Map.of());
+		long criteria = this.jdbc.sql("""
+				insert into event_assignment_criteria (window_seconds, upper, lower, store, probability, created_at)
+				values (259200, 0.8, 0.55, 0.4, 0.5, now()) returning id
+				""").query(Long.class).single();
+		this.jdbc.sql("""
+				insert into event_articles (article_id, event_id, published_at, score, decided_by, opened, criteria_id,
+				                            assigned_at)
+				values (:article, :event, '2026-11-05T00:00:00Z', 0.9, 'FORMULA', true, :criteria, '2026-11-05T00:00:00Z')
+				""").param("article", article).param("event", event).param("criteria", criteria).update();
+		long id = this.notices.create(this.admin.id(), new StorylineSubscriptionsRemovedContent(
+				List.of(new RemovedSubscription(31, event), new RemovedSubscription(32, null))), T1);
+
+		try {
+			this.mockMvc.perform(get("/api/notices").with(this.admin))
+				.andExpect(status().isOk())
+				.andExpect(content().json("""
+						{"notices":[
+						  {"id":%d,"kind":"STORYLINE_SUBSCRIPTIONS_REMOVED","revision":1,"createdAt":"2026-11-13T00:00:00Z",
+						   "updatedAt":"2026-11-13T00:00:00Z","read":false,"feedStatus":null,"passwordChanged":null,
+						   "keyInvalidated":null,"preferencesAdjusted":null,
+						   "storylineSubscriptionsRemoved":{"removed":[
+						     {"storylineId":31,"title":"풀린 흐름에 남았던 기사"},
+						     {"storylineId":32,"title":null}]}}],
+						 "nextBefore":null}
+						""".formatted(id), JsonCompareMode.STRICT));
+		}
+		finally {
+			StorylineRows.clear(this.jdbc);
+			this.jdbc.sql("delete from article_feed_entries where article_id = :id").param("id", article).update();
+			this.jdbc.sql("delete from articles where id = :id").param("id", article).update();
+		}
 	}
 
 	@Test

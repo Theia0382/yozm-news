@@ -3,7 +3,7 @@ package net.yozmnews.storyline.domain.linking;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 띠 안 후보 하나에 물은 결과 — 흐름 소속 판정의 확률과 판정 원본 ID · docs/specs/storyline.md §4 · storyline-R35.
+ * 띠 안 후보 하나에 물은 결과 — 흐름 소속 판정의 확률과 판정 원본 ID · docs/specs/storyline.md §4 · storyline-R36.
  * <p>
  * 둘 다 없으면 확률을 얻지 못한 것이다(입력 거부 · 서술이 모두 빠져 묻지 못함) — 그 후보는 다시 물을 때까지 붙일 수 없다.
  *

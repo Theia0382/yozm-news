@@ -41,6 +41,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.TestPropertySource;
@@ -53,7 +54,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 기준: 창 14일 · 띠 [0.80, 0.95) · 확률 기준 0.50. 말의 무게는 모두 같게 한다 — 점수 = 0.89 × 코사인 + 0.11 × 겹침. 사건 [1,0] 둘은
  * 점수 1.0(위 기준 이상 — 묻지 않고 짝), [4,3] 은 [1,0] 과 코사인 0.8 · 겹침 1 이라 0.822(띠 안)이다.
  * <p>
- * 지키는 규칙: storyline-R3 · storyline-R4 · storyline-R6 · storyline-R10 · storyline-R11 · storyline-R14 · storyline-R35
+ * 지키는 규칙: storyline-R3 · storyline-R4 · storyline-R6 · storyline-R10 · storyline-R11 · storyline-R14 · storyline-R36
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -83,6 +84,9 @@ class LinkingBandFlowTests {
 
 	@Autowired
 	LinkingAskedRepository asked;
+
+	@Autowired
+	ApplicationEventPublisher publisher;
 
 	@Autowired
 	RelationRepository relations;
@@ -402,7 +406,8 @@ class LinkingBandFlowTests {
 			}
 
 		};
-		return new StorylineLinker(events, this.storylines, this.queue, this.asked, this.relations, this.relationQueue);
+		return new StorylineLinker(events, this.storylines, this.queue, this.asked, this.relations, this.relationQueue,
+				this.publisher);
 	}
 
 	private static FlowMembershipJudgement judged(long judgement, FlowMembershipQuery query, double probability) {

@@ -50,6 +50,12 @@ public interface EventDirectory {
 	List<EventArticleView> articles(EventId id);
 
 	/**
+	 * 사건 여럿의 기사 ID — 사건 ID 순, 사건마다 발행 시각 · 기사 ID 순. 기간을 보지 않는다.
+	 * @return 사건 → 배정된 기사 ID — 배정이 없는 사건(합쳐진 사건 포함) · 없는 사건은 빠지고, 같은 사건은 한 번. 빈 입력이면 빈 맵
+	 */
+	Map<EventId, List<ArticleId>> articleIdsOf(Collection<EventId> events);
+
+	/**
 	 * 기사들의 사건.
 	 * @return 기사 ID → 사건 ID — 배정이 없는 기사는 빠진다. 빈 입력이면 빈 맵
 	 */

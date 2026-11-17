@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test;
  * 띠 안 후보를 물을 때 — 후보 스토리라인의 서술은 판정할 사건과 중심 코사인이 큰 구성 사건 다섯(자신 제외, 같으면 사건 ID 순, 셀 수 없는
  * 것은 뒤), 다시 물을 때는 어느 쪽 크기든 물었을 때의 두 배 이상.
  * <p>
- * 지키는 규칙: storyline-R35
+ * 지키는 규칙: storyline-R36
  */
 class LinkingAskTests {
 

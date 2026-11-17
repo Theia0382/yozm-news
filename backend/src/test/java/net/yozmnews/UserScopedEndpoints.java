@@ -3,9 +3,11 @@ package net.yozmnews;
 import java.util.Map;
 
 import net.yozmnews.credential.LlmKeyScopeTests;
+import net.yozmnews.reader.StorylineScreenScopeTests;
 import net.yozmnews.user.AccountScopeTests;
 import net.yozmnews.user.InterestScopeTests;
 import net.yozmnews.user.NoticeScopeTests;
+import net.yozmnews.user.StorylineSubscriptionScopeTests;
 
 /**
  * 사용자 데이터를 다루는 화면용 API 처리기와 그 격리 시험 — 운영자 경로 밖의 처리기는 공개 표시가 없으면 여기 한 줄로 등록한다. 키는
@@ -34,7 +36,13 @@ public final class UserScopedEndpoints {
 			Map.entry("GET /api/interests/settings", InterestScopeTests.class),
 			Map.entry("PUT /api/interests/settings", InterestScopeTests.class),
 			Map.entry("GET /api/interests/model", InterestScopeTests.class),
-			Map.entry("PUT /api/interests/model", InterestScopeTests.class));
+			Map.entry("PUT /api/interests/model", InterestScopeTests.class),
+			Map.entry("GET /api/storyline-subscriptions", StorylineSubscriptionScopeTests.class),
+			Map.entry("PUT /api/storyline-subscriptions/{storylineId}", StorylineSubscriptionScopeTests.class),
+			Map.entry("DELETE /api/storyline-subscriptions/{storylineId}", StorylineSubscriptionScopeTests.class),
+			Map.entry("GET /api/storylines", StorylineScreenScopeTests.class),
+			Map.entry("GET /api/storylines/{id}", StorylineScreenScopeTests.class),
+			Map.entry("GET /api/storyline-cards", StorylineScreenScopeTests.class));
 
 	private UserScopedEndpoints() {
 	}

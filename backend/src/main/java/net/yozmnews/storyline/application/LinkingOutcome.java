@@ -6,7 +6,7 @@ import java.util.Objects;
 import net.yozmnews.article.ArticleId;
 
 /**
- * 판정 시도 하나의 결말 — {@link StorylineLinker#link} 가 낸다 · docs/specs/storyline.md §4 · storyline-R35.
+ * 판정 시도 하나의 결말 — {@link StorylineLinker#link} 가 낸다 · docs/specs/storyline.md §4 · storyline-R36.
  */
 sealed interface LinkingOutcome {
 

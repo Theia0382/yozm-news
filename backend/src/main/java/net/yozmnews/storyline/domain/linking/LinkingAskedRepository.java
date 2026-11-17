@@ -5,7 +5,7 @@ import java.util.Collection;
 import java.util.Map;
 
 /**
- * 물은 기록 저장소 — 붙이기 띠(사건, 후보 스토리라인)와 짝 띠(사건, 이웃 사건) · docs/specs/storyline.md §4 · storyline-R35.
+ * 물은 기록 저장소 — 붙이기 띠(사건, 후보 스토리라인)와 짝 띠(사건, 이웃 사건) · docs/specs/storyline.md §4 · storyline-R36.
  * <p>
  * 판정의 확률은 이 기록이 정본이다. 쓰기 트랜잭션 안에서 부른다. 방향이 있다 — 판정할 사건이 앞이다.
  */

@@ -10,6 +10,7 @@ import java.util.Set;
 
 import net.yozmnews.article.ArticleContent;
 import net.yozmnews.article.ArticleDirectory;
+import net.yozmnews.article.ArticleHeadline;
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.source.SourceId;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -22,10 +23,14 @@ class FakeArticleDirectory implements ArticleDirectory {
 
 	final Map<ArticleId, ArticleContent> contents = new LinkedHashMap<>();
 
+	/** 헤드라인의 출처 이름 — 시험이 넣은 그대로 낸다(엮는 규칙은 {@code article} 의 시험이 본다). 없으면 빈 목록 */
+	final Map<ArticleId, List<String>> headlineSources = new LinkedHashMap<>();
+
 	final List<String> calls = new ArrayList<>();
 
 	void reset() {
 		this.contents.clear();
+		this.headlineSources.clear();
 		this.calls.clear();
 	}
 
@@ -37,6 +42,20 @@ class FakeArticleDirectory implements ArticleDirectory {
 			ArticleContent content = this.contents.get(id);
 			if (content != null) {
 				found.put(id, content);
+			}
+		});
+		return found;
+	}
+
+	@Override
+	public Map<ArticleId, ArticleHeadline> headlines(Collection<ArticleId> ids) {
+		this.calls.add("headlines " + ids.stream().map(ArticleId::value).toList());
+		Map<ArticleId, ArticleHeadline> found = new LinkedHashMap<>();
+		ids.forEach(id -> {
+			ArticleContent content = this.contents.get(id);
+			if (content != null) {
+				found.put(id, new ArticleHeadline(id, content.title(), this.headlineSources.getOrDefault(id, List.of()),
+						content.publishedAt(), content.canonicalUrl()));
 			}
 		});
 		return found;

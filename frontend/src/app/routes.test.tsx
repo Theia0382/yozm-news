@@ -18,6 +18,8 @@ import { StorylineDetailPage } from "@/features/admin/StorylineDetailPage";
 import { StorylinesPage } from "@/features/admin/StorylinesPage";
 import { ThresholdsPage } from "@/features/admin/ThresholdsPage";
 import { InterestsPage } from "@/features/interests/InterestsPage";
+import { StorylinePage as ReaderStorylinePage } from "@/features/storylines/StorylinePage";
+import { StorylinesPage as ReaderStorylinesPage } from "@/features/storylines/StorylinesPage";
 import { NoticesPage } from "@/features/notices/NoticesPage";
 import { ApiClientContext, createApiClient } from "@/shared/api/client";
 import type { components } from "@/shared/api/schema";
@@ -100,6 +102,25 @@ describe("routes", () => {
     const loaded = await (lazy as () => Promise<{ Component?: unknown }>)();
     expect(loaded.Component).toBe(InterestsPage);
   });
+
+  it.each([
+    ["storylines", ReaderStorylinesPage],
+    ["storylines/:id", ReaderStorylinePage],
+  ])(
+    "로그인 틀 아래 %s 경로가 독자 스토리라인 화면을 내려받는다",
+    async (path, page) => {
+      const signedIn = routes[0]?.children?.find(
+        (route) => route.path === undefined,
+      );
+      const lazy = signedIn?.children?.find(
+        (route) => route.path === path,
+      )?.lazy;
+
+      expect(typeof lazy).toBe("function");
+      const loaded = await (lazy as () => Promise<{ Component?: unknown }>)();
+      expect(loaded.Component).toBe(page);
+    },
+  );
 
   it("운영자 화면 아래 수집 현황 경로가 수집 현황 화면을 내려받는다", async () => {
     const admin = routes[0]?.children?.find((route) => route.path === "admin");

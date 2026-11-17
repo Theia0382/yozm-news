@@ -15,7 +15,7 @@ import org.jspecify.annotations.Nullable;
 record ArticleDetailResponse(String title, @Nullable String summary, URI canonicalUrl,
 		List<ArticleEntryResponse> entries) {
 
-	static ArticleDetailResponse of(AdminArticles.Detail detail) {
+	static ArticleDetailResponse of(AdminArticleDetails.Detail detail) {
 		return new ArticleDetailResponse(detail.title(), detail.summary(), detail.canonicalUrl(),
 				detail.entries().stream().map(ArticleEntryResponse::of).toList());
 	}

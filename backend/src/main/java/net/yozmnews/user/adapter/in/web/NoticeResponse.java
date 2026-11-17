@@ -1,6 +1,7 @@
 package net.yozmnews.user.adapter.in.web;
 
 import java.time.Instant;
+import java.util.Map;
 
 import net.yozmnews.user.domain.notice.FeedStatusContent;
 import net.yozmnews.user.domain.notice.KeyInvalidatedContent;
@@ -8,6 +9,7 @@ import net.yozmnews.user.domain.notice.Notice;
 import net.yozmnews.user.domain.notice.NoticeKind;
 import net.yozmnews.user.domain.notice.PasswordChangedContent;
 import net.yozmnews.user.domain.notice.PreferencesAdjustedContent;
+import net.yozmnews.user.domain.notice.StorylineSubscriptionsRemovedContent;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -24,24 +26,32 @@ import org.jspecify.annotations.Nullable;
  * @param passwordChanged 비밀번호 알림의 본문 — 종류가 {@code PASSWORD_CHANGED} 일 때만
  * @param keyInvalidated 키 무효 알림의 본문 — 종류가 {@code KEY_INVALIDATED} 일 때만
  * @param preferencesAdjusted 선호 조정 알림의 본문 — 종류가 {@code PREFERENCES_ADJUSTED} 일 때만
+ * @param storylineSubscriptionsRemoved 사라진 구독 알림의 본문 — 종류가 {@code STORYLINE_SUBSCRIPTIONS_REMOVED} 일 때만
  */
 record NoticeResponse(long id, NoticeKind kind, int revision, Instant createdAt, Instant updatedAt, boolean read,
 		@Nullable FeedStatusNoticeResponse feedStatus, @Nullable PasswordChangedNoticeResponse passwordChanged,
 		@Nullable KeyInvalidatedNoticeResponse keyInvalidated,
-		@Nullable PreferencesAdjustedNoticeResponse preferencesAdjusted) {
+		@Nullable PreferencesAdjustedNoticeResponse preferencesAdjusted,
+		@Nullable StorylineSubscriptionsRemovedNoticeResponse storylineSubscriptionsRemoved) {
 
-	static NoticeResponse of(Notice notice) {
+	/** @param eventTitles 사라진 구독 알림이 가리키는 사건 ID → 지금 대표 기사 제목 */
+	static NoticeResponse of(Notice notice, Map<Long, String> eventTitles) {
 		return switch (notice.content()) {
 			case FeedStatusContent content -> new NoticeResponse(notice.id(), notice.kind(), notice.revision(),
-					notice.createdAt(), notice.updatedAt(), notice.read(), FeedStatusNoticeResponse.of(content), null, null, null);
+					notice.createdAt(), notice.updatedAt(), notice.read(), FeedStatusNoticeResponse.of(content), null, null, null,
+					null);
 			case PasswordChangedContent content -> new NoticeResponse(notice.id(), notice.kind(), notice.revision(),
-					notice.createdAt(), notice.updatedAt(), notice.read(), null, PasswordChangedNoticeResponse.of(content), null, null);
+					notice.createdAt(), notice.updatedAt(), notice.read(), null, PasswordChangedNoticeResponse.of(content), null, null,
+					null);
 			case KeyInvalidatedContent content -> new NoticeResponse(notice.id(), notice.kind(), notice.revision(),
 					notice.createdAt(), notice.updatedAt(), notice.read(), null, null,
-					KeyInvalidatedNoticeResponse.of(content), null);
+					KeyInvalidatedNoticeResponse.of(content), null, null);
 			case PreferencesAdjustedContent content -> new NoticeResponse(notice.id(), notice.kind(), notice.revision(),
 					notice.createdAt(), notice.updatedAt(), notice.read(), null, null, null,
-					PreferencesAdjustedNoticeResponse.of(content));
+					PreferencesAdjustedNoticeResponse.of(content), null);
+			case StorylineSubscriptionsRemovedContent content -> new NoticeResponse(notice.id(), notice.kind(),
+					notice.revision(), notice.createdAt(), notice.updatedAt(), notice.read(), null, null, null, null,
+					StorylineSubscriptionsRemovedNoticeResponse.of(content, eventTitles));
 		};
 	}
 

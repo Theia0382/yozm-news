@@ -48,7 +48,7 @@ import org.springframework.test.context.TestPropertySource;
  * 운영자 조회 — 스토리라인과 그 하위의 소속 근거(띠 판정의 확률 · 원본, 띠가 생기기 전 기준 이력의 빈 확률 기준), 관계의 확률 · 판정 원본 ·
  * 기준, 물은 기록을 실제 저장소로 읽는다. 합쳐진 ID 는 남는 쪽을 따르고, 없는 ID 는 빈 목록이다.
  * <p>
- * 지키는 규칙: storyline-R34 · storyline-R30 · storyline-R33(가족) · storyline-R21(남는 쪽) · storyline-R35
+ * 지키는 규칙: storyline-R34 · storyline-R30 · storyline-R33(가족) · storyline-R21(남는 쪽) · storyline-R36
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest

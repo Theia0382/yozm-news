@@ -1,6 +1,7 @@
 package net.yozmnews.admin.adapter.in.web;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -57,6 +58,11 @@ class FakeStorylineDirectory implements StorylineDirectory {
 	public Optional<StorylineView> find(StorylineId id) {
 		this.calls.add("find " + id.value());
 		return Optional.ofNullable(this.storylines.get(id.value()));
+	}
+
+	@Override
+	public Map<StorylineId, StorylineView> findAll(Collection<StorylineId> ids) {
+		throw new UnsupportedOperationException("운영자 API 는 스토리라인을 묶음으로 찾지 않는다");
 	}
 
 	@Override

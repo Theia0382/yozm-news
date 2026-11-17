@@ -7,7 +7,7 @@ import java.util.Map;
 import net.yozmnews.storyline.StorylineLinkingCriteria;
 
 /**
- * 잇기 기준 이력 저장소 — docs/specs/storyline.md §4 · storyline-R14 · storyline-R35
+ * 잇기 기준 이력 저장소 — docs/specs/storyline.md §4 · storyline-R14 · storyline-R36
  */
 public interface LinkingCriteriaRepository {
 

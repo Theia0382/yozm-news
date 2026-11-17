@@ -13,7 +13,7 @@
 - **채우기** — 운영자가 기간을 정해, 그 기간에 처음 본 기사 가운데 배정이 없는 기사를 사건 묶기 대기에 넣는다(event-R19)
 - **지운 기사 따르기** — `article` 이 기사를 지우면 그 기사의 대기 행 · 배정 · 후보 · 표현을 지우고 사건을 다시 맞춘다(event-R8)
 - **사건 정리** — 같은 반복 작업이 바뀐 열린 사건을 가까운 열린 사건과 합치고(배정 산식 · 판정, 애매한 구간은 사건 소속 판정 — 배정 때 받은 확률이 확률 기준 미만인 쌍은 묻지 않는다), 하루 1회 정리 작업이 오래된 사건을 대표 기사와 함께 닫고, 닫힌 사건에 장기 검색 인덱스를 두고, 다 쓴 기사 표현을 지운다(event-R13, [ADR-0084](../adr/0084-event-merge-applies-assignment-scoring-between-events-and-keeps-merged-rows-pointing-to-survivors.md) · [ADR-0086](../adr/0086-events-close-after-an-idle-period-since-the-last-join-or-a-maximum-period-since-opening.md) · [ADR-0087](../adr/0087-closed-event-assignments-are-not-rejudged-and-closing-and-merging-are-not-undone.md) · [ADR-0088](../adr/0088-article-features-kept-until-their-event-closes-and-unassigned-ones-for-the-window-plus-a-margin.md) · [ADR-0089](../adr/0089-long-term-hnsw-indexes-on-closed-events-created-per-model-version-at-runtime-by-the-worker-role.md) · [ADR-0119](../adr/0119-event-merge-does-not-ask-band-pairs-whose-prior-assignment-probability-is-below-the-probability-threshold.md))
-- **사건 조회 · 대표 기사 · 기간 집계** — 사건 · 사건의 기사 · 기사의 사건 · 사건 목록을 공개 조회(`EventDirectory`)로 내고, 주어진 기사 가운데 대표 기사를 고르고, 사건 묶음마다 조회 기간 안 기사 수 · 서로 다른 소스 수 · 중요도 평균 · 중요도 합을 세고, 기간 안 기사가 있는 모든 사건을 한 묶음으로 센 기간 전체 집계를 낸다 — 사건 목록과 `storyline` 의 큰 판정이 이 집계를 쓴다(event-R14 · R15 · R20, [ADR-0117](../adr/0117-big-judgement-materials-are-tallied-by-event-per-group-of-events-and-storyline-passes-only-event-ids.md))
+- **사건 조회 · 대표 기사 · 기간 집계** — 사건 · 사건의 기사 · 사건 여럿의 기사 ID · 기사의 사건 · 사건 목록을 공개 조회(`EventDirectory`)로 내고, 주어진 기사 가운데 대표 기사를 고르고, 사건 묶음마다 조회 기간 안 기사 수 · 서로 다른 소스 수 · 중요도 평균 · 중요도 합을 세고, 기간 안 기사가 있는 모든 사건을 한 묶음으로 센 기간 전체 집계를 낸다 — 사건 목록과 `storyline` 의 큰 판정이 이 집계를 쓴다(event-R14 · R15 · R20, [ADR-0117](../adr/0117-big-judgement-materials-are-tallied-by-event-per-group-of-events-and-storyline-passes-only-event-ids.md))
 - **운영자 사건 조회** — 운영자 화면에 사건 배정 기준 · 이 사건으로 합쳐진 사건 · 사건 소속 판정 원본의 쓰임을 공개 조회(`EventReview`)로 낸다. 배정 · 병합 판정 기록은 반영한 판정 원본의 ID 를 남겨, 판정의 쓰임과 지금 결과를 잇는다(event-R12 · R13 · R22, [ADR-0094](../adr/0094-event-membership-judgements-identified-by-id-read-by-operators-and-referenced-by-the-records-that-apply-them.md))
 - **사건 변화 알림** — 사건을 열고 · 고치고 · 지우고 · 합치고 · 닫으면 같은 트랜잭션에서 바뀐 사건 ID 를 발행한다(`EventsChanged`). 스토리라인 잇기의 재료(사건 표현 · 이웃 사건 · 말 수 · 채우기 대상)를 공개 조회로 낸다(event-R23 · R24, [ADR-0105](../adr/0105-storylines-link-incrementally-from-event-change-notifications-and-events-publish-changed-event-ids.md))
 
@@ -68,7 +68,7 @@
 
 ## 3. 공개 인터페이스
 
-이 모듈은 `article` 의 이벤트를 받고, 사건 변화 알림(`EventsChanged`)을 발행하며, 공개 조회 둘(`EventDirectory` · 운영자 화면의 `EventReview`)과 공개 운영 API 하나(`EventIntakeAdministration`)를 낸다. `EventDirectory` 는 `digest` · `report` · `admin` · `storyline` 이 쓰고, `EventReview` 와 운영 API 는 `admin` 이 운영자 요청으로 부른다([ADR-0045](../adr/0045-admin-module-serves-operator-api-over-module-public-operation-apis.md)).
+이 모듈은 `article` 의 이벤트를 받고, 사건 변화 알림(`EventsChanged`)을 발행하며, 공개 조회 둘(`EventDirectory` · 운영자 화면의 `EventReview`)과 공개 운영 API 하나(`EventIntakeAdministration`)를 낸다. `EventDirectory` 는 `digest` · `report` · `admin` · `storyline` · `user` 가 쓰고, `EventReview` 와 운영 API 는 `admin` 이 운영자 요청으로 부른다([ADR-0045](../adr/0045-admin-module-serves-operator-api-over-module-public-operation-apis.md)).
 
 ### EventsChanged
 
@@ -117,7 +117,7 @@ public sealed interface IntakeFillResult {
 
 ### EventDirectory
 
-사건 조회 — 다른 모듈이 사건 · 사건의 기사 · 기사의 사건 · 대표 기사 · 사건 목록 · 기간 안 사건 · 사건 묶음의 기간 집계와 스토리라인 잇기의 재료(사건 표현 · 이웃 사건 · 말 수 · 채우기 대상)를 읽는다(event-R14 · R15 · R20 · R24). 구현은 `application` 의 `EventDirectoryService` 다.
+사건 조회 — 다른 모듈이 사건 · 사건의 기사 · 사건 여럿의 기사 ID · 기사의 사건 · 대표 기사 · 사건 목록 · 기간 안 사건 · 사건 묶음의 기간 집계와 스토리라인 잇기의 재료(사건 표현 · 이웃 사건 · 말 수 · 채우기 대상)를 읽는다(event-R14 · R15 · R20 · R24). 구현은 `application` 의 `EventDirectoryService` 다.
 
 ```java
 public interface EventDirectory {
@@ -127,6 +127,7 @@ public interface EventDirectory {
     int MAX_TERMS = 100;                                      // 말 수 조회 한 번에 묻는 말의 상한 — 정본
     Optional<EventView> find(EventId id);
     List<EventArticleView> articles(EventId id);
+    Map<EventId, List<ArticleId>> articleIdsOf(Collection<EventId> events);
     Map<ArticleId, EventId> eventsOf(Collection<ArticleId> articleIds);
     Map<EventId, ArticleId> representatives(Map<EventId, ? extends Collection<ArticleId>> among);
     Map<EventId, ArticleId> representativesOfAll(Collection<EventId> events);
@@ -146,6 +147,7 @@ public interface EventDirectory {
 |---|---|
 | `find` | 사건 하나 — 합쳐진 사건의 ID 면 남는 사건을 낸다(event-R13 · R20). 없는 사건이면 빈 값 |
 | `articles` | 사건의 배정 전부 — 발행 시각 · 기사 ID 순. 없는 사건이나 합쳐진 사건이면 빈 목록이다 — 합쳐진 사건의 기사는 남는 사건에 있으므로, 합쳐진 사건일 수 있는 ID 는 먼저 `find` 로 남는 사건을 얻는다(event-R20) |
+| `articleIdsOf` | 사건마다 배정된 기사 ID — 사건 ID 순, 사건마다 발행 시각 · 기사 ID 순. 기간을 보지 않는다. 배정이 없는 사건(합쳐진 사건 포함 — event-R20) · 없는 사건은 빠지고, 같은 사건은 한 번이다. 빈 입력이면 빈 맵. 독자 화면이 타임라인 사건의 기사로 받은 소식을 맞춘다 |
 | `eventsOf` | 기사들의 사건 — 배정이 없는 기사는 빠진다. 빈 입력이면 빈 맵 |
 | `representatives` | 사건마다 주어진 기사 가운데 대표 기사(event-R14) — 그 사건의 기사가 아닌 것은 무시하고, 남는 기사가 없는 사건은 빠진다. 닫을 때 남긴 대표는 쓰지 않는다 |
 | `representativesOfAll` | 사건마다 사건 기사 전체에서 고른 대표 기사(event-R14) — 닫을 때 남긴 대표가 있으면 그것이고, `list` 의 대표와 같은 정본이다. 배정이 없는 사건(합쳐진 사건 포함 — 합칠 때 남긴 대표는 `EventReview.mergedInto` 가 낸다) · 없는 사건은 빠지고, 빈 입력이면 빈 맵 |
@@ -600,6 +602,7 @@ sequenceDiagram
       Map<Long, EventView> views(Collection<Long> eventIds);                       // 합쳐진 사건 · 없는 사건은 빠진다
       Map<Long, Integer> articleCountsIn(Instant from, Instant to);                // 기간 안 배정이 있는 사건 → 그 기사 수 — 사건 ID 순
       Map<Long, List<ArticleId>> membersIn(Collection<Long> eventIds, Instant from, Instant to);  // 사건 ID 순, 사건마다 발행 시각 · 기사 ID 순
+      Map<Long, List<ArticleId>> articleIdsOf(Collection<Long> eventIds);           // membersIn 과 같은 선택 · 순서 — 기간 조건만 없다
       List<EventView> page(Instant from, Instant to, @Nullable Instant afterLast, @Nullable Long afterId, int limit);  // 기간 안 배정이 있는 사건 — 마지막 기사 시각 · 사건 ID 내림차순
       List<MergedEvent> mergedInto(long survivor);                                  // 이 사건을 가리키는 합쳐진 사건과 합칠 때 남긴 대표 — 합친 시각 · 사건 ID 순
       Map<Long, JudgementUse.Assignment> assignmentsByJudgement(Collection<Long> judgementIds);  // 원본을 가리키는 배정 — 배정 둘이 가리키면 IllegalStateException
@@ -743,7 +746,7 @@ sequenceDiagram
 
 기간 집계를 `event` 가 세는 이유는 [ADR-0117](../adr/0117-big-judgement-materials-are-tallied-by-event-per-group-of-events-and-storyline-passes-only-event-ids.md)에 있다. 집계로 큰 스토리라인을 고르는 판정과 그 기준은 [storyline Spec "큰 판정"](storyline.md#큰-판정)에 있다.
 
-- **event-R14** — 대표 기사: 주어진 기사들 가운데 사건 중심에 가장 가까운 기사다. 후보 선별([pipeline.md §6](../pipeline.md#6-다이제스트-생성))에서는 그 사용자의 제외 조건(소스 · 지역 · 형식 · 싫어요)을 통과한 기사 가운데서 고르고, 운영자 화면은 사건의 기사 전체에서 고른다(`representativesOfAll` — 목록 · 상세가 같은 대표를 보인다).
+- **event-R14** — 대표 기사: 주어진 기사들 가운데 사건 중심에 가장 가까운 기사다. 후보 선별([pipeline.md §6](../pipeline.md#6-다이제스트-생성))에서는 그 사용자의 제외 조건(소스 · 지역 · 형식 · 싫어요)을 통과한 기사 가운데서 고르고, 운영자 화면과 독자 화면(스토리라인 — [reader Spec](reader.md))은 사건의 기사 전체에서 고른다(`representativesOfAll` — 목록 · 상세가 같은 대표를 보인다). 독자 화면은 사용자의 제외 조건으로 거르지 않는다 — 공유 스토리라인의 대표는 모든 사용자에게 같다.
   - 사건 모델 버전의 표현이 있는 기사를 중심과의 거리 순(같으면 기사 ID 순)으로 먼저, 표현이 없는 기사(지웠거나 다른 모델 버전의 표현만 있다)는 그 뒤에 발행 시각 · 기사 ID 순으로 두고 첫째를 고른다(`CentroidOrder` — 서술 기사와 같은 정본)
   - 사건 기사 전체에서 고를 때는 닫을 때 남긴 대표 기사(event-R13)가 있으면 그것이다 — 닫힌 사건은 기사 표현을 지운다. 걸러진 기사에서 고를 때는 남긴 대표를 쓰지 않는다. 합쳐진 사건은 배정이 없어 이 조회에 나오지 않고, 합칠 때 남긴 대표는 합쳐진 사건 조회(`EventReview.mergedInto`)가 낸다
   - 주어진 기사 가운데 그 사건의 기사가 아닌 것은 무시하고, 남는 기사가 없는 사건은 대표가 없다

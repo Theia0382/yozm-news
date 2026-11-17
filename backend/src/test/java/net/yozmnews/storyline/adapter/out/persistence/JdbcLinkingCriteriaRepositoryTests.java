@@ -22,7 +22,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 /**
  * 잇기 기준 이력 — 같은 값이면 같은 ID, 다른 값이면 새 ID. 창은 초로 적는다. 띠가 생기기 전의 행은 확률 기준 없이 읽힌다.
  * <p>
- * 지키는 규칙: storyline-R14 · storyline-R35
+ * 지키는 규칙: storyline-R14 · storyline-R36
  */
 @JdbcTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)

@@ -13,7 +13,7 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
  * 잇기 기준 설정 — 아무것도 주지 않으면 기본값(창 14일 · 띠 0.84 ~ 0.88 · 확률 기준 0.70), 하나를 주면 그 값만 바뀌고,
  * 범위를 어기거나 옛 키 threshold 가 있으면 컨텍스트가 뜨지 않는다.
  * <p>
- * 지키는 규칙: storyline-R9 · storyline-R35
+ * 지키는 규칙: storyline-R9 · storyline-R36
  */
 class LinkingPropertiesTests {
 

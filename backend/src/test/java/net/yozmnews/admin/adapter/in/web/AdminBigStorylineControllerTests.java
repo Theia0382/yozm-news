@@ -23,7 +23,6 @@ import net.yozmnews.event.EventTally;
 import net.yozmnews.platform.ChangeActor;
 import net.yozmnews.user.application.WebSliceSecurity;
 import net.yozmnews.source.FeedId;
-import net.yozmnews.source.FeedLabel;
 import net.yozmnews.source.SourceId;
 import net.yozmnews.storyline.BigStoryline;
 import net.yozmnews.storyline.BigStorylineCriteria;
@@ -53,8 +52,7 @@ import org.springframework.test.web.servlet.MockMvc;
  */
 @WebMvcTest(controllers = AdminBigStorylineController.class, properties = AdminRequests.TOKEN_PROPERTY)
 @Import({ WebSliceSecurity.class, FakeStorylineDirectory.Config.class, FakeEventDirectory.Config.class,
-		FakeBigStorylineAdministration.Config.class,
-		FakeArticleDirectory.Config.class, FakeFeedLabels.Config.class })
+		FakeBigStorylineAdministration.Config.class, FakeArticleDirectory.Config.class })
 class AdminBigStorylineControllerTests {
 
 	private static final String PERIOD = "from=2026-11-01&to=2026-11-07&zone=Asia/Seoul";
@@ -86,20 +84,16 @@ class AdminBigStorylineControllerTests {
 	@Autowired
 	FakeArticleDirectory articles;
 
-	@Autowired
-	FakeFeedLabels labels;
-
 	@BeforeEach
 	void reset() {
 		this.directory.reset();
 		this.events.reset();
 		this.administration.reset();
 		this.articles.reset();
-		this.labels.reset();
 		this.articles.contents.put(new ArticleId(41), new ArticleContent(new ArticleId(41), "국회 본회의 통과", null,
 				URI.create("https://news.example/41"), T,
 				List.of(new ArticleEntryView(new SourceId(3), new FeedId(5), List.of()))));
-		this.labels.labels.put(new FeedId(5), new FeedLabel("한겨레", "정치"));
+		this.articles.headlineSources.put(new ArticleId(41), List.of("한겨레"));
 		this.events.representatives.put(new EventId(70), new ArticleId(41));
 	}
 
@@ -125,7 +119,7 @@ class AdminBigStorylineControllerTests {
 		assertThat(this.directory.calls).containsExactly("bigStorylines 2026-10-31T15:00:00Z ~ 2026-11-07T15:00:00Z",
 				"unlinked 2026-10-31T15:00:00Z ~ 2026-11-07T15:00:00Z");
 		assertThat(this.events.calls).containsExactly("representativesOfAll [70, 90]");
-		assertThat(this.articles.calls).containsExactly("findAll [41]");
+		assertThat(this.articles.calls).containsExactly("headlines [41]");
 	}
 
 	@Test

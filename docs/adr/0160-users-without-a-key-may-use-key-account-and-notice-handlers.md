@@ -1,6 +1,6 @@
 # ADR-0160: 키 없는 사용자에게 키 · 계정(비밀번호 변경 · 복구 코드 재발급) · 알림 처리기를 연다
 
-- 상태: 승인. 부분 대체 — 연 처리기 · 가는 화면의 열거([ADR-0179](0179-interest-settings-handlers-are-open-without-a-key.md))
+- 상태: 승인. 부분 대체 — 연 처리기 · 가는 화면의 열거([ADR-0179](0179-interest-settings-handlers-are-open-without-a-key.md)) · 연 처리기의 열거([ADR-0190](0190-storyline-subscription-handlers-are-open-without-a-key.md))
 - 날짜: 2026-11-14
 - 근거: [이슈 #150](https://github.com/Theia0382/yozm-news/issues/150)
 - 관련: [ADR-0003](0003-byok-personalized-digest.md)("LLM 키가 없는 사용자에게는 키 등록 페이지만 보여준다" — 그 범위를 이 ADR 이 밝힌다), [ADR-0158](0158-requests-of-session-users-without-a-key-are-closed-by-default-and-handlers-open-without-a-key-carry-a-platform-annotation.md)(키 관문), [ADR-0011](0011-no-email-in-v1.md)(보안 알림은 화면 안 알림으로)
@@ -12,7 +12,7 @@
 
 ## 결정
 
-> 부분 대체(아래 두 항목) — [ADR-0179](0179-interest-settings-handlers-are-open-without-a-key.md). 지금 상태: [`user` user-R5](../specs/user.md#화면용-api-의-공개와-세션-사용자)
+> 부분 대체(아래 두 항목) — 첫 항목은 [ADR-0179](0179-interest-settings-handlers-are-open-without-a-key.md) · [ADR-0190](0190-storyline-subscription-handlers-are-open-without-a-key.md), 둘째 항목은 [ADR-0179](0179-interest-settings-handlers-are-open-without-a-key.md). 지금 상태: [`user` user-R5](../specs/user.md#화면용-api-의-공개와-세션-사용자)
 - **키 없는 사용자에게 여는 것은 키 처리기, 계정 처리기(비밀번호 변경 · 복구 코드 재발급), 알림 처리기다.**
 - 화면은 그 처리기를 쓰는 화면(키 · 설정 · 알림)에는 가게 두고, 그 밖의 주소는 키 화면으로 보낸다.
 

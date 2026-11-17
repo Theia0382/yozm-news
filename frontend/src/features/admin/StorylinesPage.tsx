@@ -8,7 +8,7 @@ import {
 } from "@/features/admin/adminClient";
 import { useAdminClient } from "@/features/admin/adminSession";
 import { ArticleTitle } from "@/features/admin/ArticleTitle";
-import { storylineStateLabels } from "@/features/admin/labels";
+import { storylineStateLabels } from "@/shared/lib/storylineState";
 import { formatProbability } from "@/features/admin/metrics";
 import { PeriodFields } from "@/features/admin/PeriodFields";
 import { browserZone, defaultFirst, today } from "@/features/admin/periods";

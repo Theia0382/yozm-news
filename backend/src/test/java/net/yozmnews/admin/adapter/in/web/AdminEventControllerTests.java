@@ -31,7 +31,6 @@ import net.yozmnews.storyline.StorylineState;
 import net.yozmnews.storyline.StorylineView;
 import net.yozmnews.user.application.WebSliceSecurity;
 import net.yozmnews.source.FeedId;
-import net.yozmnews.source.FeedLabel;
 import net.yozmnews.source.SourceId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -53,8 +52,7 @@ import org.springframework.test.web.servlet.MockMvc;
  */
 @WebMvcTest(controllers = AdminEventController.class, properties = AdminRequests.TOKEN_PROPERTY)
 @Import({ WebSliceSecurity.class, FakeEventDirectory.Config.class, FakeEventReview.Config.class,
-		FakeStorylineDirectory.Config.class,
-		FakeArticleDirectory.Config.class, FakeFeedLabels.Config.class })
+		FakeStorylineDirectory.Config.class, FakeArticleDirectory.Config.class })
 class AdminEventControllerTests {
 
 	private static final String PERIOD = "from=2026-11-01&to=2026-11-07&zone=Asia/Seoul";
@@ -79,20 +77,16 @@ class AdminEventControllerTests {
 	@Autowired
 	FakeArticleDirectory articles;
 
-	@Autowired
-	FakeFeedLabels labels;
-
 	@BeforeEach
 	void reset() {
 		this.directory.reset();
 		this.review.reset();
 		this.storylines.reset();
 		this.articles.reset();
-		this.labels.reset();
 		this.articles.contents.put(new ArticleId(41), new ArticleContent(new ArticleId(41), "국회 본회의 통과", null,
 				URI.create("https://news.example/41"), T,
 				List.of(new ArticleEntryView(new SourceId(3), new FeedId(5), List.of()))));
-		this.labels.labels.put(new FeedId(5), new FeedLabel("한겨레", "정치"));
+		this.articles.headlineSources.put(new ArticleId(41), List.of("한겨레"));
 	}
 
 	@Test
@@ -117,7 +111,7 @@ class AdminEventControllerTests {
 					""", JsonCompareMode.STRICT));
 		assertThat(this.directory.calls)
 			.containsExactly("list 2026-10-31T15:00:00Z ~ 2026-11-07T15:00:00Z after null size 50");
-		assertThat(this.articles.calls).containsExactly("findAll [41, 42]");
+		assertThat(this.articles.calls).containsExactly("headlines [41, 42]");
 	}
 
 	@Test
@@ -175,6 +169,7 @@ class AdminEventControllerTests {
 		this.articles.contents.put(new ArticleId(43), new ArticleContent(new ArticleId(43), "기준금리 동결", null,
 				URI.create("https://news.example/43"), T,
 				List.of(new ArticleEntryView(new SourceId(3), new FeedId(5), List.of()))));
+		this.articles.headlineSources.put(new ArticleId(43), List.of("한겨레"));
 		// 사건 7 은 스토리라인 12 에 직접 들었고, 12 를 포함하는 10 에도 든다
 		this.storylines.eventStorylines.put(7L, List.of(
 				new EventStoryline(new StorylineView(new StorylineId(10), StorylineState.QUIET, 9, 30, T, T,
@@ -215,7 +210,7 @@ class AdminEventControllerTests {
 		assertThat(this.review.calls).containsExactly("mergedInto 7");
 		// 사건의 스토리라인은 남는 사건 ID 로 묻는다
 		assertThat(this.storylines.calls).containsExactly("storylinesOf 7");
-		assertThat(this.articles.calls).containsExactly("findAll [41, 42, 43]");
+		assertThat(this.articles.calls).containsExactly("headlines [41, 42, 43]");
 	}
 
 	@Test

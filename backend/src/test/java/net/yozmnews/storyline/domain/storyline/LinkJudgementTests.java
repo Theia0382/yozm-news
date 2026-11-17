@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 /**
  * 소속의 판정 근거 — 판정한 소속은 점수 · 기준이 있고 띠 안에서 정했으면 확률 · 판정 원본이 있다. 옮긴 소속은 모두 없다.
  * <p>
- * 지키는 규칙: storyline-R14 · storyline-R35
+ * 지키는 규칙: storyline-R14 · storyline-R36
  */
 class LinkJudgementTests {
 

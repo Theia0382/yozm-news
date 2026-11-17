@@ -9,12 +9,12 @@
 - **사건 변화 따르기** — `event` 가 바뀐 사건 ID 를 알리면(`EventsChanged`) 그 사건을 잇기 대기에 넣는다. 작업 역할의 반복 작업이 대기를 사건의 시각 순으로 점유해 사건마다 지금 상태를 읽어 판정한다 — 기간을 통째로 다시 묶지 않는다(storyline-R1 ~ R5, [ADR-0105](../adr/0105-storylines-link-incrementally-from-event-change-notifications-and-events-publish-changed-event-ids.md))
 - **소속 맞추기** — 사건이 지워지면 그 소속을 지우고, 다른 사건에 합쳐지면 소속을 남는 사건으로 옮긴다(storyline-R6)
 - **잇기** — 사건 중심의 코사인과 무게를 준 핵심 말 겹침으로 점수를 매겨, 사건을 스토리라인에 더 붙이거나 다른 사건과 짝을 지어 새 스토리라인을 연다. 소속을 빼지 않는다. 소속이 늘면 기다리는 이웃 사건을 다시 본다(storyline-R7 ~ R12, [ADR-0106](../adr/0106-provisional-storyline-linking-opens-only-with-a-partner-event-and-adds-the-single-best-storyline-without-removal.md) · [ADR-0121](../adr/0121-storyline-linking-scores-centroid-cosine-plus-idf-weighted-key-term-overlap-without-time-decay-jev-or-topic-tags.md))
-- **정돈** — 소속이 바뀐 스토리라인을 정돈한다. 구성 사건이 없으면 지우고, 구성 사건이 같은 스토리라인은 하나로 합치며, 사건 하나만 남으면 그 사건을 가진 다른 스토리라인에 합치거나 풀어 그 사건을 다시 판정한다. 합쳐진 스토리라인은 남는 스토리라인을 가리킨다(storyline-R13 · R17 · R18, [ADR-0108](../adr/0108-storylines-with-the-same-events-merge-and-a-storyline-left-with-one-event-merges-or-dissolves.md))
+- **정돈** — 소속이 바뀐 스토리라인을 정돈한다. 구성 사건이 없으면 지우고, 구성 사건이 같은 스토리라인은 하나로 합치며, 사건 하나만 남으면 그 사건을 가진 다른 스토리라인에 합치거나 풀어 그 사건을 다시 판정한다. 합쳐진 스토리라인은 남는 스토리라인을 가리킨다. 합치거나 지운 스토리라인은 이벤트로 알린다(storyline-R13 · R17 · R18 · R35, [ADR-0108](../adr/0108-storylines-with-the-same-events-merge-and-a-storyline-left-with-one-event-merges-or-dissolves.md) · [ADR-0188](../adr/0188-storyline-subscriptions-follow-retired-storylines-by-event-and-before-each-use-and-notices-point-to-the-remaining-event.md))
 - **상태** — 스토리라인의 상태(진행 · 잠잠 · 끝남)를 저장하지 않고 조회 때 마지막 기사 시각으로 정한다. 끝나도 잇기를 막지 않는다(storyline-R16, [ADR-0107](../adr/0107-storyline-state-is-judged-at-query-time-from-the-last-article-and-an-ended-storyline-still-links.md))
 - **판정 근거** — 소속마다 정한 것 · 점수 · 판정에 쓴 기준을 남긴다(storyline-R14)
 - **스토리라인 사이 관계** — 포함(큰 흐름과 그 갈래)과 이어짐(앞 흐름이 뒤 흐름을 낳음)을 스토리라인 둘의 고리로 둔다. 소속이 바뀐 스토리라인의 후보 쌍을 `evaluation` 의 관계 판정(Jev)에 물어 종류 · 방향을 정하고, 확률이 기준 이상인 것만 맺는다. 포함은 상위 하나의 나무이고 순환을 이루지 않는다(storyline-R25 ~ R32, [ADR-0131](../adr/0131-storyline-relations-are-explicit-links-with-containment-as-a-single-parent-tree-gathered-at-query-time.md) · [ADR-0132](../adr/0132-storyline-relations-are-judged-by-jev-on-candidate-pairs-and-linked-only-above-a-probability-threshold.md))
 - **채우기** — 운영자가 기간을 정해, 그 기간에 마지막 기사가 있는 사건을 잇기 대기에 넣는다(storyline-R15)
-- **공개 조회** — 다른 모듈이 스토리라인을 읽는다(`StorylineDirectory`) — ID 로 찾기, 스토리라인의 사건(타임라인), 사건의 스토리라인, 조회 기간의 스토리라인 목록 · 큰 스토리라인 · 소속 없는 사건, 스토리라인의 관계. 스토리라인의 사건 · 집계는 포함을 따라 하위의 사건까지 세고, 직접 든 것인지 물려받은 것인지 표시한다. 합쳐진 스토리라인 · 사건의 ID 는 남는 쪽을 따른다(storyline-R21 ~ R24 · R33)
+- **공개 조회** — 다른 모듈이 스토리라인을 읽는다(`StorylineDirectory`) — ID 로 찾기(하나 · 여럿), 스토리라인의 사건(타임라인), 사건의 스토리라인, 조회 기간의 스토리라인 목록 · 큰 스토리라인 · 소속 없는 사건, 스토리라인의 관계. 스토리라인의 사건 · 집계는 포함을 따라 하위의 사건까지 세고, 직접 든 것인지 물려받은 것인지 표시한다. 합쳐진 스토리라인 · 사건의 ID 는 남는 쪽을 따른다(storyline-R21 ~ R24 · R33)
 - **운영자 조회** — 운영자 화면이 판정 근거를 읽는다(`StorylineReview`) — 스토리라인과 그 하위의 소속마다 판정 근거, 관계의 확률 · 판정 원본 ID · 기준, 물은 기록, 지금 잇기 · 관계 기준(storyline-R34)
 - **큰 판정** — 구독과 무관하게 알릴 만한 스토리라인을 조회할 때 지금 기준으로 고른다. 보도 강도(조회 기간 안 기사의 중요도 합을 그 기간에 기사가 있는 소스 수와 기간의 일수로 나눈 값)가 기준 이상인 스토리라인이고, 기간 집계는 `event` 가 사건 묶음 단위로 센다(storyline-R19, [ADR-0147](../adr/0147-storyline-big-judgement-compares-importance-weighted-coverage-per-source-and-day-with-one-criterion-at-query-time.md) · [ADR-0116](../adr/0116-storyline-big-judgement-starts-with-a-provisional-rule-of-distinct-sources-and-mean-importance-judged-at-query-time.md) · [ADR-0117](../adr/0117-big-judgement-materials-are-tallied-by-event-per-group-of-events-and-storyline-passes-only-event-ids.md))
 - **큰 판정 기준** — 운영자 설정(지금 값 한 행)과 추가 전용 이력으로 두고, 기동 때 처음 값을 적재하고, 공개 운영 API(`BigStorylineAdministration`)로 지금 값 · 변경 · 이력 · 미리보기를 낸다(storyline-R20, [ADR-0118](../adr/0118-big-judgement-criteria-are-storyline-operator-settings-and-do-not-inherit-event-criteria-values-or-history.md))
@@ -86,7 +86,7 @@
 
 ## 3. 공개 인터페이스
 
-이 모듈은 `event` 의 `EventsChanged` 를 받고, 공개 조회 둘(`StorylineDirectory` · 운영자 조회 `StorylineReview`)과 공개 운영 API 둘(`StorylineLinkingAdministration` · `BigStorylineAdministration`)을 낸다. 관계 판정은 `evaluation` 의 공개 API `FlowRelation` 을 부른다. `StorylineDirectory` 는 `digest` · `report` · `admin` 이 쓰고, `StorylineReview` 와 운영 API 는 `admin` 이 운영자 요청으로 부른다([ADR-0045](../adr/0045-admin-module-serves-operator-api-over-module-public-operation-apis.md)). 발행하는 이벤트는 없다.
+이 모듈은 `event` 의 `EventsChanged` 를 받고, 공개 조회 둘(`StorylineDirectory` · 운영자 조회 `StorylineReview`)과 공개 운영 API 둘(`StorylineLinkingAdministration` · `BigStorylineAdministration`)을 낸다. 관계 판정은 `evaluation` 의 공개 API `FlowRelation` 을 부른다. `StorylineDirectory` 는 `digest` · `report` · `admin` · `user` · `reader` 가 쓰고, `StorylineReview` 와 운영 API 는 `admin` 이 운영자 요청으로 부른다([ADR-0045](../adr/0045-admin-module-serves-operator-api-over-module-public-operation-apis.md)). 발행하는 이벤트는 `StorylinesRetired` 하나다 — `user` 가 받아 스토리라인 구독을 따른다.
 
 ### StorylineLinkingAdministration · LinkingFillResult
 
@@ -117,13 +117,14 @@ public sealed interface LinkingFillResult {
 
 ### StorylineDirectory
 
-스토리라인 조회 — 다른 모듈이 스토리라인 · 스토리라인의 사건 · 사건의 스토리라인 · 조회 기간의 스토리라인 목록 · 큰 스토리라인 · 소속 없는 사건 · 스토리라인의 관계를 읽는다(storyline-R19 · R21 ~ R23 · R33). 구현은 `application` 의 `StorylineDirectoryService` 다.
+스토리라인 조회 — 다른 모듈이 스토리라인(하나 · 여럿) · 스토리라인의 사건 · 사건의 스토리라인 · 조회 기간의 스토리라인 목록 · 큰 스토리라인 · 소속 없는 사건 · 스토리라인의 관계를 읽는다(storyline-R19 · R21 ~ R23 · R33). 구현은 `application` 의 `StorylineDirectoryService` 다.
 
 ```java
 public interface StorylineDirectory {
     int MAX_PAGE_SIZE = 100;                              // 목록 한 쪽의 상한 — 정본. 측정 전 목표
 
     Optional<StorylineView> find(StorylineId id);
+    Map<StorylineId, StorylineView> findAll(Collection<StorylineId> ids);
     List<StorylineEvent> events(StorylineId id);
     List<EventStoryline> storylinesOf(EventId event);
     StorylinePage list(EventPeriod period, @Nullable StorylineCursor after, int size);
@@ -136,6 +137,7 @@ public interface StorylineDirectory {
 | 메서드 | 뜻 |
 |---|---|
 | `find` | 스토리라인 하나 — 합쳐진 스토리라인이면 남는 스토리라인을 낸다(storyline-R18 · R21). 없는 스토리라인이면 빈 값 |
+| `findAll` | 스토리라인 여럿 — 키는 받은 ID, 값은 그 ID 가 가리키는 스토리라인(합쳐졌으면 남는 스토리라인 — storyline-R21). 받은 ID 여럿이 같은 남는 스토리라인을 가리키면 그 값이 여러 키에 실린다. 없는 스토리라인(지웠거나 처음부터 없는 ID)은 결과에 없다. 빈 입력이면 빈 맵 |
 | `events` | 스토리라인의 닫은 사건 집합(타임라인) — 직접 소속과 하위의 소속을 사건마다 한 번씩, 첫 기사 시각 · 사건 ID 순. 사건마다 직접 소속인지 싣는다(storyline-R33). 합쳐진 스토리라인이면 남는 스토리라인의 것이고, 없는 스토리라인이면 빈 목록. 합쳐졌거나 지워졌는데 아직 소속을 따르지 않은 사건은 빠진다(storyline-R21) |
 | `storylinesOf` | 사건이 든 스토리라인 — 직접 든 스토리라인과 그 상위 전부를 한 번씩, 스토리라인 ID 순. 스토리라인마다 직접 든 것인지 싣는다(storyline-R33). 합쳐진 사건이면 남는 사건의 것이고, 없는 사건이면 빈 목록(storyline-R21) |
 | `list` | 기간의 스토리라인 — 직접 소속의 마지막 기사 시각 내림차순, 스토리라인 ID 내림차순으로 `size` 건. 집계 · 큰 여부는 그 기간 · 지금 기준이고 닫은 사건 집합으로 센다(storyline-R22 · R33). `size` 가 1 ~ `MAX_PAGE_SIZE` 밖이면 `IllegalArgumentException` |
@@ -185,6 +187,24 @@ public record UnlinkedEvents(int events, int articles) {}
 | `StorylineSummary.big` | 목록 기간 · 지금 기준으로 큰 스토리라인인가 |
 | `StorylinePage.next` | 다음 쪽의 커서 — 앞 쪽 마지막 스토리라인의 (마지막 기사 시각, 스토리라인 ID). 더 없으면 null |
 | `UnlinkedEvents` | 소속 없는 사건의 수(`events`)와 그 사건들의 조회 기간 안 기사 수(`articles`) |
+
+### StorylinesRetired · RetiredStoryline
+
+정돈이 합치거나 지운 스토리라인의 알림 — `user` 가 받아 스토리라인 구독을 따른다(storyline-R35).
+
+```java
+public record StorylinesRetired(List<RetiredStoryline> storylines) {}  // 비었거나 같은 스토리라인이 두 번이면 IllegalArgumentException
+public record RetiredStoryline(StorylineId id, @Nullable EventId remainingEvent) {}
+```
+
+| 타입 · 멤버 | 뜻 |
+|---|---|
+| `StorylinesRetired.storylines` | 더 이상 자기를 가리키지 않는 스토리라인 — 합쳐진 것(남는 스토리라인을 가리킨다)과 지운 것(풀기 포함) |
+| `RetiredStoryline.remainingEvent` | 풀기에서 남은 사건 — 풀기가 아니면 null. 지운 스토리라인은 받는 쪽이 읽을 행이 없어, 무엇이 사라졌는지 가리킬 재료로 싣는다. 이미 지워졌거나 합쳐졌는데 아직 따르지 않은 사건일 수 있다 |
+
+- 계약
+  - 무엇이 일어났는지는 싣지 않는다 — 받는 쪽이 `StorylineDirectory.findAll` 로 지금 상태를 읽어 남는 쪽을 찾고, 없으면 지워졌다. 그래서 받는 순서가 바뀌어도 같은 상태로 수렴한다
+  - 정돈 트랜잭션에서 한 번 발행한다(합치거나 지운 것이 있을 때만). 사용자 정보는 싣지 않는다
 
 ### StorylineReview · StorylineMembership · LinkScore · LinkedBy · StorylineLinkingCriteria · StorylineRelationDetail · StorylineRelationAsked · RelationOutcome · StorylineRelationCriteria
 
@@ -293,11 +313,11 @@ public sealed interface BigStorylineCriteriaChangeResult {
 
 `StorylineLinker` 는 먼저 `StorylineRepository.lockLinking` 으로 모듈 잠금을 잡고, `EventDirectory.find` 로 사건의 지금 상태를 가른다. 지워졌거나 합쳐졌으면 `StorylineRepository.storylinesOf` 의 스토리라인마다 `removeMember` · `moveMember` 로 소속을 맞추고 그 스토리라인들을 정돈한다. 그대로면 `EventDirectory.profiles` 로 사건과 그 사건이 든 스토리라인의 구성 사건 표현을 읽어 `Representation.of` 로 표현을 다시 저장하고(`save`), `Representation.without` 으로 그 사건을 뺀 비교 대상을 만든다. `EventDirectory.termCounts` 로 그 사건 상위 핵심 말의 사건 수를 읽어 말의 무게(`TermWeights`)를 만든다. `StorylineRepository.candidates` 로 창 안 후보 스토리라인을 읽어 `LinkingScoring` 으로 점수를 매기고 `LinkingRule.attach` 로 붙일 곳을 정한다(`addMember`). 붙일 곳이 없고 소속이 없으면 `EventDirectory.neighbors` 로 이웃을 읽어 `StorylineRepository.affiliated` 와 `LinkingRule.pair` 로 짝을 정해 `open` · `addMember` 로 연다. 소속이 늘었으면 `LinkingRule.requeue` 로 고른 이웃을 `LinkingQueueRepository.enqueue` 로 다시 넣는다 — 짝으로 연 상대 사건의 이웃은 그 사건의 말의 무게를 따로 읽어 점수를 매긴다. 끝으로 그 사건이 든 스토리라인과 붙인 스토리라인을 정돈한다.
 
-정돈은 스토리라인마다 `StorylineRepository.members` 로 구성 사건을, `storylinesOf`(첫 구성 사건) · `members` 로 그 사건을 가진 다른 스토리라인의 구성 사건을 읽어 `Tidying.decide` 로 정하고, 결과에 따라 표현을 다시 정하거나(`save`) · 지우거나(`delete`) · 합치거나(`merge`) · 풀어 그 사건을 `PendingEvent.orderAt` 의 순서 키로 다시 넣는다(`delete` · `enqueue`). 한 정돈에서 이미 지웠거나 합친 스토리라인은 건너뛴다.
+정돈은 스토리라인마다 `StorylineRepository.members` 로 구성 사건을, `storylinesOf`(첫 구성 사건) · `members` 로 그 사건을 가진 다른 스토리라인의 구성 사건을 읽어 `Tidying.decide` 로 정하고, 결과에 따라 표현을 다시 정하거나(`save`) · 지우거나(`delete`) · 합치거나(`merge`) · 풀어 그 사건을 `PendingEvent.orderAt` 의 순서 키로 다시 넣는다(`delete` · `enqueue`). 한 정돈에서 이미 지웠거나 합친 스토리라인은 건너뛴다. 합치거나 지운 스토리라인이 있으면 정돈 끝에 `StorylinesRetired` 를 한 번 발행한다(`ApplicationEventPublisher` — 같은 트랜잭션).
 
 상태는 `StateCriteria.stateOf`(`StorylineStateConfiguration` 이 `StorylineStateProperties` 로 만든 빈)가 정한다 — 공개 조회가 스토리라인을 낼 때마다 지금 시각으로 부른다.
 
-조회: `StorylineDirectoryService` 가 `StorylineQueryRepository` 로 스토리라인(합쳐진 스토리라인이면 남는 스토리라인) · 사건들이 직접 든 스토리라인 · 주어진 스토리라인들과 그 쪽을 읽고, `StorylineRepository.members` · `affiliated` 로 직접 소속 · 소속 여부를 읽는다. 기간의 스토리라인은 `event` 의 `EventDirectory.articleCountsIn` 이 낸 기간 안 사건이 직접 든 스토리라인과 그 상위이고, 기간 집계는 스토리라인마다 닫은 사건 집합을 `EventDirectory.tallies` 에 넘겨 받는다(아래 "닫은 조회"). 큰 판정은 `EventDirectory.total` 의 기간 전체 집계와 조회 기간으로 분모(`BigBasis`)를 만들고, `BigStorylineCriteriaRepository` 의 지금 기준으로 `BigStorylineRule` 이 판정 · 정렬한다. 타임라인은 닫은 사건 집합을 `EventDirectory.views` 로 읽어 첫 기사 시각 순으로 놓고, 사건의 스토리라인은 `EventDirectory.find` 로 남는 사건을 얻어 찾는다. 스토리라인의 관계는 남는 스토리라인을 찾은 뒤 `RelationRepository.of` 로 읽는다 — 읽은 관계를 공개 값으로 옮기는 것은 두 조회가 함께 쓰는 정본 하나(`application` 의 패키지 비공개 `RelationViews.of`)다. 큰 판정 기준은 `BigStorylineCriteriaSeeding` 이 기동 때 처음 값을 넣고, `BigStorylineAdministrationService` 가 변경 · 이력을 저장소로 쓰며 지금 값 읽기와 미리보기는 `StorylineDirectoryService` 의 것을 쓴다.
+조회: `StorylineDirectoryService` 가 `StorylineQueryRepository` 로 스토리라인(하나 · 여럿 — 합쳐진 스토리라인이면 남는 스토리라인) · 사건들이 직접 든 스토리라인 · 주어진 스토리라인들과 그 쪽을 읽고, `StorylineRepository.members` · `affiliated` 로 직접 소속 · 소속 여부를 읽는다. 기간의 스토리라인은 `event` 의 `EventDirectory.articleCountsIn` 이 낸 기간 안 사건이 직접 든 스토리라인과 그 상위이고, 기간 집계는 스토리라인마다 닫은 사건 집합을 `EventDirectory.tallies` 에 넘겨 받는다(아래 "닫은 조회"). 큰 판정은 `EventDirectory.total` 의 기간 전체 집계와 조회 기간으로 분모(`BigBasis`)를 만들고, `BigStorylineCriteriaRepository` 의 지금 기준으로 `BigStorylineRule` 이 판정 · 정렬한다. 타임라인은 닫은 사건 집합을 `EventDirectory.views` 로 읽어 첫 기사 시각 순으로 놓고, 사건의 스토리라인은 `EventDirectory.find` 로 남는 사건을 얻어 찾는다. 스토리라인의 관계는 남는 스토리라인을 찾은 뒤 `RelationRepository.of` 로 읽는다 — 읽은 관계를 공개 값으로 옮기는 것은 두 조회가 함께 쓰는 정본 하나(`application` 의 패키지 비공개 `RelationViews.of`)다. 큰 판정 기준은 `BigStorylineCriteriaSeeding` 이 기동 때 처음 값을 넣고, `BigStorylineAdministrationService` 가 변경 · 이력을 저장소로 쓰며 지금 값 읽기와 미리보기는 `StorylineDirectoryService` 의 것을 쓴다.
 
 운영자 조회: `StorylineReviewService` 가 `StorylineQueryRepository.find` 로 남는 스토리라인을 찾고, 소속 근거는 `ClosedMembers.families` 로 정한 가족(자기와 모든 하위)의 `StorylineRepository.judgements` 와 기준 이력 값(`LinkingCriteriaRepository.findAll`)으로, 관계는 `RelationRepository.of` 와 관계 기준 이력 값(`RelationRepository.criteria`)으로, 물은 기록은 `RelationRepository.askedOf` 로 읽는다. 지금 기준은 `LinkingCriteria` · `RelationCriteria` 빈이다.
 
@@ -339,6 +359,7 @@ sequenceDiagram
         L->>S: members · storylinesOf (정돈 — 바뀐 · 든 스토리라인마다)
         L->>S: save / delete / merge (storyline-R13 · R17 · R18)
         L->>Q: enqueue 남은 사건 (풀기, storyline-R17)
+        L-->>L: publishEvent StorylinesRetired (합치거나 지웠으면, storyline-R35)
         R->>Q: deleteIfUnchanged / releaseIfLeased (storyline-R3)
     end
 ```
@@ -362,7 +383,7 @@ sequenceDiagram
 
 - `StorylineLinkingListener` — 리스너(들어오는 쪽). 시각은 `InstantSource` 에서 얻는다. 알림 하나의 사건을 사건 ID 오름차순으로 넣는다
 - `LinkingRound` — 회차 하나(storyline-R3 · R4). 시각은 `InstantSource` 에서 얻는다. 점유 · 판정 · 실패 기록은 `TransactionTemplate` 의 짧은 트랜잭션이다. 판정의 예외를 밖으로 던지지 않는다 — 기준 등록 · 점유 · 실패 기록의 DB 예외는 회차 밖으로 나간다. 기준 등록 · 점유가 실패하면 점유한 사건이 없어 다음 회차가 가져가고, 실패 기록이 실패하면 그 회차가 점유한 사건(아직 판정하지 않은 사건 포함)이 점유가 만료된 뒤 다시 판정된다. 트랜잭션 · 역할 애너테이션이 없다. 로그: `스토리라인 잇기 판정이 예상하지 못한 오류로 실패했다 — 사건 {ID}, 실패 {n}회`(오류, 예외와 함께) · `스토리라인 잇기 판정이 거듭 실패해 대기에서 뺐다 — 사건 {ID}, 실패 {n}회`(오류)
-- `StorylineLinker` — 사건 하나의 따르기 · 판정 · 정돈 · 쓰기(storyline-R5 ~ R14 · R17 · R18)와 관계 대기에 넣기 · 합칠 때 관계 옮기기(storyline-R26 · R32). 트랜잭션 안에서 부른다. 시각 · 기준 · 기준 ID 는 회차가 넘긴다
+- `StorylineLinker` — 사건 하나의 따르기 · 판정 · 정돈 · 쓰기(storyline-R5 ~ R14 · R17 · R18)와 관계 대기에 넣기 · 합칠 때 관계 옮기기(storyline-R26 · R32), 합치거나 지운 스토리라인의 알림(storyline-R35). 트랜잭션 안에서 부른다. 시각 · 기준 · 기준 ID 는 회차가 넘긴다
 - `RelationRound` — 관계 회차 하나(storyline-R27 ~ R31). 시각은 `InstantSource` 에서 얻는다. 점유 · 후보 읽기 · 반영 · 실패 기록은 `TransactionTemplate` 의 짧은 트랜잭션이고, 관계 판정은 트랜잭션 밖이다. 판정 · 실패 갈래는 `default` 없는 `switch` 식이다. 평가기 사용 불가 · 예상 못한 예외면 회차를 멈춘다 — 점유는 만료로 풀린다. 트랜잭션 · 역할 애너테이션이 없다. 로그: `스토리라인 관계 판정이 거듭 실패해 대기에서 뺐다 — 스토리라인 {ID}, 실패 {n}회`(오류) · `스토리라인 관계 판정을 멈췄다 — 평가기를 쓸 수 없다: {문구}`(오류)
 - `RelationProperties` · `RelationConfiguration` — 관계 기준 설정(`yozmnews.storyline-relation`, 기본값의 정본은 레코드 컴포넌트의 `@DefaultValue`)과 그것을 검증된 `RelationCriteria` 빈으로 바꾸는 결선. 값이 틀리면 기동하지 않는다. 역할 애너테이션이 없다
 - `StorylineLinkingAdministrationService` — 공개 운영 API `StorylineLinkingAdministration` 의 구현(storyline-R15). 시각은 `InstantSource` 에서 얻는다
@@ -419,7 +440,8 @@ sequenceDiagram
 
   ```java
   public interface StorylineQueryRepository {
-      Optional<StoredStoryline> find(long storylineId);                 // 합쳐진 행이면 남는 행, 없으면 빈 값
+      Optional<StoredStoryline> find(long storylineId);                 // findAll 의 한 건 — 합쳐진 행이면 남는 행, 없으면 빈 값
+      Map<Long, StoredStoryline> findAll(Collection<Long> storylineIds); // 받은 ID → 행(합쳐진 행이면 남는 행) — 없는 ID 는 빠진다. 남는 쪽 풀기의 정본
       List<StoredStoryline> having(Collection<Long> eventIds);          // 이 사건 가운데 하나라도 직접 든, 합쳐지지 않은 스토리라인 — ID 순
       List<StoredStoryline> byIds(Collection<Long> storylineIds);       // 합쳐지지 않은 것만 — ID 순
       List<StoredStoryline> pageOf(Collection<Long> storylineIds, @Nullable Instant afterLast, @Nullable Long afterId,
@@ -529,7 +551,7 @@ sequenceDiagram
 - `JdbcLinkingQueueRepository` — 넣기는 `INSERT … ON CONFLICT (event_id) DO UPDATE` 로 다시 알림 수를 올리고 순서 키를 바꾼다. 여럿을 넣을 때는 사건 ID 순이다. 잠금은 `FOR UPDATE SKIP LOCKED`, 점유한 회차의 반영은 점유 토큰(지우기는 다시 알림 수도)을 조건으로 한 갱신 · 삭제다
 - `JdbcStorylineRepository` — 중심은 `halfvec` 이고 `platform` 의 `VectorText` 로 쓰고 읽는다. 후보는 합쳐지지 않은 행만 보고, 코사인은 `1 − (중심 <=> cast(벡터 as halfvec))` 를 스토리라인마다 센다(인덱스 없음) — 거리가 NaN(영 벡터)인 행은 뺀다. 합치기는 합쳐질 행을 가리키던 행을 먼저 남는 행으로 돌리고, 합쳐질 행의 소속 · 핵심 말을 지운 뒤 가리킴을 적는다. 핵심 말 상위 수는 매개변수이고 말 순은 바이트 순(`COLLATE "C"`)이다. 모듈 잠금은 `pg_advisory_xact_lock(:namespace, 0)` 이고 namespace 는 `0x53545259`('STRY')다
 - `JdbcLinkingCriteriaRepository` — 같은 값의 행을 먼저 읽고, 없을 때만 `INSERT … ON CONFLICT … DO UPDATE … RETURNING id`. 창은 초로 적는다
-- `JdbcStorylineQueryRepository` — 행의 투영(구성 사건 수는 소속 행 수)이 한 벌이다. 찾기는 합쳐진 행이면 `merged_into` 를 한 번 따른다. 쪽은 주어진 스토리라인 ID 가운데 `(last_article_at, id)` 커서다
+- `JdbcStorylineQueryRepository` — 행의 투영(구성 사건 수는 소속 행 수)이 한 벌이다. 찾기는 `findAll` 한 문장이고(`find` 는 그 한 건) 합쳐진 행이면 `merged_into` 를 한 번 따른다. 쪽은 주어진 스토리라인 ID 가운데 `(last_article_at, id)` 커서다
 - `JdbcRelationRepository` — 쌍의 고유는 두 ID 의 작은 쪽 · 큰 쪽으로 본다. `link` 는 그 쌍의 행을 지우고 넣는다. `all` 은 두 끝이 모두 합쳐지지 않은 행만 낸다. 기준 이력은 같은 값의 행을 먼저 읽고 없을 때만 넣는다. 물은 기록은 `INSERT … ON CONFLICT (low_id, high_id) DO UPDATE` 다
 - `JdbcRelationQueueRepository` — `JdbcLinkingQueueRepository` 와 같은 꼴이다. 잠금은 스토리라인 ID 순 `FOR UPDATE SKIP LOCKED`
 - `JdbcBigStorylineCriteriaRepository` — 지금 값은 ID 1 인 한 행이다. 처음 값은 `INSERT … ON CONFLICT (id) DO NOTHING` 이 넣었을 때만 이력을 쓴다(동시에 떠도 한 행). 보도 강도의 하한은 `NUMERIC(6, 2)` 를 `BigDecimal` 로 읽고 쓴다
@@ -607,6 +629,7 @@ sequenceDiagram
   - 풀기가 판정 중인 사건 자신을 다시 넣으면 다시 알림 수가 올라 회차가 점유만 풀고 다음 회차가 다시 판정한다(storyline-R3)
   - 이 기능 전에 남은 사건 하나짜리 · 구성 사건이 같은 스토리라인은 그 구성 사건이 다시 판정될 때 정돈된다 — 운영자는 채우기(storyline-R15)로 다시 판정할 수 있다
 - **storyline-R18** — 합쳐진 스토리라인: 합칠 때 합쳐질 스토리라인 M 의 소속 · 핵심 말을 지우고(같은 사건이 남는 스토리라인 S 에 있다), M 의 행은 남겨 S 를 가리킨다(합친 시각과 함께). S 의 소속 · 표현은 바꾸지 않는다. 가리킴은 평평하다 — M 을 가리키던 행도 S 를 가리키게 바꾼다. S 를 지우면 S 를 가리키는 행도 함께 지운다. 합쳐진 행은 후보 · 소속 · 표현 조회에서 빠지고, 합치기는 한 방향이다 — 다시 나누지 않는다. M 의 관계는 S 로 옮긴다(storyline-R32)
+- **storyline-R35** — 합치거나 지운 스토리라인의 알림: 정돈(storyline-R17)이 스토리라인을 합치거나 지우면 정돈 끝에 같은 트랜잭션에서 `StorylinesRetired` 를 한 번 발행한다 — 합쳐진 스토리라인마다(남는 스토리라인은 싣지 않는다), 지운 스토리라인마다 하나씩이고, 풀기면 남은 사건을 함께 싣는다. 판정이 되돌아가면 발행도 없다. 지운 스토리라인을 가리키던 합쳐진 행은 함께 지워지지만 싣지 않는다 — 합칠 때 이미 실렸고, 받는 쪽은 지금 상태를 읽어 사라짐을 가른다. 판단의 이유는 [ADR-0188](../adr/0188-storyline-subscriptions-follow-retired-storylines-by-event-and-before-each-use-and-notices-point-to-the-remaining-event.md)에 있다
 
 ### 큰 판정
 
@@ -631,7 +654,7 @@ sequenceDiagram
 ### 공개 조회
 
 - **storyline-R21** — ID 로 찾는 조회는 남는 쪽을 따른다.
-  - 스토리라인 ID 로 찾는 조회(`find` · `events`)는 합쳐진 스토리라인이면 남는 스토리라인을 낸다 — 가리킴이 평평해 한 번 따른다(storyline-R18)
+  - 스토리라인 ID 로 찾는 조회(`find` · `findAll` · `events`)는 합쳐진 스토리라인이면 남는 스토리라인을 낸다 — 가리킴이 평평해 한 번 따른다(storyline-R18). `findAll` 은 받은 ID 마다 그 값을 싣고, 없는 ID 는 뺀다
   - 사건의 스토리라인(`storylinesOf`)은 `EventDirectory.find` 로 남는 사건을 얻어 그 소속을 찾는다. 합쳐진 사건의 소속을 아직 옮기지 않은 동안에는 옛 사건 ID 의 소속이 나오지 않는다
   - 타임라인(`events`)은 닫은 사건 집합(storyline-R33)을 `EventDirectory.views` 로 읽어 첫 기사 시각 · 사건 ID 순으로 낸다. 합쳐졌거나 지워졌는데 아직 소속을 따르지 않은 사건은 빠진다
   - 소속의 판정 근거(storyline-R14)는 싣지 않는다 — 운영자 조회가 낸다(storyline-R34)
@@ -765,3 +788,4 @@ sequenceDiagram
 | [0148](../adr/0148-storyline-coverage-is-the-article-count-in-the-period-over-the-closed-event-set.md) | 스토리라인의 보도량은 닫은 사건 집합의 기간 안 기사 수로 센다 |
 | [0173](../adr/0173-storyline-linking-threshold-default-chosen-for-precision-on-an-evaluation-set-grid-and-operator-sample-review.md) | 스토리라인 잇기 기준 점수의 기본값은 평가 세트의 격자와 운영자 표본 검수로 정밀도를 앞세워 정한다 |
 | [0174](../adr/0174-big-judgement-criterion-first-value-kept-by-operator-daily-preview-review-where-the-evaluation-set-cannot-separate-neighbours.md) | 큰 판정 기준의 처음 값은 평가 세트가 이웃한 값을 가르지 못해 운영자의 날마다 미리보기 검수로 정한다 |
+| [0188](../adr/0188-storyline-subscriptions-follow-retired-storylines-by-event-and-before-each-use-and-notices-point-to-the-remaining-event.md) | 스토리라인 구독은 `storyline` 이 알리는 합침 · 지움과 사용자의 조회 · 저장 앞에서 따라가고, 사라진 구독은 남은 사건을 가리켜 알린다 |

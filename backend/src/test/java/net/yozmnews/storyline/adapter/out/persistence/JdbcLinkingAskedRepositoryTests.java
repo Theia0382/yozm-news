@@ -20,7 +20,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
  * 물은 기록 — 붙이기 띠(사건, 스토리라인) · 짝 띠(사건, 이웃 사건)마다 한 행, 다시 쓰면 덮어쓴다. 확률 없는 기록은 그대로 읽힌다. 합쳐질
  * 스토리라인 · 지워진 사건의 기록을 지우고, 지운 스토리라인의 기록은 FK 로 함께 지워진다.
  * <p>
- * 지키는 규칙: storyline-R35
+ * 지키는 규칙: storyline-R36
  */
 @JdbcTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)

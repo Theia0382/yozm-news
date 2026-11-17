@@ -88,6 +88,17 @@ class EventDirectoryService implements EventDirectory {
 	}
 
 	@Override
+	public Map<EventId, List<ArticleId>> articleIdsOf(Collection<EventId> events) {
+		if (events.isEmpty()) {
+			return Map.of();
+		}
+		Map<EventId, List<ArticleId>> result = new LinkedHashMap<>();
+		this.events.articleIdsOf(events.stream().map(EventId::value).distinct().toList())
+			.forEach((event, articles) -> result.put(new EventId(event), articles));
+		return Collections.unmodifiableMap(result);
+	}
+
+	@Override
 	public Map<EventId, ArticleId> representativesOfAll(Collection<EventId> events) {
 		if (events.isEmpty()) {
 			return Map.of();
