@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
 
-import net.yozmnews.llm.GenerationStop;
 import net.yozmnews.llm.KeyValidationResult;
 import net.yozmnews.llm.LlmFailureKind;
 import net.yozmnews.llm.Provider;
@@ -267,9 +266,6 @@ class LlmClientFactoryServiceTests {
 
 		private final List<Duration> deadlines = new ArrayList<>();
 
-		private Supplier<GenerationOutcome> generate = () -> new GenerationOutcome.Answered("{}", 0, 0,
-				GenerationStop.COMPLETE);
-
 		private final List<SecretValue> keys = new ArrayList<>();
 
 		private Supplier<ProbeResult> probe = ProbeResult.Reachable::new;
@@ -295,7 +291,7 @@ class LlmClientFactoryServiceTests {
 
 				@Override
 				public GenerationOutcome generate(GenerationCall call) {
-					return RecordingClients.this.generate.get();
+					throw new AssertionError("키 확인 시험은 생성을 부르지 않는다");
 				}
 
 				@Override
