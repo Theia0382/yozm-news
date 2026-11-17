@@ -212,6 +212,7 @@
 | [0204](0204-openrouter-keys-are-validated-with-the-key-lookup-request-not-the-model-list.md) | OpenRouter 키 검증은 모델 목록 조회가 아니라 키 조회 요청이다 | 승인 |
 | [0205](0205-an-openrouter-403-invalidates-the-key-only-with-the-permission-mark-and-an-error-inside-an-ok-answer-is-unexpected.md) | OpenRouter 의 403 은 권한 표시가 있을 때만 키를 무효로 하고, 200 응답 안의 오류는 예상 밖의 답이다 | 승인 |
 | [0206](0206-schemas-sent-to-openrouter-satisfy-both-providers-rules-and-an-optional-value-list-takes-null-without-a-type.md) | OpenRouter 로 보내는 출력 스키마는 두 공급자 맞춤을 함께 만족하고, 값 목록이 있는 선택 속성은 타입 없이 null 을 받는다 | 승인 |
+| [0212](0212-migrations-never-delete-user-data-or-the-shared-rows-and-ids-it-references-and-moved-data-is-checked-by-a-data-test.md) | 마이그레이션은 사용자 데이터와 그것이 가리키는 공유 데이터의 행 · ID 를 지우지 않고, 데이터를 옮기면 데이터 시험으로 대조한다 | 승인 |
 
 ## 운영 규칙
 
