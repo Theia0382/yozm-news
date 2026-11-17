@@ -20,6 +20,7 @@ import net.yozmnews.llm.LlmModel;
 import net.yozmnews.llm.Provider;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.reader.ReaderRows;
+import net.yozmnews.storyline.StorylineDirectory;
 import net.yozmnews.tag.ArticleEvaluations;
 import net.yozmnews.tag.TagKeyLineage;
 import net.yozmnews.tag.TagKeyMapping;
@@ -69,6 +70,9 @@ class CandidateSelectionTests {
 
 	@Autowired
 	EventDirectory events;
+
+	@Autowired
+	StorylineDirectory storylines;
 
 	@Autowired
 	TagSetDirectory tagSets;
@@ -149,6 +153,55 @@ class CandidateSelectionTests {
 	}
 
 	@Test
+	void aBigStorylineOutsideTheSubscriptionsComesFirstAsTheBigSlot() {
+		long[] conflict = bigStoryline();
+
+		// 큰 슬롯: 사건의 대표는 같은 발행 시각이라 ID 가 가장 작은 기사(event-R14), 그 다음 구독 후보
+		assertThat(this.selection.select(new UserId(this.user), DAY, ROOMY)).containsExactly(
+				new DigestCandidate(new ArticleId(conflict[0]), SelectionReason.MAJOR_STORYLINE),
+				new DigestCandidate(new ArticleId(this.a1), SelectionReason.SUBSCRIBED),
+				new DigestCandidate(new ArticleId(this.a5), SelectionReason.SUBSCRIBED));
+	}
+
+	@Test
+	void zeroBigSlotsLeaveTheBigStorylineOut() {
+		bigStoryline();
+		this.jdbc.sql("update user_settings set big_slots = 0 where user_id = :user").param("user", this.user).update();
+
+		assertThat(this.selection.select(new UserId(this.user), DAY, ROOMY)).containsExactly(
+				new DigestCandidate(new ArticleId(this.a1), SelectionReason.SUBSCRIBED),
+				new DigestCandidate(new ArticleId(this.a5), SelectionReason.SUBSCRIBED));
+	}
+
+	@Test
+	void anArticleTheUserExcludesIsSkippedForTheBigSlotRepresentative() {
+		long[] conflict = bigStoryline();
+		// 사용자가 지역 us 를 제외하고 가장 작은 ID 의 기사에 지역 us 가 붙는다 — 대표는 그다음 기사. 소스는 그대로라 보도 강도도 그대로다
+		this.jdbc.sql("""
+				insert into user_tag_preferences (user_id, tag_kind, tag_key, mode, created_at)
+				values (:user, 'REGION', 'us', 'EXCLUDE', now())
+				""").param("user", this.user).update();
+		this.jdbc.sql("""
+				insert into article_tags (evaluation_id, article_id, tag_kind, tag_key, probability)
+				select id, article_id, 'REGION', 'us', 0.9 from article_evaluations where article_id = :article
+				""").param("article", conflict[0]).update();
+
+		assertThat(this.selection.select(new UserId(this.user), DAY, ROOMY)).first()
+			.isEqualTo(new DigestCandidate(new ArticleId(conflict[1]), SelectionReason.MAJOR_STORYLINE));
+	}
+
+	@Test
+	void anArticleWithoutAnEvaluationCannotBeTheBigSlotRepresentative() {
+		// 평가 없는 기사가 사건에서 ID 가 가장 작다 — 지역 · 형식 제외를 확인할 수 없어 대표 자격이 없고 평가 있는 다음 기사가 대표다(digest-R19).
+		// 중요도가 없어 중요도 합 · 소스는 그대로라 보도 강도도 그대로다
+		long unevaluated = EventArticles.insert(this.jdbc, "분쟁 영", "요약", 1, 11);
+		long[] conflict = bigStoryline(unevaluated);
+
+		assertThat(this.selection.select(new UserId(this.user), DAY, ROOMY)).first()
+			.isEqualTo(new DigestCandidate(new ArticleId(conflict[0]), SelectionReason.MAJOR_STORYLINE));
+	}
+
+	@Test
 	void anUnknownAccountHasNoCandidates() {
 		assertThat(this.selection.select(new UserId(Long.MAX_VALUE), DAY, ROOMY)).isEmpty();
 	}
@@ -158,7 +211,7 @@ class CandidateSelectionTests {
 		TagSetId elsewhere = new TagSetId(this.tagSets.activeTagSet().id().value() + 1_000);
 		AtomicInteger skewed = new AtomicInteger(1);
 		CandidateSelection once = new CandidateSelection(this.interests, this.evaluations,
-				skewing(skewed, elsewhere), this.articles, this.events);
+				skewing(skewed, elsewhere), this.articles, this.events, this.storylines);
 
 		assertThat(once.select(new UserId(this.user), DAY, ROOMY)).extracting(DigestCandidate::articleId)
 			.containsExactly(new ArticleId(this.a1), new ArticleId(this.a5));
@@ -166,9 +219,31 @@ class CandidateSelectionTests {
 
 		AtomicInteger always = new AtomicInteger(Integer.MAX_VALUE);
 		CandidateSelection never = new CandidateSelection(this.interests, this.evaluations,
-				skewing(always, elsewhere), this.articles, this.events);
+				skewing(always, elsewhere), this.articles, this.events, this.storylines);
 		assertThatIllegalStateException().isThrownBy(() -> never.select(new UserId(this.user), DAY, ROOMY))
 			.withMessageContaining("2 번 어긋났다");
+	}
+
+	/**
+	 * 구독 밖(국제 분쟁) 사건 하나와 그것만 가진 스토리라인 — 기사 셋 · 중요도 5 · 모두 소스 1. 기간의 소스는 소스 1 하나(사건에 배정된 기사의
+	 * 소스)라 보도 강도 = 15 ÷ (1 × 1일) = 15 — 큰 판정 기준의 처음 값 15.00 과 같아 크다(경계 포함)
+	 * @param unevaluated 사건에 함께 배정할 평가 없는 기사
+	 * @return 평가 있는 기사 ID — ID 순
+	 */
+	private long[] bigStoryline(long... unevaluated) {
+		long b1 = article("분쟁 하나", "world.conflict", 5.0, "2026-11-05T06:00:00Z", 1);
+		long b2 = article("분쟁 둘", "world.conflict", 5.0, "2026-11-05T06:00:00Z", 1);
+		long b3 = article("분쟁 셋", "world.conflict", 5.0, "2026-11-05T06:00:00Z", 1);
+		long event = this.rows.event(3, "2026-11-05T00:00:00Z", "2026-11-05T00:00:00Z");
+		this.rows.assign(b1, event, "2026-11-05T00:00:00Z");
+		this.rows.assign(b2, event, "2026-11-05T00:00:00Z");
+		this.rows.assign(b3, event, "2026-11-05T00:00:00Z");
+		for (long article : unevaluated) {
+			this.rows.assign(article, event, "2026-11-05T00:00:00Z");
+		}
+		long storyline = this.rows.storyline("2026-11-05T00:00:00Z", "2026-11-05T00:00:00Z", event);
+		this.rows.member(storyline, event);
+		return new long[] { b1, b2, b3 };
 	}
 
 	/** 남은 횟수만큼 계보 표의 활성 버전을 다른 값으로 바꿔 낸다 — 조회 사이의 활성 전환 */
