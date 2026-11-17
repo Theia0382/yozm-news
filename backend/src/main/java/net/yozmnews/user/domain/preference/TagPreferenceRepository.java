@@ -33,4 +33,7 @@ public interface TagPreferenceRepository {
 	 */
 	void record(UserId user, List<PreferenceChange> changes, PreferenceCause cause, TagSetId version, Instant now);
 
+	/** 이력의 주제 행 가운데 시각이 {@code from} 이상 · {@code to} 미만인 것 — 시각 · 행 ID 순 */
+	List<RecordedTopicChange> topicChanges(UserId user, Instant from, Instant to);
+
 }
