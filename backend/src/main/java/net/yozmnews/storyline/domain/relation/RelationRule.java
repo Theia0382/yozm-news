@@ -3,6 +3,7 @@ package net.yozmnews.storyline.domain.relation;
 import java.util.EnumSet;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 import net.yozmnews.evaluation.RelationAnswer;
 import net.yozmnews.storyline.RelationOutcome;
@@ -10,8 +11,9 @@ import net.yozmnews.storyline.RelationOutcome;
 /**
  * 관계 판정 — 정본 · docs/specs/storyline.md §4 · storyline-R29.
  * <p>
- * 답 다섯 가운데 확률이 가장 높은 답으로 정한다. 확률이 같으면 {@link RelationAnswer} 의 선언 순서로 앞의 답이다 — 해당 없음이 맨 앞이라
- * 같으면 맺지 않는다. 경계는 포함한다(기준과 같은 값은 기준 이상이다).
+ * 답 가운데 확률이 가장 높은 답으로 정한다. 확률이 같으면 {@link RelationAnswer} 의 선언 순서로 앞의 답이다 — 해당 없음이 맨 앞이라
+ * 같으면 맺지 않는다. 경계는 포함한다(기준과 같은 값은 기준 이상이다). 가장 높은 답이 같은 사안의 조각이면 관계가 아니라
+ * {@link Decision.Fragments} 다 — 두 스토리라인은 어느 쪽도 다른 쪽의 하위가 아니다.
  */
 public final class RelationRule {
 
@@ -22,6 +24,7 @@ public final class RelationRule {
 	public static RelationOutcome outcomeOf(Decision decision) {
 		return switch (decision) {
 			case Decision.Link link -> RelationOutcome.LINKED;
+			case Decision.Fragments fragments -> RelationOutcome.UNGROUPED;
 			case Decision.None none -> switch (none.reason()) {
 				case NOT_RELATED -> RelationOutcome.NOT_RELATED;
 				case LOW_PROBABILITY -> RelationOutcome.LOW_PROBABILITY;
@@ -35,16 +38,16 @@ public final class RelationRule {
 	/**
 	 * @param first 요청의 first 스토리라인
 	 * @param second 요청의 second 스토리라인
-	 * @param probabilities 답 → 확률 — 다섯 답 모두
+	 * @param probabilities 답 → 확률 — {@link RelationAnswer} 의 답 모두
 	 * @param graph 지금 관계 — 구조 제약은 이 쌍의 지금 관계를 뺀 것으로 본다
-	 * @throws IllegalArgumentException 답 다섯이 모두 있지 않을 때
+	 * @throws IllegalArgumentException 답이 모두 있지 않을 때
 	 */
 	public static Decision decide(long first, long second, Map<RelationAnswer, Double> probabilities,
 			double firstOneMatter, double secondOneMatter, RelationGraph graph, RelationCriteria criteria) {
 		Objects.requireNonNull(graph, "graph");
 		Objects.requireNonNull(criteria, "criteria");
 		if (!probabilities.keySet().equals(EnumSet.allOf(RelationAnswer.class))) {
-			throw new IllegalArgumentException("답 다섯의 확률이 모두 있어야 한다: " + probabilities.keySet());
+			throw new IllegalArgumentException("모든 답의 확률이 있어야 한다: " + probabilities.keySet());
 		}
 		RelationAnswer top = RelationAnswer.NONE;
 		for (RelationAnswer answer : RelationAnswer.values()) {
@@ -53,8 +56,12 @@ public final class RelationRule {
 			}
 		}
 		double probability = probabilities.get(top);
+		if (top == RelationAnswer.SAME_MATTER) {
+			return gated(probability, firstOneMatter, secondOneMatter, criteria)
+				.orElseGet(() -> new Decision.Fragments(first, second, probability));
+		}
 		Relation relation = switch (top) {
-			case NONE -> null;
+			case NONE, SAME_MATTER -> null;
 			case SECOND_PART_OF_FIRST -> new Relation(first, second, RelationKind.CONTAINS);
 			case FIRST_PART_OF_SECOND -> new Relation(second, first, RelationKind.CONTAINS);
 			case FIRST_LED_TO_SECOND -> new Relation(first, second, RelationKind.FOLLOWS);
@@ -63,11 +70,9 @@ public final class RelationRule {
 		if (relation == null) {
 			return new Decision.None(Decision.Reason.NOT_RELATED);
 		}
-		if (probability < criteria.probability()) {
-			return new Decision.None(Decision.Reason.LOW_PROBABILITY);
-		}
-		if (Math.min(firstOneMatter, secondOneMatter) < criteria.oneMatter()) {
-			return new Decision.None(Decision.Reason.NOT_ONE_MATTER);
+		Optional<Decision> gated = gated(probability, firstOneMatter, secondOneMatter, criteria);
+		if (gated.isPresent()) {
+			return gated.get();
 		}
 		RelationGraph others = graph.without(first, second);
 		if (others.closesCycle(relation)) {
@@ -77,6 +82,18 @@ public final class RelationRule {
 			return new Decision.None(Decision.Reason.SECOND_PARENT);
 		}
 		return new Decision.Link(relation, probability);
+	}
+
+	/** 확률 기준 · 한 사안 기준에 걸리면 그 까닭으로 맺지 않는다 — 관계와 조각이 같은 순서로 거친다 */
+	private static Optional<Decision> gated(double probability, double firstOneMatter, double secondOneMatter,
+			RelationCriteria criteria) {
+		if (probability < criteria.probability()) {
+			return Optional.of(new Decision.None(Decision.Reason.LOW_PROBABILITY));
+		}
+		if (Math.min(firstOneMatter, secondOneMatter) < criteria.oneMatter()) {
+			return Optional.of(new Decision.None(Decision.Reason.NOT_ONE_MATTER));
+		}
+		return Optional.empty();
 	}
 
 	/** 판정 */
@@ -89,6 +106,12 @@ public final class RelationRule {
 				Objects.requireNonNull(relation, "relation");
 			}
 
+		}
+
+		/**
+		 * 같은 사안의 조각이다 — 두 스토리라인 사이에 관계를 맺지 않고, 그 쌍의 지금 관계를 지운다. 구조(순환 · 상위)는 보지 않았다.
+		 */
+		record Fragments(long first, long second, double probability) implements Decision {
 		}
 
 		/** 맺지 않는다 — 그 쌍의 지금 관계를 지운다 */

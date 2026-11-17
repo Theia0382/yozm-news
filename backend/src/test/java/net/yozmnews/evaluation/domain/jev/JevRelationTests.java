@@ -29,7 +29,7 @@ class JevRelationTests {
 			new FlowText(4, DAY, DAY, List.of(new HappeningText(DAY, "특검법 통과", "재석 과반"))),
 			new FlowText(3, DAY, DAY, List.of(new HappeningText(DAY, "특검 후보 추천", null))), RelationWording.CURRENT);
 
-	private static final String QUESTIONS = "\"questions\":{\"relation\":{\"type\":\"choice\","
+	private static final String PARTS = "\"questions\":{\"relation\":{\"type\":\"choice\","
 			+ "\"instructions\":\"What is the relation between flow A and flow B?\",\"criteria\":{"
 			+ "\"b_part_of_a\":\"B is narrower than A and lies inside it: B covers one reaction to A, one stage of A, "
 			+ "or one strand of A, and is still about the matter of A.\","
@@ -38,19 +38,32 @@ class JevRelationTests {
 			+ "\"a_led_to_b\":\"B is about a different matter from A. B has its own actors and its own course and would "
 			+ "go on even if A ended, but it arose because of what happened in A.\","
 			+ "\"b_led_to_a\":\"A is about a different matter from B. A has its own actors and its own course and would "
-			+ "go on even if B ended, but it arose because of what happened in B.\","
-			+ "\"none\":\"None of the above. A and B are separate matters, or they cover the same matter as a whole, or "
-			+ "one of them is a collection of separate happenings rather than one matter. They may be of a similar "
-			+ "kind, involve the same people, or share a cause, but neither is inside the other and neither arose from "
-			+ "the other.\"}},"
+			+ "go on even if B ended, but it arose because of what happened in B.\",";
+
+	private static final String ONE_MATTER = ""
 			+ "\"a_one_matter\":{\"type\":\"noul\",\"instructions\":\"Is flow A the unfolding of one matter, rather than "
 			+ "a collection of separate happenings that are only of a similar kind?\"},"
 			+ "\"b_one_matter\":{\"type\":\"noul\",\"instructions\":\"Is flow B the unfolding of one matter, rather than "
 			+ "a collection of separate happenings that are only of a similar kind?\"}}}";
 
+	/** 판 relation-2 의 요청 — 선택지는 부분 둘 · 낳음 둘 · 조각 · 해당 없음 순이다(문구를 고를 때 잰 요청의 순서) */
+	private static final String QUESTIONS = PARTS
+			+ "\"same\":\"A and B are two parts of one and the same matter. Neither is narrower than the other and "
+			+ "neither lies inside the other; taken together they follow that one matter.\","
+			+ "\"none\":\"None of the above. A and B are separate matters, or one of them is a collection of separate "
+			+ "happenings rather than one matter. They may be of a similar kind, involve the same people, or share a "
+			+ "cause, but neither is inside the other and neither arose from the other.\"}}," + ONE_MATTER;
+
+	/** 판 relation-1 의 요청 — 선택지는 부분 둘 · 낳음 둘 · 해당 없음 순이다 */
+	private static final String QUESTIONS_1 = PARTS
+			+ "\"none\":\"None of the above. A and B are separate matters, or they cover the same matter as a whole, or "
+			+ "one of them is a collection of separate happenings rather than one matter. They may be of a similar "
+			+ "kind, involve the same people, or share a cause, but neither is inside the other and neither arose from "
+			+ "the other.\"}}," + ONE_MATTER;
+
 	private static final String BODY = "{\"model\":\"jev-1.14.0\",\"answers\":{\"relation\":{\"type\":\"choice\","
 			+ "\"choice\":\"none\",\"confidence\":0.47,\"probabilities\":{\"b_part_of_a\":0.07,\"a_part_of_b\":0.03,"
-			+ "\"a_led_to_b\":0.3,\"b_led_to_a\":0.02,\"none\":0.58}},\"a_one_matter\":{\"type\":\"noul\",\"noul\":0.47},"
+			+ "\"a_led_to_b\":0.3,\"b_led_to_a\":0.02,\"same\":0.08,\"none\":0.5}},\"a_one_matter\":{\"type\":\"noul\",\"noul\":0.47},"
 			+ "\"b_one_matter\":{\"type\":\"noul\",\"noul\":0.44}},\"usage\":{\"input_tokens\":1924,\"output_tokens\":103}}";
 
 	@Test
@@ -61,30 +74,43 @@ class JevRelationTests {
 	}
 
 	@Test
+	void asksTheEarlierWordingWithItsFiveOptionsInItsOrder() {
+		RelationInput earlier = new RelationInput(INPUT.first(), INPUT.second(), RelationWording.RELATION_1);
+
+		assertThat(JevRequest.relationProbeBody("jev-latest", earlier))
+			.isEqualTo("{\"model\":\"jev-latest\",\"state\":\"\"," + QUESTIONS_1);
+	}
+
+	@Test
 	void probesWithTheSameQuestionsAndAnEmptyState() {
 		assertThat(JevRequest.relationProbeBody("jev-latest", INPUT))
 			.isEqualTo("{\"model\":\"jev-latest\",\"state\":\"\"," + QUESTIONS);
 	}
 
 	@Test
-	void readsTheFiveOptionsIntoTheAnswersAndBothOneMatterAnswers() {
-		assertThat(JevResponse.readRelation(BODY, "req_1")).isEqualTo(new Relation(
+	void readsTheOptionsOfTheWordingIntoTheAnswersAndBothOneMatterAnswers() {
+		assertThat(JevResponse.readRelation(BODY, "req_1", RelationWording.RELATION_2)).isEqualTo(new Relation(
 				Map.of(RelationAnswer.SECOND_PART_OF_FIRST, 0.07, RelationAnswer.FIRST_PART_OF_SECOND, 0.03,
 						RelationAnswer.FIRST_LED_TO_SECOND, 0.3, RelationAnswer.SECOND_LED_TO_FIRST, 0.02,
-						RelationAnswer.NONE, 0.58),
+						RelationAnswer.SAME_MATTER, 0.08, RelationAnswer.NONE, 0.5),
 				0.47, 0.44, "jev", "jev-1.14.0", 1924, BODY));
+		// 옛 판으로 읽으면 그 판의 답 다섯만 읽는다 — 본문에 더 있는 답은 보지 않는다
+		assertThat(((Relation) JevResponse.readRelation(BODY, null, RelationWording.RELATION_1)).probabilities())
+			.containsOnlyKeys(RelationAnswer.SECOND_PART_OF_FIRST, RelationAnswer.FIRST_PART_OF_SECOND,
+					RelationAnswer.FIRST_LED_TO_SECOND, RelationAnswer.SECOND_LED_TO_FIRST, RelationAnswer.NONE);
 	}
 
 	@Test
 	void anAnswerThatIsMissingOrMalformedIsUnavailable() {
-		assertThat(JevResponse.readRelation(BODY.replace("\"b_led_to_a\":0.02,", ""), "req_2"))
+		assertThat(JevResponse.readRelation(BODY.replace("\"b_led_to_a\":0.02,", ""), "req_2", RelationWording.CURRENT))
 			.isEqualTo(unavailable("Jev 응답을 읽을 수 없다 — 확률이 없거나 숫자가 아니다 — relation.b_led_to_a (요청 req_2)"));
-		assertThat(JevResponse.readRelation(BODY.replace(",\"b_one_matter\":{\"type\":\"noul\",\"noul\":0.44}", ""), null))
+		assertThat(JevResponse.readRelation(BODY.replace(",\"b_one_matter\":{\"type\":\"noul\",\"noul\":0.44}", ""), null,
+				RelationWording.CURRENT))
 			.isEqualTo(unavailable("Jev 응답을 읽을 수 없다 — 답이 없다 — b_one_matter"));
 		assertThat(JevResponse.readRelation(BODY.replace("\"relation\":{\"type\":\"choice\"", "\"relation\":{\"type\":\"noul\""),
-				null))
+				null, RelationWording.CURRENT))
 			.isEqualTo(unavailable("Jev 응답을 읽을 수 없다 — 답의 종류가 다르다 (기대 choice) — relation"));
-		assertThat(JevResponse.readRelation(BODY.replace("0.58", "1.2"), null))
+		assertThat(JevResponse.readRelation(BODY.replace("0.5}", "1.2}"), null, RelationWording.CURRENT))
 			.isEqualTo(unavailable("Jev 응답을 읽을 수 없다 — 확률이 0 ~ 1 이 아니다 — relation.none"));
 	}
 

@@ -27,7 +27,7 @@ public record RereadFailure(Kind kind, String message) implements RereadResult, 
 
 		/** 다른 평가기가 남긴 원본 응답이다 — 그 형식을 모른다 */
 		OTHER_EVALUATOR,
-		/** 원본 응답이 이 평가기의 형식이 아니거나, 태그 판정이면 넘긴 질문 묶음의 답이 없고 관계 판정이면 답 다섯 · 한 사안 확률이 없다 */
+		/** 원본 응답이 이 평가기의 형식이 아니거나, 태그 판정이면 넘긴 질문 묶음의 답이 없고 관계 판정이면 넘긴 문구 판의 답 · 한 사안 확률이 없다 */
 		UNREADABLE
 
 	}

@@ -387,13 +387,16 @@ function JudgementText({
       </span>
       {judgement.reading === "READ" ? (
         <span className="block tabular-nums">
-          해당 없음 {formatProbability(judgement.none)} · {second} ⊂ {first}{" "}
-          {formatProbability(judgement.secondPartOfFirst)} · {first} ⊂ {second}{" "}
-          {formatProbability(judgement.firstPartOfSecond)} · {first} → {second}{" "}
-          {formatProbability(judgement.firstLedToSecond)} · {second} → {first}{" "}
-          {formatProbability(judgement.secondLedToFirst)} · 한 사안 {first}{" "}
-          {formatProbability(judgement.firstOneMatter)} · {second}{" "}
-          {formatProbability(judgement.secondOneMatter)}
+          해당 없음 {formatProbability(judgement.none)} ·{" "}
+          {judgement.sameMatter != null && (
+            <>조각 {formatProbability(judgement.sameMatter)} · </>
+          )}
+          {second} ⊂ {first} {formatProbability(judgement.secondPartOfFirst)} ·{" "}
+          {first} ⊂ {second} {formatProbability(judgement.firstPartOfSecond)} ·{" "}
+          {first} → {second} {formatProbability(judgement.firstLedToSecond)} ·{" "}
+          {second} → {first} {formatProbability(judgement.secondLedToFirst)} ·
+          한 사안 {first} {formatProbability(judgement.firstOneMatter)} ·{" "}
+          {second} {formatProbability(judgement.secondOneMatter)}
         </span>
       ) : (
         <span className="block">

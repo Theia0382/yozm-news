@@ -12,7 +12,7 @@ public interface FlowRelation {
 	/**
 	 * 두 흐름의 관계를 판정한다.
 	 * @throws IllegalStateException 트랜잭션 안에서 불렀거나, 평가기가 없는 프로세스에서 불렀을 때 — 부르는 쪽 결함이다. 평가기의 결과가
-	 * 답 다섯과 어긋날 때도 던진다(판정 원본을 남기지 않는다)
+	 * 지금 문구 판의 답과 어긋날 때도 던진다(판정 원본을 남기지 않는다)
 	 */
 	RelationJudgement judge(RelationQuery query);
 

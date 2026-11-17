@@ -25,6 +25,9 @@ public enum RelationOutcome {
 	/** 하위에 이미 다른 상위가 있었다 */
 	SECOND_PARENT,
 
+	/** 같은 사안의 조각으로 판정됐으나 묶지 않았다 — 두 스토리라인 사이의 관계는 지웠다 */
+	UNGROUPED,
+
 	/** 한쪽의 서술이 남지 않아 평가기를 부르지 않았다 — 판정 원본이 없다 */
 	NOTHING_TO_ASK,
 

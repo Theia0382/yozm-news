@@ -1,8 +1,10 @@
 package net.yozmnews.evaluation;
 
-import java.util.EnumSet;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+
+import net.yozmnews.evaluation.domain.evaluator.RelationWording;
 
 /**
  * 관계 판정 원본의 원본 응답을 다시 읽은 결과 — docs/specs/evaluation.md §3 · evaluation-R50
@@ -10,18 +12,20 @@ import java.util.Objects;
 public sealed interface RelationReading {
 
 	/**
-	 * 다시 읽었다 — 답 다섯의 확률과 흐름마다 한 사안의 전개일 확률. 방향은 원본의 first · second 흐름 기준이다.
+	 * 다시 읽었다 — 그 원본을 남긴 문구 판의 답마다 확률과 흐름마다 한 사안의 전개일 확률. 방향은 원본의 first · second 흐름 기준이다.
+	 * 문구 판마다 답이 다르다 — 옛 판의 원본에는 같은 사안의 조각({@link RelationAnswer#SAME_MATTER})이 없다.
 	 */
 	record Read(Map<RelationAnswer, Double> probabilities, double firstOneMatter, double secondOneMatter)
 			implements RelationReading {
 
 		/**
-		 * @throws IllegalArgumentException 답 다섯이 모두 있지 않거나, 확률이 0 ~ 1 의 유한값이 아닐 때
+		 * @throws IllegalArgumentException 답이 어느 문구 판의 답과도 같지 않거나, 확률이 0 ~ 1 의 유한값이 아닐 때
 		 */
 		public Read {
 			Objects.requireNonNull(probabilities, "probabilities");
-			if (!probabilities.keySet().equals(EnumSet.allOf(RelationAnswer.class))) {
-				throw new IllegalArgumentException("답 다섯의 확률이 모두 있어야 한다: " + probabilities.keySet());
+			Set<RelationAnswer> answers = probabilities.keySet();
+			if (RelationWording.KNOWN.stream().noneMatch(wording -> wording.answers().equals(answers))) {
+				throw new IllegalArgumentException("한 문구 판의 답이 모두 있어야 한다: " + answers);
 			}
 			probabilities.values().forEach(Read::requireProbability);
 			requireProbability(firstOneMatter);
@@ -65,7 +69,7 @@ public sealed interface RelationReading {
 			/** 다른 평가기가 남긴 원본이다 — 그 형식을 모른다 */
 			OTHER_EVALUATOR,
 
-			/** 이 평가기의 형식이 아니거나 답 다섯 · 한 사안 확률과 어긋난다 */
+			/** 이 평가기의 형식이 아니거나, 모르는 문구 판이거나, 그 판의 답 · 한 사안 확률과 어긋난다 */
 			UNREADABLE
 
 		}

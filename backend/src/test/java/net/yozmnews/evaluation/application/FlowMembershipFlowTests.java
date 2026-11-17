@@ -36,6 +36,7 @@ import net.yozmnews.evaluation.domain.evaluator.MembershipResult;
 import net.yozmnews.evaluation.domain.evaluator.MembershipWording;
 import net.yozmnews.evaluation.domain.evaluator.RelationInput;
 import net.yozmnews.evaluation.domain.evaluator.RelationRereadResult;
+import net.yozmnews.evaluation.domain.evaluator.RelationWording;
 import net.yozmnews.evaluation.domain.evaluator.RelationResult;
 import net.yozmnews.evaluation.domain.evaluator.RereadResult;
 import net.yozmnews.evaluation.domain.membership.FlowMembershipJudgementRepository;
@@ -350,7 +351,7 @@ class FlowMembershipFlowTests {
 		}
 
 		@Override
-		public RelationRereadResult rereadRelation(String evaluator, String rawResponse) {
+		public RelationRereadResult rereadRelation(String evaluator, String rawResponse, RelationWording wording) {
 			throw new UnsupportedOperationException("이 시험 평가기는 관계 판정 원본을 다시 읽지 않는다");
 		}
 

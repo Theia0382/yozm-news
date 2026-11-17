@@ -7,8 +7,11 @@ package net.yozmnews.evaluation;
  */
 public enum RelationAnswer {
 
-	/** 해당 없음 — 별개의 사안이거나, 같은 사안 전체를 다루거나, 한쪽이 한 사안이 아니다 */
+	/** 해당 없음 — 별개의 사안이거나, 한쪽이 한 사안이 아니다 */
 	NONE,
+
+	/** 두 흐름이 같은 한 사안의 부분들이고, 어느 쪽도 다른 쪽 안에 들지 않는다 */
+	SAME_MATTER,
 
 	/** second 가 first 의 부분이다 */
 	SECOND_PART_OF_FIRST,

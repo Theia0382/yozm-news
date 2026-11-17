@@ -59,12 +59,14 @@ class RelationRuleTests {
 	void aTieWithNoneDoesNotLinkAndATieBetweenRelationsTakesTheEarlierAnswer() {
 		Map<RelationAnswer, Double> withNone = new EnumMap<>(RelationAnswer.class);
 		withNone.put(RelationAnswer.NONE, 0.45);
+		withNone.put(RelationAnswer.SAME_MATTER, 0.03);
 		withNone.put(RelationAnswer.SECOND_PART_OF_FIRST, 0.45);
 		withNone.put(RelationAnswer.FIRST_PART_OF_SECOND, 0.04);
 		withNone.put(RelationAnswer.FIRST_LED_TO_SECOND, 0.03);
 		withNone.put(RelationAnswer.SECOND_LED_TO_FIRST, 0.03);
 		Map<RelationAnswer, Double> between = new EnumMap<>(RelationAnswer.class);
 		between.put(RelationAnswer.NONE, 0.0);
+		between.put(RelationAnswer.SAME_MATTER, 0.0);
 		between.put(RelationAnswer.SECOND_PART_OF_FIRST, 0.1);
 		between.put(RelationAnswer.FIRST_PART_OF_SECOND, 0.1);
 		between.put(RelationAnswer.FIRST_LED_TO_SECOND, 0.4);
@@ -141,9 +143,38 @@ class RelationRuleTests {
 	}
 
 	@Test
-	void theOutcomeOfEachDecisionAndTheFiveAnswers() {
+	void theFragmentAnswerIsNotARelationAndPassesTheSameThresholds() {
+		// 같은 사안의 조각 — 포함도 이어짐도 아니다. 두 스토리라인의 순서는 요청의 first · second 그대로다
+		assertThat(decide(RelationAnswer.SAME_MATTER, 0.7, EMPTY)).isEqualTo(new Decision.Fragments(1, 2, 0.7));
+		assertThat(decide(RelationAnswer.SAME_MATTER, 0.60, EMPTY)).isEqualTo(new Decision.Fragments(1, 2, 0.60));
+		assertThat(decide(RelationAnswer.SAME_MATTER, 0.59, EMPTY))
+			.isEqualTo(new Decision.None(Decision.Reason.LOW_PROBABILITY));
+		assertThat(RelationRule.decide(1, 2, probabilities(RelationAnswer.SAME_MATTER, 0.7), 0.19, 0.9, EMPTY, CRITERIA))
+			.isEqualTo(new Decision.None(Decision.Reason.NOT_ONE_MATTER));
+		// 구조는 보지 않는다 — 한쪽이 다른 쪽의 상위여도, 다른 상위가 있어도 조각이다
+		RelationGraph linked = new RelationGraph(
+				List.of(new Relation(1, 2, RelationKind.CONTAINS), new Relation(9, 1, RelationKind.CONTAINS)));
+		assertThat(decide(RelationAnswer.SAME_MATTER, 0.9, linked)).isEqualTo(new Decision.Fragments(1, 2, 0.9));
+	}
+
+	@Test
+	void aTieBetweenNoneAndFragmentsDoesNotGroupAndFragmentsComeBeforeARelation() {
+		Map<RelationAnswer, Double> withNone = probabilities(RelationAnswer.NONE, 0.45);
+		withNone.put(RelationAnswer.SAME_MATTER, 0.45);
+		Map<RelationAnswer, Double> withPart = probabilities(RelationAnswer.SAME_MATTER, 0.61);
+		withPart.put(RelationAnswer.SECOND_PART_OF_FIRST, 0.61);
+
+		assertThat(RelationRule.decide(1, 2, withNone, 0.9, 0.9, EMPTY, CRITERIA))
+			.isEqualTo(new Decision.None(Decision.Reason.NOT_RELATED));
+		assertThat(RelationRule.decide(1, 2, withPart, 0.9, 0.9, EMPTY, CRITERIA))
+			.isEqualTo(new Decision.Fragments(1, 2, 0.61));
+	}
+
+	@Test
+	void theOutcomeOfEachDecisionAndEveryAnswer() {
 		assertThat(RelationRule.outcomeOf(new Decision.Link(new Relation(1, 2, RelationKind.FOLLOWS), 0.9)))
 			.isEqualTo(RelationOutcome.LINKED);
+		assertThat(RelationRule.outcomeOf(new Decision.Fragments(1, 2, 0.9))).isEqualTo(RelationOutcome.UNGROUPED);
 		assertThat(RelationRule.outcomeOf(new Decision.None(Decision.Reason.NOT_RELATED))).isEqualTo(RelationOutcome.NOT_RELATED);
 		assertThat(RelationRule.outcomeOf(new Decision.None(Decision.Reason.LOW_PROBABILITY)))
 			.isEqualTo(RelationOutcome.LOW_PROBABILITY);
@@ -154,7 +185,7 @@ class RelationRuleTests {
 			.isEqualTo(RelationOutcome.SECOND_PARENT);
 		assertThatIllegalArgumentException()
 			.isThrownBy(() -> RelationRule.decide(1, 2, Map.of(RelationAnswer.NONE, 0.9), 0.9, 0.9, EMPTY, CRITERIA))
-			.withMessageStartingWith("답 다섯의 확률이 모두 있어야 한다");
+			.withMessageStartingWith("모든 답의 확률이 있어야 한다");
 	}
 
 	private static Decision decide(RelationAnswer top, double probability, RelationGraph graph) {

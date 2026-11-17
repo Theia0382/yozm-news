@@ -47,6 +47,8 @@ function judgement(
     judgedAt: T,
     reading,
     none: read ? 0.1 : null,
+    // 조각 답이 없던 문구 판의 원본 — 그 판의 원본에는 조각 확률이 없다
+    sameMatter: null,
     secondPartOfFirst: read ? 0.7 : null,
     firstPartOfSecond: read ? 0.05 : null,
     firstLedToSecond: read ? 0.1 : null,
@@ -288,6 +290,27 @@ describe("StorylineDetailPage", () => {
     );
     expect(cells(table, 4)[0]).toHaveTextContent(/^이어받음$/);
     expect(cells(table, 4)[1]).toHaveTextContent(/^스토리라인 5$/);
+  });
+
+  it("조각으로 판정된 쌍은 결말과 조각 확률을 보인다", async () => {
+    renderPage(7, () =>
+      json({
+        ...DETAIL,
+        asked: [
+          asked(20, "UNGROUPED", 71, {
+            ...judgement(71, 7, 20, "READ", null),
+            wordingVersion: "relation-2",
+            sameMatter: 0.7,
+          }),
+        ],
+      }),
+    );
+
+    const table = await screen.findByRole("table", { name: "물은 쌍" });
+    expect(cells(table, 1)[1]).toHaveTextContent(/^조각 — 묶지 않음$/);
+    expect(cells(table, 1)[5]).toHaveTextContent(
+      "해당 없음 0.1 · 조각 0.7 · 20 ⊂ 7 0.7 · 7 ⊂ 20 0.05 · 7 → 20 0.1 · 20 → 7 0.05 · 한 사안 7 0.8 · 20 0.6",
+    );
   });
 
   it("물은 쌍은 마지막 결말과 원본이 없는 까닭을 가려 보인다", async () => {

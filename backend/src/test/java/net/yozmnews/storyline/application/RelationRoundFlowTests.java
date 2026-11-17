@@ -273,6 +273,28 @@ class RelationRoundFlowTests {
 	}
 
 	@Test
+	void fragmentsOfOneMatterAreNotLinkedAndAnEarlierContainmentBetweenThemIsRemoved() {
+		long shared = event(EARLY, 1);
+		long a = storyline("[1,0]", EARLY, LATE, shared, event(EARLY, 1), event(EARLY, 1));
+		long b = storyline("[0,1]", LATE, LATE, shared, event(LATE, 1), event(LATE, 1));
+		this.queue.enqueue(a, NOW);
+		round(answer(RelationAnswer.SECOND_PART_OF_FIRST, 0.9, 0.9, 0.9, 70)).run();
+		assertThat(this.relations.all()).containsExactly(new Relation(a, b, RelationKind.CONTAINS));
+
+		// 두 스토리라인이 모두 사건 여섯이 되어 다시 물었더니 같은 사안의 조각이다 — 포함을 지우고 결말을 남긴다
+		grow(a, 3);
+		grow(b, 3);
+		this.queue.enqueue(a, NOW);
+		round(answer(RelationAnswer.SAME_MATTER, 0.7, 0.9, 0.9, 71)).run();
+
+		assertThat(this.relations.all()).isEmpty();
+		assertThat(askedRow(a, b)).containsEntry("outcome", "UNGROUPED")
+			.containsEntry("judgement_id", 71L)
+			.containsEntry("smaller_events", 6);
+		assertThat(queued()).isEmpty();
+	}
+
+	@Test
 	void recordsAnAnswerThatDoesNotLinkAndDoesNotAskThePairAgainUntilItDoubles() {
 		long shared = event(EARLY, 1);
 		long a = storyline("[1,0]", EARLY, LATE, shared, event(EARLY, 1), event(EARLY, 1));
@@ -463,8 +485,8 @@ class RelationRoundFlowTests {
 		this.queue.enqueue(a, NOW);
 
 		assertThatIllegalStateException().isThrownBy(() -> round(query -> {
-			throw new IllegalStateException("결과가 답 다섯과 어긋난다");
-		}).run()).withMessage("결과가 답 다섯과 어긋난다");
+			throw new IllegalStateException("결과가 지금 문구 판의 답과 어긋난다");
+		}).run()).withMessage("결과가 지금 문구 판의 답과 어긋난다");
 
 		// 점유는 만료로 풀린다 — 실패 수는 올리지 않고 물은 기록도 없다(storyline-R31)
 		assertThat(queueRow(a)).containsEntry("failures", 0).doesNotContainEntry("lease_token", null);

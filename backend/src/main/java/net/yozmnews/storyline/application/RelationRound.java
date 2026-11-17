@@ -308,6 +308,7 @@ public class RelationRound {
 			switch (decision) {
 				case RelationRule.Decision.Link link -> this.relations.link(link.relation(), link.probability(),
 						judged.judgement().value(), criteriaId, now);
+				case RelationRule.Decision.Fragments fragments -> this.relations.unlink(first, second);
 				case RelationRule.Decision.None none -> this.relations.unlink(first, second);
 			}
 			this.relations.recordAsked(first, second, pair.smallerEvents(), judged.judgement().value(), criteriaId,

@@ -42,9 +42,9 @@ USED_FIELDS: Final[Mapping[str, tuple[str, ...]]] = {
     "StorylineEventResponse": ("id", "direct"),
     "StorylineRelationResponse": ("kind", "sourceId", "targetId", "judgement"),
     "StorylineAskedResponse": ("otherId", "smallerEvents", "outcome", "askedAt", "judgementId", "judgement"),
-    "RelationJudgementResponse": ("id", "firstId", "secondId", "modelVersion", "reading", "none", "secondPartOfFirst",
-                                  "firstPartOfSecond", "firstLedToSecond", "secondLedToFirst", "firstOneMatter",
-                                  "secondOneMatter"),
+    "RelationJudgementResponse": ("id", "firstId", "secondId", "modelVersion", "reading", "none", "sameMatter",
+                                  "secondPartOfFirst", "firstPartOfSecond", "firstLedToSecond", "secondLedToFirst",
+                                  "firstOneMatter", "secondOneMatter"),
     "BigStorylineListResponse": ("storylines",),
     "BigStorylineRowResponse": ("id",),
 }
@@ -55,8 +55,9 @@ _JUDGEMENTS: Final = "/api/admin/event-judgements"
 _STORYLINES: Final = "/api/admin/storylines"
 _BIG_STORYLINES: Final = "/api/admin/big-storylines"
 
-ANSWERS: Final = ("none", "secondPartOfFirst", "firstPartOfSecond", "firstLedToSecond", "secondLedToFirst")
-"""관계 판정의 답 다섯 — 응답 칸 이름, 이 순서로 확률을 싣는다."""
+ANSWERS: Final = ("none", "sameMatter", "secondPartOfFirst", "firstPartOfSecond", "firstLedToSecond",
+                  "secondLedToFirst")
+"""관계 판정의 답 — 응답 칸 이름, 이 순서로 확률을 싣는다. 같은 사안의 조각(sameMatter)은 그 답이 없는 문구 판의 원본이면 없다."""
 
 
 class ApiError(Exception):
@@ -120,8 +121,8 @@ class RelationJudgement:
     second: int
     model_version: str
     reading: str
-    probabilities: tuple[Decimal, ...] | None
-    """ANSWERS 순서의 답 다섯."""
+    probabilities: tuple[Decimal | None, ...] | None
+    """ANSWERS 순서의 답마다 확률 — 그 원본의 문구 판에 없는 답은 None."""
     first_one_matter: Decimal | None
     second_one_matter: Decimal | None
 
@@ -361,7 +362,7 @@ def _judgement(value: object) -> RelationJudgement | None:
 
     return RelationJudgement(int(field(value, schema, "id")), int(field(value, schema, "firstId")),
                              int(field(value, schema, "secondId")), str(field(value, schema, "modelVersion")), reading,
-                             tuple(_decimal(field(value, schema, name)) for name in ANSWERS) if read else None,
+                             tuple(probability(name) for name in ANSWERS) if read else None,
                              probability("firstOneMatter"), probability("secondOneMatter"))
 
 

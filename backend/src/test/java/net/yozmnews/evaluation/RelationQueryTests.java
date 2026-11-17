@@ -70,7 +70,7 @@ class RelationQueryTests {
 	}
 
 	@Test
-	void aJudgementCarriesAllFiveAnswers() {
+	void aJudgementCarriesEveryAnswer() {
 		Map<RelationAnswer, Double> all = new EnumMap<>(RelationAnswer.class);
 		for (RelationAnswer answer : RelationAnswer.values()) {
 			all.put(answer, 0.2);
@@ -79,9 +79,9 @@ class RelationQueryTests {
 		four.remove(RelationAnswer.NONE);
 		RelationJudgementId id = new RelationJudgementId(1);
 
-		assertThat(new RelationJudgement.Judged(id, all, 0.0, 1.0).probabilities()).hasSize(5);
+		assertThat(new RelationJudgement.Judged(id, all, 0.0, 1.0).probabilities()).hasSize(6);
 		assertThatIllegalArgumentException().isThrownBy(() -> new RelationJudgement.Judged(id, four, 0.5, 0.5))
-			.withMessageStartingWith("답 다섯의 확률이 모두 있어야 한다");
+			.withMessageStartingWith("모든 답의 확률이 있어야 한다");
 		assertThatIllegalArgumentException().isThrownBy(() -> new RelationJudgement.Judged(id, all, 1.1, 0.5))
 			.withMessage("확률은 0 ~ 1 의 유한값이다: 1.1");
 		assertThatIllegalArgumentException().isThrownBy(() -> new RelationJudgement.Judged(id, all, 0.5, Double.NaN))
@@ -93,7 +93,7 @@ class RelationQueryTests {
 	@Test
 	void noneComesFirstAmongTheAnswers() {
 		// 부르는 쪽이 확률이 같을 때 선언 순서의 앞의 답을 고른다 — 해당 없음이 맨 앞이어야 같으면 맺지 않는다
-		assertThat(RelationAnswer.values()).containsExactly(RelationAnswer.NONE, RelationAnswer.SECOND_PART_OF_FIRST,
+		assertThat(RelationAnswer.values()).containsExactly(RelationAnswer.NONE, RelationAnswer.SAME_MATTER, RelationAnswer.SECOND_PART_OF_FIRST,
 				RelationAnswer.FIRST_PART_OF_SECOND, RelationAnswer.FIRST_LED_TO_SECOND,
 				RelationAnswer.SECOND_LED_TO_FIRST);
 	}

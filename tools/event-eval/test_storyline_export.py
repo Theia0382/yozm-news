@@ -18,10 +18,12 @@ from test_cli import CLOCK, TOKEN, ZONE, FakeAdmin
 from test_storyline_cli import DUMP_SHA256, LINEAGE_SHA256
 
 
-def judgement(judgement_id, first, second, model, reading="READ"):
+def judgement(judgement_id, first, second, model, reading="READ", same_matter=None):
+    """same_matter 가 None 이면 조각 답이 없던 문구 판의 원본이다."""
     read = reading == "READ"
     return {"id": judgement_id, "firstId": first, "secondId": second, "modelVersion": model, "reading": reading,
-            "none": 0.1 if read else None, "secondPartOfFirst": 0.7 if read else None,
+            "none": 0.1 if read else None, "sameMatter": same_matter if read else None,
+            "secondPartOfFirst": 0.7 if read else None,
             "firstPartOfSecond": 0.05 if read else None, "firstLedToSecond": 0.1 if read else None,
             "secondLedToFirst": 0.05 if read else None, "firstOneMatter": 0.8 if read else None,
             "secondOneMatter": 0.6 if read else None}
@@ -45,7 +47,8 @@ DETAILS = {
                                   "judgement": judgement(504, 21, 40, "jev-r9")}],
          "asked": [asked(20, "LINKED", 3, 501, judgement(501, 20, 21, "jev-r1")),
                    asked(22, "LOW_PROBABILITY", 3, 502, None),
-                   asked(31, "CYCLE", 5, 503, judgement(503, 31, 21, "jev-r3", "OTHER_EVALUATOR"))]},
+                   asked(31, "CYCLE", 5, 503, judgement(503, 31, 21, "jev-r3", "OTHER_EVALUATOR")),
+                   asked(32, "UNGROUPED", 3, 505, judgement(505, 21, 32, "jev-r1", same_matter=0.6))]},
     22: {"id": 22, "events": [{"id": 14, "direct": True}], "relations": [], "asked": []},
 }
 DETAILS[23] = DETAILS[20]
@@ -68,12 +71,16 @@ RESULT = {
     "big": [{"storyline": "20", "day": "2026-11-04"}],
 }
 
-PAIRS = ("low,high,smaller_events,outcome,asked_at,judgement_id,reading,first,second,none,second_part_of_first,"
-         "first_part_of_second,first_led_to_second,second_led_to_first,first_one_matter,second_one_matter\n"
-         "20,21,3,LINKED,2026-11-06T00:00:00Z,501,READ,20,21,0.1,0.7,0.05,0.1,0.05,0.8,0.6\n"
-         "20,30,4,NOTHING_TO_ASK,2026-11-06T00:00:00Z,,,,,,,,,,,\n"
-         "21,22,3,LOW_PROBABILITY,2026-11-06T00:00:00Z,502,,,,,,,,,,\n"
-         "21,31,5,CYCLE,2026-11-06T00:00:00Z,503,OTHER_EVALUATOR,31,21,,,,,,,\n")
+PAIRS = ("low,high,smaller_events,outcome,asked_at,judgement_id,reading,first,second,none,same_matter,"
+         "second_part_of_first,first_part_of_second,first_led_to_second,second_led_to_first,first_one_matter,"
+         "second_one_matter\n"
+         # 조각 답이 없던 문구 판의 원본 — same_matter 칸이 비어 있다
+         "20,21,3,LINKED,2026-11-06T00:00:00Z,501,READ,20,21,0.1,,0.7,0.05,0.1,0.05,0.8,0.6\n"
+         "20,30,4,NOTHING_TO_ASK,2026-11-06T00:00:00Z,,,,,,,,,,,,\n"
+         "21,22,3,LOW_PROBABILITY,2026-11-06T00:00:00Z,502,,,,,,,,,,,\n"
+         "21,31,5,CYCLE,2026-11-06T00:00:00Z,503,OTHER_EVALUATOR,31,21,,,,,,,,\n"
+         # 조각 답이 있는 문구 판의 원본
+         "21,32,3,UNGROUPED,2026-11-06T00:00:00Z,505,READ,21,32,0.1,0.6,0.7,0.05,0.1,0.05,0.8,0.6\n")
 
 
 class StorylineAdmin(FakeAdmin):
@@ -152,7 +159,7 @@ class StorylineExportTest(unittest.TestCase):
         self.assertEqual(json.loads(self.result.read_text(encoding="utf-8")), RESULT)
         self.assertEqual(self.pairs.read_text(encoding="utf-8"), PAIRS)
         self.assertEqual(out, f"결과 {self.result}: 스토리라인 2 · 관계 1 · 큰 표시 1(직접 기사가 없어 내지 않은 스토리라인 1)\n"
-                              f"물은 쌍 {self.pairs}: 4쌍(확률 없는 쌍 3)\n")
+                              f"물은 쌍 {self.pairs}: 5쌍(확률 없는 쌍 3)\n")
         # 측정이 받는 결과 파일이다 — 같은 덤프 위의 결과
         self.assertEqual(run_kind(read_result(self.result), read_storyline_sample(self.data)), RunKind.SAME_DUMP)
         paths = [path for _, path, _, _ in self.fake.requests]
