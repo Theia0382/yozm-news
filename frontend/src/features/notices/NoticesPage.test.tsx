@@ -433,7 +433,14 @@ describe("NoticesPage", () => {
 
   it("다시 들어오면 목록을 새로 받아 새 응답대로 강조한다", async () => {
     let read = false;
-    const { router } = renderNotices(() => json(page([{ ...GATHERED, read }])));
+    const { router, server } = renderNotices(() =>
+      json(page([{ ...GATHERED, read }])),
+    );
+    const listRequests = () =>
+      server.requests.filter(
+        (request) =>
+          request.method === "GET" && request.path === "/api/notices",
+      ).length;
     expect(await screen.findByText("새 알림")).toBeInTheDocument();
 
     read = true;
@@ -441,8 +448,12 @@ describe("NoticesPage", () => {
     expect(await screen.findByText("첫 화면")).toBeInTheDocument();
     await router.navigate("/notices");
 
-    expect(await screen.findAllByRole("article")).toHaveLength(1);
-    expect(screen.queryByText("새 알림")).not.toBeInTheDocument();
+    // 다시 받은 응답이 그려지기 전에는 앞 화면의 목록이 잠깐 남을 수 있다 — 새 요청과 그 응답의 강조를 기다린다
+    await waitFor(() => {
+      expect(listRequests()).toBe(2);
+      expect(screen.getAllByRole("article")).toHaveLength(1);
+      expect(screen.queryByText("새 알림")).not.toBeInTheDocument();
+    });
   });
 
   it("목록이 401 이면 로그인 상태를 다시 읽어 로그인 화면으로 간다", async () => {
