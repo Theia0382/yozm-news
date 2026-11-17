@@ -255,19 +255,23 @@ sourceSets.main {
 	resources.srcDir(fetchEmbeddingModel.map { embeddingModelDir })
 }
 
+// LLM 공급자 클라이언트가 프로세스 환경 변수의 주소 · 키를 읽지 않고 SDK 요청 로그를 꺼 둠을 시험 · 실제 공급자 확인이 본다 — 닿지 않는
+// 주소 · 쓰이면 안 되는 값 · 켜진 로그 수준을 일부러 둔다. docs/specs/llm.md llm-R11 · R12 · docs/development/infrastructure.md "불변식과 지키는 장치"
+val llmProviderEnvironmentDecoys = mapOf(
+	"OPENAI_BASE_URL" to "http://127.0.0.1:9",
+	"ANTHROPIC_BASE_URL" to "http://127.0.0.1:9",
+	"OPENAI_API_KEY" to "env-key-must-not-be-used",
+	"ANTHROPIC_API_KEY" to "env-key-must-not-be-used",
+	"ANTHROPIC_AUTH_TOKEN" to "env-token-must-not-be-used",
+	"OPENAI_LOG" to "debug",
+	"ANTHROPIC_LOG" to "debug",
+)
+
 // 로컬 임베딩은 ONNX Runtime 텔레메트리를 끄는 이 환경 변수가 없으면 모델을 열지 않는다(정본은 OnnxArticleEmbedder). 네이티브를 올리는 JNA · ONNX Runtime 의 제한 메서드 경고를 끈다 — ADR-0091
 // 시험 JVM 은 Spring 시험 컨텍스트를 캐시에 쌓아 두므로 Gradle 의 기본 힙으로는 모자란다 — 상한을 정한다
 tasks.withType<Test> {
 	environment("ORT_DISABLE_TELEMETRY", "1")
-	// LLM 공급자 클라이언트가 프로세스 환경 변수의 주소 · 키를 읽지 않고 SDK 요청 로그를 꺼 둠을 시험이 본다 — 닿지 않는 주소 ·
-	// 쓰이면 안 되는 값 · 켜진 로그 수준을 일부러 둔다. docs/specs/llm.md llm-R11 · R12 · docs/development/infrastructure.md "불변식과 지키는 장치"
-	environment("OPENAI_BASE_URL", "http://127.0.0.1:9")
-	environment("ANTHROPIC_BASE_URL", "http://127.0.0.1:9")
-	environment("OPENAI_API_KEY", "env-key-must-not-be-used")
-	environment("ANTHROPIC_API_KEY", "env-key-must-not-be-used")
-	environment("ANTHROPIC_AUTH_TOKEN", "env-token-must-not-be-used")
-	environment("OPENAI_LOG", "debug")
-	environment("ANTHROPIC_LOG", "debug")
+	environment(llmProviderEnvironmentDecoys)
 	jvmArgs("--enable-native-access=ALL-UNNAMED")
 	maxHeapSize = "2g"
 	// 실패한 시험의 단언(기대 · 실제 값)과 위치를 실행 로그에 남긴다 — CI 작업 로그만으로 실패를 읽는다
@@ -298,4 +302,36 @@ tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
 		}
 		layerOrder.set(listOf("dependencies", "spring-boot-loader", "snapshot-dependencies", "embedding-model", "application"))
 	}
+}
+
+// 실제 공급자 확인(⑧) — 운영 포트로 실제 LLM 공급자에 생성 요청을 보내 공급자의 실제 거동을 기록한다. 돈이 들어 기본 빌드 · CI 에서
+// 돌리지 않고 손으로 돌린다(llmLiveCheck). 컴파일만 check 에 걸어 포트 · 공개 타입이 바뀌면 기본 빌드에서 깨진다.
+// 절차는 docs/qa/test-strategy.md "실제 외부 서비스 확인"
+val liveCheck: SourceSet = sourceSets.create("liveCheck") {
+	compileClasspath += sourceSets.main.get().output
+	runtimeClasspath += sourceSets.main.get().output
+}
+
+configurations[liveCheck.implementationConfigurationName].extendsFrom(configurations.implementation.get())
+configurations[liveCheck.runtimeOnlyConfigurationName].extendsFrom(configurations.runtimeOnly.get())
+
+tasks.named("check") {
+	dependsOn(tasks.named(liveCheck.classesTaskName))
+}
+
+tasks.register<JavaExec>("llmLiveCheck") {
+	description = "실제 LLM 공급자에 생성 요청을 보낸다 — -PliveCheckMode=dry-run|smoke|full(기본 dry-run) · -PliveCheckBudgetUsd=상한 · -PliveCheckSkip=뺄 모델 ID(쉼표)."
+	group = "verification"
+	classpath = liveCheck.runtimeClasspath
+	mainClass.set("net.yozmnews.llm.livecheck.LlmLiveCheck")
+	args(
+		providers.gradleProperty("liveCheckMode").getOrElse("dry-run"),
+		providers.gradleProperty("liveCheckBudgetUsd").getOrElse("0"),
+		layout.buildDirectory.dir("live-check").get().asFile.path,
+		providers.gradleProperty("liveCheckSkip").getOrElse(""),
+	)
+	// 키는 YOZMNEWS_LIVE_OPENAI_KEY · YOZMNEWS_LIVE_ANTHROPIC_KEY 로만 받는다. 시험 JVM 과 같은 미끼를 두어, 공급자 클라이언트가
+	// 프로세스 환경 변수의 주소 · 키를 읽지 않고 SDK 로그를 꺼 둔 채로 실제 공급자에 닿는지 본다
+	environment(llmProviderEnvironmentDecoys)
+	outputs.upToDateWhen { false }
 }
