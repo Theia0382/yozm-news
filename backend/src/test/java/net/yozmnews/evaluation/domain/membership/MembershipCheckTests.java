@@ -17,21 +17,24 @@ class MembershipCheckTests {
 
 	@Test
 	void acceptsAResultWithExactlyTheAskedEvents() {
-		assertThat(MembershipCheck.mismatch(membership(Map.of(12L, 0.83, 15L, 0.07), "{\"ok\":true}"), Set.of(12L, 15L)))
+		assertThat(MembershipCheck.mismatch(membership(Map.of(12L, 0.83, 15L, 0.07), "{\"ok\":true}"), Set.of(12L, 15L),
+				"사건"))
 			.isEmpty();
 	}
 
 	@Test
 	void namesTheMissingAndUnknownEvents() {
-		assertThat(MembershipCheck.mismatch(membership(Map.of(12L, 0.83, 99L, 0.5), "{}"), Set.of(12L, 15L)))
+		assertThat(MembershipCheck.mismatch(membership(Map.of(12L, 0.83, 99L, 0.5), "{}"), Set.of(12L, 15L), "사건"))
 			.contains("사건 키가 물은 후보와 다르다 — 빠진 사건 [15], 모르는 사건 [99]");
+		assertThat(MembershipCheck.mismatch(membership(Map.of(12L, 0.83, 99L, 0.5), "{}"), Set.of(12L, 15L), "흐름"))
+			.contains("흐름 키가 물은 후보와 다르다 — 빠진 흐름 [15], 모르는 흐름 [99]");
 	}
 
 	@Test
 	void refusesARawResponseThatJsonbDoesNotTake() {
-		assertThat(MembershipCheck.mismatch(membership(Map.of(12L, 0.83), "{\"a\":\"\\u0000\"}"), Set.of(12L)))
+		assertThat(MembershipCheck.mismatch(membership(Map.of(12L, 0.83), "{\"a\":\"\\u0000\"}"), Set.of(12L), "사건"))
 			.contains("원본 응답에 문자 U+0000 이 있다");
-		assertThat(MembershipCheck.mismatch(membership(Map.of(12L, 0.83), "<html>"), Set.of(12L)))
+		assertThat(MembershipCheck.mismatch(membership(Map.of(12L, 0.83), "<html>"), Set.of(12L), "사건"))
 			.contains("원본 응답이 JSON 이 아니다");
 	}
 

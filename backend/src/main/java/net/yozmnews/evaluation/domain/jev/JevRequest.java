@@ -24,8 +24,8 @@ import tools.jackson.databind.json.JsonMapper;
  * Jev 요청 본문 — docs/specs/evaluation.md §4 ArticleEvaluator · evaluation-R37 · evaluation-R40.
  * <p>
  * 평가의 질문은 넘긴 질문 묶음에서 읽는다. 질문 이름은 태그 종류 접두에 태그 키를 붙인 것이고, 응답은 같은 이름으로 답을 돌려준다. 형식 선택지는
- * 질문 묶음 순서, 중요도 수준 설명은 수준 순이다 — 응답의 수준 위치는 이 순서로 되찾는다({@link JevResponse}). 사건 소속 판정의 질문은 후보
- * 사건마다 Yes/No 하나이고, 이름은 {@value #EVENT_PREFIX} 에 사건 ID 를 붙인 것, 문장은 넘긴 문구로 만든다. 관계 판정의 질문은
+ * 질문 묶음 순서, 중요도 수준 설명은 수준 순이다 — 응답의 수준 위치는 이 순서로 되찾는다({@link JevResponse}). 소속 판정(사건 소속 · 흐름 소속)의 질문은
+ * 후보마다 Yes/No 하나이고, 이름은 {@value #EVENT_PREFIX} 에 후보 ID 를 붙인 것, 문장은 넘긴 문구로 만든다. 관계 판정의 질문은
  * 셋이다 — {@value #RELATION}(Choice, 선택지는 {@link #RELATION_OPTIONS} 순)과 흐름마다 한 사안인가(Yes/No).
  */
 public final class JevRequest {

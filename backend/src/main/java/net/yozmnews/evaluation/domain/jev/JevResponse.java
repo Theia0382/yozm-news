@@ -57,7 +57,7 @@ public final class JevResponse {
 	}
 
 	/**
-	 * @return 물은 후보 사건마다 Yes/No 답과 0 ~ 1 의 유한 확률이 있으면 {@link Membership}, 아니면 평가기 사용 불가 실패 — 문구는 첫 문제
+	 * @return 물은 후보마다 Yes/No 답과 0 ~ 1 의 유한 확률이 있으면 {@link Membership}, 아니면 평가기 사용 불가 실패 — 문구는 첫 문제
 	 * 하나(질문 이름만)와 요청 ID
 	 */
 	public static MembershipResult readMembership(String body, @Nullable String requestId, MembershipInput input) {

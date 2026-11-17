@@ -18,6 +18,8 @@ public final class StorylineRows {
 
 	/** 스토리라인 테이블과 사건 묶기 테이블을 비운다 — 기준 이력은 남긴다 */
 	public static void clear(JdbcClient jdbc) {
+		jdbc.sql("delete from storyline_link_asked").update();
+		jdbc.sql("delete from storyline_pair_asked").update();
 		jdbc.sql("delete from storyline_members").update();
 		jdbc.sql("delete from storyline_key_terms").update();
 		jdbc.sql("delete from storylines").update();

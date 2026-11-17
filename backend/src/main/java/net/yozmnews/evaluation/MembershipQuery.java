@@ -1,9 +1,6 @@
 package net.yozmnews.evaluation;
 
-import java.util.HashSet;
 import java.util.List;
-import java.util.Objects;
-import java.util.Set;
 
 import net.yozmnews.article.ArticleId;
 
@@ -15,7 +12,7 @@ import net.yozmnews.article.ArticleId;
  */
 public record MembershipQuery(ArticleId articleId, List<EventDescriptor> candidates) {
 
-	/** 한 요청의 후보 사건 상한 — 정본. 측정 전 목표 */
+	/** 한 요청의 후보 상한 — 정본(흐름 소속 판정도 쓴다). 측정 전 목표 */
 	public static final int MAX_CANDIDATES = 10;
 
 	/**
@@ -23,23 +20,8 @@ public record MembershipQuery(ArticleId articleId, List<EventDescriptor> candida
 	 * 후보의 서술 기사에 들어 있을 때
 	 */
 	public MembershipQuery {
-		Objects.requireNonNull(articleId, "articleId");
 		candidates = List.copyOf(candidates);
-		if (candidates.isEmpty()) {
-			throw new IllegalArgumentException("후보 사건이 없다");
-		}
-		if (candidates.size() > MAX_CANDIDATES) {
-			throw new IllegalArgumentException("후보 사건은 " + MAX_CANDIDATES + "개까지다: " + candidates.size());
-		}
-		Set<Long> eventIds = new HashSet<>();
-		for (EventDescriptor candidate : candidates) {
-			if (!eventIds.add(candidate.eventId())) {
-				throw new IllegalArgumentException("후보 사건 ID 가 겹친다: " + candidate.eventId());
-			}
-			if (candidate.articleIds().contains(articleId)) {
-				throw new IllegalArgumentException("판정할 기사가 후보 사건 " + candidate.eventId() + " 의 서술 기사다");
-			}
-		}
+		MembershipChecks.query(articleId, candidates, EventDescriptor::eventId, EventDescriptor::articleIds, "사건");
 	}
 
 }

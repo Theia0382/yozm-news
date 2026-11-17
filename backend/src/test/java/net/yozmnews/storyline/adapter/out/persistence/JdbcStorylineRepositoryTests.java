@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.storyline.LinkedBy;
 import net.yozmnews.storyline.domain.linking.Representation;
+import net.yozmnews.storyline.domain.linking.Asked;
 import net.yozmnews.storyline.domain.linking.Score;
 import net.yozmnews.storyline.domain.storyline.LinkJudgement;
 import net.yozmnews.storyline.domain.storyline.StorylineSnapshot;
@@ -96,9 +97,10 @@ class JdbcStorylineRepositoryTests {
 		long b = open("member-m", new float[] { 1, 0 }, "2026-11-01T00:00:00Z", "2026-11-01T00:00:00Z", Map.of());
 		long criteria = criteria();
 		Score score = new Score(0.93, 0.9, 1.0);
-		this.repository.addMember(a, 8102, LinkJudgement.judged(LinkedBy.PAIR, score, criteria, NOW));
-		this.repository.addMember(a, 8101, LinkJudgement.judged(LinkedBy.PAIR, score, criteria, NOW));
-		this.repository.addMember(b, 8101, LinkJudgement.judged(LinkedBy.RULE, new Score(0.7, 0.8, 0.5), criteria, NOW));
+		this.repository.addMember(a, 8102, LinkJudgement.judged(LinkedBy.PAIR, score, criteria, null, NOW));
+		this.repository.addMember(a, 8101, LinkJudgement.judged(LinkedBy.PAIR, score, criteria, null, NOW));
+		this.repository.addMember(b, 8101,
+				LinkJudgement.judged(LinkedBy.RULE, new Score(0.7, 0.8, 0.5), criteria, new Asked(0.71, 77L), NOW));
 
 		assertThat(this.repository.storylinesOf(8101)).containsExactly(a, b);
 		assertThat(this.repository.members(List.of(b, a))).containsExactly(Map.entry(a, List.of(8101L, 8102L)),
@@ -108,7 +110,13 @@ class JdbcStorylineRepositoryTests {
 			.containsEntry("score", 0.93)
 			.containsEntry("cosine", 0.9)
 			.containsEntry("key_term_overlap", 1.0)
-			.containsEntry("criteria_id", criteria);
+			.containsEntry("criteria_id", criteria)
+			.containsEntry("probability", null)
+			.containsEntry("judgement_id", null);
+		// 띠 안에서 판정으로 정한 소속은 확률 · 판정 원본 ID 를 쓰고 그대로 읽는다
+		assertThat(member(b, 8101)).containsEntry("probability", 0.71).containsEntry("judgement_id", 77L);
+		assertThat(this.repository.judgements(List.of(b))).containsExactly(Map.entry(b, Map.of(8101L,
+				LinkJudgement.judged(LinkedBy.RULE, new Score(0.7, 0.8, 0.5), criteria, new Asked(0.71, 77L), NOW))));
 
 		this.repository.moveMember(a, 8102, 8109, NOW.plusSeconds(60));
 		assertThat(member(a, 8109)).containsEntry("linked_by", "MERGE")
@@ -226,8 +234,9 @@ class JdbcStorylineRepositoryTests {
 
 	private long criteria() {
 		return this.jdbc.sql("""
-				insert into storyline_linking_criteria (window_seconds, threshold, created_at) values (1209600, 0.65, now())
-				on conflict (window_seconds, threshold) do update set created_at = excluded.created_at
+				insert into storyline_linking_criteria (window_seconds, lower, upper, probability, created_at)
+				values (1209600, 0.65, 0.65, 0.50, now())
+				on conflict (window_seconds, lower, upper, probability) do update set created_at = excluded.created_at
 				returning id
 				""").query(Long.class).single();
 	}
@@ -243,7 +252,7 @@ class JdbcStorylineRepositoryTests {
 
 	private Map<String, Object> member(long storyline, long event) {
 		return this.jdbc.sql("""
-				select linked_by, score, cosine, key_term_overlap, criteria_id from storyline_members
+				select linked_by, score, cosine, key_term_overlap, criteria_id, probability, judgement_id from storyline_members
 				where storyline_id = :storyline and event_id = :event
 				""").param("storyline", storyline).param("event", event).query().singleRow();
 	}

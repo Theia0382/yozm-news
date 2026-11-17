@@ -75,7 +75,7 @@ class JdbcLinkingQueueRepository implements LinkingQueueRepository {
 		return this.jdbc.sql("""
 				select event_id, order_at, notifications, failures, lease_token, lease_expires_at
 				from storyline_linking_queue
-				where lease_token is null or lease_expires_at <= :now
+				where (lease_token is null or lease_expires_at <= :now) and (retry_at is null or retry_at <= :now)
 				order by order_at nulls first, event_id
 				limit :limit
 				for update skip locked
@@ -128,6 +128,14 @@ class JdbcLinkingQueueRepository implements LinkingQueueRepository {
 			.optional()
 			.map(OptionalInt::of)
 			.orElseGet(OptionalInt::empty);
+	}
+
+	@Override
+	public void defer(long eventId, Instant retryAt) {
+		this.jdbc.sql("update storyline_linking_queue set retry_at = :retryAt where event_id = :event")
+			.param("event", eventId)
+			.param("retryAt", timestamp(retryAt))
+			.update();
 	}
 
 	@Override

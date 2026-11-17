@@ -555,10 +555,10 @@ class RelationRoundFlowTests {
 		float[] vector = centroid.equals("[1,0]") ? new float[] { 1, 0 } : new float[] { 0, 1 };
 		long storyline = this.storylines.open(new Representation(MODEL, vector, events.length, Instant.parse(first),
 				Instant.parse(last), Map.of("금리", events.length), events[0]), NOW);
-		long criteriaId = this.linkingCriteria.register(new LinkingCriteria(Duration.ofDays(14), 0.80), NOW);
+		long criteriaId = this.linkingCriteria.register(new LinkingCriteria(Duration.ofDays(14), 0.80, 0.80, 0.50), NOW);
 		for (long event : events) {
 			this.storylines.addMember(storyline, event,
-					LinkJudgement.judged(LinkedBy.PAIR, new Score(1.0, 1.0, 1.0), criteriaId, NOW));
+					LinkJudgement.judged(LinkedBy.PAIR, new Score(1.0, 1.0, 1.0), criteriaId, null, NOW));
 		}
 		return storyline;
 	}
@@ -571,19 +571,19 @@ class RelationRoundFlowTests {
 	private long storyline(float[] centroid, Map<String, Integer> terms, String first, String last, long... events) {
 		long storyline = this.storylines.open(new Representation(MODEL, centroid, events.length, Instant.parse(first),
 				Instant.parse(last), terms, events[0]), NOW);
-		long criteriaId = this.linkingCriteria.register(new LinkingCriteria(Duration.ofDays(14), 0.80), NOW);
+		long criteriaId = this.linkingCriteria.register(new LinkingCriteria(Duration.ofDays(14), 0.80, 0.80, 0.50), NOW);
 		for (long event : events) {
 			this.storylines.addMember(storyline, event,
-					LinkJudgement.judged(LinkedBy.PAIR, new Score(1.0, 1.0, 1.0), criteriaId, NOW));
+					LinkJudgement.judged(LinkedBy.PAIR, new Score(1.0, 1.0, 1.0), criteriaId, null, NOW));
 		}
 		return storyline;
 	}
 
 	private void grow(long storyline, int events) {
-		long criteriaId = this.linkingCriteria.register(new LinkingCriteria(Duration.ofDays(14), 0.80), NOW);
+		long criteriaId = this.linkingCriteria.register(new LinkingCriteria(Duration.ofDays(14), 0.80, 0.80, 0.50), NOW);
 		for (int i = 0; i < events; i++) {
 			this.storylines.addMember(storyline, event(LATE, 1),
-					LinkJudgement.judged(LinkedBy.RULE, new Score(1.0, 1.0, 1.0), criteriaId, NOW));
+					LinkJudgement.judged(LinkedBy.RULE, new Score(1.0, 1.0, 1.0), criteriaId, null, NOW));
 		}
 	}
 

@@ -11,7 +11,9 @@ import net.yozmnews.evaluation.JudgedEvent;
 import net.yozmnews.evaluation.domain.evaluator.Membership;
 
 /**
- * 저장할 사건 소속 판정 원본 하나 — docs/specs/evaluation.md §4 · evaluation-R38.
+ * 저장할 소속 판정 원본 하나 — 사건 소속 · 흐름 소속이 함께 쓴다 · docs/specs/evaluation.md §4 · evaluation-R38 · evaluation-R52.
+ * <p>
+ * 후보의 ID 칸({@link JudgedEvent#eventId})은 사건 소속이면 사건 ID, 흐름 소속이면 흐름 ID 다. 어느 표에 쓸지는 저장소가 정한다.
  *
  * @param articleId 판정한 기사
  * @param candidates 물은 후보 — 요청 순서
@@ -46,7 +48,7 @@ public record MembershipRecord(ArticleId articleId, List<JudgedEvent> candidates
 
 	/**
 	 * 판정 결과를 저장할 모양으로 — 후보는 {@code asked} 의 순서, 확률은 판정 결과에서 읽는다.
-	 * @param asked 물은 후보 사건 ID → 질문에 쓴 서술 기사(요청 순서)
+	 * @param asked 물은 후보 ID → 질문에 쓴 서술 기사(요청 순서)
 	 * @throws IllegalArgumentException 물은 후보의 확률이 판정 결과에 없을 때 — 결과와 물은 후보의 대조는 부르는 쪽이 먼저 한다
 	 */
 	public static MembershipRecord of(ArticleId articleId, Map<Long, List<ArticleId>> asked, Membership membership,

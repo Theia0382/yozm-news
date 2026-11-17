@@ -1,6 +1,6 @@
 # ADR-0106: 스토리라인의 임시 잇기 규칙 — 다른 사건과 이어질 때만 열고, 기준 이상 가운데 가장 높은 하나를 더하며 빼지 않는다
 
-- 상태: 승인. 부분 대체 — 점수 산식 · 기준선이라는 자리([ADR-0121](0121-storyline-linking-scores-centroid-cosine-plus-idf-weighted-key-term-overlap-without-time-decay-jev-or-topic-tags.md)) · 사건 하나인 스토리라인 · 같은 흐름이 둘로 열린 스토리라인이 남는다는 결과([ADR-0108](0108-storylines-with-the-same-events-merge-and-a-storyline-left-with-one-event-merges-or-dissolves.md))
+- 상태: 승인. 부분 대체 — 점수 산식([ADR-0121](0121-storyline-linking-scores-centroid-cosine-plus-idf-weighted-key-term-overlap-without-time-decay-jev-or-topic-tags.md)) · 점수가 가장 높은 하나 · 점수 순 짝 고르기([ADR-0194](0194-storyline-linking-asks-jev-only-for-band-candidates-and-reuses-recorded-probabilities-until-either-side-doubles.md)) · 기준선이라는 자리([ADR-0121](0121-storyline-linking-scores-centroid-cosine-plus-idf-weighted-key-term-overlap-without-time-decay-jev-or-topic-tags.md)) · 사건 하나인 스토리라인 · 같은 흐름이 둘로 열린 스토리라인이 남는다는 결과([ADR-0108](0108-storylines-with-the-same-events-merge-and-a-storyline-left-with-one-event-merges-or-dissolves.md))
 - 날짜: 2026-11-10
 - 근거: [이슈 #127](https://github.com/Theia0382/yozm-news/issues/127) — 잇는 방법을 평가 세트로 견줄 기준선. 소속 판정의 꼴 · 붙일 곳 없는 사건 · 짝 찾기를 리드와 정함
 - 관련: [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)(결정 "소속을 정하는 방법은 스토리라인을 구현할 때 정한다" — 보충, 임시 판), [ADR-0105](0105-storylines-link-incrementally-from-event-change-notifications-and-events-publish-changed-event-ids.md)(이 규칙이 도는 틀)
@@ -17,7 +17,9 @@
 
 > 부분 대체(셋째 문장) — [ADR-0121](0121-storyline-linking-scores-centroid-cosine-plus-idf-weighted-key-term-overlap-without-time-decay-jev-or-topic-tags.md). 지금 상태: [storyline Spec §5](../specs/storyline.md#잇기-규칙)(storyline-R8)
 - **사건이 열리고 바뀔 때마다 견준다.** 후보는 같은 모델 버전이고, 시각 범위가 판정할 사건의 시각 ± 창과 겹치는 스토리라인이다 — 기준 시각은 지금이 아니라 판정할 사건의 시각이다. 점수는 시각 감쇠 × (코사인과 핵심 말 겹침의 가중 합)이다. 이미 든 스토리라인은 그 사건을 뺀 표현과 견준다.
+> 부분 대체(첫 문장의 "점수가 가장 높은 하나") — [ADR-0194](0194-storyline-linking-asks-jev-only-for-band-candidates-and-reuses-recorded-probabilities-until-either-side-doubles.md). 지금 상태: [storyline Spec §5](../specs/storyline.md#잇기-규칙)(storyline-R10)
 - **기준 이상 가운데 점수가 가장 높은 하나가 지금 소속에 없으면 더 붙인다. 소속을 빼지 않는다.** 구독자의 타임라인에서 사건이 사라지지 않고, 사건이 지금 소속보다 다른 흐름에 더 가까워질 때만 소속이 는다.
+> 부분 대체(둘째 문장의 "기준 이상인 이웃을 점수 순으로 보아") — [ADR-0194](0194-storyline-linking-asks-jev-only-for-band-candidates-and-reuses-recorded-probabilities-until-either-side-doubles.md). 지금 상태: [storyline Spec §5](../specs/storyline.md#잇기-규칙)(storyline-R11)
 - **새 스토리라인은 다른 사건과 이어질 때만 연다.** 붙일 스토리라인이 없고 소속이 없는 사건은 창 안의 이웃 사건(코사인 순 상위 몇 개)에 점수를 매겨, 기준 이상인 이웃을 점수 순으로 보아 소속 없는 첫 사건과 둘로 연다. 짝이 없으면 소속 없이 남는다 — 사건은 스토리라인 0개 이상에 든다.
 - **판정으로 소속이 늘면, 그 사건의 이웃 가운데 기준 이상이고 소속 없는 사건을 다시 판정한다.** 기다리던 사건이 이웃의 새 스토리라인을 보게 해 순서 의존을 줄인다. 계기는 소속이 늘 때뿐이다 — 소속이 늘어나는 횟수에 끝이 있어 다시 판정도 끝난다.
 - **스토리라인 표현은 구성 사건 전체로 다시 정한다** — 중심은 기사 수 가중 평균, 핵심 말은 말마다 합.

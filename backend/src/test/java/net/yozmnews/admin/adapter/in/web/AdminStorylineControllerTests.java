@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.math.BigDecimal;
 import java.net.URI;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -17,6 +18,7 @@ import java.util.stream.LongStream;
 import net.yozmnews.article.ArticleContent;
 import net.yozmnews.article.ArticleEntryView;
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.evaluation.FlowMembershipJudgementId;
 import net.yozmnews.evaluation.RelationAnswer;
 import net.yozmnews.evaluation.RelationJudgementId;
 import net.yozmnews.evaluation.RelationJudgementLog;
@@ -34,6 +36,7 @@ import net.yozmnews.storyline.RelationOutcome;
 import net.yozmnews.storyline.StorylineCursor;
 import net.yozmnews.storyline.StorylineEvent;
 import net.yozmnews.storyline.StorylineId;
+import net.yozmnews.storyline.StorylineLinkingCriteria;
 import net.yozmnews.storyline.StorylineMembership;
 import net.yozmnews.storyline.StorylinePage;
 import net.yozmnews.storyline.StorylineRelationAsked;
@@ -137,7 +140,7 @@ class AdminStorylineControllerTests {
 					    "representative":null}],
 					 "next":{"lastArticleAt":"2026-11-03T00:00:00Z","id":8},
 					 "unlinked":{"events":2,"articles":5},
-					 "linkingCriteria":{"windowSeconds":259200,"threshold":0.62},
+					 "linkingCriteria":{"windowSeconds":259200,"lower":0.6,"upper":0.62,"probability":0.5},
 					 "relationCriteria":{"probability":0.6,"oneMatter":0.2,"minEvents":3,"candidateScore":0.88,
 					                     "windowSeconds":1209600},
 					 "maxDays":31}
@@ -183,15 +186,16 @@ class AdminStorylineControllerTests {
 				new StorylineEvent(event(85, EventStatus.CLOSED, 1), false)));
 		this.review.memberships.put(7L, List.of(
 				new StorylineMembership(new StorylineId(7), new EventId(70), LinkedBy.RULE, new LinkScore(0.81, 0.77, 0.4),
-						FakeStorylineReview.LINKING, T),
-				new StorylineMembership(new StorylineId(7), new EventId(80), LinkedBy.MERGE, null, null, T),
+						FakeStorylineReview.LINKING, null, null, T),
+				new StorylineMembership(new StorylineId(7), new EventId(80), LinkedBy.MERGE, null, null, null, null, T),
+				// 띠가 생기기 전의 기준 이력 행으로 정한 소속 — 확률 기준이 없다
 				new StorylineMembership(new StorylineId(8), new EventId(80), LinkedBy.PAIR, new LinkScore(0.7, 0.66, 0.2),
-						FakeStorylineReview.LINKING, T),
+						new StorylineLinkingCriteria(Duration.ofDays(3), 0.62, 0.62, null), null, null, T),
 				new StorylineMembership(new StorylineId(8), new EventId(85), LinkedBy.RULE, new LinkScore(0.9, 0.88, 0.5),
-						FakeStorylineReview.LINKING, T),
+						FakeStorylineReview.LINKING, 0.71, new FlowMembershipJudgementId(77), T),
 				// 타임라인에 없는 사건(그새 합쳐짐)의 근거는 싣지 않는다
 				new StorylineMembership(new StorylineId(8), new EventId(99), LinkedBy.RULE, new LinkScore(0.6, 0.6, 0.1),
-						FakeStorylineReview.LINKING, T)));
+						FakeStorylineReview.LINKING, null, null, T)));
 		this.review.relations.put(7L, List.of(
 				new StorylineRelationDetail(new StorylineRelationView(StorylineRelationKind.CONTAINS, new StorylineId(7),
 						new StorylineId(8), T), 0.7, new RelationJudgementId(41), FakeStorylineReview.RELATION),
@@ -222,21 +226,24 @@ class AdminStorylineControllerTests {
 					    "representative":{"title":"국회 본회의 통과","sources":["한겨레"]},
 					    "memberships":[
 					      {"storylineId":7,"linkedBy":"RULE","score":0.81,"cosine":0.77,"keyTermOverlap":0.4,
-					       "criteria":{"windowSeconds":259200,"threshold":0.62},"linkedAt":"2026-11-05T00:00:00Z"}]},
+					       "criteria":{"windowSeconds":259200,"lower":0.6,"upper":0.62,"probability":0.5},
+					       "probability":null,"judgementId":null,"linkedAt":"2026-11-05T00:00:00Z"}]},
 					   {"id":80,"status":"CLOSED","articleCount":2,"firstArticleAt":"2026-11-05T00:00:00Z",
 					    "lastArticleAt":"2026-11-05T00:00:00Z","direct":true,"representativeArticleId":null,
 					    "representative":null,
 					    "memberships":[
 					      {"storylineId":7,"linkedBy":"MERGE","score":null,"cosine":null,"keyTermOverlap":null,
-					       "criteria":null,"linkedAt":"2026-11-05T00:00:00Z"},
+					       "criteria":null,"probability":null,"judgementId":null,"linkedAt":"2026-11-05T00:00:00Z"},
 					      {"storylineId":8,"linkedBy":"PAIR","score":0.7,"cosine":0.66,"keyTermOverlap":0.2,
-					       "criteria":{"windowSeconds":259200,"threshold":0.62},"linkedAt":"2026-11-05T00:00:00Z"}]},
+					       "criteria":{"windowSeconds":259200,"lower":0.62,"upper":0.62,"probability":null},
+					       "probability":null,"judgementId":null,"linkedAt":"2026-11-05T00:00:00Z"}]},
 					   {"id":85,"status":"CLOSED","articleCount":1,"firstArticleAt":"2026-11-05T00:00:00Z",
 					    "lastArticleAt":"2026-11-05T00:00:00Z","direct":false,"representativeArticleId":null,
 					    "representative":null,
 					    "memberships":[
 					      {"storylineId":8,"linkedBy":"RULE","score":0.9,"cosine":0.88,"keyTermOverlap":0.5,
-					       "criteria":{"windowSeconds":259200,"threshold":0.62},"linkedAt":"2026-11-05T00:00:00Z"}]}],
+					       "criteria":{"windowSeconds":259200,"lower":0.6,"upper":0.62,"probability":0.5},
+					       "probability":0.71,"judgementId":77,"linkedAt":"2026-11-05T00:00:00Z"}]}],
 					 "relations":[
 					   {"kind":"CONTAINS","sourceId":7,"targetId":8,"probability":0.7,"linkedAt":"2026-11-05T00:00:00Z",
 					    "criteria":{"probability":0.6,"oneMatter":0.2,"minEvents":3,"candidateScore":0.88,
