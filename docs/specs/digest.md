@@ -12,6 +12,7 @@
 - **생성기 포트와 로컬 대체물** — 생성기 포트(`DigestGenerator`)와 profile `local` 의 고정 규칙 대체물(`FakeDigestGenerator`)
 - **지운 기사 따르기** — 운영자가 지운 기사의 후보 · 인용 행과, 인용이 남지 않게 된 섹션을 지운다
 - **후보 행 보존** — 만든 지 30일이 지난 다이제스트의 후보 행을 지운다
+- **인용 확인** — 주어진 다이제스트가 그 사용자의 것이고 그 기사를 인용했는지 답한다 — `feedback` 이 선언한 인터페이스 `DigestCitations` 의 구현이고, 피드백을 받을 수 있는 기사의 판정이 쓴다(digest-R14, [ADR-0196](../adr/0196-feedback-is-accepted-only-on-articles-cited-by-the-users-digest-and-digest-answers-through-an-interface-declared-by-feedback.md))
 - **받은 소식** — 사용자가 날짜별로 보이는 다이제스트에서 받은 기사와 받은 날짜를 공개 조회(`ReceivedArticles`)로 낸다 — 독자 화면이 스토리라인 타임라인에 단다(digest-R13, [ADR-0193](../adr/0193-the-per-user-storyline-information-is-the-received-news-counted-from-the-digest-shown-for-each-date.md))
 - **(미구현)** 후보 선별(구독 필터 · 큰 스토리라인 슬롯 · 사건 단위 중복 제거 · 상한 · 선정 이유)
 - **(미구현)** 프롬프트 구성과 실제 생성기(사용자 키로 `llm` 의 호출 API 를 부르는 생성기) · 파싱 실패의 다시 묻기
@@ -41,7 +42,7 @@
 
 ## 3. 공개 인터페이스
 
-모듈 최상위 패키지 `net.yozmnews.digest` 의 공개 타입은 받은 소식의 공개 조회 `ReceivedArticles` 하나다. HTTP 엔드포인트는 없다 — 화면용 API 는 `reader` 가 낸다. 받는 이벤트는 `article` 의 `ArticlesRemoved` 다(§4 들어오는 쪽).
+모듈 최상위 패키지 `net.yozmnews.digest` 의 공개 타입은 받은 소식의 공개 조회 `ReceivedArticles` 하나다. HTTP 엔드포인트는 없다 — 화면용 API 는 `reader` 가 낸다. 받는 이벤트는 `article` 의 `ArticlesRemoved` 다(§4 들어오는 쪽). 다른 모듈이 선언한 인터페이스 하나를 구현한다 — `feedback` 의 `DigestCitations`([feedback Spec](feedback.md#digestcitations)). 구현은 `application` 의 `DigestCitationsService` 다(digest-R14).
 
 ### ReceivedArticles
 
@@ -72,11 +73,11 @@ public interface ReceivedArticles {
 | `domain/candidate` | 후보와 별칭의 정본(`CandidateSet`), 후보 행 저장소(`DigestCandidateRepository`), 보존 기한의 정본(`CandidateRetention`), 값(`DigestCandidate` · `AliasedCandidate` · `SelectionReason`) |
 | `domain/output` | 출력 서술 · 상한의 정본(`DigestOutputSchema` — 서술 마디 `OutputShape` · 처분 `OverLimit` · `OnBlank`), 읽기의 정본(`DigestOutputReader`), 인용 검증의 정본(`CitationCheck`), 값(`OutputRead` · `DigestDraft` · `StoryDraft` · `HeadlineDraft` · `CitationResult` · `CitedDigest` · `CitedStory` · `CitedHeadline` · `CitationDrops`) |
 | `domain/generator` | 생성기 포트(`DigestGenerator`)와 그 요청 · 결과 |
-| `domain/content` | 내용 aggregate(`DigestSection` — 인용 `DigestItem` 을 자식으로)와 저장소(`DigestSectionRepository`), 섹션 종류(`SectionKind`) |
+| `domain/content` | 내용 aggregate(`DigestSection` — 인용 `DigestItem` 을 자식으로)와 저장소(`DigestSectionRepository`), 섹션 종류(`SectionKind`), 인용 확인 저장소(`CitationRepository`) |
 | `domain/removal` | 지운 기사 따르기의 판단(`RemovalFollowUp`), 내용 행 정리 저장소(`DigestContentCleanup`), 값(`SectionCitations`) |
 | `domain/receipt` | 받은 소식 저장소(`ReceiptRepository` — 계약이 digest-R13 의 정본) |
-| `application` | 생성 유스케이스(`DigestGeneration`), 지운 기사 따르기(`DigestArticleRemoval`)와 그 리스너, 후보 행 보존 정리(`CandidateCleanup`), 받은 소식 공개 조회의 구현(`ReceivedArticlesService`) |
-| `adapter/out/persistence` | 후보 행 · 내용 행 정리 · 받은 소식 저장소의 JdbcClient 구현 |
+| `application` | 생성 유스케이스(`DigestGeneration`), 지운 기사 따르기(`DigestArticleRemoval`)와 그 리스너, 후보 행 보존 정리(`CandidateCleanup`), 받은 소식 공개 조회의 구현(`ReceivedArticlesService`), 인용 확인의 구현(`DigestCitationsService`) |
+| `adapter/out/persistence` | 후보 행 · 내용 행 정리 · 받은 소식 · 인용 확인 저장소의 JdbcClient 구현 |
 | `adapter/out/fake` | 생성기의 로컬 대체물과 그 결선 |
 | `adapter/in/job` | 후보 행 보존 정리의 반복 작업 |
 
@@ -117,6 +118,7 @@ sequenceDiagram
 - `DigestArticleRemovalListener` — `ArticlesRemoved` 리스너
 - `CandidateCleanup` — 후보 행 보존 정리. 트랜잭션 하나(digest-R11)
 - `ReceivedArticlesService` — 공개 조회 `ReceivedArticles` 의 구현. 상한을 확인하고 저장소에 맡긴다. 읽기 전용 트랜잭션 하나, 역할 애너테이션 없음(digest-R13)
+- `DigestCitationsService` — `feedback` 의 `DigestCitations` 의 구현. 다이제스트 ID 가 1 보다 작으면 거짓이고 그 밖은 저장소에 맡긴다. 읽기 전용 트랜잭션(부르는 쪽의 트랜잭션이 있으면 거기에 든다), 역할 애너테이션 없음(digest-R14)
 
 ### `domain`
 
@@ -137,6 +139,14 @@ sequenceDiagram
   ```java
   public interface ReceiptRepository {
       Map<ArticleId, LocalDate> firstShownDates(UserId user, Collection<ArticleId> articles);  // 받은 기사 → 가장 이른 받은 날짜
+  }
+  ```
+
+- `CitationRepository` — 인용 확인 저장소 — 그 사용자의 그 다이제스트가 그 기사를 인용했는가(digest-R14)
+
+  ```java
+  public interface CitationRepository {
+      boolean cited(UserId user, DigestId digest, ArticleId article);
   }
   ```
 
@@ -181,6 +191,7 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
 - `JdbcDigestCandidateRepository` — `DigestCandidateRepository` 의 JdbcClient 구현. 후보 행은 넣고 지우기만 한다
 - `JdbcDigestContentCleanup` — `DigestContentCleanup` 의 JdbcClient 구현
 - `JdbcReceiptRepository` — `ReceiptRepository` 의 JdbcClient 구현 — 인용 · 섹션 · 다이제스트를 잇는 질의 하나(digest-R13)
+- `JdbcCitationRepository` — `CitationRepository` 의 JdbcClient 구현 — 인용 · 섹션 · 다이제스트를 잇는 질의 하나(digest-R14)
 - 상태 · 내용 저장소는 Spring Data JDBC 다
 
 다른 모듈의 공개 조회: 생성 중 지운 기사를 거를 때 `article` 의 `ArticleDirectory.findAll` 로 기사가 있는지 본다([article Spec](article.md#articledirectory--articlecontent--articleentryview--articleheadline)).
@@ -291,6 +302,15 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
   - 지운 기사는 인용이 지워져(digest-R10) 받은 기사가 아니다
   - 화면이 날짜별로 다이제스트를 보일 때도 이 정의를 쓴다 — 다이제스트 조회가 생기면 "보이는 다이제스트" 조건을 이 규칙 하나에서 가져온다
 
+### 인용 확인
+
+판단의 이유는 [ADR-0196](../adr/0196-feedback-is-accepted-only-on-articles-cited-by-the-users-digest-and-digest-answers-through-an-interface-declared-by-feedback.md)에 있다.
+
+- **digest-R14** — 인용 확인(`DigestCitations.cites`)은 주어진 다이제스트가 그 사용자의 것이고 그 다이제스트의 인용에 그 기사가 있으면 참이다. 없는 다이제스트 · 다른 사용자의 다이제스트 · 인용하지 않은 기사 · 1 보다 작은 다이제스트 ID 는 거짓이다
+  - 다이제스트의 상태 · 날짜를 보지 않는다 — 날짜별로 보이는 다이제스트(digest-R13)에 덮인 다이제스트의 인용도 참이다. 인용 행은 `READY` 로 끝낸 다이제스트에만 있다(digest-R7)
+  - 지운 기사는 인용이 지워져(digest-R10) 거짓이다
+  - 받은 소식(digest-R13)과 다른 정의다 — 받은 소식은 보이는 다이제스트의 인용만 세고, 인용 확인은 주어진 다이제스트 하나를 본다
+
 ### 로컬 대체물
 
 판단의 이유는 [ADR-0187](../adr/0187-the-digest-generators-local-substitute-always-stands-in-the-local-profile-and-real-generators-register-only-outside-it.md) · [ADR-0057](../adr/0057-local-substitutes-registered-only-in-local-profile-without-operator-switch.md)에 있다.
@@ -338,3 +358,4 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
 | [0187](../adr/0187-the-digest-generators-local-substitute-always-stands-in-the-local-profile-and-real-generators-register-only-outside-it.md) | 다이제스트 생성기의 로컬 대체물은 `local` 에서 언제나 서고, 실제 생성기는 `local` 밖에서만 등록된다 |
 | [0192](../adr/0192-reader-screens-are-composed-by-the-reader-module-over-module-public-queries.md) | 독자 화면의 응답은 `reader` 가 엮는다 — 다이제스트의 화면용 API 는 `reader` 가 내고 이 모듈은 공개 조회를 낸다 |
 | [0193](../adr/0193-the-per-user-storyline-information-is-the-received-news-counted-from-the-digest-shown-for-each-date.md) | 사용자마다 달라지는 스토리라인 정보는 받은 소식 하나 — 날짜별로 보이는 다이제스트의 인용으로 센다 |
+| [0196](../adr/0196-feedback-is-accepted-only-on-articles-cited-by-the-users-digest-and-digest-answers-through-an-interface-declared-by-feedback.md) | 피드백을 받을 수 있는 기사인지는 `feedback` 이 선언한 인터페이스를 이 모듈이 구현해 답한다 |

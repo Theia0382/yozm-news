@@ -48,3 +48,4 @@
 ## 후속 기록
 
 - 2026-11-15: 결정 절 "신호는 추가 전용 이벤트 기록이 정본이다"의 구독 변경 기록에 원인(사용자 · 계정을 만들 때 기본값 · 체계 변경)을 두고, 관심 신호는 원인이 사용자인 행만이다 — [ADR-0175](0175-tag-preferences-follow-tag-set-activation-events-and-are-rewritten-to-active-keys.md) · [`user` user-R45](../specs/user.md#관심-설정)
+- 2026-11-17: 결정 절 "신호는 추가 전용 이벤트 기록이 정본이다"의 좋아요 / 싫어요 이력 가운데 지운 기사의 행 — [ADR-0197](0197-feedback-on-removed-articles-is-deleted-from-both-the-current-state-and-the-history-and-recording-and-removal-are-ordered-by-a-fence-lock.md) · [`feedback` feedback-R5](../specs/feedback.md#지운-기사-따르기)

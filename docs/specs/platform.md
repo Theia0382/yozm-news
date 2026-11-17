@@ -117,7 +117,8 @@ public enum GuardedAction {
 	INVITATION_CHECK("invitation-check"),
 	INVITATION_ACCEPTANCE("invitation-acceptance"),
 	SIGN_UP("sign-up"),
-	LLM_KEY_CHECK("llm-key-check");
+	LLM_KEY_CHECK("llm-key-check"),
+	FEEDBACK("feedback");
 
 	public String actionName();
 }
@@ -131,6 +132,7 @@ public enum GuardedAction {
 | `INVITATION_ACCEPTANCE` | 초대 가입 |
 | `SIGN_UP` | 공개 가입 |
 | `LLM_KEY_CHECK` | LLM 키 등록 · 다시 검증 — 둘이 한도를 함께 쓴다 |
+| `FEEDBACK` | 좋아요 / 싫어요 누르기 · 되돌리기 |
 
 `actionName()` 은 봇 차단 위젯의 동작 이름이고 화면과의 계약이다 — 영문 소문자 · 숫자 · `-` 로 32자 이하다.
 
@@ -629,7 +631,7 @@ stateDiagram-v2
 
 판단의 이유는 [ADR-0169](../adr/0169-request-limits-and-bot-checks-are-platform-marks-applied-by-the-user-session-chain-before-the-handler.md)에 있다.
 
-- **platform-R25** — `@RequestLimited` 는 요청 제한을 거는 화면용 API 처리기 메서드에, `@HumanChecked` 는 봇 차단을 거는 메서드에 단다 — 둘 다 메서드에만 달리고(`@Target(METHOD)`) 같은 클래스의 다른 처리기에 번지지 않는다. 값은 지키는 동작(`GuardedAction`)이다. `@HumanChecked` 는 같은 메서드에 같은 동작의 `@RequestLimited` 와 함께 단다 — 봇 차단 검증(외부 요청)은 요청 제한 뒤에 돈다. 사용자로 세는 동작(지금 `LLM_KEY_CHECK`)의 표시는 세션을 요구하는 처리기에만 단다. 판정 정본은 `HandlerGuards` 이고, 표시를 읽는 쪽은 `user` 의 요청 방어([user Spec](user.md#요청-방어) user-R40 · R41) · 명세 설정(platform-R6) · 등록 가드다. 동작마다의 한도 · 세는 축은 `user` 가 정한다(user-R38)
+- **platform-R25** — `@RequestLimited` 는 요청 제한을 거는 화면용 API 처리기 메서드에, `@HumanChecked` 는 봇 차단을 거는 메서드에 단다 — 둘 다 메서드에만 달리고(`@Target(METHOD)`) 같은 클래스의 다른 처리기에 번지지 않는다. 값은 지키는 동작(`GuardedAction`)이다. `@HumanChecked` 는 같은 메서드에 같은 동작의 `@RequestLimited` 와 함께 단다 — 봇 차단 검증(외부 요청)은 요청 제한 뒤에 돈다. 사용자로 세는 동작(지금 `LLM_KEY_CHECK` · `FEEDBACK`)의 표시는 세션을 요구하는 처리기에만 단다. 판정 정본은 `HandlerGuards` 이고, 표시를 읽는 쪽은 `user` 의 요청 방어([user Spec](user.md#요청-방어) user-R40 · R41) · 명세 설정(platform-R6) · 등록 가드다. 동작마다의 한도 · 세는 축은 `user` 가 정한다(user-R38)
 
 ### 오류 응답 형식
 
