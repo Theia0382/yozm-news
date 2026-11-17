@@ -13,7 +13,9 @@ public enum Provider {
 	/** OpenAI API */
 	OPENAI("openai"),
 	/** Anthropic API */
-	ANTHROPIC("anthropic");
+	ANTHROPIC("anthropic"),
+	/** OpenRouter API — 여러 회사의 모델을 그 회사나 그 모델을 호스팅하는 공급자로 중계한다 */
+	OPENROUTER("openrouter");
 
 	private final String key;
 

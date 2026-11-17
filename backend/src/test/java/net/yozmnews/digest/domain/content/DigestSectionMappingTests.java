@@ -99,6 +99,17 @@ class DigestSectionMappingTests {
 	}
 
 	@Test
+	void storesADigestMadeWithAnOpenRouterModel() {
+		LlmModel openRouter = new LlmModel(Provider.OPENROUTER, "openai/gpt-6.1-terra", 32_000, true);
+
+		Digest running = this.digests.save(scheduled().start(openRouter, 2, T0));
+
+		Digest read = this.digests.lock(running.id().value()).orElseThrow();
+		assertThat(read.provider()).contains("openrouter");
+		assertThat(read.model()).contains("openai/gpt-6.1-terra");
+	}
+
+	@Test
 	void storesTheFailureCode() {
 		Digest failed = this.digests.save(this.digests.save(scheduled().start(MODEL, 2, T0))
 			.complete(new Completion.Failed(DigestFailure.UNREADABLE_OUTPUT, "JSON 이 아니다", null, null), T1));

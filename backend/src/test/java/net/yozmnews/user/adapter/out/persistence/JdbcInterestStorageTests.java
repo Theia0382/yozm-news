@@ -117,6 +117,17 @@ class JdbcInterestStorageTests {
 	}
 
 	@Test
+	void aChosenOpenRouterModelIsStoredAndReadBack() {
+		this.settings.insertIfAbsent(InterestSettings.defaults(this.alice, new TagSetId(3), NOW));
+		InterestSettings read = this.settings.lockByUser(this.alice).orElseThrow();
+
+		this.settings.update(read.withModel(new ModelRef(Provider.OPENROUTER, "anthropic/claude-haiku-5.5"), LATER));
+
+		assertThat(this.settings.lockByUser(this.alice).orElseThrow().model())
+			.isEqualTo(new ModelRef(Provider.OPENROUTER, "anthropic/claude-haiku-5.5"));
+	}
+
+	@Test
 	void accountsWithoutSettingsAndUsersOnAnotherVersionArePagedInIdOrder() {
 		this.settings.insertIfAbsent(InterestSettings.defaults(this.bob, new TagSetId(3), NOW));
 

@@ -15,7 +15,8 @@ public final class OpenAiSchemas {
 	static final Set<String> ALLOWED = Set.of("type", "properties", "required", "additionalProperties", "items",
 			"enum", "description", "maxItems", "minItems");
 
-	private static final SchemaRewrite REWRITE = new SchemaRewrite(ALLOWED, true);
+	private static final SchemaRewrite REWRITE = new SchemaRewrite(ALLOWED,
+			SchemaRewrite.Required.ALL_NULL_IN_TYPE_AND_VALUES);
 
 	private OpenAiSchemas() {
 	}

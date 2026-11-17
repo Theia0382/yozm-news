@@ -8,8 +8,8 @@ import org.jspecify.annotations.Nullable;
 /**
  * 공급자의 종료 사유를 {@link GenerationStop} 으로 가르는 정본 — docs/specs/llm.md llm-R22.
  * <p>
- * 입력은 어댑터가 Spring AI 의 생성 메타데이터에서 받는 문자열이다. OpenAI 는 Spring AI 가 SDK 열거 이름(대문자)으로 옮겨 넘기고, Anthropic
- * 은 공급자 원문 그대로다. 모르는 값은 빈 값이다 — 부르는 쪽이 예상 밖의 답으로 다룬다.
+ * 입력은 어댑터가 Spring AI 의 생성 메타데이터에서 받는 문자열이다. OpenAI 꼴 채팅 API(OpenAI · OpenRouter)는 Spring AI 가 SDK 열거
+ * 이름(대문자)으로 옮겨 넘기고, Anthropic 은 공급자 원문 그대로다. 모르는 값은 빈 값이다 — 부르는 쪽이 예상 밖의 답으로 다룬다.
  */
 public final class StopReasons {
 
@@ -17,7 +17,7 @@ public final class StopReasons {
 	}
 
 	/**
-	 * @param finishReason Spring AI 가 넘긴 OpenAI 의 종료 사유 — 없으면 null
+	 * @param finishReason Spring AI 가 넘긴 OpenAI 꼴 채팅 API 의 종료 사유 — 없으면 null
 	 * @param refused 응답에 거절 문구({@code refusal})가 있는가
 	 */
 	public static Optional<GenerationStop> openAi(@Nullable String finishReason, boolean refused) {

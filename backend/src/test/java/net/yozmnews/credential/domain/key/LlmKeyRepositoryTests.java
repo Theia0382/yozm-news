@@ -72,6 +72,18 @@ class LlmKeyRepositoryTests {
 	}
 
 	@Test
+	void savesAndReadsAnOpenRouterKey() {
+		KeyOwner owner = new KeyOwner(new UserId(7), Provider.OPENROUTER);
+		StoredLlmKey saved = this.keys.save(StoredLlmKey.register(owner, sealed(1), "ORKY", NOW));
+
+		assertThat(this.keys.findByUserIdAndProvider(7, "openrouter").orElseThrow().owner()).isEqualTo(owner);
+		assertThat(this.jdbc.sql("select provider from llm_credentials where id = :id")
+			.param("id", saved.id())
+			.query(String.class)
+			.single()).isEqualTo("openrouter");
+	}
+
+	@Test
 	void allowsOneKeyPerOwner() {
 		this.keys.save(StoredLlmKey.register(ALICE_OPENAI, sealed(1), "WXYZ", NOW));
 

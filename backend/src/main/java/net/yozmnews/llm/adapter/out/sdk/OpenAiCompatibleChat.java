@@ -33,8 +33,8 @@ import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
 
 /**
- * OpenAI 꼴 채팅 API 의 SDK 클라이언트 쌍과 생성 한 번 — OpenAI 클라이언트가 쓴다 · docs/specs/llm.md §4 · llm-R11 · R12 · R14 ·
- * R21 ~ R23.
+ * OpenAI 꼴 채팅 API 의 SDK 클라이언트 쌍과 생성 한 번 — OpenAI · OpenRouter 클라이언트가 함께 쓴다 · docs/specs/llm.md §4 · llm-R11 ·
+ * R12 · R14 · R21 ~ R23.
  * <p>
  * SDK 클라이언트를 직접 조립한다 — 주소 · 키 · 로그 수준(꺼짐) · 재시도(0)를 명시하고, 값이 비면 환경 변수를 읽는 길(Spring AI 의 설정
  * 도우미 · SDK 의 {@code fromEnv()})을 쓰지 않는다. 동기 · 비동기 클라이언트가 같은 전송을 쓴다. 생성은 그 SDK 클라이언트로 만든 Spring AI

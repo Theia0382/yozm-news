@@ -11,7 +11,7 @@ import net.yozmnews.llm.domain.retry.RetryAfter;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 공급자 요청 하나가 답을 받지 못한 까닭 — 두 공급자 클라이언트가 확인 요청과 생성 요청에서 함께 쓴다 · docs/specs/llm.md llm-R8 · R9 ·
+ * 공급자 요청 하나가 답을 받지 못한 까닭 — 공급자 클라이언트들이 확인 요청과 생성 요청에서 함께 쓴다 · docs/specs/llm.md llm-R8 · R9 ·
  * R20.
  *
  * @param message 고정 문구 · 상태 코드 · 예외 클래스 이름뿐이다

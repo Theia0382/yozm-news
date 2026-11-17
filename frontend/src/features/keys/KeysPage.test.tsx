@@ -14,6 +14,7 @@ const NO_KEYS: LlmKeys = {
   providers: [
     { provider: "OPENAI", key: null },
     { provider: "ANTHROPIC", key: null },
+    { provider: "OPENROUTER", key: null },
   ],
 };
 
@@ -29,6 +30,7 @@ function withAnthropic(key: LlmKey): LlmKeys {
     providers: [
       { provider: "OPENAI", key: null },
       { provider: "ANTHROPIC", key },
+      { provider: "OPENROUTER", key: null },
     ],
   };
 }
@@ -69,6 +71,11 @@ describe("KeysPage", () => {
       openai.queryByRole("button", { name: "다시 검증" }),
     ).not.toBeInTheDocument();
     expect(await section("Anthropic")).toBeDefined();
+    const openRouter = await section("OpenRouter");
+    expect(openRouter.getByText("저장한 키가 없습니다.")).toBeInTheDocument();
+    expect(
+      openRouter.getByRole("button", { name: "등록" }),
+    ).toBeInTheDocument();
 
     const guide = await section("API 키 받는 법");
     expect(
@@ -82,6 +89,10 @@ describe("KeysPage", () => {
     expect(guide.getByRole("link", { name: "Claude Console" })).toHaveAttribute(
       "href",
       "https://platform.claude.com/settings/keys",
+    );
+    expect(guide.getByRole("link", { name: "OpenRouter" })).toHaveAttribute(
+      "href",
+      "https://openrouter.ai/settings/keys",
     );
     expect(
       guide.getByText(/콘솔에 결제 수단을 등록해야 키로 요청할 수 있습니다/),
