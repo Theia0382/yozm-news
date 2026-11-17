@@ -360,6 +360,20 @@ class JdbcArticleRepositoryTests {
 	}
 
 	@Test
+	void findsThePublishedTimeOfTheGivenArticlesAndLeavesOutMissingOnes() {
+		ArticleId early = store(item(SOURCE, FEED, "https://a.example/news/41", null, "이른 기사",
+				Instant.parse("2030-05-01T08:00:00Z"), FETCHED_AT, List.of()), MatchKind.NEW);
+		ArticleId late = store(item(SOURCE, FEED, "https://a.example/news/42", null, "늦은 기사",
+				Instant.parse("2030-05-02T21:30:00Z"), FETCHED_AT, List.of()), MatchKind.NEW);
+		ArticleId missing = new ArticleId(early.value() + late.value() + 1_000);
+
+		assertThat(this.repository.findPublishedAt(List.of(missing, late, early))).containsOnly(
+				Map.entry(early, Instant.parse("2030-05-01T08:00:00Z")),
+				Map.entry(late, Instant.parse("2030-05-02T21:30:00Z")));
+		assertThat(this.repository.findPublishedAt(List.of())).isEmpty();
+	}
+
+	@Test
 	void findsArticlesFirstSeenAtOrAfterAnInstantInIdOrder() {
 		// 다른 시험이 남긴 기사와 겹치지 않게 먼 시각을 쓴다. 둘째 기사가 첫째보다 먼저 보여 처음 본 시각 순과 ID 순이 엇갈린다
 		Instant boundary = Instant.parse("2031-01-01T00:00:00Z");

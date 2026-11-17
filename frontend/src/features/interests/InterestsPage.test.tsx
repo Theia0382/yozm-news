@@ -6,6 +6,7 @@ import {
   type InterestSettings,
   type InterestSources,
   type InterestTags,
+  type InterestVolume,
 } from "@/features/interests/interestQueries";
 import { InterestsPage } from "@/features/interests/InterestsPage";
 import { json, type Handler } from "@/test/fakeServer";
@@ -61,6 +62,20 @@ const SETTINGS: InterestSettings = {
   monthlyReport: true,
 };
 
+/** 새 계정의 분량 — 보통 · 큰 스토리라인 3 */
+const VOLUME: InterestVolume = {
+  volume: "NORMAL",
+  customCount: null,
+  bigSlots: 3,
+  presets: [
+    { volume: "FEW", count: 30 },
+    { volume: "NORMAL", count: 60 },
+    { volume: "MANY", count: 90 },
+  ],
+  countRange: { min: 10, max: 150 },
+  bigSlotRange: { min: 0, max: 10 },
+};
+
 const NO_KEY_MODEL: InterestModel = {
   choosable: [],
   chosen: null,
@@ -77,6 +92,7 @@ function renderInterests(handlers: Record<string, Handler>) {
       "GET /api/interests/sources": () => json(SOURCES),
       "GET /api/interests/settings": () => json(SETTINGS),
       "GET /api/interests/model": () => json(NO_KEY_MODEL),
+      "GET /api/interests/volume": () => json(VOLUME),
       ...handlers,
     },
   );
@@ -276,6 +292,114 @@ describe("InterestsPage", () => {
       );
 
       expect(await schedule.findByRole("alert")).toHaveTextContent(text);
+    },
+  );
+
+  it("분량은 서버가 준 단계 값과 범위로 그리고, 직접 입력은 그 단계를 고를 때만 연다", async () => {
+    renderInterests({});
+    const volume = await section("다이제스트 분량");
+
+    expect(
+      await volume.findByRole("radio", { name: "보통 (60건)" }),
+    ).toBeChecked();
+    expect(
+      volume.getByRole("radio", { name: "적게 (30건)" }),
+    ).not.toBeChecked();
+    expect(
+      volume.getByRole("radio", { name: "많이 (90건)" }),
+    ).not.toBeChecked();
+    expect(
+      volume.getByLabelText("직접 입력한 후보 수 (10 ~ 150건)"),
+    ).toBeDisabled();
+    expect(volume.getByLabelText("큰 스토리라인 수 (0 ~ 10개)")).toHaveValue(3);
+  });
+
+  it("직접 입력한 수와 큰 스토리라인 수를 저장하고 알린다", async () => {
+    let current = VOLUME;
+    const { server } = renderInterests({
+      "GET /api/interests/volume": () => json(current),
+      "PUT /api/interests/volume": () => {
+        current = { ...VOLUME, volume: "CUSTOM", customCount: 45, bigSlots: 0 };
+        return json({ result: "SAVED", volume: current, range: null });
+      },
+    });
+    const user = userEvent.setup();
+    const volume = await section("다이제스트 분량");
+
+    await user.click(await volume.findByRole("radio", { name: "직접 입력" }));
+    const count = volume.getByLabelText("직접 입력한 후보 수 (10 ~ 150건)");
+    expect(count).toBeEnabled();
+    await user.clear(count);
+    await user.type(count, "45");
+    const bigSlots = volume.getByLabelText("큰 스토리라인 수 (0 ~ 10개)");
+    await user.clear(bigSlots);
+    await user.type(bigSlots, "0");
+    await user.click(volume.getByRole("button", { name: "분량 저장" }));
+
+    expect(await volume.findByRole("status")).toHaveTextContent(
+      "다이제스트 분량을 저장했습니다.",
+    );
+    expect(bodiesOf(server, "PUT", "/api/interests/volume")).toEqual([
+      { volume: "CUSTOM", customCount: 45, bigSlots: 0 },
+    ]);
+    expect(
+      await volume.findByLabelText("직접 입력한 후보 수 (10 ~ 150건)"),
+    ).toHaveValue(45);
+  });
+
+  it("단계를 고르면 직접 입력한 수를 보내지 않는다", async () => {
+    const { server } = renderInterests({
+      "PUT /api/interests/volume": () =>
+        json({
+          result: "SAVED",
+          volume: { ...VOLUME, volume: "MANY" },
+          range: null,
+        }),
+    });
+    const user = userEvent.setup();
+    const volume = await section("다이제스트 분량");
+
+    await user.click(await volume.findByRole("radio", { name: "많이 (90건)" }));
+    await user.click(volume.getByRole("button", { name: "분량 저장" }));
+
+    expect(await volume.findByRole("status")).toBeInTheDocument();
+    expect(bodiesOf(server, "PUT", "/api/interests/volume")).toEqual([
+      { volume: "MANY", customCount: null, bigSlots: 3 },
+    ]);
+  });
+
+  // 저장 결과의 범위는 조회한 범위(10 ~ 150 · 0 ~ 10)와 다르게 둔다 — 안내가 저장 결과의 범위를 읽는지 가린다
+  it.each([
+    [
+      "COUNT_OUT_OF_RANGE",
+      {
+        result: "COUNT_OUT_OF_RANGE",
+        volume: null,
+        range: { min: 20, max: 120 },
+      },
+      "직접 입력한 후보 수는 20 ~ 120건이어야 합니다.",
+    ],
+    [
+      "BIG_SLOTS_OUT_OF_RANGE",
+      {
+        result: "BIG_SLOTS_OUT_OF_RANGE",
+        volume: null,
+        range: { min: 1, max: 8 },
+      },
+      "큰 스토리라인 수는 1 ~ 8개여야 합니다.",
+    ],
+  ] as const)(
+    "분량 저장이 %s 이면 받는 범위를 알린다",
+    async (_result, response, text) => {
+      renderInterests({ "PUT /api/interests/volume": () => json(response) });
+      const user = userEvent.setup();
+      const volume = await section("다이제스트 분량");
+
+      await user.click(
+        await volume.findByRole("button", { name: "분량 저장" }),
+      );
+
+      expect(await volume.findByRole("alert")).toHaveTextContent(text);
     },
   );
 

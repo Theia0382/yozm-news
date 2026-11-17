@@ -68,4 +68,9 @@ class ArticleDirectoryService implements ArticleDirectory {
 		return this.repository.findSources(ids);
 	}
 
+	@Override
+	public Map<ArticleId, Instant> publishedAt(Collection<ArticleId> ids) {
+		return this.repository.findPublishedAt(ids);
+	}
+
 }

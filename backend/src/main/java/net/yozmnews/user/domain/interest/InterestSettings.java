@@ -10,8 +10,8 @@ import org.jspecify.annotations.Nullable;
 /**
  * 설정 행 aggregate({@code user_settings}) — 사용자마다 하나 — docs/specs/user.md §4 · user-R43 · user-R45 · user-R46
  * <p>
- * 선호 버전(태그 선호 전체가 그 버전의 키다) · 일정 · 관심사 · 고른 모델 · 변화 리포트. 관심 설정의 쓰기 · 조회는 이 행을 잠근다. 바꾸는 메서드는
- * 새 값을 돌려주고 고친 시각을 옮긴다 — 판은 저장소가 올린다.
+ * 선호 버전(태그 선호 전체가 그 버전의 키다) · 일정 · 관심사 · 고른 모델 · 변화 리포트 · 다이제스트 분량. 관심 설정의 쓰기 · 조회는 이 행을
+ * 잠근다. 바꾸는 메서드는 새 값을 돌려주고 고친 시각을 옮긴다 — 판은 저장소가 올린다.
  */
 public final class InterestSettings {
 
@@ -27,18 +27,21 @@ public final class InterestSettings {
 
 	private final ReportSettings reports;
 
+	private final DigestVolume volume;
+
 	private final Instant updatedAt;
 
 	private final long version;
 
 	public InterestSettings(UserId user, TagSetId preferenceVersion, DigestSchedule schedule, InterestText interestText,
-			@Nullable ModelRef model, ReportSettings reports, Instant updatedAt, long version) {
+			@Nullable ModelRef model, ReportSettings reports, DigestVolume volume, Instant updatedAt, long version) {
 		this.user = Objects.requireNonNull(user, "user");
 		this.preferenceVersion = Objects.requireNonNull(preferenceVersion, "preferenceVersion");
 		this.schedule = Objects.requireNonNull(schedule, "schedule");
 		this.interestText = Objects.requireNonNull(interestText, "interestText");
 		this.model = model;
 		this.reports = Objects.requireNonNull(reports, "reports");
+		this.volume = Objects.requireNonNull(volume, "volume");
 		this.updatedAt = Objects.requireNonNull(updatedAt, "updatedAt");
 		this.version = version;
 	}
@@ -49,26 +52,32 @@ public final class InterestSettings {
 				new DigestSchedule(InterestDefaults.TIMEZONE, InterestDefaults.DIGEST_TIME), InterestText.NONE, null,
 				new ReportSettings(InterestDefaults.WEEKLY_REPORT, InterestDefaults.WEEKLY_REPORT_DAY,
 						InterestDefaults.MONTHLY_REPORT),
-				now, 0);
+				DigestVolume.defaults(), now, 0);
 	}
 
 	/** 선호 버전을 바꾼다 — 따라가기가 부른다(user-R47) */
 	public InterestSettings withPreferenceVersion(TagSetId version, Instant now) {
-		return new InterestSettings(this.user, version, this.schedule, this.interestText, this.model, this.reports, now,
-				this.version);
+		return new InterestSettings(this.user, version, this.schedule, this.interestText, this.model, this.reports,
+				this.volume, now, this.version);
 	}
 
 	/** 일정 · 관심사 · 리포트를 바꾼다(user-R50) */
 	public InterestSettings withDigest(DigestSchedule schedule, InterestText interestText, ReportSettings reports,
 			Instant now) {
-		return new InterestSettings(this.user, this.preferenceVersion, schedule, interestText, this.model, reports, now,
-				this.version);
+		return new InterestSettings(this.user, this.preferenceVersion, schedule, interestText, this.model, reports,
+				this.volume, now, this.version);
 	}
 
 	/** 고른 모델을 바꾼다(user-R51) */
 	public InterestSettings withModel(ModelRef model, Instant now) {
 		return new InterestSettings(this.user, this.preferenceVersion, this.schedule, this.interestText,
-				Objects.requireNonNull(model, "model"), this.reports, now, this.version);
+				Objects.requireNonNull(model, "model"), this.reports, this.volume, now, this.version);
+	}
+
+	/** 다이제스트 분량을 바꾼다 */
+	public InterestSettings withVolume(DigestVolume volume, Instant now) {
+		return new InterestSettings(this.user, this.preferenceVersion, this.schedule, this.interestText, this.model,
+				this.reports, Objects.requireNonNull(volume, "volume"), now, this.version);
 	}
 
 	public UserId user() {
@@ -93,6 +102,10 @@ public final class InterestSettings {
 
 	public ReportSettings reports() {
 		return this.reports;
+	}
+
+	public DigestVolume volume() {
+		return this.volume;
 	}
 
 	public Instant updatedAt() {

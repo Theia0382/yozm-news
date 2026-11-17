@@ -78,7 +78,7 @@ public record PreferenceSet(Set<String> topics, Set<String> excludedRegions, Set
 		Set<String> covered = new HashSet<>();
 		for (TopicCategory category : version.topics()) {
 			if (this.topics.contains(category.key())) {
-				category.subtopics().forEach(subtopic -> covered.add(subtopic.key()));
+				covered.addAll(TopicExpansion.subtopicsOf(version, category.key()));
 			}
 		}
 		Set<String> topics = this.topics.stream().filter(key -> !covered.contains(key)).collect(Collectors.toSet());

@@ -368,14 +368,19 @@ public record TagSetVersionView(TagSetId id, int number, boolean active, ChangeA
 
 ```java
 public interface ArticleEvaluations {
+    int MAX_ARTICLES = 1000;                                  // findAll 한 번에 묻는 기사 수의 상한 — 정본. 측정 전 목표
     Optional<ArticleEvaluationView> find(ArticleId articleId);
     Map<ArticleId, Double> importances(Collection<ArticleId> articleIds);
+    Map<ArticleId, ArticleEvaluationView> findAll(Collection<ArticleId> articleIds);
+    List<ArticleId> firstEvaluatedIn(EvaluationPeriod period);
 }
 ```
 
 | 멤버 | 뜻 |
 |---|---|
 | `find` | 기사의 평가 — 평가하지 않은 기사면 빈 값. 평가가 여러 버전이면 버전 번호가 가장 큰 것 — 버전은 앞으로만 켜므로 기사를 평가한 버전 가운데 가장 최근에 활성이던 것이다(tag-R16). 태그 키는 그 평가 버전의 키다 — 활성 버전의 키로 풀려면 `TagKeyLineage` |
+| `findAll` | 기사들의 평가 — 기사마다 `find` 와 같은 평가 · 같은 판정. 평가는 질의 하나로 읽고, 판정에 쓰는 버전 내용 · 태그 기준은 버전마다 한 번 읽는다(기사 수와 무관). 평가하지 않은 기사는 빠진다. 빈 입력이면 빈 맵. 서로 다른 기사가 `MAX_ARTICLES` 개를 넘으면 `IllegalArgumentException` — 부르는 쪽이 나눈다. 다이제스트 후보 선별이 읽는다 |
+| `firstEvaluatedIn` | 첫 평가 시각(tag-R30)이 집계 기간 안인 기사 — 기사 ID 순, 한 번씩. 다이제스트 후보 선별이 그 기간에 새로 평가된 기사를 고른다 |
 | `importances` | 기사들의 중요도 기대값(1 ~ 5) — `find` 와 같은 평가(버전 번호가 가장 큰 것)의 값. 평가하지 않았거나 그 평가의 중요도가 없으면 빠진다 — 이전 버전의 값으로 내려가지 않는다. 빈 입력이면 빈 맵. `event` 가 기간 집계의 중요도 평균을 센다(질의 하나) |
 
 - 계약
@@ -896,7 +901,7 @@ sequenceDiagram
 - `ArticleEventsListener` — 리스너(들어오는 쪽). 넣기는 시각을 `InstantSource` 에서 얻는다. 지우기는 한 트랜잭션에서 대기 행을 먼저, 평가 · 태그 행을 나중에 지운다(tag-R21)
 - `PendingEvaluations` — 대기 점유. `claimDue(now)` 가 한 트랜잭션에서 평가할 수 있는 대기를 `CLAIM_BATCH`(50 — 측정 전 목표, 정본)까지 잠그고 점유를 써 커밋한다(tag-R19)
 - `EvaluationRound` — 평가 회차 하나(tag-R19 · R20). 태그 판정은 `evaluation` 의 `ArticleTagging.judge` 로 한다 — 기사 ID 와 그 버전의 `TagSetView.questions()`. 시각은 `InstantSource` 에서 얻는다. 로그: `평가 대기 기사가 지워져 대기에서 뺐다 — 기사 {ID}` · `활성 태그 체계가 바뀌어 회차를 멈췄다 — 기사 {ID}`(정보), `평가기를 쓸 수 없어 회차를 멈췄다 — 기사 {ID}: {문구}`(경고), `태그 판정이 실패해 회차를 멈췄다 — 기사 {ID}`(오류 — 예외 동봉. 판정 결과가 질문 묶음과 어긋난 것도 `evaluation` 의 예외로 여기에 든다)
-- `ArticleEvaluationsService` — 공개 API `ArticleEvaluations` 의 구현(tag-R15)
+- `ArticleEvaluationsService` — 공개 API `ArticleEvaluations` 의 구현(tag-R15). `findAll` 은 서로 다른 기사로 상한을 세고 `findLatestAll` 의 평가마다 `find` 와 같은 판정을 한다 — 버전 내용 · 태그 기준은 버전마다 한 번 읽어 그 호출 안에서 다시 쓴다
 - `EvaluationAdministrationService` — 공개 운영 API `EvaluationAdministration` 의 구현. `overview` 는 `PlatformTransactionManager` 로 만든 읽기 전용 `REPEATABLE READ` `TransactionTemplate` 안에서 센다 — 저장 바닥은 `StoreFloorsReader` 에서 얻는다(tag-R29)
 - `TopicCoverageService` — 공개 조회 `TopicCoverage` 의 구현. 같은 모양의 트랜잭션 안에서 센다 — 평가에 나온 버전마다 체계 · 지금 기준 · 계보 표를 한 번씩 읽는다(호출 하나 안). 역할 애너테이션이 없다(tag-R30)
 - `TagBackfillAdministrationService` — 공개 운영 API `TagBackfillAdministration` 의 구현(tag-R31). 요청은 한 트랜잭션에서 `tag_sets` 표를 `SHARE` 로 잠근 뒤 모든 버전의 지금 저장 기준과 범위의 평가 수로 버전별 계획을 만들어 기록한다. 기록하지 못하면 끝나지 않은 채움을 읽어 `AlreadyOpen` 으로 — 그 사이 끝나 읽기가 비면 기록을 한 번 더 한다. 시각은 `InstantSource` 에서 얻는다
@@ -1028,6 +1033,8 @@ sequenceDiagram
       void insert(EvaluationRecord record);                            // 평가 행(판정 원본 ID) + 태그 행 — 기사 · 버전마다 하나
       Optional<StoredEvaluation> findLatest(ArticleId articleId);      // 버전 번호가 가장 큰 평가와 그 태그 행
       Map<ArticleId, Double> findLatestImportances(Collection<ArticleId> articleIds);  // 기사마다 버전 번호가 가장 큰 평가의 중요도 — 없거나 null 이면 빠진다
+      List<StoredEvaluation> findLatestAll(Collection<ArticleId> articleIds);  // 기사마다 버전 번호가 가장 큰 평가와 모든 태그 행 — 기사 ID 순, 질의 하나
+      List<ArticleId> firstEvaluatedIn(Instant from, Instant to);       // 첫 평가 시각 [from, to) 인 기사 — 기사 ID 순, 한 번씩
       void streamVersionPeriod(TagSetId version, Instant from, Instant to,
               Consumer<SampleRow> sink);                                // 그 버전 · 평가 시각 [from, to) — 평가 ID 순
       void streamFirstEvaluatedIn(Instant from, Instant to,
@@ -1091,7 +1098,7 @@ sequenceDiagram
 - `TagSetRepository` 는 Spring Data JDBC 저장소다. 표 잠금은 `LOCK TABLE tag_sets IN SHARE ROW EXCLUSIVE MODE`(`lockForChange`) · `IN SHARE MODE`(`lockAgainstChange`) 다. 행 잠금(`FOR SHARE`)을 쓰지 않는 것은, READ COMMITTED 에서 전환을 기다린 문장이 다시 평가할 때 끈 옛 행만 보고 새 활성 행은 보지 못하기 때문이다. `deactivate` 는 조건부 갱신(`… where id = :id and active`)이다
 - `JdbcTagBackfillRepository` — `TagBackfillRepository` 의 PostgreSQL 구현(JdbcClient). 넣기는 끝나지 않은 행의 부분 고유 인덱스에 `INSERT … ON CONFLICT DO NOTHING RETURNING id` 로 판정한다 — 위반 예외는 트랜잭션을 깨므로 쓰지 않는다. 잠금은 `FOR UPDATE SKIP LOCKED`, 회차의 쓰기는 점유 토큰을 조건으로 한 갱신이다. 덮음은 끝났고 그 버전에서 건너뛴 평가가 없는 채움만 읽는다
 - `JdbcEvaluationQueueRepository` — `EvaluationQueueRepository` 의 PostgreSQL 구현(JdbcClient). 넣기는 `INSERT … ON CONFLICT DO NOTHING`, 재평가는 `INSERT … SELECT unnest(…) ON CONFLICT … DO UPDATE … WHERE failure IS NOT NULL` 한 문장, 잠금은 `FOR UPDATE SKIP LOCKED`, 회차의 반영은 점유 토큰을 조건으로 한 갱신 · 삭제다. 평가 가능 시각의 정착 시간은 `EvaluationSchedule` 이 정한다 — SQL 에 값을 두지 않는다
-- `JdbcEvaluationResultRepository` — `EvaluationResultRepository` 의 PostgreSQL 구현(JdbcClient). 분포는 `jsonb` 로 쓰고, 지우기는 평가 행을 평가 ID 순으로 `FOR UPDATE` 로 잠근 뒤 태그 행 → 평가 행 순이다(tag-R21). 채움의 잠금 읽기는 `ORDER BY id LIMIT … FOR KEY SHARE`, 태그 더하기는 `INSERT … ON CONFLICT (evaluation_id, tag_kind, tag_key) DO NOTHING` 이다. 잠금 읽기의 묶음은 그새 지워진 평가 때문에 비지 않는다 — PostgreSQL 의 잠금 절은 "If a LIMIT is used, locking stops once enough rows have been returned to satisfy the limit"이고, 다시 평가해 돌려주지 않는 행은 그 수에 들지 않는다([PostgreSQL 18 SELECT — The Locking Clause](https://www.postgresql.org/docs/18/sql-select.html#SQL-FOR-UPDATE-SHARE)). 흘려 받기 둘은 SQL 한 문장을 `STREAM_FETCH_SIZE`(1,000행) 커서로 받아 평가마다 태그 행을 묶는 보조 하나를 함께 쓴다 — PgJDBC 는 트랜잭션 안(autocommit 꺼짐)에서 fetch size 가 있을 때만 나눠 받는다. 최신 평가 고르기의 정렬(`LATEST_VERSION_FIRST` — 버전 번호 내림차순)은 `findLatest` · `findLatestImportances`(`distinct on` 으로 기사마다 하나를 고른 뒤 null 을 거른다)와 첫 평가 흘려 받기가 함께 쓴다
+- `JdbcEvaluationResultRepository` — `EvaluationResultRepository` 의 PostgreSQL 구현(JdbcClient). 분포는 `jsonb` 로 쓰고, 지우기는 평가 행을 평가 ID 순으로 `FOR UPDATE` 로 잠근 뒤 태그 행 → 평가 행 순이다(tag-R21). 채움의 잠금 읽기는 `ORDER BY id LIMIT … FOR KEY SHARE`, 태그 더하기는 `INSERT … ON CONFLICT (evaluation_id, tag_kind, tag_key) DO NOTHING` 이다. 잠금 읽기의 묶음은 그새 지워진 평가 때문에 비지 않는다 — PostgreSQL 의 잠금 절은 "If a LIMIT is used, locking stops once enough rows have been returned to satisfy the limit"이고, 다시 평가해 돌려주지 않는 행은 그 수에 들지 않는다([PostgreSQL 18 SELECT — The Locking Clause](https://www.postgresql.org/docs/18/sql-select.html#SQL-FOR-UPDATE-SHARE)). 흘려 받기 둘은 SQL 한 문장을 `STREAM_FETCH_SIZE`(1,000행) 커서로 받아 평가마다 태그 행을 묶는 보조 하나를 함께 쓴다 — PgJDBC 는 트랜잭션 안(autocommit 꺼짐)에서 fetch size 가 있을 때만 나눠 받는다. 최신 평가 고르기의 정렬(`LATEST_VERSION_FIRST` — 버전 번호 내림차순)은 `findLatest` · `findLatestImportances`(`distinct on` 으로 기사마다 하나를 고른 뒤 null 을 거른다) · `findLatestAll` 과 첫 평가 흘려 받기가 함께 쓴다. 첫 평가 시각의 CTE(`FIRSTS` — 그 기사에 더 이른 평가가 없는 평가의 기사)는 첫 평가 흘려 받기와 `firstEvaluatedIn` 이 함께 쓰는 정본이다 — 같은 가장 이른 시각의 평가가 둘이면 기사가 두 번 나오므로 `firstEvaluatedIn` 은 `distinct` 로 한 번씩 낸다
 
 #### 신뢰할 수 없는 입력
 

@@ -14,10 +14,12 @@ import net.yozmnews.platform.WebRole;
 import net.yozmnews.source.SourceId;
 import net.yozmnews.tag.TagSetId;
 import net.yozmnews.user.application.DigestSettings;
+import net.yozmnews.user.application.DigestVolumeSettings;
 import net.yozmnews.user.application.ExcludedSources;
 import net.yozmnews.user.application.ModelSelection;
 import net.yozmnews.user.application.TagPreferences;
 import net.yozmnews.user.application.TagPreferences.UnknownTagKeysException;
+import net.yozmnews.user.domain.interest.DigestVolume;
 import net.yozmnews.user.domain.interest.ReportSettings;
 import net.yozmnews.user.domain.preference.PreferenceSet;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,7 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
- * 관심 설정 — 태그 선호 · 제외 소스 · 일정 · 관심사 · 리포트 · 모델의 조회 · 저장. docs/specs/user.md §3 · user-R46 · user-R49 ~ user-R51
+ * 관심 설정 — 태그 선호 · 제외 소스 · 일정 · 관심사 · 리포트 · 모델 · 다이제스트 분량의 조회 · 저장. docs/specs/user.md §3 · user-R46 · user-R49 ~ user-R51
  * <p>
  * 모두 세션 사용자의 것이고 키 없이도 연다 — 관심 설정은 내용을 내지 않는다(user-R5).
  */
@@ -47,20 +49,23 @@ class InterestController {
 
 	private final ModelSelection modelSelection;
 
+	private final DigestVolumeSettings volumeSettings;
+
 	private final InstantSource clock;
 
 	@Autowired
 	InterestController(TagPreferences tagPreferences, ExcludedSources excludedSources, DigestSettings digestSettings,
-			ModelSelection modelSelection) {
-		this(tagPreferences, excludedSources, digestSettings, modelSelection, InstantSource.system());
+			ModelSelection modelSelection, DigestVolumeSettings volumeSettings) {
+		this(tagPreferences, excludedSources, digestSettings, modelSelection, volumeSettings, InstantSource.system());
 	}
 
 	InterestController(TagPreferences tagPreferences, ExcludedSources excludedSources, DigestSettings digestSettings,
-			ModelSelection modelSelection, InstantSource clock) {
+			ModelSelection modelSelection, DigestVolumeSettings volumeSettings, InstantSource clock) {
 		this.tagPreferences = Objects.requireNonNull(tagPreferences, "tagPreferences");
 		this.excludedSources = Objects.requireNonNull(excludedSources, "excludedSources");
 		this.digestSettings = Objects.requireNonNull(digestSettings, "digestSettings");
 		this.modelSelection = Objects.requireNonNull(modelSelection, "modelSelection");
+		this.volumeSettings = Objects.requireNonNull(volumeSettings, "volumeSettings");
 		this.clock = Objects.requireNonNull(clock, "clock");
 	}
 
@@ -125,6 +130,24 @@ class InterestController {
 		return InterestSettingsSaveResponse.of(this.digestSettings.save(user, body.timezone(), time,
 				body.interestText(), new ReportSettings(body.weeklyReport(), body.weeklyReportDay(), body.monthlyReport()),
 				now()));
+	}
+
+	/** 다이제스트 분량 — 최대 후보 수의 단계 · 직접 입력 · 큰 슬롯 수와 단계의 값 · 범위 */
+	@AllowedWithoutLlmKey(reason = OPEN_WITHOUT_KEY)
+	@GetMapping("/api/interests/volume")
+	InterestVolumeResponse volume(UserId user) {
+		return InterestVolumeResponse.of(this.volumeSettings.view(user, now()));
+	}
+
+	/** 다이제스트 분량 저장 — 직접 입력과 직접 입력한 수의 짝이 맞지 않으면 400 */
+	@AllowedWithoutLlmKey(reason = OPEN_WITHOUT_KEY)
+	@PutMapping("/api/interests/volume")
+	InterestVolumeSaveResponse saveVolume(UserId user, @Valid @RequestBody InterestVolumeRequest body) {
+		if (!DigestVolume.customCountMatches(body.volume(), body.customCount())) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "직접 입력일 때만 직접 입력한 수를 보낸다");
+		}
+		return InterestVolumeSaveResponse.of(
+				this.volumeSettings.save(user, body.volume(), body.customCount(), body.bigSlots(), now()));
 	}
 
 	/** 고를 수 있는 모델 · 고른 모델 · 쓸 모델 */
