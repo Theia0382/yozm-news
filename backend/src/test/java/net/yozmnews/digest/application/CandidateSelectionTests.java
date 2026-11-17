@@ -211,7 +211,8 @@ class CandidateSelectionTests {
 		TagSetId elsewhere = new TagSetId(this.tagSets.activeTagSet().id().value() + 1_000);
 		AtomicInteger skewed = new AtomicInteger(1);
 		CandidateSelection once = new CandidateSelection(this.interests, this.evaluations,
-				skewing(skewed, elsewhere), this.articles, this.events, this.storylines);
+				new ActiveEvaluations(this.evaluations, skewing(skewed, elsewhere)), this.articles, this.events,
+				this.storylines);
 
 		assertThat(once.select(new UserId(this.user), DAY, ROOMY)).extracting(DigestCandidate::articleId)
 			.containsExactly(new ArticleId(this.a1), new ArticleId(this.a5));
@@ -219,7 +220,8 @@ class CandidateSelectionTests {
 
 		AtomicInteger always = new AtomicInteger(Integer.MAX_VALUE);
 		CandidateSelection never = new CandidateSelection(this.interests, this.evaluations,
-				skewing(always, elsewhere), this.articles, this.events, this.storylines);
+				new ActiveEvaluations(this.evaluations, skewing(always, elsewhere)), this.articles, this.events,
+				this.storylines);
 		assertThatIllegalStateException().isThrownBy(() -> never.select(new UserId(this.user), DAY, ROOMY))
 			.withMessageContaining("2 번 어긋났다");
 	}

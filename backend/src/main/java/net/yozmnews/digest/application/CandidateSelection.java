@@ -9,13 +9,13 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import net.yozmnews.article.ArticleContent;
 import net.yozmnews.article.ArticleDirectory;
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.digest.domain.candidate.DigestCandidate;
 import net.yozmnews.digest.domain.digest.DigestPeriod;
+import net.yozmnews.digest.domain.selection.ActiveEvaluation;
 import net.yozmnews.digest.domain.selection.ArticleFacts;
 import net.yozmnews.digest.domain.selection.BigSlotPicker;
 import net.yozmnews.digest.domain.selection.BigSlotPicker.BigEvent;
@@ -39,13 +39,8 @@ import net.yozmnews.source.SourceId;
 import net.yozmnews.storyline.BigStoryline;
 import net.yozmnews.storyline.StorylineDirectory;
 import net.yozmnews.storyline.StorylineId;
-import net.yozmnews.tag.ArticleEvaluationView;
 import net.yozmnews.tag.ArticleEvaluations;
 import net.yozmnews.tag.EvaluationPeriod;
-import net.yozmnews.tag.TagKeyLineage;
-import net.yozmnews.tag.TagKeyMapping;
-import net.yozmnews.tag.TagKind;
-import net.yozmnews.tag.TagProbability;
 import net.yozmnews.tag.TagSetId;
 import net.yozmnews.user.DigestInterests;
 import net.yozmnews.user.DigestInterestsDirectory;
@@ -71,7 +66,7 @@ public class CandidateSelection {
 
 	private final ArticleEvaluations evaluations;
 
-	private final TagKeyLineage lineage;
+	private final ActiveEvaluations activeEvaluations;
 
 	private final ArticleDirectory articles;
 
@@ -79,11 +74,12 @@ public class CandidateSelection {
 
 	private final StorylineDirectory storylines;
 
-	CandidateSelection(DigestInterestsDirectory interests, ArticleEvaluations evaluations, TagKeyLineage lineage,
-			ArticleDirectory articles, EventDirectory events, StorylineDirectory storylines) {
+	CandidateSelection(DigestInterestsDirectory interests, ArticleEvaluations evaluations,
+			ActiveEvaluations activeEvaluations, ArticleDirectory articles, EventDirectory events,
+			StorylineDirectory storylines) {
 		this.interests = Objects.requireNonNull(interests, "interests");
 		this.evaluations = Objects.requireNonNull(evaluations, "evaluations");
-		this.lineage = Objects.requireNonNull(lineage, "lineage");
+		this.activeEvaluations = Objects.requireNonNull(activeEvaluations, "activeEvaluations");
 		this.articles = Objects.requireNonNull(articles, "articles");
 		this.events = Objects.requireNonNull(events, "events");
 		this.storylines = Objects.requireNonNull(storylines, "storylines");
@@ -206,51 +202,32 @@ public class CandidateSelection {
 	}
 
 	/**
-	 * 기사들의 재료 — 평가 · 발행 시각 · 소스를 읽고 평가 키를 활성 키로 푼다. 그 사이 지운 기사는 빠진다.
+	 * 기사들의 재료 — 평가를 활성 키로 푼 것({@link ActiveEvaluations})에 발행 시각 · 소스를 얹는다. 그 사이 지운 기사는 빠진다.
 	 * @return 계보 표의 활성 버전이 관심 설정의 버전과 다르면 빈 값
 	 */
 	private Optional<List<ArticleFacts>> facts(List<ArticleId> ids, TagSetId active) {
-		Map<ArticleId, ArticleEvaluationView> views = evaluations(ids);
-		if (views.isEmpty()) {
+		Optional<Map<ArticleId, ActiveEvaluation>> resolved = this.activeEvaluations.read(ids, active);
+		if (resolved.isEmpty()) {
+			return Optional.empty();
+		}
+		Map<ArticleId, ActiveEvaluation> evaluated = resolved.get();
+		if (evaluated.isEmpty()) {
 			return Optional.of(List.of());
 		}
-		Map<TagSetId, TagKeyMapping> mappings = new HashMap<>();
-		Set<TagSetId> versions = views.values()
-			.stream()
-			.map(ArticleEvaluationView::tagSetId)
-			.collect(Collectors.toSet());
-		for (TagSetId version : versions) {
-			TagKeyMapping mapping = this.lineage.toActive(version);
-			if (!mapping.to().equals(active)) {
-				return Optional.empty();
-			}
-			mappings.put(version, mapping);
-		}
-		Map<ArticleId, Instant> published = this.articles.publishedAt(views.keySet());
-		Map<ArticleId, Set<SourceId>> sources = this.articles.sources(views.keySet());
-		List<ArticleFacts> facts = new ArrayList<>(views.size());
-		for (ArticleEvaluationView view : views.values()) {
-			Instant publishedAt = published.get(view.articleId());
-			Set<SourceId> articleSources = sources.get(view.articleId());
+		Map<ArticleId, Instant> published = this.articles.publishedAt(evaluated.keySet());
+		Map<ArticleId, Set<SourceId>> sources = this.articles.sources(evaluated.keySet());
+		List<ArticleFacts> facts = new ArrayList<>(evaluated.size());
+		for (ActiveEvaluation evaluation : evaluated.values()) {
+			Instant publishedAt = published.get(evaluation.id());
+			Set<SourceId> articleSources = sources.get(evaluation.id());
 			if (publishedAt == null || articleSources == null) {
 				continue;
 			}
-			TagKeyMapping mapping = mappings.get(view.tagSetId());
-			facts.add(new ArticleFacts(view.articleId(), resolve(mapping, TagKind.TOPIC, view.topics()),
-					resolve(mapping, TagKind.REGION, view.regions()), mapping.resolve(TagKind.FORMAT, view.format()),
-					view.topicStatus(), view.importance(), articleSources, publishedAt));
+			facts.add(new ArticleFacts(evaluation.id(), evaluation.subtopics(), evaluation.regions(),
+					evaluation.formats(), evaluation.topicStatus(), evaluation.importance(), articleSources,
+					publishedAt));
 		}
 		return Optional.of(facts);
-	}
-
-	/** {@link ArticleEvaluations#MAX_ARTICLES} 씩 나눠 읽는다 */
-	private Map<ArticleId, ArticleEvaluationView> evaluations(List<ArticleId> ids) {
-		Map<ArticleId, ArticleEvaluationView> views = new LinkedHashMap<>();
-		for (int i = 0; i < ids.size(); i += ArticleEvaluations.MAX_ARTICLES) {
-			int end = Math.min(ids.size(), i + ArticleEvaluations.MAX_ARTICLES);
-			views.putAll(this.evaluations.findAll(ids.subList(i, end)));
-		}
-		return views;
 	}
 
 	/** 고른 후보마다 토큰 어림 — 제목 · 요약문 길이. 내용을 읽지 못한(그 사이 지운) 기사는 빠진다 */
@@ -267,12 +244,6 @@ public class CandidateSelection {
 			tokens.put(content.id(), CandidateCost.candidate(codePoints(content.title()), codePoints(summary)));
 		}
 		return tokens;
-	}
-
-	private static Set<String> resolve(TagKeyMapping mapping, TagKind kind, List<TagProbability> tags) {
-		return tags.stream()
-			.flatMap(tag -> mapping.resolve(kind, tag.key()).stream())
-			.collect(Collectors.toUnmodifiableSet());
 	}
 
 	private static int codePoints(String text) {
