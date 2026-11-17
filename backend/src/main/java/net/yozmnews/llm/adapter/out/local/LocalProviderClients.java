@@ -1,9 +1,13 @@
 package net.yozmnews.llm.adapter.out.local;
 
+import java.time.Duration;
 import java.util.Objects;
 
+import net.yozmnews.llm.GenerationStop;
 import net.yozmnews.llm.LlmFailureKind;
 import net.yozmnews.llm.Provider;
+import net.yozmnews.llm.domain.provider.GenerationCall;
+import net.yozmnews.llm.domain.provider.GenerationOutcome;
 import net.yozmnews.llm.domain.provider.LlmProviderClient;
 import net.yozmnews.llm.domain.provider.LlmProviderClients;
 import net.yozmnews.llm.domain.provider.ProbeResult;
@@ -12,7 +16,9 @@ import net.yozmnews.platform.SecretValue;
 /**
  * 공급자 클라이언트 포트의 로컬 대체물 — docs/specs/llm.md §4 · llm-R16.
  * <p>
- * 가짜 키({@value #PREFIX} 로 시작)는 공급자에 묻지 않고 접두 뒤의 낱말이 정한 결과를 낸다. 그 밖의 키는 넘겨받은 구현으로 넘긴다.
+ * 가짜 키({@value #PREFIX} 로 시작)는 공급자에 묻지 않고 접두 뒤의 낱말이 정한 결과를 낸다 — 확인 요청과 생성 요청이 같은 낱말 규칙을
+ * 쓴다. 성공 낱말의 생성 본문은 출력 스키마를 따라 만든 가장 작은 JSON({@link MinimalJson})이고 토큰은 0 이다. 그 밖의 키는 넘겨받은
+ * 구현으로 넘긴다.
  */
 final class LocalProviderClients implements LlmProviderClients {
 
@@ -29,12 +35,13 @@ final class LocalProviderClients implements LlmProviderClients {
 	}
 
 	@Override
-	public LlmProviderClient open(Provider provider, SecretValue key) {
+	public LlmProviderClient open(Provider provider, SecretValue key, Duration deadline) {
 		Objects.requireNonNull(provider, "provider");
 		Objects.requireNonNull(key, "key");
+		Objects.requireNonNull(deadline, "deadline");
 		String value = key.reveal();
 		if (!value.startsWith(PREFIX)) {
-			return this.delegate.open(provider, key);
+			return this.delegate.open(provider, key, deadline);
 		}
 		ProbeResult result = result(word(value));
 		return new LlmProviderClient() {
@@ -42,6 +49,17 @@ final class LocalProviderClients implements LlmProviderClients {
 			@Override
 			public ProbeResult probe() {
 				return result;
+			}
+
+			@Override
+			public GenerationOutcome generate(GenerationCall call) {
+				Objects.requireNonNull(call, "call");
+				return switch (result) {
+					case ProbeResult.Reachable reachable ->
+						new GenerationOutcome.Answered(MinimalJson.of(call.outputSchema()), 0, 0, GenerationStop.COMPLETE);
+					case ProbeResult.Failed failed ->
+						new GenerationOutcome.Failed(failed.kind(), failed.message(), null, false);
+				};
 			}
 
 			@Override

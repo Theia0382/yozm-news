@@ -1,6 +1,8 @@
 package net.yozmnews.llm.adapter.out.sdk;
 
+import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 import com.openai.client.OpenAIClient;
 import com.openai.client.OpenAIClientAsync;
@@ -11,27 +13,42 @@ import com.openai.core.LogLevel;
 import com.openai.errors.OpenAIException;
 import com.openai.errors.OpenAIIoException;
 import com.openai.errors.OpenAIServiceException;
+import net.yozmnews.llm.GenerationStop;
 import net.yozmnews.llm.LlmFailureKind;
+import net.yozmnews.llm.ReasoningEffort;
 import net.yozmnews.llm.domain.failure.OpenAiErrors;
 import net.yozmnews.llm.domain.failure.ProviderError;
+import net.yozmnews.llm.domain.provider.GenerationCall;
+import net.yozmnews.llm.domain.provider.GenerationOutcome;
 import net.yozmnews.llm.domain.provider.LlmProviderClient;
 import net.yozmnews.llm.domain.provider.ProbeResult;
+import net.yozmnews.llm.domain.provider.StopReasons;
+import net.yozmnews.llm.domain.schema.OpenAiSchemas;
 import net.yozmnews.platform.SecretValue;
+import org.springframework.ai.chat.messages.SystemMessage;
+import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.model.Generation;
+import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
 
 /**
- * 키 하나의 OpenAI 클라이언트 — docs/specs/llm.md §4 · llm-R6 · R8 · R9 · R11 · R12 · R14.
+ * 키 하나의 OpenAI 클라이언트 — docs/specs/llm.md §4 · llm-R6 · R8 · R9 · R11 · R12 · R14 · R21 · R22.
  * <p>
  * SDK 클라이언트를 직접 조립한다 — 주소 · 키 · 로그 수준(꺼짐) · 재시도(0)를 명시하고, 값이 비면 환경 변수를 읽는 길(Spring AI 의 설정
- * 도우미 · SDK 의 {@code fromEnv()})을 쓰지 않는다. 동기 · 비동기 클라이언트가 같은 전송을 쓴다. 실패 문구는 고정 문구 · 상태 코드 · 예외
- * 클래스 이름뿐이다 — SDK 예외의 문구에는 공급자가 되돌려준 키 조각이 실린다.
+ * 도우미 · SDK 의 {@code fromEnv()})을 쓰지 않는다. 동기 · 비동기 클라이언트가 같은 전송을 쓴다. 생성은 그 SDK 클라이언트로 만든 Spring AI
+ * 채팅 모델로 보낸다. 실패 문구는 고정 문구 · 상태 코드 · 예외 클래스 이름뿐이다 — SDK 예외의 문구에는 공급자가 되돌려준 키 조각이 실린다.
  */
 final class OpenAiProviderClient implements LlmProviderClient {
 
 	/** 공급자의 기본 주소 — 운영 설정으로 바꿀 수 없다 */
 	static final String BASE_URL = "https://api.openai.com/v1";
+
+	/** Spring AI 가 응답의 거절 문구를 싣는 메타데이터 키 */
+	private static final String REFUSAL = "refusal";
 
 	private final OpenAIClient client;
 
@@ -60,31 +77,66 @@ final class OpenAiProviderClient implements LlmProviderClient {
 			this.client.models().list();
 			return new ProbeResult.Reachable();
 		}
-		catch (OpenAIServiceException ex) {
-			ProviderError error = new ProviderError(ex.statusCode(), ex.code().orElse(null), ex.type().orElse(null),
-					!ex.headers().values("retry-after").isEmpty());
-			return new ProbeResult.Failed(OpenAiErrors.classify(error), "OpenAI 키 확인 요청이 실패했다 — 상태 " + ex.statusCode());
-		}
-		catch (TransportFailure ex) {
-			return new ProbeResult.Failed(ex.failureKind(), ex.getMessage());
-		}
-		catch (OpenAIIoException ex) {
-			return new ProbeResult.Failed(LlmFailureKind.TRANSIENT, "OpenAI 와 주고받지 못했다 — " + name(ex));
-		}
-		catch (OpenAIException ex) {
-			return new ProbeResult.Failed(LlmFailureKind.UNEXPECTED, "OpenAI 의 응답을 읽지 못했다 — " + name(ex));
+		catch (OpenAIException | TransportFailure ex) {
+			return failure(ex, "OpenAI 키 확인 요청이 실패했다 — 상태 ").toProbe();
 		}
 	}
 
+	@Override
+	public GenerationOutcome generate(GenerationCall call) {
+		Objects.requireNonNull(call, "call");
+		ChatResponse response;
+		try {
+			response = chatModel(options(call)).call(new Prompt(
+					List.of(new SystemMessage(call.instructions()), new UserMessage(call.userContent()))));
+		}
+		catch (OpenAIException | TransportFailure ex) {
+			return failure(ex, "OpenAI 생성 요청이 실패했다 — 상태 ").toGeneration();
+		}
+		// 내용 없는 응답 — Spring AI 가 종료 사유 · 사용량 없이 빈 응답을 낸다(llm-R22)
+		if (response.getResults().isEmpty()) {
+			return new GenerationOutcome.Failed(LlmFailureKind.UNEXPECTED, "OpenAI 생성 응답에 내용이 없다", null, false);
+		}
+		Generation first = response.getResult();
+		Object refusal = first.getOutput().getMetadata().get(REFUSAL);
+		Optional<GenerationStop> stop = StopReasons.openAi(first.getMetadata().getFinishReason(),
+				refusal instanceof String text && !text.isEmpty());
+		if (stop.isEmpty()) {
+			return new GenerationOutcome.Failed(LlmFailureKind.UNEXPECTED, "OpenAI 생성 응답의 종료 사유를 모른다", null,
+					false);
+		}
+		Usage usage = response.getMetadata().getUsage();
+		return new GenerationOutcome.Answered(Objects.requireNonNullElse(first.getOutput().getText(), ""),
+				tokens(usage.getPromptTokens()), tokens(usage.getCompletionTokens()), stop.get());
+	}
+
+	private static OpenAiChatOptions options(GenerationCall call) {
+		OpenAiChatOptions.Builder options = OpenAiChatOptions.builder();
+		options.model(call.modelId());
+		options.maxCompletionTokens(call.maxOutputTokens());
+		options.reasoningEffort(effort(call.effort()));
+		if (call.enforcesSchema()) {
+			options.outputSchema(OpenAiSchemas.strict(call.outputSchema()));
+		}
+		return options.build();
+	}
+
+	private static String effort(ReasoningEffort effort) {
+		return switch (effort) {
+			case LOW -> "low";
+			case MEDIUM -> "medium";
+			case HIGH -> "high";
+		};
+	}
+
 	/**
-	 * 이 키의 Spring AI 채팅 모델 — 이 클라이언트의 SDK 클라이언트(동기 · 비동기)로 만들어 Spring AI 가 따로 만들지 않게 한다. 호출 API
-	 * 가 생길 때까지 부르는 프로덕션 코드가 없다.
+	 * 이 키의 Spring AI 채팅 모델 — 이 클라이언트의 SDK 클라이언트(동기 · 비동기)로 만들어 Spring AI 가 따로 만들지 않게 한다.
 	 */
-	ChatModel chatModel(String modelId) {
+	ChatModel chatModel(OpenAiChatOptions options) {
 		return OpenAiChatModel.builder()
 			.openAiClient(this.client)
 			.openAiClientAsync(this.asyncClient)
-			.options(OpenAiChatOptions.builder().model(modelId).build())
+			.options(options)
 			.build();
 	}
 
@@ -92,6 +144,27 @@ final class OpenAiProviderClient implements LlmProviderClient {
 	public void close() {
 		this.client.close();
 		this.asyncClient.close();
+	}
+
+	/** 요청이 답을 받지 못한 까닭 — 확인 요청과 생성 요청이 함께 쓴다 */
+	private static ProviderFailure failure(RuntimeException thrown, String statusPrefix) {
+		return switch (thrown) {
+			case OpenAIServiceException ex -> {
+				ProviderError error = new ProviderError(ex.statusCode(), ex.code().orElse(null), ex.type().orElse(null),
+						!ex.headers().values("retry-after").isEmpty());
+				yield new ProviderFailure(OpenAiErrors.classify(error), statusPrefix + ex.statusCode(),
+						ProviderFailure.retryAfter(ex.headers().values("retry-after")), false);
+			}
+			case TransportFailure ex -> ProviderFailure.of(ex);
+			case OpenAIIoException ex ->
+				new ProviderFailure(LlmFailureKind.TRANSIENT, "OpenAI 와 주고받지 못했다 — " + name(ex), null, false);
+			default -> new ProviderFailure(LlmFailureKind.UNEXPECTED, "OpenAI 의 응답을 읽지 못했다 — " + name(thrown), null,
+					false);
+		};
+	}
+
+	private static int tokens(Integer count) {
+		return (count != null) ? count : 0;
 	}
 
 	private static String name(Throwable thrown) {

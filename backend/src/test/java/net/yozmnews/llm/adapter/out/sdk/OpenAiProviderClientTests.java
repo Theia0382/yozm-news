@@ -27,6 +27,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 
@@ -162,9 +163,8 @@ class OpenAiProviderClientTests {
 	}
 
 	@Test
-	void theProductionLimitsAreFiveAndFifteenSecondsAndOneMebibyte() {
+	void theProductionLimitsAreFiveSecondsToConnectAndOneMebibyte() {
 		assertThat(JdkTransport.CONNECT_TIMEOUT).isEqualTo(Duration.ofSeconds(5));
-		assertThat(JdkTransport.REQUEST_DEADLINE).isEqualTo(Duration.ofSeconds(15));
 		assertThat(JdkTransport.MAX_RESPONSE_BYTES).isEqualTo(1_048_576);
 		assertThat(OpenAiProviderClient.BASE_URL).isEqualTo("https://api.openai.com/v1");
 	}
@@ -196,7 +196,7 @@ class OpenAiProviderClientTests {
 		}
 
 		try (OpenAiProviderClient client = new OpenAiProviderClient("http://127.0.0.1:" + port + "/v1",
-				SecretValue.of(KEY), new JdkTransport())) {
+				SecretValue.of(KEY), new JdkTransport(Duration.ofSeconds(5)))) {
 			assertThat(client.probe())
 				.isEqualTo(new ProbeResult.Failed(LlmFailureKind.TRANSIENT, "LLM 공급자와 주고받지 못했다 — ConnectException"));
 		}
@@ -223,7 +223,7 @@ class OpenAiProviderClientTests {
 	void theChatModelSendsWithTheSameKeyAndAddressAndStopsAfterClose(CapturedOutput output) {
 		server.stubFor(post(urlEqualTo("/v1/chat/completions")).willReturn(json(200, CHAT)));
 		OpenAiProviderClient client = client();
-		ChatModel model = client.chatModel("gpt-x");
+		ChatModel model = client.chatModel(OpenAiChatOptions.builder().model("gpt-x").build());
 		System.out.println("출력표지-openai-chat");
 
 		assertThat(model.call(new Prompt("ping")).getResult().getOutput().getText()).isEqualTo("pong");
@@ -255,7 +255,7 @@ class OpenAiProviderClientTests {
 	@Test
 	void theAsyncPathSendsTheSameRequestAndStopsAfterClose() throws IOException {
 		server.stubFor(get(urlEqualTo("/v1/models")).willReturn(json(200, MODELS)));
-		OpenAiSdkHttpClient http = new OpenAiSdkHttpClient(new JdkTransport());
+		OpenAiSdkHttpClient http = new OpenAiSdkHttpClient(new JdkTransport(Duration.ofSeconds(5)));
 		com.openai.core.http.HttpRequest request = com.openai.core.http.HttpRequest.builder()
 			.method(com.openai.core.http.HttpMethod.GET)
 			.baseUrl(server.baseUrl())
@@ -291,7 +291,7 @@ class OpenAiProviderClientTests {
 	}
 
 	private static OpenAiProviderClient client() {
-		return client(new JdkTransport());
+		return client(new JdkTransport(Duration.ofSeconds(5)));
 	}
 
 	private static OpenAiProviderClient client(JdkTransport transport) {

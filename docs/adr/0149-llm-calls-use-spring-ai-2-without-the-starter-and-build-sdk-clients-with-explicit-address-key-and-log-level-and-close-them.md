@@ -41,3 +41,8 @@
 | 공식 SDK 만 직접 쓴다(Spring AI 없음) | 크기는 그대로다. 구조화 출력 · 토큰 사용량 · 프롬프트 추상을 공급자마다 직접 맞춰야 한다 |
 | JDK `HttpClient` 로 두 공급자의 REST API 를 직접 부른다 | 채팅 · 구조화 출력 · 오류 형식을 공급자마다 구현하고 API 변화를 직접 따라간다 |
 | 공급자의 기본 주소를 운영 설정으로 연다 | 사용자 키와 프롬프트가 운영자가 정한 제3자를 거칠 수 있다([ADR-0008](0008-v1-llm-providers.md) 의 중개 서비스 보류와 같은 이유) |
+
+## 후속 기록
+
+- 2026-11-17: 결정 절 "SDK 의 자동 재시도를 쓸지와 마감은 호출마다 이 모듈이 정해 넘긴다" — 생성 호출의 다시 보내기와 호출 종류마다의 마감 — [ADR-0201](0201-the-gateway-resends-only-transient-generation-failures-and-sets-the-request-deadline-per-call-kind.md) · [llm Spec](../specs/llm.md#키-검증) llm-R7 · [생성 호출](../specs/llm.md#생성-호출) llm-R20
+- 2026-11-17: 결정 절 "SDK 의 로그 수준을 꺼짐으로 명시한다" — Spring AI 채팅 모델의 로그도 앱 설정이 끈다 — [llm Spec](../specs/llm.md#생성-호출) llm-R24

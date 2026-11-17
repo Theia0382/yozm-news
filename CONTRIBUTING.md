@@ -49,6 +49,7 @@ docker buildx bake --allow=fs.read=.. --set '*.platform=linux/amd64,linux/arm64'
 backend/gradlew -p backend test                                  # 전체 테스트
 backend/gradlew -p backend test --tests 'net.yozmnews.digest.*'  # 일부만
 backend/gradlew -p backend build                                 # 컴파일 + 테스트 + 검사
+backend/gradlew -p backend llmLiveCheck                          # 실제 LLM 공급자 확인의 마른 실행(요청 없음) — 실제 요청 · 비용 상한 · 키는 테스트 전략 §14
 ```
 
 결과는 `backend/build/test-results/test/` (JUnit XML) 와 `backend/build/reports/tests/test/index.html` 에 남는다.

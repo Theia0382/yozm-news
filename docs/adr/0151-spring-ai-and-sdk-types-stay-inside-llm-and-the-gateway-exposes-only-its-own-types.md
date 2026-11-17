@@ -30,3 +30,7 @@
 | 대안 | 기각 이유 |
 |---|---|
 | 핸들이 Spring AI 의 채팅 모델을 내놓고 생성기가 직접 부른다 | 라이브러리 예외와 실패 분류가 부르는 모듈마다 놓이고, Spring AI 가 여러 모듈의 의존이 된다 |
+
+## 후속 기록
+
+- 2026-11-17: 결정 절 "호출 API 가 생기면 그 요청 · 결과 타입" · 결과 절 "호출 API … 설계해야 한다" — 생성 호출의 요청 · 결과 타입 — [ADR-0199](0199-generation-requests-carry-only-the-tasks-own-inputs-and-the-gateway-maps-them-to-each-provider.md) · [ADR-0200](0200-generation-results-carry-the-stop-reason-and-schema-enforcement-and-failures-use-the-five-key-check-kinds.md) · [llm Spec](../specs/llm.md#llmclientfactory) `LlmClientFactory.generateStored`

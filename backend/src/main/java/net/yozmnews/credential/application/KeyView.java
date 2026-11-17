@@ -13,7 +13,7 @@ import net.yozmnews.llm.Provider;
  * @param provider 공급자
  * @param hint 힌트 — 없으면 빈 문자열
  * @param status 상태
- * @param validatedAt 마지막으로 성공한 검증의 시각
+ * @param validatedAt 이 키로 공급자가 마지막으로 정상으로 답한 시각 — 등록 · 다시 검증 · 생성 호출이 성공할 때 고쳐진다(credential-R14)
  * @param createdAt 만든 시각
  */
 public record KeyView(Provider provider, String hint, KeyStatus status, Instant validatedAt, Instant createdAt) {

@@ -81,3 +81,10 @@ springdoc:
     java-nullable-property-customizer:
       # JSpecify @Nullable 속성을 null 허용 타입으로 낸다
       enabled: true
+
+logging:
+  level:
+    # Spring AI 채팅 모델은 내용 없는 응답에서 프롬프트 전체를 경고 로그에 남긴다 — 프롬프트에는 사용자 프로필 · 관심사가 든다.
+    # 두 클래스의 로그를 끈다 · docs/specs/llm.md §5 · llm-R24
+    org.springframework.ai.openai.OpenAiChatModel: "off"
+    org.springframework.ai.anthropic.AnthropicChatModel: "off"

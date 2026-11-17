@@ -13,7 +13,7 @@ public interface ReportGenerator {
 }
 ```
 
-- LLM 관문 `LlmClientFactory` 는 [llm Spec](specs/llm.md#llmclientfactory)에 있다. `ReportGenerator` 선언의 `LlmHandle` 은 저장한 키의 길에 생길 호출 API 의 자리 표시다 — 저장한 키를 받아 호출 직전에만 쓰는 길은 [llm Spec](specs/llm.md#저장한-키의-길)에 있고, 프롬프트를 넘겨 결과를 받는 호출 API 는 아직 설계되지 않아 설계하는 작업이 llm Spec 에 적는다. 저장한 키의 평문은 `llm` 에만 건너간다
+- LLM 관문 `LlmClientFactory` 는 [llm Spec](specs/llm.md#llmclientfactory)에 있다. `ReportGenerator` 선언의 `LlmHandle` 은 관문의 생성 호출(`LlmClientFactory.generateStored` — [llm Spec](specs/llm.md#생성-호출))의 자리 표시이고, 변화 리포트를 구현하는 작업이 선언을 맞춘다 — 저장한 키를 받아 호출 직전에만 쓰는 길은 [llm Spec](specs/llm.md#저장한-키의-길)에 있다. 저장한 키의 평문은 `llm` 에만 건너간다
 
 - `ReportGenerator`의 v1 구현체는 다이제스트 생성기([digest Spec](specs/digest.md#digestgenerator))와 같은 방식의 LLM 구현이다 — 공급자 · 라이브러리를 모른다([ADR-0151](adr/0151-spring-ai-and-sdk-types-stay-inside-llm-and-the-gateway-exposes-only-its-own-types.md)). Spring profile `local` 은 고정 응답 로컬 대체물을 쓴다 ([ADR-0025](adr/0025-long-term-personal-news-history-in-v1.md)).
 - BYOK에서는 **요청마다 사용자 키로 공급자 클라이언트를 만들고 쓰고 닫는다**. `llm` 이 이 일을 한다([llm Spec](specs/llm.md#공급자-클라이언트)).
