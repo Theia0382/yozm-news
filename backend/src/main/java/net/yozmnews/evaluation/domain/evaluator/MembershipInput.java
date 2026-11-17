@@ -9,11 +9,11 @@ import net.yozmnews.evaluation.MembershipQuery;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 사건 소속 판정의 입력 — 판정할 기사와 물을 후보 사건 · docs/specs/evaluation.md §4 · evaluation-R37.
+ * 소속 판정(사건 소속 · 흐름 소속)의 입력 — 판정할 기사와 물을 후보 · docs/specs/evaluation.md §4 · evaluation-R37 · evaluation-R51.
  *
  * @param title 판정할 기사의 제목
  * @param summary 판정할 기사의 RSS 요약문 — 없으면 null
- * @param candidates 물을 후보 사건 — 넘긴 순서 그대로 묻는다
+ * @param candidates 물을 후보(사건 또는 흐름) — 넘긴 순서 그대로 묻는다
  * @param wording 질문 문구
  */
 public record MembershipInput(String title, @Nullable String summary, List<CandidateEvent> candidates,

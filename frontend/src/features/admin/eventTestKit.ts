@@ -79,7 +79,12 @@ export function storylineList(
     storylines,
     next,
     unlinked: { events: 2, articles: 5 },
-    linkingCriteria: { windowSeconds: 259200, threshold: 0.62 },
+    linkingCriteria: {
+      windowSeconds: 259200,
+      lower: 0.62,
+      upper: 0.62,
+      probability: 0.5,
+    },
     relationCriteria: {
       probability: 0.6,
       oneMatter: 0.2,

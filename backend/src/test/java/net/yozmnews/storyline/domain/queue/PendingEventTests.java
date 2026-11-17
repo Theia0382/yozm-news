@@ -42,7 +42,7 @@ class PendingEventTests {
 
 		PendingEvent claimed = pending.claim(token, Instant.parse("2026-11-10T00:00:00Z"));
 
-		assertThat(claimed.lease()).isEqualTo(new LinkingLease(token, Instant.parse("2026-11-10T00:10:00Z")));
+		assertThat(claimed.lease()).isEqualTo(new LinkingLease(token, Instant.parse("2026-11-10T00:40:00Z")));
 		assertThat(claimed.notifications()).isEqualTo(2);
 		assertThat(claimed.failures()).isEqualTo(1);
 		assertThat(claimed.orderAt()).isEqualTo(Instant.parse("2026-11-01T00:00:00Z"));
@@ -55,9 +55,20 @@ class PendingEventTests {
 	}
 
 	@Test
-	void failuresAreExhaustedAtThree() {
-		assertThat(LinkingSchedule.failuresExhausted(2)).isFalse();
-		assertThat(LinkingSchedule.failuresExhausted(3)).isTrue();
+	void failuresAreExhaustedAtFive() {
+		assertThat(LinkingSchedule.failuresExhausted(4)).isFalse();
+		assertThat(LinkingSchedule.failuresExhausted(5)).isTrue();
+	}
+
+	@Test
+	void aTransientFailureIsRetriedAfterADoublingDelayUpToAnHour() {
+		Instant now = Instant.parse("2026-11-10T00:00:00Z");
+
+		assertThat(LinkingSchedule.retryAt(1, now)).isEqualTo(Instant.parse("2026-11-10T00:01:00Z"));
+		assertThat(LinkingSchedule.retryAt(2, now)).isEqualTo(Instant.parse("2026-11-10T00:02:00Z"));
+		assertThat(LinkingSchedule.retryAt(4, now)).isEqualTo(Instant.parse("2026-11-10T00:08:00Z"));
+		assertThat(LinkingSchedule.retryAt(7, now)).isEqualTo(Instant.parse("2026-11-10T01:00:00Z"));
+		assertThatIllegalArgumentException().isThrownBy(() -> LinkingSchedule.retryAt(0, now));
 	}
 
 }

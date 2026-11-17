@@ -8,7 +8,7 @@
 
 - **사건 변화 따르기** — `event` 가 바뀐 사건 ID 를 알리면(`EventsChanged`) 그 사건을 잇기 대기에 넣는다. 작업 역할의 반복 작업이 대기를 사건의 시각 순으로 점유해 사건마다 지금 상태를 읽어 판정한다 — 기간을 통째로 다시 묶지 않는다(storyline-R1 ~ R5, [ADR-0105](../adr/0105-storylines-link-incrementally-from-event-change-notifications-and-events-publish-changed-event-ids.md))
 - **소속 맞추기** — 사건이 지워지면 그 소속을 지우고, 다른 사건에 합쳐지면 소속을 남는 사건으로 옮긴다(storyline-R6)
-- **잇기** — 사건 중심의 코사인과 무게를 준 핵심 말 겹침으로 점수를 매겨, 사건을 스토리라인에 더 붙이거나 다른 사건과 짝을 지어 새 스토리라인을 연다. 소속을 빼지 않는다. 소속이 늘면 기다리는 이웃 사건을 다시 본다(storyline-R7 ~ R12, [ADR-0106](../adr/0106-provisional-storyline-linking-opens-only-with-a-partner-event-and-adds-the-single-best-storyline-without-removal.md) · [ADR-0121](../adr/0121-storyline-linking-scores-centroid-cosine-plus-idf-weighted-key-term-overlap-without-time-decay-jev-or-topic-tags.md))
+- **잇기** — 사건 중심의 코사인과 무게를 준 핵심 말 겹침으로 점수를 매겨, 사건을 스토리라인에 더 붙이거나 다른 사건과 짝을 지어 새 스토리라인을 연다. 점수가 애매한 띠 안 후보는 `evaluation` 의 흐름 소속 판정(Jev)에 같은 사안의 전개인지 물어 확률로 고르고, 물은 확률을 쌍마다 기록해 다시 쓴다(storyline-R36, [ADR-0194](../adr/0194-storyline-linking-asks-jev-only-for-band-candidates-and-reuses-recorded-probabilities-until-either-side-doubles.md)). 소속을 빼지 않는다. 소속이 늘면 기다리는 이웃 사건을 다시 본다(storyline-R7 ~ R12, [ADR-0106](../adr/0106-provisional-storyline-linking-opens-only-with-a-partner-event-and-adds-the-single-best-storyline-without-removal.md) · [ADR-0121](../adr/0121-storyline-linking-scores-centroid-cosine-plus-idf-weighted-key-term-overlap-without-time-decay-jev-or-topic-tags.md))
 - **정돈** — 소속이 바뀐 스토리라인을 정돈한다. 구성 사건이 없으면 지우고, 구성 사건이 같은 스토리라인은 하나로 합치며, 사건 하나만 남으면 그 사건을 가진 다른 스토리라인에 합치거나 풀어 그 사건을 다시 판정한다. 합쳐진 스토리라인은 남는 스토리라인을 가리킨다. 합치거나 지운 스토리라인은 이벤트로 알린다(storyline-R13 · R17 · R18 · R35, [ADR-0108](../adr/0108-storylines-with-the-same-events-merge-and-a-storyline-left-with-one-event-merges-or-dissolves.md) · [ADR-0188](../adr/0188-storyline-subscriptions-follow-retired-storylines-by-event-and-before-each-use-and-notices-point-to-the-remaining-event.md))
 - **상태** — 스토리라인의 상태(진행 · 잠잠 · 끝남)를 저장하지 않고 조회 때 마지막 기사 시각으로 정한다. 끝나도 잇기를 막지 않는다(storyline-R16, [ADR-0107](../adr/0107-storyline-state-is-judged-at-query-time-from-the-last-article-and-an-ended-storyline-still-links.md))
 - **판정 근거** — 소속마다 정한 것 · 점수 · 판정에 쓴 기준을 남긴다(storyline-R14)
@@ -27,11 +27,11 @@
 - 스토리라인의 주제 · 지역 태그, 같은 원인에서 나온 나란한 흐름을 묶는 상위 스토리라인을 여는 법은 아직 없다 — **(미설계)**
 - 운영자가 관계를 하나씩 넣거나 빼거나 종류를 바꾸는 길을 두지 않는다 — 관계는 관계 판정만 맺고 바꾸며, 운영자는 관계 기준(§7)으로 조정한다([ADR-0137](../adr/0137-storyline-relations-are-not-edited-one-by-one-by-operators-and-are-tuned-through-relation-criteria.md))
 - 스토리라인에 들지 않은 사건은 큰 판정에 들지 않는다 — 그 수만 낸다(storyline-R23)
-- 사건을 스토리라인에 잇는 데는 Jev 판정 · 주제 태그를 쓰지 않고, 주 소속을 두지 않는다 — Jev 는 스토리라인 사이 관계의 판정에만 쓴다([ADR-0121](../adr/0121-storyline-linking-scores-centroid-cosine-plus-idf-weighted-key-term-overlap-without-time-decay-jev-or-topic-tags.md))
+- 사건을 스토리라인에 잇는 데 주제 태그를 쓰지 않고, 주 소속을 두지 않는다([ADR-0121](../adr/0121-storyline-linking-scores-centroid-cosine-plus-idf-weighted-key-term-overlap-without-time-decay-jev-or-topic-tags.md)). Jev 는 잇기 점수가 애매한 띠 안 후보의 흐름 소속 판정(storyline-R36, [ADR-0194](../adr/0194-storyline-linking-asks-jev-only-for-band-candidates-and-reuses-recorded-probabilities-until-either-side-doubles.md))과 스토리라인 사이 관계의 판정에 쓴다
 - 표현만 비슷한 두 스토리라인, 사건 둘 이상이 다른 스토리라인에 포함된 스토리라인은 합치지 않는다 — 같은 흐름인지 갈래인지 구조로 가를 수 없다(storyline-R17). 한 사안이 둘로 열린 스토리라인은 관계로도 잇지 않는다(storyline-R29)
 - 따로 도는 정리 작업이 없다 — 상태는 조회 때 정하고, 정돈은 판정 트랜잭션에서 한다. 따로 도는 것은 관계 판정의 반복 작업뿐이다(storyline-R31)
 
-기준 점수의 기본값(§7)은 기본 임베딩 모델에 맞춰 평가 세트의 격자와 운영자의 표본 검수로 정했다([ADR-0173](../adr/0173-storyline-linking-threshold-default-chosen-for-precision-on-an-evaluation-set-grid-and-operator-sample-review.md)). 정밀도를 앞세운 값이라 이어져야 할 사건의 일부가 소속 없이 남고 몇 주에 걸친 흐름의 앞뒤가 한 스토리라인에 남지 않는다 — 잇기 점수가 같은 분야와 같은 사안을 가르지 못해서다([미결 사항](../open-questions.md) 35). 큰 판정 기준의 처음 값(storyline-R20)은 평가 세트와 운영자의 날마다 미리보기 검수로 정했다([ADR-0174](../adr/0174-big-judgement-criterion-first-value-kept-by-operator-daily-preview-review-where-the-evaluation-set-cannot-separate-neighbours.md)). 핵심 말 가중치(storyline-R8)는 평가 세트에서 고른 값이고, 가중치와 시간 창 · 상태 기간(§7), 큰 판정의 식(storyline-R19), 목록 한 쪽의 상한(storyline-R22)은 측정 전 목표다. 평가 세트가 며칠치라 몇 주에 걸친 전개는 재지 못했다. 큰 판정 · 목록 조회의 시간은 두 주 기간까지 쟀다. 관계 기준(§7)은 스토리라인 쌍을 직접 판정한 세트로 고른 값이고 측정 전 목표다 — 같은 쌍으로 고르고 잰 값이라 다른 기간에서의 품질, 시간 창보다 멀리 떨어진 흐름은 재지 못했다([미결 사항](../open-questions.md)).
+잇기 기준(아래 기준 · 위 기준 · 확률 기준)의 기본값(§7)은 기본 임베딩 모델 · 흐름 소속 판정의 문구 판에 맞춰 시뮬레이터 격자 · 평가 인스턴스 · 운영자의 표본 검수로 정밀도를 앞세워 정했다([ADR-0195](../adr/0195-storyline-linking-band-and-probability-defaults-chosen-for-precision-by-simulator-grid-evaluation-instance-and-operator-sample-review.md)). 띠 밖의 소속은 점수만으로 정해, 위 기준보다 높은 점수의 분야 모음 소속은 남고 아래 기준보다 낮은 점수의 소속은 되찾지 못한다 — 잇기 점수가 같은 분야와 같은 사안을 가르지 못해서다([미결 사항](../open-questions.md) 35). 표본은 고정 덤프의 열흘 남짓이라 몇 주에 걸친 흐름, 실측 인스턴스의 하루 판정 비용과 잇기 처리량은 재지 못했다. 큰 판정 기준의 처음 값(storyline-R20)은 평가 세트와 운영자의 날마다 미리보기 검수로 정했다([ADR-0174](../adr/0174-big-judgement-criterion-first-value-kept-by-operator-daily-preview-review-where-the-evaluation-set-cannot-separate-neighbours.md)). 핵심 말 가중치(storyline-R8)는 평가 세트에서 고른 값이고, 가중치와 시간 창 · 상태 기간(§7), 큰 판정의 식(storyline-R19), 목록 한 쪽의 상한(storyline-R22)은 측정 전 목표다. 평가 세트가 며칠치라 몇 주에 걸친 전개는 재지 못했다. 큰 판정 · 목록 조회의 시간은 두 주 기간까지 쟀다. 관계 기준(§7)은 스토리라인 쌍을 직접 판정한 세트로 고른 값이고 측정 전 목표다 — 같은 쌍으로 고르고 잰 값이라 다른 기간에서의 품질, 시간 창보다 멀리 떨어진 흐름은 재지 못했다([미결 사항](../open-questions.md)).
 
 다른 모듈과의 의존과 이벤트 흐름은 [overview.md §5](../overview.md#5-모듈-지도)에 있다.
 
@@ -41,7 +41,7 @@
 
 | 용어 | 뜻 |
 |---|---|
-| 소속 | 사건 하나가 스토리라인 하나에 든 것(`storyline_members` 한 행). 사건은 스토리라인 0개 이상에 든다. 정한 것 · 점수 · 기준 · 시각을 갖는다(storyline-R14) |
+| 소속 | 사건 하나가 스토리라인 하나에 든 것(`storyline_members` 한 행). 사건은 스토리라인 0개 이상에 든다. 정한 것 · 점수 · 기준 · 시각과, 띠 안에서 판정으로 정했으면 판정 확률 · 판정 원본 ID 를 갖는다(storyline-R14) |
 | 구성 사건 | 스토리라인에 소속이 있는 사건 |
 | 잇기 대기 | 판정할 사건의 목록(`storyline_linking_queue` — 사건마다 한 행). 순서 키 · 다시 알림 수 · 실패 수 · 점유를 갖는다(storyline-R2) |
 | 다시 알림 수 | 대기에 있는 사건에 알림이 다시 온 횟수 — 처리 중에 다시 온 알림을 놓치지 않게 한다(storyline-R2 · R3) |
@@ -51,11 +51,14 @@
 | 스토리라인 표현 | 구성 사건으로 정한 스토리라인의 중심 · 기사 수 · 시각 범위 · 핵심 말 · 대표 사건(storyline-R7) |
 | 대표 사건 | 스토리라인을 알아보게 하는 구성 사건 하나 — 기사 수가 가장 많은 사건(storyline-R7) |
 | 말의 무게 | 핵심 말이 얼마나 드문지 — 판정할 사건의 시각 ± 시간 창 안의 사건 가운데 그 말을 가진 사건이 적을수록 크다(storyline-R8) |
-| 잇기 기준 | 시간 창과 기준 점수 — 설정(storyline-R9 · §7) |
+| 잇기 기준 | 시간 창 · 아래 기준 · 위 기준 · 확률 기준 — 설정(storyline-R9 · §7) |
+| 띠 | 점수가 아래 기준 이상 위 기준 미만인 후보 — 흐름 소속 판정에 묻는다. 아래 기준이 위 기준과 같으면 비어 점수만으로 정한다(storyline-R36) |
+| 흐름 소속 판정 | 판정할 사건이 후보 흐름마다 같은 사안의 전개인지 묻는 `evaluation` 의 판정(`FlowMembership`) — 후보마다 확률을 낸다(storyline-R36) |
+| 잇기 물은 기록 | 띠 안 후보에 물은 확률 — 붙이기는 (사건, 스토리라인), 짝은 (사건, 이웃 사건)마다 한 행(`storyline_link_asked` · `storyline_pair_asked`). 확률의 정본이고 크기가 두 배가 될 때까지 다시 쓴다(storyline-R36) |
 | 기준 이력 | 회차가 판정에 쓴 잇기 기준 값의 목록(`storyline_linking_criteria`) — 같은 값이면 한 행이고, 소속이 그 ID 를 가리킨다(storyline-R14) |
 | 짝 | 붙일 스토리라인이 없는 사건과 함께 새 스토리라인을 여는 사건 — 소속이 없어야 한다(storyline-R11) |
 | 이웃 사건 | 판정할 사건과 같은 모델 버전이고 창 안에 있으며 코사인이 하한 이상인 사건 — `event` 의 `EventDirectory.neighbors` 가 낸다(storyline-R11) |
-| 다시 넣기 | 소속이 는 사건의 이웃 가운데 기준 이상이고 소속 없는 사건을 대기에 다시 넣는 것(storyline-R12) |
+| 다시 넣기 | 소속이 는 사건의 이웃 가운데 아래 기준 이상이고 소속 없는 사건을 대기에 다시 넣는 것(storyline-R12) |
 | 채우기 | 운영자가 정한 기간에 마지막 기사가 있는 사건을 잇기 대기에 넣는 운영 기능(storyline-R15) |
 | 정돈 | 소속이 바뀐 스토리라인을 지우거나 · 합치거나 · 풀거나 그대로 두는 것(storyline-R13 · R17) |
 | 합쳐진 스토리라인 | 정돈으로 다른 스토리라인에 합쳐진 스토리라인 — 소속 · 핵심 말이 없고, 행이 남아 남는 스토리라인을 가리킨다(storyline-R18) |
@@ -86,7 +89,7 @@
 
 ## 3. 공개 인터페이스
 
-이 모듈은 `event` 의 `EventsChanged` 를 받고, 공개 조회 둘(`StorylineDirectory` · 운영자 조회 `StorylineReview`)과 공개 운영 API 둘(`StorylineLinkingAdministration` · `BigStorylineAdministration`)을 낸다. 관계 판정은 `evaluation` 의 공개 API `FlowRelation` 을 부른다. `StorylineDirectory` 는 `digest` · `report` · `admin` · `user` · `reader` 가 쓰고, `StorylineReview` 와 운영 API 는 `admin` 이 운영자 요청으로 부른다([ADR-0045](../adr/0045-admin-module-serves-operator-api-over-module-public-operation-apis.md)). 발행하는 이벤트는 `StorylinesRetired` 하나다 — `user` 가 받아 스토리라인 구독을 따른다.
+이 모듈은 `event` 의 `EventsChanged` 를 받고, 공개 조회 둘(`StorylineDirectory` · 운영자 조회 `StorylineReview`)과 공개 운영 API 둘(`StorylineLinkingAdministration` · `BigStorylineAdministration`)을 낸다. 잇기의 띠 판정은 `evaluation` 의 공개 API `FlowMembership`, 관계 판정은 `FlowRelation` 을 부른다. `StorylineDirectory` 는 `digest` · `report` · `admin` · `user` · `reader` 가 쓰고, `StorylineReview` 와 운영 API 는 `admin` 이 운영자 요청으로 부른다([ADR-0045](../adr/0045-admin-module-serves-operator-api-over-module-public-operation-apis.md)). 발행하는 이벤트는 `StorylinesRetired` 하나다 — `user` 가 받아 스토리라인 구독을 따른다.
 
 ### StorylineLinkingAdministration · LinkingFillResult
 
@@ -221,12 +224,13 @@ public interface StorylineReview {
 
 public enum LinkedBy { RULE, PAIR, MERGE }
 public enum RelationOutcome { LINKED, NOT_RELATED, LOW_PROBABILITY, NOT_ONE_MATTER, CYCLE, SECOND_PARENT, NOTHING_TO_ASK, REJECTED }
-public record StorylineLinkingCriteria(Duration window, double threshold) {}
+public record StorylineLinkingCriteria(Duration window, double lower, double upper, @Nullable Double probability) {}
 public record StorylineRelationCriteria(double probability, double oneMatter, int minEvents, double candidateScore,
         Duration window) {}
 public record LinkScore(double score, double cosine, double keyTermOverlap) {}
 public record StorylineMembership(StorylineId storyline, EventId event, LinkedBy linkedBy, @Nullable LinkScore score,
-        @Nullable StorylineLinkingCriteria criteria, Instant linkedAt) {}
+        @Nullable StorylineLinkingCriteria criteria, @Nullable Double probability,
+        @Nullable FlowMembershipJudgementId judgement, Instant linkedAt) {}
 public record StorylineRelationDetail(StorylineRelationView relation, double probability, RelationJudgementId judgement,
         StorylineRelationCriteria criteria) {}
 public record StorylineRelationAsked(StorylineId other, int smallerEvents, RelationOutcome outcome,
@@ -241,6 +245,8 @@ public record StorylineRelationAsked(StorylineId other, int smallerEvents, Relat
 | `linkingCriteria` · `relationCriteria` | 지금 설정 값 — 잇기 기준 · 관계 기준(§7) |
 | `LinkedBy` | 소속을 정한 것 — 붙이기(`RULE`) · 짝으로 엶(`PAIR`) · 합쳐진 사건의 소속을 옮김(`MERGE`)(storyline-R14) |
 | `StorylineMembership.score` · `criteria` | 점수 · 코사인 · 핵심 말 겹침(무게를 준 값)과 그 판정에 쓴 잇기 기준. `MERGE` 면 둘 다 null 이고, 그 밖이면 둘 다 있다 |
+| `StorylineMembership.probability` · `judgement` | 띠 안에서 흐름 소속 판정으로 정했으면 그 확률과 판정 원본 ID(`evaluation` 의 `FlowMembershipJudgementId`) — 둘은 함께 있거나 함께 없다. 위 기준 이상으로 정했거나 `MERGE` 면 둘 다 null(storyline-R14 · R36) |
+| `StorylineLinkingCriteria` | 시간 창 · 아래 기준 · 위 기준 · 확률 기준. 띠가 생기기 전의 기준 이력은 아래 기준 = 위 기준이고 확률 기준이 null 이다 |
 | `StorylineRelationDetail.judgement` | 그 관계를 맺은 판정 원본 ID — 원본은 먼저 지워졌을 수 있다(`evaluation` 의 `RelationJudgementLog` 가 찾는다) |
 | `StorylineRelationAsked.other` | 쌍의 상대 스토리라인 |
 | `StorylineRelationAsked.smallerEvents` | 물었을 때 작은 쪽의 구성 사건 수 |
@@ -300,18 +306,20 @@ public sealed interface BigStorylineCriteriaChangeResult {
 | 패키지 | 책임 |
 |---|---|
 | (최상위) | 모듈 선언(`package-info`), 공개 조회 `StorylineDirectory` 와 그 값 타입(스토리라인 ID · 상태 포함), 운영자 조회 `StorylineReview` 와 그 값 타입(정한 것 `LinkedBy` · 물은 결말 `RelationOutcome` 포함), 공개 운영 API `StorylineLinkingAdministration` · `BigStorylineAdministration` 과 그 결과 · 값 타입 |
-| `domain/linking` | 잇기의 판단 — 점수 산식 · 말의 무게 · 코사인 하한, 판정(붙이기 · 짝 · 다시 넣기), 스토리라인 표현과 대표 사건, 잇기 기준, 기준 이력 저장소 |
+| `domain/linking` | 잇기의 판단 — 점수 산식 · 말의 무게 · 코사인 하한, 판정(붙이기 · 짝 · 다시 넣기 · 띠), 띠 후보의 서술 고르기 · 다시 물을 때, 스토리라인 표현과 대표 사건, 잇기 기준, 기준 이력 · 잇기 물은 기록 저장소 |
 | `domain/storyline` | 스토리라인과 소속 — 소속의 판정 근거, 후보로 읽는 스토리라인, 정돈 판정, 상태 판정, 닫은 사건 집합, 스토리라인 저장소, 조회로 읽는 스토리라인과 조회 저장소 |
 | `domain/big` | 큰 판정 — 판정 규칙 · 순서, 판정의 분모, 큰 판정 기준 저장소 |
-| `domain/queue` | 잇기 대기 — 대기 행과 그 점유, 순서 키 규칙, 대기 상수 · 실패 상한, 대기 저장소 |
+| `domain/queue` | 잇기 대기 — 대기 행과 그 점유, 순서 키 규칙, 대기 상수 · 실패 상한 · 판정 가능 시각, 대기 저장소 |
 | `domain/relation` | 스토리라인 사이 관계 — 관계와 종류, 구조 제약(상위 하나 · 순환), 후보 쌍 · 다시 물을 때 · 요청의 순서, 판정, 병합 때 옮기기, 서술 사건 고르기, 관계 기준, 관계 대기 행과 상수, 관계 · 관계 대기 저장소 |
 | `application` | 사건 변화 리스너, 회차, 사건 하나의 판정 · 정돈, 관계 회차, 공개 조회 · 운영자 조회 · 공개 운영 API 의 구현, 큰 판정 기준의 처음 값 적재, 잇기 기준 · 상태 기간 · 관계 기준 설정과 결선 |
 | `adapter/in/job` | 잇기 대기 반복 작업 · 관계 대기 반복 작업(작업 역할) |
-| `adapter/out/persistence` | 대기 · 스토리라인 · 기준 이력 · 조회 · 큰 판정 기준 · 관계 · 관계 대기 저장소의 JdbcClient 구현 |
+| `adapter/out/persistence` | 대기 · 스토리라인 · 기준 이력 · 잇기 물은 기록 · 조회 · 큰 판정 기준 · 관계 · 관계 대기 저장소의 JdbcClient 구현 |
 
 협력: `StorylineLinkingListener` 가 `EventsChanged` 를 받아 사건마다 `event` 의 `EventDirectory.find` 로 지금 상태를 읽어 `PendingEvent.orderAt` 으로 순서 키를 정하고 `LinkingQueueRepository.enqueue` 로 넣는다. 작업 역할의 `LinkStorylinesJob` 이 1분마다 `LinkingRound` 를 돌린다. 회차는 `LinkingCriteriaRepository` 에 지금 기준(`LinkingCriteria` — `LinkingConfiguration` 이 `LinkingProperties` 로 만든 빈)을 등록하고, `LinkingQueueRepository` 로 대기를 점유한 뒤(`PendingEvent.claim` · `LinkingSchedule`), 사건마다 한 트랜잭션에서 `StorylineLinker.link` 를 부르고 `deleteIfUnchanged` · `releaseIfLeased` 로 대기 행을 마무리한다. 예외면 `recordFailureIfLeased` 로 실패를 세고 상한(`LinkingSchedule.failuresExhausted`)이면 `delete` 로 뺀다.
 
 `StorylineLinker` 는 먼저 `StorylineRepository.lockLinking` 으로 모듈 잠금을 잡고, `EventDirectory.find` 로 사건의 지금 상태를 가른다. 지워졌거나 합쳐졌으면 `StorylineRepository.storylinesOf` 의 스토리라인마다 `removeMember` · `moveMember` 로 소속을 맞추고 그 스토리라인들을 정돈한다. 그대로면 `EventDirectory.profiles` 로 사건과 그 사건이 든 스토리라인의 구성 사건 표현을 읽어 `Representation.of` 로 표현을 다시 저장하고(`save`), `Representation.without` 으로 그 사건을 뺀 비교 대상을 만든다. `EventDirectory.termCounts` 로 그 사건 상위 핵심 말의 사건 수를 읽어 말의 무게(`TermWeights`)를 만든다. `StorylineRepository.candidates` 로 창 안 후보 스토리라인을 읽어 `LinkingScoring` 으로 점수를 매기고 `LinkingRule.attach` 로 붙일 곳을 정한다(`addMember`). 붙일 곳이 없고 소속이 없으면 `EventDirectory.neighbors` 로 이웃을 읽어 `StorylineRepository.affiliated` 와 `LinkingRule.pair` 로 짝을 정해 `open` · `addMember` 로 연다. 소속이 늘었으면 `LinkingRule.requeue` 로 고른 이웃을 `LinkingQueueRepository.enqueue` 로 다시 넣는다 — 짝으로 연 상대 사건의 이웃은 그 사건의 말의 무게를 따로 읽어 점수를 매긴다. 끝으로 그 사건이 든 스토리라인과 붙인 스토리라인을 정돈한다.
+
+띠 판정(storyline-R36): 점수를 매긴 뒤 띠 안 후보가 있으면 `LinkingAskedRepository.ofLink` · `ofPair` 로 그 후보의 물은 기록을 읽고, `LinkingAsk.due` 로 다시 물을 때인 기록을 빼고 `LinkingRule.attach` · `pair` 에 넘긴다. 규칙이 `Ask` 를 내면 `StorylineLinker` 는 아무것도 쓰지 않고 `LinkingOutcome.Ask` 를 낸다 — 붙이기 후보마다 `LinkingAsk.describe` 로 고른 가까운 구성 사건의 대표 기사(`EventDirectory.representativesOfAll`), 짝 이웃마다 그 사건의 대표 기사, 판정할 사건의 대표 기사를 싣는다. `LinkingRound` 는 트랜잭션 밖에서 `evaluation` 의 `FlowMembership.judge` 에 묻고, 짧은 트랜잭션에서 `StorylineLinker.record` 로 물은 기록에 쓴 뒤(모듈 잠금, 사건이 그대로일 때만) 다시 판정한다. 평가기 일시 실패면 `LinkingQueueRepository.recordFailureIfLeased` · `defer` 로 판정 가능 시각을 미루고, 쓸 수 없으면 남은 점유를 풀고 회차를 멈춘다.
 
 정돈은 스토리라인마다 `StorylineRepository.members` 로 구성 사건을, `storylinesOf`(첫 구성 사건) · `members` 로 그 사건을 가진 다른 스토리라인의 구성 사건을 읽어 `Tidying.decide` 로 정하고, 결과에 따라 표현을 다시 정하거나(`save`) · 지우거나(`delete`) · 합치거나(`merge`) · 풀어 그 사건을 `PendingEvent.orderAt` 의 순서 키로 다시 넣는다(`delete` · `enqueue`). 한 정돈에서 이미 지웠거나 합친 스토리라인은 건너뛴다. 합치거나 지운 스토리라인이 있으면 정돈 끝에 `StorylinesRetired` 를 한 번 발행한다(`ApplicationEventPublisher` — 같은 트랜잭션).
 
@@ -323,7 +331,7 @@ public sealed interface BigStorylineCriteriaChangeResult {
 
 채우기는 `StorylineLinkingAdministrationService` 가 `EventDirectory.lastArticleSince` 와 `LinkingQueueRepository.enqueueAll` 로 한다.
 
-관계: `StorylineLinker` 는 정돈에서 남은 스토리라인과 짝으로 연 스토리라인을 `RelationQueueRepository.enqueue` 로 관계 대기에 넣고, 합칠 때는 `StorylineRepository.merge` 앞에서 `RelationMove.plan` 을 `RelationRepository.applyMove` 로 적용하고 합쳐질 스토리라인의 물은 기록(`forgetAsked`) · 관계 대기 행(`RelationQueueRepository.delete`)을 지운다. 작업 역할의 `RelateStorylinesJob` 이 1분마다 `RelationRound` 를 돌린다. 회차는 지금 기준(`RelationCriteria` — `RelationConfiguration` 이 `RelationProperties` 로 만든 빈)을 `RelationRepository.registerCriteria` 로 등록하고 관계 대기를 점유한 뒤(`PendingStoryline.claim` · `RelationSchedule`), 스토리라인마다 `StorylineRepository.profile` 로 표현을 읽고 `StorylineRepository.members` · `storylinesOf` 로 사건을 함께 가진 스토리라인을, `StorylineRepository.candidates` · `EventDirectory.termCounts` · `LinkingScoring` 으로 점수 후보를 얻어 `RelationCandidates.partners` 로 후보 쌍을 고른다. 쌍마다 `EventDirectory.views` 로 두 스토리라인의 직접 소속 사건을 읽어 `RelationDescription.of` 로 서술 사건을 고르고 `EventDirectory.representativesOfAll` 로 대표 기사를 얻어 `evaluation` 의 `FlowRelation.judge` 에 묻는다 — 트랜잭션 밖이다. 결과는 모듈 잠금(`StorylineRepository.lockLinking`)을 잡은 짧은 트랜잭션에서 두 스토리라인을 다시 읽고 `RelationRepository.all` 로 만든 `RelationGraph` 와 `RelationRule.decide` 로 판정해 `link` · `unlink` · `recordAsked` 로 쓴다.
+관계: `StorylineLinker` 는 정돈에서 남은 스토리라인과 짝으로 연 스토리라인을 `RelationQueueRepository.enqueue` 로 관계 대기에 넣고, 합칠 때는 `StorylineRepository.merge` 앞에서 `RelationMove.plan` 을 `RelationRepository.applyMove` 로 적용하고 합쳐질 스토리라인의 물은 기록(관계 `forgetAsked` · 잇기 `LinkingAskedRepository.forgetStoryline`) · 관계 대기 행(`RelationQueueRepository.delete`)을 지운다. 작업 역할의 `RelateStorylinesJob` 이 1분마다 `RelationRound` 를 돌린다. 회차는 지금 기준(`RelationCriteria` — `RelationConfiguration` 이 `RelationProperties` 로 만든 빈)을 `RelationRepository.registerCriteria` 로 등록하고 관계 대기를 점유한 뒤(`PendingStoryline.claim` · `RelationSchedule`), 스토리라인마다 `StorylineRepository.profile` 로 표현을 읽고 `StorylineRepository.members` · `storylinesOf` 로 사건을 함께 가진 스토리라인을, `StorylineRepository.candidates` · `EventDirectory.termCounts` · `LinkingScoring` 으로 점수 후보를 얻어 `RelationCandidates.partners` 로 후보 쌍을 고른다. 쌍마다 `EventDirectory.views` 로 두 스토리라인의 직접 소속 사건을 읽어 `RelationDescription.of` 로 서술 사건을 고르고 `EventDirectory.representativesOfAll` 로 대표 기사를 얻어 `evaluation` 의 `FlowRelation.judge` 에 묻는다 — 트랜잭션 밖이다. 결과는 모듈 잠금(`StorylineRepository.lockLinking`)을 잡은 짧은 트랜잭션에서 두 스토리라인을 다시 읽고 `RelationRepository.all` 로 만든 `RelationGraph` 와 `RelationRule.decide` 로 판정해 `link` · `unlink` · `recordAsked` 로 쓴다.
 
 닫은 조회: `StorylineDirectoryService` 는 `RelationRepository.all` 로 `RelationGraph` 를 만들어 스토리라인의 하위(`descendants`) · 상위(`ancestors` · `parentOf`)를 얻고, `ClosedMembers.families` 로 가족을 정한 뒤 `StorylineRepository.members` 로 그 스토리라인들의 직접 소속을 읽어 닫은 사건 집합(`ClosedMembers`)을 만든다 — 스토리라인 값 · 타임라인 · 사건의 스토리라인 · 기간 집계와 운영자 조회의 가족이 이 한 길을 쓴다.
 
@@ -348,6 +356,11 @@ sequenceDiagram
             L->>S: save (storyline-R7)
             L->>D: termCounts (storyline-R8)
             L->>S: candidates (storyline-R9)
+            opt 띠 안 후보의 물은 기록이 모자람 (storyline-R36)
+                L-->>R: Ask (아무것도 쓰지 않음)
+                R->>R: FlowMembership.judge (트랜잭션 밖)
+                R->>L: record → link 다시 (사건마다 3번까지)
+            end
             alt 붙일 곳 있음
                 L->>S: addMember (storyline-R10)
             else 소속 없음
@@ -382,8 +395,9 @@ sequenceDiagram
 ### `application`
 
 - `StorylineLinkingListener` — 리스너(들어오는 쪽). 시각은 `InstantSource` 에서 얻는다. 알림 하나의 사건을 사건 ID 오름차순으로 넣는다
-- `LinkingRound` — 회차 하나(storyline-R3 · R4). 시각은 `InstantSource` 에서 얻는다. 점유 · 판정 · 실패 기록은 `TransactionTemplate` 의 짧은 트랜잭션이다. 판정의 예외를 밖으로 던지지 않는다 — 기준 등록 · 점유 · 실패 기록의 DB 예외는 회차 밖으로 나간다. 기준 등록 · 점유가 실패하면 점유한 사건이 없어 다음 회차가 가져가고, 실패 기록이 실패하면 그 회차가 점유한 사건(아직 판정하지 않은 사건 포함)이 점유가 만료된 뒤 다시 판정된다. 트랜잭션 · 역할 애너테이션이 없다. 로그: `스토리라인 잇기 판정이 예상하지 못한 오류로 실패했다 — 사건 {ID}, 실패 {n}회`(오류, 예외와 함께) · `스토리라인 잇기 판정이 거듭 실패해 대기에서 뺐다 — 사건 {ID}, 실패 {n}회`(오류)
-- `StorylineLinker` — 사건 하나의 따르기 · 판정 · 정돈 · 쓰기(storyline-R5 ~ R14 · R17 · R18)와 관계 대기에 넣기 · 합칠 때 관계 옮기기(storyline-R26 · R32), 합치거나 지운 스토리라인의 알림(storyline-R35). 트랜잭션 안에서 부른다. 시각 · 기준 · 기준 ID 는 회차가 넘긴다
+- `LinkingRound` — 회차 하나(storyline-R3 · R4 · R36). 시각은 `InstantSource` 에서 얻는다. 점유 · 판정 · 물은 기록 · 실패 기록은 `TransactionTemplate` 의 짧은 트랜잭션이고, 흐름 소속 판정(`FlowMembership`)은 트랜잭션 밖이다. 판정 결말 · 평가기 실패 갈래는 `default` 없는 `switch` 식이다. 판정의 예외를 밖으로 던지지 않는다 — 기준 등록 · 점유 · 실패 기록의 DB 예외는 회차 밖으로 나간다. 기준 등록 · 점유가 실패하면 점유한 사건이 없어 다음 회차가 가져가고, 실패 기록이 실패하면 그 회차가 점유한 사건(아직 판정하지 않은 사건 포함)이 점유가 만료된 뒤 다시 판정된다. 트랜잭션 · 역할 애너테이션이 없다. 로그: `스토리라인 잇기 판정이 예상하지 못한 오류로 실패했다 — 사건 {ID}, 실패 {n}회`(오류, 예외와 함께) · `스토리라인 잇기 판정이 거듭 실패해 대기에서 뺐다 — 사건 {ID}, 실패 {n}회`(오류) · `스토리라인 잇기 판정을 멈췄다 — 평가기를 쓸 수 없다: {메시지}`(오류)
+- `LinkingOutcome` — 판정 시도 하나의 결말: 마침(`Done`) · 물을 것(`Ask` — 붙이기 · 짝, 판정할 사건 · 그 대표 기사 · 기사 수, 후보 흐름마다 서술 기사 · 크기). 패키지 비공개
+- `StorylineLinker` — 사건 하나의 따르기 · 판정 · 정돈 · 쓰기(storyline-R5 ~ R14 · R17 · R18 · R36), 물은 확률의 기록(`record` — storyline-R36)과 관계 대기에 넣기 · 합칠 때 관계 옮기기(storyline-R26 · R32), 합치거나 지운 스토리라인의 알림(storyline-R35). 트랜잭션 안에서 부른다. 시각 · 기준 · 기준 ID 는 회차가 넘긴다
 - `RelationRound` — 관계 회차 하나(storyline-R27 ~ R31). 시각은 `InstantSource` 에서 얻는다. 점유 · 후보 읽기 · 반영 · 실패 기록은 `TransactionTemplate` 의 짧은 트랜잭션이고, 관계 판정은 트랜잭션 밖이다. 판정 · 실패 갈래는 `default` 없는 `switch` 식이다. 평가기 사용 불가 · 예상 못한 예외면 회차를 멈춘다 — 점유는 만료로 풀린다. 트랜잭션 · 역할 애너테이션이 없다. 로그: `스토리라인 관계 판정이 거듭 실패해 대기에서 뺐다 — 스토리라인 {ID}, 실패 {n}회`(오류) · `스토리라인 관계 판정을 멈췄다 — 평가기를 쓸 수 없다: {문구}`(오류)
 - `RelationProperties` · `RelationConfiguration` — 관계 기준 설정(`yozmnews.storyline-relation`, 기본값의 정본은 레코드 컴포넌트의 `@DefaultValue`)과 그것을 검증된 `RelationCriteria` 빈으로 바꾸는 결선. 값이 틀리면 기동하지 않는다. 역할 애너테이션이 없다
 - `StorylineLinkingAdministrationService` — 공개 운영 API `StorylineLinkingAdministration` 의 구현(storyline-R15). 시각은 `InstantSource` 에서 얻는다
@@ -398,17 +412,30 @@ sequenceDiagram
 
 #### `domain/linking`
 
-- `LinkingCriteria(Duration window, double threshold)` — 잇기 기준. 창은 0 보다 큰 초 단위, 기준은 0 보다 크고 1 이하(storyline-R9)
+- `LinkingCriteria(Duration window, double lower, double upper, double probability)` — 잇기 기준. 창은 0 보다 큰 초 단위, 0 < 아래 기준 ≤ 위 기준 ≤ 1, 확률 기준은 0 보다 크고 1 이하(storyline-R9). `inBand(Score)` 가 띠(아래 기준 이상 위 기준 미만)의 정본이다(storyline-R36)
 - `LinkingScoring` — 점수 산식 · 코사인 하한의 정본(storyline-R8). 상수 `KEY_TERM_WEIGHT` · `KEY_TERMS` · `NEIGHBORS` · `COSINE_MARGIN`. 판정할 사건(`Subject`)과 견줄 것(`Compared`)을 시간 창 · 말의 무게로 견준 점수(`Score` — 점수 · 코사인 · 핵심 말 겹침)
 - `TermWeights` — 말의 무게의 정본(storyline-R8) — `of(사건 수, 말마다 그 말을 가진 사건 수)` · `weight(말)`
 - `Cosine` — 두 벡터의 코사인 유사도 — 어느 한쪽이 영 벡터면 NaN
-- `LinkingRule` — 판정의 정본(storyline-R10 ~ R12) — `attach` · `pair` · `requeue`. 점수를 매긴 것은 `Scored(id, Score)`
+- `LinkingRule` — 판정의 정본(storyline-R10 ~ R12 · R36) — `attach` · `pair` 는 후보 · 쓸 수 있는 물은 기록(후보 ID → `Asked`) · 기준을 받아 `Choice` 를 낸다: 고름(`Take` — 고른 것과, 확률로 정했으면 그 `Asked`) · 없음(`None`) · 물을 것(`Ask` — 기록 없는 띠 후보, 점수 순 `MAX_ASKED` 개 안). `requeue`. 점수를 매긴 것은 `Scored(id, Score)`. 상수 `MAX_ASKED`(한 번에 묻는 띠 후보 수 — 측정 전 목표)
+- `Asked(@Nullable Double probability, @Nullable Long judgementId)` — 띠 후보 하나에 물은 결과(storyline-R36). 확률이 없으면 확률을 얻지 못한 것(`UNANSWERED`) — 고르지 않는다. `AskedRecord(Asked asked, int eventArticles, int otherSize)` — 물은 기록 한 행과 물었을 때의 두 쪽 크기
+- `LinkingAsk` — 띠 후보의 서술 고르기와 다시 물을 때의 정본(storyline-R36) — `describe(판정할 사건, 그 ID, 구성 사건 중심)` 은 판정할 사건과 중심 코사인이 큰 구성 사건 `DESCRIBED_EVENTS` 개(자신 제외, 같으면 사건 ID 순, 셀 수 없는 것은 뒤), `due(기록, 지금 기사 수, 지금 크기)` 는 어느 쪽이든 물었을 때의 두 배 이상인가. 상수 `DESCRIBED_EVENTS`(측정 전 목표, `evaluation` 의 `EventDescriptor.MAX_ARTICLES` 이하)
+- 잇기 물은 기록 저장소 `LinkingAskedRepository`(storyline-R36)
+  ```java
+  public interface LinkingAskedRepository {
+      Map<Long, AskedRecord> ofLink(long eventId, Collection<Long> storylineIds);   // 붙이기 띠 — 스토리라인 → 기록
+      Map<Long, AskedRecord> ofPair(long eventId, Collection<Long> partnerIds);     // 짝 띠 — 이웃 사건 → 기록
+      void recordLink(long eventId, Map<Long, AskedRecord> records, Instant now);   // 덮어쓴다
+      void recordPair(long eventId, Map<Long, AskedRecord> records, Instant now);
+      void forgetStoryline(long storylineId);                                      // 합쳐질 스토리라인의 붙이기 기록
+      void forgetEvent(long eventId);                                              // 그 사건이 판정할 쪽 · 이웃 쪽인 기록 모두
+  }
+  ```
 - `Representation` — 스토리라인 표현과 대표 사건의 정본(storyline-R7) — `of(구성 사건 표현)` · `without(구성 사건 표현, 뺄 사건)` · `topTerms(n)`
-- 기준 이력 저장소 `LinkingCriteriaRepository` — `long register(LinkingCriteria criteria, Instant now)`(같은 값의 행이 있으면 그 ID) · `Map<Long, LinkingCriteria> findAll(Collection<Long> ids)`(기준 이력 ID → 값 — 운영자 조회)
+- 기준 이력 저장소 `LinkingCriteriaRepository` — `long register(LinkingCriteria criteria, Instant now)`(같은 값의 행이 있으면 그 ID) · `Map<Long, StorylineLinkingCriteria> findAll(Collection<Long> ids)`(기준 이력 ID → 기록된 값 — 운영자 조회. 띠가 생기기 전의 행은 확률 기준이 없어 공개 값으로 읽는다)
 
 #### `domain/storyline`
 
-- `LinkJudgement(LinkedBy linkedBy, @Nullable Score score, @Nullable Long criteriaId, Instant linkedAt)` — 소속 하나의 판정 근거(storyline-R14). 정한 것은 최상위 `LinkedBy` 다
+- `LinkJudgement(LinkedBy linkedBy, @Nullable Score score, @Nullable Long criteriaId, @Nullable Asked asked, Instant linkedAt)` — 소속 하나의 판정 근거(storyline-R14). 정한 것은 최상위 `LinkedBy` 다. `asked` 는 띠 안에서 확률로 정했을 때만 있고 확률이 있어야 한다
 - `ClosedMembers(Map<Long, Set<Long>> families, Map<Long, List<Long>> members)` — 닫은 사건 집합의 정본(storyline-R33). 정적 `families(스토리라인 ID, RelationGraph)` 가 스토리라인마다 자기와 모든 하위를 정하고 `everyone(가족)` 이 소속을 한 번에 읽을 가족 모두를 내며, `direct` · `closed` · `hasChildren` 이 직접 소속 · 닫은 사건 집합 · 하위 여부를 낸다
 - `StorylineSnapshot(long id, float[] centroid, Instant firstArticleAt, Instant lastArticleAt, List<String> keyTerms)` — 후보로 읽은 스토리라인
 - `Tidying` — 정돈 판정의 정본(storyline-R13 · R17). `decide(스토리라인 ID, 구성 사건, 첫 구성 사건을 가진 다른 스토리라인의 구성 사건)` 이 `Keep` · `Remove` · `Dissolve(사건 ID)` · `MergeInto(남는 스토리라인 ID, 합쳐질 스토리라인 ID 목록)` 가운데 하나를 낸다(sealed)
@@ -527,29 +554,31 @@ sequenceDiagram
 
 - `PendingEvent(long eventId, @Nullable Instant orderAt, int notifications, int failures, @Nullable LinkingLease lease)` — 대기 행 하나. `claim(토큰, 지금)` 이 점유(만료 = 지금 + `LinkingSchedule.LEASE`). 정적 `orderAt(사건 ID, 지금 상태)` 가 지금 상태로 순서 키를 정하는 규칙의 정본이다(storyline-R1 — 리스너와 풀기가 쓴다)
 - `LinkingLease(UUID token, Instant expiresAt)` — 점유
-- `LinkingSchedule` — 대기 상수(점유 기간 · 묶음 크기 · 실패 상한)의 정본(storyline-R3 · R4)
+- `LinkingSchedule` — 대기 상수(점유 기간 · 묶음 크기 · 실패 상한 · 점유 한 번의 시도 수)와 판정 가능 시각(`retryAt(실패 수, 지금)`)의 정본(storyline-R3 · R4)
 
   ```java
   public interface LinkingQueueRepository {
       void enqueue(long eventId, @Nullable Instant orderAt, Instant now);   // 이미 있으면 다시 알림 + 1 · 순서 키를 새 값으로(storyline-R2)
       int enqueueAll(Map<Long, Instant> orderAtByEvent, Instant now);       // 같은 넣기 — 새로 넣은 행 수
-      List<PendingEvent> lockDue(Instant now, int limit);                    // 순서 키(없음 먼저) · 사건 ID 순 FOR UPDATE SKIP LOCKED
+      List<PendingEvent> lockDue(Instant now, int limit);                    // 판정 가능 시각이 지난 행 — 순서 키(없음 먼저) · 사건 ID 순 FOR UPDATE SKIP LOCKED
       void saveLocked(PendingEvent next);
       boolean deleteIfUnchanged(long eventId, UUID token, int notifications);  // 토큰 · 다시 알림 수가 모두 맞을 때만
       boolean releaseIfLeased(long eventId, UUID token);
       OptionalInt recordFailureIfLeased(long eventId, UUID token);          // 실패 + 1 · 점유 해제 — 올린 뒤의 수
+      void defer(long eventId, Instant retryAt);                             // 판정 가능 시각을 미룬다(storyline-R4)
       void delete(long eventId);
   }
   ```
 
 ### 나가는 쪽
 
-포트가 없다 — Jev 는 `evaluation` 의 공개 API `FlowRelation` 으로 묻는다([evaluation Spec](evaluation.md#관계-판정)). `event` 는 공개 조회 `EventDirectory` 로 읽는다 — 잇기는 `find` · `profiles` · `neighbors` · `termCounts` · `lastArticleSince`, 조회는 `find` · `views` · `articleCountsIn` · `tallies`, 관계 판정은 `views` · `representativesOfAll` · `termCounts`. `article` 은 기사 ID 타입(`ArticleId`)만 쓴다 — 받아서 넘긴다.
+포트가 없다 — Jev 는 `evaluation` 의 공개 API `FlowMembership`([evaluation Spec](evaluation.md#흐름-소속-판정)) · `FlowRelation`([evaluation Spec](evaluation.md#관계-판정))으로 묻는다. `event` 는 공개 조회 `EventDirectory` 로 읽는다 — 잇기는 `find` · `profiles` · `neighbors` · `termCounts` · `lastArticleSince`, 조회는 `find` · `views` · `articleCountsIn` · `tallies`, 관계 판정은 `views` · `representativesOfAll` · `termCounts`. `article` 은 기사 ID 타입(`ArticleId`)만 쓴다 — 받아서 넘긴다.
 
 #### 저장소 구현
 
 - `JdbcLinkingQueueRepository` — 넣기는 `INSERT … ON CONFLICT (event_id) DO UPDATE` 로 다시 알림 수를 올리고 순서 키를 바꾼다. 여럿을 넣을 때는 사건 ID 순이다. 잠금은 `FOR UPDATE SKIP LOCKED`, 점유한 회차의 반영은 점유 토큰(지우기는 다시 알림 수도)을 조건으로 한 갱신 · 삭제다
 - `JdbcStorylineRepository` — 중심은 `halfvec` 이고 `platform` 의 `VectorText` 로 쓰고 읽는다. 후보는 합쳐지지 않은 행만 보고, 코사인은 `1 − (중심 <=> cast(벡터 as halfvec))` 를 스토리라인마다 센다(인덱스 없음) — 거리가 NaN(영 벡터)인 행은 뺀다. 합치기는 합쳐질 행을 가리키던 행을 먼저 남는 행으로 돌리고, 합쳐질 행의 소속 · 핵심 말을 지운 뒤 가리킴을 적는다. 핵심 말 상위 수는 매개변수이고 말 순은 바이트 순(`COLLATE "C"`)이다. 모듈 잠금은 `pg_advisory_xact_lock(:namespace, 0)` 이고 namespace 는 `0x53545259`('STRY')다
+- `JdbcLinkingAskedRepository` — 물은 기록 둘을 `INSERT … ON CONFLICT … DO UPDATE` 로 덮어쓴다. 스토리라인 행이 지워지면 붙이기 기록은 FK 로 함께 지워진다
 - `JdbcLinkingCriteriaRepository` — 같은 값의 행을 먼저 읽고, 없을 때만 `INSERT … ON CONFLICT … DO UPDATE … RETURNING id`. 창은 초로 적는다
 - `JdbcStorylineQueryRepository` — 행의 투영(구성 사건 수는 소속 행 수)이 한 벌이다. 찾기는 `findAll` 한 문장이고(`find` 는 그 한 건) 합쳐진 행이면 `merged_into` 를 한 번 따른다. 쪽은 주어진 스토리라인 ID 가운데 `(last_article_at, id)` 커서다
 - `JdbcRelationRepository` — 쌍의 고유는 두 ID 의 작은 쪽 · 큰 쪽으로 본다. `link` 는 그 쌍의 행을 지우고 넣는다. `all` 은 두 끝이 모두 합쳐지지 않은 행만 낸다. 기준 이력은 같은 값의 행을 먼저 읽고 없을 때만 넣는다. 물은 기록은 `INSERT … ON CONFLICT (low_id, high_id) DO UPDATE` 다
@@ -564,10 +593,10 @@ sequenceDiagram
 
 - **storyline-R1** — 알림 받기: `EventsChanged` 의 사건마다 `EventDirectory.find` 로 지금 상태를 읽어 순서 키를 정하고 대기에 넣는다(storyline-R2). 그대로인 사건이면 그 사건의 첫 기사 시각이다. 지워졌거나(빈 값) 합쳐졌으면(다른 ID) 순서 키가 없다(`PendingEvent.orderAt` — 정본, 풀기(storyline-R17)도 쓴다). 한 알림의 사건은 사건 ID 오름차순으로 넣는다. 다시 처리해도 다시 알림 수만 는다
 - **storyline-R2** — 잇기 대기: 사건마다 한 행이다. 넣을 때 행이 없으면 다시 알림 수 0 으로 넣고, 있으면 다시 알림 수를 하나 올리고 순서 키를 새 값으로 바꾼다(점유 · 실패 수는 그대로). 리스너(storyline-R1) · 다시 넣기(storyline-R12) · 풀기(storyline-R17) · 채우기(storyline-R15)가 같은 넣기를 쓴다. 이 기능이 켜지기 전의 사건은 운영자가 채우기 전까지 대기에 들어가지 않는다
-- **storyline-R3** — 회차: 반복 작업(1분, 재시도 없음)의 회차는 지금 기준을 기준 이력에 등록하고(storyline-R14), 점유가 없거나 만료된(만료 시각 ≤ 지금) 대기 행을 순서 키(없음이 먼저) · 사건 ID 순으로 64건(`LinkingSchedule.BATCH_SIZE`)까지 잠가(다른 트랜잭션이 잡은 행은 건너뛴다) 점유(토큰 · 만료 = 지금 + 10분, `LinkingSchedule.LEASE`)를 쓰고 커밋한다. 반복 작업은 이전 실행이 대기 · 처리 중이면 그 회차를 건너뛴다.
-  - 사건마다 한 트랜잭션에서 판정 · 정돈하고(storyline-R5 ~ R14 · R17 · R18), 같은 트랜잭션에서 점유 토큰과 다시 알림 수가 점유할 때와 같으면 대기 행을 지운다. 다시 알림 수가 달라졌으면(처리 중에 그 사건이 또 바뀌었다) 점유만 풀어 다음 회차가 다시 판정한다
+- **storyline-R3** — 회차: 반복 작업(1분, 재시도 없음)의 회차는 지금 기준을 기준 이력에 등록하고(storyline-R14), 점유가 없거나 만료됐고(만료 시각 ≤ 지금) 판정 가능 시각이 없거나 지난(≤ 지금) 대기 행을 순서 키(없음이 먼저) · 사건 ID 순으로 32건(`LinkingSchedule.BATCH_SIZE`)까지 잠가(다른 트랜잭션이 잡은 행은 건너뛴다) 점유(토큰 · 만료 = 지금 + 40분, `LinkingSchedule.LEASE`)를 쓰고 커밋한다. 반복 작업은 이전 실행이 대기 · 처리 중이면 그 회차를 건너뛴다.
+  - 사건마다 한 트랜잭션에서 판정 · 정돈하고(storyline-R5 ~ R14 · R17 · R18), 같은 트랜잭션에서 점유 토큰과 다시 알림 수가 점유할 때와 같으면 대기 행을 지운다. 판정이 띠 안 후보를 물어야 하면(storyline-R36) 그 트랜잭션은 아무것도 쓰지 않고, 회차가 트랜잭션 밖에서 묻고 기록한 뒤 다시 판정한다 — 사건 하나에 3번(`LinkingSchedule.MAX_ATTEMPTS_PER_CLAIM`)까지, 남으면 점유만 풀어 다음 회차가 잇는다. 다시 알림 수가 달라졌으면(처리 중에 그 사건이 또 바뀌었다) 점유만 풀어 다음 회차가 다시 판정한다
   - 회차 도중 프로세스가 죽으면 점유가 만료된 뒤 다른 회차가 가져간다
-- **storyline-R4** — 실패: 판정이 예상하지 못한 예외를 내면 그 판정의 쓰기는 롤백된다. 새 트랜잭션에서 토큰이 맞을 때 실패 수를 하나 올리고 점유를 푼 뒤 다음 사건으로 넘어간다(오류). 올린 실패 수가 상한(3, `LinkingSchedule.MAX_FAILURES`)에 이르면 그 대기 행을 지운다(오류). 뺀 사건은 운영자 채우기(storyline-R15)가 실패 수 0 으로 다시 넣을 수 있다
+- **storyline-R4** — 실패: 판정이 예상하지 못한 예외를 내면 그 판정의 쓰기는 롤백된다. 새 트랜잭션에서 토큰이 맞을 때 실패 수를 하나 올리고 점유를 푼 뒤 다음 사건으로 넘어간다(오류). 흐름 소속 판정의 평가기 일시 실패(storyline-R36)도 실패 수를 하나 올리고 점유를 풀며, 판정 가능 시각을 지금 + 1분 × 2^(실패 수 − 1)(1시간까지, `LinkingSchedule.retryAt`)로 미룬다(로그 없음). 올린 실패 수가 상한(5, `LinkingSchedule.MAX_FAILURES`)에 이르면 그 대기 행을 지운다(오류). 뺀 사건은 운영자 채우기(storyline-R15)가 실패 수 0 으로 다시 넣을 수 있다
 - **storyline-R5** — 직렬화: 판정 트랜잭션은 처음에 모듈 잠금(트랜잭션 advisory 잠금 하나)을 잡는다 — 판정은 한 번에 하나다. 리스너 · 채우기는 잡지 않는다
 
 ### 사건 변화 따르기
@@ -575,8 +604,8 @@ sequenceDiagram
 판단의 이유는 [ADR-0105](../adr/0105-storylines-link-incrementally-from-event-change-notifications-and-events-publish-changed-event-ids.md)에 있다.
 
 - **storyline-R6** — 판정은 사건의 지금 상태(`EventDirectory.find`)로 가른다.
-  - 없는 사건(지워짐): 그 사건의 소속을 모두 지운다
-  - 다른 ID(합쳐짐 — 남는 사건 S): 그 사건이 든 스토리라인마다, S 가 이미 구성 사건이면 그 사건의 소속을 지우고, 아니면 소속의 사건을 S 로 바꾸고 근거를 `MERGE` 로 다시 적는다(점수 · 기준 없음, 시각은 지금). S 의 판정은 S 자신의 알림이 한다. 옮기기는 다시 넣기(storyline-R12)의 계기가 아니다
+  - 없는 사건(지워짐): 그 사건의 소속을 모두 지우고, 그 사건이 판정할 쪽 · 이웃 쪽인 잇기 물은 기록을 지운다(storyline-R36)
+  - 다른 ID(합쳐짐 — 남는 사건 S): 그 사건의 잇기 물은 기록을 지우고(storyline-R36 — S 와는 다시 묻는다), 그 사건이 든 스토리라인마다, S 가 이미 구성 사건이면 그 사건의 소속을 지우고, 아니면 소속의 사건을 S 로 바꾸고 근거를 `MERGE` 로 다시 적는다(점수 · 기준 없음, 시각은 지금). S 의 판정은 S 자신의 알림이 한다. 옮기기는 다시 넣기(storyline-R12)의 계기가 아니다
   - 같은 ID(그대로): 아래 잇기(storyline-R7 ~ R12)를 한다. 표현을 읽을 수 없으면(그사이 지워지거나 합쳐짐) 아무것도 하지 않는다 — 그 변화의 알림이 다시 넣는다
   - 소속이 바뀐 스토리라인은 정돈한다(storyline-R17)
   - 기사 삭제는 따로 받지 않는다 — `event` 가 사건을 줄이거나 지우고 알린다(event-R8 · event-R23)
@@ -591,13 +620,27 @@ sequenceDiagram
   - 핵심 말 겹침은 Σ 무게(판정할 사건 상위 핵심 말 ∩ 견줄 것 상위 핵심 말) ÷ Σ 무게(판정할 사건 상위 핵심 말)이다 — 분모가 0 이면(핵심 말이 없거나 무게가 모두 0) 0 이다. 상위는 기사 수가 많은 순(같으면 바이트 순) 20개(`KEY_TERMS`)다
   - 말의 무게(`TermWeights` — 정본) = ln((N + 1) ÷ (n + 1)), 0 이상. N 은 첫 ~ 마지막 기사 시각이 판정할 사건의 구간(storyline-R9)과 겹치는 합쳐지지 않은 사건 수, n 은 그 가운데 그 말을 핵심 말로 가진 사건 수다(`EventDirectory.termCounts` — 판정할 사건의 상위 핵심 말만 묻는다). 많은 사건에 있는 말일수록 작다. 무게는 판정할 사건마다 그 사건의 구간과 말로 센다 — 다시 넣기(storyline-R12)에서 짝으로 연 상대 사건도 같다
   - 시각 차 Δ 는 두 시각 범위(첫 ~ 마지막 기사 시각)의 간격이다 — 겹치면 0. Δ 가 시간 창보다 크면 견줄 것이 아니다(같으면 견준다). 창 안이면 시각 차는 점수를 바꾸지 않는다
-  - 코사인 하한(`cosineFloor`) = (기준 − w) ÷ (1 − w) − 0.01(`COSINE_MARGIN` — 반 정밀도 여유). 기준이 w 이하면 −1(거르지 않는다). 겹침 ≤ 1 이라 하한 밑의 것은 기준에 닿을 수 없다
-- **storyline-R9** — 후보: 시간 창 W 는 판정할 사건 E 의 시각을 기준으로 한다 — [E 의 첫 기사 시각 − W, E 의 마지막 기사 시각 + W]. 후보 스토리라인은 E 와 모델 버전이 같고, 시각 범위가 그 구간과 겹치고, 코사인이 하한 이상인 스토리라인이다. E 가 이미 든 스토리라인은 E 를 뺀 표현(`Representation.without`)과 견준다 — E 를 빼면 남는 구성 사건이 없는 스토리라인은 후보가 아니다. 점수가 기준 이상인 것만 판정에 쓴다
-- **storyline-R10** — 붙이기(`LinkingRule.attach`): 기준 이상인 후보 가운데 점수가 가장 높은 것(같으면 스토리라인 ID 가 작은 것)이 E 의 소속이 아니면 그 스토리라인에 붙인다(`RULE`). 가장 높은 것이 이미 소속이면 아무것도 하지 않는다. 소속을 빼지 않는다
-- **storyline-R11** — 짝(`LinkingRule.pair`): 붙일 곳이 없고 E 에 소속이 없으면, 이웃 사건(`EventDirectory.neighbors` — E 와 같은 모델 버전 · 합쳐지지 않은 사건(열림 · 닫힘) · 시각 범위가 R9 의 구간과 겹침 · 코사인이 하한 이상, 코사인 순 상위 50개 — `LinkingScoring.NEIGHBORS`)에 점수를 매겨, 기준 이상인 이웃을 점수 순(같으면 사건 ID 순)으로 보아 소속 없는 첫 사건 P 와 새 스토리라인을 연다 — 표현은 E · P 로 정하고, 두 소속의 근거는 `PAIR` 와 E · P 사이 점수다. 짝이 없으면 E 는 소속 없이 남는다
-- **storyline-R12** — 다시 넣기(`LinkingRule.requeue`): 판정으로 소속이 는 사건(붙은 E, 또는 짝으로 연 E · P)마다 그 사건의 이웃을 읽어, 기준 이상이고 소속 없는 이웃(소속이 는 사건은 빼고)을 사건 ID 오름차순으로 대기에 넣는다(storyline-R2 — 순서 키는 그 이웃의 첫 기사 시각). 계기는 소속이 늘 때뿐이다 — 구성 사건이 자라 표현이 움직여도 다시 넣지 않는다. 소속은 사건 삭제 · 합쳐짐과 정돈(storyline-R17 — 합치기 · 풀기는 되돌리지 않는다)으로만 줄어 한 방향이라 다시 넣기는 끝난다
+  - 코사인 하한(`cosineFloor`) = (아래 기준 − w) ÷ (1 − w) − 0.01(`COSINE_MARGIN` — 반 정밀도 여유). 아래 기준이 w 이하면 −1(거르지 않는다). 겹침 ≤ 1 이라 하한 밑의 것은 아래 기준에 닿을 수 없다
+- **storyline-R9** — 후보: 시간 창 W 는 판정할 사건 E 의 시각을 기준으로 한다 — [E 의 첫 기사 시각 − W, E 의 마지막 기사 시각 + W]. 후보 스토리라인은 E 와 모델 버전이 같고, 시각 범위가 그 구간과 겹치고, 코사인이 하한 이상인 스토리라인이다. E 가 이미 든 스토리라인은 E 를 뺀 표현(`Representation.without`)과 견준다 — E 를 빼면 남는 구성 사건이 없는 스토리라인은 후보가 아니다. 점수가 아래 기준 이상인 것만 판정에 쓴다
+- **storyline-R10** — 붙이기(`LinkingRule.attach`): 위 기준 이상인 후보가 있으면 그 가운데 점수가 가장 높은 것(같으면 스토리라인 ID 가 작은 것)을 고르고, 없으면 띠 안 후보를 물은 확률로 고른다(storyline-R36). 고른 것이 E 의 소속이 아니면 그 스토리라인에 붙인다(`RULE`). 고른 것이 이미 소속이거나 고른 것이 없으면 아무것도 하지 않는다. 소속을 빼지 않는다 — 지금 소속인 스토리라인도 띠 안이면 묻고, 거절돼도 빼지 않는다
+- **storyline-R11** — 짝(`LinkingRule.pair`): 붙일 곳이 없고 E 에 소속이 없으면, 이웃 사건(`EventDirectory.neighbors` — E 와 같은 모델 버전 · 합쳐지지 않은 사건(열림 · 닫힘) · 시각 범위가 R9 의 구간과 겹침 · 코사인이 하한 이상, 코사인 순 상위 50개 — `LinkingScoring.NEIGHBORS`)에 점수를 매겨, 소속 없는 이웃 가운데 위 기준 이상이면 점수가 가장 높은 것(같으면 사건 ID 가 작은 것), 없으면 띠 안 이웃을 물은 확률로 고른 것(storyline-R36) P 와 새 스토리라인을 연다 — 표현은 E · P 로 정하고, 두 소속의 근거는 `PAIR` 와 E · P 사이 점수(확률로 골랐으면 그 확률 · 판정 원본 ID)다. 짝이 없으면 E 는 소속 없이 남는다
+- **storyline-R12** — 다시 넣기(`LinkingRule.requeue`): 판정으로 소속이 는 사건(붙은 E, 또는 짝으로 연 E · P)마다 그 사건의 이웃을 읽어, 아래 기준 이상이고 소속 없는 이웃(소속이 는 사건은 빼고)을 사건 ID 오름차순으로 대기에 넣는다(storyline-R2 — 순서 키는 그 이웃의 첫 기사 시각). 계기는 소속이 늘 때뿐이다 — 구성 사건이 자라 표현이 움직여도 다시 넣지 않는다. 소속은 사건 삭제 · 합쳐짐과 정돈(storyline-R17 — 합치기 · 풀기는 되돌리지 않는다)으로만 줄어 한 방향이라 다시 넣기는 끝난다
 - **storyline-R13** — 빈 스토리라인: 구성 사건이 남지 않은 스토리라인은 표현 · 핵심 말과 함께 지운다(정돈의 한 갈래 — storyline-R17). 스토리라인 ID 는 다시 쓰지 않는다([ADR-0105](../adr/0105-storylines-link-incrementally-from-event-change-notifications-and-events-publish-changed-event-ids.md))
-- **storyline-R14** — 판정 근거: 소속마다 정한 것(`RULE` · `PAIR` · `MERGE`), 점수 · 코사인 · 핵심 말 겹침(무게를 준 값 — storyline-R8), 판정에 쓴 기준 이력 ID, 시각을 남긴다. `MERGE` 는 점수 · 코사인 · 겹침 · 기준이 없고, 나머지는 넷이 모두 있다. 기준 이력은 (창, 기준) 값마다 한 행이다 — 같은 값이면 같은 ID 다. 기준을 바꿔도 지난 소속을 다시 판정하지 않는다([ADR-0105](../adr/0105-storylines-link-incrementally-from-event-change-notifications-and-events-publish-changed-event-ids.md))
+- **storyline-R14** — 판정 근거: 소속마다 정한 것(`RULE` · `PAIR` · `MERGE`), 점수 · 코사인 · 핵심 말 겹침(무게를 준 값 — storyline-R8), 판정에 쓴 기준 이력 ID, 시각을 남긴다. 띠 안에서 물은 확률로 골랐으면 그 확률 · 판정 원본 ID 도 남긴다(storyline-R36). `MERGE` 는 점수 · 코사인 · 겹침 · 기준 · 확률이 없고, 나머지는 점수 · 코사인 · 겹침 · 기준이 모두 있다. 기준 이력은 (창, 아래 기준, 위 기준, 확률 기준) 값마다 한 행이다 — 같은 값이면 같은 ID 다. 띠가 생기기 전의 행은 아래 기준 = 위 기준이고 확률 기준이 없다. 기준을 바꿔도 지난 소속을 다시 판정하지 않는다([ADR-0105](../adr/0105-storylines-link-incrementally-from-event-change-notifications-and-events-publish-changed-event-ids.md))
+
+### 띠 판정
+
+판단의 이유는 [ADR-0194](../adr/0194-storyline-linking-asks-jev-only-for-band-candidates-and-reuses-recorded-probabilities-until-either-side-doubles.md)에 있다.
+
+- **storyline-R36** — 띠 판정과 물은 기록: 붙이기(storyline-R10) · 짝(storyline-R11)의 후보 가운데 점수가 띠(아래 기준 이상 위 기준 미만 — `LinkingCriteria.inBand`)인 것은 `evaluation` 의 흐름 소속 판정(`FlowMembership`)으로 정한다. 아래 기준이 위 기준과 같으면 띠가 비어 이 규칙은 돌지 않는다.
+  - 고르기(`LinkingRule` — 정본): 위 기준 이상이 있으면 묻지 않는다. 없으면 띠 후보를 점수 순(같으면 ID 순) `MAX_ASKED`(5) 개까지 보고, 그 가운데 쓸 수 있는 물은 기록이 없는 것이 있으면 그것들을 묻는다. 모두 기록이 있으면 확률이 확률 기준 이상인 것 가운데 확률이 가장 높은 것(같으면 점수, 그다음 ID)을 고른다. 없으면 고르지 않는다. 확률 없는 기록으로는 고르지 않는다
+  - 짝 띠는 붙이기가 고른 것이 없고 E 에 소속이 없을 때만 본다 — 붙이기 띠의 답을 받은 뒤 묻는다
+  - 서술: 판정할 사건은 대표 기사(`EventDirectory.representativesOfAll`)로 넘긴다. 붙이기 후보는 판정할 사건과 중심 코사인이 큰 구성 사건 5개(`LinkingAsk.DESCRIBED_EVENTS` — 자신 제외, 같은 모델 버전)의 대표 기사, 짝 이웃은 그 사건의 대표 기사다. 대표 기사가 없는 사건은 서술에서 빠진다. 서술이 모두 빠진 후보는 묻지 않고 확률 없이 기록한다. 판정할 사건의 대표 기사가 없으면 묻지 못하고 그 판정에서 띠 후보는 고르지 않는다
+  - 물은 기록(정본): 붙이기는 (E, 스토리라인), 짝은 (E, 이웃 사건)마다 한 행에 확률 · 판정 원본 ID · 물었을 때 E 의 기사 수 · 상대의 크기(스토리라인은 구성 사건 수, 이웃은 기사 수) · 시각을 둔다. 방향이 있다 — (P, E) 는 (E, P) 를 대신하지 않는다. 다시 물을 때(`LinkingAsk.due`)는 E 의 기사 수나 상대의 크기가 물었을 때의 두 배 이상일 때다 — 그 기록은 쓰지 않고 다시 묻는다. 다시 물으면 덮어쓴다. 잇기 기준을 바꿔도 기록은 그대로 쓴다(확률 기준은 기록을 읽을 때 쓴다)
+  - 묻기는 DB 트랜잭션 밖이다(storyline-R3). 답은 짧은 트랜잭션에서 모듈 잠금을 잡고 기록한다 — 그사이 E 가 지워졌거나 합쳐졌으면 기록하지 않고(그 변화의 알림이 다시 판정한다), 그사이 합쳐졌거나 지워진 후보 스토리라인의 답은 버린다. 기록한 뒤 지금 상태로 다시 판정한다
+  - 결말: 확률을 받으면 기록한다. 평가기가 판정할 기사를 거부하면 물은 후보를 확률 없이 기록하고 판정을 잇는다 — 같은 기사라 다시 보내도 같고, 다시 물을 때가 되면 다시 묻는다. 판정할 기사가 지워졌으면 점유만 푼다(사건 변화의 알림이 다시 넣는다). 평가기 일시 실패면 실패를 세고 판정 가능 시각을 미룬다(storyline-R4). 평가기를 쓸 수 없으면 남은 점유를 풀고 회차를 멈춘다(오류)
+  - 따르기: 스토리라인이 지워지면 그 붙이기 기록이 함께 지워지고(FK), 합쳐지면 합쳐질 쪽의 기록을 지운다(storyline-R18). 사건이 지워지거나 합쳐지면 그 사건이 판정할 쪽 · 이웃 쪽인 기록을 지운다(storyline-R6)
+  - 문구: 질문 문구는 `evaluation` 이 갖는다(evaluation-R51). 물은 기록에는 문구 판이 없다 — 문구 판을 바꾸는 변경은 마이그레이션으로 잇기 물은 기록 둘을 비운다
 
 ### 운영자 채우기
 
@@ -628,7 +671,7 @@ sequenceDiagram
   - 정돈에서 남은 스토리라인은 관계 대기에 넣고(storyline-R26), 합칠 때는 관계를 옮긴다(storyline-R32)
   - 풀기가 판정 중인 사건 자신을 다시 넣으면 다시 알림 수가 올라 회차가 점유만 풀고 다음 회차가 다시 판정한다(storyline-R3)
   - 이 기능 전에 남은 사건 하나짜리 · 구성 사건이 같은 스토리라인은 그 구성 사건이 다시 판정될 때 정돈된다 — 운영자는 채우기(storyline-R15)로 다시 판정할 수 있다
-- **storyline-R18** — 합쳐진 스토리라인: 합칠 때 합쳐질 스토리라인 M 의 소속 · 핵심 말을 지우고(같은 사건이 남는 스토리라인 S 에 있다), M 의 행은 남겨 S 를 가리킨다(합친 시각과 함께). S 의 소속 · 표현은 바꾸지 않는다. 가리킴은 평평하다 — M 을 가리키던 행도 S 를 가리키게 바꾼다. S 를 지우면 S 를 가리키는 행도 함께 지운다. 합쳐진 행은 후보 · 소속 · 표현 조회에서 빠지고, 합치기는 한 방향이다 — 다시 나누지 않는다. M 의 관계는 S 로 옮긴다(storyline-R32)
+- **storyline-R18** — 합쳐진 스토리라인: 합칠 때 합쳐질 스토리라인 M 의 소속 · 핵심 말을 지우고(같은 사건이 남는 스토리라인 S 에 있다), M 의 행은 남겨 S 를 가리킨다(합친 시각과 함께). S 의 소속 · 표현은 바꾸지 않는다. 가리킴은 평평하다 — M 을 가리키던 행도 S 를 가리키게 바꾼다. S 를 지우면 S 를 가리키는 행도 함께 지운다. 합쳐진 행은 후보 · 소속 · 표현 조회에서 빠지고, 합치기는 한 방향이다 — 다시 나누지 않는다. M 의 관계는 S 로 옮기고(storyline-R32), M 의 잇기 물은 기록을 지운다(storyline-R36 — S 와는 다시 묻는다)
 - **storyline-R35** — 합치거나 지운 스토리라인의 알림: 정돈(storyline-R17)이 스토리라인을 합치거나 지우면 정돈 끝에 같은 트랜잭션에서 `StorylinesRetired` 를 한 번 발행한다 — 합쳐진 스토리라인마다(남는 스토리라인은 싣지 않는다), 지운 스토리라인마다 하나씩이고, 풀기면 남은 사건을 함께 싣는다. 판정이 되돌아가면 발행도 없다. 지운 스토리라인을 가리키던 합쳐진 행은 함께 지워지지만 싣지 않는다 — 합칠 때 이미 실렸고, 받는 쪽은 지금 상태를 읽어 사라짐을 가른다. 판단의 이유는 [ADR-0188](../adr/0188-storyline-subscriptions-follow-retired-storylines-by-event-and-before-each-use-and-notices-point-to-the-remaining-event.md)에 있다
 
 ### 큰 판정
@@ -733,15 +776,17 @@ sequenceDiagram
 
 ## 6. 데이터
 
-컬럼 타입 · 인덱스 · 제약 문면의 정본은 `backend/src/main/resources/db/migration/V24__storylines.sql` · `V25__storyline_merges.sql` · `V28__storyline_big_criteria.sql` · `V35__storyline_relations.sql` · `V40__storyline_big_criteria_intensity.sql` 이다 — `V28` 이 만든 큰 판정 기준 테이블 둘은 `V40` 이 지우고 다시 만든다. `event_id` · `representative_event_id` 는 `event` 의 사건을 가리키지만 FK 를 두지 않는다 — 모듈 사이는 ID 로만 참조한다. 보존 기간은 [data-model.md "보존 정책"](../data-model.md#보존-정책-초안)에 있다.
+컬럼 타입 · 인덱스 · 제약 문면의 정본은 `backend/src/main/resources/db/migration/V24__storylines.sql` · `V25__storyline_merges.sql` · `V28__storyline_big_criteria.sql` · `V35__storyline_relations.sql` · `V40__storyline_big_criteria_intensity.sql` · `V49__storyline_link_asked.sql` 이다 — `V28` 이 만든 큰 판정 기준 테이블 둘은 `V40` 이 지우고 다시 만든다. `event_id` · `representative_event_id` 는 `event` 의 사건을 가리키지만 FK 를 두지 않는다 — 모듈 사이는 ID 로만 참조한다. 보존 기간은 [data-model.md "보존 정책"](../data-model.md#보존-정책-초안)에 있다.
 
 | 테이블 | 주요 컬럼 | 뜻 |
 |---|---|---|
-| `storyline_linking_criteria` | id, window_seconds(0 보다 큼), threshold(0 보다 크고 1 이하), created_at | 기준 이력 — 두 값이 고유하다(storyline-R14) |
+| `storyline_linking_criteria` | id, window_seconds(0 보다 큼), lower, upper(0 < lower ≤ upper ≤ 1), probability(0 보다 크고 1 이하 · 없을 수 있음), created_at | 기준 이력 — 네 값이 고유하다(없음끼리 같다, storyline-R14). 확률 기준이 없으면 아래 기준 = 위 기준이다(제약 — 띠가 생기기 전의 행) |
 | `storylines` | id, model_version, centroid(`halfvec`), article_count(1 이상), first_article_at, last_article_at, representative_event_id, created_at, updated_at, merged_into, merged_at | 공유 스토리라인과 그 표현(storyline-R7). `centroid` 는 차원을 정하지 않은 `halfvec` 이다 — 같은 모델 버전끼리만 비교한다. 첫 기사 시각 ≤ 마지막 기사 시각(제약). 후보는 합쳐지지 않은 행의 `(model_version, last_article_at)` 부분 인덱스로 거른다(storyline-R9). 정돈이 지우거나 합친다(storyline-R17). `merged_into` 는 합쳐진 행이 가리키는 남는 스토리라인(자기 FK `ON DELETE CASCADE`)이고 `merged_at` 과 함께 있거나 함께 없으며, 자기를 가리키지 않는다(제약). 합쳐진 행의 표현 칸은 합칠 때의 값이다(storyline-R18) |
 | `storyline_key_terms` | storyline_id, term, article_count(1 이상) | 스토리라인 핵심 말 — (storyline_id, term) 기본 키(storyline-R7). 스토리라인을 지우면 함께 지워진다(FK `ON DELETE CASCADE`) |
-| `storyline_members` | storyline_id, event_id, linked_by(`RULE`/`PAIR`/`MERGE`), score, cosine, key_term_overlap, criteria_id, linked_at | 소속 — (storyline_id, event_id) 기본 키(storyline-R14). `MERGE` 면 점수 · 코사인 · 겹침 · 기준이 없고 그 밖이면 넷 모두 있다(제약). `criteria_id` 는 기준 이력 FK 다. 사건의 소속은 `event_id` 인덱스로 찾는다. 스토리라인을 지우면 함께 지워진다(FK `ON DELETE CASCADE`) |
-| `storyline_linking_queue` | event_id(기본 키), order_at, notifications(0 이상), failures(0 이상), enqueued_at, lease_token, lease_expires_at | 잇기 대기 — 사건마다 한 행(storyline-R2). `order_at` 은 순서 키이고 없을 수 있다. 점유 둘은 함께 있거나 함께 없다(제약). 회차의 잠금은 `(order_at NULLS FIRST, event_id)` 인덱스로 찾는다(storyline-R3) |
+| `storyline_members` | storyline_id, event_id, linked_by(`RULE`/`PAIR`/`MERGE`), score, cosine, key_term_overlap, criteria_id, probability, judgement_id, linked_at | 소속 — (storyline_id, event_id) 기본 키(storyline-R14). `MERGE` 면 점수 · 코사인 · 겹침 · 기준 · 확률이 없고 그 밖이면 점수 · 코사인 · 겹침 · 기준이 모두 있다(제약). 확률(0 ~ 1)과 판정 원본 ID 는 함께 있거나 함께 없다(제약 — 띠 안 판정, storyline-R36). `judgement_id` 는 `evaluation` 의 흐름 소속 판정 원본이고 FK 가 없다. `criteria_id` 는 기준 이력 FK 다. 사건의 소속은 `event_id` 인덱스로 찾는다. 스토리라인을 지우면 함께 지워진다(FK `ON DELETE CASCADE`) |
+| `storyline_link_asked` | event_id, storyline_id, probability(0 ~ 1 · 없을 수 있음), judgement_id, event_articles(1 이상), storyline_events(1 이상), asked_at | 붙이기 띠의 잇기 물은 기록 — (event_id, storyline_id) 기본 키(storyline-R36). 확률과 판정 원본 ID 는 함께 있거나 함께 없다(제약). `storyline_id` 는 스토리라인 FK `ON DELETE CASCADE` 이고 인덱스로 찾는다. `event_id` · `judgement_id` 는 FK 가 없다 |
+| `storyline_pair_asked` | event_id, partner_id, probability(0 ~ 1 · 없을 수 있음), judgement_id, event_articles(1 이상), partner_articles(1 이상), asked_at | 짝 띠의 잇기 물은 기록 — (event_id, partner_id) 기본 키, 두 ID 는 다르다(제약, storyline-R36). 확률과 판정 원본 ID 는 함께 있거나 함께 없다(제약). `partner_id` 인덱스로 찾는다. FK 가 없다 |
+| `storyline_linking_queue` | event_id(기본 키), order_at, notifications(0 이상), failures(0 이상), enqueued_at, lease_token, lease_expires_at, retry_at | 잇기 대기 — 사건마다 한 행(storyline-R2). `order_at` 은 순서 키이고 없을 수 있다. `retry_at` 은 판정 가능 시각이고 없을 수 있다(storyline-R4). 점유 둘은 함께 있거나 함께 없다(제약). 회차의 잠금은 `(order_at NULLS FIRST, event_id)` 인덱스로 찾는다(storyline-R3) |
 | `storyline_relation_criteria` | id, probability, one_matter, min_events, candidate_score, window_seconds, created_at | 관계 기준 이력 — 다섯 값이 고유하다(storyline-R31). 관계 · 물은 기록이 그 ID 를 가리킨다 |
 | `storyline_relations` | id, kind(`CONTAINS`/`FOLLOWS`), source_id, target_id, probability, judgement_id, criteria_id, linked_at | 스토리라인 사이 관계(storyline-R25). `source_id` · `target_id` 는 스토리라인 FK `ON DELETE CASCADE` 이고 서로 다르다(제약). 쌍마다 한 행 — 두 ID 의 작은 쪽 · 큰 쪽의 고유 인덱스. 포함의 하위는 상위 하나 — `target_id` 의 부분 고유 인덱스(포함만). `judgement_id` 는 `evaluation` 의 관계 판정 원본을 가리키지만 FK 가 없다 — 원본은 먼저 지워질 수 있다. `criteria_id` 는 관계 기준 이력 FK 다 |
 | `storyline_relation_asked` | low_id, high_id, smaller_events(1 이상), outcome, judgement_id, criteria_id, asked_at | 물은 기록 — (low_id, high_id) 기본 키, `low_id < high_id`(제약), 두 ID 는 스토리라인 FK `ON DELETE CASCADE`(storyline-R30). `outcome` 은 `LINKED`/`NOT_RELATED`/`LOW_PROBABILITY`/`NOT_ONE_MATTER`/`CYCLE`/`SECOND_PARENT`/`NOTHING_TO_ASK`/`REJECTED`. `judgement_id` 는 판정 원본이 남지 않은 결말(`NOTHING_TO_ASK` · `REJECTED`)이면 없다 |
@@ -754,7 +799,9 @@ sequenceDiagram
 | 설정 | 바꾸는 규칙 |
 |---|---|
 | `yozmnews.storyline-linking.window` | 시간 창(`Duration` — 예 `14d`), 기본 14일(storyline-R8 · R9) |
-| `yozmnews.storyline-linking.threshold` | 기준 점수, 기본 0.86(storyline-R8 ~ R12) |
+| `yozmnews.storyline-linking.lower` | 아래 기준 — 띠의 아래 끝 · 다시 넣기 · 코사인 하한, 기본 0.84(storyline-R8 ~ R12 · R36) |
+| `yozmnews.storyline-linking.upper` | 위 기준 — 이 이상이면 묻지 않고 붙인다, 기본 0.88(storyline-R10 · R11 · R36). 아래 기준과 같으면 띠가 비어 점수만으로 정한다 |
+| `yozmnews.storyline-linking.probability` | 확률 기준 — 띠 안 후보를 고르는 흐름 소속 판정 확률의 하한, 기본 0.70(storyline-R36) |
 | `yozmnews.storyline-state.quiet-after` | 잠잠 기간(`Duration`), 기본 7일(storyline-R16) |
 | `yozmnews.storyline-state.ended-after` | 끝남 기간(`Duration`), 기본 30일(storyline-R16) |
 | `yozmnews.storyline-relation.probability` | 관계를 맺는 확률 기준, 기본 0.60(storyline-R29) |
@@ -763,7 +810,7 @@ sequenceDiagram
 | `yozmnews.storyline-relation.candidate-score` | 점수 후보의 기준, 기본 0.88(storyline-R27) |
 | `yozmnews.storyline-relation.window` | 점수 후보를 찾고 말 수를 세는 시간 창(`Duration`), 기본 14일(storyline-R27) |
 
-기본값의 정본은 `LinkingProperties` · `StorylineStateProperties` 의 `@DefaultValue` 이고 `application.yaml` 에는 키가 없다. 기준 점수의 기본값은 기본 임베딩 모델의 코사인 범위에 맞춰 평가 세트와 운영자의 표본 검수로 정했다([ADR-0173](../adr/0173-storyline-linking-threshold-default-chosen-for-precision-on-an-evaluation-set-grid-and-operator-sample-review.md)) — 임베딩 모델을 바꾸면 다시 정한다. 시간 창 · 상태 기간의 기본값은 측정 전 목표다. 운영자는 환경 변수(`YOZMNEWS_STORYLINE_LINKING_WINDOW` · `YOZMNEWS_STORYLINE_LINKING_THRESHOLD` · `YOZMNEWS_STORYLINE_STATE_QUIET_AFTER` · `YOZMNEWS_STORYLINE_STATE_ENDED_AFTER`)로 바꾼다. 창이 0 이하이거나 초 단위가 아니거나 기준이 0 보다 크고 1 이하가 아니면 기동하지 않는다. 잠잠 · 끝남 기간이 0 이하이거나 초 단위가 아니거나 잠잠 기간 ≥ 끝남 기간이면 기동하지 않는다. 바꾼 잇기 기준은 그 뒤 판정에만 쓴다 — 지난 소속을 다시 판정하지 않는다(storyline-R14). 바꾼 상태 기간은 조회 때 바로 쓴다(storyline-R16). 관계 기준의 기본값의 정본은 `RelationProperties` 의 `@DefaultValue` 이고, 스토리라인 쌍을 직접 판정한 세트로 고른 측정 전 목표다([스토리라인 평가하기](../operations/storyline-evaluation.md#관계를-쌍-판정으로-재기)). 운영자는 환경 변수(`YOZMNEWS_STORYLINE_RELATION_PROBABILITY` · `YOZMNEWS_STORYLINE_RELATION_ONE_MATTER` · `YOZMNEWS_STORYLINE_RELATION_MIN_EVENTS` · `YOZMNEWS_STORYLINE_RELATION_CANDIDATE_SCORE` · `YOZMNEWS_STORYLINE_RELATION_WINDOW`)로 바꾼다. 확률 기준 · 후보 점수 기준이 0 보다 크고 1 이하가 아니거나, 한 사안 기준이 0 ~ 1 밖이거나, 사건 수 하한이 2 미만이거나, 창이 0 이하이거나 초 단위가 아니면 기동하지 않는다. 바꾼 관계 기준은 그 뒤 판정에만 쓴다(storyline-R30). 후보 점수 기준은 잇기의 기준 점수와 같은 눈금이다 — 임베딩 모델을 바꾸면 함께 다시 정한다. 그 밖의 설정 키는 없다. 큰 판정 기준은 설정이 아니라 운영자 설정이다 — 운영자가 화면에서 바꾼다(storyline-R20).
+기본값의 정본은 `LinkingProperties` · `StorylineStateProperties` 의 `@DefaultValue` 이고 `application.yaml` 에는 키가 없다. 아래 · 위 · 확률 기준의 기본값은 기본 임베딩 모델의 코사인 범위 · 흐름 소속 판정의 문구 판에 맞춰 시뮬레이터 격자 · 평가 인스턴스 · 운영자의 표본 검수로 정했다([ADR-0195](../adr/0195-storyline-linking-band-and-probability-defaults-chosen-for-precision-by-simulator-grid-evaluation-instance-and-operator-sample-review.md)) — 임베딩 모델이나 문구 판을 바꾸면 다시 정한다. 띠가 있으면 잇기에 Jev 비용(운영자 비용)이 든다 — 아래 기준을 위 기준과 같게 두면 Jev 를 묻지 않는다. 옛 키 `yozmnews.storyline-linking.threshold` 가 설정돼 있으면 기동하지 않는다 — 오류에 새 키 셋을 적는다([ADR-0194](../adr/0194-storyline-linking-asks-jev-only-for-band-candidates-and-reuses-recorded-probabilities-until-either-side-doubles.md)). 시간 창 · 상태 기간의 기본값은 측정 전 목표다. 운영자는 환경 변수(`YOZMNEWS_STORYLINE_LINKING_WINDOW` · `YOZMNEWS_STORYLINE_LINKING_LOWER` · `YOZMNEWS_STORYLINE_LINKING_UPPER` · `YOZMNEWS_STORYLINE_LINKING_PROBABILITY` · `YOZMNEWS_STORYLINE_STATE_QUIET_AFTER` · `YOZMNEWS_STORYLINE_STATE_ENDED_AFTER`)로 바꾼다. 창이 0 이하이거나 초 단위가 아니거나, 0 < 아래 기준 ≤ 위 기준 ≤ 1 이 아니거나, 확률 기준이 0 보다 크고 1 이하가 아니면 기동하지 않는다. 잠잠 · 끝남 기간이 0 이하이거나 초 단위가 아니거나 잠잠 기간 ≥ 끝남 기간이면 기동하지 않는다. 바꾼 잇기 기준은 그 뒤 판정에만 쓴다 — 지난 소속을 다시 판정하지 않는다(storyline-R14). 바꾼 상태 기간은 조회 때 바로 쓴다(storyline-R16). 관계 기준의 기본값의 정본은 `RelationProperties` 의 `@DefaultValue` 이고, 스토리라인 쌍을 직접 판정한 세트로 고른 측정 전 목표다([스토리라인 평가하기](../operations/storyline-evaluation.md#관계를-쌍-판정으로-재기)). 운영자는 환경 변수(`YOZMNEWS_STORYLINE_RELATION_PROBABILITY` · `YOZMNEWS_STORYLINE_RELATION_ONE_MATTER` · `YOZMNEWS_STORYLINE_RELATION_MIN_EVENTS` · `YOZMNEWS_STORYLINE_RELATION_CANDIDATE_SCORE` · `YOZMNEWS_STORYLINE_RELATION_WINDOW`)로 바꾼다. 확률 기준 · 후보 점수 기준이 0 보다 크고 1 이하가 아니거나, 한 사안 기준이 0 ~ 1 밖이거나, 사건 수 하한이 2 미만이거나, 창이 0 이하이거나 초 단위가 아니면 기동하지 않는다. 바꾼 관계 기준은 그 뒤 판정에만 쓴다(storyline-R30). 후보 점수 기준은 잇기의 아래 · 위 기준과 같은 눈금이다 — 임베딩 모델을 바꾸면 함께 다시 정한다. 그 밖의 설정 키는 없다. 큰 판정 기준은 설정이 아니라 운영자 설정이다 — 운영자가 화면에서 바꾼다(storyline-R20).
 
 ## 8. 결정
 
@@ -789,3 +836,5 @@ sequenceDiagram
 | [0173](../adr/0173-storyline-linking-threshold-default-chosen-for-precision-on-an-evaluation-set-grid-and-operator-sample-review.md) | 스토리라인 잇기 기준 점수의 기본값은 평가 세트의 격자와 운영자 표본 검수로 정밀도를 앞세워 정한다 |
 | [0174](../adr/0174-big-judgement-criterion-first-value-kept-by-operator-daily-preview-review-where-the-evaluation-set-cannot-separate-neighbours.md) | 큰 판정 기준의 처음 값은 평가 세트가 이웃한 값을 가르지 못해 운영자의 날마다 미리보기 검수로 정한다 |
 | [0188](../adr/0188-storyline-subscriptions-follow-retired-storylines-by-event-and-before-each-use-and-notices-point-to-the-remaining-event.md) | 스토리라인 구독은 `storyline` 이 알리는 합침 · 지움과 사용자의 조회 · 저장 앞에서 따라가고, 사라진 구독은 남은 사건을 가리켜 알린다 |
+| [0194](../adr/0194-storyline-linking-asks-jev-only-for-band-candidates-and-reuses-recorded-probabilities-until-either-side-doubles.md) | 스토리라인 잇기는 띠 안 후보만 Jev 에 같은 사안의 전개인지 묻고, 물은 확률을 쌍마다 기록해 크기가 두 배가 될 때까지 다시 쓴다 |
+| [0195](../adr/0195-storyline-linking-band-and-probability-defaults-chosen-for-precision-by-simulator-grid-evaluation-instance-and-operator-sample-review.md) | 스토리라인 잇기의 띠와 확률 기준의 처음 값은 시뮬레이터 격자로 좁히고 평가 인스턴스와 운영자 표본 검수로 정밀도를 앞세워 정한다 |

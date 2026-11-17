@@ -7327,7 +7327,15 @@
       "LinkingCriteriaResponse" : {
         "type" : "object",
         "properties" : {
-          "threshold" : {
+          "lower" : {
+            "type" : "number",
+            "format" : "double"
+          },
+          "probability" : {
+            "type" : [ "number", "null" ],
+            "format" : "double"
+          },
+          "upper" : {
             "type" : "number",
             "format" : "double"
           },
@@ -7336,7 +7344,7 @@
             "format" : "int64"
           }
         },
-        "required" : [ "threshold", "windowSeconds" ]
+        "required" : [ "lower", "probability", "upper", "windowSeconds" ]
       },
       "LlmKeyResponse" : {
         "type" : "object",
@@ -8800,6 +8808,10 @@
               "type" : "null"
             } ]
           },
+          "judgementId" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int64"
+          },
           "keyTermOverlap" : {
             "type" : [ "number", "null" ],
             "format" : "double"
@@ -8812,6 +8824,10 @@
             "type" : "string",
             "enum" : [ "RULE", "PAIR", "MERGE" ]
           },
+          "probability" : {
+            "type" : [ "number", "null" ],
+            "format" : "double"
+          },
           "score" : {
             "type" : [ "number", "null" ],
             "format" : "double"
@@ -8821,7 +8837,7 @@
             "format" : "int64"
           }
         },
-        "required" : [ "cosine", "criteria", "keyTermOverlap", "linkedAt", "linkedBy", "score", "storylineId" ]
+        "required" : [ "cosine", "criteria", "judgementId", "keyTermOverlap", "linkedAt", "linkedBy", "probability", "score", "storylineId" ]
       },
       "StorylinePageCursorResponse" : {
         "type" : "object",

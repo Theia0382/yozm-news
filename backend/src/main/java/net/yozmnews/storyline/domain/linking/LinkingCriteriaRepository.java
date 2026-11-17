@@ -4,15 +4,19 @@ import java.time.Instant;
 import java.util.Collection;
 import java.util.Map;
 
+import net.yozmnews.storyline.StorylineLinkingCriteria;
+
 /**
- * 잇기 기준 이력 저장소 — docs/specs/storyline.md §4 · storyline-R14
+ * 잇기 기준 이력 저장소 — docs/specs/storyline.md §4 · storyline-R14 · storyline-R36
  */
 public interface LinkingCriteriaRepository {
 
 	/** 기준을 이력에 등록한다 — 같은 값의 행이 있으면 그 ID, 없으면 더한 행의 ID */
 	long register(LinkingCriteria criteria, Instant now);
 
-	/** 기준 이력 ID → 값 — 없는 ID 는 빠진다(storyline-R34) */
-	Map<Long, LinkingCriteria> findAll(Collection<Long> ids);
+	/**
+	 * 기준 이력 ID → 기록된 값 — 없는 ID 는 빠진다(storyline-R34). 띠가 생기기 전의 행은 아래 기준 = 위 기준이고 확률 기준이 없다
+	 */
+	Map<Long, StorylineLinkingCriteria> findAll(Collection<Long> ids);
 
 }

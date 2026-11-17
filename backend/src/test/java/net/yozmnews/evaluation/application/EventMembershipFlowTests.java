@@ -211,7 +211,7 @@ class EventMembershipFlowTests {
 
 		assertThat(service(stub).judge(query(judged, 12, counting))).isEqualTo(new MembershipJudgement.ArticleMissing());
 		assertThat(judgementRows()).isZero();
-		assertThat(output).contains("판정 중 기사가 지워져 판정 원본을 지웠다 — 기사 " + judged);
+		assertThat(output).contains("사건 소속 판정 중 기사가 지워져 판정 원본을 지웠다 — 기사 " + judged);
 	}
 
 	@Test

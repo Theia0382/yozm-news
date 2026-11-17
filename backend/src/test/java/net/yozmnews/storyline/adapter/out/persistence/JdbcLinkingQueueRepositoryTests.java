@@ -67,12 +67,25 @@ class JdbcLinkingQueueRepositoryTests {
 		PendingEvent due = only(9021);
 		this.repository.saveLocked(due.claim(TOKEN, NOW));
 
-		assertThat(this.repository.lockDue(NOW.plusSeconds(599), 100)).extracting(PendingEvent::eventId)
+		assertThat(this.repository.lockDue(NOW.plusSeconds(2399), 100)).extracting(PendingEvent::eventId)
 			.doesNotContain(9021L);
-		// 만료 시각 포함
-		assertThat(this.repository.lockDue(NOW.plusSeconds(600), 100)).filteredOn(row -> row.eventId() == 9021)
+		// 만료 시각 포함 — 점유 기간 40분
+		assertThat(this.repository.lockDue(NOW.plusSeconds(2400), 100)).filteredOn(row -> row.eventId() == 9021)
 			.singleElement()
-			.satisfies(row -> assertThat(row.lease()).isEqualTo(new LinkingLease(TOKEN, NOW.plusSeconds(600))));
+			.satisfies(row -> assertThat(row.lease()).isEqualTo(new LinkingLease(TOKEN, NOW.plusSeconds(2400))));
+	}
+
+	@Test
+	void aDeferredRowWaitsUntilItsRetryTime() {
+		this.repository.enqueue(9025, Instant.parse("2026-11-01T00:00:00Z"), NOW);
+		this.repository.saveLocked(only(9025).claim(TOKEN, NOW));
+		assertThat(this.repository.recordFailureIfLeased(9025, TOKEN)).hasValue(1);
+		this.repository.defer(9025, NOW.plusSeconds(60));
+
+		assertThat(this.repository.lockDue(NOW.plusSeconds(59), 100)).extracting(PendingEvent::eventId)
+			.doesNotContain(9025L);
+		// 판정 가능 시각 포함
+		assertThat(this.repository.lockDue(NOW.plusSeconds(60), 100)).extracting(PendingEvent::eventId).contains(9025L);
 	}
 
 	@Test

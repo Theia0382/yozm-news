@@ -50,7 +50,7 @@ DETAILS = {
 }
 DETAILS[23] = DETAILS[20]
 
-LINKING = {"windowSeconds": 259200, "threshold": 0.62}
+LINKING = {"windowSeconds": 259200, "lower": 0.6, "upper": 0.62, "probability": 0.5}
 RELATION = {"probability": 0.6, "oneMatter": 0.2, "minEvents": 3, "candidateScore": 0.88, "windowSeconds": 1209600}
 
 RESULT = {
@@ -83,6 +83,7 @@ class StorylineAdmin(FakeAdmin):
         super().__init__()
         self.events[14] = ("OPEN", [])
         self.listing = [[20, 21], [22, 23]]
+        self.linking = LINKING
 
     def _serve(self, request, body):
         url = urllib.parse.urlsplit(request.path)
@@ -96,7 +97,7 @@ class StorylineAdmin(FakeAdmin):
             index = 1 if "afterId" in query else 0
             following = {"lastArticleAt": "2026-11-05T00:00:00Z", "id": 21} if index == 0 else None
             return self._send(request, 200, {"storylines": [{"id": one} for one in self.listing[index]],
-                                             "next": following, "linkingCriteria": LINKING,
+                                             "next": following, "linkingCriteria": self.linking,
                                              "relationCriteria": RELATION})
         if url.path == "/api/admin/big-storylines":
             big = {"2026-11-04": [20, 22], "2026-11-05": []}[query["from"]]
@@ -133,6 +134,16 @@ class StorylineExportTest(unittest.TestCase):
                     environ={"YOZMNEWS_ADMIN_TOKEN": token} if token else {}, stdout=out, stderr=err,
                     clock=lambda: CLOCK)
         return code, out.getvalue(), err.getvalue()
+
+    def test_keeps_a_linking_criteria_without_a_probability_as_null(self):
+        # 띠가 생기기 전의 기준처럼 확률 기준이 없는 잇기 기준도 응답 그대로 결과 기록에 남는다
+        self.fake.linking = {"windowSeconds": 1209600, "lower": 0.86, "upper": 0.86, "probability": None}
+
+        code, out, err = self.export()
+
+        self.assertEqual((code, err), (0, ""), err)
+        self.assertEqual(json.loads(self.result.read_text(encoding="utf-8"))["meta"]["linking"]["linking"],
+                         {"windowSeconds": 1209600, "lower": 0.86, "upper": 0.86, "probability": None})
 
     def test_writes_the_result_and_the_asked_pairs_of_the_instance(self):
         code, out, err = self.export()

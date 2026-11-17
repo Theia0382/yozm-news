@@ -17,6 +17,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.evaluation.FlowMembership;
 import net.yozmnews.event.EventDirectory;
 import net.yozmnews.event.EventId;
 import net.yozmnews.event.EventProfile;
@@ -31,6 +32,7 @@ import net.yozmnews.storyline.StorylineId;
 import net.yozmnews.storyline.StorylineRows;
 import net.yozmnews.storyline.StorylineState;
 import net.yozmnews.storyline.StorylinesRetired;
+import net.yozmnews.storyline.domain.linking.LinkingAskedRepository;
 import net.yozmnews.storyline.domain.linking.LinkingCriteria;
 import net.yozmnews.storyline.domain.linking.LinkingCriteriaRepository;
 import net.yozmnews.storyline.domain.linking.Representation;
@@ -88,7 +90,12 @@ class LinkingFlowTests {
 
 	private static final String MODEL = "link-m";
 
-	private static final LinkingCriteria CRITERIA = new LinkingCriteria(Duration.ofDays(14), 0.80);
+	private static final LinkingCriteria CRITERIA = new LinkingCriteria(Duration.ofDays(14), 0.80, 0.80, 0.50);
+
+	/** 띠가 없는 기준이라 흐름 소속 판정을 부르지 않는다 — 부르면 크게 실패한다 */
+	private static final FlowMembership NEVER_ASKED = query -> {
+		throw new AssertionError("띠가 없는 기준은 묻지 않는다: " + query);
+	};
 
 	private static final StateCriteria STATE = new StateCriteria(Duration.ofDays(7), Duration.ofDays(30));
 
@@ -103,6 +110,9 @@ class LinkingFlowTests {
 
 	@Autowired
 	LinkingCriteriaRepository criteria;
+
+	@Autowired
+	LinkingAskedRepository asked;
 
 	@Autowired
 	RelationRepository relations;
@@ -520,7 +530,7 @@ class LinkingFlowTests {
 		assertThat(queued(e3)).isEmpty();
 		this.queue.enqueue(e3, Instant.parse("2026-11-09T00:00:00Z"), NOW);
 
-		round(evenly(), new LinkingCriteria(Duration.ofDays(60), 0.80)).run();
+		round(evenly(), new LinkingCriteria(Duration.ofDays(60), 0.80, 0.80, 0.50)).run();
 
 		// 창 60일 안 — 시각 차는 점수를 바꾸지 않는다: 코사인 1 · 겹침 1 이라 1.0. 같은 스토리라인이 다시 진행이다(storyline-R16)
 		assertThat(member(storyline, e3)).containsEntry("linked_by", "RULE");
@@ -758,7 +768,7 @@ class LinkingFlowTests {
 	}
 
 	@Test
-	void aFailingEventIsSkippedAndDroppedAfterThreeFailures(CapturedOutput output) {
+	void aFailingEventIsSkippedAndDroppedAfterFiveFailures(CapturedOutput output) {
 		long e1 = StorylineRows.event(this.jdbc, "OPEN", MODEL, "[1,0]", 1, "2026-11-01T00:00:00Z",
 				"2026-11-01T00:00:00Z", Map.of("금리", 1));
 		long e2 = StorylineRows.event(this.jdbc, "OPEN", MODEL, "[0,1]", 1, "2026-11-02T00:00:00Z",
@@ -786,9 +796,12 @@ class LinkingFlowTests {
 		round(failing).run();
 		assertThat(queued(e1)).hasValueSatisfying(row -> assertThat(row).containsEntry("failures", 2));
 		round(failing).run();
+		round(failing).run();
+		assertThat(queued(e1)).hasValueSatisfying(row -> assertThat(row).containsEntry("failures", 4));
+		round(failing).run();
 
 		assertThat(queued(e1)).isEmpty();
-		assertThat(output).contains("스토리라인 잇기 판정이 거듭 실패해 대기에서 뺐다 — 사건 " + e1 + ", 실패 3회");
+		assertThat(output).contains("스토리라인 잇기 판정이 거듭 실패해 대기에서 뺐다 — 사건 " + e1 + ", 실패 5회");
 	}
 
 	@Test
@@ -842,12 +855,13 @@ class LinkingFlowTests {
 
 	private LinkingRound round(EventDirectory events, LinkingCriteria criteria) {
 		return new LinkingRound(this.queue, this.criteria, criteria,
-				new StorylineLinker(events, this.storylines, this.queue, this.relations, this.relationQueue, this.publisher),
-				this.transaction, InstantSource.fixed(NOW));
+				new StorylineLinker(events, this.storylines, this.queue, this.asked, this.relations, this.relationQueue,
+						this.publisher),
+				NEVER_ASKED, this.transaction, InstantSource.fixed(NOW));
 	}
 
 	private long criteriaId() {
-		return this.jdbc.sql("select id from storyline_linking_criteria where window_seconds = 1209600 and threshold = 0.80")
+		return this.jdbc.sql("select id from storyline_linking_criteria where window_seconds = 1209600 and upper = 0.80 and lower = 0.80")
 			.query(Long.class)
 			.single();
 	}
@@ -884,7 +898,7 @@ class LinkingFlowTests {
 		long criteriaId = this.criteria.register(CRITERIA, NOW);
 		for (long event : events) {
 			this.storylines.addMember(storyline, event,
-					LinkJudgement.judged(LinkedBy.PAIR, new Score(1.0, 1.0, 1.0), criteriaId, NOW));
+					LinkJudgement.judged(LinkedBy.PAIR, new Score(1.0, 1.0, 1.0), criteriaId, null, NOW));
 		}
 		return storyline;
 	}

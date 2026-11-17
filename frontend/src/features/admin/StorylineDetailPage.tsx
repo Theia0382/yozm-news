@@ -202,6 +202,13 @@ function MembershipText({
           {formatProbability(membership.keyTermOverlap)})
         </>
       )}
+      {membership.probability !== null && (
+        <>
+          {" "}
+          · 판정 확률 {formatProbability(membership.probability)} · 원본 #
+          {membership.judgementId}
+        </>
+      )}
       {membership.criteria !== null && (
         <span className="block text-muted-foreground">
           {linkingCriteriaText(membership.criteria)} ·{" "}
