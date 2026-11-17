@@ -84,6 +84,11 @@ class EventMembershipServiceTests {
 			throw new UnsupportedOperationException();
 		}
 
+		@Override
+		public Map<ArticleId, Instant> publishedAt(Collection<ArticleId> ids) {
+			throw new UnsupportedOperationException();
+		}
+
 	}
 
 	/** 쓰기가 일어나면 크게 실패하는 저장소 */

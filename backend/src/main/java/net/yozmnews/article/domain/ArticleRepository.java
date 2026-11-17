@@ -67,6 +67,9 @@ public interface ArticleRepository {
 	 */
 	Map<ArticleId, Set<SourceId>> findSources(Collection<ArticleId> articleIds);
 
+	/** 기사들의 발행 시각 — 없는 기사는 빠진다 */
+	Map<ArticleId, Instant> findPublishedAt(Collection<ArticleId> articleIds);
+
 	/**
 	 * 처음 본 시각({@code first_seen_at})이 {@code since} 이상인 기사.
 	 * @return 기사 ID — ID 순
