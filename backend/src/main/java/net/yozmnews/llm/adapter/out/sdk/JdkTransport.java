@@ -36,9 +36,6 @@ final class JdkTransport implements AutoCloseable {
 	/** 연결 마감 */
 	static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(5);
 
-	/** 요청 하나(헤더 · 본문 전부)의 마감 */
-	static final Duration REQUEST_DEADLINE = Duration.ofSeconds(15);
-
 	/** 응답 본문 상한 */
 	static final int MAX_RESPONSE_BYTES = 1024 * 1024;
 
@@ -54,11 +51,14 @@ final class JdkTransport implements AutoCloseable {
 
 	private final AtomicBoolean closed = new AtomicBoolean();
 
-	JdkTransport() {
-		this(REQUEST_DEADLINE, MAX_RESPONSE_BYTES);
+	/**
+	 * @param deadline 요청 하나(헤더 · 본문 전부)의 마감 — 부르는 쪽이 호출 종류마다 정한다(llm-R7)
+	 */
+	JdkTransport(Duration deadline) {
+		this(deadline, MAX_RESPONSE_BYTES);
 	}
 
-	/** 시험이 마감 · 본문 상한을 줄인다 */
+	/** 시험이 본문 상한도 줄인다 */
 	JdkTransport(Duration deadline, int maxResponseBytes) {
 		this.deadline = Objects.requireNonNull(deadline, "deadline");
 		this.maxResponseBytes = maxResponseBytes;

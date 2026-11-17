@@ -2,9 +2,8 @@ package net.yozmnews.llm;
 
 import java.util.Objects;
 
+import net.yozmnews.llm.domain.schema.SchemaDocuments;
 import org.jspecify.annotations.Nullable;
-import tools.jackson.core.JacksonException;
-import tools.jackson.databind.json.JsonMapper;
 
 /**
  * 생성 호출의 요청 — docs/specs/llm.md §3.
@@ -27,8 +26,6 @@ public record GenerationRequest(LlmModel model, String instructions, String user
 	 */
 	public static final int MAX_BODY_TOKENS = 32_000;
 
-	private static final JsonMapper JSON = JsonMapper.builder().build();
-
 	public GenerationRequest {
 		Objects.requireNonNull(model, "model");
 		Objects.requireNonNull(instructions, "instructions");
@@ -44,17 +41,8 @@ public record GenerationRequest(LlmModel model, String instructions, String user
 			throw new IllegalArgumentException(
 					"본문 토큰 상한은 1 ~ " + MAX_BODY_TOKENS + " 이다 — " + maxBodyTokens);
 		}
-		if (outputSchema != null && !isObject(outputSchema)) {
+		if (outputSchema != null && !SchemaDocuments.isObject(outputSchema)) {
 			throw new IllegalArgumentException("출력 스키마는 JSON 객체 문서다");
-		}
-	}
-
-	private static boolean isObject(String document) {
-		try {
-			return JSON.readTree(document).isObject();
-		}
-		catch (JacksonException ex) {
-			return false;
 		}
 	}
 

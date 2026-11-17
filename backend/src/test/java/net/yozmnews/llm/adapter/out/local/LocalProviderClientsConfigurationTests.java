@@ -2,13 +2,19 @@ package net.yozmnews.llm.adapter.out.local;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Duration;
+
+import net.yozmnews.llm.GenerationStop;
 import net.yozmnews.llm.KeyValidationResult;
 import net.yozmnews.llm.LlmClientFactory;
 import net.yozmnews.llm.LlmFailureKind;
 import net.yozmnews.llm.NoStoredKeys;
 import net.yozmnews.llm.Provider;
+import net.yozmnews.llm.ReasoningEffort;
 import net.yozmnews.llm.StoredKeySource;
 import net.yozmnews.llm.adapter.out.sdk.SdkProviderClients;
+import net.yozmnews.llm.domain.provider.GenerationCall;
+import net.yozmnews.llm.domain.provider.GenerationOutcome;
 import net.yozmnews.llm.domain.provider.LlmProviderClient;
 import net.yozmnews.llm.domain.provider.LlmProviderClients;
 import net.yozmnews.llm.domain.provider.ProbeResult;
@@ -39,8 +45,12 @@ class LocalProviderClientsConfigurationTests {
 
 				assertThat(port).isInstanceOf(LocalProviderClients.class);
 				assertThat(context).hasSingleBean(SdkProviderClients.class);
-				try (LlmProviderClient client = port.open(Provider.OPENAI, SecretValue.of("yozm-local-valid"))) {
+				try (LlmProviderClient client = port.open(Provider.OPENAI, SecretValue.of("yozm-local-valid"),
+						Duration.ofSeconds(15))) {
 					assertThat(client.probe()).isEqualTo(new ProbeResult.Reachable());
+					assertThat(client.generate(
+							new GenerationCall("gpt-x", true, "지시", "사용자", null, ReasoningEffort.LOW, 4_100)))
+						.isEqualTo(new GenerationOutcome.Answered("로컬 대체물이 만든 본문이다.", 0, 0, GenerationStop.COMPLETE));
 				}
 			});
 	}

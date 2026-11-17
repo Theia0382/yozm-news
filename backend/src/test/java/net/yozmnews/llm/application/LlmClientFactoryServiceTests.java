@@ -3,17 +3,21 @@ package net.yozmnews.llm.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
 
+import net.yozmnews.llm.GenerationStop;
 import net.yozmnews.llm.KeyValidationResult;
 import net.yozmnews.llm.LlmFailureKind;
 import net.yozmnews.llm.Provider;
 import net.yozmnews.llm.StoredKey;
 import net.yozmnews.llm.StoredKeySource;
 import net.yozmnews.llm.StoredKeyValidation;
+import net.yozmnews.llm.domain.provider.GenerationCall;
+import net.yozmnews.llm.domain.provider.GenerationOutcome;
 import net.yozmnews.llm.domain.provider.LlmProviderClient;
 import net.yozmnews.llm.domain.provider.LlmProviderClients;
 import net.yozmnews.llm.domain.provider.ProbeResult;
@@ -50,6 +54,16 @@ class LlmClientFactoryServiceTests {
 		assertThat(this.clients.opened).containsExactly(Provider.ANTHROPIC);
 		assertThat(this.clients.keys).containsExactly(KEY);
 		assertThat(this.clients.closed).isEqualTo(1);
+	}
+
+	@Test
+	void bothKeyChecksOpenTheClientWithAFifteenSecondDeadline() {
+		this.source.stored = Optional.of(new StoredKey(41, KEY));
+
+		this.service.validate(Provider.OPENAI, KEY);
+		this.service.validateStored(new UserId(7), Provider.ANTHROPIC);
+
+		assertThat(this.clients.deadlines).containsExactly(Duration.ofSeconds(15), Duration.ofSeconds(15));
 	}
 
 	@Test
@@ -246,10 +260,15 @@ class LlmClientFactoryServiceTests {
 
 	}
 
-	/** 연 공급자 · 키와 닫은 횟수를 적는 가짜 포트 */
+	/** 연 공급자 · 키 · 마감과 닫은 횟수를 적는 가짜 포트 */
 	private static final class RecordingClients implements LlmProviderClients {
 
 		private final List<Provider> opened = new ArrayList<>();
+
+		private final List<Duration> deadlines = new ArrayList<>();
+
+		private Supplier<GenerationOutcome> generate = () -> new GenerationOutcome.Answered("{}", 0, 0,
+				GenerationStop.COMPLETE);
 
 		private final List<SecretValue> keys = new ArrayList<>();
 
@@ -260,17 +279,23 @@ class LlmClientFactoryServiceTests {
 		private int closed;
 
 		@Override
-		public LlmProviderClient open(Provider provider, SecretValue key) {
+		public LlmProviderClient open(Provider provider, SecretValue key, Duration deadline) {
 			if (this.failOnOpen) {
 				throw new IllegalStateException("sk-open-failure");
 			}
 			this.opened.add(provider);
 			this.keys.add(key);
+			this.deadlines.add(deadline);
 			return new LlmProviderClient() {
 
 				@Override
 				public ProbeResult probe() {
 					return RecordingClients.this.probe.get();
+				}
+
+				@Override
+				public GenerationOutcome generate(GenerationCall call) {
+					return RecordingClients.this.generate.get();
 				}
 
 				@Override

@@ -1,5 +1,6 @@
 package net.yozmnews.llm.application;
 
+import java.time.Duration;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -34,6 +35,9 @@ class LlmClientFactoryService implements LlmClientFactory {
 	static final String IN_TRANSACTION = "LLM 공급자 호출을 트랜잭션 안에서 불렀다 — 공급자 호출은 트랜잭션 밖에서 한다";
 
 	static final String MALFORMED_KEY = "키의 형식이 틀렸다";
+
+	/** 키 검증의 요청 하나 마감(헤더 · 본문 전부) — 화면 요청 안에서 불러도 되는 길이다 */
+	static final Duration VALIDATION_DEADLINE = Duration.ofSeconds(15);
 
 	/** 예상 밖 예외의 실패 문구 머리 — 뒤에 예외 클래스 이름을 잇는다 */
 	static final String UNEXPECTED_FAILURE = "LLM 키 확인 중 예상 못한 오류 — ";
@@ -88,7 +92,7 @@ class LlmClientFactoryService implements LlmClientFactory {
 		if (HeaderValueShape.violation(key.reveal()).isPresent()) {
 			return new KeyValidationResult.Rejected(LlmFailureKind.INVALID_KEY, MALFORMED_KEY);
 		}
-		try (LlmProviderClient client = this.clients.open(provider, key)) {
+		try (LlmProviderClient client = this.clients.open(provider, key, VALIDATION_DEADLINE)) {
 			return switch (client.probe()) {
 				case ProbeResult.Reachable reachable -> new KeyValidationResult.Valid();
 				case ProbeResult.Failed failed -> new KeyValidationResult.Rejected(failed.kind(), failed.message());

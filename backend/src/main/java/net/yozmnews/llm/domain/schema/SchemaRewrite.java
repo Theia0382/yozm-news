@@ -6,7 +6,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ArrayNode;
@@ -42,17 +41,9 @@ final class SchemaRewrite {
 	 */
 	String apply(String schema) {
 		Objects.requireNonNull(schema, "schema");
-		JsonNode root;
-		try {
-			root = JSON.readTree(schema);
-		}
-		catch (JacksonException ex) {
-			throw new IllegalArgumentException("출력 스키마를 읽지 못했다 — " + ex.getClass().getSimpleName());
-		}
-		if (!root.isObject()) {
-			throw new IllegalArgumentException("출력 스키마는 JSON 객체 문서다");
-		}
-		return JSON.writeValueAsString(rewrite((ObjectNode) root));
+		ObjectNode root = SchemaDocuments.read(schema)
+			.orElseThrow(() -> new IllegalArgumentException("출력 스키마는 JSON 객체 문서다"));
+		return JSON.writeValueAsString(rewrite(root));
 	}
 
 	private ObjectNode rewrite(ObjectNode node) {
