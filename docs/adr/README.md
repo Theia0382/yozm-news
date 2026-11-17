@@ -33,7 +33,7 @@
 | [0025](0025-long-term-personal-news-history-in-v1.md) | 장기 개인 뉴스 히스토리를 v1 핵심 가치로 둔다 — 공유 사건 · 사용자별 이슈 · 변화 리포트 | 승인 (부분 대체: 0047 · 0101) |
 | [0026](0026-event-clustering-with-local-embeddings-and-jev.md) | 사건 묶기는 로컬 임베딩과 고유명사 산식으로 하고, 애매한 구간만 Jev 로 판정한다 | 승인 (부분 대체: 0063 · 0101 · 0103 · 0114) |
 | [0027](0027-pgvector-for-vector-storage.md) | 벡터 저장은 PostgreSQL pgvector 확장으로 한다 | 승인 (부분 대체: 0075 · 0079 · 0088) |
-| [0028](0028-explicit-signals-and-interest-weighted-candidates.md) | 관심 신호는 명시적 행동만 쓰고, 관심도를 후보 순위에 반영하되 큰 사건을 끼워 넣는다 | 승인 (부분 대체: 0101 · 0103) |
+| [0028](0028-explicit-signals-and-interest-weighted-candidates.md) | 관심 신호는 명시적 행동만 쓰고, 관심도를 후보 순위에 반영하되 큰 사건을 끼워 넣는다 | 승인 (부분 대체: 0101 · 0103 · 0209) |
 | [0029](0029-indefinite-summary-retention-with-optional-deletion.md) | RSS 요약문은 기본 무기한 보존하고, 자동 삭제는 운영 설정으로 켠다 | 승인 (부분 대체: 0068 · 0101) |
 | [0030](0030-feed-xml-own-parser-and-rome-for-format-title-link.md) | 피드 문서는 자체 구성한 XML 파서로 읽어 DTD 선언을 거부하고, Rome 은 형식 판별 · 제목 · 링크에만 쓴다 | 승인 |
 | [0031](0031-feed-request-blocks-internal-addresses-with-apache-httpclient-deadline.md) | 피드 요청은 내부 주소를 기본으로 막고, Apache HttpClient 로 한 번의 수집 전체에 마감 · 크기 상한을 건다 | 승인 (부분 대체: 0049 · 0065) |
@@ -207,6 +207,11 @@
 | [0199](0199-generation-requests-carry-only-the-tasks-own-inputs-and-the-gateway-maps-them-to-each-provider.md) | 생성 호출의 요청은 과제의 것만 받고, 공급자의 꼴로 옮기는 일은 관문이 한다 | 승인 |
 | [0200](0200-generation-results-carry-the-stop-reason-and-schema-enforcement-and-failures-use-the-five-key-check-kinds.md) | 생성 호출의 결과는 종료 사유와 스키마 강제 여부를 싣고, 실패는 검증과 같은 다섯 종류로 낸다 | 승인 |
 | [0201](0201-the-gateway-resends-only-transient-generation-failures-and-sets-the-request-deadline-per-call-kind.md) | 생성 호출은 관문이 일시 장애만 다시 보내고, 요청 하나의 마감은 관문이 호출 종류마다 정한다 | 승인 |
+| [0207](0207-digest-candidates-enter-a-period-by-first-evaluation-time-with-a-published-time-floor.md) | 다이제스트 후보는 첫 평가 시각으로 기간에 넣고, 발행 시각 하한으로 오래된 기사를 막는다 | 승인 |
+| [0208](0208-the-big-slot-takes-the-representatives-of-the-heaviest-events-of-each-big-storyline-row.md) | 큰 슬롯은 큰 판정 행마다 기간 안 중요도 합이 큰 사건 몇 개의 대표 기사를 넣는다 | 승인 |
+| [0209](0209-maximum-candidates-and-big-slots-are-user-settings-and-the-big-slot-takes-at-most-half.md) | 최대 후보 수와 큰 슬롯 수는 사용자 설정이고, 큰 슬롯은 최대 후보 수의 절반을 넘지 않는다 | 승인 |
+| [0210](0210-candidate-selection-cuts-to-the-input-token-budget-with-one-estimate-the-prompt-follows.md) | 입력 토큰 예산은 후보 선별이 `digest` 의 한 추정 규칙으로 세어 자르고, 프롬프트 구성이 그 규칙을 따른다 | 승인 |
+| [0211](0211-the-digest-consumer-query-of-interest-settings-writes-nothing-and-returns-followed-preferences-with-expanded-topics.md) | 다이제스트가 읽는 관심 설정 조회는 쓰지 않고, 따라가기 결과와 펼친 주제 구독을 낸다 | 승인 |
 
 ## 운영 규칙
 

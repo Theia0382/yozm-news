@@ -112,6 +112,7 @@ public interface ArticleDirectory {
     Map<ArticleId, ArticleHeadline> headlines(Collection<ArticleId> ids);
     List<ArticleId> firstSeenSince(Instant since);
     Map<ArticleId, Set<SourceId>> sources(Collection<ArticleId> ids);
+    Map<ArticleId, Instant> publishedAt(Collection<ArticleId> ids);
 }
 
 public record ArticleContent(ArticleId id, String title, @Nullable String summary, URI canonicalUrl,
@@ -129,6 +130,7 @@ public record ArticleHeadline(ArticleId id, String title, List<String> sources, 
 | `headlines` | 기사들의 헤드라인 — 없는(지운) 기사는 결과에 없다. 빈 입력이면 빈 맵. 운영자 화면(`admin`)과 독자 화면(`reader`)이 기사 한 줄을 그린다(article-R17) |
 | `ArticleHeadline.sources` | 출처 이름 — 엔트리 순서, 같은 이름은 한 번, 이름이 없는 피드는 뺀다(article-R17). 비어 있을 수 있다 |
 | `firstSeenSince` | 처음 본 시각(`first_seen_at`)이 `since` 이상인 기사의 ID — ID 순. `tag` 가 체계를 바꿀 때 재평가 대상을, `event` 가 사건 묶기 채우기 대상을 고른다 |
+| `publishedAt` | 기사들의 발행 시각(`ArticleContent.publishedAt` 과 같은 값) — 질의 하나, 내용 전체를 읽지 않는다. 없는(지운) 기사는 결과에 없다. 빈 입력이면 빈 맵. 다이제스트 후보 선별이 발행 시각 하한 · 순위에 쓴다 |
 | `sources` | 기사들의 엔트리가 가진 소스 — 엔트리가 없는(지운) 기사는 결과에 없다. 빈 입력이면 빈 맵. `event` 가 기간 집계의 서로 다른 소스 수를 센다 |
 | `ArticleContent.summary` | 저장된 RSS 요약문 — 없으면 null |
 | `ArticleContent.canonicalUrl` | 기사의 정규 URL(article-R1) — 원문 링크. 언제나 http · https 다 |
@@ -137,7 +139,7 @@ public record ArticleHeadline(ArticleId id, String title, List<String> sources, 
 | `ArticleEntryView.categories` | 그 피드에서 처음 본 항목의 RSS 카테고리 — 피드 순서 그대로 |
 
 - 계약
-  - 트랜잭션을 열지 않는다 — `findAll` 은 엔트리 · 기사 두 질의로 읽고, 각 질의는 그 순간의 값이다. 엔트리를 먼저 읽으므로 두 질의 사이에 지운 기사는 결과에서 빠진다. `firstSeenSince` · `sources` 는 질의 하나다
+  - 트랜잭션을 열지 않는다 — `findAll` 은 엔트리 · 기사 두 질의로 읽고, 각 질의는 그 순간의 값이다. 엔트리를 먼저 읽으므로 두 질의 사이에 지운 기사는 결과에서 빠진다. `firstSeenSince` · `sources` · `publishedAt` 은 질의 하나다
   - `first_seen_at` 에는 인덱스가 없다 — `firstSeenSince` 는 표 전체를 읽는다. 드문 운영 연산(체계 변경 · 사건 묶기 채우기)이 부른다
   - `findAll` 은 출처 이름 · 피드 섹션을 담지 않는다 — `source` 의 공개 조회가 낸다. `headlines` 는 `findAll` 한 번과 `source` 의 `FeedLabels.labels` 한 번으로 출처 이름을 엮는다 — 두 질의 사이에 지운 기사 · 피드는 결과 · 이름에서 빠진다
 
@@ -293,6 +295,7 @@ sequenceDiagram
       Map<ArticleId, ArticleContent> findContents(Collection<ArticleId> articleIds);  // 없는 기사는 빠진다 — 엔트리는 받은 시각 · 피드 ID 순
       List<ArticleId> findFirstSeenSince(Instant since);                               // first_seen_at >= since — ID 순
       Map<ArticleId, Set<SourceId>> findSources(Collection<ArticleId> articleIds);    // 엔트리의 소스 — 엔트리가 없는 기사는 빠진다
+      Map<ArticleId, Instant> findPublishedAt(Collection<ArticleId> articleIds);      // 발행 시각 — 없는 기사는 빠진다
   }
   ```
 
