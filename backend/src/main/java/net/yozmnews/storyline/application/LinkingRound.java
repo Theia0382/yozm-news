@@ -165,7 +165,7 @@ public class LinkingRound {
 					yield Next.EVENT;
 				}
 				case ARTICLE_REJECTED -> {
-					// 같은 기사라 다시 보내도 같다 — 물은 후보를 확률 없이 기록하고 판정을 잇는다(D10)
+					// 같은 기사라 다시 보내도 같다 — 물은 후보를 확률 없이 기록하고 판정을 잇는다
 					this.transaction.executeWithoutResult(
 							status -> this.linker.record(ask, null, Map.of(), this.clock.instant()));
 					yield Next.ATTEMPT;

@@ -1,6 +1,6 @@
 # ADR-0105: 스토리라인은 사건 변화 알림으로 증분으로 잇고, `event` 는 바뀐 사건 ID 를 발행한다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 판정 실패의 상한([ADR-0194](0194-storyline-linking-asks-jev-only-for-band-candidates-and-reuses-recorded-probabilities-until-either-side-doubles.md))
 - 날짜: 2026-11-10
 - 근거: [이슈 #127](https://github.com/Theia0382/yozm-news/issues/127) — 스토리라인 골격(모듈 · 소속 데이터 · 사건 변화 따르기 · 잇기 작업). `event` 의 사건 쓰기 경로 전수 조사와 리드 결정
 - 관련: [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)(결정 "공유 스토리라인의 책임 · 계약은 구현할 때 정한다" — 보충), [ADR-0060](0060-article-deletion-announced-by-removed-article-ids-and-followed-by-referencing-modules.md)(지운 ID 를 이벤트로 알리고 가리키는 쪽이 따르는 꼴 — 같은 꼴), [ADR-0045](0045-admin-module-serves-operator-api-over-module-public-operation-apis.md)(운영 API 의 꼴), [ADR-0106](0106-provisional-storyline-linking-opens-only-with-a-partner-event-and-adds-the-single-best-storyline-without-removal.md)(이 틀 위에서 도는 임시 잇기 규칙)
@@ -18,6 +18,7 @@
 - **잇기는 증분이다.** 사건이 생기거나 바뀌면 그 사건을 판정해 스토리라인에 붙이거나 새 스토리라인을 연다. 기간을 통째로 다시 묶지 않는다 — 스토리라인 ID 가 구독 · 타임라인의 기준이다.
 - **`event` 는 바뀐 사건 ID 를 발행한다(`EventsChanged`).** 사건을 바꾸는 저장소 메서드 다섯(열기 · 고치기 · 지우기 · 합치기 · 닫기)이 같은 트랜잭션에서 발행한다 — 일곱 갈래가 모두 이 메서드를 지나가고, 앞으로 생길 갈래도 빠뜨릴 수 없다. 트랜잭션 밖에서 부르면 실패한다. 알림은 ID 만 싣고 무엇이 일어났는지는 싣지 않는다 — 받는 쪽이 지금 상태(`EventDirectory.find` — 지워짐 · 합쳐짐 · 그대로)를 읽어 가른다. 그래서 알림의 순서가 바뀌거나 두 번 와도 결과가 같다. 대표 기사 비우기는 소속의 재료를 바꾸지 않아 알리지 않는다.
 - **`storyline` 은 알림을 잇기 대기로 받는다.** 사건마다 한 행이고, 이미 있으면 다시 알림 수를 올린다. 회차는 점유할 때의 다시 알림 수가 그대로일 때만 행을 지운다 — 처리 중에 다시 온 알림을 놓치지 않는다. 대기는 사건의 첫 기사 시각 순으로 점유한다(지워졌거나 합쳐진 사건이 먼저) — 한꺼번에 넣은 사건도 실시간과 같은 시간 순으로 판정한다. 판정은 모듈 잠금 하나로 직렬이다.
+> 부분 대체(둘째 문장의 상한) — [ADR-0194](0194-storyline-linking-asks-jev-only-for-band-candidates-and-reuses-recorded-probabilities-until-either-side-doubles.md). 지금 상태: [storyline Spec "잇기 대기와 회차"](../specs/storyline.md#잇기-대기와-회차)(storyline-R4)
 - **판정이 예외를 내면 그 사건만 건너뛴다.** 실패 수를 세어 상한(3)이면 대기에서 빼고 오류 로그를 남긴다 — 시각 순 점유에서 회차를 멈추면 같은 사건이 뒤 사건을 영영 막는다.
 - **사건이 지워지면 소속을 지우고, 합쳐지면 남는 사건으로 옮긴다. 구성 사건이 없는 스토리라인은 지운다.** 사건이 비면 지우는 것과 같은 꼴이다. 스토리라인을 가리키는 쪽(앞으로의 구독)이 생기면 지운 스토리라인 ID 를 알린다.
 - **스토리라인은 사건 ID 만 가리킨다.** 기사를 가리키지 않아 기사 삭제는 사건의 변화로 따른다. 스토리라인을 알아보게 하는 대표는 구성 사건 하나 — 기사 수가 가장 많은 사건(같으면 사건 ID 가 작은 것)이고, 대표 기사는 그 사건의 것을 조회할 때 읽는다. 소속마다 정한 것 · 점수 · 판정에 쓴 기준(기준 이력 ID)을 남긴다.
@@ -55,3 +56,4 @@
 - 2026-11-10: 결정 "구성 사건이 없는 스토리라인은 지운다" — 사건 하나만 남은 스토리라인의 합치기 · 풀기와 합쳐진 스토리라인의 가리킴([ADR-0108](0108-storylines-with-the-same-events-merge-and-a-storyline-left-with-one-event-merges-or-dissolves.md)), 지금 상태는 [storyline Spec "정돈"](../specs/storyline.md#정돈)(storyline-R17 · R18)
 - 2026-11-12: 결정 "스토리라인은 사건 ID 만 가리킨다" — 큰 판정의 재료(기간 안 기사의 소스 · 중요도)는 `event` 가 사건 묶음 단위로 센다([ADR-0117](0117-big-judgement-materials-are-tallied-by-event-per-group-of-events-and-storyline-passes-only-event-ids.md)), 지금 상태는 [storyline Spec "큰 판정"](../specs/storyline.md#큰-판정)(storyline-R19)
 - 2026-11-16: 결정 "스토리라인을 가리키는 쪽(앞으로의 구독)이 생기면 지운 스토리라인 ID 를 알린다"와 결과 "구독이 생길 때 지운 ID 알림을 더한다" — 정돈이 합치거나 지운 스토리라인을 `StorylinesRetired` 로 알리고 구독이 따른다([ADR-0188](0188-storyline-subscriptions-follow-retired-storylines-by-event-and-before-each-use-and-notices-point-to-the-remaining-event.md)), 지금 상태는 [storyline Spec "정돈"](../specs/storyline.md#정돈)(storyline-R35) · [user Spec "스토리라인 구독"](../specs/user.md#스토리라인-구독)
+- 2026-11-17: 결정 "소속마다 정한 것 · 점수 · 판정에 쓴 기준(기준 이력 ID)을 남긴다" — 띠 안 판정의 확률 · 판정 원본 ID 를 더한다([ADR-0194](0194-storyline-linking-asks-jev-only-for-band-candidates-and-reuses-recorded-probabilities-until-either-side-doubles.md) · [storyline Spec §5](../specs/storyline.md#잇기-규칙)(storyline-R14))
