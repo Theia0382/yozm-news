@@ -14,7 +14,7 @@
 - **후보 행 보존** — 만든 지 30일이 지난 다이제스트의 후보 행을 지운다
 - **받은 소식** — 사용자가 날짜별로 보이는 다이제스트에서 받은 기사와 받은 날짜를 공개 조회(`ReceivedArticles`)로 낸다 — 독자 화면이 스토리라인 타임라인에 단다(digest-R13, [ADR-0193](../adr/0193-the-per-user-storyline-information-is-the-received-news-counted-from-the-digest-shown-for-each-date.md))
 - **(미구현)** 후보 선별(구독 필터 · 큰 스토리라인 슬롯 · 사건 단위 중복 제거 · 상한 · 선정 이유)
-- **(미구현)** 프롬프트 구성과 실제 생성기(사용자 키로 `llm` 의 호출 API 를 부르는 생성기) · 파싱 실패의 다시 묻기
+- **(미구현)** 프롬프트 구성과 실제 생성기(사용자 키로 `llm` 의 생성 호출 `LlmClientFactory.generateStored` 를 부르는 생성기) · 파싱 실패의 다시 묻기
 - **(미구현)** 일정 기반 생성과 수동 재생성, 독자 화면(`reader`)이 쓸 다이제스트 조회 — 화면은 날짜별로 보이는 다이제스트(digest-R13)를 보인다. 화면용 API 는 `reader` 가 낸다([ADR-0192](../adr/0192-reader-screens-are-composed-by-the-reader-module-over-module-public-queries.md))
 - **(미구현)** 관심도 산식과 관심사 히스토리 조회
 
@@ -169,7 +169,7 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
   - 트랜잭션 밖에서 불린다
   - 예외는 그대로 부르는 쪽으로 간다 — 다이제스트는 생성 중으로 남는다(digest-R8)
 - 구현
-  - **(미구현)** 사용자 키로 `llm` 의 호출 API 를 부르는 실제 생성기 — `local` 밖에서 등록된다
+  - **(미구현)** 사용자 키로 `llm` 의 생성 호출([llm Spec](llm.md#생성-호출))을 부르는 실제 생성기 — `local` 밖에서 등록된다
   - `FakeDigestGenerator`(`adapter/out/fake`) — 로컬 대체물. 고정 규칙(digest-R12)
   - `FakeDigestGeneratorConfiguration`(`adapter/out/fake`) — 대체물의 결선. `@LocalDevelopment` — profile `local` 에서 조건 없이 등록한다([platform-R18](platform.md#로컬-개발) · digest-R12). 역할 애너테이션이 없다
 - 생성기가 하나도 없는 프로세스도 기동한다 — 생성할 때 찾고, 없으면 그 다이제스트를 실패로 끝낸다(digest-R8)
