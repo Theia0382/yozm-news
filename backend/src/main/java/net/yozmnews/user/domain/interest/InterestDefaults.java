@@ -26,6 +26,12 @@ public final class InterestDefaults {
 	/** 월간 변화 리포트를 받는가 */
 	public static final boolean MONTHLY_REPORT = true;
 
+	/** 다이제스트 최대 후보 수의 단계 */
+	public static final CandidateVolume CANDIDATE_VOLUME = CandidateVolume.NORMAL;
+
+	/** 다이제스트 큰 슬롯 수 — 측정 전 목표 */
+	public static final int BIG_SLOTS = 3;
+
 	private InterestDefaults() {
 	}
 

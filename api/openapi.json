@@ -4292,6 +4292,90 @@
         "tags" : [ "interest-controller" ]
       }
     },
+    "/api/interests/volume" : {
+      "get" : {
+        "operationId" : "volume",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/InterestVolumeResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "세션이 없거나 만료됐다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "비밀번호를 바꿔야 한다"
+          }
+        },
+        "tags" : [ "interest-controller" ]
+      },
+      "put" : {
+        "operationId" : "saveVolume",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/InterestVolumeRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/InterestVolumeSaveResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "세션이 없거나 만료됐다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청 보호 토큰이 없거나 맞지 않는다 · 비밀번호를 바꿔야 한다"
+          }
+        },
+        "tags" : [ "interest-controller" ]
+      }
+    },
     "/api/invitation-acceptances" : {
       "post" : {
         "operationId" : "acceptInvitation",
@@ -7077,6 +7161,78 @@
         },
         "required" : [ "activeTagSetId", "preferences", "result" ]
       },
+      "InterestVolumeRequest" : {
+        "type" : "object",
+        "properties" : {
+          "bigSlots" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "customCount" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int32"
+          },
+          "volume" : {
+            "type" : "string",
+            "enum" : [ "FEW", "NORMAL", "MANY", "CUSTOM" ]
+          }
+        },
+        "required" : [ "bigSlots", "customCount", "volume" ]
+      },
+      "InterestVolumeResponse" : {
+        "type" : "object",
+        "properties" : {
+          "bigSlotRange" : {
+            "$ref" : "#/components/schemas/Range"
+          },
+          "bigSlots" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "countRange" : {
+            "$ref" : "#/components/schemas/Range"
+          },
+          "customCount" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int32"
+          },
+          "presets" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/Preset"
+            }
+          },
+          "volume" : {
+            "type" : "string",
+            "enum" : [ "FEW", "NORMAL", "MANY", "CUSTOM" ]
+          }
+        },
+        "required" : [ "bigSlotRange", "bigSlots", "countRange", "customCount", "presets", "volume" ]
+      },
+      "InterestVolumeSaveResponse" : {
+        "type" : "object",
+        "properties" : {
+          "range" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/Range"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "result" : {
+            "type" : "string",
+            "enum" : [ "SAVED", "COUNT_OUT_OF_RANGE", "BIG_SLOTS_OUT_OF_RANGE" ]
+          },
+          "volume" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/InterestVolumeResponse"
+            }, {
+              "type" : "null"
+            } ]
+          }
+        },
+        "required" : [ "range", "result", "volume" ]
+      },
       "InvitationAcceptanceRequest" : {
         "type" : "object",
         "properties" : {
@@ -7730,6 +7886,20 @@
         },
         "required" : [ "excludedFormats", "excludedRegions", "topics" ]
       },
+      "Preset" : {
+        "type" : "object",
+        "properties" : {
+          "count" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "volume" : {
+            "type" : "string",
+            "enum" : [ "FEW", "NORMAL", "MANY", "CUSTOM" ]
+          }
+        },
+        "required" : [ "count", "volume" ]
+      },
       "PresetResponse" : {
         "type" : "object",
         "properties" : {
@@ -7950,6 +8120,20 @@
           }
         },
         "required" : [ "key", "provider" ]
+      },
+      "Range" : {
+        "type" : "object",
+        "properties" : {
+          "max" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "min" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        },
+        "required" : [ "max", "min" ]
       },
       "ReadNoticesRequest" : {
         "type" : "object",
