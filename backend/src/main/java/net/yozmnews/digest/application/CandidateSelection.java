@@ -133,7 +133,7 @@ public class CandidateSelection {
 		}
 		Shortlist shortlist = CandidateSelector.shortlist(ranked, eventOf, representatives, big.get(), filter,
 				interests.maxCandidates());
-		int budget = CandidateCost.candidateBudget(model.inputTokenBudget(), interests.interestTextLength(),
+		int budget = CandidateCost.candidateBudget(model.inputTokenBudget(), codePoints(interests.interestText()),
 				interests.topics().size(), interests.excludedRegions().size());
 		return Optional.of(CandidateSelector.candidates(shortlist, tokens(shortlist), budget));
 	}

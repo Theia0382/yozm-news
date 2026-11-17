@@ -14,10 +14,12 @@ import java.util.Set;
 
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.llm.Provider;
+import net.yozmnews.llm.ReasoningEffort;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.source.SourceId;
 import net.yozmnews.tag.TagKind;
 import net.yozmnews.tag.TagSetId;
+import net.yozmnews.user.SummaryLength;
 import net.yozmnews.user.domain.interest.CandidateVolume;
 import net.yozmnews.user.domain.interest.DigestSchedule;
 import net.yozmnews.user.domain.interest.DigestVolume;
@@ -90,8 +92,9 @@ class JdbcInterestStorageTests {
 		assertThat(read.schedule()).isEqualTo(new DigestSchedule(ZoneId.of("Asia/Seoul"), LocalTime.of(7, 0)));
 		assertThat(read.interestText()).isEqualTo(new InterestText(""));
 		assertThat(read.model()).isNull();
+		assertThat(read.effort()).isEqualTo(ReasoningEffort.MEDIUM);
 		assertThat(read.reports()).isEqualTo(new ReportSettings(true, DayOfWeek.MONDAY, true));
-		assertThat(read.volume()).isEqualTo(new DigestVolume(CandidateVolume.NORMAL, null, 3));
+		assertThat(read.volume()).isEqualTo(new DigestVolume(CandidateVolume.NORMAL, null, 3, SummaryLength.NORMAL));
 		assertThat(read.updatedAt()).isEqualTo(NOW);
 		assertThat(read.version()).isZero();
 		assertThat(this.settings.lockByUser(this.bob)).isEmpty();
@@ -102,12 +105,12 @@ class JdbcInterestStorageTests {
 		this.settings.insertIfAbsent(InterestSettings.defaults(this.alice, new TagSetId(3), NOW));
 		InterestSettings read = this.settings.lockByUser(this.alice).orElseThrow();
 
-		this.settings.update(read
+		this.settings.update(read.withEffort(ReasoningEffort.LOW, LATER)
 			.withDigest(new DigestSchedule(ZoneId.of("America/New_York"), LocalTime.of(6, 30)), new InterestText("배터리"),
 					new ReportSettings(false, DayOfWeek.FRIDAY, false), LATER)
 			.withModel(new ModelRef(Provider.ANTHROPIC, "claude-haiku-5-5"), LATER)
 			.withPreferenceVersion(new TagSetId(5), LATER)
-			.withVolume(new DigestVolume(CandidateVolume.CUSTOM, 45, 0), LATER));
+			.withVolume(new DigestVolume(CandidateVolume.CUSTOM, 45, 0, SummaryLength.DETAILED), LATER));
 
 		InterestSettings again = this.settings.lockByUser(this.alice).orElseThrow();
 		assertThat(again.version()).isOne();
@@ -116,7 +119,8 @@ class JdbcInterestStorageTests {
 		assertThat(again.interestText()).isEqualTo(new InterestText("배터리"));
 		assertThat(again.model()).isEqualTo(new ModelRef(Provider.ANTHROPIC, "claude-haiku-5-5"));
 		assertThat(again.reports()).isEqualTo(new ReportSettings(false, DayOfWeek.FRIDAY, false));
-		assertThat(again.volume()).isEqualTo(new DigestVolume(CandidateVolume.CUSTOM, 45, 0));
+		assertThat(again.effort()).isEqualTo(ReasoningEffort.LOW);
+		assertThat(again.volume()).isEqualTo(new DigestVolume(CandidateVolume.CUSTOM, 45, 0, SummaryLength.DETAILED));
 		assertThat(again.updatedAt()).isEqualTo(LATER);
 		assertThatIllegalStateException().isThrownBy(() -> this.settings.update(read));
 	}
@@ -178,6 +182,26 @@ class JdbcInterestStorageTests {
 				insert into user_tag_preferences (user_id, tag_kind, tag_key, mode, created_at)
 				values (:user, 'REGION', 'us', 'SUBSCRIBE', now())
 				""").param("user", this.alice.value()).update());
+	}
+
+	@Test
+	void theStorageRefusesAnUnknownSummaryLength() {
+		this.settings.insertIfAbsent(InterestSettings.defaults(this.bob, new TagSetId(3), NOW));
+
+		assertThatExceptionOfType(DataIntegrityViolationException.class)
+			.isThrownBy(() -> this.jdbc.sql("update user_settings set summary_length = 'LONG' where user_id = :user")
+				.param("user", this.bob.value())
+				.update());
+	}
+
+	@Test
+	void theStorageRefusesAnUnknownEffort() {
+		this.settings.insertIfAbsent(InterestSettings.defaults(this.bob, new TagSetId(3), NOW));
+
+		assertThatExceptionOfType(DataIntegrityViolationException.class)
+			.isThrownBy(() -> this.jdbc.sql("update user_settings set reasoning_effort = 'NONE' where user_id = :user")
+				.param("user", this.bob.value())
+				.update());
 	}
 
 	@Test

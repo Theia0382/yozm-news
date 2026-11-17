@@ -1,14 +1,17 @@
 package net.yozmnews.digest.domain.selection;
 
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Set;
 
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.llm.ReasoningEffort;
 import net.yozmnews.source.SourceId;
 import net.yozmnews.tag.TagSetId;
 import net.yozmnews.tag.TopicStatus;
 import net.yozmnews.user.DigestInterests;
+import net.yozmnews.user.SummaryLength;
 import net.yozmnews.user.TopicSubscription;
 import org.jspecify.annotations.Nullable;
 
@@ -35,7 +38,8 @@ final class Facts {
 
 	static DigestInterests interests(List<TopicSubscription> topics, Set<String> excludedRegions,
 			Set<String> excludedFormats, Set<SourceId> excludedSources) {
-		return new DigestInterests(new TagSetId(1), topics, excludedRegions, excludedFormats, excludedSources, 0, 60, 3);
+		return new DigestInterests(new TagSetId(1), topics, excludedRegions, excludedFormats, excludedSources, "",
+				ZoneId.of("Asia/Seoul"), 60, 3, SummaryLength.NORMAL, ReasoningEffort.MEDIUM);
 	}
 
 	static final class Builder {

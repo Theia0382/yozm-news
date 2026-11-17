@@ -4,6 +4,9 @@ import java.time.DayOfWeek;
 import java.time.LocalTime;
 import java.time.ZoneId;
 
+import net.yozmnews.llm.ReasoningEffort;
+import net.yozmnews.user.SummaryLength;
+
 /**
  * 관심 설정 기본값의 정본 — 계정을 만들 때 설정 행에 넣는 값 — docs/specs/user.md §5 · user-R43
  * <p>
@@ -31,6 +34,12 @@ public final class InterestDefaults {
 
 	/** 다이제스트 큰 슬롯 수 — 측정 전 목표 */
 	public static final int BIG_SLOTS = 3;
+
+	/** 다이제스트 요약 길이 */
+	public static final SummaryLength SUMMARY_LENGTH = SummaryLength.NORMAL;
+
+	/** 다이제스트 생성의 추론 강도 — 사용자 비용이 드는 기본값이다(측정 전 — 리드 결정) */
+	public static final ReasoningEffort REASONING_EFFORT = ReasoningEffort.MEDIUM;
 
 	private InterestDefaults() {
 	}

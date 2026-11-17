@@ -83,11 +83,10 @@ class DigestInterestsDirectoryService implements DigestInterestsDirectory {
 			.stream()
 			.map(entry -> new TopicSubscription(entry.getKey(), entry.getValue()))
 			.toList();
-		String text = stored.interestText().value();
 		DigestVolume volume = stored.volume();
 		return Optional.of(new DigestInterests(version, topics, current.excludedRegions(), current.excludedFormats(),
-				this.excludedSources.load(user), text.codePointCount(0, text.length()), volume.maxCandidates(),
-				volume.bigSlots()));
+				this.excludedSources.load(user), stored.interestText().value(), stored.schedule().timezone(),
+				volume.maxCandidates(), volume.bigSlots(), volume.summaryLength(), stored.effort()));
 	}
 
 }

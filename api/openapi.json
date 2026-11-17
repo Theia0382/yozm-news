@@ -3956,6 +3956,54 @@
         "tags" : [ "human-check-controller" ]
       }
     },
+    "/api/interests/effort" : {
+      "put" : {
+        "operationId" : "saveEffort",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/InterestEffortRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/InterestModelResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "세션이 없거나 만료됐다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청 보호 토큰이 없거나 맞지 않는다 · 비밀번호를 바꿔야 한다"
+          }
+        },
+        "tags" : [ "interest-controller" ]
+      }
+    },
     "/api/interests/model" : {
       "get" : {
         "operationId" : "model",
@@ -6902,6 +6950,16 @@
         },
         "required" : [ "result" ]
       },
+      "InterestEffortRequest" : {
+        "type" : "object",
+        "properties" : {
+          "effort" : {
+            "type" : "string",
+            "enum" : [ "LOW", "MEDIUM", "HIGH" ]
+          }
+        },
+        "required" : [ "effort" ]
+      },
       "InterestModelRequest" : {
         "type" : "object",
         "properties" : {
@@ -6938,12 +6996,23 @@
               "type" : "null"
             } ]
           },
+          "effort" : {
+            "type" : "string",
+            "enum" : [ "LOW", "MEDIUM", "HIGH" ]
+          },
+          "efforts" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string",
+              "enum" : [ "LOW", "MEDIUM", "HIGH" ]
+            }
+          },
           "reason" : {
             "type" : "string",
             "enum" : [ "CHOSEN", "NOT_CHOSEN", "NOT_ALLOWED", "NO_KEY", "KEY_INVALID" ]
           }
         },
-        "required" : [ "choosable", "chosen", "effective", "reason" ]
+        "required" : [ "choosable", "chosen", "effective", "effort", "efforts", "reason" ]
       },
       "InterestModelSaveResponse" : {
         "type" : "object",
@@ -7172,12 +7241,16 @@
             "type" : [ "integer", "null" ],
             "format" : "int32"
           },
+          "summaryLength" : {
+            "type" : "string",
+            "enum" : [ "SHORT", "NORMAL", "DETAILED" ]
+          },
           "volume" : {
             "type" : "string",
             "enum" : [ "FEW", "NORMAL", "MANY", "CUSTOM" ]
           }
         },
-        "required" : [ "bigSlots", "customCount", "volume" ]
+        "required" : [ "bigSlots", "customCount", "summaryLength", "volume" ]
       },
       "InterestVolumeResponse" : {
         "type" : "object",
@@ -7202,12 +7275,23 @@
               "$ref" : "#/components/schemas/VolumePresetResponse"
             }
           },
+          "summaryLength" : {
+            "type" : "string",
+            "enum" : [ "SHORT", "NORMAL", "DETAILED" ]
+          },
+          "summaryLengths" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string",
+              "enum" : [ "SHORT", "NORMAL", "DETAILED" ]
+            }
+          },
           "volume" : {
             "type" : "string",
             "enum" : [ "FEW", "NORMAL", "MANY", "CUSTOM" ]
           }
         },
-        "required" : [ "bigSlotRange", "bigSlots", "countRange", "customCount", "presets", "volume" ]
+        "required" : [ "bigSlotRange", "bigSlots", "countRange", "customCount", "presets", "summaryLength", "summaryLengths", "volume" ]
       },
       "InterestVolumeSaveResponse" : {
         "type" : "object",

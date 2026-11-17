@@ -9,6 +9,7 @@ import net.yozmnews.credential.LlmKeys;
 import net.yozmnews.llm.LlmModel;
 import net.yozmnews.llm.LlmModels;
 import net.yozmnews.llm.Provider;
+import net.yozmnews.llm.ReasoningEffort;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.user.domain.interest.InterestSettings;
 import net.yozmnews.user.domain.interest.InterestSettingsRepository;
@@ -19,9 +20,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 공급자 · 모델 고르기와 쓸 모델 조회 — docs/specs/user.md §4 · user-R51
+ * 공급자 · 모델 고르기와 쓸 모델 조회, 추론 강도 — docs/specs/user.md §4 · user-R51 · user-R58
  * <p>
- * 고르기는 키가 있는(상태 무관) 공급자의 허용 모델만 받는다. 쓸 모델은 조회 때 {@link ModelChoice} 로 정한다.
+ * 고르기는 키가 있는(상태 무관) 공급자의 허용 모델만 받는다. 쓸 모델은 조회 때 {@link ModelChoice} 로 정한다. 추론 강도는 고른 모델 ·
+ * 키와 무관하게 저장한다.
  */
 @Service
 public class ModelSelection {
@@ -60,18 +62,28 @@ public class ModelSelection {
 		return new ModelSelectionOutcome.Saved(view(user, changed));
 	}
 
+	/** 추론 강도를 바꾼다 — 통째로 바꾸고 이력이 없다 */
+	@Transactional
+	public ModelView saveEffort(UserId user, ReasoningEffort effort, Instant now) {
+		Objects.requireNonNull(effort, "effort");
+		InterestSettings changed = this.lock.lockFollowed(user, now).withEffort(effort, now);
+		this.settings.update(changed);
+		return view(user, changed);
+	}
+
 	private ModelView view(UserId user, InterestSettings settings) {
 		Set<Provider> withKey = this.keys.providers(user);
 		Set<Provider> usable = this.keys.usable(user);
 		List<LlmModel> allowed = this.models.all();
 		List<LlmModel> choosable = allowed.stream().filter(model -> withKey.contains(model.provider())).toList();
-		return new ModelView(choosable, ModelChoice.resolve(settings.model(), allowed, withKey, usable));
+		return new ModelView(choosable, ModelChoice.resolve(settings.model(), allowed, withKey, usable),
+				settings.effort());
 	}
 
 	/**
-	 * 고를 수 있는 모델(키가 있는 공급자의 허용 모델 — 목록 순)과 쓸 모델의 판정.
+	 * 고를 수 있는 모델(키가 있는 공급자의 허용 모델 — 목록 순)과 쓸 모델의 판정, 추론 강도.
 	 */
-	public record ModelView(List<LlmModel> choosable, ModelResolution resolution) {
+	public record ModelView(List<LlmModel> choosable, ModelResolution resolution, ReasoningEffort effort) {
 	}
 
 	/** 고르기의 결과 */
