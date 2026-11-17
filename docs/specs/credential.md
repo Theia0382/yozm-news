@@ -52,7 +52,7 @@ HTTP 엔드포인트:
 | `/api/llm-keys/{provider}/checks` | `POST` | 다시 검증 — `VALID` · `INVALID` · `UNDETERMINED`(+실패 종류) · `MISSING`(credential-R12 · R14) |
 | `/api/llm-keys/{provider}` | `DELETE` | 키 삭제 — 없어도 204(credential-R16) |
 
-네 경로 모두 세션이 필요하고 사용자 격리 시험에 등록돼 있으며([user Spec](user.md#화면용-api-의-공개와-세션-사용자) user-R6), 키가 없는 세션 사용자에게도 연다(`@AllowedWithoutLlmKey` — user-R5). 등록 · 다시 검증은 요청마다 공급자에 한 번 묻고, 한도(세션 사용자 · 클라이언트 주소 — 둘이 함께 쓴다)를 넘으면 처리기 앞에서 429 다(user-R38 · R40). `{provider}` 는 `llm` 의 `Provider` 이름(`OPENAI` · `ANTHROPIC`)이고 모르는 값은 400 이다. 판정 결과는 200 이고, 요청 · 응답 형식은 `api/openapi.json` 에 있다.
+네 경로 모두 세션이 필요하고 사용자 격리 시험에 등록돼 있으며([user Spec](user.md#화면용-api-의-공개와-세션-사용자) user-R6), 키가 없는 세션 사용자에게도 연다(`@AllowedWithoutLlmKey` — user-R5). 등록 · 다시 검증은 요청마다 공급자에 한 번 묻고, 한도(세션 사용자 · 클라이언트 주소 — 둘이 함께 쓴다)를 넘으면 처리기 앞에서 429 다(user-R38 · R40). `{provider}` 는 `llm` 의 `Provider` 이름(`OPENAI` · `ANTHROPIC` · `OPENROUTER`)이고 모르는 값은 400 이다. 판정 결과는 200 이고, 요청 · 응답 형식은 `api/openapi.json` 에 있다.
 
 ### LlmKeys
 
@@ -230,7 +230,7 @@ sequenceDiagram
 
 | 테이블 | 주요 컬럼 | 뜻 |
 |---|---|---|
-| `llm_credentials` | id, user_id, provider(`openai`/`anthropic`), ciphertext, encrypted_dek, kek_version, key_hint, status(`VALID`/`INVALID`), validated_at, created_at | 사용자 LLM 키 — 주인(`user_id` · `provider`)마다 하나(credential-R11). `user_id` 는 `user` 의 사용자 ID 를 가리킨다 — 모듈 사이라 FK 가 없다. `provider` 는 `Provider` 의 키다. `ciphertext` · `encrypted_dek` 의 꼴은 credential-R3, `kek_version` 은 DEK 를 감싼 KEK 의 버전(credential-R6 · R7), `key_hint` 는 credential-R9, `status` · `validated_at` 은 credential-R14 |
+| `llm_credentials` | id, user_id, provider(`openai`/`anthropic`/`openrouter`), ciphertext, encrypted_dek, kek_version, key_hint, status(`VALID`/`INVALID`), validated_at, created_at | 사용자 LLM 키 — 주인(`user_id` · `provider`)마다 하나(credential-R11). `user_id` 는 `user` 의 사용자 ID 를 가리킨다 — 모듈 사이라 FK 가 없다. `provider` 는 `Provider` 의 키다. `ciphertext` · `encrypted_dek` 의 꼴은 credential-R3, `kek_version` 은 DEK 를 감싼 KEK 의 버전(credential-R6 · R7), `key_hint` 는 credential-R9, `status` · `validated_at` 은 credential-R14 |
 
 ## 7. 설정
 
