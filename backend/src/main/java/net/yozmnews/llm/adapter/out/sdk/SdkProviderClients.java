@@ -20,16 +20,21 @@ public final class SdkProviderClients implements LlmProviderClients {
 
 	private final String anthropicBaseUrl;
 
+	private final String openRouterBaseUrl;
+
 	private final Function<Duration, JdkTransport> transports;
 
 	public SdkProviderClients() {
-		this(OpenAiProviderClient.BASE_URL, AnthropicProviderClient.BASE_URL, JdkTransport::new);
+		this(OpenAiProviderClient.BASE_URL, AnthropicProviderClient.BASE_URL, OpenRouterProviderClient.BASE_URL,
+				JdkTransport::new);
 	}
 
 	/** 시험이 대체 서버의 주소와 본문 상한을 줄인 전송을 넣는다 — 함수는 넘겨받은 마감으로 전송을 만든다 */
-	SdkProviderClients(String openAiBaseUrl, String anthropicBaseUrl, Function<Duration, JdkTransport> transports) {
+	SdkProviderClients(String openAiBaseUrl, String anthropicBaseUrl, String openRouterBaseUrl,
+			Function<Duration, JdkTransport> transports) {
 		this.openAiBaseUrl = Objects.requireNonNull(openAiBaseUrl, "openAiBaseUrl");
 		this.anthropicBaseUrl = Objects.requireNonNull(anthropicBaseUrl, "anthropicBaseUrl");
+		this.openRouterBaseUrl = Objects.requireNonNull(openRouterBaseUrl, "openRouterBaseUrl");
 		this.transports = Objects.requireNonNull(transports, "transports");
 	}
 
@@ -41,6 +46,8 @@ public final class SdkProviderClients implements LlmProviderClients {
 		return switch (provider) {
 			case OPENAI -> new OpenAiProviderClient(this.openAiBaseUrl, key, this.transports.apply(deadline));
 			case ANTHROPIC -> new AnthropicProviderClient(this.anthropicBaseUrl, key, this.transports.apply(deadline));
+			case OPENROUTER ->
+				new OpenRouterProviderClient(this.openRouterBaseUrl, key, this.transports.apply(deadline));
 		};
 	}
 

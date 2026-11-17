@@ -72,7 +72,8 @@ public class LlmKeyScopeTests {
 
 		// B 는 A 의 키를 보지 못한다
 		this.mockMvc.perform(get("/api/llm-keys").with(b)).andExpect(status().isOk()).andExpect(content().json("""
-				{"providers":[{"provider":"OPENAI","key":null},{"provider":"ANTHROPIC","key":null}]}
+				{"providers":[{"provider":"OPENAI","key":null},{"provider":"ANTHROPIC","key":null},
+				 {"provider":"OPENROUTER","key":null}]}
 				""", JsonCompareMode.STRICT));
 		// B 의 다시 검증은 A 의 키로 묻지 않는다
 		int asked = this.provider.asked().size();
@@ -94,6 +95,33 @@ public class LlmKeyScopeTests {
 		this.mockMvc.perform(get("/api/llm-keys").with(a))
 			.andExpect(jsonPath("$.providers[0].key.hint").value("AAAA"))
 			.andExpect(jsonPath("$.providers[1].key").value((Object) null));
+	}
+
+	@Test
+	void userBCannotCheckOrRemoveUserAsOpenRouterKey() throws Exception {
+		SignedInUsers users = new SignedInUsers(this.mockMvc, this.accounts, this.credentials, this.hashing);
+		SignedInUsers.SignedInUser a = users.signIn("key-scope-or-a@example.com");
+		SignedInUsers.SignedInUser b = users.signIn("key-scope-or-b@example.com");
+		this.mockMvc
+			.perform(put("/api/llm-keys/OPENROUTER").with(a).contentType(MediaType.APPLICATION_JSON).content("""
+					{"key":"sk-or-v1-scope-a-0123456789CCCC"}"""))
+			.andExpect(jsonPath("$.result").value("REGISTERED"));
+		List<String> aRows = rows(a);
+		assertThat(aRows).hasSize(1);
+
+		// B 의 다시 검증은 A 의 키로 묻지 않는다
+		int asked = this.provider.asked().size();
+		this.mockMvc.perform(post("/api/llm-keys/OPENROUTER/checks").with(b)).andExpect(content().json("""
+				{"result":"MISSING","failure":null,"key":null}
+				""", JsonCompareMode.STRICT));
+		assertThat(this.provider.asked()).hasSize(asked);
+		// B 의 삭제는 A 의 행을 건드리지 않는다
+		this.mockMvc.perform(delete("/api/llm-keys/OPENROUTER").with(b)).andExpect(status().isNoContent());
+		assertThat(rows(a)).isEqualTo(aRows);
+		// A 는 자기 OpenRouter 키를 본다
+		this.mockMvc.perform(get("/api/llm-keys").with(a))
+			.andExpect(jsonPath("$.providers[2].provider").value("OPENROUTER"))
+			.andExpect(jsonPath("$.providers[2].key.hint").value("CCCC"));
 	}
 
 	@Test

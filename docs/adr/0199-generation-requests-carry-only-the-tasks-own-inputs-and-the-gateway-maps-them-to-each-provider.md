@@ -38,3 +38,7 @@
 | 관문 상수 하나의 추론 강도 | 과제마다(다이제스트 · 변화 리포트) 비용과 품질을 따로 정할 수 없다 |
 | 부르는 쪽이 추론을 포함한 출력 상한 전체를 준다 | 부르는 쪽이 모델마다의 추론 몫을 알아야 한다 |
 | 관문 상수 하나의 출력 상한 | 과제의 본문 크기에 맞게 멈추지 않는 생성을 막지 못한다 |
+
+## 후속 기록
+
+- 2026-11-17: 결정 절 "공급자의 꼴로 옮기는 일은 관문이 한다"의 OpenRouter — 두 공급자 맞춤을 함께 만족하는 맞춤 하나 — [ADR-0206](0206-schemas-sent-to-openrouter-satisfy-both-providers-rules-and-an-optional-value-list-takes-null-without-a-type.md) · [llm Spec](../specs/llm.md#생성-호출) llm-R21

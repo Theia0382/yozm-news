@@ -31,3 +31,30 @@ providers:
       - id: claude-fable-5-2
         input-token-budget: 32000
         structured-output: true
+  # OpenRouter 는 여러 회사의 모델을 중계한다 — ID 는 OpenRouter 의 모델 ID(회사/모델)다. 2026-11-17 공개 목록으로 확인.
+  openrouter:
+    models:
+      - id: openai/gpt-6.1-terra
+        input-token-budget: 32000
+        structured-output: true
+      - id: openai/gpt-6.1-sol
+        input-token-budget: 32000
+        structured-output: true
+      - id: openai/gpt-6-luna
+        input-token-budget: 32000
+        structured-output: true
+      - id: openai/gpt-6-astra
+        input-token-budget: 32000
+        structured-output: true
+      - id: anthropic/claude-sonnet-5.5
+        input-token-budget: 32000
+        structured-output: true
+      - id: anthropic/claude-opus-5.5
+        input-token-budget: 32000
+        structured-output: true
+      - id: anthropic/claude-haiku-5.5
+        input-token-budget: 32000
+        structured-output: true
+      - id: anthropic/claude-fable-5.2
+        input-token-budget: 32000
+        structured-output: true

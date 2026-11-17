@@ -4519,7 +4519,7 @@
           "required" : true,
           "schema" : {
             "type" : "string",
-            "enum" : [ "OPENAI", "ANTHROPIC" ]
+            "enum" : [ "OPENAI", "ANTHROPIC", "OPENROUTER" ]
           }
         } ],
         "responses" : {
@@ -4557,7 +4557,7 @@
           "required" : true,
           "schema" : {
             "type" : "string",
-            "enum" : [ "OPENAI", "ANTHROPIC" ]
+            "enum" : [ "OPENAI", "ANTHROPIC", "OPENROUTER" ]
           }
         } ],
         "requestBody" : {
@@ -4624,7 +4624,7 @@
           "required" : true,
           "schema" : {
             "type" : "string",
-            "enum" : [ "OPENAI", "ANTHROPIC" ]
+            "enum" : [ "OPENAI", "ANTHROPIC", "OPENROUTER" ]
           }
         } ],
         "responses" : {
@@ -6910,7 +6910,7 @@
           },
           "provider" : {
             "type" : "string",
-            "enum" : [ "OPENAI", "ANTHROPIC" ]
+            "enum" : [ "OPENAI", "ANTHROPIC", "OPENROUTER" ]
           }
         },
         "required" : [ "modelId", "provider" ]
@@ -7419,7 +7419,7 @@
           },
           "provider" : {
             "type" : "string",
-            "enum" : [ "OPENAI", "ANTHROPIC" ]
+            "enum" : [ "OPENAI", "ANTHROPIC", "OPENROUTER" ]
           }
         },
         "required" : [ "invalidatedAt", "provider" ]
@@ -7640,7 +7640,7 @@
           },
           "provider" : {
             "type" : "string",
-            "enum" : [ "OPENAI", "ANTHROPIC" ]
+            "enum" : [ "OPENAI", "ANTHROPIC", "OPENROUTER" ]
           }
         },
         "required" : [ "id", "provider" ]
@@ -8102,7 +8102,7 @@
           },
           "provider" : {
             "type" : "string",
-            "enum" : [ "OPENAI", "ANTHROPIC" ]
+            "enum" : [ "OPENAI", "ANTHROPIC", "OPENROUTER" ]
           }
         },
         "required" : [ "key", "provider" ]

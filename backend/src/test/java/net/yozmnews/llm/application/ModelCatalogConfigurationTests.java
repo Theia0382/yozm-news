@@ -42,7 +42,15 @@ class ModelCatalogConfigurationTests {
 				new LlmModel(Provider.ANTHROPIC, "claude-sonnet-5-5", 32_000, true),
 				new LlmModel(Provider.ANTHROPIC, "claude-opus-5-5", 32_000, true),
 				new LlmModel(Provider.ANTHROPIC, "claude-haiku-5-5", 32_000, true),
-				new LlmModel(Provider.ANTHROPIC, "claude-fable-5-2", 32_000, true));
+				new LlmModel(Provider.ANTHROPIC, "claude-fable-5-2", 32_000, true),
+				new LlmModel(Provider.OPENROUTER, "openai/gpt-6.1-terra", 32_000, true),
+				new LlmModel(Provider.OPENROUTER, "openai/gpt-6.1-sol", 32_000, true),
+				new LlmModel(Provider.OPENROUTER, "openai/gpt-6-luna", 32_000, true),
+				new LlmModel(Provider.OPENROUTER, "openai/gpt-6-astra", 32_000, true),
+				new LlmModel(Provider.OPENROUTER, "anthropic/claude-sonnet-5.5", 32_000, true),
+				new LlmModel(Provider.OPENROUTER, "anthropic/claude-opus-5.5", 32_000, true),
+				new LlmModel(Provider.OPENROUTER, "anthropic/claude-haiku-5.5", 32_000, true),
+				new LlmModel(Provider.OPENROUTER, "anthropic/claude-fable-5.2", 32_000, true));
 	}
 
 	@Test

@@ -14,7 +14,7 @@ public final class AnthropicSchemas {
 	static final Set<String> ALLOWED = Set.of("type", "properties", "required", "additionalProperties", "items",
 			"enum", "description");
 
-	private static final SchemaRewrite REWRITE = new SchemaRewrite(ALLOWED, false);
+	private static final SchemaRewrite REWRITE = new SchemaRewrite(ALLOWED, SchemaRewrite.Required.AS_GIVEN);
 
 	private AnthropicSchemas() {
 	}

@@ -132,10 +132,62 @@ class ProviderSchemasTests {
 	}
 
 	@Test
+	void openRouterKeepsOnlyTheKeywordsBothProvidersTakeAndRequiresEveryProperty() {
+		assertSameJson(OpenRouterSchemas.common(DIGEST_LIKE), """
+				{"type":"object",
+				 "properties":{
+				  "overview":{"type":"string"},
+				  "more_headlines":{"type":"array",
+				   "items":{"type":"object",
+				    "properties":{
+				     "ref":{"type":"string"},
+				     "note":{"type":["string","null"]}},
+				    "required":["ref","note"],"additionalProperties":false}}},
+				 "required":["overview","more_headlines"],"additionalProperties":false}
+				""");
+	}
+
+	@Test
+	void openRouterLetsAnOptionalValueListTakeNullWithoutAType() {
+		// 대조 — OpenAI 엄격 맞춤은 같은 속성에 타입을 남긴다(OpenRouter 맞춤의 꼴이 틀려도 이 단언은 통과한다)
+		assertSameJson(OpenAiSchemas.strict("""
+				{"type":"object","properties":{"mood":{"type":"string","enum":["good","bad"]}}}
+				"""), """
+				{"type":"object","properties":{"mood":{"type":["string","null"],"enum":["good","bad",null]}},
+				 "required":["mood"],"additionalProperties":false}
+				""");
+		assertSameJson(OpenRouterSchemas.common("""
+				{"type":"object","properties":{"mood":{"type":"string","enum":["good","bad"]},
+				 "count":{"type":"integer","minimum":0}},"required":["count"]}
+				"""), """
+				{"type":"object","properties":{"mood":{"enum":["good","bad",null]},
+				 "count":{"type":"integer"}},"required":["mood","count"],"additionalProperties":false}
+				""");
+	}
+
+	@Test
+	void openRouterKeepsTheTypeOfARequiredValueListAndOfAnOptionalPropertyWithoutOne() {
+		assertSameJson(OpenRouterSchemas.common("""
+				{"type":"object","properties":{"mood":{"type":"string","enum":["good","bad"]},
+				 "note":{"type":"string"}},"required":["mood"]}
+				"""), """
+				{"type":"object","properties":{"mood":{"type":"string","enum":["good","bad"]},
+				 "note":{"type":["string","null"]}},"required":["mood","note"],"additionalProperties":false}
+				""");
+	}
+
+	@Test
+	void openRouterKeywordsAreTheKeywordsBothProvidersKeep() {
+		assertThat(OpenRouterSchemas.ALLOWED).containsExactlyInAnyOrder("type", "properties", "required",
+				"additionalProperties", "items", "enum", "description");
+	}
+
+	@Test
 	void refusesADocumentThatIsNotAnObject() {
 		assertThatThrownBy(() -> OpenAiSchemas.strict("[]")).isInstanceOf(IllegalArgumentException.class);
 		assertThatThrownBy(() -> AnthropicSchemas.supported("{\"type\":")).isInstanceOf(IllegalArgumentException.class);
 		assertThatThrownBy(() -> OpenAiSchemas.strict("{} []")).isInstanceOf(IllegalArgumentException.class);
+		assertThatThrownBy(() -> OpenRouterSchemas.common("[]")).isInstanceOf(IllegalArgumentException.class);
 	}
 
 	private static void assertSameJson(String actual, String expected) {
