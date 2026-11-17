@@ -4,10 +4,10 @@
 
 ## 1. 책임과 범위
 
-`llm` 은 사용자 LLM 키(BYOK)로 하는 모든 LLM 호출의 관문이다. 공급자(OpenAI · Anthropic)와 그 라이브러리를 아는 코드는 이 모듈에만 있다.
+`llm` 은 사용자 LLM 키(BYOK)로 하는 모든 LLM 호출의 관문이다. 공급자(OpenAI · Anthropic · OpenRouter)와 그 라이브러리를 아는 코드는 이 모듈에만 있다.
 
-- **공급자와 허용 모델 목록** — v1 의 공급자 둘과, 사용자가 고를 수 있는 모델의 목록(모델마다 입력 토큰 예산 · 구조화 출력 지원 여부). 목록은 앱에 든 기본 파일이 정본이고 운영자가 자기 파일로 통째로 바꾼다
-- **키 검증** — 주어진 키로 공급자에 가벼운 요청 하나를 보내 키가 쓸 수 있는지 본다. 실패는 종류로 가른다
+- **공급자와 허용 모델 목록** — 공급자 셋과, 사용자가 고를 수 있는 모델의 목록(모델마다 입력 토큰 예산 · 구조화 출력 지원 여부). 목록은 앱에 든 기본 파일이 정본이고 운영자가 자기 파일로 통째로 바꾼다
+- **키 검증** — 주어진 키로 공급자에 가벼운 요청 하나(공급자마다 정한 조회)를 보내 키가 쓸 수 있는지 본다. 실패는 종류로 가른다
 - **공급자 클라이언트** — 주어진 키로 공급자 클라이언트를 요청마다 만들고 쓰고 닫는다. 주소 · 키 · 로그 수준을 언제나 명시하고, 전송은 이 모듈이 직접 구현한다
 - **실패 분류** — 공급자가 답하지 못한 까닭을 종류로 가르는 정본. 검증과 생성 호출이 함께 쓴다
 - **생성 호출** — 저장한 키로 지시 · 사용자 구획 · 출력 JSON 스키마를 넘겨 공급자의 응답(본문 · 토큰 · 종료 사유 · 소요 시간)을 받는다. 출력 스키마 · 추론 강도 · 출력 토큰 상한을 그 공급자의 꼴로 옮기고, 일시 장애를 정해진 만큼 다시 보낸다
@@ -28,7 +28,9 @@
 
 | 용어 | 뜻 |
 |---|---|
-| 공급자 | LLM API 를 내는 곳 — OpenAI · Anthropic |
+| 공급자 | LLM API 를 내는 곳 — OpenAI · Anthropic · OpenRouter |
+| 중계 공급자 | 여러 회사의 모델을 한 키로 받아 그 모델의 회사나 호스팅 공급자로 옮겨 보내는 공급자 — OpenRouter |
+| 실제 공급자 | 중계 공급자가 요청을 옮겨 보내는 곳 — 그 모델의 회사나 그 모델을 호스팅하는 곳(Azure · Bedrock · Vertex 등) |
 | 허용 모델 | 이 인스턴스의 사용자가 고를 수 있는 모델. 공급자와 모델 ID 로 가리킨다 |
 | 입력 토큰 예산 | 그 모델에 한 번의 생성 요청으로 넣는 입력의 상한(토큰). 모델의 문맥 한도가 아니라 이 서비스가 정한 값이다 |
 | 구조화 출력 | 공급자가 응답을 JSON 스키마에 맞게 강제하는 기능 |
@@ -54,7 +56,7 @@ LLM 공급자.
 
 ```java
 public enum Provider {
-    OPENAI("openai"), ANTHROPIC("anthropic");
+    OPENAI("openai"), ANTHROPIC("anthropic"), OPENROUTER("openrouter");
     public String key();
     public static Optional<Provider> ofKey(String key);
 }
@@ -64,10 +66,12 @@ public enum Provider {
 |---|---|---|
 | `OPENAI` | `openai` | OpenAI API |
 | `ANTHROPIC` | `anthropic` | Anthropic API |
+| `OPENROUTER` | `openrouter` | OpenRouter API — 중계 공급자 |
 
 - 계약
   - 키는 허용 모델 목록 파일과 저장 값에 쓰는 이름이다 — 소문자이고 바꾸지 않는다
   - `ofKey` 는 모르는 키에 빈 값을 낸다(대소문자를 가린다)
+  - 선언 순서가 쓸 모델의 대체 순서다(`LlmModels.all`) — 새 값은 끝에 둔다
 
 관련 규칙: llm-R1
 
@@ -153,7 +157,7 @@ public sealed interface KeyValidationResult {
 
 - 계약
   - `Rejected.message` 는 고정 문구 · 상태 코드 · 예외 클래스 이름으로만 이루어진다 — 키 · 응답 본문 · 라이브러리 예외의 문구가 없다(llm-R9). 사용자에게 보일 문구는 부르는 쪽이 `kind` 로 정한다
-  - `Valid` 는 그 키로 모델 목록을 조회할 수 있다는 뜻이다 — 잔액 · 지출 한도와 특정 모델을 쓸 권한은 확인하지 않는다(llm-R6)
+  - `Valid` 는 그 키로 공급자의 확인 조회(OpenAI · Anthropic 은 모델 목록, OpenRouter 는 키 조회)를 할 수 있다는 뜻이다 — 잔액 · 지출 한도와 특정 모델을 쓸 권한은 확인하지 않는다(llm-R6)
 
 관련 규칙: llm-R6 · R8 · R9
 
@@ -348,9 +352,9 @@ public enum LlmFailureKind { INVALID_KEY, PERMISSION_DENIED, QUOTA_EXHAUSTED, TR
 |---|---|
 | (최상위) | 공개 타입 열넷 |
 | `domain/catalog` | 허용 모델 목록의 값(`ModelCatalog`)과 목록 파일 형식의 정본(`ModelCatalogParser` 와 결과 `ModelCatalogParse`) |
-| `domain/failure` | 실패 분류의 정본 — 공급자 오류에서 읽은 것(`ProviderError`)과 공급자마다의 분류(`OpenAiErrors` · `AnthropicErrors`) |
+| `domain/failure` | 실패 분류의 정본 — 공급자 오류에서 읽은 것(`ProviderError`)과 공급자마다의 분류(`OpenAiErrors` · `AnthropicErrors` · `OpenRouterErrors`) |
 | `domain/provider` | 공급자 클라이언트 포트(`LlmProviderClients` · `LlmProviderClient`)와 그 값(`ProbeResult` · `GenerationCall` · `GenerationOutcome`), 종료 사유의 정본(`StopReasons`) |
-| `domain/schema` | 출력 스키마가 JSON 객체 문서인가의 정본(`SchemaDocuments`)과 공급자 맞춤의 정본(`OpenAiSchemas` · `AnthropicSchemas` — 공용 걸음 `SchemaRewrite`) |
+| `domain/schema` | 출력 스키마가 JSON 객체 문서인가의 정본(`SchemaDocuments`)과 공급자 맞춤의 정본(`OpenAiSchemas` · `AnthropicSchemas` · `OpenRouterSchemas` — 공용 걸음 `SchemaRewrite`) |
 | `domain/budget` | 출력 토큰 상한의 정본(`OutputBudget`) |
 | `domain/retry` | 다시 보내기의 정본(`RetryPolicy`)과 `retry-after` 읽기(`RetryAfter`) |
 | `application` | 공개 API 의 구현 둘, 다시 보내기 전의 기다림(`Sleeper`), 설정(`LlmProperties`), 목록의 기동 적재 |
@@ -371,7 +375,7 @@ sequenceDiagram
     S->>P: open(provider, key)
     P-->>S: client
     S->>K: probe()
-    K->>X: 모델 목록 조회(llm-R6 · R7 · R11 ~ R13)
+    K->>X: 확인 조회(llm-R6 · R7 · R11 ~ R13)
     X-->>K: 응답 또는 오류
     Note over K: 오류의 종류를 읽어 분류(llm-R8) · 고정 문구(llm-R9)
     K-->>S: ProbeResult
@@ -423,10 +427,10 @@ sequenceDiagram
 
 - `ModelCatalog` — 검증된 허용 모델 목록. 불변이고 저장하지 않는다
 - `ModelCatalogParser` — 목록 파일 원문을 읽어 형식 규칙(llm-R2)을 판정하는 정본. YAML 읽기와 공통 거부는 `platform` 의 `YamlTextReader` · `StrictYamlBinding` 이 한다
-- `ProviderError` — 공급자 오류에서 분류에 쓰려고 읽은 것(상태 코드 · 오류 `code` · 오류 `type` · `retry-after` 헤더 유무). 오류 문구는 담지 않는다
-- `OpenAiErrors` · `AnthropicErrors` — `ProviderError` 를 `LlmFailureKind` 로 가르는 정본(llm-R8)
+- `ProviderError` — 공급자 오류에서 분류에 쓰려고 읽은 것(상태 코드 · 오류 `code` · 오류의 종류 이름 `type` — OpenRouter 는 `error.metadata.error_type` · `retry-after` 헤더 유무). 오류 문구는 담지 않는다
+- `OpenAiErrors` · `AnthropicErrors` · `OpenRouterErrors` — `ProviderError` 를 `LlmFailureKind` 로 가르는 정본(llm-R8). `OpenRouterErrors` 는 오류 본문에서 종류 이름을 읽는 정본(`errorType`)도 갖는다
 - `SchemaDocuments` — 출력 스키마가 JSON 객체 문서인가의 정본. `GenerationRequest` 의 검사와 공급자 맞춤이 함께 쓴다
-- `OpenAiSchemas` · `AnthropicSchemas` — 출력 스키마를 공급자가 받는 꼴로 맞추는 정본(llm-R21). 허용 키워드와 필수 속성 처리만 다르고, 걸음은 `SchemaRewrite` 하나다
+- `OpenAiSchemas` · `AnthropicSchemas` · `OpenRouterSchemas` — 출력 스키마를 공급자가 받는 꼴로 맞추는 정본(llm-R21). 허용 키워드와 필수 속성 처리(`SchemaRewrite.Required`)만 다르고, 걸음은 `SchemaRewrite` 하나다. `OpenRouterSchemas` 의 허용 키워드는 두 맞춤의 교집합으로 계산한다
 - `StopReasons` — 공급자의 종료 사유를 `GenerationStop` 으로 가르는 정본(llm-R22)
 - `OutputBudget` — 공급자에 보내는 출력 토큰 상한의 정본(llm-R23)
 - `RetryPolicy` · `RetryAfter` — 다시 보낼지와 기다릴 시간, `retry-after` 헤더 읽기의 정본(llm-R20)
@@ -473,8 +477,10 @@ public sealed interface GenerationOutcome {
 v1 구현(`adapter/out/sdk`):
 
 - `SdkProviderClients` — `LlmProviderClients` 의 운영 구현. 공급자마다의 클라이언트를 그 공급자의 기본 주소와, 넘겨받은 마감의 새 전송으로 만든다(llm-R7 · R11)
-- `OpenAiProviderClient` · `AnthropicProviderClient` — `LlmProviderClient` 의 구현. 공급자 SDK 의 클라이언트를 직접 조립해 쥐고(llm-R11 · R12), 모델 목록 조회로 확인하고(llm-R6), 생성은 그 SDK 클라이언트로 만든 Spring AI 채팅 모델에 지시 · 사용자 구획과 옵션(모델 · 출력 상한 · 추론 강도 · 맞춘 스키마)을 넘겨 보낸다(llm-R21 ~ R23). 응답에서 본문 · 토큰 · 종료 사유를 읽고(llm-R22), SDK 예외에서 분류에 쓸 것만 읽는다(llm-R8 · R9) — 확인 요청과 생성 요청이 같은 실패 읽기를 쓴다
-- `ProviderFailure` — 공급자 요청 하나가 답을 받지 못한 까닭(종류 · 문구 · `retry-after` · 마감 초과). 두 클라이언트의 확인 · 생성이 함께 쓰는 값이다
+- `OpenAiCompatibleChat` — OpenAI 꼴 채팅 API 의 SDK 클라이언트 쌍과 생성 한 번. OpenAI SDK 의 클라이언트(동기 · 비동기)를 직접 조립해 쥐고(llm-R11 · R12), 생성은 그 SDK 클라이언트로 만든 Spring AI 채팅 모델에 지시 · 사용자 구획과 옵션(모델 · 출력 상한 · 추론 강도 · 맞춘 스키마 · 추가 본문)을 넘겨 보내고, 응답에서 본문 · 토큰 · 종료 사유를 읽는다(llm-R21 ~ R23). 공급자마다 다른 것(문구의 이름 · 스키마 맞춤 · 추가 본문 · 오류 응답 읽기)은 `Dialect` 로 받고, 오류 응답 밖의 실패(전송 · 입출력 · 읽지 못한 응답)는 `otherFailure` 하나가 옮긴다. OpenAI · OpenRouter 클라이언트가 함께 쓴다
+- `OpenAiProviderClient` · `OpenRouterProviderClient` — `LlmProviderClient` 의 구현. 생성은 `OpenAiCompatibleChat` 으로 보낸다. OpenAI 는 모델 목록 조회로 확인하고 SDK 예외의 상태 코드 · `code` · `type` 으로 가른다. OpenRouter 는 키 조회(`GET /key`)를 SDK 밖에서 같은 전송으로 보내 확인하고, 상태 코드와 오류 본문의 `error.metadata.error_type` 만 읽는다(SDK 의 `code` · `type` 은 OpenRouter 의 숫자 `code` 에서 예외를 내 읽지 않는다). OpenRouter 의 생성 요청에는 라우팅(llm-R23)을 싣는다. 확인 요청과 생성 요청이 같은 실패 읽기를 쓴다(llm-R8 · R9)
+- `AnthropicProviderClient` — `LlmProviderClient` 의 구현. Anthropic SDK 의 클라이언트를 직접 조립해 쥐고(llm-R11 · R12), 모델 목록 조회로 확인하고(llm-R6), 생성은 그 SDK 클라이언트로 만든 Spring AI 채팅 모델로 보낸다(llm-R21 ~ R23). 응답에서 본문 · 토큰 · 종료 사유를 읽고(llm-R22), SDK 예외에서 분류에 쓸 것만 읽는다(llm-R8 · R9)
+- `ProviderFailure` — 공급자 요청 하나가 답을 받지 못한 까닭(종류 · 문구 · `retry-after` · 마감 초과). 공급자 클라이언트의 확인 · 생성이 함께 쓰는 값이다
 - `JdkTransport` — 공급자로 가는 HTTP 전송의 정본(llm-R13). JDK `HttpClient` 로 보내고 응답 본문은 `platform` 의 `CappedBody` 로 받는다. 요청 하나의 마감은 생성자 인자다
 - `OpenAiSdkHttpClient` · `AnthropicSdkHttpClient` — 두 SDK 의 HTTP 클라이언트 인터페이스를 `JdkTransport` 로 구현한다. SDK 의 요청 · 응답을 옮기기만 한다
 - `SdkProviderClientsConfiguration` — `SdkProviderClients` 의 결선. 모든 profile, 두 역할 공통
@@ -493,21 +499,21 @@ v1 구현(`adapter/out/sdk`):
 
 ### 공급자와 허용 모델 목록
 
-판단의 이유는 [ADR-0008](../adr/0008-v1-llm-providers.md) · [ADR-0153](../adr/0153-allowed-llm-models-come-from-a-bundled-file-that-an-operator-file-replaces-as-a-whole.md)에 있다.
+판단의 이유는 [ADR-0008](../adr/0008-v1-llm-providers.md) · [ADR-0153](../adr/0153-allowed-llm-models-come-from-a-bundled-file-that-an-operator-file-replaces-as-a-whole.md) · [ADR-0202](../adr/0202-openrouter-is-added-as-a-user-llm-provider-and-its-default-models-are-the-two-providers-models-under-openrouter-ids.md)에 있다.
 
-- **llm-R1** — 공급자는 OpenAI(`openai`) · Anthropic(`anthropic`) 둘이다. 공급자마다 달라지는 코드(클라이언트 조립 · 실패 분류)는 `Provider` 를 `default` 없는 `switch` 로 가른다 — 공급자를 더하면 가르는 자리가 컴파일 오류로 드러난다
+- **llm-R1** — 공급자는 OpenAI(`openai`) · Anthropic(`anthropic`) · OpenRouter(`openrouter`) 셋이다. OpenRouter 는 중계 공급자다 — 요청을 그 모델의 회사나 호스팅 공급자로 옮겨 보낸다. 공급자마다 클라이언트를 고르는 자리(`SdkProviderClients.open`)는 `Provider` 를 `default` 없는 `switch` 로 가른다 — 공급자를 더하면 그 자리가 컴파일 오류로 드러나고, 실패 분류 · 스키마 맞춤은 그 클라이언트가 고른다. 공급자 값은 `llm` 밖에도 저장된다(키 · 고른 모델 · 다이제스트의 공급자 칸 CHECK 제약, 화면용 API 명세의 enum) — 공급자를 더하는 변경은 그 자리를 함께 고친다
 - **llm-R2** — 허용 모델 목록 파일은 YAML 이고 최상위 키는 `providers` 하나다. 그 아래 키는 공급자 키(llm-R1)이고 공급자마다 `models` 목록을 갖는다. 모델은 `id`(1 ~ 128자 · 출력 가능한 ASCII U+0021 ~ U+007E, 공급자 안에서 유일) · `input-token-budget`(정수 1 ~ 10,000,000) · `structured-output`(불리언)을 모두 갖는다. 모르는 키 · 모르는 공급자는 오류다. 공급자는 빠져도 되고 `models` 는 빈 목록이어도 된다 — 그 공급자의 허용 모델이 없다. 전체 모델 수는 1 이상이다. 원문은 65,536자까지다(`ModelCatalogParser.MAX_CHARS`). 문제는 모두 모아 경로 · 줄:열과 함께 낸다
 - **llm-R3** — 목록은 기동 때 한 번 읽는다. 설정 `yozmnews.llm.models-file` 이 있으면 그 파일이 목록 전체이고(기본 목록과 합치지 않는다), 없으면 앱에 든 기본 파일 `llm-models/default.yaml` 이 목록이다. 설정 값이 비었거나, 설정이 가리키는 파일이 없거나 읽지 못하거나 형식이 틀리면 기동하지 않는다 — 문구에 설정 이름 · 환경 변수 이름과 문제 목록이 있다. 기본 목록으로 조용히 떨어지지 않는다. 기본 파일이 틀려도 기동하지 않는다. 두 역할 모두 읽는다
 - **llm-R4** — 기본 파일의 입력 토큰 예산은 측정 전의 잠정값이다 — 모델의 문맥 한도가 아니라 다이제스트 한 번의 입력 상한으로 잡은 값이고, 실제 다이제스트의 입력을 재서 고친다([open-questions.md](../open-questions.md) "운영하면서 결정" 9번)
 
 ### 키 검증
 
-판단의 이유는 [ADR-0154](../adr/0154-key-validation-lists-models-and-failure-kinds-are-sorted-by-one-rule-per-provider-reading-the-error-kind.md)에 있다. 생성 호출의 마감은 [ADR-0201](../adr/0201-the-gateway-resends-only-transient-generation-failures-and-sets-the-request-deadline-per-call-kind.md)에 있다.
+판단의 이유는 [ADR-0154](../adr/0154-key-validation-lists-models-and-failure-kinds-are-sorted-by-one-rule-per-provider-reading-the-error-kind.md) · [ADR-0204](../adr/0204-openrouter-keys-are-validated-with-the-key-lookup-request-not-the-model-list.md) · [ADR-0205](../adr/0205-an-openrouter-403-invalidates-the-key-only-with-the-permission-mark-and-an-error-inside-an-ok-answer-is-unexpected.md)에 있다. 생성 호출의 마감은 [ADR-0201](../adr/0201-the-gateway-resends-only-transient-generation-failures-and-sets-the-request-deadline-per-call-kind.md)에 있다.
 
 - **llm-R5** — 공급자 호출은 DB 트랜잭션 밖에서 한다. 관문의 세 메서드(`validate` · `validateStored` · `generateStored`)를 트랜잭션 안에서 부르면 요청을 보내지 않고 `IllegalStateException` 이다
-- **llm-R6** — 키 검증의 요청은 모델 목록 조회 하나다(OpenAI `GET /v1/models`, Anthropic `GET /v1/models`). 과금되지 않는다. 정상 응답이면 `Valid` 다 — 응답의 모델 목록은 읽지 않는다. 잔액 · 지출 한도 소진과 특정 모델을 쓸 권한은 이 요청으로 드러나지 않고 생성 호출에서 드러난다
+- **llm-R6** — 키 검증의 요청은 공급자마다 과금되지 않는 조회 하나다 — OpenAI `GET /v1/models`, Anthropic `GET /v1/models`(모델 목록), OpenRouter `GET /api/v1/key`(키 조회). OpenRouter 의 모델 목록은 인증 없이 열려 있어(2026-11-17 실측 — 가짜 키도 200, 본문 852,895 바이트) 키를 가리지 못한다. 정상 응답이면 `Valid` 다 — 응답 본문(모델 목록 · 키의 한도 · 사용량)은 읽지 않는다. 잔액 · 지출 한도 소진과 특정 모델을 쓸 권한은 이 요청으로 드러나지 않고 생성 호출에서 드러난다
 - **llm-R7** — 요청 하나의 마감(헤더와 본문 전부)은 관문이 호출 종류마다 정해 클라이언트를 열 때 넘긴다 — 키 검증 15초(`LlmClientFactoryService.VALIDATION_DEADLINE`), 생성 호출 180초(`LlmClientFactoryService.GENERATION_DEADLINE` — 측정 전의 잠정값, 허용 모델이 다이제스트 한 편을 다 쓰는 시간을 재서 고친다). 연결 마감은 5초(`JdkTransport.CONNECT_TIMEOUT`)다. SDK 의 자동 재시도는 0 이다 — 키 검증은 다시 시도하지 않고, 생성 호출을 다시 보내는 것은 관문이다(llm-R20). 스트리밍 없이 응답 전체를 기다리므로 생성 마감은 출력 전체의 생성 시간을 덮어야 한다
-- **llm-R8** — 실패 종류는 공급자마다 `domain/failure` 의 함수 하나가 가른다. 입력은 상태 코드, 오류의 `code` · `type`, `retry-after` 헤더 유무다 — 상태 코드만으로는 요청 제한과 한도 소진이 갈리지 않는다
+- **llm-R8** — 실패 종류는 공급자마다 `domain/failure` 의 함수 하나가 가른다. 입력은 상태 코드, 오류의 `code` · 종류 이름(OpenAI · Anthropic 의 `type`, OpenRouter 의 `error.metadata.error_type`), `retry-after` 헤더 유무다 — 상태 코드만으로는 요청 제한과 한도 소진, OpenRouter 의 권한 문제와 입력 내용 차단이 갈리지 않는다
 
   | 공급자 | 입력 | 종류 |
   |---|---|---|
@@ -522,8 +528,14 @@ v1 구현(`adapter/out/sdk`):
   | | 429 이고 `retry-after` 헤더가 없다 | `QUOTA_EXHAUSTED` |
   | | 429 이고 `retry-after` 헤더가 있다, 408, 409, 500 ~ 599 | `TRANSIENT` |
   | | 그 밖 | `UNEXPECTED` |
+  | OpenRouter | 401 | `INVALID_KEY` |
+  | | 402 | `QUOTA_EXHAUSTED` |
+  | | 403 이고 `error_type` 이 `permission_denied` | `PERMISSION_DENIED` |
+  | | 그 밖의 403(`error_type` 없음 · `refusal` · `content_policy_violation` 등) | `UNEXPECTED` |
+  | | 429, 408, 409, 500 ~ 599 | `TRANSIENT` |
+  | | 그 밖 | `UNEXPECTED` |
 
-  확인 요청과 생성 요청이 같은 함수로 가른다. 응답 없이 끝난 실패(연결 · 마감 · 입출력)는 `TRANSIENT`, 읽을 수 없는 응답과 상한을 넘은 본문(llm-R13)은 `UNEXPECTED` 다. 없는 모델 ID 의 생성 요청은 두 공급자 모두 404 로 답해 `UNEXPECTED` 다(Anthropic 은 조직이 쓸 수 없는 모델도 같은 404 다). 입력이 모델의 문맥 한도를 넘은 오류는 종류로 갈리지 않아 `UNEXPECTED` 다 — Anthropic 은 400 의 문구로만 갈리고, OpenAI 는 그 오류의 `code` 를 문서에 적지 않는다. 입력 길이는 부르는 쪽이 보내기 전에 입력 토큰 예산(llm-R4)으로 막는다. 리다이렉트 응답(3xx)은 따르지 않으므로 "그 밖"이다. OpenAI 의 401 은 틀린 키 · 조직 소속 없음 · 허용되지 않은 IP 를 문구로 가르지 않는다. Anthropic 의 400(운영자가 정한 지출 한도 도달 포함)은 종류로 갈리지 않아 `UNEXPECTED` 다
+  확인 요청과 생성 요청이 같은 함수로 가른다. 응답 없이 끝난 실패(연결 · 마감 · 입출력)는 `TRANSIENT`, 읽을 수 없는 응답과 상한을 넘은 본문(llm-R13)은 `UNEXPECTED` 다. 없는 모델 ID 의 생성 요청은 OpenAI · Anthropic 모두 404 로 답해 `UNEXPECTED` 다(Anthropic 은 조직이 쓸 수 없는 모델도 같은 404 다). 입력이 모델의 문맥 한도를 넘은 오류는 종류로 갈리지 않아 `UNEXPECTED` 다 — Anthropic 은 400 의 문구로만 갈리고, OpenAI 는 그 오류의 `code` 를 문서에 적지 않는다. 입력 길이는 부르는 쪽이 보내기 전에 입력 토큰 예산(llm-R4)으로 막는다. 리다이렉트 응답(3xx)은 따르지 않으므로 "그 밖"이다. OpenAI 의 401 은 틀린 키 · 조직 소속 없음 · 허용되지 않은 IP 를 문구로 가르지 않는다. Anthropic 의 400(운영자가 정한 지출 한도 도달 포함)은 종류로 갈리지 않아 `UNEXPECTED` 다. OpenRouter 의 오류 본문은 `code` 가 숫자이고 `type` 이 없으며 `metadata` 가 없을 때도 있다(틀린 키의 401) — `error_type` 이 없으면 상태 코드로만 가른다. OpenRouter 의 403 에는 키 권한 · 가드레일 문제(`permission_denied`)와 입력 내용 차단(모델 거절 · 내용 필터 · 검열)이 섞여 있어, 권한 표시가 없는 403 은 키 상태를 바꾸지 않는 `UNEXPECTED` 다. 모델을 막는 가드레일은 403 이 아니라 라우팅 단계의 404 로 온다(2026-11-17 실측 — `error_type` 없음, 과금 없음) — `UNEXPECTED` 다. 검열 403 의 `metadata` 에는 걸린 입력 조각(`flagged_input`)이 실려 읽지 않는다(llm-R9)
 - **llm-R9** — 실패 문구(`KeyValidationResult.Rejected.message` · `ProbeResult.Failed.message` · `GenerationResult.Failed.message` · `GenerationOutcome.Failed.message`)와 이 모듈이 남기는 로그는 고정 문구 · 상태 코드 · 예외 클래스 이름으로만 이루어진다. 키, 생성 호출의 지시 · 사용자 구획, 공급자의 응답 본문 · 헤더, 라이브러리 예외의 문구를 담지 않는다 — 공급자는 오류 본문에 키의 앞뒤 조각을 되돌려주고 SDK 예외의 문구가 그 본문을 담는다. 라이브러리 예외를 밖으로 던지지 않는다 — 포트가 던진 예상 밖의 예외는 `LlmClientFactoryService` 가 `UNEXPECTED` 로 바꾸고 경고 로그에 예외 클래스 이름만 남긴다
 - **llm-R10** — 키는 요청 헤더에 실을 수 있는 꼴이어야 한다 — `platform` 의 `HeaderValueShape`([platform-R23](platform.md#비밀-값))가 정본이다. 꼴이 틀리면 요청을 보내지 않고 `INVALID_KEY` 다
 
@@ -531,9 +543,9 @@ v1 구현(`adapter/out/sdk`):
 
 판단의 이유는 [ADR-0149](../adr/0149-llm-calls-use-spring-ai-2-without-the-starter-and-build-sdk-clients-with-explicit-address-key-and-log-level-and-close-them.md) · [ADR-0150](../adr/0150-user-keys-travel-over-an-own-jdk-transport-for-the-sdks-without-redirects-or-proxy-and-with-a-response-body-cap.md) · [ADR-0151](../adr/0151-spring-ai-and-sdk-types-stay-inside-llm-and-the-gateway-exposes-only-its-own-types.md)에 있다.
 
-- **llm-R11** — 공급자 클라이언트는 요청마다 그 키로 새로 만든다. 주소와 키를 언제나 명시해 넘긴다 — 라이브러리가 값이 비었을 때 프로세스 환경 변수(`OPENAI_BASE_URL` · `OPENAI_API_KEY` · `ANTHROPIC_BASE_URL` · `ANTHROPIC_API_KEY` · `ANTHROPIC_AUTH_TOKEN` 등)에서 대신 읽는 길(Spring AI 의 설정 도우미, SDK 의 `fromEnv()`)을 쓰지 않는다. 공급자의 기본 주소는 코드 상수다(`OpenAiProviderClient.BASE_URL` = `https://api.openai.com/v1`, `AnthropicProviderClient.BASE_URL` = `https://api.anthropic.com`) — 운영 설정으로 바꿀 수 없다. 사용자 키와 프롬프트는 공급자에만 간다. Spring AI 의 스타터 · 자동 구성을 쓰지 않아 전역 채팅 모델 빈과 `spring.ai.*` 설정이 없다
+- **llm-R11** — 공급자 클라이언트는 요청마다 그 키로 새로 만든다. 주소와 키를 언제나 명시해 넘긴다 — 라이브러리가 값이 비었을 때 프로세스 환경 변수(`OPENAI_BASE_URL` · `OPENAI_API_KEY` · `ANTHROPIC_BASE_URL` · `ANTHROPIC_API_KEY` · `ANTHROPIC_AUTH_TOKEN` 등)에서 대신 읽는 길(Spring AI 의 설정 도우미, SDK 의 `fromEnv()`)을 쓰지 않는다. 공급자의 기본 주소는 코드 상수다(`OpenAiProviderClient.BASE_URL` = `https://api.openai.com/v1`, `AnthropicProviderClient.BASE_URL` = `https://api.anthropic.com`, `OpenRouterProviderClient.BASE_URL` = `https://openrouter.ai/api/v1`) — 운영 설정으로 바꿀 수 없다. 사용자 키와 프롬프트는 공급자에만 간다 — OpenRouter 를 거친 프롬프트는 OpenRouter 가 그 모델의 실제 공급자로 옮겨 보낸다(llm-R23 의 라우팅). OpenRouter 의 앱 표시 헤더(`HTTP-Referer` · `X-OpenRouter-Title`)는 싣지 않는다. Spring AI 의 스타터 · 자동 구성을 쓰지 않아 전역 채팅 모델 빈과 `spring.ai.*` 설정이 없다
 - **llm-R12** — SDK 의 요청 로그를 꺼짐으로 명시한다. SDK 는 로그 수준을 환경 변수(`OPENAI_LOG` · `ANTHROPIC_LOG`)에서 읽고, 켜지면 인증 헤더는 가리지만 요청 · 응답 본문(프롬프트와 키 조각이 든 오류 본문)을 찍는다
-- **llm-R13** — 공급자로 가는 전송은 `JdkTransport` 하나다. 리다이렉트를 따르지 않고, 프록시를 쓰지 않고, 응답 본문을 1 MiB(`JdkTransport.MAX_RESPONSE_BYTES`)까지만 받고, 마감(llm-R7)을 헤더와 본문 전부에 건다. 상한을 넘은 본문과 리다이렉트 응답은 실패다(llm-R8)
+- **llm-R13** — 공급자로 가는 전송은 `JdkTransport` 하나다 — SDK 에 없는 OpenRouter 의 키 조회도 같은 전송으로 보낸다. 리다이렉트를 따르지 않고, 프록시를 쓰지 않고, 응답 본문을 1 MiB(`JdkTransport.MAX_RESPONSE_BYTES`)까지만 받고, 마감(llm-R7)을 헤더와 본문 전부에 건다. 상한을 넘은 본문과 리다이렉트 응답은 실패다(llm-R8)
 - **llm-R14** — 만든 클라이언트는 쓰고 나서 닫는다. 닫으면 전송이 쥔 연결 · 스레드가 풀리고, 닫은 뒤의 요청은 보내지 않는다. Spring AI 의 채팅 모델에는 이 모듈이 만든 SDK 클라이언트를 동기 · 비동기 둘 다 넘긴다 — 넘기지 않은 쪽은 Spring AI 가 따로 만들고 닫을 길이 없다
 - **llm-R15** — Spring AI · 공급자 SDK 의 타입은 `adapter/out/sdk` 안에만 있다. 모듈의 공개 타입과 `domain` 의 포트에 나타나지 않는다
 
@@ -552,13 +564,13 @@ v1 구현(`adapter/out/sdk`):
 
 ### 생성 호출
 
-판단의 이유는 [ADR-0199](../adr/0199-generation-requests-carry-only-the-tasks-own-inputs-and-the-gateway-maps-them-to-each-provider.md) · [ADR-0200](../adr/0200-generation-results-carry-the-stop-reason-and-schema-enforcement-and-failures-use-the-five-key-check-kinds.md) · [ADR-0201](../adr/0201-the-gateway-resends-only-transient-generation-failures-and-sets-the-request-deadline-per-call-kind.md)에 있다.
+판단의 이유는 [ADR-0199](../adr/0199-generation-requests-carry-only-the-tasks-own-inputs-and-the-gateway-maps-them-to-each-provider.md) · [ADR-0203](../adr/0203-openrouter-requests-exclude-providers-that-train-on-data-and-ask-for-providers-that-support-every-parameter-and-carry-no-app-attribution-headers.md) · [ADR-0205](../adr/0205-an-openrouter-403-invalidates-the-key-only-with-the-permission-mark-and-an-error-inside-an-ok-answer-is-unexpected.md) · [ADR-0206](../adr/0206-schemas-sent-to-openrouter-satisfy-both-providers-rules-and-an-optional-value-list-takes-null-without-a-type.md) · [ADR-0200](../adr/0200-generation-results-carry-the-stop-reason-and-schema-enforcement-and-failures-use-the-five-key-check-kinds.md) · [ADR-0201](../adr/0201-the-gateway-resends-only-transient-generation-failures-and-sets-the-request-deadline-per-call-kind.md)에 있다.
 
 - **llm-R19** — 저장한 키의 생성 호출은 한 번에 이 순서다: 트랜잭션 밖인지 본다(llm-R5) → 시작 시각을 잰다 → 요청한 모델의 공급자로 `StoredKeySource.find` 를 부른다 → 없으면 보내지 않고 `Missing` 으로 끝난다(소요 시간 없음) → 키의 꼴이 틀리면 보내지 않고 `Failed(INVALID_KEY)` → 생성 마감(llm-R7)으로 클라이언트를 연다 → 출력 상한(llm-R23)을 정한 요청을 보낸다 · 다시 보낸다(llm-R20) → 닫는다 → 결과를 `StoredKeySource.checked` 로 알린다(공급자가 답했으면 `Valid`, 답하지 못했으면 같은 종류의 `Rejected` — 키의 상태는 `credential` 이 정한다) → `Done` 으로 낸다. `find` 가 던진 예외는 `UNEXPECTED` 로 바꾸고 알리지 않는다. `checked` 가 던진 예외는 그대로 올린다. 포트가 던진 예상 밖의 예외는 `UNEXPECTED`(문구 머리 `LlmClientFactoryService.UNEXPECTED_GENERATION` + 예외 클래스 이름)이고 클라이언트는 닫힌다. 소요 시간은 시작 시각부터 결과까지이고 다시 보내기 전에 기다린 시간을 포함한다. 결과의 토큰은 마지막으로 보낸 요청의 값이다. 스키마 강제 여부는 스키마가 있고 모델이 구조화 출력을 지원할 때만 참이다(`GenerationCall.enforcesSchema()`)
 - **llm-R20** — 생성 호출은 일시 장애(`TRANSIENT`)만 다시 보낸다 — 응답 마감을 넘긴 실패는 빼고(그 요청은 공급자 쪽에서 과금됐을 수 있고, 같은 마감으로 다시 보내도 같을 가능성이 크다), 한 호출에서 보내는 것은 많아야 4번(`RetryPolicy.MAX_SENDS` — 처음 하나와 다시 보내기 셋)이다. 다시 보내기 전에는 공급자가 준 `retry-after`(0 이상의 정수 초만 읽는다 — `RetryAfter`)를 기다리고, 60초(`RetryPolicy.MAX_RETRY_AFTER`)를 넘으면 다시 보내지 않는다. 없으면 차례마다 2 · 4 · 8초(`RetryPolicy.BACKOFF`)를 기다린다. 다시 보내기는 같은 클라이언트로 한다. 기다리다 중단되면 인터럽트 표시를 되살리고 `Failed(TRANSIENT)` 로 끝낸다. 간격 · 횟수 · 상한은 측정 전의 잠정값이다. 정본은 `RetryPolicy` 하나다
-- **llm-R21** — 출력 스키마는 JSON 객체 문서다(`SchemaDocuments`). 모델이 구조화 출력을 지원할 때만 그 공급자가 받는 꼴로 맞춰 강제 인자로 보낸다 — OpenAI(엄격 모드, `OpenAiSchemas`)는 `type` · `properties` · `required` · `additionalProperties` · `items` · `enum` · `description` · `maxItems` · `minItems` 만 남기고, 모든 객체에 `additionalProperties: false` 를 두고, 모든 속성을 `required` 에 넣는다 — 원래 필수가 아니던 속성은 null 을 받게 한다(타입에 `"null"`, 값 목록에 null — 둘 다 없는 마디는 이미 null 을 받아 그대로). Anthropic(`AnthropicSchemas`)은 `type` · `properties` · `required` · `additionalProperties` · `items` · `enum` · `description` 만 남기고, 모든 객체에 `additionalProperties: false` 를 두고, `required` 는 그대로 둔다. 남기지 않은 키워드(`$schema` · 문자열 길이 · 수 제약 등)는 지워진다 — 참조(`$ref` · `$defs`)와 조합(`anyOf` · `allOf` 등)도 지워져 그것을 쓰는 스키마는 맞춘 뒤 뜻이 바뀐다. 지운 규칙은 부르는 쪽의 읽기 · 검증이 맡는다
-- **llm-R22** — 공급자가 답한 생성의 종료 사유는 `StopReasons` 가 가른다: OpenAI(Spring AI 가 넘기는 SDK 열거 이름) `STOP` → 끝까지, `LENGTH` → 잘림, `CONTENT_FILTER` 이거나 응답에 거절 문구(`refusal`)가 있으면 → 거절. Anthropic `end_turn` · `stop_sequence` → 끝까지, `max_tokens` · `model_context_window_exceeded` → 잘림, `refusal` → 거절. 그 밖의 종료 사유는 `Failed(UNEXPECTED)` 다. 응답 본문은 텍스트 블록을 이은 것이고, Anthropic 의 추론 블록은 들지 않는다. 내용이 없는 응답(OpenAI `choices` · Anthropic `content` 가 빔 — 내용 없이 온 거절 포함)은 Spring AI 가 종료 사유 · 사용량 없이 빈 응답을 내므로 `Failed(UNEXPECTED)` 이고 토큰이 결과에 없다
-- **llm-R23** — 공급자에 보내는 출력 토큰 상한은 추론과 응답 본문을 합친 것이고 언제나 명시해 보낸다(공급자 · 라이브러리의 기본값에 맡기지 않는다). 상한은 부르는 쪽의 본문 토큰 몫에 추론 강도의 여유(낮음 4,000 · 보통 8,000 · 높음 16,000 — `OutputBudget`, 측정 전의 잠정값)를 더한 것이다. 추론 강도는 OpenAI `reasoning_effort` · Anthropic `output_config.effort` 의 `low` · `medium` · `high` 로 옮긴다
+- **llm-R21** — 출력 스키마는 JSON 객체 문서다(`SchemaDocuments`). 모델이 구조화 출력을 지원할 때만 그 공급자가 받는 꼴로 맞춰 강제 인자로 보낸다 — OpenAI(엄격 모드, `OpenAiSchemas`)는 `type` · `properties` · `required` · `additionalProperties` · `items` · `enum` · `description` · `maxItems` · `minItems` 만 남기고, 모든 객체에 `additionalProperties: false` 를 두고, 모든 속성을 `required` 에 넣는다 — 원래 필수가 아니던 속성은 null 을 받게 한다(타입에 `"null"`, 값 목록에 null — 둘 다 없는 마디는 이미 null 을 받아 그대로). Anthropic(`AnthropicSchemas`)은 `type` · `properties` · `required` · `additionalProperties` · `items` · `enum` · `description` 만 남기고, 모든 객체에 `additionalProperties: false` 를 두고, `required` 는 그대로 둔다. OpenRouter(`OpenRouterSchemas`)는 모델에 상관없이 두 맞춤을 함께 만족하게 한다 — 두 맞춤의 허용 키워드 교집합만 남기고, 모든 객체에 `additionalProperties: false`, 모든 속성을 `required` 에 넣어 원래 선택이던 속성은 null 을 받게 하되, 값 목록이 있는 선택 속성은 타입을 지우고 값 목록에 null 을 더한다 — 값 목록과 `"null"` 을 더한 타입 배열을 함께 두면 Anthropic 계열이 OpenRouter 를 거쳐 400 으로 거절한다(2026-11-17 실측). 남기지 않은 키워드(`$schema` · 문자열 길이 · 수 제약 등)는 지워진다 — 참조(`$ref` · `$defs`)와 조합(`anyOf` · `allOf` 등)도 지워져 그것을 쓰는 스키마는 맞춘 뒤 뜻이 바뀐다. 지운 규칙은 부르는 쪽의 읽기 · 검증이 맡는다
+- **llm-R22** — 공급자가 답한 생성의 종료 사유는 `StopReasons` 가 가른다: OpenAI(Spring AI 가 넘기는 SDK 열거 이름) `STOP` → 끝까지, `LENGTH` → 잘림, `CONTENT_FILTER` 이거나 응답에 거절 문구(`refusal`)가 있으면 → 거절. Anthropic `end_turn` · `stop_sequence` → 끝까지, `max_tokens` · `model_context_window_exceeded` → 잘림, `refusal` → 거절. 그 밖의 종료 사유는 `Failed(UNEXPECTED)` 다. OpenRouter 는 종료 사유를 OpenAI 와 같은 값으로 정규화하므로 OpenAI 의 갈래로 가른다 — 생성이 시작된 뒤 공급자 쪽에서 난 오류를 200 응답 안에 싣는 꼴(`finish_reason: "error"`, 또는 `choices` 없이 `error` 만)은 `Failed(UNEXPECTED)` 이고 다시 보내지 않는다(과금됐을 수 있다). 응답 본문은 텍스트 블록을 이은 것이고, Anthropic 의 추론 블록은 들지 않는다. 내용이 없는 응답(OpenAI `choices` · Anthropic `content` 가 빔 — 내용 없이 온 거절 포함)은 Spring AI 가 종료 사유 · 사용량 없이 빈 응답을 내므로 `Failed(UNEXPECTED)` 이고 토큰이 결과에 없다
+- **llm-R23** — 공급자에 보내는 출력 토큰 상한은 추론과 응답 본문을 합친 것이고 언제나 명시해 보낸다(공급자 · 라이브러리의 기본값에 맡기지 않는다). OpenAI · Anthropic 의 상한이 그렇다 — OpenRouter 는 같은 값을 `max_completion_tokens` 로 실어 실제 공급자로 넘기고, 추론이 그 안에 드는지는 재지 않았다. 상한은 부르는 쪽의 본문 토큰 몫에 추론 강도의 여유(낮음 4,000 · 보통 8,000 · 높음 16,000 — `OutputBudget`, 측정 전의 잠정값)를 더한 것이다. 추론 강도는 OpenAI · OpenRouter `reasoning_effort` · Anthropic `output_config.effort` 의 `low` · `medium` · `high` 로 옮긴다. OpenRouter 의 생성 요청에는 언제나 `provider: {data_collection: "deny", require_parameters: true}` 를 싣는다(`OpenRouterProviderClient.ROUTING`) — 학습에 쓰는 실제 공급자를 빼고(보관은 할 수 있다), 출력 상한 · 추론 강도 · 스키마를 모두 지원하는 실제 공급자로만 보낸다. 맞는 실제 공급자가 없으면 생성이 실패한다
 - **llm-R24** — Spring AI 의 두 채팅 모델(`OpenAiChatModel` · `AnthropicChatModel`)은 내용이 없는 응답에서 프롬프트 전체를 경고 로그에 남긴다. 앱 설정(`application.yaml` 의 `logging.level`)이 두 클래스의 로그를 끈다 — 운영자가 로깅 설정으로 일부러 켜면 다시 남는다
 
 ## 6. 데이터
@@ -576,7 +588,7 @@ v1 구현(`adapter/out/sdk`):
 | ADR | 한 줄 |
 |---|---|
 | [0003](../adr/0003-byok-personalized-digest.md) | 사용자 BYOK LLM 으로 개인화 종합 다이제스트를 만들고, 사용자 키로 요청마다 클라이언트를 만든다 |
-| [0008](../adr/0008-v1-llm-providers.md) | v1 지원 LLM 공급자는 OpenAI 와 Anthropic 이고, 운영자가 허용 모델 목록을 관리한다 |
+| [0008](../adr/0008-v1-llm-providers.md) | v1 지원 LLM 공급자는 OpenAI 와 Anthropic 이고, 운영자가 허용 모델 목록을 관리한다(공급자 나열은 ADR-0202 가 부분 대체) |
 | [0012](../adr/0012-swappable-external-dependencies.md) | 외부 의존성은 교체 가능하게, 개발 환경에는 로컬 대체물을 둔다 |
 | [0057](../adr/0057-local-substitutes-registered-only-in-local-profile-without-operator-switch.md) | 로컬 대체물은 `local` profile 에서만 등록하고, 운영 설정으로 켜는 스위치를 두지 않는다 |
 | [0149](../adr/0149-llm-calls-use-spring-ai-2-without-the-starter-and-build-sdk-clients-with-explicit-address-key-and-log-level-and-close-them.md) | LLM 호출은 Spring AI 2.0 을 스타터 없이 쓰고, SDK 클라이언트를 직접 만들어 주소 · 키 · 로그 수준을 명시하고 닫는다 |
@@ -584,10 +596,15 @@ v1 구현(`adapter/out/sdk`):
 | [0151](../adr/0151-spring-ai-and-sdk-types-stay-inside-llm-and-the-gateway-exposes-only-its-own-types.md) | Spring AI · SDK 의 타입은 `llm` 밖으로 나가지 않고, 관문은 자기 타입만 낸다 |
 | [0152](../adr/0152-secret-value-is-a-platform-public-type-that-fails-on-serialization.md) | 비밀 값 평문의 래퍼 `SecretValue` 는 `platform` 의 공개 타입이고, 직렬화하면 실패한다 |
 | [0153](../adr/0153-allowed-llm-models-come-from-a-bundled-file-that-an-operator-file-replaces-as-a-whole.md) | 허용 모델 목록은 앱에 든 파일이 정본이고, 운영자는 자기 파일로 통째로 바꾼다 |
-| [0154](../adr/0154-key-validation-lists-models-and-failure-kinds-are-sorted-by-one-rule-per-provider-reading-the-error-kind.md) | 키 검증은 모델 목록 조회이고, 실패 종류는 공급자마다 오류의 종류까지 읽는 정본 하나가 가른다 |
+| [0154](../adr/0154-key-validation-lists-models-and-failure-kinds-are-sorted-by-one-rule-per-provider-reading-the-error-kind.md) | 키 검증은 모델 목록 조회이고, 실패 종류는 공급자마다 오류의 종류까지 읽는 정본 하나가 가른다(키 검증의 요청은 ADR-0204 가 부분 대체) |
 | [0155](../adr/0155-llm-local-substitute-takes-only-keys-with-a-fixed-prefix-in-the-local-profile.md) | `llm` 의 로컬 대체물은 `local` 에서 정해진 접두의 키만 받는다 |
 | [0156](../adr/0156-user-id-is-a-platform-public-type.md) | 사용자 식별자 `UserId` 는 `platform` 의 공개 타입이다 |
 | [0157](../adr/0157-credential-depends-on-llm-and-stored-keys-reach-llm-through-a-supply-interface-that-llm-declares-and-credential-implements.md) | `credential` 이 `llm` 에 의존하고, 저장한 키는 `llm` 이 선언한 공급 인터페이스를 `credential` 이 구현해 낸다 |
 | [0199](../adr/0199-generation-requests-carry-only-the-tasks-own-inputs-and-the-gateway-maps-them-to-each-provider.md) | 생성 호출의 요청은 과제의 것만 받고, 공급자의 꼴로 옮기는 일은 관문이 한다 |
 | [0200](../adr/0200-generation-results-carry-the-stop-reason-and-schema-enforcement-and-failures-use-the-five-key-check-kinds.md) | 생성 호출의 결과는 종료 사유와 스키마 강제 여부를 싣고, 실패는 검증과 같은 다섯 종류로 낸다 |
 | [0201](../adr/0201-the-gateway-resends-only-transient-generation-failures-and-sets-the-request-deadline-per-call-kind.md) | 생성 호출은 관문이 일시 장애만 다시 보내고, 요청 하나의 마감은 관문이 호출 종류마다 정한다 |
+| [0202](../adr/0202-openrouter-is-added-as-a-user-llm-provider-and-its-default-models-are-the-two-providers-models-under-openrouter-ids.md) | 사용자 LLM 공급자에 OpenRouter 를 더하고, 기본 허용 모델은 두 공급자의 지금 모델을 OpenRouter ID 로 둔다 |
+| [0203](../adr/0203-openrouter-requests-exclude-providers-that-train-on-data-and-ask-for-providers-that-support-every-parameter-and-carry-no-app-attribution-headers.md) | OpenRouter 요청은 학습에 쓰는 공급자를 빼고, 요청 인자를 모두 지원하는 공급자로만 보내며, 앱 표시 헤더를 싣지 않는다 |
+| [0204](../adr/0204-openrouter-keys-are-validated-with-the-key-lookup-request-not-the-model-list.md) | OpenRouter 키 검증은 모델 목록 조회가 아니라 키 조회 요청이다 |
+| [0205](../adr/0205-an-openrouter-403-invalidates-the-key-only-with-the-permission-mark-and-an-error-inside-an-ok-answer-is-unexpected.md) | OpenRouter 의 403 은 권한 표시가 있을 때만 키를 무효로 하고, 200 응답 안의 오류는 예상 밖의 답이다 |
+| [0206](../adr/0206-schemas-sent-to-openrouter-satisfy-both-providers-rules-and-an-optional-value-list-takes-null-without-a-type.md) | OpenRouter 로 보내는 출력 스키마는 두 공급자 맞춤을 함께 만족하고, 값 목록이 있는 선택 속성은 타입 없이 null 을 받는다 |

@@ -39,7 +39,7 @@
 - 운영자가 켠 소스의 RSS 피드에서 기사 수집, 정규화, 중복 제거, 피드 상태 모니터링(실패 · 방치된 피드 감지). 소스는 수집 프로필로 등록하고, 주요 언론사는 프리셋으로 제공한다([ADR-0015](adr/0015-source-presets-and-collection-profiles.md))
 - 운영자가 관리하는 태그 체계(주제 2단계 · 지역 · 형식)와 Jev 공유 평가(주제 · 지역 다중 태그, 기사 형식, 중요도)
 - 가입 · 로그인: 운영자의 초대 링크 · 계정 생성으로 가입(공개 가입은 운영자 화면에서 연다, 첫 운영자는 환경 변수), 자체 로그인(이메일 · 비밀번호, 복구 코드 재설정, 첫 로그인의 비밀번호 변경)
-- LLM API 키 등록(BYOK — OpenAI · Anthropic). 키가 없는 사용자는 키 등록 · 계정 설정 · 알림 · 관심 설정 화면만 쓴다
+- LLM API 키 등록(BYOK — OpenAI · Anthropic · 중계 공급자 OpenRouter). 키가 없는 사용자는 키 등록 · 계정 설정 · 알림 · 관심 설정 화면만 쓴다
 - 관심 설정: 구독 주제, 지역 · 형식 제외, 자유 텍스트 관심사, 제외할 소스, 다이제스트 생성 시각
 - 한 번 일어난 일을 다룬 기사의 공유 묶기(사건) ([ADR-0026](adr/0026-event-clustering-with-local-embeddings-and-jev.md) · [ADR-0102](adr/0102-an-event-is-the-reports-of-one-happening-narrowed-by-the-event-membership-question-wording.md))
 - 사용자별 일일 다이제스트 생성(여러 기사를 종합한 주요 뉴스 + 추가 헤드라인)과 열람(오늘 · 지난 날짜), 원문 링크
@@ -89,7 +89,7 @@ flowchart LR
     end
     feeds[[언론사 RSS 피드]]
     jev[[Jev<br/>TypeSafe System One API]]
-    llm[[LLM 공급자<br/>OpenAI · Anthropic]]
+    llm[[LLM 공급자<br/>OpenAI · Anthropic · OpenRouter]]
 
     user --> edge --> tunnel --> proxy
     admin --> edge
@@ -207,7 +207,7 @@ flowchart LR
 | 언어 · 프레임워크 | Java 25, Spring Boot 4, Spring Modulith | [ADR-0004](adr/0004-tech-stack.md) · [ADR-0013](adr/0013-architecture-patterns.md) |
 | 데이터 | PostgreSQL(pgvector 확장), Flyway, Spring Data JDBC + JdbcClient | [ADR-0004](adr/0004-tech-stack.md) · [ADR-0014](adr/0014-spring-data-jdbc.md) · [ADR-0027](adr/0027-pgvector-for-vector-storage.md) |
 | 사건 묶기 | ONNX Runtime · DJL tokenizers(로컬 임베딩 — multilingual-e5-small int8, 기본) 또는 OpenAI 호환 임베딩 API(설정), Lucene Nori(고유명사) | [ADR-0026](adr/0026-event-clustering-with-local-embeddings-and-jev.md) · [ADR-0090](adr/0090-article-embedding-defaults-to-an-in-app-local-model-with-an-openai-compatible-api-by-setting.md) · [ADR-0091](adr/0091-local-embedding-model-is-multilingual-e5-small-int8-fetched-at-build-into-the-image-with-onnx-telemetry-off.md) |
-| LLM · 평가 | Spring AI 2.x(OpenAI · Anthropic — 공급자 공식 SDK 위, 스타터 없이), Jev | [ADR-0008](adr/0008-v1-llm-providers.md) · [ADR-0149](adr/0149-llm-calls-use-spring-ai-2-without-the-starter-and-build-sdk-clients-with-explicit-address-key-and-log-level-and-close-them.md) · [ADR-0002](adr/0002-shared-evaluation-with-jev.md) |
+| LLM · 평가 | Spring AI 2.x(OpenAI · Anthropic — 공급자 공식 SDK 위, 스타터 없이. OpenRouter 는 OpenAI SDK 로), Jev | [ADR-0008](adr/0008-v1-llm-providers.md) · [ADR-0202](adr/0202-openrouter-is-added-as-a-user-llm-provider-and-its-default-models-are-the-two-providers-models-under-openrouter-ids.md) · [ADR-0149](adr/0149-llm-calls-use-spring-ai-2-without-the-starter-and-build-sdk-clients-with-explicit-address-key-and-log-level-and-close-them.md) · [ADR-0002](adr/0002-shared-evaluation-with-jev.md) |
 | 인증 | Spring Security(이메일 · 비밀번호), Spring Session JDBC | [ADR-0009](adr/0009-authentication-google-and-local.md) · [ADR-0011](adr/0011-no-email-in-v1.md) · [ADR-0123](adr/0123-v1-login-is-local-only-and-oidc-and-account-linking-come-after-v1.md) |
 | 백그라운드 작업 · RSS | JobRunr OSS(PostgreSQL 저장소), Apache HttpClient 5(피드 요청), Rome(피드 형식 판별 · 제목 · 링크), jsoup(피드 텍스트의 HTML 제거), snakeyaml-engine(수집 프로필 YAML) | [ADR-0004](adr/0004-tech-stack.md) · [ADR-0023](adr/0023-jobrunr-oss-framework-schema-and-event-resubmission.md) · [ADR-0024](adr/0024-collection-profile-yaml-and-preset-reference-or-own-profile.md) · [ADR-0030](adr/0030-feed-xml-own-parser-and-rome-for-format-title-link.md) · [ADR-0031](adr/0031-feed-request-blocks-internal-addresses-with-apache-httpclient-deadline.md) |
 | 빌드 · 테스트 | Gradle(Kotlin DSL), JUnit 5, Testcontainers, WireMock. 검사는 컨테이너에서 돌고 CI(GitHub Actions)와 로컬이 같은 Compose 정의를 쓴다 | [ADR-0004](adr/0004-tech-stack.md) · [ADR-0016](adr/0016-containerized-checks.md) · [테스트 전략](qa/test-strategy.md) |

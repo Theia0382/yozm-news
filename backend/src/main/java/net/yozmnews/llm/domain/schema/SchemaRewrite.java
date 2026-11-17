@@ -12,7 +12,7 @@ import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
 
 /**
- * 출력 JSON Schema 를 공급자가 받는 부분집합으로 다시 쓰는 걸음 — 두 공급자의 맞춤이 함께 쓴다 · docs/specs/llm.md llm-R21.
+ * 출력 JSON Schema 를 공급자가 받는 부분집합으로 다시 쓰는 걸음 — 공급자마다의 맞춤이 함께 쓴다 · docs/specs/llm.md llm-R21.
  * <p>
  * 스키마 마디마다 허용 키워드 밖을 지우고, 객체 마디에는 {@code additionalProperties: false} 를 둔다. {@code properties} 아래의 키는
  * 속성 이름이라 거르지 않고 값만 다시 쓴다. 참조({@code $ref} · {@code $defs})는 허용 키워드가 아니라 지워진다 — 참조를 쓰는 스키마는
@@ -24,16 +24,15 @@ final class SchemaRewrite {
 
 	private final Set<String> allowed;
 
-	private final boolean requireAll;
+	private final Required required;
 
 	/**
 	 * @param allowed 남길 키워드
-	 * @param requireAll 참이면 객체의 모든 속성을 {@code required} 에 넣고, 원래 필수가 아니던 속성이 null 을 받게 한다(타입의
-	 * {@code "null"} · 값 목록의 null)
+	 * @param required 객체의 {@code required} 를 다루는 꼴
 	 */
-	SchemaRewrite(Set<String> allowed, boolean requireAll) {
+	SchemaRewrite(Set<String> allowed, Required required) {
 		this.allowed = Set.copyOf(allowed);
-		this.requireAll = requireAll;
+		this.required = Objects.requireNonNull(required, "required");
 	}
 
 	/**
@@ -60,8 +59,11 @@ final class SchemaRewrite {
 						: property.getValue());
 			}
 			out.set("properties", rewritten);
-			if (this.requireAll) {
-				requireAll(out, rewritten);
+			switch (this.required) {
+				case AS_GIVEN -> {
+				}
+				case ALL_NULL_IN_TYPE_AND_VALUES -> requireAll(out, rewritten, false);
+				case ALL_NULL_IN_VALUES_WITHOUT_TYPE -> requireAll(out, rewritten, true);
 			}
 		}
 		if (out.get("items") instanceof ObjectNode items) {
@@ -73,7 +75,10 @@ final class SchemaRewrite {
 		return out;
 	}
 
-	private static void requireAll(ObjectNode node, ObjectNode properties) {
+	/**
+	 * @param valuesWithoutType 참이면 값 목록이 있는 마디는 타입을 지우고 값 목록으로만 null 을 받게 한다
+	 */
+	private static void requireAll(ObjectNode node, ObjectNode properties, boolean valuesWithoutType) {
 		List<String> before = new ArrayList<>();
 		if (node.get("required") instanceof ArrayNode required) {
 			required.forEach(name -> before.add(name.asString()));
@@ -82,7 +87,7 @@ final class SchemaRewrite {
 		for (String name : properties.propertyNames()) {
 			all.add(name);
 			if (!before.contains(name) && properties.get(name) instanceof ObjectNode property) {
-				allowNull(property);
+				allowNull(property, valuesWithoutType);
 			}
 		}
 		node.set("required", all);
@@ -91,10 +96,19 @@ final class SchemaRewrite {
 	/**
 	 * 마디가 null 을 받게 한다 — 타입에 {@code "null"} 을, 값 목록({@code enum})에 null 을 더한다. 둘 다 없는 마디는 이미 null 을
 	 * 받으므로 그대로 둔다.
+	 *
+	 * @param valuesWithoutType 참이면 값 목록이 있는 마디는 타입을 지우고 값 목록에만 null 을 더한다 — 값 목록과 null 을 더한 타입 배열을
+	 * 함께 두면 Anthropic 구조화 출력이 값과 타입이 맞지 않는다며 거절한다
 	 */
-	private static void allowNull(ObjectNode property) {
-		if (property.get("enum") instanceof ArrayNode values && !containsNull(values)) {
-			values.addNull();
+	private static void allowNull(ObjectNode property, boolean valuesWithoutType) {
+		if (property.get("enum") instanceof ArrayNode values) {
+			if (!containsNull(values)) {
+				values.addNull();
+			}
+			if (valuesWithoutType) {
+				property.remove("type");
+				return;
+			}
 		}
 		JsonNode type = property.get("type");
 		if (type == null) {
@@ -145,6 +159,23 @@ final class SchemaRewrite {
 			}
 		}
 		return false;
+	}
+
+	/** 객체의 {@code required} 를 다루는 꼴 */
+	enum Required {
+
+		/** 그대로 둔다 */
+		AS_GIVEN,
+
+		/** 모든 속성을 넣고, 원래 선택이던 속성은 타입에 {@code "null"} · 값 목록에 null 을 더해 null 을 받게 한다 */
+		ALL_NULL_IN_TYPE_AND_VALUES,
+
+		/**
+		 * 모든 속성을 넣고, 원래 선택이던 속성은 null 을 받게 한다 — 값 목록이 있으면 타입을 지우고 값 목록에 null 을, 없으면 타입에
+		 * {@code "null"} 을 더한다
+		 */
+		ALL_NULL_IN_VALUES_WITHOUT_TYPE
+
 	}
 
 }

@@ -28,9 +28,15 @@ class LlmModelsWiringTests {
 		this.runner.run(context -> {
 			LlmModels models = context.getBean(LlmModels.class);
 
-			assertThat(models.all()).hasSize(8);
+			assertThat(models.all()).hasSize(16);
 			assertThat(models.of(Provider.OPENAI)).extracting(LlmModel::id)
 				.containsExactly("gpt-6.1-terra", "gpt-6.1-sol", "gpt-6-luna", "gpt-6-astra");
+			assertThat(models.of(Provider.OPENROUTER)).extracting(LlmModel::id)
+				.containsExactly("openai/gpt-6.1-terra", "openai/gpt-6.1-sol", "openai/gpt-6-luna", "openai/gpt-6-astra",
+						"anthropic/claude-sonnet-5.5", "anthropic/claude-opus-5.5", "anthropic/claude-haiku-5.5",
+						"anthropic/claude-fable-5.2");
+			assertThat(models.find(Provider.OPENROUTER, "anthropic/claude-haiku-5.5"))
+				.contains(new LlmModel(Provider.OPENROUTER, "anthropic/claude-haiku-5.5", 32_000, true));
 			assertThat(models.find(Provider.ANTHROPIC, "claude-haiku-5-5"))
 				.contains(new LlmModel(Provider.ANTHROPIC, "claude-haiku-5-5", 32_000, true));
 			assertThat(models.find(Provider.ANTHROPIC, "claude-unknown")).isEmpty();

@@ -89,12 +89,21 @@ class LocalProviderClientsTests {
 	}
 
 	@Test
-	void theSubstituteAnswersForBothProviders() {
+	void theSubstituteAnswersForEveryProvider() {
 		try (LlmProviderClient client = this.clients.open(Provider.ANTHROPIC, SecretValue.of("yozm-local-denied"),
 				DEADLINE)) {
 			assertThat(client.probe()).isEqualTo(
 					new ProbeResult.Failed(LlmFailureKind.PERMISSION_DENIED, "로컬 대체물이 정한 결과 — PERMISSION_DENIED"));
 		}
+		try (LlmProviderClient client = this.clients.open(Provider.OPENROUTER, SecretValue.of("yozm-local-valid"),
+				DEADLINE)) {
+			assertThat(client.probe()).isEqualTo(new ProbeResult.Reachable());
+			assertThat(client.generate(new GenerationCall("openai/gpt-x", true, "지시", "사용자", SCHEMA,
+					ReasoningEffort.LOW, 4_100)))
+				.isEqualTo(new GenerationOutcome.Answered("{\"a\":\"로컬 대체물이 만든 본문이다.\"}", 0, 0,
+						GenerationStop.COMPLETE));
+		}
+		assertThat(this.delegate.opened).isEmpty();
 	}
 
 	@Test
