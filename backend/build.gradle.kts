@@ -330,8 +330,9 @@ tasks.register<JavaExec>("llmLiveCheck") {
 		layout.buildDirectory.dir("live-check").get().asFile.path,
 		providers.gradleProperty("liveCheckSkip").getOrElse(""),
 	)
-	// 키는 YOZMNEWS_LIVE_OPENAI_KEY · YOZMNEWS_LIVE_ANTHROPIC_KEY 로만 받는다. 시험 JVM 과 같은 미끼를 두어, 공급자 클라이언트가
-	// 프로세스 환경 변수의 주소 · 키를 읽지 않고 SDK 로그를 꺼 둔 채로 실제 공급자에 닿는지 본다
+	// 키는 YOZMNEWS_LIVE_OPENAI_KEY · YOZMNEWS_LIVE_ANTHROPIC_KEY · YOZMNEWS_LIVE_OPENROUTER_KEY 로만 받고, 계획에 남은 공급자의
+	// 키만 요구한다. 시험 JVM 과 같은 미끼를 두어, 공급자 클라이언트가 프로세스 환경 변수의 주소 · 키를 읽지 않고 SDK 로그를 꺼 둔 채로
+	// 실제 공급자에 닿는지 본다
 	environment(llmProviderEnvironmentDecoys)
 	outputs.upToDateWhen { false }
 }

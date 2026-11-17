@@ -14,6 +14,7 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -41,16 +42,19 @@ import tools.jackson.databind.json.JsonMapper;
  * 받는지와 응답의 종료 사유 · 토큰 · 소요 시간 · 오류의 꼴을 기록한다 · docs/qa/test-strategy.md ⑧.
  * <p>
  * 방식은 셋이다 — {@code dry-run}(요청 없이 요청 수와 최대 비용 추정), {@code smoke}(공급자마다 한 건), {@code full}(전부). 뺄 모델
- * ID 를 쉼표로 넘기면 그 모델의 요청을 계획에서 뺀다. 돈이 드는 방식은 키 둘(환경 변수 {@value #OPENAI_KEY} ·
- * {@value #ANTHROPIC_KEY})이 모두 있어야 하고, 보내기 전마다 쓴 비용 + 다음 요청의 최대 비용이 상한을 넘으면 멈춘다. 포트가 예상 밖의
- * 예외를 던지면 그 요청은 예외 클래스 이름만 적고 최대 비용으로 센 뒤 다음으로 넘어간다 — 멈추거나 끝나도 그때까지의 결과를 표 파일 하나로
- * 남긴다. 출력에는 키 · 프롬프트 · 응답 본문 · 예외 문구를 찍지 않는다.
+ * ID 를 쉼표로 넘기면 그 모델의 요청을 계획에서 뺀다. 돈이 드는 방식은 계획에 남은 모델의 공급자 키(환경 변수
+ * {@value #OPENAI_KEY} · {@value #ANTHROPIC_KEY} · {@value #OPENROUTER_KEY} 가운데 그 공급자의 것)가 모두 있어야 하고,
+ * 보내기 전마다 쓴 비용 + 다음 요청의 최대 비용이 상한을 넘으면 멈춘다. 포트가 예상 밖의 예외를 던지면 그 요청은 예외 클래스 이름만
+ * 적고 최대 비용으로 센 뒤 다음으로 넘어간다 — 멈추거나 끝나도 그때까지의 결과를 표 파일 하나로 남긴다. 출력에는 키 · 프롬프트 ·
+ * 응답 본문 · 예외 문구를 찍지 않는다.
  */
 public final class LlmLiveCheck {
 
 	static final String OPENAI_KEY = "YOZMNEWS_LIVE_OPENAI_KEY";
 
 	static final String ANTHROPIC_KEY = "YOZMNEWS_LIVE_ANTHROPIC_KEY";
+
+	static final String OPENROUTER_KEY = "YOZMNEWS_LIVE_OPENROUTER_KEY";
 
 	/** 확인 요청 하나의 마감 */
 	private static final Duration DEADLINE = Duration.ofSeconds(180);
@@ -85,13 +89,26 @@ public final class LlmLiveCheck {
 
 	/**
 	 * 모델 단가(USD, 100만 토큰당 입력 · 출력) — 2026-11-17 확인. OpenAI 는 공식 가격 페이지의 Standard · 짧은 문맥 행, Anthropic 은
-	 * 공식 모델 표. 바뀌면 이 표를 고친다 — 표에 없는 모델은 돈이 드는 방식에서 거부한다.
+	 * 공식 모델 표, OpenRouter 는 공개 모델 목록({@code GET /api/v1/models} 의 {@code pricing}). 바뀌면 이 표를 고친다 — 표에 없는
+	 * 모델은 돈이 드는 방식에서 거부한다.
 	 */
-	private static final Map<String, Price> PRICES = Map.of("gpt-6.1-terra", new Price("1.00", "5.00"), "gpt-6.1-sol",
-			new Price("2.00", "10.00"), "gpt-6-luna", new Price("0.10", "0.50"), "gpt-6-astra",
-			new Price("10.00", "50.00"), "claude-sonnet-5-5", new Price("2.00", "10.00"), "claude-opus-5-5",
-			new Price("4.00", "20.00"), "claude-haiku-5-5", new Price("0.10", "0.50"), "claude-fable-5-2",
-			new Price("8.00", "40.00"));
+	private static final Map<String, Price> PRICES = Map.ofEntries(
+			Map.entry("gpt-6.1-terra", new Price("1.00", "5.00")),
+			Map.entry("gpt-6.1-sol", new Price("2.00", "10.00")),
+			Map.entry("gpt-6-luna", new Price("0.10", "0.50")),
+			Map.entry("gpt-6-astra", new Price("10.00", "50.00")),
+			Map.entry("claude-sonnet-5-5", new Price("2.00", "10.00")),
+			Map.entry("claude-opus-5-5", new Price("4.00", "20.00")),
+			Map.entry("claude-haiku-5-5", new Price("0.10", "0.50")),
+			Map.entry("claude-fable-5-2", new Price("8.00", "40.00")),
+			Map.entry("openai/gpt-6.1-terra", new Price("1.00", "5.00")),
+			Map.entry("openai/gpt-6.1-sol", new Price("2.00", "10.00")),
+			Map.entry("openai/gpt-6-luna", new Price("0.10", "0.50")),
+			Map.entry("openai/gpt-6-astra", new Price("10.00", "50.00")),
+			Map.entry("anthropic/claude-sonnet-5.5", new Price("2.00", "10.00")),
+			Map.entry("anthropic/claude-opus-5.5", new Price("4.00", "20.00")),
+			Map.entry("anthropic/claude-haiku-5.5", new Price("0.10", "0.50")),
+			Map.entry("anthropic/claude-fable-5.2", new Price("8.00", "40.00")));
 
 	private static final JsonMapper JSON = JsonMapper.builder().build();
 
@@ -140,13 +157,30 @@ public final class LlmLiveCheck {
 		if (!unpriced.isEmpty()) {
 			fail(3, "단가 표에 없는 모델 — " + unpriced + ". 비용 상한을 지킬 수 없어 보내지 않는다");
 		}
-		String openAiKey = System.getenv(OPENAI_KEY);
-		String anthropicKey = System.getenv(ANTHROPIC_KEY);
-		if (openAiKey == null || openAiKey.isBlank() || anthropicKey == null || anthropicKey.isBlank()) {
-			fail(2, "키가 없다 — 환경 변수 " + OPENAI_KEY + " · " + ANTHROPIC_KEY + " 가 모두 있어야 한다");
+		Map<Provider, SecretValue> keys = new EnumMap<>(Provider.class);
+		List<String> missing = new ArrayList<>();
+		for (Provider provider : plan.stream().map(probe -> probe.model().provider()).distinct().toList()) {
+			String key = System.getenv(keyVariable(provider));
+			if (key == null || key.isBlank()) {
+				missing.add(keyVariable(provider));
+			}
+			else {
+				keys.put(provider, SecretValue.of(key));
+			}
 		}
-		run(plan, budget, reportDir, Map.of(Provider.OPENAI, SecretValue.of(openAiKey), Provider.ANTHROPIC,
-				SecretValue.of(anthropicKey)), mode);
+		if (!missing.isEmpty()) {
+			fail(2, "키가 없다 — 계획에 남은 공급자의 환경 변수 " + String.join(" · ", missing) + " 가 있어야 한다");
+		}
+		run(plan, budget, reportDir, keys, mode);
+	}
+
+	/** 공급자의 키를 받는 환경 변수 */
+	private static String keyVariable(Provider provider) {
+		return switch (provider) {
+			case OPENAI -> OPENAI_KEY;
+			case ANTHROPIC -> ANTHROPIC_KEY;
+			case OPENROUTER -> OPENROUTER_KEY;
+		};
 	}
 
 	private static void run(List<Probe> plan, BigDecimal budget, Path reportDir, Map<Provider, SecretValue> keys,
