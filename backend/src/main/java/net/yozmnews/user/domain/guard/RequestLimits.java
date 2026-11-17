@@ -31,6 +31,7 @@ public final class RequestLimits {
 			case SIGN_UP -> List.of(new LimitRule(LimitAxis.CLIENT_ADDRESS, 5, HOUR));
 			case LLM_KEY_CHECK -> List.of(new LimitRule(LimitAxis.SESSION_USER, 20, HOUR),
 					new LimitRule(LimitAxis.CLIENT_ADDRESS, 60, HOUR));
+			case FEEDBACK -> List.of(new LimitRule(LimitAxis.SESSION_USER, 300, TEN_MINUTES));
 		};
 	}
 
