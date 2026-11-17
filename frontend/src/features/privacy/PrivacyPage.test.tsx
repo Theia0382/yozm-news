@@ -46,6 +46,18 @@ describe("PrivacyPage", () => {
         /고른 모델을 쓸 수 없으면 키를 등록한 다른 공급자에게 전송됩니다\./,
       ),
     ).toBeInTheDocument();
+    // 공급자 셋과, 중계를 거치는 OpenRouter 의 경로 · 학습 제외
+    expect(
+      transfer.getByText(/LLM 공급자\(OpenAI · Anthropic · OpenRouter\)에게/),
+    ).toBeInTheDocument();
+    expect(
+      transfer.getByText(
+        /OpenRouter를 거쳐, 그 모델을 만든 회사나 그 모델을 호스팅하는 공급자에게/,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      transfer.getByText(/받은 데이터를 학습에 쓰는 공급자로는 보내지 않지만/),
+    ).toBeInTheDocument();
     expect(
       transfer.getByText("구독 주제, 지역 선호, 자유 텍스트 관심사"),
     ).toBeInTheDocument();

@@ -99,6 +99,10 @@ describe("KeysPage", () => {
     ).toBeInTheDocument();
 
     const transfer = await section("LLM 공급자에게 보내는 것");
+    // 키 화면도 같은 고지 — OpenRouter 의 중계 경로
+    expect(
+      transfer.getByText(/OpenRouter를 거쳐, 그 모델을 만든 회사나/),
+    ).toBeInTheDocument();
     expect(
       transfer.getByText("구독 주제, 지역 선호, 자유 텍스트 관심사"),
     ).toBeInTheDocument();
