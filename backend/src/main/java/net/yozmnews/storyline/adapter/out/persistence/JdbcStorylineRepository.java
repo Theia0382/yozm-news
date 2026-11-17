@@ -19,6 +19,7 @@ import java.util.Set;
 
 import net.yozmnews.platform.VectorText;
 import net.yozmnews.storyline.LinkedBy;
+import net.yozmnews.storyline.domain.linking.Asked;
 import net.yozmnews.storyline.domain.linking.Representation;
 import net.yozmnews.storyline.domain.linking.Score;
 import net.yozmnews.storyline.domain.storyline.LinkJudgement;
@@ -180,10 +181,11 @@ class JdbcStorylineRepository implements StorylineRepository {
 	@Override
 	public void addMember(long storylineId, long eventId, LinkJudgement judgement) {
 		Score score = judgement.score();
+		Asked asked = judgement.asked();
 		this.jdbc.sql("""
 				insert into storyline_members (storyline_id, event_id, linked_by, score, cosine, key_term_overlap,
-				                               criteria_id, linked_at)
-				values (:storyline, :event, :by, :score, :cosine, :overlap, :criteria, :at)
+				                               criteria_id, probability, judgement_id, linked_at)
+				values (:storyline, :event, :by, :score, :cosine, :overlap, :criteria, :probability, :judgement, :at)
 				""")
 			.param("storyline", storylineId)
 			.param("event", eventId)
@@ -192,6 +194,8 @@ class JdbcStorylineRepository implements StorylineRepository {
 			.param("cosine", (score != null) ? score.cosine() : null, Types.DOUBLE)
 			.param("overlap", (score != null) ? score.overlap() : null, Types.DOUBLE)
 			.param("criteria", judgement.criteriaId(), Types.BIGINT)
+			.param("probability", (asked != null) ? asked.probability() : null, Types.DOUBLE)
+			.param("judgement", (asked != null) ? asked.judgementId() : null, Types.BIGINT)
 			.param("at", timestamp(judgement.linkedAt()))
 			.update();
 	}
@@ -201,7 +205,7 @@ class JdbcStorylineRepository implements StorylineRepository {
 		this.jdbc.sql("""
 				update storyline_members
 				set event_id = :to, linked_by = 'MERGE', score = null, cosine = null, key_term_overlap = null,
-				    criteria_id = null, linked_at = :now
+				    criteria_id = null, probability = null, judgement_id = null, linked_at = :now
 				where storyline_id = :storyline and event_id = :from
 				""")
 			.param("storyline", storylineId)
@@ -261,7 +265,8 @@ class JdbcStorylineRepository implements StorylineRepository {
 		}
 		Map<Long, Map<Long, LinkJudgement>> judgements = new LinkedHashMap<>();
 		this.jdbc.sql("""
-				select storyline_id, event_id, linked_by, score, cosine, key_term_overlap, criteria_id, linked_at
+				select storyline_id, event_id, linked_by, score, cosine, key_term_overlap, criteria_id, probability,
+				       judgement_id, linked_at
 				from storyline_members where storyline_id = any(:ids)
 				order by storyline_id, event_id
 				""").param("ids", storylineIds.toArray(Long[]::new)).query((ResultSet rs) -> {
@@ -270,8 +275,11 @@ class JdbcStorylineRepository implements StorylineRepository {
 			Score scored = rs.wasNull() ? null : new Score(score, rs.getDouble("cosine"), rs.getDouble("key_term_overlap"));
 			long criteria = rs.getLong("criteria_id");
 			Long criteriaId = rs.wasNull() ? null : criteria;
+			double probability = rs.getDouble("probability");
+			Asked asked = rs.wasNull() ? null : new Asked(probability, rs.getLong("judgement_id"));
 			judgements.computeIfAbsent(rs.getLong("storyline_id"), id -> new LinkedHashMap<>())
-				.put(rs.getLong("event_id"), new LinkJudgement(linkedBy, scored, criteriaId, instant(rs, "linked_at")));
+				.put(rs.getLong("event_id"),
+						new LinkJudgement(linkedBy, scored, criteriaId, asked, instant(rs, "linked_at")));
 		});
 		Map<Long, Map<Long, LinkJudgement>> result = new LinkedHashMap<>();
 		judgements.forEach((storyline, byEvent) -> result.put(storyline, Collections.unmodifiableMap(byEvent)));

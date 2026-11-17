@@ -24,11 +24,14 @@ import tools.jackson.databind.json.JsonMapper;
 /**
  * {@link EventJudgementRepository} 의 JdbcClient 구현 — docs/specs/evaluation.md §4.
  * <p>
- * 판정 원본은 넣기 한 번이고 갱신하지 않는다 — aggregate 가 없다. 물은 후보와 원본 응답은 {@code jsonb} 로 쓴다. 이 행을 잠그는 다른
- * 쓰기가 없어 지우기는 잠금 순서 없이 한 문장이다. 기간 읽기는 {@code (judged_at, id)} 인덱스를 거꾸로 훑는다.
+ * 판정 원본은 넣기 한 번이고 갱신하지 않는다 — aggregate 가 없다. 넣기 · 지우기는 흐름 소속 표와 함께 쓰는
+ * {@link MembershipJudgementRows} 이고, 물은 후보의 ID 키는 {@code eventId} 다. 기간 읽기는 {@code (judged_at, id)} 인덱스를 거꾸로
+ * 훑는다.
  */
 @Repository
 class JdbcEventJudgementRepository implements EventJudgementRepository {
+
+	private static final String TABLE = "article_event_judgements";
 
 	private static final JsonMapper JSON = JsonMapper.builder().build();
 
@@ -43,24 +46,7 @@ class JdbcEventJudgementRepository implements EventJudgementRepository {
 
 	@Override
 	public EventJudgementId insert(MembershipRecord record) {
-		long id = this.jdbc.sql("""
-				insert into article_event_judgements (article_id, evaluator, model_version, wording_version, candidates,
-				    raw_response, input_tokens, judged_at)
-				values (:article, :evaluator, :modelVersion, :wordingVersion, cast(:candidates as jsonb),
-				    cast(:rawResponse as jsonb), :inputTokens, :judgedAt)
-				returning id
-				""")
-			.param("article", record.articleId().value())
-			.param("evaluator", record.evaluator())
-			.param("modelVersion", record.modelVersion())
-			.param("wordingVersion", record.wordingVersion())
-			.param("candidates", candidates(record.candidates()))
-			.param("rawResponse", record.rawResponse())
-			.param("inputTokens", record.inputTokens())
-			.param("judgedAt", record.judgedAt().atOffset(ZoneOffset.UTC))
-			.query(Long.class)
-			.single();
-		return new EventJudgementId(id);
+		return new EventJudgementId(MembershipJudgementRows.insert(this.jdbc, TABLE, "eventId", record));
 	}
 
 	@Override
@@ -90,19 +76,7 @@ class JdbcEventJudgementRepository implements EventJudgementRepository {
 
 	@Override
 	public void deleteByArticles(Collection<ArticleId> articleIds) {
-		if (articleIds.isEmpty()) {
-			return;
-		}
-		Long[] ids = articleIds.stream().map(ArticleId::value).toArray(Long[]::new);
-		this.jdbc.sql("delete from article_event_judgements where article_id = any(:ids)").param("ids", ids).update();
-	}
-
-	/** 물은 후보의 jsonb — 후보마다 {@link StoredCandidate} 한 칸, 요청 순서 */
-	private static String candidates(List<JudgedEvent> candidates) {
-		return JSON.writeValueAsString(candidates.stream()
-			.map(candidate -> new StoredCandidate(candidate.eventId(),
-					candidate.describedArticles().stream().map(ArticleId::value).toList(), candidate.probability()))
-			.toList());
+		MembershipJudgementRows.deleteByArticles(this.jdbc, TABLE, articleIds);
 	}
 
 	private static EventJudgementView view(ResultSet rs, int row) throws SQLException {
@@ -116,7 +90,7 @@ class JdbcEventJudgementRepository implements EventJudgementRepository {
 				rs.getInt("input_tokens"), rs.getObject("judged_at", OffsetDateTime.class).toInstant());
 	}
 
-	/** jsonb 의 후보 한 칸 — 쓰기와 읽기가 함께 쓰는 저장 모양 {@code eventId} · {@code articleIds} · {@code probability} */
+	/** jsonb 의 후보 한 칸을 읽는 모양 {@code eventId} · {@code articleIds} · {@code probability} — 쓰기는 {@link MembershipJudgementRows} */
 	private record StoredCandidate(long eventId, List<Long> articleIds, double probability) {
 	}
 

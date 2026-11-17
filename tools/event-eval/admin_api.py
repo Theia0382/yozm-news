@@ -36,7 +36,7 @@ USED_FIELDS: Final[Mapping[str, tuple[str, ...]]] = {
     "StorylineListResponse": ("storylines", "next", "linkingCriteria", "relationCriteria"),
     "StorylineRowResponse": ("id",),
     "StorylineCursorResponse": ("lastArticleAt", "id"),
-    "LinkingCriteriaResponse": ("windowSeconds", "threshold"),
+    "LinkingCriteriaResponse": ("windowSeconds", "lower", "upper", "probability"),
     "RelationCriteriaResponse": ("probability", "oneMatter", "minEvents", "candidateScore", "windowSeconds"),
     "StorylineDetailResponse": ("id", "events", "relations", "asked"),
     "StorylineEventResponse": ("id", "direct"),
@@ -269,7 +269,9 @@ class AdminApi:
         relation = field(first, "StorylineListResponse", "relationCriteria")
         return StorylineList(
             tuple(ids),
-            {name: json_number(field(linking, "LinkingCriteriaResponse", name))
+            # 확률 기준만 null 일 수 있다 — 창 · 두 기준이 null 이면 크게 실패한다
+            {name: (optional_number if name == "probability" else json_number)(
+                field(linking, "LinkingCriteriaResponse", name))
              for name in USED_FIELDS["LinkingCriteriaResponse"]},
             {name: json_number(field(relation, "RelationCriteriaResponse", name))
              for name in USED_FIELDS["RelationCriteriaResponse"]})
@@ -361,6 +363,11 @@ def _judgement(value: object) -> RelationJudgement | None:
                              int(field(value, schema, "secondId")), str(field(value, schema, "modelVersion")), reading,
                              tuple(_decimal(field(value, schema, name)) for name in ANSWERS) if read else None,
                              probability("firstOneMatter"), probability("secondOneMatter"))
+
+
+def optional_number(value: object) -> int | float | None:
+    """null 일 수 있는 응답의 수 — null 은 그대로(띠가 생기기 전의 잇기 기준은 확률 기준이 없다), 수는 json_number."""
+    return None if value is None else json_number(value)
 
 
 def json_number(value: object) -> int | float:

@@ -35,3 +35,4 @@
 ## 후속 기록
 
 - 2026-11-16: 다이제스트가 따르는 범위(후보 · 인용 행과 인용이 남지 않은 섹션) — [ADR-0186](0186-digests-follow-removed-articles-by-deleting-their-rows-and-show-no-summary-without-any-citation.md) · [digest Spec "지운 기사 따르기"](../specs/digest.md#지운-기사-따르기) digest-R10
+- 2026-11-17: 피드백이 따르는 범위(현재 상태 · 이력 행)와 기록과의 차례 — [ADR-0197](0197-feedback-on-removed-articles-is-deleted-from-both-the-current-state-and-the-history-and-recording-and-removal-are-ordered-by-a-fence-lock.md) · [feedback Spec "지운 기사 따르기"](../specs/feedback.md#지운-기사-따르기) feedback-R5 · R6

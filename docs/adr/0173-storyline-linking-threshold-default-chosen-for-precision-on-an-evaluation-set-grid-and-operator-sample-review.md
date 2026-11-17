@@ -1,6 +1,6 @@
 # ADR-0173: 스토리라인 잇기 기준 점수의 기본값은 평가 세트의 격자와 운영자 표본 검수로 정밀도를 앞세워 정한다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 기준 점수의 기본값([ADR-0195](0195-storyline-linking-band-and-probability-defaults-chosen-for-precision-by-simulator-grid-evaluation-instance-and-operator-sample-review.md))
 - 날짜: 2026-11-15
 - 근거: [이슈 #126](https://github.com/Theia0382/yozm-news/issues/126) — 평가 세트로 기준 점수를 격자로 견주고, 실측 인스턴스를 옛 기본값과 새 기본값으로 다시 이어 표본을 검수함(옛 기본값의 표본은 운영자가 일부를 판정하고 나머지는 그 기준으로 미리 판정한 것, 새 기본값의 표본은 운영자가 모두 판정)
 - 관련: [ADR-0121](0121-storyline-linking-scores-centroid-cosine-plus-idf-weighted-key-term-overlap-without-time-decay-jev-or-topic-tags.md)(결정 절 "가중치와 기준 점수의 값은 평가 세트로 정했다. 이 값들은 측정 전 목표다" 가운데 기준 점수 — 보충), [ADR-0132](0132-storyline-relations-are-judged-by-jev-on-candidate-pairs-and-linked-only-above-a-probability-threshold.md)(관계 판정 — 기준은 그대로), [ADR-0109](0109-event-clustering-defaults-chosen-on-the-evaluation-set-with-operator-review-and-closing-from-operating-records.md)(기본값을 평가 세트와 운영자 표본 검수로 정한 선례), [ADR-0096](0096-instance-bound-evaluation-data-kept-out-of-the-public-repository-and-defaults-cite-only-the-evaluation-set.md)(근거 수치를 공개 문서에 적지 않는다)
@@ -14,6 +14,7 @@
 
 ## 결정
 
+> 부분 대체 — [ADR-0195](0195-storyline-linking-band-and-probability-defaults-chosen-for-precision-by-simulator-grid-evaluation-instance-and-operator-sample-review.md). 지금 상태: [storyline Spec §7](../specs/storyline.md#7-설정)
 - **기준 점수의 기본값은 0.86 이다.** 값의 정본은 설정 클래스와 [storyline Spec §7](../specs/storyline.md#7-설정)이다.
 - **값은 평가 세트의 격자와 운영자 표본 검수로 정한다.** 격자는 옛 기본값의 아래와 위를 함께 견준다. 운영자 표본은 실측 인스턴스에서 뽑는다 — 기준 바로 위 점수 띠의 소속, 사건 수가 많은 스토리라인, 무작위 스토리라인, 소속 없는 사건을 씨앗을 밝혀 뽑고, 운영자가 소속마다 그 사건이 그 흐름에 드는지, 스토리라인마다 한 사안인지를 판정한다. 값을 바꾸면 실측 인스턴스를 그 값으로 다시 이은 뒤 같은 표본을 다시 뽑아 검수한다 — 검수하지 않은 값으로 정하지 않는다.
 - **같은 품질로 보이는 값 가운데서는 정밀도를 앞세운다.** 평가 세트에서 정밀도가 크게 오르는 지점이고, 실측 인스턴스에서 큰 분야 모음이 흩어지는 값을 고른다. 표본의 판정은 제목만이 아니라 기사 요약문까지 보고 한다.
@@ -39,3 +40,9 @@
 | 더 높은 값으로 정밀도를 더 얻는다 | 정밀도의 이득이 구간 안이고, 재현율과 긴 흐름을 더 잃는다 |
 | 관계 판정으로 재현율을 되찾는다는 전제로 정한다 | 측정에서 관계는 긴 흐름의 손실을 메우지 못했다 |
 | 잇기의 애매한 점수 구간에 Jev 소속 판정을 둔다 | 잇기의 꼴을 바꾸는 일이고 판정의 품질 · 비교 대상 · 비용을 재지 않았다. 기본값을 정하는 일과 따로 본다 |
+
+## 후속 기록
+
+- 2026-11-17: 결정 "값은 평가 세트의 격자와 운영자 표본 검수로 정한다" — 띠 · 확률 기준에도 쓰고 앞에 시뮬레이터 격자를 둔다([ADR-0195](0195-storyline-linking-band-and-probability-defaults-chosen-for-precision-by-simulator-grid-evaluation-instance-and-operator-sample-review.md))
+- 2026-11-17: 결과 "새 기본값에서도 분야 모음이 남는다" — 기준 바로 위의 분야 모음 소속을 띠 판정이 거른다([ADR-0194](0194-storyline-linking-asks-jev-only-for-band-candidates-and-reuses-recorded-probabilities-until-either-side-doubles.md) · [ADR-0195](0195-storyline-linking-band-and-probability-defaults-chosen-for-precision-by-simulator-grid-evaluation-instance-and-operator-sample-review.md))
+- 2026-11-17: 검토한 대안 "잇기의 애매한 점수 구간에 Jev 소속 판정을 둔다" — [ADR-0194](0194-storyline-linking-asks-jev-only-for-band-candidates-and-reuses-recorded-probabilities-until-either-side-doubles.md)

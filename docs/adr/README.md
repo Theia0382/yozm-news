@@ -110,8 +110,8 @@
 | [0102](0102-an-event-is-the-reports-of-one-happening-narrowed-by-the-event-membership-question-wording.md) | 사건은 한 번 일어난 일을 다룬 보도들이고, 시스템의 사건 범위는 사건 소속 질문 문구로 좁힌다 | 승인 |
 | [0103](0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md) | 큰 판정은 스토리라인 단위로 하고, 사건 묶기 바로 뒤 스토리라인 마일스톤이 사건의 큰 사건 판정을 거둔다 | 승인 |
 | [0104](0104-arm64-run-checked-on-arm64-runners-with-a-symmetric-deploy-check-per-architecture.md) | arm64 실행은 arm64 러너의 배포 검사로 확인하고, 배포 검사는 아키텍처마다 대칭 job 으로 둔다 | 승인 |
-| [0105](0105-storylines-link-incrementally-from-event-change-notifications-and-events-publish-changed-event-ids.md) | 스토리라인은 사건 변화 알림으로 증분으로 잇고, `event` 는 바뀐 사건 ID 를 발행한다 | 승인 |
-| [0106](0106-provisional-storyline-linking-opens-only-with-a-partner-event-and-adds-the-single-best-storyline-without-removal.md) | 스토리라인의 임시 잇기 규칙 — 다른 사건과 이어질 때만 열고, 기준 이상 가운데 가장 높은 하나를 더하며 빼지 않는다 | 승인 (부분 대체: 0108 · 0121) |
+| [0105](0105-storylines-link-incrementally-from-event-change-notifications-and-events-publish-changed-event-ids.md) | 스토리라인은 사건 변화 알림으로 증분으로 잇고, `event` 는 바뀐 사건 ID 를 발행한다 | 승인 (부분 대체: 0194) |
+| [0106](0106-provisional-storyline-linking-opens-only-with-a-partner-event-and-adds-the-single-best-storyline-without-removal.md) | 스토리라인의 임시 잇기 규칙 — 다른 사건과 이어질 때만 열고, 기준 이상 가운데 가장 높은 하나를 더하며 빼지 않는다 | 승인 (부분 대체: 0108 · 0121 · 0194) |
 | [0107](0107-storyline-state-is-judged-at-query-time-from-the-last-article-and-an-ended-storyline-still-links.md) | 스토리라인 상태는 저장하지 않고 조회 때 마지막 기사 시각으로 진행 · 잠잠 · 끝남을 가르며, 끝나도 잇기를 막지 않는다 | 승인 |
 | [0108](0108-storylines-with-the-same-events-merge-and-a-storyline-left-with-one-event-merges-or-dissolves.md) | 구성 사건이 같은 스토리라인은 합치고, 사건 하나만 남은 스토리라인은 그 사건을 가진 스토리라인에 합치거나 풀며, 합쳐진 스토리라인은 남는 쪽을 가리킨다 | 승인 |
 | [0109](0109-event-clustering-defaults-chosen-on-the-evaluation-set-with-operator-review-and-closing-from-operating-records.md) | 사건 묶기 기본값은 기본 임베딩 모델에 맞춰 평가 세트로 견주고 운영자 표본 검수로 확인해 정하며, 반감기는 상수로 두고 닫는 기간은 시간 창에 늦은 수집의 여유를 더한다 | 승인 |
@@ -126,7 +126,7 @@
 | [0118](0118-big-judgement-criteria-are-storyline-operator-settings-and-do-not-inherit-event-criteria-values-or-history.md) | 큰 판정 기준은 `storyline` 의 운영자 설정으로 두고 사건 기준의 값 · 이력을 이어받지 않는다 | 승인 (부분 대체: 0147) |
 | [0119](0119-event-merge-does-not-ask-band-pairs-whose-prior-assignment-probability-is-below-the-probability-threshold.md) | 사건 병합은 배정 때 받은 확률이 확률 기준 미만인 띠 쌍을 다시 묻지 않는다 | 승인 |
 | [0120](0120-event-membership-probability-threshold-default-chosen-by-merge-precision-among-values-indistinguishable-in-assignment.md) | 사건 소속 판정의 확률 기준 기본값은 배정에서 구별되지 않는 값 가운데 병합 판정의 정밀이 높은 값으로 정한다 | 승인 |
-| [0121](0121-storyline-linking-scores-centroid-cosine-plus-idf-weighted-key-term-overlap-without-time-decay-jev-or-topic-tags.md) | 스토리라인 잇기의 점수는 사건 중심 코사인과 IDF 로 가중한 핵심 말 겹침이고, 시각 감쇠 · Jev · 주제 태그를 쓰지 않는다 | 승인 (부분 대체: 0132) |
+| [0121](0121-storyline-linking-scores-centroid-cosine-plus-idf-weighted-key-term-overlap-without-time-decay-jev-or-topic-tags.md) | 스토리라인 잇기의 점수는 사건 중심 코사인과 IDF 로 가중한 핵심 말 겹침이고, 시각 감쇠 · Jev · 주제 태그를 쓰지 않는다 | 승인 (부분 대체: 0132 · 0194) |
 | [0122](0122-test-postgresql-container-shared-per-test-jvm-with-an-empty-database-per-context.md) | 테스트의 PostgreSQL 컨테이너는 테스트 JVM 이 함께 쓰고, 컨텍스트마다 빈 데이터베이스를 만든다 | 승인 |
 | [0123](0123-v1-login-is-local-only-and-oidc-and-account-linking-come-after-v1.md) | v1 의 로그인은 자체 로그인 하나이고, OIDC 로그인과 외부 계정 연결은 v1 뒤로 미룬다 | 승인 |
 | [0124](0124-security-configuration-lives-in-the-user-module-and-platform-keeps-only-the-screen-api-path-convention.md) | 인증 · 보안 구성은 운영자 토큰 체인까지 `user` 모듈이 갖고, `platform` 은 화면용 API 경로 규약만 갖는다 | 승인 |
@@ -137,7 +137,7 @@
 | [0129](0129-passwords-are-free-form-from-eight-to-128-code-points-without-a-common-password-list.md) | 비밀번호는 8 ~ 128 코드 포인트의 자유형이고 흔한 비밀번호 목록과 대조하지 않는다 | 승인 |
 | [0130](0130-sign-in-failure-delays-count-per-digest-of-the-submitted-normalized-email-regardless-of-account.md) | 로그인 실패 지연은 제출된 정규화 이메일의 다이제스트마다 세고, 계정 유무와 무관하게 같은 기록과 지연을 준다 | 승인 |
 | [0131](0131-storyline-relations-are-explicit-links-with-containment-as-a-single-parent-tree-gathered-at-query-time.md) | 스토리라인 사이 관계는 명시 고리로 두고, 포함은 상위 하나의 나무이며 조회 때 하위를 따라 모은다 | 승인 |
-| [0132](0132-storyline-relations-are-judged-by-jev-on-candidate-pairs-and-linked-only-above-a-probability-threshold.md) | 스토리라인 관계는 후보 쌍을 Jev 에 물어 종류와 방향을 정하고 확률이 높은 것만 맺는다 | 승인 (부분 대체: 0137) |
+| [0132](0132-storyline-relations-are-judged-by-jev-on-candidate-pairs-and-linked-only-above-a-probability-threshold.md) | 스토리라인 관계는 후보 쌍을 Jev 에 물어 종류와 방향을 정하고 확률이 높은 것만 맺는다 | 승인 (부분 대체: 0137 · 0194) |
 | [0133](0133-storyline-evaluation-closes-system-containment-per-layer-view-and-measures-relations-by-direct-pair-judgement.md) | 스토리라인 평가는 시스템 쪽도 포함을 닫아 층 보기마다 견주고, 관계 품질은 시스템 스토리라인 쌍의 직접 판정으로 잰다 | 승인 |
 | [0134](0134-in-app-notices-are-one-row-per-recipient-with-a-closed-kind-and-per-kind-jsonb-content-and-read-notices-are-deleted-after-ninety-days.md) | 화면 내 알림은 받는 사용자마다 한 행이고, 종류는 닫힌 열거 · 내용은 종류마다 정한 레코드(jsonb)이며, 읽은 알림은 읽고 90일 뒤 지운다 | 승인 |
 | [0135](0135-feed-status-changes-publish-each-check-runs-transitions-and-gather-into-one-unread-notice-per-active-admin-read-up-to-the-seen-revision.md) | 피드 상태 변화는 검사 회차마다 전이를 실은 이벤트로 알리고, 그때의 운영자 계정마다 안 읽은 알림 하나에 모으며, 읽음은 화면이 받은 판까지다 | 승인 |
@@ -178,7 +178,7 @@
 | [0170](0170-request-limits-count-fixed-windows-in-a-user-postgresql-table-with-a-code-constant-policy-table.md) | 요청 제한은 `user` 의 PostgreSQL 테이블에 고정 창마다 한 문장으로 세고, 한도는 코드 상수 정책 표 하나다 | 승인 |
 | [0171](0171-sign-in-and-recovery-are-limited-per-ip-while-the-email-axis-stays-the-failure-delay.md) | 로그인 · 복구의 사용자 축은 이메일별 실패 지연이고, 요청 제한은 IP 로만 센다 | 승인 |
 | [0172](0172-bot-checks-use-turnstile-or-off-pass-when-the-verifier-is-unreachable-and-match-the-action.md) | 봇 차단은 Turnstile · 끔(기본 끔)이고, 검증 서비스에 닿지 못하면 통과하며 동작 이름을 대조한다 | 승인 |
-| [0173](0173-storyline-linking-threshold-default-chosen-for-precision-on-an-evaluation-set-grid-and-operator-sample-review.md) | 스토리라인 잇기 기준 점수의 기본값은 평가 세트의 격자와 운영자 표본 검수로 정밀도를 앞세워 정한다 | 승인 |
+| [0173](0173-storyline-linking-threshold-default-chosen-for-precision-on-an-evaluation-set-grid-and-operator-sample-review.md) | 스토리라인 잇기 기준 점수의 기본값은 평가 세트의 격자와 운영자 표본 검수로 정밀도를 앞세워 정한다 | 승인 (부분 대체: 0195) |
 | [0174](0174-big-judgement-criterion-first-value-kept-by-operator-daily-preview-review-where-the-evaluation-set-cannot-separate-neighbours.md) | 큰 판정 기준의 처음 값은 평가 세트가 이웃한 값을 가르지 못해 운영자의 날마다 미리보기 검수로 정한다 | 승인 |
 | [0175](0175-tag-preferences-follow-tag-set-activation-events-and-are-rewritten-to-active-keys.md) | 태그 선호는 체계 활성 전환 이벤트를 받아 활성 버전의 키로 고쳐 쓴다 | 승인 |
 | [0176](0176-tag-set-changes-do-not-narrow-a-users-preferences-without-telling.md) | 체계 변경은 사용자 모르게 선호 범위를 좁히지 않는다 — 일부만 제외한 병합은 해제하고 알리고, 구독한 대분류에서 옮겨 간 중분류는 구독으로 더한다 | 승인 |
@@ -199,6 +199,11 @@
 | [0191](0191-the-consumer-query-of-storyline-subscriptions-is-opened-with-the-subscriptions-and-resolves-ids-without-writing.md) | 스토리라인 구독의 소비자 조회는 구독을 만든 작업이 열고, 쓰지 않고 남는 스토리라인 ID 로 풀어 낸다 | 승인 |
 | [0192](0192-reader-screens-are-composed-by-the-reader-module-over-module-public-queries.md) | 독자 화면의 응답은 `reader` 모듈이 각 모듈의 공개 조회를 엮어 내고, 뉴스 내용을 보이는 사용자 화면은 모두 `reader` 가 맡는다 | 승인 |
 | [0193](0193-the-per-user-storyline-information-is-the-received-news-counted-from-the-digest-shown-for-each-date.md) | 사용자마다 달라지는 스토리라인 정보는 타임라인의 받은 소식 하나이고, 날짜별로 보이는 다이제스트의 인용으로 센다 | 승인 |
+| [0194](0194-storyline-linking-asks-jev-only-for-band-candidates-and-reuses-recorded-probabilities-until-either-side-doubles.md) | 스토리라인 잇기는 띠 안 후보만 Jev 에 같은 사안의 전개인지 묻고, 물은 확률을 쌍마다 기록해 크기가 두 배가 될 때까지 다시 쓴다 | 승인 |
+| [0195](0195-storyline-linking-band-and-probability-defaults-chosen-for-precision-by-simulator-grid-evaluation-instance-and-operator-sample-review.md) | 스토리라인 잇기의 띠와 확률 기준의 처음 값은 시뮬레이터 격자로 좁히고 평가 인스턴스와 운영자 표본 검수로 정밀도를 앞세워 정한다 | 승인 |
+| [0196](0196-feedback-is-accepted-only-on-articles-cited-by-the-users-digest-and-digest-answers-through-an-interface-declared-by-feedback.md) | 피드백은 그 사용자의 다이제스트가 인용한 기사에만 받고, 그 확인은 `feedback` 이 선언한 인터페이스를 `digest` 가 구현해 답한다 | 승인 |
+| [0197](0197-feedback-on-removed-articles-is-deleted-from-both-the-current-state-and-the-history-and-recording-and-removal-are-ordered-by-a-fence-lock.md) | 지운 기사의 피드백은 현재 상태와 이력을 모두 지우고, 기록과 삭제는 울타리 잠금으로 차례를 세운다 | 승인 |
+| [0198](0198-feedback-recording-is-request-limited-per-session-user.md) | 피드백 기록에 세션 사용자 축 요청 제한을 건다 | 승인 |
 | [0199](0199-generation-requests-carry-only-the-tasks-own-inputs-and-the-gateway-maps-them-to-each-provider.md) | 생성 호출의 요청은 과제의 것만 받고, 공급자의 꼴로 옮기는 일은 관문이 한다 | 승인 |
 | [0200](0200-generation-results-carry-the-stop-reason-and-schema-enforcement-and-failures-use-the-five-key-check-kinds.md) | 생성 호출의 결과는 종료 사유와 스키마 강제 여부를 싣고, 실패는 검증과 같은 다섯 종류로 낸다 | 승인 |
 | [0201](0201-the-gateway-resends-only-transient-generation-failures-and-sets-the-request-deadline-per-call-kind.md) | 생성 호출은 관문이 일시 장애만 다시 보내고, 요청 하나의 마감은 관문이 호출 종류마다 정한다 | 승인 |

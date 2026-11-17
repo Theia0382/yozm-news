@@ -92,16 +92,34 @@ class StorylineMigrationTests {
 	}
 
 	@Test
-	void theThresholdIsAboveZeroUpToOne() {
+	void theUpperThresholdIsAtMostOne() {
 		assertThatThrownBy(() -> this.jdbc.sql("""
-				insert into storyline_linking_criteria (window_seconds, threshold, created_at) values (60, 1.5, now())
+				insert into storyline_linking_criteria (window_seconds, lower, upper, probability, created_at)
+				values (60, 0.5, 1.5, 0.5, now())
+				""").update()).isInstanceOf(DataIntegrityViolationException.class);
+	}
+
+	@Test
+	void theLowerThresholdIsAtMostTheUpper() {
+		assertThatThrownBy(() -> this.jdbc.sql("""
+				insert into storyline_linking_criteria (window_seconds, lower, upper, probability, created_at)
+				values (60, 0.9, 0.84, 0.5, now())
+				""").update()).isInstanceOf(DataIntegrityViolationException.class);
+	}
+
+	@Test
+	void theProbabilityThresholdIsAtMostOne() {
+		assertThatThrownBy(() -> this.jdbc.sql("""
+				insert into storyline_linking_criteria (window_seconds, lower, upper, probability, created_at)
+				values (60, 0.84, 0.9, 1.5, now())
 				""").update()).isInstanceOf(DataIntegrityViolationException.class);
 	}
 
 	@Test
 	void theWindowIsPositive() {
 		assertThatThrownBy(() -> this.jdbc.sql("""
-				insert into storyline_linking_criteria (window_seconds, threshold, created_at) values (0, 0.5, now())
+				insert into storyline_linking_criteria (window_seconds, lower, upper, probability, created_at)
+				values (0, 0.5, 0.5, 0.5, now())
 				""").update()).isInstanceOf(DataIntegrityViolationException.class);
 	}
 

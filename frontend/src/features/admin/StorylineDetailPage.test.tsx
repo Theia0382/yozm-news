@@ -6,7 +6,18 @@ import { ARTICLE } from "@/features/admin/eventTestKit";
 import { renderAdminRoutes } from "@/features/admin/reviewTestKit";
 import { StorylineDetailPage } from "@/features/admin/StorylineDetailPage";
 
-const LINKING = { windowSeconds: 259200, threshold: 0.62 };
+const LINKING = {
+  windowSeconds: 259200,
+  lower: 0.62,
+  upper: 0.62,
+  probability: 0.5,
+};
+const BAND = {
+  windowSeconds: 259200,
+  lower: 0.6,
+  upper: 0.62,
+  probability: 0.5,
+};
 
 const RELATION = {
   probability: 0.6,
@@ -93,6 +104,8 @@ const DETAIL: Schemas["StorylineDetailResponse"] = {
           cosine: 0.77,
           keyTermOverlap: 0.4,
           criteria: LINKING,
+          probability: null,
+          judgementId: null,
           linkedAt: T,
         },
       ],
@@ -113,7 +126,9 @@ const DETAIL: Schemas["StorylineDetailResponse"] = {
           score: 0.7,
           cosine: 0.66,
           keyTermOverlap: 0.2,
-          criteria: LINKING,
+          criteria: BAND,
+          probability: 0.71,
+          judgementId: 77,
           linkedAt: T,
         },
         {
@@ -123,6 +138,8 @@ const DETAIL: Schemas["StorylineDetailResponse"] = {
           cosine: null,
           keyTermOverlap: null,
           criteria: null,
+          probability: null,
+          judgementId: null,
           linkedAt: T,
         },
       ],
@@ -232,10 +249,15 @@ describe("StorylineDetailPage", () => {
     expect(first[6]).toHaveTextContent(
       /^이 스토리라인 · 붙이기 · 점수 0\.81 \(코사인 0\.77 · 겹침 0\.4\)창 3일 · 기준 점수 0\.62 · /,
     );
+    // 위 기준 이상으로 붙은 소속은 판정 확률이 없다
+    expect(first[6]).not.toHaveTextContent("판정 확률");
     const second = cells(table, 2);
     expect(second[1]).toHaveTextContent(/^하위에서$/);
     const memberships = within(second[6]!).getAllByRole("listitem");
-    expect(memberships[0]).toHaveTextContent(/^스토리라인 8 · 짝 · 점수 0\.7 /);
+    // 띠 안에서 판정으로 정한 소속은 판정 확률과 원본 번호, 그 판정의 띠 기준을 보인다
+    expect(memberships[0]).toHaveTextContent(
+      /^스토리라인 8 · 짝 · 점수 0\.7 \(코사인 0\.66 · 겹침 0\.2\) · 판정 확률 0\.71 · 원본 #77창 3일 · 띠 0\.6 ~ 0\.62 · 확률 0\.5 · /,
+    );
     expect(
       within(memberships[0]!).getByRole("link", { name: "스토리라인 8" }),
     ).toHaveAttribute("href", "/admin/storylines/8");
@@ -243,6 +265,7 @@ describe("StorylineDetailPage", () => {
     expect(memberships[1]).toHaveTextContent(/^이 스토리라인 · 병합 옮김/);
     expect(memberships[1]).not.toHaveTextContent("점수");
     expect(memberships[1]).not.toHaveTextContent("기준 점수");
+    expect(memberships[1]).not.toHaveTextContent("판정 확률");
   });
 
   it("관계를 이 스토리라인 기준 방향 넷으로 적고 판정 원본의 확률을 번호로 보인다", async () => {

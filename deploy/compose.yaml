@@ -61,8 +61,12 @@ services:
       YOZMNEWS_EVENT_ASSIGNMENT_PROBABILITY:
       YOZMNEWS_EVENT_ASSIGNMENT_CLOSE_AFTER:
       YOZMNEWS_EVENT_ASSIGNMENT_MAX_OPEN:
-      # 스토리라인 잇기의 시간 창 · 기준 점수 — deploy/.env 에 있을 때만 넘긴다. docs/operations/configuration.md "스토리라인 잇기"
+      # 스토리라인 잇기의 시간 창 · 아래 기준 · 위 기준 · 확률 기준 — deploy/.env 에 있을 때만 넘긴다.
+      # docs/operations/configuration.md "스토리라인 잇기". 옛 키 THRESHOLD 도 넘긴다 — 남아 있으면 앱이 뜨지 않고 새 키를 알린다
       YOZMNEWS_STORYLINE_LINKING_WINDOW:
+      YOZMNEWS_STORYLINE_LINKING_LOWER:
+      YOZMNEWS_STORYLINE_LINKING_UPPER:
+      YOZMNEWS_STORYLINE_LINKING_PROBABILITY:
       YOZMNEWS_STORYLINE_LINKING_THRESHOLD:
       # 스토리라인 관계의 확률 기준 · 한 사안 기준 · 사건 수 하한 · 후보 점수 기준 · 시간 창 — deploy/.env 에 있을 때만 넘긴다.
       # docs/operations/configuration.md "스토리라인 관계"
