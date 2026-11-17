@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.digest.DigestRows;
 import net.yozmnews.feedback.DigestCitations;
 import net.yozmnews.platform.UserId;
 import org.junit.jupiter.api.AfterEach;
@@ -19,8 +20,8 @@ import org.springframework.test.context.TestPropertySource;
  * <p>
  * 지키는 규칙: digest-R14
  * <p>
- * 실제 PostgreSQL 위에서 다이제스트 · 섹션 · 인용 행을 직접 넣는다 — 같은 날짜의 덮인 다이제스트는 생성 흐름이 만들지 않는 입력이다. 인용의
- * 기사는 행만 있으면 되므로 기사 테이블에 넣지 않는다(모듈 사이라 FK 가 없다).
+ * 실제 PostgreSQL 위에서 다이제스트 · 섹션 · 인용 행을 직접 넣는다({@link DigestRows}) — 같은 날짜의 덮인 다이제스트는 생성 흐름이 만들지
+ * 않는 입력이다.
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -99,25 +100,11 @@ class DigestCitationsTests {
 	}
 
 	private long digest(UserId user, String date) {
-		return this.jdbc.sql("""
-				insert into digests (user_id, digest_date, period_start, period_end, status, trigger, created_at,
-				    started_at, completed_at, version)
-				values (:user, cast(:date as date), cast(:date as date) - interval '1 day', cast(:date as date), 'READY',
-				    'SCHEDULED', now(), now(), now(), 0)
-				returning id
-				""").param("user", user.value()).param("date", date).query(Long.class).single();
+		return DigestRows.digest(this.jdbc, user.value(), date);
 	}
 
 	private void cite(long digest, long article) {
-		long section = this.jdbc.sql("""
-				insert into digest_sections (digest_id, kind, position, title, body)
-				values (:digest, 'MORE_HEADLINES', (select count(*) from digest_sections where digest_id = :digest), null, null)
-				returning id
-				""").param("digest", digest).query(Long.class).single();
-		this.jdbc.sql("""
-				insert into digest_items (digest_section_id, position, article_id, note, selection_reason)
-				values (:section, 0, :article, null, 'SUBSCRIBED')
-				""").param("section", section).param("article", article).update();
+		DigestRows.cite(this.jdbc, digest, article);
 	}
 
 }
