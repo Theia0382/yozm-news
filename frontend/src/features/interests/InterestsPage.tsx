@@ -10,17 +10,25 @@ import {
   INTEREST_SETTINGS_QUERY_KEY,
   INTEREST_SOURCES_QUERY_KEY,
   INTEREST_TAGS_QUERY_KEY,
+  INTEREST_VOLUME_QUERY_KEY,
   type InterestModel,
   type InterestSettings,
   type InterestSources,
   type InterestTags,
+  type InterestVolume,
   InterestRequestError,
   useInterestModel,
   useInterestSettings,
   useInterestSources,
   useInterestTags,
+  useInterestVolume,
 } from "@/features/interests/interestQueries";
 import {
+  BIG_SLOTS_HELP_TEXT,
+  BIG_SLOTS_OFF_TEXT,
+  CANDIDATE_VOLUME_HELP_TEXT,
+  type CandidateVolume,
+  candidateVolumeNames,
   modelReasonTexts,
   NO_TOPIC_TEXT,
   type Weekday,
@@ -38,7 +46,7 @@ import { NARROW_WIDTH, PAGE_FRAME } from "@/shared/ui/widths";
 type Message = { tone: "status" | "alert"; text: string };
 
 /**
- * 관심 설정 — 주제 구독 · 지역 · 형식 제외, 제외 소스, 일정 · 관심사 · 변화 리포트, 모델. 절마다 저장한다. 키가 없어도 쓰고, 모델 절만
+ * 관심 설정 — 주제 구독 · 지역 · 형식 제외, 제외 소스, 일정 · 관심사 · 변화 리포트, 다이제스트 분량, 모델. 절마다 저장한다. 키가 없어도 쓰고, 모델 절만
  * 키 등록을 안내한다(docs/specs/user.md §3 · user-R5).
  */
 export function InterestsPage() {
@@ -70,6 +78,7 @@ export function InterestsPage() {
       {tags.data && <TagSection data={tags.data} />}
       <SourcesSection />
       <ScheduleSection />
+      <VolumeSection />
       <ModelSection />
       <p className="text-sm">
         <Link to={PRIVACY_PATH} className="underline">
@@ -529,6 +538,160 @@ function ScheduleForm({ data, setMessage }: FormProps<InterestSettings>) {
       />
       <Button type="submit" disabled={busy}>
         일정 · 관심사 · 리포트 저장
+      </Button>
+    </form>
+  );
+}
+
+function VolumeSection() {
+  const volume = useInterestVolume();
+  const [message, setMessage] = useState<Message | null>(null);
+  return (
+    <Section id="interest-volume" title="다이제스트 분량">
+      {volume.isPending && <p className="text-muted-foreground">읽는 중…</p>}
+      {volume.isError && <p role="alert">분량을 읽지 못했습니다.</p>}
+      {volume.data && (
+        <VolumeForm
+          key={JSON.stringify(volume.data)}
+          data={volume.data}
+          setMessage={setMessage}
+        />
+      )}
+      <Notice message={message} />
+    </Section>
+  );
+}
+
+function VolumeForm({ data, setMessage }: FormProps<InterestVolume>) {
+  const client = useApiClient();
+  const queryClient = useQueryClient();
+  const [volume, setVolume] = useState<CandidateVolume>(data.volume);
+  const [customCount, setCustomCount] = useState(
+    String(data.customCount ?? data.countRange.min),
+  );
+  const [bigSlots, setBigSlots] = useState(String(data.bigSlots));
+  const [busy, setBusy] = useState(false);
+  const custom = volume === "CUSTOM";
+
+  function save(event: FormEvent) {
+    event.preventDefault();
+    void attempt(setBusy, setMessage, async () => {
+      const { data: saved, response } = await client.PUT(
+        "/api/interests/volume",
+        {
+          body: {
+            volume,
+            customCount: custom ? Number(customCount) : null,
+            bigSlots: Number(bigSlots),
+          },
+        },
+      );
+      if (!response.ok || !saved) {
+        return { tone: "alert", text: requestFailedText(response.status) };
+      }
+      switch (saved.result) {
+        case "SAVED":
+          await queryClient.invalidateQueries({
+            queryKey: INTEREST_VOLUME_QUERY_KEY,
+          });
+          return { tone: "status", text: "다이제스트 분량을 저장했습니다." };
+        case "COUNT_OUT_OF_RANGE": {
+          const range = saved.range ?? data.countRange;
+          return {
+            tone: "alert",
+            text: `직접 입력한 후보 수는 ${range.min} ~ ${range.max}건이어야 합니다.`,
+          };
+        }
+        case "BIG_SLOTS_OUT_OF_RANGE": {
+          const range = saved.range ?? data.bigSlotRange;
+          return {
+            tone: "alert",
+            text: `큰 스토리라인 수는 ${range.min} ~ ${range.max}개여야 합니다.`,
+          };
+        }
+      }
+      const unknown: never = saved.result;
+      return {
+        tone: "alert",
+        text: `알 수 없는 결과입니다: ${String(unknown)}`,
+      };
+    });
+  }
+
+  return (
+    <form onSubmit={save} className="max-w-sm space-y-4">
+      <fieldset className="space-y-2" aria-describedby="candidate-volume-help">
+        <legend className="text-sm">최대 후보 수</legend>
+        {data.presets.map((preset) => (
+          <label
+            key={preset.volume}
+            className="flex items-center gap-2 text-sm"
+          >
+            <input
+              type="radio"
+              name="candidateVolume"
+              value={preset.volume}
+              checked={volume === preset.volume}
+              onChange={() => setVolume(preset.volume)}
+            />
+            {candidateVolumeNames[preset.volume]} ({preset.count}건)
+          </label>
+        ))}
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="radio"
+            name="candidateVolume"
+            value="CUSTOM"
+            checked={custom}
+            onChange={() => setVolume("CUSTOM")}
+          />
+          {candidateVolumeNames.CUSTOM}
+        </label>
+        <label className="block space-y-1 pl-6">
+          <span className="text-sm">
+            {`직접 입력한 후보 수 (${data.countRange.min} ~ ${data.countRange.max}건)`}
+          </span>
+          <input
+            type="number"
+            name="customCount"
+            required={custom}
+            disabled={!custom}
+            min={data.countRange.min}
+            max={data.countRange.max}
+            step={1}
+            value={customCount}
+            onChange={(event) => setCustomCount(event.target.value)}
+            className="w-full rounded-md border border-input bg-background px-2 py-1"
+          />
+        </label>
+        <p id="candidate-volume-help" className="text-sm text-muted-foreground">
+          {CANDIDATE_VOLUME_HELP_TEXT}
+        </p>
+      </fieldset>
+      <div className="space-y-1">
+        <label className="block space-y-1">
+          <span className="text-sm">
+            {`큰 스토리라인 수 (${data.bigSlotRange.min} ~ ${data.bigSlotRange.max}개)`}
+          </span>
+          <input
+            type="number"
+            name="bigSlots"
+            required
+            min={data.bigSlotRange.min}
+            max={data.bigSlotRange.max}
+            step={1}
+            value={bigSlots}
+            aria-describedby="big-slots-help"
+            onChange={(event) => setBigSlots(event.target.value)}
+            className="w-full rounded-md border border-input bg-background px-2 py-1"
+          />
+        </label>
+        <p id="big-slots-help" className="text-sm text-muted-foreground">
+          {BIG_SLOTS_HELP_TEXT} {BIG_SLOTS_OFF_TEXT}
+        </p>
+      </div>
+      <Button type="submit" disabled={busy}>
+        분량 저장
       </Button>
     </form>
   );

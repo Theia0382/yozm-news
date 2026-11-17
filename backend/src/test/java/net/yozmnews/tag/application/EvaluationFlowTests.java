@@ -711,6 +711,16 @@ class EvaluationFlowTests {
 		}
 
 		@Override
+		public List<StoredEvaluation> findLatestAll(java.util.Collection<ArticleId> articleIds) {
+			return this.delegate.findLatestAll(articleIds);
+		}
+
+		@Override
+		public List<ArticleId> firstEvaluatedIn(Instant from, Instant to) {
+			return this.delegate.firstEvaluatedIn(from, to);
+		}
+
+		@Override
 		public void streamVersionPeriod(net.yozmnews.tag.TagSetId version, Instant from, Instant to,
 				java.util.function.Consumer<net.yozmnews.tag.domain.result.SampleRow> sink) {
 			this.delegate.streamVersionPeriod(version, from, to, sink);

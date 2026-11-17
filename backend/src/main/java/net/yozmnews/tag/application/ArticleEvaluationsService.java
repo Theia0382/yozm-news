@@ -1,12 +1,22 @@
 package net.yozmnews.tag.application;
 
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.tag.ArticleEvaluationView;
 import net.yozmnews.tag.ArticleEvaluations;
+import net.yozmnews.tag.EvaluationPeriod;
+import net.yozmnews.tag.TagSetId;
+import net.yozmnews.tag.TagSetThresholds;
+import net.yozmnews.tag.TagSetView;
 import net.yozmnews.tag.domain.result.EvaluationResultRepository;
 import net.yozmnews.tag.domain.result.StoredEvaluation;
 import net.yozmnews.tag.domain.result.TagJudgement;
@@ -44,9 +54,36 @@ class ArticleEvaluationsService implements ArticleEvaluations {
 		return this.results.findLatestImportances(articleIds);
 	}
 
+	@Override
+	public Map<ArticleId, ArticleEvaluationView> findAll(Collection<ArticleId> articleIds) {
+		Set<ArticleId> distinct = new LinkedHashSet<>(articleIds);
+		if (distinct.size() > MAX_ARTICLES) {
+			throw new IllegalArgumentException("한 번에 묻는 기사가 " + MAX_ARTICLES + " 개를 넘는다: " + distinct.size());
+		}
+		// 버전 내용과 그 기준은 버전마다 한 번만 읽는다 — 평가가 많아도 질의는 평가 질의 하나 + 버전 수 × 2 다
+		Map<TagSetId, TagSetView> versions = new HashMap<>();
+		Map<TagSetId, TagSetThresholds> thresholds = new HashMap<>();
+		Map<ArticleId, ArticleEvaluationView> views = new LinkedHashMap<>();
+		for (StoredEvaluation stored : this.results.findLatestAll(distinct)) {
+			views.put(stored.articleId(),
+					view(stored, versions.computeIfAbsent(stored.tagSetId(), this.tagSets::of),
+							thresholds.computeIfAbsent(stored.tagSetId(), this.thresholds::current)));
+		}
+		return Collections.unmodifiableMap(views);
+	}
+
+	@Override
+	public List<ArticleId> firstEvaluatedIn(EvaluationPeriod period) {
+		return this.results.firstEvaluatedIn(period.from(), period.to());
+	}
+
 	private ArticleEvaluationView view(StoredEvaluation stored) {
-		Judged judged = TagJudgement.judge(stored.tags(), this.tagSets.of(stored.tagSetId()),
-				this.thresholds.current(stored.tagSetId()));
+		return view(stored, this.tagSets.of(stored.tagSetId()), this.thresholds.current(stored.tagSetId()));
+	}
+
+	private static ArticleEvaluationView view(StoredEvaluation stored, TagSetView version,
+			TagSetThresholds thresholds) {
+		Judged judged = TagJudgement.judge(stored.tags(), version, thresholds);
 		return new ArticleEvaluationView(stored.articleId(), stored.tagSetId(), judged.status(), judged.topics(),
 				judged.topicCategories(), judged.regions(), stored.formatKey(), stored.importance());
 	}

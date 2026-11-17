@@ -227,6 +227,47 @@ class JdbcEvaluationResultRepositoryTests {
 	}
 
 	@Test
+	void listsTheArticlesFirstEvaluatedInThePeriodOnceInIdOrder() {
+		// 51: 첫 평가가 10월 1일 0시(시작 경계 포함) — 11월 3일 재평가는 첫 평가 시각을 옮기지 않는다
+		this.repository.insert(record(51, this.first, Instant.parse("2026-10-01T00:00:00Z"), 1_001, List.of()));
+		this.repository.insert(record(51, this.second, Instant.parse("2026-11-03T00:00:00Z"), 1_002, List.of()));
+		// 52: 11월 1일 0시 — 끝 경계라 10월에 들지 않는다
+		this.repository.insert(record(52, this.second, Instant.parse("2026-11-01T00:00:00Z"), 1_003, List.of()));
+		// 53: 두 버전을 같은 가장 이른 시각에 — 한 번
+		this.repository.insert(record(53, this.second, Instant.parse("2026-10-05T00:00:00Z"), 1_004, List.of()));
+		this.repository.insert(record(53, this.first, Instant.parse("2026-10-05T00:00:00Z"), 1_005, List.of()));
+		// 50: 9월 30일 23:59:59 — 시작 바로 앞
+		this.repository.insert(record(50, this.first, Instant.parse("2026-09-30T23:59:59Z"), 1_006, List.of()));
+
+		assertThat(this.repository.firstEvaluatedIn(Instant.parse("2026-10-01T00:00:00Z"),
+				Instant.parse("2026-11-01T00:00:00Z")))
+			.containsExactly(new ArticleId(51), new ArticleId(53));
+		assertThat(this.repository.firstEvaluatedIn(Instant.parse("2026-11-01T00:00:00Z"),
+				Instant.parse("2026-11-04T00:00:00Z")))
+			.containsExactly(new ArticleId(52));
+	}
+
+	@Test
+	void findsTheLatestEvaluationOfEachArticleWithAllItsTagRows() {
+		// 61: 버전 1 · 2 — 버전 2 의 평가와 그 주제 · 지역 행 모두. 버전 2 를 먼저 넣어 평가 ID 순과 버전 순이 어긋난다
+		this.repository.insert(record(61, this.second, 4.0,
+				List.of(new StoredTag(MultiTagKind.TOPIC, "economy.finance", 0.75),
+						new StoredTag(MultiTagKind.REGION, "domestic", 0.875))));
+		this.repository.insert(record(61, this.first, 2.0,
+				List.of(new StoredTag(MultiTagKind.TOPIC, "politics.assembly", 0.5))));
+		// 62: 태그 행 없음
+		this.repository.insert(record(62, this.first, null, List.of()));
+
+		assertThat(this.repository.findLatestAll(List.of(new ArticleId(62), new ArticleId(61), new ArticleId(63))))
+			.containsExactly(
+					new StoredEvaluation(new ArticleId(61), this.second, "straight", 4.0,
+							List.of(new StoredTag(MultiTagKind.REGION, "domestic", 0.875),
+									new StoredTag(MultiTagKind.TOPIC, "economy.finance", 0.75))),
+					new StoredEvaluation(new ArticleId(62), this.first, "straight", null, List.of()));
+		assertThat(this.repository.findLatestAll(List.of())).isEmpty();
+	}
+
+	@Test
 	void streamingOutsideATransactionIsRefused() {
 		TransactionTemplate suspended = new TransactionTemplate(this.transactionManager);
 		suspended.setPropagationBehavior(TransactionDefinition.PROPAGATION_NOT_SUPPORTED);

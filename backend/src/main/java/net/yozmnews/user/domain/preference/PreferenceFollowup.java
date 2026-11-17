@@ -107,7 +107,7 @@ public final class PreferenceFollowup {
 		for (String key : sorted(subscribed)) {
 			Set<String> targets = mapping.resolve(TagKind.TOPIC, key);
 			if (fromCategories.contains(key)) {
-				subtopicsOf(from, key).forEach(actual::add);
+				TopicExpansion.subtopicsOf(from, key).forEach(actual::add);
 				if (targets.isEmpty()) {
 					released.add(new Adjustment(TagKind.TOPIC, key, fromNames.get(key), PreferenceMode.SUBSCRIBE,
 							AdjustmentKind.RELEASED_REMOVED));
@@ -156,14 +156,6 @@ public final class PreferenceFollowup {
 			}
 		}
 		return sources;
-	}
-
-	private static List<String> subtopicsOf(TagSetView version, String category) {
-		return version.topics()
-			.stream()
-			.filter(topic -> topic.key().equals(category))
-			.flatMap(topic -> topic.subtopics().stream().map(AskedTag::key))
-			.toList();
 	}
 
 	private static Set<String> categoryKeys(TagSetView version) {
