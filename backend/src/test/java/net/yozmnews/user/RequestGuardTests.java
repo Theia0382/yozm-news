@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.function.Supplier;
 
 import jakarta.servlet.http.Cookie;
+import net.yozmnews.LlmKeyRows;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.llm.ScriptedProviderClients;
 import net.yozmnews.user.application.PasswordHashing;
@@ -22,6 +23,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -29,10 +31,10 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * 요청 제한 — 앱 전체를 실제 PostgreSQL 로 띄워, 표시가 있는 일곱 처리기에 같은 클라이언트 주소({@code X-Real-IP})로 요청을 거듭 보내면 429
- * {@code rate-limited} 문제 응답과 {@code Retry-After} 가 나오는지 본다. 고정 창이라 짧은 시간의 요청은 많아야 경계 하나를 넘으므로, 한도의
- * 두 배 + 1 번 안에 429 가 반드시 나온다 — 정확히 몇 번째인지는 고정 시계의 {@code RequestLimiterTests} 가 본다. 헤더 이름 · 문제 유형은
- * 리터럴이다.
+ * 요청 제한 — 앱 전체를 실제 PostgreSQL 로 띄워, 표시가 있는 여덟 처리기에 같은 클라이언트 주소({@code X-Real-IP}) · 같은 세션
+ * 사용자로 요청을 거듭 보내면 429 {@code rate-limited} 문제 응답과 {@code Retry-After} 가 나오는지 본다. 고정 창이라 짧은 시간의 요청은
+ * 많아야 경계 하나를 넘으므로, 한도의 두 배 + 1 번 안에 429 가 반드시 나온다 — 정확히 몇 번째인지는 고정 시계의
+ * {@code RequestLimiterTests} 가 본다. 헤더 이름 · 문제 유형은 리터럴이다.
  * <p>
  * 지키는 규칙: user-R37 · user-R38 · user-R39 · user-R40
  */
@@ -54,6 +56,9 @@ class RequestGuardTests {
 
 	@Autowired
 	PasswordHashing hashing;
+
+	@Autowired
+	JdbcClient jdbc;
 
 	private SignedInUsers users;
 
@@ -112,6 +117,29 @@ class RequestGuardTests {
 								{"key":"sk-guard-registered-0123456789"}""")
 					: post("/api/llm-keys/OPENAI/checks").with(user).header("X-Real-IP", "192.0.2.16");
 		}, 3600);
+	}
+
+	@Test
+	void feedbackIsLimitedPerUser() throws Exception {
+		SignedInUsers.SignedInUser user = this.users.signIn("guard-feedback@example.com");
+		LlmKeyRows.give(this.jdbc, user.id().value());
+		try {
+			// 인용되지 않은 기사라 판정 결과는 NOT_IN_DIGEST(200)다 — 결과와 무관하게 센다
+			assertLimited("/api/feedback/{articleId}", 300, () -> put("/api/feedback/1").with(user)
+				.header("X-Real-IP", "192.0.2.20")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{"value":"LIKE","digestId":1}"""), 600);
+			// 대조 — 표시는 누르기 · 되돌리기에만 있다. 같은 사용자의 현재 상태 조회는 막히지 않는다
+			assertThat(this.mockMvc.perform(get("/api/feedback").param("articleIds", "1").with(user))
+				.andReturn()
+				.getResponse()
+				.getStatus()).isEqualTo(200);
+		}
+		finally {
+			// 열 수 없는 자리 값의 키 행을 다른 시험에 남기지 않는다
+			this.jdbc.sql("delete from llm_credentials where user_id = :id").param("id", user.id().value()).update();
+		}
 	}
 
 	@Test

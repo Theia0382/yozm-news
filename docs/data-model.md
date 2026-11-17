@@ -78,6 +78,9 @@ erDiagram
     digests ||--o{ digest_candidates : ""
     articles ||--o{ digest_candidates : ""
     articles ||--o{ feedback : ""
+    articles ||--o{ feedback_events : ""
+    digests ||--o{ feedback : ""
+    digests ||--o{ feedback_events : ""
 
     reports ||--o{ report_sections : ""
     report_sections ||--o{ report_items : ""
@@ -115,10 +118,7 @@ erDiagram
 
 ## 피드백
 
-| 테이블 | 주요 컬럼 | 비고 |
-|---|---|---|
-| `feedback_events` | id, user_id, article_id, value(+1/-1/0), digest_id, occurred_at | 좋아요 / 싫어요 / 없음 이력. 추가만 한다 — 정본 |
-| `feedback` | user_id, article_id, value(+1/-1), digest_id, updated_at | 현재 상태 — `feedback_events` 의 투영. (user_id, article_id) 고유. "없음"이면 행이 없다 |
+좋아요 / 싫어요의 현재 상태(`feedback`)와 이력(`feedback_events` — 추가 전용, 현재 상태는 그 투영)은 [feedback Spec §6](specs/feedback.md#6-데이터)에 있다. 사용자 · 기사 · 누른 다이제스트는 ID 로만 가리킨다 — 모듈 사이라 FK 가 없고, 지운 기사는 `feedback` 이 따른다([feedback Spec](specs/feedback.md#지운-기사-따르기) feedback-R5).
 
 ## 변화 리포트
 
@@ -156,7 +156,7 @@ erDiagram
 | 관계 판정 원본 (`flow_relation_judgements`) | 180일 | 태그 판정 원본과 같다. 관계 · 물은 기록이 가리키는 원본이 먼저 지워질 수 있다 — 그 ID 는 FK 가 아니다 |
 | 태그 판정 원본 (`article_tag_judgements`) | 180일 | 태그 기준 · 저장 기준 분석과 저장 기준을 낮춘 뒤 빠진 태그 채움([tag-R31](specs/tag.md#빠진-태그-채움--저장-바닥) — 채울 기간의 상한도 180일)에 충분한 기간. **(미설계)** 지운 뒤 원본이 없는 평가의 채움 처분은 보존을 구현하는 작업이 정한다 |
 | 다이제스트 | 사용자 탈퇴 시까지. 지운 기사의 인용과 인용이 남지 않은 섹션은 지운다 — 다이제스트 행은 남는다 | 인용 항목은 노출 기록이다([digest Spec](specs/digest.md#지운-기사-따르기) digest-R10) |
-| 관심 신호 이력(`feedback_events` · `user_tag_preference_events` · `user_storyline_subscription_events`) · 변화 리포트 | 사용자 탈퇴 시까지 | 관심사 히스토리 · 리포트의 근거 |
+| 관심 신호 이력(`feedback_events` · `user_tag_preference_events` · `user_storyline_subscription_events`) · 변화 리포트 | 사용자 탈퇴 시까지. 지운 기사의 좋아요 / 싫어요 이력(`feedback_events`)은 그 기사를 지울 때 지운다 | 관심사 히스토리 · 리포트의 근거. 지운 기사는 태그도 인용도 없어 그 이력이 관심도에 쓰이지 못한다([feedback Spec](specs/feedback.md#지운-기사-따르기) feedback-R5) |
 | `digest_candidates` | 다이제스트를 만들고 30일. 지운 기사의 행은 곧바로 지운다 | 생성 중 지운 기사의 표시이고 그 뒤로는 디버깅용이다. `digest` 의 보존 정리가 지운다([digest Spec](specs/digest.md#후보-행-보존) digest-R11) |
 | 화면 내 알림 (`user_notices`) | 읽은 알림은 읽고 90일 뒤 삭제. 안 읽은 알림은 볼 때까지 남는다 | 지나간 일을 알리는 것이고 장기 기능의 근거가 아니다. 안 읽은 보안 알림은 다음 로그인 때 보여야 한다([ADR-0134](adr/0134-in-app-notices-are-one-row-per-recipient-with-a-closed-kind-and-per-kind-jsonb-content-and-read-notices-are-deleted-after-ninety-days.md)) |
 | 피드 상태 알림의 반영 기준 (`user_feed_status_receipts`) | 사용자 탈퇴 시까지 | 사용자마다 한 행이고, 다시 처리된 회차를 거르는 데 쓴다([user Spec](specs/user.md#화면-내-알림) user-R24) |

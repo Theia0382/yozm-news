@@ -27,7 +27,10 @@ public enum GuardedAction {
 	SIGN_UP("sign-up"),
 
 	/** LLM 키 등록 · 다시 검증 — 둘이 한도를 함께 쓴다 */
-	LLM_KEY_CHECK("llm-key-check");
+	LLM_KEY_CHECK("llm-key-check"),
+
+	/** 좋아요 / 싫어요 누르기 · 되돌리기 */
+	FEEDBACK("feedback");
 
 	private final String actionName;
 

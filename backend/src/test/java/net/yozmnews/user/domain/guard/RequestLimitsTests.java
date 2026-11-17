@@ -53,6 +53,12 @@ class RequestLimitsTests {
 	}
 
 	@Test
+	void feedbackCountsThreeHundredPerUserEachTenMinutes() {
+		assertThat(RequestLimits.rulesOf(GuardedAction.FEEDBACK))
+			.containsExactly(new LimitRule(LimitAxis.SESSION_USER, 300, Duration.parse("PT10M")));
+	}
+
+	@Test
 	void ruleRejectsAWindowThatDoesNotDivideTheDayAndAnEmptyLimit() {
 		assertThatIllegalArgumentException()
 			.isThrownBy(() -> new LimitRule(LimitAxis.CLIENT_ADDRESS, 1, Duration.parse("PT7M")));

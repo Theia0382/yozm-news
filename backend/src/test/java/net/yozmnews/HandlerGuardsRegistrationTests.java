@@ -21,7 +21,7 @@ import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 /**
- * 요청 제한 · 봇 차단 표시의 등록 — 앱의 처리기를 열거해, 표시가 있는 처리기가 손으로 적은 연산(요청 제한 일곱 · 봇 차단 셋)과 그
+ * 요청 제한 · 봇 차단 표시의 등록 — 앱의 처리기를 열거해, 표시가 있는 처리기가 손으로 적은 연산(요청 제한 여덟 · 봇 차단 셋)과 그
  * 동작인지, 봇 차단 처리기가 같은 동작의 요청 제한을 갖는지, 사용자로 세는 동작의 표시가 세션 없는 공개 처리기에 달리지 않았는지 본다(달리면
  * 요청 제한이 그 요청에서 실패한다).
  * <p>
@@ -36,7 +36,7 @@ class HandlerGuardsRegistrationTests {
 	RequestMappingHandlerMapping mapping;
 
 	@Test
-	void exactlyTheSevenGuardedOperationsCarryTheirActions() {
+	void exactlyTheEightGuardedOperationsCarryTheirActions() {
 		Map<String, String> limited = new TreeMap<>();
 		for (Map.Entry<RequestMappingInfo, HandlerMethod> entry : this.mapping.getHandlerMethods().entrySet()) {
 			HandlerGuards.requestLimited(entry.getValue())
@@ -47,7 +47,7 @@ class HandlerGuardsRegistrationTests {
 				"POST /api/account-recoveries", "ACCOUNT_RECOVERY", "POST /api/invitation-checks", "INVITATION_CHECK",
 				"POST /api/invitation-acceptances", "INVITATION_ACCEPTANCE", "POST /api/sign-ups", "SIGN_UP",
 				"PUT /api/llm-keys/{provider}", "LLM_KEY_CHECK", "POST /api/llm-keys/{provider}/checks",
-				"LLM_KEY_CHECK"));
+				"LLM_KEY_CHECK", "PUT /api/feedback/{articleId}", "FEEDBACK"));
 	}
 
 	@Test
