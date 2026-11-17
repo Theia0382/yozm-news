@@ -18,16 +18,16 @@ import org.jspecify.annotations.Nullable;
  * @param bigSlotRange 큰 슬롯 수의 범위
  */
 record InterestVolumeResponse(CandidateVolume volume, @Nullable Integer customCount, int bigSlots,
-		List<Preset> presets, Range countRange, Range bigSlotRange) {
+		List<VolumePresetResponse> presets, VolumeRangeResponse countRange, VolumeRangeResponse bigSlotRange) {
 
 	static InterestVolumeResponse of(DigestVolume volume) {
 		return new InterestVolumeResponse(volume.volume(), volume.customCount(), volume.bigSlots(),
 				Arrays.stream(CandidateVolume.values())
 					.filter(CandidateVolume::preset)
-					.map(preset -> new Preset(preset, preset.count()))
+					.map(preset -> new VolumePresetResponse(preset, preset.count()))
 					.toList(),
-				new Range(DigestVolume.MIN_COUNT, DigestVolume.MAX_COUNT),
-				new Range(DigestVolume.MIN_BIG_SLOTS, DigestVolume.MAX_BIG_SLOTS));
+				new VolumeRangeResponse(DigestVolume.MIN_COUNT, DigestVolume.MAX_COUNT),
+				new VolumeRangeResponse(DigestVolume.MIN_BIG_SLOTS, DigestVolume.MAX_BIG_SLOTS));
 	}
 
 	/**
@@ -35,7 +35,7 @@ record InterestVolumeResponse(CandidateVolume volume, @Nullable Integer customCo
 	 * @param volume 단계
 	 * @param count 그 단계의 최대 후보 수
 	 */
-	record Preset(CandidateVolume volume, int count) {
+	record VolumePresetResponse(CandidateVolume volume, int count) {
 	}
 
 	/**
@@ -43,7 +43,7 @@ record InterestVolumeResponse(CandidateVolume volume, @Nullable Integer customCo
 	 * @param min 하한
 	 * @param max 상한
 	 */
-	record Range(int min, int max) {
+	record VolumeRangeResponse(int min, int max) {
 	}
 
 }

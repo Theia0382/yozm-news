@@ -7183,14 +7183,14 @@
         "type" : "object",
         "properties" : {
           "bigSlotRange" : {
-            "$ref" : "#/components/schemas/Range"
+            "$ref" : "#/components/schemas/VolumeRangeResponse"
           },
           "bigSlots" : {
             "type" : "integer",
             "format" : "int32"
           },
           "countRange" : {
-            "$ref" : "#/components/schemas/Range"
+            "$ref" : "#/components/schemas/VolumeRangeResponse"
           },
           "customCount" : {
             "type" : [ "integer", "null" ],
@@ -7199,7 +7199,7 @@
           "presets" : {
             "type" : "array",
             "items" : {
-              "$ref" : "#/components/schemas/Preset"
+              "$ref" : "#/components/schemas/VolumePresetResponse"
             }
           },
           "volume" : {
@@ -7214,7 +7214,7 @@
         "properties" : {
           "range" : {
             "oneOf" : [ {
-              "$ref" : "#/components/schemas/Range"
+              "$ref" : "#/components/schemas/VolumeRangeResponse"
             }, {
               "type" : "null"
             } ]
@@ -7886,20 +7886,6 @@
         },
         "required" : [ "excludedFormats", "excludedRegions", "topics" ]
       },
-      "Preset" : {
-        "type" : "object",
-        "properties" : {
-          "count" : {
-            "type" : "integer",
-            "format" : "int32"
-          },
-          "volume" : {
-            "type" : "string",
-            "enum" : [ "FEW", "NORMAL", "MANY", "CUSTOM" ]
-          }
-        },
-        "required" : [ "count", "volume" ]
-      },
       "PresetResponse" : {
         "type" : "object",
         "properties" : {
@@ -8120,20 +8106,6 @@
           }
         },
         "required" : [ "key", "provider" ]
-      },
-      "Range" : {
-        "type" : "object",
-        "properties" : {
-          "max" : {
-            "type" : "integer",
-            "format" : "int32"
-          },
-          "min" : {
-            "type" : "integer",
-            "format" : "int32"
-          }
-        },
-        "required" : [ "max", "min" ]
       },
       "ReadNoticesRequest" : {
         "type" : "object",
@@ -10293,6 +10265,34 @@
           }
         },
         "required" : [ "evaluations", "id", "number", "processed", "regionStoreThreshold", "skippedOtherEvaluator", "skippedUnreadable", "tagsAdded", "topicStoreThreshold" ]
+      },
+      "VolumePresetResponse" : {
+        "type" : "object",
+        "properties" : {
+          "count" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "volume" : {
+            "type" : "string",
+            "enum" : [ "FEW", "NORMAL", "MANY", "CUSTOM" ]
+          }
+        },
+        "required" : [ "count", "volume" ]
+      },
+      "VolumeRangeResponse" : {
+        "type" : "object",
+        "properties" : {
+          "max" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "min" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        },
+        "required" : [ "max", "min" ]
       }
     }
   }

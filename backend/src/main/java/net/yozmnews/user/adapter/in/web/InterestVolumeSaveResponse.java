@@ -1,6 +1,6 @@
 package net.yozmnews.user.adapter.in.web;
 
-import net.yozmnews.user.adapter.in.web.InterestVolumeResponse.Range;
+import net.yozmnews.user.adapter.in.web.InterestVolumeResponse.VolumeRangeResponse;
 import net.yozmnews.user.application.DigestVolumeSettings.VolumeOutcome;
 import org.jspecify.annotations.Nullable;
 
@@ -11,16 +11,17 @@ import org.jspecify.annotations.Nullable;
  * @param volume 저장한 분량 — 저장했을 때만
  * @param range 받는 범위 — 범위 밖일 때만(어긋난 칸의 범위)
  */
-record InterestVolumeSaveResponse(Result result, @Nullable InterestVolumeResponse volume, @Nullable Range range) {
+record InterestVolumeSaveResponse(Result result, @Nullable InterestVolumeResponse volume,
+		@Nullable VolumeRangeResponse range) {
 
 	static InterestVolumeSaveResponse of(VolumeOutcome outcome) {
 		return switch (outcome) {
 			case VolumeOutcome.Saved saved ->
 				new InterestVolumeSaveResponse(Result.SAVED, InterestVolumeResponse.of(saved.volume()), null);
 			case VolumeOutcome.CountOutOfRange count -> new InterestVolumeSaveResponse(Result.COUNT_OUT_OF_RANGE, null,
-					new Range(count.min(), count.max()));
+					new VolumeRangeResponse(count.min(), count.max()));
 			case VolumeOutcome.BigSlotsOutOfRange bigSlots -> new InterestVolumeSaveResponse(
-					Result.BIG_SLOTS_OUT_OF_RANGE, null, new Range(bigSlots.min(), bigSlots.max()));
+					Result.BIG_SLOTS_OUT_OF_RANGE, null, new VolumeRangeResponse(bigSlots.min(), bigSlots.max()));
 		};
 	}
 
