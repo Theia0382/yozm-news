@@ -11,6 +11,12 @@ export type Weekday =
 export type CandidateVolume =
   components["schemas"]["InterestVolumeResponse"]["volume"];
 
+export type SummaryLength =
+  components["schemas"]["InterestVolumeResponse"]["summaryLength"];
+
+export type ReasoningEffort =
+  components["schemas"]["InterestModelResponse"]["effort"];
+
 /** 관심 설정 화면의 주소 */
 export const INTERESTS_PATH = "/interests";
 
@@ -57,3 +63,23 @@ export const BIG_SLOTS_HELP_TEXT =
 
 export const BIG_SLOTS_OFF_TEXT =
   "0이면 큰 스토리라인을 넣지 않아, 구독한 주제 밖의 소식은 받지 않습니다.";
+
+/** 요약 길이 단계의 이름 */
+export const summaryLengthNames: Record<SummaryLength, string> = {
+  SHORT: "짧게",
+  NORMAL: "보통",
+  DETAILED: "자세히",
+};
+
+export const SUMMARY_LENGTH_HELP_TEXT =
+  "다이제스트의 개요와 주요 뉴스 요약을 얼마나 길게 쓸지 정합니다. 길수록 출력 토큰(비용)이 늘고 읽는 시간도 늡니다.";
+
+/** 추론 강도의 이름 — 낮음부터 */
+export const reasoningEffortNames: Record<ReasoningEffort, string> = {
+  LOW: "낮음",
+  MEDIUM: "보통",
+  HIGH: "높음",
+};
+
+export const REASONING_EFFORT_HELP_TEXT =
+  "다이제스트를 만들 때 모델이 얼마나 깊이 생각할지 정합니다. 높을수록 여러 기사를 종합해 쓰는 품질이 나아질 수 있지만 출력 토큰(비용)과 만드는 시간이 늡니다.";
