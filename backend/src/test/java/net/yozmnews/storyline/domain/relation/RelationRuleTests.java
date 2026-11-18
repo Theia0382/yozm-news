@@ -20,7 +20,7 @@ import org.junit.jupiter.api.Test;
  */
 class RelationRuleTests {
 
-	private static final RelationCriteria CRITERIA = new RelationCriteria(0.60, 0.20, 3, 0.88, Duration.ofDays(14));
+	private static final RelationCriteria CRITERIA = new RelationCriteria(0.60, 0.20, 3, 0.88, Duration.ofDays(14), 1.0);
 
 	private static final RelationGraph EMPTY = new RelationGraph(List.of());
 
@@ -73,7 +73,7 @@ class RelationRuleTests {
 		between.put(RelationAnswer.FIRST_PART_OF_SECOND, 0.1);
 		between.put(RelationAnswer.FIRST_LED_TO_SECOND, 0.4);
 		between.put(RelationAnswer.SECOND_LED_TO_FIRST, 0.4);
-		RelationCriteria low = new RelationCriteria(0.40, 0.20, 3, 0.88, Duration.ofDays(14));
+		RelationCriteria low = new RelationCriteria(0.40, 0.20, 3, 0.88, Duration.ofDays(14), 1.0);
 
 		assertThat(RelationRule.decide(1, 2, withNone, 0.9, 0.9, EMPTY, low))
 			.isEqualTo(new Decision.None(Decision.Reason.NOT_RELATED));

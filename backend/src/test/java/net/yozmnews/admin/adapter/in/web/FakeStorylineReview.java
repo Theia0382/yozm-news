@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import net.yozmnews.storyline.MergedStoryline;
 import net.yozmnews.storyline.StorylineId;
 import net.yozmnews.storyline.StorylineLinkingCriteria;
 import net.yozmnews.storyline.StorylineMembership;
@@ -25,7 +26,7 @@ class FakeStorylineReview implements StorylineReview {
 	static final StorylineLinkingCriteria LINKING = new StorylineLinkingCriteria(Duration.ofDays(3), 0.6, 0.62, 0.5);
 
 	static final StorylineRelationCriteria RELATION = new StorylineRelationCriteria(0.6, 0.2, 3, 0.88,
-			Duration.ofDays(14));
+			Duration.ofDays(14), 0.75);
 
 	final Map<Long, List<StorylineMembership>> memberships = new LinkedHashMap<>();
 
@@ -33,12 +34,15 @@ class FakeStorylineReview implements StorylineReview {
 
 	final Map<Long, List<StorylineRelationAsked>> asked = new LinkedHashMap<>();
 
+	final Map<Long, List<MergedStoryline>> merged = new LinkedHashMap<>();
+
 	final List<String> calls = new ArrayList<>();
 
 	void reset() {
 		this.memberships.clear();
 		this.relations.clear();
 		this.asked.clear();
+		this.merged.clear();
 		this.calls.clear();
 	}
 
@@ -52,6 +56,12 @@ class FakeStorylineReview implements StorylineReview {
 	public List<StorylineRelationDetail> relations(StorylineId id) {
 		this.calls.add("relations " + id.value());
 		return this.relations.getOrDefault(id.value(), List.of());
+	}
+
+	@Override
+	public List<MergedStoryline> merged(StorylineId id) {
+		this.calls.add("merged " + id.value());
+		return this.merged.getOrDefault(id.value(), List.of());
 	}
 
 	@Override

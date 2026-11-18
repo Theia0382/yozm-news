@@ -15,9 +15,11 @@ import org.jspecify.annotations.Nullable;
  * @param criteriaId 판정에 쓴 기준 이력 ID — {@code MERGE} 면 없다
  * @param asked 띠 안에서 흐름 소속 판정의 확률로 정했으면 그 결과 — 위 기준 이상으로 정했거나 {@code MERGE} 면 없다
  * @param linkedAt 정한 시각
+ * @param mergedFrom 스토리라인 합치기로 옮겨 온 소속이면 그 사건을 직전에 가졌던 합쳐진 스토리라인 ID — 근거(정한 것 · 점수 · 기준 ·
+ * 판정 결과 · 시각)는 그 스토리라인에서의 것 그대로다
  */
 public record LinkJudgement(LinkedBy linkedBy, @Nullable Score score, @Nullable Long criteriaId, @Nullable Asked asked,
-		Instant linkedAt) {
+		Instant linkedAt, @Nullable Long mergedFrom) {
 
 	/**
 	 * @throws IllegalArgumentException {@code MERGE} 에 점수 · 기준 · 판정 결과가 있거나, 그 밖에 점수 · 기준이 없거나, 판정 결과에 확률이
@@ -36,6 +38,12 @@ public record LinkJudgement(LinkedBy linkedBy, @Nullable Score score, @Nullable 
 		if (asked != null && (!judged || !asked.answered())) {
 			throw new IllegalArgumentException(linkedBy + " 의 판정 결과가 맞지 않다: " + asked);
 		}
+	}
+
+	/** 옮겨 오지 않은 소속 */
+	public LinkJudgement(LinkedBy linkedBy, @Nullable Score score, @Nullable Long criteriaId, @Nullable Asked asked,
+			Instant linkedAt) {
+		this(linkedBy, score, criteriaId, asked, linkedAt, null);
 	}
 
 	/**

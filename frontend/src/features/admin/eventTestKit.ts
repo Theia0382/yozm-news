@@ -92,6 +92,7 @@ export function storylineList(
       minEvents: 3,
       candidateScore: 0.88,
       windowSeconds: 1209600,
+      mergeProbability: 0.75,
     },
     maxDays: 31,
   };

@@ -152,7 +152,7 @@ class FlowRelationFlowTests {
 				body, AT)));
 		RelationJudgementId second = this.transaction.execute(status -> this.judgements.insert(new RelationRecord(8, 9,
 				List.of(new RelationRecord.Described(new ArticleId(13), false)),
-				List.of(new RelationRecord.Described(new ArticleId(14), false)), "fake", "fake-rules-2", "relation-1", 0,
+				List.of(new RelationRecord.Described(new ArticleId(14), false)), "fake", "fake-rules-3", "relation-1", 0,
 				"{\"evaluator\": \"fake\"}", AT)));
 
 		List<StoredRelationJudgement> found = this.judgements

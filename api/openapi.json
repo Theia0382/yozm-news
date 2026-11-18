@@ -8264,6 +8264,10 @@
             "type" : "number",
             "format" : "double"
           },
+          "mergeProbability" : {
+            "type" : "number",
+            "format" : "double"
+          },
           "minEvents" : {
             "type" : "integer",
             "format" : "int32"
@@ -8281,7 +8285,7 @@
             "format" : "int64"
           }
         },
-        "required" : [ "candidateScore", "minEvents", "oneMatter", "probability", "windowSeconds" ]
+        "required" : [ "candidateScore", "mergeProbability", "minEvents", "oneMatter", "probability", "windowSeconds" ]
       },
       "RelationJudgementResponse" : {
         "type" : "object",
@@ -8910,6 +8914,12 @@
             "type" : "string",
             "format" : "date-time"
           },
+          "merged" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/StorylineMergedResponse"
+            }
+          },
           "parentId" : {
             "type" : [ "integer", "null" ],
             "format" : "int64"
@@ -8940,7 +8950,7 @@
             "enum" : [ "ACTIVE", "QUIET", "ENDED" ]
           }
         },
-        "required" : [ "articleCount", "asked", "createdAt", "eventCount", "events", "firstArticleAt", "id", "lastArticleAt", "parentId", "relations", "representative", "representativeArticleId", "requestedId", "state" ]
+        "required" : [ "articleCount", "asked", "createdAt", "eventCount", "events", "firstArticleAt", "id", "lastArticleAt", "merged", "parentId", "relations", "representative", "representativeArticleId", "requestedId", "state" ]
       },
       "StorylineEventResponse" : {
         "type" : "object",
@@ -9078,6 +9088,10 @@
             "type" : "string",
             "enum" : [ "RULE", "PAIR", "MERGE", "GROUP" ]
           },
+          "mergedFrom" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int64"
+          },
           "probability" : {
             "type" : [ "number", "null" ],
             "format" : "double"
@@ -9091,7 +9105,39 @@
             "format" : "int64"
           }
         },
-        "required" : [ "cosine", "criteria", "judgementId", "keyTermOverlap", "linkedAt", "linkedBy", "probability", "score", "storylineId" ]
+        "required" : [ "cosine", "criteria", "judgementId", "keyTermOverlap", "linkedAt", "linkedBy", "mergedFrom", "probability", "score", "storylineId" ]
+      },
+      "StorylineMergedResponse" : {
+        "type" : "object",
+        "properties" : {
+          "criteria" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/RelationCriteriaResponse"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "judgement" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/RelationJudgementResponse"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "judgementId" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int64"
+          },
+          "mergedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        },
+        "required" : [ "criteria", "id", "judgement", "judgementId", "mergedAt" ]
       },
       "StorylinePageCursorResponse" : {
         "type" : "object",

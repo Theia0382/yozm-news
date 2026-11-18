@@ -254,7 +254,7 @@ class FlowMembershipFlowTests {
 	/** 기사 하나를 흐름 305 에 대해 판정한 원본 — 서술 기사 하나 */
 	private static MembershipRecord judgement(long article, long described) {
 		return new MembershipRecord(new ArticleId(article),
-				List.of(new JudgedEvent(305, List.of(new ArticleId(described)), 0.8)), "fake", "fake-rules-2",
+				List.of(new JudgedEvent(305, List.of(new ArticleId(described)), 0.8)), "fake", "fake-rules-3",
 				"matter-1", 10, "{\"events\":{\"305\":0.8}}", AT);
 	}
 

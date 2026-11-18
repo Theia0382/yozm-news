@@ -76,7 +76,7 @@ class StorylineQueryFlowTests {
 	private static final Instant NOW = Instant.parse("2026-11-10T00:00:00Z");
 
 	private static final RelationCriteria RELATION_CRITERIA = new RelationCriteria(0.60, 0.20, 3, 0.88,
-			Duration.ofDays(14));
+			Duration.ofDays(14), 1.0);
 
 	@Autowired
 	StorylineQueryRepository storylines;

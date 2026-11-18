@@ -14,6 +14,8 @@ import net.yozmnews.storyline.domain.linking.Representation;
 import net.yozmnews.storyline.domain.linking.Asked;
 import net.yozmnews.storyline.domain.linking.Score;
 import net.yozmnews.storyline.domain.storyline.LinkJudgement;
+import net.yozmnews.storyline.domain.storyline.MergeBasis;
+import net.yozmnews.storyline.domain.storyline.MergedRow;
 import net.yozmnews.storyline.domain.storyline.StorylineSnapshot;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -161,8 +163,8 @@ class JdbcStorylineRepositoryTests {
 		Instant first = Instant.parse("2026-11-10T01:00:00Z");
 		Instant second = Instant.parse("2026-11-10T02:00:00Z");
 
-		this.repository.merge(l3, l2, first);
-		this.repository.merge(l2, l1, second);
+		this.repository.merge(l3, l2, null, first);
+		this.repository.merge(l2, l1, null, second);
 
 		// 가리킴은 평평하다 — l3 도 l1 을 가리키고, l3 의 합친 시각은 처음 그대로다
 		assertThat(merge(l2)).containsEntry("merged_into", l1).containsEntry("merged_at", "2026-11-10T02:00:00Z");
@@ -178,6 +180,48 @@ class JdbcStorylineRepositoryTests {
 	}
 
 	@Test
+	void movesTheMembersTheSurvivorLacksKeepingTheirBasisAndRecordsWhyItMerged() {
+		long l1 = open("move-m", new float[] { 1, 0 }, "2026-11-01T00:00:00Z", "2026-11-01T00:00:00Z", Map.of());
+		long l2 = open("move-m", new float[] { 1, 0 }, "2026-11-01T00:00:00Z", "2026-11-01T00:00:00Z", Map.of());
+		long criteria = criteria();
+		this.repository.addMember(l1, 8401,
+				LinkJudgement.judged(LinkedBy.RULE, new Score(0.9, 0.9, 0.5), criteria, null, NOW));
+		this.repository.addMember(l1, 8402, LinkJudgement.merged(NOW));
+		this.repository.addMember(l2, 8402,
+				LinkJudgement.judged(LinkedBy.PAIR, new Score(0.7, 0.7, 0.2), criteria, null, NOW));
+		this.repository.addMember(l2, 8403, LinkJudgement.judged(LinkedBy.RULE, new Score(0.86, 0.85, 0.4), criteria,
+				new Asked(0.72, 55L), NOW.plusSeconds(60)));
+		long relationCriteria = this.jdbc.sql("""
+				insert into storyline_relation_criteria (probability, one_matter, min_events, candidate_score,
+				    window_seconds, merge_probability, created_at)
+				values (0.6, 0.2, 3, 0.88, 1209600, 0.91, now())
+				returning id
+				""").query(Long.class).single();
+
+		// 남는 쪽에 없는 사건만 옮긴다 — 함께 가진 8402 는 남는 쪽의 소속이 그대로다
+		assertThat(this.repository.moveMembers(l2, l1)).containsExactly(8403L);
+		this.repository.merge(l2, l1, new MergeBasis(77, relationCriteria), NOW.plusSeconds(120));
+
+		assertThat(this.repository.members(List.of(l1, l2))).containsExactly(Map.entry(l1, List.of(8401L, 8402L, 8403L)));
+		Map<Long, LinkJudgement> judgements = this.repository.judgements(List.of(l1)).get(l1);
+		// 옮겨 온 소속은 근거가 그대로이고 어디서 왔는지만 는다
+		assertThat(judgements.get(8403L)).isEqualTo(new LinkJudgement(LinkedBy.RULE, new Score(0.86, 0.85, 0.4), criteria,
+				new Asked(0.72, 55L), NOW.plusSeconds(60), l2));
+		assertThat(judgements.get(8402L)).isEqualTo(LinkJudgement.merged(NOW));
+		assertThat(judgements.get(8401L).mergedFrom()).isNull();
+		assertThat(this.repository.mergedInto(l1))
+			.containsExactly(new MergedRow(l2, NOW.plusSeconds(120), new MergeBasis(77, relationCriteria)));
+
+		// 대조 — 정돈의 합치기는 근거가 없다
+		long l3 = open("move-m", new float[] { 1, 0 }, "2026-11-01T00:00:00Z", "2026-11-01T00:00:00Z", Map.of());
+		assertThat(this.repository.moveMembers(l3, l1)).isEmpty();
+		this.repository.merge(l3, l1, null, NOW);
+		assertThat(this.repository.mergedInto(l1)).containsExactly(
+				new MergedRow(l2, NOW.plusSeconds(120), new MergeBasis(77, relationCriteria)), new MergedRow(l3, NOW, null));
+		assertThat(this.repository.mergedInto(l2)).isEmpty();
+	}
+
+	@Test
 	void deletingTheSurvivorTakesTheMergedRows() {
 		long l1 = open("merge-delete-m", new float[] { 1, 0 }, "2026-11-01T00:00:00Z", "2026-11-01T00:00:00Z",
 				Map.of());
@@ -187,8 +231,8 @@ class JdbcStorylineRepositoryTests {
 				Map.of());
 		long other = open("merge-delete-m", new float[] { 1, 0 }, "2026-11-01T00:00:00Z", "2026-11-01T00:00:00Z",
 				Map.of());
-		this.repository.merge(l3, l2, NOW);
-		this.repository.merge(l2, l1, NOW);
+		this.repository.merge(l3, l2, null, NOW);
+		this.repository.merge(l2, l1, null, NOW);
 
 		this.repository.delete(l1);
 
@@ -208,7 +252,7 @@ class JdbcStorylineRepositoryTests {
 			.extracting(StorylineSnapshot::id)
 			.containsExactly(l1, l2);
 
-		this.repository.merge(l2, l1, NOW);
+		this.repository.merge(l2, l1, null, NOW);
 
 		assertThat(this.repository.candidates("merge-cand-m", new float[] { 1, 0 }, from, to, 0.5, 2))
 			.extracting(StorylineSnapshot::id)

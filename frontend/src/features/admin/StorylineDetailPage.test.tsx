@@ -25,6 +25,7 @@ const RELATION = {
   minEvents: 3,
   candidateScore: 0.88,
   windowSeconds: 1209600,
+  mergeProbability: 0.75,
 };
 
 const T = "2026-11-05T00:00:00Z";
@@ -110,6 +111,7 @@ const DETAIL: Schemas["StorylineDetailResponse"] = {
           probability: null,
           judgementId: null,
           linkedAt: T,
+          mergedFrom: null,
         },
       ],
     },
@@ -133,6 +135,8 @@ const DETAIL: Schemas["StorylineDetailResponse"] = {
           probability: 0.71,
           judgementId: 77,
           linkedAt: T,
+          // 합쳐진 스토리라인 12 에서 옮겨 온 소속
+          mergedFrom: 12,
         },
         {
           storylineId: 7,
@@ -144,6 +148,7 @@ const DETAIL: Schemas["StorylineDetailResponse"] = {
           probability: null,
           judgementId: null,
           linkedAt: T,
+          mergedFrom: null,
         },
       ],
     },
@@ -213,6 +218,7 @@ const DETAIL: Schemas["StorylineDetailResponse"] = {
     ),
     asked(16, "NOT_ONE_MATTER", 46, null),
   ],
+  merged: [],
 };
 
 function renderPage(id: number, response: () => Response) {
@@ -259,12 +265,14 @@ describe("StorylineDetailPage", () => {
     );
     // 위 기준 이상으로 붙은 소속은 판정 확률이 없다
     expect(first[6]).not.toHaveTextContent("판정 확률");
+    // 옮겨 오지 않은 소속에는 옮겨 온 표시가 없다
+    expect(first[6]).not.toHaveTextContent("옮겨 옴");
     const second = cells(table, 2);
     expect(second[1]).toHaveTextContent(/^하위에서$/);
     const memberships = within(second[6]!).getAllByRole("listitem");
     // 띠 안에서 판정으로 정한 소속은 판정 확률과 원본 번호, 그 판정의 띠 기준을 보인다
     expect(memberships[0]).toHaveTextContent(
-      /^스토리라인 8 · 짝 · 점수 0\.7 \(코사인 0\.66 · 겹침 0\.2\) · 판정 확률 0\.71 · 원본 #77창 3일 · 띠 0\.6 ~ 0\.62 · 확률 0\.5 · /,
+      /^스토리라인 8 · 짝 · 점수 0\.7 \(코사인 0\.66 · 겹침 0\.2\) · 판정 확률 0\.71 · 원본 #77 · 합쳐진 스토리라인 12 에서 옮겨 옴창 3일 · 띠 0\.6 ~ 0\.62 · 확률 0\.5 · /,
     );
     expect(
       within(memberships[0]!).getByRole("link", { name: "스토리라인 8" }),
@@ -321,7 +329,7 @@ describe("StorylineDetailPage", () => {
     );
 
     const table = await screen.findByRole("table", { name: "물은 쌍" });
-    expect(cells(table, 1)[1]).toHaveTextContent(/^조각 — 합치지 않음$/);
+    expect(cells(table, 1)[1]).toHaveTextContent(/^조각 — 합치기 기준 미달$/);
     expect(cells(table, 1)[5]).toHaveTextContent(
       "해당 없음 0.1 · 조각 0.7 · 나란한 흐름 0.2 · 20 ⊂ 7 0.7 · 7 ⊂ 20 0.05 · 7 → 20 0.1 · 20 → 7 0.05 · 한 사안 7 0.8 · 20 0.6",
     );
@@ -330,6 +338,54 @@ describe("StorylineDetailPage", () => {
       /^나란한 흐름 — 상위에 넘겨 물음$/,
     );
     expect(cells(table, 4)[1]).toHaveTextContent(/^나란한 흐름 — 묶지 않음$/);
+  });
+
+  it("합쳐진 스토리라인을 합친 까닭 · 기준 · 판정 원본과 함께 보인다", async () => {
+    renderPage(7, () =>
+      json({
+        ...DETAIL,
+        merged: [
+          {
+            id: 12,
+            mergedAt: T,
+            criteria: RELATION,
+            judgementId: 47,
+            judgement: null,
+          },
+          {
+            id: 13,
+            mergedAt: T,
+            criteria: null,
+            judgementId: null,
+            judgement: null,
+          },
+        ],
+      }),
+    );
+
+    const table = await screen.findByRole("table", {
+      name: "합쳐진 스토리라인",
+    });
+    expect(cells(table, 1)[0]).toHaveTextContent(/^12$/);
+    expect(cells(table, 1)[2]).toHaveTextContent(/^같은 사안의 조각$/);
+    expect(cells(table, 1)[3]).toHaveTextContent(/합치기 확률 0\.75$/);
+    expect(cells(table, 1)[4]).toHaveTextContent(/^원본 없음$/);
+    // 정돈이 합친 것은 기준 · 판정 원본이 없다
+    expect(cells(table, 2)[0]).toHaveTextContent(/^13$/);
+    expect(cells(table, 2)[2]).toHaveTextContent(
+      /^정돈 — 구성 사건이 같거나 하나만 남음$/,
+    );
+    expect(cells(table, 2)[3]).toHaveTextContent(/^$/);
+    expect(cells(table, 2)[4]).toHaveTextContent(/^$/);
+  });
+
+  it("합쳐진 스토리라인이 없으면 그 절을 보이지 않는다", async () => {
+    renderPage(7, () => json(DETAIL));
+
+    await screen.findByRole("table", { name: "관계" });
+    expect(
+      screen.queryByRole("region", { name: "합쳐진 스토리라인" }),
+    ).not.toBeInTheDocument();
   });
 
   it("물은 쌍은 마지막 결말과 원본이 없는 까닭을 가려 보인다", async () => {
@@ -353,7 +409,7 @@ describe("StorylineDetailPage", () => {
     expect(cells(table, 5)[5]).toHaveTextContent(/^원본 없음$/);
     expect(cells(table, 1)[2]).toHaveTextContent(/^3$/);
     expect(cells(table, 1)[4]).toHaveTextContent(
-      /^확률 0\.6 · 한 사안 0\.2 · 사건 수 3 이상 · 후보 점수 0\.88 · 창 14일$/,
+      /^확률 0\.6 · 한 사안 0\.2 · 사건 수 3 이상 · 후보 점수 0\.88 · 창 14일 · 합치기 확률 0\.75$/,
     );
   });
 

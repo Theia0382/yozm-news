@@ -33,7 +33,12 @@ import net.yozmnews.event.EventId;
 import net.yozmnews.event.EventTermCounts;
 import net.yozmnews.storyline.LinkedBy;
 import net.yozmnews.storyline.RelationOutcome;
+import net.yozmnews.storyline.RetiredStoryline;
+import net.yozmnews.storyline.StorylineId;
 import net.yozmnews.storyline.StorylineRows;
+import net.yozmnews.storyline.StorylinesRetired;
+import net.yozmnews.storyline.domain.linking.Asked;
+import net.yozmnews.storyline.domain.linking.AskedRecord;
 import net.yozmnews.storyline.domain.linking.LinkingAskedRepository;
 import net.yozmnews.storyline.domain.linking.LinkingCriteria;
 import net.yozmnews.storyline.domain.linking.LinkingCriteriaRepository;
@@ -68,7 +73,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 넣는다. 사건과 스토리라인은 시험이 직접 심고, 대표 기사는 사건 ID + 100000 인 기사로 답하게 한다(사건에 기사를 넣지 않는다). 말의 무게는
  * 모두 같게 한다. 회차는 시험이 고정 시계로 직접 만든다(작업 서버는 끈다).
  * <p>
- * 기준: 확률 0.60 · 한 사안 0.20 · 사건 수 3 · 후보 점수 0.88 · 창 14일.
+ * 기준: 확률 0.60 · 한 사안 0.20 · 사건 수 3 · 후보 점수 0.88 · 창 14일 · 합치기 확률 0.80.
  * <p>
  * 지키는 규칙: storyline-R27 ~ storyline-R31
  */
@@ -82,7 +87,7 @@ class RelationRoundFlowTests {
 
 	private static final String MODEL = "relation-m";
 
-	private static final RelationCriteria CRITERIA = new RelationCriteria(0.60, 0.20, 3, 0.88, Duration.ofDays(14));
+	private static final RelationCriteria CRITERIA = new RelationCriteria(0.60, 0.20, 3, 0.88, Duration.ofDays(14), 0.80);
 
 	/** 상위를 열 때의 평가에 쓰는 잇기 기준 — 띠 0.50 ~ 0.90 · 확률 0.60 */
 	private static final LinkingCriteria OPENING = new LinkingCriteria(Duration.ofDays(14), 0.50, 0.90, 0.60);
@@ -116,6 +121,9 @@ class RelationRoundFlowTests {
 	JdbcClient jdbc;
 
 	private final List<RelationQuery> asked = new ArrayList<>();
+
+	/** 회차가 발행한 이벤트 */
+	private final List<Object> published = new ArrayList<>();
 
 	/** 상위를 열 때 흐름 소속 판정에 물은 것 */
 	private final List<FlowMembershipQuery> membershipAsked = new ArrayList<>();
@@ -249,7 +257,7 @@ class RelationRoundFlowTests {
 		};
 
 		new RelationRound(this.queue, this.relations, this.storylines, uneven, recording, CRITERIA, opening(uneven),
-				OPENING, this.linkingCriteria, this.linkAsked, this.transaction, InstantSource.fixed(NOW))
+				merger(uneven), this.published::add, OPENING, this.linkingCriteria, this.linkAsked, this.transaction, InstantSource.fixed(NOW))
 			.run();
 
 		// 판정할 쪽의 말은 금리 하나라 무게와 무관하게 겹침 1 — 후보다
@@ -505,7 +513,7 @@ class RelationRoundFlowTests {
 	}
 
 	@Test
-	void fragmentsOfOneMatterAreNotGroupedOrLinkedAndAnEarlierContainmentBetweenThemIsRemoved() {
+	void fragmentsBelowTheMergeProbabilityStayTwoWithoutARelationOrAParent() {
 		long shared = event(EARLY, 1);
 		long a = storyline("[1,0]", EARLY, LATE, shared, event(EARLY, 1), event(EARLY, 1));
 		long b = storyline("[0,1]", LATE, LATE, shared, event(LATE, 1), event(LATE, 1));
@@ -513,17 +521,115 @@ class RelationRoundFlowTests {
 		this.relations.link(new Relation(a, b, RelationKind.CONTAINS), 0.7, 40, criteriaId, NOW);
 		this.queue.enqueue(a, NOW);
 
-		// 조각 답은 상위를 열지 않는다 — 열기 평가를 부르면 실패하는 회차로 돈다
-		round(answer(RelationAnswer.SAME_MATTER, 0.9, 0.9, 0.9, 61)).run();
+		// 조각 답은 상위를 열지 않는다 — 열기 평가를 부르면 실패하는 회차로 돈다. 확률 0.79 는 관계 기준(0.60)은 넘고 합치기
+		// 기준(0.80)에는 못 미친다
+		round(answer(RelationAnswer.SAME_MATTER, 0.79, 0.9, 0.9, 61)).run();
 
 		assertThat(this.relations.all()).isEmpty();
 		assertThat(storylineCount()).isEqualTo(2);
 		assertThat(askedRow(a, b)).containsEntry("outcome", "UNMERGED").containsEntry("judgement_id", 61L);
 		assertThat(queued()).isEmpty();
+		// 둘로 남는다 — 소속도 그대로다
+		assertThat(mergedInto(b)).isNull();
+		assertThat(members(a)).hasSize(3);
+		assertThat(members(b)).hasSize(3);
+		assertThat(this.published).isEmpty();
 	}
 
 	@Test
-	void aParallelPairAnsweredAsFragmentsReleasesItsLinksLikeAnyOtherOverturn() {
+	void mergesFragmentsAtOrAboveTheMergeProbabilityIntoTheSmallerId() {
+		long shared = event(EARLY, 1);
+		long[] first = { event(EARLY, 1), event(EARLY, 1) };
+		long[] second = { event(LATE, 1), event(LATE, 1) };
+		long a = storyline(new float[] { 1, 0 }, Map.of("금리", 3), EARLY, LATE, first[0], first[1], shared);
+		long b = storyline(new float[] { 1, 0 }, Map.of("금리", 3), LATE, LATE, shared, second[0], second[1]);
+		// a 의 후보 쌍이 하나 더 있다 — 합친 뒤에는 이 회차에 묻지 않는다
+		storyline(new float[] { 1, 0 }, Map.of("금리", 3), event(LATE, 1), event(LATE, 1), event(LATE, 1));
+		long criteriaId = this.relations.registerCriteria(CRITERIA, NOW);
+		// 잇기가 second[0] 을 a 에 물어 들지 않는다고 답한 기록 — 합치면 그 사건이 a 의 소속이 되므로 지운다
+		this.linkAsked.recordLink(second[0], Map.of(a, new AskedRecord(new Asked(0.3, 5L), 1, 3)), NOW);
+		this.queue.enqueue(a, NOW);
+
+		round(answer(RelationAnswer.SAME_MATTER, 0.80, 0.9, 0.9, 61)).run();
+
+		// b 가 a 에 합쳐졌다 — 합쳐진 행이 남는 쪽을 가리키고 판정 · 기준을 가진다
+		assertThat(mergedInto(b)).isEqualTo(a);
+		assertThat(this.jdbc.sql("select merge_judgement_id, merge_criteria_id from storylines where id = :id")
+			.param("id", b)
+			.query()
+			.singleRow()).containsEntry("merge_judgement_id", 61L).containsEntry("merge_criteria_id", criteriaId);
+		// b 의 소속 가운데 a 에 없던 사건이 근거 그대로 옮겨 왔다 — 함께 가진 사건은 a 의 소속 그대로 한 번만 든다
+		assertThat(members(a)).containsExactlyInAnyOrder(first[0], first[1], shared, second[0], second[1]);
+		assertThat(members(b)).isEmpty();
+		assertThat(memberRow(a, second[0])).containsEntry("linked_by", "PAIR").containsEntry("score", 1.0);
+		assertThat(mergedFrom(a, second[0])).isEqualTo(b);
+		assertThat(mergedFrom(a, shared)).isNull();
+		// 남는 쪽의 표현이 지금 구성 사건으로 다시 정해졌다 — 기사 수는 심을 때 3 이었고 기사 하나짜리 사건 다섯의 합은 5 다
+		assertThat(this.storylines.profile(a, 20).orElseThrow().events()).isEqualTo(5);
+		assertThat(this.jdbc.sql("select article_count from storylines where id = :id")
+			.param("id", a)
+			.query(Integer.class)
+			.single()).isEqualTo(5);
+		assertThat(this.jdbc.sql("select count(*) from storyline_link_asked where storyline_id = :id")
+			.param("id", a)
+			.query(Long.class)
+			.single()).isZero();
+		// 합친 쌍은 물은 기록이 없고, 그 스토리라인의 남은 쌍은 이 회차에 묻지 않는다
+		assertThat(this.jdbc.sql("select count(*) from storyline_relation_asked").query(Long.class).single()).isZero();
+		assertThat(this.asked).hasSize(1);
+		assertThat(this.published)
+			.containsExactly(new StorylinesRetired(List.of(new RetiredStoryline(new StorylineId(b), null))));
+		// 남는 쪽은 관계 대기에 남아 다음 회차가 지금 구성으로 후보를 다시 고른다
+		assertThat(queued()).containsExactly(a);
+		assertThat(queueRow(a)).containsEntry("lease_token", null);
+	}
+
+	@Test
+	void mergingMovesTheRelationsOfTheMergedSideAndDropsTheOnesThatCannotMove() {
+		long a = storyline(new float[] { 1, 0 }, Map.of("금리", 3), EARLY, LATE, event(EARLY, 1), event(EARLY, 1),
+				event(EARLY, 1));
+		long b = storyline(new float[] { 1, 0 }, Map.of("금리", 3), LATE, LATE, event(LATE, 1), event(LATE, 1),
+				event(LATE, 1));
+		// 서로 다른 상위 아래의 두 조각, b 가 낳은 다른 스토리라인 하나 — 상위들은 점수로도 사건으로도 후보가 아니다
+		long parentOfA = away(3);
+		long parentOfB = away(3);
+		long follower = away(3);
+		long criteriaId = this.relations.registerCriteria(CRITERIA, NOW);
+		this.relations.link(new Relation(parentOfA, a, RelationKind.CONTAINS), 0.7, 40, criteriaId, NOW);
+		this.relations.link(new Relation(parentOfB, b, RelationKind.CONTAINS), 0.7, 41, criteriaId, NOW);
+		this.relations.link(new Relation(b, follower, RelationKind.FOLLOWS), 0.7, 42, criteriaId, NOW);
+		this.queue.enqueue(b, NOW);
+
+		round(answer(RelationAnswer.SAME_MATTER, 0.9, 0.9, 0.9, 61)).run();
+
+		// 구조 제약으로 합치기를 막지 않는다 — b 의 이어짐은 a 로 옮기고, 둘째 상위가 되는 포함은 버린다(남는 쪽의 상위가 남는다)
+		assertThat(mergedInto(b)).isEqualTo(a);
+		assertThat(this.relations.all()).containsExactlyInAnyOrder(new Relation(parentOfA, a, RelationKind.CONTAINS),
+				new Relation(a, follower, RelationKind.FOLLOWS));
+		// 처리하던 쪽(b)이 합쳐졌다 — 그 대기 행은 사라지고 남는 쪽이 관계 대기에 든다
+		assertThat(queued()).containsExactly(a);
+	}
+
+	@Test
+	void mergingAnAncestorWithItsDescendantRemovesTheRelationBetweenThem() {
+		long a = storyline(new float[] { 1, 0 }, Map.of("금리", 3), EARLY, LATE, event(EARLY, 1), event(EARLY, 1),
+				event(EARLY, 1));
+		long b = storyline(new float[] { 1, 0 }, Map.of("금리", 3), LATE, LATE, event(LATE, 1), event(LATE, 1),
+				event(LATE, 1));
+		long criteriaId = this.relations.registerCriteria(CRITERIA, NOW);
+		this.relations.link(new Relation(a, b, RelationKind.CONTAINS), 0.7, 40, criteriaId, NOW);
+		this.queue.enqueue(a, NOW);
+
+		round(answer(RelationAnswer.SAME_MATTER, 0.9, 0.9, 0.9, 61)).run();
+
+		assertThat(mergedInto(b)).isEqualTo(a);
+		assertThat(this.relations.all()).isEmpty();
+		// 합쳐진 쪽을 끝으로 둔 행도 남지 않는다 — all() 은 합쳐진 끝의 행을 내지 않으므로 표를 직접 센다
+		assertThat(this.jdbc.sql("select count(*) from storyline_relations").query(Long.class).single()).isZero();
+	}
+
+	@Test
+	void aParallelPairThatMergesLeavesOneUnmarkedLinkToTheSurvivor() {
 		long[] first = { event(EARLY, 1), event(EARLY, 1), event(EARLY, 1) };
 		long[] second = { event(LATE, 1), event(LATE, 1), event(LATE, 1) };
 		long a = storyline(new float[] { 1, 0 }, Map.of("금리", 3), EARLY, LATE, first);
@@ -531,7 +637,26 @@ class RelationRoundFlowTests {
 		long group = grouped(a, b, first[0], first[1], second[0], second[1]);
 		this.queue.enqueue(a, NOW);
 
-		round(answer(RelationAnswer.SAME_MATTER, 0.9, 0.9, 0.9, 69)).run();
+		round(answer(RelationAnswer.SAME_MATTER, 0.9, 0.9, 0.9, 70)).run();
+
+		// 상위 → b 는 상위 → a 로 옮겨지며 이미 있어 버려지고, 맺은 쌍 (a, b) 는 한 스토리라인이 되어 표지가 지워진다
+		assertThat(mergedInto(b)).isEqualTo(a);
+		assertThat(this.relations.all()).containsExactly(new Relation(group, a, RelationKind.CONTAINS));
+		assertThat(this.relations.grouped()).isEmpty();
+		assertThat(members(group)).containsExactlyInAnyOrder(first[0], first[1], second[0], second[1]);
+	}
+
+	@Test
+	void aParallelPairAnsweredAsFragmentsBelowTheMergeProbabilityReleasesItsLinksLikeAnyOtherOverturn() {
+		long[] first = { event(EARLY, 1), event(EARLY, 1), event(EARLY, 1) };
+		long[] second = { event(LATE, 1), event(LATE, 1), event(LATE, 1) };
+		long a = storyline(new float[] { 1, 0 }, Map.of("금리", 3), EARLY, LATE, first);
+		long b = storyline(new float[] { 1, 0 }, Map.of("금리", 3), LATE, LATE, second);
+		long group = grouped(a, b, first[0], first[1], second[0], second[1]);
+		this.queue.enqueue(a, NOW);
+
+		// 조각이지만 합치기 기준 미만 — 둘로 남는다
+		round(answer(RelationAnswer.SAME_MATTER, 0.79, 0.9, 0.9, 69)).run();
 
 		assertThat(this.relations.all()).containsExactlyInAnyOrder(new Relation(group, a, RelationKind.CONTAINS),
 				new Relation(group, b, RelationKind.CONTAINS));
@@ -883,7 +1008,11 @@ class RelationRoundFlowTests {
 		};
 		EventDirectory even = evenly(events);
 		return new RelationRound(this.queue, this.relations, this.storylines, even, recording, CRITERIA, opening(even),
-				OPENING, this.linkingCriteria, this.linkAsked, this.transaction, InstantSource.fixed(NOW));
+				merger(even), this.published::add, OPENING, this.linkingCriteria, this.linkAsked, this.transaction, InstantSource.fixed(NOW));
+	}
+
+	private StorylineMerger merger(EventDirectory events) {
+		return new StorylineMerger(this.storylines, this.relations, this.queue, this.linkAsked, events);
 	}
 
 	/** 상위를 열 평가를 하지 않는 회차의 평가 — 하면 실패다 */
@@ -905,7 +1034,8 @@ class RelationRoundFlowTests {
 		};
 		EventDirectory even = evenly(withRepresentatives());
 		return new RelationRound(this.queue, this.relations, this.storylines, even, recording, CRITERIA,
-				new GroupOpening(even, this.storylines, recordingMembership, this.transaction), OPENING,
+				new GroupOpening(even, this.storylines, recordingMembership, this.transaction), merger(even),
+				this.published::add, OPENING,
 				this.linkingCriteria, this.linkAsked, this.transaction, InstantSource.fixed(NOW));
 	}
 
@@ -935,6 +1065,32 @@ class RelationRoundFlowTests {
 		this.relations.linkGrouped(new Relation(group, b, RelationKind.CONTAINS), GroupedBy.of(a, b), 0.9, 61,
 				criteriaId, NOW);
 		return group;
+	}
+
+	/** [0,1] · 환율 표현의 스토리라인 — [1,0] · 금리 스토리라인의 후보가 아니다 */
+	private long away(int events) {
+		long[] ids = new long[events];
+		for (int i = 0; i < events; i++) {
+			ids[i] = event(EARLY, 1);
+		}
+		return storyline(new float[] { 0, 1 }, Map.of("환율", events), ids);
+	}
+
+	private @Nullable Long mergedInto(long storyline) {
+		return this.jdbc.sql("select merged_into from storylines where id = :id")
+			.param("id", storyline)
+			.query(Long.class)
+			.optional()
+			.orElse(null);
+	}
+
+	private @Nullable Long mergedFrom(long storyline, long event) {
+		return this.jdbc.sql("select merged_from from storyline_members where storyline_id = :storyline and event_id = :event")
+			.param("storyline", storyline)
+			.param("event", event)
+			.query(Long.class)
+			.optional()
+			.orElse(null);
 	}
 
 	/** 넘긴 스토리라인 말고 새로 열린 스토리라인 하나 */

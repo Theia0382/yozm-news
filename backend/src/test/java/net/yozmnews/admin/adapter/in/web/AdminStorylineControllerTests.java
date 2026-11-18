@@ -35,6 +35,7 @@ import net.yozmnews.storyline.LinkedBy;
 import net.yozmnews.storyline.RelationOutcome;
 import net.yozmnews.storyline.StorylineCursor;
 import net.yozmnews.storyline.StorylineEvent;
+import net.yozmnews.storyline.MergedStoryline;
 import net.yozmnews.storyline.StorylineId;
 import net.yozmnews.storyline.StorylineLinkingCriteria;
 import net.yozmnews.storyline.StorylineMembership;
@@ -142,7 +143,7 @@ class AdminStorylineControllerTests {
 					 "unlinked":{"events":2,"articles":5},
 					 "linkingCriteria":{"windowSeconds":259200,"lower":0.6,"upper":0.62,"probability":0.5},
 					 "relationCriteria":{"probability":0.6,"oneMatter":0.2,"minEvents":3,"candidateScore":0.88,
-					                     "windowSeconds":1209600},
+					                     "windowSeconds":1209600,"mergeProbability":0.75},
 					 "maxDays":31}
 					""", JsonCompareMode.STRICT));
 		assertThat(this.directory.calls).containsExactly(
@@ -186,16 +187,20 @@ class AdminStorylineControllerTests {
 				new StorylineEvent(event(85, EventStatus.CLOSED, 1), false)));
 		this.review.memberships.put(7L, List.of(
 				new StorylineMembership(new StorylineId(7), new EventId(70), LinkedBy.RULE, new LinkScore(0.81, 0.77, 0.4),
-						FakeStorylineReview.LINKING, null, null, T),
-				new StorylineMembership(new StorylineId(7), new EventId(80), LinkedBy.MERGE, null, null, null, null, T),
+						FakeStorylineReview.LINKING, null, null, T, null),
+				new StorylineMembership(new StorylineId(7), new EventId(80), LinkedBy.MERGE, null, null, null, null, T, null),
 				// 띠가 생기기 전의 기준 이력 행으로 정한 소속 — 확률 기준이 없다
 				new StorylineMembership(new StorylineId(8), new EventId(80), LinkedBy.PAIR, new LinkScore(0.7, 0.66, 0.2),
-						new StorylineLinkingCriteria(Duration.ofDays(3), 0.62, 0.62, null), null, null, T),
+						new StorylineLinkingCriteria(Duration.ofDays(3), 0.62, 0.62, null), null, null, T, new StorylineId(12)),
 				new StorylineMembership(new StorylineId(8), new EventId(85), LinkedBy.RULE, new LinkScore(0.9, 0.88, 0.5),
-						FakeStorylineReview.LINKING, 0.71, new FlowMembershipJudgementId(77), T),
+						FakeStorylineReview.LINKING, 0.71, new FlowMembershipJudgementId(77), T, null),
 				// 타임라인에 없는 사건(그새 합쳐짐)의 근거는 싣지 않는다
 				new StorylineMembership(new StorylineId(8), new EventId(99), LinkedBy.RULE, new LinkScore(0.6, 0.6, 0.1),
-						FakeStorylineReview.LINKING, null, null, T)));
+						FakeStorylineReview.LINKING, null, null, T, null)));
+		// 12 는 같은 사안의 조각으로 합쳐졌고(판정 원본은 지워짐) 13 은 정돈이 합쳤다
+		this.review.merged.put(7L,
+				List.of(new MergedStoryline(new StorylineId(12), T, new RelationJudgementId(47), FakeStorylineReview.RELATION),
+						new MergedStoryline(new StorylineId(13), T, null, null)));
 		this.review.relations.put(7L, List.of(
 				new StorylineRelationDetail(new StorylineRelationView(StorylineRelationKind.CONTAINS, new StorylineId(7),
 						new StorylineId(8), T), 0.7, new RelationJudgementId(41), FakeStorylineReview.RELATION,
@@ -234,27 +239,27 @@ class AdminStorylineControllerTests {
 					    "memberships":[
 					      {"storylineId":7,"linkedBy":"RULE","score":0.81,"cosine":0.77,"keyTermOverlap":0.4,
 					       "criteria":{"windowSeconds":259200,"lower":0.6,"upper":0.62,"probability":0.5},
-					       "probability":null,"judgementId":null,"linkedAt":"2026-11-05T00:00:00Z"}]},
+					       "probability":null,"judgementId":null,"linkedAt":"2026-11-05T00:00:00Z","mergedFrom":null}]},
 					   {"id":80,"status":"CLOSED","articleCount":2,"firstArticleAt":"2026-11-05T00:00:00Z",
 					    "lastArticleAt":"2026-11-05T00:00:00Z","direct":true,"representativeArticleId":null,
 					    "representative":null,
 					    "memberships":[
 					      {"storylineId":7,"linkedBy":"MERGE","score":null,"cosine":null,"keyTermOverlap":null,
-					       "criteria":null,"probability":null,"judgementId":null,"linkedAt":"2026-11-05T00:00:00Z"},
+					       "criteria":null,"probability":null,"judgementId":null,"linkedAt":"2026-11-05T00:00:00Z","mergedFrom":null},
 					      {"storylineId":8,"linkedBy":"PAIR","score":0.7,"cosine":0.66,"keyTermOverlap":0.2,
 					       "criteria":{"windowSeconds":259200,"lower":0.62,"upper":0.62,"probability":null},
-					       "probability":null,"judgementId":null,"linkedAt":"2026-11-05T00:00:00Z"}]},
+					       "probability":null,"judgementId":null,"linkedAt":"2026-11-05T00:00:00Z","mergedFrom":12}]},
 					   {"id":85,"status":"CLOSED","articleCount":1,"firstArticleAt":"2026-11-05T00:00:00Z",
 					    "lastArticleAt":"2026-11-05T00:00:00Z","direct":false,"representativeArticleId":null,
 					    "representative":null,
 					    "memberships":[
 					      {"storylineId":8,"linkedBy":"RULE","score":0.9,"cosine":0.88,"keyTermOverlap":0.5,
 					       "criteria":{"windowSeconds":259200,"lower":0.6,"upper":0.62,"probability":0.5},
-					       "probability":0.71,"judgementId":77,"linkedAt":"2026-11-05T00:00:00Z"}]}],
+					       "probability":0.71,"judgementId":77,"linkedAt":"2026-11-05T00:00:00Z","mergedFrom":null}]}],
 					 "relations":[
 					   {"kind":"CONTAINS","sourceId":7,"targetId":8,"probability":0.7,"linkedAt":"2026-11-05T00:00:00Z",
 					    "criteria":{"probability":0.6,"oneMatter":0.2,"minEvents":3,"candidateScore":0.88,
-					                "windowSeconds":1209600},
+					                "windowSeconds":1209600,"mergeProbability":0.75},
 					    "judgementId":41,
 					    "judgement":{"id":41,"firstId":7,"secondId":8,"modelVersion":"jev-1.14.0",
 					                 "wordingVersion":"relation-1","inputTokens":1924,"judgedAt":"2026-11-05T00:00:00Z",
@@ -264,20 +269,20 @@ class AdminStorylineControllerTests {
 					    "groupedBy":[8,9]},
 					   {"kind":"FOLLOWS","sourceId":7,"targetId":11,"probability":0.66,"linkedAt":"2026-11-05T00:00:00Z",
 					    "criteria":{"probability":0.6,"oneMatter":0.2,"minEvents":3,"candidateScore":0.88,
-					                "windowSeconds":1209600},
+					                "windowSeconds":1209600,"mergeProbability":0.75},
 					    "judgementId":42,"judgement":null,"groupedBy":[]}],
 					 "asked":[
 					   {"otherId":11,"smallerEvents":3,"outcome":"LINKED","askedAt":"2026-11-05T00:00:00Z",
 					    "criteria":{"probability":0.6,"oneMatter":0.2,"minEvents":3,"candidateScore":0.88,
-					                "windowSeconds":1209600},
+					                "windowSeconds":1209600,"mergeProbability":0.75},
 					    "judgementId":42,"judgement":null},
 					   {"otherId":12,"smallerEvents":4,"outcome":"NOTHING_TO_ASK","askedAt":"2026-11-05T00:00:00Z",
 					    "criteria":{"probability":0.6,"oneMatter":0.2,"minEvents":3,"candidateScore":0.88,
-					                "windowSeconds":1209600},
+					                "windowSeconds":1209600,"mergeProbability":0.75},
 					    "judgementId":null,"judgement":null},
 					   {"otherId":13,"smallerEvents":5,"outcome":"LOW_PROBABILITY","askedAt":"2026-11-05T00:00:00Z",
 					    "criteria":{"probability":0.6,"oneMatter":0.2,"minEvents":3,"candidateScore":0.88,
-					                "windowSeconds":1209600},
+					                "windowSeconds":1209600,"mergeProbability":0.75},
 					    "judgementId":43,
 					    "judgement":{"id":43,"firstId":13,"secondId":7,"modelVersion":"jev-1.14.0",
 					                 "wordingVersion":"relation-1","inputTokens":1924,"judgedAt":"2026-11-05T00:00:00Z",
@@ -286,7 +291,7 @@ class AdminStorylineControllerTests {
 					                 "firstOneMatter":null,"secondOneMatter":null,"message":"다른 평가기"}},
 					   {"otherId":14,"smallerEvents":6,"outcome":"NOT_ONE_MATTER","askedAt":"2026-11-05T00:00:00Z",
 					    "criteria":{"probability":0.6,"oneMatter":0.2,"minEvents":3,"candidateScore":0.88,
-					                "windowSeconds":1209600},
+					                "windowSeconds":1209600,"mergeProbability":0.75},
 					    "judgementId":44,
 					    "judgement":{"id":44,"firstId":7,"secondId":14,"modelVersion":"jev-1.14.0",
 					                 "wordingVersion":"relation-1","inputTokens":1924,"judgedAt":"2026-11-05T00:00:00Z",
@@ -295,7 +300,7 @@ class AdminStorylineControllerTests {
 					                 "firstOneMatter":null,"secondOneMatter":null,"message":"평가기 없음"}},
 					   {"otherId":15,"smallerEvents":3,"outcome":"NOT_RELATED","askedAt":"2026-11-05T00:00:00Z",
 					    "criteria":{"probability":0.6,"oneMatter":0.2,"minEvents":3,"candidateScore":0.88,
-					                "windowSeconds":1209600},
+					                "windowSeconds":1209600,"mergeProbability":0.75},
 					    "judgementId":45,
 					    "judgement":{"id":45,"firstId":15,"secondId":7,"modelVersion":"jev-1.14.0",
 					                 "wordingVersion":"relation-1","inputTokens":1924,"judgedAt":"2026-11-05T00:00:00Z",
@@ -304,19 +309,25 @@ class AdminStorylineControllerTests {
 					                 "firstOneMatter":null,"secondOneMatter":null,"message":"읽을 수 없다"}},
 					   {"otherId":16,"smallerEvents":3,"outcome":"UNGROUPED","askedAt":"2026-11-05T00:00:00Z",
 					    "criteria":{"probability":0.6,"oneMatter":0.2,"minEvents":3,"candidateScore":0.88,
-					                "windowSeconds":1209600},
+					                "windowSeconds":1209600,"mergeProbability":0.75},
 					    "judgementId":46,
 					    "judgement":{"id":46,"firstId":7,"secondId":16,"modelVersion":"jev-1.14.0",
 					                 "wordingVersion":"relation-3","inputTokens":1924,"judgedAt":"2026-11-05T00:00:00Z",
 					                 "reading":"READ","none":0.08,"sameMatter":0.65,"parallel":0.02,"secondPartOfFirst":0.15,
 					                 "firstPartOfSecond":0.04,"firstLedToSecond":0.03,"secondLedToFirst":0.03,
-					                 "firstOneMatter":0.9,"secondOneMatter":0.7,"message":null}}]}
+					                 "firstOneMatter":0.9,"secondOneMatter":0.7,"message":null}}],
+					 "merged":[
+					   {"id":12,"mergedAt":"2026-11-05T00:00:00Z",
+					    "criteria":{"probability":0.6,"oneMatter":0.2,"minEvents":3,"candidateScore":0.88,
+					                "windowSeconds":1209600,"mergeProbability":0.75},
+					    "judgementId":47,"judgement":null},
+					   {"id":13,"mergedAt":"2026-11-05T00:00:00Z","criteria":null,"judgementId":null,"judgement":null}]}
 					""", JsonCompareMode.STRICT));
 		assertThat(this.directory.calls).containsExactly("find 5", "events 7");
 		// 운영자 조회는 남는 스토리라인 ID 로 부른다
-		assertThat(this.review.calls).containsExactly("memberships 7", "relations 7", "asked 7");
+		assertThat(this.review.calls).containsExactly("memberships 7", "relations 7", "asked 7", "merged 7");
 		// 원본은 관계 · 물은 쌍의 것을 한 번씩, 한 번에 찾는다
-		assertThat(this.judgements.calls).containsExactly(List.of(41L, 42L, 43L, 44L, 45L, 46L));
+		assertThat(this.judgements.calls).containsExactly(List.of(41L, 42L, 43L, 44L, 45L, 46L, 47L));
 		// 대표는 스토리라인의 대표 사건과 타임라인 사건을 한 번에
 		assertThat(this.events.calls).containsExactly("representativesOfAll [70, 80, 85]");
 	}

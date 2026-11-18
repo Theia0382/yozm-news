@@ -96,7 +96,7 @@ public final class FakeArticleEvaluator implements ArticleEvaluator {
 	public static final String NAME = "fake";
 
 	/** 모델 버전 — 규칙을 바꾸면 올린다 */
-	public static final String MODEL_VERSION = "fake-rules-2";
+	public static final String MODEL_VERSION = "fake-rules-3";
 
 	/** 원본 응답의 키 — 쓰기와 다시 읽기가 함께 쓴다 */
 	private static final String RAW_EVALUATOR = "evaluator";

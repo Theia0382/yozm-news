@@ -8,6 +8,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import net.yozmnews.storyline.domain.linking.Representation;
+import org.jspecify.annotations.Nullable;
 
 /**
  * 스토리라인 저장소 — 스토리라인 행 · 핵심 말 · 소속 · 합쳐진 스토리라인의 가리킴 · docs/specs/storyline.md §4.
@@ -74,8 +75,19 @@ public interface StorylineRepository {
 	/**
 	 * 스토리라인 merged 를 survivor 에 합친다(storyline-R18) — merged 의 소속 · 핵심 말을 지우고, merged 와 merged 를 가리키던 행이
 	 * survivor 를 가리키게 한다. 합친 시각은 merged 에만 적는다. survivor 의 소속 · 표현은 바꾸지 않는다
+	 * @param basis 조각 합치기면 그 근거 — merged 의 행에 남긴다. 정돈의 합치기면 null
 	 */
-	void merge(long merged, long survivor, Instant now);
+	void merge(long merged, long survivor, @Nullable MergeBasis basis, Instant now);
+
+	/**
+	 * 합쳐질 스토리라인의 소속 가운데 남는 스토리라인에 없는 사건의 소속을 남는 쪽으로 옮긴다 — 근거는 그대로 두고 어디서 왔는지만
+	 * 적는다. {@link #merge} 앞에 부른다.
+	 * @return 옮긴 사건 ID — ID 순
+	 */
+	List<Long> moveMembers(long merged, long survivor);
+
+	/** 이 스토리라인을 가리키는 합쳐진 행 — ID 순 */
+	List<MergedRow> mergedInto(long survivor);
 
 	/**
 	 * 스토리라인과 그 핵심 말 · 소속, 이 스토리라인을 가리키는 합쳐진 행을 지운다(storyline-R13 · R17 · R18). 그 관계 · 물은 기록 · 관계 대기

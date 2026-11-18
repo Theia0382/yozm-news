@@ -120,9 +120,9 @@ public final class ReaderRows {
 	public void relate(String kind, long source, long target) {
 		long criteria = this.jdbc.sql("""
 				insert into storyline_relation_criteria (probability, one_matter, min_events, candidate_score,
-				    window_seconds, created_at)
-				values (0.6, 0.2, 3, 0.88, 604800, now())
-				on conflict (probability, one_matter, min_events, candidate_score, window_seconds)
+				    window_seconds, merge_probability, created_at)
+				values (0.6, 0.2, 3, 0.88, 604800, 0.65, now())
+				on conflict (probability, one_matter, min_events, candidate_score, window_seconds, merge_probability)
 				do update set probability = excluded.probability
 				returning id
 				""").query(Long.class).single();

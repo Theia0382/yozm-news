@@ -81,7 +81,7 @@ describe("StorylinesPage", () => {
     // 띠가 빈 잇기 기준은 기준 점수 하나로 보인다
     expect(overview).toHaveTextContent("창 3일 · 기준 점수 0.62");
     expect(overview).toHaveTextContent(
-      "확률 0.6 · 한 사안 0.2 · 사건 수 3 이상 · 후보 점수 0.88 · 창 14일",
+      "확률 0.6 · 한 사안 0.2 · 사건 수 3 이상 · 후보 점수 0.88 · 창 14일 · 합치기 확률 0.75",
     );
     const [request] = listRequests(server);
     expect(request?.get("from")).toBe("2026-11-01");

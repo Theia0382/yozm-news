@@ -55,7 +55,8 @@ DETAILS = {
 DETAILS[23] = DETAILS[20]
 
 LINKING = {"windowSeconds": 259200, "lower": 0.6, "upper": 0.62, "probability": 0.5}
-RELATION = {"probability": 0.6, "oneMatter": 0.2, "minEvents": 3, "candidateScore": 0.88, "windowSeconds": 1209600}
+RELATION = {"probability": 0.6, "oneMatter": 0.2, "minEvents": 3, "candidateScore": 0.88, "windowSeconds": 1209600,
+            "mergeProbability": 0.6}
 
 RESULT = {
     "format": 1,

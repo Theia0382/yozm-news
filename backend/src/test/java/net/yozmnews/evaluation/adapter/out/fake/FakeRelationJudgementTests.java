@@ -44,7 +44,7 @@ class FakeRelationJudgementTests {
 		assertThat(relation.firstOneMatter()).isCloseTo(0.9, within(1e-12));
 		assertThat(relation.secondOneMatter()).isEqualTo(0.9);
 		assertThat(relation.evaluator()).isEqualTo("fake");
-		assertThat(relation.modelVersion()).isEqualTo("fake-rules-2");
+		assertThat(relation.modelVersion()).isEqualTo("fake-rules-3");
 		assertThat(JsonMapper.builder().build().readTree(relation.rawResponse()).get("relation").size()).isEqualTo(7);
 	}
 
@@ -92,7 +92,7 @@ class FakeRelationJudgementTests {
 		// 입력 토큰은 원본 응답에 없어 0 이다 — 나머지는 판정 때와 같다
 		assertThat(this.evaluator.rereadRelation("fake", judged.rawResponse(), RelationWording.CURRENT))
 			.isEqualTo(new Relation(judged.probabilities(), judged.firstOneMatter(), judged.secondOneMatter(), "fake",
-					"fake-rules-2", 0, judged.rawResponse()));
+					"fake-rules-3", 0, judged.rawResponse()));
 	}
 
 	@Test
@@ -119,7 +119,7 @@ class FakeRelationJudgementTests {
 
 	@Test
 	void cannotReadABrokenRawResponseAndLeavesItsTextOutOfTheMessage() {
-		String outOfRange = "{\"modelVersion\":\"fake-rules-2\",\"relation\":{\"FIRST_LED_TO_SECOND\":0.1,"
+		String outOfRange = "{\"modelVersion\":\"fake-rules-3\",\"relation\":{\"FIRST_LED_TO_SECOND\":0.1,"
 				+ "\"FIRST_PART_OF_SECOND\":0.1,\"NONE\":1.7,\"SECOND_LED_TO_FIRST\":0.1,\"SECOND_PART_OF_FIRST\":0.1},"
 				+ "\"oneMatter\":[0.5,0.5]}";
 		String oneMatterMissing = outOfRange.replace("1.7", "0.6").replace(",\"oneMatter\":[0.5,0.5]", "");

@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test;
  */
 class RelationCandidatesTests {
 
-	private static final RelationCriteria CRITERIA = new RelationCriteria(0.60, 0.20, 3, 0.88, Duration.ofDays(14));
+	private static final RelationCriteria CRITERIA = new RelationCriteria(0.60, 0.20, 3, 0.88, Duration.ofDays(14), 1.0);
 
 	private static final Instant T1 = Instant.parse("2026-11-01T00:00:00Z");
 

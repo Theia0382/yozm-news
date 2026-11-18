@@ -281,11 +281,11 @@ class ArticleTaggingServiceTests {
 	@Test
 	void findsTheJudgementViewsWithoutAnEvaluator() {
 		TagJudgementId stored = this.judgements
-			.insert(new TagJudgementRecord(new ArticleId(42), "fake", "fake-rules-2", "{}", 31, AT));
+			.insert(new TagJudgementRecord(new ArticleId(42), "fake", "fake-rules-3", "{}", 31, AT));
 		TagJudgementId missing = new TagJudgementId(stored.value() + 1);
 
 		assertThat(service(null).find(List.of(stored, missing))).isEqualTo(
-				Map.of(stored, new TagJudgementView(stored, new ArticleId(42), "fake", "fake-rules-2", 31, AT)));
+				Map.of(stored, new TagJudgementView(stored, new ArticleId(42), "fake", "fake-rules-3", 31, AT)));
 	}
 
 	private ArticleTaggingService service(@Nullable ArticleEvaluator evaluator) {

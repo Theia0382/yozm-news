@@ -14,6 +14,7 @@ import net.yozmnews.evaluation.RelationJudgementId;
 import net.yozmnews.event.EventId;
 import net.yozmnews.storyline.LinkScore;
 import net.yozmnews.storyline.LinkedBy;
+import net.yozmnews.storyline.MergedStoryline;
 import net.yozmnews.storyline.RelationOutcome;
 import net.yozmnews.storyline.StorylineId;
 import net.yozmnews.storyline.StorylineLinkingCriteria;
@@ -34,6 +35,7 @@ import net.yozmnews.storyline.domain.relation.RelationCriteria;
 import net.yozmnews.storyline.domain.relation.RelationKind;
 import net.yozmnews.storyline.domain.relation.RelationRepository;
 import net.yozmnews.storyline.domain.storyline.LinkJudgement;
+import net.yozmnews.storyline.domain.storyline.MergeBasis;
 import net.yozmnews.storyline.domain.storyline.StorylineQueryRepository;
 import net.yozmnews.storyline.domain.storyline.StorylineRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -62,12 +64,12 @@ class StorylineReviewFlowTests {
 
 	private static final LinkingCriteria LINKING = new LinkingCriteria(Duration.ofDays(3), 0.62, 0.62, 0.50);
 
-	private static final RelationCriteria RELATION = new RelationCriteria(0.60, 0.20, 3, 0.88, Duration.ofDays(14));
+	private static final RelationCriteria RELATION = new RelationCriteria(0.60, 0.20, 3, 0.88, Duration.ofDays(14), 0.75);
 
 	private static final StorylineLinkingCriteria LINKING_VIEW = new StorylineLinkingCriteria(Duration.ofDays(3), 0.62, 0.62, 0.50);
 
 	private static final StorylineRelationCriteria RELATION_VIEW = new StorylineRelationCriteria(0.60, 0.20, 3, 0.88,
-			Duration.ofDays(14));
+			Duration.ofDays(14), 0.75);
 
 	/** 띠가 생기기 전의 기준 이력 행 — 아래 = 위, 확률 기준 없음 */
 	private static final StorylineLinkingCriteria OLD_LINKING_VIEW = new StorylineLinkingCriteria(Duration.ofDays(1), 0.65,
@@ -111,7 +113,7 @@ class StorylineReviewFlowTests {
 		StorylineRows.clear(this.jdbc);
 		this.review = new StorylineReviewService(this.storylines, this.memberships, this.relations, this.linking,
 				new LinkingCriteria(Duration.ofDays(5), 0.7, 0.7, 0.50),
-				new RelationCriteria(0.65, 0.25, 4, 0.9, Duration.ofDays(21)));
+				new RelationCriteria(0.65, 0.25, 4, 0.9, Duration.ofDays(21), 0.75));
 		this.e1 = event();
 		this.e2 = event();
 		this.e3 = event();
@@ -159,13 +161,13 @@ class StorylineReviewFlowTests {
 	void membershipsCoverTheStorylineAndItsDescendantsWithTheirJudgements() {
 		List<StorylineMembership> expected = List.of(
 				new StorylineMembership(new StorylineId(this.parent), new EventId(this.e1), LinkedBy.RULE,
-						new LinkScore(0.81, 0.77, 0.4), LINKING_VIEW, null, null, LINKED_AT),
+						new LinkScore(0.81, 0.77, 0.4), LINKING_VIEW, null, null, LINKED_AT, null),
 				new StorylineMembership(new StorylineId(this.parent), new EventId(this.e3), LinkedBy.MERGE, null, null,
-						null, null, LINKED_AT.plusSeconds(60)),
+						null, null, LINKED_AT.plusSeconds(60), null),
 				new StorylineMembership(new StorylineId(this.child), new EventId(this.e2), LinkedBy.PAIR,
-						new LinkScore(0.7, 0.66, 0.2), OLD_LINKING_VIEW, null, null, LINKED_AT),
+						new LinkScore(0.7, 0.66, 0.2), OLD_LINKING_VIEW, null, null, LINKED_AT, null),
 				new StorylineMembership(new StorylineId(this.child), new EventId(this.e3), LinkedBy.RULE,
-						new LinkScore(0.9, 0.88, 0.5), LINKING_VIEW, 0.71, new FlowMembershipJudgementId(77), LINKED_AT));
+						new LinkScore(0.9, 0.88, 0.5), LINKING_VIEW, 0.71, new FlowMembershipJudgementId(77), LINKED_AT, null));
 
 		assertThat(this.review.memberships(new StorylineId(this.parent))).isEqualTo(expected);
 		// 합쳐진 ID 는 남는 쪽을 따른다
@@ -189,6 +191,44 @@ class StorylineReviewFlowTests {
 
 		assertThat(this.review.relations(new StorylineId(this.parent))).isEqualTo(expected);
 		assertThat(this.review.relations(new StorylineId(this.merged))).isEqualTo(expected);
+	}
+
+	@Test
+	void mergedStorylinesCarryTheirBasisAndMovedMembershipsSayWhereTheyCameFrom() {
+		long absorbed = storyline(this.e1);
+		long extra = event();
+		long linkingId = this.linking.register(LINKING, NOW);
+		long relationId = this.relations.registerCriteria(RELATION, NOW);
+		this.memberships.addMember(absorbed, extra,
+				LinkJudgement.judged(LinkedBy.RULE, new Score(0.85, 0.8, 0.3), linkingId, null, LINKED_AT));
+		// 조각 합치기 — 소속을 옮기고 판정 · 기준을 합쳐진 행에 남긴다
+		this.memberships.moveMembers(absorbed, this.parent);
+		this.memberships.merge(absorbed, this.parent, new MergeBasis(88, relationId), NOW.plusSeconds(90));
+
+		List<MergedStoryline> merged = this.review.merged(new StorylineId(this.parent));
+
+		// 정돈이 합친 것(근거 없음)과 조각으로 합친 것 — ID 순
+		assertThat(merged).extracting(MergedStoryline::id)
+			.containsExactly(new StorylineId(this.merged), new StorylineId(absorbed));
+		assertThat(merged.getFirst().judgement()).isNull();
+		assertThat(merged.getFirst().criteria()).isNull();
+		assertThat(merged.getLast()).isEqualTo(new MergedStoryline(new StorylineId(absorbed), NOW.plusSeconds(90),
+				new RelationJudgementId(88), RELATION_VIEW));
+		// 합쳐진 ID 로 물어도 남는 스토리라인의 것이다
+		assertThat(this.review.merged(new StorylineId(absorbed))).isEqualTo(merged);
+		assertThat(this.review.merged(new StorylineId(this.child))).isEmpty();
+		// 옮겨 온 소속은 근거 그대로이고 어디서 왔는지를 싣는다 — 원래 소속은 싣지 않는다
+		assertThat(this.review.memberships(new StorylineId(this.parent)))
+			.filteredOn(membership -> membership.event().value() == extra)
+			.singleElement()
+			.satisfies(membership -> {
+				assertThat(membership.mergedFrom()).isEqualTo(new StorylineId(absorbed));
+				assertThat(membership.linkedBy()).isEqualTo(LinkedBy.RULE);
+				assertThat(membership.score()).isEqualTo(new LinkScore(0.85, 0.8, 0.3));
+			});
+		assertThat(this.review.memberships(new StorylineId(this.parent)))
+			.filteredOn(membership -> membership.event().value() == this.e1)
+			.allSatisfy(membership -> assertThat(membership.mergedFrom()).isNull());
 	}
 
 	@Test
@@ -218,7 +258,7 @@ class StorylineReviewFlowTests {
 	void theCurrentCriteriaAreTheSettings() {
 		assertThat(this.review.linkingCriteria()).isEqualTo(new StorylineLinkingCriteria(Duration.ofDays(5), 0.7, 0.7, 0.50));
 		assertThat(this.review.relationCriteria())
-			.isEqualTo(new StorylineRelationCriteria(0.65, 0.25, 4, 0.9, Duration.ofDays(21)));
+			.isEqualTo(new StorylineRelationCriteria(0.65, 0.25, 4, 0.9, Duration.ofDays(21), 0.75));
 	}
 
 	private long event() {
