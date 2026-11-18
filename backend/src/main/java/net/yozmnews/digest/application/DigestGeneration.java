@@ -5,7 +5,6 @@ import java.time.Instant;
 import java.time.InstantSource;
 import java.time.LocalDate;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -14,7 +13,6 @@ import java.util.function.Supplier;
 import net.yozmnews.article.ArticleDirectory;
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.digest.domain.candidate.CandidateSet;
-import net.yozmnews.digest.domain.candidate.DigestCandidate;
 import net.yozmnews.digest.domain.candidate.DigestCandidateRepository;
 import net.yozmnews.digest.domain.content.DigestSection;
 import net.yozmnews.digest.domain.content.DigestSectionRepository;
@@ -28,12 +26,19 @@ import net.yozmnews.digest.domain.digest.DigestStatus;
 import net.yozmnews.digest.domain.digest.DigestTrigger;
 import net.yozmnews.digest.domain.generator.DigestGenerator;
 import net.yozmnews.digest.domain.generator.DigestRequest;
-import net.yozmnews.digest.domain.generator.GeneratedOutput;
+import net.yozmnews.digest.domain.generator.GenerationOutcome;
+import net.yozmnews.digest.domain.generator.GenerationVerdict;
+import net.yozmnews.digest.domain.generator.GenerationVerdict.Retry;
+import net.yozmnews.digest.domain.generator.GenerationVerdict.Settled;
+import net.yozmnews.digest.domain.generator.TokenUsage;
+import net.yozmnews.digest.domain.input.DigestInput;
 import net.yozmnews.digest.domain.output.CitationCheck;
 import net.yozmnews.digest.domain.output.CitationResult;
-import net.yozmnews.digest.domain.output.DigestOutputReader;
 import net.yozmnews.digest.domain.output.OutputRead;
+import net.yozmnews.digest.domain.prompt.DigestPrompt;
+import net.yozmnews.digest.domain.prompt.DigestPrompts;
 import net.yozmnews.llm.LlmModel;
+import net.yozmnews.llm.ReasoningEffort;
 import net.yozmnews.platform.UserId;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -47,9 +52,10 @@ import org.springframework.transaction.support.TransactionTemplate;
 /**
  * 다이제스트 생성 유스케이스 — docs/specs/digest.md §4 · digest-R2 · digest-R8 · digest-R9
  * <p>
- * 시작(트랜잭션 ①) · 생성기 호출(트랜잭션 밖) · 읽기 · 검증 · 저장(트랜잭션 ②) 셋으로 나눈다. 두 트랜잭션은 다이제스트 행을 먼저, 후보
- * 행을 다음에 잠근다. 트랜잭션 ② 는 다이제스트의 버전이 트랜잭션 ① 뒤의 값과 다르거나 이미 끝났으면 아무것도 쓰지 않는다. 생성기는 부를 때
- * 찾는다 — 없으면 그 다이제스트를 실패로 끝낸다. 트랜잭션 안에서 부르면 거부한다.
+ * 시작(트랜잭션 ①) · 프롬프트 구성 · 생성기 호출과 읽기 · 다시 묻기(트랜잭션 밖) · 인용 검증 · 저장(트랜잭션 ②) 셋으로 나눈다. 판단(읽을지 ·
+ * 다시 물을지 · 실패 코드)은 {@link GenerationVerdict} 가 한다. 두 트랜잭션은 다이제스트 행을 먼저, 후보 행을 다음에 잠근다. 트랜잭션 ② 는
+ * 다이제스트의 버전이 트랜잭션 ① 뒤의 값과 다르거나 이미 끝났으면 아무것도 쓰지 않는다. 생성기는 부를 때 찾는다 — 없으면 그 다이제스트를 실패로
+ * 끝낸다. 트랜잭션 안에서 부르면 거부한다.
  */
 @Service
 public class DigestGeneration {
@@ -105,18 +111,21 @@ public class DigestGeneration {
 	}
 
 	/**
-	 * 시작 → 후보가 있으면 생성 → 읽기 · 검증 → 저장. 끝난 다이제스트면 아무것도 하지 않는다.
+	 * 시작 → 후보가 있으면 프롬프트 구성 · 생성 · 읽기(끝까지 쓴 응답을 읽지 못하면 한 번 다시 묻기) → 인용 검증 → 저장. 끝난 다이제스트면 아무것도
+	 * 하지 않는다. 생성과 다시 묻기는 트랜잭션 밖이다. 토큰은 공급자가 답한 호출의 합이고, 소요 시간은 첫 호출 시작부터 마지막 호출 끝까지다.
+	 * @param input 후보 선별이 낸 생성의 입력
 	 * @return 이 실행 뒤 그 다이제스트의 상태 — 다른 실행이 먼저 다시 시작했으면 그 실행 중의 상태
-	 * @throws IllegalArgumentException 없는 다이제스트이거나 후보에 같은 기사가 두 번 있을 때
+	 * @throws IllegalArgumentException 없는 다이제스트일 때
 	 * @throws IllegalStateException 트랜잭션 안에서 불렀을 때 — 아무것도 쓰지 않는다
 	 */
-	public DigestStatus run(DigestId id, LlmModel model, List<DigestCandidate> candidates) {
+	public DigestStatus run(DigestId id, LlmModel model, DigestInput input) {
 		Objects.requireNonNull(id, "id");
 		Objects.requireNonNull(model, "model");
+		Objects.requireNonNull(input, "input");
 		if (TransactionSynchronizationManager.isActualTransactionActive()) {
 			throw new IllegalStateException(IN_TRANSACTION);
 		}
-		CandidateSet set = CandidateSet.of(candidates);
+		CandidateSet set = CandidateSet.of(input.digestCandidates());
 		Started started = Objects.requireNonNull(this.transaction.execute(status -> start(id, model, set)));
 		if (started.finished() != null) {
 			return started.finished();
@@ -126,10 +135,41 @@ public class DigestGeneration {
 			return finish(id, started.version(),
 					() -> new Completion.Failed(DigestFailure.NO_GENERATOR, NO_GENERATOR, null, null));
 		}
+		DigestPrompt prompt = DigestPrompts.compose(input, set, model);
+		ReasoningEffort effort = input.profile().effort();
 		Instant asked = this.clock.instant();
-		GeneratedOutput output = generator.generate(new DigestRequest(started.user(), model, set));
+		GenerationOutcome first = generator.generate(new DigestRequest(started.user(), model, effort, set, prompt));
+		GenerationOutcome second = null;
+		Settled settled = switch (GenerationVerdict.judge(first)) {
+			case Settled done -> done;
+			case Retry retry -> {
+				second = generator.generate(new DigestRequest(started.user(), model, effort, set,
+						DigestPrompts.retry(prompt, retry.diagnosis())));
+				yield GenerationVerdict.settle(second);
+			}
+		};
+		TokenUsage usage = sum(usage(first), (second == null) ? null : usage(second));
 		Duration took = Duration.between(asked, this.clock.instant());
-		return finish(id, started.version(), () -> complete(id, set, output, took));
+		return finish(id, started.version(), () -> complete(id, set, settled, usage, took));
+	}
+
+	/** 공급자가 센 토큰 — 공급자가 답하지 못한 호출은 없다 */
+	private static @Nullable TokenUsage usage(GenerationOutcome outcome) {
+		return switch (outcome) {
+			case GenerationOutcome.Generated generated -> generated.usage();
+			case GenerationOutcome.Failed failed -> null;
+		};
+	}
+
+	/** 두 호출의 토큰 합 — 한쪽만 있으면 그쪽, 둘 다 없으면 없음 */
+	private static @Nullable TokenUsage sum(@Nullable TokenUsage a, @Nullable TokenUsage b) {
+		if (a == null) {
+			return b;
+		}
+		if (b == null) {
+			return a;
+		}
+		return new TokenUsage(a.inputTokens() + b.inputTokens(), a.outputTokens() + b.outputTokens());
 	}
 
 	private Started start(DigestId id, LlmModel model, CandidateSet set) {
@@ -157,18 +197,23 @@ public class DigestGeneration {
 		}));
 	}
 
-	/** 트랜잭션 ② 안에서 — 후보 행 잠금 · 지운 기사 거르기 · 읽기 · 인용 검증 · 내용 저장 */
-	private Completion complete(DigestId id, CandidateSet set, GeneratedOutput output, Duration took) {
+	/**
+	 * 트랜잭션 ② 안에서 — 후보 행 잠금 · 지운 기사 거르기 · 판정이 읽음이면 인용 검증 · 내용 저장, 실패면 그 코드
+	 * @param usage 공급자가 답한 호출의 토큰 합 — 읽음이면 언제나 있다(끝까지 쓴 응답에서만 읽는다)
+	 */
+	private Completion complete(DigestId id, CandidateSet set, Settled settled, @Nullable TokenUsage usage,
+			Duration took) {
 		Set<ArticleId> kept = this.candidates.lockArticles(id);
 		Set<ArticleId> present = new HashSet<>(this.articles.findAll(kept).keySet());
 		present.retainAll(kept);
 		Set<ArticleId> gone = new HashSet<>(kept);
 		gone.removeAll(present);
 		this.candidates.delete(id, gone);
-		return switch (DigestOutputReader.read(output.text())) {
-			case OutputRead.Unreadable unreadable -> new Completion.Failed(DigestFailure.UNREADABLE_OUTPUT,
-					unreadable.reason(), output.usage(), took);
-			case OutputRead.Read read -> {
+		return switch (settled) {
+			case GenerationVerdict.Fail fail -> new Completion.Failed(fail.failure(), fail.message(), usage, took);
+			case GenerationVerdict.Read verdict -> {
+				OutputRead.Read read = verdict.output();
+				TokenUsage spent = Objects.requireNonNull(usage, "읽은 응답은 공급자가 센 토큰이 있다");
 				CitationResult cited = CitationCheck.check(read.draft(), set.retain(present));
 				if (cited.drops().removedRefs() > 0 || cited.drops().droppedItems() > 0 || read.overLimit() > 0) {
 					logger.info("다이제스트 출력에서 지운 것이 있다 — 다이제스트 {}, 지운 별칭 {}, 버린 항목 {}, 상한으로 버린 수 {}",
@@ -176,10 +221,10 @@ public class DigestGeneration {
 				}
 				yield switch (cited) {
 					case CitationResult.NoCitation none -> new Completion.Failed(DigestFailure.NO_CITATION,
-							NO_CITATION, output.usage(), took);
+							NO_CITATION, spent, took);
 					case CitationResult.Cited ok -> {
 						this.sections.saveAll(DigestSection.of(id, ok.digest()));
-						yield new Completion.Ready(output.usage(), took);
+						yield new Completion.Ready(spent, took);
 					}
 				};
 			}

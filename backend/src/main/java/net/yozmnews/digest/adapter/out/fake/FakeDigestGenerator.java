@@ -9,13 +9,16 @@ import java.util.Objects;
 import net.yozmnews.digest.domain.candidate.AliasedCandidate;
 import net.yozmnews.digest.domain.generator.DigestGenerator;
 import net.yozmnews.digest.domain.generator.DigestRequest;
-import net.yozmnews.digest.domain.generator.GeneratedOutput;
+import net.yozmnews.digest.domain.generator.GenerationOutcome;
 import net.yozmnews.digest.domain.generator.TokenUsage;
 import net.yozmnews.digest.domain.output.DigestOutputSchema;
+import net.yozmnews.llm.GenerationStop;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
  * 다이제스트 생성기의 로컬 대체물 — 외부 호출 없이 고정 규칙으로 출력 원문을 만든다 · docs/specs/digest.md §4 · digest-R12
+ * <p>
+ * 요청의 별칭 후보만 쓴다 — 프롬프트 · 모델 · 추론 강도는 보지 않는다. 결과는 언제나 끝까지 쓴 응답이다.
  */
 public final class FakeDigestGenerator implements DigestGenerator {
 
@@ -25,7 +28,7 @@ public final class FakeDigestGenerator implements DigestGenerator {
 	private static final JsonMapper JSON = JsonMapper.builder().build();
 
 	@Override
-	public GeneratedOutput generate(DigestRequest request) {
+	public GenerationOutcome generate(DigestRequest request) {
 		Objects.requireNonNull(request, "request");
 		List<AliasedCandidate> entries = request.candidates().entries();
 		List<Map<String, Object>> stories = new ArrayList<>();
@@ -47,7 +50,8 @@ public final class FakeDigestGenerator implements DigestGenerator {
 		output.put(DigestOutputSchema.OVERVIEW, "로컬 대체물이 만든 다이제스트다. 후보 " + entries.size() + "건.");
 		output.put(DigestOutputSchema.TOP_STORIES, stories);
 		output.put(DigestOutputSchema.MORE_HEADLINES, headlines);
-		return new GeneratedOutput(JSON.writeValueAsString(output), new TokenUsage(0, 0));
+		return new GenerationOutcome.Generated(JSON.writeValueAsString(output), new TokenUsage(0, 0),
+				GenerationStop.COMPLETE);
 	}
 
 }

@@ -17,11 +17,13 @@ import java.util.function.Function;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleDirectory;
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.digest.DigestInputs;
 import net.yozmnews.digest.adapter.out.fake.FakeDigestGenerator;
 import net.yozmnews.digest.domain.candidate.DigestCandidate;
 import net.yozmnews.digest.domain.candidate.DigestCandidateRepository;
 import net.yozmnews.digest.domain.candidate.SelectionReason;
 import net.yozmnews.digest.domain.content.DigestSectionRepository;
+import net.yozmnews.digest.domain.digest.DigestFailure;
 import net.yozmnews.digest.domain.digest.DigestId;
 import net.yozmnews.digest.domain.digest.DigestPeriod;
 import net.yozmnews.digest.domain.digest.DigestRepository;
@@ -29,11 +31,15 @@ import net.yozmnews.digest.domain.digest.DigestStatus;
 import net.yozmnews.digest.domain.digest.DigestTrigger;
 import net.yozmnews.digest.domain.generator.DigestGenerator;
 import net.yozmnews.digest.domain.generator.DigestRequest;
-import net.yozmnews.digest.domain.generator.GeneratedOutput;
+import net.yozmnews.digest.domain.generator.GenerationOutcome;
 import net.yozmnews.digest.domain.generator.TokenUsage;
+import net.yozmnews.digest.domain.input.DigestInput;
+import net.yozmnews.digest.domain.input.DigestProfile;
 import net.yozmnews.event.EventArticles;
+import net.yozmnews.llm.GenerationStop;
 import net.yozmnews.llm.LlmModel;
 import net.yozmnews.llm.Provider;
+import net.yozmnews.llm.ReasoningEffort;
 import net.yozmnews.platform.UserId;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
@@ -50,7 +56,8 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 다이제스트 생성 흐름 — 예약 · 시작 · 생성 · 읽기 · 인용 검증 · 저장이 실제 PostgreSQL 위에서 끝까지 간다.
+ * 다이제스트 생성 흐름 — 예약 · 시작 · 프롬프트 · 생성 · 읽기(끝까지 쓴 응답을 읽지 못하면 한 번 다시 묻기) · 인용 검증 · 저장이 실제
+ * PostgreSQL 위에서 끝까지 간다. 생성기의 실패 · 잘림 · 거절은 그 코드로 끝난다.
  * <p>
  * 지키는 규칙: digest-R2 · digest-R8 · digest-R9 · digest-R12
  * <p>
@@ -91,9 +98,13 @@ class DigestGenerationTests {
 
 	private final List<Long> articleIds = new ArrayList<>();
 
+	/** 대본 생성기가 받은 요청 */
+	private final List<DigestRequest> requests = new ArrayList<>();
+
 	@BeforeEach
 	void fiveArticles() {
 		clear();
+		this.requests.clear();
 		for (int index = 1; index <= 5; index++) {
 			this.articleIds.add(EventArticles.insert(this.jdbc, "다이제스트 시험 기사 " + index, null));
 		}
@@ -120,21 +131,28 @@ class DigestGenerationTests {
 				DigestTrigger.SCHEDULED);
 	}
 
-	private List<DigestCandidate> candidates(int count) {
+	private DigestInput candidates(int count) {
 		List<DigestCandidate> list = new ArrayList<>();
 		for (int index = 0; index < count; index++) {
 			SelectionReason reason = (index == 1) ? SelectionReason.MAJOR_STORYLINE : SelectionReason.SUBSCRIBED;
 			list.add(new DigestCandidate(new ArticleId(this.articleIds.get(index)), reason));
 		}
-		return list;
+		return DigestInputs.of(list);
 	}
 
-	/** 대본 생성기 — 부를 때마다 수를 세고, 시계를 2초 넘기고, 요청으로 원문을 만든다 */
+	/** 대본 생성기 — 부를 때마다 수를 세고, 시계를 2초 넘기고, 요청으로 원문을 만든다(끝까지 씀 · 토큰 1,200 · 340) */
 	private DigestGenerator scripted(AtomicInteger calls, Function<DigestRequest, String> text) {
+		return scriptedOutcomes(calls, request -> new GenerationOutcome.Generated(text.apply(request),
+				new TokenUsage(1_200, 340), GenerationStop.COMPLETE));
+	}
+
+	/** 대본 생성기 — 결과를 대본이 정한다. 부를 때마다 수를 세고 시계를 2초 넘기고 요청을 모은다 */
+	private DigestGenerator scriptedOutcomes(AtomicInteger calls, Function<DigestRequest, GenerationOutcome> outcome) {
 		return request -> {
 			calls.incrementAndGet();
+			this.requests.add(request);
 			this.now.set(this.now.get().plusSeconds(2));
-			return new GeneratedOutput(text.apply(request), new TokenUsage(1_200, 340));
+			return outcome.apply(request);
 		};
 	}
 
@@ -175,7 +193,7 @@ class DigestGenerationTests {
 		DigestGeneration generation = generation(scripted(calls, request -> "{}"));
 		DigestId id = schedule(generation);
 
-		assertThat(generation.run(id, MODEL, List.of())).isEqualTo(DigestStatus.EMPTY);
+		assertThat(generation.run(id, MODEL, DigestInputs.of(List.of()))).isEqualTo(DigestStatus.EMPTY);
 
 		assertThat(calls).hasValue(0);
 		Map<String, Object> row = row(id);
@@ -199,7 +217,7 @@ class DigestGenerationTests {
 		assertThatIllegalStateException().isThrownBy(() -> failing.run(id, MODEL, candidates(3)));
 		assertThat(candidateRows(id)).hasSize(3);
 
-		assertThat(failing.run(id, MODEL, List.of())).isEqualTo(DigestStatus.EMPTY);
+		assertThat(failing.run(id, MODEL, DigestInputs.of(List.of()))).isEqualTo(DigestStatus.EMPTY);
 
 		assertThat(candidateRows(id)).isEmpty();
 		assertThat(row(id)).containsEntry("candidate_count", 0);
@@ -246,20 +264,117 @@ class DigestGenerationTests {
 	}
 
 	@Test
-	void failsUnreadableAndKeepsTheUsage() {
-		DigestGeneration generation = generation(scripted(new AtomicInteger(), request -> "not json"));
+	void failsUnreadableAfterAskingOnceMoreAndKeepsBothCallsUsage() {
+		AtomicInteger calls = new AtomicInteger();
+		DigestGeneration generation = generation(scripted(calls, request -> "not json"));
 		DigestId id = schedule(generation);
 
 		assertThat(generation.run(id, MODEL, candidates(2))).isEqualTo(DigestStatus.FAILED);
 
+		// 두 번 물었다 — 토큰은 두 호출의 합, 소요 시간은 첫 호출 시작부터 둘째 호출 끝까지
+		assertThat(calls).hasValue(2);
 		assertThat(row(id)).containsEntry("status", "FAILED")
 			.containsEntry("error_code", "UNREADABLE_OUTPUT")
 			.containsEntry("error_message", "JSON 이 아니다")
-			.containsEntry("input_tokens", 1_200)
-			.containsEntry("output_tokens", 340)
-			.containsEntry("duration_ms", 2_000L);
+			.containsEntry("input_tokens", 2_400)
+			.containsEntry("output_tokens", 680)
+			.containsEntry("duration_ms", 4_000L);
 		assertThat(count("select count(*) from digest_sections where digest_id = :id", id)).isZero();
 		assertThat(candidateRows(id)).hasSize(2);
+	}
+
+	@Test
+	void asksOnceMoreWithTheDiagnosisAndStoresTheSecondAnswer() {
+		AtomicInteger calls = new AtomicInteger();
+		DigestGeneration generation = generation(scripted(calls, request -> (calls.get() == 1) ? "not json" : """
+				{ "overview": "흐름", "top_stories": [ { "title": "t", "summary": "s", "refs": ["A1"] } ], "more_headlines": [] }
+				"""));
+		DigestId id = schedule(generation);
+		// 추론 강도는 기본값(보통)과 다른 값으로 — 요청이 입력 프로필의 값을 실었는지 가린다
+		DigestInput fixed = candidates(2);
+		DigestInput input = new DigestInput(new DigestProfile(fixed.profile().topics(),
+				fixed.profile().excludedRegions(), fixed.profile().interest(), fixed.profile().timezone(),
+				fixed.profile().summaryLength(), ReasoningEffort.HIGH), fixed.candidates(), fixed.storylines());
+
+		assertThat(generation.run(id, MODEL, input)).isEqualTo(DigestStatus.READY);
+
+		assertThat(calls).hasValue(2);
+		assertThat(row(id)).containsEntry("input_tokens", 2_400)
+			.containsEntry("output_tokens", 680)
+			.containsEntry("duration_ms", 4_000L);
+		assertThat(itemRows(id)).containsExactly("TOP_STORY:1:0:" + a(1) + ":SUBSCRIBED");
+		// 첫 요청의 프롬프트는 입력으로 만든 것이다 — 사용자 구획에 후보의 별칭과 제목이 있다
+		DigestRequest first = this.requests.get(0);
+		DigestRequest second = this.requests.get(1);
+		assertThat(first.prompt().userContent()).contains("[\"A1\",").contains("\"시험 기사 " + a(1) + "\"");
+		// 다시 물은 요청 — 지시 끝에 진단, 사용자 구획 · 스키마 · 별칭 후보는 같다
+		assertThat(second.prompt().instructions()).startsWith(first.prompt().instructions())
+			.contains("앞 출력이 출력 스키마에 맞지 않았다: JSON 이 아니다");
+		assertThat(first.prompt().instructions()).doesNotContain("앞 출력이");
+		assertThat(second.prompt().userContent()).isEqualTo(first.prompt().userContent());
+		assertThat(second.prompt().outputSchema()).isEqualTo(first.prompt().outputSchema());
+		assertThat(second.candidates().entries()).isEqualTo(first.candidates().entries());
+		// 두 요청의 추론 강도는 입력 프로필의 값
+		assertThat(first.effort()).isEqualTo(ReasoningEffort.HIGH);
+		assertThat(second.effort()).isEqualTo(ReasoningEffort.HIGH);
+	}
+
+	@Test
+	void aTruncatedOrRefusedAnswerIsNotAskedAgainAndKeepsItsUsage() {
+		for (GenerationStop stop : new GenerationStop[] { GenerationStop.TRUNCATED, GenerationStop.REFUSED }) {
+			AtomicInteger calls = new AtomicInteger();
+			DigestGeneration generation = generation(scriptedOutcomes(calls,
+					request -> new GenerationOutcome.Generated("{\"overview\":", new TokenUsage(1_200, 4_000), stop)));
+			DigestId id = schedule(generation);
+
+			assertThat(generation.run(id, MODEL, candidates(2))).isEqualTo(DigestStatus.FAILED);
+
+			assertThat(calls).as("%s", stop).hasValue(1);
+			assertThat(row(id)).containsEntry("input_tokens", 1_200)
+				.containsEntry("output_tokens", 4_000)
+				.containsEntry("duration_ms", 2_000L);
+			assertThat(row(id).get("error_code")).isEqualTo(
+					(stop == GenerationStop.TRUNCATED) ? "OUTPUT_TRUNCATED" : "OUTPUT_REFUSED");
+			assertThat(row(id).get("error_message")).isEqualTo(
+					(stop == GenerationStop.TRUNCATED) ? "출력이 출력 토큰 상한에 닿아 잘렸다" : "모델이 출력을 거절했다");
+		}
+	}
+
+	@Test
+	void aGeneratorFailureEndsWithItsCodeAndTheTimeButNoTokens() {
+		AtomicInteger calls = new AtomicInteger();
+		DigestGeneration generation = generation(scriptedOutcomes(calls,
+				request -> new GenerationOutcome.Failed(DigestFailure.QUOTA_EXHAUSTED, "OpenAI 429 insufficient_quota")));
+		DigestId id = schedule(generation);
+
+		assertThat(generation.run(id, MODEL, candidates(2))).isEqualTo(DigestStatus.FAILED);
+
+		assertThat(calls).hasValue(1);
+		Map<String, Object> row = row(id);
+		assertThat(row).containsEntry("error_code", "QUOTA_EXHAUSTED")
+			.containsEntry("error_message", "OpenAI 429 insufficient_quota")
+			.containsEntry("duration_ms", 2_000L);
+		assertThat(row.get("input_tokens")).isNull();
+		assertThat(row.get("output_tokens")).isNull();
+	}
+
+	@Test
+	void aFailureOfTheSecondCallKeepsTheFirstCallsTokens() {
+		AtomicInteger calls = new AtomicInteger();
+		DigestGeneration generation = generation(scriptedOutcomes(calls,
+				request -> (calls.get() == 1)
+						? new GenerationOutcome.Generated("not json", new TokenUsage(1_200, 340), GenerationStop.COMPLETE)
+						: new GenerationOutcome.Failed(DigestFailure.PROVIDER_UNAVAILABLE, "TRANSIENT 503")));
+		DigestId id = schedule(generation);
+
+		assertThat(generation.run(id, MODEL, candidates(2))).isEqualTo(DigestStatus.FAILED);
+
+		assertThat(calls).hasValue(2);
+		assertThat(row(id)).containsEntry("error_code", "PROVIDER_UNAVAILABLE")
+			.containsEntry("error_message", "TRANSIENT 503")
+			.containsEntry("input_tokens", 1_200)
+			.containsEntry("output_tokens", 340)
+			.containsEntry("duration_ms", 4_000L);
 	}
 
 	@Test
@@ -298,7 +413,8 @@ class DigestGenerationTests {
 
 		assertThat(generation.run(id, MODEL, candidates(3))).isEqualTo(DigestStatus.FAILED);
 
-		assertThat(calls).hasValue(1);
+		// 앞 실행이 한 번 다시 물어 두 번 — 끝난 다이제스트의 둘째 실행은 부르지 않는다
+		assertThat(calls).hasValue(2);
 		assertThat(row(id)).containsEntry("candidate_count", 2);
 	}
 

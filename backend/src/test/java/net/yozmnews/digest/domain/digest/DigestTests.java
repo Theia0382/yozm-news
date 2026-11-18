@@ -113,6 +113,23 @@ class DigestTests {
 	}
 
 	@Test
+	void aFailureOfTheGatewayHasTheTimeButNoTokens() {
+		Digest failed = scheduled().start(MODEL, 5, T1)
+			.complete(new Completion.Failed(DigestFailure.KEY_INVALID, "OpenAI 401", null, Duration.ofMillis(1_500)),
+					T2);
+
+		assertThat(failed.failure()).contains(DigestFailure.KEY_INVALID);
+		assertThat(failed.usage()).isEmpty();
+		assertThat(failed.durationMs()).contains(1_500L);
+	}
+
+	@Test
+	void tokensWithoutTimeAreRefused() {
+		assertThatThrownBy(() -> new Completion.Failed(DigestFailure.NO_CITATION, "x", new TokenUsage(1, 1), null))
+			.isInstanceOf(IllegalArgumentException.class);
+	}
+
+	@Test
 	void refusesToStartAFinishedDigest() {
 		Digest ready = scheduled().start(MODEL, 5, T1)
 			.complete(new Completion.Ready(new TokenUsage(1, 1), Duration.ZERO), T2);
