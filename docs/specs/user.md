@@ -22,8 +22,8 @@
 - **스토리라인 구독** — 사용자마다 따라갈 스토리라인의 현재 상태와 추가 전용 이력, 구독 · 해제 · 내 구독(상한 100). `storyline` 이 합치거나 지운 스토리라인을 알리면(`StorylinesRetired`) 구독을 남는 스토리라인으로 옮기거나 빼고, 사라진 구독을 알린다. 사용자의 구독 조회 · 저장 앞에서도 같은 정본으로 따라간다. 다이제스트 · 관심도 · 관심사 히스토리 · 변화 리포트가 읽는 공개 조회(`StorylineSubscriptionDirectory`)를 낸다
 - **다이제스트가 읽는 관심 설정** — 다이제스트 후보 선별이 읽는 공개 조회(`DigestInterestsDirectory`) — 활성 키의 주제 구독(펼친 중분류와 함께) · 제외 · 관심사 본문 · 시간대 · 분량 · 요약 길이 · 추론 강도. 쓰지 않는다(user-R57)
 - **주제 구독 이력 조회** — 다이제스트의 관심도 · 관심사 히스토리가 읽는 공개 조회(`TopicSubscriptionHistory`) — 기간의 선호 이력 가운데 주제 행을 기록 당시 버전으로 펼치고 활성 중분류로 풀어 원인과 함께 낸다. 쓰지 않는다(user-R58)
-- **사용자 시간대 조회** — 관심 설정의 시간대를 내는 공개 조회(`UserTimezones`) — 다이제스트의 수동 생성이 오늘의 경계를 정할 때, 관심사 히스토리가 기간을 자를 때 읽는다. 쓰지 않는다(user-R60)
-- **다이제스트 일정과 쓸 모델** — 다이제스트의 일정 회차가 읽는 일정 목록(`DigestScheduleDirectory` — 쓰는 계정의 시간대 · 생성 시각)과 일정 · 생성 작업 · 수동 생성이 읽는 쓸 모델(`DigestModelDirectory` — `ModelChoice`). 쓰지 않는다(user-R61)
+- **사용자 시간대 조회** — 관심 설정의 시간대를 내는 공개 조회(`UserTimezones`) — 다이제스트의 수동 생성 · 수동 생성 상태가 오늘의 경계를 정할 때, 관심사 히스토리가 기간을 자를 때 읽는다. 쓰지 않는다(user-R60)
+- **다이제스트 일정과 쓸 모델** — 다이제스트의 일정 회차가 읽는 일정 목록(`DigestScheduleDirectory` — 쓰는 계정의 시간대 · 생성 시각)과 일정 · 생성 작업 · 수동 생성 · 수동 생성 상태가 읽는 쓸 모델(`DigestModelDirectory` — `ModelChoice`). 쓰지 않는다(user-R61)
 - **(미설계)** 변화 리포트가 관심 설정을 읽는 공개 조회 — 소비자의 작업이 소비 계약과 함께 연다([ADR-0180](../adr/0180-user-settings-changes-publish-no-event-and-consumers-query.md))
 
 하지 않는 것:
@@ -320,7 +320,7 @@ public enum TopicSubscriptionCause { USER, ONBOARDING, TAG_SET_CHANGE }
 
 ### UserTimezones
 
-사용자 시간대 조회 — 관심 설정의 시간대. 다이제스트의 수동 생성이 사용자 시간대의 오늘을 정할 때, 관심사 히스토리가 기간을 자를 때 읽는다. 구현은 `application` 의 `UserTimezonesService` 다.
+사용자 시간대 조회 — 관심 설정의 시간대. 다이제스트의 수동 생성 · 수동 생성 상태가 사용자 시간대의 오늘을 정할 때, 관심사 히스토리가 기간을 자를 때 읽는다. 구현은 `application` 의 `UserTimezonesService` 다.
 
 ```java
 public interface UserTimezones {
@@ -364,7 +364,7 @@ public record DigestScheduleEntry(UserId user, ZoneId timezone, LocalTime time) 
 
 ### DigestModelDirectory
 
-다이제스트를 만들 때 쓸 모델 — 다이제스트의 일정 회차 · 생성 작업 · 수동 생성이 읽는다. 구현은 `application` 의 `DigestModelDirectoryService` 다.
+다이제스트를 만들 때 쓸 모델 — 다이제스트의 일정 회차 · 생성 작업 · 수동 생성 · 수동 생성 상태가 읽는다. 구현은 `application` 의 `DigestModelDirectoryService` 다.
 
 ```java
 public interface DigestModelDirectory {
@@ -397,7 +397,7 @@ public enum DigestFailureCause { KEY, PROVIDER_ACCOUNT, TEMPORARY, OUTPUT }
 |---|---|
 | `digestId` | 실패한 다이제스트(1 이상) — 같은 다이제스트의 알림은 하나다 |
 | `digestDate` · `failedAt` | 다이제스트 날짜 · 실패로 끝낸 시각 |
-| `DigestFailureCause` | 실패의 갈래 — 사용자가 할 일로 묶는다. `KEY` 키 확인 · `PROVIDER_ACCOUNT` 공급자 계정의 권한 · 잔액 · `TEMPORARY` 잠시 뒤 다시 · `OUTPUT` 모델 출력 문제. 실패 코드를 갈래로 옮기는 정본은 `digest` 에 있다([digest Spec](digest.md#끝내기와-실패-이벤트)) |
+| `DigestFailureCause` | 실패의 갈래 — 사용자가 할 일로 묶는다. 실패 알림과 다이제스트 화면이 할 일 문구를 고른다. `KEY` 키 확인 · `PROVIDER_ACCOUNT` 공급자 계정의 권한 · 잔액 · `TEMPORARY` 잠시 뒤 다시 · `OUTPUT` 모델 출력 문제. 실패 코드를 갈래로 옮기는 정본은 `digest` 에 있다([digest Spec](digest.md#끝내기와-실패-이벤트)) |
 
 - 계약
   - 받는 쪽이 선언한다 — `digest` 는 이 모듈의 공개 조회를 읽어 이 모듈에 기대므로, `digest` 가 선언한 이벤트를 이 모듈이 받으면 두 모듈이 서로 기댄다
@@ -546,7 +546,6 @@ sequenceDiagram
 - `DigestScheduleDirectoryService` · `DigestModelDirectoryService` — 공개 조회 `DigestScheduleDirectory` · `DigestModelDirectory` 의 구현. 읽기 전용 트랜잭션 하나(user-R61)
 - `ModelResolutions` — 쓸 모델 판정의 재료 읽기(허용 모델 목록 · 키가 있는 공급자 · 쓸 수 있는 키의 공급자)와 고를 수 있는 모델 — `ModelSelection` 과 `DigestModelDirectoryService` 가 함께 쓴다(user-R51 · R61)
 - `TopicSubscriptionHistoryService` — 공개 조회 `TopicSubscriptionHistory` 의 구현. 이력 행 · 활성 체계 · 기록 버전의 구조 · 계보 표를 한 스냅숏에서 읽도록 읽기 전용 `REPEATABLE_READ` 트랜잭션 하나다 — 계보 표의 기준이 읽은 활성 버전이 아니면 불변식 위반이다(user-R58)
-- `UserTimezonesService` — 공개 조회 `UserTimezones` 의 구현. 계정 유무와 설정 행을 읽기 전용 트랜잭션 하나에서 읽는다(user-R60)
 - 그 밖의 값: `AdminSecurityProperties`(설정 `yozmnews.admin` — §7) · `AdminTokenAuthentication`(제시된 토큰 · 운영자 인증) · `AccountAuthentication`(세션 사용자 인증 — 세션에 직렬화되는 유일한 앱 타입, 역할 권한 이름의 정본) · `SignInOutcome`(로그인됨 · 거절 · 대기)
 
 ### `domain`
@@ -685,7 +684,7 @@ public interface HumanVerifier {
 - **user-R26** — 읽은 알림은 읽은 지 90일(`NoticeRetention.KEEP_READ`)이 지나면 지운다 — 읽은 시각이 지금 − 90일보다 이른 알림이다(정확히 90일은 남는다). 작업 역할의 반복 작업이 하루마다 지운다. 안 읽은 알림은 기간과 무관하게 남는다
 - **user-R27** — 알림함: 세 경로 모두 세션 사용자로 범위가 정해진다(user-R6). 목록은 최근(ID 큰 것)부터 한 쪽 50개(`NoticeRetention.PAGE_SIZE`)이고, 다음 쪽이 있으면 이 쪽의 마지막 알림 ID 를 `nextBefore` 로 준다 — 다음 쪽은 `before` 로 그 값을 준다. 알림 하나는 종류 판별자와 그 종류의 본문 하나(`feedStatus` · `passwordChanged` · `keyInvalidated` · `preferencesAdjusted` · `storylineSubscriptionsRemoved` · `digestFailed` — 나머지는 null)다. 읽음 요청은 50개까지다. `before` 가 1 미만이거나 숫자가 아니면, 읽음 요청이 50개를 넘거나 원소의 ID · 판이 1 미만(빠짐 포함)이거나 목록이 없으면 400 이다. 화면은 안 읽은 수를 로그인한 화면에 들어올 때 · 경로를 옮길 때 · 창으로 돌아올 때 · 다시 연결될 때 다시 읽고 주기 조회는 하지 않는다. 알림 페이지에서 읽음을 보내면 안 읽은 수를 다시 읽는다
 - **user-R36** — 키 무효 알림: `credential` 의 `CredentialInvalidated` 하나에 그 사용자의 알림 하나를 남긴다(모으지 않는다). 내용은 공급자 · 키 ID · 무효 시각이고, 화면 응답은 공급자와 무효 시각만 낸다. 같은 사용자 · 키 ID · 무효 시각의 알림은 많아야 하나다(부분 고유 인덱스) — 같은 발행을 거듭 받아도 하나만 남는다. 이벤트 하나가 트랜잭션 하나다. 판단의 이유는 [ADR-0166](../adr/0166-credential-invalidated-is-published-on-each-transition-to-invalid-and-leaves-one-notice-per-transition.md)에 있다
-- **user-R62** — 다이제스트 실패 알림: `digest` 가 낸 `DigestFailed` 하나에 그 사용자의 알림 하나를 남긴다(`DIGEST_FAILED` — 모으지 않는다). 내용은 다이제스트 ID · 날짜 · 실패의 갈래(`DigestFailureCause`) · 실패 시각이고, 화면 응답은 날짜 · 갈래 · 실패 시각만 낸다(`digestFailed`). 같은 사용자 · 다이제스트 ID 의 알림은 많아야 하나다(부분 고유 인덱스) — 같은 이벤트를 거듭 받아도 하나만 남는다. 계정이 없으면 남기지 않고 끝낸다(지운 계정의 이벤트가 재처리를 되풀이하지 않는다). 이벤트 하나가 트랜잭션 하나다. 화면은 갈래마다 할 일 문구를 보이고, `KEY` 면 LLM 키 화면으로 잇는다. 판단의 이유는 [ADR-0233](../adr/0233-digest-failure-notices-come-through-an-event-declared-by-the-receiving-user-module-for-every-failed-digest.md)에 있다
+- **user-R62** — 다이제스트 실패 알림: `digest` 가 낸 `DigestFailed` 하나에 그 사용자의 알림 하나를 남긴다(`DIGEST_FAILED` — 모으지 않는다). 내용은 다이제스트 ID · 날짜 · 실패의 갈래(`DigestFailureCause`) · 실패 시각이고, 화면 응답은 날짜 · 갈래 · 실패 시각만 낸다(`digestFailed`). 같은 사용자 · 다이제스트 ID 의 알림은 많아야 하나다(부분 고유 인덱스) — 같은 이벤트를 거듭 받아도 하나만 남는다. 계정이 없으면 남기지 않고 끝낸다(지운 계정의 이벤트가 재처리를 되풀이하지 않는다). 이벤트 하나가 트랜잭션 하나다. 화면은 갈래마다 할 일 문구(다이제스트 화면과 같은 문구)를 보이고 그 날짜의 다이제스트 화면으로 잇는다 — `KEY` 면 LLM 키 화면으로, 다시 만들기가 할 일인 갈래(`TEMPORARY` · `OUTPUT`)면 다시 만들기 버튼이 있는 홈으로도 잇는다. 판단의 이유는 [ADR-0233](../adr/0233-digest-failure-notices-come-through-an-event-declared-by-the-receiving-user-module-for-every-failed-digest.md) · [ADR-0240](../adr/0240-digest-failures-show-the-cause-action-and-the-code-and-never-the-failure-message.md)에 있다
 
 ### 계정을 만드는 길
 
@@ -838,10 +837,6 @@ public interface HumanVerifier {
 
 - **user-R60** — 사용자 시간대 조회(`UserTimezones`): 계정 행이 없으면 빈 값이다. 설정 행이 있으면 그 일정의 시간대(user-R50), 없으면 계정을 만들 때의 값(`InterestDefaults.TIMEZONE` — user-R43 과 같은 정본)을 낸다. 읽기 전용 트랜잭션 하나에서 읽고 쓰지 않는다. 사용자를 인자로 받는 조회다 — 화면 경로에서는 세션 사용자로만 부른다
 
-### 사용자 시간대 조회
-
-- **user-R60** — 사용자 시간대 조회(`UserTimezones`): 계정 행이 없으면 빈 값이다. 설정 행이 있으면 그 일정의 시간대(user-R50), 없으면 계정을 만들 때의 값(`InterestDefaults.TIMEZONE` — user-R43 과 같은 정본)을 낸다. 읽기 전용 트랜잭션 하나에서 읽고 쓰지 않는다. 사용자를 인자로 받는 조회다 — 화면 경로에서는 세션 사용자로만 부른다
-
 ### 다이제스트 일정과 쓸 모델
 
 판단의 이유는 [ADR-0230](../adr/0230-scheduled-digests-are-made-after-the-generation-time-and-a-period-runs-from-the-last-ready-or-empty-end-to-that-time.md) · [ADR-0178](../adr/0178-the-llm-model-to-use-is-decided-at-query-time-from-the-chosen-model-the-allowed-list-and-key-status.md)에 있다.
@@ -945,3 +940,4 @@ public interface HumanVerifier {
 | [0229](../adr/0229-interest-history-periods-are-monday-weeks-and-calendar-months-in-the-users-zone-and-the-query-takes-a-span-or-reference-times.md) | 관심사 히스토리의 기간은 관심 설정 시간대로 자르고, 그 시간대는 이 모듈의 사용자 시간대 조회가 낸다 |
 | [0230](../adr/0230-scheduled-digests-are-made-after-the-generation-time-and-a-period-runs-from-the-last-ready-or-empty-end-to-that-time.md) | 다이제스트 일정은 생성 시각이 지난 뒤 만든다 — 일정 목록 · 쓸 모델은 이 모듈의 따로 된 조회로 읽는다 |
 | [0233](../adr/0233-digest-failure-notices-come-through-an-event-declared-by-the-receiving-user-module-for-every-failed-digest.md) | 다이제스트 실패 알림은 이 모듈이 선언한 이벤트로 받고, 실패한 다이제스트마다 남긴다 |
+| [0240](../adr/0240-digest-failures-show-the-cause-action-and-the-code-and-never-the-failure-message.md) | 실패 알림의 할 일 문구는 다이제스트 화면과 함께 쓰고, 알림은 그 날짜의 다이제스트 화면으로 잇는다 |

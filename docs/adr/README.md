@@ -239,6 +239,11 @@
 | [0231](0231-manual-generation-remakes-todays-digest-with-its-period-or-makes-a-new-one-and-counts-manual-rows-of-the-users-day.md) | 수동 생성은 오늘 다이제스트를 같은 기간으로 다시 만들거나 새로 만들고, 하루 횟수는 사용자 시간대의 오늘 만든 수동 행으로 센다 | 승인 |
 | [0232](0232-a-running-digest-is-never-started-again-and-stalled-digests-end-interrupted-after-a-lease-or-a-start-deadline.md) | 생성 중인 다이제스트는 다시 시작하지 않고, 임대가 지난 생성과 시작 기한이 지난 예약은 중단 실패로 끝낸다 | 승인 |
 | [0233](0233-digest-failure-notices-come-through-an-event-declared-by-the-receiving-user-module-for-every-failed-digest.md) | 다이제스트 실패 알림은 받는 쪽 user 가 선언한 이벤트로 받고, 실패한 다이제스트마다 까닭 갈래와 함께 남긴다 | 승인 |
+| [0237](0237-the-digest-home-shows-the-latest-date-and-every-date-has-its-own-page-and-a-list.md) | 다이제스트 홈은 가장 늦은 날짜의 다이제스트를 보이고, 날짜마다 화면과 날짜 목록을 둔다 | 승인 |
+| [0238](0238-a-digest-date-shows-the-visible-digest-with-the-latest-attempt-and-the-list-holds-every-date-with-a-state.md) | 날짜 보기는 보이는 다이제스트와 가장 최근 시도를 함께 내고, 날짜 목록은 다이제스트가 있는 모든 날짜를 상태와 함께 낸다 | 승인 |
+| [0239](0239-digest-screens-show-tokens-of-the-visible-digest-and-the-sum-of-every-attempt-of-the-date-without-prices.md) | 다이제스트 화면의 토큰은 보이는 다이제스트의 것과 그 날짜 모든 시도의 합을 보이고 금액으로 바꾸지 않는다 | 승인 |
+| [0240](0240-digest-failures-show-the-cause-action-and-the-code-and-never-the-failure-message.md) | 다이제스트 실패는 갈래의 할 일과 코드의 무슨 일 두 층으로 보이고, 실패 메시지는 화면에 내지 않는다 | 승인 |
+| [0241](0241-selection-reasons-mark-only-citations-outside-subscribed-topics-named-interest-and-big-topic.md) | 선정 이유는 구독 주제가 아닌 인용에만 표시하고, 화면 이름은 구독 주제 · 관심 반영 · 큰 화제다 | 승인 |
 
 ## 운영 규칙
 
