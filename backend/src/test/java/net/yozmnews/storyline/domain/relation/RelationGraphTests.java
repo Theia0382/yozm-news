@@ -33,6 +33,10 @@ class RelationGraphTests {
 		assertThat(GRAPH.ancestors(1)).isEmpty();
 		assertThat(GRAPH.descendants(1)).containsExactly(2L, 3L, 4L);
 		assertThat(GRAPH.descendants(3)).isEmpty();
+		// 바로 아래 하위만 — 손자와 이어짐의 뒤는 아니다
+		assertThat(GRAPH.childrenOf(1)).containsExactly(2L, 4L);
+		assertThat(GRAPH.childrenOf(3)).isEmpty();
+		assertThat(GRAPH.childrenOf(5)).isEmpty();
 	}
 
 	@Test

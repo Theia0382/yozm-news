@@ -47,6 +47,15 @@ public final class RelationGraph {
 			.findFirst();
 	}
 
+	/** 포함의 바로 아래 하위들 — ID 순 */
+	public List<Long> childrenOf(long storylineId) {
+		return this.relations.stream()
+			.filter(relation -> relation.kind() == RelationKind.CONTAINS && relation.sourceId() == storylineId)
+			.map(Relation::targetId)
+			.sorted()
+			.toList();
+	}
+
 	/** 포함을 따라 내려간 모든 하위 — 자기 자신은 없다 */
 	public Set<Long> descendants(long storylineId) {
 		Set<Long> found = new TreeSet<>(reachable(storylineId, RelationKind.CONTAINS));

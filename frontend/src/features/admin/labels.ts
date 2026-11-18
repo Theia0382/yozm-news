@@ -222,7 +222,7 @@ export const relationOutcomeLabels = {
   CYCLE: "순환",
   SECOND_PARENT: "둘째 상위",
   GROUPED: "나란한 흐름 — 묶음",
-  REFERRED: "나란한 흐름 — 상위에 넘겨 물음",
+  REFERRED: "나란한 흐름 — 넘겨 물음",
   UNGROUPED: "나란한 흐름 — 묶지 않음",
   UNMERGED: "조각 — 합치기 기준 미달",
   NOTHING_TO_ASK: "물을 것 없음",

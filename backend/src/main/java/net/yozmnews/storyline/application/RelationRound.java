@@ -55,6 +55,7 @@ import net.yozmnews.storyline.domain.relation.RelationQueueRepository;
 import net.yozmnews.storyline.domain.relation.RelationRepository;
 import net.yozmnews.storyline.domain.relation.RelationRule;
 import net.yozmnews.storyline.domain.relation.RelationSchedule;
+import net.yozmnews.storyline.domain.relation.StoredAsked;
 import net.yozmnews.storyline.domain.storyline.LinkJudgement;
 import net.yozmnews.storyline.domain.storyline.MergeBasis;
 import net.yozmnews.storyline.domain.storyline.StorylineProfile;
@@ -80,10 +81,12 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 답이 같은 사안의 조각이면 확률이 합치기 확률 기준 이상일 때 두 스토리라인을 하나로 합치고({@link FragmentMerge} ·
  * {@link StorylineMerger}), 미만이면 관계를 맺지 않고 둘로 둔다. 합치면 그 스토리라인의 남은 쌍은 이 회차에 묻지 않는다.
  * <p>
- * 답이 나란한 흐름이면 두 스토리라인을 한 상위 아래 묶는다({@link Grouping}). 둘 다 상위가 없으면 반영 전에 트랜잭션 밖에서 두
- * 흐름의 사건을 평가하고({@link GroupOpening}), 반영 트랜잭션이 상태를 다시 확인한 뒤 통과한 사건으로 상위를 연다. 한쪽에만 상위가
- * 있으면 그 상위와 다른 흐름의 쌍을 넘겨 물을 쌍으로 둔다. 나란한 흐름으로 묶였던 쌍의 답이 바뀌면 그 쌍이 맺은 고리를 지우지 않고 그
- * 고리의 두 끝을 넘겨 묻는다.
+ * 답이 나란한 흐름이면 두 스토리라인을 한 상위 아래 묶는다({@link Grouping}). 상위를 열 차례면 반영 전에 트랜잭션 밖에서 두
+ * 흐름의 사건을 평가하고({@link GroupOpening}), 반영 트랜잭션이 상태를 다시 확인한 뒤 통과한 사건으로 상위를 연다. 한쪽이 다른
+ * 하위를 가진 상위 아래 있거나 그 자신이 하위를 가진 상위면 상위를 열지 않고, 다른 흐름이 그 상위의 하위들과도 나란한 흐름인지를 물은
+ * 기록으로 보아 그 상위의 하위로 두거나 묻지 않은 쌍을 넘겨 묻는다. 한쪽의 상위에 다른 하위가 없으면 그 상위와 다른 흐름의 쌍을 넘겨
+ * 묻는다. 포함으로 답했으나 하위에 이미 상위가 있어 맺지 못하면 그 상위와 상위가 없는 쪽의 쌍을 넘겨 묻는다. 나란한 흐름으로 묶였던
+ * 쌍의 답이 바뀌면 그 쌍이 맺은 고리를 지우지 않고 그 고리의 두 끝을 넘겨 묻는다.
  */
 @Service
 public class RelationRound {
@@ -443,6 +446,9 @@ public class RelationRound {
 					overturn(first, second, none, now);
 					this.relations.unlink(first, second);
 					outcome = RelationRule.outcomeOf(none);
+					if (none.reason() == RelationRule.Decision.Reason.SECOND_PARENT) {
+						referToParent(first, second, now);
+					}
 				}
 				case RelationRule.Decision.Fragments fragments -> {
 					if (FragmentMerge.decide(fragments, this.criteria) instanceof FragmentMerge.Action.Merge merge) {
@@ -467,16 +473,19 @@ public class RelationRound {
 					}
 					this.relations.unlink(first, second);
 					boolean opened = false;
+					Grouping.Consensus consensus = null;
 					switch (action) {
 						case Grouping.Action.Open open ->
 							opened = open(first, second, parallel, evaluated, judgementId, criteriaIds, now);
 						case Grouping.Action.Refer refer -> refer(refer.parent(), refer.other(), now);
+						case Grouping.Action.Among among ->
+							consensus = among(among, first, second, parallel, judgementId, criteriaIds, now);
 						case Grouping.Action.Already already -> {
 						}
 						case Grouping.Action.Reject reject -> {
 						}
 					}
-					outcome = Grouping.outcomeOf(action, opened);
+					outcome = Grouping.outcomeOf(action, opened, consensus);
 				}
 			}
 			this.relations.recordAsked(first, second, pair.smallerEvents(), judgementId, criteriaIds.relation(), outcome,
@@ -502,6 +511,56 @@ public class RelationRound {
 		for (Relation released : overturn.released()) {
 			this.relations.regroup(released, null);
 			refer(released.sourceId(), released.targetId(), now);
+		}
+	}
+
+	/**
+	 * 다른 흐름을 하위를 가진 상위 아래 둘지 정해 반영한다(storyline-R38) — 그 상위의 하위들과 다른 흐름의 마지막 결말을 보고, 모두 나란한
+	 * 흐름이면 상위의 하위로 두고, 아직 묻지 않은 하위가 있으면 그 쌍들을 넘겨 묻는다. 하위의 사건은 상위로 옮기지 않는다. 이 쌍이
+	 * 상위와 다른 흐름의 쌍이면 그 고리는 이 쌍 자신의 관계이고, 아니면 이 쌍의 판정이 맺은 고리다(맺은 쌍 표지)
+	 */
+	private Grouping.Consensus among(Grouping.Action.Among among, long first, long second,
+			RelationRule.Decision.Parallel parallel, long judgementId, Criteria criteriaIds, Instant now) {
+		Map<Long, RelationOutcome> asked = new HashMap<>();
+		for (StoredAsked record : this.relations.askedOf(among.other())) {
+			asked.put((record.lowId() == among.other()) ? record.highId() : record.lowId(), record.outcome());
+		}
+		Grouping.Consensus consensus = Grouping.among(among, asked);
+		switch (consensus) {
+			case Grouping.Consensus.Join join -> {
+				Relation relation = new Relation(among.parent(), among.other(), RelationKind.CONTAINS);
+				if (among.parent() == first || among.parent() == second) {
+					this.relations.link(relation, parallel.probability(), judgementId, criteriaIds.relation(), now);
+				}
+				else {
+					this.relations.linkGrouped(relation, GroupedBy.of(first, second), parallel.probability(), judgementId,
+							criteriaIds.relation(), now);
+				}
+				this.queue.enqueue(among.parent(), now);
+			}
+			case Grouping.Consensus.Ask ask -> ask.siblings().forEach(sibling -> refer(among.other(), sibling, now));
+			case Grouping.Consensus.Stay stay -> {
+			}
+		}
+		return consensus;
+	}
+
+	/**
+	 * 포함으로 답했으나 하위에 이미 다른 상위가 있어 맺지 못했다 — 상위가 없는 쪽이 그 하위를 포함한다는 답이면 그 하위의 상위와 상위가
+	 * 없는 쪽의 쌍을 넘겨 묻는다(storyline-R38). 둘째 상위로 맺지 못하는 포함은 하위 쪽에 상위가 있는 것이므로, 한쪽에만 상위가 있으면
+	 * 그쪽이 하위다
+	 */
+	private void referToParent(long first, long second, Instant now) {
+		RelationGraph graph = new RelationGraph(this.relations.all()).without(first, second);
+		Optional<Long> parentOfFirst = graph.parentOf(first);
+		Optional<Long> parentOfSecond = graph.parentOf(second);
+		if (parentOfFirst.isPresent() == parentOfSecond.isPresent()) {
+			return;
+		}
+		long parent = parentOfFirst.orElseGet(parentOfSecond::get);
+		long other = parentOfFirst.isPresent() ? second : first;
+		if (parent != other && !graph.ancestors(parent).contains(other)) {
+			refer(parent, other, now);
 		}
 	}
 

@@ -362,6 +362,51 @@ class RelationRoundFlowTests {
 
 		assertThat(this.relations.all()).containsExactly(new Relation(other, b, RelationKind.CONTAINS));
 		assertThat(askedRow(a, b)).containsEntry("outcome", "SECOND_PARENT");
+		// 상위가 없는 a 가 b 를 포함한다는 답이다 — b 의 상위와 a 의 쌍을 넘겨 묻는다(storyline-R38)
+		assertThat(this.relations.referred(other)).containsExactly(a);
+		assertThat(queued()).containsExactlyInAnyOrder(other, a);
+	}
+
+	@Test
+	void aContainmentRefusedBetweenTwoChildrenOfDifferentParentsRefersNothing() {
+		long shared = event(EARLY, 1);
+		long a = storyline("[1,0]", EARLY, LATE, shared, event(EARLY, 1), event(EARLY, 1));
+		long b = storyline("[0,1]", LATE, LATE, shared, event(LATE, 1), event(LATE, 1));
+		long parentOfA = away(3);
+		long parentOfB = away(3);
+		long criteriaId = this.relations.registerCriteria(CRITERIA, NOW);
+		this.relations.link(new Relation(parentOfA, a, RelationKind.CONTAINS), 0.7, 40, criteriaId, NOW);
+		this.relations.link(new Relation(parentOfB, b, RelationKind.CONTAINS), 0.7, 41, criteriaId, NOW);
+		this.queue.enqueue(a, NOW);
+
+		round(answer(RelationAnswer.SECOND_PART_OF_FIRST, 0.9, 0.9, 0.9, 49)).run();
+
+		assertThat(askedRow(a, b)).containsEntry("outcome", "SECOND_PARENT");
+		assertThat(this.jdbc.sql("select count(*) from storyline_relation_referrals").query(Long.class).single())
+			.isZero();
+		assertThat(queued()).isEmpty();
+	}
+
+	@Test
+	void aContainmentRefusedToAnAncestorOfTheChildsParentRefersNothing() {
+		long shared = event(EARLY, 1);
+		long a = storyline("[1,0]", EARLY, LATE, shared, event(EARLY, 1), event(EARLY, 1));
+		long b = storyline("[0,1]", LATE, LATE, shared, event(LATE, 1), event(LATE, 1));
+		// a ⊃ between ⊃ b — b 의 상위는 이미 a 아래 있다
+		long between = away(3);
+		long criteriaId = this.relations.registerCriteria(CRITERIA, NOW);
+		this.relations.link(new Relation(a, between, RelationKind.CONTAINS), 0.7, 40, criteriaId, NOW);
+		this.relations.link(new Relation(between, b, RelationKind.CONTAINS), 0.7, 41, criteriaId, NOW);
+		this.queue.enqueue(a, NOW);
+
+		round(answer(RelationAnswer.SECOND_PART_OF_FIRST, 0.9, 0.9, 0.9, 49)).run();
+
+		// a 가 b 를 포함한다는 답은 둘째 상위라 맺지 못한다. b 의 상위와 a 는 이미 포함으로 이어져 있어 그 쌍을 넘겨 묻지 않는다
+		assertThat(askedRow(a, b)).containsEntry("outcome", "SECOND_PARENT");
+		assertThat(this.relations.all()).containsExactlyInAnyOrder(new Relation(a, between, RelationKind.CONTAINS),
+				new Relation(between, b, RelationKind.CONTAINS));
+		assertThat(this.jdbc.sql("select count(*) from storyline_relation_referrals").query(Long.class).single())
+			.isZero();
 	}
 
 	@Test
@@ -763,7 +808,7 @@ class RelationRoundFlowTests {
 	}
 
 	@Test
-	void aParallelFlowIsReferredToTheParentOfTheOtherAndThatPairIsGroupedLikeAnyOtherPair() {
+	void aParallelFlowIsReferredToAParentWithNoOtherChildAndJoinsItWhenThatPairIsParallelToo() {
 		long a = storyline(new float[] { 1, 0 }, Map.of("금리", 3), event(EARLY, 1), event(EARLY, 1), event(EARLY, 1));
 		long b = storyline(new float[] { 1, 0 }, Map.of("금리", 3), event(LATE, 1), event(LATE, 1), event(LATE, 1));
 		// 상위는 점수로도 사건으로도 b 의 후보가 아니다
@@ -787,14 +832,121 @@ class RelationRoundFlowTests {
 
 		round.run();
 
-		// 넘겨 물은 쌍도 나란한 흐름이다 — 하위를 가진 쪽 아래 넣지 않고 그 둘 위에 상위를 연다
-		long group = opened(a, b, parent);
+		// 넘겨 물은 쌍도 나란한 흐름이다 — 하위를 가진 상위 위에 상위를 열지 않는다. b 는 그 상위의 하위 a 와 나란한 흐름이므로
+		// 그 상위의 하위가 된다. 고리는 (상위, b) 쌍 자신의 관계다(맺은 쌍 표지 없음)
+		assertThat(storylineCount()).isEqualTo(3);
 		assertThat(this.asked).hasSize(2);
 		assertThat(this.relations.all()).containsExactlyInAnyOrder(new Relation(parent, a, RelationKind.CONTAINS),
-				new Relation(group, parent, RelationKind.CONTAINS), new Relation(group, b, RelationKind.CONTAINS));
+				new Relation(parent, b, RelationKind.CONTAINS));
+		assertThat(this.relations.of(b)).singleElement().satisfies(stored -> {
+			assertThat(stored.groupedBy()).isNull();
+			assertThat(stored.judgementId()).isEqualTo(61);
+		});
 		assertThat(askedRow(parent, b)).containsEntry("outcome", "GROUPED");
 		assertThat(this.relations.referred(parent)).isEmpty();
+		// 하위의 사건은 상위로 옮기지 않는다
+		assertThat(members(parent)).hasSize(3);
 		assertThat(this.membershipAsked).isEmpty();
+	}
+
+	@Test
+	void aFlowParallelWithEveryChildOfAParentJoinsItWithoutOpeningAnotherParent() {
+		long[] first = { event(EARLY, 1), event(EARLY, 1), event(EARLY, 1) };
+		long[] second = { event(LATE, 1), event(LATE, 1), event(LATE, 1) };
+		long a = storyline(new float[] { 1, 0 }, Map.of("금리", 3), EARLY, LATE, first);
+		long c = storyline(new float[] { 1, 0 }, Map.of("금리", 3), LATE, LATE, second);
+		long group = grouped(a, c, first[0], first[1], second[0], second[1]);
+		long b = storyline(new float[] { 1, 0 }, Map.of("금리", 3), event(LATE, 1), event(LATE, 1), event(LATE, 1));
+		long criteriaId = this.relations.registerCriteria(CRITERIA, NOW);
+		// b 는 a 와만 물린다 — c 와는 다시 물을 때가 아닌 옛 기록이 없고 넘김으로만 물린다
+		this.relations.recordAsked(a, c, 3, 61L, criteriaId, RelationOutcome.GROUPED, NOW);
+		this.queue.enqueue(a, NOW);
+		FlowRelation judge = query -> judged(RelationAnswer.PARALLEL, 0.9, 0.9, 0.9,
+				(query.first().flowId() == a || query.second().flowId() == a) ? 71 : 72);
+		RelationRound round = groupingRound(judge, membership(Map.of(), 81));
+
+		round.run();
+
+		// (a, b) 는 나란한 흐름이고 a 의 상위에 다른 하위 c 가 있다 — 상위에 묻지 않고 (b, c) 를 넘겨 묻는다
+		assertThat(askedRow(a, b)).containsEntry("outcome", "REFERRED").containsEntry("judgement_id", 71L);
+		assertThat(this.relations.referred(b)).contains(c);
+		assertThat(this.relations.referred(group)).isEmpty();
+		assertThat(this.relations.all()).containsExactlyInAnyOrder(new Relation(group, a, RelationKind.CONTAINS),
+				new Relation(group, c, RelationKind.CONTAINS));
+
+		round.run();
+
+		// (b, c) 도 나란한 흐름이다 — 상위의 하위 모두와 나란하므로 b 를 그 상위의 하위로 둔다. 새 상위는 열지 않는다
+		assertThat(storylineCount()).isEqualTo(4);
+		assertThat(this.relations.all()).containsExactlyInAnyOrder(new Relation(group, a, RelationKind.CONTAINS),
+				new Relation(group, c, RelationKind.CONTAINS), new Relation(group, b, RelationKind.CONTAINS));
+		// 그 고리는 마지막으로 합의를 채운 쌍 (b, c) 의 판정이 맺은 것이다
+		assertThat(this.relations.of(b))
+			.filteredOn(stored -> stored.relation().equals(new Relation(group, b, RelationKind.CONTAINS)))
+			.singleElement()
+			.satisfies(stored -> {
+				assertThat(stored.groupedBy()).isEqualTo(GroupedBy.of(b, c));
+				assertThat(stored.judgementId()).isEqualTo(72);
+			});
+		assertThat(askedRow(b, c)).containsEntry("outcome", "GROUPED");
+		assertThat(this.relations.referred(b)).isEmpty();
+		// 하위의 사건은 상위로 옮기지 않고, 상위를 여는 평가도 부르지 않는다
+		assertThat(members(group)).containsExactlyInAnyOrder(first[0], first[1], second[0], second[1]);
+		assertThat(this.membershipAsked).isEmpty();
+	}
+
+	@Test
+	void aFlowThatIsNotParallelWithAChildOfTheParentStaysOutOfIt() {
+		long[] first = { event(EARLY, 1), event(EARLY, 1), event(EARLY, 1) };
+		long[] second = { event(LATE, 1), event(LATE, 1), event(LATE, 1) };
+		long a = storyline(new float[] { 1, 0 }, Map.of("금리", 3), EARLY, LATE, first);
+		long c = storyline(new float[] { 1, 0 }, Map.of("금리", 3), LATE, LATE, second);
+		long group = grouped(a, c, first[0], first[1], second[0], second[1]);
+		long b = storyline(new float[] { 1, 0 }, Map.of("금리", 3), event(LATE, 1), event(LATE, 1), event(LATE, 1));
+		long criteriaId = this.relations.registerCriteria(CRITERIA, NOW);
+		this.relations.recordAsked(a, c, 3, 61L, criteriaId, RelationOutcome.GROUPED, NOW);
+		this.queue.enqueue(a, NOW);
+		// (a, b) 는 나란한 흐름, (b, c) 는 해당 없음
+		FlowRelation judge = query -> (query.first().flowId() == a || query.second().flowId() == a)
+				? judged(RelationAnswer.PARALLEL, 0.9, 0.9, 0.9, 71)
+				: judged(RelationAnswer.NONE, 0.9, 0.9, 0.9, 72);
+		RelationRound round = groupingRound(judge, membership(Map.of(), 81));
+
+		round.run();
+		round.run();
+
+		assertThat(askedRow(b, c)).containsEntry("outcome", "NOT_RELATED");
+		assertThat(this.relations.all()).containsExactlyInAnyOrder(new Relation(group, a, RelationKind.CONTAINS),
+				new Relation(group, c, RelationKind.CONTAINS));
+		assertThat(storylineCount()).isEqualTo(4);
+		assertThat(this.jdbc.sql("select count(*) from storyline_relation_referrals").query(Long.class).single())
+			.isZero();
+		assertThat(queued()).isEmpty();
+	}
+
+	@Test
+	void aParallelPairWhoseOtherFlowAlreadyFailedWithAChildIsLeftUngroupedWithoutAskingMore() {
+		long[] first = { event(EARLY, 1), event(EARLY, 1), event(EARLY, 1) };
+		long[] second = { event(LATE, 1), event(LATE, 1), event(LATE, 1) };
+		long a = storyline(new float[] { 1, 0 }, Map.of("금리", 3), EARLY, LATE, first);
+		long c = storyline(new float[] { 1, 0 }, Map.of("금리", 3), LATE, LATE, second);
+		long group = grouped(a, c, first[0], first[1], second[0], second[1]);
+		long b = storyline(new float[] { 1, 0 }, Map.of("금리", 3), event(LATE, 1), event(LATE, 1), event(LATE, 1));
+		long criteriaId = this.relations.registerCriteria(CRITERIA, NOW);
+		this.relations.recordAsked(a, c, 3, 61L, criteriaId, RelationOutcome.GROUPED, NOW);
+		// b 와 c 는 앞서 물어 확률 미달이었다
+		this.relations.recordAsked(b, c, 3, 70L, criteriaId, RelationOutcome.LOW_PROBABILITY, NOW);
+		this.queue.enqueue(a, NOW);
+
+		groupingRound(answer(RelationAnswer.PARALLEL, 0.9, 0.9, 0.9, 71), membership(Map.of(), 81)).run();
+
+		assertThat(this.asked).hasSize(1);
+		assertThat(askedRow(a, b)).containsEntry("outcome", "UNGROUPED").containsEntry("judgement_id", 71L);
+		assertThat(this.relations.all()).containsExactlyInAnyOrder(new Relation(group, a, RelationKind.CONTAINS),
+				new Relation(group, c, RelationKind.CONTAINS));
+		assertThat(storylineCount()).isEqualTo(4);
+		assertThat(this.jdbc.sql("select count(*) from storyline_relation_referrals").query(Long.class).single())
+			.isZero();
 	}
 
 	@Test

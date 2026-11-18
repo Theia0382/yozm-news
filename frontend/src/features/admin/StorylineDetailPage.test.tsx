@@ -334,9 +334,7 @@ describe("StorylineDetailPage", () => {
       "해당 없음 0.1 · 조각 0.7 · 나란한 흐름 0.2 · 20 ⊂ 7 0.7 · 7 ⊂ 20 0.05 · 7 → 20 0.1 · 20 → 7 0.05 · 한 사안 7 0.8 · 20 0.6",
     );
     expect(cells(table, 2)[1]).toHaveTextContent(/^나란한 흐름 — 묶음$/);
-    expect(cells(table, 3)[1]).toHaveTextContent(
-      /^나란한 흐름 — 상위에 넘겨 물음$/,
-    );
+    expect(cells(table, 3)[1]).toHaveTextContent(/^나란한 흐름 — 넘겨 물음$/);
     expect(cells(table, 4)[1]).toHaveTextContent(/^나란한 흐름 — 묶지 않음$/);
   });
 
