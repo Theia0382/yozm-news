@@ -10,7 +10,7 @@ import net.yozmnews.digest.domain.candidate.DigestCandidate;
 
 /**
  * 다이제스트 생성의 입력 — 후보 선별이 한 번 읽어 낸 사용자 프로필 · 후보 · 큰 스토리라인 묶음. 토큰 어림에 쓴 글을 그대로 담아 프롬프트에
- * 싣는 글과 같다(ADR-0210) — docs/specs/digest.md §5
+ * 싣는 글과 같다(ADR-0210) — docs/specs/digest.md §5 · digest-R22
  *
  * @param profile 사용자 프로필
  * @param candidates 후보 — 생성에 넘기는 순서(큰 슬롯 기사 다음 구독 후보)

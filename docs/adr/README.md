@@ -215,9 +215,14 @@
 | [0207](0207-digest-candidates-enter-a-period-by-first-evaluation-time-with-a-published-time-floor.md) | 다이제스트 후보는 첫 평가 시각으로 기간에 넣고, 발행 시각 하한으로 오래된 기사를 막는다 | 승인 |
 | [0208](0208-the-big-slot-takes-the-representatives-of-the-heaviest-events-of-each-big-storyline-row.md) | 큰 슬롯은 큰 판정 행마다 기간 안 중요도 합이 큰 사건 몇 개의 대표 기사를 넣는다 | 승인 |
 | [0209](0209-maximum-candidates-and-big-slots-are-user-settings-and-the-big-slot-takes-at-most-half.md) | 최대 후보 수와 큰 슬롯 수는 사용자 설정이고, 큰 슬롯은 최대 후보 수의 절반을 넘지 않는다 | 승인 |
-| [0210](0210-candidate-selection-cuts-to-the-input-token-budget-with-one-estimate-the-prompt-follows.md) | 입력 토큰 예산은 후보 선별이 `digest` 의 한 추정 규칙으로 세어 자르고, 프롬프트 구성이 그 규칙을 따른다 | 승인 |
-| [0211](0211-the-digest-consumer-query-of-interest-settings-writes-nothing-and-returns-followed-preferences-with-expanded-topics.md) | 다이제스트가 읽는 관심 설정 조회는 쓰지 않고, 따라가기 결과와 펼친 주제 구독을 낸다 | 승인 |
+| [0210](0210-candidate-selection-cuts-to-the-input-token-budget-with-one-estimate-the-prompt-follows.md) | 입력 토큰 예산은 후보 선별이 `digest` 의 한 추정 규칙으로 세어 자르고, 프롬프트 구성이 그 규칙을 따른다 | 승인 (부분 대체: 0219 · 0220) |
+| [0211](0211-the-digest-consumer-query-of-interest-settings-writes-nothing-and-returns-followed-preferences-with-expanded-topics.md) | 다이제스트가 읽는 관심 설정 조회는 쓰지 않고, 따라가기 결과와 펼친 주제 구독을 낸다 | 승인 (부분 대체: 0219) |
 | [0212](0212-migrations-never-delete-user-data-or-the-shared-rows-and-ids-it-references-and-moved-data-is-checked-by-a-data-test.md) | 마이그레이션은 사용자 데이터와 그것이 가리키는 공유 데이터의 행 · ID 를 지우지 않고, 데이터를 옮기면 데이터 시험으로 대조한다 | 승인 |
+| [0217](0217-the-digest-summary-length-is-a-user-setting-in-the-digest-volume-section.md) | 다이제스트의 요약 길이는 사용자 설정이고 "다이제스트 분량" 구획에 있다 | 승인 |
+| [0218](0218-the-digest-generation-reasoning-effort-is-a-user-setting-defaulting-to-medium.md) | 다이제스트 생성의 추론 강도는 사용자 설정이고 기본은 보통이다 | 승인 |
+| [0219](0219-candidate-selection-hands-over-the-prompt-material-read-once-with-its-token-estimate.md) | 프롬프트 재료는 후보 선별이 토큰 어림과 같은 한 번의 읽기로 낸다 | 승인 |
+| [0220](0220-big-slot-candidates-are-grouped-by-big-storyline-row-in-the-prompt-and-the-digest-llm-neither-makes-nor-links-groups.md) | 큰 슬롯 후보는 큰 판정 행마다 묶어 프롬프트에 보이고, 다이제스트 LLM 은 묶음을 새로 만들거나 잇지 않는다 | 승인 |
+| [0221](0221-generator-results-are-success-or-failure-and-the-use-case-asks-once-more-only-for-a-complete-unreadable-answer.md) | 다이제스트 생성기의 결과는 성공 · 실패 갈래이고, 끝까지 쓴 응답을 읽지 못하면 유스케이스가 한 번 다시 묻는다 | 승인 |
 
 ## 운영 규칙
 

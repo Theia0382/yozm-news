@@ -64,7 +64,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * 실제 생성기의 전체 흐름 — profile {@code local} 문맥에서 관문의 로컬 대체물(가짜 키 {@code yozm-local-<낱말>})로 실제 생성기
- * ({@link LlmDigestGenerator})를 지나 다이제스트가 끝나는 코드까지(AC6 · C-2). {@code local} 의 결선된 생성기는 로컬 대체물(ADR-0187)이라 실제
+ * ({@link LlmDigestGenerator})를 지나 다이제스트가 끝나는 코드까지. {@code local} 의 결선된 생성기는 로컬 대체물(ADR-0187)이라 실제
  * 생성기는 시험이 관문 빈으로 직접 만들어 유스케이스의 패키지 생성자에 넣는다. 공급자에 닿지 않는다.
  * <p>
  * 키는 등록 처리기가 검증 성공 때만 저장하므로 저장소 · 봉투 암호로 넣고, 주인은 실제 계정이다 — 무효 이벤트를 알림 리스너가 받는다. 가짜 키

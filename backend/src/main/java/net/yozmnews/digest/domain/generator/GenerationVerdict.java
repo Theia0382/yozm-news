@@ -8,7 +8,7 @@ import net.yozmnews.digest.domain.output.OutputRead;
 import net.yozmnews.llm.GenerationStop;
 
 /**
- * 생성 한 번의 판정 — 읽을지 · 다시 물을지 · 실패로 끝낼지. 정본 — docs/specs/digest.md §5
+ * 생성 한 번의 판정 — 읽을지 · 다시 물을지 · 실패로 끝낼지. 정본 — docs/specs/digest.md §5 · digest-R24
  * <p>
  * 끝까지 쓴 응답만 읽는다. 첫 호출에서 읽지 못하면 다시 묻고({@link #judge}), 다시 물은 호출에서 읽지 못하면 실패로 끝낸다({@link #settle}) —
  * 한 생성에 다시 묻기는 한 번이다. 잘린 응답 · 거절은 같은 요청을 다시 보내도 같을 가능성이 커서 다시 묻지 않고 그 사유의 코드로 끝낸다.

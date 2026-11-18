@@ -4,9 +4,9 @@ import net.yozmnews.digest.domain.output.DigestOutputSchema;
 import net.yozmnews.user.SummaryLength;
 
 /**
- * 프롬프트 구성의 상수 · 길이 기준 — 정본 — docs/specs/digest.md §5
+ * 프롬프트 구성의 상수 · 길이 기준 — 정본 — docs/specs/digest.md §5 · digest-R23
  * <p>
- * 길이 기준은 측정 전 목표다 — 실제 다이제스트의 출력(#182 의 측정)으로 고친다. 기준은 출력 서술의 상한({@link DigestOutputSchema}) 안이다.
+ * 길이 기준은 측정 전 목표다 — 실제 공급자로 만든 다이제스트의 출력 길이를 재서 고친다. 기준은 출력 서술의 상한({@link DigestOutputSchema}) 안이다.
  */
 public final class PromptRules {
 

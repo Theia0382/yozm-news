@@ -15,7 +15,7 @@ import net.yozmnews.llm.LlmClientFactory;
 import net.yozmnews.llm.StoredGeneration;
 
 /**
- * 실제 생성기 — 사용자의 저장한 키로 {@code llm} 관문의 생성 호출을 부르고 결과를 생성기 결과로 옮긴다 · docs/specs/digest.md §4
+ * 실제 생성기 — 사용자의 저장한 키로 {@code llm} 관문의 생성 호출을 부르고 결과를 생성기 결과로 옮긴다 · docs/specs/digest.md §4 · digest-R25
  * <p>
  * 판단이 없다 — 요청의 프롬프트 · 쓸 모델 · 추론 강도를 관문 요청으로, 관문 결과를 생성기 결과로 옮기기만 한다. 본문 몫은 관문의 상한
  * ({@link GenerationRequest#MAX_BODY_TOKENS})이고 글 길이는 지시가 정한다. 키 · 프롬프트 · 응답 본문을 로그에 남기지 않는다. 다시 묻기는

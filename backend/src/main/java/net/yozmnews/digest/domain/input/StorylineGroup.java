@@ -6,7 +6,7 @@ import java.util.Objects;
 import net.yozmnews.article.ArticleId;
 
 /**
- * 큰 스토리라인 묶음 하나 — 큰 판정 행 하나에서 들어온 큰 슬롯 후보 — docs/specs/digest.md §5
+ * 큰 스토리라인 묶음 하나 — 큰 판정 행 하나에서 들어온 큰 슬롯 후보 — docs/specs/digest.md §5 · digest-R19 · R22
  * <p>
  * 다이제스트 LLM 이 읽는 표시일 뿐이다 — 묶음을 새로 만들거나 잇지 않는다(ADR-0101).
  *

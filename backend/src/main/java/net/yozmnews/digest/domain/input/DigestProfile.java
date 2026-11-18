@@ -8,7 +8,7 @@ import net.yozmnews.llm.ReasoningEffort;
 import net.yozmnews.user.SummaryLength;
 
 /**
- * 프롬프트의 사용자 프로필 재료 — 후보 선별이 관심 설정에서 만든다 — docs/specs/digest.md §5
+ * 프롬프트의 사용자 프로필 재료 — 후보 선별이 관심 설정에서 만든다 — docs/specs/digest.md §5 · digest-R22
  *
  * @param topics 구독 행의 이름 — 활성 태그 체계의 이름, 체계 순서
  * @param excludedRegions 제외한 지역의 이름 — 체계 순서
