@@ -59,12 +59,13 @@ final class SchemaRewrite {
 						: property.getValue());
 			}
 			out.set("properties", rewritten);
-			switch (this.required) {
-				case AS_GIVEN -> {
-				}
-				case ALL_NULL_IN_TYPE_AND_VALUES -> requireAll(out, rewritten, false);
-				case ALL_NULL_IN_VALUES_WITHOUT_TYPE -> requireAll(out, rewritten, true);
-			}
+			Runnable require = switch (this.required) {
+				case AS_GIVEN -> () -> {
+				};
+				case ALL_NULL_IN_TYPE_AND_VALUES -> () -> requireAll(out, rewritten, false);
+				case ALL_NULL_IN_VALUES_WITHOUT_TYPE -> () -> requireAll(out, rewritten, true);
+			};
+			require.run();
 		}
 		if (out.get("items") instanceof ObjectNode items) {
 			out.set("items", rewrite(items));

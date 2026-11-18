@@ -189,8 +189,6 @@ class PreferenceFollowupsTests {
 		assertThat(publications()).isEqualTo(before + 1);
 	}
 
-
-
 	private UserId account(String email) {
 		ProvisionResult result = this.transaction.execute(status -> this.provisioning.provision(Onboarding.OPEN_SIGN_UP,
 				EmailAddress.parse(email).orElseThrow(), new DisplayName("사용자"),

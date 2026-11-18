@@ -1,3 +1,4 @@
+import type { ReactElement } from "react";
 import { useState } from "react";
 import type { Schemas } from "@/features/admin/adminClient";
 import {
@@ -26,7 +27,7 @@ export function FeedEnableResultView({
   result,
 }: {
   result: FeedEnableResponse;
-}) {
+}): ReactElement {
   switch (result.result) {
     case "ENABLED":
       return (
@@ -67,7 +68,11 @@ export function FeedEnableResultView({
 }
 
 /** 등록 전 원문의 피드 미리보기 결과 */
-export function PreviewResultView({ result }: { result: PreviewResponse }) {
+export function PreviewResultView({
+  result,
+}: {
+  result: PreviewResponse;
+}): ReactElement {
   switch (result.result) {
     case "INVALID_PROFILE":
       return (

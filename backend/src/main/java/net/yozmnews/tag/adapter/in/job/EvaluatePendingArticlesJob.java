@@ -21,7 +21,6 @@ public class EvaluatePendingArticlesJob {
 
 	private final EvaluationRound round;
 
-
 	EvaluatePendingArticlesJob(EvaluationRound round) {
 		this.round = round;
 	}

@@ -123,10 +123,12 @@ public final class DigestOutputSchema {
 			}
 			case OutputShape.Str str -> {
 				node.put("type", type("string", nullable));
-				switch (str.onBlank()) {
-					case UNREADABLE, KEEP -> node.put("minLength", 1);
-					case ABSENT -> {
-					}
+				boolean rejectsBlank = switch (str.onBlank()) {
+					case UNREADABLE, KEEP -> true;
+					case ABSENT -> false;
+				};
+				if (rejectsBlank) {
+					node.put("minLength", 1);
 				}
 				node.put("maxLength", str.maxCodePoints());
 			}

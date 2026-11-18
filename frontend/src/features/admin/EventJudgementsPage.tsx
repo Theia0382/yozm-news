@@ -1,4 +1,5 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
+import type { ReactElement } from "react";
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import {
@@ -178,7 +179,7 @@ function JudgementsTable({ rows }: { rows: Row[] }) {
   );
 }
 
-function UseView({ row }: { row: Row }) {
+function UseView({ row }: { row: Row }): ReactElement {
   switch (row.use) {
     case "ASSIGNMENT":
       return (

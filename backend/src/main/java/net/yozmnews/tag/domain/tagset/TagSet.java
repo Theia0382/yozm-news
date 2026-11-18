@@ -190,8 +190,8 @@ public final class TagSet {
 		List<TagDef> regions = new ArrayList<>();
 		List<FormatDef> formats = new ArrayList<>();
 		for (TagRow row : rows) {
-			switch (row.kind()) {
-				case TOPIC -> {
+			Runnable place = switch (row.kind()) {
+				case TOPIC -> () -> {
 					if (row.parentKey() == null) {
 						List<TagDef> subtopics = rows.stream()
 							.filter(child -> child.kind() == TagKind.TOPIC && row.key().equals(child.parentKey()))
@@ -199,11 +199,12 @@ public final class TagSet {
 							.toList();
 						topics.add(new TopicCategoryDef(new TagKey(row.key()), row.name(), row.description(), subtopics));
 					}
-				}
-				case REGION -> regions.add(new TagDef(new TagKey(row.key()), row.name(), row.description()));
-				case FORMAT -> formats.add(new FormatDef(new TagKey(row.key()), row.name(), row.description(),
+				};
+				case REGION -> () -> regions.add(new TagDef(new TagKey(row.key()), row.name(), row.description()));
+				case FORMAT -> () -> formats.add(new FormatDef(new TagKey(row.key()), row.name(), row.description(),
 						row.excludedByDefault()));
-			}
+			};
+			place.run();
 		}
 		List<ImportanceLevelDef> importance = this.rubrics.stream()
 			.sorted(Comparator.comparingInt(ImportanceRubricRow::level))

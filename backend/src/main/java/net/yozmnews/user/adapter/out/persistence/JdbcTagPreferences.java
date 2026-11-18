@@ -42,11 +42,12 @@ class JdbcTagPreferences implements TagPreferenceRepository {
 			.param("user", user.value())
 			.query((rs, n) -> {
 				String key = rs.getString("tag_key");
-				switch (TagKind.valueOf(rs.getString("tag_kind"))) {
-					case TOPIC -> topics.add(key);
-					case REGION -> regions.add(key);
-					case FORMAT -> formats.add(key);
-				}
+				Set<String> keys = switch (TagKind.valueOf(rs.getString("tag_kind"))) {
+					case TOPIC -> topics;
+					case REGION -> regions;
+					case FORMAT -> formats;
+				};
+				keys.add(key);
 				return key;
 			})
 			.list();
@@ -68,10 +69,11 @@ class JdbcTagPreferences implements TagPreferenceRepository {
 	/** 차이를 현재 상태 행으로 옮긴다 — 더함은 행 넣기, 해제는 행 지우기. 이력은 쓰지 않는다 */
 	private void write(UserId user, List<PreferenceChange> changes, Instant now) {
 		for (PreferenceChange change : changes) {
-			switch (change.action()) {
-				case ADD -> insertRow(user, change.kind(), change.key(), now);
-				case REMOVE -> deleteRow(user, change.kind(), change.key());
-			}
+			Runnable step = switch (change.action()) {
+				case ADD -> () -> insertRow(user, change.kind(), change.key(), now);
+				case REMOVE -> () -> deleteRow(user, change.kind(), change.key());
+			};
+			step.run();
 		}
 	}
 
