@@ -35,7 +35,15 @@ public final class DigestScheduleRules {
 	public static final Duration RUN_LEASE = LlmClientFactory.LONGEST_GENERATION_CALL.multipliedBy(2)
 		.plus(Duration.ofMinutes(10));
 
+	/** 사용자가 하루(사용자 시간대)에 요청할 수 있는 수동 생성 수 */
+	public static final int MANUAL_PER_DAY = 3;
+
 	private DigestScheduleRules() {
+	}
+
+	/** 그 시간대에서 그 날짜가 시작하는 시각 — 서머타임으로 0시가 없는 날은 그날의 첫 시각이다(java.time 의 규칙) */
+	public static Instant startOfDay(LocalDate date, ZoneId zone) {
+		return date.atStartOfDay(zone).toInstant();
 	}
 
 	/**

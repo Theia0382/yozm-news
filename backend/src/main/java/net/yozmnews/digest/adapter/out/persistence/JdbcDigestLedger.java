@@ -14,6 +14,7 @@ import java.util.Optional;
 
 import net.yozmnews.digest.domain.digest.DigestId;
 import net.yozmnews.digest.domain.digest.DigestLedger;
+import net.yozmnews.digest.domain.digest.DigestPeriod;
 import net.yozmnews.platform.UserId;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
@@ -66,6 +67,39 @@ class JdbcDigestLedger implements DigestLedger {
 			.param("user", user.value())
 			.query((rs, n) -> rs.getObject(1, OffsetDateTime.class).toInstant())
 			.optional();
+	}
+
+	@Override
+	public Optional<DigestPeriod> latestPeriodOn(UserId user, LocalDate date) {
+		return this.jdbc.sql("""
+				select period_start, period_end from digests where user_id = :user and digest_date = :date
+				order by id desc limit 1
+				""")
+			.param("user", user.value())
+			.param("date", date)
+			.query((rs, n) -> new DigestPeriod(rs.getObject("period_start", OffsetDateTime.class).toInstant(),
+					rs.getObject("period_end", OffsetDateTime.class).toInstant()))
+			.optional();
+	}
+
+	@Override
+	public boolean inProgress(UserId user) {
+		return this.jdbc.sql("""
+				select exists (select 1 from digests where user_id = :user and status in ('SCHEDULED', 'RUNNING'))
+				""").param("user", user.value()).query(Boolean.class).single();
+	}
+
+	@Override
+	public int manualCountBetween(UserId user, Instant from, Instant to) {
+		return this.jdbc.sql("""
+				select count(*) from digests
+				where user_id = :user and trigger = 'MANUAL' and created_at >= :from and created_at < :to
+				""")
+			.param("user", user.value())
+			.param("from", from.atOffset(ZoneOffset.UTC))
+			.param("to", to.atOffset(ZoneOffset.UTC))
+			.query(Integer.class)
+			.single();
 	}
 
 	@Override

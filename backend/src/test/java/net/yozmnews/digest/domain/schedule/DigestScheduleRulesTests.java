@@ -77,4 +77,15 @@ class DigestScheduleRulesTests {
 		assertThat(DigestScheduleRules.RUN_LEASE).isEqualTo(Duration.ofMinutes(40));
 	}
 
+	@Test
+	void theDayStartsAtLocalMidnight() {
+		// 2026-11-19 0시 PST(UTC−8) = 08:00 UTC, 서머타임 첫날 2026-03-08 의 0시는 아직 PST
+		assertThat(DigestScheduleRules.startOfDay(LocalDate.parse("2026-11-19"), ZoneId.of("America/Los_Angeles")))
+			.isEqualTo(Instant.parse("2026-11-19T08:00:00Z"));
+		assertThat(DigestScheduleRules.startOfDay(LocalDate.parse("2026-03-08"), ZoneId.of("America/Los_Angeles")))
+			.isEqualTo(Instant.parse("2026-03-08T08:00:00Z"));
+		assertThat(DigestScheduleRules.startOfDay(LocalDate.parse("2026-03-09"), ZoneId.of("America/Los_Angeles")))
+			.isEqualTo(Instant.parse("2026-03-09T07:00:00Z"));
+	}
+
 }
