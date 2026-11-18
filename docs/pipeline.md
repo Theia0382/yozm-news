@@ -40,9 +40,10 @@
 ### 일정
 
 - 사용자는 생성 시각과 시간대를 정한다(기본 07:00 `Asia/Seoul` — [user Spec](specs/user.md#관심-설정) user-R50).
-- `ScheduleDueDigests`가 생성 시각 15분 전에 작업을 등록해, 사용자가 열었을 때 준비되어 있게 한다.
-- 다이제스트 기간은 직전 다이제스트의 기간 종료 시각부터 이번 생성 시각까지다. 첫 다이제스트는 최근 24시간으로 한다.
-- 수동 재생성은 하루 N회로 제한한다. 사용자 비용이고 서버 부하이기도 하다.
+- 일정 회차가 1분마다 생성 시각이 지난 사용자의 다이제스트를 날짜마다 한 번 만들고 생성 작업을 등록한다 — 생성 시각 뒤 2시간 안에서만 따라잡고, 그 사용자의 가장 늦은 다이제스트 날짜보다 뒤의 날짜만 만든다. 다이제스트는 생성 시각에 시작해 생성 시간만큼 뒤에 보인다([ADR-0230](adr/0230-scheduled-digests-are-made-after-the-generation-time-and-a-period-runs-from-the-last-ready-or-empty-end-to-that-time.md) · [digest Spec "일정"](specs/digest.md#일정) digest-R29).
+- 다이제스트 기간은 직전에 끝난 다이제스트(`READY` · `EMPTY`)의 기간 끝부터 이번 생성 시각까지다 — 실패한 기간은 다음 다이제스트가 이어서 덮는다. 첫 다이제스트는 최근 24시간, 기간은 72시간까지다. 기간 끝이 후보 선별 시각보다 앞이라 첫 평가 시각으로 넣는 후보(§6 후보 선별)가 빠지지 않는다 — 평가 시각은 커밋 직전에 찍혀, 기간 끝 직전에 찍히고 선별 뒤 커밋된 평가가 빠지는 짧은 틈은 남는다(digest-R30).
+- 수동 생성은 오늘(사용자 시간대) 다이제스트를 같은 기간으로 다시 만들거나, 없으면 요청 시각까지의 새 기간으로 만든다 — 사용자당 하루 세 번, 생성 중이면 받지 않는다. 사용자 비용이고 서버 부하이기도 하다([ADR-0231](adr/0231-manual-generation-remakes-todays-digest-with-its-period-or-makes-a-new-one-and-counts-manual-rows-of-the-users-day.md) · digest-R31).
+- 생성 중인 다이제스트는 다시 시작하지 않는다 — 같은 다이제스트의 공급자 호출은 하나다. 시작되지 않은 다이제스트는 다시 등록하고(만든 지 1시간이 지나면 실패), 임대(40분)가 지나도 끝나지 않는 생성은 실패로 끝낸다. 실패는 화면 내 알림이 된다([ADR-0232](adr/0232-a-running-digest-is-never-started-again-and-stalled-digests-end-interrupted-after-a-lease-or-a-start-deadline.md) · digest-R32 · R33).
 - 쓸 모델이 없는 사용자(유효한 키가 있는 공급자의 허용 모델이 없다)는 일정에서 제외한다 — 고른 모델을 쓸 수 없으면 유효한 키가 있는 공급자의 첫 모델을 쓴다([ADR-0178](adr/0178-the-llm-model-to-use-is-decided-at-query-time-from-the-chosen-model-the-allowed-list-and-key-status.md) · [user Spec](specs/user.md#관심-설정) user-R51).
 
 ### 후보 선별
@@ -124,7 +125,7 @@
   - 스토리라인은 주제를 저장하지 않는다. 스토리라인 구독 변경은 지금 그 스토리라인의 닫은 사건마다 대표 기사 하나의 주제로 몫(그 주제가 붙은 대표 수 ÷ 대표 수)을 세어 그만큼 나눠 더한다.
   - 반응을 노출 수에 가상의 노출을 더한 값으로 나눠 정규화하고, 반감기로 감쇠해 최근 신호에 더 큰 가중치를 준다. 가중치는 0.5 ~ 1.5 이고 신호가 없으면 중립(1)이다. 감쇠 · 가중치 값은 운영하면서 정한다([미결 사항](open-questions.md) 24).
   - 조회할 때 계산하고 저장하지 않는다 — 관심사를 개체로 세우지 않는다. 산식은 노출 기록을 가진 `digest` 의 `domain` 한 곳에 둔다.
-- **관심사 히스토리**: 기간별 주제 관심도, 새로 생긴 관심과 사라진 관심, 대분류에서 중분류로 넓어진 흐름을 보여 준다. 주제는 태그 키 계보(§5)를 따라 이어진다.
+- **관심사 히스토리**: 사용자 시간대의 주 · 월 기간마다 주제 중분류의 관심(기간 끝 — 진행 중인 기간은 지금 — 을 기준 시각으로 그 앞 120일의 신호만 읽어 관심도와 같은 산식으로 계산), 이웃 기간 사이 새로 생긴 관심과 사라진 관심(관심이 기준값 이상인지를 견준다), 그 기간에 사용자가 바꾼 주제 구독을 보여 준다. 주제는 태그 키 계보(§5)를 따라 이어진다. 스토리라인 구독 이력과 주제별 보도량은 보이지 않는다. 규칙의 정본은 [digest Spec "관심사 히스토리"](specs/digest.md#관심사-히스토리)(digest-R34 ~ R37), 판단의 이유는 [ADR-0225](adr/0225-interest-history-values-read-only-the-window-before-each-reference-time-and-the-period-in-progress-is-measured-at-the-call.md) · [ADR-0226](adr/0226-new-and-lost-interests-are-neighbouring-periods-crossing-one-threshold-on-the-interest-value.md) · [ADR-0227](adr/0227-the-interest-history-shows-subtopic-interest-and-the-users-own-topic-subscription-changes-only.md) · [ADR-0229](adr/0229-interest-history-periods-are-monday-weeks-and-calendar-months-in-the-users-zone-and-the-query-takes-a-span-or-reference-times.md)에 있다.
 - **구독 제안**: 구독하지 않은 주제의 관심도가 기준을 넘으면(주로 큰 슬롯에서 받은 좋아요) 그 주제의 구독을 화면에서 제안한다. 구독 여부는 사용자가 정한다. 기준은 운영하면서 정한다.
 
 ## 8. 사건 묶기
@@ -158,7 +159,7 @@
 - **입력**(원문 없음)
   - 이번 기간 구독한 스토리라인의 변화
   - 구독 주제와 큰 스토리라인의 보도량, 이번 기간과 직전 기간의 비교 — 스토리라인의 보도량은 하위의 사건까지 센 기간 안 기사 수이고, 기간에 넣는 시각이 주제별 보도량과 다르다([storyline Spec](specs/storyline.md#공개-조회))
-  - 관심도의 변화, 새로 생긴 관심과 사라진 관심
+  - 관심도의 변화, 새로 생긴 관심과 사라진 관심 — 관심사 히스토리와 같은 판정이고, 리포트의 기간 경계로 `digest` 의 `InterestHistory.at` 을 부른다
   - 새로 나타난 주제와 보도가 줄어든 스토리라인 · 주제
   - 직전 리포트의 요약. 월간 리포트는 그 달의 주간 리포트를 입력으로 삼는다
 - **생성** — `ReportGenerator` 로 (사용자, 리포트 기간)마다 한 번 호출한다. LLM 호출은 `LlmClientFactory` 가 만든 핸들로 한다. 스토리라인 · 기사는 이번 요청에서만 쓰는 별칭으로만 인용한다.

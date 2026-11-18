@@ -25,6 +25,9 @@ public final class InterestRules {
 	/** 중립 가중치 — 신호가 없는 주제 */
 	public static final double NEUTRAL = 1.0;
 
+	/** "관심 있음"의 관심 x 하한(θ) — 관심사 히스토리의 새로 생긴 관심 · 사라진 관심과 화면에 드러낼 주제를 정한다 */
+	public static final double PRESENCE_THRESHOLD = 0.2;
+
 	private InterestRules() {
 	}
 

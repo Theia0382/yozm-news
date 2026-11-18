@@ -45,6 +45,15 @@ export const routes: RouteObject[] = [
             }),
           },
           {
+            // 관심사 히스토리 — 사용자의 관심 신호로 계산한 값이라 키가 있어야 간다
+            path: "interest-history",
+            lazy: async () => ({
+              Component: (
+                await import("@/features/interestHistory/InterestHistoryPage")
+              ).InterestHistoryPage,
+            }),
+          },
+          {
             path: "storylines/:id",
             lazy: async () => ({
               Component: (await import("@/features/storylines/StorylinePage"))

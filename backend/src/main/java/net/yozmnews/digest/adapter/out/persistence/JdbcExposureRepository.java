@@ -3,13 +3,12 @@ package net.yozmnews.digest.adapter.out.persistence;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.time.Instant;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.List;
 import java.util.Objects;
 
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.digest.domain.exposure.ExposureRepository;
+import net.yozmnews.digest.domain.interest.ExposureRow;
 import net.yozmnews.platform.UserId;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
@@ -28,24 +27,21 @@ class JdbcExposureRepository implements ExposureRepository {
 	}
 
 	@Override
-	public Map<ArticleId, Instant> latestExposures(UserId user, Instant from, Instant to) {
-		Map<ArticleId, Instant> exposures = new LinkedHashMap<>();
-		this.jdbc.sql("""
-				select i.article_id, max(d.completed_at) as exposed_at
+	public List<ExposureRow> exposures(UserId user, Instant from, Instant to) {
+		return this.jdbc.sql("""
+				select distinct i.article_id, d.completed_at
 				from digest_items i
 				join digest_sections s on s.id = i.digest_section_id
 				join digests d on d.id = s.digest_id
 				where d.user_id = :user and d.status = 'READY' and d.completed_at >= :from and d.completed_at < :to
-				group by i.article_id
-				order by i.article_id
+				order by d.completed_at, i.article_id
 				""")
 			.param("user", user.value())
 			.param("from", Timestamp.from(from))
 			.param("to", Timestamp.from(to))
-			.query((ResultSet rs) -> {
-				exposures.put(new ArticleId(rs.getLong("article_id")), rs.getTimestamp("exposed_at").toInstant());
-			});
-		return Collections.unmodifiableMap(exposures);
+			.query((ResultSet rs, int row) -> new ExposureRow(new ArticleId(rs.getLong("article_id")),
+					rs.getTimestamp("completed_at").toInstant()))
+			.list();
 	}
 
 }

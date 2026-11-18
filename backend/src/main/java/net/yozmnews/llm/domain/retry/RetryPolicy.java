@@ -31,6 +31,17 @@ public final class RetryPolicy {
 	}
 
 	/**
+	 * 생성 호출 한 번이 걸릴 수 있는 가장 긴 시간 — 요청 마감마다 보내기를 {@link #MAX_SENDS} 번 하고, 그 사이마다 가장 길게 기다린 경우
+	 * ({@link #MAX_RETRY_AFTER} 와 {@link #BACKOFF} 의 가장 긴 값). 산식의 정본이다.
+	 * @param deadline 요청 하나의 마감
+	 */
+	public static Duration longestCall(Duration deadline) {
+		Objects.requireNonNull(deadline, "deadline");
+		Duration longestWait = BACKOFF.stream().reduce(MAX_RETRY_AFTER, (a, b) -> (a.compareTo(b) >= 0) ? a : b);
+		return deadline.multipliedBy(MAX_SENDS).plus(longestWait.multipliedBy(MAX_SENDS - 1));
+	}
+
+	/**
 	 * @param sentCount 지금까지 보낸 횟수 — 1 이상
 	 * @param kind 마지막 실패의 종류
 	 * @param retryAfter 공급자가 준 기다릴 시간 — 없으면 null

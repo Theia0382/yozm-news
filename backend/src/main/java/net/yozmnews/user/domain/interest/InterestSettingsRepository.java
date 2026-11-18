@@ -33,4 +33,10 @@ public interface InterestSettingsRepository {
 	/** 선호 버전이 {@code active} 가 아닌 사용자 — 사용자 ID 가 {@code afterUserId} 보다 큰 것부터 ID 순으로 {@code limit} 개까지 */
 	List<UserId> withPreferenceVersionOtherThan(TagSetId active, long afterUserId, int limit);
 
+	/**
+	 * 쓰는({@code ACTIVE}) 계정 가운데 설정 행이 있는 사용자의 다이제스트 일정 — 사용자 ID 가 {@code afterUserId} 보다 큰 것부터 ID 순으로
+	 * {@code limit} 개까지
+	 */
+	List<ScheduledUser> activeSchedules(long afterUserId, int limit);
+
 }

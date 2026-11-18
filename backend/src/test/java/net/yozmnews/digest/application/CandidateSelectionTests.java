@@ -51,6 +51,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.TestPropertySource;
+import org.jobrunr.scheduling.JobScheduler;
+import net.yozmnews.digest.DigestRounds;
 
 /**
  * 후보 선별의 재료 경로 — 실제 PostgreSQL 의 사용자 설정 · 기사 · 평가 · 사건 행에서 관심 설정 조회 · 첫 평가 시각 · 평가 · 발행 시각 · 소스 ·
@@ -68,6 +70,9 @@ import org.springframework.test.context.TestPropertySource;
 @SpringBootTest
 @TestPropertySource(properties = "jobrunr.background-job-server.enabled=false")
 class CandidateSelectionTests {
+
+	@Autowired
+	JobScheduler digestJobs;
 
 	private static final DigestPeriod DAY = new DigestPeriod(Instant.parse("2026-11-05T00:00:00Z"),
 			Instant.parse("2026-11-06T00:00:00Z"));
@@ -131,6 +136,11 @@ class CandidateSelectionTests {
 	private long a5;
 
 	private long a6;
+
+	@BeforeEach
+	void stopDigestRounds() {
+		DigestRounds.stop(this.digestJobs);
+	}
 
 	@BeforeEach
 	void prepare() {

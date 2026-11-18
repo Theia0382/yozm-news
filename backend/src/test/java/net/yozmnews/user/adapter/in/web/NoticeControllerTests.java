@@ -119,7 +119,7 @@ class NoticeControllerTests {
 			.andExpect(content().json("""
 					{"notices":[
 					  {"id":%d,"kind":"FEED_STATUS","revision":2,"createdAt":"2026-11-13T00:00:00Z",
-					   "updatedAt":"2026-11-13T01:00:00Z","read":false,
+					   "updatedAt":"2026-11-13T01:00:00Z","read":false,"digestFailed":null,
 					   "feedStatus":{"feeds":[
 					     {"feedId":11,"sourceName":"알림일보","section":"정치","firstFrom":"ACTIVE","lastTo":"ACTIVE",
 					      "firstAt":"2026-11-13T00:00:00Z","lastAt":"2026-11-13T01:00:00Z","changes":2},
@@ -127,7 +127,7 @@ class NoticeControllerTests {
 					      "firstAt":"2026-11-13T01:00:00Z","lastAt":"2026-11-13T01:00:00Z","changes":1}]},
 					   "passwordChanged":null,"keyInvalidated":null,"preferencesAdjusted":null,"storylineSubscriptionsRemoved":null},
 					  {"id":%d,"kind":"FEED_STATUS","revision":1,"createdAt":"2026-11-13T00:00:00Z",
-					   "updatedAt":"2026-11-13T00:00:00Z","read":true,
+					   "updatedAt":"2026-11-13T00:00:00Z","read":true,"digestFailed":null,
 					   "feedStatus":{"feeds":[
 					     {"feedId":11,"sourceName":"알림일보","section":"정치","firstFrom":"ACTIVE","lastTo":"DEGRADED",
 					      "firstAt":"2026-11-13T00:00:00Z","lastAt":"2026-11-13T00:00:00Z","changes":1}]},
@@ -150,7 +150,7 @@ class NoticeControllerTests {
 			.andExpect(content().json("""
 					{"notices":[
 					  {"id":%d,"kind":"PASSWORD_CHANGED","revision":1,"createdAt":"2026-11-13T00:00:00Z",
-					   "updatedAt":"2026-11-13T00:00:00Z","read":false,"feedStatus":null,
+					   "updatedAt":"2026-11-13T00:00:00Z","read":false,"digestFailed":null,"feedStatus":null,
 					   "passwordChanged":{"method":"RECOVERY","changedAt":"2026-11-13T00:00:00Z"},
 					   "keyInvalidated":null,"preferencesAdjusted":null,"storylineSubscriptionsRemoved":null}],
 					 "nextBefore":null}
@@ -169,7 +169,7 @@ class NoticeControllerTests {
 			.andExpect(content().json("""
 					{"notices":[
 					  {"id":%d,"kind":"KEY_INVALIDATED","revision":1,"createdAt":"2026-11-13T00:00:00Z",
-					   "updatedAt":"2026-11-13T00:00:00Z","read":false,"feedStatus":null,"passwordChanged":null,
+					   "updatedAt":"2026-11-13T00:00:00Z","read":false,"digestFailed":null,"feedStatus":null,"passwordChanged":null,
 					   "keyInvalidated":{"provider":"ANTHROPIC","invalidatedAt":"2026-11-13T00:30:00.123456Z"},
 					   "preferencesAdjusted":null,"storylineSubscriptionsRemoved":null}],
 					 "nextBefore":null}
@@ -192,7 +192,7 @@ class NoticeControllerTests {
 			.andExpect(content().json("""
 					{"notices":[
 					  {"id":%d,"kind":"PREFERENCES_ADJUSTED","revision":1,"createdAt":"2026-11-13T00:00:00Z",
-					   "updatedAt":"2026-11-13T00:00:00Z","read":false,"feedStatus":null,"passwordChanged":null,
+					   "updatedAt":"2026-11-13T00:00:00Z","read":false,"digestFailed":null,"feedStatus":null,"passwordChanged":null,
 					   "keyInvalidated":null,
 					   "preferencesAdjusted":{"tagSetNumber":4,"adjustments":[
 					     {"kind":"REGION","key":"china","name":"중국","mode":"EXCLUDE","change":"RELEASED_REMOVED"},
@@ -225,7 +225,7 @@ class NoticeControllerTests {
 				.andExpect(content().json("""
 						{"notices":[
 						  {"id":%d,"kind":"STORYLINE_SUBSCRIPTIONS_REMOVED","revision":1,"createdAt":"2026-11-13T00:00:00Z",
-						   "updatedAt":"2026-11-13T00:00:00Z","read":false,"feedStatus":null,"passwordChanged":null,
+						   "updatedAt":"2026-11-13T00:00:00Z","read":false,"digestFailed":null,"feedStatus":null,"passwordChanged":null,
 						   "keyInvalidated":null,"preferencesAdjusted":null,
 						   "storylineSubscriptionsRemoved":{"removed":[
 						     {"storylineId":31,"title":"풀린 흐름에 남았던 기사"},

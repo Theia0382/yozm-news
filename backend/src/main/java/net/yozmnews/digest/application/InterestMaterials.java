@@ -1,7 +1,6 @@
 package net.yozmnews.digest.application;
 
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -11,13 +10,12 @@ import java.util.Set;
 
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.digest.domain.exposure.ExposureRepository;
-import net.yozmnews.digest.domain.interest.ExposedArticle;
+import net.yozmnews.digest.domain.interest.ExposureRow;
 import net.yozmnews.digest.domain.interest.InterestFormula;
-import net.yozmnews.digest.domain.interest.InterestRules;
+import net.yozmnews.digest.domain.interest.InterestRecord;
 import net.yozmnews.digest.domain.interest.InterestSignals;
+import net.yozmnews.digest.domain.interest.InterestWindow;
 import net.yozmnews.digest.domain.interest.StorylineTopics;
-import net.yozmnews.digest.domain.interest.SubscriptionSignal;
-import net.yozmnews.digest.domain.interest.TopicInterests;
 import net.yozmnews.digest.domain.selection.ActiveEvaluation;
 import net.yozmnews.event.EventDirectory;
 import net.yozmnews.event.EventId;
@@ -34,13 +32,12 @@ import net.yozmnews.user.TopicSubscriptionHistory;
 import org.springframework.stereotype.Service;
 
 /**
- * 관심도의 재료를 읽어 산식에 넘긴다 — 노출(자기 인용 행) · 좋아요 / 싫어요 이력({@code feedback}) · 주제 구독 변경 · 스토리라인 구독 변경
- * ({@code user}) · 스토리라인 사건의 대표 기사({@code storyline} · {@code event}) · 노출 기사와 대표 기사의 평가({@code tag}). 행을 고르는
- * 판단은 {@link InterestSignals}, 계산은 {@link InterestFormula} 가 한다. docs/specs/digest.md §4 · §5
+ * 관심도의 재료를 범위 하나에서 읽는다 — 노출 행(자기 인용 행) · 좋아요 / 싫어요 이력({@code feedback}) · 주제 구독 변경 · 스토리라인 구독 변경
+ * ({@code user}) · 스토리라인 사건의 대표 기사({@code storyline} · {@code event}) · 노출 기사와 대표 기사의 평가({@code tag}). 기준 시각마다
+ * 창으로 자르는 일은 {@link InterestWindow}, 행을 고르는 판단은 {@link InterestSignals}, 계산은 {@link InterestFormula} 가 한다.
+ * docs/specs/digest.md §4 · §5
  * <p>
- * 읽는 범위는 [기준 시각 − {@link InterestRules#lookback()}, 지금)이다 — 기준 시각 뒤의 노출 · 신호(같은 기간을 다시 만들 때 앞 다이제스트의
- * 노출과 그 뒤 누른 반응)도 읽고 무게 1 로 센다. 트랜잭션 없이 조회를 차례로 부른다. 범위 시작 앞에 누른 반응은 읽지 않는다 — 범위 경계를 걸쳐 같은
- * 기사가 다시 인용된 경우에만 그 반응을 없음으로 센다. 백그라운드 작업 전용이다.
+ * 트랜잭션 없이 조회를 차례로 부른다. 사용자를 인자로 받는다 — 화면 경로에서는 세션 사용자로만 부른다.
  */
 @Service
 class InterestMaterials {
@@ -72,17 +69,18 @@ class InterestMaterials {
 	}
 
 	/**
-	 * @param active 맞출 활성 태그 체계 버전 — 관심 설정의 키 버전
-	 * @param reference 기준 시각 — 다이제스트 기간 끝
-	 * @param now 부르는 시각 — 읽는 범위의 끝
-	 * @return 주제 중분류마다 가중치. 재료의 키를 푼 활성 버전이 {@code active} 와 다르면 빈 값 — 부르는 쪽이 처음부터 다시 한다
+	 * @param active 맞출 활성 태그 체계 버전
+	 * @param from 범위 시작(포함) — 첫 기준 시각의 창 시작({@link InterestWindow#start})
+	 * @param to 범위 끝(제외)
+	 * @return 범위의 재료. 재료의 키를 푼 활성 버전이 {@code active} 와 다르면 빈 값 — 부르는 쪽이 처음부터 다시 한다
+	 * @throws IllegalArgumentException {@code from} 이 {@code to} 보다 늦을 때
 	 */
-	Optional<TopicInterests> read(UserId user, TagSetId active, Instant reference, Instant now) {
+	Optional<InterestRecord> read(UserId user, TagSetId active, Instant from, Instant to) {
 		Objects.requireNonNull(user, "user");
-		Instant from = reference.minus(InterestRules.lookback());
-		Instant to = now.isAfter(from) ? now : from;
-		Map<ArticleId, Instant> exposed = this.exposures.latestExposures(user, from, to);
-		Optional<Map<ArticleId, ActiveEvaluation>> evaluated = this.activeEvaluations.read(exposed.keySet(), active);
+		Objects.requireNonNull(active, "active");
+		List<ExposureRow> exposed = this.exposures.exposures(user, from, to);
+		Optional<Map<ArticleId, ActiveEvaluation>> evaluated = this.activeEvaluations
+			.read(exposed.stream().map(ExposureRow::article).toList(), active);
 		if (evaluated.isEmpty()) {
 			return Optional.empty();
 		}
@@ -97,10 +95,8 @@ class InterestMaterials {
 		if (shares.isEmpty()) {
 			return Optional.empty();
 		}
-		List<ExposedArticle> articles = InterestSignals.exposed(exposed, reactions, subtopics(evaluated.get()));
-		List<SubscriptionSignal> signals = new ArrayList<>(InterestSignals.topics(topics.changes()));
-		signals.addAll(InterestSignals.storylines(storylineChanges, shares.get()));
-		return Optional.of(InterestFormula.interests(articles, signals, reference));
+		return Optional.of(new InterestRecord(active, exposed, subtopics(evaluated.get()), reactions, topics.changes(),
+				storylineChanges, shares.get()));
 	}
 
 	/** 스토리라인마다 사건 대표 기사의 주제 몫 — 버전이 어긋나면 빈 값 */

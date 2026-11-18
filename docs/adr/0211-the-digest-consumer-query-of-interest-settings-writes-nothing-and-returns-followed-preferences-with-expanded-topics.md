@@ -36,3 +36,4 @@
 ## 후속 기록
 
 - 2026-11-18: 결정 "시간대 · 관심사 본문 · 쓸 모델은 그것을 쓰는 작업이 더한다" — 시간대 · 관심사 본문 · 요약 길이 · 추론 강도를 더했다([ADR-0219](0219-candidate-selection-hands-over-the-prompt-material-read-once-with-its-token-estimate.md) · [ADR-0223](0223-the-digest-summary-length-is-a-user-setting-in-the-digest-volume-section.md) · [ADR-0218](0218-the-digest-generation-reasoning-effort-is-a-user-setting-defaulting-to-medium.md)), 쓸 모델은 생성을 부르는 작업(#178)이 정한다. 지금 상태는 [user Spec "다이제스트가 읽는 관심 설정"](../specs/user.md#다이제스트가-읽는-관심-설정) user-R57
+- 2026-11-18: 결정 "쓸 모델은 그것을 쓰는 작업이 더한다" — 쓸 모델은 이 조회에 더하지 않고 `user` 의 따로 된 조회(`DigestModelDirectory`)로 일정 · 생성 작업 · 수동 생성이 읽는다([ADR-0230](0230-scheduled-digests-are-made-after-the-generation-time-and-a-period-runs-from-the-last-ready-or-empty-end-to-that-time.md) · [user Spec "다이제스트 일정과 쓸 모델"](../specs/user.md#다이제스트-일정과-쓸-모델) user-R61)

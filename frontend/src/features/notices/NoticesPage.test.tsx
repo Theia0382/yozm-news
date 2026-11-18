@@ -48,6 +48,7 @@ const GATHERED: Notice = {
   createdAt: "2026-11-13T00:00:00Z",
   updatedAt: "2026-11-13T02:00:00Z",
   read: false,
+  digestFailed: null,
   feedStatus: {
     feeds: [
       {
@@ -96,6 +97,7 @@ const OLD: Notice = {
   createdAt: "2026-11-12T00:00:00Z",
   updatedAt: "2026-11-12T00:00:00Z",
   read: true,
+  digestFailed: null,
   feedStatus: {
     feeds: [
       {
@@ -124,6 +126,7 @@ const PASSWORD: Notice = {
   createdAt: "2026-11-13T03:00:00Z",
   updatedAt: "2026-11-13T03:00:00Z",
   read: false,
+  digestFailed: null,
   feedStatus: null,
   passwordChanged: { method: "RECOVERY", changedAt: "2026-11-13T03:00:00Z" },
   keyInvalidated: null,
@@ -139,6 +142,7 @@ const KEY_INVALIDATED: Notice = {
   createdAt: "2026-11-13T03:00:05Z",
   updatedAt: "2026-11-13T03:00:05Z",
   read: false,
+  digestFailed: null,
   feedStatus: null,
   passwordChanged: null,
   keyInvalidated: {
@@ -157,6 +161,7 @@ const PREFERENCES_ADJUSTED: Notice = {
   createdAt: "2026-11-13T04:00:00Z",
   updatedAt: "2026-11-13T04:00:00Z",
   read: false,
+  digestFailed: null,
   feedStatus: null,
   passwordChanged: null,
   keyInvalidated: null,
@@ -190,6 +195,7 @@ const SUBSCRIPTIONS_REMOVED: Notice = {
   createdAt: "2026-11-13T05:00:00Z",
   updatedAt: "2026-11-13T05:00:00Z",
   read: false,
+  digestFailed: null,
   feedStatus: null,
   passwordChanged: null,
   keyInvalidated: null,
@@ -199,6 +205,37 @@ const SUBSCRIPTIONS_REMOVED: Notice = {
       { storylineId: 31, title: "의대 정원 조정안 발표" },
       { storylineId: 32, title: null },
     ],
+  },
+};
+
+/** 키를 쓸 수 없어 실패한 일정 다이제스트의 알림 */
+const DIGEST_FAILED_KEY: Notice = {
+  id: 60,
+  kind: "DIGEST_FAILED",
+  revision: 1,
+  createdAt: "2026-11-18T22:03:11Z",
+  updatedAt: "2026-11-18T22:03:11Z",
+  read: false,
+  digestFailed: {
+    digestDate: "2026-11-19",
+    cause: "KEY",
+    failedAt: "2026-11-18T22:03:10Z",
+  },
+  feedStatus: null,
+  passwordChanged: null,
+  keyInvalidated: null,
+  preferencesAdjusted: null,
+  storylineSubscriptionsRemoved: null,
+};
+
+/** 공급자의 일시 장애로 실패한 다이제스트의 알림 */
+const DIGEST_FAILED_TEMPORARY: Notice = {
+  ...DIGEST_FAILED_KEY,
+  id: 61,
+  digestFailed: {
+    digestDate: "2026-11-20",
+    cause: "TEMPORARY",
+    failedAt: "2026-11-19T22:03:10Z",
   },
 };
 
@@ -361,6 +398,35 @@ describe("NoticesPage", () => {
     expect(rows).toHaveLength(2);
     expect(rows[0]).toHaveTextContent("의대 정원 조정안 발표");
     expect(rows[1]).toHaveTextContent("제목을 알 수 없는 스토리라인");
+  });
+
+  it("다이제스트 실패 알림은 날짜 · 시각과 할 일을 보이고 키 갈래면 키 화면으로 잇는다", async () => {
+    renderNotices(() => json(page([DIGEST_FAILED_KEY])));
+
+    const item = await screen.findByRole("article");
+    expect(within(item).getByRole("heading", { level: 2 })).toHaveTextContent(
+      "새 알림다이제스트를 만들지 못했습니다",
+    );
+    expect(item).toHaveTextContent(
+      "2026. 11. 19. 다이제스트 · 2026. 11. 19. 오전 7:03 GMT+9",
+    );
+    expect(item).toHaveTextContent(
+      "LLM 키를 쓸 수 없었습니다. 키를 확인하거나 다시 등록하세요.",
+    );
+    expect(
+      within(item).getByRole("link", { name: "LLM 키 화면에서 확인하기" }),
+    ).toHaveAttribute("href", "/keys");
+  });
+
+  it("키 갈래가 아닌 다이제스트 실패 알림은 할 일만 보이고 키 화면으로 잇지 않는다", async () => {
+    renderNotices(() => json(page([DIGEST_FAILED_TEMPORARY])));
+
+    const item = await screen.findByRole("article");
+    expect(item).toHaveTextContent("2026. 11. 20. 다이제스트");
+    expect(item).toHaveTextContent(
+      "공급자가 잠시 답하지 못했거나 생성이 끝나지 않았습니다. 잠시 뒤 다시 만들어 보세요.",
+    );
+    expect(within(item).queryByRole("link")).toBeNull();
   });
 
   it("받은 쪽의 안 읽은 알림만 받은 판까지 읽음으로 보낸다", async () => {

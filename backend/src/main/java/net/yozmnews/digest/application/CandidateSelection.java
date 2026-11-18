@@ -26,6 +26,8 @@ import net.yozmnews.digest.domain.input.CandidateArticle;
 import net.yozmnews.digest.domain.input.DigestInput;
 import net.yozmnews.digest.domain.input.DigestProfile;
 import net.yozmnews.digest.domain.input.StorylineGroup;
+import net.yozmnews.digest.domain.interest.InterestRecord;
+import net.yozmnews.digest.domain.interest.InterestWindow;
 import net.yozmnews.digest.domain.interest.TopicInterests;
 import net.yozmnews.digest.domain.selection.ActiveEvaluation;
 import net.yozmnews.digest.domain.selection.ArticleFacts;
@@ -84,9 +86,6 @@ import org.springframework.stereotype.Service;
 @Service
 public class CandidateSelection {
 
-	/** 활성 버전이 어긋날 때 처음부터 다시 하는 횟수를 포함한 전체 시도 수 */
-	static final int ATTEMPTS = 2;
-
 	private final DigestInterestsDirectory interests;
 
 	private final ArticleEvaluations evaluations;
@@ -138,19 +137,20 @@ public class CandidateSelection {
 	 * @param model 쓸 모델 — 입력 토큰 예산
 	 * @return 생성의 입력 — 후보는 큰 슬롯 기사(선정 이유 {@code MAJOR_STORYLINE}) 다음 구독 후보(관심도로 들어왔으면 {@code INTEREST},
 	 *     아니면 {@code SUBSCRIBED}). 후보가 없어도 프로필이 있는 입력이다. 계정이 없으면 빈 값
-	 * @throws IllegalStateException 관심 설정과 기사 평가 키의 활성 버전이 {@link #ATTEMPTS} 번 모두 어긋났을 때
+	 * @throws IllegalStateException 관심 설정과 기사 평가 키의 활성 버전이 {@link ActiveEvaluations#ATTEMPTS} 번 모두 어긋났을 때
 	 */
 	public Optional<DigestInput> select(UserId user, DigestPeriod period, LlmModel model) {
 		Objects.requireNonNull(user, "user");
 		Objects.requireNonNull(period, "period");
 		Objects.requireNonNull(model, "model");
-		for (int attempt = 0; attempt < ATTEMPTS; attempt++) {
+		for (int attempt = 0; attempt < ActiveEvaluations.ATTEMPTS; attempt++) {
 			Optional<Attempt> selected = attempt(user, period, model);
 			if (selected.isPresent()) {
 				return selected.get().input();
 			}
 		}
-		throw new IllegalStateException("관심 설정과 기사 평가 키의 태그 체계 활성 버전이 " + ATTEMPTS + " 번 어긋났다");
+		throw new IllegalStateException(
+				"관심 설정과 기사 평가 키의 태그 체계 활성 버전이 " + ActiveEvaluations.ATTEMPTS + " 번 어긋났다");
 	}
 
 	/** 한 번의 선별 — 활성 버전이 어긋나면 빈 값 */
@@ -160,11 +160,14 @@ public class CandidateSelection {
 			return Optional.of(new Attempt(Optional.empty()));
 		}
 		DigestInterests interests = found.get();
-		Optional<TopicInterests> weights = this.interestMaterials.read(user, interests.tagSet(), period.end(),
-				this.clock.instant());
-		if (weights.isEmpty()) {
+		Instant now = this.clock.instant();
+		Instant interestFrom = InterestWindow.start(period.end());
+		Optional<InterestRecord> interestRecord = this.interestMaterials.read(user, interests.tagSet(), interestFrom,
+				now.isAfter(interestFrom) ? now : interestFrom);
+		if (interestRecord.isEmpty()) {
 			return Optional.empty();
 		}
+		TopicInterests weights = InterestWindow.levels(interestRecord.get(), period.end(), now).weights();
 		Instant from = latest(period.start(), period.end().minus(EvaluationPeriod.MAX_LENGTH));
 		EvaluationPeriod readPeriod = EvaluationPeriod.of(from, period.end()).orElseThrow();
 		Optional<List<ArticleFacts>> facts = facts(user, this.evaluations.firstEvaluatedIn(readPeriod),
@@ -173,7 +176,7 @@ public class CandidateSelection {
 			return Optional.empty();
 		}
 		UserFilter filter = UserFilter.of(interests);
-		List<ArticleFacts> ranked = SubscriptionFilter.select(facts.get(), filter, from, weights.get());
+		List<ArticleFacts> ranked = SubscriptionFilter.select(facts.get(), filter, from, weights);
 		List<ArticleFacts> neutral = SubscriptionFilter.select(facts.get(), filter, from, TopicInterests.NEUTRAL_ALL);
 		Map<ArticleId, EventId> eventOf = ranked.isEmpty() ? Map.of()
 				: this.events.eventsOf(ranked.stream().map(ArticleFacts::id).toList());
@@ -196,7 +199,7 @@ public class CandidateSelection {
 		Map<ArticleId, Integer> tokens = tokens(contents);
 		Shortlist cut = BudgetCut.apply(shortlist, tokens, budget);
 		Shortlist neutralCut = BudgetCut.apply(neutralShortlist, tokens, budget);
-		return Optional.of(new Attempt(Optional.of(input(interests, cut, neutralCut, weights.get(), contents, titles))));
+		return Optional.of(new Attempt(Optional.of(input(interests, cut, neutralCut, weights, contents, titles))));
 	}
 
 	/** 자른 후보에 프롬프트 재료를 붙인다 — 이름은 관심 설정 버전(활성 버전)의 이름이다 */

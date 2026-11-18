@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Duration;
 
+import net.yozmnews.llm.LlmClientFactory;
 import net.yozmnews.llm.LlmFailureKind;
 import org.junit.jupiter.api.Test;
 
@@ -54,6 +55,15 @@ class RetryPolicyTests {
 	void refusesACountBelowOne() {
 		assertThatThrownBy(() -> RetryPolicy.next(0, LlmFailureKind.TRANSIENT, null, false))
 			.isInstanceOf(IllegalArgumentException.class);
+	}
+
+	@Test
+	void theLongestCallSendsFourTimesAndWaitsTheLongestThreeTimes() {
+		// 4 × 180초 + 3 × 60초 = 900초
+		assertThat(RetryPolicy.longestCall(Duration.ofSeconds(180))).isEqualTo(Duration.ofSeconds(900));
+		// 대조 — 마감이 짧으면 보내는 몫만 준다: 4 × 10초 + 3 × 60초 = 220초
+		assertThat(RetryPolicy.longestCall(Duration.ofSeconds(10))).isEqualTo(Duration.ofSeconds(220));
+		assertThat(LlmClientFactory.LONGEST_GENERATION_CALL).isEqualTo(Duration.ofMinutes(15));
 	}
 
 }

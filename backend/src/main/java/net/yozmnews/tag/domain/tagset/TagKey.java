@@ -1,6 +1,7 @@
 package net.yozmnews.tag.domain.tagset;
 
 import java.util.Objects;
+import java.util.Optional;
 import java.util.regex.Pattern;
 
 /**
@@ -51,6 +52,12 @@ public record TagKey(String value) {
 	/** 중분류 전체 키인가 — 조각 둘 */
 	public boolean isChild() {
 		return this.value.indexOf('.') >= 0;
+	}
+
+	/** 대분류 키 — 중분류 전체 키면 점 앞 조각의 키, 조각 하나면 빈 값 */
+	public Optional<TagKey> category() {
+		int dot = this.value.indexOf('.');
+		return (dot < 0) ? Optional.empty() : Optional.of(new TagKey(this.value.substring(0, dot)));
 	}
 
 	/** 마지막 조각 — 중분류 전체 키면 점 뒤 조각, 조각 하나면 그 조각 */

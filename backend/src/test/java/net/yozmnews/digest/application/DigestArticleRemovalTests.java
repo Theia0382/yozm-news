@@ -47,6 +47,8 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.jobrunr.scheduling.JobScheduler;
+import net.yozmnews.digest.DigestRounds;
 
 /**
  * 지운 기사 따르기 — 후보 · 인용 행과 인용이 다 지워진 섹션, 인용 섹션이 남지 않는 다이제스트의 개요를 지우고 다이제스트 행은 남긴다. 생성과
@@ -61,6 +63,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 @SpringBootTest
 @TestPropertySource(properties = "jobrunr.background-job-server.enabled=false")
 class DigestArticleRemovalTests {
+
+	@Autowired
+	JobScheduler digestJobs;
 
 	private static final LlmModel MODEL = new LlmModel(Provider.OPENAI, "gpt-5.5-mini", 100_000, true);
 
@@ -82,6 +87,9 @@ class DigestArticleRemovalTests {
 	TransactionTemplate transaction;
 
 	@Autowired
+	DigestEndings endings;
+
+	@Autowired
 	DigestArticleRemoval removal;
 
 	@Autowired
@@ -91,6 +99,11 @@ class DigestArticleRemovalTests {
 	JdbcClient jdbc;
 
 	private final List<Long> articleIds = new ArrayList<>();
+
+	@BeforeEach
+	void stopDigestRounds() {
+		DigestRounds.stop(this.digestJobs);
+	}
 
 	@BeforeEach
 	void fiveArticles() {
@@ -111,7 +124,7 @@ class DigestArticleRemovalTests {
 	}
 
 	private DigestGeneration generation(DigestGenerator generator, DigestCandidateRepository repository) {
-		return new DigestGeneration(this.digests, this.sections, repository, this.articles, generator,
+		return new DigestGeneration(this.digests, this.sections, repository, this.articles, generator, this.endings,
 				this.transaction, CLOCK);
 	}
 
@@ -125,7 +138,7 @@ class DigestArticleRemovalTests {
 	private DigestId schedule(DigestGeneration generation) {
 		return generation.schedule(new UserId(42), LocalDate.parse("2026-11-16"),
 				new DigestPeriod(Instant.parse("2026-11-14T22:00:00Z"), Instant.parse("2026-11-15T22:00:00Z")),
-				DigestTrigger.SCHEDULED);
+				DigestTrigger.MANUAL).id();
 	}
 
 	private DigestInput candidates(int... indexes) {

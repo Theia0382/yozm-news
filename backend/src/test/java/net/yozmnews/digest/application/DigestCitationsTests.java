@@ -14,6 +14,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.TestPropertySource;
+import org.jobrunr.scheduling.JobScheduler;
+import org.junit.jupiter.api.BeforeEach;
+import net.yozmnews.digest.DigestRounds;
 
 /**
  * 인용 확인 — 주어진 다이제스트가 그 사용자의 것이고 그 기사를 인용했는가. 다이제스트의 상태 · 날짜를 보지 않는다.
@@ -28,6 +31,9 @@ import org.springframework.test.context.TestPropertySource;
 @TestPropertySource(properties = "jobrunr.background-job-server.enabled=false")
 class DigestCitationsTests {
 
+	@Autowired
+	JobScheduler digestJobs;
+
 	private static final UserId USER = new UserId(42);
 
 	private static final UserId OTHER = new UserId(43);
@@ -41,6 +47,11 @@ class DigestCitationsTests {
 	@AfterEach
 	void clear() {
 		this.jdbc.sql("delete from digests").update();
+	}
+
+	@BeforeEach
+	void stopDigestRounds() {
+		DigestRounds.stop(this.digestJobs);
 	}
 
 	@Test

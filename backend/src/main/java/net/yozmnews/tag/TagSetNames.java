@@ -6,6 +6,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import net.yozmnews.tag.domain.tagset.TagKey;
+
 /**
  * 태그 체계 버전 하나의 키와 이름 — 주제(대분류 · 중분류)와 지역. docs/specs/tag.md §3.
  * <p>
@@ -29,6 +31,15 @@ public record TagSetNames(TagSetId id, List<TagName> categories, List<TagName> s
 	public Optional<String> topicName(String key) {
 		Objects.requireNonNull(key, "key");
 		return find(this.categories, key).or(() -> find(this.subtopics, key));
+	}
+
+	/** 중분류 전체 키의 대분류 키 — 이 버전의 중분류 키가 아니면(대분류 키 포함) 빈 값 */
+	public Optional<String> categoryOf(String subtopicKey) {
+		Objects.requireNonNull(subtopicKey, "subtopicKey");
+		if (find(this.subtopics, subtopicKey).isEmpty()) {
+			return Optional.empty();
+		}
+		return new TagKey(subtopicKey).category().map(TagKey::value);
 	}
 
 	/** 지역 키의 이름 — 이 버전에 없는 키면 빈 값 */

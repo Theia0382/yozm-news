@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 
 import net.yozmnews.digest.domain.generator.TokenUsage;
 import net.yozmnews.llm.LlmModel;
@@ -60,6 +61,10 @@ public final class Digest {
 
 	private final Instant createdAt;
 
+	private final UUID dispatchToken;
+
+	private final Instant dispatchedAt;
+
 	private final @Nullable Instant startedAt;
 
 	private final @Nullable Instant completedAt;
@@ -72,7 +77,8 @@ public final class Digest {
 			DigestStatus status, DigestTrigger trigger, @Nullable String provider, @Nullable String model,
 			@Nullable Integer candidateCount, @Nullable Integer inputTokens, @Nullable Integer outputTokens,
 			@Nullable Long durationMs, @Nullable DigestFailure errorCode, @Nullable String errorMessage,
-			Instant createdAt, @Nullable Instant startedAt, @Nullable Instant completedAt, @Nullable Long version) {
+			Instant createdAt, UUID dispatchToken, Instant dispatchedAt, @Nullable Instant startedAt,
+			@Nullable Instant completedAt, @Nullable Long version) {
 		this.id = id;
 		this.userId = userId;
 		this.digestDate = Objects.requireNonNull(digestDate, "digestDate");
@@ -89,23 +95,44 @@ public final class Digest {
 		this.errorCode = errorCode;
 		this.errorMessage = errorMessage;
 		this.createdAt = Objects.requireNonNull(createdAt, "createdAt");
+		this.dispatchToken = Objects.requireNonNull(dispatchToken, "dispatchToken");
+		this.dispatchedAt = Objects.requireNonNull(dispatchedAt, "dispatchedAt");
 		this.startedAt = startedAt;
 		this.completedAt = completedAt;
 		this.version = version;
 	}
 
-	/** 생성을 기다리는 다이제스트를 만든다 */
+	/**
+	 * 생성을 기다리는 다이제스트를 만든다 — 생성 작업을 등록할 토큰과 등록 시각을 함께 적는다.
+	 * @param dispatchToken 생성 작업의 ID — 다시 등록하면 새 토큰이다
+	 */
 	public static Digest schedule(UserId user, LocalDate digestDate, DigestPeriod period, DigestTrigger trigger,
-			Instant now) {
+			UUID dispatchToken, Instant now) {
 		Objects.requireNonNull(user, "user");
 		Objects.requireNonNull(period, "period");
 		return new Digest(null, user.value(), digestDate, period.start(), period.end(), DigestStatus.SCHEDULED, trigger,
-				null, null, null, null, null, null, null, null, now, null, null, null);
+				null, null, null, null, null, null, null, null, now, dispatchToken, now, null, null, null);
 	}
 
 	/**
-	 * 생성을 시작한다 — 이미 시작했으면 처음부터 다시 시작한다.
-	 * @throws IllegalStateException 끝난 다이제스트일 때
+	 * 생성 작업을 새 토큰으로 다시 등록한다 — 생성을 기다리는 다이제스트만.
+	 * @throws IllegalStateException 생성을 기다리는 다이제스트가 아닐 때
+	 */
+	public Digest redispatch(UUID token, Instant now) {
+		Objects.requireNonNull(token, "token");
+		Objects.requireNonNull(now, "now");
+		if (this.status != DigestStatus.SCHEDULED) {
+			throw new IllegalStateException("생성을 기다리는 다이제스트만 다시 등록할 수 있다: " + this.status);
+		}
+		return new Digest(this.id, this.userId, this.digestDate, this.periodStart, this.periodEnd, this.status,
+				this.trigger, this.provider, this.model, this.candidateCount, this.inputTokens, this.outputTokens,
+				this.durationMs, this.errorCode, this.errorMessage, this.createdAt, token, now, this.startedAt,
+				this.completedAt, this.version);
+	}
+
+	/**
+	 * 생성을 시작한다 — 생성을 기다리는 다이제스트만 시작한다. 생성 중인 다이제스트는 다시 시작하지 않는다.
+	 * @throws IllegalStateException 생성을 기다리는 다이제스트가 아닐 때
 	 */
 	public Digest start(LlmModel model, int candidateCount, Instant now) {
 		Objects.requireNonNull(model, "model");
@@ -113,12 +140,12 @@ public final class Digest {
 		if (candidateCount < 0) {
 			throw new IllegalArgumentException("후보 수가 음수다: " + candidateCount);
 		}
-		if (this.status.finished()) {
-			throw new IllegalStateException("끝난 다이제스트는 시작할 수 없다: " + this.status);
+		if (this.status != DigestStatus.SCHEDULED) {
+			throw new IllegalStateException("생성을 기다리는 다이제스트만 시작할 수 있다: " + this.status);
 		}
 		return new Digest(this.id, this.userId, this.digestDate, this.periodStart, this.periodEnd,
 				DigestStatus.RUNNING, this.trigger, model.provider().key(), model.id(), candidateCount, null, null,
-				null, null, null, this.createdAt, now, null, this.version);
+				null, null, null, this.createdAt, this.dispatchToken, this.dispatchedAt, now, null, this.version);
 	}
 
 	/**
@@ -139,13 +166,27 @@ public final class Digest {
 		};
 	}
 
+	/**
+	 * 생성기를 부르지 않거나 생성이 끝나지 않은 채 실패로 끝낸다 — 토큰 · 소요 시간이 없다. 시작할 때 적은 공급자 · 모델은 그대로 둔다.
+	 * @throws IllegalStateException 끝난 다이제스트일 때
+	 */
+	public Digest abandon(DigestFailure failure, String message, Instant now) {
+		Objects.requireNonNull(failure, "failure");
+		Objects.requireNonNull(message, "message");
+		Objects.requireNonNull(now, "now");
+		if (this.status.finished()) {
+			throw new IllegalStateException("끝난 다이제스트는 실패로 끝낼 수 없다: " + this.status);
+		}
+		return finish(DigestStatus.FAILED, null, null, failure, CodePoints.prefix(message, MAX_ERROR_MESSAGE), now);
+	}
+
 	private Digest finish(DigestStatus finished, @Nullable TokenUsage usage, @Nullable Duration took,
 			@Nullable DigestFailure failure, @Nullable String message, Instant now) {
 		return new Digest(this.id, this.userId, this.digestDate, this.periodStart, this.periodEnd, finished,
 				this.trigger, this.provider, this.model, this.candidateCount,
 				usage == null ? null : usage.inputTokens(), usage == null ? null : usage.outputTokens(),
-				took == null ? null : took.toMillis(), failure, message, this.createdAt, this.startedAt, now,
-				this.version);
+				took == null ? null : took.toMillis(), failure, message, this.createdAt, this.dispatchToken,
+				this.dispatchedAt, this.startedAt, now, this.version);
 	}
 
 	/**
@@ -232,6 +273,16 @@ public final class Digest {
 
 	public Instant createdAt() {
 		return this.createdAt;
+	}
+
+	/** 생성 작업의 ID — 등록할 때마다 새 값이다 */
+	public UUID dispatchToken() {
+		return this.dispatchToken;
+	}
+
+	/** 생성 작업을 마지막으로 등록한 시각 */
+	public Instant dispatchedAt() {
+		return this.dispatchedAt;
 	}
 
 	/**

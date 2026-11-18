@@ -18,7 +18,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 조각 합치기의 칸을 더하는 마이그레이션(V57) — 실제 PostgreSQL 의 별도 스키마에 V56 까지만 올려 옛 관계 기준 · 합쳐진 스토리라인 ·
+ * 조각 합치기의 칸을 더하는 마이그레이션(V63) — 실제 PostgreSQL 의 별도 스키마에 V62 까지만 올려 옛 관계 기준 · 합쳐진 스토리라인 ·
  * 소속 행을 넣고, 끝까지 올린 뒤 옛 기준의 합치기 확률 기준이 1.0(조각을 합치지 않던 기준)이고 옛 합쳐진 행 · 소속에 합치기 근거가
  * 없는지 본다. 앱이 쓰는 스키마와 섞이지 않게 스키마를 따로 두고 테스트 뒤 지운다.
  * <p>
@@ -30,7 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Import(TestcontainersConfiguration.class)
 class FragmentMergeMigrationTests {
 
-	private static final String SCHEMA = "v56_fragment_merge";
+	private static final String SCHEMA = "v62_fragment_merge";
 
 	@Autowired
 	DataSource dataSource;
@@ -45,7 +45,7 @@ class FragmentMergeMigrationTests {
 
 	@Test
 	void earlierCriteriaNeverMergeAndEarlierRowsCarryNoMergeBasis() {
-		flyway("56").migrate();
+		flyway("62").migrate();
 		long criteria = this.jdbc.sql("insert into " + SCHEMA + ".storyline_relation_criteria (probability, one_matter, "
 				+ "min_events, candidate_score, window_seconds, created_at) values (0.6, 0.2, 3, 0.88, 1209600, now()) "
 				+ "returning id").query(Long.class).single();
