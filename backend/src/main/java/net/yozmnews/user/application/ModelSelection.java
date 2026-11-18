@@ -20,7 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 공급자 · 모델 고르기와 쓸 모델 조회, 추론 강도 — docs/specs/user.md §4 · user-R51 · user-R58
+ * 공급자 · 모델 고르기와 쓸 모델 조회, 추론 강도 — docs/specs/user.md §4 · user-R51 · user-R59
  * <p>
  * 고르기는 키가 있는(상태 무관) 공급자의 허용 모델만 받는다. 쓸 모델은 조회 때 {@link ModelChoice} 로 정한다. 추론 강도는 고른 모델 ·
  * 키와 무관하게 저장한다.

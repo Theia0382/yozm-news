@@ -3,7 +3,7 @@ package net.yozmnews.digest.domain.prompt;
 import java.util.Objects;
 
 /**
- * 생성 요청의 프롬프트 — 지시 구획 · 사용자 구획 · 출력 JSON Schema 문서 — docs/specs/digest.md §5 · digest-R23
+ * 생성 요청의 프롬프트 — 지시 구획 · 사용자 구획 · 출력 JSON Schema 문서 — docs/specs/digest.md §5 · digest-R26
  * <p>
  * 출력 스키마는 언제나 싣는다 — 모델이 구조화 출력을 지원하면 관문이 강제 인자로 보내고, 지원하지 않으면 지시에도 같은 문서가 들어 있다.
  *

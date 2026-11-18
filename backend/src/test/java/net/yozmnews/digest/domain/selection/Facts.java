@@ -60,6 +60,8 @@ final class Facts {
 
 		private Instant published = PUBLISHED;
 
+		private boolean disliked;
+
 		private Builder(long id) {
 			this.id = id;
 		}
@@ -105,9 +107,14 @@ final class Facts {
 			return this;
 		}
 
+		Builder disliked() {
+			this.disliked = true;
+			return this;
+		}
+
 		ArticleFacts build() {
 			return new ArticleFacts(new ArticleId(this.id), this.subtopics, this.regions, this.formats, this.status,
-					this.importance, this.sources, this.published);
+					this.importance, this.sources, this.published, this.disliked);
 		}
 
 	}

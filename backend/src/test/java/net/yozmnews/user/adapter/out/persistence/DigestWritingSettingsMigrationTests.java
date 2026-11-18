@@ -20,7 +20,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 요약 길이 · 추론 강도 칸을 더하는 마이그레이션(V54) — 실제 PostgreSQL 의 별도 스키마에 V53 까지만 올려 설정 행을 넣고, V54 까지 올린 뒤 그
+ * 요약 길이 · 추론 강도 칸을 더하는 마이그레이션(V55) — 실제 PostgreSQL 의 별도 스키마에 V54 까지만 올려 설정 행을 넣고, V55 까지 올린 뒤 그
  * 행이 기본값(요약 길이 보통 · 추론 강도 보통)으로 채워졌는지, 기본값을 지워 두 칸 없이 넣는 행은 거부되는지, 값 목록 밖의 값이 거부되는지 본다.
  * 칸을 더하기만 하는 마이그레이션이라 기존 칸의 값은 그대로다. 앱이 쓰는 스키마와 섞이지 않게 스키마를 따로 두고 테스트 뒤 지운다.
  */
@@ -33,7 +33,7 @@ class DigestWritingSettingsMigrationTests {
 	private static final String SCHEMA = "v53_digest_writing";
 
 	/** 시험하는 마이그레이션의 버전 */
-	private static final String THIS_VERSION = "54";
+	private static final String THIS_VERSION = "55";
 
 	private static final String SETTINGS_COLUMNS = "user_id, tag_set_id, timezone, digest_time, interest_text, "
 			+ "weekly_report, weekly_report_day, monthly_report, candidate_volume, candidate_count, big_slots, "
@@ -55,7 +55,7 @@ class DigestWritingSettingsMigrationTests {
 
 	@Test
 	void existingSettingsRowsTakeTheDefaultsAndKeepTheirOtherValues() {
-		flyway("53").migrate();
+		flyway("54").migrate();
 		long existing = user("old@example.com");
 		this.jdbc.sql("insert into " + SCHEMA + ".user_settings (" + SETTINGS_COLUMNS + ") values (:user, 1, "
 				+ SETTINGS_VALUES + ")").param("user", existing).update();

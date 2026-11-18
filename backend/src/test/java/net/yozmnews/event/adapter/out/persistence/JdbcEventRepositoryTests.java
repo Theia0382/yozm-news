@@ -21,6 +21,7 @@ import net.yozmnews.event.EventsChanged;
 import net.yozmnews.event.domain.assignment.EventSnapshot;
 import net.yozmnews.event.domain.event.LockedEvent;
 import net.yozmnews.event.domain.event.MergeSubject;
+import org.assertj.core.groups.Tuple;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
@@ -36,9 +37,10 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * 사건 저장소 — 후보 사건의 조건(열림 · 모델 버전 · 시각 범위)과 순서, 사건 핵심 말 상위 수와 순서, 정확한 코사인, 반 정밀도 중심의
  * 왕복, 서술 기사 순서, 잠금 · 열기 · 고치기 · 지우기를 Flyway 가 적용된 실제 PostgreSQL 에서 본다. 사건을 열고 · 고치고 ·
- * 지우고 · 합치고 · 닫는 쓰기가 바뀐 사건 ID 를 한 번 알리고, 트랜잭션 밖에서는 실패하는지도 본다.
+ * 지우고 · 합치고 · 닫는 쓰기가 바뀐 사건 ID 를 한 번 알리고, 트랜잭션 밖에서는 실패하는지도 본다. 병합 대상의 조건과 순서, 미룸을
+ * 쓰고 지우는 자리(확인 표시 · 합치기)도 본다.
  * <p>
- * 지키는 규칙: event-R10 · event-R11 · event-R12 · event-R23
+ * 지키는 규칙: event-R10 · event-R11 · event-R12 · event-R13 · event-R23
  */
 @JdbcTest
 @RecordApplicationEvents
@@ -270,7 +272,7 @@ class JdbcEventRepositoryTests {
 		// revision 이 다르면 표시하지 않는다 — 그새 바뀐 사건은 다시 본다
 		this.repository.markMergeChecked(fresh, 2, criteria);
 
-		List<MergeSubject> due = this.repository.mergeDue(criteria, 10);
+		List<MergeSubject> due = this.repository.mergeDue(criteria, T, 10);
 
 		assertThat(due).extracting(MergeSubject::id).containsExactly(fresh, otherCriteria);
 		MergeSubject subject = due.get(0);
@@ -281,7 +283,71 @@ class JdbcEventRepositoryTests {
 		assertThat(subject.firstArticleAt()).isEqualTo(Instant.parse("2026-11-05T00:00:00Z"));
 		assertThat(subject.lastArticleAt()).isEqualTo(Instant.parse("2026-11-05T06:00:00Z"));
 		assertThat(subject.revision()).isEqualTo(1);
-		assertThat(this.repository.mergeDue(criteria, 1)).extracting(MergeSubject::id).containsExactly(fresh);
+		assertThat(subject.deferrals()).isZero();
+		assertThat(this.repository.mergeDue(criteria, T, 1)).extracting(MergeSubject::id).containsExactly(fresh);
+	}
+
+	@Test
+	void mergeDueLeavesOutDeferredEventsUntilTheirTimeAndReadsThemAfterTheOthers() {
+		long criteria = criteria();
+		long deferredLonger = event("OPEN", "model-a", "[1,0]", "2026-11-05T00:00:00Z", "2026-11-05T00:00:00Z");
+		long deferred = event("OPEN", "model-a", "[1,0]", "2026-11-05T00:00:00Z", "2026-11-05T00:00:00Z");
+		long first = event("OPEN", "model-a", "[1,0]", "2026-11-05T00:00:00Z", "2026-11-05T00:00:00Z");
+		long second = event("OPEN", "model-a", "[1,0]", "2026-11-05T00:00:00Z", "2026-11-05T00:00:00Z");
+		this.repository.deferMerge(deferredLonger, 2, Instant.parse("2026-11-06T00:03:00Z"));
+		this.repository.deferMerge(deferred, 1, Instant.parse("2026-11-06T00:01:00Z"));
+
+		// 다시 볼 시각 전에는 미루지 않은 사건만 — 사건 ID 순
+		assertThat(this.repository.mergeDue(criteria, Instant.parse("2026-11-06T00:00:59Z"), 10))
+			.extracting(MergeSubject::id)
+			.containsExactly(first, second);
+		// 다시 볼 시각부터(경계 포함) 미루지 않은 사건 다음에 온다
+		assertThat(this.repository.mergeDue(criteria, Instant.parse("2026-11-06T00:01:00Z"), 10))
+			.extracting(MergeSubject::id)
+			.containsExactly(first, second, deferred);
+		// 미룬 사건끼리는 다시 볼 시각 순이다 — 사건 ID 순이 아니다
+		assertThat(this.repository.mergeDue(criteria, Instant.parse("2026-11-06T00:03:00Z"), 10))
+			.extracting(MergeSubject::id, MergeSubject::deferrals)
+			.containsExactly(tuple(first, 0), tuple(second, 0), tuple(deferred, 1), tuple(deferredLonger, 2));
+		assertThat(this.repository.mergeDue(criteria, Instant.parse("2026-11-06T00:03:00Z"), 3))
+			.extracting(MergeSubject::id)
+			.containsExactly(first, second, deferred);
+	}
+
+	@Test
+	void aMergeCheckClearsTheDeferralOnlyWhenItIsMarked() {
+		long criteria = criteria();
+		long marked = event("OPEN", "model-a", "[1,0]", "2026-11-05T00:00:00Z", "2026-11-05T00:00:00Z");
+		long changed = event("OPEN", "model-a", "[1,0]", "2026-11-05T00:00:00Z", "2026-11-05T00:00:00Z");
+		long closed = event("CLOSED", "model-a", "[1,0]", "2026-11-05T00:00:00Z", "2026-11-05T00:00:00Z");
+		this.repository.deferMerge(marked, 3, Instant.parse("2026-11-06T00:04:00Z"));
+		this.repository.deferMerge(changed, 3, Instant.parse("2026-11-06T00:04:00Z"));
+		// 열린 사건이 아니면 미루지 않는다
+		this.repository.deferMerge(closed, 1, Instant.parse("2026-11-06T00:01:00Z"));
+
+		this.repository.markMergeChecked(marked, 1, criteria);
+		// revision 이 달라 표시하지 않는다 — 미룸도 그대로다
+		this.repository.markMergeChecked(changed, 2, criteria);
+
+		assertThat(deferrals()).containsExactly(tuple(marked, 0, null), tuple(changed, 3, "2026-11-06T00:04:00Z"),
+				tuple(closed, 0, null));
+	}
+
+	@Test
+	void absorbClearsTheDeferralOfBothEvents() {
+		long survivor = event("OPEN", "model-a", "[1,0]", "2026-11-05T00:00:00Z", "2026-11-05T00:00:00Z");
+		long absorbed = event("OPEN", "model-a", "[0,1]", "2026-11-05T00:00:00Z", "2026-11-05T00:00:00Z");
+		long bystander = event("OPEN", "model-a", "[0,1]", "2026-11-05T00:00:00Z", "2026-11-05T00:00:00Z");
+		this.repository.deferMerge(survivor, 2, Instant.parse("2026-11-06T00:03:00Z"));
+		this.repository.deferMerge(absorbed, 1, Instant.parse("2026-11-06T00:01:00Z"));
+		this.repository.deferMerge(bystander, 1, Instant.parse("2026-11-06T00:01:00Z"));
+		LockedEvent kept = this.repository.lock(survivor).orElseThrow();
+		LockedEvent gone = this.repository.lock(absorbed).orElseThrow();
+
+		this.repository.absorb(kept.absorbed(gone), gone, null, T);
+
+		assertThat(deferrals()).containsExactly(tuple(survivor, 0, null), tuple(absorbed, 0, null),
+				tuple(bystander, 1, "2026-11-06T00:01:00Z"));
 	}
 
 	@Test
@@ -429,6 +495,15 @@ class JdbcEventRepositoryTests {
 			.param("last", Instant.parse(last).atOffset(ZoneOffset.UTC))
 			.query(Long.class)
 			.single();
+	}
+
+	/** 사건마다 (사건 ID, 이어서 미룬 횟수, 다시 볼 시각 — 미루지 않았으면 null) — 사건 ID 순 */
+	private List<Tuple> deferrals() {
+		return this.jdbc.sql("""
+				select id, merge_deferrals,
+				    to_char(merge_retry_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as retry
+				from events order by id
+				""").query((rs, row) -> tuple(rs.getLong("id"), rs.getInt("merge_deferrals"), rs.getString("retry"))).list();
 	}
 
 	private void times(long event, String opened, String joined) {

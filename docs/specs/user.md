@@ -22,7 +22,8 @@
 - **스토리라인 구독** — 사용자마다 따라갈 스토리라인의 현재 상태와 추가 전용 이력, 구독 · 해제 · 내 구독(상한 100). `storyline` 이 합치거나 지운 스토리라인을 알리면(`StorylinesRetired`) 구독을 남는 스토리라인으로 옮기거나 빼고, 사라진 구독을 알린다. 사용자의 구독 조회 · 저장 앞에서도 같은 정본으로 따라간다. 다이제스트 · 관심도 · 변화 리포트가 읽는 공개 조회(`StorylineSubscriptionDirectory`)를 낸다
 - **(미구현)** 다이제스트 실패 알림
 - **다이제스트가 읽는 관심 설정** — 다이제스트 후보 선별이 읽는 공개 조회(`DigestInterestsDirectory`) — 활성 키의 주제 구독(펼친 중분류와 함께) · 제외 · 관심사 본문 · 시간대 · 분량 · 요약 길이 · 추론 강도. 쓰지 않는다(user-R57)
-- **(미설계)** 관심도 · 변화 리포트가 관심 설정을 읽는 공개 조회 — 소비자의 작업이 소비 계약과 함께 연다([ADR-0180](../adr/0180-user-settings-changes-publish-no-event-and-consumers-query.md))
+- **주제 구독 이력 조회** — 다이제스트의 관심도가 읽는 공개 조회(`TopicSubscriptionHistory`) — 기간의 선호 이력 가운데 주제 행을 기록 당시 버전으로 펼치고 활성 중분류로 풀어 원인과 함께 낸다. 쓰지 않는다(user-R58)
+- **(미설계)** 변화 리포트가 관심 설정을 읽는 공개 조회 — 소비자의 작업이 소비 계약과 함께 연다([ADR-0180](../adr/0180-user-settings-changes-publish-no-event-and-consumers-query.md))
 
 하지 않는 것:
 
@@ -68,7 +69,7 @@
 | 창 | 요청 제한이 세는 고정 시간 칸 — 유닉스 기원부터 창 길이로 나눈 칸이고 시작은 포함 · 끝은 제외다(user-R39) |
 | 봇 차단 | 로그인 · 복구 · 공개 가입에서 사람 확인 토큰을 봇 차단 서비스로 확인하는 것 — 운영자 설정으로 켜고 끈다(user-R41) |
 | 사람 확인 토큰 | 화면의 봇 차단 위젯이 준 일회용 토큰 — 요청 헤더 `X-Human-Check` 로 보낸다(user-R41) |
-| 관심 설정 | 다이제스트 · 리포트가 쓸 사용자의 설정 — 태그 선호 · 제외 소스 · 일정(시간대 · 생성 시각) · 자유 텍스트 관심사 · 변화 리포트 · 고른 모델 · 추론 강도 · 다이제스트 분량 · 요약 길이(user-R43 ~ R51 · R56 · R58) |
+| 관심 설정 | 다이제스트 · 리포트가 쓸 사용자의 설정 — 태그 선호 · 제외 소스 · 일정(시간대 · 생성 시각) · 자유 텍스트 관심사 · 변화 리포트 · 고른 모델 · 추론 강도 · 다이제스트 분량 · 요약 길이(user-R43 ~ R51 · R56 · R59) |
 | 설정 행 | 사용자마다 한 행인 관심 설정 — 선호의 체계 버전도 여기 있다. 관심 설정의 쓰기 · 조회는 이 행을 잠근다(user-R43 · R46) |
 | 태그 선호 | 주제 구독 · 지역 제외 · 형식 제외 — 태그 종류마다 모드 하나다(user-R45) |
 | 선호 버전 | 사용자의 태그 선호 전체가 그 키로 적힌 태그 체계 버전 — 설정 행의 칸 하나(user-R45) |
@@ -80,8 +81,9 @@
 | 쓸 모델 | 고른 모델 · 허용 모델 목록 · 키 상태로 조회 때 정하는 모델(user-R51) |
 | 다이제스트 분량 | 다이제스트 최대 후보 수의 단계(적게 · 보통 · 많이) 또는 직접 입력한 수, 큰 슬롯 수, 요약 길이 — 설정 행의 칸 넷(user-R56) |
 | 요약 길이 | 다이제스트 글(개요 · 주요 뉴스 요약)의 길이 단계 — 짧게 · 보통 · 자세히. 단계의 뜻은 다이제스트의 지시가 정한다(user-R56) |
-| 추론 강도 | 다이제스트 생성 호출의 추론 강도 — 낮음 · 보통 · 높음(`llm` 의 `ReasoningEffort`), 설정 행의 칸 하나(user-R58) |
+| 추론 강도 | 다이제스트 생성 호출의 추론 강도 — 낮음 · 보통 · 높음(`llm` 의 `ReasoningEffort`), 설정 행의 칸 하나(user-R59) |
 | 다이제스트가 읽는 관심 설정 | 다이제스트 후보 선별이 읽는 관심 설정 — 활성 키로 낸 주제 구독 행(덮는 중분류와 함께) · 제외 · 관심사 본문 · 시간대 · 분량 · 요약 길이 · 추론 강도(user-R57) |
+| 주제 구독 이력 조회 | 다이제스트의 관심도가 읽는 기간의 주제 구독 변경 — 선호 이력의 주제 행을 기록 당시 버전으로 펼쳐 활성 중분류로 풀고 원인과 함께 낸다(user-R58) |
 | 스토리라인 구독 | 사용자가 따라가는 스토리라인 — 스토리라인 ID 와 처음 구독한 시각(user-R52) |
 | 구독 이력 | 스토리라인 구독의 추가 전용 변경 기록 — 원인(사용자 · 합쳐짐 · 사라짐)을 갖는다. 관심 신호는 원인이 사용자인 행만이다(user-R52 · R53) |
 | 구독 따라가기 | 구독 행을 지금 가리키는 스토리라인으로 고쳐 쓰는 것 — 합쳐진 것은 남는 스토리라인으로 옮기고 사라진 것은 뺀다(user-R53) |
@@ -91,7 +93,7 @@
 
 받는 이벤트는 `source` 의 `FeedStatusesChanged` · `SourceDeleted`, `credential` 의 `CredentialInvalidated`, `tag` 의 `TagSetActivated`, `storyline` 의 `StorylinesRetired` 이고, 내는 이벤트는 없다 — 관심 설정 · 스토리라인 구독이 바뀌어도 이벤트를 내지 않는다([ADR-0180](../adr/0180-user-settings-changes-publish-no-event-and-consumers-query.md)).
 
-모듈 최상위 패키지 `net.yozmnews.user` 의 공개 타입은 비밀번호 규칙 위반의 까닭 하나(`PasswordProblem`), 계정 들이기의 운영 API 셋(`AccountAdministration` · `InvitationAdministration` · `SignUpPolicyAdministration`)과 그 결과 · 값 타입(`AccountCreationResult` · `InitialPasswordResetResult` · `IssuedInvitation` · `InvitationView` · `InvitationState` · `InvitationRevocationResult` · `UnknownInvitationException` · `SignUpPolicyChange` · `SignUpPolicyChangeResult`)이다. 운영 API 는 `admin` 이 운영자 경로로 낸다. 다른 모듈이 읽는 공개 조회는 스토리라인 구독(`StorylineSubscriptionDirectory`)과 그 값 타입(`StorylineSubscriptionChange` · `StorylineSubscriptionAction` · `StorylineSubscriptionCause`), 다이제스트가 읽는 관심 설정(`DigestInterestsDirectory`)과 그 값 타입(`DigestInterests` · `TopicSubscription` · `SummaryLength`)이다. 사용자 식별자 `UserId` 는 `platform` 의 공개 타입이다([platform Spec](platform.md#userid)).
+모듈 최상위 패키지 `net.yozmnews.user` 의 공개 타입은 비밀번호 규칙 위반의 까닭 하나(`PasswordProblem`), 계정 들이기의 운영 API 셋(`AccountAdministration` · `InvitationAdministration` · `SignUpPolicyAdministration`)과 그 결과 · 값 타입(`AccountCreationResult` · `InitialPasswordResetResult` · `IssuedInvitation` · `InvitationView` · `InvitationState` · `InvitationRevocationResult` · `UnknownInvitationException` · `SignUpPolicyChange` · `SignUpPolicyChangeResult`)이다. 운영 API 는 `admin` 이 운영자 경로로 낸다. 다른 모듈이 읽는 공개 조회는 스토리라인 구독(`StorylineSubscriptionDirectory`)과 그 값 타입(`StorylineSubscriptionChange` · `StorylineSubscriptionAction` · `StorylineSubscriptionCause`), 다이제스트가 읽는 관심 설정(`DigestInterestsDirectory`)과 그 값 타입(`DigestInterests` · `TopicSubscription` · `SummaryLength`), 주제 구독 이력(`TopicSubscriptionHistory`)과 그 값 타입(`TopicSubscriptionChanges` · `TopicSubscriptionChange` · `TopicSubscriptionAction` · `TopicSubscriptionCause`)이다. 사용자 식별자 `UserId` 는 `platform` 의 공개 타입이다([platform Spec](platform.md#userid)).
 
 HTTP 엔드포인트:
 
@@ -117,9 +119,9 @@ HTTP 엔드포인트:
 | `/api/interests/sources` | `PUT` | 제외 소스 저장 — `SAVED`(+제외 소스)(user-R49) |
 | `/api/interests/settings` | `GET` | 시간대 · 생성 시각 · 자유 텍스트 관심사(와 상한) · 변화 리포트(user-R50) |
 | `/api/interests/settings` | `PUT` | 저장 — `SAVED` · `UNKNOWN_TIMEZONE` · `INTEREST_TEXT_TOO_LONG`(+상한). 시각 · 요일 형식이 틀리면 400(user-R50) |
-| `/api/interests/model` | `GET` | 고를 수 있는 모델 · 고른 모델 · 쓸 모델 · 까닭 · 추론 강도와 그 값들(user-R51 · R58) |
+| `/api/interests/model` | `GET` | 고를 수 있는 모델 · 고른 모델 · 쓸 모델 · 까닭 · 추론 강도와 그 값들(user-R51 · R59) |
 | `/api/interests/model` | `PUT` | 모델 고르기 — `SAVED`(+조회와 같은 칸) · `PROVIDER_WITHOUT_KEY` · `MODEL_NOT_ALLOWED`(user-R51) |
-| `/api/interests/effort` | `PUT` | 추론 강도 저장 — 모델 조회와 같은 칸. 키 · 고른 모델과 무관하다. 값 이름이 틀리면 400(user-R58) |
+| `/api/interests/effort` | `PUT` | 추론 강도 저장 — 모델 조회와 같은 칸. 키 · 고른 모델과 무관하다. 값 이름이 틀리면 400(user-R59) |
 | `/api/interests/volume` | `GET` | 다이제스트 분량 — 단계 · 직접 입력한 수 · 큰 슬롯 수 · 요약 길이와 단계마다의 후보 수 · 직접 입력 · 큰 슬롯 수의 범위 · 요약 길이 값들(user-R56) |
 | `/api/interests/volume` | `PUT` | 분량 저장 — `SAVED`(+조회와 같은 칸) · `COUNT_OUT_OF_RANGE`(+범위) · `BIG_SLOTS_OUT_OF_RANGE`(+범위). 직접 입력과 직접 입력한 수의 짝이 맞지 않으면 400(user-R56) |
 | `/api/storyline-subscriptions` | `GET` | 내 스토리라인 구독 — 스토리라인 ID · 처음 구독한 시각 · 지금 상태, 구독 시각 내림차순과 상한(user-R52) |
@@ -281,6 +283,40 @@ public enum SummaryLength { SHORT, NORMAL, DETAILED }
 
 관련 규칙: user-R57.
 
+### TopicSubscriptionHistory
+
+주제 구독 이력 조회 — 다이제스트의 관심도 작업이 읽는다. 구현은 `application` 의 `TopicSubscriptionHistoryService` 다.
+
+```java
+public interface TopicSubscriptionHistory {
+	TopicSubscriptionChanges changes(UserId user, Instant from, Instant to);
+}
+
+public record TopicSubscriptionChanges(TagSetId tagSet, List<TopicSubscriptionChange> changes) {}
+
+public record TopicSubscriptionChange(String recordedKey, TagSetId recordedVersion, Set<String> subtopics,
+		TopicSubscriptionAction action, TopicSubscriptionCause cause, Instant occurredAt) {}
+
+public enum TopicSubscriptionAction { ADD, REMOVE }
+
+public enum TopicSubscriptionCause { USER, ONBOARDING, TAG_SET_CHANGE }
+```
+
+| 메서드 · 타입 | 뜻 |
+|---|---|
+| `changes` | 선호 이력 가운데 주제 행으로 시각이 `from` 이상 · `to` 미만인 것 — 시각 · 행 순. 계정이 없으면 빈 목록. `from` 이 `to` 보다 늦으면 `IllegalArgumentException` |
+| `TopicSubscriptionChanges.tagSet` | 행마다 낸 중분류 키의 활성 태그 체계 버전 — 부르는 쪽이 기사 평가 키를 푼 계보 표의 버전과 맞춘다 |
+| `TopicSubscriptionChange.recordedKey` · `recordedVersion` | 기록된 키(대분류 키 또는 중분류 전체 키)와 기록 당시 버전 |
+| `TopicSubscriptionChange.subtopics` | 그 행이 덮던 중분류(기록 당시 버전에서 대분류는 하위 전체로 펼침)를 활성 중분류로 푼 것 — 계보 없이 지운 것은 빠지고 모두 지웠으면 비었다 |
+| `TopicSubscriptionCause` | 선호 이력의 저장 원인을 옮긴 것 — 사용자(`USER`) · 계정을 만들 때 기본값(`ONBOARDING`) · 체계 변경(`TAG_SET_CHANGE`). 관심 신호는 `USER` 행만이다 |
+
+- 계약
+  - 백그라운드 작업 전용이다 — 화면 경로에서 부르지 않는다
+  - 쓰지 않는다 — 이력 행의 키는 기록 당시 버전의 것이라 그 버전의 구조로 펼치고 계보로 풀어 낸다
+  - 기간을 사용자 시간대의 날로 자르는 일과 관심 신호로 쓸 행을 고르는 일은 부르는 쪽이 한다
+
+관련 규칙: user-R58.
+
 ## 4. 내부 구조
 
 ### 개관
@@ -304,7 +340,7 @@ public enum SummaryLength { SHORT, NORMAL, DETAILED }
 
 알림: `source` 의 `FeedStatusesChanged` 를 `FeedStatusNoticeListener` 가 받아 `FeedStatusNotices` 에 맡긴다. 유스케이스는 피드 이름을 `source` 의 `FeedLabels` 로, 받는 사람을 `NoticeRecipients` 로 읽고, 받는 사람마다 `NoticeRepository` 로 반영 기준 행을 잠근 뒤 `FeedStatusReceipt` 로 회차를 거르고, 안 읽은 피드 상태 알림을 `FeedStatusContent` 로 모으거나 새로 만든다. `credential` 의 `CredentialInvalidated` 는 `KeyInvalidatedNoticeListener` 가 받아 `KeyInvalidatedNotices` 에 맡기고, 유스케이스는 그 사용자에게 키 무효 알림을 전이마다 하나 남긴다. 화면은 `NoticeController` → `NoticeInbox` → `NoticeRepository` 로 세션 사용자의 알림을 읽고 읽음을 쓴다.
 
-관심 설정: 계정을 만드는 정본(`AccountProvisioning`)이 `InterestDefaultsWriter` 로 설정 행 · 형식 기본 제외를 같은 트랜잭션에서 쓴다 — 울타리(`PreferenceVersionFence`) 공유 잠금 뒤 `tag` 의 `TagSetDirectory` 로 활성 체계를 읽는다. 기존 계정은 기동 단계의 `InterestBackfill` 이 같은 쓰기로 채운다. 화면은 `InterestController` → `TagPreferences` · `ExcludedSources` · `DigestSettings` · `ModelSelection` · `DigestVolumeSettings` 이고, 다섯 모두 설정 행을 잠근 뒤 `PreferenceFollowups.followLocked` 로 먼저 따라간다. 따라가기는 `TagKeyLineage` 의 계보 표와 `TagSetDirectory.tagSet` 의 옛 버전 구조로 `PreferenceFollowup` 이 판정하고, `TagPreferenceRepository` 가 현재 상태 · 이력을 쓰며, 조정이 있으면 `NoticeRepository` 로 알림을 남긴다. `tag` 의 `TagSetActivated` 는 `TagSetActivationListener` → `PreferenceFollowups.followAll`, `source` 의 `SourceDeleted` 는 `SourceDeletedListener` → `ExcludedSources.forget` 이다. 고를 소스는 `source` 의 `SourceNames`, 쓸 모델은 `llm` 의 `LlmModels` 와 `credential` 의 `LlmKeys` 로 `ModelChoice` 가 정한다.
+관심 설정: 계정을 만드는 정본(`AccountProvisioning`)이 `InterestDefaultsWriter` 로 설정 행 · 형식 기본 제외를 같은 트랜잭션에서 쓴다 — 울타리(`PreferenceVersionFence`) 공유 잠금 뒤 `tag` 의 `TagSetDirectory` 로 활성 체계를 읽는다. 기존 계정은 기동 단계의 `InterestBackfill` 이 같은 쓰기로 채운다. 화면은 `InterestController` → `TagPreferences` · `ExcludedSources` · `DigestSettings` · `ModelSelection` · `DigestVolumeSettings` 이고, 다섯 모두 설정 행을 잠근 뒤 `PreferenceFollowups.followLocked` 로 먼저 따라간다. 따라가기는 `TagKeyLineage` 의 계보 표와 `TagSetDirectory.tagSet` 의 옛 버전 구조로 `PreferenceFollowup` 이 판정하고, `TagPreferenceRepository` 가 현재 상태 · 이력을 쓰며, 조정이 있으면 `NoticeRepository` 로 알림을 남긴다. `tag` 의 `TagSetActivated` 는 `TagSetActivationListener` → `PreferenceFollowups.followAll`, `source` 의 `SourceDeleted` 는 `SourceDeletedListener` → `ExcludedSources.forget` 이다. 고를 소스는 `source` 의 `SourceNames`, 쓸 모델은 `llm` 의 `LlmModels` 와 `credential` 의 `LlmKeys` 로 `ModelChoice` 가 정한다. 주제 구독 이력의 소비자 조회는 `TopicSubscriptionHistoryService` 가 `TagPreferenceRepository.topicChanges` 의 행을 `TagSetDirectory.tagSet` 의 기록 버전 구조로 펼치고(`TopicExpansion`) `TagKeyLineage` 의 계보 표로 푼다.
 
 스토리라인 구독: 화면은 `StorylineSubscriptionController` → `StorylineSubscriptions` 이고, 조회 · 구독 · 해제 모두 `InterestSettingsLock.lockFollowed`(설정 행 만들기 · 잠금 · 태그 따라가기) 뒤 `SubscriptionFollowups.followLocked` 로 구독을 먼저 따라간다. 따라가기는 `StorylineSubscriptionRepository`(`JdbcStorylineSubscriptions`)의 구독 행을 `storyline` 의 `StorylineDirectory.findAll` 로 풀어 `SubscriptionFollow` 가 판정하고, 고쳐 쓰기 · 이력 · 사라진 구독 알림(`NoticeRepository`)을 남긴다. `storyline` 의 `StorylinesRetired` 는 `StorylinesRetiredListener` → `SubscriptionFollowups.followRetired` 가 받아 그 스토리라인을 구독한 사용자를 쪽으로 나눠 사용자마다 같은 정본을 부른다. 알림함(`NoticeInbox.page`)은 사라진 구독 알림이 가리키는 사건의 대표 기사 제목을 `RemovedSubscriptionTitles` 로 읽는다 — `event` 의 `EventDirectory`(남는 사건 · 대표 기사)와 `article` 의 `ArticleDirectory`(제목). 소비자 조회는 `StorylineSubscriptionDirectoryService` 가 저장 행을 읽어 `findAll` 로 푼다.
 
@@ -345,13 +381,14 @@ sequenceDiagram
 | 가입 정책 처음 값 | `SignUpPolicySeeding` | 기동 | 지금 값이 없으면 닫힘을 이력과 함께 넣는다(user-R32) |
 | 첫 운영자 | `FirstAdminBootstrap` | 기동 단계(user-R44) | 설정 `yozmnews.first-admin.*` 로 첫 운영자를 판정 · 생성하거나 경고 · 기동 실패(user-R34) |
 | 기존 계정 채우기 | `InterestBackfill` | 기동 단계(user-R44) | 설정 행이 없는 계정에 관심 설정 기본값을 넣는다(user-R43) |
-| 관심 설정 | `InterestController` → `TagPreferences` · `ExcludedSources` · `DigestSettings` · `ModelSelection` · `DigestVolumeSettings` | `GET` · `PUT /api/interests/tags` · `/sources` · `/settings` · `/model` · `/volume`, `PUT /api/interests/effort` | user-R46 · R49 ~ R51 · R56 · R58. 응답 · 요청 값은 `Interest*Response` · `Interest*Request` |
+| 관심 설정 | `InterestController` → `TagPreferences` · `ExcludedSources` · `DigestSettings` · `ModelSelection` · `DigestVolumeSettings` | `GET` · `PUT /api/interests/tags` · `/sources` · `/settings` · `/model` · `/volume`, `PUT /api/interests/effort` | user-R46 · R49 ~ R51 · R56 · R59. 응답 · 요청 값은 `Interest*Response` · `Interest*Request` |
 | 태그 체계 활성 전환 | `TagSetActivationListener` → `PreferenceFollowups.followAll` | `tag` 의 `TagSetActivated` | 선호 버전이 활성과 다른 사용자를 따라가게 한다(user-R47). 비동기 · 트랜잭션 없음(`NOT_SUPPORTED` — 사용자마다 트랜잭션 하나)이고 이벤트 발행 레지스트리에 기록된다 — 실패하면 다시 처리되고 남은 사용자만 고친다 |
 | 소스 삭제 | `SourceDeletedListener` → `ExcludedSources.forget` | `source` 의 `SourceDeleted` | 그 소스의 제외 행을 지운다(user-R49). 비동기 · 새 트랜잭션, 다시 처리해도 같다 |
 | 스토리라인 구독 | `StorylineSubscriptionController` → `StorylineSubscriptions` | `GET /api/storyline-subscriptions`, `PUT` · `DELETE /api/storyline-subscriptions/{storylineId}` | user-R52 · R53. 응답 값 `StorylineSubscriptionsResponse` · `StorylineSubscriptionItem` · `StorylineSubscribeResponse` · `StorylineUnsubscribeResponse` |
 | 합치거나 지운 스토리라인 | `StorylinesRetiredListener` → `SubscriptionFollowups.followRetired` | `storyline` 의 `StorylinesRetired` | 그 스토리라인을 구독한 사용자의 구독을 따라가게 하고 사라진 구독을 알린다(user-R53 · R54). 비동기 · 트랜잭션 없음(`NOT_SUPPORTED` — 사용자마다 트랜잭션 하나)이고 이벤트 발행 레지스트리에 기록된다 — 실패하면 다시 처리되고 지금 상태로 수렴한다 |
 | 스토리라인 구독 조회 | `StorylineSubscriptionDirectoryService` | 다른 모듈의 백그라운드 작업 | §3 `StorylineSubscriptionDirectory` 의 구현(user-R55). 읽기 전용 트랜잭션 |
 | 다이제스트가 읽는 관심 설정 | `DigestInterestsDirectoryService` | 다른 모듈의 백그라운드 작업 | §3 `DigestInterestsDirectory` 의 구현(user-R57). 읽기 전용 `REPEATABLE_READ` 트랜잭션 |
+| 주제 구독 이력 조회 | `TopicSubscriptionHistoryService` | 다른 모듈의 백그라운드 작업 | §3 `TopicSubscriptionHistory` 의 구현(user-R58). 읽기 전용 `REPEATABLE_READ` 트랜잭션 |
 | 만료 세션 정리 — 반복 작업 ID `expire-sessions` | `ExpireSessionsJob` | 10분마다 | 만료 세션을 지운다(user-R12). 재시도하지 않는다 — 다음 회차가 이어 지운다 |
 | 실패 기록 정리 — 반복 작업 ID `forget-login-failures` | `ForgetLoginFailuresJob` | 1시간마다 | 마지막 실패에서 24시간이 지난 실패 기록을 지운다(user-R19). 재시도하지 않는다 |
 | 끝난 요청 제한 창 정리 — 반복 작업 ID `forget-request-counts` | `ForgetRequestCountsJob` | 10분마다 | 끝난 창의 요청 제한 기록을 지운다(user-R42). 재시도하지 않는다 — 다음 회차가 이어 지운다 |
@@ -401,7 +438,7 @@ sequenceDiagram
 - `InterestDefaultsWriter` — 관심 설정 기본값 쓰기의 정본 — 울타리 공유 잠금 → 활성 체계 → 설정 행 · 형식 기본 제외(이력 원인 `ONBOARDING`). 설정 행이 있으면 쓰지 않는다(user-R43)
 - `UserStartup` — 기동 단계 상수 `PHASE` 의 정본(user-R44)
 - `InterestBackfill` — 기존 계정 채우기(기동 단계)(user-R44)
-- `TagPreferences` · `ExcludedSources` · `DigestSettings` · `ModelSelection` · `DigestVolumeSettings` — 관심 설정 조회 · 저장 유스케이스 다섯(user-R46 · R49 ~ R51 · R56 · R58 — 추론 강도는 `ModelSelection`)
+- `TagPreferences` · `ExcludedSources` · `DigestSettings` · `ModelSelection` · `DigestVolumeSettings` — 관심 설정 조회 · 저장 유스케이스 다섯(user-R46 · R49 ~ R51 · R56 · R59 — 추론 강도는 `ModelSelection`)
 - `PreferenceFollowups` — 따라가기 — 사용자 하나(`followLocked` — 정본)와 전부(`followAll`), 쓰지 않는 계산(`followed` — 계보 표 · 옛 버전 구조를 읽어 `PreferenceFollowup` 을 부르는 정본, `followLocked` 와 다이제스트가 읽는 관심 설정이 함께 쓴다)(user-R47 · R57)
 - `TagSetActivationListener` · `SourceDeletedListener` — `TagSetActivated` · `SourceDeleted` 리스너(들어오는 쪽). 역할 애너테이션이 없다(user-R47 · R49)
 - `StorylineSubscriptions` — 스토리라인 구독 조회 · 구독 · 해제 유스케이스(user-R52). 결과 `SubscribeOutcome` · `UnsubscribeOutcome`, 조회 값 `SubscriptionsView` · `SubscribedStoryline`
@@ -409,6 +446,7 @@ sequenceDiagram
 - `StorylinesRetiredListener` — `StorylinesRetired` 리스너(들어오는 쪽). 역할 애너테이션이 없다(user-R53)
 - `StorylineSubscriptionDirectoryService` — 공개 조회 `StorylineSubscriptionDirectory` 의 구현. 읽기 전용이다(user-R55)
 - `DigestInterestsDirectoryService` — 공개 조회 `DigestInterestsDirectory` 의 구현. 설정 행을 잠그지 않으므로 설정 행 · 선호 행 · 활성 체계 · 계보를 한 스냅숏에서 읽도록 읽기 전용 `REPEATABLE_READ` 트랜잭션 하나다 — 기본 격리면 리스너의 따라가기가 그 사이 커밋되어 옛 선호 버전과 새 버전 키를 섞어 읽을 수 있다(user-R57)
+- `TopicSubscriptionHistoryService` — 공개 조회 `TopicSubscriptionHistory` 의 구현. 이력 행 · 활성 체계 · 기록 버전의 구조 · 계보 표를 한 스냅숏에서 읽도록 읽기 전용 `REPEATABLE_READ` 트랜잭션 하나다 — 계보 표의 기준이 읽은 활성 버전이 아니면 불변식 위반이다(user-R58)
 - 그 밖의 값: `AdminSecurityProperties`(설정 `yozmnews.admin` — §7) · `AdminTokenAuthentication`(제시된 토큰 · 운영자 인증) · `AccountAuthentication`(세션 사용자 인증 — 세션에 직렬화되는 유일한 앱 타입, 역할 권한 이름의 정본) · `SignInOutcome`(로그인됨 · 거절 · 대기)
 
 ### `domain`
@@ -459,8 +497,8 @@ sequenceDiagram
 - `ExcludedSourceRepository` — 제외 소스 저장 — 읽기 · 바꾸기 · 소스 잊기. 구현 `JdbcExcludedSources`(user-R49)
 - `PreferenceSet` · `PreferenceChange` · `PreferenceMode` · `PreferenceCause` · `PreferenceAction` — 태그 선호 집합 · 기본값 · 모르는 키 · 정규화 · 차이, 모드 조합 · 원인 · 더함 뺌의 정본(user-R45)
 - `PreferenceFollowup` · `FollowResult` · `Adjustment` · `AdjustmentKind` — 따라가기 규칙의 정본(user-R47)
-- `TopicExpansion` — 대분류 구독을 그 버전의 하위 중분류로 펼치는 정본 — 정규화 · 따라가기 · 다이제스트가 읽는 관심 설정이 함께 쓴다(user-R45 · R57)
-- `TagPreferenceRepository` — 태그 선호 현재 상태 · 이력 저장. 구현 `JdbcTagPreferences`(user-R45)
+- `TopicExpansion` — 대분류 구독을 그 버전의 하위 중분류로 펼치는 정본 — 정규화 · 따라가기 · 다이제스트가 읽는 관심 설정 · 주제 구독 이력 조회가 함께 쓴다(user-R45 · R57 · R58)
+- `TagPreferenceRepository` — 태그 선호 현재 상태 · 이력 저장, 기간의 주제 이력 행 읽기(`topicChanges` — 값 `RecordedTopicChange`). 구현 `JdbcTagPreferences`(user-R45 · R58)
 - `PreferencesAdjustedContent` — 선호 조정 알림의 내용(user-R48)
 - `StorylineSubscriptionsRemovedContent` · `RemovedSubscription` — 사라진 구독 알림의 내용 — 스토리라인 ID 와 풀기에서 남은 사건 ID, 기사 정보 없음(user-R54)
 - `StorylineSubscriptionLimit` — 사용자당 구독 상한의 정본(user-R52)
@@ -666,8 +704,8 @@ public interface HumanVerifier {
 - **user-R49** — 제외 소스는 소스 단위이고 이력이 없다(관심 신호가 아니다). 고를 소스는 `source` 의 `SourceNames`(숨기지 않은 소스)다. 저장은 고를 소스 안에서만 바꾼다 — 새 집합 = (지금 제외 가운데 고를 소스 밖의 것) ∪ (요청 가운데 고를 소스 안의 것)이고 고를 소스 밖의 요청은 버린다. 숨긴 소스의 제외는 남아 다시 보이면 그대로다. `source` 의 `SourceDeleted` 를 받으면 그 소스의 제외 행을 모두 지운다
 - **user-R50** — 일정 · 관심사 · 리포트: 시간대는 IANA 시간대 ID(`ZoneId.getAvailableZoneIds` 에 있는 것 — 그 밖의 값은 오프셋(`+09:00` · `Z`) · 목록에 없는 약어(`KST`)를 포함해 `UNKNOWN_TIMEZONE`), 생성 시각은 `HH:mm`(분 단위), 주간 리포트 요일은 `DayOfWeek` 이름이다 — 시각 · 요일의 형식이 틀리면 400. 자유 텍스트 관심사는 앞뒤 공백을 지운 0 ~ 500 코드 포인트이고(빈 문자열은 없음), 넘으면 `INTEREST_TEXT_TOO_LONG`(상한)이다. 리포트 설정은 저장 · 조회만 하고 일정은 리포트의 작업이 쓴다. 화면의 시각 표기는 브라우저 시간대다 — 사용자 시간대는 일정의 기준이다
 - **user-R51** — 공급자 · 모델: 고르기는 그 사용자의 키가 있는(상태 무관) 공급자의 허용 모델만 받는다 — 키가 없는 공급자면 `PROVIDER_WITHOUT_KEY`, 목록에 없는 모델이면 `MODEL_NOT_ALLOWED`. 쓸 모델은 조회 때 정한다(`ModelChoice`): 고른 모델이 허용 목록에 있고 그 공급자의 키가 `VALID` 면 그것(`CHOSEN`), 아니면 `VALID` 키가 있는 공급자(`Provider` 선언 순)의 허용 목록 첫 모델, 그것도 없으면 없음. 고른 모델을 못 쓴 까닭은 하나이고 앞의 것부터다 — `NOT_CHOSEN` → `NOT_ALLOWED`(목록에서 빠짐) → `NO_KEY` → `KEY_INVALID`. 조회는 고를 수 있는 모델(키가 있는 공급자의 허용 모델) · 고른 모델 · 쓸 모델 · 까닭을 낸다
-- **user-R56** — 다이제스트 분량: 최대 후보 수는 단계(`CandidateVolume` — 적게 30 · 보통 60 · 많이 90) 또는 직접 입력(10 ~ 150 — `DigestVolume.MIN_COUNT` · `MAX_COUNT`)이고, 큰 슬롯 수는 0 ~ 10(`MIN_BIG_SLOTS` · `MAX_BIG_SLOTS` — 0 이면 큰 슬롯을 넣지 않는다)이다. 요약 길이는 짧게 · 보통 · 자세히(`SummaryLength` — 단계의 뜻은 다이제스트의 지시가 정한다, [digest-R23](digest.md#프롬프트-구성))이다. 기본은 보통 · 3 · 보통(`InterestDefaults`). 저장은 네 칸을 통째로 바꾸고 이력이 없다. 직접 입력일 때만 직접 입력한 수가 있다(`customCountMatches` — 처리기는 400, 유스케이스는 범위보다 먼저 본다). 범위는 저장할 때만 직접 입력한 수 → 큰 슬롯 수 순으로 보고 어긋난 첫 칸을 결과로 낸다 — 범위 값을 나중에 좁혀도 이미 저장된 값은 그대로 읽는다. 처리기는 키 없이 연다(user-R5). 값은 측정 전 목표다([ADR-0209](../adr/0209-maximum-candidates-and-big-slots-are-user-settings-and-the-big-slot-takes-at-most-half.md) · [ADR-0217](../adr/0217-the-digest-summary-length-is-a-user-setting-in-the-digest-volume-section.md))
-- **user-R58** — 추론 강도: 다이제스트 생성 호출의 추론 강도는 `llm` 의 `ReasoningEffort`(낮음 · 보통 · 높음)이고 기본은 보통(`InterestDefaults.REASONING_EFFORT`)이다. 저장(`ModelSelection.saveEffort` — `PUT /api/interests/effort`)은 user-R46 의 트랜잭션에서 칸 하나를 바꾸고 이력이 없다 — 키 · 고른 모델 · 쓸 모델과 무관하게 받는다. 모델 조회 · 고르기 · 저장의 응답이 지금 값과 고를 수 있는 값을 함께 낸다. 처리기는 키 없이 연다(user-R5). 값을 더하는 변경은 `llm` 의 값과 설정 칸의 검사 · 화면용 API 명세를 함께 고친다([ADR-0218](../adr/0218-the-digest-generation-reasoning-effort-is-a-user-setting-defaulting-to-medium.md))
+- **user-R56** — 다이제스트 분량: 최대 후보 수는 단계(`CandidateVolume` — 적게 30 · 보통 60 · 많이 90) 또는 직접 입력(10 ~ 150 — `DigestVolume.MIN_COUNT` · `MAX_COUNT`)이고, 큰 슬롯 수는 0 ~ 10(`MIN_BIG_SLOTS` · `MAX_BIG_SLOTS` — 0 이면 큰 슬롯을 넣지 않는다)이다. 요약 길이는 짧게 · 보통 · 자세히(`SummaryLength` — 단계의 뜻은 다이제스트의 지시가 정한다, [digest-R23](digest.md#프롬프트-구성))이다. 기본은 보통 · 3 · 보통(`InterestDefaults`). 저장은 네 칸을 통째로 바꾸고 이력이 없다. 직접 입력일 때만 직접 입력한 수가 있다(`customCountMatches` — 처리기는 400, 유스케이스는 범위보다 먼저 본다). 범위는 저장할 때만 직접 입력한 수 → 큰 슬롯 수 순으로 보고 어긋난 첫 칸을 결과로 낸다 — 범위 값을 나중에 좁혀도 이미 저장된 값은 그대로 읽는다. 처리기는 키 없이 연다(user-R5). 값은 측정 전 목표다([ADR-0209](../adr/0209-maximum-candidates-and-big-slots-are-user-settings-and-the-big-slot-takes-at-most-half.md) · [ADR-0223](../adr/0223-the-digest-summary-length-is-a-user-setting-in-the-digest-volume-section.md))
+- **user-R59** — 추론 강도: 다이제스트 생성 호출의 추론 강도는 `llm` 의 `ReasoningEffort`(낮음 · 보통 · 높음)이고 기본은 보통(`InterestDefaults.REASONING_EFFORT`)이다. 저장(`ModelSelection.saveEffort` — `PUT /api/interests/effort`)은 user-R46 의 트랜잭션에서 칸 하나를 바꾸고 이력이 없다 — 키 · 고른 모델 · 쓸 모델과 무관하게 받는다. 모델 조회 · 고르기 · 저장의 응답이 지금 값과 고를 수 있는 값을 함께 낸다. 처리기는 키 없이 연다(user-R5). 값을 더하는 변경은 `llm` 의 값과 설정 칸의 검사 · 화면용 API 명세를 함께 고친다([ADR-0218](../adr/0218-the-digest-generation-reasoning-effort-is-a-user-setting-defaulting-to-medium.md))
 
 ### 스토리라인 구독
 
@@ -686,9 +724,15 @@ public interface HumanVerifier {
 
 - **user-R57** — 다이제스트가 읽는 관심 설정(`DigestInterestsDirectory`): 계정 행이 없으면 빈 값이다. 읽기 전용 `REPEATABLE_READ` 트랜잭션 하나에서 설정 행을 잠그지 않고 읽는다. 설정 행이 없으면 계정을 만들 때의 값(`InterestSettings.defaults` · `PreferenceSet.onboarding`(활성 버전))을 계산하고, 있으면 선호 행을 읽어 선호 버전이 활성 버전과 다를 때 따라가기 결과(`PreferenceFollowups.followed` — user-R47 의 규칙)를 계산한다. 쓰지 않는다 — 설정 행 · 선호 행 · 이력 · 알림은 그대로다. 주제 구독은 구독 행마다 그 버전의 덮는 중분류로 펼쳐(`TopicExpansion`) 키 순으로 내고, 관심사는 본문(없으면 빈 문자열), 시간대, 분량은 최대 후보 수(단계의 값 또는 직접 입력한 수)와 큰 슬롯 수, 요약 길이, 추론 강도를 낸다. 계정 상태는 보지 않는다. 사용자를 인자로 받는 백그라운드 작업 전용이다
 
+### 주제 구독 이력 조회
+
+판단의 이유는 [ADR-0180](../adr/0180-user-settings-changes-publish-no-event-and-consumers-query.md) · [ADR-0211](../adr/0211-the-digest-consumer-query-of-interest-settings-writes-nothing-and-returns-followed-preferences-with-expanded-topics.md)(같은 꼴 — 쓰지 않고 풀어 낸다)에 있다.
+
+- **user-R58** — 주제 구독 이력 조회(`TopicSubscriptionHistory`): 선호 이력의 주제 행 가운데 시각이 시작 포함 · 끝 제외 구간에 드는 것을 시각 · 행 순으로 낸다. 행마다 기록 당시 버전의 구조로 펼치고(대분류는 하위 중분류 전체 — `TopicExpansion`) 중분류마다 그 버전에서 활성 버전으로의 계보 표(`TagKeyLineage.toActive`)로 푼 합집합을 낸다 — 계보 없이 지운 것은 빠진다. 원인 · 더함 뺌은 저장 값을 그대로 옮기고, 관심 신호로 쓸 행을 고르는 일은 부르는 쪽이 한다. 계정 행이 없으면 빈 목록이다. 읽기 전용 `REPEATABLE_READ` 트랜잭션 하나에서 읽고 쓰지 않는다. 낸 키의 활성 버전을 함께 낸다. 사용자를 인자로 받는 백그라운드 작업 전용이다
+
 ## 6. 데이터
 
-컬럼 타입 · 인덱스 · 제약 문면의 정본은 `backend/src/main/resources/db/migration/V31__users_and_password_credentials.sql` · `V33__login_failures.sql` · `V36__user_notices.sql` · `V37__account_provisioning.sql` · `V38__password_change_and_recovery.sql` · `V39__sign_up_and_invitations.sql` · `V42__key_invalidated_notices.sql` · `V43__request_limit_counts.sql` · `V44__interest_settings.sql` · `V45__preferences_adjusted_notices.sql` · `V47__storyline_subscriptions.sql` · `V53__digest_volume.sql` · `V54__digest_writing_settings.sql` 이다. 세션 테이블(Spring Session)은 프레임워크 테이블이라 [data-model.md](../data-model.md)에 있다.
+컬럼 타입 · 인덱스 · 제약 문면의 정본은 `backend/src/main/resources/db/migration/V31__users_and_password_credentials.sql` · `V33__login_failures.sql` · `V36__user_notices.sql` · `V37__account_provisioning.sql` · `V38__password_change_and_recovery.sql` · `V39__sign_up_and_invitations.sql` · `V42__key_invalidated_notices.sql` · `V43__request_limit_counts.sql` · `V44__interest_settings.sql` · `V45__preferences_adjusted_notices.sql` · `V47__storyline_subscriptions.sql` · `V53__digest_volume.sql` · `V55__digest_writing_settings.sql` 이다. 세션 테이블(Spring Session)은 프레임워크 테이블이라 [data-model.md](../data-model.md)에 있다.
 
 | 테이블 | 주요 컬럼 | 뜻 |
 |---|---|---|
@@ -702,7 +746,7 @@ public interface HumanVerifier {
 | `user_sign_up_policy_changes` | id, previous_open, open, actor(`SYSTEM`/`OPERATOR`), changed_at | 가입 정책 이력 — 추가 전용(user-R32). 처음 값 행은 `previous_open` 이 없다 |
 | `user_invitations` | id, token_digest(고유), memo, created_at, expires_at, revoked_at, used_at, used_by, version | 초대(user-R31). `token_digest` 는 토큰의 SHA-256. 쓴 것과 취소한 것은 함께 있을 수 없다(검사). `used_by` 는 가입한 계정이고, 그 계정을 지우면 비고 `used_at` 은 남는다 |
 | `request_limit_counts` | limit_key · window_start(PK), window_end, requests | 요청 제한 기록(user-R39) — 동작 · 축 · 대상의 SHA-256 다이제스트(32바이트)와 고정 창 시작마다 한 행이고 `requests` 는 1 이상이다. 대상(IP · 사용자 ID)을 평문으로 두지 않는다. 끝난 창은 `window_end` 로 찾아 지운다(user-R42) |
-| `user_settings` | user_id(PK), tag_set_id, timezone, digest_time, interest_text, llm_provider, llm_model, weekly_report, weekly_report_day, monthly_report, candidate_volume(`FEW`/`NORMAL`/`MANY`/`CUSTOM`), candidate_count, big_slots, summary_length(`SHORT`/`NORMAL`/`DETAILED`), reasoning_effort(`LOW`/`MEDIUM`/`HIGH`), updated_at, version | 설정 행 — 사용자마다 하나(user-R43). `tag_set_id` 는 선호 버전(user-R45 — `tag` 의 버전 ID, FK 없음). `interest_text` 는 빈 문자열이 없음이다. `llm_provider` · `llm_model` 은 함께 있거나 함께 없다(검사). `weekly_report_day` 는 ISO 요일 1 ~ 7. `candidate_count` 는 `CUSTOM` 일 때만 있다(검사) — 단계의 값과 범위는 칸이 아니라 코드(`DigestVolume`)가 갖는다(user-R56). `summary_length` 의 뜻은 다이제스트의 지시가 갖는다(user-R56), `reasoning_effort` 는 `llm` 의 값이다(user-R58). 계정을 지우면 함께 지워진다 |
+| `user_settings` | user_id(PK), tag_set_id, timezone, digest_time, interest_text, llm_provider, llm_model, weekly_report, weekly_report_day, monthly_report, candidate_volume(`FEW`/`NORMAL`/`MANY`/`CUSTOM`), candidate_count, big_slots, summary_length(`SHORT`/`NORMAL`/`DETAILED`), reasoning_effort(`LOW`/`MEDIUM`/`HIGH`), updated_at, version | 설정 행 — 사용자마다 하나(user-R43). `tag_set_id` 는 선호 버전(user-R45 — `tag` 의 버전 ID, FK 없음). `interest_text` 는 빈 문자열이 없음이다. `llm_provider` · `llm_model` 은 함께 있거나 함께 없다(검사). `weekly_report_day` 는 ISO 요일 1 ~ 7. `candidate_count` 는 `CUSTOM` 일 때만 있다(검사) — 단계의 값과 범위는 칸이 아니라 코드(`DigestVolume`)가 갖는다(user-R56). `summary_length` 의 뜻은 다이제스트의 지시가 갖는다(user-R56), `reasoning_effort` 는 `llm` 의 값이다(user-R59). 계정을 지우면 함께 지워진다 |
 | `user_tag_preferences` | user_id · tag_kind · tag_key(PK), mode, created_at | 태그 선호의 현재 상태 — 선호 이력의 투영(user-R45). `tag_kind` 는 `TOPIC`/`REGION`/`FORMAT`, `mode` 는 `TOPIC` 이면 `SUBSCRIBE` · 그 밖 `EXCLUDE`(검사). 계정을 지우면 함께 지워진다 |
 | `user_tag_preference_events` | id, user_id, cause(`USER`/`ONBOARDING`/`TAG_SET_CHANGE`), tag_set_id, tag_kind, tag_key, mode, action(`ADD`/`REMOVE`), occurred_at | 선호 이력 — 추가만 한다(user-R45). `tag_set_id` 는 기록 당시 버전. 계정을 지우면 함께 지워진다 |
 | `user_excluded_sources` | user_id · source_id(PK), created_at | 제외 소스(user-R49). `source_id` 는 `source` 의 소스 ID(FK 없음 — `SourceDeleted` 로 지운다, 소스 ID 색인). 계정을 지우면 함께 지워진다 |
@@ -774,6 +818,6 @@ public interface HumanVerifier {
 | [0191](../adr/0191-the-consumer-query-of-storyline-subscriptions-is-opened-with-the-subscriptions-and-resolves-ids-without-writing.md) | 스토리라인 구독의 소비자 조회는 구독을 만든 작업이 열고, 쓰지 않고 남는 스토리라인 ID 로 풀어 낸다 |
 | [0209](../adr/0209-maximum-candidates-and-big-slots-are-user-settings-and-the-big-slot-takes-at-most-half.md) | 다이제스트 최대 후보 수와 큰 슬롯 수는 사용자 설정이다 |
 | [0211](../adr/0211-the-digest-consumer-query-of-interest-settings-writes-nothing-and-returns-followed-preferences-with-expanded-topics.md) | 다이제스트가 읽는 관심 설정 조회는 쓰지 않고, 따라가기 결과와 펼친 주제 구독을 낸다 |
-| [0217](../adr/0217-the-digest-summary-length-is-a-user-setting-in-the-digest-volume-section.md) | 요약 길이는 사용자 설정이고 "다이제스트 분량" 구획에 있다 |
+| [0223](../adr/0223-the-digest-summary-length-is-a-user-setting-in-the-digest-volume-section.md) | 요약 길이는 사용자 설정이고 "다이제스트 분량" 구획에 있다 |
 | [0218](../adr/0218-the-digest-generation-reasoning-effort-is-a-user-setting-defaulting-to-medium.md) | 생성의 추론 강도는 사용자 설정이고 기본은 보통이다 |
 | [0219](../adr/0219-candidate-selection-hands-over-the-prompt-material-read-once-with-its-token-estimate.md) | 다이제스트가 읽는 관심 설정은 관심사 본문 · 시간대 · 요약 길이 · 추론 강도를 낸다 |

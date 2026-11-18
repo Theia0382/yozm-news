@@ -24,7 +24,7 @@ import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
 
 /**
- * 프롬프트 구성 — 정본 — docs/specs/digest.md §5 · digest-R23
+ * 프롬프트 구성 — 정본 — docs/specs/digest.md §5 · digest-R26
  * <p>
  * 지시 구획은 고정 문면과 요약 길이 기준이고, 모델이 구조화 출력을 지원하지 않으면 출력 스키마 문서를 덧붙인다. 사용자 구획은 JSON 문서 하나
  * ({@code profile} · {@code storylines} · {@code candidates})이고 JSON 으로 써서 신뢰할 수 없는 글(제목 · 요약문 · 출처 · 관심사)이

@@ -52,8 +52,10 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 기록이 없는 띠 쌍은 배정 때 받은 확률({@link EventArticleRepository#priorProbabilities})이 확률 기준 미만이면 묻지 않고 합치지
  * 않는다 — 남기지 않아 확인할 때마다 그때 기준과 견준다. 기준 이상이면 묻는다({@link MergeRule#priorProbability}).
  * 핵심 말 겹침의 기준 쪽과 남는 사건은 {@link MergeRule} 이 정한다. 쓰기는 쌍마다 한 트랜잭션에서 배정 행(기사 ID 순) → 사건(ID 순)을
- * 잠그고, 둘 다 열려 있고 모델 버전이 같고 잠근 배정 수가 사건의 기사 수와 같을 때만 합친다 — 아니면 표시하지 않아 다음 회차가 다시 본다.
+ * 잠그고, 둘 다 열려 있고 모델 버전이 같고 잠근 배정 수가 사건의 기사 수와 같을 때만 합친다.
  * 합쳐질 사건에는 합치기 직전의 대표 기사({@link EventQueryRepository#representativesOfAll})를 남긴다.
+ * 확인을 끝내지 못한 사건(판정의 일시 실패 · 판정할 기사 없음 · 합치지 못함)은 표시하지 않고 미룬다({@link EventRepository#deferMerge}) —
+ * 다시 볼 시각은 {@link AssignmentSchedule#retryAt} 에 이어서 미룬 횟수를 넣은 값이고, 그 시각이 지난 회차가 미루지 않은 사건 다음에 본다.
  * 사건 소속 판정은 트랜잭션 밖에서 부른다. 회차마다 {@link AssignmentSchedule#MERGE_BATCH} 사건까지 본다. 예외를 밖으로 던지지 않는다.
  * 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통).
  */
@@ -114,7 +116,8 @@ public class MergeRound {
 			long criteriaId = Objects.requireNonNull(
 					this.transaction.execute(status -> this.criteriaHistory.register(this.criteria, this.clock.instant())),
 					"criteriaId");
-			for (MergeSubject subject : this.events.mergeDue(criteriaId, AssignmentSchedule.MERGE_BATCH)) {
+			for (MergeSubject subject : this.events.mergeDue(criteriaId, this.clock.instant(),
+					AssignmentSchedule.MERGE_BATCH)) {
 				// 이 회차에서 앞서 합친 사건이다 — 읽어 둔 값이 낡았고, 남는 쪽은 revision 이 늘어 다음 회차가 다시 본다
 				if (touched.contains(subject.id())) {
 					continue;
@@ -158,21 +161,20 @@ public class MergeRound {
 		};
 		return switch (resolution) {
 			case Resolution.Decided decided -> apply(subject, decided.decision(), criteriaId, now);
-			// 일시 실패이거나 서술 기사가 지워졌다 — 표시하지 않아 다음 회차가 다시 본다
-			case Resolution.Later later -> new Step.Next();
+			case Resolution.Later later -> defer(subject, now);
 			case Resolution.Halt halt -> new Step.Stop(halt.message());
 		};
 	}
 
-	/** 판정을 적용한다 — 붙임이면 합치고, 새 사건이면 합치지 않는다. 합치지 못하면 표시하지 않는다 */
+	/** 판정을 적용한다 — 붙임이면 합치고, 새 사건이면 합치지 않는다. 합치지 못하면 표시하지 않고 미룬다 */
 	private Step apply(MergeSubject subject, Decision decision, long criteriaId, Instant now) {
 		return switch (decision) {
 			case Decision.Attach attach -> {
 				Optional<Step.Merged> done = merge(subject.id(), attach.eventId(), now);
 				if (done.isEmpty()) {
-					logger.info("합칠 사건이 닫혔거나 그새 바뀌어 다음 회차에 다시 본다 — 사건 {} · {}", subject.id(),
+					logger.info("합칠 사건이 닫혔거나 그새 바뀌어 미뤄 다시 본다 — 사건 {} · {}", subject.id(),
 							attach.eventId());
-					yield new Step.Next();
+					yield defer(subject, now);
 				}
 				// 합쳤으면 revision 이 늘어 표시되지 않는다 — 남는 사건은 다음 회차가 다시 본다(사슬 병합)
 				this.events.markMergeChecked(subject.id(), subject.revision(), criteriaId);
@@ -185,6 +187,16 @@ public class MergeRound {
 			case Decision.Ask ask -> throw new IllegalStateException("물을 후보가 남은 채 정하려 했다: " + ask);
 			case Decision.Keep keep -> throw new IllegalStateException("병합은 유지를 내지 않는다");
 		};
+	}
+
+	/**
+	 * 확인을 끝내지 못한 사건을 미룬다 — 표시하지 않아 대상으로 남고, 다시 볼 시각까지는 회차의 자리를 차지하지 않는다. 미룸은 확인을
+	 * 표시하거나 합칠 때 지워진다.
+	 */
+	private Step defer(MergeSubject subject, Instant now) {
+		int deferrals = subject.deferrals() + 1;
+		this.events.deferMerge(subject.id(), deferrals, AssignmentSchedule.retryAt(now, deferrals));
+		return new Step.Next();
 	}
 
 	/**
@@ -259,7 +271,7 @@ public class MergeRound {
 			}
 			case MembershipJudgement.Failed failed -> switch (failed.kind()) {
 				case TRANSIENT -> {
-					logger.info("사건 병합 판정이 일시 실패해 다음 회차에 다시 본다 — 사건 {}: {}", subject.id(),
+					logger.info("사건 병합 판정이 일시 실패해 미뤄 다시 본다 — 사건 {}: {}", subject.id(),
 							failed.message());
 					yield new Resolution.Later();
 				}
@@ -333,7 +345,7 @@ public class MergeRound {
 		record Decided(Decision decision) implements Resolution {
 		}
 
-		/** 표시하지 않고 다음 회차에 다시 본다 — 일시 실패 · 판정할 기사 없음 */
+		/** 표시하지 않고 미뤄 다시 본다 — 일시 실패 · 판정할 기사 없음 */
 		record Later() implements Resolution {
 		}
 

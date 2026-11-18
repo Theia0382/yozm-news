@@ -37,7 +37,7 @@
 | [0029](0029-indefinite-summary-retention-with-optional-deletion.md) | RSS 요약문은 기본 무기한 보존하고, 자동 삭제는 운영 설정으로 켠다 | 승인 (부분 대체: 0068 · 0101) |
 | [0030](0030-feed-xml-own-parser-and-rome-for-format-title-link.md) | 피드 문서는 자체 구성한 XML 파서로 읽어 DTD 선언을 거부하고, Rome 은 형식 판별 · 제목 · 링크에만 쓴다 | 승인 |
 | [0031](0031-feed-request-blocks-internal-addresses-with-apache-httpclient-deadline.md) | 피드 요청은 내부 주소를 기본으로 막고, Apache HttpClient 로 한 번의 수집 전체에 마감 · 크기 상한을 건다 | 승인 (부분 대체: 0049 · 0065) |
-| [0032](0032-same-article-matching-avoids-false-merges-with-per-feed-entries-under-source-lock.md) | 같은 기사 판정은 기사를 잃지 않는 쪽으로 좁히고, 피드별 기록은 (기사, 피드)마다 한 행으로 소스 단위 잠금 안에서 쓴다 | 승인 (부분 대체: 0052) |
+| [0032](0032-same-article-matching-avoids-false-merges-with-per-feed-entries-under-source-lock.md) | 같은 기사 판정은 기사를 잃지 않는 쪽으로 좁히고, 피드별 기록은 (기사, 피드)마다 한 행으로 소스 단위 잠금 안에서 쓴다 | 승인 (부분 대체: 0052 · 0217) |
 | [0033](0033-feed-polling-db-lease-per-feed-new-items-and-per-source-request-spacing.md) | 피드 수집은 DB 점유로 겹침을 막고, 피드별 직전 항목으로 새 항목을 가르며, 같은 언론사 요청 사이는 요청 직전의 DB 예약으로 띄운다 | 승인 (부분 대체: 0040 · 0051 · 0066) |
 | [0034](0034-module-spec-as-public-interface-specification-and-docs-by-kind.md) | 모듈 Spec 은 모듈 공개 인터페이스의 명세로 코드보다 먼저 쓰고, 설계 문서는 종류 · 독자별 갈래로 나눈다 | 승인 (부분 대체: 0036) |
 | [0035](0035-public-markdown-links-and-anchors-checked-by-separate-check-service.md) | 공개 마크다운의 상대 링크와 앵커는 별도 검사 서비스가 확인한다 | 승인 (부분 대체: 0100) |
@@ -89,7 +89,7 @@
 | [0081](0081-event-assignment-criteria-in-settings-and-rejudgement-within-stored-scores.md) | 사건 기준 · 저장 기준은 설정에 두고(기본값은 코드), 기준이 바뀌면 저장된 점수 · 확률 안에서 재판정한다 | 승인 (부분 대체: 0087) |
 | [0082](0082-big-events-judged-at-query-time-by-distinct-sources-and-mean-importance-both-reaching-criteria.md) | 큰 사건은 기간 안의 서로 다른 소스 수와 중요도 평균이 둘 다 기준 이상인 사건이고, 조회할 때 지금 기준으로 판정한다 | 대체됨 (0116) |
 | [0083](0083-big-event-criteria-as-operator-settings-with-append-only-history-and-preview.md) | 큰 사건 기준은 운영자 설정으로 두고 추가 전용 이력과 미리보기를 둔다 | 대체됨 (0118) |
-| [0084](0084-event-merge-applies-assignment-scoring-between-events-and-keeps-merged-rows-pointing-to-survivors.md) | 사건 병합은 배정 산식 · 판정을 사건 대 사건에 쓰고, 합쳐진 사건은 남는 사건을 가리키는 행으로 남긴다 | 승인 (부분 대체: 0093 · 0119) |
+| [0084](0084-event-merge-applies-assignment-scoring-between-events-and-keeps-merged-rows-pointing-to-survivors.md) | 사건 병합은 배정 산식 · 판정을 사건 대 사건에 쓰고, 합쳐진 사건은 남는 사건을 가리키는 행으로 남긴다 | 승인 (부분 대체: 0093 · 0119 · 0213) |
 | [0085](0085-rejudgement-knows-opened-events-from-an-assignment-flag-and-reads-merged-candidates-as-survivors.md) | 재판정은 그 기사가 연 사건을 배정의 표지로 알고, 저장 후보의 합쳐진 사건은 남는 사건으로 읽는다 | 승인 |
 | [0086](0086-events-close-after-an-idle-period-since-the-last-join-or-a-maximum-period-since-opening.md) | 사건은 마지막으로 기사가 붙은 뒤 닫는 기간이 지나거나 연 뒤 최대 기간이 지나면 닫는다 | 승인 (부분 대체: 0101) |
 | [0087](0087-closed-event-assignments-are-not-rejudged-and-closing-and-merging-are-not-undone.md) | 닫힌 사건의 배정은 재판정하지 않고, 닫기 · 병합은 기준이 바뀌어도 되돌리지 않는다 | 승인 |
@@ -218,11 +218,17 @@
 | [0210](0210-candidate-selection-cuts-to-the-input-token-budget-with-one-estimate-the-prompt-follows.md) | 입력 토큰 예산은 후보 선별이 `digest` 의 한 추정 규칙으로 세어 자르고, 프롬프트 구성이 그 규칙을 따른다 | 승인 (부분 대체: 0219 · 0220) |
 | [0211](0211-the-digest-consumer-query-of-interest-settings-writes-nothing-and-returns-followed-preferences-with-expanded-topics.md) | 다이제스트가 읽는 관심 설정 조회는 쓰지 않고, 따라가기 결과와 펼친 주제 구독을 낸다 | 승인 (부분 대체: 0219) |
 | [0212](0212-migrations-never-delete-user-data-or-the-shared-rows-and-ids-it-references-and-moved-data-is-checked-by-a-data-test.md) | 마이그레이션은 사용자 데이터와 그것이 가리키는 공유 데이터의 행 · ID 를 지우지 않고, 데이터를 옮기면 데이터 시험으로 대조한다 | 승인 |
-| [0217](0217-the-digest-summary-length-is-a-user-setting-in-the-digest-volume-section.md) | 다이제스트의 요약 길이는 사용자 설정이고 "다이제스트 분량" 구획에 있다 | 승인 |
+| [0213](0213-event-merge-defers-events-whose-check-did-not-finish-until-a-retry-time-on-the-event-row-and-never-drops-them.md) | 병합 회차가 확인을 끝내지 못한 사건은 사건 행에 남긴 다시 볼 시각까지 미루고, 미룬 횟수로 대상에서 빼지 않는다 | 승인 |
+| [0214](0214-a-storyline-subscription-enters-topic-interest-by-the-topic-shares-of-its-event-representatives.md) | 스토리라인 구독은 사건 대표 기사의 주제 몫으로 주제별 관심도에 든다 | 승인 |
+| [0215](0215-interests-are-not-stored-entities-and-are-computed-from-signal-history-at-query-time.md) | 관심사는 개체로 세우지 않고 신호 이력에서 조회 때 계산한다 | 승인 |
+| [0216](0216-the-interest-selection-reason-marks-subscribed-candidates-that-enter-only-by-interest-with-a-weight-above-neutral.md) | 선정 이유 `INTEREST` 는 중립 순위로는 들지 못하고 가중치가 1 보다 큰 구독 후보다 | 승인 |
+| [0217](0217-title-matching-takes-an-article-seen-in-the-feed-when-the-item-repeats-its-read-published-time.md) | 제목 판정은 이 피드에서 본 기사라도 읽은 발행 시각이 같으면 후보로 둔다 | 승인 |
 | [0218](0218-the-digest-generation-reasoning-effort-is-a-user-setting-defaulting-to-medium.md) | 다이제스트 생성의 추론 강도는 사용자 설정이고 기본은 보통이다 | 승인 |
 | [0219](0219-candidate-selection-hands-over-the-prompt-material-read-once-with-its-token-estimate.md) | 프롬프트 재료는 후보 선별이 토큰 어림과 같은 한 번의 읽기로 낸다 | 승인 |
 | [0220](0220-big-slot-candidates-are-grouped-by-big-storyline-row-in-the-prompt-and-the-digest-llm-neither-makes-nor-links-groups.md) | 큰 슬롯 후보는 큰 판정 행마다 묶어 프롬프트에 보이고, 다이제스트 LLM 은 묶음을 새로 만들거나 잇지 않는다 | 승인 |
 | [0221](0221-generator-results-are-success-or-failure-and-the-use-case-asks-once-more-only-for-a-complete-unreadable-answer.md) | 다이제스트 생성기의 결과는 성공 · 실패 갈래이고, 끝까지 쓴 응답을 읽지 못하면 유스케이스가 한 번 다시 묻는다 | 승인 |
+| [0222](0222-interest-per-subtopic-is-smoothed-reactions-over-exposures-with-a-half-life-and-exposures-are-all-ready-citations.md) | 관심도는 주제 중분류마다 노출로 나눈 반응에 가상 노출을 더해 평활하고 반감기로 감쇠하며, 노출은 덮인 다이제스트를 포함한 인용 전부다 | 승인 |
+| [0223](0223-the-digest-summary-length-is-a-user-setting-in-the-digest-volume-section.md) | 다이제스트의 요약 길이는 사용자 설정이고 "다이제스트 분량" 구획에 있다 | 승인 |
 
 ## 운영 규칙
 

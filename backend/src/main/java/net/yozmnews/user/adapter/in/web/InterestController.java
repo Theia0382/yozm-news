@@ -32,7 +32,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 /**
  * 관심 설정 — 태그 선호 · 제외 소스 · 일정 · 관심사 · 리포트 · 모델 · 추론 강도 · 다이제스트 분량의 조회 · 저장. docs/specs/user.md §3 ·
- * user-R46 · user-R49 ~ user-R51 · user-R56 · user-R58
+ * user-R46 · user-R49 ~ user-R51 · user-R56 · user-R59
  * <p>
  * 모두 세션 사용자의 것이고 키 없이도 연다 — 관심 설정은 내용을 내지 않는다(user-R5).
  */

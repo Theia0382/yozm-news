@@ -11,7 +11,7 @@ import net.yozmnews.user.domain.interest.ModelRef;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 모델 조회 — 고를 수 있는 모델 · 고른 모델 · 쓸 모델 · 고른 모델을 못 쓴 까닭 · 추론 강도. docs/specs/user.md §3 · user-R51 · user-R58
+ * 모델 조회 — 고를 수 있는 모델 · 고른 모델 · 쓸 모델 · 고른 모델을 못 쓴 까닭 · 추론 강도. docs/specs/user.md §3 · user-R51 · user-R59
  *
  * @param choosable 고를 수 있는 모델(키가 있는 공급자의 허용 모델 — 목록 순)
  * @param chosen 고른 모델 — 고르지 않았으면 null

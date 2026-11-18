@@ -45,7 +45,7 @@ public final class ArticleMatching {
 		Instant publishedAt = item.article().publishedAt();
 		Optional<TitleCandidate> byTitle = candidates.byTitle()
 			.stream()
-			.filter((candidate) -> !candidate.seenInFeed())
+			.filter((candidate) -> !candidate.seenInFeed() || republishedInFeed(item, candidate))
 			.filter((candidate) -> distance(candidate, publishedAt).compareTo(TITLE_WINDOW) <= 0)
 			.min(Comparator.comparing((TitleCandidate candidate) -> distance(candidate, publishedAt))
 				.thenComparingLong((candidate) -> candidate.articleId().value()));
@@ -53,6 +53,12 @@ public final class ArticleMatching {
 			return new MatchDecision.Existing(byTitle.get().articleId(), MatchKind.TITLE);
 		}
 		return new MatchDecision.New(!candidates.byGuid().isEmpty());
+	}
+
+	/** 이 피드에서 본 기사를 같은 발행 시각으로 다시 낸 항목인지 — 둘 다 발행 시각을 피드에서 읽었을 때만 본다 */
+	private static boolean republishedInFeed(IncomingItem item, TitleCandidate candidate) {
+		return !item.article().publishedAtEstimated() && !candidate.publishedAtEstimated()
+				&& candidate.publishedAt().equals(item.article().publishedAt());
 	}
 
 	private static Duration distance(TitleCandidate candidate, Instant publishedAt) {

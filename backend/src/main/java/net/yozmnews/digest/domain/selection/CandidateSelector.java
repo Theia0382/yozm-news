@@ -6,10 +6,14 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.digest.domain.candidate.DigestCandidate;
 import net.yozmnews.digest.domain.candidate.SelectionReason;
+import net.yozmnews.digest.domain.interest.InterestRules;
+import net.yozmnews.digest.domain.interest.TopicInterests;
 import net.yozmnews.digest.domain.selection.BigSlotPicker.BigSlots;
 import net.yozmnews.event.EventId;
 
@@ -20,6 +24,8 @@ import net.yozmnews.event.EventId;
  * → 사건 단위 중복 제거({@link EventDedup}) → 다양성 몫과 최대 후보 수({@link DiversityQuota}) → (부르는 쪽이 제목 · 요약문 길이를 읽음) →
  * 입력 토큰 예산({@link BudgetCut}) → 선정 이유 · 큰 판정 행 묶음. 다른 모듈을 읽는 단계 사이를 부르는 쪽이 잇는다 — 읽을 기사가 앞 단계의
  * 결과로 좁혀진다.
+ * <p>
+ * 구독 후보는 관심도 순위와 중립 순위로 각각 같은 단계를 지난다 — 선정 이유 {@link SelectionReason#INTEREST} 는 둘을 견줘 정한다.
  */
 public final class CandidateSelector {
 
@@ -43,15 +49,29 @@ public final class CandidateSelector {
 	}
 
 	/**
-	 * 예산으로 자른 후보에 선정 이유를 붙인다 — 큰 슬롯 기사는 {@link SelectionReason#MAJOR_STORYLINE}, 구독 후보는
-	 * {@link SelectionReason#SUBSCRIBED}. 관심도가 중립이라 {@link SelectionReason#INTEREST} 는 나오지 않는다. 큰 슬롯 기사가 먼저다.
-	 * @param cut {@link BudgetCut#apply} 의 결과
+	 * 예산으로 자른 두 결과로 선정 이유를 붙인다 — 큰 슬롯 기사는 {@link SelectionReason#MAJOR_STORYLINE}. 구독 후보는 중립 결과의 구독
+	 * 후보에 없고 관심도 가중치가 중립보다 크면 {@link SelectionReason#INTEREST}(관심도로 들어온 기사), 아니면
+	 * {@link SelectionReason#SUBSCRIBED} 다. 관심도 때문에 밀려난 기사는 이유가 남지 않는다. 큰 슬롯 기사가 먼저, 구독 후보는 관심도 결과의
+	 * 순서다.
+	 * @param cut 관심도 순위로 고른 결과를 {@link BudgetCut#apply} 로 자른 것
+	 * @param neutralCut 같은 재료를 중립 순위({@link TopicInterests#NEUTRAL_ALL})로 고른 결과를 같은 어림 · 예산으로 자른 것
 	 */
-	public static List<DigestCandidate> candidates(Shortlist cut) {
+	public static List<DigestCandidate> candidates(Shortlist cut, Shortlist neutralCut, TopicInterests interests) {
 		Objects.requireNonNull(cut, "cut");
+		Objects.requireNonNull(neutralCut, "neutralCut");
+		Objects.requireNonNull(interests, "interests");
+		Set<ArticleId> withoutInterest = neutralCut.subscribed()
+			.stream()
+			.map(ArticleFacts::id)
+			.collect(Collectors.toSet());
 		List<DigestCandidate> candidates = new ArrayList<>(cut.big().size() + cut.subscribed().size());
 		cut.big().forEach(article -> candidates.add(new DigestCandidate(article.id(), SelectionReason.MAJOR_STORYLINE)));
-		cut.subscribed().forEach(article -> candidates.add(new DigestCandidate(article.id(), SelectionReason.SUBSCRIBED)));
+		for (ArticleFacts article : cut.subscribed()) {
+			boolean byInterest = !withoutInterest.contains(article.id())
+					&& interests.weightOf(article.subtopics()) > InterestRules.NEUTRAL;
+			candidates.add(new DigestCandidate(article.id(),
+					byInterest ? SelectionReason.INTEREST : SelectionReason.SUBSCRIBED));
+		}
 		return List.copyOf(candidates);
 	}
 

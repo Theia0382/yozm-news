@@ -80,7 +80,7 @@ public final class InterestSettings {
 				Objects.requireNonNull(model, "model"), this.effort, this.reports, this.volume, now, this.version);
 	}
 
-	/** 추론 강도를 바꾼다(user-R58) */
+	/** 추론 강도를 바꾼다(user-R59) */
 	public InterestSettings withEffort(ReasoningEffort effort, Instant now) {
 		return new InterestSettings(this.user, this.preferenceVersion, this.schedule, this.interestText, this.model,
 				Objects.requireNonNull(effort, "effort"), this.reports, this.volume, now, this.version);

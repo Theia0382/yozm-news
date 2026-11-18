@@ -36,4 +36,4 @@
 
 ## 후속 기록
 
-- 2026-11-18: 결과 "관심 설정 화면에 '다이제스트 분량' 구획이 있다" — 같은 구획에 요약 길이가 더해졌다([ADR-0217](0217-the-digest-summary-length-is-a-user-setting-in-the-digest-volume-section.md)), 지금 상태는 [user Spec "관심 설정"](../specs/user.md#관심-설정) user-R56
+- 2026-11-18: 결과 "관심 설정 화면에 '다이제스트 분량' 구획이 있다" — 같은 구획에 요약 길이가 더해졌다([ADR-0223](0223-the-digest-summary-length-is-a-user-setting-in-the-digest-volume-section.md)), 지금 상태는 [user Spec "관심 설정"](../specs/user.md#관심-설정) user-R56
