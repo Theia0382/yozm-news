@@ -82,6 +82,9 @@ class DigestArticleRemovalTests {
 	TransactionTemplate transaction;
 
 	@Autowired
+	DigestEndings endings;
+
+	@Autowired
 	DigestArticleRemoval removal;
 
 	@Autowired
@@ -111,7 +114,7 @@ class DigestArticleRemovalTests {
 	}
 
 	private DigestGeneration generation(DigestGenerator generator, DigestCandidateRepository repository) {
-		return new DigestGeneration(this.digests, this.sections, repository, this.articles, generator,
+		return new DigestGeneration(this.digests, this.sections, repository, this.articles, generator, this.endings,
 				this.transaction, CLOCK);
 	}
 

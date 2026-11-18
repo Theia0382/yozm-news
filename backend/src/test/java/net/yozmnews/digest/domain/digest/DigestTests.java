@@ -14,7 +14,7 @@ import net.yozmnews.platform.UserId;
 import org.junit.jupiter.api.Test;
 
 /**
- * 다이제스트 상태 전이 — 예약 → 시작(다시 시작) → 끝(READY · EMPTY · FAILED), 끝난 뒤 · 시작 전의 거부. 스프링 없이 돈다.
+ * 다이제스트 상태 전이 — 예약 → 시작 → 끝(READY · EMPTY · FAILED), 시작하지 않고 · 생성 중에 실패로 끝내기, 생성 중 · 끝난 뒤 · 시작 전의 거부. 스프링 없이 돈다.
  * <p>
  * 지키는 규칙: digest-R1
  */
@@ -48,7 +48,7 @@ class DigestTests {
 	}
 
 	@Test
-	void startsWithTheRequestedModelAndStartsAgain() {
+	void startsWithTheRequestedModelAndDoesNotStartAgain() {
 		Digest started = scheduled().start(MODEL, 5, T1);
 
 		assertThat(started.status()).isEqualTo(DigestStatus.RUNNING);
@@ -57,12 +57,45 @@ class DigestTests {
 		assertThat(started.candidateCount()).contains(5);
 		assertThat(started.startedAt()).contains(T1);
 
-		Digest again = started.start(new LlmModel(Provider.OPENAI, "gpt-5.5-mini", 100_000, true), 3, T2);
+		// 생성 중인 다이제스트는 다시 시작하지 않는다 — 같은 다이제스트의 생성기 호출은 하나다
+		assertThatThrownBy(() -> started.start(new LlmModel(Provider.OPENAI, "gpt-5.5-mini", 100_000, true), 3, T2))
+			.isInstanceOf(IllegalStateException.class);
+	}
 
-		assertThat(again.status()).isEqualTo(DigestStatus.RUNNING);
-		assertThat(again.provider()).contains("openai");
-		assertThat(again.candidateCount()).contains(3);
-		assertThat(again.startedAt()).contains(T2);
+	@Test
+	void abandonsAScheduledDigestWithoutModelTokensOrTime() {
+		Digest abandoned = scheduled().abandon(DigestFailure.NO_USABLE_MODEL, "쓸 모델이 없다", T1);
+
+		assertThat(abandoned.status()).isEqualTo(DigestStatus.FAILED);
+		assertThat(abandoned.failure()).contains(DigestFailure.NO_USABLE_MODEL);
+		assertThat(abandoned.errorMessage()).contains("쓸 모델이 없다");
+		assertThat(abandoned.completedAt()).contains(T1);
+		assertThat(abandoned.provider()).isEmpty();
+		assertThat(abandoned.model()).isEmpty();
+		assertThat(abandoned.usage()).isEmpty();
+		assertThat(abandoned.durationMs()).isEmpty();
+	}
+
+	@Test
+	void abandonsARunningDigestAndKeepsItsModel() {
+		Digest abandoned = scheduled().start(MODEL, 5, T1).abandon(DigestFailure.INTERRUPTED, "끝나지 않았다", T2);
+
+		assertThat(abandoned.status()).isEqualTo(DigestStatus.FAILED);
+		assertThat(abandoned.failure()).contains(DigestFailure.INTERRUPTED);
+		assertThat(abandoned.completedAt()).contains(T2);
+		assertThat(abandoned.provider()).contains("anthropic");
+		assertThat(abandoned.model()).contains("claude-sonnet-5-5");
+		assertThat(abandoned.candidateCount()).contains(5);
+		assertThat(abandoned.usage()).isEmpty();
+		assertThat(abandoned.durationMs()).isEmpty();
+	}
+
+	@Test
+	void refusesToAbandonAFinishedDigest() {
+		Digest empty = scheduled().start(MODEL, 0, T1).complete(new Completion.Empty(), T2);
+
+		assertThatThrownBy(() -> empty.abandon(DigestFailure.INTERRUPTED, "끝나지 않았다", T2))
+			.isInstanceOf(IllegalStateException.class);
 	}
 
 	@Test

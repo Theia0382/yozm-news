@@ -104,8 +104,8 @@ public final class Digest {
 	}
 
 	/**
-	 * 생성을 시작한다 — 이미 시작했으면 처음부터 다시 시작한다.
-	 * @throws IllegalStateException 끝난 다이제스트일 때
+	 * 생성을 시작한다 — 생성을 기다리는 다이제스트만 시작한다. 생성 중인 다이제스트는 다시 시작하지 않는다.
+	 * @throws IllegalStateException 생성을 기다리는 다이제스트가 아닐 때
 	 */
 	public Digest start(LlmModel model, int candidateCount, Instant now) {
 		Objects.requireNonNull(model, "model");
@@ -113,8 +113,8 @@ public final class Digest {
 		if (candidateCount < 0) {
 			throw new IllegalArgumentException("후보 수가 음수다: " + candidateCount);
 		}
-		if (this.status.finished()) {
-			throw new IllegalStateException("끝난 다이제스트는 시작할 수 없다: " + this.status);
+		if (this.status != DigestStatus.SCHEDULED) {
+			throw new IllegalStateException("생성을 기다리는 다이제스트만 시작할 수 있다: " + this.status);
 		}
 		return new Digest(this.id, this.userId, this.digestDate, this.periodStart, this.periodEnd,
 				DigestStatus.RUNNING, this.trigger, model.provider().key(), model.id(), candidateCount, null, null,
@@ -137,6 +137,20 @@ public final class Digest {
 			case Completion.Failed failed -> finish(DigestStatus.FAILED, failed.usage(), failed.took(),
 					failed.failure(), CodePoints.prefix(failed.message(), MAX_ERROR_MESSAGE), now);
 		};
+	}
+
+	/**
+	 * 생성기를 부르지 않거나 생성이 끝나지 않은 채 실패로 끝낸다 — 토큰 · 소요 시간이 없다. 시작할 때 적은 공급자 · 모델은 그대로 둔다.
+	 * @throws IllegalStateException 끝난 다이제스트일 때
+	 */
+	public Digest abandon(DigestFailure failure, String message, Instant now) {
+		Objects.requireNonNull(failure, "failure");
+		Objects.requireNonNull(message, "message");
+		Objects.requireNonNull(now, "now");
+		if (this.status.finished()) {
+			throw new IllegalStateException("끝난 다이제스트는 실패로 끝낼 수 없다: " + this.status);
+		}
+		return finish(DigestStatus.FAILED, null, null, failure, CodePoints.prefix(message, MAX_ERROR_MESSAGE), now);
 	}
 
 	private Digest finish(DigestStatus finished, @Nullable TokenUsage usage, @Nullable Duration took,

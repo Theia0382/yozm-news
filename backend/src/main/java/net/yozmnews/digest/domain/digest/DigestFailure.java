@@ -35,6 +35,12 @@ public enum DigestFailure {
 	OUTPUT_TRUNCATED,
 
 	/** 모델이 거절했다 — 다시 묻지 않는다 */
-	OUTPUT_REFUSED
+	OUTPUT_REFUSED,
+
+	/** 생성을 시작할 때 쓸 모델이 없거나 계정이 없었다 — 생성기를 부르지 않았다 */
+	NO_USABLE_MODEL,
+
+	/** 정한 시간 안에 생성이 끝나지 않았다 — 시작하지 못했거나 생성 중에 멈췄다 */
+	INTERRUPTED
 
 }

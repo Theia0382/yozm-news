@@ -102,6 +102,9 @@ class LlmDigestGeneratorFlowTests {
 	TransactionTemplate transaction;
 
 	@Autowired
+	DigestEndings endings;
+
+	@Autowired
 	LlmKeyRepository keys;
 
 	@Autowired
@@ -206,7 +209,7 @@ class LlmDigestGeneratorFlowTests {
 
 	private Map<String, Object> run(UserId user, LlmDigestGenerator generator, DigestInput input) {
 		DigestGeneration generation = new DigestGeneration(this.digests, this.sections, this.candidates, this.articles,
-				generator, this.transaction, Instant::now);
+				generator, this.endings, this.transaction, Instant::now);
 		DigestId id = generation.schedule(user, java.time.LocalDate.parse("2026-11-16"),
 				new DigestPeriod(Instant.parse("2026-11-14T22:00:00Z"), Instant.parse("2026-11-15T22:00:00Z")),
 				DigestTrigger.SCHEDULED);
