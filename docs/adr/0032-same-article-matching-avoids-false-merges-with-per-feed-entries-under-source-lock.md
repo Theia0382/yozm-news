@@ -1,6 +1,6 @@
 # ADR-0032: 같은 기사 판정은 기사를 잃지 않는 쪽으로 좁히고, 피드별 기록은 (기사, 피드)마다 한 행으로 소스 단위 잠금 안에서 쓴다
 
-- 상태: 승인. 부분 대체 — L2 의 범위([ADR-0052](0052-article-sources-live-in-feed-entries-and-late-items-of-deleted-feeds-are-dropped.md))
+- 상태: 승인. 부분 대체 — L2 의 같은 피드 제외([ADR-0217](0217-title-matching-takes-an-article-seen-in-the-feed-when-the-item-repeats-its-read-published-time.md)) · L2 의 범위([ADR-0052](0052-article-sources-live-in-feed-entries-and-late-items-of-deleted-feeds-are-dropped.md)) · 같은 피드에 URL 만 바꿔 다시 올라온 기사([ADR-0217](0217-title-matching-takes-an-article-seen-in-the-feed-when-the-item-repeats-its-read-published-time.md))
 - 날짜: 2026-10-28
 - 근거: [이슈 #20](https://github.com/Theia0382/yozm-news/issues/20) — Spring Modulith 2.1.1 · Spring Boot 4.1.2 자동 구성을 확인하고, PostgreSQL 에서 btree 항목 크기 한계와 소스 잠금 대기를 실행으로 확인. 구현 `8b43269`(판정 규칙) · `a84e3fe`(스키마 · 저장소) · `ee7d895`(이벤트 처리)
 - 관련: [ADR-0013](0013-architecture-patterns.md)(aggregate 사이 ID 참조 · 멱등 작업), [ADR-0014](0014-spring-data-jdbc.md)(upsert 는 JdbcClient), [ADR-0023](0023-jobrunr-oss-framework-schema-and-event-resubmission.md)(이벤트는 최소 한 번 처리된다), [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md)(다른 기사를 같은 사건으로 묶는 일)
@@ -26,6 +26,7 @@
 - **정규 URL 은 자원을 바꾸지 않는 변환만 한다.** 스킴 · 호스트 소문자, 기본 포트 · 프래그먼트 · 추적 파라미터 제거, 빈 경로와 빈 질의 정리다. http↔https · `www.` 통일, 파라미터 정렬은 하지 않는다.
 - **guid 는 제목 비교 키도 같을 때만 같은 기사로 본다.** guid 가 같지만 제목이 다르면 새 기사로 저장하고 로그를 남긴다.
 - **제목 비교 키는 보수적이다.** NFKC 정규화 · 소문자 · 공백 제거까지만 하고 말머리 · 구두점은 남긴다. 키가 비면 guid · 제목으로 판정하지 않는다.
+> 부분 대체(첫 문장) — [ADR-0217](0217-title-matching-takes-an-article-seen-in-the-feed-when-the-item-repeats-its-read-published-time.md). 지금 상태: [article Spec §5](../specs/article.md#5-규칙과-불변식) article-R5
 - **L2 는 이 피드에서 이미 본 기사를 후보에서 뺀다.** 문서가 밝힌 L2 의 대상 — 여러 섹션 피드에 같은 기사가 실리는 경우 — 만 남는다. 후보가 여럿이면 발행 시각이 가장 가까운 기사, 같으면 먼저 저장된 기사다.
 
 ### 기록
@@ -47,6 +48,7 @@
 - 깨진 guid · 정형 기사 · 말머리 때문에 기사를 잃지 않는다. 대신 아래 경우는 같은 기사가 두 건 저장된다. 평가 비용이 그만큼 늘고 사건 묶기가 받친다.
   - URL 과 제목이 함께 바뀐 같은 항목
   - 구두점 모양만 다른 같은 제목
+  > 부분 대체 — [ADR-0217](0217-title-matching-takes-an-article-seen-in-the-feed-when-the-item-repeats-its-read-published-time.md). 지금 상태: [article Spec §5](../specs/article.md#5-규칙과-불변식) article-R5
   - 같은 피드에 URL 만 바꿔 다시 올라온 같은 기사(guid 가 없거나 함께 바뀐 경우)
 - 날마다 다른 피드에 실리는 같은 제목의 정형 기사는 여전히 합쳐진다. 판정 종류 "제목" 의 비율로 드러난다.
 - 같은 소스의 항목 처리가 줄을 선다. 잠금을 기다리는 동안 DB 연결을 붙잡으므로 처리는 짧아야 한다. 처리량은 실제 수집에서 잰다.
