@@ -157,6 +157,7 @@ const DETAIL: Schemas["StorylineDetailResponse"] = {
       criteria: RELATION,
       judgementId: 41,
       judgement: judgement(41, 7, 8, "READ", null),
+      groupedBy: [],
     },
     {
       kind: "CONTAINS",
@@ -167,6 +168,8 @@ const DETAIL: Schemas["StorylineDetailResponse"] = {
       criteria: RELATION,
       judgementId: 40,
       judgement: null,
+      // 조각 쌍 (7, 9) 위에 상위 2 를 열 때 맺은 고리
+      groupedBy: [7, 9],
     },
     {
       kind: "FOLLOWS",
@@ -178,6 +181,7 @@ const DETAIL: Schemas["StorylineDetailResponse"] = {
       judgementId: 42,
       // 판정을 물을 때의 앞은 11 이다 — 관계의 앞(7)과 다르다
       judgement: judgement(42, 11, 7, "READ", null),
+      groupedBy: [],
     },
     {
       kind: "FOLLOWS",
@@ -188,6 +192,7 @@ const DETAIL: Schemas["StorylineDetailResponse"] = {
       criteria: RELATION,
       judgementId: 43,
       judgement: judgement(43, 5, 7, "READ", null),
+      groupedBy: [],
     },
   ],
   asked: [
@@ -282,7 +287,11 @@ describe("StorylineDetailPage", () => {
     );
     expect(cells(table, 2)[0]).toHaveTextContent(/^포함됨$/);
     expect(cells(table, 2)[1]).toHaveTextContent(/^스토리라인 2$/);
-    expect(cells(table, 2)[5]).toHaveTextContent(/^원본 없음$/);
+    // 조각 쌍의 판정이 맺은 고리는 그 쌍을 적는다 — 보통 관계에는 적지 않는다
+    expect(cells(table, 2)[5]).toHaveTextContent(
+      /^조각 쌍 7 · 9 의 판정이 맺음원본 없음$/,
+    );
+    expect(cells(table, 1)[5]).not.toHaveTextContent("조각 쌍");
     expect(cells(table, 3)[0]).toHaveTextContent(/^낳음$/);
     // 원본의 확률은 관계의 앞 · 뒤가 아니라 원본의 앞 · 뒤 번호로 적는다
     expect(cells(table, 3)[5]).toHaveTextContent(
@@ -302,6 +311,8 @@ describe("StorylineDetailPage", () => {
             wordingVersion: "relation-2",
             sameMatter: 0.7,
           }),
+          asked(21, "GROUPED", 72, null),
+          asked(22, "REFERRED", 73, null),
         ],
       }),
     );
@@ -311,6 +322,8 @@ describe("StorylineDetailPage", () => {
     expect(cells(table, 1)[5]).toHaveTextContent(
       "해당 없음 0.1 · 조각 0.7 · 20 ⊂ 7 0.7 · 7 ⊂ 20 0.05 · 7 → 20 0.1 · 20 → 7 0.05 · 한 사안 7 0.8 · 20 0.6",
     );
+    expect(cells(table, 2)[1]).toHaveTextContent(/^조각 — 묶음$/);
+    expect(cells(table, 3)[1]).toHaveTextContent(/^조각 — 상위에 넘겨 물음$/);
   });
 
   it("물은 쌍은 마지막 결말과 원본이 없는 까닭을 가려 보인다", async () => {

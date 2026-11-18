@@ -21,7 +21,6 @@ import net.yozmnews.event.EventId;
 import net.yozmnews.event.EventKeyTerm;
 import net.yozmnews.event.EventNeighbor;
 import net.yozmnews.event.EventProfile;
-import net.yozmnews.event.EventTermCounts;
 import net.yozmnews.event.EventView;
 import net.yozmnews.storyline.LinkedBy;
 import net.yozmnews.storyline.RetiredStoryline;
@@ -360,14 +359,8 @@ class StorylineLinker {
 		Map<Long, List<Long>> described = new LinkedHashMap<>();
 		Set<Long> describedEvents = new TreeSet<>();
 		for (Scored one : band) {
-			Map<Long, float[]> centroids = new TreeMap<>();
-			for (long member : bandMembers.getOrDefault(one.id(), List.of())) {
-				EventProfile memberProfile = memberProfiles.get(new EventId(member));
-				if (memberProfile != null && memberProfile.modelVersion().equals(profile.modelVersion())) {
-					centroids.put(member, memberProfile.centroid());
-				}
-			}
-			List<Long> chosen = LinkingAsk.describe(subject, profile.id().value(), centroids);
+			List<Long> chosen = LinkingMaterials.describe(profile, subject,
+					bandMembers.getOrDefault(one.id(), List.of()), memberProfiles);
 			described.put(one.id(), chosen);
 			describedEvents.addAll(chosen);
 		}
@@ -508,11 +501,15 @@ class StorylineLinker {
 	}
 
 	/**
-	 * 합쳐질 스토리라인의 관계를 남는 스토리라인으로 옮기고, 그 물은 기록(관계 · 잇기)과 관계 대기 행을 지운다(storyline-R32 ·
+	 * 합쳐질 스토리라인의 관계와 맺은 쌍을 남는 스토리라인으로 옮기고, 그 넘김 · 물은 기록(관계 · 잇기)과 관계 대기 행을 지운다(storyline-R32 ·
 	 * storyline-R36) — 합쳐진 행은 남으므로 FK 연쇄가 돌지 않는다. 합치기 전에 부른다
 	 */
 	private void followMerge(long merged, long survivor, Instant now) {
 		this.relations.applyMove(RelationMove.plan(this.relations.all(), merged, survivor), now);
+		// 옮긴 뒤의 고리로 맺은 쌍을 고친다 — 맺은 쌍에 든 합쳐진 스토리라인을 남는 쪽으로
+		RelationMove.remark(this.relations.grouped(), merged, survivor)
+			.forEach(remark -> this.relations.regroup(remark.relation(), remark.by()));
+		this.relations.clearReferrals(merged);
 		this.relations.forgetAsked(merged);
 		this.relationQueue.delete(merged);
 		this.asked.forgetStoryline(merged);
@@ -528,20 +525,12 @@ class StorylineLinker {
 
 	/** 판정할 사건의 말의 무게 — 그 사건의 구간(storyline-R9)과 겹치는 사건으로 센 수에서(storyline-R8) */
 	private TermWeights weights(Subject subject, LinkingCriteria criteria) {
-		EventTermCounts counts = this.events.termCounts(subject.keyTerms(),
-				LinkingScoring.windowFrom(subject.firstArticleAt(), criteria.window()),
-				LinkingScoring.windowTo(subject.lastArticleAt(), criteria.window()));
-		return TermWeights.of(counts.events(), counts.eventsByTerm());
+		return LinkingMaterials.weights(this.events, subject, criteria);
 	}
 
 	private static List<Scored> score(Subject subject, List<Compared> compared, LinkingCriteria criteria,
 			TermWeights weights) {
-		List<Scored> scored = new ArrayList<>();
-		for (Compared other : compared) {
-			LinkingScoring.score(subject, other, criteria.window(), weights)
-				.ifPresent(score -> scored.add(new Scored(other.id(), score)));
-		}
-		return scored;
+		return LinkingMaterials.score(subject, compared, criteria, weights);
 	}
 
 	private static List<Compared> compared(List<EventNeighbor> neighbours) {
@@ -553,7 +542,7 @@ class StorylineLinker {
 	}
 
 	private static List<EventProfile> readable(List<Long> members, Map<EventId, EventProfile> profiles) {
-		return members.stream().map(member -> profiles.get(new EventId(member))).filter(p -> p != null).toList();
+		return LinkingMaterials.readable(members, profiles);
 	}
 
 	private static List<Long> neighbourIds(List<EventNeighbor> neighbours) {

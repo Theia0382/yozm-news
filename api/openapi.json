@@ -8525,7 +8525,7 @@
           },
           "outcome" : {
             "type" : "string",
-            "enum" : [ "LINKED", "NOT_RELATED", "LOW_PROBABILITY", "NOT_ONE_MATTER", "CYCLE", "SECOND_PARENT", "UNGROUPED", "NOTHING_TO_ASK", "REJECTED" ]
+            "enum" : [ "LINKED", "NOT_RELATED", "LOW_PROBABILITY", "NOT_ONE_MATTER", "CYCLE", "SECOND_PARENT", "GROUPED", "REFERRED", "UNGROUPED", "NOTHING_TO_ASK", "REJECTED" ]
           },
           "smallerEvents" : {
             "type" : "integer",
@@ -8826,7 +8826,7 @@
           },
           "linkedBy" : {
             "type" : "string",
-            "enum" : [ "RULE", "PAIR", "MERGE" ]
+            "enum" : [ "RULE", "PAIR", "MERGE", "GROUP" ]
           },
           "probability" : {
             "type" : [ "number", "null" ],
@@ -8924,6 +8924,13 @@
           "criteria" : {
             "$ref" : "#/components/schemas/RelationCriteriaResponse"
           },
+          "groupedBy" : {
+            "type" : "array",
+            "items" : {
+              "type" : "integer",
+              "format" : "int64"
+            }
+          },
           "judgement" : {
             "oneOf" : [ {
               "$ref" : "#/components/schemas/RelationJudgementResponse"
@@ -8956,7 +8963,7 @@
             "format" : "int64"
           }
         },
-        "required" : [ "criteria", "judgement", "judgementId", "kind", "linkedAt", "probability", "sourceId", "targetId" ]
+        "required" : [ "criteria", "groupedBy", "judgement", "judgementId", "kind", "linkedAt", "probability", "sourceId", "targetId" ]
       },
       "StorylineRowResponse" : {
         "type" : "object",

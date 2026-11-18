@@ -279,6 +279,12 @@ function RelationsSection({ detail }: { detail: Detail }) {
                       <td>{formatDateTime(relation.linkedAt)}</td>
                       <td>{relationCriteriaText(relation.criteria)}</td>
                       <td>
+                        {relation.groupedBy.length === 2 && (
+                          <span className="block text-muted-foreground">
+                            조각 쌍 {relation.groupedBy[0]} ·{" "}
+                            {relation.groupedBy[1]} 의 판정이 맺음
+                          </span>
+                        )}
                         <JudgementText
                           judgementId={relation.judgementId}
                           judgement={relation.judgement}

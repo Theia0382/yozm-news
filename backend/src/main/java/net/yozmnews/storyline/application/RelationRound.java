@@ -10,6 +10,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
 
 import net.yozmnews.article.ArticleId;
@@ -20,24 +22,37 @@ import net.yozmnews.evaluation.RelationJudgement;
 import net.yozmnews.evaluation.RelationQuery;
 import net.yozmnews.event.EventDirectory;
 import net.yozmnews.event.EventId;
+import net.yozmnews.event.EventProfile;
 import net.yozmnews.event.EventTermCounts;
 import net.yozmnews.event.EventView;
+import net.yozmnews.storyline.LinkedBy;
 import net.yozmnews.storyline.RelationOutcome;
+import net.yozmnews.storyline.domain.linking.AskedRecord;
 import net.yozmnews.storyline.domain.linking.Compared;
 import net.yozmnews.storyline.domain.linking.Cosine;
+import net.yozmnews.storyline.domain.linking.LinkingAskedRepository;
+import net.yozmnews.storyline.domain.linking.LinkingCriteria;
+import net.yozmnews.storyline.domain.linking.LinkingCriteriaRepository;
 import net.yozmnews.storyline.domain.linking.LinkingScoring;
+import net.yozmnews.storyline.domain.linking.OpeningSelection;
+import net.yozmnews.storyline.domain.linking.Representation;
 import net.yozmnews.storyline.domain.linking.Scored;
 import net.yozmnews.storyline.domain.linking.Subject;
 import net.yozmnews.storyline.domain.linking.TermWeights;
+import net.yozmnews.storyline.domain.relation.GroupedBy;
+import net.yozmnews.storyline.domain.relation.Grouping;
 import net.yozmnews.storyline.domain.relation.PendingStoryline;
+import net.yozmnews.storyline.domain.relation.Relation;
 import net.yozmnews.storyline.domain.relation.RelationCandidates;
 import net.yozmnews.storyline.domain.relation.RelationCriteria;
 import net.yozmnews.storyline.domain.relation.RelationDescription;
 import net.yozmnews.storyline.domain.relation.RelationGraph;
+import net.yozmnews.storyline.domain.relation.RelationKind;
 import net.yozmnews.storyline.domain.relation.RelationQueueRepository;
 import net.yozmnews.storyline.domain.relation.RelationRepository;
 import net.yozmnews.storyline.domain.relation.RelationRule;
 import net.yozmnews.storyline.domain.relation.RelationSchedule;
+import net.yozmnews.storyline.domain.storyline.LinkJudgement;
 import net.yozmnews.storyline.domain.storyline.StorylineProfile;
 import net.yozmnews.storyline.domain.storyline.StorylineRepository;
 import net.yozmnews.storyline.domain.storyline.StorylineSnapshot;
@@ -56,6 +71,11 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 행이 그대로면 지우고, 아니면 점유만 푼다. 일시 실패면 그 스토리라인의 실패 수를 올리고 다음 스토리라인으로 간다. 평가기를 쓸 수 없으면
  * 회차를 멈추고, 예상 못한 예외는 밖으로 나간다 — 점유는 만료로 풀린다. 판단은 {@code domain/relation} 이 한다. 트랜잭션 · 역할
  * 애너테이션이 없다(두 역할 공통).
+ * <p>
+ * 답이 같은 사안의 조각이면 두 스토리라인을 한 상위 아래 묶는다({@link Grouping}). 둘 다 상위가 없으면 반영 전에 트랜잭션 밖에서 두
+ * 조각의 사건을 평가하고({@link GroupOpening}), 반영 트랜잭션이 상태를 다시 확인한 뒤 통과한 사건으로 상위를 연다. 한쪽에만 상위가
+ * 있으면 그 상위와 다른 조각의 쌍을 넘겨 물을 쌍으로 둔다. 조각으로 묶였던 쌍의 답이 바뀌면 그 쌍이 맺은 고리를 지우지 않고 그 고리의 두
+ * 끝을 넘겨 묻는다.
  */
 @Service
 public class RelationRound {
@@ -74,26 +94,42 @@ public class RelationRound {
 
 	private final RelationCriteria criteria;
 
+	private final GroupOpening opening;
+
+	private final LinkingCriteria linkingCriteria;
+
+	private final LinkingCriteriaRepository linkingCriteriaHistory;
+
+	private final LinkingAskedRepository linkAsked;
+
 	private final TransactionTemplate transaction;
 
 	private final InstantSource clock;
 
 	@Autowired
 	RelationRound(RelationQueueRepository queue, RelationRepository relations, StorylineRepository storylines,
-			EventDirectory events, FlowRelation judge, RelationCriteria criteria, TransactionTemplate transaction) {
-		this(queue, relations, storylines, events, judge, criteria, transaction, InstantSource.system());
+			EventDirectory events, FlowRelation judge, RelationCriteria criteria, GroupOpening opening,
+			LinkingCriteria linkingCriteria, LinkingCriteriaRepository linkingCriteriaHistory,
+			LinkingAskedRepository linkAsked, TransactionTemplate transaction) {
+		this(queue, relations, storylines, events, judge, criteria, opening, linkingCriteria, linkingCriteriaHistory,
+				linkAsked, transaction, InstantSource.system());
 	}
 
 	/** 시험이 시계를 넣는다 */
 	RelationRound(RelationQueueRepository queue, RelationRepository relations, StorylineRepository storylines,
-			EventDirectory events, FlowRelation judge, RelationCriteria criteria, TransactionTemplate transaction,
-			InstantSource clock) {
+			EventDirectory events, FlowRelation judge, RelationCriteria criteria, GroupOpening opening,
+			LinkingCriteria linkingCriteria, LinkingCriteriaRepository linkingCriteriaHistory,
+			LinkingAskedRepository linkAsked, TransactionTemplate transaction, InstantSource clock) {
 		this.queue = queue;
 		this.relations = relations;
 		this.storylines = storylines;
 		this.events = events;
 		this.judge = judge;
 		this.criteria = criteria;
+		this.opening = opening;
+		this.linkingCriteria = linkingCriteria;
+		this.linkingCriteriaHistory = linkingCriteriaHistory;
+		this.linkAsked = linkAsked;
 		this.transaction = transaction;
 		this.clock = clock;
 	}
@@ -101,11 +137,13 @@ public class RelationRound {
 	/** 회차 하나를 돈다 */
 	public void run() {
 		Instant now = this.clock.instant();
-		long criteriaId = Objects
-			.requireNonNull(this.transaction.execute(status -> this.relations.registerCriteria(this.criteria, now)));
+		// 상위를 열 때의 평가는 잇기 기준으로 한다 — 그 소속이 가리킬 잇기 기준 이력도 함께 등록한다
+		Criteria criteriaIds = Objects.requireNonNull(this.transaction
+			.execute(status -> new Criteria(this.relations.registerCriteria(this.criteria, now),
+					this.linkingCriteriaHistory.register(this.linkingCriteria, now))));
 		Map<Long, TermWeights> weights = new HashMap<>();
 		for (PendingStoryline claim : claim(now)) {
-			if (relate(claim, criteriaId, weights) == Next.STOP) {
+			if (relate(claim, criteriaIds, weights) == Next.STOP) {
 				return;
 			}
 		}
@@ -124,7 +162,8 @@ public class RelationRound {
 	}
 
 	/** 스토리라인 하나의 후보 쌍을 묻고 반영한다 */
-	private Next relate(PendingStoryline claim, long criteriaId, Map<Long, TermWeights> weights) {
+	private Next relate(PendingStoryline claim, Criteria criteriaIds, Map<Long, TermWeights> weights) {
+		long criteriaId = criteriaIds.relation();
 		long storylineId = claim.storylineId();
 		UUID token = Objects.requireNonNull(claim.lease(), "lease").token();
 		List<Pair> pairs = Objects.requireNonNull(this.transaction.execute(status -> pairs(storylineId, weights)));
@@ -133,10 +172,24 @@ public class RelationRound {
 			RelationJudgement judgement = query.isPresent() ? this.judge.judge(query.get())
 					: new RelationJudgement.NothingToAsk();
 			Next next = switch (judgement) {
-				case RelationJudgement.Judged judged -> {
-					reflect(pair, judged, criteriaId);
-					yield Next.PAIR;
-				}
+				case RelationJudgement.Judged judged -> switch (evaluate(pair, judged)) {
+					case Opening.Unneeded unneeded -> {
+						reflect(pair, judged, null, criteriaIds);
+						yield Next.PAIR;
+					}
+					case Opening.Evaluated evaluated -> {
+						reflect(pair, judged, evaluated.passed(), criteriaIds);
+						yield Next.PAIR;
+					}
+					case Opening.Transient failed -> {
+						fail(storylineId, token);
+						yield Next.STORYLINE;
+					}
+					case Opening.Unavailable unavailable -> {
+						logger.error("스토리라인 관계 판정을 멈췄다 — 평가기를 쓸 수 없다: {}", unavailable.message());
+						yield Next.STOP;
+					}
+				};
 				case RelationJudgement.NothingToAsk nothing -> {
 					record(pair, RelationOutcome.NOTHING_TO_ASK, criteriaId);
 					yield Next.PAIR;
@@ -179,12 +232,21 @@ public class RelationRound {
 	private List<Pair> pairs(long storylineId, Map<Long, TermWeights> weights) {
 		Optional<StorylineProfile> found = this.storylines.profile(storylineId, LinkingScoring.KEY_TERMS);
 		if (found.isEmpty() || found.get().events() < this.criteria.minEvents()) {
+			// 물을 수 없는 스토리라인의 넘김은 남기지 않는다 — 기록된 결말이 그대로 선다
+			this.relations.clearReferrals(storylineId);
 			return List.of();
 		}
 		StorylineProfile own = found.get();
 		Map<Long, Integer> asked = this.relations.askedAtSmallerEvents(storylineId);
 		Map<Long, StorylineProfile> profiles = new HashMap<>();
 		Map<Long, Integer> eventCounts = new HashMap<>();
+		Set<Long> referred = this.relations.referred(storylineId);
+		Set<Long> grouped = this.relations.groupedPartners(storylineId);
+		for (long other : referred) {
+			if (comparable(own, other, profiles)) {
+				eventCounts.put(other, profiles.get(other).events());
+			}
+		}
 		Map<Long, Integer> sharing = new LinkedHashMap<>();
 		for (long event : members(storylineId)) {
 			for (long other : this.storylines.storylinesOf(event)) {
@@ -227,8 +289,13 @@ public class RelationRound {
 				.ifPresent(score -> scored.add(new Scored(other, score)));
 		}
 		List<Pair> pairs = new ArrayList<>();
-		for (long partner : RelationCandidates.partners(storylineId, own.events(), sharing, scored, eventCounts, asked,
-				this.criteria)) {
+		List<Long> partners = RelationCandidates.partners(storylineId, own.events(), sharing, scored, eventCounts, asked,
+				referred, grouped, this.criteria);
+		// 물을 수 없는 넘김(상대가 없거나 사건 수 하한 미만 · 다시 물을 때가 아님 · 조각 쌍이 맺은 고리의 상대)은 지운다
+		referred.stream()
+			.filter(other -> !partners.contains(other))
+			.forEach(other -> this.relations.clearReferral(storylineId, other));
+		for (long partner : partners) {
 			if (!comparable(own, partner, profiles)) {
 				continue;
 			}
@@ -292,28 +359,167 @@ public class RelationRound {
 				profile.lastArticleAt(), happenings));
 	}
 
-	/** 판정을 반영한다(storyline-R29 · R30) — 모듈 잠금 안에서 두 스토리라인을 다시 읽고, 없어졌으면 버린다 */
-	private void reflect(Pair pair, RelationJudgement.Judged judged, long criteriaId) {
+	/**
+	 * 반영 전에 상위를 열 평가가 필요한지 보고, 필요하면 트랜잭션 밖에서 평가한다 — 답이 조각이고 두 스토리라인 모두 상위가 없을 때다.
+	 * 여기서 읽은 것은 반영 트랜잭션이 다시 확인한다
+	 */
+	private Opening evaluate(Pair pair, RelationJudgement.Judged judged) {
 		long first = pair.first().id();
 		long second = pair.second().id();
+		boolean needed = Boolean.TRUE.equals(this.transaction.execute(status -> !gone(first) && !gone(second)
+				&& decide(first, second, judged) instanceof RelationRule.Decision.Fragments
+				&& grouping(first, second) instanceof Grouping.Action.Open));
+		if (!needed) {
+			return new Opening.Unneeded();
+		}
+		return switch (this.opening.evaluate(first, second, this.linkingCriteria)) {
+			case GroupOpening.Evaluated.Passed passed -> new Opening.Evaluated(passed);
+			case GroupOpening.Evaluated.Transient failed -> new Opening.Transient();
+			case GroupOpening.Evaluated.Unavailable unavailable -> new Opening.Unavailable(unavailable.message());
+		};
+	}
+
+	/**
+	 * 판정(storyline-R29) — 구조 제약은 이 쌍 사이의 관계와 이 쌍이 조각으로 묶일 때 맺은 고리를 뺀 관계들로 본다. 이 쌍이 맺어 둔
+	 * 고리가 이 쌍의 새 판정을 막지 않게 한다
+	 */
+	private RelationRule.Decision decide(long first, long second, RelationJudgement.Judged judged) {
+		List<Relation> own = this.relations.groupedBy(first, second);
+		List<Relation> others = this.relations.all().stream().filter(relation -> !own.contains(relation)).toList();
+		return RelationRule.decide(first, second, judged.probabilities(), judged.firstOneMatter(),
+				judged.secondOneMatter(), new RelationGraph(others), this.criteria);
+	}
+
+	/** 조각으로 판정된 쌍을 어떻게 묶는가 — 이 쌍 사이의 관계를 뺀 지금 관계로 본다 */
+	private Grouping.Action grouping(long first, long second) {
+		return Grouping.decide(first, second, new RelationGraph(this.relations.all()).without(first, second));
+	}
+
+	/**
+	 * 판정을 반영한다(storyline-R29 · R30) — 모듈 잠금 안에서 두 스토리라인을 다시 읽고, 없어졌으면 버린다.
+	 * @param evaluated 반영 전에 한 상위 열기 평가 — 하지 않았으면 null
+	 */
+	private void reflect(Pair pair, RelationJudgement.Judged judged, GroupOpening.Evaluated.@Nullable Passed evaluated,
+			Criteria criteriaIds) {
+		long first = pair.first().id();
+		long second = pair.second().id();
+		long judgementId = judged.judgement().value();
 		this.transaction.executeWithoutResult(status -> {
 			this.storylines.lockLinking();
 			if (gone(first) || gone(second)) {
 				return;
 			}
 			Instant now = this.clock.instant();
-			RelationRule.Decision decision = RelationRule.decide(first, second, judged.probabilities(),
-					judged.firstOneMatter(), judged.secondOneMatter(), new RelationGraph(this.relations.all()),
-					this.criteria);
-			switch (decision) {
-				case RelationRule.Decision.Link link -> this.relations.link(link.relation(), link.probability(),
-						judged.judgement().value(), criteriaId, now);
-				case RelationRule.Decision.Fragments fragments -> this.relations.unlink(first, second);
-				case RelationRule.Decision.None none -> this.relations.unlink(first, second);
+			RelationOutcome outcome;
+			switch (decide(first, second, judged)) {
+				case RelationRule.Decision.Link link -> {
+					overturn(first, second, link, now);
+					this.relations.link(link.relation(), link.probability(), judgementId, criteriaIds.relation(), now);
+					outcome = RelationOutcome.LINKED;
+				}
+				case RelationRule.Decision.None none -> {
+					overturn(first, second, none, now);
+					this.relations.unlink(first, second);
+					outcome = RelationRule.outcomeOf(none);
+				}
+				case RelationRule.Decision.Fragments fragments -> {
+					Grouping.Action action = grouping(first, second);
+					if (action instanceof Grouping.Action.Open && evaluated == null) {
+						// 평가한 뒤 상태가 바뀌어 이제야 열 차례가 됐다 — 아무것도 쓰지 않고 다음 회차가 다시 묻게 한다
+						this.queue.enqueue(first, now);
+						this.queue.enqueue(second, now);
+						return;
+					}
+					this.relations.unlink(first, second);
+					boolean opened = false;
+					switch (action) {
+						case Grouping.Action.Open open ->
+							opened = open(first, second, fragments, evaluated, judgementId, criteriaIds, now);
+						case Grouping.Action.Refer refer -> refer(refer.parent(), refer.other(), now);
+						case Grouping.Action.Already already -> {
+						}
+						case Grouping.Action.Reject reject -> {
+						}
+					}
+					outcome = Grouping.outcomeOf(action, opened);
+				}
 			}
-			this.relations.recordAsked(first, second, pair.smallerEvents(), judged.judgement().value(), criteriaId,
-					RelationRule.outcomeOf(decision), now);
+			this.relations.recordAsked(first, second, pair.smallerEvents(), judgementId, criteriaIds.relation(), outcome,
+					now);
+			this.relations.clearReferral(first, second);
 		});
+	}
+
+	/**
+	 * 조각으로 묶였던 쌍의 답이 조각이 아니게 됐다 — 그 쌍이 맺은 고리를 {@link Grouping#overturn} 대로 처분한다. 지울 고리를 먼저
+	 * 지운다(하위의 상위는 하나다). 표지를 푼 고리는 그 두 끝을 넘겨 물을 쌍으로 두고 상위를 관계 대기에 넣는다
+	 */
+	private void overturn(long first, long second, RelationRule.Decision decision, Instant now) {
+		List<Relation> own = this.relations.groupedBy(first, second);
+		if (own.isEmpty()) {
+			return;
+		}
+		Grouping.Overturn overturn = Grouping.overturn(decision, own);
+		for (Relation removed : overturn.removed()) {
+			this.relations.unlink(removed.sourceId(), removed.targetId());
+		}
+		for (Relation released : overturn.released()) {
+			this.relations.regroup(released, null);
+			refer(released.sourceId(), released.targetId(), now);
+		}
+	}
+
+	/** 그 쌍을 넘겨 물을 쌍으로 두고 두 스토리라인을 관계 대기에 넣는다 */
+	private void refer(long a, long b, Instant now) {
+		this.relations.refer(a, b, now);
+		this.queue.enqueue(a, now);
+		this.queue.enqueue(b, now);
+	}
+
+	/**
+	 * 평가를 통과한 사건으로 상위를 열고 두 조각을 그 하위로 둔다 — 통과한 사건 가운데 지금도 두 조각의 구성 사건이고 프로필이 읽히는
+	 * 것만 넣는다. 열 수 없으면({@link OpeningSelection#openable}) 아무것도 쓰지 않는다.
+	 * @return 열었는가
+	 */
+	private boolean open(long first, long second, RelationRule.Decision.Fragments fragments,
+			GroupOpening.Evaluated.Passed evaluated, long judgementId, Criteria criteriaIds, Instant now) {
+		Map<Long, List<Long>> members = this.storylines.members(List.of(first, second));
+		Set<Long> firstMembers = new TreeSet<>(members.getOrDefault(first, List.of()));
+		Set<Long> secondMembers = new TreeSet<>(members.getOrDefault(second, List.of()));
+		List<GroupOpening.Evaluated.Member> candidates = evaluated.members()
+			.stream()
+			.filter(member -> firstMembers.contains(member.eventId()) || secondMembers.contains(member.eventId()))
+			.toList();
+		Map<EventId, EventProfile> profiles = this.events
+			.profiles(candidates.stream().map(member -> new EventId(member.eventId())).toList(), LinkingScoring.KEY_TERMS);
+		List<GroupOpening.Evaluated.Member> kept = candidates.stream()
+			.filter(member -> profiles.containsKey(new EventId(member.eventId())))
+			.toList();
+		Set<Long> keptIds = new TreeSet<>(kept.stream().map(GroupOpening.Evaluated.Member::eventId).toList());
+		if (!OpeningSelection.openable(keptIds, firstMembers, secondMembers)) {
+			return false;
+		}
+		long group = evaluated.reservedId();
+		this.storylines.open(group,
+				Representation.of(kept.stream().map(member -> profiles.get(new EventId(member.eventId()))).toList()), now);
+		for (GroupOpening.Evaluated.Member member : kept) {
+			this.storylines.addMember(group, member.eventId(),
+					LinkJudgement.judged(LinkedBy.GROUP, member.score(), criteriaIds.linking(), member.asked(), now));
+		}
+		// 띠 안에서 물은 결과는 든 사건 · 들지 못한 사건 모두 남긴다 — 잇기가 같은 사건을 이 상위에 곧바로 다시 묻지 않는다(storyline-R36)
+		evaluated.asked().forEach((event, asked) -> {
+			if (firstMembers.contains(event) || secondMembers.contains(event)) {
+				this.linkAsked.recordLink(event,
+						Map.of(group, new AskedRecord(asked.asked(), asked.eventArticles(), kept.size())), now);
+			}
+		});
+		GroupedBy by = GroupedBy.of(first, second);
+		this.relations.linkGrouped(new Relation(group, first, RelationKind.CONTAINS), by, fragments.probability(),
+				judgementId, criteriaIds.relation(), now);
+		this.relations.linkGrouped(new Relation(group, second, RelationKind.CONTAINS), by, fragments.probability(),
+				judgementId, criteriaIds.relation(), now);
+		this.queue.enqueue(group, now);
+		return true;
 	}
 
 	/** 평가기를 부르지 않았거나 입력이 거부된 쌍의 물은 기록만 남긴다 — 관계는 건드리지 않는다(storyline-R31) */
@@ -327,6 +533,7 @@ public class RelationRound {
 			}
 			this.relations.recordAsked(first, second, pair.smallerEvents(), null, criteriaId, outcome,
 					this.clock.instant());
+			this.relations.clearReferral(first, second);
 		});
 	}
 
@@ -345,6 +552,30 @@ public class RelationRound {
 						failures.getAsInt());
 			}
 		});
+	}
+
+	/** 회차가 판정에 쓴 기준의 이력 ID — 관계 기준과, 상위를 열 때의 평가에 쓴 잇기 기준 */
+	private record Criteria(long relation, long linking) {
+	}
+
+	/** 반영 전에 한 상위 열기 평가 */
+	private sealed interface Opening {
+
+		/** 평가할 일이 없다 */
+		record Unneeded() implements Opening {
+		}
+
+		record Evaluated(GroupOpening.Evaluated.Passed passed) implements Opening {
+		}
+
+		/** 평가기의 일시 실패 */
+		record Transient() implements Opening {
+		}
+
+		/** 평가기를 쓸 수 없다 */
+		record Unavailable(String message) implements Opening {
+		}
+
 	}
 
 	/** 다음에 할 것 */

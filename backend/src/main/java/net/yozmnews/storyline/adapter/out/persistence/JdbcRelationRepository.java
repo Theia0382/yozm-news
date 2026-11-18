@@ -12,9 +12,14 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
+import java.util.TreeSet;
 
 import net.yozmnews.storyline.RelationOutcome;
+import net.yozmnews.storyline.domain.relation.GroupedBy;
+import net.yozmnews.storyline.domain.relation.GroupedRelation;
 import net.yozmnews.storyline.domain.relation.Relation;
 import net.yozmnews.storyline.domain.relation.RelationCriteria;
 import net.yozmnews.storyline.domain.relation.RelationKind;
@@ -30,7 +35,7 @@ import org.springframework.stereotype.Repository;
  * {@link RelationRepository} 의 JdbcClient 구현 — docs/specs/storyline.md §4.
  * <p>
  * 쌍의 고유는 두 ID 의 작은 쪽 · 큰 쪽으로 본다. 맺기는 그 쌍의 행을 지우고 넣는다. 모든 관계({@code all})는 두 끝이 모두 합쳐지지 않은 행만 낸다.
- * 기준 이력은 같은 값의 행을 먼저 읽고 없을 때만 넣는다. 물은 기록은 {@code INSERT … ON CONFLICT (low_id, high_id) DO UPDATE} 다.
+ * 조각 쌍이 맺은 고리는 맺은 쌍의 두 열이 모두 있는 행이다. 기준 이력은 같은 값의 행을 먼저 읽고 없을 때만 넣는다. 물은 기록은 {@code INSERT … ON CONFLICT (low_id, high_id) DO UPDATE} 다.
  */
 @Repository
 class JdbcRelationRepository implements RelationRepository {
@@ -55,7 +60,8 @@ class JdbcRelationRepository implements RelationRepository {
 	@Override
 	public List<StoredRelation> of(long storylineId) {
 		return this.jdbc.sql("""
-				select kind, source_id, target_id, probability, judgement_id, criteria_id, linked_at
+				select kind, source_id, target_id, probability, judgement_id, criteria_id, linked_at,
+				       grouped_low_id, grouped_high_id
 				from storyline_relations
 				where source_id = :id or target_id = :id
 				order by kind, source_id, target_id
@@ -63,17 +69,28 @@ class JdbcRelationRepository implements RelationRepository {
 			.param("id", storylineId)
 			.query((rs, row) -> new StoredRelation(relation(rs, row), rs.getDouble("probability"),
 					rs.getLong("judgement_id"), rs.getLong("criteria_id"),
-					rs.getObject("linked_at", OffsetDateTime.class).toInstant()))
+					rs.getObject("linked_at", OffsetDateTime.class).toInstant(), groupedBy(rs)))
 			.list();
 	}
 
 	@Override
 	public void link(Relation relation, double probability, long judgementId, long criteriaId, Instant now) {
+		insert(relation, null, probability, judgementId, criteriaId, now);
+	}
+
+	@Override
+	public void linkGrouped(Relation relation, GroupedBy by, double probability, long judgementId, long criteriaId,
+			Instant now) {
+		insert(relation, Objects.requireNonNull(by, "by"), probability, judgementId, criteriaId, now);
+	}
+
+	private void insert(Relation relation, @Nullable GroupedBy by, double probability, long judgementId,
+			long criteriaId, Instant now) {
 		unlink(relation.sourceId(), relation.targetId());
 		this.jdbc.sql("""
 				insert into storyline_relations (kind, source_id, target_id, probability, judgement_id, criteria_id,
-				    linked_at)
-				values (:kind, :source, :target, :probability, :judgement, :criteria, :now)
+				    linked_at, grouped_low_id, grouped_high_id)
+				values (:kind, :source, :target, :probability, :judgement, :criteria, :now, :low, :high)
 				""")
 			.param("kind", relation.kind().name())
 			.param("source", relation.sourceId())
@@ -82,6 +99,86 @@ class JdbcRelationRepository implements RelationRepository {
 			.param("judgement", judgementId)
 			.param("criteria", criteriaId)
 			.param("now", timestamp(now))
+			.param("low", (by != null) ? by.low() : null, Types.BIGINT)
+			.param("high", (by != null) ? by.high() : null, Types.BIGINT)
+			.update();
+	}
+
+	@Override
+	public List<Relation> groupedBy(long a, long b) {
+		GroupedBy by = GroupedBy.of(a, b);
+		return grouped().stream().filter(one -> one.by().equals(by)).map(GroupedRelation::relation).toList();
+	}
+
+	@Override
+	public List<GroupedRelation> grouped() {
+		return this.jdbc.sql("""
+				select r.kind, r.source_id, r.target_id, r.grouped_low_id, r.grouped_high_id
+				from storyline_relations r
+				join storylines s on s.id = r.source_id and s.merged_into is null
+				join storylines t on t.id = r.target_id and t.merged_into is null
+				where r.grouped_low_id is not null and r.grouped_high_id is not null
+				order by r.kind, r.source_id, r.target_id
+				""")
+			.query((rs, row) -> new GroupedRelation(relation(rs, row),
+					new GroupedBy(rs.getLong("grouped_low_id"), rs.getLong("grouped_high_id"))))
+			.list();
+	}
+
+	@Override
+	public void regroup(Relation relation, @Nullable GroupedBy by) {
+		this.jdbc.sql("""
+				update storyline_relations set grouped_low_id = :low, grouped_high_id = :high
+				where kind = :kind and source_id = :source and target_id = :target
+				""")
+			.param("low", (by != null) ? by.low() : null, Types.BIGINT)
+			.param("high", (by != null) ? by.high() : null, Types.BIGINT)
+			.param("kind", relation.kind().name())
+			.param("source", relation.sourceId())
+			.param("target", relation.targetId())
+			.update();
+	}
+
+	@Override
+	public Set<Long> groupedPartners(long storylineId) {
+		return new TreeSet<>(this.jdbc.sql("""
+				select case when source_id = :id then target_id else source_id end
+				from storyline_relations
+				where (source_id = :id or target_id = :id)
+				  and grouped_low_id is not null and grouped_high_id is not null
+				""").param("id", storylineId).query(Long.class).list());
+	}
+
+	@Override
+	public void refer(long a, long b, Instant now) {
+		this.jdbc.sql("""
+				insert into storyline_relation_referrals (low_id, high_id, referred_at)
+				values (:low, :high, :now)
+				on conflict (low_id, high_id) do nothing
+				""").param("low", Math.min(a, b)).param("high", Math.max(a, b)).param("now", timestamp(now)).update();
+	}
+
+	@Override
+	public Set<Long> referred(long storylineId) {
+		return new TreeSet<>(this.jdbc.sql("""
+				select case when low_id = :id then high_id else low_id end
+				from storyline_relation_referrals
+				where low_id = :id or high_id = :id
+				""").param("id", storylineId).query(Long.class).list());
+	}
+
+	@Override
+	public void clearReferral(long a, long b) {
+		this.jdbc.sql("delete from storyline_relation_referrals where low_id = :low and high_id = :high")
+			.param("low", Math.min(a, b))
+			.param("high", Math.max(a, b))
+			.update();
+	}
+
+	@Override
+	public void clearReferrals(long storylineId) {
+		this.jdbc.sql("delete from storyline_relation_referrals where low_id = :id or high_id = :id")
+			.param("id", storylineId)
 			.update();
 	}
 
@@ -227,6 +324,14 @@ class JdbcRelationRepository implements RelationRepository {
 		this.jdbc.sql("delete from storyline_relation_asked where low_id = :id or high_id = :id")
 			.param("id", storylineId)
 			.update();
+	}
+
+	/** 두 열이 모두 있을 때만 맺은 쌍이 있다 — 한쪽이 지워져 비었으면 보통 관계다 */
+	private static @Nullable GroupedBy groupedBy(ResultSet rs) throws SQLException {
+		long low = rs.getLong("grouped_low_id");
+		boolean noLow = rs.wasNull();
+		long high = rs.getLong("grouped_high_id");
+		return (noLow || rs.wasNull()) ? null : new GroupedBy(low, high);
 	}
 
 	private static Relation relation(ResultSet rs, int row) throws SQLException {

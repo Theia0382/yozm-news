@@ -20,18 +20,17 @@ public final class RelationRule {
 	private RelationRule() {
 	}
 
-	/** 판정의 결말 — 물은 기록에 남긴다(storyline-R30) */
-	public static RelationOutcome outcomeOf(Decision decision) {
-		return switch (decision) {
-			case Decision.Link link -> RelationOutcome.LINKED;
-			case Decision.Fragments fragments -> RelationOutcome.UNGROUPED;
-			case Decision.None none -> switch (none.reason()) {
-				case NOT_RELATED -> RelationOutcome.NOT_RELATED;
-				case LOW_PROBABILITY -> RelationOutcome.LOW_PROBABILITY;
-				case NOT_ONE_MATTER -> RelationOutcome.NOT_ONE_MATTER;
-				case CYCLE -> RelationOutcome.CYCLE;
-				case SECOND_PARENT -> RelationOutcome.SECOND_PARENT;
-			};
+	/**
+	 * 맺지 않는 판정의 결말 — 물은 기록에 남긴다(storyline-R30). 맺으면 {@link RelationOutcome#LINKED} 이고, 조각이면 묶기의 결과가
+	 * 결말을 정한다({@link Grouping#outcomeOf}).
+	 */
+	public static RelationOutcome outcomeOf(Decision.None none) {
+		return switch (none.reason()) {
+			case NOT_RELATED -> RelationOutcome.NOT_RELATED;
+			case LOW_PROBABILITY -> RelationOutcome.LOW_PROBABILITY;
+			case NOT_ONE_MATTER -> RelationOutcome.NOT_ONE_MATTER;
+			case CYCLE -> RelationOutcome.CYCLE;
+			case SECOND_PARENT -> RelationOutcome.SECOND_PARENT;
 		};
 	}
 
@@ -49,32 +48,32 @@ public final class RelationRule {
 		if (!probabilities.keySet().equals(EnumSet.allOf(RelationAnswer.class))) {
 			throw new IllegalArgumentException("모든 답의 확률이 있어야 한다: " + probabilities.keySet());
 		}
-		RelationAnswer top = RelationAnswer.NONE;
+		RelationAnswer highest = RelationAnswer.NONE;
 		for (RelationAnswer answer : RelationAnswer.values()) {
-			if (probabilities.get(answer) > probabilities.get(top)) {
-				top = answer;
+			if (probabilities.get(answer) > probabilities.get(highest)) {
+				highest = answer;
 			}
 		}
+		RelationAnswer top = highest;
 		double probability = probabilities.get(top);
-		if (top == RelationAnswer.SAME_MATTER) {
-			return gated(probability, firstOneMatter, secondOneMatter, criteria)
-				.orElseGet(() -> new Decision.Fragments(first, second, probability));
-		}
-		Relation relation = switch (top) {
-			case NONE, SAME_MATTER -> null;
-			case SECOND_PART_OF_FIRST -> new Relation(first, second, RelationKind.CONTAINS);
-			case FIRST_PART_OF_SECOND -> new Relation(second, first, RelationKind.CONTAINS);
-			case FIRST_LED_TO_SECOND -> new Relation(first, second, RelationKind.FOLLOWS);
-			case SECOND_LED_TO_FIRST -> new Relation(second, first, RelationKind.FOLLOWS);
-		};
-		if (relation == null) {
-			return new Decision.None(Decision.Reason.NOT_RELATED);
-		}
 		Optional<Decision> gated = gated(probability, firstOneMatter, secondOneMatter, criteria);
-		if (gated.isPresent()) {
-			return gated.get();
-		}
 		RelationGraph others = graph.without(first, second);
+		return switch (top) {
+			case NONE -> new Decision.None(Decision.Reason.NOT_RELATED);
+			case SAME_MATTER -> gated.orElseGet(() -> new Decision.Fragments(first, second, probability));
+			case SECOND_PART_OF_FIRST -> gated
+				.orElseGet(() -> linked(new Relation(first, second, RelationKind.CONTAINS), probability, others));
+			case FIRST_PART_OF_SECOND -> gated
+				.orElseGet(() -> linked(new Relation(second, first, RelationKind.CONTAINS), probability, others));
+			case FIRST_LED_TO_SECOND -> gated
+				.orElseGet(() -> linked(new Relation(first, second, RelationKind.FOLLOWS), probability, others));
+			case SECOND_LED_TO_FIRST -> gated
+				.orElseGet(() -> linked(new Relation(second, first, RelationKind.FOLLOWS), probability, others));
+		};
+	}
+
+	/** 구조 제약을 지나면 맺는다 — 순환을 먼저 본다 */
+	private static Decision linked(Relation relation, double probability, RelationGraph others) {
 		if (others.closesCycle(relation)) {
 			return new Decision.None(Decision.Reason.CYCLE);
 		}
@@ -109,7 +108,8 @@ public final class RelationRule {
 		}
 
 		/**
-		 * 같은 사안의 조각이다 — 두 스토리라인 사이에 관계를 맺지 않고, 그 쌍의 지금 관계를 지운다. 구조(순환 · 상위)는 보지 않았다.
+		 * 같은 사안의 조각이다 — 두 스토리라인 사이에 관계를 맺지 않고, 그 쌍의 지금 관계를 지운다. 구조(순환 · 상위)는 보지 않았다 —
+		 * 두 스토리라인을 한 상위 아래 어떻게 묶는지는 {@link Grouping} 이 지금 관계로 정한다.
 		 */
 		record Fragments(long first, long second, double probability) implements Decision {
 		}

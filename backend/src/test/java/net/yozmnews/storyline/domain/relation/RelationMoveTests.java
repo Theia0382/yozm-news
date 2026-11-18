@@ -77,6 +77,36 @@ class RelationMoveTests {
 	}
 
 	@Test
+	void rewritesTheMergedStorylineInThePairThatMadeALink() {
+		// 9 ⊃ 1 · 9 ⊃ 2 를 조각 쌍 (1, 2) 가 맺었다. 2 가 5 에 합쳐지면 관계는 9 ⊃ 5 로 옮겨지고 맺은 쌍은 (1, 5) 다
+		List<GroupedRelation> grouped = List.of(grouped(9, 1, 1, 2), grouped(9, 5, 1, 2));
+
+		assertThat(RelationMove.remark(grouped, 2, 5)).containsExactly(
+				new RelationMove.Remark(contains(9, 1), new GroupedBy(1, 5)),
+				new RelationMove.Remark(contains(9, 5), new GroupedBy(1, 5)));
+		// 맺은 쌍과 무관한 합치기는 고칠 것이 없다
+		assertThat(RelationMove.remark(grouped, 7, 8)).isEmpty();
+	}
+
+	@Test
+	void clearsTheMarkWhenThePairMergedIntoOneOrBecameTheEndsOfTheLink() {
+		// 맺은 쌍 (1, 2) 의 2 가 1 에 합쳐졌다 — 9 ⊃ 1 만 남고 맺은 쌍은 한 스토리라인이라 표지를 지운다
+		assertThat(RelationMove.remark(List.of(grouped(9, 1, 1, 2)), 2, 1))
+			.containsExactly(new RelationMove.Remark(contains(9, 1), null));
+		// 상위 9 가 조각 1 에 합쳐져 9 ⊃ 2 가 1 ⊃ 2 로 옮겨졌다 — 맺은 쌍 (1, 2) 가 그 고리의 두 끝이라 표지를 지운다
+		assertThat(RelationMove.remark(List.of(grouped(1, 2, 1, 2)), 9, 1))
+			.containsExactly(new RelationMove.Remark(contains(1, 2), null));
+	}
+
+	private static GroupedRelation grouped(long parent, long child, long low, long high) {
+		return new GroupedRelation(contains(parent, child), new GroupedBy(low, high));
+	}
+
+	private static Relation contains(long parent, long child) {
+		return new Relation(parent, child, RelationKind.CONTAINS);
+	}
+
+	@Test
 	void leavesRelationsThatDoNotTouchTheMergedStorylineAlone() {
 		assertThat(RelationMove.plan(List.of(new Relation(7, 8, RelationKind.CONTAINS)), 2, 1))
 			.isEqualTo(new Plan(List.of(), List.of()));

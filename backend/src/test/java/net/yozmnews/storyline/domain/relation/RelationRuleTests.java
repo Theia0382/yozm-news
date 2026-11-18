@@ -171,10 +171,7 @@ class RelationRuleTests {
 	}
 
 	@Test
-	void theOutcomeOfEachDecisionAndEveryAnswer() {
-		assertThat(RelationRule.outcomeOf(new Decision.Link(new Relation(1, 2, RelationKind.FOLLOWS), 0.9)))
-			.isEqualTo(RelationOutcome.LINKED);
-		assertThat(RelationRule.outcomeOf(new Decision.Fragments(1, 2, 0.9))).isEqualTo(RelationOutcome.UNGROUPED);
+	void theOutcomeOfEachReasonNotToLinkAndEveryAnswer() {
 		assertThat(RelationRule.outcomeOf(new Decision.None(Decision.Reason.NOT_RELATED))).isEqualTo(RelationOutcome.NOT_RELATED);
 		assertThat(RelationRule.outcomeOf(new Decision.None(Decision.Reason.LOW_PROBABILITY)))
 			.isEqualTo(RelationOutcome.LOW_PROBABILITY);

@@ -38,6 +38,8 @@ import net.yozmnews.storyline.domain.linking.LinkingCriteriaRepository;
 import net.yozmnews.storyline.domain.linking.Representation;
 import net.yozmnews.storyline.domain.linking.Score;
 import net.yozmnews.storyline.domain.queue.LinkingQueueRepository;
+import net.yozmnews.storyline.domain.relation.GroupedBy;
+import net.yozmnews.storyline.domain.relation.GroupedRelation;
 import net.yozmnews.storyline.domain.relation.Relation;
 import net.yozmnews.storyline.domain.relation.RelationCriteria;
 import net.yozmnews.storyline.domain.relation.RelationKind;
@@ -336,6 +338,39 @@ class LinkingFlowTests {
 		assertThat(liveStorylineIds()).containsExactly(l1);
 		// 합쳐진 L2 만 알린다 — 남는 L1 은 싣지 않는다(storyline-R35)
 		assertThat(retired()).containsExactly(List.of(new RetiredStoryline(new StorylineId(l2), null)));
+	}
+
+	@Test
+	void aMergedStorylineIsRewrittenInThePairThatMadeALinkAndItsReferralsAreDropped() {
+		Pair pair = openPair();
+		long l1 = onlyStoryline();
+		Pair other = openOtherPair();
+		long l2 = otherStoryline(l1);
+		long l3 = seed(sameEvent(), sameEvent(), sameEvent());
+		long l4 = seed(sameEvent(), sameEvent(), sameEvent());
+		long relationCriteria = this.relations
+			.registerCriteria(new RelationCriteria(0.60, 0.20, 3, 0.88, Duration.ofDays(14)), NOW);
+		// L4 ⊃ L2 · L4 ⊃ L3 을 조각 쌍 (L2, L3) 의 판정이 맺었다. 넘겨 물을 쌍은 (L2, L3) · (L4, L3)
+		this.relations.linkGrouped(new Relation(l4, l2, RelationKind.CONTAINS), GroupedBy.of(l2, l3), 0.9, 61,
+				relationCriteria, NOW);
+		this.relations.linkGrouped(new Relation(l4, l3, RelationKind.CONTAINS), GroupedBy.of(l2, l3), 0.9, 61,
+				relationCriteria, NOW);
+		this.relations.refer(l2, l3, NOW);
+		this.relations.refer(l4, l3, NOW);
+		StorylineRows.merge(this.jdbc, other.e1(), pair.e1());
+		StorylineRows.merge(this.jdbc, other.e2(), pair.e2());
+		this.queue.enqueue(other.e1(), null, NOW);
+		this.queue.enqueue(other.e2(), null, NOW);
+
+		round(evenly()).run();
+
+		// L2 가 L1 에 합쳐졌다 — 고리도 맺은 쌍도 L1 을 가리키고, L2 의 넘김은 사라진다
+		assertThat(mergedInto(l2)).isEqualTo(l1);
+		assertThat(this.relations.grouped()).containsExactlyInAnyOrder(
+				new GroupedRelation(new Relation(l4, l1, RelationKind.CONTAINS), GroupedBy.of(l1, l3)),
+				new GroupedRelation(new Relation(l4, l3, RelationKind.CONTAINS), GroupedBy.of(l1, l3)));
+		assertThat(this.relations.referred(l3)).containsExactly(l4);
+		assertThat(this.relations.referred(l1)).isEmpty();
 	}
 
 	@Test

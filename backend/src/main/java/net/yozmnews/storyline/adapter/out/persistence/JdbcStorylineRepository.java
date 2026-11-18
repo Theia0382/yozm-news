@@ -138,12 +138,24 @@ class JdbcStorylineRepository implements StorylineRepository {
 
 	@Override
 	public long open(Representation representation, Instant now) {
-		long id = this.jdbc.sql("""
-				insert into storylines (model_version, centroid, article_count, first_article_at, last_article_at,
+		long id = reserveId();
+		open(id, representation, now);
+		return id;
+	}
+
+	@Override
+	public long reserveId() {
+		return this.jdbc.sql("select nextval(pg_get_serial_sequence('storylines', 'id'))").query(Long.class).single();
+	}
+
+	@Override
+	public void open(long storylineId, Representation representation, Instant now) {
+		this.jdbc.sql("""
+				insert into storylines (id, model_version, centroid, article_count, first_article_at, last_article_at,
 				                        representative_event_id, created_at, updated_at)
-				values (:model, cast(:centroid as halfvec), :count, :first, :last, :representative, :now, :now)
-				returning id
+				values (:id, :model, cast(:centroid as halfvec), :count, :first, :last, :representative, :now, :now)
 				""")
+			.param("id", storylineId)
 			.param("model", representation.modelVersion())
 			.param("centroid", VectorText.of(representation.centroid()))
 			.param("count", representation.articleCount())
@@ -151,10 +163,8 @@ class JdbcStorylineRepository implements StorylineRepository {
 			.param("last", timestamp(representation.lastArticleAt()))
 			.param("representative", representation.representativeEventId())
 			.param("now", timestamp(now))
-			.query(Long.class)
-			.single();
-		writeTerms(id, representation.keyTerms());
-		return id;
+			.update();
+		writeTerms(storylineId, representation.keyTerms());
 	}
 
 	@Override

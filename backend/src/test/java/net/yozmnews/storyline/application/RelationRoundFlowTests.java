@@ -2,6 +2,7 @@ package net.yozmnews.storyline.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
+import static org.assertj.core.api.Assertions.within;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -18,6 +19,10 @@ import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.evaluation.EvaluatorFailureKind;
 import net.yozmnews.evaluation.FlowHappening;
+import net.yozmnews.evaluation.FlowMembership;
+import net.yozmnews.evaluation.FlowMembershipJudgement;
+import net.yozmnews.evaluation.FlowMembershipJudgementId;
+import net.yozmnews.evaluation.FlowMembershipQuery;
 import net.yozmnews.evaluation.FlowRelation;
 import net.yozmnews.evaluation.RelationAnswer;
 import net.yozmnews.evaluation.RelationJudgement;
@@ -29,10 +34,13 @@ import net.yozmnews.event.EventTermCounts;
 import net.yozmnews.storyline.LinkedBy;
 import net.yozmnews.storyline.RelationOutcome;
 import net.yozmnews.storyline.StorylineRows;
+import net.yozmnews.storyline.domain.linking.LinkingAskedRepository;
 import net.yozmnews.storyline.domain.linking.LinkingCriteria;
 import net.yozmnews.storyline.domain.linking.LinkingCriteriaRepository;
 import net.yozmnews.storyline.domain.linking.Representation;
 import net.yozmnews.storyline.domain.linking.Score;
+import net.yozmnews.storyline.domain.relation.GroupedBy;
+import net.yozmnews.storyline.domain.relation.GroupedRelation;
 import net.yozmnews.storyline.domain.relation.Relation;
 import net.yozmnews.storyline.domain.relation.RelationCriteria;
 import net.yozmnews.storyline.domain.relation.RelationKind;
@@ -76,6 +84,9 @@ class RelationRoundFlowTests {
 
 	private static final RelationCriteria CRITERIA = new RelationCriteria(0.60, 0.20, 3, 0.88, Duration.ofDays(14));
 
+	/** 상위를 열 때의 평가에 쓰는 잇기 기준 — 띠 0.50 ~ 0.90 · 확률 0.60 */
+	private static final LinkingCriteria OPENING = new LinkingCriteria(Duration.ofDays(14), 0.50, 0.90, 0.60);
+
 	private static final String EARLY = "2026-11-03T00:00:00Z";
 
 	private static final String LATE = "2026-11-05T00:00:00Z";
@@ -90,6 +101,9 @@ class RelationRoundFlowTests {
 	LinkingCriteriaRepository linkingCriteria;
 
 	@Autowired
+	LinkingAskedRepository linkAsked;
+
+	@Autowired
 	RelationRepository relations;
 
 	@Autowired
@@ -102,6 +116,9 @@ class RelationRoundFlowTests {
 	JdbcClient jdbc;
 
 	private final List<RelationQuery> asked = new ArrayList<>();
+
+	/** 상위를 열 때 흐름 소속 판정에 물은 것 */
+	private final List<FlowMembershipQuery> membershipAsked = new ArrayList<>();
 
 	/** 말 수 조회를 부른 횟수 */
 	private int termCountCalls;
@@ -231,8 +248,8 @@ class RelationRoundFlowTests {
 			return judged(RelationAnswer.NONE, 0.9, 0.9, 0.9, 64);
 		};
 
-		new RelationRound(this.queue, this.relations, this.storylines, uneven, recording, CRITERIA, this.transaction,
-				InstantSource.fixed(NOW))
+		new RelationRound(this.queue, this.relations, this.storylines, uneven, recording, CRITERIA, opening(uneven),
+				OPENING, this.linkingCriteria, this.linkAsked, this.transaction, InstantSource.fixed(NOW))
 			.run();
 
 		// 판정할 쪽의 말은 금리 하나라 무게와 무관하게 겹침 1 — 후보다
@@ -269,28 +286,6 @@ class RelationRoundFlowTests {
 
 		assertThat(this.asked).isEmpty();
 		assertThat(this.relations.all()).isEmpty();
-		assertThat(queued()).isEmpty();
-	}
-
-	@Test
-	void fragmentsOfOneMatterAreNotLinkedAndAnEarlierContainmentBetweenThemIsRemoved() {
-		long shared = event(EARLY, 1);
-		long a = storyline("[1,0]", EARLY, LATE, shared, event(EARLY, 1), event(EARLY, 1));
-		long b = storyline("[0,1]", LATE, LATE, shared, event(LATE, 1), event(LATE, 1));
-		this.queue.enqueue(a, NOW);
-		round(answer(RelationAnswer.SECOND_PART_OF_FIRST, 0.9, 0.9, 0.9, 70)).run();
-		assertThat(this.relations.all()).containsExactly(new Relation(a, b, RelationKind.CONTAINS));
-
-		// 두 스토리라인이 모두 사건 여섯이 되어 다시 물었더니 같은 사안의 조각이다 — 포함을 지우고 결말을 남긴다
-		grow(a, 3);
-		grow(b, 3);
-		this.queue.enqueue(a, NOW);
-		round(answer(RelationAnswer.SAME_MATTER, 0.7, 0.9, 0.9, 71)).run();
-
-		assertThat(this.relations.all()).isEmpty();
-		assertThat(askedRow(a, b)).containsEntry("outcome", "UNGROUPED")
-			.containsEntry("judgement_id", 71L)
-			.containsEntry("smaller_events", 6);
 		assertThat(queued()).isEmpty();
 	}
 
@@ -509,6 +504,338 @@ class RelationRoundFlowTests {
 		assertThat(queueRow(a)).containsEntry("notifications", 1).containsEntry("lease_token", null);
 	}
 
+	@Test
+	void opensAParentOverTwoFragmentsWithTheEventsThatPassTheLinkingRule() {
+		// 띠 0.50 ~ 0.90 · 확률 0.60. 가운데 사건들은 점수 0.94(위 기준 이상), band 는 0.77(띠), far 는 0.13(띠 아래)
+		long[] first = { event(EARLY, 1), event(EARLY, 1), event(EARLY, 1) };
+		long[] core = { event(LATE, 1), event(LATE, 1) };
+		long band = StorylineRows.event(this.jdbc, "OPEN", MODEL, "[0.6,0.8]", 1, LATE, LATE, Map.of("금리", 1));
+		long far = StorylineRows.event(this.jdbc, "OPEN", MODEL, "[0,1]", 1, LATE, LATE, Map.of("환율", 1));
+		long a = storyline(new float[] { 1, 0 }, Map.of("금리", 3), first);
+		long b = storyline(new float[] { 1, 0 }, Map.of("금리", 4), core[0], core[1], band, far);
+		this.queue.enqueue(a, NOW);
+		RelationRound round = groupingRound(answer(RelationAnswer.SAME_MATTER, 0.9, 0.9, 0.9, 61),
+				membership(Map.of(band, 0.7), 71));
+
+		round.run();
+
+		long group = opened(a, b);
+		assertThat(this.relations.all()).containsExactlyInAnyOrder(new Relation(group, a, RelationKind.CONTAINS),
+				new Relation(group, b, RelationKind.CONTAINS));
+		// 두 고리는 조각 쌍 (a, b) 의 판정이 맺었다 — 확률 · 판정 원본도 그 판정 것
+		assertThat(this.relations.of(a)).singleElement().satisfies(stored -> {
+			assertThat(stored.groupedBy()).isEqualTo(GroupedBy.of(a, b));
+			assertThat(stored.probability()).isEqualTo(0.9);
+			assertThat(stored.judgementId()).isEqualTo(61);
+		});
+		assertThat(this.relations.of(b)).singleElement()
+			.satisfies(stored -> assertThat(stored.groupedBy()).isEqualTo(GroupedBy.of(a, b)));
+		// 상위에는 통과한 사건만 직접 든다 — 조각의 소속은 그대로다
+		assertThat(members(group)).containsExactlyInAnyOrder(first[0], first[1], first[2], core[0], core[1], band);
+		assertThat(members(a)).containsExactlyInAnyOrder(first[0], first[1], first[2]);
+		assertThat(members(b)).containsExactlyInAnyOrder(core[0], core[1], band, far);
+		assertThat(memberRow(group, band)).containsEntry("linked_by", "GROUP")
+			.containsEntry("probability", 0.7)
+			.containsEntry("judgement_id", 71L);
+		assertThat(memberRow(group, first[0])).containsEntry("linked_by", "GROUP").containsEntry("probability", null);
+		assertThat((Double) memberRow(group, band).get("score")).isCloseTo(0.773, within(0.005));
+		// 띠 사건 하나만 물었다 — 흐름은 미리 받은 상위의 ID
+		assertThat(this.membershipAsked).singleElement().satisfies(query -> {
+			assertThat(query.articleId()).isEqualTo(article(band));
+			assertThat(query.candidates()).singleElement()
+				.satisfies(candidate -> assertThat(candidate.flowId()).isEqualTo(group));
+		});
+		assertThat(linkAskedRows(group)).containsExactly(Map.of("event_id", band, "judgement_id", 71L));
+		assertThat(askedRow(a, b)).containsEntry("outcome", "GROUPED").containsEntry("judgement_id", 61L);
+		assertThat(queued()).containsExactly(group);
+
+		// 상위와 두 조각은 사건을 함께 가졌지만 그 고리는 조각 쌍의 판정을 따른다 — 따로 묻지 않는다
+		round.run();
+
+		assertThat(this.asked).hasSize(1);
+		assertThat(queued()).isEmpty();
+	}
+
+	@Test
+	void anAskedBandEventBelowTheProbabilityStaysOutOfTheParentButIsRecorded() {
+		long[] first = { event(EARLY, 1), event(EARLY, 1), event(EARLY, 1) };
+		long[] core = { event(LATE, 1), event(LATE, 1) };
+		long band = StorylineRows.event(this.jdbc, "OPEN", MODEL, "[0.6,0.8]", 1, LATE, LATE, Map.of("금리", 1));
+		long a = storyline(new float[] { 1, 0 }, Map.of("금리", 3), first);
+		long b = storyline(new float[] { 1, 0 }, Map.of("금리", 3), core[0], core[1], band);
+		this.queue.enqueue(a, NOW);
+
+		groupingRound(answer(RelationAnswer.SAME_MATTER, 0.9, 0.9, 0.9, 61), membership(Map.of(band, 0.59), 71)).run();
+
+		long group = opened(a, b);
+		assertThat(members(group)).containsExactlyInAnyOrder(first[0], first[1], first[2], core[0], core[1]);
+		assertThat(linkAskedRows(group)).containsExactly(Map.of("event_id", band, "judgement_id", 71L));
+	}
+
+	@Test
+	void fragmentsWhosePassedEventsAreOnlyOneOfThemAreNotGroupedAndTheirEarlierContainmentIsRemoved() {
+		// 한 조각의 사건은 [1,0] 금리, 다른 조각의 사건은 [0,1] 환율 — 모두 점수 0.60(띠)이라 묻는다
+		long[] near = { event(EARLY, 1), event(EARLY, 1), event(EARLY, 1) };
+		long[] away = { away(), away(), away() };
+		long a = storyline(new float[] { 1, 0 }, Map.of("금리", 3), near);
+		long b = storyline(new float[] { 1, 0 }, Map.of("금리", 3), away);
+		long criteriaId = this.relations.registerCriteria(CRITERIA, NOW);
+		this.relations.link(new Relation(a, b, RelationKind.CONTAINS), 0.7, 40, criteriaId, NOW);
+		this.queue.enqueue(a, NOW);
+		Map<Long, Double> probabilities = new HashMap<>();
+		for (long event : near) {
+			probabilities.put(event, 0.9);
+		}
+		for (long event : away) {
+			probabilities.put(event, 0.1);
+		}
+
+		groupingRound(answer(RelationAnswer.SAME_MATTER, 0.9, 0.9, 0.9, 61), membership(probabilities, 71)).run();
+
+		// 통과한 사건이 한 조각의 구성 사건 그대로다 — 상위를 열지 않고 아무것도 남기지 않는다
+		assertThat(this.membershipAsked).hasSize(6);
+		assertThat(storylineCount()).isEqualTo(2);
+		assertThat(this.relations.all()).isEmpty();
+		assertThat(this.jdbc.sql("select count(*) from storyline_link_asked").query(Long.class).single()).isZero();
+		assertThat(askedRow(a, b)).containsEntry("outcome", "UNGROUPED").containsEntry("judgement_id", 61L);
+		assertThat(queued()).isEmpty();
+	}
+
+	@Test
+	void aFragmentIsReferredToTheParentOfTheOtherAndThatPairIsGroupedLikeAnyOtherFragments() {
+		long a = storyline(new float[] { 1, 0 }, Map.of("금리", 3), event(EARLY, 1), event(EARLY, 1), event(EARLY, 1));
+		long b = storyline(new float[] { 1, 0 }, Map.of("금리", 3), event(LATE, 1), event(LATE, 1), event(LATE, 1));
+		// 상위는 점수로도 사건으로도 b 의 후보가 아니다
+		long parent = storyline(new float[] { 0, 1 }, Map.of("환율", 3), event(EARLY, 1), event(EARLY, 1),
+				event(EARLY, 1));
+		long criteriaId = this.relations.registerCriteria(CRITERIA, NOW);
+		this.relations.link(new Relation(parent, a, RelationKind.CONTAINS), 0.7, 40, criteriaId, NOW);
+		this.relations.recordAsked(parent, a, 3, 40L, criteriaId, RelationOutcome.LINKED, NOW);
+		this.queue.enqueue(a, NOW);
+		RelationRound round = groupingRound(answer(RelationAnswer.SAME_MATTER, 0.9, 0.9, 0.9, 61),
+				membership(Map.of(), 71));
+
+		round.run();
+
+		// b 를 a 의 상위 아래 넣지 않는다 — (상위, b) 를 넘겨 물을 쌍으로 둔다
+		assertThat(this.relations.all()).containsExactly(new Relation(parent, a, RelationKind.CONTAINS));
+		assertThat(storylineCount()).isEqualTo(3);
+		assertThat(askedRow(a, b)).containsEntry("outcome", "REFERRED");
+		assertThat(this.relations.referred(parent)).containsExactly(b);
+		assertThat(queued()).containsExactlyInAnyOrder(parent, b);
+
+		round.run();
+
+		// 넘겨 물은 쌍도 조각이다 — 하위를 가진 쪽 아래 넣지 않고 그 둘 위에 상위를 연다
+		long group = opened(a, b, parent);
+		assertThat(this.asked).hasSize(2);
+		assertThat(this.relations.all()).containsExactlyInAnyOrder(new Relation(parent, a, RelationKind.CONTAINS),
+				new Relation(group, parent, RelationKind.CONTAINS), new Relation(group, b, RelationKind.CONTAINS));
+		assertThat(askedRow(parent, b)).containsEntry("outcome", "GROUPED");
+		assertThat(this.relations.referred(parent)).isEmpty();
+		assertThat(this.membershipAsked).isEmpty();
+	}
+
+	@Test
+	void anOverturnedFragmentPairKeepsItsLinksAndRefersEachToItsOwnPair() {
+		long[] first = { event(EARLY, 1), event(EARLY, 1), event(EARLY, 1) };
+		long[] second = { event(LATE, 1), event(LATE, 1), event(LATE, 1) };
+		long a = storyline(new float[] { 1, 0 }, Map.of("금리", 3), EARLY, LATE, first);
+		long b = storyline(new float[] { 1, 0 }, Map.of("금리", 3), LATE, LATE, second);
+		long group = grouped(a, b, first[0], first[1], second[0], second[1]);
+		this.queue.enqueue(a, NOW);
+
+		round(answer(RelationAnswer.NONE, 0.9, 0.9, 0.9, 63)).run();
+
+		// 조각 판정이 뒤집혔다 — 고리는 그대로 두고 표지만 풀어 (상위, 하위) 쌍을 넘겨 묻는다
+		assertThat(this.asked).hasSize(1);
+		assertThat(this.relations.all()).containsExactlyInAnyOrder(new Relation(group, a, RelationKind.CONTAINS),
+				new Relation(group, b, RelationKind.CONTAINS));
+		assertThat(this.relations.grouped()).isEmpty();
+		assertThat(this.relations.referred(group)).containsExactlyInAnyOrder(a, b);
+		assertThat(askedRow(a, b)).containsEntry("outcome", "NOT_RELATED");
+		assertThat(queued()).contains(group, b);
+		// 상위의 사건은 걷어 내지 않는다
+		assertThat(members(group)).containsExactlyInAnyOrder(first[0], first[1], second[0], second[1]);
+
+		round(answer(RelationAnswer.NONE, 0.9, 0.9, 0.9, 64)).run();
+
+		// 이제 각 고리는 자기 쌍의 판정을 따른다
+		assertThat(this.asked).hasSize(3);
+		assertThat(this.relations.all()).isEmpty();
+		assertThat(this.relations.referred(group)).isEmpty();
+		assertThat(askedRow(group, a)).containsEntry("outcome", "NOT_RELATED");
+		assertThat(askedRow(group, b)).containsEntry("outcome", "NOT_RELATED");
+	}
+
+	@Test
+	void aFragmentPairAnsweredAsFragmentsAgainKeepsItsLinksAndAsFollowingReleasesBoth() {
+		long[] first = { event(EARLY, 1), event(EARLY, 1), event(EARLY, 1) };
+		long[] second = { event(LATE, 1), event(LATE, 1), event(LATE, 1) };
+		long a = storyline(new float[] { 1, 0 }, Map.of("금리", 3), EARLY, LATE, first);
+		long b = storyline(new float[] { 1, 0 }, Map.of("금리", 3), LATE, LATE, second);
+		long group = grouped(a, b, first[0], first[1], second[0], second[1]);
+		Relation toA = new Relation(group, a, RelationKind.CONTAINS);
+		Relation toB = new Relation(group, b, RelationKind.CONTAINS);
+		this.queue.enqueue(a, NOW);
+
+		round(answer(RelationAnswer.SAME_MATTER, 0.9, 0.9, 0.9, 66)).run();
+
+		// 다시 조각이다 — 이미 같은 상위 아래다. 고리와 표지는 그대로이고 상위를 또 열지 않는다
+		assertThat(this.relations.grouped()).containsExactly(new GroupedRelation(toA, GroupedBy.of(a, b)),
+				new GroupedRelation(toB, GroupedBy.of(a, b)));
+		assertThat(storylineCount()).isEqualTo(3);
+		assertThat(this.relations.referred(group)).isEmpty();
+		assertThat(askedRow(a, b)).containsEntry("outcome", "GROUPED").containsEntry("judgement_id", 66L);
+
+		// 물은 기록을 지워 다시 묻게 한다 — 이번에는 이어짐
+		this.relations.forgetAsked(a);
+		this.queue.enqueue(a, NOW);
+		round(answer(RelationAnswer.FIRST_LED_TO_SECOND, 0.9, 0.9, 0.9, 67)).run();
+
+		assertThat(this.relations.all()).containsExactlyInAnyOrder(toA, toB, new Relation(a, b, RelationKind.FOLLOWS));
+		assertThat(this.relations.grouped()).isEmpty();
+		assertThat(this.relations.referred(group)).containsExactlyInAnyOrder(a, b);
+	}
+
+	@Test
+	void aReferredPairAnsweredAsAPartIsLinkedLikeAnyOtherPair() {
+		long a = storyline(new float[] { 1, 0 }, Map.of("금리", 3), event(EARLY, 1), event(EARLY, 1), event(EARLY, 1));
+		long b = storyline(new float[] { 1, 0 }, Map.of("금리", 3), LATE, LATE, event(LATE, 1), event(LATE, 1),
+				event(LATE, 1));
+		long parent = storyline(new float[] { 0, 1 }, Map.of("환율", 3), EARLY, LATE, event(EARLY, 1), event(EARLY, 1),
+				event(EARLY, 1));
+		long criteriaId = this.relations.registerCriteria(CRITERIA, NOW);
+		this.relations.link(new Relation(parent, a, RelationKind.CONTAINS), 0.7, 40, criteriaId, NOW);
+		this.relations.recordAsked(parent, a, 3, 40L, criteriaId, RelationOutcome.LINKED, NOW);
+		this.queue.enqueue(a, NOW);
+		// (a, b) 는 조각, 넘겨 물은 (상위, b) 는 b 가 상위의 부분
+		FlowRelation judge = query -> (query.first().flowId() == parent || query.second().flowId() == parent)
+				? judged(RelationAnswer.SECOND_PART_OF_FIRST, 0.8, 0.9, 0.9, 62)
+				: judged(RelationAnswer.SAME_MATTER, 0.9, 0.9, 0.9, 61);
+		RelationRound round = groupingRound(judge, membership(Map.of(), 71));
+
+		round.run();
+		round.run();
+
+		assertThat(this.asked).hasSize(2);
+		assertThat(this.asked.get(1).first().flowId()).isEqualTo(parent);
+		assertThat(this.relations.all()).containsExactlyInAnyOrder(new Relation(parent, a, RelationKind.CONTAINS),
+				new Relation(parent, b, RelationKind.CONTAINS));
+		assertThat(this.relations.of(b)).singleElement().satisfies(stored -> {
+			assertThat(stored.groupedBy()).isNull();
+			assertThat(stored.judgementId()).isEqualTo(62);
+		});
+		assertThat(this.relations.referred(parent)).isEmpty();
+		assertThat(storylineCount()).isEqualTo(3);
+	}
+
+	@Test
+	void aReferralThatCannotBeAskedIsDroppedWithoutAsking() {
+		long b = storyline(new float[] { 1, 0 }, Map.of("금리", 3), event(LATE, 1), event(LATE, 1), event(LATE, 1));
+		long parent = storyline(new float[] { 0, 1 }, Map.of("환율", 3), event(EARLY, 1), event(EARLY, 1),
+				event(EARLY, 1));
+		long small = storyline(new float[] { 0, 1 }, Map.of("환율", 2), event(EARLY, 1), event(EARLY, 1));
+		long criteriaId = this.relations.registerCriteria(CRITERIA, NOW);
+		// (상위, b) 는 이미 물렸고 다시 물을 때가 아니다. (상위, small) 은 사건 수 하한 미만이다
+		this.relations.recordAsked(parent, b, 3, 40L, criteriaId, RelationOutcome.NOT_RELATED, NOW);
+		this.relations.refer(parent, b, NOW);
+		this.relations.refer(parent, small, NOW);
+		this.queue.enqueue(parent, NOW);
+
+		round(answer(RelationAnswer.NONE, 0.9, 0.9, 0.9, 68)).run();
+
+		assertThat(this.asked).isEmpty();
+		assertThat(this.relations.referred(parent)).isEmpty();
+		assertThat(askedRow(parent, b)).containsEntry("outcome", "NOT_RELATED").containsEntry("judgement_id", 40L);
+	}
+
+	@Test
+	void aFragmentPairOverturnedToContainmentMovesTheChildUnderTheOtherFragment() {
+		long[] first = { event(EARLY, 1), event(EARLY, 1), event(EARLY, 1) };
+		long[] second = { event(LATE, 1), event(LATE, 1), event(LATE, 1) };
+		long a = storyline(new float[] { 1, 0 }, Map.of("금리", 3), EARLY, LATE, first);
+		long b = storyline(new float[] { 1, 0 }, Map.of("금리", 3), LATE, LATE, second);
+		long group = grouped(a, b, first[0], first[1], second[0], second[1]);
+		this.queue.enqueue(a, NOW);
+
+		round(answer(RelationAnswer.SECOND_PART_OF_FIRST, 0.9, 0.9, 0.9, 65)).run();
+
+		// b 가 a 의 부분이다 — 상위 → b 를 a → b 로 바꾸고, 상위 → a 만 표지를 풀어 넘겨 묻는다
+		assertThat(this.relations.all()).containsExactlyInAnyOrder(new Relation(group, a, RelationKind.CONTAINS),
+				new Relation(a, b, RelationKind.CONTAINS));
+		assertThat(this.relations.grouped()).isEmpty();
+		assertThat(this.relations.referred(group)).containsExactly(a);
+		assertThat(askedRow(a, b)).containsEntry("outcome", "LINKED").containsEntry("judgement_id", 65L);
+	}
+
+	@Test
+	void aTransientFailureWhileEvaluatingTheParentWritesNothingAndPostponesTheStoryline() {
+		long band = StorylineRows.event(this.jdbc, "OPEN", MODEL, "[0.6,0.8]", 1, LATE, LATE, Map.of("금리", 1));
+		long a = storyline(new float[] { 1, 0 }, Map.of("금리", 3), event(EARLY, 1), event(EARLY, 1), event(EARLY, 1));
+		long b = storyline(new float[] { 1, 0 }, Map.of("금리", 3), event(LATE, 1), event(LATE, 1), band);
+		this.queue.enqueue(a, NOW);
+		FlowMembership failing = query -> new FlowMembershipJudgement.Failed(EvaluatorFailureKind.TRANSIENT, "마감 초과");
+
+		groupingRound(answer(RelationAnswer.SAME_MATTER, 0.9, 0.9, 0.9, 61), failing).run();
+
+		assertThat(storylineCount()).isEqualTo(2);
+		assertThat(this.relations.all()).isEmpty();
+		assertThat(this.jdbc.sql("select count(*) from storyline_relation_asked").query(Long.class).single()).isZero();
+		assertThat(queueRow(a)).containsEntry("failures", 1).containsEntry("lease_token", null);
+
+		// 다음 회차에 평가가 답하면 열린다
+		groupingRound(answer(RelationAnswer.SAME_MATTER, 0.9, 0.9, 0.9, 61), membership(Map.of(band, 0.7), 71)).run();
+
+		assertThat(members(opened(a, b))).contains(band);
+	}
+
+	@Test
+	void anEventTheEvaluatorRejectsWhileEvaluatingTheParentStaysOutAndIsRecordedWithoutAProbability() {
+		long[] first = { event(EARLY, 1), event(EARLY, 1), event(EARLY, 1) };
+		long[] core = { event(LATE, 1), event(LATE, 1) };
+		long band = StorylineRows.event(this.jdbc, "OPEN", MODEL, "[0.6,0.8]", 1, LATE, LATE, Map.of("금리", 1));
+		long a = storyline(new float[] { 1, 0 }, Map.of("금리", 3), first);
+		long b = storyline(new float[] { 1, 0 }, Map.of("금리", 3), core[0], core[1], band);
+		this.queue.enqueue(a, NOW);
+		FlowMembership rejecting = query -> new FlowMembershipJudgement.Failed(EvaluatorFailureKind.ARTICLE_REJECTED,
+				"문맥 초과");
+
+		groupingRound(answer(RelationAnswer.SAME_MATTER, 0.9, 0.9, 0.9, 61), rejecting).run();
+
+		// 입력이 거부된 띠 사건은 들지 않는다 — 나머지로 상위를 열고, 그 사건은 확률 없이 물은 기록에 남는다
+		long group = opened(a, b);
+		assertThat(members(group)).containsExactlyInAnyOrder(first[0], first[1], first[2], core[0], core[1]);
+		assertThat(this.jdbc
+			.sql("select event_id, probability, judgement_id from storyline_link_asked where storyline_id = :storyline")
+			.param("storyline", group)
+			.query()
+			.listOfRows()).singleElement()
+			.satisfies(row -> assertThat(row).containsEntry("event_id", band)
+				.containsEntry("probability", null)
+				.containsEntry("judgement_id", null));
+		assertThat(askedRow(a, b)).containsEntry("outcome", "GROUPED");
+	}
+
+	@Test
+	void anUnavailableEvaluatorWhileEvaluatingTheParentStopsTheRoundAndWritesNothing(CapturedOutput output) {
+		long band = StorylineRows.event(this.jdbc, "OPEN", MODEL, "[0.6,0.8]", 1, LATE, LATE, Map.of("금리", 1));
+		long a = storyline(new float[] { 1, 0 }, Map.of("금리", 3), event(EARLY, 1), event(EARLY, 1), event(EARLY, 1));
+		long b = storyline(new float[] { 1, 0 }, Map.of("금리", 3), event(LATE, 1), event(LATE, 1), band);
+		this.queue.enqueue(a, NOW);
+		FlowMembership unavailable = query -> new FlowMembershipJudgement.Failed(
+				EvaluatorFailureKind.EVALUATOR_UNAVAILABLE, "키가 틀렸다");
+
+		groupingRound(answer(RelationAnswer.SAME_MATTER, 0.9, 0.9, 0.9, 61), unavailable).run();
+
+		// 회차를 멈춘다 — 상위도 물은 기록도 없고, 점유는 남고 실패 수는 그대로다
+		assertThat(storylineCount()).isEqualTo(2);
+		assertThat(this.relations.all()).isEmpty();
+		assertThat(this.jdbc.sql("select count(*) from storyline_relation_asked").query(Long.class).single()).isZero();
+		assertThat(queueRow(a)).containsEntry("failures", 0).doesNotContainEntry("lease_token", null);
+		assertThat(output.getAll()).contains("스토리라인 관계 판정을 멈췄다 — 평가기를 쓸 수 없다: 키가 틀렸다");
+	}
+
 	private RelationRound round(FlowRelation judge) {
 		return round(withRepresentatives(), judge);
 	}
@@ -518,8 +845,91 @@ class RelationRoundFlowTests {
 			this.asked.add(query);
 			return judge.judge(query);
 		};
-		return new RelationRound(this.queue, this.relations, this.storylines, evenly(events), recording, CRITERIA,
-				this.transaction, InstantSource.fixed(NOW));
+		EventDirectory even = evenly(events);
+		return new RelationRound(this.queue, this.relations, this.storylines, even, recording, CRITERIA, opening(even),
+				OPENING, this.linkingCriteria, this.linkAsked, this.transaction, InstantSource.fixed(NOW));
+	}
+
+	/** 상위를 열 평가를 하지 않는 회차의 평가 — 하면 실패다 */
+	private GroupOpening opening(EventDirectory events) {
+		return new GroupOpening(events, this.storylines, query -> {
+			throw new AssertionError("상위를 열 평가를 하지 않는다");
+		}, this.transaction);
+	}
+
+	/** 조각을 묶는 회차 — 상위를 열 때의 평가는 잇기 기준 {@link #OPENING} 으로 하고 물은 것을 모은다 */
+	private RelationRound groupingRound(FlowRelation judge, FlowMembership membership) {
+		FlowRelation recording = query -> {
+			this.asked.add(query);
+			return judge.judge(query);
+		};
+		FlowMembership recordingMembership = query -> {
+			this.membershipAsked.add(query);
+			return membership.judge(query);
+		};
+		EventDirectory even = evenly(withRepresentatives());
+		return new RelationRound(this.queue, this.relations, this.storylines, even, recording, CRITERIA,
+				new GroupOpening(even, this.storylines, recordingMembership, this.transaction), OPENING,
+				this.linkingCriteria, this.linkAsked, this.transaction, InstantSource.fixed(NOW));
+	}
+
+	/** 사건(대표 기사)마다 정한 확률로 답한다 — 정하지 않은 사건을 물으면 실패다 */
+	private static FlowMembership membership(Map<Long, Double> byEvent, long judgementId) {
+		return query -> {
+			Double probability = byEvent.get(query.articleId().value() - 100_000);
+			if (probability == null) {
+				throw new AssertionError("물을 사건이 아니다: " + query.articleId());
+			}
+			return new FlowMembershipJudgement.Judged(new FlowMembershipJudgementId(judgementId),
+					Map.of(query.candidates().getFirst().flowId(), probability));
+		};
+	}
+
+	/** [0,1] · 환율 사건 */
+	private long away() {
+		return StorylineRows.event(this.jdbc, "OPEN", MODEL, "[0,1]", 1, LATE, LATE, Map.of("환율", 1));
+	}
+
+	/** 조각 쌍 (a, b) 의 판정이 맺은 상위를 심는다 — 상위는 두 조각의 사건을 직접 가진다 */
+	private long grouped(long a, long b, long... events) {
+		long group = storyline(new float[] { 1, 0 }, Map.of("금리", events.length), events);
+		long criteriaId = this.relations.registerCriteria(CRITERIA, NOW);
+		this.relations.linkGrouped(new Relation(group, a, RelationKind.CONTAINS), GroupedBy.of(a, b), 0.9, 61,
+				criteriaId, NOW);
+		this.relations.linkGrouped(new Relation(group, b, RelationKind.CONTAINS), GroupedBy.of(a, b), 0.9, 61,
+				criteriaId, NOW);
+		return group;
+	}
+
+	/** 넘긴 스토리라인 말고 새로 열린 스토리라인 하나 */
+	private long opened(long... known) {
+		List<Long> ids = this.jdbc.sql("select id from storylines order by id").query(Long.class).list();
+		for (long id : known) {
+			ids.remove(Long.valueOf(id));
+		}
+		assertThat(ids).hasSize(1);
+		return ids.getFirst();
+	}
+
+	private long storylineCount() {
+		return this.jdbc.sql("select count(*) from storylines").query(Long.class).single();
+	}
+
+	private List<Long> members(long storyline) {
+		return this.storylines.members(List.of(storyline)).getOrDefault(storyline, List.of());
+	}
+
+	private Map<String, @Nullable Object> memberRow(long storyline, long event) {
+		return this.jdbc.sql("""
+				select linked_by, score, probability, judgement_id from storyline_members
+				where storyline_id = :storyline and event_id = :event
+				""").param("storyline", storyline).param("event", event).query().singleRow();
+	}
+
+	private List<Map<String, @Nullable Object>> linkAskedRows(long storyline) {
+		return this.jdbc.sql("""
+				select event_id, judgement_id from storyline_link_asked where storyline_id = :storyline order by event_id
+				""").param("storyline", storyline).query().listOfRows();
 	}
 
 	private static FlowRelation answer(RelationAnswer top, double probability, double firstOneMatter,

@@ -6,6 +6,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * 스토리라인이 합쳐질 때 관계를 옮기는 계획 — 정본 · docs/specs/storyline.md §4 · storyline-R32.
  * <p>
@@ -52,6 +54,44 @@ public final class RelationMove {
 			moved.add(new Moved(relation, to));
 		}
 		return new Plan(removed, moved);
+	}
+
+	/**
+	 * 합친 뒤 조각 쌍이 맺은 고리의 맺은 쌍을 고친다 — 관계를 옮긴 뒤의 고리를 넘긴다.
+	 * <p>
+	 * 맺은 쌍에 합쳐진 스토리라인이 들었으면 남는 스토리라인으로 고쳐 적는다. 고치면 쌍의 두 쪽이 같아지거나(맺은 쌍이 서로 합쳐졌다),
+	 * 맺은 쌍이 그 고리의 두 끝과 같아지면(상위가 조각 하나에 합쳐져 고리가 두 조각 사이로 옮겨졌다) 표지를 지운다 — 그 고리는 두 끝이
+	 * 스스로 판정받는 보통 관계다.
+	 * @param grouped 지금 조각 쌍이 맺은 고리
+	 * @return 고칠 고리만 — 그대로인 것은 없다
+	 */
+	public static List<Remark> remark(Collection<GroupedRelation> grouped, long merged, long survivor) {
+		List<Remark> remarks = new ArrayList<>();
+		for (GroupedRelation one : grouped) {
+			long low = (one.by().low() == merged) ? survivor : one.by().low();
+			long high = (one.by().high() == merged) ? survivor : one.by().high();
+			GroupedBy by = (low == high) ? null : GroupedBy.of(low, high);
+			if (by != null && by.is(one.relation().sourceId(), one.relation().targetId())) {
+				by = null;
+			}
+			if (!one.by().equals(by)) {
+				remarks.add(new Remark(one.relation(), by));
+			}
+		}
+		return remarks;
+	}
+
+	/**
+	 * 고리 하나의 맺은 쌍을 고친다.
+	 *
+	 * @param by 고친 맺은 쌍 — null 이면 표지를 지운다
+	 */
+	public record Remark(Relation relation, @Nullable GroupedBy by) {
+
+		public Remark {
+			Objects.requireNonNull(relation, "relation");
+		}
+
 	}
 
 	/**

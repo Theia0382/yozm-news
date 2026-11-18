@@ -198,9 +198,10 @@ class AdminStorylineControllerTests {
 						FakeStorylineReview.LINKING, null, null, T)));
 		this.review.relations.put(7L, List.of(
 				new StorylineRelationDetail(new StorylineRelationView(StorylineRelationKind.CONTAINS, new StorylineId(7),
-						new StorylineId(8), T), 0.7, new RelationJudgementId(41), FakeStorylineReview.RELATION),
+						new StorylineId(8), T), 0.7, new RelationJudgementId(41), FakeStorylineReview.RELATION,
+						List.of(new StorylineId(8), new StorylineId(9))),
 				new StorylineRelationDetail(new StorylineRelationView(StorylineRelationKind.FOLLOWS, new StorylineId(7),
-						new StorylineId(11), T), 0.66, new RelationJudgementId(42), FakeStorylineReview.RELATION)));
+						new StorylineId(11), T), 0.66, new RelationJudgementId(42), FakeStorylineReview.RELATION, List.of())));
 		this.review.asked.put(7L, List.of(
 				asked(11, 3, RelationOutcome.LINKED, 42L), asked(12, 4, RelationOutcome.NOTHING_TO_ASK, null),
 				asked(13, 5, RelationOutcome.LOW_PROBABILITY, 43L), asked(14, 6, RelationOutcome.NOT_ONE_MATTER, 44L),
@@ -258,11 +259,12 @@ class AdminStorylineControllerTests {
 					                 "wordingVersion":"relation-1","inputTokens":1924,"judgedAt":"2026-11-05T00:00:00Z",
 					                 "reading":"READ","none":0.1,"sameMatter":null,"secondPartOfFirst":0.7,"firstPartOfSecond":0.05,
 					                 "firstLedToSecond":0.1,"secondLedToFirst":0.05,"firstOneMatter":0.8,
-					                 "secondOneMatter":0.6,"message":null}},
+					                 "secondOneMatter":0.6,"message":null},
+					    "groupedBy":[8,9]},
 					   {"kind":"FOLLOWS","sourceId":7,"targetId":11,"probability":0.66,"linkedAt":"2026-11-05T00:00:00Z",
 					    "criteria":{"probability":0.6,"oneMatter":0.2,"minEvents":3,"candidateScore":0.88,
 					                "windowSeconds":1209600},
-					    "judgementId":42,"judgement":null}],
+					    "judgementId":42,"judgement":null,"groupedBy":[]}],
 					 "asked":[
 					   {"otherId":11,"smallerEvents":3,"outcome":"LINKED","askedAt":"2026-11-05T00:00:00Z",
 					    "criteria":{"probability":0.6,"oneMatter":0.2,"minEvents":3,"candidateScore":0.88,
@@ -324,7 +326,7 @@ class AdminStorylineControllerTests {
 		List<StorylineRelationDetail> relations = LongStream.rangeClosed(1, MAX_IDS + 1)
 			.mapToObj(id -> new StorylineRelationDetail(new StorylineRelationView(StorylineRelationKind.FOLLOWS,
 					new StorylineId(7), new StorylineId(1000 + id), T), 0.7, new RelationJudgementId(id),
-					FakeStorylineReview.RELATION))
+					FakeStorylineReview.RELATION, List.of()))
 			.toList();
 		this.review.relations.put(7L, relations);
 		LongStream.rangeClosed(1, MAX_IDS + 1)

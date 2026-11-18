@@ -28,6 +28,7 @@ import net.yozmnews.storyline.domain.linking.Asked;
 import net.yozmnews.storyline.domain.linking.LinkingCriteria;
 import net.yozmnews.storyline.domain.linking.LinkingCriteriaRepository;
 import net.yozmnews.storyline.domain.linking.Score;
+import net.yozmnews.storyline.domain.relation.GroupedBy;
 import net.yozmnews.storyline.domain.relation.Relation;
 import net.yozmnews.storyline.domain.relation.RelationCriteria;
 import net.yozmnews.storyline.domain.relation.RelationKind;
@@ -136,7 +137,9 @@ class StorylineReviewFlowTests {
 		this.memberships.addMember(this.child, this.e3, LinkJudgement.judged(LinkedBy.RULE,
 				new Score(0.9, 0.88, 0.5), linkingId, new Asked(0.71, 77L), LINKED_AT));
 		// 포함 parent ⊃ child, 이어짐 parent → follower
-		this.relations.link(new Relation(this.parent, this.child, RelationKind.CONTAINS), 0.7, 41, relationId, NOW);
+		// 상위 → 하위 고리는 조각 쌍 (하위, 뒤 스토리라인) 의 판정이 맺은 것으로 심는다
+		this.relations.linkGrouped(new Relation(this.parent, this.child, RelationKind.CONTAINS),
+				GroupedBy.of(this.child, this.follower), 0.7, 41, relationId, NOW);
 		this.relations.link(new Relation(this.parent, this.follower, RelationKind.FOLLOWS), 0.66, 42, relationId, NOW);
 		this.relations.recordAsked(this.follower, this.parent, 3, 42L, relationId, RelationOutcome.LINKED, NOW);
 		this.relations.recordAsked(this.parent, this.silent, 4, null, relationId, RelationOutcome.NOTHING_TO_ASK,
@@ -173,14 +176,16 @@ class StorylineReviewFlowTests {
 	}
 
 	@Test
-	void relationsCarryTheirProbabilityJudgementAndCriteria() {
+	void relationsCarryTheirProbabilityJudgementCriteriaAndThePairThatMadeThem() {
 		List<StorylineRelationDetail> expected = List.of(
 				new StorylineRelationDetail(new StorylineRelationView(StorylineRelationKind.CONTAINS,
 						new StorylineId(this.parent), new StorylineId(this.child), NOW), 0.7, new RelationJudgementId(41),
-						RELATION_VIEW),
+						RELATION_VIEW,
+						List.of(new StorylineId(Math.min(this.child, this.follower)),
+								new StorylineId(Math.max(this.child, this.follower)))),
 				new StorylineRelationDetail(new StorylineRelationView(StorylineRelationKind.FOLLOWS,
 						new StorylineId(this.parent), new StorylineId(this.follower), NOW), 0.66,
-						new RelationJudgementId(42), RELATION_VIEW));
+						new RelationJudgementId(42), RELATION_VIEW, List.of()));
 
 		assertThat(this.review.relations(new StorylineId(this.parent))).isEqualTo(expected);
 		assertThat(this.review.relations(new StorylineId(this.merged))).isEqualTo(expected);
