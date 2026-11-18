@@ -109,7 +109,7 @@ public record TopicSubscriptionStep(Instant at, TopicSubscriptionAction action, 
 | 멤버 | 뜻 |
 |---|---|
 | `recent` | 사용자 시간대의 최근 기간마다 하나(`span.count()` 개, 시간 순, 마지막이 진행 중) — 기간 경계 digest-R29. 계정이 없으면 빈 값 |
-| `at` | 부르는 쪽이 정한 기준 시각마다 하나 — 맨 앞 기준 시각은 둘째의 변화를 정하는 견줌용이라 결과에 없다. 기준 시각이 둘보다 적거나 시간 순(같은 시각 없음)이 아니면 재료를 읽기 전에 `IllegalArgumentException`. 계정이 없으면 빈 값 |
+| `at` | 부르는 쪽이 정한 기준 시각마다 하나 — 맨 앞 기준 시각은 둘째의 변화를 정하는 견줌용이라 결과에 없다. 기준 시각이 둘보다 적거나 시간 순이 아니면(앞이 뒤보다 늦으면) 재료를 읽기 전에 `IllegalArgumentException` — 같은 시각은 받고, 같은 기준 시각 사이는 관심이 같고 변화 · 구독 변경이 없다. 계정이 없으면 빈 값 |
 | `InterestTimeline.tagSet` | 주제 키의 활성 태그 체계 버전 — 이름은 그 버전으로 읽는다 |
 | `InterestTimeline.prominent` | 드러난 주제(digest-R31) |
 | `InterestPoint.levels` | 주제 중분류(활성 키) → 관심 — 노출 · 구독 신호가 있는 중분류만(digest-R30) |
@@ -466,13 +466,13 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
 
 판단의 이유는 [ADR-0225](../adr/0225-interest-history-values-read-only-the-window-before-each-reference-time-and-the-period-in-progress-is-measured-at-the-call.md) · [ADR-0226](../adr/0226-new-and-lost-interests-are-neighbouring-periods-crossing-one-threshold-on-the-interest-value.md) · [ADR-0227](../adr/0227-the-interest-history-shows-subtopic-interest-and-the-users-own-topic-subscription-changes-only.md) · [ADR-0228](../adr/0228-consumer-queries-scoped-by-a-user-argument-may-be-called-on-screen-paths-with-the-session-user.md) · [ADR-0229](../adr/0229-interest-history-periods-are-monday-weeks-and-calendar-months-in-the-users-zone-and-the-query-takes-a-span-or-reference-times.md) · [ADR-0215](../adr/0215-interests-are-not-stored-entities-and-are-computed-from-signal-history-at-query-time.md)에 있다. θ 는 측정 전 목표다([open-questions.md](../open-questions.md) "운영하면서 결정" 24번).
 
-- **digest-R29** — 기간 경계(`InterestPeriods`): 사용자 시간대(`user` 의 `UserTimezones` — 관심 설정의 시간대, 설정 행이 없으면 계정을 만들 때의 값)에서 주는 월요일, 월은 1일에 시작하고 경계는 그날의 시작 시각이다(자정이 없는 날은 첫 유효 시각). 부르는 시각을 담은 기간을 마지막으로 `span.count()` + 1 개를 만들고 맨 앞은 견줌용이다. 지난 기간의 기준 시각은 기간 끝, 진행 중인 기간의 기준 시각은 부르는 시각이다. 고를 수 있는 기간은 `InterestHistorySpan` — 주 13 · 26 · 52, 월 12 · 24 · 36, 처음 13주, 단위를 바꾸면 주 13 · 월 12
+- **digest-R29** — 기간 경계(`InterestPeriods`): 사용자 시간대(`user` 의 `UserTimezones` — 관심 설정의 시간대, 설정 행이 없으면 계정을 만들 때의 값)에서 주는 월요일, 월은 1일에 시작하고 경계는 그날의 시작 시각이다(자정이 없는 날은 첫 유효 시각). 부르는 시각을 담은 기간을 마지막으로 `span.count()` + 1 개를 만들고 맨 앞은 견줌용이다. 지난 기간의 기준 시각은 기간 끝, 진행 중인 기간의 기준 시각은 부르는 시각이다 — 기간이 시작되는 정각에 부르면 앞 기간 끝과 같은 기준 시각이라 진행 중인 기간은 앞 기간과 관심이 같고 변화가 없다. 고를 수 있는 기간은 `InterestHistorySpan` — 주 13 · 26 · 52, 월 12 · 24 · 36, 처음 13주, 단위를 바꾸면 주 13 · 월 12
 - **digest-R30** — 기준 시각마다의 관심(`InterestTimelines` · `InterestWindow`): 재료는 첫 기준 시각의 창 시작부터 마지막 기준 시각까지 한 번 읽고, 기준 시각 T 마다 창 끝을 T 로 둔 관심을 digest-R23 의 산식으로 낸다 — T 뒤의 노출 · 반응 · 구독 변경은 그 기간에 들지 않는다. 주제는 활성 체계의 중분류이고 지난 기간의 기사 · 구독도 계보로 활성 키로 풀린다
 - **digest-R31** — 판정(`InterestShifts` · `InterestTimelines` · `InterestRules.PRESENCE_THRESHOLD` 0.2):
   - 관심 있음 = 관심 ≥ θ. 새로 생긴 관심 = 이번 기준 시각에 관심 있음이고 앞 기준 시각에 아닌 중분류, 사라진 관심은 그 반대다. 싫어요 쪽(관심 ≤ −θ)은 관심 있음이 아니다
   - 드러난 주제 = 보인 기간(견줌용 제외) 가운데 한 번이라도 |관심| ≥ θ 인 중분류
   - 기간마다의 주제 구독 변경 = 앞 기준 시각 이상 · 이 기준 시각 미만에 원인이 사용자이고 푼 중분류가 있는 주제 구독 이력 행(`InterestSignals.subscriberTopicChanges` — 관심 신호와 같은 고르기). 좋아요 / 싫어요 · 스토리라인 구독 이력은 행으로 내지 않는다
-- **digest-R32** — 조회(`InterestHistoryService`): 계정이 없으면(`UserTimezones` 가 빈 값) 빈 값이다. 맞출 버전은 그때의 활성 버전이고, 재료의 키 버전이 어긋나면 처음부터 다시 해 `ActiveEvaluations.ATTEMPTS` 번 모두 어긋나면 `IllegalStateException` 이다. `at` 의 기준 시각 조건(둘 이상 · 시간 순)은 재료를 읽기 전에 본다. 리포트는 백그라운드 작업으로 `at` 을 자기 경계로 부른다
+- **digest-R32** — 조회(`InterestHistoryService`): 계정이 없으면(`UserTimezones` 가 빈 값) 빈 값이다. 맞출 버전은 그때의 활성 버전이고, 재료의 키 버전이 어긋나면 처음부터 다시 해 `ActiveEvaluations.ATTEMPTS` 번 모두 어긋나면 `IllegalStateException` 이다. 기준 시각 조건(둘 이상 · 시간 순 — 같은 시각 허용, 앞이 뒤보다 늦으면 `IllegalArgumentException`)은 재료를 읽기 전에 본다. 리포트는 백그라운드 작업으로 `at` 을 자기 경계로 부른다
 
 ### 로컬 대체물
 
