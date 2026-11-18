@@ -90,15 +90,34 @@ class InterestTimelinesTests {
 	}
 
 	@Test
-	void theReferencesAreAtLeastTwoInTimeOrder() {
+	void theReferencesAreAtLeastTwoAndNotGoingBack() {
 		InterestRecord empty = new InterestRecord(TAG_SET, List.of(), Map.of(), List.of(), List.of(), List.of(),
 				Map.of());
 
 		assertThatIllegalArgumentException().isThrownBy(() -> InterestTimelines.points(empty, List.of(T0)));
 		assertThatIllegalArgumentException().isThrownBy(() -> InterestTimelines.points(empty, List.of(T1, T0)));
-		assertThatIllegalArgumentException().isThrownBy(() -> InterestTimelines.points(empty, List.of(T0, T0)));
 		assertThat(InterestTimelines.points(empty, List.of(T0, T1))).singleElement()
 			.satisfies(point -> assertThat(point.levels()).isEmpty());
+	}
+
+	@Test
+	void aRepeatedReferenceHasTheSameInterestAndNoShiftOrStep() {
+		// 기간이 시작되는 정각에 부르면 앞 기간 끝과 진행 중 기간의 기준 시각이 같다 — a: T0 에 사용자가 두 번 더함
+		InterestRecord record = new InterestRecord(TAG_SET, List.of(), Map.of(), List.of(),
+				List.of(topic(Set.of("a"), TopicSubscriptionAction.ADD, TopicSubscriptionCause.USER, T0),
+						topic(Set.of("a"), TopicSubscriptionAction.ADD, TopicSubscriptionCause.USER, T0)),
+				List.of(), Map.of());
+
+		List<InterestPoint> points = InterestTimelines.points(record, List.of(T0, T1, T1));
+
+		assertThat(points).extracting(InterestPoint::reference).containsExactly(T1, T1);
+		assertThat(points.get(0).entered()).containsExactly("a");
+		InterestPoint repeated = points.get(1);
+		assertThat(repeated.levels()).as("같은 창 — 같은 관심").isEqualTo(points.get(0).levels());
+		assertThat(repeated.levels().get("a")).isCloseTo(0.3333333333333333, EXACT);
+		assertThat(repeated.entered()).isEmpty();
+		assertThat(repeated.left()).isEmpty();
+		assertThat(repeated.subscriptionChanges()).as("[T1, T1) 은 비었다").isEmpty();
 	}
 
 	private static ArticleId article(long id) {

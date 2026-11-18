@@ -23,9 +23,9 @@ public interface InterestHistory {
 
 	/**
 	 * 부르는 쪽이 정한 기준 시각들의 관심 — 맨 앞 기준 시각은 둘째의 변화를 정하는 견줌용이라 결과에 없다.
-	 * @param references 기준 시각 — 둘 이상, 시간 순(같은 시각 없음)
+	 * @param references 기준 시각 — 둘 이상, 시간 순(같은 시각 허용 — 그 사이는 변화 · 구독 변경이 없다)
 	 * @return 둘째부터의 기준 시각마다 하나. 계정이 없으면 빈 값
-	 * @throws IllegalArgumentException 기준 시각이 둘보다 적거나 시간 순이 아닐 때
+	 * @throws IllegalArgumentException 기준 시각이 둘보다 적거나 시간 순이 아닐 때(앞이 뒤보다 늦을 때)
 	 */
 	Optional<List<InterestPoint>> at(UserId user, List<Instant> references);
 

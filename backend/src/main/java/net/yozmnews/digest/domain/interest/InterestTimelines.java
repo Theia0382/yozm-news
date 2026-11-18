@@ -24,9 +24,9 @@ public final class InterestTimelines {
 
 	/**
 	 * @param record 첫 기준 시각의 창 시작부터 마지막 기준 시각까지를 덮는 재료
-	 * @param references 기준 시각 — 둘 이상, 시간 순(같은 시각 없음)
+	 * @param references 기준 시각 — 둘 이상, 시간 순(같은 시각 허용 — 그 사이는 변화 · 구독 변경이 없다)
 	 * @return 둘째부터의 기준 시각마다 하나
-	 * @throws IllegalArgumentException 기준 시각이 둘보다 적거나 시간 순이 아닐 때
+	 * @throws IllegalArgumentException 기준 시각이 둘보다 적거나 시간 순이 아닐 때(앞이 뒤보다 늦을 때)
 	 */
 	public static List<InterestPoint> points(InterestRecord record, List<Instant> references) {
 		Objects.requireNonNull(record, "record");
@@ -50,7 +50,8 @@ public final class InterestTimelines {
 	}
 
 	/**
-	 * 기준 시각 목록의 조건 — 둘 이상, 시간 순(같은 시각 없음)
+	 * 기준 시각 목록의 조건 — 둘 이상, 시간 순(같은 시각 허용). 같은 기준 시각은 창이 같아 관심이 같고 그 사이의 구독 변경이
+	 * 없다 — 기간이 시작되는 정각에 부르면 진행 중 기간의 기준 시각이 앞 기간 끝과 같다
 	 * @throws IllegalArgumentException 조건에 맞지 않을 때
 	 */
 	public static void requireReferences(List<Instant> references) {
@@ -59,7 +60,7 @@ public final class InterestTimelines {
 			throw new IllegalArgumentException("기준 시각이 둘 이상이어야 한다: " + references.size());
 		}
 		for (int i = 1; i < references.size(); i++) {
-			if (!references.get(i - 1).isBefore(references.get(i))) {
+			if (references.get(i - 1).isAfter(references.get(i))) {
 				throw new IllegalArgumentException("기준 시각이 시간 순이 아니다: " + references);
 			}
 		}

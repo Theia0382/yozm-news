@@ -133,10 +133,11 @@ class InterestHistoryControllerTests {
 		assertThat(executiveLevels).hasSize(13);
 		Object firstLevel = JsonPath.read(body, "$.topics[0].levels[0].level");
 		assertThat(firstLevel).as("13주 전 — 신호 없음").isNull();
-		Double executiveNow = JsonPath.read(body, "$.topics[0].levels[12].level");
-		assertThat(executiveNow).isGreaterThan(0.2);
-		Double legislatureNow = JsonPath.read(body, "$.topics[1].levels[12].level");
-		assertThat(legislatureNow).isEqualTo(0.0);
+		// 관심 값은 지금에서 거슬러 정한 시각이라 자릿수가 실행마다 다르다 — JSON 수는 Double 또는 BigDecimal 로 읽혀 Number 로 받는다
+		Number executiveNow = JsonPath.read(body, "$.topics[0].levels[12].level");
+		assertThat(executiveNow.doubleValue()).isGreaterThan(0.2);
+		Number legislatureNow = JsonPath.read(body, "$.topics[1].levels[12].level");
+		assertThat(legislatureNow.doubleValue()).isEqualTo(0.0);
 		List<Map<String, Object>> changes = JsonPath.read(body, "$.periods[*].subscriptionChanges[*]");
 		assertThat(changes).singleElement()
 			.satisfies(change -> assertThat(change).containsEntry("action", "ADD")

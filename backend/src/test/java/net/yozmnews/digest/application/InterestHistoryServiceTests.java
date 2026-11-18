@@ -235,6 +235,40 @@ class InterestHistoryServiceTests {
 	}
 
 	@Test
+	void callingAtTheVeryStartOfAPeriodRepeatsThePreviousReferenceWithoutAShift() {
+		// 11-10 인용 · 좋아요 — 지금이 11-16(월) 00:00 서울이면 11-09 주의 끝과 진행 중 주의 기준 시각이 같다
+		long digest = DigestRows.digest(this.jdbc, this.user, "2026-11-10", "2026-11-10T00:00:00Z");
+		long article = article("의회", "politics.legislature");
+		DigestRows.cite(this.jdbc, digest, article);
+		react(article, "LIKE", "2026-11-10T01:00:00Z");
+		Instant mondayMidnight = Instant.parse("2026-11-15T15:00:00Z");
+		InterestHistoryService atMonday = new InterestHistoryService(this.timezones, this.tagSets, this.materials,
+				InstantSource.fixed(mondayMidnight));
+
+		InterestTimeline weeks = atMonday.recent(new UserId(this.user), InterestHistorySpan.WEEKS_13).orElseThrow();
+
+		assertThat(weeks.periods()).hasSize(13);
+		InterestPeriodView previous = weeks.periods().get(11);
+		InterestPeriodView current = weeks.periods().get(12);
+		assertThat(previous.point().reference()).isEqualTo(mondayMidnight);
+		assertThat(current.inProgress()).isTrue();
+		assertThat(current.point().reference()).isEqualTo(mondayMidnight);
+		assertThat(previous.point().entered()).containsExactly("politics.legislature");
+		assertThat(current.point().levels()).isEqualTo(previous.point().levels());
+		assertThat(current.point().entered()).isEmpty();
+		assertThat(current.point().left()).isEmpty();
+		assertThat(current.point().subscriptionChanges()).isEmpty();
+
+		// 11-01 00:00 서울 — 월 단위도 같다
+		InterestHistoryService atFirst = new InterestHistoryService(this.timezones, this.tagSets, this.materials,
+				InstantSource.fixed(Instant.parse("2026-10-31T15:00:00Z")));
+		InterestTimeline months = atFirst.recent(new UserId(this.user), InterestHistorySpan.MONTHS_12).orElseThrow();
+		assertThat(months.periods()).hasSize(12);
+		assertThat(months.periods().get(11).point().reference())
+			.isEqualTo(months.periods().get(10).point().reference());
+	}
+
+	@Test
 	void anEvaluationKeyAppearsAsTheActiveKeyItResolvesTo() {
 		// 재료 쪽 계보 표가 politics.legislature 를 politics.executive 로 옮긴다(이름이 바뀐 버전의 표를 흉내 낸다)
 		long digest = DigestRows.digest(this.jdbc, this.user, "2026-11-10", "2026-11-10T00:00:00Z");
