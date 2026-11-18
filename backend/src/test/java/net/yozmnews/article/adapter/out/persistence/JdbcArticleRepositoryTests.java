@@ -242,6 +242,10 @@ class JdbcArticleRepositoryTests {
 				FETCHED_AT, List.of()), MatchKind.NEW);
 		ArticleId seenHere = store(item(SOURCE, FEED, "https://a.example/news/3", null, TITLE,
 				Instant.parse("2026-10-28T03:00:00Z"), FETCHED_AT, List.of()), MatchKind.NEW);
+		ArticleId estimated = store(IncomingItem.from(new ArticleFetched(SOURCE, OTHER_FEED, FETCHED_AT,
+				new FetchedArticle(TITLE, URI.create("https://a.example/news/7"), null, null,
+						Instant.parse("2026-10-29T00:00:00Z"), true, null, List.of(), null))),
+				MatchKind.NEW);
 		store(item(new SourceId(4), OTHER_FEED, "https://b.example/news/1", null, TITLE, PUBLISHED_AT, FETCHED_AT,
 				List.of()), MatchKind.NEW);
 		store(item(SOURCE, OTHER_FEED, "https://a.example/news/4", null, "국회 본회의 부결", PUBLISHED_AT, FETCHED_AT,
@@ -251,9 +255,10 @@ class JdbcArticleRepositoryTests {
 				null, "국회  본회의 통과", PUBLISHED_AT, FETCHED_AT, List.of()));
 
 		assertThat(candidates.byTitle()).containsExactlyInAnyOrder(
-				new TitleCandidate(atBoundary, Instant.parse("2026-10-26T00:00:00Z"), false),
-				new TitleCandidate(atUpperBoundary, Instant.parse("2026-10-30T00:00:00Z"), false),
-				new TitleCandidate(seenHere, Instant.parse("2026-10-28T03:00:00Z"), true));
+				new TitleCandidate(atBoundary, Instant.parse("2026-10-26T00:00:00Z"), false, false),
+				new TitleCandidate(atUpperBoundary, Instant.parse("2026-10-30T00:00:00Z"), false, false),
+				new TitleCandidate(seenHere, Instant.parse("2026-10-28T03:00:00Z"), false, true),
+				new TitleCandidate(estimated, Instant.parse("2026-10-29T00:00:00Z"), true, false));
 	}
 
 	@Test
@@ -269,7 +274,7 @@ class JdbcArticleRepositoryTests {
 		MatchCandidates candidates = this.repository.findCandidates(item(SOURCE, FEED, "https://a.example/news/9",
 				null, TITLE, PUBLISHED_AT, FETCHED_AT, List.of()));
 
-		assertThat(candidates.byTitle()).containsExactly(new TitleCandidate(shared, PUBLISHED_AT, false));
+		assertThat(candidates.byTitle()).containsExactly(new TitleCandidate(shared, PUBLISHED_AT, false, false));
 	}
 
 	@Test

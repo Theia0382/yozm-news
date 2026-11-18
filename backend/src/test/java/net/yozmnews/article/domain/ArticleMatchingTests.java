@@ -103,6 +103,38 @@ class ArticleMatchingTests {
 	}
 
 	@Test
+	void articleSeenInThisFeedAtTheSamePublishedTimeIsATitleCandidate() {
+		MatchCandidates candidates = new MatchCandidates(null, null, List.of(),
+				List.of(title(4, "2026-10-28T00:00:00Z", true)));
+
+		assertThat(decide(TITLE, candidates)).isEqualTo(existing(4, MatchKind.TITLE));
+	}
+
+	@Test
+	void articleSeenInThisFeedOneSecondApartIsNotATitleCandidate() {
+		MatchCandidates candidates = new MatchCandidates(null, null, List.of(),
+				List.of(title(4, "2026-10-28T00:00:01Z", true)));
+
+		assertThat(decide(TITLE, candidates)).isEqualTo(new MatchDecision.New(false));
+	}
+
+	@Test
+	void articleSeenInThisFeedWithAnEstimatedPublishedTimeIsNotATitleCandidate() {
+		MatchCandidates candidates = new MatchCandidates(null, null, List.of(),
+				List.of(new TitleCandidate(id(4), PUBLISHED_AT, true, true)));
+
+		assertThat(decide(TITLE, candidates)).isEqualTo(new MatchDecision.New(false));
+	}
+
+	@Test
+	void itemWithAnEstimatedPublishedTimeDoesNotJoinAnArticleSeenInThisFeed() {
+		MatchCandidates candidates = new MatchCandidates(null, null, List.of(),
+				List.of(title(4, "2026-10-28T00:00:00Z", true)));
+
+		assertThat(decide(TITLE, true, candidates)).isEqualTo(new MatchDecision.New(false));
+	}
+
+	@Test
 	void closestTitleCandidateWins() {
 		MatchCandidates candidates = new MatchCandidates(null, null, List.of(),
 				List.of(title(4, "2026-10-26T01:00:00Z", false), title(6, "2026-10-28T02:00:00Z", false)));
@@ -134,8 +166,12 @@ class ArticleMatchingTests {
 	}
 
 	private static MatchDecision decide(String title, MatchCandidates candidates) {
+		return decide(title, false, candidates);
+	}
+
+	private static MatchDecision decide(String title, boolean publishedAtEstimated, MatchCandidates candidates) {
 		FetchedArticle article = new FetchedArticle(title, URI.create("https://a.example/news/1"), "g-1", null,
-				PUBLISHED_AT, false, null, List.of(), null);
+				PUBLISHED_AT, publishedAtEstimated, null, List.of(), null);
 		IncomingItem item = IncomingItem
 			.from(new ArticleFetched(new SourceId(1), new FeedId(2), Instant.parse("2026-10-28T01:00:00Z"), article));
 		return ArticleMatching.decide(item, candidates);
@@ -150,7 +186,7 @@ class ArticleMatchingTests {
 	}
 
 	private static TitleCandidate title(long articleId, String publishedAt, boolean seenInFeed) {
-		return new TitleCandidate(new ArticleId(articleId), Instant.parse(publishedAt), seenInFeed);
+		return new TitleCandidate(new ArticleId(articleId), Instant.parse(publishedAt), false, seenInFeed);
 	}
 
 	private static MatchDecision existing(long articleId, MatchKind kind) {

@@ -19,9 +19,14 @@ final class Fetched {
 
 	static ArticleFetched item(long sourceId, long feedId, String link, @Nullable String guid, String title,
 			Instant publishedAt) {
+		return item(sourceId, feedId, link, guid, title, publishedAt, false);
+	}
+
+	static ArticleFetched item(long sourceId, long feedId, String link, @Nullable String guid, String title,
+			Instant publishedAt, boolean publishedAtEstimated) {
 		return new ArticleFetched(new SourceId(sourceId), new FeedId(feedId), publishedAt.plus(Duration.ofMinutes(10)),
-				new FetchedArticle(title, URI.create(link), guid, "요약", publishedAt, false, "홍길동", List.of("정치"),
-						null));
+				new FetchedArticle(title, URI.create(link), guid, "요약", publishedAt, publishedAtEstimated, "홍길동",
+						List.of("정치"), null));
 	}
 
 }
