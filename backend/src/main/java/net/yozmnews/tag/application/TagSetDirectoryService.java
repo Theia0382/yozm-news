@@ -3,7 +3,9 @@ package net.yozmnews.tag.application;
 import java.util.Objects;
 
 import net.yozmnews.tag.TagSetDirectory;
+import net.yozmnews.tag.TagName;
 import net.yozmnews.tag.TagSetId;
+import net.yozmnews.tag.TagSetNames;
 import net.yozmnews.tag.TagSetThresholds;
 import net.yozmnews.tag.TagSetView;
 import net.yozmnews.tag.domain.tagset.TagSet;
@@ -43,6 +45,19 @@ class TagSetDirectoryService implements TagSetDirectory {
 		Objects.requireNonNull(id, "id");
 		return TagSetViews.view(this.tagSets.findById(id.value())
 			.orElseThrow(() -> new IllegalArgumentException("없는 태그 체계 버전: " + id.value())));
+	}
+
+	@Override
+	public TagSetNames names(TagSetId id) {
+		TagSetView view = tagSet(id);
+		return new TagSetNames(view.id(),
+				view.topics().stream().map(category -> new TagName(category.key(), category.name())).toList(),
+				view.topics()
+					.stream()
+					.flatMap(category -> category.subtopics().stream())
+					.map(subtopic -> new TagName(subtopic.key(), subtopic.name()))
+					.toList(),
+				view.regions().stream().map(region -> new TagName(region.key(), region.name())).toList());
 	}
 
 	/**

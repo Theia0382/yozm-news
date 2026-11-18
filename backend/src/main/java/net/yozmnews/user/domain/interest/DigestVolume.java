@@ -2,18 +2,21 @@ package net.yozmnews.user.domain.interest;
 
 import java.util.Objects;
 
+import net.yozmnews.user.SummaryLength;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 다이제스트 분량 설정 — 최대 후보 수의 단계(또는 직접 입력한 수)와 큰 슬롯 수. 범위의 정본 — docs/specs/user.md §5
+ * 다이제스트 분량 설정 — 최대 후보 수의 단계(또는 직접 입력한 수) · 큰 슬롯 수 · 요약 길이. 범위의 정본 — docs/specs/user.md §5
  * <p>
  * 표준 생성자는 구조만 검사한다 — 범위는 저장할 때만 본다({@link #countInRange} · {@link #bigSlotsInRange}). 범위 상수를 나중에 좁혀도
  * 이미 저장된 행을 읽을 수 있어야 하고, 그 행은 사용자가 다시 저장할 때 새 범위를 따른다. 범위 값은 측정 전 목표다.
  * @param volume 최대 후보 수의 단계
  * @param customCount 직접 입력한 최대 후보 수 — {@link CandidateVolume#CUSTOM} 일 때만 있다
  * @param bigSlots 큰 슬롯 수 — 0 이면 큰 슬롯을 넣지 않는다
+ * @param summaryLength 요약 길이 — 단계의 뜻은 다이제스트의 지시가 정한다
  */
-public record DigestVolume(CandidateVolume volume, @Nullable Integer customCount, int bigSlots) {
+public record DigestVolume(CandidateVolume volume, @Nullable Integer customCount, int bigSlots,
+		SummaryLength summaryLength) {
 
 	/** 직접 입력한 최대 후보 수의 하한 */
 	public static final int MIN_COUNT = 10;
@@ -32,6 +35,7 @@ public record DigestVolume(CandidateVolume volume, @Nullable Integer customCount
 	 */
 	public DigestVolume {
 		Objects.requireNonNull(volume, "volume");
+		Objects.requireNonNull(summaryLength, "summaryLength");
 		if (!customCountMatches(volume, customCount)) {
 			throw new IllegalArgumentException("직접 입력일 때만 직접 입력한 수가 있다: " + volume + ", " + customCount);
 		}
@@ -50,7 +54,8 @@ public record DigestVolume(CandidateVolume volume, @Nullable Integer customCount
 
 	/** 계정을 만들 때의 분량 — {@link InterestDefaults} */
 	public static DigestVolume defaults() {
-		return new DigestVolume(InterestDefaults.CANDIDATE_VOLUME, null, InterestDefaults.BIG_SLOTS);
+		return new DigestVolume(InterestDefaults.CANDIDATE_VOLUME, null, InterestDefaults.BIG_SLOTS,
+				InterestDefaults.SUMMARY_LENGTH);
 	}
 
 	/** 최대 후보 수 — 단계의 값 또는 직접 입력한 수 */

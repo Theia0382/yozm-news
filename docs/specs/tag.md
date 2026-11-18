@@ -79,7 +79,7 @@
 
 ## 3. 공개 인터페이스
 
-모듈 최상위 패키지 `net.yozmnews.tag` 의 공개 타입은 활성 체계 · 버전 내용 조회 `TagSetDirectory`, 활성 전환 이벤트 `TagSetActivated`, 태그 체계의 운영 API `TagSetAdministration`(태그 기준 · 저장 기준 · 버전), 태그 키 계보 조회 `TagKeyLineage`, 평가 결과 조회 `ArticleEvaluations`, 평가 대기 · 평가 현황의 운영 API `EvaluationAdministration`, 평가 검수의 운영 API `EvaluationReview`, 빠진 태그 채움의 운영 API `TagBackfillAdministration`, 주제별 보도량 조회 `TopicCoverage`, 집계 기간 `EvaluationPeriod` 와 그 값 · 결과 타입이다. 내는 이벤트는 활성 전환 `TagSetActivated` 하나다. 평가 결과를 알리는 `ArticleEvaluated` 도 이 모듈이 낸다(**(미설계)** 발행 시점 · 내용 — [overview.md §5](../overview.md#5-모듈-지도)).
+모듈 최상위 패키지 `net.yozmnews.tag` 의 공개 타입은 활성 체계 · 버전 내용 · 버전의 이름 조회 `TagSetDirectory`(이름은 `TagSetNames`), 활성 전환 이벤트 `TagSetActivated`, 태그 체계의 운영 API `TagSetAdministration`(태그 기준 · 저장 기준 · 버전), 태그 키 계보 조회 `TagKeyLineage`, 평가 결과 조회 `ArticleEvaluations`, 평가 대기 · 평가 현황의 운영 API `EvaluationAdministration`, 평가 검수의 운영 API `EvaluationReview`, 빠진 태그 채움의 운영 API `TagBackfillAdministration`, 주제별 보도량 조회 `TopicCoverage`, 집계 기간 `EvaluationPeriod` 와 그 값 · 결과 타입이다. 내는 이벤트는 활성 전환 `TagSetActivated` 하나다. 평가 결과를 알리는 `ArticleEvaluated` 도 이 모듈이 낸다(**(미설계)** 발행 시점 · 내용 — [overview.md §5](../overview.md#5-모듈-지도)).
 
 받는 이벤트는 `article` 의 `ArticleStored` · `ArticlesRemoved` 이고, 재평가 대상은 `article` 의 공개 조회 `ArticleDirectory.firstSeenSince` 로 읽는다([article Spec §3](article.md#3-공개-인터페이스)). 태그 판정은 `evaluation` 의 공개 API `ArticleTagging` 으로 한다([evaluation Spec §3](evaluation.md#3-공개-인터페이스)) — 질문 묶음(`TagQuestions`)과 그 값 타입(`TopicCategory` · `AskedTag` · `FormatChoice` · `FormatOption` · `ImportanceScale` · `ImportanceLevel`)은 `evaluation` 의 공개 타입이고, 이 모듈의 `TagSetView` 가 그것으로 체계 내용을 담는다. 태그 기준 · 저장 기준 이력과 버전의 행위자 종류는 `platform` 의 `ChangeActor` 다.
 
@@ -94,6 +94,14 @@ public interface TagSetDirectory {
     TagSetView activeTagSet();
     TagSetThresholds activeThresholds();
     TagSetView tagSet(TagSetId id);
+    TagSetNames names(TagSetId id);
+}
+
+public record TagSetNames(TagSetId id, List<TagName> categories, List<TagName> subtopics, List<TagName> regions) {
+    Optional<String> topicName(String key);
+    Optional<String> regionName(String key);
+    Map<String, Integer> topicOrder();
+    Map<String, Integer> regionOrder();
 }
 ```
 
@@ -102,12 +110,16 @@ public interface TagSetDirectory {
 | `activeTagSet()` | 활성 버전의 내용 — 태그 · 질문 문장 · 중요도 기준 |
 | `activeThresholds()` | 활성 버전의 주제 · 지역의 태그 기준 · 저장 기준 |
 | `tagSet(id)` | 버전 하나의 내용 — 활성이 아닌 버전도 낸다. 사용자 선호가 옛 버전의 구조(대분류 · 중분류)와 이름을 읽는다 |
+| `names(id)` | 버전 하나의 키와 이름(`TagSetNames`) — `tagSet` 과 같은 버전 내용에서 이름만 낸다. 평가 질문 묶음을 읽지 않는 쪽(다이제스트의 프롬프트)이 쓴다 |
+| `TagSetNames.categories` · `subtopics` · `regions` | 주제 대분류(대분류 키) · 주제 중분류(중분류 전체 키 — 대분류 순서, 그 안의 순서) · 지역의 키와 이름(`TagName`) — 체계 파일에 적힌 순서 |
+| `TagSetNames.topicName` · `regionName` | 키의 이름 — 주제는 대분류 키와 중분류 전체 키를 받는다. 이 버전에 없는 키면 빈 값 |
+| `TagSetNames.topicOrder` · `regionOrder` | 키 → 체계 순서의 위치(주제는 대분류 먼저, 그다음 중분류) — 이름을 체계 순서로 늘어놓을 때 쓴다 |
 
 - 계약
   - 활성 버전은 언제나 하나다. 없으면(첫 기동 적재의 불변식이 깨짐) `IllegalStateException` 이다(tag-R3)
   - 내용과 태그 기준 · 저장 기준은 다른 조회다 — 내용은 바뀌지 않고 태그 기준 · 저장 기준은 바뀐다. 둘 다 버전 ID 를 싣는다. 두 조회를 이어 부르면 그 사이 활성 전환으로 버전이 갈릴 수 있다 — 버전 ID 로 맞춘다
   - 트랜잭션을 열지 않는다. 각 조회는 그 순간의 값이다
-  - `tagSet` 은 없는 버전에 `IllegalArgumentException` 이다. 버전 내용은 바뀌지 않으므로(tag-R4) 같은 ID 는 언제나 같은 내용이다
+  - `tagSet` · `names` 는 없는 버전에 `IllegalArgumentException` 이다. 버전 내용은 바뀌지 않으므로(tag-R4) 같은 ID 는 언제나 같은 내용이다
 
 관련 규칙: tag-R3 · tag-R4 · tag-R9 · tag-R10.
 
@@ -1353,3 +1365,4 @@ sequenceDiagram
 | [0113](../adr/0113-moving-listeners-or-jobs-between-modules-migrates-pending-publication-listener-ids-and-drops-pending-jobs-of-the-old-class.md) | 모듈 사이로 리스너 · 반복 작업을 옮기면 미완료 발행의 리스너 ID 를 마이그레이션으로 옮기고, 옛 클래스의 남은 예약 작업을 지운다 |
 | [0175](../adr/0175-tag-preferences-follow-tag-set-activation-events-and-are-rewritten-to-active-keys.md) | 태그 선호는 체계 활성 전환 이벤트를 받아 활성 버전의 키로 고쳐 쓴다 |
 | [0182](../adr/0182-startup-work-reading-the-active-tag-set-runs-in-a-lifecycle-phase-after-first-start-seeding-and-before-the-web-server.md) | 기동 때 활성 태그 체계를 읽는 작업은 웹 서버 앞의 기동 단계에서 첫 기동 적재 뒤에 돈다 |
+| [0219](../adr/0219-candidate-selection-hands-over-the-prompt-material-read-once-with-its-token-estimate.md) | 태그 이름만 필요한 쪽을 위해 버전의 키 · 이름 조회(`TagSetDirectory.names`)를 낸다 |

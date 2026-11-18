@@ -106,7 +106,20 @@ describe("KeysPage", () => {
     expect(
       transfer.getByText("구독 주제, 지역 선호, 자유 텍스트 관심사"),
     ).toBeInTheDocument();
-    expect(transfer.getByText("후보 기사의 정보")).toBeInTheDocument();
+    expect(
+      transfer.getByText("시간대 — 기사의 발행 시각을 그 시간대로 적습니다"),
+    ).toBeInTheDocument();
+    expect(transfer.getByText("요약 길이")).toBeInTheDocument();
+    expect(
+      transfer.getByText(
+        "후보 기사의 정보(제목 · 요약문 · 출처 · 발행 시각 · 주제 · 지역)",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      transfer.getByText(
+        "큰 스토리라인 묶음 — 구독과 무관하게 넣은 기사가 어느 큰 흐름에 속하는지와 그 흐름의 대표 기사 제목",
+      ),
+    ).toBeInTheDocument();
     expect(
       transfer.getByText(
         "그 기간에 구독한 스토리라인의 변화 · 보도량 · 관심도 통계",

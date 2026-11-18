@@ -18,6 +18,7 @@ import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleDirectory;
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.article.ArticlesRemoved;
+import net.yozmnews.digest.DigestInputs;
 import net.yozmnews.digest.adapter.out.fake.FakeDigestGenerator;
 import net.yozmnews.digest.domain.candidate.CandidateSet;
 import net.yozmnews.digest.domain.candidate.DigestCandidate;
@@ -30,13 +31,13 @@ import net.yozmnews.digest.domain.digest.DigestRepository;
 import net.yozmnews.digest.domain.digest.DigestStatus;
 import net.yozmnews.digest.domain.digest.DigestTrigger;
 import net.yozmnews.digest.domain.generator.DigestGenerator;
+import net.yozmnews.digest.domain.input.DigestInput;
 import net.yozmnews.digest.domain.removal.DigestContentCleanup;
 import net.yozmnews.digest.domain.removal.SectionCitations;
 import net.yozmnews.event.EventArticles;
 import net.yozmnews.llm.LlmModel;
 import net.yozmnews.llm.Provider;
 import net.yozmnews.platform.UserId;
-import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -109,8 +110,8 @@ class DigestArticleRemovalTests {
 		this.articleIds.clear();
 	}
 
-	private DigestGeneration generation(@Nullable DigestGenerator generator, DigestCandidateRepository repository) {
-		return new DigestGeneration(this.digests, this.sections, repository, this.articles, () -> generator,
+	private DigestGeneration generation(DigestGenerator generator, DigestCandidateRepository repository) {
+		return new DigestGeneration(this.digests, this.sections, repository, this.articles, generator,
 				this.transaction, CLOCK);
 	}
 
@@ -127,12 +128,12 @@ class DigestArticleRemovalTests {
 				DigestTrigger.SCHEDULED);
 	}
 
-	private List<DigestCandidate> candidates(int... indexes) {
+	private DigestInput candidates(int... indexes) {
 		List<DigestCandidate> list = new ArrayList<>();
 		for (int index : indexes) {
 			list.add(new DigestCandidate(new ArticleId(this.articleIds.get(index - 1)), SelectionReason.SUBSCRIBED));
 		}
-		return list;
+		return DigestInputs.of(list);
 	}
 
 	private ArticleId article(int index) {

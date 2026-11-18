@@ -1,6 +1,7 @@
 package net.yozmnews.user.adapter.in.web;
 
 import jakarta.validation.constraints.NotNull;
+import net.yozmnews.user.SummaryLength;
 import net.yozmnews.user.domain.interest.CandidateVolume;
 import org.jspecify.annotations.Nullable;
 
@@ -11,7 +12,8 @@ import org.jspecify.annotations.Nullable;
  * @param volume 최대 후보 수의 단계
  * @param customCount 직접 입력한 최대 후보 수 — {@code CUSTOM} 일 때만
  * @param bigSlots 큰 슬롯 수
+ * @param summaryLength 요약 길이
  */
 record InterestVolumeRequest(@NotNull CandidateVolume volume, @Nullable Integer customCount,
-		@NotNull Integer bigSlots) {
+		@NotNull Integer bigSlots, @NotNull SummaryLength summaryLength) {
 }

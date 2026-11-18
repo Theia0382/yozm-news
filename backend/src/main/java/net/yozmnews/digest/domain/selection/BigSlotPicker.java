@@ -43,7 +43,9 @@ public final class BigSlotPicker {
 		Set<EventId> usedEvents = new HashSet<>();
 		Set<ArticleId> usedArticles = new HashSet<>();
 		List<List<Picked>> chosen = new ArrayList<>();
-		for (BigRow row : rows) {
+		List<Integer> chosenRows = new ArrayList<>();
+		for (int index = 0; index < rows.size(); index++) {
+			BigRow row = rows.get(index);
 			if (chosen.size() == bigSlots) {
 				break;
 			}
@@ -63,13 +65,17 @@ public final class BigSlotPicker {
 			}
 			if (!picked.isEmpty()) {
 				chosen.add(picked);
+				chosenRows.add(index);
 			}
 		}
-		return trim(chosen, cap);
+		return trim(chosen, chosenRows, cap);
 	}
 
-	/** 상한을 넘으면 행 순서로 돌며 하나씩 담는다 — 결과는 행 순서 · 행 안 사건 순서 */
-	private static BigSlots trim(List<List<Picked>> chosen, int cap) {
+	/**
+	 * 상한을 넘으면 행 순서로 돌며 하나씩 담는다 — 결과는 행 순서 · 행 안 사건 순서
+	 * @param chosenRows {@code chosen} 의 행마다 입력 행의 위치
+	 */
+	private static BigSlots trim(List<List<Picked>> chosen, List<Integer> chosenRows, int cap) {
 		int[] keep = new int[chosen.size()];
 		int kept = 0;
 		boolean more = true;
@@ -84,14 +90,16 @@ public final class BigSlotPicker {
 			}
 		}
 		List<ArticleFacts> articles = new ArrayList<>(kept);
+		List<Integer> rows = new ArrayList<>(kept);
 		Set<EventId> events = new LinkedHashSet<>();
 		for (int i = 0; i < chosen.size(); i++) {
 			for (Picked picked : chosen.get(i).subList(0, keep[i])) {
 				articles.add(picked.article());
+				rows.add(chosenRows.get(i));
 				events.add(picked.event());
 			}
 		}
-		return new BigSlots(articles, events);
+		return new BigSlots(articles, rows, events);
 	}
 
 	/**
@@ -124,16 +132,24 @@ public final class BigSlotPicker {
 	/**
 	 * 고른 큰 슬롯
 	 * @param articles 큰 슬롯 기사 — 행 순서, 행 안에서는 사건 순서
+	 * @param rows {@code articles} 와 같은 순서로 각 기사가 나온 큰 판정 행의 위치({@link #pick} 의 입력 {@code rows} 의 위치)
 	 * @param events 그 기사들의 사건 — 구독 후보의 사건 중복 제거가 뺀다
 	 */
-	public record BigSlots(List<ArticleFacts> articles, Set<EventId> events) {
+	public record BigSlots(List<ArticleFacts> articles, List<Integer> rows, Set<EventId> events) {
 
 		/** 큰 슬롯 없음 */
-		public static final BigSlots NONE = new BigSlots(List.of(), Set.of());
+		public static final BigSlots NONE = new BigSlots(List.of(), List.of(), Set.of());
 
+		/**
+		 * @throws IllegalArgumentException 행 위치가 기사마다 하나가 아닐 때
+		 */
 		public BigSlots {
 			articles = List.copyOf(Objects.requireNonNull(articles, "articles"));
+			rows = List.copyOf(Objects.requireNonNull(rows, "rows"));
 			events = Set.copyOf(Objects.requireNonNull(events, "events"));
+			if (rows.size() != articles.size()) {
+				throw new IllegalArgumentException("행 위치가 기사마다 하나가 아니다: " + articles.size() + " · " + rows.size());
+			}
 		}
 
 	}

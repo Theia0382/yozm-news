@@ -158,57 +158,95 @@ class InterestControllerTests {
 	void volumeHasTheDefaultsAndSavesOrSaysWhichFieldIsOutOfRange() throws Exception {
 		String presets = """
 				"presets":[{"volume":"FEW","count":30},{"volume":"NORMAL","count":60},{"volume":"MANY","count":90}],
-				"countRange":{"min":10,"max":150},"bigSlotRange":{"min":0,"max":10}""";
+				"countRange":{"min":10,"max":150},"bigSlotRange":{"min":0,"max":10},
+				"summaryLengths":["SHORT","NORMAL","DETAILED"]""";
 		this.mockMvc.perform(get("/api/interests/volume").with(this.user))
 			.andExpect(status().isOk())
 			.andExpect(content().json("""
-					{"volume":"NORMAL","customCount":null,"bigSlots":3,%s}""".formatted(presets), JsonCompareMode.STRICT));
+					{"volume":"NORMAL","customCount":null,"bigSlots":3,"summaryLength":"NORMAL",%s}"""
+				.formatted(presets), JsonCompareMode.STRICT));
 
 		this.mockMvc.perform(json(put("/api/interests/volume").with(this.user), """
-				{"volume":"CUSTOM","customCount":150,"bigSlots":0}"""))
+				{"volume":"CUSTOM","customCount":150,"bigSlots":0,"summaryLength":"DETAILED"}"""))
 			.andExpect(status().isOk())
 			.andExpect(content().json("""
-					{"result":"SAVED","volume":{"volume":"CUSTOM","customCount":150,"bigSlots":0,%s},"range":null}"""
-				.formatted(presets), JsonCompareMode.STRICT));
+					{"result":"SAVED","volume":{"volume":"CUSTOM","customCount":150,"bigSlots":0,
+					 "summaryLength":"DETAILED",%s},"range":null}""".formatted(presets), JsonCompareMode.STRICT));
 		this.mockMvc.perform(json(put("/api/interests/volume").with(this.user), """
-				{"volume":"CUSTOM","customCount":151,"bigSlots":0}"""))
+				{"volume":"CUSTOM","customCount":151,"bigSlots":0,"summaryLength":"SHORT"}"""))
 			.andExpect(content().json("""
 					{"result":"COUNT_OUT_OF_RANGE","volume":null,"range":{"min":10,"max":150}}""", JsonCompareMode.STRICT));
 		this.mockMvc.perform(json(put("/api/interests/volume").with(this.user), """
-				{"volume":"CUSTOM","customCount":9,"bigSlots":11}"""))
+				{"volume":"CUSTOM","customCount":9,"bigSlots":11,"summaryLength":"SHORT"}"""))
 			.andExpect(content().json("""
 					{"result":"COUNT_OUT_OF_RANGE","volume":null,"range":{"min":10,"max":150}}""", JsonCompareMode.STRICT));
 		this.mockMvc.perform(json(put("/api/interests/volume").with(this.user), """
-				{"volume":"MANY","bigSlots":11}"""))
+				{"volume":"MANY","bigSlots":11,"summaryLength":"SHORT"}"""))
 			.andExpect(content().json("""
 					{"result":"BIG_SLOTS_OUT_OF_RANGE","volume":null,"range":{"min":0,"max":10}}""", JsonCompareMode.STRICT));
 		this.mockMvc.perform(json(put("/api/interests/volume").with(this.user), """
-				{"volume":"MANY","customCount":45,"bigSlots":3}"""))
+				{"volume":"MANY","customCount":45,"bigSlots":3,"summaryLength":"SHORT"}"""))
 			.andExpect(status().isBadRequest());
 		this.mockMvc.perform(json(put("/api/interests/volume").with(this.user), """
-				{"volume":"MANY","customCount":200,"bigSlots":3}"""))
+				{"volume":"MANY","customCount":200,"bigSlots":3,"summaryLength":"SHORT"}"""))
 			.andExpect(status().isBadRequest());
 		this.mockMvc.perform(json(put("/api/interests/volume").with(this.user), """
-				{"volume":"CUSTOM","bigSlots":3}"""))
+				{"volume":"CUSTOM","bigSlots":3,"summaryLength":"SHORT"}"""))
 			.andExpect(status().isBadRequest());
 		this.mockMvc.perform(json(put("/api/interests/volume").with(this.user), """
-				{"volume":"LOTS","bigSlots":3}"""))
+				{"volume":"LOTS","bigSlots":3,"summaryLength":"SHORT"}"""))
 			.andExpect(status().isBadRequest());
 		this.mockMvc.perform(json(put("/api/interests/volume").with(this.user), """
-				{"volume":"MANY"}"""))
+				{"volume":"MANY","summaryLength":"SHORT"}"""))
+			.andExpect(status().isBadRequest());
+		this.mockMvc.perform(json(put("/api/interests/volume").with(this.user), """
+				{"volume":"MANY","bigSlots":3}"""))
+			.andExpect(status().isBadRequest());
+		this.mockMvc.perform(json(put("/api/interests/volume").with(this.user), """
+				{"volume":"MANY","bigSlots":3,"summaryLength":"LONG"}"""))
 			.andExpect(status().isBadRequest());
 		this.mockMvc.perform(get("/api/interests/volume").with(this.user))
 			.andExpect(jsonPath("$.volume").value("CUSTOM"))
 			.andExpect(jsonPath("$.customCount").value(150))
-			.andExpect(jsonPath("$.bigSlots").value(0));
+			.andExpect(jsonPath("$.bigSlots").value(0))
+			.andExpect(jsonPath("$.summaryLength").value("DETAILED"));
 
 		this.mockMvc.perform(json(put("/api/interests/volume").with(this.user), """
-				{"volume":"FEW","bigSlots":10}"""))
+				{"volume":"FEW","bigSlots":10,"summaryLength":"SHORT"}"""))
 			.andExpect(jsonPath("$.result").value("SAVED"));
 		this.mockMvc.perform(get("/api/interests/volume").with(this.user))
 			.andExpect(jsonPath("$.volume").value("FEW"))
 			.andExpect(jsonPath("$.customCount").value(nullValue()))
-			.andExpect(jsonPath("$.bigSlots").value(10));
+			.andExpect(jsonPath("$.bigSlots").value(10))
+			.andExpect(jsonPath("$.summaryLength").value("SHORT"));
+	}
+
+	@Test
+	void theEffortIsMediumByDefaultAndSavesWithoutAKeyOrAChosenModel() throws Exception {
+		String efforts = """
+				"efforts":["LOW","MEDIUM","HIGH"]""";
+		this.mockMvc.perform(get("/api/interests/model").with(this.user))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.effort").value("MEDIUM"));
+		this.mockMvc.perform(json(put("/api/interests/effort").with(this.user), """
+				{"effort":"LOW"}"""))
+			.andExpect(status().isOk())
+			.andExpect(content().json("""
+					{"choosable":[],"chosen":null,"effective":null,"reason":"NOT_CHOSEN","effort":"LOW",%s}"""
+				.formatted(efforts), JsonCompareMode.STRICT));
+		this.mockMvc.perform(json(put("/api/interests/effort").with(this.user), """
+				{"effort":"NONE"}"""))
+			.andExpect(status().isBadRequest());
+		this.mockMvc.perform(json(put("/api/interests/effort").with(this.user), "{}"))
+			.andExpect(status().isBadRequest());
+		this.mockMvc.perform(get("/api/interests/model").with(this.user))
+			.andExpect(jsonPath("$.effort").value("LOW"));
+
+		this.mockMvc.perform(json(put("/api/interests/effort").with(this.user), """
+				{"effort":"HIGH"}"""))
+			.andExpect(jsonPath("$.effort").value("HIGH"));
+		this.mockMvc.perform(get("/api/interests/model").with(this.user))
+			.andExpect(jsonPath("$.effort").value("HIGH"));
 	}
 
 	@Test
@@ -216,7 +254,8 @@ class InterestControllerTests {
 		this.mockMvc.perform(get("/api/interests/model").with(this.user))
 			.andExpect(status().isOk())
 			.andExpect(content().json("""
-					{"choosable":[],"chosen":null,"effective":null,"reason":"NOT_CHOSEN"}""", JsonCompareMode.STRICT));
+					{"choosable":[],"chosen":null,"effective":null,"reason":"NOT_CHOSEN","effort":"MEDIUM",
+					 "efforts":["LOW","MEDIUM","HIGH"]}""", JsonCompareMode.STRICT));
 		this.mockMvc.perform(json(put("/api/interests/model").with(this.user), """
 				{"provider":"OPENAI","modelId":"gpt-6-astra"}"""))
 			.andExpect(status().isOk())
@@ -232,7 +271,8 @@ class InterestControllerTests {
 			.andExpect(content().json("""
 					{"choosable":[{"provider":"OPENAI","id":"gpt-6.1-terra"},{"provider":"OPENAI","id":"gpt-6.1-sol"},
 					  {"provider":"OPENAI","id":"gpt-6-luna"},{"provider":"OPENAI","id":"gpt-6-astra"}],
-					 "chosen":null,"effective":{"provider":"OPENAI","id":"gpt-6.1-terra"},"reason":"NOT_CHOSEN"}""",
+					 "chosen":null,"effective":{"provider":"OPENAI","id":"gpt-6.1-terra"},"reason":"NOT_CHOSEN",
+					 "effort":"MEDIUM","efforts":["LOW","MEDIUM","HIGH"]}""",
 					JsonCompareMode.STRICT));
 		this.mockMvc.perform(json(put("/api/interests/model").with(this.user), """
 				{"provider":"OPENAI","modelId":"gpt-unknown"}"""))

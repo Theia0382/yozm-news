@@ -1,5 +1,7 @@
 package net.yozmnews.digest.domain.selection;
 
+import java.util.List;
+
 /**
  * 입력 토큰의 추정 — 정본. 프롬프트 구성은 이 추정을 따른다 — docs/specs/digest.md §5
  * <p>
@@ -21,6 +23,18 @@ public final class CandidateCost {
 	/** 사용자 프로필 구획에서 구독 주제 · 지역 선호 하나의 몫(코드 포인트) — 이름과 구분 기호 */
 	public static final int PROFILE_TAG_COST = 20;
 
+	/**
+	 * 사용자 구획의 고정 틀(코드 포인트) — 문서 · 구획 키 · 괄호 · 시간대 ID. 가장 긴 IANA 시간대 ID 를 덮는다 — 구독 주제 · 지역 선호 ·
+	 * 관심사 · 묶음 · 후보 줄 밖의 글이다
+	 */
+	public static final int PROFILE_OVERHEAD = 200;
+
+	/**
+	 * 큰 스토리라인 묶음 하나에서 이름 밖의 몫(코드 포인트) — 묶음 별칭 · 구분 기호 · 묶음 기사 별칭들(행마다 최대
+	 * {@link SelectionRules#BIG_EVENTS_PER_STORYLINE} 개)
+	 */
+	public static final int STORYLINE_OVERHEAD = 100;
+
 	private CandidateCost() {
 	}
 
@@ -33,18 +47,39 @@ public final class CandidateCost {
 	}
 
 	/**
-	 * 후보가 쓸 수 있는 토큰 — 모델의 입력 토큰 예산에서 지시 구획과 사용자 프로필 구획(구독 주제 · 지역 선호 · 자유 텍스트 관심사)의 몫을 뺀 것.
-	 * 0 보다 작으면 0
-	 * @param topicRows 구독 행 수
-	 * @param excludedRegions 제외한 지역 수
+	 * 큰 스토리라인 묶음들의 토큰 어림
+	 * @param titleCodePoints 묶음마다 이름의 코드 포인트 수
 	 */
-	public static int candidateBudget(int modelBudget, int interestTextCodePoints, int topicRows,
-			int excludedRegions) {
-		int profile = tokens(interestTextCodePoints + (topicRows + excludedRegions) * PROFILE_TAG_COST);
-		return Math.max(0, modelBudget - INSTRUCTION_RESERVE - profile);
+	public static int storylines(List<Integer> titleCodePoints) {
+		int codePoints = 0;
+		for (int title : titleCodePoints) {
+			if (title < 0) {
+				throw new IllegalArgumentException("코드 포인트 수가 음수다");
+			}
+			codePoints += title + STORYLINE_OVERHEAD;
+		}
+		return tokens(codePoints);
 	}
 
-	private static int tokens(int codePoints) {
+	/**
+	 * 후보가 쓸 수 있는 토큰 — 모델의 입력 토큰 예산에서 지시 구획, 사용자 프로필 구획(구독 주제 · 지역 선호 · 자유 텍스트 관심사 · 고정 틀),
+	 * 큰 스토리라인 묶음의 몫을 뺀 것. 0 보다 작으면 0
+	 * @param topicRows 구독 행 수
+	 * @param excludedRegions 제외한 지역 수
+	 * @param storylineTokens 묶음들의 토큰 어림({@link #storylines})
+	 */
+	public static int candidateBudget(int modelBudget, int interestTextCodePoints, int topicRows, int excludedRegions,
+			int storylineTokens) {
+		if (storylineTokens < 0) {
+			throw new IllegalArgumentException("묶음 몫이 음수다");
+		}
+		int profile = tokens(
+				interestTextCodePoints + (topicRows + excludedRegions) * PROFILE_TAG_COST + PROFILE_OVERHEAD);
+		return Math.max(0, modelBudget - INSTRUCTION_RESERVE - profile - storylineTokens);
+	}
+
+	/** 코드 포인트 수의 토큰 어림 — 어림 비율의 정본. 프롬프트 구성의 시험이 이 함수로 견준다 */
+	public static int tokens(int codePoints) {
 		return (int) Math.ceil(codePoints * TOKENS_PER_CODE_POINT);
 	}
 

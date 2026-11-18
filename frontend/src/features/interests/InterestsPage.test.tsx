@@ -1,4 +1,4 @@
-import { screen, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import {
@@ -62,11 +62,12 @@ const SETTINGS: InterestSettings = {
   monthlyReport: true,
 };
 
-/** 새 계정의 분량 — 보통 · 큰 스토리라인 3 */
+/** 새 계정의 분량 — 보통 · 큰 스토리라인 3 · 요약 길이 보통 */
 const VOLUME: InterestVolume = {
   volume: "NORMAL",
   customCount: null,
   bigSlots: 3,
+  summaryLength: "NORMAL",
   presets: [
     { volume: "FEW", count: 30 },
     { volume: "NORMAL", count: 60 },
@@ -74,6 +75,7 @@ const VOLUME: InterestVolume = {
   ],
   countRange: { min: 10, max: 150 },
   bigSlotRange: { min: 0, max: 10 },
+  summaryLengths: ["SHORT", "NORMAL", "DETAILED"],
 };
 
 const NO_KEY_MODEL: InterestModel = {
@@ -81,6 +83,8 @@ const NO_KEY_MODEL: InterestModel = {
   chosen: null,
   effective: null,
   reason: "NOT_CHOSEN",
+  effort: "MEDIUM",
+  efforts: ["LOW", "MEDIUM", "HIGH"],
 };
 
 function renderInterests(handlers: Record<string, Handler>) {
@@ -312,6 +316,82 @@ describe("InterestsPage", () => {
       volume.getByLabelText("직접 입력한 후보 수 (10 ~ 150건)"),
     ).toBeDisabled();
     expect(volume.getByLabelText("큰 스토리라인 수 (0 ~ 10개)")).toHaveValue(3);
+    expect(volume.getByRole("radio", { name: "보통" })).toBeChecked();
+    expect(volume.getByRole("radio", { name: "짧게" })).not.toBeChecked();
+    expect(volume.getByRole("radio", { name: "자세히" })).not.toBeChecked();
+  });
+
+  it("요약 길이를 골라 분량과 함께 저장한다", async () => {
+    let current = VOLUME;
+    const { server } = renderInterests({
+      "GET /api/interests/volume": () => json(current),
+      "PUT /api/interests/volume": () => {
+        current = { ...VOLUME, summaryLength: "DETAILED" };
+        return json({ result: "SAVED", volume: current, range: null });
+      },
+    });
+    const user = userEvent.setup();
+    const volume = await section("다이제스트 분량");
+    const volumeReads = () =>
+      server.requests.filter(
+        (r) => r.method === "GET" && r.path === "/api/interests/volume",
+      ).length;
+
+    await user.click(await volume.findByRole("radio", { name: "자세히" }));
+    const readsBeforeSave = volumeReads();
+    await user.click(volume.getByRole("button", { name: "분량 저장" }));
+
+    expect(await volume.findByRole("status")).toHaveTextContent(
+      "다이제스트 분량을 저장했습니다.",
+    );
+    // 저장 뒤 분량을 다시 읽는다 — 아래 선택 상태는 다시 읽은 값이다
+    await waitFor(() => expect(volumeReads()).toBeGreaterThan(readsBeforeSave));
+    expect(bodiesOf(server, "PUT", "/api/interests/volume")).toEqual([
+      {
+        volume: "NORMAL",
+        customCount: null,
+        bigSlots: 3,
+        summaryLength: "DETAILED",
+      },
+    ]);
+    expect(await volume.findByRole("radio", { name: "자세히" })).toBeChecked();
+  });
+
+  it("추론 강도는 키 · 고른 모델이 없어도 고르고 저장한다", async () => {
+    let current = NO_KEY_MODEL;
+    const { server } = renderInterests({
+      "GET /api/interests/model": () => json(current),
+      "PUT /api/interests/effort": () => {
+        current = { ...NO_KEY_MODEL, effort: "HIGH" };
+        return json(current);
+      },
+    });
+    const user = userEvent.setup();
+    const model = await section("모델");
+
+    const modelReads = () =>
+      server.requests.filter(
+        (r) => r.method === "GET" && r.path === "/api/interests/model",
+      ).length;
+
+    expect(await model.findByRole("radio", { name: "보통" })).toBeChecked();
+    await user.click(model.getByRole("radio", { name: "높음" }));
+    const readsBeforeSave = modelReads();
+    await user.click(model.getByRole("button", { name: "추론 강도 저장" }));
+
+    expect(await model.findByRole("status")).toHaveTextContent(
+      "추론 강도를 저장했습니다.",
+    );
+    // 저장 뒤 모델 조회를 다시 읽는다 — 아래 선택 상태는 다시 읽은 값이다
+    await waitFor(() => expect(modelReads()).toBeGreaterThan(readsBeforeSave));
+    expect(bodiesOf(server, "PUT", "/api/interests/effort")).toEqual([
+      { effort: "HIGH" },
+    ]);
+    expect(await model.findByRole("radio", { name: "높음" })).toBeChecked();
+    // 대조 — 키가 없어 모델은 고르지 못한다는 안내는 그대로
+    expect(
+      model.getByRole("link", { name: "LLM 키 등록하기" }),
+    ).toBeInTheDocument();
   });
 
   it("직접 입력한 수와 큰 스토리라인 수를 저장하고 알린다", async () => {
@@ -340,7 +420,12 @@ describe("InterestsPage", () => {
       "다이제스트 분량을 저장했습니다.",
     );
     expect(bodiesOf(server, "PUT", "/api/interests/volume")).toEqual([
-      { volume: "CUSTOM", customCount: 45, bigSlots: 0 },
+      {
+        volume: "CUSTOM",
+        customCount: 45,
+        bigSlots: 0,
+        summaryLength: "NORMAL",
+      },
     ]);
     expect(
       await volume.findByLabelText("직접 입력한 후보 수 (10 ~ 150건)"),
@@ -364,7 +449,12 @@ describe("InterestsPage", () => {
 
     expect(await volume.findByRole("status")).toBeInTheDocument();
     expect(bodiesOf(server, "PUT", "/api/interests/volume")).toEqual([
-      { volume: "MANY", customCount: null, bigSlots: 3 },
+      {
+        volume: "MANY",
+        customCount: null,
+        bigSlots: 3,
+        summaryLength: "NORMAL",
+      },
     ]);
   });
 
@@ -421,6 +511,8 @@ describe("InterestsPage", () => {
           chosen: { provider: "ANTHROPIC", id: "claude-haiku-5-5" },
           effective: null,
           reason: "KEY_INVALID",
+          effort: "MEDIUM",
+          efforts: ["LOW", "MEDIUM", "HIGH"],
         } satisfies InterestModel),
     });
 
@@ -441,6 +533,8 @@ describe("InterestsPage", () => {
           chosen: { provider: "ANTHROPIC", id: "claude-opus-5-5" },
           effective: { provider: "OPENAI", id: "gpt-5.5" },
           reason: "NO_KEY",
+          effort: "MEDIUM",
+          efforts: ["LOW", "MEDIUM", "HIGH"],
         } satisfies InterestModel),
       "PUT /api/interests/model": () => json({ result: "SAVED", model: null }),
     });

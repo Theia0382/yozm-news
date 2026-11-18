@@ -31,6 +31,12 @@ import {
   candidateVolumeNames,
   modelReasonTexts,
   NO_TOPIC_TEXT,
+  REASONING_EFFORT_HELP_TEXT,
+  type ReasoningEffort,
+  reasoningEffortNames,
+  SUMMARY_LENGTH_HELP_TEXT,
+  type SummaryLength,
+  summaryLengthNames,
   type Weekday,
   weekdayNames,
 } from "@/features/interests/interestTexts";
@@ -570,6 +576,9 @@ function VolumeForm({ data, setMessage }: FormProps<InterestVolume>) {
     String(data.customCount ?? data.countRange.min),
   );
   const [bigSlots, setBigSlots] = useState(String(data.bigSlots));
+  const [summaryLength, setSummaryLength] = useState<SummaryLength>(
+    data.summaryLength,
+  );
   const [busy, setBusy] = useState(false);
   const custom = volume === "CUSTOM";
 
@@ -583,6 +592,7 @@ function VolumeForm({ data, setMessage }: FormProps<InterestVolume>) {
             volume,
             customCount: custom ? Number(customCount) : null,
             bigSlots: Number(bigSlots),
+            summaryLength,
           },
         },
       );
@@ -690,6 +700,24 @@ function VolumeForm({ data, setMessage }: FormProps<InterestVolume>) {
           {BIG_SLOTS_HELP_TEXT} {BIG_SLOTS_OFF_TEXT}
         </p>
       </div>
+      <fieldset className="space-y-2" aria-describedby="summary-length-help">
+        <legend className="text-sm">요약 길이</legend>
+        {data.summaryLengths.map((length) => (
+          <label key={length} className="flex items-center gap-2 text-sm">
+            <input
+              type="radio"
+              name="summaryLength"
+              value={length}
+              checked={summaryLength === length}
+              onChange={() => setSummaryLength(length)}
+            />
+            {summaryLengthNames[length]}
+          </label>
+        ))}
+        <p id="summary-length-help" className="text-sm text-muted-foreground">
+          {SUMMARY_LENGTH_HELP_TEXT}
+        </p>
+      </fieldset>
       <Button type="submit" disabled={busy}>
         분량 저장
       </Button>
@@ -711,8 +739,66 @@ function ModelSection() {
           setMessage={setMessage}
         />
       )}
+      {model.data && (
+        <EffortForm
+          key={`effort-${model.data.effort}`}
+          data={model.data}
+          setMessage={setMessage}
+        />
+      )}
       <Notice message={message} />
     </Section>
+  );
+}
+
+/** 추론 강도 — 고른 모델 · 키와 무관하게 저장한다 */
+function EffortForm({ data, setMessage }: FormProps<InterestModel>) {
+  const client = useApiClient();
+  const queryClient = useQueryClient();
+  const [effort, setEffort] = useState<ReasoningEffort>(data.effort);
+  const [busy, setBusy] = useState(false);
+
+  function save(event: FormEvent) {
+    event.preventDefault();
+    void attempt(setBusy, setMessage, async () => {
+      const { data: saved, response } = await client.PUT(
+        "/api/interests/effort",
+        { body: { effort } },
+      );
+      if (!response.ok || !saved) {
+        return { tone: "alert", text: requestFailedText(response.status) };
+      }
+      await queryClient.invalidateQueries({
+        queryKey: INTEREST_MODEL_QUERY_KEY,
+      });
+      return { tone: "status", text: "추론 강도를 저장했습니다." };
+    });
+  }
+
+  return (
+    <form onSubmit={save} className="max-w-sm space-y-3">
+      <fieldset className="space-y-2" aria-describedby="reasoning-effort-help">
+        <legend className="text-sm">추론 강도</legend>
+        {data.efforts.map((value) => (
+          <label key={value} className="flex items-center gap-2 text-sm">
+            <input
+              type="radio"
+              name="reasoningEffort"
+              value={value}
+              checked={effort === value}
+              onChange={() => setEffort(value)}
+            />
+            {reasoningEffortNames[value]}
+          </label>
+        ))}
+        <p id="reasoning-effort-help" className="text-sm text-muted-foreground">
+          {REASONING_EFFORT_HELP_TEXT}
+        </p>
+      </fieldset>
+      <Button type="submit" disabled={busy}>
+        추론 강도 저장
+      </Button>
+    </form>
   );
 }
 
