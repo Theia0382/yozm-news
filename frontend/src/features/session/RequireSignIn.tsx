@@ -1,4 +1,8 @@
 import { Link, Navigate, Outlet, useLocation } from "react-router";
+import {
+  INTEREST_HISTORY_PATH,
+  INTEREST_HISTORY_TITLE,
+} from "@/features/interestHistory/interestHistoryTexts";
 import { INTERESTS_PATH } from "@/features/interests/interestTexts";
 import { NoticesLink } from "@/features/notices/NoticesLink";
 import { withNext } from "@/features/session/safeNext";
@@ -87,6 +91,9 @@ export function RequireSignIn() {
             <NoticesLink />
             <Link to={STORYLINES_PATH} className="underline">
               {STORYLINES_TITLE}
+            </Link>
+            <Link to={INTEREST_HISTORY_PATH} className="underline">
+              {INTEREST_HISTORY_TITLE}
             </Link>
             <Link to={INTERESTS_PATH} className="underline">
               관심 설정

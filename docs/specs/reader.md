@@ -11,7 +11,8 @@
 - **스토리라인 타임라인** — 스토리라인 하나의 값, 상위 · 하위 · 앞 흐름 · 이어진 흐름, 사건마다 대표 기사와 그 사용자가 받은 날짜를 낸다(reader-R3 ~ R5)
 - **스토리라인 카드** — 스토리라인 ID 여럿의 표시 정보를 낸다 — 구독 목록처럼 ID 만 가진 화면이 쓴다(reader-R6)
 - **기사 정보** — 사용자 화면의 기사는 제목 · 출처 이름 · 발행 시각 · 원문 링크다(reader-R7)
-- **(미구현)** 다이제스트 화면 · 관심사 히스토리 · 변화 리포트 열람의 응답 — 그 화면을 만드는 작업이 이 모듈에 처리기를, 내용을 가진 모듈에 공개 조회를 둔다
+- **관심사 히스토리** — 세션 사용자의 기간별 주제 관심 · 새로 생긴 관심 · 사라진 관심 · 주제 구독 변경을 고른 기간(주 · 월)으로 낸다(reader-R8)
+- **(미구현)** 다이제스트 화면 · 변화 리포트 열람의 응답 — 그 화면을 만드는 작업이 이 모듈에 처리기를, 내용을 가진 모듈에 공개 조회를 둔다
 
 하지 않는 것:
 
@@ -43,6 +44,7 @@ HTTP 엔드포인트 — 모두 세션이 필요하고 키 관문 뒤다(키 없
 | `GET /api/storylines` | 목록 기간의 스토리라인 한 쪽 — 질의 `window`(`DAY` · `WEEK` · `MONTH`, 기본 `WEEK`) · `until`(ISO-8601, 없으면 지금) · `afterLastArticleAt` · `afterId`(다음 쪽 커서 — 함께) |
 | `GET /api/storylines/{id}` | 스토리라인 하나의 타임라인 — 카드 · 상위 · 하위 · 앞 흐름 · 이어진 흐름 · 사건마다 대표 기사와 받은 날짜. 합쳐진 ID 면 남는 스토리라인을 낸다 |
 | `GET /api/storyline-cards` | 스토리라인 ID 여럿의 카드 — 질의 `ids`(쉼표로 이은 ID, 1 ~ 100개) |
+| `GET /api/interest-history` | 세션 사용자의 관심사 히스토리 — 질의 `span`(`WEEKS_13` · `WEEKS_26` · `WEEKS_52` · `MONTHS_12` · `MONTHS_24` · `MONTHS_36`, 없으면 `digest` 의 `InterestHistorySpan.DEFAULT`) |
 
 요청 · 응답 형식의 정본은 [`api/openapi.json`](../../api/openapi.json)이다([ADR-0020](../adr/0020-screen-api-contract-from-committed-openapi-spec.md)). 요청의 문제는 400 · 404 문제 응답이다([ADR-0044](../adr/0044-screen-api-results-as-flat-discriminated-200-and-rfc9457-problems.md)).
 
@@ -52,10 +54,10 @@ HTTP 엔드포인트 — 모두 세션이 필요하고 키 관문 뒤다(키 없
 
 | 패키지 | 책임 |
 |---|---|
-| (최상위) | 모듈 선언 — 의존을 `storyline` · `event` · `article` · `digest` · `platform` 으로 둔다(`package-info`) |
-| `adapter/in/web` | 독자 화면 컨트롤러, 응답 레코드, 요청 매개변수 읽기, 기간 열거, 기사 정보 · 대표 기사 · 받은 날짜 맞붙이기 |
+| (최상위) | 모듈 선언 — 의존을 `storyline` · `event` · `article` · `digest` · `tag` · `user` · `platform` 으로 둔다(`package-info`) |
+| `adapter/in/web` | 독자 화면 컨트롤러, 응답 레코드, 요청 매개변수 읽기, 기간 열거, 기사 정보 · 대표 기사 · 받은 날짜 맞붙이기, 관심사 히스토리의 주제 이름 맞붙이기 |
 
-협력: 컨트롤러는 `storyline` 의 공개 조회 `StorylineDirectory`(`list` · `find` · `findAll` · `events` · `relationsOf`), `event` 의 공개 조회 `EventDirectory`(`representativesOfAll` · `articleIdsOf`), `article` 의 공개 조회 `ArticleDirectory`(`headlines`), `digest` 의 공개 조회 `ReceivedArticles`(`receivedAmong`)만 부르고, 결과를 응답 레코드의 정적 팩토리로 옮긴다. 오류 응답은 `platform` 의 문제 응답 형식이다. `application` · `domain` 이 없다 — 판단이 없다([ADR-0192](../adr/0192-reader-screens-are-composed-by-the-reader-module-over-module-public-queries.md)).
+협력: 컨트롤러는 `storyline` 의 공개 조회 `StorylineDirectory`(`list` · `find` · `findAll` · `events` · `relationsOf`), `event` 의 공개 조회 `EventDirectory`(`representativesOfAll` · `articleIdsOf`), `article` 의 공개 조회 `ArticleDirectory`(`headlines`), `digest` 의 공개 조회 `ReceivedArticles`(`receivedAmong`) · `InterestHistory`(`recent`), `tag` 의 공개 조회 `TagSetDirectory`(`names` — `TagSetNames` 의 `topicName` · `categoryOf` · `topicOrder`)만 부르고(`user` 는 값 타입 `TopicSubscriptionAction` 만 쓴다), 결과를 응답 레코드의 정적 팩토리로 옮긴다. 오류 응답은 `platform` 의 문제 응답 형식이다. `application` · `domain` 이 없다 — 판단이 없다([ADR-0192](../adr/0192-reader-screens-are-composed-by-the-reader-module-over-module-public-queries.md)).
 
 역할: 모든 구성 요소가 화면 역할(`@WebRole`)이다(platform-R9).
 
@@ -64,8 +66,9 @@ HTTP 엔드포인트 — 모두 세션이 필요하고 키 관문 뒤다(키 없
 | 진입점 | 구성 요소 | 계기 | 내용 |
 |---|---|---|---|
 | 스토리라인 | `StorylineScreenController` | `GET /api/storylines` · `GET /api/storylines/{id}` · `GET /api/storyline-cards` | 목록 · 타임라인 · 카드(reader-R1 ~ R7). 트랜잭션을 열지 않는다 — 여러 공개 조회는 한 스냅숏이 아니다. "지금"은 생성자로 받은 시계로 읽는다 |
+| 관심사 히스토리 | `InterestHistoryController` | `GET /api/interest-history` | 세션 사용자의 관심사 히스토리(reader-R8). 트랜잭션을 열지 않는다 |
 
-`adapter/in/web` 의 그 밖의 타입: 응답 `StorylinePageResponse` · `StorylinePageCursorResponse` · `StorylineCardResponse` · `StorylinePeriodResponse` · `StorylineTimelineResponse` · `StorylineRefResponse` · `TimelineEventResponse` · `StorylineCardsResponse` · `StorylineCardEntryResponse` · `NewsArticleResponse`, 보조 `ScreenRequests`(요청 매개변수 읽기와 그 400 · 404) · `StorylineWindow`(목록 기간의 열거 — 기간 길이의 정본) · `ScreenArticles`(기사 정보 맞붙이기) · `StorylineTitles`(사건의 대표 기사 맞붙이기) · `ReceivedMarks`(사건마다 받은 날짜 맞붙이기). 보조 맞붙이기 셋은 스프링 구성 요소가 아니라 컨트롤러가 만든다.
+`adapter/in/web` 의 그 밖의 타입: 응답 `StorylinePageResponse` · `StorylinePageCursorResponse` · `StorylineCardResponse` · `StorylinePeriodResponse` · `StorylineTimelineResponse` · `StorylineRefResponse` · `TimelineEventResponse` · `StorylineCardsResponse` · `StorylineCardEntryResponse` · `NewsArticleResponse` · `InterestHistoryResponse` · `InterestSpanChoicesResponse` · `InterestPeriodResponse` · `TopicSubscriptionStepResponse` · `InterestTopicResponse` · `InterestLevelResponse`, 보조 `ScreenRequests`(요청 매개변수 읽기와 그 400 · 404) · `StorylineWindow`(목록 기간의 열거 — 기간 길이의 정본) · `ScreenArticles`(기사 정보 맞붙이기) · `StorylineTitles`(사건의 대표 기사 맞붙이기) · `ReceivedMarks`(사건마다 받은 날짜 맞붙이기). 보조 맞붙이기 셋은 스프링 구성 요소가 아니라 컨트롤러가 만든다.
 
 ### `application`
 
@@ -96,6 +99,15 @@ HTTP 엔드포인트 — 모두 세션이 필요하고 키 관문 뒤다(키 없
 
 - **reader-R6** — 카드 여럿: `ids` 는 받은 값의 수(같은 ID 포함)가 1 ~ 100개(`StorylineDirectory.MAX_PAGE_SIZE`)이고 모두 1 이상이어야 한다 — 아니면 400 이다. 같은 ID 는 처음 자리 한 번만 본다. `StorylineDirectory.findAll` 의 결과를 받은 ID 순으로 싣고 행마다 받은 ID 와 카드(reader-R3)를 싣는다 — 합쳐진 ID 면 카드의 ID 가 남는 스토리라인이고, 없는 ID 는 빠진다. 기간이 없어 기간 기사 수 · 큰 여부는 싣지 않는다
 
+### 관심사 히스토리
+
+판단의 이유는 [ADR-0227](../adr/0227-the-interest-history-shows-subtopic-interest-and-the-users-own-topic-subscription-changes-only.md) · [ADR-0229](../adr/0229-interest-history-periods-are-monday-weeks-and-calendar-months-in-the-users-zone-and-the-query-takes-a-span-or-reference-times.md) · [ADR-0228](../adr/0228-consumer-queries-scoped-by-a-user-argument-may-be-called-on-screen-paths-with-the-session-user.md)에 있다. 기간 · 관심 · 변화의 판단은 `digest` 의 것이다(digest-R34 ~ R37).
+
+- **reader-R8** — 관심사 히스토리: 세션 사용자로 `InterestHistory.recent` 를 부른다. 질의 `span` 이 없으면 `InterestHistorySpan.DEFAULT`, 열거 값이 아니면 400 이다. 응답은 고른 기간(`span`), 단위마다 고를 수 있는 기간과 단위를 바꿨을 때의 기간(`spans[]` — `InterestHistorySpan.Unit` 순, `defaultOf`), 기간(`periods[]` — 시간 순, 마지막이 진행 중), 주제(`topics[]`)를 싣는다. 계정이 없으면(조회가 빈 값) 기간 · 주제가 비어 있다
+  - 기간마다 첫날 · 마지막 날(사용자 시간대) · 진행 중 여부 · 새로 생긴 관심 · 사라진 관심 · 사용자가 직접 바꾼 주제 구독(시각 · 더함 / 뺌 · 덮는 중분류)을 싣는다. 키는 태그 체계 순이다
+  - 주제는 기간 가운데 한 번이라도 관심 값이 있는 중분류이고 `TagSetNames.topicOrder()` 순이다. 주제마다 키 · 이름 · 대분류 이름(`TagSetNames.categoryOf` → `topicName`) · 기간마다 관심 칸(`level` — 신호가 없으면 null) · 드러남(`prominent` — digest-R36)을 싣는다. 이름은 조회가 낸 태그 체계 버전(`InterestTimeline.tagSet`)으로 읽는다 — 그 버전에 없는 키는 불변식이 깨진 것이라 `IllegalStateException` 이다
+  - 판정 · 관심의 계산은 하지 않는다 — θ 는 응답에 없다
+
 ### 기사 정보
 
 - **reader-R7** — 사용자 화면의 기사는 제목 · 출처 이름 · 발행 시각 · 원문 링크(정규 URL)다 — `article` 의 `ArticleDirectory.headlines` 를 한 응답에 한 번 부른다(출처 이름 엮기는 article-R17). 그새 지운 기사는 비어 있다
@@ -116,3 +128,6 @@ HTTP 엔드포인트 — 모두 세션이 필요하고 키 관문 뒤다(키 없
 | [0068](../adr/0068-rss-summaries-shown-only-on-operator-screens-and-users-get-processed-information.md) | RSS 요약문은 운영자 화면에만 보이고, 인스턴스 사용자와 외부 API 에는 가공한 정보만 낸다 |
 | [0192](../adr/0192-reader-screens-are-composed-by-the-reader-module-over-module-public-queries.md) | 독자 화면의 응답은 `reader` 모듈이 각 모듈의 공개 조회를 엮어 내고, 뉴스 내용을 보이는 사용자 화면은 모두 `reader` 가 맡는다 |
 | [0193](../adr/0193-the-per-user-storyline-information-is-the-received-news-counted-from-the-digest-shown-for-each-date.md) | 사용자마다 달라지는 스토리라인 정보는 타임라인의 받은 소식 하나이고, 날짜별로 보이는 다이제스트의 인용으로 센다 |
+| [0227](../adr/0227-the-interest-history-shows-subtopic-interest-and-the-users-own-topic-subscription-changes-only.md) | 관심사 히스토리는 주제 중분류의 관심과 사용자가 직접 바꾼 주제 구독만 보인다 |
+| [0228](../adr/0228-consumer-queries-scoped-by-a-user-argument-may-be-called-on-screen-paths-with-the-session-user.md) | 사용자를 인자로 받는 소비자 조회는 화면 경로에서 세션 사용자로 부를 수 있다 |
+| [0229](../adr/0229-interest-history-periods-are-monday-weeks-and-calendar-months-in-the-users-zone-and-the-query-takes-a-span-or-reference-times.md) | 관심사 히스토리의 기간은 관심 설정 시간대의 월요일 시작 주 · 1일 시작 월이고, 화면은 정해 둔 기간 수 가운데 하나를 고른다 |

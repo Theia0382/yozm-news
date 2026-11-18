@@ -22,7 +22,8 @@ import net.yozmnews.feedback.FeedbackValue;
  * <li>관심 x = clamp((F + γ·S) ÷ (E + K), −1, 1), 가중치 g = 1 + β·x — γ {@link InterestRules#SUBSCRIPTION_SIGNAL}, K
  * {@link InterestRules#PRIOR_EXPOSURES}, β {@link InterestRules#STRENGTH}</li>
  * </ul>
- * 노출도 구독 신호도 없는 주제는 중립이다. 조회할 때 계산하고 저장하지 않는다.
+ * 노출도 구독 신호도 없는 주제는 중립(관심 0 · 가중치 1)이다. 가중치 변환은 {@link InterestLevels#weights} 가 한다. 조회할 때 계산하고
+ * 저장하지 않는다.
  */
 public final class InterestFormula {
 
@@ -30,11 +31,23 @@ public final class InterestFormula {
 	}
 
 	/**
+	 * 가중치 — {@link #levels} 의 관심을 {@link InterestLevels#weights} 로 옮긴 것
 	 * @param exposed 노출 기사 — 기사마다 하나
 	 * @param signals 구독 변경 신호
-	 * @param reference 기준 시각 — 다이제스트 기간 끝
+	 * @param reference 기준 시각 — 다이제스트는 기간 끝, 관심사 히스토리는 기간의 기준 시각
 	 */
 	public static TopicInterests interests(Collection<ExposedArticle> exposed, Collection<SubscriptionSignal> signals,
+			Instant reference) {
+		return levels(exposed, signals, reference).weights();
+	}
+
+	/**
+	 * 관심 x — 노출 또는 구독 신호가 있는 중분류마다
+	 * @param exposed 노출 기사 — 기사마다 하나
+	 * @param signals 구독 변경 신호
+	 * @param reference 기준 시각 — 다이제스트는 기간 끝, 관심사 히스토리는 기간의 기준 시각
+	 */
+	public static InterestLevels levels(Collection<ExposedArticle> exposed, Collection<SubscriptionSignal> signals,
 			Instant reference) {
 		Objects.requireNonNull(exposed, "exposed");
 		Objects.requireNonNull(signals, "signals");
@@ -56,15 +69,14 @@ public final class InterestFormula {
 		}
 		Set<String> topics = new HashSet<>(exposures.keySet());
 		topics.addAll(subscriptions.keySet());
-		Map<String, Double> weights = new HashMap<>();
+		Map<String, Double> levels = new HashMap<>();
 		for (String subtopic : topics) {
 			double numerator = reactions.getOrDefault(subtopic, 0.0)
 					+ InterestRules.SUBSCRIPTION_SIGNAL * subscriptions.getOrDefault(subtopic, 0.0);
 			double denominator = exposures.getOrDefault(subtopic, 0.0) + InterestRules.PRIOR_EXPOSURES;
-			double interest = Math.max(-1.0, Math.min(1.0, numerator / denominator));
-			weights.put(subtopic, InterestRules.NEUTRAL + InterestRules.STRENGTH * interest);
+			levels.put(subtopic, Math.max(-1.0, Math.min(1.0, numerator / denominator)));
 		}
-		return new TopicInterests(weights);
+		return new InterestLevels(levels);
 	}
 
 	/** 무게 — 0.5 ^ (max(0, reference − at) ÷ 반감기) */

@@ -19,10 +19,10 @@
 - **요청 방어** — `platform` 의 요청 방어 표시가 있는 처리기의 요청을 처리기 앞에서 클라이언트 주소 · 세션 사용자로 세고(고정 창 — PostgreSQL), 한도를 넘으면 429 로 거부한다. 봇 차단을 켠 인스턴스에서는 로그인 · 복구 · 공개 가입의 사람 확인 토큰을 봇 차단 서비스(Turnstile — 포트 `HumanVerifier`)로 확인한다. 클라이언트 주소는 배포 proxy 가 덮어쓴 헤더 하나에서 읽는다
 - **정리** — 만료 세션과 오래된 실패 기록(로그인 · 복구), 끝난 요청 제한 창, 읽은 지 오래된 알림을 지운다
 - **관심 설정** — 사용자마다 설정 행 하나(선호의 체계 버전 · 일정 · 자유 텍스트 관심사 · 고른 모델 · 변화 리포트 · 다이제스트 분량)와 태그 선호(주제 구독 · 지역 제외 · 형식 제외)의 현재 상태 · 추가 전용 이력, 제외 소스. 계정을 만들 때 기본값을 넣고(설정 행이 없는 계정은 기동 때 채운다), 태그 체계의 활성 전환을 따라 선호를 활성 키로 고쳐 쓰고 알린다. 고른 모델과 쓸 모델을 정한다
-- **스토리라인 구독** — 사용자마다 따라갈 스토리라인의 현재 상태와 추가 전용 이력, 구독 · 해제 · 내 구독(상한 100). `storyline` 이 합치거나 지운 스토리라인을 알리면(`StorylinesRetired`) 구독을 남는 스토리라인으로 옮기거나 빼고, 사라진 구독을 알린다. 사용자의 구독 조회 · 저장 앞에서도 같은 정본으로 따라간다. 다이제스트 · 관심도 · 변화 리포트가 읽는 공개 조회(`StorylineSubscriptionDirectory`)를 낸다
+- **스토리라인 구독** — 사용자마다 따라갈 스토리라인의 현재 상태와 추가 전용 이력, 구독 · 해제 · 내 구독(상한 100). `storyline` 이 합치거나 지운 스토리라인을 알리면(`StorylinesRetired`) 구독을 남는 스토리라인으로 옮기거나 빼고, 사라진 구독을 알린다. 사용자의 구독 조회 · 저장 앞에서도 같은 정본으로 따라간다. 다이제스트 · 관심도 · 관심사 히스토리 · 변화 리포트가 읽는 공개 조회(`StorylineSubscriptionDirectory`)를 낸다
 - **다이제스트가 읽는 관심 설정** — 다이제스트 후보 선별이 읽는 공개 조회(`DigestInterestsDirectory`) — 활성 키의 주제 구독(펼친 중분류와 함께) · 제외 · 관심사 본문 · 시간대 · 분량 · 요약 길이 · 추론 강도. 쓰지 않는다(user-R57)
-- **주제 구독 이력 조회** — 다이제스트의 관심도가 읽는 공개 조회(`TopicSubscriptionHistory`) — 기간의 선호 이력 가운데 주제 행을 기록 당시 버전으로 펼치고 활성 중분류로 풀어 원인과 함께 낸다. 쓰지 않는다(user-R58)
-- **사용자 시간대 조회** — 관심 설정의 시간대를 내는 공개 조회(`UserTimezones`) — 다이제스트의 수동 생성이 오늘의 경계를 정할 때 읽는다. 쓰지 않는다(user-R60)
+- **주제 구독 이력 조회** — 다이제스트의 관심도 · 관심사 히스토리가 읽는 공개 조회(`TopicSubscriptionHistory`) — 기간의 선호 이력 가운데 주제 행을 기록 당시 버전으로 펼치고 활성 중분류로 풀어 원인과 함께 낸다. 쓰지 않는다(user-R58)
+- **사용자 시간대 조회** — 관심 설정의 시간대를 내는 공개 조회(`UserTimezones`) — 다이제스트의 수동 생성이 오늘의 경계를 정할 때, 관심사 히스토리가 기간을 자를 때 읽는다. 쓰지 않는다(user-R60)
 - **다이제스트 일정과 쓸 모델** — 다이제스트의 일정 회차가 읽는 일정 목록(`DigestScheduleDirectory` — 쓰는 계정의 시간대 · 생성 시각)과 일정 · 생성 작업 · 수동 생성이 읽는 쓸 모델(`DigestModelDirectory` — `ModelChoice`). 쓰지 않는다(user-R61)
 - **(미설계)** 변화 리포트가 관심 설정을 읽는 공개 조회 — 소비자의 작업이 소비 계약과 함께 연다([ADR-0180](../adr/0180-user-settings-changes-publish-no-event-and-consumers-query.md))
 
@@ -215,7 +215,7 @@ public record SignUpPolicyChange(@Nullable Boolean previousOpen, boolean open, C
 
 ### StorylineSubscriptionDirectory
 
-스토리라인 구독 조회 — 다이제스트 · 관심도 · 변화 리포트 작업이 읽는다. 구현은 `application` 의 `StorylineSubscriptionDirectoryService` 다.
+스토리라인 구독 조회 — 다이제스트 · 관심도 · 관심사 히스토리 · 변화 리포트가 읽는다. 구현은 `application` 의 `StorylineSubscriptionDirectoryService` 다.
 
 ```java
 public interface StorylineSubscriptionDirectory {
@@ -240,7 +240,7 @@ public enum StorylineSubscriptionCause { USER, STORYLINE_MERGED, STORYLINE_REMOV
 | `StorylineSubscriptionCause` | 사용자(`USER`) · 합쳐져 옮김(`STORYLINE_MERGED`) · 사라져 뺌(`STORYLINE_REMOVED`) — 관심 신호는 `USER` 행만이다 |
 
 - 계약
-  - 백그라운드 작업 전용이다 — 화면 경로에서 부르지 않는다
+  - 사용자를 인자로 받는 조회다 — 화면 경로에서는 세션 사용자로만 부른다([ADR-0228](../adr/0228-consumer-queries-scoped-by-a-user-argument-may-be-called-on-screen-paths-with-the-session-user.md))
   - 쓰지 않는다 — 저장된 구독 · 이력의 ID 는 합쳐진 옛 ID 일 수 있어 `storyline` 의 묶음 찾기로 풀어 낸다(user-R53)
   - 기간을 사용자 시간대의 날로 자르는 일과 관심 신호로 쓸 행을 고르는 일은 부르는 쪽이 한다
 
@@ -286,7 +286,7 @@ public enum SummaryLength { SHORT, NORMAL, DETAILED }
 
 ### TopicSubscriptionHistory
 
-주제 구독 이력 조회 — 다이제스트의 관심도 작업이 읽는다. 구현은 `application` 의 `TopicSubscriptionHistoryService` 다.
+주제 구독 이력 조회 — 다이제스트의 관심도 · 관심사 히스토리가 읽는다. 구현은 `application` 의 `TopicSubscriptionHistoryService` 다.
 
 ```java
 public interface TopicSubscriptionHistory {
@@ -312,7 +312,7 @@ public enum TopicSubscriptionCause { USER, ONBOARDING, TAG_SET_CHANGE }
 | `TopicSubscriptionCause` | 선호 이력의 저장 원인을 옮긴 것 — 사용자(`USER`) · 계정을 만들 때 기본값(`ONBOARDING`) · 체계 변경(`TAG_SET_CHANGE`). 관심 신호는 `USER` 행만이다 |
 
 - 계약
-  - 백그라운드 작업 전용이다 — 화면 경로에서 부르지 않는다
+  - 사용자를 인자로 받는 조회다 — 화면 경로에서는 세션 사용자로만 부른다([ADR-0228](../adr/0228-consumer-queries-scoped-by-a-user-argument-may-be-called-on-screen-paths-with-the-session-user.md))
   - 쓰지 않는다 — 이력 행의 키는 기록 당시 버전의 것이라 그 버전의 구조로 펼치고 계보로 풀어 낸다
   - 기간을 사용자 시간대의 날로 자르는 일과 관심 신호로 쓸 행을 고르는 일은 부르는 쪽이 한다
 
@@ -320,7 +320,7 @@ public enum TopicSubscriptionCause { USER, ONBOARDING, TAG_SET_CHANGE }
 
 ### UserTimezones
 
-사용자 시간대 조회 — 관심 설정의 시간대. 다이제스트의 수동 생성이 사용자 시간대의 오늘을 정할 때 읽는다. 구현은 `application` 의 `UserTimezonesService` 다.
+사용자 시간대 조회 — 관심 설정의 시간대. 다이제스트의 수동 생성이 사용자 시간대의 오늘을 정할 때, 관심사 히스토리가 기간을 자를 때 읽는다. 구현은 `application` 의 `UserTimezonesService` 다.
 
 ```java
 public interface UserTimezones {
@@ -333,7 +333,7 @@ public interface UserTimezones {
 | `timezoneOf` | 설정 행의 시간대 — 설정 행이 없으면 계정을 만들 때의 값(`InterestDefaults.TIMEZONE`), 계정이 없으면 빈 값 |
 
 - 계약
-  - 사용자를 인자로 받는 조회다 — 화면 경로에서는 세션 사용자로만 부른다
+  - 사용자를 인자로 받는 조회다 — 화면 경로에서는 세션 사용자로만 부른다([ADR-0228](../adr/0228-consumer-queries-scoped-by-a-user-argument-may-be-called-on-screen-paths-with-the-session-user.md))
   - 읽기 전용 트랜잭션 하나다. 쓰지 않는다 — 설정 행이 없어도 만들지 않는다
 
 관련 규칙: user-R60.
@@ -475,9 +475,9 @@ sequenceDiagram
 | 소스 삭제 | `SourceDeletedListener` → `ExcludedSources.forget` | `source` 의 `SourceDeleted` | 그 소스의 제외 행을 지운다(user-R49). 비동기 · 새 트랜잭션, 다시 처리해도 같다 |
 | 스토리라인 구독 | `StorylineSubscriptionController` → `StorylineSubscriptions` | `GET /api/storyline-subscriptions`, `PUT` · `DELETE /api/storyline-subscriptions/{storylineId}` | user-R52 · R53. 응답 값 `StorylineSubscriptionsResponse` · `StorylineSubscriptionItem` · `StorylineSubscribeResponse` · `StorylineUnsubscribeResponse` |
 | 합치거나 지운 스토리라인 | `StorylinesRetiredListener` → `SubscriptionFollowups.followRetired` | `storyline` 의 `StorylinesRetired` | 그 스토리라인을 구독한 사용자의 구독을 따라가게 하고 사라진 구독을 알린다(user-R53 · R54). 비동기 · 트랜잭션 없음(`NOT_SUPPORTED` — 사용자마다 트랜잭션 하나)이고 이벤트 발행 레지스트리에 기록된다 — 실패하면 다시 처리되고 지금 상태로 수렴한다 |
-| 스토리라인 구독 조회 | `StorylineSubscriptionDirectoryService` | 다른 모듈의 백그라운드 작업 | §3 `StorylineSubscriptionDirectory` 의 구현(user-R55). 읽기 전용 트랜잭션 |
+| 스토리라인 구독 조회 | `StorylineSubscriptionDirectoryService` | 다른 모듈의 백그라운드 작업 · 세션 사용자의 화면 경로 | §3 `StorylineSubscriptionDirectory` 의 구현(user-R55). 읽기 전용 트랜잭션 |
 | 다이제스트가 읽는 관심 설정 | `DigestInterestsDirectoryService` | 다른 모듈의 백그라운드 작업 | §3 `DigestInterestsDirectory` 의 구현(user-R57). 읽기 전용 `REPEATABLE_READ` 트랜잭션 |
-| 주제 구독 이력 조회 | `TopicSubscriptionHistoryService` | 다른 모듈의 백그라운드 작업 | §3 `TopicSubscriptionHistory` 의 구현(user-R58). 읽기 전용 `REPEATABLE_READ` 트랜잭션 |
+| 주제 구독 이력 조회 | `TopicSubscriptionHistoryService` | 다른 모듈의 백그라운드 작업 · 세션 사용자의 화면 경로 | §3 `TopicSubscriptionHistory` 의 구현(user-R58). 읽기 전용 `REPEATABLE_READ` 트랜잭션 |
 | 사용자 시간대 조회 | `UserTimezonesService` | 다른 모듈의 조회(세션 사용자의 화면 경로 포함) | §3 `UserTimezones` 의 구현(user-R60). 읽기 전용 트랜잭션 |
 | 다이제스트 일정 목록 | `DigestScheduleDirectoryService` | 다른 모듈의 백그라운드 작업 | §3 `DigestScheduleDirectory` 의 구현(user-R61). 읽기 전용 트랜잭션 |
 | 다이제스트의 쓸 모델 | `DigestModelDirectoryService` | 다른 모듈의 조회(세션 사용자의 화면 경로 포함) | §3 `DigestModelDirectory` 의 구현(user-R61). 읽기 전용 트랜잭션 |
@@ -546,6 +546,7 @@ sequenceDiagram
 - `DigestScheduleDirectoryService` · `DigestModelDirectoryService` — 공개 조회 `DigestScheduleDirectory` · `DigestModelDirectory` 의 구현. 읽기 전용 트랜잭션 하나(user-R61)
 - `ModelResolutions` — 쓸 모델 판정의 재료 읽기(허용 모델 목록 · 키가 있는 공급자 · 쓸 수 있는 키의 공급자)와 고를 수 있는 모델 — `ModelSelection` 과 `DigestModelDirectoryService` 가 함께 쓴다(user-R51 · R61)
 - `TopicSubscriptionHistoryService` — 공개 조회 `TopicSubscriptionHistory` 의 구현. 이력 행 · 활성 체계 · 기록 버전의 구조 · 계보 표를 한 스냅숏에서 읽도록 읽기 전용 `REPEATABLE_READ` 트랜잭션 하나다 — 계보 표의 기준이 읽은 활성 버전이 아니면 불변식 위반이다(user-R58)
+- `UserTimezonesService` — 공개 조회 `UserTimezones` 의 구현. 계정 유무와 설정 행을 읽기 전용 트랜잭션 하나에서 읽는다(user-R60)
 - 그 밖의 값: `AdminSecurityProperties`(설정 `yozmnews.admin` — §7) · `AdminTokenAuthentication`(제시된 토큰 · 운영자 인증) · `AccountAuthentication`(세션 사용자 인증 — 세션에 직렬화되는 유일한 앱 타입, 역할 권한 이름의 정본) · `SignInOutcome`(로그인됨 · 거절 · 대기)
 
 ### `domain`
@@ -817,7 +818,7 @@ public interface HumanVerifier {
   1. `storyline` 의 `StorylinesRetired` 를 받으면 그 스토리라인 가운데 하나라도 구독한 사용자를 사용자 ID 순 쪽(100명)으로 읽어 사용자마다 트랜잭션 하나에서 설정 행을 잠그고 따라간다(설정 행이 없는 사용자는 건너뛴다). 한 사용자의 실패는 그 사용자만 되돌리고, 이벤트가 다시 처리되면 지금 상태로 수렴한다 — 이미 고친 사용자는 바뀌지 않는다
   2. 사용자의 구독 조회 · 저장 앞(user-R52) — 리스너가 닿기 전의 틈과 리스너가 놓친 사용자를 고친다
 - **user-R54** — 사라진 구독 알림: 따라가기가 구독을 뺐으면 그 사용자에게 알림 하나를 남긴다(`STORYLINE_SUBSCRIPTIONS_REMOVED` — 모으지 않는다). 내용은 뺀 스토리라인마다 스토리라인 ID 와, 받은 이벤트가 그 스토리라인의 풀기에서 남은 사건을 실었으면 그 사건 ID 다(없으면 비운다). 기사 정보는 담지 않는다. 알림함은 쪽을 읽을 때 그 사건(합쳐졌으면 남는 사건)의 지금 대표 기사 제목을 읽어 항목마다 싣는다 — 사건 · 대표 기사 · 기사를 얻지 못하면 제목이 없다. 그래서 지운 기사의 제목은 알림에 남지 않는다. 알림은 키 없이 열리므로 키 없는 사용자도 이 제목을 본다
-- **user-R55** — 소비자 조회(`StorylineSubscriptionDirectory`): 지금 구독은 저장 행을 묶음 찾기로 풀어 남는 스토리라인 ID 로 내고(같은 것은 하나, 사라진 것은 뺌, ID 순), 기간의 변경은 이력 행마다 기록된 ID 와 그 ID 를 지금 푼 ID(지워졌으면 없음) · 원인 · 시각을 시작 포함 · 끝 제외 구간으로 낸다. 쓰지 않는다 — 고쳐 쓰기는 user-R53 의 두 계기만 한다. 사용자를 인자로 받는 백그라운드 작업 전용이다
+- **user-R55** — 소비자 조회(`StorylineSubscriptionDirectory`): 지금 구독은 저장 행을 묶음 찾기로 풀어 남는 스토리라인 ID 로 내고(같은 것은 하나, 사라진 것은 뺌, ID 순), 기간의 변경은 이력 행마다 기록된 ID 와 그 ID 를 지금 푼 ID(지워졌으면 없음) · 원인 · 시각을 시작 포함 · 끝 제외 구간으로 낸다. 쓰지 않는다 — 고쳐 쓰기는 user-R53 의 두 계기만 한다. 사용자를 인자로 받는 조회다 — 화면 경로에서는 세션 사용자로만 부른다
 
 ### 다이제스트가 읽는 관심 설정
 
@@ -829,7 +830,13 @@ public interface HumanVerifier {
 
 판단의 이유는 [ADR-0180](../adr/0180-user-settings-changes-publish-no-event-and-consumers-query.md) · [ADR-0211](../adr/0211-the-digest-consumer-query-of-interest-settings-writes-nothing-and-returns-followed-preferences-with-expanded-topics.md)(같은 꼴 — 쓰지 않고 풀어 낸다)에 있다.
 
-- **user-R58** — 주제 구독 이력 조회(`TopicSubscriptionHistory`): 선호 이력의 주제 행 가운데 시각이 시작 포함 · 끝 제외 구간에 드는 것을 시각 · 행 순으로 낸다. 행마다 기록 당시 버전의 구조로 펼치고(대분류는 하위 중분류 전체 — `TopicExpansion`) 중분류마다 그 버전에서 활성 버전으로의 계보 표(`TagKeyLineage.toActive`)로 푼 합집합을 낸다 — 계보 없이 지운 것은 빠진다. 원인 · 더함 뺌은 저장 값을 그대로 옮기고, 관심 신호로 쓸 행을 고르는 일은 부르는 쪽이 한다. 계정 행이 없으면 빈 목록이다. 읽기 전용 `REPEATABLE_READ` 트랜잭션 하나에서 읽고 쓰지 않는다. 낸 키의 활성 버전을 함께 낸다. 사용자를 인자로 받는 백그라운드 작업 전용이다
+- **user-R58** — 주제 구독 이력 조회(`TopicSubscriptionHistory`): 선호 이력의 주제 행 가운데 시각이 시작 포함 · 끝 제외 구간에 드는 것을 시각 · 행 순으로 낸다. 행마다 기록 당시 버전의 구조로 펼치고(대분류는 하위 중분류 전체 — `TopicExpansion`) 중분류마다 그 버전에서 활성 버전으로의 계보 표(`TagKeyLineage.toActive`)로 푼 합집합을 낸다 — 계보 없이 지운 것은 빠진다. 원인 · 더함 뺌은 저장 값을 그대로 옮기고, 관심 신호로 쓸 행을 고르는 일은 부르는 쪽이 한다. 계정 행이 없으면 빈 목록이다. 읽기 전용 `REPEATABLE_READ` 트랜잭션 하나에서 읽고 쓰지 않는다. 낸 키의 활성 버전을 함께 낸다. 사용자를 인자로 받는 조회다 — 화면 경로에서는 세션 사용자로만 부른다
+
+### 사용자 시간대 조회
+
+판단의 이유는 [ADR-0229](../adr/0229-interest-history-periods-are-monday-weeks-and-calendar-months-in-the-users-zone-and-the-query-takes-a-span-or-reference-times.md) · [ADR-0228](../adr/0228-consumer-queries-scoped-by-a-user-argument-may-be-called-on-screen-paths-with-the-session-user.md)에 있다.
+
+- **user-R60** — 사용자 시간대 조회(`UserTimezones`): 계정 행이 없으면 빈 값이다. 설정 행이 있으면 그 일정의 시간대(user-R50), 없으면 계정을 만들 때의 값(`InterestDefaults.TIMEZONE` — user-R43 과 같은 정본)을 낸다. 읽기 전용 트랜잭션 하나에서 읽고 쓰지 않는다. 사용자를 인자로 받는 조회다 — 화면 경로에서는 세션 사용자로만 부른다
 
 ### 사용자 시간대 조회
 
@@ -934,5 +941,7 @@ public interface HumanVerifier {
 | [0218](../adr/0218-the-digest-generation-reasoning-effort-is-a-user-setting-defaulting-to-medium.md) | 생성의 추론 강도는 사용자 설정이고 기본은 보통이다 |
 | [0219](../adr/0219-candidate-selection-hands-over-the-prompt-material-read-once-with-its-token-estimate.md) | 다이제스트가 읽는 관심 설정은 관심사 본문 · 시간대 · 요약 길이 · 추론 강도를 낸다 |
 | [0224](../adr/0224-sign-in-rechecks-the-credential-version-under-its-lock-after-storing-the-session-and-sessions-are-saved-as-they-change.md) | 로그인은 세션을 저장한 뒤 자격 행을 잠가 대조한 자격의 버전을 다시 확인하고, 세션 저장소는 세션 변경을 곧바로 저장한다 |
+| [0228](../adr/0228-consumer-queries-scoped-by-a-user-argument-may-be-called-on-screen-paths-with-the-session-user.md) | 사용자를 인자로 받는 소비자 조회는 화면 경로에서 세션 사용자로 부를 수 있다 |
+| [0229](../adr/0229-interest-history-periods-are-monday-weeks-and-calendar-months-in-the-users-zone-and-the-query-takes-a-span-or-reference-times.md) | 관심사 히스토리의 기간은 관심 설정 시간대로 자르고, 그 시간대는 이 모듈의 사용자 시간대 조회가 낸다 |
 | [0230](../adr/0230-scheduled-digests-are-made-after-the-generation-time-and-a-period-runs-from-the-last-ready-or-empty-end-to-that-time.md) | 다이제스트 일정은 생성 시각이 지난 뒤 만든다 — 일정 목록 · 쓸 모델은 이 모듈의 따로 된 조회로 읽는다 |
 | [0233](../adr/0233-digest-failure-notices-come-through-an-event-declared-by-the-receiving-user-module-for-every-failed-digest.md) | 다이제스트 실패 알림은 이 모듈이 선언한 이벤트로 받고, 실패한 다이제스트마다 남긴다 |

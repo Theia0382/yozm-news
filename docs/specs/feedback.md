@@ -10,7 +10,7 @@
 - **받을 수 있는 기사** — 그 사용자의 다이제스트가 인용한 기사에만 받는다. 인용했는지는 이 모듈이 선언한 인터페이스 `DigestCitations` 로 묻고 `digest` 가 답한다
 - **지운 기사 따르기** — 운영자가 지운 기사의 현재 상태 · 이력 행을 지운다
 - **화면용 API** — 누르기 · 되돌리기와, 화면이 쓸 현재 상태 조회
-- **소비자 조회** — 다이제스트 후보 선별 · 관심도가 읽는 싫어요 기사와 기간의 이력(`ArticleFeedback`)
+- **소비자 조회** — 다이제스트 후보 선별 · 관심도 · 관심사 히스토리가 읽는 싫어요 기사와 기간의 이력(`ArticleFeedback`)
 - **(미구현)** 탈퇴한 사용자의 현재 상태 · 이력 지우기
 
 하지 않는 것:
@@ -64,7 +64,7 @@ public enum FeedbackValue { LIKE, DISLIKE, NONE }
 
 ### ArticleFeedback · FeedbackChange
 
-좋아요 / 싫어요의 소비자 조회 — 다이제스트 후보 선별 · 관심도가 읽는다. 구현은 `application` 의 `ArticleFeedbackService` 다.
+좋아요 / 싫어요의 소비자 조회 — 다이제스트 후보 선별 · 관심도 · 관심사 히스토리가 읽는다. 구현은 `application` 의 `ArticleFeedbackService` 다.
 
 ```java
 public interface ArticleFeedback {
@@ -89,7 +89,7 @@ public record FeedbackChange(ArticleId article, FeedbackValue value, long digest
 | `occurredAt` | 요청을 받은 시각 | 마이크로초까지 |
 
 - 계약
-  - 백그라운드 작업 전용이다 — 화면 경로에서 부르지 않는다(화면은 세션 사용자로 범위가 정해진 처리기를 쓴다). 사용자는 부르는 쪽이 넘긴 `UserId` 다
+  - 사용자를 인자로 받는 조회다 — 화면 경로에서는 세션 사용자로만 부른다([ADR-0228](../adr/0228-consumer-queries-scoped-by-a-user-argument-may-be-called-on-screen-paths-with-the-session-user.md)). 사용자는 부르는 쪽이 넘긴 `UserId` 다
   - 읽기 전용 트랜잭션 하나 · 질의 하나다. 역할 애너테이션이 없다(두 역할 공통)
   - 기간을 사용자 시간대의 날로 자르는 일과 주제로 모으는 일은 부르는 쪽이 한다
   - `changes` 의 순서는 기록한 순서다 — 같은 (사용자, 기사)의 마지막 행의 값이 현재 상태와 같다(feedback-R4). 시각 순으로 다시 정렬하면 이 성질이 깨질 수 있다

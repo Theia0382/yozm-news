@@ -110,9 +110,10 @@ public record TagSetNames(TagSetId id, List<TagName> categories, List<TagName> s
 | `activeTagSet()` | 활성 버전의 내용 — 태그 · 질문 문장 · 중요도 기준 |
 | `activeThresholds()` | 활성 버전의 주제 · 지역의 태그 기준 · 저장 기준 |
 | `tagSet(id)` | 버전 하나의 내용 — 활성이 아닌 버전도 낸다. 사용자 선호가 옛 버전의 구조(대분류 · 중분류)와 이름을 읽는다 |
-| `names(id)` | 버전 하나의 키와 이름(`TagSetNames`) — `tagSet` 과 같은 버전 내용에서 이름만 낸다. 평가 질문 묶음을 읽지 않는 쪽(다이제스트의 프롬프트)이 쓴다 |
+| `names(id)` | 버전 하나의 키와 이름(`TagSetNames`) — `tagSet` 과 같은 버전 내용에서 이름만 낸다. 평가 질문 묶음을 읽지 않는 쪽(다이제스트의 프롬프트 · 독자 화면의 관심사 히스토리)이 쓴다 |
 | `TagSetNames.categories` · `subtopics` · `regions` | 주제 대분류(대분류 키) · 주제 중분류(중분류 전체 키 — 대분류 순서, 그 안의 순서) · 지역의 키와 이름(`TagName`) — 체계 파일에 적힌 순서 |
 | `TagSetNames.topicName` · `regionName` | 키의 이름 — 주제는 대분류 키와 중분류 전체 키를 받는다. 이 버전에 없는 키면 빈 값 |
+| `TagSetNames.categoryOf` | 중분류 전체 키의 대분류 키 — 이 버전의 중분류 키가 아니면(대분류 키 · 없는 키 · 지역 키) 빈 값. 키 형식은 tag-R6 이다 |
 | `TagSetNames.topicOrder` · `regionOrder` | 키 → 체계 순서의 위치(주제는 대분류 먼저, 그다음 중분류) — 이름을 체계 순서로 늘어놓을 때 쓴다 |
 
 - 계약
@@ -688,7 +689,7 @@ public enum TagBackfillState { WAITING, RUNNING, DONE }
 
 ### TopicCoverage · TopicCoverageResult · TopicCoverageView · CategoryCoverage · SubtopicCoverage
 
-주제별 보도량 — 운영자 화면이 먼저 쓰고, 변화 리포트 · 관심사 히스토리가 쓴다. 구현은 `application` 의 `TopicCoverageService` 다.
+주제별 보도량 — 운영자 화면이 쓰고, 변화 리포트가 쓸 것이다. 구현은 `application` 의 `TopicCoverageService` 다.
 
 ```java
 public interface TopicCoverage {

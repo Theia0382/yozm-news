@@ -27,3 +27,8 @@
 |---|---|
 | 기간마다 관심도 스냅숏을 저장한다 | "조회할 때 계산"을 바꾼다. 산식을 바꾸면 옛 행과 새 행이 섞이고, 태그 체계가 바뀌면 행을 고쳐 써야 한다 |
 | 관심사를 사용자가 다루는 개체로 세운다(주제 · 스토리라인 · 자유 텍스트를 묶은 이름 붙은 관심사) | 구독 · 자유 텍스트 관심사와 겹치는 새 기능이다 |
+
+## 후속 기록
+
+- 2026-11-18: 결정 "관심사 히스토리도 기간마다 같은 산식으로 계산해 견준다"의 기간 값 · 읽는 창 — [ADR-0225](0225-interest-history-values-read-only-the-window-before-each-reference-time-and-the-period-in-progress-is-measured-at-the-call.md), 지금 상태는 [digest Spec "관심사 히스토리"](../specs/digest.md#관심사-히스토리)
+- 2026-11-18: 결과 "새로 생긴 관심 · 사라진 관심은 계산 결과를 견주는 기준이 하나 더 필요하다" — [ADR-0226](0226-new-and-lost-interests-are-neighbouring-periods-crossing-one-threshold-on-the-interest-value.md), 지금 상태는 [digest Spec "관심사 히스토리"](../specs/digest.md#관심사-히스토리)

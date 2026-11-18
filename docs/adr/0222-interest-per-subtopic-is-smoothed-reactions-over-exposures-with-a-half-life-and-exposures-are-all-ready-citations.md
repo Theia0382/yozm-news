@@ -46,3 +46,7 @@
 | 여러 주제 기사의 가중치를 가장 큰 값으로 둔다 | 싫어하는 주제에 함께 걸쳐도 내려가지 않는다 |
 | 읽는 범위를 기간 끝에서 닫는다 | 같은 기간을 다시 만들 때 앞 다이제스트에서 받은 반응이 빠진다 |
 | 기준 시각을 부르는 시각으로 둔다 | 늦게 도는 생성(멈춘 생성의 재시작)에서 관심도가 기간과 따로 움직인다 |
+
+## 후속 기록
+
+- 2026-11-18: 결정 "기준 시각은 기간 끝이고, 읽는 범위의 끝은 부르는 시각이다"는 다이제스트의 관심도에 적용되는 규칙으로 밝힘([ADR-0225](0225-interest-history-values-read-only-the-window-before-each-reference-time-and-the-period-in-progress-is-measured-at-the-call.md)), 지금 상태는 [digest Spec "관심도"](../specs/digest.md#관심도) digest-R25

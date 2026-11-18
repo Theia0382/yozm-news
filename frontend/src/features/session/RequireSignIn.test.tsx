@@ -123,6 +123,15 @@ describe("RequireSignIn", () => {
     );
   });
 
+  it("관심사 히스토리 링크를 머리줄에 둔다", async () => {
+    renderGuarded("/", () => json(SIGNED_IN));
+
+    await screen.findByText("첫 화면");
+    expect(
+      screen.getByRole("link", { name: "관심사 히스토리" }),
+    ).toHaveAttribute("href", "/interest-history");
+  });
+
   it("LLM 키 링크를 머리줄에 둔다", async () => {
     renderGuarded("/digest", () => json(SIGNED_IN));
 
