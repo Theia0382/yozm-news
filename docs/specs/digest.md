@@ -14,10 +14,11 @@
 - **후보 행 보존** — 만든 지 30일이 지난 다이제스트의 후보 행을 지운다
 - **인용 확인** — 주어진 다이제스트가 그 사용자의 것이고 그 기사를 인용했는지 답한다 — `feedback` 이 선언한 인터페이스 `DigestCitations` 의 구현이고, 피드백을 받을 수 있는 기사의 판정이 쓴다(digest-R14, [ADR-0196](../adr/0196-feedback-is-accepted-only-on-articles-cited-by-the-users-digest-and-digest-answers-through-an-interface-declared-by-feedback.md))
 - **받은 소식** — 사용자가 날짜별로 보이는 다이제스트에서 받은 기사와 받은 날짜를 공개 조회(`ReceivedArticles`)로 낸다 — 독자 화면이 스토리라인 타임라인에 단다(digest-R13, [ADR-0193](../adr/0193-the-per-user-storyline-information-is-the-received-news-counted-from-the-digest-shown-for-each-date.md))
-- **후보 선별** — 사용자의 관심 설정과 기간으로 후보를 고른다 — 구독 필터 · 순위 · 큰 슬롯 · 사건 단위 중복 제거 · 구독 행마다 몫 · 최대 후보 수 · 입력 토큰 예산 · 선정 이유(digest-R15 ~ R22). 재료는 다른 모듈의 공개 조회로 읽고 판단은 `domain/selection` 의 순수 규칙이 한다. 관심도는 아직 중립이고 싫어요 기사를 빼지 않는다(**(미구현)** — 관심도 산식과 함께)
+- **후보 선별** — 사용자의 관심 설정과 기간으로 후보를 고른다 — 구독 필터 · 순위 · 큰 슬롯 · 사건 단위 중복 제거 · 구독 행마다 몫 · 최대 후보 수 · 입력 토큰 예산 · 선정 이유(digest-R15 ~ R22). 순위는 관심도를 곱하고 사용자가 싫어요를 누른 기사는 뺀다. 재료는 다른 모듈의 공개 조회로 읽고 판단은 `domain/selection` 의 순수 규칙이 한다
 - **(미구현)** 프롬프트 구성과 실제 생성기(사용자 키로 `llm` 의 생성 호출 `LlmClientFactory.generateStored` 를 부르는 생성기) · 파싱 실패의 다시 묻기
 - **(미구현)** 일정 기반 생성과 수동 재생성, 독자 화면(`reader`)이 쓸 다이제스트 조회 — 화면은 날짜별로 보이는 다이제스트(digest-R13)를 보인다. 화면용 API 는 `reader` 가 낸다([ADR-0192](../adr/0192-reader-screens-are-composed-by-the-reader-module-over-module-public-queries.md))
-- **(미구현)** 관심도 산식과 관심사 히스토리 조회
+- **관심도** — 사용자 × 주제 중분류 × 기준 시각의 관심 크기를 신호 이력(좋아요 / 싫어요 · 주제 구독 변경 · 스토리라인 구독 변경)과 노출 기록(인용)에서 조회할 때 계산한다 — 저장하지 않는다(digest-R23 ~ R25)
+- **(미구현)** 관심사 히스토리 조회
 
 하지 않는 것:
 
@@ -43,6 +44,9 @@
 | 구독 행 | 사용자가 구독한 대분류 또는 중분류 하나와 그 행이 덮는 활성 중분류 — 다양성 몫의 단위(digest-R21) |
 | 큰 슬롯 | 구독과 무관하게 큰 스토리라인의 기사를 넣는 자리 — 사용자의 큰 슬롯 수만큼 큰 판정 행을 쓴다(digest-R19) |
 | 토큰 어림 | 보내기 전에 코드 포인트로 어림한 입력 토큰 — 프롬프트 구성이 같은 규칙을 따른다(digest-R22) |
+| 관심도 가중치 | 주제 중분류마다 신호와 노출로 계산한 0.5 ~ 1.5 의 값 — 신호가 없으면 1(중립). 기사의 가중치는 그 기사 주제 중분류 가중치의 평균이다(digest-R23) |
+| 노출 | 그 사용자의 `READY` 다이제스트(같은 날짜의 덮인 것 포함)가 인용한 기사 — 관심도의 분모. 받은 소식과 다른 정의다(digest-R24) |
+| 기준 시각 | 관심도의 감쇠를 재는 시각 — 다이제스트 기간 끝(digest-R25) |
 
 ## 3. 공개 인터페이스
 
@@ -75,14 +79,16 @@ public interface ReceivedArticles {
 |---|---|
 | `domain/digest` | 상태 aggregate(`Digest`)와 저장소(`DigestRepository`), 전이의 값(`Completion` · `DigestStatus` · `DigestTrigger` · `DigestFailure` · `DigestPeriod` · `DigestId`) |
 | `domain/candidate` | 후보와 별칭의 정본(`CandidateSet`), 후보 행 저장소(`DigestCandidateRepository`), 보존 기한의 정본(`CandidateRetention`), 값(`DigestCandidate` · `AliasedCandidate` · `SelectionReason`) |
-| `domain/selection` | 후보 선별의 순수 규칙 — 상수의 정본(`SelectionRules` · `CandidateCost`), 사용자 제외 · 구독 행 대조(`UserFilter`), 구독 필터(`SubscriptionFilter`) · 순위(`CandidateRank`), 큰 슬롯(`BigSlotPicker`), 사건 단위 중복 제거(`EventDedup`), 다양성 몫(`DiversityQuota`), 예산 자르기(`BudgetCut`), 단계 잇기와 선정 이유(`CandidateSelector`), 값(`ArticleFacts` · `Shortlist`) |
+| `domain/selection` | 후보 선별의 순수 규칙 — 상수의 정본(`SelectionRules` · `CandidateCost`), 평가 키를 활성 키로 풀기(`ActiveKeys`), 사용자 제외(싫어요 포함) · 구독 행 대조(`UserFilter`), 구독 필터(`SubscriptionFilter`) · 관심도를 곱한 순위(`CandidateRank`), 큰 슬롯(`BigSlotPicker`), 사건 단위 중복 제거(`EventDedup`), 다양성 몫(`DiversityQuota`), 예산 자르기(`BudgetCut`), 단계 잇기와 선정 이유(`CandidateSelector`), 값(`ActiveEvaluation` · `ArticleFacts` · `Shortlist`) |
+| `domain/interest` | 관심도의 순수 규칙 — 상수의 정본(`InterestRules`), 산식(`InterestFormula`), 신호 고르기(`InterestSignals`), 스토리라인의 주제 몫(`StorylineTopics`), 값(`TopicInterests` · `ExposedArticle` · `SubscriptionSignal`) |
+| `domain/exposure` | 노출 저장소(`ExposureRepository` — 계약이 digest-R24 의 정본) |
 | `domain/output` | 출력 서술 · 상한의 정본(`DigestOutputSchema` — 서술 마디 `OutputShape` · 처분 `OverLimit` · `OnBlank`), 읽기의 정본(`DigestOutputReader`), 인용 검증의 정본(`CitationCheck`), 값(`OutputRead` · `DigestDraft` · `StoryDraft` · `HeadlineDraft` · `CitationResult` · `CitedDigest` · `CitedStory` · `CitedHeadline` · `CitationDrops`) |
 | `domain/generator` | 생성기 포트(`DigestGenerator`)와 그 요청 · 결과 |
 | `domain/content` | 내용 aggregate(`DigestSection` — 인용 `DigestItem` 을 자식으로)와 저장소(`DigestSectionRepository`), 섹션 종류(`SectionKind`), 인용 확인 저장소(`CitationRepository`) |
 | `domain/removal` | 지운 기사 따르기의 판단(`RemovalFollowUp`), 내용 행 정리 저장소(`DigestContentCleanup`), 값(`SectionCitations`) |
 | `domain/receipt` | 받은 소식 저장소(`ReceiptRepository` — 계약이 digest-R13 의 정본) |
-| `application` | 생성 유스케이스(`DigestGeneration`), 후보 선별(`CandidateSelection`), 지운 기사 따르기(`DigestArticleRemoval`)와 그 리스너, 후보 행 보존 정리(`CandidateCleanup`), 받은 소식 공개 조회의 구현(`ReceivedArticlesService`), 인용 확인의 구현(`DigestCitationsService`) |
-| `adapter/out/persistence` | 후보 행 · 내용 행 정리 · 받은 소식 · 인용 확인 저장소의 JdbcClient 구현 |
+| `application` | 생성 유스케이스(`DigestGeneration`), 후보 선별(`CandidateSelection`)과 그 재료 — 평가를 활성 키로 읽기(`ActiveEvaluations`) · 관심도 재료 읽기(`InterestMaterials`), 지운 기사 따르기(`DigestArticleRemoval`)와 그 리스너, 후보 행 보존 정리(`CandidateCleanup`), 받은 소식 공개 조회의 구현(`ReceivedArticlesService`), 인용 확인의 구현(`DigestCitationsService`) |
+| `adapter/out/persistence` | 후보 행 · 내용 행 정리 · 받은 소식 · 인용 확인 · 노출 저장소의 JdbcClient 구현 |
 | `adapter/out/fake` | 생성기의 로컬 대체물과 그 결선 |
 | `adapter/in/job` | 후보 행 보존 정리의 반복 작업 |
 
@@ -123,7 +129,9 @@ sequenceDiagram
 - `DigestArticleRemovalListener` — `ArticlesRemoved` 리스너
 - `CandidateCleanup` — 후보 행 보존 정리. 트랜잭션 하나(digest-R11)
 - `ReceivedArticlesService` — 공개 조회 `ReceivedArticles` 의 구현. 상한을 확인하고 저장소에 맡긴다. 읽기 전용 트랜잭션 하나, 역할 애너테이션 없음(digest-R13)
-- `CandidateSelection` — 후보 선별(`select(UserId, DigestPeriod, LlmModel)` → 후보 목록). 트랜잭션 없이 다른 모듈의 공개 조회를 차례로 부르고 그 사이를 `domain/selection` 의 순수 단계로 잇는다 — 대표 기사 · 내용은 앞 단계로 좁힌 기사에 대해서만 읽는다. 백그라운드 작업 전용이고 역할 애너테이션이 없다(digest-R15 ~ R22)
+- `CandidateSelection` — 후보 선별(`select(UserId, DigestPeriod, LlmModel)` → 후보 목록). 트랜잭션 없이 다른 모듈의 공개 조회를 차례로 부르고 그 사이를 `domain/selection` 의 순수 단계로 잇는다 — 대표 기사 · 내용은 앞 단계로 좁힌 기사에 대해서만 읽는다. 관심도는 `InterestMaterials`, 싫어요는 `feedback` 의 `ArticleFeedback.dislikedAmong` 으로 읽는다. 구독 후보를 관심도 순위와 중립 순위로 각각 고른다. 시계는 `InstantSource`(시험이 넣는다). 백그라운드 작업 전용이고 역할 애너테이션이 없다(digest-R15 ~ R22 · R25)
+- `ActiveEvaluations` — 기사들의 평가를 `ArticleEvaluations.MAX_ARTICLES` 씩 읽고 평가 버전마다 계보 표를 한 번 읽어 활성 키로 푼다(`ActiveKeys`) — 표의 활성 버전이 맞출 버전과 다르면 빈 값. 후보 선별 · 관심도의 노출 기사 · 스토리라인 대표가 함께 쓴다(digest-R16)
+- `InterestMaterials` — 관심도 재료 읽기 — 노출(`ExposureRepository`), `feedback` 의 `ArticleFeedback.changes`, `user` 의 `TopicSubscriptionHistory` · `StorylineSubscriptionDirectory.changes`, `storyline` 의 `StorylineDirectory.events` → `event` 의 `EventDirectory.representativesOfAll` → `ActiveEvaluations` 를 읽어 `InterestSignals` · `StorylineTopics` · `InterestFormula` 에 넘긴다. 트랜잭션 없음, 키 버전이 어긋나면 빈 값(digest-R25)
 - `DigestCitationsService` — `feedback` 의 `DigestCitations` 의 구현. 다이제스트 ID 가 1 보다 작으면 거짓이고 그 밖은 저장소에 맡긴다. 읽기 전용 트랜잭션(부르는 쪽의 트랜잭션이 있으면 거기에 든다), 역할 애너테이션 없음(digest-R14)
 
 ### `domain`
@@ -150,7 +158,17 @@ sequenceDiagram
 
 - `CitationRepository` — 인용 확인 저장소 — 그 사용자의 그 다이제스트가 그 기사를 인용했는가(digest-R14)
 - `SelectionRules` · `CandidateCost` — 후보 선별 상수의 정본(digest-R15 ~ R22)
-- `UserFilter` · `SubscriptionFilter` · `CandidateRank` · `BigSlotPicker` · `EventDedup` · `DiversityQuota` · `BudgetCut` · `CandidateSelector` — 후보 선별 규칙의 정본, 규칙마다 하나(digest-R17 ~ R22)
+- `UserFilter` · `SubscriptionFilter` · `CandidateRank` · `BigSlotPicker` · `EventDedup` · `DiversityQuota` · `BudgetCut` · `CandidateSelector` — 후보 선별 규칙의 정본, 규칙마다 하나(digest-R17 ~ R22). `CandidateRank.order(TopicInterests)` 가 관심도를 곱한 순위다. `ArticleFacts` 는 그 사용자의 싫어요 여부(`disliked`)를 싣고 `ArticleFacts.of(ActiveEvaluation, …)` 로 만든다
+- `ActiveKeys` — 평가 키(주제 중분류 · 지역 · 대표 형식)를 계보 표로 활성 키로 푸는 정본(`ActiveEvaluation`)(digest-R16)
+- `InterestRules` · `InterestFormula` · `TopicInterests` — 관심도 상수 · 산식 · 가중치의 정본(digest-R23)
+- `InterestSignals` · `StorylineTopics` — 관심 신호로 쓸 행 고르기 · 스토리라인의 주제 몫의 정본(digest-R25)
+- `ExposureRepository` — 노출 저장소 — 계약이 노출 정의의 정본이다(digest-R24)
+
+  ```java
+  public interface ExposureRepository {
+      Map<ArticleId, Instant> latestExposures(UserId user, Instant from, Instant to);  // 인용 기사 → 가장 늦게 끝낸 시각
+  }
+  ```
 
   ```java
   public interface CitationRepository {
@@ -321,25 +339,27 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
 
 ### 후보 선별
 
-판단의 이유는 [ADR-0207](../adr/0207-digest-candidates-enter-a-period-by-first-evaluation-time-with-a-published-time-floor.md) · [ADR-0208](../adr/0208-the-big-slot-takes-the-representatives-of-the-heaviest-events-of-each-big-storyline-row.md) · [ADR-0209](../adr/0209-maximum-candidates-and-big-slots-are-user-settings-and-the-big-slot-takes-at-most-half.md) · [ADR-0210](../adr/0210-candidate-selection-cuts-to-the-input-token-budget-with-one-estimate-the-prompt-follows.md) · [ADR-0028](../adr/0028-explicit-signals-and-interest-weighted-candidates.md)에 있다. 상수는 모두 측정 전 목표다([open-questions.md](../open-questions.md) "운영하면서 결정" 9 · 21번).
+판단의 이유는 [ADR-0207](../adr/0207-digest-candidates-enter-a-period-by-first-evaluation-time-with-a-published-time-floor.md) · [ADR-0216](../adr/0216-the-interest-selection-reason-marks-subscribed-candidates-that-enter-only-by-interest-with-a-weight-above-neutral.md) · [ADR-0208](../adr/0208-the-big-slot-takes-the-representatives-of-the-heaviest-events-of-each-big-storyline-row.md) · [ADR-0209](../adr/0209-maximum-candidates-and-big-slots-are-user-settings-and-the-big-slot-takes-at-most-half.md) · [ADR-0210](../adr/0210-candidate-selection-cuts-to-the-input-token-budget-with-one-estimate-the-prompt-follows.md) · [ADR-0028](../adr/0028-explicit-signals-and-interest-weighted-candidates.md)에 있다. 상수는 모두 측정 전 목표다([open-questions.md](../open-questions.md) "운영하면서 결정" 9 · 21번).
 
 - **digest-R15** — 기간: 후보 선별(`CandidateSelection.select`)은 다이제스트 기간(시각 범위)과 쓸 모델을 받고 시간대를 모른다 — 사용자 시간대의 날로 기간을 만드는 일은 부르는 쪽이 한다
   - 구독 후보의 읽는 기간은 [max(시작, 끝 − `EvaluationPeriod.MAX_LENGTH`), 끝)이고 그 안에 **첫 평가 시각**(기사 평가 행의 가장 이른 평가 시각 — [tag-R30](tag.md#평가-현황--주제별-보도량))이 있는 기사에서 고른다
   - 큰 슬롯의 조회 기간은 [max(시작, 끝 − `EventPeriod.MAX_LENGTH`), 끝)이고 기간 안 기사는 사건 배정의 발행 시각으로 고른다([event-R20](event.md#대표-기사--기간-집계))
 - **digest-R16** — 재료: 트랜잭션 없이 공개 조회를 차례로 부른다 — 한 스냅숏이 아니다. 그 사이 지운 기사는 재료에서 빠지고(내용을 읽지 못한 후보는 뺀다) 생성이 후보 행으로 다시 거른다(digest-R9)
   - 관심 설정은 `user` 의 조회로 읽는다 — 계정이 없으면 후보는 빈 목록이다. 계정 상태는 보지 않는다
-  - 기사의 평가 키(주제 중분류 · 지역 · 대표 형식)는 평가 버전마다 `TagKeyLineage.toActive` 로 활성 키의 집합으로 푼다. 그 표의 활성 버전이 관심 설정의 키 버전과 다르면(조회 사이의 활성 전환) 처음부터 한 번 더 하고(`CandidateSelection.ATTEMPTS` — 2), 그래도 다르면 `IllegalStateException` 이다
+  - 기사의 평가 키(주제 중분류 · 지역 · 대표 형식)는 평가 버전마다 `TagKeyLineage.toActive` 로 활성 키의 집합으로 푼다(`ActiveEvaluations` · `ActiveKeys`). 그 표의 활성 버전이 관심 설정의 키 버전과 다르면(조회 사이의 활성 전환) 처음부터 한 번 더 하고(`CandidateSelection.ATTEMPTS` — 2), 그래도 다르면 `IllegalStateException` 이다. 관심도 재료의 키 버전(digest-R25)도 같다
   - 평가는 `ArticleEvaluations.MAX_ARTICLES` 씩 나눠 읽는다
+  - 관심도(digest-R23 ~ R25)를 먼저 읽고, 구독 후보 · 큰 슬롯 재료를 읽을 때 그 사용자의 현재 싫어요를 `ArticleFeedback.dislikedAmong` 으로 `ArticleFeedback.MAX_ARTICLES` 씩 묻는다
 - **digest-R17** — 구독 필터(`SubscriptionFilter` · `UserFilter`): 읽는 기간의 첫 평가 기사 가운데 다음을 모두 지나는 기사
   - 발행 시각 ≥ 읽는 기간의 시작 − `SelectionRules.PUBLISHED_LOOKBACK`(24시간, 경계 포함)
   - 붙은 주제 중분류(태그 기준 이상 · `low_confidence` 하나 포함)가 구독 행이 덮는 중분류와 하나라도 겹친다 — 미분류는 겹치지 않는다
   - 붙은 지역이 제외 지역과 겹치지 않고, 활성 키로 푼 형식이 제외 형식과 겹치지 않는다(계보 없이 지운 형식은 걸리지 않는다)
   - 소스가 있고 그 소스가 모두 제외 소스는 아니다 — 소스가 여럿인 기사는 제외하지 않은 소스도 그 기사를 냈다
-- **digest-R18** — 순위(`CandidateRank`): 점수 = 중요도 × (`low_confidence` 면 `SelectionRules.LOW_CONFIDENCE_WEIGHT` 0.7) × 관심도(`SelectionRules.NEUTRAL_INTEREST` 1 — 관심도를 계산하기 전이라 중립). 순서는 점수 내림차순(중요도가 없으면 맨 뒤) → 발행 시각 내림차순 → 기사 ID 오름차순
+  - 그 사용자가 지금 싫어요를 누른 기사가 아니다 — 이 제외는 큰 슬롯 대표의 자격(digest-R19)에도 같고, 사건의 대표를 고르기 전에 빠져 같은 사건의 다른 기사가 대표가 된다
+- **digest-R18** — 순위(`CandidateRank`): 점수 = 중요도 × (`low_confidence` 면 `SelectionRules.LOW_CONFIDENCE_WEIGHT` 0.7) × 기사의 관심도 가중치(digest-R23 — 주제 중분류 가중치의 평균). 순서는 점수 내림차순(중요도가 없으면 맨 뒤) → 발행 시각 내림차순 → 기사 ID 오름차순
 - **digest-R19** — 큰 슬롯(`BigSlotPicker`): 사용자의 큰 슬롯 수가 0 이면 넣지 않는다
   - 큰 판정 목록(`StorylineDirectory.bigStorylines` — 보도 강도 순)의 행을 앞에서부터 큰 슬롯 수만큼 쓴다 — 대표를 하나도 내지 못한 행은 세지 않고 다음 행으로 간다
   - 행마다 닫은 사건 집합 가운데 기간 안 기사가 있는 사건을 기간 안 중요도 합 내림차순(같으면 사건 ID 오름차순)으로 `SelectionRules.BIG_EVENTS_PER_STORYLINE`(10) 개까지 — 대표가 없거나 앞 행이 쓴 사건 · 기사는 세지 않고 다음 사건으로 간다
-  - 사건의 대표는 그 사건의 기간 안 기사 가운데 평가가 있고 사용자의 제외(digest-R17 의 지역 · 형식 · 소스)를 지나는 기사에서 `EventDirectory.representatives` 로 고른다([event-R14](event.md#대표-기사--기간-집계))
+  - 사건의 대표는 그 사건의 기간 안 기사 가운데 평가가 있고 사용자의 제외(digest-R17 의 지역 · 형식 · 소스 · 싫어요)를 지나는 기사에서 `EventDirectory.representatives` 로 고른다([event-R14](event.md#대표-기사--기간-집계))
   - 큰 슬롯 기사는 최대 후보 수 × `SelectionRules.BIG_SHARE`(0.5)를 내림한 수(`bigSeats`)를 넘지 않는다 — 넘으면 행 순서로 하나씩 돌며 담아 행마다 고르게 줄인다. 이 값은 관심 설정 화면의 안내 문구가 말로 적는다
   - 포함의 상위와 하위가 함께 크면 큰 판정 목록이 둘을 각각 행으로 낸다([storyline-R19](storyline.md#큰-판정)) — 같은 사건은 두 번 들지 않지만 한 포함 나무가 슬롯 둘을 쓸 수 있다
 - **digest-R20** — 사건 단위 중복 제거(`EventDedup`): 같은 사건의 구독 후보는 하나만 남긴다 — 자리는 그 사건 후보 가운데 가장 앞 순위, 기사는 그 사건 후보 가운데 대표 기사(`EventDirectory.representatives`). 큰 슬롯이 쓴 사건의 구독 후보는 뺀다. 사건에 배정되지 않은 기사는 그대로 둔다
@@ -347,8 +367,25 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
 - **digest-R22** — 입력 토큰 예산과 선정 이유(`CandidateCost` · `BudgetCut` · `CandidateSelector`):
   - 후보 하나의 토큰 어림 = ⌈(제목 + 요약문 코드 포인트 + `CANDIDATE_OVERHEAD` 80) × `TOKENS_PER_CODE_POINT` 1.0⌉. 후보가 쓸 예산 = 모델의 입력 토큰 예산 − `INSTRUCTION_RESERVE`(2,000) − ⌈(관심사 코드 포인트 + (구독 행 수 + 제외 지역 수) × `PROFILE_TAG_COST` 20) × 1.0⌉(0 아래면 0). 프롬프트 구성은 이 어림을 따른다
   - 큰 슬롯 기사 다음 구독 후보로 놓고 합이 예산을 넘으면 구독 후보의 꼬리부터, 그래도 넘으면 큰 슬롯의 꼬리(마지막 행의 마지막 사건)부터 뺀다
-  - 큰 슬롯 기사는 `MAJOR_STORYLINE`, 구독 후보는 `SUBSCRIBED` 다 — 관심도가 중립이라 `INTEREST` 는 나오지 않는다. 후보는 큰 슬롯 기사 다음 구독 후보의 순서로 생성(digest-R3)에 넘긴다
+  - 구독 후보는 같은 재료를 중립 순위(가중치 모두 1)로도 digest-R20 ~ R22 의 단계에 넣어 견준다 — 사건 · 대표는 한 번 읽고, 토큰 어림은 두 결과의 기사를 함께 읽는다
+  - 큰 슬롯 기사는 `MAJOR_STORYLINE` 이다. 구독 후보는 중립 결과의 구독 후보에 없고 관심도 가중치가 1 보다 크면 `INTEREST`(관심도로 들어온 기사), 아니면 `SUBSCRIBED` 다 — 다른 기사가 내려가 빈 자리에 든 가중치 1 인 기사는 `SUBSCRIBED` 이고, 관심도 때문에 밀려난 기사는 이유가 남지 않는다. 후보는 큰 슬롯 기사 다음 관심도 결과의 구독 후보 순서로 생성(digest-R3)에 넘긴다
   - 구독도 큰 슬롯도 없으면 후보는 0 건이다(생성은 `EMPTY` — digest-R8)
+
+### 관심도
+
+판단의 이유는 [ADR-0213](../adr/0213-interest-per-subtopic-is-smoothed-reactions-over-exposures-with-a-half-life-and-exposures-are-all-ready-citations.md) · [ADR-0214](../adr/0214-a-storyline-subscription-enters-topic-interest-by-the-topic-shares-of-its-event-representatives.md) · [ADR-0215](../adr/0215-interests-are-not-stored-entities-and-are-computed-from-signal-history-at-query-time.md) · [ADR-0028](../adr/0028-explicit-signals-and-interest-weighted-candidates.md)에 있다. 상수는 모두 측정 전 목표다([open-questions.md](../open-questions.md) "운영하면서 결정" 24번).
+
+- **digest-R23** — 산식(`InterestFormula` · `InterestRules` · `TopicInterests`): 단위는 활성 태그 체계의 주제 중분류다. 기준 시각 T 에서 무게 w(at) = 0.5 ^ (max(0, T − at) ÷ `HALF_LIFE` 30일) — T 뒤의 시각은 무게 1. 중분류 t 마다
+  - 노출 E = t 가 붙은 노출 기사의 w(노출 시각) 합, 반응 F = 같은 기사의 w(노출 시각) × (좋아요 +1 · 싫어요 −1 · 없음 0) 합, 구독 S = t 를 가진 구독 신호의 w(바꾼 시각) × (더함 +1 · 뺌 −1) × 몫 합
+  - 관심 x = clamp((F + `SUBSCRIPTION_SIGNAL` 1 × S) ÷ (E + `PRIOR_EXPOSURES` 3), −1, 1), 가중치 g = `NEUTRAL` 1 + `STRENGTH` 0.5 × x — 0.5 ~ 1.5
+  - 노출도 구독 신호도 없는 중분류는 1(중립)이다. 기사의 가중치(`TopicInterests.weightOf`)는 그 기사 주제 중분류 가중치의 산술 평균이고 주제가 없으면 1 이다
+  - 조회할 때 계산하고 저장하지 않는다 — 관심사에 저장 행 · ID 가 없다
+- **digest-R24** — 노출(`ExposureRepository`): 그 사용자의 `READY` 다이제스트 가운데 끝낸 시각이 범위 안인 것의 인용 기사 — 같은 날짜의 덮인 다이제스트도 센다(피드백을 받는 범위 digest-R14 와 같다). 기사마다 한 번이고 노출 시각은 그 기사를 인용한 다이제스트 가운데 가장 늦게 끝낸 시각이다. 받은 소식(digest-R13)과 다른 정의다
+- **digest-R25** — 재료와 신호 고르기(`InterestMaterials` · `InterestSignals` · `StorylineTopics`): 기준 시각은 다이제스트 기간 끝이고 읽는 범위는 [기준 시각 − `HALF_LIFE` × `LOOKBACK_HALF_LIVES` 4(120일), 부르는 시각)이다 — 기간 끝 뒤의 노출 · 반응 · 구독 변경도 무게 1 로 센다
+  - 노출 기사는 평가가 있는 것만, 활성 중분류로 푼다. 반응은 그 기사의 범위 안 이력 가운데 기록 순 마지막 값이다(없으면 없음). 노출되지 않은 기사의 반응은 버린다. 범위 시작 앞에 누른 반응은 읽지 않는다
+  - 주제 구독 변경(`user` 의 `TopicSubscriptionHistory`)은 원인이 사용자인 행만, 푼 활성 중분류마다 몫 1 이다
+  - 스토리라인 구독 변경(`StorylineSubscriptionDirectory.changes`)은 원인이 사용자이고 지금도 있는 스토리라인(합쳐졌으면 남는 쪽)의 행만이다. 몫은 지금 그 스토리라인의 닫은 사건마다 대표 기사(`EventDirectory.representativesOfAll`)를 읽어, 평가가 있는 대표 가운데 그 중분류가 붙은 대표 수 ÷ 대표 수다 — 미분류 대표도 분모에 들고, 기준 몫은 없다. 몫이 빈 스토리라인의 변경은 신호가 아니다
+  - 재료의 키를 푼 활성 버전(노출 기사 · 대표 기사의 계보 표, 주제 구독 변경 조회가 낸 버전)이 관심 설정의 키 버전과 다르면 후보 선별이 처음부터 다시 한다(digest-R16)
 
 ### 로컬 대체물
 
@@ -402,3 +439,7 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
 | [0208](../adr/0208-the-big-slot-takes-the-representatives-of-the-heaviest-events-of-each-big-storyline-row.md) | 큰 슬롯은 큰 판정 행마다 기간 안 중요도 합이 큰 사건 몇 개의 대표 기사를 넣는다 |
 | [0209](../adr/0209-maximum-candidates-and-big-slots-are-user-settings-and-the-big-slot-takes-at-most-half.md) | 최대 후보 수와 큰 슬롯 수는 사용자 설정이고, 큰 슬롯은 최대 후보 수의 절반을 넘지 않는다 |
 | [0210](../adr/0210-candidate-selection-cuts-to-the-input-token-budget-with-one-estimate-the-prompt-follows.md) | 입력 토큰 예산은 후보 선별이 한 추정 규칙으로 세어 자르고, 프롬프트 구성이 그 규칙을 따른다 |
+| [0213](../adr/0213-interest-per-subtopic-is-smoothed-reactions-over-exposures-with-a-half-life-and-exposures-are-all-ready-citations.md) | 관심도는 주제 중분류마다 노출로 나눈 반응에 가상 노출을 더해 평활하고 반감기로 감쇠하며, 노출은 덮인 다이제스트를 포함한 인용 전부다 |
+| [0214](../adr/0214-a-storyline-subscription-enters-topic-interest-by-the-topic-shares-of-its-event-representatives.md) | 스토리라인 구독은 사건 대표 기사의 주제 몫으로 주제별 관심도에 든다 |
+| [0215](../adr/0215-interests-are-not-stored-entities-and-are-computed-from-signal-history-at-query-time.md) | 관심사는 개체로 세우지 않고 신호 이력에서 조회 때 계산한다 |
+| [0216](../adr/0216-the-interest-selection-reason-marks-subscribed-candidates-that-enter-only-by-interest-with-a-weight-above-neutral.md) | 선정 이유 `INTEREST` 는 중립 순위로는 들지 못하고 가중치가 1 보다 큰 구독 후보다 |

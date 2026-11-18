@@ -37,3 +37,7 @@
 | 쓰기 처리기를 `reader` 에 두고 처리기가 확인한 뒤 `feedback` 의 쓰기 API 를 부른다 | 받을 수 있는 기사의 규칙이 `adapter` 에 놓이고, `reader` 가 판정 · 저장을 하지 않는다는 경계에서 벗어난다. 쓰기 API 를 다른 길이 부르면 제한이 빠진다 |
 | 의존을 `feedback` → `digest` 로 뒤집고, `digest` 가 읽을 신호를 `digest` 가 선언한 인터페이스로 받는다 | 관심 신호의 소비자가 읽는 공개 조회를 `feedback` 이 낸다는 방향을 함께 뒤집어야 한다 |
 | 날짜별로 보이는 다이제스트의 인용에만 받는다 | 열어 둔 화면에서 누른 것이 그 사이의 재생성 때문에 거부된다 |
+
+## 후속 기록
+
+- 2026-11-18: 결과 "덮인 다이제스트에서 온 신호를 관심도가 셀지는 노출 수의 정의와 함께 관심도를 구현하는 작업이 정한다" — [ADR-0213](0213-interest-per-subtopic-is-smoothed-reactions-over-exposures-with-a-half-life-and-exposures-are-all-ready-citations.md)(덮인 다이제스트를 포함한 `READY` 인용 전부를 노출로 센다), 지금 상태는 [digest Spec "관심도"](../specs/digest.md#관심도)
