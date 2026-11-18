@@ -13,9 +13,6 @@ public enum DigestFailure {
 	/** 검증 뒤 인용이 하나도 남지 않았다 */
 	NO_CITATION,
 
-	/** 생성기가 없었다 */
-	NO_GENERATOR,
-
 	/** 쓸 모델 공급자의 저장한 키가 없었다 — 공급자에 보내지 않았다 */
 	KEY_MISSING,
 

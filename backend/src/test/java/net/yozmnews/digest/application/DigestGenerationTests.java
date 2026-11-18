@@ -41,7 +41,6 @@ import net.yozmnews.llm.LlmModel;
 import net.yozmnews.llm.Provider;
 import net.yozmnews.llm.ReasoningEffort;
 import net.yozmnews.platform.UserId;
-import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -61,8 +60,8 @@ import org.springframework.transaction.support.TransactionTemplate;
  * <p>
  * 지키는 규칙: digest-R2 · digest-R8 · digest-R9 · digest-R12
  * <p>
- * 시험을 트랜잭션으로 감싸지 않는다 — 유스케이스가 트랜잭션을 둘로 나눈다. 생성기 공급자 · 시계는 유스케이스의 패키지 생성자로 넣는다(대본
- * 생성기 · 로컬 대체물 · 생성기 없음). 기사 행은 SQL 로 넣는다. 기대값은 손으로 쓴 리터럴이다.
+ * 시험을 트랜잭션으로 감싸지 않는다 — 유스케이스가 트랜잭션을 둘로 나눈다. 생성기 · 시계는 유스케이스의 패키지 생성자로 넣는다(대본 생성기 ·
+ * 로컬 대체물). 기사 행은 SQL 로 넣는다. 기대값은 손으로 쓴 리터럴이다.
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -120,8 +119,8 @@ class DigestGenerationTests {
 		this.articleIds.clear();
 	}
 
-	private DigestGeneration generation(@Nullable DigestGenerator generator) {
-		return new DigestGeneration(this.digests, this.sections, this.candidates, this.articles, () -> generator,
+	private DigestGeneration generation(DigestGenerator generator) {
+		return new DigestGeneration(this.digests, this.sections, this.candidates, this.articles, generator,
 				this.transaction, this.clock);
 	}
 
@@ -389,19 +388,6 @@ class DigestGenerationTests {
 		assertThat(row(id)).containsEntry("error_code", "NO_CITATION")
 			.containsEntry("error_message", "검증 뒤 인용이 하나도 남지 않았다");
 		assertThat(count("select count(*) from digest_sections where digest_id = :id", id)).isZero();
-	}
-
-	@Test
-	void failsWhenThereIsNoGenerator() {
-		DigestGeneration generation = generation(null);
-		DigestId id = schedule(generation);
-
-		assertThat(generation.run(id, MODEL, candidates(2))).isEqualTo(DigestStatus.FAILED);
-
-		Map<String, Object> row = row(id);
-		assertThat(row).containsEntry("error_code", "NO_GENERATOR").containsEntry("error_message", "생성기가 없다");
-		assertThat(row.get("input_tokens")).isNull();
-		assertThat(row.get("duration_ms")).isNull();
 	}
 
 	@Test

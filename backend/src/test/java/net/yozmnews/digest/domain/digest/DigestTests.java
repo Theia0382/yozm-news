@@ -105,9 +105,9 @@ class DigestTests {
 	@Test
 	void keepsAShortMessageWhole() {
 		Digest failed = scheduled().start(MODEL, 5, T1)
-			.complete(new Completion.Failed(DigestFailure.NO_GENERATOR, "생성기가 없다", null, null), T2);
+			.complete(new Completion.Failed(DigestFailure.KEY_MISSING, "키가 없다", null, null), T2);
 
-		assertThat(failed.errorMessage()).contains("생성기가 없다");
+		assertThat(failed.errorMessage()).contains("키가 없다");
 		assertThat(failed.usage()).isEmpty();
 		assertThat(failed.durationMs()).isEmpty();
 	}

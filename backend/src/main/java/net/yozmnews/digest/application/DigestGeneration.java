@@ -43,7 +43,6 @@ import net.yozmnews.platform.UserId;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -54,14 +53,11 @@ import org.springframework.transaction.support.TransactionTemplate;
  * <p>
  * 시작(트랜잭션 ①) · 프롬프트 구성 · 생성기 호출과 읽기 · 다시 묻기(트랜잭션 밖) · 인용 검증 · 저장(트랜잭션 ②) 셋으로 나눈다. 판단(읽을지 ·
  * 다시 물을지 · 실패 코드)은 {@link GenerationVerdict} 가 한다. 두 트랜잭션은 다이제스트 행을 먼저, 후보 행을 다음에 잠근다. 트랜잭션 ② 는
- * 다이제스트의 버전이 트랜잭션 ① 뒤의 값과 다르거나 이미 끝났으면 아무것도 쓰지 않는다. 생성기는 부를 때 찾는다 — 없으면 그 다이제스트를 실패로
- * 끝낸다. 트랜잭션 안에서 부르면 거부한다.
+ * 다이제스트의 버전이 트랜잭션 ① 뒤의 값과 다르거나 이미 끝났으면 아무것도 쓰지 않는다. 생성기는 어느 프로세스에나 하나다 — {@code local}
+ * 은 로컬 대체물, 그 밖은 실제 생성기(ADR-0187). 트랜잭션 안에서 부르면 거부한다.
  */
 @Service
 public class DigestGeneration {
-
-	/** 생성기가 없을 때의 실패 메시지 */
-	static final String NO_GENERATOR = "생성기가 없다";
 
 	/** 인용이 남지 않았을 때의 실패 메시지 */
 	static final String NO_CITATION = "검증 뒤 인용이 하나도 남지 않았다";
@@ -79,7 +75,7 @@ public class DigestGeneration {
 
 	private final ArticleDirectory articles;
 
-	private final Supplier<@Nullable DigestGenerator> generator;
+	private final DigestGenerator generator;
 
 	private final TransactionTemplate transaction;
 
@@ -87,20 +83,19 @@ public class DigestGeneration {
 
 	@Autowired
 	DigestGeneration(DigestRepository digests, DigestSectionRepository sections,
-			DigestCandidateRepository candidates, ArticleDirectory articles, ObjectProvider<DigestGenerator> generators,
+			DigestCandidateRepository candidates, ArticleDirectory articles, DigestGenerator generator,
 			TransactionTemplate transaction) {
-		this(digests, sections, candidates, articles, generators::getIfAvailable, transaction, InstantSource.system());
+		this(digests, sections, candidates, articles, generator, transaction, InstantSource.system());
 	}
 
-	/** 시험이 생성기 공급자와 시계를 넣는다 */
+	/** 시험이 생성기와 시계를 넣는다 */
 	DigestGeneration(DigestRepository digests, DigestSectionRepository sections, DigestCandidateRepository candidates,
-			ArticleDirectory articles, Supplier<@Nullable DigestGenerator> generator, TransactionTemplate transaction,
-			InstantSource clock) {
+			ArticleDirectory articles, DigestGenerator generator, TransactionTemplate transaction, InstantSource clock) {
 		this.digests = digests;
 		this.sections = sections;
 		this.candidates = candidates;
 		this.articles = articles;
-		this.generator = generator;
+		this.generator = Objects.requireNonNull(generator, "generator");
 		this.transaction = transaction;
 		this.clock = Objects.requireNonNull(clock, "clock");
 	}
@@ -130,20 +125,15 @@ public class DigestGeneration {
 		if (started.finished() != null) {
 			return started.finished();
 		}
-		DigestGenerator generator = this.generator.get();
-		if (generator == null) {
-			return finish(id, started.version(),
-					() -> new Completion.Failed(DigestFailure.NO_GENERATOR, NO_GENERATOR, null, null));
-		}
 		DigestPrompt prompt = DigestPrompts.compose(input, set, model);
 		ReasoningEffort effort = input.profile().effort();
 		Instant asked = this.clock.instant();
-		GenerationOutcome first = generator.generate(new DigestRequest(started.user(), model, effort, set, prompt));
+		GenerationOutcome first = this.generator.generate(new DigestRequest(started.user(), model, effort, set, prompt));
 		GenerationOutcome second = null;
 		Settled settled = switch (GenerationVerdict.judge(first)) {
 			case Settled done -> done;
 			case Retry retry -> {
-				second = generator.generate(new DigestRequest(started.user(), model, effort, set,
+				second = this.generator.generate(new DigestRequest(started.user(), model, effort, set,
 						DigestPrompts.retry(prompt, retry.diagnosis())));
 				yield GenerationVerdict.settle(second);
 			}

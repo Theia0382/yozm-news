@@ -38,7 +38,6 @@ import net.yozmnews.event.EventArticles;
 import net.yozmnews.llm.LlmModel;
 import net.yozmnews.llm.Provider;
 import net.yozmnews.platform.UserId;
-import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -111,8 +110,8 @@ class DigestArticleRemovalTests {
 		this.articleIds.clear();
 	}
 
-	private DigestGeneration generation(@Nullable DigestGenerator generator, DigestCandidateRepository repository) {
-		return new DigestGeneration(this.digests, this.sections, repository, this.articles, () -> generator,
+	private DigestGeneration generation(DigestGenerator generator, DigestCandidateRepository repository) {
+		return new DigestGeneration(this.digests, this.sections, repository, this.articles, generator,
 				this.transaction, CLOCK);
 	}
 
