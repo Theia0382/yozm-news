@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.UUID;
 
 import net.yozmnews.digest.domain.generator.TokenUsage;
 import net.yozmnews.llm.LlmModel;
@@ -26,12 +27,16 @@ class DigestTests {
 
 	private static final Instant T2 = Instant.parse("2026-11-15T22:47:00Z");
 
+	private static final UUID TOKEN = UUID.fromString("5f0c9a2e-3b1d-4c7e-9a40-2d6f8e1b7c35");
+
+	private static final UUID NEW_TOKEN = UUID.fromString("0b7e4c1a-9d2f-4e83-b6a5-71c3f0d9e248");
+
 	private static final LlmModel MODEL = new LlmModel(Provider.ANTHROPIC, "claude-sonnet-5-5", 100_000, true);
 
 	private static Digest scheduled() {
 		return Digest.schedule(new UserId(42), LocalDate.parse("2026-11-16"),
 				new DigestPeriod(Instant.parse("2026-11-14T22:00:00Z"), Instant.parse("2026-11-15T22:00:00Z")),
-				DigestTrigger.SCHEDULED, T0);
+				DigestTrigger.SCHEDULED, TOKEN, T0);
 	}
 
 	@Test
@@ -42,6 +47,8 @@ class DigestTests {
 		assertThat(digest.userId()).isEqualTo(new UserId(42));
 		assertThat(digest.trigger()).isEqualTo(DigestTrigger.SCHEDULED);
 		assertThat(digest.createdAt()).isEqualTo(T0);
+		assertThat(digest.dispatchToken()).isEqualTo(TOKEN);
+		assertThat(digest.dispatchedAt()).isEqualTo(T0);
 		assertThat(digest.provider()).isEmpty();
 		assertThat(digest.startedAt()).isEmpty();
 		assertThat(digest.completedAt()).isEmpty();
@@ -96,6 +103,23 @@ class DigestTests {
 
 		assertThatThrownBy(() -> empty.abandon(DigestFailure.INTERRUPTED, "끝나지 않았다", T2))
 			.isInstanceOf(IllegalStateException.class);
+	}
+
+	@Test
+	void redispatchesAScheduledDigestWithANewTokenOnly() {
+		Digest again = scheduled().redispatch(NEW_TOKEN, T1);
+
+		assertThat(again.status()).isEqualTo(DigestStatus.SCHEDULED);
+		assertThat(again.dispatchToken()).isEqualTo(NEW_TOKEN);
+		assertThat(again.dispatchedAt()).isEqualTo(T1);
+		assertThat(again.createdAt()).isEqualTo(T0);
+		// 생성 중이거나 끝난 다이제스트는 다시 등록하지 않는다 — 시작하고 끝내도 토큰은 그대로다
+		Digest running = scheduled().start(MODEL, 5, T1);
+		assertThatThrownBy(() -> running.redispatch(NEW_TOKEN, T2)).isInstanceOf(IllegalStateException.class);
+		Digest failed = running.abandon(DigestFailure.INTERRUPTED, "끝나지 않았다", T2);
+		assertThat(failed.dispatchToken()).isEqualTo(TOKEN);
+		assertThat(failed.dispatchedAt()).isEqualTo(T0);
+		assertThatThrownBy(() -> failed.redispatch(NEW_TOKEN, T2)).isInstanceOf(IllegalStateException.class);
 	}
 
 	@Test

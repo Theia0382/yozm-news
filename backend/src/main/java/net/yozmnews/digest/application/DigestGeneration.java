@@ -8,6 +8,7 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.Supplier;
 
 import net.yozmnews.article.ArticleDirectory;
@@ -24,6 +25,7 @@ import net.yozmnews.digest.domain.digest.DigestPeriod;
 import net.yozmnews.digest.domain.digest.DigestRepository;
 import net.yozmnews.digest.domain.digest.DigestStatus;
 import net.yozmnews.digest.domain.digest.DigestTrigger;
+import net.yozmnews.digest.domain.digest.ScheduledDigest;
 import net.yozmnews.digest.domain.generator.DigestGenerator;
 import net.yozmnews.digest.domain.generator.DigestRequest;
 import net.yozmnews.digest.domain.generator.GenerationOutcome;
@@ -105,9 +107,14 @@ public class DigestGeneration {
 		this.clock = Objects.requireNonNull(clock, "clock");
 	}
 
-	/** 생성을 기다리는 다이제스트를 만든다 */
-	public DigestId schedule(UserId user, LocalDate digestDate, DigestPeriod period, DigestTrigger trigger) {
-		return this.digests.save(Digest.schedule(user, digestDate, period, trigger, this.clock.instant())).id();
+	/**
+	 * 생성을 기다리는 다이제스트를 새 등록 토큰과 함께 만든다 — 생성 작업의 등록은 커밋 뒤 부르는 쪽이 한다. 같은 사용자 · 날짜의 일정
+	 * 다이제스트가 이미 있으면 저장소의 유일 제약이 거부한다.
+	 */
+	public ScheduledDigest schedule(UserId user, LocalDate digestDate, DigestPeriod period, DigestTrigger trigger) {
+		UUID token = UUID.randomUUID();
+		Digest saved = this.digests.save(Digest.schedule(user, digestDate, period, trigger, token, this.clock.instant()));
+		return new ScheduledDigest(saved.id(), token);
 	}
 
 	/**

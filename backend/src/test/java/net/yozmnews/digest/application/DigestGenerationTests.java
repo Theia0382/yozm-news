@@ -64,6 +64,8 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.event.ApplicationEvents;
 import org.springframework.test.context.event.RecordApplicationEvents;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.jobrunr.scheduling.JobScheduler;
+import net.yozmnews.digest.DigestRounds;
 
 /**
  * 다이제스트 생성 흐름 — 예약 · 시작 · 프롬프트 · 생성 · 읽기(끝까지 쓴 응답을 읽지 못하면 한 번 다시 묻기) · 인용 검증 · 저장이 실제
@@ -80,6 +82,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 @TestPropertySource(properties = "jobrunr.background-job-server.enabled=false")
 @RecordApplicationEvents
 class DigestGenerationTests {
+
+	@Autowired
+	JobScheduler digestJobs;
 
 	private static final Instant T0 = Instant.parse("2026-11-15T22:45:00Z");
 
@@ -119,6 +124,11 @@ class DigestGenerationTests {
 	private final List<DigestRequest> requests = new ArrayList<>();
 
 	@BeforeEach
+	void stopDigestRounds() {
+		DigestRounds.stop(this.digestJobs);
+	}
+
+	@BeforeEach
 	void fiveArticles() {
 		clear();
 		this.requests.clear();
@@ -145,7 +155,7 @@ class DigestGenerationTests {
 	private DigestId schedule(DigestGeneration generation) {
 		return generation.schedule(new UserId(42), LocalDate.parse("2026-11-16"),
 				new DigestPeriod(Instant.parse("2026-11-14T22:00:00Z"), Instant.parse("2026-11-15T22:00:00Z")),
-				DigestTrigger.SCHEDULED);
+				DigestTrigger.MANUAL).id();
 	}
 
 	private DigestInput candidates(int count) {
@@ -364,6 +374,22 @@ class DigestGenerationTests {
 		// 실패 이벤트 하나 — 끝낸 시각은 생성기가 시계를 2초 넘긴 뒤다
 		assertThat(this.events.stream(DigestFailed.class)).containsExactly(new DigestFailed(new UserId(42), id.value(),
 				LocalDate.parse("2026-11-16"), DigestFailureCause.PROVIDER_ACCOUNT, Instant.parse("2026-11-15T22:45:02Z")));
+	}
+
+	/** 생성 도중 공급자가 키를 무효로 답하면 그 코드로 끝나고 실패 알림의 갈래는 키다 — 키 상태의 전이와 키 무효 알림은 관문 · credential 이 한다 */
+	@Test
+	void aKeyInvalidatedDuringGenerationFailsWithTheKeyCause() {
+		AtomicInteger calls = new AtomicInteger();
+		DigestGeneration generation = generation(scriptedOutcomes(calls,
+				request -> new GenerationOutcome.Failed(DigestFailure.KEY_INVALID, "OpenAI 401 invalid_api_key")));
+		DigestId id = schedule(generation);
+
+		assertThat(generation.run(id, MODEL, candidates(2))).isEqualTo(DigestStatus.FAILED);
+
+		assertThat(calls).hasValue(1);
+		assertThat(row(id)).containsEntry("error_code", "KEY_INVALID");
+		assertThat(this.events.stream(DigestFailed.class)).extracting(DigestFailed::cause)
+			.containsExactly(DigestFailureCause.KEY);
 	}
 
 	@Test
