@@ -263,3 +263,32 @@ export const BUSY_TEXT =
 /** 수동 생성 결과 — 받음은 만드는 중 표시가 대신한다 */
 export const IN_PROGRESS_REFUSED = "이미 만드는 중인 다이제스트가 있습니다.";
 export const REQUEST_FAILED = "요청하지 못했습니다. 다시 시도해 주세요.";
+
+/** 홈의 구독 제안 제목(docs/specs/reader.md reader-R12) */
+export const SUGGESTION_TITLE = "구독해 볼 만한 주제";
+
+/** 구독 제안의 까닭 — 관심은 좋아요 · 싫어요와 구독 변경으로 정한다 */
+export const SUGGESTION_TEXT =
+  "최근 좋아요와 구독한 스토리라인을 보면 관심이 있는 주제입니다. 구독하면 매일 다이제스트에 이 주제의 기사가 들어옵니다.";
+
+/** 거절의 효과 — 다시 권하지 않는 기간의 값은 서버가 갖고 문구에 적지 않는다 */
+export const SUGGESTION_DECLINE_NOTE =
+  "괜찮아요를 누르면 다시 권하지 않습니다. 관심이 더 커지면 다시 권할 수 있습니다.";
+
+/** 제안 수락 */
+export const SUGGESTION_SUBSCRIBE = "구독";
+
+/** 제안 거절 */
+export const SUGGESTION_DECLINE = "괜찮아요";
+
+/** 수락 · 거절 요청이 실패했다 */
+export const SUGGESTION_FAILED =
+  "요청을 처리하지 못했습니다. 잠시 뒤 다시 해 주세요.";
+
+/** 제안할 주제의 이름 — 대분류 · 중분류 */
+export function suggestionTopicLabel(
+  categoryName: string,
+  name: string,
+): string {
+  return `${categoryName} · ${name}`;
+}

@@ -31,6 +31,15 @@ public final class TopicExpansion {
 			.toList();
 	}
 
+	/** 그 버전의 주제 중분류 전체 키인가 — 대분류 키 · 다른 종류의 키 · 없는 키는 아니다 */
+	public static boolean isSubtopic(TagSetView version, String key) {
+		Objects.requireNonNull(version, "version");
+		Objects.requireNonNull(key, "key");
+		return version.topics()
+			.stream()
+			.anyMatch(topic -> topic.subtopics().stream().anyMatch(tag -> tag.key().equals(key)));
+	}
+
 	/**
 	 * 구독 행마다 그 행이 덮는 중분류 — 대분류면 그 버전의 하위 중분류 전체, 중분류면 그 하나. 키 순.
 	 * @param topics 그 버전의 키로 적힌 구독 — 대분류 키 · 중분류 전체 키
@@ -46,10 +55,7 @@ public final class TopicExpansion {
 				expanded.put(key, Set.copyOf(subtopicsOf(version, key)));
 				continue;
 			}
-			boolean subtopic = version.topics()
-				.stream()
-				.anyMatch(topic -> topic.subtopics().stream().anyMatch(tag -> tag.key().equals(key)));
-			if (!subtopic) {
+			if (!isSubtopic(version, key)) {
 				throw new IllegalArgumentException("버전 " + version.number() + " 에 없는 주제 키다: " + key);
 			}
 			expanded.put(key, Set.of(key));

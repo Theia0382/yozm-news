@@ -13,6 +13,7 @@
 - **기사 정보** — 사용자 화면의 기사는 제목 · 출처 이름 · 발행 시각 · 원문 링크다(reader-R7)
 - **관심사 히스토리** — 세션 사용자의 기간별 주제 관심 · 새로 생긴 관심 · 사라진 관심 · 주제 구독 변경을 고른 기간(주 · 월)으로 낸다(reader-R8)
 - **다이제스트** — 세션 사용자의 가장 늦은 날짜의 다이제스트와 수동 생성 상태, 날짜 하나의 다이제스트, 다이제스트가 있는 날짜 목록을 내고, 수동 생성 요청을 받는다(reader-R9 ~ R11)
+- **구독 제안** — 세션 사용자에게 지금 제안할 주제 중분류의 이름 · 대분류 이름과 태그 체계 버전을 낸다 — 다이제스트 홈의 제안 카드가 쓴다(reader-R12). 수락 · 거절은 `user` 의 처리기가 받는다
 - **(미구현)** 변화 리포트 열람의 응답 — 그 화면을 만드는 작업이 이 모듈에 처리기를, 내용을 가진 모듈에 공개 조회를 둔다
 
 하지 않는 것:
@@ -49,6 +50,7 @@ HTTP 엔드포인트 — 모두 세션이 필요하고 키 관문 뒤다(키 없
 | `GET /api/digests/{date}` | 날짜 하나의 다이제스트 — 경로 `date`(YYYY-MM-DD). 형식이 틀리면 400, 그 날짜의 다이제스트가 없으면 404 |
 | `GET /api/digests` | 다이제스트가 있는 날짜 한 쪽 — 질의 `before`(YYYY-MM-DD, 다음 쪽은 앞 응답의 `next`) |
 | `POST /api/digests` | 수동 생성 요청 — 판별자 200(받음 · 진행 중 · 오늘 횟수 소진 · 쓸 모델 없음) |
+| `GET /api/topic-suggestions` | 세션 사용자에게 지금 제안할 주제 — 태그 체계 버전 ID(계정이 없으면 null) · 중분류마다 키 · 이름 · 대분류 이름 |
 | `GET /api/interest-history` | 세션 사용자의 관심사 히스토리 — 질의 `span`(`WEEKS_13` · `WEEKS_26` · `WEEKS_52` · `MONTHS_12` · `MONTHS_24` · `MONTHS_36`, 없으면 `digest` 의 `InterestHistorySpan.DEFAULT`) |
 
 요청 · 응답 형식의 정본은 [`api/openapi.json`](../../api/openapi.json)이다([ADR-0020](../adr/0020-screen-api-contract-from-committed-openapi-spec.md)). 요청의 문제는 400 · 404 문제 응답이다([ADR-0044](../adr/0044-screen-api-results-as-flat-discriminated-200-and-rfc9457-problems.md)).
@@ -60,9 +62,9 @@ HTTP 엔드포인트 — 모두 세션이 필요하고 키 관문 뒤다(키 없
 | 패키지 | 책임 |
 |---|---|
 | (최상위) | 모듈 선언 — 의존을 `storyline` · `event` · `article` · `digest` · `tag` · `user` · `platform` 으로 둔다(`package-info`) |
-| `adapter/in/web` | 독자 화면 컨트롤러, 응답 레코드, 요청 매개변수 읽기, 기간 열거, 기사 정보 · 대표 기사 · 받은 날짜 맞붙이기, 관심사 히스토리의 주제 이름 맞붙이기, 다이제스트 인용 기사의 정보 맞붙이기 |
+| `adapter/in/web` | 독자 화면 컨트롤러, 응답 레코드, 요청 매개변수 읽기, 기간 열거, 기사 정보 · 대표 기사 · 받은 날짜 맞붙이기, 관심사 히스토리 · 구독 제안의 주제 이름 맞붙이기, 다이제스트 인용 기사의 정보 맞붙이기 |
 
-협력: 컨트롤러는 `storyline` 의 공개 조회 `StorylineDirectory`(`list` · `find` · `findAll` · `events` · `relationsOf`), `event` 의 공개 조회 `EventDirectory`(`representativesOfAll` · `articleIdsOf`), `article` 의 공개 조회 `ArticleDirectory`(`headlines`), `digest` 의 공개 조회 `ReceivedArticles`(`receivedAmong`) · `InterestHistory`(`recent`) · `DigestDirectory`(`latest` · `on` · `dates` · `requestStatus`)와 공개 API `DigestRequests`(`request`), `tag` 의 공개 조회 `TagSetDirectory`(`names` — `TagSetNames` 의 `topicName` · `categoryOf` · `topicOrder`)만 부르고(`user` 는 값 타입 `TopicSubscriptionAction` · `DigestFailureCause` 만 쓴다), 결과를 응답 레코드의 정적 팩토리로 옮긴다. 오류 응답은 `platform` 의 문제 응답 형식이다. `application` · `domain` 이 없다 — 판단이 없다([ADR-0192](../adr/0192-reader-screens-are-composed-by-the-reader-module-over-module-public-queries.md)).
+협력: 컨트롤러는 `storyline` 의 공개 조회 `StorylineDirectory`(`list` · `find` · `findAll` · `events` · `relationsOf`), `event` 의 공개 조회 `EventDirectory`(`representativesOfAll` · `articleIdsOf`), `article` 의 공개 조회 `ArticleDirectory`(`headlines`), `digest` 의 공개 조회 `ReceivedArticles`(`receivedAmong`) · `InterestHistory`(`recent`) · `TopicSuggestions`(`suggestionsOf`) · `DigestDirectory`(`latest` · `on` · `dates` · `requestStatus`)와 공개 API `DigestRequests`(`request`), `tag` 의 공개 조회 `TagSetDirectory`(`names` — `TagSetNames` 의 `topicName` · `categoryOf` · `topicOrder`)만 부르고(`user` 는 값 타입 `TopicSubscriptionAction` · `DigestFailureCause` 만 쓴다), 결과를 응답 레코드의 정적 팩토리로 옮긴다. 오류 응답은 `platform` 의 문제 응답 형식이다. `application` · `domain` 이 없다 — 판단이 없다([ADR-0192](../adr/0192-reader-screens-are-composed-by-the-reader-module-over-module-public-queries.md)).
 
 역할: 모든 구성 요소가 화면 역할(`@WebRole`)이다(platform-R9).
 
@@ -73,8 +75,9 @@ HTTP 엔드포인트 — 모두 세션이 필요하고 키 관문 뒤다(키 없
 | 스토리라인 | `StorylineScreenController` | `GET /api/storylines` · `GET /api/storylines/{id}` · `GET /api/storyline-cards` | 목록 · 타임라인 · 카드(reader-R1 ~ R7). 트랜잭션을 열지 않는다 — 여러 공개 조회는 한 스냅숏이 아니다. "지금"은 생성자로 받은 시계로 읽는다 |
 | 다이제스트 | `DigestScreenController` | `GET /api/digests/latest` · `GET /api/digests/{date}` · `GET /api/digests` · `POST /api/digests` | 홈 · 날짜 · 날짜 목록 · 수동 생성 요청(reader-R9 ~ R11). 트랜잭션을 열지 않는다 — 수동 생성 요청은 트랜잭션 밖에서 불러야 한다 |
 | 관심사 히스토리 | `InterestHistoryController` | `GET /api/interest-history` | 세션 사용자의 관심사 히스토리(reader-R8). 트랜잭션을 열지 않는다 |
+| 구독 제안 | `TopicSuggestionController` | `GET /api/topic-suggestions` | 세션 사용자의 구독 제안(reader-R12). 트랜잭션을 열지 않는다 |
 
-`adapter/in/web` 의 그 밖의 타입: 응답 `StorylinePageResponse` · `StorylinePageCursorResponse` · `StorylineCardResponse` · `StorylinePeriodResponse` · `StorylineTimelineResponse` · `StorylineRefResponse` · `TimelineEventResponse` · `StorylineCardsResponse` · `StorylineCardEntryResponse` · `NewsArticleResponse` · `InterestHistoryResponse` · `InterestSpanChoicesResponse` · `InterestPeriodResponse` · `TopicSubscriptionStepResponse` · `InterestTopicResponse` · `InterestLevelResponse` · `DigestHomeResponse` · `DigestDayResponse` · `ShownDigestResponse` · `DigestSectionResponse` · `DigestCitationResponse` · `DigestAttemptResponse` · `DigestUsageResponse` · `DigestDatesResponse`(중첩 `DigestDateResponse`) · `DigestRequestStatusResponse` · `DigestUnresolvedFailureResponse` · `DigestRequestResponse`, 보조 `ScreenRequests`(요청 매개변수 읽기와 그 400 · 404) · `StorylineWindow`(목록 기간의 열거 — 기간 길이의 정본) · `ScreenArticles`(기사 정보 맞붙이기) · `StorylineTitles`(사건의 대표 기사 맞붙이기) · `ReceivedMarks`(사건마다 받은 날짜 맞붙이기). 보조 맞붙이기 셋은 스프링 구성 요소가 아니라 컨트롤러가 만든다.
+`adapter/in/web` 의 그 밖의 타입: 응답 `StorylinePageResponse` · `StorylinePageCursorResponse` · `StorylineCardResponse` · `StorylinePeriodResponse` · `StorylineTimelineResponse` · `StorylineRefResponse` · `TimelineEventResponse` · `StorylineCardsResponse` · `StorylineCardEntryResponse` · `NewsArticleResponse` · `InterestHistoryResponse` · `InterestSpanChoicesResponse` · `InterestPeriodResponse` · `TopicSubscriptionStepResponse` · `InterestTopicResponse` · `InterestLevelResponse` · `DigestHomeResponse` · `DigestDayResponse` · `ShownDigestResponse` · `DigestSectionResponse` · `DigestCitationResponse` · `DigestAttemptResponse` · `DigestUsageResponse` · `DigestDatesResponse`(중첩 `DigestDateResponse`) · `DigestRequestStatusResponse` · `DigestUnresolvedFailureResponse` · `DigestRequestResponse` · `TopicSuggestionsResponse` · `TopicSuggestionResponse`, 보조 `ScreenRequests`(요청 매개변수 읽기와 그 400 · 404) · `StorylineWindow`(목록 기간의 열거 — 기간 길이의 정본) · `ScreenArticles`(기사 정보 맞붙이기) · `StorylineTitles`(사건의 대표 기사 맞붙이기) · `ReceivedMarks`(사건마다 받은 날짜 맞붙이기). 보조 맞붙이기 셋은 스프링 구성 요소가 아니라 컨트롤러가 만든다.
 
 ### `application`
 
@@ -114,6 +117,13 @@ HTTP 엔드포인트 — 모두 세션이 필요하고 키 관문 뒤다(키 없
   - 주제는 기간 가운데 한 번이라도 관심 값이 있는 중분류이고 `TagSetNames.topicOrder()` 순이다. 주제마다 키 · 이름 · 대분류 이름(`TagSetNames.categoryOf` → `topicName`) · 기간마다 관심 칸(`level` — 신호가 없으면 null) · 드러남(`prominent` — digest-R36)을 싣는다. 이름은 조회가 낸 태그 체계 버전(`InterestTimeline.tagSet`)으로 읽는다 — 그 버전에 없는 키는 불변식이 깨진 것이라 `IllegalStateException` 이다
   - 판정 · 관심의 계산은 하지 않는다 — θ 는 응답에 없다
 
+### 구독 제안
+
+판단의 이유는 [ADR-0249](../adr/0249-topic-suggestions-show-as-a-card-on-the-digest-home-and-accepting-uses-the-tag-preference-save.md) · [ADR-0245](../adr/0245-a-topic-suggestion-is-made-when-the-current-interest-of-an-unsubscribed-subtopic-reaches-its-own-threshold.md) · [ADR-0248](../adr/0248-the-digest-interests-and-topic-suggestion-queries-may-be-called-on-screen-paths-with-the-session-user.md)에 있다. 제안의 판정은 `digest` 의 것이다(digest-R41 · R42).
+
+- **reader-R12** — 구독 제안: `GET /api/topic-suggestions` 는 `digest` 의 `TopicSuggestions.suggestionsOf` 를 세션 사용자로 부른다. 빈 값(계정 없음)이면 `tagSetId` null · `topics` 빈 목록이다. 있으면 `tagSetId` 는 그 버전 ID, `topics` 는 낸 순서 그대로 중분류마다 키 · 이름 · 대분류 이름(`TagSetNames.categoryOf` → `topicName`)이다. 이름은 제안이 낸 버전으로 읽는다 — 그 버전에 없는 키는 불변식이 깨진 것이라 `IllegalStateException` 이다. 관심 값 · 기준은 싣지 않는다
+  - 화면(다이제스트 홈)은 제안이 있을 때만 카드를 그린다. 수락은 지금 태그 선호에 그 중분류를 더해 `user` 의 태그 선호 저장(`PUT /api/interests/tags` — 이 응답의 `tagSetId`)으로, 거절은 `user` 의 `POST /api/interests/declined-suggestions` 로 보낸다 — 선호와 제안의 버전이 다르면 수락을 보내지 않고 둘을 다시 읽는다([user Spec](user.md#구독-제안-거절) user-R64)
+
 ### 기사 정보
 
 - **reader-R7** — 사용자 화면의 기사는 제목 · 출처 이름 · 발행 시각 · 원문 링크(정규 URL)다 — `article` 의 `ArticleDirectory.headlines` 를 한 응답에 한 번 부른다(출처 이름 엮기는 article-R17). 그새 지운 기사는 비어 있다
@@ -150,3 +160,6 @@ HTTP 엔드포인트 — 모두 세션이 필요하고 키 관문 뒤다(키 없
 | [0239](../adr/0239-digest-screens-show-tokens-of-the-visible-digest-and-the-sum-of-every-attempt-of-the-date-without-prices.md) | 토큰은 보이는 다이제스트의 것과 그 날짜 모든 시도의 합을 보이고 금액으로 바꾸지 않는다 |
 | [0240](../adr/0240-digest-failures-show-the-cause-action-and-the-code-and-never-the-failure-message.md) | 실패는 갈래의 할 일과 코드의 무슨 일 두 층으로 보이고, 실패 메시지는 화면에 내지 않는다 |
 | [0241](../adr/0241-selection-reasons-mark-only-citations-outside-subscribed-topics-named-interest-and-big-topic.md) | 선정 이유는 구독 주제가 아닌 인용에만 표시하고, 화면 이름은 구독 주제 · 관심 반영 · 큰 화제다 |
+| [0245](../adr/0245-a-topic-suggestion-is-made-when-the-current-interest-of-an-unsubscribed-subtopic-reaches-its-own-threshold.md) | 구독 제안은 구독하지 않은 활성 중분류의 지금 관심이 "관심 있음" 기준과 따로 둔 제안 기준 이상일 때 낸다 |
+| [0248](../adr/0248-the-digest-interests-and-topic-suggestion-queries-may-be-called-on-screen-paths-with-the-session-user.md) | 다이제스트가 읽는 관심 설정과 구독 제안의 조회는 화면 경로에서 세션 사용자로 부를 수 있다 |
+| [0249](../adr/0249-topic-suggestions-show-as-a-card-on-the-digest-home-and-accepting-uses-the-tag-preference-save.md) | 구독 제안은 다이제스트 홈에 카드로 보이고 수락은 태그 선호 저장을 쓴다 |

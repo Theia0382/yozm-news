@@ -233,7 +233,7 @@
 | [0225](0225-interest-history-values-read-only-the-window-before-each-reference-time-and-the-period-in-progress-is-measured-at-the-call.md) | 관심사 히스토리의 기간 값은 기준 시각 앞 120일의 창만 읽어 다이제스트와 같은 산식으로 계산하고, 진행 중인 기간은 부르는 시각을 기준으로 한다 | 승인 |
 | [0226](0226-new-and-lost-interests-are-neighbouring-periods-crossing-one-threshold-on-the-interest-value.md) | 새로 생긴 관심 · 사라진 관심은 관심 값이 기준값 이상인지를 이웃 기간끼리 견주어 정한다 | 승인 |
 | [0227](0227-the-interest-history-shows-subtopic-interest-and-the-users-own-topic-subscription-changes-only.md) | 관심사 히스토리는 주제 중분류의 관심과 사용자가 직접 바꾼 주제 구독만 보인다 | 승인 |
-| [0228](0228-consumer-queries-scoped-by-a-user-argument-may-be-called-on-screen-paths-with-the-session-user.md) | 사용자를 인자로 받는 소비자 조회는 화면 경로에서 세션 사용자로 부를 수 있다 | 승인 |
+| [0228](0228-consumer-queries-scoped-by-a-user-argument-may-be-called-on-screen-paths-with-the-session-user.md) | 사용자를 인자로 받는 소비자 조회는 화면 경로에서 세션 사용자로 부를 수 있다 | 승인 (부분 대체: 0248) |
 | [0229](0229-interest-history-periods-are-monday-weeks-and-calendar-months-in-the-users-zone-and-the-query-takes-a-span-or-reference-times.md) | 관심사 히스토리의 기간은 관심 설정 시간대의 월요일 시작 주 · 1일 시작 월이고, 공개 조회는 정해 둔 기간 또는 부르는 쪽의 기준 시각 목록을 받는다 | 승인 |
 | [0230](0230-scheduled-digests-are-made-after-the-generation-time-and-a-period-runs-from-the-last-ready-or-empty-end-to-that-time.md) | 일정 다이제스트는 생성 시각이 지난 뒤 만들고, 기간은 직전 READY · EMPTY 의 끝부터 생성 시각까지다 | 승인 |
 | [0231](0231-manual-generation-remakes-todays-digest-with-its-period-or-makes-a-new-one-and-counts-manual-rows-of-the-users-day.md) | 수동 생성은 오늘 다이제스트를 같은 기간으로 다시 만들거나 새로 만들고, 하루 횟수는 사용자 시간대의 오늘 만든 수동 행으로 센다 | 승인 |
@@ -250,6 +250,11 @@
 | [0242](0242-the-storyline-subscription-list-lives-on-the-key-gated-storyline-screen.md) | 내 스토리라인 구독 목록은 키가 있어야 가는 스토리라인 화면에 둔다 | 승인 |
 | [0243](0243-the-subscription-history-on-the-subscription-screen-shows-only-the-users-own-subscribe-and-unsubscribe.md) | 내 구독 화면의 구독 이력은 사용자가 직접 한 구독 · 해제만 보인다 | 승인 |
 | [0244](0244-the-storyline-subscription-history-handler-is-opened-by-user-without-a-key-and-reads-recent-pages-in-the-module.md) | 스토리라인 구독 이력의 화면 처리기는 `user` 가 키 없이 열고, 소비자 조회 대신 같은 모듈의 유스케이스가 최근부터 쪽으로 읽는다 | 승인 |
+| [0245](0245-a-topic-suggestion-is-made-when-the-current-interest-of-an-unsubscribed-subtopic-reaches-its-own-threshold.md) | 구독 제안은 구독하지 않은 활성 중분류의 지금 관심이 "관심 있음" 기준과 따로 둔 제안 기준 이상일 때 낸다 | 승인 |
+| [0246](0246-a-declined-topic-suggestion-returns-only-after-a-period-and-a-higher-interest-and-a-decline-is-not-an-interest-signal.md) | 거절한 구독 제안은 기간이 지나고 거절 때보다 관심이 커져야 다시 내고, 거절은 관심 신호가 아니다 | 승인 |
+| [0247](0247-topic-suggestion-declines-are-kept-by-user-with-the-recorded-version-and-digest-answers-the-interest-at-decline-through-an-interface-declared-by-user.md) | 구독 제안의 거절은 `user` 가 기록 당시 버전과 함께 갖고, 거절 때 관심은 `user` 가 선언한 공급 인터페이스로 `digest` 가 답한다 | 승인 |
+| [0248](0248-the-digest-interests-and-topic-suggestion-queries-may-be-called-on-screen-paths-with-the-session-user.md) | 다이제스트가 읽는 관심 설정과 구독 제안의 조회는 화면 경로에서 세션 사용자로 부를 수 있다 | 승인 |
+| [0249](0249-topic-suggestions-show-as-a-card-on-the-digest-home-and-accepting-uses-the-tag-preference-save.md) | 구독 제안은 다이제스트 홈에 카드로 보이고 수락은 태그 선호 저장을 쓴다 | 승인 |
 
 ## 운영 규칙
 

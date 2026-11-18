@@ -22,7 +22,7 @@ import net.yozmnews.user.TopicSubscriptionChange;
  * <li>주제 · 스토리라인 구독 변경은 창 안 행</li>
  * </ul>
  * 창 끝은 다이제스트가 부르는 시각(기간 끝 뒤의 노출 · 반응 · 구독 변경도 무게 1 로 센다), 관심사 히스토리가 기준 시각이다(기준 시각 뒤 신호를 넣지
- * 않는다). 창 끝이 창 시작 이하이면 빈 창이다.
+ * 않는다). 구독 제안은 기준 시각과 창 끝이 모두 부르는 시각이다. 창 끝이 창 시작 이하이면 빈 창이다.
  */
 public final class InterestWindow {
 

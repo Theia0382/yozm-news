@@ -34,7 +34,7 @@ public final class InterestFormula {
 	 * 가중치 — {@link #levels} 의 관심을 {@link InterestLevels#weights} 로 옮긴 것
 	 * @param exposed 노출 기사 — 기사마다 하나
 	 * @param signals 구독 변경 신호
-	 * @param reference 기준 시각 — 다이제스트는 기간 끝, 관심사 히스토리는 기간의 기준 시각
+	 * @param reference 기준 시각 — 다이제스트는 기간 끝, 관심사 히스토리는 기간의 기준 시각, 구독 제안은 부르는 시각
 	 */
 	public static TopicInterests interests(Collection<ExposedArticle> exposed, Collection<SubscriptionSignal> signals,
 			Instant reference) {
@@ -45,7 +45,7 @@ public final class InterestFormula {
 	 * 관심 x — 노출 또는 구독 신호가 있는 중분류마다
 	 * @param exposed 노출 기사 — 기사마다 하나
 	 * @param signals 구독 변경 신호
-	 * @param reference 기준 시각 — 다이제스트는 기간 끝, 관심사 히스토리는 기간의 기준 시각
+	 * @param reference 기준 시각 — 다이제스트는 기간 끝, 관심사 히스토리는 기간의 기준 시각, 구독 제안은 부르는 시각
 	 */
 	public static InterestLevels levels(Collection<ExposedArticle> exposed, Collection<SubscriptionSignal> signals,
 			Instant reference) {

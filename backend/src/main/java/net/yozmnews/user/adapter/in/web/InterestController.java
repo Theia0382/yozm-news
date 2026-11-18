@@ -19,20 +19,23 @@ import net.yozmnews.user.application.ExcludedSources;
 import net.yozmnews.user.application.ModelSelection;
 import net.yozmnews.user.application.TagPreferences;
 import net.yozmnews.user.application.TagPreferences.UnknownTagKeysException;
+import net.yozmnews.user.application.TopicSuggestionDeclining;
+import net.yozmnews.user.application.TopicSuggestionDeclining.UnknownTopicException;
 import net.yozmnews.user.domain.interest.DigestVolume;
 import net.yozmnews.user.domain.interest.ReportSettings;
 import net.yozmnews.user.domain.preference.PreferenceSet;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
- * 관심 설정 — 태그 선호 · 제외 소스 · 일정 · 관심사 · 리포트 · 모델 · 추론 강도 · 다이제스트 분량의 조회 · 저장. docs/specs/user.md §3 ·
- * user-R46 · user-R49 ~ user-R51 · user-R56 · user-R59
+ * 관심 설정 — 태그 선호 · 제외 소스 · 일정 · 관심사 · 리포트 · 모델 · 추론 강도 · 다이제스트 분량의 조회 · 저장과 구독 제안 거절.
+ * docs/specs/user.md §3 · user-R46 · user-R49 ~ user-R51 · user-R56 · user-R59 · user-R64
  * <p>
  * 모두 세션 사용자의 것이고 키 없이도 연다 — 관심 설정은 내용을 내지 않는다(user-R5).
  */
@@ -52,21 +55,27 @@ class InterestController {
 
 	private final DigestVolumeSettings volumeSettings;
 
+	private final TopicSuggestionDeclining suggestionDeclining;
+
 	private final InstantSource clock;
 
 	@Autowired
 	InterestController(TagPreferences tagPreferences, ExcludedSources excludedSources, DigestSettings digestSettings,
-			ModelSelection modelSelection, DigestVolumeSettings volumeSettings) {
-		this(tagPreferences, excludedSources, digestSettings, modelSelection, volumeSettings, InstantSource.system());
+			ModelSelection modelSelection, DigestVolumeSettings volumeSettings,
+			TopicSuggestionDeclining suggestionDeclining) {
+		this(tagPreferences, excludedSources, digestSettings, modelSelection, volumeSettings, suggestionDeclining,
+				InstantSource.system());
 	}
 
 	InterestController(TagPreferences tagPreferences, ExcludedSources excludedSources, DigestSettings digestSettings,
-			ModelSelection modelSelection, DigestVolumeSettings volumeSettings, InstantSource clock) {
+			ModelSelection modelSelection, DigestVolumeSettings volumeSettings,
+			TopicSuggestionDeclining suggestionDeclining, InstantSource clock) {
 		this.tagPreferences = Objects.requireNonNull(tagPreferences, "tagPreferences");
 		this.excludedSources = Objects.requireNonNull(excludedSources, "excludedSources");
 		this.digestSettings = Objects.requireNonNull(digestSettings, "digestSettings");
 		this.modelSelection = Objects.requireNonNull(modelSelection, "modelSelection");
 		this.volumeSettings = Objects.requireNonNull(volumeSettings, "volumeSettings");
+		this.suggestionDeclining = Objects.requireNonNull(suggestionDeclining, "suggestionDeclining");
 		this.clock = Objects.requireNonNull(clock, "clock");
 	}
 
@@ -171,6 +180,23 @@ class InterestController {
 	@PutMapping("/api/interests/effort")
 	InterestModelResponse saveEffort(UserId user, @Valid @RequestBody InterestEffortRequest body) {
 		return InterestModelResponse.of(this.modelSelection.saveEffort(user, body.effort(), now()));
+	}
+
+	/** 구독 제안 거절 — 그 버전의 주제 중분류 키가 아니면 400. 거절 때의 관심과 함께 적고 관심 신호를 남기지 않는다 */
+	@AllowedWithoutLlmKey(reason = OPEN_WITHOUT_KEY)
+	@PostMapping("/api/interests/declined-suggestions")
+	TopicSuggestionDeclineResponse declineSuggestion(UserId user,
+			@Valid @RequestBody TopicSuggestionDeclineRequest body) {
+		if (body.tagSetId() < 1) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "체계 버전 ID 는 1 이상이다");
+		}
+		try {
+			return TopicSuggestionDeclineResponse
+				.of(this.suggestionDeclining.decline(user, new TagSetId(body.tagSetId()), body.topic(), now()));
+		}
+		catch (UnknownTopicException ex) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "체계의 주제 중분류 키가 아니다", ex);
+		}
 	}
 
 	private Instant now() {

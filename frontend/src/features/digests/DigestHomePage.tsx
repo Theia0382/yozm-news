@@ -9,6 +9,7 @@ import {
   useRequestDigest,
 } from "@/features/digests/digestQueries";
 import { DigestDayView } from "@/features/digests/DigestDayView";
+import { TopicSuggestionCard } from "@/features/digests/TopicSuggestionCard";
 import {
   BUSY_TEXT,
   DIGEST_DATES_TITLE,
@@ -53,7 +54,8 @@ import { NARROW_WIDTH, PAGE_FRAME } from "@/shared/ui/widths";
 
 /**
  * 홈 — 가장 늦은 날짜의 다이제스트와 수동 생성(docs/specs/reader.md reader-R9 · R11). 그 날짜가 오늘이 아니면 서버가 정한 오늘 일정 생성
- * 시각으로 오늘 다이제스트를 언제 만드는지 알리고(ADR-0237), 구독한 주제가 없으면 관심 설정으로 안내한다(docs/specs/user.md user-R43).
+ * 시각으로 오늘 다이제스트를 언제 만드는지 알리고(ADR-0237), 구독한 주제가 없으면 관심 설정으로 안내한다(docs/specs/user.md user-R43). 구독
+ * 제안이 있으면 그 아래에 권한다(reader-R12).
  */
 export function DigestHomePage() {
   const home = useDigestHome();
@@ -78,6 +80,7 @@ export function DigestHomePage() {
           </Link>
         </p>
       )}
+      <TopicSuggestionCard />
       {home.isPending && <p className="text-muted-foreground">불러오는 중…</p>}
       {home.isError && <p role="alert">{LOAD_FAILED}</p>}
       {home.data && (
