@@ -15,6 +15,7 @@ import net.yozmnews.article.ArticleDirectory;
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.digest.domain.candidate.DigestCandidate;
 import net.yozmnews.digest.domain.digest.DigestPeriod;
+import net.yozmnews.digest.domain.interest.TopicInterests;
 import net.yozmnews.digest.domain.selection.ActiveEvaluation;
 import net.yozmnews.digest.domain.selection.ArticleFacts;
 import net.yozmnews.digest.domain.selection.BigSlotPicker;
@@ -118,7 +119,7 @@ public class CandidateSelection {
 			return Optional.empty();
 		}
 		UserFilter filter = UserFilter.of(interests);
-		List<ArticleFacts> ranked = SubscriptionFilter.select(facts.get(), filter, from);
+		List<ArticleFacts> ranked = SubscriptionFilter.select(facts.get(), filter, from, TopicInterests.NEUTRAL_ALL);
 		Map<ArticleId, EventId> eventOf = ranked.isEmpty() ? Map.of()
 				: this.events.eventsOf(ranked.stream().map(ArticleFacts::id).toList());
 		Map<EventId, List<ArticleId>> groups = EventDedup.groups(ranked, eventOf);
@@ -131,7 +132,8 @@ public class CandidateSelection {
 				interests.maxCandidates());
 		int budget = CandidateCost.candidateBudget(model.inputTokenBudget(), interests.interestTextLength(),
 				interests.topics().size(), interests.excludedRegions().size());
-		return Optional.of(CandidateSelector.candidates(shortlist, tokens(shortlist), budget));
+		return Optional.of(CandidateSelector.candidates(shortlist, shortlist, TopicInterests.NEUTRAL_ALL,
+				tokens(shortlist), budget));
 	}
 
 	/**
@@ -223,9 +225,7 @@ public class CandidateSelection {
 			if (publishedAt == null || articleSources == null) {
 				continue;
 			}
-			facts.add(new ArticleFacts(evaluation.id(), evaluation.subtopics(), evaluation.regions(),
-					evaluation.formats(), evaluation.topicStatus(), evaluation.importance(), articleSources,
-					publishedAt));
+			facts.add(ArticleFacts.of(evaluation, articleSources, publishedAt, false));
 		}
 		return Optional.of(facts);
 	}
