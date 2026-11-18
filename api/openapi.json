@@ -4212,6 +4212,54 @@
         "tags" : [ "interest-history-controller" ]
       }
     },
+    "/api/interests/declined-suggestions" : {
+      "post" : {
+        "operationId" : "declineSuggestion",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/TopicSuggestionDeclineRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TopicSuggestionDeclineResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "세션이 없거나 만료됐다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청 보호 토큰이 없거나 맞지 않는다 · 비밀번호를 바꿔야 한다"
+          }
+        },
+        "tags" : [ "interest-controller" ]
+      }
+    },
     "/api/interests/effort" : {
       "put" : {
         "operationId" : "saveEffort",
@@ -11134,6 +11182,37 @@
           }
         },
         "required" : [ "action", "at", "topics" ]
+      },
+      "TopicSuggestionDeclineRequest" : {
+        "type" : "object",
+        "properties" : {
+          "tagSetId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "topic" : {
+            "type" : "string",
+            "minLength" : 1
+          }
+        },
+        "required" : [ "tagSetId", "topic" ]
+      },
+      "TopicSuggestionDeclineResponse" : {
+        "type" : "object",
+        "properties" : {
+          "activeTagSetId" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int64"
+          },
+          "result" : {
+            "type" : "string",
+            "enum" : [ "DECLINED", "TAG_SET_CHANGED" ]
+          },
+          "topic" : {
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "activeTagSetId", "result", "topic" ]
       },
       "UnlinkedEventsResponse" : {
         "type" : "object",

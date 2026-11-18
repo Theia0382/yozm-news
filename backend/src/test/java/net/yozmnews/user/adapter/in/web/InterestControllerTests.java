@@ -1,7 +1,9 @@
 package net.yozmnews.user.adapter.in.web;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -28,11 +30,11 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 /**
- * 관심 설정 처리기 — 응답 모양, 판정 결과(저장 · 체계 버전이 바뀜 · 받지 않는 시간대 · 관심사가 김 · 키 없는 공급자 · 허용 목록에 없는 모델), 형식
- * 400, 키 없는 사용자도 쓴다(user-R5). 로그인 시험 도우미가 만든 계정은 설정 행이 없어 첫 요청이 기본값을 만든다. 실제 PostgreSQL 과 기본 체계 ·
- * 기본 허용 모델 목록으로 본다.
+ * 관심 설정 처리기 — 응답 모양, 판정 결과(저장 · 체계 버전이 바뀜 · 받지 않는 시간대 · 관심사가 김 · 키 없는 공급자 · 허용 목록에 없는 모델 ·
+ * 구독 제안 거절), 형식 400, 키 없는 사용자도 쓴다(user-R5). 로그인 시험 도우미가 만든 계정은 설정 행이 없어 첫 요청이 기본값을
+ * 만든다. 실제 PostgreSQL 과 기본 체계 · 기본 허용 모델 목록으로 본다.
  * <p>
- * 지키는 규칙: user-R5 · user-R46 · user-R49 ~ user-R51
+ * 지키는 규칙: user-R5 · user-R46 · user-R49 ~ user-R51 · user-R64
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -304,6 +306,36 @@ class InterestControllerTests {
 		this.mockMvc.perform(json(put("/api/interests/sources").with(this.user), """
 				{"excluded":[0]}"""))
 			.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void decliningASuggestionWritesItOrSaysTheTagSetChangedOrRejectsANonSubtopic() throws Exception {
+		long tagSet = this.tagSets.activeTagSet().id().value();
+
+		this.mockMvc.perform(json(post("/api/interests/declined-suggestions").with(this.user), """
+				{"tagSetId":%d,"topic":"economy.markets"}""".formatted(tagSet)))
+			.andExpect(status().isOk())
+			.andExpect(content().json("""
+					{"result":"DECLINED","topic":"economy.markets","activeTagSetId":null}""",
+					JsonCompareMode.STRICT));
+		assertThat(this.jdbc.sql("""
+				select tag_set_id, topic_key, interest_level from user_topic_suggestion_declines
+				""").query((rs, n) -> rs.getLong(1) + " " + rs.getString(2) + " " + rs.getDouble(3)).list())
+			.as("신호가 없는 사용자의 거절 때 관심은 0")
+			.containsExactly(tagSet + " economy.markets 0.0");
+		this.mockMvc.perform(json(post("/api/interests/declined-suggestions").with(this.user), """
+				{"tagSetId":%d,"topic":"economy.markets"}""".formatted(tagSet + 1000)))
+			.andExpect(status().isOk())
+			.andExpect(content().json("""
+					{"result":"TAG_SET_CHANGED","topic":null,"activeTagSetId":%d}""".formatted(tagSet),
+					JsonCompareMode.STRICT));
+		for (String body : new String[] { "{\"tagSetId\":%d,\"topic\":\"economy\"}".formatted(tagSet),
+				"{\"tagSetId\":%d,\"topic\":\"sports.nowhere\"}".formatted(tagSet),
+				"{\"tagSetId\":0,\"topic\":\"economy.markets\"}", "{\"tagSetId\":%d,\"topic\":\" \"}".formatted(tagSet),
+				"{\"tagSetId\":%d}".formatted(tagSet) }) {
+			this.mockMvc.perform(json(post("/api/interests/declined-suggestions").with(this.user), body))
+				.andExpect(status().isBadRequest());
+		}
 	}
 
 	private static String settings(String timezone, String time, String interestText) {
