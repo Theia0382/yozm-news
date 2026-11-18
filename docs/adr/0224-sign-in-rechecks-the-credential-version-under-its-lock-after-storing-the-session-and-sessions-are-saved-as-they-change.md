@@ -1,6 +1,6 @@
 # ADR-0224: 로그인은 세션을 저장한 뒤 자격 행을 잠가 대조한 자격의 버전을 다시 확인하고, 세션 저장소는 세션 변경을 곧바로 저장한다
 
-- 상태: 제안
+- 상태: 승인
 - 날짜: 2026-11-18
 - 근거: [이슈 #195](https://github.com/Theia0382/yozm-news/issues/195) — 로그인의 대조를 붙잡아 복구 재설정 · 초기 비밀번호 다시 정하기와 겹친 시험으로 옛 비밀번호의 세션이 남는 것을 재현하고, Spring Session 의 저장 시점(기본은 요청 끝)을 라이브러리 원문으로 확인해 구현
 - 관련: [ADR-0126](0126-user-paths-authenticate-with-a-jdbc-session-holding-only-the-user-id-and-cookie-csrf-reading-the-account-per-request.md)(세션에는 사용자 ID 만 담는다 — 그대로), [ADR-0143](0143-operators-reset-the-initial-password-only-of-accounts-before-their-first-sign-in-and-end-their-sessions.md)(초기 비밀번호 다시 정하기가 세션을 지운다 — 그대로), [ADR-0144](0144-recovery-code-failures-are-delayed-on-the-sign-in-schedule-in-a-separate-record-and-current-password-checks-share-the-sign-in-record.md)(현재 비밀번호 확인이 로그인 실패 기록을 쓴다 — 그대로)
