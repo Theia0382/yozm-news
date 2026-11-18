@@ -61,12 +61,12 @@
    ORDER BY 중요도 × (low_confidence 면 0.7) × 관심도 가중치 DESC (중요도 없음은 맨 뒤), 발행 시각 DESC, 기사 ID
    ```
 
-   기간에 넣는 시각은 첫 평가 시각이다 — 생성 직전에 수집 · 평가된 기사도 다음 다이제스트에 든다. 발행 시각 하한은 소스를 새로 켰을 때 오래된 기사가 한꺼번에 들어오는 것을 막는다([ADR-0207](adr/0207-digest-candidates-enter-a-period-by-first-evaluation-time-with-a-published-time-floor.md)). 소스가 여럿인 기사는 제외하지 않은 소스도 그 기사를 냈으므로 모든 소스가 제외일 때만 뺀다. 관심도 가중치는 기사의 주제에 대한 그 사용자의 관심도(§7)에서 나온다. **(미구현)** 관심도는 아직 계산하지 않아 중립(1)이다 — 그래서 지금 순서는 중요도 순서다. **(미구현)** 사용자가 싫어요를 누른 기사는 뺀다.
-2. **큰 슬롯** — 기간 안의 큰 스토리라인(§9 큰 판정)을 큰 판정 목록의 순서로 사용자의 큰 슬롯 수(기본 3, 0 ~ 10 — 0 이면 넣지 않는다)만큼 구독과 무관하게 넣는다([ADR-0103](adr/0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md)). 스토리라인마다 기간 안 사건을 기간 안 중요도 합 순으로 10 개까지, 사건마다 그 기간 안 기사 가운데 평가가 있고 사용자의 제외를 지나는 기사의 대표(§8) 하나를 넣는다. 대표를 내지 못한 스토리라인은 세지 않고, 앞 스토리라인이 쓴 사건은 다시 넣지 않는다([ADR-0208](adr/0208-the-big-slot-takes-the-representatives-of-the-heaviest-events-of-each-big-storyline-row.md)). 큰 슬롯 기사는 최대 후보 수의 절반을 넘지 않는다 — 넘으면 스토리라인마다 고르게 줄인다([ADR-0209](adr/0209-maximum-candidates-and-big-slots-are-user-settings-and-the-big-slot-takes-at-most-half.md)). 포함의 상위와 하위가 함께 크면 큰 판정 목록이 둘을 각각 내어 한 포함 나무가 슬롯 둘을 쓸 수 있다. **(미구현)** 사용자가 싫어요를 누른 기사는 여기서도 뺀다.
+   기간에 넣는 시각은 첫 평가 시각이다 — 생성 직전에 수집 · 평가된 기사도 다음 다이제스트에 든다. 발행 시각 하한은 소스를 새로 켰을 때 오래된 기사가 한꺼번에 들어오는 것을 막는다([ADR-0207](adr/0207-digest-candidates-enter-a-period-by-first-evaluation-time-with-a-published-time-floor.md)). 소스가 여럿인 기사는 제외하지 않은 소스도 그 기사를 냈으므로 모든 소스가 제외일 때만 뺀다. 관심도 가중치는 기사의 주제 중분류마다 그 사용자의 관심도(§7)의 평균이다 — 신호가 없으면 1 이라 순서는 중요도 순서다. 사용자가 지금 싫어요를 누른 기사는 뺀다 — 사건의 대표를 고르기 전에 빠져 같은 사건의 다른 기사가 대표가 된다.
+2. **큰 슬롯** — 기간 안의 큰 스토리라인(§9 큰 판정)을 큰 판정 목록의 순서로 사용자의 큰 슬롯 수(기본 3, 0 ~ 10 — 0 이면 넣지 않는다)만큼 구독과 무관하게 넣는다([ADR-0103](adr/0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md)). 스토리라인마다 기간 안 사건을 기간 안 중요도 합 순으로 10 개까지, 사건마다 그 기간 안 기사 가운데 평가가 있고 사용자의 제외를 지나는 기사의 대표(§8) 하나를 넣는다. 대표를 내지 못한 스토리라인은 세지 않고, 앞 스토리라인이 쓴 사건은 다시 넣지 않는다([ADR-0208](adr/0208-the-big-slot-takes-the-representatives-of-the-heaviest-events-of-each-big-storyline-row.md)). 큰 슬롯 기사는 최대 후보 수의 절반을 넘지 않는다 — 넘으면 스토리라인마다 고르게 줄인다([ADR-0209](adr/0209-maximum-candidates-and-big-slots-are-user-settings-and-the-big-slot-takes-at-most-half.md)). 포함의 상위와 하위가 함께 크면 큰 판정 목록이 둘을 각각 내어 한 포함 나무가 슬롯 둘을 쓸 수 있다. 사용자가 싫어요를 누른 기사는 여기서도 대표가 되지 못한다.
 3. **사건 단위 중복 제거** — 같은 사건(§8)에 속한 구독 후보는 그 사건 후보 가운데 대표 기사(§8) 하나만 남기고 자리는 그 사건 후보 가운데 가장 앞 순위다. 큰 슬롯이 쓴 사건의 구독 후보는 뺀다. 아직 사건에 배정되지 않은 기사는 그대로 둔다.
 4. **다양성 상한** — 주제 하나가 후보를 독식하지 않도록 구독 행(사용자가 고른 대분류 · 중분류 하나)마다 몫(남은 자리 ÷ 후보가 있는 구독 행 수, 올림)까지 순위대로 먼저 담고, 남은 자리를 순위대로 채운다. 여러 주제에 걸친 기사는 한 행의 몫만 쓴다.
 5. **상한** — 최대 후보 수(사용자 설정 — 적게 30 · 보통 60 · 많이 90 · 직접 입력 10 ~ 150, 기본 보통)까지 큰 슬롯이 먼저, 남은 자리를 구독 후보가 쓴다([ADR-0209](adr/0209-maximum-candidates-and-big-slots-are-user-settings-and-the-big-slot-takes-at-most-half.md)). 그다음 모델별 입력 토큰 예산으로 자른다 — 후보마다 토큰을 어림해 넘으면 구독 후보의 꼬리부터, 그래도 넘으면 큰 슬롯의 꼬리부터 뺀다. 프롬프트 구성은 같은 어림 규칙을 따른다([ADR-0210](adr/0210-candidate-selection-cuts-to-the-input-token-budget-with-one-estimate-the-prompt-follows.md)).
-6. **선정 이유** — 큰 슬롯으로 들어왔으면 큰 스토리라인(`MAJOR_STORYLINE` — 화면 이름은 화면을 만들 때 정한다), 그 밖은 구독 주제(`SUBSCRIBED`)다. **(미구현)** 관심도 가중치가 중립보다 커서 순위가 오른 기사는 "관심도"(`INTEREST`)다. 다이제스트가 인용한 기사에 이유를 남기고 화면에 보여 준다. 후보는 큰 슬롯 기사 다음 구독 후보의 순서로 생성에 넘긴다.
+6. **선정 이유** — 큰 슬롯으로 들어왔으면 큰 스토리라인(`MAJOR_STORYLINE` — 화면 이름은 화면을 만들 때 정한다), 그 밖은 구독 주제(`SUBSCRIBED`)다. 같은 재료를 관심도 없이(가중치 모두 1) 고른 결과에 없고 관심도 가중치가 1 보다 커서 관심도로 들어온 구독 후보는 "관심도"(`INTEREST`)다([ADR-0216](adr/0216-the-interest-selection-reason-marks-subscribed-candidates-that-enter-only-by-interest-with-a-weight-above-neutral.md)). 다이제스트가 인용한 기사에 이유를 남기고 화면에 보여 준다. 후보는 큰 슬롯 기사 다음 구독 후보의 순서로 생성에 넘긴다.
 
 ### 프롬프트 구성
 
@@ -115,10 +115,11 @@
 - **관심 신호는 두 가지다.** 기사 좋아요 / 싫어요 / 없음(`feedback`), 주제와 스토리라인의 구독 변경(`user`). 클릭 · 열람은 추적하지 않는다([security.md](security.md)).
 - 신호는 각 모듈이 추가 전용 이벤트로 기록하고, 현재 상태는 그 투영이다. 피드백을 "없음"으로 되돌리는 것도 이벤트로 남는다. 피드백은 그 사용자의 다이제스트가 인용한 기사에만 받고, 어느 다이제스트에서 눌렀는지도 남긴다. 운영자가 지운 기사의 피드백은 현재 상태와 이력을 함께 지운다([feedback Spec](specs/feedback.md#5-규칙과-불변식) feedback-R2 · R5).
 - 싫어요를 누른 기사는 후보에서 뺀다(§6).
-- **관심도**: 사용자 × 주제 × 기간마다 계산한다.
-  - 입력은 그 주제 태그(태그 기준 이상, 대분류는 하위로 펼침)가 붙은 기사의 좋아요 · 싫어요와 노출 수(다이제스트가 인용한 기사), 그 주제의 구독 변경이다. **(미설계)** 스토리라인 구독이 주제별 관심도에 들어가는 방법은 스토리라인의 주제를 정하는 법([미결 사항](open-questions.md))과 함께 정한다 — 스토리라인에 태그를 저장하지 않고 쓸 때 구성 기사의 태그로 모으는 방식부터 본다.
-  - 신호를 노출 수로 나눠 정규화하고, 최근 신호에 더 큰 가중치를 준다. 신호가 없으면 중립이다.
-  - 조회할 때 계산한다. 산식은 노출 기록을 가진 `digest` 의 `domain` 한 곳에 두고, 감쇠 · 가중치 값은 운영하면서 정한다.
+- **관심도**: 사용자 × 주제 중분류 × 기준 시각(다이제스트 기간 끝)마다 계산한다. 산식 · 상수 · 노출 정의의 정본은 [digest Spec "관심도"](specs/digest.md#관심도)(digest-R23 ~ R25)이고, 판단의 이유는 [ADR-0222](adr/0222-interest-per-subtopic-is-smoothed-reactions-over-exposures-with-a-half-life-and-exposures-are-all-ready-citations.md) · [ADR-0214](adr/0214-a-storyline-subscription-enters-topic-interest-by-the-topic-shares-of-its-event-representatives.md) · [ADR-0215](adr/0215-interests-are-not-stored-entities-and-are-computed-from-signal-history-at-query-time.md)에 있다.
+  - 입력은 그 주제 태그(태그 기준 이상, 대분류는 하위로 펼침)가 붙은 기사의 좋아요 · 싫어요와 노출 수(그 사용자의 다이제스트가 인용한 기사 — 같은 날짜의 덮인 다이제스트도 센다), 그 주제의 구독 변경과 스토리라인 구독 변경이다. 구독 변경은 원인이 사용자인 것만 센다.
+  - 스토리라인은 주제를 저장하지 않는다. 스토리라인 구독 변경은 지금 그 스토리라인의 닫은 사건마다 대표 기사 하나의 주제로 몫(그 주제가 붙은 대표 수 ÷ 대표 수)을 세어 그만큼 나눠 더한다.
+  - 반응을 노출 수에 가상의 노출을 더한 값으로 나눠 정규화하고, 반감기로 감쇠해 최근 신호에 더 큰 가중치를 준다. 가중치는 0.5 ~ 1.5 이고 신호가 없으면 중립(1)이다. 감쇠 · 가중치 값은 운영하면서 정한다([미결 사항](open-questions.md) 24).
+  - 조회할 때 계산하고 저장하지 않는다 — 관심사를 개체로 세우지 않는다. 산식은 노출 기록을 가진 `digest` 의 `domain` 한 곳에 둔다.
 - **관심사 히스토리**: 기간별 주제 관심도, 새로 생긴 관심과 사라진 관심, 대분류에서 중분류로 넓어진 흐름을 보여 준다. 주제는 태그 키 계보(§5)를 따라 이어진다.
 - **구독 제안**: 구독하지 않은 주제의 관심도가 기준을 넘으면(주로 큰 슬롯에서 받은 좋아요) 그 주제의 구독을 화면에서 제안한다. 구독 여부는 사용자가 정한다. 기준은 운영하면서 정한다.
 
