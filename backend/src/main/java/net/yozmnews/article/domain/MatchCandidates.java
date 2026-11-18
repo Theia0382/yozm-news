@@ -39,9 +39,11 @@ public record MatchCandidates(@Nullable ArticleId byArticleUrl, @Nullable Articl
 
 	/**
 	 * 제목으로 찾은 후보.
+	 * @param publishedAtEstimated 그 기사의 발행 시각을 추정했는지 — 기사의 처음 값
 	 * @param seenInFeed 항목을 받은 피드에 이 기사의 엔트리가 이미 있는지
 	 */
-	public record TitleCandidate(ArticleId articleId, Instant publishedAt, boolean seenInFeed) {
+	public record TitleCandidate(ArticleId articleId, Instant publishedAt, boolean publishedAtEstimated,
+			boolean seenInFeed) {
 
 		public TitleCandidate {
 			Objects.requireNonNull(articleId, "articleId");
