@@ -7,6 +7,7 @@ import net.yozmnews.feedback.FeedbackScopeTests;
 import net.yozmnews.reader.DigestScreenScopeTests;
 import net.yozmnews.reader.InterestHistoryScopeTests;
 import net.yozmnews.reader.StorylineScreenScopeTests;
+import net.yozmnews.reader.TopicSuggestionScopeTests;
 import net.yozmnews.user.AccountScopeTests;
 import net.yozmnews.user.InterestScopeTests;
 import net.yozmnews.user.NoticeScopeTests;
@@ -52,6 +53,7 @@ public final class UserScopedEndpoints {
 			Map.entry("GET /api/storylines/{id}", StorylineScreenScopeTests.class),
 			Map.entry("GET /api/storyline-cards", StorylineScreenScopeTests.class),
 			Map.entry("GET /api/interest-history", InterestHistoryScopeTests.class),
+			Map.entry("GET /api/topic-suggestions", TopicSuggestionScopeTests.class),
 			Map.entry("GET /api/digests/latest", DigestScreenScopeTests.class),
 			Map.entry("GET /api/digests/{date}", DigestScreenScopeTests.class),
 			Map.entry("GET /api/digests", DigestScreenScopeTests.class),
