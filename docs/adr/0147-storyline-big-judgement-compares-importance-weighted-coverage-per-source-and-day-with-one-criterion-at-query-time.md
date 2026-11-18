@@ -1,6 +1,6 @@
 # ADR-0147: 큰 판정은 기간에 기사가 있는 소스 수와 일수로 나눈 중요도 가중 보도량이 기준 이상인지를 조회할 때 판정한다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 상위와 하위를 둘 다 낸다는 결정([ADR-0235](0235-the-big-list-has-one-row-per-containment-tree-carrying-the-big-storylines-under-it.md))
 - 날짜: 2026-11-14
 - 근거: [이슈 #137](https://github.com/Theia0382/yozm-news/issues/137) — 고정 덤프의 스토리라인 평가 세트에서 식의 후보들을 스토리라인 × 날짜의 큰 표시와 견주어 리드와 정함
 - 관련: [ADR-0116](0116-storyline-big-judgement-starts-with-a-provisional-rule-of-distinct-sources-and-mean-importance-judged-at-query-time.md)(큰 판정의 식과 순서 — 부분 대체), [ADR-0118](0118-big-judgement-criteria-are-storyline-operator-settings-and-do-not-inherit-event-criteria-values-or-history.md)(기준의 범위 — 부분 대체), [ADR-0117](0117-big-judgement-materials-are-tallied-by-event-per-group-of-events-and-storyline-passes-only-event-ids.md)(기간 집계의 재료 — 보충), [ADR-0103](0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md)(중요도 세분화 — 보충), [ADR-0131](0131-storyline-relations-are-explicit-links-with-containment-as-a-single-parent-tree-gathered-at-query-time.md)(상위와 하위를 함께 낸다 — 보충), [ADR-0110](0110-storyline-evaluation-labels-system-events-of-a-fixed-dump-and-measures-overlapping-clusters-from-random-seed-events.md)(큰 판정을 스토리라인 × 날짜로 잰다), [ADR-0148](0148-storyline-coverage-is-the-article-count-in-the-period-over-the-closed-event-set.md)(보도량)
@@ -22,6 +22,7 @@
 - **기준은 값 하나다.** 0 보다 크고 소수 둘째 자리까지인 운영자 설정이다. 처음 값은 평가 세트로 정한 측정 전 목표다.
 - **판정은 나누지 않고 곱으로 견주고, 보이는 값은 소수 둘째 자리로 반올림한다.** 순서는 보이는 보도 강도 내림차순, 스토리라인 ID 순이다.
 - **조회할 때 지금 기준으로 판정하고 결과를 저장하지 않는다.** [ADR-0116](0116-storyline-big-judgement-starts-with-a-provisional-rule-of-distinct-sources-and-mean-importance-judged-at-query-time.md)의 결정 그대로다.
+> 부분 대체 — [ADR-0235](0235-the-big-list-has-one-row-per-containment-tree-carrying-the-big-storylines-under-it.md). 지금 상태: [storyline Spec storyline-R19](../specs/storyline.md#큰-판정)
 - **상위와 하위는 둘 다 낸다.** [ADR-0131](0131-storyline-relations-are-explicit-links-with-containment-as-a-single-parent-tree-gathered-at-query-time.md)의 결정 그대로다. 상위의 닫은 사건 집합이 하위의 것을 품으므로 하위가 크면 상위도 언제나 크고, 상위의 보도 강도가 하위보다 작지 않다.
 - **큰 여부보다 잘게 나눈 등급을 두지 않는다.** 보도 강도를 큰 스토리라인과 목록의 행에 싣고, 쓰는 쪽이 그 값으로 순서를 정한다.
 - **옛 기준(소스 기준 · 중요도 기준)의 값과 이력은 옮기지 않는다.** 두 기준을 새 값 하나로 옮기는 식이 없다. 판을 올리면 기준은 처음 값으로 시작한다.
