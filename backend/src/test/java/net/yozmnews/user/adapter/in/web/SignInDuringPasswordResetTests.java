@@ -56,8 +56,8 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
  * 지키는 규칙: user-R18 · user-R30 · user-R35
  * <p>
  * 실제 PostgreSQL 위에서 로그인 요청(MockMvc — 세션 저장소 필터 포함)을 보내고, spy 로 순서를 정한다 — 로그인의 Argon2 대조
- * ({@link PasswordHashing})를 재설정이 커밋될 때까지 붙잡거나, 세션을 연 뒤의 다시 확인({@link SignIn#stillCurrent}) 직후에
- * 재설정을 끝까지 돌린다. 세션이 남았는지는 세션 테이블의 사용자 이름 색인으로 센다.
+ * ({@link PasswordHashing})를 재설정이 커밋될 때까지 붙잡거나, 세션을 연 뒤의 다시 확인({@link SignIn#stillCurrent})이 버전을 본
+ * 직후 그 트랜잭션 안에서 재설정을 돌린다. 세션이 남았는지는 세션 테이블의 사용자 이름 색인으로 센다.
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -150,7 +150,9 @@ class SignInDuringPasswordResetTests {
 	void recoveryResetRightAfterTheSignInCheckEndsTheNewSession() throws Exception {
 		UserId user = account("carol@example.com");
 		this.recoveryCodes.replace(user, RecoveryCode.parse(CODE).orElseThrow().digest(), NOW);
-		// 다시 확인이 통과한 직후, 요청이 끝나기 전에 복구 재설정이 끝난다 — 세션이 이미 저장소에 있어야 그 세션 지우기가 지운다
+		// 다시 확인이 버전을 본 직후 복구 재설정을 돌린다. spy 가 트랜잭션 프록시의 안쪽이라 재설정은 다시 확인의 트랜잭션(자격 행 잠금을 쥔
+		// 채)에 합류하고, 그 트랜잭션은 재설정 뒤에 커밋된다. 지키는 것은 재설정의 세션 지우기 때 로그인 세션이 이미 저장소에 있다는 것이다
+		// — 세션 저장 시점을 요청 끝으로 되돌리면 세션이 남는다
 		doAnswer(invocation -> {
 			Object current = invocation.callRealMethod();
 			assertThat(this.recovery.reset("carol@example.com", CODE, NEW_PASSWORD, Instant.now()))
