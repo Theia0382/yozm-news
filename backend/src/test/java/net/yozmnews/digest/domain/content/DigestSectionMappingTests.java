@@ -9,6 +9,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleId;
@@ -71,7 +72,7 @@ class DigestSectionMappingTests {
 	private Digest scheduled() {
 		return this.digests.save(Digest.schedule(new UserId(42), LocalDate.parse("2026-11-16"),
 				new DigestPeriod(Instant.parse("2026-11-14T22:00:00Z"), Instant.parse("2026-11-15T22:00:00Z")),
-				DigestTrigger.SCHEDULED, T0));
+				DigestTrigger.SCHEDULED, UUID.randomUUID(), T0));
 	}
 
 	@Test
@@ -96,6 +97,25 @@ class DigestSectionMappingTests {
 		assertThat(read.durationMs()).contains(2_000L);
 		assertThat(read.startedAt()).contains(T0);
 		assertThat(read.completedAt()).contains(T1);
+	}
+
+	@Test
+	void roundTripsTheDispatchTokenAndItsRedispatch() {
+		UUID first = UUID.fromString("a4d7e2c1-6b39-4f08-8e15-2c9b0d7f3a61");
+		UUID second = UUID.fromString("71f0b8c3-2e5d-4a96-b047-9d3c6e1a5f28");
+		Digest scheduled = this.digests.save(Digest.schedule(new UserId(43), LocalDate.parse("2026-11-16"),
+				new DigestPeriod(Instant.parse("2026-11-14T22:00:00Z"), Instant.parse("2026-11-15T22:00:00Z")),
+				DigestTrigger.SCHEDULED, first, T0));
+
+		Digest read = this.digests.lock(scheduled.id().value()).orElseThrow();
+		assertThat(read.dispatchToken()).isEqualTo(first);
+		assertThat(read.dispatchedAt()).isEqualTo(T0);
+
+		this.digests.save(read.redispatch(second, T1));
+		Digest again = this.digests.lock(scheduled.id().value()).orElseThrow();
+		assertThat(again.dispatchToken()).isEqualTo(second);
+		assertThat(again.dispatchedAt()).isEqualTo(T1);
+		assertThat(again.createdAt()).isEqualTo(T0);
 	}
 
 	@Test

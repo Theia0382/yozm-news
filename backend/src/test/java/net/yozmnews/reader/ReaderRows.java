@@ -138,13 +138,13 @@ public final class ReaderRows {
 			.update();
 	}
 
-	/** 사용자의 READY 다이제스트 하나 — 그 날짜 */
+	/** 사용자의 READY 다이제스트 하나 — 그 날짜, 계기는 수동(일정 다이제스트는 사용자 · 날짜마다 하나다) */
 	public long digest(long user, String date) {
 		return this.jdbc.sql("""
 				insert into digests (user_id, digest_date, period_start, period_end, status, trigger, created_at,
-				    started_at, completed_at, version)
+				    dispatch_token, dispatched_at, started_at, completed_at, version)
 				values (:user, cast(:date as date), cast(:date as date) - interval '1 day', cast(:date as date), 'READY',
-				    'SCHEDULED', now(), now(), now(), 0)
+				    'MANUAL', now(), gen_random_uuid(), now(), now(), now(), 0)
 				returning id
 				""").param("user", user).param("date", date).query(Long.class).single();
 	}

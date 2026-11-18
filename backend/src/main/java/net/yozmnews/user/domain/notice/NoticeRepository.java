@@ -40,6 +40,13 @@ public interface NoticeRepository {
 	 */
 	boolean createOnce(UserId user, KeyInvalidatedContent content, Instant now);
 
+	/**
+	 * 다이제스트 실패 알림을 만든다 — 같은 사용자 · 다이제스트의 알림이 이미 있거나 계정이 없으면 만들지 않는다. 판 1, 만든 시각 = 고친 시각 =
+	 * {@code now}.
+	 * @return 만들었으면 참 — 이미 있거나 계정이 없어 만들지 않았으면 거짓
+	 */
+	boolean createOnce(UserId user, DigestFailedContent content, Instant now);
+
 	/** 알림의 내용을 바꾼다 — 판 + 1, 고친 시각 = {@code now} */
 	void revise(long id, NoticeContent content, Instant now);
 

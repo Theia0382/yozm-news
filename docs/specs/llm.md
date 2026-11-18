@@ -118,6 +118,8 @@ public interface LlmModels {
 
 ```java
 public interface LlmClientFactory {
+    Duration GENERATION_DEADLINE = Duration.ofSeconds(180);                            // 생성 호출의 요청 하나 마감 — 정본(llm-R7)
+    Duration LONGEST_GENERATION_CALL = RetryPolicy.longestCall(GENERATION_DEADLINE);  // 생성 호출 한 번의 최악 — 900초(llm-R20)
     KeyValidationResult validate(Provider provider, SecretValue key);
     StoredKeyValidation validateStored(UserId user, Provider provider);
     StoredGeneration generateStored(UserId user, GenerationRequest request);
@@ -125,6 +127,7 @@ public interface LlmClientFactory {
 ```
 
 - 계약
+  - `GENERATION_DEADLINE` 은 생성 호출의 요청 하나 마감, `LONGEST_GENERATION_CALL` 은 다시 보내기를 다 겪은 생성 호출 한 번의 가장 긴 시간이다 — 부르는 쪽이 멈춘 생성을 가를 때 쓴다(다이제스트의 임대 — [digest Spec](digest.md#거두기) digest-R32)
   - `validate` 는 그 키로 공급자에 가벼운 요청 하나를 보내 결과를 낸다. 예상한 실패는 예외가 아니라 `KeyValidationResult.Rejected` 다
   - 트랜잭션 안에서 부르면 `IllegalStateException` 이다 — 외부 호출은 트랜잭션 밖에서 한다(llm-R5)
   - 키를 저장하지 않고, 결과 · 예외 문구 · 로그에 키를 남기지 않는다(llm-R9 · R12)
@@ -418,7 +421,7 @@ sequenceDiagram
 
 ### `application`
 
-- `LlmClientFactoryService` — `LlmClientFactory` 의 구현. 트랜잭션 밖인지 보고(llm-R5), 키의 꼴을 보고(llm-R10), 포트로 호출 종류의 마감(`VALIDATION_DEADLINE` · `GENERATION_DEADLINE` — llm-R7)을 넘겨 클라이언트를 열고 요청한 뒤 닫는다(llm-R14). 포트가 던진 예상 밖의 예외를 `UNEXPECTED` 로 바꾼다(llm-R9). 저장한 키의 검증과 생성 호출은 공급 인터페이스로 키를 받아 요청하고 결과를 알리는 걸음 하나(`withStoredKey`)를 쓴다(llm-R17 · R19) — 주어진 키의 검증과 확인의 걸음도 하나다. 생성 호출은 다시 보내기 정책대로 기다렸다가 같은 클라이언트로 다시 보낸다(llm-R20). 시각(`InstantSource`)과 기다림(`Sleeper`)을 받는다. 트랜잭션 · 역할 애너테이션이 없다
+- `LlmClientFactoryService` — `LlmClientFactory` 의 구현. 트랜잭션 밖인지 보고(llm-R5), 키의 꼴을 보고(llm-R10), 포트로 호출 종류의 마감(`VALIDATION_DEADLINE` · 공개 상수 `LlmClientFactory.GENERATION_DEADLINE` — llm-R7)을 넘겨 클라이언트를 열고 요청한 뒤 닫는다(llm-R14). 포트가 던진 예상 밖의 예외를 `UNEXPECTED` 로 바꾼다(llm-R9). 저장한 키의 검증과 생성 호출은 공급 인터페이스로 키를 받아 요청하고 결과를 알리는 걸음 하나(`withStoredKey`)를 쓴다(llm-R17 · R19) — 주어진 키의 검증과 확인의 걸음도 하나다. 생성 호출은 다시 보내기 정책대로 기다렸다가 같은 클라이언트로 다시 보낸다(llm-R20). 시각(`InstantSource`)과 기다림(`Sleeper`)을 받는다. 트랜잭션 · 역할 애너테이션이 없다
 - `Sleeper` — 다시 보내기 전에 기다린다. 운영은 스레드를 재운다
 - `LlmModelsService` — `LlmModels` 의 구현. `ModelCatalog` 를 그대로 읽는다
 - `ModelCatalogConfiguration` — 목록 파일(운영자 파일이 있으면 그것, 없으면 기본 파일)을 읽어 `ModelCatalog` 빈으로 낸다. 역할 애너테이션이 없다
@@ -434,7 +437,7 @@ sequenceDiagram
 - `OpenAiSchemas` · `AnthropicSchemas` · `OpenRouterSchemas` — 출력 스키마를 공급자가 받는 꼴로 맞추는 정본(llm-R21). 허용 키워드와 필수 속성 처리(`SchemaRewrite.Required`)만 다르고, 걸음은 `SchemaRewrite` 하나다. `OpenRouterSchemas` 의 허용 키워드는 두 맞춤의 교집합으로 계산한다
 - `StopReasons` — 공급자의 종료 사유를 `GenerationStop` 으로 가르는 정본(llm-R22)
 - `OutputBudget` — 공급자에 보내는 출력 토큰 상한의 정본(llm-R23)
-- `RetryPolicy` · `RetryAfter` — 다시 보낼지와 기다릴 시간, `retry-after` 헤더 읽기의 정본(llm-R20)
+- `RetryPolicy` · `RetryAfter` — 다시 보낼지와 기다릴 시간, 생성 호출 한 번의 가장 긴 시간(`longestCall`), `retry-after` 헤더 읽기의 정본(llm-R20)
 - 키의 꼴은 이 모듈이 갖지 않는다 — `platform` 의 `HeaderValueShape` 가 정본이다([platform Spec](platform.md#headervalueshape))
 
 ### 나가는 쪽
@@ -513,7 +516,7 @@ v1 구현(`adapter/out/sdk`):
 
 - **llm-R5** — 공급자 호출은 DB 트랜잭션 밖에서 한다. 관문의 세 메서드(`validate` · `validateStored` · `generateStored`)를 트랜잭션 안에서 부르면 요청을 보내지 않고 `IllegalStateException` 이다
 - **llm-R6** — 키 검증의 요청은 공급자마다 과금되지 않는 조회 하나다 — OpenAI `GET /v1/models`, Anthropic `GET /v1/models`(모델 목록), OpenRouter `GET /api/v1/key`(키 조회). OpenRouter 의 모델 목록은 인증 없이 열려 있어(2026-11-17 실측 — 가짜 키도 200, 본문 852,895 바이트) 키를 가리지 못한다. 정상 응답이면 `Valid` 다 — 응답 본문(모델 목록 · 키의 한도 · 사용량)은 읽지 않는다. 잔액 · 지출 한도 소진과 특정 모델을 쓸 권한은 이 요청으로 드러나지 않고 생성 호출에서 드러난다
-- **llm-R7** — 요청 하나의 마감(헤더와 본문 전부)은 관문이 호출 종류마다 정해 클라이언트를 열 때 넘긴다 — 키 검증 15초(`LlmClientFactoryService.VALIDATION_DEADLINE`), 생성 호출 180초(`LlmClientFactoryService.GENERATION_DEADLINE` — 측정 전의 잠정값, 허용 모델이 다이제스트 한 편을 다 쓰는 시간을 재서 고친다). 연결 마감은 5초(`JdkTransport.CONNECT_TIMEOUT`)다. SDK 의 자동 재시도는 0 이다 — 키 검증은 다시 시도하지 않고, 생성 호출을 다시 보내는 것은 관문이다(llm-R20). 스트리밍 없이 응답 전체를 기다리므로 생성 마감은 출력 전체의 생성 시간을 덮어야 한다
+- **llm-R7** — 요청 하나의 마감(헤더와 본문 전부)은 관문이 호출 종류마다 정해 클라이언트를 열 때 넘긴다 — 키 검증 15초(`LlmClientFactoryService.VALIDATION_DEADLINE`), 생성 호출 180초(`LlmClientFactory.GENERATION_DEADLINE` — 공개 상수, 측정 전의 잠정값, 허용 모델이 다이제스트 한 편을 다 쓰는 시간을 재서 고친다). 연결 마감은 5초(`JdkTransport.CONNECT_TIMEOUT`)다. SDK 의 자동 재시도는 0 이다 — 키 검증은 다시 시도하지 않고, 생성 호출을 다시 보내는 것은 관문이다(llm-R20). 스트리밍 없이 응답 전체를 기다리므로 생성 마감은 출력 전체의 생성 시간을 덮어야 한다
 - **llm-R8** — 실패 종류는 공급자마다 `domain/failure` 의 함수 하나가 가른다. 입력은 상태 코드, 오류의 `code` · 종류 이름(OpenAI · Anthropic 의 `type`, OpenRouter 의 `error.metadata.error_type`), `retry-after` 헤더 유무다 — 상태 코드만으로는 요청 제한과 한도 소진, OpenRouter 의 권한 문제와 입력 내용 차단이 갈리지 않는다
 
   | 공급자 | 입력 | 종류 |
@@ -568,7 +571,7 @@ v1 구현(`adapter/out/sdk`):
 판단의 이유는 [ADR-0199](../adr/0199-generation-requests-carry-only-the-tasks-own-inputs-and-the-gateway-maps-them-to-each-provider.md) · [ADR-0203](../adr/0203-openrouter-requests-exclude-providers-that-train-on-data-and-ask-for-providers-that-support-every-parameter-and-carry-no-app-attribution-headers.md) · [ADR-0205](../adr/0205-an-openrouter-403-invalidates-the-key-only-with-the-permission-mark-and-an-error-inside-an-ok-answer-is-unexpected.md) · [ADR-0206](../adr/0206-schemas-sent-to-openrouter-satisfy-both-providers-rules-and-an-optional-value-list-takes-null-without-a-type.md) · [ADR-0200](../adr/0200-generation-results-carry-the-stop-reason-and-schema-enforcement-and-failures-use-the-five-key-check-kinds.md) · [ADR-0201](../adr/0201-the-gateway-resends-only-transient-generation-failures-and-sets-the-request-deadline-per-call-kind.md)에 있다.
 
 - **llm-R19** — 저장한 키의 생성 호출은 한 번에 이 순서다: 트랜잭션 밖인지 본다(llm-R5) → 시작 시각을 잰다 → 요청한 모델의 공급자로 `StoredKeySource.find` 를 부른다 → 없으면 보내지 않고 `Missing` 으로 끝난다(소요 시간 없음) → 키의 꼴이 틀리면 보내지 않고 `Failed(INVALID_KEY)` → 생성 마감(llm-R7)으로 클라이언트를 연다 → 출력 상한(llm-R23)을 정한 요청을 보낸다 · 다시 보낸다(llm-R20) → 닫는다 → 결과를 `StoredKeySource.checked` 로 알린다(공급자가 답했으면 `Valid`, 답하지 못했으면 같은 종류의 `Rejected` — 키의 상태는 `credential` 이 정한다) → `Done` 으로 낸다. `find` 가 던진 예외는 `UNEXPECTED` 로 바꾸고 알리지 않는다. `checked` 가 던진 예외는 그대로 올린다. 포트가 던진 예상 밖의 예외는 `UNEXPECTED`(문구 머리 `LlmClientFactoryService.UNEXPECTED_GENERATION` + 예외 클래스 이름)이고 클라이언트는 닫힌다. 소요 시간은 시작 시각부터 결과까지이고 다시 보내기 전에 기다린 시간을 포함한다. 결과의 토큰은 마지막으로 보낸 요청의 값이다. 스키마 강제 여부는 스키마가 있고 모델이 구조화 출력을 지원할 때만 참이다(`GenerationCall.enforcesSchema()`)
-- **llm-R20** — 생성 호출은 일시 장애(`TRANSIENT`)만 다시 보낸다 — 응답 마감을 넘긴 실패는 빼고(그 요청은 공급자 쪽에서 과금됐을 수 있고, 같은 마감으로 다시 보내도 같을 가능성이 크다), 한 호출에서 보내는 것은 많아야 4번(`RetryPolicy.MAX_SENDS` — 처음 하나와 다시 보내기 셋)이다. 다시 보내기 전에는 공급자가 준 `retry-after`(0 이상의 정수 초만 읽는다 — `RetryAfter`)를 기다리고, 60초(`RetryPolicy.MAX_RETRY_AFTER`)를 넘으면 다시 보내지 않는다. 없으면 차례마다 2 · 4 · 8초(`RetryPolicy.BACKOFF`)를 기다린다. 다시 보내기는 같은 클라이언트로 한다. 기다리다 중단되면 인터럽트 표시를 되살리고 `Failed(TRANSIENT)` 로 끝낸다. 간격 · 횟수 · 상한은 측정 전의 잠정값이다. 정본은 `RetryPolicy` 하나다
+- **llm-R20** — 생성 호출은 일시 장애(`TRANSIENT`)만 다시 보낸다 — 응답 마감을 넘긴 실패는 빼고(그 요청은 공급자 쪽에서 과금됐을 수 있고, 같은 마감으로 다시 보내도 같을 가능성이 크다), 한 호출에서 보내는 것은 많아야 4번(`RetryPolicy.MAX_SENDS` — 처음 하나와 다시 보내기 셋)이다. 다시 보내기 전에는 공급자가 준 `retry-after`(0 이상의 정수 초만 읽는다 — `RetryAfter`)를 기다리고, 60초(`RetryPolicy.MAX_RETRY_AFTER`)를 넘으면 다시 보내지 않는다. 없으면 차례마다 2 · 4 · 8초(`RetryPolicy.BACKOFF`)를 기다린다. 다시 보내기는 같은 클라이언트로 한다. 기다리다 중단되면 인터럽트 표시를 되살리고 `Failed(TRANSIENT)` 로 끝낸다. 간격 · 횟수 · 상한은 측정 전의 잠정값이다. 정본은 `RetryPolicy` 하나다. 호출 한 번의 가장 긴 시간은 마감 × 보내는 최대 횟수 + 그 사이마다 가장 긴 기다림(`retry-after` 상한과 간격 가운데 긴 것)이다(`RetryPolicy.longestCall` — 마감 180초면 4 × 180 + 3 × 60 = 900초, 공개 상수 `LlmClientFactory.LONGEST_GENERATION_CALL`)
 - **llm-R21** — 출력 스키마는 JSON 객체 문서다(`SchemaDocuments`). 모델이 구조화 출력을 지원할 때만 그 공급자가 받는 꼴로 맞춰 강제 인자로 보낸다 — OpenAI(엄격 모드, `OpenAiSchemas`)는 `type` · `properties` · `required` · `additionalProperties` · `items` · `enum` · `description` · `maxItems` · `minItems` 만 남기고, 모든 객체에 `additionalProperties: false` 를 두고, 모든 속성을 `required` 에 넣는다 — 원래 필수가 아니던 속성은 null 을 받게 한다(타입에 `"null"`, 값 목록에 null — 둘 다 없는 마디는 이미 null 을 받아 그대로). Anthropic(`AnthropicSchemas`)은 `type` · `properties` · `required` · `additionalProperties` · `items` · `enum` · `description` 만 남기고, 모든 객체에 `additionalProperties: false` 를 두고, `required` 는 그대로 둔다. OpenRouter(`OpenRouterSchemas`)는 모델에 상관없이 두 맞춤을 함께 만족하게 한다 — 두 맞춤의 허용 키워드 교집합만 남기고, 모든 객체에 `additionalProperties: false`, 모든 속성을 `required` 에 넣어 원래 선택이던 속성은 null 을 받게 하되, 값 목록이 있는 선택 속성은 타입을 지우고 값 목록에 null 을 더한다 — 값 목록과 `"null"` 을 더한 타입 배열을 함께 두면 Anthropic 계열이 OpenRouter 를 거쳐 400 으로 거절한다(2026-11-17 실측). 남기지 않은 키워드(`$schema` · 문자열 길이 · 수 제약 등)는 지워진다 — 참조(`$ref` · `$defs`)와 조합(`anyOf` · `allOf` 등)도 지워져 그것을 쓰는 스키마는 맞춘 뒤 뜻이 바뀐다. 지운 규칙은 부르는 쪽의 읽기 · 검증이 맡는다
 - **llm-R22** — 공급자가 답한 생성의 종료 사유는 `StopReasons` 가 가른다: OpenAI(Spring AI 가 넘기는 SDK 열거 이름) `STOP` → 끝까지, `LENGTH` → 잘림, `CONTENT_FILTER` 이거나 응답에 거절 문구(`refusal`)가 있으면 → 거절. Anthropic `end_turn` · `stop_sequence` → 끝까지, `max_tokens` · `model_context_window_exceeded` → 잘림, `refusal` → 거절. 그 밖의 종료 사유는 `Failed(UNEXPECTED)` 다. OpenRouter 는 종료 사유를 OpenAI 와 같은 값으로 정규화하므로 OpenAI 의 갈래로 가른다 — 생성이 시작된 뒤 공급자 쪽에서 난 오류를 200 응답 안에 싣는 꼴(`finish_reason: "error"`, 또는 `choices` 없이 `error` 만)은 `Failed(UNEXPECTED)` 이고 다시 보내지 않는다(과금됐을 수 있다). 응답 본문은 텍스트 블록을 이은 것이고, Anthropic 의 추론 블록은 들지 않는다. 내용이 없는 응답(OpenAI `choices` · Anthropic `content` 가 빔 — 내용 없이 온 거절 포함)은 Spring AI 가 종료 사유 · 사용량 없이 빈 응답을 내므로 `Failed(UNEXPECTED)` 이고 토큰이 결과에 없다
 - **llm-R23** — 공급자에 보내는 출력 토큰 상한은 추론과 응답 본문을 합친 것이고 언제나 명시해 보낸다(공급자 · 라이브러리의 기본값에 맡기지 않는다). OpenAI · Anthropic 의 상한이 그렇다 — OpenRouter 는 같은 값을 `max_completion_tokens` 로 실어 실제 공급자로 넘기고, 추론이 그 안에 드는지는 재지 않았다. 상한은 부르는 쪽의 본문 토큰 몫에 추론 강도의 여유(낮음 4,000 · 보통 8,000 · 높음 16,000 — `OutputBudget`, 측정 전의 잠정값)를 더한 것이다. 추론 강도는 OpenAI · OpenRouter `reasoning_effort` · Anthropic `output_config.effort` 의 `low` · `medium` · `high` 로 옮긴다. OpenRouter 의 생성 요청에는 언제나 `provider: {data_collection: "deny", require_parameters: true}` 를 싣는다(`OpenRouterProviderClient.ROUTING`) — 학습에 쓰는 실제 공급자를 빼고(보관은 할 수 있다), 출력 상한 · 추론 강도 · 스키마를 모두 지원하는 실제 공급자로만 보낸다. 맞는 실제 공급자가 없으면 생성이 실패한다

@@ -31,6 +31,8 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
+import org.jobrunr.scheduling.JobScheduler;
+import net.yozmnews.digest.DigestRounds;
 
 /**
  * 독자 화면의 스토리라인 — 목록 기간의 목록(카드 · 기간 기사 수 · 큰 여부 · 커서 · until), 타임라인(사건 순서 · 직접 소속 · 대표 기사 · 관계 넷 ·
@@ -45,6 +47,9 @@ import tools.jackson.databind.json.JsonMapper;
 @SpringBootTest
 @AutoConfigureMockMvc
 class StorylineScreenControllerTests {
+
+	@Autowired
+	JobScheduler digestJobs;
 
 	@Autowired
 	MockMvc mockMvc;
@@ -87,6 +92,11 @@ class StorylineScreenControllerTests {
 	private long a1;
 
 	private long a2;
+
+	@BeforeEach
+	void stopDigestRounds() {
+		DigestRounds.stop(this.digestJobs);
+	}
 
 	@BeforeEach
 	void startFromTheFixture() throws Exception {

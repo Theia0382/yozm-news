@@ -5925,6 +5925,24 @@
         },
         "required" : [ "exclusiveArticles" ]
       },
+      "DigestFailedNoticeResponse" : {
+        "type" : "object",
+        "properties" : {
+          "cause" : {
+            "type" : "string",
+            "enum" : [ "KEY", "PROVIDER_ACCOUNT", "TEMPORARY", "OUTPUT" ]
+          },
+          "digestDate" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "failedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        },
+        "required" : [ "cause", "digestDate", "failedAt" ]
+      },
       "DiscardItemResponse" : {
         "type" : "object",
         "properties" : {
@@ -7967,6 +7985,13 @@
             "type" : "string",
             "format" : "date-time"
           },
+          "digestFailed" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/DigestFailedNoticeResponse"
+            }, {
+              "type" : "null"
+            } ]
+          },
           "feedStatus" : {
             "oneOf" : [ {
               "$ref" : "#/components/schemas/FeedStatusNoticeResponse"
@@ -7987,7 +8012,7 @@
           },
           "kind" : {
             "type" : "string",
-            "enum" : [ "FEED_STATUS", "PASSWORD_CHANGED", "KEY_INVALIDATED", "PREFERENCES_ADJUSTED", "STORYLINE_SUBSCRIPTIONS_REMOVED" ]
+            "enum" : [ "FEED_STATUS", "PASSWORD_CHANGED", "KEY_INVALIDATED", "PREFERENCES_ADJUSTED", "STORYLINE_SUBSCRIPTIONS_REMOVED", "DIGEST_FAILED" ]
           },
           "passwordChanged" : {
             "oneOf" : [ {
@@ -8022,7 +8047,7 @@
             "format" : "date-time"
           }
         },
-        "required" : [ "createdAt", "feedStatus", "id", "keyInvalidated", "kind", "passwordChanged", "preferencesAdjusted", "read", "revision", "storylineSubscriptionsRemoved", "updatedAt" ]
+        "required" : [ "createdAt", "digestFailed", "feedStatus", "id", "keyInvalidated", "kind", "passwordChanged", "preferencesAdjusted", "read", "revision", "storylineSubscriptionsRemoved", "updatedAt" ]
       },
       "NoticeRevision" : {
         "type" : "object",

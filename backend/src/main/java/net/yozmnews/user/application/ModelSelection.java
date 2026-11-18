@@ -3,7 +3,6 @@ package net.yozmnews.user.application;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 
 import net.yozmnews.credential.LlmKeys;
 import net.yozmnews.llm.LlmModel;
@@ -36,11 +35,15 @@ public class ModelSelection {
 
 	private final LlmKeys keys;
 
-	ModelSelection(InterestSettingsLock lock, InterestSettingsRepository settings, LlmModels models, LlmKeys keys) {
+	private final ModelResolutions resolutions;
+
+	ModelSelection(InterestSettingsLock lock, InterestSettingsRepository settings, LlmModels models, LlmKeys keys,
+			ModelResolutions resolutions) {
 		this.lock = Objects.requireNonNull(lock, "lock");
 		this.settings = Objects.requireNonNull(settings, "settings");
 		this.models = Objects.requireNonNull(models, "models");
 		this.keys = Objects.requireNonNull(keys, "keys");
+		this.resolutions = Objects.requireNonNull(resolutions, "resolutions");
 	}
 
 	@Transactional
@@ -72,12 +75,8 @@ public class ModelSelection {
 	}
 
 	private ModelView view(UserId user, InterestSettings settings) {
-		Set<Provider> withKey = this.keys.providers(user);
-		Set<Provider> usable = this.keys.usable(user);
-		List<LlmModel> allowed = this.models.all();
-		List<LlmModel> choosable = allowed.stream().filter(model -> withKey.contains(model.provider())).toList();
-		return new ModelView(choosable, ModelChoice.resolve(settings.model(), allowed, withKey, usable),
-				settings.effort());
+		ModelResolutions.Materials materials = this.resolutions.materials(user);
+		return new ModelView(materials.choosable(), materials.resolve(settings.model()), settings.effort());
 	}
 
 	/**

@@ -1,6 +1,7 @@
 package net.yozmnews.digest.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 import java.time.Duration;
@@ -10,6 +11,11 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
@@ -23,6 +29,7 @@ import net.yozmnews.digest.domain.candidate.DigestCandidate;
 import net.yozmnews.digest.domain.candidate.DigestCandidateRepository;
 import net.yozmnews.digest.domain.candidate.SelectionReason;
 import net.yozmnews.digest.domain.content.DigestSectionRepository;
+import net.yozmnews.digest.domain.digest.Digest;
 import net.yozmnews.digest.domain.digest.DigestFailure;
 import net.yozmnews.digest.domain.digest.DigestId;
 import net.yozmnews.digest.domain.digest.DigestPeriod;
@@ -41,6 +48,8 @@ import net.yozmnews.llm.LlmModel;
 import net.yozmnews.llm.Provider;
 import net.yozmnews.llm.ReasoningEffort;
 import net.yozmnews.platform.UserId;
+import net.yozmnews.user.DigestFailed;
+import net.yozmnews.user.DigestFailureCause;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -52,7 +61,11 @@ import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.event.ApplicationEvents;
+import org.springframework.test.context.event.RecordApplicationEvents;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.jobrunr.scheduling.JobScheduler;
+import net.yozmnews.digest.DigestRounds;
 
 /**
  * 다이제스트 생성 흐름 — 예약 · 시작 · 프롬프트 · 생성 · 읽기(끝까지 쓴 응답을 읽지 못하면 한 번 다시 묻기) · 인용 검증 · 저장이 실제
@@ -67,7 +80,11 @@ import org.springframework.transaction.support.TransactionTemplate;
 @SpringBootTest
 @ExtendWith(OutputCaptureExtension.class)
 @TestPropertySource(properties = "jobrunr.background-job-server.enabled=false")
+@RecordApplicationEvents
 class DigestGenerationTests {
+
+	@Autowired
+	JobScheduler digestJobs;
 
 	private static final Instant T0 = Instant.parse("2026-11-15T22:45:00Z");
 
@@ -89,7 +106,13 @@ class DigestGenerationTests {
 	TransactionTemplate transaction;
 
 	@Autowired
+	DigestEndings endings;
+
+	@Autowired
 	JdbcClient jdbc;
+
+	@Autowired
+	ApplicationEvents events;
 
 	private final AtomicReference<Instant> now = new AtomicReference<>(T0);
 
@@ -99,6 +122,11 @@ class DigestGenerationTests {
 
 	/** 대본 생성기가 받은 요청 */
 	private final List<DigestRequest> requests = new ArrayList<>();
+
+	@BeforeEach
+	void stopDigestRounds() {
+		DigestRounds.stop(this.digestJobs);
+	}
 
 	@BeforeEach
 	void fiveArticles() {
@@ -121,13 +149,13 @@ class DigestGenerationTests {
 
 	private DigestGeneration generation(DigestGenerator generator) {
 		return new DigestGeneration(this.digests, this.sections, this.candidates, this.articles, generator,
-				this.transaction, this.clock);
+				this.endings, this.transaction, this.clock);
 	}
 
 	private DigestId schedule(DigestGeneration generation) {
 		return generation.schedule(new UserId(42), LocalDate.parse("2026-11-16"),
 				new DigestPeriod(Instant.parse("2026-11-14T22:00:00Z"), Instant.parse("2026-11-15T22:00:00Z")),
-				DigestTrigger.SCHEDULED);
+				DigestTrigger.MANUAL).id();
 	}
 
 	private DigestInput candidates(int count) {
@@ -195,6 +223,7 @@ class DigestGenerationTests {
 		assertThat(generation.run(id, MODEL, DigestInputs.of(List.of()))).isEqualTo(DigestStatus.EMPTY);
 
 		assertThat(calls).hasValue(0);
+		assertThat(this.events.stream(DigestFailed.class)).isEmpty();
 		Map<String, Object> row = row(id);
 		assertThat(row).containsEntry("status", "EMPTY")
 			.containsEntry("provider", "anthropic")
@@ -205,21 +234,6 @@ class DigestGenerationTests {
 		assertThat(row.get("duration_ms")).isNull();
 		assertThat(candidateRows(id)).isEmpty();
 		assertThat(count("select count(*) from digest_sections where digest_id = :id", id)).isZero();
-	}
-
-	@Test
-	void clearsTheEarlierCandidatesWhenRestartedWithoutCandidates() {
-		DigestGeneration failing = generation(request -> {
-			throw new IllegalStateException("공급자 장애");
-		});
-		DigestId id = schedule(failing);
-		assertThatIllegalStateException().isThrownBy(() -> failing.run(id, MODEL, candidates(3)));
-		assertThat(candidateRows(id)).hasSize(3);
-
-		assertThat(failing.run(id, MODEL, DigestInputs.of(List.of()))).isEqualTo(DigestStatus.EMPTY);
-
-		assertThat(candidateRows(id)).isEmpty();
-		assertThat(row(id)).containsEntry("candidate_count", 0);
 	}
 
 	@Test
@@ -260,6 +274,8 @@ class DigestGenerationTests {
 				"MORE_HEADLINES:4:0:" + a(4) + ":SUBSCRIBED", "MORE_HEADLINES:4:1:" + a(5) + ":SUBSCRIBED");
 		// 대조 — 지운 것이 없으면 정보 로그가 없다
 		assertThat(log.getOut()).doesNotContain("다이제스트 출력에서 지운 것이 있다");
+		// 실패가 아니면 실패 이벤트가 없다
+		assertThat(this.events.stream(DigestFailed.class)).isEmpty();
 	}
 
 	@Test
@@ -355,6 +371,25 @@ class DigestGenerationTests {
 			.containsEntry("duration_ms", 2_000L);
 		assertThat(row.get("input_tokens")).isNull();
 		assertThat(row.get("output_tokens")).isNull();
+		// 실패 이벤트 하나 — 끝낸 시각은 생성기가 시계를 2초 넘긴 뒤다
+		assertThat(this.events.stream(DigestFailed.class)).containsExactly(new DigestFailed(new UserId(42), id.value(),
+				LocalDate.parse("2026-11-16"), DigestFailureCause.PROVIDER_ACCOUNT, Instant.parse("2026-11-15T22:45:02Z")));
+	}
+
+	/** 생성 도중 공급자가 키를 무효로 답하면 그 코드로 끝나고 실패 알림의 갈래는 키다 — 키 상태의 전이와 키 무효 알림은 관문 · credential 이 한다 */
+	@Test
+	void aKeyInvalidatedDuringGenerationFailsWithTheKeyCause() {
+		AtomicInteger calls = new AtomicInteger();
+		DigestGeneration generation = generation(scriptedOutcomes(calls,
+				request -> new GenerationOutcome.Failed(DigestFailure.KEY_INVALID, "OpenAI 401 invalid_api_key")));
+		DigestId id = schedule(generation);
+
+		assertThat(generation.run(id, MODEL, candidates(2))).isEqualTo(DigestStatus.FAILED);
+
+		assertThat(calls).hasValue(1);
+		assertThat(row(id)).containsEntry("error_code", "KEY_INVALID");
+		assertThat(this.events.stream(DigestFailed.class)).extracting(DigestFailed::cause)
+			.containsExactly(DigestFailureCause.KEY);
 	}
 
 	@Test
@@ -387,6 +422,8 @@ class DigestGenerationTests {
 
 		assertThat(row(id)).containsEntry("error_code", "NO_CITATION")
 			.containsEntry("error_message", "검증 뒤 인용이 하나도 남지 않았다");
+		assertThat(this.events.stream(DigestFailed.class)).extracting(DigestFailed::cause)
+			.containsExactly(DigestFailureCause.OUTPUT);
 		assertThat(count("select count(*) from digest_sections where digest_id = :id", id)).isZero();
 	}
 
@@ -402,33 +439,76 @@ class DigestGenerationTests {
 		// 앞 실행이 한 번 다시 물어 두 번 — 끝난 다이제스트의 둘째 실행은 부르지 않는다
 		assertThat(calls).hasValue(2);
 		assertThat(row(id)).containsEntry("candidate_count", 2);
+		// 실패 이벤트는 끝낸 실행의 하나뿐이다 — 끝난 다이제스트의 둘째 실행은 내지 않는다
+		assertThat(this.events.stream(DigestFailed.class)).hasSize(1);
 	}
 
+	/**
+	 * 끝낸 다이제스트 저장 — 끝나지 않은 다이제스트와 트랜잭션 밖의 저장은 거부하고 아무것도 쓰지 않는다. 트랜잭션 안에서는 시작하지 않은 다이제스트를
+	 * 실패로 끝내 저장하고 실패 이벤트를 하나 낸다.
+	 */
 	@Test
-	void startsAgainAfterTheGeneratorThrew() {
+	void endingsSaveOnlyAFinishedDigestInsideATransaction() {
+		DigestId id = schedule(generation(new FakeDigestGenerator()));
+		Digest scheduled = this.digests.findById(id.value()).orElseThrow();
+		Digest abandoned = scheduled.abandon(DigestFailure.INTERRUPTED, "정한 시간 안에 시작하지 못했다", T0);
+
+		assertThatIllegalArgumentException()
+			.isThrownBy(() -> this.transaction.executeWithoutResult(status -> this.endings.save(scheduled)));
+		assertThatIllegalStateException().isThrownBy(() -> this.endings.save(abandoned))
+			.withMessage(DigestEndings.OUTSIDE_TRANSACTION);
+		assertThat(row(id)).containsEntry("status", "SCHEDULED").containsEntry("completed", false);
+		assertThat(this.events.stream(DigestFailed.class)).isEmpty();
+
+		// 대조 — 트랜잭션 안에서는 저장하고 이벤트 하나를 낸다
+		this.transaction.executeWithoutResult(status -> this.endings.save(abandoned));
+
+		assertThat(row(id)).containsEntry("status", "FAILED")
+			.containsEntry("error_code", "INTERRUPTED")
+			.containsEntry("error_message", "정한 시간 안에 시작하지 못했다")
+			.containsEntry("provider", null)
+			.containsEntry("candidate_count", null)
+			.containsEntry("completed", true);
+		assertThat(this.events.stream(DigestFailed.class)).containsExactly(new DigestFailed(new UserId(42), id.value(),
+				LocalDate.parse("2026-11-16"), DigestFailureCause.TEMPORARY, Instant.parse("2026-11-15T22:45:00Z")));
+	}
+
+	/**
+	 * 생성기 예외로 생성 중에 남은 다이제스트는 다시 불러도 시작하지 않는다 — 생성 중인 다이제스트를 다시 시작하면 같은 다이제스트의 공급자 호출이
+	 * 둘이 될 수 있다. 멈춘 생성은 거두기가 끝낸다.
+	 */
+	@Test
+	void aDigestLeftRunningByAGeneratorExceptionIsNotStartedAgain() {
 		DigestGeneration failing = generation(request -> {
 			throw new IllegalStateException("공급자 장애");
 		});
 		DigestId id = schedule(failing);
 		assertThatIllegalStateException().isThrownBy(() -> failing.run(id, MODEL, candidates(5)));
 		assertThat(row(id)).containsEntry("status", "RUNNING").containsEntry("completed", false);
+		AtomicInteger calls = new AtomicInteger();
 
-		assertThat(generation(new FakeDigestGenerator()).run(id, MODEL, candidates(5))).isEqualTo(DigestStatus.READY);
+		assertThat(generation(scripted(calls, request -> "{}")).run(id, MODEL, candidates(2)))
+			.isEqualTo(DigestStatus.RUNNING);
 
+		assertThat(calls).hasValue(0);
+		assertThat(row(id)).containsEntry("status", "RUNNING").containsEntry("candidate_count", 5);
 		assertThat(candidateRows(id)).hasSize(5);
-		assertThat(count("select count(*) from digest_sections where digest_id = :id", id)).isEqualTo(5);
+		assertThat(count("select count(*) from digest_sections where digest_id = :id", id)).isZero();
+		assertThat(this.events.stream(DigestFailed.class)).isEmpty();
 	}
 
+	/** 앞 실행이 생성기 안에 있는 동안 같은 다이제스트를 다시 부르면 생성기를 부르지 않고 생성 중을 돌려준다 — 공급자 호출은 하나다 */
 	@Test
-	void anEarlierRunWritesNothingWhenALaterRunFinishedFirst() {
+	void aSecondRunWhileTheFirstIsGeneratingDoesNotCallTheGenerator() {
 		AtomicReference<DigestGeneration> self = new AtomicReference<>();
 		AtomicReference<DigestId> digest = new AtomicReference<>();
+		AtomicReference<DigestStatus> inner = new AtomicReference<>();
 		AtomicInteger calls = new AtomicInteger();
 		FakeDigestGenerator fake = new FakeDigestGenerator();
 		DigestGeneration generation = generation(request -> {
 			if (calls.incrementAndGet() == 1) {
-				// 앞 실행이 생성기 안에 있는 동안 뒤 실행이 같은 다이제스트를 처음부터 끝낸다 — 뒤 실행은 후보 둘
-				assertThat(self.get().run(digest.get(), MODEL, candidates(2))).isEqualTo(DigestStatus.READY);
+				// 뒤 실행 — 후보 둘로 같은 다이제스트를 부른다
+				inner.set(self.get().run(digest.get(), MODEL, candidates(2)));
 			}
 			return fake.generate(request);
 		});
@@ -438,41 +518,51 @@ class DigestGenerationTests {
 
 		assertThat(generation.run(id, MODEL, candidates(5))).isEqualTo(DigestStatus.READY);
 
-		assertThat(calls).hasValue(2);
-		assertThat(row(id)).containsEntry("candidate_count", 2);
-		assertThat(candidateRows(id)).containsExactly("A1:" + a(1), "A2:" + a(2));
-		// 뒤 실행의 개요 1 · 주요 뉴스 2 — 앞 실행의 섹션은 더해지지 않는다
-		assertThat(count("select count(*) from digest_sections where digest_id = :id", id)).isEqualTo(3);
+		assertThat(inner).hasValue(DigestStatus.RUNNING);
+		assertThat(calls).hasValue(1);
+		assertThat(row(id)).containsEntry("status", "READY").containsEntry("candidate_count", 5);
+		assertThat(candidateRows(id)).hasSize(5);
+		// 앞 실행의 개요 1 · 주요 뉴스 4 — 뒤 실행은 아무것도 쓰지 않았다
+		assertThat(count("select count(*) from digest_sections where digest_id = :id", id)).isEqualTo(5);
 	}
 
+	/** 두 스레드가 같은 다이제스트를 함께 돌려도 생성기 호출은 하나다 — 늦은 쪽은 생성 중을 돌려준다 */
 	@Test
-	void anEarlierRunWritesNothingWhenALaterRunRestartedIt() {
-		AtomicReference<DigestGeneration> self = new AtomicReference<>();
-		AtomicReference<DigestId> digest = new AtomicReference<>();
+	void twoThreadsRunningTheSameDigestCallTheGeneratorOnce() throws Exception {
 		AtomicInteger calls = new AtomicInteger();
+		CountDownLatch entered = new CountDownLatch(1);
+		CountDownLatch release = new CountDownLatch(1);
 		FakeDigestGenerator fake = new FakeDigestGenerator();
 		DigestGeneration generation = generation(request -> {
-			int call = calls.incrementAndGet();
-			if (call == 1) {
-				// 앞 실행이 생성기 안에 있는 동안 뒤 실행이 같은 다이제스트를 다시 시작하고 생성기 예외로 RUNNING 에 남긴다
-				assertThatIllegalStateException()
-					.isThrownBy(() -> self.get().run(digest.get(), MODEL, candidates(2)));
+			calls.incrementAndGet();
+			entered.countDown();
+			try {
+				assertThat(release.await(20, TimeUnit.SECONDS)).isTrue();
 			}
-			if (call == 2) {
-				throw new IllegalStateException("공급자 장애");
+			catch (InterruptedException ex) {
+				Thread.currentThread().interrupt();
+				throw new IllegalStateException(ex);
 			}
 			return fake.generate(request);
 		});
-		self.set(generation);
 		DigestId id = schedule(generation);
-		digest.set(id);
+		ExecutorService pool = Executors.newFixedThreadPool(2);
+		try {
+			Future<DigestStatus> first = pool.submit(() -> generation.run(id, MODEL, candidates(5)));
+			assertThat(entered.await(20, TimeUnit.SECONDS)).isTrue();
+			Future<DigestStatus> second = pool.submit(() -> generation.run(id, MODEL, candidates(3)));
 
-		assertThat(generation.run(id, MODEL, candidates(5))).isEqualTo(DigestStatus.RUNNING);
+			assertThat(second.get(20, TimeUnit.SECONDS)).isEqualTo(DigestStatus.RUNNING);
+			release.countDown();
+			assertThat(first.get(20, TimeUnit.SECONDS)).isEqualTo(DigestStatus.READY);
+		}
+		finally {
+			release.countDown();
+			pool.shutdownNow();
+		}
 
-		assertThat(calls).hasValue(2);
-		assertThat(row(id)).containsEntry("status", "RUNNING").containsEntry("candidate_count", 2);
-		assertThat(candidateRows(id)).containsExactly("A1:" + a(1), "A2:" + a(2));
-		assertThat(count("select count(*) from digest_sections where digest_id = :id", id)).isZero();
+		assertThat(calls).hasValue(1);
+		assertThat(row(id)).containsEntry("status", "READY").containsEntry("candidate_count", 5);
 	}
 
 	@Test

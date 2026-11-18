@@ -4,7 +4,8 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 
 /**
  * 시험 도우미 — 다이제스트 · 섹션 · 인용 행. 모두 SQL 로 넣는다 — 생성 흐름 없이 인용을 가진 다이제스트를 만든다. 인용의 기사는 행만 있으면
- * 되므로 기사 테이블과 무관하다(모듈 사이라 FK 가 없다).
+ * 되므로 기사 테이블과 무관하다(모듈 사이라 FK 가 없다). 다이제스트의 계기는 수동({@code MANUAL})이다 — 일정 다이제스트는 사용자 · 날짜마다
+ * 하나라, 같은 날짜에 여럿을 넣는 시험이 걸리지 않게 한다.
  */
 public final class DigestRows {
 
@@ -18,9 +19,9 @@ public final class DigestRows {
 	public static long digest(JdbcClient jdbc, long user, String date) {
 		return jdbc.sql("""
 				insert into digests (user_id, digest_date, period_start, period_end, status, trigger, created_at,
-				    started_at, completed_at, version)
+				    dispatch_token, dispatched_at, started_at, completed_at, version)
 				values (:user, cast(:date as date), cast(:date as date) - interval '1 day', cast(:date as date), 'READY',
-				    'SCHEDULED', now(), now(), now(), 0)
+				    'MANUAL', now(), gen_random_uuid(), now(), now(), now(), 0)
 				returning id
 				""").param("user", user).param("date", date).query(Long.class).single();
 	}
@@ -32,10 +33,10 @@ public final class DigestRows {
 	public static long digest(JdbcClient jdbc, long user, String date, String completedAt) {
 		return jdbc.sql("""
 				insert into digests (user_id, digest_date, period_start, period_end, status, trigger, created_at,
-				    started_at, completed_at, version)
+				    dispatch_token, dispatched_at, started_at, completed_at, version)
 				values (:user, cast(:date as date), cast(:date as date) - interval '1 day', cast(:date as date), 'READY',
-				    'SCHEDULED', cast(:completed as timestamptz), cast(:completed as timestamptz),
-				    cast(:completed as timestamptz), 0)
+				    'MANUAL', cast(:completed as timestamptz), gen_random_uuid(), cast(:completed as timestamptz),
+				    cast(:completed as timestamptz), cast(:completed as timestamptz), 0)
 				returning id
 				""").param("user", user).param("date", date).param("completed", completedAt).query(Long.class).single();
 	}

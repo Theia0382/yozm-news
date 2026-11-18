@@ -40,9 +40,10 @@
 ### 일정
 
 - 사용자는 생성 시각과 시간대를 정한다(기본 07:00 `Asia/Seoul` — [user Spec](specs/user.md#관심-설정) user-R50).
-- `ScheduleDueDigests`가 생성 시각 15분 전에 작업을 등록해, 사용자가 열었을 때 준비되어 있게 한다.
-- 다이제스트 기간은 직전 다이제스트의 기간 종료 시각부터 이번 생성 시각까지다. 첫 다이제스트는 최근 24시간으로 한다.
-- 수동 재생성은 하루 N회로 제한한다. 사용자 비용이고 서버 부하이기도 하다.
+- 일정 회차가 1분마다 생성 시각이 지난 사용자의 다이제스트를 날짜마다 한 번 만들고 생성 작업을 등록한다 — 생성 시각 뒤 2시간 안에서만 따라잡고, 그 사용자의 가장 늦은 다이제스트 날짜보다 뒤의 날짜만 만든다. 다이제스트는 생성 시각에 시작해 생성 시간만큼 뒤에 보인다([ADR-0230](adr/0230-scheduled-digests-are-made-after-the-generation-time-and-a-period-runs-from-the-last-ready-or-empty-end-to-that-time.md) · [digest Spec "일정"](specs/digest.md#일정) digest-R29).
+- 다이제스트 기간은 직전에 끝난 다이제스트(`READY` · `EMPTY`)의 기간 끝부터 이번 생성 시각까지다 — 실패한 기간은 다음 다이제스트가 이어서 덮는다. 첫 다이제스트는 최근 24시간, 기간은 72시간까지다. 기간 끝이 후보 선별 시각보다 앞이라 첫 평가 시각으로 넣는 후보(§6 후보 선별)가 빠지지 않는다 — 평가 시각은 커밋 직전에 찍혀, 기간 끝 직전에 찍히고 선별 뒤 커밋된 평가가 빠지는 짧은 틈은 남는다(digest-R30).
+- 수동 생성은 오늘(사용자 시간대) 다이제스트를 같은 기간으로 다시 만들거나, 없으면 요청 시각까지의 새 기간으로 만든다 — 사용자당 하루 세 번, 생성 중이면 받지 않는다. 사용자 비용이고 서버 부하이기도 하다([ADR-0231](adr/0231-manual-generation-remakes-todays-digest-with-its-period-or-makes-a-new-one-and-counts-manual-rows-of-the-users-day.md) · digest-R31).
+- 생성 중인 다이제스트는 다시 시작하지 않는다 — 같은 다이제스트의 공급자 호출은 하나다. 시작되지 않은 다이제스트는 다시 등록하고(만든 지 1시간이 지나면 실패), 임대(40분)가 지나도 끝나지 않는 생성은 실패로 끝낸다. 실패는 화면 내 알림이 된다([ADR-0232](adr/0232-a-running-digest-is-never-started-again-and-stalled-digests-end-interrupted-after-a-lease-or-a-start-deadline.md) · digest-R32 · R33).
 - 쓸 모델이 없는 사용자(유효한 키가 있는 공급자의 허용 모델이 없다)는 일정에서 제외한다 — 고른 모델을 쓸 수 없으면 유효한 키가 있는 공급자의 첫 모델을 쓴다([ADR-0178](adr/0178-the-llm-model-to-use-is-decided-at-query-time-from-the-chosen-model-the-allowed-list-and-key-status.md) · [user Spec](specs/user.md#관심-설정) user-R51).
 
 ### 후보 선별
