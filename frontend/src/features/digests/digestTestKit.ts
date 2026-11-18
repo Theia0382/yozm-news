@@ -9,6 +9,16 @@ import type {
   DigestSection,
   ShownDigest,
 } from "@/features/digests/digestQueries";
+import type { components } from "@/shared/api/schema";
+
+/** 좋아요 · 싫어요 현재 상태 응답 */
+export type FeedbackStatesBody =
+  components["schemas"]["FeedbackStatesResponse"];
+
+/** 현재 상태가 하나도 없는 응답 */
+export function noFeedback(): FeedbackStatesBody {
+  return { states: [] };
+}
 
 export function citation(
   articleId: number,

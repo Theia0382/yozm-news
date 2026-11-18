@@ -359,7 +359,7 @@ describe("KeysPage", () => {
 });
 
 describe("KeysPage 요청 제한", () => {
-  it("등록 · 다시 검증이 요청 제한에 걸리면 요청 제한 안내를 보인다", async () => {
+  it("등록 · 다시 검증이 요청 제한에 걸리면 축을 말하지 않는 요청 제한 안내를 보인다", async () => {
     const limited = () =>
       new Response(
         JSON.stringify({ type: "urn:yozmnews:problem:rate-limited" }),
@@ -387,17 +387,25 @@ describe("KeysPage 요청 제한", () => {
 
     await user.type(openai.getByLabelText("새 OpenAI API 키"), "sk-new");
     await user.click(openai.getByRole("button", { name: "새 키로 바꾸기" }));
-    expect(await openai.findByRole("alert")).toHaveTextContent(
-      "이 네트워크에서 요청이 너무 많아 잠시 막혔습니다. 30분 뒤에 다시 시도해 주세요.",
+    // 키 확인은 세션 사용자 · 클라이언트 주소 두 축으로 센다(user-R38) — 어느 쪽에 걸렸는지 모르므로 "이 네트워크" 라고 하지 않는다
+    const registerAlert = await openai.findByRole("alert");
+    expect(registerAlert.textContent).toBe(
+      "요청이 너무 많아 잠시 막혔습니다. 30분 뒤에 다시 시도해 주세요.",
     );
+    expect(registerAlert.textContent).not.toContain("이 네트워크");
 
     await user.click(openai.getByRole("button", { name: "다시 검증" }));
     await waitFor(() =>
       expect(
         openai.getAllByRole("alert").map((alert) => alert.textContent),
       ).toContain(
-        "이 네트워크에서 요청이 너무 많아 잠시 막혔습니다. 30분 뒤에 다시 시도해 주세요.",
+        "요청이 너무 많아 잠시 막혔습니다. 30분 뒤에 다시 시도해 주세요.",
       ),
     );
+    expect(
+      openai
+        .getAllByRole("alert")
+        .some((alert) => alert.textContent?.includes("이 네트워크")),
+    ).toBe(false);
   });
 });

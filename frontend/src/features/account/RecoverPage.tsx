@@ -66,7 +66,7 @@ function RecoverForm({
       );
       if (!response.ok || !data) {
         setMessage(
-          guardRejectionText(response, error) ??
+          guardRejectionText(response, error, "NETWORK") ??
             requestFailedText(response.status),
         );
         await me.refetch();
