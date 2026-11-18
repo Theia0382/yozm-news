@@ -1,6 +1,7 @@
 package net.yozmnews.digest.domain.selection;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -29,6 +30,8 @@ class BigSlotPickerTests {
 		BigSlots slots = BigSlotPicker.pick(List.of(first, nothing, second, third), 2, 30);
 
 		assertThat(ids(slots)).containsExactly(101L, 103L);
+		// 행 위치는 입력 행의 위치 — 대표 없는 행(위치 1)을 건너뛰어도 셋째 행은 위치 2
+		assertThat(slots.rows()).containsExactly(0, 2);
 		assertThat(slots.events()).containsExactlyInAnyOrder(new EventId(1), new EventId(3));
 	}
 
@@ -74,6 +77,8 @@ class BigSlotPickerTests {
 		BigSlots slots = BigSlotPicker.pick(List.of(first, second, third), 3, 5);
 
 		assertThat(ids(slots)).containsExactly(101L, 102L, 104L, 105L, 106L);
+		// 줄인 뒤에도 행 위치가 기사와 같은 순서로 남는다
+		assertThat(slots.rows()).containsExactly(0, 0, 1, 2, 2);
 		assertThat(slots.events()).containsExactlyInAnyOrder(new EventId(1), new EventId(2), new EventId(4),
 				new EventId(5), new EventId(6));
 	}
@@ -85,6 +90,13 @@ class BigSlotPickerTests {
 		assertThat(BigSlotPicker.pick(List.of(row), 0, 30)).isEqualTo(BigSlots.NONE);
 		assertThat(BigSlotPicker.pick(List.of(), 3, 30).articles()).isEmpty();
 		assertThat(BigSlotPicker.pick(List.of(row), 3, 0).events()).isEqualTo(Set.of());
+		assertThat(BigSlotPicker.pick(List.of(row), 3, 0).rows()).isEmpty();
+	}
+
+	@Test
+	void slotsNeedOneRowPerArticle() {
+		assertThatIllegalArgumentException()
+			.isThrownBy(() -> new BigSlots(List.of(Facts.article(1).build()), List.of(), Set.of(new EventId(1))));
 	}
 
 	@Test

@@ -26,4 +26,10 @@ public interface TagSetDirectory {
 	 */
 	TagSetView tagSet(TagSetId id);
 
+	/**
+	 * 버전 하나의 키와 이름을 돌려준다 — {@link #tagSet} 과 같은 버전 내용에서 이름만 낸다.
+	 * @throws IllegalArgumentException 없는 버전일 때
+	 */
+	TagSetNames names(TagSetId id);
+
 }
