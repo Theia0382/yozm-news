@@ -30,3 +30,7 @@
 |---|---|
 | 발행 시각으로 기간에 넣는다 | 생성 직전에 수집된 기사와 늦게 수집된 기사가 어느 다이제스트에도 들지 않는다 |
 | 첫 평가 시각만 쓴다(하한 없음) | 소스를 새로 켜면 오래된 기사가 한꺼번에 다음 다이제스트로 온다 |
+
+## 후속 기록
+
+- 2026-11-18: 결과 "기간 끝을 정하는 일정의 몫이다" — 일정은 생성 시각이 지난 뒤 만들고 기간 끝은 생성 시각이다([ADR-0230](0230-scheduled-digests-are-made-after-the-generation-time-and-a-period-runs-from-the-last-ready-or-empty-end-to-that-time.md) · [digest Spec "일정"](../specs/digest.md#일정) digest-R29)

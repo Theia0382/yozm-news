@@ -12,7 +12,7 @@ import {
 } from "@/features/notices/noticeQueries";
 import { SESSION_QUERY_KEY } from "@/features/session/sessionQueries";
 import type { components } from "@/shared/api/schema";
-import { formatDateTime } from "@/shared/lib/dateTime";
+import { formatDate, formatDateTime } from "@/shared/lib/dateTime";
 import { type FeedStatus, feedStatusLabels } from "@/shared/lib/feedStatus";
 import { Button } from "@/shared/ui/button";
 import { NARROW_WIDTH, PAGE_FRAME } from "@/shared/ui/widths";
@@ -34,6 +34,10 @@ type Adjustment = PreferencesAdjustedNotice["adjustments"][number];
 
 type StorylineSubscriptionsRemovedNotice =
   components["schemas"]["StorylineSubscriptionsRemovedNoticeResponse"];
+
+type DigestFailedNotice = components["schemas"]["DigestFailedNoticeResponse"];
+
+type DigestFailureCause = DigestFailedNotice["cause"];
 
 /** 피드를 묶어 보이는 지금 상태의 순서 — 손볼 것부터 */
 const STATUS_ORDER: readonly FeedStatus[] = ["DEGRADED", "STALE", "ACTIVE"];
@@ -151,6 +155,8 @@ function noticeTitle(notice: Notice): string {
       return "태그 체계가 바뀌어 관심 설정을 맞췄습니다";
     case "STORYLINE_SUBSCRIPTIONS_REMOVED":
       return "구독한 스토리라인이 사라졌습니다";
+    case "DIGEST_FAILED":
+      return "다이제스트를 만들지 못했습니다";
   }
 }
 
@@ -170,6 +176,8 @@ function NoticeBody({ notice }: { notice: Notice }): ReactElement {
           body={notice.storylineSubscriptionsRemoved}
         />
       );
+    case "DIGEST_FAILED":
+      return <DigestFailedBody body={notice.digestFailed} />;
   }
 }
 
@@ -196,6 +204,43 @@ function PasswordChangedBody({
       <p className="text-muted-foreground">
         직접 바꾸지 않았다면 바로 비밀번호를 바꾸세요.
       </p>
+    </div>
+  );
+}
+
+/** 다이제스트 실패의 갈래마다 할 일 문구 */
+const digestFailureCauseText: Record<DigestFailureCause, string> = {
+  KEY: "LLM 키를 쓸 수 없었습니다. 키를 확인하거나 다시 등록하세요.",
+  PROVIDER_ACCOUNT:
+    "공급자 계정의 권한이나 잔액 때문에 만들지 못했습니다. 공급자 계정을 확인하세요.",
+  TEMPORARY:
+    "공급자가 잠시 답하지 못했거나 생성이 끝나지 않았습니다. 잠시 뒤 다시 만들어 보세요.",
+  OUTPUT:
+    "모델의 출력을 다이제스트로 쓰지 못했습니다. 다시 만들거나 다른 모델을 골라 보세요.",
+};
+
+function DigestFailedBody({
+  body,
+}: {
+  body: DigestFailedNotice | null | undefined;
+}) {
+  if (!body) {
+    return null;
+  }
+  return (
+    <div className="space-y-1 text-sm">
+      <p>
+        {formatDate(body.digestDate)} 다이제스트 ·{" "}
+        <time dateTime={body.failedAt}>{formatDateTime(body.failedAt)}</time>
+      </p>
+      <p className="text-muted-foreground">
+        {digestFailureCauseText[body.cause]}
+      </p>
+      {body.cause === "KEY" && (
+        <Link to="/keys" className="underline">
+          LLM 키 화면에서 확인하기
+        </Link>
+      )}
     </div>
   );
 }

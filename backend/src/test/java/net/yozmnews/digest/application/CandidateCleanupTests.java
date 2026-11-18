@@ -6,6 +6,7 @@ import java.time.Instant;
 import java.time.InstantSource;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleId;
@@ -30,6 +31,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.TestPropertySource;
+import org.jobrunr.scheduling.JobScheduler;
+import org.junit.jupiter.api.BeforeEach;
+import net.yozmnews.digest.DigestRounds;
 
 /**
  * 후보 행 보존 정리 — 만든 지 30일이 지난 다이제스트의 후보 행만 지우고, 다이제스트 · 섹션 · 인용은 남긴다.
@@ -43,6 +47,9 @@ import org.springframework.test.context.TestPropertySource;
 @SpringBootTest
 @TestPropertySource(properties = "jobrunr.background-job-server.enabled=false")
 class CandidateCleanupTests {
+
+	@Autowired
+	JobScheduler digestJobs;
 
 	private static final Instant NOW = Instant.parse("2026-11-16T00:00:00Z");
 
@@ -65,7 +72,7 @@ class CandidateCleanupTests {
 
 	private DigestId digestCreatedAt(Instant createdAt, long article) {
 		DigestId id = this.digests.save(Digest.schedule(new UserId(42), LocalDate.parse("2026-10-17"),
-				new DigestPeriod(createdAt.minusSeconds(86_400), createdAt), DigestTrigger.SCHEDULED, createdAt)).id();
+				new DigestPeriod(createdAt.minusSeconds(86_400), createdAt), DigestTrigger.MANUAL, UUID.randomUUID(), createdAt)).id();
 		DigestCandidate candidate = new DigestCandidate(new ArticleId(article), SelectionReason.SUBSCRIBED);
 		this.candidates.replace(id, CandidateSet.of(List.of(candidate)));
 		this.sections.saveAll(DigestSection.of(id,
@@ -75,6 +82,11 @@ class CandidateCleanupTests {
 
 	private long count(String sql, DigestId id) {
 		return this.jdbc.sql(sql).param("id", id.value()).query(Long.class).single();
+	}
+
+	@BeforeEach
+	void stopDigestRounds() {
+		DigestRounds.stop(this.digestJobs);
 	}
 
 	@Test

@@ -24,6 +24,8 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.web.servlet.MockMvc;
+import org.jobrunr.scheduling.JobScheduler;
+import net.yozmnews.digest.DigestRounds;
 
 /**
  * 독자 화면의 사용자 격리 — 목록 · 카드는 사용자 데이터가 없어 두 사용자가 같은 본문을 받고, 타임라인의 받은 날짜는 그 사용자의 다이제스트에서만 온다. 세
@@ -35,6 +37,9 @@ import org.springframework.test.web.servlet.MockMvc;
 @SpringBootTest
 @AutoConfigureMockMvc
 public class StorylineScreenScopeTests {
+
+	@Autowired
+	JobScheduler digestJobs;
 
 	@Autowired
 	MockMvc mockMvc;
@@ -52,6 +57,11 @@ public class StorylineScreenScopeTests {
 	JdbcClient jdbc;
 
 	private ReaderRows rows;
+
+	@BeforeEach
+	void stopDigestRounds() {
+		DigestRounds.stop(this.digestJobs);
+	}
 
 	@BeforeEach
 	@AfterEach

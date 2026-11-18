@@ -17,6 +17,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.TestPropertySource;
+import org.jobrunr.scheduling.JobScheduler;
+import org.junit.jupiter.api.BeforeEach;
+import net.yozmnews.digest.DigestRounds;
 
 /**
  * 노출 기록 읽기 — 그 사용자의 READY 다이제스트 모두(같은 날짜의 덮인 것 포함)의 인용, 기사마다 가장 늦게 끝낸 시각, 끝낸 시각의 반열린 범위.
@@ -28,6 +31,9 @@ import org.springframework.test.context.TestPropertySource;
 @SpringBootTest
 @TestPropertySource(properties = "jobrunr.background-job-server.enabled=false")
 class JdbcExposureRepositoryTests {
+
+	@Autowired
+	JobScheduler digestJobs;
 
 	private static final long USER = 42;
 
@@ -46,6 +52,11 @@ class JdbcExposureRepositoryTests {
 	@AfterEach
 	void clear() {
 		this.jdbc.sql("delete from digests").update();
+	}
+
+	@BeforeEach
+	void stopDigestRounds() {
+		DigestRounds.stop(this.digestJobs);
 	}
 
 	@Test

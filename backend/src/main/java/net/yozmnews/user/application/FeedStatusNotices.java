@@ -13,6 +13,7 @@ import net.yozmnews.source.FeedLabel;
 import net.yozmnews.source.FeedLabels;
 import net.yozmnews.source.FeedStatusTransition;
 import net.yozmnews.source.FeedStatusesChanged;
+import net.yozmnews.user.domain.notice.DigestFailedContent;
 import net.yozmnews.user.domain.notice.FeedStatusContent;
 import net.yozmnews.user.domain.notice.FeedStatusReceipt;
 import net.yozmnews.user.domain.notice.KeyInvalidatedContent;
@@ -79,6 +80,7 @@ public class FeedStatusNotices {
 					case PreferencesAdjustedContent other -> throw new IllegalStateException("피드 상태 알림이 아니다");
 					case StorylineSubscriptionsRemovedContent other ->
 						throw new IllegalStateException("피드 상태 알림이 아니다");
+					case DigestFailedContent other -> throw new IllegalStateException("피드 상태 알림이 아니다");
 				};
 				this.notices.revise(unread.get().id(), content.merge(changed, labels), now);
 			}

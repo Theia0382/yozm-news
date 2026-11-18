@@ -22,6 +22,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.TestPropertySource;
+import org.jobrunr.scheduling.JobScheduler;
+import org.junit.jupiter.api.BeforeEach;
+import net.yozmnews.digest.DigestRounds;
 
 /**
  * 받은 소식 — 날짜별로 보이는 다이제스트(그 날짜의 READY 가운데 ID 가 가장 큰 것)의 인용만, 받은 날짜는 가장 이른 날짜.
@@ -37,6 +40,9 @@ import org.springframework.test.context.TestPropertySource;
 @TestPropertySource(properties = "jobrunr.background-job-server.enabled=false")
 class ReceivedArticlesServiceTests {
 
+	@Autowired
+	JobScheduler digestJobs;
+
 	private static final UserId USER = new UserId(42);
 
 	private static final UserId OTHER = new UserId(43);
@@ -50,6 +56,11 @@ class ReceivedArticlesServiceTests {
 	@AfterEach
 	void clear() {
 		this.jdbc.sql("delete from digests").update();
+	}
+
+	@BeforeEach
+	void stopDigestRounds() {
+		DigestRounds.stop(this.digestJobs);
 	}
 
 	@Test
@@ -110,9 +121,9 @@ class ReceivedArticlesServiceTests {
 		boolean done = !status.equals("RUNNING");
 		return this.jdbc.sql("""
 				insert into digests (user_id, digest_date, period_start, period_end, status, trigger, error_code,
-				    created_at, started_at, completed_at, version)
+				    created_at, dispatch_token, dispatched_at, started_at, completed_at, version)
 				values (:user, cast(:date as date), cast(:date as date) - interval '1 day', cast(:date as date), :status,
-				    'SCHEDULED', :error, now(), now(), :completed, 0)
+				    'MANUAL', :error, now(), gen_random_uuid(), now(), now(), :completed, 0)
 				returning id
 				""")
 			.param("user", user.value())
