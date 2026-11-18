@@ -14,7 +14,7 @@ import net.yozmnews.user.TopicSubscriptionChange;
 
 /**
  * 기준 시각 하나의 관심 — 재료({@link InterestRecord})에서 창 [{@link #start}(기준 시각), 창 끝) 안의 행만 골라 산식에 넘긴다. 정본 —
- * docs/specs/digest.md §5 · digest-R25 · digest-R30
+ * docs/specs/digest.md §5 · digest-R25 · digest-R35
  * <ul>
  * <li>노출은 기사마다 창 안에서 가장 늦은 노출 시각</li>
  * <li>반응은 창 안 이력의 기록 순 마지막 값 — 창 시작 앞에 누른 반응은 읽지 않으므로, 창 시작을 걸쳐 같은 기사가 다시 인용된 경우에만 그 반응을

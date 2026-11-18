@@ -11,7 +11,7 @@ import net.yozmnews.digest.TopicSubscriptionStep;
 import net.yozmnews.user.TopicSubscriptionChange;
 
 /**
- * 관심사 히스토리의 기준 시각마다 관심과 변화 — 정본 — docs/specs/digest.md §5 · digest-R30 · digest-R31
+ * 관심사 히스토리의 기준 시각마다 관심과 변화 — 정본 — docs/specs/digest.md §5 · digest-R35 · digest-R36
  * <p>
  * 기준 시각마다 창 끝을 그 기준 시각으로 둔 관심({@link InterestWindow#levels})을 내고, 앞 기준 시각과 견준 새로 생긴 관심 · 사라진 관심
  * ({@link InterestShifts#between})과 두 기준 시각 사이(앞 포함 · 뒤 제외)에 사용자가 직접 바꾼 주제 구독

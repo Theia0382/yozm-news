@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test;
 /**
  * 관심사 히스토리의 기간 경계 — 날짜 · 시각은 달력으로 센 리터럴이다.
  * <p>
- * 지키는 규칙: digest-R29
+ * 지키는 규칙: digest-R34
  */
 class InterestPeriodsTests {
 

@@ -101,11 +101,11 @@ HTTP 엔드포인트 — 모두 세션이 필요하고 키 관문 뒤다(키 없
 
 ### 관심사 히스토리
 
-판단의 이유는 [ADR-0227](../adr/0227-the-interest-history-shows-subtopic-interest-and-the-users-own-topic-subscription-changes-only.md) · [ADR-0229](../adr/0229-interest-history-periods-are-monday-weeks-and-calendar-months-in-the-users-zone-and-the-query-takes-a-span-or-reference-times.md) · [ADR-0228](../adr/0228-consumer-queries-scoped-by-a-user-argument-may-be-called-on-screen-paths-with-the-session-user.md)에 있다. 기간 · 관심 · 변화의 판단은 `digest` 의 것이다(digest-R29 ~ R32).
+판단의 이유는 [ADR-0227](../adr/0227-the-interest-history-shows-subtopic-interest-and-the-users-own-topic-subscription-changes-only.md) · [ADR-0229](../adr/0229-interest-history-periods-are-monday-weeks-and-calendar-months-in-the-users-zone-and-the-query-takes-a-span-or-reference-times.md) · [ADR-0228](../adr/0228-consumer-queries-scoped-by-a-user-argument-may-be-called-on-screen-paths-with-the-session-user.md)에 있다. 기간 · 관심 · 변화의 판단은 `digest` 의 것이다(digest-R34 ~ R37).
 
 - **reader-R8** — 관심사 히스토리: 세션 사용자로 `InterestHistory.recent` 를 부른다. 질의 `span` 이 없으면 `InterestHistorySpan.DEFAULT`, 열거 값이 아니면 400 이다. 응답은 고른 기간(`span`), 단위마다 고를 수 있는 기간과 단위를 바꿨을 때의 기간(`spans[]` — `InterestHistorySpan.Unit` 순, `defaultOf`), 기간(`periods[]` — 시간 순, 마지막이 진행 중), 주제(`topics[]`)를 싣는다. 계정이 없으면(조회가 빈 값) 기간 · 주제가 비어 있다
   - 기간마다 첫날 · 마지막 날(사용자 시간대) · 진행 중 여부 · 새로 생긴 관심 · 사라진 관심 · 사용자가 직접 바꾼 주제 구독(시각 · 더함 / 뺌 · 덮는 중분류)을 싣는다. 키는 태그 체계 순이다
-  - 주제는 기간 가운데 한 번이라도 관심 값이 있는 중분류이고 `TagSetNames.topicOrder()` 순이다. 주제마다 키 · 이름 · 대분류 이름(`TagSetNames.categoryOf` → `topicName`) · 기간마다 관심 칸(`level` — 신호가 없으면 null) · 드러남(`prominent` — digest-R31)을 싣는다. 이름은 조회가 낸 태그 체계 버전(`InterestTimeline.tagSet`)으로 읽는다 — 그 버전에 없는 키는 불변식이 깨진 것이라 `IllegalStateException` 이다
+  - 주제는 기간 가운데 한 번이라도 관심 값이 있는 중분류이고 `TagSetNames.topicOrder()` 순이다. 주제마다 키 · 이름 · 대분류 이름(`TagSetNames.categoryOf` → `topicName`) · 기간마다 관심 칸(`level` — 신호가 없으면 null) · 드러남(`prominent` — digest-R36)을 싣는다. 이름은 조회가 낸 태그 체계 버전(`InterestTimeline.tagSet`)으로 읽는다 — 그 버전에 없는 키는 불변식이 깨진 것이라 `IllegalStateException` 이다
   - 판정 · 관심의 계산은 하지 않는다 — θ 는 응답에 없다
 
 ### 기사 정보

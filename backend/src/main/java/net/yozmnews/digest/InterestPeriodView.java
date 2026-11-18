@@ -4,7 +4,7 @@ import java.time.LocalDate;
 import java.util.Objects;
 
 /**
- * 관심사 히스토리의 기간 하나 — 사용자 시간대의 날짜와 그 기간 기준 시각의 관심. docs/specs/digest.md §3 · digest-R29
+ * 관심사 히스토리의 기간 하나 — 사용자 시간대의 날짜와 그 기간 기준 시각의 관심. docs/specs/digest.md §3 · digest-R34
  *
  * @param firstDay 첫날
  * @param lastDay 마지막 날

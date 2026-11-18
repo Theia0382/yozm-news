@@ -3,7 +3,7 @@ package net.yozmnews.digest;
 import java.util.Objects;
 
 /**
- * 관심사 히스토리가 보일 기간 — 단위(주 · 월)와 기간 수 · docs/specs/digest.md §3 · digest-R29
+ * 관심사 히스토리가 보일 기간 — 단위(주 · 월)와 기간 수 · docs/specs/digest.md §3 · digest-R34
  */
 public enum InterestHistorySpan {
 

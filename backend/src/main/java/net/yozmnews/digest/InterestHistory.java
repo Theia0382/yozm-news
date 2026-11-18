@@ -8,7 +8,7 @@ import net.yozmnews.platform.UserId;
 
 /**
  * 관심사 히스토리 — 기준 시각마다 다이제스트와 같은 산식으로 계산한 주제 관심과 그 변화. 저장하지 않고 부를 때 계산한다.
- * docs/specs/digest.md §3 · digest-R29 ~ digest-R32
+ * docs/specs/digest.md §3 · digest-R34 ~ digest-R37
  * <p>
  * 사용자를 인자로 받는다 — 화면 경로에서는 세션 사용자로만 부른다. 트랜잭션 없이 다른 모듈의 조회를 차례로 부르고, 조회 사이의 태그 체계 활성
  * 전환으로 키 버전이 어긋나면 처음부터 다시 한다(끝내 어긋나면 {@link IllegalStateException}).

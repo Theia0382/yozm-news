@@ -18,7 +18,7 @@
 - **후보 선별** — 사용자의 관심 설정과 기간으로 후보를 고르고 생성의 입력(`DigestInput` — 프로필 · 후보 기사의 값 · 큰 스토리라인 묶음)을 낸다 — 구독 필터 · 순위 · 큰 슬롯 · 사건 단위 중복 제거 · 구독 행마다 몫 · 최대 후보 수 · 입력 토큰 예산 · 선정 이유(digest-R15 ~ R22). 순위는 관심도를 곱하고 사용자가 싫어요를 누른 기사는 뺀다. 재료는 다른 모듈의 공개 조회로 읽고 판단은 `domain/selection` 의 순수 규칙이 한다
 - **(미구현)** 일정 기반 생성과 수동 재생성, 독자 화면(`reader`)이 쓸 다이제스트 조회 — 화면은 날짜별로 보이는 다이제스트(digest-R13)를 보인다. 화면용 API 는 `reader` 가 낸다([ADR-0192](../adr/0192-reader-screens-are-composed-by-the-reader-module-over-module-public-queries.md))
 - **관심도** — 사용자 × 주제 중분류 × 기준 시각의 관심 크기를 신호 이력(좋아요 / 싫어요 · 주제 구독 변경 · 스토리라인 구독 변경)과 노출 기록(인용)에서 조회할 때 계산한다 — 저장하지 않는다(digest-R23 ~ R25)
-- **관심사 히스토리** — 기준 시각마다 관심도와 같은 산식으로 계산한 주제 관심, 이웃 기준 시각 사이의 새로 생긴 관심 · 사라진 관심, 그 사이 사용자가 직접 바꾼 주제 구독을 공개 조회(`InterestHistory`)로 낸다 — 화면용은 사용자 시간대의 주 · 월 기간, 리포트용은 부르는 쪽의 기준 시각 목록. 저장하지 않는다(digest-R29 ~ R32)
+- **관심사 히스토리** — 기준 시각마다 관심도와 같은 산식으로 계산한 주제 관심, 이웃 기준 시각 사이의 새로 생긴 관심 · 사라진 관심, 그 사이 사용자가 직접 바꾼 주제 구독을 공개 조회(`InterestHistory`)로 낸다 — 화면용은 사용자 시간대의 주 · 월 기간, 리포트용은 부르는 쪽의 기준 시각 목록. 저장하지 않는다(digest-R34 ~ R37)
 
 하지 않는 것:
 
@@ -47,10 +47,10 @@
 | 관심 | 주제 중분류마다 신호와 노출로 계산한 −1 ~ 1 의 값(관심 x) — 신호가 없으면 0(digest-R23) |
 | 관심도 가중치 | 관심을 옮긴 0.5 ~ 1.5 의 값 — 신호가 없으면 1(중립). 기사의 가중치는 그 기사 주제 중분류 가중치의 평균이다(digest-R23) |
 | 노출 | 그 사용자의 `READY` 다이제스트(같은 날짜의 덮인 것 포함)가 인용한 기사 — 관심도의 분모. 받은 소식과 다른 정의다(digest-R24) |
-| 기준 시각 | 관심도의 감쇠를 재는 시각 — 다이제스트는 기간 끝, 관심사 히스토리는 기간 끝(진행 중인 기간은 부르는 시각)(digest-R25 · R30) |
-| 창 | 기준 시각 하나의 관심을 계산할 때 쓰는 재료 행의 시각 범위 — [기준 시각 − 120일, 창 끝). 창 끝은 다이제스트가 부르는 시각, 관심사 히스토리가 기준 시각이다(digest-R25 · R30) |
-| 관심 있음 | 관심이 "관심 있음"의 하한(θ) 이상인 주제 — 새로 생긴 관심 · 사라진 관심은 이웃 기간의 관심 있음을 견준 것이다(digest-R31) |
-| 드러난 주제 | 보인 기간 가운데 한 번이라도 관심의 크기가 θ 이상인 주제(관심 쪽 · 싫어요 쪽) — 화면이 펼쳐 보이는 행(digest-R31) |
+| 기준 시각 | 관심도의 감쇠를 재는 시각 — 다이제스트는 기간 끝, 관심사 히스토리는 기간 끝(진행 중인 기간은 부르는 시각)(digest-R25 · R35) |
+| 창 | 기준 시각 하나의 관심을 계산할 때 쓰는 재료 행의 시각 범위 — [기준 시각 − 120일, 창 끝). 창 끝은 다이제스트가 부르는 시각, 관심사 히스토리가 기준 시각이다(digest-R25 · R35) |
+| 관심 있음 | 관심이 "관심 있음"의 하한(θ) 이상인 주제 — 새로 생긴 관심 · 사라진 관심은 이웃 기간의 관심 있음을 견준 것이다(digest-R36) |
+| 드러난 주제 | 보인 기간 가운데 한 번이라도 관심의 크기가 θ 이상인 주제(관심 쪽 · 싫어요 쪽) — 화면이 펼쳐 보이는 행(digest-R36) |
 | 생성의 입력 | 후보 선별이 낸 사용자 프로필 · 후보 기사의 값 · 큰 스토리라인 묶음(`DigestInput`) — 토큰 어림에 쓴 글과 같은 읽기다(digest-R22) |
 | 큰 스토리라인 묶음 | 큰 판정 행 하나에서 들어온 큰 슬롯 후보 — 프롬프트에서 요청마다의 별칭(`S1` …)과 이름(그 스토리라인 대표 사건의 대표 기사 제목)으로 보인다(digest-R19 · R26) |
 | 프롬프트 | 지시 구획 · 사용자 구획(JSON 문서) · 출력 JSON Schema 문서(digest-R26) |
@@ -81,7 +81,7 @@ public interface ReceivedArticles {
 
 ### InterestHistory
 
-관심사 히스토리 — 기준 시각마다 관심도와 같은 산식으로 계산한 주제 관심과 그 변화(digest-R29 ~ R32). `reader` 가 관심사 히스토리 화면에 엮고(`recent`), 변화 리포트가 자기 기간 경계로 부른다(`at`). 구현은 `application` 의 `InterestHistoryService` 다.
+관심사 히스토리 — 기준 시각마다 관심도와 같은 산식으로 계산한 주제 관심과 그 변화(digest-R34 ~ R37). `reader` 가 관심사 히스토리 화면에 엮고(`recent`), 변화 리포트가 자기 기간 경계로 부른다(`at`). 구현은 `application` 의 `InterestHistoryService` 다.
 
 ```java
 public interface InterestHistory {
@@ -108,19 +108,19 @@ public record TopicSubscriptionStep(Instant at, TopicSubscriptionAction action, 
 
 | 멤버 | 뜻 |
 |---|---|
-| `recent` | 사용자 시간대의 최근 기간마다 하나(`span.count()` 개, 시간 순, 마지막이 진행 중) — 기간 경계 digest-R29. 계정이 없으면 빈 값 |
+| `recent` | 사용자 시간대의 최근 기간마다 하나(`span.count()` 개, 시간 순, 마지막이 진행 중) — 기간 경계 digest-R34. 계정이 없으면 빈 값 |
 | `at` | 부르는 쪽이 정한 기준 시각마다 하나 — 맨 앞 기준 시각은 둘째의 변화를 정하는 견줌용이라 결과에 없다. 기준 시각이 둘보다 적거나 시간 순이 아니면(앞이 뒤보다 늦으면) 재료를 읽기 전에 `IllegalArgumentException` — 같은 시각은 받고, 같은 기준 시각 사이는 관심이 같고 변화 · 구독 변경이 없다. 계정이 없으면 빈 값 |
 | `InterestTimeline.tagSet` | 주제 키의 활성 태그 체계 버전 — 이름은 그 버전으로 읽는다 |
-| `InterestTimeline.prominent` | 드러난 주제(digest-R31) |
-| `InterestPoint.levels` | 주제 중분류(활성 키) → 관심 — 노출 · 구독 신호가 있는 중분류만(digest-R30) |
-| `InterestPoint.entered` · `left` | 앞 기준 시각 대비 새로 생긴 관심 · 사라진 관심(digest-R31) |
-| `InterestPoint.subscriptionChanges` | 앞 기준 시각 이상 · 이 기준 시각 미만에 사용자가 직접 바꾼 주제 구독 — 시각 순(digest-R31) |
+| `InterestTimeline.prominent` | 드러난 주제(digest-R36) |
+| `InterestPoint.levels` | 주제 중분류(활성 키) → 관심 — 노출 · 구독 신호가 있는 중분류만(digest-R35) |
+| `InterestPoint.entered` · `left` | 앞 기준 시각 대비 새로 생긴 관심 · 사라진 관심(digest-R36) |
+| `InterestPoint.subscriptionChanges` | 앞 기준 시각 이상 · 이 기준 시각 미만에 사용자가 직접 바꾼 주제 구독 — 시각 순(digest-R36) |
 | `TopicSubscriptionStep.subtopics` | 그 행이 덮던 중분류를 활성 키로 푼 것 — 비지 않는다 |
 
 - 계약
   - 사용자를 인자로 받는다 — 화면 경로에서는 세션 사용자로만 부른다([ADR-0228](../adr/0228-consumer-queries-scoped-by-a-user-argument-may-be-called-on-screen-paths-with-the-session-user.md))
   - 트랜잭션 없이 다른 모듈의 조회를 차례로 부른다. 역할 애너테이션이 없다(두 역할 공통). 저장하지 않는다
-  - 조회 사이 태그 체계 활성 전환으로 재료의 키 버전이 어긋나면 처음부터 다시 하고, `ActiveEvaluations.ATTEMPTS` 번 모두 어긋나면 `IllegalStateException` 이다(digest-R32)
+  - 조회 사이 태그 체계 활성 전환으로 재료의 키 버전이 어긋나면 처음부터 다시 하고, `ActiveEvaluations.ATTEMPTS` 번 모두 어긋나면 `IllegalStateException` 이다(digest-R37)
 
 ## 4. 내부 구조
 
@@ -186,9 +186,9 @@ sequenceDiagram
 - `CandidateCleanup` — 후보 행 보존 정리. 트랜잭션 하나(digest-R11)
 - `ReceivedArticlesService` — 공개 조회 `ReceivedArticles` 의 구현. 상한을 확인하고 저장소에 맡긴다. 읽기 전용 트랜잭션 하나, 역할 애너테이션 없음(digest-R13)
 - `CandidateSelection` — 후보 선별(`select(UserId, DigestPeriod, LlmModel)` → `Optional<DigestInput>` — 계정이 없으면 빈 값). 트랜잭션 없이 다른 모듈의 공개 조회를 차례로 부르고 그 사이를 `domain/selection` 의 순수 단계로 잇는다 — 대표 기사 · 내용은 앞 단계로 좁힌 기사에 대해서만 읽는다. 관심도는 `InterestMaterials` 로 읽어 `InterestWindow`(창 끝 = 부르는 시각)로 계산하고, 싫어요는 `feedback` 의 `ArticleFeedback.dislikedAmong`, 태그 이름은 `tag` 의 `TagSetDirectory.names` 로 읽는다. 구독 후보를 관심도 순위와 중립 순위로 각각 고른다. 후보의 내용은 두 결과의 기사를 한 번 읽어 토큰 어림과 생성의 입력에 함께 쓴다. 시계는 `InstantSource`(시험이 넣는다). 백그라운드 작업 전용이고 역할 애너테이션이 없다(digest-R15 ~ R22 · R25)
-- `ActiveEvaluations` — 기사들의 평가를 `ArticleEvaluations.MAX_ARTICLES` 씩 읽고 평가 버전마다 계보 표를 한 번 읽어 활성 키로 푼다(`ActiveKeys`) — 표의 활성 버전이 맞출 버전과 다르면 빈 값. 후보 선별 · 관심도의 노출 기사 · 스토리라인 대표가 함께 쓴다. 활성 버전이 어긋날 때의 전체 시도 수 `ATTEMPTS`(2)의 정본이다(digest-R16 · R32)
+- `ActiveEvaluations` — 기사들의 평가를 `ArticleEvaluations.MAX_ARTICLES` 씩 읽고 평가 버전마다 계보 표를 한 번 읽어 활성 키로 푼다(`ActiveKeys`) — 표의 활성 버전이 맞출 버전과 다르면 빈 값. 후보 선별 · 관심도의 노출 기사 · 스토리라인 대표가 함께 쓴다. 활성 버전이 어긋날 때의 전체 시도 수 `ATTEMPTS`(2)의 정본이다(digest-R16 · R37)
 - `InterestMaterials` — 관심도 재료 읽기(`read(UserId, TagSetId, Instant from, Instant to)` → `Optional<InterestRecord>`) — 범위 하나에서 노출 행(`ExposureRepository`), `feedback` 의 `ArticleFeedback.changes`, `user` 의 `TopicSubscriptionHistory` · `StorylineSubscriptionDirectory.changes`, `storyline` 의 `StorylineDirectory.events` → `event` 의 `EventDirectory.representativesOfAll` → `ActiveEvaluations` 를 읽어 재료로 낸다 — 계산하지 않는다. 트랜잭션 없음, 키 버전이 어긋나면 빈 값. 사용자를 인자로 받는다 — 화면 경로에서는 세션 사용자로만(digest-R25)
-- `InterestHistoryService` — `InterestHistory` 의 구현. `user` 의 `UserTimezones` 로 계정 · 시간대를 읽고, `tag` 의 `TagSetDirectory.activeTagSet` 으로 맞출 버전을, `InterestMaterials` 로 첫 기준 시각의 창 시작부터 마지막 기준 시각까지의 재료를 한 번 읽어 `InterestPeriods` · `InterestTimelines` 에 넘긴다. 트랜잭션 없음, 역할 애너테이션 없음, 시계는 `InstantSource`(digest-R29 ~ R32)
+- `InterestHistoryService` — `InterestHistory` 의 구현. `user` 의 `UserTimezones` 로 계정 · 시간대를 읽고, `tag` 의 `TagSetDirectory.activeTagSet` 으로 맞출 버전을, `InterestMaterials` 로 첫 기준 시각의 창 시작부터 마지막 기준 시각까지의 재료를 한 번 읽어 `InterestPeriods` · `InterestTimelines` 에 넘긴다. 트랜잭션 없음, 역할 애너테이션 없음, 시계는 `InstantSource`(digest-R34 ~ R37)
 - `DigestCitationsService` — `feedback` 의 `DigestCitations` 의 구현. 다이제스트 ID 가 1 보다 작으면 거짓이고 그 밖은 저장소에 맡긴다. 읽기 전용 트랜잭션(부르는 쪽의 트랜잭션이 있으면 거기에 든다), 역할 애너테이션 없음(digest-R14)
 
 ### `domain`
@@ -218,10 +218,10 @@ sequenceDiagram
 - `UserFilter` · `SubscriptionFilter` · `CandidateRank` · `BigSlotPicker` · `EventDedup` · `DiversityQuota` · `BudgetCut` · `CandidateSelector` — 후보 선별 규칙의 정본, 규칙마다 하나(digest-R17 ~ R22). `CandidateRank.order(TopicInterests)` 가 관심도를 곱한 순위다. `ArticleFacts` 는 그 사용자의 싫어요 여부(`disliked`)를 싣고 `ArticleFacts.of(ActiveEvaluation, …)` 로 만든다
 - `DigestInput` — 생성의 입력 — 같은 기사 두 번 · 후보 밖의 묶음 기사 · 두 묶음에 든 기사를 거부한다(digest-R22)
 - `ActiveKeys` — 평가 키(주제 중분류 · 지역 · 대표 형식)를 계보 표로 활성 키로 푸는 정본(`ActiveEvaluation`)(digest-R16)
-- `InterestRules` · `InterestFormula` · `InterestLevels` · `TopicInterests` — 관심도 상수(θ `PRESENCE_THRESHOLD` 포함) · 산식 · 관심과 가중치 변환의 정본(digest-R23 · R31)
+- `InterestRules` · `InterestFormula` · `InterestLevels` · `TopicInterests` — 관심도 상수(θ `PRESENCE_THRESHOLD` 포함) · 산식 · 관심과 가중치 변환의 정본(digest-R23 · R36)
 - `InterestSignals` · `StorylineTopics` — 관심 신호로 쓸 행 고르기(사용자가 바꾼 주제 구독 행 `subscriberTopicChanges` 포함) · 스토리라인의 주제 몫의 정본(digest-R25)
-- `InterestWindow` — 창 시작(`start`)과 창 안 행 고르기의 정본(digest-R25 · R30)
-- `InterestPeriods` · `InterestShifts` · `InterestTimelines` — 관심사 히스토리의 기간 경계 · 생김 · 사라짐 · 드러남 · 기준 시각마다의 관심과 변화의 정본(digest-R29 ~ R31)
+- `InterestWindow` — 창 시작(`start`)과 창 안 행 고르기의 정본(digest-R25 · R35)
+- `InterestPeriods` · `InterestShifts` · `InterestTimelines` — 관심사 히스토리의 기간 경계 · 생김 · 사라짐 · 드러남 · 기준 시각마다의 관심과 변화의 정본(digest-R34 ~ R36)
 - `ExposureRepository` — 노출 저장소 — 계약이 노출 정의의 정본이다(digest-R24)
 
   ```java
@@ -460,19 +460,19 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
   - 노출 기사는 평가가 있는 것만, 활성 중분류로 푼다. 반응은 그 기사의 창 안 이력 가운데 기록 순 마지막 값이다(없으면 없음). 노출되지 않은 기사의 반응은 버린다. 창 시작 앞에 누른 반응은 읽지 않는다 — 창 시작을 걸쳐 같은 기사가 다시 인용된 경우에만 그 반응을 없음으로 센다
   - 주제 구독 변경(`user` 의 `TopicSubscriptionHistory`)은 원인이 사용자인 행만, 푼 활성 중분류마다 몫 1 이다
   - 스토리라인 구독 변경(`StorylineSubscriptionDirectory.changes`)은 원인이 사용자이고 지금도 있는 스토리라인(합쳐졌으면 남는 쪽)의 행만이다. 몫은 지금 그 스토리라인의 닫은 사건마다 대표 기사(`EventDirectory.representativesOfAll`)를 읽어, 평가가 있는 대표 가운데 그 중분류가 붙은 대표 수 ÷ 대표 수다 — 미분류 대표도 분모에 들고, 기준 몫은 없다. 몫이 빈 스토리라인의 변경은 신호가 아니다
-  - 재료의 키를 푼 활성 버전(노출 기사 · 대표 기사의 계보 표, 주제 구독 변경 조회가 낸 버전)이 맞출 버전과 다르면 빈 값이다 — 후보 선별(digest-R16) · 관심사 히스토리(digest-R32)가 처음부터 다시 한다
+  - 재료의 키를 푼 활성 버전(노출 기사 · 대표 기사의 계보 표, 주제 구독 변경 조회가 낸 버전)이 맞출 버전과 다르면 빈 값이다 — 후보 선별(digest-R16) · 관심사 히스토리(digest-R37)가 처음부터 다시 한다
 
 ### 관심사 히스토리
 
 판단의 이유는 [ADR-0225](../adr/0225-interest-history-values-read-only-the-window-before-each-reference-time-and-the-period-in-progress-is-measured-at-the-call.md) · [ADR-0226](../adr/0226-new-and-lost-interests-are-neighbouring-periods-crossing-one-threshold-on-the-interest-value.md) · [ADR-0227](../adr/0227-the-interest-history-shows-subtopic-interest-and-the-users-own-topic-subscription-changes-only.md) · [ADR-0228](../adr/0228-consumer-queries-scoped-by-a-user-argument-may-be-called-on-screen-paths-with-the-session-user.md) · [ADR-0229](../adr/0229-interest-history-periods-are-monday-weeks-and-calendar-months-in-the-users-zone-and-the-query-takes-a-span-or-reference-times.md) · [ADR-0215](../adr/0215-interests-are-not-stored-entities-and-are-computed-from-signal-history-at-query-time.md)에 있다. θ 는 측정 전 목표다([open-questions.md](../open-questions.md) "운영하면서 결정" 24번).
 
-- **digest-R29** — 기간 경계(`InterestPeriods`): 사용자 시간대(`user` 의 `UserTimezones` — 관심 설정의 시간대, 설정 행이 없으면 계정을 만들 때의 값)에서 주는 월요일, 월은 1일에 시작하고 경계는 그날의 시작 시각이다(자정이 없는 날은 첫 유효 시각). 부르는 시각을 담은 기간을 마지막으로 `span.count()` + 1 개를 만들고 맨 앞은 견줌용이다. 지난 기간의 기준 시각은 기간 끝, 진행 중인 기간의 기준 시각은 부르는 시각이다 — 기간이 시작되는 정각에 부르면 앞 기간 끝과 같은 기준 시각이라 진행 중인 기간은 앞 기간과 관심이 같고 변화가 없다. 고를 수 있는 기간은 `InterestHistorySpan` — 주 13 · 26 · 52, 월 12 · 24 · 36, 처음 13주, 단위를 바꾸면 주 13 · 월 12
-- **digest-R30** — 기준 시각마다의 관심(`InterestTimelines` · `InterestWindow`): 재료는 첫 기준 시각의 창 시작부터 마지막 기준 시각까지 한 번 읽고, 기준 시각 T 마다 창 끝을 T 로 둔 관심을 digest-R23 의 산식으로 낸다 — T 뒤의 노출 · 반응 · 구독 변경은 그 기간에 들지 않는다. 주제는 활성 체계의 중분류이고 지난 기간의 기사 · 구독도 계보로 활성 키로 풀린다
-- **digest-R31** — 판정(`InterestShifts` · `InterestTimelines` · `InterestRules.PRESENCE_THRESHOLD` 0.2):
+- **digest-R34** — 기간 경계(`InterestPeriods`): 사용자 시간대(`user` 의 `UserTimezones` — 관심 설정의 시간대, 설정 행이 없으면 계정을 만들 때의 값)에서 주는 월요일, 월은 1일에 시작하고 경계는 그날의 시작 시각이다(자정이 없는 날은 첫 유효 시각). 부르는 시각을 담은 기간을 마지막으로 `span.count()` + 1 개를 만들고 맨 앞은 견줌용이다. 지난 기간의 기준 시각은 기간 끝, 진행 중인 기간의 기준 시각은 부르는 시각이다 — 기간이 시작되는 정각에 부르면 앞 기간 끝과 같은 기준 시각이라 진행 중인 기간은 앞 기간과 관심이 같고 변화가 없다. 고를 수 있는 기간은 `InterestHistorySpan` — 주 13 · 26 · 52, 월 12 · 24 · 36, 처음 13주, 단위를 바꾸면 주 13 · 월 12
+- **digest-R35** — 기준 시각마다의 관심(`InterestTimelines` · `InterestWindow`): 재료는 첫 기준 시각의 창 시작부터 마지막 기준 시각까지 한 번 읽고, 기준 시각 T 마다 창 끝을 T 로 둔 관심을 digest-R23 의 산식으로 낸다 — T 뒤의 노출 · 반응 · 구독 변경은 그 기간에 들지 않는다. 주제는 활성 체계의 중분류이고 지난 기간의 기사 · 구독도 계보로 활성 키로 풀린다
+- **digest-R36** — 판정(`InterestShifts` · `InterestTimelines` · `InterestRules.PRESENCE_THRESHOLD` 0.2):
   - 관심 있음 = 관심 ≥ θ. 새로 생긴 관심 = 이번 기준 시각에 관심 있음이고 앞 기준 시각에 아닌 중분류, 사라진 관심은 그 반대다. 싫어요 쪽(관심 ≤ −θ)은 관심 있음이 아니다
   - 드러난 주제 = 보인 기간(견줌용 제외) 가운데 한 번이라도 |관심| ≥ θ 인 중분류
   - 기간마다의 주제 구독 변경 = 앞 기준 시각 이상 · 이 기준 시각 미만에 원인이 사용자이고 푼 중분류가 있는 주제 구독 이력 행(`InterestSignals.subscriberTopicChanges` — 관심 신호와 같은 고르기). 좋아요 / 싫어요 · 스토리라인 구독 이력은 행으로 내지 않는다
-- **digest-R32** — 조회(`InterestHistoryService`): 계정이 없으면(`UserTimezones` 가 빈 값) 빈 값이다. 맞출 버전은 그때의 활성 버전이고, 재료의 키 버전이 어긋나면 처음부터 다시 해 `ActiveEvaluations.ATTEMPTS` 번 모두 어긋나면 `IllegalStateException` 이다. 기준 시각 조건(둘 이상 · 시간 순 — 같은 시각 허용, 앞이 뒤보다 늦으면 `IllegalArgumentException`)은 재료를 읽기 전에 본다. 리포트는 백그라운드 작업으로 `at` 을 자기 경계로 부른다
+- **digest-R37** — 조회(`InterestHistoryService`): 계정이 없으면(`UserTimezones` 가 빈 값) 빈 값이다. 맞출 버전은 그때의 활성 버전이고, 재료의 키 버전이 어긋나면 처음부터 다시 해 `ActiveEvaluations.ATTEMPTS` 번 모두 어긋나면 `IllegalStateException` 이다. 기준 시각 조건(둘 이상 · 시간 순 — 같은 시각 허용, 앞이 뒤보다 늦으면 `IllegalArgumentException`)은 재료를 읽기 전에 본다. 리포트는 백그라운드 작업으로 `at` 을 자기 경계로 부른다
 
 ### 로컬 대체물
 

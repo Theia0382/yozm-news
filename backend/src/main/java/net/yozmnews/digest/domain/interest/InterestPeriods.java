@@ -12,7 +12,7 @@ import java.util.Objects;
 import net.yozmnews.digest.InterestHistorySpan;
 
 /**
- * 관심사 히스토리의 기간 경계 — 정본 — docs/specs/digest.md §5 · digest-R29
+ * 관심사 히스토리의 기간 경계 — 정본 — docs/specs/digest.md §5 · digest-R34
  * <p>
  * 사용자 시간대에서 주는 월요일, 월은 1일에 시작한다. 경계는 그날의 시작 시각이다({@link LocalDate#atStartOfDay(ZoneId)} — 자정이 없는
  * 날은 그날의 첫 유효 시각). 부르는 시각을 담은 기간이 마지막이고 진행 중이다.
