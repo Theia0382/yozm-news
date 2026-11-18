@@ -22,8 +22,6 @@ public interface ReportGenerator {
 
 | 작업 | 주기/계기 | 내용 |
 |---|---|---|
-| `ScheduleDueDigests` | 1분마다 | 생성 시각이 다가온 사용자의 다이제스트 생성 작업 등록 |
-| `GenerateDigest(userId, date)` | 위에서 등록 / 사용자 수동 요청 | 후보 선별 → LLM 호출 → 검증 → 저장 |
 | `ScheduleDueReports` | 1시간마다 | 리포트 시점이 된 사용자의 변화 리포트 생성 작업 등록 |
 | `GenerateReport(userId, period)` | 위에서 등록 | 통계 집계 → 스냅숏 → LLM 호출 → 검증 → 저장 |
 | `Retention` | 하루 1회 | 보존 기간이 지난 데이터 정리 ([data-model.md](data-model.md)) — 요약문(운영 설정을 켰을 때) 포함. 사건 배정 입력(기사 표현)은 `event` 의 사건 정리 작업이, 다이제스트 후보 행(`digest_candidates`)은 `digest` 의 후보 행 보존 정리가 지운다([event Spec](specs/event.md#사건-정리) · [digest Spec](specs/digest.md#후보-행-보존)) |

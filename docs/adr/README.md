@@ -229,6 +229,10 @@
 | [0221](0221-generator-results-are-success-or-failure-and-the-use-case-asks-once-more-only-for-a-complete-unreadable-answer.md) | 다이제스트 생성기의 결과는 성공 · 실패 갈래이고, 끝까지 쓴 응답을 읽지 못하면 유스케이스가 한 번 다시 묻는다 | 승인 |
 | [0222](0222-interest-per-subtopic-is-smoothed-reactions-over-exposures-with-a-half-life-and-exposures-are-all-ready-citations.md) | 관심도는 주제 중분류마다 노출로 나눈 반응에 가상 노출을 더해 평활하고 반감기로 감쇠하며, 노출은 덮인 다이제스트를 포함한 인용 전부다 | 승인 |
 | [0223](0223-the-digest-summary-length-is-a-user-setting-in-the-digest-volume-section.md) | 다이제스트의 요약 길이는 사용자 설정이고 "다이제스트 분량" 구획에 있다 | 승인 |
+| [0230](0230-scheduled-digests-are-made-after-the-generation-time-and-a-period-runs-from-the-last-ready-or-empty-end-to-that-time.md) | 일정 다이제스트는 생성 시각이 지난 뒤 만들고, 기간은 직전 READY · EMPTY 의 끝부터 생성 시각까지다 | 승인 |
+| [0231](0231-manual-generation-remakes-todays-digest-with-its-period-or-makes-a-new-one-and-counts-manual-rows-of-the-users-day.md) | 수동 생성은 오늘 다이제스트를 같은 기간으로 다시 만들거나 새로 만들고, 하루 횟수는 사용자 시간대의 오늘 만든 수동 행으로 센다 | 승인 |
+| [0232](0232-a-running-digest-is-never-started-again-and-stalled-digests-end-interrupted-after-a-lease-or-a-start-deadline.md) | 생성 중인 다이제스트는 다시 시작하지 않고, 임대가 지난 생성과 시작 기한이 지난 예약은 중단 실패로 끝낸다 | 승인 |
+| [0233](0233-digest-failure-notices-come-through-an-event-declared-by-the-receiving-user-module-for-every-failed-digest.md) | 다이제스트 실패 알림은 받는 쪽 user 가 선언한 이벤트로 받고, 실패한 다이제스트마다 까닭 갈래와 함께 남긴다 | 승인 |
 
 ## 운영 규칙
 
