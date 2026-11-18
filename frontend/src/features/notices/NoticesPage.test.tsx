@@ -400,7 +400,7 @@ describe("NoticesPage", () => {
     expect(rows[1]).toHaveTextContent("제목을 알 수 없는 스토리라인");
   });
 
-  it("다이제스트 실패 알림은 날짜 · 시각과 할 일을 보이고 키 갈래면 키 화면으로 잇는다", async () => {
+  it("다이제스트 실패 알림은 날짜 · 시각과 할 일을 보이고 그 날짜 다이제스트로, 키 갈래면 키 화면으로 잇는다", async () => {
     renderNotices(() => json(page([DIGEST_FAILED_KEY])));
 
     const item = await screen.findByRole("article");
@@ -416,18 +416,70 @@ describe("NoticesPage", () => {
     expect(
       within(item).getByRole("link", { name: "LLM 키 화면에서 확인하기" }),
     ).toHaveAttribute("href", "/keys");
+    expect(
+      within(item).getByRole("link", { name: "그 날짜 다이제스트 보기" }),
+    ).toHaveAttribute("href", "/digests/2026-11-19");
+    // 키 갈래의 할 일은 다시 만들기가 아니다
+    expect(
+      within(item).queryByRole("link", {
+        name: "오늘 다이제스트에서 다시 만들기",
+      }),
+    ).toBeNull();
   });
 
-  it("키 갈래가 아닌 다이제스트 실패 알림은 할 일만 보이고 키 화면으로 잇지 않는다", async () => {
+  it("일시 장애 실패 알림은 다시 만들기가 있는 오늘 다이제스트로 잇고 키 화면으로 잇지 않는다", async () => {
     renderNotices(() => json(page([DIGEST_FAILED_TEMPORARY])));
 
     const item = await screen.findByRole("article");
     expect(item).toHaveTextContent("2026. 11. 20. 다이제스트");
     expect(item).toHaveTextContent(
-      "공급자가 잠시 답하지 못했거나 생성이 끝나지 않았습니다. 잠시 뒤 다시 만들어 보세요.",
+      "공급자가 잠시 답하지 못했거나 생성이 끝나지 않았습니다. 잠시 뒤 오늘 다이제스트에서 다시 만들어 보세요.",
     );
-    expect(within(item).queryByRole("link")).toBeNull();
+    expect(
+      within(item)
+        .getAllByRole("link")
+        .map((link) => [link.textContent, link.getAttribute("href")]),
+    ).toEqual([
+      ["그 날짜 다이제스트 보기", "/digests/2026-11-20"],
+      ["오늘 다이제스트에서 다시 만들기", "/"],
+    ]);
   });
+
+  it.each([
+    ["OUTPUT", true],
+    ["PROVIDER_ACCOUNT", false],
+  ] as const)(
+    "%s 갈래 실패 알림의 다시 만들기 링크 — %s",
+    async (cause, retry) => {
+      renderNotices(() =>
+        json(
+          page([
+            {
+              ...DIGEST_FAILED_KEY,
+              digestFailed: {
+                digestDate: "2026-11-21",
+                cause,
+                failedAt: "2026-11-20T22:03:10Z",
+              },
+            },
+          ]),
+        ),
+      );
+
+      const item = await screen.findByRole("article");
+      expect(
+        within(item).getByRole("link", { name: "그 날짜 다이제스트 보기" }),
+      ).toHaveAttribute("href", "/digests/2026-11-21");
+      expect(
+        within(item).queryByRole("link", {
+          name: "오늘 다이제스트에서 다시 만들기",
+        }) !== null,
+      ).toBe(retry);
+      expect(
+        within(item).queryByRole("link", { name: "LLM 키 화면에서 확인하기" }),
+      ).toBeNull();
+    },
+  );
 
   it("받은 쪽의 안 읽은 알림만 받은 판까지 읽음으로 보낸다", async () => {
     const { reads } = renderNotices(() => json(page([GATHERED, OLD])));

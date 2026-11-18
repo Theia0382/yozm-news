@@ -62,7 +62,7 @@ const SETTINGS: InterestSettings = {
   monthlyReport: true,
 };
 
-/** 새 계정의 분량 — 보통 · 큰 스토리라인 3 · 요약 길이 보통 */
+/** 새 계정의 분량 — 보통 · 큰 화제 3 · 요약 길이 보통 */
 const VOLUME: InterestVolume = {
   volume: "NORMAL",
   customCount: null,
@@ -315,7 +315,7 @@ describe("InterestsPage", () => {
     expect(
       volume.getByLabelText("직접 입력한 후보 수 (10 ~ 150건)"),
     ).toBeDisabled();
-    expect(volume.getByLabelText("큰 스토리라인 수 (0 ~ 10개)")).toHaveValue(3);
+    expect(volume.getByLabelText("큰 화제 수 (0 ~ 10개)")).toHaveValue(3);
     expect(volume.getByRole("radio", { name: "보통" })).toBeChecked();
     expect(volume.getByRole("radio", { name: "짧게" })).not.toBeChecked();
     expect(volume.getByRole("radio", { name: "자세히" })).not.toBeChecked();
@@ -394,7 +394,7 @@ describe("InterestsPage", () => {
     ).toBeInTheDocument();
   });
 
-  it("직접 입력한 수와 큰 스토리라인 수를 저장하고 알린다", async () => {
+  it("직접 입력한 수와 큰 화제 수를 저장하고 알린다", async () => {
     let current = VOLUME;
     const { server } = renderInterests({
       "GET /api/interests/volume": () => json(current),
@@ -411,7 +411,7 @@ describe("InterestsPage", () => {
     expect(count).toBeEnabled();
     await user.clear(count);
     await user.type(count, "45");
-    const bigSlots = volume.getByLabelText("큰 스토리라인 수 (0 ~ 10개)");
+    const bigSlots = volume.getByLabelText("큰 화제 수 (0 ~ 10개)");
     await user.clear(bigSlots);
     await user.type(bigSlots, "0");
     await user.click(volume.getByRole("button", { name: "분량 저장" }));
@@ -476,7 +476,7 @@ describe("InterestsPage", () => {
         volume: null,
         range: { min: 1, max: 8 },
       },
-      "큰 스토리라인 수는 1 ~ 8개여야 합니다.",
+      "큰 화제 수는 1 ~ 8개여야 합니다.",
     ],
   ] as const)(
     "분량 저장이 %s 이면 받는 범위를 알린다",

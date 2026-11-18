@@ -247,6 +247,10 @@ describe("DigestDayPage", () => {
       "다시 만들지 못해 앞서 만든 다이제스트를 보여 줍니다.",
     );
     expect(alert).toHaveTextContent("모델이 다이제스트 작성을 거절했습니다.");
+    // 날짜 화면에는 다시 만들기 버튼이 없다 — 할 일은 홈(오늘 다이제스트)을 가리킨다
+    expect(alert).toHaveTextContent(
+      "오늘 다이제스트에서 다시 만들거나 관심 설정에서 다른 모델을 골라 보세요.",
+    );
     expect(within(alert).queryByRole("link")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "기사 1" })).toBeInTheDocument();
   });

@@ -2,7 +2,15 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { useEffect, useRef } from "react";
 import { Link } from "react-router";
-import { digestFailureCauseTexts } from "@/features/digests/digestTexts";
+import {
+  DIGEST_HOME_PATH,
+  FAILED_DAY_LINK,
+  KEYS_LINK,
+  RETRY_AT_HOME_LINK,
+  digestFailureCauseTexts,
+  digestPath,
+  retryAtHome,
+} from "@/features/digests/digestTexts";
 import { INTERESTS_PATH } from "@/features/interests/interestTexts";
 import { providers } from "@/features/keys/keyTexts";
 import {
@@ -224,11 +232,21 @@ function DigestFailedBody({
       <p className="text-muted-foreground">
         {digestFailureCauseTexts[body.cause]}
       </p>
-      {body.cause === "KEY" && (
-        <Link to="/keys" className="underline">
-          LLM 키 화면에서 확인하기
+      <p className="flex flex-wrap gap-x-3">
+        <Link to={digestPath(body.digestDate)} className="underline">
+          {FAILED_DAY_LINK}
         </Link>
-      )}
+        {body.cause === "KEY" && (
+          <Link to="/keys" className="underline">
+            {KEYS_LINK}
+          </Link>
+        )}
+        {retryAtHome[body.cause] && (
+          <Link to={DIGEST_HOME_PATH} className="underline">
+            {RETRY_AT_HOME_LINK}
+          </Link>
+        )}
+      </p>
     </div>
   );
 }

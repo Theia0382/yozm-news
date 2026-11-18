@@ -54,10 +54,24 @@ export const digestFailureCauseTexts: Record<DigestFailureCause, string> = {
   PROVIDER_ACCOUNT:
     "공급자 계정의 권한이나 잔액 때문에 만들지 못했습니다. 공급자 계정을 확인하세요.",
   TEMPORARY:
-    "공급자가 잠시 답하지 못했거나 생성이 끝나지 않았습니다. 잠시 뒤 다시 만들어 보세요.",
+    "공급자가 잠시 답하지 못했거나 생성이 끝나지 않았습니다. 잠시 뒤 오늘 다이제스트에서 다시 만들어 보세요.",
   OUTPUT:
-    "모델의 출력을 다이제스트로 쓰지 못했습니다. 다시 만들거나 다른 모델을 골라 보세요.",
+    "모델의 출력을 다이제스트로 쓰지 못했습니다. 오늘 다이제스트에서 다시 만들거나 관심 설정에서 다른 모델을 골라 보세요.",
 };
+
+/** 다시 만들기가 할 일인 갈래 — 다시 만들기 버튼은 홈에만 있다 */
+export const retryAtHome = {
+  KEY: false,
+  PROVIDER_ACCOUNT: false,
+  TEMPORARY: true,
+  OUTPUT: true,
+} as const satisfies Record<DigestFailureCause, boolean>;
+
+/** 홈의 다시 만들기로 가는 링크 */
+export const RETRY_AT_HOME_LINK = "오늘 다이제스트에서 다시 만들기";
+
+/** 실패한 날짜의 다이제스트 화면으로 가는 링크 */
+export const FAILED_DAY_LINK = "그 날짜 다이제스트 보기";
 
 /** 실패 코드마다 무슨 일이 있었는가(ADR-0240) */
 export const digestFailureTexts: Record<DigestFailure, string> = {

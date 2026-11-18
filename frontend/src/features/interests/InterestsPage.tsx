@@ -616,7 +616,7 @@ function VolumeForm({ data, setMessage }: FormProps<InterestVolume>) {
           const range = saved.range ?? data.bigSlotRange;
           return {
             tone: "alert",
-            text: `큰 스토리라인 수는 ${range.min} ~ ${range.max}개여야 합니다.`,
+            text: `큰 화제 수는 ${range.min} ~ ${range.max}개여야 합니다.`,
           };
         }
       }
@@ -681,7 +681,7 @@ function VolumeForm({ data, setMessage }: FormProps<InterestVolume>) {
       <div className="space-y-1">
         <label className="block space-y-1">
           <span className="text-sm">
-            {`큰 스토리라인 수 (${data.bigSlotRange.min} ~ ${data.bigSlotRange.max}개)`}
+            {`큰 화제 수 (${data.bigSlotRange.min} ~ ${data.bigSlotRange.max}개)`}
           </span>
           <input
             type="number"
