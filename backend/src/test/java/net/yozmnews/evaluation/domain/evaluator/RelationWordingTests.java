@@ -44,24 +44,30 @@ class RelationWordingTests {
 	void theCurrentWordingIsTheOneThatWasMeasured() {
 		RelationWording wording = RelationWording.CURRENT;
 
-		assertThat(wording.version()).isEqualTo("relation-2");
+		assertThat(wording.version()).isEqualTo("relation-3");
 		assertThat(wording.question()).isEqualTo("What is the relation between flow A and flow B?");
 		assertThat(wording.oneMatterQuestion("A")).isEqualTo("Is flow A the unfolding of one matter, rather than a "
 				+ "collection of separate happenings that are only of a similar kind?");
 		assertThat(wording.oneMatterQuestion("B")).isEqualTo("Is flow B the unfolding of one matter, rather than a "
 				+ "collection of separate happenings that are only of a similar kind?");
 		assertThat(wording.options()).containsOnlyKeys(RelationAnswer.values());
-		// 요청 순서는 문구를 고를 때 잰 요청의 것이다 — 조각이 해당 없음 바로 앞이고, 답의 선언 순서(해당 없음이 맨 앞)와 다르다
+		// 요청 순서는 문구를 고를 때 잰 요청의 것이다 — 조각 · 나란한 흐름이 해당 없음 바로 앞이고, 답의 선언 순서(해당 없음이 맨 앞)와 다르다
 		assertThat(wording.order()).containsExactly(RelationAnswer.SECOND_PART_OF_FIRST,
 				RelationAnswer.FIRST_PART_OF_SECOND, RelationAnswer.FIRST_LED_TO_SECOND,
-				RelationAnswer.SECOND_LED_TO_FIRST, RelationAnswer.SAME_MATTER, RelationAnswer.NONE);
-		assertThat(wording.options().get(RelationAnswer.SAME_MATTER)).isEqualTo("A and B are two parts of one and the same "
-				+ "matter. Neither is narrower than the other and neither lies inside the other; taken together they "
-				+ "follow that one matter.");
+				RelationAnswer.SECOND_LED_TO_FIRST, RelationAnswer.SAME_MATTER, RelationAnswer.PARALLEL,
+				RelationAnswer.NONE);
+		assertThat(wording.options().get(RelationAnswer.SAME_MATTER)).isEqualTo("A and B are one and the same flow "
+				+ "recorded as two. They follow the same matter with the same actors and the same course, and would be "
+				+ "read as a single flow.");
+		assertThat(wording.options().get(RelationAnswer.PARALLEL)).isEqualTo("A and B are separate flows, but both "
+				+ "came directly out of one and the same specific event or decision, and neither would exist without "
+				+ "it. Each has its own actors and its own course; neither is inside the other and neither arose from "
+				+ "the other.");
 		assertThat(wording.options().get(RelationAnswer.NONE)).isEqualTo("None of the above. A and B are separate "
-				+ "matters, or one of them is a collection of separate happenings rather than one matter. They may be "
-				+ "of a similar kind, involve the same people, or share a cause, but neither is inside the other and "
-				+ "neither arose from the other.");
+				+ "matters that did not come out of one specific event, or one of them is a collection of separate "
+				+ "happenings rather than one matter. They may be of a similar kind, belong to the same field or the "
+				+ "same recurring series, or involve the same people, but neither is inside the other and neither "
+				+ "arose from the other.");
 		assertThat(wording.options().get(RelationAnswer.SECOND_PART_OF_FIRST)).isEqualTo("B is narrower than A and lies "
 				+ "inside it: B covers one reaction to A, one stage of A, or one strand of A, and is still about the "
 				+ "matter of A.");
@@ -71,10 +77,10 @@ class RelationWordingTests {
 	}
 
 	@Test
-	void theCurrentWordingAnswersEveryAnswerAndTheEarlierOneLacksTheFragmentAnswer() {
+	void theCurrentWordingAnswersEveryAnswerAndTheEarlierOneLacksTheFragmentAndParallelAnswers() {
 		// 판정을 받는 쪽은 모든 답의 확률을 기대한다 — 지금 판의 답은 답 전부여야 한다
 		assertThat(RelationWording.CURRENT.answers()).isEqualTo(EnumSet.allOf(RelationAnswer.class));
-		assertThat(RelationWording.CURRENT).isSameAs(RelationWording.RELATION_2);
+		assertThat(RelationWording.CURRENT).isSameAs(RelationWording.RELATION_3);
 		assertThat(RelationWording.RELATION_1.answers()).isEqualTo(EnumSet.of(RelationAnswer.NONE,
 				RelationAnswer.SECOND_PART_OF_FIRST, RelationAnswer.FIRST_PART_OF_SECOND,
 				RelationAnswer.FIRST_LED_TO_SECOND, RelationAnswer.SECOND_LED_TO_FIRST));
@@ -83,8 +89,10 @@ class RelationWordingTests {
 				RelationAnswer.SECOND_LED_TO_FIRST, RelationAnswer.NONE);
 		assertThat(RelationWording.RELATION_1.options().get(RelationAnswer.NONE)).contains("or they cover the same matter as a whole");
 		assertThat(RelationWording.ofVersion("relation-1")).contains(RelationWording.RELATION_1);
-		assertThat(RelationWording.ofVersion("relation-2")).contains(RelationWording.RELATION_2);
-		assertThat(RelationWording.ofVersion("relation-3")).isEmpty();
+		assertThat(RelationWording.ofVersion("relation-3")).contains(RelationWording.RELATION_3);
+		// 배포된 적이 없는 판은 알려진 판이 아니다
+		assertThat(RelationWording.ofVersion("relation-2")).isEmpty();
+		assertThat(RelationWording.KNOWN).containsExactly(RelationWording.RELATION_1, RelationWording.RELATION_3);
 	}
 
 	@Test

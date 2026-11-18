@@ -29,16 +29,16 @@ public interface RelationRepository {
 	void unlink(long a, long b);
 
 	/**
-	 * 그 쌍의 관계를 조각 쌍의 판정이 맺은 고리로 둔다 — 그 쌍에 있던 관계는 지운다.
-	 * @param by 그 고리를 맺은 조각 쌍 — 확률 · 판정 원본은 그 쌍의 조각 판정 것이다
+	 * 그 쌍의 관계를 나란한 흐름 쌍의 판정이 맺은 고리로 둔다 — 그 쌍에 있던 관계는 지운다.
+	 * @param by 그 고리를 맺은 나란한 흐름 쌍 — 확률 · 판정 원본은 그 쌍의 나란한 흐름 판정 것이다
 	 */
 	void linkGrouped(Relation relation, GroupedBy by, double probability, long judgementId, long criteriaId,
 			Instant now);
 
-	/** 그 조각 쌍이 맺은 고리 — 종류 · 앞 ID · 뒤 ID 순. 두 끝이 모두 합쳐지지 않은 것만 */
+	/** 그 나란한 흐름 쌍이 맺은 고리 — 종류 · 앞 ID · 뒤 ID 순. 두 끝이 모두 합쳐지지 않은 것만 */
 	List<Relation> groupedBy(long a, long b);
 
-	/** 조각 쌍이 맺은 모든 고리 — 종류 · 앞 ID · 뒤 ID 순. 두 끝이 모두 합쳐지지 않은 것만 */
+	/** 나란한 흐름 쌍이 맺은 모든 고리 — 종류 · 앞 ID · 뒤 ID 순. 두 끝이 모두 합쳐지지 않은 것만 */
 	List<GroupedRelation> grouped();
 
 	/**
@@ -47,7 +47,7 @@ public interface RelationRepository {
 	 */
 	void regroup(Relation relation, @Nullable GroupedBy by);
 
-	/** 이 스토리라인과 조각 쌍이 맺은 고리로 이어진 상대 — 그 쌍은 따로 묻지 않는다 */
+	/** 이 스토리라인과 나란한 흐름 쌍이 맺은 고리로 이어진 상대 — 그 쌍은 따로 묻지 않는다 */
 	Set<Long> groupedPartners(long storylineId);
 
 	/** 그 쌍을 넘겨 물을 쌍으로 둔다 — 이미 있으면 그대로다 */

@@ -350,7 +350,7 @@ class LinkingFlowTests {
 		long l4 = seed(sameEvent(), sameEvent(), sameEvent());
 		long relationCriteria = this.relations
 			.registerCriteria(new RelationCriteria(0.60, 0.20, 3, 0.88, Duration.ofDays(14)), NOW);
-		// L4 ⊃ L2 · L4 ⊃ L3 을 조각 쌍 (L2, L3) 의 판정이 맺었다. 넘겨 물을 쌍은 (L2, L3) · (L4, L3)
+		// L4 ⊃ L2 · L4 ⊃ L3 을 나란한 흐름 쌍 (L2, L3) 의 판정이 맺었다. 넘겨 물을 쌍은 (L2, L3) · (L4, L3)
 		this.relations.linkGrouped(new Relation(l4, l2, RelationKind.CONTAINS), GroupedBy.of(l2, l3), 0.9, 61,
 				relationCriteria, NOW);
 		this.relations.linkGrouped(new Relation(l4, l3, RelationKind.CONTAINS), GroupedBy.of(l2, l3), 0.9, 61,

@@ -13,7 +13,8 @@ public sealed interface RelationReading {
 
 	/**
 	 * 다시 읽었다 — 그 원본을 남긴 문구 판의 답마다 확률과 흐름마다 한 사안의 전개일 확률. 방향은 원본의 first · second 흐름 기준이다.
-	 * 문구 판마다 답이 다르다 — 옛 판의 원본에는 같은 사안의 조각({@link RelationAnswer#SAME_MATTER})이 없다.
+	 * 문구 판마다 답이 다르다 — 옛 판의 원본에는 같은 사안의 조각({@link RelationAnswer#SAME_MATTER})과 나란한
+	 * 흐름({@link RelationAnswer#PARALLEL})이 없다.
 	 */
 	record Read(Map<RelationAnswer, Double> probabilities, double firstOneMatter, double secondOneMatter)
 			implements RelationReading {

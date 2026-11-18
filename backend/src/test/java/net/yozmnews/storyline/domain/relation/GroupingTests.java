@@ -10,7 +10,7 @@ import net.yozmnews.storyline.domain.relation.RelationRule.Decision;
 import org.junit.jupiter.api.Test;
 
 /**
- * 같은 사안의 조각으로 판정된 두 스토리라인을 묶는 판정 — 조각은 한쪽을 다른 쪽 아래 넣지 않고 같은 상위의 하위로 둔다. 넘기는 그래프는 그
+ * 나란한 흐름으로 판정된 두 스토리라인을 묶는 판정 — 나란한 흐름은 한쪽을 다른 쪽 아래 넣지 않고 같은 상위의 하위로 둔다. 넘기는 그래프는 그
  * 쌍 사이의 관계를 뺀 것이다.
  * <p>
  * 지키는 규칙: storyline-R29
@@ -20,9 +20,9 @@ class GroupingTests {
 	private static final RelationGraph EMPTY = new RelationGraph(List.of());
 
 	@Test
-	void twoFragmentsWithoutAParentOpenOneEvenWhenOneOfThemHasChildren() {
+	void twoFlowsWithoutAParentOpenOneEvenWhenOneOfThemHasChildren() {
 		assertThat(Grouping.decide(1, 2, EMPTY)).isEqualTo(new Grouping.Action.Open());
-		// 한쪽이 하위를 가졌어도 조각은 그 아래 들지 않는다 — 둘 위에 상위를 연다
+		// 한쪽이 하위를 가졌어도 다른 쪽은 그 아래 들지 않는다 — 둘 위에 상위를 연다
 		RelationGraph withChild = new RelationGraph(List.of(contains(1, 7)));
 		assertThat(Grouping.decide(1, 2, withChild)).isEqualTo(new Grouping.Action.Open());
 		// 이어짐은 상위가 아니다
@@ -31,7 +31,7 @@ class GroupingTests {
 	}
 
 	@Test
-	void theOtherFragmentIsReferredToTheParentOfTheOneThatHasIt() {
+	void theOtherFlowIsReferredToTheParentOfTheOneThatHasIt() {
 		RelationGraph parented = new RelationGraph(List.of(contains(9, 1)));
 
 		assertThat(Grouping.decide(1, 2, parented)).isEqualTo(new Grouping.Action.Refer(9, 2));
@@ -39,7 +39,7 @@ class GroupingTests {
 	}
 
 	@Test
-	void fragmentsUnderTheSameParentAreAlreadyGroupedAndUnderDifferentParentsAreNot() {
+	void flowsUnderTheSameParentAreAlreadyGroupedAndUnderDifferentParentsAreNot() {
 		RelationGraph same = new RelationGraph(List.of(contains(9, 1), contains(9, 2)));
 		RelationGraph different = new RelationGraph(List.of(contains(9, 1), contains(8, 2)));
 
@@ -48,7 +48,7 @@ class GroupingTests {
 	}
 
 	@Test
-	void aFragmentCannotBeGroupedWithItsAncestor() {
+	void aFlowCannotBeGroupedWithItsAncestor() {
 		// 1 ⊃ 5 ⊃ 2 — 이 쌍 사이의 관계가 아니라 다른 고리들로 조상이다
 		RelationGraph chain = new RelationGraph(List.of(contains(1, 5), contains(5, 2)));
 
@@ -85,8 +85,11 @@ class GroupingTests {
 		// 한 고리만 남아 있어도 남은 것에만 한다
 		assertThat(Grouping.overturn(new Decision.Link(contains(1, 2), 0.8), List.of(contains(9, 1))))
 			.isEqualTo(new Grouping.Overturn(List.of(), List.of(contains(9, 1))));
+		// 조각으로 뒤집혀도 고리는 지우지 않고 표지만 푼다 — 그 둘이 합쳐지든 둘로 남든 이 쌍의 고리가 아니다
+		assertThat(Grouping.overturn(new Decision.Fragments(1, 2, 0.8), grouped))
+			.isEqualTo(new Grouping.Overturn(List.of(), grouped));
 		assertThatIllegalArgumentException()
-			.isThrownBy(() -> Grouping.overturn(new Decision.Fragments(1, 2, 0.8), grouped));
+			.isThrownBy(() -> Grouping.overturn(new Decision.Parallel(1, 2, 0.8), grouped));
 	}
 
 	private static Relation contains(long parent, long child) {

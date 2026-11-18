@@ -47,8 +47,9 @@ function judgement(
     judgedAt: T,
     reading,
     none: read ? 0.1 : null,
-    // 조각 답이 없던 문구 판의 원본 — 그 판의 원본에는 조각 확률이 없다
+    // 조각 답 · 나란한 흐름 답이 없던 문구 판의 원본 — 그 판의 원본에는 두 확률이 없다
     sameMatter: null,
+    parallel: null,
     secondPartOfFirst: read ? 0.7 : null,
     firstPartOfSecond: read ? 0.05 : null,
     firstLedToSecond: read ? 0.1 : null,
@@ -168,7 +169,7 @@ const DETAIL: Schemas["StorylineDetailResponse"] = {
       criteria: RELATION,
       judgementId: 40,
       judgement: null,
-      // 조각 쌍 (7, 9) 위에 상위 2 를 열 때 맺은 고리
+      // 나란한 흐름 쌍 (7, 9) 위에 상위 2 를 열 때 맺은 고리
       groupedBy: [7, 9],
     },
     {
@@ -287,11 +288,11 @@ describe("StorylineDetailPage", () => {
     );
     expect(cells(table, 2)[0]).toHaveTextContent(/^포함됨$/);
     expect(cells(table, 2)[1]).toHaveTextContent(/^스토리라인 2$/);
-    // 조각 쌍의 판정이 맺은 고리는 그 쌍을 적는다 — 보통 관계에는 적지 않는다
+    // 나란한 흐름 쌍의 판정이 맺은 고리는 그 쌍을 적는다 — 보통 관계에는 적지 않는다
     expect(cells(table, 2)[5]).toHaveTextContent(
-      /^조각 쌍 7 · 9 의 판정이 맺음원본 없음$/,
+      /^나란한 흐름 쌍 7 · 9 의 판정이 맺음원본 없음$/,
     );
-    expect(cells(table, 1)[5]).not.toHaveTextContent("조각 쌍");
+    expect(cells(table, 1)[5]).not.toHaveTextContent("나란한 흐름 쌍");
     expect(cells(table, 3)[0]).toHaveTextContent(/^낳음$/);
     // 원본의 확률은 관계의 앞 · 뒤가 아니라 원본의 앞 · 뒤 번호로 적는다
     expect(cells(table, 3)[5]).toHaveTextContent(
@@ -301,29 +302,34 @@ describe("StorylineDetailPage", () => {
     expect(cells(table, 4)[1]).toHaveTextContent(/^스토리라인 5$/);
   });
 
-  it("조각으로 판정된 쌍은 결말과 조각 확률을 보인다", async () => {
+  it("조각 · 나란한 흐름으로 판정된 쌍은 결말과 두 확률을 보인다", async () => {
     renderPage(7, () =>
       json({
         ...DETAIL,
         asked: [
-          asked(20, "UNGROUPED", 71, {
+          asked(20, "UNMERGED", 71, {
             ...judgement(71, 7, 20, "READ", null),
-            wordingVersion: "relation-2",
+            wordingVersion: "relation-3",
             sameMatter: 0.7,
+            parallel: 0.2,
           }),
           asked(21, "GROUPED", 72, null),
           asked(22, "REFERRED", 73, null),
+          asked(23, "UNGROUPED", 74, null),
         ],
       }),
     );
 
     const table = await screen.findByRole("table", { name: "물은 쌍" });
-    expect(cells(table, 1)[1]).toHaveTextContent(/^조각 — 묶지 않음$/);
+    expect(cells(table, 1)[1]).toHaveTextContent(/^조각 — 합치지 않음$/);
     expect(cells(table, 1)[5]).toHaveTextContent(
-      "해당 없음 0.1 · 조각 0.7 · 20 ⊂ 7 0.7 · 7 ⊂ 20 0.05 · 7 → 20 0.1 · 20 → 7 0.05 · 한 사안 7 0.8 · 20 0.6",
+      "해당 없음 0.1 · 조각 0.7 · 나란한 흐름 0.2 · 20 ⊂ 7 0.7 · 7 ⊂ 20 0.05 · 7 → 20 0.1 · 20 → 7 0.05 · 한 사안 7 0.8 · 20 0.6",
     );
-    expect(cells(table, 2)[1]).toHaveTextContent(/^조각 — 묶음$/);
-    expect(cells(table, 3)[1]).toHaveTextContent(/^조각 — 상위에 넘겨 물음$/);
+    expect(cells(table, 2)[1]).toHaveTextContent(/^나란한 흐름 — 묶음$/);
+    expect(cells(table, 3)[1]).toHaveTextContent(
+      /^나란한 흐름 — 상위에 넘겨 물음$/,
+    );
+    expect(cells(table, 4)[1]).toHaveTextContent(/^나란한 흐름 — 묶지 않음$/);
   });
 
   it("물은 쌍은 마지막 결말과 원본이 없는 까닭을 가려 보인다", async () => {

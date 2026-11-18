@@ -8324,6 +8324,10 @@
             "type" : [ "number", "null" ],
             "format" : "double"
           },
+          "parallel" : {
+            "type" : [ "number", "null" ],
+            "format" : "double"
+          },
           "reading" : {
             "type" : "string",
             "enum" : [ "READ", "NO_EVALUATOR", "OTHER_EVALUATOR", "UNREADABLE" ]
@@ -8352,7 +8356,7 @@
             "type" : "string"
           }
         },
-        "required" : [ "firstId", "firstLedToSecond", "firstOneMatter", "firstPartOfSecond", "id", "inputTokens", "judgedAt", "message", "modelVersion", "none", "reading", "sameMatter", "secondId", "secondLedToFirst", "secondOneMatter", "secondPartOfFirst", "wordingVersion" ]
+        "required" : [ "firstId", "firstLedToSecond", "firstOneMatter", "firstPartOfSecond", "id", "inputTokens", "judgedAt", "message", "modelVersion", "none", "parallel", "reading", "sameMatter", "secondId", "secondLedToFirst", "secondOneMatter", "secondPartOfFirst", "wordingVersion" ]
       },
       "RemovedStorylineResponse" : {
         "type" : "object",
@@ -8771,7 +8775,7 @@
           },
           "outcome" : {
             "type" : "string",
-            "enum" : [ "LINKED", "NOT_RELATED", "LOW_PROBABILITY", "NOT_ONE_MATTER", "CYCLE", "SECOND_PARENT", "GROUPED", "REFERRED", "UNGROUPED", "NOTHING_TO_ASK", "REJECTED" ]
+            "enum" : [ "LINKED", "NOT_RELATED", "LOW_PROBABILITY", "NOT_ONE_MATTER", "CYCLE", "SECOND_PARENT", "GROUPED", "REFERRED", "UNGROUPED", "UNMERGED", "NOTHING_TO_ASK", "REJECTED" ]
           },
           "smallerEvents" : {
             "type" : "integer",

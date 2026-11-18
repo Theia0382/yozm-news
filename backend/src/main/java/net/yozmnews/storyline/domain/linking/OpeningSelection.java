@@ -10,11 +10,11 @@ import java.util.Set;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 같은 사안의 조각 위에 상위를 열 때 그 상위에 들 사건을 고르는 판정 — 정본 · docs/specs/storyline.md §4.
+ * 나란한 흐름 위에 상위를 열 때 그 상위에 들 사건을 고르는 판정 — 정본 · docs/specs/storyline.md §4.
  * <p>
- * 두 조각의 사건마다 잇기의 규칙을 그대로 쓴다 — 기준은 잇기 기준 하나다. 점수가 위 기준 이상이면 든다. 띠 [아래 기준, 위 기준) 안이면
+ * 두 흐름의 사건마다 잇기의 규칙을 그대로 쓴다 — 기준은 잇기 기준 하나다. 점수가 위 기준 이상이면 든다. 띠 [아래 기준, 위 기준) 안이면
  * 흐름 소속 판정에 물어 확률이 확률 기준 이상일 때 든다. 그 밖은 들지 않는다(경계 포함 — {@link LinkingCriteria#inBand} ·
- * {@link Score#reaches} · {@link Asked#reaches}). 점수는 부르는 쪽이 그 사건을 뺀 두 조각의 표현과 견줘 매긴다.
+ * {@link Score#reaches} · {@link Asked#reaches}). 점수는 부르는 쪽이 그 사건을 뺀 두 흐름의 표현과 견줘 매긴다.
  */
 public final class OpeningSelection {
 
@@ -38,7 +38,7 @@ public final class OpeningSelection {
 
 	/**
 	 * 물을 띠 사건 — 점수 순으로 {@link #MAX_ASKED_EVENTS} 개까지.
-	 * @param events 점수를 매긴 두 조각의 사건
+	 * @param events 점수를 매긴 두 흐름의 사건
 	 */
 	public static List<Scored> toAsk(List<Scored> events, LinkingCriteria criteria) {
 		Objects.requireNonNull(criteria, "criteria");
@@ -51,7 +51,7 @@ public final class OpeningSelection {
 
 	/**
 	 * 상위에 들 사건 — 사건 ID 순.
-	 * @param events 점수를 매긴 두 조각의 사건
+	 * @param events 점수를 매긴 두 흐름의 사건
 	 * @param asked 띠 사건에 물은 결과 — 사건 ID → 결과. 결과가 없는 띠 사건(묻지 못했거나 상한을 넘었다)은 들지 않는다
 	 */
 	public static List<Passed> passed(List<Scored> events, Map<Long, Asked> asked, LinkingCriteria criteria) {
@@ -73,11 +73,11 @@ public final class OpeningSelection {
 	}
 
 	/**
-	 * 그 사건들로 상위를 열 수 있는가 — 사건이 {@link #MIN_EVENTS} 개 이상이고 어느 조각의 구성 사건과도 같은 집합이 아니다. 조각 하나와
-	 * 같은 집합이면 정돈이 그 상위를 곧 그 조각과 합친다.
+	 * 그 사건들로 상위를 열 수 있는가 — 사건이 {@link #MIN_EVENTS} 개 이상이고 어느 흐름의 구성 사건과도 같은 집합이 아니다. 흐름 하나와
+	 * 같은 집합이면 정돈이 그 상위를 곧 그 흐름과 합친다.
 	 * @param passed 상위에 들 사건
-	 * @param first 한 조각의 구성 사건
-	 * @param second 다른 조각의 구성 사건
+	 * @param first 한 흐름의 구성 사건
+	 * @param second 다른 흐름의 구성 사건
 	 */
 	public static boolean openable(Set<Long> passed, Set<Long> first, Set<Long> second) {
 		return passed.size() >= MIN_EVENTS && !passed.equals(first) && !passed.equals(second);

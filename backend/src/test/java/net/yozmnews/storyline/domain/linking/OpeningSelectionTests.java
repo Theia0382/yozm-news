@@ -11,7 +11,7 @@ import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 /**
- * 같은 사안의 조각 위에 상위를 열 때 그 상위에 들 사건 — 잇기의 규칙 그대로다.
+ * 나란한 흐름 위에 상위를 열 때 그 상위에 들 사건 — 잇기의 규칙 그대로다.
  * <p>
  * 기준: 띠 0.84 ~ 0.88 · 확률 0.70.
  */
@@ -56,7 +56,7 @@ class OpeningSelectionTests {
 	}
 
 	@Test
-	void aParentOpensWithTwoEventsThatAreNotExactlyOneFragment() {
+	void aParentOpensWithTwoEventsThatAreNotExactlyOneFlow() {
 		Set<Long> first = Set.of(1L, 2L, 3L);
 		Set<Long> second = Set.of(4L, 5L, 6L);
 
@@ -64,7 +64,7 @@ class OpeningSelectionTests {
 		assertThat(OpeningSelection.openable(Set.of(1L, 2L), first, second)).isTrue();
 		assertThat(OpeningSelection.openable(Set.of(1L), first, second)).isFalse();
 		assertThat(OpeningSelection.openable(Set.of(), first, second)).isFalse();
-		// 한 조각의 구성 사건과 같은 집합이면 정돈이 그 상위를 그 조각과 합친다 — 열지 않는다
+		// 한 흐름의 구성 사건과 같은 집합이면 정돈이 그 상위를 그 흐름과 합친다 — 열지 않는다
 		assertThat(OpeningSelection.openable(Set.of(1L, 2L, 3L), first, second)).isFalse();
 		assertThat(OpeningSelection.openable(Set.of(4L, 5L, 6L), first, second)).isFalse();
 		assertThat(OpeningSelection.openable(Set.of(1L, 2L, 3L, 4L), first, second)).isTrue();

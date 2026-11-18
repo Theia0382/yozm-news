@@ -46,13 +46,17 @@ class JevRelationTests {
 			+ "\"b_one_matter\":{\"type\":\"noul\",\"instructions\":\"Is flow B the unfolding of one matter, rather than "
 			+ "a collection of separate happenings that are only of a similar kind?\"}}}";
 
-	/** 판 relation-2 의 요청 — 선택지는 부분 둘 · 낳음 둘 · 조각 · 해당 없음 순이다(문구를 고를 때 잰 요청의 순서) */
+	/** 판 relation-3 의 요청 — 선택지는 부분 둘 · 낳음 둘 · 조각 · 나란한 흐름 · 해당 없음 순이다(문구를 고를 때 잰 요청의 순서 · 키) */
 	private static final String QUESTIONS = PARTS
-			+ "\"same\":\"A and B are two parts of one and the same matter. Neither is narrower than the other and "
-			+ "neither lies inside the other; taken together they follow that one matter.\","
-			+ "\"none\":\"None of the above. A and B are separate matters, or one of them is a collection of separate "
-			+ "happenings rather than one matter. They may be of a similar kind, involve the same people, or share a "
-			+ "cause, but neither is inside the other and neither arose from the other.\"}}," + ONE_MATTER;
+			+ "\"same\":\"A and B are one and the same flow recorded as two. They follow the same matter with the same "
+			+ "actors and the same course, and would be read as a single flow.\","
+			+ "\"parallel\":\"A and B are separate flows, but both came directly out of one and the same specific "
+			+ "event or decision, and neither would exist without it. Each has its own actors and its own course; "
+			+ "neither is inside the other and neither arose from the other.\","
+			+ "\"none\":\"None of the above. A and B are separate matters that did not come out of one specific event, "
+			+ "or one of them is a collection of separate happenings rather than one matter. They may be of a similar "
+			+ "kind, belong to the same field or the same recurring series, or involve the same people, but neither is "
+			+ "inside the other and neither arose from the other.\"}}," + ONE_MATTER;
 
 	/** 판 relation-1 의 요청 — 선택지는 부분 둘 · 낳음 둘 · 해당 없음 순이다 */
 	private static final String QUESTIONS_1 = PARTS
@@ -63,7 +67,7 @@ class JevRelationTests {
 
 	private static final String BODY = "{\"model\":\"jev-1.14.0\",\"answers\":{\"relation\":{\"type\":\"choice\","
 			+ "\"choice\":\"none\",\"confidence\":0.47,\"probabilities\":{\"b_part_of_a\":0.07,\"a_part_of_b\":0.03,"
-			+ "\"a_led_to_b\":0.3,\"b_led_to_a\":0.02,\"same\":0.08,\"none\":0.5}},\"a_one_matter\":{\"type\":\"noul\",\"noul\":0.47},"
+			+ "\"a_led_to_b\":0.3,\"b_led_to_a\":0.02,\"same\":0.08,\"parallel\":0.05,\"none\":0.45}},\"a_one_matter\":{\"type\":\"noul\",\"noul\":0.47},"
 			+ "\"b_one_matter\":{\"type\":\"noul\",\"noul\":0.44}},\"usage\":{\"input_tokens\":1924,\"output_tokens\":103}}";
 
 	@Test
@@ -89,10 +93,10 @@ class JevRelationTests {
 
 	@Test
 	void readsTheOptionsOfTheWordingIntoTheAnswersAndBothOneMatterAnswers() {
-		assertThat(JevResponse.readRelation(BODY, "req_1", RelationWording.RELATION_2)).isEqualTo(new Relation(
+		assertThat(JevResponse.readRelation(BODY, "req_1", RelationWording.RELATION_3)).isEqualTo(new Relation(
 				Map.of(RelationAnswer.SECOND_PART_OF_FIRST, 0.07, RelationAnswer.FIRST_PART_OF_SECOND, 0.03,
 						RelationAnswer.FIRST_LED_TO_SECOND, 0.3, RelationAnswer.SECOND_LED_TO_FIRST, 0.02,
-						RelationAnswer.SAME_MATTER, 0.08, RelationAnswer.NONE, 0.5),
+						RelationAnswer.SAME_MATTER, 0.08, RelationAnswer.PARALLEL, 0.05, RelationAnswer.NONE, 0.45),
 				0.47, 0.44, "jev", "jev-1.14.0", 1924, BODY));
 		// 옛 판으로 읽으면 그 판의 답 다섯만 읽는다 — 본문에 더 있는 답은 보지 않는다
 		assertThat(((Relation) JevResponse.readRelation(BODY, null, RelationWording.RELATION_1)).probabilities())
@@ -110,7 +114,7 @@ class JevRelationTests {
 		assertThat(JevResponse.readRelation(BODY.replace("\"relation\":{\"type\":\"choice\"", "\"relation\":{\"type\":\"noul\""),
 				null, RelationWording.CURRENT))
 			.isEqualTo(unavailable("Jev 응답을 읽을 수 없다 — 답의 종류가 다르다 (기대 choice) — relation"));
-		assertThat(JevResponse.readRelation(BODY.replace("0.5}", "1.2}"), null, RelationWording.CURRENT))
+		assertThat(JevResponse.readRelation(BODY.replace("0.45}", "1.2}"), null, RelationWording.CURRENT))
 			.isEqualTo(unavailable("Jev 응답을 읽을 수 없다 — 확률이 0 ~ 1 이 아니다 — relation.none"));
 	}
 

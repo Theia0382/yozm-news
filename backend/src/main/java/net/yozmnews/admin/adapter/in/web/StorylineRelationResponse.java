@@ -15,7 +15,7 @@ import org.jspecify.annotations.Nullable;
  * @param probability 맺은 판정에서 가장 높았던 답의 확률
  * @param judgementId 그 판정 원본 ID
  * @param judgement 판정 원본 — 원본이 지워졌으면 null
- * @param groupedBy 그 고리를 맺은 조각 쌍의 스토리라인 ID 둘 — 상위를 열 때 맺은 고리가 아니면 비어 있다
+ * @param groupedBy 그 고리를 맺은 나란한 흐름 쌍의 스토리라인 ID 둘 — 상위를 열 때 맺은 고리가 아니면 비어 있다
  */
 record StorylineRelationResponse(StorylineRelationKind kind, long sourceId, long targetId, double probability,
 		Instant linkedAt, RelationCriteriaResponse criteria, long judgementId,

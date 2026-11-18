@@ -16,8 +16,8 @@ import org.jspecify.annotations.Nullable;
  * 관계를 물을 후보 쌍 — 정본 · docs/specs/storyline.md §4 · storyline-R27 · storyline-R28 · storyline-R30.
  * <p>
  * 스토리라인의 상대는 넘겨 물을 스토리라인, 사건을 함께 가진 스토리라인, 점수가 후보 점수 기준 이상인 스토리라인이다. 두 스토리라인
- * 모두 구성 사건 수가 사건 수 하한 이상이어야 하고, 다시 물을 때가 된 쌍만 든다. 조각 쌍의 판정이 맺은 고리로 이어진 상대는 묻지 않는다 —
- * 그 고리는 그 조각 쌍의 판정을 따른다. 사건 수는 직접 소속의 수다.
+ * 모두 구성 사건 수가 사건 수 하한 이상이어야 하고, 다시 물을 때가 된 쌍만 든다. 나란한 흐름 쌍의 판정이 맺은 고리로 이어진 상대는 묻지 않는다 —
+ * 그 고리는 그 나란한 흐름 쌍의 판정을 따른다. 사건 수는 직접 소속의 수다.
  */
 public final class RelationCandidates {
 
@@ -33,7 +33,7 @@ public final class RelationCandidates {
 	 * @param eventCounts 상대 스토리라인 → 구성 사건 수 — 없는 상대는 후보가 아니다
 	 * @param askedAtSmallerEvents 물은 상대 → 물었을 때 작은 쪽의 구성 사건 수
 	 * @param referred 넘겨 물을 상대 — 점수 · 사건 공유와 무관하게 후보지만 물을 수 있는 쌍({@link #askable})만 든다
-	 * @param grouped 조각 쌍의 판정이 맺은 고리로 이어진 상대 — 넘겨 물을 상대여도 뺀다
+	 * @param grouped 나란한 흐름 쌍의 판정이 맺은 고리로 이어진 상대 — 넘겨 물을 상대여도 뺀다
 	 */
 	public static List<Long> partners(long storylineId, int events, Map<Long, Integer> sharing, List<Scored> scored,
 			Map<Long, Integer> eventCounts, Map<Long, Integer> askedAtSmallerEvents, Set<Long> referred,

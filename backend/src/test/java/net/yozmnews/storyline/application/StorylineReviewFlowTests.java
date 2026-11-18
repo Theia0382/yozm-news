@@ -137,7 +137,7 @@ class StorylineReviewFlowTests {
 		this.memberships.addMember(this.child, this.e3, LinkJudgement.judged(LinkedBy.RULE,
 				new Score(0.9, 0.88, 0.5), linkingId, new Asked(0.71, 77L), LINKED_AT));
 		// 포함 parent ⊃ child, 이어짐 parent → follower
-		// 상위 → 하위 고리는 조각 쌍 (하위, 뒤 스토리라인) 의 판정이 맺은 것으로 심는다
+		// 상위 → 하위 고리는 나란한 흐름 쌍 (하위, 뒤 스토리라인) 의 판정이 맺은 것으로 심는다
 		this.relations.linkGrouped(new Relation(this.parent, this.child, RelationKind.CONTAINS),
 				GroupedBy.of(this.child, this.follower), 0.7, 41, relationId, NOW);
 		this.relations.link(new Relation(this.parent, this.follower, RelationKind.FOLLOWS), 0.66, 42, relationId, NOW);

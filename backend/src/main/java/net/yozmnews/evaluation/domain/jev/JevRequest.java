@@ -99,6 +99,7 @@ public final class JevRequest {
 	public static String relationOption(RelationAnswer answer) {
 		return switch (answer) {
 			case NONE -> "none";
+			case PARALLEL -> "parallel";
 			case SAME_MATTER -> "same";
 			case SECOND_PART_OF_FIRST -> "b_part_of_a";
 			case FIRST_PART_OF_SECOND -> "a_part_of_b";

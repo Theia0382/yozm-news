@@ -31,9 +31,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 같은 사안의 조각 위에 상위를 열 때의 평가 — docs/specs/storyline.md §4.
+ * 나란한 흐름 위에 상위를 열 때의 평가 — docs/specs/storyline.md §4.
  * <p>
- * 두 조각의 직접 소속 사건마다, 그 사건을 뺀 두 조각의 표현과 견줘 잇기 점수를 매기고 띠 안 사건은 흐름 소속 판정에 묻는다. 판단은
+ * 두 흐름의 직접 소속 사건마다, 그 사건을 뺀 두 흐름의 표현과 견줘 잇기 점수를 매기고 띠 안 사건은 흐름 소속 판정에 묻는다. 판단은
  * {@link OpeningSelection} 이 하고 기준은 잇기 기준이다. 읽기는 짧은 트랜잭션, 묻기는 트랜잭션 밖이다 — 아무것도 쓰지 않는다. 열지는
  * 부르는 쪽({@link RelationRound})이 모듈 잠금 안에서 상태를 다시 확인한 뒤 정한다. 판정 원본과 물은 기록이 가리킬 상위의 ID 는 여기서
  * 미리 받는다 — 열지 않으면 그 ID 는 쓰이지 않는다. 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통).
@@ -58,9 +58,9 @@ class GroupOpening {
 	}
 
 	/**
-	 * 두 조각의 사건을 평가한다 — 트랜잭션 밖에서 부른다.
-	 * @param first 한 조각
-	 * @param second 다른 조각
+	 * 두 흐름의 사건을 평가한다 — 트랜잭션 밖에서 부른다.
+	 * @param first 한 흐름
+	 * @param second 다른 흐름
 	 */
 	Evaluated evaluate(long first, long second, LinkingCriteria criteria) {
 		Read read = Objects.requireNonNull(this.transaction.execute(status -> read(first, second, criteria)), "read");
@@ -91,7 +91,7 @@ class GroupOpening {
 		return new Evaluated.Passed(read.reservedId(), members, records);
 	}
 
-	/** 두 조각의 사건과 그 점수 — 모델 버전이 조각과 같은 사건만 */
+	/** 두 흐름의 사건과 그 점수 — 모델 버전이 두 흐름과 같은 사건만 */
 	private Read read(long first, long second, LinkingCriteria criteria) {
 		Optional<StorylineProfile> profile = this.storylines.profile(first, 1);
 		Map<Long, List<Long>> members = this.storylines.members(List.of(first, second));
@@ -120,7 +120,7 @@ class GroupOpening {
 		return new Read(reservedId, union, profiles, scored);
 	}
 
-	/** 띠 사건 하나를 묻는다 — 판정할 기사는 그 사건의 대표 기사, 후보는 두 조각의 사건 가운데 가까운 것으로 서술한 상위 하나 */
+	/** 띠 사건 하나를 묻는다 — 판정할 기사는 그 사건의 대표 기사, 후보는 두 흐름의 사건 가운데 가까운 것으로 서술한 상위 하나 */
 	private Answer ask(Read read, EventProfile profile) {
 		Subject subject = Subject.of(profile);
 		List<EventId> described = LinkingMaterials.describe(profile, subject, read.union(), read.profiles())

@@ -221,9 +221,10 @@ export const relationOutcomeLabels = {
   NOT_ONE_MATTER: "한 사안 기준 미달",
   CYCLE: "순환",
   SECOND_PARENT: "둘째 상위",
-  GROUPED: "조각 — 묶음",
-  REFERRED: "조각 — 상위에 넘겨 물음",
-  UNGROUPED: "조각 — 묶지 않음",
+  GROUPED: "나란한 흐름 — 묶음",
+  REFERRED: "나란한 흐름 — 상위에 넘겨 물음",
+  UNGROUPED: "나란한 흐름 — 묶지 않음",
+  UNMERGED: "조각 — 합치지 않음",
   NOTHING_TO_ASK: "물을 것 없음",
   REJECTED: "입력 거부",
 } as const satisfies Record<RelationOutcome, string>;

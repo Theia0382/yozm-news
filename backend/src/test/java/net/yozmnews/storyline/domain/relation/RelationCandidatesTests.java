@@ -73,8 +73,8 @@ class RelationCandidatesTests {
 	}
 
 	@Test
-	void aPartnerLinkedByAnotherPairsFragmentJudgementIsNotAsked() {
-		// 20 은 사건을 함께 가졌고 21 은 넘겨 물을 상대지만, 조각 쌍의 판정이 맺은 고리로 이어져 있다 — 묻지 않는다
+	void aPartnerLinkedByAnotherPairsParallelJudgementIsNotAsked() {
+		// 20 은 사건을 함께 가졌고 21 은 넘겨 물을 상대지만, 나란한 흐름 쌍의 판정이 맺은 고리로 이어져 있다 — 묻지 않는다
 		assertThat(RelationCandidates.partners(1, 5, Map.of(20L, 3, 22L, 1), List.of(scored(30, 0.95)),
 				counts(20, 21, 22, 30), Map.of(), Set.of(21L), Set.of(20L, 21L), CRITERIA))
 			.containsExactly(22L, 30L);

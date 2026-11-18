@@ -258,7 +258,7 @@ class JdbcRelationRepositoryTests {
 	}
 
 	@Test
-	void aLinkMadeByAFragmentPairCarriesThatPairUntilItIsRemarked() {
+	void aLinkMadeByAParallelPairCarriesThatPairUntilItIsRemarked() {
 		long group = storyline();
 		Relation toA = new Relation(group, this.a, RelationKind.CONTAINS);
 		Relation toB = new Relation(group, this.b, RelationKind.CONTAINS);

@@ -109,9 +109,9 @@ class RelationPlanTests {
 		assertThat(RelationCheck.mismatch(new Relation(all, 0.5, 0.5, "jev", "jev-1", 10, "{}"), earlier)).isEmpty();
 		assertThat(RelationCheck.mismatch(new Relation(three, 0.5, 0.5, "jev", "jev-1", 10, "{}"), earlier)).contains(
 				"답이 문구 판 relation-1 의 선택지와 다르다 — 빠진 답 [FIRST_LED_TO_SECOND, SECOND_LED_TO_FIRST], 모르는 답 []");
-		// 같은 답 다섯이라도 조각 답이 있는 판에는 모자란다
-		assertThat(RelationCheck.mismatch(new Relation(all, 0.5, 0.5, "jev", "jev-1", 10, "{}"), RelationWording.RELATION_2))
-			.contains("답이 문구 판 relation-2 의 선택지와 다르다 — 빠진 답 [SAME_MATTER], 모르는 답 []");
+		// 같은 답 다섯이라도 조각 답 · 나란한 흐름 답이 있는 판에는 모자란다
+		assertThat(RelationCheck.mismatch(new Relation(all, 0.5, 0.5, "jev", "jev-1", 10, "{}"), RelationWording.RELATION_3))
+			.contains("답이 문구 판 relation-3 의 선택지와 다르다 — 빠진 답 [PARALLEL, SAME_MATTER], 모르는 답 []");
 		assertThat(RelationCheck.mismatch(new Relation(all, 0.5, 0.5, "jev", "jev-1", 10, "not json"), earlier))
 			.contains("원본 응답이 JSON 이 아니다");
 		assertThat(RelationCheck.mismatch(new Relation(all, 0.5, 0.5, "jev", "jev-1", 10, "{\"a\":\"\\u0000\"}"), earlier))

@@ -213,9 +213,10 @@ class AdminStorylineControllerTests {
 		judgement(43, 13, 7, new RelationReading.Unread(RelationReading.Unread.Reason.OTHER_EVALUATOR, "다른 평가기"));
 		judgement(44, 7, 14, new RelationReading.Unread(RelationReading.Unread.Reason.NO_EVALUATOR, "평가기 없음"));
 		judgement(45, 15, 7, new RelationReading.Unread(RelationReading.Unread.Reason.UNREADABLE, "읽을 수 없다"));
-		// 조각 답이 있는 문구 판의 원본 — 조각 확률이 있다
-		judgement(46, 7, 16, "relation-2",
-				new RelationReading.Read(Map.of(RelationAnswer.NONE, 0.1, RelationAnswer.SAME_MATTER, 0.65,
+		// 조각 답 · 나란한 흐름 답이 있는 문구 판의 원본 — 두 확률이 있다
+		judgement(46, 7, 16, "relation-3",
+				new RelationReading.Read(Map.of(RelationAnswer.NONE, 0.08, RelationAnswer.SAME_MATTER, 0.65,
+						RelationAnswer.PARALLEL, 0.02,
 						RelationAnswer.SECOND_PART_OF_FIRST, 0.15, RelationAnswer.FIRST_PART_OF_SECOND, 0.04,
 						RelationAnswer.FIRST_LED_TO_SECOND, 0.03, RelationAnswer.SECOND_LED_TO_FIRST, 0.03), 0.9, 0.7));
 
@@ -257,7 +258,7 @@ class AdminStorylineControllerTests {
 					    "judgementId":41,
 					    "judgement":{"id":41,"firstId":7,"secondId":8,"modelVersion":"jev-1.14.0",
 					                 "wordingVersion":"relation-1","inputTokens":1924,"judgedAt":"2026-11-05T00:00:00Z",
-					                 "reading":"READ","none":0.1,"sameMatter":null,"secondPartOfFirst":0.7,"firstPartOfSecond":0.05,
+					                 "reading":"READ","none":0.1,"sameMatter":null,"parallel":null,"secondPartOfFirst":0.7,"firstPartOfSecond":0.05,
 					                 "firstLedToSecond":0.1,"secondLedToFirst":0.05,"firstOneMatter":0.8,
 					                 "secondOneMatter":0.6,"message":null},
 					    "groupedBy":[8,9]},
@@ -280,7 +281,7 @@ class AdminStorylineControllerTests {
 					    "judgementId":43,
 					    "judgement":{"id":43,"firstId":13,"secondId":7,"modelVersion":"jev-1.14.0",
 					                 "wordingVersion":"relation-1","inputTokens":1924,"judgedAt":"2026-11-05T00:00:00Z",
-					                 "reading":"OTHER_EVALUATOR","none":null,"sameMatter":null,"secondPartOfFirst":null,
+					                 "reading":"OTHER_EVALUATOR","none":null,"sameMatter":null,"parallel":null,"secondPartOfFirst":null,
 					                 "firstPartOfSecond":null,"firstLedToSecond":null,"secondLedToFirst":null,
 					                 "firstOneMatter":null,"secondOneMatter":null,"message":"다른 평가기"}},
 					   {"otherId":14,"smallerEvents":6,"outcome":"NOT_ONE_MATTER","askedAt":"2026-11-05T00:00:00Z",
@@ -289,7 +290,7 @@ class AdminStorylineControllerTests {
 					    "judgementId":44,
 					    "judgement":{"id":44,"firstId":7,"secondId":14,"modelVersion":"jev-1.14.0",
 					                 "wordingVersion":"relation-1","inputTokens":1924,"judgedAt":"2026-11-05T00:00:00Z",
-					                 "reading":"NO_EVALUATOR","none":null,"sameMatter":null,"secondPartOfFirst":null,
+					                 "reading":"NO_EVALUATOR","none":null,"sameMatter":null,"parallel":null,"secondPartOfFirst":null,
 					                 "firstPartOfSecond":null,"firstLedToSecond":null,"secondLedToFirst":null,
 					                 "firstOneMatter":null,"secondOneMatter":null,"message":"평가기 없음"}},
 					   {"otherId":15,"smallerEvents":3,"outcome":"NOT_RELATED","askedAt":"2026-11-05T00:00:00Z",
@@ -298,7 +299,7 @@ class AdminStorylineControllerTests {
 					    "judgementId":45,
 					    "judgement":{"id":45,"firstId":15,"secondId":7,"modelVersion":"jev-1.14.0",
 					                 "wordingVersion":"relation-1","inputTokens":1924,"judgedAt":"2026-11-05T00:00:00Z",
-					                 "reading":"UNREADABLE","none":null,"sameMatter":null,"secondPartOfFirst":null,
+					                 "reading":"UNREADABLE","none":null,"sameMatter":null,"parallel":null,"secondPartOfFirst":null,
 					                 "firstPartOfSecond":null,"firstLedToSecond":null,"secondLedToFirst":null,
 					                 "firstOneMatter":null,"secondOneMatter":null,"message":"읽을 수 없다"}},
 					   {"otherId":16,"smallerEvents":3,"outcome":"UNGROUPED","askedAt":"2026-11-05T00:00:00Z",
@@ -306,8 +307,8 @@ class AdminStorylineControllerTests {
 					                "windowSeconds":1209600},
 					    "judgementId":46,
 					    "judgement":{"id":46,"firstId":7,"secondId":16,"modelVersion":"jev-1.14.0",
-					                 "wordingVersion":"relation-2","inputTokens":1924,"judgedAt":"2026-11-05T00:00:00Z",
-					                 "reading":"READ","none":0.1,"sameMatter":0.65,"secondPartOfFirst":0.15,
+					                 "wordingVersion":"relation-3","inputTokens":1924,"judgedAt":"2026-11-05T00:00:00Z",
+					                 "reading":"READ","none":0.08,"sameMatter":0.65,"parallel":0.02,"secondPartOfFirst":0.15,
 					                 "firstPartOfSecond":0.04,"firstLedToSecond":0.03,"secondLedToFirst":0.03,
 					                 "firstOneMatter":0.9,"secondOneMatter":0.7,"message":null}}]}
 					""", JsonCompareMode.STRICT));

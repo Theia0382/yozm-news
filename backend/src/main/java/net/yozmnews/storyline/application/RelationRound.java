@@ -72,9 +72,9 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 회차를 멈추고, 예상 못한 예외는 밖으로 나간다 — 점유는 만료로 풀린다. 판단은 {@code domain/relation} 이 한다. 트랜잭션 · 역할
  * 애너테이션이 없다(두 역할 공통).
  * <p>
- * 답이 같은 사안의 조각이면 두 스토리라인을 한 상위 아래 묶는다({@link Grouping}). 둘 다 상위가 없으면 반영 전에 트랜잭션 밖에서 두
- * 조각의 사건을 평가하고({@link GroupOpening}), 반영 트랜잭션이 상태를 다시 확인한 뒤 통과한 사건으로 상위를 연다. 한쪽에만 상위가
- * 있으면 그 상위와 다른 조각의 쌍을 넘겨 물을 쌍으로 둔다. 조각으로 묶였던 쌍의 답이 바뀌면 그 쌍이 맺은 고리를 지우지 않고 그 고리의 두
+ * 답이 나란한 흐름이면 두 스토리라인을 한 상위 아래 묶는다({@link Grouping}). 같은 사안의 조각이면 관계를 맺지 않는다. 둘 다 상위가 없으면 반영 전에 트랜잭션 밖에서 두
+ * 흐름의 사건을 평가하고({@link GroupOpening}), 반영 트랜잭션이 상태를 다시 확인한 뒤 통과한 사건으로 상위를 연다. 한쪽에만 상위가
+ * 있으면 그 상위와 다른 흐름의 쌍을 넘겨 물을 쌍으로 둔다. 나란한 흐름으로 묶였던 쌍의 답이 바뀌면 그 쌍이 맺은 고리를 지우지 않고 그 고리의 두
  * 끝을 넘겨 묻는다.
  */
 @Service
@@ -291,7 +291,7 @@ public class RelationRound {
 		List<Pair> pairs = new ArrayList<>();
 		List<Long> partners = RelationCandidates.partners(storylineId, own.events(), sharing, scored, eventCounts, asked,
 				referred, grouped, this.criteria);
-		// 물을 수 없는 넘김(상대가 없거나 사건 수 하한 미만 · 다시 물을 때가 아님 · 조각 쌍이 맺은 고리의 상대)은 지운다
+		// 물을 수 없는 넘김(상대가 없거나 사건 수 하한 미만 · 다시 물을 때가 아님 · 나란한 흐름 쌍이 맺은 고리의 상대)은 지운다
 		referred.stream()
 			.filter(other -> !partners.contains(other))
 			.forEach(other -> this.relations.clearReferral(storylineId, other));
@@ -360,14 +360,14 @@ public class RelationRound {
 	}
 
 	/**
-	 * 반영 전에 상위를 열 평가가 필요한지 보고, 필요하면 트랜잭션 밖에서 평가한다 — 답이 조각이고 두 스토리라인 모두 상위가 없을 때다.
+	 * 반영 전에 상위를 열 평가가 필요한지 보고, 필요하면 트랜잭션 밖에서 평가한다 — 답이 나란한 흐름이고 두 스토리라인 모두 상위가 없을 때다.
 	 * 여기서 읽은 것은 반영 트랜잭션이 다시 확인한다
 	 */
 	private Opening evaluate(Pair pair, RelationJudgement.Judged judged) {
 		long first = pair.first().id();
 		long second = pair.second().id();
 		boolean needed = Boolean.TRUE.equals(this.transaction.execute(status -> !gone(first) && !gone(second)
-				&& decide(first, second, judged) instanceof RelationRule.Decision.Fragments
+				&& decide(first, second, judged) instanceof RelationRule.Decision.Parallel
 				&& grouping(first, second) instanceof Grouping.Action.Open));
 		if (!needed) {
 			return new Opening.Unneeded();
@@ -380,7 +380,7 @@ public class RelationRound {
 	}
 
 	/**
-	 * 판정(storyline-R29) — 구조 제약은 이 쌍 사이의 관계와 이 쌍이 조각으로 묶일 때 맺은 고리를 뺀 관계들로 본다. 이 쌍이 맺어 둔
+	 * 판정(storyline-R29) — 구조 제약은 이 쌍 사이의 관계와 이 쌍이 나란한 흐름으로 묶일 때 맺은 고리를 뺀 관계들로 본다. 이 쌍이 맺어 둔
 	 * 고리가 이 쌍의 새 판정을 막지 않게 한다
 	 */
 	private RelationRule.Decision decide(long first, long second, RelationJudgement.Judged judged) {
@@ -390,7 +390,7 @@ public class RelationRound {
 				judged.secondOneMatter(), new RelationGraph(others), this.criteria);
 	}
 
-	/** 조각으로 판정된 쌍을 어떻게 묶는가 — 이 쌍 사이의 관계를 뺀 지금 관계로 본다 */
+	/** 나란한 흐름으로 판정된 쌍을 어떻게 묶는가 — 이 쌍 사이의 관계를 뺀 지금 관계로 본다 */
 	private Grouping.Action grouping(long first, long second) {
 		return Grouping.decide(first, second, new RelationGraph(this.relations.all()).without(first, second));
 	}
@@ -423,6 +423,11 @@ public class RelationRound {
 					outcome = RelationRule.outcomeOf(none);
 				}
 				case RelationRule.Decision.Fragments fragments -> {
+					overturn(first, second, fragments, now);
+					this.relations.unlink(first, second);
+					outcome = RelationOutcome.UNMERGED;
+				}
+				case RelationRule.Decision.Parallel parallel -> {
 					Grouping.Action action = grouping(first, second);
 					if (action instanceof Grouping.Action.Open && evaluated == null) {
 						// 평가한 뒤 상태가 바뀌어 이제야 열 차례가 됐다 — 아무것도 쓰지 않고 다음 회차가 다시 묻게 한다
@@ -434,7 +439,7 @@ public class RelationRound {
 					boolean opened = false;
 					switch (action) {
 						case Grouping.Action.Open open ->
-							opened = open(first, second, fragments, evaluated, judgementId, criteriaIds, now);
+							opened = open(first, second, parallel, evaluated, judgementId, criteriaIds, now);
 						case Grouping.Action.Refer refer -> refer(refer.parent(), refer.other(), now);
 						case Grouping.Action.Already already -> {
 						}
@@ -451,7 +456,7 @@ public class RelationRound {
 	}
 
 	/**
-	 * 조각으로 묶였던 쌍의 답이 조각이 아니게 됐다 — 그 쌍이 맺은 고리를 {@link Grouping#overturn} 대로 처분한다. 지울 고리를 먼저
+	 * 나란한 흐름으로 묶였던 쌍의 답이 나란한 흐름이 아니게 됐다 — 그 쌍이 맺은 고리를 {@link Grouping#overturn} 대로 처분한다. 지울 고리를 먼저
 	 * 지운다(하위의 상위는 하나다). 표지를 푼 고리는 그 두 끝을 넘겨 물을 쌍으로 두고 상위를 관계 대기에 넣는다
 	 */
 	private void overturn(long first, long second, RelationRule.Decision decision, Instant now) {
@@ -477,11 +482,11 @@ public class RelationRound {
 	}
 
 	/**
-	 * 평가를 통과한 사건으로 상위를 열고 두 조각을 그 하위로 둔다 — 통과한 사건 가운데 지금도 두 조각의 구성 사건이고 프로필이 읽히는
+	 * 평가를 통과한 사건으로 상위를 열고 두 흐름을 그 하위로 둔다 — 통과한 사건 가운데 지금도 두 흐름의 구성 사건이고 프로필이 읽히는
 	 * 것만 넣는다. 열 수 없으면({@link OpeningSelection#openable}) 아무것도 쓰지 않는다.
 	 * @return 열었는가
 	 */
-	private boolean open(long first, long second, RelationRule.Decision.Fragments fragments,
+	private boolean open(long first, long second, RelationRule.Decision.Parallel parallel,
 			GroupOpening.Evaluated.Passed evaluated, long judgementId, Criteria criteriaIds, Instant now) {
 		Map<Long, List<Long>> members = this.storylines.members(List.of(first, second));
 		Set<Long> firstMembers = new TreeSet<>(members.getOrDefault(first, List.of()));
@@ -514,9 +519,9 @@ public class RelationRound {
 			}
 		});
 		GroupedBy by = GroupedBy.of(first, second);
-		this.relations.linkGrouped(new Relation(group, first, RelationKind.CONTAINS), by, fragments.probability(),
+		this.relations.linkGrouped(new Relation(group, first, RelationKind.CONTAINS), by, parallel.probability(),
 				judgementId, criteriaIds.relation(), now);
-		this.relations.linkGrouped(new Relation(group, second, RelationKind.CONTAINS), by, fragments.probability(),
+		this.relations.linkGrouped(new Relation(group, second, RelationKind.CONTAINS), by, parallel.probability(),
 				judgementId, criteriaIds.relation(), now);
 		this.queue.enqueue(group, now);
 		return true;

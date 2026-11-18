@@ -56,7 +56,7 @@ public record RelationWording(String version, String question, Map<RelationAnswe
 	private static final String ONE_MATTER = "Is flow {flow} the unfolding of one matter, rather than a collection of "
 			+ "separate happenings that are only of a similar kind?";
 
-	/** 판 {@code relation-1} — 답 다섯. 같은 사안의 조각은 해당 없음에 든다. 이 판으로 남긴 판정 원본을 다시 읽을 때 쓴다 */
+	/** 판 {@code relation-1} — 답 다섯. 같은 사안의 조각과 나란한 흐름은 해당 없음에 든다. 이 판으로 남긴 판정 원본을 다시 읽을 때 쓴다 */
 	public static final RelationWording RELATION_1 = new RelationWording("relation-1", QUESTION,
 			Map.of(RelationAnswer.SECOND_PART_OF_FIRST, SECOND_PART_OF_FIRST, RelationAnswer.FIRST_PART_OF_SECOND,
 					FIRST_PART_OF_SECOND, RelationAnswer.FIRST_LED_TO_SECOND, FIRST_LED_TO_SECOND,
@@ -69,28 +69,35 @@ public record RelationWording(String version, String question, Map<RelationAnswe
 					RelationAnswer.FIRST_LED_TO_SECOND, RelationAnswer.SECOND_LED_TO_FIRST, RelationAnswer.NONE),
 			ONE_MATTER);
 
-	/** 판 {@code relation-2} — 답 여섯. 같은 사안의 조각을 따로 답한다 */
-	public static final RelationWording RELATION_2 = new RelationWording("relation-2", QUESTION,
+	/**
+	 * 판 {@code relation-3} — 답 일곱. 둘로 기록된 한 흐름(같은 사안의 조각)과 한 일에서 나온 별개의 흐름(나란한 흐름)을 따로 답한다.
+	 * {@code relation-2} 는 배포된 적이 없는 판이라 알려진 판에 없다
+	 */
+	public static final RelationWording RELATION_3 = new RelationWording("relation-3", QUESTION,
 			Map.of(RelationAnswer.SECOND_PART_OF_FIRST, SECOND_PART_OF_FIRST, RelationAnswer.FIRST_PART_OF_SECOND,
 					FIRST_PART_OF_SECOND, RelationAnswer.FIRST_LED_TO_SECOND, FIRST_LED_TO_SECOND,
 					RelationAnswer.SECOND_LED_TO_FIRST, SECOND_LED_TO_FIRST, RelationAnswer.SAME_MATTER,
-					"A and B are two parts of one and the same matter. Neither is narrower than the other and neither "
-							+ "lies inside the other; taken together they follow that one matter.",
+					"A and B are one and the same flow recorded as two. They follow the same matter with the same "
+							+ "actors and the same course, and would be read as a single flow.",
+					RelationAnswer.PARALLEL,
+					"A and B are separate flows, but both came directly out of one and the same specific event or "
+							+ "decision, and neither would exist without it. Each has its own actors and its own "
+							+ "course; neither is inside the other and neither arose from the other.",
 					RelationAnswer.NONE,
-					"None of the above. A and B are separate matters, or one of them is a collection of separate "
-							+ "happenings rather than one matter. They may be of a similar kind, involve the same "
-							+ "people, or share a cause, but neither is inside the other and neither arose from the "
-							+ "other."),
+					"None of the above. A and B are separate matters that did not come out of one specific event, or "
+							+ "one of them is a collection of separate happenings rather than one matter. They may be "
+							+ "of a similar kind, belong to the same field or the same recurring series, or involve "
+							+ "the same people, but neither is inside the other and neither arose from the other."),
 			List.of(RelationAnswer.SECOND_PART_OF_FIRST, RelationAnswer.FIRST_PART_OF_SECOND,
 					RelationAnswer.FIRST_LED_TO_SECOND, RelationAnswer.SECOND_LED_TO_FIRST, RelationAnswer.SAME_MATTER,
-					RelationAnswer.NONE),
+					RelationAnswer.PARALLEL, RelationAnswer.NONE),
 			ONE_MATTER);
 
 	/** 지금 문구 — 정본. 판정은 이 판으로 묻는다 */
-	public static final RelationWording CURRENT = RELATION_2;
+	public static final RelationWording CURRENT = RELATION_3;
 
 	/** 알려진 판 — 정본. 판정 원본에 남은 판은 이 가운데 하나다 */
-	public static final List<RelationWording> KNOWN = List.of(RELATION_1, RELATION_2);
+	public static final List<RelationWording> KNOWN = List.of(RELATION_1, RELATION_3);
 
 	/** state 의 날짜 — UTC 의 월-일 */
 	private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("MM-dd").withZone(ZoneOffset.UTC);

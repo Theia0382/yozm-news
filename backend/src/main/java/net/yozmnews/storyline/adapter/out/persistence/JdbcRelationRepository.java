@@ -35,7 +35,8 @@ import org.springframework.stereotype.Repository;
  * {@link RelationRepository} 의 JdbcClient 구현 — docs/specs/storyline.md §4.
  * <p>
  * 쌍의 고유는 두 ID 의 작은 쪽 · 큰 쪽으로 본다. 맺기는 그 쌍의 행을 지우고 넣는다. 모든 관계({@code all})는 두 끝이 모두 합쳐지지 않은 행만 낸다.
- * 조각 쌍이 맺은 고리는 맺은 쌍의 두 열이 모두 있는 행이다. 기준 이력은 같은 값의 행을 먼저 읽고 없을 때만 넣는다. 물은 기록은 {@code INSERT … ON CONFLICT (low_id, high_id) DO UPDATE} 다.
+ * 나란한 흐름 쌍이 맺은 고리는 맺은 쌍의 두 열이 모두 있는 행이다. 기준 이력은 같은 값의 행을 먼저 읽고 없을 때만 넣는다. 물은 기록은
+ * {@code INSERT … ON CONFLICT (low_id, high_id) DO UPDATE} 다.
  */
 @Repository
 class JdbcRelationRepository implements RelationRepository {

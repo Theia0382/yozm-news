@@ -1,6 +1,6 @@
--- 같은 사안의 조각을 한 상위 스토리라인 아래 묶는다 — docs/specs/storyline.md §6.
+-- 나란한 흐름을 한 상위 스토리라인 아래 묶는다 — docs/specs/storyline.md §6.
 --
--- 관계의 맺은 쌍: 상위를 열 때 맺은 포함 고리는 그 고리의 두 끝이 아니라 조각으로 판정된 쌍의 판정이 맺는다. 두 열이 모두 있을 때만
+-- 관계의 맺은 쌍: 상위를 열 때 맺은 포함 고리는 그 고리의 두 끝이 아니라 나란한 흐름으로 판정된 쌍의 판정이 맺는다. 두 열이 모두 있을 때만
 -- 그 표지가 있는 고리다 — 맺은 쌍의 한쪽이 지워지면 그 열이 비어 보통 관계가 된다.
 ALTER TABLE storyline_relations
   ADD COLUMN grouped_low_id   BIGINT REFERENCES storylines ON DELETE SET NULL,

@@ -13,7 +13,8 @@ import net.yozmnews.storyline.RelationOutcome;
  * <p>
  * 답 가운데 확률이 가장 높은 답으로 정한다. 확률이 같으면 {@link RelationAnswer} 의 선언 순서로 앞의 답이다 — 해당 없음이 맨 앞이라
  * 같으면 맺지 않는다. 경계는 포함한다(기준과 같은 값은 기준 이상이다). 가장 높은 답이 같은 사안의 조각이면 관계가 아니라
- * {@link Decision.Fragments} 다 — 두 스토리라인은 어느 쪽도 다른 쪽의 하위가 아니다.
+ * {@link Decision.Fragments}, 나란한 흐름이면 {@link Decision.Parallel} 이다 — 두 스토리라인은 어느 쪽도 다른 쪽의 하위가 아니다. 조각과
+ * 나란한 흐름의 확률이 같으면 선언 순서로 나란한 흐름이다.
  */
 public final class RelationRule {
 
@@ -21,8 +22,8 @@ public final class RelationRule {
 	}
 
 	/**
-	 * 맺지 않는 판정의 결말 — 물은 기록에 남긴다(storyline-R30). 맺으면 {@link RelationOutcome#LINKED} 이고, 조각이면 묶기의 결과가
-	 * 결말을 정한다({@link Grouping#outcomeOf}).
+	 * 맺지 않는 판정의 결말 — 물은 기록에 남긴다(storyline-R30). 맺으면 {@link RelationOutcome#LINKED}, 조각이면
+	 * {@link RelationOutcome#UNMERGED} 이고, 나란한 흐름이면 묶기의 결과가 결말을 정한다({@link Grouping#outcomeOf}).
 	 */
 	public static RelationOutcome outcomeOf(Decision.None none) {
 		return switch (none.reason()) {
@@ -60,6 +61,7 @@ public final class RelationRule {
 		RelationGraph others = graph.without(first, second);
 		return switch (top) {
 			case NONE -> new Decision.None(Decision.Reason.NOT_RELATED);
+			case PARALLEL -> gated.orElseGet(() -> new Decision.Parallel(first, second, probability));
 			case SAME_MATTER -> gated.orElseGet(() -> new Decision.Fragments(first, second, probability));
 			case SECOND_PART_OF_FIRST -> gated
 				.orElseGet(() -> linked(new Relation(first, second, RelationKind.CONTAINS), probability, others));
@@ -83,7 +85,7 @@ public final class RelationRule {
 		return new Decision.Link(relation, probability);
 	}
 
-	/** 확률 기준 · 한 사안 기준에 걸리면 그 까닭으로 맺지 않는다 — 관계와 조각이 같은 순서로 거친다 */
+	/** 확률 기준 · 한 사안 기준에 걸리면 그 까닭으로 맺지 않는다 — 관계 · 조각 · 나란한 흐름이 같은 순서로 거친다 */
 	private static Optional<Decision> gated(double probability, double firstOneMatter, double secondOneMatter,
 			RelationCriteria criteria) {
 		if (probability < criteria.probability()) {
@@ -108,10 +110,17 @@ public final class RelationRule {
 		}
 
 		/**
-		 * 같은 사안의 조각이다 — 두 스토리라인 사이에 관계를 맺지 않고, 그 쌍의 지금 관계를 지운다. 구조(순환 · 상위)는 보지 않았다 —
-		 * 두 스토리라인을 한 상위 아래 어떻게 묶는지는 {@link Grouping} 이 지금 관계로 정한다.
+		 * 같은 사안의 조각이다(한 흐름이 둘로 열렸다) — 두 스토리라인 사이에 관계를 맺지 않고, 그 쌍의 지금 관계를 지운다. 구조(순환 ·
+		 * 상위)는 보지 않았다.
 		 */
 		record Fragments(long first, long second, double probability) implements Decision {
+		}
+
+		/**
+		 * 나란한 흐름이다(한 일에서 나온 별개의 흐름) — 두 스토리라인 사이에 관계를 맺지 않고, 그 쌍의 지금 관계를 지운다. 구조(순환 ·
+		 * 상위)는 보지 않았다 — 두 스토리라인을 한 상위 아래 어떻게 묶는지는 {@link Grouping} 이 지금 관계로 정한다.
+		 */
+		record Parallel(long first, long second, double probability) implements Decision {
 		}
 
 		/** 맺지 않는다 — 그 쌍의 지금 관계를 지운다 */

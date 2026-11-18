@@ -78,7 +78,7 @@ class RelationMoveTests {
 
 	@Test
 	void rewritesTheMergedStorylineInThePairThatMadeALink() {
-		// 9 ⊃ 1 · 9 ⊃ 2 를 조각 쌍 (1, 2) 가 맺었다. 2 가 5 에 합쳐지면 관계는 9 ⊃ 5 로 옮겨지고 맺은 쌍은 (1, 5) 다
+		// 9 ⊃ 1 · 9 ⊃ 2 를 나란한 흐름 쌍 (1, 2) 가 맺었다. 2 가 5 에 합쳐지면 관계는 9 ⊃ 5 로 옮겨지고 맺은 쌍은 (1, 5) 다
 		List<GroupedRelation> grouped = List.of(grouped(9, 1, 1, 2), grouped(9, 5, 1, 2));
 
 		assertThat(RelationMove.remark(grouped, 2, 5)).containsExactly(
@@ -93,7 +93,7 @@ class RelationMoveTests {
 		// 맺은 쌍 (1, 2) 의 2 가 1 에 합쳐졌다 — 9 ⊃ 1 만 남고 맺은 쌍은 한 스토리라인이라 표지를 지운다
 		assertThat(RelationMove.remark(List.of(grouped(9, 1, 1, 2)), 2, 1))
 			.containsExactly(new RelationMove.Remark(contains(9, 1), null));
-		// 상위 9 가 조각 1 에 합쳐져 9 ⊃ 2 가 1 ⊃ 2 로 옮겨졌다 — 맺은 쌍 (1, 2) 가 그 고리의 두 끝이라 표지를 지운다
+		// 상위 9 가 하위 1 에 합쳐져 9 ⊃ 2 가 1 ⊃ 2 로 옮겨졌다 — 맺은 쌍 (1, 2) 가 그 고리의 두 끝이라 표지를 지운다
 		assertThat(RelationMove.remark(List.of(grouped(1, 2, 1, 2)), 9, 1))
 			.containsExactly(new RelationMove.Remark(contains(1, 2), null));
 	}

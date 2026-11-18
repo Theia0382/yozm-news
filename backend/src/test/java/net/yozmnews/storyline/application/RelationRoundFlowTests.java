@@ -505,7 +505,43 @@ class RelationRoundFlowTests {
 	}
 
 	@Test
-	void opensAParentOverTwoFragmentsWithTheEventsThatPassTheLinkingRule() {
+	void fragmentsOfOneMatterAreNotGroupedOrLinkedAndAnEarlierContainmentBetweenThemIsRemoved() {
+		long shared = event(EARLY, 1);
+		long a = storyline("[1,0]", EARLY, LATE, shared, event(EARLY, 1), event(EARLY, 1));
+		long b = storyline("[0,1]", LATE, LATE, shared, event(LATE, 1), event(LATE, 1));
+		long criteriaId = this.relations.registerCriteria(CRITERIA, NOW);
+		this.relations.link(new Relation(a, b, RelationKind.CONTAINS), 0.7, 40, criteriaId, NOW);
+		this.queue.enqueue(a, NOW);
+
+		// 조각 답은 상위를 열지 않는다 — 열기 평가를 부르면 실패하는 회차로 돈다
+		round(answer(RelationAnswer.SAME_MATTER, 0.9, 0.9, 0.9, 61)).run();
+
+		assertThat(this.relations.all()).isEmpty();
+		assertThat(storylineCount()).isEqualTo(2);
+		assertThat(askedRow(a, b)).containsEntry("outcome", "UNMERGED").containsEntry("judgement_id", 61L);
+		assertThat(queued()).isEmpty();
+	}
+
+	@Test
+	void aParallelPairAnsweredAsFragmentsReleasesItsLinksLikeAnyOtherOverturn() {
+		long[] first = { event(EARLY, 1), event(EARLY, 1), event(EARLY, 1) };
+		long[] second = { event(LATE, 1), event(LATE, 1), event(LATE, 1) };
+		long a = storyline(new float[] { 1, 0 }, Map.of("금리", 3), EARLY, LATE, first);
+		long b = storyline(new float[] { 1, 0 }, Map.of("금리", 3), LATE, LATE, second);
+		long group = grouped(a, b, first[0], first[1], second[0], second[1]);
+		this.queue.enqueue(a, NOW);
+
+		round(answer(RelationAnswer.SAME_MATTER, 0.9, 0.9, 0.9, 69)).run();
+
+		assertThat(this.relations.all()).containsExactlyInAnyOrder(new Relation(group, a, RelationKind.CONTAINS),
+				new Relation(group, b, RelationKind.CONTAINS));
+		assertThat(this.relations.grouped()).isEmpty();
+		assertThat(this.relations.referred(group)).containsExactlyInAnyOrder(a, b);
+		assertThat(askedRow(a, b)).containsEntry("outcome", "UNMERGED");
+	}
+
+	@Test
+	void opensAParentOverTwoParallelFlowsWithTheEventsThatPassTheLinkingRule() {
 		// 띠 0.50 ~ 0.90 · 확률 0.60. 가운데 사건들은 점수 0.94(위 기준 이상), band 는 0.77(띠), far 는 0.13(띠 아래)
 		long[] first = { event(EARLY, 1), event(EARLY, 1), event(EARLY, 1) };
 		long[] core = { event(LATE, 1), event(LATE, 1) };
@@ -514,7 +550,7 @@ class RelationRoundFlowTests {
 		long a = storyline(new float[] { 1, 0 }, Map.of("금리", 3), first);
 		long b = storyline(new float[] { 1, 0 }, Map.of("금리", 4), core[0], core[1], band, far);
 		this.queue.enqueue(a, NOW);
-		RelationRound round = groupingRound(answer(RelationAnswer.SAME_MATTER, 0.9, 0.9, 0.9, 61),
+		RelationRound round = groupingRound(answer(RelationAnswer.PARALLEL, 0.9, 0.9, 0.9, 61),
 				membership(Map.of(band, 0.7), 71));
 
 		round.run();
@@ -522,7 +558,7 @@ class RelationRoundFlowTests {
 		long group = opened(a, b);
 		assertThat(this.relations.all()).containsExactlyInAnyOrder(new Relation(group, a, RelationKind.CONTAINS),
 				new Relation(group, b, RelationKind.CONTAINS));
-		// 두 고리는 조각 쌍 (a, b) 의 판정이 맺었다 — 확률 · 판정 원본도 그 판정 것
+		// 두 고리는 나란한 흐름 쌍 (a, b) 의 판정이 맺었다 — 확률 · 판정 원본도 그 판정 것
 		assertThat(this.relations.of(a)).singleElement().satisfies(stored -> {
 			assertThat(stored.groupedBy()).isEqualTo(GroupedBy.of(a, b));
 			assertThat(stored.probability()).isEqualTo(0.9);
@@ -530,7 +566,7 @@ class RelationRoundFlowTests {
 		});
 		assertThat(this.relations.of(b)).singleElement()
 			.satisfies(stored -> assertThat(stored.groupedBy()).isEqualTo(GroupedBy.of(a, b)));
-		// 상위에는 통과한 사건만 직접 든다 — 조각의 소속은 그대로다
+		// 상위에는 통과한 사건만 직접 든다 — 두 흐름의 소속은 그대로다
 		assertThat(members(group)).containsExactlyInAnyOrder(first[0], first[1], first[2], core[0], core[1], band);
 		assertThat(members(a)).containsExactlyInAnyOrder(first[0], first[1], first[2]);
 		assertThat(members(b)).containsExactlyInAnyOrder(core[0], core[1], band, far);
@@ -549,7 +585,7 @@ class RelationRoundFlowTests {
 		assertThat(askedRow(a, b)).containsEntry("outcome", "GROUPED").containsEntry("judgement_id", 61L);
 		assertThat(queued()).containsExactly(group);
 
-		// 상위와 두 조각은 사건을 함께 가졌지만 그 고리는 조각 쌍의 판정을 따른다 — 따로 묻지 않는다
+		// 상위와 두 흐름은 사건을 함께 가졌지만 그 고리는 나란한 흐름 쌍의 판정을 따른다 — 따로 묻지 않는다
 		round.run();
 
 		assertThat(this.asked).hasSize(1);
@@ -565,7 +601,7 @@ class RelationRoundFlowTests {
 		long b = storyline(new float[] { 1, 0 }, Map.of("금리", 3), core[0], core[1], band);
 		this.queue.enqueue(a, NOW);
 
-		groupingRound(answer(RelationAnswer.SAME_MATTER, 0.9, 0.9, 0.9, 61), membership(Map.of(band, 0.59), 71)).run();
+		groupingRound(answer(RelationAnswer.PARALLEL, 0.9, 0.9, 0.9, 61), membership(Map.of(band, 0.59), 71)).run();
 
 		long group = opened(a, b);
 		assertThat(members(group)).containsExactlyInAnyOrder(first[0], first[1], first[2], core[0], core[1]);
@@ -573,8 +609,8 @@ class RelationRoundFlowTests {
 	}
 
 	@Test
-	void fragmentsWhosePassedEventsAreOnlyOneOfThemAreNotGroupedAndTheirEarlierContainmentIsRemoved() {
-		// 한 조각의 사건은 [1,0] 금리, 다른 조각의 사건은 [0,1] 환율 — 모두 점수 0.60(띠)이라 묻는다
+	void parallelFlowsWhosePassedEventsAreOnlyOneOfThemAreNotGroupedAndTheirEarlierContainmentIsRemoved() {
+		// 한 흐름의 사건은 [1,0] 금리, 다른 흐름의 사건은 [0,1] 환율 — 모두 점수 0.60(띠)이라 묻는다
 		long[] near = { event(EARLY, 1), event(EARLY, 1), event(EARLY, 1) };
 		long[] away = { away(), away(), away() };
 		long a = storyline(new float[] { 1, 0 }, Map.of("금리", 3), near);
@@ -590,9 +626,9 @@ class RelationRoundFlowTests {
 			probabilities.put(event, 0.1);
 		}
 
-		groupingRound(answer(RelationAnswer.SAME_MATTER, 0.9, 0.9, 0.9, 61), membership(probabilities, 71)).run();
+		groupingRound(answer(RelationAnswer.PARALLEL, 0.9, 0.9, 0.9, 61), membership(probabilities, 71)).run();
 
-		// 통과한 사건이 한 조각의 구성 사건 그대로다 — 상위를 열지 않고 아무것도 남기지 않는다
+		// 통과한 사건이 한 흐름의 구성 사건 그대로다 — 상위를 열지 않고 아무것도 남기지 않는다
 		assertThat(this.membershipAsked).hasSize(6);
 		assertThat(storylineCount()).isEqualTo(2);
 		assertThat(this.relations.all()).isEmpty();
@@ -602,7 +638,7 @@ class RelationRoundFlowTests {
 	}
 
 	@Test
-	void aFragmentIsReferredToTheParentOfTheOtherAndThatPairIsGroupedLikeAnyOtherFragments() {
+	void aParallelFlowIsReferredToTheParentOfTheOtherAndThatPairIsGroupedLikeAnyOtherPair() {
 		long a = storyline(new float[] { 1, 0 }, Map.of("금리", 3), event(EARLY, 1), event(EARLY, 1), event(EARLY, 1));
 		long b = storyline(new float[] { 1, 0 }, Map.of("금리", 3), event(LATE, 1), event(LATE, 1), event(LATE, 1));
 		// 상위는 점수로도 사건으로도 b 의 후보가 아니다
@@ -612,7 +648,7 @@ class RelationRoundFlowTests {
 		this.relations.link(new Relation(parent, a, RelationKind.CONTAINS), 0.7, 40, criteriaId, NOW);
 		this.relations.recordAsked(parent, a, 3, 40L, criteriaId, RelationOutcome.LINKED, NOW);
 		this.queue.enqueue(a, NOW);
-		RelationRound round = groupingRound(answer(RelationAnswer.SAME_MATTER, 0.9, 0.9, 0.9, 61),
+		RelationRound round = groupingRound(answer(RelationAnswer.PARALLEL, 0.9, 0.9, 0.9, 61),
 				membership(Map.of(), 71));
 
 		round.run();
@@ -626,7 +662,7 @@ class RelationRoundFlowTests {
 
 		round.run();
 
-		// 넘겨 물은 쌍도 조각이다 — 하위를 가진 쪽 아래 넣지 않고 그 둘 위에 상위를 연다
+		// 넘겨 물은 쌍도 나란한 흐름이다 — 하위를 가진 쪽 아래 넣지 않고 그 둘 위에 상위를 연다
 		long group = opened(a, b, parent);
 		assertThat(this.asked).hasSize(2);
 		assertThat(this.relations.all()).containsExactlyInAnyOrder(new Relation(parent, a, RelationKind.CONTAINS),
@@ -637,7 +673,7 @@ class RelationRoundFlowTests {
 	}
 
 	@Test
-	void anOverturnedFragmentPairKeepsItsLinksAndRefersEachToItsOwnPair() {
+	void anOverturnedParallelPairKeepsItsLinksAndRefersEachToItsOwnPair() {
 		long[] first = { event(EARLY, 1), event(EARLY, 1), event(EARLY, 1) };
 		long[] second = { event(LATE, 1), event(LATE, 1), event(LATE, 1) };
 		long a = storyline(new float[] { 1, 0 }, Map.of("금리", 3), EARLY, LATE, first);
@@ -647,7 +683,7 @@ class RelationRoundFlowTests {
 
 		round(answer(RelationAnswer.NONE, 0.9, 0.9, 0.9, 63)).run();
 
-		// 조각 판정이 뒤집혔다 — 고리는 그대로 두고 표지만 풀어 (상위, 하위) 쌍을 넘겨 묻는다
+		// 나란한 흐름 판정이 뒤집혔다 — 고리는 그대로 두고 표지만 풀어 (상위, 하위) 쌍을 넘겨 묻는다
 		assertThat(this.asked).hasSize(1);
 		assertThat(this.relations.all()).containsExactlyInAnyOrder(new Relation(group, a, RelationKind.CONTAINS),
 				new Relation(group, b, RelationKind.CONTAINS));
@@ -669,7 +705,7 @@ class RelationRoundFlowTests {
 	}
 
 	@Test
-	void aFragmentPairAnsweredAsFragmentsAgainKeepsItsLinksAndAsFollowingReleasesBoth() {
+	void aParallelPairAnsweredAsParallelAgainKeepsItsLinksAndAsFollowingReleasesBoth() {
 		long[] first = { event(EARLY, 1), event(EARLY, 1), event(EARLY, 1) };
 		long[] second = { event(LATE, 1), event(LATE, 1), event(LATE, 1) };
 		long a = storyline(new float[] { 1, 0 }, Map.of("금리", 3), EARLY, LATE, first);
@@ -679,9 +715,9 @@ class RelationRoundFlowTests {
 		Relation toB = new Relation(group, b, RelationKind.CONTAINS);
 		this.queue.enqueue(a, NOW);
 
-		round(answer(RelationAnswer.SAME_MATTER, 0.9, 0.9, 0.9, 66)).run();
+		round(answer(RelationAnswer.PARALLEL, 0.9, 0.9, 0.9, 66)).run();
 
-		// 다시 조각이다 — 이미 같은 상위 아래다. 고리와 표지는 그대로이고 상위를 또 열지 않는다
+		// 다시 나란한 흐름이다 — 이미 같은 상위 아래다. 고리와 표지는 그대로이고 상위를 또 열지 않는다
 		assertThat(this.relations.grouped()).containsExactly(new GroupedRelation(toA, GroupedBy.of(a, b)),
 				new GroupedRelation(toB, GroupedBy.of(a, b)));
 		assertThat(storylineCount()).isEqualTo(3);
@@ -709,10 +745,10 @@ class RelationRoundFlowTests {
 		this.relations.link(new Relation(parent, a, RelationKind.CONTAINS), 0.7, 40, criteriaId, NOW);
 		this.relations.recordAsked(parent, a, 3, 40L, criteriaId, RelationOutcome.LINKED, NOW);
 		this.queue.enqueue(a, NOW);
-		// (a, b) 는 조각, 넘겨 물은 (상위, b) 는 b 가 상위의 부분
+		// (a, b) 는 나란한 흐름, 넘겨 물은 (상위, b) 는 b 가 상위의 부분
 		FlowRelation judge = query -> (query.first().flowId() == parent || query.second().flowId() == parent)
 				? judged(RelationAnswer.SECOND_PART_OF_FIRST, 0.8, 0.9, 0.9, 62)
-				: judged(RelationAnswer.SAME_MATTER, 0.9, 0.9, 0.9, 61);
+				: judged(RelationAnswer.PARALLEL, 0.9, 0.9, 0.9, 61);
 		RelationRound round = groupingRound(judge, membership(Map.of(), 71));
 
 		round.run();
@@ -751,7 +787,7 @@ class RelationRoundFlowTests {
 	}
 
 	@Test
-	void aFragmentPairOverturnedToContainmentMovesTheChildUnderTheOtherFragment() {
+	void aParallelPairOverturnedToContainmentMovesTheChildUnderTheOtherFlow() {
 		long[] first = { event(EARLY, 1), event(EARLY, 1), event(EARLY, 1) };
 		long[] second = { event(LATE, 1), event(LATE, 1), event(LATE, 1) };
 		long a = storyline(new float[] { 1, 0 }, Map.of("금리", 3), EARLY, LATE, first);
@@ -777,7 +813,7 @@ class RelationRoundFlowTests {
 		this.queue.enqueue(a, NOW);
 		FlowMembership failing = query -> new FlowMembershipJudgement.Failed(EvaluatorFailureKind.TRANSIENT, "마감 초과");
 
-		groupingRound(answer(RelationAnswer.SAME_MATTER, 0.9, 0.9, 0.9, 61), failing).run();
+		groupingRound(answer(RelationAnswer.PARALLEL, 0.9, 0.9, 0.9, 61), failing).run();
 
 		assertThat(storylineCount()).isEqualTo(2);
 		assertThat(this.relations.all()).isEmpty();
@@ -785,7 +821,7 @@ class RelationRoundFlowTests {
 		assertThat(queueRow(a)).containsEntry("failures", 1).containsEntry("lease_token", null);
 
 		// 다음 회차에 평가가 답하면 열린다
-		groupingRound(answer(RelationAnswer.SAME_MATTER, 0.9, 0.9, 0.9, 61), membership(Map.of(band, 0.7), 71)).run();
+		groupingRound(answer(RelationAnswer.PARALLEL, 0.9, 0.9, 0.9, 61), membership(Map.of(band, 0.7), 71)).run();
 
 		assertThat(members(opened(a, b))).contains(band);
 	}
@@ -801,7 +837,7 @@ class RelationRoundFlowTests {
 		FlowMembership rejecting = query -> new FlowMembershipJudgement.Failed(EvaluatorFailureKind.ARTICLE_REJECTED,
 				"문맥 초과");
 
-		groupingRound(answer(RelationAnswer.SAME_MATTER, 0.9, 0.9, 0.9, 61), rejecting).run();
+		groupingRound(answer(RelationAnswer.PARALLEL, 0.9, 0.9, 0.9, 61), rejecting).run();
 
 		// 입력이 거부된 띠 사건은 들지 않는다 — 나머지로 상위를 열고, 그 사건은 확률 없이 물은 기록에 남는다
 		long group = opened(a, b);
@@ -826,7 +862,7 @@ class RelationRoundFlowTests {
 		FlowMembership unavailable = query -> new FlowMembershipJudgement.Failed(
 				EvaluatorFailureKind.EVALUATOR_UNAVAILABLE, "키가 틀렸다");
 
-		groupingRound(answer(RelationAnswer.SAME_MATTER, 0.9, 0.9, 0.9, 61), unavailable).run();
+		groupingRound(answer(RelationAnswer.PARALLEL, 0.9, 0.9, 0.9, 61), unavailable).run();
 
 		// 회차를 멈춘다 — 상위도 물은 기록도 없고, 점유는 남고 실패 수는 그대로다
 		assertThat(storylineCount()).isEqualTo(2);
@@ -857,7 +893,7 @@ class RelationRoundFlowTests {
 		}, this.transaction);
 	}
 
-	/** 조각을 묶는 회차 — 상위를 열 때의 평가는 잇기 기준 {@link #OPENING} 으로 하고 물은 것을 모은다 */
+	/** 나란한 흐름을 묶는 회차 — 상위를 열 때의 평가는 잇기 기준 {@link #OPENING} 으로 하고 물은 것을 모은다 */
 	private RelationRound groupingRound(FlowRelation judge, FlowMembership membership) {
 		FlowRelation recording = query -> {
 			this.asked.add(query);
@@ -890,7 +926,7 @@ class RelationRoundFlowTests {
 		return StorylineRows.event(this.jdbc, "OPEN", MODEL, "[0,1]", 1, LATE, LATE, Map.of("환율", 1));
 	}
 
-	/** 조각 쌍 (a, b) 의 판정이 맺은 상위를 심는다 — 상위는 두 조각의 사건을 직접 가진다 */
+	/** 나란한 흐름 쌍 (a, b) 의 판정이 맺은 상위를 심는다 — 상위는 두 흐름의 사건을 직접 가진다 */
 	private long grouped(long a, long b, long... events) {
 		long group = storyline(new float[] { 1, 0 }, Map.of("금리", events.length), events);
 		long criteriaId = this.relations.registerCriteria(CRITERIA, NOW);
