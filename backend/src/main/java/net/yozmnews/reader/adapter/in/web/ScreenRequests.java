@@ -2,11 +2,13 @@ package net.yozmnews.reader.adapter.in.web;
 
 import java.time.DateTimeException;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import net.yozmnews.event.EventPeriod;
 import net.yozmnews.storyline.StorylineCursor;
@@ -17,9 +19,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
- * 독자 화면의 요청 매개변수 읽기와 그 400 · 404 — docs/specs/reader.md §5 reader-R1 · R2 · R4 · R6.
+ * 독자 화면의 요청 매개변수 읽기와 그 400 · 404 — docs/specs/reader.md §5 reader-R1 · R2 · R4 · R6 · R9 · R10.
  */
 final class ScreenRequests {
+
+	/** 다이제스트 날짜의 꼴 — 연도 네 자리 · 월 두 자리 · 일 두 자리 */
+	private static final Pattern DATE = Pattern.compile("\\d{4}-\\d{2}-\\d{2}");
 
 	private ScreenRequests() {
 	}
@@ -95,6 +100,27 @@ final class ScreenRequests {
 			distinct.add(new StorylineId(id));
 		}
 		return List.copyOf(distinct);
+	}
+
+	/**
+	 * 다이제스트 날짜 — ISO-8601 날짜(YYYY-MM-DD). 연도가 네 자리라 DB 의 날짜 범위 안에 든다.
+	 * @throws ResponseStatusException 400 — 그 꼴이 아니거나 날짜로 읽을 수 없을 때
+	 */
+	static LocalDate date(String value) {
+		if (!DATE.matcher(value).matches()) {
+			throw badRequest("날짜는 ISO-8601 형식(YYYY-MM-DD)이다: " + value);
+		}
+		try {
+			return LocalDate.parse(value);
+		}
+		catch (DateTimeParseException ex) {
+			throw badRequest("날짜는 ISO-8601 형식(YYYY-MM-DD)이다: " + value);
+		}
+	}
+
+	/** 그 날짜에 다이제스트가 없을 때의 404 */
+	static ResponseStatusException unknownDigest(LocalDate date) {
+		return new ResponseStatusException(HttpStatus.NOT_FOUND, "그 날짜의 다이제스트가 없다: " + date);
 	}
 
 	private static Instant instant(String value) {
