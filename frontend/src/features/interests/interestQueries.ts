@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { TOPIC_SUGGESTIONS_QUERY_KEY } from "@/features/digests/topicSuggestionQueries";
 import { useApiClient } from "@/shared/api/client";
 import type { components } from "@/shared/api/schema";
 
@@ -119,6 +120,52 @@ export function useInterestVolume() {
         throw new InterestRequestError(response.status);
       }
       return data;
+    },
+  });
+}
+
+/** 제안한 주제를 구독한 결과 — 서버의 저장 결과, 또는 제안과 선호의 체계 버전이 달라 보내지 않음 */
+export type SubscribeTopicResult =
+  components["schemas"]["InterestTagsSaveResponse"]["result"] | "STALE";
+
+/**
+ * 주제 하나를 구독에 더한다 — 지금 선호(주제 · 지역 · 형식)에 키를 더해 태그 선호 저장(docs/specs/user.md user-R46)으로 보낸다. 제안이 낸
+ * 체계 버전과 선호의 버전이 다르면 보내지 않는다. 어느 쪽이든 끝나면 관심 설정과 구독 제안을 다시 읽는다
+ */
+export function useSubscribeTopic() {
+  const client = useApiClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      tags,
+      tagSetId,
+      topic,
+    }: {
+      tags: InterestTags;
+      tagSetId: number;
+      topic: string;
+    }): Promise<SubscribeTopicResult> => {
+      if (tags.tagSet.id !== tagSetId) {
+        return "STALE";
+      }
+      const { data, response } = await client.PUT("/api/interests/tags", {
+        body: {
+          tagSetId,
+          topics: [...tags.preferences.topics, topic],
+          excludedRegions: tags.preferences.excludedRegions,
+          excludedFormats: tags.preferences.excludedFormats,
+        },
+      });
+      if (!response.ok || !data) {
+        throw new InterestRequestError(response.status);
+      }
+      return data.result;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: INTERESTS_QUERY_KEY });
+      await queryClient.invalidateQueries({
+        queryKey: TOPIC_SUGGESTIONS_QUERY_KEY,
+      });
     },
   });
 }

@@ -41,6 +41,17 @@ export class DigestRequestError extends Error {
   }
 }
 
+/**
+ * 조회를 다시 물을지 — 키 관문의 403(LLM 키 없음)은 다시 묻지 않고, 그 밖의 실패는 세 번까지 다시 묻는다. 홈과 구독 제안의 조회가 함께 쓴다
+ */
+export function retryUnlessKeyRequired(
+  failureCount: number,
+  error: Error,
+): boolean {
+  const keyRequired = "status" in error && error.status === 403;
+  return !keyRequired && failureCount < 3;
+}
+
 /** 생성을 기다리거나 생성 중인 상태인가 — 상태가 늘면 타입 검사가 잡는다 */
 const runningStatuses = {
   SCHEDULED: true,
@@ -69,9 +80,7 @@ export function useDigestHome() {
       }
       return data;
     },
-    retry: (failureCount, error) =>
-      !(error instanceof DigestRequestError && error.status === 403) &&
-      failureCount < 3,
+    retry: retryUnlessKeyRequired,
     refetchInterval: (query) => {
       const home = query.state.data;
       const running =

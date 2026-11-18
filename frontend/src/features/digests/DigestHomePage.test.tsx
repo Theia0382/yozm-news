@@ -28,6 +28,7 @@ function renderHome(
     "GET /api/digests/latest": () =>
       json(queue.length > 1 ? queue.shift() : queue[0]),
     "GET /api/interests/tags": () => json(tags(topics)),
+    "GET /api/topic-suggestions": () => json({ tagSetId: 1, topics: [] }),
     ...extra,
   });
 }
@@ -63,6 +64,33 @@ describe("DigestHomePage", () => {
     expect(
       screen.getAllByRole("link", { name: "지난 다이제스트" })[0],
     ).toHaveAttribute("href", "/digests");
+  });
+
+  it("구독 제안이 있으면 다이제스트와 함께 권한다", async () => {
+    renderHome(home(), {
+      "GET /api/topic-suggestions": () =>
+        json({
+          tagSetId: 1,
+          topics: [
+            {
+              key: "politics.legislature",
+              name: "국회·정당·선거",
+              categoryName: "정치",
+            },
+          ],
+        }),
+    });
+
+    expect(
+      await screen.findByRole("heading", { name: "구독해 볼 만한 주제" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("정치 · 국회·정당·선거")).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", {
+        level: 2,
+        name: "2026. 11. 18. 다이제스트",
+      }),
+    ).toBeInTheDocument();
   });
 
   it("다이제스트가 하나도 없으면 그렇게 알린다", async () => {
