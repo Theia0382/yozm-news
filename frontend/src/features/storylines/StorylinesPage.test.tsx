@@ -3,14 +3,23 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { StorylinePage } from "@/features/storylines/StorylinePage";
 import { StorylinesPage } from "@/features/storylines/StorylinesPage";
-import { card, page } from "@/features/storylines/storylineTestKit";
-import { json } from "@/test/fakeServer";
+import {
+  card,
+  page,
+  subscriptionHandlers,
+} from "@/features/storylines/storylineTestKit";
+import { type fakeServer, json, problem } from "@/test/fakeServer";
 import { renderRoutes } from "@/test/renderRoutes";
 
 const ROUTES = [
   { path: "/storylines", element: <StorylinesPage /> },
   { path: "/storylines/:id", element: <StorylinePage /> },
 ];
+
+/** 목록 요청만 — 구독 버튼이 내 구독을 함께 읽는다 */
+function listRequests(server: ReturnType<typeof fakeServer>) {
+  return server.requests.filter((r) => r.path === "/api/storylines");
+}
 
 describe("StorylinesPage", () => {
   it("기본 7일 목록을 받아 카드마다 제목 링크 · 큰 표시 · 상태 · 수 · 상위 링크를 보인다", async () => {
@@ -45,7 +54,7 @@ describe("StorylinesPage", () => {
       within(items[1]!).getByRole("link", { name: "상위 스토리라인 보기" }),
     ).toHaveAttribute("href", "/storylines/7");
     expect(within(items[1]!).getByText(/^잠잠 ·/)).toBeInTheDocument();
-    expect(server.requests.map((r) => r.search)).toEqual(["?window=WEEK"]);
+    expect(listRequests(server).map((r) => r.search)).toEqual(["?window=WEEK"]);
     expect(screen.getByRole("button", { name: "최근 7일" })).toHaveAttribute(
       "aria-pressed",
       "true",
@@ -61,7 +70,7 @@ describe("StorylinesPage", () => {
     await userEvent.click(screen.getByRole("button", { name: "최근 24시간" }));
 
     await waitFor(() =>
-      expect(server.requests.map((r) => r.search)).toEqual([
+      expect(listRequests(server).map((r) => r.search)).toEqual([
         "?window=WEEK",
         "?window=DAY",
       ]),
@@ -87,8 +96,8 @@ describe("StorylinesPage", () => {
     await waitFor(() =>
       expect(screen.getAllByRole("listitem")).toHaveLength(2),
     );
-    expect(server.requests).toHaveLength(2);
-    const params = new URLSearchParams(server.requests[1]!.search);
+    expect(listRequests(server)).toHaveLength(2);
+    const params = new URLSearchParams(listRequests(server)[1]!.search);
     expect(Object.fromEntries(params)).toEqual({
       window: "WEEK",
       until: "2026-11-05T09:00:00Z",
@@ -110,5 +119,87 @@ describe("StorylinesPage", () => {
       "aria-pressed",
       "true",
     );
+  });
+
+  it("카드마다 구독 버튼이 내 구독을 따르고, 누르면 그 카드의 ID 로 구독 · 해제한다", async () => {
+    const { server } = renderRoutes(ROUTES, "/storylines", {
+      "GET /api/storylines": () =>
+        json(page([card(7), card(8, { parentId: 7 })])),
+      ...subscriptionHandlers([7], [7, 8]),
+    });
+    const list = await screen.findByRole("list", { name: "스토리라인" });
+    const [first, child] = within(list).getAllByRole("listitem");
+    const subscribed = await within(first!).findByRole("button", {
+      name: "구독 중",
+    });
+    expect(subscribed).toHaveAttribute("aria-pressed", "true");
+    expect(
+      within(child!).getByRole("button", { name: "구독" }),
+    ).toHaveAttribute("aria-pressed", "false");
+    // 카드 둘의 버튼이 내 구독 조회 한 번을 함께 쓴다
+    const listReads = () =>
+      server.requests.filter((r) => r.path === "/api/storyline-subscriptions");
+    expect(listReads()).toHaveLength(1);
+
+    // 하위 행은 자기 ID 로 구독한다
+    await userEvent.click(within(child!).getByRole("button", { name: "구독" }));
+    expect(
+      await within(child!).findByRole("button", { name: "구독 중" }),
+    ).toBeInTheDocument();
+    await userEvent.click(subscribed);
+    expect(
+      await within(first!).findByRole("button", { name: "구독" }),
+    ).toBeInTheDocument();
+
+    const changes = server.requests.filter((r) => r.method !== "GET");
+    expect(changes.map((r) => `${r.method} ${r.path}`)).toEqual([
+      "PUT /api/storyline-subscriptions/8",
+      "DELETE /api/storyline-subscriptions/7",
+    ]);
+    // 구독 · 해제마다 내 구독을 한 번씩 다시 읽는다
+    expect(listReads()).toHaveLength(3);
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("상한 · 없는 스토리라인 · 실패는 버튼 옆에 알린다", async () => {
+    let answer = (): Response =>
+      json({ result: "LIMIT_REACHED", storylineId: null, limit: 100 });
+    renderRoutes(ROUTES, "/storylines", {
+      "GET /api/storylines": () => json(page([card(8)])),
+      "GET /api/storyline-subscriptions": () =>
+        json({ limit: 100, subscriptions: [] }),
+      "PUT /api/storyline-subscriptions/8": () => answer(),
+    });
+    const button = await screen.findByRole("button", { name: "구독" });
+    await waitFor(() => expect(button).toBeEnabled());
+
+    await userEvent.click(button);
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "구독은 100개까지입니다. 내 구독에서 정리해 주세요.",
+    );
+
+    answer = () =>
+      json({ result: "UNKNOWN_STORYLINE", storylineId: null, limit: null });
+    await userEvent.click(button);
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "없는 스토리라인입니다.",
+    );
+
+    answer = () => problem(500, "오류");
+    await userEvent.click(button);
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "구독을 바꾸지 못했습니다.",
+    );
+    expect(button).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("내 구독을 읽기 전에는 구독 버튼을 누를 수 없다", async () => {
+    renderRoutes(ROUTES, "/storylines", {
+      "GET /api/storylines": () => json(page([card(8)])),
+      "GET /api/storyline-subscriptions": () => problem(500, "오류"),
+    });
+
+    const button = await screen.findByRole("button", { name: "구독" });
+    expect(button).toBeDisabled();
   });
 });

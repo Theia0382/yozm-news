@@ -1,4 +1,5 @@
 import { Link, useSearchParams } from "react-router";
+import { SubscribeButton } from "@/features/storylines/SubscribeButton";
 import {
   type StorylineCard,
   type StorylineWindow,
@@ -26,7 +27,10 @@ function readWindow(value: string | null): StorylineWindow {
   return WINDOWS.find((one) => one === value) ?? DEFAULT_WINDOW;
 }
 
-/** 독자 화면의 스토리라인 목록 — 목록 기간을 고르고, 기간에 기사가 있는 스토리라인을 마지막 기사 순으로 본다(docs/specs/reader.md reader-R1 · R2) */
+/**
+ * 독자 화면의 스토리라인 목록 — 목록 기간을 고르고, 기간에 기사가 있는 스토리라인을 마지막 기사 순으로 본다(docs/specs/reader.md reader-R1 ·
+ * R2). 카드마다 구독 버튼이 있다(docs/specs/user.md user-R52)
+ */
 export function StorylinesPage() {
   const [params, setParams] = useSearchParams();
   const chosen = readWindow(params.get("window"));
@@ -100,11 +104,14 @@ function StorylineCardItem({
 }) {
   return (
     <article className="space-y-1 rounded-md border border-input p-4">
-      <h2 className="text-lg font-semibold break-words">
-        <Link to={storylinePath(card.id)} className="hover:underline">
-          {card.title?.title ?? UNTITLED}
-        </Link>
-      </h2>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <h2 className="min-w-0 text-lg font-semibold break-words">
+          <Link to={storylinePath(card.id)} className="hover:underline">
+            {card.title?.title ?? UNTITLED}
+          </Link>
+        </h2>
+        <SubscribeButton storylineId={card.id} />
+      </div>
       {card.period?.big && (
         <p className="text-sm font-medium" title={bigInWindow(chosen)}>
           {BIG_STORYLINE}

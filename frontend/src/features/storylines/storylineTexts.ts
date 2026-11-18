@@ -1,4 +1,4 @@
-// 독자 화면의 스토리라인 문구 — 목록과 상세가 같은 문구를 쓰게 한 곳에 둔다(docs/specs/reader.md · overview §8).
+// 독자 화면의 스토리라인 문구 — 목록 · 상세 · 구독이 같은 문구를 쓰게 한 곳에 둔다(docs/specs/reader.md · overview §8).
 
 import type { StorylineWindow } from "@/features/storylines/storylineQueries";
 import { formatDate } from "@/shared/lib/dateTime";
@@ -66,3 +66,24 @@ export const NOT_FOUND = "없는 스토리라인입니다.";
 
 /** 읽지 못했다 */
 export const LOAD_FAILED = "스토리라인을 불러오지 못했습니다.";
+
+/** 구독 버튼 — 구독하지 않은 스토리라인 */
+export const SUBSCRIBE_LABEL = "구독";
+
+/** 구독 버튼 — 구독 중인 스토리라인(누르면 해제) */
+export const SUBSCRIBED_LABEL = "구독 중";
+
+/**
+ * 구독의 효과 한 줄 — 구독 버튼의 설명. 구독은 그 흐름의 기사를 다이제스트에 따로 넣지 않고 주제별 관심도에만 한동안 든다(docs/specs/digest.md
+ * 관심도 · ADR-0214)
+ */
+export const SUBSCRIPTION_EFFECT_SHORT =
+  "구독하면 이 흐름의 주제를 다이제스트 순위에 한동안 반영합니다";
+
+/** 구독 수가 상한이다 */
+export function limitReached(limit: number): string {
+  return `구독은 ${limit}개까지입니다. 내 구독에서 정리해 주세요.`;
+}
+
+/** 구독 · 해제 요청이 실패했다 */
+export const SUBSCRIPTION_CHANGE_FAILED = "구독을 바꾸지 못했습니다.";
