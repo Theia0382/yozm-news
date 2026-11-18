@@ -56,14 +56,18 @@ public final class InterestSignals {
 		return exposed;
 	}
 
-	/** 주제 구독 변경 — 원인이 사용자이고 푼 중분류가 있는 행마다, 중분류마다 몫 1 */
-	public static List<SubscriptionSignal> topics(List<TopicSubscriptionChange> changes) {
+	/** 주제 구독 변경 가운데 관심 신호인 행 — 원인이 사용자이고 푼 중분류가 있는 행, 순서 그대로 */
+	public static List<TopicSubscriptionChange> subscriberTopicChanges(List<TopicSubscriptionChange> changes) {
 		Objects.requireNonNull(changes, "changes");
+		return changes.stream()
+			.filter(change -> bySubscriber(change.cause()) && !change.subtopics().isEmpty())
+			.toList();
+	}
+
+	/** 주제 구독 변경 — {@link #subscriberTopicChanges} 의 행마다, 중분류마다 몫 1 */
+	public static List<SubscriptionSignal> topics(List<TopicSubscriptionChange> changes) {
 		List<SubscriptionSignal> signals = new ArrayList<>();
-		for (TopicSubscriptionChange change : changes) {
-			if (!bySubscriber(change.cause()) || change.subtopics().isEmpty()) {
-				continue;
-			}
+		for (TopicSubscriptionChange change : subscriberTopicChanges(changes)) {
 			Map<String, Double> shares = new HashMap<>();
 			change.subtopics().forEach(subtopic -> shares.put(subtopic, 1.0));
 			signals.add(new SubscriptionSignal(shares, sign(change.action()), change.occurredAt()));

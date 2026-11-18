@@ -1,0 +1,119 @@
+package net.yozmnews.digest.domain.interest;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.assertj.core.api.Assertions.within;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import net.yozmnews.article.ArticleId;
+import net.yozmnews.digest.InterestPoint;
+import net.yozmnews.digest.TopicSubscriptionStep;
+import net.yozmnews.feedback.FeedbackChange;
+import net.yozmnews.feedback.FeedbackValue;
+import net.yozmnews.tag.TagSetId;
+import net.yozmnews.user.TopicSubscriptionAction;
+import net.yozmnews.user.TopicSubscriptionCause;
+import net.yozmnews.user.TopicSubscriptionChange;
+import org.assertj.core.data.Offset;
+import org.junit.jupiter.api.Test;
+
+/**
+ * 기준 시각마다의 관심 · 새로 생긴 관심 · 사라진 관심 · 두 기준 시각 사이의 주제 구독 변경 · 드러난 주제. 기준 시각은 30일 간격이라 앞 기준 시각의
+ * 행은 무게 0.5, 두 칸 앞은 0.25 다. 기대값은 손으로 계산한 리터럴이다(K 3 · γ 1 · θ 0.2).
+ */
+class InterestTimelinesTests {
+
+	private static final Instant T0 = Instant.parse("2026-10-01T00:00:00Z");
+
+	private static final Instant T1 = Instant.parse("2026-10-31T00:00:00Z");
+
+	private static final Instant T2 = Instant.parse("2026-11-30T00:00:00Z");
+
+	private static final TagSetId TAG_SET = new TagSetId(7);
+
+	private static final Offset<Double> EXACT = within(1e-12);
+
+	@Test
+	void eachReferenceAfterTheFirstHasItsInterestShiftAndSubscriptionSteps() {
+		InterestRecord record = new InterestRecord(TAG_SET,
+				// c: 기사 1 · 2 를 T1 에 인용, 하루 뒤 좋아요 · d: 기사 3 · 4 를 T1 에 인용, 하루 뒤 싫어요
+				List.of(exposure(1, T1), exposure(2, T1), exposure(3, T1), exposure(4, T1)),
+				Map.of(article(1), Set.of("c"), article(2), Set.of("c"), article(3), Set.of("d"), article(4),
+						Set.of("d")),
+				List.of(feedback(1, FeedbackValue.LIKE), feedback(2, FeedbackValue.LIKE),
+						feedback(3, FeedbackValue.DISLIKE), feedback(4, FeedbackValue.DISLIKE)),
+				List.of(
+						// a: T0 에 사용자가 두 번 더함 · b: 기본값 · 빈 중분류(계보 없이 지운 키) · e: 사용자가 뺌
+						topic(Set.of("a"), TopicSubscriptionAction.ADD, TopicSubscriptionCause.USER, T0),
+						topic(Set.of("a"), TopicSubscriptionAction.ADD, TopicSubscriptionCause.USER, T0),
+						topic(Set.of("b"), TopicSubscriptionAction.ADD, TopicSubscriptionCause.ONBOARDING,
+								T0.plus(Duration.ofDays(1))),
+						topic(Set.of(), TopicSubscriptionAction.ADD, TopicSubscriptionCause.USER,
+								T1.plus(Duration.ofDays(2))),
+						topic(Set.of("e"), TopicSubscriptionAction.REMOVE, TopicSubscriptionCause.USER,
+								T1.plus(Duration.ofDays(5)))),
+				List.of(), Map.of());
+
+		List<InterestPoint> points = InterestTimelines.points(record, List.of(T0, T1, T2));
+
+		assertThat(points).extracting(InterestPoint::reference).containsExactly(T1, T2);
+		InterestPoint first = points.get(0);
+		// T1: a 는 더함 둘(무게 0.5) → S = 1 → x = 1/3. c · d 의 T1 인용은 창 끝(T1) 밖
+		assertThat(first.levels()).containsOnlyKeys("a");
+		assertThat(first.levels().get("a")).isCloseTo(0.3333333333333333, EXACT);
+		assertThat(first.entered()).containsExactly("a");
+		assertThat(first.left()).isEmpty();
+		assertThat(first.subscriptionChanges()).as("T0 이상 T1 미만, 사용자가 바꾸고 중분류가 있는 행").containsExactly(
+				new TopicSubscriptionStep(T0, TopicSubscriptionAction.ADD, Set.of("a")),
+				new TopicSubscriptionStep(T0, TopicSubscriptionAction.ADD, Set.of("a")));
+
+		InterestPoint second = points.get(1);
+		// T2: a 는 무게 0.25 둘 → x = 0.5/3 = 1/6(관심 있음 아님 → 사라짐), c 는 노출 둘(0.5) · 좋아요 둘 → x = 1/4,
+		// d 는 싫어요 둘 → x = −1/4
+		assertThat(second.levels().get("a")).isCloseTo(0.16666666666666666, EXACT);
+		assertThat(second.levels().get("c")).isCloseTo(0.25, EXACT);
+		assertThat(second.levels().get("d")).isCloseTo(-0.25, EXACT);
+		assertThat(second.entered()).containsExactly("c");
+		assertThat(second.left()).containsExactly("a");
+		assertThat(second.subscriptionChanges()).containsExactly(
+				new TopicSubscriptionStep(T1.plus(Duration.ofDays(5)), TopicSubscriptionAction.REMOVE, Set.of("e")));
+
+		// 드러난 주제 — |x| ≥ 0.2: a(1/3) · c(1/4) · d(−1/4). e 는 뺌 하나(25일 전) → |x| 는 0.2 미만
+		assertThat(InterestTimelines.prominent(points)).containsExactlyInAnyOrder("a", "c", "d");
+	}
+
+	@Test
+	void theReferencesAreAtLeastTwoInTimeOrder() {
+		InterestRecord empty = new InterestRecord(TAG_SET, List.of(), Map.of(), List.of(), List.of(), List.of(),
+				Map.of());
+
+		assertThatIllegalArgumentException().isThrownBy(() -> InterestTimelines.points(empty, List.of(T0)));
+		assertThatIllegalArgumentException().isThrownBy(() -> InterestTimelines.points(empty, List.of(T1, T0)));
+		assertThatIllegalArgumentException().isThrownBy(() -> InterestTimelines.points(empty, List.of(T0, T0)));
+		assertThat(InterestTimelines.points(empty, List.of(T0, T1))).singleElement()
+			.satisfies(point -> assertThat(point.levels()).isEmpty());
+	}
+
+	private static ArticleId article(long id) {
+		return new ArticleId(id);
+	}
+
+	private static ExposureRow exposure(long article, Instant at) {
+		return new ExposureRow(article(article), at);
+	}
+
+	private static FeedbackChange feedback(long article, FeedbackValue value) {
+		return new FeedbackChange(article(article), value, 1, T1.plus(Duration.ofDays(1)));
+	}
+
+	private static TopicSubscriptionChange topic(Set<String> subtopics, TopicSubscriptionAction action,
+			TopicSubscriptionCause cause, Instant at) {
+		return new TopicSubscriptionChange("key", TAG_SET, subtopics, action, cause, at);
+	}
+
+}
