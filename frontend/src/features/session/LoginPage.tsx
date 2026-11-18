@@ -46,7 +46,7 @@ export function LoginPage() {
       });
       if (!response.ok || !data) {
         setMessage(
-          guardRejectionText(response, error) ??
+          guardRejectionText(response, error, "NETWORK") ??
             `로그인 요청이 실패했습니다 (HTTP ${response.status}). 다시 시도해 주세요.`,
         );
         // 요청 보호 토큰이 없거나 낡았으면 상태를 다시 읽어 새 토큰을 받는다

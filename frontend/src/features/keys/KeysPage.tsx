@@ -145,7 +145,7 @@ function ProviderKeySection({
         return {
           tone: "alert",
           text:
-            guardRejectionText(response, error) ??
+            guardRejectionText(response, error, "ACCOUNT_OR_NETWORK") ??
             requestFailedText(response.status),
         };
       }
@@ -179,7 +179,7 @@ function ProviderKeySection({
         return {
           tone: "alert",
           text:
-            guardRejectionText(response, error) ??
+            guardRejectionText(response, error, "ACCOUNT_OR_NETWORK") ??
             requestFailedText(response.status),
         };
       }

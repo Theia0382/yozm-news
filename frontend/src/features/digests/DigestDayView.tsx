@@ -7,9 +7,17 @@ import type {
   DigestSection,
   ShownDigest,
 } from "@/features/digests/digestQueries";
+import { FeedbackButtons } from "@/features/digests/FeedbackButtons";
+import {
+  type FeedbackStates,
+  feedbackArticleIds,
+  useFeedbackStates,
+} from "@/features/digests/feedbackQueries";
 import {
   EMPTY_TEXT,
   FAILED_HEADING,
+  FEEDBACK_LEGEND,
+  FEEDBACK_STATES_FAILED,
   IN_PROGRESS_TEXT,
   NO_CONTENT_TEXT,
   REGENERATING_TEXT,
@@ -29,7 +37,8 @@ import { formatDateTime } from "@/shared/lib/dateTime";
 
 /**
  * 날짜 하나의 다이제스트 — 가장 최근 시도의 상태 · 보이는 다이제스트의 섹션 · 사용량(docs/specs/reader.md reader-R9). 링크 · 출처 · 발행 시각은
- * 응답의 기사 정보로만 그리고, 종합문은 글자로만 그린다(HTML 로 해석하지 않는다).
+ * 응답의 기사 정보로만 그리고, 종합문은 글자로만 그린다(HTML 로 해석하지 않는다). 주요 뉴스 · 추가 헤드라인의 인용 줄마다 좋아요 · 싫어요를
+ * 두고, 현재 상태는 다이제스트마다 한 번 읽는다(docs/specs/feedback.md feedback-R7).
  */
 export function DigestDayView({ day }: { day: DigestDay }) {
   const { shown, latest, usage } = day;
@@ -108,7 +117,17 @@ function CauseLink({ cause }: { cause: DigestAttempt["cause"] }) {
   );
 }
 
+/** 인용 줄의 버튼이 쓰는 현재 상태 — 조회가 성공했을 때만 누를 수 있다 */
+type FeedbackView = { states: FeedbackStates; ready: boolean };
+
+const NO_STATES: FeedbackStates = new Map();
+
 function ShownContent({ shown }: { shown: ShownDigest }) {
+  const ids = feedbackArticleIds(shown.sections);
+  const states = useFeedbackStates(ids);
+  const feedback: FeedbackView = states.isSuccess
+    ? { states: states.data, ready: true }
+    : { states: NO_STATES, ready: false };
   const overview = shown.sections.filter((s) => s.kind === "OVERVIEW");
   const stories = shown.sections.filter((s) => s.kind === "TOP_STORY");
   const more = shown.sections.filter((s) => s.kind === "MORE_HEADLINES");
@@ -121,6 +140,11 @@ function ShownContent({ shown }: { shown: ShownDigest }) {
         {periodText(shown.periodStart, shown.periodEnd)}
       </p>
       {shown.sections.length === 0 && <p role="note">{NO_CONTENT_TEXT}</p>}
+      {states.isError && (
+        <p role="alert" className="text-sm">
+          {FEEDBACK_STATES_FAILED}
+        </p>
+      )}
       {overview.map((section, index) => (
         <section
           key={`overview-${index}`}
@@ -135,7 +159,12 @@ function ShownContent({ shown }: { shown: ShownDigest }) {
             {sectionHeadings.topStories}
           </h2>
           {stories.map((story, index) => (
-            <Story key={`story-${index}`} story={story} />
+            <Story
+              key={`story-${index}`}
+              story={story}
+              digestId={shown.digestId}
+              feedback={feedback}
+            />
           ))}
         </section>
       )}
@@ -144,7 +173,12 @@ function ShownContent({ shown }: { shown: ShownDigest }) {
           <h2 className="text-lg font-semibold">
             {sectionHeadings.moreHeadlines}
           </h2>
-          <Citations citations={section.citations} withNote />
+          <Citations
+            citations={section.citations}
+            withNote
+            digestId={shown.digestId}
+            feedback={feedback}
+          />
         </section>
       ))}
       {marked && (
@@ -152,16 +186,32 @@ function ShownContent({ shown }: { shown: ShownDigest }) {
           {SELECTION_REASON_LEGEND}
         </p>
       )}
+      {ids.length > 0 && (
+        <p className="text-xs text-muted-foreground">{FEEDBACK_LEGEND}</p>
+      )}
     </div>
   );
 }
 
-function Story({ story }: { story: DigestSection }) {
+function Story({
+  story,
+  digestId,
+  feedback,
+}: {
+  story: DigestSection;
+  digestId: number;
+  feedback: FeedbackView;
+}) {
   return (
     <article className="space-y-2 border-l-2 border-input pl-4">
       <h3 className="font-medium break-words">{story.title}</h3>
       <p className="break-words whitespace-pre-line">{story.body}</p>
-      <Citations citations={story.citations} withNote={false} />
+      <Citations
+        citations={story.citations}
+        withNote={false}
+        digestId={digestId}
+        feedback={feedback}
+      />
     </article>
   );
 }
@@ -169,9 +219,13 @@ function Story({ story }: { story: DigestSection }) {
 function Citations({
   citations,
   withNote,
+  digestId,
+  feedback,
 }: {
   citations: DigestCitation[];
   withNote: boolean;
+  digestId: number;
+  feedback: FeedbackView;
 }) {
   return (
     <ul className="space-y-1 text-sm">
@@ -196,6 +250,13 @@ function Citations({
               {selectionReasonLabels[citation.reason]}
             </span>
           )}
+          <FeedbackButtons
+            articleId={citation.articleId}
+            digestId={digestId}
+            title={citation.article.title}
+            current={feedback.states.get(citation.articleId) ?? null}
+            ready={feedback.ready}
+          />
           {withNote && citation.note && (
             <p className="text-muted-foreground">{citation.note}</p>
           )}

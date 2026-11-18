@@ -1,4 +1,4 @@
-import { act, screen, waitFor } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DigestHomePage } from "@/features/digests/DigestHomePage";
@@ -6,10 +6,17 @@ import type {
   DigestHome,
   DigestRequestResult,
 } from "@/features/digests/digestQueries";
-import { attempt, day, home, status } from "@/features/digests/digestTestKit";
+import {
+  attempt,
+  day,
+  home,
+  noFeedback,
+  shown,
+  status,
+} from "@/features/digests/digestTestKit";
 import type { InterestTags } from "@/features/interests/interestQueries";
 import { type Handler, json } from "@/test/fakeServer";
-import { renderRoutes } from "@/test/renderRoutes";
+import { bodiesOf, renderRoutes } from "@/test/renderRoutes";
 
 function tags(topics: string[]): InterestTags {
   return {
@@ -29,6 +36,7 @@ function renderHome(
       json(queue.length > 1 ? queue.shift() : queue[0]),
     "GET /api/interests/tags": () => json(tags(topics)),
     "GET /api/topic-suggestions": () => json({ tagSetId: 1, topics: [] }),
+    "GET /api/feedback": () => json(noFeedback()),
     ...extra,
   });
 }
@@ -403,5 +411,40 @@ describe("DigestHomePage", () => {
 
     await act(() => vi.advanceTimersByTimeAsync(15000));
     expect(latestRequests(server)).toBe(2);
+  });
+});
+
+describe("DigestHomePage 의 좋아요 · 싫어요", () => {
+  it("홈의 다이제스트에서도 누르고, 보내는 다이제스트 ID 는 가장 최근 시도가 아니라 보이는 다이제스트다", async () => {
+    // 같은 기간으로 다시 만든 시도(12)에 기사가 없어 앞서 만든 다이제스트(11)를 보이고 있다
+    const regeneratedEmpty = home({
+      day: day({
+        shown: shown({ digestId: 11 }),
+        latest: attempt({ digestId: 12, status: "EMPTY" }),
+      }),
+    });
+    const { server } = renderHome(regeneratedEmpty, {
+      "PUT /api/feedback/1": () => json({ result: "RECORDED", value: "LIKE" }),
+    });
+    const user = userEvent.setup();
+    const buttons = within(
+      await screen.findByRole("group", { name: "기사 1 반응" }),
+    );
+    await waitFor(() =>
+      expect(buttons.getByRole("button", { name: "좋아요" })).toBeEnabled(),
+    );
+
+    await user.click(buttons.getByRole("button", { name: "좋아요" }));
+
+    await waitFor(() =>
+      expect(
+        buttons
+          .getByRole("button", { name: "좋아요" })
+          .getAttribute("aria-pressed"),
+      ).toBe("true"),
+    );
+    expect(bodiesOf(server, "PUT", "/api/feedback/1")).toEqual([
+      { digestId: 11, value: "LIKE" },
+    ]);
   });
 });
