@@ -77,6 +77,17 @@ public final class PasswordCredential {
 		return this.passwordChangedAt;
 	}
 
+	/**
+	 * 저장된 행의 버전 — 자격을 저장할 때마다 오른다.
+	 * @throws IllegalStateException 아직 저장하지 않은 새 자격일 때
+	 */
+	public long version() {
+		if (this.version == null) {
+			throw new IllegalStateException("저장하지 않은 자격에는 버전이 없다");
+		}
+		return this.version;
+	}
+
 	/** 첫 로그인에서 비밀번호를 바꿔야 하는가 */
 	public boolean mustChange() {
 		return this.mustChange;

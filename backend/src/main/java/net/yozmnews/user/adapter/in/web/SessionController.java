@@ -72,6 +72,11 @@ class SessionController {
 		return switch (this.signIn.attempt(body.email(), body.password(), now)) {
 			case SignInOutcome.SignedIn signedIn -> {
 				this.sessions.signIn(signedIn.userId(), body.keep(), request, response);
+				// 세션이 저장소에 들어간 뒤 확인해야, 그 사이 자격을 바꾼 쪽의 세션 지우기가 이 세션을 놓치지 않는다(user-R18)
+				if (!this.signIn.stillCurrent(signedIn)) {
+					this.sessions.signOut(request, response);
+					yield SignInResponse.rejected();
+				}
 				yield SignInResponse.signedIn();
 			}
 			case SignInOutcome.Rejected rejected -> SignInResponse.rejected();
