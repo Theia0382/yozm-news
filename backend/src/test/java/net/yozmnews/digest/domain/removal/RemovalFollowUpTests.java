@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Set;
 
 import net.yozmnews.article.ArticleId;
-import net.yozmnews.digest.domain.content.SectionKind;
+import net.yozmnews.digest.SectionKind;
 import org.junit.jupiter.api.Test;
 
 /**

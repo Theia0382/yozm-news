@@ -8,10 +8,10 @@ import java.util.List;
 import java.util.function.Function;
 
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.digest.DigestFailure;
+import net.yozmnews.digest.SelectionReason;
 import net.yozmnews.digest.domain.candidate.CandidateSet;
 import net.yozmnews.digest.domain.candidate.DigestCandidate;
-import net.yozmnews.digest.domain.candidate.SelectionReason;
-import net.yozmnews.digest.domain.digest.DigestFailure;
 import net.yozmnews.digest.domain.generator.DigestRequest;
 import net.yozmnews.digest.domain.generator.GenerationOutcome;
 import net.yozmnews.digest.domain.generator.TokenUsage;

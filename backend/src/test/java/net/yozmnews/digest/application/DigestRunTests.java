@@ -10,9 +10,9 @@ import java.util.Map;
 
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.digest.DigestRounds;
+import net.yozmnews.digest.DigestStatus;
 import net.yozmnews.digest.domain.digest.DigestId;
 import net.yozmnews.digest.domain.digest.DigestPeriod;
-import net.yozmnews.digest.domain.digest.DigestStatus;
 import net.yozmnews.digest.domain.digest.DigestTrigger;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.tag.TagSetDirectory;

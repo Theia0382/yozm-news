@@ -6,8 +6,9 @@ import static org.assertj.core.api.Assertions.tuple;
 import java.util.List;
 
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.digest.SectionKind;
+import net.yozmnews.digest.SelectionReason;
 import net.yozmnews.digest.domain.candidate.DigestCandidate;
-import net.yozmnews.digest.domain.candidate.SelectionReason;
 import net.yozmnews.digest.domain.digest.DigestId;
 import net.yozmnews.digest.domain.output.CitedDigest;
 import net.yozmnews.digest.domain.output.CitedHeadline;

@@ -10,8 +10,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.digest.SelectionReason;
 import net.yozmnews.digest.domain.candidate.DigestCandidate;
-import net.yozmnews.digest.domain.candidate.SelectionReason;
 import net.yozmnews.digest.domain.interest.InterestRules;
 import net.yozmnews.digest.domain.interest.TopicInterests;
 import net.yozmnews.digest.domain.selection.BigSlotPicker.BigSlots;

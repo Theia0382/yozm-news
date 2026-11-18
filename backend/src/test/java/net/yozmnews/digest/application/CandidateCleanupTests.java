@@ -10,10 +10,10 @@ import java.util.UUID;
 
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.digest.SelectionReason;
 import net.yozmnews.digest.domain.candidate.CandidateSet;
 import net.yozmnews.digest.domain.candidate.DigestCandidate;
 import net.yozmnews.digest.domain.candidate.DigestCandidateRepository;
-import net.yozmnews.digest.domain.candidate.SelectionReason;
 import net.yozmnews.digest.domain.content.DigestSection;
 import net.yozmnews.digest.domain.content.DigestSectionRepository;
 import net.yozmnews.digest.domain.digest.Digest;

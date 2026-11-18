@@ -5,12 +5,12 @@ import java.time.InstantSource;
 import java.util.Objects;
 import java.util.UUID;
 
+import net.yozmnews.digest.DigestFailure;
+import net.yozmnews.digest.DigestStatus;
 import net.yozmnews.digest.domain.digest.Digest;
-import net.yozmnews.digest.domain.digest.DigestFailure;
 import net.yozmnews.digest.domain.digest.DigestId;
 import net.yozmnews.digest.domain.digest.DigestLedger;
 import net.yozmnews.digest.domain.digest.DigestRepository;
-import net.yozmnews.digest.domain.digest.DigestStatus;
 import net.yozmnews.digest.domain.digest.ScheduledDigest;
 import net.yozmnews.digest.domain.schedule.DigestScheduleRules;
 import org.jspecify.annotations.Nullable;

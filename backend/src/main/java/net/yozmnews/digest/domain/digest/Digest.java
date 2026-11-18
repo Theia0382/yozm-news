@@ -7,6 +7,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
+import net.yozmnews.digest.DigestFailure;
+import net.yozmnews.digest.DigestStatus;
 import net.yozmnews.digest.domain.generator.TokenUsage;
 import net.yozmnews.llm.LlmModel;
 import net.yozmnews.platform.CodePoints;

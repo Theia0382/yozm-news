@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Set;
 
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.digest.SelectionReason;
 import org.junit.jupiter.api.Test;
 
 /**

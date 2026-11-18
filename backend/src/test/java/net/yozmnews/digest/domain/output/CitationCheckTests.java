@@ -6,9 +6,9 @@ import java.util.List;
 import java.util.Set;
 
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.digest.SelectionReason;
 import net.yozmnews.digest.domain.candidate.CandidateSet;
 import net.yozmnews.digest.domain.candidate.DigestCandidate;
-import net.yozmnews.digest.domain.candidate.SelectionReason;
 import org.junit.jupiter.api.Test;
 
 /**

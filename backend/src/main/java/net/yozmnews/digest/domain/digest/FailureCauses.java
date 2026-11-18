@@ -1,5 +1,6 @@
 package net.yozmnews.digest.domain.digest;
 
+import net.yozmnews.digest.DigestFailure;
 import net.yozmnews.user.DigestFailureCause;
 
 /**

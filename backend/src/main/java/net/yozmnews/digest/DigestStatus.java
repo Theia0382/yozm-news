@@ -1,7 +1,7 @@
-package net.yozmnews.digest.domain.digest;
+package net.yozmnews.digest;
 
 /**
- * 다이제스트 상태 · docs/specs/digest.md §5 · digest-R1
+ * 다이제스트 상태 — 공개 타입 · docs/specs/digest.md §3 · digest-R1
  */
 public enum DigestStatus {
 

@@ -3,6 +3,7 @@ package net.yozmnews.digest.domain.digest;
 import java.time.Duration;
 import java.util.Objects;
 
+import net.yozmnews.digest.DigestFailure;
 import net.yozmnews.digest.domain.generator.TokenUsage;
 import org.jspecify.annotations.Nullable;
 
