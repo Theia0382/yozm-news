@@ -1,6 +1,5 @@
 import type { RouteObject } from "react-router";
 import { RootLayout } from "@/app/RootLayout";
-import { HomePage } from "@/features/home/HomePage";
 import { RequireSignIn } from "@/features/session/RequireSignIn";
 
 export const routes: RouteObject[] = [
@@ -12,7 +11,28 @@ export const routes: RouteObject[] = [
         // 로그인한 사용자만 보는 화면 — 로그인하지 않았으면 로그인 화면으로 보낸다
         element: <RequireSignIn />,
         children: [
-          { index: true, element: <HomePage /> },
+          {
+            // 홈 — 오늘 다이제스트. 키가 있어야 간다(키 없는 사용자는 키 화면으로)
+            index: true,
+            lazy: async () => ({
+              Component: (await import("@/features/digests/DigestHomePage"))
+                .DigestHomePage,
+            }),
+          },
+          {
+            path: "digests",
+            lazy: async () => ({
+              Component: (await import("@/features/digests/DigestDatesPage"))
+                .DigestDatesPage,
+            }),
+          },
+          {
+            path: "digests/:date",
+            lazy: async () => ({
+              Component: (await import("@/features/digests/DigestDayPage"))
+                .DigestDayPage,
+            }),
+          },
           {
             // 알림 페이지는 필요할 때 내려받는다 — 머리줄의 알림 링크만 첫 화면 묶음에 든다
             path: "notices",

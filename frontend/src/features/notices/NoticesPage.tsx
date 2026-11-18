@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { useEffect, useRef } from "react";
 import { Link } from "react-router";
+import { digestFailureCauseTexts } from "@/features/digests/digestTexts";
 import { INTERESTS_PATH } from "@/features/interests/interestTexts";
 import { providers } from "@/features/keys/keyTexts";
 import {
@@ -36,8 +37,6 @@ type StorylineSubscriptionsRemovedNotice =
   components["schemas"]["StorylineSubscriptionsRemovedNoticeResponse"];
 
 type DigestFailedNotice = components["schemas"]["DigestFailedNoticeResponse"];
-
-type DigestFailureCause = DigestFailedNotice["cause"];
 
 /** 피드를 묶어 보이는 지금 상태의 순서 — 손볼 것부터 */
 const STATUS_ORDER: readonly FeedStatus[] = ["DEGRADED", "STALE", "ACTIVE"];
@@ -208,17 +207,6 @@ function PasswordChangedBody({
   );
 }
 
-/** 다이제스트 실패의 갈래마다 할 일 문구 */
-const digestFailureCauseText: Record<DigestFailureCause, string> = {
-  KEY: "LLM 키를 쓸 수 없었습니다. 키를 확인하거나 다시 등록하세요.",
-  PROVIDER_ACCOUNT:
-    "공급자 계정의 권한이나 잔액 때문에 만들지 못했습니다. 공급자 계정을 확인하세요.",
-  TEMPORARY:
-    "공급자가 잠시 답하지 못했거나 생성이 끝나지 않았습니다. 잠시 뒤 다시 만들어 보세요.",
-  OUTPUT:
-    "모델의 출력을 다이제스트로 쓰지 못했습니다. 다시 만들거나 다른 모델을 골라 보세요.",
-};
-
 function DigestFailedBody({
   body,
 }: {
@@ -234,7 +222,7 @@ function DigestFailedBody({
         <time dateTime={body.failedAt}>{formatDateTime(body.failedAt)}</time>
       </p>
       <p className="text-muted-foreground">
-        {digestFailureCauseText[body.cause]}
+        {digestFailureCauseTexts[body.cause]}
       </p>
       {body.cause === "KEY" && (
         <Link to="/keys" className="underline">

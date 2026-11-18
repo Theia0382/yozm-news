@@ -1,5 +1,11 @@
 import { Link, Navigate, Outlet, useLocation } from "react-router";
 import {
+  DIGEST_DATES_TITLE,
+  DIGEST_HOME_PATH,
+  DIGEST_HOME_TITLE,
+  DIGESTS_PATH,
+} from "@/features/digests/digestTexts";
+import {
   INTEREST_HISTORY_PATH,
   INTEREST_HISTORY_TITLE,
 } from "@/features/interestHistory/interestHistoryTexts";
@@ -34,8 +40,9 @@ const OPEN_WITHOUT_KEY: readonly string[] = [
 
 /**
  * 로그인한 사용자만 보는 화면의 틀 — 로그인하지 않았으면 로그인 화면으로 보내고(돌아올 주소를 next 로), 로그인했으면 머리줄에 알림 링크 ·
- * 스토리라인 · 관심 설정 · LLM 키 · 설정 링크(운영자면 운영자 화면 링크도) · 이름 · 로그아웃을 둔다. 첫 로그인의 비밀번호 변경이 남았으면 어느
- * 주소든 비밀번호 변경 화면으로 보내고, 머리줄에는 이름 · 로그아웃만 둔다 — 알림 · 설정은 그 상태에서 서버가 거부하는 경로다
+ * 오늘 다이제스트 · 지난 다이제스트 · 스토리라인 · 관심사 히스토리 · 관심 설정 · LLM 키 · 설정 링크(운영자면 운영자 화면 링크도) · 이름 ·
+ * 로그아웃을 둔다. 첫 로그인의 비밀번호 변경이 남았으면 어느 주소든 비밀번호 변경 화면으로 보내고, 머리줄에는 이름 · 로그아웃만
+ * 둔다 — 알림 · 설정은 그 상태에서 서버가 거부하는 경로다
  * (docs/specs/user.md §4). 그 다음으로, LLM 키가 없으면 키 · 설정 · 비밀번호 변경 · 알림 · 관심 설정 화면 밖의 주소를 키 화면으로
  * 보낸다 — 그 밖의 화면이 쓰는 경로는 키가 없으면 서버가 거부한다.
  */
@@ -44,7 +51,7 @@ export function RequireSignIn() {
   const location = useLocation();
   const { signOut, failed: signOutFailed } = useSignOut();
 
-  // 첫 화면 묶음에 들어가므로 cn · 공용 버튼을 들이지 않는다 — HomePage 와 같은 이유
+  // 첫 화면 묶음에 들어가므로 cn · 공용 버튼을 들이지 않는다 — 로그인 전에도 모든 방문자가 받는 묶음이다
   if (me.isPending) {
     return (
       <p className={`${PAGE_FRAME} ${NARROW_WIDTH} text-muted-foreground`}>
@@ -89,6 +96,12 @@ export function RequireSignIn() {
         {!mustChange && (
           <>
             <NoticesLink />
+            <Link to={DIGEST_HOME_PATH} className="underline">
+              {DIGEST_HOME_TITLE}
+            </Link>
+            <Link to={DIGESTS_PATH} className="underline">
+              {DIGEST_DATES_TITLE}
+            </Link>
             <Link to={STORYLINES_PATH} className="underline">
               {STORYLINES_TITLE}
             </Link>
