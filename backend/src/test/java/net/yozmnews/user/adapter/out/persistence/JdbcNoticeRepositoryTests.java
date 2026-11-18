@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -15,11 +16,13 @@ import net.yozmnews.llm.Provider;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.source.FeedId;
 import net.yozmnews.source.FeedStatus;
+import net.yozmnews.user.DigestFailureCause;
 import net.yozmnews.user.domain.account.Account;
 import net.yozmnews.user.domain.account.AccountRepository;
 import net.yozmnews.user.domain.account.AccountRole;
 import net.yozmnews.user.domain.account.DisplayName;
 import net.yozmnews.user.domain.account.EmailAddress;
+import net.yozmnews.user.domain.notice.DigestFailedContent;
 import net.yozmnews.user.domain.notice.FeedStatusContent;
 import net.yozmnews.user.domain.notice.FeedStatusEntry;
 import net.yozmnews.user.domain.notice.KeyInvalidatedContent;
@@ -127,6 +130,33 @@ class JdbcNoticeRepositoryTests {
 				{"method": "CHANGE", "changedAt": "2026-11-13T00:00:00Z"}
 				""", this.jdbc.sql("select content::text from user_notices where id = :id")
 			.param("id", older)
+			.query(String.class)
+			.single(), JSONCompareMode.STRICT);
+	}
+
+	@Test
+	void aDigestFailedNoticeIsStoredOncePerDigestAndKeepsItsShape() throws Exception {
+		UserId alice = account("alice@example.com", AccountRole.USER);
+		DigestFailedContent content = new DigestFailedContent(901, LocalDate.parse("2026-11-19"),
+				DigestFailureCause.OUTPUT, Instant.parse("2026-11-18T22:03:10Z"));
+
+		assertThat(this.notices.createOnce(alice, content, T1)).isTrue();
+		assertThat(this.notices.createOnce(alice, content, T1)).isFalse();
+		// 대조 — 같은 날짜의 다른 다이제스트는 다른 알림이다
+		DigestFailedContent other = new DigestFailedContent(902, LocalDate.parse("2026-11-19"),
+				DigestFailureCause.KEY, Instant.parse("2026-11-18T23:00:00Z"));
+		assertThat(this.notices.createOnce(alice, other, T1)).isTrue();
+		// 계정이 없으면 만들지 않는다
+		assertThat(this.notices.createOnce(new UserId(Long.MAX_VALUE), content, T1)).isFalse();
+
+		List<Notice> page = this.notices.page(alice, null, 50);
+		assertThat(page).extracting(Notice::kind, Notice::content)
+			.containsExactly(org.assertj.core.groups.Tuple.tuple(NoticeKind.DIGEST_FAILED, other),
+					org.assertj.core.groups.Tuple.tuple(NoticeKind.DIGEST_FAILED, content));
+		JSONAssert.assertEquals("""
+				{"digestId": 901, "digestDate": "2026-11-19", "cause": "OUTPUT", "failedAt": "2026-11-18T22:03:10Z"}
+				""", this.jdbc.sql("select content::text from user_notices where id = :id")
+			.param("id", page.get(1).id())
 			.query(String.class)
 			.single(), JSONCompareMode.STRICT);
 	}

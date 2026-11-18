@@ -3,6 +3,7 @@ package net.yozmnews.user.adapter.out.persistence;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -13,6 +14,8 @@ import net.yozmnews.platform.UserId;
 import net.yozmnews.source.FeedId;
 import net.yozmnews.source.FeedStatus;
 import net.yozmnews.tag.TagKind;
+import net.yozmnews.user.DigestFailureCause;
+import net.yozmnews.user.domain.notice.DigestFailedContent;
 import net.yozmnews.user.domain.notice.FeedStatusContent;
 import net.yozmnews.user.domain.notice.FeedStatusEntry;
 import net.yozmnews.user.domain.notice.KeyInvalidatedContent;
@@ -119,6 +122,21 @@ class JdbcNoticeRepository implements NoticeRepository {
 	}
 
 	@Override
+	public boolean createOnce(UserId user, DigestFailedContent content, Instant now) {
+		return this.jdbc.sql("""
+				insert into user_notices (user_id, kind, content, revision, created_at, updated_at)
+				select :user, :kind, cast(:content as jsonb), 1, :now, :now
+				where exists (select 1 from users where id = :user)
+				on conflict (user_id, (content ->> 'digestId')) where kind = 'DIGEST_FAILED' do nothing
+				""")
+			.param("user", user.value())
+			.param("kind", content.kind().name())
+			.param("content", json(content))
+			.param("now", utc(now))
+			.update() == 1;
+	}
+
+	@Override
 	public void revise(long id, NoticeContent content, Instant now) {
 		this.jdbc.sql("""
 				update user_notices set content = cast(:content as jsonb), revision = revision + 1, updated_at = :now
@@ -181,6 +199,7 @@ class JdbcNoticeRepository implements NoticeRepository {
 				JSON.readValue(rs.getString("content"), StoredPreferencesAdjusted.class).content();
 			case STORYLINE_SUBSCRIPTIONS_REMOVED ->
 				JSON.readValue(rs.getString("content"), StoredSubscriptionsRemoved.class).content();
+			case DIGEST_FAILED -> JSON.readValue(rs.getString("content"), StoredDigestFailed.class).content();
 		};
 		return new Notice(rs.getLong("id"), kind, content, rs.getInt("revision"),
 				rs.getObject("created_at", OffsetDateTime.class).toInstant(),
@@ -197,6 +216,7 @@ class JdbcNoticeRepository implements NoticeRepository {
 				JSON.writeValueAsString(StoredPreferencesAdjusted.of(preferencesAdjusted));
 			case StorylineSubscriptionsRemovedContent subscriptionsRemoved ->
 				JSON.writeValueAsString(StoredSubscriptionsRemoved.of(subscriptionsRemoved));
+			case DigestFailedContent digestFailed -> JSON.writeValueAsString(StoredDigestFailed.of(digestFailed));
 		};
 	}
 
@@ -261,6 +281,24 @@ class JdbcNoticeRepository implements NoticeRepository {
 					Provider.ofKey(this.provider)
 						.orElseThrow(() -> new IllegalStateException("모르는 공급자 키가 저장돼 있다: " + this.provider)),
 					this.keyId, Instant.parse(this.invalidatedAt));
+		}
+
+	}
+
+	/**
+	 * 다이제스트 실패 알림 내용의 저장 모양 — {@code {"digestId":…,"digestDate":…,"cause":…,"failedAt":…}}. 날짜 · 시각은 ISO 8601
+	 * 문자열이다. {@code digestId} 는 같은 다이제스트의 알림을 하나로 묶는 고유 인덱스의 키다 — 이름을 바꾸면 마이그레이션의 인덱스도 바꾼다
+	 */
+	private record StoredDigestFailed(long digestId, String digestDate, DigestFailureCause cause, String failedAt) {
+
+		static StoredDigestFailed of(DigestFailedContent content) {
+			return new StoredDigestFailed(content.digestId(), content.digestDate().toString(), content.cause(),
+					content.failedAt().toString());
+		}
+
+		DigestFailedContent content() {
+			return new DigestFailedContent(this.digestId, LocalDate.parse(this.digestDate), this.cause,
+					Instant.parse(this.failedAt));
 		}
 
 	}

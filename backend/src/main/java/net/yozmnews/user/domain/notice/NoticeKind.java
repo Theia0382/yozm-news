@@ -20,6 +20,9 @@ public enum NoticeKind {
 	PREFERENCES_ADJUSTED,
 
 	/** 구독한 스토리라인이 지워져 구독에서 뺐다 — 따라가기 한 번마다 하나 */
-	STORYLINE_SUBSCRIPTIONS_REMOVED
+	STORYLINE_SUBSCRIPTIONS_REMOVED,
+
+	/** 다이제스트가 실패로 끝났다 — 실패한 다이제스트마다 하나 */
+	DIGEST_FAILED
 
 }
