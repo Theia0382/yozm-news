@@ -12,9 +12,10 @@ import net.yozmnews.event.domain.assignment.CandidateScoring;
  * @param centroid 중심 벡터 — 복사해 받고 복사해 낸다
  * @param keyTerms 사건 핵심 말 — 후보 쪽과 같은 상위 {@link CandidateScoring#EVENT_KEY_TERMS} 개(기사 수가 많은 순, 같으면 말 순)
  * @param revision 읽은 때의 고친 횟수 — 확인 표시는 이 값이 그대로일 때만 남는다
+ * @param deferrals 읽은 때까지 이어서 미룬 횟수 — 미룬 적이 없거나 그 뒤 확인을 표시했으면 0
  */
 public record MergeSubject(long id, String modelVersion, float[] centroid, int articleCount, List<String> keyTerms,
-		Instant firstArticleAt, Instant lastArticleAt, long revision) {
+		Instant firstArticleAt, Instant lastArticleAt, long revision, int deferrals) {
 
 	public MergeSubject {
 		Objects.requireNonNull(modelVersion, "modelVersion");

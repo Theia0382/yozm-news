@@ -37,6 +37,8 @@ import org.springframework.transaction.annotation.Transactional;
  * 를 열린 사건마다 센다(인덱스를 쓰지 않는 정확 검색). 사건 핵심 말의 상위 수는 {@link CandidateScoring#EVENT_KEY_TERMS} 를 매개변수로
  * 넘긴다. 말 순은 바이트 순({@code COLLATE "C"})이라 DB 의 정렬 규칙과 무관하다. 병합은 남는 사건의 값을 쓰고 합쳐질 사건의 핵심 말
  * 수를 더한 뒤, 합쳐질 사건 행을 {@code MERGED} 로 남겨 남는 사건을 바로 가리키게 한다(사슬 없음).
+ * 병합 대상은 미루지 않은 사건({@code merge_retry_at} 없음)을 먼저, 이어서 미룬 사건을 다시 볼 시각 순으로 읽는다. 미룸은 확인을
+ * 표시하거나 합칠 때 지운다.
  * <p>
  * 사건을 열고 · 고치고 · 지우고 · 합치고 · 닫는 다섯 메서드는 트랜잭션 안에서만 돌고({@link Propagation#MANDATORY}), 끝에
  * {@link EventsChanged} 를 한 번 발행한다(event-R23) — 트랜잭션 밖이면 커밋 뒤 리스너가 불리지 않아 알림이 조용히 빠진다.
@@ -168,31 +170,42 @@ class JdbcEventRepository implements EventRepository {
 	}
 
 	@Override
-	public List<MergeSubject> mergeDue(long criteriaId, int limit) {
+	public List<MergeSubject> mergeDue(long criteriaId, Instant now, int limit) {
 		return this.jdbc.sql("select e.id, e.model_version, e.centroid::text as centroid, e.article_count, "
-				+ "e.first_article_at, e.last_article_at, e.revision, " + TOP_TERMS + """
+				+ "e.first_article_at, e.last_article_at, e.revision, e.merge_deferrals, " + TOP_TERMS + """
 				from events e
 				where e.status = 'OPEN'
 				  and (e.merge_checked_revision < e.revision or e.merge_checked_criteria_id is distinct from :criteria)
-				order by e.id
+				  and (e.merge_retry_at is null or e.merge_retry_at <= :now)
+				order by e.merge_retry_at nulls first, e.id
 				limit :limit
 				""")
 			.param("terms", CandidateScoring.EVENT_KEY_TERMS)
 			.param("criteria", criteriaId)
+			.param("now", timestamp(now))
 			.param("limit", limit)
 			.query((rs, row) -> new MergeSubject(rs.getLong("id"), rs.getString("model_version"),
 					VectorText.parse(rs.getString("centroid")), rs.getInt("article_count"),
 					strings(rs.getArray("key_terms")), instant(rs, "first_article_at"), instant(rs, "last_article_at"),
-					rs.getLong("revision")))
+					rs.getLong("revision"), rs.getInt("merge_deferrals")))
 			.list();
 	}
 
 	@Override
 	public void markMergeChecked(long eventId, long revision, long criteriaId) {
 		this.jdbc.sql("""
-				update events set merge_checked_revision = :revision, merge_checked_criteria_id = :criteria
+				update events set merge_checked_revision = :revision, merge_checked_criteria_id = :criteria,
+				                  merge_deferrals = 0, merge_retry_at = null
 				where id = :id and revision = :revision
 				""").param("id", eventId).param("revision", revision).param("criteria", criteriaId).update();
+	}
+
+	@Override
+	public void deferMerge(long eventId, int deferrals, Instant retryAt) {
+		this.jdbc.sql("""
+				update events set merge_deferrals = :deferrals, merge_retry_at = :retry
+				where id = :id and status = 'OPEN'
+				""").param("id", eventId).param("deferrals", deferrals).param("retry", timestamp(retryAt)).update();
 	}
 
 	@Override
@@ -220,6 +233,11 @@ class JdbcEventRepository implements EventRepository {
 			.param("absorbed", absorbed.id())
 			.param("now", timestamp(now))
 			.param("representative", (absorbedRepresentative != null) ? absorbedRepresentative.value() : null, Types.BIGINT)
+			.update();
+		// 합친 사건은 값이 새것이다 — 미뤄 둔 사건이어도 남는 사건을 곧 다시 본다
+		this.jdbc.sql("update events set merge_deferrals = 0, merge_retry_at = null where id in (:survivor, :absorbed)")
+			.param("survivor", survivorNext.id())
+			.param("absorbed", absorbed.id())
 			.update();
 		changed(survivorNext.id(), absorbed.id());
 	}
