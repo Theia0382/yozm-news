@@ -6,7 +6,7 @@ import net.yozmnews.llm.LlmModel;
 import net.yozmnews.platform.UserId;
 
 /**
- * 다이제스트를 만들 때 쓸 모델 — 다이제스트의 일정 회차 · 생성 작업 · 수동 생성이 읽는다. docs/specs/user.md §3 · user-R51
+ * 다이제스트를 만들 때 쓸 모델 — 다이제스트의 일정 회차 · 생성 작업 · 수동 생성 · 수동 생성 상태가 읽는다. docs/specs/user.md §3 · user-R51
  * <p>
  * 사용자를 인자로 받는 조회다 — 화면 경로에서는 세션 사용자로만 부른다. 쓰지 않는다. 판정은 관심 설정 화면의 쓸 모델과 같은 정본
  * ({@code ModelChoice})이다.
