@@ -26,3 +26,8 @@
 | 대안 | 기각 이유 |
 |---|---|
 | 구독 처리기를 키 관문 뒤에 둔다 | 내용을 내지 않는 처리기를 닫아 ADR-0160 의 기준과 어긋난다 |
+
+## 후속 기록
+
+- 2026-11-18: 맥락 "내 구독 목록을 관심 설정 화면에 둘지 스토리라인 화면에 둘지는 구독 화면을 만들 때 정한다" — [ADR-0242](0242-the-storyline-subscription-list-lives-on-the-key-gated-storyline-screen.md)(키가 있어야 가는 스토리라인 화면에 둔다 — 결과 "키를 모두 지운 사용자도 구독을 보고 해제할 수 있다"는 처리기 수준의 결과로 남는다)
+- 2026-11-18: 결정 "스토리라인 구독 처리기를 키 없이 연다"의 처리기에 구독 이력 처리기가 든다 — [ADR-0244](0244-the-storyline-subscription-history-handler-is-opened-by-user-without-a-key-and-reads-recent-pages-in-the-module.md), 지금 상태는 [user Spec "스토리라인 구독"](../specs/user.md#스토리라인-구독) user-R63
