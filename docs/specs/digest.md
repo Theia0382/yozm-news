@@ -487,7 +487,7 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
   - 행마다 닫은 사건 집합 가운데 기간 안 기사가 있는 사건을 기간 안 중요도 합 내림차순(같으면 사건 ID 오름차순)으로 `SelectionRules.BIG_EVENTS_PER_STORYLINE`(10) 개까지 — 대표가 없거나 앞 행이 쓴 사건 · 기사는 세지 않고 다음 사건으로 간다
   - 사건의 대표는 그 사건의 기간 안 기사 가운데 평가가 있고 사용자의 제외(digest-R17 의 지역 · 형식 · 소스 · 싫어요)를 지나는 기사에서 `EventDirectory.representatives` 로 고른다([event-R14](event.md#대표-기사--기간-집계))
   - 큰 슬롯 기사는 최대 후보 수 × `SelectionRules.BIG_SHARE`(0.5)를 내림한 수(`bigSeats`)를 넘지 않는다 — 넘으면 행 순서로 하나씩 돌며 담아 행마다 고르게 줄인다. 이 값은 관심 설정 화면의 안내 문구가 말로 적는다
-  - 포함의 상위와 하위가 함께 크면 큰 판정 목록이 둘을 각각 행으로 낸다([storyline-R19](storyline.md#큰-판정)) — 같은 사건은 두 번 들지 않지만 한 포함 나무가 슬롯 둘을 쓸 수 있다
+  - 큰 판정 목록은 포함 나무마다 한 행이다([storyline-R19](storyline.md#큰-판정)) — 한 포함 나무는 슬롯 하나를 쓰고, 행의 닫은 사건 집합에 그 아래 하위의 사건이 함께 든다. 행의 아래 행(`BigStoryline.branches`)은 따로 슬롯을 쓰지 않는다
   - 큰 슬롯 기사마다 그 기사가 나온 큰 판정 행의 위치를 함께 나른다 — 자르기(digest-R22)가 기사를 빼면 위치도 뺀다. 행마다 남은 기사가 큰 스토리라인 묶음이고, 묶음 이름은 그 스토리라인 대표 사건(`StorylineView.representativeEvent`)의 대표 기사(`EventDirectory.representativesOfAll`) 제목 — 읽지 못하면(그 사이 지운 기사) 묶음 첫 기사의 제목이다. 그 대표 기사는 후보가 아닐 수 있다
 - **digest-R20** — 사건 단위 중복 제거(`EventDedup`): 같은 사건의 구독 후보는 하나만 남긴다 — 자리는 그 사건 후보 가운데 가장 앞 순위, 기사는 그 사건 후보 가운데 대표 기사(`EventDirectory.representatives`). 큰 슬롯이 쓴 사건의 구독 후보는 뺀다. 사건에 배정되지 않은 기사는 그대로 둔다
 - **digest-R21** — 다양성 몫과 최대 후보 수(`DiversityQuota`): 구독 후보의 자리 = 최대 후보 수 − 큰 슬롯 기사 수. 1차로 구독 행마다 몫 = ⌈자리 ÷ 후보가 있는 구독 행 수⌉ 까지 순위대로 담고, 2차로 남은 자리를 순위대로 채운다. 여러 행에 걸친 기사는 겹친 행 가운데 남은 몫이 가장 큰 행(같으면 키 순 앞 행)의 몫 하나만 쓴다. 결과는 순위 순서다

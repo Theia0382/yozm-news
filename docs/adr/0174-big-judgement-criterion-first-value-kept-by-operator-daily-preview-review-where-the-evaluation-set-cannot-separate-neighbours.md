@@ -38,3 +38,7 @@
 | 재현율을 얻으려고 값을 내린다 | 검수에서 알릴 정도가 아닌 스토리라인이 함께 들어왔다 |
 | 평일과 주말의 기준을 따로 둔다 | 기준은 값 하나다([ADR-0147](0147-storyline-big-judgement-compares-importance-weighted-coverage-per-source-and-day-with-one-criterion-at-query-time.md)). 주말을 며칠만 봤다 |
 | 스토리라인이 없는 큰 사건을 큰 판정에 더한다 | 그런 사건이 드물었고, 큰 판정의 재료와 화면이 늘어난다 |
+
+## 후속 기록
+
+- 2026-11-18: 결과 "큰 판정 목록의 중복은 관찰로 남긴다" — 큰 판정 목록을 포함 나무마다 한 행으로 낸다([ADR-0235](0235-the-big-list-has-one-row-per-containment-tree-carrying-the-big-storylines-under-it.md))

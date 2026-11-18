@@ -32,3 +32,7 @@
 |---|---|
 | 판정할 때 판정 원본에 확률 칸을 더한다 | 저장 형식이 바뀌고 지금 있는 원본은 칸이 비며, 원본과 함께 지워진다. 같은 값이 원본 응답과 칸에 두 번 있다 |
 | 판정을 반영할 때 물은 기록에 확률 칸을 더한다 | 원본이 지워져도 남지만 저장 형식이 바뀌고 지금 있는 물은 기록은 칸이 빈다. `evaluation` 의 답이 `storyline` 에 사본으로 남고, 쌍마다 마지막 한 번뿐이다 |
+
+## 후속 기록
+
+- 2026-11-18: 결정 "평가기가 저장된 원본 응답을 다시 읽는다" — 문구 판마다 답이 달라 원본을 그 원본의 문구 판으로 읽는다([ADR-0234](0234-fragments-of-one-matter-are-recognised-by-the-relation-judgement-and-merged-above-a-merge-probability-without-a-way-back.md) · [evaluation Spec evaluation-R50](../specs/evaluation.md#관계-판정-원본-조회))

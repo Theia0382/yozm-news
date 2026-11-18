@@ -56,7 +56,7 @@ class ArticleTagJudgementsMigrationTests {
 			.single();
 		long jev = evaluation(42, version, "jev", "jev-1.14.0", "{\"answers\": [1, 2]}", 3_245,
 				"2026-11-02T00:00:00Z");
-		long fake = evaluation(43, version, "fake", "fake-rules-2", "{\"evaluator\": \"fake\"}", 7,
+		long fake = evaluation(43, version, "fake", "fake-rules-3", "{\"evaluator\": \"fake\"}", 7,
 				"2026-11-03T12:30:00Z");
 
 		flyway(null).migrate();
@@ -69,7 +69,7 @@ class ArticleTagJudgementsMigrationTests {
 					Map.of("id", jev, "article_id", 42L, "evaluator", "jev", "model_version", "jev-1.14.0",
 							"raw_response", "{\"answers\": [1, 2]}", "input_tokens", 3_245, "judged_at",
 							"2026-11-02 00:00:00"),
-					Map.of("id", fake, "article_id", 43L, "evaluator", "fake", "model_version", "fake-rules-2",
+					Map.of("id", fake, "article_id", 43L, "evaluator", "fake", "model_version", "fake-rules-3",
 							"raw_response", "{\"evaluator\": \"fake\"}", "input_tokens", 7, "judged_at",
 							"2026-11-03 12:30:00"));
 		assertThat(this.jdbc.sql("select id, judgement_id from " + SCHEMA + ".article_evaluations order by id")

@@ -15,15 +15,17 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Final
 
-from admin_api import AskedPair, RelationJudgement, StorylineDetail
+from admin_api import ANSWERS, AskedPair, RelationJudgement, StorylineDetail
 from labels import LabelError, format_instant
 from storyline_labels import StorylineSample
 from storyline_result import RESULT_FORMAT
 
 PAIR_COLUMNS: Final = ("low", "high", "smaller_events", "outcome", "asked_at", "judgement_id", "reading", "first",
-                       "second", "none", "second_part_of_first", "first_part_of_second", "first_led_to_second",
-                       "second_led_to_first", "first_one_matter", "second_one_matter")
-"""물은 쌍 파일의 칸 — 답 다섯은 admin_api.ANSWERS 와 같은 순서다."""
+                       "second", "none", "same_matter", "second_part_of_first", "first_part_of_second",
+                       "first_led_to_second", "second_led_to_first", "first_one_matter", "second_one_matter")
+"""물은 쌍 파일의 칸 — 답의 칸(none ~ second_led_to_first)은 admin_api.ANSWERS 와 같은 순서다."""
+
+_ANSWER_COLUMNS: Final = PAIR_COLUMNS[9:9 + len(ANSWERS)]
 
 READ: Final = "READ"
 
@@ -115,7 +117,7 @@ def _pairs(details: Sequence[StorylineDetail]) -> list[dict[str, str]]:
 def _pair_row(low: int, high: int, pair: AskedPair) -> dict[str, str]:
     judgement = pair.judgement
     read = judgement is not None and judgement.reading == READ
-    probabilities = judgement.probabilities if read and judgement.probabilities is not None else (None,) * 5
+    probabilities = judgement.probabilities if read and judgement.probabilities is not None else (None,) * len(ANSWERS)
     row = {
         "low": str(low), "high": str(high), "smaller_events": str(pair.smaller_events), "outcome": pair.outcome,
         "asked_at": format_instant(pair.asked_at), "judgement_id": _text(pair.judgement_id),
@@ -125,7 +127,7 @@ def _pair_row(low: int, high: int, pair: AskedPair) -> dict[str, str]:
         "first_one_matter": _text(judgement.first_one_matter) if read else "",
         "second_one_matter": _text(judgement.second_one_matter) if read else "",
     }
-    for column, probability in zip(PAIR_COLUMNS[9:14], probabilities, strict=True):
+    for column, probability in zip(_ANSWER_COLUMNS, probabilities, strict=True):
         row[column] = _text(probability)
     return row
 

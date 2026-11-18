@@ -74,9 +74,10 @@ class FlowRelationFlowTests {
 
 	private static final String RAW = "{\"model\":\"jev-1.14.0\",\"answers\":{}}";
 
-	private static final Map<RelationAnswer, Double> PROBABILITIES = Map.of(RelationAnswer.NONE, 0.1,
-			RelationAnswer.SECOND_PART_OF_FIRST, 0.7, RelationAnswer.FIRST_PART_OF_SECOND, 0.05,
-			RelationAnswer.FIRST_LED_TO_SECOND, 0.1, RelationAnswer.SECOND_LED_TO_FIRST, 0.05);
+	private static final Map<RelationAnswer, Double> PROBABILITIES = Map.of(RelationAnswer.NONE, 0.06,
+			RelationAnswer.SAME_MATTER, 0.04, RelationAnswer.SECOND_PART_OF_FIRST, 0.7,
+			RelationAnswer.FIRST_PART_OF_SECOND, 0.05, RelationAnswer.FIRST_LED_TO_SECOND, 0.1,
+			RelationAnswer.SECOND_LED_TO_FIRST, 0.05);
 
 	@Autowired
 	ArticleDirectory articles;
@@ -129,7 +130,7 @@ class FlowRelationFlowTests {
 							+ ", \"summarized\": false}]}")
 			.containsEntry("evaluator", "jev")
 			.containsEntry("model_version", "jev-1.14.0")
-			.containsEntry("wording_version", "relation-1")
+			.containsEntry("wording_version", "relation-2")
 			.containsEntry("same_raw", true)
 			.containsEntry("input_tokens", 1924);
 		assertThat(this.jdbc.sql("select judged_at from flow_relation_judgements")
@@ -151,7 +152,7 @@ class FlowRelationFlowTests {
 				body, AT)));
 		RelationJudgementId second = this.transaction.execute(status -> this.judgements.insert(new RelationRecord(8, 9,
 				List.of(new RelationRecord.Described(new ArticleId(13), false)),
-				List.of(new RelationRecord.Described(new ArticleId(14), false)), "fake", "fake-rules-2", "relation-1", 0,
+				List.of(new RelationRecord.Described(new ArticleId(14), false)), "fake", "fake-rules-3", "relation-1", 0,
 				"{\"evaluator\": \"fake\"}", AT)));
 
 		List<StoredRelationJudgement> found = this.judgements
@@ -164,7 +165,7 @@ class FlowRelationFlowTests {
 				StoredRelationJudgement::wordingVersion, StoredRelationJudgement::inputTokens,
 				StoredRelationJudgement::judgedAt)
 			.containsExactly(5L, 3L, "jev", "jev-1.14.0", "relation-1", 811, AT);
-		Relation reread = (Relation) JevResponse.readRelation(stored.rawResponse(), null);
+		Relation reread = (Relation) JevResponse.readRelation(stored.rawResponse(), null, RelationWording.RELATION_1);
 		assertThat(reread.probabilities()).isEqualTo(Map.of(RelationAnswer.NONE, 0.62,
 				RelationAnswer.SECOND_PART_OF_FIRST, 0.2, RelationAnswer.FIRST_PART_OF_SECOND, 0.08,
 				RelationAnswer.FIRST_LED_TO_SECOND, 0.06, RelationAnswer.SECOND_LED_TO_FIRST, 0.04));
@@ -212,13 +213,13 @@ class FlowRelationFlowTests {
 	}
 
 	@Test
-	void throwsWithoutRecordingWhenTheResultDoesNotCarryTheFiveAnswers() {
+	void throwsWithoutRecordingWhenTheResultDoesNotCarryTheAnswersOfTheCurrentWording() {
 		long one = article("특검법 통과", null);
 		long two = article("특검 후보 추천", null);
 		Stub stub = new Stub(input -> relation(Map.of(RelationAnswer.NONE, 0.9)));
 
 		assertThatIllegalStateException().isThrownBy(() -> service(stub).judge(query(one, two)))
-			.withMessageStartingWith("관계 판정 결과를 저장할 수 없다 — 답이 선택지 다섯과 다르다");
+			.withMessageStartingWith("관계 판정 결과를 저장할 수 없다 — 답이 문구 판 relation-2 의 선택지와 다르다");
 		assertThat(judgementRows()).isZero();
 	}
 
@@ -335,7 +336,7 @@ class FlowRelationFlowTests {
 		}
 
 		@Override
-		public RelationRereadResult rereadRelation(String evaluator, String rawResponse) {
+		public RelationRereadResult rereadRelation(String evaluator, String rawResponse, RelationWording wording) {
 			throw new UnsupportedOperationException("이 시험 평가기는 관계 판정 원본을 다시 읽지 않는다");
 		}
 

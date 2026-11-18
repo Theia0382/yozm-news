@@ -24,7 +24,7 @@ export function relationCriteriaText(criteria: RelationCriteria): string {
   return (
     `확률 ${formatProbability(criteria.probability)} · 한 사안 ${formatProbability(criteria.oneMatter)} · ` +
     `사건 수 ${criteria.minEvents} 이상 · 후보 점수 ${formatProbability(criteria.candidateScore)} · ` +
-    `창 ${formatSeconds(criteria.windowSeconds)}`
+    `창 ${formatSeconds(criteria.windowSeconds)} · 합치기 확률 ${formatProbability(criteria.mergeProbability)}`
   );
 }
 

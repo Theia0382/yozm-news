@@ -34,6 +34,7 @@ import net.yozmnews.storyline.UnlinkedEvents;
 import net.yozmnews.storyline.domain.big.BigBasis;
 import net.yozmnews.storyline.domain.big.BigStorylineCriteriaRepository;
 import net.yozmnews.storyline.domain.big.BigStorylineRule;
+import net.yozmnews.storyline.domain.big.BigTrees;
 import net.yozmnews.storyline.domain.relation.RelationGraph;
 import net.yozmnews.storyline.domain.relation.RelationRepository;
 import net.yozmnews.storyline.domain.storyline.ClosedMembers;
@@ -232,8 +233,8 @@ class StorylineDirectoryService implements StorylineDirectory {
 				big.add(new BigStoryline(view, tally, BigStorylineRule.intensity(tally, basis)));
 			}
 		}
-		big.sort(BigStorylineRule.ORDER);
-		return List.copyOf(big);
+		// 포함 나무마다 한 행 — 같은 사안이 상위와 하위로 두 번 나오지 않는다(storyline-R19)
+		return BigTrees.gather(big, graph);
 	}
 
 	/** 큰 판정의 분모 — 기간 전체 집계의 소스 수는 {@code event} 가 센다(storyline-R19) */

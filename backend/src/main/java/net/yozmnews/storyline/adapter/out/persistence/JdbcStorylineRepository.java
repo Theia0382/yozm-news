@@ -23,9 +23,12 @@ import net.yozmnews.storyline.domain.linking.Asked;
 import net.yozmnews.storyline.domain.linking.Representation;
 import net.yozmnews.storyline.domain.linking.Score;
 import net.yozmnews.storyline.domain.storyline.LinkJudgement;
+import net.yozmnews.storyline.domain.storyline.MergeBasis;
+import net.yozmnews.storyline.domain.storyline.MergedRow;
 import net.yozmnews.storyline.domain.storyline.StorylineProfile;
 import net.yozmnews.storyline.domain.storyline.StorylineRepository;
 import net.yozmnews.storyline.domain.storyline.StorylineSnapshot;
+import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
@@ -224,7 +227,7 @@ class JdbcStorylineRepository implements StorylineRepository {
 	}
 
 	@Override
-	public void merge(long merged, long survivor, Instant now) {
+	public void merge(long merged, long survivor, @Nullable MergeBasis basis, Instant now) {
 		// 가리킴을 평평하게 — merged 를 가리키던 행을 먼저 survivor 로 돌린다(그 행들의 합친 시각은 그대로)
 		this.jdbc.sql("update storylines set merged_into = :survivor where merged_into = :merged")
 			.param("survivor", survivor)
@@ -233,8 +236,41 @@ class JdbcStorylineRepository implements StorylineRepository {
 		this.jdbc.sql("delete from storyline_members where storyline_id = :merged").param("merged", merged).update();
 		this.jdbc.sql("delete from storyline_key_terms where storyline_id = :merged").param("merged", merged).update();
 		this.jdbc.sql("""
-				update storylines set merged_into = :survivor, merged_at = :now, updated_at = :now where id = :merged
-				""").param("survivor", survivor).param("now", timestamp(now)).param("merged", merged).update();
+				update storylines
+				set merged_into = :survivor, merged_at = :now, updated_at = :now, merge_judgement_id = :judgement,
+				    merge_criteria_id = :criteria
+				where id = :merged
+				""")
+			.param("survivor", survivor)
+			.param("now", timestamp(now))
+			.param("judgement", (basis != null) ? basis.judgementId() : null, Types.BIGINT)
+			.param("criteria", (basis != null) ? basis.criteriaId() : null, Types.BIGINT)
+			.param("merged", merged)
+			.update();
+	}
+
+	@Override
+	public List<Long> moveMembers(long merged, long survivor) {
+		// 남는 쪽에 이미 있는 사건은 남는 쪽의 소속을 그대로 둔다 — 그 사건의 합쳐질 쪽 소속은 merge 가 지운다
+		return this.jdbc.sql("""
+				update storyline_members m set storyline_id = :survivor, merged_from = :merged
+				where m.storyline_id = :merged
+				  and not exists (select 1 from storyline_members s
+				                  where s.storyline_id = :survivor and s.event_id = m.event_id)
+				returning m.event_id
+				""").param("survivor", survivor).param("merged", merged).query(Long.class).list().stream().sorted().toList();
+	}
+
+	@Override
+	public List<MergedRow> mergedInto(long survivor) {
+		return this.jdbc.sql("""
+				select id, merged_at, merge_judgement_id, merge_criteria_id from storylines
+				where merged_into = :survivor order by id
+				""").param("survivor", survivor).query((rs, row) -> {
+			long judgement = rs.getLong("merge_judgement_id");
+			MergeBasis basis = rs.wasNull() ? null : new MergeBasis(judgement, rs.getLong("merge_criteria_id"));
+			return new MergedRow(rs.getLong("id"), instant(rs, "merged_at"), basis);
+		}).list();
 	}
 
 	@Override
@@ -266,7 +302,7 @@ class JdbcStorylineRepository implements StorylineRepository {
 		Map<Long, Map<Long, LinkJudgement>> judgements = new LinkedHashMap<>();
 		this.jdbc.sql("""
 				select storyline_id, event_id, linked_by, score, cosine, key_term_overlap, criteria_id, probability,
-				       judgement_id, linked_at
+				       judgement_id, linked_at, merged_from
 				from storyline_members where storyline_id = any(:ids)
 				order by storyline_id, event_id
 				""").param("ids", storylineIds.toArray(Long[]::new)).query((ResultSet rs) -> {
@@ -277,9 +313,11 @@ class JdbcStorylineRepository implements StorylineRepository {
 			Long criteriaId = rs.wasNull() ? null : criteria;
 			double probability = rs.getDouble("probability");
 			Asked asked = rs.wasNull() ? null : new Asked(probability, rs.getLong("judgement_id"));
+			long from = rs.getLong("merged_from");
+			Long mergedFrom = rs.wasNull() ? null : from;
 			judgements.computeIfAbsent(rs.getLong("storyline_id"), id -> new LinkedHashMap<>())
 				.put(rs.getLong("event_id"),
-						new LinkJudgement(linkedBy, scored, criteriaId, asked, instant(rs, "linked_at")));
+						new LinkJudgement(linkedBy, scored, criteriaId, asked, instant(rs, "linked_at"), mergedFrom));
 		});
 		Map<Long, Map<Long, LinkJudgement>> result = new LinkedHashMap<>();
 		judgements.forEach((storyline, byEvent) -> result.put(storyline, Collections.unmodifiableMap(byEvent)));

@@ -199,14 +199,13 @@ function PreviewView({
 }: {
   preview: Schemas["BigStorylinePreviewResponse"];
 }) {
-  const now = new Set(preview.currentStorylines.map((row) => row.id));
-  const then = new Set(preview.proposedStorylines.map((row) => row.id));
-  const added = preview.proposedStorylines.filter(
-    (row) => !now.has(row.id),
-  ).length;
-  const removed = preview.currentStorylines.filter(
-    (row) => !then.has(row.id),
-  ).length;
+  // 들어오고 빠지는 것은 행과 그 아래 행을 함께 센다 — 행이던 것이 아래 행이 돼도 큰 것은 그대로다
+  const current = withBranches(preview.currentStorylines);
+  const proposed = withBranches(preview.proposedStorylines);
+  const now = new Set(current.map((row) => row.id));
+  const then = new Set(proposed.map((row) => row.id));
+  const added = proposed.filter((row) => !now.has(row.id)).length;
+  const removed = current.filter((row) => !then.has(row.id)).length;
   return (
     <section aria-label="미리보기" className="space-y-3">
       <p className="text-sm">
@@ -301,35 +300,47 @@ function BigTable({
         </tr>
       </thead>
       <tbody>
-        {rows.map((row) => (
-          <tr key={row.id} className="align-top">
-            <td>
-              <Link to={storylinePath(row.id)} className="underline">
-                스토리라인 {row.id}
-              </Link>
-            </td>
-            <td>{storylineStateLabels[row.state]}</td>
-            <td className="tabular-nums">{row.eventCount}</td>
-            <td className="tabular-nums">{row.intensity.toFixed(2)}</td>
-            <td className="tabular-nums">{row.periodSources}</td>
-            <td className="tabular-nums">
-              {formatProbability(row.importance)}
-            </td>
-            <td className="tabular-nums">
-              {row.periodArticles} / {row.articleCount}
-            </td>
-            <td>
-              <ArticleTitle
-                id={row.representativeArticleId}
-                article={row.representative}
-              />
-            </td>
-            {marks && <td>{marks(row)}</td>}
-          </tr>
-        ))}
+        {rows.flatMap((head) =>
+          [head, ...head.branches].map((row) => (
+            <tr key={row.id} className="align-top">
+              <td className={row === head ? undefined : "pl-6"}>
+                {row !== head && (
+                  <span className="text-muted-foreground">
+                    └ {head.id} 아래{" "}
+                  </span>
+                )}
+                <Link to={storylinePath(row.id)} className="underline">
+                  스토리라인 {row.id}
+                </Link>
+              </td>
+              <td>{storylineStateLabels[row.state]}</td>
+              <td className="tabular-nums">{row.eventCount}</td>
+              <td className="tabular-nums">{row.intensity.toFixed(2)}</td>
+              <td className="tabular-nums">{row.periodSources}</td>
+              <td className="tabular-nums">
+                {formatProbability(row.importance)}
+              </td>
+              <td className="tabular-nums">
+                {row.periodArticles} / {row.articleCount}
+              </td>
+              <td>
+                <ArticleTitle
+                  id={row.representativeArticleId}
+                  article={row.representative}
+                />
+              </td>
+              {marks && <td>{marks(row)}</td>}
+            </tr>
+          )),
+        )}
       </tbody>
     </table>
   );
+}
+
+/** 행과 그 아래 행을 한 줄로 편다 — 아래 행은 자기 행 바로 뒤 */
+function withBranches(rows: Row[]): Row[] {
+  return rows.flatMap((row) => [row, ...row.branches]);
 }
 
 function criteriaText(criteria: Criteria): string {

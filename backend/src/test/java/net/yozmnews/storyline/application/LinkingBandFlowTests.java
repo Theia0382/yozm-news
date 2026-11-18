@@ -406,8 +406,8 @@ class LinkingBandFlowTests {
 			}
 
 		};
-		return new StorylineLinker(events, this.storylines, this.queue, this.asked, this.relations, this.relationQueue,
-				this.publisher);
+		return new StorylineLinker(events, this.storylines, this.queue, this.asked, this.relationQueue,
+				new StorylineMerger(this.storylines, this.relations, this.relationQueue, this.asked, events), this.publisher);
 	}
 
 	private static FlowMembershipJudgement judged(long judgement, FlowMembershipQuery query, double probability) {

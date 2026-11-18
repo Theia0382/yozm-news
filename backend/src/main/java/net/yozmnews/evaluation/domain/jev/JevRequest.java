@@ -26,7 +26,7 @@ import tools.jackson.databind.json.JsonMapper;
  * 평가의 질문은 넘긴 질문 묶음에서 읽는다. 질문 이름은 태그 종류 접두에 태그 키를 붙인 것이고, 응답은 같은 이름으로 답을 돌려준다. 형식 선택지는
  * 질문 묶음 순서, 중요도 수준 설명은 수준 순이다 — 응답의 수준 위치는 이 순서로 되찾는다({@link JevResponse}). 소속 판정(사건 소속 · 흐름 소속)의 질문은
  * 후보마다 Yes/No 하나이고, 이름은 {@value #EVENT_PREFIX} 에 후보 ID 를 붙인 것, 문장은 넘긴 문구로 만든다. 관계 판정의 질문은
- * 셋이다 — {@value #RELATION}(Choice, 선택지는 {@link #RELATION_OPTIONS} 순)과 흐름마다 한 사안인가(Yes/No).
+ * 셋이다 — {@value #RELATION}(Choice, 선택지는 문구 판의 순서 {@link RelationWording#order})과 흐름마다 한 사안인가(Yes/No).
  */
 public final class JevRequest {
 
@@ -53,11 +53,6 @@ public final class JevRequest {
 
 	/** second 가 한 사안인가의 질문 이름 */
 	public static final String SECOND_ONE_MATTER = "b_one_matter";
-
-	/** 관계 질문의 선택지 — 요청에 싣는 순서 · 정본 */
-	public static final List<RelationAnswer> RELATION_OPTIONS = List.of(RelationAnswer.SECOND_PART_OF_FIRST,
-			RelationAnswer.FIRST_PART_OF_SECOND, RelationAnswer.FIRST_LED_TO_SECOND,
-			RelationAnswer.SECOND_LED_TO_FIRST, RelationAnswer.NONE);
 
 	/** state 의 출처 줄에서 조각 사이 */
 	private static final String PART_SEPARATOR = " / ";
@@ -104,6 +99,7 @@ public final class JevRequest {
 	public static String relationOption(RelationAnswer answer) {
 		return switch (answer) {
 			case NONE -> "none";
+			case SAME_MATTER -> "same";
 			case SECOND_PART_OF_FIRST -> "b_part_of_a";
 			case FIRST_PART_OF_SECOND -> "a_part_of_b";
 			case FIRST_LED_TO_SECOND -> "a_led_to_b";
@@ -151,7 +147,7 @@ public final class JevRequest {
 
 	private static Map<String, Object> relationQuestions(RelationWording wording) {
 		Map<String, String> options = new LinkedHashMap<>();
-		for (RelationAnswer answer : RELATION_OPTIONS) {
+		for (RelationAnswer answer : wording.order()) {
 			options.put(relationOption(answer), wording.options().get(answer));
 		}
 		Map<String, Object> questions = new LinkedHashMap<>();
