@@ -15,6 +15,7 @@ import net.yozmnews.llm.ReasoningEffort;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.tag.TagSetId;
 import net.yozmnews.user.SummaryLength;
+import net.yozmnews.user.domain.account.AccountStatus;
 import net.yozmnews.user.domain.interest.CandidateVolume;
 import net.yozmnews.user.domain.interest.DigestSchedule;
 import net.yozmnews.user.domain.interest.DigestVolume;
@@ -23,6 +24,7 @@ import net.yozmnews.user.domain.interest.InterestSettingsRepository;
 import net.yozmnews.user.domain.interest.InterestText;
 import net.yozmnews.user.domain.interest.ModelRef;
 import net.yozmnews.user.domain.interest.ReportSettings;
+import net.yozmnews.user.domain.interest.ScheduledUser;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
@@ -110,6 +112,25 @@ class JdbcInterestSettings implements InterestSettingsRepository {
 			.list();
 	}
 
+	@Override
+	public List<ScheduledUser> activeSchedules(long afterUserId, int limit) {
+		return this.jdbc.sql("""
+				select s.user_id, s.timezone, s.digest_time from user_settings s
+				join users u on u.id = s.user_id
+				where u.status = :active and s.user_id > :after
+				order by s.user_id limit :limit
+				""")
+			.param("active", AccountStatus.ACTIVE.name())
+			.param("after", afterUserId)
+			.param("limit", limit)
+			.query((rs, n) -> new ScheduledUser(new UserId(rs.getLong("user_id")), schedule(rs)))
+			.list();
+	}
+
+	private static DigestSchedule schedule(ResultSet rs) throws SQLException {
+		return new DigestSchedule(ZoneId.of(rs.getString("timezone")), rs.getObject("digest_time", LocalTime.class));
+	}
+
 	private static InterestSettings row(ResultSet rs, int rowNum) throws SQLException {
 		String provider = rs.getString("llm_provider");
 		ModelRef model = null;
@@ -119,8 +140,7 @@ class JdbcInterestSettings implements InterestSettingsRepository {
 					Objects.requireNonNull(rs.getString("llm_model"), "llm_model"));
 		}
 		return new InterestSettings(new UserId(rs.getLong("user_id")), new TagSetId(rs.getLong("tag_set_id")),
-				new DigestSchedule(ZoneId.of(rs.getString("timezone")), rs.getObject("digest_time", LocalTime.class)),
-				new InterestText(rs.getString("interest_text")), model,
+				schedule(rs), new InterestText(rs.getString("interest_text")), model,
 				ReasoningEffort.valueOf(rs.getString("reasoning_effort")),
 				new ReportSettings(rs.getBoolean("weekly_report"), DayOfWeek.of(rs.getInt("weekly_report_day")),
 						rs.getBoolean("monthly_report")),
