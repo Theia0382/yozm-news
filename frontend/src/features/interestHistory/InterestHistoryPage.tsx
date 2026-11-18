@@ -13,6 +13,8 @@ import {
   EMPTY_HISTORY,
   ENTERED,
   FEWER_TOPICS,
+  HOW_LINES,
+  HOW_TITLE,
   INTEREST_HISTORY_INTRO,
   INTEREST_HISTORY_TITLE,
   IN_PROGRESS,
@@ -67,6 +69,7 @@ export function InterestHistoryPage() {
       )}
       {history.isError && <p role="alert">{LOAD_FAILED}</p>}
       {history.data && <HistoryBody data={history.data} onChoose={choose} />}
+      <HowItChanges />
     </section>
   );
 }
@@ -140,7 +143,8 @@ function TopicGrid({
   const shown = showAll ? data.topics : prominent;
   return (
     <div className="space-y-2">
-      <div className="overflow-x-auto">
+      {/* relative — 칸의 화면 낭독용 값(sr-only 는 position: absolute)이 이 상자를 기준으로 놓여, 좁은 폭에서 페이지를 넓히지 않는다 */}
+      <div className="relative overflow-x-auto">
         <table aria-label="주제별 관심" className="text-sm">
           <thead>
             <tr>
@@ -152,12 +156,18 @@ function TopicGrid({
                   key={period.firstDay}
                   scope="col"
                   title={periodRange(period)}
-                  className="px-0.5 text-xs font-normal whitespace-nowrap text-muted-foreground"
+                  className={`px-0.5 align-bottom text-xs font-normal whitespace-nowrap ${
+                    period.inProgress
+                      ? "font-medium text-primary"
+                      : "text-muted-foreground"
+                  }`}
                 >
-                  {periodLabel(period, unit)}
                   {period.inProgress && (
-                    <span className="sr-only"> {IN_PROGRESS}</span>
+                    <span className="block text-[10px] leading-tight">
+                      {IN_PROGRESS}
+                    </span>
                   )}
+                  {periodLabel(period, unit)}
                 </th>
               ))}
             </tr>
@@ -202,7 +212,7 @@ function TopicRow({
           <td
             key={periods[index]?.firstDay ?? index}
             title={`${periods[index] ? periodRange(periods[index]) : ""} · ${text}`}
-            className="px-0.5 py-0.5"
+            className={`px-0.5 py-0.5 ${periods[index]?.inProgress ? "bg-primary/10" : ""}`}
           >
             <span
               aria-hidden="true"
@@ -278,5 +288,21 @@ function Changes({ data }: { data: InterestHistory }) {
         </ul>
       )}
     </div>
+  );
+}
+
+/** 관심이 바뀌는 까닭 — 화면 설명과 따로 둔다 */
+function HowItChanges() {
+  return (
+    <section aria-labelledby="interest-how" className="space-y-2">
+      <h2 id="interest-how" className="text-lg font-semibold">
+        {HOW_TITLE}
+      </h2>
+      <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+        {HOW_LINES.map((line) => (
+          <li key={line}>{line}</li>
+        ))}
+      </ul>
+    </section>
   );
 }

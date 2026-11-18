@@ -111,7 +111,7 @@ describe("InterestHistoryPage", () => {
     expect(headers.map((header) => header.textContent)).toEqual([
       "주제",
       "11/9",
-      "11/16 진행 중",
+      "진행 중11/16",
     ]);
     const rows = within(table).getAllByRole("rowheader");
     expect(rows.map((row) => row.textContent)).toEqual([
@@ -198,6 +198,23 @@ describe("InterestHistoryPage", () => {
       await screen.findByText(/아직 관심의 흐름을 보일 신호가 없습니다/),
     ).toBeInTheDocument();
     expect(screen.queryByRole("table")).toBeNull();
+  });
+
+  it("관심이 바뀌는 까닭은 화면 설명과 따로 보인다", async () => {
+    renderRoutes(ROUTES, "/interest-history", {
+      "GET /api/interest-history": () => json(twoWeeks()),
+    });
+
+    const how = await screen.findByRole("region", {
+      name: "관심은 어떻게 바뀌나요",
+    });
+    expect(within(how).getAllByRole("listitem")).toHaveLength(5);
+    expect(
+      within(how).getByText(/좋아요를 누르면 그 기사 주제의 관심이 오르고/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/^주제마다 관심이 기간에 따라 어떻게 달라졌는지/),
+    ).toBeInTheDocument();
   });
 
   it("요청이 실패하면 알린다", async () => {
