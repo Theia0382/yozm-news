@@ -147,10 +147,11 @@ public final class OverviewTally {
 		this.topicsPerArticle[Math.min(judged.topics().size(), TAGS_PER_ARTICLE_CAP)]++;
 		this.regionsPerArticle[Math.min(judged.regions().size(), TAGS_PER_ARTICLE_CAP)]++;
 		for (StoredTag tag : evaluation.tags()) {
-			switch (tag.kind()) {
-				case TOPIC -> this.topicProbabilities.add(tag.probability());
-				case REGION -> this.regionProbabilities.add(tag.probability());
-			}
+			ProbabilityBins bins = switch (tag.kind()) {
+				case TOPIC -> this.topicProbabilities;
+				case REGION -> this.regionProbabilities;
+			};
+			bins.add(tag.probability());
 		}
 		this.formatProbabilities.add(sample.formatProbability());
 		if (evaluation.importance() == null) {

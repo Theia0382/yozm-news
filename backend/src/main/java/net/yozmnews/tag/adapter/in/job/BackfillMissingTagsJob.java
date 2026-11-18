@@ -20,7 +20,6 @@ public class BackfillMissingTagsJob {
 
 	private final TagBackfillRound round;
 
-
 	BackfillMissingTagsJob(TagBackfillRound round) {
 		this.round = round;
 	}

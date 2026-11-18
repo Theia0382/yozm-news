@@ -150,10 +150,11 @@ class StorylineLinker {
 					: new Asked(probability, judgement.value());
 			records.put(flow.flowId(), new AskedRecord(answer, ask.eventArticles(), flow.size()));
 		}
-		switch (ask.target()) {
-			case LINK -> this.asked.recordLink(eventId, records, now);
-			case PAIR -> this.asked.recordPair(eventId, records, now);
-		}
+		Runnable recordAsked = switch (ask.target()) {
+			case LINK -> () -> this.asked.recordLink(eventId, records, now);
+			case PAIR -> () -> this.asked.recordPair(eventId, records, now);
+		};
+		recordAsked.run();
 	}
 
 	/**

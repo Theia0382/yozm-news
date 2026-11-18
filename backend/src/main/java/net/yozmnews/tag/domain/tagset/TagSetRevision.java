@@ -179,22 +179,23 @@ public final class TagSetRevision {
 
 	private static Map<String, Facts> facts(TagSetContent content, TagKind kind) {
 		Map<String, Facts> facts = new HashMap<>();
-		switch (kind) {
-			case TOPIC -> {
+		Runnable collect = switch (kind) {
+			case TOPIC -> () -> {
 				for (TopicCategoryDef topic : content.topics()) {
 					facts.put(topic.key().value(), new Facts(topic.name(), topic.description(), false));
 					for (TagDef subtopic : topic.subtopics()) {
 						facts.put(subtopic.key().value(), new Facts(subtopic.name(), subtopic.description(), false));
 					}
 				}
-			}
-			case REGION -> content.regions()
+			};
+			case REGION -> () -> content.regions()
 				.forEach(region -> facts.put(region.key().value(),
 						new Facts(region.name(), region.description(), false)));
-			case FORMAT -> content.formats()
+			case FORMAT -> () -> content.formats()
 				.forEach(format -> facts.put(format.key().value(),
 						new Facts(format.name(), format.description(), format.excludedByDefault())));
-		}
+		};
+		collect.run();
 		return facts;
 	}
 
