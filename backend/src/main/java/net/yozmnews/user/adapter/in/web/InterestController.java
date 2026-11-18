@@ -31,7 +31,8 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
- * 관심 설정 — 태그 선호 · 제외 소스 · 일정 · 관심사 · 리포트 · 모델 · 다이제스트 분량의 조회 · 저장. docs/specs/user.md §3 · user-R46 · user-R49 ~ user-R51
+ * 관심 설정 — 태그 선호 · 제외 소스 · 일정 · 관심사 · 리포트 · 모델 · 추론 강도 · 다이제스트 분량의 조회 · 저장. docs/specs/user.md §3 ·
+ * user-R46 · user-R49 ~ user-R51 · user-R56 · user-R59
  * <p>
  * 모두 세션 사용자의 것이고 키 없이도 연다 — 관심 설정은 내용을 내지 않는다(user-R5).
  */
@@ -132,7 +133,7 @@ class InterestController {
 				now()));
 	}
 
-	/** 다이제스트 분량 — 최대 후보 수의 단계 · 직접 입력 · 큰 슬롯 수와 단계의 값 · 범위 */
+	/** 다이제스트 분량 — 최대 후보 수의 단계 · 직접 입력 · 큰 슬롯 수 · 요약 길이와 단계의 값 · 범위 */
 	@AllowedWithoutLlmKey(reason = OPEN_WITHOUT_KEY)
 	@GetMapping("/api/interests/volume")
 	InterestVolumeResponse volume(UserId user) {
@@ -146,11 +147,11 @@ class InterestController {
 		if (!DigestVolume.customCountMatches(body.volume(), body.customCount())) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "직접 입력일 때만 직접 입력한 수를 보낸다");
 		}
-		return InterestVolumeSaveResponse.of(
-				this.volumeSettings.save(user, body.volume(), body.customCount(), body.bigSlots(), now()));
+		return InterestVolumeSaveResponse.of(this.volumeSettings.save(user, body.volume(), body.customCount(),
+				body.bigSlots(), body.summaryLength(), now()));
 	}
 
-	/** 고를 수 있는 모델 · 고른 모델 · 쓸 모델 */
+	/** 고를 수 있는 모델 · 고른 모델 · 쓸 모델 · 추론 강도 */
 	@AllowedWithoutLlmKey(reason = OPEN_WITHOUT_KEY)
 	@GetMapping("/api/interests/model")
 	InterestModelResponse model(UserId user) {
@@ -163,6 +164,13 @@ class InterestController {
 	InterestModelSaveResponse chooseModel(UserId user, @Valid @RequestBody InterestModelRequest body) {
 		return InterestModelSaveResponse
 			.of(this.modelSelection.choose(user, body.provider(), body.modelId(), now()));
+	}
+
+	/** 추론 강도 저장 — 고른 모델 · 키와 무관하다. 응답은 저장 뒤 모델 조회 */
+	@AllowedWithoutLlmKey(reason = OPEN_WITHOUT_KEY)
+	@PutMapping("/api/interests/effort")
+	InterestModelResponse saveEffort(UserId user, @Valid @RequestBody InterestEffortRequest body) {
+		return InterestModelResponse.of(this.modelSelection.saveEffort(user, body.effort(), now()));
 	}
 
 	private Instant now() {

@@ -11,7 +11,7 @@ import net.yozmnews.digest.domain.candidate.CandidateSet;
 import net.yozmnews.digest.domain.candidate.DigestCandidate;
 import net.yozmnews.digest.domain.candidate.SelectionReason;
 import net.yozmnews.digest.domain.generator.DigestRequest;
-import net.yozmnews.digest.domain.generator.GeneratedOutput;
+import net.yozmnews.digest.domain.generator.GenerationOutcome;
 import net.yozmnews.digest.domain.generator.TokenUsage;
 import net.yozmnews.digest.domain.output.CitationCheck;
 import net.yozmnews.digest.domain.output.CitationDrops;
@@ -21,8 +21,11 @@ import net.yozmnews.digest.domain.output.CitedHeadline;
 import net.yozmnews.digest.domain.output.CitedStory;
 import net.yozmnews.digest.domain.output.DigestOutputReader;
 import net.yozmnews.digest.domain.output.OutputRead;
+import net.yozmnews.digest.domain.prompt.DigestPrompt;
+import net.yozmnews.llm.GenerationStop;
 import net.yozmnews.llm.LlmModel;
 import net.yozmnews.llm.Provider;
+import net.yozmnews.llm.ReasoningEffort;
 import net.yozmnews.platform.UserId;
 import org.junit.jupiter.api.Test;
 
@@ -37,6 +40,9 @@ import org.junit.jupiter.api.Test;
 class FakeDigestGeneratorTests {
 
 	private static final LlmModel MODEL = new LlmModel(Provider.OPENAI, "gpt-5.5-mini", 100_000, true);
+
+	/** 대체물은 프롬프트를 보지 않는다 — 요청의 꼴을 채우는 값 */
+	private static final DigestPrompt PROMPT = new DigestPrompt("지시", "{}", "{}");
 
 	private final FakeDigestGenerator generator = new FakeDigestGenerator();
 
@@ -54,8 +60,12 @@ class FakeDigestGeneratorTests {
 
 	private CitationResult generateAndCheck(int count) {
 		CandidateSet set = CandidateSet.of(candidates(count));
-		GeneratedOutput output = this.generator.generate(new DigestRequest(new UserId(1), MODEL, set));
+		GenerationOutcome outcome = this.generator.generate(new DigestRequest(new UserId(1), MODEL,
+				ReasoningEffort.MEDIUM, set, PROMPT));
+		assertThat(outcome).isInstanceOf(GenerationOutcome.Generated.class);
+		GenerationOutcome.Generated output = (GenerationOutcome.Generated) outcome;
 		assertThat(output.usage()).isEqualTo(new TokenUsage(0, 0));
+		assertThat(output.stop()).isEqualTo(GenerationStop.COMPLETE);
 		OutputRead read = DigestOutputReader.read(output.text());
 		assertThat(read).isInstanceOf(OutputRead.Read.class);
 		OutputRead.Read result = (OutputRead.Read) read;
@@ -95,7 +105,8 @@ class FakeDigestGeneratorTests {
 
 	@Test
 	void isNeverAskedWithoutCandidates() {
-		assertThatThrownBy(() -> new DigestRequest(new UserId(1), MODEL, CandidateSet.of(List.of())))
+		assertThatThrownBy(() -> new DigestRequest(new UserId(1), MODEL, ReasoningEffort.MEDIUM,
+				CandidateSet.of(List.of()), PROMPT))
 			.isInstanceOf(IllegalArgumentException.class);
 	}
 

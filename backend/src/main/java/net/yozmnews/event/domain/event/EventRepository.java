@@ -60,18 +60,28 @@ public interface EventRepository {
 	void delete(long eventId);
 
 	/**
-	 * 병합 회차가 볼 바뀐 열린 사건 — 지난 확인 뒤 고쳐졌거나({@code revision}) 다른 기준으로 확인한 사건. 잠그지 않는다.
-	 * @return 사건 ID 순, {@code limit} 개까지
+	 * 병합 회차가 볼 바뀐 열린 사건 — 지난 확인 뒤 고쳐졌거나({@code revision}) 다른 기준으로 확인한 사건 가운데, 미루지 않았거나 다시 볼
+	 * 시각이 {@code now} 이전(같으면 포함)인 것. 잠그지 않는다.
+	 * @return 미루지 않은 사건이 먼저(사건 ID 순), 이어서 미룬 사건이 다시 볼 시각 · 사건 ID 순 — {@code limit} 개까지
 	 */
-	List<MergeSubject> mergeDue(long criteriaId, int limit);
+	List<MergeSubject> mergeDue(long criteriaId, Instant now, int limit);
 
-	/** 병합 확인을 표시한다 — 사건의 {@code revision} 이 읽은 값 그대로일 때만. 그새 바뀌었으면 다음 회차가 다시 본다 */
+	/**
+	 * 병합 확인을 표시하고 미룸을 지운다 — 사건의 {@code revision} 이 읽은 값 그대로일 때만이다. 그새 바뀌었으면 아무것도 쓰지 않아 회차가
+	 * 다시 본다.
+	 */
 	void markMergeChecked(long eventId, long revision, long criteriaId);
+
+	/**
+	 * 병합 확인을 미룬다 — 확인은 표시하지 않고, 열린 사건이면 이어서 미룬 횟수와 다시 볼 시각을 쓴다.
+	 * @param deferrals 이번까지 이어서 미룬 횟수 — 1 이상
+	 */
+	void deferMerge(long eventId, int deferrals, Instant retryAt);
 
 	/**
 	 * 잠근 두 사건을 합쳐 쓴다 — 트랜잭션 안에서, 합쳐질 사건의 배정을 남는 사건으로 옮긴 뒤 부른다. 남는 사건에 합친 값을 쓰고(연 시각 포함,
 	 * {@code revision} + 1), 합쳐질 사건의 핵심 말 수를 남는 사건에 더한 뒤 지운다. 합쳐질 사건은 {@code MERGED} 로 남는 사건을 가리키고
-	 * 열림이 끝난 시각은 {@code now} 다. 합쳐질 사건을 가리키던 합쳐진 사건 행도 남는 사건을 가리킨다.
+	 * 열림이 끝난 시각은 {@code now} 다. 합쳐질 사건을 가리키던 합쳐진 사건 행도 남는 사건을 가리킨다. 두 사건의 병합 미룸은 지운다.
 	 * @param absorbedRepresentative 합쳐질 사건의 대표 기사 — 배정을 옮기기 전에 고른 것이고 합쳐진 사건 행에 남긴다(없으면 null)
 	 * @param survivorNext 남는 사건의 합친 값 — {@link LockedEvent#absorbed}
 	 */

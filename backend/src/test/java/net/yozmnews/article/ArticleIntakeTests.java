@@ -164,6 +164,33 @@ class ArticleIntakeTests {
 	}
 
 	@Test
+	void sameArticleRepublishedInTheSameFeedUnderAnotherSectionPathJoinsItAndStaysThereWhenReprocessed() {
+		ArticleFetched republished = item(this.sourceA, this.feedA1, "https://a.example/politics/news/1", null,
+				"국회  본회의 통과", T);
+		this.intake.accept(item(this.sourceA, this.feedA1, "https://a.example/society/news/1", null, TITLE, T));
+		this.intake.accept(republished);
+		Snapshot first = this.rows.snapshot();
+
+		this.intake.accept(republished);
+
+		assertThat(this.rows.snapshot()).isEqualTo(first);
+		long id = this.rows.articleIds().getFirst();
+		assertThat(this.rows.articleIds()).containsExactly(id);
+		assertThat(this.rows.entries()).containsExactly(new Entry(id, this.feedA1, "NEW"));
+		assertThat(this.events.stream(ArticleStored.class)).hasSize(1);
+	}
+
+	@Test
+	void sameTitleInTheSameFeedWithEstimatedPublishedTimesIsANewArticle() {
+		this.intake.accept(item(this.sourceA, this.feedA1, "https://a.example/board/1", null, "[게시판]", T, true));
+		this.intake.accept(item(this.sourceA, this.feedA1, "https://a.example/board/2", null, "[게시판]", T, true));
+
+		assertThat(this.rows.articleIds()).hasSize(2);
+		assertThat(this.rows.entries()).extracting(Entry::matchKind).containsExactly("NEW", "NEW");
+		assertThat(this.events.stream(ArticleStored.class)).hasSize(2);
+	}
+
+	@Test
 	void guidJoinsOnlyWithTheSameTitle(CapturedOutput output) {
 		this.intake.accept(item(this.sourceA, this.feedA1, "https://a.example/news/1", "g-7", TITLE, T));
 		// 같은 피드 · 같은 guid · 같은 제목, URL 이 바뀌었고 시간 창 밖이다 — guid 로만 같은 기사

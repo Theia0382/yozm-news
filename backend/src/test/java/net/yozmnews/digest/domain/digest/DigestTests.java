@@ -105,11 +105,28 @@ class DigestTests {
 	@Test
 	void keepsAShortMessageWhole() {
 		Digest failed = scheduled().start(MODEL, 5, T1)
-			.complete(new Completion.Failed(DigestFailure.NO_GENERATOR, "생성기가 없다", null, null), T2);
+			.complete(new Completion.Failed(DigestFailure.KEY_MISSING, "키가 없다", null, null), T2);
 
-		assertThat(failed.errorMessage()).contains("생성기가 없다");
+		assertThat(failed.errorMessage()).contains("키가 없다");
 		assertThat(failed.usage()).isEmpty();
 		assertThat(failed.durationMs()).isEmpty();
+	}
+
+	@Test
+	void aFailureOfTheGatewayHasTheTimeButNoTokens() {
+		Digest failed = scheduled().start(MODEL, 5, T1)
+			.complete(new Completion.Failed(DigestFailure.KEY_INVALID, "OpenAI 401", null, Duration.ofMillis(1_500)),
+					T2);
+
+		assertThat(failed.failure()).contains(DigestFailure.KEY_INVALID);
+		assertThat(failed.usage()).isEmpty();
+		assertThat(failed.durationMs()).contains(1_500L);
+	}
+
+	@Test
+	void tokensWithoutTimeAreRefused() {
+		assertThatThrownBy(() -> new Completion.Failed(DigestFailure.NO_CITATION, "x", new TokenUsage(1, 1), null))
+			.isInstanceOf(IllegalArgumentException.class);
 	}
 
 	@Test

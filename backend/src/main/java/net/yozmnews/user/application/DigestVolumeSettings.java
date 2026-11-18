@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.Objects;
 
 import net.yozmnews.platform.UserId;
+import net.yozmnews.user.SummaryLength;
 import net.yozmnews.user.domain.interest.CandidateVolume;
 import net.yozmnews.user.domain.interest.DigestVolume;
 import net.yozmnews.user.domain.interest.InterestSettings;
@@ -13,7 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 다이제스트 분량(최대 후보 수의 단계 · 직접 입력 · 큰 슬롯 수)의 조회 · 저장 — docs/specs/user.md §4
+ * 다이제스트 분량(최대 후보 수의 단계 · 직접 입력 · 큰 슬롯 수 · 요약 길이)의 조회 · 저장 — docs/specs/user.md §4
  * <p>
  * 다른 관심 설정 갈래와 같이 설정 행을 만들고 · 잠그고 · 따라가게 한 뒤 읽거나 쓴다(user-R46). 저장은 통째로 바꾸고 이력이 없다. 범위는 저장할
  * 때만 본다 — 직접 입력한 수를 먼저, 큰 슬롯 수를 다음에 보고 어긋난 첫 칸을 결과로 낸다.
@@ -42,7 +43,7 @@ public class DigestVolumeSettings {
 	 */
 	@Transactional
 	public VolumeOutcome save(UserId user, CandidateVolume volume, @Nullable Integer customCount, int bigSlots,
-			Instant now) {
+			SummaryLength summaryLength, Instant now) {
 		if (!DigestVolume.customCountMatches(volume, customCount)) {
 			throw new IllegalArgumentException("직접 입력일 때만 직접 입력한 수가 있다: " + volume + ", " + customCount);
 		}
@@ -52,7 +53,7 @@ public class DigestVolumeSettings {
 		if (!DigestVolume.bigSlotsInRange(bigSlots)) {
 			return new VolumeOutcome.BigSlotsOutOfRange(DigestVolume.MIN_BIG_SLOTS, DigestVolume.MAX_BIG_SLOTS);
 		}
-		DigestVolume requested = new DigestVolume(volume, customCount, bigSlots);
+		DigestVolume requested = new DigestVolume(volume, customCount, bigSlots, summaryLength);
 		InterestSettings locked = this.lock.lockFollowed(user, now);
 		this.settings.update(locked.withVolume(requested, now));
 		return new VolumeOutcome.Saved(requested);

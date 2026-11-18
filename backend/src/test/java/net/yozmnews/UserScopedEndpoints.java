@@ -38,6 +38,7 @@ public final class UserScopedEndpoints {
 			Map.entry("PUT /api/interests/settings", InterestScopeTests.class),
 			Map.entry("GET /api/interests/model", InterestScopeTests.class),
 			Map.entry("PUT /api/interests/model", InterestScopeTests.class),
+			Map.entry("PUT /api/interests/effort", InterestScopeTests.class),
 			Map.entry("GET /api/interests/volume", InterestScopeTests.class),
 			Map.entry("PUT /api/interests/volume", InterestScopeTests.class),
 			Map.entry("GET /api/storyline-subscriptions", StorylineSubscriptionScopeTests.class),

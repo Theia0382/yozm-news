@@ -3,6 +3,7 @@ package net.yozmnews.user.domain.interest;
 import java.time.Instant;
 import java.util.Objects;
 
+import net.yozmnews.llm.ReasoningEffort;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.tag.TagSetId;
 import org.jspecify.annotations.Nullable;
@@ -10,8 +11,8 @@ import org.jspecify.annotations.Nullable;
 /**
  * 설정 행 aggregate({@code user_settings}) — 사용자마다 하나 — docs/specs/user.md §4 · user-R43 · user-R45 · user-R46
  * <p>
- * 선호 버전(태그 선호 전체가 그 버전의 키다) · 일정 · 관심사 · 고른 모델 · 변화 리포트 · 다이제스트 분량. 관심 설정의 쓰기 · 조회는 이 행을
- * 잠근다. 바꾸는 메서드는 새 값을 돌려주고 고친 시각을 옮긴다 — 판은 저장소가 올린다.
+ * 선호 버전(태그 선호 전체가 그 버전의 키다) · 일정 · 관심사 · 고른 모델 · 추론 강도 · 변화 리포트 · 다이제스트 분량. 관심 설정의 쓰기 ·
+ * 조회는 이 행을 잠근다. 바꾸는 메서드는 새 값을 돌려주고 고친 시각을 옮긴다 — 판은 저장소가 올린다.
  */
 public final class InterestSettings {
 
@@ -25,6 +26,8 @@ public final class InterestSettings {
 
 	private final @Nullable ModelRef model;
 
+	private final ReasoningEffort effort;
+
 	private final ReportSettings reports;
 
 	private final DigestVolume volume;
@@ -34,12 +37,14 @@ public final class InterestSettings {
 	private final long version;
 
 	public InterestSettings(UserId user, TagSetId preferenceVersion, DigestSchedule schedule, InterestText interestText,
-			@Nullable ModelRef model, ReportSettings reports, DigestVolume volume, Instant updatedAt, long version) {
+			@Nullable ModelRef model, ReasoningEffort effort, ReportSettings reports, DigestVolume volume,
+			Instant updatedAt, long version) {
 		this.user = Objects.requireNonNull(user, "user");
 		this.preferenceVersion = Objects.requireNonNull(preferenceVersion, "preferenceVersion");
 		this.schedule = Objects.requireNonNull(schedule, "schedule");
 		this.interestText = Objects.requireNonNull(interestText, "interestText");
 		this.model = model;
+		this.effort = Objects.requireNonNull(effort, "effort");
 		this.reports = Objects.requireNonNull(reports, "reports");
 		this.volume = Objects.requireNonNull(volume, "volume");
 		this.updatedAt = Objects.requireNonNull(updatedAt, "updatedAt");
@@ -50,6 +55,7 @@ public final class InterestSettings {
 	public static InterestSettings defaults(UserId user, TagSetId activeVersion, Instant now) {
 		return new InterestSettings(user, activeVersion,
 				new DigestSchedule(InterestDefaults.TIMEZONE, InterestDefaults.DIGEST_TIME), InterestText.NONE, null,
+				InterestDefaults.REASONING_EFFORT,
 				new ReportSettings(InterestDefaults.WEEKLY_REPORT, InterestDefaults.WEEKLY_REPORT_DAY,
 						InterestDefaults.MONTHLY_REPORT),
 				DigestVolume.defaults(), now, 0);
@@ -57,27 +63,33 @@ public final class InterestSettings {
 
 	/** 선호 버전을 바꾼다 — 따라가기가 부른다(user-R47) */
 	public InterestSettings withPreferenceVersion(TagSetId version, Instant now) {
-		return new InterestSettings(this.user, version, this.schedule, this.interestText, this.model, this.reports,
-				this.volume, now, this.version);
+		return new InterestSettings(this.user, version, this.schedule, this.interestText, this.model, this.effort,
+				this.reports, this.volume, now, this.version);
 	}
 
 	/** 일정 · 관심사 · 리포트를 바꾼다(user-R50) */
 	public InterestSettings withDigest(DigestSchedule schedule, InterestText interestText, ReportSettings reports,
 			Instant now) {
-		return new InterestSettings(this.user, this.preferenceVersion, schedule, interestText, this.model, reports,
-				this.volume, now, this.version);
+		return new InterestSettings(this.user, this.preferenceVersion, schedule, interestText, this.model, this.effort,
+				reports, this.volume, now, this.version);
 	}
 
 	/** 고른 모델을 바꾼다(user-R51) */
 	public InterestSettings withModel(ModelRef model, Instant now) {
 		return new InterestSettings(this.user, this.preferenceVersion, this.schedule, this.interestText,
-				Objects.requireNonNull(model, "model"), this.reports, this.volume, now, this.version);
+				Objects.requireNonNull(model, "model"), this.effort, this.reports, this.volume, now, this.version);
+	}
+
+	/** 추론 강도를 바꾼다(user-R59) */
+	public InterestSettings withEffort(ReasoningEffort effort, Instant now) {
+		return new InterestSettings(this.user, this.preferenceVersion, this.schedule, this.interestText, this.model,
+				Objects.requireNonNull(effort, "effort"), this.reports, this.volume, now, this.version);
 	}
 
 	/** 다이제스트 분량을 바꾼다 */
 	public InterestSettings withVolume(DigestVolume volume, Instant now) {
 		return new InterestSettings(this.user, this.preferenceVersion, this.schedule, this.interestText, this.model,
-				this.reports, Objects.requireNonNull(volume, "volume"), now, this.version);
+				this.effort, this.reports, Objects.requireNonNull(volume, "volume"), now, this.version);
 	}
 
 	public UserId user() {
@@ -98,6 +110,10 @@ public final class InterestSettings {
 
 	public @Nullable ModelRef model() {
 		return this.model;
+	}
+
+	public ReasoningEffort effort() {
+		return this.effort;
 	}
 
 	public ReportSettings reports() {

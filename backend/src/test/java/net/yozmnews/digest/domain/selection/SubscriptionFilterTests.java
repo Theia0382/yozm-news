@@ -5,9 +5,11 @@ import static org.assertj.core.api.Assertions.within;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.digest.domain.interest.TopicInterests;
 import net.yozmnews.source.SourceId;
 import net.yozmnews.user.TopicSubscription;
 import org.junit.jupiter.api.Test;
@@ -25,7 +27,8 @@ class SubscriptionFilterTests {
 		ArticleFacts atBound = Facts.article(1).published("2026-11-15T22:00:00Z").build();
 		ArticleFacts justBefore = Facts.article(2).published("2026-11-15T21:59:59Z").build();
 
-		assertThat(ids(SubscriptionFilter.select(List.of(atBound, justBefore), Facts.politicsAndMarkets(), START)))
+		assertThat(ids(SubscriptionFilter.select(List.of(atBound, justBefore), Facts.politicsAndMarkets(), START,
+				TopicInterests.NEUTRAL_ALL)))
 			.containsExactly(1L);
 	}
 
@@ -37,7 +40,7 @@ class SubscriptionFilterTests {
 		ArticleFacts justBefore = Facts.article(2).published("2026-10-31T03:59:59Z").build();
 
 		assertThat(ids(SubscriptionFilter.select(List.of(atBound, justBefore), Facts.politicsAndMarkets(),
-				newYorkMidnight)))
+				newYorkMidnight, TopicInterests.NEUTRAL_ALL)))
 			.containsExactly(1L);
 	}
 
@@ -49,14 +52,14 @@ class SubscriptionFilterTests {
 		ArticleFacts several = Facts.article(4).subtopics("economy.finance", "politics.legislature").build();
 
 		assertThat(ids(SubscriptionFilter.select(List.of(executive, markets, finance, several),
-				Facts.politicsAndMarkets(), START)))
+				Facts.politicsAndMarkets(), START, TopicInterests.NEUTRAL_ALL)))
 			.containsExactlyInAnyOrder(1L, 2L, 4L);
 	}
 
 	@Test
 	void unclassifiedArticlesHaveNoTopicToMatch() {
 		assertThat(SubscriptionFilter.select(List.of(Facts.article(1).unclassified().build()),
-				Facts.politicsAndMarkets(), START))
+				Facts.politicsAndMarkets(), START, TopicInterests.NEUTRAL_ALL))
 			.isEmpty();
 	}
 
@@ -76,14 +79,14 @@ class SubscriptionFilterTests {
 
 		assertThat(ids(SubscriptionFilter.select(List.of(plain, inUs, brief, onlyFromNine, alsoFromTwo, formatGone,
 				formatSplitOneExcluded),
-				filter, START)))
+				filter, START, TopicInterests.NEUTRAL_ALL)))
 			.containsExactlyInAnyOrder(1L, 5L, 6L);
 	}
 
 	@Test
 	void anArticleWithoutSourcesDoesNotPass() {
 		ArticleFacts noSource = new ArticleFacts(new ArticleId(1), Set.of("politics.executive"), Set.of(),
-				Set.of("straight"), net.yozmnews.tag.TopicStatus.TAGGED, 3.0, Set.of(), Facts.PUBLISHED);
+				Set.of("straight"), net.yozmnews.tag.TopicStatus.TAGGED, 3.0, Set.of(), Facts.PUBLISHED, false);
 
 		assertThat(Facts.politicsAndMarkets().passesExclusions(noSource)).isFalse();
 	}
@@ -100,10 +103,54 @@ class SubscriptionFilterTests {
 		// 3(13시) · 3(12시, ID 1) · 3(12시, ID 6) · 2.8(low 4) · 2 · 없음
 		assertThat(ids(SubscriptionFilter.select(
 				List.of(none, tagged2, low4, tagged3SameTimeLargerId, tagged3Later, tagged3),
-				Facts.politicsAndMarkets(), START)))
+				Facts.politicsAndMarkets(), START, TopicInterests.NEUTRAL_ALL)))
 			.containsExactly(5L, 1L, 6L, 2L, 3L, 4L);
-		assertThat(CandidateRank.score(low4).orElseThrow()).isCloseTo(2.8, within(1e-9));
-		assertThat(CandidateRank.score(none)).isEmpty();
+		assertThat(CandidateRank.score(low4, TopicInterests.NEUTRAL_ALL).orElseThrow()).isCloseTo(2.8, within(1e-9));
+		assertThat(CandidateRank.score(none, TopicInterests.NEUTRAL_ALL)).isEmpty();
+	}
+
+	@Test
+	void theInterestWeightMultipliesTheRank() {
+		// 시장 가중치 1.5 — 3 × 1.5 = 4.5 가 4 × 1 = 4.0 앞, low 4 × 0.7 × 1.5 = 4.2 도 4.0 앞
+		TopicInterests interests = new TopicInterests(Map.of("economy.markets", 1.5));
+		ArticleFacts markets3 = Facts.article(1).subtopics("economy.markets").importance(3.0).build();
+		ArticleFacts politics4 = Facts.article(2).importance(4.0).build();
+		ArticleFacts marketsLow4 = Facts.article(3)
+			.subtopics("economy.markets")
+			.importance(4.0)
+			.lowConfidence()
+			.build();
+
+		assertThat(ids(SubscriptionFilter.select(List.of(politics4, marketsLow4, markets3), Facts.politicsAndMarkets(),
+				START, interests)))
+			.containsExactly(1L, 3L, 2L);
+		assertThat(CandidateRank.score(markets3, interests).orElseThrow()).isCloseTo(4.5, within(1e-9));
+		assertThat(CandidateRank.score(marketsLow4, interests).orElseThrow()).isCloseTo(4.2, within(1e-9));
+		assertThat(ids(SubscriptionFilter.select(List.of(politics4, marketsLow4, markets3), Facts.politicsAndMarkets(),
+				START, TopicInterests.NEUTRAL_ALL)))
+			.as("중립이면 중요도 순")
+			.containsExactly(2L, 1L, 3L);
+	}
+
+	@Test
+	void anArticleOnSeveralTopicsIsWeightedByTheMeanOfItsTopics() {
+		// 시장 1.5 · 정치 행정 1.0 의 평균 1.25 — 4 × 1.25 = 5.0
+		TopicInterests interests = new TopicInterests(Map.of("economy.markets", 1.5));
+		ArticleFacts both = Facts.article(1).subtopics("economy.markets", "politics.executive").importance(4.0).build();
+
+		assertThat(CandidateRank.score(both, interests).orElseThrow()).isCloseTo(5.0, within(1e-9));
+	}
+
+	@Test
+	void aDislikedArticleDoesNotPass() {
+		ArticleFacts disliked = Facts.article(1).disliked().build();
+		ArticleFacts kept = Facts.article(2).build();
+
+		assertThat(ids(SubscriptionFilter.select(List.of(disliked, kept), Facts.politicsAndMarkets(), START,
+				TopicInterests.NEUTRAL_ALL)))
+			.containsExactly(2L);
+		assertThat(Facts.politicsAndMarkets().passesExclusions(disliked)).as("큰 슬롯 대표의 자격도 같은 판정").isFalse();
+		assertThat(Facts.politicsAndMarkets().passesExclusions(kept)).isTrue();
 	}
 
 	private static List<Long> ids(List<ArticleFacts> articles) {

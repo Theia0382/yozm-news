@@ -96,8 +96,12 @@ public class InterestScopeTests {
 				{"provider":"OPENAI","modelId":"gpt-6-astra"}"""))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.result").value("SAVED"));
+		this.mockMvc.perform(json(put("/api/interests/effort").with(a), """
+				{"effort":"HIGH"}"""))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.effort").value("HIGH"));
 		this.mockMvc.perform(json(put("/api/interests/volume").with(a), """
-				{"volume":"CUSTOM","customCount":45,"bigSlots":0}"""))
+				{"volume":"CUSTOM","customCount":45,"bigSlots":0,"summaryLength":"DETAILED"}"""))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.result").value("SAVED"));
 		this.mockMvc.perform(json(put("/api/interests/sources").with(a), """
@@ -116,11 +120,13 @@ public class InterestScopeTests {
 		this.mockMvc.perform(get("/api/interests/model").with(b))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.chosen").doesNotExist())
-			.andExpect(jsonPath("$.choosable").isEmpty());
+			.andExpect(jsonPath("$.choosable").isEmpty())
+			.andExpect(jsonPath("$.effort").value("MEDIUM"));
 		this.mockMvc.perform(get("/api/interests/volume").with(b))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.volume").value("NORMAL"))
-			.andExpect(jsonPath("$.bigSlots").value(3));
+			.andExpect(jsonPath("$.bigSlots").value(3))
+			.andExpect(jsonPath("$.summaryLength").value("NORMAL"));
 		this.mockMvc.perform(get("/api/interests/sources").with(b))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.sources[*].id").value(hasItem((int) source)))
@@ -133,7 +139,9 @@ public class InterestScopeTests {
 			.andExpect(jsonPath("$.timezone").value("Europe/Paris"));
 		this.mockMvc.perform(get("/api/interests/volume").with(a))
 			.andExpect(jsonPath("$.customCount").value(45))
-			.andExpect(jsonPath("$.bigSlots").value(0));
+			.andExpect(jsonPath("$.bigSlots").value(0))
+			.andExpect(jsonPath("$.summaryLength").value("DETAILED"));
+		this.mockMvc.perform(get("/api/interests/model").with(a)).andExpect(jsonPath("$.effort").value("HIGH"));
 	}
 
 	@Test
@@ -146,6 +154,10 @@ public class InterestScopeTests {
 				.perform(json(put(path).cookie(csrf).header("X-XSRF-TOKEN", "interest-scope"), "{}"))
 				.andExpect(status().isUnauthorized());
 		}
+		this.mockMvc
+			.perform(json(put("/api/interests/effort").cookie(csrf).header("X-XSRF-TOKEN", "interest-scope"),
+					"{\"effort\":\"LOW\"}"))
+			.andExpect(status().isUnauthorized());
 	}
 
 	private static MockHttpServletRequestBuilder json(MockHttpServletRequestBuilder request, String body) {

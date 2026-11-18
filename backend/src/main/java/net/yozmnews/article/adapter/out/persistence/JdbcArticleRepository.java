@@ -296,7 +296,7 @@ class JdbcArticleRepository implements ArticleRepository {
 		}
 		TimeRange window = ArticleMatching.titleWindowAround(item.article().publishedAt());
 		return this.jdbc.sql("""
-				select a.id, a.published_at,
+				select a.id, a.published_at, a.published_at_estimated,
 				    exists (select 1 from article_feed_entries e where e.article_id = a.id and e.feed_id = :feedId)
 				        as seen_in_feed
 				from articles a
@@ -310,7 +310,7 @@ class JdbcArticleRepository implements ArticleRepository {
 			.param("from", timestamp(window.from()))
 			.param("to", timestamp(window.to()))
 			.query((rs, rowNum) -> new TitleCandidate(new ArticleId(rs.getLong("id")), instant(rs, "published_at"),
-					rs.getBoolean("seen_in_feed")))
+					rs.getBoolean("published_at_estimated"), rs.getBoolean("seen_in_feed")))
 			.list();
 	}
 

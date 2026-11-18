@@ -25,7 +25,14 @@ public final class BudgetCut {
 	public static Shortlist apply(Shortlist shortlist, Map<ArticleId, Integer> tokens, int budget) {
 		Objects.requireNonNull(shortlist, "shortlist");
 		Objects.requireNonNull(tokens, "tokens");
-		List<ArticleFacts> big = known(shortlist.big(), tokens);
+		List<ArticleFacts> big = new ArrayList<>();
+		List<Integer> bigRows = new ArrayList<>();
+		for (int i = 0; i < shortlist.big().size(); i++) {
+			if (tokens.containsKey(shortlist.big().get(i).id())) {
+				big.add(shortlist.big().get(i));
+				bigRows.add(shortlist.bigRows().get(i));
+			}
+		}
 		List<ArticleFacts> subscribed = known(shortlist.subscribed(), tokens);
 		long total = sum(big, tokens) + sum(subscribed, tokens);
 		while (total > budget && !subscribed.isEmpty()) {
@@ -33,8 +40,9 @@ public final class BudgetCut {
 		}
 		while (total > budget && !big.isEmpty()) {
 			total -= tokens.get(big.removeLast().id());
+			bigRows.removeLast();
 		}
-		return new Shortlist(big, subscribed);
+		return new Shortlist(big, subscribed, bigRows);
 	}
 
 	private static List<ArticleFacts> known(List<ArticleFacts> articles, Map<ArticleId, Integer> tokens) {

@@ -34,6 +34,7 @@ import net.yozmnews.event.domain.assignment.MergeJudgementRepository;
 import net.yozmnews.event.domain.event.EventArticleRepository;
 import net.yozmnews.event.domain.event.EventQueryRepository;
 import net.yozmnews.event.domain.event.EventRepository;
+import org.assertj.core.groups.Tuple;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -55,7 +56,8 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 사건 병합 — 바뀐 열린 사건마다 가까운 열린 사건을 배정 산식 · 위 기준으로 합치고, 띠는 사건 소속 판정에 한 번 묻는다. 기사 수가 많은
  * 사건이 남고, 합쳐진 사건은 남는 사건을 가리킨다. 사건 · 배정 · 표현은 SQL 로 넣는다(기준 위 0.80 · 아래 0.55 · 저장 0.40 · 확률 0.50 ·
  * 창 72시간). 벡터는 반 정밀도로 정확한 값이다. 기록이 없는 띠 쌍은 배정 때 받은 확률(두 방향 · 최댓값)이 확률 기준 미만이면 묻지
- * 않고 합치지 않으며 남기지 않는다. 기준 이상이면 묻는다 — 앞선 확률로는 합치지 않는다.
+ * 않고 합치지 않으며 남기지 않는다. 기준 이상이면 묻는다 — 앞선 확률로는 합치지 않는다. 확인을 끝내지 못한 사건(일시 실패 · 판정할
+ * 기사 없음 · 합치지 못함)은 미뤄, 회차 크기 이상이 거듭 실패해도 뒤의 사건을 확인한다 — 시계는 회차마다 고정한 값이다.
  * <p>
  * 지키는 규칙: event-R13
  */
@@ -481,7 +483,7 @@ class MergeFlowTests {
 	}
 
 	@Test
-	void aTransientFailureLeavesTheEventUncheckedAndTheRoundGoesOn(CapturedOutput output) {
+	void aTransientFailureDefersTheEventUncheckedAndTheRoundGoesOn(CapturedOutput output) {
 		long large = event("[1,0]", T, T, Map.of("국회", 2), "[1,0]", "[1,0]");
 		long small = event("[0.8,0.6]", T, T, Map.of("금리", 1), "[0.8,0.6]");
 		// 떨어진 다른 쌍 — 산식으로 합친다
@@ -499,7 +501,134 @@ class MergeFlowTests {
 		assertThat(eventRow(small)).containsEntry("status", "OPEN");
 		assertThat(eventRow(otherSmall)).containsEntry("status", "MERGED").containsEntry("merged_into", other);
 		assertThat(judgementRows()).isEmpty();
-		assertThat(output.getOut()).contains("사건 병합 판정이 일시 실패해 다음 회차에 다시 본다 — 사건 " + large + ": 요청 제한");
+		assertThat(output.getOut()).contains("사건 병합 판정이 일시 실패해 미뤄 다시 본다 — 사건 " + large + ": 요청 제한");
+		// 물은 두 사건(large · small)은 1분 뒤로 미뤘다 — 합친 쌍은 미루지 않았다
+		assertThat(deferrals()).containsExactly(tuple(large, 1, "2026-11-06T00:01:00Z"),
+				tuple(small, 1, "2026-11-06T00:01:00Z"), tuple(other, 0, null), tuple(otherSmall, 0, null));
+	}
+
+	@Test
+	void eventsFailingEveryRoundDoNotKeepLaterEventsFromBeingChecked() {
+		// 회차 크기(16)만큼의 사건 — 벡터가 같고 핵심 말이 서로 달라 어느 쌍이나 0.7 × 1 + 0.3 × 0 = 0.70(띠)이고, 물을 때마다 일시 실패한다
+		List<Long> failing = new ArrayList<>();
+		for (int i = 0; i < 16; i++) {
+			failing.add(event("[1,0]", T, T, Map.of("말" + i, 1), "[1,0]"));
+		}
+		// 뒤의 쌍 — 앞 사건들과는 코사인 0 이라 후보가 아니고, 서로는 0.7 × 1 + 0.3 × 1 = 1.0 이라 산식으로 합친다
+		long other = event("[0,1]", T, T, Map.of("환율", 2), "[0,1]", "[0,1]");
+		long otherSmall = event("[0,1]", T, T, Map.of("환율", 1), "[0,1]");
+		Scripted membership = new Scripted(query -> new MembershipJudgement.Failed(EvaluatorFailureKind.TRANSIENT,
+				"연결 실패"));
+
+		round(membership).run();
+
+		// 첫 회차는 ID 가 작은 열여섯 사건으로 찼다 — 모두 물었고 뒤의 쌍은 보지 못했다
+		assertThat(membership.queries).hasSize(16);
+		assertThat(eventRow(otherSmall)).containsEntry("status", "OPEN");
+
+		round(membership).run();
+
+		// 실패한 사건들이 자리를 비켜 뒤의 쌍을 확인했다 — 같은 시각이라 미룬 사건은 다시 묻지 않았다
+		assertThat(eventRow(otherSmall)).containsEntry("status", "MERGED").containsEntry("merged_into", other);
+		assertThat(membership.queries).hasSize(16);
+		assertThat(failing).allSatisfy(id -> assertThat(eventRow(id)).containsEntry("status", "OPEN"));
+
+		// 다시 볼 시각이 된 뒤에 새 쌍이 생겼다 — 앞 사건들과는 코사인 −1 · 0 이라 후보가 아니고, 서로는 1.0 이라 산식으로 합친다
+		long late = event("[-1,0]", T, T, Map.of("물가", 2), "[-1,0]", "[-1,0]");
+		long lateSmall = event("[-1,0]", T, T, Map.of("물가", 1), "[-1,0]");
+
+		roundAt(membership, Instant.parse("2026-11-06T00:01:00Z")).run();
+
+		// 미룬 사건은 때가 되어도 아직 보지 않은 사건 다음이다 — 새 쌍을 먼저 확인하고, 남은 자리에서 미룬 사건을 다시 물었다
+		assertThat(eventRow(lateSmall)).containsEntry("status", "MERGED").containsEntry("merged_into", late);
+		assertThat(membership.queries).hasSizeGreaterThan(16);
+	}
+
+	@Test
+	void fewerFailingEventsThanARoundHoldsLeaveRoomForLaterEventsInTheSameRound() {
+		// 회차 크기(16)보다 하나 적은 열다섯 사건이 일시 실패한다 — 남은 한 자리에서 뒤의 쌍을 본다
+		for (int i = 0; i < 15; i++) {
+			event("[1,0]", T, T, Map.of("말" + i, 1), "[1,0]");
+		}
+		long other = event("[0,1]", T, T, Map.of("환율", 2), "[0,1]", "[0,1]");
+		long otherSmall = event("[0,1]", T, T, Map.of("환율", 1), "[0,1]");
+		Scripted membership = new Scripted(query -> new MembershipJudgement.Failed(EvaluatorFailureKind.TRANSIENT,
+				"연결 실패"));
+
+		round(membership).run();
+
+		assertThat(membership.queries).hasSize(15);
+		assertThat(eventRow(otherSmall)).containsEntry("status", "MERGED").containsEntry("merged_into", other);
+	}
+
+	@Test
+	void aDeferredEventIsAskedAgainOnlyFromItsRetryTimeAndTheDelayDoubles() {
+		// 띠 쌍(0.56) — 두 사건 모두 묻고, 물을 때마다 일시 실패한다
+		long large = event("[1,0]", T, T, Map.of("국회", 2), "[1,0]", "[1,0]");
+		long small = event("[0.8,0.6]", T, T, Map.of("금리", 1), "[0.8,0.6]");
+		Scripted membership = new Scripted(query -> new MembershipJudgement.Failed(EvaluatorFailureKind.TRANSIENT,
+				"요청 제한"));
+
+		round(membership).run();
+
+		assertThat(membership.queries).hasSize(2);
+		assertThat(deferrals()).containsExactly(tuple(large, 1, "2026-11-06T00:01:00Z"),
+				tuple(small, 1, "2026-11-06T00:01:00Z"));
+
+		// 59초 뒤 — 아직 볼 때가 아니다
+		roundAt(membership, Instant.parse("2026-11-06T00:00:59Z")).run();
+
+		assertThat(membership.queries).hasSize(2);
+
+		// 1분 뒤(경계 포함) — 다시 묻고, 또 실패해 그때부터 2분 뒤로 미룬다
+		roundAt(membership, Instant.parse("2026-11-06T00:01:00Z")).run();
+
+		assertThat(membership.queries).hasSize(4);
+		assertThat(deferrals()).containsExactly(tuple(large, 2, "2026-11-06T00:03:00Z"),
+				tuple(small, 2, "2026-11-06T00:03:00Z"));
+		assertThat(this.jdbc.sql("select merge_checked_revision from events order by id").query(Long.class).list())
+			.containsExactly(0L, 0L);
+	}
+
+	@Test
+	void anAnswerAfterADeferralMarksTheEventsAndClearsTheDeferral() {
+		long large = event("[1,0]", T, T, Map.of("국회", 2), "[1,0]", "[1,0]");
+		long small = event("[0.8,0.6]", T, T, Map.of("금리", 1), "[0.8,0.6]");
+		round(new Scripted(query -> new MembershipJudgement.Failed(EvaluatorFailureKind.TRANSIENT, "요청 제한"))).run();
+		assertThat(deferrals()).containsExactly(tuple(large, 1, "2026-11-06T00:01:00Z"),
+				tuple(small, 1, "2026-11-06T00:01:00Z"));
+		Scripted membership = answering(small, 0.1);
+
+		roundAt(membership, Instant.parse("2026-11-06T00:01:00Z")).run();
+
+		// large 차례에 한 번 묻고 쌍의 기록을 남겼다 — 두 사건 모두 확인을 표시하고 미룸을 지웠다
+		assertThat(membership.queries).hasSize(1);
+		assertThat(eventRow(small)).containsEntry("status", "OPEN");
+		assertThat(this.jdbc.sql("select count(*) from events where merge_checked_revision = revision")
+			.query(Long.class)
+			.single()).isEqualTo(2);
+		assertThat(deferrals()).containsExactly(tuple(large, 0, null), tuple(small, 0, null));
+	}
+
+	@Test
+	void eventsThatCannotBeMergedAreDeferredToo(CapturedOutput output) {
+		// 0.86 ≥ 위 기준이라 산식이 합치려 한다 — small 의 기사 수(2)가 배정 수(1)와 어긋나 합치지 못한다
+		long large = event("[1,0]", T, T, Map.of("금리", 3, "동결", 3), "[1,0]", "[1,0]", "[1,0]");
+		long small = event("[0.8,0.6]", T, T, Map.of("금리", 1), "[0.8,0.6]");
+		this.jdbc.sql("update events set article_count = 2 where id = :id").param("id", small).update();
+		Scripted membership = new Scripted(query -> {
+			throw new AssertionError("산식으로 정하므로 묻지 않는다: " + query);
+		});
+
+		round(membership).run();
+
+		assertThat(eventRow(large)).containsEntry("status", "OPEN").containsEntry("article_count", 3);
+		assertThat(eventRow(small)).containsEntry("status", "OPEN");
+		assertThat(output.getOut()).contains("합칠 사건이 닫혔거나 그새 바뀌어 미뤄 다시 본다 — 사건 " + large + " · " + small);
+		assertThat(deferrals()).containsExactly(tuple(large, 1, "2026-11-06T00:01:00Z"),
+				tuple(small, 1, "2026-11-06T00:01:00Z"));
+		assertThat(this.jdbc.sql("select merge_checked_revision from events order by id").query(Long.class).list())
+			.containsExactly(0L, 0L);
 	}
 
 	@Test
@@ -540,20 +669,22 @@ class MergeFlowTests {
 	}
 
 	@Test
-	void aMissingArticleLeavesTheEventsUnchecked() {
+	void aMissingArticleDefersTheEventsUnchecked() {
 		long large = event("[1,0]", T, T, Map.of("국회", 2), "[1,0]", "[1,0]");
 		long small = event("[0.8,0.6]", T, T, Map.of("금리", 1), "[0.8,0.6]");
 		Scripted membership = new Scripted(query -> new MembershipJudgement.ArticleMissing());
 
 		round(membership).run();
 
-		// 판정할 기사가 그새 지워졌다 — 표시하지 않아 다음 회차가 다른 서술 기사로 다시 묻는다
+		// 판정할 기사가 그새 지워졌다 — 표시하지 않고 미뤄, 다시 볼 때 다른 서술 기사로 다시 묻는다
 		assertThat(membership.queries).hasSize(2);
 		assertThat(eventRow(large)).containsEntry("status", "OPEN");
 		assertThat(eventRow(small)).containsEntry("status", "OPEN");
 		assertThat(this.jdbc.sql("select merge_checked_revision from events order by id").query(Long.class).list())
 			.containsExactly(0L, 0L);
 		assertThat(judgementRows()).isEmpty();
+		assertThat(deferrals()).containsExactly(tuple(large, 1, "2026-11-06T00:01:00Z"),
+				tuple(small, 1, "2026-11-06T00:01:00Z"));
 	}
 
 	private MergeRound round(EventMembership membership) {
@@ -563,6 +694,12 @@ class MergeFlowTests {
 	private MergeRound round(EventMembership membership, AssignmentCriteria criteria) {
 		return new MergeRound(this.events, this.queries, this.assignments, this.judgements, this.criteriaHistory, criteria,
 				membership, this.transaction, (InstantSource) () -> NOW);
+	}
+
+	/** 시계를 {@code now} 에 고정한 회차 */
+	private MergeRound roundAt(EventMembership membership, Instant now) {
+		return new MergeRound(this.events, this.queries, this.assignments, this.judgements, this.criteriaHistory, CRITERIA,
+				membership, this.transaction, (InstantSource) () -> now);
 	}
 
 	/**
@@ -644,6 +781,15 @@ class MergeFlowTests {
 				    to_char(last_joined_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as joined
 				from events where id = :event
 				""").param("event", event).query().singleRow();
+	}
+
+	/** 사건마다 (사건 ID, 이어서 미룬 횟수, 다시 볼 시각 — 미루지 않았으면 null) — 사건 ID 순 */
+	private List<Tuple> deferrals() {
+		return this.jdbc.sql("""
+				select id, merge_deferrals,
+				    to_char(merge_retry_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as retry
+				from events order by id
+				""").query((rs, row) -> tuple(rs.getLong("id"), rs.getInt("merge_deferrals"), rs.getString("retry"))).list();
 	}
 
 	private @Nullable Object representativeColumn(long event) {

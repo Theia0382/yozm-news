@@ -30,17 +30,20 @@ public sealed interface Completion {
 
 	/**
 	 * 생성이 실패했다.
-	 * @param usage 생성기를 불렀으면 그 사용량, 아니면 {@code null}
+	 * @param usage 공급자가 센 토큰 — 생성기를 불러 공급자가 답했으면 있고, 생성기를 부르지 않았거나 관문 실패 · 키 없음이면 {@code null}
 	 * @param took 생성기를 불렀으면 그 소요 시간, 아니면 {@code null}
 	 */
 	record Failed(DigestFailure failure, String message, @Nullable TokenUsage usage, @Nullable Duration took)
 			implements Completion {
 
+		/**
+		 * @throws IllegalArgumentException 사용량이 있는데 소요 시간이 없거나 소요 시간이 음수일 때
+		 */
 		public Failed {
 			Objects.requireNonNull(failure, "failure");
 			Objects.requireNonNull(message, "message");
-			if ((usage == null) != (took == null)) {
-				throw new IllegalArgumentException("사용량과 소요 시간은 함께 있거나 함께 없다");
+			if (usage != null && took == null) {
+				throw new IllegalArgumentException("사용량이 있으면 소요 시간도 있다");
 			}
 			if (took != null && took.isNegative()) {
 				throw new IllegalArgumentException("소요 시간이 음수다: " + took);

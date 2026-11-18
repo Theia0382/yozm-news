@@ -6,14 +6,13 @@
 
 | # | 질문 | 권장안 | 필요 시점 |
 |---|---|---|---|
-| 34 | 스토리라인에 주제 · 지역 태그를 줄지 — 사용자 관심사(구독 주제)와 스토리라인을 잇는 축 | 주제는 스토리라인과 다른 축이다([ADR-0101](adr/0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)). 스토리라인에 태그를 저장하지 않고, 쓸 때 구성 기사의 태그로 모으는 방식부터 한다 — 스토리라인은 사건이 붙고 합쳐질 때마다, 기사 태그는 태그 체계 · 기준이 바뀔 때마다 달라져 저장하면 그때마다 다시 맞춰야 한다. 좋아요 / 싫어요와 주제별 보도량은 기사에 붙어 기사 태그로 세므로, 스토리라인의 주제가 필요한 곳은 스토리라인 구독을 주제별 관심도에 넣는 일이다. 재료가 기사 단위라 `storyline` 은 직접 모으지 못한다 — 모으는 곳과 여러 주제에 걸친 스토리라인의 집계 규칙(주제마다 어느 만큼의 기사가 있어야 그 주제로 보는지)을 정한다. 스토리라인을 주제로 거르는 화면이 생기면 저장을 다시 본다 | M7 관심도 |
 
 ## 운영하면서 결정
 
 | # | 질문 | 권장안 |
 |---|---|---|
 | 8 | 다이제스트 주기: 하루 1회 고정인가, 사용자가 여러 번 받을 수 있는가 | v1은 하루 1회 + 수동 재생성 |
-| 9 | 후보 수 · 토큰 예산과 후보 선별의 상수 | 최대 후보 수는 사용자 설정(단계 30 · 60 · 90, 직접 입력 10 ~ 150, 기본 60)이다. 모델별 예산은 허용 모델 목록의 기본 파일에 잠정값으로 있다([llm Spec](specs/llm.md#공급자와-허용-모델-목록) llm-R4). 토큰 어림(코드 포인트 × 1.0, 후보 줄 80 · 지시 2,000 · 프로필 태그 20), 발행 시각 하한 24시간, `low_confidence` 가중치 0.7 도 측정 전 값이다([digest Spec](specs/digest.md#후보-선별) digest-R15 ~ R22). M6 측정에서 다이제스트에 기록되는 실제 입력 토큰과 받은 다이제스트로 조정 |
+| 9 | 후보 수 · 토큰 예산과 후보 선별의 상수 | 최대 후보 수는 사용자 설정(단계 30 · 60 · 90, 직접 입력 10 ~ 150, 기본 60)이다. 모델별 예산은 허용 모델 목록의 기본 파일에 잠정값으로 있다([llm Spec](specs/llm.md#공급자와-허용-모델-목록) llm-R4). 토큰 어림(코드 포인트 × 1.0, 후보 줄 80 · 지시 2,000 · 프로필 태그 20 · 사용자 구획 고정 틀 200 · 큰 스토리라인 묶음 100), 발행 시각 하한 24시간, `low_confidence` 가중치 0.7 도 측정 전 값이다([digest Spec](specs/digest.md#후보-선별) digest-R15 ~ R22). 요약 길이마다의 길이 기준([digest Spec](specs/digest.md#프롬프트-구성) digest-R26)과 추론 강도의 기본 보통([user Spec](specs/user.md#관심-설정) user-R59)도 측정 전 값이다. M6 측정에서 다이제스트에 기록되는 실제 입력 토큰과 받은 다이제스트로 조정 |
 | 10 | 보존 기간 ([data-model.md](data-model.md)) | 초안 값으로 시작. RSS 요약문은 결정됨(아래) |
 | 11 | 사용자 피드 추가 허용 | v1은 불가. 열 때는 사용자당 피드 수 상한, 피드 볼륨 상한, 운영자 승인 중 하나 이상이 필요하다 (Jev 비용이 운영자 부담이므로) |
 | 12 | 본문 추출 도입 | M6 품질 측정 후. 요약문이 거의 없는 소스(제목만 주는 피드)부터 검토 |
@@ -94,3 +93,9 @@
 | # | 내용 | 반영 |
 |---|---|---|
 | 28 | Jev 사건 소속 판정 가운데 배정 판정(기사 하나와 후보 사건의 기사들)은 평가 세트에서 같은 일과 다른 일을 가른다. 병합 판정이 같은 일인 사건 쌍을 대부분 합치지 않은 것은 질문의 꼴 때문이 아니라 병합에 올라오는 쌍의 구성 때문이었다 — 다수가 배정 때 이미 확률 기준 미만의 답을 받고 갈린 쌍이다. 병합은 그런 쌍을 묻지 않고, 확률 기준의 기본값은 병합 판정의 정밀이 높은 값으로 다시 골랐다. 병합 판정의 품질이 더 필요해지면 사건 대 사건을 묻는 질문을 다음 대안으로 본다 | [ADR-0119](adr/0119-event-merge-does-not-ask-band-pairs-whose-prior-assignment-probability-is-below-the-probability-threshold.md) · [ADR-0120](adr/0120-event-membership-probability-threshold-default-chosen-by-merge-precision-among-values-indistinguishable-in-assignment.md) · [ADR-0109](adr/0109-event-clustering-defaults-chosen-on-the-evaluation-set-with-operator-review-and-closing-from-operating-records.md) · [event Spec §5](specs/event.md#사건-정리) event-R13 · [event Spec §7](specs/event.md#7-설정) |
+
+## 결정됨 (2026-11-18)
+
+| # | 내용 | 반영 |
+|---|---|---|
+| 34 | 스토리라인에 주제 · 지역 태그를 주지 않는다. 주제가 필요한 곳(스토리라인 구독을 주제별 관심도에 넣는 일)은 `digest` 가 쓸 때 사건 대표 기사의 주제로 모은다 — 몫 = 그 주제가 붙은 대표 수 ÷ 대표 수, 기준 몫 없음. 스토리라인을 주제로 거르는 화면이 생기면 저장을 다시 본다 | [ADR-0214](adr/0214-a-storyline-subscription-enters-topic-interest-by-the-topic-shares-of-its-event-representatives.md) |
