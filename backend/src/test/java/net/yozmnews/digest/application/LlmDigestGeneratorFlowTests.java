@@ -47,6 +47,7 @@ import net.yozmnews.llm.StoredGeneration;
 import net.yozmnews.llm.StoredKeyValidation;
 import net.yozmnews.platform.SecretValue;
 import net.yozmnews.platform.UserId;
+import net.yozmnews.user.DigestFailed;
 import net.yozmnews.user.SummaryLength;
 import net.yozmnews.user.domain.account.Account;
 import net.yozmnews.user.domain.account.AccountRepository;
@@ -137,7 +138,7 @@ class LlmDigestGeneratorFlowTests {
 
 	@AfterEach
 	void clear() {
-		awaitInvalidationsHandled();
+		awaitNoticeEventsHandled();
 		this.jdbc.sql("delete from digests").update();
 		this.jdbc.sql("delete from llm_credentials").update();
 		this.jdbc.sql("delete from users where email like 'digest-flow-%'").update();
@@ -285,11 +286,14 @@ class LlmDigestGeneratorFlowTests {
 		this.keys.save(StoredLlmKey.register(owner, this.cipher.seal(value, owner), KeyHint.of(value), REGISTERED));
 	}
 
-	/** 키 무효 이벤트(invalid · denied)를 알림 리스너가 처리해 발행을 끝냈다 — 사용자 행을 지우기 전에 기다린다 */
-	private void awaitInvalidationsHandled() {
+	/**
+	 * 키 무효 이벤트(invalid · denied)와 다이제스트 실패 이벤트를 알림 리스너가 처리해 발행을 끝냈다 — 사용자 행을 지우기 전에 기다린다. 리스너가
+	 * 알림을 쓰기 전에 사용자를 지우면 외래 키 위반으로 발행이 미완료로 남아, 같은 DB 에서 발행이 비기를 기다리는 다른 시험이 재처리 주기까지 막힌다
+	 */
+	private void awaitNoticeEventsHandled() {
 		await().atMost(Duration.ofSeconds(10))
-			.untilAsserted(() -> assertThat(this.jdbc.sql("select count(*) from event_publication where event_type = :type")
-				.param("type", CredentialInvalidated.class.getName())
+			.untilAsserted(() -> assertThat(this.jdbc.sql("select count(*) from event_publication where event_type in (:types)")
+				.param("types", List.of(CredentialInvalidated.class.getName(), DigestFailed.class.getName()))
 				.query(Long.class)
 				.single()).isZero());
 	}

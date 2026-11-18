@@ -1,7 +1,9 @@
 package net.yozmnews.digest.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Map;
@@ -64,6 +66,7 @@ class DigestRunTests {
 
 	@AfterEach
 	void clear() {
+		awaitDigestFailuresHandled();
 		this.jdbc.sql("delete from digests").update();
 		this.jdbc.sql("delete from llm_credentials where user_id in (select id from users where email like 'digest-run-%')")
 			.update();
@@ -170,6 +173,18 @@ class DigestRunTests {
 				select status, provider, model, candidate_count, input_tokens, duration_ms, error_code
 				from digests where id = :id
 				""").param("id", id.value()).query().singleRow();
+	}
+
+	/**
+	 * 다이제스트 실패 이벤트를 알림 리스너가 처리해 발행을 끝냈다 — 사용자 행을 지우기 전에 기다린다. 리스너가 알림을 쓰기 전에 사용자를 지우면 외래 키
+	 * 위반으로 발행이 미완료로 남아, 같은 DB 에서 발행이 비기를 기다리는 다른 시험이 재처리 주기까지 막힌다
+	 */
+	private void awaitDigestFailuresHandled() {
+		await().atMost(Duration.ofSeconds(10))
+			.untilAsserted(() -> assertThat(this.jdbc.sql("select count(*) from event_publication where event_type = :type")
+				.param("type", DigestFailed.class.getName())
+				.query(Long.class)
+				.single()).isZero());
 	}
 
 }
