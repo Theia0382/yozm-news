@@ -7,30 +7,14 @@ import type {
   DigestRequestResult,
 } from "@/features/digests/digestQueries";
 import { attempt, day, home, status } from "@/features/digests/digestTestKit";
-import type {
-  InterestSettings,
-  InterestTags,
-} from "@/features/interests/interestQueries";
-import { type Handler, json, problem } from "@/test/fakeServer";
+import type { InterestTags } from "@/features/interests/interestQueries";
+import { type Handler, json } from "@/test/fakeServer";
 import { renderRoutes } from "@/test/renderRoutes";
 
 function tags(topics: string[]): InterestTags {
   return {
     tagSet: { id: 1, number: 1, topics: [], regions: [], formats: [] },
     preferences: { topics, excludedRegions: [], excludedFormats: [] },
-  };
-}
-
-function settings(overrides: Partial<InterestSettings> = {}): InterestSettings {
-  return {
-    timezone: "Asia/Seoul",
-    digestTime: "07:00",
-    interestText: "",
-    interestTextMax: 500,
-    weeklyReport: true,
-    weeklyReportDay: "MONDAY",
-    monthlyReport: true,
-    ...overrides,
   };
 }
 
@@ -44,7 +28,6 @@ function renderHome(
     "GET /api/digests/latest": () =>
       json(queue.length > 1 ? queue.shift() : queue[0]),
     "GET /api/interests/tags": () => json(tags(topics)),
-    "GET /api/interests/settings": () => json(settings()),
     ...extra,
   });
 }
@@ -114,17 +97,18 @@ describe("DigestHomePage", () => {
     expect(screen.queryByText(/구독한 주제가 없어/)).not.toBeInTheDocument();
   });
 
-  it("오늘 다이제스트가 아직 없고 생성 시각 전이면 그 시각을 알린다", async () => {
+  it("오늘 다이제스트가 아직 없으면 서버가 낸 오늘 일정 생성 시각을 알린다 — 브라우저 시계와 견주지 않는다", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
-    // 2026-11-19 06:00 KST — 생성 시각 07:00 전
-    vi.setSystemTime(new Date("2026-11-18T21:00:00Z"));
-    renderHome(
+    // 브라우저 시계는 2026-11-19 09:00 KST — 생성 시각 07:00 뒤여도 서버가 낸 시각을 그대로 쓴다
+    vi.setSystemTime(new Date("2026-11-19T00:00:00Z"));
+    const { server } = renderHome(
       home({
         day: day({ date: "2026-11-18" }),
         status: status({
           today: "2026-11-19",
           targetDate: "2026-11-19",
           regenerates: false,
+          scheduledAt: "2026-11-18T22:00:00Z",
         }),
       }),
     );
@@ -133,21 +117,24 @@ describe("DigestHomePage", () => {
       await screen.findByText("오늘 다이제스트는 07:00에 만듭니다."),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "지금 만들기" })).toBeEnabled();
+    // 관심 설정은 읽지 않는다
+    expect(
+      server.requests.some((r) => r.path === "/api/interests/settings"),
+    ).toBe(false);
   });
 
-  it("설정 시간대가 브라우저와 다르면 시간대 이름을 붙인다", async () => {
-    vi.useFakeTimers({ toFake: ["Date"] });
-    // 2026-11-18 06:00 PST — 생성 시각 07:00 전
-    vi.setSystemTime(new Date("2026-11-18T14:00:00Z"));
+  it("사용자 시간대가 브라우저와 다르면 그 시간대의 시각에 시간대 이름을 붙인다", async () => {
     renderHome(
       home({
         day: day({ date: "2026-11-17" }),
-        status: status({ today: "2026-11-18", regenerates: false }),
+        status: status({
+          today: "2026-11-18",
+          regenerates: false,
+          timezone: "America/Los_Angeles",
+          // 2026-11-18 07:00 PST
+          scheduledAt: "2026-11-18T15:00:00Z",
+        }),
       }),
-      {
-        "GET /api/interests/settings": () =>
-          json(settings({ timezone: "America/Los_Angeles" })),
-      },
     );
 
     expect(
@@ -157,10 +144,7 @@ describe("DigestHomePage", () => {
     ).toBeInTheDocument();
   });
 
-  it("생성 시각이 지났는데 오늘 다이제스트가 없으면 아직 없다고만 알린다", async () => {
-    vi.useFakeTimers({ toFake: ["Date"] });
-    // 2026-11-19 09:00 KST — 생성 시각 07:00 뒤
-    vi.setSystemTime(new Date("2026-11-19T00:00:00Z"));
+  it("오늘 일정 생성 시각이 없으면 아직 없다고만 알린다", async () => {
     renderHome(
       home({
         day: day({ date: "2026-11-18" }),
@@ -168,6 +152,7 @@ describe("DigestHomePage", () => {
           today: "2026-11-19",
           targetDate: "2026-11-19",
           regenerates: false,
+          scheduledAt: null,
         }),
       }),
     );
@@ -175,20 +160,7 @@ describe("DigestHomePage", () => {
     expect(
       await screen.findByText("오늘 다이제스트가 아직 없습니다."),
     ).toBeInTheDocument();
-  });
-
-  it("관심 설정을 읽지 못하면 시각 없이 알린다", async () => {
-    renderHome(
-      home({
-        day: day({ date: "2026-11-17" }),
-        status: status({ today: "2026-11-18", regenerates: false }),
-      }),
-      { "GET /api/interests/settings": () => problem(500, "실패") },
-    );
-
-    expect(
-      await screen.findByText("오늘 다이제스트가 아직 없습니다."),
-    ).toBeInTheDocument();
+    expect(screen.queryByText(/에 만듭니다/)).not.toBeInTheDocument();
   });
 
   it("오늘 다이제스트가 있으면 오늘 안내를 하지 않는다", async () => {
@@ -265,9 +237,7 @@ describe("DigestHomePage", () => {
     await waitFor(() => expect(latestRequests(server)).toBe(2));
   });
 
-  it("생성 시각 전에 새로 만들면 그날 일정 생성이 빠진다고 알린다", async () => {
-    vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(new Date("2026-11-18T21:00:00Z"));
+  it("오늘 일정 생성 시각이 있을 때 새로 만들면 그날 일정 생성이 빠진다고 알린다", async () => {
     const user = userEvent.setup();
     renderHome(
       home({
@@ -276,6 +246,7 @@ describe("DigestHomePage", () => {
           today: "2026-11-19",
           targetDate: "2026-11-19",
           regenerates: false,
+          scheduledAt: "2026-11-18T22:00:00Z",
         }),
       }),
     );
@@ -293,9 +264,7 @@ describe("DigestHomePage", () => {
     expect(dialog).not.toHaveTextContent("같은 기간으로 다시 만듭니다");
   });
 
-  it("생성 시각이 지나 새로 만들면 일정 생성 문구를 두지 않는다", async () => {
-    vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(new Date("2026-11-19T00:00:00Z"));
+  it("오늘 일정 생성 시각이 없으면 새로 만들어도 일정 생성 문구를 두지 않는다", async () => {
     const user = userEvent.setup();
     renderHome(
       home({
@@ -304,6 +273,7 @@ describe("DigestHomePage", () => {
           today: "2026-11-19",
           targetDate: "2026-11-19",
           regenerates: false,
+          scheduledAt: null,
         }),
       }),
     );
@@ -313,6 +283,22 @@ describe("DigestHomePage", () => {
     );
     const dialog = await screen.findByRole("alertdialog");
     expect(dialog).not.toHaveTextContent("일정 생성은 하지 않습니다");
+  });
+
+  it("홈에 보이는 날짜가 아닌 다이제스트를 만드는 중이면 꺼진 버튼의 까닭을 알린다", async () => {
+    renderHome(
+      home({
+        day: day({ latest: attempt({ status: "READY" }) }),
+        status: status({ inProgress: true }),
+      }),
+    );
+
+    expect(
+      await screen.findByText(
+        "만드는 중인 다이제스트가 있어 끝날 때까지 만들 수 없습니다.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "다시 만들기" })).toBeDisabled();
   });
 
   it.each([
@@ -379,6 +365,10 @@ describe("DigestHomePage", () => {
       "다이제스트를 만드는 중입니다.",
     );
     expect(screen.getByRole("button", { name: "다시 만들기" })).toBeDisabled();
+    // 만드는 중인 것이 이 날짜의 시도라 날짜 보기가 알린다 — 따로 까닭을 두지 않는다
+    expect(
+      screen.queryByText(/끝날 때까지 만들 수 없습니다/),
+    ).not.toBeInTheDocument();
     await act(() => vi.advanceTimersByTimeAsync(5000));
     expect(await screen.findByRole("link", { name: "기사 1" })).toBeVisible();
     expect(latestRequests(server)).toBe(2);

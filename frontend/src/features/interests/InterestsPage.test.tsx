@@ -1,6 +1,6 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   type InterestModel,
   type InterestSettings,
@@ -87,10 +87,13 @@ const NO_KEY_MODEL: InterestModel = {
   efforts: ["LOW", "MEDIUM", "HIGH"],
 };
 
-function renderInterests(handlers: Record<string, Handler>) {
+function renderInterests(
+  handlers: Record<string, Handler>,
+  entry = "/interests",
+) {
   return renderRoutes(
     [{ path: "/interests", element: <InterestsPage /> }],
-    "/interests",
+    entry,
     {
       "GET /api/interests/tags": () => json(NEW_ACCOUNT),
       "GET /api/interests/sources": () => json(SOURCES),
@@ -106,7 +109,59 @@ async function section(name: string) {
   return within(await screen.findByRole("region", { name }));
 }
 
+afterEach(() => {
+  delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
+});
+
 describe("InterestsPage", () => {
+  it("주소에 절의 id 가 있으면 조회가 모두 끝난 뒤 그 절로 한 번 내려간다", async () => {
+    // jsdom 에는 scrollIntoView 가 없다
+    const scroll = vi.fn();
+    Element.prototype.scrollIntoView = scroll;
+    renderInterests({}, "/interests#interest-model");
+
+    await section("모델");
+    await waitFor(() => expect(scroll).toHaveBeenCalledTimes(1));
+    expect((scroll.mock.contexts[0] as Element).id).toBe("interest-model");
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(scroll).toHaveBeenCalledTimes(1);
+  });
+
+  it("다른 절의 조회가 끝나기 전에는 내려가지 않는다", async () => {
+    const scroll = vi.fn();
+    Element.prototype.scrollIntoView = scroll;
+    let release: () => void = () => {};
+    const modelHeld = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    renderInterests(
+      {
+        "GET /api/interests/model": async () => {
+          await modelHeld;
+          return json(NO_KEY_MODEL);
+        },
+      },
+      "/interests#interest-model",
+    );
+
+    await section("구독할 주제");
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(scroll).not.toHaveBeenCalled();
+    release();
+    await waitFor(() => expect(scroll).toHaveBeenCalledTimes(1));
+    expect((scroll.mock.contexts[0] as Element).id).toBe("interest-model");
+  });
+
+  it("주소에 절의 id 가 없으면 내려가지 않는다", async () => {
+    const scroll = vi.fn();
+    Element.prototype.scrollIntoView = scroll;
+    renderInterests({});
+
+    await section("모델");
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(scroll).not.toHaveBeenCalled();
+  });
+
   it("새 계정은 구독이 없다고 안내하고 기본 제외 형식만 켜져 있다", async () => {
     renderInterests({});
 

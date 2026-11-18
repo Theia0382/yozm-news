@@ -1,11 +1,18 @@
-import { useQueryClient } from "@tanstack/react-query";
-import { type FormEvent, type ReactNode, useEffect, useState } from "react";
-import { Link } from "react-router";
+import { useIsFetching, useQueryClient } from "@tanstack/react-query";
+import {
+  type FormEvent,
+  type ReactNode,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import { Link, useLocation } from "react-router";
 import {
   requestFailedText,
   UNREACHABLE_TEXT,
 } from "@/features/account/accountTexts";
 import {
+  INTERESTS_QUERY_KEY,
   INTEREST_MODEL_QUERY_KEY,
   INTEREST_SETTINGS_QUERY_KEY,
   INTEREST_SOURCES_QUERY_KEY,
@@ -53,11 +60,12 @@ type Message = { tone: "status" | "alert"; text: string };
 
 /**
  * 관심 설정 — 주제 구독 · 지역 · 형식 제외, 제외 소스, 일정 · 관심사 · 변화 리포트, 다이제스트 분량, 모델. 절마다 저장한다. 키가 없어도 쓰고, 모델 절만
- * 키 등록을 안내한다(docs/specs/user.md §3 · user-R5).
+ * 키 등록을 안내한다(docs/specs/user.md §3 · user-R5). 주소에 절의 id(`#interest-model` 등)가 있으면 조회가 모두 끝난 뒤 그 절로 내려간다.
  */
 export function InterestsPage() {
   const tags = useInterestTags();
   const queryClient = useQueryClient();
+  useScrollToHashWhenLoaded(!tags.isPending);
   const unauthenticated =
     tags.error instanceof InterestRequestError && tags.error.status === 401;
   useEffect(() => {
@@ -93,6 +101,24 @@ export function InterestsPage() {
       </p>
     </section>
   );
+}
+
+/**
+ * 관심 설정의 조회가 모두 끝난 뒤 한 번, 라우터 위치의 해시가 가리키는 절로 내려간다 — 절 위의 내용이 비동기로 채워져 자리가 바뀌므로 다 읽은 뒤에
+ * 내려간다. 브라우저 주소가 아니라 라우터 위치를 읽어 화면 안 이동과 같은 값을 쓴다.
+ * @param started 첫 조회가 시작됐다 — 조회가 걸리기 전의 0 을 끝으로 읽지 않게 한다
+ */
+function useScrollToHashWhenLoaded(started: boolean) {
+  const { hash } = useLocation();
+  const fetching = useIsFetching({ queryKey: INTERESTS_QUERY_KEY });
+  const scrolled = useRef(false);
+  useEffect(() => {
+    if (scrolled.current || hash === "" || !started || fetching > 0) {
+      return;
+    }
+    scrolled.current = true;
+    document.getElementById(hash.slice(1))?.scrollIntoView();
+  }, [hash, started, fetching]);
 }
 
 /** 서버 값이 바뀌면 절의 입력을 서버 값으로 다시 채운다 */

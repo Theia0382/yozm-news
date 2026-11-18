@@ -54,7 +54,10 @@ export function isRunning(status: DigestStatus): boolean {
   return runningStatuses[status];
 }
 
-/** 홈 — 가장 늦은 날짜와 수동 생성 상태. 만드는 중이면 끝날 때까지 다시 읽는다 */
+/**
+ * 홈 — 가장 늦은 날짜와 수동 생성 상태. 만드는 중이면 끝날 때까지 다시 읽는다. 403(LLM 키 없음)은 다시 묻지 않는다 — 알림 화면도 이 조회로
+ * 해결되지 않은 마지막 실패를 읽는데, 키가 없는 사용자에게 기본 재시도를 돌리지 않는다
+ */
 export function useDigestHome() {
   const client = useApiClient();
   return useQuery({
@@ -66,6 +69,9 @@ export function useDigestHome() {
       }
       return data;
     },
+    retry: (failureCount, error) =>
+      !(error instanceof DigestRequestError && error.status === 403) &&
+      failureCount < 3,
     refetchInterval: (query) => {
       const home = query.state.data;
       const running =

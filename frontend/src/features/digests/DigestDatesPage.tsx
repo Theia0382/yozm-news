@@ -37,10 +37,12 @@ export function DigestDatesPage() {
               <Link to={digestPath(entry.date)} className="underline">
                 {digestDayTitle(entry.date)}
               </Link>
-              <span className="text-sm text-muted-foreground">
-                {" · "}
-                {dayStateLabels[entry.state]}
-              </span>
+              {dayStateLabels[entry.state] !== null && (
+                <span className="text-sm text-muted-foreground">
+                  {" · "}
+                  {dayStateLabels[entry.state]}
+                </span>
+              )}
             </li>
           ))}
         </ul>

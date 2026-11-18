@@ -97,12 +97,15 @@ export function status(
 ): DigestRequestStatus {
   return {
     today: "2026-11-18",
+    timezone: "Asia/Seoul",
     usableModel: true,
     inProgress: false,
     remainingToday: 3,
     resetsAt: "2026-11-18T15:00:00Z",
     targetDate: "2026-11-18",
     regenerates: true,
+    scheduledAt: null,
+    unresolvedFailure: null,
     ...overrides,
   };
 }

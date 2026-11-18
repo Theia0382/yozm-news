@@ -4,11 +4,13 @@ import {
   type DigestDay,
   type DigestRequestResult,
   type DigestRequestStatus,
+  isRunning,
   useDigestHome,
   useRequestDigest,
 } from "@/features/digests/digestQueries";
 import { DigestDayView } from "@/features/digests/DigestDayView";
 import {
+  BUSY_TEXT,
   DIGEST_DATES_TITLE,
   DIGEST_HOME_TITLE,
   DIGESTS_PATH,
@@ -31,15 +33,8 @@ import {
   scheduledTodayText,
   skipsScheduleText,
 } from "@/features/digests/digestTexts";
-import {
-  beforeGenerationTime,
-  zoneLabel,
-} from "@/features/digests/todaySchedule";
-import {
-  type InterestSettings,
-  useInterestSettings,
-  useInterestTags,
-} from "@/features/interests/interestQueries";
+import { clockIn, zoneLabel } from "@/features/digests/todaySchedule";
+import { useInterestTags } from "@/features/interests/interestQueries";
 import {
   INTERESTS_PATH,
   NO_TOPIC_TEXT,
@@ -57,13 +52,12 @@ import { Button } from "@/shared/ui/button";
 import { NARROW_WIDTH, PAGE_FRAME } from "@/shared/ui/widths";
 
 /**
- * 홈 — 가장 늦은 날짜의 다이제스트와 수동 생성(docs/specs/reader.md reader-R9 · R11). 그 날짜가 오늘이 아니면 오늘 다이제스트를 언제 만드는지
- * 알리고(ADR-0237), 구독한 주제가 없으면 관심 설정으로 안내한다(docs/specs/user.md user-R43).
+ * 홈 — 가장 늦은 날짜의 다이제스트와 수동 생성(docs/specs/reader.md reader-R9 · R11). 그 날짜가 오늘이 아니면 서버가 정한 오늘 일정 생성
+ * 시각으로 오늘 다이제스트를 언제 만드는지 알리고(ADR-0237), 구독한 주제가 없으면 관심 설정으로 안내한다(docs/specs/user.md user-R43).
  */
 export function DigestHomePage() {
   const home = useDigestHome();
   const tags = useInterestTags();
-  const settings = useInterestSettings();
   const noTopic =
     tags.data !== undefined && tags.data.preferences.topics.length === 0;
   return (
@@ -89,11 +83,7 @@ export function DigestHomePage() {
       {home.data && (
         <>
           {home.data.status && (
-            <TodayControls
-              status={home.data.status}
-              day={home.data.day}
-              settings={settings.data}
-            />
+            <TodayControls status={home.data.status} day={home.data.day} />
           )}
           {home.data.day ? (
             <LatestDay day={home.data.day} />
@@ -122,25 +112,18 @@ function LatestDay({ day }: { day: DigestDay }) {
   );
 }
 
-/** 오늘 다이제스트 안내와 수동 생성 버튼 */
+/** 오늘 다이제스트 안내와 수동 생성 버튼 — 오늘 일정 생성 시각은 서버가 정한다(digest-R40) */
 function TodayControls({
   status,
   day,
-  settings,
 }: {
   status: DigestRequestStatus;
   day: DigestDay | null;
-  settings: InterestSettings | undefined;
 }) {
-  const before =
-    settings === undefined
+  const time =
+    status.scheduledAt === null
       ? null
-      : beforeGenerationTime(
-          new Date(),
-          settings.digestTime,
-          settings.timezone,
-        );
-  const time = settings?.digestTime.slice(0, 5);
+      : clockIn(status.scheduledAt, status.timezone);
   const noToday = day === null || day.date < status.today;
   return (
     <div className="space-y-2">
@@ -159,8 +142,8 @@ function TodayControls({
         noToday &&
         !status.inProgress && (
           <p role="note">
-            {before === true && settings !== undefined && time !== undefined
-              ? scheduledTodayText(time, zoneLabel(settings.timezone))
+            {time !== null
+              ? scheduledTodayText(time, zoneLabel(status.timezone))
               : NOT_YET_TODAY}
           </p>
         )
@@ -170,7 +153,10 @@ function TodayControls({
         targetShown={
           day !== null && day.date === status.targetDate && day.shown !== null
         }
-        skipsAt={!status.regenerates && before === true ? time : undefined}
+        skipsAt={!status.regenerates && time !== null ? time : undefined}
+        busyElsewhere={
+          status.inProgress && !(day !== null && isRunning(day.latest.status))
+        }
       />
     </div>
   );
@@ -180,15 +166,18 @@ function TodayControls({
  * 수동 생성 — 확인 창 뒤 요청한다(docs/specs/reader.md reader-R11). 쓸 모델이 없거나 만드는 중이거나 오늘 횟수를 다 썼으면 누를 수 없다.
  * @param targetShown 대상 날짜에 보이는 다이제스트가 있는가 — 다시 만드는 동안 그것이 보인다
  * @param skipsAt 지금 새로 만들면 빠지는 오늘 일정 생성 시각 — 없으면 undefined
+ * @param busyElsewhere 만드는 중인 다이제스트가 홈에 보이는 날짜의 것이 아니다 — 버튼이 꺼진 까닭을 따로 알린다
  */
 function RequestButton({
   status,
   targetShown,
   skipsAt,
+  busyElsewhere,
 }: {
   status: DigestRequestStatus;
   targetShown: boolean;
   skipsAt: string | undefined;
+  busyElsewhere: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const request = useRequestDigest();
@@ -204,6 +193,9 @@ function RequestButton({
       >
         {status.regenerates ? REQUEST_REGENERATE : REQUEST_NEW}
       </Button>
+      {busyElsewhere && (
+        <p className="text-sm text-muted-foreground">{BUSY_TEXT}</p>
+      )}
       {exhausted && (
         <p className="text-sm text-muted-foreground">
           {dailyLimitText(status.resetsAt)}

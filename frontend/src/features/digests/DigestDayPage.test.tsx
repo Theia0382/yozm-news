@@ -120,7 +120,7 @@ describe("DigestDayPage", () => {
 
     expect(
       await screen.findByText(
-        "이 날짜에 2번 만들었고, 다시 만들거나 실패한 것까지 모두 입력 토큰 1,700 · 출력 토큰 300을 썼습니다.",
+        "이 날짜에 2번 시도했고, 다시 만들거나 실패한 것까지 모두 입력 토큰 1,700 · 출력 토큰 300을 썼습니다.",
       ),
     ).toBeInTheDocument();
   });
@@ -140,7 +140,7 @@ describe("DigestDayPage", () => {
 
     expect(
       await screen.findByText(
-        "이 날짜에 1번 만들었고, 다시 만들거나 실패한 것까지 모두 입력 토큰 900 · 출력 토큰 4,000을 썼습니다.",
+        "이 날짜에 1번 시도했고, 다시 만들거나 실패한 것까지 모두 입력 토큰 900 · 출력 토큰 4,000을 썼습니다.",
       ),
     ).toBeInTheDocument();
   });
@@ -229,7 +229,7 @@ describe("DigestDayPage", () => {
     ).toHaveAttribute("href", "/keys");
   });
 
-  it("출력 실패는 키 화면으로 안내하지 않고, 다시 만들기 실패면 앞 다이제스트를 보인다고 알린다", async () => {
+  it("출력 실패는 관심 설정의 모델 절로 잇고, 다시 만들기 실패면 앞 다이제스트를 보인다고 알린다", async () => {
     renderDay(
       day({
         latest: attempt({
@@ -251,8 +251,31 @@ describe("DigestDayPage", () => {
     expect(alert).toHaveTextContent(
       "오늘 다이제스트에서 다시 만들거나 관심 설정에서 다른 모델을 골라 보세요.",
     );
-    expect(within(alert).queryByRole("link")).not.toBeInTheDocument();
+    expect(within(alert).getAllByRole("link")).toHaveLength(1);
+    expect(
+      within(alert).getByRole("link", { name: "관심 설정에서 모델 고르기" }),
+    ).toHaveAttribute("href", "/interests#interest-model");
     expect(screen.getByRole("link", { name: "기사 1" })).toBeInTheDocument();
+  });
+
+  it("잠시 뒤 다시 할 실패는 가 볼 화면이 없어 링크를 두지 않는다", async () => {
+    renderDay(
+      day({
+        shown: null,
+        latest: attempt({
+          status: "FAILED",
+          failure: "PROVIDER_UNAVAILABLE",
+          cause: "TEMPORARY",
+        }),
+        usage: { attempts: 1, inputTokens: 0, outputTokens: 0 },
+      }),
+    );
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(
+      "공급자가 여러 번 다시 보내도 답하지 못했습니다.",
+    );
+    expect(within(alert).queryByRole("link")).not.toBeInTheDocument();
   });
 
   it("인용한 기사가 모두 지워진 다이제스트는 따로 알린다", async () => {

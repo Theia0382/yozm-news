@@ -11,13 +11,13 @@ import {
   EMPTY_TEXT,
   FAILED_HEADING,
   IN_PROGRESS_TEXT,
-  KEYS_LINK,
   NO_CONTENT_TEXT,
   REGENERATING_TEXT,
   RETRY_EMPTY_TEXT,
   RETRY_FAILED_TEXT,
   SELECTION_REASON_LEGEND,
   dayUsageText,
+  digestFailureCauseLinks,
   digestFailureCauseTexts,
   digestFailureTexts,
   periodText,
@@ -93,12 +93,18 @@ function FailureNotice({
           {digestFailureCauseTexts[attempt.cause]}
         </p>
       )}
-      {attempt.cause === "KEY" && (
-        <Link to="/keys" className="underline">
-          {KEYS_LINK}
-        </Link>
-      )}
+      <CauseLink cause={attempt.cause} />
     </div>
+  );
+}
+
+/** 실패의 갈래가 가리키는 화면 — 없으면 그리지 않는다 */
+function CauseLink({ cause }: { cause: DigestAttempt["cause"] }) {
+  const link = cause === null ? null : digestFailureCauseLinks[cause];
+  return link === null ? null : (
+    <Link to={link.to} className="underline">
+      {link.label}
+    </Link>
   );
 }
 

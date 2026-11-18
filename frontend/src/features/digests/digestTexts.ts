@@ -67,7 +67,7 @@ export const retryAtHome = {
   OUTPUT: true,
 } as const satisfies Record<DigestFailureCause, boolean>;
 
-/** 홈의 다시 만들기로 가는 링크 */
+/** 홈의 다시 만들기로 가는 링크 — 알림 화면은 해결되지 않은 마지막 실패의 알림에만 단다(ADR-0240) */
 export const RETRY_AT_HOME_LINK = "오늘 다이제스트에서 다시 만들기";
 
 /** 실패한 날짜의 다이제스트 화면으로 가는 링크 */
@@ -96,6 +96,20 @@ export const FAILED_HEADING = "다이제스트를 만들지 못했습니다";
 
 /** 키 화면으로 가는 링크 */
 export const KEYS_LINK = "LLM 키 화면에서 확인하기";
+
+/** 관심 설정의 모델 절로 가는 링크 */
+export const MODEL_LINK = "관심 설정에서 모델 고르기";
+
+/** 실패의 갈래마다 가 볼 화면 — 실패 상자와 알림 화면이 함께 쓴다(ADR-0240) */
+export const digestFailureCauseLinks: Record<
+  DigestFailureCause,
+  { to: string; label: string } | null
+> = {
+  KEY: { to: "/keys", label: KEYS_LINK },
+  PROVIDER_ACCOUNT: null,
+  TEMPORARY: null,
+  OUTPUT: { to: "/interests#interest-model", label: MODEL_LINK },
+};
 
 /** 보이는 다이제스트가 없고 만드는 중 */
 export const IN_PROGRESS_TEXT =
@@ -129,13 +143,13 @@ export const DAY_NOT_FOUND = "그 날짜의 다이제스트가 없습니다.";
 /** 읽지 못했다 */
 export const LOAD_FAILED = "다이제스트를 불러오지 못했습니다.";
 
-/** 날짜 목록의 상태 이름(ADR-0238) */
+/** 날짜 목록의 상태 이름(ADR-0238) — 내용이 있는 날짜는 링크 글자("… 다이제스트")가 곧 상태라 붙이지 않는다 */
 export const dayStateLabels = {
-  CONTENT: "다이제스트",
+  CONTENT: null,
   IN_PROGRESS: "만드는 중",
   EMPTY: "넣을 기사 없음",
   FAILED: "만들지 못함",
-} as const satisfies Record<DigestDayState, string>;
+} as const satisfies Record<DigestDayState, string | null>;
 
 /** 다이제스트의 기간 */
 export function periodText(start: string, end: string): string {
@@ -154,21 +168,21 @@ export function shownUsageText(
   return `모델 ${model} · 후보 ${numbers.format(candidateCount)}건 · 입력 토큰 ${numbers.format(inputTokens)} · 출력 토큰 ${numbers.format(outputTokens)}`;
 }
 
-/** 그 날짜 모든 시도의 토큰 합(ADR-0239) — 다시 만든 · 실패한 시도를 포함한다 */
+/** 그 날짜 모든 시도의 토큰 합(ADR-0239) — 다시 만든 · 실패한 시도를 포함한다. 시도 수는 만드는 중인 시도도 센다 */
 export function dayUsageText(
   attempts: number,
   inputTokens: number,
   outputTokens: number,
 ): string {
-  return `이 날짜에 ${numbers.format(attempts)}번 만들었고, 다시 만들거나 실패한 것까지 모두 입력 토큰 ${numbers.format(inputTokens)} · 출력 토큰 ${numbers.format(outputTokens)}을 썼습니다.`;
+  return `이 날짜에 ${numbers.format(attempts)}번 시도했고, 다시 만들거나 실패한 것까지 모두 입력 토큰 ${numbers.format(inputTokens)} · 출력 토큰 ${numbers.format(outputTokens)}을 썼습니다.`;
 }
 
-/** 오늘 다이제스트 안내 — 생성 시각 전(ADR-0237) */
+/** 오늘 다이제스트 안내 — 서버가 낸 오늘 일정 생성 시각이 있을 때(ADR-0237) */
 export function scheduledTodayText(time: string, zone: string | null): string {
   return `오늘 다이제스트는 ${time}${zone === null ? "" : ` (${zone})`}에 만듭니다.`;
 }
 
-/** 오늘 다이제스트 안내 — 생성 시각이 지났거나 시각을 모를 때 */
+/** 오늘 다이제스트 안내 — 오늘 일정 생성 시각이 없을 때(지났거나 일정이 오늘을 만들지 않는다) */
 export const NOT_YET_TODAY = "오늘 다이제스트가 아직 없습니다.";
 
 /** 쓸 모델이 없다 */
@@ -200,7 +214,7 @@ export const REGENERATE_TEXT = "같은 기간으로 다시 만듭니다.";
 export const REGENERATE_KEEPS_TEXT =
   "다 만들 때까지 지금 다이제스트가 보이고, 만들지 못하면 지금 다이제스트가 그대로 남습니다.";
 
-/** 새로 만들기 — 생성 시각 전이면 그날 일정 생성이 빠진다 */
+/** 새로 만들기 — 서버가 낸 오늘 일정 생성 시각이 있으면 그날 일정 생성이 빠진다 */
 export function skipsScheduleText(time: string): string {
   return `지금 만들면 오늘 ${time} 일정 생성은 하지 않습니다.`;
 }
@@ -209,6 +223,10 @@ export function skipsScheduleText(time: string): string {
 export function dailyLimitText(resetsAt: string): string {
   return `오늘은 더 만들 수 없습니다. ${formatDateTime(resetsAt)}부터 다시 만들 수 있습니다.`;
 }
+
+/** 만드는 중인 다이제스트가 홈에 보이는 날짜의 것이 아니어서 버튼이 꺼진 까닭 */
+export const BUSY_TEXT =
+  "만드는 중인 다이제스트가 있어 끝날 때까지 만들 수 없습니다.";
 
 /** 수동 생성 결과 — 받음은 만드는 중 표시가 대신한다 */
 export const IN_PROGRESS_REFUSED = "이미 만드는 중인 다이제스트가 있습니다.";

@@ -36,7 +36,7 @@ function renderDates(pages: Record<string, DigestDates>) {
 }
 
 describe("DigestDatesPage", () => {
-  it("다이제스트가 있는 날짜를 늦은 순으로 상태와 함께 보이고 더 보기로 다음 쪽을 잇는다", async () => {
+  it("다이제스트가 있는 날짜를 늦은 순으로 보이고 내용이 없는 날짜에만 상태를 붙이며 더 보기로 다음 쪽을 잇는다", async () => {
     const user = userEvent.setup();
     const { server } = renderDates({ "": FIRST, "2026-11-17": SECOND });
 
@@ -44,7 +44,10 @@ describe("DigestDatesPage", () => {
       name: "2026. 11. 18. 다이제스트",
     });
     expect(first).toHaveAttribute("href", "/digests/2026-11-18");
-    expect(first.closest("li")).toHaveTextContent("다이제스트 · 다이제스트");
+    // 내용이 있는 날짜는 링크 글자가 곧 상태라 상태 이름을 붙이지 않는다
+    expect(first.closest("li")).toHaveTextContent(
+      /^2026\. 11\. 18\. 다이제스트$/,
+    );
     expect(
       screen
         .getByRole("link", { name: "2026. 11. 17. 다이제스트" })
@@ -61,7 +64,7 @@ describe("DigestDatesPage", () => {
     ).toBeInTheDocument();
     const items = within(list).getAllByRole("listitem");
     expect(items.map((item) => item.textContent)).toEqual([
-      "2026. 11. 18. 다이제스트 · 다이제스트",
+      "2026. 11. 18. 다이제스트",
       "2026. 11. 17. 다이제스트 · 만들지 못함",
       "2026. 11. 16. 다이제스트 · 넣을 기사 없음",
       "2026. 11. 15. 다이제스트 · 만드는 중",
