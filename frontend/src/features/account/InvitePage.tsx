@@ -31,7 +31,7 @@ export function InvitePage() {
       );
       if (!response.ok || !data) {
         throw new InvitationCheckFailure(
-          guardRejectionText(response, error) ??
+          guardRejectionText(response, error, "NETWORK") ??
             `초대를 확인하지 못했습니다 (HTTP ${response.status})`,
         );
       }

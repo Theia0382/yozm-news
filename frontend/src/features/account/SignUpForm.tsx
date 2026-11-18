@@ -71,7 +71,7 @@ export function SignUpForm({
       );
       if (!response.ok || !data) {
         setMessage(
-          guardRejectionText(response, error) ??
+          guardRejectionText(response, error, "NETWORK") ??
             requestFailedText(response.status),
         );
         // 요청 보호 토큰이 없거나 낡았으면 상태를 다시 읽어 새 토큰을 받는다
