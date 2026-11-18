@@ -2,6 +2,10 @@ package net.yozmnews.llm.adapter.out.sdk;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+
 import net.yozmnews.llm.KeyValidationResult;
 import net.yozmnews.llm.LlmClientFactory;
 import net.yozmnews.llm.LlmFailureKind;
@@ -30,10 +34,28 @@ class SdkProviderClientsTests {
 	void opensTheClientOfEachProviderWithoutSendingARequest() {
 		SdkProviderClients clients = new SdkProviderClients();
 
-		try (LlmProviderClient openAi = clients.open(Provider.OPENAI, KEY);
-				LlmProviderClient anthropic = clients.open(Provider.ANTHROPIC, KEY)) {
+		try (LlmProviderClient openAi = clients.open(Provider.OPENAI, KEY, Duration.ofSeconds(15));
+				LlmProviderClient anthropic = clients.open(Provider.ANTHROPIC, KEY, Duration.ofSeconds(15));
+				LlmProviderClient openRouter = clients.open(Provider.OPENROUTER, KEY, Duration.ofSeconds(15))) {
 			assertThat(openAi).isInstanceOf(OpenAiProviderClient.class);
 			assertThat(anthropic).isInstanceOf(AnthropicProviderClient.class);
+			assertThat(openRouter).isInstanceOf(OpenRouterProviderClient.class);
+		}
+	}
+
+	@Test
+	void eachClientGetsATransportWithTheDeadlineItWasOpenedWith() {
+		List<Duration> made = new ArrayList<>();
+		SdkProviderClients clients = new SdkProviderClients("http://127.0.0.1:9/v1", "http://127.0.0.1:9",
+				"http://127.0.0.1:9/api/v1", deadline -> {
+			made.add(deadline);
+			return new JdkTransport(deadline);
+		});
+
+		try (LlmProviderClient openAi = clients.open(Provider.OPENAI, KEY, Duration.ofSeconds(15));
+				LlmProviderClient anthropic = clients.open(Provider.ANTHROPIC, KEY, Duration.ofSeconds(180));
+				LlmProviderClient openRouter = clients.open(Provider.OPENROUTER, KEY, Duration.ofSeconds(30))) {
+			assertThat(made).containsExactly(Duration.ofSeconds(15), Duration.ofSeconds(180), Duration.ofSeconds(30));
 		}
 	}
 

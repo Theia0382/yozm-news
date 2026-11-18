@@ -132,6 +132,52 @@ class LlmKeyLeakTests {
 		assertThat(output.getAll()).doesNotContain("Incorrect API key provided", "bad key sk-");
 	}
 
+	@Test
+	void responsesAndLogsOfTheOpenRouterKeyPathsCarryNoKey(CapturedOutput output) throws Exception {
+		SignedInUsers.SignedInUser user = new SignedInUsers(this.mockMvc, this.accounts, this.credentials, this.hashing)
+			.signIn("key-leak-openrouter@example.com");
+		List<String> keys = new ArrayList<>();
+		List<String> bodies = new ArrayList<>();
+
+		// 등록 실패 → 등록 성공 → 목록 → 다시 검증(성공 · 무효 · 예상 밖 예외) → 삭제
+		String rejected = "sk-or-v1-leak-rejected-0123456789-REJECTEND";
+		keys.add(rejected);
+		this.provider.fail(rejected, LlmFailureKind.INVALID_KEY);
+		bodies.add(body(registerOpenRouter(user, rejected)));
+		String stored = "sk-or-v1-leak-stored-0123456789-ORSTORED";
+		keys.add(stored);
+		bodies.add(body(registerOpenRouter(user, stored)));
+		bodies.add(body(get("/api/llm-keys").with(user)));
+		bodies.add(body(post("/api/llm-keys/OPENROUTER/checks").with(user)));
+		this.provider.fail(stored, LlmFailureKind.INVALID_KEY);
+		bodies.add(body(post("/api/llm-keys/OPENROUTER/checks").with(user)));
+		this.provider.raise(stored, () -> new IllegalArgumentException("bad key " + stored));
+		bodies.add(body(post("/api/llm-keys/OPENROUTER/checks").with(user)));
+		bodies.add(body(delete("/api/llm-keys/OPENROUTER").with(user)));
+
+		// 대조 — 요청이 실제로 처리됐다. 아래의 부정 단언이 빈 응답 때문에 통과하는 것이 아니다
+		assertThat(bodies).hasSize(7);
+		assertThat(bodies.get(0)).isEqualTo("""
+				{"result":"REJECTED","failure":"INVALID_KEY","key":null}""");
+		assertThat(bodies.get(1)).contains("\"result\":\"REGISTERED\"").contains("\"hint\":\"ORED\"");
+		assertThat(bodies.get(2)).contains("\"provider\":\"OPENROUTER\"");
+		assertThat(bodies.get(5)).contains("\"result\":\"UNDETERMINED\"").contains("\"failure\":\"UNEXPECTED\"");
+		assertThat(output.getAll()).contains("LLM 키 확인 중 예상 못한 오류 — IllegalArgumentException");
+
+		String responses = String.join("\n", bodies);
+		for (String key : keys) {
+			String tail = key.substring(key.length() - 8);
+			assertThat(responses).as("응답").doesNotContain(key).doesNotContain(tail);
+			assertThat(output.getAll()).as("로그").doesNotContain(key).doesNotContain(tail);
+		}
+		assertThat(output.getAll()).doesNotContain("bad key sk-");
+	}
+
+	private static MockHttpServletRequestBuilder registerOpenRouter(SignedInUsers.SignedInUser user, String key) {
+		return put("/api/llm-keys/OPENROUTER").with(user).contentType(MediaType.APPLICATION_JSON).content("""
+				{"key":"%s"}""".formatted(key));
+	}
+
 	private static MockHttpServletRequestBuilder register(SignedInUsers.SignedInUser user, String key) {
 		return put("/api/llm-keys/OPENAI").with(user).contentType(MediaType.APPLICATION_JSON).content("""
 				{"key":"%s"}""".formatted(key));

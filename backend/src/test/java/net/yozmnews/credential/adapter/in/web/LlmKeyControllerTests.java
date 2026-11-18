@@ -74,7 +74,7 @@ class LlmKeyControllerTests {
 		SignedInUsers.SignedInUser user = this.users.signIn("keys-empty@example.com");
 
 		this.mockMvc.perform(get("/api/llm-keys").with(user)).andExpect(status().isOk()).andExpect(content().json("""
-				{"providers":[{"provider":"OPENAI","key":null},{"provider":"ANTHROPIC","key":null}]}
+				{"providers":[{"provider":"OPENAI","key":null},{"provider":"ANTHROPIC","key":null},{"provider":"OPENROUTER","key":null}]}
 				""", JsonCompareMode.STRICT));
 	}
 

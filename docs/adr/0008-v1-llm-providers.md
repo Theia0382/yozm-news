@@ -1,6 +1,6 @@
 # ADR-0008: v1 지원 LLM 공급자는 OpenAI(ChatGPT)와 Anthropic(Claude)
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 지원 공급자 둘([ADR-0202](0202-openrouter-is-added-as-a-user-llm-provider-and-its-default-models-are-the-two-providers-models-under-openrouter-ids.md)) · 중개 서비스 키 보류([ADR-0202](0202-openrouter-is-added-as-a-user-llm-provider-and-its-default-models-are-the-two-providers-models-under-openrouter-ids.md))
 - 날짜: 2026-10-25
 
 ## 맥락
@@ -9,6 +9,7 @@
 
 ## 결정
 
+> 부분 대체 — [ADR-0202](0202-openrouter-is-added-as-a-user-llm-provider-and-its-default-models-are-the-two-providers-models-under-openrouter-ids.md). 지금 상태: [llm Spec §5](../specs/llm.md#공급자와-허용-모델-목록) llm-R1
 - v1은 **OpenAI API**(ChatGPT 계열 모델)와 **Anthropic API**(Claude 계열 모델)만 지원한다.
 - 운영자가 공급자별 허용 모델 목록을 관리하고, 사용자는 그중 하나를 고른다. 모델마다 입력 토큰 예산과 구조화 출력 지원 여부를 함께 관리한다.
 - 두 공급자 모두 Spring AI 2.x 구현을 쓴다.
@@ -19,6 +20,8 @@
 - 공급자 추가(예: Google Gemini)는 `LlmClientFactory` 구현과 모델 목록 추가로 끝나야 한다. 공급자별 코드는 `llm` 모듈 밖으로 나가지 않는다.
 
 ## 검토한 대안
+
+> 부분 대체("OpenRouter 같은 중개 서비스 키 지원" 행) — [ADR-0202](0202-openrouter-is-added-as-a-user-llm-provider-and-its-default-models-are-the-two-providers-models-under-openrouter-ids.md). 지금 상태: [llm Spec §5](../specs/llm.md#공급자와-허용-모델-목록) llm-R1
 
 | 대안 | 보류 이유 |
 |---|---|
@@ -31,3 +34,4 @@
 - 2026-11-14: 결정 절 "운영자가 공급자별 허용 모델 목록을 관리"의 관리 방법 — [ADR-0153](0153-allowed-llm-models-come-from-a-bundled-file-that-an-operator-file-replaces-as-a-whole.md) · [llm Spec](../specs/llm.md#공급자와-허용-모델-목록) llm-R2 ~ R4
 - 2026-11-14: 결과 절 "공급자별 코드는 `llm` 모듈 밖으로 나가지 않는다"의 라이브러리 타입 — [ADR-0151](0151-spring-ai-and-sdk-types-stay-inside-llm-and-the-gateway-exposes-only-its-own-types.md) · [llm Spec](../specs/llm.md#공급자-클라이언트) llm-R15
 - 2026-11-15: 결정 절 "사용자는 그중 하나를 고른다" — 고르지 않았거나 고른 모델을 쓸 수 없을 때 쓸 모델 — [ADR-0178](0178-the-llm-model-to-use-is-decided-at-query-time-from-the-chosen-model-the-allowed-list-and-key-status.md) · [`user` user-R51](../specs/user.md#관심-설정)
+- 2026-11-17: 결과 절 "공급자 추가는 `LlmClientFactory` 구현과 모델 목록 추가로 끝나야 한다"의 문면과 구현의 어긋남(공급자 값이 `llm` 밖에도 저장된다) — [ADR-0202](0202-openrouter-is-added-as-a-user-llm-provider-and-its-default-models-are-the-two-providers-models-under-openrouter-ids.md) · [llm Spec](../specs/llm.md#공급자와-허용-모델-목록) llm-R1

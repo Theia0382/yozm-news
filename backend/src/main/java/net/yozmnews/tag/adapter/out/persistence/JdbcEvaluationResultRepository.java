@@ -74,6 +74,18 @@ class JdbcEvaluationResultRepository implements EvaluationResultRepository {
 	/** 기사의 최신 평가 고르기 — 버전 번호가 큰 것(tag-R15). {@code tag_sets s} 를 이은 조회가 함께 쓰는 정렬 */
 	private static final String LATEST_VERSION_FIRST = "s.number desc";
 
+	/**
+	 * 첫 평가 시각(그 기사 평가 행의 가장 이른 평가 시각 — tag-R30)이 {@code [:from, :to)} 인 기사의 CTE {@code firsts(article_id)} —
+	 * 정본. 같은 가장 이른 시각의 평가가 둘이면 기사가 두 번 나온다 — 부르는 쪽이 기사 집합으로 다룬다
+	 */
+	private static final String FIRSTS = """
+			firsts as (
+			  select c.article_id from article_evaluations c
+			  where c.evaluated_at >= :from and c.evaluated_at < :to
+			    and not exists (select 1 from article_evaluations p
+			                    where p.article_id = c.article_id and p.evaluated_at < c.evaluated_at)
+			)""";
+
 	private final JdbcClient jdbc;
 
 	JdbcEvaluationResultRepository(JdbcClient jdbc) {
@@ -160,6 +172,43 @@ class JdbcEvaluationResultRepository implements EvaluationResultRepository {
 	}
 
 	@Override
+	public List<StoredEvaluation> findLatestAll(Collection<ArticleId> articleIds) {
+		if (articleIds.isEmpty()) {
+			return List.of();
+		}
+		List<StoredEvaluation> found = new ArrayList<>(articleIds.size());
+		scan(this.jdbc.sql("""
+				with latest as (
+				  select distinct on (e.article_id) e.id, e.article_id, e.tag_set_id, e.format_key, e.format_probability,
+				         e.importance, e.judgement_id, e.evaluated_at
+				  from article_evaluations e join tag_sets s on s.id = e.tag_set_id
+				  where e.article_id = any(:ids)
+				  order by e.article_id, %s
+				)
+				select l.*, t.tag_kind, t.tag_key, t.probability from latest l
+				left join article_tags t on t.evaluation_id = l.id
+				order by l.article_id, t.tag_kind, t.tag_key
+				""".formatted(LATEST_VERSION_FIRST))
+			.param("ids", articleIds.stream().map(ArticleId::value).toArray(Long[]::new)), false, listed -> {
+				found.add(listed.sample().evaluation());
+				return true;
+			});
+		return List.copyOf(found);
+	}
+
+	@Override
+	public List<ArticleId> firstEvaluatedIn(Instant from, Instant to) {
+		return this.jdbc.sql("""
+				with %s
+				select distinct article_id from firsts order by article_id
+				""".formatted(FIRSTS))
+			.param("from", timestamp(from))
+			.param("to", timestamp(to))
+			.query((rs, row) -> new ArticleId(rs.getLong("article_id")))
+			.list();
+	}
+
+	@Override
 	public void streamVersionPeriod(TagSetId version, Instant from, Instant to, Consumer<SampleRow> sink) {
 		scan(this.jdbc.sql("""
 				select %s
@@ -178,12 +227,7 @@ class JdbcEvaluationResultRepository implements EvaluationResultRepository {
 	public void streamFirstEvaluatedIn(Instant from, Instant to, Consumer<StoredEvaluation> sink) {
 		// 첫 평가 시각이 기간 안인 기사 — 같은 시각의 두 평가가 둘 다 남아도 기사 집합이라 한 번이다
 		scan(this.jdbc.sql("""
-				with firsts as (
-				  select c.article_id from article_evaluations c
-				  where c.evaluated_at >= :from and c.evaluated_at < :to
-				    and not exists (select 1 from article_evaluations p
-				                    where p.article_id = c.article_id and p.evaluated_at < c.evaluated_at)
-				), latest as (
+				with %s, latest as (
 				  select distinct on (e.article_id) e.id, e.article_id, e.tag_set_id, e.format_key, e.format_probability,
 				         e.importance, e.judgement_id, e.evaluated_at
 				  from article_evaluations e join tag_sets s on s.id = e.tag_set_id
@@ -193,7 +237,8 @@ class JdbcEvaluationResultRepository implements EvaluationResultRepository {
 				select l.*, t.tag_kind, t.tag_key, t.probability from latest l
 				left join article_tags t on t.evaluation_id = l.id and t.tag_kind = 'TOPIC'
 				order by l.article_id, t.tag_kind, t.tag_key
-				""".formatted(LATEST_VERSION_FIRST)).param("from", timestamp(from)).param("to", timestamp(to)), true,
+				""".formatted(FIRSTS, LATEST_VERSION_FIRST)).param("from", timestamp(from)).param("to", timestamp(to)),
+				true,
 				listed -> {
 					sink.accept(listed.sample().evaluation());
 					return true;

@@ -38,3 +38,4 @@
 ## 후속 기록
 
 - 2026-11-16: 결과 절 "로컬 개발에서 실제 키로 공급자를 확인하는 길이 남는다" — 키 등록 · 검증에 그대로이고, 다이제스트 생성은 `local` 에서 언제나 로컬 대체물이다 — [ADR-0187](0187-the-digest-generators-local-substitute-always-stands-in-the-local-profile-and-real-generators-register-only-outside-it.md) · [digest Spec "로컬 대체물"](../specs/digest.md#로컬-대체물) digest-R12
+- 2026-11-17: 결과 절 "생성 호출의 로컬 대체물은 호출 API 를 만드는 작업이 더한다" — 같은 낱말 규칙으로 생성 호출에 답한다 — [llm Spec](../specs/llm.md#로컬-대체물) llm-R16

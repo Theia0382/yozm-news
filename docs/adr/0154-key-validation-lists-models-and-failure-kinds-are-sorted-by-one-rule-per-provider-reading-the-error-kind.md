@@ -1,6 +1,6 @@
 # ADR-0154: 키 검증은 모델 목록 조회이고, 실패 종류는 공급자마다 오류의 종류까지 읽는 정본 하나가 가른다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 키 검증의 요청([ADR-0204](0204-openrouter-keys-are-validated-with-the-key-lookup-request-not-the-model-list.md))
 - 날짜: 2026-11-14
 - 근거: [이슈 #148](https://github.com/Theia0382/yozm-news/issues/148) — 두 공급자의 공식 오류 문서와, 모델 목록 엔드포인트에 가짜 키로 보낸 요청의 실제 응답
 - 관련: [ADR-0003](0003-byok-personalized-digest.md)(키의 유효성 · 한도 · 요금 부족이 다이제스트 실패 원인이 된다)
@@ -14,6 +14,7 @@
 
 ## 결정
 
+> 부분 대체(첫 문장) — [ADR-0204](0204-openrouter-keys-are-validated-with-the-key-lookup-request-not-the-model-list.md). 지금 상태: [llm Spec §5](../specs/llm.md#키-검증) llm-R6
 - **키 검증의 요청은 모델 목록 조회 하나다.** 정상 응답이면 유효다. 잔액 · 지출 한도와 특정 모델을 쓸 권한은 확인하지 않는다.
 - **검증은 짧은 마감으로 한 번만 보낸다.** 다시 시도하지 않는다.
 - **실패 종류는 다섯이다** — 무효 · 권한 · 한도 · 일시 장애, 그리고 넷 어디에도 들지 않는 예상 밖의 답.
@@ -37,3 +38,7 @@
 | 목록 조회 뒤 모델을 고르면 그 모델로 최소 생성 요청을 한다 | 검증 경로가 둘이 되고 모델 선택에 묶인다 |
 | 상태 코드만으로 가른다 | 429 가 요청 제한과 한도 소진을 함께 뜻해 둘이 갈리지 않는다 |
 | 공급자 공통 분류 함수 하나 | 429 를 가르는 근거가 공급자마다 다르다 |
+
+## 후속 기록
+
+- 2026-11-17: 결정 절 "분류의 정본은 공급자마다 함수 하나"의 OpenRouter — 오류의 종류를 `error.metadata.error_type` 에서 읽고, 403 은 권한 표시가 있을 때만 권한 없음이다 — [ADR-0205](0205-an-openrouter-403-invalidates-the-key-only-with-the-permission-mark-and-an-error-inside-an-ok-answer-is-unexpected.md) · [llm Spec](../specs/llm.md#키-검증) llm-R8

@@ -1,5 +1,6 @@
 package net.yozmnews.user.adapter.in.web;
 
+import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -151,6 +152,63 @@ class InterestControllerTests {
 		this.mockMvc.perform(get("/api/interests/settings").with(this.user))
 			.andExpect(jsonPath("$.timezone").value("America/New_York"))
 			.andExpect(jsonPath("$.interestText").value("전력망과 배터리"));
+	}
+
+	@Test
+	void volumeHasTheDefaultsAndSavesOrSaysWhichFieldIsOutOfRange() throws Exception {
+		String presets = """
+				"presets":[{"volume":"FEW","count":30},{"volume":"NORMAL","count":60},{"volume":"MANY","count":90}],
+				"countRange":{"min":10,"max":150},"bigSlotRange":{"min":0,"max":10}""";
+		this.mockMvc.perform(get("/api/interests/volume").with(this.user))
+			.andExpect(status().isOk())
+			.andExpect(content().json("""
+					{"volume":"NORMAL","customCount":null,"bigSlots":3,%s}""".formatted(presets), JsonCompareMode.STRICT));
+
+		this.mockMvc.perform(json(put("/api/interests/volume").with(this.user), """
+				{"volume":"CUSTOM","customCount":150,"bigSlots":0}"""))
+			.andExpect(status().isOk())
+			.andExpect(content().json("""
+					{"result":"SAVED","volume":{"volume":"CUSTOM","customCount":150,"bigSlots":0,%s},"range":null}"""
+				.formatted(presets), JsonCompareMode.STRICT));
+		this.mockMvc.perform(json(put("/api/interests/volume").with(this.user), """
+				{"volume":"CUSTOM","customCount":151,"bigSlots":0}"""))
+			.andExpect(content().json("""
+					{"result":"COUNT_OUT_OF_RANGE","volume":null,"range":{"min":10,"max":150}}""", JsonCompareMode.STRICT));
+		this.mockMvc.perform(json(put("/api/interests/volume").with(this.user), """
+				{"volume":"CUSTOM","customCount":9,"bigSlots":11}"""))
+			.andExpect(content().json("""
+					{"result":"COUNT_OUT_OF_RANGE","volume":null,"range":{"min":10,"max":150}}""", JsonCompareMode.STRICT));
+		this.mockMvc.perform(json(put("/api/interests/volume").with(this.user), """
+				{"volume":"MANY","bigSlots":11}"""))
+			.andExpect(content().json("""
+					{"result":"BIG_SLOTS_OUT_OF_RANGE","volume":null,"range":{"min":0,"max":10}}""", JsonCompareMode.STRICT));
+		this.mockMvc.perform(json(put("/api/interests/volume").with(this.user), """
+				{"volume":"MANY","customCount":45,"bigSlots":3}"""))
+			.andExpect(status().isBadRequest());
+		this.mockMvc.perform(json(put("/api/interests/volume").with(this.user), """
+				{"volume":"MANY","customCount":200,"bigSlots":3}"""))
+			.andExpect(status().isBadRequest());
+		this.mockMvc.perform(json(put("/api/interests/volume").with(this.user), """
+				{"volume":"CUSTOM","bigSlots":3}"""))
+			.andExpect(status().isBadRequest());
+		this.mockMvc.perform(json(put("/api/interests/volume").with(this.user), """
+				{"volume":"LOTS","bigSlots":3}"""))
+			.andExpect(status().isBadRequest());
+		this.mockMvc.perform(json(put("/api/interests/volume").with(this.user), """
+				{"volume":"MANY"}"""))
+			.andExpect(status().isBadRequest());
+		this.mockMvc.perform(get("/api/interests/volume").with(this.user))
+			.andExpect(jsonPath("$.volume").value("CUSTOM"))
+			.andExpect(jsonPath("$.customCount").value(150))
+			.andExpect(jsonPath("$.bigSlots").value(0));
+
+		this.mockMvc.perform(json(put("/api/interests/volume").with(this.user), """
+				{"volume":"FEW","bigSlots":10}"""))
+			.andExpect(jsonPath("$.result").value("SAVED"));
+		this.mockMvc.perform(get("/api/interests/volume").with(this.user))
+			.andExpect(jsonPath("$.volume").value("FEW"))
+			.andExpect(jsonPath("$.customCount").value(nullValue()))
+			.andExpect(jsonPath("$.bigSlots").value(10));
 	}
 
 	@Test

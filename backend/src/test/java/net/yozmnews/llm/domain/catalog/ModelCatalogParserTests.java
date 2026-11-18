@@ -159,7 +159,7 @@ class ModelCatalogParserTests {
 				        structured-output: true
 				        context-window: 5
 				""")).containsExactly("1:1 version: 알 수 없는 항목 'version'",
-				"3:3 providers.gemini: 모르는 공급자 'gemini' — openai · anthropic 가운데 하나여야 한다",
+				"3:3 providers.gemini: 모르는 공급자 'gemini' — openai · anthropic · openrouter 가운데 하나여야 한다",
 				"10:9 providers.openai.models[0].context-window: 알 수 없는 항목 'context-window'");
 		assertThat(problems("""
 				providers:

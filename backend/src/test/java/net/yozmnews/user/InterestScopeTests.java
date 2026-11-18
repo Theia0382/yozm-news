@@ -96,6 +96,10 @@ public class InterestScopeTests {
 				{"provider":"OPENAI","modelId":"gpt-6-astra"}"""))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.result").value("SAVED"));
+		this.mockMvc.perform(json(put("/api/interests/volume").with(a), """
+				{"volume":"CUSTOM","customCount":45,"bigSlots":0}"""))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.result").value("SAVED"));
 		this.mockMvc.perform(json(put("/api/interests/sources").with(a), """
 				{"excluded":[%d]}""".formatted(source)))
 			.andExpect(status().isOk())
@@ -113,6 +117,10 @@ public class InterestScopeTests {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.chosen").doesNotExist())
 			.andExpect(jsonPath("$.choosable").isEmpty());
+		this.mockMvc.perform(get("/api/interests/volume").with(b))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.volume").value("NORMAL"))
+			.andExpect(jsonPath("$.bigSlots").value(3));
 		this.mockMvc.perform(get("/api/interests/sources").with(b))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.sources[*].id").value(hasItem((int) source)))
@@ -123,13 +131,16 @@ public class InterestScopeTests {
 			.single()).as("A 의 저장은 B 의 선호를 바꾸지 않는다").isZero();
 		this.mockMvc.perform(get("/api/interests/settings").with(a))
 			.andExpect(jsonPath("$.timezone").value("Europe/Paris"));
+		this.mockMvc.perform(get("/api/interests/volume").with(a))
+			.andExpect(jsonPath("$.customCount").value(45))
+			.andExpect(jsonPath("$.bigSlots").value(0));
 	}
 
 	@Test
 	void interestPathsNeedASession() throws Exception {
 		Cookie csrf = new Cookie("XSRF-TOKEN", "interest-scope");
 		for (String path : new String[] { "/api/interests/tags", "/api/interests/sources", "/api/interests/settings",
-				"/api/interests/model" }) {
+				"/api/interests/model", "/api/interests/volume" }) {
 			this.mockMvc.perform(get(path)).andExpect(status().isUnauthorized());
 			this.mockMvc
 				.perform(json(put(path).cookie(csrf).header("X-XSRF-TOKEN", "interest-scope"), "{}"))

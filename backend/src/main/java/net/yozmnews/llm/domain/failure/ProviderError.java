@@ -8,13 +8,14 @@ import org.jspecify.annotations.Nullable;
  * 오류의 문구는 담지 않는다 — 공급자가 문구에 키 조각을 되돌려준다(llm-R9).
  *
  * @param status HTTP 상태 코드
- * @param code 오류의 {@code code} — 없으면 null
- * @param type 오류의 {@code type} — 없으면 null
+ * @param code 오류의 문자열 {@code code}(OpenAI) — 없으면 null
+ * @param type 오류의 종류 이름 — OpenAI 의 {@code type}, Anthropic 의 {@code error.type}, OpenRouter 의
+ * {@code error.metadata.error_type}. 없으면 null
  * @param retryAfter 응답에 {@code retry-after} 헤더가 있는가
  */
 public record ProviderError(int status, @Nullable String code, @Nullable String type, boolean retryAfter) {
 
-	/** 시간이 지나면 풀릴 수 있는 상태인가 — 요청 제한(429)을 뺀 408 · 409 · 500 ~ 599. 두 공급자의 분류가 함께 읽는다 */
+	/** 시간이 지나면 풀릴 수 있는 상태인가 — 요청 제한(429)을 뺀 408 · 409 · 500 ~ 599. 공급자마다의 분류가 함께 읽는다 */
 	boolean retriableStatus() {
 		return this.status == 408 || this.status == 409 || (this.status >= 500 && this.status <= 599);
 	}

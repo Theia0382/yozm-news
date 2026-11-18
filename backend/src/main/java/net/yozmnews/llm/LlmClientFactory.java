@@ -21,4 +21,13 @@ public interface LlmClientFactory {
 	 */
 	StoredKeyValidation validateStored(UserId user, Provider provider);
 
+	/**
+	 * 그 사용자의 저장한 키(요청한 모델의 공급자)로 생성 요청을 보내고 결과를 그 키에 알린다 — llm-R19 ~ R23. 일시 장애는 정해진 만큼 다시
+	 * 보낸다. 예상한 실패는 예외가 아니라 {@link GenerationResult.Failed} 다. 결과 · 예외 문구 · 로그에 키 · 프롬프트 · 응답 본문을 남기지
+	 * 않는다. 화면 요청 안에서 부르는 길이가 아니다 — 생성 요청 하나의 마감이 길고 다시 보낸다.
+	 * @return 저장한 키가 없으면 {@link StoredGeneration.Missing} — 공급자에 보내지 않는다
+	 * @throws IllegalStateException 트랜잭션 안에서 불렀을 때 — 요청을 보내지 않는다
+	 */
+	StoredGeneration generateStored(UserId user, GenerationRequest request);
+
 }

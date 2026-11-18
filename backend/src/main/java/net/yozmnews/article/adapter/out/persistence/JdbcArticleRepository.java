@@ -233,6 +233,20 @@ class JdbcArticleRepository implements ArticleRepository {
 	}
 
 	@Override
+	public Map<ArticleId, Instant> findPublishedAt(Collection<ArticleId> articleIds) {
+		if (articleIds.isEmpty()) {
+			return Map.of();
+		}
+		Map<ArticleId, Instant> published = new LinkedHashMap<>();
+		this.jdbc.sql("select id, published_at from articles where id = any(:ids) order by id")
+			.param("ids", ids(articleIds))
+			.query((ResultSet rs) -> {
+				published.put(new ArticleId(rs.getLong("id")), instant(rs, "published_at"));
+			});
+		return Collections.unmodifiableMap(published);
+	}
+
+	@Override
 	public long countArticlesOnlyIn(SourceId sourceId) {
 		return this.jdbc.sql("""
 				select count(distinct e.article_id) from article_feed_entries e

@@ -27,6 +27,11 @@ export const providers: Record<
     console: "Claude Console",
     consoleUrl: "https://platform.claude.com/settings/keys",
   },
+  OPENROUTER: {
+    name: "OpenRouter",
+    console: "OpenRouter",
+    consoleUrl: "https://openrouter.ai/settings/keys",
+  },
 };
 
 /** 공급자가 키를 받아 주지 않은 까닭 */

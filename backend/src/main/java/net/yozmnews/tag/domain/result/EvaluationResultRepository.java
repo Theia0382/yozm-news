@@ -30,6 +30,12 @@ public interface EvaluationResultRepository {
 	/** 기사의 평가 가운데 버전 번호가 가장 큰 것과 그 태그 행 */
 	Optional<StoredEvaluation> findLatest(ArticleId articleId);
 
+	/** 기사들의 평가 가운데 기사마다 버전 번호가 가장 큰 것과 그 모든 태그 행 — 기사 ID 순, 평가가 없는 기사는 빠진다. 질의 하나 */
+	List<StoredEvaluation> findLatestAll(Collection<ArticleId> articleIds);
+
+	/** 첫 평가 시각(그 기사 평가 행의 가장 이른 평가 시각)이 {@code [from, to)} 인 기사 — 기사 ID 순, 한 번씩 */
+	List<ArticleId> firstEvaluatedIn(Instant from, Instant to);
+
 	/**
 	 * 기사들의 버전 번호가 가장 큰 평가의 중요도 기대값.
 	 * @return 기사 ID → 중요도 — 평가가 없거나 그 평가의 중요도가 null 이면 빠진다

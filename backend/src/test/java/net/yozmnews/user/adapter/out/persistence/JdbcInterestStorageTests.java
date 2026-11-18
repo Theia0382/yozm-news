@@ -18,7 +18,9 @@ import net.yozmnews.platform.UserId;
 import net.yozmnews.source.SourceId;
 import net.yozmnews.tag.TagKind;
 import net.yozmnews.tag.TagSetId;
+import net.yozmnews.user.domain.interest.CandidateVolume;
 import net.yozmnews.user.domain.interest.DigestSchedule;
+import net.yozmnews.user.domain.interest.DigestVolume;
 import net.yozmnews.user.domain.interest.InterestSettings;
 import net.yozmnews.user.domain.interest.InterestText;
 import net.yozmnews.user.domain.interest.ModelRef;
@@ -89,6 +91,7 @@ class JdbcInterestStorageTests {
 		assertThat(read.interestText()).isEqualTo(new InterestText(""));
 		assertThat(read.model()).isNull();
 		assertThat(read.reports()).isEqualTo(new ReportSettings(true, DayOfWeek.MONDAY, true));
+		assertThat(read.volume()).isEqualTo(new DigestVolume(CandidateVolume.NORMAL, null, 3));
 		assertThat(read.updatedAt()).isEqualTo(NOW);
 		assertThat(read.version()).isZero();
 		assertThat(this.settings.lockByUser(this.bob)).isEmpty();
@@ -103,7 +106,8 @@ class JdbcInterestStorageTests {
 			.withDigest(new DigestSchedule(ZoneId.of("America/New_York"), LocalTime.of(6, 30)), new InterestText("배터리"),
 					new ReportSettings(false, DayOfWeek.FRIDAY, false), LATER)
 			.withModel(new ModelRef(Provider.ANTHROPIC, "claude-haiku-5-5"), LATER)
-			.withPreferenceVersion(new TagSetId(5), LATER));
+			.withPreferenceVersion(new TagSetId(5), LATER)
+			.withVolume(new DigestVolume(CandidateVolume.CUSTOM, 45, 0), LATER));
 
 		InterestSettings again = this.settings.lockByUser(this.alice).orElseThrow();
 		assertThat(again.version()).isOne();
@@ -112,8 +116,20 @@ class JdbcInterestStorageTests {
 		assertThat(again.interestText()).isEqualTo(new InterestText("배터리"));
 		assertThat(again.model()).isEqualTo(new ModelRef(Provider.ANTHROPIC, "claude-haiku-5-5"));
 		assertThat(again.reports()).isEqualTo(new ReportSettings(false, DayOfWeek.FRIDAY, false));
+		assertThat(again.volume()).isEqualTo(new DigestVolume(CandidateVolume.CUSTOM, 45, 0));
 		assertThat(again.updatedAt()).isEqualTo(LATER);
 		assertThatIllegalStateException().isThrownBy(() -> this.settings.update(read));
+	}
+
+	@Test
+	void aChosenOpenRouterModelIsStoredAndReadBack() {
+		this.settings.insertIfAbsent(InterestSettings.defaults(this.alice, new TagSetId(3), NOW));
+		InterestSettings read = this.settings.lockByUser(this.alice).orElseThrow();
+
+		this.settings.update(read.withModel(new ModelRef(Provider.OPENROUTER, "anthropic/claude-haiku-5.5"), LATER));
+
+		assertThat(this.settings.lockByUser(this.alice).orElseThrow().model())
+			.isEqualTo(new ModelRef(Provider.OPENROUTER, "anthropic/claude-haiku-5.5"));
 	}
 
 	@Test

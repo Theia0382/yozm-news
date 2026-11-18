@@ -24,6 +24,7 @@ import net.yozmnews.platform.SecretValue;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.springframework.ai.anthropic.AnthropicChatOptions;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.boot.test.system.CapturedOutput;
@@ -195,7 +196,7 @@ class AnthropicProviderClientTests {
 	void theChatModelSendsWithTheSameKeyAndAddressAndStopsAfterClose(CapturedOutput output) {
 		server.stubFor(post(urlPathEqualTo("/v1/messages")).willReturn(json(200, MESSAGE)));
 		AnthropicProviderClient client = client();
-		ChatModel model = client.chatModel("claude-x");
+		ChatModel model = client.chatModel(AnthropicChatOptions.builder().model("claude-x").build());
 		System.out.println("출력표지-anthropic-chat");
 
 		assertThat(model.call(new Prompt("ping")).getResult().getOutput().getText()).isEqualTo("pong");
@@ -220,7 +221,7 @@ class AnthropicProviderClientTests {
 			.baseUrl(server.baseUrl())
 			.apiKey(KEY)
 			.build();
-		AnthropicSdkHttpClient http = new AnthropicSdkHttpClient(new JdkTransport(), backend);
+		AnthropicSdkHttpClient http = new AnthropicSdkHttpClient(new JdkTransport(Duration.ofSeconds(5)), backend);
 		com.anthropic.core.http.HttpRequest request = com.anthropic.core.http.HttpRequest.builder()
 			.method(com.anthropic.core.http.HttpMethod.GET)
 			.addPathSegment("v1")
@@ -252,7 +253,7 @@ class AnthropicProviderClientTests {
 	}
 
 	private static AnthropicProviderClient client() {
-		return client(new JdkTransport());
+		return client(new JdkTransport(Duration.ofSeconds(5)));
 	}
 
 	private static AnthropicProviderClient client(JdkTransport transport) {

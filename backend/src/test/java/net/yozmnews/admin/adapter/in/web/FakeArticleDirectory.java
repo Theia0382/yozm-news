@@ -71,6 +71,11 @@ class FakeArticleDirectory implements ArticleDirectory {
 		throw new UnsupportedOperationException("운영자 컨트롤러는 부르지 않는다");
 	}
 
+	@Override
+	public Map<ArticleId, Instant> publishedAt(Collection<ArticleId> ids) {
+		throw new UnsupportedOperationException("운영자 컨트롤러는 부르지 않는다");
+	}
+
 	/** 운영자 API 슬라이스에 대역을 싣는다 */
 	@TestConfiguration(proxyBeanMethods = false)
 	static class Config {

@@ -10,10 +10,10 @@
 - **KEK** — 운영자가 파일로 주는 버전 있는 키. 기동 때 읽어 검사하고, 교체하면 저장된 DEK 를 새 버전으로 다시 감싼다
 - **키 등록 · 교체** — `llm` 의 키 검증이 성공할 때만 저장한다. 사용자 × 공급자마다 키 하나다
 - **다시 검증** — 저장한 키를 `llm` 의 저장한 키의 길로 확인한다
-- **상태와 무효 알림** — 키의 상태(`VALID` · `INVALID`)를 검증 결과로 전이하고, 무효가 되는 전이마다 `CredentialInvalidated` 를 낸다
+- **상태와 무효 알림** — 키의 상태(`VALID` · `INVALID`)를 저장한 키로 공급자에 물은 결과(다시 검증 · 생성 호출)로 전이하고, 무효가 되는 전이마다 `CredentialInvalidated` 를 낸다
 - **저장한 키의 공급** — `llm` 이 선언한 공급 인터페이스 `StoredKeySource` 를 구현해, `llm` 이 물을 때만 키를 복호화해 건넨다
 - **키 유무** — 사용자에게 저장한 키가 있는지, 키가 있는 공급자와 쓸 수 있는(`VALID`) 키의 공급자를 답한다
-- **(미구현)** 생성 호출에 쓴 시각의 기록, 탈퇴한 사용자의 키 삭제
+- **(미구현)** 탈퇴한 사용자의 키 삭제
 
 하지 않는 것:
 
@@ -52,7 +52,7 @@ HTTP 엔드포인트:
 | `/api/llm-keys/{provider}/checks` | `POST` | 다시 검증 — `VALID` · `INVALID` · `UNDETERMINED`(+실패 종류) · `MISSING`(credential-R12 · R14) |
 | `/api/llm-keys/{provider}` | `DELETE` | 키 삭제 — 없어도 204(credential-R16) |
 
-네 경로 모두 세션이 필요하고 사용자 격리 시험에 등록돼 있으며([user Spec](user.md#화면용-api-의-공개와-세션-사용자) user-R6), 키가 없는 세션 사용자에게도 연다(`@AllowedWithoutLlmKey` — user-R5). 등록 · 다시 검증은 요청마다 공급자에 한 번 묻고, 한도(세션 사용자 · 클라이언트 주소 — 둘이 함께 쓴다)를 넘으면 처리기 앞에서 429 다(user-R38 · R40). `{provider}` 는 `llm` 의 `Provider` 이름(`OPENAI` · `ANTHROPIC`)이고 모르는 값은 400 이다. 판정 결과는 200 이고, 요청 · 응답 형식은 `api/openapi.json` 에 있다.
+네 경로 모두 세션이 필요하고 사용자 격리 시험에 등록돼 있으며([user Spec](user.md#화면용-api-의-공개와-세션-사용자) user-R6), 키가 없는 세션 사용자에게도 연다(`@AllowedWithoutLlmKey` — user-R5). 등록 · 다시 검증은 요청마다 공급자에 한 번 묻고, 한도(세션 사용자 · 클라이언트 주소 — 둘이 함께 쓴다)를 넘으면 처리기 앞에서 429 다(user-R38 · R40). `{provider}` 는 `llm` 의 `Provider` 이름(`OPENAI` · `ANTHROPIC` · `OPENROUTER`)이고 모르는 값은 400 이다. 판정 결과는 200 이고, 요청 · 응답 형식은 `api/openapi.json` 에 있다.
 
 ### LlmKeys
 
@@ -212,7 +212,7 @@ sequenceDiagram
 
 - **credential-R12** — 다시 검증은 저장한 키를 `llm` 의 저장한 키의 길(`LlmClientFactory.validateStored`)로 확인한다 — 사용자가 키를 다시 넣지 않는다. 키가 없으면 `MISSING` 이다. 결과의 갈래(`VALID` · `INVALID` · `UNDETERMINED`)는 credential-R14 의 전이가 정하고, 응답의 키는 확인 뒤에 다시 읽은 지금 행이다 — 묻는 사이 키가 지워졌으면 `MISSING` 이고, 새 키로 바뀌었으면 결과는 옛 키의 것이고 키는 새 키의 지금 상태다
 - **credential-R13** — 저장한 키의 평문은 `StoredKeySource.find` 의 반환으로만 이 모듈을 나간다. 그 인터페이스는 `llm` 이 선언하고 `llm` 만 부른다([llm Spec](llm.md#저장한-키의-길) llm-R17 · R18). 복호화는 그 호출 안에서만 한다
-- **credential-R14** — 상태는 `VALID` · `INVALID` 둘이고, 저장한 키로 공급자에 물은 결과로 전이한다:
+- **credential-R14** — 상태는 `VALID` · `INVALID` 둘이고, 저장한 키로 공급자에 물은 결과로 전이한다 — 결과를 알리는 것은 `llm` 의 저장한 키의 길(다시 검증과 생성 호출 — [llm Spec](llm.md#저장한-키의-길) llm-R17 · [생성 호출](llm.md#생성-호출) llm-R19)이고, 생성 호출의 결과는 공급자가 답했으면 성공, 답하지 못했으면 그 실패 종류다:
 
   | 결과 | 다음 상태 |
   |---|---|
@@ -220,7 +220,7 @@ sequenceDiagram
   | `INVALID_KEY` · `PERMISSION_DENIED` | `INVALID` |
   | `QUOTA_EXHAUSTED` · `TRANSIENT` · `UNEXPECTED` | 바꾸지 않는다 |
 
-  결과는 물은 그 키 ID 의 행에만 쓴다 — 그 사이 지워졌거나 교체돼 그 ID 의 행이 없으면 아무것도 쓰지 않는다. 행을 잠근 뒤 쓴다. 무효였던 키가 성공하면 `VALID` 로 돌아온다
+  결과는 물은 그 키 ID 의 행에만 쓴다 — 그 사이 지워졌거나 교체돼 그 ID 의 행이 없으면 아무것도 쓰지 않는다. 행을 잠근 뒤 쓴다. 무효였던 키가 성공하면 `VALID` 로 돌아온다. 검증 시각은 이 키로 공급자가 마지막으로 정상으로 답한 시각이다 — 등록 · 다시 검증 · 생성 호출의 성공이 고친다. 생성 호출에 쓴 시각을 따로 두지 않는다
 - **credential-R15** — 상태가 `VALID` 에서 `INVALID` 로 바뀌는 트랜잭션에서 `CredentialInvalidated` 를 한 번 낸다. 같은 상태로의 전이(`INVALID` → `INVALID`, `VALID` → `VALID`)와 `INVALID` → `VALID` 에는 내지 않는다
 - **credential-R18** — 키가 있다는 것은 그 사용자의 저장한 키가 하나라도 있다는 것이다 — 공급자 · 상태와 무관하다. 공급자마다로 물으면(`providers`) 같은 뜻이고, 쓸 수 있는 키(`usable`)는 상태가 `VALID` 인 키다
 
@@ -230,7 +230,7 @@ sequenceDiagram
 
 | 테이블 | 주요 컬럼 | 뜻 |
 |---|---|---|
-| `llm_credentials` | id, user_id, provider(`openai`/`anthropic`), ciphertext, encrypted_dek, kek_version, key_hint, status(`VALID`/`INVALID`), validated_at, created_at | 사용자 LLM 키 — 주인(`user_id` · `provider`)마다 하나(credential-R11). `user_id` 는 `user` 의 사용자 ID 를 가리킨다 — 모듈 사이라 FK 가 없다. `provider` 는 `Provider` 의 키다. `ciphertext` · `encrypted_dek` 의 꼴은 credential-R3, `kek_version` 은 DEK 를 감싼 KEK 의 버전(credential-R6 · R7), `key_hint` 는 credential-R9, `status` · `validated_at` 은 credential-R14 |
+| `llm_credentials` | id, user_id, provider(`openai`/`anthropic`/`openrouter`), ciphertext, encrypted_dek, kek_version, key_hint, status(`VALID`/`INVALID`), validated_at, created_at | 사용자 LLM 키 — 주인(`user_id` · `provider`)마다 하나(credential-R11). `user_id` 는 `user` 의 사용자 ID 를 가리킨다 — 모듈 사이라 FK 가 없다. `provider` 는 `Provider` 의 키다. `ciphertext` · `encrypted_dek` 의 꼴은 credential-R3, `kek_version` 은 DEK 를 감싼 KEK 의 버전(credential-R6 · R7), `key_hint` 는 credential-R9, `status` · `validated_at` 은 credential-R14 |
 
 ## 7. 설정
 

@@ -43,4 +43,10 @@ public interface ArticleDirectory {
 	 */
 	Map<ArticleId, Set<SourceId>> sources(Collection<ArticleId> ids);
 
+	/**
+	 * 기사들의 발행 시각을 읽는다 — 질의 하나. 다이제스트 후보 선별이 기간의 하한과 순서에 쓴다. 내용 전체를 읽지 않는다.
+	 * @return 기사 ID → 발행 시각({@link ArticleContent#publishedAt()} 과 같은 값) — 없는(지운) 기사는 빠진다. 빈 입력이면 빈 맵
+	 */
+	Map<ArticleId, Instant> publishedAt(Collection<ArticleId> ids);
+
 }

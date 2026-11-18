@@ -13,7 +13,9 @@ import java.util.Optional;
 import net.yozmnews.llm.Provider;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.tag.TagSetId;
+import net.yozmnews.user.domain.interest.CandidateVolume;
 import net.yozmnews.user.domain.interest.DigestSchedule;
+import net.yozmnews.user.domain.interest.DigestVolume;
 import net.yozmnews.user.domain.interest.InterestSettings;
 import net.yozmnews.user.domain.interest.InterestSettingsRepository;
 import net.yozmnews.user.domain.interest.InterestText;
@@ -31,7 +33,7 @@ class JdbcInterestSettings implements InterestSettingsRepository {
 
 	private static final String COLUMNS = """
 			user_id, tag_set_id, timezone, digest_time, interest_text, llm_provider, llm_model, weekly_report,
-			weekly_report_day, monthly_report, updated_at, version""";
+			weekly_report_day, monthly_report, candidate_volume, candidate_count, big_slots, updated_at, version""";
 
 	private final JdbcClient jdbc;
 
@@ -48,10 +50,18 @@ class JdbcInterestSettings implements InterestSettingsRepository {
 	}
 
 	@Override
+	public Optional<InterestSettings> findByUser(UserId user) {
+		return this.jdbc.sql("select " + COLUMNS + " from user_settings where user_id = :user")
+			.param("user", user.value())
+			.query(JdbcInterestSettings::row)
+			.optional();
+	}
+
+	@Override
 	public boolean insertIfAbsent(InterestSettings settings) {
 		return this.jdbc.sql("insert into user_settings (" + COLUMNS + """
 				) values (:user, :tagSet, :timezone, :digestTime, :interestText, :provider, :model, :weekly, :weeklyDay,
-				  :monthly, :updatedAt, 0)
+				  :monthly, :candidateVolume, :candidateCount, :bigSlots, :updatedAt, 0)
 				on conflict (user_id) do nothing
 				""")
 			.paramSource(params(settings))
@@ -64,7 +74,8 @@ class JdbcInterestSettings implements InterestSettingsRepository {
 		int updated = this.jdbc.sql("""
 				update user_settings set tag_set_id = :tagSet, timezone = :timezone, digest_time = :digestTime,
 				  interest_text = :interestText, llm_provider = :provider, llm_model = :model, weekly_report = :weekly,
-				  weekly_report_day = :weeklyDay, monthly_report = :monthly, updated_at = :updatedAt, version = version + 1
+				  weekly_report_day = :weeklyDay, monthly_report = :monthly, candidate_volume = :candidateVolume,
+				  candidate_count = :candidateCount, big_slots = :bigSlots, updated_at = :updatedAt, version = version + 1
 				where user_id = :user and version = :version
 				""").paramSource(params).update();
 		if (updated != 1) {
@@ -108,6 +119,8 @@ class JdbcInterestSettings implements InterestSettingsRepository {
 				new InterestText(rs.getString("interest_text")), model,
 				new ReportSettings(rs.getBoolean("weekly_report"), DayOfWeek.of(rs.getInt("weekly_report_day")),
 						rs.getBoolean("monthly_report")),
+				new DigestVolume(CandidateVolume.valueOf(rs.getString("candidate_volume")),
+						rs.getObject("candidate_count", Integer.class), rs.getInt("big_slots")),
 				rs.getTimestamp("updated_at").toInstant(), rs.getLong("version"));
 	}
 
@@ -123,6 +136,9 @@ class JdbcInterestSettings implements InterestSettingsRepository {
 			.addValue("weekly", settings.reports().weekly())
 			.addValue("weeklyDay", settings.reports().weeklyDay().getValue())
 			.addValue("monthly", settings.reports().monthly())
+			.addValue("candidateVolume", settings.volume().volume().name())
+			.addValue("candidateCount", settings.volume().customCount())
+			.addValue("bigSlots", settings.volume().bigSlots())
 			.addValue("updatedAt", Timestamp.from(settings.updatedAt()));
 	}
 

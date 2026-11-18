@@ -88,7 +88,7 @@ erDiagram
 
 ## 사용자
 
-계정 · 자격 · 복구 코드 · 실패 기록 · 요청 제한 기록 · 화면 내 알림 · 가입 정책 · 초대 · 관심 설정 · 스토리라인 구독 테이블(`users` · `user_password_credentials` · `user_recovery_codes` · `login_failures` · `request_limit_counts` · `user_notices` · `user_feed_status_receipts` · `user_sign_up_policy` · `user_sign_up_policy_changes` · `user_invitations` · `user_settings` · `user_tag_preferences` · `user_tag_preference_events` · `user_excluded_sources` · `user_storyline_subscriptions` · `user_storyline_subscription_events`)은 [user Spec §6](specs/user.md#6-데이터)에 있다. **(미설계)** 다이제스트의 최대 후보 수와 원하는 분량을 사용자 설정으로 둘지는 다이제스트 생성을 설계하는 작업이 정한다([pipeline §6](pipeline.md#후보-선별)).
+계정 · 자격 · 복구 코드 · 실패 기록 · 요청 제한 기록 · 화면 내 알림 · 가입 정책 · 초대 · 관심 설정 · 스토리라인 구독 테이블(`users` · `user_password_credentials` · `user_recovery_codes` · `login_failures` · `request_limit_counts` · `user_notices` · `user_feed_status_receipts` · `user_sign_up_policy` · `user_sign_up_policy_changes` · `user_invitations` · `user_settings` · `user_tag_preferences` · `user_tag_preference_events` · `user_excluded_sources` · `user_storyline_subscriptions` · `user_storyline_subscription_events`)은 [user Spec §6](specs/user.md#6-데이터)에 있다. 다이제스트의 최대 후보 수와 큰 슬롯 수는 설정 행의 칸이다([user Spec](specs/user.md#관심-설정) user-R56). **(미설계)** 원하는 분량을 사용자 설정으로 둘지는 프롬프트와 실제 생성기를 설계하는 작업이 정한다([pipeline §6](pipeline.md#프롬프트-구성)).
 
 ## LLM 키 (BYOK)
 
@@ -157,6 +157,11 @@ erDiagram
 | 태그 판정 원본 (`article_tag_judgements`) | 180일 | 태그 기준 · 저장 기준 분석과 저장 기준을 낮춘 뒤 빠진 태그 채움([tag-R31](specs/tag.md#빠진-태그-채움--저장-바닥) — 채울 기간의 상한도 180일)에 충분한 기간. **(미설계)** 지운 뒤 원본이 없는 평가의 채움 처분은 보존을 구현하는 작업이 정한다 |
 | 다이제스트 | 사용자 탈퇴 시까지. 지운 기사의 인용과 인용이 남지 않은 섹션은 지운다 — 다이제스트 행은 남는다 | 인용 항목은 노출 기록이다([digest Spec](specs/digest.md#지운-기사-따르기) digest-R10) |
 | 관심 신호 이력(`feedback_events` · `user_tag_preference_events` · `user_storyline_subscription_events`) · 변화 리포트 | 사용자 탈퇴 시까지. 지운 기사의 좋아요 / 싫어요 이력(`feedback_events`)은 그 기사를 지울 때 지운다 | 관심사 히스토리 · 리포트의 근거. 지운 기사는 태그도 인용도 없어 그 이력이 관심도에 쓰이지 못한다([feedback Spec](specs/feedback.md#지운-기사-따르기) feedback-R5) |
+| 계정 (`users` · `user_password_credentials`) | 사용자 탈퇴 시까지 | 사용자 데이터의 주인이고 로그인의 근거다([user Spec](specs/user.md#계정과-자격)) |
+| 관심 설정의 현재 상태 (`user_settings` · `user_tag_preferences` · `user_excluded_sources`) | 사용자 탈퇴 시까지. 태그 체계를 바꿔 활성하면 태그 선호를 활성 키로 고쳐 쓰고, 소스를 지우면 그 소스의 제외를 지운다 | 다이제스트 후보 선별의 입력이다([user Spec](specs/user.md#관심-설정) user-R47 · R49) |
+| 스토리라인 구독의 현재 상태 (`user_storyline_subscriptions`) | 사용자 탈퇴 시까지. 합쳐진 스토리라인의 구독은 남는 스토리라인으로 옮기고, 사라진 스토리라인의 구독은 뺀다 | 구독 이력의 투영이다([user Spec](specs/user.md#스토리라인-구독) user-R53) |
+| 좋아요 / 싫어요의 현재 상태 (`feedback`) | 사용자 탈퇴 시까지. 지운 기사의 행은 그 기사를 지울 때 지운다 | 사용자가 누른 지금 값이다 — 바뀐 차례는 `feedback_events` 에 있다([feedback Spec](specs/feedback.md#지운-기사-따르기) feedback-R5) |
+| LLM 키 (`llm_credentials`) | 사용자가 지우거나 탈퇴할 때까지. 교체하면 옛 행을 지우고 새 행을 넣는다 | 다이제스트 생성에 쓴다. 상태가 `INVALID` 여도 남는다([credential Spec](specs/credential.md#등록과-삭제) credential-R11 · R16) |
 | `digest_candidates` | 다이제스트를 만들고 30일. 지운 기사의 행은 곧바로 지운다 | 생성 중 지운 기사의 표시이고 그 뒤로는 디버깅용이다. `digest` 의 보존 정리가 지운다([digest Spec](specs/digest.md#후보-행-보존) digest-R11) |
 | 화면 내 알림 (`user_notices`) | 읽은 알림은 읽고 90일 뒤 삭제. 안 읽은 알림은 볼 때까지 남는다 | 지나간 일을 알리는 것이고 장기 기능의 근거가 아니다. 안 읽은 보안 알림은 다음 로그인 때 보여야 한다([ADR-0134](adr/0134-in-app-notices-are-one-row-per-recipient-with-a-closed-kind-and-per-kind-jsonb-content-and-read-notices-are-deleted-after-ninety-days.md)) |
 | 피드 상태 알림의 반영 기준 (`user_feed_status_receipts`) | 사용자 탈퇴 시까지 | 사용자마다 한 행이고, 다시 처리된 회차를 거르는 데 쓴다([user Spec](specs/user.md#화면-내-알림) user-R24) |
@@ -169,5 +174,6 @@ erDiagram
 | 이벤트 발행 기록 (`event_publication`) | 완료 즉시 삭제. 실패한 발행은 운영자가 폐기할 때까지 남는다 | 결과는 각 모듈의 데이터에 남고, 실패한 발행은 재처리와 원인 조사의 근거다([ADR-0023](adr/0023-jobrunr-oss-framework-schema-and-event-resubmission.md) · [ADR-0050](adr/0050-operator-resubmits-once-or-discards-stranded-event-publications-read-from-registry.md)) |
 
 - **무기한은 자동으로 지우지 않는다는 뜻이다.** 숨긴 소스 · 피드의 기사도 남는다. 운영자가 소스 · 피드를 지우면 그 소스 · 피드만 가진 기사(메타데이터 · 요약문 · 엔트리)가 함께 지워지고, 다른 소스 · 피드도 가진 기사는 남는다([source Spec 숨김과 삭제](specs/source.md#숨김과-삭제) · [article Spec](specs/article.md#지운-소스--피드) · [ADR-0051](adr/0051-operator-hides-or-deletes-sources-and-feeds-and-deletion-removes-exclusive-articles.md) · [ADR-0052](adr/0052-article-sources-live-in-feed-entries-and-late-items-of-deleted-feeds-are-dropped.md)). 기사를 가리키는 다른 모듈의 데이터는 `article` 이 알리는 지운 기사 ID 로 함께 지워진다 — 지금은 평가 대기 · 평가 · 태그 · 태그 판정 원본 · 사건 소속 판정 원본 · 사건 묶기 대기 · 배정 대기 · 기사 표현 · 배정 · 저장 후보, 그리고 사건에 남긴 대표 기사(비운다)([overview.md §5](overview.md#5-모듈-지도) · [ADR-0060](adr/0060-article-deletion-announced-by-removed-article-ids-and-followed-by-referencing-modules.md))
+- **보존 기간은 마이그레이션에도 적용된다** — 사용자 데이터와 그것이 가리키는 공유 데이터를 마이그레이션이 지우지 않는 규칙은 [CONTRIBUTING.md §7](../CONTRIBUTING.md#7-코드)에 있다([ADR-0212](adr/0212-migrations-never-delete-user-data-or-the-shared-rows-and-ids-it-references-and-moved-data-is-checked-by-a-data-test.md))
 
 보존 기간은 [open-questions.md](open-questions.md)에서 확정한다.

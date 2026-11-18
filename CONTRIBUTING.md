@@ -49,6 +49,7 @@ docker buildx bake --allow=fs.read=.. --set '*.platform=linux/amd64,linux/arm64'
 backend/gradlew -p backend test                                  # 전체 테스트
 backend/gradlew -p backend test --tests 'net.yozmnews.digest.*'  # 일부만
 backend/gradlew -p backend build                                 # 컴파일 + 테스트 + 검사
+backend/gradlew -p backend llmLiveCheck                          # 실제 LLM 공급자 확인의 마른 실행(요청 없음) — 실제 요청 · 비용 상한 · 키는 테스트 전략 §14
 ```
 
 결과는 `backend/build/test-results/test/` (JUnit XML) 와 `backend/build/reports/tests/test/index.html` 에 남는다.
@@ -71,7 +72,7 @@ docker compose --profile dev down -v                                            
 - 역할 profile(`web` · `worker`)을 `local` 과 함께 적는다. 한 역할만 띄워 보려면 `local,web` 또는 `local,worker` 다. `local` 만 적으면 역할이 없어 기동이 멈춘다([platform Spec](docs/specs/platform.md#역할))
 - `local` 은 사건 묶기의 임베딩에 로컬 대체물(문자 2-그램 — 의미가 아니라 표면 겹침)을 쓴다. 실제 모델은 테스트와 배포 이미지에서 돈다. 외부 임베딩 방식을 확인하려면 [운영 설정 — 임베딩](docs/operations/configuration.md#임베딩)의 값을 환경 변수로 준다
 - `local` 은 Jev 키가 없으면 고정 규칙의 대체 평가기로 기사를 평가한다. 실제 Jev 로 확인하려면 키를 넣는다 — 환경 변수 `YOZMNEWS_JEV_API_KEY`, 또는 키 파일을 `yozmnews.jev.api-key` 라는 이름으로 둔 디렉터리를 `--spring.config.import=configtree:<디렉터리>/` 로 넘긴다(키 값이 명령줄에 남지 않는다). 다른 설정은 [운영 설정 — 공유 평가](docs/operations/configuration.md#공유-평가)
-- `local` 은 `yozm-local-` 로 시작하는 LLM 키를 공급자에 묻지 않고 받는다 — 접두 뒤의 낱말이 검증 결과다(`yozm-local-valid` 는 성공, `yozm-local-invalid` · `-denied` · `-quota` · `-transient` · `-unexpected` 는 그 실패 종류). 그 밖의 키는 `local` 에서도 실제 공급자(OpenAI · Anthropic)에 묻는다([llm Spec](docs/specs/llm.md#로컬-대체물))
+- `local` 은 `yozm-local-` 로 시작하는 LLM 키를 공급자에 묻지 않고 받는다 — 접두 뒤의 낱말이 검증 결과다(`yozm-local-valid` 는 성공, `yozm-local-invalid` · `-denied` · `-quota` · `-transient` · `-unexpected` 는 그 실패 종류). 그 밖의 키는 `local` 에서도 실제 공급자(OpenAI · Anthropic · OpenRouter)에 묻는다([llm Spec](docs/specs/llm.md#로컬-대체물))
 - `local` 은 다이제스트를 언제나 고정 규칙의 대체 생성기로 만든다 — 실제 키 · 가짜 키와 무관하다([digest Spec](docs/specs/digest.md#로컬-대체물))
 - `local` 은 저장소의 개발용 KEK(`dev/local-kek`)로 LLM 키를 암호화한다 — 개발 DB 의 키만 감싸는 값이고 운영에 쓰지 않는다. 다른 파일을 쓰려면 환경 변수 `YOZMNEWS_CREDENTIAL_KEK_FILE` 을 준다([운영 설정 — LLM 키 암호화](docs/operations/configuration.md#llm-키-암호화))
 - Compose 를 먼저 띄우지 않았으면 앱이 띄우고, 앱이 끝날 때 멈춘다. 먼저 띄워 두었으면 앱이 끝나도 그대로 둔다
@@ -204,6 +205,10 @@ Issue: #12
   - JobRunr 를 올려 새 스크립트가 생기면 `FrameworkSchemaMigrationTests` 가 실패한다. 그 원문을 Flyway 새 버전 파일에 `-- jobrunr-migration:` 구획으로 옮기고, `-- jobrunr-migration-record` 구획에 기록 행을 더한다
   - Spring Modulith 를 올릴 때는 이벤트 발행 레지스트리의 스키마 판이 바뀌었는지 릴리스 노트로 확인한다. 테스트는 지금 쓰는 판의 원문만 대조하므로, 그 원문이 바뀌면 실패하지만 판이 바뀐 것은 알리지 못한다. 원문이 `CREATE TABLE IF NOT EXISTS` 라 새 원문을 옮겨도 이미 있는 테이블은 바뀌지 않는다 — 바뀐 부분을 손으로 쓴 마이그레이션으로 더하고, 대조 테스트의 Modulith 대조를 새 원문에 맞게 고친다
 - 되돌릴 수 없는 스키마 변경은 두 번의 배포로 나눈다(확장 → 축소)
+- 사용자 데이터를 지우는 마이그레이션을 쓰지 않는다. 사용자 데이터가 가리키는 기사 · 태그 · 태그 체계 · 사건 · 스토리라인도 행을 지우지 않고 ID 를 다시 매기지 않는다([ADR-0212](docs/adr/0212-migrations-never-delete-user-data-or-the-shared-rows-and-ids-it-references-and-moved-data-is-checked-by-a-data-test.md)). 보존 대상과 기간은 [data-model.md 보존 정책](docs/data-model.md#보존-정책-초안)에 있다
+  - 꼴을 바꿀 때는 새 자리로 옮긴 뒤 옛 자리를 지운다
+  - 데이터를 옮기거나 고쳐 쓰는 마이그레이션은 데이터 시험을 함께 둔다 — 실제 PostgreSQL 의 별도 스키마에 직전 버전까지 올려 옛 행을 넣고, 끝까지 올린 뒤 옮긴 값을 대조한다(예: `LinkingBandMigrationTests`)
+  - 앱이 설계로 지우거나 바꾸는 경로(탈퇴, 지운 기사 따르기, 스토리라인 구독 따라가기, 태그 선호 따라가기, 보존 정리)는 이 규칙의 대상이 아니다
 
 ### 주석
 
