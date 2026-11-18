@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -25,6 +26,7 @@ import net.yozmnews.digest.DigestRequestStatus;
 import net.yozmnews.digest.DigestRounds;
 import net.yozmnews.digest.DigestSectionView;
 import net.yozmnews.digest.DigestStatus;
+import net.yozmnews.digest.DigestUnresolvedFailure;
 import net.yozmnews.digest.SectionKind;
 import net.yozmnews.digest.SelectionReason;
 import net.yozmnews.digest.ShownDigest;
@@ -39,6 +41,7 @@ import net.yozmnews.platform.UserId;
 import net.yozmnews.tag.TagSetDirectory;
 import net.yozmnews.user.DigestFailureCause;
 import net.yozmnews.user.DigestModelDirectory;
+import net.yozmnews.user.UserDigestSchedules;
 import net.yozmnews.user.UserTimezones;
 import org.jobrunr.scheduling.JobScheduler;
 import org.jspecify.annotations.Nullable;
@@ -54,8 +57,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * 다이제스트 조회 — 실제 PostgreSQL 로, 날짜의 보이는 다이제스트는 그 날짜의 READY 가운데 ID 가 가장 큰 것이고 가장 최근 시도 · 사용량 · 이웃
- * 날짜가 함께 오는지, 날짜 목록이 날짜마다 상태를 늦은 순으로 쪽에 담는지, 수동 생성 상태가 사용자 시간대의 오늘 횟수 · 대상을 내는지 본다. 다른
- * 사용자의 행은 보이지 않는다. 행은 SQL 로 넣는다.
+ * 날짜가 함께 오는지, 날짜 목록이 날짜마다 상태를 늦은 순으로 쪽에 담는지, 수동 생성 상태가 사용자 시간대의 오늘 횟수 · 대상과 오늘 일정
+ * 생성 시각 · 해결되지 않은 마지막 실패를 내는지 본다. 다른 사용자의 행은 보이지 않는다. 행은 SQL 로 넣는다.
  * <p>
  * 수동 생성 상태의 사용자는 `America/Los_Angeles`(PST, UTC−8)이다. 기대값은 손으로 셈한 리터럴이다.
  * <p>
@@ -69,6 +72,8 @@ class DigestDirectoryServiceTests {
 	/** 2026-11-18 12:00 PST */
 	private static final Instant NOW = Instant.parse("2026-11-18T20:00:00Z");
 
+	private static final ZoneId LA = ZoneId.of("America/Los_Angeles");
+
 	@Autowired
 	JobScheduler digestJobs;
 
@@ -80,6 +85,9 @@ class DigestDirectoryServiceTests {
 
 	@Autowired
 	UserTimezones timezones;
+
+	@Autowired
+	UserDigestSchedules schedules;
 
 	@Autowired
 	DigestModelDirectory models;
@@ -125,8 +133,12 @@ class DigestDirectoryServiceTests {
 	}
 
 	private DigestDirectoryService directory() {
-		return new DigestDirectoryService(this.ledger, this.days, this.timezones, this.models, this.transaction,
-				() -> NOW);
+		return directory(NOW);
+	}
+
+	private DigestDirectoryService directory(Instant now) {
+		return new DigestDirectoryService(this.ledger, this.days, this.schedules, this.models, this.transaction,
+				() -> now);
 	}
 
 	private DigestRequestsService requests() {
@@ -268,16 +280,16 @@ class DigestDirectoryServiceTests {
 		manualRow(user, "2026-11-18", Instant.parse("2026-11-18T09:00:00Z"));
 		manualRow(user, "2026-11-18", Instant.parse("2026-11-18T19:00:00Z"));
 
-		assertThat(directory().requestStatus(user)).contains(new DigestRequestStatus(LocalDate.parse("2026-11-18"),
-				true, false, 1, Instant.parse("2026-11-19T08:00:00Z"), LocalDate.parse("2026-11-18"), true));
+		assertThat(directory().requestStatus(user)).contains(new DigestRequestStatus(LocalDate.parse("2026-11-18"), LA,
+				true, false, 1, Instant.parse("2026-11-19T08:00:00Z"), LocalDate.parse("2026-11-18"), true, null, null));
 	}
 
 	@Test
 	void withoutATodayRowARequestMakesTodayAnew() {
 		UserId user = user("digest-view-new@example.com", "VALID");
 
-		assertThat(directory().requestStatus(user)).contains(new DigestRequestStatus(LocalDate.parse("2026-11-18"),
-				true, false, 3, Instant.parse("2026-11-19T08:00:00Z"), LocalDate.parse("2026-11-18"), false));
+		assertThat(directory().requestStatus(user)).contains(new DigestRequestStatus(LocalDate.parse("2026-11-18"), LA,
+				true, false, 3, Instant.parse("2026-11-19T08:00:00Z"), LocalDate.parse("2026-11-18"), false, null, null));
 		// 같은 정본을 부르는 수동 생성도 같은 대상을 만든다
 		assertThat(requests().request(user))
 			.isEqualTo(new DigestRequestOutcome.Requested(LocalDate.parse("2026-11-18"), false));
@@ -288,8 +300,8 @@ class DigestDirectoryServiceTests {
 		UserId user = user("digest-view-again@example.com", "VALID");
 		row(user, "2026-11-18", "EMPTY", null, null, null);
 
-		assertThat(directory().requestStatus(user)).contains(new DigestRequestStatus(LocalDate.parse("2026-11-18"),
-				true, false, 3, Instant.parse("2026-11-19T08:00:00Z"), LocalDate.parse("2026-11-18"), true));
+		assertThat(directory().requestStatus(user)).contains(new DigestRequestStatus(LocalDate.parse("2026-11-18"), LA,
+				true, false, 3, Instant.parse("2026-11-19T08:00:00Z"), LocalDate.parse("2026-11-18"), true, null, null));
 		assertThat(requests().request(user))
 			.isEqualTo(new DigestRequestOutcome.Requested(LocalDate.parse("2026-11-18"), true));
 	}
@@ -299,8 +311,8 @@ class DigestDirectoryServiceTests {
 		UserId user = user("digest-view-later-date@example.com", "VALID");
 		row(user, "2026-11-19", "READY", 100, 20, null);
 
-		assertThat(directory().requestStatus(user)).contains(new DigestRequestStatus(LocalDate.parse("2026-11-18"),
-				true, false, 3, Instant.parse("2026-11-19T08:00:00Z"), LocalDate.parse("2026-11-19"), true));
+		assertThat(directory().requestStatus(user)).contains(new DigestRequestStatus(LocalDate.parse("2026-11-18"), LA,
+				true, false, 3, Instant.parse("2026-11-19T08:00:00Z"), LocalDate.parse("2026-11-19"), true, null, null));
 		assertThat(requests().request(user))
 			.isEqualTo(new DigestRequestOutcome.Requested(LocalDate.parse("2026-11-19"), true));
 	}
@@ -319,6 +331,62 @@ class DigestDirectoryServiceTests {
 		assertThat(invalidStatus).map(DigestRequestStatus::usableModel).contains(false);
 		assertThat(invalidStatus).map(DigestRequestStatus::inProgress).contains(false);
 		assertThat(directory().requestStatus(new UserId(Long.MAX_VALUE))).isEmpty();
+	}
+
+	@Test
+	void beforeTodaysGenerationTimeTheStatusCarriesIt() {
+		UserId user = user("digest-view-upcoming@example.com", "VALID");
+		row(user, "2026-11-17", "READY", 100, 20, null);
+
+		// 2026-11-18 03:16 PST — 생성 시각 03:17 PST(11:17Z) 전
+		assertThat(directory(Instant.parse("2026-11-18T11:16:00Z")).requestStatus(user))
+			.map(DigestRequestStatus::scheduledAt)
+			.contains(Instant.parse("2026-11-18T11:17:00Z"));
+		// 생성 시각과 같은 시각은 전이 아니다
+		assertThat(directory(Instant.parse("2026-11-18T11:17:00Z")).requestStatus(user)).hasValueSatisfying(status -> {
+			assertThat(status.scheduledAt()).isNull();
+			assertThat(status.timezone()).isEqualTo(LA);
+		});
+	}
+
+	@Test
+	void withTodaysRowOrWithoutAUsableModelNoGenerationTimeIsCarried() {
+		UserId today = user("digest-view-upcoming-today@example.com", "VALID");
+		row(today, "2026-11-18", "READY", 100, 20, null);
+		UserId invalid = user("digest-view-upcoming-invalid@example.com", "INVALID");
+		Instant before = Instant.parse("2026-11-18T11:16:00Z");
+
+		assertThat(directory(before).requestStatus(today)).hasValueSatisfying(
+				status -> assertThat(status.scheduledAt()).isNull());
+		assertThat(directory(before).requestStatus(invalid)).hasValueSatisfying(
+				status -> assertThat(status.scheduledAt()).isNull());
+	}
+
+	@Test
+	void theLatestFailureWithoutACoveringRowAfterItIsUnresolved() {
+		UserId user = user("digest-view-unresolved@example.com", "VALID");
+		UserId other = user("digest-view-unresolved-other@example.com", "VALID");
+		row(user, "2026-11-16", "READY", 100, 20, null);
+		row(user, "2026-11-17", "FAILED", null, null, "PROVIDER_UNAVAILABLE");
+		// 진행 중은 끝나지 않아 해결로 치지 않는다
+		row(user, "2026-11-18", "RUNNING", null, null, null);
+		// 다른 사용자의 더 큰 ID 는 보지 않는다
+		row(other, "2026-11-18", "READY", 100, 20, null);
+
+		assertThat(directory().requestStatus(user)).map(DigestRequestStatus::unresolvedFailure)
+			.contains(new DigestUnresolvedFailure(LocalDate.parse("2026-11-17"), Instant.parse("2026-11-18T15:05:00Z")));
+		assertThat(directory().requestStatus(other)).hasValueSatisfying(
+				status -> assertThat(status.unresolvedFailure()).isNull());
+	}
+
+	@Test
+	void anEmptyAfterTheLatestFailureResolvesIt() {
+		UserId user = user("digest-view-resolved@example.com", "VALID");
+		row(user, "2026-11-17", "FAILED", null, null, "PROVIDER_UNAVAILABLE");
+		row(user, "2026-11-18", "EMPTY", null, null, null);
+
+		assertThat(directory().requestStatus(user)).hasValueSatisfying(
+				status -> assertThat(status.unresolvedFailure()).isNull());
 	}
 
 	/** 쓰는 계정 · 설정 행(LA · 03:17) · 그 상태의 OpenAI 키 */

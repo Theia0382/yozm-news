@@ -3,6 +3,7 @@ package net.yozmnews.digest.domain.digest;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -69,6 +70,10 @@ public final class Digest {
 
 	private final @Nullable Instant startedAt;
 
+	/**
+	 * 끝낸 시각 — 저장 정밀도(마이크로초)로 갖는다. 저장한 행의 {@code completed_at} 과 실패 이벤트({@code DigestFailed})의 시각이 같은 값이
+	 * 되어, 독자 화면이 실패 알림과 해결되지 않은 마지막 실패(digest-R40)를 시각으로 맞춘다
+	 */
 	private final @Nullable Instant completedAt;
 
 	@Version
@@ -100,7 +105,7 @@ public final class Digest {
 		this.dispatchToken = Objects.requireNonNull(dispatchToken, "dispatchToken");
 		this.dispatchedAt = Objects.requireNonNull(dispatchedAt, "dispatchedAt");
 		this.startedAt = startedAt;
-		this.completedAt = completedAt;
+		this.completedAt = (completedAt == null) ? null : completedAt.truncatedTo(ChronoUnit.MICROS);
 		this.version = version;
 	}
 

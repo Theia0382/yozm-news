@@ -111,6 +111,24 @@ public class DigestScreenScopeTests {
 	}
 
 	@Test
+	void aUsersUnresolvedFailureIsSeenOnlyThroughTheirOwnSession() throws Exception {
+		SignedInUsers users = new SignedInUsers(this.mockMvc, this.accounts, this.credentials, this.hashing);
+		SignedInUsers.SignedInUser a = users.signIn("digest-failure-a@example.com");
+		SignedInUsers.SignedInUser b = users.signIn("digest-failure-b@example.com");
+		LlmKeyRows.give(this.jdbc, a.id().value());
+		LlmKeyRows.give(this.jdbc, b.id().value());
+		this.rows.digest(a.id().value(), "2026-11-05", "FAILED", null, null, "PROVIDER_UNAVAILABLE");
+
+		// 빈 값끼리 같아 통과하지 않게 A 의 세션으로 A 의 실패가 보임을 먼저 본다
+		this.mockMvc.perform(get("/api/digests/latest").with(a))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.status.unresolvedFailure.digestDate").value("2026-11-05"));
+		this.mockMvc.perform(get("/api/digests/latest").with(b))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.status.unresolvedFailure").isEmpty());
+	}
+
+	@Test
 	void aRequestMakesOnlyTheRequestersRow() throws Exception {
 		SignedInUsers users = new SignedInUsers(this.mockMvc, this.accounts, this.credentials, this.hashing);
 		SignedInUsers.SignedInUser a = users.signIn("digest-request-a@example.com");

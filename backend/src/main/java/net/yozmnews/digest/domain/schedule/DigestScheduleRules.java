@@ -67,11 +67,35 @@ public final class DigestScheduleRules {
 		for (LocalDate date : new LocalDate[] { today, today.minusDays(1) }) {
 			Instant at = generationTime(date, time, zone);
 			boolean inWindow = !now.isBefore(at) && now.isBefore(at.plus(CATCH_UP));
-			if (inWindow && (latest == null || date.isAfter(latest))) {
+			if (inWindow && makesDate(date, latest)) {
 				return Optional.of(date);
 			}
 		}
 		return Optional.empty();
+	}
+
+	/**
+	 * 오늘 일정이 아직 오지 않은 생성 시각 — digest-R40. 그 시간대에서 지금의 날짜를 오늘로, 일정이 오늘을 만들 것(쓸 모델이 있고 그 사용자의 가장
+	 * 늦은 다이제스트 날짜가 오늘보다 앞섬 — digest-R29 와 같은 재료)이고 지금이 오늘 생성 시각 T 전이면 T 다.
+	 * <p>
+	 * 일정 회차의 기간 확인(끝이 시작보다 뒤가 아니면 만들지 않음 — digest-R30)은 보지 않는다. 기간 끝은 언제나 그 행을 만든 시각 이전이라(일정은
+	 * 생성 시각, 수동은 요청 시각) T 가 지금보다 뒤면 직전 덮인 끝보다도 뒤고 기간이 선다.
+	 * @param latest 그 사용자의 가장 늦은 다이제스트 날짜(계기 · 상태 무관) — 없으면 null
+	 * @param usableModel 쓸 모델이 있는가 — 없으면 일정은 만들지 않는다
+	 */
+	public static Optional<Instant> upcomingToday(Instant now, LocalTime time, ZoneId zone, @Nullable LocalDate latest,
+			boolean usableModel) {
+		Objects.requireNonNull(now, "now");
+		Objects.requireNonNull(time, "time");
+		Objects.requireNonNull(zone, "zone");
+		LocalDate today = now.atZone(zone).toLocalDate();
+		Instant at = generationTime(today, time, zone);
+		return (usableModel && makesDate(today, latest) && now.isBefore(at)) ? Optional.of(at) : Optional.empty();
+	}
+
+	/** 일정이 그 날짜를 만들 수 있는가 — 그 사용자의 가장 늦은 다이제스트 날짜보다 뒤(digest-R29) */
+	private static boolean makesDate(LocalDate date, @Nullable LocalDate latest) {
+		return latest == null || date.isAfter(latest);
 	}
 
 }

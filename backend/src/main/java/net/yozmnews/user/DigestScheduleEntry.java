@@ -7,7 +7,7 @@ import java.util.Objects;
 import net.yozmnews.platform.UserId;
 
 /**
- * 사용자 하나의 다이제스트 일정 — {@link DigestScheduleDirectory} 가 낸다. docs/specs/user.md §3
+ * 사용자 하나의 다이제스트 일정 — {@link DigestScheduleDirectory} · {@link UserDigestSchedules} 가 낸다. docs/specs/user.md §3
  *
  * @param user 사용자
  * @param timezone 일정의 기준 시간대(user-R50)

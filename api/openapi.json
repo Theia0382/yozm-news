@@ -6306,19 +6306,33 @@
             "type" : "string",
             "format" : "date-time"
           },
+          "scheduledAt" : {
+            "type" : [ "string", "null" ],
+            "format" : "date-time"
+          },
           "targetDate" : {
             "type" : "string",
             "format" : "date"
+          },
+          "timezone" : {
+            "type" : "string"
           },
           "today" : {
             "type" : "string",
             "format" : "date"
           },
+          "unresolvedFailure" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/DigestUnresolvedFailureResponse"
+            }, {
+              "type" : "null"
+            } ]
+          },
           "usableModel" : {
             "type" : "boolean"
           }
         },
-        "required" : [ "inProgress", "regenerates", "remainingToday", "resetsAt", "targetDate", "today", "usableModel" ]
+        "required" : [ "inProgress", "regenerates", "remainingToday", "resetsAt", "scheduledAt", "targetDate", "timezone", "today", "unresolvedFailure", "usableModel" ]
       },
       "DigestSectionResponse" : {
         "type" : "object",
@@ -6341,6 +6355,20 @@
           }
         },
         "required" : [ "body", "citations", "kind", "title" ]
+      },
+      "DigestUnresolvedFailureResponse" : {
+        "type" : "object",
+        "properties" : {
+          "digestDate" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "failedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        },
+        "required" : [ "digestDate", "failedAt" ]
       },
       "DigestUsageResponse" : {
         "type" : "object",

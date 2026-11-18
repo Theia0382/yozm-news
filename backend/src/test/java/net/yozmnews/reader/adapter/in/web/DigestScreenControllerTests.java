@@ -158,6 +158,29 @@ class DigestScreenControllerTests {
 		assertThat(body).doesNotContain("운영 로그용 실패 메시지").doesNotContain("errorMessage").doesNotContain("요약문 원문");
 	}
 
+	/**
+	 * 수동 생성 상태의 시간대 · 해결되지 않은 마지막 실패. 오늘 일정 생성 시각의 값은 이 계층에 시계를 넣을 수 없어(시스템 시계) 고정 시계의
+	 * 다이제스트 조회 시험이 보고, 여기서는 가장 늦은 날짜가 오늘보다 늦은 행으로 null 만 본다.
+	 */
+	@Test
+	void theStatusCarriesTheTimezoneAndTheUnresolvedFailureUntilACoveringRow() throws Exception {
+		long user = this.reader.id().value();
+		this.rows.digest(user, "2099-01-01", "FAILED", null, null, "PROVIDER_UNAVAILABLE");
+
+		this.mockMvc.perform(get("/api/digests/latest").with(this.reader))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.status.timezone").value("Asia/Seoul"))
+			.andExpect(jsonPath("$.status.scheduledAt").isEmpty())
+			.andExpect(jsonPath("$.status.unresolvedFailure.digestDate").value("2099-01-01"))
+			.andExpect(jsonPath("$.status.unresolvedFailure.failedAt").value("2026-11-05T15:05:00Z"));
+
+		this.rows.digest(user, "2099-01-01", "READY", 100, 20, null);
+
+		this.mockMvc.perform(get("/api/digests/latest").with(this.reader))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.status.unresolvedFailure").isEmpty());
+	}
+
 	@Test
 	void aUserWithoutDigestsHasAnEmptyHomeAndADateWithoutDigestsIsNotFound() throws Exception {
 		this.mockMvc.perform(get("/api/digests/latest").with(this.reader))

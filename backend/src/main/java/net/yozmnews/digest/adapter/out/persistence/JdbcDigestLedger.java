@@ -60,10 +60,8 @@ class JdbcDigestLedger implements DigestLedger {
 
 	@Override
 	public Optional<Instant> lastCoveredEnd(UserId user) {
-		return this.jdbc.sql("""
-				select period_end from digests where user_id = :user and status in ('READY', 'EMPTY')
-				order by period_end desc limit 1
-				""")
+		return this.jdbc.sql("select period_end from digests where user_id = :user and " + CoveringDigestSql.STATUS
+				+ " order by period_end desc limit 1")
 			.param("user", user.value())
 			.query((rs, n) -> rs.getObject(1, OffsetDateTime.class).toInstant())
 			.optional();

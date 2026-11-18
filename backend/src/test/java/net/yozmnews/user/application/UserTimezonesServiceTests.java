@@ -3,10 +3,13 @@ package net.yozmnews.user.application;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Instant;
+import java.time.LocalTime;
 import java.time.ZoneId;
 
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.platform.UserId;
+import net.yozmnews.user.DigestScheduleEntry;
+import net.yozmnews.user.UserDigestSchedules;
 import net.yozmnews.user.UserTimezones;
 import net.yozmnews.user.domain.account.DisplayName;
 import net.yozmnews.user.domain.account.EmailAddress;
@@ -21,8 +24,8 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 사용자 시간대 조회 — 설정 행의 시간대, 설정 행이 없으면 계정을 만들 때의 기본값(Asia/Seoul), 계정이 없으면 빈 값. 실제 PostgreSQL 위에서
- * 계정을 만드는 길로 계정과 설정 행을 만든다.
+ * 사용자 시간대 · 일정 조회 — 설정 행의 시간대 · 생성 시각, 설정 행이 없으면 계정을 만들 때의 기본값(Asia/Seoul · 07:00), 계정이
+ * 없으면 빈 값. 시간대 조회는 일정 조회의 시간대와 같다. 실제 PostgreSQL 위에서 계정을 만드는 길로 계정과 설정 행을 만든다.
  * <p>
  * 지키는 규칙: user-R60
  */
@@ -35,6 +38,9 @@ class UserTimezonesServiceTests {
 
 	@Autowired
 	UserTimezones timezones;
+
+	@Autowired
+	UserDigestSchedules schedules;
 
 	@Autowired
 	AccountProvisioning provisioning;
@@ -56,12 +62,26 @@ class UserTimezonesServiceTests {
 	}
 
 	@Test
+	void theScheduleOfTheSettingsRow() {
+		UserId user = account("schedule-stored@example.com");
+		this.jdbc.sql("update user_settings set timezone = 'America/Los_Angeles', digest_time = '06:30' where user_id = :user")
+			.param("user", user.value())
+			.update();
+
+		assertThat(this.schedules.scheduleOf(user))
+			.contains(new DigestScheduleEntry(user, ZoneId.of("America/Los_Angeles"), LocalTime.of(6, 30)));
+		assertThat(this.timezones.timezoneOf(user)).contains(ZoneId.of("America/Los_Angeles"));
+	}
+
+	@Test
 	void anAccountWithoutASettingsRowHasTheTimezoneOfANewAccount() {
 		UserId user = account("timezone-missing@example.com");
 		this.jdbc.sql("delete from user_tag_preferences where user_id = :user").param("user", user.value()).update();
 		this.jdbc.sql("delete from user_settings where user_id = :user").param("user", user.value()).update();
 
 		assertThat(this.timezones.timezoneOf(user)).contains(ZoneId.of("Asia/Seoul"));
+		assertThat(this.schedules.scheduleOf(user))
+			.contains(new DigestScheduleEntry(user, ZoneId.of("Asia/Seoul"), LocalTime.of(7, 0)));
 		assertThat(this.jdbc.sql("select count(*) from user_settings where user_id = :user")
 			.param("user", user.value())
 			.query(Long.class)
@@ -71,6 +91,7 @@ class UserTimezonesServiceTests {
 	@Test
 	void noAccountHasNoTimezone() {
 		assertThat(this.timezones.timezoneOf(new UserId(Long.MAX_VALUE))).isEmpty();
+		assertThat(this.schedules.scheduleOf(new UserId(Long.MAX_VALUE))).isEmpty();
 	}
 
 	private UserId account(String email) {

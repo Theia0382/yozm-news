@@ -17,7 +17,8 @@ import net.yozmnews.platform.UserId;
 import org.junit.jupiter.api.Test;
 
 /**
- * 다이제스트 상태 전이 — 예약 → 시작 → 끝(READY · EMPTY · FAILED), 시작하지 않고 · 생성 중에 실패로 끝내기, 생성 중 · 끝난 뒤 · 시작 전의 거부. 스프링 없이 돈다.
+ * 다이제스트 상태 전이 — 예약 → 시작 → 끝(READY · EMPTY · FAILED), 시작하지 않고 · 생성 중에 실패로 끝내기, 생성 중 · 끝난 뒤 · 시작 전의 거부,
+ * 끝낸 시각의 저장 정밀도(마이크로초). 스프링 없이 돈다.
  * <p>
  * 지키는 규칙: digest-R1
  */
@@ -83,6 +84,22 @@ class DigestTests {
 		assertThat(abandoned.model()).isEmpty();
 		assertThat(abandoned.usage()).isEmpty();
 		assertThat(abandoned.durationMs()).isEmpty();
+	}
+
+	@Test
+	void theCompletionTimeIsKeptInMicroseconds() {
+		Digest abandoned = scheduled().abandon(DigestFailure.NO_USABLE_MODEL, "쓸 모델이 없다",
+				Instant.parse("2026-11-18T10:51:53.828175417Z"));
+
+		assertThat(abandoned.completedAt()).contains(Instant.parse("2026-11-18T10:51:53.828175Z"));
+	}
+
+	@Test
+	void aCompletionTimeInMicrosecondsStaysAsItIs() {
+		Digest exact = scheduled().abandon(DigestFailure.NO_USABLE_MODEL, "쓸 모델이 없다",
+				Instant.parse("2026-11-18T10:51:53.828175Z"));
+
+		assertThat(exact.completedAt()).contains(Instant.parse("2026-11-18T10:51:53.828175Z"));
 	}
 
 	@Test

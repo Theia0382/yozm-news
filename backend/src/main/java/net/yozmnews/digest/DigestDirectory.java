@@ -39,7 +39,7 @@ public interface DigestDirectory {
 
 	/**
 	 * 수동 생성 상태 — digest-R40. 잠그지 않고 읽은 그 순간의 값이다 — 실제 요청의 판정은 {@link DigestRequests#request} 가 한다.
-	 * @return 계정이 없거나 시간대가 없으면 빈 값
+	 * @return 계정이 없으면 빈 값
 	 */
 	Optional<DigestRequestStatus> requestStatus(UserId user);
 

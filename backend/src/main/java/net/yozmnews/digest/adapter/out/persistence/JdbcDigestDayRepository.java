@@ -9,6 +9,8 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.OptionalLong;
 
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.digest.DigestCitation;
@@ -21,6 +23,7 @@ import net.yozmnews.digest.domain.view.DigestDateRow;
 import net.yozmnews.digest.domain.view.DigestDayRepository;
 import net.yozmnews.digest.domain.view.DigestDayRow;
 import net.yozmnews.digest.domain.view.DigestNeighbors;
+import net.yozmnews.digest.domain.view.FailedAttempt;
 import net.yozmnews.platform.UserId;
 import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -118,6 +121,29 @@ class JdbcDigestDayRepository implements DigestDayRepository {
 			.query((rs, n) -> new DigestDateRow(rs.getObject("digest_date", LocalDate.class), rs.getBoolean("shown"),
 					DigestStatus.valueOf(rs.getString("status"))))
 			.list();
+	}
+
+	@Override
+	public Optional<FailedAttempt> latestFailed(UserId user) {
+		return this.jdbc.sql("""
+				select id, digest_date, completed_at from digests where user_id = :user and status = 'FAILED'
+				order by id desc limit 1
+				""")
+			.param("user", user.value())
+			.query((rs, n) -> new FailedAttempt(rs.getLong("id"), rs.getObject("digest_date", LocalDate.class),
+					instant(rs, "completed_at")))
+			.optional();
+	}
+
+	@Override
+	public OptionalLong latestCoveringId(UserId user) {
+		Optional<Long> id = this.jdbc
+			.sql("select id from digests where user_id = :user and " + CoveringDigestSql.STATUS
+					+ " order by id desc limit 1")
+			.param("user", user.value())
+			.query((rs, n) -> rs.getLong("id"))
+			.optional();
+		return id.map(OptionalLong::of).orElseGet(OptionalLong::empty);
 	}
 
 	private static Instant instant(ResultSet rs, String column) throws SQLException {
