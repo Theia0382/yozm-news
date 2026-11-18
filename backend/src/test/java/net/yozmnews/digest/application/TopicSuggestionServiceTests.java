@@ -46,7 +46,7 @@ import org.springframework.test.context.TestPropertySource;
  * 다이제스트를 끝낸 시각 {@link #COMPLETED} 에 노출 둘 · 좋아요 둘이 있다. 노출 · 반응의 무게 w 가 같아 x = 2w ÷ (2w + 3) 이다 — 정확히 30일
  * (반감기) 뒤면 w = 0.5 라 0.25, 1일 뒤면 약 0.3945(기준 0.35 이상), 10일 뒤면 약 0.3460(기준 미만).
  * <p>
- * 지키는 규칙: digest-R23 · digest-R25 · digest-R41 · digest-R42. 기준 시각과 창 끝은 모두 지금(고정 시계)이다.
+ * 지키는 규칙: digest-R23 · digest-R25 · digest-R41 ~ digest-R43. 기준 시각과 창 끝은 모두 지금(고정 시계)이다.
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest

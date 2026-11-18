@@ -88,7 +88,7 @@ erDiagram
 
 ## 사용자
 
-계정 · 자격 · 복구 코드 · 실패 기록 · 요청 제한 기록 · 화면 내 알림 · 가입 정책 · 초대 · 관심 설정 · 스토리라인 구독 테이블(`users` · `user_password_credentials` · `user_recovery_codes` · `login_failures` · `request_limit_counts` · `user_notices` · `user_feed_status_receipts` · `user_sign_up_policy` · `user_sign_up_policy_changes` · `user_invitations` · `user_settings` · `user_tag_preferences` · `user_tag_preference_events` · `user_excluded_sources` · `user_storyline_subscriptions` · `user_storyline_subscription_events`)은 [user Spec §6](specs/user.md#6-데이터)에 있다. 다이제스트의 최대 후보 수 · 큰 슬롯 수 · 요약 길이와 생성의 추론 강도는 설정 행의 칸이다([user Spec](specs/user.md#관심-설정) user-R56 · R59).
+계정 · 자격 · 복구 코드 · 실패 기록 · 요청 제한 기록 · 화면 내 알림 · 가입 정책 · 초대 · 관심 설정 · 스토리라인 구독 · 구독 제안 거절 테이블(`users` · `user_password_credentials` · `user_recovery_codes` · `login_failures` · `request_limit_counts` · `user_notices` · `user_feed_status_receipts` · `user_sign_up_policy` · `user_sign_up_policy_changes` · `user_invitations` · `user_settings` · `user_tag_preferences` · `user_tag_preference_events` · `user_excluded_sources` · `user_storyline_subscriptions` · `user_storyline_subscription_events` · `user_topic_suggestion_declines`)은 [user Spec §6](specs/user.md#6-데이터)에 있다. 다이제스트의 최대 후보 수 · 큰 슬롯 수 · 요약 길이와 생성의 추론 강도는 설정 행의 칸이다([user Spec](specs/user.md#관심-설정) user-R56 · R59).
 
 ## LLM 키 (BYOK)
 

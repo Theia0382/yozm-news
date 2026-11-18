@@ -23,6 +23,7 @@
 - **다이제스트 조회** — 독자 화면이 날짜마다 보이는 다이제스트(digest-R13) · 그 날짜의 가장 최근 시도 · 사용량 · 이웃 날짜, 다이제스트가 있는 날짜 목록, 수동 생성 상태를 공개 조회(`DigestDirectory`)로 낸다. 화면용 API 는 `reader` 가 낸다(digest-R38 ~ R40, [ADR-0192](../adr/0192-reader-screens-are-composed-by-the-reader-module-over-module-public-queries.md) · [ADR-0238](../adr/0238-a-digest-date-shows-the-visible-digest-with-the-latest-attempt-and-the-list-holds-every-date-with-a-state.md))
 - **관심도** — 사용자 × 주제 중분류 × 기준 시각의 관심 크기를 신호 이력(좋아요 / 싫어요 · 주제 구독 변경 · 스토리라인 구독 변경)과 노출 기록(인용)에서 조회할 때 계산한다 — 저장하지 않는다(digest-R23 ~ R25)
 - **관심사 히스토리** — 기준 시각마다 관심도와 같은 산식으로 계산한 주제 관심, 이웃 기준 시각 사이의 새로 생긴 관심 · 사라진 관심, 그 사이 사용자가 직접 바꾼 주제 구독을 공개 조회(`InterestHistory`)로 낸다 — 화면용은 사용자 시간대의 주 · 월 기간, 리포트용은 부르는 쪽의 기준 시각 목록. 저장하지 않는다(digest-R34 ~ R37)
+- **구독 제안** — 구독하지 않은 주제 중분류 가운데 지금 관심이 제안 기준 이상이고 거절에 막히지 않은 것을 공개 조회(`TopicSuggestions`)로 낸다. 거절의 기록은 `user` 의 것이고, 거절 때의 관심은 `user` 가 선언한 공급 인터페이스(`TopicInterestNow`)를 구현해 답한다. 저장하지 않는다(digest-R41 ~ R43)
 
 하지 않는 것:
 
@@ -51,10 +52,13 @@
 | 관심 | 주제 중분류마다 신호와 노출로 계산한 −1 ~ 1 의 값(관심 x) — 신호가 없으면 0(digest-R23) |
 | 관심도 가중치 | 관심을 옮긴 0.5 ~ 1.5 의 값 — 신호가 없으면 1(중립). 기사의 가중치는 그 기사 주제 중분류 가중치의 평균이다(digest-R23) |
 | 노출 | 그 사용자의 `READY` 다이제스트(같은 날짜의 덮인 것 포함)가 인용한 기사 — 관심도의 분모. 받은 소식과 다른 정의다(digest-R24) |
-| 기준 시각 | 관심도의 감쇠를 재는 시각 — 다이제스트는 기간 끝, 관심사 히스토리는 기간 끝(진행 중인 기간은 부르는 시각)(digest-R25 · R35) |
-| 창 | 기준 시각 하나의 관심을 계산할 때 쓰는 재료 행의 시각 범위 — [기준 시각 − 120일, 창 끝). 창 끝은 다이제스트가 부르는 시각, 관심사 히스토리가 기준 시각이다(digest-R25 · R35) |
+| 기준 시각 | 관심도의 감쇠를 재는 시각 — 다이제스트는 기간 끝, 관심사 히스토리는 기간 끝(진행 중인 기간은 부르는 시각), 구독 제안은 부르는 시각(digest-R25 · R35 · R41) |
+| 창 | 기준 시각 하나의 관심을 계산할 때 쓰는 재료 행의 시각 범위 — [기준 시각 − 120일, 창 끝). 창 끝은 다이제스트 · 구독 제안이 부르는 시각, 관심사 히스토리가 기준 시각이다(digest-R25 · R35 · R41) |
 | 관심 있음 | 관심이 "관심 있음"의 하한(θ) 이상인 주제 — 새로 생긴 관심 · 사라진 관심은 이웃 기간의 관심 있음을 견준 것이다(digest-R36) |
 | 드러난 주제 | 보인 기간 가운데 한 번이라도 관심의 크기가 θ 이상인 주제(관심 쪽 · 싫어요 쪽) — 화면이 펼쳐 보이는 행(digest-R36) |
+| 구독 제안 | 구독 행이 덮지 않은 활성 중분류 가운데 지금 관심이 제안 기준 이상이고 거절에 막히지 않은 것 — 화면이 구독을 권한다(digest-R41) |
+| 제안 기준 | 구독 제안의 관심 하한 — "관심 있음" θ 와 따로 둔 값(digest-R41) |
+| 거절 기간 | 거절한 구독 제안을 다시 내지 않는 기간 — 지난 뒤에도 거절 때보다 관심이 커야 다시 낸다(digest-R41) |
 | 생성의 입력 | 후보 선별이 낸 사용자 프로필 · 후보 기사의 값 · 큰 스토리라인 묶음(`DigestInput`) — 토큰 어림에 쓴 글과 같은 읽기다(digest-R22) |
 | 큰 스토리라인 묶음 | 큰 판정 행 하나에서 들어온 큰 슬롯 후보 — 프롬프트에서 요청마다의 별칭(`S1` …)과 이름(그 스토리라인 대표 사건의 대표 기사 제목)으로 보인다(digest-R19 · R26) |
 | 프롬프트 | 지시 구획 · 사용자 구획(JSON 문서) · 출력 JSON Schema 문서(digest-R26) |
@@ -67,7 +71,7 @@
 
 ## 3. 공개 인터페이스
 
-모듈 최상위 패키지 `net.yozmnews.digest` 의 공개 타입은 받은 소식의 공개 조회 `ReceivedArticles`, 수동 생성의 공개 API `DigestRequests` 와 그 결과 `DigestRequestOutcome`, 다이제스트 조회 `DigestDirectory` 와 그 값(`DigestDay` · `ShownDigest` · `DigestSectionView` · `DigestCitation` · `DigestAttempt` · `DigestDayUsage` · `DigestDates` · `DigestDateEntry` · `DigestDayState` · `DigestRequestStatus` · `DigestUnresolvedFailure`), 관심사 히스토리의 공개 조회 `InterestHistory` 와 그 값(`InterestHistorySpan` · `InterestTimeline` · `InterestPeriodView` · `InterestPoint` · `TopicSubscriptionStep`), 공개 값이 쓰는 enum 넷(`DigestStatus` · `DigestFailure` · `SelectionReason` · `SectionKind` — 상태 · 실패 코드 · 선정 이유 · 섹션 종류, digest-R1 · R7 · R8)이다. HTTP 엔드포인트는 없다 — 화면용 API 는 `reader` 가 낸다. 받는 이벤트는 `article` 의 `ArticlesRemoved` 다(§4 들어오는 쪽). 내는 이벤트는 `user` 가 선언한 `DigestFailed` 다(digest-R33 — [user Spec](user.md#digestfailed)). 다른 모듈이 선언한 인터페이스 하나를 구현한다 — `feedback` 의 `DigestCitations`([feedback Spec](feedback.md#digestcitations)). 구현은 `application` 의 `DigestCitationsService` 다(digest-R14).
+모듈 최상위 패키지 `net.yozmnews.digest` 의 공개 타입은 받은 소식의 공개 조회 `ReceivedArticles`, 수동 생성의 공개 API `DigestRequests` 와 그 결과 `DigestRequestOutcome`, 다이제스트 조회 `DigestDirectory` 와 그 값(`DigestDay` · `ShownDigest` · `DigestSectionView` · `DigestCitation` · `DigestAttempt` · `DigestDayUsage` · `DigestDates` · `DigestDateEntry` · `DigestDayState` · `DigestRequestStatus` · `DigestUnresolvedFailure`), 관심사 히스토리의 공개 조회 `InterestHistory` 와 그 값(`InterestHistorySpan` · `InterestTimeline` · `InterestPeriodView` · `InterestPoint` · `TopicSubscriptionStep`), 구독 제안의 공개 조회 `TopicSuggestions` 와 그 값 `TopicSuggestionList`, 공개 값이 쓰는 enum 넷(`DigestStatus` · `DigestFailure` · `SelectionReason` · `SectionKind` — 상태 · 실패 코드 · 선정 이유 · 섹션 종류, digest-R1 · R7 · R8)이다. HTTP 엔드포인트는 없다 — 화면용 API 는 `reader` 가 낸다. 받는 이벤트는 `article` 의 `ArticlesRemoved` 다(§4 들어오는 쪽). 내는 이벤트는 `user` 가 선언한 `DigestFailed` 다(digest-R33 — [user Spec](user.md#digestfailed)). 다른 모듈이 선언한 인터페이스 둘을 구현한다 — `feedback` 의 `DigestCitations`([feedback Spec](feedback.md#digestcitations) — 구현 `application` 의 `DigestCitationsService`, digest-R14)와 `user` 의 `TopicInterestNow`([user Spec](user.md#topicinterestnow) — 구현 `application` 의 `TopicSuggestionService`, digest-R43).
 
 ### ReceivedArticles
 
@@ -215,6 +219,29 @@ public record TopicSubscriptionStep(Instant at, TopicSubscriptionAction action, 
   - 트랜잭션 없이 다른 모듈의 조회를 차례로 부른다. 역할 애너테이션이 없다(두 역할 공통). 저장하지 않는다
   - 조회 사이 태그 체계 활성 전환으로 재료의 키 버전이 어긋나면 처음부터 다시 하고, `ActiveEvaluations.ATTEMPTS` 번 모두 어긋나면 `IllegalStateException` 이다(digest-R37)
 
+### TopicSuggestions
+
+구독 제안 — 구독하지 않은 주제 중분류 가운데 지금 관심이 제안 기준 이상이고 거절에 막히지 않은 것(digest-R41 · R42). `reader` 가 다이제스트 홈의 제안 카드에 엮는다. 구현은 `application` 의 `TopicSuggestionService` 다.
+
+```java
+public interface TopicSuggestions {
+    Optional<TopicSuggestionList> suggestionsOf(UserId user);
+}
+
+public record TopicSuggestionList(TagSetId tagSet, List<String> subtopics) {}
+```
+
+| 멤버 | 뜻 |
+|---|---|
+| `suggestionsOf` | 지금 제안할 주제 — 계정이 없으면 빈 값, 제안이 없으면 빈 목록 |
+| `TopicSuggestionList.tagSet` | 키의 태그 체계 버전 — 화면이 수락(태그 선호 저장) · 거절 요청에 싣고, 이름은 그 버전으로 읽는다 |
+| `TopicSuggestionList.subtopics` | 제안할 활성 중분류 전체 키 — 관심 내림차순, 같으면 태그 체계 순 |
+
+- 계약
+  - 사용자를 인자로 받는다 — 화면 경로에서는 세션 사용자로만 부른다([ADR-0248](../adr/0248-the-digest-interests-and-topic-suggestion-queries-may-be-called-on-screen-paths-with-the-session-user.md))
+  - 트랜잭션 없이 다른 모듈의 조회를 차례로 부른다. 역할 애너테이션이 없다(두 역할 공통). 저장하지 않는다
+  - 조회 사이 태그 체계 활성 전환으로 관심 설정 · 거절 · 관심도 재료의 키 버전이 어긋나면 처음부터 다시 하고, `ActiveEvaluations.ATTEMPTS` 번 모두 어긋나면 `IllegalStateException` 이다(digest-R42)
+
 ## 4. 내부 구조
 
 ### 개관
@@ -227,7 +254,7 @@ public record TopicSubscriptionStep(Instant at, TopicSubscriptionAction action, 
 | `domain/selection` | 후보 선별의 순수 규칙 — 상수의 정본(`SelectionRules` · `CandidateCost`), 평가 키를 활성 키로 풀기(`ActiveKeys`), 사용자 제외(싫어요 포함) · 구독 행 대조(`UserFilter`), 구독 필터(`SubscriptionFilter`) · 관심도를 곱한 순위(`CandidateRank`), 큰 슬롯(`BigSlotPicker` — 기사마다 큰 판정 행의 위치), 사건 단위 중복 제거(`EventDedup`), 다양성 몫(`DiversityQuota`), 예산 자르기(`BudgetCut`), 단계 잇기와 선정 이유 · 행마다 묶기(`CandidateSelector`), 값(`ActiveEvaluation` · `ArticleFacts` · `Shortlist`) |
 | `domain/input` | 생성의 입력(`DigestInput`)과 그 값(`DigestProfile` · `CandidateArticle` · `StorylineGroup`) |
 | `domain/prompt` | 프롬프트 구성의 정본(`DigestPrompts`), 상수 · 길이 기준의 정본(`PromptRules`), 값(`DigestPrompt`) |
-| `domain/interest` | 관심도 · 관심사 히스토리의 순수 규칙 — 상수의 정본(`InterestRules`), 산식(`InterestFormula` — 관심 `InterestLevels` 와 그 가중치 변환), 신호 고르기(`InterestSignals`), 스토리라인의 주제 몫(`StorylineTopics`), 창 고르기(`InterestWindow`), 기간 경계(`InterestPeriods`), 생김 · 사라짐 · 드러남(`InterestShifts`), 기준 시각마다의 관심과 변화(`InterestTimelines`), 값(`TopicInterests` · `ExposedArticle` · `SubscriptionSignal` · `ExposureRow` · `InterestRecord` · `InterestPeriod`) |
+| `domain/interest` | 관심도 · 관심사 히스토리의 순수 규칙 — 상수의 정본(`InterestRules`), 산식(`InterestFormula` — 관심 `InterestLevels` 와 그 가중치 변환), 신호 고르기(`InterestSignals`), 스토리라인의 주제 몫(`StorylineTopics`), 창 고르기(`InterestWindow`), 기간 경계(`InterestPeriods`), 생김 · 사라짐 · 드러남(`InterestShifts`), 기준 시각마다의 관심과 변화(`InterestTimelines`), 구독 제안 판정(`TopicSuggestionRule`), 값(`DeclinedTopic` · `TopicInterests` · `ExposedArticle` · `SubscriptionSignal` · `ExposureRow` · `InterestRecord` · `InterestPeriod`) |
 | `domain/exposure` | 노출 저장소(`ExposureRepository` — 계약이 digest-R24 의 정본) |
 | `domain/output` | 출력 서술 · 상한의 정본(`DigestOutputSchema` — 서술 마디 `OutputShape` · 처분 `OverLimit` · `OnBlank`), 읽기의 정본(`DigestOutputReader`), 인용 검증의 정본(`CitationCheck`), 값(`OutputRead` · `DigestDraft` · `StoryDraft` · `HeadlineDraft` · `CitationResult` · `CitedDigest` · `CitedStory` · `CitedHeadline` · `CitationDrops`) |
 | `domain/generator` | 생성기 포트(`DigestGenerator`)와 그 요청 · 결과(`DigestRequest` · `GenerationOutcome` · `TokenUsage`), 생성 한 번의 판정(`GenerationVerdict`), 관문 실패 종류의 옮기기(`GenerationFailures`) |
@@ -235,7 +262,7 @@ public record TopicSubscriptionStep(Instant at, TopicSubscriptionAction action, 
 | `domain/removal` | 지운 기사 따르기의 판단(`RemovalFollowUp`), 내용 행 정리 저장소(`DigestContentCleanup`), 값(`SectionCitations`) |
 | `domain/receipt` | 받은 소식 저장소(`ReceiptRepository` — 계약이 받은 날짜의 정본) |
 | `domain/view` | 다이제스트 조회의 판단 — 날짜 보기 만들기(`DigestDays`) · 날짜 상태와 날짜 목록 한 쪽(`DigestDayStates`) · 해결되지 않은 마지막 실패(`UnresolvedFailures`)의 정본, 조회 저장소(`DigestDayRepository`), 값(`DigestDayRow` · `DigestDateRow` · `DigestNeighbors` · `FailedAttempt`) |
-| `application` | 생성 유스케이스(`DigestGeneration`)와 끝낸 행 저장의 정본(`DigestEndings`), 일정 회차(`DigestScheduling`) · 생성 작업(`DigestRun`) · 거두기(`StalledDigests`) · 수동 생성(`DigestRequestsService`)과 수동 생성 대상 · 오늘 횟수 읽기의 정본(`ManualTargets`) · 작업 등록의 정본(`DigestDispatch`), 다이제스트 조회 공개 조회의 구현(`DigestDirectoryService`), 후보 선별(`CandidateSelection`)과 그 재료 — 평가를 활성 키로 읽기(`ActiveEvaluations`) · 관심도 재료 읽기(`InterestMaterials`), 관심사 히스토리 공개 조회의 구현(`InterestHistoryService`), 지운 기사 따르기(`DigestArticleRemoval`)와 그 리스너, 후보 행 보존 정리(`CandidateCleanup`), 받은 소식 공개 조회의 구현(`ReceivedArticlesService`), 인용 확인의 구현(`DigestCitationsService`) |
+| `application` | 생성 유스케이스(`DigestGeneration`)와 끝낸 행 저장의 정본(`DigestEndings`), 일정 회차(`DigestScheduling`) · 생성 작업(`DigestRun`) · 거두기(`StalledDigests`) · 수동 생성(`DigestRequestsService`)과 수동 생성 대상 · 오늘 횟수 읽기의 정본(`ManualTargets`) · 작업 등록의 정본(`DigestDispatch`), 다이제스트 조회 공개 조회의 구현(`DigestDirectoryService`), 후보 선별(`CandidateSelection`)과 그 재료 — 평가를 활성 키로 읽기(`ActiveEvaluations`) · 관심도 재료 읽기(`InterestMaterials`), 관심사 히스토리 공개 조회의 구현(`InterestHistoryService`), 지금의 관심(`CurrentInterests`)과 구독 제안 공개 조회 · `user` 의 `TopicInterestNow` 의 구현(`TopicSuggestionService`), 지운 기사 따르기(`DigestArticleRemoval`)와 그 리스너, 후보 행 보존 정리(`CandidateCleanup`), 받은 소식 공개 조회의 구현(`ReceivedArticlesService`), 인용 확인의 구현(`DigestCitationsService`) |
 | `adapter/out/persistence` | 후보 행 · 내용 행 정리 · 받은 소식 · 인용 확인 · 노출 저장소 · 행 조회 · 다이제스트 조회의 JdbcClient 구현, 보이는 다이제스트 조건의 정본(`ShownDigestSql`) · 기간을 덮는 상태 조건의 정본(`CoveringDigestSql`), 사용자 잠금의 PostgreSQL 구현 |
 | `adapter/out/job` | 생성 작업 등록 포트의 JobRunr 구현(`JobRunrDigestJobQueue`) — 역할 애너테이션 없음 |
 | `adapter/out/llm` | 실제 생성기(`LlmDigestGenerator`)와 그 결선 — profile `local` 밖 |
@@ -274,7 +301,7 @@ sequenceDiagram
 - 반복 작업 — `CandidateCleanupJob`(작업 역할, 하루마다 — ID `digest-candidate-cleanup`, 실패해도 재시도하지 않는다 — 다음 회차가 잇는다). `CandidateCleanup` 을 부른다(digest-R11)
 - 반복 작업 — `ScheduleDueDigestsJob`(작업 역할, 1분마다 — ID `schedule-due-digests`) → `DigestScheduling`(digest-R29), `RecoverStalledDigestsJob`(작업 역할, 5분마다 — ID `recover-stalled-digests`) → `StalledDigests`(digest-R32). 둘 다 재시도하지 않는다 — 다음 회차가 잇는다
 - 생성 작업 — `GenerateDigestJob.run(digestId, token)`(작업 역할 — 작업 ID 는 등록 토큰, 재시도하지 않는다) → `DigestRun`(digest-R29). 등록은 일정 회차 · 수동 생성 · 거두기가 커밋 뒤 `DigestDispatch` 로 한다
-- 공개 API — `DigestRequests`(digest-R31) · 공개 조회 `DigestDirectory`(digest-R38 ~ R40). 부르는 쪽은 `reader` 의 화면용 처리기다. 컨트롤러는 없다
+- 공개 API — `DigestRequests`(digest-R31) · 공개 조회 `DigestDirectory`(digest-R38 ~ R40) · `TopicSuggestions`(digest-R42). 부르는 쪽은 `reader` 의 화면용 처리기다. `user` 의 거절 처리기가 `TopicInterestNow`(digest-R43)를 부른다. 컨트롤러는 없다
 
 ### `application`
 
@@ -295,6 +322,8 @@ sequenceDiagram
 - `ActiveEvaluations` — 기사들의 평가를 `ArticleEvaluations.MAX_ARTICLES` 씩 읽고 평가 버전마다 계보 표를 한 번 읽어 활성 키로 푼다(`ActiveKeys`) — 표의 활성 버전이 맞출 버전과 다르면 빈 값. 후보 선별 · 관심도의 노출 기사 · 스토리라인 대표가 함께 쓴다. 활성 버전이 어긋날 때의 전체 시도 수 `ATTEMPTS`(2)의 정본이다(digest-R16 · R37)
 - `InterestMaterials` — 관심도 재료 읽기(`read(UserId, TagSetId, Instant from, Instant to)` → `Optional<InterestRecord>`) — 범위 하나에서 노출 행(`ExposureRepository`), `feedback` 의 `ArticleFeedback.changes`, `user` 의 `TopicSubscriptionHistory` · `StorylineSubscriptionDirectory.changes`, `storyline` 의 `StorylineDirectory.events` → `event` 의 `EventDirectory.representativesOfAll` → `ActiveEvaluations` 를 읽어 재료로 낸다 — 계산하지 않는다. 트랜잭션 없음, 키 버전이 어긋나면 빈 값. 사용자를 인자로 받는다 — 화면 경로에서는 세션 사용자로만(digest-R25)
 - `InterestHistoryService` — `InterestHistory` 의 구현. `user` 의 `UserTimezones` 로 계정 · 시간대를 읽고, `tag` 의 `TagSetDirectory.activeTagSet` 으로 맞출 버전을, `InterestMaterials` 로 첫 기준 시각의 창 시작부터 마지막 기준 시각까지의 재료를 한 번 읽어 `InterestPeriods` · `InterestTimelines` 에 넘긴다. 트랜잭션 없음, 역할 애너테이션 없음, 시계는 `InstantSource`(digest-R34 ~ R37)
+- `CurrentInterests` — 지금의 관심 — 기준 시각과 창 끝을 모두 부르는 시각으로 두고 `InterestMaterials` 로 읽어 `InterestWindow.levels` 로 낸다. 재료 키 버전이 어긋나면 빈 값. 구독 제안 조회와 거절 때 관심이 함께 쓰는 정본이다(digest-R41 · R43)
+- `TopicSuggestionService` — `TopicSuggestions` 와 `user` 의 `TopicInterestNow` 의 구현. 제안 조회는 `user` 의 `DigestInterestsDirectory`(구독한 중분류) · `TopicSuggestionDeclines`(거절)와 `CurrentInterests` · `tag` 의 `TagSetDirectory.names`(체계 순서)를 읽어 `TopicSuggestionRule` 에 넘긴다. 트랜잭션 없음, 역할 애너테이션 없음, 시계는 `InstantSource`(digest-R41 ~ R43)
 - `DigestCitationsService` — `feedback` 의 `DigestCitations` 의 구현. 다이제스트 ID 가 1 보다 작으면 거짓이고 그 밖은 저장소에 맡긴다. 읽기 전용 트랜잭션(부르는 쪽의 트랜잭션이 있으면 거기에 든다), 역할 애너테이션 없음(digest-R14)
 
 ### `domain`
@@ -331,7 +360,8 @@ sequenceDiagram
 - `UserFilter` · `SubscriptionFilter` · `CandidateRank` · `BigSlotPicker` · `EventDedup` · `DiversityQuota` · `BudgetCut` · `CandidateSelector` — 후보 선별 규칙의 정본, 규칙마다 하나(digest-R17 ~ R22). `CandidateRank.order(TopicInterests)` 가 관심도를 곱한 순위다. `ArticleFacts` 는 그 사용자의 싫어요 여부(`disliked`)를 싣고 `ArticleFacts.of(ActiveEvaluation, …)` 로 만든다
 - `DigestInput` — 생성의 입력 — 같은 기사 두 번 · 후보 밖의 묶음 기사 · 두 묶음에 든 기사를 거부한다(digest-R22)
 - `ActiveKeys` — 평가 키(주제 중분류 · 지역 · 대표 형식)를 계보 표로 활성 키로 푸는 정본(`ActiveEvaluation`)(digest-R16)
-- `InterestRules` · `InterestFormula` · `InterestLevels` · `TopicInterests` — 관심도 상수(θ `PRESENCE_THRESHOLD` 포함) · 산식 · 관심과 가중치 변환의 정본(digest-R23 · R36)
+- `InterestRules` · `InterestFormula` · `InterestLevels` · `TopicInterests` — 관심도 상수(θ `PRESENCE_THRESHOLD` · 제안 기준 `SUGGESTION_THRESHOLD` · 거절 기간 `SUGGESTION_DECLINE_PERIOD` 포함) · 산식 · 관심과 가중치 변환의 정본(digest-R23 · R36 · R41)
+- `TopicSuggestionRule` — 구독 제안 판정과 순서의 정본(값 `DeclinedTopic`) — 제안할 중분류가 순서 표에 없으면 `IllegalArgumentException`(digest-R41)
 - `InterestSignals` · `StorylineTopics` — 관심 신호로 쓸 행 고르기(사용자가 바꾼 주제 구독 행 `subscriberTopicChanges` 포함) · 스토리라인의 주제 몫의 정본(digest-R25)
 - `InterestWindow` — 창 시작(`start`)과 창 안 행 고르기의 정본(digest-R25 · R35)
 - `InterestPeriods` · `InterestShifts` · `InterestTimelines` — 관심사 히스토리의 기간 경계 · 생김 · 사라짐 · 드러남 · 기준 시각마다의 관심과 변화의 정본(digest-R34 ~ R36)
@@ -592,6 +622,19 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
   - 기간마다의 주제 구독 변경 = 앞 기준 시각 이상 · 이 기준 시각 미만에 원인이 사용자이고 푼 중분류가 있는 주제 구독 이력 행(`InterestSignals.subscriberTopicChanges` — 관심 신호와 같은 고르기). 좋아요 / 싫어요 · 스토리라인 구독 이력은 행으로 내지 않는다
 - **digest-R37** — 조회(`InterestHistoryService`): 계정이 없으면(`UserTimezones` 가 빈 값) 빈 값이다. 맞출 버전은 그때의 활성 버전이고, 재료의 키 버전이 어긋나면 처음부터 다시 해 `ActiveEvaluations.ATTEMPTS` 번 모두 어긋나면 `IllegalStateException` 이다. 기준 시각 조건(둘 이상 · 시간 순 — 같은 시각 허용, 앞이 뒤보다 늦으면 `IllegalArgumentException`)은 재료를 읽기 전에 본다. 리포트는 백그라운드 작업으로 `at` 을 자기 경계로 부른다
 
+### 구독 제안
+
+판단의 이유는 [ADR-0245](../adr/0245-a-topic-suggestion-is-made-when-the-current-interest-of-an-unsubscribed-subtopic-reaches-its-own-threshold.md) · [ADR-0246](../adr/0246-a-declined-topic-suggestion-returns-only-after-a-period-and-a-higher-interest-and-a-decline-is-not-an-interest-signal.md) · [ADR-0247](../adr/0247-topic-suggestion-declines-are-kept-by-user-with-the-recorded-version-and-digest-answers-the-interest-at-decline-through-an-interface-declared-by-user.md) · [ADR-0248](../adr/0248-the-digest-interests-and-topic-suggestion-queries-may-be-called-on-screen-paths-with-the-session-user.md) · [ADR-0028](../adr/0028-explicit-signals-and-interest-weighted-candidates.md)에 있다. 기준 · 기간은 측정 전 목표다([open-questions.md](../open-questions.md) "운영하면서 결정" 24번).
+
+- **digest-R41** — 판정(`TopicSuggestionRule` · `InterestRules`): 지금의 관심(기준 시각 = 창 끝 = 부르는 시각 — digest-R23 의 산식 · digest-R25 의 창)이 있는 활성 중분류 t 가운데 다음을 모두 지나는 것을 제안한다
+  - 관심 x ≥ `SUGGESTION_THRESHOLD` 0.35 — "관심 있음" θ 와 따로 둔 값이다
+  - 구독 행이 덮는 중분류가 아니다 — 대분류 구독은 하위 전체를 덮는다
+  - 거절이 없거나, 거절 시각 + `SUGGESTION_DECLINE_PERIOD` 90일이 되었고(그 시각 포함) 지금 x 가 거절 때 x 보다 엄격히 크다 — 같거나 작으면 내지 않는다. 거절 때 x 가 상한 1 이면 다시 내지 않는다
+  - 순서는 관심 내림차순, 같으면 태그 체계 순(`TagSetNames.topicOrder`)이다
+  - 구독하지 않은 중분류의 노출은 큰 슬롯 기사와, 구독한 중분류와 함께 붙은 구독 후보에서 생긴다 — 한 기사의 반응은 붙은 중분류마다 그대로 든다(digest-R23). 제안은 큰 판정을 직접 부르지 않는다. 거절은 관심 재료가 아니다
+- **digest-R42** — 조회(`TopicSuggestionService.suggestionsOf`): `user` 의 `DigestInterestsDirectory` 가 빈 값이면(계정 없음) 빈 값이다. 맞출 버전은 그 관심 설정의 키 버전이고, `TopicSuggestionDeclines` 가 낸 버전이 다르거나 관심도 재료(`CurrentInterests`)의 키 버전이 다르면 처음부터 다시 해 `ActiveEvaluations.ATTEMPTS` 번 모두 어긋나면 `IllegalStateException` 이다. 구독한 중분류는 구독 행의 덮는 중분류 합집합, 순서 표는 그 버전의 `TagSetDirectory.names` 다. 저장하지 않는다
+- **digest-R43** — 거절 때 관심(`TopicSuggestionService.levelOf` — `user` 의 `TopicInterestNow` 구현): 주어진 버전이 지금 활성 버전과 다르거나 계정이 없으면(`UserTimezones` 가 빈 값) 빈 값이다. 아니면 `CurrentInterests` 로 그 버전의 지금 관심을 내어 그 중분류의 x 를 낸다 — 신호가 없으면 0, 재료의 키 버전이 어긋나면 빈 값(다시 하지 않는다 — 부르는 쪽이 버전이 바뀐 것으로 다룬다)
+
 ### 로컬 대체물
 
 판단의 이유는 [ADR-0187](../adr/0187-the-digest-generators-local-substitute-always-stands-in-the-local-profile-and-real-generators-register-only-outside-it.md) · [ADR-0057](../adr/0057-local-substitutes-registered-only-in-local-profile-without-operator-switch.md)에 있다.
@@ -745,3 +788,7 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
 | [0238](../adr/0238-a-digest-date-shows-the-visible-digest-with-the-latest-attempt-and-the-list-holds-every-date-with-a-state.md) | 날짜 보기는 보이는 다이제스트와 가장 최근 시도를 함께 내고, 날짜 목록은 다이제스트가 있는 모든 날짜를 상태와 함께 낸다 |
 | [0239](../adr/0239-digest-screens-show-tokens-of-the-visible-digest-and-the-sum-of-every-attempt-of-the-date-without-prices.md) | 토큰은 보이는 다이제스트의 것과 그 날짜 모든 시도의 합을 보이고 금액으로 바꾸지 않는다 |
 | [0240](../adr/0240-digest-failures-show-the-cause-action-and-the-code-and-never-the-failure-message.md) | 실패는 갈래의 할 일과 코드의 무슨 일 두 층으로 보이고, 실패 메시지는 화면에 내지 않는다 |
+| [0245](../adr/0245-a-topic-suggestion-is-made-when-the-current-interest-of-an-unsubscribed-subtopic-reaches-its-own-threshold.md) | 구독 제안은 구독하지 않은 활성 중분류의 지금 관심이 "관심 있음" 기준과 따로 둔 제안 기준 이상일 때 낸다 |
+| [0246](../adr/0246-a-declined-topic-suggestion-returns-only-after-a-period-and-a-higher-interest-and-a-decline-is-not-an-interest-signal.md) | 거절한 구독 제안은 기간이 지나고 거절 때보다 관심이 커져야 다시 내고, 거절은 관심 신호가 아니다 |
+| [0247](../adr/0247-topic-suggestion-declines-are-kept-by-user-with-the-recorded-version-and-digest-answers-the-interest-at-decline-through-an-interface-declared-by-user.md) | 거절은 `user` 가 갖고, 거절 때 관심은 `user` 가 선언한 공급 인터페이스를 이 모듈이 구현해 답한다 |
+| [0248](../adr/0248-the-digest-interests-and-topic-suggestion-queries-may-be-called-on-screen-paths-with-the-session-user.md) | 다이제스트가 읽는 관심 설정과 구독 제안의 조회는 화면 경로에서 세션 사용자로 부를 수 있다 |

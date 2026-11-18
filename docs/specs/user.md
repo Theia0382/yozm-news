@@ -20,7 +20,8 @@
 - **정리** — 만료 세션과 오래된 실패 기록(로그인 · 복구), 끝난 요청 제한 창, 읽은 지 오래된 알림을 지운다
 - **관심 설정** — 사용자마다 설정 행 하나(선호의 체계 버전 · 일정 · 자유 텍스트 관심사 · 고른 모델 · 변화 리포트 · 다이제스트 분량)와 태그 선호(주제 구독 · 지역 제외 · 형식 제외)의 현재 상태 · 추가 전용 이력, 제외 소스. 계정을 만들 때 기본값을 넣고(설정 행이 없는 계정은 기동 때 채운다), 태그 체계의 활성 전환을 따라 선호를 활성 키로 고쳐 쓰고 알린다. 고른 모델과 쓸 모델을 정한다
 - **스토리라인 구독** — 사용자마다 따라갈 스토리라인의 현재 상태와 추가 전용 이력, 구독 · 해제 · 내 구독(상한 100) · 내 구독 이력(사용자가 직접 한 구독 · 해제). `storyline` 이 합치거나 지운 스토리라인을 알리면(`StorylinesRetired`) 구독을 남는 스토리라인으로 옮기거나 빼고, 사라진 구독을 알린다. 사용자의 구독 조회 · 저장 앞에서도 같은 정본으로 따라간다. 다이제스트 · 관심도 · 관심사 히스토리 · 변화 리포트가 읽는 공개 조회(`StorylineSubscriptionDirectory`)를 낸다
-- **다이제스트가 읽는 관심 설정** — 다이제스트 후보 선별이 읽는 공개 조회(`DigestInterestsDirectory`) — 활성 키의 주제 구독(펼친 중분류와 함께) · 제외 · 관심사 본문 · 시간대 · 분량 · 요약 길이 · 추론 강도. 쓰지 않는다(user-R57)
+- **구독 제안 거절** — 구독 제안을 거절한 주제 중분류를 기록 당시 태그 체계 버전 · 거절 때 관심 · 시각과 함께 사용자마다 현재 상태 한 벌로 저장하고(처리기), 활성 키로 풀어 내는 공개 조회(`TopicSuggestionDeclines`)를 낸다. 거절 때 관심은 이 모듈이 선언하고 `digest` 가 구현하는 공급 인터페이스(`TopicInterestNow`)로 묻는다. 제안의 판정은 하지 않는다(user-R64 · R65)
+- **다이제스트가 읽는 관심 설정** — 다이제스트 후보 선별 · 구독 제안이 읽는 공개 조회(`DigestInterestsDirectory`) — 활성 키의 주제 구독(펼친 중분류와 함께) · 제외 · 관심사 본문 · 시간대 · 분량 · 요약 길이 · 추론 강도. 쓰지 않는다(user-R57)
 - **주제 구독 이력 조회** — 다이제스트의 관심도 · 관심사 히스토리가 읽는 공개 조회(`TopicSubscriptionHistory`) — 기간의 선호 이력 가운데 주제 행을 기록 당시 버전으로 펼치고 활성 중분류로 풀어 원인과 함께 낸다. 쓰지 않는다(user-R58)
 - **사용자 시간대 · 일정 조회** — 관심 설정의 시간대를 내는 공개 조회(`UserTimezones`) — 다이제스트의 수동 생성이 오늘의 경계를 정할 때, 관심사 히스토리가 기간을 자를 때 읽는다. 사용자 하나의 일정(시간대 · 생성 시각)을 내는 공개 조회(`UserDigestSchedules`) — 다이제스트의 수동 생성 상태가 오늘의 경계와 오늘 일정 생성 시각을 정할 때 읽는다. 쓰지 않는다(user-R60)
 - **다이제스트 일정과 쓸 모델** — 다이제스트의 일정 회차가 읽는 일정 목록(`DigestScheduleDirectory` — 쓰는 계정의 시간대 · 생성 시각)과 일정 · 생성 작업 · 수동 생성 · 수동 생성 상태가 읽는 쓸 모델(`DigestModelDirectory` — `ModelChoice`). 쓰지 않는다(user-R61)
@@ -83,7 +84,8 @@
 | 다이제스트 분량 | 다이제스트 최대 후보 수의 단계(적게 · 보통 · 많이) 또는 직접 입력한 수, 큰 슬롯 수, 요약 길이 — 설정 행의 칸 넷(user-R56) |
 | 요약 길이 | 다이제스트 글(개요 · 주요 뉴스 요약)의 길이 단계 — 짧게 · 보통 · 자세히. 단계의 뜻은 다이제스트의 지시가 정한다(user-R56) |
 | 추론 강도 | 다이제스트 생성 호출의 추론 강도 — 낮음 · 보통 · 높음(`llm` 의 `ReasoningEffort`), 설정 행의 칸 하나(user-R59) |
-| 다이제스트가 읽는 관심 설정 | 다이제스트 후보 선별이 읽는 관심 설정 — 활성 키로 낸 주제 구독 행(덮는 중분류와 함께) · 제외 · 관심사 본문 · 시간대 · 분량 · 요약 길이 · 추론 강도(user-R57) |
+| 구독 제안 거절 | 사용자가 구독 제안을 거절한 주제 중분류 — 기록 당시 버전의 키 · 거절 때 관심 · 시각. 관심 신호가 아니다(user-R64) |
+| 다이제스트가 읽는 관심 설정 | 다이제스트 후보 선별 · 구독 제안이 읽는 관심 설정 — 활성 키로 낸 주제 구독 행(덮는 중분류와 함께) · 제외 · 관심사 본문 · 시간대 · 분량 · 요약 길이 · 추론 강도(user-R57) |
 | 주제 구독 이력 조회 | 다이제스트의 관심도가 읽는 기간의 주제 구독 변경 — 선호 이력의 주제 행을 기록 당시 버전으로 펼쳐 활성 중분류로 풀고 원인과 함께 낸다(user-R58) |
 | 스토리라인 구독 | 사용자가 따라가는 스토리라인 — 스토리라인 ID 와 처음 구독한 시각(user-R52) |
 | 구독 이력 | 스토리라인 구독의 추가 전용 변경 기록 — 원인(사용자 · 합쳐짐 · 사라짐)을 갖는다. 관심 신호는 원인이 사용자인 행만이다(user-R52 · R53) |
@@ -94,7 +96,7 @@
 
 받는 이벤트는 `source` 의 `FeedStatusesChanged` · `SourceDeleted`, `credential` 의 `CredentialInvalidated`, `tag` 의 `TagSetActivated`, `storyline` 의 `StorylinesRetired`, `digest` 가 내는 `DigestFailed`(이 모듈이 선언한 이벤트 — user-R62)이고, 내는 이벤트는 없다 — 관심 설정 · 스토리라인 구독이 바뀌어도 이벤트를 내지 않는다([ADR-0180](../adr/0180-user-settings-changes-publish-no-event-and-consumers-query.md)).
 
-모듈 최상위 패키지 `net.yozmnews.user` 의 공개 타입은 비밀번호 규칙 위반의 까닭 하나(`PasswordProblem`), 계정 들이기의 운영 API 셋(`AccountAdministration` · `InvitationAdministration` · `SignUpPolicyAdministration`)과 그 결과 · 값 타입(`AccountCreationResult` · `InitialPasswordResetResult` · `IssuedInvitation` · `InvitationView` · `InvitationState` · `InvitationRevocationResult` · `UnknownInvitationException` · `SignUpPolicyChange` · `SignUpPolicyChangeResult`)이다. 운영 API 는 `admin` 이 운영자 경로로 낸다. 다른 모듈이 읽는 공개 조회는 스토리라인 구독(`StorylineSubscriptionDirectory`)과 그 값 타입(`StorylineSubscriptionChange` · `StorylineSubscriptionAction` · `StorylineSubscriptionCause`), 다이제스트가 읽는 관심 설정(`DigestInterestsDirectory`)과 그 값 타입(`DigestInterests` · `TopicSubscription` · `SummaryLength`), 주제 구독 이력(`TopicSubscriptionHistory`)과 그 값 타입(`TopicSubscriptionChanges` · `TopicSubscriptionChange` · `TopicSubscriptionAction` · `TopicSubscriptionCause`), 사용자 시간대(`UserTimezones` · `UserDigestSchedules`), 다이제스트 일정 목록(`DigestScheduleDirectory`)과 그 값 타입(`DigestScheduleEntry`), 다이제스트의 쓸 모델(`DigestModelDirectory`)이다. 받는 쪽으로 선언한 이벤트는 다이제스트 실패(`DigestFailed`)와 그 값 타입(`DigestFailureCause`)이다. 사용자 식별자 `UserId` 는 `platform` 의 공개 타입이다([platform Spec](platform.md#userid)).
+모듈 최상위 패키지 `net.yozmnews.user` 의 공개 타입은 비밀번호 규칙 위반의 까닭 하나(`PasswordProblem`), 계정 들이기의 운영 API 셋(`AccountAdministration` · `InvitationAdministration` · `SignUpPolicyAdministration`)과 그 결과 · 값 타입(`AccountCreationResult` · `InitialPasswordResetResult` · `IssuedInvitation` · `InvitationView` · `InvitationState` · `InvitationRevocationResult` · `UnknownInvitationException` · `SignUpPolicyChange` · `SignUpPolicyChangeResult`)이다. 운영 API 는 `admin` 이 운영자 경로로 낸다. 다른 모듈이 읽는 공개 조회는 스토리라인 구독(`StorylineSubscriptionDirectory`)과 그 값 타입(`StorylineSubscriptionChange` · `StorylineSubscriptionAction` · `StorylineSubscriptionCause`), 다이제스트가 읽는 관심 설정(`DigestInterestsDirectory`)과 그 값 타입(`DigestInterests` · `TopicSubscription` · `SummaryLength`), 주제 구독 이력(`TopicSubscriptionHistory`)과 그 값 타입(`TopicSubscriptionChanges` · `TopicSubscriptionChange` · `TopicSubscriptionAction` · `TopicSubscriptionCause`), 사용자 시간대(`UserTimezones` · `UserDigestSchedules`), 다이제스트 일정 목록(`DigestScheduleDirectory`)과 그 값 타입(`DigestScheduleEntry`), 다이제스트의 쓸 모델(`DigestModelDirectory`), 구독 제안 거절(`TopicSuggestionDeclines`)과 그 값 타입(`TopicSuggestionDeclineList` · `TopicSuggestionDecline`)이다. 다른 모듈이 구현하는 공급 인터페이스는 지금 관심(`TopicInterestNow` — `digest` 가 구현)이다. 받는 쪽으로 선언한 이벤트는 다이제스트 실패(`DigestFailed`)와 그 값 타입(`DigestFailureCause`)이다. 사용자 식별자 `UserId` 는 `platform` 의 공개 타입이다([platform Spec](platform.md#userid)).
 
 HTTP 엔드포인트:
 
@@ -125,12 +127,13 @@ HTTP 엔드포인트:
 | `/api/interests/effort` | `PUT` | 추론 강도 저장 — 모델 조회와 같은 칸. 키 · 고른 모델과 무관하다. 값 이름이 틀리면 400(user-R59) |
 | `/api/interests/volume` | `GET` | 다이제스트 분량 — 단계 · 직접 입력한 수 · 큰 슬롯 수 · 요약 길이와 단계마다의 후보 수 · 직접 입력 · 큰 슬롯 수의 범위 · 요약 길이 값들(user-R56) |
 | `/api/interests/volume` | `PUT` | 분량 저장 — `SAVED`(+조회와 같은 칸) · `COUNT_OUT_OF_RANGE`(+범위) · `BIG_SLOTS_OUT_OF_RANGE`(+범위). 직접 입력과 직접 입력한 수의 짝이 맞지 않으면 400(user-R56) |
+| `/api/interests/declined-suggestions` | `POST` | 구독 제안 거절 — 본문 `{tagSetId, topic}`, `DECLINED`(+주제 키) · `TAG_SET_CHANGED`(+활성 버전 ID). 그 버전의 주제 중분류 키가 아니거나 `tagSetId` 가 1 보다 작으면 400(user-R64) |
 | `/api/storyline-subscriptions` | `GET` | 내 스토리라인 구독 — 스토리라인 ID · 처음 구독한 시각 · 지금 상태, 구독 시각 내림차순과 상한(user-R52) |
 | `/api/storyline-subscriptions/{storylineId}` | `PUT` | 구독 — `SUBSCRIBED`(+남는 스토리라인 ID) · `ALREADY_SUBSCRIBED`(+남는 스토리라인 ID) · `UNKNOWN_STORYLINE` · `LIMIT_REACHED`(+상한). ID 가 1 보다 작거나 숫자가 아니면 400(user-R52) |
 | `/api/storyline-subscriptions/{storylineId}` | `DELETE` | 해제 — `UNSUBSCRIBED` · `NOT_SUBSCRIBED`. ID 가 1 보다 작거나 숫자가 아니면 400(user-R52) |
 | `/api/storyline-subscriptions/changes` | `GET` | 내 구독 이력 한 쪽 — 사용자가 직접 한 구독 · 해제의 지금 스토리라인 ID(지워졌으면 null) · 더함 뺌 · 시각, 최근부터, 다음 쪽 커서. 질의 `beforeAt` · `beforeId`(다음 쪽 커서 — 함께). 하나만 오거나 시각 · ID(1 이상)를 읽을 수 없으면 400(user-R63) |
 
-로그인 · 로그아웃 · 로그인 상태 조회 · 가입 정책 조회 · 봇 차단 설정 조회 · 가입 둘 · 초대 상태 · 복구 재설정은 공개 처리기다. 로그인 · 복구 재설정 · 초대 상태 · 초대 가입 · 공개 가입에는 요청 제한이 걸려 넘으면 429 이고(user-R38 · R40), 로그인 · 복구 재설정 · 공개 가입에는 봇 차단을 켠 인스턴스에서 사람 확인이 걸린다(user-R41). 알림 세 경로 · 비밀번호 변경 · 복구 코드 재발급 · 관심 설정 열한 경로 · 스토리라인 구독 네 경로는 세션이 필요하며 사용자 격리 시험에 등록돼 있고(user-R5 · user-R6), LLM 키가 없는 세션 사용자에게도 연다(`@AllowedWithoutLlmKey` — user-R5). 비밀번호 변경은 강제 변경 중에도 연다(`@AllowedBeforePasswordChange` — user-R29). 판정 결과는 200 이고 요청 본문의 칸이 없으면 본문 형식 400 이다. 요청 · 응답 형식은 `api/openapi.json` 에 있다.
+로그인 · 로그아웃 · 로그인 상태 조회 · 가입 정책 조회 · 봇 차단 설정 조회 · 가입 둘 · 초대 상태 · 복구 재설정은 공개 처리기다. 로그인 · 복구 재설정 · 초대 상태 · 초대 가입 · 공개 가입에는 요청 제한이 걸려 넘으면 429 이고(user-R38 · R40), 로그인 · 복구 재설정 · 공개 가입에는 봇 차단을 켠 인스턴스에서 사람 확인이 걸린다(user-R41). 알림 세 경로 · 비밀번호 변경 · 복구 코드 재발급 · 관심 설정 열두 경로 · 스토리라인 구독 네 경로는 세션이 필요하며 사용자 격리 시험에 등록돼 있고(user-R5 · user-R6), LLM 키가 없는 세션 사용자에게도 연다(`@AllowedWithoutLlmKey` — user-R5). 비밀번호 변경은 강제 변경 중에도 연다(`@AllowedBeforePasswordChange` — user-R29). 판정 결과는 200 이고 요청 본문의 칸이 없으면 본문 형식 400 이다. 요청 · 응답 형식은 `api/openapi.json` 에 있다.
 
 ### PasswordProblem
 
@@ -279,11 +282,55 @@ public enum SummaryLength { SHORT, NORMAL, DETAILED }
 | `TopicSubscription` | 구독 행 하나(대분류 또는 중분류 키)와 그 행이 덮는 활성 중분류 — 대분류면 하위 중분류 전부, 중분류면 그 하나 |
 
 - 계약
-  - 백그라운드 작업 전용이다 — 화면 경로에서 부르지 않는다
+  - 사용자를 인자로 받는 조회다 — 화면 경로에서는 세션 사용자로만 부른다(구독 제안 — [ADR-0248](../adr/0248-the-digest-interests-and-topic-suggestion-queries-may-be-called-on-screen-paths-with-the-session-user.md))
   - 쓰지 않는다 — 선호 버전이 활성 버전과 다르면 따라가기 결과를 계산해 내고, 설정 행이 없으면 계정을 만들 때의 기본값을 계산해 낸다
   - 계정 상태는 보지 않는다
 
 관련 규칙: user-R57.
+
+### TopicSuggestionDeclines
+
+구독 제안 거절 조회 — 다이제스트의 구독 제안이 다시 내지 않을 주제를 고를 때 읽는다. 구현은 `application` 의 `TopicSuggestionDeclinesService` 다.
+
+```java
+public interface TopicSuggestionDeclines {
+    TopicSuggestionDeclineList declinesOf(UserId user);
+}
+
+public record TopicSuggestionDeclineList(TagSetId tagSet, List<TopicSuggestionDecline> declines) {}
+public record TopicSuggestionDecline(String subtopic, double level, Instant declinedAt) {}
+```
+
+| 멤버 | 뜻 |
+|---|---|
+| `declinesOf` | 그 사용자의 거절을 활성 버전의 주제 중분류로 푼 것 — 계정이 없으면 빈 목록 |
+| `TopicSuggestionDeclineList.tagSet` | 거절의 키를 푼 활성 버전 — 부르는 쪽이 자기 재료의 버전과 맞춘다 |
+| `TopicSuggestionDecline.subtopic` | 활성 중분류 전체 키 — 중분류마다 많아야 하나 |
+| `TopicSuggestionDecline.level` · `declinedAt` | 거절 때 관심 x(−1 ~ 1) · 거절한 시각 |
+
+- 계약
+  - 사용자를 인자로 받는 조회다 — 화면 경로에서는 세션 사용자로만 부른다
+  - 쓰지 않는다
+
+관련 규칙: user-R65.
+
+### TopicInterestNow
+
+지금 관심의 공급 인터페이스 — 이 모듈이 선언하고 `digest` 가 구현한다. 거절 처리기가 거절 때의 관심을 적으려고 부른다([ADR-0247](../adr/0247-topic-suggestion-declines-are-kept-by-user-with-the-recorded-version-and-digest-answers-the-interest-at-decline-through-an-interface-declared-by-user.md)).
+
+```java
+public interface TopicInterestNow {
+    OptionalDouble levelOf(UserId user, TagSetId tagSet, String subtopic);
+}
+```
+
+| 멤버 | 뜻 |
+|---|---|
+| `levelOf` | 지금을 기준 시각으로 둔 그 중분류의 관심(−1 ~ 1 — 신호가 없으면 0). `tagSet` 이 구현이 읽은 활성 버전과 다르거나 계정이 없으면 빈 값 |
+
+- 계약
+  - 이 모듈은 관심을 계산하지 않고 `digest` 의 타입을 쓰지 않는다
+  - 사용자를 인자로 받는다 — 화면 경로에서는 세션 사용자로만 부른다. 쓰지 않는다
 
 ### TopicSubscriptionHistory
 
@@ -498,7 +545,9 @@ sequenceDiagram
 | 스토리라인 구독 이력 | `StorylineSubscriptionController` → `StorylineSubscriptionHistory` | `GET /api/storyline-subscriptions/changes` | user-R63. 읽기 전용 트랜잭션 — 잠그지 않고 따라가지 않는다. 응답 값 `StorylineSubscriptionChangesResponse` · `StorylineSubscriptionChangeItem` · `StorylineSubscriptionChangeCursor` |
 | 합치거나 지운 스토리라인 | `StorylinesRetiredListener` → `SubscriptionFollowups.followRetired` | `storyline` 의 `StorylinesRetired` | 그 스토리라인을 구독한 사용자의 구독을 따라가게 하고 사라진 구독을 알린다(user-R53 · R54). 비동기 · 트랜잭션 없음(`NOT_SUPPORTED` — 사용자마다 트랜잭션 하나)이고 이벤트 발행 레지스트리에 기록된다 — 실패하면 다시 처리되고 지금 상태로 수렴한다 |
 | 스토리라인 구독 조회 | `StorylineSubscriptionDirectoryService` | 다른 모듈의 백그라운드 작업 · 세션 사용자의 화면 경로 | §3 `StorylineSubscriptionDirectory` 의 구현(user-R55). 읽기 전용 트랜잭션 |
-| 다이제스트가 읽는 관심 설정 | `DigestInterestsDirectoryService` | 다른 모듈의 백그라운드 작업 | §3 `DigestInterestsDirectory` 의 구현(user-R57). 읽기 전용 `REPEATABLE_READ` 트랜잭션 |
+| 구독 제안 거절 | `InterestController` → `TopicSuggestionDeclining` | `POST /api/interests/declined-suggestions` | user-R64. 요청 · 응답 값 `TopicSuggestionDeclineRequest` · `TopicSuggestionDeclineResponse`. 트랜잭션 없음 — 거절 때 관심을 트랜잭션 밖에서 묻고 쓰기는 한 문장 |
+| 구독 제안 거절 조회 | `TopicSuggestionDeclinesService` | 다른 모듈의 세션 사용자 화면 경로 | §3 `TopicSuggestionDeclines` 의 구현(user-R65). 읽기 전용 `REPEATABLE_READ` 트랜잭션 |
+| 다이제스트가 읽는 관심 설정 | `DigestInterestsDirectoryService` | 다른 모듈의 백그라운드 작업 · 세션 사용자의 화면 경로 | §3 `DigestInterestsDirectory` 의 구현(user-R57). 읽기 전용 `REPEATABLE_READ` 트랜잭션 |
 | 주제 구독 이력 조회 | `TopicSubscriptionHistoryService` | 다른 모듈의 백그라운드 작업 · 세션 사용자의 화면 경로 | §3 `TopicSubscriptionHistory` 의 구현(user-R58). 읽기 전용 `REPEATABLE_READ` 트랜잭션 |
 | 사용자 시간대 · 일정 조회 | `UserTimezonesService` | 다른 모듈의 조회(세션 사용자의 화면 경로 포함) | §3 `UserTimezones` · `UserDigestSchedules` 의 구현(user-R60). 읽기 전용 트랜잭션 |
 | 다이제스트 일정 목록 | `DigestScheduleDirectoryService` | 다른 모듈의 백그라운드 작업 | §3 `DigestScheduleDirectory` 의 구현(user-R61). 읽기 전용 트랜잭션 |
@@ -569,6 +618,8 @@ sequenceDiagram
 - `UserTimezonesService` — 공개 조회 `UserTimezones` · `UserDigestSchedules` 의 구현. 계정 유무와 설정 행을 읽기 전용 트랜잭션 하나에서 읽는다 — 설정 행이 없을 때의 대체는 `scheduleOf` 한 곳이고 `timezoneOf` 는 그 일정의 시간대다(user-R60)
 - `DigestScheduleDirectoryService` · `DigestModelDirectoryService` — 공개 조회 `DigestScheduleDirectory` · `DigestModelDirectory` 의 구현. 읽기 전용 트랜잭션 하나(user-R61)
 - `ModelResolutions` — 쓸 모델 판정의 재료 읽기(허용 모델 목록 · 키가 있는 공급자 · 쓸 수 있는 키의 공급자)와 고를 수 있는 모델 — `ModelSelection` 과 `DigestModelDirectoryService` 가 함께 쓴다(user-R51 · R61)
+- `TopicSuggestionDeclining` — 구독 제안 거절 유스케이스 — 활성 버전 확인 · 중분류 키 확인(`DeclinableTopics`) · 거절 때 관심(`TopicInterestNow`) · upsert. 트랜잭션이 없다(user-R64)
+- `TopicSuggestionDeclinesService` — 공개 조회 `TopicSuggestionDeclines` 의 구현. 거절 행 · 활성 체계 · 계보 표를 한 스냅숏에서 읽도록 읽기 전용 `REPEATABLE_READ` 트랜잭션 하나다 — 계보 표의 기준이 읽은 활성 버전이 아니면 불변식 위반이다(user-R65)
 - `TopicSubscriptionHistoryService` — 공개 조회 `TopicSubscriptionHistory` 의 구현. 이력 행 · 활성 체계 · 기록 버전의 구조 · 계보 표를 한 스냅숏에서 읽도록 읽기 전용 `REPEATABLE_READ` 트랜잭션 하나다 — 계보 표의 기준이 읽은 활성 버전이 아니면 불변식 위반이다(user-R58)
 - 그 밖의 값: `AdminSecurityProperties`(설정 `yozmnews.admin` — §7) · `AdminTokenAuthentication`(제시된 토큰 · 운영자 인증) · `AccountAuthentication`(세션 사용자 인증 — 세션에 직렬화되는 유일한 앱 타입, 역할 권한 이름의 정본) · `SignInOutcome`(로그인됨 · 거절 · 대기)
 
@@ -621,7 +672,10 @@ sequenceDiagram
 - `ExcludedSourceRepository` — 제외 소스 저장 — 읽기 · 바꾸기 · 소스 잊기. 구현 `JdbcExcludedSources`(user-R49)
 - `PreferenceSet` · `PreferenceChange` · `PreferenceMode` · `PreferenceCause` · `PreferenceAction` — 태그 선호 집합 · 기본값 · 모르는 키 · 정규화 · 차이, 모드 조합 · 원인 · 더함 뺌의 정본(user-R45)
 - `PreferenceFollowup` · `FollowResult` · `Adjustment` · `AdjustmentKind` — 따라가기 규칙의 정본(user-R47)
-- `TopicExpansion` — 대분류 구독을 그 버전의 하위 중분류로 펼치는 정본 — 정규화 · 따라가기 · 다이제스트가 읽는 관심 설정 · 주제 구독 이력 조회가 함께 쓴다(user-R45 · R57 · R58)
+- `TopicExpansion` — 대분류 구독을 그 버전의 하위 중분류로 펼치는 정본 — 정규화 · 따라가기 · 다이제스트가 읽는 관심 설정 · 주제 구독 이력 조회가 함께 쓴다. 그 버전의 중분류 키인지 보는 정본(`isSubtopic`)도 여기 있고 구독 제안 거절이 함께 쓴다(user-R45 · R57 · R58 · R64)
+- `DeclinableTopics` — 거절할 수 있는 키(그 버전의 주제 중분류 전체 키)의 정본(user-R64)
+- `RecordedDecline` — 저장한 거절 한 행과, 같은 활성 주제에 닿는 두 행 가운데 남길 것(`later` — 늦은 시각, 같으면 큰 관심)의 정본(user-R65)
+- `TopicSuggestionDeclineRepository` — 거절 저장 — upsert · 사용자의 행 읽기. 구현 `JdbcTopicSuggestionDeclines`(user-R64 · R65)
 - `TagPreferenceRepository` — 태그 선호 현재 상태 · 이력 저장, 기간의 주제 이력 행 읽기(`topicChanges` — 값 `RecordedTopicChange`). 구현 `JdbcTagPreferences`(user-R45 · R58)
 - `PreferencesAdjustedContent` — 선호 조정 알림의 내용(user-R48)
 - `StorylineSubscriptionsRemovedContent` · `RemovedSubscription` — 사라진 구독 알림의 내용 — 스토리라인 ID 와 풀기에서 남은 사건 ID, 기사 정보 없음(user-R54)
@@ -641,9 +695,9 @@ public interface HumanVerifier {
 }
 ```
 
-세션 저장소(Spring Session JDBC)와 반복 작업(JobRunr)은 프레임워크다. 저장 인터페이스의 구현(`JdbcLoginFailures` · `JdbcRequestCounts` · `JdbcNoticeRepository` · `JdbcNoticeRecipients` · `JdbcRecoveryCodes` · `JdbcSessionAccounts` · `JdbcSignUpPolicy` · `JdbcFirstAdminLock` · `JdbcInterestSettings` · `JdbcTagPreferences` · `JdbcExcludedSources` · `JdbcPreferenceVersionFence` · `JdbcStorylineSubscriptions`)이 직접 읽고 쓴다(§6). 세션 지우기(`OtherSessions`)는 세션 저장소의 사용자 이름 색인을 쓴다. 피드 이름은 `source` 의 공개 조회 `FeedLabels` 로, 세션 사용자의 키 유무 · 키가 있는 공급자 · 쓸 수 있는 키의 공급자는 `credential` 의 공개 조회 `LlmKeys` 로, 활성 태그 체계 · 버전의 내용 · 계보 표는 `tag` 의 `TagSetDirectory` · `TagKeyLineage` 로, 고를 소스는 `source` 의 `SourceNames` 로, 허용 모델 목록은 `llm` 의 `LlmModels` 로, 구독한 스토리라인의 남는 쪽 · 지금 상태는 `storyline` 의 `StorylineDirectory.findAll` 로, 사라진 구독 알림의 제목은 `event` 의 `EventDirectory`(`find` · `representativesOfAll`)와 `article` 의 `ArticleDirectory.findAll` 로 읽는다([overview §5](../overview.md#5-모듈-지도)).
+세션 저장소(Spring Session JDBC)와 반복 작업(JobRunr)은 프레임워크다. 저장 인터페이스의 구현(`JdbcLoginFailures` · `JdbcRequestCounts` · `JdbcNoticeRepository` · `JdbcNoticeRecipients` · `JdbcRecoveryCodes` · `JdbcSessionAccounts` · `JdbcSignUpPolicy` · `JdbcFirstAdminLock` · `JdbcInterestSettings` · `JdbcTagPreferences` · `JdbcExcludedSources` · `JdbcPreferenceVersionFence` · `JdbcStorylineSubscriptions` · `JdbcTopicSuggestionDeclines`)이 직접 읽고 쓴다(§6). 세션 지우기(`OtherSessions`)는 세션 저장소의 사용자 이름 색인을 쓴다. 피드 이름은 `source` 의 공개 조회 `FeedLabels` 로, 세션 사용자의 키 유무 · 키가 있는 공급자 · 쓸 수 있는 키의 공급자는 `credential` 의 공개 조회 `LlmKeys` 로, 활성 태그 체계 · 버전의 내용 · 계보 표는 `tag` 의 `TagSetDirectory` · `TagKeyLineage` 로, 고를 소스는 `source` 의 `SourceNames` 로, 허용 모델 목록은 `llm` 의 `LlmModels` 로, 구독 제안 거절 때의 관심은 이 모듈이 선언한 `TopicInterestNow`(`digest` 가 구현)로, 구독한 스토리라인의 남는 쪽 · 지금 상태는 `storyline` 의 `StorylineDirectory.findAll` 로, 사라진 구독 알림의 제목은 `event` 의 `EventDirectory`(`find` · `representativesOfAll`)와 `article` 의 `ArticleDirectory.findAll` 로 읽는다([overview §5](../overview.md#5-모듈-지도)).
 
-신뢰할 수 없는 입력: 로그인 요청의 이메일 · 비밀번호(user-R13 · R14 · R17), 가입 · 초대 가입의 이메일 · 표시 이름 · 비밀번호 · 토큰(user-R31 · R33), 복구 요청의 이메일 · 복구 코드 · 새 비밀번호(user-R30), 비밀번호 변경 · 재발급의 비밀번호(user-R29 · R30), 세션 쿠키 · CSRF 헤더(user-R7 · R10), 운영자 토큰 헤더(user-R1), 알림 목록의 질의 `before` · 읽음 요청 본문(user-R27), 클라이언트 주소 헤더(user-R37), 사람 확인 토큰 헤더 · Turnstile 검증 응답 본문(user-R41), 관심 설정 저장의 키 · 소스 ID · 시간대 · 시각 · 요일 · 관심사 · 공급자 · 모델 ID(user-R46 · R49 ~ R51), 스토리라인 구독 경로의 스토리라인 ID(user-R52). 운영자 입력(메모 · 계정 생성 칸)과 첫 운영자 설정 값도 규칙으로 거른다(user-R31 · R34 · R35).
+신뢰할 수 없는 입력: 로그인 요청의 이메일 · 비밀번호(user-R13 · R14 · R17), 가입 · 초대 가입의 이메일 · 표시 이름 · 비밀번호 · 토큰(user-R31 · R33), 복구 요청의 이메일 · 복구 코드 · 새 비밀번호(user-R30), 비밀번호 변경 · 재발급의 비밀번호(user-R29 · R30), 세션 쿠키 · CSRF 헤더(user-R7 · R10), 운영자 토큰 헤더(user-R1), 알림 목록의 질의 `before` · 읽음 요청 본문(user-R27), 클라이언트 주소 헤더(user-R37), 사람 확인 토큰 헤더 · Turnstile 검증 응답 본문(user-R41), 관심 설정 저장의 키 · 소스 ID · 시간대 · 시각 · 요일 · 관심사 · 공급자 · 모델 ID(user-R46 · R49 ~ R51), 스토리라인 구독 경로의 스토리라인 ID(user-R52), 구독 제안 거절의 체계 버전 ID · 주제 키(user-R64). 운영자 입력(메모 · 계정 생성 칸)과 첫 운영자 설정 값도 규칙으로 거른다(user-R31 · R34 · R35).
 
 ## 5. 규칙과 불변식
 
@@ -849,13 +903,20 @@ public interface HumanVerifier {
 
 판단의 이유는 [ADR-0211](../adr/0211-the-digest-consumer-query-of-interest-settings-writes-nothing-and-returns-followed-preferences-with-expanded-topics.md) · [ADR-0219](../adr/0219-candidate-selection-hands-over-the-prompt-material-read-once-with-its-token-estimate.md) · [ADR-0180](../adr/0180-user-settings-changes-publish-no-event-and-consumers-query.md)에 있다.
 
-- **user-R57** — 다이제스트가 읽는 관심 설정(`DigestInterestsDirectory`): 계정 행이 없으면 빈 값이다. 읽기 전용 `REPEATABLE_READ` 트랜잭션 하나에서 설정 행을 잠그지 않고 읽는다. 설정 행이 없으면 계정을 만들 때의 값(`InterestSettings.defaults` · `PreferenceSet.onboarding`(활성 버전))을 계산하고, 있으면 선호 행을 읽어 선호 버전이 활성 버전과 다를 때 따라가기 결과(`PreferenceFollowups.followed` — user-R47 의 규칙)를 계산한다. 쓰지 않는다 — 설정 행 · 선호 행 · 이력 · 알림은 그대로다. 주제 구독은 구독 행마다 그 버전의 덮는 중분류로 펼쳐(`TopicExpansion`) 키 순으로 내고, 관심사는 본문(없으면 빈 문자열), 시간대, 분량은 최대 후보 수(단계의 값 또는 직접 입력한 수)와 큰 슬롯 수, 요약 길이, 추론 강도를 낸다. 계정 상태는 보지 않는다. 사용자를 인자로 받는 백그라운드 작업 전용이다
+- **user-R57** — 다이제스트가 읽는 관심 설정(`DigestInterestsDirectory`): 계정 행이 없으면 빈 값이다. 읽기 전용 `REPEATABLE_READ` 트랜잭션 하나에서 설정 행을 잠그지 않고 읽는다. 설정 행이 없으면 계정을 만들 때의 값(`InterestSettings.defaults` · `PreferenceSet.onboarding`(활성 버전))을 계산하고, 있으면 선호 행을 읽어 선호 버전이 활성 버전과 다를 때 따라가기 결과(`PreferenceFollowups.followed` — user-R47 의 규칙)를 계산한다. 쓰지 않는다 — 설정 행 · 선호 행 · 이력 · 알림은 그대로다. 주제 구독은 구독 행마다 그 버전의 덮는 중분류로 펼쳐(`TopicExpansion`) 키 순으로 내고, 관심사는 본문(없으면 빈 문자열), 시간대, 분량은 최대 후보 수(단계의 값 또는 직접 입력한 수)와 큰 슬롯 수, 요약 길이, 추론 강도를 낸다. 계정 상태는 보지 않는다. 사용자를 인자로 받는 조회다 — 다이제스트 후보 선별(백그라운드 작업)과 구독 제안(세션 사용자의 화면 경로 — [ADR-0248](../adr/0248-the-digest-interests-and-topic-suggestion-queries-may-be-called-on-screen-paths-with-the-session-user.md))이 부른다
 
 ### 주제 구독 이력 조회
 
 판단의 이유는 [ADR-0180](../adr/0180-user-settings-changes-publish-no-event-and-consumers-query.md) · [ADR-0211](../adr/0211-the-digest-consumer-query-of-interest-settings-writes-nothing-and-returns-followed-preferences-with-expanded-topics.md)(같은 꼴 — 쓰지 않고 풀어 낸다)에 있다.
 
 - **user-R58** — 주제 구독 이력 조회(`TopicSubscriptionHistory`): 선호 이력의 주제 행 가운데 시각이 시작 포함 · 끝 제외 구간에 드는 것을 시각 · 행 순으로 낸다. 행마다 기록 당시 버전의 구조로 펼치고(대분류는 하위 중분류 전체 — `TopicExpansion`) 중분류마다 그 버전에서 활성 버전으로의 계보 표(`TagKeyLineage.toActive`)로 푼 합집합을 낸다 — 계보 없이 지운 것은 빠진다. 원인 · 더함 뺌은 저장 값을 그대로 옮기고, 관심 신호로 쓸 행을 고르는 일은 부르는 쪽이 한다. 계정 행이 없으면 빈 목록이다. 읽기 전용 `REPEATABLE_READ` 트랜잭션 하나에서 읽고 쓰지 않는다. 낸 키의 활성 버전을 함께 낸다. 사용자를 인자로 받는 조회다 — 화면 경로에서는 세션 사용자로만 부른다
+
+### 구독 제안 거절
+
+판단의 이유는 [ADR-0247](../adr/0247-topic-suggestion-declines-are-kept-by-user-with-the-recorded-version-and-digest-answers-the-interest-at-decline-through-an-interface-declared-by-user.md) · [ADR-0246](../adr/0246-a-declined-topic-suggestion-returns-only-after-a-period-and-a-higher-interest-and-a-decline-is-not-an-interest-signal.md) · [ADR-0248](../adr/0248-the-digest-interests-and-topic-suggestion-queries-may-be-called-on-screen-paths-with-the-session-user.md)에 있다. 제안의 판정(기준 · 다시 내는 조건)은 `digest` 의 것이다([digest Spec "구독 제안"](digest.md#구독-제안)).
+
+- **user-R64** — 거절(`TopicSuggestionDeclining` · `POST /api/interests/declined-suggestions`): 요청은 화면이 본 체계 버전 ID 와 주제 중분류 키다. ① 지금 활성 버전이 그 버전과 다르면 적지 않고 `TAG_SET_CHANGED`(활성 버전 ID) ② 그 버전의 주제 중분류 키가 아니면(대분류 · 다른 종류 · 없는 키) 아무것도 바꾸지 않고 400 ③ 거절 때 관심을 공급 인터페이스 `TopicInterestNow` 로 묻고 — 빈 값이면(그 사이 활성 전환 · 계정 없음 — 계정 없음은 세션 체인이 막아 처리기 경로에서 생기지 않는다) `TAG_SET_CHANGED`(지금 활성 버전) ④ (사용자, 버전, 키) 행을 거절 때 관심 · 시각과 함께 쓴다 — 같은 행이 있으면 관심 · 시각을 바꾼다. `DECLINED`(키). 트랜잭션이 없다 — ③ 은 잠금 · 연결을 쥐지 않고 부르고 ④ 는 한 문장이다. 설정 행을 잠그거나 따라가지 않는다. 관심 신호를 남기지 않는다 — 거절은 이력이 없고 관심도 · 관심사 히스토리의 재료가 아니다. 화면이 보낸 관심 값은 받지 않는다. 키 없이도 연다(관심 설정의 처리기 — user-R5). 행은 계정과 함께 지워진다
+- **user-R65** — 거절 조회(`TopicSuggestionDeclines`): 계정 행이 없으면 빈 목록(활성 버전)이다. 읽기 전용 `REPEATABLE_READ` 트랜잭션 하나에서 그 사용자의 거절 행을 읽고, 행마다 기록 당시 버전에서 활성 버전으로의 계보 표(`TagKeyLineage.toActive`)로 키를 활성 중분류 집합으로 푼다 — 계보 없이 지운 키는 빠진다. 같은 활성 중분류에 닿는 행이 여럿이면(합쳐진 키 · 다른 버전의 같은 키) 거절 시각이 늦은 것 하나, 같으면 관심이 큰 것(`RecordedDecline.later`)을 낸다. 낸 키의 활성 버전을 함께 낸다. 쓰지 않는다. 사용자를 인자로 받는 조회다 — 화면 경로에서는 세션 사용자로만 부른다
 
 ### 사용자 시간대 조회
 
@@ -871,7 +932,7 @@ public interface HumanVerifier {
 
 ## 6. 데이터
 
-컬럼 타입 · 인덱스 · 제약 문면의 정본은 `backend/src/main/resources/db/migration/V31__users_and_password_credentials.sql` · `V33__login_failures.sql` · `V36__user_notices.sql` · `V37__account_provisioning.sql` · `V38__password_change_and_recovery.sql` · `V39__sign_up_and_invitations.sql` · `V42__key_invalidated_notices.sql` · `V43__request_limit_counts.sql` · `V44__interest_settings.sql` · `V45__preferences_adjusted_notices.sql` · `V47__storyline_subscriptions.sql` · `V53__digest_volume.sql` · `V55__digest_writing_settings.sql` · `V60__digest_failed_notices.sql` 이다. 세션 테이블(Spring Session)은 프레임워크 테이블이라 [data-model.md](../data-model.md)에 있다.
+컬럼 타입 · 인덱스 · 제약 문면의 정본은 `backend/src/main/resources/db/migration/V31__users_and_password_credentials.sql` · `V33__login_failures.sql` · `V36__user_notices.sql` · `V37__account_provisioning.sql` · `V38__password_change_and_recovery.sql` · `V39__sign_up_and_invitations.sql` · `V42__key_invalidated_notices.sql` · `V43__request_limit_counts.sql` · `V44__interest_settings.sql` · `V45__preferences_adjusted_notices.sql` · `V47__storyline_subscriptions.sql` · `V53__digest_volume.sql` · `V55__digest_writing_settings.sql` · `V60__digest_failed_notices.sql` · `V65__topic_suggestion_declines.sql` 이다. 세션 테이블(Spring Session)은 프레임워크 테이블이라 [data-model.md](../data-model.md)에 있다.
 
 | 테이블 | 주요 컬럼 | 뜻 |
 |---|---|---|
@@ -891,6 +952,7 @@ public interface HumanVerifier {
 | `user_excluded_sources` | user_id · source_id(PK), created_at | 제외 소스(user-R49). `source_id` 는 `source` 의 소스 ID(FK 없음 — `SourceDeleted` 로 지운다, 소스 ID 색인). 계정을 지우면 함께 지워진다 |
 | `user_storyline_subscriptions` | user_id · storyline_id(PK), created_at | 스토리라인 구독의 현재 상태 — 구독 이력의 투영(user-R52). `storyline_id` 는 `storyline` 의 스토리라인 ID(FK 없음 — `StorylinesRetired` 로 따른다, 스토리라인 ID 색인). `created_at` 은 처음 구독한 시각. 계정을 지우면 함께 지워진다 |
 | `user_storyline_subscription_events` | id, user_id, storyline_id, action(`ADD`/`REMOVE`), cause(`USER`/`STORYLINE_MERGED`/`STORYLINE_REMOVED`), occurred_at | 구독 이력 — 추가만 한다(user-R52 · R53). `storyline_id` 는 기록 당시의 ID 다. 사용자 · 시각 · 행 순 색인. 계정을 지우면 함께 지워진다 |
+| `user_topic_suggestion_declines` | user_id · tag_set_id · topic_key(PK), interest_level, declined_at | 구독 제안 거절의 현재 상태 — 이력이 없다(user-R64). `tag_set_id` 는 기록 당시 버전(1 이상 — `tag` 의 버전 ID, FK 없음), `topic_key` 는 그 버전의 주제 중분류 전체 키 — 기본 키에 버전이 있어 같은 키 문자열의 다른 버전 행이 함께 있을 수 있다. `interest_level` 은 거절 때 관심 x(−1 ~ 1 — 검사). 계정을 지우면 함께 지워진다 |
 
 ## 7. 설정
 
@@ -970,3 +1032,6 @@ public interface HumanVerifier {
 | [0242](../adr/0242-the-storyline-subscription-list-lives-on-the-key-gated-storyline-screen.md) | 내 스토리라인 구독 목록은 키가 있어야 가는 스토리라인 화면에 둔다 |
 | [0243](../adr/0243-the-subscription-history-on-the-subscription-screen-shows-only-the-users-own-subscribe-and-unsubscribe.md) | 내 구독 화면의 구독 이력은 사용자가 직접 한 구독 · 해제만 보인다 |
 | [0244](../adr/0244-the-storyline-subscription-history-handler-is-opened-by-user-without-a-key-and-reads-recent-pages-in-the-module.md) | 스토리라인 구독 이력의 화면 처리기는 `user` 가 키 없이 열고, 소비자 조회 대신 같은 모듈의 유스케이스가 최근부터 쪽으로 읽는다 |
+| [0246](../adr/0246-a-declined-topic-suggestion-returns-only-after-a-period-and-a-higher-interest-and-a-decline-is-not-an-interest-signal.md) | 거절한 구독 제안은 기간이 지나고 거절 때보다 관심이 커져야 다시 내고, 거절은 관심 신호가 아니다 |
+| [0247](../adr/0247-topic-suggestion-declines-are-kept-by-user-with-the-recorded-version-and-digest-answers-the-interest-at-decline-through-an-interface-declared-by-user.md) | 구독 제안의 거절은 이 모듈이 기록 당시 버전과 함께 갖고, 거절 때 관심은 이 모듈이 선언한 공급 인터페이스로 `digest` 가 답한다 |
+| [0248](../adr/0248-the-digest-interests-and-topic-suggestion-queries-may-be-called-on-screen-paths-with-the-session-user.md) | 다이제스트가 읽는 관심 설정과 구독 제안의 조회는 화면 경로에서 세션 사용자로 부를 수 있다 |

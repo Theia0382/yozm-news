@@ -37,3 +37,4 @@
 ## 후속 기록
 
 - 2026-11-18: 결과 "관심 설정 화면에 '다이제스트 분량' 구획이 있다" — 같은 구획에 요약 길이가 더해졌다([ADR-0223](0223-the-digest-summary-length-is-a-user-setting-in-the-digest-volume-section.md)), 지금 상태는 [user Spec "관심 설정"](../specs/user.md#관심-설정) user-R56
+- 2026-11-19: 결과 "큰 슬롯을 끈 사용자에게는 … 구독 제안의 재료(구독 밖 기사에 받은 좋아요)도 생기지 않는다" — 구독한 중분류와 함께 붙은 구독 후보도 구독하지 않은 중분류의 재료가 된다([ADR-0245](0245-a-topic-suggestion-is-made-when-the-current-interest-of-an-unsubscribed-subtopic-reaches-its-own-threshold.md)), 지금 상태는 [digest Spec "구독 제안"](../specs/digest.md#구독-제안) digest-R41
