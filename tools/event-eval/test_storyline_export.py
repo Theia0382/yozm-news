@@ -107,8 +107,10 @@ class StorylineAdmin(FakeAdmin):
                                              "next": following, "linkingCriteria": self.linking,
                                              "relationCriteria": RELATION})
         if url.path == "/api/admin/big-storylines":
-            big = {"2026-11-04": [20, 22], "2026-11-05": []}[query["from"]]
-            return self._send(request, 200, {"storylines": [{"id": one} for one in big]})
+            # 20 의 포함 나무 아래에서 21 도 크다 — 목록은 20 한 행이고 21 은 그 아래에 실린다
+            big = {"2026-11-04": [{"id": 20, "branches": [{"id": 21, "branches": []}]}, {"id": 22, "branches": []}],
+                   "2026-11-05": []}[query["from"]]
+            return self._send(request, 200, {"storylines": big})
         return self._send(request, 200, DETAILS[int(url.path.rsplit("/", 1)[1])])
 
 
@@ -134,10 +136,11 @@ class StorylineExportTest(unittest.TestCase):
         self.result = root / "instance.json"
         self.pairs = root / "instance-pairs.csv"
 
-    def export(self, token=TOKEN):
+    def export(self, token=TOKEN, extra=()):
         out, err = io.StringIO(), io.StringIO()
         code = main(["export", "--data", str(self.data), "--result", str(self.result), "--pairs", str(self.pairs),
-                     "--method", "instance", "--embedding-model", "onnx e5-small", "--base-url", self.fake.url],
+                     "--method", "instance", "--embedding-model", "onnx e5-small", "--base-url", self.fake.url,
+                     *extra],
                     environ={"YOZMNEWS_ADMIN_TOKEN": token} if token else {}, stdout=out, stderr=err,
                     clock=lambda: CLOCK)
         return code, out.getvalue(), err.getvalue()
@@ -168,6 +171,15 @@ class StorylineExportTest(unittest.TestCase):
                          ["/api/admin/events/10", "/api/admin/events/11", "/api/admin/events/14"])
         self.assertEqual([query["from"] for _, path, query, _ in self.fake.requests
                           if path == "/api/admin/big-storylines"], ["2026-11-04", "2026-11-05"])
+
+    def test_big_marks_take_the_rows_only_unless_the_branches_are_asked_for(self):
+        # 기본은 행만 — 위 시험의 RESULT 가 20 하나다. --big-branches 면 20 아래의 21 도 큰 표시에 든다
+        code, out, err = self.export(extra=["--big-branches"])
+
+        self.assertEqual((code, err), (0, ""), err)
+        self.assertEqual(json.loads(self.result.read_text(encoding="utf-8"))["big"],
+                         [{"storyline": "20", "day": "2026-11-04"}, {"storyline": "21", "day": "2026-11-04"}])
+        self.assertIn("큰 표시 2", out)
 
     def test_does_not_overwrite_and_needs_the_token(self):
         self.pairs.write_text("old\n", encoding="utf-8")

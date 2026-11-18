@@ -5664,6 +5664,12 @@
             "type" : "integer",
             "format" : "int32"
           },
+          "branches" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/BigStorylineRowResponse"
+            }
+          },
           "eventCount" : {
             "type" : "integer",
             "format" : "int32"
@@ -5710,7 +5716,7 @@
             "enum" : [ "ACTIVE", "QUIET", "ENDED" ]
           }
         },
-        "required" : [ "articleCount", "eventCount", "firstArticleAt", "id", "importance", "intensity", "lastArticleAt", "periodArticles", "periodSources", "representative", "representativeArticleId", "state" ]
+        "required" : [ "articleCount", "branches", "eventCount", "firstArticleAt", "id", "importance", "intensity", "lastArticleAt", "periodArticles", "periodSources", "representative", "representativeArticleId", "state" ]
       },
       "CategoryCoverage" : {
         "type" : "object",

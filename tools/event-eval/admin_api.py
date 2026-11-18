@@ -46,7 +46,7 @@ USED_FIELDS: Final[Mapping[str, tuple[str, ...]]] = {
                                   "secondPartOfFirst", "firstPartOfSecond", "firstLedToSecond", "secondLedToFirst",
                                   "firstOneMatter", "secondOneMatter"),
     "BigStorylineListResponse": ("storylines",),
-    "BigStorylineRowResponse": ("id",),
+    "BigStorylineRowResponse": ("id", "branches"),
 }
 """스키마 이름 → 도구가 읽는 필드."""
 
@@ -301,11 +301,19 @@ class AdminApi:
                                    _judgement(field(pair, "StorylineAskedResponse", "judgement"))))
         return StorylineDetail(int(field(detail, schema, "id")), direct, relations, tuple(asked))
 
-    def big_storylines(self, day: date, zone: str) -> list[int]:
-        """그날 하루의 큰 스토리라인 ID — 지금 큰 판정 기준."""
+    def big_storylines(self, day: date, zone: str, *, branches: bool = False) -> list[int]:
+        """그날 하루의 큰 스토리라인 ID — 지금 큰 판정 기준. 목록은 포함 나무마다 한 행이다. branches 면 행 아래에 실린 큰
+        스토리라인도 행 바로 뒤에 넣는다."""
         page = self._get(_BIG_STORYLINES, {"from": day.isoformat(), "to": day.isoformat(), "zone": zone})
-        return [int(field(row, "BigStorylineRowResponse", "id"))
-                for row in field(page, "BigStorylineListResponse", "storylines")]
+        ids: list[int] = []
+        for row in field(page, "BigStorylineListResponse", "storylines"):
+            ids.append(int(field(row, "BigStorylineRowResponse", "id")))
+            below = field(row, "BigStorylineRowResponse", "branches")
+            if branches:
+                if not isinstance(below, list):
+                    raise ApiError("BigStorylineRowResponse", None, "branches 가 목록이 아니다")
+                ids.extend(int(field(branch, "BigStorylineRowResponse", "id")) for branch in below)
+        return ids
 
     def _get(self, path: str, query: Mapping[str, str]) -> object:
         url = self._base + path + ("?" + urllib.parse.urlencode(query) if query else "")
