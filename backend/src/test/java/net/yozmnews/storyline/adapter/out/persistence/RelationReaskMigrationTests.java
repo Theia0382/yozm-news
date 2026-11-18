@@ -22,7 +22,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 관계를 다시 묻게 하는 마이그레이션(V59) — 실제 PostgreSQL 의 별도 스키마에 V58 까지만 올려 스토리라인 · 관계 · 물은 기록 · 관계 대기
+ * 관계를 다시 묻게 하는 마이그레이션(V58) — 실제 PostgreSQL 의 별도 스키마에 V57 까지만 올려 스토리라인 · 관계 · 물은 기록 · 관계 대기
  * 행을 넣고, 끝까지 올린 뒤 물은 기록이 비고 합쳐지지 않은 스토리라인이 모두 관계 대기에 있고 지금 관계는 그대로인지 본다. 앱이 쓰는
  * 스키마와 섞이지 않게 스키마를 따로 두고 테스트 뒤 지운다.
  * <p>
@@ -34,7 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Import(TestcontainersConfiguration.class)
 class RelationReaskMigrationTests {
 
-	private static final String SCHEMA = "v58_relation_reask";
+	private static final String SCHEMA = "v57_relation_reask";
 
 	@Autowired
 	DataSource dataSource;
@@ -49,7 +49,7 @@ class RelationReaskMigrationTests {
 
 	@Test
 	void everyLiveStorylineIsQueuedAgainWithNoAskedRecordsAndRelationsStay() {
-		flyway("58").migrate();
+		flyway("57").migrate();
 		long waiting = storyline(null);
 		long idle = storyline(null);
 		// waiting 에 합쳐진 스토리라인 — 대기에 들지 않아야 한다

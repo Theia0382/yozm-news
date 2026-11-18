@@ -77,11 +77,10 @@ import tools.jackson.databind.json.JsonMapper;
  * <li>판정 원본 응답 — 평가기 이름 · 버전과 사건 ID 순의 확률({@code events})을 담은 JSON</li>
  * <li>관계 판정 — 흐름의 조각은 그 흐름 서술 제목들의 조각 합집합이다. 두 흐름의 조각 집합 A · B 의 겹침은
  * {@code |A ∩ B| / min(|A|, |B|)} 이다(한쪽이 비면 0). 답은 넘긴 문구 판의 답이다. 겹침이 0 이면 해당 없음이
- * {@value #RELATION_NONE} 이고 나머지 답이 그 나머지를 똑같이 나눈다. 겹침이 있으면 고른 답 하나가
+ * {@value #RELATION_NONE} 이고 나머지 답이 그 나머지를 똑같이 나눈다. 겹침이 있으면 서술 사건이 적은 흐름이 많은 흐름의 부분이라는
+ * 답이고, 서술 사건 수가 같으면 같은 사안의 조각이라는 답(그 답이 없는 판이면 second 가 first 의 부분)이
  * {@code RELATION_FLOOR + RELATION_SPAN * 겹침}({@value #RELATION_FLOOR} · {@value #RELATION_SPAN})이고 나머지 답이 그 나머지를
- * 똑같이 나눈다. 고르는 답은 겹친 조각이 작은 쪽 조각의 절반 이하면(겹침 0.5 이하) 나란한 흐름이다(그 답이 없는 판이면 이 갈래가
- * 없다). 그 밖에는 서술 사건이 적은 흐름이 많은 흐름의 부분이고, 서술 사건 수가 같으면 같은 사안의 조각(그 답이 없는 판이면 second 가
- * first 의 부분)이다</li>
+ * 똑같이 나눈다</li>
  * <li>한 사안 확률 — 서술 제목이 하나면 {@value #ONE_MATTER_SINGLE}. 둘 이상이면 그 흐름의 다른 서술 제목과 조각을 하나라도 함께 가진
  * 제목의 비율 r 로 {@code ONE_MATTER_FLOOR + ONE_MATTER_SPAN * r}({@value #ONE_MATTER_FLOOR} · {@value #ONE_MATTER_SPAN})</li>
  * <li>관계 판정 입력 토큰 — state 와 관계 질문 · 그 판의 선택지 모두 · 한 사안 질문 둘의 코드 포인트 합을 2로 나눠 올린 값</li>
@@ -280,9 +279,8 @@ public final class FakeArticleEvaluator implements ArticleEvaluator {
 	}
 
 	/**
-	 * 그 문구 판의 답마다 확률 — 겹침이 없으면 해당 없음이다. 겹침이 있으면, 나란한 흐름 답이 있는 판에서 겹친 조각이 작은 쪽 조각의 절반
-	 * 이하일 때 나란한 흐름이고, 그 밖에는 서술 사건이 적은 흐름이 많은 흐름의 부분이다. 서술 사건 수가 같으면 조각 답이 있는 판에서는
-	 * 같은 사안의 조각, 없는 판에서는 second 가 first 의 부분이다
+	 * 그 문구 판의 답마다 확률 — 겹침이 없으면 해당 없음, 있으면 서술 사건이 적은 흐름이 많은 흐름의 부분이다. 서술 사건 수가 같으면 조각 답이
+	 * 있는 판에서는 같은 사안의 조각, 없는 판에서는 second 가 first 의 부분이다
 	 */
 	private static Map<RelationAnswer, Double> relation(FlowText first, FlowText second, Set<RelationAnswer> answers) {
 		Set<String> a = flowPieces(first);
@@ -297,10 +295,7 @@ public final class FakeArticleEvaluator implements ArticleEvaluator {
 		else {
 			int firstDescribed = first.described().size();
 			int secondDescribed = second.described().size();
-			if (answers.contains(RelationAnswer.PARALLEL) && shared * 2 <= Math.min(a.size(), b.size())) {
-				chosen = RelationAnswer.PARALLEL;
-			}
-			else if (firstDescribed == secondDescribed && answers.contains(RelationAnswer.SAME_MATTER)) {
+			if (firstDescribed == secondDescribed && answers.contains(RelationAnswer.SAME_MATTER)) {
 				chosen = RelationAnswer.SAME_MATTER;
 			}
 			else {

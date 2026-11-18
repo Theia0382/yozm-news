@@ -63,7 +63,7 @@ class JevRelationJudgementTests {
 
 	private static final String ANSWER = "{\"model\":\"jev-1.14.0\",\"answers\":{\"relation\":{\"type\":\"choice\","
 			+ "\"choice\":\"b_part_of_a\",\"confidence\":0.7,\"probabilities\":{\"b_part_of_a\":0.7,\"a_part_of_b\":0.03,"
-			+ "\"a_led_to_b\":0.15,\"b_led_to_a\":0.02,\"same\":0.04,\"parallel\":0.01,\"none\":0.05}},\"a_one_matter\":{\"type\":\"noul\",\"noul\":0.91},"
+			+ "\"a_led_to_b\":0.15,\"b_led_to_a\":0.02,\"same\":0.04,\"none\":0.06}},\"a_one_matter\":{\"type\":\"noul\",\"noul\":0.91},"
 			+ "\"b_one_matter\":{\"type\":\"noul\",\"noul\":0.84}},\"usage\":{\"input_tokens\":1924,\"output_tokens\":103}}";
 
 	private static final String CONTEXT_EXCEEDED = "{\"detail\":{\"error_type\":\"max_tokens_exceeded\"}}";
@@ -82,7 +82,7 @@ class JevRelationJudgementTests {
 		assertThat(evaluator().judgeRelation(INPUT)).isEqualTo(new Relation(
 				Map.of(RelationAnswer.SECOND_PART_OF_FIRST, 0.7, RelationAnswer.FIRST_PART_OF_SECOND, 0.03,
 						RelationAnswer.FIRST_LED_TO_SECOND, 0.15, RelationAnswer.SECOND_LED_TO_FIRST, 0.02,
-						RelationAnswer.SAME_MATTER, 0.04, RelationAnswer.PARALLEL, 0.01, RelationAnswer.NONE, 0.05),
+						RelationAnswer.SAME_MATTER, 0.04, RelationAnswer.NONE, 0.06),
 				0.91, 0.84, "jev", "jev-1.14.0", 1924, ANSWER));
 		server.verify(1, postRequestedFor(urlEqualTo(PATH)).withHeader("Authorization", equalTo("Bearer " + KEY))
 			.withRequestBody(matchingJsonPath("$.model", equalTo("jev-latest")))
@@ -90,7 +90,6 @@ class JevRelationJudgementTests {
 			.withRequestBody(matchingJsonPath("$.questions.relation.type", equalTo("choice")))
 			.withRequestBody(matchingJsonPath("$.questions.relation.criteria.b_led_to_a"))
 			.withRequestBody(matchingJsonPath("$.questions.relation.criteria.same"))
-			.withRequestBody(matchingJsonPath("$.questions.relation.criteria.parallel"))
 			.withRequestBody(matchingJsonPath("$.questions.a_one_matter.type", equalTo("noul")))
 			.withRequestBody(matchingJsonPath("$.questions.b_one_matter.type", equalTo("noul"))));
 	}
@@ -98,25 +97,25 @@ class JevRelationJudgementTests {
 	@Test
 	void rereadsAStoredBodyWithoutSendingARequest() {
 		// 판정 때 받은 본문 그대로 — 그 판의 답마다 확률과 두 한 사안 확률, 모델 · 토큰도 본문의 값이다
-		assertThat(evaluator().rereadRelation("jev", ANSWER, RelationWording.RELATION_3)).isEqualTo(new Relation(
+		assertThat(evaluator().rereadRelation("jev", ANSWER, RelationWording.RELATION_2)).isEqualTo(new Relation(
 				Map.of(RelationAnswer.SECOND_PART_OF_FIRST, 0.7, RelationAnswer.FIRST_PART_OF_SECOND, 0.03,
 						RelationAnswer.FIRST_LED_TO_SECOND, 0.15, RelationAnswer.SECOND_LED_TO_FIRST, 0.02,
-						RelationAnswer.SAME_MATTER, 0.04, RelationAnswer.PARALLEL, 0.01, RelationAnswer.NONE, 0.05),
+						RelationAnswer.SAME_MATTER, 0.04, RelationAnswer.NONE, 0.06),
 				0.91, 0.84, "jev", "jev-1.14.0", 1924, ANSWER));
 		server.verify(0, anyRequestedFor(anyUrl()));
 	}
 
 	@Test
 	void rereadsABodyOfTheEarlierWordingWithItsFiveAnswers() {
-		// 조각 답 · 나란한 흐름 답이 없던 판의 본문 — 그 판의 답 다섯만 읽는다. 지금 판으로 읽으면 조각 답이 없어 읽지 못한다
-		String earlier = ANSWER.replace("\"same\":0.04,\"parallel\":0.01,\"none\":0.05", "\"none\":0.1");
+		// 조각 답이 없던 판의 본문 — 그 판의 답 다섯만 읽는다. 지금 판으로 읽으면 조각 답이 없어 읽지 못한다
+		String earlier = ANSWER.replace("\"same\":0.04,\"none\":0.06", "\"none\":0.1");
 
 		assertThat(evaluator().rereadRelation("jev", earlier, RelationWording.RELATION_1)).isEqualTo(new Relation(
 				Map.of(RelationAnswer.SECOND_PART_OF_FIRST, 0.7, RelationAnswer.FIRST_PART_OF_SECOND, 0.03,
 						RelationAnswer.FIRST_LED_TO_SECOND, 0.15, RelationAnswer.SECOND_LED_TO_FIRST, 0.02,
 						RelationAnswer.NONE, 0.1),
 				0.91, 0.84, "jev", "jev-1.14.0", 1924, earlier));
-		assertThat(evaluator().rereadRelation("jev", earlier, RelationWording.RELATION_3)).isEqualTo(new RereadFailure(
+		assertThat(evaluator().rereadRelation("jev", earlier, RelationWording.RELATION_2)).isEqualTo(new RereadFailure(
 				RereadFailure.Kind.UNREADABLE, "Jev 응답을 읽을 수 없다 — 확률이 없거나 숫자가 아니다 — relation.same"));
 		server.verify(0, anyRequestedFor(anyUrl()));
 	}

@@ -44,8 +44,8 @@ USED_FIELDS: Final[Mapping[str, tuple[str, ...]]] = {
     "StorylineRelationResponse": ("kind", "sourceId", "targetId", "judgement"),
     "StorylineAskedResponse": ("otherId", "smallerEvents", "outcome", "askedAt", "judgementId", "judgement"),
     "RelationJudgementResponse": ("id", "firstId", "secondId", "modelVersion", "reading", "none", "sameMatter",
-                                  "parallel", "secondPartOfFirst", "firstPartOfSecond", "firstLedToSecond",
-                                  "secondLedToFirst", "firstOneMatter", "secondOneMatter"),
+                                  "secondPartOfFirst", "firstPartOfSecond", "firstLedToSecond", "secondLedToFirst",
+                                  "firstOneMatter", "secondOneMatter"),
     "BigStorylineListResponse": ("storylines",),
     "BigStorylineRowResponse": ("id", "branches"),
 }
@@ -56,10 +56,9 @@ _JUDGEMENTS: Final = "/api/admin/event-judgements"
 _STORYLINES: Final = "/api/admin/storylines"
 _BIG_STORYLINES: Final = "/api/admin/big-storylines"
 
-ANSWERS: Final = ("none", "sameMatter", "parallel", "secondPartOfFirst", "firstPartOfSecond", "firstLedToSecond",
+ANSWERS: Final = ("none", "sameMatter", "secondPartOfFirst", "firstPartOfSecond", "firstLedToSecond",
                   "secondLedToFirst")
-"""관계 판정의 답 — 응답 칸 이름, 이 순서로 확률을 싣는다. 같은 사안의 조각(sameMatter)과 나란한 흐름(parallel)은 그 답이 없는 문구
-판의 원본이면 없다."""
+"""관계 판정의 답 — 응답 칸 이름, 이 순서로 확률을 싣는다. 같은 사안의 조각(sameMatter)은 그 답이 없는 문구 판의 원본이면 없다."""
 
 
 class ApiError(Exception):

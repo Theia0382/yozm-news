@@ -210,7 +210,6 @@ export const linkedByLabels = {
   RULE: "붙이기",
   PAIR: "짝",
   MERGE: "병합 옮김",
-  GROUP: "상위 열기 평가",
 } as const satisfies Record<LinkedBy, string>;
 
 /** 관계를 마지막으로 물은 결말 */
@@ -221,9 +220,6 @@ export const relationOutcomeLabels = {
   NOT_ONE_MATTER: "한 사안 기준 미달",
   CYCLE: "순환",
   SECOND_PARENT: "둘째 상위",
-  GROUPED: "나란한 흐름 — 묶음",
-  REFERRED: "나란한 흐름 — 넘겨 물음",
-  UNGROUPED: "나란한 흐름 — 묶지 않음",
   UNMERGED: "조각 — 합치기 기준 미달",
   NOTHING_TO_ASK: "물을 것 없음",
   REJECTED: "입력 거부",

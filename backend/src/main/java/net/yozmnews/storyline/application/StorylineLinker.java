@@ -21,6 +21,7 @@ import net.yozmnews.event.EventId;
 import net.yozmnews.event.EventKeyTerm;
 import net.yozmnews.event.EventNeighbor;
 import net.yozmnews.event.EventProfile;
+import net.yozmnews.event.EventTermCounts;
 import net.yozmnews.event.EventView;
 import net.yozmnews.storyline.LinkedBy;
 import net.yozmnews.storyline.RetiredStoryline;
@@ -357,8 +358,14 @@ class StorylineLinker {
 		Map<Long, List<Long>> described = new LinkedHashMap<>();
 		Set<Long> describedEvents = new TreeSet<>();
 		for (Scored one : band) {
-			List<Long> chosen = LinkingMaterials.describe(profile, subject,
-					bandMembers.getOrDefault(one.id(), List.of()), memberProfiles);
+			Map<Long, float[]> centroids = new TreeMap<>();
+			for (long member : bandMembers.getOrDefault(one.id(), List.of())) {
+				EventProfile memberProfile = memberProfiles.get(new EventId(member));
+				if (memberProfile != null && memberProfile.modelVersion().equals(profile.modelVersion())) {
+					centroids.put(member, memberProfile.centroid());
+				}
+			}
+			List<Long> chosen = LinkingAsk.describe(subject, profile.id().value(), centroids);
 			described.put(one.id(), chosen);
 			describedEvents.addAll(chosen);
 		}
@@ -506,12 +513,20 @@ class StorylineLinker {
 
 	/** 판정할 사건의 말의 무게 — 그 사건의 구간(storyline-R9)과 겹치는 사건으로 센 수에서(storyline-R8) */
 	private TermWeights weights(Subject subject, LinkingCriteria criteria) {
-		return LinkingMaterials.weights(this.events, subject, criteria);
+		EventTermCounts counts = this.events.termCounts(subject.keyTerms(),
+				LinkingScoring.windowFrom(subject.firstArticleAt(), criteria.window()),
+				LinkingScoring.windowTo(subject.lastArticleAt(), criteria.window()));
+		return TermWeights.of(counts.events(), counts.eventsByTerm());
 	}
 
 	private static List<Scored> score(Subject subject, List<Compared> compared, LinkingCriteria criteria,
 			TermWeights weights) {
-		return LinkingMaterials.score(subject, compared, criteria, weights);
+		List<Scored> scored = new ArrayList<>();
+		for (Compared other : compared) {
+			LinkingScoring.score(subject, other, criteria.window(), weights)
+				.ifPresent(score -> scored.add(new Scored(other.id(), score)));
+		}
+		return scored;
 	}
 
 	private static List<Compared> compared(List<EventNeighbor> neighbours) {
@@ -522,8 +537,8 @@ class StorylineLinker {
 			.toList();
 	}
 
-	private static List<EventProfile> readable(List<Long> members, Map<EventId, EventProfile> profiles) {
-		return LinkingMaterials.readable(members, profiles);
+	static List<EventProfile> readable(List<Long> members, Map<EventId, EventProfile> profiles) {
+		return members.stream().map(member -> profiles.get(new EventId(member))).filter(p -> p != null).toList();
 	}
 
 	private static List<Long> neighbourIds(List<EventNeighbor> neighbours) {

@@ -21,7 +21,7 @@ from storyline_labels import StorylineSample
 from storyline_result import RESULT_FORMAT
 
 PAIR_COLUMNS: Final = ("low", "high", "smaller_events", "outcome", "asked_at", "judgement_id", "reading", "first",
-                       "second", "none", "same_matter", "parallel", "second_part_of_first", "first_part_of_second",
+                       "second", "none", "same_matter", "second_part_of_first", "first_part_of_second",
                        "first_led_to_second", "second_led_to_first", "first_one_matter", "second_one_matter")
 """물은 쌍 파일의 칸 — 답의 칸(none ~ second_led_to_first)은 admin_api.ANSWERS 와 같은 순서다."""
 

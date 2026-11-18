@@ -13,8 +13,6 @@ import java.util.UUID;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.storyline.RelationOutcome;
 import net.yozmnews.storyline.domain.queue.LinkingLease;
-import net.yozmnews.storyline.domain.relation.GroupedBy;
-import net.yozmnews.storyline.domain.relation.GroupedRelation;
 import net.yozmnews.storyline.domain.relation.PendingStoryline;
 import net.yozmnews.storyline.domain.relation.Relation;
 import net.yozmnews.storyline.domain.relation.RelationCriteria;
@@ -81,7 +79,7 @@ class JdbcRelationRepositoryTests {
 		assertThat(mine(this.relations.all())).containsExactly(new Relation(this.b, this.a, RelationKind.FOLLOWS));
 		assertThat(this.relations.of(this.a)).containsExactly(
 				new StoredRelation(new Relation(this.b, this.a, RelationKind.FOLLOWS), 0.8, 42, this.criteriaId,
-						NOW.plusSeconds(60), null));
+						NOW.plusSeconds(60)));
 		Map<String, Object> row = this.jdbc
 			.sql("select probability, judgement_id, criteria_id from storyline_relations where target_id = :a")
 			.param("a", this.a)
@@ -151,7 +149,7 @@ class JdbcRelationRepositoryTests {
 
 		assertThat(this.relations.of(this.a)).containsExactly(
 				new StoredRelation(new Relation(this.a, this.c, RelationKind.CONTAINS), 0.7, 41, this.criteriaId,
-						NOW.plusSeconds(300), null));
+						NOW.plusSeconds(300)));
 		assertThat(this.relations.of(this.b)).isEmpty();
 		assertThat(this.jdbc.sql("select judgement_id from storyline_relations where source_id = :a")
 			.param("a", this.a)
@@ -262,79 +260,6 @@ class JdbcRelationRepositoryTests {
 
 	private boolean mine(PendingStoryline row) {
 		return List.of(this.a, this.b, this.c).contains(row.storylineId());
-	}
-
-	@Test
-	void aLinkMadeByAParallelPairCarriesThatPairUntilItIsRemarked() {
-		long group = storyline();
-		Relation toA = new Relation(group, this.a, RelationKind.CONTAINS);
-		Relation toB = new Relation(group, this.b, RelationKind.CONTAINS);
-		this.relations.linkGrouped(toA, GroupedBy.of(this.b, this.a), 0.9, 61, this.criteriaId, NOW);
-		this.relations.linkGrouped(toB, GroupedBy.of(this.a, this.b), 0.9, 61, this.criteriaId, NOW);
-		this.relations.link(new Relation(this.a, this.c, RelationKind.FOLLOWS), 0.7, 41, this.criteriaId, NOW);
-
-		assertThat(this.relations.groupedBy(this.b, this.a)).containsExactly(toA, toB);
-		assertThat(this.relations.groupedBy(this.a, this.c)).isEmpty();
-		assertThat(this.relations.grouped().stream().filter(one -> one.relation().sourceId() == group))
-			.containsExactly(new GroupedRelation(toA, new GroupedBy(this.a, this.b)),
-					new GroupedRelation(toB, new GroupedBy(this.a, this.b)));
-		assertThat(this.relations.of(this.b)).containsExactly(
-				new StoredRelation(toB, 0.9, 61, this.criteriaId, NOW, new GroupedBy(this.a, this.b)));
-		// 그 고리로 이어진 상대 — 보통 관계의 상대(c)는 아니다
-		assertThat(this.relations.groupedPartners(this.a)).containsExactly(group);
-		assertThat(this.relations.groupedPartners(group)).containsExactly(this.a, this.b);
-		assertThat(this.relations.groupedPartners(this.c)).isEmpty();
-
-		this.relations.regroup(toA, new GroupedBy(this.a, this.c));
-		this.relations.regroup(toB, null);
-
-		assertThat(this.relations.groupedBy(this.a, this.c)).containsExactly(toA);
-		assertThat(this.relations.groupedBy(this.a, this.b)).isEmpty();
-		assertThat(this.relations.groupedPartners(group)).containsExactly(this.a);
-		assertThat(this.relations.of(this.b)).extracting(StoredRelation::groupedBy).containsOnlyNulls();
-	}
-
-	@Test
-	void aLinkLosesItsPairWhenOneOfThePairIsDeleted() {
-		long group = storyline();
-		long gone = storyline();
-		Relation toA = new Relation(group, this.a, RelationKind.CONTAINS);
-		this.relations.linkGrouped(toA, GroupedBy.of(this.a, gone), 0.9, 61, this.criteriaId, NOW);
-
-		this.jdbc.sql("delete from storylines where id = :id").param("id", gone).update();
-
-		// 고리는 남고 표지만 없다 — 두 끝이 스스로 판정받는 보통 관계다
-		assertThat(this.relations.of(this.a)).containsExactly(
-				new StoredRelation(toA, 0.9, 61, this.criteriaId, NOW, null));
-		assertThat(this.relations.grouped().stream().filter(one -> one.relation().sourceId() == group)).isEmpty();
-		assertThat(this.relations.groupedPartners(this.a)).isEmpty();
-	}
-
-	@Test
-	void referralsAreKeptPerPairAndClearedByPairOrByStoryline() {
-		this.relations.refer(this.b, this.a, NOW);
-		this.relations.refer(this.a, this.b, NOW.plusSeconds(60));
-		this.relations.refer(this.a, this.c, NOW);
-		this.relations.refer(this.c, this.b, NOW);
-
-		assertThat(this.relations.referred(this.a)).containsExactly(this.b, this.c);
-		assertThat(this.relations.referred(this.b)).containsExactly(this.a, this.c);
-
-		this.relations.clearReferral(this.b, this.a);
-
-		assertThat(this.relations.referred(this.a)).containsExactly(this.c);
-		assertThat(this.relations.referred(this.b)).containsExactly(this.c);
-
-		this.relations.clearReferrals(this.c);
-
-		assertThat(this.relations.referred(this.a)).isEmpty();
-		assertThat(this.relations.referred(this.b)).isEmpty();
-
-		// 스토리라인이 지워지면 그 넘김도 지워진다
-		long gone = storyline();
-		this.relations.refer(this.a, gone, NOW);
-		this.jdbc.sql("delete from storylines where id = :id").param("id", gone).update();
-		assertThat(this.relations.referred(this.a)).isEmpty();
 	}
 
 	private List<Long> queued() {

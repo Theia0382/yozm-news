@@ -29,7 +29,7 @@ public record LinkJudgement(LinkedBy linkedBy, @Nullable Score score, @Nullable 
 		Objects.requireNonNull(linkedBy, "linkedBy");
 		Objects.requireNonNull(linkedAt, "linkedAt");
 		boolean judged = switch (linkedBy) {
-			case RULE, PAIR, GROUP -> true;
+			case RULE, PAIR -> true;
 			case MERGE -> false;
 		};
 		if (judged != (score != null) || judged != (criteriaId != null)) {

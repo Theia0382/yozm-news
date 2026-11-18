@@ -283,12 +283,6 @@ function RelationsSection({ detail }: { detail: Detail }) {
                       <td>{formatDateTime(relation.linkedAt)}</td>
                       <td>{relationCriteriaText(relation.criteria)}</td>
                       <td>
-                        {relation.groupedBy.length === 2 && (
-                          <span className="block text-muted-foreground">
-                            나란한 흐름 쌍 {relation.groupedBy[0]} ·{" "}
-                            {relation.groupedBy[1]} 의 판정이 맺음
-                          </span>
-                        )}
                         <JudgementText
                           judgementId={relation.judgementId}
                           judgement={relation.judgement}
@@ -458,9 +452,6 @@ function JudgementText({
           해당 없음 {formatProbability(judgement.none)} ·{" "}
           {judgement.sameMatter != null && (
             <>조각 {formatProbability(judgement.sameMatter)} · </>
-          )}
-          {judgement.parallel != null && (
-            <>나란한 흐름 {formatProbability(judgement.parallel)} · </>
           )}
           {second} ⊂ {first} {formatProbability(judgement.secondPartOfFirst)} ·{" "}
           {first} ⊂ {second} {formatProbability(judgement.firstPartOfSecond)} ·{" "}

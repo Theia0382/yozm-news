@@ -66,21 +66,21 @@ class RelationJudgementLogServiceTests {
 
 	@Test
 	void rereadsEachJudgementWithTheWordingItWasAskedWith() {
-		Map<RelationAnswer, Double> seven = Map.of(RelationAnswer.NONE, 0.05, RelationAnswer.PARALLEL, 0.05,
-				RelationAnswer.SAME_MATTER, 0.6, RelationAnswer.SECOND_PART_OF_FIRST, 0.1, RelationAnswer.FIRST_PART_OF_SECOND,
-				0.05, RelationAnswer.FIRST_LED_TO_SECOND, 0.1, RelationAnswer.SECOND_LED_TO_FIRST, 0.05);
+		Map<RelationAnswer, Double> six = Map.of(RelationAnswer.NONE, 0.1, RelationAnswer.SAME_MATTER, 0.6,
+				RelationAnswer.SECOND_PART_OF_FIRST, 0.1, RelationAnswer.FIRST_PART_OF_SECOND, 0.05,
+				RelationAnswer.FIRST_LED_TO_SECOND, 0.1, RelationAnswer.SECOND_LED_TO_FIRST, 0.05);
 		StoredRelationJudgement second = new StoredRelationJudgement(new RelationJudgementId(42), 7, 9, "jev",
-				"jev-1.14.0", "relation-3", 1960, "{\"stored\":2}", AT);
+				"jev-1.14.0", "relation-2", 1960, "{\"stored\":2}", AT);
 		Evaluator evaluator = new Evaluator(
-				(name, raw) -> new Relation(raw.contains("2") ? seven : ANSWERS, 0.8, 0.6, name, "jev-1.14.0", 0, raw));
+				(name, raw) -> new Relation(raw.contains("2") ? six : ANSWERS, 0.8, 0.6, name, "jev-1.14.0", 0, raw));
 
 		Map<RelationJudgementId, RelationJudgementView> found = new RelationJudgementLogService(() -> evaluator,
 				new Repository(List.of(STORED, second)))
 			.findAll(List.of(new RelationJudgementId(41), new RelationJudgementId(42)));
 
 		assertThat(found.get(new RelationJudgementId(41)).reading()).isEqualTo(new RelationReading.Read(ANSWERS, 0.8, 0.6));
-		assertThat(found.get(new RelationJudgementId(42)).reading()).isEqualTo(new RelationReading.Read(seven, 0.8, 0.6));
-		assertThat(evaluator.asked).containsExactly("jev|{\"stored\":true}|relation-1", "jev|{\"stored\":2}|relation-3");
+		assertThat(found.get(new RelationJudgementId(42)).reading()).isEqualTo(new RelationReading.Read(six, 0.8, 0.6));
+		assertThat(evaluator.asked).containsExactly("jev|{\"stored\":true}|relation-1", "jev|{\"stored\":2}|relation-2");
 	}
 
 	@Test

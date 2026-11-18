@@ -23,7 +23,7 @@ class RelationPropertiesTests {
 	@Test
 	void withoutPropertiesTheDefaultsApply() {
 		this.runner.run(context -> assertThat(context.getBean(RelationCriteria.class))
-			.isEqualTo(new RelationCriteria(0.60, 0.20, 3, 0.88, Duration.ofDays(14), 0.60)));
+			.isEqualTo(new RelationCriteria(0.60, 0.20, 3, 0.88, Duration.ofDays(14), 0.65)));
 	}
 
 	@Test
@@ -43,7 +43,7 @@ class RelationPropertiesTests {
 			.run(context -> assertThat(context.getBean(RelationCriteria.class).mergeProbability()).isEqualTo(0.7));
 		// 확률 기준을 내리면 기본값 그대로다
 		this.runner.withPropertyValues("yozmnews.storyline-relation.probability=0.5")
-			.run(context -> assertThat(context.getBean(RelationCriteria.class).mergeProbability()).isEqualTo(0.60));
+			.run(context -> assertThat(context.getBean(RelationCriteria.class).mergeProbability()).isEqualTo(0.65));
 	}
 
 	@Test

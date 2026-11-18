@@ -74,8 +74,8 @@ class FlowRelationFlowTests {
 
 	private static final String RAW = "{\"model\":\"jev-1.14.0\",\"answers\":{}}";
 
-	private static final Map<RelationAnswer, Double> PROBABILITIES = Map.of(RelationAnswer.NONE, 0.05,
-			RelationAnswer.PARALLEL, 0.01, RelationAnswer.SAME_MATTER, 0.04, RelationAnswer.SECOND_PART_OF_FIRST, 0.7,
+	private static final Map<RelationAnswer, Double> PROBABILITIES = Map.of(RelationAnswer.NONE, 0.06,
+			RelationAnswer.SAME_MATTER, 0.04, RelationAnswer.SECOND_PART_OF_FIRST, 0.7,
 			RelationAnswer.FIRST_PART_OF_SECOND, 0.05, RelationAnswer.FIRST_LED_TO_SECOND, 0.1,
 			RelationAnswer.SECOND_LED_TO_FIRST, 0.05);
 
@@ -130,7 +130,7 @@ class FlowRelationFlowTests {
 							+ ", \"summarized\": false}]}")
 			.containsEntry("evaluator", "jev")
 			.containsEntry("model_version", "jev-1.14.0")
-			.containsEntry("wording_version", "relation-3")
+			.containsEntry("wording_version", "relation-2")
 			.containsEntry("same_raw", true)
 			.containsEntry("input_tokens", 1924);
 		assertThat(this.jdbc.sql("select judged_at from flow_relation_judgements")
@@ -219,7 +219,7 @@ class FlowRelationFlowTests {
 		Stub stub = new Stub(input -> relation(Map.of(RelationAnswer.NONE, 0.9)));
 
 		assertThatIllegalStateException().isThrownBy(() -> service(stub).judge(query(one, two)))
-			.withMessageStartingWith("관계 판정 결과를 저장할 수 없다 — 답이 문구 판 relation-3 의 선택지와 다르다");
+			.withMessageStartingWith("관계 판정 결과를 저장할 수 없다 — 답이 문구 판 relation-2 의 선택지와 다르다");
 		assertThat(judgementRows()).isZero();
 	}
 

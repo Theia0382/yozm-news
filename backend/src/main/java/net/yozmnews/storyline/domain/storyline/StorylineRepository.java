@@ -52,14 +52,6 @@ public interface StorylineRepository {
 	/** 새 스토리라인을 연다 — 표현과 핵심 말을 쓴다 */
 	long open(Representation representation, Instant now);
 
-	/**
-	 * 앞으로 열 스토리라인의 ID 를 미리 받는다 — 열기 전에 그 ID 로 판정을 묻고 기록할 때 쓴다. 열지 않으면 그 ID 는 쓰이지 않는다.
-	 */
-	long reserveId();
-
-	/** 미리 받은 ID 로 스토리라인을 연다 — 소속은 따로 넣는다 */
-	void open(long storylineId, Representation representation, Instant now);
-
 	/** 스토리라인의 표현을 쓴다 — 핵심 말은 통째로 바꾼다 */
 	void save(long storylineId, Representation representation, Instant now);
 

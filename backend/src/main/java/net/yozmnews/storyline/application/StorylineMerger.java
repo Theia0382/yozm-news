@@ -53,7 +53,7 @@ class StorylineMerger {
 	 * <ol>
 	 * <li>merged 의 소속 가운데 survivor 에 없는 사건을 survivor 로 옮긴다 — 근거는 그대로다. 옮겨 온 사건을 survivor 에 물었던 붙이기
 	 * 기록은 지운다(이제 소속이다)</li>
-	 * <li>merged 의 관계와 맺은 쌍을 survivor 로 옮기고, 그 넘김 · 물은 기록(관계 · 잇기)과 관계 대기 행을 지운다 — 합쳐진 행은 남으므로
+	 * <li>merged 의 관계를 survivor 로 옮기고, 그 물은 기록(관계 · 잇기)과 관계 대기 행을 지운다 — 합쳐진 행은 남으므로
 	 * FK 연쇄가 돌지 않는다</li>
 	 * <li>merged 의 행이 survivor 를 가리키게 한다</li>
 	 * <li>옮긴 사건이 있으면 survivor 의 표현을 지금 구성 사건으로 다시 정한다</li>
@@ -65,10 +65,6 @@ class StorylineMerger {
 		List<Long> moved = this.storylines.moveMembers(merged, survivor);
 		this.asked.forgetLinks(survivor, moved);
 		this.relations.applyMove(RelationMove.plan(this.relations.all(), merged, survivor), now);
-		// 옮긴 뒤의 고리로 맺은 쌍을 고친다 — 맺은 쌍에 든 합쳐진 스토리라인을 남는 쪽으로
-		RelationMove.remark(this.relations.grouped(), merged, survivor)
-			.forEach(remark -> this.relations.regroup(remark.relation(), remark.by()));
-		this.relations.clearReferrals(merged);
 		this.relations.forgetAsked(merged);
 		this.relationQueue.delete(merged);
 		this.asked.forgetStoryline(merged);
@@ -82,7 +78,7 @@ class StorylineMerger {
 	/** 구성 사건의 지금 표현으로 스토리라인 표현을 다시 정한다 — 읽을 구성 사건이 없으면 그대로 둔다(storyline-R7) */
 	private void represent(long storyline, Instant now) {
 		List<Long> members = this.storylines.members(List.of(storyline)).getOrDefault(storyline, List.of());
-		List<EventProfile> readable = LinkingMaterials.readable(members,
+		List<EventProfile> readable = StorylineLinker.readable(members,
 				this.events.profiles(members.stream().map(EventId::new).toList(), LinkingScoring.KEY_TERMS));
 		if (!readable.isEmpty()) {
 			this.storylines.save(storyline, Representation.of(readable), now);

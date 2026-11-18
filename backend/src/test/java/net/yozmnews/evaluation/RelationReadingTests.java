@@ -33,14 +33,12 @@ class RelationReadingTests {
 	}
 
 	@Test
-	void keepsTheSevenAnswersOfTheWordingWithTheFragmentAndParallelAnswers() {
-		Map<RelationAnswer, Double> seven = new EnumMap<>(ANSWERS);
-		seven.put(RelationAnswer.SAME_MATTER, 0.3);
-		seven.put(RelationAnswer.PARALLEL, 0.2);
+	void keepsTheSixAnswersOfTheWordingWithTheFragmentAnswer() {
+		Map<RelationAnswer, Double> six = new EnumMap<>(ANSWERS);
+		six.put(RelationAnswer.SAME_MATTER, 0.3);
 
-		assertThat(new RelationReading.Read(seven, 0.8, 0.6).probabilities()).containsOnlyKeys(RelationAnswer.values())
-			.containsEntry(RelationAnswer.SAME_MATTER, 0.3)
-			.containsEntry(RelationAnswer.PARALLEL, 0.2);
+		assertThat(new RelationReading.Read(six, 0.8, 0.6).probabilities()).containsOnlyKeys(RelationAnswer.values())
+			.containsEntry(RelationAnswer.SAME_MATTER, 0.3);
 	}
 
 	@Test

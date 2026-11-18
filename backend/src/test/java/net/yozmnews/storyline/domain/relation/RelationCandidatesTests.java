@@ -6,7 +6,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import net.yozmnews.event.EventId;
 import net.yozmnews.event.EventStatus;
@@ -34,7 +33,7 @@ class RelationCandidatesTests {
 	void sharingPartnersComeFirstByCountThenScoredPartnersByScore() {
 		List<Long> partners = RelationCandidates.partners(1, 5, Map.of(20L, 1, 21L, 3, 22L, 3),
 				List.of(scored(30, 0.90), scored(31, 0.95), scored(32, 0.95), scored(21, 0.99)),
-				counts(20, 21, 22, 30, 31, 32), Map.of(), Set.of(), Set.of(), CRITERIA);
+				counts(20, 21, 22, 30, 31, 32), Map.of(), CRITERIA);
 
 		assertThat(partners).containsExactly(21L, 22L, 20L, 31L, 32L, 30L);
 	}
@@ -42,49 +41,29 @@ class RelationCandidatesTests {
 	@Test
 	void aScoreBelowTheCandidateScoreIsNotACandidateButItsBoundaryIs() {
 		assertThat(RelationCandidates.partners(1, 5, Map.of(), List.of(scored(30, 0.88), scored(31, 0.8799)),
-				counts(30, 31), Map.of(), Set.of(), Set.of(), CRITERIA))
+				counts(30, 31), Map.of(), CRITERIA))
 			.containsExactly(30L);
 		// 사건을 함께 가졌으면 점수가 없어도 후보다
-		assertThat(RelationCandidates.partners(1, 5, Map.of(31L, 1), List.of(), counts(31), Map.of(), Set.of(), Set.of(), CRITERIA))
+		assertThat(RelationCandidates.partners(1, 5, Map.of(31L, 1), List.of(), counts(31), Map.of(), CRITERIA))
 			.containsExactly(31L);
 	}
 
 	@Test
 	void bothStorylinesNeedTheMinimumNumberOfEvents() {
-		assertThat(RelationCandidates.partners(1, 2, Map.of(20L, 2), List.of(), counts(20), Map.of(), Set.of(), Set.of(), CRITERIA)).isEmpty();
-		assertThat(RelationCandidates.partners(1, 3, Map.of(20L, 2, 21L, 2), List.of(), Map.of(20L, 2, 21L, 3), Map.of(), Set.of(), Set.of(),
+		assertThat(RelationCandidates.partners(1, 2, Map.of(20L, 2), List.of(), counts(20), Map.of(), CRITERIA)).isEmpty();
+		assertThat(RelationCandidates.partners(1, 3, Map.of(20L, 2, 21L, 2), List.of(), Map.of(20L, 2, 21L, 3), Map.of(),
 				CRITERIA))
 			.containsExactly(21L);
 		// 사건 수를 모르는 상대(그새 없어진 스토리라인)와 자기 자신은 후보가 아니다
-		assertThat(RelationCandidates.partners(1, 3, Map.of(1L, 3, 99L, 1), List.of(), Map.of(1L, 3), Map.of(), Set.of(), Set.of(), CRITERIA))
+		assertThat(RelationCandidates.partners(1, 3, Map.of(1L, 3, 99L, 1), List.of(), Map.of(1L, 3), Map.of(), CRITERIA))
 			.isEmpty();
-	}
-
-	@Test
-	void referredPartnersComeFirstWithoutAScoreButStillMustBeAskable() {
-		// 40 · 41 은 사건을 함께 갖지도 점수가 있지도 않다 — 넘겨 물을 상대라 맨 앞에 선다(ID 순)
-		assertThat(RelationCandidates.partners(1, 5, Map.of(20L, 2), List.of(scored(30, 0.95)), counts(20, 30, 40, 41),
-				Map.of(), Set.of(41L, 40L), Set.of(), CRITERIA))
-			.containsExactly(40L, 41L, 20L, 30L);
-		// 넘겨 물을 상대도 사건 수 하한과 다시 물을 때를 지킨다 — 40 은 사건 둘, 41 은 물었을 때에서 두 배가 안 됐다
-		assertThat(RelationCandidates.partners(1, 5, Map.of(), List.of(), Map.of(40L, 2, 41L, 5), Map.of(41L, 3),
-				Set.of(40L, 41L), Set.of(), CRITERIA))
-			.isEmpty();
-	}
-
-	@Test
-	void aPartnerLinkedByAnotherPairsParallelJudgementIsNotAsked() {
-		// 20 은 사건을 함께 가졌고 21 은 넘겨 물을 상대지만, 나란한 흐름 쌍의 판정이 맺은 고리로 이어져 있다 — 묻지 않는다
-		assertThat(RelationCandidates.partners(1, 5, Map.of(20L, 3, 22L, 1), List.of(scored(30, 0.95)),
-				counts(20, 21, 22, 30), Map.of(), Set.of(21L), Set.of(20L, 21L), CRITERIA))
-			.containsExactly(22L, 30L);
 	}
 
 	@Test
 	void anAskedPairIsAskedAgainWhenTheSmallerSideHasDoubled() {
 		// 지금 작은 쪽은 min(8, 상대의 사건 수) 다 — 20: 5 → 물었을 때 3 의 두 배 미만, 21: 6 → 두 배, 22: 물은 적 없음
 		assertThat(RelationCandidates.partners(1, 8, Map.of(20L, 1, 21L, 1, 22L, 1), List.of(),
-				Map.of(20L, 5, 21L, 6, 22L, 3), Map.of(20L, 3, 21L, 3), Set.of(), Set.of(), CRITERIA))
+				Map.of(20L, 5, 21L, 6, 22L, 3), Map.of(20L, 3, 21L, 3), CRITERIA))
 			.containsExactly(21L, 22L);
 		// 점수를 매기기 전에 거르는 물음도 같은 규칙이다
 		assertThat(RelationCandidates.askable(8, 5, 3, CRITERIA)).isFalse();

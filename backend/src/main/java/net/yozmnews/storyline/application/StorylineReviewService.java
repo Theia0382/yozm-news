@@ -108,9 +108,7 @@ class StorylineReviewService implements StorylineReview {
 			.criteria(rows.stream().map(StoredRelation::criteriaId).distinct().toList());
 		return rows.stream()
 			.map(row -> new StorylineRelationDetail(RelationViews.of(row), row.probability(),
-					new RelationJudgementId(row.judgementId()), relationCriteria(criteria.get(row.criteriaId())),
-					(row.groupedBy() == null) ? List.of()
-							: List.of(new StorylineId(row.groupedBy().low()), new StorylineId(row.groupedBy().high()))))
+					new RelationJudgementId(row.judgementId()), relationCriteria(criteria.get(row.criteriaId()))))
 			.toList();
 	}
 

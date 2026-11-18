@@ -11,14 +11,13 @@ import org.jspecify.annotations.Nullable;
  * 관계 판정 원본 — 판별자 {@code reading} 하나의 평평한 값 · docs/specs/admin.md §5 admin-R1 · admin-R7.
  * <p>
  * {@link Reading#READ} 면 그 원본을 남긴 문구 판의 답마다 확률과 두 한 사안 확률이 있고 {@code message} 가 null 이다 — 같은 사안의
- * 조각 답 · 나란한 흐름 답이 없는 판의 원본이면 {@code sameMatter} · {@code parallel} 은 null 이다. 그 밖이면 확률이 모두 null 이고 {@code message}
+ * 조각 답이 없는 판의 원본이면 {@code sameMatter} 는 null 이다. 그 밖이면 확률이 모두 null 이고 {@code message}
  * 가 읽지 못한 까닭의 문구다. 확률의 방향은 원본의 first · second 흐름({@code firstId} · {@code secondId}) 기준이다.
  *
  * @param firstId 그 판정 요청의 first 스토리라인 — 판정 뒤 합쳐진 스토리라인일 수 있다
  * @param secondId 그 판정 요청의 second 스토리라인
  * @param none 해당 없음의 확률
  * @param sameMatter 두 흐름이 같은 사안의 조각일 확률 — 그 답이 없는 문구 판의 원본이면 null
- * @param parallel 두 흐름이 한 일에서 나온 나란한 흐름일 확률 — 그 답이 없는 문구 판의 원본이면 null
  * @param secondPartOfFirst second 가 first 의 부분일 확률
  * @param firstPartOfSecond first 가 second 의 부분일 확률
  * @param firstLedToSecond first 가 second 를 낳았을 확률
@@ -28,7 +27,7 @@ import org.jspecify.annotations.Nullable;
  */
 record RelationJudgementResponse(long id, long firstId, long secondId, String modelVersion, String wordingVersion,
 		int inputTokens, Instant judgedAt, Reading reading, @Nullable Double none, @Nullable Double sameMatter,
-		@Nullable Double parallel, @Nullable Double secondPartOfFirst,
+		@Nullable Double secondPartOfFirst,
 		@Nullable Double firstPartOfSecond, @Nullable Double firstLedToSecond, @Nullable Double secondLedToFirst,
 		@Nullable Double firstOneMatter, @Nullable Double secondOneMatter, @Nullable String message) {
 
@@ -45,7 +44,6 @@ record RelationJudgementResponse(long id, long firstId, long secondId, String mo
 					view.secondFlowId(), view.modelVersion(), view.wordingVersion(), view.inputTokens(), view.judgedAt(),
 					Reading.READ, read.probabilities().get(RelationAnswer.NONE),
 					read.probabilities().get(RelationAnswer.SAME_MATTER),
-					read.probabilities().get(RelationAnswer.PARALLEL),
 					read.probabilities().get(RelationAnswer.SECOND_PART_OF_FIRST),
 					read.probabilities().get(RelationAnswer.FIRST_PART_OF_SECOND),
 					read.probabilities().get(RelationAnswer.FIRST_LED_TO_SECOND),
@@ -57,7 +55,7 @@ record RelationJudgementResponse(long id, long firstId, long secondId, String mo
 						case NO_EVALUATOR -> Reading.NO_EVALUATOR;
 						case OTHER_EVALUATOR -> Reading.OTHER_EVALUATOR;
 						case UNREADABLE -> Reading.UNREADABLE;
-					}, null, null, null, null, null, null, null, null, null, unread.message());
+					}, null, null, null, null, null, null, null, null, unread.message());
 		};
 	}
 

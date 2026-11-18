@@ -27,7 +27,7 @@ record RelationProperties(@DefaultValue("0.60") double probability, @DefaultValu
 		@DefaultValue("14d") Duration window, @Nullable Double mergeProbability) {
 
 	/** 합치기 확률 기준의 기본값 */
-	static final double DEFAULT_MERGE_PROBABILITY = 0.60;
+	static final double DEFAULT_MERGE_PROBABILITY = 0.65;
 
 	/**
 	 * @throws IllegalArgumentException 범위를 어길 때

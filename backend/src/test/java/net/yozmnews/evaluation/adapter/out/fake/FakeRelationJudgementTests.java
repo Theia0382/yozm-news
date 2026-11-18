@@ -38,14 +38,14 @@ class FakeRelationJudgementTests {
 			.judgeRelation(input(List.of("서울 시장 선거 개표", "서울 시장 당선 확정"), List.of("서울 시장")));
 
 		assertThat(relation.probabilities().get(RelationAnswer.SECOND_PART_OF_FIRST)).isCloseTo(0.9, within(1e-12));
-		// 나머지 답 여섯이 0.1 을 똑같이 나눈다
-		assertOthers(relation, RelationAnswer.SECOND_PART_OF_FIRST, 0.016666666666666666);
+		// 나머지 답 다섯이 0.1 을 똑같이 나눈다
+		assertOthers(relation, RelationAnswer.SECOND_PART_OF_FIRST, 0.02);
 		// 두 제목이 서로 조각을 함께 가진다 → 0.1 + 0.8 × 2 ÷ 2, 제목 하나 → 0.9
 		assertThat(relation.firstOneMatter()).isCloseTo(0.9, within(1e-12));
 		assertThat(relation.secondOneMatter()).isEqualTo(0.9);
 		assertThat(relation.evaluator()).isEqualTo("fake");
 		assertThat(relation.modelVersion()).isEqualTo("fake-rules-3");
-		assertThat(JsonMapper.builder().build().readTree(relation.rawResponse()).get("relation").size()).isEqualTo(7);
+		assertThat(JsonMapper.builder().build().readTree(relation.rawResponse()).get("relation").size()).isEqualTo(6);
 	}
 
 	@Test
@@ -54,26 +54,26 @@ class FakeRelationJudgementTests {
 		Relation relation = (Relation) this.evaluator.judgeRelation(input(List.of("서울 시장 선거"), List.of("서울 시장 취임")));
 
 		assertThat(relation.probabilities().get(RelationAnswer.SAME_MATTER)).isCloseTo(0.7666666666666667, within(1e-12));
-		assertOthers(relation, RelationAnswer.SAME_MATTER, 0.03888888888888889);
+		assertOthers(relation, RelationAnswer.SAME_MATTER, 0.04666666666666667);
 	}
 
 	@Test
-	void flowsThatShareAtMostHalfOfTheSmallerSidesPiecesAreParallel() {
-		// 조각 A = {서울, 시장, 선거, 개표}, B = {서울, 예산, 심의, 통과} — 겹침 1 은 작은 쪽 4 의 절반 이하 → 나란한 흐름, 0.5 + 0.4 × 1 ÷ 4
-		Relation relation = (Relation) this.evaluator.judgeRelation(input(List.of("서울 시장 선거 개표"), List.of("서울 예산 심의 통과")));
+	void aSmallOverlapIsStillTheFragmentAnswerWithALowerProbability() {
+		// 조각 A = {서울, 시장, 선거, 개표}, B = {서울, 예산, 심의, 통과} — 겹침 1 ÷ 4 → 0.5 + 0.4 × 1 ÷ 4. 겹침이 작아도 조각 답이고 확률만 낮다
+		Relation quarter = (Relation) this.evaluator.judgeRelation(input(List.of("서울 시장 선거 개표"), List.of("서울 예산 심의 통과")));
 
-		assertThat(relation.probabilities().get(RelationAnswer.PARALLEL)).isCloseTo(0.6, within(1e-12));
-		assertOthers(relation, RelationAnswer.PARALLEL, 0.06666666666666667);
-		// 경계 — B = {서울, 시장, 예산, 심의} 면 겹침 2 가 작은 쪽 4 의 꼭 절반이다 → 나란한 흐름, 0.5 + 0.4 × 2 ÷ 4
+		assertThat(quarter.probabilities().get(RelationAnswer.SAME_MATTER)).isCloseTo(0.6, within(1e-12));
+		assertOthers(quarter, RelationAnswer.SAME_MATTER, 0.08);
+		// B = {서울, 시장, 예산, 심의} — 겹침 2 ÷ 4 → 0.5 + 0.4 × 2 ÷ 4
 		Relation half = (Relation) this.evaluator.judgeRelation(input(List.of("서울 시장 선거 개표"), List.of("서울 시장 예산 심의")));
-		assertThat(half.probabilities().get(RelationAnswer.PARALLEL)).isCloseTo(0.7, within(1e-12));
-		assertOthers(half, RelationAnswer.PARALLEL, 0.05);
-		// 대조 — 겹침이 절반을 넘으면 나란한 흐름이 아니다(위 시험의 2 ÷ 3)
+
+		assertThat(half.probabilities().get(RelationAnswer.SAME_MATTER)).isCloseTo(0.7, within(1e-12));
+		assertOthers(half, RelationAnswer.SAME_MATTER, 0.06);
 	}
 
 	@Test
 	void answersOnlyTheAnswersOfTheWordingItWasAsked() {
-		// 조각 답 · 나란한 흐름 답이 없는 판 — 서술 사건 수가 같으면 second 가 first 의 부분이고, 나머지 답 넷이 그 나머지를 나눈다
+		// 조각 답이 없는 판 — 서술 사건 수가 같으면 second 가 first 의 부분이고, 나머지 답 넷이 그 나머지를 나눈다
 		Relation relation = (Relation) this.evaluator.judgeRelation(new RelationInput(flow(List.of("서울 시장 선거")),
 				flow(List.of("서울 시장 취임")), RelationWording.RELATION_1));
 
@@ -107,8 +107,8 @@ class FakeRelationJudgementTests {
 						RelationAnswer.FIRST_PART_OF_SECOND, 0.05, RelationAnswer.FIRST_LED_TO_SECOND, 0.05,
 						RelationAnswer.SECOND_LED_TO_FIRST, 0.05),
 				0.3, 0.9, "fake", "fake-rules-1", 0, raw));
-		assertThat(this.evaluator.rereadRelation("fake", raw, RelationWording.RELATION_3)).isEqualTo(new RereadFailure(
-				RereadFailure.Kind.UNREADABLE, "Fake 원본 응답을 읽을 수 없다 — 확률이 없거나 숫자가 아니다 — relation.PARALLEL"));
+		assertThat(this.evaluator.rereadRelation("fake", raw, RelationWording.RELATION_2)).isEqualTo(new RereadFailure(
+				RereadFailure.Kind.UNREADABLE, "Fake 원본 응답을 읽을 수 없다 — 확률이 없거나 숫자가 아니다 — relation.SAME_MATTER"));
 	}
 
 	@Test
@@ -150,7 +150,7 @@ class FakeRelationJudgementTests {
 			.judgeRelation(input(List.of("서울 시장 선거"), List.of("부산 항만 파업")));
 
 		assertThat(relation.probabilities().get(RelationAnswer.NONE)).isEqualTo(0.9);
-		assertOthers(relation, RelationAnswer.NONE, 0.016666666666666666);
+		assertOthers(relation, RelationAnswer.NONE, 0.02);
 	}
 
 	@Test

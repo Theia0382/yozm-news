@@ -59,7 +59,6 @@ class RelationRuleTests {
 	void aTieWithNoneDoesNotLinkAndATieBetweenRelationsTakesTheEarlierAnswer() {
 		Map<RelationAnswer, Double> withNone = new EnumMap<>(RelationAnswer.class);
 		withNone.put(RelationAnswer.NONE, 0.45);
-		withNone.put(RelationAnswer.PARALLEL, 0.0);
 		withNone.put(RelationAnswer.SAME_MATTER, 0.03);
 		withNone.put(RelationAnswer.SECOND_PART_OF_FIRST, 0.45);
 		withNone.put(RelationAnswer.FIRST_PART_OF_SECOND, 0.04);
@@ -67,7 +66,6 @@ class RelationRuleTests {
 		withNone.put(RelationAnswer.SECOND_LED_TO_FIRST, 0.03);
 		Map<RelationAnswer, Double> between = new EnumMap<>(RelationAnswer.class);
 		between.put(RelationAnswer.NONE, 0.0);
-		between.put(RelationAnswer.PARALLEL, 0.0);
 		between.put(RelationAnswer.SAME_MATTER, 0.0);
 		between.put(RelationAnswer.SECOND_PART_OF_FIRST, 0.1);
 		between.put(RelationAnswer.FIRST_PART_OF_SECOND, 0.1);
@@ -160,35 +158,7 @@ class RelationRuleTests {
 	}
 
 	@Test
-	void theParallelAnswerIsNotARelationAndPassesTheSameThresholds() {
-		// 나란한 흐름 — 포함도 이어짐도 조각도 아니다
-		assertThat(decide(RelationAnswer.PARALLEL, 0.7, EMPTY)).isEqualTo(new Decision.Parallel(1, 2, 0.7));
-		assertThat(decide(RelationAnswer.PARALLEL, 0.60, EMPTY)).isEqualTo(new Decision.Parallel(1, 2, 0.60));
-		assertThat(decide(RelationAnswer.PARALLEL, 0.59, EMPTY))
-			.isEqualTo(new Decision.None(Decision.Reason.LOW_PROBABILITY));
-		assertThat(RelationRule.decide(1, 2, probabilities(RelationAnswer.PARALLEL, 0.7), 0.9, 0.19, EMPTY, CRITERIA))
-			.isEqualTo(new Decision.None(Decision.Reason.NOT_ONE_MATTER));
-		// 구조는 보지 않는다 — 묶기가 지금 관계로 정한다
-		RelationGraph linked = new RelationGraph(
-				List.of(new Relation(1, 2, RelationKind.CONTAINS), new Relation(9, 1, RelationKind.CONTAINS)));
-		assertThat(decide(RelationAnswer.PARALLEL, 0.9, linked)).isEqualTo(new Decision.Parallel(1, 2, 0.9));
-	}
-
-	@Test
-	void aTieBetweenFragmentsAndParallelFlowsIsParallelAndBothComeAfterNone() {
-		// 조각과 나란한 흐름의 확률이 같으면 되돌릴 수 있는 쪽(묶기)이다
-		Map<RelationAnswer, Double> tie = probabilities(RelationAnswer.SAME_MATTER, 0.61);
-		tie.put(RelationAnswer.PARALLEL, 0.61);
-		Map<RelationAnswer, Double> withNone = probabilities(RelationAnswer.NONE, 0.45);
-		withNone.put(RelationAnswer.PARALLEL, 0.45);
-
-		assertThat(RelationRule.decide(1, 2, tie, 0.9, 0.9, EMPTY, CRITERIA)).isEqualTo(new Decision.Parallel(1, 2, 0.61));
-		assertThat(RelationRule.decide(1, 2, withNone, 0.9, 0.9, EMPTY, CRITERIA))
-			.isEqualTo(new Decision.None(Decision.Reason.NOT_RELATED));
-	}
-
-	@Test
-	void aTieBetweenNoneAndFragmentsIsNotFragmentsAndFragmentsComeBeforeARelation() {
+	void aTieBetweenNoneAndFragmentsIsNoneAndFragmentsComeBeforeARelation() {
 		Map<RelationAnswer, Double> withNone = probabilities(RelationAnswer.NONE, 0.45);
 		withNone.put(RelationAnswer.SAME_MATTER, 0.45);
 		Map<RelationAnswer, Double> withPart = probabilities(RelationAnswer.SAME_MATTER, 0.61);
@@ -201,7 +171,10 @@ class RelationRuleTests {
 	}
 
 	@Test
-	void theOutcomeOfEachReasonNotToLinkAndEveryAnswer() {
+	void theOutcomeOfEachDecisionAndEveryAnswer() {
+		assertThat(RelationRule.outcomeOf(new Decision.Link(new Relation(1, 2, RelationKind.FOLLOWS), 0.9)))
+			.isEqualTo(RelationOutcome.LINKED);
+		assertThat(RelationRule.outcomeOf(new Decision.Fragments(1, 2, 0.9))).isEqualTo(RelationOutcome.UNMERGED);
 		assertThat(RelationRule.outcomeOf(new Decision.None(Decision.Reason.NOT_RELATED))).isEqualTo(RelationOutcome.NOT_RELATED);
 		assertThat(RelationRule.outcomeOf(new Decision.None(Decision.Reason.LOW_PROBABILITY)))
 			.isEqualTo(RelationOutcome.LOW_PROBABILITY);

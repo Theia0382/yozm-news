@@ -10,8 +10,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalInt;
-import java.util.Set;
-import java.util.TreeSet;
 import java.util.UUID;
 
 import net.yozmnews.article.ArticleId;
@@ -22,41 +20,27 @@ import net.yozmnews.evaluation.RelationJudgement;
 import net.yozmnews.evaluation.RelationQuery;
 import net.yozmnews.event.EventDirectory;
 import net.yozmnews.event.EventId;
-import net.yozmnews.event.EventProfile;
 import net.yozmnews.event.EventTermCounts;
 import net.yozmnews.event.EventView;
-import net.yozmnews.storyline.LinkedBy;
 import net.yozmnews.storyline.RelationOutcome;
 import net.yozmnews.storyline.RetiredStoryline;
 import net.yozmnews.storyline.StorylinesRetired;
-import net.yozmnews.storyline.domain.linking.AskedRecord;
 import net.yozmnews.storyline.domain.linking.Compared;
 import net.yozmnews.storyline.domain.linking.Cosine;
-import net.yozmnews.storyline.domain.linking.LinkingAskedRepository;
-import net.yozmnews.storyline.domain.linking.LinkingCriteria;
-import net.yozmnews.storyline.domain.linking.LinkingCriteriaRepository;
 import net.yozmnews.storyline.domain.linking.LinkingScoring;
-import net.yozmnews.storyline.domain.linking.OpeningSelection;
-import net.yozmnews.storyline.domain.linking.Representation;
 import net.yozmnews.storyline.domain.linking.Scored;
 import net.yozmnews.storyline.domain.linking.Subject;
 import net.yozmnews.storyline.domain.linking.TermWeights;
 import net.yozmnews.storyline.domain.relation.FragmentMerge;
-import net.yozmnews.storyline.domain.relation.GroupedBy;
-import net.yozmnews.storyline.domain.relation.Grouping;
 import net.yozmnews.storyline.domain.relation.PendingStoryline;
-import net.yozmnews.storyline.domain.relation.Relation;
 import net.yozmnews.storyline.domain.relation.RelationCandidates;
 import net.yozmnews.storyline.domain.relation.RelationCriteria;
 import net.yozmnews.storyline.domain.relation.RelationDescription;
 import net.yozmnews.storyline.domain.relation.RelationGraph;
-import net.yozmnews.storyline.domain.relation.RelationKind;
 import net.yozmnews.storyline.domain.relation.RelationQueueRepository;
 import net.yozmnews.storyline.domain.relation.RelationRepository;
 import net.yozmnews.storyline.domain.relation.RelationRule;
 import net.yozmnews.storyline.domain.relation.RelationSchedule;
-import net.yozmnews.storyline.domain.relation.StoredAsked;
-import net.yozmnews.storyline.domain.storyline.LinkJudgement;
 import net.yozmnews.storyline.domain.storyline.MergeBasis;
 import net.yozmnews.storyline.domain.storyline.StorylineProfile;
 import net.yozmnews.storyline.domain.storyline.StorylineRepository;
@@ -80,13 +64,6 @@ import org.springframework.transaction.support.TransactionTemplate;
  * <p>
  * 답이 같은 사안의 조각이면 확률이 합치기 확률 기준 이상일 때 두 스토리라인을 하나로 합치고({@link FragmentMerge} ·
  * {@link StorylineMerger}), 미만이면 관계를 맺지 않고 둘로 둔다. 합치면 그 스토리라인의 남은 쌍은 이 회차에 묻지 않는다.
- * <p>
- * 답이 나란한 흐름이면 두 스토리라인을 한 상위 아래 묶는다({@link Grouping}). 상위를 열 차례면 반영 전에 트랜잭션 밖에서 두
- * 흐름의 사건을 평가하고({@link GroupOpening}), 반영 트랜잭션이 상태를 다시 확인한 뒤 통과한 사건으로 상위를 연다. 한쪽이 다른
- * 하위를 가진 상위 아래 있거나 그 자신이 하위를 가진 상위면 상위를 열지 않고, 다른 흐름이 그 상위의 하위들과도 나란한 흐름인지를 물은
- * 기록으로 보아 그 상위의 하위로 두거나 묻지 않은 쌍을 넘겨 묻는다. 한쪽의 상위에 다른 하위가 없으면 그 상위와 다른 흐름의 쌍을 넘겨
- * 묻는다. 포함으로 답했으나 하위에 이미 상위가 있어 맺지 못하면 그 상위와 상위가 없는 쪽의 쌍을 넘겨 묻는다. 나란한 흐름으로 묶였던
- * 쌍의 답이 바뀌면 그 쌍이 맺은 고리를 지우지 않고 그 고리의 두 끝을 넘겨 묻는다.
  */
 @Service
 public class RelationRound {
@@ -105,17 +82,9 @@ public class RelationRound {
 
 	private final RelationCriteria criteria;
 
-	private final GroupOpening opening;
-
 	private final StorylineMerger merger;
 
 	private final ApplicationEventPublisher publisher;
-
-	private final LinkingCriteria linkingCriteria;
-
-	private final LinkingCriteriaRepository linkingCriteriaHistory;
-
-	private final LinkingAskedRepository linkAsked;
 
 	private final TransactionTemplate transaction;
 
@@ -123,32 +92,24 @@ public class RelationRound {
 
 	@Autowired
 	RelationRound(RelationQueueRepository queue, RelationRepository relations, StorylineRepository storylines,
-			EventDirectory events, FlowRelation judge, RelationCriteria criteria, GroupOpening opening,
-			StorylineMerger merger, ApplicationEventPublisher publisher, LinkingCriteria linkingCriteria,
-			LinkingCriteriaRepository linkingCriteriaHistory, LinkingAskedRepository linkAsked,
-			TransactionTemplate transaction) {
-		this(queue, relations, storylines, events, judge, criteria, opening, merger, publisher, linkingCriteria,
-				linkingCriteriaHistory, linkAsked, transaction, InstantSource.system());
+			EventDirectory events, FlowRelation judge, RelationCriteria criteria, StorylineMerger merger,
+			ApplicationEventPublisher publisher, TransactionTemplate transaction) {
+		this(queue, relations, storylines, events, judge, criteria, merger, publisher, transaction,
+				InstantSource.system());
 	}
 
 	/** 시험이 시계를 넣는다 */
 	RelationRound(RelationQueueRepository queue, RelationRepository relations, StorylineRepository storylines,
-			EventDirectory events, FlowRelation judge, RelationCriteria criteria, GroupOpening opening,
-			StorylineMerger merger, ApplicationEventPublisher publisher, LinkingCriteria linkingCriteria,
-			LinkingCriteriaRepository linkingCriteriaHistory, LinkingAskedRepository linkAsked,
-			TransactionTemplate transaction, InstantSource clock) {
+			EventDirectory events, FlowRelation judge, RelationCriteria criteria, StorylineMerger merger,
+			ApplicationEventPublisher publisher, TransactionTemplate transaction, InstantSource clock) {
 		this.queue = queue;
 		this.relations = relations;
 		this.storylines = storylines;
 		this.events = events;
 		this.judge = judge;
 		this.criteria = criteria;
-		this.opening = opening;
 		this.merger = merger;
 		this.publisher = publisher;
-		this.linkingCriteria = linkingCriteria;
-		this.linkingCriteriaHistory = linkingCriteriaHistory;
-		this.linkAsked = linkAsked;
 		this.transaction = transaction;
 		this.clock = clock;
 	}
@@ -156,13 +117,11 @@ public class RelationRound {
 	/** 회차 하나를 돈다 */
 	public void run() {
 		Instant now = this.clock.instant();
-		// 상위를 열 때의 평가는 잇기 기준으로 한다 — 그 소속이 가리킬 잇기 기준 이력도 함께 등록한다
-		Criteria criteriaIds = Objects.requireNonNull(this.transaction
-			.execute(status -> new Criteria(this.relations.registerCriteria(this.criteria, now),
-					this.linkingCriteriaHistory.register(this.linkingCriteria, now))));
+		long criteriaId = Objects
+			.requireNonNull(this.transaction.execute(status -> this.relations.registerCriteria(this.criteria, now)));
 		Map<Long, TermWeights> weights = new HashMap<>();
 		for (PendingStoryline claim : claim(now)) {
-			if (relate(claim, criteriaIds, weights) == Next.STOP) {
+			if (relate(claim, criteriaId, weights) == Next.STOP) {
 				return;
 			}
 		}
@@ -181,8 +140,7 @@ public class RelationRound {
 	}
 
 	/** 스토리라인 하나의 후보 쌍을 묻고 반영한다 */
-	private Next relate(PendingStoryline claim, Criteria criteriaIds, Map<Long, TermWeights> weights) {
-		long criteriaId = criteriaIds.relation();
+	private Next relate(PendingStoryline claim, long criteriaId, Map<Long, TermWeights> weights) {
 		long storylineId = claim.storylineId();
 		UUID token = Objects.requireNonNull(claim.lease(), "lease").token();
 		List<Pair> pairs = Objects.requireNonNull(this.transaction.execute(status -> pairs(storylineId, weights)));
@@ -191,20 +149,8 @@ public class RelationRound {
 			RelationJudgement judgement = query.isPresent() ? this.judge.judge(query.get())
 					: new RelationJudgement.NothingToAsk();
 			Next next = switch (judgement) {
-				case RelationJudgement.Judged judged -> switch (evaluate(pair, judged)) {
-					case Opening.Unneeded unneeded ->
-						reflect(pair, judged, null, criteriaIds) ? merged(storylineId, token) : Next.PAIR;
-					case Opening.Evaluated evaluated ->
-						reflect(pair, judged, evaluated.passed(), criteriaIds) ? merged(storylineId, token) : Next.PAIR;
-					case Opening.Transient failed -> {
-						fail(storylineId, token);
-						yield Next.STORYLINE;
-					}
-					case Opening.Unavailable unavailable -> {
-						logger.error("스토리라인 관계 판정을 멈췄다 — 평가기를 쓸 수 없다: {}", unavailable.message());
-						yield Next.STOP;
-					}
-				};
+				case RelationJudgement.Judged judged ->
+					reflect(pair, judged, criteriaId) ? merged(storylineId, token) : Next.PAIR;
 				case RelationJudgement.NothingToAsk nothing -> {
 					record(pair, RelationOutcome.NOTHING_TO_ASK, criteriaId);
 					yield Next.PAIR;
@@ -247,21 +193,12 @@ public class RelationRound {
 	private List<Pair> pairs(long storylineId, Map<Long, TermWeights> weights) {
 		Optional<StorylineProfile> found = this.storylines.profile(storylineId, LinkingScoring.KEY_TERMS);
 		if (found.isEmpty() || found.get().events() < this.criteria.minEvents()) {
-			// 물을 수 없는 스토리라인의 넘김은 남기지 않는다 — 기록된 결말이 그대로 선다
-			this.relations.clearReferrals(storylineId);
 			return List.of();
 		}
 		StorylineProfile own = found.get();
 		Map<Long, Integer> asked = this.relations.askedAtSmallerEvents(storylineId);
 		Map<Long, StorylineProfile> profiles = new HashMap<>();
 		Map<Long, Integer> eventCounts = new HashMap<>();
-		Set<Long> referred = this.relations.referred(storylineId);
-		Set<Long> grouped = this.relations.groupedPartners(storylineId);
-		for (long other : referred) {
-			if (comparable(own, other, profiles)) {
-				eventCounts.put(other, profiles.get(other).events());
-			}
-		}
 		Map<Long, Integer> sharing = new LinkedHashMap<>();
 		for (long event : members(storylineId)) {
 			for (long other : this.storylines.storylinesOf(event)) {
@@ -304,13 +241,8 @@ public class RelationRound {
 				.ifPresent(score -> scored.add(new Scored(other, score)));
 		}
 		List<Pair> pairs = new ArrayList<>();
-		List<Long> partners = RelationCandidates.partners(storylineId, own.events(), sharing, scored, eventCounts, asked,
-				referred, grouped, this.criteria);
-		// 물을 수 없는 넘김(상대가 없거나 사건 수 하한 미만 · 다시 물을 때가 아님 · 나란한 흐름 쌍이 맺은 고리의 상대)은 지운다
-		referred.stream()
-			.filter(other -> !partners.contains(other))
-			.forEach(other -> this.relations.clearReferral(storylineId, other));
-		for (long partner : partners) {
+		for (long partner : RelationCandidates.partners(storylineId, own.events(), sharing, scored, eventCounts, asked,
+				this.criteria)) {
 			if (!comparable(own, partner, profiles)) {
 				continue;
 			}
@@ -375,42 +307,6 @@ public class RelationRound {
 	}
 
 	/**
-	 * 반영 전에 상위를 열 평가가 필요한지 보고, 필요하면 트랜잭션 밖에서 평가한다 — 답이 나란한 흐름이고 두 스토리라인 모두 상위가 없을 때다.
-	 * 여기서 읽은 것은 반영 트랜잭션이 다시 확인한다
-	 */
-	private Opening evaluate(Pair pair, RelationJudgement.Judged judged) {
-		long first = pair.first().id();
-		long second = pair.second().id();
-		boolean needed = Boolean.TRUE.equals(this.transaction.execute(status -> !gone(first) && !gone(second)
-				&& decide(first, second, judged) instanceof RelationRule.Decision.Parallel
-				&& grouping(first, second) instanceof Grouping.Action.Open));
-		if (!needed) {
-			return new Opening.Unneeded();
-		}
-		return switch (this.opening.evaluate(first, second, this.linkingCriteria)) {
-			case GroupOpening.Evaluated.Passed passed -> new Opening.Evaluated(passed);
-			case GroupOpening.Evaluated.Transient failed -> new Opening.Transient();
-			case GroupOpening.Evaluated.Unavailable unavailable -> new Opening.Unavailable(unavailable.message());
-		};
-	}
-
-	/**
-	 * 판정(storyline-R29) — 구조 제약은 이 쌍 사이의 관계와 이 쌍이 나란한 흐름으로 묶일 때 맺은 고리를 뺀 관계들로 본다. 이 쌍이 맺어 둔
-	 * 고리가 이 쌍의 새 판정을 막지 않게 한다
-	 */
-	private RelationRule.Decision decide(long first, long second, RelationJudgement.Judged judged) {
-		List<Relation> own = this.relations.groupedBy(first, second);
-		List<Relation> others = this.relations.all().stream().filter(relation -> !own.contains(relation)).toList();
-		return RelationRule.decide(first, second, judged.probabilities(), judged.firstOneMatter(),
-				judged.secondOneMatter(), new RelationGraph(others), this.criteria);
-	}
-
-	/** 나란한 흐름으로 판정된 쌍을 어떻게 묶는가 — 이 쌍 사이의 관계를 뺀 지금 관계로 본다 */
-	private Grouping.Action grouping(long first, long second) {
-		return Grouping.decide(first, second, new RelationGraph(this.relations.all()).without(first, second));
-	}
-
-	/**
 	 * 두 스토리라인이 합쳐졌다 — 이 스토리라인의 남은 쌍은 합치기 전의 구성 사건으로 고른 것이라 묻지 않는다. 점유를 풀고 다음
 	 * 스토리라인으로 간다. 남는 스토리라인은 관계 대기에 들어 있어 다음 회차가 지금 구성으로 후보를 다시 고른다
 	 */
@@ -420,12 +316,11 @@ public class RelationRound {
 	}
 
 	/**
-	 * 판정을 반영한다(storyline-R29 · R30) — 모듈 잠금 안에서 두 스토리라인을 다시 읽고, 없어졌으면 버린다.
-	 * @param evaluated 반영 전에 한 상위 열기 평가 — 하지 않았으면 null
+	 * 판정을 반영한다(storyline-R29 · R30) — 모듈 잠금 안에서 두 스토리라인을 다시 읽고, 없어졌으면 버린다. 같은 사안의 조각이고
+	 * 확률이 합치기 확률 기준 이상이면 두 스토리라인을 합친다(storyline-R17 — {@link FragmentMerge}).
 	 * @return 두 스토리라인을 합쳤는가
 	 */
-	private boolean reflect(Pair pair, RelationJudgement.Judged judged,
-			GroupOpening.Evaluated.@Nullable Passed evaluated, Criteria criteriaIds) {
+	private boolean reflect(Pair pair, RelationJudgement.Judged judged, long criteriaId) {
 		long first = pair.first().id();
 		long second = pair.second().id();
 		long judgementId = judged.judgement().value();
@@ -435,186 +330,31 @@ public class RelationRound {
 				return false;
 			}
 			Instant now = this.clock.instant();
-			RelationOutcome outcome;
-			switch (decide(first, second, judged)) {
-				case RelationRule.Decision.Link link -> {
-					overturn(first, second, link, now);
-					this.relations.link(link.relation(), link.probability(), judgementId, criteriaIds.relation(), now);
-					outcome = RelationOutcome.LINKED;
-				}
-				case RelationRule.Decision.None none -> {
-					overturn(first, second, none, now);
-					this.relations.unlink(first, second);
-					outcome = RelationRule.outcomeOf(none);
-					if (none.reason() == RelationRule.Decision.Reason.SECOND_PARENT) {
-						referToParent(first, second, now);
-					}
-				}
+			RelationRule.Decision decision = RelationRule.decide(first, second, judged.probabilities(),
+					judged.firstOneMatter(), judged.secondOneMatter(), new RelationGraph(this.relations.all()),
+					this.criteria);
+			switch (decision) {
+				case RelationRule.Decision.Link link ->
+					this.relations.link(link.relation(), link.probability(), judgementId, criteriaId, now);
 				case RelationRule.Decision.Fragments fragments -> {
-					if (FragmentMerge.decide(fragments, this.criteria) instanceof FragmentMerge.Action.Merge merge) {
-						// 합친 쌍은 한쪽이 사라져 물은 기록을 남기지 않는다 — 근거는 합쳐진 행이 갖는다(storyline-R18)
-						RetiredStoryline retired = this.merger.merge(merge.merged(), merge.survivor(),
-								new MergeBasis(judgementId, criteriaIds.relation()), now);
-						this.queue.enqueue(merge.survivor(), now);
-						this.publisher.publishEvent(new StorylinesRetired(List.of(retired)));
-						return true;
-					}
-					overturn(first, second, fragments, now);
-					this.relations.unlink(first, second);
-					outcome = RelationOutcome.UNMERGED;
-				}
-				case RelationRule.Decision.Parallel parallel -> {
-					Grouping.Action action = grouping(first, second);
-					if (action instanceof Grouping.Action.Open && evaluated == null) {
-						// 평가한 뒤 상태가 바뀌어 이제야 열 차례가 됐다 — 아무것도 쓰지 않고 다음 회차가 다시 묻게 한다
-						this.queue.enqueue(first, now);
-						this.queue.enqueue(second, now);
-						return false;
-					}
-					this.relations.unlink(first, second);
-					boolean opened = false;
-					Grouping.Consensus consensus = null;
-					switch (action) {
-						case Grouping.Action.Open open ->
-							opened = open(first, second, parallel, evaluated, judgementId, criteriaIds, now);
-						case Grouping.Action.Refer refer -> refer(refer.parent(), refer.other(), now);
-						case Grouping.Action.Among among ->
-							consensus = among(among, first, second, parallel, judgementId, criteriaIds, now);
-						case Grouping.Action.Already already -> {
+					switch (FragmentMerge.decide(fragments, this.criteria)) {
+						case FragmentMerge.Action.Merge merge -> {
+							// 합친 쌍은 한쪽이 사라져 물은 기록을 남기지 않는다 — 근거는 합쳐진 행이 갖는다(storyline-R18)
+							RetiredStoryline retired = this.merger.merge(merge.merged(), merge.survivor(),
+									new MergeBasis(judgementId, criteriaId), now);
+							this.queue.enqueue(merge.survivor(), now);
+							this.publisher.publishEvent(new StorylinesRetired(List.of(retired)));
+							return true;
 						}
-						case Grouping.Action.Reject reject -> {
-						}
+						case FragmentMerge.Action.Keep keep -> this.relations.unlink(first, second);
 					}
-					outcome = Grouping.outcomeOf(action, opened, consensus);
 				}
+				case RelationRule.Decision.None none -> this.relations.unlink(first, second);
 			}
-			this.relations.recordAsked(first, second, pair.smallerEvents(), judgementId, criteriaIds.relation(), outcome,
-					now);
-			this.relations.clearReferral(first, second);
+			this.relations.recordAsked(first, second, pair.smallerEvents(), judgementId, criteriaId,
+					RelationRule.outcomeOf(decision), now);
 			return false;
 		}));
-	}
-
-	/**
-	 * 나란한 흐름으로 묶였던 쌍의 답이 나란한 흐름이 아니게 됐다 — 그 쌍이 맺은 고리를 {@link Grouping#overturn} 대로 처분한다. 지울 고리를 먼저
-	 * 지운다(하위의 상위는 하나다). 표지를 푼 고리는 그 두 끝을 넘겨 물을 쌍으로 두고 상위를 관계 대기에 넣는다
-	 */
-	private void overturn(long first, long second, RelationRule.Decision decision, Instant now) {
-		List<Relation> own = this.relations.groupedBy(first, second);
-		if (own.isEmpty()) {
-			return;
-		}
-		Grouping.Overturn overturn = Grouping.overturn(decision, own);
-		for (Relation removed : overturn.removed()) {
-			this.relations.unlink(removed.sourceId(), removed.targetId());
-		}
-		for (Relation released : overturn.released()) {
-			this.relations.regroup(released, null);
-			refer(released.sourceId(), released.targetId(), now);
-		}
-	}
-
-	/**
-	 * 다른 흐름을 하위를 가진 상위 아래 둘지 정해 반영한다(storyline-R38) — 그 상위의 하위들과 다른 흐름의 마지막 결말을 보고, 모두 나란한
-	 * 흐름이면 상위의 하위로 두고, 아직 묻지 않은 하위가 있으면 그 쌍들을 넘겨 묻는다. 하위의 사건은 상위로 옮기지 않는다. 이 쌍이
-	 * 상위와 다른 흐름의 쌍이면 그 고리는 이 쌍 자신의 관계이고, 아니면 이 쌍의 판정이 맺은 고리다(맺은 쌍 표지)
-	 */
-	private Grouping.Consensus among(Grouping.Action.Among among, long first, long second,
-			RelationRule.Decision.Parallel parallel, long judgementId, Criteria criteriaIds, Instant now) {
-		Map<Long, RelationOutcome> asked = new HashMap<>();
-		for (StoredAsked record : this.relations.askedOf(among.other())) {
-			asked.put((record.lowId() == among.other()) ? record.highId() : record.lowId(), record.outcome());
-		}
-		Grouping.Consensus consensus = Grouping.among(among, asked);
-		switch (consensus) {
-			case Grouping.Consensus.Join join -> {
-				Relation relation = new Relation(among.parent(), among.other(), RelationKind.CONTAINS);
-				if (among.parent() == first || among.parent() == second) {
-					this.relations.link(relation, parallel.probability(), judgementId, criteriaIds.relation(), now);
-				}
-				else {
-					this.relations.linkGrouped(relation, GroupedBy.of(first, second), parallel.probability(), judgementId,
-							criteriaIds.relation(), now);
-				}
-				this.queue.enqueue(among.parent(), now);
-			}
-			case Grouping.Consensus.Ask ask -> ask.siblings().forEach(sibling -> refer(among.other(), sibling, now));
-			case Grouping.Consensus.Stay stay -> {
-			}
-		}
-		return consensus;
-	}
-
-	/**
-	 * 포함으로 답했으나 하위에 이미 다른 상위가 있어 맺지 못했다 — 상위가 없는 쪽이 그 하위를 포함한다는 답이면 그 하위의 상위와 상위가
-	 * 없는 쪽의 쌍을 넘겨 묻는다(storyline-R38). 둘째 상위로 맺지 못하는 포함은 하위 쪽에 상위가 있는 것이므로, 한쪽에만 상위가 있으면
-	 * 그쪽이 하위다
-	 */
-	private void referToParent(long first, long second, Instant now) {
-		RelationGraph graph = new RelationGraph(this.relations.all()).without(first, second);
-		Optional<Long> parentOfFirst = graph.parentOf(first);
-		Optional<Long> parentOfSecond = graph.parentOf(second);
-		if (parentOfFirst.isPresent() == parentOfSecond.isPresent()) {
-			return;
-		}
-		long parent = parentOfFirst.orElseGet(parentOfSecond::get);
-		long other = parentOfFirst.isPresent() ? second : first;
-		if (parent != other && !graph.ancestors(parent).contains(other)) {
-			refer(parent, other, now);
-		}
-	}
-
-	/** 그 쌍을 넘겨 물을 쌍으로 두고 두 스토리라인을 관계 대기에 넣는다 */
-	private void refer(long a, long b, Instant now) {
-		this.relations.refer(a, b, now);
-		this.queue.enqueue(a, now);
-		this.queue.enqueue(b, now);
-	}
-
-	/**
-	 * 평가를 통과한 사건으로 상위를 열고 두 흐름을 그 하위로 둔다 — 통과한 사건 가운데 지금도 두 흐름의 구성 사건이고 프로필이 읽히는
-	 * 것만 넣는다. 열 수 없으면({@link OpeningSelection#openable}) 아무것도 쓰지 않는다.
-	 * @return 열었는가
-	 */
-	private boolean open(long first, long second, RelationRule.Decision.Parallel parallel,
-			GroupOpening.Evaluated.Passed evaluated, long judgementId, Criteria criteriaIds, Instant now) {
-		Map<Long, List<Long>> members = this.storylines.members(List.of(first, second));
-		Set<Long> firstMembers = new TreeSet<>(members.getOrDefault(first, List.of()));
-		Set<Long> secondMembers = new TreeSet<>(members.getOrDefault(second, List.of()));
-		List<GroupOpening.Evaluated.Member> candidates = evaluated.members()
-			.stream()
-			.filter(member -> firstMembers.contains(member.eventId()) || secondMembers.contains(member.eventId()))
-			.toList();
-		Map<EventId, EventProfile> profiles = this.events
-			.profiles(candidates.stream().map(member -> new EventId(member.eventId())).toList(), LinkingScoring.KEY_TERMS);
-		List<GroupOpening.Evaluated.Member> kept = candidates.stream()
-			.filter(member -> profiles.containsKey(new EventId(member.eventId())))
-			.toList();
-		Set<Long> keptIds = new TreeSet<>(kept.stream().map(GroupOpening.Evaluated.Member::eventId).toList());
-		if (!OpeningSelection.openable(keptIds, firstMembers, secondMembers)) {
-			return false;
-		}
-		long group = evaluated.reservedId();
-		this.storylines.open(group,
-				Representation.of(kept.stream().map(member -> profiles.get(new EventId(member.eventId()))).toList()), now);
-		for (GroupOpening.Evaluated.Member member : kept) {
-			this.storylines.addMember(group, member.eventId(),
-					LinkJudgement.judged(LinkedBy.GROUP, member.score(), criteriaIds.linking(), member.asked(), now));
-		}
-		// 띠 안에서 물은 결과는 든 사건 · 들지 못한 사건 모두 남긴다 — 잇기가 같은 사건을 이 상위에 곧바로 다시 묻지 않는다(storyline-R36)
-		evaluated.asked().forEach((event, asked) -> {
-			if (firstMembers.contains(event) || secondMembers.contains(event)) {
-				this.linkAsked.recordLink(event,
-						Map.of(group, new AskedRecord(asked.asked(), asked.eventArticles(), kept.size())), now);
-			}
-		});
-		GroupedBy by = GroupedBy.of(first, second);
-		this.relations.linkGrouped(new Relation(group, first, RelationKind.CONTAINS), by, parallel.probability(),
-				judgementId, criteriaIds.relation(), now);
-		this.relations.linkGrouped(new Relation(group, second, RelationKind.CONTAINS), by, parallel.probability(),
-				judgementId, criteriaIds.relation(), now);
-		this.queue.enqueue(group, now);
-		return true;
 	}
 
 	/** 평가기를 부르지 않았거나 입력이 거부된 쌍의 물은 기록만 남긴다 — 관계는 건드리지 않는다(storyline-R31) */
@@ -628,7 +368,6 @@ public class RelationRound {
 			}
 			this.relations.recordAsked(first, second, pair.smallerEvents(), null, criteriaId, outcome,
 					this.clock.instant());
-			this.relations.clearReferral(first, second);
 		});
 	}
 
@@ -647,30 +386,6 @@ public class RelationRound {
 						failures.getAsInt());
 			}
 		});
-	}
-
-	/** 회차가 판정에 쓴 기준의 이력 ID — 관계 기준과, 상위를 열 때의 평가에 쓴 잇기 기준 */
-	private record Criteria(long relation, long linking) {
-	}
-
-	/** 반영 전에 한 상위 열기 평가 */
-	private sealed interface Opening {
-
-		/** 평가할 일이 없다 */
-		record Unneeded() implements Opening {
-		}
-
-		record Evaluated(GroupOpening.Evaluated.Passed passed) implements Opening {
-		}
-
-		/** 평가기의 일시 실패 */
-		record Transient() implements Opening {
-		}
-
-		/** 평가기를 쓸 수 없다 */
-		record Unavailable(String message) implements Opening {
-		}
-
 	}
 
 	/** 다음에 할 것 */
