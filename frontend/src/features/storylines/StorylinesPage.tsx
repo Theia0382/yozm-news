@@ -11,6 +11,8 @@ import {
   LOAD_FAILED,
   STORYLINES_INTRO,
   STORYLINES_TITLE,
+  SUBSCRIPTIONS_PATH,
+  SUBSCRIPTIONS_TITLE,
   UNTITLED,
   WINDOWS,
   bigInWindow,
@@ -44,6 +46,11 @@ export function StorylinesPage() {
           {STORYLINES_TITLE}
         </h1>
         <p className="text-muted-foreground">{STORYLINES_INTRO}</p>
+        <p className="text-sm">
+          <Link to={SUBSCRIPTIONS_PATH} className="underline">
+            {SUBSCRIPTIONS_TITLE}
+          </Link>
+        </p>
       </header>
       <div role="group" aria-label="기간" className="flex flex-wrap gap-2">
         {WINDOWS.map((one) => (

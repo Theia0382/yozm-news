@@ -382,6 +382,10 @@ describe("NoticesPage", () => {
     expect(
       within(item).getByRole("link", { name: "관심 설정에서 확인하기" }),
     ).toHaveAttribute("href", "/interests");
+    // 내 구독 링크는 사라진 구독 알림에만 있다
+    expect(
+      within(item).queryByRole("link", { name: "내 구독 보기" }),
+    ).not.toBeInTheDocument();
   });
 
   it("사라진 구독 알림은 스토리라인마다 남았던 기사 제목을 보이고 없으면 알 수 없다고 한다", async () => {
@@ -398,6 +402,9 @@ describe("NoticesPage", () => {
     expect(rows).toHaveLength(2);
     expect(rows[0]).toHaveTextContent("의대 정원 조정안 발표");
     expect(rows[1]).toHaveTextContent("제목을 알 수 없는 스토리라인");
+    expect(
+      within(item).getByRole("link", { name: "내 구독 보기" }),
+    ).toHaveAttribute("href", "/storylines/subscriptions");
   });
 
   it("다이제스트 실패 알림은 날짜 · 시각과 할 일을 보이고 키 갈래면 키 화면으로 잇는다", async () => {

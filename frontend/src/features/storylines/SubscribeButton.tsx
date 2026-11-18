@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router";
 import {
   type SubscriptionChangeResult,
   useStorylineSubscriptions,
@@ -10,8 +11,13 @@ import {
   SUBSCRIBE_LABEL,
   SUBSCRIPTION_CHANGE_FAILED,
   SUBSCRIPTION_EFFECT_SHORT,
+  SUBSCRIPTIONS_PATH,
+  SUBSCRIPTIONS_TITLE,
   limitReached,
 } from "@/features/storylines/storylineTexts";
+
+/** 버튼 옆 안내 — 상한이면 내 구독으로 가는 링크를 함께 둔다 */
+type Notice = { text: string; toSubscriptions: boolean };
 
 /**
  * 결과에 따라 버튼 옆에 남길 안내 — 바뀐 것이 그대로 보이는 결과는 안내가 없다.
@@ -20,7 +26,7 @@ import {
 function noticeOf(
   change: SubscriptionChangeResult,
   listLimit: number,
-): string | null {
+): Notice | null {
   if (change.kind === "unsubscribe") {
     return null;
   }
@@ -29,9 +35,12 @@ function noticeOf(
     case "ALREADY_SUBSCRIBED":
       return null;
     case "UNKNOWN_STORYLINE":
-      return NOT_FOUND;
+      return { text: NOT_FOUND, toSubscriptions: false };
     case "LIMIT_REACHED":
-      return limitReached(change.result.limit ?? listLimit);
+      return {
+        text: limitReached(change.result.limit ?? listLimit),
+        toSubscriptions: true,
+      };
   }
 }
 
@@ -42,7 +51,7 @@ function noticeOf(
 export function SubscribeButton({ storylineId }: { storylineId: number }) {
   const subscriptions = useStorylineSubscriptions();
   const change = useSubscriptionToggle();
-  const [notice, setNotice] = useState<string | null>(null);
+  const [notice, setNotice] = useState<Notice | null>(null);
   const subscribed =
     subscriptions.data?.subscriptions.some(
       (one) => one.storylineId === storylineId,
@@ -65,7 +74,11 @@ export function SubscribeButton({ storylineId }: { storylineId: number }) {
             { storylineId, subscribe: !subscribed },
             {
               onSuccess: (result) => setNotice(noticeOf(result, list.limit)),
-              onError: () => setNotice(SUBSCRIPTION_CHANGE_FAILED),
+              onError: () =>
+                setNotice({
+                  text: SUBSCRIPTION_CHANGE_FAILED,
+                  toSubscriptions: false,
+                }),
             },
           );
         }}
@@ -77,7 +90,15 @@ export function SubscribeButton({ storylineId }: { storylineId: number }) {
       </button>
       {notice && (
         <span role="alert" className="text-sm">
-          {notice}
+          {notice.text}
+          {notice.toSubscriptions && (
+            <>
+              {" "}
+              <Link to={SUBSCRIPTIONS_PATH} className="underline">
+                {SUBSCRIPTIONS_TITLE}
+              </Link>
+            </>
+          )}
         </span>
       )}
     </span>

@@ -59,6 +59,10 @@ describe("StorylinesPage", () => {
       "aria-pressed",
       "true",
     );
+    expect(screen.getByRole("link", { name: "내 구독" })).toHaveAttribute(
+      "href",
+      "/storylines/subscriptions",
+    );
   });
 
   it("기간을 고르면 그 기간으로 다시 받는다", async () => {
@@ -174,9 +178,13 @@ describe("StorylinesPage", () => {
     await waitFor(() => expect(button).toBeEnabled());
 
     await userEvent.click(button);
-    expect(await screen.findByRole("alert")).toHaveTextContent(
+    const limited = await screen.findByRole("alert");
+    expect(limited).toHaveTextContent(
       "구독은 100개까지입니다. 내 구독에서 정리해 주세요.",
     );
+    expect(
+      within(limited).getByRole("link", { name: "내 구독" }),
+    ).toHaveAttribute("href", "/storylines/subscriptions");
 
     answer = () =>
       json({ result: "UNKNOWN_STORYLINE", storylineId: null, limit: null });
