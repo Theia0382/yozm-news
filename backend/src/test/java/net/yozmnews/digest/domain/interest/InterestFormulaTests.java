@@ -127,6 +127,28 @@ class InterestFormulaTests {
 		assertThat(interests.weight("a")).isCloseTo(0.9375, EXACT);
 	}
 
+	@Test
+	void levelsGiveTheInterestBeforeItBecomesAWeight() {
+		// 노출 10 · 좋아요 5 → x = 5 ÷ 13 · g = 15.5 ÷ 13, 노출 2 · 싫어요 2 → x = −2 ÷ 5 · g = 0.8, 신호 없는 주제는 0
+		List<ExposedArticle> exposed = new ArrayList<>();
+		for (int i = 0; i < 5; i++) {
+			exposed.add(exposed(Set.of("a"), T, FeedbackValue.LIKE));
+			exposed.add(exposed(Set.of("a"), T, FeedbackValue.NONE));
+		}
+		exposed.add(exposed(Set.of("b"), T, FeedbackValue.DISLIKE));
+		exposed.add(exposed(Set.of("b"), T, FeedbackValue.DISLIKE));
+
+		InterestLevels levels = InterestFormula.levels(exposed, List.of(), T);
+
+		assertThat(levels.level("a")).isCloseTo(0.38461538461538464, EXACT);
+		assertThat(levels.level("b")).isCloseTo(-0.4, EXACT);
+		assertThat(levels.level("c")).isEqualTo(0.0);
+		assertThat(levels.levels()).containsOnlyKeys("a", "b");
+		TopicInterests interests = InterestFormula.interests(exposed, List.of(), T);
+		assertThat(interests.weight("a")).as("가중치는 같은 관심의 변환").isCloseTo(1.1923076923076923, EXACT);
+		assertThat(interests.weight("b")).isCloseTo(0.8, EXACT);
+	}
+
 	private static ExposedArticle exposed(Set<String> subtopics, Instant at, FeedbackValue reaction) {
 		return new ExposedArticle(subtopics, at, reaction);
 	}
