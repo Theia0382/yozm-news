@@ -10,9 +10,6 @@ public final class SelectionRules {
 	/** {@code low_confidence} 기사의 중요도에 곱하는 가중치 — 중요도 4 인 {@code low_confidence} 기사는 2.8 로 센다 */
 	public static final double LOW_CONFIDENCE_WEIGHT = 0.7;
 
-	/** 관심도 가중치 — 관심도를 계산하기 전이라 중립이다 */
-	public static final double NEUTRAL_INTEREST = 1.0;
-
 	/**
 	 * 발행 시각의 하한 — 첫 평가 시각이 기간 안이어도 발행 시각이 기간 시작에서 이만큼보다 앞서면 넣지 않는다. 소스를 새로 켰을 때 피드에 남아
 	 * 있던 오래된 기사가 한꺼번에 들어오지 않게 한다

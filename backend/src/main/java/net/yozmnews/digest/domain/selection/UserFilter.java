@@ -34,13 +34,14 @@ public record UserFilter(List<TopicSubscription> topics, Set<String> excludedReg
 
 	/**
 	 * 사용자의 제외를 지나는가 — 붙은 지역이 제외와 겹치지 않고, 형식(활성 키로 푼 것)이 제외와 겹치지 않고, 소스가 있으며 그 소스가 모두 제외는
-	 * 아니다(소스가 여럿인 기사는 제외하지 않은 소스도 그 기사를 냈다)
+	 * 아니고(소스가 여럿인 기사는 제외하지 않은 소스도 그 기사를 냈다), 그 사용자가 싫어요를 누른 기사가 아니다. 구독 필터와 큰 슬롯 대표의 자격이
+	 * 같은 판정을 쓴다
 	 */
 	public boolean passesExclusions(ArticleFacts article) {
 		Objects.requireNonNull(article, "article");
 		return Collections.disjoint(article.regions(), this.excludedRegions)
 				&& Collections.disjoint(article.formats(), this.excludedFormats) && !article.sources().isEmpty()
-				&& !this.excludedSources.containsAll(article.sources());
+				&& !this.excludedSources.containsAll(article.sources()) && !article.disliked();
 	}
 
 	/** 기사와 겹치는 구독 행의 키 — 행 순서. 붙은 중분류가 그 행이 덮는 중분류와 하나라도 겹치면 겹친다 */

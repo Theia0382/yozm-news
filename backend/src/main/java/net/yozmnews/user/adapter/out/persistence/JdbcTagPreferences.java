@@ -10,10 +10,12 @@ import java.util.Set;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.tag.TagKind;
 import net.yozmnews.tag.TagSetId;
+import net.yozmnews.user.domain.preference.PreferenceAction;
 import net.yozmnews.user.domain.preference.PreferenceCause;
 import net.yozmnews.user.domain.preference.PreferenceChange;
 import net.yozmnews.user.domain.preference.PreferenceMode;
 import net.yozmnews.user.domain.preference.PreferenceSet;
+import net.yozmnews.user.domain.preference.RecordedTopicChange;
 import net.yozmnews.user.domain.preference.TagPreferenceRepository;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
@@ -93,6 +95,22 @@ class JdbcTagPreferences implements TagPreferenceRepository {
 				.param("at", at)
 				.update();
 		}
+	}
+
+	@Override
+	public List<RecordedTopicChange> topicChanges(UserId user, Instant from, Instant to) {
+		return this.jdbc.sql("""
+				select tag_key, tag_set_id, action, cause, occurred_at from user_tag_preference_events
+				where user_id = :user and tag_kind = 'TOPIC' and occurred_at >= :from and occurred_at < :to
+				order by occurred_at, id
+				""")
+			.param("user", user.value())
+			.param("from", Timestamp.from(from))
+			.param("to", Timestamp.from(to))
+			.query((rs, n) -> new RecordedTopicChange(rs.getString("tag_key"), new TagSetId(rs.getLong("tag_set_id")),
+					PreferenceAction.valueOf(rs.getString("action")), PreferenceCause.valueOf(rs.getString("cause")),
+					rs.getTimestamp("occurred_at").toInstant()))
+			.list();
 	}
 
 	private void insertRow(UserId user, TagKind kind, String key, Instant now) {

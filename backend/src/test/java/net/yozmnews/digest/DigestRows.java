@@ -25,6 +25,21 @@ public final class DigestRows {
 				""").param("user", user).param("date", date).query(Long.class).single();
 	}
 
+	/**
+	 * 그 사용자의 그 날짜의 {@code READY} 다이제스트 하나를 끝낸 시각과 함께 넣는다.
+	 * @return 다이제스트 ID
+	 */
+	public static long digest(JdbcClient jdbc, long user, String date, String completedAt) {
+		return jdbc.sql("""
+				insert into digests (user_id, digest_date, period_start, period_end, status, trigger, created_at,
+				    started_at, completed_at, version)
+				values (:user, cast(:date as date), cast(:date as date) - interval '1 day', cast(:date as date), 'READY',
+				    'SCHEDULED', cast(:completed as timestamptz), cast(:completed as timestamptz),
+				    cast(:completed as timestamptz), 0)
+				returning id
+				""").param("user", user).param("date", date).param("completed", completedAt).query(Long.class).single();
+	}
+
 	/** 다이제스트가 기사를 인용한다 — 추가 헤드라인 섹션 하나에 인용 하나 */
 	public static void cite(JdbcClient jdbc, long digest, long article) {
 		long section = jdbc.sql("""
