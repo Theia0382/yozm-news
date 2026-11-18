@@ -86,6 +86,11 @@ class InterestFormulaTests {
 	}
 
 	@Test
+	void theReadRangeIsFourHalfLives() {
+		assertThat(InterestRules.lookback()).isEqualTo(Duration.ofDays(120));
+	}
+
+	@Test
 	void signalsAfterTheReferenceTimeWeighAsNow() {
 		// 기준 시각 하루 뒤 노출 · 좋아요 → 무게 1 → x = 1 ÷ 4 → g = 1.125
 		TopicInterests interests = InterestFormula.interests(
