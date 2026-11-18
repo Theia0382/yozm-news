@@ -20,6 +20,7 @@ import net.yozmnews.event.EventId;
 import net.yozmnews.event.EventPeriod;
 import net.yozmnews.platform.ApiProblem;
 import net.yozmnews.platform.WebRole;
+import net.yozmnews.storyline.MergedStoryline;
 import net.yozmnews.storyline.StorylineCursor;
 import net.yozmnews.storyline.StorylineDirectory;
 import net.yozmnews.storyline.StorylineEvent;
@@ -113,9 +114,12 @@ class AdminStorylineController {
 		}
 		List<StorylineRelationDetail> relations = this.review.relations(view.id());
 		List<StorylineRelationAsked> asked = this.review.asked(view.id());
+		List<MergedStoryline> merged = this.review.merged(view.id());
 		Map<RelationJudgementId, RelationJudgementView> judged = judgements(Stream
-			.concat(relations.stream().map(StorylineRelationDetail::judgement),
-					asked.stream().map(StorylineRelationAsked::judgement).filter(Objects::nonNull))
+			.of(relations.stream().map(StorylineRelationDetail::judgement),
+					asked.stream().map(StorylineRelationAsked::judgement).filter(Objects::nonNull),
+					merged.stream().map(MergedStoryline::judgement).filter(Objects::nonNull))
+			.flatMap(stream -> stream)
 			.distinct()
 			.toList());
 		Map<EventId, AdminRepresentatives.Representative> representatives = this.representatives.of(Stream
@@ -135,6 +139,10 @@ class AdminStorylineController {
 					.toList(),
 				asked.stream()
 					.map(one -> StorylineAskedResponse.of(one,
+							(one.judgement() == null) ? null : judged.get(one.judgement())))
+					.toList(),
+				merged.stream()
+					.map(one -> StorylineMergedResponse.of(one,
 							(one.judgement() == null) ? null : judged.get(one.judgement())))
 					.toList());
 	}

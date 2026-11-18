@@ -8,13 +8,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.List;
 
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.storyline.StorylineRows;
 import net.yozmnews.user.SignedInUsers;
+import net.yozmnews.user.StorylineSubscriptionAction;
+import net.yozmnews.user.StorylineSubscriptionCause;
 import net.yozmnews.user.application.PasswordHashing;
 import net.yozmnews.user.domain.account.AccountRepository;
 import net.yozmnews.user.domain.credential.PasswordCredentialRepository;
+import net.yozmnews.user.domain.subscription.StorylineSubscriptionRepository;
+import net.yozmnews.user.domain.subscription.SubscriptionChange;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,12 +30,13 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.json.JsonCompareMode;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * 스토리라인 구독 API — 판정 결과는 판별자 하나의 200 이고 손으로 쓴 JSON 과 STRICT 로 견준다. 경로의 스토리라인 ID 가 1 보다 작으면 400
- * 이다. 실제 PostgreSQL 에서 본다.
+ * 이다. 내 구독 이력은 최근부터 한 쪽과 다음 쪽 커서를 내고, 커서 두 값은 함께 오며 틀리면 400 이다. 실제 PostgreSQL 에서 본다.
  * <p>
- * 지키는 규칙: user-R52
+ * 지키는 규칙: user-R52 · user-R63
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -51,6 +57,12 @@ class StorylineSubscriptionControllerTests {
 
 	@Autowired
 	JdbcClient jdbc;
+
+	@Autowired
+	StorylineSubscriptionRepository repository;
+
+	@Autowired
+	TransactionTemplate transaction;
 
 	private SignedInUsers.SignedInUser user;
 
@@ -131,6 +143,65 @@ class StorylineSubscriptionControllerTests {
 			.andExpect(status().isBadRequest());
 		this.mockMvc.perform(put("/api/storyline-subscriptions/abc").with(this.user))
 			.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void theHistoryAnswersAPageAndAcceptsTheCursorOfTheLastRow() throws Exception {
+		long removed = storyline();
+		long kept = storyline();
+		record(removed, StorylineSubscriptionAction.ADD, "2026-11-10T00:00:00Z");
+		long newer = record(kept, StorylineSubscriptionAction.REMOVE, "2026-11-11T00:00:00Z");
+		this.jdbc.sql("delete from storylines where id = :id").param("id", removed).update();
+
+		this.mockMvc.perform(get("/api/storyline-subscriptions/changes").with(this.user))
+			.andExpect(status().isOk())
+			.andExpect(content().json("""
+					{"changes":[
+					  {"storylineId":%d,"action":"REMOVE","occurredAt":"2026-11-11T00:00:00Z"},
+					  {"storylineId":null,"action":"ADD","occurredAt":"2026-11-10T00:00:00Z"}],
+					 "next":null}""".formatted(kept), JsonCompareMode.STRICT));
+		// 짝이 맞는 커서는 그보다 앞선 행만 낸다
+		this.mockMvc
+			.perform(get("/api/storyline-subscriptions/changes").param("beforeAt", "2026-11-11T00:00:00Z")
+				.param("beforeId", String.valueOf(newer))
+				.with(this.user))
+			.andExpect(status().isOk())
+			.andExpect(content().json("""
+					{"changes":[{"storylineId":null,"action":"ADD","occurredAt":"2026-11-10T00:00:00Z"}],
+					 "next":null}""", JsonCompareMode.STRICT));
+	}
+
+	@Test
+	void aBrokenHistoryCursorIsABadRequest() throws Exception {
+		this.mockMvc
+			.perform(get("/api/storyline-subscriptions/changes").param("beforeAt", "2026-11-11T00:00:00Z")
+				.with(this.user))
+			.andExpect(status().isBadRequest());
+		this.mockMvc.perform(get("/api/storyline-subscriptions/changes").param("beforeId", "3").with(this.user))
+			.andExpect(status().isBadRequest());
+		this.mockMvc
+			.perform(get("/api/storyline-subscriptions/changes").param("beforeAt", "2026-11-11T00:00:00Z")
+				.param("beforeId", "0")
+				.with(this.user))
+			.andExpect(status().isBadRequest());
+		this.mockMvc
+			.perform(get("/api/storyline-subscriptions/changes").param("beforeAt", "x")
+				.param("beforeId", "3")
+				.with(this.user))
+			.andExpect(status().isBadRequest());
+		this.mockMvc
+			.perform(get("/api/storyline-subscriptions/changes").param("beforeAt", "2026-11-11T00:00:00Z")
+				.param("beforeId", "abc")
+				.with(this.user))
+			.andExpect(status().isBadRequest());
+	}
+
+	/** 세션 사용자의 원인이 사용자인 이력 행 하나 — 그 행 ID */
+	private long record(long storyline, StorylineSubscriptionAction action, String at) {
+		this.transaction.executeWithoutResult(status -> this.repository.record(this.user.id(),
+				List.of(new SubscriptionChange(storyline, action)), StorylineSubscriptionCause.USER,
+				Instant.parse(at)));
+		return this.jdbc.sql("select max(id) from user_storyline_subscription_events").query(Long.class).single();
 	}
 
 	private long storyline() {

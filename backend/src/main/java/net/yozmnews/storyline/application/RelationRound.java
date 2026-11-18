@@ -23,12 +23,15 @@ import net.yozmnews.event.EventId;
 import net.yozmnews.event.EventTermCounts;
 import net.yozmnews.event.EventView;
 import net.yozmnews.storyline.RelationOutcome;
+import net.yozmnews.storyline.RetiredStoryline;
+import net.yozmnews.storyline.StorylinesRetired;
 import net.yozmnews.storyline.domain.linking.Compared;
 import net.yozmnews.storyline.domain.linking.Cosine;
 import net.yozmnews.storyline.domain.linking.LinkingScoring;
 import net.yozmnews.storyline.domain.linking.Scored;
 import net.yozmnews.storyline.domain.linking.Subject;
 import net.yozmnews.storyline.domain.linking.TermWeights;
+import net.yozmnews.storyline.domain.relation.FragmentMerge;
 import net.yozmnews.storyline.domain.relation.PendingStoryline;
 import net.yozmnews.storyline.domain.relation.RelationCandidates;
 import net.yozmnews.storyline.domain.relation.RelationCriteria;
@@ -38,6 +41,7 @@ import net.yozmnews.storyline.domain.relation.RelationQueueRepository;
 import net.yozmnews.storyline.domain.relation.RelationRepository;
 import net.yozmnews.storyline.domain.relation.RelationRule;
 import net.yozmnews.storyline.domain.relation.RelationSchedule;
+import net.yozmnews.storyline.domain.storyline.MergeBasis;
 import net.yozmnews.storyline.domain.storyline.StorylineProfile;
 import net.yozmnews.storyline.domain.storyline.StorylineRepository;
 import net.yozmnews.storyline.domain.storyline.StorylineSnapshot;
@@ -45,6 +49,7 @@ import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -56,6 +61,9 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 행이 그대로면 지우고, 아니면 점유만 푼다. 일시 실패면 그 스토리라인의 실패 수를 올리고 다음 스토리라인으로 간다. 평가기를 쓸 수 없으면
  * 회차를 멈추고, 예상 못한 예외는 밖으로 나간다 — 점유는 만료로 풀린다. 판단은 {@code domain/relation} 이 한다. 트랜잭션 · 역할
  * 애너테이션이 없다(두 역할 공통).
+ * <p>
+ * 답이 같은 사안의 조각이면 확률이 합치기 확률 기준 이상일 때 두 스토리라인을 하나로 합치고({@link FragmentMerge} ·
+ * {@link StorylineMerger}), 미만이면 관계를 맺지 않고 둘로 둔다. 합치면 그 스토리라인의 남은 쌍은 이 회차에 묻지 않는다.
  */
 @Service
 public class RelationRound {
@@ -74,26 +82,34 @@ public class RelationRound {
 
 	private final RelationCriteria criteria;
 
+	private final StorylineMerger merger;
+
+	private final ApplicationEventPublisher publisher;
+
 	private final TransactionTemplate transaction;
 
 	private final InstantSource clock;
 
 	@Autowired
 	RelationRound(RelationQueueRepository queue, RelationRepository relations, StorylineRepository storylines,
-			EventDirectory events, FlowRelation judge, RelationCriteria criteria, TransactionTemplate transaction) {
-		this(queue, relations, storylines, events, judge, criteria, transaction, InstantSource.system());
+			EventDirectory events, FlowRelation judge, RelationCriteria criteria, StorylineMerger merger,
+			ApplicationEventPublisher publisher, TransactionTemplate transaction) {
+		this(queue, relations, storylines, events, judge, criteria, merger, publisher, transaction,
+				InstantSource.system());
 	}
 
 	/** 시험이 시계를 넣는다 */
 	RelationRound(RelationQueueRepository queue, RelationRepository relations, StorylineRepository storylines,
-			EventDirectory events, FlowRelation judge, RelationCriteria criteria, TransactionTemplate transaction,
-			InstantSource clock) {
+			EventDirectory events, FlowRelation judge, RelationCriteria criteria, StorylineMerger merger,
+			ApplicationEventPublisher publisher, TransactionTemplate transaction, InstantSource clock) {
 		this.queue = queue;
 		this.relations = relations;
 		this.storylines = storylines;
 		this.events = events;
 		this.judge = judge;
 		this.criteria = criteria;
+		this.merger = merger;
+		this.publisher = publisher;
 		this.transaction = transaction;
 		this.clock = clock;
 	}
@@ -133,10 +149,8 @@ public class RelationRound {
 			RelationJudgement judgement = query.isPresent() ? this.judge.judge(query.get())
 					: new RelationJudgement.NothingToAsk();
 			Next next = switch (judgement) {
-				case RelationJudgement.Judged judged -> {
-					reflect(pair, judged, criteriaId);
-					yield Next.PAIR;
-				}
+				case RelationJudgement.Judged judged ->
+					reflect(pair, judged, criteriaId) ? merged(storylineId, token) : Next.PAIR;
 				case RelationJudgement.NothingToAsk nothing -> {
 					record(pair, RelationOutcome.NOTHING_TO_ASK, criteriaId);
 					yield Next.PAIR;
@@ -292,27 +306,55 @@ public class RelationRound {
 				profile.lastArticleAt(), happenings));
 	}
 
-	/** 판정을 반영한다(storyline-R29 · R30) — 모듈 잠금 안에서 두 스토리라인을 다시 읽고, 없어졌으면 버린다 */
-	private void reflect(Pair pair, RelationJudgement.Judged judged, long criteriaId) {
+	/**
+	 * 두 스토리라인이 합쳐졌다 — 이 스토리라인의 남은 쌍은 합치기 전의 구성 사건으로 고른 것이라 묻지 않는다. 점유를 풀고 다음
+	 * 스토리라인으로 간다. 남는 스토리라인은 관계 대기에 들어 있어 다음 회차가 지금 구성으로 후보를 다시 고른다
+	 */
+	private Next merged(long storylineId, UUID token) {
+		this.transaction.executeWithoutResult(status -> this.queue.releaseIfLeased(storylineId, token));
+		return Next.STORYLINE;
+	}
+
+	/**
+	 * 판정을 반영한다(storyline-R29 · R30) — 모듈 잠금 안에서 두 스토리라인을 다시 읽고, 없어졌으면 버린다. 같은 사안의 조각이고
+	 * 확률이 합치기 확률 기준 이상이면 두 스토리라인을 합친다(storyline-R17 — {@link FragmentMerge}).
+	 * @return 두 스토리라인을 합쳤는가
+	 */
+	private boolean reflect(Pair pair, RelationJudgement.Judged judged, long criteriaId) {
 		long first = pair.first().id();
 		long second = pair.second().id();
-		this.transaction.executeWithoutResult(status -> {
+		long judgementId = judged.judgement().value();
+		return Boolean.TRUE.equals(this.transaction.execute(status -> {
 			this.storylines.lockLinking();
 			if (gone(first) || gone(second)) {
-				return;
+				return false;
 			}
 			Instant now = this.clock.instant();
 			RelationRule.Decision decision = RelationRule.decide(first, second, judged.probabilities(),
 					judged.firstOneMatter(), judged.secondOneMatter(), new RelationGraph(this.relations.all()),
 					this.criteria);
 			switch (decision) {
-				case RelationRule.Decision.Link link -> this.relations.link(link.relation(), link.probability(),
-						judged.judgement().value(), criteriaId, now);
+				case RelationRule.Decision.Link link ->
+					this.relations.link(link.relation(), link.probability(), judgementId, criteriaId, now);
+				case RelationRule.Decision.Fragments fragments -> {
+					switch (FragmentMerge.decide(fragments, this.criteria)) {
+						case FragmentMerge.Action.Merge merge -> {
+							// 합친 쌍은 한쪽이 사라져 물은 기록을 남기지 않는다 — 근거는 합쳐진 행이 갖는다(storyline-R18)
+							RetiredStoryline retired = this.merger.merge(merge.merged(), merge.survivor(),
+									new MergeBasis(judgementId, criteriaId), now);
+							this.queue.enqueue(merge.survivor(), now);
+							this.publisher.publishEvent(new StorylinesRetired(List.of(retired)));
+							return true;
+						}
+						case FragmentMerge.Action.Keep keep -> this.relations.unlink(first, second);
+					}
+				}
 				case RelationRule.Decision.None none -> this.relations.unlink(first, second);
 			}
-			this.relations.recordAsked(first, second, pair.smallerEvents(), judged.judgement().value(), criteriaId,
+			this.relations.recordAsked(first, second, pair.smallerEvents(), judgementId, criteriaId,
 					RelationRule.outcomeOf(decision), now);
-		});
+			return false;
+		}));
 	}
 
 	/** 평가기를 부르지 않았거나 입력이 거부된 쌍의 물은 기록만 남긴다 — 관계는 건드리지 않는다(storyline-R31) */

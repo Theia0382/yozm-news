@@ -2,10 +2,12 @@ import { screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { StorylinePage } from "@/features/storylines/StorylinePage";
 import { StorylinesPage } from "@/features/storylines/StorylinesPage";
+import userEvent from "@testing-library/user-event";
 import {
   ARTICLE,
   card,
   event,
+  subscriptionHandlers,
   timeline,
 } from "@/features/storylines/storylineTestKit";
 import { json, problem } from "@/test/fakeServer";
@@ -161,5 +163,28 @@ describe("StorylinePage", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "스토리라인을 불러오지 못했습니다.",
     );
+  });
+
+  it("합쳐진 ID 로 와도 구독 버튼은 남는 스토리라인을 구독한다", async () => {
+    const { server } = renderRoutes(ROUTES, "/storylines/5", {
+      "GET /api/storylines/5": () =>
+        json(timeline({ storyline: card(9, { period: null }) })),
+      "GET /api/storylines/9": () =>
+        json(timeline({ storyline: card(9, { period: null }) })),
+      ...subscriptionHandlers([], [5, 9]),
+    });
+    // 남는 스토리라인의 주소로 바뀐 뒤 그린 버튼
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "구독" })).toBeEnabled(),
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "구독" }));
+
+    expect(
+      await screen.findByRole("button", { name: "구독 중" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(
+      server.requests.filter((r) => r.method === "PUT").map((r) => r.path),
+    ).toEqual(["/api/storyline-subscriptions/9"]);
   });
 });

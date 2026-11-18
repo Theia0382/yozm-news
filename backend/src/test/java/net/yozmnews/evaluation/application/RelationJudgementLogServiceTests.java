@@ -24,6 +24,7 @@ import net.yozmnews.evaluation.domain.evaluator.MembershipResult;
 import net.yozmnews.evaluation.domain.evaluator.Relation;
 import net.yozmnews.evaluation.domain.evaluator.RelationInput;
 import net.yozmnews.evaluation.domain.evaluator.RelationRereadResult;
+import net.yozmnews.evaluation.domain.evaluator.RelationWording;
 import net.yozmnews.evaluation.domain.evaluator.RelationResult;
 import net.yozmnews.evaluation.domain.evaluator.RereadFailure;
 import net.yozmnews.evaluation.domain.evaluator.RereadResult;
@@ -60,7 +61,58 @@ class RelationJudgementLogServiceTests {
 		assertThat(found).containsExactly(Map.entry(new RelationJudgementId(41),
 				new RelationJudgementView(new RelationJudgementId(41), 7, 9, "jev", "jev-1.14.0", "relation-1", 1924, AT,
 						new RelationReading.Read(ANSWERS, 0.8, 0.6))));
-		assertThat(evaluator.asked).containsExactly("jev|{\"stored\":true}");
+		assertThat(evaluator.asked).containsExactly("jev|{\"stored\":true}|relation-1");
+	}
+
+	@Test
+	void rereadsEachJudgementWithTheWordingItWasAskedWith() {
+		Map<RelationAnswer, Double> six = Map.of(RelationAnswer.NONE, 0.1, RelationAnswer.SAME_MATTER, 0.6,
+				RelationAnswer.SECOND_PART_OF_FIRST, 0.1, RelationAnswer.FIRST_PART_OF_SECOND, 0.05,
+				RelationAnswer.FIRST_LED_TO_SECOND, 0.1, RelationAnswer.SECOND_LED_TO_FIRST, 0.05);
+		StoredRelationJudgement second = new StoredRelationJudgement(new RelationJudgementId(42), 7, 9, "jev",
+				"jev-1.14.0", "relation-2", 1960, "{\"stored\":2}", AT);
+		Evaluator evaluator = new Evaluator(
+				(name, raw) -> new Relation(raw.contains("2") ? six : ANSWERS, 0.8, 0.6, name, "jev-1.14.0", 0, raw));
+
+		Map<RelationJudgementId, RelationJudgementView> found = new RelationJudgementLogService(() -> evaluator,
+				new Repository(List.of(STORED, second)))
+			.findAll(List.of(new RelationJudgementId(41), new RelationJudgementId(42)));
+
+		assertThat(found.get(new RelationJudgementId(41)).reading()).isEqualTo(new RelationReading.Read(ANSWERS, 0.8, 0.6));
+		assertThat(found.get(new RelationJudgementId(42)).reading()).isEqualTo(new RelationReading.Read(six, 0.8, 0.6));
+		assertThat(evaluator.asked).containsExactly("jev|{\"stored\":true}|relation-1", "jev|{\"stored\":2}|relation-2");
+	}
+
+	@Test
+	void cannotReadAJudgementOfAnUnknownWordingAndDoesNotAskTheEvaluator() {
+		StoredRelationJudgement unknown = new StoredRelationJudgement(new RelationJudgementId(43), 7, 9, "jev",
+				"jev-1.14.0", "relation-9", 10, "{}", AT);
+		Evaluator evaluator = new Evaluator((name, raw) -> new Relation(ANSWERS, 0.8, 0.6, name, "jev-1.14.0", 0, raw));
+
+		RelationReading reading = new RelationJudgementLogService(() -> evaluator, new Repository(List.of(unknown)))
+			.findAll(List.of(new RelationJudgementId(43)))
+			.get(new RelationJudgementId(43))
+			.reading();
+
+		assertThat(reading).isEqualTo(new RelationReading.Unread(RelationReading.Unread.Reason.UNREADABLE,
+				"모르는 문구 판이라 원본 응답을 읽지 못한다 — relation-9"));
+		assertThat(evaluator.asked).isEmpty();
+	}
+
+	@Test
+	void cannotReadARereadWhoseAnswersAreThoseOfAnotherWording() {
+		Map<RelationAnswer, Double> six = Map.of(RelationAnswer.NONE, 0.1, RelationAnswer.SAME_MATTER, 0.6,
+				RelationAnswer.SECOND_PART_OF_FIRST, 0.1, RelationAnswer.FIRST_PART_OF_SECOND, 0.05,
+				RelationAnswer.FIRST_LED_TO_SECOND, 0.1, RelationAnswer.SECOND_LED_TO_FIRST, 0.05);
+		Evaluator evaluator = new Evaluator((name, raw) -> new Relation(six, 0.8, 0.6, name, "jev-1.14.0", 0, raw));
+
+		RelationReading reading = new RelationJudgementLogService(() -> evaluator, new Repository(List.of(STORED)))
+			.findAll(List.of(new RelationJudgementId(41)))
+			.get(new RelationJudgementId(41))
+			.reading();
+
+		assertThat(reading).isEqualTo(new RelationReading.Unread(RelationReading.Unread.Reason.UNREADABLE,
+				"답이 문구 판 relation-1 의 선택지와 다르다 — 빠진 답 [], 모르는 답 [SAME_MATTER]"));
 	}
 
 	@Test
@@ -93,7 +145,7 @@ class RelationJudgementLogServiceTests {
 	}
 
 	@Test
-	void cannotReadARereadWithoutAllFiveAnswers() {
+	void cannotReadARereadWithoutAllAnswersOfItsWording() {
 		Map<RelationAnswer, Double> four = Map.of(RelationAnswer.NONE, 0.1, RelationAnswer.SECOND_PART_OF_FIRST, 0.7,
 				RelationAnswer.FIRST_PART_OF_SECOND, 0.05, RelationAnswer.FIRST_LED_TO_SECOND, 0.15);
 		Evaluator evaluator = new Evaluator((name, raw) -> new Relation(four, 0.8, 0.6, name, "jev-1.14.0", 0, raw));
@@ -186,8 +238,8 @@ class RelationJudgementLogServiceTests {
 		}
 
 		@Override
-		public RelationRereadResult rereadRelation(String evaluator, String rawResponse) {
-			this.asked.add(evaluator + "|" + rawResponse);
+		public RelationRereadResult rereadRelation(String evaluator, String rawResponse, RelationWording wording) {
+			this.asked.add(evaluator + "|" + rawResponse + "|" + wording.version());
 			return this.answer.apply(evaluator, rawResponse);
 		}
 

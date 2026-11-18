@@ -9,7 +9,7 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 /**
- * 관계 판정 원본을 다시 읽은 값 — 답 다섯이 모두 있고 확률이 0 ~ 1 의 유한값인 것만 읽은 값이 된다. 읽지 못함의 문구는 비지 않는다.
+ * 관계 판정 원본을 다시 읽은 값 — 한 문구 판의 답이 모두 있고 확률이 0 ~ 1 의 유한값인 것만 읽은 값이 된다. 읽지 못함의 문구는 비지 않는다.
  * <p>
  * 지키는 규칙: evaluation-R50
  */
@@ -20,10 +20,12 @@ class RelationReadingTests {
 			RelationAnswer.FIRST_LED_TO_SECOND, 0.1, RelationAnswer.SECOND_LED_TO_FIRST, 0.05);
 
 	@Test
-	void keepsAllFiveAnswersAndBothOneMatterProbabilities() {
+	void keepsTheAnswersOfTheEarlierWordingAndBothOneMatterProbabilities() {
 		RelationReading.Read read = new RelationReading.Read(ANSWERS, 0.8, 0.6);
 
-		assertThat(read.probabilities()).containsOnlyKeys(RelationAnswer.values())
+		assertThat(read.probabilities())
+			.containsOnlyKeys(RelationAnswer.NONE, RelationAnswer.SECOND_PART_OF_FIRST, RelationAnswer.FIRST_PART_OF_SECOND,
+					RelationAnswer.FIRST_LED_TO_SECOND, RelationAnswer.SECOND_LED_TO_FIRST)
 			.containsEntry(RelationAnswer.SECOND_PART_OF_FIRST, 0.7)
 			.containsEntry(RelationAnswer.NONE, 0.1);
 		assertThat(read.firstOneMatter()).isEqualTo(0.8);
@@ -31,12 +33,27 @@ class RelationReadingTests {
 	}
 
 	@Test
-	void rejectsAReadingWithoutAllFiveAnswers() {
+	void keepsTheSixAnswersOfTheWordingWithTheFragmentAnswer() {
+		Map<RelationAnswer, Double> six = new EnumMap<>(ANSWERS);
+		six.put(RelationAnswer.SAME_MATTER, 0.3);
+
+		assertThat(new RelationReading.Read(six, 0.8, 0.6).probabilities()).containsOnlyKeys(RelationAnswer.values())
+			.containsEntry(RelationAnswer.SAME_MATTER, 0.3);
+	}
+
+	@Test
+	void rejectsAReadingWhoseAnswersAreNotThoseOfOneWording() {
 		Map<RelationAnswer, Double> four = new EnumMap<>(ANSWERS);
 		four.remove(RelationAnswer.SECOND_LED_TO_FIRST);
+		// 조각 답은 있는데 해당 없음이 없다 — 어느 판의 답도 아니다
+		Map<RelationAnswer, Double> withoutNone = new EnumMap<>(ANSWERS);
+		withoutNone.remove(RelationAnswer.NONE);
+		withoutNone.put(RelationAnswer.SAME_MATTER, 0.3);
 
 		assertThatIllegalArgumentException().isThrownBy(() -> new RelationReading.Read(four, 0.8, 0.6))
-			.withMessageStartingWith("답 다섯의 확률이 모두 있어야 한다");
+			.withMessageStartingWith("한 문구 판의 답이 모두 있어야 한다");
+		assertThatIllegalArgumentException().isThrownBy(() -> new RelationReading.Read(withoutNone, 0.8, 0.6))
+			.withMessageStartingWith("한 문구 판의 답이 모두 있어야 한다");
 	}
 
 	@Test

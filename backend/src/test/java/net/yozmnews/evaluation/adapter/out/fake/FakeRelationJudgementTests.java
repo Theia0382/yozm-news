@@ -38,13 +38,50 @@ class FakeRelationJudgementTests {
 			.judgeRelation(input(List.of("서울 시장 선거 개표", "서울 시장 당선 확정"), List.of("서울 시장")));
 
 		assertThat(relation.probabilities().get(RelationAnswer.SECOND_PART_OF_FIRST)).isCloseTo(0.9, within(1e-12));
-		assertOthers(relation, RelationAnswer.SECOND_PART_OF_FIRST, 0.025);
+		// 나머지 답 다섯이 0.1 을 똑같이 나눈다
+		assertOthers(relation, RelationAnswer.SECOND_PART_OF_FIRST, 0.02);
 		// 두 제목이 서로 조각을 함께 가진다 → 0.1 + 0.8 × 2 ÷ 2, 제목 하나 → 0.9
 		assertThat(relation.firstOneMatter()).isCloseTo(0.9, within(1e-12));
 		assertThat(relation.secondOneMatter()).isEqualTo(0.9);
 		assertThat(relation.evaluator()).isEqualTo("fake");
-		assertThat(relation.modelVersion()).isEqualTo("fake-rules-2");
-		assertThat(JsonMapper.builder().build().readTree(relation.rawResponse()).get("relation").size()).isEqualTo(5);
+		assertThat(relation.modelVersion()).isEqualTo("fake-rules-3");
+		assertThat(JsonMapper.builder().build().readTree(relation.rawResponse()).get("relation").size()).isEqualTo(6);
+	}
+
+	@Test
+	void flowsWithAsManyDescriptionsAreFragmentsOfOneMatterWhenTheirPiecesOverlap() {
+		// 조각 A = {서울, 시장, 선거}, B = {서울, 시장, 취임} — 겹침 2 ÷ 3 → 0.5 + 0.4 × 2 ÷ 3
+		Relation relation = (Relation) this.evaluator.judgeRelation(input(List.of("서울 시장 선거"), List.of("서울 시장 취임")));
+
+		assertThat(relation.probabilities().get(RelationAnswer.SAME_MATTER)).isCloseTo(0.7666666666666667, within(1e-12));
+		assertOthers(relation, RelationAnswer.SAME_MATTER, 0.04666666666666667);
+	}
+
+	@Test
+	void aSmallOverlapIsStillTheFragmentAnswerWithALowerProbability() {
+		// 조각 A = {서울, 시장, 선거, 개표}, B = {서울, 예산, 심의, 통과} — 겹침 1 ÷ 4 → 0.5 + 0.4 × 1 ÷ 4. 겹침이 작아도 조각 답이고 확률만 낮다
+		Relation quarter = (Relation) this.evaluator.judgeRelation(input(List.of("서울 시장 선거 개표"), List.of("서울 예산 심의 통과")));
+
+		assertThat(quarter.probabilities().get(RelationAnswer.SAME_MATTER)).isCloseTo(0.6, within(1e-12));
+		assertOthers(quarter, RelationAnswer.SAME_MATTER, 0.08);
+		// B = {서울, 시장, 예산, 심의} — 겹침 2 ÷ 4 → 0.5 + 0.4 × 2 ÷ 4
+		Relation half = (Relation) this.evaluator.judgeRelation(input(List.of("서울 시장 선거 개표"), List.of("서울 시장 예산 심의")));
+
+		assertThat(half.probabilities().get(RelationAnswer.SAME_MATTER)).isCloseTo(0.7, within(1e-12));
+		assertOthers(half, RelationAnswer.SAME_MATTER, 0.06);
+	}
+
+	@Test
+	void answersOnlyTheAnswersOfTheWordingItWasAsked() {
+		// 조각 답이 없는 판 — 서술 사건 수가 같으면 second 가 first 의 부분이고, 나머지 답 넷이 그 나머지를 나눈다
+		Relation relation = (Relation) this.evaluator.judgeRelation(new RelationInput(flow(List.of("서울 시장 선거")),
+				flow(List.of("서울 시장 취임")), RelationWording.RELATION_1));
+
+		assertThat(relation.probabilities()).containsOnlyKeys(RelationAnswer.NONE, RelationAnswer.SECOND_PART_OF_FIRST,
+				RelationAnswer.FIRST_PART_OF_SECOND, RelationAnswer.FIRST_LED_TO_SECOND, RelationAnswer.SECOND_LED_TO_FIRST);
+		assertThat(relation.probabilities().get(RelationAnswer.SECOND_PART_OF_FIRST))
+			.isCloseTo(0.7666666666666667, within(1e-12));
+		assertThat(relation.probabilities().get(RelationAnswer.NONE)).isCloseTo(0.05833333333333333, within(1e-12));
 	}
 
 	@Test
@@ -53,9 +90,9 @@ class FakeRelationJudgementTests {
 			.judgeRelation(input(List.of("서울 시장 선거 개표", "서울 시장 당선 확정"), List.of("서울 시장")));
 
 		// 입력 토큰은 원본 응답에 없어 0 이다 — 나머지는 판정 때와 같다
-		assertThat(this.evaluator.rereadRelation("fake", judged.rawResponse()))
+		assertThat(this.evaluator.rereadRelation("fake", judged.rawResponse(), RelationWording.CURRENT))
 			.isEqualTo(new Relation(judged.probabilities(), judged.firstOneMatter(), judged.secondOneMatter(), "fake",
-					"fake-rules-2", 0, judged.rawResponse()));
+					"fake-rules-3", 0, judged.rawResponse()));
 	}
 
 	@Test
@@ -64,31 +101,34 @@ class FakeRelationJudgementTests {
 				+ "\"FIRST_PART_OF_SECOND\":0.05,\"NONE\":0.8,\"SECOND_LED_TO_FIRST\":0.05,\"SECOND_PART_OF_FIRST\":0.05},"
 				+ "\"oneMatter\":[0.3,0.9]}";
 
-		assertThat(this.evaluator.rereadRelation("fake", raw)).isEqualTo(new Relation(
+		// 조각 답이 없던 판의 원본 — 그 판의 답 다섯으로 읽는다
+		assertThat(this.evaluator.rereadRelation("fake", raw, RelationWording.RELATION_1)).isEqualTo(new Relation(
 				Map.of(RelationAnswer.NONE, 0.8, RelationAnswer.SECOND_PART_OF_FIRST, 0.05,
 						RelationAnswer.FIRST_PART_OF_SECOND, 0.05, RelationAnswer.FIRST_LED_TO_SECOND, 0.05,
 						RelationAnswer.SECOND_LED_TO_FIRST, 0.05),
 				0.3, 0.9, "fake", "fake-rules-1", 0, raw));
+		assertThat(this.evaluator.rereadRelation("fake", raw, RelationWording.RELATION_2)).isEqualTo(new RereadFailure(
+				RereadFailure.Kind.UNREADABLE, "Fake 원본 응답을 읽을 수 없다 — 확률이 없거나 숫자가 아니다 — relation.SAME_MATTER"));
 	}
 
 	@Test
 	void doesNotReadARawResponseOfAnotherEvaluator() {
-		assertThat(this.evaluator.rereadRelation("jev", "{}")).isEqualTo(
+		assertThat(this.evaluator.rereadRelation("jev", "{}", RelationWording.CURRENT)).isEqualTo(
 				new RereadFailure(RereadFailure.Kind.OTHER_EVALUATOR, "Fake 가 남긴 원본 응답이 아니다 — 평가기 jev"));
 	}
 
 	@Test
 	void cannotReadABrokenRawResponseAndLeavesItsTextOutOfTheMessage() {
-		String outOfRange = "{\"modelVersion\":\"fake-rules-2\",\"relation\":{\"FIRST_LED_TO_SECOND\":0.1,"
+		String outOfRange = "{\"modelVersion\":\"fake-rules-3\",\"relation\":{\"FIRST_LED_TO_SECOND\":0.1,"
 				+ "\"FIRST_PART_OF_SECOND\":0.1,\"NONE\":1.7,\"SECOND_LED_TO_FIRST\":0.1,\"SECOND_PART_OF_FIRST\":0.1},"
 				+ "\"oneMatter\":[0.5,0.5]}";
 		String oneMatterMissing = outOfRange.replace("1.7", "0.6").replace(",\"oneMatter\":[0.5,0.5]", "");
 
-		assertThat(this.evaluator.rereadRelation("fake", outOfRange)).isEqualTo(new RereadFailure(
+		assertThat(this.evaluator.rereadRelation("fake", outOfRange, RelationWording.RELATION_1)).isEqualTo(new RereadFailure(
 				RereadFailure.Kind.UNREADABLE, "Fake 원본 응답을 읽을 수 없다 — 확률이 0 ~ 1 이 아니다 — relation.NONE"));
-		assertThat(this.evaluator.rereadRelation("fake", oneMatterMissing)).isEqualTo(new RereadFailure(
+		assertThat(this.evaluator.rereadRelation("fake", oneMatterMissing, RelationWording.RELATION_1)).isEqualTo(new RereadFailure(
 				RereadFailure.Kind.UNREADABLE, "Fake 원본 응답을 읽을 수 없다 — oneMatter 가 두 값의 배열이 아니다"));
-		assertThat(this.evaluator.rereadRelation("fake", "not json")).isEqualTo(
+		assertThat(this.evaluator.rereadRelation("fake", "not json", RelationWording.CURRENT)).isEqualTo(
 				new RereadFailure(RereadFailure.Kind.UNREADABLE, "Fake 원본 응답을 읽을 수 없다 — JSON 이 아니다"));
 	}
 
@@ -110,7 +150,7 @@ class FakeRelationJudgementTests {
 			.judgeRelation(input(List.of("서울 시장 선거"), List.of("부산 항만 파업")));
 
 		assertThat(relation.probabilities().get(RelationAnswer.NONE)).isEqualTo(0.9);
-		assertOthers(relation, RelationAnswer.NONE, 0.025);
+		assertOthers(relation, RelationAnswer.NONE, 0.02);
 	}
 
 	@Test
@@ -118,7 +158,7 @@ class FakeRelationJudgementTests {
 		RelationInput input = input(List.of("서울 시장 선거 개표", "서울 시장 당선 확정"), List.of("서울 시장"));
 
 		assertThat(this.evaluator.judgeRelation(input)).isEqualTo(this.evaluator.judgeRelation(input));
-		// 입력 토큰은 state · 관계 질문 · 선택지 다섯 · 한 사안 질문 둘의 코드 포인트 합의 절반(올림)이다 — 0 보다 크다
+		// 입력 토큰은 state · 관계 질문 · 그 판의 선택지 모두 · 한 사안 질문 둘의 코드 포인트 합의 절반(올림)이다 — 0 보다 크다
 		assertThat(((Relation) this.evaluator.judgeRelation(input)).inputTokens()).isGreaterThan(400);
 	}
 

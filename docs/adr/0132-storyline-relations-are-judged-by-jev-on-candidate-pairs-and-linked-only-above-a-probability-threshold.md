@@ -1,6 +1,6 @@
 # ADR-0132: 스토리라인 관계는 후보 쌍을 Jev 에 물어 종류와 방향을 정하고 확률이 높은 것만 맺는다
 
-- 상태: 승인. 부분 대체 — 잇기가 Jev 를 쓰지 않는다는 결과([ADR-0194](0194-storyline-linking-asks-jev-only-for-band-candidates-and-reuses-recorded-probabilities-until-either-side-doubles.md)) · 운영자가 관계를 고치는 길([ADR-0137](0137-storyline-relations-are-not-edited-one-by-one-by-operators-and-are-tuned-through-relation-criteria.md))
+- 상태: 승인. 부분 대체 — 잇기가 Jev 를 쓰지 않는다는 결과([ADR-0194](0194-storyline-linking-asks-jev-only-for-band-candidates-and-reuses-recorded-probabilities-until-either-side-doubles.md)) · 운영자가 관계를 고치는 길([ADR-0137](0137-storyline-relations-are-not-edited-one-by-one-by-operators-and-are-tuned-through-relation-criteria.md)) · 선택지에 "같은 사안"을 두지 않는다는 결정([ADR-0234](0234-fragments-of-one-matter-are-recognised-by-the-relation-judgement-and-merged-above-a-merge-probability-without-a-way-back.md))
 - 날짜: 2026-11-13
 - 근거: [이슈 #122](https://github.com/Theia0382/yozm-news/issues/122) — 시스템 스토리라인 쌍을 직접 판정한 세트로 구조 규칙 · Jev(문구와 입력의 변형) · 생성형 LLM(웹 검색 포함)을 견주고 리드와 정함
 - 관련: [ADR-0121](0121-storyline-linking-scores-centroid-cosine-plus-idf-weighted-key-term-overlap-without-time-decay-jev-or-topic-tags.md)(결정 "Jev 판정과 주제 태그를 쓰지 않는다. `storyline` 은 `evaluation` · `tag` 에 의존하지 않는다" — 관계 판정에 한해 부분 대체), [ADR-0071](0071-event-membership-judged-from-article-ids-with-questions-built-in-evaluation.md) · [ADR-0072](0072-event-membership-question-wording-as-one-code-constant-with-its-version-in-raw-records.md)(판정 관문의 꼴 — 관계 판정에 같은 꼴을 쓴다, 보충), [ADR-0131](0131-storyline-relations-are-explicit-links-with-containment-as-a-single-parent-tree-gathered-at-query-time.md)(관계의 표현과 구조), [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)(생성형 LLM 없이 운영자 비용으로 잇는다), [ADR-0133](0133-storyline-evaluation-closes-system-containment-per-layer-view-and-measures-relations-by-direct-pair-judgement.md)(견준 방법), [ADR-0096](0096-instance-bound-evaluation-data-kept-out-of-the-public-repository-and-defaults-cite-only-the-evaluation-set.md)(근거 수치를 공개 문서에 적지 않는다)
@@ -21,6 +21,7 @@
 
 - **후보 쌍을 Jev 에 물어 관계의 종류와 방향을 정한다.** 가장 높은 답이 포함이나 이어짐이고 그 확률이 기준 이상이며 두 스토리라인이 각각 한 사안이면 그 종류 · 방향의 관계를 맺는다. 확률이 같으면 맺지 않는 쪽이다. 포함의 상위와 이어짐의 앞은 Jev 가 답한 방향이다.
 - **후보는 사건을 함께 가졌거나 표현 점수가 기준 이상인 쌍이다.** 점수는 잇기의 산식 그대로이고, 사건 수가 적은 스토리라인을 판정할 쪽으로 둔다. 두 스토리라인 모두 사건 수가 하한 이상이어야 한다. 사건 수 · 서술 · 순서는 직접 소속으로 본다.
+> 부분 대체(둘째 문장) — [ADR-0234](0234-fragments-of-one-matter-are-recognised-by-the-relation-judgement-and-merged-above-a-merge-probability-without-a-way-back.md). 지금 상태: [storyline Spec storyline-R29](../specs/storyline.md#스토리라인-사이-관계)
 - **한 사안이 둘로 열린 쌍은 관계로 맺지 않는다.** 선택지에 "같은 사안"을 두지 않고, 그런 쌍과 주제 묶음은 "해당 없음"에 든다.
 - **포함과 이어짐의 경계.** 큰 흐름을 중심으로 도는 반응 · 알아볼 수 있는 부분(회차 · 단계) · 한 갈래는 포함이다. 자기 주체와 절차로 따로 굴러가는 다른 사안은 이어짐이다. 선택지 문구가 이 경계를 적는다.
 - **판정은 `evaluation` 의 공개 API 하나다.** `storyline` 은 흐름 ID 와 서술 사건의 대표 기사 ID · 시각을 넘기고, `evaluation` 이 제목 · 요약문을 읽어 요청을 조립하고 판정 원본을 남긴다. `evaluation` 은 스토리라인을 모른다. 문구는 코드 상수 하나이고 판을 판정 원본에 남긴다.
@@ -45,6 +46,8 @@
 
 ## 검토한 대안
 
+> 부분 대체(선택지에 "같은 사안"을 둔다 행) — [ADR-0234](0234-fragments-of-one-matter-are-recognised-by-the-relation-judgement-and-merged-above-a-merge-probability-without-a-way-back.md). 지금 상태: [storyline Spec storyline-R29](../specs/storyline.md#스토리라인-사이-관계)
+
 | 대안 | 기각 이유 |
 |---|---|
 | 사건을 함께 가진 쌍을 구조 규칙(기간 · 사건 수)으로만 판정한다 | 고른 쌍의 다수가 주제 묶음이나 한 사안이 갈라진 것이었고, 이어짐을 찾지 못한다 |
@@ -60,3 +63,7 @@
 | 다시 묻되 맺은 관계는 지우지 않는다 | 틀린 관계가 남는다 |
 | `event` 가 서술을 만들어 `storyline` 이 열어 보지 않고 넘긴다 | `event` 가 관계 판정의 서술 꼴을 알게 된다 |
 | 관계 판정을 잇기 회차 뒤에 같은 반복 작업에서 돈다 | 판정이 느릴 때 잇기가 밀린다 |
+
+## 후속 기록
+
+- 2026-11-18: 결정 "다시 묻는다" — 문구 판을 올릴 때도 모두 다시 묻는다([ADR-0236](0236-raising-the-relation-wording-version-clears-asked-records-and-asks-every-storyline-again.md))

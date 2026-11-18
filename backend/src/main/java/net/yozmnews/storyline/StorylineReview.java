@@ -20,6 +20,12 @@ public interface StorylineReview {
 	/** 이 스토리라인이 든 물은 기록 — 상대 ID 순, 쌍마다 마지막 한 번 */
 	List<StorylineRelationAsked> asked(StorylineId id);
 
+	/**
+	 * 이 스토리라인에 합쳐진 스토리라인 — ID 순. 합쳐진 스토리라인의 ID 면 남는 스토리라인의 것이다.
+	 * @return 없는 스토리라인이면 빈 목록
+	 */
+	List<MergedStoryline> merged(StorylineId id);
+
 	/** 지금 잇기 기준 — 설정 */
 	StorylineLinkingCriteria linkingCriteria();
 

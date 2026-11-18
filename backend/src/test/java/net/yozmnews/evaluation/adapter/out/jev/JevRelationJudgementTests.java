@@ -63,7 +63,7 @@ class JevRelationJudgementTests {
 
 	private static final String ANSWER = "{\"model\":\"jev-1.14.0\",\"answers\":{\"relation\":{\"type\":\"choice\","
 			+ "\"choice\":\"b_part_of_a\",\"confidence\":0.7,\"probabilities\":{\"b_part_of_a\":0.7,\"a_part_of_b\":0.03,"
-			+ "\"a_led_to_b\":0.15,\"b_led_to_a\":0.02,\"none\":0.1}},\"a_one_matter\":{\"type\":\"noul\",\"noul\":0.91},"
+			+ "\"a_led_to_b\":0.15,\"b_led_to_a\":0.02,\"same\":0.04,\"none\":0.06}},\"a_one_matter\":{\"type\":\"noul\",\"noul\":0.91},"
 			+ "\"b_one_matter\":{\"type\":\"noul\",\"noul\":0.84}},\"usage\":{\"input_tokens\":1924,\"output_tokens\":103}}";
 
 	private static final String CONTEXT_EXCEEDED = "{\"detail\":{\"error_type\":\"max_tokens_exceeded\"}}";
@@ -82,41 +82,57 @@ class JevRelationJudgementTests {
 		assertThat(evaluator().judgeRelation(INPUT)).isEqualTo(new Relation(
 				Map.of(RelationAnswer.SECOND_PART_OF_FIRST, 0.7, RelationAnswer.FIRST_PART_OF_SECOND, 0.03,
 						RelationAnswer.FIRST_LED_TO_SECOND, 0.15, RelationAnswer.SECOND_LED_TO_FIRST, 0.02,
-						RelationAnswer.NONE, 0.1),
+						RelationAnswer.SAME_MATTER, 0.04, RelationAnswer.NONE, 0.06),
 				0.91, 0.84, "jev", "jev-1.14.0", 1924, ANSWER));
 		server.verify(1, postRequestedFor(urlEqualTo(PATH)).withHeader("Authorization", equalTo("Bearer " + KEY))
 			.withRequestBody(matchingJsonPath("$.model", equalTo("jev-latest")))
 			.withRequestBody(matchingJsonPath("$.state", equalTo(STATE)))
 			.withRequestBody(matchingJsonPath("$.questions.relation.type", equalTo("choice")))
 			.withRequestBody(matchingJsonPath("$.questions.relation.criteria.b_led_to_a"))
+			.withRequestBody(matchingJsonPath("$.questions.relation.criteria.same"))
 			.withRequestBody(matchingJsonPath("$.questions.a_one_matter.type", equalTo("noul")))
 			.withRequestBody(matchingJsonPath("$.questions.b_one_matter.type", equalTo("noul"))));
 	}
 
 	@Test
 	void rereadsAStoredBodyWithoutSendingARequest() {
-		// 판정 때 받은 본문 그대로 — 답 다섯과 두 한 사안 확률, 모델 · 토큰도 본문의 값이다
-		assertThat(evaluator().rereadRelation("jev", ANSWER)).isEqualTo(new Relation(
+		// 판정 때 받은 본문 그대로 — 그 판의 답마다 확률과 두 한 사안 확률, 모델 · 토큰도 본문의 값이다
+		assertThat(evaluator().rereadRelation("jev", ANSWER, RelationWording.RELATION_2)).isEqualTo(new Relation(
+				Map.of(RelationAnswer.SECOND_PART_OF_FIRST, 0.7, RelationAnswer.FIRST_PART_OF_SECOND, 0.03,
+						RelationAnswer.FIRST_LED_TO_SECOND, 0.15, RelationAnswer.SECOND_LED_TO_FIRST, 0.02,
+						RelationAnswer.SAME_MATTER, 0.04, RelationAnswer.NONE, 0.06),
+				0.91, 0.84, "jev", "jev-1.14.0", 1924, ANSWER));
+		server.verify(0, anyRequestedFor(anyUrl()));
+	}
+
+	@Test
+	void rereadsABodyOfTheEarlierWordingWithItsFiveAnswers() {
+		// 조각 답이 없던 판의 본문 — 그 판의 답 다섯만 읽는다. 지금 판으로 읽으면 조각 답이 없어 읽지 못한다
+		String earlier = ANSWER.replace("\"same\":0.04,\"none\":0.06", "\"none\":0.1");
+
+		assertThat(evaluator().rereadRelation("jev", earlier, RelationWording.RELATION_1)).isEqualTo(new Relation(
 				Map.of(RelationAnswer.SECOND_PART_OF_FIRST, 0.7, RelationAnswer.FIRST_PART_OF_SECOND, 0.03,
 						RelationAnswer.FIRST_LED_TO_SECOND, 0.15, RelationAnswer.SECOND_LED_TO_FIRST, 0.02,
 						RelationAnswer.NONE, 0.1),
-				0.91, 0.84, "jev", "jev-1.14.0", 1924, ANSWER));
+				0.91, 0.84, "jev", "jev-1.14.0", 1924, earlier));
+		assertThat(evaluator().rereadRelation("jev", earlier, RelationWording.RELATION_2)).isEqualTo(new RereadFailure(
+				RereadFailure.Kind.UNREADABLE, "Jev 응답을 읽을 수 없다 — 확률이 없거나 숫자가 아니다 — relation.same"));
 		server.verify(0, anyRequestedFor(anyUrl()));
 	}
 
 	@Test
 	void doesNotReadABodyLeftByAnotherEvaluator() {
 		// 같은 본문이라도 평가기 이름이 다르면 형식을 모른다고 본다
-		assertThat(evaluator().rereadRelation("fake", ANSWER)).isEqualTo(new RereadFailure(
+		assertThat(evaluator().rereadRelation("fake", ANSWER, RelationWording.CURRENT)).isEqualTo(new RereadFailure(
 				RereadFailure.Kind.OTHER_EVALUATOR, "Jev 가 남긴 원본 응답이 아니다 — 평가기 fake"));
 		server.verify(0, anyRequestedFor(anyUrl()));
 	}
 
 	@Test
-	void cannotReadABodyWithoutAllFiveAnswers() {
+	void cannotReadABodyWithoutAllAnswersOfItsWording() {
 		String withoutAnAnswer = ANSWER.replace("\"b_led_to_a\":0.02,", "");
 
-		RereadFailure failure = (RereadFailure) evaluator().rereadRelation("jev", withoutAnAnswer);
+		RereadFailure failure = (RereadFailure) evaluator().rereadRelation("jev", withoutAnAnswer, RelationWording.CURRENT);
 
 		// 문구는 빠진 답의 자리만 말하고 본문의 값은 싣지 않는다
 		assertThat(failure).isEqualTo(new RereadFailure(RereadFailure.Kind.UNREADABLE,

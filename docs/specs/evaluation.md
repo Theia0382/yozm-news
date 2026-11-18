@@ -10,7 +10,7 @@
 - **태그 판정** — 기사 하나를 넘긴 질문 묶음(주제 · 지역 · 형식 · 중요도)으로 평가하는 공개 API(`ArticleTagging`)를 `tag` 에 낸다. 기사 ID 로 기사 내용 · 피드 맥락을 읽어 요청을 만들고, 결과를 질문 묶음과 대조해 판정 원본을 남기고, 그 ID 와 분포를 돌려준다. 남긴 원본을 질문 묶음으로 다시 읽고(빠진 태그 채움), 원본의 평가기 · 모델 버전 · 입력 토큰을 낸다(evaluation-R17 · R40 ~ R42)
 - **사건 소속 판정** — 기사 하나가 후보 사건마다 그 사건을 다루는지 평가기에 묻는 공개 API(`EventMembership`)를 사건 묶기에 낸다. 판정할 기사와 후보 사건의 서술 기사를 ID 로 받아 질문을 만들고, 성공한 판정의 원본을 남겨 그 ID 를 결과에 싣는다(evaluation-R37 · R38, [ADR-0026](../adr/0026-event-clustering-with-local-embeddings-and-jev.md) · [ADR-0071](../adr/0071-event-membership-judged-from-article-ids-with-questions-built-in-evaluation.md) · [ADR-0094](../adr/0094-event-membership-judgements-identified-by-id-read-by-operators-and-referenced-by-the-records-that-apply-them.md))
 - **흐름 소속 판정** — 기사 하나가 후보 흐름마다 같은 사안의 전개인지 평가기에 묻는 공개 API(`FlowMembership`)를 `storyline` 의 잇기에 낸다. 요청 · 결과의 꼴은 사건 소속 판정과 같고 문구 · 판정 원본이 다르다(evaluation-R51 · R52, [ADR-0194](../adr/0194-storyline-linking-asks-jev-only-for-band-candidates-and-reuses-recorded-probabilities-until-either-side-doubles.md))
-- **관계 판정** — 두 흐름(사건들의 묶음 둘)이 어떤 관계인지 평가기에 묻는 공개 API(`FlowRelation`)를 `storyline` 에 낸다. 흐름 ID 와 서술 사건의 대표 기사 ID · 시각을 받아 제목 · 요약문으로 요청을 만들고, 성공한 판정의 원본을 남겨 그 ID 와 답마다의 확률을 돌려준다(evaluation-R48 · R49, [ADR-0132](../adr/0132-storyline-relations-are-judged-by-jev-on-candidate-pairs-and-linked-only-above-a-probability-threshold.md))
+- **관계 판정** — 두 흐름(사건들의 묶음 둘)이 어떤 관계인지 평가기에 묻는 공개 API(`FlowRelation`)를 `storyline` 에 낸다. 흐름 ID 와 서술 사건의 대표 기사 ID · 시각을 받아 제목 · 요약문으로 요청을 만들고, 성공한 판정의 원본을 남겨 그 ID 와 답마다의 확률을 돌려준다. 답에는 같은 사안의 조각이 있다(evaluation-R48 · R49, [ADR-0234](../adr/0234-fragments-of-one-matter-are-recognised-by-the-relation-judgement-and-merged-above-a-merge-probability-without-a-way-back.md) · [ADR-0132](../adr/0132-storyline-relations-are-judged-by-jev-on-candidate-pairs-and-linked-only-above-a-probability-threshold.md))
 - **기사 임베딩** — 텍스트 묶음을 벡터로 바꾸는 공개 API(`TextEmbedding`)를 사건 묶기에 낸다. 텍스트는 부르는 쪽이 만들어 넘기고, 결과의 수 · 차원을 확인해 돌려주며, 결과를 기록하지 않는다. 임베더 포트(`ArticleEmbedder`)와 운영 구현(앱 안 로컬 모델 — 기본, OpenAI 호환 외부 API) · 로컬 대체물(`FakeArticleEmbedder`)을 둔다. 작업 역할은 임베더 없이 운영하지 않는다(evaluation-R45 ~ R47, [ADR-0114](../adr/0114-article-embedding-is-a-gateway-operation-of-evaluation-taking-callers-texts-checking-results-and-recording-nothing.md) · [ADR-0115](../adr/0115-embedding-api-in-both-roles-looks-up-the-embedder-on-call-and-a-worker-startup-check-requires-one.md) · [ADR-0090](../adr/0090-article-embedding-defaults-to-an-in-app-local-model-with-an-openai-compatible-api-by-setting.md) · [ADR-0091](../adr/0091-local-embedding-model-is-multilingual-e5-small-int8-fetched-at-build-into-the-image-with-onnx-telemetry-off.md))
 - **판정 원본 조회** — 운영자 화면에 공개 조회로 낸다. 판정 시각이 기간 안인 사건 소속 판정 원본(`EventJudgementLog` — 판정의 쓰임 · 결과는 `event` 가 낸다)과, ID 로 찾는 관계 판정 원본(`RelationJudgementLog` — 원본 응답을 평가기가 다시 읽어 답마다의 확률을 낸다)이다(evaluation-R39 · R50, [ADR-0138](../adr/0138-relation-judgement-probabilities-are-read-for-operators-by-the-evaluator-rereading-stored-raw-responses.md))
 - **지운 기사 따르기** — `article` 이 기사를 지우면 그 기사의 판정 원본(사건 소속 · 흐름 소속 · 태그)을 지운다(evaluation-R44)
@@ -42,13 +42,13 @@
 | 후보 사건 · 서술 기사 | 판정에서 묻는 사건(사건 ID)과 그 사건을 설명하는 기사. 부르는 쪽이 사건 중심에 가까운 기사를 고르고, 질문에는 그 제목이 실린다(evaluation-R37) |
 | 문구 판 | 사건 소속 · 흐름 소속 질문 문구 · 관계 판정 문구의 버전 문자열. 문구나 질문 조립 모양을 바꾸면 올리고, 판정 원본마다 남는다(evaluation-R37 · R48 · R51) |
 | 흐름 소속 판정 | 기사 하나가 후보 흐름마다 같은 사안의 전개인지 평가기에 묻는 것 — 후보마다 Yes/No 확률 하나. 받아들일지는 부르는 쪽(`storyline`)이 정한다(evaluation-R51 · R52) |
-| 관계 판정 | 두 흐름의 관계를 평가기에 묻는 것 — 답 다섯(해당 없음 · 한쪽이 다른 쪽의 부분 두 방향 · 한쪽이 다른 쪽을 낳음 두 방향)의 확률과, 흐름마다 한 사안의 전개일 확률. 받아들일지는 부르는 쪽(`storyline`)이 정한다(evaluation-R48 · R49) |
+| 관계 판정 | 두 흐름의 관계를 평가기에 묻는 것 — 지금 문구 판의 답 여섯(해당 없음 · 같은 사안의 조각 · 한쪽이 다른 쪽의 부분 두 방향 · 한쪽이 다른 쪽을 낳음 두 방향)의 확률과, 흐름마다 한 사안의 전개일 확률. 받아들일지는 부르는 쪽(`storyline`)이 정한다(evaluation-R48 · R49) |
 | 흐름 · 서술 사건 | 관계 판정에서 견주는 사건 묶음(흐름 ID — `storyline` 의 스토리라인을 가리키지만 이 모듈은 그 뜻을 모른다)과, 그 흐름을 설명하는 사건. 부르는 쪽이 고르고, 요청에는 사건마다 대표 기사의 제목(일부는 요약문)과 날짜가 실린다(evaluation-R48) |
 | 판정 원본 | 성공한 판정 한 번의 기록 — 원본 응답 · 평가기 · 모델 버전 · 입력 토큰 · 판정 시각과 판정할 기사. 사건 소속 판정은 물은 후보(사건 ID · 서술 기사 ID · 확률)와 문구 판을 더 남기고 `EventJudgementId` 로, 태그 판정은 `TagJudgementId` 로 식별된다. 흐름 소속 판정은 사건 소속과 같은 것을 남기고(후보는 흐름 ID) `FlowMembershipJudgementId` 로 식별된다(evaluation-R52). 관계 판정의 원본은 판정할 기사가 없고 두 흐름 ID 와 서술 기사 ID · 문구 판을 남기며 `RelationJudgementId` 로 식별된다(evaluation-R49). 판정을 반영한 쪽의 기록이 그 ID 를 가리킨다(evaluation-R38 · R41) |
 | 임베더 | 텍스트를 벡터로 바꾸는 외부 의존 — 포트 `ArticleEmbedder`. 이름 · 모델 버전 · 차원을 밝힌다. 운영 구현은 앱 안 로컬 모델(기본)과 OpenAI 호환 외부 API 둘이고, provider 설정으로 고른다(evaluation-R45 · R46) |
 | 임베딩 모델 버전 | 임베더가 밝히는 모델을 가리키는 값 — 다른 모델과 겹치지 않는다. 부르는 쪽이 벡터와 함께 남겨, 같은 모델 버전의 벡터끼리만 비교한다(evaluation-R45) |
 | 임베딩 실패 갈래 | 임베더가 예상한 실패의 종류(`EmbedderFailureKind`) — 일시 · 입력 거부 · 임베더 사용 불가. 갈래마다 무엇을 할지는 부르는 쪽이 정한다([ADR-0092](../adr/0092-embedder-failures-in-three-kinds-with-rejected-articles-isolated-and-dropped-after-a-limit.md)) |
-| 다시 읽기 | 판정 원본의 원본 응답을 그 원본을 남긴 평가기의 형식으로 다시 읽는 것 — 모델을 부르지 않는다. 태그 판정 원본은 넘긴 질문 묶음으로(evaluation-R42), 관계 판정 원본은 답 다섯과 한 사안 확률로(evaluation-R50) 읽는다 |
+| 다시 읽기 | 판정 원본의 원본 응답을 그 원본을 남긴 평가기의 형식으로 다시 읽는 것 — 모델을 부르지 않는다. 태그 판정 원본은 넘긴 질문 묶음으로(evaluation-R42), 관계 판정 원본은 그 원본을 남긴 문구 판의 답과 한 사안 확률로(evaluation-R50) 읽는다 |
 
 ## 3. 공개 인터페이스
 
@@ -257,7 +257,8 @@ public record FlowDescriptor(long flowId, int happenings, Instant firstAt, Insta
 
 public record FlowHappening(ArticleId articleId, Instant at, boolean summarized) {}
 
-public enum RelationAnswer { NONE, SECOND_PART_OF_FIRST, FIRST_PART_OF_SECOND, FIRST_LED_TO_SECOND, SECOND_LED_TO_FIRST }
+public enum RelationAnswer { NONE, SAME_MATTER, SECOND_PART_OF_FIRST, FIRST_PART_OF_SECOND, FIRST_LED_TO_SECOND,
+        SECOND_LED_TO_FIRST }
 
 public sealed interface RelationJudgement {
     record Judged(RelationJudgementId judgement, Map<RelationAnswer, Double> probabilities,
@@ -280,9 +281,9 @@ public record RelationJudgementId(long value) {}             // 1 이상 — 아
 | `FlowHappening.articleId` | 그 사건의 대표 기사 — 제목(과 요약문)을 읽는다 | 두 흐름에 걸쳐 같은 기사가 있어도 된다(두 흐름이 함께 가진 사건) |
 | `FlowHappening.at` | 그 사건의 시각 — 요청에 날짜로 싣는다 | — |
 | `FlowHappening.summarized` | 요약문을 싣는가 — 요약문이 없는 기사면 싣지 않는다 | — |
-| `RelationAnswer` | 답 — 해당 없음, second 가 first 의 부분, first 가 second 의 부분, first 가 second 를 낳음, second 가 first 를 낳음. 선언 순서는 부르는 쪽이 확률이 같을 때 쓰는 순서다 | — |
+| `RelationAnswer` | 답 — 해당 없음, 같은 사안의 조각(두 흐름이 둘로 기록된 하나의 같은 흐름), second 가 first 의 부분, first 가 second 의 부분, first 가 second 를 낳음, second 가 first 를 낳음. 선언 순서는 부르는 쪽이 확률이 같을 때 쓰는 순서다. 옛 문구 판(`relation-1`)에는 조각이 없다 | — |
 | `Judged.judgement` | 남긴 판정 원본의 ID. 판정을 반영한 쪽이 자기 기록에 남긴다(evaluation-R49) | — |
-| `Judged.probabilities` | 답 다섯 모두의 확률 | 다섯 답이 모두 있고 0 ~ 1 의 유한값이다. 합은 계약하지 않는다 |
+| `Judged.probabilities` | 답 모두의 확률 — 판정은 언제나 지금 문구 판으로 묻고 그 판의 답은 `RelationAnswer` 모두다 | 모든 답이 있고 0 ~ 1 의 유한값이다. 합은 계약하지 않는다 |
 | `Judged.firstOneMatter` · `secondOneMatter` | 그 흐름이 한 사안의 전개일 확률 — 비슷한 종류의 일을 모은 묶음이면 낮다 | 0 ~ 1 의 유한값 |
 | `Failed` | 평가기의 예상한 실패 — 갈래와 운영자용 문구. 판정 원본을 남기지 않았다 | 문구는 공백뿐이 아니고 비밀 값을 담지 않는다 |
 | `NothingToAsk` | 한쪽 흐름의 서술이 하나도 남지 않았다(서술 기사가 모두 지워졌거나 제목이 비었다) — 평가기를 부르지 않았고 판정 원본이 없다 | — |
@@ -291,7 +292,7 @@ public record RelationJudgementId(long value) {}             // 1 이상 — 아
   - 판정은 외부 호출이라 작업 역할의 작업에서, DB 트랜잭션 밖에서 부른다. 트랜잭션 안에서 부르거나 평가기가 없는 프로세스에서 부르면 `IllegalStateException` 이다
   - 요청 값이 제약을 어기면 생성자가 `IllegalArgumentException` 을 던진다
   - 답을 받아들일지(확률 기준 · 한 사안 기준 · 구조 제약)는 부르는 쪽이 정한다. 같은 요청도 확률이 흔들릴 수 있고, 두 흐름의 순서를 바꾸면 답이 달라질 수 있다
-  - 판정에 성공하면 판정 원본을 남긴다(evaluation-R49). 평가기의 예상 못한 예외와 결과가 답 다섯과 어긋남(`IllegalStateException`)은 그대로 던지고 원본을 남기지 않는다
+  - 판정에 성공하면 판정 원본을 남긴다(evaluation-R49). 평가기의 예상 못한 예외와 결과가 지금 문구 판의 답과 어긋남(`IllegalStateException`)은 그대로 던지고 원본을 남기지 않는다
   - 사용자 정보를 받지 않는다 — 공유 판정이다
   - 판정 원본은 `RelationJudgementLog` 가 원본 ID 로 찾아 낸다(evaluation-R50)
 
@@ -360,9 +361,9 @@ public sealed interface RelationReading {
 | `RelationJudgementView.firstFlowId` · `secondFlowId` | 그 판정 요청의 first · second 흐름 ID — 확률의 방향(`RelationAnswer`)은 이 둘을 기준으로 한다. 판정 뒤 흐름이 합쳐졌으면 합쳐진 쪽의 ID 일 수 있다 |
 | `RelationJudgementView.inputTokens` | 판정 요청의 입력 토큰 |
 | `RelationJudgementView.reading` | 원본 응답을 다시 읽은 결과 |
-| `Read.probabilities` | 답 다섯 모두의 확률 — 다섯 답이 모두 있고 0 ~ 1 의 유한값이다. 아니면 생성자가 `IllegalArgumentException` |
+| `Read.probabilities` | 그 원본을 남긴 문구 판의 답 모두의 확률 — 답의 집합이 알려진 문구 판(`RelationWording.KNOWN`) 하나의 답과 같고 0 ~ 1 의 유한값이다. 아니면 생성자가 `IllegalArgumentException`. `relation-1` 의 원본에는 조각이 없다 |
 | `Read.firstOneMatter` · `secondOneMatter` | 흐름마다 한 사안의 전개일 확률 — 0 ~ 1 의 유한값 |
-| `Unread.reason` | `NO_EVALUATOR`(이 프로세스에 평가기가 없다) · `OTHER_EVALUATOR`(다른 평가기가 남긴 원본 — 그 형식을 모른다) · `UNREADABLE`(형식이 아니거나 답 다섯과 어긋난다) |
+| `Unread.reason` | `NO_EVALUATOR`(이 프로세스에 평가기가 없다) · `OTHER_EVALUATOR`(다른 평가기가 남긴 원본 — 그 형식을 모른다) · `UNREADABLE`(형식이 아니거나, 모르는 문구 판이거나, 그 판의 답과 어긋난다) |
 | `Unread.message` | 운영자용 문구 — 공백뿐이 아니고 원본 응답 원문을 담지 않는다 |
 
 - 계약
@@ -474,7 +475,7 @@ public enum EmbedderFailureKind { TRANSIENT, INPUT_REJECTED, EMBEDDER_UNAVAILABL
 
 흐름 소속 판정: `FlowMembershipService` 는 같은 `MembershipCall` 을 판정 이름 · 후보의 이름(흐름) · 문구 `MembershipWording.SAME_MATTER` · 원본 저장소 `FlowMembershipJudgementRepository` · 결과 꼴(`FlowMembershipJudgement`)만 바꿔 부른다 — 포트 메서드는 같은 `ArticleEvaluator.judgeMembership` 이다(evaluation-R51 · R52).
 
-관계 판정: `FlowRelationService` 는 트랜잭션 밖인지 · 평가기가 있는지 본 뒤, `article` 의 `ArticleDirectory.findAll` 로 두 흐름의 서술 기사를 한 번에 읽는다. `RelationPlan` 이 물을 서술과 포트 입력(`RelationInput` — 제목 · 요약문은 `HappeningText.limited`, 문구는 `RelationWording.CURRENT`)을 만들고 포트 `ArticleEvaluator.judgeRelation` 을 부른다. 성공이면 `RelationCheck` 로 답 다섯과 대조하고 `RelationRecord` 로 저장할 모양을 만들어 `RelationJudgementRepository` 에 쓴다(넣은 행의 ID 를 결과에 싣는다). 판정할 기사가 따로 없어 커밋 뒤에 다시 보지 않는다. 관계 판정 원본 조회는 `RelationJudgementLogService` 가 `RelationJudgementRepository.findAll` 로 원본을 읽고, 평가기가 있으면(`ObjectProvider` 로 부를 때 찾는다) 원본마다 포트 `ArticleEvaluator.rereadRelation` 으로 다시 읽어 `RelationCheck` 로 답 다섯과 대조한다.
+관계 판정: `FlowRelationService` 는 트랜잭션 밖인지 · 평가기가 있는지 본 뒤, `article` 의 `ArticleDirectory.findAll` 로 두 흐름의 서술 기사를 한 번에 읽는다. `RelationPlan` 이 물을 서술과 포트 입력(`RelationInput` — 제목 · 요약문은 `HappeningText.limited`, 문구는 `RelationWording.CURRENT`)을 만들고 포트 `ArticleEvaluator.judgeRelation` 을 부른다. 성공이면 `RelationCheck` 로 지금 문구 판의 답과 대조하고 `RelationRecord` 로 저장할 모양을 만들어 `RelationJudgementRepository` 에 쓴다(넣은 행의 ID 를 결과에 싣는다). 판정할 기사가 따로 없어 커밋 뒤에 다시 보지 않는다. 관계 판정 원본 조회는 `RelationJudgementLogService` 가 `RelationJudgementRepository.findAll` 로 원본을 읽고, 평가기가 있으면(`ObjectProvider` 로 부를 때 찾는다) 원본마다 그 원본의 문구 판(`RelationWording.ofVersion` — 모르는 판이면 읽을 수 없음)으로 포트 `ArticleEvaluator.rereadRelation` 을 불러 다시 읽고 `RelationCheck` 로 그 판의 답과 대조한다.
 
 임베딩: `TextEmbeddingService.embed` 는 트랜잭션 밖인지 · 임베더가 있는지(`ObjectProvider` 로 부를 때 찾는다) 본 뒤, 포트 `ArticleEmbedder` 의 정보를 한 번 읽고 텍스트 묶음을 한 번에 넘긴다. 성공이면 `EmbeddingCheck` 로 수 · 차원을 확인해 그대로 돌려주고, 실패는 그대로 넘긴다. 저장소를 쓰지 않는다. 임베더는 provider 설정(`EmbeddingProperties` — 결선 조건은 `EmbeddingProviderCondition`)에 따라 작업 역할에서 `OnnxArticleEmbedderConfiguration`(기본, `local` 밖) 또는 `OpenAiCompatibleEmbedderConfiguration` 이, `local` 에서 provider 가 기본이면 `FakeArticleEmbedderConfiguration` 이 포트로 등록한다. 작업 역할에서는 `EmbedderRequirement` 가 임베더 빈이 있는지 기동 때 본다.
 
@@ -584,13 +585,13 @@ sequenceDiagram
 - `EvaluationInput.presentSummary` — 공백뿐인 요약은 없는 요약이라는 규칙의 정본 — 태그 판정 · 사건 소속 판정 · 관계 판정이 함께 쓴다
 - `ResultCheck` — 결과와 질문의 대조의 정본 — 태그 판정의 결과 · 다시 읽은 결과와 질문 묶음의 키 집합(`mismatch`), 원본 응답의 `jsonb` 저장 가능성(`rawResponseProblem` — 관계 판정의 `RelationCheck` 도 쓴다), 키 차이 문구(`keyDifference` — 사건 소속 판정의 `MembershipCheck` 도 쓴다)(evaluation-R41 · R42)
 - `MembershipWording` — 소속 판정의 질문 문구 · 판 — 사건 소속(`CURRENT`) · 흐름 소속(`SAME_MATTER`) — 과 질문 문장 조립(`question`)의 정본(evaluation-R37 · R51)
-- `RelationWording` — 관계 판정의 문구 · 판(`CURRENT`)과 state 조립(`state`)의 정본(evaluation-R48)
+- `RelationWording` — 관계 판정의 문구 · 판(`CURRENT` · 알려진 판 `KNOWN`) · 선택지 순서와 state 조립(`state`)의 정본(evaluation-R48)
 - `HappeningText.limited` — 서술 사건의 제목 · 요약문 상한을 적용하는 정본(evaluation-R48)
 
 #### `domain/jev`
 
 - `JevRequest` — Jev 요청 본문의 정본. 질문 이름은 태그 종류 접두에 키를 붙인다 — 주제 `topic.{전체 키}`, 지역 `region.{키}`, 형식 `format`, 중요도 `importance`. 질문 문장은 `instructions`, 형식 선택지는 질문 묶음 순서의 `criteria`(키 → 설명), 중요도는 수준 순의 `criteria`(설명 배열)다. state 문자열(§4 나가는 쪽)과 문맥 초과 확인 요청(같은 질문 · 빈 state)도 만든다. 사건 소속 판정은 후보마다 `event.{사건 ID}` Yes/No 질문(문장은 넘긴 문구로 만든다)이고 state 는 제목 · 요약 줄이다 — 제목 · 요약 줄은 태그 판정 state 와 함께 쓴다(evaluation-R37 · R40)
-- `JevResponse` — 200 응답을 포트 결과로 옮긴다. 평가기 이름 `jev`, 모델 버전은 응답의 `model`, 입력 토큰은 `usage.input_tokens`, 원본 응답은 본문이다. 중요도는 수준 위치(`"0"` 부터)를 질문 묶음의 수준 순서로 되찾는다. 질문마다 기대한 종류의 답과 0 ~ 1 의 유한 확률이 없으면 평가기 사용 불가다. 판정 응답은 물은 후보마다 Yes/No 답을 읽고, 묻지 않은 답은 읽지 않는다. 관계 판정 응답은 `relation` 의 선택지 다섯의 확률과 `a_one_matter` · `b_one_matter` 의 Yes/No 확률을 읽는다. 모델 · 토큰 · 답 묶음 읽기는 세 응답이 함께 쓴다
+- `JevResponse` — 200 응답을 포트 결과로 옮긴다. 평가기 이름 `jev`, 모델 버전은 응답의 `model`, 입력 토큰은 `usage.input_tokens`, 원본 응답은 본문이다. 중요도는 수준 위치(`"0"` 부터)를 질문 묶음의 수준 순서로 되찾는다. 질문마다 기대한 종류의 답과 0 ~ 1 의 유한 확률이 없으면 평가기 사용 불가다. 판정 응답은 물은 후보마다 Yes/No 답을 읽고, 묻지 않은 답은 읽지 않는다. 관계 판정 응답은 `relation` 의 그 문구 판 선택지마다 확률과 `a_one_matter` · `b_one_matter` 의 Yes/No 확률을 읽는다. 모델 · 토큰 · 답 묶음 읽기는 세 응답이 함께 쓴다
 - `JevErrors` · `JevOutcome` — 200 이 아닌 응답의 갈래(Jev 대응표 — 나가는 쪽)와 운영자용 문구
 - `JevApiKey` — Jev 키. 형식은 `platform` 의 `HeaderValueShape` 가 정한다([platform-R23](platform.md#비밀-값) — 1 ~ 512자, 공백 없는 출력 가능한 ASCII). 값은 `Authorization` 헤더로만 내보내고 문구 · `toString` 에 담지 않는다
 
@@ -636,7 +637,7 @@ sequenceDiagram
 #### `domain/relation`
 
 - `RelationPlan` — 물을 서술 고르기의 정본(evaluation-R49). 흐름마다 서술 사건 가운데 기사가 아직 있는 것의 제목을 요청 순서로 자르고, 지워진 기사와 자른 뒤 공백뿐인 제목의 서술은 요청 · 기록에서 뺀다. 요약문은 `summarized` 이고 공백뿐이 아닐 때만 싣는다(`EvaluationInput.presentSummary`). 한쪽이라도 남은 서술이 없으면 `NothingToAsk`
-- `RelationCheck` — 판정 결과와 답 다섯의 대조의 정본(evaluation-R49 · R50) — 답의 집합과 원본 응답의 저장 가능성(`ResultCheck.rawResponseProblem`). 판정 때와 다시 읽을 때 함께 쓴다
+- `RelationCheck` — 판정 결과와 문구 판의 답의 대조의 정본(evaluation-R49 · R50) — 답의 집합과 원본 응답의 저장 가능성(`ResultCheck.rawResponseProblem`). 판정 때와 다시 읽을 때 함께 쓴다
 - `RelationRecord` — 저장할 판정 원본(`of` — 두 흐름 ID, 흐름마다 실은 서술 기사 ID 와 요약문을 실었는가, 요청 순서)
 - 저장 단위: aggregate 가 없다 — 판정 원본은 넣기 한 번이고 갱신하지 않는다
 
@@ -679,7 +680,7 @@ public interface ArticleEvaluator {
     RereadResult reread(String evaluator, String rawResponse, TagQuestions questions);
     MembershipResult judgeMembership(MembershipInput input);
     RelationResult judgeRelation(RelationInput input);
-    RelationRereadResult rereadRelation(String evaluator, String rawResponse);
+    RelationRereadResult rereadRelation(String evaluator, String rawResponse, RelationWording wording);
 }
 
 public record EvaluationInput(String title, @Nullable String summary, List<FeedContext> feeds) {}
@@ -733,8 +734,14 @@ public record HappeningText(Instant at, String title, @Nullable String summary) 
     public static Optional<HappeningText> limited(Instant at, String title, @Nullable String summary);
 }
 
-public record RelationWording(String version, String question, Map<RelationAnswer, String> options, String oneMatter) {
-    public static final RelationWording CURRENT;
+public record RelationWording(String version, String question, Map<RelationAnswer, String> options,
+        List<RelationAnswer> order, String oneMatter) {
+    public static final RelationWording RELATION_1;
+    public static final RelationWording RELATION_2;
+    public static final RelationWording CURRENT;                 // RELATION_2
+    public static final List<RelationWording> KNOWN;             // RELATION_1 · RELATION_2
+    public static Optional<RelationWording> ofVersion(String version);
+    public Set<RelationAnswer> answers();
     public static final String FLOW_NAME = "{flow}";
     public static final String FIRST_NAME = "A";
     public static final String SECOND_NAME = "B";
@@ -764,7 +771,7 @@ public record Relation(Map<RelationAnswer, Double> probabilities, double firstOn
 | `Evaluation.rawResponse` | 원본 응답 — JSON 텍스트 | — |
 | `EvaluationFailure.kind` | 실패 갈래 — `EvaluatorFailureKind`(§3). 태그 평가 작업의 갈래별 처리는 [tag-R20](tag.md#평가-대기와-평가-작업) | — |
 | `EvaluationFailure.message` | 운영자용 문구 | 공백뿐이 아니고 비밀 값을 담지 않는다 |
-| `RereadFailure.Kind` | 다시 읽기의 실패 갈래 — `OTHER_EVALUATOR`(다른 평가기가 남긴 원본 응답 — 그 형식을 모른다) · `UNREADABLE`(이 평가기의 형식이 아니거나, 태그 판정이면 넘긴 질문 묶음의 답이 없고 관계 판정이면 답 다섯 · 한 사안 확률이 없다) | — |
+| `RereadFailure.Kind` | 다시 읽기의 실패 갈래 — `OTHER_EVALUATOR`(다른 평가기가 남긴 원본 응답 — 그 형식을 모른다) · `UNREADABLE`(이 평가기의 형식이 아니거나, 태그 판정이면 넘긴 질문 묶음의 답이 없고 관계 판정이면 그 문구 판의 답 · 한 사안 확률이 없다) | — |
 | `RereadFailure.message` | 운영자용 문구 | 공백뿐이 아니고 비밀 값 · 원본 응답 원문을 담지 않는다 |
 | `judgeMembership` | 판정할 기사가 후보마다 넘긴 문구의 질문에 맞는지 묻는다 — 사건 소속(그 사건을 다루는가) · 흐름 소속(같은 사안의 전개인가), 후보마다 Yes/No 확률 하나 | — |
 | `MembershipInput.title` · `summary` | 판정할 기사의 제목 · RSS 요약문(없으면 null) | 제목 · 요약은 공백뿐이 아니다 |
@@ -774,22 +781,22 @@ public record Relation(Map<RelationAnswer, Double> probabilities, double firstOn
 | `MembershipWording` | 문구 판 · 문구. `question(titles)` 는 문구 뒤에 제목을 한 줄씩 `- ` 로 붙인 질문 문장이다 | 판 · 문구는 공백뿐이 아니다 |
 | `Membership.probabilities` | 후보 사건 ID → 확률 | 0 이상 1 이하의 유한값 |
 | `Membership.evaluator` · `modelVersion` · `inputTokens` · `rawResponse` | 평가기 이름 · 모델 버전 · 입력 토큰 · 원본 응답(JSON 텍스트) | `Evaluation` 의 같은 값과 같다 |
-| `judgeRelation` | 두 흐름의 관계를 묻는다 — 답 다섯의 확률과 흐름마다 한 사안일 확률 | — |
-| `rereadRelation` | 저장된 관계 판정 원본 응답을 다시 읽는다 — 외부를 부르지 않는다. `evaluator` 는 그 원본을 남긴 평가기 이름이다. 읽은 `Relation` 의 입력 토큰은 원본 응답에 없으면 0 이다 | — |
+| `judgeRelation` | 두 흐름의 관계를 묻는다 — 넘긴 문구 판의 답마다 확률과 흐름마다 한 사안일 확률 | — |
+| `rereadRelation` | 저장된 관계 판정 원본 응답을 그 원본을 남긴 문구 판(`wording`)의 답으로 다시 읽는다 — 외부를 부르지 않는다. `evaluator` 는 그 원본을 남긴 평가기 이름이다. 읽은 `Relation` 의 입력 토큰은 원본 응답에 없으면 0 이다 | — |
 | `RelationInput.first` · `second` | 두 흐름의 서술 — first 가 요청의 A, second 가 B | 흐름마다 서술이 하나 이상이다 |
 | `FlowText.happenings` · `firstAt` · `lastAt` | 흐름의 사건 수 · 첫 · 마지막 기사 시각 | `FlowDescriptor` 의 같은 값과 같다 |
 | `HappeningText.title` · `summary` | 서술 사건의 대표 기사 제목 · 요약문(싣지 않으면 null) | 제목은 공백뿐이 아니고 `CandidateEvent.MAX_TITLE_CODE_POINTS` 코드 포인트 이하, 요약문은 공백뿐이 아니고 `MAX_SUMMARY_CODE_POINTS`(160) 코드 포인트 이하. 상한을 모르는 값은 `limited` 로 만든다 |
-| `RelationWording` | 문구 판 · 관계 질문 · 선택지 다섯의 문장 · 한 사안 질문의 틀. `state` 는 두 흐름의 서술, `oneMatterQuestion` 은 한 사안 질문의 틀에서 `FLOW_NAME` 자리에 흐름 이름(`FIRST_NAME` · `SECOND_NAME` — 요청에서 first · second 를 부르는 이름)을 넣은 질문 문장 | 판 · 문장은 공백뿐이 아니고 선택지는 답 다섯 모두이며 한 사안 질문의 틀에 `FLOW_NAME` 자리가 있다 |
+| `RelationWording` | 문구 판 · 관계 질문 · 답마다 선택지의 문장 · 요청에 선택지를 싣는 순서(`order` — 답의 선언 순서와는 다른 지식이다) · 한 사안 질문의 틀. `answers` 는 그 판의 답, `ofVersion` 은 판 이름으로 알려진 판(`KNOWN`)을 찾는다. 판정은 언제나 `CURRENT` 로 묻고, 옛 판은 그 판으로 남긴 원본을 다시 읽을 때 쓴다. `state` 는 두 흐름의 서술, `oneMatterQuestion` 은 한 사안 질문의 틀에서 `FLOW_NAME` 자리에 흐름 이름(`FIRST_NAME` · `SECOND_NAME` — 요청에서 first · second 를 부르는 이름)을 넣은 질문 문장 | 판 · 문장은 공백뿐이 아니고 선택지에 해당 없음이 있으며 순서는 선택지의 답을 한 번씩 담고 한 사안 질문의 틀에 `FLOW_NAME` 자리가 있다 |
 | `Relation.probabilities` | 답 → 확률 | 0 이상 1 이하의 유한값 |
 | `Relation.firstOneMatter` · `secondOneMatter` | 흐름마다 한 사안일 확률 | 0 이상 1 이하의 유한값 |
 
 - 계약
   - 질문 · 태그는 넘긴 질문 묶음에서, 소속 판정(사건 · 흐름)의 질문 문구는 넘긴 입력(`MembershipWording`)에서 읽는다 — 구현은 문구를 갖지 않는다(evaluation-R37 · R40)
-  - 원본 응답의 형식은 그 응답을 낸 구현만 안다 — 다시 읽기는 외부를 부르지 않아 트랜잭션 안에서 불러도 된다. 예상한 실패는 `RereadFailure` 로 돌려주고, 예상 못한 런타임 예외는 구현 결함이다. 되찾은 평가가 질문 묶음과 맞는지는 `ArticleTaggingService` 가 `ResultCheck` 로, 되찾은 관계 판정이 답 다섯과 맞는지는 `RelationJudgementLogService` 가 `RelationCheck` 로 본다(evaluation-R42 · R50)
+  - 원본 응답의 형식은 그 응답을 낸 구현만 안다 — 다시 읽기는 외부를 부르지 않아 트랜잭션 안에서 불러도 된다. 예상한 실패는 `RereadFailure` 로 돌려주고, 예상 못한 런타임 예외는 구현 결함이다. 되찾은 평가가 질문 묶음과 맞는지는 `ArticleTaggingService` 가 `ResultCheck` 로, 되찾은 관계 판정이 그 판의 답과 맞는지는 `RelationJudgementLogService` 가 `RelationCheck` 로 본다(evaluation-R42 · R50)
   - 성공이면 넘긴 질문 묶음의 주제 중분류 · 지역 · 형식 선택지 · 중요도 수준마다 확률이 하나씩 있고, 다른 키는 없다. 분포의 합은 계약하지 않는다. 결과 레코드는 값 하나하나만 검사하고, 질문 묶음과 맞는지는 `ArticleTaggingService` 가 `ResultCheck` 로 본다(evaluation-R41)
   - 예상한 실패는 `EvaluationFailure` 로 돌려준다 — 예외를 던지지 않는다. 예상 못한 런타임 예외는 구현 결함이다([ADR-0058](../adr/0058-evaluator-failures-in-three-kinds-and-unavailable-evaluator-skips-article-retries.md))
   - 판정 성공이면 넘긴 후보마다 확률이 하나씩 있고 다른 사건은 없다. 결과 레코드는 값 하나하나만 검사하고, 물은 후보와 맞는지는 부르는 쪽이 `MembershipCheck` 로 본다
-  - 관계 판정의 문구는 넘긴 입력(`RelationWording`)에서 읽는다 — 구현은 문구를 갖지 않는다. 성공이면 답 다섯의 확률과 두 흐름의 한 사안 확률이 있고, 답 다섯과 맞는지는 `FlowRelationService` 가 `RelationCheck` 로 본다(evaluation-R48 · R49)
+  - 관계 판정의 문구는 넘긴 입력(`RelationWording`)에서 읽는다 — 구현은 문구를 갖지 않는다. 성공이면 넘긴 판의 답마다 확률과 두 흐름의 한 사안 확률이 있고, 그 판의 답과 맞는지는 `FlowRelationService` 가 `RelationCheck` 로 본다(evaluation-R48 · R49)
   - 외부 호출을 하므로 부르는 쪽은 DB 트랜잭션 밖에서 부른다. 구현은 트랜잭션을 열지 않는다
   - 형식 · 중요도는 분포만 돌려준다. 대표값 고르기 · 저장 기준 거르기 · `low_confidence` 는 `tag` 의 규칙이다([tag-R15](tag.md#공유-평가))
 - 포트 입력 · 결과는 내부 타입이다 — `tag` 는 공개 API `ArticleTagging` 을, `event` 는 공개 API `EventMembership` 을, `storyline` 은 `FlowMembership` · `FlowRelation` 을 거친다(§3). 사건 소속 판정의 공개 값은 사건 ID · 기사 ID · 확률 · 실패 갈래와 판정 원본 ID 를 담는다(원본 응답 · 모델 버전 · 입력 토큰은 판정 결과가 아니라 판정 원본 조회 `EventJudgementLog` 가 낸다 — [ADR-0094](../adr/0094-event-membership-judgements-identified-by-id-read-by-operators-and-referenced-by-the-records-that-apply-them.md)). 인자 · 반환 타입은 `evaluation` 이 소유한다 — `event` 의 타입을 받으면 모듈 순환이 된다([ADR-0026](../adr/0026-event-clustering-with-local-embeddings-and-jev.md) · [ADR-0071](../adr/0071-event-membership-judged-from-article-ids-with-questions-built-in-evaluation.md))
@@ -809,7 +816,7 @@ public record Relation(Map<RelationAnswer, Double> probabilities, double firstOn
   - {서술 제목}
   ```
 
-- 관계 판정의 state 는 두 흐름의 서술이고 사이에 빈 줄을 둔다. 흐름마다 머리 줄 하나와 서술 사건마다 제목 줄, 요약문을 실으면 그 다음 줄이다. 날짜는 UTC 의 월-일이다. 질문은 셋이다 — `relation`(Choice — 선택지는 `b_part_of_a` · `a_part_of_b` · `a_led_to_b` · `b_led_to_a` · `none` 순), `a_one_matter` · `b_one_matter`(Yes/No):
+- 관계 판정의 state 는 두 흐름의 서술이고 사이에 빈 줄을 둔다. 흐름마다 머리 줄 하나와 서술 사건마다 제목 줄, 요약문을 실으면 그 다음 줄이다. 날짜는 UTC 의 월-일이다. 질문은 셋이다 — `relation`(Choice — 선택지는 문구 판의 순서 `RelationWording.order` 이고 지금 판은 `b_part_of_a` · `a_part_of_b` · `a_led_to_b` · `b_led_to_a` · `same` · `none` 순), `a_one_matter` · `b_one_matter`(Yes/No):
 
   ```
   Flow A ({사건 수} happenings, {MM-DD} to {MM-DD}):
@@ -841,16 +848,16 @@ public record Relation(Map<RelationAnswer, Double> probabilities, double firstOn
   - 실패 문구 — 무엇이 일어났는지와 상태 · `error_type` · Jev 설명 앞 200 코드 포인트 · `Retry-After` · 요청 ID(응답 헤더 `x-typesafe-request-id`)를 담고 500 코드 포인트 이하다. 요청 · 응답 본문 원문(검증 실패 응답은 요청 본문을 되돌려준다)은 담지 않는다. 확인 요청이 받아들여지지 않은 실패는 확인 요청의 응답으로 쓴다
   - 키는 `Authorization` 헤더로만 나간다
   - 다시 읽기 — 평가기 이름이 `jev` 가 아니면 `OTHER_EVALUATOR`, 맞으면 `JevResponse` 로 읽는다(요청을 보내지 않는다). 읽을 수 없으면 `UNREADABLE` 이고 문구는 `JevResponse` 의 것이다
-- `JevArticleEvaluator` 의 관계 판정 다시 읽기 — 평가기 이름이 `jev` 가 아니면 `OTHER_EVALUATOR`, 맞으면 `JevResponse.readRelation` 으로 읽는다(요청을 보내지 않는다 — 판정 때와 같은 읽기). 읽을 수 없으면 `UNREADABLE` 이고 문구는 `JevResponse` 의 것이다
-- `JevArticleEvaluator` 의 관계 판정 — 요청 하나에 질문 셋이고, 문맥 초과 확인(같은 질문 · 빈 state)과 실패 갈래는 다른 판정과 같다. 응답의 선택지 키를 `RelationAnswer` 로 옮긴다 — `none` → `NONE`, `b_part_of_a` → `SECOND_PART_OF_FIRST`, `a_part_of_b` → `FIRST_PART_OF_SECOND`, `a_led_to_b` → `FIRST_LED_TO_SECOND`, `b_led_to_a` → `SECOND_LED_TO_FIRST`(정본 `JevRequest` 의 키 상수)
+- `JevArticleEvaluator` 의 관계 판정 다시 읽기 — 평가기 이름이 `jev` 가 아니면 `OTHER_EVALUATOR`, 맞으면 `JevResponse.readRelation` 으로 넘긴 문구 판의 선택지 키를 읽는다(요청을 보내지 않는다 — 판정 때와 같은 읽기). 읽을 수 없으면 `UNREADABLE` 이고 문구는 `JevResponse` 의 것이다
+- `JevArticleEvaluator` 의 관계 판정 — 요청 하나에 질문 셋이고, 문맥 초과 확인(같은 질문 · 빈 state)과 실패 갈래는 다른 판정과 같다. 응답의 선택지 키를 `RelationAnswer` 로 옮긴다 — `none` → `NONE`, `same` → `SAME_MATTER`, `b_part_of_a` → `SECOND_PART_OF_FIRST`, `a_part_of_b` → `FIRST_PART_OF_SECOND`, `a_led_to_b` → `FIRST_LED_TO_SECOND`, `b_led_to_a` → `SECOND_LED_TO_FIRST`(정본 `JevRequest` 의 키 상수)
 - `FakeArticleEvaluator`(`adapter/out/fake`) — 로컬 대체물. 외부 호출 없이 고정 규칙으로 같은 입력 · 같은 체계에 같은 결과를 낸다. `local` 이면서 Jev 키가 없을 때만 등록되고(§7 · [platform-R18](platform.md#로컬-개발)), 시험은 직접 만들어 쓴다([ADR-0057](../adr/0057-local-substitutes-registered-only-in-local-profile-without-operator-switch.md)). 개발 · 확인용 인스턴스가 기대는 조종 계약:
   - 실패 표지 — 제목에 `[fake:transient]` · `[fake:article-rejected]` · `[fake:evaluator-unavailable]` 가 있으면 그 갈래로 실패한다. 표지는 제목에서만 본다. 여럿이면 갈래 선언 순서(일시 → 기사 거부 → 평가기 사용 불가)로 처음 것이다
   - 이름 일치 — 태그 · 대분류 이름을 `·` 로 나눈 조각이 제목 · 피드 섹션 · 카테고리에 들어 있으면 그 태그의 확률을 높인다. 요약 · 출처 이름은 보지 않는다. 일치가 없으면 주제는 고정 규칙으로 하나를, 지역 · 형식은 체계 순서의 첫 항목을 고른다. 수치와 고르는 규칙은 클래스 Javadoc 이 정본이다
-  - 평가기 이름 `fake`, 모델 버전 `fake-rules-2` — 규칙을 바꾸면 버전을 올린다. 입력 토큰은 실제 토큰 수가 아니다
+  - 평가기 이름 `fake`, 모델 버전 `fake-rules-3` — 규칙을 바꾸면 버전을 올린다. 입력 토큰은 실제 토큰 수가 아니다
   - 소속 판정(사건 · 흐름 — 문구와 무관하게 같다) — 실패 표지는 평가와 같다(판정할 기사 제목에서 본다). 확률은 판정할 기사 제목과 후보 서술 제목의 조각(문자 · 숫자 덩어리) 겹침으로 정하고, 겹침이 없으면 0.05 다. 원본 응답은 평가기 이름 · 버전과 사건 ID 별 확률이다. 수치와 계산 순서는 클래스 Javadoc 이 정본이다
-  - 관계 판정 — 실패 표지는 first 의 첫 서술 제목에서 본다. 확률은 두 흐름 서술 제목의 조각(문자 · 숫자 덩어리) 겹침으로 정한다 — 겹침이 없으면 해당 없음이 가장 높고, 겹치면 서술 사건이 적은 흐름이 많은 흐름의 부분이다(같으면 second 가 first 의 부분). 한 사안 확률은 그 흐름 서술 제목끼리의 조각 겹침이다. 수치와 계산 순서는 클래스 Javadoc 이 정본이다
+  - 관계 판정 — 실패 표지는 first 의 첫 서술 제목에서 본다. 확률은 두 흐름 서술 제목의 조각(문자 · 숫자 덩어리) 겹침으로 정한다 — 답은 넘긴 문구 판의 답이다. 겹침이 없으면 해당 없음이 가장 높고, 겹치면 서술 사건이 적은 흐름이 많은 흐름의 부분이다. 서술 사건 수가 같으면 같은 사안의 조각이다(조각 답이 없는 판이면 second 가 first 의 부분). 고른 답의 확률은 겹침이 클수록 높다 — 지금 합치기 확률 기준의 기본값(0.65 — [storyline Spec §7](storyline.md#7-설정))에서는 겹침이 작은 조각 쌍은 합쳐지지 않고 큰 쌍은 합쳐진다. 한 사안 확률은 그 흐름 서술 제목끼리의 조각 겹침이다. 수치와 계산 순서는 클래스 Javadoc 이 정본이다
   - 다시 읽기 — 평가기 이름이 `fake` 가 아니면 `OTHER_EVALUATOR`, 맞으면 자기 원본 응답에서 넘긴 질문 묶음의 키마다 확률을 읽는다(중요도 키는 수준의 문자열). 모델 버전은 원본의 값, 입력 토큰은 원본에 없어 0 이다. 키가 없거나 확률이 0 ~ 1 유한값이 아니면 `UNREADABLE`
-  - 관계 판정 다시 읽기 — 평가기 이름이 `fake` 가 아니면 `OTHER_EVALUATOR`, 맞으면 자기가 쓴 원본 응답의 답 이름마다 확률과 한 사안 확률 둘을 읽는다 — 쓰기와 읽기가 같은 키 상수를 쓴다. 모델 버전은 원본의 값, 입력 토큰은 0 이다. 키가 없거나 확률이 0 ~ 1 유한값이 아니면 `UNREADABLE`
+  - 관계 판정 다시 읽기 — 평가기 이름이 `fake` 가 아니면 `OTHER_EVALUATOR`, 맞으면 자기가 쓴 원본 응답에서 넘긴 문구 판의 답 이름마다 확률과 한 사안 확률 둘을 읽는다 — 쓰기와 읽기가 같은 키 상수를 쓴다. 모델 버전은 원본의 값, 입력 토큰은 0 이다. 키가 없거나 확률이 0 ~ 1 유한값이 아니면 `UNREADABLE`
 
 태그 평가 작업(대기 · 회차)은 `tag` 가 갖고 `ArticleTagging` 을 부른다 — [tag Spec](tag.md) tag-R18 ~ R20.
 
@@ -893,12 +900,12 @@ public interface ArticleEmbedder {
 |---|---|
 | RSS 항목 카테고리(평가 입력) | 피드가 개수 · 길이를 정하는 값이라 평가 입력에 넣기 전에 줄인다 — evaluation-R17 |
 | Jev 응답 | 본문은 1 MiB 까지 받는다. 200 은 질문마다 기대한 종류의 답과 0 ~ 1 의 유한 확률이 있어야 하고(판정은 물은 후보마다), 없으면 평가기 사용 불가다. 오류 응답의 설명 · 요청 ID · `Retry-After` 는 실패 문구에 넣기 전에 제어 문자를 공백으로, 짝 없는 서로게이트를 U+FFFD 로 바꾸고 길이를 자른다 — 문구는 대기 행에 저장되고 PostgreSQL `text` 는 U+0000 을 받지 않는다. 오류 본문 원문은 문구에 넣지 않는다 |
-| 다시 읽는 판정 원본(관계 판정) | 평가기가 자기 형식으로만 다시 읽고, 답 다섯 · 한 사안 확률이 없으면 읽을 수 없음이다. 되찾은 결과는 `RelationCheck` 로 답 다섯과 대조한다 — 어긋나면 읽을 수 없음으로 돌려준다. 문구에 원본 응답 원문을 넣지 않는다(evaluation-R50) |
+| 다시 읽는 판정 원본(관계 판정) | 평가기가 자기 형식과 그 원본의 문구 판으로만 다시 읽고, 그 판의 답 · 한 사안 확률이 없거나 모르는 판이면 읽을 수 없음이다. 되찾은 결과는 `RelationCheck` 로 그 판의 답과 대조한다 — 어긋나면 읽을 수 없음으로 돌려준다. 문구에 원본 응답 원문을 넣지 않는다(evaluation-R50) |
 | 다시 읽는 판정 원본(태그 판정) | 평가기가 자기 형식으로만 다시 읽고, 넘긴 질문 묶음의 답이 없으면 읽을 수 없음이다. 되찾은 결과는 `ResultCheck` 로 질문 묶음과 대조한다 — 어긋나면 읽을 수 없음으로 돌려준다(evaluation-R42) |
 | 평가기 결과 · 원본 응답(태그 판정) | 기록 전에 질문 묶음과 대조한다 — 키 집합이 질문 묶음과 같고, 원본 응답은 JSON 이고 문자 U+0000 · 짝 없는 서로게이트가 없어야 한다(PostgreSQL `jsonb` 가 받지 않는다). 어긋나면 기록하지 않고 `IllegalStateException` 이다(evaluation-R41) |
 | 서술 기사 제목(소속 판정 입력 — 사건 · 흐름) | 피드가 길이를 정하는 값이라 질문에 넣기 전에 후보마다 5건, 하나에 200 코드 포인트까지로 줄인다 — 서술 기사 수는 요청 값이 거부하고, 제목은 자른다(evaluation-R37) |
 | 서술 사건의 제목 · 요약문(관계 판정 입력) | 피드가 길이를 정하는 값이라 요청에 넣기 전에 흐름마다 10건, 제목은 200 코드 포인트 · 요약문은 160 코드 포인트까지로 줄인다 — 서술 수는 요청 값이 거부하고, 제목 · 요약문은 자른다(evaluation-R48). 제목 · 요약문은 평가기의 입력(state)일 뿐 지시가 아니다 — 평가기의 답은 정해진 선택지의 확률뿐이다 |
-| 관계 판정 결과 · 원본 응답 | 기록 전에 답 다섯과 대조한다 — 답의 집합이 같고, 원본 응답은 JSON 이고 문자 U+0000 · 짝 없는 서로게이트가 없어야 한다. 어긋나면 기록하지 않고 `IllegalStateException` 이다(evaluation-R49) |
+| 관계 판정 결과 · 원본 응답 | 기록 전에 지금 문구 판의 답과 대조한다 — 답의 집합이 같고, 원본 응답은 JSON 이고 문자 U+0000 · 짝 없는 서로게이트가 없어야 한다. 어긋나면 기록하지 않고 `IllegalStateException` 이다(evaluation-R49) |
 | 임베더 결과 | 돌려주기 전에 수 · 차원을 확인한다 — 어긋나면 `IllegalStateException`. 벡터 값은 유한해야 한다(`Embedding`) — evaluation-R45 |
 | 외부 임베딩 응답 | 본문은 32 MiB 까지만 읽고, 읽을 수 없거나 모양이 어긋나면 `EMBEDDER_UNAVAILABLE` 이다. 본문 · 키 · 입력 텍스트를 로그 · 실패 문구에 싣지 않는다 |
 | 판정 결과 · 원본 응답 | 기록 전에 물은 후보와 대조한다 — 사건 ID 집합이 같고, 원본 응답은 JSON 이고 문자 U+0000 · 짝 없는 서로게이트가 없어야 한다. 어긋나면 기록하지 않고 `IllegalStateException` 이다(evaluation-R38) |
@@ -1024,19 +1031,20 @@ public interface ArticleEmbedder {
   - 작업 역할의 작업에서 DB 트랜잭션 밖에서 부른다. 트랜잭션 안이거나 평가기가 없는 프로세스면 `IllegalStateException` 이다 — 평가기는 부를 때 찾는다
   - 두 흐름의 서술 기사를 한 번에 읽는다. state 는 두 흐름의 서술이다(§4 나가는 쪽) — first 가 `Flow A`, second 가 `Flow B` 다. 날짜는 UTC 의 월-일이다
   - 제목은 하나에 200 코드 포인트(`CandidateEvent.MAX_TITLE_CODE_POINTS`), 요약문은 160 코드 포인트(`HappeningText.MAX_SUMMARY_CODE_POINTS`)까지로 자르고(서로게이트 쌍을 가르지 않는다) 끝 공백을 지운다. 정본은 `HappeningText.limited` 다
-  - 질문은 셋이고 한 요청에 묶는다 — 관계(Choice, 선택지 다섯)와 흐름마다 한 사안인가(Yes/No)
-  - 문구는 코드 상수 하나(`RelationWording.CURRENT`)이고 판 `relation-1` 의 영어 문장이다. 분야의 예를 들지 않는다. 문구나 state · 질문의 조립 모양을 바꾸면 판을 올린다
+  - 질문은 셋이고 한 요청에 묶는다 — 관계(Choice, 선택지 여섯)와 흐름마다 한 사안인가(Yes/No)
+  - 문구는 코드 상수(`RelationWording.CURRENT`)이고 판 `relation-2` 의 영어 문장이다. 분야의 예를 들지 않는다. 문구나 state · 질문의 조립 모양을 바꾸면 판을 올린다. 옛 판(`relation-1` — 선택지 다섯, 같은 사안 전체를 다루는 쌍은 해당 없음)은 그 판으로 남긴 원본을 다시 읽으려고 남긴다(`RelationWording.KNOWN`). 선택지는 부분 둘 · 낳음 둘 · 조각 · 해당 없음 순으로 싣는다(`RelationWording.order` — 문구를 고를 때 잰 요청의 순서)
     - 관계 질문 — 두 흐름의 관계가 무엇인가
     - 부분 — 한쪽이 다른 쪽보다 좁고 그 안에 든다: 다른 쪽에 대한 반응 하나, 다른 쪽의 한 단계, 다른 쪽의 한 갈래이고 여전히 다른 쪽의 사안에 관한 것이다
     - 낳음 — 한쪽이 다른 쪽과 다른 사안이다: 자기 주체와 자기 경로를 갖고 다른 쪽이 끝나도 이어지지만 다른 쪽에서 일어난 일 때문에 생겼다
-    - 해당 없음 — 두 흐름이 별개의 사안이거나, 같은 사안 전체를 다루거나, 한쪽이 한 사안이 아니라 따로 일어난 일들의 모음이다. 종류가 비슷하거나 같은 사람이 나오거나 원인이 같아도, 어느 쪽도 다른 쪽 안에 들지 않고 다른 쪽에서 비롯되지 않았다
+    - 조각 — 두 흐름이 둘로 기록된 하나의 같은 흐름이다: 같은 주체와 같은 경로로 같은 사안을 따르고, 한 흐름으로 읽힌다
+    - 해당 없음 — 두 흐름이 별개의 사안이거나, 한쪽이 한 사안이 아니라 따로 일어난 일들의 모음이다. 종류가 비슷하거나, 같은 분야나 되풀이되는 같은 일정에 속하거나, 같은 사람이 나오거나 원인이 같아도, 어느 쪽도 다른 쪽 안에 들지 않고 다른 쪽에서 비롯되지 않았다
     - 한 사안 질문 — 그 흐름이 종류만 비슷한 따로 일어난 일들의 모음이 아니라 한 사안의 전개인가
   - 문맥을 넘으면 같은 질문 · 빈 state 로 확인한다 — 받으면 기사 거부, 그것도 넘으면 평가기 사용 불가다(evaluation-R40 의 확인 요청과 같다)
 - **evaluation-R49** — 관계 판정 결과와 판정 원본:
   - 지워진 서술 기사와 자른 뒤 공백뿐인 제목의 서술은 빼고 묻는다. 요약문은 표시된 사건의 공백뿐이 아닌 요약문만 싣는다. 한쪽 흐름에 남은 서술이 없으면 평가기를 부르지 않고 "물을 것 없음"이다. 정본은 `RelationPlan` 이다
-  - 성공이면 답 다섯의 확률과 흐름마다 한 사안일 확률이다. 받아들일지는 부르는 쪽이 정한다
+  - 성공이면 답 여섯의 확률과 흐름마다 한 사안일 확률이다. 받아들일지 · 조각을 합칠지는 부르는 쪽이 정한다
   - 평가기의 예상한 실패는 갈래와 문구로 돌려주고 원본을 남기지 않는다. 평가기의 예상 못한 예외는 그대로 던진다
-  - 성공이면 결과를 대조한다 — 답의 집합이 `RelationAnswer` 다섯과 같고, 원본 응답을 `jsonb` 로 저장할 수 있어야 한다(정본 `RelationCheck`). 어긋나면 원본을 남기지 않고 `IllegalStateException` 이다
+  - 성공이면 결과를 대조한다 — 답의 집합이 지금 문구 판의 답과 같고, 원본 응답을 `jsonb` 로 저장할 수 있어야 한다(정본 `RelationCheck`). 어긋나면 원본을 남기지 않고 `IllegalStateException` 이다
   - 맞으면 짧은 트랜잭션 하나로 판정 원본 한 행을 쓴다 — 두 흐름 ID, 흐름마다 실은 서술 기사 ID 와 요약문을 실었는가(요청 순서), 평가기 · 모델 버전 · 문구 판 · 원본 응답 · 입력 토큰 · 판정 시각. 제목 · 요약문 텍스트는 남기지 않는다. 같은 쌍의 판정이 여러 번이면 행도 여러 개다
   - 판정 결과에 남긴 판정 원본의 ID 를 싣는다. 그 판정을 반영했는지는 부르는 쪽이 원본 ID 로 기록한다([storyline-R29 · R30](storyline.md#스토리라인-사이-관계))
   - 판정할 기사가 없는 판정이라 지운 기사를 따르지 않는다 — 원본에는 서술 기사의 ID 만 있다(evaluation-R44 의 서술 기사와 같다). 보존 기간은 [data-model 보존 정책](../data-model.md#보존-정책-초안)에 있다
@@ -1047,8 +1055,8 @@ public interface ArticleEmbedder {
 
 - **evaluation-R50** — 관계 판정 원본 조회와 다시 읽기:
   - 원본 ID 묶음을 받아 있는 원본만 낸다 — 지운(보존 기간이 지난) 원본은 결과에 없다. 한 번에 `RelationJudgementLog.MAX_IDS`(500)개까지 받고, 넘으면 `IllegalArgumentException` 이다. 상한은 측정 전 목표다
-  - 원본마다 평가기 · 모델 버전 · 문구 판 · 입력 토큰 · 판정 시각 · 두 흐름 ID 를 내고, 원본 응답을 그 원본을 남긴 평가기의 형식으로 다시 읽어 답 다섯의 확률과 흐름마다의 한 사안 확률을 낸다 — 모델을 부르지 않는다. 확률의 방향은 원본의 first · second 흐름 기준이다
-  - 그 프로세스에 평가기가 없으면 원본마다 읽지 못함(평가기 없음)이다. 다른 평가기가 남긴 원본이면 읽지 못함(다른 평가기), 형식이 아니거나 읽은 결과가 답 다섯과 어긋나면(`RelationCheck`) 읽지 못함(읽을 수 없음)이다 — 나머지 값은 그대로 낸다
+  - 원본마다 평가기 · 모델 버전 · 문구 판 · 입력 토큰 · 판정 시각 · 두 흐름 ID 를 내고, 원본 응답을 그 원본을 남긴 평가기의 형식과 그 원본의 문구 판으로 다시 읽어 그 판의 답마다 확률과 흐름마다의 한 사안 확률을 낸다 — 모델을 부르지 않는다. 판마다 답이 다르다 — `relation-1` 의 원본에는 조각이 없다. 확률의 방향은 원본의 first · second 흐름 기준이다
+  - 그 프로세스에 평가기가 없으면 원본마다 읽지 못함(평가기 없음)이다. 다른 평가기가 남긴 원본이면 읽지 못함(다른 평가기), 모르는 문구 판의 원본이거나, 형식이 아니거나, 읽은 결과가 그 판의 답과 어긋나면(`RelationCheck`) 읽지 못함(읽을 수 없음)이다 — 나머지 값은 그대로 낸다
   - 원본 응답 · 서술은 내지 않는다
 
 ### 기사 임베딩
@@ -1123,6 +1131,7 @@ public interface ArticleEmbedder {
 | [0094](../adr/0094-event-membership-judgements-identified-by-id-read-by-operators-and-referenced-by-the-records-that-apply-them.md) | 사건 소속 판정 원본은 ID 로 식별되어 운영자 조회로 읽히고, 판정을 반영한 `event` 기록이 그 ID 를 가리켜 판정의 쓰임과 결과를 잇는다 |
 | [0102](../adr/0102-an-event-is-the-reports-of-one-happening-narrowed-by-the-event-membership-question-wording.md) | 사건은 한 번 일어난 일을 다룬 보도들이고, 시스템의 사건 범위는 사건 소속 질문 문구로 좁힌다 |
 | [0132](../adr/0132-storyline-relations-are-judged-by-jev-on-candidate-pairs-and-linked-only-above-a-probability-threshold.md) | 스토리라인 관계는 후보 쌍을 Jev 에 물어 종류와 방향을 정하고 확률이 높은 것만 맺는다 |
+| [0234](../adr/0234-fragments-of-one-matter-are-recognised-by-the-relation-judgement-and-merged-above-a-merge-probability-without-a-way-back.md) | 같은 사안의 조각은 관계 판정의 조각 답으로 알아보고 합치기 확률 기준 이상이면 합치며 되돌리는 길은 두지 않는다 |
 | [0138](../adr/0138-relation-judgement-probabilities-are-read-for-operators-by-the-evaluator-rereading-stored-raw-responses.md) | 관계 판정의 확률은 평가기가 저장된 원본 응답을 다시 읽어 운영자에게 낸다 |
 | [0112](../adr/0112-tags-split-into-a-tag-module-and-evaluation-is-the-model-gateway-that-assembles-calls-and-records-each-judgement.md) | 태그는 `tag` 모듈로 떼고, `evaluation` 은 판정마다 요청 조립 · 모델 호출 · 판정 원본 기록을 맡는 관문으로 둔다 |
 | [0113](../adr/0113-moving-listeners-or-jobs-between-modules-migrates-pending-publication-listener-ids-and-drops-pending-jobs-of-the-old-class.md) | 모듈 사이로 리스너 · 반복 작업을 옮기면 미완료 발행의 리스너 ID 를 마이그레이션으로 옮기고, 옛 클래스의 남은 예약 작업을 지운다 |

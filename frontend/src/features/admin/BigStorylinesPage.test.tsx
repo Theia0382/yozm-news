@@ -52,8 +52,9 @@ function renderPage(
         json({
           current: DEFAULT,
           proposed: { minIntensity: 20 },
-          currentStorylines: [bigRow(7), bigRow(9)],
-          proposedStorylines: [bigRow(7), bigRow(11)],
+          // 지금은 7 의 포함 나무 아래에서 8 도 크다 — 제안 기준에서는 8 이 따로 행이다
+          currentStorylines: [bigRow(7, { branches: [bigRow(8)] }), bigRow(9)],
+          proposedStorylines: [bigRow(7), bigRow(8), bigRow(11)],
         }),
       "PUT /api/admin/big-storyline-criteria": () => {
         status = {
@@ -155,12 +156,24 @@ describe("BigStorylinesPage", () => {
     const now = within(
       within(preview).getByRole("table", { name: "지금 기준의 큰 스토리라인" }),
     ).getAllByRole("row");
-    expect(within(now[2]!).getAllByRole("cell")[8]).toHaveTextContent(/^빠짐$/);
+    // 아래 행은 자기 행 바로 뒤에 들여 보인다 — 행이 되어도 새로 드는 것으로 세지 않는다
+    expect(within(now[1]!).getAllByRole("cell")[0]).toHaveTextContent(
+      /^스토리라인 7$/,
+    );
+    expect(within(now[2]!).getAllByRole("cell")[0]).toHaveTextContent(
+      /^└ 7 아래 스토리라인 8$/,
+    );
+    expect(within(now[2]!).getAllByRole("cell")[8]).toHaveTextContent(/^$/);
+    expect(within(now[3]!).getAllByRole("cell")[8]).toHaveTextContent(/^빠짐$/);
     const then = within(
       within(preview).getByRole("table", { name: "제안 기준의 큰 스토리라인" }),
     ).getAllByRole("row");
     expect(within(then[1]!).getAllByRole("cell")[8]).toHaveTextContent(/^$/);
-    expect(within(then[2]!).getAllByRole("cell")[8]).toHaveTextContent(
+    expect(within(then[2]!).getAllByRole("cell")[0]).toHaveTextContent(
+      /^스토리라인 8$/,
+    );
+    expect(within(then[2]!).getAllByRole("cell")[8]).toHaveTextContent(/^$/);
+    expect(within(then[3]!).getAllByRole("cell")[8]).toHaveTextContent(
       /^새로 듦$/,
     );
     const previewRequest = server.requests.find(

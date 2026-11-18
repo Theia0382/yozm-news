@@ -18,10 +18,12 @@ from test_cli import CLOCK, TOKEN, ZONE, FakeAdmin
 from test_storyline_cli import DUMP_SHA256, LINEAGE_SHA256
 
 
-def judgement(judgement_id, first, second, model, reading="READ"):
+def judgement(judgement_id, first, second, model, reading="READ", same_matter=None):
+    """same_matter 가 None 이면 조각 답이 없던 문구 판의 원본이다."""
     read = reading == "READ"
     return {"id": judgement_id, "firstId": first, "secondId": second, "modelVersion": model, "reading": reading,
-            "none": 0.1 if read else None, "secondPartOfFirst": 0.7 if read else None,
+            "none": 0.1 if read else None, "sameMatter": same_matter if read else None,
+            "secondPartOfFirst": 0.7 if read else None,
             "firstPartOfSecond": 0.05 if read else None, "firstLedToSecond": 0.1 if read else None,
             "secondLedToFirst": 0.05 if read else None, "firstOneMatter": 0.8 if read else None,
             "secondOneMatter": 0.6 if read else None}
@@ -45,13 +47,15 @@ DETAILS = {
                                   "judgement": judgement(504, 21, 40, "jev-r9")}],
          "asked": [asked(20, "LINKED", 3, 501, judgement(501, 20, 21, "jev-r1")),
                    asked(22, "LOW_PROBABILITY", 3, 502, None),
-                   asked(31, "CYCLE", 5, 503, judgement(503, 31, 21, "jev-r3", "OTHER_EVALUATOR"))]},
+                   asked(31, "CYCLE", 5, 503, judgement(503, 31, 21, "jev-r3", "OTHER_EVALUATOR")),
+                   asked(32, "UNMERGED", 3, 505, judgement(505, 21, 32, "jev-r1", same_matter=0.6))]},
     22: {"id": 22, "events": [{"id": 14, "direct": True}], "relations": [], "asked": []},
 }
 DETAILS[23] = DETAILS[20]
 
 LINKING = {"windowSeconds": 259200, "lower": 0.6, "upper": 0.62, "probability": 0.5}
-RELATION = {"probability": 0.6, "oneMatter": 0.2, "minEvents": 3, "candidateScore": 0.88, "windowSeconds": 1209600}
+RELATION = {"probability": 0.6, "oneMatter": 0.2, "minEvents": 3, "candidateScore": 0.88, "windowSeconds": 1209600,
+            "mergeProbability": 0.6}
 
 RESULT = {
     "format": 1,
@@ -68,12 +72,16 @@ RESULT = {
     "big": [{"storyline": "20", "day": "2026-11-04"}],
 }
 
-PAIRS = ("low,high,smaller_events,outcome,asked_at,judgement_id,reading,first,second,none,second_part_of_first,"
-         "first_part_of_second,first_led_to_second,second_led_to_first,first_one_matter,second_one_matter\n"
-         "20,21,3,LINKED,2026-11-06T00:00:00Z,501,READ,20,21,0.1,0.7,0.05,0.1,0.05,0.8,0.6\n"
-         "20,30,4,NOTHING_TO_ASK,2026-11-06T00:00:00Z,,,,,,,,,,,\n"
-         "21,22,3,LOW_PROBABILITY,2026-11-06T00:00:00Z,502,,,,,,,,,,\n"
-         "21,31,5,CYCLE,2026-11-06T00:00:00Z,503,OTHER_EVALUATOR,31,21,,,,,,,\n")
+PAIRS = ("low,high,smaller_events,outcome,asked_at,judgement_id,reading,first,second,none,same_matter,"
+         "second_part_of_first,first_part_of_second,first_led_to_second,second_led_to_first,first_one_matter,"
+         "second_one_matter\n"
+         # 조각 답이 없던 문구 판의 원본 — same_matter 칸이 비어 있다
+         "20,21,3,LINKED,2026-11-06T00:00:00Z,501,READ,20,21,0.1,,0.7,0.05,0.1,0.05,0.8,0.6\n"
+         "20,30,4,NOTHING_TO_ASK,2026-11-06T00:00:00Z,,,,,,,,,,,,\n"
+         "21,22,3,LOW_PROBABILITY,2026-11-06T00:00:00Z,502,,,,,,,,,,,\n"
+         "21,31,5,CYCLE,2026-11-06T00:00:00Z,503,OTHER_EVALUATOR,31,21,,,,,,,,\n"
+         # 조각 답이 있는 문구 판의 원본
+         "21,32,3,UNMERGED,2026-11-06T00:00:00Z,505,READ,21,32,0.1,0.6,0.7,0.05,0.1,0.05,0.8,0.6\n")
 
 
 class StorylineAdmin(FakeAdmin):
@@ -100,8 +108,10 @@ class StorylineAdmin(FakeAdmin):
                                              "next": following, "linkingCriteria": self.linking,
                                              "relationCriteria": RELATION})
         if url.path == "/api/admin/big-storylines":
-            big = {"2026-11-04": [20, 22], "2026-11-05": []}[query["from"]]
-            return self._send(request, 200, {"storylines": [{"id": one} for one in big]})
+            # 20 의 포함 나무 아래에서 21 도 크다 — 목록은 20 한 행이고 21 은 그 아래에 실린다
+            big = {"2026-11-04": [{"id": 20, "branches": [{"id": 21, "branches": []}]}, {"id": 22, "branches": []}],
+                   "2026-11-05": []}[query["from"]]
+            return self._send(request, 200, {"storylines": big})
         return self._send(request, 200, DETAILS[int(url.path.rsplit("/", 1)[1])])
 
 
@@ -127,10 +137,11 @@ class StorylineExportTest(unittest.TestCase):
         self.result = root / "instance.json"
         self.pairs = root / "instance-pairs.csv"
 
-    def export(self, token=TOKEN):
+    def export(self, token=TOKEN, extra=()):
         out, err = io.StringIO(), io.StringIO()
         code = main(["export", "--data", str(self.data), "--result", str(self.result), "--pairs", str(self.pairs),
-                     "--method", "instance", "--embedding-model", "onnx e5-small", "--base-url", self.fake.url],
+                     "--method", "instance", "--embedding-model", "onnx e5-small", "--base-url", self.fake.url,
+                     *extra],
                     environ={"YOZMNEWS_ADMIN_TOKEN": token} if token else {}, stdout=out, stderr=err,
                     clock=lambda: CLOCK)
         return code, out.getvalue(), err.getvalue()
@@ -152,7 +163,7 @@ class StorylineExportTest(unittest.TestCase):
         self.assertEqual(json.loads(self.result.read_text(encoding="utf-8")), RESULT)
         self.assertEqual(self.pairs.read_text(encoding="utf-8"), PAIRS)
         self.assertEqual(out, f"결과 {self.result}: 스토리라인 2 · 관계 1 · 큰 표시 1(직접 기사가 없어 내지 않은 스토리라인 1)\n"
-                              f"물은 쌍 {self.pairs}: 4쌍(확률 없는 쌍 3)\n")
+                              f"물은 쌍 {self.pairs}: 5쌍(확률 없는 쌍 3)\n")
         # 측정이 받는 결과 파일이다 — 같은 덤프 위의 결과
         self.assertEqual(run_kind(read_result(self.result), read_storyline_sample(self.data)), RunKind.SAME_DUMP)
         paths = [path for _, path, _, _ in self.fake.requests]
@@ -161,6 +172,15 @@ class StorylineExportTest(unittest.TestCase):
                          ["/api/admin/events/10", "/api/admin/events/11", "/api/admin/events/14"])
         self.assertEqual([query["from"] for _, path, query, _ in self.fake.requests
                           if path == "/api/admin/big-storylines"], ["2026-11-04", "2026-11-05"])
+
+    def test_big_marks_take_the_rows_only_unless_the_branches_are_asked_for(self):
+        # 기본은 행만 — 위 시험의 RESULT 가 20 하나다. --big-branches 면 20 아래의 21 도 큰 표시에 든다
+        code, out, err = self.export(extra=["--big-branches"])
+
+        self.assertEqual((code, err), (0, ""), err)
+        self.assertEqual(json.loads(self.result.read_text(encoding="utf-8"))["big"],
+                         [{"storyline": "20", "day": "2026-11-04"}, {"storyline": "21", "day": "2026-11-04"}])
+        self.assertIn("큰 표시 2", out)
 
     def test_does_not_overwrite_and_needs_the_token(self):
         self.pairs.write_text("old\n", encoding="utf-8")

@@ -1,6 +1,6 @@
 # ADR-0131: 스토리라인 사이 관계는 명시 고리로 두고, 포함은 상위 하나의 나무이며 조회 때 하위를 따라 모은다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 큰 판정 목록에서 상위와 하위를 가리지 않고 낸다는 결정([ADR-0235](0235-the-big-list-has-one-row-per-containment-tree-carrying-the-big-storylines-under-it.md))
 - 날짜: 2026-11-13
 - 근거: [이슈 #122](https://github.com/Theia0382/yozm-news/issues/122) — 지금 잇기가 낸 스토리라인에서 소속의 겹침과 스토리라인 쌍을 조사하고, 시스템 스토리라인 쌍을 직접 판정해 리드와 정함
 - 관련: [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)(결정 "관계를 소속에서 끌어낼지 명시 고리로 둘지, 판정 방법, 데이터는 스토리라인을 구현할 때 정한다"와 검토한 대안 "포함을 상위 스토리라인(깊이 2)으로 지금 정한다" — 보충), [ADR-0106](0106-provisional-storyline-linking-opens-only-with-a-partner-event-and-adds-the-single-best-storyline-without-removal.md)(결정의 "관계를 소속에서 끌어내기로 하면 다시 본다" — 보충), [ADR-0108](0108-storylines-with-the-same-events-merge-and-a-storyline-left-with-one-event-merges-or-dissolves.md)(결과 "표현만 비슷한 두 스토리라인과 사건 둘 이상의 포함은 남는다" — 보충), [ADR-0132](0132-storyline-relations-are-judged-by-jev-on-candidate-pairs-and-linked-only-above-a-probability-threshold.md)(관계를 판정하는 방법), [ADR-0111](0111-storyline-gold-links-by-matter-with-mixed-events-on-their-central-happening-and-events-without-a-happening-following-their-matter.md)(정답 쪽의 포함 — 위로 닫는다)
@@ -21,6 +21,7 @@
 - **포함은 나무다.** 스토리라인은 상위를 하나까지 갖고, 깊이는 제한하지 않는다. 이어짐은 앞 · 뒤가 여럿일 수 있다.
 - **구조 제약.** 스토리라인은 자기 자신과 관계를 갖지 않는다. 한 쌍의 관계는 하나다. 포함끼리 · 이어짐끼리 순환을 이루지 않는다. 방향은 관계를 넣는 쪽이 정하고, 순환을 이루거나 하위에 둘째 상위를 주는 고리는 넣을 때 거부한다.
 - **소속은 직접 소속만 저장하고, 포함은 조회 때 따라 모은다.** 공개 조회에서 스토리라인의 사건 · 사건 수 · 기간 집계 · 큰 판정은 하위의 사건까지 세고, 사건이 든 스토리라인은 직접 든 것과 그 상위를 함께 낸다 — 직접인지 물려받은 것인지 표시한다. 잇기가 견주는 스토리라인의 표현은 직접 소속으로 정한다.
+> 부분 대체(둘째 문장의 큰 판정) — [ADR-0235](0235-the-big-list-has-one-row-per-containment-tree-carrying-the-big-storylines-under-it.md). 지금 상태: [storyline Spec storyline-R19](../specs/storyline.md#큰-판정)
 - **상위와 하위를 가리지 않고 낸다.** 목록과 큰 판정은 하위가 크면 상위도 함께 내고, 행에 상위를 싣는다. 무엇을 고를지는 쓰는 쪽이 정한다.
 - **관계는 스토리라인의 병합과 삭제를 따른다.** 스토리라인이 합쳐지면 그 관계를 남는 쪽으로 옮기고, 지워지면 함께 지운다. 옮긴 관계가 구조 제약을 어기면 남는 쪽이 이미 가진 관계를 남긴다.
 
@@ -35,6 +36,8 @@
 - 규칙과 데이터의 정본은 [storyline Spec](../specs/storyline.md)에 있다.
 
 ## 검토한 대안
+
+> 부분 대체("목록과 큰 판정에서 최상위만 낸다" 행의 큰 판정) — [ADR-0235](0235-the-big-list-has-one-row-per-containment-tree-carrying-the-big-storylines-under-it.md). 지금 상태: [storyline Spec storyline-R19](../specs/storyline.md#큰-판정)
 
 | 대안 | 기각 이유 |
 |---|---|
@@ -52,3 +55,4 @@
 ## 후속 기록
 
 - 2026-11-14: 결정 "상위와 하위를 가리지 않고 낸다" — 큰 판정의 식이 정해진 뒤에도 그대로다([ADR-0147](0147-storyline-big-judgement-compares-importance-weighted-coverage-per-source-and-day-with-one-criterion-at-query-time.md)), 지금 상태는 [storyline Spec "큰 판정"](../specs/storyline.md#큰-판정)
+- 2026-11-18: 결과 "그런 상위를 여는 방법은 정하지 않았다" — 나란한 흐름은 관계 판정의 답으로도 두지 않기로 하고 미결 사항으로 남겼다([ADR-0234](0234-fragments-of-one-matter-are-recognised-by-the-relation-judgement-and-merged-above-a-merge-probability-without-a-way-back.md) · [미결 사항](../open-questions.md) 37)

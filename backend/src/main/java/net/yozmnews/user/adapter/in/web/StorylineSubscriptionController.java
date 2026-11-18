@@ -2,26 +2,37 @@ package net.yozmnews.user.adapter.in.web;
 
 import java.time.Instant;
 import java.time.InstantSource;
+import java.time.format.DateTimeParseException;
 import java.util.Objects;
 
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import net.yozmnews.platform.AllowedWithoutLlmKey;
+import net.yozmnews.platform.ApiProblem;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.platform.WebRole;
 import net.yozmnews.storyline.StorylineId;
+import net.yozmnews.user.application.StorylineSubscriptionHistory;
 import net.yozmnews.user.application.StorylineSubscriptions;
+import net.yozmnews.user.domain.subscription.SubscriptionChangeCursor;
+import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
- * 스토리라인 구독 — 내 구독 목록 · 구독 · 해제. docs/specs/user.md §3 · user-R52
+ * 스토리라인 구독 — 내 구독 목록 · 구독 · 해제 · 내 구독 이력. docs/specs/user.md §3 · user-R52 · user-R63
  * <p>
- * 모두 세션 사용자의 것이고 키 없이도 연다 — 구독은 스토리라인 ID · 구독 시각 · 상태만 내고 기사 내용을 내지 않는다(user-R5).
+ * 모두 세션 사용자의 것이고 키 없이도 연다 — 스토리라인 ID · 시각 · 상태 · 더함 뺌만 내고 기사 내용을 내지 않는다(user-R5).
  */
 @WebRole
 @RestController
@@ -31,15 +42,19 @@ class StorylineSubscriptionController {
 
 	private final StorylineSubscriptions subscriptions;
 
+	private final StorylineSubscriptionHistory history;
+
 	private final InstantSource clock;
 
 	@Autowired
-	StorylineSubscriptionController(StorylineSubscriptions subscriptions) {
-		this(subscriptions, InstantSource.system());
+	StorylineSubscriptionController(StorylineSubscriptions subscriptions, StorylineSubscriptionHistory history) {
+		this(subscriptions, history, InstantSource.system());
 	}
 
-	StorylineSubscriptionController(StorylineSubscriptions subscriptions, InstantSource clock) {
+	StorylineSubscriptionController(StorylineSubscriptions subscriptions, StorylineSubscriptionHistory history,
+			InstantSource clock) {
 		this.subscriptions = Objects.requireNonNull(subscriptions, "subscriptions");
+		this.history = Objects.requireNonNull(history, "history");
 		this.clock = Objects.requireNonNull(clock, "clock");
 	}
 
@@ -64,9 +79,51 @@ class StorylineSubscriptionController {
 		return StorylineUnsubscribeResponse.of(this.subscriptions.unsubscribe(user, storyline(storylineId), now()));
 	}
 
+	/** 내 구독 이력 한 쪽 — 커서 두 값은 함께 오거나 함께 없다 */
+	@AllowedWithoutLlmKey(reason = OPEN_WITHOUT_KEY)
+	@GetMapping("/api/storyline-subscriptions/changes")
+	@ApiResponse(responseCode = "200", description = "OK", useReturnTypeSchema = true)
+	@ApiResponse(responseCode = "400", description = "다음 쪽 커서가 틀렸다",
+			content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+					schema = @Schema(implementation = ApiProblem.class)))
+	StorylineSubscriptionChangesResponse changes(UserId user,
+			@Parameter(description = "다음 쪽 커서의 시각(ISO-8601) — beforeId 와 함께") @RequestParam(
+					required = false) @Nullable String beforeAt,
+			@Parameter(description = "다음 쪽 커서의 이력 행 ID — beforeAt 과 함께") @RequestParam(
+					required = false) @Nullable Long beforeId) {
+		return StorylineSubscriptionChangesResponse.of(this.history.page(user, cursor(beforeAt, beforeId)));
+	}
+
+	/**
+	 * 다음 쪽 커서 — 둘 다 없으면 첫 쪽.
+	 * @throws ResponseStatusException 400 — 하나만 오거나, 시각 형식이 틀렸거나, ID 가 1 미만일 때
+	 */
+	private static @Nullable SubscriptionChangeCursor cursor(@Nullable String beforeAt, @Nullable Long beforeId) {
+		if ((beforeAt == null) != (beforeId == null)) {
+			throw badRequest("beforeAt 과 beforeId 는 함께 준다");
+		}
+		if (beforeAt == null) {
+			return null;
+		}
+		long id = Objects.requireNonNull(beforeId);
+		if (id < 1) {
+			throw badRequest("이력 행 ID 는 1 이상이다: " + id);
+		}
+		try {
+			return new SubscriptionChangeCursor(Instant.parse(beforeAt), id);
+		}
+		catch (DateTimeParseException ex) {
+			throw badRequest("시각은 ISO-8601 형식이다: " + beforeAt);
+		}
+	}
+
+	private static ResponseStatusException badRequest(String detail) {
+		return new ResponseStatusException(HttpStatus.BAD_REQUEST, detail);
+	}
+
 	private static StorylineId storyline(long storylineId) {
 		if (storylineId < 1) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "스토리라인 ID 는 1 이상이다");
+			throw badRequest("스토리라인 ID 는 1 이상이다");
 		}
 		return new StorylineId(storylineId);
 	}

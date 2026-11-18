@@ -115,13 +115,14 @@ class JdbcRelationRepository implements RelationRepository {
 		}
 		Map<Long, RelationCriteria> found = new LinkedHashMap<>();
 		this.jdbc.sql("""
-				select id, probability, one_matter, min_events, candidate_score, window_seconds
+				select id, probability, one_matter, min_events, candidate_score, window_seconds, merge_probability
 				from storyline_relation_criteria where id = any(:ids) order by id
 				""")
 			.param("ids", ids.toArray(Long[]::new))
 			.query((rs, row) -> found.put(rs.getLong("id"),
 					new RelationCriteria(rs.getDouble("probability"), rs.getDouble("one_matter"), rs.getInt("min_events"),
-							rs.getDouble("candidate_score"), Duration.ofSeconds(rs.getLong("window_seconds")))))
+							rs.getDouble("candidate_score"), Duration.ofSeconds(rs.getLong("window_seconds")),
+							rs.getDouble("merge_probability"))))
 			.list();
 		return Collections.unmodifiableMap(found);
 	}
@@ -172,12 +173,14 @@ class JdbcRelationRepository implements RelationRepository {
 				select id from storyline_relation_criteria
 				where probability = :probability and one_matter = :oneMatter and min_events = :minEvents
 				  and candidate_score = :candidateScore and window_seconds = :window
+				  and merge_probability = :mergeProbability
 				""")
 			.param("probability", criteria.probability())
 			.param("oneMatter", criteria.oneMatter())
 			.param("minEvents", criteria.minEvents())
 			.param("candidateScore", criteria.candidateScore())
 			.param("window", criteria.window().toSeconds())
+			.param("mergeProbability", criteria.mergeProbability())
 			.query(Long.class)
 			.optional();
 		if (existing.isPresent()) {
@@ -185,9 +188,9 @@ class JdbcRelationRepository implements RelationRepository {
 		}
 		return this.jdbc.sql("""
 				insert into storyline_relation_criteria (probability, one_matter, min_events, candidate_score,
-				    window_seconds, created_at)
-				values (:probability, :oneMatter, :minEvents, :candidateScore, :window, :now)
-				on conflict (probability, one_matter, min_events, candidate_score, window_seconds)
+				    window_seconds, merge_probability, created_at)
+				values (:probability, :oneMatter, :minEvents, :candidateScore, :window, :mergeProbability, :now)
+				on conflict (probability, one_matter, min_events, candidate_score, window_seconds, merge_probability)
 				do update set window_seconds = excluded.window_seconds
 				returning id
 				""")
@@ -196,6 +199,7 @@ class JdbcRelationRepository implements RelationRepository {
 			.param("minEvents", criteria.minEvents())
 			.param("candidateScore", criteria.candidateScore())
 			.param("window", criteria.window().toSeconds())
+			.param("mergeProbability", criteria.mergeProbability())
 			.param("now", timestamp(now))
 			.query(Long.class)
 			.single();

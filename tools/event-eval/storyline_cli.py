@@ -84,6 +84,8 @@ def _parser() -> argparse.ArgumentParser:
     export.add_argument("--pairs", required=True, type=Path, help="쓸 물은 쌍 파일(CSV) — 이미 있으면 멈춘다")
     export.add_argument("--method", required=True, help="결과 파일 meta.method — 방법 이름")
     export.add_argument("--embedding-model", required=True, help="결과 파일 meta.embeddingModel — 임베딩 방식 · 모델")
+    export.add_argument("--big-branches", action="store_true",
+                        help="큰 표시에 큰 판정 목록의 행 아래에 실린 큰 스토리라인도 넣는다 — 없으면 행(포함 나무마다 하나)만")
     add_base_url_argument(export)
     return parser
 
@@ -105,7 +107,7 @@ def _export(args: argparse.Namespace, api: AdminApi, clock: Callable[[], datetim
     event_articles: dict[int, tuple[int, ...]] = {}
     for event_id in sorted({event for detail in details for event in detail.direct_events}):
         event_articles[event_id] = tuple(article.article_id for article in api.event_articles(event_id).articles)
-    big = {day: api.big_storylines(day, period.zone) for day in period.days()}
+    big = {day: api.big_storylines(day, period.zone, branches=args.big_branches) for day in period.days()}
     created_at = clock()
     today = created_at.astimezone(ZoneInfo(period.zone)).date()
     articles = {article for detail in details for event in detail.direct_events

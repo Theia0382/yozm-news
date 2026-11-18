@@ -11,6 +11,7 @@ import net.yozmnews.evaluation.FlowMembershipJudgementId;
 import net.yozmnews.evaluation.RelationJudgementId;
 import net.yozmnews.event.EventId;
 import net.yozmnews.storyline.LinkScore;
+import net.yozmnews.storyline.MergedStoryline;
 import net.yozmnews.storyline.StorylineId;
 import net.yozmnews.storyline.StorylineLinkingCriteria;
 import net.yozmnews.storyline.StorylineMembership;
@@ -29,6 +30,8 @@ import net.yozmnews.storyline.domain.relation.StoredAsked;
 import net.yozmnews.storyline.domain.relation.StoredRelation;
 import net.yozmnews.storyline.domain.storyline.ClosedMembers;
 import net.yozmnews.storyline.domain.storyline.LinkJudgement;
+import net.yozmnews.storyline.domain.storyline.MergeBasis;
+import net.yozmnews.storyline.domain.storyline.MergedRow;
 import net.yozmnews.storyline.domain.storyline.StoredStoryline;
 import net.yozmnews.storyline.domain.storyline.StorylineQueryRepository;
 import net.yozmnews.storyline.domain.storyline.StorylineRepository;
@@ -89,7 +92,8 @@ class StorylineReviewService implements StorylineReview {
 		judgements.forEach((storyline, byEvent) -> byEvent.forEach((event, judgement) -> found
 			.add(new StorylineMembership(new StorylineId(storyline), new EventId(event), judgement.linkedBy(),
 					score(judgement.score()), linkingCriteria(criteria, judgement.criteriaId()), probability(judgement),
-					judgementId(judgement), judgement.linkedAt()))));
+					judgementId(judgement), judgement.linkedAt(),
+					(judgement.mergedFrom() == null) ? null : new StorylineId(judgement.mergedFrom())))));
 		return List.copyOf(found);
 	}
 
@@ -106,6 +110,27 @@ class StorylineReviewService implements StorylineReview {
 			.map(row -> new StorylineRelationDetail(RelationViews.of(row), row.probability(),
 					new RelationJudgementId(row.judgementId()), relationCriteria(criteria.get(row.criteriaId()))))
 			.toList();
+	}
+
+	@Override
+	public List<MergedStoryline> merged(StorylineId id) {
+		Optional<StoredStoryline> stored = this.storylines.find(id.value());
+		if (stored.isEmpty()) {
+			return List.of();
+		}
+		List<MergedRow> rows = this.memberships.mergedInto(stored.get().id());
+		Map<Long, RelationCriteria> criteria = this.relations.criteria(rows.stream()
+			.map(MergedRow::basis)
+			.filter(basis -> basis != null)
+			.map(MergeBasis::criteriaId)
+			.distinct()
+			.toList());
+		return rows.stream().map(row -> {
+			MergeBasis basis = row.basis();
+			return (basis == null) ? new MergedStoryline(new StorylineId(row.id()), row.mergedAt(), null, null)
+					: new MergedStoryline(new StorylineId(row.id()), row.mergedAt(),
+							new RelationJudgementId(basis.judgementId()), relationCriteria(criteria.get(basis.criteriaId())));
+		}).toList();
 	}
 
 	@Override
@@ -169,7 +194,7 @@ class StorylineReviewService implements StorylineReview {
 			throw new IllegalStateException("관계 · 물은 기록이 가리키는 관계 기준 이력이 없다");
 		}
 		return new StorylineRelationCriteria(criteria.probability(), criteria.oneMatter(), criteria.minEvents(),
-				criteria.candidateScore(), criteria.window());
+				criteria.candidateScore(), criteria.window(), criteria.mergeProbability());
 	}
 
 }

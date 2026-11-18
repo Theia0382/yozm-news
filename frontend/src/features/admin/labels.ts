@@ -220,6 +220,7 @@ export const relationOutcomeLabels = {
   NOT_ONE_MATTER: "한 사안 기준 미달",
   CYCLE: "순환",
   SECOND_PARENT: "둘째 상위",
+  UNMERGED: "조각 — 합치기 기준 미달",
   NOTHING_TO_ASK: "물을 것 없음",
   REJECTED: "입력 거부",
 } as const satisfies Record<RelationOutcome, string>;

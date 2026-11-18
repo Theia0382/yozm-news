@@ -74,20 +74,20 @@ class RelationGraphTests {
 	void theCriteriaRejectValuesOutsideTheirRanges() {
 		Duration window = Duration.ofDays(14);
 
-		assertThat(new RelationCriteria(1.0, 0.0, 2, 1.0, Duration.ofSeconds(1)).minEvents()).isEqualTo(2);
-		assertThatIllegalArgumentException().isThrownBy(() -> new RelationCriteria(0.0, 0.2, 3, 0.88, window))
+		assertThat(new RelationCriteria(1.0, 0.0, 2, 1.0, Duration.ofSeconds(1), 1.0).minEvents()).isEqualTo(2);
+		assertThatIllegalArgumentException().isThrownBy(() -> new RelationCriteria(0.0, 0.2, 3, 0.88, window, 1.0))
 			.withMessage("확률 기준은 0 보다 크고 1 이하다: 0.0");
-		assertThatIllegalArgumentException().isThrownBy(() -> new RelationCriteria(0.6, 1.1, 3, 0.88, window))
+		assertThatIllegalArgumentException().isThrownBy(() -> new RelationCriteria(0.6, 1.1, 3, 0.88, window, 1.0))
 			.withMessage("한 사안 기준은 0 이상 1 이하다: 1.1");
-		assertThatIllegalArgumentException().isThrownBy(() -> new RelationCriteria(0.6, 0.2, 1, 0.88, window))
+		assertThatIllegalArgumentException().isThrownBy(() -> new RelationCriteria(0.6, 0.2, 1, 0.88, window, 1.0))
 			.withMessage("사건 수 하한은 2 이상이다: 1");
-		assertThatIllegalArgumentException().isThrownBy(() -> new RelationCriteria(0.6, 0.2, 3, 1.01, window))
+		assertThatIllegalArgumentException().isThrownBy(() -> new RelationCriteria(0.6, 0.2, 3, 1.01, window, 1.0))
 			.withMessage("후보 점수 기준은 0 보다 크고 1 이하다: 1.01");
-		assertThatIllegalArgumentException().isThrownBy(() -> new RelationCriteria(0.6, 0.2, 3, 0.88, Duration.ZERO))
+		assertThatIllegalArgumentException().isThrownBy(() -> new RelationCriteria(0.6, 0.2, 3, 0.88, Duration.ZERO, 1.0))
 			.withMessageStartingWith("시간 창은 0 보다 큰 초 단위다");
-		assertThatIllegalArgumentException().isThrownBy(() -> new RelationCriteria(0.6, 0.2, 3, 0.88, Duration.ofMillis(1500)))
+		assertThatIllegalArgumentException().isThrownBy(() -> new RelationCriteria(0.6, 0.2, 3, 0.88, Duration.ofMillis(1500), 1.0))
 			.withMessageStartingWith("시간 창은 0 보다 큰 초 단위다");
-		assertThatIllegalArgumentException().isThrownBy(() -> new RelationCriteria(Double.NaN, 0.2, 3, 0.88, window))
+		assertThatIllegalArgumentException().isThrownBy(() -> new RelationCriteria(Double.NaN, 0.2, 3, 0.88, window, 1.0))
 			.withMessageStartingWith("확률 기준은");
 	}
 

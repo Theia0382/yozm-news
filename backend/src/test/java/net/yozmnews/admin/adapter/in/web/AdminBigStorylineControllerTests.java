@@ -99,7 +99,9 @@ class AdminBigStorylineControllerTests {
 
 	@Test
 	void theBigStorylinesOfThePeriodComeWithTheCurrentCriteria() throws Exception {
-		this.directory.bigStorylines = List.of(SEVEN, NINE);
+		// 7 의 포함 나무 아래에서 9 도 크다 — 7 한 행에 9 가 아래 행으로 실린다
+		this.directory.bigStorylines = List.of(new BigStoryline(SEVEN.storyline(), SEVEN.tally(), SEVEN.intensity(),
+				List.of(NINE)));
 		this.directory.unlinked = new UnlinkedEvents(2, 5);
 
 		this.mockMvc.perform(authorized(get("/api/admin/big-storylines?" + PERIOD)))
@@ -109,10 +111,11 @@ class AdminBigStorylineControllerTests {
 					 "storylines":[
 					   {"id":7,"state":"ACTIVE","eventCount":3,"articleCount":12,"firstArticleAt":"2026-11-01T00:00:00Z",
 					    "lastArticleAt":"2026-11-05T00:00:00Z","intensity":17.50,"periodArticles":2,"periodSources":4,"importance":3.75,
-					    "representativeArticleId":41,"representative":{"title":"국회 본회의 통과","sources":["한겨레"]}},
+					    "representativeArticleId":41,"representative":{"title":"국회 본회의 통과","sources":["한겨레"]},
+					    "branches":[
 					   {"id":9,"state":"ENDED","eventCount":2,"articleCount":5,"firstArticleAt":"2026-09-01T00:00:00Z",
 					    "lastArticleAt":"2026-11-03T00:00:00Z","intensity":0.00,"periodArticles":1,"periodSources":3,"importance":null,
-					    "representativeArticleId":null,"representative":null}],
+					    "representativeArticleId":null,"representative":null,"branches":[]}]}],
 					 "unlinked":{"events":2,"articles":5},
 					 "maxDays":31}
 					""", JsonCompareMode.STRICT));
@@ -157,14 +160,14 @@ class AdminBigStorylineControllerTests {
 					 "currentStorylines":[
 					   {"id":7,"state":"ACTIVE","eventCount":3,"articleCount":12,"firstArticleAt":"2026-11-01T00:00:00Z",
 					    "lastArticleAt":"2026-11-05T00:00:00Z","intensity":17.50,"periodArticles":2,"periodSources":4,"importance":3.75,
-					    "representativeArticleId":41,"representative":{"title":"국회 본회의 통과","sources":["한겨레"]}}],
+					    "representativeArticleId":41,"representative":{"title":"국회 본회의 통과","sources":["한겨레"]},"branches":[]}],
 					 "proposedStorylines":[
 					   {"id":7,"state":"ACTIVE","eventCount":3,"articleCount":12,"firstArticleAt":"2026-11-01T00:00:00Z",
 					    "lastArticleAt":"2026-11-05T00:00:00Z","intensity":17.50,"periodArticles":2,"periodSources":4,"importance":3.75,
-					    "representativeArticleId":41,"representative":{"title":"국회 본회의 통과","sources":["한겨레"]}},
+					    "representativeArticleId":41,"representative":{"title":"국회 본회의 통과","sources":["한겨레"]},"branches":[]},
 					   {"id":9,"state":"ENDED","eventCount":2,"articleCount":5,"firstArticleAt":"2026-09-01T00:00:00Z",
 					    "lastArticleAt":"2026-11-03T00:00:00Z","intensity":0.00,"periodArticles":1,"periodSources":3,"importance":null,
-					    "representativeArticleId":null,"representative":null}]}
+					    "representativeArticleId":null,"representative":null,"branches":[]}]}
 					""", JsonCompareMode.STRICT));
 		assertThat(this.administration.calls).containsExactly("criteria",
 				"preview 12.50 2026-10-31T15:00:00Z ~ 2026-11-07T15:00:00Z");

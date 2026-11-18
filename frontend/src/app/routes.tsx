@@ -74,6 +74,15 @@ export const routes: RouteObject[] = [
             }),
           },
           {
+            // 내 구독 — 제목을 카드 처리기(키 관문 뒤)로 붙이므로 키가 있어야 간다(ADR-0242). 정적 조각이라 storylines/:id 보다 먼저 고른다
+            path: "storylines/subscriptions",
+            lazy: async () => ({
+              Component: (
+                await import("@/features/storylines/SubscriptionsPage")
+              ).SubscriptionsPage,
+            }),
+          },
+          {
             path: "storylines/:id",
             lazy: async () => ({
               Component: (await import("@/features/storylines/StorylinePage"))

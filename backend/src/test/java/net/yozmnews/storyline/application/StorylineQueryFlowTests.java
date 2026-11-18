@@ -76,7 +76,7 @@ class StorylineQueryFlowTests {
 	private static final Instant NOW = Instant.parse("2026-11-10T00:00:00Z");
 
 	private static final RelationCriteria RELATION_CRITERIA = new RelationCriteria(0.60, 0.20, 3, 0.88,
-			Duration.ofDays(14));
+			Duration.ofDays(14), 1.0);
 
 	@Autowired
 	StorylineQueryRepository storylines;
@@ -386,10 +386,20 @@ class StorylineQueryFlowTests {
 		assertThat(tally.sources()).isEqualTo(3);
 		assertThat(tally.importance()).isEqualByComparingTo("4.25");
 		assertThat(big.getFirst().intensity()).hasToString("4.25");
-		// 기준이 하위에도 닿으면 상위와 하위가 함께 나온다 — 상위의 보도 강도는 하위보다 낮을 수 없어 앞선다
+		// 기준이 하위에도 닿으면 상위와 하위가 함께 크다 — 목록은 그 나무의 한 행이고 하위는 그 행 아래에 실린다
 		List<BigStoryline> both = this.administration.preview(new BigStorylineCriteria(new BigDecimal("1.00")), PERIOD);
-		assertThat(both).extracting(storyline -> storyline.storyline().id().value()).containsExactly(this.wide, this.narrow);
-		assertThat(both.getLast().storyline().parent()).isEqualTo(new StorylineId(this.wide));
+		assertThat(both).extracting(storyline -> storyline.storyline().id().value()).containsExactly(this.wide);
+		assertThat(both.getFirst().branches()).singleElement().satisfies(branch -> {
+			assertThat(branch.storyline().id()).isEqualTo(new StorylineId(this.narrow));
+			assertThat(branch.storyline().parent()).isEqualTo(new StorylineId(this.wide));
+			assertThat(branch.intensity()).hasToString("1.25");
+		});
+		// 대조 — 포함이 없으면 같은 기준에서 둘은 두 행이다
+		this.relations.unlink(this.wide, this.narrow);
+		assertThat(this.administration.preview(new BigStorylineCriteria(new BigDecimal("1.00")), PERIOD))
+			.extracting(storyline -> storyline.storyline().id().value())
+			.containsExactly(this.wide, this.narrow);
+		contains(this.wide, this.narrow);
 		// 사건 C 가 상위에도 직접 들어도 상위의 합은 한 번만 센다
 		member(this.wide, this.eventC);
 		assertThat(this.directory.bigStorylines(PERIOD).getFirst().intensity()).hasToString("4.25");
@@ -419,9 +429,11 @@ class StorylineQueryFlowTests {
 		assertThat(row.tally().articles()).isEqualTo(4);
 		assertThat(row.tally().sources()).isEqualTo(3);
 		assertThat(row.big()).isTrue();
-		// 상위와 하위가 함께 큰 스토리라인으로 나온다 — 집계가 같아 ID 순
-		assertThat(this.directory.bigStorylines(PERIOD)).extracting(storyline -> storyline.storyline().id().value())
-			.containsExactly(this.wide, this.quiet);
+		// 상위와 하위가 함께 크다 — 집계가 같아도 행은 나무의 가장 위인 상위 하나이고 하위는 그 아래다
+		List<BigStoryline> big = this.directory.bigStorylines(PERIOD);
+		assertThat(big).extracting(storyline -> storyline.storyline().id().value()).containsExactly(this.quiet);
+		assertThat(big.getFirst().branches()).extracting(storyline -> storyline.storyline().id().value())
+			.containsExactly(this.wide);
 	}
 
 	@Test

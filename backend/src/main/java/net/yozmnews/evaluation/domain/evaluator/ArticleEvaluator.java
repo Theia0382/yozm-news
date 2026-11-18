@@ -19,7 +19,10 @@ public interface ArticleEvaluator {
 	/** 두 흐름의 관계를 묻는다 — 문구는 넘긴 입력에서 읽는다 · docs/specs/evaluation.md §4 */
 	RelationResult judgeRelation(RelationInput input);
 
-	/** 저장된 관계 판정 원본 응답을 다시 읽는다 — 요청을 보내지 않는다 · docs/specs/evaluation.md §4 · evaluation-R50 */
-	RelationRereadResult rereadRelation(String evaluator, String rawResponse);
+	/**
+	 * 저장된 관계 판정 원본 응답을 그 원본을 남긴 문구 판의 답으로 다시 읽는다 — 요청을 보내지 않는다 · docs/specs/evaluation.md §4 ·
+	 * evaluation-R50
+	 */
+	RelationRereadResult rereadRelation(String evaluator, String rawResponse, RelationWording wording);
 
 }

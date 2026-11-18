@@ -65,6 +65,17 @@ class JdbcLinkingAskedRepository implements LinkingAskedRepository {
 	}
 
 	@Override
+	public void forgetLinks(long storylineId, Collection<Long> eventIds) {
+		if (eventIds.isEmpty()) {
+			return;
+		}
+		this.jdbc.sql("delete from storyline_link_asked where storyline_id = :storyline and event_id = any(:events)")
+			.param("storyline", storylineId)
+			.param("events", eventIds.toArray(Long[]::new))
+			.update();
+	}
+
+	@Override
 	public void forgetEvent(long eventId) {
 		this.jdbc.sql("delete from storyline_link_asked where event_id = :event").param("event", eventId).update();
 		this.jdbc.sql("delete from storyline_pair_asked where event_id = :event or partner_id = :event")
