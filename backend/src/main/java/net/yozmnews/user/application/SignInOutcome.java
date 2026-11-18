@@ -10,8 +10,11 @@ import net.yozmnews.platform.UserId;
  */
 public sealed interface SignInOutcome {
 
-	/** 맞는 비밀번호의 쓰는 계정 */
-	record SignedIn(UserId userId) implements SignInOutcome {
+	/**
+	 * 맞는 비밀번호의 쓰는 계정.
+	 * @param credentialVersion 대조한 자격의 버전 — 세션을 연 뒤 {@link SignIn#stillCurrent} 가 다시 확인한다
+	 */
+	record SignedIn(UserId userId, long credentialVersion) implements SignInOutcome {
 
 		public SignedIn {
 			Objects.requireNonNull(userId, "userId");
