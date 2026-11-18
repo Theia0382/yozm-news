@@ -218,7 +218,7 @@
 | [0210](0210-candidate-selection-cuts-to-the-input-token-budget-with-one-estimate-the-prompt-follows.md) | 입력 토큰 예산은 후보 선별이 `digest` 의 한 추정 규칙으로 세어 자르고, 프롬프트 구성이 그 규칙을 따른다 | 승인 |
 | [0211](0211-the-digest-consumer-query-of-interest-settings-writes-nothing-and-returns-followed-preferences-with-expanded-topics.md) | 다이제스트가 읽는 관심 설정 조회는 쓰지 않고, 따라가기 결과와 펼친 주제 구독을 낸다 | 승인 |
 | [0212](0212-migrations-never-delete-user-data-or-the-shared-rows-and-ids-it-references-and-moved-data-is-checked-by-a-data-test.md) | 마이그레이션은 사용자 데이터와 그것이 가리키는 공유 데이터의 행 · ID 를 지우지 않고, 데이터를 옮기면 데이터 시험으로 대조한다 | 승인 |
-| [0213](0213-event-merge-defers-events-whose-check-did-not-finish-until-a-retry-time-on-the-event-row-and-never-drops-them.md) | 병합 회차가 확인을 끝내지 못한 사건은 사건 행에 남긴 다시 볼 시각까지 미루고, 미룬 횟수로 대상에서 빼지 않는다 | 제안 |
+| [0213](0213-event-merge-defers-events-whose-check-did-not-finish-until-a-retry-time-on-the-event-row-and-never-drops-them.md) | 병합 회차가 확인을 끝내지 못한 사건은 사건 행에 남긴 다시 볼 시각까지 미루고, 미룬 횟수로 대상에서 빼지 않는다 | 승인 |
 
 ## 운영 규칙
 
