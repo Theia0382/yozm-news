@@ -59,6 +59,7 @@ class SignInHashingPathTests {
 		// 스텁 설정 안에서 spy 를 부르지 않게 해시를 먼저 만든다
 		PasswordCredential credential = PasswordCredential.of(new UserId(7),
 				this.hashing.hash("correct horse"), false, NOW);
+		ReflectionTestUtils.setField(credential, "version", 3L);
 		when(this.credentials.findById(7L)).thenReturn(Optional.of(credential));
 		Account suspended = Account.create(EmailAddress.parse("carol@example.com").orElseThrow(), new DisplayName("캐럴"),
 				AccountRole.USER, NOW);
@@ -118,7 +119,7 @@ class SignInHashingPathTests {
 	@Test
 	void rightPasswordSignsIn() {
 		assertThat(this.signIn.attempt(" Alice@Example.com ", "correct horse", NOW))
-			.isEqualTo(new SignInOutcome.SignedIn(new UserId(7)));
+			.isEqualTo(new SignInOutcome.SignedIn(new UserId(7), 3));
 		verify(this.failures).lock(ThrottledAttempt.SIGN_IN, EmailDigest.of("alice@example.com"));
 		verify(this.failures).forget(ThrottledAttempt.SIGN_IN, EmailDigest.of("alice@example.com"));
 	}
