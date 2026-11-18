@@ -6,6 +6,7 @@ import {
   attempt,
   citation,
   day,
+  noFeedback,
   shown,
 } from "@/features/digests/digestTestKit";
 import { json, problem } from "@/test/fakeServer";
@@ -18,6 +19,7 @@ function renderDay(response: DigestDay | Response, date = "2026-11-18") {
     {
       [`GET /api/digests/${date}`]: () =>
         response instanceof Response ? response : json(response),
+      "GET /api/feedback": () => json(noFeedback()),
     },
   );
 }
