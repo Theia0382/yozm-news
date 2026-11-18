@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * 다이제스트 일정 규칙 — 날짜의 생성 시각(서머타임의 틈 · 겹침 포함)과 일정이 지금 만들 날짜(생성 시각 뒤 2시간 창 · 자정 근처 · 가장 늦은
- * 날짜). 스프링 없이 돈다. 기대 시각은 손으로 셈한 리터럴이다.
+ * 날짜), 오늘 일정이 아직 오지 않은 생성 시각(가장 늦은 날짜 · 쓸 모델 · 서머타임의 틈). 스프링 없이 돈다. 기대 시각은 손으로 셈한 리터럴이다.
  */
 class DigestScheduleRulesTests {
 
@@ -69,6 +69,40 @@ class DigestScheduleRulesTests {
 		// 대조 — 가장 늦은 날짜가 앞이면 만든다
 		assertThat(DigestScheduleRules.dueDate(now, SEVEN, SEOUL, LocalDate.parse("2026-11-18")))
 			.contains(LocalDate.parse("2026-11-19"));
+	}
+
+	@Test
+	void beforeTodaysGenerationTimeTheUpcomingTimeIsIt() {
+		LocalDate latest = LocalDate.parse("2026-11-17");
+
+		// 2026-11-18 06:59 KST — 07:00 KST(22:00Z) 전
+		assertThat(DigestScheduleRules.upcomingToday(Instant.parse("2026-11-17T21:59:00Z"), SEVEN, SEOUL, latest, true))
+			.contains(Instant.parse("2026-11-17T22:00:00Z"));
+		// 생성 시각과 같은 시각은 전이 아니다
+		assertThat(DigestScheduleRules.upcomingToday(Instant.parse("2026-11-17T22:00:00Z"), SEVEN, SEOUL, latest, true))
+			.isEmpty();
+		// 다이제스트가 하나도 없어도 일정은 오늘을 만든다
+		assertThat(DigestScheduleRules.upcomingToday(Instant.parse("2026-11-17T21:59:00Z"), SEVEN, SEOUL, null, true))
+			.contains(Instant.parse("2026-11-17T22:00:00Z"));
+	}
+
+	@Test
+	void withTodayOrALaterDateOrWithoutAUsableModelNothingIsUpcoming() {
+		Instant before = Instant.parse("2026-11-17T21:59:00Z");
+
+		assertThat(DigestScheduleRules.upcomingToday(before, SEVEN, SEOUL, LocalDate.parse("2026-11-18"), true)).isEmpty();
+		// 시간대를 서쪽으로 옮겨 가장 늦은 날짜가 오늘보다 늦다
+		assertThat(DigestScheduleRules.upcomingToday(before, SEVEN, SEOUL, LocalDate.parse("2026-11-19"), true)).isEmpty();
+		assertThat(DigestScheduleRules.upcomingToday(before, SEVEN, SEOUL, LocalDate.parse("2026-11-17"), false))
+			.isEmpty();
+	}
+
+	@Test
+	void anUpcomingTimeInTheSpringGapMovesLater() {
+		// 2027-03-14 01:00 PST — 02:30 은 서머타임의 틈이라 03:30 PDT(10:30Z)
+		assertThat(DigestScheduleRules.upcomingToday(Instant.parse("2027-03-14T09:00:00Z"), LocalTime.of(2, 30),
+				ZoneId.of("America/Los_Angeles"), LocalDate.parse("2027-03-13"), true))
+			.contains(Instant.parse("2027-03-14T10:30:00Z"));
 	}
 
 	@Test

@@ -1,7 +1,7 @@
-package net.yozmnews.digest.domain.digest;
+package net.yozmnews.digest;
 
 /**
- * 실패한 다이제스트의 오류 코드 · docs/specs/digest.md §5 · digest-R8
+ * 실패한 다이제스트의 오류 코드 — 공개 타입 · docs/specs/digest.md §3 · digest-R8
  * <p>
  * 관문이 가른 실패 종류는 {@code GenerationFailures} 가 옮긴다 — 사용자에게 보일 문구는 코드로 고른다.
  */

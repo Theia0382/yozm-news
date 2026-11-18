@@ -37,12 +37,10 @@ class JdbcReceiptRepository implements ReceiptRepository {
 				join digest_sections s on s.id = i.digest_section_id
 				join digests d on d.id = s.digest_id
 				where d.user_id = :user and d.status = 'READY' and i.article_id = any(:articles)
-				  and d.id = (select max(shown.id) from digests shown
-				              where shown.user_id = d.user_id and shown.digest_date = d.digest_date
-				                and shown.status = 'READY')
+				  and d.id = %s
 				group by i.article_id
 				order by i.article_id
-				""")
+				""".formatted(ShownDigestSql.shownIdOf("d")))
 			.param("user", user.value())
 			.param("articles", articles.stream().map(ArticleId::value).distinct().toArray(Long[]::new))
 			.query((ResultSet rs) -> {

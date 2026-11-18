@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.time.InstantSource;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -23,18 +24,18 @@ import java.util.function.Function;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleDirectory;
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.digest.DigestFailure;
 import net.yozmnews.digest.DigestInputs;
+import net.yozmnews.digest.DigestStatus;
+import net.yozmnews.digest.SelectionReason;
 import net.yozmnews.digest.adapter.out.fake.FakeDigestGenerator;
 import net.yozmnews.digest.domain.candidate.DigestCandidate;
 import net.yozmnews.digest.domain.candidate.DigestCandidateRepository;
-import net.yozmnews.digest.domain.candidate.SelectionReason;
 import net.yozmnews.digest.domain.content.DigestSectionRepository;
 import net.yozmnews.digest.domain.digest.Digest;
-import net.yozmnews.digest.domain.digest.DigestFailure;
 import net.yozmnews.digest.domain.digest.DigestId;
 import net.yozmnews.digest.domain.digest.DigestPeriod;
 import net.yozmnews.digest.domain.digest.DigestRepository;
-import net.yozmnews.digest.domain.digest.DigestStatus;
 import net.yozmnews.digest.domain.digest.DigestTrigger;
 import net.yozmnews.digest.domain.generator.DigestGenerator;
 import net.yozmnews.digest.domain.generator.DigestRequest;
@@ -374,6 +375,30 @@ class DigestGenerationTests {
 		// 실패 이벤트 하나 — 끝낸 시각은 생성기가 시계를 2초 넘긴 뒤다
 		assertThat(this.events.stream(DigestFailed.class)).containsExactly(new DigestFailed(new UserId(42), id.value(),
 				LocalDate.parse("2026-11-16"), DigestFailureCause.PROVIDER_ACCOUNT, Instant.parse("2026-11-15T22:45:02Z")));
+	}
+
+	/**
+	 * 끝낸 시각은 저장 정밀도(마이크로초)로 잘린다 — 실패 이벤트의 시각과 다시 읽은 행의 시각이 같은 값이라 독자 화면이 실패 알림과 해결되지 않은
+	 * 마지막 실패를 시각으로 맞춘다(digest-R40)
+	 */
+	@Test
+	void theFailureEventAndTheStoredRowCarryTheSameMicrosecondTime() {
+		AtomicInteger calls = new AtomicInteger();
+		DigestGeneration generation = generation(scriptedOutcomes(calls,
+				request -> new GenerationOutcome.Failed(DigestFailure.QUOTA_EXHAUSTED, "OpenAI 429 insufficient_quota")));
+		DigestId id = schedule(generation);
+		// 생성기가 2초 넘겨 끝낸 시각은 나노초 자리를 가진다
+		this.now.set(Instant.parse("2026-11-18T10:51:51.828175417Z"));
+
+		assertThat(generation.run(id, MODEL, candidates(2))).isEqualTo(DigestStatus.FAILED);
+
+		Instant stored = this.jdbc.sql("select completed_at from digests where id = :id")
+			.param("id", id.value())
+			.query((rs, n) -> rs.getObject(1, OffsetDateTime.class).toInstant())
+			.single();
+		assertThat(stored).isEqualTo(Instant.parse("2026-11-18T10:51:53.828175Z"));
+		assertThat(this.events.stream(DigestFailed.class)).extracting(DigestFailed::failedAt)
+			.containsExactly(Instant.parse("2026-11-18T10:51:53.828175Z"));
 	}
 
 	/** 생성 도중 공급자가 키를 무효로 답하면 그 코드로 끝나고 실패 알림의 갈래는 키다 — 키 상태의 전이와 키 무효 알림은 관문 · credential 이 한다 */

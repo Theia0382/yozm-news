@@ -1,7 +1,8 @@
 package net.yozmnews.user;
 
 /**
- * 다이제스트 실패의 갈래 — 실패 알림이 사용자에게 보일 할 일을 고른다. 실패 코드를 갈래로 옮기는 일은 다이제스트가 한다. docs/specs/user.md §3
+ * 다이제스트 실패의 갈래 — 실패 알림과 다이제스트 화면이 사용자에게 보일 할 일을 고른다. 실패 코드를 갈래로 옮기는 일은 다이제스트가 한다.
+ * docs/specs/user.md §3
  */
 public enum DigestFailureCause {
 

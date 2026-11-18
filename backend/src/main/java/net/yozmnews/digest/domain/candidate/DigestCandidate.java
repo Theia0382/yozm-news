@@ -3,6 +3,7 @@ package net.yozmnews.digest.domain.candidate;
 import java.util.Objects;
 
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.digest.SelectionReason;
 
 /**
  * 다이제스트 후보 하나 — 기사와 선정 이유 · docs/specs/digest.md §4

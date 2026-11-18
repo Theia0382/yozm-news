@@ -1,7 +1,7 @@
-package net.yozmnews.digest.domain.content;
+package net.yozmnews.digest;
 
 /**
- * 다이제스트 섹션의 종류 · docs/specs/digest.md §5 · digest-R7
+ * 다이제스트 섹션의 종류 — 공개 타입 · docs/specs/digest.md §3 · digest-R7
  */
 public enum SectionKind {
 

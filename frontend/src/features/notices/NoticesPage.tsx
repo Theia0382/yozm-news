@@ -2,6 +2,16 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { useEffect, useRef } from "react";
 import { Link } from "react-router";
+import { useDigestHome } from "@/features/digests/digestQueries";
+import {
+  DIGEST_HOME_PATH,
+  FAILED_DAY_LINK,
+  RETRY_AT_HOME_LINK,
+  digestFailureCauseLinks,
+  digestFailureCauseTexts,
+  digestPath,
+  retryAtHome,
+} from "@/features/digests/digestTexts";
 import { INTERESTS_PATH } from "@/features/interests/interestTexts";
 import { providers } from "@/features/keys/keyTexts";
 import {
@@ -38,7 +48,8 @@ type StorylineSubscriptionsRemovedNotice =
 
 type DigestFailedNotice = components["schemas"]["DigestFailedNoticeResponse"];
 
-type DigestFailureCause = DigestFailedNotice["cause"];
+type DigestUnresolvedFailure =
+  components["schemas"]["DigestUnresolvedFailureResponse"];
 
 /** 피드를 묶어 보이는 지금 상태의 순서 — 손볼 것부터 */
 const STATUS_ORDER: readonly FeedStatus[] = ["DEGRADED", "STALE", "ACTIVE"];
@@ -209,25 +220,20 @@ function PasswordChangedBody({
   );
 }
 
-/** 다이제스트 실패의 갈래마다 할 일 문구 */
-const digestFailureCauseText: Record<DigestFailureCause, string> = {
-  KEY: "LLM 키를 쓸 수 없었습니다. 키를 확인하거나 다시 등록하세요.",
-  PROVIDER_ACCOUNT:
-    "공급자 계정의 권한이나 잔액 때문에 만들지 못했습니다. 공급자 계정을 확인하세요.",
-  TEMPORARY:
-    "공급자가 잠시 답하지 못했거나 생성이 끝나지 않았습니다. 잠시 뒤 다시 만들어 보세요.",
-  OUTPUT:
-    "모델의 출력을 다이제스트로 쓰지 못했습니다. 다시 만들거나 다른 모델을 골라 보세요.",
-};
-
+/**
+ * 다이제스트 실패 알림 — 날짜 화면과 갈래의 화면으로 잇는다. 다시 만들기 링크는 해결되지 않은 마지막 실패(홈 응답의 수동 생성 상태 —
+ * digest-R40)의 알림에만 단다. 홈 응답은 홈 화면과 같은 조회(캐시 공유)이고, 읽지 못하면 다시 만들기 링크만 달지 않는다.
+ */
 function DigestFailedBody({
   body,
 }: {
   body: DigestFailedNotice | null | undefined;
 }) {
+  const home = useDigestHome();
   if (!body) {
     return null;
   }
+  const causeLink = digestFailureCauseLinks[body.cause];
   return (
     <div className="space-y-1 text-sm">
       <p>
@@ -235,14 +241,38 @@ function DigestFailedBody({
         <time dateTime={body.failedAt}>{formatDateTime(body.failedAt)}</time>
       </p>
       <p className="text-muted-foreground">
-        {digestFailureCauseText[body.cause]}
+        {digestFailureCauseTexts[body.cause]}
       </p>
-      {body.cause === "KEY" && (
-        <Link to="/keys" className="underline">
-          LLM 키 화면에서 확인하기
+      <p className="flex flex-wrap gap-x-3">
+        <Link to={digestPath(body.digestDate)} className="underline">
+          {FAILED_DAY_LINK}
         </Link>
-      )}
+        {causeLink !== null && (
+          <Link to={causeLink.to} className="underline">
+            {causeLink.label}
+          </Link>
+        )}
+        {retryAtHome[body.cause] &&
+          isUnresolved(body, home.data?.status?.unresolvedFailure) && (
+            <Link to={DIGEST_HOME_PATH} className="underline">
+              {RETRY_AT_HOME_LINK}
+            </Link>
+          )}
+      </p>
     </div>
+  );
+}
+
+/** 그 실패 알림이 해결되지 않은 마지막 실패인가 — 날짜와 끝낸 시각이 같다(서버가 같은 값으로 낸다) */
+function isUnresolved(
+  body: DigestFailedNotice,
+  unresolved: DigestUnresolvedFailure | null | undefined,
+): boolean {
+  return (
+    unresolved !== null &&
+    unresolved !== undefined &&
+    unresolved.digestDate === body.digestDate &&
+    unresolved.failedAt === body.failedAt
   );
 }
 

@@ -13,12 +13,30 @@ export type InterestModel = components["schemas"]["InterestModelResponse"];
 
 export type InterestVolume = components["schemas"]["InterestVolumeResponse"];
 
+/** 관심 설정 조회의 공통 접두 — 화면이 조회가 모두 끝났는지 이것으로 본다 */
+export const INTERESTS_QUERY_KEY = ["interests"] as const;
+
 /** 관심 설정 조회의 키 — 갈래마다 하나 */
-export const INTEREST_TAGS_QUERY_KEY = ["interests", "tags"] as const;
-export const INTEREST_SOURCES_QUERY_KEY = ["interests", "sources"] as const;
-export const INTEREST_SETTINGS_QUERY_KEY = ["interests", "settings"] as const;
-export const INTEREST_MODEL_QUERY_KEY = ["interests", "model"] as const;
-export const INTEREST_VOLUME_QUERY_KEY = ["interests", "volume"] as const;
+export const INTEREST_TAGS_QUERY_KEY = [
+  ...INTERESTS_QUERY_KEY,
+  "tags",
+] as const;
+export const INTEREST_SOURCES_QUERY_KEY = [
+  ...INTERESTS_QUERY_KEY,
+  "sources",
+] as const;
+export const INTEREST_SETTINGS_QUERY_KEY = [
+  ...INTERESTS_QUERY_KEY,
+  "settings",
+] as const;
+export const INTEREST_MODEL_QUERY_KEY = [
+  ...INTERESTS_QUERY_KEY,
+  "model",
+] as const;
+export const INTEREST_VOLUME_QUERY_KEY = [
+  ...INTERESTS_QUERY_KEY,
+  "volume",
+] as const;
 
 /** 관심 설정 요청이 실패했다 — 화면이 상태 코드로 가른다 */
 export class InterestRequestError extends Error {

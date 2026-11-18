@@ -26,7 +26,7 @@ public final class DigestPeriods {
 	}
 
 	/**
-	 * 끝이 {@code end} 인 다음 기간 — 시작이 끝보다 늦지 않으면 빈 값(그 날짜는 만들지 않는다).
+	 * 끝이 {@code end} 인 다음 기간 — 끝이 시작보다 뒤가 아니면 빈 값(그 날짜는 만들지 않는다).
 	 * @param lastCoveredEnd 직전에 끝난 다이제스트({@code READY} · {@code EMPTY})의 가장 늦은 기간 끝 — 없으면 null
 	 */
 	public static Optional<DigestPeriod> next(Instant end, @Nullable Instant lastCoveredEnd) {

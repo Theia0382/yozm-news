@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.EnumMap;
 import java.util.Map;
 
+import net.yozmnews.digest.DigestFailure;
 import net.yozmnews.user.DigestFailureCause;
 import org.junit.jupiter.api.Test;
 

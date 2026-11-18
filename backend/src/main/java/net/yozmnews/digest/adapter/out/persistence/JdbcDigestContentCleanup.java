@@ -10,7 +10,7 @@ import java.util.Map;
 import java.util.Set;
 
 import net.yozmnews.article.ArticleId;
-import net.yozmnews.digest.domain.content.SectionKind;
+import net.yozmnews.digest.SectionKind;
 import net.yozmnews.digest.domain.removal.DigestContentCleanup;
 import net.yozmnews.digest.domain.removal.SectionCitations;
 import org.springframework.jdbc.core.simple.JdbcClient;

@@ -1,7 +1,7 @@
-package net.yozmnews.digest.domain.candidate;
+package net.yozmnews.digest;
 
 /**
- * 후보의 선정 이유 — 인용에 남는 노출 기록의 칸 · docs/specs/digest.md §6
+ * 후보의 선정 이유 — 인용에 남는 노출 기록의 칸. 공개 타입 · docs/specs/digest.md §3 · §6
  */
 public enum SelectionReason {
 

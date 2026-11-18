@@ -4,6 +4,7 @@ import java.util.Map;
 
 import net.yozmnews.credential.LlmKeyScopeTests;
 import net.yozmnews.feedback.FeedbackScopeTests;
+import net.yozmnews.reader.DigestScreenScopeTests;
 import net.yozmnews.reader.InterestHistoryScopeTests;
 import net.yozmnews.reader.StorylineScreenScopeTests;
 import net.yozmnews.user.AccountScopeTests;
@@ -50,6 +51,10 @@ public final class UserScopedEndpoints {
 			Map.entry("GET /api/storylines/{id}", StorylineScreenScopeTests.class),
 			Map.entry("GET /api/storyline-cards", StorylineScreenScopeTests.class),
 			Map.entry("GET /api/interest-history", InterestHistoryScopeTests.class),
+			Map.entry("GET /api/digests/latest", DigestScreenScopeTests.class),
+			Map.entry("GET /api/digests/{date}", DigestScreenScopeTests.class),
+			Map.entry("GET /api/digests", DigestScreenScopeTests.class),
+			Map.entry("POST /api/digests", DigestScreenScopeTests.class),
 			Map.entry("PUT /api/feedback/{articleId}", FeedbackScopeTests.class),
 			Map.entry("GET /api/feedback", FeedbackScopeTests.class));
 

@@ -13,14 +13,15 @@ import java.util.UUID;
 
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.digest.DigestFailure;
+import net.yozmnews.digest.DigestStatus;
+import net.yozmnews.digest.SectionKind;
+import net.yozmnews.digest.SelectionReason;
 import net.yozmnews.digest.domain.candidate.DigestCandidate;
-import net.yozmnews.digest.domain.candidate.SelectionReason;
 import net.yozmnews.digest.domain.digest.Completion;
 import net.yozmnews.digest.domain.digest.Digest;
-import net.yozmnews.digest.domain.digest.DigestFailure;
 import net.yozmnews.digest.domain.digest.DigestPeriod;
 import net.yozmnews.digest.domain.digest.DigestRepository;
-import net.yozmnews.digest.domain.digest.DigestStatus;
 import net.yozmnews.digest.domain.digest.DigestTrigger;
 import net.yozmnews.digest.domain.generator.TokenUsage;
 import net.yozmnews.digest.domain.output.CitedDigest;

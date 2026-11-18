@@ -2,7 +2,7 @@ package net.yozmnews.digest.domain.content;
 
 import java.util.Objects;
 
-import net.yozmnews.digest.domain.candidate.SelectionReason;
+import net.yozmnews.digest.SelectionReason;
 import org.jspecify.annotations.Nullable;
 import org.springframework.data.relational.core.mapping.Table;
 

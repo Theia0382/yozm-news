@@ -6,8 +6,8 @@ import java.util.Optional;
 import net.yozmnews.platform.UserId;
 
 /**
- * 사용자 시간대 조회 — 관심 설정의 시간대. 다이제스트의 수동 생성이 사용자 시간대의 오늘을 정할 때, 관심사 히스토리가 기간을 자를 때 읽는다.
- * docs/specs/user.md §3 · user-R60
+ * 사용자 시간대 조회 — 관심 설정의 시간대. 다이제스트의 수동 생성이 사용자 시간대의 오늘을 정할 때, 관심사 히스토리가 기간을
+ * 자를 때 읽는다. docs/specs/user.md §3 · user-R60
  * <p>
  * 사용자를 인자로 받는 조회다 — 화면 경로에서는 세션 사용자로만 부른다. 쓰지 않는다.
  */

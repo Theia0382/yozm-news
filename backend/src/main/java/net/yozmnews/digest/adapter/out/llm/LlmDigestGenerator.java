@@ -2,7 +2,7 @@ package net.yozmnews.digest.adapter.out.llm;
 
 import java.util.Objects;
 
-import net.yozmnews.digest.domain.digest.DigestFailure;
+import net.yozmnews.digest.DigestFailure;
 import net.yozmnews.digest.domain.generator.DigestGenerator;
 import net.yozmnews.digest.domain.generator.DigestRequest;
 import net.yozmnews.digest.domain.generator.GenerationFailures;

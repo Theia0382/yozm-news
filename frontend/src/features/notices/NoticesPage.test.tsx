@@ -4,6 +4,8 @@ import userEvent from "@testing-library/user-event";
 import { createMemoryRouter } from "react-router";
 import { RouterProvider } from "react-router/dom";
 import { describe, expect, it } from "vitest";
+import type { DigestRequestStatus } from "@/features/digests/digestQueries";
+import { home, status } from "@/features/digests/digestTestKit";
 import type { Notice, NoticePage } from "@/features/notices/noticeQueries";
 import { NoticesPage } from "@/features/notices/NoticesPage";
 import { RequireSignIn } from "@/features/session/RequireSignIn";
@@ -243,10 +245,18 @@ function page(notices: Notice[], nextBefore: number | null = null): NoticePage {
   return { notices, nextBefore };
 }
 
+/** 홈 응답 — 해결되지 않은 마지막 실패만 바꾼다 */
+function homeWith(
+  unresolvedFailure: DigestRequestStatus["unresolvedFailure"],
+): Handler {
+  return () => json(home({ status: status({ unresolvedFailure }) }));
+}
+
 function renderNotices(
   notices: Handler,
   read: Handler = () => noContent(),
   unread: Handler = () => json({ count: 0 }),
+  options: { digests?: Handler; productionRetry?: boolean } = {},
 ) {
   let signedIn = true;
   const server = fakeServer({
@@ -254,6 +264,7 @@ function renderNotices(
     "GET /api/notices/unread-count": unread,
     "GET /api/notices": notices,
     "POST /api/notices/read": read,
+    "GET /api/digests/latest": options.digests ?? homeWith(null),
   });
   const router = createMemoryRouter(
     [
@@ -271,7 +282,10 @@ function renderNotices(
   render(
     <QueryClientProvider
       client={
-        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        // 운영과 같은 재시도(기본 3번)를 보는 시험은 기다림만 없앤다
+        options.productionRetry
+          ? new QueryClient({ defaultOptions: { queries: { retryDelay: 0 } } })
+          : new QueryClient({ defaultOptions: { queries: { retry: false } } })
       }
     >
       <ApiClientContext.Provider
@@ -407,7 +421,7 @@ describe("NoticesPage", () => {
     ).toHaveAttribute("href", "/storylines/subscriptions");
   });
 
-  it("다이제스트 실패 알림은 날짜 · 시각과 할 일을 보이고 키 갈래면 키 화면으로 잇는다", async () => {
+  it("다이제스트 실패 알림은 날짜 · 시각과 할 일을 보이고 그 날짜 다이제스트로, 키 갈래면 키 화면으로 잇는다", async () => {
     renderNotices(() => json(page([DIGEST_FAILED_KEY])));
 
     const item = await screen.findByRole("article");
@@ -423,18 +437,232 @@ describe("NoticesPage", () => {
     expect(
       within(item).getByRole("link", { name: "LLM 키 화면에서 확인하기" }),
     ).toHaveAttribute("href", "/keys");
+    expect(
+      within(item).getByRole("link", { name: "그 날짜 다이제스트 보기" }),
+    ).toHaveAttribute("href", "/digests/2026-11-19");
+    // 키 갈래의 할 일은 다시 만들기가 아니다
+    expect(
+      within(item).queryByRole("link", {
+        name: "오늘 다이제스트에서 다시 만들기",
+      }),
+    ).toBeNull();
   });
 
-  it("키 갈래가 아닌 다이제스트 실패 알림은 할 일만 보이고 키 화면으로 잇지 않는다", async () => {
-    renderNotices(() => json(page([DIGEST_FAILED_TEMPORARY])));
+  it("해결되지 않은 마지막 실패인 일시 장애 알림은 다시 만들기가 있는 오늘 다이제스트로 잇고 키 화면으로 잇지 않는다", async () => {
+    renderNotices(
+      () => json(page([DIGEST_FAILED_TEMPORARY])),
+      undefined,
+      undefined,
+      {
+        digests: homeWith({
+          digestDate: "2026-11-20",
+          failedAt: "2026-11-19T22:03:10Z",
+        }),
+      },
+    );
 
     const item = await screen.findByRole("article");
     expect(item).toHaveTextContent("2026. 11. 20. 다이제스트");
     expect(item).toHaveTextContent(
-      "공급자가 잠시 답하지 못했거나 생성이 끝나지 않았습니다. 잠시 뒤 다시 만들어 보세요.",
+      "공급자가 잠시 답하지 못했거나 생성이 끝나지 않았습니다. 잠시 뒤 오늘 다이제스트에서 다시 만들어 보세요.",
     );
-    expect(within(item).queryByRole("link")).toBeNull();
+    await waitFor(() =>
+      expect(
+        within(item)
+          .getAllByRole("link")
+          .map((link) => [link.textContent, link.getAttribute("href")]),
+      ).toEqual([
+        ["그 날짜 다이제스트 보기", "/digests/2026-11-20"],
+        ["오늘 다이제스트에서 다시 만들기", "/"],
+      ]),
+    );
   });
+
+  it("다시 만들기 링크는 해결되지 않은 마지막 실패의 알림에만 붙는다", async () => {
+    const older: Notice = {
+      ...DIGEST_FAILED_KEY,
+      id: 62,
+      digestFailed: {
+        digestDate: "2026-11-19",
+        cause: "OUTPUT",
+        failedAt: "2026-11-18T22:03:10Z",
+      },
+    };
+    const { server } = renderNotices(
+      () => json(page([DIGEST_FAILED_TEMPORARY, older])),
+      undefined,
+      undefined,
+      {
+        digests: homeWith({
+          digestDate: "2026-11-20",
+          failedAt: "2026-11-19T22:03:10Z",
+        }),
+      },
+    );
+
+    const items = await screen.findAllByRole("article");
+    await waitFor(() =>
+      expect(
+        within(items[0]!).getByRole("link", {
+          name: "오늘 다이제스트에서 다시 만들기",
+        }),
+      ).toHaveAttribute("href", "/"),
+    );
+    expect(
+      within(items[1]!).queryByRole("link", {
+        name: "오늘 다이제스트에서 다시 만들기",
+      }),
+    ).toBeNull();
+    // 출력 갈래는 해결 여부와 무관하게 관심 설정의 모델 절로 잇는다
+    expect(
+      within(items[1]!).getByRole("link", {
+        name: "관심 설정에서 모델 고르기",
+      }),
+    ).toHaveAttribute("href", "/interests#interest-model");
+    // 실패 알림이 둘이어도 홈 응답은 한 번 읽는다
+    expect(
+      server.requests.filter((r) => r.path === "/api/digests/latest"),
+    ).toHaveLength(1);
+  });
+
+  it("날짜가 같아도 끝낸 시각이 다르면 다시 만들기 링크를 달지 않는다", async () => {
+    const { server } = renderNotices(
+      () => json(page([DIGEST_FAILED_TEMPORARY])),
+      undefined,
+      undefined,
+      {
+        digests: homeWith({
+          digestDate: "2026-11-20",
+          failedAt: "2026-11-19T23:30:00Z",
+        }),
+      },
+    );
+
+    const item = await screen.findByRole("article");
+    await waitFor(() =>
+      expect(
+        server.requests.some((r) => r.path === "/api/digests/latest"),
+      ).toBe(true),
+    );
+    await waitFor(() =>
+      expect(within(item).getAllByRole("link")).toHaveLength(1),
+    );
+    expect(
+      within(item).queryByRole("link", {
+        name: "오늘 다이제스트에서 다시 만들기",
+      }),
+    ).toBeNull();
+  });
+
+  it("다이제스트 응답을 읽지 못하면 다시 만들기 링크만 달지 않는다", async () => {
+    const { server } = renderNotices(
+      () => json(page([DIGEST_FAILED_TEMPORARY])),
+      undefined,
+      undefined,
+      { digests: () => problem(403, "llm-key-required") },
+    );
+
+    const item = await screen.findByRole("article");
+    await waitFor(() =>
+      expect(
+        server.requests.some((r) => r.path === "/api/digests/latest"),
+      ).toBe(true),
+    );
+    expect(
+      within(item).getByRole("link", { name: "그 날짜 다이제스트 보기" }),
+    ).toHaveAttribute("href", "/digests/2026-11-20");
+    expect(
+      within(item).queryByRole("link", {
+        name: "오늘 다이제스트에서 다시 만들기",
+      }),
+    ).toBeNull();
+  });
+
+  it("홈 응답이 403 이면 다시 묻지 않는다", async () => {
+    const { server } = renderNotices(
+      () => json(page([DIGEST_FAILED_TEMPORARY])),
+      undefined,
+      undefined,
+      {
+        digests: () => problem(403, "llm-key-required"),
+        productionRetry: true,
+      },
+    );
+
+    await screen.findByRole("article");
+    await waitFor(() =>
+      expect(
+        server.requests.filter((r) => r.path === "/api/digests/latest"),
+      ).toHaveLength(1),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(
+      server.requests.filter((r) => r.path === "/api/digests/latest"),
+    ).toHaveLength(1);
+  });
+
+  it("홈 응답이 그 밖의 오류면 운영의 재시도대로 다시 묻는다", async () => {
+    const { server } = renderNotices(
+      () => json(page([DIGEST_FAILED_TEMPORARY])),
+      undefined,
+      undefined,
+      { digests: () => problem(500, "server-error"), productionRetry: true },
+    );
+
+    await screen.findByRole("article");
+    await waitFor(() =>
+      expect(
+        server.requests.filter((r) => r.path === "/api/digests/latest"),
+      ).toHaveLength(4),
+    );
+  });
+
+  it.each([
+    ["OUTPUT", true],
+    ["PROVIDER_ACCOUNT", false],
+  ] as const)(
+    "%s 갈래가 해결되지 않은 마지막 실패면 다시 만들기 링크 — %s",
+    async (cause, retry) => {
+      renderNotices(
+        () =>
+          json(
+            page([
+              {
+                ...DIGEST_FAILED_KEY,
+                digestFailed: {
+                  digestDate: "2026-11-21",
+                  cause,
+                  failedAt: "2026-11-20T22:03:10Z",
+                },
+              },
+            ]),
+          ),
+        undefined,
+        undefined,
+        {
+          digests: homeWith({
+            digestDate: "2026-11-21",
+            failedAt: "2026-11-20T22:03:10Z",
+          }),
+        },
+      );
+
+      const item = await screen.findByRole("article");
+      expect(
+        within(item).getByRole("link", { name: "그 날짜 다이제스트 보기" }),
+      ).toHaveAttribute("href", "/digests/2026-11-21");
+      await waitFor(() =>
+        expect(
+          within(item).queryByRole("link", {
+            name: "오늘 다이제스트에서 다시 만들기",
+          }) !== null,
+        ).toBe(retry),
+      );
+      expect(
+        within(item).queryByRole("link", { name: "LLM 키 화면에서 확인하기" }),
+      ).toBeNull();
+    },
+  );
 
   it("받은 쪽의 안 읽은 알림만 받은 판까지 읽음으로 보낸다", async () => {
     const { reads } = renderNotices(() => json(page([GATHERED, OLD])));

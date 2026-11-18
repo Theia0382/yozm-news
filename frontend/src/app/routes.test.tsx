@@ -17,6 +17,9 @@ import { SamplePage } from "@/features/admin/SamplePage";
 import { StorylineDetailPage } from "@/features/admin/StorylineDetailPage";
 import { StorylinesPage } from "@/features/admin/StorylinesPage";
 import { ThresholdsPage } from "@/features/admin/ThresholdsPage";
+import { DigestDatesPage } from "@/features/digests/DigestDatesPage";
+import { DigestDayPage } from "@/features/digests/DigestDayPage";
+import { DigestHomePage } from "@/features/digests/DigestHomePage";
 import { InterestsPage } from "@/features/interests/InterestsPage";
 import { StorylinePage as ReaderStorylinePage } from "@/features/storylines/StorylinePage";
 import { StorylinesPage as ReaderStorylinesPage } from "@/features/storylines/StorylinesPage";
@@ -24,11 +27,20 @@ import { SubscriptionsPage } from "@/features/storylines/SubscriptionsPage";
 import { NoticesPage } from "@/features/notices/NoticesPage";
 import { ApiClientContext, createApiClient } from "@/shared/api/client";
 import type { components } from "@/shared/api/schema";
-import { fakeServer, json, TEST_BASE_URL } from "@/test/fakeServer";
+import {
+  fakeServer,
+  type Handler,
+  json,
+  TEST_BASE_URL,
+} from "@/test/fakeServer";
 
 /** 로그인 상태를 정한 가짜 서버로 경로를 그린다 */
-function renderAt(path: string, me: components["schemas"]["MeResponse"]) {
-  const server = fakeServer({ "GET /api/me": () => json(me) });
+function renderAt(
+  path: string,
+  me: components["schemas"]["MeResponse"],
+  handlers: Record<string, Handler> = {},
+) {
+  const server = fakeServer({ "GET /api/me": () => json(me), ...handlers });
   const router = createMemoryRouter(routes, { initialEntries: [path] });
   render(
     <QueryClientProvider client={new QueryClient()}>
@@ -43,21 +55,48 @@ function renderAt(path: string, me: components["schemas"]["MeResponse"]) {
 }
 
 describe("routes", () => {
-  it("로그인한 사용자에게 루트 경로의 첫 화면을 보여준다", async () => {
-    renderAt("/", {
-      result: "SIGNED_IN",
-      userId: 1,
-      email: "a@example.com",
-      displayName: "앨리스",
-      role: "USER",
-      passwordChangeRequired: false,
-      llmKeyRequired: false,
-    });
+  it("로그인한 사용자에게 루트 경로에서 오늘 다이제스트를 보여준다", async () => {
+    renderAt(
+      "/",
+      {
+        result: "SIGNED_IN",
+        userId: 1,
+        email: "a@example.com",
+        displayName: "앨리스",
+        role: "USER",
+        passwordChangeRequired: false,
+        llmKeyRequired: false,
+      },
+      { "GET /api/digests/latest": () => json({ day: null, status: null }) },
+    );
 
     expect(
-      await screen.findByRole("heading", { level: 1, name: "요즘뉴스" }),
+      await screen.findByRole("heading", { level: 1, name: "오늘 다이제스트" }),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByText("아직 만든 다이제스트가 없습니다."),
     ).toBeInTheDocument();
   });
+
+  it.each([
+    [undefined, DigestHomePage],
+    ["digests", DigestDatesPage],
+    ["digests/:date", DigestDayPage],
+  ])(
+    "로그인 틀 아래 %s 경로가 다이제스트 화면을 내려받는다",
+    async (path, page) => {
+      const signedIn = routes[0]?.children?.find(
+        (route) => route.path === undefined,
+      );
+      const lazy = signedIn?.children?.find((route) =>
+        path === undefined ? route.index === true : route.path === path,
+      )?.lazy;
+
+      expect(typeof lazy).toBe("function");
+      const loaded = await (lazy as () => Promise<{ Component?: unknown }>)();
+      expect(loaded.Component).toBe(page);
+    },
+  );
 
   it("로그인하지 않은 방문자는 루트 경로에서 로그인 화면으로 간다", async () => {
     const router = renderAt("/", {

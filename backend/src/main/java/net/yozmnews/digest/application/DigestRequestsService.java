@@ -31,7 +31,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * <p>
  * 시간대 · 쓸 모델은 트랜잭션 밖에서 읽는다(쓸 모델이 없으면 세지 않고 거절). 같은 사용자의 수동 요청 · 일정 행 만들기는 사용자 잠금
  * ({@link DigestOwnerLock})으로 줄을 선다 — 확인과 행 만들기 사이에 다른 요청이 끼지 않는다. 대상 날짜 · 기간은 {@link ManualTarget} 이
- * 정한다. 역할 애너테이션이 없다(화면 처리기가 부른다).
+ * 정하고, 그 읽기와 오늘 횟수는 수동 생성 상태와 함께 쓰는 {@link ManualTargets} 가 한다. 역할 애너테이션이 없다(화면 처리기가 부른다).
  */
 @Service
 class DigestRequestsService implements DigestRequests {
@@ -41,6 +41,8 @@ class DigestRequestsService implements DigestRequests {
 	private final DigestModelDirectory models;
 
 	private final DigestLedger ledger;
+
+	private final ManualTargets targets;
 
 	private final DigestOwnerLock owners;
 
@@ -66,6 +68,7 @@ class DigestRequestsService implements DigestRequests {
 		this.timezones = Objects.requireNonNull(timezones, "timezones");
 		this.models = Objects.requireNonNull(models, "models");
 		this.ledger = Objects.requireNonNull(ledger, "ledger");
+		this.targets = new ManualTargets(ledger);
 		this.owners = Objects.requireNonNull(owners, "owners");
 		this.generation = Objects.requireNonNull(generation, "generation");
 		this.dispatch = Objects.requireNonNull(dispatch, "dispatch");
@@ -99,15 +102,11 @@ class DigestRequestsService implements DigestRequests {
 			return new Accepted(new DigestRequestOutcome.InProgress(), null);
 		}
 		LocalDate today = now.atZone(zone).toLocalDate();
-		Instant dayStart = DigestScheduleRules.startOfDay(today, zone);
-		Instant nextDay = DigestScheduleRules.startOfDay(today.plusDays(1), zone);
-		if (this.ledger.manualCountBetween(user, dayStart, nextDay) >= DigestScheduleRules.MANUAL_PER_DAY) {
-			return new Accepted(new DigestRequestOutcome.DailyLimitReached(nextDay), null);
+		if (this.targets.manualCountOn(user, today, zone) >= DigestScheduleRules.MANUAL_PER_DAY) {
+			return new Accepted(new DigestRequestOutcome.DailyLimitReached(ManualTargets.nextDayStart(today, zone)),
+					null);
 		}
-		@Nullable LocalDate latestDate = this.ledger.latestDate(user).orElse(null);
-		ManualTarget target = ManualTarget.of(today, now, latestDate,
-				(latestDate == null) ? null : this.ledger.latestPeriodOn(user, latestDate).orElse(null),
-				this.ledger.latestPeriodOn(user, today).orElse(null), this.ledger.lastCoveredEnd(user).orElse(null));
+		ManualTarget target = this.targets.targetOf(user, today, now);
 		ScheduledDigest scheduled = this.generation.schedule(user, target.date(), target.period(),
 				DigestTrigger.MANUAL);
 		return new Accepted(new DigestRequestOutcome.Requested(target.date(), target.regenerated()), scheduled);

@@ -59,10 +59,10 @@ export const CANDIDATE_VOLUME_HELP_TEXT =
   "후보는 다이제스트를 만들 때 LLM 공급자에게 보내는 기사입니다. 많을수록 입력 토큰(비용)이 늘고, 모델의 입력 한도에 걸리면 그보다 적게 보냅니다.";
 
 export const BIG_SLOTS_HELP_TEXT =
-  "구독하지 않은 주제라도 그 기간에 크게 보도된 스토리라인을 몇 개까지 넣을지 정합니다. 큰 스토리라인 기사는 최대 후보 수의 절반을 넘지 않습니다.";
+  "구독하지 않은 주제라도 그 기간에 크게 보도된 소식(큰 화제)을 몇 개까지 넣을지 정합니다. 큰 화제 기사는 최대 후보 수의 절반을 넘지 않습니다.";
 
 export const BIG_SLOTS_OFF_TEXT =
-  "0이면 큰 스토리라인을 넣지 않아, 구독한 주제 밖의 소식은 받지 않습니다.";
+  "0이면 큰 화제를 넣지 않아, 구독한 주제 밖의 소식은 받지 않습니다.";
 
 /** 요약 길이 단계의 이름 */
 export const summaryLengthNames: Record<SummaryLength, string> = {

@@ -20,7 +20,7 @@
 - **수동 생성** — 사용자가 요청하면 오늘(사용자 시간대) 다이제스트를 같은 기간으로 다시 만들거나 새로 만든다 — 하루 세 번, 진행 중 · 쓸 모델 없음은 거절한다. 공개 API(`DigestRequests`)이고 화면용 처리기는 `reader` 가 낸다(digest-R31)
 - **거두기** — 시작되지 않은 다이제스트를 다시 등록하거나 시작 기한 뒤 실패로 끝내고, 임대가 지나도 끝나지 않는 생성을 실패로 끝낸다(digest-R32)
 - **실패 알림 발행** — 다이제스트를 실패로 끝내면 같은 트랜잭션에서 `user` 가 선언한 `DigestFailed` 를 실패의 갈래와 함께 낸다(digest-R33)
-- **(미구현)** 독자 화면(`reader`)이 쓸 다이제스트 조회 — 화면은 날짜별로 보이는 다이제스트(digest-R13)를 보인다. 화면용 API 는 `reader` 가 낸다([ADR-0192](../adr/0192-reader-screens-are-composed-by-the-reader-module-over-module-public-queries.md))
+- **다이제스트 조회** — 독자 화면이 날짜마다 보이는 다이제스트(digest-R13) · 그 날짜의 가장 최근 시도 · 사용량 · 이웃 날짜, 다이제스트가 있는 날짜 목록, 수동 생성 상태를 공개 조회(`DigestDirectory`)로 낸다. 화면용 API 는 `reader` 가 낸다(digest-R38 ~ R40, [ADR-0192](../adr/0192-reader-screens-are-composed-by-the-reader-module-over-module-public-queries.md) · [ADR-0238](../adr/0238-a-digest-date-shows-the-visible-digest-with-the-latest-attempt-and-the-list-holds-every-date-with-a-state.md))
 - **관심도** — 사용자 × 주제 중분류 × 기준 시각의 관심 크기를 신호 이력(좋아요 / 싫어요 · 주제 구독 변경 · 스토리라인 구독 변경)과 노출 기록(인용)에서 조회할 때 계산한다 — 저장하지 않는다(digest-R23 ~ R25)
 - **관심사 히스토리** — 기준 시각마다 관심도와 같은 산식으로 계산한 주제 관심, 이웃 기준 시각 사이의 새로 생긴 관심 · 사라진 관심, 그 사이 사용자가 직접 바꾼 주제 구독을 공개 조회(`InterestHistory`)로 낸다 — 화면용은 사용자 시간대의 주 · 월 기간, 리포트용은 부르는 쪽의 기준 시각 목록. 저장하지 않는다(digest-R34 ~ R37)
 
@@ -67,7 +67,7 @@
 
 ## 3. 공개 인터페이스
 
-모듈 최상위 패키지 `net.yozmnews.digest` 의 공개 타입은 받은 소식의 공개 조회 `ReceivedArticles`, 수동 생성의 공개 API `DigestRequests` 와 그 결과 `DigestRequestOutcome`, 관심사 히스토리의 공개 조회 `InterestHistory` 와 그 값(`InterestHistorySpan` · `InterestTimeline` · `InterestPeriodView` · `InterestPoint` · `TopicSubscriptionStep`)이다. HTTP 엔드포인트는 없다 — 화면용 API 는 `reader` 가 낸다. 받는 이벤트는 `article` 의 `ArticlesRemoved` 다(§4 들어오는 쪽). 내는 이벤트는 `user` 가 선언한 `DigestFailed` 다(digest-R33 — [user Spec](user.md#digestfailed)). 다른 모듈이 선언한 인터페이스 하나를 구현한다 — `feedback` 의 `DigestCitations`([feedback Spec](feedback.md#digestcitations)). 구현은 `application` 의 `DigestCitationsService` 다(digest-R14).
+모듈 최상위 패키지 `net.yozmnews.digest` 의 공개 타입은 받은 소식의 공개 조회 `ReceivedArticles`, 수동 생성의 공개 API `DigestRequests` 와 그 결과 `DigestRequestOutcome`, 다이제스트 조회 `DigestDirectory` 와 그 값(`DigestDay` · `ShownDigest` · `DigestSectionView` · `DigestCitation` · `DigestAttempt` · `DigestDayUsage` · `DigestDates` · `DigestDateEntry` · `DigestDayState` · `DigestRequestStatus` · `DigestUnresolvedFailure`), 관심사 히스토리의 공개 조회 `InterestHistory` 와 그 값(`InterestHistorySpan` · `InterestTimeline` · `InterestPeriodView` · `InterestPoint` · `TopicSubscriptionStep`), 공개 값이 쓰는 enum 넷(`DigestStatus` · `DigestFailure` · `SelectionReason` · `SectionKind` — 상태 · 실패 코드 · 선정 이유 · 섹션 종류, digest-R1 · R7 · R8)이다. HTTP 엔드포인트는 없다 — 화면용 API 는 `reader` 가 낸다. 받는 이벤트는 `article` 의 `ArticlesRemoved` 다(§4 들어오는 쪽). 내는 이벤트는 `user` 가 선언한 `DigestFailed` 다(digest-R33 — [user Spec](user.md#digestfailed)). 다른 모듈이 선언한 인터페이스 하나를 구현한다 — `feedback` 의 `DigestCitations`([feedback Spec](feedback.md#digestcitations)). 구현은 `application` 의 `DigestCitationsService` 다(digest-R14).
 
 ### ReceivedArticles
 
@@ -116,6 +116,61 @@ public sealed interface DigestRequestOutcome {
 - 계약
   - 사용자를 인자로 받는다 — 화면 경로에서는 세션 사용자로만 부른다
   - 역할 애너테이션이 없다(두 역할 공통 — 처리기는 화면 역할, 작업 등록은 두 역할 공통)
+
+### DigestDirectory
+
+다이제스트 조회 — 독자 화면이 날짜마다 보이는 다이제스트와 생성 상태를 읽는다(digest-R38 ~ R40). `reader` 가 다이제스트 화면에 엮는다. 구현은 `application` 의 `DigestDirectoryService` 다.
+
+```java
+public interface DigestDirectory {
+    int MAX_DATES = 100;                                              // 날짜 목록 한 쪽의 상한 — 정본. 측정 전 목표
+    Optional<DigestDay> latest(UserId user);
+    Optional<DigestDay> on(UserId user, LocalDate date);
+    DigestDates dates(UserId user, @Nullable LocalDate before, int limit);
+    Optional<DigestRequestStatus> requestStatus(UserId user);
+}
+
+public record DigestDay(LocalDate date, @Nullable LocalDate previousDate, @Nullable LocalDate nextDate,
+        @Nullable ShownDigest shown, DigestAttempt latest, DigestDayUsage usage) { }
+public record ShownDigest(long digestId, Instant periodStart, Instant periodEnd, String provider, String model,
+        int candidateCount, int inputTokens, int outputTokens, Instant completedAt, List<DigestSectionView> sections) { }
+public record DigestSectionView(SectionKind kind, @Nullable String title, @Nullable String body,
+        List<DigestCitation> citations) { }
+public record DigestCitation(ArticleId article, @Nullable String note, SelectionReason reason) { }
+public record DigestAttempt(long digestId, DigestStatus status, @Nullable DigestFailure failure,
+        @Nullable DigestFailureCause cause, @Nullable Instant completedAt) { }
+public record DigestDayUsage(int attempts, long inputTokens, long outputTokens) { }
+public record DigestDates(List<DigestDateEntry> dates, @Nullable LocalDate next) { }
+public record DigestDateEntry(LocalDate date, DigestDayState state) { }
+public enum DigestDayState { CONTENT, IN_PROGRESS, EMPTY, FAILED }
+public record DigestRequestStatus(LocalDate today, ZoneId timezone, boolean usableModel, boolean inProgress,
+        int remainingToday, Instant resetsAt, LocalDate targetDate, boolean regenerates, @Nullable Instant scheduledAt,
+        @Nullable DigestUnresolvedFailure unresolvedFailure) { }
+public record DigestUnresolvedFailure(LocalDate digestDate, Instant failedAt) { }
+```
+
+| 멤버 | 뜻 |
+|---|---|
+| `latest` | 가장 늦은 날짜(계기 · 상태 무관)의 날짜 보기 — 다이제스트 행이 하나도 없으면 빈 값(digest-R38) |
+| `on` | 그 날짜의 날짜 보기 — 그 날짜의 행이 없으면 빈 값(digest-R38) |
+| `dates` | 다이제스트 행이 있는 날짜를 늦은 순으로 `limit` 개, `before` 가 있으면 그보다 이른 날짜만. `limit` 이 1 ~ `MAX_DATES` 밖이면 `IllegalArgumentException`(digest-R39) |
+| `requestStatus` | 수동 생성 상태 — 계정이 없으면 빈 값(digest-R40) |
+| `DigestDay.shown` | 그 날짜의 보이는 다이제스트(digest-R13) — 없으면 null. 섹션 · 인용은 위치 순이고 섹션이 0개일 수 있다(digest-R10) |
+| `DigestDay.latest` | 그 날짜의 ID 가 가장 큰 행 — `shown` 과 같은 행일 수 있다. `failure` · `cause` 는 `FAILED` 일 때만 있다. 실패 메시지는 싣지 않는다 |
+| `DigestDay.usage` | 그 날짜 모든 행의 수와, 공급자가 답한 행의 입력 · 출력 토큰 합 |
+| `DigestDay.previousDate` · `nextDate` | 그 사용자의 다이제스트 행이 있는 날짜 가운데 바로 앞 · 뒤 — 없으면 null |
+| `DigestCitation` | 인용 기사 ID · 추가 헤드라인의 코멘트 · 선정 이유 — 링크 · 출처 · 발행 시각은 싣지 않는다(화면이 `article` 에서 읽는다) |
+| `DigestDates.next` | 더 있으면 다음 쪽의 `before`(이 쪽의 마지막 날짜) — 없으면 null |
+| `DigestDayState` | 날짜의 상태 — 보이는 다이제스트가 있으면 `CONTENT`, 없으면 가장 최근 시도로 `IN_PROGRESS` · `EMPTY` · `FAILED`(digest-R39) |
+| `DigestRequestStatus` | 지금의 사용자 시간대 날짜 · 사용자 시간대 · 쓸 모델 유무 · 진행 중 · 오늘 남은 수동 횟수 · 다시 차는 시각 · 지금 요청하면 만들 날짜와 그것이 다시 만들기인가 · 일정이 오늘을 만들 생성 시각(아직 오지 않았을 때만, 아니면 null) · 해결되지 않은 마지막 실패(없으면 null)(digest-R40) |
+| `DigestUnresolvedFailure` | 해결되지 않은 마지막 실패의 날짜와 끝낸 시각 — 끝낸 시각은 그 실패의 `DigestFailed.failedAt` 과 같은 값이다(digest-R33 · R40) |
+
+`DigestFailureCause` 는 `user` 의 공개 타입이다([user Spec](user.md#digestfailed)). `ArticleId` 는 `article` 의 공개 타입이다.
+
+- 계약
+  - 사용자를 인자로 받는다 — 화면 경로에서는 세션 사용자로만 부른다. 다른 사용자의 다이제스트는 보지 않는다. 쓰지 않는다
+  - `latest` · `on` · `dates` 는 읽기 전용 트랜잭션 하나다 — 날짜 보기는 행 · 섹션 · 이웃 날짜를 한 스냅숏으로 읽는다. `requestStatus` 는 일정(시간대 · 생성 시각 — `user` 의 `UserDigestSchedules`) · 쓸 모델을 트랜잭션 밖에서 읽고 행 조회는 읽기 전용 트랜잭션 하나에서 잠그지 않고 읽는다 — 실제 요청의 판정은 `DigestRequests.request` 가 잠금 안에서 다시 한다
+  - 역할 애너테이션이 없다
 
 ### InterestHistory
 
@@ -166,9 +221,9 @@ public record TopicSubscriptionStep(Instant at, TopicSubscriptionAction action, 
 
 | 패키지 | 책임 |
 |---|---|
-| `domain/digest` | 상태 aggregate(`Digest`)와 저장소(`DigestRepository`), 전이의 값(`Completion` · `DigestStatus` · `DigestTrigger` · `DigestFailure` · `DigestPeriod` · `DigestId` · `ScheduledDigest`), 실패 갈래 옮기기의 정본(`FailureCauses`), 행 조회(`DigestLedger`) · 사용자 잠금(`DigestOwnerLock`) · 생성 작업 등록 포트(`DigestJobQueue`) |
-| `domain/schedule` | 일정 규칙과 상수의 정본(`DigestScheduleRules` — 따라잡기 창 · 등록 기다림 · 시작 기한 · 임대 · 하루 수동 횟수 · 날짜의 생성 시각 · 만들 날짜 · 하루의 시작), 기간 산식의 정본(`DigestPeriods`), 수동 생성 대상의 정본(`ManualTarget`) |
-| `domain/candidate` | 후보와 별칭의 정본(`CandidateSet`), 후보 행 저장소(`DigestCandidateRepository`), 보존 기한의 정본(`CandidateRetention`), 값(`DigestCandidate` · `AliasedCandidate` · `SelectionReason`) |
+| `domain/digest` | 상태 aggregate(`Digest`)와 저장소(`DigestRepository`), 전이의 값(`Completion` · `DigestTrigger` · `DigestPeriod` · `DigestId` · `ScheduledDigest` — 상태 · 실패 코드는 공개 enum `DigestStatus` · `DigestFailure`), 실패 갈래 옮기기의 정본(`FailureCauses`), 행 조회(`DigestLedger`) · 사용자 잠금(`DigestOwnerLock`) · 생성 작업 등록 포트(`DigestJobQueue`) |
+| `domain/schedule` | 일정 규칙과 상수의 정본(`DigestScheduleRules` — 따라잡기 창 · 등록 기다림 · 시작 기한 · 임대 · 하루 수동 횟수 · 날짜의 생성 시각 · 만들 날짜 · 오늘 일정이 아직 오지 않은 생성 시각 · 하루의 시작), 기간 산식의 정본(`DigestPeriods`), 수동 생성 대상의 정본(`ManualTarget`) |
+| `domain/candidate` | 후보와 별칭의 정본(`CandidateSet`), 후보 행 저장소(`DigestCandidateRepository`), 보존 기한의 정본(`CandidateRetention`), 값(`DigestCandidate` · `AliasedCandidate` — 선정 이유는 공개 enum `SelectionReason`) |
 | `domain/selection` | 후보 선별의 순수 규칙 — 상수의 정본(`SelectionRules` · `CandidateCost`), 평가 키를 활성 키로 풀기(`ActiveKeys`), 사용자 제외(싫어요 포함) · 구독 행 대조(`UserFilter`), 구독 필터(`SubscriptionFilter`) · 관심도를 곱한 순위(`CandidateRank`), 큰 슬롯(`BigSlotPicker` — 기사마다 큰 판정 행의 위치), 사건 단위 중복 제거(`EventDedup`), 다양성 몫(`DiversityQuota`), 예산 자르기(`BudgetCut`), 단계 잇기와 선정 이유 · 행마다 묶기(`CandidateSelector`), 값(`ActiveEvaluation` · `ArticleFacts` · `Shortlist`) |
 | `domain/input` | 생성의 입력(`DigestInput`)과 그 값(`DigestProfile` · `CandidateArticle` · `StorylineGroup`) |
 | `domain/prompt` | 프롬프트 구성의 정본(`DigestPrompts`), 상수 · 길이 기준의 정본(`PromptRules`), 값(`DigestPrompt`) |
@@ -176,11 +231,12 @@ public record TopicSubscriptionStep(Instant at, TopicSubscriptionAction action, 
 | `domain/exposure` | 노출 저장소(`ExposureRepository` — 계약이 digest-R24 의 정본) |
 | `domain/output` | 출력 서술 · 상한의 정본(`DigestOutputSchema` — 서술 마디 `OutputShape` · 처분 `OverLimit` · `OnBlank`), 읽기의 정본(`DigestOutputReader`), 인용 검증의 정본(`CitationCheck`), 값(`OutputRead` · `DigestDraft` · `StoryDraft` · `HeadlineDraft` · `CitationResult` · `CitedDigest` · `CitedStory` · `CitedHeadline` · `CitationDrops`) |
 | `domain/generator` | 생성기 포트(`DigestGenerator`)와 그 요청 · 결과(`DigestRequest` · `GenerationOutcome` · `TokenUsage`), 생성 한 번의 판정(`GenerationVerdict`), 관문 실패 종류의 옮기기(`GenerationFailures`) |
-| `domain/content` | 내용 aggregate(`DigestSection` — 인용 `DigestItem` 을 자식으로)와 저장소(`DigestSectionRepository`), 섹션 종류(`SectionKind`), 인용 확인 저장소(`CitationRepository`) |
+| `domain/content` | 내용 aggregate(`DigestSection` — 인용 `DigestItem` 을 자식으로)와 저장소(`DigestSectionRepository`), 인용 확인 저장소(`CitationRepository`) — 섹션 종류는 공개 enum `SectionKind` |
 | `domain/removal` | 지운 기사 따르기의 판단(`RemovalFollowUp`), 내용 행 정리 저장소(`DigestContentCleanup`), 값(`SectionCitations`) |
-| `domain/receipt` | 받은 소식 저장소(`ReceiptRepository` — 계약이 digest-R13 의 정본) |
-| `application` | 생성 유스케이스(`DigestGeneration`)와 끝낸 행 저장의 정본(`DigestEndings`), 일정 회차(`DigestScheduling`) · 생성 작업(`DigestRun`) · 거두기(`StalledDigests`) · 수동 생성(`DigestRequestsService`)과 작업 등록의 정본(`DigestDispatch`), 후보 선별(`CandidateSelection`)과 그 재료 — 평가를 활성 키로 읽기(`ActiveEvaluations`) · 관심도 재료 읽기(`InterestMaterials`), 관심사 히스토리 공개 조회의 구현(`InterestHistoryService`), 지운 기사 따르기(`DigestArticleRemoval`)와 그 리스너, 후보 행 보존 정리(`CandidateCleanup`), 받은 소식 공개 조회의 구현(`ReceivedArticlesService`), 인용 확인의 구현(`DigestCitationsService`) |
-| `adapter/out/persistence` | 후보 행 · 내용 행 정리 · 받은 소식 · 인용 확인 · 노출 저장소 · 행 조회의 JdbcClient 구현, 사용자 잠금의 PostgreSQL 구현 |
+| `domain/receipt` | 받은 소식 저장소(`ReceiptRepository` — 계약이 받은 날짜의 정본) |
+| `domain/view` | 다이제스트 조회의 판단 — 날짜 보기 만들기(`DigestDays`) · 날짜 상태와 날짜 목록 한 쪽(`DigestDayStates`) · 해결되지 않은 마지막 실패(`UnresolvedFailures`)의 정본, 조회 저장소(`DigestDayRepository`), 값(`DigestDayRow` · `DigestDateRow` · `DigestNeighbors` · `FailedAttempt`) |
+| `application` | 생성 유스케이스(`DigestGeneration`)와 끝낸 행 저장의 정본(`DigestEndings`), 일정 회차(`DigestScheduling`) · 생성 작업(`DigestRun`) · 거두기(`StalledDigests`) · 수동 생성(`DigestRequestsService`)과 수동 생성 대상 · 오늘 횟수 읽기의 정본(`ManualTargets`) · 작업 등록의 정본(`DigestDispatch`), 다이제스트 조회 공개 조회의 구현(`DigestDirectoryService`), 후보 선별(`CandidateSelection`)과 그 재료 — 평가를 활성 키로 읽기(`ActiveEvaluations`) · 관심도 재료 읽기(`InterestMaterials`), 관심사 히스토리 공개 조회의 구현(`InterestHistoryService`), 지운 기사 따르기(`DigestArticleRemoval`)와 그 리스너, 후보 행 보존 정리(`CandidateCleanup`), 받은 소식 공개 조회의 구현(`ReceivedArticlesService`), 인용 확인의 구현(`DigestCitationsService`) |
+| `adapter/out/persistence` | 후보 행 · 내용 행 정리 · 받은 소식 · 인용 확인 · 노출 저장소 · 행 조회 · 다이제스트 조회의 JdbcClient 구현, 보이는 다이제스트 조건의 정본(`ShownDigestSql`) · 기간을 덮는 상태 조건의 정본(`CoveringDigestSql`), 사용자 잠금의 PostgreSQL 구현 |
 | `adapter/out/job` | 생성 작업 등록 포트의 JobRunr 구현(`JobRunrDigestJobQueue`) — 역할 애너테이션 없음 |
 | `adapter/out/llm` | 실제 생성기(`LlmDigestGenerator`)와 그 결선 — profile `local` 밖 |
 | `adapter/out/fake` | 생성기의 로컬 대체물과 그 결선 |
@@ -218,7 +274,7 @@ sequenceDiagram
 - 반복 작업 — `CandidateCleanupJob`(작업 역할, 하루마다 — ID `digest-candidate-cleanup`, 실패해도 재시도하지 않는다 — 다음 회차가 잇는다). `CandidateCleanup` 을 부른다(digest-R11)
 - 반복 작업 — `ScheduleDueDigestsJob`(작업 역할, 1분마다 — ID `schedule-due-digests`) → `DigestScheduling`(digest-R29), `RecoverStalledDigestsJob`(작업 역할, 5분마다 — ID `recover-stalled-digests`) → `StalledDigests`(digest-R32). 둘 다 재시도하지 않는다 — 다음 회차가 잇는다
 - 생성 작업 — `GenerateDigestJob.run(digestId, token)`(작업 역할 — 작업 ID 는 등록 토큰, 재시도하지 않는다) → `DigestRun`(digest-R29). 등록은 일정 회차 · 수동 생성 · 거두기가 커밋 뒤 `DigestDispatch` 로 한다
-- 공개 API — `DigestRequests`(digest-R31). 부르는 화면용 처리기(`reader`)는 아직 없다. 컨트롤러는 없다
+- 공개 API — `DigestRequests`(digest-R31) · 공개 조회 `DigestDirectory`(digest-R38 ~ R40). 부르는 쪽은 `reader` 의 화면용 처리기다. 컨트롤러는 없다
 
 ### `application`
 
@@ -228,7 +284,9 @@ sequenceDiagram
 - `DigestScheduling` — 일정 회차(digest-R29 · R30). 시계는 `InstantSource`(시험이 넣는다)
 - `DigestRun` — 생성 작업 — 생성을 기다리는 다이제스트만, 쓸 모델을 다시 정해 선별 · 생성한다(digest-R29)
 - `StalledDigests` — 거두기 회차(digest-R32)
-- `DigestRequestsService` — 공개 API `DigestRequests` 의 구현(digest-R31). 역할 애너테이션 없음
+- `DigestRequestsService` — 공개 API `DigestRequests` 의 구현(digest-R31). 대상 날짜 · 기간과 오늘 횟수는 `ManualTargets` 로 읽는다. 역할 애너테이션 없음
+- `ManualTargets` — 수동 생성 대상 · 오늘 횟수 읽기의 정본 — 행 조회(`DigestLedger`)로 `ManualTarget.of` 의 재료를 읽어 대상을 정하고(`targetOf`), 사용자 시간대의 오늘 만든 수동 행을 세고(`manualCountOn`), 다음 날 0시(`nextDayStart`)를 낸다. 트랜잭션 안에서 부른다. 스프링 구성 요소가 아니다 — `DigestRequestsService` · `DigestDirectoryService` 가 행 조회로 만든다(digest-R31 · R40)
+- `DigestDirectoryService` — 공개 조회 `DigestDirectory` 의 구현. 날짜 보기는 `DigestLedger.latestDate` · `DigestDayRepository` 로 읽어 `DigestDays` 에, 날짜 목록은 `limit + 1` 개를 읽어 `DigestDayStates.page` 에 맡긴다. 수동 생성 상태는 `user` 의 `UserDigestSchedules`(시간대 · 생성 시각) · `DigestModelDirectory` 와 `ManualTargets` · `DigestLedger.latestDate` · `DigestDayRepository` 의 실패 재료로 읽어 `DigestScheduleRules.upcomingToday` · `UnresolvedFailures` 에 맡긴다. 시계는 `InstantSource`(시험이 넣는다), 역할 애너테이션 없음(digest-R38 ~ R40)
 - `DigestArticleRemoval` — 지운 기사 따르기. 트랜잭션 하나(digest-R10)
 - `DigestArticleRemovalListener` — `ArticlesRemoved` 리스너
 - `CandidateCleanup` — 후보 행 보존 정리. 트랜잭션 하나(digest-R11)
@@ -241,13 +299,13 @@ sequenceDiagram
 
 ### `domain`
 
-- `Digest` — 상태 aggregate(`digests`) — 상태 전이의 정본(digest-R1). 바꾸는 메서드는 새 값을 돌려준다. 버전(`@Version`)을 갖는다
+- `Digest` — 상태 aggregate(`digests`) — 상태 전이의 정본(digest-R1). 바꾸는 메서드는 새 값을 돌려준다. 버전(`@Version`)을 갖는다. 끝낸 시각은 저장 정밀도(마이크로초)로 갖는다 — 저장한 행과 실패 이벤트의 시각이 같은 값이다(digest-R33)
 - `DigestRepository` — 상태 저장소. 다이제스트 행 잠금(`lock`)
 - `DigestLedger` — 행 조회 — 사용자마다 가장 늦은 날짜 · 직전 `READY` · `EMPTY` 의 끝 · 그 날짜의 가장 최근 기간 · 진행 중 · 하루 수동 수 · 멈춘 등록 · 멈춘 생성(digest-R29 ~ R32). 구현 `JdbcDigestLedger`
 - `DigestOwnerLock` — 한 사용자의 행 만들기 잠금(트랜잭션 advisory 잠금 — 첫 키 'DGST')(digest-R29 · R31). 구현 `JdbcDigestOwnerLock`
 - `DigestJobQueue` — 생성 작업 등록 포트 — 작업 서버(외부 의존성)에 토큰을 작업 ID 로 넣는다(digest-R29). 구현 `adapter/out/job` 의 `JobRunrDigestJobQueue`
 - `FailureCauses` — 실패 코드를 실패 알림의 갈래로 옮기는 정본 — 망라 분기(digest-R33)
-- `DigestScheduleRules` · `DigestPeriods` · `ManualTarget` — 일정 규칙과 상수 · 기간 산식 · 수동 생성 대상의 정본(digest-R29 ~ R32)
+- `DigestScheduleRules` · `DigestPeriods` · `ManualTarget` — 일정 규칙과 상수 · 기간 산식 · 수동 생성 대상의 정본(digest-R29 ~ R32 · R40)
 - `CandidateSet` — 후보와 별칭의 정본(digest-R3)
 - `DigestCandidateRepository` — 후보 행 저장소 — 다시 쓰기 · 공유 잠금 읽기 · 지우기(생성 중 지운 기사 · 지운 기사 따르기 · 보존 정리)(digest-R9 ~ R11)
 - `CandidateRetention` — 후보 행 보존 기한의 정본(digest-R11)
@@ -258,7 +316,7 @@ sequenceDiagram
 - `DigestSectionRepository` — 내용 저장소
 - `RemovalFollowUp` — 지운 기사 따르기에서 지울 섹션의 판단(digest-R10)
 - `DigestContentCleanup` — 내용 행 정리 저장소 — 다이제스트 행 잠금 · 섹션과 인용 읽기 · 인용 · 섹션 지우기(digest-R10)
-- `ReceiptRepository` — 받은 소식 저장소 — 계약이 "날짜별로 보이는 다이제스트 · 받은 날짜"의 정본이다(digest-R13)
+- `ReceiptRepository` — 받은 소식 저장소 — 계약이 "받은 날짜"의 정본이다. 보이는 다이제스트의 조건은 구현 쪽 `ShownDigestSql` 이 정본이다(digest-R13)
 
   ```java
   public interface ReceiptRepository {
@@ -266,6 +324,8 @@ sequenceDiagram
   }
   ```
 
+- `DigestDays` · `DigestDayStates` · `UnresolvedFailures` — 날짜 보기 만들기 · 날짜의 상태와 날짜 목록 한 쪽 · 해결되지 않은 마지막 실패의 정본(digest-R38 ~ R40)
+- `DigestDayRepository` — 다이제스트 조회 저장소 — 그 날짜의 행(보이는 표시와 함께) · 섹션과 인용 · 이웃 날짜 · 날짜 목록의 재료, 가장 최근 실패(`FailedAttempt`) · 기간을 덮는 행의 가장 큰 ID. 쓰지 않는다(digest-R38 ~ R40)
 - `CitationRepository` — 인용 확인 저장소 — 그 사용자의 그 다이제스트가 그 기사를 인용했는가(digest-R14)
 - `SelectionRules` · `CandidateCost` — 후보 선별 상수의 정본(digest-R15 ~ R22)
 - `UserFilter` · `SubscriptionFilter` · `CandidateRank` · `BigSlotPicker` · `EventDedup` · `DiversityQuota` · `BudgetCut` · `CandidateSelector` — 후보 선별 규칙의 정본, 규칙마다 하나(digest-R17 ~ R22). `CandidateRank.order(TopicInterests)` 가 관심도를 곱한 순위다. `ArticleFacts` 는 그 사용자의 싫어요 여부(`disliked`)를 싣고 `ArticleFacts.of(ActiveEvaluation, …)` 로 만든다
@@ -340,6 +400,9 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
 - `JdbcDigestCandidateRepository` — `DigestCandidateRepository` 의 JdbcClient 구현. 후보 행은 넣고 지우기만 한다
 - `JdbcDigestContentCleanup` — `DigestContentCleanup` 의 JdbcClient 구현
 - `JdbcReceiptRepository` — `ReceiptRepository` 의 JdbcClient 구현 — 인용 · 섹션 · 다이제스트를 잇는 질의 하나(digest-R13)
+- `JdbcDigestDayRepository` — `DigestDayRepository` 의 JdbcClient 구현 — 그 날짜의 행과 보이는 표시 · 섹션과 인용 · 이웃 날짜 · 날짜마다 가장 최근 행의 상태와 보이는 다이제스트 유무, ID 가 가장 큰 `FAILED` 행 · `CoveringDigestSql` 로 고른 ID 가 가장 큰 행(digest-R38 ~ R40)
+- `ShownDigestSql` — 날짜별로 보이는 다이제스트 조건의 정본 — 바깥 질의의 `digests` 별칭을 받아 같은 사용자 · 날짜의 보이는 다이제스트 ID 부분 질의를 낸다. 받은 소식 · 다이제스트 조회 질의가 모두 쓴다(digest-R13)
+- `CoveringDigestSql` — 기간을 덮는 다이제스트 상태(`READY` · `EMPTY`) 조건의 정본 — 직전 덮인 끝(`JdbcDigestLedger.lastCoveredEnd`)과 기간을 덮는 행의 가장 큰 ID(`JdbcDigestDayRepository.latestCoveringId`) 질의가 쓴다(digest-R30 · R40)
 - `JdbcCitationRepository` — `CitationRepository` 의 JdbcClient 구현 — 인용 · 섹션 · 다이제스트를 잇는 질의 하나(digest-R14)
 - 상태 · 내용 저장소는 Spring Data JDBC 다
 
@@ -358,6 +421,7 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
   - 시작은 `SCHEDULED` 에서만 `RUNNING` 으로 간다. 쓸 모델의 공급자 키(`Provider.key()`) · 모델 ID · 후보 수 · 시작 시각을 적는다. 생성 중 · 끝난 다이제스트는 시작하지 못한다
   - 생성기를 부르지 않거나 생성이 끝나지 않은 채 끝내기(`abandon`)는 `SCHEDULED` · `RUNNING` 에서 `FAILED` 로 간다 — 실패 코드 · 메시지만 있고 토큰 · 소요 시간이 없으며, 시작할 때 적은 공급자 · 모델은 그대로다(digest-R29 · R32)
   - 생성을 끝내기(`complete`)는 `RUNNING` 에서만 한다 — `READY` 는 토큰 · 소요 시간(밀리초), `EMPTY` 는 결과 칸 없음, `FAILED` 는 실패 코드(`DigestFailure`) · 메시지(앞 500 코드 포인트까지 자름 — `Digest.MAX_ERROR_MESSAGE`, `platform` 의 `CodePoints`)와 생성기를 불렀으면 소요 시간, 공급자가 답했으면 토큰이다 — 관문 실패 · 키 없음은 토큰 없이 소요 시간만 있다(토큰이 있으면 소요 시간도 있다 — `Completion.Failed`). 끝낸 시각을 적는다
+  - 끝낸 시각(`abandon` · `complete`)은 저장 정밀도(마이크로초)로 잘라 갖는다 — 저장한 행의 끝낸 시각과 실패 이벤트(`DigestFailed`)의 끝낸 시각이 같은 값이다(digest-R33)
   - 기록하는 공급자 · 모델은 요청의 쓸 모델이다 — 로컬 대체물이 만든 다이제스트도 요청한 모델을 적고 토큰은 0 이다
   - 테이블이 지킨다: 공급자와 모델은 함께 있거나 함께 없다, 끝난 상태 ⇔ 끝낸 시각이 있다, `FAILED` ⇔ 실패 코드가 있다
 - **digest-R2** — 생성(`run`)은 다이제스트 행을 잠근 뒤 상태를 본다. 끝났거나 생성 중(`RUNNING`)이면 아무것도 하지 않고 그 상태를 돌려준다 — 같은 다이제스트를 두 실행이 함께 불러도 생성기 호출은 하나다. 멈춘 생성은 거두기가 끝낸다(digest-R32 — [ADR-0232](../adr/0232-a-running-digest-is-never-started-again-and-stalled-digests-end-interrupted-after-a-lease-or-a-start-deadline.md)). 트랜잭션 ② 는 다이제스트 행을 다시 잠가, 이미 끝났거나 버전이 트랜잭션 ① 뒤의 값과 다르면(다른 실행이나 거두기가 끝냈다) 아무것도 쓰지 않고 지금 상태를 돌려준다
@@ -451,7 +515,7 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
 - **digest-R13** — 사용자가 받은 기사는 그 사용자의 **날짜별로 보이는 다이제스트**의 인용이다 — 날짜마다 그 날짜의 `READY` 다이제스트 가운데 ID 가 가장 큰 것이다. 같은 날짜의 더 큰 ID 가 `SCHEDULED` · `RUNNING` · `EMPTY` · `FAILED` 여도 앞선 `READY` 가 보인다. 같은 날짜의 덮인 `READY` · `EMPTY` · `FAILED` 의 인용은 세지 않는다
   - 받은 날짜는 그 기사를 인용한, 날짜별로 보이는 다이제스트들의 날짜 가운데 가장 이른 것이다
   - 지운 기사는 인용이 지워져(digest-R10) 받은 기사가 아니다
-  - 화면이 날짜별로 다이제스트를 보일 때도 이 정의를 쓴다 — 다이제스트 조회가 생기면 "보이는 다이제스트" 조건을 이 규칙 하나에서 가져온다
+  - 화면이 날짜별로 다이제스트를 보일 때도 이 정의를 쓴다(digest-R38). 조건의 정본은 SQL 조각 `ShownDigestSql` 하나이고 받은 소식 · 다이제스트 조회 질의가 그것을 쓴다
 
 ### 인용 확인
 
@@ -577,7 +641,7 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
   - 사용자마다 트랜잭션 하나에서 사용자 잠금(`DigestOwnerLock`)을 잡고 가장 늦은 날짜를 다시 확인한 뒤 기간(digest-R30)을 정해 `SCHEDULED` · 계기 `SCHEDULED` 행을 새 등록 토큰과 만든다. 기간이 비면 그 날짜는 만들지 않는다. 같은 사용자 · 날짜의 일정 다이제스트는 저장소의 부분 유일 제약이 한 번 더 막는다
   - 생성 작업은 커밋 뒤 등록한다(`DigestDispatch` → 포트 `DigestJobQueue` — 작업 ID 는 등록 토큰, 트랜잭션 안이면 거부). 사용자 하나의 실패는 WARN 로그(사용자 · 날짜)를 남기고 다음 사용자로 간다
   - 생성 작업(`DigestRun`)은 행이 `SCHEDULED` 가 아니면 그 상태를 돌려준다. 쓸 모델을 다시 정하고, 없으면 생성기를 부르지 않고 `NO_USABLE_MODEL` 로 끝낸다(행 잠금 뒤 `SCHEDULED` 일 때만). 후보 선별이 빈 값(계정 없음)이어도 같다. 아니면 그 모델로 고르고 생성한다(digest-R8)
-- **digest-R30** — 기간(`DigestPeriods.next`)의 끝은 일정이면 생성 시각, 수동이면 요청 시각이다. 시작은 그 사용자의 끝난 다이제스트 가운데 `READY` · `EMPTY` 의 가장 늦은 기간 끝(계기 무관 — 실패한 기간은 다음 다이제스트가 덮는다)이고, 없으면 끝 − 24시간(`FIRST_PERIOD`)이다. 끝 − 72시간(`MAX_PERIOD`)보다 이르면 거기까지로 줄인다. 시작이 끝보다 늦지 않으면 기간이 없다 — 시간대 · 생성 시각을 바꾸면 다음 날짜의 끝이 직전 끝보다 앞설 수 있다
+- **digest-R30** — 기간(`DigestPeriods.next`)의 끝은 일정이면 생성 시각, 수동이면 요청 시각이다. 시작은 그 사용자의 끝난 다이제스트 가운데 `READY` · `EMPTY` 의 가장 늦은 기간 끝(계기 무관 — 실패한 기간은 다음 다이제스트가 덮는다)이고, 없으면 끝 − 24시간(`FIRST_PERIOD`)이다. 끝 − 72시간(`MAX_PERIOD`)보다 이르면 거기까지로 줄인다. 끝이 시작보다 뒤가 아니면 기간이 없다 — 시간대 · 생성 시각을 바꾸면 다음 날짜의 끝이 직전 끝보다 앞설 수 있다
 
 ### 수동 생성
 
@@ -604,6 +668,21 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
 판단의 이유는 [ADR-0233](../adr/0233-digest-failure-notices-come-through-an-event-declared-by-the-receiving-user-module-for-every-failed-digest.md)에 있다.
 
 - **digest-R33** — 끝낸 행은 `DigestEndings` 하나로 저장한다 — 생성(트랜잭션 ① 의 `EMPTY` · 트랜잭션 ②) · 생성 작업의 시작 전 끝내기 · 거두기. 끝나지 않은 행은 거부하고 트랜잭션 안에서만 저장한다. `FAILED` 면 같은 트랜잭션에서 `user` 가 선언한 `DigestFailed`(사용자 · 다이제스트 ID · 날짜 · 갈래 · 끝낸 시각)를 하나 낸다(계기 무관). 실패 코드의 갈래(`FailureCauses` — 망라 분기)는 `KEY`: `KEY_MISSING` · `KEY_INVALID` · `NO_USABLE_MODEL`, `PROVIDER_ACCOUNT`: `PERMISSION_DENIED` · `QUOTA_EXHAUSTED`, `TEMPORARY`: `PROVIDER_UNAVAILABLE` · `PROVIDER_UNEXPECTED` · `INTERRUPTED`, `OUTPUT`: `UNREADABLE_OUTPUT` · `NO_CITATION` · `OUTPUT_TRUNCATED` · `OUTPUT_REFUSED` 다. 알림은 `user` 가 남긴다([user Spec](user.md#화면-내-알림) user-R62)
+
+### 다이제스트 조회
+
+판단의 이유는 [ADR-0237](../adr/0237-the-digest-home-shows-the-latest-date-and-every-date-has-its-own-page-and-a-list.md) · [ADR-0238](../adr/0238-a-digest-date-shows-the-visible-digest-with-the-latest-attempt-and-the-list-holds-every-date-with-a-state.md) · [ADR-0239](../adr/0239-digest-screens-show-tokens-of-the-visible-digest-and-the-sum-of-every-attempt-of-the-date-without-prices.md) · [ADR-0240](../adr/0240-digest-failures-show-the-cause-action-and-the-code-and-never-the-failure-message.md)에 있다.
+
+- **digest-R38** — 날짜 보기(`DigestDays`): 그 사용자의 그 날짜 행 전부에서
+  - 보이는 다이제스트는 digest-R13 의 행이다(`ShownDigestSql` 이 표시한 행 — 둘 이상이면 `IllegalArgumentException`). 그 행이 `READY` 가 아니거나 공급자 · 모델 · 후보 수 · 토큰 · 끝낸 시각이 없으면 `IllegalStateException` 이다 — digest-R1 이 `READY` 에 보장하는 칸이다. 섹션은 그 다이제스트의 것 전부(위치 순)이고 인용이 모두 지워졌으면 비어 있다(digest-R10)
+  - 가장 최근 시도는 ID 가 가장 큰 행이다 — 실패면 실패 코드와 갈래(`FailureCauses.of`)를 싣고 실패 메시지는 싣지 않는다
+  - 사용량은 행 수와, 입력 · 출력 토큰이 함께 있는 행의 토큰 합이다 — 덮인 시도 · 실패한 시도를 포함한다
+  - 이웃 날짜는 그 사용자의 행이 있는 날짜 가운데 바로 앞 · 뒤다
+  - 가장 늦은 날짜(`latest`)는 `DigestLedger.latestDate`(계기 · 상태 무관)다 — 생성 시각 전이면 어제, 오늘 행이 생겼으면 오늘이고 그 날짜에 보이는 다이제스트가 없을 수 있다
+- **digest-R39** — 날짜 목록(`DigestDayStates`): 다이제스트 행이 있는 날짜를 늦은 순으로, `before` 가 있으면 그보다 이른 날짜만 읽는다. 날짜의 상태는 보이는 다이제스트가 있으면 `CONTENT`, 없으면 그 날짜 가장 최근 행의 상태로 `SCHEDULED` · `RUNNING` → `IN_PROGRESS`, `EMPTY`, `FAILED` 다(`READY` 가 가장 최근인데 보이는 다이제스트가 없으면 `IllegalStateException` — 망라 분기). `limit + 1` 개를 읽어 더 있으면 다음 쪽의 `before` 를 이 쪽의 마지막 날짜로 둔다
+- **digest-R40** — 수동 생성 상태(`DigestDirectoryService.requestStatus`): 일정(`user` 의 `UserDigestSchedules` — 시간대 · 생성 시각)이 없으면(계정 없음) 빈 값이다. 오늘은 지금의 사용자 시간대 날짜, 시간대는 일정의 시간대, 쓸 모델 유무는 `DigestModelDirectory.modelOf`, 진행 중은 `DigestLedger.inProgress`, 남은 횟수는 max(0, `MANUAL_PER_DAY` − 오늘 만든 수동 행 수), 다시 차는 시각은 다음 날 0시, 대상 날짜와 다시 만들기 여부는 지금 요청하면 만들 것이다 — 셋 모두 수동 생성(digest-R31)과 같은 `ManualTargets` 로 읽는다. 잠그지 않으므로 그 순간의 값이다
+  - 오늘 일정 생성 시각(`DigestScheduleRules.upcomingToday`): 일정이 오늘을 만들 것(쓸 모델이 있고 가장 늦은 다이제스트 날짜가 오늘보다 앞섬 — digest-R29 와 같은 재료)이고 지금이 오늘 생성 시각 T(`generationTime`) 전이면 T, 아니면 없음. 기간 확인(digest-R30)은 보지 않는다 — 기간 끝은 언제나 그 행을 만든 시각 이전이라 T 가 지금보다 뒤면 기간이 선다
+  - 해결되지 않은 마지막 실패(`UnresolvedFailures`): 그 사용자의 가장 최근 `FAILED` 행(ID 가 가장 큼) 뒤(ID 가 더 큰 행)에 기간을 덮는 행(`READY` · `EMPTY` — digest-R30 과 같은 조건 `CoveringDigestSql`)이 없으면 그 실패의 날짜와 끝낸 시각, 아니면 없음. 날짜는 보지 않고, 생성을 기다리거나 생성 중인 행은 해결로 치지 않는다. 끝낸 시각은 그 실패의 `DigestFailed.failedAt` 과 같은 값이다(digest-R33 — 둘 다 마이크로초로 자른 aggregate 의 값) — 독자 화면이 실패 알림과 맞추는 열쇠다
 
 ## 6. 데이터
 
@@ -662,3 +741,7 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
 | [0231](../adr/0231-manual-generation-remakes-todays-digest-with-its-period-or-makes-a-new-one-and-counts-manual-rows-of-the-users-day.md) | 수동 생성은 오늘 다이제스트를 같은 기간으로 다시 만들거나 새로 만들고, 하루 횟수는 사용자 시간대의 수동 행으로 센다 |
 | [0232](../adr/0232-a-running-digest-is-never-started-again-and-stalled-digests-end-interrupted-after-a-lease-or-a-start-deadline.md) | 생성 중인 다이제스트는 다시 시작하지 않고, 임대 · 시작 기한이 지나면 중단 실패로 끝낸다 |
 | [0233](../adr/0233-digest-failure-notices-come-through-an-event-declared-by-the-receiving-user-module-for-every-failed-digest.md) | 실패 알림은 받는 쪽 `user` 가 선언한 이벤트로 낸다 |
+| [0237](../adr/0237-the-digest-home-shows-the-latest-date-and-every-date-has-its-own-page-and-a-list.md) | 다이제스트 홈은 가장 늦은 날짜의 다이제스트를 보이고, 날짜마다 화면과 날짜 목록을 둔다 |
+| [0238](../adr/0238-a-digest-date-shows-the-visible-digest-with-the-latest-attempt-and-the-list-holds-every-date-with-a-state.md) | 날짜 보기는 보이는 다이제스트와 가장 최근 시도를 함께 내고, 날짜 목록은 다이제스트가 있는 모든 날짜를 상태와 함께 낸다 |
+| [0239](../adr/0239-digest-screens-show-tokens-of-the-visible-digest-and-the-sum-of-every-attempt-of-the-date-without-prices.md) | 토큰은 보이는 다이제스트의 것과 그 날짜 모든 시도의 합을 보이고 금액으로 바꾸지 않는다 |
+| [0240](../adr/0240-digest-failures-show-the-cause-action-and-the-code-and-never-the-failure-message.md) | 실패는 갈래의 할 일과 코드의 무슨 일 두 층으로 보이고, 실패 메시지는 화면에 내지 않는다 |

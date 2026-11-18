@@ -3810,6 +3810,204 @@
         "tags" : [ "admin-evaluation-controller" ]
       }
     },
+    "/api/digests" : {
+      "get" : {
+        "operationId" : "digestDates",
+        "parameters" : [ {
+          "description" : "이 날짜보다 이른 날짜만(ISO-8601) — 다음 쪽은 앞 응답의 next 를 넘긴다",
+          "in" : "query",
+          "name" : "before",
+          "required" : false,
+          "schema" : {
+            "type" : [ "string", "null" ]
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DigestDatesResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "before 형식이 틀렸다"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "세션이 없거나 만료됐다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "비밀번호를 바꿔야 한다 · LLM 키를 등록해야 한다"
+          }
+        },
+        "tags" : [ "digest-screen-controller" ]
+      },
+      "post" : {
+        "operationId" : "requestDigest",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DigestRequestResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "세션이 없거나 만료됐다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청 보호 토큰이 없거나 맞지 않는다 · 비밀번호를 바꿔야 한다 · LLM 키를 등록해야 한다"
+          }
+        },
+        "tags" : [ "digest-screen-controller" ]
+      }
+    },
+    "/api/digests/latest" : {
+      "get" : {
+        "operationId" : "digestHome",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DigestHomeResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "세션이 없거나 만료됐다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "비밀번호를 바꿔야 한다 · LLM 키를 등록해야 한다"
+          }
+        },
+        "tags" : [ "digest-screen-controller" ]
+      }
+    },
+    "/api/digests/{date}" : {
+      "get" : {
+        "operationId" : "digestDay",
+        "parameters" : [ {
+          "description" : "다이제스트 날짜(ISO-8601, YYYY-MM-DD)",
+          "in" : "path",
+          "name" : "date",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DigestDayResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "날짜 형식이 틀렸다"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "세션이 없거나 만료됐다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "비밀번호를 바꿔야 한다 · LLM 키를 등록해야 한다"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "그 날짜의 다이제스트가 없다"
+          }
+        },
+        "tags" : [ "digest-screen-controller" ]
+      }
+    },
     "/api/feedback" : {
       "get" : {
         "operationId" : "states",
@@ -5997,6 +6195,113 @@
         },
         "required" : [ "exclusiveArticles" ]
       },
+      "DigestAttemptResponse" : {
+        "type" : "object",
+        "properties" : {
+          "cause" : {
+            "type" : [ "string", "null" ],
+            "enum" : [ "KEY", "PROVIDER_ACCOUNT", "TEMPORARY", "OUTPUT" ]
+          },
+          "completedAt" : {
+            "type" : [ "string", "null" ],
+            "format" : "date-time"
+          },
+          "digestId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "failure" : {
+            "type" : [ "string", "null" ],
+            "enum" : [ "UNREADABLE_OUTPUT", "NO_CITATION", "KEY_MISSING", "KEY_INVALID", "PERMISSION_DENIED", "QUOTA_EXHAUSTED", "PROVIDER_UNAVAILABLE", "PROVIDER_UNEXPECTED", "OUTPUT_TRUNCATED", "OUTPUT_REFUSED", "NO_USABLE_MODEL", "INTERRUPTED" ]
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "SCHEDULED", "RUNNING", "READY", "EMPTY", "FAILED" ]
+          }
+        },
+        "required" : [ "cause", "completedAt", "digestId", "failure", "status" ]
+      },
+      "DigestCitationResponse" : {
+        "type" : "object",
+        "properties" : {
+          "article" : {
+            "$ref" : "#/components/schemas/NewsArticleResponse"
+          },
+          "articleId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "note" : {
+            "type" : [ "string", "null" ]
+          },
+          "reason" : {
+            "type" : "string",
+            "enum" : [ "SUBSCRIBED", "INTEREST", "MAJOR_STORYLINE" ]
+          }
+        },
+        "required" : [ "article", "articleId", "note", "reason" ]
+      },
+      "DigestDateResponse" : {
+        "type" : "object",
+        "properties" : {
+          "date" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "state" : {
+            "type" : "string",
+            "enum" : [ "CONTENT", "IN_PROGRESS", "EMPTY", "FAILED" ]
+          }
+        },
+        "required" : [ "date", "state" ]
+      },
+      "DigestDatesResponse" : {
+        "type" : "object",
+        "properties" : {
+          "dates" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/DigestDateResponse"
+            }
+          },
+          "next" : {
+            "type" : [ "string", "null" ],
+            "format" : "date"
+          }
+        },
+        "required" : [ "dates", "next" ]
+      },
+      "DigestDayResponse" : {
+        "type" : "object",
+        "properties" : {
+          "date" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "latest" : {
+            "$ref" : "#/components/schemas/DigestAttemptResponse"
+          },
+          "nextDate" : {
+            "type" : [ "string", "null" ],
+            "format" : "date"
+          },
+          "previousDate" : {
+            "type" : [ "string", "null" ],
+            "format" : "date"
+          },
+          "shown" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/ShownDigestResponse"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "usage" : {
+            "$ref" : "#/components/schemas/DigestUsageResponse"
+          }
+        },
+        "required" : [ "date", "latest", "nextDate", "previousDate", "shown", "usage" ]
+      },
       "DigestFailedNoticeResponse" : {
         "type" : "object",
         "properties" : {
@@ -6014,6 +6319,146 @@
           }
         },
         "required" : [ "cause", "digestDate", "failedAt" ]
+      },
+      "DigestHomeResponse" : {
+        "type" : "object",
+        "properties" : {
+          "day" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/DigestDayResponse"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "status" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/DigestRequestStatusResponse"
+            }, {
+              "type" : "null"
+            } ]
+          }
+        },
+        "required" : [ "day", "status" ]
+      },
+      "DigestRequestResponse" : {
+        "type" : "object",
+        "properties" : {
+          "digestDate" : {
+            "type" : [ "string", "null" ],
+            "format" : "date"
+          },
+          "regenerated" : {
+            "type" : [ "boolean", "null" ]
+          },
+          "resetsAt" : {
+            "type" : [ "string", "null" ],
+            "format" : "date-time"
+          },
+          "result" : {
+            "type" : "string",
+            "enum" : [ "REQUESTED", "IN_PROGRESS", "DAILY_LIMIT_REACHED", "NO_USABLE_MODEL" ]
+          }
+        },
+        "required" : [ "digestDate", "regenerated", "resetsAt", "result" ]
+      },
+      "DigestRequestStatusResponse" : {
+        "type" : "object",
+        "properties" : {
+          "inProgress" : {
+            "type" : "boolean"
+          },
+          "regenerates" : {
+            "type" : "boolean"
+          },
+          "remainingToday" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "resetsAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "scheduledAt" : {
+            "type" : [ "string", "null" ],
+            "format" : "date-time"
+          },
+          "targetDate" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "timezone" : {
+            "type" : "string"
+          },
+          "today" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "unresolvedFailure" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/DigestUnresolvedFailureResponse"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "usableModel" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "inProgress", "regenerates", "remainingToday", "resetsAt", "scheduledAt", "targetDate", "timezone", "today", "unresolvedFailure", "usableModel" ]
+      },
+      "DigestSectionResponse" : {
+        "type" : "object",
+        "properties" : {
+          "body" : {
+            "type" : [ "string", "null" ]
+          },
+          "citations" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/DigestCitationResponse"
+            }
+          },
+          "kind" : {
+            "type" : "string",
+            "enum" : [ "OVERVIEW", "TOP_STORY", "MORE_HEADLINES" ]
+          },
+          "title" : {
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "body", "citations", "kind", "title" ]
+      },
+      "DigestUnresolvedFailureResponse" : {
+        "type" : "object",
+        "properties" : {
+          "digestDate" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "failedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        },
+        "required" : [ "digestDate", "failedAt" ]
+      },
+      "DigestUsageResponse" : {
+        "type" : "object",
+        "properties" : {
+          "attempts" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "inputTokens" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "outputTokens" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        },
+        "required" : [ "attempts", "inputTokens", "outputTokens" ]
       },
       "DiscardItemResponse" : {
         "type" : "object",
@@ -8707,6 +9152,52 @@
           }
         },
         "required" : [ "count", "ratio" ]
+      },
+      "ShownDigestResponse" : {
+        "type" : "object",
+        "properties" : {
+          "candidateCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "completedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "digestId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "inputTokens" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "model" : {
+            "type" : "string"
+          },
+          "outputTokens" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "periodEnd" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "periodStart" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "provider" : {
+            "type" : "string"
+          },
+          "sections" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/DigestSectionResponse"
+            }
+          }
+        },
+        "required" : [ "candidateCount", "completedAt", "digestId", "inputTokens", "model", "outputTokens", "periodEnd", "periodStart", "provider", "sections" ]
       },
       "SignInRequest" : {
         "type" : "object",

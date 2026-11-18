@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-18
-- 근거: [이슈 #177](https://github.com/Theia0382/yozm-news/issues/177) — 게이트 ① 대화에서 리드가 정함("D5=B 사용자 설정으로 진행한다. 기본 보통."). 구현 커밋 `d3b074d`(설정 · `PUT /api/interests/effort`) · `9e1012a`(생성 요청) · `7094e6d`(관문 요청) · `3c4e6d0`(화면)
+- 근거: [이슈 #177](https://github.com/Theia0382/yozm-news/issues/177) — 리드가 정함(추론 강도는 사용자 설정, 기본 보통). 구현 커밋 `d3b074d`(설정 · `PUT /api/interests/effort`) · `9e1012a`(생성 요청) · `7094e6d`(관문 요청) · `3c4e6d0`(화면)
 - 관련: [ADR-0199](0199-generation-requests-carry-only-the-tasks-own-inputs-and-the-gateway-maps-them-to-each-provider.md)(관련 — 추론 강도는 과제를 아는 부르는 쪽이 고른다)
 
 ## 맥락

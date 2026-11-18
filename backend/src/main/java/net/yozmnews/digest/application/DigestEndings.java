@@ -2,9 +2,9 @@ package net.yozmnews.digest.application;
 
 import java.util.Objects;
 
+import net.yozmnews.digest.DigestStatus;
 import net.yozmnews.digest.domain.digest.Digest;
 import net.yozmnews.digest.domain.digest.DigestRepository;
-import net.yozmnews.digest.domain.digest.DigestStatus;
 import net.yozmnews.digest.domain.digest.FailureCauses;
 import net.yozmnews.user.DigestFailed;
 import org.springframework.context.ApplicationEventPublisher;

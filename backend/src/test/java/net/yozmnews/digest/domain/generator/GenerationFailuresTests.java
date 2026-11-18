@@ -2,7 +2,7 @@ package net.yozmnews.digest.domain.generator;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import net.yozmnews.digest.domain.digest.DigestFailure;
+import net.yozmnews.digest.DigestFailure;
 import net.yozmnews.llm.LlmFailureKind;
 import org.junit.jupiter.api.Test;
 
