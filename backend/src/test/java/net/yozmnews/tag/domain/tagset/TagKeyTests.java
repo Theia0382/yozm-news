@@ -28,6 +28,8 @@ class TagKeyTests {
 		assertThat(new TagKey("politics").isChild()).isFalse();
 		assertThat(new TagKey("politics.executive").leaf()).isEqualTo("executive");
 		assertThat(new TagKey("politics").leaf()).isEqualTo("politics");
+		assertThat(new TagKey("politics.executive").category()).hasValue(new TagKey("politics"));
+		assertThat(new TagKey("politics").category()).isEmpty();
 	}
 
 }

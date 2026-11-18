@@ -29,6 +29,15 @@ class TagSetNamesTests {
 	}
 
 	@Test
+	void aSubtopicKeyOfThisVersionKnowsItsCategory() {
+		assertThat(NAMES.categoryOf("politics.executive")).hasValue("politics");
+		assertThat(NAMES.categoryOf("world.politics")).hasValue("world");
+		assertThat(NAMES.categoryOf("politics")).as("대분류 키").isEmpty();
+		assertThat(NAMES.categoryOf("politics.legislature")).as("이 버전에 없는 중분류 키").isEmpty();
+		assertThat(NAMES.categoryOf("us")).as("지역 키").isEmpty();
+	}
+
+	@Test
 	void theOrderIsTheTagSetOrderWithCategoriesFirst() {
 		assertThat(NAMES.topicOrder()).containsExactly(java.util.Map.entry("politics", 0),
 				java.util.Map.entry("world", 1), java.util.Map.entry("politics.executive", 2),
