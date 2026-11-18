@@ -2,6 +2,7 @@ package net.yozmnews.digest.domain.schedule;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -68,6 +69,12 @@ class DigestScheduleRulesTests {
 		// 대조 — 가장 늦은 날짜가 앞이면 만든다
 		assertThat(DigestScheduleRules.dueDate(now, SEVEN, SEOUL, LocalDate.parse("2026-11-18")))
 			.contains(LocalDate.parse("2026-11-19"));
+	}
+
+	@Test
+	void theLeaseCoversTwoLongestGenerationCallsAndTenMinutes() {
+		// 생성 호출 하나의 최악 15분 × 2(다시 묻기) + 10분
+		assertThat(DigestScheduleRules.RUN_LEASE).isEqualTo(Duration.ofMinutes(40));
 	}
 
 }

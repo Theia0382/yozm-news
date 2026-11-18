@@ -9,6 +9,7 @@ import java.time.ZonedDateTime;
 import java.util.Objects;
 import java.util.Optional;
 
+import net.yozmnews.llm.LlmClientFactory;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -20,6 +21,19 @@ public final class DigestScheduleRules {
 
 	/** 생성 시각이 지난 뒤 따라잡아 만드는 창 — 지나면 그 날짜는 만들지 않는다 */
 	public static final Duration CATCH_UP = Duration.ofHours(2);
+
+	/** 등록한 생성 작업이 시작되기를 기다리는 시간 — 지나도 생성을 기다리면 새 토큰으로 다시 등록한다 */
+	public static final Duration DISPATCH_WAIT = Duration.ofMinutes(15);
+
+	/** 만든 다이제스트가 시작될 기한 — 지나도 생성을 기다리면 다시 등록하지 않고 끝나지 않은 실패로 끝낸다 */
+	public static final Duration START_DEADLINE = Duration.ofHours(1);
+
+	/**
+	 * 생성 중인 다이제스트의 임대 — 시작한 지 이만큼 지나도 끝나지 않으면 멈춘 생성으로 보고 끝나지 않은 실패로 끝낸다. 생성 호출 둘(끝까지 쓴 응답을
+	 * 읽지 못하면 한 번 다시 묻는다)의 가장 긴 시간과 선별 뒤 트랜잭션의 여유 10분이다
+	 */
+	public static final Duration RUN_LEASE = LlmClientFactory.LONGEST_GENERATION_CALL.multipliedBy(2)
+		.plus(Duration.ofMinutes(10));
 
 	private DigestScheduleRules() {
 	}

@@ -3,6 +3,7 @@ package net.yozmnews.digest.domain.digest;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -22,5 +23,11 @@ public interface DigestLedger {
 
 	/** 그 사용자의 끝난 다이제스트 가운데 {@code READY} · {@code EMPTY} 인 것의 가장 늦은 기간 끝 */
 	Optional<Instant> lastCoveredEnd(UserId user);
+
+	/** 생성을 기다리고 마지막 등록 시각이 {@code before} 보다 이른 다이제스트 — 등록 시각 · ID 순으로 {@code limit} 개까지 */
+	List<DigestId> stalledScheduled(Instant before, int limit);
+
+	/** 생성 중이고 시작 시각이 {@code before} 보다 이른 다이제스트 — 시작 시각 · ID 순으로 {@code limit} 개까지 */
+	List<DigestId> stalledRunning(Instant before, int limit);
 
 }

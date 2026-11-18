@@ -52,12 +52,6 @@ class LlmClientFactoryService implements LlmClientFactory {
 	/** 키 검증의 요청 하나 마감(헤더 · 본문 전부) — 화면 요청 안에서 불러도 되는 길이다 */
 	static final Duration VALIDATION_DEADLINE = Duration.ofSeconds(15);
 
-	/**
-	 * 생성 호출의 요청 하나 마감(헤더 · 본문 전부) — 측정 전의 잠정값이다. 허용 모델이 다이제스트 한 편을 다 쓰는 시간을 재서 고친다. 스트리밍
-	 * 없이 응답 전체를 기다리므로 출력 전체의 생성 시간을 덮어야 한다.
-	 */
-	static final Duration GENERATION_DEADLINE = Duration.ofSeconds(180);
-
 	/** 예상 밖 예외의 실패 문구 머리(키 확인) — 뒤에 예외 클래스 이름을 잇는다 */
 	static final String UNEXPECTED_FAILURE = "LLM 키 확인 중 예상 못한 오류 — ";
 
@@ -180,7 +174,7 @@ class LlmClientFactoryService implements LlmClientFactory {
 		GenerationCall call = new GenerationCall(model.id(), model.structuredOutput(), request.instructions(),
 				request.userContent(), request.outputSchema(), request.effort(),
 				OutputBudget.total(request.maxBodyTokens(), request.effort()));
-		try (LlmProviderClient client = this.clients.open(provider, key, GENERATION_DEADLINE)) {
+		try (LlmProviderClient client = this.clients.open(provider, key, LlmClientFactory.GENERATION_DEADLINE)) {
 			int sent = 0;
 			while (true) {
 				GenerationOutcome outcome = client.generate(call);

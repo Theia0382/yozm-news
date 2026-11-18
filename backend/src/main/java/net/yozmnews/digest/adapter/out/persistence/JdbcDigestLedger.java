@@ -4,12 +4,15 @@ import java.sql.ResultSet;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import net.yozmnews.digest.domain.digest.DigestId;
 import net.yozmnews.digest.domain.digest.DigestLedger;
 import net.yozmnews.platform.UserId;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -63,6 +66,30 @@ class JdbcDigestLedger implements DigestLedger {
 			.param("user", user.value())
 			.query((rs, n) -> rs.getObject(1, OffsetDateTime.class).toInstant())
 			.optional();
+	}
+
+	@Override
+	public List<DigestId> stalledScheduled(Instant before, int limit) {
+		return this.jdbc.sql("""
+				select id from digests where status = 'SCHEDULED' and dispatched_at < :before
+				order by dispatched_at, id limit :limit
+				""")
+			.param("before", before.atOffset(ZoneOffset.UTC))
+			.param("limit", limit)
+			.query((rs, n) -> new DigestId(rs.getLong(1)))
+			.list();
+	}
+
+	@Override
+	public List<DigestId> stalledRunning(Instant before, int limit) {
+		return this.jdbc.sql("""
+				select id from digests where status = 'RUNNING' and started_at < :before
+				order by started_at, id limit :limit
+				""")
+			.param("before", before.atOffset(ZoneOffset.UTC))
+			.param("limit", limit)
+			.query((rs, n) -> new DigestId(rs.getLong(1)))
+			.list();
 	}
 
 }
