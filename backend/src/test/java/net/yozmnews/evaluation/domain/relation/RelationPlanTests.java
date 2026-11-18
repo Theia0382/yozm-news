@@ -23,7 +23,7 @@ import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 /**
- * 물을 서술 고르기와 결과 대조 — 지워진 기사 · 빈 제목의 서술을 빼고, 표시된 사건에만 요약문을 싣고, 답 다섯을 본다.
+ * 물을 서술 고르기와 결과 대조 — 지워진 기사 · 빈 제목의 서술을 빼고, 표시된 사건에만 요약문을 싣고, 결과를 그 문구 판의 답과 견준다.
  * <p>
  * 지키는 규칙: evaluation-R49
  */
@@ -97,19 +97,24 @@ class RelationPlanTests {
 	}
 
 	@Test
-	void theResultMustCarryExactlyTheFiveAnswersAndAStorableResponse() {
+	void theResultMustCarryExactlyTheAnswersOfItsWordingAndAStorableResponse() {
 		Map<RelationAnswer, Double> all = Map.of(RelationAnswer.NONE, 0.6, RelationAnswer.SECOND_PART_OF_FIRST, 0.1,
 				RelationAnswer.FIRST_PART_OF_SECOND, 0.1, RelationAnswer.FIRST_LED_TO_SECOND, 0.1,
 				RelationAnswer.SECOND_LED_TO_FIRST, 0.1);
 		Map<RelationAnswer, Double> three = Map.of(RelationAnswer.NONE, 0.6, RelationAnswer.SECOND_PART_OF_FIRST, 0.1,
 				RelationAnswer.FIRST_PART_OF_SECOND, 0.1);
 
-		assertThat(RelationCheck.mismatch(new Relation(all, 0.5, 0.5, "jev", "jev-1", 10, "{}"))).isEmpty();
-		assertThat(RelationCheck.mismatch(new Relation(three, 0.5, 0.5, "jev", "jev-1", 10, "{}")))
-			.contains("답이 선택지 다섯과 다르다 — 빠진 답 [FIRST_LED_TO_SECOND, SECOND_LED_TO_FIRST], 모르는 답 []");
-		assertThat(RelationCheck.mismatch(new Relation(all, 0.5, 0.5, "jev", "jev-1", 10, "not json")))
+		RelationWording earlier = RelationWording.RELATION_1;
+
+		assertThat(RelationCheck.mismatch(new Relation(all, 0.5, 0.5, "jev", "jev-1", 10, "{}"), earlier)).isEmpty();
+		assertThat(RelationCheck.mismatch(new Relation(three, 0.5, 0.5, "jev", "jev-1", 10, "{}"), earlier)).contains(
+				"답이 문구 판 relation-1 의 선택지와 다르다 — 빠진 답 [FIRST_LED_TO_SECOND, SECOND_LED_TO_FIRST], 모르는 답 []");
+		// 같은 답 다섯이라도 조각 답이 있는 판에는 모자란다
+		assertThat(RelationCheck.mismatch(new Relation(all, 0.5, 0.5, "jev", "jev-1", 10, "{}"), RelationWording.RELATION_2))
+			.contains("답이 문구 판 relation-2 의 선택지와 다르다 — 빠진 답 [SAME_MATTER], 모르는 답 []");
+		assertThat(RelationCheck.mismatch(new Relation(all, 0.5, 0.5, "jev", "jev-1", 10, "not json"), earlier))
 			.contains("원본 응답이 JSON 이 아니다");
-		assertThat(RelationCheck.mismatch(new Relation(all, 0.5, 0.5, "jev", "jev-1", 10, "{\"a\":\"\\u0000\"}")))
+		assertThat(RelationCheck.mismatch(new Relation(all, 0.5, 0.5, "jev", "jev-1", 10, "{\"a\":\"\\u0000\"}"), earlier))
 			.contains("원본 응답에 문자 U+0000 이 있다");
 	}
 

@@ -20,6 +20,7 @@ import net.yozmnews.evaluation.domain.evaluator.MembershipInput;
 import net.yozmnews.evaluation.domain.evaluator.MembershipResult;
 import net.yozmnews.evaluation.domain.evaluator.Relation;
 import net.yozmnews.evaluation.domain.evaluator.RelationResult;
+import net.yozmnews.evaluation.domain.evaluator.RelationWording;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
@@ -76,15 +77,16 @@ public final class JevResponse {
 	}
 
 	/**
-	 * @return 관계 질문의 선택지 다섯과 두 흐름의 한 사안 질문에 0 ~ 1 의 유한 확률이 있으면 {@link Relation}, 아니면 평가기 사용 불가
-	 * 실패 — 문구는 첫 문제 하나(질문 이름만)와 요청 ID
+	 * @param wording 그 응답을 받은 요청의 문구 판 — 그 판의 선택지만 읽는다
+	 * @return 관계 질문의 그 판 선택지 모두와 두 흐름의 한 사안 질문에 0 ~ 1 의 유한 확률이 있으면 {@link Relation}, 아니면 평가기 사용
+	 * 불가 실패 — 문구는 첫 문제 하나(질문 이름만)와 요청 ID
 	 */
-	public static RelationResult readRelation(String body, @Nullable String requestId) {
+	public static RelationResult readRelation(String body, @Nullable String requestId, RelationWording wording) {
 		try {
 			Envelope envelope = envelope(body);
 			JsonNode relation = probabilities(envelope.answers(), JevRequest.RELATION, "choice");
 			Map<RelationAnswer, Double> probabilities = new LinkedHashMap<>();
-			for (RelationAnswer answer : JevRequest.RELATION_OPTIONS) {
+			for (RelationAnswer answer : wording.order()) {
 				String key = JevRequest.relationOption(answer);
 				probabilities.put(answer, probability(relation.get(key), JevRequest.RELATION + "." + key));
 			}

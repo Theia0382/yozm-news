@@ -105,17 +105,17 @@ class AdminBigStorylineController {
 			.of(this.administration.change(body.minIntensity(), ChangeActor.OPERATOR));
 	}
 
-	/** 큰 스토리라인마다 대표 사건의 대표 기사와 그 정보 — 대표 조회 · 기사 정보 조회 한 번씩 */
+	/** 큰 스토리라인(행과 그 아래 행)마다 대표 사건의 대표 기사와 그 정보 — 대표 조회 · 기사 정보 조회 한 번씩 */
 	private Map<EventId, AdminRepresentatives.Representative> representatives(List<BigStoryline> storylines) {
-		return this.representatives.of(storylines.stream().map(big -> big.storyline().representativeEvent()).toList());
+		return this.representatives.of(storylines.stream()
+			.flatMap(big -> Stream.concat(Stream.of(big), big.branches().stream()))
+			.map(big -> big.storyline().representativeEvent())
+			.toList());
 	}
 
 	private static List<BigStorylineRowResponse> rows(List<BigStoryline> storylines,
 			Map<EventId, AdminRepresentatives.Representative> representatives) {
-		return storylines.stream()
-			.map(big -> BigStorylineRowResponse.of(big, representatives.getOrDefault(big.storyline().representativeEvent(),
-					AdminRepresentatives.Representative.NONE)))
-			.toList();
+		return storylines.stream().map(big -> BigStorylineRowResponse.of(big, representatives)).toList();
 	}
 
 }

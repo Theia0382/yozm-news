@@ -42,9 +42,7 @@ import net.yozmnews.storyline.domain.linking.Subject;
 import net.yozmnews.storyline.domain.linking.TermWeights;
 import net.yozmnews.storyline.domain.queue.LinkingQueueRepository;
 import net.yozmnews.storyline.domain.queue.PendingEvent;
-import net.yozmnews.storyline.domain.relation.RelationMove;
 import net.yozmnews.storyline.domain.relation.RelationQueueRepository;
-import net.yozmnews.storyline.domain.relation.RelationRepository;
 import net.yozmnews.storyline.domain.storyline.LinkJudgement;
 import net.yozmnews.storyline.domain.storyline.StorylineRepository;
 import net.yozmnews.storyline.domain.storyline.StorylineSnapshot;
@@ -76,21 +74,21 @@ class StorylineLinker {
 
 	private final LinkingAskedRepository asked;
 
-	private final RelationRepository relations;
-
 	private final RelationQueueRepository relationQueue;
+
+	private final StorylineMerger merger;
 
 	private final ApplicationEventPublisher publisher;
 
 	StorylineLinker(EventDirectory events, StorylineRepository storylines, LinkingQueueRepository queue,
-			LinkingAskedRepository asked, RelationRepository relations, RelationQueueRepository relationQueue,
+			LinkingAskedRepository asked, RelationQueueRepository relationQueue, StorylineMerger merger,
 			ApplicationEventPublisher publisher) {
 		this.events = events;
 		this.storylines = storylines;
 		this.queue = queue;
 		this.asked = asked;
-		this.relations = relations;
 		this.relationQueue = relationQueue;
+		this.merger = merger;
 		this.publisher = publisher;
 	}
 
@@ -490,10 +488,8 @@ class StorylineLinker {
 				}
 				case Tidying.MergeInto merge -> {
 					for (long merged : merge.merged()) {
-						followMerge(merged, merge.survivor(), now);
-						this.storylines.merge(merged, merge.survivor(), now);
+						retired.add(this.merger.merge(merged, merge.survivor(), null, now));
 						gone.add(merged);
-						retired.add(new RetiredStoryline(new StorylineId(merged), null));
 					}
 					if (merge.survivor() == storyline && represent.contains(storyline)) {
 						represent(storyline, members, now);
@@ -505,17 +501,6 @@ class StorylineLinker {
 		if (!retired.isEmpty()) {
 			this.publisher.publishEvent(new StorylinesRetired(retired));
 		}
-	}
-
-	/**
-	 * 합쳐질 스토리라인의 관계를 남는 스토리라인으로 옮기고, 그 물은 기록(관계 · 잇기)과 관계 대기 행을 지운다(storyline-R32 ·
-	 * storyline-R36) — 합쳐진 행은 남으므로 FK 연쇄가 돌지 않는다. 합치기 전에 부른다
-	 */
-	private void followMerge(long merged, long survivor, Instant now) {
-		this.relations.applyMove(RelationMove.plan(this.relations.all(), merged, survivor), now);
-		this.relations.forgetAsked(merged);
-		this.relationQueue.delete(merged);
-		this.asked.forgetStoryline(merged);
 	}
 
 	/** 구성 사건의 지금 표현으로 스토리라인 표현을 다시 정한다 — 읽을 구성 사건이 없으면 그대로 둔다(storyline-R7) */
@@ -552,7 +537,7 @@ class StorylineLinker {
 			.toList();
 	}
 
-	private static List<EventProfile> readable(List<Long> members, Map<EventId, EventProfile> profiles) {
+	static List<EventProfile> readable(List<Long> members, Map<EventId, EventProfile> profiles) {
 		return members.stream().map(member -> profiles.get(new EventId(member))).filter(p -> p != null).toList();
 	}
 

@@ -10,10 +10,11 @@ import java.util.Objects;
 public sealed interface RelationJudgement {
 
 	/**
-	 * 판정했다 — 답 다섯의 확률과 흐름마다 한 사안의 전개일 확률.
+	 * 판정했다 — 지금 문구 판의 답 모두의 확률과 흐름마다 한 사안의 전개일 확률.
 	 *
 	 * @param judgement 남긴 판정 원본
-	 * @param probabilities 답 → 확률 — 다섯 답 모두. 합은 계약하지 않는다
+	 * @param probabilities 답 → 확률 — {@link RelationAnswer} 의 답 모두(판정은 언제나 지금 문구 판이고 그 판의 답은 모든 답이다). 합은
+	 * 계약하지 않는다
 	 * @param firstOneMatter first 가 한 사안의 전개일 확률
 	 * @param secondOneMatter second 가 한 사안의 전개일 확률
 	 */
@@ -21,13 +22,13 @@ public sealed interface RelationJudgement {
 			double secondOneMatter) implements RelationJudgement {
 
 		/**
-		 * @throws IllegalArgumentException 답 다섯이 모두 있지 않거나 확률이 0 이상 1 이하의 유한값이 아닐 때
+		 * @throws IllegalArgumentException 답이 모두 있지 않거나 확률이 0 이상 1 이하의 유한값이 아닐 때
 		 */
 		public Judged {
 			Objects.requireNonNull(judgement, "judgement");
 			Objects.requireNonNull(probabilities, "probabilities");
 			if (!probabilities.keySet().equals(EnumSet.allOf(RelationAnswer.class))) {
-				throw new IllegalArgumentException("답 다섯의 확률이 모두 있어야 한다: " + probabilities.keySet());
+				throw new IllegalArgumentException("모든 답의 확률이 있어야 한다: " + probabilities.keySet());
 			}
 			probabilities.values().forEach(Judged::requireProbability);
 			requireProbability(firstOneMatter);

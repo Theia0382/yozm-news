@@ -76,15 +76,16 @@ import tools.jackson.databind.json.JsonMapper;
  * <li>판정 입력 토큰 — 제목 · 요약과 후보마다 질문 문장의 코드 포인트 합을 2로 나눠 올린 값</li>
  * <li>판정 원본 응답 — 평가기 이름 · 버전과 사건 ID 순의 확률({@code events})을 담은 JSON</li>
  * <li>관계 판정 — 흐름의 조각은 그 흐름 서술 제목들의 조각 합집합이다. 두 흐름의 조각 집합 A · B 의 겹침은
- * {@code |A ∩ B| / min(|A|, |B|)} 이다(한쪽이 비면 0). 겹침이 0 이면 해당 없음이 {@value #RELATION_NONE} 이고 나머지 넷이 그
- * 나머지를 똑같이 나눈다. 겹침이 있으면 서술 사건이 적은 흐름이 많은 흐름의 부분이라는 답(같으면 second 가 first 의 부분)이
- * {@code RELATION_FLOOR + RELATION_SPAN * 겹침}({@value #RELATION_FLOOR} · {@value #RELATION_SPAN})이고 나머지 넷이 그 나머지를
+ * {@code |A ∩ B| / min(|A|, |B|)} 이다(한쪽이 비면 0). 답은 넘긴 문구 판의 답이다. 겹침이 0 이면 해당 없음이
+ * {@value #RELATION_NONE} 이고 나머지 답이 그 나머지를 똑같이 나눈다. 겹침이 있으면 서술 사건이 적은 흐름이 많은 흐름의 부분이라는
+ * 답이고, 서술 사건 수가 같으면 같은 사안의 조각이라는 답(그 답이 없는 판이면 second 가 first 의 부분)이
+ * {@code RELATION_FLOOR + RELATION_SPAN * 겹침}({@value #RELATION_FLOOR} · {@value #RELATION_SPAN})이고 나머지 답이 그 나머지를
  * 똑같이 나눈다</li>
  * <li>한 사안 확률 — 서술 제목이 하나면 {@value #ONE_MATTER_SINGLE}. 둘 이상이면 그 흐름의 다른 서술 제목과 조각을 하나라도 함께 가진
  * 제목의 비율 r 로 {@code ONE_MATTER_FLOOR + ONE_MATTER_SPAN * r}({@value #ONE_MATTER_FLOOR} · {@value #ONE_MATTER_SPAN})</li>
- * <li>관계 판정 입력 토큰 — state 와 관계 질문 · 선택지 다섯 · 한 사안 질문 둘의 코드 포인트 합을 2로 나눠 올린 값</li>
+ * <li>관계 판정 입력 토큰 — state 와 관계 질문 · 그 판의 선택지 모두 · 한 사안 질문 둘의 코드 포인트 합을 2로 나눠 올린 값</li>
  * <li>관계 판정 원본 응답 — 평가기 이름 · 버전과 답 이름 순의 확률({@code relation}), 두 한 사안 확률({@code oneMatter})을 담은
- * JSON. 다시 읽기는 같은 키로 답 다섯과 한 사안 확률 둘을 읽고, 입력 토큰은 원본에 없어 0 이다</li>
+ * JSON. 다시 읽기는 같은 키로 넘긴 문구 판의 답마다 확률과 한 사안 확률 둘을 읽고, 입력 토큰은 원본에 없어 0 이다</li>
  * </ul>
  * 넘긴 질문 묶음은 검증된 체계에서 왔다 — 주제 · 중분류 · 지역이 하나 이상, 형식 선택지가 둘 이상이다.
  */
@@ -94,7 +95,7 @@ public final class FakeArticleEvaluator implements ArticleEvaluator {
 	public static final String NAME = "fake";
 
 	/** 모델 버전 — 규칙을 바꾸면 올린다 */
-	public static final String MODEL_VERSION = "fake-rules-2";
+	public static final String MODEL_VERSION = "fake-rules-3";
 
 	/** 원본 응답의 키 — 쓰기와 다시 읽기가 함께 쓴다 */
 	private static final String RAW_EVALUATOR = "evaluator";
@@ -206,14 +207,15 @@ public final class FakeArticleEvaluator implements ArticleEvaluator {
 
 	/** 자기가 남긴 관계 판정 원본 응답을 다시 읽는다 */
 	@Override
-	public RelationRereadResult rereadRelation(String evaluator, String rawResponse) {
+	public RelationRereadResult rereadRelation(String evaluator, String rawResponse, RelationWording wording) {
 		Objects.requireNonNull(evaluator, "evaluator");
 		Objects.requireNonNull(rawResponse, "rawResponse");
+		Objects.requireNonNull(wording, "wording");
 		if (!NAME.equals(evaluator)) {
 			return new RereadFailure(RereadFailure.Kind.OTHER_EVALUATOR, "Fake 가 남긴 원본 응답이 아니다 — 평가기 " + evaluator);
 		}
 		try {
-			return rereadRelation(rawResponse);
+			return rereadRelation(rawResponse, wording);
 		}
 		catch (Unreadable ex) {
 			return new RereadFailure(RereadFailure.Kind.UNREADABLE, "Fake 원본 응답을 읽을 수 없다 — " + ex.getMessage());
@@ -256,7 +258,7 @@ public final class FakeArticleEvaluator implements ArticleEvaluator {
 		if (failure != null) {
 			return failure;
 		}
-		Map<RelationAnswer, Double> probabilities = relation(input.first(), input.second());
+		Map<RelationAnswer, Double> probabilities = relation(input.first(), input.second(), input.wording().answers());
 		double firstOneMatter = oneMatter(input.first());
 		double secondOneMatter = oneMatter(input.second());
 		List<String> texts = new ArrayList<>();
@@ -276,8 +278,11 @@ public final class FakeArticleEvaluator implements ArticleEvaluator {
 				JSON.writeValueAsString(raw));
 	}
 
-	/** 답 다섯의 확률 — 겹침이 없으면 해당 없음, 있으면 서술 사건이 적은 흐름이 많은 흐름의 부분 */
-	private static Map<RelationAnswer, Double> relation(FlowText first, FlowText second) {
+	/**
+	 * 그 문구 판의 답마다 확률 — 겹침이 없으면 해당 없음, 있으면 서술 사건이 적은 흐름이 많은 흐름의 부분이다. 서술 사건 수가 같으면 조각 답이
+	 * 있는 판에서는 같은 사안의 조각, 없는 판에서는 second 가 first 의 부분이다
+	 */
+	private static Map<RelationAnswer, Double> relation(FlowText first, FlowText second, Set<RelationAnswer> answers) {
 		Set<String> a = flowPieces(first);
 		Set<String> b = flowPieces(second);
 		long shared = a.stream().filter(b::contains).count();
@@ -288,14 +293,20 @@ public final class FakeArticleEvaluator implements ArticleEvaluator {
 			probability = RELATION_NONE;
 		}
 		else {
-			chosen = (first.described().size() < second.described().size()) ? RelationAnswer.FIRST_PART_OF_SECOND
-					: RelationAnswer.SECOND_PART_OF_FIRST;
+			int firstDescribed = first.described().size();
+			int secondDescribed = second.described().size();
+			if (firstDescribed == secondDescribed && answers.contains(RelationAnswer.SAME_MATTER)) {
+				chosen = RelationAnswer.SAME_MATTER;
+			}
+			else {
+				chosen = (firstDescribed < secondDescribed) ? RelationAnswer.FIRST_PART_OF_SECOND
+						: RelationAnswer.SECOND_PART_OF_FIRST;
+			}
 			probability = RELATION_FLOOR + RELATION_SPAN * shared / Math.min(a.size(), b.size());
 		}
 		Map<RelationAnswer, Double> probabilities = new EnumMap<>(RelationAnswer.class);
-		RelationAnswer[] answers = RelationAnswer.values();
 		for (RelationAnswer answer : answers) {
-			probabilities.put(answer, (answer == chosen) ? probability : (1 - probability) / (answers.length - 1));
+			probabilities.put(answer, (answer == chosen) ? probability : (1 - probability) / (answers.size() - 1));
 		}
 		return probabilities;
 	}
@@ -529,12 +540,12 @@ public final class FakeArticleEvaluator implements ArticleEvaluator {
 		return new Evaluation(topics, regions, formats, importance, NAME, model, 0, rawResponse);
 	}
 
-	/** 원본 응답에서 답 다섯의 확률과 두 한 사안 확률을 읽는다 — 판정 때 쓴 키 그대로 */
-	private static Relation rereadRelation(String rawResponse) {
+	/** 원본 응답에서 그 문구 판의 답마다 확률과 두 한 사안 확률을 읽는다 — 판정 때 쓴 키 그대로 */
+	private static Relation rereadRelation(String rawResponse, RelationWording wording) {
 		JsonNode root = root(rawResponse);
 		String model = modelVersion(root);
 		Map<RelationAnswer, Double> probabilities = new EnumMap<>(RelationAnswer.class);
-		for (RelationAnswer answer : RelationAnswer.values()) {
+		for (RelationAnswer answer : wording.answers()) {
 			probabilities.put(answer, probability(root, RAW_RELATION, answer.name()));
 		}
 		JsonNode oneMatter = root.get(RAW_ONE_MATTER);

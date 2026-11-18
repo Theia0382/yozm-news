@@ -5836,6 +5836,12 @@
             "type" : "integer",
             "format" : "int32"
           },
+          "branches" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/BigStorylineRowResponse"
+            }
+          },
           "eventCount" : {
             "type" : "integer",
             "format" : "int32"
@@ -5882,7 +5888,7 @@
             "enum" : [ "ACTIVE", "QUIET", "ENDED" ]
           }
         },
-        "required" : [ "articleCount", "eventCount", "firstArticleAt", "id", "importance", "intensity", "lastArticleAt", "periodArticles", "periodSources", "representative", "representativeArticleId", "state" ]
+        "required" : [ "articleCount", "branches", "eventCount", "firstArticleAt", "id", "importance", "intensity", "lastArticleAt", "periodArticles", "periodSources", "representative", "representativeArticleId", "state" ]
       },
       "CategoryCoverage" : {
         "type" : "object",
@@ -8525,6 +8531,10 @@
             "type" : "number",
             "format" : "double"
           },
+          "mergeProbability" : {
+            "type" : "number",
+            "format" : "double"
+          },
           "minEvents" : {
             "type" : "integer",
             "format" : "int32"
@@ -8542,7 +8552,7 @@
             "format" : "int64"
           }
         },
-        "required" : [ "candidateScore", "minEvents", "oneMatter", "probability", "windowSeconds" ]
+        "required" : [ "candidateScore", "mergeProbability", "minEvents", "oneMatter", "probability", "windowSeconds" ]
       },
       "RelationJudgementResponse" : {
         "type" : "object",
@@ -8589,6 +8599,10 @@
             "type" : "string",
             "enum" : [ "READ", "NO_EVALUATOR", "OTHER_EVALUATOR", "UNREADABLE" ]
           },
+          "sameMatter" : {
+            "type" : [ "number", "null" ],
+            "format" : "double"
+          },
           "secondId" : {
             "type" : "integer",
             "format" : "int64"
@@ -8609,7 +8623,7 @@
             "type" : "string"
           }
         },
-        "required" : [ "firstId", "firstLedToSecond", "firstOneMatter", "firstPartOfSecond", "id", "inputTokens", "judgedAt", "message", "modelVersion", "none", "reading", "secondId", "secondLedToFirst", "secondOneMatter", "secondPartOfFirst", "wordingVersion" ]
+        "required" : [ "firstId", "firstLedToSecond", "firstOneMatter", "firstPartOfSecond", "id", "inputTokens", "judgedAt", "message", "modelVersion", "none", "reading", "sameMatter", "secondId", "secondLedToFirst", "secondOneMatter", "secondPartOfFirst", "wordingVersion" ]
       },
       "RemovedStorylineResponse" : {
         "type" : "object",
@@ -9028,7 +9042,7 @@
           },
           "outcome" : {
             "type" : "string",
-            "enum" : [ "LINKED", "NOT_RELATED", "LOW_PROBABILITY", "NOT_ONE_MATTER", "CYCLE", "SECOND_PARENT", "NOTHING_TO_ASK", "REJECTED" ]
+            "enum" : [ "LINKED", "NOT_RELATED", "LOW_PROBABILITY", "NOT_ONE_MATTER", "CYCLE", "SECOND_PARENT", "UNMERGED", "NOTHING_TO_ASK", "REJECTED" ]
           },
           "smallerEvents" : {
             "type" : "integer",
@@ -9163,6 +9177,12 @@
             "type" : "string",
             "format" : "date-time"
           },
+          "merged" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/StorylineMergedResponse"
+            }
+          },
           "parentId" : {
             "type" : [ "integer", "null" ],
             "format" : "int64"
@@ -9193,7 +9213,7 @@
             "enum" : [ "ACTIVE", "QUIET", "ENDED" ]
           }
         },
-        "required" : [ "articleCount", "asked", "createdAt", "eventCount", "events", "firstArticleAt", "id", "lastArticleAt", "parentId", "relations", "representative", "representativeArticleId", "requestedId", "state" ]
+        "required" : [ "articleCount", "asked", "createdAt", "eventCount", "events", "firstArticleAt", "id", "lastArticleAt", "merged", "parentId", "relations", "representative", "representativeArticleId", "requestedId", "state" ]
       },
       "StorylineEventResponse" : {
         "type" : "object",
@@ -9331,6 +9351,10 @@
             "type" : "string",
             "enum" : [ "RULE", "PAIR", "MERGE" ]
           },
+          "mergedFrom" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int64"
+          },
           "probability" : {
             "type" : [ "number", "null" ],
             "format" : "double"
@@ -9344,7 +9368,39 @@
             "format" : "int64"
           }
         },
-        "required" : [ "cosine", "criteria", "judgementId", "keyTermOverlap", "linkedAt", "linkedBy", "probability", "score", "storylineId" ]
+        "required" : [ "cosine", "criteria", "judgementId", "keyTermOverlap", "linkedAt", "linkedBy", "mergedFrom", "probability", "score", "storylineId" ]
+      },
+      "StorylineMergedResponse" : {
+        "type" : "object",
+        "properties" : {
+          "criteria" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/RelationCriteriaResponse"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "judgement" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/RelationJudgementResponse"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "judgementId" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int64"
+          },
+          "mergedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        },
+        "required" : [ "criteria", "id", "judgement", "judgementId", "mergedAt" ]
       },
       "StorylinePageCursorResponse" : {
         "type" : "object",

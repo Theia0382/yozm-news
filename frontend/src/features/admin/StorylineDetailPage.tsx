@@ -107,6 +107,7 @@ function DetailView({ detail }: { detail: Detail }) {
       <EventsSection detail={detail} />
       <RelationsSection detail={detail} />
       <AskedSection detail={detail} />
+      <MergedSection detail={detail} />
     </>
   );
 }
@@ -208,6 +209,9 @@ function MembershipText({
           · 판정 확률 {formatProbability(membership.probability)} · 원본 #
           {membership.judgementId}
         </>
+      )}
+      {membership.mergedFrom !== null && (
+        <> · 합쳐진 스토리라인 {membership.mergedFrom} 에서 옮겨 옴</>
       )}
       {membership.criteria !== null && (
         <span className="block text-muted-foreground">
@@ -351,6 +355,64 @@ function AskedSection({ detail }: { detail: Detail }) {
   );
 }
 
+/** 이 스토리라인에 합쳐진 스토리라인 — 같은 사안의 조각으로 합쳤으면 그 기준과 판정 원본을 보인다 */
+function MergedSection({ detail }: { detail: Detail }) {
+  if (detail.merged.length === 0) {
+    return null;
+  }
+  return (
+    <section aria-label="합쳐진 스토리라인" className="space-y-2">
+      <h3 className="text-lg font-semibold">합쳐진 스토리라인</h3>
+      <p className="text-sm text-muted-foreground">
+        이 스토리라인에 합쳐져 더는 따로 보이지 않는 스토리라인이다 — 합치기는
+        되돌리지 않는다
+      </p>
+      <div className="overflow-x-auto">
+        <table
+          aria-label="합쳐진 스토리라인"
+          className={`w-full text-left text-sm ${REVIEW_TABLE}`}
+        >
+          <thead>
+            <tr>
+              <th className="font-medium">스토리라인</th>
+              <th className="font-medium">합친 시각</th>
+              <th className="font-medium">합친 까닭</th>
+              <th className="font-medium">기준</th>
+              <th className="font-medium">판정 원본</th>
+            </tr>
+          </thead>
+          <tbody>
+            {detail.merged.map((merged) => (
+              <tr key={merged.id} className="align-top">
+                <td className="tabular-nums">{merged.id}</td>
+                <td>{formatDateTime(merged.mergedAt)}</td>
+                <td>
+                  {merged.criteria === null
+                    ? "정돈 — 구성 사건이 같거나 하나만 남음"
+                    : "같은 사안의 조각"}
+                </td>
+                <td>
+                  {merged.criteria === null
+                    ? ""
+                    : relationCriteriaText(merged.criteria)}
+                </td>
+                <td>
+                  {merged.judgementId !== null && (
+                    <JudgementText
+                      judgementId={merged.judgementId}
+                      judgement={merged.judgement}
+                    />
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
 /** 판정 원본의 답을 읽는 법 */
 function JudgementLegend() {
   return (
@@ -387,13 +449,16 @@ function JudgementText({
       </span>
       {judgement.reading === "READ" ? (
         <span className="block tabular-nums">
-          해당 없음 {formatProbability(judgement.none)} · {second} ⊂ {first}{" "}
-          {formatProbability(judgement.secondPartOfFirst)} · {first} ⊂ {second}{" "}
-          {formatProbability(judgement.firstPartOfSecond)} · {first} → {second}{" "}
-          {formatProbability(judgement.firstLedToSecond)} · {second} → {first}{" "}
-          {formatProbability(judgement.secondLedToFirst)} · 한 사안 {first}{" "}
-          {formatProbability(judgement.firstOneMatter)} · {second}{" "}
-          {formatProbability(judgement.secondOneMatter)}
+          해당 없음 {formatProbability(judgement.none)} ·{" "}
+          {judgement.sameMatter != null && (
+            <>조각 {formatProbability(judgement.sameMatter)} · </>
+          )}
+          {second} ⊂ {first} {formatProbability(judgement.secondPartOfFirst)} ·{" "}
+          {first} ⊂ {second} {formatProbability(judgement.firstPartOfSecond)} ·{" "}
+          {first} → {second} {formatProbability(judgement.firstLedToSecond)} ·{" "}
+          {second} → {first} {formatProbability(judgement.secondLedToFirst)} ·
+          한 사안 {first} {formatProbability(judgement.firstOneMatter)} ·{" "}
+          {second} {formatProbability(judgement.secondOneMatter)}
         </span>
       ) : (
         <span className="block">

@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Supplier;
 
 import net.yozmnews.evaluation.RelationJudgementId;
@@ -12,6 +13,7 @@ import net.yozmnews.evaluation.RelationJudgementView;
 import net.yozmnews.evaluation.RelationReading;
 import net.yozmnews.evaluation.domain.evaluator.ArticleEvaluator;
 import net.yozmnews.evaluation.domain.evaluator.Relation;
+import net.yozmnews.evaluation.domain.evaluator.RelationWording;
 import net.yozmnews.evaluation.domain.evaluator.RereadFailure;
 import net.yozmnews.evaluation.domain.relation.RelationCheck;
 import net.yozmnews.evaluation.domain.relation.RelationJudgementRepository;
@@ -24,7 +26,7 @@ import org.springframework.stereotype.Service;
 /**
  * 공개 조회 {@link RelationJudgementLog} 의 구현 — docs/specs/evaluation.md §4 · evaluation-R50.
  * <p>
- * 원본을 한 번에 읽고, 평가기가 있으면 원본마다 포트로 다시 읽어 {@link RelationCheck} 로 답 다섯과 대조한다. 평가기는 부를 때 찾는다 —
+ * 원본을 한 번에 읽고, 평가기가 있으면 원본마다 포트로 다시 읽어 {@link RelationCheck} 로 그 원본을 남긴 문구 판의 답과 대조한다. 평가기는 부를 때 찾는다 —
  * 없으면 원본마다 {@link RelationReading.Unread.Reason#NO_EVALUATOR} 이고 나머지 값은 그대로 낸다. 트랜잭션 · 역할 애너테이션이
  * 없다(두 역할 공통).
  */
@@ -71,12 +73,17 @@ class RelationJudgementLogService implements RelationJudgementLog {
 			return new RelationReading.Unread(RelationReading.Unread.Reason.NO_EVALUATOR,
 					"이 프로세스에 평가기가 없어 원본 응답을 읽지 못한다");
 		}
-		return switch (evaluator.rereadRelation(stored.evaluator(), stored.rawResponse())) {
+		Optional<RelationWording> wording = RelationWording.ofVersion(stored.wordingVersion());
+		if (wording.isEmpty()) {
+			return new RelationReading.Unread(RelationReading.Unread.Reason.UNREADABLE,
+					"모르는 문구 판이라 원본 응답을 읽지 못한다 — " + stored.wordingVersion());
+		}
+		return switch (evaluator.rereadRelation(stored.evaluator(), stored.rawResponse(), wording.get())) {
 			case RereadFailure failure -> new RelationReading.Unread(switch (failure.kind()) {
 				case OTHER_EVALUATOR -> RelationReading.Unread.Reason.OTHER_EVALUATOR;
 				case UNREADABLE -> RelationReading.Unread.Reason.UNREADABLE;
 			}, failure.message());
-			case Relation relation -> RelationCheck.mismatch(relation)
+			case Relation relation -> RelationCheck.mismatch(relation, wording.get())
 				.<RelationReading>map(mismatch -> new RelationReading.Unread(RelationReading.Unread.Reason.UNREADABLE,
 						mismatch))
 				.orElseGet(() -> new RelationReading.Read(relation.probabilities(), relation.firstOneMatter(),

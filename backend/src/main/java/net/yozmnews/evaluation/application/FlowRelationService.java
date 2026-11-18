@@ -37,7 +37,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 /**
  * 공개 API {@link FlowRelation} 의 구현 — docs/specs/evaluation.md §4 · evaluation-R48 · evaluation-R49.
  * <p>
- * 트랜잭션 밖에서 두 흐름의 서술 기사를 한 번에 읽고, 물을 서술을 골라 평가기를 부른다. 성공이면 결과를 답 다섯과 대조한 뒤 짧은 트랜잭션 하나로
+ * 트랜잭션 밖에서 두 흐름의 서술 기사를 한 번에 읽고, 물을 서술을 골라 평가기를 부른다. 성공이면 결과를 지금 문구 판의 답과 대조한 뒤 짧은 트랜잭션 하나로
  * 판정 원본을 쓰고 그 ID 를 결과에 싣는다. 판정할 기사가 따로 없어 커밋 뒤에 다시 보지 않는다.
  * <p>
  * 평가기는 부를 때 찾는다 — 화면 역할만 띄운 프로세스에는 평가기가 없을 수 있고, 판정은 작업 역할의 작업에서 부른다. 트랜잭션 · 역할
@@ -103,7 +103,7 @@ class FlowRelationService implements FlowRelation {
 	/** 결과를 대조해 원본을 쓴다 */
 	private RelationJudgement record(RelationQuery query, RelationPlan.Plan.Ask ask, Relation relation,
 			RelationWording wording) {
-		Optional<String> mismatch = RelationCheck.mismatch(relation);
+		Optional<String> mismatch = RelationCheck.mismatch(relation, wording);
 		if (mismatch.isPresent()) {
 			throw new IllegalStateException("관계 판정 결과를 저장할 수 없다 — " + mismatch.get());
 		}

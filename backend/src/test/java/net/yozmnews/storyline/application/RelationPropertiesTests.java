@@ -23,7 +23,7 @@ class RelationPropertiesTests {
 	@Test
 	void withoutPropertiesTheDefaultsApply() {
 		this.runner.run(context -> assertThat(context.getBean(RelationCriteria.class))
-			.isEqualTo(new RelationCriteria(0.60, 0.20, 3, 0.88, Duration.ofDays(14))));
+			.isEqualTo(new RelationCriteria(0.60, 0.20, 3, 0.88, Duration.ofDays(14), 0.65)));
 	}
 
 	@Test
@@ -31,9 +31,19 @@ class RelationPropertiesTests {
 		this.runner
 			.withPropertyValues("yozmnews.storyline-relation.probability=0.7", "yozmnews.storyline-relation.one-matter=0.3",
 					"yozmnews.storyline-relation.min-events=4", "yozmnews.storyline-relation.candidate-score=0.9",
-					"yozmnews.storyline-relation.window=21d")
+					"yozmnews.storyline-relation.window=21d", "yozmnews.storyline-relation.merge-probability=0.8")
 			.run(context -> assertThat(context.getBean(RelationCriteria.class))
-				.isEqualTo(new RelationCriteria(0.7, 0.3, 4, 0.9, Duration.ofDays(21))));
+				.isEqualTo(new RelationCriteria(0.7, 0.3, 4, 0.9, Duration.ofDays(21), 0.8)));
+	}
+
+	@Test
+	void anUnsetMergeProbabilityFollowsAProbabilityRaisedAboveItsDefault() {
+		// 확률 기준만 0.7 로 올렸다 — 합치기 확률 기준은 그보다 낮을 수 없어 0.7 이 된다
+		this.runner.withPropertyValues("yozmnews.storyline-relation.probability=0.7")
+			.run(context -> assertThat(context.getBean(RelationCriteria.class).mergeProbability()).isEqualTo(0.7));
+		// 확률 기준을 내리면 기본값 그대로다
+		this.runner.withPropertyValues("yozmnews.storyline-relation.probability=0.5")
+			.run(context -> assertThat(context.getBean(RelationCriteria.class).mergeProbability()).isEqualTo(0.65));
 	}
 
 	@Test
@@ -46,6 +56,10 @@ class RelationPropertiesTests {
 			.run(context -> assertThat(context).hasFailed());
 		this.runner.withPropertyValues("yozmnews.storyline-relation.window=0s")
 			.run(context -> assertThat(context).hasFailed());
+		this.runner.withPropertyValues("yozmnews.storyline-relation.merge-probability=0.59")
+			.run(context -> assertThat(context).getFailure()
+				.rootCause()
+				.hasMessage("합치기 확률 기준은 확률 기준 0.6 이상 1 이하다: 0.59"));
 		this.runner.withPropertyValues("yozmnews.storyline-relation.min-events=1")
 			.run(context -> assertThat(context).getFailure().rootCause().hasMessage("사건 수 하한은 2 이상이다: 1"));
 	}

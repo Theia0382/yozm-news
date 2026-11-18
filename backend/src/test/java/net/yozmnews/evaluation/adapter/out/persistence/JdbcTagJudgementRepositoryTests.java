@@ -81,7 +81,7 @@ class JdbcTagJudgementRepositoryTests {
 	@Test
 	void missingIdsAreLeftOutOfTheViewsAndTheRead() {
 		TagJudgementId stored = this.repository
-			.insert(new TagJudgementRecord(new ArticleId(42), "fake", "fake-rules-2", "{}", 10, AT));
+			.insert(new TagJudgementRecord(new ArticleId(42), "fake", "fake-rules-3", "{}", 10, AT));
 		TagJudgementId missing = new TagJudgementId(stored.value() + 1);
 
 		assertThat(this.repository.views(List.of(stored, missing))).containsOnlyKeys(stored);
@@ -92,11 +92,11 @@ class JdbcTagJudgementRepositoryTests {
 	@Test
 	void deletesOneJudgementOrTheJudgementsOfArticles() {
 		TagJudgementId first = this.repository
-			.insert(new TagJudgementRecord(new ArticleId(42), "fake", "fake-rules-2", "{}", 10, AT));
+			.insert(new TagJudgementRecord(new ArticleId(42), "fake", "fake-rules-3", "{}", 10, AT));
 		TagJudgementId second = this.repository
-			.insert(new TagJudgementRecord(new ArticleId(42), "fake", "fake-rules-2", "{}", 10, AT));
+			.insert(new TagJudgementRecord(new ArticleId(42), "fake", "fake-rules-3", "{}", 10, AT));
 		TagJudgementId other = this.repository
-			.insert(new TagJudgementRecord(new ArticleId(43), "fake", "fake-rules-2", "{}", 10, AT));
+			.insert(new TagJudgementRecord(new ArticleId(43), "fake", "fake-rules-3", "{}", 10, AT));
 
 		this.repository.delete(first);
 		assertThat(this.repository.views(List.of(first, second, other))).containsOnlyKeys(second, other);

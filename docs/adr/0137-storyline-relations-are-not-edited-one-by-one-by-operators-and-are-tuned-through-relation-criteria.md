@@ -28,3 +28,7 @@
 | 대안 | 기각 이유 |
 |---|---|
 | 운영자가 관계를 넣고 빼고 종류를 바꾸며, 운영자가 정한 쌍은 다시 묻지 않는다 | 자라는 스토리라인마다 운영자 손이 들고, 다시 묻기 · 병합 · 구조 제약에 운영자 갈래가 생긴다. 하나씩 고친 결과는 기준을 고르는 근거가 되지 못한다 |
+
+## 후속 기록
+
+- 2026-11-18: 결정 전체 — 같은 사안의 조각을 합치는 것도 운영자가 하나씩 풀지 않고 합치기 확률 기준으로 조정한다([ADR-0234](0234-fragments-of-one-matter-are-recognised-by-the-relation-judgement-and-merged-above-a-merge-probability-without-a-way-back.md))

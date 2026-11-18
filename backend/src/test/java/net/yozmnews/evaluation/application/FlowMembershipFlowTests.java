@@ -36,6 +36,7 @@ import net.yozmnews.evaluation.domain.evaluator.MembershipResult;
 import net.yozmnews.evaluation.domain.evaluator.MembershipWording;
 import net.yozmnews.evaluation.domain.evaluator.RelationInput;
 import net.yozmnews.evaluation.domain.evaluator.RelationRereadResult;
+import net.yozmnews.evaluation.domain.evaluator.RelationWording;
 import net.yozmnews.evaluation.domain.evaluator.RelationResult;
 import net.yozmnews.evaluation.domain.evaluator.RereadResult;
 import net.yozmnews.evaluation.domain.membership.FlowMembershipJudgementRepository;
@@ -253,7 +254,7 @@ class FlowMembershipFlowTests {
 	/** 기사 하나를 흐름 305 에 대해 판정한 원본 — 서술 기사 하나 */
 	private static MembershipRecord judgement(long article, long described) {
 		return new MembershipRecord(new ArticleId(article),
-				List.of(new JudgedEvent(305, List.of(new ArticleId(described)), 0.8)), "fake", "fake-rules-2",
+				List.of(new JudgedEvent(305, List.of(new ArticleId(described)), 0.8)), "fake", "fake-rules-3",
 				"matter-1", 10, "{\"events\":{\"305\":0.8}}", AT);
 	}
 
@@ -350,7 +351,7 @@ class FlowMembershipFlowTests {
 		}
 
 		@Override
-		public RelationRereadResult rereadRelation(String evaluator, String rawResponse) {
+		public RelationRereadResult rereadRelation(String evaluator, String rawResponse, RelationWording wording) {
 			throw new UnsupportedOperationException("이 시험 평가기는 관계 판정 원본을 다시 읽지 않는다");
 		}
 

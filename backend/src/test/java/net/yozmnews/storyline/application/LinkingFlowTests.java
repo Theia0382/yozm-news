@@ -347,7 +347,7 @@ class LinkingFlowTests {
 		long l3 = seed(sameEvent(), sameEvent(), sameEvent());
 		long l4 = seed(sameEvent(), sameEvent(), sameEvent());
 		long relationCriteria = this.relations
-			.registerCriteria(new RelationCriteria(0.60, 0.20, 3, 0.88, Duration.ofDays(14)), NOW);
+			.registerCriteria(new RelationCriteria(0.60, 0.20, 3, 0.88, Duration.ofDays(14), 1.0), NOW);
 		// L2 ⊃ L3, L4 → L2, 그리고 합쳐질 둘 사이의 L1 → L2
 		this.relations.link(new Relation(l2, l3, RelationKind.CONTAINS), 0.7, 41, relationCriteria, NOW);
 		this.relations.link(new Relation(l4, l2, RelationKind.FOLLOWS), 0.8, 42, relationCriteria, NOW);
@@ -387,7 +387,7 @@ class LinkingFlowTests {
 		long l1 = onlyStoryline();
 		long l3 = seed(sameEvent(), sameEvent(), sameEvent());
 		long relationCriteria = this.relations
-			.registerCriteria(new RelationCriteria(0.60, 0.20, 3, 0.88, Duration.ofDays(14)), NOW);
+			.registerCriteria(new RelationCriteria(0.60, 0.20, 3, 0.88, Duration.ofDays(14), 1.0), NOW);
 		this.relations.link(new Relation(l3, l1, RelationKind.CONTAINS), 0.7, 41, relationCriteria, NOW);
 		this.relations.recordAsked(l1, l3, 2, 41L, relationCriteria, RelationOutcome.LINKED, NOW);
 		this.relationQueue.enqueue(l1, NOW);
@@ -855,7 +855,8 @@ class LinkingFlowTests {
 
 	private LinkingRound round(EventDirectory events, LinkingCriteria criteria) {
 		return new LinkingRound(this.queue, this.criteria, criteria,
-				new StorylineLinker(events, this.storylines, this.queue, this.asked, this.relations, this.relationQueue,
+				new StorylineLinker(events, this.storylines, this.queue, this.asked, this.relationQueue,
+						new StorylineMerger(this.storylines, this.relations, this.relationQueue, this.asked, events),
 						this.publisher),
 				NEVER_ASKED, this.transaction, InstantSource.fixed(NOW));
 	}

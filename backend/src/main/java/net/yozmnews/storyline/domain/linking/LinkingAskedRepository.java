@@ -26,6 +26,9 @@ public interface LinkingAskedRepository {
 	/** 그 스토리라인의 기록을 지운다 — 합쳐질 스토리라인. 지운 스토리라인은 FK 로 함께 지워진다 */
 	void forgetStoryline(long storylineId);
 
+	/** 그 스토리라인에 물은 붙이기 기록 가운데 이 사건들의 것을 지운다 — 그 사건들이 그 스토리라인의 소속이 됐다 */
+	void forgetLinks(long storylineId, Collection<Long> eventIds);
+
 	/** 그 사건이 판정할 쪽이거나 이웃 쪽인 기록을 두 표 모두에서 지운다 — 지워졌거나 합쳐진 사건 */
 	void forgetEvent(long eventId);
 

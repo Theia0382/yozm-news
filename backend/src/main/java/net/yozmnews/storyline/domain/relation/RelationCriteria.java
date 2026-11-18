@@ -11,16 +11,18 @@ import java.util.Objects;
  * @param minEvents 후보가 되는 스토리라인의 구성 사건 수 하한
  * @param candidateScore 점수 후보의 기준
  * @param window 점수 후보를 찾고 말 수를 세는 시간 창
+ * @param mergeProbability 합치기 확률 기준 — 같은 사안의 조각이라는 답의 확률이 이 이상이어야 두 스토리라인을 합친다. 합치기는 한
+ * 방향이라 확률 기준보다 낮을 수 없다
  */
 public record RelationCriteria(double probability, double oneMatter, int minEvents, double candidateScore,
-		Duration window) {
+		Duration window, double mergeProbability) {
 
 	/** 사건 수 하한의 하한 — 스토리라인은 서로 다른 사건 둘 이상이다 */
 	public static final int MIN_EVENTS_FLOOR = 2;
 
 	/**
 	 * @throws IllegalArgumentException 확률 기준 · 후보 점수 기준이 0 보다 크고 1 이하가 아니거나, 한 사안 기준이 0 ~ 1 밖이거나, 사건 수
-	 * 하한이 {@value #MIN_EVENTS_FLOOR} 미만이거나, 창이 0 이하이거나 초 단위가 아닐 때
+	 * 하한이 {@value #MIN_EVENTS_FLOOR} 미만이거나, 창이 0 이하이거나 초 단위가 아니거나, 합치기 확률 기준이 확률 기준보다 낮거나 1 보다 클 때
 	 */
 	public RelationCriteria {
 		if (!(probability > 0 && probability <= 1)) {
@@ -38,6 +40,10 @@ public record RelationCriteria(double probability, double oneMatter, int minEven
 		Objects.requireNonNull(window, "window");
 		if (window.isZero() || window.isNegative() || window.getNano() != 0) {
 			throw new IllegalArgumentException("시간 창은 0 보다 큰 초 단위다: " + window);
+		}
+		if (!(mergeProbability >= probability && mergeProbability <= 1)) {
+			throw new IllegalArgumentException(
+					"합치기 확률 기준은 확률 기준 " + probability + " 이상 1 이하다: " + mergeProbability);
 		}
 	}
 

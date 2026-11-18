@@ -37,16 +37,17 @@ USED_FIELDS: Final[Mapping[str, tuple[str, ...]]] = {
     "StorylineRowResponse": ("id",),
     "StorylineCursorResponse": ("lastArticleAt", "id"),
     "LinkingCriteriaResponse": ("windowSeconds", "lower", "upper", "probability"),
-    "RelationCriteriaResponse": ("probability", "oneMatter", "minEvents", "candidateScore", "windowSeconds"),
+    "RelationCriteriaResponse": ("probability", "oneMatter", "minEvents", "candidateScore", "windowSeconds",
+                                 "mergeProbability"),
     "StorylineDetailResponse": ("id", "events", "relations", "asked"),
     "StorylineEventResponse": ("id", "direct"),
     "StorylineRelationResponse": ("kind", "sourceId", "targetId", "judgement"),
     "StorylineAskedResponse": ("otherId", "smallerEvents", "outcome", "askedAt", "judgementId", "judgement"),
-    "RelationJudgementResponse": ("id", "firstId", "secondId", "modelVersion", "reading", "none", "secondPartOfFirst",
-                                  "firstPartOfSecond", "firstLedToSecond", "secondLedToFirst", "firstOneMatter",
-                                  "secondOneMatter"),
+    "RelationJudgementResponse": ("id", "firstId", "secondId", "modelVersion", "reading", "none", "sameMatter",
+                                  "secondPartOfFirst", "firstPartOfSecond", "firstLedToSecond", "secondLedToFirst",
+                                  "firstOneMatter", "secondOneMatter"),
     "BigStorylineListResponse": ("storylines",),
-    "BigStorylineRowResponse": ("id",),
+    "BigStorylineRowResponse": ("id", "branches"),
 }
 """스키마 이름 → 도구가 읽는 필드."""
 
@@ -55,8 +56,9 @@ _JUDGEMENTS: Final = "/api/admin/event-judgements"
 _STORYLINES: Final = "/api/admin/storylines"
 _BIG_STORYLINES: Final = "/api/admin/big-storylines"
 
-ANSWERS: Final = ("none", "secondPartOfFirst", "firstPartOfSecond", "firstLedToSecond", "secondLedToFirst")
-"""관계 판정의 답 다섯 — 응답 칸 이름, 이 순서로 확률을 싣는다."""
+ANSWERS: Final = ("none", "sameMatter", "secondPartOfFirst", "firstPartOfSecond", "firstLedToSecond",
+                  "secondLedToFirst")
+"""관계 판정의 답 — 응답 칸 이름, 이 순서로 확률을 싣는다. 같은 사안의 조각(sameMatter)은 그 답이 없는 문구 판의 원본이면 없다."""
 
 
 class ApiError(Exception):
@@ -120,8 +122,8 @@ class RelationJudgement:
     second: int
     model_version: str
     reading: str
-    probabilities: tuple[Decimal, ...] | None
-    """ANSWERS 순서의 답 다섯."""
+    probabilities: tuple[Decimal | None, ...] | None
+    """ANSWERS 순서의 답마다 확률 — 그 원본의 문구 판에 없는 답은 None."""
     first_one_matter: Decimal | None
     second_one_matter: Decimal | None
 
@@ -300,11 +302,19 @@ class AdminApi:
                                    _judgement(field(pair, "StorylineAskedResponse", "judgement"))))
         return StorylineDetail(int(field(detail, schema, "id")), direct, relations, tuple(asked))
 
-    def big_storylines(self, day: date, zone: str) -> list[int]:
-        """그날 하루의 큰 스토리라인 ID — 지금 큰 판정 기준."""
+    def big_storylines(self, day: date, zone: str, *, branches: bool = False) -> list[int]:
+        """그날 하루의 큰 스토리라인 ID — 지금 큰 판정 기준. 목록은 포함 나무마다 한 행이다. branches 면 행 아래에 실린 큰
+        스토리라인도 행 바로 뒤에 넣는다."""
         page = self._get(_BIG_STORYLINES, {"from": day.isoformat(), "to": day.isoformat(), "zone": zone})
-        return [int(field(row, "BigStorylineRowResponse", "id"))
-                for row in field(page, "BigStorylineListResponse", "storylines")]
+        ids: list[int] = []
+        for row in field(page, "BigStorylineListResponse", "storylines"):
+            ids.append(int(field(row, "BigStorylineRowResponse", "id")))
+            below = field(row, "BigStorylineRowResponse", "branches")
+            if branches:
+                if not isinstance(below, list):
+                    raise ApiError("BigStorylineRowResponse", None, "branches 가 목록이 아니다")
+                ids.extend(int(field(branch, "BigStorylineRowResponse", "id")) for branch in below)
+        return ids
 
     def _get(self, path: str, query: Mapping[str, str]) -> object:
         url = self._base + path + ("?" + urllib.parse.urlencode(query) if query else "")
@@ -361,7 +371,7 @@ def _judgement(value: object) -> RelationJudgement | None:
 
     return RelationJudgement(int(field(value, schema, "id")), int(field(value, schema, "firstId")),
                              int(field(value, schema, "secondId")), str(field(value, schema, "modelVersion")), reading,
-                             tuple(_decimal(field(value, schema, name)) for name in ANSWERS) if read else None,
+                             tuple(probability(name) for name in ANSWERS) if read else None,
                              probability("firstOneMatter"), probability("secondOneMatter"))
 
 

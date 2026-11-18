@@ -15,20 +15,22 @@ import org.jspecify.annotations.Nullable;
  * @param events 닫은 사건 집합의 사건 — 첫 기사 시각 · 사건 ID 순
  * @param relations 이 스토리라인이 앞이거나 뒤인 관계 — 종류(포함 먼저) · 앞 ID · 뒤 ID 순
  * @param asked 이 스토리라인이 든 물은 쌍 — 상대 ID 순
+ * @param merged 이 스토리라인에 합쳐진 스토리라인 — ID 순
  */
 record StorylineDetailResponse(long requestedId, long id, StorylineState state, @Nullable Long parentId,
 		int eventCount, int articleCount, Instant firstArticleAt, Instant lastArticleAt, Instant createdAt,
 		@Nullable Long representativeArticleId, @Nullable ArticleSummaryResponse representative,
 		List<StorylineEventResponse> events, List<StorylineRelationResponse> relations,
-		List<StorylineAskedResponse> asked) {
+		List<StorylineAskedResponse> asked, List<StorylineMergedResponse> merged) {
 
 	static StorylineDetailResponse of(long requestedId, StorylineView view,
 			AdminRepresentatives.Representative representative, List<StorylineEventResponse> events,
-			List<StorylineRelationResponse> relations, List<StorylineAskedResponse> asked) {
+			List<StorylineRelationResponse> relations, List<StorylineAskedResponse> asked,
+			List<StorylineMergedResponse> merged) {
 		return new StorylineDetailResponse(requestedId, view.id().value(), view.state(),
 				(view.parent() == null) ? null : view.parent().value(), view.eventCount(), view.articleCount(),
 				view.firstArticleAt(), view.lastArticleAt(), view.createdAt(), representative.articleId(),
-				representative.response(), events, relations, asked);
+				representative.response(), events, relations, asked, merged);
 	}
 
 }

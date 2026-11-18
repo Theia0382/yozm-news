@@ -1,6 +1,6 @@
 # ADR-0108: 구성 사건이 같은 스토리라인은 합치고, 사건 하나만 남은 스토리라인은 그 사건을 가진 스토리라인에 합치거나 풀며, 합쳐진 스토리라인은 남는 쪽을 가리킨다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 표현만 비슷한 경우는 합치지 않는다는 결정 · 남는 쪽의 소속 · 표현이 바뀌지 않는다는 결정([ADR-0234](0234-fragments-of-one-matter-are-recognised-by-the-relation-judgement-and-merged-above-a-merge-probability-without-a-way-back.md))
 - 날짜: 2026-11-10
 - 근거: [이슈 #123](https://github.com/Theia0382/yozm-news/issues/123) — 같은 흐름이 둘로 남는 경로를 코드로 따라가 합치기의 범위 · 사건 하나만 남은 스토리라인의 처분 · 합쳐진 행의 처리를 리드와 정함
 - 관련: [ADR-0106](0106-provisional-storyline-linking-opens-only-with-a-partner-event-and-adds-the-single-best-storyline-without-removal.md)(결과 "사건 하나인 스토리라인 · 같은 흐름이 둘로 열린 스토리라인이 남는다" — 부분 대체, 결정 "다시 판정의 계기" — 보충), [ADR-0105](0105-storylines-link-incrementally-from-event-change-notifications-and-events-publish-changed-event-ids.md)(결정 "구성 사건이 없는 스토리라인은 지운다" — 보충), [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)(결정 "공유 스토리라인의 책임 · 계약은 구현할 때 정한다"의 정돈 몫 — 보충), [ADR-0084](0084-event-merge-applies-assignment-scoring-between-events-and-keeps-merged-rows-pointing-to-survivors.md)(합쳐진 행이 남는 쪽을 가리키는 꼴 — 같은 꼴)
@@ -18,8 +18,10 @@
 ## 결정
 
 - **소속이 바뀐 스토리라인을 같은 판정 트랜잭션에서 정돈한다.** 정돈은 구성 사건만 보고 기준값이 없다. 따로 도는 정리 작업은 두지 않는다.
+> 부분 대체(둘째 문장의 "표현만 비슷한 경우") — [ADR-0234](0234-fragments-of-one-matter-are-recognised-by-the-relation-judgement-and-merged-above-a-merge-probability-without-a-way-back.md). 지금 상태: [storyline Spec storyline-R17 · R18](../specs/storyline.md#정돈)
 - **구성 사건이 같은 스토리라인은 하나로 합친다.** ID 가 가장 작은 것이 남는다. 사건 둘 이상이 다른 스토리라인에 포함된 경우와 표현만 비슷한 경우는 합치지 않는다 — 구조로 같은 흐름인지 갈래인지 가를 수 없다.
 - **사건 하나만 남은 스토리라인은 그 사건을 가진 다른 스토리라인에 합치고, 없으면 풀어 그 사건을 다시 판정한다.** 합칠 곳이 여럿이면 ID 가 가장 작은 것이다. 풀기는 스토리라인을 지우고 그 사건을 잇기 대기에 넣는다. 정돈을 거친 스토리라인은 늘 사건 둘 이상으로 된 흐름이다.
+> 부분 대체(둘째 문장) — [ADR-0234](0234-fragments-of-one-matter-are-recognised-by-the-relation-judgement-and-merged-above-a-merge-probability-without-a-way-back.md). 지금 상태: [storyline Spec storyline-R17 · R18](../specs/storyline.md#정돈)
 - **합쳐진 스토리라인은 행을 남겨 남는 스토리라인을 가리킨다.** 합쳐진 쪽의 소속 · 핵심 말은 지운다 — 같은 사건이 남는 쪽에 이미 있어 남는 쪽의 소속 · 표현은 바뀌지 않는다. 가리킴은 평평하고, 남는 쪽을 지우면 가리키는 행도 지운다. 합치기는 한 방향이다.
 - **보존은 무기한이다.** 합쳐진 행도 남는 쪽을 지울 때까지 남는다.
 
@@ -32,6 +34,8 @@
 - 이 결정 전에 남은 사건 하나짜리 · 구성 사건이 같은 스토리라인은 그 구성 사건이 다시 판정될 때 정돈된다. 운영자는 채우기로 다시 판정할 수 있다.
 
 ## 검토한 대안
+
+> 부분 대체 — "표현 유사도가 기준 이상인 스토리라인을 합친다" · "합칠 때 소속을 남는 쪽으로 옮긴다" 행은 [ADR-0234](0234-fragments-of-one-matter-are-recognised-by-the-relation-judgement-and-merged-above-a-merge-probability-without-a-way-back.md)(관계 판정이 같은 사안의 조각으로 답한 쌍에 한해). 지금 상태: [storyline Spec storyline-R17 · R18](../specs/storyline.md#정돈)
 
 | 대안 | 기각 이유 |
 |---|---|

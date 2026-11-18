@@ -54,7 +54,7 @@ class FakeArticleEvaluatorTests {
 
 	/** 고정 체계의 키를 모두 가진 Fake 원본 응답 리터럴 */
 	private static final String RAW = """
-			{"evaluator":"fake","modelVersion":"fake-rules-2",\
+			{"evaluator":"fake","modelVersion":"fake-rules-3",\
 			"topics":{"economy.finance":0.05,"economy.realestate":0.11,"politics.assembly":0.9,"politics.executive":0.7},\
 			"regions":{"domestic":0.9,"world":0.03},\
 			"formats":{"feature":0.1,"opinion":0.1,"straight":0.8},\
@@ -66,7 +66,7 @@ class FakeArticleEvaluatorTests {
 				Map.of("politics.executive", 0.7, "politics.assembly", 0.9, "economy.finance", 0.05,
 						"economy.realestate", 0.11),
 				Map.of("world", 0.03, "domestic", 0.9), Map.of("straight", 0.8, "opinion", 0.1, "feature", 0.1),
-				Map.of(1, 0.1, 2, 0.1, 3, 0.6, 4, 0.1, 5, 0.1), "fake", "fake-rules-2", 0, RAW));
+				Map.of(1, 0.1, 2, 0.1, 3, 0.6, 4, 0.1, 5, 0.1), "fake", "fake-rules-3", 0, RAW));
 	}
 
 	@Test
@@ -122,7 +122,7 @@ class FakeArticleEvaluatorTests {
 		assertThat(evaluation.formats()).containsOnlyKeys("straight", "opinion", "feature");
 		assertThat(evaluation.importance()).containsOnlyKeys(1, 2, 3, 4, 5);
 		assertThat(evaluation.evaluator()).isEqualTo("fake");
-		assertThat(evaluation.modelVersion()).isEqualTo("fake-rules-2");
+		assertThat(evaluation.modelVersion()).isEqualTo("fake-rules-3");
 	}
 
 	@Test
@@ -281,7 +281,7 @@ class FakeArticleEvaluatorTests {
 
 		Map<String, Object> raw = JsonMapper.builder().build().readValue(evaluation.rawResponse(), LinkedHashMap.class);
 
-		assertThat(raw).containsEntry("evaluator", "fake").containsEntry("modelVersion", "fake-rules-2");
+		assertThat(raw).containsEntry("evaluator", "fake").containsEntry("modelVersion", "fake-rules-3");
 		assertThat(raw.keySet()).containsExactly("evaluator", "modelVersion", "topics", "regions", "formats",
 				"importance");
 		assertThat(keys(raw, "topics")).containsExactly("economy.finance", "economy.realestate", "politics.assembly",
@@ -294,10 +294,10 @@ class FakeArticleEvaluatorTests {
 	@Test
 	void judgesMembershipByTheSharedPiecesOfTheTitles() {
 		MembershipInput input = membership("서울 시장 선거 결과 발표");
-		String raw = "{\"evaluator\":\"fake\",\"modelVersion\":\"fake-rules-2\",\"events\":{\"12\":0.41,\"15\":0.05}}";
+		String raw = "{\"evaluator\":\"fake\",\"modelVersion\":\"fake-rules-3\",\"events\":{\"12\":0.41,\"15\":0.05}}";
 
 		assertThat(this.evaluator.judgeMembership(input))
-			.isEqualTo(new Membership(Map.of(12L, 0.41, 15L, 0.05), "fake", "fake-rules-2", 25, raw));
+			.isEqualTo(new Membership(Map.of(12L, 0.41, 15L, 0.05), "fake", "fake-rules-3", 25, raw));
 		assertThat(this.evaluator.judgeMembership(input)).isEqualTo(this.evaluator.judgeMembership(input));
 	}
 

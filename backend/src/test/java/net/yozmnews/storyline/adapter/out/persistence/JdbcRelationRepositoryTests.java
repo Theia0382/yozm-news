@@ -43,7 +43,7 @@ class JdbcRelationRepositoryTests {
 
 	private static final UUID TOKEN = UUID.fromString("00000000-0000-0000-0000-00000000000c");
 
-	private static final RelationCriteria CRITERIA = new RelationCriteria(0.60, 0.20, 3, 0.88, Duration.ofDays(14));
+	private static final RelationCriteria CRITERIA = new RelationCriteria(0.60, 0.20, 3, 0.88, Duration.ofDays(14), 1.0);
 
 	@Autowired
 	JdbcRelationRepository relations;
@@ -179,8 +179,15 @@ class JdbcRelationRepositoryTests {
 	@Test
 	void registersTheSameCriteriaOnce() {
 		assertThat(this.relations.registerCriteria(CRITERIA, NOW.plusSeconds(60))).isEqualTo(this.criteriaId);
-		assertThat(this.relations.registerCriteria(new RelationCriteria(0.61, 0.20, 3, 0.88, Duration.ofDays(14)), NOW))
+		assertThat(this.relations.registerCriteria(new RelationCriteria(0.61, 0.20, 3, 0.88, Duration.ofDays(14), 1.0), NOW))
 			.isNotEqualTo(this.criteriaId);
+		// 합치기 확률 기준만 달라도 다른 이력 행이다 — 읽으면 그 값이 돌아온다
+		long merging = this.relations
+			.registerCriteria(new RelationCriteria(0.60, 0.20, 3, 0.88, Duration.ofDays(14), 0.75), NOW);
+		assertThat(merging).isNotEqualTo(this.criteriaId);
+		assertThat(this.relations.criteria(List.of(this.criteriaId, merging))).containsExactly(
+				Map.entry(this.criteriaId, CRITERIA),
+				Map.entry(merging, new RelationCriteria(0.60, 0.20, 3, 0.88, Duration.ofDays(14), 0.75)));
 	}
 
 	@Test
