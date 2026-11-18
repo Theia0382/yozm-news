@@ -27,6 +27,12 @@ import org.springframework.stereotype.Service;
 @Service
 class ActiveEvaluations {
 
+	/**
+	 * 활성 버전이 어긋날 때(조회 사이의 태그 체계 활성 전환) 처음부터 다시 하는 횟수를 포함한 전체 시도 수 — 평가를 활성 키로 풀어 읽는 작업이 함께
+	 * 쓰는 정본
+	 */
+	static final int ATTEMPTS = 2;
+
 	private final ArticleEvaluations evaluations;
 
 	private final TagKeyLineage lineage;
