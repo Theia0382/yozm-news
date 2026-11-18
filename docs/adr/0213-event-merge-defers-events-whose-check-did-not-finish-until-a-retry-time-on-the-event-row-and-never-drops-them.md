@@ -1,6 +1,6 @@
 # ADR-0213: 병합 회차가 확인을 끝내지 못한 사건은 사건 행에 남긴 다시 볼 시각까지 미루고, 미룬 횟수로 대상에서 빼지 않는다
 
-- 상태: 제안
+- 상태: 승인
 - 날짜: 2026-11-15
 - 근거: [이슈 #141](https://github.com/Theia0382/yozm-news/issues/141) — 병합 회차가 표시 없이 넘기는 갈래 셋에서 같은 사건이 거듭 맨 앞에 오는 조건을 코드로 정리하고, 사건 묶기 대기 · 배정 대기 · 스토리라인 잇기 대기 · 관계 대기의 실패 처리와 대조해 구현
 - 관련: [ADR-0084](0084-event-merge-applies-assignment-scoring-between-events-and-keeps-merged-rows-pointing-to-survivors.md)(결정 절의 합치지 못한 사건을 "다음 회차가 다시 본다" — 부분 대체. 병합 대기 테이블을 두지 않는 것은 그대로), [ADR-0058](0058-evaluator-failures-in-three-kinds-and-unavailable-evaluator-skips-article-retries.md)(평가기 실패 세 갈래 — 일시 실패의 재시도를 병합 판정에 쓰는 방식을 정한다, 보충), [ADR-0077](0077-event-assignment-queue-judged-one-article-at-a-time-with-evaluation-failure-kinds.md)(배정 대기의 재시도 간격 — 같은 식을 쓴다, 결정은 그대로)
