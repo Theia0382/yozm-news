@@ -51,9 +51,9 @@ public final class InterestRows {
 	public void cite(long user, Instant completedAt, long... articles) {
 		long digest = this.jdbc.sql("""
 				insert into digests (user_id, digest_date, period_start, period_end, status, trigger, created_at,
-				    started_at, completed_at, version)
+				    dispatch_token, dispatched_at, started_at, completed_at, version)
 				values (:user, cast(:at as date), cast(:at as date) - interval '1 day', cast(:at as date), 'READY',
-				    'SCHEDULED', :at, :at, :at, 0)
+				    'MANUAL', :at, gen_random_uuid(), :at, :at, :at, 0)
 				returning id
 				""").param("user", user).param("at", completedAt.atOffset(ZoneOffset.UTC)).query(Long.class).single();
 		for (int i = 0; i < articles.length; i++) {
