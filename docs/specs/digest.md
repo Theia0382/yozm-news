@@ -373,7 +373,7 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
 
 ### 관심도
 
-판단의 이유는 [ADR-0213](../adr/0213-interest-per-subtopic-is-smoothed-reactions-over-exposures-with-a-half-life-and-exposures-are-all-ready-citations.md) · [ADR-0214](../adr/0214-a-storyline-subscription-enters-topic-interest-by-the-topic-shares-of-its-event-representatives.md) · [ADR-0215](../adr/0215-interests-are-not-stored-entities-and-are-computed-from-signal-history-at-query-time.md) · [ADR-0028](../adr/0028-explicit-signals-and-interest-weighted-candidates.md)에 있다. 상수는 모두 측정 전 목표다([open-questions.md](../open-questions.md) "운영하면서 결정" 24번).
+판단의 이유는 [ADR-0222](../adr/0222-interest-per-subtopic-is-smoothed-reactions-over-exposures-with-a-half-life-and-exposures-are-all-ready-citations.md) · [ADR-0214](../adr/0214-a-storyline-subscription-enters-topic-interest-by-the-topic-shares-of-its-event-representatives.md) · [ADR-0215](../adr/0215-interests-are-not-stored-entities-and-are-computed-from-signal-history-at-query-time.md) · [ADR-0028](../adr/0028-explicit-signals-and-interest-weighted-candidates.md)에 있다. 상수는 모두 측정 전 목표다([open-questions.md](../open-questions.md) "운영하면서 결정" 24번).
 
 - **digest-R23** — 산식(`InterestFormula` · `InterestRules` · `TopicInterests`): 단위는 활성 태그 체계의 주제 중분류다. 기준 시각 T 에서 무게 w(at) = 0.5 ^ (max(0, T − at) ÷ `HALF_LIFE` 30일) — T 뒤의 시각은 무게 1. 중분류 t 마다
   - 노출 E = t 가 붙은 노출 기사의 w(노출 시각) 합, 반응 F = 같은 기사의 w(노출 시각) × (좋아요 +1 · 싫어요 −1 · 없음 0) 합, 구독 S = t 를 가진 구독 신호의 w(바꾼 시각) × (더함 +1 · 뺌 −1) × 몫 합
@@ -439,7 +439,7 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
 | [0208](../adr/0208-the-big-slot-takes-the-representatives-of-the-heaviest-events-of-each-big-storyline-row.md) | 큰 슬롯은 큰 판정 행마다 기간 안 중요도 합이 큰 사건 몇 개의 대표 기사를 넣는다 |
 | [0209](../adr/0209-maximum-candidates-and-big-slots-are-user-settings-and-the-big-slot-takes-at-most-half.md) | 최대 후보 수와 큰 슬롯 수는 사용자 설정이고, 큰 슬롯은 최대 후보 수의 절반을 넘지 않는다 |
 | [0210](../adr/0210-candidate-selection-cuts-to-the-input-token-budget-with-one-estimate-the-prompt-follows.md) | 입력 토큰 예산은 후보 선별이 한 추정 규칙으로 세어 자르고, 프롬프트 구성이 그 규칙을 따른다 |
-| [0213](../adr/0213-interest-per-subtopic-is-smoothed-reactions-over-exposures-with-a-half-life-and-exposures-are-all-ready-citations.md) | 관심도는 주제 중분류마다 노출로 나눈 반응에 가상 노출을 더해 평활하고 반감기로 감쇠하며, 노출은 덮인 다이제스트를 포함한 인용 전부다 |
 | [0214](../adr/0214-a-storyline-subscription-enters-topic-interest-by-the-topic-shares-of-its-event-representatives.md) | 스토리라인 구독은 사건 대표 기사의 주제 몫으로 주제별 관심도에 든다 |
 | [0215](../adr/0215-interests-are-not-stored-entities-and-are-computed-from-signal-history-at-query-time.md) | 관심사는 개체로 세우지 않고 신호 이력에서 조회 때 계산한다 |
 | [0216](../adr/0216-the-interest-selection-reason-marks-subscribed-candidates-that-enter-only-by-interest-with-a-weight-above-neutral.md) | 선정 이유 `INTEREST` 는 중립 순위로는 들지 못하고 가중치가 1 보다 큰 구독 후보다 |
+| [0222](../adr/0222-interest-per-subtopic-is-smoothed-reactions-over-exposures-with-a-half-life-and-exposures-are-all-ready-citations.md) | 관심도는 주제 중분류마다 노출로 나눈 반응에 가상 노출을 더해 평활하고 반감기로 감쇠하며, 노출은 덮인 다이제스트를 포함한 인용 전부다 |

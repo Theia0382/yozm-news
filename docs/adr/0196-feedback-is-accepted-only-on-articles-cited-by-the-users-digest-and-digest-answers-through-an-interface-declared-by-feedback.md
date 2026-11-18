@@ -40,4 +40,4 @@
 
 ## 후속 기록
 
-- 2026-11-18: 결과 "덮인 다이제스트에서 온 신호를 관심도가 셀지는 노출 수의 정의와 함께 관심도를 구현하는 작업이 정한다" — [ADR-0213](0213-interest-per-subtopic-is-smoothed-reactions-over-exposures-with-a-half-life-and-exposures-are-all-ready-citations.md)(덮인 다이제스트를 포함한 `READY` 인용 전부를 노출로 센다), 지금 상태는 [digest Spec "관심도"](../specs/digest.md#관심도)
+- 2026-11-18: 결과 "덮인 다이제스트에서 온 신호를 관심도가 셀지는 노출 수의 정의와 함께 관심도를 구현하는 작업이 정한다" — [ADR-0222](0222-interest-per-subtopic-is-smoothed-reactions-over-exposures-with-a-half-life-and-exposures-are-all-ready-citations.md)(덮인 다이제스트를 포함한 `READY` 인용 전부를 노출로 센다), 지금 상태는 [digest Spec "관심도"](../specs/digest.md#관심도)

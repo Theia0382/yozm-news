@@ -3,7 +3,7 @@
 - 상태: 승인
 - 날짜: 2026-11-18
 - 근거: [이슈 #187](https://github.com/Theia0382/yozm-news/issues/187) — 스토리라인 · 사건 · 평가의 공개 조회로 스토리라인의 주제를 모을 수 있음을 대조하고, 모으는 규칙을 리드와 정함. 구현 커밋 `e6d32cf` · `1487ffe`
-- 관련: [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)(결정 "주제는 스토리라인 층 밖이다"와 미뤄 둔 스토리라인의 주제 — 보충), [ADR-0213](0213-interest-per-subtopic-is-smoothed-reactions-over-exposures-with-a-half-life-and-exposures-are-all-ready-citations.md)(관심도 산식 — 구독 변경의 몫)
+- 관련: [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)(결정 "주제는 스토리라인 층 밖이다"와 미뤄 둔 스토리라인의 주제 — 보충), [ADR-0222](0222-interest-per-subtopic-is-smoothed-reactions-over-exposures-with-a-half-life-and-exposures-are-all-ready-citations.md)(관심도 산식 — 구독 변경의 몫)
 
 ## 맥락
 

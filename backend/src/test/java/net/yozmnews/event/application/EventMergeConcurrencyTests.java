@@ -132,7 +132,7 @@ class EventMergeConcurrencyTests {
 
 		// L 차례에는 잠근 S 의 배정 수(1)가 S 의 기사 수(2)와 달라 합치지 않고 되돌렸다 — 같은 회차의 S 차례가 새 값으로 다시 합쳤다
 		assertThat(output.getOut())
-			.contains("합칠 사건이 닫혔거나 그새 바뀌어 다음 회차에 다시 본다 — 사건 " + large + " · " + small);
+			.contains("합칠 사건이 닫혔거나 그새 바뀌어 미뤄 다시 본다 — 사건 " + large + " · " + small);
 		assertThat(status(small)).isEqualTo("MERGED");
 		assertThat(articleCount(large)).isEqualTo(5);
 		// 기사마다 배정 하나 — 다섯 기사가 모두 남는 사건에 있다
