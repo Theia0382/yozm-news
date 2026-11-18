@@ -7,6 +7,7 @@ import java.util.Map;
 
 import net.yozmnews.platform.UserId;
 import net.yozmnews.user.StorylineSubscriptionCause;
+import org.jspecify.annotations.Nullable;
 
 /**
  * 스토리라인 구독 저장소 — 현재 상태({@code user_storyline_subscriptions})와 추가 전용 이력
@@ -40,5 +41,11 @@ public interface StorylineSubscriptionRepository {
 
 	/** 사용자의 이력 가운데 시각이 {@code from} 이상 · {@code to} 미만인 행 — 시각 · 행 순 */
 	List<StoredSubscriptionChange> changes(UserId user, Instant from, Instant to);
+
+	/**
+	 * 사용자의 이력 가운데 원인이 사용자인 행 — 시각 · 행의 내림차순으로 {@code limit} 건까지. 내 구독 이력 전용(user-R63).
+	 * @param before 있으면 이 순서 키보다 앞선(시각이 이르거나, 같으면 행 ID 가 작은) 행만
+	 */
+	List<UserSubscriptionChange> userChanges(UserId user, @Nullable SubscriptionChangeCursor before, int limit);
 
 }

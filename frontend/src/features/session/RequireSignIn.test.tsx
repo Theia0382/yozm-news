@@ -70,6 +70,10 @@ function renderGuarded(
           { path: "/notices", element: <p>알림 화면</p> },
           { path: "/interests", element: <p>관심 설정 화면</p> },
           { path: "/storylines", element: <p>스토리라인 화면</p> },
+          {
+            path: "/storylines/subscriptions",
+            element: <p>내 구독 화면</p>,
+          },
           { path: "/password", element: <p>비밀번호 변경 화면</p> },
         ],
       },
@@ -172,7 +176,7 @@ describe("RequireSignIn", () => {
     ).not.toBeInTheDocument();
   });
 
-  it.each(["/", "/digest", "/storylines"])(
+  it.each(["/", "/digest", "/storylines", "/storylines/subscriptions"])(
     "LLM 키가 없으면 %s 로 와도 키 화면으로 보낸다",
     async (entry) => {
       const { router } = renderGuarded(entry, () =>
@@ -184,6 +188,7 @@ describe("RequireSignIn", () => {
       expect(screen.queryByText("다이제스트")).not.toBeInTheDocument();
       expect(screen.queryByText("첫 화면")).not.toBeInTheDocument();
       expect(screen.queryByText("스토리라인 화면")).not.toBeInTheDocument();
+      expect(screen.queryByText("내 구독 화면")).not.toBeInTheDocument();
     },
   );
 

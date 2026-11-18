@@ -1,7 +1,8 @@
-// 독자 화면의 스토리라인 문구 — 목록과 상세가 같은 문구를 쓰게 한 곳에 둔다(docs/specs/reader.md · overview §8).
+// 독자 화면의 스토리라인 문구 — 목록 · 상세 · 구독이 같은 문구를 쓰게 한 곳에 둔다(docs/specs/reader.md · overview §8).
 
 import type { StorylineWindow } from "@/features/storylines/storylineQueries";
-import { formatDate } from "@/shared/lib/dateTime";
+import type { SubscriptionAction } from "@/features/storylines/subscriptionQueries";
+import { formatDate, formatDateTime } from "@/shared/lib/dateTime";
 
 /** 스토리라인 목록의 주소 */
 export const STORYLINES_PATH = "/storylines";
@@ -66,3 +67,105 @@ export const NOT_FOUND = "없는 스토리라인입니다.";
 
 /** 읽지 못했다 */
 export const LOAD_FAILED = "스토리라인을 불러오지 못했습니다.";
+
+/** 구독 버튼 — 구독하지 않은 스토리라인 */
+export const SUBSCRIBE_LABEL = "구독";
+
+/** 구독 버튼 — 구독 중인 스토리라인(누르면 해제) */
+export const SUBSCRIBED_LABEL = "구독 중";
+
+/**
+ * 구독의 효과 한 줄 — 구독 버튼의 설명. 구독은 그 흐름의 기사를 다이제스트에 따로 넣지 않고 주제별 관심도에만 한동안 든다(docs/specs/digest.md
+ * 관심도 · ADR-0214)
+ */
+export const SUBSCRIPTION_EFFECT_SHORT =
+  "구독하면 이 흐름의 주제를 다이제스트 순위에 한동안 반영합니다";
+
+/** 구독 수가 상한이다 */
+export function limitReached(limit: number): string {
+  return `구독은 ${limit}개까지입니다. 내 구독에서 정리해 주세요.`;
+}
+
+/** 구독 · 해제 요청이 실패했다 */
+export const SUBSCRIPTION_CHANGE_FAILED = "구독을 바꾸지 못했습니다.";
+
+/** 내 구독의 주소 — 스토리라인 화면 묶음 안에 있고 키가 있어야 간다(ADR-0242) */
+export const SUBSCRIPTIONS_PATH = `${STORYLINES_PATH}/subscriptions`;
+
+/** 내 구독 화면 이름 */
+export const SUBSCRIPTIONS_TITLE = "내 구독";
+
+/** 구독 해제 버튼 */
+export const UNSUBSCRIBE_LABEL = "구독 해제";
+
+/**
+ * 구독의 효과 — 내 구독 머리의 설명. 버튼 설명(SUBSCRIPTION_EFFECT_SHORT)과 같은 사실이다: 그 흐름의 기사를 다이제스트에 따로 넣지 않고,
+ * 주제별 관심도에 구독 · 해제한 때 한 번 든 뒤 차츰 줄어든다(docs/specs/digest.md 관심도 · ADR-0214)
+ */
+export const SUBSCRIPTION_EFFECT =
+  "구독하면 그 흐름의 주제를 관심 있게 본 것으로 다이제스트 순위에 한동안 반영합니다. 구독한 흐름의 기사를 다이제스트에 따로 넣지는 않습니다. 따라가는 흐름은 여기서 다시 찾아볼 수 있습니다.";
+
+/** 지금 구독 수와 상한 */
+export function subscriptionCount(count: number, limit: number): string {
+  return `구독 ${count} / ${limit}`;
+}
+
+/** 내 구독의 순서 */
+export type SubscriptionOrder = "LATEST_ARTICLE" | "SUBSCRIBED";
+
+/** 내 구독 순서의 기본 — 최근 기사가 있는 흐름이 위 */
+export const DEFAULT_ORDER: SubscriptionOrder = "LATEST_ARTICLE";
+
+/** 내 구독 순서의 이름 */
+export const orderLabels = {
+  LATEST_ARTICLE: "최근 기사 순",
+  SUBSCRIBED: "구독한 순",
+} as const satisfies Record<SubscriptionOrder, string>;
+
+/** 내 구독 순서를 고르는 목록의 차례 */
+export const ORDERS: readonly SubscriptionOrder[] = [
+  "LATEST_ARTICLE",
+  "SUBSCRIBED",
+];
+
+/** 내 구독의 묶음 머리 — 끝나지 않은 것(진행 · 잠잠)과 끝난 것 */
+export const groupHeadings = {
+  following: "이어지는 스토리라인",
+  ended: "끝난 스토리라인",
+} as const;
+
+/** 끝난 묶음의 설명 — 끝난 구독도 남고 뒤 기사가 붙으면 다시 이어진다(ADR-0189) */
+export const ENDED_NOTE =
+  "한동안 새 기사가 없는 흐름입니다. 다시 기사가 붙으면 위로 올라갑니다. 더 따라가지 않으려면 구독을 해제하세요.";
+
+/** 구독한 스토리라인이 없다 */
+export const NO_SUBSCRIPTIONS = "구독한 스토리라인이 없습니다.";
+
+/** 그새 지워진 스토리라인 — 다시 읽으면 구독에서 빠진다 */
+export const REMOVED_STORYLINE = "사라진 스토리라인";
+
+/** 마지막 기사 시각 · 구독 시각의 한 줄 */
+export function subscriptionTimes(
+  lastArticleAt: string,
+  subscribedAt: string,
+): string {
+  return `마지막 기사 ${formatDateTime(lastArticleAt)} · 구독 ${formatDateTime(subscribedAt)}`;
+}
+
+/** 내 구독을 읽지 못했다 */
+export const SUBSCRIPTIONS_LOAD_FAILED = "내 구독을 불러오지 못했습니다.";
+
+/** 구독 기록 절 이름 — 사용자가 직접 한 구독 · 해제(ADR-0243) */
+export const HISTORY_TITLE = "구독 기록";
+
+/** 구독 기록 행의 이름 */
+export const historyActionLabels = {
+  ADD: SUBSCRIBE_LABEL,
+  REMOVE: UNSUBSCRIBE_LABEL,
+} as const satisfies Record<SubscriptionAction, string>;
+
+/** 구독 기록이 없다 */
+export const NO_HISTORY = "구독 기록이 없습니다.";
+
+/** 구독 기록을 읽지 못했다 */
+export const HISTORY_LOAD_FAILED = "구독 기록을 불러오지 못했습니다.";

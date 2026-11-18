@@ -11,6 +11,7 @@ import {
   useNoticePages,
 } from "@/features/notices/noticeQueries";
 import { SESSION_QUERY_KEY } from "@/features/session/sessionQueries";
+import { SUBSCRIPTIONS_PATH } from "@/features/storylines/storylineTexts";
 import type { components } from "@/shared/api/schema";
 import { formatDate, formatDateTime } from "@/shared/lib/dateTime";
 import { type FeedStatus, feedStatusLabels } from "@/shared/lib/feedStatus";
@@ -341,6 +342,9 @@ function StorylineSubscriptionsRemovedBody({
           </li>
         ))}
       </ul>
+      <Link to={SUBSCRIPTIONS_PATH} className="underline">
+        내 구독 보기
+      </Link>
     </div>
   );
 }

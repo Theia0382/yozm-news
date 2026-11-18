@@ -10,9 +10,6 @@ import java.util.Objects;
 
 import net.yozmnews.platform.UserId;
 import net.yozmnews.storyline.RetiredStoryline;
-import net.yozmnews.storyline.StorylineDirectory;
-import net.yozmnews.storyline.StorylineId;
-import net.yozmnews.storyline.StorylineView;
 import net.yozmnews.storyline.StorylinesRetired;
 import net.yozmnews.user.StorylineSubscriptionAction;
 import net.yozmnews.user.StorylineSubscriptionCause;
@@ -35,7 +32,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 구독 따라가기 — 사용자의 스토리라인 구독을 지금 가리키는 스토리라인으로 고쳐 쓴다. docs/specs/user.md §4 · user-R53 · user-R54
  * <p>
  * 사용자 하나를 고쳐 쓰는 정본은 {@link #followLocked} 하나다 — 리스너({@link #followRetired})와 구독 조회 · 저장 유스케이스가 함께
- * 쓴다. 판정은 {@link SubscriptionFollow} 가 하고, 남는 쪽 풀기는 {@code storyline} 의 {@link StorylineDirectory#findAll} 이 한다.
+ * 쓴다. 판정은 {@link SubscriptionFollow} 가 하고, 남는 쪽 풀기는 {@link CurrentStorylines} 가 한다.
  * 합쳐져 옮긴 행은 옛 ID 의 뺌과(새로 더했으면) 남는 ID 의 더함, 사라진 행은 뺌으로 이력에 남기고, 사라진 구독이 있으면 알림 하나를
  * 남긴다. 알림은 스토리라인 ID 와 풀기의 남은 사건만 담는다 — 기사를 읽지 않는다.
  */
@@ -53,7 +50,7 @@ class SubscriptionFollowups {
 
 	private final NoticeRepository notices;
 
-	private final StorylineDirectory storylines;
+	private final CurrentStorylines storylines;
 
 	private final TransactionTemplate transaction;
 
@@ -61,12 +58,12 @@ class SubscriptionFollowups {
 
 	@Autowired
 	SubscriptionFollowups(StorylineSubscriptionRepository subscriptions, InterestSettingsRepository settings,
-			NoticeRepository notices, StorylineDirectory storylines, TransactionTemplate transaction) {
+			NoticeRepository notices, CurrentStorylines storylines, TransactionTemplate transaction) {
 		this(subscriptions, settings, notices, storylines, transaction, InstantSource.system());
 	}
 
 	SubscriptionFollowups(StorylineSubscriptionRepository subscriptions, InterestSettingsRepository settings,
-			NoticeRepository notices, StorylineDirectory storylines, TransactionTemplate transaction,
+			NoticeRepository notices, CurrentStorylines storylines, TransactionTemplate transaction,
 			InstantSource clock) {
 		this.subscriptions = Objects.requireNonNull(subscriptions, "subscriptions");
 		this.settings = Objects.requireNonNull(settings, "settings");
@@ -91,9 +88,7 @@ class SubscriptionFollowups {
 		if (current.isEmpty()) {
 			return new Followed(current, false);
 		}
-		Map<Long, Long> resolved = new HashMap<>();
-		this.storylines.findAll(current.keySet().stream().map(StorylineId::new).toList())
-			.forEach((requested, view) -> resolved.put(requested.value(), survivor(view)));
+		Map<Long, Long> resolved = this.storylines.resolve(current.keySet());
 		SubscriptionFollow follow = SubscriptionFollow.decide(current, resolved);
 		if (!follow.changed()) {
 			return new Followed(current, false);
@@ -158,10 +153,6 @@ class SubscriptionFollowups {
 			logger.info("합치거나 지운 스토리라인 {}개를 따라 사용자 {}명의 구독을 고쳤다", ids.size(), followed);
 		}
 		return followed;
-	}
-
-	private static long survivor(StorylineView view) {
-		return view.id().value();
 	}
 
 	/** 따라간 뒤의 구독 행과 바뀐 것이 있었는가 */

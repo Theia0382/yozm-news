@@ -28,10 +28,10 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.web.servlet.MockMvc;
 
 /**
- * 스토리라인 구독의 사용자 격리 — 사용자 A 의 구독은 B 의 목록에 없고, B 의 해제는 A 의 구독을 지우지 않는다. 키가 없는 사용자도 쓴다. 세션
- * 없이 부르면 세 경로 모두 401 이다(docs/qa/test-strategy.md §13).
+ * 스토리라인 구독의 사용자 격리 — 사용자 A 의 구독은 B 의 목록에 없고, B 의 해제는 A 의 구독을 지우지 않으며, 구독 이력은 자기 행만
+ * 낸다. 키가 없는 사용자도 쓴다. 세션 없이 부르면 네 경로 모두 401 이다(docs/qa/test-strategy.md §13).
  * <p>
- * 지키는 규칙: user-R5 · user-R6 · user-R52
+ * 지키는 규칙: user-R5 · user-R6 · user-R52 · user-R63
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -97,9 +97,32 @@ public class StorylineSubscriptionScopeTests {
 	}
 
 	@Test
+	void eachUserReadsOnlyTheirOwnHistory() throws Exception {
+		SignedInUsers users = new SignedInUsers(this.mockMvc, this.accounts, this.credentials, this.hashing);
+		SignedInUsers.SignedInUser a = users.signIn("history-a@example.com");
+		SignedInUsers.SignedInUser b = users.signIn("history-b@example.com");
+		// A 만 키가 있다 — 키가 없는 B 도 구독 이력을 읽는다(키 관문 403 이 아니다)
+		LlmKeyRows.give(this.jdbc, a.id().value());
+		long ofA = storyline();
+		long ofB = storyline();
+		this.mockMvc.perform(put("/api/storyline-subscriptions/{id}", ofA).with(a)).andExpect(status().isOk());
+		this.mockMvc.perform(put("/api/storyline-subscriptions/{id}", ofB).with(b)).andExpect(status().isOk());
+
+		this.mockMvc.perform(get("/api/storyline-subscriptions/changes").with(b))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.changes.length()").value(1))
+			.andExpect(jsonPath("$.changes[0].storylineId").value(ofB));
+		this.mockMvc.perform(get("/api/storyline-subscriptions/changes").with(a))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.changes.length()").value(1))
+			.andExpect(jsonPath("$.changes[0].storylineId").value(ofA));
+	}
+
+	@Test
 	void subscriptionPathsNeedASession() throws Exception {
 		Cookie csrf = new Cookie("XSRF-TOKEN", "subscription-scope");
 		this.mockMvc.perform(get("/api/storyline-subscriptions")).andExpect(status().isUnauthorized());
+		this.mockMvc.perform(get("/api/storyline-subscriptions/changes")).andExpect(status().isUnauthorized());
 		this.mockMvc
 			.perform(put("/api/storyline-subscriptions/1").cookie(csrf).header("X-XSRF-TOKEN", "subscription-scope"))
 			.andExpect(status().isUnauthorized());
