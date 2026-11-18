@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { ReactElement } from "react";
 import { useId, useState } from "react";
 import { Link } from "react-router";
 import {
@@ -236,7 +237,7 @@ function PreviewView({
   );
 }
 
-function ChangeView({ change }: { change: Change }) {
+function ChangeView({ change }: { change: Change }): ReactElement {
   switch (change.result) {
     case "CHANGED":
       return (
