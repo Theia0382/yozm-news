@@ -32,7 +32,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 독자 화면의 관심사 히스토리 — 세션 사용자의 기간별 주제 관심 · 새로 생긴 관심 · 사라진 관심 · 주제 구독 변경. docs/specs/reader.md §3
+ * 독자 화면의 관심사 히스토리 — 세션 사용자의 기간별 주제 관심 · 새로 생긴 관심 · 사라진 관심 · 주제 구독 변경. docs/specs/reader.md §3 · reader-R8
  * <p>
  * {@code digest} 의 {@link InterestHistory} 와 {@code tag} 의 이름 조회만 부르고 응답 모양을 정한다 — 기간 · 관심 · 변화의 판단은
  * {@code digest} 의 것이다. 세션이 필요하고 키 관문 뒤다(키 없이 여는 표시 · 요청 방어 표시가 없다).

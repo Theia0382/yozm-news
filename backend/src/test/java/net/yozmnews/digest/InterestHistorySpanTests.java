@@ -6,6 +6,8 @@ import org.junit.jupiter.api.Test;
 
 /**
  * 관심사 히스토리의 기간 선택지와 단위별 기본값.
+ * <p>
+ * 지키는 규칙: digest-R29
  */
 class InterestHistorySpanTests {
 

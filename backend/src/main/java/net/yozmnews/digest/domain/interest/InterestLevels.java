@@ -8,7 +8,7 @@ import java.util.stream.Collectors;
 
 /**
  * 한 사용자의 주제 중분류마다 관심 x(−1 ~ 1) — {@link InterestFormula#levels} 가 낸다. 맵에 없는 중분류는 0(신호 없음)이다.
- * 가중치({@link TopicInterests})로 옮기는 변환과 "관심 있음"의 판정이 여기 한 곳에 있다. docs/specs/digest.md §5
+ * 가중치({@link TopicInterests})로 옮기는 변환과 "관심 있음"의 판정이 여기 한 곳에 있다. docs/specs/digest.md §5 · digest-R23 · digest-R31
  */
 public final class InterestLevels {
 

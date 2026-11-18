@@ -1,6 +1,6 @@
 # ADR-0191: 스토리라인 구독의 소비자 조회는 구독을 만든 작업이 열고, 쓰지 않고 남는 스토리라인 ID 로 풀어 낸다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 조회의 백그라운드 작업 전용([ADR-0228](0228-consumer-queries-scoped-by-a-user-argument-may-be-called-on-screen-paths-with-the-session-user.md))
 - 날짜: 2026-11-16
 - 근거: [이슈 #184](https://github.com/Theia0382/yozm-news/issues/184) — 구현 커밋 `a7ed33a`
 - 관련: [ADR-0180](0180-user-settings-changes-publish-no-event-and-consumers-query.md)(보충 — 결정 범위(사용자 설정 · 태그 선호) 밖인 스토리라인 구독의 소비자 조회를 이 작업이 열었다. 결과 "소비자용 공개 조회도 소비자의 작업이 연다"와 다르게 간 범위다), [ADR-0188](0188-storyline-subscriptions-follow-retired-storylines-by-event-and-before-each-use-and-notices-point-to-the-remaining-event.md)(따라가기 — 풀어 읽어야 하는 까닭)
@@ -14,6 +14,7 @@
 ## 결정
 
 - **스토리라인 구독의 소비자 조회를 구독을 만든 작업이 연다.** 지금 구독(남는 스토리라인 ID 로 풀고 같은 것은 하나로, 사라진 것은 뺀다)과 시각 반열린 구간의 구독 변경(이력 행 그대로 — 기록된 ID · 지금 푼 ID · 원인)을 낸다.
+> 부분 대체(셋째 문장) — [ADR-0228](0228-consumer-queries-scoped-by-a-user-argument-may-be-called-on-screen-paths-with-the-session-user.md). 지금 상태: [`user` user-R55](../specs/user.md#스토리라인-구독)
 - **조회는 쓰지 않는다.** 따라가기의 고쳐 쓰기는 리스너와 사용자의 조회 · 저장만 한다. 백그라운드 작업 전용이다.
 - **소비자의 필요는 비워 둔다** — 기간을 사용자 시간대의 날로 자르는 일과 관심 신호로 쓸 행을 고르는 일은 부르는 쪽이 한다.
 

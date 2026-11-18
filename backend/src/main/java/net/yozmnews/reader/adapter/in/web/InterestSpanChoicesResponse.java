@@ -5,7 +5,7 @@ import java.util.List;
 import net.yozmnews.digest.InterestHistorySpan;
 
 /**
- * 한 단위의 고를 수 있는 기간 — docs/specs/reader.md §5
+ * 한 단위의 고를 수 있는 기간 — docs/specs/reader.md §5 · reader-R8
  *
  * @param unit 단위 — 주 · 월
  * @param choices 그 단위의 기간 — 기간 수 순

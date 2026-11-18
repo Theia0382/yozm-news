@@ -14,7 +14,7 @@ import net.yozmnews.user.StorylineSubscriptionChange;
 import net.yozmnews.user.TopicSubscriptionChange;
 
 /**
- * 범위 하나에서 읽은 관심도 재료 — 기준 시각마다 {@link InterestWindow} 가 창으로 잘라 쓴다. 기간 판단은 없다. docs/specs/digest.md §5
+ * 범위 하나에서 읽은 관심도 재료 — 기준 시각마다 {@link InterestWindow} 가 창으로 잘라 쓴다. 기간 판단은 없다. docs/specs/digest.md §5 · digest-R25
  *
  * @param tagSet 키를 푼 활성 태그 체계 버전
  * @param exposures 노출 행 — 끝낸 시각 · 기사 순

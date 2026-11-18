@@ -56,6 +56,8 @@ import org.springframework.test.context.TestPropertySource;
  * 지금은 2026-11-18(수) 12:00 서울이다. 관심 x 의 값은 산식 · 창의 단위 시험(InterestFormulaTests · InterestWindowTests ·
  * InterestTimelinesTests)이 고정하고, 여기서는 어느 기간에 값 · 변화 · 구독 변경이 붙는지를 본다. 기준 시각 조회만 실제 저장 행을 지난 관심 x 를
  * 손으로 계산한 리터럴로 단언한다.
+ * <p>
+ * 지키는 규칙: digest-R29 ~ digest-R32
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest

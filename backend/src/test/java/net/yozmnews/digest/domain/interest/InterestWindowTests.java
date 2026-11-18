@@ -26,6 +26,8 @@ import org.junit.jupiter.api.Test;
 /**
  * 기준 시각 하나의 관심 — 재료를 창으로 자른다. 기대값은 손으로 계산한 리터럴이다(반감기 30일 · K 3 · γ 1, 30일 전 무게 0.5). 다이제스트의 창 끝은
  * 부르는 시각, 관심사 히스토리의 창 끝은 기준 시각이다.
+ * <p>
+ * 지키는 규칙: digest-R25 · digest-R30
  */
 class InterestWindowTests {
 

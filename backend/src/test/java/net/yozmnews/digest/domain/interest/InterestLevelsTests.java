@@ -11,6 +11,8 @@ import org.junit.jupiter.api.Test;
 
 /**
  * 관심 x 와 가중치 변환 · 관심 있음 — 기대값은 손으로 적은 리터럴이다(β 0.5 · θ 0.2).
+ * <p>
+ * 지키는 규칙: digest-R23 · digest-R31
  */
 class InterestLevelsTests {
 

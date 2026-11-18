@@ -6,7 +6,7 @@ import java.util.List;
 import net.yozmnews.user.TopicSubscriptionAction;
 
 /**
- * 사용자가 직접 바꾼 주제 구독 하나 — docs/specs/reader.md §5
+ * 사용자가 직접 바꾼 주제 구독 하나 — docs/specs/reader.md §5 · reader-R8
  *
  * @param at 바꾼 시각
  * @param action 더함 · 뺌

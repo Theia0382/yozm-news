@@ -23,6 +23,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 /**
  * 사용자 시간대 조회 — 설정 행의 시간대, 설정 행이 없으면 계정을 만들 때의 기본값(Asia/Seoul), 계정이 없으면 빈 값. 실제 PostgreSQL 위에서
  * 계정을 만드는 길로 계정과 설정 행을 만든다.
+ * <p>
+ * 지키는 규칙: user-R60
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest

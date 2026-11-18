@@ -47,3 +47,7 @@
 | 기사 ID 구간마다 한 문장씩 나눠 읽는다 | 메모리는 묶이지만 구간마다 스냅숏이 달라 첫 평가 · 최신 평가 판단과 활성 버전이 구간 사이에서 갈릴 수 있다 |
 | 기간을 날짜 · 시간대로만 받는다 | 상한이 날짜 수 하나로 깔끔하지만, 자정에 맞지 않는 구간(조회 시각에서 거꾸로 7일)을 소비자가 낼 수 없다 |
 | 기간 상한을 92일(분기)로 · 두지 않는다 | 가장 긴 v1 소비자는 월간 리포트다. 처리 시간이 기간에 비례해 92일이면 측정 목표가 세 배가 되고, 상한이 없으면 한 요청이 쌓인 평가 전부를 읽을 수 있다 |
+
+## 후속 기록
+
+- 2026-11-18: 맥락 · 결과의 "관심사 히스토리가 보도량을 쓴다" — [ADR-0227](0227-the-interest-history-shows-subtopic-interest-and-the-users-own-topic-subscription-changes-only.md), 지금 상태는 [tag Spec "TopicCoverage"](../specs/tag.md#topiccoverage--topiccoverageresult--topiccoverageview--categorycoverage--subtopiccoverage)

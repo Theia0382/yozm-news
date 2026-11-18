@@ -4,7 +4,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * 관심사 히스토리의 기간 하나 — docs/specs/reader.md §5
+ * 관심사 히스토리의 기간 하나 — docs/specs/reader.md §5 · reader-R8
  *
  * @param firstDay 첫날(사용자 시간대)
  * @param lastDay 마지막 날(사용자 시간대)

@@ -13,7 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * {@link UserTimezones} 의 구현 — 계정 유무와 설정 행을 읽기 전용 트랜잭션 하나에서 읽는다. 쓰지 않는다. docs/specs/user.md §4
+ * {@link UserTimezones} 의 구현 — 계정 유무와 설정 행을 읽기 전용 트랜잭션 하나에서 읽는다. 쓰지 않는다. docs/specs/user.md §4 · user-R60
  */
 @Service
 class UserTimezonesService implements UserTimezones {

@@ -5,7 +5,7 @@ import java.time.LocalDate;
 import java.util.Objects;
 
 /**
- * 관심사 히스토리의 기간 하나 — {@link InterestPeriods} 가 낸다. docs/specs/digest.md §5
+ * 관심사 히스토리의 기간 하나 — {@link InterestPeriods} 가 낸다. docs/specs/digest.md §5 · digest-R29
  *
  * @param firstDay 사용자 시간대의 첫날
  * @param lastDay 사용자 시간대의 마지막 날

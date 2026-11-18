@@ -7,7 +7,7 @@ import java.util.Set;
 import net.yozmnews.user.TopicSubscriptionAction;
 
 /**
- * 사용자가 직접 바꾼 주제 구독 하나 — 관심사 히스토리의 기간마다 붙는다. docs/specs/digest.md §3
+ * 사용자가 직접 바꾼 주제 구독 하나 — 관심사 히스토리의 기간마다 붙는다. docs/specs/digest.md §3 · digest-R31
  *
  * @param at 바꾼 시각
  * @param action 더함 · 뺌

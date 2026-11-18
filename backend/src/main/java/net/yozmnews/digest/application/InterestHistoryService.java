@@ -29,7 +29,7 @@ import org.springframework.stereotype.Service;
  * {@link InterestHistory} 의 구현 — 계정 유무와 시간대({@code user} 의 {@link UserTimezones}) · 활성 체계 버전({@code tag}) · 관심도 재료
  * ({@link InterestMaterials})를 차례로 읽고, 기간 경계({@link InterestPeriods})와 기준 시각마다의 관심 · 변화({@link InterestTimelines})는
  * {@code domain} 이 정한다. 재료는 첫 기준 시각의 창 시작부터 마지막 기준 시각까지 한 번 읽는다. 트랜잭션 없음, 역할 애너테이션 없음.
- * docs/specs/digest.md §4
+ * docs/specs/digest.md §4 · digest-R29 ~ digest-R32
  */
 @Service
 class InterestHistoryService implements InterestHistory {

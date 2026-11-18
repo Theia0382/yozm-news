@@ -3,7 +3,7 @@ package net.yozmnews.reader.adapter.in.web;
 import java.util.List;
 
 /**
- * 관심사 히스토리의 주제 중분류 하나 — docs/specs/reader.md §5
+ * 관심사 히스토리의 주제 중분류 하나 — docs/specs/reader.md §5 · reader-R8
  *
  * @param key 중분류 전체 키
  * @param name 중분류 이름

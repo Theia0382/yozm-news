@@ -25,6 +25,8 @@ import org.junit.jupiter.api.Test;
 /**
  * 기준 시각마다의 관심 · 새로 생긴 관심 · 사라진 관심 · 두 기준 시각 사이의 주제 구독 변경 · 드러난 주제. 기준 시각은 30일 간격이라 앞 기준 시각의
  * 행은 무게 0.5, 두 칸 앞은 0.25 다. 기대값은 손으로 계산한 리터럴이다(K 3 · γ 1 · θ 0.2).
+ * <p>
+ * 지키는 규칙: digest-R30 · digest-R31
  */
 class InterestTimelinesTests {
 

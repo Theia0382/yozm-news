@@ -7,7 +7,7 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * 기준 시각 하나의 관심과 그 앞 기준 시각 대비 변화 — 관심사 히스토리 조회가 낸다. docs/specs/digest.md §3
+ * 기준 시각 하나의 관심과 그 앞 기준 시각 대비 변화 — 관심사 히스토리 조회가 낸다. docs/specs/digest.md §3 · digest-R30 · digest-R31
  *
  * @param reference 기준 시각
  * @param levels 주제 중분류(활성 키) → 관심 x(−1 ~ 1) — 노출 · 구독 신호가 있는 중분류만

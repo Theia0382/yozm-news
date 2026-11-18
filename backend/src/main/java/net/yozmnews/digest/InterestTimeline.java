@@ -8,7 +8,7 @@ import java.util.Set;
 import net.yozmnews.tag.TagSetId;
 
 /**
- * 한 사용자의 최근 기간별 관심 — {@link InterestHistory#recent} 가 낸다. docs/specs/digest.md §3
+ * 한 사용자의 최근 기간별 관심 — {@link InterestHistory#recent} 가 낸다. docs/specs/digest.md §3 · digest-R29 · digest-R31
  *
  * @param tagSet 주제 키의 활성 태그 체계 버전
  * @param zone 기간을 자른 사용자 시간대

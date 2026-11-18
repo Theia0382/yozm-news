@@ -9,6 +9,8 @@ import org.junit.jupiter.api.Test;
 
 /**
  * 새로 생긴 관심 · 사라진 관심과 드러난 주제 — θ 0.2 둘레의 손 리터럴.
+ * <p>
+ * 지키는 규칙: digest-R31
  */
 class InterestShiftsTests {
 

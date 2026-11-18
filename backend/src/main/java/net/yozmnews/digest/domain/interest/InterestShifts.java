@@ -6,7 +6,7 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * 관심사 히스토리의 판정 — 정본 — docs/specs/digest.md §5
+ * 관심사 히스토리의 판정 — 정본 — docs/specs/digest.md §5 · digest-R31
  * <ul>
  * <li>새로 생긴 관심 · 사라진 관심 — 이웃한 두 기간의 관심 있음({@link InterestLevels#present})을 견준다</li>
  * <li>드러난 주제 — 보이는 기간 가운데 한 번이라도 |x| 가 {@link InterestRules#PRESENCE_THRESHOLD} 이상인 중분류(관심 쪽 · 싫어요 쪽 모두)</li>

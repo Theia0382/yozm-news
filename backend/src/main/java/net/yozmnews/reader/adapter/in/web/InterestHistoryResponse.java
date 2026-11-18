@@ -5,7 +5,7 @@ import java.util.List;
 import net.yozmnews.digest.InterestHistorySpan;
 
 /**
- * 관심사 히스토리 — 고른 기간 · 고를 수 있는 기간 · 기간마다 변화 · 주제마다 관심. docs/specs/reader.md §5
+ * 관심사 히스토리 — 고른 기간 · 고를 수 있는 기간 · 기간마다 변화 · 주제마다 관심. docs/specs/reader.md §5 · reader-R8
  *
  * @param span 보인 기간
  * @param spans 고를 수 있는 기간 — 단위마다 하나, 단위 순
