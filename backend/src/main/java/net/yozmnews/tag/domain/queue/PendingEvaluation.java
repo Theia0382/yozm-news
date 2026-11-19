@@ -44,16 +44,13 @@ public record PendingEvaluation(ArticleId articleId, Instant eligibleAt, int att
 	}
 
 	/**
-	 * 일시 실패 — 시도 수를 하나 늘리고, 상한이면 실패로 남기고, 아니면 재시도 간격 뒤로 미룬다. 점유를 푼다.
+	 * 일시 실패 — 시도 수를 하나 늘리고 재시도 간격({@link EvaluationSchedule#retryDelay}) 뒤로 미룬다. 시도 수에 상한이 없어 실패로
+	 * 남기지 않는다. 점유를 푼다.
 	 * @throws IllegalStateException 실패로 남은 행일 때
 	 */
 	public PendingEvaluation afterTransient(String message, Instant now) {
 		requireWaiting();
 		int next = this.attempts + 1;
-		if (next >= EvaluationSchedule.MAX_ATTEMPTS) {
-			return new PendingEvaluation(this.articleId, this.eligibleAt, next, null, QueueFailure.RETRIES_EXHAUSTED,
-					message);
-		}
 		return new PendingEvaluation(this.articleId, now.plus(EvaluationSchedule.retryDelay(next)), next, null, null,
 				message);
 	}

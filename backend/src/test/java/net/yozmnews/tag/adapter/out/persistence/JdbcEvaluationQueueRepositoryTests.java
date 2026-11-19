@@ -75,7 +75,7 @@ class JdbcEvaluationQueueRepositoryTests {
 		row(11, T.plusSeconds(1800), 0, null, null, null);                    // 대기 중 — 정착 시간 뒤
 		row(12, T.plusSeconds(60), 2, OTHER, now.plusSeconds(600), null);     // 회차가 점유 중
 		row(13, T, 0, null, null, "ARTICLE_REJECTED");                        // 기사 거부로 실패
-		row(14, T, 5, null, null, "RETRIES_EXHAUSTED");                       // 시도 소진으로 실패
+		row(14, T, 3, null, null, "ARTICLE_REJECTED");                        // 일시 실패 뒤 기사 거부로 실패
 		this.jdbc.sql("update evaluation_queue set last_error = '거부' where article_id in (13, 14)").update();
 
 		int requeued = this.repository.requeue(
@@ -105,7 +105,7 @@ class JdbcEvaluationQueueRepositoryTests {
 		row(5, now, 0, null, null, null);                                   // 경계 — 지금 평가할 수 있다
 		row(4, now.minusSeconds(60), 0, null, null, null);                  // 더 일찍 평가할 수 있다
 		row(3, now.plusSeconds(1), 0, null, null, null);                    // 아직 아니다
-		row(2, now.minusSeconds(60), 5, null, null, "RETRIES_EXHAUSTED");  // 실패로 남았다
+		row(2, now.minusSeconds(60), 0, null, null, "ARTICLE_REJECTED");   // 실패로 남았다
 		row(6, now.minusSeconds(60), 0, OTHER, now.plusSeconds(60), null); // 다른 회차가 점유 중
 		row(7, now.minusSeconds(30), 1, OTHER, now, null);                  // 점유가 지금 만료됐다
 
@@ -148,16 +148,16 @@ class JdbcEvaluationQueueRepositoryTests {
 	}
 
 	@Test
-	void deletesTheGivenArticlesAndCountsWaitingAndFailedRows() {
+	void deletesTheGivenArticlesAndCountsWaitingRetryingAndFailedRows() {
 		row(11, T, 0, null, null, null);
-		row(12, T, 2, TOKEN, T.plusSeconds(60), null);
-		row(13, T, 1, null, null, "ARTICLE_REJECTED");
-		row(14, T, 5, null, null, "RETRIES_EXHAUSTED");
-		row(15, T, 5, null, null, "RETRIES_EXHAUSTED");
+		row(12, T, 2, TOKEN, T.plusSeconds(60), null);                  // 일시 실패 뒤 점유 중 — 대기 · 일시 실패를 겪은 대기
+		row(13, T, 1, null, null, "ARTICLE_REJECTED");                  // 일시 실패 뒤 기사 거부 — 실패만 센다
+		row(14, T.plusSeconds(3600), 9, null, null, null);              // 일시 실패로 미뤘다
+		row(15, T, 0, null, null, "ARTICLE_REJECTED");
 
-		assertThat(this.repository.counts()).isEqualTo(new EvaluationQueueCounts(2, 1, 2));
+		assertThat(this.repository.counts()).isEqualTo(new EvaluationQueueCounts(3, 2, 2));
 
-		this.repository.delete(List.of(new ArticleId(11), new ArticleId(15), new ArticleId(99)));
+		this.repository.delete(List.of(new ArticleId(11), new ArticleId(14), new ArticleId(15), new ArticleId(99)));
 		this.repository.delete(List.of());
 
 		assertThat(this.repository.counts()).isEqualTo(new EvaluationQueueCounts(1, 1, 1));

@@ -5,7 +5,7 @@ import java.time.Instant;
 import java.util.Objects;
 
 /**
- * 평가 대기의 일정 — 정착 시간 · 점유 기간 · 재시도 간격과 상한의 정본 · docs/specs/tag.md §5.
+ * 평가 대기의 일정 — 정착 시간 · 점유 기간 · 재시도 간격의 정본 · docs/specs/tag.md §5.
  * <p>
  * 값은 모두 측정 전 목표다.
  */
@@ -17,13 +17,10 @@ public final class EvaluationSchedule {
 	/** 회차가 대기 행을 점유하는 기간 — 만료되면 다른 회차가 다시 가져간다 */
 	public static final Duration LEASE = Duration.ofMinutes(30);
 
-	/** 일시 실패의 시도 상한 — 이 번째 일시 실패에서 실패로 남긴다 */
-	public static final int MAX_ATTEMPTS = 5;
-
 	/** 첫 일시 실패 뒤의 재시도 간격 — 실패마다 두 배 */
 	public static final Duration FIRST_RETRY = Duration.ofMinutes(1);
 
-	/** 재시도 간격의 상한 */
+	/** 재시도 간격의 상한 — 일시 실패가 이어지는 동안 기사마다 이 간격으로 다시 묻는다 */
 	public static final Duration MAX_RETRY = Duration.ofHours(1);
 
 	private EvaluationSchedule() {

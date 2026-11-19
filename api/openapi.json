@@ -7030,11 +7030,11 @@
       "EvaluationQueueResponse" : {
         "type" : "object",
         "properties" : {
-          "exhausted" : {
+          "rejected" : {
             "type" : "integer",
             "format" : "int64"
           },
-          "rejected" : {
+          "retrying" : {
             "type" : "integer",
             "format" : "int64"
           },
@@ -7043,7 +7043,7 @@
             "format" : "int64"
           }
         },
-        "required" : [ "exhausted", "rejected", "waiting" ]
+        "required" : [ "rejected", "retrying", "waiting" ]
       },
       "EvaluationRowResponse" : {
         "type" : "object",
