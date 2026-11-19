@@ -745,7 +745,7 @@ sequenceDiagram
 
 ### 스토리라인 사이 관계
 
-판단의 이유는 [ADR-0131](../adr/0131-storyline-relations-are-explicit-links-with-containment-as-a-single-parent-tree-gathered-at-query-time.md)(관계의 표현 · 구조 · 조회)과 [ADR-0132](../adr/0132-storyline-relations-are-judged-by-jev-on-candidate-pairs-and-linked-only-above-a-probability-threshold.md)(판정 방법), [ADR-0255](../adr/0255-storyline-relation-queue-defers-transient-failures-until-a-retry-time-and-never-drops-them.md)(일시 실패한 스토리라인의 미룸)에 있다. 관계 판정의 요청 · 문구 · 판정 원본은 [evaluation Spec](evaluation.md#관계-판정)에 있다.
+판단의 이유는 [ADR-0131](../adr/0131-storyline-relations-are-explicit-links-with-containment-as-a-single-parent-tree-gathered-at-query-time.md)(관계의 표현 · 구조 · 조회)과 [ADR-0132](../adr/0132-storyline-relations-are-judged-by-jev-on-candidate-pairs-and-linked-only-above-a-probability-threshold.md)(판정 방법), [ADR-0255](../adr/0255-storyline-linking-and-relation-queues-defer-transient-failures-until-a-retry-time-and-never-drop-them.md)(일시 실패한 스토리라인의 미룸)에 있다. 관계 판정의 요청 · 문구 · 판정 원본은 [evaluation Spec](evaluation.md#관계-판정)에 있다.
 
 - **storyline-R25** — 관계와 구조 제약(`RelationGraph` — 정본): 관계는 합쳐지지 않은 스토리라인 둘의 고리이고 종류는 포함 · 이어짐 둘이다. 포함은 앞이 상위 · 뒤가 하위, 이어짐은 앞이 뒤를 낳았다.
   - 스토리라인은 자기 자신과 관계를 갖지 않는다. 한 쌍의 관계는 하나다(종류 · 방향과 무관)
@@ -781,7 +781,7 @@ sequenceDiagram
 - **storyline-R31** — 관계 회차: 반복 작업(1분, 재시도 없음)의 회차는 지금 기준을 관계 기준 이력에 등록하고, 점유가 없거나 만료됐고(점유한 뒤의 경과가 임대 이상 — platform-R28) 판정 가능 시각이 없거나 지난(≤ 지금) 관계 대기 행을 스토리라인 ID 순으로 4건(`RelationSchedule.BATCH_SIZE`)까지 잠가 점유(토큰 · 만료 = 지금 + 20분, `RelationSchedule.LEASE`)를 쓰고 커밋한다.
   - 스토리라인마다 후보 쌍을 5쌍(`RelationSchedule.MAX_PAIRS`)까지 순서대로 묻고(storyline-R27 · R28), 쌍마다 모듈 잠금을 잡은 짧은 트랜잭션에서 반영한다(storyline-R29 · R30). 반영 전에 두 스토리라인을 다시 읽어 합쳐졌거나 지워졌으면 그 쌍은 버린다. 반영이 두 스토리라인을 합쳤으면 그 스토리라인의 남은 쌍은 묻지 않고 점유를 푼다 — 합치기 전의 구성으로 고른 쌍이라서다
   - 스토리라인이 없거나 합쳐졌거나 구성 사건 수가 하한 미만이면 후보가 없다. 후보를 모두 물었고 토큰과 다시 알림 수가 점유할 때와 같으면 대기 행을 지운다. 후보가 남았거나 다시 알림 수가 달라졌으면 점유만 풀어 다음 회차가 잇는다
-  - 일시 실패면 그 스토리라인의 남은 쌍을 묻지 않는다. 한 트랜잭션에서 토큰이 맞을 때 실패 수를 하나 올리고 점유를 풀고, 판정 가능 시각을 지금 + 1분 × 2^(실패 수 − 1)(1시간에서 멈춤, `RelationSchedule.retryAt` — 정본)로 미룬다(로그 없음). 실패 수에는 상한이 없어 대기에서 빼지 않는다 — 평가기가 일시 실패로만 답하는 장애가 길어도 스토리라인은 대기에 남고, 장애가 풀리면 늦어도 1시간 안에 그 스토리라인이 바뀌지 않아도 다시 묻는다. 그 스토리라인 탓으로 거듭 실패해도 1시간에 한 번 묻고, 미룬 동안 점유하지 않아 다른 스토리라인의 판정을 막지 않는다. 실패 수 · 판정 가능 시각은 대기 행을 지울 때까지 남는다([ADR-0255](../adr/0255-storyline-relation-queue-defers-transient-failures-until-a-retry-time-and-never-drops-them.md))
+  - 일시 실패면 그 스토리라인의 남은 쌍을 묻지 않는다. 한 트랜잭션에서 토큰이 맞을 때 실패 수를 하나 올리고 점유를 풀고, 판정 가능 시각을 지금 + 1분 × 2^(실패 수 − 1)(1시간에서 멈춤, `RelationSchedule.retryAt` — 정본)로 미룬다(로그 없음). 실패 수에는 상한이 없어 대기에서 빼지 않는다 — 평가기가 일시 실패로만 답하는 장애가 길어도 스토리라인은 대기에 남고, 장애가 풀리면 늦어도 1시간 안에 그 스토리라인이 바뀌지 않아도 다시 묻는다. 그 스토리라인 탓으로 거듭 실패해도 1시간에 한 번 묻고, 미룬 동안 점유하지 않아 다른 스토리라인의 판정을 막지 않는다. 실패 수 · 판정 가능 시각은 대기 행을 지울 때까지 남는다([ADR-0255](../adr/0255-storyline-linking-and-relation-queues-defer-transient-failures-until-a-retry-time-and-never-drop-them.md))
   - 물을 서술이 없거나(`NothingToAsk`) 기사 거부면 물은 기록에 그 결말(`NOTHING_TO_ASK` · `REJECTED`)을 남기고 다음 쌍으로 간다 — 관계는 건드리지 않는다
   - 평가기 사용 불가 · 예상 못한 예외면 회차를 멈춘다(오류). 점유는 만료로 풀려 다음 회차가 가져간다
   - 회차 하나의 판정은 많아야 4 × 5 번이다 — 요청 마감(`evaluation` 의 Jev 요청 마감)으로도 점유 기간 안에 끝난다
@@ -879,4 +879,4 @@ sequenceDiagram
 | [0235](../adr/0235-the-big-list-has-one-row-per-containment-tree-carrying-the-big-storylines-under-it.md) | 큰 판정 목록은 포함 나무마다 한 행으로 내고 그 아래의 큰 스토리라인을 행에 싣는다 |
 | [0236](../adr/0236-raising-the-relation-wording-version-clears-asked-records-and-asks-every-storyline-again.md) | 관계 판정의 문구 판을 올리면 물은 기록을 비우고 모든 스토리라인을 관계 대기에 넣어 다시 묻는다 |
 | [0252](../adr/0252-the-stall-and-duration-of-work-in-progress-are-measured-as-elapsed-time-without-the-jumps-of-the-clock.md) | 진행 중 작업의 멈춤과 걸린 시간은 시계가 넘긴 시간을 뺀 경과로 잰다 |
-| [0255](../adr/0255-storyline-relation-queue-defers-transient-failures-until-a-retry-time-and-never-drops-them.md) | 관계 판정이 일시 실패한 스토리라인은 관계 대기 행의 판정 가능 시각까지 미루고, 실패 수로 대기에서 빼지 않는다 |
+| [0255](../adr/0255-storyline-linking-and-relation-queues-defer-transient-failures-until-a-retry-time-and-never-drop-them.md) | 관계 판정이 일시 실패한 스토리라인은 관계 대기 행의 판정 가능 시각까지 미루고, 실패 수로 대기에서 빼지 않는다 |

@@ -1,6 +1,6 @@
 # ADR-0194: 스토리라인 잇기는 띠 안 후보만 Jev 에 같은 사안의 전개인지 묻고, 물은 확률을 쌍마다 기록해 크기가 두 배가 될 때까지 다시 쓴다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 평가기 일시 실패의 상한([ADR-0255](0255-storyline-linking-and-relation-queues-defer-transient-failures-until-a-retry-time-and-never-drop-them.md))
 - 날짜: 2026-11-17
 - 근거: [이슈 #169](https://github.com/Theia0382/yozm-news/issues/169) — 문구 후보를 운영자가 판정한 소속 표본으로 견주고, 잇기 시뮬레이터 · 평가 인스턴스 · 운영자 표본 검수로 띠를 재고 리드와 정함
 - 관련: [ADR-0121](0121-storyline-linking-scores-centroid-cosine-plus-idf-weighted-key-term-overlap-without-time-decay-jev-or-topic-tags.md)(결정 "Jev 판정과 주제 태그를 쓰지 않는다"의 Jev 부분 · "기준 점수와 시간 창은 설정"의 기준 점수 — 부분 대체, 판정의 꼴 · 검토한 대안 "점수의 애매한 구간만 Jev 에 묻는다" — 보충), [ADR-0106](0106-provisional-storyline-linking-opens-only-with-a-partner-event-and-adds-the-single-best-storyline-without-removal.md)(결정 "기준 이상 가운데 점수가 가장 높은 하나" · "기준 이상인 이웃을 점수 순으로 보아 소속 없는 첫 사건" — 부분 대체), [ADR-0105](0105-storylines-link-incrementally-from-event-change-notifications-and-events-publish-changed-event-ids.md)(결정의 실패 상한 — 부분 대체, 소속마다 남기는 근거 — 보충), [ADR-0132](0132-storyline-relations-are-judged-by-jev-on-candidate-pairs-and-linked-only-above-a-probability-threshold.md)(결과 "잇기는 여전히 Jev 를 쓰지 않는다" — 부분 대체), [ADR-0071](0071-event-membership-judged-from-article-ids-with-questions-built-in-evaluation.md) · [ADR-0072](0072-event-membership-question-wording-as-one-code-constant-with-its-version-in-raw-records.md)(판정 꼴 · 문구 상수를 흐름 소속 판정에도 쓴다 — 보충), [ADR-0195](0195-storyline-linking-band-and-probability-defaults-chosen-for-precision-by-simulator-grid-evaluation-instance-and-operator-sample-review.md)(띠 · 확률 기준의 처음 값)
@@ -20,6 +20,7 @@
 - **판정은 `evaluation` 의 새 공개 API(흐름 소속 판정) 하나다.** `storyline` 은 판정할 기사 ID 와 후보 흐름마다 서술 기사 ID 를 넘기고, `evaluation` 이 요청을 조립 · 호출하고 판정 원본을 남긴다. 평가기 포트는 사건 소속 판정의 메서드를 문구만 바꿔 다시 쓴다 — 요청 꼴 · 실패 분류가 같다. 문구는 코드 상수 하나이고 판을 판정 원본에 남긴다.
 - **물은 확률은 쌍마다 기록하고, 어느 쪽 크기든 물었을 때의 두 배가 되면 다시 묻는다.** 붙이기는 (사건, 스토리라인), 짝은 (사건, 이웃 사건)마다 한 행이고 이 기록이 확률의 정본이다. 크기는 판정할 사건의 기사 수와 상대의 크기(스토리라인은 구성 사건 수, 이웃은 기사 수)다. 스토리라인이 합쳐지면 합쳐질 쪽의 기록을, 사건이 지워지거나 합쳐지면 그 사건의 기록을 지운다. 기준을 바꿔도 기록은 그대로 쓴다.
 - **묻기는 트랜잭션 밖이다.** 회차는 잠금 안에서 판정을 시도하고, 띠 안 후보의 기록이 모자라면 아무것도 쓰지 않고 물을 것을 낸다. 트랜잭션 밖에서 묻고, 짧은 트랜잭션에서 기록한 뒤 다시 판정한다 — 사건 하나에 몇 번까지, 남으면 점유를 풀어 다음 회차가 잇는다.
+> 부분 대체(둘째 문장) — [ADR-0255](0255-storyline-linking-and-relation-queues-defer-transient-failures-until-a-retry-time-and-never-drop-them.md). 지금 상태: [storyline Spec §5](../specs/storyline.md#잇기-대기와-회차) storyline-R4
 - **확률을 얻지 못하면 기다린다.** 평가기 일시 실패는 그 사건의 판정 가능 시각을 미루고 실패 수를 올리며, 상한이면 대기에서 뺀다. 평가기를 쓸 수 없으면 회차를 멈춘다. 판정할 기사를 평가기가 거부하면 확률 없이 기록하고, 그 띠 후보는 붙이지 않는다 — 같은 기사라 다시 보내도 같다. 확률 없는 기록으로는 고르지 않는다.
 - **소속의 근거에 판정 확률과 판정 원본 ID 를 더한다.** 띠 안에서 판정으로 정한 소속만 갖는다. 운영자 조회 · 화면이 보인다.
 - **설정 이름은 사건 배정과 같은 꼴(아래 기준 · 위 기준 · 확률 기준)이고, 옛 기준 점수 설정이 남아 있으면 기동하지 않는다.** 오류에 새 설정 이름을 적는다. 옛 기준 이력은 띠가 빈 기준으로 옮긴다.

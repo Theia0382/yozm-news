@@ -36,3 +36,7 @@
 | 체계 쪽에 질문 수 · 길이 상한을 두어 문맥 초과를 막는다 | 토크나이저가 공개되지 않아 앱이 토큰을 셀 수 없다 — 정확한 경계가 없다 |
 | 모델 기본값을 버전 ID 로 고정한다 | 옛 버전이 내려가면 운영자가 설정을 바꿀 때까지 회차가 멈추고, 새 모델 개선을 받지 못한다 |
 | 모델을 코드에 고정한다 | 모델을 바꾸려면 새 릴리스가 필요하다 — 셀프 호스팅 운영자가 고를 수 없다 |
+
+## 후속 기록
+
+- 2026-11-19: 결과 절의 "요청 마감이 그 부등식에 묶인다" — 요청 마감은 `evaluation` 의 `EvaluatorTiming.REQUEST_DEADLINE` 이고, 판정을 부르는 대기의 점유 기간은 그 값에서 계산한다([ADR-0259](0259-evaluator-timing-is-owned-by-one-evaluation-type-and-judging-queues-derive-their-leases-from-the-longest-judgement.md) · [evaluation Spec §5](../specs/evaluation.md#평가기-시간) evaluation-R53)

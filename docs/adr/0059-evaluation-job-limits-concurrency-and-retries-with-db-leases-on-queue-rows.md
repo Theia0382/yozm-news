@@ -43,3 +43,4 @@
 ## 후속 기록
 
 - 2026-11-02: 체계를 활성으로 바꾸면 재평가 기간 안의 기사를 대기에 넣거나 되돌린다(평가 가능 시각은 그 시각, 순서는 같다). 회차는 결과를 쓰는 트랜잭션에서 `tag_sets` 표를 `SHARE` 로 잠그고 자기가 읽은 버전이 아직 활성인지 본 뒤 쓴다 — 아니면 점유를 풀고 회차를 멈춘다([ADR-0062](0062-tag-set-versions-from-operator-text-activated-forward-with-key-lineage-and-recent-reevaluation.md))
+- 2026-11-19: 결정 절의 재시도 간격 · 결과 절의 점유 기간 — 간격은 `evaluation` 의 `EvaluatorTiming.retryDelay`, 점유 기간은 판정 한 번의 가장 긴 시간 × 묶음 + 여유로 계산한다([ADR-0259](0259-evaluator-timing-is-owned-by-one-evaluation-type-and-judging-queues-derive-their-leases-from-the-longest-judgement.md) · [tag Spec §5](../specs/tag.md#평가-대기와-평가-작업) tag-R19 · [evaluation Spec §5](../specs/evaluation.md#평가기-시간) evaluation-R53)
