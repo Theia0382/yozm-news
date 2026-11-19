@@ -19,8 +19,8 @@ import org.springframework.stereotype.Repository;
 /**
  * {@link RelationQueueRepository} 의 JdbcClient 구현 — docs/specs/storyline.md §4.
  * <p>
- * 넣기는 {@code INSERT … ON CONFLICT (storyline_id) DO UPDATE} 로 다시 알림 수를 올린다. 잠금은 스토리라인 ID 순
- * {@code FOR UPDATE SKIP LOCKED}, 점유한 회차의 반영은 점유 토큰(지우기는 다시 알림 수도)을 조건으로 한 갱신 · 삭제다.
+ * 넣기는 {@code INSERT … ON CONFLICT (storyline_id) DO UPDATE} 로 다시 알림 수를 올린다. 잠금은 판정 가능 시각이 없거나 지난 행의
+ * 스토리라인 ID 순 {@code FOR UPDATE SKIP LOCKED}, 점유한 회차의 반영은 점유 토큰(지우기는 다시 알림 수도)을 조건으로 한 갱신 · 삭제다.
  */
 @Repository
 class JdbcRelationQueueRepository implements RelationQueueRepository {
@@ -40,15 +40,16 @@ class JdbcRelationQueueRepository implements RelationQueueRepository {
 	}
 
 	@Override
-	public List<PendingStoryline> lockDue(Instant expiredBy, int limit) {
+	public List<PendingStoryline> lockDue(Instant now, Instant expiredBy, int limit) {
 		return this.jdbc.sql("""
 				select storyline_id, notifications, failures, lease_token, lease_expires_at
 				from storyline_relation_queue
-				where lease_token is null or lease_expires_at <= :expiredBy
+				where (lease_token is null or lease_expires_at <= :expiredBy) and (retry_at is null or retry_at <= :now)
 				order by storyline_id
 				limit :limit
 				for update skip locked
 				""")
+			.param("now", timestamp(now))
 			.param("expiredBy", timestamp(expiredBy))
 			.param("limit", limit)
 			.query(JdbcRelationQueueRepository::row)
@@ -102,6 +103,14 @@ class JdbcRelationQueueRepository implements RelationQueueRepository {
 			.optional()
 			.map(OptionalInt::of)
 			.orElseGet(OptionalInt::empty);
+	}
+
+	@Override
+	public void defer(long storylineId, Instant retryAt) {
+		this.jdbc.sql("update storyline_relation_queue set retry_at = :retryAt where storyline_id = :storyline")
+			.param("storyline", storylineId)
+			.param("retryAt", timestamp(retryAt))
+			.update();
 	}
 
 	@Override

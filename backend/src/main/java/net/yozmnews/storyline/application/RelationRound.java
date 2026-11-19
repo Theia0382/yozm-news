@@ -57,9 +57,9 @@ import org.springframework.transaction.support.TransactionTemplate;
  * <p>
  * 지금 기준을 관계 기준 이력에 등록하고 관계 대기를 스토리라인 ID 순으로 점유해 커밋한 뒤, 스토리라인마다 후보 쌍을 골라 순서대로 묻는다.
  * 관계 판정은 트랜잭션 밖이고, 결과는 쌍마다 모듈 잠금을 잡은 짧은 트랜잭션에서 두 스토리라인을 다시 읽어 반영한다. 후보를 모두 물었고 대기
- * 행이 그대로면 지우고, 아니면 점유만 푼다. 일시 실패면 그 스토리라인의 실패 수를 올리고 다음 스토리라인으로 간다. 평가기를 쓸 수 없으면
- * 회차를 멈추고, 예상 못한 예외는 밖으로 나간다 — 점유는 만료로 풀린다. 판단은 {@code domain/relation} 이 한다. 트랜잭션 · 역할
- * 애너테이션이 없다(두 역할 공통).
+ * 행이 그대로면 지우고, 아니면 점유만 푼다. 일시 실패면 그 스토리라인의 실패 수를 올려 판정 가능 시각을 미루고 다음 스토리라인으로 간다 —
+ * 대기에서 빼지 않는다. 평가기를 쓸 수 없으면 회차를 멈추고, 예상 못한 예외는 밖으로 나간다 — 점유는 만료로 풀린다. 판단은
+ * {@code domain/relation} 이 한다. 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통).
  * <p>
  * 답이 같은 사안의 조각이면 확률이 합치기 확률 기준 이상일 때 두 스토리라인을 하나로 합치고({@link FragmentMerge} ·
  * {@link StorylineMerger}), 미만이면 관계를 맺지 않고 둘로 둔다. 합치면 그 스토리라인의 남은 쌍은 이 회차에 묻지 않는다.
@@ -121,7 +121,7 @@ public class RelationRound {
 		return Objects.requireNonNull(this.transaction.execute(status -> {
 			List<PendingStoryline> leased = new ArrayList<>();
 			Instant expiredBy = this.clock.expiredBy(RelationSchedule.LEASE);
-			for (PendingStoryline due : this.queue.lockDue(expiredBy, RelationSchedule.BATCH_SIZE)) {
+			for (PendingStoryline due : this.queue.lockDue(now, expiredBy, RelationSchedule.BATCH_SIZE)) {
 				PendingStoryline next = due.claim(UUID.randomUUID(), now);
 				this.queue.saveLocked(next);
 				leased.add(next);
@@ -152,7 +152,7 @@ public class RelationRound {
 						yield Next.PAIR;
 					}
 					case TRANSIENT -> {
-						fail(storylineId, token);
+						defer(storylineId, token);
 						yield Next.STORYLINE;
 					}
 					case EVALUATOR_UNAVAILABLE -> {
@@ -367,14 +367,14 @@ public class RelationRound {
 		return this.storylines.profile(storylineId, 1).isEmpty();
 	}
 
-	/** 실패 수를 하나 올리고 점유를 푼다 — 상한이면 대기에서 뺀다(storyline-R31) */
-	private void fail(long storylineId, UUID token) {
+	/**
+	 * 평가기 일시 실패 — 실패 수를 하나 올리고 점유를 풀고 판정 가능 시각을 미룬다. 실패 수에 상한이 없어 대기에서 빼지 않는다(storyline-R31)
+	 */
+	private void defer(long storylineId, UUID token) {
 		this.transaction.executeWithoutResult(status -> {
 			OptionalInt failures = this.queue.recordFailureIfLeased(storylineId, token);
-			if (failures.isPresent() && RelationSchedule.failuresExhausted(failures.getAsInt())) {
-				this.queue.delete(storylineId);
-				logger.error("스토리라인 관계 판정이 거듭 실패해 대기에서 뺐다 — 스토리라인 {}, 실패 {}회", storylineId,
-						failures.getAsInt());
+			if (failures.isPresent()) {
+				this.queue.defer(storylineId, RelationSchedule.retryAt(failures.getAsInt(), this.clock.instant()));
 			}
 		});
 	}

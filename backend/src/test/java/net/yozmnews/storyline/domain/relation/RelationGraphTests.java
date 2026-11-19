@@ -92,7 +92,7 @@ class RelationGraphTests {
 	}
 
 	@Test
-	void aClaimedRowExpiresAfterTwentyMinutesAndFailuresRunOutAtThree() {
+	void aClaimedRowExpiresAfterTwentyMinutesAndFailuresDeferItWithoutALimit() {
 		Instant now = Instant.parse("2026-11-10T00:00:00Z");
 		UUID token = UUID.fromString("00000000-0000-0000-0000-00000000000b");
 
@@ -100,8 +100,13 @@ class RelationGraphTests {
 			.isEqualTo(new PendingStoryline(7, 2, 1, new LinkingLease(token, Instant.parse("2026-11-10T00:20:00Z"))));
 		assertThat(RelationSchedule.BATCH_SIZE).isEqualTo(4);
 		assertThat(RelationSchedule.MAX_PAIRS).isEqualTo(5);
-		assertThat(RelationSchedule.failuresExhausted(2)).isFalse();
-		assertThat(RelationSchedule.failuresExhausted(3)).isTrue();
+		// 1 · 2 · 4 · 8 · 16 · 32분, 그 뒤로는 1시간 — 실패 수가 아무리 커도 넘치지 않는다
+		assertThat(RelationSchedule.retryAt(1, now)).isEqualTo(Instant.parse("2026-11-10T00:01:00Z"));
+		assertThat(RelationSchedule.retryAt(4, now)).isEqualTo(Instant.parse("2026-11-10T00:08:00Z"));
+		assertThat(RelationSchedule.retryAt(6, now)).isEqualTo(Instant.parse("2026-11-10T00:32:00Z"));
+		assertThat(RelationSchedule.retryAt(7, now)).isEqualTo(Instant.parse("2026-11-10T01:00:00Z"));
+		assertThat(RelationSchedule.retryAt(Integer.MAX_VALUE, now)).isEqualTo(Instant.parse("2026-11-10T01:00:00Z"));
+		assertThatIllegalArgumentException().isThrownBy(() -> RelationSchedule.retryAt(0, now));
 		assertThatIllegalArgumentException().isThrownBy(() -> new PendingStoryline(7, -1, 0, null));
 	}
 
