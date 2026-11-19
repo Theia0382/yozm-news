@@ -67,13 +67,13 @@ class JdbcLinkingQueueRepositoryTests {
 		PendingEvent due = only(9021);
 		this.repository.saveLocked(due.claim(TOKEN, NOW));
 
-		assertThat(this.repository.lockDue(NOW.plusSeconds(2399), NOW.plusSeconds(2399), 100)).extracting(PendingEvent::eventId)
+		assertThat(this.repository.lockDue(NOW.plusSeconds(2999), NOW.plusSeconds(2999), 100)).extracting(PendingEvent::eventId)
 			.doesNotContain(9021L);
-		// 만료 시각 포함 — 점유 기간 40분
-		Instant after2400 = NOW.plusSeconds(2400);
-		assertThat(this.repository.lockDue(after2400, after2400, 100)).filteredOn(row -> row.eventId() == 9021)
+		// 만료 시각 포함 — 점유 기간 50분
+		Instant after3000 = NOW.plusSeconds(3000);
+		assertThat(this.repository.lockDue(after3000, after3000, 100)).filteredOn(row -> row.eventId() == 9021)
 			.singleElement()
-			.satisfies(row -> assertThat(row.lease()).isEqualTo(new LinkingLease(TOKEN, NOW.plusSeconds(2400))));
+			.satisfies(row -> assertThat(row.lease()).isEqualTo(new LinkingLease(TOKEN, NOW.plusSeconds(3000))));
 	}
 
 	@Test
