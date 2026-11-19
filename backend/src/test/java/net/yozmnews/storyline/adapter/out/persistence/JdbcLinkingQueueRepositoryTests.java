@@ -80,7 +80,7 @@ class JdbcLinkingQueueRepositoryTests {
 	void aDeferredRowWaitsUntilItsRetryTime() {
 		this.repository.enqueue(9025, Instant.parse("2026-11-01T00:00:00Z"), NOW);
 		this.repository.saveLocked(only(9025).claim(TOKEN, NOW));
-		assertThat(this.repository.recordFailureIfLeased(9025, TOKEN)).hasValue(1);
+		assertThat(this.repository.recordTransientFailureIfLeased(9025, TOKEN)).hasValue(1);
 		this.repository.defer(9025, NOW.plusSeconds(60));
 
 		assertThat(this.repository.lockDue(NOW.plusSeconds(59), NOW.plusSeconds(59), 100)).extracting(PendingEvent::eventId)
@@ -129,6 +129,23 @@ class JdbcLinkingQueueRepositoryTests {
 	}
 
 	@Test
+	void aTransientFailureCountsUpApartFromFailuresAndReleasesTheLease() {
+		this.repository.enqueue(9045, null, NOW);
+		this.repository.saveLocked(only(9045).claim(TOKEN, NOW));
+
+		assertThat(this.repository.recordTransientFailureIfLeased(9045, UUID.randomUUID())).isEmpty();
+		assertThat(this.repository.recordTransientFailureIfLeased(9045, TOKEN)).hasValue(1);
+		assertThat(row(9045)).containsEntry("transient_failures", 1)
+			.containsEntry("failures", 0)
+			.containsEntry("lease_token", null);
+		// 다시 점유한 뒤의 일시 실패는 이어서 센다 — 다시 넣어도 그대로다
+		this.repository.saveLocked(only(9045).claim(TOKEN, NOW));
+		assertThat(this.repository.recordTransientFailureIfLeased(9045, TOKEN)).hasValue(2);
+		this.repository.enqueue(9045, null, NOW);
+		assertThat(row(9045)).containsEntry("transient_failures", 2).containsEntry("failures", 0);
+	}
+
+	@Test
 	void enqueueAllCountsOnlyNewRows() {
 		this.repository.enqueue(9052, Instant.parse("2026-11-02T00:00:00Z"), NOW);
 
@@ -151,7 +168,7 @@ class JdbcLinkingQueueRepositoryTests {
 
 	private Map<String, Object> row(long eventId) {
 		return this.jdbc.sql("""
-				select notifications, failures, lease_token,
+				select notifications, failures, transient_failures, lease_token,
 				       to_char(order_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as order_at
 				from storyline_linking_queue where event_id = :event
 				""").param("event", eventId).query().singleRow();

@@ -18,7 +18,7 @@ public final class LinkingSchedule {
 	/** 회차 하나가 점유하는 대기 행 수의 상한 */
 	public static final int BATCH_SIZE = 32;
 
-	/** 실패 상한 — 판정이 예상 못한 예외나 평가기 일시 실패로 이만큼 실패하면 대기에서 뺀다 */
+	/** 실패 상한 — 판정이 예상 못한 예외로 이만큼 실패하면 대기에서 뺀다. 평가기 일시 실패는 세지 않는다 */
 	public static final int MAX_FAILURES = 5;
 
 	/** 사건 하나를 점유한 동안 판정을 시도하는 수의 상한 — 붙이기 묻기 · 짝 묻기 · 쓰기. 남으면 점유를 풀어 다음 회차가 잇는다 */
