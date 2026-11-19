@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.time.InstantSource;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -47,9 +48,10 @@ class UserStartupOrderTests {
 		new ApplicationContextRunner()
 			.withBean(FirstAdminBootstrap.class,
 					() -> new FirstAdminBootstrap(new FirstAdminProperties(null, null), provisioning,
-							mock(AccountRepository.class), mock(FirstAdminLock.class)))
+							mock(AccountRepository.class), mock(FirstAdminLock.class), InstantSource.system()))
 			.withBean(InterestBackfill.class,
-					() -> new InterestBackfill(settings, mock(InterestDefaultsWriter.class), mock(TransactionTemplate.class)))
+					() -> new InterestBackfill(settings, mock(InterestDefaultsWriter.class), mock(TransactionTemplate.class),
+							InstantSource.system()))
 			.withBean("seeding", SmartInitializingSingleton.class, () -> () -> order.add("seeding"))
 			.run(context -> {
 				assertThat(context).hasNotFailed();

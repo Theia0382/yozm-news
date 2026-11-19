@@ -14,6 +14,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import net.yozmnews.TestClocks;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleDirectory;
 import net.yozmnews.article.ArticleId;
@@ -181,7 +182,7 @@ class EventMergeConcurrencyTests {
 	private AssignmentRound assign() {
 		return new AssignmentRound(this.queue, this.intake, this.features, this.events, this.assignments,
 				this.criteriaHistory, CRITERIA, this.articles, query -> new MembershipJudgement.Judged(null, Map.of()),
-				EventEmbeddings.modelOnly("model-a"), this.transaction, (InstantSource) () -> NOW);
+				EventEmbeddings.modelOnly("model-a"), this.transaction, TestClocks.fixed(NOW));
 	}
 
 	private void remove(long article) {

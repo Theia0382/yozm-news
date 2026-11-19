@@ -1,7 +1,6 @@
 package net.yozmnews.storyline.application;
 
 import java.time.Instant;
-import java.time.InstantSource;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -22,6 +21,7 @@ import net.yozmnews.event.EventDirectory;
 import net.yozmnews.event.EventId;
 import net.yozmnews.event.EventTermCounts;
 import net.yozmnews.event.EventView;
+import net.yozmnews.platform.AppClock;
 import net.yozmnews.storyline.RelationOutcome;
 import net.yozmnews.storyline.RetiredStoryline;
 import net.yozmnews.storyline.StorylinesRetired;
@@ -48,7 +48,6 @@ import net.yozmnews.storyline.domain.storyline.StorylineSnapshot;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -88,20 +87,11 @@ public class RelationRound {
 
 	private final TransactionTemplate transaction;
 
-	private final InstantSource clock;
+	private final AppClock clock;
 
-	@Autowired
 	RelationRound(RelationQueueRepository queue, RelationRepository relations, StorylineRepository storylines,
 			EventDirectory events, FlowRelation judge, RelationCriteria criteria, StorylineMerger merger,
-			ApplicationEventPublisher publisher, TransactionTemplate transaction) {
-		this(queue, relations, storylines, events, judge, criteria, merger, publisher, transaction,
-				InstantSource.system());
-	}
-
-	/** 시험이 시계를 넣는다 */
-	RelationRound(RelationQueueRepository queue, RelationRepository relations, StorylineRepository storylines,
-			EventDirectory events, FlowRelation judge, RelationCriteria criteria, StorylineMerger merger,
-			ApplicationEventPublisher publisher, TransactionTemplate transaction, InstantSource clock) {
+			ApplicationEventPublisher publisher, TransactionTemplate transaction, AppClock clock) {
 		this.queue = queue;
 		this.relations = relations;
 		this.storylines = storylines;
@@ -130,7 +120,8 @@ public class RelationRound {
 	private List<PendingStoryline> claim(Instant now) {
 		return Objects.requireNonNull(this.transaction.execute(status -> {
 			List<PendingStoryline> leased = new ArrayList<>();
-			for (PendingStoryline due : this.queue.lockDue(now, RelationSchedule.BATCH_SIZE)) {
+			Instant expiredBy = this.clock.expiredBy(RelationSchedule.LEASE);
+			for (PendingStoryline due : this.queue.lockDue(expiredBy, RelationSchedule.BATCH_SIZE)) {
 				PendingStoryline next = due.claim(UUID.randomUUID(), now);
 				this.queue.saveLocked(next);
 				leased.add(next);

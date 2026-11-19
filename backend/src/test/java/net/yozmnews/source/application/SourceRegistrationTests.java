@@ -8,6 +8,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 
 import java.time.Duration;
+import java.time.InstantSource;
 import java.util.List;
 
 import net.yozmnews.TestcontainersConfiguration;
@@ -281,7 +282,7 @@ class SourceRegistrationTests {
 		}).when(meanwhile).findAllBySourceId(anyLong());
 
 		new PresetFeedReconciliation(this.sourceRepository, meanwhile, this.resolver, this.provisioner,
-				this.attributions, this.transaction)
+				this.attributions, this.transaction, InstantSource.system())
 			.reconcile();
 
 		assertThat(output).contains("다른 변경과 겹쳐 이 소스의 기동 대조를 건너뛴다 — 소스 " + first);
@@ -330,7 +331,7 @@ class SourceRegistrationTests {
 		}).when(deleting).findAll();
 
 		new PresetFeedReconciliation(deleting, this.feedRepository, this.resolver, this.provisioner, this.attributions,
-				this.transaction)
+				this.transaction, InstantSource.system())
 			.reconcile();
 
 		assertThat(this.rows.feeds(next)).containsExactly("all:false");

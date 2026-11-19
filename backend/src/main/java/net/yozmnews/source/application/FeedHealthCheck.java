@@ -1,11 +1,11 @@
 package net.yozmnews.source.application;
 
 import java.time.Instant;
-import java.time.InstantSource;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import net.yozmnews.platform.AppClock;
 import net.yozmnews.source.FeedStatus;
 import net.yozmnews.source.FeedStatusTransition;
 import net.yozmnews.source.FeedStatusesChanged;
@@ -17,14 +17,13 @@ import net.yozmnews.source.domain.poll.LastError;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * 켜진 피드의 상태를 다시 판정하는 피드 건강 검사 — docs/specs/source.md §4 · source-R30 · source-R31 · source-R47 ~
- * source-R49.
+ * source-R49 · source-R58.
  * <p>
  * 바뀐 피드가 있으면 상태를 쓴 트랜잭션에서 {@link FeedStatusesChanged} 를 한 번 발행한다.
  */
@@ -42,15 +41,10 @@ public class FeedHealthCheck {
 
 	private final ApplicationEventPublisher events;
 
-	private final InstantSource clock;
-
-	@Autowired
-	FeedHealthCheck(FeedStatusRepository statuses, TransactionTemplate transaction, ApplicationEventPublisher events) {
-		this(statuses, transaction, events, InstantSource.system());
-	}
+	private final AppClock clock;
 
 	FeedHealthCheck(FeedStatusRepository statuses, TransactionTemplate transaction, ApplicationEventPublisher events,
-			InstantSource clock) {
+			AppClock clock) {
 		this.statuses = statuses;
 		this.transaction = transaction;
 		this.events = events;
@@ -58,10 +52,15 @@ public class FeedHealthCheck {
 	}
 
 	/**
-	 * 판정해 바뀐 피드의 상태를 쓰고 같은 트랜잭션에서 전이를 발행한 뒤, 커밋 뒤 전이를 로그한다.
+	 * 판정해 바뀐 피드의 상태를 쓰고 같은 트랜잭션에서 전이를 발행한 뒤, 커밋 뒤 전이를 로그한다. 앱의 시각이 실제 시간이 아니면(측정용 시계 —
+	 * 수집하지 않는다) 판정하지 않는다.
 	 * @return 이번에 바뀐 피드 — 피드 ID 순
 	 */
 	public List<FeedStatusChange> run() {
+		if (!this.clock.realTime()) {
+			logger.debug("앱의 시각이 실제 시간이 아니라 피드 상태를 판정하지 않는다");
+			return List.of();
+		}
 		Instant now = this.clock.instant();
 		List<FeedStatusChange> changes = this.transaction.execute(status -> judge(now));
 		for (FeedStatusChange change : changes) {

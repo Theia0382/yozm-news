@@ -20,6 +20,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import net.yozmnews.TestClocks;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.article.ArticleStored;
@@ -32,6 +33,7 @@ import net.yozmnews.evaluation.TagAnswers;
 import net.yozmnews.evaluation.TagQuestions;
 import net.yozmnews.evaluation.TaggingJudgement;
 import net.yozmnews.evaluation.TaggingQuery;
+import net.yozmnews.platform.AppClock;
 import net.yozmnews.platform.ChangeActor;
 import net.yozmnews.tag.ArticleEvaluationView;
 import net.yozmnews.tag.ArticleEvaluations;
@@ -200,6 +202,33 @@ class EvaluationFlowTests {
 		round(failing(Map.of(article, EvaluatorFailureKind.ARTICLE_REJECTED))).run();
 
 		assertThat(failure(article)).isEqualTo("ARTICLE_REJECTED");
+	}
+
+	/**
+	 * 측정용 시계를 넘겨도 다른 회차가 점유 중인 기사는 다시 가져가지 않는다 — 임대(30분)는 시계가 넘긴 시간을 뺀 경과로 잰다. 점유는 DUE 에
+	 * 했고 만료는 DUE + 30분이다.
+	 */
+	@Test
+	void aJumpOfTheClockLeavesAnotherRoundsLeaseAlone() {
+		long article = enqueued("국회 본회의 통과");
+		UUID other = UUID.fromString("ad5b6a7f-8e9d-4c2b-9f40-5162738a9bac");
+		this.jdbc.sql("update evaluation_queue set lease_token = :token, lease_expires_at = :expires where article_id = :article")
+			.param("token", other)
+			.param("expires", OffsetDateTime.parse("2026-11-02T01:00:00Z"))
+			.param("article", article)
+			.update();
+		ScriptedTagging counting = scripted();
+
+		round(counting, this.results, TestClocks.movable(DUE).jump(Duration.ofHours(24))).run();
+
+		assertThat(counting.calls()).isEmpty();
+		assertThat(this.jdbc.sql("select count(*) from evaluation_queue where lease_token = :token")
+			.param("token", other)
+			.query(Long.class)
+			.single()).isEqualTo(1);
+		// 대조 — 넘기지 않고 31분이 흐르면 임대가 지나 다시 가져가 평가한다
+		round(counting, this.results, TestClocks.movable(DUE).advance(Duration.ofMinutes(31))).run();
+		assertThat(counting.calls()).hasSize(1);
 	}
 
 	@Test
@@ -562,6 +591,10 @@ class EvaluationFlowTests {
 
 	private Runnable round(ArticleTagging tagging, EvaluationResultRepository results) {
 		InstantSource clock = this.now::get;
+		return round(tagging, results, TestClocks.of(clock));
+	}
+
+	private Runnable round(ArticleTagging tagging, EvaluationResultRepository results, AppClock clock) {
 		EvaluationRound round = new EvaluationRound(this.pending, this.directory, this.thresholds, tagging, results,
 				this.queue, this.tagSets, this.transaction, clock);
 		return round::run;

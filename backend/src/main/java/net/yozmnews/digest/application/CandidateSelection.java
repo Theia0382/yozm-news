@@ -63,7 +63,6 @@ import net.yozmnews.tag.TagSetNames;
 import net.yozmnews.user.DigestInterests;
 import net.yozmnews.user.DigestInterestsDirectory;
 import net.yozmnews.user.TopicSubscription;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
@@ -106,16 +105,6 @@ public class CandidateSelection {
 
 	private final InstantSource clock;
 
-	@Autowired
-	CandidateSelection(DigestInterestsDirectory interests, ArticleEvaluations evaluations,
-			ActiveEvaluations activeEvaluations, TagSetDirectory tagSets, ArticleDirectory articles,
-			EventDirectory events, StorylineDirectory storylines, InterestMaterials interestMaterials,
-			ArticleFeedback feedback) {
-		this(interests, evaluations, activeEvaluations, tagSets, articles, events, storylines, interestMaterials,
-				feedback, InstantSource.system());
-	}
-
-	/** 시험이 시계를 넣는다 */
 	CandidateSelection(DigestInterestsDirectory interests, ArticleEvaluations evaluations,
 			ActiveEvaluations activeEvaluations, TagSetDirectory tagSets, ArticleDirectory articles,
 			EventDirectory events, StorylineDirectory storylines, InterestMaterials interestMaterials,

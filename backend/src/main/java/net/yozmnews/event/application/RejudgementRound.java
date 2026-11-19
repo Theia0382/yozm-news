@@ -70,12 +70,11 @@ public class RejudgementRound {
 	@Autowired
 	RejudgementRound(EventArticleRepository assignments, EventRepository events, MatchFeaturesRepository features,
 			CriteriaRepository criteriaHistory, AssignmentSettings settings, EventShrinkWriter shrinks,
-			TransactionTemplate transaction) {
-		this(assignments, events, features, criteriaHistory, settings.criteria(), shrinks, transaction,
-				InstantSource.system());
+			TransactionTemplate transaction, InstantSource clock) {
+		this(assignments, events, features, criteriaHistory, settings.criteria(), shrinks, transaction, clock);
 	}
 
-	/** 시험이 시계를 넣는다 */
+	/** 시험이 기준을 넣는다 */
 	RejudgementRound(EventArticleRepository assignments, EventRepository events, MatchFeaturesRepository features,
 			CriteriaRepository criteriaHistory, AssignmentCriteria criteria, EventShrinkWriter shrinks,
 			TransactionTemplate transaction, InstantSource clock) {

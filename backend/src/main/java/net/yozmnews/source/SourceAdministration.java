@@ -46,7 +46,10 @@ public interface SourceAdministration {
 	/** 운영자 원문을 고친다 — 읽기 설정이 바뀐 켜진 피드와 검토일이 사라진 소스를 끈다 */
 	ProfileRevisionResult reviseOperatorProfile(SourceId id, String text);
 
-	/** 등록 전 운영자 원문의 피드 하나를 미리본다(source-R9) — 피드 식별자 형식이 틀리면 {@code FeedNotInProfile} */
+	/**
+	 * 등록 전 운영자 원문의 피드 하나를 미리본다(source-R9) — 피드 식별자 형식이 틀리면 {@code FeedNotInProfile}.
+	 * @throws net.yozmnews.platform.RealTimeRequiredException 받을 피드가 있는데 앱의 시각이 실제 시간이 아닐 때(측정용 시계)
+	 */
 	ProfilePreviewResult previewOperatorProfile(String text, String feedKey);
 
 	/** 소스를 켠다(source-R4) */
@@ -54,7 +57,10 @@ public interface SourceAdministration {
 
 	void disableSource(SourceId id);
 
-	/** 피드를 켠다 — 꺼진 피드는 한 번 받아 미리보고 기준을 넘을 때만 켠다(source-R5 · source-R9) */
+	/**
+	 * 피드를 켠다 — 꺼진 피드는 한 번 받아 미리보고 기준을 넘을 때만 켠다(source-R5 · source-R9).
+	 * @throws net.yozmnews.platform.RealTimeRequiredException 받아 미리볼 피드인데 앱의 시각이 실제 시간이 아닐 때(측정용 시계)
+	 */
 	FeedEnableResult enableFeed(FeedId id);
 
 	void disableFeed(FeedId id);

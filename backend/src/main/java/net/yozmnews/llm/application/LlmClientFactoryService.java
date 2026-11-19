@@ -2,7 +2,6 @@ package net.yozmnews.llm.application;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.time.InstantSource;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
@@ -25,6 +24,7 @@ import net.yozmnews.llm.domain.provider.LlmProviderClient;
 import net.yozmnews.llm.domain.provider.LlmProviderClients;
 import net.yozmnews.llm.domain.provider.ProbeResult;
 import net.yozmnews.llm.domain.retry.RetryPolicy;
+import net.yozmnews.platform.AppClock;
 import net.yozmnews.platform.HeaderValueShape;
 import net.yozmnews.platform.SecretValue;
 import net.yozmnews.platform.UserId;
@@ -67,16 +67,16 @@ class LlmClientFactoryService implements LlmClientFactory {
 
 	private final StoredKeySource storedKeys;
 
-	private final InstantSource clock;
+	private final AppClock clock;
 
 	private final Sleeper sleeper;
 
 	@Autowired
-	LlmClientFactoryService(LlmProviderClients clients, StoredKeySource storedKeys) {
-		this(clients, storedKeys, InstantSource.system(), Thread::sleep);
+	LlmClientFactoryService(LlmProviderClients clients, StoredKeySource storedKeys, AppClock clock) {
+		this(clients, storedKeys, clock, Thread::sleep);
 	}
 
-	LlmClientFactoryService(LlmProviderClients clients, StoredKeySource storedKeys, InstantSource clock,
+	LlmClientFactoryService(LlmProviderClients clients, StoredKeySource storedKeys, AppClock clock,
 			Sleeper sleeper) {
 		this.clients = Objects.requireNonNull(clients, "clients");
 		this.storedKeys = Objects.requireNonNull(storedKeys, "storedKeys");
@@ -215,9 +215,9 @@ class LlmClientFactoryService implements LlmClientFactory {
 		};
 	}
 
+	/** 생성 시작부터 시계가 넘긴 시간을 뺀 경과 — 0 이상이다 */
 	private Duration elapsed(Instant start) {
-		Duration elapsed = Duration.between(start, this.clock.instant());
-		return elapsed.isNegative() ? Duration.ZERO : elapsed;
+		return this.clock.elapsedSince(start);
 	}
 
 	private static KeyValidationResult.Rejected rejected(RuntimeException ex) {

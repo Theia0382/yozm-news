@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.time.InstantSource;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
@@ -13,6 +12,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import net.yozmnews.TestClocks;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleDirectory;
 import net.yozmnews.article.ArticleId;
@@ -139,7 +139,7 @@ class EventAssignmentConcurrencyTests {
 		return new AssignmentRound(this.queue, this.intake, this.features, this.events, assignments,
 				this.criteriaHistory, CRITERIA, this.articles,
 				query -> new MembershipJudgement.Judged(null, Map.of()), EventEmbeddings.modelOnly("model-a"),
-				this.transaction, (InstantSource) () -> now);
+				this.transaction, TestClocks.fixed(now));
 	}
 
 	private long article(String vector, Instant availableAt) {

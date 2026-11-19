@@ -7,7 +7,6 @@ import net.yozmnews.storyline.domain.big.BigStorylineCriteriaRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.SmartInitializingSingleton;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -27,11 +26,6 @@ class BigStorylineCriteriaSeeding implements SmartInitializingSingleton {
 	private final TransactionTemplate transaction;
 
 	private final InstantSource clock;
-
-	@Autowired
-	BigStorylineCriteriaSeeding(BigStorylineCriteriaRepository criteria, TransactionTemplate transaction) {
-		this(criteria, transaction, InstantSource.system());
-	}
 
 	BigStorylineCriteriaSeeding(BigStorylineCriteriaRepository criteria, TransactionTemplate transaction, InstantSource clock) {
 		this.criteria = criteria;

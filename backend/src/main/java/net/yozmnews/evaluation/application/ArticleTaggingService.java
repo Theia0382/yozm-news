@@ -77,11 +77,12 @@ class ArticleTaggingService implements ArticleTagging {
 
 	@Autowired
 	ArticleTaggingService(ObjectProvider<ArticleEvaluator> evaluators, ArticleDirectory articles,
-			FeedLabels feedLabels, TagJudgementRepository judgements, TransactionTemplate transaction) {
-		this(evaluators::getIfAvailable, articles, feedLabels, judgements, transaction, InstantSource.system());
+			FeedLabels feedLabels, TagJudgementRepository judgements, TransactionTemplate transaction,
+			InstantSource clock) {
+		this(evaluators::getIfAvailable, articles, feedLabels, judgements, transaction, clock);
 	}
 
-	/** 시험이 평가기 · 시계를 넣는다 */
+	/** 시험이 평가기를 넣는다 */
 	ArticleTaggingService(Supplier<@Nullable ArticleEvaluator> evaluator, ArticleDirectory articles,
 			FeedLabels feedLabels, TagJudgementRepository judgements, TransactionTemplate transaction,
 			InstantSource clock) {

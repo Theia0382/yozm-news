@@ -20,7 +20,6 @@ import net.yozmnews.user.application.SessionSignIn;
 import net.yozmnews.user.application.SignIn;
 import net.yozmnews.user.application.SignInOutcome;
 import net.yozmnews.user.domain.account.Account;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -47,11 +46,6 @@ class SessionController {
 	private final LlmKeys llmKeys;
 
 	private final InstantSource clock;
-
-	@Autowired
-	SessionController(SignIn signIn, SessionSignIn sessions, AccountQueries accounts, LlmKeys llmKeys) {
-		this(signIn, sessions, accounts, llmKeys, InstantSource.system());
-	}
 
 	SessionController(SignIn signIn, SessionSignIn sessions, AccountQueries accounts, LlmKeys llmKeys,
 			InstantSource clock) {

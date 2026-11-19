@@ -5,13 +5,14 @@ import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.time.InstantSource;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
 import java.util.Optional;
 
+import net.yozmnews.TestClocks;
+import net.yozmnews.TestClocks.MovableClock;
 import net.yozmnews.llm.GenerationRequest;
 import net.yozmnews.llm.GenerationResult;
 import net.yozmnews.llm.GenerationStop;
@@ -57,7 +58,7 @@ class LlmClientFactoryGenerationTests {
 
 	private static final String SCHEMA = "{\"type\":\"object\"}";
 
-	private final MovingClock clock = new MovingClock();
+	private final MovableClock clock = TestClocks.movable(T0);
 
 	private final List<Duration> slept = new ArrayList<>();
 
@@ -93,6 +94,21 @@ class LlmClientFactoryGenerationTests {
 				"사용자표지-service", SCHEMA, ReasoningEffort.LOW, 5_000));
 		assertThat(this.clients.closed).isEqualTo(1);
 		assertThat(this.source.calls).containsExactly("find 7 ANTHROPIC", "checked 41 " + new KeyValidationResult.Valid());
+	}
+
+	/** 생성 중에 측정용 시계를 넘겨도 걸린 시간은 실제로 흐른 만큼이다 — 넘긴 시간은 경과에서 빠진다 */
+	@Test
+	void aJumpOfTheClockDuringGenerationLeavesTheElapsedTimeAlone() {
+		this.source.stored = Optional.of(new StoredKey(41, KEY));
+		this.clients.answer(Duration.ofSeconds(7),
+				new GenerationOutcome.Answered("{\"a\":1}", 12, 34, GenerationStop.COMPLETE));
+		this.clients.jump = Duration.ofHours(24);
+
+		StoredGeneration result = this.service.generateStored(USER, request(STRUCTURED, SCHEMA, ReasoningEffort.LOW, 1_000));
+
+		assertThat(result).isEqualTo(new StoredGeneration.Done(new GenerationResult.Generated("{\"a\":1}", 12, 34,
+				Duration.ofSeconds(7), GenerationStop.COMPLETE, true)));
+		assertThat(this.clock.instant()).isEqualTo(Instant.parse("2026-11-18T07:00:07Z"));
 	}
 
 	@Test
@@ -317,22 +333,6 @@ class LlmClientFactoryGenerationTests {
 		return new GenerationOutcome.Failed(LlmFailureKind.TRANSIENT, "상태 503", null, false);
 	}
 
-	/** 흐르게 할 때만 흐르는 시계 */
-	private static final class MovingClock implements InstantSource {
-
-		private Instant now = T0;
-
-		void advance(Duration duration) {
-			this.now = this.now.plus(duration);
-		}
-
-		@Override
-		public Instant instant() {
-			return this.now;
-		}
-
-	}
-
 	/** 부른 순서와 인자를 적는 가짜 공급 인터페이스 */
 	private static final class RecordingSource implements StoredKeySource {
 
@@ -366,7 +366,7 @@ class LlmClientFactoryGenerationTests {
 	/** 연 공급자 · 키 · 마감, 받은 생성 요청, 닫은 횟수를 적고 정해 둔 결과를 차례로 내는 가짜 포트 — 답할 때 시계를 흐르게 한다 */
 	private static final class RecordingClients implements LlmProviderClients {
 
-		private final MovingClock clock;
+		private final MovableClock clock;
 
 		private final List<Provider> opened = new ArrayList<>();
 
@@ -380,11 +380,13 @@ class LlmClientFactoryGenerationTests {
 
 		private Duration latency = Duration.ZERO;
 
+		private Duration jump = Duration.ZERO;
+
 		private boolean raise;
 
 		private int closed;
 
-		RecordingClients(MovingClock clock) {
+		RecordingClients(MovableClock clock) {
 			this.clock = clock;
 		}
 
@@ -414,6 +416,9 @@ class LlmClientFactoryGenerationTests {
 						throw new IllegalArgumentException("Incorrect API key " + KEY.reveal());
 					}
 					RecordingClients.this.clock.advance(RecordingClients.this.latency);
+					if (!RecordingClients.this.jump.isZero()) {
+						RecordingClients.this.clock.jump(RecordingClients.this.jump);
+					}
 					Deque<GenerationOutcome> outcomes = RecordingClients.this.outcomes;
 					if (outcomes.isEmpty()) {
 						return new GenerationOutcome.Answered("{}", 0, 0, GenerationStop.COMPLETE);

@@ -24,7 +24,6 @@ import net.yozmnews.user.domain.notice.NoticeRepository;
 import net.yozmnews.user.domain.notice.PasswordChangedContent;
 import net.yozmnews.user.domain.notice.PreferencesAdjustedContent;
 import net.yozmnews.user.domain.notice.StorylineSubscriptionsRemovedContent;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,11 +44,6 @@ public class FeedStatusNotices {
 	private final NoticeRepository notices;
 
 	private final InstantSource clock;
-
-	@Autowired
-	FeedStatusNotices(FeedLabels labels, NoticeRecipients recipients, NoticeRepository notices) {
-		this(labels, recipients, notices, InstantSource.system());
-	}
 
 	FeedStatusNotices(FeedLabels labels, NoticeRecipients recipients, NoticeRepository notices, InstantSource clock) {
 		this.labels = Objects.requireNonNull(labels, "labels");

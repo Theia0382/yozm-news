@@ -18,6 +18,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import net.yozmnews.TestClocks;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleDirectory;
 import net.yozmnews.digest.DigestRequestOutcome;
@@ -124,7 +125,7 @@ class DigestRequestsTests {
 	/** 행을 만드는 시각도 같은 고정 시계다 — 오늘 횟수는 만든 시각으로 센다 */
 	private DigestGeneration generation(Instant now) {
 		return new DigestGeneration(this.digests, this.sections, this.candidates, this.articles,
-				new FakeDigestGenerator(), this.endings, this.transaction, () -> now);
+				new FakeDigestGenerator(), this.endings, this.transaction, TestClocks.fixed(now));
 	}
 
 	private DigestRequestsService requests(Instant now) {

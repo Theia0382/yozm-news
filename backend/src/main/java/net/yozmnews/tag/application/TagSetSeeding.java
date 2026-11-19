@@ -12,7 +12,6 @@ import net.yozmnews.tag.domain.threshold.ThresholdRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.SmartInitializingSingleton;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -36,12 +35,6 @@ class TagSetSeeding implements SmartInitializingSingleton {
 	private final TransactionTemplate transaction;
 
 	private final InstantSource clock;
-
-	@Autowired
-	TagSetSeeding(TagSetDefinition definition, TagSetRepository tagSets, ThresholdRepository thresholds,
-			TransactionTemplate transaction) {
-		this(definition, tagSets, thresholds, transaction, InstantSource.system());
-	}
 
 	TagSetSeeding(TagSetDefinition definition, TagSetRepository tagSets, ThresholdRepository thresholds,
 			TransactionTemplate transaction, InstantSource clock) {

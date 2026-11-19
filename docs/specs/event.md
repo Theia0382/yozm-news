@@ -423,15 +423,15 @@ sequenceDiagram
 
 ### `application`
 
-- `EventIntakeListener` — 리스너(들어오는 쪽). 넣기는 시각을 `InstantSource` 에서 얻는다. 지우기는 한 트랜잭션에서 event-R8 의 순서로 한다 — 사건의 새 값은 `EventShrink`, 쓰기는 `EventShrinkWriter`, 대표 비우기는 `EventRepository.clearRepresentative`. 이름은 `tag` · `evaluation` 의 리스너와 다르다 — 빈 이름은 단순 클래스 이름이다
-- `EventIntakeRound` — 표현 회차 하나(event-R6 · R8). 임베딩은 생성자로 받은 `evaluation` 의 `TextEmbedding` 으로 얻는다. 시각은 `InstantSource` 에서 얻는다. 점유와 쓰기는 `TransactionTemplate` 의 짧은 트랜잭션이고, 기사 조회와 임베더 호출은 트랜잭션 밖이다. 표현을 쓰는 트랜잭션에서 배정 대기에 넣는다. 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통). 결과 · 실패 갈래는 `default` 없는 `switch` 식이다. 로그(`{n}건` 은 남은 점유 수, `{문구}` 는 실패 결과의 운영자용 문구): `사건 묶기 대기 기사가 지워져 대기에서 뺐다 — 기사 {ID}` · `임베더가 기사를 거부했다 — 기사 {ID}, 거부 {n}회: {문구}`(정보), `임베더가 일시 실패해 회차를 멈췄다 — {이름} {모델 버전}, 기사 {n}건: {문구}` · `임베더를 쓸 수 없어 회차를 멈췄다 — {이름} {모델 버전}, 기사 {n}건: {문구}` · `임베더가 기사를 거부해 사건 묶기에서 뺐다 — 기사 {ID}, 거부 {n}회: {문구}`(경고), `임베더가 실패해 회차를 멈췄다 — {이름} {모델 버전}, 기사 {n}건: {사유}`(오류 — 사유는 예외 클래스 이름이고 스택이 뒤따른다. 결과 어긋남도 관문의 `IllegalStateException` 으로 온다)
-- `AssignmentRound` — 배정 회차 하나(event-R10 ~ R12 · R16). 생성자로 받은 `TextEmbedding` 은 지금 모델 버전(`info().modelVersion()`)을 정하는 데만 쓴다. 기사마다 시계를 다시 읽는다. 점유 · 쓰기는 짧은 트랜잭션이고 기사 조회 · 사건 소속 판정은 트랜잭션 밖이다. 판정 · 실패 갈래는 `default` 없는 `switch` 식이다. 판정의 예외를 밖으로 던지지 않는다 — 점유 · 기준 등록 · 기사 조회 · 점유 풀기의 예외는 회차 밖으로 나간다. 그때 점유한 기사는 점유가 만료된 뒤 다시 처리된다. 트랜잭션 · 역할 애너테이션이 없다. 로그: `배정 대기 기사가 지워져 대기에서 뺐다 — 기사 {ID}` · `배정 대기 기사가 판정 중에 지워져 대기에서 뺐다 — 기사 {ID}` · `사건 소속 판정이 일시 실패해 다시 시도한다 — 기사 {ID}, 시도 {n}: {문구}` · `붙일 사건이 사라졌거나 닫혀 다음 회차에 다시 판정한다 — 기사 {ID}`(정보), `사건 소속 판정의 일시 실패가 상한에 이르러 새 사건으로 끝낸다 — 기사 {ID}: {문구}` · `평가기가 기사를 거부해 새 사건으로 끝낸다 — 기사 {ID}: {문구}` · `평가기를 쓸 수 없어 배정 회차를 멈췄다 — 남은 기사 {n}건: {문구}`(경고), `배정 회차가 예상하지 못한 오류로 멈췄다 — 기사 {ID}, 남은 기사 {n}건`(오류)
+- `EventIntakeListener` — 리스너(들어오는 쪽). 넣기는 시각을 `platform` 의 앱 시계(`InstantSource` — platform-R26)에서 얻는다. 지우기는 한 트랜잭션에서 event-R8 의 순서로 한다 — 사건의 새 값은 `EventShrink`, 쓰기는 `EventShrinkWriter`, 대표 비우기는 `EventRepository.clearRepresentative`. 이름은 `tag` · `evaluation` 의 리스너와 다르다 — 빈 이름은 단순 클래스 이름이다
+- `EventIntakeRound` — 표현 회차 하나(event-R6 · R8). 임베딩은 생성자로 받은 `evaluation` 의 `TextEmbedding` 으로 얻는다. 시각과 임대 만료 상한은 `platform` 의 앱 시계(`AppClock` — `expiredBy(IntakeSchedule.LEASE)`, platform-R28)에서 얻는다. 점유와 쓰기는 `TransactionTemplate` 의 짧은 트랜잭션이고, 기사 조회와 임베더 호출은 트랜잭션 밖이다. 표현을 쓰는 트랜잭션에서 배정 대기에 넣는다. 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통). 결과 · 실패 갈래는 `default` 없는 `switch` 식이다. 로그(`{n}건` 은 남은 점유 수, `{문구}` 는 실패 결과의 운영자용 문구): `사건 묶기 대기 기사가 지워져 대기에서 뺐다 — 기사 {ID}` · `임베더가 기사를 거부했다 — 기사 {ID}, 거부 {n}회: {문구}`(정보), `임베더가 일시 실패해 회차를 멈췄다 — {이름} {모델 버전}, 기사 {n}건: {문구}` · `임베더를 쓸 수 없어 회차를 멈췄다 — {이름} {모델 버전}, 기사 {n}건: {문구}` · `임베더가 기사를 거부해 사건 묶기에서 뺐다 — 기사 {ID}, 거부 {n}회: {문구}`(경고), `임베더가 실패해 회차를 멈췄다 — {이름} {모델 버전}, 기사 {n}건: {사유}`(오류 — 사유는 예외 클래스 이름이고 스택이 뒤따른다. 결과 어긋남도 관문의 `IllegalStateException` 으로 온다)
+- `AssignmentRound` — 배정 회차 하나(event-R10 ~ R12 · R16). 생성자로 받은 `TextEmbedding` 은 지금 모델 버전(`info().modelVersion()`)을 정하는 데만 쓴다. 기사마다 시계를 다시 읽는다. 시계는 `platform` 의 앱 시계(`AppClock`)이고 점유할 때 임대 만료 상한을 `expiredBy(AssignmentSchedule.LEASE)` 로 얻는다(platform-R28). 점유 · 쓰기는 짧은 트랜잭션이고 기사 조회 · 사건 소속 판정은 트랜잭션 밖이다. 판정 · 실패 갈래는 `default` 없는 `switch` 식이다. 판정의 예외를 밖으로 던지지 않는다 — 점유 · 기준 등록 · 기사 조회 · 점유 풀기의 예외는 회차 밖으로 나간다. 그때 점유한 기사는 점유가 만료된 뒤 다시 처리된다. 트랜잭션 · 역할 애너테이션이 없다. 로그: `배정 대기 기사가 지워져 대기에서 뺐다 — 기사 {ID}` · `배정 대기 기사가 판정 중에 지워져 대기에서 뺐다 — 기사 {ID}` · `사건 소속 판정이 일시 실패해 다시 시도한다 — 기사 {ID}, 시도 {n}: {문구}` · `붙일 사건이 사라졌거나 닫혀 다음 회차에 다시 판정한다 — 기사 {ID}`(정보), `사건 소속 판정의 일시 실패가 상한에 이르러 새 사건으로 끝낸다 — 기사 {ID}: {문구}` · `평가기가 기사를 거부해 새 사건으로 끝낸다 — 기사 {ID}: {문구}` · `평가기를 쓸 수 없어 배정 회차를 멈췄다 — 남은 기사 {n}건: {문구}`(경고), `배정 회차가 예상하지 못한 오류로 멈췄다 — 기사 {ID}, 남은 기사 {n}건`(오류)
 - `RejudgementRound` — 재판정 회차 하나(event-R18). 먼저 닫힌 사건의 배정을 한 트랜잭션에서 기준만 새것으로 적고, 이어서 배정 하나마다 짧은 트랜잭션이다. 사건 소속 판정 · 임베더를 부르지 않는다. 트랜잭션 · 역할 애너테이션이 없다. 로그: `닫힌 사건의 배정 {n}건은 기준만 새것으로 적었다` · `배정 {n}건을 지금 기준으로 다시 판정했다`(정보, 한 건 이상일 때), `재판정 회차가 예상하지 못한 오류로 멈췄다 — 이번 회차에 다시 판정한 배정 {n}건`(오류)
-- `MergeRound` — 병합 회차 하나(event-R13). 임베더를 받지 않는다 — 모델 버전은 사건의 것이다. 시각은 `InstantSource` 에서 얻는다. 기준 등록 · 판정 기록 쓰기 · 합치기는 짧은 트랜잭션이고, 사건 소속 판정은 트랜잭션 밖이다. 기록 없는 띠 후보의 앞선 배정 확률은 사건을 볼 때마다 다시 읽고 남기지 않는다. 확인 표시와 미룸 쓰기는 트랜잭션 없이 한 문장씩이다. 판정 · 실패 갈래는 `default` 없는 `switch` 식이다. 예외를 밖으로 던지지 않는다. 트랜잭션 · 역할 애너테이션이 없다. 로그: `사건 {n}건을 합쳤다` · `합칠 사건이 닫혔거나 그새 바뀌어 미뤄 다시 본다 — 사건 {ID} · {ID}` · `사건 병합 판정이 일시 실패해 미뤄 다시 본다 — 사건 {ID}: {문구}`(정보), `평가기가 기사를 거부해 병합 판정을 확률 없이 정한다 — 사건 {ID}: {문구}` · `평가기를 쓸 수 없어 병합 회차를 멈췄다 — 사건 {ID}: {문구}`(경고), `병합 회차가 예상하지 못한 오류로 멈췄다 — 사건 {ID}`(오류)
+- `MergeRound` — 병합 회차 하나(event-R13). 임베더를 받지 않는다 — 모델 버전은 사건의 것이다. 시각은 `platform` 의 앱 시계(`InstantSource` — platform-R26)에서 얻는다. 기준 등록 · 판정 기록 쓰기 · 합치기는 짧은 트랜잭션이고, 사건 소속 판정은 트랜잭션 밖이다. 기록 없는 띠 후보의 앞선 배정 확률은 사건을 볼 때마다 다시 읽고 남기지 않는다. 확인 표시와 미룸 쓰기는 트랜잭션 없이 한 문장씩이다. 판정 · 실패 갈래는 `default` 없는 `switch` 식이다. 예외를 밖으로 던지지 않는다. 트랜잭션 · 역할 애너테이션이 없다. 로그: `사건 {n}건을 합쳤다` · `합칠 사건이 닫혔거나 그새 바뀌어 미뤄 다시 본다 — 사건 {ID} · {ID}` · `사건 병합 판정이 일시 실패해 미뤄 다시 본다 — 사건 {ID}: {문구}`(정보), `평가기가 기사를 거부해 병합 판정을 확률 없이 정한다 — 사건 {ID}: {문구}` · `평가기를 쓸 수 없어 병합 회차를 멈췄다 — 사건 {ID}: {문구}`(경고), `병합 회차가 예상하지 못한 오류로 멈췄다 — 사건 {ID}`(오류)
 - `CleanupRound` — 정리 작업 하나(event-R13) — 닫기 · 장기 검색 인덱스 · 기사 표현 정리를 차례로 한다. 시계는 한 번 읽는다. 닫기는 사건마다, 표현 정리는 묶음마다 짧은 트랜잭션이고, 인덱스는 트랜잭션 밖(자동 커밋)이다. 단계마다 예상 못한 예외는 그 단계에서 멈추고 다음 단계로 간다. 예외를 밖으로 던지지 않는다. 트랜잭션 · 역할 애너테이션이 없다. 로그: `사건 {n}건을 닫았다` · `장기 검색 인덱스 {n}개를 만들었다` · `기사 표현 {n}건을 지웠다`(정보, 하나라도 있을 때), `사건 닫기가 예상하지 못한 오류로 멈췄다 — 닫은 사건 {n}건` · `장기 검색 인덱스 확인이 예상하지 못한 오류로 멈췄다` · `기사 표현 정리가 예상하지 못한 오류로 멈췄다 — 지운 표현 {n}건`(오류). 인덱스의 경고 로그는 `JdbcLongTermIndexes` 가 남긴다
 - `EventShrinkWriter` — 기사를 뺀 사건 쓰기의 정본(event-R8 · R18). 뺀 기사의 배정이 지워지거나 옮겨진 뒤 같은 트랜잭션에서 부른다 — 비면 사건을 지우고, 아니면 새 중심 · 수 · 핵심 말과 남은 배정의 발행 시각 범위를 쓴다(연 시각 · 마지막으로 붙은 시각은 그대로). 남은 수가 있는데 배정이 없으면 사건을 지운다
 - `EventAssignmentProperties` · `AssignmentConfiguration` · `AssignmentSettings` — 사건 기준 · 저장 기준 · 닫는 기간 · 최대 기간 설정(`yozmnews.event-assignment`, 기본값의 정본은 레코드 컴포넌트의 `@DefaultValue`)과 그것을 검증된 기준으로 바꾸는 결선(event-R13 · R17). 공개 타입 `AssignmentCriteria` 는 패키지 내부 레코드 `AssignmentSettings` 에 감싼 빈으로 운반한다. 닫기 기준은 `EventClosing` 빈이다. 두 빈 모두 기동 때 검증된다
-- `EventIntakeAdministrationService` — 공개 운영 API `EventIntakeAdministration` 의 구현(event-R19). 시각은 `InstantSource` 에서 얻는다
+- `EventIntakeAdministrationService` — 공개 운영 API `EventIntakeAdministration` 의 구현(event-R19). 시각은 `platform` 의 앱 시계(`InstantSource` — platform-R26)에서 얻는다
 - `KeyTermConfiguration` — `KeyTermExtractor` 를 빈으로 두고, 컨텍스트가 닫을 때 닫는다
 - `EventReviewService` — 공개 조회 `EventReview` 의 구현(event-R13 · R17 · R22). 판정 원본의 쓰임은 배정과 병합 판정 기록을 각각 원본 ID 로 찾아 합친다. 트랜잭션 · 역할 애너테이션이 없다
 - `EventDirectoryService` — 공개 조회 `EventDirectory` 의 구현(event-R14 · R15 · R20 · R24). 표현 · 이웃 · 말 수 조회의 범위를 검사한다. 기간 집계는 묶음들의 사건 ID 합집합으로 기간 안 배정을 한 번 읽고, 묶음마다 구성 사건(중복 없이)의 기사를 이어 `EventTallyReader` 에 넘긴다 — 사건 목록의 집계와 기간 전체 집계(`total`)도 같은 길이다. `list` 는 한 건 더 읽어 다음 커서를 정한다. 트랜잭션 · 역할 애너테이션이 없다
@@ -469,7 +469,7 @@ sequenceDiagram
   public interface IntakeQueueRepository {
       void enqueue(ArticleId articleId, Instant now);                  // 없으면 넣기. 있으면 그대로
       int enqueueUnassigned(Collection<ArticleId> articleIds, Instant now);  // 배정이 없는 기사만 넣기 — 새로 넣은 수(event-R19)
-      List<PendingArticle> lockDue(Instant now, int limit);           // 점유가 없거나 만료(≤ now)된 행 — 넣은 시각, 기사 ID 순. 잡힌 행은 건너뛴다
+      List<PendingArticle> lockDue(Instant expiredBy, int limit);     // 점유가 없거나 만료(≤ expiredBy — 부르는 쪽이 AppClock.expiredBy 로 정한다)된 행 — 넣은 시각, 기사 ID 순. 잡힌 행은 건너뛴다
       void saveLocked(PendingArticle next);                            // lockDue 로 잠근 행 갱신
       boolean deleteIfLeased(ArticleId articleId, UUID token);        // 토큰이 맞을 때만 삭제
       boolean releaseIfLeased(ArticleId articleId, UUID token);       // 토큰이 맞을 때만 점유 해제
@@ -521,7 +521,7 @@ sequenceDiagram
   ```java
   public interface AssignmentQueueRepository {
       void enqueue(ArticleId articleId, Instant now);                               // 없으면 넣기 — 판정 가능 시각 = now
-      List<PendingAssignment> lockDue(Instant now, int limit);                     // 판정 가능 시각 ≤ now · 점유 없음/만료 — 판정 가능 시각, 기사 ID 순. 잡힌 행은 건너뛴다
+      List<PendingAssignment> lockDue(Instant now, Instant expiredBy, int limit);  // 판정 가능 시각 ≤ now · 점유 없음/만료(≤ expiredBy — AppClock.expiredBy) — 판정 가능 시각, 기사 ID 순. 잡힌 행은 건너뛴다
       void saveLocked(PendingAssignment next);
       boolean deleteIfLeased(ArticleId articleId, UUID token);
       boolean releaseIfLeased(ArticleId articleId, UUID token);                    // 시도 수 · 판정 가능 시각은 그대로
@@ -656,7 +656,7 @@ sequenceDiagram
 판단의 이유는 [ADR-0074](../adr/0074-article-features-built-by-event-intake-queue-job-and-skipped-without-an-embedder.md) · [ADR-0060](../adr/0060-article-deletion-announced-by-removed-article-ids-and-followed-by-referencing-modules.md) · [ADR-0080](../adr/0080-event-centroids-and-key-terms-accumulated-with-article-counts-and-updated-incrementally.md) · [ADR-0092](../adr/0092-embedder-failures-in-three-kinds-with-rejected-articles-isolated-and-dropped-after-a-limit.md) · [ADR-0093](../adr/0093-worker-role-does-not-run-without-an-embedder-built-only-in-the-worker-role.md)에 있다.
 
 - **event-R5** — 대기: 새 기사(`ArticleStored`)를 대기에 넣는다. 기사마다 한 행이고 이미 있으면 그대로다 — 같은 이벤트를 다시 처리해도 결과가 같다. 정착 시간이 없다 — 기사의 제목 · 요약문은 처음 저장한 값이 남는다(article-R8). 이 모듈이 생기기 전에 저장된 기사는 운영자가 채우기 전까지 대기에 들어가지 않는다(event-R19)
-- **event-R6** — 회차: 반복 작업(1분, 재시도 없음)의 회차는 점유가 없거나 만료된(만료 시각 ≤ 지금) 대기 행을 넣은 시각 · 기사 ID 순으로 64건(`IntakeSchedule.BATCH_SIZE`)까지 잠가(다른 트랜잭션이 잡은 행은 건너뛴다) 점유(토큰 · 만료 = 지금 + 10분, `IntakeSchedule.LEASE`)를 쓰고 커밋한다. 반복 작업은 이전 실행이 대기 · 처리 중이면 그 회차를 건너뛴다.
+- **event-R6** — 회차: 반복 작업(1분, 재시도 없음)의 회차는 점유가 없거나 만료된(만료 시각 ≤ `AppClock.expiredBy(10분)` — 점유한 뒤 시계가 넘긴 시간을 뺀 경과가 임대 이상, platform-R28) 대기 행을 넣은 시각 · 기사 ID 순으로 64건(`IntakeSchedule.BATCH_SIZE`)까지 잠가(다른 트랜잭션이 잡은 행은 건너뛴다) 점유(토큰 · 만료 = 지금 + 10분, `IntakeSchedule.LEASE`)를 쓰고 커밋한다. 반복 작업은 이전 실행이 대기 · 처리 중이면 그 회차를 건너뛴다.
   - 기사의 제목 · 요약문을 트랜잭션 밖에서 한 번에 읽는다. 그새 지워진 기사는 토큰이 맞으면 대기 행을 지운다. 남은 기사가 없으면 임베더를 부르지 않는다
   - 임베더를 트랜잭션 밖에서 한 번 부른다. 결과에 따라([ADR-0092](../adr/0092-embedder-failures-in-three-kinds-with-rejected-articles-isolated-and-dropped-after-a-limit.md))
     - 성공이면(수 · 차원은 관문이 확인했다 — event-R3) 아래처럼 쓴다
@@ -704,7 +704,7 @@ sequenceDiagram
   - 기사를 빼면(event-R8 · R18) 그 사건 모델 버전의 표현이 있을 때 기여를 뺀다(`CentroidUpdate.remove`). 반 정밀도 누적이라 많이 더한 사건에서 많이 빼면 앞선 반올림 오차가 커진다. 표현이 없는 기사를 빼면 그 기여가 중심 · 핵심 말에 남고, 그런 기사가 섞여 여러 기사를 한 번에 빼면 결과는 뺀 순서(기사 ID 순)를 따른다
   - **(미설계)** 모델을 바꾼 뒤 열린 사건의 중심을 새 모델로 다시 계산하는 일 — 지금은 새 모델의 기사가 새 사건을 연다
 - **event-R16** — 배정 대기와 배정 회차: 표현을 쓴 기사를 배정 대기에 넣는다(event-R6) — 기사마다 한 행이고 이미 있으면 그대로, 판정 가능 시각은 넣은 시각이다. 반복 작업이 표현 회차 다음에 배정 회차를 돈다.
-  - 회차는 판정 가능 시각이 지났고 점유가 없거나 만료된 행을 판정 가능 시각 · 기사 ID 순으로 32건(`AssignmentSchedule.BATCH_SIZE`)까지 잠가 점유(만료 = 지금 + 20분, `AssignmentSchedule.LEASE` — 32 × 요청 둘 × 마감 15초 = 16분보다 길다)를 쓰고 커밋한다. 점유한 행이 있으면 지금 기준을 기준 이력에 등록한다(event-R17)
+  - 회차는 판정 가능 시각이 지났고 점유가 없거나 만료된(점유한 뒤의 경과가 임대 이상 — platform-R28) 행을 판정 가능 시각 · 기사 ID 순으로 32건(`AssignmentSchedule.BATCH_SIZE`)까지 잠가 점유(만료 = 지금 + 20분, `AssignmentSchedule.LEASE` — 32 × 요청 둘 × 마감 15초 = 16분보다 길다)를 쓰고 커밋한다. 점유한 행이 있으면 지금 기준을 기준 이력에 등록한다(event-R17)
   - 기사를 점유 순서대로 하나씩 판정하고 기사마다 짧은 트랜잭션에서 쓴다 — 같은 회차의 뒤 기사가 앞 기사가 연 사건을 후보로 본다. 시각은 기사마다 다시 읽는다. 쓰기는 토큰이 맞아 배정 대기 행을 지웠을 때만 한다
   - 기사가 없으면 대기 행을 지운다. 배정이 이미 있으면 대기 행만 지운다. 지금 모델 버전의 표현이 없으면(모델이 바뀜) 한 트랜잭션에서 대기 행을 지우고 사건 묶기 대기에 넣는다 — 표현을 새 모델로 다시 만든다
   - 붙일 사건이 사라졌거나 열려 있지 않거나 모델 버전이 다르면, 또는 배정이 이미 있으면 쓰기를 모두 되돌리고 새 트랜잭션에서 점유를 풀거나(다음 회차가 다시 판정) 대기 행을 지운다 — 점유 만료까지 묶이지 않는다
@@ -856,3 +856,4 @@ sequenceDiagram
 | [0119](../adr/0119-event-merge-does-not-ask-band-pairs-whose-prior-assignment-probability-is-below-the-probability-threshold.md) | 사건 병합은 배정 때 받은 확률이 확률 기준 미만인 띠 쌍을 다시 묻지 않는다 |
 | [0120](../adr/0120-event-membership-probability-threshold-default-chosen-by-merge-precision-among-values-indistinguishable-in-assignment.md) | 사건 소속 판정의 확률 기준 기본값은 배정에서 구별되지 않는 값 가운데 병합 판정의 정밀이 높은 값으로 정한다 |
 | [0213](../adr/0213-event-merge-defers-events-whose-check-did-not-finish-until-a-retry-time-on-the-event-row-and-never-drops-them.md) | 병합 회차가 확인을 끝내지 못한 사건은 사건 행에 남긴 다시 볼 시각까지 미루고, 미룬 횟수로 대상에서 빼지 않는다 |
+| [0252](../adr/0252-the-stall-and-duration-of-work-in-progress-are-measured-as-elapsed-time-without-the-jumps-of-the-clock.md) | 진행 중 작업의 멈춤과 걸린 시간은 시계가 넘긴 시간을 뺀 경과로 잰다 |

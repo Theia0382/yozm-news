@@ -13,7 +13,6 @@ import net.yozmnews.event.EventView;
 import net.yozmnews.storyline.LinkingFillResult;
 import net.yozmnews.storyline.StorylineLinkingAdministration;
 import net.yozmnews.storyline.domain.queue.LinkingQueueRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -33,12 +32,6 @@ class StorylineLinkingAdministrationService implements StorylineLinkingAdministr
 	private final TransactionTemplate transaction;
 
 	private final InstantSource clock;
-
-	@Autowired
-	StorylineLinkingAdministrationService(EventDirectory events, LinkingQueueRepository queue,
-			TransactionTemplate transaction) {
-		this(events, queue, transaction, InstantSource.system());
-	}
 
 	StorylineLinkingAdministrationService(EventDirectory events, LinkingQueueRepository queue,
 			TransactionTemplate transaction, InstantSource clock) {

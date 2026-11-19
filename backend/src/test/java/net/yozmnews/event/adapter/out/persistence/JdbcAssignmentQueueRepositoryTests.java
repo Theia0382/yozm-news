@@ -48,7 +48,7 @@ class JdbcAssignmentQueueRepositoryTests {
 		this.repository.enqueue(new ArticleId(1), T);
 		this.repository.enqueue(new ArticleId(1), Instant.parse("2026-11-06T05:00:00Z"));
 
-		assertThat(this.repository.lockDue(T, 10)).containsExactly(new PendingAssignment(new ArticleId(1), T, 0, T, null));
+		assertThat(this.repository.lockDue(T, T, 10)).containsExactly(new PendingAssignment(new ArticleId(1), T, 0, T, null));
 	}
 
 	@Test
@@ -59,20 +59,21 @@ class JdbcAssignmentQueueRepositoryTests {
 		row(14, "2026-11-05T22:00:00Z", 0, OTHER, "2026-11-06T00:00:01Z"); // 점유 중
 		row(15, "2026-11-06T00:00:00Z", 0, null, null);
 
-		assertThat(this.repository.lockDue(T, 2)).extracting(PendingAssignment::articleId)
+		assertThat(this.repository.lockDue(T, T, 2)).extracting(PendingAssignment::articleId)
 			.containsExactly(new ArticleId(12), new ArticleId(11));
-		assertThat(this.repository.lockDue(T, 10)).extracting(PendingAssignment::articleId)
+		assertThat(this.repository.lockDue(T, T, 10)).extracting(PendingAssignment::articleId)
 			.containsExactly(new ArticleId(12), new ArticleId(11), new ArticleId(15));
 	}
 
 	@Test
 	void savesAttemptsAvailabilityAndLeaseOfALockedRow() {
 		row(21, "2026-11-06T00:00:00Z", 1, null, null);
-		PendingAssignment claimed = this.repository.lockDue(T, 1).get(0).claim(TOKEN, T);
+		PendingAssignment claimed = this.repository.lockDue(T, T, 1).get(0).claim(TOKEN, T);
 
 		this.repository.saveLocked(claimed);
 
-		assertThat(this.repository.lockDue(Instant.parse("2026-11-06T00:20:00Z"), 1)).containsExactly(
+		Instant at0020 = Instant.parse("2026-11-06T00:20:00Z");
+		assertThat(this.repository.lockDue(at0020, at0020, 1)).containsExactly(
 				new PendingAssignment(new ArticleId(21), Instant.parse("2026-11-06T00:00:00Z"), 1, T,
 						new IntakeLease(TOKEN, Instant.parse("2026-11-06T00:20:00Z"))));
 	}
@@ -91,7 +92,8 @@ class JdbcAssignmentQueueRepositoryTests {
 		assertThat(this.repository.retryIfLeased(new ArticleId(33), TOKEN, 2, Instant.parse("2026-11-06T00:02:00Z")))
 			.isTrue();
 
-		assertThat(this.repository.lockDue(Instant.parse("2026-11-06T00:02:00Z"), 10)).containsExactly(
+		Instant at0002 = Instant.parse("2026-11-06T00:02:00Z");
+		assertThat(this.repository.lockDue(at0002, at0002, 10)).containsExactly(
 				new PendingAssignment(new ArticleId(32), T, 0, T, null),
 				new PendingAssignment(new ArticleId(33), T, 2, Instant.parse("2026-11-06T00:02:00Z"), null));
 	}

@@ -29,8 +29,12 @@ public interface TagBackfillRepository {
 	/** 끝나지 않은 채움을 읽는다 */
 	Optional<TagBackfill> findOpen();
 
-	/** 시작할 수 있고 점유가 없거나 만료된 채움을 행 잠금으로 읽는다 — 다른 트랜잭션이 잡은 행은 건너뛴다. 트랜잭션 안에서 부른다 */
-	Optional<TagBackfill> lockDue(Instant now);
+	/**
+	 * 시작할 수 있고(시작 가능 시각 ≤ {@code now}) 점유가 없거나 만료된(만료 시각 ≤ {@code expiredBy}) 채움을 행 잠금으로 읽는다 — 다른
+	 * 트랜잭션이 잡은 행은 건너뛴다. 트랜잭션 안에서 부른다.
+	 * @param expiredBy 만료 시각의 상한 — 부르는 쪽이 시계가 넘긴 시간을 뺀 경과로 정한다({@code AppClock#expiredBy})
+	 */
+	Optional<TagBackfill> lockDue(Instant now, Instant expiredBy);
 
 	/** {@link #lockDue} 로 잠근 채움의 점유를 쓴다 */
 	void saveLocked(TagBackfill claimed);

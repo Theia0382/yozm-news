@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import net.yozmnews.TestClocks;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleDirectory;
 import net.yozmnews.article.ArticleId;
@@ -218,7 +219,7 @@ class CleanupFlowTests {
 	private void assign() {
 		new AssignmentRound(this.queue, this.intake, this.features, this.events, this.assignments, this.criteriaHistory,
 				CRITERIA, this.articles, query -> new MembershipJudgement.Judged(null, Map.of()),
-				EventEmbeddings.modelOnly("model-a"), this.transaction, (InstantSource) () -> NOW)
+				EventEmbeddings.modelOnly("model-a"), this.transaction, TestClocks.fixed(NOW))
 			.run();
 	}
 

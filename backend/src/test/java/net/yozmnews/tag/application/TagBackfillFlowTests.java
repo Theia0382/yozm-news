@@ -11,6 +11,7 @@ import java.time.InstantSource;
 import java.util.List;
 import java.util.Map;
 
+import net.yozmnews.TestClocks;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.evaluation.ArticleTagging;
 import net.yozmnews.evaluation.TagReread;
@@ -195,7 +196,7 @@ class TagBackfillFlowTests {
 		TagBackfillRunView requested = ((TagBackfillRequestResult.Requested) administration.request(days)).run();
 		new TagBackfillRound(this.backfills, this.results, this.thresholds, this.views,
 				new ScriptedTagging(this.tagging).rereading(this.scenario::reread), this.transaction,
-				InstantSource.fixed(at.plus(Duration.ofMinutes(2))))
+				TestClocks.fixed(at.plus(Duration.ofMinutes(2))))
 			.run();
 		return this.backfills.run(requested.id()).orElseThrow();
 	}

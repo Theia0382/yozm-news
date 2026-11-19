@@ -1,6 +1,5 @@
 package net.yozmnews.tag.application;
 
-import java.time.InstantSource;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -9,12 +8,14 @@ import net.yozmnews.evaluation.ArticleTagging;
 import net.yozmnews.evaluation.TagQuestions;
 import net.yozmnews.evaluation.TaggingJudgement;
 import net.yozmnews.evaluation.TaggingQuery;
+import net.yozmnews.platform.AppClock;
 import net.yozmnews.tag.TagSetDirectory;
 import net.yozmnews.tag.TagSetId;
 import net.yozmnews.tag.TagSetThresholds;
 import net.yozmnews.tag.TagSetView;
 import net.yozmnews.tag.domain.queue.EvaluationLease;
 import net.yozmnews.tag.domain.queue.EvaluationQueueRepository;
+import net.yozmnews.tag.domain.queue.EvaluationSchedule;
 import net.yozmnews.tag.domain.queue.PendingEvaluation;
 import net.yozmnews.tag.domain.result.EvaluationRecord;
 import net.yozmnews.tag.domain.result.EvaluationResultRepository;
@@ -23,7 +24,6 @@ import net.yozmnews.tag.domain.threshold.ThresholdRepository;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -58,18 +58,11 @@ public class EvaluationRound {
 
 	private final TransactionTemplate transaction;
 
-	private final InstantSource clock;
-
-	@Autowired
-	EvaluationRound(PendingEvaluations pending, TagSetDirectory directory, ThresholdRepository thresholds,
-			ArticleTagging tagging, EvaluationResultRepository results, EvaluationQueueRepository queue,
-			TagSetRepository tagSets, TransactionTemplate transaction) {
-		this(pending, directory, thresholds, tagging, results, queue, tagSets, transaction, InstantSource.system());
-	}
+	private final AppClock clock;
 
 	EvaluationRound(PendingEvaluations pending, TagSetDirectory directory, ThresholdRepository thresholds,
 			ArticleTagging tagging, EvaluationResultRepository results, EvaluationQueueRepository queue,
-			TagSetRepository tagSets, TransactionTemplate transaction, InstantSource clock) {
+			TagSetRepository tagSets, TransactionTemplate transaction, AppClock clock) {
 		this.pending = pending;
 		this.directory = directory;
 		this.thresholds = thresholds;
@@ -83,7 +76,8 @@ public class EvaluationRound {
 
 	/** 회차 하나를 돈다 */
 	public void run() {
-		List<PendingEvaluation> claimed = this.pending.claimDue(this.clock.instant());
+		List<PendingEvaluation> claimed = this.pending.claimDue(this.clock.instant(),
+				this.clock.expiredBy(EvaluationSchedule.LEASE));
 		if (claimed.isEmpty()) {
 			return;
 		}

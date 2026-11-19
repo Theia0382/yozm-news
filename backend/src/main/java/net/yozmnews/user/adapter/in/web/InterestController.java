@@ -24,7 +24,6 @@ import net.yozmnews.user.application.TopicSuggestionDeclining.UnknownTopicExcept
 import net.yozmnews.user.domain.interest.DigestVolume;
 import net.yozmnews.user.domain.interest.ReportSettings;
 import net.yozmnews.user.domain.preference.PreferenceSet;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -58,14 +57,6 @@ class InterestController {
 	private final TopicSuggestionDeclining suggestionDeclining;
 
 	private final InstantSource clock;
-
-	@Autowired
-	InterestController(TagPreferences tagPreferences, ExcludedSources excludedSources, DigestSettings digestSettings,
-			ModelSelection modelSelection, DigestVolumeSettings volumeSettings,
-			TopicSuggestionDeclining suggestionDeclining) {
-		this(tagPreferences, excludedSources, digestSettings, modelSelection, volumeSettings, suggestionDeclining,
-				InstantSource.system());
-	}
 
 	InterestController(TagPreferences tagPreferences, ExcludedSources excludedSources, DigestSettings digestSettings,
 			ModelSelection modelSelection, DigestVolumeSettings volumeSettings,

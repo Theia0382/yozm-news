@@ -2,7 +2,6 @@ package net.yozmnews.digest.application;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.time.InstantSource;
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Objects;
@@ -41,11 +40,11 @@ import net.yozmnews.digest.domain.prompt.DigestPrompt;
 import net.yozmnews.digest.domain.prompt.DigestPrompts;
 import net.yozmnews.llm.LlmModel;
 import net.yozmnews.llm.ReasoningEffort;
+import net.yozmnews.platform.AppClock;
 import net.yozmnews.platform.UserId;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -84,19 +83,11 @@ public class DigestGeneration {
 
 	private final TransactionTemplate transaction;
 
-	private final InstantSource clock;
+	private final AppClock clock;
 
-	@Autowired
-	DigestGeneration(DigestRepository digests, DigestSectionRepository sections,
-			DigestCandidateRepository candidates, ArticleDirectory articles, DigestGenerator generator,
-			DigestEndings endings, TransactionTemplate transaction) {
-		this(digests, sections, candidates, articles, generator, endings, transaction, InstantSource.system());
-	}
-
-	/** 시험이 생성기와 시계를 넣는다 */
 	DigestGeneration(DigestRepository digests, DigestSectionRepository sections, DigestCandidateRepository candidates,
 			ArticleDirectory articles, DigestGenerator generator, DigestEndings endings,
-			TransactionTemplate transaction, InstantSource clock) {
+			TransactionTemplate transaction, AppClock clock) {
 		this.digests = digests;
 		this.sections = sections;
 		this.candidates = candidates;
@@ -153,7 +144,7 @@ public class DigestGeneration {
 			}
 		};
 		TokenUsage usage = sum(usage(first), (second == null) ? null : usage(second));
-		Duration took = Duration.between(asked, this.clock.instant());
+		Duration took = this.clock.elapsedSince(asked);
 		return finish(id, started.version(), () -> complete(id, set, settled, usage, took));
 	}
 

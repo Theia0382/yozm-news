@@ -3,6 +3,7 @@ package net.yozmnews.digest.application;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.sql.Timestamp;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -11,6 +12,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import net.yozmnews.TestClocks;
+import net.yozmnews.TestClocks.MovableClock;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleDirectory;
 import net.yozmnews.article.ArticleId;
@@ -30,6 +33,7 @@ import net.yozmnews.digest.domain.digest.DigestTrigger;
 import net.yozmnews.event.EventArticles;
 import net.yozmnews.llm.LlmModel;
 import net.yozmnews.llm.Provider;
+import net.yozmnews.platform.AppClock;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.user.DigestFailed;
 import net.yozmnews.user.DigestFailureCause;
@@ -113,8 +117,12 @@ class StalledDigestsTests {
 	}
 
 	private StalledDigests stalled(Instant now) {
+		return stalled(TestClocks.fixed(now));
+	}
+
+	private StalledDigests stalled(AppClock clock) {
 		DigestDispatch dispatch = new DigestDispatch((id, token) -> this.enqueued.add(Map.entry(id.value(), token)));
-		return new StalledDigests(this.digests, this.ledger, this.endings, dispatch, this.transaction, () -> now);
+		return new StalledDigests(this.digests, this.ledger, this.endings, dispatch, this.transaction, clock);
 	}
 
 	@Test
@@ -172,6 +180,34 @@ class StalledDigestsTests {
 			.containsExactly(org.assertj.core.groups.Tuple.tuple(stuck, DigestFailureCause.TEMPORARY));
 	}
 
+	/**
+	 * 측정용 시계를 넘겨도 진행 중인 다이제스트는 멈춘 것으로 보지 않는다 — 기다림(15분) · 시작 기한(1시간) · 생성 임대(40분)는 시계가 넘긴
+	 * 시간을 뺀 경과로 잰다. 둘 다 NOW 1분 전에 등록 · 시작했다.
+	 */
+	@Test
+	void aJumpOfTheClockDoesNotStallDigestsInProgress() {
+		Instant before = NOW.minusSeconds(60);
+		long waiting = scheduled("2026-11-19", before, before, UUID.randomUUID());
+		long busy = running("2026-11-20", before);
+		MovableClock clock = TestClocks.movable(NOW).jump(Duration.ofHours(24));
+
+		stalled(clock).runRound();
+
+		assertThat(row(waiting)).containsEntry("status", "SCHEDULED").containsEntry("dispatched_at", Timestamp.from(before));
+		assertThat(row(busy)).containsEntry("status", "RUNNING");
+		assertThat(this.enqueued).isEmpty();
+		assertThat(this.events.stream(DigestFailed.class)).isEmpty();
+
+		// 대조 — 넘긴 뒤 실제로 40분이 흐르면 경과 41분이라 생성 임대가 지나 끝내고, 생성 대기는 다시 등록한다(만든 지 41분)
+		clock.advance(Duration.ofMinutes(40));
+		stalled(clock).runRound();
+
+		assertThat(row(busy)).containsEntry("status", "FAILED").containsEntry("error_code", "INTERRUPTED");
+		assertThat(row(waiting)).containsEntry("status", "SCHEDULED")
+			.containsEntry("dispatched_at", Timestamp.from(Instant.parse("2026-11-20T12:40:00Z")));
+		assertThat(this.enqueued).extracting(Map.Entry::getKey).containsExactly(waiting);
+	}
+
 	@Test
 	void finishedDigestsAreLeftAlone() {
 		long done = scheduled("2026-11-19", NOW.minusSeconds(3 * 3600), NOW.minusSeconds(3 * 3600), UUID.randomUUID());
@@ -198,7 +234,7 @@ class StalledDigestsTests {
 				request -> {
 					stalled(NOW.plusSeconds(41 * 60)).runRound();
 					return fake.generate(request);
-				}, this.endings, this.transaction, () -> NOW);
+				}, this.endings, this.transaction, TestClocks.fixed(NOW));
 		DigestId id = generation.schedule(new UserId(42), LocalDate.parse("2026-11-19"),
 				new DigestPeriod(Instant.parse("2026-11-18T12:00:00Z"), NOW), DigestTrigger.MANUAL).id();
 		List<DigestCandidate> list = List.of(

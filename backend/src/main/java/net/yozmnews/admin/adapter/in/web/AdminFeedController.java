@@ -38,7 +38,7 @@ class AdminFeedController {
 	@ApiResponse(responseCode = "404", description = "없는 피드다",
 			content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
 					schema = @Schema(implementation = ApiProblem.class)))
-	@ApiResponse(responseCode = "409", description = "다른 요청이 먼저 바꿨다",
+	@ApiResponse(responseCode = "409", description = "다른 요청이 먼저 바꿨거나 측정용 시계라 실제 피드를 요청하지 않는다",
 			content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
 					schema = @Schema(implementation = ApiProblem.class)))
 	FeedEnableResponse enable(@PathVariable long id) {

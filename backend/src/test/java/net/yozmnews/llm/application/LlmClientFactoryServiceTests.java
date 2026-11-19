@@ -4,11 +4,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 import java.time.Duration;
+import java.time.InstantSource;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
 
+import net.yozmnews.TestClocks;
 import net.yozmnews.llm.KeyValidationResult;
 import net.yozmnews.llm.LlmFailureKind;
 import net.yozmnews.llm.Provider;
@@ -43,7 +45,8 @@ class LlmClientFactoryServiceTests {
 
 	private final RecordingSource source = new RecordingSource();
 
-	private final LlmClientFactoryService service = new LlmClientFactoryService(this.clients, this.source);
+	private final LlmClientFactoryService service = new LlmClientFactoryService(this.clients, this.source,
+			TestClocks.of(InstantSource.system()));
 
 	@Test
 	void aReachableProviderMakesTheKeyValid() {

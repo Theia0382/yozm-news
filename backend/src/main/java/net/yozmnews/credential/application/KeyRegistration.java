@@ -16,7 +16,6 @@ import net.yozmnews.llm.LlmClientFactory;
 import net.yozmnews.llm.Provider;
 import net.yozmnews.platform.SecretValue;
 import net.yozmnews.platform.UserId;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -40,12 +39,6 @@ public class KeyRegistration {
 	private final TransactionTemplate transaction;
 
 	private final InstantSource clock;
-
-	@Autowired
-	KeyRegistration(LlmClientFactory llm, LlmKeyRepository keys, KeyOwnerLock ownerLock, EnvelopeCipher cipher,
-			TransactionTemplate transaction) {
-		this(llm, keys, ownerLock, cipher, transaction, InstantSource.system());
-	}
 
 	KeyRegistration(LlmClientFactory llm, LlmKeyRepository keys, KeyOwnerLock ownerLock, EnvelopeCipher cipher,
 			TransactionTemplate transaction, InstantSource clock) {

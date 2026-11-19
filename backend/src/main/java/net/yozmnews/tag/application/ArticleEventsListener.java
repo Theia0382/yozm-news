@@ -6,7 +6,6 @@ import net.yozmnews.article.ArticleStored;
 import net.yozmnews.article.ArticlesRemoved;
 import net.yozmnews.tag.domain.queue.EvaluationQueueRepository;
 import net.yozmnews.tag.domain.result.EvaluationResultRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
 
@@ -25,11 +24,6 @@ class ArticleEventsListener {
 	private final EvaluationResultRepository results;
 
 	private final InstantSource clock;
-
-	@Autowired
-	ArticleEventsListener(EvaluationQueueRepository queue, EvaluationResultRepository results) {
-		this(queue, results, InstantSource.system());
-	}
 
 	ArticleEventsListener(EvaluationQueueRepository queue, EvaluationResultRepository results, InstantSource clock) {
 		this.queue = queue;

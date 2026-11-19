@@ -76,14 +76,19 @@ class JdbcEvaluationQueueRepository implements EvaluationQueueRepository {
 	}
 
 	@Override
-	public List<PendingEvaluation> lockDue(Instant now, int limit) {
+	public List<PendingEvaluation> lockDue(Instant now, Instant expiredBy, int limit) {
 		return this.jdbc.sql("select " + COLUMNS + """
 				 from evaluation_queue
-				where failure is null and eligible_at <= :now and (lease_token is null or lease_expires_at <= :now)
+				where failure is null and eligible_at <= :now and (lease_token is null or lease_expires_at <= :expiredBy)
 				order by eligible_at, article_id
 				limit :limit
 				for update skip locked
-				""").param("now", timestamp(now)).param("limit", limit).query(JdbcEvaluationQueueRepository::row).list();
+				""")
+			.param("now", timestamp(now))
+			.param("expiredBy", timestamp(expiredBy))
+			.param("limit", limit)
+			.query(JdbcEvaluationQueueRepository::row)
+			.list();
 	}
 
 	@Override

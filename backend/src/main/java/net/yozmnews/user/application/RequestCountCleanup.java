@@ -4,7 +4,6 @@ import java.time.InstantSource;
 import java.util.Objects;
 
 import net.yozmnews.user.domain.guard.RequestCounts;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
@@ -16,11 +15,6 @@ public class RequestCountCleanup {
 	private final RequestCounts counts;
 
 	private final InstantSource clock;
-
-	@Autowired
-	RequestCountCleanup(RequestCounts counts) {
-		this(counts, InstantSource.system());
-	}
 
 	RequestCountCleanup(RequestCounts counts, InstantSource clock) {
 		this.counts = Objects.requireNonNull(counts, "counts");

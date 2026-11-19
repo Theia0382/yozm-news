@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import jakarta.servlet.http.Cookie;
 import net.yozmnews.platform.PublicApi;
+import net.yozmnews.platform.RealTimeRequiredException;
 import net.yozmnews.user.application.WebSliceSecurity;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -115,6 +116,17 @@ class ProblemResponseAdviceTests {
 	}
 
 	@Test
+	void aRequestThatNeedsRealTimeOnAMeasurementClockIsAConflict() throws Exception {
+		this.mockMvc.perform(get("/api/test/not-real-time"))
+			.andExpect(status().isConflict())
+			.andExpect(content().json("""
+					{"type":"about:blank","title":"Conflict","status":409,
+					 "detail":"측정용 시계에서는 실제 피드를 요청하지 않는다 — 이 인스턴스의 시계는 실제 시간이 아니다",
+					 "instance":"/api/test/not-real-time"}
+					""", JsonCompareMode.STRICT));
+	}
+
+	@Test
 	void unexpectedFailureDoesNotLeakItsMessage() throws Exception {
 		String body = this.mockMvc.perform(get("/api/test/boom"))
 			.andExpect(status().isInternalServerError())
@@ -150,6 +162,11 @@ class ProblemResponseAdviceTests {
 		@GetMapping("/api/test/conflict")
 		String conflict() {
 			throw new OptimisticLockingFailureException("version 3");
+		}
+
+		@GetMapping("/api/test/not-real-time")
+		String notRealTime() {
+			throw new RealTimeRequiredException();
 		}
 
 		@GetMapping("/api/test/boom")

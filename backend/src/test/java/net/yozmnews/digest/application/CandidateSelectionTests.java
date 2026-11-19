@@ -5,8 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 import java.lang.reflect.Proxy;
 import java.time.Instant;
-import java.time.ZoneId;
 import java.time.InstantSource;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
@@ -293,7 +293,7 @@ class CandidateSelectionTests {
 						: method.invoke(this.events, args));
 		CandidateSelection selection = new CandidateSelection(this.interests, this.evaluations,
 				new ActiveEvaluations(this.evaluations, this.lineage), this.tagSets, this.articles, noRepresentatives,
-				this.storylines, this.interestMaterials, this.feedback);
+				this.storylines, this.interestMaterials, this.feedback, InstantSource.system());
 
 		DigestInput input = selection.select(new UserId(this.user), DAY, ROOMY).orElseThrow();
 
@@ -370,7 +370,7 @@ class CandidateSelectionTests {
 		AtomicInteger skewed = new AtomicInteger(1);
 		CandidateSelection once = new CandidateSelection(this.interests, this.evaluations,
 				new ActiveEvaluations(this.evaluations, skewing(skewed, elsewhere)), this.tagSets, this.articles, this.events,
-				this.storylines, this.interestMaterials, this.feedback);
+				this.storylines, this.interestMaterials, this.feedback, InstantSource.system());
 
 		assertThat(candidates(once.select(new UserId(this.user), DAY, ROOMY))).extracting(DigestCandidate::articleId)
 			.containsExactly(new ArticleId(this.a1), new ArticleId(this.a5));
@@ -379,7 +379,7 @@ class CandidateSelectionTests {
 		AtomicInteger always = new AtomicInteger(Integer.MAX_VALUE);
 		CandidateSelection never = new CandidateSelection(this.interests, this.evaluations,
 				new ActiveEvaluations(this.evaluations, skewing(always, elsewhere)), this.tagSets, this.articles, this.events,
-				this.storylines, this.interestMaterials, this.feedback);
+				this.storylines, this.interestMaterials, this.feedback, InstantSource.system());
 		assertThatIllegalStateException().isThrownBy(() -> never.select(new UserId(this.user), DAY, ROOMY))
 			.withMessageContaining("2 번 어긋났다");
 	}
@@ -530,7 +530,7 @@ class CandidateSelectionTests {
 				this.storylineSubscriptions, this.storylines, this.events);
 		return new CandidateSelection(this.interests, this.evaluations,
 				new ActiveEvaluations(this.evaluations, this.lineage), this.tagSets, this.articles, this.events,
-				this.storylines, materials, this.feedback);
+				this.storylines, materials, this.feedback, InstantSource.system());
 	}
 
 	/**

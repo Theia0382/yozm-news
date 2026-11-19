@@ -17,7 +17,6 @@ import net.yozmnews.user.domain.guard.RequestCounts;
 import net.yozmnews.user.domain.guard.RequestLimits;
 import net.yozmnews.user.domain.throttle.RetryAfter;
 import org.jspecify.annotations.Nullable;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
@@ -31,11 +30,6 @@ public class RequestLimiter {
 	private final RequestCounts counts;
 
 	private final InstantSource clock;
-
-	@Autowired
-	RequestLimiter(RequestCounts counts) {
-		this(counts, InstantSource.system());
-	}
 
 	RequestLimiter(RequestCounts counts, InstantSource clock) {
 		this.counts = Objects.requireNonNull(counts, "counts");

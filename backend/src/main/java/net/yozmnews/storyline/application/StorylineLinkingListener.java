@@ -9,7 +9,6 @@ import net.yozmnews.event.EventId;
 import net.yozmnews.event.EventsChanged;
 import net.yozmnews.storyline.domain.queue.LinkingQueueRepository;
 import net.yozmnews.storyline.domain.queue.PendingEvent;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
 
@@ -27,11 +26,6 @@ class StorylineLinkingListener {
 	private final LinkingQueueRepository queue;
 
 	private final InstantSource clock;
-
-	@Autowired
-	StorylineLinkingListener(EventDirectory events, LinkingQueueRepository queue) {
-		this(events, queue, InstantSource.system());
-	}
 
 	StorylineLinkingListener(EventDirectory events, LinkingQueueRepository queue, InstantSource clock) {
 		this.events = events;

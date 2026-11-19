@@ -94,6 +94,9 @@ class AdminSourceController {
 	@ApiResponse(responseCode = "400", description = "요청 본문의 형식이 틀렸다",
 			content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
 					schema = @Schema(implementation = ApiProblem.class)))
+	@ApiResponse(responseCode = "409", description = "측정용 시계라 실제 피드를 요청하지 않는다",
+			content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+					schema = @Schema(implementation = ApiProblem.class)))
 	PreviewResponse preview(@Valid @RequestBody PreviewRequest body) {
 		return PreviewResponse.of(this.administration.previewOperatorProfile(body.profile(), body.feedKey()));
 	}

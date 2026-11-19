@@ -4,10 +4,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import java.net.http.HttpResponse;
+import java.time.Clock;
 import java.time.Duration;
+import java.time.InstantSource;
 
 import net.yozmnews.evaluation.adapter.out.jev.JevArticleEvaluator;
 import net.yozmnews.evaluation.domain.evaluator.ArticleEvaluator;
+import net.yozmnews.platform.AppClock;
+import net.yozmnews.platform.MeasurementClockAdministration;
+import net.yozmnews.platform.MeasurementClockStatus;
+import net.yozmnews.platform.application.SystemClock;
 import net.yozmnews.platform.domain.ActiveRoles;
 import org.jobrunr.server.BackgroundJobServer;
 import org.junit.jupiter.api.Test;
@@ -72,6 +78,18 @@ class BothRolesTests {
 		assertThat(this.context.getBean(ArticleEvaluator.class)).isInstanceOf(JevArticleEvaluator.class);
 		assertThat(this.environment.getProperty("yozmnews.jev.base-url")).isEqualTo("http://127.0.0.1:9");
 		assertThat(this.environment.getProperty("yozmnews.jev.model")).isEqualTo("jev-latest");
+	}
+
+	@Test
+	void readsTheTimeFromOneAppClockThatIsNotAJavaTimeClock() {
+		// Spring Modulith 는 java.time.Clock bean 을 이벤트 발행 레지스트리에 집어 쓴다 — 앱의 시계는 그 타입이 아니다
+		assertThat(this.context.getBeansOfType(AppClock.class)).hasSize(1);
+		assertThat(this.context.getBeansOfType(InstantSource.class)).hasSize(1);
+		assertThat(this.context.getBeansOfType(Clock.class)).isEmpty();
+		// 측정 profile 이 아니면 실제 시간의 시계이고, 측정용 시계 운영 API 는 Off 다
+		assertThat(this.context.getBean(AppClock.class)).isInstanceOf(SystemClock.class);
+		assertThat(this.context.getBean(MeasurementClockAdministration.class).status())
+			.isInstanceOf(MeasurementClockStatus.Off.class);
 	}
 
 	@Test

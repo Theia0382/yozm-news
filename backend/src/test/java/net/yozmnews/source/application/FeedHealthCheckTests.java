@@ -13,6 +13,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicReference;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
+import net.yozmnews.TestClocks;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.source.FeedId;
 import net.yozmnews.source.FeedStatus;
@@ -118,7 +119,7 @@ class FeedHealthCheckTests {
 		new RegistryRows(this.jdbc).deleteAll();
 		this.clock.set(NOW);
 		this.committed.clear();
-		this.check = new FeedHealthCheck(this.statuses, this.transaction, this.events, this.clock::get);
+		this.check = new FeedHealthCheck(this.statuses, this.transaction, this.events, TestClocks.of(this.clock::get));
 		server.stubFor(get(urlMatching("/health.*\\.xml")).willReturn(TestFeeds.rss("h1")));
 	}
 
@@ -162,6 +163,22 @@ class FeedHealthCheckTests {
 		assertThat(line(output, "피드 " + b.value() + ": ACTIVE → STALE")).contains(" WARN ");
 		assertThat(output.getOut()).doesNotContain("피드 " + c.value() + ":", "피드 " + d.value() + ":",
 				"피드 " + e.value() + ":");
+	}
+
+	/** 측정용 시계에서는 피드 상태를 판정하지 않는다 — 수집하지 않으므로 무소식 판정이 측정 시각을 따라 피드를 잘못 STALE 로 바꾼다 */
+	@Test
+	void aMeasurementClockJudgesNothing() {
+		FeedId quiet = enabledFeed(register("1"), "a");
+		arrange(quiet, 0, "2026-10-29T00:00:00Z", "2026-10-22T00:00:00Z");
+		FeedHealthCheck measuring = new FeedHealthCheck(this.statuses, this.transaction, this.events,
+				TestClocks.movable(NOW));
+
+		assertThat(measuring.run()).isEmpty();
+
+		assertThat(status(quiet)).isEqualTo("ACTIVE null");
+		assertThat(this.committed.events()).isEmpty();
+		// 대조 — 실제 시간의 시계는 같은 피드를 STALE 로 바꾼다
+		assertThat(this.check.run()).extracting(FeedStatusChange::to).containsExactly(FeedStatus.STALE);
 	}
 
 	@Test

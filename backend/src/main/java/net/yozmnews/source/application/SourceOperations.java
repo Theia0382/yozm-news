@@ -1,8 +1,8 @@
 package net.yozmnews.source.application;
 
-import java.time.InstantSource;
 import java.util.function.Consumer;
 
+import net.yozmnews.platform.AppClock;
 import net.yozmnews.source.FeedId;
 import net.yozmnews.source.SourceId;
 import net.yozmnews.source.UnknownFeedException;
@@ -23,12 +23,12 @@ import net.yozmnews.source.domain.registry.ProfileResolver;
 import net.yozmnews.source.domain.registry.Source;
 import net.yozmnews.source.domain.registry.SourceRepository;
 import org.jspecify.annotations.Nullable;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 소스 · 피드의 운영 설정 — docs/specs/source.md §4 · source-R4 · source-R5 · source-R9 · source-R14 · source-R18.
+ * 소스 · 피드의 운영 설정 — docs/specs/source.md §4 · source-R4 · source-R5 · source-R9 · source-R14 · source-R18 ·
+ * source-R58.
  * <p>
  * 피드 켜기는 피드를 받으므로 호출자의 트랜잭션 밖에서 부른다 — 안에서 부르면 대기와 요청이 그 트랜잭션 안에 든다.
  */
@@ -47,17 +47,11 @@ class SourceOperations {
 
 	private final TransactionTemplate transaction;
 
-	private final InstantSource clock;
-
-	@Autowired
-	SourceOperations(SourceRepository sources, FeedRepository feeds, ProfileResolver resolver,
-			ArticleSource articleSource, SourceFetchSlots fetchSlots, TransactionTemplate transaction) {
-		this(sources, feeds, resolver, articleSource, fetchSlots, transaction, InstantSource.system());
-	}
+	private final AppClock clock;
 
 	SourceOperations(SourceRepository sources, FeedRepository feeds, ProfileResolver resolver,
 			ArticleSource articleSource, SourceFetchSlots fetchSlots, TransactionTemplate transaction,
-			InstantSource clock) {
+			AppClock clock) {
 		this.sources = sources;
 		this.feeds = feeds;
 		this.resolver = resolver;
@@ -86,6 +80,7 @@ class SourceOperations {
 	/**
 	 * 피드를 켠다 — source-R5 · source-R9 · source-R18.
 	 * @throws IllegalStateException 요청 순서를 기다리다 중단됐을 때 — 요청 시작 시각 예약만 남는다
+	 * @throws net.yozmnews.platform.RealTimeRequiredException 받아 미리볼 피드인데 앱의 시각이 실제 시간이 아닐 때(측정용 시계)
 	 */
 	FeedActivation enableFeed(FeedId id) {
 		FeedGate.Precheck precheck = this.transaction.execute(status -> {
@@ -99,6 +94,8 @@ class SourceOperations {
 	}
 
 	private FeedActivation previewAndEnable(FeedId id, FeedGate.Precheck.Fetch fetch) {
+		// 측정용 시계에서는 실제 피드를 요청하지 않는다
+		this.clock.requireRealTime();
 		// 미리보기 전에 소스가 지워졌으면 없는 피드다
 		FetchSlot slot = this.fetchSlots.reserve(fetch.source(), this.clock)
 			.orElseThrow(() -> new UnknownFeedException(id));

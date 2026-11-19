@@ -305,25 +305,25 @@ sequenceDiagram
 
 ### `application`
 
-- `DigestGeneration` — 다이제스트 예약(`schedule` — 새 등록 토큰으로 행을 만들고 `ScheduledDigest` 를 낸다)과 생성(`run(DigestId, LlmModel, DigestInput)`). 생성은 트랜잭션 ①(시작) · 프롬프트 구성 · 생성기 호출과 판정 · 다시 묻기(트랜잭션 밖) · 트랜잭션 ②(인용 검증 · 저장)로 나뉘고, 두 트랜잭션은 다이제스트 행을 먼저 잠근다(digest-R2 · R8 · R9 · R27). 생성기는 생성자로 받는다 — 어느 프로세스에나 하나다(digest-R12 · R28). 인용 없음 메시지는 이 클래스의 상수가 정본이다
+- `DigestGeneration` — 다이제스트 예약(`schedule` — 새 등록 토큰으로 행을 만들고 `ScheduledDigest` 를 낸다)과 생성(`run(DigestId, LlmModel, DigestInput)`). 생성은 트랜잭션 ①(시작) · 프롬프트 구성 · 생성기 호출과 판정 · 다시 묻기(트랜잭션 밖) · 트랜잭션 ②(인용 검증 · 저장)로 나뉘고, 두 트랜잭션은 다이제스트 행을 먼저 잠근다(digest-R2 · R8 · R9 · R27). 생성기는 생성자로 받는다 — 어느 프로세스에나 하나다(digest-R12 · R28). 인용 없음 메시지는 이 클래스의 상수가 정본이다. 소요 시간은 `platform` 의 `AppClock.elapsedSince` 로 잰다 — 시계가 넘긴 시간을 뺀 경과다(platform-R28)
 - `DigestEndings` — 끝낸 행 저장의 정본 — 끝나지 않은 행은 거부하고 트랜잭션 안에서만 저장하며, 실패면 같은 트랜잭션에서 `DigestFailed` 를 낸다(digest-R33). 생성 · 생성 작업 · 거두기가 모두 이것으로 끝낸다
 - `DigestDispatch` — 생성 작업 등록의 정본 — 트랜잭션 안이면 거부하고 포트 `DigestJobQueue` 에 맡긴다(digest-R29)
-- `DigestScheduling` — 일정 회차(digest-R29 · R30). 시계는 `InstantSource`(시험이 넣는다)
+- `DigestScheduling` — 일정 회차(digest-R29 · R30). 시계는 `platform` 의 앱 시계(`InstantSource` — platform-R26)
 - `DigestRun` — 생성 작업 — 생성을 기다리는 다이제스트만, 쓸 모델을 다시 정해 선별 · 생성한다(digest-R29)
-- `StalledDigests` — 거두기 회차(digest-R32)
+- `StalledDigests` — 거두기 회차(digest-R32). 기준 시각 셋은 `platform` 의 `AppClock.before` 로 회차 시작에 한 번 정한다 — 시계가 넘긴 시간을 뺀 경과다(platform-R28)
 - `DigestRequestsService` — 공개 API `DigestRequests` 의 구현(digest-R31). 대상 날짜 · 기간과 오늘 횟수는 `ManualTargets` 로 읽는다. 역할 애너테이션 없음
 - `ManualTargets` — 수동 생성 대상 · 오늘 횟수 읽기의 정본 — 행 조회(`DigestLedger`)로 `ManualTarget.of` 의 재료를 읽어 대상을 정하고(`targetOf`), 사용자 시간대의 오늘 만든 수동 행을 세고(`manualCountOn`), 다음 날 0시(`nextDayStart`)를 낸다. 트랜잭션 안에서 부른다. 스프링 구성 요소가 아니다 — `DigestRequestsService` · `DigestDirectoryService` 가 행 조회로 만든다(digest-R31 · R40)
-- `DigestDirectoryService` — 공개 조회 `DigestDirectory` 의 구현. 날짜 보기는 `DigestLedger.latestDate` · `DigestDayRepository` 로 읽어 `DigestDays` 에, 날짜 목록은 `limit + 1` 개를 읽어 `DigestDayStates.page` 에 맡긴다. 수동 생성 상태는 `user` 의 `UserDigestSchedules`(시간대 · 생성 시각) · `DigestModelDirectory` 와 `ManualTargets` · `DigestLedger.latestDate` · `DigestDayRepository` 의 실패 재료로 읽어 `DigestScheduleRules.upcomingToday` · `UnresolvedFailures` 에 맡긴다. 시계는 `InstantSource`(시험이 넣는다), 역할 애너테이션 없음(digest-R38 ~ R40)
+- `DigestDirectoryService` — 공개 조회 `DigestDirectory` 의 구현. 날짜 보기는 `DigestLedger.latestDate` · `DigestDayRepository` 로 읽어 `DigestDays` 에, 날짜 목록은 `limit + 1` 개를 읽어 `DigestDayStates.page` 에 맡긴다. 수동 생성 상태는 `user` 의 `UserDigestSchedules`(시간대 · 생성 시각) · `DigestModelDirectory` 와 `ManualTargets` · `DigestLedger.latestDate` · `DigestDayRepository` 의 실패 재료로 읽어 `DigestScheduleRules.upcomingToday` · `UnresolvedFailures` 에 맡긴다. 시계는 `platform` 의 앱 시계(`InstantSource` — platform-R26), 역할 애너테이션 없음(digest-R38 ~ R40)
 - `DigestArticleRemoval` — 지운 기사 따르기. 트랜잭션 하나(digest-R10)
 - `DigestArticleRemovalListener` — `ArticlesRemoved` 리스너
 - `CandidateCleanup` — 후보 행 보존 정리. 트랜잭션 하나(digest-R11)
 - `ReceivedArticlesService` — 공개 조회 `ReceivedArticles` 의 구현. 상한을 확인하고 저장소에 맡긴다. 읽기 전용 트랜잭션 하나, 역할 애너테이션 없음(digest-R13)
-- `CandidateSelection` — 후보 선별(`select(UserId, DigestPeriod, LlmModel)` → `Optional<DigestInput>` — 계정이 없으면 빈 값). 트랜잭션 없이 다른 모듈의 공개 조회를 차례로 부르고 그 사이를 `domain/selection` 의 순수 단계로 잇는다 — 대표 기사 · 내용은 앞 단계로 좁힌 기사에 대해서만 읽는다. 관심도는 `InterestMaterials` 로 읽어 `InterestWindow`(창 끝 = 부르는 시각)로 계산하고, 싫어요는 `feedback` 의 `ArticleFeedback.dislikedAmong`, 태그 이름은 `tag` 의 `TagSetDirectory.names` 로 읽는다. 구독 후보를 관심도 순위와 중립 순위로 각각 고른다. 후보의 내용은 두 결과의 기사를 한 번 읽어 토큰 어림과 생성의 입력에 함께 쓴다. 시계는 `InstantSource`(시험이 넣는다). 백그라운드 작업 전용이고 역할 애너테이션이 없다(digest-R15 ~ R22 · R25)
+- `CandidateSelection` — 후보 선별(`select(UserId, DigestPeriod, LlmModel)` → `Optional<DigestInput>` — 계정이 없으면 빈 값). 트랜잭션 없이 다른 모듈의 공개 조회를 차례로 부르고 그 사이를 `domain/selection` 의 순수 단계로 잇는다 — 대표 기사 · 내용은 앞 단계로 좁힌 기사에 대해서만 읽는다. 관심도는 `InterestMaterials` 로 읽어 `InterestWindow`(창 끝 = 부르는 시각)로 계산하고, 싫어요는 `feedback` 의 `ArticleFeedback.dislikedAmong`, 태그 이름은 `tag` 의 `TagSetDirectory.names` 로 읽는다. 구독 후보를 관심도 순위와 중립 순위로 각각 고른다. 후보의 내용은 두 결과의 기사를 한 번 읽어 토큰 어림과 생성의 입력에 함께 쓴다. 시계는 `platform` 의 앱 시계(`InstantSource` — platform-R26). 백그라운드 작업 전용이고 역할 애너테이션이 없다(digest-R15 ~ R22 · R25)
 - `ActiveEvaluations` — 기사들의 평가를 `ArticleEvaluations.MAX_ARTICLES` 씩 읽고 평가 버전마다 계보 표를 한 번 읽어 활성 키로 푼다(`ActiveKeys`) — 표의 활성 버전이 맞출 버전과 다르면 빈 값. 후보 선별 · 관심도의 노출 기사 · 스토리라인 대표가 함께 쓴다. 활성 버전이 어긋날 때의 전체 시도 수 `ATTEMPTS`(2)의 정본이다(digest-R16 · R37)
 - `InterestMaterials` — 관심도 재료 읽기(`read(UserId, TagSetId, Instant from, Instant to)` → `Optional<InterestRecord>`) — 범위 하나에서 노출 행(`ExposureRepository`), `feedback` 의 `ArticleFeedback.changes`, `user` 의 `TopicSubscriptionHistory` · `StorylineSubscriptionDirectory.changes`, `storyline` 의 `StorylineDirectory.events` → `event` 의 `EventDirectory.representativesOfAll` → `ActiveEvaluations` 를 읽어 재료로 낸다 — 계산하지 않는다. 트랜잭션 없음, 키 버전이 어긋나면 빈 값. 사용자를 인자로 받는다 — 화면 경로에서는 세션 사용자로만(digest-R25)
-- `InterestHistoryService` — `InterestHistory` 의 구현. `user` 의 `UserTimezones` 로 계정 · 시간대를 읽고, `tag` 의 `TagSetDirectory.activeTagSet` 으로 맞출 버전을, `InterestMaterials` 로 첫 기준 시각의 창 시작부터 마지막 기준 시각까지의 재료를 한 번 읽어 `InterestPeriods` · `InterestTimelines` 에 넘긴다. 트랜잭션 없음, 역할 애너테이션 없음, 시계는 `InstantSource`(digest-R34 ~ R37)
+- `InterestHistoryService` — `InterestHistory` 의 구현. `user` 의 `UserTimezones` 로 계정 · 시간대를 읽고, `tag` 의 `TagSetDirectory.activeTagSet` 으로 맞출 버전을, `InterestMaterials` 로 첫 기준 시각의 창 시작부터 마지막 기준 시각까지의 재료를 한 번 읽어 `InterestPeriods` · `InterestTimelines` 에 넘긴다. 트랜잭션 없음, 역할 애너테이션 없음, 시계는 `platform` 의 앱 시계(`InstantSource` — platform-R26)(digest-R34 ~ R37)
 - `CurrentInterests` — 지금의 관심 — 기준 시각과 창 끝을 모두 부르는 시각으로 두고 `InterestMaterials` 로 읽어 `InterestWindow.levels` 로 낸다. 재료 키 버전이 어긋나면 빈 값. 구독 제안 조회와 거절 때 관심이 함께 쓰는 정본이다(digest-R41 · R43)
-- `TopicSuggestionService` — `TopicSuggestions` 와 `user` 의 `TopicInterestNow` 의 구현. 제안 조회는 `user` 의 `DigestInterestsDirectory`(구독한 중분류) · `TopicSuggestionDeclines`(거절)와 `CurrentInterests` · `tag` 의 `TagSetDirectory.names`(체계 순서)를 읽어 `TopicSuggestionRule` 에 넘긴다. 트랜잭션 없음, 역할 애너테이션 없음, 시계는 `InstantSource`(digest-R41 ~ R43)
+- `TopicSuggestionService` — `TopicSuggestions` 와 `user` 의 `TopicInterestNow` 의 구현. 제안 조회는 `user` 의 `DigestInterestsDirectory`(구독한 중분류) · `TopicSuggestionDeclines`(거절)와 `CurrentInterests` · `tag` 의 `TagSetDirectory.names`(체계 순서)를 읽어 `TopicSuggestionRule` 에 넘긴다. 트랜잭션 없음, 역할 애너테이션 없음, 시계는 `platform` 의 앱 시계(`InstantSource` — platform-R26)(digest-R41 ~ R43)
 - `DigestCitationsService` — `feedback` 의 `DigestCitations` 의 구현. 다이제스트 ID 가 1 보다 작으면 거짓이고 그 밖은 저장소에 맡긴다. 읽기 전용 트랜잭션(부르는 쪽의 트랜잭션이 있으면 거기에 든다), 역할 애너테이션 없음(digest-R14)
 
 ### `domain`
@@ -513,7 +513,7 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
   - 후보는 생성의 입력의 후보 순서 그대로 별칭을 매긴다(digest-R3). 후보가 없으면 생성기를 부르지 않고 `EMPTY` 로 끝낸다
   - 프롬프트를 만들고(digest-R26) 생성기를 트랜잭션 밖에서 부른다. 추론 강도는 입력 프로필의 값이다. 결과를 판정하고, 끝까지 쓴 응답을 읽지 못했으면 한 번 다시 묻는다(digest-R27). 생성기가 예외를 던지면 그대로 올라가고 다이제스트는 `RUNNING` 으로 남는다 — 다시 `run` 해도 시작하지 않고(digest-R2), 임대가 지나면 거두기가 실패로 끝낸다(digest-R32)
   - 판정이 실패면 그 코드 · 메시지로 `FAILED` 다 — 읽지 못함(`UNREADABLE_OUTPUT`, 메시지는 읽기의 진단), 잘림(`OUTPUT_TRUNCATED`), 거절(`OUTPUT_REFUSED`), 생성기의 실패(키 없음 `KEY_MISSING` · 관문 실패 종류마다 코드 — digest-R27). 읽었으면 트랜잭션 ② 에서 인용을 검증해 인용이 없으면 `FAILED`(`NO_CITATION`, 메시지 `DigestGeneration.NO_CITATION`), 있으면 섹션 · 인용을 저장하고 `READY` 로 끝낸다
-  - 토큰은 공급자가 답한 호출의 합이고(답하지 못한 호출은 빼고, 둘 다 없으면 없음), 소요 시간은 첫 호출 시작부터 마지막 호출 끝까지다 — 실패에도 적는다(digest-R1)
+  - 토큰은 공급자가 답한 호출의 합이고(답하지 못한 호출은 빼고, 둘 다 없으면 없음), 소요 시간은 첫 호출 시작부터 마지막 호출 끝까지의 경과(시계가 넘긴 시간을 뺀다 — platform-R28)다 — 실패에도 적는다(digest-R1)
   - 읽기 · 인용 검증이 지운 것이 있으면(지운 별칭 · 버린 항목 · 상한으로 버린 수) 정보 로그를 남긴다 — 다이제스트 ID 와 수만, 출력 원문은 없다
 - **digest-R9** — 생성 중에 지워진 기사는 인용하지 않는다. 후보 행이 그 기사를 인용해도 되는지의 표시다:
   - 트랜잭션 ② 는 다이제스트 행을 잠근 뒤 그 다이제스트의 후보 행을 별칭 순으로 공유 잠금하고 읽는다 — 지운 기사 따르기가 먼저 지운 후보 행은 없다
@@ -701,7 +701,7 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
 
 판단의 이유는 [ADR-0232](../adr/0232-a-running-digest-is-never-started-again-and-stalled-digests-end-interrupted-after-a-lease-or-a-start-deadline.md)에 있다. 상수는 측정 전 목표다.
 
-- **digest-R32** — 거두기 회차(`StalledDigests.runRound`, 5분마다)는 시각 하나로 갈래마다 오래된 순 100개까지 본다(남은 것은 다음 회차):
+- **digest-R32** — 거두기 회차(`StalledDigests.runRound`, 5분마다)는 시각 하나로 갈래마다 오래된 순 100개까지 본다(남은 것은 다음 회차). 아래의 "지났다"는 시계가 넘긴 시간을 뺀 경과로 잰다 — 회차 시작에 기준 시각 셋을 `AppClock.before(기한)` 으로 정하고 조회 · 다시 확인이 함께 쓴다(platform-R28):
   - 생성을 기다린 채 등록 시각이 15분(`DISPATCH_WAIT`) 넘게 지난 다이제스트 — 행을 잠그고 조건을 다시 본 뒤, 만든 지 1시간(`START_DEADLINE`)이 지났으면(정확히 1시간 포함) `INTERRUPTED` 로 끝내고, 아니면 새 등록 토큰 · 등록 시각으로 바꿔 커밋 뒤 다시 등록한다 — 생성기를 부르기 전이라 비용이 없다
   - 생성 중인 채 시작 시각이 임대(`RUN_LEASE` = `llm` 의 `LlmClientFactory.LONGEST_GENERATION_CALL` × 2 + 10분 = 40분)를 넘게 지난 다이제스트 — 행을 잠그고 조건을 다시 본 뒤 `INTERRUPTED` 로 끝내고 다시 돌리지 않는다. 그 사이 생성이 끝내려 하면 트랜잭션 ② 는 끝난 상태를 보고 쓰지 않는다(digest-R2)
   - 행 하나의 실패는 WARN 로그를 남기고 다음 행으로 간다. 계기와 무관하다
@@ -792,3 +792,4 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
 | [0246](../adr/0246-a-declined-topic-suggestion-returns-only-after-a-period-and-a-higher-interest-and-a-decline-is-not-an-interest-signal.md) | 거절한 구독 제안은 기간이 지나고 거절 때보다 관심이 커져야 다시 내고, 거절은 관심 신호가 아니다 |
 | [0247](../adr/0247-topic-suggestion-declines-are-kept-by-user-with-the-recorded-version-and-digest-answers-the-interest-at-decline-through-an-interface-declared-by-user.md) | 거절은 `user` 가 갖고, 거절 때 관심은 `user` 가 선언한 공급 인터페이스를 이 모듈이 구현해 답한다 |
 | [0248](../adr/0248-the-digest-interests-and-topic-suggestion-queries-may-be-called-on-screen-paths-with-the-session-user.md) | 다이제스트가 읽는 관심 설정과 구독 제안의 조회는 화면 경로에서 세션 사용자로 부를 수 있다 |
+| [0252](../adr/0252-the-stall-and-duration-of-work-in-progress-are-measured-as-elapsed-time-without-the-jumps-of-the-clock.md) | 진행 중 작업의 멈춤과 걸린 시간은 시계가 넘긴 시간을 뺀 경과로 잰다 |

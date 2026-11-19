@@ -10,6 +10,7 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
+import net.yozmnews.TestClocks;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleDirectory;
 import net.yozmnews.article.ArticleId;
@@ -143,7 +144,7 @@ class DigestDirectoryServiceTests {
 
 	private DigestRequestsService requests() {
 		DigestGeneration generation = new DigestGeneration(this.digests, this.sections, this.candidates, this.articles,
-				new FakeDigestGenerator(), this.endings, this.transaction, () -> NOW);
+				new FakeDigestGenerator(), this.endings, this.transaction, TestClocks.fixed(NOW));
 		return new DigestRequestsService(this.timezones, this.models, this.ledger, this.owners, generation,
 				new DigestDispatch((id, token) -> {
 				}), this.transaction, () -> NOW);

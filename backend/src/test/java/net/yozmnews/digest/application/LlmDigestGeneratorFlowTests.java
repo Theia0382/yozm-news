@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import net.yozmnews.TestClocks;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleDirectory;
 import net.yozmnews.article.ArticleId;
@@ -220,7 +221,7 @@ class LlmDigestGeneratorFlowTests {
 
 	private Map<String, Object> run(UserId user, LlmDigestGenerator generator, DigestInput input) {
 		DigestGeneration generation = new DigestGeneration(this.digests, this.sections, this.candidates, this.articles,
-				generator, this.endings, this.transaction, Instant::now);
+				generator, this.endings, this.transaction, TestClocks.of(Instant::now));
 		DigestId id = generation.schedule(user, java.time.LocalDate.parse("2026-11-16"),
 				new DigestPeriod(Instant.parse("2026-11-14T22:00:00Z"), Instant.parse("2026-11-15T22:00:00Z")),
 				DigestTrigger.SCHEDULED).id();

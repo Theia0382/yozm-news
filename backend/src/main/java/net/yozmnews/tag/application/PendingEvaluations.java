@@ -32,12 +32,13 @@ class PendingEvaluations {
 
 	/**
 	 * 지금 평가할 대기를 점유한다.
+	 * @param expiredBy 임대 만료 시각의 상한 — 부르는 쪽이 시계가 넘긴 시간을 뺀 경과로 정한다({@code AppClock#expiredBy})
 	 * @return 점유한 대기 — 평가 가능 시각, 기사 ID 순
 	 */
-	List<PendingEvaluation> claimDue(Instant now) {
+	List<PendingEvaluation> claimDue(Instant now, Instant expiredBy) {
 		return this.transaction.execute(status -> {
 			List<PendingEvaluation> claimed = new ArrayList<>();
-			for (PendingEvaluation due : this.queue.lockDue(now, CLAIM_BATCH)) {
+			for (PendingEvaluation due : this.queue.lockDue(now, expiredBy, CLAIM_BATCH)) {
 				PendingEvaluation lease = due.claim(UUID.randomUUID(), now);
 				this.queue.saveLocked(lease);
 				claimed.add(lease);

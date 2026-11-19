@@ -2,6 +2,8 @@ package net.yozmnews.source.application;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -14,7 +16,9 @@ import java.util.List;
 import java.util.Optional;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
+import net.yozmnews.TestClocks;
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.platform.RealTimeRequiredException;
 import net.yozmnews.source.ActivationRefusal;
 import net.yozmnews.source.ArticleSampleView;
 import net.yozmnews.source.Criterion;
@@ -43,6 +47,10 @@ import net.yozmnews.source.SourceView;
 import net.yozmnews.source.SummaryLengthsView;
 import net.yozmnews.source.UnknownFeedException;
 import net.yozmnews.source.UnknownSourceException;
+import net.yozmnews.source.domain.fetch.ArticleSource;
+import net.yozmnews.source.domain.gate.ProfilePreview;
+import net.yozmnews.source.domain.profile.FeedKey;
+import net.yozmnews.source.domain.profile.ProfileParser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -74,6 +82,12 @@ class SourceAdministrationServiceTests {
 
 	@Autowired
 	SourceAdministration administration;
+
+	@Autowired
+	ProfileParser parser;
+
+	@Autowired
+	ArticleSource articleSource;
 
 	@Autowired
 	JdbcClient jdbc;
@@ -254,6 +268,20 @@ class SourceAdministrationServiceTests {
 				null,
 				List.of(new ArticleSampleView("제목 p1", Instant.parse("2026-10-28T00:00:00Z"), false),
 						new ArticleSampleView("제목 p2", Instant.parse("2026-10-28T00:00:00Z"), false)))));
+	}
+
+	/** 측정용 시계에서는 미리볼 피드를 받지 않는다 — 실제 피드를 요청하기 전에 거부한다. 받을 피드가 없으면 거부할 것도 없다 */
+	@Test
+	void aMeasurementClockRefusesToRequestThePreviewedFeed() {
+		server.stubFor(get("/admin/measure.xml").willReturn(TestFeeds.rss("m1")));
+		String text = operatorText("/admin/measure.xml", true);
+		ProfilePreviewer measuring = new ProfilePreviewer(this.parser, this.articleSource, TestClocks.movable(Instant.now()));
+
+		assertThatExceptionOfType(RealTimeRequiredException.class)
+			.isThrownBy(() -> measuring.preview(text, new FeedKey("main")));
+
+		assertThat(server.findAll(getRequestedFor(urlEqualTo("/admin/measure.xml")))).isEmpty();
+		assertThat(measuring.preview(text, new FeedKey("other"))).isInstanceOf(ProfilePreview.FeedNotInProfile.class);
 	}
 
 	@Test

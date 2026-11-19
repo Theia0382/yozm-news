@@ -10,10 +10,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import net.yozmnews.TestClocks;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.evaluation.ArticleTagging;
 import net.yozmnews.evaluation.TagJudgementId;
 import net.yozmnews.evaluation.TagReread;
+import net.yozmnews.platform.AppClock;
 import net.yozmnews.tag.TagBackfillRequestResult;
 import net.yozmnews.tag.TagBackfillRunView;
 import net.yozmnews.tag.TagBackfillState;
@@ -113,13 +115,17 @@ class TagBackfillRoundTests {
 		// 앞 회차가 8001 을 처리하고 점유를 쥔 채 죽었다
 		UUID dead = UUID.randomUUID();
 		this.transaction.executeWithoutResult(status -> {
-			TagBackfill claimed = this.backfills.lockDue(RUN).orElseThrow().claim(dead, RUN);
+			TagBackfill claimed = this.backfills.lockDue(RUN, RUN).orElseThrow().claim(dead, RUN);
 			this.backfills.saveLocked(claimed);
 			this.backfills.advance(this.backfill, dead, evaluationId(8001), Map.of(), RUN.plus(Duration.ofMinutes(10)));
 		});
 
 		round(RUN.plus(Duration.ofMinutes(5)), scripted()).run();
 		assertThat(run().state()).as("점유가 살아 있으면 가져가지 않는다").isEqualTo(TagBackfillState.RUNNING);
+		assertThat(this.scenario.tags(8002)).isEmpty();
+		// 측정용 시계를 넘겨도 점유는 살아 있다 — 임대(10분)는 시계가 넘긴 시간을 뺀 경과로 잰다
+		round(TestClocks.movable(RUN.plus(Duration.ofMinutes(5))).jump(Duration.ofHours(24)), scripted()).run();
+		assertThat(run().state()).as("넘긴 시간은 점유 기간에서 빠진다").isEqualTo(TagBackfillState.RUNNING);
 		assertThat(this.scenario.tags(8002)).isEmpty();
 
 		round(RUN.plus(Duration.ofMinutes(11)), scripted()).run();
@@ -206,8 +212,12 @@ class TagBackfillRoundTests {
 	}
 
 	private TagBackfillRound round(Instant now, ScriptedTagging tagging) {
+		return round(TestClocks.fixed(now), tagging);
+	}
+
+	private TagBackfillRound round(AppClock clock, ScriptedTagging tagging) {
 		return new TagBackfillRound(this.backfills, this.results, this.thresholds, this.views, tagging,
-				this.transaction, InstantSource.fixed(now));
+				this.transaction, clock);
 	}
 
 	private TagBackfillRunView run() {

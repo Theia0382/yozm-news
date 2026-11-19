@@ -86,12 +86,12 @@ public class MergeRound {
 	MergeRound(EventRepository events, EventQueryRepository queries, EventArticleRepository assignments,
 			MergeJudgementRepository judgements,
 			CriteriaRepository criteriaHistory, AssignmentSettings settings, EventMembership membership,
-			TransactionTemplate transaction) {
+			TransactionTemplate transaction, InstantSource clock) {
 		this(events, queries, assignments, judgements, criteriaHistory, settings.criteria(), membership, transaction,
-				InstantSource.system());
+				clock);
 	}
 
-	/** 시험이 시계를 넣는다 */
+	/** 시험이 기준을 넣는다 */
 	MergeRound(EventRepository events, EventQueryRepository queries, EventArticleRepository assignments,
 			MergeJudgementRepository judgements,
 			CriteriaRepository criteriaHistory, AssignmentCriteria criteria, EventMembership membership,

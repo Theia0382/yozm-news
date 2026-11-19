@@ -21,7 +21,6 @@ import net.yozmnews.user.application.PasswordChangeOutcome;
 import net.yozmnews.user.application.RecoveryCodeReissue;
 import net.yozmnews.user.application.RecoveryOutcome;
 import net.yozmnews.user.application.SessionSignIn;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -43,12 +42,6 @@ class AccountController {
 	private final SessionSignIn sessions;
 
 	private final InstantSource clock;
-
-	@Autowired
-	AccountController(PasswordChange passwordChange, RecoveryCodeReissue reissue, AccountRecovery recovery,
-			SessionSignIn sessions) {
-		this(passwordChange, reissue, recovery, sessions, InstantSource.system());
-	}
 
 	AccountController(PasswordChange passwordChange, RecoveryCodeReissue reissue, AccountRecovery recovery,
 			SessionSignIn sessions, InstantSource clock) {

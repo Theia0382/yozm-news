@@ -7,7 +7,6 @@ import net.yozmnews.digest.domain.candidate.CandidateRetention;
 import net.yozmnews.digest.domain.candidate.DigestCandidateRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,12 +22,6 @@ public class CandidateCleanup {
 
 	private final InstantSource clock;
 
-	@Autowired
-	CandidateCleanup(DigestCandidateRepository candidates) {
-		this(candidates, InstantSource.system());
-	}
-
-	/** 시험이 시계를 넣는다 */
 	CandidateCleanup(DigestCandidateRepository candidates, InstantSource clock) {
 		this.candidates = candidates;
 		this.clock = clock;

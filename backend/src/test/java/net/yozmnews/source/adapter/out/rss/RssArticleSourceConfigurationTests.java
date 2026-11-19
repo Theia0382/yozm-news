@@ -6,6 +6,7 @@ import java.net.InetAddress;
 import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
 
+import net.yozmnews.TestClocks;
 import net.yozmnews.source.domain.fetch.AddressPolicy;
 import net.yozmnews.source.domain.fetch.ArticleSource;
 import net.yozmnews.source.domain.fetch.UserAgent;
@@ -21,7 +22,7 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 class RssArticleSourceConfigurationTests {
 
 	private final ApplicationContextRunner runner = new ApplicationContextRunner()
-		.withUserConfiguration(RssArticleSourceConfiguration.class);
+		.withUserConfiguration(RssArticleSourceConfiguration.class, TestClocks.FixedClockConfiguration.class);
 
 	@Test
 	void startsWithAContact() {

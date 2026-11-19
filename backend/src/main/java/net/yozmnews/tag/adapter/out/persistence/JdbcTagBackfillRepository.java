@@ -85,14 +85,15 @@ class JdbcTagBackfillRepository implements TagBackfillRepository {
 	}
 
 	@Override
-	public Optional<TagBackfill> lockDue(Instant now) {
+	public Optional<TagBackfill> lockDue(Instant now, Instant expiredBy) {
 		return this.jdbc.sql("select " + BACKFILL_COLUMNS + """
 				 from tag_backfills
 				where finished_at is null and eligible_at <= :now
-				  and (lease_token is null or lease_expires_at <= :now)
+				  and (lease_token is null or lease_expires_at <= :expiredBy)
 				for update skip locked
 				""")
 			.param("now", timestamp(now))
+			.param("expiredBy", timestamp(expiredBy))
 			.query(JdbcTagBackfillRepository::backfill)
 			.optional();
 	}

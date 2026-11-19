@@ -37,3 +37,4 @@
 
 - 2026-11-04: 로컬 대체물도 운영 구현도 등록되지 않았을 때의 동작 — [ADR-0061](0061-worker-role-does-not-run-without-an-evaluator.md) · [evaluation Spec §5](../specs/evaluation.md#5-규칙과-불변식) evaluation-R43
 - 2026-11-05: 결과 절 "실제 구현이 아직 없는 외부 의존은 … 그때의 동작은 그 포트를 쓰는 쪽이 정한다"의 임베더 — [ADR-0074](0074-article-features-built-by-event-intake-queue-job-and-skipped-without-an-embedder.md) · [event Spec §5](../specs/event.md#사건-묶기-대기와-회차) event-R7
+- 2026-11-19: 측정용 시계는 로컬 대체물이 아니지만 같은 원리(배포 정의를 바꾸지 않고는 켜지 않고, 켜는 운영 설정을 두지 않는다)를 따른다 — 전용 profile `measurement` 와 운영자가 넣는 DB 시계 행이 함께 있어야 뜨고, 시계 행이 있는 DB 는 그 profile 없이 뜨지 않는다. 둘째 기동 거부는 profile 이 아니라 데이터 상태를 보므로 이 ADR 이 기각한 "등록 조건의 사본"이 아니다 — [ADR-0251](0251-the-measurement-clock-starts-only-with-the-measurement-profile-and-a-clock-row-and-moves-forward-through-the-operator-api.md) · [platform Spec](../specs/platform.md#앱-시계) platform-R27

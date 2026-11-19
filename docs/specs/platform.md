@@ -24,6 +24,7 @@
 - **사용자 식별자** — 사용자를 가리키는 값 타입(`UserId`). 사용자 데이터를 가진 모듈이 주인을 가리키고, 화면용 API 처리기가 세션 사용자를 받는 인자 타입이다(platform-R24). 세션 사용자로 인자를 채우는 일은 `user` 의 것이다
 - **비밀 값** — 비밀 값 평문의 래퍼(`SecretValue` — 문자열 표현이 값을 숨기고 직렬화하면 실패한다)와 요청 헤더에 실을 값의 꼴(`HeaderValueShape`). 래퍼는 사용자 LLM 키를 다루는 모듈(`llm` · `credential`)이, 꼴은 API 키를 헤더에 싣는 모듈(`evaluation` 의 Jev 키 · 임베딩 키, `llm` 의 키 검증)이 쓴다(platform-R22 · R23)
 - **벡터의 pgvector 텍스트 표현** — 벡터를 pgvector 의 텍스트 표현으로 쓰고 되읽는 공개 타입(`VectorText`). 기사 표현 · 사건 중심(`event`)과 스토리라인 중심(`storyline`)의 저장소가 쓴다
+- **앱 시계** — 앱의 지금을 내는 시계 정본(`AppClock` bean 하나 — platform-R26), 측정용 시계(profile `measurement` 와 DB 의 시계 행이 함께 있을 때만 뜨고 운영자가 앞으로 넘긴다 — platform-R27 · R29)와 그 상태 표, 시계가 넘긴 시간을 뺀 경과 판정(platform-R28), 측정용 시계 운영 API(`MeasurementClockAdministration` — 처리기는 `admin`), 실제 시간이 아니면 거부하는 표시(`RealTimeRequiredException` — platform-R30)
 
 하지 않는 것:
 
@@ -35,6 +36,7 @@
 - 확장을 쓰는 테이블 · 검색은 갖지 않는다 — 쓰는 모듈의 것이다. 이 모듈은 확장이 있고 최소 버전 이상인지만 본다(platform-R19)
 - 길이 상한 값을 갖지 않는다 — 상한은 쓰는 모듈의 정본이고, 이 모듈은 자르는 방법만 갖는다
 - 비밀 값을 저장하거나 암호화하지 않는다 — 평문을 감싸는 타입과 헤더 값의 꼴만 갖는다
+- 진행 중 작업의 기한 · 임대 값과 그것을 무엇에 쓰는지는 갖지 않는다 — 각 모듈의 정본이다. 이 모듈은 넘긴 시간을 뺀 경과의 산식만 갖는다(platform-R28)
 
 다른 모듈과의 의존과 이벤트 흐름은 [overview.md §5](../overview.md#5-모듈-지도)에 있다.
 
@@ -56,10 +58,15 @@
 | 문제 응답 | 화면용 API 의 오류 응답 — RFC 9457 의 필드 이름을 따르는 `application/problem+json` 본문 |
 | 공통 거부 | 문서 종류와 무관하게 거부하는 YAML 문제 — 길이 상한 초과 · 문법 오류 · 최상위가 매핑이 아님 · 여러 문서 · 알 수 없는 키 · 같은 매핑 안 중복 키 · 별칭 · 앵커 · 명시 태그 · 빈 값 · 형 오류(platform-R17) |
 | 역할 | 한 프로세스가 맡는 일의 갈래 — 화면 역할(profile `web` — 화면용 API)과 작업 역할(profile `worker` — 백그라운드 작업). 같은 이미지가 켜진 profile 로 역할을 정한다 |
+| 앱의 지금 | 앱이 읽는 현재 시각 — `AppClock` bean 하나가 낸다(platform-R26). 운영 인스턴스에서는 실제 시간이다 |
+| 측정용 시계 | 지정한 출발 시각에서 실제 속도로 흐르고 운영자가 앞으로 넘기는 앱 시계 — 지난 데이터로 여러 날의 동작을 확인하는 일회용 인스턴스에서 쓴다(platform-R27) |
+| 시계 행 | 측정용 시계의 출발 시각과 그에 대응하는 실제 시각을 담은 DB 행(`measurement_clock`) — 운영자가 측정 DB 에 넣는다 |
+| 넘긴 기록 | 측정용 시계가 넘긴 구간(넘기기 전 시각 → 넘긴 뒤 시각)의 목록(`measurement_clock_jumps`) |
+| 경과 | 두 시각 사이의 길이에서 넘긴 구간과 겹친 길이를 뺀 것 — 넘긴 기록이 없으면 단순한 차다(platform-R28) |
 
 ## 3. 공개 인터페이스
 
-모듈 최상위 패키지 `net.yozmnews.platform` 의 공개 타입은 역할 애너테이션 둘, 로컬 개발 애너테이션 하나, 화면용 API 경로 규약 하나(`ApiPaths`), 공개 처리기 표시 하나(`PublicApi`), 변경 전 허용 표시 하나(`AllowedBeforePasswordChange`), 키 없이 허용 표시 하나(`AllowedWithoutLlmKey`)와 세 표시의 판정 하나(`PublicApis`), 지키는 동작 하나(`GuardedAction`)와 요청 방어 표시 둘(`RequestLimited` · `HumanChecked`)과 그 판정 하나(`HandlerGuards`), 사용자 식별자 하나(`UserId`), 문제 응답 둘(`ApiProblem` · `ProblemResponses`), 이벤트 발행 운영 API(`EventPublicationAdministration` 과 결과 타입 — 파일 9개, 중첩 레코드를 더하면 타입 11개), YAML 원문 읽기(파일 8개), 코드 포인트 자르기 하나(`CodePoints`), 날짜 범위 변환 하나(`DayRange`), HTTP 응답 본문 수신자 하나(`CappedBody` — 중첩 타입을 더하면 넷), 벡터의 pgvector 텍스트 표현 하나(`VectorText`), 운영 설정의 행위자 종류 하나(`ChangeActor`), 비밀 값 평문의 래퍼 하나(`SecretValue`), 헤더에 실을 값의 꼴 하나(`HeaderValueShape` — 중첩 enum 을 더하면 둘)다.
+모듈 최상위 패키지 `net.yozmnews.platform` 의 공개 타입은 역할 애너테이션 둘, 로컬 개발 애너테이션 하나, 화면용 API 경로 규약 하나(`ApiPaths`), 공개 처리기 표시 하나(`PublicApi`), 변경 전 허용 표시 하나(`AllowedBeforePasswordChange`), 키 없이 허용 표시 하나(`AllowedWithoutLlmKey`)와 세 표시의 판정 하나(`PublicApis`), 지키는 동작 하나(`GuardedAction`)와 요청 방어 표시 둘(`RequestLimited` · `HumanChecked`)과 그 판정 하나(`HandlerGuards`), 사용자 식별자 하나(`UserId`), 문제 응답 둘(`ApiProblem` · `ProblemResponses`), 이벤트 발행 운영 API(`EventPublicationAdministration` 과 결과 타입 — 파일 9개, 중첩 레코드를 더하면 타입 11개), YAML 원문 읽기(파일 8개), 코드 포인트 자르기 하나(`CodePoints`), 날짜 범위 변환 하나(`DayRange`), HTTP 응답 본문 수신자 하나(`CappedBody` — 중첩 타입을 더하면 넷), 벡터의 pgvector 텍스트 표현 하나(`VectorText`), 운영 설정의 행위자 종류 하나(`ChangeActor`), 비밀 값 평문의 래퍼 하나(`SecretValue`), 헤더에 실을 값의 꼴 하나(`HeaderValueShape` — 중첩 enum 을 더하면 둘), 앱 시계 하나(`AppClock`), 실제 시간이 아니라 거부하는 예외 하나(`RealTimeRequiredException`), 측정용 시계 운영 API(`MeasurementClockAdministration` 과 결과 타입 — 파일 5개, 중첩 레코드를 더하면 타입 10개)다.
 
 | 타입 | 형태 | 용도 |
 |---|---|---|
@@ -72,7 +79,7 @@
 | `RequestLimited` | `@Target(METHOD)` · `@Retention(RUNTIME)` · `@Documented` 애너테이션, 속성 `GuardedAction value()` | 요청 제한을 거는 화면용 API 처리기 메서드에 단다(platform-R25) |
 | `HumanChecked` | 같은 형태, 속성 `GuardedAction value()` | 봇 차단을 거는 화면용 API 처리기 메서드에 단다 — 같은 메서드에 같은 동작의 `RequestLimited` 와 함께 단다(platform-R25) |
 
-profile 이름의 코드 쪽 정본은 세 상수다.
+profile 이름의 코드 쪽 정본은 세 상수다. 측정 profile `measurement` 의 정본은 모듈 내부 애너테이션 `MeasurementOnly` 의 상수 `PROFILE` 이다(§4 — 측정용 시계의 결선에만 단다).
 
 ### ApiPaths
 
@@ -489,6 +496,71 @@ public enum DiscardOutcome { DISCARDED, NOT_STRANDED, CHANGED, NOT_FOUND }
 
 결과 타입은 HTTP 모양을 갖지 않는다 — 응답 모양은 `admin` 이 정한다([ADR-0045](../adr/0045-admin-module-serves-operator-api-over-module-public-operation-apis.md)). 관련 규칙: platform-R14 ~ platform-R16.
 
+### AppClock
+
+앱의 지금 — 앱 전체가 함께 쓰는 시계 정본이다(platform-R26). bean 은 하나이고 `java.time.Clock` 을 상속하지 않는다. 지금만 읽는 곳은 그 bean 을 `InstantSource` 로, 진행 중 작업의 멈춤이나 걸린 시간을 재는 곳은 이 타입으로 받는다. 구현은 `application` 의 `SystemClock`(실제 시간)과 `MeasurementClock`(측정용 시계) 가운데 하나다(platform-R27).
+
+```java
+public interface AppClock extends InstantSource {
+    boolean realTime();
+    Duration elapsed(Instant from, Instant to);
+    Instant before(Instant at, Duration elapsed);
+    Instant after(Instant from, Duration elapsed);
+    default Duration elapsedSince(Instant from);
+    default Instant before(Duration elapsed);
+    default Instant expiredBy(Duration term);
+    default void requireRealTime();
+}
+```
+
+| 멤버 | 뜻 |
+|---|---|
+| `realTime()` | 앱의 지금이 실제 시간인가 — 측정용 시계면 거짓 |
+| `elapsed(from, to)` | `from` 부터 `to` 까지 넘긴 시간을 뺀 경과. `to` 가 `from` 보다 앞서거나 같으면 0(platform-R28) |
+| `before(at, elapsed)` | `at` 까지의 경과가 `elapsed` 이상인 가장 늦은 시각 — 넘긴 기록이 없으면 `at − elapsed` |
+| `after(from, elapsed)` | `from` 부터의 경과가 `elapsed` 가 되는 가장 이른 시각 — 지금까지의 넘긴 기록으로 계산한다 |
+| `elapsedSince(from)` · `before(elapsed)` | 지금을 기준으로 한 두 판정 |
+| `expiredBy(term)` | 길이 `term` 의 임대가 지났는지 가르는 만료 시각의 상한 — 점유 시각 c 에 쓴 만료 c + `term` 이 이 값 이하면 지났다(`before(term) + term`). 넘긴 기록이 없으면 지금 |
+| `requireRealTime()` | 실제 시간이 아니면 `RealTimeRequiredException` — 실제 시간의 외부 요청을 하는 길이 요청 전에 부른다(platform-R30) |
+
+관련 규칙: platform-R26 · platform-R28 · platform-R30.
+
+### RealTimeRequiredException
+
+앱의 시각이 실제 시간이 아니라 실제 시간의 외부 요청을 하지 않는다 — `RuntimeException` 이다. 메시지는 상수 `MESSAGE`("측정용 시계에서는 실제 피드를 요청하지 않는다 — 이 인스턴스의 시계는 실제 시간이 아니다")이고, 화면용 API 처리기에서 나오면 `ProblemResponseAdvice` 가 409 문제 응답(detail = `MESSAGE`)으로 낸다(platform-R30).
+
+### MeasurementClockAdministration
+
+측정용 시계의 상태 · 앞으로 넘기기 — `admin` 의 운영자 API 가 부른다([admin Spec](admin.md#3-공개-인터페이스)). 구현은 `application` 의 `MeasurementClockAdministrationService` 다. 언제나 쓸 수 있고, 앱의 시계가 측정용 시계가 아니면 두 연산 모두 `Off` 다.
+
+```java
+public interface MeasurementClockAdministration {
+    MeasurementClockStatus status();
+    ClockAdvanceResult advance(@Nullable Duration by, @Nullable Instant to);
+}
+
+public sealed interface MeasurementClockStatus {
+    record Off() implements MeasurementClockStatus {}
+    record On(Instant now, Instant startedAt, List<ClockJumpView> jumps) implements MeasurementClockStatus {}
+}
+public record ClockJumpView(Instant from, Instant to) {}
+
+public sealed interface ClockAdvanceResult {
+    record Off() implements ClockAdvanceResult {}
+    record Rejected(AdvanceRefusal reason) implements ClockAdvanceResult {}
+    record Advanced(MeasurementClockStatus.On status) implements ClockAdvanceResult {}
+}
+public enum AdvanceRefusal { BOTH_GIVEN, NONE_GIVEN, NOT_POSITIVE, NOT_AHEAD }
+```
+
+| 멤버 · 타입 | 뜻 |
+|---|---|
+| `status()` | 측정용 시계면 지금의 측정 시각 · 출발 시각 · 넘긴 기록(시간 순), 아니면 `Off` |
+| `advance(by, to)` | 넘길 길이 `by` 와 도착 시각 `to` 가운데 정확히 하나로 앞으로 넘긴다(platform-R29) |
+| `AdvanceRefusal` | `BOTH_GIVEN` 둘 다 받음 · `NONE_GIVEN` 둘 다 없음 · `NOT_POSITIVE` 길이가 0 이하 · `NOT_AHEAD` 도착 시각이 지금보다 뒤가 아님 |
+
+관련 규칙: platform-R29.
+
 HTTP 엔드포인트:
 
 | 메서드 · 경로 | 용도 |
@@ -503,16 +575,16 @@ HTTP 엔드포인트:
 
 | 패키지 | 책임 |
 |---|---|
-| (최상위) | 역할 애너테이션 · 화면용 API 경로 규약 · 공개 처리기 표시와 그 판정 · 요청 방어 표시와 그 판정 · 문제 응답 · 이벤트 발행 운영 API · YAML 원문 읽기 · 코드 포인트 자르기 · 날짜 범위 변환 · HTTP 응답 본문 상한 · 벡터의 pgvector 텍스트 표현(§3) |
+| (최상위) | 역할 애너테이션 · 화면용 API 경로 규약 · 공개 처리기 표시와 그 판정 · 요청 방어 표시와 그 판정 · 문제 응답 · 이벤트 발행 운영 API · YAML 원문 읽기 · 코드 포인트 자르기 · 날짜 범위 변환 · HTTP 응답 본문 상한 · 벡터의 pgvector 텍스트 표현 · 앱 시계 · 실제 시간 요구 예외 · 측정용 시계 운영 API(§3) |
 | `adapter/in/job` | 이벤트 발행 재처리 반복 작업 |
 | `adapter/in/web` | API 계약 확인 엔드포인트, 화면용 API 명세 설정, 컨트롤러 오류의 문제 응답 |
-| `adapter/out/persistence` | 이벤트 발행 레지스트리 행의 읽기 · 조건부 삭제, 설치된 DB 확장의 버전 읽기 |
-| `application` | 재처리 유스케이스, 남겨진 발행의 운영 유스케이스, 재처리 설정과 정책 결선, 역할 검사 결선, DB 확장 요건 검사 결선, 작업 역할의 스케줄링, 명세가 담는 경로 |
-| `domain` | 재처리 대상 · 남겨진 발행 판정과 그 설정 조건, 이벤트를 읽을 수 있는지의 판정, 레지스트리 행 저장 인터페이스, 역할 판정, pgvector 확장 판정과 설치된 확장 저장 인터페이스 |
+| `adapter/out/persistence` | 이벤트 발행 레지스트리 행의 읽기 · 조건부 삭제, 설치된 DB 확장의 버전 읽기, 측정용 시계의 시계 행 · 넘긴 기록 읽기 · 쓰기 |
+| `application` | 재처리 유스케이스, 남겨진 발행의 운영 유스케이스, 재처리 설정과 정책 결선, 역할 검사 결선, DB 확장 요건 검사 결선, 작업 역할의 스케줄링, 명세가 담는 경로, 앱 시계의 결선과 두 구현(실제 시간 · 측정용 시계), 측정 profile 표시, 측정용 시계의 운영 유스케이스 |
+| `domain` | 재처리 대상 · 남겨진 발행 판정과 그 설정 조건, 이벤트를 읽을 수 있는지의 판정, 레지스트리 행 저장 인터페이스, 역할 판정, pgvector 확장 판정과 설치된 확장 저장 인터페이스, 넘긴 기록과 경과 산식, 앱 시계의 기동 판정, 측정용 시계의 상태와 저장 인터페이스 |
 
-협력: `EventResubmissionJob` 이 `EventResubmissionService` 를 부르고, 서비스는 Spring Modulith 의 미완료 발행 전체를 읽어 `EventResubmissionPolicy` 의 판정대로 재제출한다 — 실패 발행은 재제출 전에 `EventReading` 으로 이벤트를 읽어 본다. `admin` 의 운영자 API 는 `EventPublicationAdministrationService` 를 부른다 — 이 서비스는 `RegistryRows`(구현 `JdbcRegistryRows` — 본문은 Spring Modulith 의 `EventSerializer` 로 읽어 `EventReading` 으로 판정한다)로 레지스트리 행을 읽어 같은 정책으로 남겨진 발행을 가르고, 다시 처리는 Spring Modulith 의 재제출 경로로, 폐기는 `RegistryRows` 의 조건부 삭제로 한다. 정책은 `EventResubmissionConfiguration` 이 설정 값(`EventResubmissionProperties`)으로 만든다. `RoleConfiguration` 이 켜진 profile 로 `ActiveRoles` 를 만든다. `VectorExtensionConfiguration` 이 `DatabaseExtensions`(구현 `JdbcDatabaseExtensions`)로 설치된 pgvector 확장의 버전을 읽어 `VectorExtension` 을 만든다. `user` 의 보안 진입점과 이 모듈의 `ProblemResponseAdvice` 는 `ProblemResponses` 로 문제 응답을 쓴다. YAML 원문 읽기는 다른 구성 요소와 협력하지 않는다 — 다른 모듈이 `YamlTextReader` 로 읽은 트리를 `StrictYamlBinding` 으로 바인딩한다. `CodePoints` · `DayRange` 도 협력하지 않는다.
+협력: `EventResubmissionJob` 이 `EventResubmissionService` 를 부르고, 서비스는 Spring Modulith 의 미완료 발행 전체를 읽어 `EventResubmissionPolicy` 의 판정대로 재제출한다 — 실패 발행은 재제출 전에 `EventReading` 으로 이벤트를 읽어 본다. `admin` 의 운영자 API 는 `EventPublicationAdministrationService` 를 부른다 — 이 서비스는 `RegistryRows`(구현 `JdbcRegistryRows` — 본문은 Spring Modulith 의 `EventSerializer` 로 읽어 `EventReading` 으로 판정한다)로 레지스트리 행을 읽어 같은 정책으로 남겨진 발행을 가르고, 다시 처리는 Spring Modulith 의 재제출 경로로, 폐기는 `RegistryRows` 의 조건부 삭제로 한다. 정책은 `EventResubmissionConfiguration` 이 설정 값(`EventResubmissionProperties`)으로 만든다. `RoleConfiguration` 이 켜진 profile 로 `ActiveRoles` 를 만든다. `VectorExtensionConfiguration` 이 `DatabaseExtensions`(구현 `JdbcDatabaseExtensions`)로 설치된 pgvector 확장의 버전을 읽어 `VectorExtension` 을 만든다. `user` 의 보안 진입점과 이 모듈의 `ProblemResponseAdvice` 는 `ProblemResponses` 로 문제 응답을 쓴다. YAML 원문 읽기는 다른 구성 요소와 협력하지 않는다 — 다른 모듈이 `YamlTextReader` 로 읽은 트리를 `StrictYamlBinding` 으로 바인딩한다. `CodePoints` · `DayRange` 도 협력하지 않는다. `ClockConfiguration` 이 profile 과 `MeasurementClockRows`(구현 `JdbcMeasurementClockRows`)로 `ClockStart` 의 판정을 거쳐 `SystemClock` 이나 `MeasurementClock` 하나를 `AppClock` bean 으로 만든다 — 두 구현의 경과 판정은 `ClockJumps` 에 맡긴다. `admin` 의 운영자 API 는 `MeasurementClockAdministrationService` 를 부르고, 서비스는 측정용 시계 bean 이 있을 때만 그 시계로 상태를 내고 넘긴다 — 넘긴 구간은 시계가 `MeasurementClockRows` 에 먼저 쓴다. `ProblemResponseAdvice` 는 `RealTimeRequiredException` 을 409 로 낸다.
 
-역할: `EventResubmissionJob` 과 `WorkerSchedulingConfiguration` 은 작업 역할, `PingController` · `OpenApiConfiguration` · `ProblemResponseAdvice` 는 화면 역할에서만 켜진다. `EventPublicationAdministrationService` · `JdbcRegistryRows` · `VectorExtensionConfiguration` · `JdbcDatabaseExtensions` 는 공통이다. 나머지는 두 역할 공통이다(platform-R9). YAML 원문 읽기 타입은 빈이 아니다.
+역할: `EventResubmissionJob` 과 `WorkerSchedulingConfiguration` 은 작업 역할, `PingController` · `OpenApiConfiguration` · `ProblemResponseAdvice` 는 화면 역할에서만 켜진다. `EventPublicationAdministrationService` · `JdbcRegistryRows` · `VectorExtensionConfiguration` · `JdbcDatabaseExtensions` · `ClockConfiguration` · `MeasurementClockAdministrationService` · `JdbcMeasurementClockRows` 는 공통이다. 나머지는 두 역할 공통이다(platform-R9). YAML 원문 읽기 타입은 빈이 아니다.
 
 #### 발행 상태와 재처리
 
@@ -544,10 +616,12 @@ stateDiagram-v2
 | 재처리 설정 검사 | `EventResubmissionConfiguration` | 기동 | 재제출 주기와 멈춤 기준의 조건을 확인한다(platform-R3) |
 | 역할 검사 | `RoleConfiguration` | 기동 | 켜진 profile 로 역할을 정하고, 하나도 없으면 기동하지 않는다(platform-R8) |
 | DB 확장 요건 검사 | `VectorExtensionConfiguration` | 기동(마이그레이션 뒤) | 설치된 pgvector 확장의 버전을 읽어, 없거나 최소 버전보다 낮으면 기동하지 않는다(platform-R19) |
+| 앱 시계 | `ClockConfiguration` | 기동(마이그레이션 뒤) | profile 과 시계 행으로 앱 시계 하나를 만든다 — 측정 profile 이면 측정용 시계(두 역할 · 시계 행이 없으면 기동하지 않는다, 처음이면 대응 실제 시각을 채운다, warn 로그 한 줄), 아니면 실제 시간의 시계(시계 행이 있으면 기동하지 않는다)(platform-R26 · R27) |
+| 측정용 시계의 운영 기능 | `MeasurementClockAdministrationService` | 공개 운영 API 호출(`admin` 의 운영자 요청 — 화면 역할) | 상태 · 앞으로 넘기기(platform-R29). 측정용 시계가 아니면 `Off` |
 | 작업 역할의 스케줄링 | `WorkerSchedulingConfiguration` | 기동(작업 역할) | Spring 스케줄링을 켠다 — Spring Modulith 의 멈춤 감시(platform-R2)가 이것으로 돈다(platform-R9) |
 | API 계약 확인 | `PingController` | `GET /api/ping` | `{"message": "pong"}` 을 돌려준다(platform-R7). 응답 값 `PingResponse` |
 | 화면용 API 명세 | `OpenApiConfiguration` | 명세 생성 | 명세의 고정 값과 속성 규칙, 운영자 경로 연산과 세션 경로 연산의 401 · 403 · 429 문제 응답(platform-R6) |
-| 컨트롤러 오류 | `ProblemResponseAdvice` | 컨트롤러 예외 | 프레임워크 예외 · 동시 수정 · 처리하지 못한 예외를 문제 응답으로 쓴다. 다른 모듈의 조언이 먼저 받는다(platform-R12) |
+| 컨트롤러 오류 | `ProblemResponseAdvice` | 컨트롤러 예외 | 프레임워크 예외 · 동시 수정 · 실제 시간 요구(platform-R30) · 처리하지 못한 예외를 문제 응답으로 쓴다. 다른 모듈의 조언이 먼저 받는다(platform-R12) |
 
 ### `application`
 
@@ -559,6 +633,11 @@ stateDiagram-v2
 - `VectorExtensionConfiguration` — 설치된 pgvector 확장의 버전을 읽어 `VectorExtension` 을 만들고, 통과하면 버전을 정보 로그 한 줄로 남긴다. 빈을 만들 때 판정하고, 읽기가 받는 `JdbcClient` 가 마이그레이션 뒤에 만들어지므로 첫 기동에서도 마이그레이션이 설치한 확장을 본다(platform-R19)
 - `WorkerSchedulingConfiguration` — 작업 역할에서 Spring 스케줄링을 켠다. 스케줄링을 켜는 곳은 이것 하나다(platform-R9)
 - `OpenApiPathsConfiguration` — 화면용 API 명세가 담는 경로를 `ApiPaths.API` 로 springdoc 설정에 넣는다. 두 역할 공통이라 작업 역할만 켠 프로세스의 명세도 같은 경로만 담는다(platform-R6 · platform-R21)
+- `ClockConfiguration` — 앱 시계의 결선. main 소스에서 실제 시간의 원천(`InstantSource.system()`)을 만드는 유일한 곳이다. bean 메서드 둘이 profile 로 갈려 언제나 하나만 등록된다 — `@Profile("!measurement")` 의 `SystemClock`(먼저 `ClockStart.requireNoMeasurementRow`)과 `@MeasurementOnly` 의 `MeasurementClock`(`ClockStart.measurement`). 반환형은 구체 타입이다 — 아직 만들지 않은 bean 의 타입은 반환형으로 예측된다(platform-R26 · R27)
+- `SystemClock` — 실제 시간의 `AppClock`. 경과 판정은 넘긴 기록 없는 `ClockJumps.NONE` 에 맡긴다(platform-R26)
+- `MeasurementClock` — 측정용 시계의 `AppClock`. 지금 = 출발 시각 + (실제 지금 − 대응 실제 시각) + 넘긴 길이의 합. 넘기기(`advanceBy` · `advanceTo`)는 잠금 안에서 넘기는 순간의 지금으로 규칙을 판정하고, 넘긴 구간을 저장한 뒤 메모리를 바꾼다 — 저장이 실패하면 그대로다(platform-R27 · R29)
+- `MeasurementOnly` — 측정 profile 에서만 켜는 구성요소의 메타 애너테이션(`@Profile`). 상수 `PROFILE = "measurement"` 가 profile 이름의 정본이다. 다른 `@Profile` 이 달린 구성요소에는 달지 않는다 — 둘 가운데 하나만 맞아도 등록된다(platform-R27)
+- `MeasurementClockAdministrationService` — 공개 운영 API `MeasurementClockAdministration` 의 구현. 측정용 시계 bean 을 `ObjectProvider` 로 찾아 없으면 `Off`, 인자 개수(정확히 하나)를 보고 나머지는 측정용 시계에 맡긴다(platform-R29)
 
 ### `domain`
 
@@ -568,12 +647,16 @@ stateDiagram-v2
 - `DatabaseExtensions` — 설치된 DB 확장의 버전을 읽는 저장 인터페이스. 구현은 `adapter/out/persistence` 의 `JdbcDatabaseExtensions` 다(platform-R19)
 - `EventReading` — 이벤트를 읽을 수 있는지의 판정 정본. 읽기가 값을 돌려주면 참, 예외 · 클래스 연결 오류를 던지거나 값이 없으면 거짓이다(platform-R16)
 - `RegistryRows` — 이벤트 발행 레지스트리의 행을 읽고(전체 · ID 로), 읽은 그대로일 때만 지우는 저장 인터페이스. 이벤트 내용은 읽을 수 있는지의 판정에만 쓰고 행에 싣지 않는다. 구현은 `adapter/out/persistence` 의 `JdbcRegistryRows` 다(platform-R15 · platform-R16)
-- 그 밖의 값: `EventResubmissionPolicy.Decision` · `RegistryRows.RegistryRow`
-- 저장 단위: 자기 테이블이 없다(§6)
+- `ClockJumps` — 넘긴 기록과 경과 산식의 정본. 넘긴 구간(`Jump` — 넘기기 전 · 넘긴 뒤 시각, 시간 순 · 겹치지 않음)의 목록으로 경과 · `before` · `after` · 넘긴 길이의 합을 낸다(platform-R28)
+- `ClockStart` — 앱 시계의 기동 판정 정본. 실제 시간의 시계는 시계 행이 없을 때만, 측정용 시계는 두 역할 · 시계 행이 함께 있을 때만 뜬다 — 어기면 할 일(측정 profile 켜기 · 시계 행 SQL · 두 역할)을 알리며 거부한다. profile 이름은 인자로 받는다(platform-R27)
+- `MeasurementClockState` — 측정용 시계의 저장된 상태(출발 시각 · 대응 실제 시각 · 넘긴 기록)
+- `MeasurementClockRows` — 시계 행 · 넘긴 기록을 읽고(있는가 · 전부) 대응 실제 시각을 채우고 넘긴 구간을 더하는 저장 인터페이스. 구현은 `adapter/out/persistence` 의 `JdbcMeasurementClockRows` 다(§6)
+- 그 밖의 값: `EventResubmissionPolicy.Decision` · `RegistryRows.RegistryRow` · `ClockJumps.Jump`
+- 저장 단위: 측정용 시계의 시계 행과 넘긴 기록(§6). 그 밖의 자기 테이블은 없다
 
 ### 나가는 쪽
 
-해당 없음 — 포트가 없다. 이벤트 발행 레지스트리(Spring Modulith)와 반복 작업(JobRunr)은 프레임워크다. 레지스트리 행은 `adapter/out/persistence` 의 `JdbcRegistryRows` 가 `RegistryRows` 의 구현으로 직접 읽고 지운다(§6). 설치된 확장은 `JdbcDatabaseExtensions` 가 `DatabaseExtensions` 의 구현으로 시스템 카탈로그를 읽는다(§6).
+해당 없음 — 포트가 없다. 이벤트 발행 레지스트리(Spring Modulith)와 반복 작업(JobRunr)은 프레임워크다. 레지스트리 행은 `adapter/out/persistence` 의 `JdbcRegistryRows` 가 `RegistryRows` 의 구현으로 직접 읽고 지운다(§6). 설치된 확장은 `JdbcDatabaseExtensions` 가 `DatabaseExtensions` 의 구현으로 시스템 카탈로그를 읽는다(§6). 측정용 시계의 표는 `JdbcMeasurementClockRows` 가 `MeasurementClockRows` 의 구현으로 읽고 쓴다(§6).
 
 ## 5. 규칙과 불변식
 
@@ -608,6 +691,21 @@ stateDiagram-v2
 
 - **platform-R19** — 앱은 DB 에 pgvector 확장(`vector`)이 설치되어 있고 설치 버전이 0.8(`VectorExtension.MINIMUM_VERSION`) 이상이어야 기동한다 — 최소 버전의 근거는 [ADR-0027](../adr/0027-pgvector-for-vector-storage.md)이다. 버전은 점으로 나눈 숫자 성분을 앞에서부터 견주고, 짧은 쪽의 없는 성분은 0 이다(`0.8` = `0.8.0` < `0.10.0`). 확장이 없거나, 버전을 숫자 성분으로 읽을 수 없거나, 0.8 보다 낮으면 기동하지 않고 할 일(`CREATE EXTENSION vector` 로 설치 · `ALTER EXTENSION vector UPDATE` 로 올림)을 알린다. 확인은 마이그레이션 뒤, 두 역할 모두에서 한다. 설치는 마이그레이션이 `CREATE EXTENSION IF NOT EXISTS vector` 로 한다 — 버전 · 스키마를 정하지 않으며, 앱 계정이 superuser 가 아니면 DBA 가 먼저 설치해 둔다([배포와 운영 "서비스"](../operations/deployment.md#서비스))
 
+### 앱 시계
+
+판단의 이유는 [ADR-0250](../adr/0250-the-apps-now-comes-from-one-appclock-bean-that-is-not-a-java-time-clock.md) · [ADR-0251](../adr/0251-the-measurement-clock-starts-only-with-the-measurement-profile-and-a-clock-row-and-moves-forward-through-the-operator-api.md) · [ADR-0252](../adr/0252-the-stall-and-duration-of-work-in-progress-are-measured-as-elapsed-time-without-the-jumps-of-the-clock.md) · [ADR-0253](../adr/0253-the-measurement-clock-does-not-collect-feeds.md)에 있다.
+
+- **platform-R26** — 앱의 지금은 `AppClock` bean 하나에서 읽는다. main 소스에서 실제 시간의 원천을 만드는 곳은 `ClockConfiguration` 하나다 — 그 밖의 main 클래스는 `InstantSource.system()` · `Clock.systemUTC()` · `Clock.systemDefaultZone()` · `Clock.system(ZoneId)`, 인자 없는 또는 시간대만 받는 `now()`(`Instant` · `LocalDate` · `LocalDateTime` · `LocalTime` · `ZonedDateTime` · `OffsetDateTime` · `OffsetTime` · `Year` · `YearMonth` · `MonthDay`), `System.currentTimeMillis()`, 인자 없는 `java.util.Date` 생성자를 부르거나 메서드 참조로 쓰지 않는다(ArchUnit `ClockSourceTests`). 실제 경과를 재는 단조 시계(`System.nanoTime`)는 지금을 읽는 곳이 아니라 규칙 밖이다. 지금만 읽는 곳은 bean 을 `InstantSource` 로, 진행 중 작업을 판정하는 곳은 `AppClock` 으로 받는다. 시계 bean 은 `java.time.Clock` 이 아니다 — Spring Modulith 의 이벤트 발행 레지스트리는 자기 기본 시계(실제 시간)를 쓴다
+- **platform-R27** — 측정용 시계는 profile `measurement`(`MeasurementOnly.PROFILE`)와 DB 의 시계 행(`measurement_clock`)이 함께 있을 때만 뜬다. 판정의 정본은 `ClockStart` 다
+  - 측정 profile 이 아니면 실제 시간의 시계다. 시계 행이 있으면 기동하지 않는다 — 측정용 시계로 돈 DB 라 기록된 시각이 실제와 다르다
+  - 측정 profile 이면 한 프로세스가 두 역할(`web` · `worker`)을 함께 해야 하고, 시계 행이 있어야 한다. 어기면 기동하지 않고 할 일(두 역할 켜기 · 출발 시각을 넣는 SQL)을 알린다. 측정용 시계를 켜는 설정 키 · 환경 변수는 없다 — 시계 행은 운영자가 측정 DB 에 SQL 로 넣는다
+  - 지금 = 출발 시각 + (실제 지금 − 출발에 대응하는 실제 시각) + 넘긴 길이의 합이다. 대응 실제 시각이 비었으면 처음 뜰 때 그때의 실제 시각을 쓴다. 내려 있던 동안의 실제 시간도 흐른 것으로 친다. 출발 시각은 막지 않는다 — 지난 데이터보다 앞선 시각에서도 출발한다
+  - 상태는 기동 때 DB 에서 읽고, 넘길 때 DB 에 먼저 쓴 뒤 메모리를 바꾼다
+  - 앱 밖의 시간 — JobRunr 의 반복 간격 · 재시도, Spring Session 만료, 이벤트 발행 레지스트리, 외부 공급자 — 은 실제 시간 그대로다
+- **platform-R28** — 경과(t1, t2)는 (t2 − t1) 에서 넘긴 구간들과 [t1, t2] 가 겹친 길이를 뺀 것이고, t2 가 t1 보다 앞서거나 같으면 0 이다. 넘긴 구간 안의 시각에는 앱이 아무것도 기록하지 않으므로 경과는 기록된 시각 위에서 연속이고 끝 시각이 같으면 시작 시각이 늦을수록 작다. `before(at, d)` 는 at 까지의 경과가 d 이상인 가장 늦은 시각, `after(from, d)` 는 from 부터의 경과가 d 가 되는 가장 이른 시각(지금까지의 넘긴 기록으로), `expiredBy(term)` 은 `before(term) + term` 이다. 산식의 정본은 `ClockJumps` 이고, 실제 시간의 시계는 넘긴 기록이 없어 단순한 차다. 진행 중 작업의 멈춤과 걸린 시간을 재는 모듈은 이 경과로 잰다 — 그 규칙은 각 모듈 Spec 에 있다(digest-R32 · event-R6 · event-R16 · storyline-R3 · storyline-R31 · tag-R19 · tag-R31 · tag-R32 · llm-R19, 수집은 source-R58)
+- **platform-R29** — 측정용 시계는 운영자가 앞으로만 넘긴다(`MeasurementClockAdministration.advance`). 넘길 길이와 도착 시각 가운데 정확히 하나를 받고(둘 다 · 둘 다 없음은 거부), 길이는 0 보다 길고 도착 시각은 지금보다 뒤여야 한다 — 이 판정은 넘기는 순간의 지금으로 한다. 넘기는 폭은 제한하지 않는다. 넘기기 사이에는 실제 속도로 흐른다. 앱의 시계가 측정용 시계가 아니면 상태 · 넘기기 모두 `Off` 다 — 운영자 처리기는 409 를 낸다([admin Spec](admin.md#3-공개-인터페이스))
+- **platform-R30** — 실제 시간의 외부 요청을 하는 길은 요청 전에 `AppClock.requireRealTime()` 을 부른다. 앱의 시각이 실제 시간이 아니면 `RealTimeRequiredException` 이고, 화면용 API 에서는 `ProblemResponseAdvice` 가 409 문제 응답(`about:blank`, detail = `RealTimeRequiredException.MESSAGE`)으로 낸다
+
 ### 로컬 개발
 
 판단의 이유는 [ADR-0057](../adr/0057-local-substitutes-registered-only-in-local-profile-without-operator-switch.md)에 있다.
@@ -635,7 +733,7 @@ stateDiagram-v2
 
 ### 오류 응답 형식
 
-- **platform-R12** — 화면용 API 의 오류 응답은 `application/problem+json` 의 `ApiProblem`(§3)이고 `Cache-Control: no-store` 다. 다섯 속성 모두 값을 갖는다 — `instance` 는 요청 경로(질의 문자열 제외), `detail` 은 언제나 채운다. 따로 정하지 않은 문제는 `type` 이 `about:blank` 이고 `title` 은 상태 코드의 표준 문구다. 컨트롤러 오류는 화면 역할에서 문제 응답으로 낸다 — 프레임워크 예외(본문 · 경로 값 형식 400, 없는 경로 404, `ResponseStatusException` 의 상태와 이유 등)는 그 상태와 설명으로, 동시 수정(`OptimisticLockingFailureException`)은 409 로, 처리하지 못한 예외는 500 으로 낸다. 요청 본문을 읽지 못한 400(깨진 JSON · 빈 본문 · 칸과 다른 종류의 값)은 설명이 `요청 본문의 형식이 틀렸다` 다. 500 은 예외 문구를 싣지 않고 ERROR 로그를 남긴다. 다른 모듈의 조언이 이 조언보다 먼저 받는다. 판정 결과는 오류가 아니라 200 응답이다([ADR-0044](../adr/0044-screen-api-results-as-flat-discriminated-200-and-rfc9457-problems.md))
+- **platform-R12** — 화면용 API 의 오류 응답은 `application/problem+json` 의 `ApiProblem`(§3)이고 `Cache-Control: no-store` 다. 다섯 속성 모두 값을 갖는다 — `instance` 는 요청 경로(질의 문자열 제외), `detail` 은 언제나 채운다. 따로 정하지 않은 문제는 `type` 이 `about:blank` 이고 `title` 은 상태 코드의 표준 문구다. 컨트롤러 오류는 화면 역할에서 문제 응답으로 낸다 — 프레임워크 예외(본문 · 경로 값 형식 400, 없는 경로 404, `ResponseStatusException` 의 상태와 이유 등)는 그 상태와 설명으로, 동시 수정(`OptimisticLockingFailureException`)과 실제 시간 요구(`RealTimeRequiredException` — platform-R30)는 409 로, 처리하지 못한 예외는 500 으로 낸다. 요청 본문을 읽지 못한 400(깨진 JSON · 빈 본문 · 칸과 다른 종류의 값)은 설명이 `요청 본문의 형식이 틀렸다` 다. 500 은 예외 문구를 싣지 않고 ERROR 로그를 남긴다. 다른 모듈의 조언이 이 조언보다 먼저 받는다. 판정 결과는 오류가 아니라 200 응답이다([ADR-0044](../adr/0044-screen-api-results-as-flat-discriminated-200-and-rfc9457-problems.md))
   - 요청 본문의 정수 칸에 온 소수(`3.5`, `3.0` 포함)는 버림해 받지 않고 본문 형식 400 이다 — 앱의 JSON 역직렬화 설정(§7 `spring.jackson.deserialization.accept-float-as-int`)이 앱 전체에 건다
 - **platform-R13** — (폐지 — 보안 거부의 문제 유형 URI 는 [user Spec](user.md#운영자-접근-통제) user-R3 으로 옮겼다)
 
@@ -660,7 +758,12 @@ stateDiagram-v2
 
 ## 6. 데이터
 
-해당 없음 — 이 모듈은 자기 테이블이 없다. 이벤트 발행 레지스트리와 작업 테이블은 프레임워크 테이블이라 [data-model.md](../data-model.md)에 있다.
+이 모듈의 테이블은 측정용 시계의 상태 둘이다(마이그레이션 `V66`). 운영 인스턴스에서는 비어 있다 — 행이 있으면 측정 profile 없이 기동하지 않는다(platform-R27). 이벤트 발행 레지스트리와 작업 테이블은 프레임워크 테이블이라 [data-model.md](../data-model.md)에 있다.
+
+| 테이블 | 주요 컬럼 | 뜻 · 제약 |
+|---|---|---|
+| `measurement_clock` | `id` · `started_at` · `anchored_at` | 시계 행 하나(`id = 1` 만). `started_at` 은 측정 시각의 출발점(운영자가 넣는다), `anchored_at` 은 그에 대응하는 실제 시각(처음 뜰 때 앱이 채운다 — 비어 있을 수 있다) |
+| `measurement_clock_jumps` | `id` · `clock_id` · `from_at` · `to_at` | 넘긴 구간 하나(넘기기 전 · 넘긴 뒤 측정 시각, `to_at > from_at`). 시계 행을 가리킨다. 넘길 때마다 한 행을 더하고 지우지 않는다 |
 
 남겨진 발행의 운영자 처리는 레지스트리 테이블 `event_publication` 을 직접 읽고 지운다(platform-R14 ~ R16). 쓰는 열은 `id` · `event_type` · `listener_id` · `publication_date` · `status` · `completion_attempts` · `last_resubmission_date` · `serialized_event` 이고, 이벤트 내용(`serialized_event`)은 읽을 수 있는지의 판정에만 쓰고 응답 · 로그에 싣지 않는다(platform-R16). 행을 바꾸는 것은 조건부 삭제뿐이다 — 상태 갱신은 Spring Modulith 가 한다.
 
@@ -701,3 +804,7 @@ stateDiagram-v2
 | [0156](../adr/0156-user-id-is-a-platform-public-type.md) | 사용자 식별자 `UserId` 는 `platform` 의 공개 타입이다 |
 | [0158](../adr/0158-requests-of-session-users-without-a-key-are-closed-by-default-and-handlers-open-without-a-key-carry-a-platform-annotation.md) | 키 없는 세션 사용자의 요청은 닫힘이 기본이고, 키 없이도 여는 처리기에 `platform` 의 표시를 단다 |
 | [0169](../adr/0169-request-limits-and-bot-checks-are-platform-marks-applied-by-the-user-session-chain-before-the-handler.md) | 요청 제한 · 봇 차단은 `platform` 의 처리기 표시를 `user` 세션 체인이 처리기 앞에서 요청 제한 → 봇 차단 순으로 걸고, 거부는 429 `rate-limited` · 403 `human-check-failed` 다 |
+| [0250](../adr/0250-the-apps-now-comes-from-one-appclock-bean-that-is-not-a-java-time-clock.md) | 앱의 지금은 `platform` 의 `AppClock` bean 하나에서 읽고, 그 bean 은 `java.time.Clock` 이 아니다 |
+| [0251](../adr/0251-the-measurement-clock-starts-only-with-the-measurement-profile-and-a-clock-row-and-moves-forward-through-the-operator-api.md) | 측정용 시계는 profile `measurement` 와 운영자가 넣는 DB 시계 행이 함께 있을 때만 뜨고, 운영자 API 로 앞으로만 넘긴다 |
+| [0252](../adr/0252-the-stall-and-duration-of-work-in-progress-are-measured-as-elapsed-time-without-the-jumps-of-the-clock.md) | 진행 중 작업의 멈춤과 걸린 시간은 시계가 넘긴 시간을 뺀 경과로 잰다 |
+| [0253](../adr/0253-the-measurement-clock-does-not-collect-feeds.md) | 측정용 시계에서는 수집하지 않는다 |

@@ -55,11 +55,12 @@ public class CleanupRound {
 
 	@Autowired
 	CleanupRound(EventRepository events, EventQueryRepository queries, MatchFeaturesRepository features,
-			LongTermIndexes indexes, EventClosing closing, AssignmentSettings settings, TransactionTemplate transaction) {
-		this(events, queries, features, indexes, closing, settings.criteria(), transaction, InstantSource.system());
+			LongTermIndexes indexes, EventClosing closing, AssignmentSettings settings, TransactionTemplate transaction,
+			InstantSource clock) {
+		this(events, queries, features, indexes, closing, settings.criteria(), transaction, clock);
 	}
 
-	/** 시험이 시계를 넣는다 */
+	/** 시험이 기준을 넣는다 */
 	CleanupRound(EventRepository events, EventQueryRepository queries, MatchFeaturesRepository features,
 			LongTermIndexes indexes, EventClosing closing, AssignmentCriteria criteria, TransactionTemplate transaction,
 			InstantSource clock) {

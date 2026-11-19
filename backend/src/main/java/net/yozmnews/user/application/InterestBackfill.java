@@ -8,7 +8,6 @@ import net.yozmnews.platform.UserId;
 import net.yozmnews.user.domain.interest.InterestSettingsRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.SmartLifecycle;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -37,12 +36,6 @@ class InterestBackfill implements SmartLifecycle {
 	private final InstantSource clock;
 
 	private volatile boolean ran;
-
-	@Autowired
-	InterestBackfill(InterestSettingsRepository settings, InterestDefaultsWriter defaults,
-			TransactionTemplate transaction) {
-		this(settings, defaults, transaction, InstantSource.system());
-	}
 
 	InterestBackfill(InterestSettingsRepository settings, InterestDefaultsWriter defaults,
 			TransactionTemplate transaction, InstantSource clock) {

@@ -109,23 +109,24 @@ class JdbcEvaluationQueueRepositoryTests {
 		row(6, now.minusSeconds(60), 0, OTHER, now.plusSeconds(60), null); // 다른 회차가 점유 중
 		row(7, now.minusSeconds(30), 1, OTHER, now, null);                  // 점유가 지금 만료됐다
 
-		assertThat(this.repository.lockDue(now, 10)).extracting(row -> row.articleId().value())
+		assertThat(this.repository.lockDue(now, now, 10)).extracting(row -> row.articleId().value())
 			.containsExactly(4L, 7L, 5L);
-		assertThat(this.repository.lockDue(now, 1)).extracting(row -> row.articleId().value()).containsExactly(4L);
+		assertThat(this.repository.lockDue(now, now, 1)).extracting(row -> row.articleId().value()).containsExactly(4L);
 	}
 
 	@Test
 	void roundTripsEveryColumnThroughALockedSave() {
 		row(8, T, 0, null, null, null);
 		// 일시 실패 한 번 — 시도 1 · 평가 가능 00:01 · 문구가 남는다. 그 행을 다시 점유한다
-		this.repository.saveLocked(this.repository.lockDue(T, 10).getFirst().claim(OTHER, T).afterTransient("시간 초과", T));
-		PendingEvaluation retried = this.repository.lockDue(Instant.parse("2026-11-02T00:01:00Z"), 10).getFirst();
+		this.repository.saveLocked(this.repository.lockDue(T, T, 10).getFirst().claim(OTHER, T).afterTransient("시간 초과", T));
+		Instant retryAt = Instant.parse("2026-11-02T00:01:00Z");
+		PendingEvaluation retried = this.repository.lockDue(retryAt, retryAt, 10).getFirst();
 
 		this.repository.saveLocked(retried.claim(TOKEN, Instant.parse("2026-11-02T00:01:00Z")));
 
 		assertThat(retried).isEqualTo(new PendingEvaluation(new ArticleId(8), Instant.parse("2026-11-02T00:01:00Z"), 1,
 				null, null, "시간 초과"));
-		assertThat(this.repository.lockDue(Instant.parse("2026-11-02T00:31:00Z"), 10))
+		assertThat(this.repository.lockDue(Instant.parse("2026-11-02T00:31:00Z"), Instant.parse("2026-11-02T00:31:00Z"), 10))
 			.containsExactly(new PendingEvaluation(new ArticleId(8), Instant.parse("2026-11-02T00:01:00Z"), 1,
 					new EvaluationLease(TOKEN, Instant.parse("2026-11-02T00:31:00Z")), null, "시간 초과"));
 	}
@@ -172,7 +173,7 @@ class JdbcEvaluationQueueRepositoryTests {
 		try {
 			CompletableFuture<List<PendingEvaluation>> holder = CompletableFuture
 				.supplyAsync(() -> transaction.execute(status -> {
-					List<PendingEvaluation> due = this.repository.lockDue(T, 10);
+					List<PendingEvaluation> due = this.repository.lockDue(T, T, 10);
 					locked.countDown();
 					awaitQuietly(release);
 					return due;
@@ -182,11 +183,11 @@ class JdbcEvaluationQueueRepositoryTests {
 			// 앞 회차가 잡은 행은 기다리지 않고 건너뛴다 — 기다린다면 200ms 뒤 55P03 으로 실패한다
 			List<PendingEvaluation> whileLocked = transaction.execute(status -> {
 				this.jdbc.sql("set local lock_timeout = '200ms'").update();
-				return this.repository.lockDue(T, 10);
+				return this.repository.lockDue(T, T, 10);
 			});
 			release.countDown();
 			List<PendingEvaluation> firstRound = holder.join();
-			List<PendingEvaluation> afterRelease = transaction.execute(status -> this.repository.lockDue(T, 10));
+			List<PendingEvaluation> afterRelease = transaction.execute(status -> this.repository.lockDue(T, T, 10));
 
 			assertThat(firstRound).extracting(row -> row.articleId().value()).containsExactly(20L);
 			assertThat(whileLocked).isEmpty();

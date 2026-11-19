@@ -43,7 +43,6 @@ import net.yozmnews.storyline.domain.storyline.StoredStoryline;
 import net.yozmnews.storyline.domain.storyline.StorylineQueryRepository;
 import net.yozmnews.storyline.domain.storyline.StorylineRepository;
 import org.jspecify.annotations.Nullable;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
@@ -74,13 +73,6 @@ class StorylineDirectoryService implements StorylineDirectory {
 	private final StateCriteria state;
 
 	private final InstantSource clock;
-
-	@Autowired
-	StorylineDirectoryService(StorylineQueryRepository storylines, StorylineRepository memberships,
-			RelationRepository relations, BigStorylineCriteriaRepository criteria, EventDirectory events,
-			StateCriteria state) {
-		this(storylines, memberships, relations, criteria, events, state, InstantSource.system());
-	}
 
 	StorylineDirectoryService(StorylineQueryRepository storylines, StorylineRepository memberships,
 			RelationRepository relations, BigStorylineCriteriaRepository criteria, EventDirectory events,

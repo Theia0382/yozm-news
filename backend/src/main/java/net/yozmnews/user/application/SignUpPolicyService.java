@@ -11,7 +11,6 @@ import net.yozmnews.user.SignUpPolicyChangeResult;
 import net.yozmnews.user.domain.signup.SignUpPolicyRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -28,11 +27,6 @@ class SignUpPolicyService implements SignUpPolicyAdministration {
 	private final TransactionTemplate transaction;
 
 	private final InstantSource clock;
-
-	@Autowired
-	SignUpPolicyService(SignUpPolicyRepository policy, TransactionTemplate transaction) {
-		this(policy, transaction, InstantSource.system());
-	}
 
 	SignUpPolicyService(SignUpPolicyRepository policy, TransactionTemplate transaction, InstantSource clock) {
 		this.policy = policy;

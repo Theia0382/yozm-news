@@ -10,7 +10,6 @@ import net.yozmnews.article.ArticleId;
 import net.yozmnews.event.EventIntakeAdministration;
 import net.yozmnews.event.IntakeFillResult;
 import net.yozmnews.event.domain.intake.IntakeQueueRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
@@ -26,11 +25,6 @@ class EventIntakeAdministrationService implements EventIntakeAdministration {
 	private final IntakeQueueRepository queue;
 
 	private final InstantSource clock;
-
-	@Autowired
-	EventIntakeAdministrationService(ArticleDirectory articles, IntakeQueueRepository queue) {
-		this(articles, queue, InstantSource.system());
-	}
 
 	EventIntakeAdministrationService(ArticleDirectory articles, IntakeQueueRepository queue, InstantSource clock) {
 		this.articles = articles;

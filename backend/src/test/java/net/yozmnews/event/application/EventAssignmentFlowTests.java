@@ -12,9 +12,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
+import net.yozmnews.TestClocks;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleDirectory;
 import net.yozmnews.article.ArticleId;
@@ -38,6 +40,7 @@ import net.yozmnews.event.domain.event.EventArticleRepository;
 import net.yozmnews.event.domain.event.EventRepository;
 import net.yozmnews.event.domain.feature.MatchFeaturesRepository;
 import net.yozmnews.event.domain.intake.IntakeQueueRepository;
+import net.yozmnews.platform.AppClock;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -235,6 +238,31 @@ class EventAssignmentFlowTests {
 			.containsEntry("last", "2026-11-05T00:00:00Z")
 			.containsEntry("article_count", 2);
 		assertThat(membership.queries).extracting(MembershipQuery::articleId).containsExactly(new ArticleId(earlier));
+	}
+
+	/**
+	 * 측정용 시계를 넘겨도 다른 회차가 점유 중인 기사는 다시 가져가지 않는다 — 임대(20분)는 시계가 넘긴 시간을 뺀 경과로 잰다. 점유는 NOW 에
+	 * 했고 만료는 NOW + 20분이다.
+	 */
+	@Test
+	void aJumpOfTheClockLeavesAnotherRoundsLeaseAlone() {
+		long article = queued("[1,0]");
+		UUID other = UUID.fromString("7a2e3d4c-5b6a-4f98-8c1d-2e3f40516273");
+		this.jdbc.sql("""
+				update event_assignment_queue set lease_token = :token, lease_expires_at = :expires where article_id = :article
+				""")
+			.param("token", other)
+			.param("expires", NOW.plus(Duration.ofMinutes(20)).atOffset(ZoneOffset.UTC))
+			.param("article", article)
+			.update();
+		EventMembership none = new Scripted(query -> new MembershipJudgement.Judged(null, Map.of()));
+
+		round(none, TestClocks.movable(NOW).jump(Duration.ofHours(24))).run();
+
+		assertThat(queueRow(article)).containsEntry("lease_token", other);
+		// 대조 — 넘기지 않고 21분이 흐르면 임대가 지나 다시 가져가 배정한다
+		round(none, TestClocks.movable(NOW).advance(Duration.ofMinutes(21))).run();
+		assertThat(queueRows()).isZero();
 	}
 
 	@Test
@@ -454,6 +482,10 @@ class EventAssignmentFlowTests {
 	}
 
 	private AssignmentRound round(EventMembership membership, InstantSource clock) {
+		return round(membership, TestClocks.of(clock));
+	}
+
+	private AssignmentRound round(EventMembership membership, AppClock clock) {
 		return new AssignmentRound(this.queue, this.intake, this.features, this.events, this.assignments,
 				this.criteriaHistory, CRITERIA, this.articles, membership, MODEL_A, this.transaction, clock);
 	}

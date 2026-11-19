@@ -22,7 +22,6 @@ import net.yozmnews.platform.UserId;
 import net.yozmnews.tag.TagSetDirectory;
 import net.yozmnews.tag.TagSetId;
 import net.yozmnews.user.UserTimezones;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
@@ -42,12 +41,6 @@ class InterestHistoryService implements InterestHistory {
 
 	private final InstantSource clock;
 
-	@Autowired
-	InterestHistoryService(UserTimezones timezones, TagSetDirectory tagSets, InterestMaterials materials) {
-		this(timezones, tagSets, materials, InstantSource.system());
-	}
-
-	/** 시험이 시계를 넣는다 */
 	InterestHistoryService(UserTimezones timezones, TagSetDirectory tagSets, InterestMaterials materials,
 			InstantSource clock) {
 		this.timezones = Objects.requireNonNull(timezones, "timezones");

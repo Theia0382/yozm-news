@@ -68,11 +68,11 @@ class EventMembershipService implements EventMembership {
 
 	@Autowired
 	EventMembershipService(ObjectProvider<ArticleEvaluator> evaluators, ArticleDirectory articles,
-			EventJudgementRepository judgements, TransactionTemplate transaction) {
-		this(evaluators::getIfAvailable, articles, judgements, transaction, InstantSource.system());
+			EventJudgementRepository judgements, TransactionTemplate transaction, InstantSource clock) {
+		this(evaluators::getIfAvailable, articles, judgements, transaction, clock);
 	}
 
-	/** 시험이 평가기 · 시계를 넣는다 */
+	/** 시험이 평가기를 넣는다 */
 	EventMembershipService(Supplier<@Nullable ArticleEvaluator> evaluator, ArticleDirectory articles,
 			EventJudgementRepository judgements, TransactionTemplate transaction, InstantSource clock) {
 		this.call = new MembershipCall(evaluator, articles, transaction, clock);
