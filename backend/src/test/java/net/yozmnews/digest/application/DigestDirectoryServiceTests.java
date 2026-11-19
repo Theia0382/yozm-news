@@ -158,7 +158,7 @@ class DigestDirectoryServiceTests {
 		long story = section(ready, "TOP_STORY", 1, "주요 뉴스 제목", "주요 뉴스 요약");
 		item(story, 0, 7, null, "MAJOR_STORYLINE");
 		item(story, 1, 9, null, "SUBSCRIBED");
-		long more = section(ready, "MORE_HEADLINES", 2, null, null);
+		long more = section(ready, "HEADLINE", 2, null, null);
 		item(more, 0, 8, "한 줄 코멘트", "INTEREST");
 		// 공급자가 답하지 않은 실패 — 시도 수에는 들고 토큰 합에는 들지 않는다
 		row(user, "2026-11-18", "FAILED", null, null, "PROVIDER_UNAVAILABLE");
@@ -172,7 +172,7 @@ class DigestDirectoryServiceTests {
 						new DigestSectionView(SectionKind.TOP_STORY, "주요 뉴스 제목", "주요 뉴스 요약",
 								List.of(new DigestCitation(new ArticleId(7), null, SelectionReason.MAJOR_STORYLINE),
 										new DigestCitation(new ArticleId(9), null, SelectionReason.SUBSCRIBED))),
-						new DigestSectionView(SectionKind.MORE_HEADLINES, null, null, List.of(
+						new DigestSectionView(SectionKind.HEADLINE, null, null, List.of(
 								new DigestCitation(new ArticleId(8), "한 줄 코멘트", SelectionReason.INTEREST))))));
 		assertThat(day.latest()).isEqualTo(new DigestAttempt(failed, DigestStatus.FAILED, DigestFailure.NO_CITATION,
 				DigestFailureCause.OUTPUT, Instant.parse("2026-11-18T15:05:00Z")));

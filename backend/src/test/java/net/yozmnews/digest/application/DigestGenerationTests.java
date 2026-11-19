@@ -45,6 +45,7 @@ import net.yozmnews.digest.domain.generator.GenerationOutcome;
 import net.yozmnews.digest.domain.generator.TokenUsage;
 import net.yozmnews.digest.domain.input.DigestInput;
 import net.yozmnews.digest.domain.input.DigestProfile;
+import net.yozmnews.digest.domain.item.ItemKind;
 import net.yozmnews.event.EventArticles;
 import net.yozmnews.llm.GenerationStop;
 import net.yozmnews.llm.LlmModel;
@@ -72,8 +73,9 @@ import org.jobrunr.scheduling.JobScheduler;
 import net.yozmnews.digest.DigestRounds;
 
 /**
- * 다이제스트 생성 흐름 — 예약 · 시작 · 프롬프트 · 생성 · 읽기(끝까지 쓴 응답을 읽지 못하면 한 번 다시 묻기) · 인용 검증 · 저장이 실제
- * PostgreSQL 위에서 끝까지 간다. 생성기의 실패 · 잘림 · 거절은 그 코드로 끝난다.
+ * 다이제스트 생성 흐름 — 예약 · 시작 · 프롬프트 · 생성 · 읽기(끝까지 쓴 응답을 읽지 못하면 한 번 다시 묻기) · 항목 대조 · 저장이 실제
+ * PostgreSQL 위에서 끝까지 간다. 생성기의 실패 · 잘림 · 거절은 그 코드로 끝난다. 다이제스트 행의 후보 수는 사건 수, 섹션은 항목마다 하나이고
+ * 인용은 항목의 남은 표본 기사, 섹션 사건은 항목의 사건이다.
  * <p>
  * 지키는 규칙: digest-R2 · digest-R8 · digest-R9 · digest-R12
  * <p>
@@ -166,6 +168,7 @@ class DigestGenerationTests {
 				DigestTrigger.MANUAL).id();
 	}
 
+	/** 기사마다 사건 하나 · 항목 하나 — 앞 셋은 주요 뉴스 항목, 나머지는 헤드라인 항목. 둘째 기사만 큰 슬롯 사건 */
 	private DigestInput candidates(int count) {
 		List<DigestCandidate> list = new ArrayList<>();
 		for (int index = 0; index < count; index++) {
@@ -215,6 +218,21 @@ class DigestGenerationTests {
 				select s.kind || ':' || s.position || ':' || i.position || ':' || i.article_id || ':' || i.selection_reason
 				from digest_sections s join digest_items i on i.digest_section_id = s.id
 				where s.digest_id = :id order by s.position, i.position
+				""").param("id", id.value()).query(String.class).list();
+	}
+
+	private List<String> sectionEventRows(DigestId id) {
+		return this.jdbc.sql("""
+				select s.kind || ':' || s.position || ':' || e.position || ':' || e.event_id || ':' || e.selection_reason
+				from digest_sections s join digest_section_events e on e.digest_section_id = s.id
+				where s.digest_id = :id order by s.position, e.position
+				""").param("id", id.value()).query(String.class).list();
+	}
+
+	private List<String> sectionTexts(DigestId id) {
+		return this.jdbc.sql("""
+				select s.kind || ':' || coalesce(s.title, '-') || ':' || coalesce(s.body, '-')
+				from digest_sections s where s.digest_id = :id order by s.position
 				""").param("id", id.value()).query(String.class).list();
 	}
 
@@ -276,10 +294,17 @@ class DigestGenerationTests {
 			.containsEntry("completed", true);
 		assertThat(candidateRows(id)).containsExactly("A1:" + a(1), "A2:" + a(2), "A3:" + a(3), "A4:" + a(4),
 				"A5:" + a(5));
-		assertThat(count("select count(*) from digest_sections where digest_id = :id", id)).isEqualTo(5);
+		// 개요 · 주요 뉴스 항목 셋 · 헤드라인 항목 둘 — 헤드라인은 항목마다 섹션 하나
+		assertThat(count("select count(*) from digest_sections where digest_id = :id", id)).isEqualTo(6);
 		assertThat(itemRows(id)).containsExactly("TOP_STORY:1:0:" + a(1) + ":SUBSCRIBED",
 				"TOP_STORY:2:0:" + a(2) + ":MAJOR_STORYLINE", "TOP_STORY:3:0:" + a(3) + ":SUBSCRIBED",
-				"MORE_HEADLINES:4:0:" + a(4) + ":SUBSCRIBED", "MORE_HEADLINES:4:1:" + a(5) + ":SUBSCRIBED");
+				"HEADLINE:4:0:" + a(4) + ":SUBSCRIBED", "HEADLINE:5:0:" + a(5) + ":SUBSCRIBED");
+		assertThat(sectionEventRows(id)).containsExactly("TOP_STORY:1:0:" + a(1) + ":SUBSCRIBED",
+				"TOP_STORY:2:0:" + a(2) + ":MAJOR_STORYLINE", "TOP_STORY:3:0:" + a(3) + ":SUBSCRIBED",
+				"HEADLINE:4:0:" + a(4) + ":SUBSCRIBED", "HEADLINE:5:0:" + a(5) + ":SUBSCRIBED");
+		assertThat(sectionTexts(id)).containsExactly("OVERVIEW:-:로컬 대체물이 만든 다이제스트다. 항목 5개.",
+				"TOP_STORY:로컬 주요 뉴스 1:로컬 대체물이 만든 요약이다.", "TOP_STORY:로컬 주요 뉴스 2:로컬 대체물이 만든 요약이다.",
+				"TOP_STORY:로컬 주요 뉴스 3:로컬 대체물이 만든 요약이다.", "HEADLINE:로컬 헤드라인 1:-", "HEADLINE:로컬 헤드라인 2:-");
 		// 대조 — 지운 것이 없으면 정보 로그가 없다
 		assertThat(log.getOut()).doesNotContain("다이제스트 출력에서 지운 것이 있다");
 		// 실패가 아니면 실패 이벤트가 없다
@@ -328,14 +353,14 @@ class DigestGenerationTests {
 	void asksOnceMoreWithTheDiagnosisAndStoresTheSecondAnswer() {
 		AtomicInteger calls = new AtomicInteger();
 		DigestGeneration generation = generation(scripted(calls, request -> (calls.get() == 1) ? "not json" : """
-				{ "overview": "흐름", "top_stories": [ { "title": "t", "summary": "s", "refs": ["A1"] } ], "more_headlines": [] }
+				{ "overview": "흐름", "top_stories": [ { "ref": "I1", "title": "t", "summary": "s" } ], "headlines": [] }
 				"""));
 		DigestId id = schedule(generation);
 		// 추론 강도는 기본값(보통)과 다른 값으로 — 요청이 입력 프로필의 값을 실었는지 가린다
 		DigestInput fixed = candidates(2);
 		DigestInput input = new DigestInput(new DigestProfile(fixed.profile().topics(),
 				fixed.profile().excludedRegions(), fixed.profile().interest(), fixed.profile().timezone(),
-				fixed.profile().summaryLength(), ReasoningEffort.HIGH), fixed.candidates(), fixed.storylines());
+				fixed.profile().summaryLength(), ReasoningEffort.HIGH), fixed.items());
 
 		assertThat(generation.run(id, MODEL, input)).isEqualTo(DigestStatus.READY);
 
@@ -344,17 +369,19 @@ class DigestGenerationTests {
 			.containsEntry("output_tokens", 680)
 			.containsEntry("duration_ms", 4_000L);
 		assertThat(itemRows(id)).containsExactly("TOP_STORY:1:0:" + a(1) + ":SUBSCRIBED");
-		// 첫 요청의 프롬프트는 입력으로 만든 것이다 — 사용자 구획에 후보의 별칭과 제목이 있다
+		// 첫 요청의 프롬프트는 입력으로 만든 것이다 — 사용자 구획에 항목의 별칭 · 칸과 기사 제목이 있고 기사 별칭은 없다
 		DigestRequest first = this.requests.get(0);
 		DigestRequest second = this.requests.get(1);
-		assertThat(first.prompt().userContent()).contains("[\"A1\",").contains("\"시험 기사 " + a(1) + "\"");
+		assertThat(first.prompt().userContent()).contains("[\"I1\",\"top_stories\",")
+			.contains("\"시험 기사 " + a(1) + "\"")
+			.doesNotContain("\"A1\"");
 		// 다시 물은 요청 — 지시 끝에 진단, 사용자 구획 · 스키마 · 별칭 후보는 같다
 		assertThat(second.prompt().instructions()).startsWith(first.prompt().instructions())
 			.contains("앞 출력이 출력 스키마에 맞지 않았다: JSON 이 아니다");
 		assertThat(first.prompt().instructions()).doesNotContain("앞 출력이");
 		assertThat(second.prompt().userContent()).isEqualTo(first.prompt().userContent());
 		assertThat(second.prompt().outputSchema()).isEqualTo(first.prompt().outputSchema());
-		assertThat(second.candidates().entries()).isEqualTo(first.candidates().entries());
+		assertThat(second.candidates().items()).isEqualTo(first.candidates().items());
 		// 두 요청의 추론 강도는 입력 프로필의 값
 		assertThat(first.effort()).isEqualTo(ReasoningEffort.HIGH);
 		assertThat(second.effort()).isEqualTo(ReasoningEffort.HIGH);
@@ -464,7 +491,7 @@ class DigestGenerationTests {
 	@Test
 	void failsWithoutCitationWhenEveryAliasIsUnknown() {
 		DigestGeneration generation = generation(scripted(new AtomicInteger(), request -> """
-				{ "overview": "흐름", "top_stories": [ { "title": "t", "summary": "s", "refs": ["Z9"] } ], "more_headlines": [] }
+				{ "overview": "흐름", "top_stories": [ { "ref": "Z9", "title": "t", "summary": "s" } ], "headlines": [] }
 				"""));
 		DigestId id = schedule(generation);
 
@@ -572,8 +599,8 @@ class DigestGenerationTests {
 		assertThat(calls).hasValue(1);
 		assertThat(row(id)).containsEntry("status", "READY").containsEntry("candidate_count", 5);
 		assertThat(candidateRows(id)).hasSize(5);
-		// 앞 실행의 개요 1 · 주요 뉴스 4 — 뒤 실행은 아무것도 쓰지 않았다
-		assertThat(count("select count(*) from digest_sections where digest_id = :id", id)).isEqualTo(5);
+		// 앞 실행의 개요 1 · 주요 뉴스 3 · 헤드라인 2 — 뒤 실행은 아무것도 쓰지 않았다
+		assertThat(count("select count(*) from digest_sections where digest_id = :id", id)).isEqualTo(6);
 	}
 
 	/** 두 스레드가 같은 다이제스트를 함께 돌려도 생성기 호출은 하나다 — 늦은 쪽은 생성 중을 돌려준다 */
@@ -626,12 +653,57 @@ class DigestGenerationTests {
 		assertThat(generation.run(id, MODEL, candidates(5))).isEqualTo(DigestStatus.READY);
 
 		assertThat(candidateRows(id)).containsExactly("A1:" + a(1), "A3:" + a(3), "A4:" + a(4), "A5:" + a(5));
+		// 기사가 남지 않은 항목 I2 는 대조에서 모르는 항목이라 대체물이 쓴 원소를 버린다
 		assertThat(itemRows(id)).containsExactly("TOP_STORY:1:0:" + a(1) + ":SUBSCRIBED",
-				"TOP_STORY:2:0:" + a(3) + ":SUBSCRIBED", "MORE_HEADLINES:3:0:" + a(4) + ":SUBSCRIBED",
-				"MORE_HEADLINES:3:1:" + a(5) + ":SUBSCRIBED");
+				"TOP_STORY:2:0:" + a(3) + ":SUBSCRIBED", "HEADLINE:3:0:" + a(4) + ":SUBSCRIBED",
+				"HEADLINE:4:0:" + a(5) + ":SUBSCRIBED");
 		assertThat(log.getOut()).contains("다이제스트 출력에서 지운 것이 있다 — 다이제스트 " + id.value()
-				+ ", 지운 별칭 1, 버린 항목 1, 상한으로 버린 수 0")
+				+ ", 버린 원소 1, 출력에 없는 항목 0, 상한으로 버린 수 0")
 			.doesNotContain("로컬 대체물이 만든");
+	}
+
+	/**
+	 * 후보 수는 사건 수다 — 항목 하나에 사건 둘(기사 셋 · 기사 하나)과 헤드라인 항목 하나(기사 하나)면 기사 별칭(후보 행)은 다섯이지만 후보 수는
+	 * 셋이다. 섹션은 항목마다 하나이고 인용은 항목의 표본 기사 전부, 섹션 사건은 항목의 사건 순서다
+	 */
+	@Test
+	void theCandidateCountIsTheNumberOfEventsAndASectionCitesTheSampleOfItsItem() {
+		DigestGeneration generation = generation(new FakeDigestGenerator());
+		DigestId id = schedule(generation);
+		DigestInput input = DigestInputs.items(
+				DigestInputs.item(ItemKind.TOP_STORY,
+						DigestInputs.event(900, SelectionReason.MAJOR_STORYLINE, Long.parseLong(a(1)), Long.parseLong(a(2)),
+								Long.parseLong(a(3))),
+						DigestInputs.event(800, SelectionReason.SUBSCRIBED, Long.parseLong(a(4)))),
+				DigestInputs.item(ItemKind.HEADLINE, DigestInputs.event(700, SelectionReason.INTEREST, Long.parseLong(a(5)))));
+
+		assertThat(generation.run(id, MODEL, input)).isEqualTo(DigestStatus.READY);
+
+		assertThat(row(id)).containsEntry("candidate_count", 3);
+		assertThat(candidateRows(id)).hasSize(5);
+		assertThat(itemRows(id)).containsExactly("TOP_STORY:1:0:" + a(1) + ":MAJOR_STORYLINE",
+				"TOP_STORY:1:1:" + a(2) + ":MAJOR_STORYLINE", "TOP_STORY:1:2:" + a(3) + ":MAJOR_STORYLINE",
+				"TOP_STORY:1:3:" + a(4) + ":SUBSCRIBED", "HEADLINE:2:0:" + a(5) + ":INTEREST");
+		assertThat(sectionEventRows(id)).containsExactly("TOP_STORY:1:0:900:MAJOR_STORYLINE",
+				"TOP_STORY:1:1:800:SUBSCRIBED", "HEADLINE:2:0:700:INTEREST");
+	}
+
+	/** 생성 중 지운 표본 기사는 인용에서만 빠지고 항목 · 섹션 사건은 남는다(digest-R9) */
+	@Test
+	void anArticleDeletedDuringGenerationLeavesTheRestOfItsItem() {
+		DigestGeneration generation = generation(new FakeDigestGenerator());
+		DigestId id = schedule(generation);
+		DigestInput input = DigestInputs.items(DigestInputs.item(ItemKind.TOP_STORY,
+				DigestInputs.event(900, SelectionReason.SUBSCRIBED, Long.parseLong(a(1)), Long.parseLong(a(2)))));
+		long deleted = this.articleIds.get(1);
+		this.jdbc.sql("delete from article_feed_entries where article_id = :id").param("id", deleted).update();
+		this.jdbc.sql("delete from articles where id = :id").param("id", deleted).update();
+
+		assertThat(generation.run(id, MODEL, input)).isEqualTo(DigestStatus.READY);
+
+		assertThat(row(id)).containsEntry("candidate_count", 1);
+		assertThat(itemRows(id)).containsExactly("TOP_STORY:1:0:" + a(1) + ":SUBSCRIBED");
+		assertThat(sectionEventRows(id)).containsExactly("TOP_STORY:1:0:900:SUBSCRIBED");
 	}
 
 }

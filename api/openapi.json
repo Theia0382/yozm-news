@@ -4138,7 +4138,7 @@
       "get" : {
         "operationId" : "states",
         "parameters" : [ {
-          "description" : "기사 ID — 쉼표로 이은 것, 서로 다른 ID 는 500개까지",
+          "description" : "기사 ID — 쉼표로 이은 것, 서로 다른 ID 는 750개까지",
           "in" : "query",
           "name" : "articleIds",
           "required" : true,
@@ -6661,7 +6661,7 @@
           },
           "kind" : {
             "type" : "string",
-            "enum" : [ "OVERVIEW", "TOP_STORY", "MORE_HEADLINES" ]
+            "enum" : [ "OVERVIEW", "TOP_STORY", "HEADLINE" ]
           },
           "title" : {
             "type" : [ "string", "null" ]

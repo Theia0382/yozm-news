@@ -17,8 +17,12 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class FeedbackStates {
 
-	/** 한 번에 묻는 서로 다른 기사 수의 상한 — 정본. 측정 전 목표. 값의 근거는 docs/specs/feedback.md §5 · feedback-R7 */
-	public static final int MAX_ARTICLES = 500;
+	/**
+	 * 한 번에 묻는 서로 다른 기사 수의 상한 — 정본. 측정 전 목표. 화면이 다이제스트 하나의 인용 기사 전부를 한 요청으로 묻는다 — 인용은 사건마다
+	 * 표본 기사(사건당 상한 5)이고 사건 수는 최대 후보 수(직접 입력 상한 150) 이하라 많아야 750 이고, 이 값이 그것을 덮는다. 값의 근거는
+	 * docs/specs/feedback.md §5 · feedback-R7
+	 */
+	public static final int MAX_ARTICLES = 750;
 
 	private final FeedbackRepository feedback;
 

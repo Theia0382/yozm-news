@@ -99,7 +99,7 @@ class DigestScreenControllerTests {
 		long story = this.rows.section(ready, "TOP_STORY", 1, "주요 뉴스 제목", "주요 뉴스 요약");
 		this.rows.cite(story, 0, removed, null, "SUBSCRIBED");
 		this.rows.cite(story, 1, kept, null, "MAJOR_STORYLINE");
-		long more = this.rows.section(ready, "MORE_HEADLINES", 2, null, null);
+		long more = this.rows.section(ready, "HEADLINE", 2, null, null);
 		this.rows.cite(more, 0, kept, "한 줄 코멘트", "INTEREST");
 		long failed = this.rows.digest(user, "2026-11-05", "FAILED", 50, 0, "NO_CITATION");
 		this.rows.digest(user, "2026-11-04", "EMPTY", null, null, null);
@@ -137,7 +137,7 @@ class DigestScreenControllerTests {
 			.andExpect(jsonPath("$.day.shown.sections[1].citations[0].article.publishedAt")
 				.value("2026-11-05T00:00:00Z"))
 			.andExpect(jsonPath("$.day.shown.sections[1].citations[0].article.sources").isEmpty())
-			.andExpect(jsonPath("$.day.shown.sections[2].kind").value("MORE_HEADLINES"))
+			.andExpect(jsonPath("$.day.shown.sections[2].kind").value("HEADLINE"))
 			.andExpect(jsonPath("$.day.shown.sections[2].citations[0].note").value("한 줄 코멘트"))
 			.andExpect(jsonPath("$.day.shown.sections[2].citations[0].reason").value("INTEREST"))
 			.andExpect(jsonPath("$.day.latest.digestId").value(failed))

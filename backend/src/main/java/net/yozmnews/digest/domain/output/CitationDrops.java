@@ -1,15 +1,15 @@
 package net.yozmnews.digest.domain.output;
 
 /**
- * 인용 검증이 지운 것의 수
- * @param removedRefs 주요 뉴스에서 지운 별칭 수 — 후보에 없거나 같은 주요 뉴스 안에서 거듭됨
- * @param droppedItems 버린 주요 뉴스 · 추가 헤드라인 수
+ * 항목 대조가 지운 것의 수
+ * @param droppedItems 버린 주요 뉴스 · 헤드라인 원소 수 — 모르는 항목 별칭 · 다른 칸의 항목 · 앞에서 이미 쓴 항목
+ * @param missingItems 출력에 없어 저장하지 않는 항목 수
  */
-public record CitationDrops(int removedRefs, int droppedItems) {
+public record CitationDrops(int droppedItems, int missingItems) {
 
 	public CitationDrops {
-		if (removedRefs < 0 || droppedItems < 0) {
-			throw new IllegalArgumentException("음수다: " + removedRefs + ", " + droppedItems);
+		if (droppedItems < 0 || missingItems < 0) {
+			throw new IllegalArgumentException("음수다: " + droppedItems + ", " + missingItems);
 		}
 	}
 

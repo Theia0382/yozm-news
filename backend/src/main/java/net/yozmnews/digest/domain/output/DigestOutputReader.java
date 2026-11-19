@@ -78,19 +78,15 @@ public final class DigestOutputReader {
 		List<StoryDraft> stories = new ArrayList<>();
 		for (Object element : list(root.get(DigestOutputSchema.TOP_STORIES))) {
 			Map<String, @Nullable Object> story = map(element);
-			List<String> refs = new ArrayList<>();
-			for (Object ref : list(story.get(DigestOutputSchema.REFS))) {
-				refs.add(string(ref));
-			}
-			stories.add(new StoryDraft(string(story.get(DigestOutputSchema.TITLE)),
-					string(story.get(DigestOutputSchema.SUMMARY)), refs));
+			stories.add(new StoryDraft(string(story.get(DigestOutputSchema.REF)),
+					string(story.get(DigestOutputSchema.TITLE)), string(story.get(DigestOutputSchema.SUMMARY))));
 		}
 		List<HeadlineDraft> headlines = new ArrayList<>();
-		for (Object element : list(root.get(DigestOutputSchema.MORE_HEADLINES))) {
+		for (Object element : list(root.get(DigestOutputSchema.HEADLINES))) {
 			Map<String, @Nullable Object> headline = map(element);
 			Object note = headline.get(DigestOutputSchema.NOTE);
 			headlines.add(new HeadlineDraft(string(headline.get(DigestOutputSchema.REF)),
-					note == null ? null : string(note)));
+					string(headline.get(DigestOutputSchema.TITLE)), note == null ? null : string(note)));
 		}
 		return new DigestDraft(string(root.get(DigestOutputSchema.OVERVIEW)), stories, headlines);
 	}

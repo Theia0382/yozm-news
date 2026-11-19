@@ -10,16 +10,13 @@ import net.yozmnews.user.SummaryLength;
  */
 public final class PromptRules {
 
-	/** 큰 스토리라인 묶음 별칭의 접두 — {@code S1}, {@code S2} … */
-	public static final String STORYLINE_ALIAS_PREFIX = "S";
-
 	/** 다시 묻는 요청에 싣는 진단의 최대 코드 포인트 — 넘으면 앞부분만 */
 	public static final int MAX_DIAGNOSIS = 200;
 
-	/** 후보 줄 출처 이름 사이의 구분 */
+	/** 기사 줄 출처 이름 사이의 구분 */
 	public static final String SOURCE_SEPARATOR = ", ";
 
-	/** 후보 줄 발행 시각의 꼴 — 프로필 시간대의 날짜와 시각 */
+	/** 기사 줄 발행 시각의 꼴 — 프로필 시간대의 날짜와 시각 */
 	public static final String PUBLISHED_PATTERN = "yyyy-MM-dd HH:mm";
 
 	private PromptRules() {

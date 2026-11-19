@@ -10,6 +10,7 @@ import java.util.UUID;
 
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.digest.DigestInputs;
 import net.yozmnews.digest.SelectionReason;
 import net.yozmnews.digest.domain.candidate.CandidateSet;
 import net.yozmnews.digest.domain.candidate.DigestCandidate;
@@ -73,10 +74,11 @@ class CandidateCleanupTests {
 	private DigestId digestCreatedAt(Instant createdAt, long article) {
 		DigestId id = this.digests.save(Digest.schedule(new UserId(42), LocalDate.parse("2026-10-17"),
 				new DigestPeriod(createdAt.minusSeconds(86_400), createdAt), DigestTrigger.MANUAL, UUID.randomUUID(), createdAt)).id();
-		DigestCandidate candidate = new DigestCandidate(new ArticleId(article), SelectionReason.SUBSCRIBED);
-		this.candidates.replace(id, CandidateSet.of(List.of(candidate)));
+		CandidateSet set = CandidateSet
+			.of(DigestInputs.of(List.of(new DigestCandidate(new ArticleId(article), SelectionReason.SUBSCRIBED))));
+		this.candidates.replace(id, set);
 		this.sections.saveAll(DigestSection.of(id,
-				new CitedDigest("흐름", List.of(new CitedStory("t", "s", List.of(candidate))), List.of())));
+				new CitedDigest("흐름", List.of(new CitedStory(set.items().getFirst(), "t", "s")), List.of())));
 		return id;
 	}
 

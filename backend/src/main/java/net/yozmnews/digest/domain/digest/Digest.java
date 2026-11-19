@@ -139,6 +139,7 @@ public final class Digest {
 
 	/**
 	 * 생성을 시작한다 — 생성을 기다리는 다이제스트만 시작한다. 생성 중인 다이제스트는 다시 시작하지 않는다.
+	 * @param candidateCount 후보 수 — 생성에 넘기는 사건 수
 	 * @throws IllegalStateException 생성을 기다리는 다이제스트가 아닐 때
 	 */
 	public Digest start(LlmModel model, int candidateCount, Instant now) {
@@ -241,7 +242,7 @@ public final class Digest {
 	}
 
 	/**
-	 * @return 시작할 때 받은 후보 수 — 시작 전이면 빈 값
+	 * @return 시작할 때 받은 후보 수(후보 사건 수) — 시작 전이면 빈 값
 	 */
 	public Optional<Integer> candidateCount() {
 		return Optional.ofNullable(this.candidateCount);

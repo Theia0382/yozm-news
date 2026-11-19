@@ -8,9 +8,9 @@ import net.yozmnews.digest.domain.candidate.DigestCandidate;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 후보 기사 하나와 프롬프트의 후보 줄 재료 — 토큰 어림에 쓴 제목 · 요약문과 같은 읽기의 값이다 — docs/specs/digest.md §5 · digest-R22
+ * 사건의 표본 기사 하나와 프롬프트의 기사 줄 재료 — 토큰 어림에 쓴 제목 · 요약문과 같은 읽기의 값이다 — docs/specs/digest.md §5 · digest-R22
  *
- * @param candidate 기사와 선정 이유
+ * @param candidate 기사와 선정 이유 — 이유는 그 사건의 선정 이유
  * @param title 제목
  * @param summary 저장된 RSS 요약문 — 없으면 null
  * @param sources 출처 이름 — 엔트리 순서, 비어 있을 수 있다

@@ -9,6 +9,7 @@ import java.util.function.Function;
 
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.digest.DigestFailure;
+import net.yozmnews.digest.DigestInputs;
 import net.yozmnews.digest.SelectionReason;
 import net.yozmnews.digest.domain.candidate.CandidateSet;
 import net.yozmnews.digest.domain.candidate.DigestCandidate;
@@ -99,7 +100,8 @@ class LlmDigestGeneratorTests {
 
 	private static DigestRequest request(ReasoningEffort effort) {
 		return new DigestRequest(new UserId(7), MODEL, effort,
-				CandidateSet.of(List.of(new DigestCandidate(new ArticleId(1), SelectionReason.SUBSCRIBED))), PROMPT);
+				CandidateSet.of(DigestInputs.of(List.of(new DigestCandidate(new ArticleId(1), SelectionReason.SUBSCRIBED)))),
+				PROMPT);
 	}
 
 	private static StoredGeneration done(GenerationResult result) {

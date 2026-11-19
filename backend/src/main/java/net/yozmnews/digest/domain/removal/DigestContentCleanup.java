@@ -23,7 +23,7 @@ public interface DigestContentCleanup {
 	/** 주어진 기사의 인용 행을 지운다 */
 	void deleteItems(Collection<ArticleId> removed);
 
-	/** 주어진 섹션과 그 인용 행을 지운다 */
+	/** 주어진 섹션과 그 인용 · 섹션 사건 행을 지운다 — 인용 · 섹션 사건 행은 섹션을 따라 지워진다 */
 	void deleteSections(Collection<Long> sectionIds);
 
 }

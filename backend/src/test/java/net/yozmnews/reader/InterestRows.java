@@ -59,7 +59,7 @@ public final class InterestRows {
 		for (int i = 0; i < articles.length; i++) {
 			long section = this.jdbc.sql("""
 					insert into digest_sections (digest_id, kind, position, title, body)
-					values (:digest, 'MORE_HEADLINES', :position, null, null)
+					values (:digest, 'HEADLINE', :position, null, null)
 					returning id
 					""").param("digest", digest).param("position", i).query(Long.class).single();
 			this.jdbc.sql("""

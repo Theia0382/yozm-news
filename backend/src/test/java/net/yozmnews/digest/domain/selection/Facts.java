@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Set;
 
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.event.EventId;
 import net.yozmnews.llm.ReasoningEffort;
 import net.yozmnews.source.SourceId;
 import net.yozmnews.tag.TagSetId;
@@ -16,7 +17,8 @@ import net.yozmnews.user.TopicSubscription;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 선별 규칙 시험의 재료 — 손으로 적은 기사 · 사용자. 기본 기사는 정치 행정 · 국내 · 스트레이트 · 소스 1 · 발행 2026-11-16T12:00Z 다.
+ * 선별 규칙 시험의 재료 — 손으로 적은 기사 · 사건 · 사용자. 기본 기사는 정치 행정 · 국내 · 스트레이트 · 소스 1 · 발행 2026-11-16T12:00Z 다.
+ * 사건의 값은 {@link EventFacts#of} 가 소속 기사의 평가로 센다 — 기사 하나뿐인 사건은 그 기사의 주제 · 지역 · 중요도를 그대로 갖는다.
  */
 final class Facts {
 
@@ -27,6 +29,30 @@ final class Facts {
 
 	static Builder article(long id) {
 		return new Builder(id);
+	}
+
+	/** 기사 하나뿐인 사건 — 사건 ID 는 기사 ID 와 같다 */
+	static CandidateEvent single(Builder article) {
+		return event(article.id, article);
+	}
+
+	/** 사건 — 기사가 모두 평가 있는 소속 기사이고 모두 후보 기사(기간에 든 · 제외를 지난 기사)다 */
+	static CandidateEvent event(long id, Builder... articles) {
+		return event(id, List.of(articles), List.of(articles));
+	}
+
+	/**
+	 * 사건 — 사건의 값은 {@code members} 전부로 세고, 후보 기사는 {@code inPeriod} 다
+	 * @param members 평가 있는 소속 기사 전부
+	 * @param inPeriod 그 가운데 기간에 든 · 제외를 지난 기사
+	 */
+	static CandidateEvent event(long id, List<Builder> members, List<Builder> inPeriod) {
+		return new CandidateEvent(eventFacts(id, members), inPeriod.stream().map(Builder::build).toList());
+	}
+
+	/** 사건의 값 — 소속 기사의 평가로 센다 */
+	static EventFacts eventFacts(long id, List<Builder> members) {
+		return EventFacts.of(new EventId(id), members.stream().map(Builder::evaluation).toList());
 	}
 
 	/** 구독 행 — 대분류 politics(행정 · 입법), 중분류 economy.markets. 제외 없음 */

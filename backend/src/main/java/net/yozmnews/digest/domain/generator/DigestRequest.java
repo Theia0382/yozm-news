@@ -11,12 +11,12 @@ import net.yozmnews.platform.UserId;
 /**
  * 생성 요청 — docs/specs/digest.md §4
  * <p>
- * 실제 생성기는 쓸 모델 · 추론 강도 · 프롬프트를, 로컬 대체물은 별칭을 매긴 후보를 쓴다.
+ * 실제 생성기는 쓸 모델 · 추론 강도 · 프롬프트를, 로컬 대체물은 별칭을 매긴 항목을 쓴다.
  *
  * @param userId 다이제스트의 사용자 — 그 사용자의 저장한 키로 부른다
  * @param model 쓸 모델
  * @param effort 생성의 추론 강도
- * @param candidates 별칭을 매긴 후보 — 비어 있지 않다
+ * @param candidates 별칭을 매긴 항목 · 기사 — 비어 있지 않다
  * @param prompt 지시 · 사용자 구획 · 출력 스키마
  */
 public record DigestRequest(UserId userId, LlmModel model, ReasoningEffort effort, CandidateSet candidates,

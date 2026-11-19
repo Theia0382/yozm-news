@@ -11,6 +11,8 @@ import java.util.Optional;
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.digest.domain.selection.ActiveEvaluation;
 import net.yozmnews.digest.domain.selection.ActiveKeys;
+import net.yozmnews.digest.domain.selection.EventFacts;
+import net.yozmnews.event.EventId;
 import net.yozmnews.tag.ArticleEvaluationView;
 import net.yozmnews.tag.ArticleEvaluations;
 import net.yozmnews.tag.TagKeyLineage;
@@ -66,6 +68,34 @@ class ActiveEvaluations {
 			resolved.put(view.articleId(), ActiveKeys.resolve(view, mapping));
 		}
 		return Optional.of(resolved);
+	}
+
+	/**
+	 * 사건들의 값 — 사건마다 배정된 기사 전부의 평가를 활성 키로 풀어 {@link EventFacts#of} 로 센다. 후보 선별과 관심도 재료(스토리라인 주제 몫)가
+	 * 함께 쓰는 읽기다.
+	 * @param members 사건 → 배정된 기사({@code EventDirectory.articleIdsOf})
+	 * @param active 맞출 활성 버전
+	 * @return 사건 → 사건의 값 — 평가 있는 소속 기사가 없는 사건은 빠진다. 계보 표의 활성 버전이 {@code active} 와 다르면 빈 값
+	 */
+	Optional<Map<EventId, EventFacts>> eventFacts(Map<EventId, List<ArticleId>> members, TagSetId active) {
+		Objects.requireNonNull(members, "members");
+		Objects.requireNonNull(active, "active");
+		Optional<Map<ArticleId, ActiveEvaluation>> evaluated = read(
+				members.values().stream().flatMap(List::stream).toList(), active);
+		if (evaluated.isEmpty()) {
+			return Optional.empty();
+		}
+		Map<EventId, EventFacts> facts = new LinkedHashMap<>();
+		members.forEach((event, articles) -> {
+			List<ActiveEvaluation> ofEvent = articles.stream()
+				.map(evaluated.get()::get)
+				.filter(Objects::nonNull)
+				.toList();
+			if (!ofEvent.isEmpty()) {
+				facts.put(event, EventFacts.of(event, ofEvent));
+			}
+		});
+		return Optional.of(facts);
 	}
 
 }

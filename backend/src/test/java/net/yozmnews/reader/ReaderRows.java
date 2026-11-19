@@ -153,7 +153,7 @@ public final class ReaderRows {
 	public void cite(long digest, long article) {
 		long section = this.jdbc.sql("""
 				insert into digest_sections (digest_id, kind, position, title, body)
-				values (:digest, 'MORE_HEADLINES', (select count(*) from digest_sections where digest_id = :digest), null,
+				values (:digest, 'HEADLINE', (select count(*) from digest_sections where digest_id = :digest), null,
 				    null)
 				returning id
 				""").param("digest", digest).query(Long.class).single();

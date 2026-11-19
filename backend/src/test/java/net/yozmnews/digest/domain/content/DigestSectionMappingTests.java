@@ -12,12 +12,13 @@ import java.util.Map;
 import java.util.UUID;
 
 import net.yozmnews.TestcontainersConfiguration;
-import net.yozmnews.article.ArticleId;
 import net.yozmnews.digest.DigestFailure;
 import net.yozmnews.digest.DigestStatus;
 import net.yozmnews.digest.SectionKind;
 import net.yozmnews.digest.SelectionReason;
-import net.yozmnews.digest.domain.candidate.DigestCandidate;
+import net.yozmnews.digest.DigestInputs;
+import net.yozmnews.digest.domain.candidate.CandidateSet;
+import net.yozmnews.digest.domain.item.ItemKind;
 import net.yozmnews.digest.domain.digest.Completion;
 import net.yozmnews.digest.domain.digest.Digest;
 import net.yozmnews.digest.domain.digest.DigestPeriod;
@@ -56,10 +57,6 @@ class DigestSectionMappingTests {
 	private static final Instant T1 = Instant.parse("2026-11-15T22:46:00Z");
 
 	private static final LlmModel MODEL = new LlmModel(Provider.OPENAI, "gpt-5.5-mini", 100_000, true);
-
-	private static final DigestCandidate C11 = new DigestCandidate(new ArticleId(11), SelectionReason.SUBSCRIBED);
-
-	private static final DigestCandidate C12 = new DigestCandidate(new ArticleId(12), SelectionReason.MAJOR_STORYLINE);
 
 	@Autowired
 	DigestRepository digests;
@@ -152,13 +149,18 @@ class DigestSectionMappingTests {
 	}
 
 	@Test
-	void roundTripsSectionsWithOrderedItems() {
+	void roundTripsSectionsWithOrderedItemsAndEvents() {
 		Digest digest = scheduled();
-		CitedDigest cited = new CitedDigest("흐름", List.of(new CitedStory("하나", "요약", List.of(C12, C11))),
-				List.of(new CitedHeadline(C11, "한 줄")));
+		CandidateSet items = CandidateSet.of(DigestInputs.items(
+				DigestInputs.item(ItemKind.TOP_STORY, DigestInputs.event(30, SelectionReason.MAJOR_STORYLINE, 12),
+						DigestInputs.event(20, SelectionReason.SUBSCRIBED, 11)),
+				DigestInputs.item(ItemKind.HEADLINE, DigestInputs.event(40, SelectionReason.SUBSCRIBED, 13))));
+		CitedDigest cited = new CitedDigest("흐름", List.of(new CitedStory(items.item("I1").orElseThrow(), "하나", "요약")),
+				List.of(new CitedHeadline(items.item("I2").orElseThrow(), "헤드라인", "한 줄")));
 
 		this.sections.saveAll(DigestSection.of(digest.id(), cited));
 
+		// digest_items.note 는 쓰지 않는다 — 헤드라인의 코멘트는 섹션 본문이다
 		assertThat(this.jdbc.sql("""
 				select s.kind, s.position as section, s.title, s.body, i.position as item, i.article_id, i.note,
 				       i.selection_reason
@@ -173,14 +175,23 @@ class DigestSectionMappingTests {
 			.containsExactly(List.of("OVERVIEW", "0", "null", "흐름", "null", "null", "null", "null"),
 					List.of("TOP_STORY", "1", "하나", "요약", "0", "12", "null", "MAJOR_STORYLINE"),
 					List.of("TOP_STORY", "1", "하나", "요약", "1", "11", "null", "SUBSCRIBED"),
-					List.of("MORE_HEADLINES", "2", "null", "null", "0", "11", "한 줄", "SUBSCRIBED"));
+					List.of("HEADLINE", "2", "헤드라인", "한 줄", "0", "13", "null", "SUBSCRIBED"));
+		assertThat(this.jdbc.sql("""
+				select s.position || ':' || e.position || ':' || e.event_id || ':' || e.selection_reason
+				from digest_sections s join digest_section_events e on e.digest_section_id = s.id
+				where s.digest_id = :digest
+				order by s.position, e.position
+				""").param("digest", digest.id().value()).query(String.class).list())
+			.containsExactly("1:0:30:MAJOR_STORYLINE", "1:1:20:SUBSCRIBED", "2:0:40:SUBSCRIBED");
 
 		List<DigestSection> read = new ArrayList<>();
 		this.sections.findAll().forEach(read::add);
 		DigestSection story = read.stream().filter(section -> section.kind() == SectionKind.TOP_STORY).findFirst()
 			.orElseThrow();
-		assertThat(story.items()).containsExactly(new DigestItem(12, null, SelectionReason.MAJOR_STORYLINE),
-				new DigestItem(11, null, SelectionReason.SUBSCRIBED));
+		assertThat(story.items()).containsExactly(new DigestItem(12, SelectionReason.MAJOR_STORYLINE),
+				new DigestItem(11, SelectionReason.SUBSCRIBED));
+		assertThat(story.events()).containsExactly(new SectionEvent(30, SelectionReason.MAJOR_STORYLINE),
+				new SectionEvent(20, SelectionReason.SUBSCRIBED));
 	}
 
 	@Test

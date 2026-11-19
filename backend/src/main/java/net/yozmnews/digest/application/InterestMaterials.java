@@ -1,7 +1,6 @@
 package net.yozmnews.digest.application;
 
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -110,21 +109,11 @@ class InterestMaterials {
 		for (StorylineId id : ids) {
 			List<EventId> eventIds = this.storylines.events(id).stream().map(member -> member.event().id()).toList();
 			Map<EventId, List<ArticleId>> members = eventIds.isEmpty() ? Map.of() : this.events.articleIdsOf(eventIds);
-			Optional<Map<ArticleId, ActiveEvaluation>> evaluated = this.activeEvaluations
-				.read(members.values().stream().flatMap(List::stream).toList(), active);
-			if (evaluated.isEmpty()) {
+			Optional<Map<EventId, EventFacts>> facts = this.activeEvaluations.eventFacts(members, active);
+			if (facts.isEmpty()) {
 				return Optional.empty();
 			}
-			List<Set<String>> eventTopics = new ArrayList<>();
-			members.forEach((event, articles) -> {
-				List<ActiveEvaluation> ofEvent = articles.stream()
-					.map(evaluated.get()::get)
-					.filter(Objects::nonNull)
-					.toList();
-				if (!ofEvent.isEmpty()) {
-					eventTopics.add(EventFacts.of(event, ofEvent).subtopics());
-				}
-			});
+			List<Set<String>> eventTopics = facts.get().values().stream().map(EventFacts::subtopics).toList();
 			shares.put(id, StorylineTopics.shares(eventTopics));
 		}
 		return Optional.of(shares);

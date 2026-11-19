@@ -25,7 +25,7 @@ class RemovalFollowUpTests {
 		List<SectionCitations> digest = List.of(new SectionCitations(100, 1, SectionKind.OVERVIEW, Set.of()),
 				new SectionCitations(101, 1, SectionKind.TOP_STORY, Set.of(a(11))),
 				new SectionCitations(102, 1, SectionKind.TOP_STORY, Set.of(a(11), a(12))),
-				new SectionCitations(103, 1, SectionKind.MORE_HEADLINES, Set.of(a(13))));
+				new SectionCitations(103, 1, SectionKind.HEADLINE, Set.of(a(13))));
 
 		assertThat(RemovalFollowUp.sectionsToDelete(digest, Set.of(a(11)))).containsExactly(101L);
 	}
@@ -34,7 +34,7 @@ class RemovalFollowUpTests {
 	void deletesTheOverviewWhenNoCitedSectionRemains() {
 		List<SectionCitations> digest = List.of(new SectionCitations(100, 1, SectionKind.OVERVIEW, Set.of()),
 				new SectionCitations(101, 1, SectionKind.TOP_STORY, Set.of(a(11))),
-				new SectionCitations(103, 1, SectionKind.MORE_HEADLINES, Set.of(a(12), a(13))));
+				new SectionCitations(103, 1, SectionKind.HEADLINE, Set.of(a(12), a(13))));
 
 		assertThat(RemovalFollowUp.sectionsToDelete(digest, Set.of(a(11), a(12), a(13))))
 			.containsExactlyInAnyOrder(100L, 101L, 103L);
@@ -44,7 +44,7 @@ class RemovalFollowUpTests {
 	void keepsTheOverviewWhileOneCitedSectionRemains() {
 		List<SectionCitations> digest = List.of(new SectionCitations(100, 1, SectionKind.OVERVIEW, Set.of()),
 				new SectionCitations(101, 1, SectionKind.TOP_STORY, Set.of(a(11))),
-				new SectionCitations(103, 1, SectionKind.MORE_HEADLINES, Set.of(a(12), a(13))));
+				new SectionCitations(103, 1, SectionKind.HEADLINE, Set.of(a(12), a(13))));
 
 		assertThat(RemovalFollowUp.sectionsToDelete(digest, Set.of(a(11), a(12))))
 			.containsExactlyInAnyOrder(101L);

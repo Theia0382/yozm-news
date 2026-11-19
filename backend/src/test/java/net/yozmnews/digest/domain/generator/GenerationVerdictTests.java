@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test;
 class GenerationVerdictTests {
 
 	private static final String READABLE = """
-			{"overview":"흐름","top_stories":[{"title":"t","summary":"s","refs":["A1"]}],"more_headlines":[]}""";
+			{"overview":"흐름","top_stories":[{"ref":"I1","title":"t","summary":"s"}],"headlines":[]}""";
 
 	private static final TokenUsage USAGE = new TokenUsage(10, 20);
 

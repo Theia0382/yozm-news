@@ -10,12 +10,15 @@ import java.util.List;
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.digest.SelectionReason;
 import net.yozmnews.digest.domain.candidate.DigestCandidate;
+import net.yozmnews.digest.domain.item.ItemKind;
+import net.yozmnews.event.EventId;
 import net.yozmnews.llm.ReasoningEffort;
 import net.yozmnews.user.SummaryLength;
 import org.junit.jupiter.api.Test;
 
 /**
- * 생성의 입력 — 후보 순서를 그대로 내고, 같은 기사 두 번 · 후보 밖의 묶음 기사 · 두 묶음에 든 기사 · 빈 묶음을 거부한다
+ * 생성의 입력 — 항목 · 사건 · 기사의 순서를 그대로 두고, 같은 사건 · 같은 기사 두 번, 사건 없는 항목, 기사 없는 사건, 사건과 다른 선정 이유의
+ * 기사를 거부한다
  */
 class DigestInputTests {
 
@@ -23,32 +26,47 @@ class DigestInputTests {
 			SummaryLength.NORMAL, ReasoningEffort.MEDIUM);
 
 	@Test
-	void theCandidatesKeepTheirOrder() {
-		DigestInput input = new DigestInput(PROFILE, List.of(article(7, SelectionReason.MAJOR_STORYLINE),
-				article(1, SelectionReason.SUBSCRIBED)), List.of(new StorylineGroup("분쟁", List.of(new ArticleId(7)))));
+	void theItemsEventsAndArticlesKeepTheirOrder() {
+		InputItem big = new InputItem(ItemKind.TOP_STORY,
+				List.of(event(30, SelectionReason.MAJOR_STORYLINE, 7, 3), event(10, SelectionReason.SUBSCRIBED, 1)));
+		InputItem headline = new InputItem(ItemKind.HEADLINE, List.of(event(20, SelectionReason.INTEREST, 9)));
 
-		assertThat(input.digestCandidates()).containsExactly(
-				new DigestCandidate(new ArticleId(7), SelectionReason.MAJOR_STORYLINE),
-				new DigestCandidate(new ArticleId(1), SelectionReason.SUBSCRIBED));
+		DigestInput input = new DigestInput(PROFILE, List.of(big, headline));
+
+		assertThat(input.items()).extracting(InputItem::kind).containsExactly(ItemKind.TOP_STORY, ItemKind.HEADLINE);
+		assertThat(input.items().getFirst().events()).extracting(InputEvent::event)
+			.containsExactly(new EventId(30), new EventId(10));
+		assertThat(input.items().getFirst().events().getFirst().articles())
+			.extracting(article -> article.candidate().articleId())
+			.containsExactly(new ArticleId(7), new ArticleId(3));
 	}
 
 	@Test
 	void inconsistentInputsAreRefused() {
+		// 같은 사건 두 번
 		assertThatIllegalArgumentException().isThrownBy(() -> new DigestInput(PROFILE,
-				List.of(article(1, SelectionReason.SUBSCRIBED), article(1, SelectionReason.SUBSCRIBED)), List.of()));
+				List.of(new InputItem(ItemKind.TOP_STORY, List.of(event(10, SelectionReason.SUBSCRIBED, 1))),
+						new InputItem(ItemKind.HEADLINE, List.of(event(10, SelectionReason.SUBSCRIBED, 2))))));
+		// 같은 기사 두 번 — 다른 사건이어도
 		assertThatIllegalArgumentException().isThrownBy(() -> new DigestInput(PROFILE,
-				List.of(article(1, SelectionReason.SUBSCRIBED)),
-				List.of(new StorylineGroup("분쟁", List.of(new ArticleId(9))))));
-		assertThatIllegalArgumentException().isThrownBy(() -> new DigestInput(PROFILE,
-				List.of(article(7, SelectionReason.MAJOR_STORYLINE)),
-				List.of(new StorylineGroup("분쟁", List.of(new ArticleId(7))),
-						new StorylineGroup("분쟁 둘", List.of(new ArticleId(7))))));
-		assertThatIllegalArgumentException().isThrownBy(() -> new StorylineGroup("분쟁", List.of()));
+				List.of(new InputItem(ItemKind.TOP_STORY,
+						List.of(event(10, SelectionReason.SUBSCRIBED, 1), event(11, SelectionReason.SUBSCRIBED, 1))))));
+		assertThatIllegalArgumentException().isThrownBy(() -> new InputItem(ItemKind.TOP_STORY, List.of()));
+		assertThatIllegalArgumentException()
+			.isThrownBy(() -> new InputEvent(new EventId(10), SelectionReason.SUBSCRIBED, List.of()));
+		// 기사의 선정 이유는 사건의 것이어야 한다
+		assertThatIllegalArgumentException().isThrownBy(() -> new InputEvent(new EventId(10),
+				SelectionReason.SUBSCRIBED, List.of(article(1, SelectionReason.INTEREST))));
 	}
 
 	@Test
-	void noCandidatesIsAnInputToo() {
-		assertThat(new DigestInput(PROFILE, List.of(), List.of()).digestCandidates()).isEmpty();
+	void noItemsIsAnInputToo() {
+		assertThat(new DigestInput(PROFILE, List.of()).items()).isEmpty();
+	}
+
+	private static InputEvent event(long id, SelectionReason reason, long... articles) {
+		return new InputEvent(new EventId(id), reason,
+				java.util.Arrays.stream(articles).mapToObj(article -> article(article, reason)).toList());
 	}
 
 	private static CandidateArticle article(long id, SelectionReason reason) {
