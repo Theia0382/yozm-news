@@ -19,11 +19,11 @@ class DigestOutputReaderTests {
 			{
 			  "overview": " 오늘의 흐름 ",
 			  "top_stories": [
-			    { "title": "제목 하나", "summary": "요약 하나", "refs": ["A1", "A2"] }
+			    { "ref": "I1", "title": "제목 하나", "summary": "요약 하나" }
 			  ],
-			  "more_headlines": [
-			    { "ref": "A3", "note": "한 줄" },
-			    { "ref": "A4" }
+			  "headlines": [
+			    { "ref": "I2", "title": " 헤드라인 둘 ", "note": "한 줄" },
+			    { "ref": "I3", "title": "헤드라인 셋" }
 			  ]
 			}
 			""";
@@ -36,8 +36,8 @@ class DigestOutputReaderTests {
 		OutputRead read = DigestOutputReader.read(NORMAL);
 
 		assertThat(read).isEqualTo(new OutputRead.Read(new DigestDraft("오늘의 흐름",
-				List.of(new StoryDraft("제목 하나", "요약 하나", List.of("A1", "A2"))),
-				List.of(new HeadlineDraft("A3", "한 줄"), new HeadlineDraft("A4", null))), 0));
+				List.of(new StoryDraft("I1", "제목 하나", "요약 하나")),
+				List.of(new HeadlineDraft("I2", "헤드라인 둘", "한 줄"), new HeadlineDraft("I3", "헤드라인 셋", null))), 0));
 	}
 
 	@Test
@@ -63,84 +63,103 @@ class DigestOutputReaderTests {
 	@Test
 	void rejectsADuplicateKey() {
 		String twice = """
-				{ "overview": "하나", "overview": "둘", "top_stories": [], "more_headlines": [] }
+				{ "overview": "하나", "overview": "둘", "top_stories": [], "headlines": [] }
 				""";
 
 		assertThat(DigestOutputReader.read(twice)).isEqualTo(new OutputRead.Unreadable("JSON 이 아니다"));
 	}
 
 	@Test
-	void rejectsAMissingOrBlankOverview() {
+	void rejectsAMissingOrBlankOverviewAndAMissingList() {
 		assertThat(DigestOutputReader.read("""
-				{ "top_stories": [], "more_headlines": [] }
+				{ "top_stories": [], "headlines": [] }
 				""")).isEqualTo(new OutputRead.Unreadable("$.overview: 없다"));
 		assertThat(DigestOutputReader.read("""
-				{ "overview": "  ", "top_stories": [], "more_headlines": [] }
+				{ "overview": "  ", "top_stories": [], "headlines": [] }
 				""")).isEqualTo(new OutputRead.Unreadable("$.overview: 비었다"));
 		assertThat(DigestOutputReader.read("""
-				{ "overview": null, "top_stories": [], "more_headlines": [] }
+				{ "overview": null, "top_stories": [], "headlines": [] }
 				""")).isEqualTo(new OutputRead.Unreadable("$.overview: null 이다"));
+		// 옛 칸 이름은 모르는 속성이라 헤드라인 목록이 없다
+		assertThat(DigestOutputReader.read("""
+				{ "overview": "흐름", "top_stories": [], "more_headlines": [] }
+				""")).isEqualTo(new OutputRead.Unreadable("$.headlines: 없다"));
 	}
 
 	@Test
 	void rejectsAWrongTypeWithoutConverting() {
 		String numberRef = """
-				{ "overview": "흐름", "top_stories": [ { "title": "t", "summary": "s", "refs": [1] } ], "more_headlines": [] }
+				{ "overview": "흐름", "top_stories": [ { "ref": 1, "title": "t", "summary": "s" } ], "headlines": [] }
 				""";
 		String stringRef = """
-				{ "overview": "흐름", "top_stories": [ { "title": "t", "summary": "s", "refs": ["A1"] } ], "more_headlines": [] }
+				{ "overview": "흐름", "top_stories": [ { "ref": "I1", "title": "t", "summary": "s" } ], "headlines": [] }
 				""";
 
 		assertThat(DigestOutputReader.read(numberRef))
-			.isEqualTo(new OutputRead.Unreadable("$.top_stories[0].refs[0]: 문자열이 아니다"));
+			.isEqualTo(new OutputRead.Unreadable("$.top_stories[0].ref: 문자열이 아니다"));
 		assertThat(DigestOutputReader.read(stringRef)).isInstanceOf(OutputRead.Read.class);
 		assertThat(DigestOutputReader.read("""
-				{ "overview": "흐름", "top_stories": {}, "more_headlines": [] }
+				{ "overview": "흐름", "top_stories": {}, "headlines": [] }
 				""")).isEqualTo(new OutputRead.Unreadable("$.top_stories: 배열이 아니다"));
 	}
 
 	@Test
 	void ignoresUnknownProperties() {
 		String extra = """
-				{ "overview": "흐름", "mood": "맑음", "top_stories": [], "more_headlines": [ { "ref": "A1", "url": "x" } ] }
+				{ "overview": "흐름", "mood": "맑음", "top_stories": [],
+				  "headlines": [ { "ref": "I1", "title": "t", "url": "x", "refs": ["A1"] } ] }
 				""";
 
 		assertThat(DigestOutputReader.read(extra)).isEqualTo(new OutputRead.Read(
-				new DigestDraft("흐름", List.of(), List.of(new HeadlineDraft("A1", null))), 0));
+				new DigestDraft("흐름", List.of(), List.of(new HeadlineDraft("I1", "t", null))), 0));
 	}
 
 	@Test
 	void takesANullOrBlankNoteAsNone() {
 		String notes = """
-				{ "overview": "흐름", "top_stories": [], "more_headlines": [ { "ref": "A1", "note": null }, { "ref": "A2", "note": " " } ] }
+				{ "overview": "흐름", "top_stories": [],
+				  "headlines": [ { "ref": "I1", "title": "t", "note": null }, { "ref": "I2", "title": "t", "note": " " } ] }
 				""";
 
 		assertThat(DigestOutputReader.read(notes)).isEqualTo(new OutputRead.Read(new DigestDraft("흐름", List.of(),
-				List.of(new HeadlineDraft("A1", null), new HeadlineDraft("A2", null))), 0));
+				List.of(new HeadlineDraft("I1", "t", null), new HeadlineDraft("I2", "t", null))), 0));
 	}
 
 	@Test
-	void dropsOnlyTheStoryWhoseTitleIsOverTheLimit() {
+	void aHeadlineNeedsATitle() {
+		assertThat(DigestOutputReader.read("""
+				{ "overview": "흐름", "top_stories": [], "headlines": [ { "ref": "I1" } ] }
+				""")).isEqualTo(new OutputRead.Unreadable("$.headlines[0].title: 없다"));
+		assertThat(DigestOutputReader.read("""
+				{ "overview": "흐름", "top_stories": [], "headlines": [ { "ref": "I1", "title": " " } ] }
+				""")).isEqualTo(new OutputRead.Unreadable("$.headlines[0].title: 비었다"));
+	}
+
+	@Test
+	void dropsOnlyTheElementWhoseTitleIsOverTheLimit() {
 		String atLimit = "가".repeat(199) + WIDE;
 		String overLimit = WIDE.repeat(201);
 		String output = """
 				{ "overview": "흐름", "top_stories": [
-				    { "title": "%s", "summary": "s", "refs": ["A1"] },
-				    { "title": "%s", "summary": "s", "refs": ["A2"] }
-				  ], "more_headlines": [] }
-				""".formatted(atLimit, overLimit);
+				    { "ref": "I1", "title": "%s", "summary": "s" },
+				    { "ref": "I2", "title": "%s", "summary": "s" }
+				  ], "headlines": [
+				    { "ref": "I3", "title": "%s" },
+				    { "ref": "I4", "title": "%s" }
+				  ] }
+				""".formatted(atLimit, overLimit, overLimit, atLimit);
 
-		assertThat(DigestOutputReader.read(output)).isEqualTo(new OutputRead.Read(
-				new DigestDraft("흐름", List.of(new StoryDraft(atLimit, "s", List.of("A1"))), List.of()), 1));
+		assertThat(DigestOutputReader.read(output)).isEqualTo(new OutputRead.Read(new DigestDraft("흐름",
+				List.of(new StoryDraft("I1", atLimit, "s")), List.of(new HeadlineDraft("I4", atLimit, null))), 2));
 	}
 
 	@Test
 	void failsOnAMissingPropertyEvenBesideAnOverLimitTitle() {
 		String missingSummary = """
-				{ "overview": "흐름", "top_stories": [ { "title": "%s", "refs": ["A1"] } ], "more_headlines": [] }
+				{ "overview": "흐름", "top_stories": [ { "ref": "I1", "title": "%s" } ], "headlines": [] }
 				""".formatted("가".repeat(201));
 		String withSummary = """
-				{ "overview": "흐름", "top_stories": [ { "title": "%s", "summary": "s", "refs": ["A1"] } ], "more_headlines": [] }
+				{ "overview": "흐름", "top_stories": [ { "ref": "I1", "title": "%s", "summary": "s" } ], "headlines": [] }
 				""".formatted("가".repeat(201));
 
 		assertThat(DigestOutputReader.read(withSummary))
@@ -152,17 +171,18 @@ class DigestOutputReaderTests {
 	@Test
 	void countsADroppedHeadlineOnceEvenWhenItsNoteIsAlsoOverTheLimit() {
 		String output = """
-				{ "overview": "흐름", "top_stories": [], "more_headlines": [ { "ref": "%s", "note": "%s" }, { "ref": "A2" } ] }
-				""".formatted("A".repeat(17), "가".repeat(301));
+				{ "overview": "흐름", "top_stories": [],
+				  "headlines": [ { "ref": "%s", "title": "t", "note": "%s" }, { "ref": "I2", "title": "t" } ] }
+				""".formatted("I".repeat(17), "가".repeat(301));
 
 		assertThat(DigestOutputReader.read(output)).isEqualTo(
-				new OutputRead.Read(new DigestDraft("흐름", List.of(), List.of(new HeadlineDraft("A2", null))), 1));
+				new OutputRead.Read(new DigestDraft("흐름", List.of(), List.of(new HeadlineDraft("I2", "t", null))), 1));
 	}
 
 	@Test
 	void dropsTheStoryWhoseSummaryIsOverTheLimit() {
 		String output = """
-				{ "overview": "흐름", "top_stories": [ { "title": "t", "summary": "%s", "refs": ["A1"] } ], "more_headlines": [] }
+				{ "overview": "흐름", "top_stories": [ { "ref": "I1", "title": "t", "summary": "%s" } ], "headlines": [] }
 				""".formatted("가".repeat(2_001));
 
 		assertThat(DigestOutputReader.read(output))
@@ -172,10 +192,10 @@ class DigestOutputReaderTests {
 	@Test
 	void failsWhenTheOverviewIsOverTheLimit() {
 		String atLimit = """
-				{ "overview": "%s", "top_stories": [], "more_headlines": [] }
+				{ "overview": "%s", "top_stories": [], "headlines": [] }
 				""".formatted(WIDE.repeat(1_000));
 		String overLimit = """
-				{ "overview": "%s", "top_stories": [], "more_headlines": [] }
+				{ "overview": "%s", "top_stories": [], "headlines": [] }
 				""".formatted(WIDE.repeat(1_001));
 
 		assertThat(DigestOutputReader.read(atLimit)).isInstanceOf(OutputRead.Read.class);
@@ -186,63 +206,80 @@ class DigestOutputReaderTests {
 	@Test
 	void dropsOnlyANoteThatIsOverTheLimit() {
 		String output = """
-				{ "overview": "흐름", "top_stories": [], "more_headlines": [ { "ref": "A1", "note": "%s" }, { "ref": "A2", "note": "%s" } ] }
+				{ "overview": "흐름", "top_stories": [],
+				  "headlines": [ { "ref": "I1", "title": "t", "note": "%s" }, { "ref": "I2", "title": "t", "note": "%s" } ] }
 				""".formatted("가".repeat(301), "가".repeat(300));
 
 		assertThat(DigestOutputReader.read(output)).isEqualTo(new OutputRead.Read(new DigestDraft("흐름", List.of(),
-				List.of(new HeadlineDraft("A1", null), new HeadlineDraft("A2", "가".repeat(300)))), 1));
+				List.of(new HeadlineDraft("I1", "t", null), new HeadlineDraft("I2", "t", "가".repeat(300)))), 1));
 	}
 
 	@Test
-	void readsOnlyTheFirstItemsOfALongArray() {
+	void readsOnlyTheFirstTwentyTopStories() {
 		StringBuilder stories = new StringBuilder();
 		for (int index = 1; index <= 21; index++) {
 			if (index > 1) {
 				stories.append(',');
 			}
-			stories.append("{ \"title\": \"t").append(index).append("\", \"summary\": \"s\", \"refs\": [\"A1\"] }");
+			stories.append("{ \"ref\": \"I").append(index).append("\", \"title\": \"t").append(index)
+				.append("\", \"summary\": \"s\" }");
 		}
-		String output = "{ \"overview\": \"흐름\", \"top_stories\": [" + stories + "], \"more_headlines\": [] }";
+		String output = "{ \"overview\": \"흐름\", \"top_stories\": [" + stories + "], \"headlines\": [] }";
 
-		OutputRead read = DigestOutputReader.read(output);
+		OutputRead.Read result = (OutputRead.Read) DigestOutputReader.read(output);
 
-		assertThat(read).isInstanceOf(OutputRead.Read.class);
-		OutputRead.Read result = (OutputRead.Read) read;
 		assertThat(result.overLimit()).isEqualTo(1);
 		assertThat(result.draft().topStories()).hasSize(20);
 		assertThat(result.draft().topStories().get(19).title()).isEqualTo("t20");
 	}
 
 	@Test
-	void dropsAnAliasThatIsOverTheLimit() {
+	void readsOnlyTheFirstHundredFiftyHeadlines() {
+		StringBuilder headlines = new StringBuilder();
+		for (int index = 1; index <= 151; index++) {
+			if (index > 1) {
+				headlines.append(',');
+			}
+			headlines.append("{ \"ref\": \"I").append(index).append("\", \"title\": \"h").append(index).append("\" }");
+		}
+		String output = "{ \"overview\": \"흐름\", \"top_stories\": [], \"headlines\": [" + headlines + "] }";
+
+		OutputRead.Read result = (OutputRead.Read) DigestOutputReader.read(output);
+
+		assertThat(result.overLimit()).isEqualTo(1);
+		assertThat(result.draft().headlines()).hasSize(150);
+		assertThat(result.draft().headlines().get(149).title()).isEqualTo("h150");
+	}
+
+	@Test
+	void dropsAnElementWhoseAliasIsOverTheLimit() {
 		String output = """
-				{ "overview": "흐름", "top_stories": [ { "title": "t", "summary": "s", "refs": ["A1", "%s"] } ],
-				  "more_headlines": [ { "ref": "%s" }, { "ref": "A2" } ] }
-				""".formatted("A".repeat(17), "A".repeat(17));
+				{ "overview": "흐름", "top_stories": [ { "ref": "%s", "title": "t", "summary": "s" }, { "ref": "I1", "title": "t", "summary": "s" } ],
+				  "headlines": [ { "ref": "%s", "title": "h" }, { "ref": "I2", "title": "h" } ] }
+				""".formatted("I".repeat(17), "I".repeat(17));
 
 		assertThat(DigestOutputReader.read(output)).isEqualTo(new OutputRead.Read(
-				new DigestDraft("흐름", List.of(new StoryDraft("t", "s", List.of("A1"))),
-						List.of(new HeadlineDraft("A2", null))),
+				new DigestDraft("흐름", List.of(new StoryDraft("I1", "t", "s")), List.of(new HeadlineDraft("I2", "h", null))),
 				2));
 	}
 
 	@Test
-	void keepsAnEmptyAliasForTheCitationCheck() {
+	void keepsAnEmptyAliasForTheItemCheck() {
 		String output = """
-				{ "overview": "흐름", "top_stories": [ { "title": "t", "summary": "s", "refs": ["A1", " "] } ],
-				  "more_headlines": [ { "ref": "" }, { "ref": "A2" } ] }
+				{ "overview": "흐름", "top_stories": [ { "ref": " ", "title": "t", "summary": "s" } ],
+				  "headlines": [ { "ref": "", "title": "h" }, { "ref": "I2", "title": "h" } ] }
 				""";
 
 		assertThat(DigestOutputReader.read(output)).isEqualTo(new OutputRead.Read(
-				new DigestDraft("흐름", List.of(new StoryDraft("t", "s", List.of("A1", ""))),
-						List.of(new HeadlineDraft("", null), new HeadlineDraft("A2", null))),
+				new DigestDraft("흐름", List.of(new StoryDraft("", "t", "s")),
+						List.of(new HeadlineDraft("", "h", null), new HeadlineDraft("I2", "h", null))),
 				0));
 	}
 
 	@Test
-	void stillFailsOnABlankTitle() {
+	void stillFailsOnABlankStoryTitle() {
 		String output = """
-				{ "overview": "흐름", "top_stories": [ { "title": " ", "summary": "s", "refs": ["A1"] } ], "more_headlines": [] }
+				{ "overview": "흐름", "top_stories": [ { "ref": "I1", "title": " ", "summary": "s" } ], "headlines": [] }
 				""";
 
 		assertThat(DigestOutputReader.read(output))

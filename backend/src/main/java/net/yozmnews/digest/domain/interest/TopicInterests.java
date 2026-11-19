@@ -26,7 +26,7 @@ public final class TopicInterests {
 		return this.weights.getOrDefault(subtopic, InterestRules.NEUTRAL);
 	}
 
-	/** 기사의 가중치 — 주제 중분류들의 가중치 산술 평균. 주제가 없으면 중립 */
+	/** 후보 사건의 가중치 — 사건의 주제 중분류들의 가중치 산술 평균(docs/specs/digest.md digest-R18). 주제가 없으면 중립 */
 	public double weightOf(Set<String> subtopics) {
 		Objects.requireNonNull(subtopics, "subtopics");
 		if (subtopics.isEmpty()) {

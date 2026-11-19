@@ -6,13 +6,15 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.util.ArrayList;
 import java.util.List;
 
-import net.yozmnews.article.ArticleId;
+import net.yozmnews.digest.DigestInputs;
 import net.yozmnews.digest.SelectionReason;
+import net.yozmnews.digest.domain.candidate.AliasedItem;
 import net.yozmnews.digest.domain.candidate.CandidateSet;
-import net.yozmnews.digest.domain.candidate.DigestCandidate;
 import net.yozmnews.digest.domain.generator.DigestRequest;
 import net.yozmnews.digest.domain.generator.GenerationOutcome;
 import net.yozmnews.digest.domain.generator.TokenUsage;
+import net.yozmnews.digest.domain.input.InputItem;
+import net.yozmnews.digest.domain.item.ItemKind;
 import net.yozmnews.digest.domain.output.CitationCheck;
 import net.yozmnews.digest.domain.output.CitationDrops;
 import net.yozmnews.digest.domain.output.CitationResult;
@@ -30,12 +32,12 @@ import net.yozmnews.platform.UserId;
 import org.junit.jupiter.api.Test;
 
 /**
- * 다이제스트 생성기의 로컬 대체물 — 출력이 실제 생성기와 같은 읽기 · 인용 검증을 지나고 후보 별칭으로만 인용한다. 스프링 없이 돈다.
+ * 다이제스트 생성기의 로컬 대체물 — 출력이 실제 생성기와 같은 읽기 · 항목 대조를 지나고 항목 별칭으로만 가리킨다. 주요 뉴스 항목마다 제목 ·
+ * 요약, 헤드라인 항목마다 제목(코멘트 없음). 스프링 없이 돈다.
  * <p>
  * 지키는 규칙: digest-R12
  * <p>
- * 대체물의 출력 원문을 읽기({@link DigestOutputReader})와 인용 검증({@link CitationCheck})에 넣고, 결과를 손으로 쓴 리터럴과
- * 견준다.
+ * 대체물의 출력 원문을 읽기({@link DigestOutputReader})와 항목 대조({@link CitationCheck})에 넣고, 결과를 손으로 쓴 리터럴과 견준다.
  */
 class FakeDigestGeneratorTests {
 
@@ -46,20 +48,17 @@ class FakeDigestGeneratorTests {
 
 	private final FakeDigestGenerator generator = new FakeDigestGenerator();
 
-	private static List<DigestCandidate> candidates(int count) {
-		List<DigestCandidate> candidates = new ArrayList<>();
-		for (int index = 1; index <= count; index++) {
-			candidates.add(new DigestCandidate(new ArticleId(100 + index), SelectionReason.SUBSCRIBED));
+	/** 주요 뉴스 항목 {@code stories} 개 다음 헤드라인 항목 {@code headlines} 개 — 항목마다 사건 하나 · 기사 하나(ID 101 …) */
+	private static CandidateSet items(int stories, int headlines) {
+		List<InputItem> items = new ArrayList<>();
+		for (int index = 0; index < stories + headlines; index++) {
+			ItemKind kind = (index < stories) ? ItemKind.TOP_STORY : ItemKind.HEADLINE;
+			items.add(DigestInputs.item(kind, DigestInputs.event(101 + index, SelectionReason.SUBSCRIBED, 101 + index)));
 		}
-		return candidates;
+		return CandidateSet.of(DigestInputs.items(items.toArray(InputItem[]::new)));
 	}
 
-	private static DigestCandidate candidate(long articleId) {
-		return new DigestCandidate(new ArticleId(articleId), SelectionReason.SUBSCRIBED);
-	}
-
-	private CitationResult generateAndCheck(int count) {
-		CandidateSet set = CandidateSet.of(candidates(count));
+	private CitationResult generateAndCheck(CandidateSet set) {
 		GenerationOutcome outcome = this.generator.generate(new DigestRequest(new UserId(1), MODEL,
 				ReasoningEffort.MEDIUM, set, PROMPT));
 		assertThat(outcome).isInstanceOf(GenerationOutcome.Generated.class);
@@ -74,51 +73,60 @@ class FakeDigestGeneratorTests {
 	}
 
 	@Test
-	void citesThreeStoriesAndTheRestAsHeadlinesForFiveCandidates() {
-		assertThat(generateAndCheck(5)).isEqualTo(new CitationResult.Cited(new CitedDigest(
-				"로컬 대체물이 만든 다이제스트다. 후보 5건.",
-				List.of(new CitedStory("로컬 주요 뉴스 1", "로컬 대체물이 만든 요약이다.", List.of(candidate(101))),
-						new CitedStory("로컬 주요 뉴스 2", "로컬 대체물이 만든 요약이다.", List.of(candidate(102))),
-						new CitedStory("로컬 주요 뉴스 3", "로컬 대체물이 만든 요약이다.", List.of(candidate(103)))),
-				List.of(new CitedHeadline(candidate(104), null), new CitedHeadline(candidate(105), null))),
+	void writesEveryItemInItsFieldForThreeStoriesAndTwoHeadlines() {
+		CandidateSet set = items(3, 2);
+
+		assertThat(generateAndCheck(set)).isEqualTo(new CitationResult.Cited(new CitedDigest(
+				"로컬 대체물이 만든 다이제스트다. 항목 5개.",
+				List.of(new CitedStory(item(set, "I1"), "로컬 주요 뉴스 1", "로컬 대체물이 만든 요약이다."),
+						new CitedStory(item(set, "I2"), "로컬 주요 뉴스 2", "로컬 대체물이 만든 요약이다."),
+						new CitedStory(item(set, "I3"), "로컬 주요 뉴스 3", "로컬 대체물이 만든 요약이다.")),
+				List.of(new CitedHeadline(item(set, "I4"), "로컬 헤드라인 1", null),
+						new CitedHeadline(item(set, "I5"), "로컬 헤드라인 2", null))),
 				new CitationDrops(0, 0)));
 	}
 
 	@Test
-	void citesThreeStoriesAndNoHeadlinesForThreeCandidates() {
-		CitationResult result = generateAndCheck(3);
+	void writesOnlyHeadlinesWhenEveryItemIsAHeadline() {
+		CandidateSet set = items(0, 2);
 
-		assertThat(result).isInstanceOf(CitationResult.Cited.class);
-		CitedDigest digest = ((CitationResult.Cited) result).digest();
-		assertThat(digest.stories()).hasSize(3);
-		assertThat(digest.headlines()).isEmpty();
-		assertThat(result.drops()).isEqualTo(new CitationDrops(0, 0));
+		assertThat(generateAndCheck(set)).isEqualTo(new CitationResult.Cited(new CitedDigest(
+				"로컬 대체물이 만든 다이제스트다. 항목 2개.", List.of(),
+				List.of(new CitedHeadline(item(set, "I1"), "로컬 헤드라인 1", null),
+						new CitedHeadline(item(set, "I2"), "로컬 헤드라인 2", null))),
+				new CitationDrops(0, 0)));
 	}
 
 	@Test
-	void citesOneStoryForOneCandidate() {
-		assertThat(generateAndCheck(1)).isEqualTo(new CitationResult.Cited(new CitedDigest(
-				"로컬 대체물이 만든 다이제스트다. 후보 1건.",
-				List.of(new CitedStory("로컬 주요 뉴스 1", "로컬 대체물이 만든 요약이다.", List.of(candidate(101)))),
-				List.of()), new CitationDrops(0, 0)));
+	void writesOneStoryForOneItem() {
+		CandidateSet set = items(1, 0);
+
+		assertThat(generateAndCheck(set)).isEqualTo(new CitationResult.Cited(new CitedDigest(
+				"로컬 대체물이 만든 다이제스트다. 항목 1개.",
+				List.of(new CitedStory(item(set, "I1"), "로컬 주요 뉴스 1", "로컬 대체물이 만든 요약이다.")), List.of()),
+				new CitationDrops(0, 0)));
 	}
 
 	@Test
-	void isNeverAskedWithoutCandidates() {
-		assertThatThrownBy(() -> new DigestRequest(new UserId(1), MODEL, ReasoningEffort.MEDIUM,
-				CandidateSet.of(List.of()), PROMPT))
+	void isNeverAskedWithoutItems() {
+		assertThatThrownBy(() -> new DigestRequest(new UserId(1), MODEL, ReasoningEffort.MEDIUM, items(0, 0), PROMPT))
 			.isInstanceOf(IllegalArgumentException.class);
 	}
 
 	@Test
-	void citesOnlyWithinTheLimitsForManyCandidates() {
-		CitationResult result = generateAndCheck(60);
+	void writesWithinTheLimitsForTheLargestDigest() {
+		// 주요 뉴스 상한 20 · 헤드라인 상한 150 — 넘친 원소가 없다
+		CitationResult result = generateAndCheck(items(20, 150));
 
 		assertThat(result).isInstanceOf(CitationResult.Cited.class);
 		CitedDigest digest = ((CitationResult.Cited) result).digest();
-		assertThat(digest.stories()).hasSize(3);
-		assertThat(digest.headlines()).hasSize(57);
+		assertThat(digest.stories()).hasSize(20);
+		assertThat(digest.headlines()).hasSize(150);
 		assertThat(result.drops()).isEqualTo(new CitationDrops(0, 0));
+	}
+
+	private static AliasedItem item(CandidateSet set, String alias) {
+		return set.item(alias).orElseThrow();
 	}
 
 }

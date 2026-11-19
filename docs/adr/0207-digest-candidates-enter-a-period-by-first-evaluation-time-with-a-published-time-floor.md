@@ -1,6 +1,6 @@
 # ADR-0207: 다이제스트 후보는 첫 평가 시각으로 기간에 넣고, 발행 시각 하한으로 오래된 기사를 막는다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 결과의 정착 시간 동안 수집된 기사가 다음 다이제스트에 든다는 것([ADR-0260](0260-digest-candidates-are-events-and-only-assigned-events-with-an-article-first-evaluated-in-the-period-enter.md))
 - 날짜: 2026-11-17
 - 근거: [이슈 #176](https://github.com/Theia0382/yozm-news/issues/176) — 수집 · 평가 정착 시간 · 다이제스트 일정의 시각을 대조해 발행 시각 기준의 손실을 확인함. 구현 커밋 `7b7c7b7`(첫 평가 시각 조회) · `b3cfac1`(하한) · `e828c70`(읽는 기간)
 - 관련: [ADR-0028](0028-explicit-signals-and-interest-weighted-candidates.md)(결정 "후보 선별 순서"의 구독 필터 — 보충: 그 ADR 은 기간에 넣는 시각을 정하지 않았다)
@@ -19,6 +19,7 @@
 
 ## 결과
 
+> 부분 대체(첫 문장) — [ADR-0260](0260-digest-candidates-are-events-and-only-assigned-events-with-an-article-first-evaluated-in-the-period-enter.md). 지금 상태: [digest Spec "후보 선별"](../specs/digest.md#후보-선별) digest-R17
 - 정착 시간 동안 수집된 기사가 다음 다이제스트에 든다. 다만 기간 끝이 선별이 읽는 시각보다 뒤면 그 사이에 첫 평가된 기사는 이번 선별이 읽지 못하고 다음 기간에도 들지 않는다 — 기간 끝을 정하는 일정의 몫이다.
 - 하한보다 늦게 수집된 기사는 빠진다.
 - 구독 후보와 큰 슬롯의 기간 시각이 다르다.

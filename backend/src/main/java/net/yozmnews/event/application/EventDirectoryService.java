@@ -79,15 +79,6 @@ class EventDirectoryService implements EventDirectory {
 	}
 
 	@Override
-	public Map<EventId, ArticleId> representatives(Map<EventId, ? extends Collection<ArticleId>> among) {
-		Map<Long, Collection<ArticleId>> byId = new LinkedHashMap<>();
-		among.forEach((event, articles) -> byId.put(event.value(), articles));
-		Map<EventId, ArticleId> result = new LinkedHashMap<>();
-		this.events.representatives(byId).forEach((event, article) -> result.put(new EventId(event), article));
-		return Collections.unmodifiableMap(result);
-	}
-
-	@Override
 	public Map<EventId, List<ArticleId>> articleIdsOf(Collection<EventId> events) {
 		if (events.isEmpty()) {
 			return Map.of();

@@ -73,6 +73,8 @@ erDiagram
     articles ||--o{ flow_membership_judgements : ""
 
     digests ||--o{ digest_sections : ""
+    digest_sections ||--o{ digest_section_events : ""
+    events ||--o{ digest_section_events : ""
     digest_sections ||--o{ digest_items : ""
     articles ||--o{ digest_items : ""
     digests ||--o{ digest_candidates : ""
@@ -108,7 +110,7 @@ erDiagram
 
 ## 다이제스트
 
-다이제스트 테이블(`digests` · `digest_sections` · `digest_items` · `digest_candidates`)은 [digest Spec §6](specs/digest.md#6-데이터)에 있다. 인용(`digest_items`)과 후보 행(`digest_candidates`)은 기사를 ID 로 가리킨다 — 모듈 사이라 FK 가 없고, 지운 기사는 `digest` 가 따른다([digest Spec](specs/digest.md#지운-기사-따르기) digest-R10).
+다이제스트 테이블(`digests` · `digest_sections` · `digest_section_events` · `digest_items` · `digest_candidates`)은 [digest Spec §6](specs/digest.md#6-데이터)에 있다. 섹션 하나가 항목 하나이고, 섹션 사건(`digest_section_events`)은 그 항목의 사건을 ID 로 가리킨다 — 사건의 값은 복사해 두지 않는다. 인용(`digest_items`)과 후보 행(`digest_candidates`)은 기사를 ID 로 가리킨다. 모두 모듈 사이라 FK 가 없고, 지운 기사는 `digest` 가 따른다([digest Spec](specs/digest.md#지운-기사-따르기) digest-R10).
 
 ## 스토리라인
 

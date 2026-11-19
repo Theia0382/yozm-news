@@ -156,10 +156,21 @@ class DigestDirectoryServiceTests {
 		long ready = row(user, "2026-11-18", "READY", 100, 20, null);
 		section(ready, "OVERVIEW", 0, null, "오늘의 흐름");
 		long story = section(ready, "TOP_STORY", 1, "주요 뉴스 제목", "주요 뉴스 요약");
-		item(story, 0, 7, null, "MAJOR_STORYLINE");
-		item(story, 1, 9, null, "SUBSCRIBED");
-		long more = section(ready, "MORE_HEADLINES", 2, null, null);
-		item(more, 0, 8, "한 줄 코멘트", "INTEREST");
+		item(story, 0, 7, "MAJOR_STORYLINE");
+		item(story, 1, 9, "SUBSCRIBED");
+		sectionEvent(story, 0, 70, "MAJOR_STORYLINE");
+		sectionEvent(story, 1, 90, "SUBSCRIBED");
+		long more = section(ready, "HEADLINE", 2, "헤드라인 제목", "한 줄 코멘트");
+		item(more, 0, 8, "INTEREST");
+		sectionEvent(more, 0, 80, "INTEREST");
+		long plain = section(ready, "HEADLINE", 3, "구독 헤드라인", null);
+		item(plain, 0, 6, "SUBSCRIBED");
+		sectionEvent(plain, 0, 60, "SUBSCRIBED");
+		// 관심도 사건의 표본이 모두 지워져 인용은 구독 사건의 기사뿐이어도 항목의 이유는 섹션 사건 전부로 정한다
+		long followed = section(ready, "HEADLINE", 4, "남은 인용 헤드라인", null);
+		item(followed, 0, 5, "SUBSCRIBED");
+		sectionEvent(followed, 0, 50, "SUBSCRIBED");
+		sectionEvent(followed, 1, 51, "INTEREST");
 		// 공급자가 답하지 않은 실패 — 시도 수에는 들고 토큰 합에는 들지 않는다
 		row(user, "2026-11-18", "FAILED", null, null, "PROVIDER_UNAVAILABLE");
 		long failed = row(user, "2026-11-18", "FAILED", 50, 0, "NO_CITATION");
@@ -168,12 +179,17 @@ class DigestDirectoryServiceTests {
 
 		assertThat(day.shown()).isEqualTo(new ShownDigest(ready, Instant.parse("2026-11-17T15:00:00Z"),
 				Instant.parse("2026-11-18T15:00:00Z"), "openai", "m", 30, 100, 20, Instant.parse("2026-11-18T15:05:00Z"),
-				List.of(new DigestSectionView(SectionKind.OVERVIEW, null, "오늘의 흐름", List.of()),
+				List.of(new DigestSectionView(SectionKind.OVERVIEW, null, "오늘의 흐름", null, List.of()),
+						// 항목의 이유 하나 — 큰 슬롯 사건이 있으면 큰 화제, 관심도 사건이 있으면 관심 반영, 아니면 구독 주제
 						new DigestSectionView(SectionKind.TOP_STORY, "주요 뉴스 제목", "주요 뉴스 요약",
-								List.of(new DigestCitation(new ArticleId(7), null, SelectionReason.MAJOR_STORYLINE),
-										new DigestCitation(new ArticleId(9), null, SelectionReason.SUBSCRIBED))),
-						new DigestSectionView(SectionKind.MORE_HEADLINES, null, null, List.of(
-								new DigestCitation(new ArticleId(8), "한 줄 코멘트", SelectionReason.INTEREST))))));
+								SelectionReason.MAJOR_STORYLINE,
+								List.of(new DigestCitation(new ArticleId(7)), new DigestCitation(new ArticleId(9)))),
+						new DigestSectionView(SectionKind.HEADLINE, "헤드라인 제목", "한 줄 코멘트", SelectionReason.INTEREST,
+								List.of(new DigestCitation(new ArticleId(8)))),
+						new DigestSectionView(SectionKind.HEADLINE, "구독 헤드라인", null, SelectionReason.SUBSCRIBED,
+								List.of(new DigestCitation(new ArticleId(6)))),
+						new DigestSectionView(SectionKind.HEADLINE, "남은 인용 헤드라인", null, SelectionReason.INTEREST,
+								List.of(new DigestCitation(new ArticleId(5)))))));
 		assertThat(day.latest()).isEqualTo(new DigestAttempt(failed, DigestStatus.FAILED, DigestFailure.NO_CITATION,
 				DigestFailureCause.OUTPUT, Instant.parse("2026-11-18T15:05:00Z")));
 		assertThat(day.usage()).isEqualTo(new DigestDayUsage(3, 150, 20));
@@ -474,15 +490,26 @@ class DigestDirectoryServiceTests {
 			.single();
 	}
 
-	private void item(long section, int position, long article, @Nullable String note, String reason) {
+	private void item(long section, int position, long article, String reason) {
 		this.jdbc.sql("""
-				insert into digest_items (digest_section_id, position, article_id, note, selection_reason)
-				values (:section, :position, :article, :note, :reason)
+				insert into digest_items (digest_section_id, position, article_id, selection_reason)
+				values (:section, :position, :article, :reason)
 				""")
 			.param("section", section)
 			.param("position", position)
 			.param("article", article)
-			.param("note", note)
+			.param("reason", reason)
+			.update();
+	}
+
+	private void sectionEvent(long section, int position, long event, String reason) {
+		this.jdbc.sql("""
+				insert into digest_section_events (digest_section_id, position, event_id, selection_reason)
+				values (:section, :position, :event, :reason)
+				""")
+			.param("section", section)
+			.param("position", position)
+			.param("event", event)
 			.param("reason", reason)
 			.update();
 	}

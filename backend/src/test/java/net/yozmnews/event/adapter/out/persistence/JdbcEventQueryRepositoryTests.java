@@ -73,13 +73,26 @@ class JdbcEventQueryRepositoryTests {
 		vector(86, "model-a", "[1,0]");
 
 		assertThat(this.repository.representativesOfAll(List.of(event))).isEqualTo(Map.of(event, new ArticleId(82)));
-		assertThat(this.repository.representatives(Map.of(event, ids(81, 84, 85, 86))))
-			.isEqualTo(Map.of(event, new ArticleId(81)));
-		assertThat(this.repository.representatives(Map.of(event, ids(84, 85)))).isEqualTo(Map.of(event, new ArticleId(85)));
-		assertThat(this.repository.representatives(Map.of(event, ids(81, 87)))).isEqualTo(Map.of(event, new ArticleId(81)));
-		assertThat(this.repository.representatives(Map.of(event, ids(85, 87)))).isEqualTo(Map.of(event, new ArticleId(87)));
-		assertThat(this.repository.representatives(Map.of(event, ids(86)))).isEmpty();
-		assertThat(this.repository.representatives(Map.of())).isEmpty();
+
+		// 사건 모델 버전의 표현이 있는 기사는 멀어도 · 늦게 발행했어도 표현 없는 기사보다 앞이다
+		long farVector = event("OPEN", "model-a", "[1,0]", "2026-11-02T00:00:00Z", "2026-11-05T00:00:00Z");
+		member(71, farVector, criteria, "2026-11-05T00:00:00Z", DecidedBy.FORMULA, 0.9);
+		vector(71, "model-a", "[0,1]");
+		member(72, farVector, criteria, "2026-11-02T00:00:00Z", DecidedBy.FORMULA, 0.9);
+		// 표현 없는 기사끼리는 발행 시각 순
+		long withoutVectors = event("OPEN", "model-a", "[1,0]", "2026-11-03T00:00:00Z", "2026-11-04T00:00:00Z");
+		member(73, withoutVectors, criteria, "2026-11-04T00:00:00Z", DecidedBy.FORMULA, 0.9);
+		member(74, withoutVectors, criteria, "2026-11-03T00:00:00Z", DecidedBy.FORMULA, 0.9);
+		// 사건과 다른 모델 버전의 표현만 있는 기사는 표현 없음으로 친다 — 거리 0 이어도 발행 시각 순
+		long otherModelOnly = event("OPEN", "model-a", "[1,0]", "2026-11-02T00:00:00Z", "2026-11-03T00:00:00Z");
+		member(75, otherModelOnly, criteria, "2026-11-03T00:00:00Z", DecidedBy.FORMULA, 0.9);
+		vector(75, "model-b", "[1,0]");
+		member(76, otherModelOnly, criteria, "2026-11-02T00:00:00Z", DecidedBy.FORMULA, 0.9);
+
+		assertThat(this.repository.representativesOfAll(List.of(farVector, withoutVectors, otherModelOnly)))
+			.isEqualTo(Map.of(farVector, new ArticleId(71), withoutVectors, new ArticleId(74), otherModelOnly,
+					new ArticleId(76)));
+		assertThat(this.repository.representativesOfAll(List.of())).isEmpty();
 	}
 
 	@Test
@@ -124,8 +137,6 @@ class JdbcEventQueryRepositoryTests {
 				""").param("open", open).param("merged", merged).update();
 		assertThat(this.repository.representativesOfAll(List.of(merged))).isEmpty();
 		assertThat(this.repository.mergedInto(open)).extracting(MergedEvent::representative).containsExactly(new ArticleId(98));
-		// 걸러진 기사에서 고를 때는 저장값을 쓰지 않는다
-		assertThat(this.repository.representatives(Map.of(closed, ids(96, 97)))).isEqualTo(Map.of(closed, new ArticleId(96)));
 	}
 
 	@Test

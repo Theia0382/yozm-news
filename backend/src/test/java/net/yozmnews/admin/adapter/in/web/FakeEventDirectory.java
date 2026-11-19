@@ -71,11 +71,6 @@ class FakeEventDirectory implements EventDirectory {
 	}
 
 	@Override
-	public Map<EventId, ArticleId> representatives(Map<EventId, ? extends Collection<ArticleId>> among) {
-		throw new UnsupportedOperationException("운영자 컨트롤러는 사건 전체의 대표만 부른다");
-	}
-
-	@Override
 	public Map<EventId, ArticleId> representativesOfAll(Collection<EventId> events) {
 		this.calls.add("representativesOfAll " + events.stream().map(EventId::value).toList());
 		Map<EventId, ArticleId> found = new LinkedHashMap<>();

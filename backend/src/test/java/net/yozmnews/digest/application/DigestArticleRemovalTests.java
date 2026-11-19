@@ -33,6 +33,8 @@ import net.yozmnews.digest.domain.digest.DigestRepository;
 import net.yozmnews.digest.domain.digest.DigestTrigger;
 import net.yozmnews.digest.domain.generator.DigestGenerator;
 import net.yozmnews.digest.domain.input.DigestInput;
+import net.yozmnews.digest.domain.input.InputItem;
+import net.yozmnews.digest.domain.item.ItemKind;
 import net.yozmnews.digest.domain.removal.DigestContentCleanup;
 import net.yozmnews.digest.domain.removal.SectionCitations;
 import net.yozmnews.event.EventArticles;
@@ -58,7 +60,8 @@ import net.yozmnews.digest.DigestRounds;
  * 지키는 규칙: digest-R9 · digest-R10
  * <p>
  * 시험을 트랜잭션으로 감싸지 않는다 — 엇갈림(생성과 지우기, 나뉘어 발행된 지우기 둘)은 두 스레드의 커밋 순서로 본다. 리스너는 직접 부른다(사건 묶기의 지운 기사 시험과 같은
- * 방식). 다이제스트는 로컬 대체물로 만든다 — 개요, 주요 뉴스 A1 · A2 · A3, 추가 헤드라인 A4 · A5. 기사 행은 SQL 로 넣는다.
+ * 방식). 다이제스트는 로컬 대체물로 만든다 — 개요, 주요 뉴스 항목 셋(기사 1 · 2 · 3, 항목마다 사건 하나 · 기사 하나), 헤드라인 항목 하나(사건
+ * 하나에 기사 4 · 5). 기사 행은 SQL 로 넣는다.
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -142,12 +145,24 @@ class DigestArticleRemovalTests {
 				DigestTrigger.MANUAL).id();
 	}
 
+	/** 앞 셋은 주요 뉴스 항목(사건 하나 · 기사 하나씩), 나머지는 헤드라인 항목 하나(사건 하나에 기사 여럿) — 사건 ID 는 첫 기사 ID */
 	private DigestInput candidates(int... indexes) {
-		List<DigestCandidate> list = new ArrayList<>();
+		List<InputItem> items = new ArrayList<>();
+		List<Long> rest = new ArrayList<>();
 		for (int index : indexes) {
-			list.add(new DigestCandidate(new ArticleId(this.articleIds.get(index - 1)), SelectionReason.SUBSCRIBED));
+			long article = this.articleIds.get(index - 1);
+			if (items.size() < 3) {
+				items.add(DigestInputs.item(ItemKind.TOP_STORY, DigestInputs.event(article, SelectionReason.SUBSCRIBED, article)));
+			}
+			else {
+				rest.add(article);
+			}
 		}
-		return DigestInputs.of(list);
+		if (!rest.isEmpty()) {
+			items.add(DigestInputs.item(ItemKind.HEADLINE, DigestInputs.event(rest.getFirst(), SelectionReason.SUBSCRIBED,
+					rest.stream().mapToLong(Long::longValue).toArray())));
+		}
+		return DigestInputs.items(items.toArray(InputItem[]::new));
 	}
 
 	private ArticleId article(int index) {
@@ -181,6 +196,15 @@ class DigestArticleRemovalTests {
 			.list();
 	}
 
+	/** 섹션 사건 행 — 섹션 위치:사건 */
+	private List<String> sectionEventRows(DigestId id) {
+		return this.jdbc.sql("""
+				select s.position || ':' || e.event_id
+				from digest_sections s join digest_section_events e on e.digest_section_id = s.id
+				where s.digest_id = :id order by s.position, e.position
+				""").param("id", id.value()).query(String.class).list();
+	}
+
 	private String status(DigestId id) {
 		return this.jdbc.sql("select status from digests where id = :id").param("id", id.value()).query(String.class).single();
 	}
@@ -192,8 +216,10 @@ class DigestArticleRemovalTests {
 		remove(2);
 
 		assertThat(sectionRows(id)).containsExactly("OVERVIEW:0", "TOP_STORY:1:" + a(1), "TOP_STORY:3:" + a(3),
-				"MORE_HEADLINES:4:" + a(4) + "," + a(5));
+				"HEADLINE:4:" + a(4) + "," + a(5));
 		assertThat(candidateRows(id)).containsExactly("A1:" + a(1), "A3:" + a(3), "A4:" + a(4), "A5:" + a(5));
+		// 지운 섹션의 섹션 사건 행도 함께 지워진다 — 남은 섹션의 사건 행은 그대로
+		assertThat(sectionEventRows(id)).containsExactly("1:" + a(1), "3:" + a(3), "4:" + a(4));
 		assertThat(status(id)).isEqualTo("READY");
 	}
 
@@ -204,7 +230,9 @@ class DigestArticleRemovalTests {
 		remove(4);
 
 		assertThat(sectionRows(id)).containsExactly("OVERVIEW:0", "TOP_STORY:1:" + a(1), "TOP_STORY:2:" + a(2),
-				"TOP_STORY:3:" + a(3), "MORE_HEADLINES:4:" + a(5));
+				"TOP_STORY:3:" + a(3), "HEADLINE:4:" + a(5));
+		// 인용이 남은 섹션은 섹션 사건 행도 남는다
+		assertThat(sectionEventRows(id)).containsExactly("1:" + a(1), "2:" + a(2), "3:" + a(3), "4:" + a(4));
 	}
 
 	@Test
@@ -214,6 +242,7 @@ class DigestArticleRemovalTests {
 		remove(1, 2, 3, 4, 5);
 
 		assertThat(sectionRows(id)).isEmpty();
+		assertThat(sectionEventRows(id)).isEmpty();
 		assertThat(candidateRows(id)).isEmpty();
 		assertThat(status(id)).isEqualTo("READY");
 	}
@@ -238,7 +267,7 @@ class DigestArticleRemovalTests {
 		remove(2);
 
 		assertThat(sectionRows(id)).containsExactly("OVERVIEW:0", "TOP_STORY:1:" + a(1), "TOP_STORY:3:" + a(3),
-				"MORE_HEADLINES:4:" + a(4) + "," + a(5));
+				"HEADLINE:4:" + a(4) + "," + a(5));
 	}
 
 	@Test
@@ -265,7 +294,7 @@ class DigestArticleRemovalTests {
 		}
 
 		assertThat(sectionRows(id)).containsExactly("OVERVIEW:0", "TOP_STORY:2:" + a(2), "TOP_STORY:3:" + a(3),
-				"MORE_HEADLINES:4:" + a(4) + "," + a(5));
+				"HEADLINE:4:" + a(4) + "," + a(5));
 		assertThat(candidateRows(id)).containsExactly("A2:" + a(2), "A3:" + a(3), "A4:" + a(4), "A5:" + a(5));
 	}
 
@@ -281,7 +310,7 @@ class DigestArticleRemovalTests {
 		assertThat(generation.run(id, MODEL, candidates(1, 2, 3, 4, 5))).isEqualTo(DigestStatus.READY);
 
 		assertThat(sectionRows(id)).containsExactly("OVERVIEW:0", "TOP_STORY:1:" + a(2), "TOP_STORY:2:" + a(3),
-				"MORE_HEADLINES:3:" + a(4) + "," + a(5));
+				"HEADLINE:3:" + a(4) + "," + a(5));
 		assertThat(candidateRows(id)).containsExactly("A2:" + a(2), "A3:" + a(3), "A4:" + a(4), "A5:" + a(5));
 	}
 
@@ -293,7 +322,7 @@ class DigestArticleRemovalTests {
 		DigestArticleRemoval pausing = new DigestArticleRemoval(this.candidates,
 				new PausingContent(this.content, read, resume));
 		try {
-			// 나뉘어 발행된 지운 기사 이벤트 둘 — 헤드라인 묶음의 A4 와 A5 를 하나씩 지운다
+			// 나뉘어 발행된 지운 기사 이벤트 둘 — 헤드라인 항목의 기사 4 와 5 를 하나씩 지운다
 			// 시험이 만든 유스케이스는 프록시가 아니라 트랜잭션을 시험이 연다
 			CompletableFuture<Void> first = CompletableFuture.runAsync(
 					() -> this.transaction.executeWithoutResult(status -> pausing.apply(List.of(article(4)))));

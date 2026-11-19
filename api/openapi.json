@@ -4138,7 +4138,7 @@
       "get" : {
         "operationId" : "states",
         "parameters" : [ {
-          "description" : "기사 ID — 쉼표로 이은 것, 서로 다른 ID 는 500개까지",
+          "description" : "기사 ID — 쉼표로 이은 것, 서로 다른 ID 는 750개까지",
           "in" : "query",
           "name" : "articleIds",
           "required" : true,
@@ -6471,16 +6471,9 @@
           "articleId" : {
             "type" : "integer",
             "format" : "int64"
-          },
-          "note" : {
-            "type" : [ "string", "null" ]
-          },
-          "reason" : {
-            "type" : "string",
-            "enum" : [ "SUBSCRIBED", "INTEREST", "MAJOR_STORYLINE" ]
           }
         },
-        "required" : [ "article", "articleId", "note", "reason" ]
+        "required" : [ "article", "articleId" ]
       },
       "DigestDateResponse" : {
         "type" : "object",
@@ -6661,13 +6654,17 @@
           },
           "kind" : {
             "type" : "string",
-            "enum" : [ "OVERVIEW", "TOP_STORY", "MORE_HEADLINES" ]
+            "enum" : [ "OVERVIEW", "TOP_STORY", "HEADLINE" ]
+          },
+          "reason" : {
+            "type" : [ "string", "null" ],
+            "enum" : [ "SUBSCRIBED", "INTEREST", "MAJOR_STORYLINE" ]
           },
           "title" : {
             "type" : [ "string", "null" ]
           }
         },
-        "required" : [ "body", "citations", "kind", "title" ]
+        "required" : [ "body", "citations", "kind", "reason", "title" ]
       },
       "DigestUnresolvedFailureResponse" : {
         "type" : "object",

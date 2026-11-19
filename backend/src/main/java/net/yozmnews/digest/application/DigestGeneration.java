@@ -52,7 +52,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 /**
  * 다이제스트 생성 유스케이스 — docs/specs/digest.md §4 · digest-R2 · digest-R8 · digest-R9
  * <p>
- * 시작(트랜잭션 ①) · 프롬프트 구성 · 생성기 호출과 읽기 · 다시 묻기(트랜잭션 밖) · 인용 검증 · 저장(트랜잭션 ②) 셋으로 나눈다. 판단(읽을지 ·
+ * 시작(트랜잭션 ①) · 프롬프트 구성 · 생성기 호출과 읽기 · 다시 묻기(트랜잭션 밖) · 항목 대조 · 저장(트랜잭션 ②) 셋으로 나눈다. 판단(읽을지 ·
  * 다시 물을지 · 실패 코드)은 {@link GenerationVerdict} 가 한다. 두 트랜잭션은 다이제스트 행을 먼저, 후보 행을 다음에 잠근다. 트랜잭션 ① 은
  * 생성을 기다리는 다이제스트만 시작한다 — 생성 중인 다이제스트를 다시 시작하지 않아 같은 다이제스트의 생성기 호출은 하나다. 트랜잭션 ② 는
  * 다이제스트의 버전이 트랜잭션 ① 뒤의 값과 다르거나 이미 끝났으면 아무것도 쓰지 않는다. 끝낸 행은 {@link DigestEndings} 로 저장한다. 생성기는 어느 프로세스에나 하나다 — {@code local}
@@ -109,7 +109,7 @@ public class DigestGeneration {
 	}
 
 	/**
-	 * 시작 → 후보가 있으면 프롬프트 구성 · 생성 · 읽기(끝까지 쓴 응답을 읽지 못하면 한 번 다시 묻기) → 인용 검증 → 저장. 끝났거나 생성 중인
+	 * 시작 → 후보가 있으면 프롬프트 구성 · 생성 · 읽기(끝까지 쓴 응답을 읽지 못하면 한 번 다시 묻기) → 항목 대조 → 저장. 끝났거나 생성 중인
 	 * 다이제스트면 아무것도 하지 않는다 — 생성 중인 다이제스트를 다시 시작하지 않는다. 생성과 다시 묻기는 트랜잭션 밖이다. 토큰은 공급자가 답한 호출의 합이고, 소요 시간은 첫 호출 시작부터 마지막 호출 끝까지다.
 	 * <p>
 	 * 후보 선별과 생성은 같은 모델을 쓴다 — 쓸 모델은 그 입력을 고른 선별에 넘긴 모델이어야 하고, 입력 토큰 예산은 선별이 그 모델의 예산으로 자른 것이고 여기서 다시 자르지 않는다.
@@ -125,7 +125,7 @@ public class DigestGeneration {
 		if (TransactionSynchronizationManager.isActualTransactionActive()) {
 			throw new IllegalStateException(IN_TRANSACTION);
 		}
-		CandidateSet set = CandidateSet.of(input.digestCandidates());
+		CandidateSet set = CandidateSet.of(input);
 		Started started = Objects.requireNonNull(this.transaction.execute(status -> start(id, model, set)));
 		if (started.finished() != null) {
 			return started.finished();
@@ -173,7 +173,7 @@ public class DigestGeneration {
 			// 끝났거나 다른 실행이 생성 중이다 — 다시 시작하지 않는다
 			return new Started(digest.status(), digest.userId(), 0);
 		}
-		Digest running = this.digests.save(digest.start(model, set.size(), this.clock.instant()));
+		Digest running = this.digests.save(digest.start(model, set.eventCount(), this.clock.instant()));
 		this.candidates.replace(id, set);
 		if (set.isEmpty()) {
 			Digest empty = this.endings.save(running.complete(new Completion.Empty(), this.clock.instant()));
@@ -194,7 +194,7 @@ public class DigestGeneration {
 	}
 
 	/**
-	 * 트랜잭션 ② 안에서 — 후보 행 잠금 · 지운 기사 거르기 · 판정이 읽음이면 인용 검증 · 내용 저장, 실패면 그 코드
+	 * 트랜잭션 ② 안에서 — 후보 행 잠금 · 지운 기사 거르기 · 판정이 읽음이면 항목 대조 · 내용 저장, 실패면 그 코드
 	 * @param usage 공급자가 답한 호출의 토큰 합 — 읽음이면 언제나 있다(끝까지 쓴 응답에서만 읽는다)
 	 */
 	private Completion complete(DigestId id, CandidateSet set, Settled settled, @Nullable TokenUsage usage,
@@ -211,9 +211,9 @@ public class DigestGeneration {
 				OutputRead.Read read = verdict.output();
 				TokenUsage spent = Objects.requireNonNull(usage, "읽은 응답은 공급자가 센 토큰이 있다");
 				CitationResult cited = CitationCheck.check(read.draft(), set.retain(present));
-				if (cited.drops().removedRefs() > 0 || cited.drops().droppedItems() > 0 || read.overLimit() > 0) {
-					logger.info("다이제스트 출력에서 지운 것이 있다 — 다이제스트 {}, 지운 별칭 {}, 버린 항목 {}, 상한으로 버린 수 {}",
-							id.value(), cited.drops().removedRefs(), cited.drops().droppedItems(), read.overLimit());
+				if (cited.drops().droppedItems() > 0 || cited.drops().missingItems() > 0 || read.overLimit() > 0) {
+					logger.info("다이제스트 출력에서 지운 것이 있다 — 다이제스트 {}, 버린 원소 {}, 출력에 없는 항목 {}, 상한으로 버린 수 {}",
+							id.value(), cited.drops().droppedItems(), cited.drops().missingItems(), read.overLimit());
 				}
 				yield switch (cited) {
 					case CitationResult.NoCitation none -> new Completion.Failed(DigestFailure.NO_CITATION,

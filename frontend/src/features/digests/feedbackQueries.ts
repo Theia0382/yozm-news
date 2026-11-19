@@ -39,13 +39,13 @@ export class FeedbackRequestError extends Error {
 }
 
 /**
- * 상태를 물을 기사 ID — 주요 뉴스 · 추가 헤드라인의 인용 기사(개요는 인용이 없다 — docs/specs/digest.md digest-R7). 중복을 없애고
+ * 상태를 물을 기사 ID — 주요 뉴스 · 헤드라인 항목의 출처 기사(개요는 인용이 없다 — docs/specs/digest.md digest-R7). 중복을 없애고
  * 오름차순으로 정규화해, 같은 다이제스트는 인용 순서 · 겹침과 무관하게 같은 조회 키가 된다
  */
 export function feedbackArticleIds(sections: DigestSection[]): number[] {
   const ids = new Set<number>();
   for (const section of sections) {
-    if (section.kind === "TOP_STORY" || section.kind === "MORE_HEADLINES") {
+    if (section.kind === "TOP_STORY" || section.kind === "HEADLINE") {
       for (const citation of section.citations) {
         ids.add(citation.articleId);
       }

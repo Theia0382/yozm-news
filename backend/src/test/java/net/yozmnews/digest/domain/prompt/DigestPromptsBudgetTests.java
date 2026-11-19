@@ -15,9 +15,11 @@ import net.yozmnews.digest.domain.candidate.DigestCandidate;
 import net.yozmnews.digest.domain.input.CandidateArticle;
 import net.yozmnews.digest.domain.input.DigestInput;
 import net.yozmnews.digest.domain.input.DigestProfile;
-import net.yozmnews.digest.domain.input.StorylineGroup;
+import net.yozmnews.digest.domain.input.InputEvent;
+import net.yozmnews.digest.domain.input.InputItem;
+import net.yozmnews.digest.domain.item.ItemKind;
 import net.yozmnews.digest.domain.selection.CandidateCost;
-import net.yozmnews.digest.domain.selection.SelectionRules;
+import net.yozmnews.event.EventId;
 import net.yozmnews.llm.LlmModel;
 import net.yozmnews.llm.Provider;
 import net.yozmnews.llm.ReasoningEffort;
@@ -27,8 +29,9 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * 프롬프트가 후보 선별의 토큰 어림 안에 드는가(ADR-0210) — 지시 + 출력 스키마는 지시 예약 안, 프로필(고정 틀 포함) · 묶음 줄 · 후보 줄은
- * 각 어림 안. 긴 이름 · 이스케이프가 많은 글 · 가장 긴 시간대 ID 로 자르기를 걸고, 짧은 줄은 자르지 않는 대조를 둔다. 어림은
+ * 프롬프트가 후보 선별의 토큰 어림 안에 드는가(ADR-0210) — 지시 + 출력 스키마는 지시 예약 안, 프로필(고정 틀 포함) · 기사 줄은 각 어림
+ * 안, 사건 · 항목의 괄호 · 항목 별칭 · 칸 이름은 사건마다 사건 몫 안. 긴 이름 · 이스케이프가 많은 글 · 가장 긴 시간대 ID · 가장 긴 항목
+ * 별칭으로 자르기와 몫을 걸고, 짧은 줄은 자르지 않는 대조를 둔다. 어림은
  * {@link CandidateCost} 의 공개 함수로 센다 — 비율을 다시 적지 않는다.
  */
 class DigestPromptsBudgetTests {
@@ -44,8 +47,9 @@ class DigestPromptsBudgetTests {
 	void theInstructionsAndTheSchemaFitTheReserveInEveryCombination() {
 		for (SummaryLength length : SummaryLength.values()) {
 			for (boolean structured : new boolean[] { true, false }) {
-				DigestPrompt first = DigestPrompts.compose(input(profile(length, "", "Asia/Seoul"), List.of(), List.of()),
-						CandidateSet.of(List.of()), new LlmModel(Provider.OPENAI, "gpt-test", 32_000, structured));
+				DigestInput empty = input(profile(length, "", "Asia/Seoul"), List.of());
+				DigestPrompt first = DigestPrompts.compose(empty, CandidateSet.of(empty),
+						new LlmModel(Provider.OPENAI, "gpt-test", 32_000, structured));
 				DigestPrompt retry = DigestPrompts.retry(first, "가".repeat(PromptRules.MAX_DIAGNOSIS + 50));
 				for (DigestPrompt prompt : List.of(first, retry)) {
 					// 스키마는 강제 인자로 가도 공급자가 입력으로 셀 수 있다 — 지시에 실렸든 아니든 한 번 센다
@@ -59,7 +63,7 @@ class DigestPromptsBudgetTests {
 	}
 
 	@Test
-	void aLongCandidateLineIsCutWithinItsEstimateAndAShortOneIsNot() throws Exception {
+	void aLongArticleLineIsCutWithinItsEstimateAndAShortOneIsNot() throws Exception {
 		List<String> manySources = List.of("출처 이름이 아주 긴 언론사 하나", "출처 이름이 아주 긴 언론사 둘", "출처 이름이 아주 긴 언론사 셋");
 		List<String> manyTopics = List.of("대통령실·행정부", "국회·정당", "북한", "외교·국방", "증권·시장");
 		List<String> manyRegions = List.of("국내", "미국", "중국", "일본", "북한·한반도");
@@ -69,32 +73,33 @@ class DigestPromptsBudgetTests {
 				"제목", ESCAPY, List.of("출처"), PUBLISHED, List.of("정치"), List.of("국내"));
 		CandidateArticle plain = new CandidateArticle(new DigestCandidate(new ArticleId(3), SelectionReason.SUBSCRIBED),
 				"짧은 제목", "짧은 요약", List.of("연합뉴스"), PUBLISHED, List.of("정치"), List.of("국내"));
+		List<String> sixRegions = List.of("국내", "미국", "중국", "일본", "북한·한반도", "러시아");
 		CandidateArticle regional = new CandidateArticle(
 				new DigestCandidate(new ArticleId(4), SelectionReason.SUBSCRIBED), "제목", "요약문", List.of("연합뉴스"),
-				PUBLISHED, List.of("정치", "국회·정당"), manyRegions);
+				PUBLISHED, List.of("정치", "국회·정당"), sixRegions);
 		DigestInput input = input(profile(SummaryLength.NORMAL, "", "Asia/Seoul"),
-				List.of(crowded, escapy, plain, regional), List.of());
+				List.of(new InputItem(ItemKind.TOP_STORY, List.of(event(10, crowded, escapy, plain, regional)))));
 
-		JsonNode lines = JSON.readTree(compose(input).userContent()).get("candidates");
+		JsonNode lines = JSON.readTree(compose(input).userContent()).get("items").get(0).get(2).get(0);
 
 		assertThat(tokens(lines.get(0))).isLessThanOrEqualTo(CandidateCost.candidate(2, 3));
 		assertThat(tokens(lines.get(1))).isLessThanOrEqualTo(CandidateCost.candidate(2, 300));
-		// 넘친 줄(몫 2 + 3 + 80 = 85)은 지역을 모두, 그다음 주제를 모두, 그다음 출처의 꼬리 하나를 뺐다 — 남은 줄은 쉼표까지 83.
+		// 넘친 줄(몫 2 + 3 + 80 = 85)은 지역을 모두, 그다음 주제를 모두, 그다음 출처의 꼬리 하나를 뺐다 — 남은 줄은 쉼표까지 78.
 		// 요약문은 그대로다
 		assertThat(lines.get(0)).isEqualTo(JSON.readTree("""
-				["A1","출처 이름이 아주 긴 언론사 하나, 출처 이름이 아주 긴 언론사 둘","2026-11-17 12:30",[],[],"제목","요약문"]"""));
+				["출처 이름이 아주 긴 언론사 하나, 출처 이름이 아주 긴 언론사 둘","2026-11-17 12:30",[],[],"제목","요약문"]"""));
 		// 이스케이프로 넘친 줄은 이름을 다 뺀 뒤 요약문의 꼬리를 잘랐다
-		assertThat(lines.get(1).get(1).asString()).isEmpty();
+		assertThat(lines.get(1).get(0).asString()).isEmpty();
+		assertThat(lines.get(1).get(2)).isEmpty();
 		assertThat(lines.get(1).get(3)).isEmpty();
-		assertThat(lines.get(1).get(4)).isEmpty();
-		assertThat(lines.get(1).get(6).asString()).isNotEmpty().hasSizeLessThan(ESCAPY.length());
-		assertThat(lines.get(1).get(5).asString()).isEqualTo("제목");
+		assertThat(lines.get(1).get(5).asString()).isNotEmpty().hasSizeLessThan(ESCAPY.length());
+		assertThat(lines.get(1).get(4).asString()).isEqualTo("제목");
 		// 대조 — 짧은 줄은 자르지 않는다
 		assertThat(lines.get(2)).isEqualTo(JSON.readTree("""
-				["A3","연합뉴스","2026-11-17 12:30",["정치"],["국내"],"짧은 제목","짧은 요약"]"""));
-		// 조금 넘친 줄(쉼표까지 90 > 85)은 지역의 꼬리 하나만 뺀다 — 주제를 먼저 뺐다면 주제 "국회·정당"이 빠졌을 것이다
+				["연합뉴스","2026-11-17 12:30",["정치"],["국내"],"짧은 제목","짧은 요약"]"""));
+		// 조금 넘친 줄(쉼표까지 91 > 85)은 지역의 꼬리 하나만 뺀다 — 주제를 먼저 뺐다면 주제 "국회·정당"이 빠졌을 것이다
 		assertThat(lines.get(3)).isEqualTo(JSON.readTree("""
-				["A4","연합뉴스","2026-11-17 12:30",["정치","국회·정당"],["국내","미국","중국","일본"],"제목","요약문"]"""));
+				["연합뉴스","2026-11-17 12:30",["정치","국회·정당"],["국내","미국","중국","일본","북한·한반도"],"제목","요약문"]"""));
 	}
 
 	@Test
@@ -109,7 +114,7 @@ class DigestPromptsBudgetTests {
 		DigestProfile profile = new DigestProfile(topics, regions, interest, ZoneId.of(longestZone), SummaryLength.NORMAL,
 				ReasoningEffort.MEDIUM);
 
-		JsonNode root = JSON.readTree(compose(input(profile, List.of(), List.of())).userContent());
+		JsonNode root = JSON.readTree(compose(input(profile, List.of())).userContent());
 
 		int allowed = CandidateCost.tokens(codePoints(interest)
 				+ (topics.size() + regions.size()) * CandidateCost.PROFILE_TAG_COST + CandidateCost.PROFILE_OVERHEAD);
@@ -126,53 +131,58 @@ class DigestPromptsBudgetTests {
 		DigestProfile empty = new DigestProfile(List.of(), List.of(), "", ZoneId.of("UTC"), SummaryLength.SHORT,
 				ReasoningEffort.LOW);
 
-		String content = compose(input(empty, List.of(), List.of())).userContent();
+		String content = compose(input(empty, List.of())).userContent();
 
 		assertThat(JSON.readTree(content)).isEqualTo(JSON.readTree("""
-				{"profile":{"topics":[],"excludedRegions":[],"interest":"","timezone":"UTC"},"storylines":[],
-				 "candidates":[]}"""));
+				{"profile":{"topics":[],"excludedRegions":[],"interest":"","timezone":"UTC"},"items":[]}"""));
 		assertThat(CandidateCost.tokens(codePoints(content))).isLessThanOrEqualTo(CandidateCost.PROFILE_OVERHEAD);
 	}
 
 	@Test
-	void aFullStorylineGroupWithAnEscapingTitleFitsItsShare() throws Exception {
-		// 최대 별칭 길이의 후보 — A141 ~ A150 이 묶음의 기사가 되도록 앞에 구독 후보를 140 개 둔다
-		List<CandidateArticle> candidates = new ArrayList<>();
-		for (int i = 1; i <= 140; i++) {
-			candidates.add(new CandidateArticle(new DigestCandidate(new ArticleId(i), SelectionReason.SUBSCRIBED), "제목",
-					"", List.of(), PUBLISHED, List.of(), List.of()));
+	void everyItemFitsTheShareOfItsEventsWithTheLongestItemAlias() throws Exception {
+		// 항목 150 개 — 마지막 항목의 별칭은 가장 긴 I150 이고 칸 이름은 긴 쪽(top_stories)이다. 항목 149 는 사건 셋 · 기사 둘씩
+		List<InputItem> items = new ArrayList<>();
+		long article = 1;
+		for (int i = 1; i <= 150; i++) {
+			int events = (i == 149) ? 3 : 1;
+			List<InputEvent> ofItem = new ArrayList<>();
+			for (int e = 0; e < events; e++) {
+				int articles = (i == 149) ? 2 : 1;
+				CandidateArticle[] lines = new CandidateArticle[articles];
+				for (int a = 0; a < articles; a++) {
+					lines[a] = new CandidateArticle(new DigestCandidate(new ArticleId(article++), SelectionReason.SUBSCRIBED),
+							"제목", "", List.of(), PUBLISHED, List.of(), List.of());
+				}
+				ofItem.add(event(i * 10L + e, lines));
+			}
+			items.add(new InputItem(ItemKind.TOP_STORY, ofItem));
 		}
-		List<ArticleId> members = new ArrayList<>();
-		for (int i = 141; i <= 140 + SelectionRules.BIG_EVENTS_PER_STORYLINE; i++) {
-			candidates.add(new CandidateArticle(new DigestCandidate(new ArticleId(i), SelectionReason.MAJOR_STORYLINE),
-					"제목", "", List.of(), PUBLISHED, List.of(), List.of()));
-			members.add(new ArticleId(i));
-		}
-		String title = "분쟁 " + "\"".repeat(30);
-		DigestInput input = input(profile(SummaryLength.NORMAL, "", "Asia/Seoul"), candidates,
-				List.of(new StorylineGroup(title, members)));
+		DigestInput input = input(profile(SummaryLength.NORMAL, "", "Asia/Seoul"), items);
 
-		JsonNode group = JSON.readTree(compose(input).userContent()).get("storylines").get(0);
+		JsonNode root = JSON.readTree(compose(input).userContent());
+		JsonNode last = root.get("items").get(149);
+		JsonNode many = root.get("items").get(148);
 
-		assertThat(group.get(2)).hasSize(SelectionRules.BIG_EVENTS_PER_STORYLINE);
-		assertThat(group.get(2).get(9).asString()).isEqualTo("A150");
-		assertThat(tokens(group)).isLessThanOrEqualTo(CandidateCost.storylines(List.of(codePoints(title))));
-
-		// 대조 — 이스케이프가 없는 이름은 자르지 않는다
-		DigestInput plain = input(profile(SummaryLength.NORMAL, "", "Asia/Seoul"), candidates,
-				List.of(new StorylineGroup("분쟁 흐름", members)));
-		assertThat(JSON.readTree(compose(plain).userContent()).get("storylines").get(0).get(1).asString())
-			.isEqualTo("분쟁 흐름");
+		assertThat(last.get(0).asString()).isEqualTo("I150");
+		int line = CandidateCost.candidate(2, 0);
+		assertThat(tokens(last)).isLessThanOrEqualTo(CandidateCost.event(List.of(line)));
+		assertThat(tokens(many)).isLessThanOrEqualTo(3 * CandidateCost.event(List.of(line, line)));
+		// 사용자 구획 전체가 프로필 몫(구독 행 하나) + 사건마다의 몫 안이다 — 사건 하나짜리 항목 149 개와 사건 셋짜리 항목 하나
+		int allowed = CandidateCost.tokens(CandidateCost.PROFILE_TAG_COST + CandidateCost.PROFILE_OVERHEAD)
+				+ 149 * CandidateCost.event(List.of(line)) + 3 * CandidateCost.event(List.of(line, line));
+		assertThat(CandidateCost.tokens(codePoints(compose(input).userContent()))).isLessThanOrEqualTo(allowed);
 	}
 
 	private static DigestPrompt compose(DigestInput input) {
-		return DigestPrompts.compose(input, CandidateSet.of(input.digestCandidates()),
-				new LlmModel(Provider.OPENAI, "gpt-test", 32_000, true));
+		return DigestPrompts.compose(input, CandidateSet.of(input), new LlmModel(Provider.OPENAI, "gpt-test", 32_000, true));
 	}
 
-	private static DigestInput input(DigestProfile profile, List<CandidateArticle> candidates,
-			List<StorylineGroup> storylines) {
-		return new DigestInput(profile, candidates, storylines);
+	private static DigestInput input(DigestProfile profile, List<InputItem> items) {
+		return new DigestInput(profile, items);
+	}
+
+	private static InputEvent event(long id, CandidateArticle... articles) {
+		return new InputEvent(new EventId(id), SelectionReason.SUBSCRIBED, List.of(articles));
 	}
 
 	private static DigestProfile profile(SummaryLength length, String interest, String zone) {

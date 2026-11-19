@@ -37,8 +37,8 @@ import { formatDateTime } from "@/shared/lib/dateTime";
 
 /**
  * 날짜 하나의 다이제스트 — 가장 최근 시도의 상태 · 보이는 다이제스트의 섹션 · 사용량(docs/specs/reader.md reader-R9). 링크 · 출처 · 발행 시각은
- * 응답의 기사 정보로만 그리고, 종합문은 글자로만 그린다(HTML 로 해석하지 않는다). 주요 뉴스 · 추가 헤드라인의 인용 줄마다 좋아요 · 싫어요를
- * 두고, 현재 상태는 다이제스트마다 한 번 읽는다(docs/specs/feedback.md feedback-R7).
+ * 응답의 기사 정보로만 그리고, 종합문은 글자로만 그린다(HTML 로 해석하지 않는다). 주요 뉴스 · 헤드라인 항목마다 배지 하나와 출처 기사
+ * 목록을 두고 출처 줄마다 좋아요 · 싫어요를 두며, 현재 상태는 다이제스트마다 한 번 읽는다(docs/specs/feedback.md feedback-R7).
  */
 export function DigestDayView({ day }: { day: DigestDay }) {
   const { shown, latest, usage } = day;
@@ -130,9 +130,9 @@ function ShownContent({ shown }: { shown: ShownDigest }) {
     : { states: NO_STATES, ready: false };
   const overview = shown.sections.filter((s) => s.kind === "OVERVIEW");
   const stories = shown.sections.filter((s) => s.kind === "TOP_STORY");
-  const more = shown.sections.filter((s) => s.kind === "MORE_HEADLINES");
-  const marked = shown.sections.some((s) =>
-    s.citations.some((c) => c.reason !== "SUBSCRIBED"),
+  const headlines = shown.sections.filter((s) => s.kind === "HEADLINE");
+  const marked = shown.sections.some(
+    (s) => s.reason !== null && s.reason !== "SUBSCRIBED",
   );
   return (
     <div className="space-y-6">
@@ -168,19 +168,21 @@ function ShownContent({ shown }: { shown: ShownDigest }) {
           ))}
         </section>
       )}
-      {more.map((section, index) => (
-        <section key={`more-${index}`} className="space-y-2">
+      {headlines.length > 0 && (
+        <section className="space-y-3">
           <h2 className="text-lg font-semibold">
             {sectionHeadings.moreHeadlines}
           </h2>
-          <Citations
-            citations={section.citations}
-            withNote
-            digestId={shown.digestId}
-            feedback={feedback}
-          />
+          {headlines.map((headline, index) => (
+            <Headline
+              key={`headline-${index}`}
+              headline={headline}
+              digestId={shown.digestId}
+              feedback={feedback}
+            />
+          ))}
         </section>
-      ))}
+      )}
       {marked && (
         <p className="text-xs text-muted-foreground">
           {SELECTION_REASON_LEGEND}
@@ -204,11 +206,13 @@ function Story({
 }) {
   return (
     <article className="space-y-2 border-l-2 border-input pl-4">
-      <h3 className="font-medium break-words">{story.title}</h3>
+      <h3 className="font-medium break-words">
+        {story.title}
+        <ReasonBadge section={story} />
+      </h3>
       <p className="break-words whitespace-pre-line">{story.body}</p>
       <Citations
         citations={story.citations}
-        withNote={false}
         digestId={digestId}
         feedback={feedback}
       />
@@ -216,14 +220,61 @@ function Story({
   );
 }
 
+/** 더 볼 헤드라인 항목 하나 — 제목 · 배지 · 코멘트 · 출처 기사 */
+function Headline({
+  headline,
+  digestId,
+  feedback,
+}: {
+  headline: DigestSection;
+  digestId: number;
+  feedback: FeedbackView;
+}) {
+  return (
+    <article className="space-y-1">
+      <h3 className="text-sm font-medium break-words">
+        {headline.title}
+        <ReasonBadge section={headline} />
+      </h3>
+      {headline.body && (
+        <p className="text-sm break-words text-muted-foreground">
+          {headline.body}
+        </p>
+      )}
+      <Citations
+        citations={headline.citations}
+        digestId={digestId}
+        feedback={feedback}
+      />
+    </article>
+  );
+}
+
+/**
+ * 항목의 선정 이유 배지 하나 — 구독 주제는 표시하지 않고 범례로 알린다. 제목 요소 안에 있어 화면 낭독기가 제목과 이어 읽으므로, 보이지 않는
+ * 구분 글자 "·" 를 앞에 둔다(낭독되는 제목 이름이 "제목 · 큰 화제")
+ */
+function ReasonBadge({ section }: { section: DigestSection }) {
+  if (section.reason === null || section.reason === "SUBSCRIBED") {
+    return null;
+  }
+  return (
+    <>
+      <span className="sr-only"> · </span>
+      <span className="ml-2 rounded border px-1 align-middle text-xs font-normal whitespace-nowrap">
+        {selectionReasonLabels[section.reason]}
+      </span>
+    </>
+  );
+}
+
+/** 항목의 출처 기사 목록 — 줄마다 제목 링크 · 출처 · 발행 시각 · 좋아요 / 싫어요 */
 function Citations({
   citations,
-  withNote,
   digestId,
   feedback,
 }: {
   citations: DigestCitation[];
-  withNote: boolean;
   digestId: number;
   feedback: FeedbackView;
 }) {
@@ -245,11 +296,6 @@ function Citations({
             {" · "}
             {formatDateTime(citation.article.publishedAt)}
           </span>
-          {citation.reason !== "SUBSCRIBED" && (
-            <span className="ml-2 rounded border px-1 text-xs whitespace-nowrap">
-              {selectionReasonLabels[citation.reason]}
-            </span>
-          )}
           <FeedbackButtons
             articleId={citation.articleId}
             digestId={digestId}
@@ -257,9 +303,6 @@ function Citations({
             current={feedback.states.get(citation.articleId) ?? null}
             ready={feedback.ready}
           />
-          {withNote && citation.note && (
-            <p className="text-muted-foreground">{citation.note}</p>
-          )}
         </li>
       ))}
     </ul>

@@ -24,6 +24,7 @@ import net.yozmnews.digest.domain.view.DigestDayRepository;
 import net.yozmnews.digest.domain.view.DigestDayRow;
 import net.yozmnews.digest.domain.view.DigestNeighbors;
 import net.yozmnews.digest.domain.view.FailedAttempt;
+import net.yozmnews.digest.domain.view.SectionReasons;
 import net.yozmnews.platform.UserId;
 import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -66,7 +67,7 @@ class JdbcDigestDayRepository implements DigestDayRepository {
 	public List<DigestSectionView> sectionsOf(long digestId) {
 		Map<Long, SectionRows> sections = new LinkedHashMap<>();
 		this.jdbc.sql("""
-				select s.id, s.kind, s.title, s.body, i.article_id, i.note, i.selection_reason
+				select s.id, s.kind, s.title, s.body, i.article_id
 				from digest_sections s
 				left join digest_items i on i.digest_section_id = s.id
 				where s.digest_id = :digest
@@ -76,19 +77,29 @@ class JdbcDigestDayRepository implements DigestDayRepository {
 			SectionRows section = sections.get(id);
 			if (section == null) {
 				section = new SectionRows(SectionKind.valueOf(rs.getString("kind")), rs.getString("title"),
-						rs.getString("body"), new ArrayList<>());
+						rs.getString("body"), new ArrayList<>(), new ArrayList<>());
 				sections.put(id, section);
 			}
 			long article = rs.getLong("article_id");
 			if (!rs.wasNull()) {
-				section.citations().add(new DigestCitation(new ArticleId(article), rs.getString("note"),
-						SelectionReason.valueOf(rs.getString("selection_reason"))));
+				section.citations().add(new DigestCitation(new ArticleId(article)));
+			}
+		});
+		this.jdbc.sql("""
+				select e.digest_section_id, e.selection_reason
+				from digest_section_events e
+				join digest_sections s on s.id = e.digest_section_id
+				where s.digest_id = :digest
+				""").param("digest", digestId).query((ResultSet rs) -> {
+			SectionRows section = sections.get(rs.getLong("digest_section_id"));
+			if (section != null) {
+				section.reasons().add(SelectionReason.valueOf(rs.getString("selection_reason")));
 			}
 		});
 		return sections.values()
 			.stream()
 			.map(section -> new DigestSectionView(section.kind(), section.title(), section.body(),
-					section.citations()))
+					SectionReasons.of(section.kind(), section.reasons()), section.citations()))
 			.toList();
 	}
 
@@ -161,7 +172,7 @@ class JdbcDigestDayRepository implements DigestDayRepository {
 
 	/** 섹션 한 줄과 모은 인용 */
 	private record SectionRows(SectionKind kind, @Nullable String title, @Nullable String body,
-			List<DigestCitation> citations) {
+			List<DigestCitation> citations, List<SelectionReason> reasons) {
 	}
 
 }

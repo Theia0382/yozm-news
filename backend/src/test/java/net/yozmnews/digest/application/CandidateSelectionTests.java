@@ -3,13 +3,14 @@ package net.yozmnews.digest.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
-import java.lang.reflect.Proxy;
 import java.time.Instant;
 import java.time.InstantSource;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -23,7 +24,10 @@ import net.yozmnews.digest.domain.digest.DigestPeriod;
 import net.yozmnews.digest.domain.input.CandidateArticle;
 import net.yozmnews.digest.domain.input.DigestInput;
 import net.yozmnews.digest.domain.input.DigestProfile;
-import net.yozmnews.digest.domain.input.StorylineGroup;
+import net.yozmnews.digest.domain.input.InputEvent;
+import net.yozmnews.digest.domain.input.InputItem;
+import net.yozmnews.digest.domain.item.ItemKind;
+import net.yozmnews.event.EventId;
 import net.yozmnews.digest.domain.exposure.ExposureRepository;
 import net.yozmnews.event.EventArticles;
 import net.yozmnews.event.EventDirectory;
@@ -55,16 +59,20 @@ import org.jobrunr.scheduling.JobScheduler;
 import net.yozmnews.digest.DigestRounds;
 
 /**
- * 후보 선별의 재료 경로 — 실제 PostgreSQL 의 사용자 설정 · 기사 · 평가 · 사건 행에서 관심 설정 조회 · 첫 평가 시각 · 평가 · 발행 시각 · 소스 ·
- * 사건 · 대표 기사 · 내용 조회를 거쳐 규칙까지. 기본 체계(버전 1)로 본다. 기간은 2026-11-05 하루(UTC)이고 기사는 모두 그날 0시 발행이다
- * ({@link EventArticles#insert}).
+ * 후보 선별의 재료 경로 — 실제 PostgreSQL 의 사용자 설정 · 기사 · 평가 · 사건 · 스토리라인 행에서 관심 설정 조회 · 첫 평가 시각 · 평가 · 발행
+ * 시각 · 소스 · 사건 · 사건의 소속 기사 평가 · 꼭대기 · 내용 조회를 거쳐 규칙까지. 기본 체계(버전 1)로 본다. 기간은 2026-11-05 하루(UTC)이고
+ * 기사는 모두 그날 0시 발행이다({@link EventArticles#insert}).
  * <p>
- * 지키는 규칙: 구독 필터 · 사건 단위 중복 제거 · 상한 · 선정 이유, 관심 설정과 계보 표의 활성 버전 대조, 관심도 순위와 {@code INTEREST}
- * (노출 · 좋아요 · 주제 구독 변경 · 스토리라인 구독 변경), 싫어요 거름(구독 후보 · 큰 슬롯 대표), 중립 결과의 토큰 어림, 관심도 재료를
- * 읽는 범위의 끝(부르는 시각), 생성의 입력(프로필 · 후보 재료 · 큰 스토리라인 묶음과 그 몫)
+ * 지키는 규칙: digest-R15 ~ digest-R19 · digest-R21 · digest-R22 · digest-R25 · digest-R44 ~ digest-R46 — 후보는 사건(사건 없는 기사는 버림), 구독 필터는 사건의 주제 · 지역 제외는 사건의 지역 · 기사 제외는 기사마다, 사건 중요도는 소속
+ * 기사의 최대, 표본(기간에 든 · 제외를 지난 기사), 상한 · 선정 이유, 항목 묶기(꼭대기), 관심 설정과 계보 표의 활성 버전 대조, 관심도 순위와
+ * {@code INTEREST}(노출 · 좋아요 · 주제 구독 변경 · 스토리라인 구독 변경), 싫어요 거름(구독 사건 · 큰 슬롯 사건의 기사), 중립 결과의 토큰 어림,
+ * 관심도 재료를 읽는 범위의 끝(부르는 시각), 생성의 입력(프로필 · 항목 · 사건 · 표본 기사 재료)
  * <p>
  * 관심도의 기준 시각은 기간 끝 11-06 0시다. 노출 · 반응 · 구독 변경은 그 앞 하루 남짓이라 무게가 1 에 가깝고, 기대값은 순위가 바뀌는지만 본다
  * — 무게의 값은 산식 단위 시험(InterestFormulaTests)이 고정한다.
+ * <p>
+ * 토큰 어림: 기사 줄 = 제목 + 요약문 "요약" 2 + 80, 사건 = 기사 줄의 합 + 40. 사건 E1(기사 "정치 하나" 5 · "정치 둘" 4) = 87 + 86 + 40 =
+ * 213, 제목 다섯 글자 기사 하나뿐인 사건 = 87 + 40 = 127.
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -79,8 +87,8 @@ class CandidateSelectionTests {
 
 	private static final LlmModel ROOMY = new LlmModel(Provider.OPENAI, "gpt-test", 32_000, true);
 
-	/** 후보 하나 = 제목 5 + 요약문 "요약" 2 + 80 = 87 토큰. 예산 = 2,000 + 구독 행 1 × 20 + 87 → 하나만 */
-	private static final LlmModel ONE_CANDIDATE = new LlmModel(Provider.OPENAI, "gpt-test", 2_000 + 20 + 200 + 87,
+	/** 지시 2,000 + 프로필(구독 행 1 × 20 + 고정 틀 200) + 사건 E1 213 — 사건 E1 하나만 든다 */
+	private static final LlmModel ONE_CANDIDATE = new LlmModel(Provider.OPENAI, "gpt-test", 2_000 + 20 + 200 + 213,
 			true);
 
 	@Autowired
@@ -127,6 +135,9 @@ class CandidateSelectionTests {
 
 	private ReaderRows rows;
 
+	/** 기사 → 그 기사만 가진 사건(시험이 만든 것) */
+	private final Map<Long, Long> soloEvents = new HashMap<>();
+
 	private long user;
 
 	private long a1;
@@ -136,6 +147,9 @@ class CandidateSelectionTests {
 	private long a5;
 
 	private long a6;
+
+	/** 기사 1 · 2 의 사건 */
+	private long e1;
 
 	@BeforeEach
 	void stopDigestRounds() {
@@ -147,17 +161,18 @@ class CandidateSelectionTests {
 		this.rows = new ReaderRows(this.jdbc);
 		clean();
 		this.user = user();
-		// 1 · 2: 같은 사건, 정치 행정 — 대표는 같은 발행 시각이라 ID 가 작은 1(event-R14)
+		// 1 · 2: 같은 사건 E1, 정치 행정 — 사건 중요도는 최대 4.0
 		this.a1 = article("정치 하나", "politics.executive", 4.0, "2026-11-05T06:00:00Z", 1);
 		this.a2 = article("정치 둘", "politics.executive", 3.0, "2026-11-05T06:00:00Z", 1);
-		long event = this.rows.event(2, "2026-11-05T00:00:00Z", "2026-11-05T00:00:00Z");
-		this.rows.assign(this.a1, event, "2026-11-05T00:00:00Z");
-		this.rows.assign(this.a2, event, "2026-11-05T00:00:00Z");
-		// 3: 제외 소스 2 만 — 빠짐. 4: 구독 밖 주제 — 빠짐. 5: 사건 미배정 — 남음. 6: 첫 평가가 기간 전 — 빠짐
+		this.e1 = this.rows.event(2, "2026-11-05T00:00:00Z", "2026-11-05T00:00:00Z");
+		this.rows.assign(this.a1, this.e1, "2026-11-05T00:00:00Z");
+		this.rows.assign(this.a2, this.e1, "2026-11-05T00:00:00Z");
+		// 3: 제외 소스 2 만 · 사건 없음 — 빠짐(사건에 배정하지 않는다 — 기간에 사건 기사가 있는 소스가 늘면 큰 판정의 보도 강도가
+		// 바뀐다). 4: 구독 밖 주제 — 빠짐. 5: 혼자인 사건 — 남음. 6: 첫 평가가 기간 전 — 빠짐
 		article("정치 셋", "politics.legislature", 2.0, "2026-11-05T06:00:00Z", 2);
-		article("시장", "economy.markets", 5.0, "2026-11-05T06:00:00Z", 1);
-		this.a5 = article("정치 다섯", "politics.executive", 1.0, "2026-11-05T06:00:00Z", 1);
-		this.a6 = article("정치 여섯", "politics.executive", 5.0, "2026-11-04T23:59:59Z", 1);
+		eventArticle("시장", "economy.markets", 5.0, "2026-11-05T06:00:00Z", 1);
+		this.a5 = eventArticle("정치 다섯", "politics.executive", 1.0, "2026-11-05T06:00:00Z", 1);
+		this.a6 = eventArticle("정치 여섯", "politics.executive", 5.0, "2026-11-04T23:59:59Z", 1);
 	}
 
 	@AfterEach
@@ -170,17 +185,110 @@ class CandidateSelectionTests {
 		this.rows.clear();
 		EventArticles.clear(this.jdbc);
 		this.jdbc.sql("delete from users").update();
+		this.soloEvents.clear();
 	}
 
 	@Test
-	void theSubscribedArticlesOfThePeriodComeOncePerEventInRankOrder() {
-		assertThat(candidates(this.selection.select(new UserId(this.user), DAY, ROOMY))).containsExactly(
-				new DigestCandidate(new ArticleId(this.a1), SelectionReason.SUBSCRIBED),
-				new DigestCandidate(new ArticleId(this.a5), SelectionReason.SUBSCRIBED));
+	void theSubscribedEventsOfThePeriodComeOnceEachInRankOrderWithTheirArticles() {
+		DigestInput input = this.selection.select(new UserId(this.user), DAY, ROOMY).orElseThrow();
+
+		// 기사 1 · 2 는 같은 사건이라 사건 하나, 그 기사 둘이 표본이다
+		assertThat(events(input)).containsExactly(this.e1 + ":SUBSCRIBED", event(this.a5) + ":SUBSCRIBED");
+		assertThat(articles(input)).containsExactly(this.a1, this.a2, this.a5);
 	}
 
 	@Test
-	void theInputCarriesTheProfileAndTheCandidateMaterialWithActiveNames() {
+	void anArticleWithoutAnEventIsNotACandidate() {
+		// 구독 주제 · 중요도 5 · 기간에 첫 평가된 기사지만 사건에 배정되지 않았다
+		long unassigned = article("정치 미배정", "politics.executive", 5.0, "2026-11-05T06:00:00Z", 1);
+
+		DigestInput input = this.selection.select(new UserId(this.user), DAY, ROOMY).orElseThrow();
+
+		assertThat(articles(input)).doesNotContain(unassigned);
+		// 대조 — 사건에 배정된 기간 기사 둘은 한 사건으로 들고 둘 다 그 사건의 표본이다
+		assertThat(events(input)).contains(this.e1 + ":SUBSCRIBED");
+		assertThat(articlesOf(input, this.e1)).containsExactly(this.a1, this.a2);
+	}
+
+	@Test
+	void theSubscriptionIsMatchedOnTheTopicOfTheEventNotOnTheTopicOfItsArticleInThePeriod() {
+		// 사건 X: 기간 기사는 금융(구독 밖), 기간 앞에 평가된 소속 기사 둘은 정치 행정 — 사건의 주제는 정치 행정(2/3)
+		long outsideTopic = article("금융 기사", "economy.finance", 3.5, "2026-11-05T06:00:00Z", 1);
+		long x = eventOf(outsideTopic, article("지난 정치 하나", "politics.executive", 3.0, "2026-11-01T00:00:00Z", 1),
+				article("지난 정치 둘", "politics.executive", 3.0, "2026-11-01T00:00:00Z", 1));
+		// 대조 — 사건 Y: 기간 기사 · 소속 기사 모두 정치 행정
+		long insideTopic = article("정치 기사", "politics.executive", 3.5, "2026-11-05T06:00:00Z", 1);
+		long y = eventOf(insideTopic, article("지난 정치 셋", "politics.executive", 3.0, "2026-11-01T00:00:00Z", 1));
+
+		DigestInput input = this.selection.select(new UserId(this.user), DAY, ROOMY).orElseThrow();
+
+		assertThat(events(input)).contains(x + ":SUBSCRIBED", y + ":SUBSCRIBED");
+		// 표본은 기간에 든 기사만 — 기간 앞에 평가된 소속 기사는 싣지 않는다
+		assertThat(articlesOf(input, x)).containsExactly(outsideTopic);
+		assertThat(articlesOf(input, y)).containsExactly(insideTopic);
+	}
+
+	@Test
+	void articleExclusionsAreAppliedPerArticleAndTheRegionExclusionPerEvent() {
+		this.jdbc.sql("""
+				insert into user_tag_preferences (user_id, tag_kind, tag_key, mode, created_at)
+				values (:user, 'REGION', 'us', 'EXCLUDE', now())
+				""").param("user", this.user).update();
+		// 사건 S: 제외 소스 2 의 기사와 소스 1 의 기사 — 사건은 후보, 표본에는 소스 1 의 기사만
+		long fromExcluded = article("제외 소스 기사", "politics.executive", 3.5, "2026-11-05T06:00:00Z", 2);
+		long fromKept = article("남는 소스 기사", "politics.executive", 3.5, "2026-11-05T06:00:00Z", 1);
+		long s = eventOf(fromExcluded, fromKept);
+		// 사건 R: 소속 둘 가운데 하나가 미국(몫 1/2) — 사건의 지역이 제외라 후보가 아니다
+		long r = eventOf(region(article("미국 기사", "politics.executive", 3.5, "2026-11-05T06:00:00Z", 1), "us"),
+				article("국내 기사", "politics.executive", 3.5, "2026-11-05T06:00:00Z", 1));
+		// 대조 — 사건 Q: 소속 셋 가운데 하나가 미국(몫 1/3) — 후보이고 미국 기사도 표본에 든다
+		long american = region(article("미국 기사 둘", "politics.executive", 3.5, "2026-11-05T06:00:00Z", 1), "us");
+		long q = eventOf(american, article("국내 기사 둘", "politics.executive", 3.5, "2026-11-05T06:00:00Z", 1),
+				article("국내 기사 셋", "politics.executive", 3.5, "2026-11-05T06:00:00Z", 1));
+		// 대조 — 사건 Z: 제외 소스의 기사뿐 — 후보가 아니다
+		long z = eventOf(article("제외 소스 기사 둘", "politics.executive", 3.5, "2026-11-05T06:00:00Z", 2));
+
+		DigestInput input = this.selection.select(new UserId(this.user), DAY, ROOMY).orElseThrow();
+
+		assertThat(events(input)).contains(s + ":SUBSCRIBED", q + ":SUBSCRIBED")
+			.doesNotContain(r + ":SUBSCRIBED", z + ":SUBSCRIBED");
+		assertThat(articlesOf(input, s)).containsExactly(fromKept);
+		assertThat(articlesOf(input, q)).contains(american).hasSize(3);
+		assertThat(articles(input)).doesNotContain(fromExcluded);
+	}
+
+	@Test
+	void theEventImportanceIsTheMaximumOfItsMembersEvenOutsideThePeriod() {
+		// 사건 W: 기간 기사 중요도 2 · 기간 앞에 평가된 소속 기사 중요도 4 → 사건 중요도 4. 사건 V: 기사 하나 중요도 3.5
+		long w = eventOf(article("넓은 사건", "politics.executive", 2.0, "2026-11-05T06:00:00Z", 1),
+				article("지난 큰 기사", "politics.executive", 4.0, "2026-11-01T00:00:00Z", 1));
+		long v = event(eventArticle("좁은 사건", "politics.executive", 3.5, "2026-11-05T06:00:00Z", 1));
+
+		DigestInput input = this.selection.select(new UserId(this.user), DAY, ROOMY).orElseThrow();
+
+		// E1(4) · W(4 — 같은 점수 · 같은 발행 시각이라 사건 ID 순) · V(3.5) · 사건 5(1). 대조 — 기사 하나씩인 V(3.5) 가 사건 5(1) 앞
+		assertThat(events(input)).containsExactly(this.e1 + ":SUBSCRIBED", w + ":SUBSCRIBED", v + ":SUBSCRIBED",
+				event(this.a5) + ":SUBSCRIBED");
+	}
+
+	@Test
+	void eventsOfOneStorylineTreeMakeOneItem() {
+		// E1 과 사건 5 가 한 스토리라인의 직접 소속 — 기간 안 중요도 합 8 · 소스 하나라 크지 않다
+		long storyline = this.rows.storyline("2026-11-05T00:00:00Z", "2026-11-05T00:00:00Z", this.e1);
+		this.rows.member(storyline, this.e1);
+		this.rows.member(storyline, event(this.a5));
+		long alone = event(eventArticle("혼자 사건", "politics.executive", 2.0, "2026-11-05T06:00:00Z", 1));
+
+		DigestInput input = this.selection.select(new UserId(this.user), DAY, ROOMY).orElseThrow();
+
+		// 항목 점수는 사건 점수의 최대 — 나무의 항목(4) 다음 혼자인 사건(2), 항목 안 사건은 사건 점수 순
+		assertThat(input.items()).extracting(item -> item.events().stream().map(e -> e.event().value()).toList())
+			.containsExactly(List.of(this.e1, event(this.a5)), List.of(alone));
+		assertThat(input.items()).extracting(InputItem::kind).containsOnly(ItemKind.TOP_STORY);
+	}
+
+	@Test
+	void theInputCarriesTheProfileAndTheArticleMaterialWithActiveNames() {
 		this.jdbc.sql("""
 				update user_settings set interest_text = '반도체 공급망', timezone = 'America/New_York',
 				  summary_length = 'DETAILED', reasoning_effort = 'LOW'
@@ -203,13 +311,15 @@ class CandidateSelectionTests {
 		// 일본 …)로 늘어놓는다 — 키의 사전 순(china < korean-peninsula, japan < us)과 다르다
 		assertThat(input.profile()).isEqualTo(new DigestProfile(List.of("정치"), List.of("미국", "일본"), "반도체 공급망",
 				ZoneId.of("America/New_York"), SummaryLength.DETAILED, ReasoningEffort.LOW));
-		CandidateArticle first = input.candidates().getFirst();
+		InputEvent firstEvent = input.items().getFirst().events().getFirst();
+		assertThat(firstEvent.event()).isEqualTo(new EventId(this.e1));
+		assertThat(firstEvent.reason()).isEqualTo(SelectionReason.SUBSCRIBED);
+		CandidateArticle first = firstEvent.articles().getFirst();
 		assertThat(first.candidate()).isEqualTo(new DigestCandidate(new ArticleId(this.a1), SelectionReason.SUBSCRIBED));
 		assertThat(first.title()).isEqualTo("정치 하나");
 		assertThat(first.summary()).isEqualTo("요약");
 		assertThat(first.topics()).containsExactly("대통령실·행정부");
 		assertThat(first.regions()).containsExactly("북한·한반도", "중국");
-		assertThat(input.storylines()).isEmpty();
 	}
 
 	@Test
@@ -219,19 +329,15 @@ class CandidateSelectionTests {
 
 		DigestInput input = this.selection.select(new UserId(this.user), empty, ROOMY).orElseThrow();
 
-		assertThat(input.candidates()).isEmpty();
-		assertThat(input.storylines()).isEmpty();
+		assertThat(input.items()).isEmpty();
 		assertThat(input.profile().topics()).containsExactly("정치");
 	}
 
 	@Test
-	void theInputTokenBudgetCutsTheTail() {
-		// 후보 하나 = 제목 "정치 하나" 5 + 요약문 "요약" 2 + 80 = 87 토큰.
-		// 예산 = 지시 2,000 + 프로필(구독 행 1 × 20 + 고정 틀 200) + 87 → 하나만
-		LlmModel tight = new LlmModel(Provider.OPENAI, "gpt-test", 2_000 + 20 + 200 + 87, true);
-
-		assertThat(candidates(this.selection.select(new UserId(this.user), DAY, tight)))
-			.containsExactly(new DigestCandidate(new ArticleId(this.a1), SelectionReason.SUBSCRIBED));
+	void theInputTokenBudgetCutsTheTailByEvent() {
+		// 예산 = 지시 2,000 + 프로필 220 + 사건 E1 213 → 사건 E1 하나만(사건 5 의 127 은 들 자리가 없다)
+		assertThat(events(this.selection.select(new UserId(this.user), DAY, ONE_CANDIDATE)))
+			.containsExactly(this.e1 + ":SUBSCRIBED");
 	}
 
 	@Test
@@ -239,83 +345,46 @@ class CandidateSelectionTests {
 		// 9월 1일 ~ 11월 6일(66일)은 평가 조회의 상한(32일)을 넘는다 — 끝에서 32일 앞인 10월 5일 0시부터 읽는다.
 		// 6(첫 평가 11월 4일)은 들고 7(첫 평가 10월 1일)은 빠진다. 8 은 첫 평가가 11월 1일이지만 발행이 10월 1일이라 줄인 시작의
 		// 24시간 전(10월 4일 0시)보다 앞서 빠진다 — 발행 시각의 하한도 줄인 시작에서 잰다
-		article("정치 일곱", "politics.executive", 5.0, "2026-10-01T00:00:00Z", 1);
-		long a8 = article("정치 여덟", "politics.executive", 5.0, "2026-11-01T00:00:00Z", 1);
+		long a7 = eventArticle("정치 일곱", "politics.executive", 5.0, "2026-10-01T00:00:00Z", 1);
+		long a8 = eventArticle("정치 여덟", "politics.executive", 5.0, "2026-11-01T00:00:00Z", 1);
 		this.jdbc.sql("update articles set published_at = '2026-10-01T00:00:00Z' where id = :id").param("id", a8).update();
 		DigestPeriod long66Days = new DigestPeriod(Instant.parse("2026-09-01T00:00:00Z"),
 				Instant.parse("2026-11-06T00:00:00Z"));
 
-		assertThat(candidates(this.selection.select(new UserId(this.user), long66Days, ROOMY))).containsExactly(
-				new DigestCandidate(new ArticleId(this.a6), SelectionReason.SUBSCRIBED),
-				new DigestCandidate(new ArticleId(this.a1), SelectionReason.SUBSCRIBED),
-				new DigestCandidate(new ArticleId(this.a5), SelectionReason.SUBSCRIBED));
+		DigestInput input = this.selection.select(new UserId(this.user), long66Days, ROOMY).orElseThrow();
+
+		assertThat(events(input)).containsExactly(event(this.a6) + ":SUBSCRIBED", this.e1 + ":SUBSCRIBED",
+				event(this.a5) + ":SUBSCRIBED");
+		assertThat(articles(input)).doesNotContain(a7, a8);
 	}
 
 	@Test
-	void aBigStorylineOutsideTheSubscriptionsComesFirstAsTheBigSlotAndIsGrouped() {
+	void aBigStorylineOutsideTheSubscriptionsComesFirstAsTheBigSlotWithItsArticles() {
 		long[] conflict = bigStoryline();
 
 		DigestInput input = this.selection.select(new UserId(this.user), DAY, ROOMY).orElseThrow();
 
-		// 큰 슬롯: 사건의 대표는 같은 발행 시각이라 ID 가 가장 작은 기사(event-R14), 그 다음 구독 후보
-		assertThat(input.digestCandidates()).containsExactly(
-				new DigestCandidate(new ArticleId(conflict[0]), SelectionReason.MAJOR_STORYLINE),
-				new DigestCandidate(new ArticleId(this.a1), SelectionReason.SUBSCRIBED),
-				new DigestCandidate(new ArticleId(this.a5), SelectionReason.SUBSCRIBED));
-		// 묶음 이름 = 스토리라인 대표 사건의 대표 기사 제목
-		assertThat(input.storylines())
-			.containsExactly(new StorylineGroup("분쟁 하나", List.of(new ArticleId(conflict[0]))));
-		assertThat(input.candidates().getFirst().topics()).containsExactly("분쟁·안보");
+		// 큰 슬롯 사건(사건 중요도 5)이 먼저 — 표본은 그 사건의 기간 안 기사 셋, 그 다음 구독 사건
+		assertThat(events(input)).containsExactly(event(conflict[0]) + ":MAJOR_STORYLINE", this.e1 + ":SUBSCRIBED",
+				event(this.a5) + ":SUBSCRIBED");
+		assertThat(articlesOf(input, event(conflict[0]))).containsExactly(conflict[0], conflict[1], conflict[2]);
+		assertThat(input.items().getFirst().kind()).isEqualTo(ItemKind.TOP_STORY);
+		assertThat(input.items().getFirst().events().getFirst().articles().getFirst().topics()).containsExactly("분쟁·안보");
 	}
 
 	@Test
-	void theStorylineGroupNameMayBeAnArticleOutsideTheCandidates() {
-		// 평가 없는 기사가 사건에서 ID 가 가장 작아 사건 전체의 대표다 — 묶음 이름은 그 기사의 제목이고, 그 기사는 후보가 아니다
-		long unevaluated = EventArticles.insert(this.jdbc, "분쟁 영", "요약", 1, 11);
-		long[] conflict = bigStoryline(unevaluated);
+	void theBigEventTakesItsShareOfTheBudgetFirst() {
+		long[] conflict = bigStoryline();
+		// 큰 슬롯 사건 = 87("분쟁 하나") + 86 + 86 + 40 = 299. 예산 = 지시 2,000 + 프로필 220 + 299 → 구독 사건은 들 자리가 없다
+		LlmModel tight = new LlmModel(Provider.OPENAI, "gpt-test", 2_000 + 220 + 299, true);
 
-		DigestInput input = this.selection.select(new UserId(this.user), DAY, ROOMY).orElseThrow();
+		assertThat(events(this.selection.select(new UserId(this.user), DAY, tight)))
+			.containsExactly(event(conflict[0]) + ":MAJOR_STORYLINE");
 
-		assertThat(input.storylines())
-			.containsExactly(new StorylineGroup("분쟁 영", List.of(new ArticleId(conflict[0]))));
-		assertThat(input.digestCandidates()).extracting(DigestCandidate::articleId)
-			.doesNotContain(new ArticleId(unevaluated));
-	}
-
-	@Test
-	void aStorylineGroupWhoseRepresentativeCannotBeReadIsNamedAfterItsFirstArticle() {
-		// 대표 기사는 "분쟁 영"이지만 그 사이 지워져 읽지 못한 것처럼 대표 조회가 비면, 묶음 첫 기사(큰 슬롯 후보 "분쟁 하나")의 제목이다
-		long unevaluated = EventArticles.insert(this.jdbc, "분쟁 영", "요약", 1, 11);
-		long[] conflict = bigStoryline(unevaluated);
-		EventDirectory noRepresentatives = (EventDirectory) Proxy.newProxyInstance(
-				EventDirectory.class.getClassLoader(), new Class<?>[] { EventDirectory.class },
-				(proxy, method, args) -> method.getName().equals("representativesOfAll") ? Map.of()
-						: method.invoke(this.events, args));
-		CandidateSelection selection = new CandidateSelection(this.interests, this.evaluations,
-				new ActiveEvaluations(this.evaluations, this.lineage), this.tagSets, this.articles, noRepresentatives,
-				this.storylines, this.interestMaterials, this.feedback, InstantSource.system());
-
-		DigestInput input = selection.select(new UserId(this.user), DAY, ROOMY).orElseThrow();
-
-		assertThat(input.storylines())
-			.containsExactly(new StorylineGroup("분쟁 하나", List.of(new ArticleId(conflict[0]))));
-	}
-
-	@Test
-	void theStorylineGroupTakesItsShareOfTheBudget() {
-		bigStoryline();
-		// 예산 = 지시 2,000 + 프로필 220 + 묶음("분쟁 하나" 5 + 100) + 큰 슬롯 기사 87 → 구독 후보는 들 자리가 없다
-		LlmModel tight = new LlmModel(Provider.OPENAI, "gpt-test", 2_000 + 220 + 105 + 87, true);
-
-		assertThat(candidates(this.selection.select(new UserId(this.user), DAY, tight)))
-			.extracting(DigestCandidate::reason)
-			.containsExactly(SelectionReason.MAJOR_STORYLINE);
-
-		// 대조: 큰 슬롯을 끄면 묶음 몫이 없어 같은 예산(후보 몫 192)에 구독 후보 둘(87 + 87)이 든다
+		// 대조: 큰 슬롯을 끄면 같은 예산(후보 몫 299)에 사건 E1(213)이 든다 — 사건 5(127)까지는 넘는다
 		this.jdbc.sql("update user_settings set big_slots = 0 where user_id = :user").param("user", this.user).update();
-		assertThat(candidates(this.selection.select(new UserId(this.user), DAY, tight))).containsExactly(
-				new DigestCandidate(new ArticleId(this.a1), SelectionReason.SUBSCRIBED),
-				new DigestCandidate(new ArticleId(this.a5), SelectionReason.SUBSCRIBED));
+		assertThat(events(this.selection.select(new UserId(this.user), DAY, tight)))
+			.containsExactly(this.e1 + ":SUBSCRIBED");
 	}
 
 	@Test
@@ -325,38 +394,42 @@ class CandidateSelectionTests {
 
 		DigestInput input = this.selection.select(new UserId(this.user), DAY, ROOMY).orElseThrow();
 
-		assertThat(input.digestCandidates()).containsExactly(
-				new DigestCandidate(new ArticleId(this.a1), SelectionReason.SUBSCRIBED),
-				new DigestCandidate(new ArticleId(this.a5), SelectionReason.SUBSCRIBED));
-		assertThat(input.storylines()).isEmpty();
+		assertThat(events(input)).containsExactly(this.e1 + ":SUBSCRIBED", event(this.a5) + ":SUBSCRIBED");
 	}
 
 	@Test
-	void anArticleTheUserExcludesIsSkippedForTheBigSlotRepresentative() {
+	void aBigEventWhoseMembersAreMostlyInAnExcludedRegionHasNoBigSlot() {
 		long[] conflict = bigStoryline();
-		// 사용자가 지역 us 를 제외하고 가장 작은 ID 의 기사에 지역 us 가 붙는다 — 대표는 그다음 기사. 소스는 그대로라 보도 강도도 그대로다
 		this.jdbc.sql("""
 				insert into user_tag_preferences (user_id, tag_kind, tag_key, mode, created_at)
 				values (:user, 'REGION', 'us', 'EXCLUDE', now())
 				""").param("user", this.user).update();
-		this.jdbc.sql("""
-				insert into article_tags (evaluation_id, article_id, tag_kind, tag_key, probability)
-				select id, article_id, 'REGION', 'us', 0.9 from article_evaluations where article_id = :article
-				""").param("article", conflict[0]).update();
+		// 셋 가운데 하나만 미국 — 사건의 지역이 아니라 큰 슬롯 사건이고, 미국 기사도 표본에 든다
+		region(conflict[0], "us");
 
-		assertThat(candidates(this.selection.select(new UserId(this.user), DAY, ROOMY))).first()
-			.isEqualTo(new DigestCandidate(new ArticleId(conflict[1]), SelectionReason.MAJOR_STORYLINE));
+		DigestInput oneThird = this.selection.select(new UserId(this.user), DAY, ROOMY).orElseThrow();
+
+		assertThat(events(oneThird)).first().isEqualTo(event(conflict[0]) + ":MAJOR_STORYLINE");
+		assertThat(articlesOf(oneThird, event(conflict[0]))).containsExactly(conflict[0], conflict[1], conflict[2]);
+
+		// 둘이 미국 — 사건의 지역이 제외라 큰 슬롯이 없다
+		region(conflict[1], "us");
+
+		assertThat(events(this.selection.select(new UserId(this.user), DAY, ROOMY)))
+			.containsExactly(this.e1 + ":SUBSCRIBED", event(this.a5) + ":SUBSCRIBED");
 	}
 
 	@Test
-	void anArticleWithoutAnEvaluationCannotBeTheBigSlotRepresentative() {
-		// 평가 없는 기사가 사건에서 ID 가 가장 작다 — 지역 · 형식 제외를 확인할 수 없어 대표 자격이 없고 평가 있는 다음 기사가 대표다(digest-R19).
-		// 중요도가 없어 중요도 합 · 소스는 그대로라 보도 강도도 그대로다
+	void anArticleWithoutAnEvaluationIsNotInTheBigEventSample() {
+		// 평가 없는 기사가 사건에 함께 배정됐다 — 지역 · 형식 제외를 확인할 수 없어 표본에 들지 않는다(digest-R19). 중요도가 없어 중요도
+		// 합 · 소스는 그대로라 보도 강도도 그대로다
 		long unevaluated = EventArticles.insert(this.jdbc, "분쟁 영", "요약", 1, 11);
 		long[] conflict = bigStoryline(unevaluated);
 
-		assertThat(candidates(this.selection.select(new UserId(this.user), DAY, ROOMY))).first()
-			.isEqualTo(new DigestCandidate(new ArticleId(conflict[0]), SelectionReason.MAJOR_STORYLINE));
+		DigestInput input = this.selection.select(new UserId(this.user), DAY, ROOMY).orElseThrow();
+
+		assertThat(articlesOf(input, event(conflict[0]))).containsExactly(conflict[0], conflict[1], conflict[2]);
+		assertThat(articles(input)).doesNotContain(unevaluated);
 	}
 
 	@Test
@@ -372,8 +445,8 @@ class CandidateSelectionTests {
 				new ActiveEvaluations(this.evaluations, skewing(skewed, elsewhere)), this.tagSets, this.articles, this.events,
 				this.storylines, this.interestMaterials, this.feedback, InstantSource.system());
 
-		assertThat(candidates(once.select(new UserId(this.user), DAY, ROOMY))).extracting(DigestCandidate::articleId)
-			.containsExactly(new ArticleId(this.a1), new ArticleId(this.a5));
+		assertThat(events(once.select(new UserId(this.user), DAY, ROOMY)))
+			.containsExactly(this.e1 + ":SUBSCRIBED", event(this.a5) + ":SUBSCRIBED");
 		assertThat(skewed).hasValue(0);
 
 		AtomicInteger always = new AtomicInteger(Integer.MAX_VALUE);
@@ -385,83 +458,109 @@ class CandidateSelectionTests {
 	}
 
 	@Test
-	void anArticleOnATopicTheUserLikedEntersByInterest() {
-		// 입법 3.6 은 중립이면 행정 4.0(1) 뒤라 후보 하나의 예산 밖이다. 지난 다이제스트가 입법 기사 일곱을 보였고 모두 좋아요 —
+	void anEventOnATopicTheUserLikedEntersByInterest() {
+		// 입법 3.6 은 중립이면 E1(4.0) 뒤라 사건 하나의 예산 밖이다. 지난 다이제스트가 입법 기사 일곱을 보였고 모두 좋아요 —
 		// 입법 가중치 ≈ 1 + 0.5 × 7 ÷ 10 ≈ 1.35 라 3.6 × 1.35 ≈ 4.8 이 4.0 앞이다
-		long legislature = article("의회 넷이", "politics.legislature", 3.6, "2026-11-05T06:00:00Z", 1);
+		long legislature = event(eventArticle("의회 넷이", "politics.legislature", 3.6, "2026-11-05T06:00:00Z", 1));
 		long[] shown = likedLegislatureShown(7);
 
-		assertThat(candidates(this.selection.select(new UserId(this.user), DAY, ONE_CANDIDATE)))
-			.containsExactly(new DigestCandidate(new ArticleId(legislature), SelectionReason.INTEREST));
+		assertThat(events(this.selection.select(new UserId(this.user), DAY, ONE_CANDIDATE)))
+			.containsExactly(legislature + ":INTEREST");
 
 		// 대조 — 좋아요를 모두 없음으로 되돌리면 중립 순서 그대로
 		for (long article : shown) {
 			react(article, "NONE", "2026-11-04T08:00:00Z");
 		}
-		assertThat(candidates(this.selection.select(new UserId(this.user), DAY, ONE_CANDIDATE)))
-			.containsExactly(new DigestCandidate(new ArticleId(this.a1), SelectionReason.SUBSCRIBED));
+		assertThat(events(this.selection.select(new UserId(this.user), DAY, ONE_CANDIDATE)))
+			.containsExactly(this.e1 + ":SUBSCRIBED");
 	}
 
 	@Test
 	void aSubscribedStorylineRaisesTheTopicsOfItsEvents() {
 		// 입법 기사 하나뿐인 사건의 스토리라인을 구독했다 — 입법 몫 1, 가중치 ≈ 1 + 0.5 × 1 ÷ 3 ≈ 1.17 이라 3.6 × 1.17 ≈ 4.2 가 4.0 앞이다
-		long legislature = article("의회 넷이", "politics.legislature", 3.6, "2026-11-05T06:00:00Z", 1);
+		long legislature = event(eventArticle("의회 넷이", "politics.legislature", 3.6, "2026-11-05T06:00:00Z", 1));
 		subscribeStoryline(legislatureStoryline(), "USER");
 
-		assertThat(candidates(this.selection.select(new UserId(this.user), DAY, ONE_CANDIDATE)))
-			.containsExactly(new DigestCandidate(new ArticleId(legislature), SelectionReason.INTEREST));
+		assertThat(events(this.selection.select(new UserId(this.user), DAY, ONE_CANDIDATE)))
+			.containsExactly(legislature + ":INTEREST");
+	}
+
+	@Test
+	void aSubscribedStorylineCountsTheTopicOfEachEventByItsMembersNotByItsRepresentative() {
+		// 지난 사건의 대표 기사는 경제, 나머지 소속 둘은 입법 — 사건의 주제는 입법(2/3)이라 입법 몫 1, 가중치 ≈ 1.17 이고
+		// 3.6 × 1.17 ≈ 4.2 가 4.0 앞이다. 대표 기사로 세면 경제 몫 1 이라 입법 사건은 4.0 뒤다
+		long legislature = event(eventArticle("의회 넷이", "politics.legislature", 3.6, "2026-11-05T06:00:00Z", 1));
+		long representative = article("지난 경제", "economy.markets", 3.0, "2026-11-01T00:00:00Z", 1);
+		long event = this.rows.event(3, "2026-11-01T00:00:00Z", "2026-11-01T02:00:00Z");
+		this.rows.assign(representative, event, "2026-11-01T00:00:00Z");
+		this.rows.assign(article("지난 의회 하나", "politics.legislature", 3.0, "2026-11-01T01:00:00Z", 2), event,
+				"2026-11-01T01:00:00Z");
+		this.rows.assign(article("지난 의회 둘", "politics.legislature", 3.0, "2026-11-01T02:00:00Z", 3), event,
+				"2026-11-01T02:00:00Z");
+		this.jdbc.sql("""
+				update events set status = 'CLOSED', closed_at = '2026-11-02T00:00:00Z', representative_article_id = :article
+				where id = :event
+				""").param("article", representative).param("event", event).update();
+		long storyline = this.rows.storyline("2026-11-01T00:00:00Z", "2026-11-01T02:00:00Z", event);
+		this.rows.member(storyline, event);
+		subscribeStoryline(storyline, "USER");
+
+		assertThat(events(this.selection.select(new UserId(this.user), DAY, ONE_CANDIDATE)))
+			.containsExactly(legislature + ":INTEREST");
 	}
 
 	@Test
 	void aStorylineSubscriptionRewrittenByAMergeIsNotASignal() {
-		article("의회 넷이", "politics.legislature", 3.6, "2026-11-05T06:00:00Z", 1);
+		eventArticle("의회 넷이", "politics.legislature", 3.6, "2026-11-05T06:00:00Z", 1);
 		subscribeStoryline(legislatureStoryline(), "STORYLINE_MERGED");
 
-		assertThat(candidates(this.selection.select(new UserId(this.user), DAY, ONE_CANDIDATE)))
-			.containsExactly(new DigestCandidate(new ArticleId(this.a1), SelectionReason.SUBSCRIBED));
+		assertThat(events(this.selection.select(new UserId(this.user), DAY, ONE_CANDIDATE)))
+			.containsExactly(this.e1 + ":SUBSCRIBED");
 	}
 
 	@Test
-	void aDislikedArticleLeavesItsEventToAnotherRepresentative() {
-		// 1 · 2 는 같은 사건 — 1 에 싫어요를 누르면 대표는 2
+	void aDislikedArticleLeavesTheSampleOfItsEvent() {
+		// 1 · 2 는 같은 사건 — 1 에 싫어요를 누르면 사건은 남고 표본은 2 만
 		dislike(this.a1);
 
-		assertThat(candidates(this.selection.select(new UserId(this.user), DAY, ROOMY))).containsExactly(
-				new DigestCandidate(new ArticleId(this.a2), SelectionReason.SUBSCRIBED),
-				new DigestCandidate(new ArticleId(this.a5), SelectionReason.SUBSCRIBED));
+		DigestInput input = this.selection.select(new UserId(this.user), DAY, ROOMY).orElseThrow();
 
-		// 대조 — 좋아요로 바꾸면 다시 대표다
+		assertThat(events(input)).containsExactly(this.e1 + ":SUBSCRIBED", event(this.a5) + ":SUBSCRIBED");
+		assertThat(articlesOf(input, this.e1)).containsExactly(this.a2);
+
+		// 대조 — 좋아요로 바꾸면 다시 표본에 든다
 		like(this.a1);
-		assertThat(candidates(this.selection.select(new UserId(this.user), DAY, ROOMY))).containsExactly(
-				new DigestCandidate(new ArticleId(this.a1), SelectionReason.SUBSCRIBED),
-				new DigestCandidate(new ArticleId(this.a5), SelectionReason.SUBSCRIBED));
+		assertThat(articlesOf(this.selection.select(new UserId(this.user), DAY, ROOMY).orElseThrow(), this.e1))
+			.containsExactly(this.a1, this.a2);
 	}
 
 	@Test
-	void aDislikedArticleIsSkippedForTheBigSlotRepresentative() {
+	void aDislikedArticleLeavesTheSampleOfTheBigEvent() {
 		long[] conflict = bigStoryline();
 		dislike(conflict[0]);
 
-		assertThat(candidates(this.selection.select(new UserId(this.user), DAY, ROOMY))).first()
-			.isEqualTo(new DigestCandidate(new ArticleId(conflict[1]), SelectionReason.MAJOR_STORYLINE));
+		assertThat(articlesOf(this.selection.select(new UserId(this.user), DAY, ROOMY).orElseThrow(),
+				event(conflict[0])))
+			.containsExactly(conflict[1], conflict[2]);
 
-		// 대조 — 좋아요로 바꾸면 다시 큰 슬롯 대표다
+		// 대조 — 좋아요로 바꾸면 다시 표본에 든다
 		like(conflict[0]);
-		assertThat(candidates(this.selection.select(new UserId(this.user), DAY, ROOMY))).first()
-			.isEqualTo(new DigestCandidate(new ArticleId(conflict[0]), SelectionReason.MAJOR_STORYLINE));
+		assertThat(articlesOf(this.selection.select(new UserId(this.user), DAY, ROOMY).orElseThrow(),
+				event(conflict[0])))
+			.containsExactly(conflict[0], conflict[1], conflict[2]);
 	}
 
 	@Test
 	void signalsAfterThePeriodEndAreReadUpToNow() {
 		// 스토리라인 구독(USER)이 기간 끝 11-06 0시 뒤 12시다 — 지금이 그 뒤면 읽혀 무게 1 로 세고(≈ 1 + 0.5 × 1 ÷ 3 ≈ 1.17,
 		// 3.6 × 1.17 ≈ 4.2 가 4.0 앞), 지금이 그 앞이면 읽는 범위 밖이라 중립 순서다
-		long legislature = article("의회 넷이", "politics.legislature", 3.6, "2026-11-05T06:00:00Z", 1);
+		long legislature = event(eventArticle("의회 넷이", "politics.legislature", 3.6, "2026-11-05T06:00:00Z", 1));
 		subscribeStoryline(legislatureStoryline(), "USER", "2026-11-06T12:00:00Z");
 
-		assertThat(candidates(selectionAt("2026-11-07T00:00:00Z").select(new UserId(this.user), DAY, ONE_CANDIDATE)))
-			.containsExactly(new DigestCandidate(new ArticleId(legislature), SelectionReason.INTEREST));
-		assertThat(candidates(selectionAt("2026-11-06T06:00:00Z").select(new UserId(this.user), DAY, ONE_CANDIDATE)))
-			.containsExactly(new DigestCandidate(new ArticleId(this.a1), SelectionReason.SUBSCRIBED));
+		assertThat(events(selectionAt("2026-11-07T00:00:00Z").select(new UserId(this.user), DAY, ONE_CANDIDATE)))
+			.containsExactly(legislature + ":INTEREST");
+		assertThat(events(selectionAt("2026-11-06T06:00:00Z").select(new UserId(this.user), DAY, ONE_CANDIDATE)))
+			.containsExactly(this.e1 + ":SUBSCRIBED");
 	}
 
 	/** 시계를 고정한 후보 선별 */
@@ -472,8 +571,8 @@ class CandidateSelectionTests {
 	}
 
 	@Test
-	void theNeutralResultIsCutByTheSameBudgetWithItsOwnArticles() {
-		// 최대 후보 10 · 예산 9 개. 북한(D 4.8)은 뺌 넷으로 가중치 0.5, 외교(Z 4.55)는 더함 넷으로 1.5.
+	void theNeutralResultIsCutByTheSameBudgetWithItsOwnEvents() {
+		// 사건마다 기사 하나(127). 최대 후보 10 · 예산 9 개. 북한(D 4.8)은 뺌 넷으로 가중치 0.5, 외교(Z 4.55)는 더함 넷으로 1.5.
 		// 관심도 결과 10: Z · n1 ~ n4 · n6 ~ n9 · n11 → 예산 9: Z · n1 ~ n4 · n6 ~ n9
 		// 중립 결과 10: n1 ~ n4 · D · n6 ~ n9 · Z → 예산 9: n1 ~ n4 · D · n6 ~ n9 — Z 는 중립으로는 들지 못해 INTEREST.
 		// 중립에만 든 D 의 토큰을 읽지 않으면 중립 결과가 D 를 버리고 Z 를 담아 Z 가 SUBSCRIBED 가 된다
@@ -484,26 +583,25 @@ class CandidateSelectionTests {
 		long[] n = new long[12];
 		double[] importance = { 0, 5.0, 4.95, 4.9, 4.85, 0, 4.75, 4.7, 4.65, 4.6, 0, 4.5 };
 		for (int i : new int[] { 1, 2, 3, 4, 6, 7, 8, 9, 11 }) {
-			n[i] = article("기사 %02d".formatted(i), "politics.executive", importance[i], "2026-11-05T06:00:00Z", 1);
+			n[i] = eventArticle("기사 %02d".formatted(i), "politics.executive", importance[i], "2026-11-05T06:00:00Z", 1);
 		}
-		long d = article("기사 05", "politics.north-korea", 4.8, "2026-11-05T06:00:00Z", 1);
-		long z = article("기사 10", "politics.diplomacy-defense", 4.55, "2026-11-05T06:00:00Z", 1);
+		long d = eventArticle("기사 05", "politics.north-korea", 4.8, "2026-11-05T06:00:00Z", 1);
+		long z = eventArticle("기사 10", "politics.diplomacy-defense", 4.55, "2026-11-05T06:00:00Z", 1);
 		for (int i = 0; i < 4; i++) {
 			topicChange("politics.north-korea", "REMOVE");
 			topicChange("politics.diplomacy-defense", "ADD");
 		}
-		LlmModel nine = new LlmModel(Provider.OPENAI, "gpt-test", 2_000 + 20 + 200 + 9 * 87, true);
+		LlmModel nine = new LlmModel(Provider.OPENAI, "gpt-test", 2_000 + 20 + 200 + 9 * 127, true);
 
-		List<DigestCandidate> candidates = candidates(this.selection.select(new UserId(this.user), DAY, nine));
+		DigestInput input = this.selection.select(new UserId(this.user), DAY, nine).orElseThrow();
 
-		assertThat(candidates).extracting(DigestCandidate::articleId)
-			.containsExactly(new ArticleId(z), new ArticleId(n[1]), new ArticleId(n[2]), new ArticleId(n[3]),
-					new ArticleId(n[4]), new ArticleId(n[6]), new ArticleId(n[7]), new ArticleId(n[8]),
-					new ArticleId(n[9]));
-		assertThat(candidates).filteredOn(candidate -> candidate.reason() == SelectionReason.INTEREST)
-			.extracting(DigestCandidate::articleId)
-			.containsExactly(new ArticleId(z));
-		assertThat(candidates).extracting(DigestCandidate::articleId).doesNotContain(new ArticleId(d));
+		// 사건마다 기사 하나라 기사 순서가 항목 순서다 — 주요 뉴스 다섯 다음 헤드라인 넷
+		assertThat(articles(input)).containsExactly(z, n[1], n[2], n[3], n[4], n[6], n[7], n[8], n[9]);
+		assertThat(events(input)).filteredOn(entry -> entry.endsWith(":INTEREST")).containsExactly(event(z) + ":INTEREST");
+		assertThat(articles(input)).doesNotContain(d);
+		assertThat(input.items()).extracting(InputItem::kind)
+			.containsExactly(ItemKind.TOP_STORY, ItemKind.TOP_STORY, ItemKind.TOP_STORY, ItemKind.TOP_STORY,
+					ItemKind.TOP_STORY, ItemKind.HEADLINE, ItemKind.HEADLINE, ItemKind.HEADLINE, ItemKind.HEADLINE);
 	}
 
 	@Test
@@ -513,8 +611,8 @@ class CandidateSelectionTests {
 		AtomicInteger skewed = new AtomicInteger(1);
 		CandidateSelection once = selectionWithInterestLineage(skewing(skewed, elsewhere));
 
-		assertThat(candidates(once.select(new UserId(this.user), DAY, ROOMY))).extracting(DigestCandidate::articleId)
-			.containsExactly(new ArticleId(this.a1), new ArticleId(this.a5));
+		assertThat(events(once.select(new UserId(this.user), DAY, ROOMY)))
+			.containsExactly(this.e1 + ":SUBSCRIBED", event(this.a5) + ":SUBSCRIBED");
 		assertThat(skewed).hasValue(0);
 
 		CandidateSelection never = selectionWithInterestLineage(
@@ -625,14 +723,75 @@ class CandidateSelectionTests {
 		for (long article : unevaluated) {
 			this.rows.assign(article, event, "2026-11-05T00:00:00Z");
 		}
+		this.soloEvents.put(b1, event);
 		long storyline = this.rows.storyline("2026-11-05T00:00:00Z", "2026-11-05T00:00:00Z", event);
 		this.rows.member(storyline, event);
 		return new long[] { b1, b2, b3 };
 	}
 
-	/** 입력의 후보 — 계정이 있어야 한다 */
-	private static List<DigestCandidate> candidates(Optional<DigestInput> input) {
-		return input.orElseThrow().digestCandidates();
+	/** 입력의 사건마다 "사건 ID:선정 이유" — 항목 순서, 항목 안 사건 순서. 계정이 있어야 한다 */
+	private static List<String> events(Optional<DigestInput> input) {
+		return events(input.orElseThrow());
+	}
+
+	private static List<String> events(DigestInput input) {
+		return input.items()
+			.stream()
+			.flatMap(item -> item.events().stream())
+			.map(event -> event.event().value() + ":" + event.reason())
+			.toList();
+	}
+
+	/** 입력의 표본 기사 — 항목 · 사건 · 기사 순서 */
+	private static List<Long> articles(DigestInput input) {
+		return input.items()
+			.stream()
+			.flatMap(item -> item.events().stream())
+			.flatMap(event -> event.articles().stream())
+			.map(article -> article.candidate().articleId().value())
+			.toList();
+	}
+
+	/** 그 사건의 표본 기사 — 입력에 그 사건이 없으면 빈 목록 */
+	private static List<Long> articlesOf(DigestInput input, long event) {
+		return input.items()
+			.stream()
+			.flatMap(item -> item.events().stream())
+			.filter(entry -> entry.event().value() == event)
+			.flatMap(entry -> entry.articles().stream())
+			.map(article -> article.candidate().articleId().value())
+			.toList();
+	}
+
+	/** 시험이 그 기사로 만든 사건 */
+	private long event(long article) {
+		return Objects.requireNonNull(this.soloEvents.get(article), "시험이 만든 사건이 없는 기사다");
+	}
+
+	/** 기사들을 한 사건에 배정한다 — 배정의 발행 시각은 기간 첫 시각 */
+	private long eventOf(long... articles) {
+		long event = this.rows.event(articles.length, "2026-11-05T00:00:00Z", "2026-11-05T00:00:00Z");
+		for (long article : articles) {
+			this.rows.assign(article, event, "2026-11-05T00:00:00Z");
+		}
+		this.soloEvents.put(articles[0], event);
+		return event;
+	}
+
+	/** 기사와 그 기사만 가진 사건 */
+	private long eventArticle(String title, String topic, double importance, String evaluatedAt, long source) {
+		long article = article(title, topic, importance, evaluatedAt, source);
+		eventOf(article);
+		return article;
+	}
+
+	/** 기사의 평가에 지역을 붙인다 */
+	private long region(long article, String region) {
+		this.jdbc.sql("""
+				insert into article_tags (evaluation_id, article_id, tag_kind, tag_key, probability)
+				select id, article_id, 'REGION', :region, 0.9 from article_evaluations where article_id = :article
+				""").param("region", region).param("article", article).update();
+		return article;
 	}
 
 	/** 남은 횟수만큼 계보 표의 활성 버전을 다른 값으로 바꿔 낸다 — 조회 사이의 활성 전환 */

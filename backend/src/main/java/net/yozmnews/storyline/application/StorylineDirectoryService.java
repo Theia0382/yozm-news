@@ -37,6 +37,7 @@ import net.yozmnews.storyline.domain.big.BigStorylineRule;
 import net.yozmnews.storyline.domain.big.BigTrees;
 import net.yozmnews.storyline.domain.relation.RelationGraph;
 import net.yozmnews.storyline.domain.relation.RelationRepository;
+import net.yozmnews.storyline.domain.relation.StorylineTops;
 import net.yozmnews.storyline.domain.storyline.ClosedMembers;
 import net.yozmnews.storyline.domain.storyline.StateCriteria;
 import net.yozmnews.storyline.domain.storyline.StoredStoryline;
@@ -46,7 +47,7 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 
 /**
- * 공개 조회 {@link StorylineDirectory} 의 구현 — docs/specs/storyline.md §4 · storyline-R19 · storyline-R21 ~ R23 · storyline-R33.
+ * 공개 조회 {@link StorylineDirectory} 의 구현 — docs/specs/storyline.md §4 · storyline-R19 · storyline-R21 ~ R23 · storyline-R33 · storyline-R37.
  * <p>
  * 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통). 큰 판정은 {@link #bigStorylines(EventPeriod, BigStorylineCriteria)} 하나를 공개 조회와
  * 미리보기가 함께 쓴다. 스토리라인의 사건은 닫은 사건 집합({@link ClosedMembers} — 직접 소속과 포함을 따라 내려간 하위의 직접 소속)이고, 스토리라인
@@ -140,6 +141,23 @@ class StorylineDirectoryService implements StorylineDirectory {
 		for (StorylineView view : views) {
 			found.add(new EventStoryline(view, direct.contains(view.id().value())));
 		}
+		return found;
+	}
+
+	@Override
+	public Map<EventId, List<StorylineId>> topsOf(Collection<EventId> events) {
+		Objects.requireNonNull(events, "events");
+		Set<EventId> distinct = new LinkedHashSet<>(events);
+		if (distinct.size() > MAX_TOP_EVENTS) {
+			throw new IllegalArgumentException("꼭대기 조회는 한 번에 사건 " + MAX_TOP_EVENTS + " 개까지다: " + distinct.size());
+		}
+		if (distinct.isEmpty()) {
+			return Map.of();
+		}
+		List<Long> present = this.events.views(distinct).keySet().stream().map(EventId::value).toList();
+		Map<Long, List<Long>> tops = StorylineTops.of(this.storylines.directMemberships(present), graph());
+		Map<EventId, List<StorylineId>> found = new LinkedHashMap<>();
+		tops.forEach((event, roots) -> found.put(new EventId(event), roots.stream().map(StorylineId::new).toList()));
 		return found;
 	}
 

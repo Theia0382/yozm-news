@@ -140,10 +140,10 @@ class FeedbackControllerTests {
 			.andExpect(status().isBadRequest());
 		this.mockMvc.perform(get("/api/feedback").param("articleIds", "1,0").with(this.user))
 			.andExpect(status().isBadRequest());
-		this.mockMvc.perform(get("/api/feedback").param("articleIds", ids(501)).with(this.user))
+		this.mockMvc.perform(get("/api/feedback").param("articleIds", ids(751)).with(this.user))
 			.andExpect(status().isBadRequest());
-		// 대조 — 겹친 ID 를 섞어 서로 다른 500 개는 받는다
-		this.mockMvc.perform(get("/api/feedback").param("articleIds", ids(500) + ",1,2").with(this.user))
+		// 대조 — 겹친 ID 를 섞어 서로 다른 750 개는 받는다
+		this.mockMvc.perform(get("/api/feedback").param("articleIds", ids(750) + ",1,2").with(this.user))
 			.andExpect(status().isOk())
 			.andExpect(content().json("""
 					{"states":[]}""", JsonCompareMode.STRICT));

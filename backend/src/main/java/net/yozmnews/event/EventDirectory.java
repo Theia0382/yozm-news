@@ -62,13 +62,6 @@ public interface EventDirectory {
 	Map<ArticleId, EventId> eventsOf(Collection<ArticleId> articleIds);
 
 	/**
-	 * 사건마다 주어진 기사 가운데 대표 기사(event-R14) — 사건 모델 버전의 표현이 있는 기사를 중심에 가까운 순으로 먼저, 표현이 없는 기사는
-	 * 그 뒤에 발행 시각 · 기사 ID 순으로 두고 첫째를 고른다.
-	 * @return 사건 ID → 대표 기사 — 그 사건의 기사가 아닌 것은 무시하고, 남는 기사가 없는 사건은 빠진다
-	 */
-	Map<EventId, ArticleId> representatives(Map<EventId, ? extends Collection<ArticleId>> among);
-
-	/**
 	 * 사건마다 사건 기사 전체에서 고른 대표 기사(event-R14) — 닫을 때 남긴 대표가 있으면 그것이다. {@link #list} 의 대표와 같은 정본이다.
 	 * @return 사건 ID → 대표 기사 — 배정이 없는 사건(합쳐진 사건 포함) · 없는 사건은 빠진다. 빈 입력이면 빈 맵
 	 */

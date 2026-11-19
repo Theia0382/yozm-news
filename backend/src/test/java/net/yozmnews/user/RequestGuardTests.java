@@ -125,7 +125,7 @@ class RequestGuardTests {
 		LlmKeyRows.give(this.jdbc, user.id().value());
 		try {
 			// 인용되지 않은 기사라 판정 결과는 NOT_IN_DIGEST(200)다 — 결과와 무관하게 센다
-			assertLimited("/api/feedback/{articleId}", 300, () -> put("/api/feedback/1").with(user)
+			assertLimited("/api/feedback/{articleId}", 750, () -> put("/api/feedback/1").with(user)
 				.header("X-Real-IP", "192.0.2.20")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""

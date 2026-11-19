@@ -36,9 +36,6 @@ public interface EventQueryRepository {
 	/** 기사 → 사건 ID — 배정이 없는 기사는 빠진다 */
 	Map<ArticleId, Long> eventsOf(Collection<ArticleId> articleIds);
 
-	/** 주어진 (사건, 기사) 가운데 사건마다 대표 기사 — 그 사건의 배정이 아닌 쌍은 무시한다 */
-	Map<Long, ArticleId> representatives(Map<Long, ? extends Collection<ArticleId>> among);
-
 	/** 사건 기사 전체에서 사건마다 대표 기사 — 닫을 때 남긴 대표가 있으면 그것 */
 	Map<Long, ArticleId> representativesOfAll(Collection<Long> eventIds);
 

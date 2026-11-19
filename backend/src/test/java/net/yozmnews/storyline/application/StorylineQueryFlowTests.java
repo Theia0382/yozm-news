@@ -11,6 +11,7 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.LongStream;
 
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.event.EventArticles;
@@ -25,6 +26,7 @@ import net.yozmnews.storyline.BigStorylineCriteria;
 import net.yozmnews.storyline.BigStorylineCriteriaRows;
 import net.yozmnews.storyline.EventStoryline;
 import net.yozmnews.storyline.StorylineCursor;
+import net.yozmnews.storyline.StorylineDirectory;
 import net.yozmnews.storyline.StorylineEvent;
 import net.yozmnews.storyline.StorylineId;
 import net.yozmnews.storyline.StorylinePage;
@@ -62,7 +64,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 큰 판정 기준은 인스턴스에 한 행이라 시작과 끝에 비우고 처음 값을 다시 적재한다. 사건 · 스토리라인 행과 이 시험이 넣은 평가 행도 시작과 끝에
  * 지운다. 상태는 고정 시계로 본다.
  * <p>
- * 지키는 규칙: storyline-R16 · storyline-R19 ~ R23 · storyline-R25 · storyline-R33
+ * 지키는 규칙: storyline-R16 · storyline-R19 ~ R23 · storyline-R25 · storyline-R33 · storyline-R37
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -103,6 +105,8 @@ class StorylineQueryFlowTests {
 	JdbcClient jdbc;
 
 	private final List<Long> evaluated = new ArrayList<>();
+
+	private final List<Long> linkingCriteria = new ArrayList<>();
 
 	private StorylineDirectoryService directory;
 
@@ -325,6 +329,79 @@ class StorylineQueryFlowTests {
 	}
 
 	@Test
+	void theTopsOfEventsAreTheRootsOfTheirTreesOrderedByTheBestScore() {
+		// wide ⊃ narrow — 사건 C 와 지난 사건은 narrow 에 직접 들어 wide 의 나무다
+		contains(this.wide, this.narrow);
+		long eventD = event("2026-11-05T10:00:00Z", "2026-11-05T10:00:00Z");
+		scored(this.narrow, eventD, 0.90);
+		scored(this.quiet, eventD, 0.70);
+		// 합쳐진 스토리라인에 남은 소속 행은 점수가 가장 높아도 꼭대기가 되지 않는다
+		long mergedStoryline = storyline("2026-11-05T10:00:00Z", "2026-11-05T10:00:00Z", eventD);
+		scored(mergedStoryline, eventD, 0.99);
+		this.jdbc.sql("update storylines set merged_into = :into, merged_at = now() where id = :id")
+			.param("into", this.wide)
+			.param("id", mergedStoryline)
+			.update();
+
+		Map<EventId, List<StorylineId>> tops = this.directory.topsOf(List.of(new EventId(this.eventA),
+				new EventId(this.eventC), new EventId(this.eventOld), new EventId(eventD), new EventId(this.eventLoose),
+				new EventId(this.eventMerged), new EventId(999_999_999L), new EventId(this.eventA)));
+
+		// 소속 없는 사건 · 합쳐진 사건(소속 행이 남아 있어도) · 없는 사건은 빠진다
+		assertThat(tops).containsOnlyKeys(new EventId(this.eventA), new EventId(this.eventC), new EventId(this.eventOld),
+				new EventId(eventD));
+		assertThat(tops.get(new EventId(this.eventA))).containsExactly(new StorylineId(this.wide));
+		assertThat(tops.get(new EventId(this.eventC))).containsExactly(new StorylineId(this.wide));
+		// 점수 없는 소속뿐이면 꼭대기 ID 순 — narrow 는 wide 로 풀려 한 번
+		assertThat(tops.get(new EventId(this.eventOld))).containsExactly(new StorylineId(this.wide),
+				new StorylineId(this.quiet), new StorylineId(this.ended), new StorylineId(this.spanning));
+		// 점수 순 — wide 의 나무(narrow 0.90) > quiet 0.70
+		assertThat(tops.get(new EventId(eventD))).containsExactly(new StorylineId(this.wide), new StorylineId(this.quiet));
+
+		// 대조 — 점수를 뒤집으면 순서가 뒤집힌다
+		this.jdbc.sql("update storyline_members set score = 0.95 where storyline_id = :storyline and event_id = :event")
+			.param("storyline", this.quiet)
+			.param("event", eventD)
+			.update();
+		assertThat(this.directory.topsOf(List.of(new EventId(eventD))).get(new EventId(eventD)))
+			.containsExactly(new StorylineId(this.quiet), new StorylineId(this.wide));
+
+		assertThat(this.directory.topsOf(List.of())).isEmpty();
+	}
+
+	@Test
+	void aBigRowHeadIsTheTopOfTheEventsOfItsTree() {
+		contains(this.wide, this.narrow);
+
+		List<BigStoryline> big = this.directory.bigStorylines(PERIOD);
+
+		assertThat(big).extracting(row -> row.storyline().id()).containsExactly(new StorylineId(this.wide));
+		assertThat(this.directory.topsOf(List.of(new EventId(this.eventC))).get(new EventId(this.eventC)))
+			.containsExactly(new StorylineId(this.wide));
+		// 사건 C 가 직접 든 하위 narrow 도 크면 — 행의 머리는 여전히 그 나무의 꼭대기 wide 이고 narrow 는 아래 행이다
+		this.administration.change(new BigDecimal("1.00"), ChangeActor.OPERATOR);
+		List<BigStoryline> both = this.directory.bigStorylines(PERIOD);
+		assertThat(both).extracting(row -> row.storyline().id()).containsExactly(new StorylineId(this.wide));
+		assertThat(both.getFirst().branches()).extracting(row -> row.storyline().id())
+			.containsExactly(new StorylineId(this.narrow));
+	}
+
+	@Test
+	void theTopsQueryRefusesMoreEventsThanItsLimit() {
+		List<EventId> tooMany = LongStream.rangeClosed(1, StorylineDirectory.MAX_TOP_EVENTS + 1)
+			.mapToObj(EventId::new)
+			.toList();
+		List<EventId> atLimit = tooMany.subList(0, StorylineDirectory.MAX_TOP_EVENTS);
+
+		assertThatIllegalArgumentException().isThrownBy(() -> this.directory.topsOf(tooMany));
+		assertThat(this.directory.topsOf(atLimit)).isNotNull();
+		// 상한은 서로 다른 사건 수다 — 같은 사건을 한 번 더 넣어 1001 개가 되어도 받는다
+		List<EventId> repeated = new ArrayList<>(atLimit);
+		repeated.add(atLimit.getFirst());
+		assertThat(this.directory.topsOf(repeated)).isNotNull();
+	}
+
+	@Test
 	void aParentHoldsTheEventsOfItsChildrenAndMarksTheInheritedOnes() {
 		contains(this.wide, this.narrow);
 
@@ -513,6 +590,12 @@ class StorylineQueryFlowTests {
 
 	private void clear() {
 		StorylineRows.clear(this.jdbc);
+		if (!this.linkingCriteria.isEmpty()) {
+			this.jdbc.sql("delete from storyline_linking_criteria where id = any(:ids)")
+				.param("ids", this.linkingCriteria.toArray(Long[]::new))
+				.update();
+			this.linkingCriteria.clear();
+		}
 		if (!this.evaluated.isEmpty()) {
 			this.jdbc.sql("delete from article_evaluations where article_id = any(:ids)")
 				.param("ids", this.evaluated.toArray(Long[]::new))
@@ -579,6 +662,28 @@ class StorylineQueryFlowTests {
 	private void contains(long parent, long child) {
 		long criteriaId = this.relations.registerCriteria(RELATION_CRITERIA, NOW);
 		this.relations.link(new Relation(parent, child, RelationKind.CONTAINS), 0.7, 1, criteriaId, NOW);
+	}
+
+	/** 판정한 소속을 심는다 — 점수 · 잇기 기준이 있다 */
+	private void scored(long storyline, long event, double score) {
+		if (this.linkingCriteria.isEmpty()) {
+			// 다른 시험의 기준과 겹치지 않는 값 — 값이 같은 기준은 하나다(유일 제약)
+			this.linkingCriteria.add(this.jdbc.sql("""
+					insert into storyline_linking_criteria (window_seconds, lower, upper, probability, created_at)
+					values (86400, 0.123, 0.123, null, now()) returning id
+					""").query(Long.class).single());
+		}
+		long criteriaId = this.linkingCriteria.getFirst();
+		this.jdbc.sql("""
+				insert into storyline_members (storyline_id, event_id, linked_by, score, cosine, key_term_overlap,
+				                               criteria_id, linked_at)
+				values (:storyline, :event, 'RULE', :score, :score, 0, :criteria, '2026-11-06T00:00:00Z')
+				""")
+			.param("storyline", storyline)
+			.param("event", event)
+			.param("score", score)
+			.param("criteria", criteriaId)
+			.update();
 	}
 
 	private void member(long storyline, long event) {

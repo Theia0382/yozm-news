@@ -4,14 +4,14 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * 읽은 출력 — 인용 검증 전 · docs/specs/digest.md §4
+ * 읽은 출력 — 항목 대조 전 · docs/specs/digest.md §4
  */
-public record DigestDraft(String overview, List<StoryDraft> topStories, List<HeadlineDraft> moreHeadlines) {
+public record DigestDraft(String overview, List<StoryDraft> topStories, List<HeadlineDraft> headlines) {
 
 	public DigestDraft {
 		Objects.requireNonNull(overview, "overview");
 		topStories = List.copyOf(topStories);
-		moreHeadlines = List.copyOf(moreHeadlines);
+		headlines = List.copyOf(headlines);
 	}
 
 }

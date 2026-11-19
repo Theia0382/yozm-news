@@ -41,16 +41,16 @@ public final class DigestRows {
 				""").param("user", user).param("date", date).param("completed", completedAt).query(Long.class).single();
 	}
 
-	/** 다이제스트가 기사를 인용한다 — 추가 헤드라인 섹션 하나에 인용 하나 */
+	/** 다이제스트가 기사를 인용한다 — 헤드라인 섹션 하나에 인용 하나 */
 	public static void cite(JdbcClient jdbc, long digest, long article) {
 		long section = jdbc.sql("""
 				insert into digest_sections (digest_id, kind, position, title, body)
-				values (:digest, 'MORE_HEADLINES', (select count(*) from digest_sections where digest_id = :digest), null, null)
+				values (:digest, 'HEADLINE', (select count(*) from digest_sections where digest_id = :digest), null, null)
 				returning id
 				""").param("digest", digest).query(Long.class).single();
 		jdbc.sql("""
-				insert into digest_items (digest_section_id, position, article_id, note, selection_reason)
-				values (:section, 0, :article, null, 'SUBSCRIBED')
+				insert into digest_items (digest_section_id, position, article_id, selection_reason)
+				values (:section, 0, :article, 'SUBSCRIBED')
 				""").param("section", section).param("article", article).update();
 	}
 

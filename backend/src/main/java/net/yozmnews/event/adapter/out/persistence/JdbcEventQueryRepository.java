@@ -126,29 +126,6 @@ class JdbcEventQueryRepository implements EventQueryRepository {
 	}
 
 	@Override
-	public Map<Long, ArticleId> representatives(Map<Long, ? extends Collection<ArticleId>> among) {
-		List<Long> events = new ArrayList<>();
-		List<Long> articles = new ArrayList<>();
-		among.forEach((event, ids) -> ids.forEach(article -> {
-			events.add(event);
-			articles.add(article.value());
-		}));
-		if (events.isEmpty()) {
-			return Map.of();
-		}
-		return firstPerEvent(this.jdbc.sql("""
-				select distinct on (a.event_id) a.event_id, a.article_id
-				from unnest(cast(:events as bigint[]), cast(:articles as bigint[])) as g(event_id, article_id)
-				join event_articles a on a.article_id = g.article_id and a.event_id = g.event_id
-				join events e on e.id = a.event_id
-				left join article_match_features f on f.article_id = a.article_id and f.model_version = e.model_version
-				order by a.event_id, %s
-				""".formatted(CentroidOrder.ORDER))
-			.param("events", events.toArray(Long[]::new))
-			.param("articles", articles.toArray(Long[]::new)));
-	}
-
-	@Override
 	public Map<Long, ArticleId> representativesOfAll(Collection<Long> eventIds) {
 		if (eventIds.isEmpty()) {
 			return Map.of();

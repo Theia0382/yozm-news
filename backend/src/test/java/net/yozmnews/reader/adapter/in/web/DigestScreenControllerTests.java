@@ -97,10 +97,14 @@ class DigestScreenControllerTests {
 		long ready = this.rows.digest(user, "2026-11-05", "READY", 100, 20, null);
 		this.rows.section(ready, "OVERVIEW", 0, null, "오늘의 흐름");
 		long story = this.rows.section(ready, "TOP_STORY", 1, "주요 뉴스 제목", "주요 뉴스 요약");
-		this.rows.cite(story, 0, removed, null, "SUBSCRIBED");
-		this.rows.cite(story, 1, kept, null, "MAJOR_STORYLINE");
-		long more = this.rows.section(ready, "MORE_HEADLINES", 2, null, null);
-		this.rows.cite(more, 0, kept, "한 줄 코멘트", "INTEREST");
+		this.rows.cite(story, 0, removed, "SUBSCRIBED");
+		this.rows.cite(story, 1, kept, "MAJOR_STORYLINE");
+		// 항목의 이유는 섹션 사건의 이유에서 — 큰 슬롯 사건이 있으면 큰 화제
+		this.rows.sectionEvent(story, 0, 70, "SUBSCRIBED");
+		this.rows.sectionEvent(story, 1, 71, "MAJOR_STORYLINE");
+		long more = this.rows.section(ready, "HEADLINE", 2, "헤드라인 제목", "한 줄 코멘트");
+		this.rows.cite(more, 0, kept, "INTEREST");
+		this.rows.sectionEvent(more, 0, 80, "INTEREST");
 		long failed = this.rows.digest(user, "2026-11-05", "FAILED", 50, 0, "NO_CITATION");
 		this.rows.digest(user, "2026-11-04", "EMPTY", null, null, null);
 		String url = this.jdbc.sql("select canonical_url from articles where id = :id")
@@ -124,22 +128,27 @@ class DigestScreenControllerTests {
 			.andExpect(jsonPath("$.day.shown.sections.length()").value(3))
 			.andExpect(jsonPath("$.day.shown.sections[0].kind").value("OVERVIEW"))
 			.andExpect(jsonPath("$.day.shown.sections[0].body").value("오늘의 흐름"))
+			.andExpect(jsonPath("$.day.shown.sections[0].reason").isEmpty())
 			.andExpect(jsonPath("$.day.shown.sections[0].citations").isEmpty())
 			.andExpect(jsonPath("$.day.shown.sections[1].kind").value("TOP_STORY"))
 			.andExpect(jsonPath("$.day.shown.sections[1].title").value("주요 뉴스 제목"))
 			.andExpect(jsonPath("$.day.shown.sections[1].body").value("주요 뉴스 요약"))
+			.andExpect(jsonPath("$.day.shown.sections[1].reason").value("MAJOR_STORYLINE"))
 			// 지운 기사의 인용은 빠진다
 			.andExpect(jsonPath("$.day.shown.sections[1].citations.length()").value(1))
 			.andExpect(jsonPath("$.day.shown.sections[1].citations[0].articleId").value(kept))
-			.andExpect(jsonPath("$.day.shown.sections[1].citations[0].reason").value("MAJOR_STORYLINE"))
+			.andExpect(jsonPath("$.day.shown.sections[1].citations[0].reason").doesNotExist())
 			.andExpect(jsonPath("$.day.shown.sections[1].citations[0].article.title").value("남은 기사 제목"))
 			.andExpect(jsonPath("$.day.shown.sections[1].citations[0].article.url").value(url))
 			.andExpect(jsonPath("$.day.shown.sections[1].citations[0].article.publishedAt")
 				.value("2026-11-05T00:00:00Z"))
 			.andExpect(jsonPath("$.day.shown.sections[1].citations[0].article.sources").isEmpty())
-			.andExpect(jsonPath("$.day.shown.sections[2].kind").value("MORE_HEADLINES"))
-			.andExpect(jsonPath("$.day.shown.sections[2].citations[0].note").value("한 줄 코멘트"))
-			.andExpect(jsonPath("$.day.shown.sections[2].citations[0].reason").value("INTEREST"))
+			.andExpect(jsonPath("$.day.shown.sections[2].kind").value("HEADLINE"))
+			.andExpect(jsonPath("$.day.shown.sections[2].title").value("헤드라인 제목"))
+			.andExpect(jsonPath("$.day.shown.sections[2].body").value("한 줄 코멘트"))
+			.andExpect(jsonPath("$.day.shown.sections[2].reason").value("INTEREST"))
+			.andExpect(jsonPath("$.day.shown.sections[2].citations[0].articleId").value(kept))
+			.andExpect(jsonPath("$.day.shown.sections[2].citations[0].note").doesNotExist())
 			.andExpect(jsonPath("$.day.latest.digestId").value(failed))
 			.andExpect(jsonPath("$.day.latest.status").value("FAILED"))
 			.andExpect(jsonPath("$.day.latest.failure").value("NO_CITATION"))

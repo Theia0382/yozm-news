@@ -206,7 +206,7 @@ aggregate 는 없다 — 현재 상태는 (사용자, 기사)마다 값 하나�
 
 ### 화면의 현재 상태 조회
 
-- **feedback-R7** — 주어진 기사 가운데 세션 사용자의 현재 상태가 있는 기사와 그 값을 기사 ID 순으로 낸다. 현재 상태가 없는 기사는 빠진다. 같은 기사가 두 번 와도 한 번이다. 한 번에 묻는 서로 다른 기사는 500 개(`FeedbackStates.MAX_ARTICLES` — 정본, 측정 전 목표)까지다 — 다이제스트 하나의 인용 상한(주요 뉴스 20 × 인용 20 + 추가 헤드라인 60 = 460 — [digest Spec](digest.md#출력-읽기))을 덮는 값이다
+- **feedback-R7** — 주어진 기사 가운데 세션 사용자의 현재 상태가 있는 기사와 그 값을 기사 ID 순으로 낸다. 현재 상태가 없는 기사는 빠진다. 같은 기사가 두 번 와도 한 번이다. 한 번에 묻는 서로 다른 기사는 750 개(`FeedbackStates.MAX_ARTICLES` — 정본, 측정 전 목표)까지다 — 다이제스트 하나의 서로 다른 인용 기사의 위쪽(사건당 기사 상한 `EventSample.ARTICLES_PER_EVENT` 5 × 직접 입력한 최대 후보 수의 상한 `DigestVolume.MAX_COUNT` 150 = 750 — [digest Spec](digest.md#후보-선별) digest-R45 · [user Spec](user.md#관심-설정) user-R56)을 덮는 값이다. 셋의 관계는 시험이 묶는다([ADR-0263](../adr/0263-articles-sent-per-event-are-sampled-up-to-a-cap-with-a-fixed-seed-from-those-in-the-period-and-the-sample-is-the-citations-and-sources.md))
 
 ### 소비자 조회의 범위
 
