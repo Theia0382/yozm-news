@@ -1,6 +1,5 @@
 package net.yozmnews.tag.application;
 
-import java.time.InstantSource;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -11,6 +10,7 @@ import java.util.UUID;
 
 import net.yozmnews.evaluation.ArticleTagging;
 import net.yozmnews.evaluation.TagReread;
+import net.yozmnews.platform.AppClock;
 import net.yozmnews.tag.MultiTagKind;
 import net.yozmnews.tag.TagBackfillRunView;
 import net.yozmnews.tag.TagSetId;
@@ -59,11 +59,11 @@ public class TagBackfillRound {
 
 	private final TransactionTemplate transaction;
 
-	private final InstantSource clock;
+	private final AppClock clock;
 
 	TagBackfillRound(TagBackfillRepository backfills, EvaluationResultRepository results,
 			ThresholdRepository thresholds, TagSetViews views, ArticleTagging tagging, TransactionTemplate transaction,
-			InstantSource clock) {
+			AppClock clock) {
 		this.backfills = backfills;
 		this.results = results;
 		this.thresholds = thresholds;
@@ -77,7 +77,7 @@ public class TagBackfillRound {
 	public void run() {
 		UUID token = UUID.randomUUID();
 		Optional<TagBackfill> claimed = this.transaction.execute(status -> this.backfills
-			.lockDue(this.clock.instant())
+			.lockDue(this.clock.instant(), this.clock.expiredBy(BackfillSchedule.LEASE))
 			.map(due -> {
 				TagBackfill claim = due.claim(token, this.clock.instant());
 				this.backfills.saveLocked(claim);

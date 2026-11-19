@@ -8,6 +8,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 
+import net.yozmnews.TestClocks;
+import net.yozmnews.TestClocks.MovableClock;
 import net.yozmnews.platform.ChangeActor;
 import net.yozmnews.tag.MultiTagKind;
 import net.yozmnews.tag.ThresholdChangeView;
@@ -133,9 +135,41 @@ class StoreFloorsTests {
 		assertThatIllegalStateException().isThrownBy(() -> floors(List.of()));
 	}
 
+	/**
+	 * 측정용 시계를 넘기면 읽기 지연(30분)도 넘긴 시간을 뺀 경과로 잰다 — 내린 시각 T1 + 10분에 24시간을 넘겼다. 넘긴 뒤 T1 + 24시간 15분의
+	 * 평가는 내린 지 경과 15분이라 옛 기준(0.3)으로 읽었을 수 있다.
+	 */
 	@Test
-	void theProductionReadLagIsTheEvaluationLease() {
-		// 세 인자 of 는 읽기 지연 30분 — 내린 시각 + 29분까지 덮으면 옛 기준이 남고 + 31분이면 남지 않는다
+	void evaluationsWithinTheReadLagAfterAJumpOfTheClockMayHaveUsedTheOldThreshold() {
+		MovableClock clock = TestClocks.movable(T1.plus(Duration.ofMinutes(10))).jump(Duration.ofHours(24));
+		ReadLag lag = new ReadLag() {
+
+			@Override
+			public Instant readFrom(Instant evaluatedAt) {
+				return clock.before(evaluatedAt, LAG);
+			}
+
+			@Override
+			public Instant settledAt(Instant changedAt) {
+				return clock.after(changedAt, LAG);
+			}
+
+		};
+		List<ThresholdChangeView> changes = List.of(change("0.3", "0.1", T1), initial("0.3", T0));
+		Instant afterJump = T1.plus(Duration.ofHours(24));
+
+		assertThat(StoreFloors.of(MultiTagKind.TOPIC, changes,
+				List.of(new StoreCoverage(T0, afterJump.plus(Duration.ofMinutes(15)), new BigDecimal("0.1"))), lag)
+			.pastMax()).isEqualByComparingTo("0.3");
+		// 대조 — 넘긴 뒤 경과 31분(T1 + 24시간 31분)까지 덮으면 그 뒤 평가는 새 기준으로 읽었다
+		assertThat(StoreFloors.of(MultiTagKind.TOPIC, changes,
+				List.of(new StoreCoverage(T0, afterJump.plus(Duration.ofMinutes(31)), new BigDecimal("0.1"))), lag)
+			.pastMax()).isEqualByComparingTo("0.1");
+	}
+
+	@Test
+	void theDefaultReadLagIsTheEvaluationLease() {
+		// 세 인자 of 는 넘긴 기록이 없는 읽기 지연 30분 — 내린 시각 + 29분까지 덮으면 옛 기준이 남고 + 31분이면 남지 않는다
 		List<ThresholdChangeView> changes = List.of(change("0.3", "0.1", T1), initial("0.3", T0));
 		assertThat(StoreFloors.of(MultiTagKind.TOPIC, changes,
 				List.of(new StoreCoverage(T0, T1.plus(Duration.ofMinutes(29)), new BigDecimal("0.1"))))

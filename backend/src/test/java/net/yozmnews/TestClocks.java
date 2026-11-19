@@ -21,7 +21,13 @@ public final class TestClocks {
 
 	/** 지금이 언제나 {@code now} 인 실제 시간의 시계 */
 	public static AppClock fixed(Instant now) {
-		return new FixedClock(Objects.requireNonNull(now, "now"));
+		return of(InstantSource.fixed(Objects.requireNonNull(now, "now")));
+	}
+
+	/** 지금을 {@code source} 에서 읽는 실제 시간의 시계 — 넘긴 기록이 없다. 시험이 지금을 바꾸는 원천을 그대로 쓴다 */
+	public static AppClock of(InstantSource source) {
+		Objects.requireNonNull(source, "source");
+		return new SourceClock(source);
 	}
 
 	/** {@code start} 에서 출발해 흐르거나 넘길 수 있는 측정용 시계의 흉내 — {@link AppClock#realTime()} 거짓 */
@@ -48,11 +54,26 @@ public final class TestClocks {
 
 	}
 
-	private record FixedClock(Instant now) implements AppClock {
+	/**
+	 * 앱 컨텍스트를 잘라 띄우는 시험이 넣는 시계 bean 가운데 선언 타입이 {@link AppClock} 인 것 — {@code AppClock} 으로 받는 구성요소를 만드는
+	 * 컨텍스트가 쓴다. 지금은 {@link FixedClockConfiguration#CONTEXT_NOW} 다. Spring Modulith 의 모듈 시험에서는 {@code platform} 타입이라
+	 * 지워지므로 그곳에는 {@link FixedClockConfiguration} 을 쓴다.
+	 */
+	@TestConfiguration(proxyBeanMethods = false)
+	public static class FixedAppClockConfiguration {
+
+		@Bean
+		AppClock testAppClock() {
+			return fixed(FixedClockConfiguration.CONTEXT_NOW);
+		}
+
+	}
+
+	private record SourceClock(InstantSource source) implements AppClock {
 
 		@Override
 		public Instant instant() {
-			return this.now;
+			return this.source.instant();
 		}
 
 		@Override

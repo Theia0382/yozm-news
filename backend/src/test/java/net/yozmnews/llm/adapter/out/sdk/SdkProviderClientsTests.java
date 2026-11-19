@@ -64,7 +64,7 @@ class SdkProviderClientsTests {
 	void theGatewayIsWiredOnTheOperationalPortInEveryProfile() {
 		new ApplicationContextRunner()
 			.withUserConfiguration(SdkProviderClientsConfiguration.class, Gateway.class,
-					TestClocks.FixedClockConfiguration.class)
+					TestClocks.FixedAppClockConfiguration.class)
 			.run(context -> {
 				assertThat(context).hasSingleBean(LlmProviderClients.class);
 				assertThat(context.getBean(LlmProviderClients.class)).isInstanceOf(SdkProviderClients.class);

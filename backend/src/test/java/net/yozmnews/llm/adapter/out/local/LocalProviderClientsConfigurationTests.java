@@ -36,7 +36,7 @@ import org.springframework.context.annotation.FilterType;
 class LocalProviderClientsConfigurationTests {
 
 	private final ApplicationContextRunner runner = new ApplicationContextRunner()
-		.withUserConfiguration(Wiring.class, TestClocks.FixedClockConfiguration.class);
+		.withUserConfiguration(Wiring.class, TestClocks.FixedAppClockConfiguration.class);
 
 	@Test
 	void theSubstituteTakesThePortInLocalDevelopment() {

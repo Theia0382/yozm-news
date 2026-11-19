@@ -16,6 +16,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import net.yozmnews.TestClocks;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleDirectory;
 import net.yozmnews.article.ArticleId;
@@ -509,7 +510,7 @@ class RejudgementFlowTests {
 		};
 		new AssignmentRound(this.queue, this.intake, this.features, this.events, this.assignments, this.criteriaHistory,
 				CRITERIA, this.articles, membership, EventEmbeddings.modelOnly("model-a"), this.transaction,
-				(InstantSource) () -> NOW)
+				TestClocks.fixed(NOW))
 			.run();
 		return article;
 	}

@@ -71,15 +71,20 @@ class JdbcLinkingQueueRepository implements LinkingQueueRepository {
 	}
 
 	@Override
-	public List<PendingEvent> lockDue(Instant now, int limit) {
+	public List<PendingEvent> lockDue(Instant now, Instant expiredBy, int limit) {
 		return this.jdbc.sql("""
 				select event_id, order_at, notifications, failures, lease_token, lease_expires_at
 				from storyline_linking_queue
-				where (lease_token is null or lease_expires_at <= :now) and (retry_at is null or retry_at <= :now)
+				where (lease_token is null or lease_expires_at <= :expiredBy) and (retry_at is null or retry_at <= :now)
 				order by order_at nulls first, event_id
 				limit :limit
 				for update skip locked
-				""").param("now", timestamp(now)).param("limit", limit).query(JdbcLinkingQueueRepository::row).list();
+				""")
+			.param("now", timestamp(now))
+			.param("expiredBy", timestamp(expiredBy))
+			.param("limit", limit)
+			.query(JdbcLinkingQueueRepository::row)
+			.list();
 	}
 
 	@Override

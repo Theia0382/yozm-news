@@ -1,26 +1,47 @@
 package net.yozmnews.tag.application;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 
+import net.yozmnews.platform.AppClock;
 import net.yozmnews.tag.MultiTagKind;
 import net.yozmnews.tag.TagSetId;
 import net.yozmnews.tag.ThresholdChangeView;
 import net.yozmnews.tag.domain.backfill.TagBackfillRepository;
+import net.yozmnews.tag.domain.queue.EvaluationSchedule;
+import net.yozmnews.tag.domain.threshold.ReadLag;
 import net.yozmnews.tag.domain.threshold.StoreFloors;
 import org.springframework.stereotype.Component;
 
 /**
  * 저장 바닥 결선 — 그 버전 · 태그 종류의 이력과 끝난 채움의 덮음으로 {@link StoreFloors} 를 만든다 · docs/specs/tag.md §4 ·
- * tag-R32. 트랜잭션을 열지 않는다 — 부르는 쪽의 트랜잭션(한 스냅숏) 안에서 덮음을 읽는다. 역할 애너테이션이 없다(두 역할 공통).
+ * tag-R32. 읽기 지연은 평가 회차의 점유 기간({@link EvaluationSchedule#LEASE})을 시계가 넘긴 시간을 뺀 경과로 잰 것이다. 트랜잭션을 열지
+ * 않는다 — 부르는 쪽의 트랜잭션(한 스냅숏) 안에서 덮음을 읽는다. 역할 애너테이션이 없다(두 역할 공통).
  */
 @Component
 class StoreFloorsReader {
 
 	private final TagBackfillRepository backfills;
 
-	StoreFloorsReader(TagBackfillRepository backfills) {
+	private final ReadLag readLag;
+
+	StoreFloorsReader(TagBackfillRepository backfills, AppClock clock) {
 		this.backfills = backfills;
+		Objects.requireNonNull(clock, "clock");
+		this.readLag = new ReadLag() {
+
+			@Override
+			public Instant readFrom(Instant evaluatedAt) {
+				return clock.before(evaluatedAt, EvaluationSchedule.LEASE);
+			}
+
+			@Override
+			public Instant settledAt(Instant changedAt) {
+				return clock.after(changedAt, EvaluationSchedule.LEASE);
+			}
+
+		};
 	}
 
 	/**
@@ -30,7 +51,7 @@ class StoreFloorsReader {
 		Objects.requireNonNull(version, "version");
 		Objects.requireNonNull(kind, "kind");
 		Objects.requireNonNull(changes, "changes");
-		return StoreFloors.of(kind, changes, this.backfills.coverages(version, kind));
+		return StoreFloors.of(kind, changes, this.backfills.coverages(version, kind), this.readLag);
 	}
 
 }

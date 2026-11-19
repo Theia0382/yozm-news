@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
 
+import net.yozmnews.TestClocks;
 import net.yozmnews.llm.KeyValidationResult;
 import net.yozmnews.llm.LlmFailureKind;
 import net.yozmnews.llm.Provider;
@@ -45,7 +46,7 @@ class LlmClientFactoryServiceTests {
 	private final RecordingSource source = new RecordingSource();
 
 	private final LlmClientFactoryService service = new LlmClientFactoryService(this.clients, this.source,
-			InstantSource.system());
+			TestClocks.of(InstantSource.system()));
 
 	@Test
 	void aReachableProviderMakesTheKeyValid() {

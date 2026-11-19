@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.time.InstantSource;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -13,6 +12,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 
+import net.yozmnews.TestClocks;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.evaluation.EvaluatorFailureKind;
@@ -383,7 +383,7 @@ class LinkingBandFlowTests {
 
 	private LinkingRound round(FlowMembership membership, Instant at) {
 		return new LinkingRound(this.queue, this.criteria, BANDED, linker(), membership, this.transaction,
-				InstantSource.fixed(at));
+				TestClocks.fixed(at));
 	}
 
 	/** 말의 무게를 모두 같게 하고 대표 기사를 시험이 정한 사건 조회로 만든 판정 */

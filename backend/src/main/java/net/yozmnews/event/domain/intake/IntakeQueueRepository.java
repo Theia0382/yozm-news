@@ -23,10 +23,11 @@ public interface IntakeQueueRepository {
 	int enqueueUnassigned(Collection<ArticleId> articleIds, Instant now);
 
 	/**
-	 * 점유가 없거나 만료된(만료 시각 ≤ {@code now}) 행을 넣은 시각 · 기사 ID 순으로 {@code limit} 개까지 잠근다. 다른 트랜잭션이 잠근 행은
-	 * 건너뛴다. 트랜잭션 안에서 부른다.
+	 * 점유가 없거나 만료된(만료 시각 ≤ {@code expiredBy}) 행을 넣은 시각 · 기사 ID 순으로 {@code limit} 개까지 잠근다. 다른 트랜잭션이 잠근
+	 * 행은 건너뛴다. 트랜잭션 안에서 부른다.
+	 * @param expiredBy 만료 시각의 상한 — 부르는 쪽이 시계가 넘긴 시간을 뺀 경과로 정한다({@code AppClock#expiredBy})
 	 */
-	List<PendingArticle> lockDue(Instant now, int limit);
+	List<PendingArticle> lockDue(Instant expiredBy, int limit);
 
 	/** {@link #lockDue} 로 잠근 행을 고쳐 쓴다 */
 	void saveLocked(PendingArticle next);

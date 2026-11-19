@@ -6,7 +6,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.sql.ResultSet;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.InstantSource;
 import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -16,6 +15,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import net.yozmnews.TestClocks;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleDirectory;
 import net.yozmnews.article.ArticleId;
@@ -344,7 +344,7 @@ class EventRemovalFlowTests {
 	private AssignmentRound round(EventArticleRepository assignments, EventMembership membership) {
 		return new AssignmentRound(this.queue, this.intake, this.features, this.events, assignments,
 				this.criteriaHistory, CRITERIA, this.articles, membership, EventEmbeddings.modelOnly("model-a"),
-				this.transaction, (InstantSource) () -> NOW);
+				this.transaction, TestClocks.fixed(NOW));
 	}
 
 	private static EventMembership unasked() {

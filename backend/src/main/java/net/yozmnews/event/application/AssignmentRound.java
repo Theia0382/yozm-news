@@ -1,7 +1,6 @@
 package net.yozmnews.event.application;
 
 import java.time.Instant;
-import java.time.InstantSource;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -38,6 +37,7 @@ import net.yozmnews.event.domain.event.LockedEvent;
 import net.yozmnews.event.domain.feature.MatchFeatures;
 import net.yozmnews.event.domain.feature.MatchFeaturesRepository;
 import net.yozmnews.event.domain.intake.IntakeQueueRepository;
+import net.yozmnews.platform.AppClock;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -80,13 +80,13 @@ public class AssignmentRound {
 
 	private final TransactionTemplate transaction;
 
-	private final InstantSource clock;
+	private final AppClock clock;
 
 	@Autowired
 	AssignmentRound(AssignmentQueueRepository queue, IntakeQueueRepository intake, MatchFeaturesRepository features,
 			EventRepository events, EventArticleRepository assignments, CriteriaRepository criteriaHistory,
 			AssignmentSettings settings, ArticleDirectory articles, EventMembership membership, TextEmbedding embedding,
-			TransactionTemplate transaction, InstantSource clock) {
+			TransactionTemplate transaction, AppClock clock) {
 		this(queue, intake, features, events, assignments, criteriaHistory, settings.criteria(), articles, membership,
 				embedding, transaction, clock);
 	}
@@ -95,7 +95,7 @@ public class AssignmentRound {
 	AssignmentRound(AssignmentQueueRepository queue, IntakeQueueRepository intake, MatchFeaturesRepository features,
 			EventRepository events, EventArticleRepository assignments, CriteriaRepository criteriaHistory,
 			AssignmentCriteria criteria, ArticleDirectory articles, EventMembership membership, TextEmbedding embedding,
-			TransactionTemplate transaction, InstantSource clock) {
+			TransactionTemplate transaction, AppClock clock) {
 		this.queue = queue;
 		this.intake = intake;
 		this.features = features;
@@ -150,7 +150,8 @@ public class AssignmentRound {
 	private List<PendingAssignment> claim(Instant now) {
 		List<PendingAssignment> claimed = this.transaction.execute(status -> {
 			List<PendingAssignment> leased = new ArrayList<>();
-			for (PendingAssignment due : this.queue.lockDue(now, AssignmentSchedule.BATCH_SIZE)) {
+			for (PendingAssignment due : this.queue.lockDue(now, this.clock.expiredBy(AssignmentSchedule.LEASE),
+					AssignmentSchedule.BATCH_SIZE)) {
 				PendingAssignment next = due.claim(UUID.randomUUID(), now);
 				this.queue.saveLocked(next);
 				leased.add(next);

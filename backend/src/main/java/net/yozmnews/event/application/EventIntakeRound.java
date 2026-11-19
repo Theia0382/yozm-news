@@ -1,7 +1,6 @@
 package net.yozmnews.event.application;
 
 import java.time.Instant;
-import java.time.InstantSource;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -26,6 +25,7 @@ import net.yozmnews.event.domain.feature.MatchText;
 import net.yozmnews.event.domain.intake.IntakeQueueRepository;
 import net.yozmnews.event.domain.intake.IntakeSchedule;
 import net.yozmnews.event.domain.intake.PendingArticle;
+import net.yozmnews.platform.AppClock;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -66,11 +66,11 @@ public class EventIntakeRound {
 
 	private final TransactionTemplate transaction;
 
-	private final InstantSource clock;
+	private final AppClock clock;
 
 	EventIntakeRound(IntakeQueueRepository queue, MatchFeaturesRepository features,
 			AssignmentQueueRepository assignmentQueue, ArticleDirectory articles, KeyTermExtractor keyTerms,
-			TextEmbedding embedding, TransactionTemplate transaction, InstantSource clock) {
+			TextEmbedding embedding, TransactionTemplate transaction, AppClock clock) {
 		this.queue = queue;
 		this.features = features;
 		this.assignmentQueue = assignmentQueue;
@@ -203,7 +203,8 @@ public class EventIntakeRound {
 	private List<PendingArticle> claim(Instant now) {
 		List<PendingArticle> claimed = this.transaction.execute(status -> {
 			List<PendingArticle> leased = new ArrayList<>();
-			for (PendingArticle due : this.queue.lockDue(now, IntakeSchedule.BATCH_SIZE)) {
+			Instant expiredBy = this.clock.expiredBy(IntakeSchedule.LEASE);
+			for (PendingArticle due : this.queue.lockDue(expiredBy, IntakeSchedule.BATCH_SIZE)) {
 				PendingArticle next = due.claim(UUID.randomUUID(), now);
 				this.queue.saveLocked(next);
 				leased.add(next);

@@ -5,15 +5,17 @@ import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.time.InstantSource;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.function.Function;
 
+import net.yozmnews.TestClocks;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.evaluation.EvaluatorFailureKind;
@@ -26,6 +28,7 @@ import net.yozmnews.evaluation.RelationQuery;
 import net.yozmnews.event.EventDirectory;
 import net.yozmnews.event.EventId;
 import net.yozmnews.event.EventTermCounts;
+import net.yozmnews.platform.AppClock;
 import net.yozmnews.storyline.LinkedBy;
 import net.yozmnews.storyline.RelationOutcome;
 import net.yozmnews.storyline.RetiredStoryline;
@@ -161,6 +164,33 @@ class RelationRoundFlowTests {
 		assertThat(query.second().happenings()).isEqualTo(3);
 	}
 
+	/**
+	 * 측정용 시계를 넘겨도 다른 회차가 점유 중인 스토리라인은 다시 가져가지 않는다 — 임대(20분)는 시계가 넘긴 시간을 뺀 경과로 잰다. 점유는
+	 * NOW 에 했고 만료는 NOW + 20분이다. 후보 쌍이 없는 스토리라인이라 다시 가져가면 묻지 않고 대기에서 뺀다.
+	 */
+	@Test
+	void aJumpOfTheClockLeavesAnotherRoundsLeaseAlone() {
+		long alone = storyline("[1,0]", EARLY, LATE, event(EARLY, 1), event(EARLY, 1), event(EARLY, 1));
+		this.queue.enqueue(alone, NOW);
+		UUID other = UUID.fromString("9c4a5f6e-7d8c-4b1a-8e3f-405162738a9b");
+		this.jdbc.sql("""
+				update storyline_relation_queue set lease_token = :token, lease_expires_at = :expires where storyline_id = :id
+				""")
+			.param("token", other)
+			.param("expires", NOW.plus(Duration.ofMinutes(20)).atOffset(ZoneOffset.UTC))
+			.param("id", alone)
+			.update();
+		FlowRelation unasked = answer(RelationAnswer.FIRST_LED_TO_SECOND, 0.8, 0.9, 0.9, 42);
+
+		round(withRepresentatives(), unasked, TestClocks.movable(NOW).jump(Duration.ofHours(24))).run();
+
+		assertThat(queueRow(alone)).containsEntry("lease_token", other.toString());
+		// 대조 — 넘기지 않고 21분이 흐르면 임대가 지나 다시 가져가 대기에서 뺀다
+		round(withRepresentatives(), unasked, TestClocks.movable(NOW).advance(Duration.ofMinutes(21))).run();
+		assertThat(queued()).isEmpty();
+		assertThat(this.asked).isEmpty();
+	}
+
 	@Test
 	void asksAPairWithoutSharedEventsOnlyWhenTheirScoreReachesTheCandidateScore() {
 		// 중심이 같고 말이 같다 — 점수 1. 중심이 직각이면 코사인 하한에 못 미쳐 후보가 아니다
@@ -244,7 +274,7 @@ class RelationRoundFlowTests {
 		};
 
 		new RelationRound(this.queue, this.relations, this.storylines, uneven, recording, CRITERIA, merger(uneven),
-				this.published::add, this.transaction, InstantSource.fixed(NOW))
+				this.published::add, this.transaction, TestClocks.fixed(NOW))
 			.run();
 
 		// 판정할 쪽의 말은 금리 하나라 무게와 무관하게 겹침 1 — 후보다
@@ -619,13 +649,17 @@ class RelationRoundFlowTests {
 	}
 
 	private RelationRound round(EventDirectory events, FlowRelation judge) {
+		return round(events, judge, TestClocks.fixed(NOW));
+	}
+
+	private RelationRound round(EventDirectory events, FlowRelation judge, AppClock clock) {
 		FlowRelation recording = query -> {
 			this.asked.add(query);
 			return judge.judge(query);
 		};
 		EventDirectory even = evenly(events);
 		return new RelationRound(this.queue, this.relations, this.storylines, even, recording, CRITERIA, merger(even),
-				this.published::add, this.transaction, InstantSource.fixed(NOW));
+				this.published::add, this.transaction, clock);
 	}
 
 	private StorylineMerger merger(EventDirectory events) {

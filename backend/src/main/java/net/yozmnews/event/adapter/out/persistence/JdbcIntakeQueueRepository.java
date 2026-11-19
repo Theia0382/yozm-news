@@ -58,14 +58,18 @@ class JdbcIntakeQueueRepository implements IntakeQueueRepository {
 	}
 
 	@Override
-	public List<PendingArticle> lockDue(Instant now, int limit) {
+	public List<PendingArticle> lockDue(Instant expiredBy, int limit) {
 		return this.jdbc.sql("""
 				select article_id, enqueued_at, lease_token, lease_expires_at from event_intake_queue
-				where lease_token is null or lease_expires_at <= :now
+				where lease_token is null or lease_expires_at <= :expiredBy
 				order by enqueued_at, article_id
 				limit :limit
 				for update skip locked
-				""").param("now", timestamp(now)).param("limit", limit).query(JdbcIntakeQueueRepository::row).list();
+				""")
+			.param("expiredBy", timestamp(expiredBy))
+			.param("limit", limit)
+			.query(JdbcIntakeQueueRepository::row)
+			.list();
 	}
 
 	@Override

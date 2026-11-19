@@ -25,10 +25,11 @@ public interface EvaluationQueueRepository {
 	int requeue(Collection<ArticleId> articleIds, Instant now);
 
 	/**
-	 * 지금 평가할 수 있는 대기 행을 잠근다 — 실패로 남지 않았고, 평가 가능 시각이 지났고, 점유가 없거나 만료된 행. 평가 가능 시각, 기사 ID 순.
-	 * 다른 트랜잭션이 잠근 행은 건너뛴다. 트랜잭션 안에서 부른다.
+	 * 지금 평가할 수 있는 대기 행을 잠근다 — 실패로 남지 않았고, 평가 가능 시각이 지났고(≤ {@code now}), 점유가 없거나 만료된(만료 시각 ≤
+	 * {@code expiredBy}) 행. 평가 가능 시각, 기사 ID 순. 다른 트랜잭션이 잠근 행은 건너뛴다. 트랜잭션 안에서 부른다.
+	 * @param expiredBy 만료 시각의 상한 — 부르는 쪽이 시계가 넘긴 시간을 뺀 경과로 정한다({@code AppClock#expiredBy})
 	 */
-	List<PendingEvaluation> lockDue(Instant now, int limit);
+	List<PendingEvaluation> lockDue(Instant now, Instant expiredBy, int limit);
 
 	/** {@link #lockDue} 로 잠근 행을 고쳐 쓴다 */
 	void saveLocked(PendingEvaluation next);

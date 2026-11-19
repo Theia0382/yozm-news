@@ -14,6 +14,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import net.yozmnews.TestClocks;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleDirectory;
 import net.yozmnews.article.ArticleId;
@@ -125,7 +126,7 @@ class DigestArticleRemovalTests {
 
 	private DigestGeneration generation(DigestGenerator generator, DigestCandidateRepository repository) {
 		return new DigestGeneration(this.digests, this.sections, repository, this.articles, generator, this.endings,
-				this.transaction, CLOCK);
+				this.transaction, TestClocks.of(CLOCK));
 	}
 
 	private DigestId ready(int... indexes) {

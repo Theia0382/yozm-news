@@ -40,15 +40,19 @@ class JdbcRelationQueueRepository implements RelationQueueRepository {
 	}
 
 	@Override
-	public List<PendingStoryline> lockDue(Instant now, int limit) {
+	public List<PendingStoryline> lockDue(Instant expiredBy, int limit) {
 		return this.jdbc.sql("""
 				select storyline_id, notifications, failures, lease_token, lease_expires_at
 				from storyline_relation_queue
-				where lease_token is null or lease_expires_at <= :now
+				where lease_token is null or lease_expires_at <= :expiredBy
 				order by storyline_id
 				limit :limit
 				for update skip locked
-				""").param("now", timestamp(now)).param("limit", limit).query(JdbcRelationQueueRepository::row).list();
+				""")
+			.param("expiredBy", timestamp(expiredBy))
+			.param("limit", limit)
+			.query(JdbcRelationQueueRepository::row)
+			.list();
 	}
 
 	@Override

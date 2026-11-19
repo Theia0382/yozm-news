@@ -21,6 +21,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
+import net.yozmnews.TestClocks;
+import net.yozmnews.TestClocks.MovableClock;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleDirectory;
 import net.yozmnews.article.ArticleId;
@@ -48,6 +50,7 @@ import net.yozmnews.llm.GenerationStop;
 import net.yozmnews.llm.LlmModel;
 import net.yozmnews.llm.Provider;
 import net.yozmnews.llm.ReasoningEffort;
+import net.yozmnews.platform.AppClock;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.user.DigestFailed;
 import net.yozmnews.user.DigestFailureCause;
@@ -149,8 +152,12 @@ class DigestGenerationTests {
 	}
 
 	private DigestGeneration generation(DigestGenerator generator) {
+		return generation(generator, TestClocks.of(this.clock));
+	}
+
+	private DigestGeneration generation(DigestGenerator generator, AppClock clock) {
 		return new DigestGeneration(this.digests, this.sections, this.candidates, this.articles, generator,
-				this.endings, this.transaction, this.clock);
+				this.endings, this.transaction, clock);
 	}
 
 	private DigestId schedule(DigestGeneration generation) {
@@ -277,6 +284,24 @@ class DigestGenerationTests {
 		assertThat(log.getOut()).doesNotContain("다이제스트 출력에서 지운 것이 있다");
 		// 실패가 아니면 실패 이벤트가 없다
 		assertThat(this.events.stream(DigestFailed.class)).isEmpty();
+	}
+
+	/** 생성 중에 측정용 시계를 넘겨도 소요 시간은 실제로 흐른 만큼이다 — 호출마다 2초가 흐르고 24시간을 넘긴다. 두 번 물어 4초다 */
+	@Test
+	void aJumpOfTheClockDuringGenerationLeavesTheDurationAlone() {
+		MovableClock clock = TestClocks.movable(T0);
+		AtomicInteger calls = new AtomicInteger();
+		DigestGeneration generation = generation(request -> {
+			calls.incrementAndGet();
+			clock.advance(Duration.ofSeconds(2)).jump(Duration.ofHours(24));
+			return new GenerationOutcome.Generated("not json", new TokenUsage(1_200, 340), GenerationStop.COMPLETE);
+		}, clock);
+		DigestId id = schedule(generation);
+
+		assertThat(generation.run(id, MODEL, candidates(2))).isEqualTo(DigestStatus.FAILED);
+
+		assertThat(calls).hasValue(2);
+		assertThat(row(id)).containsEntry("duration_ms", 4_000L);
 	}
 
 	@Test

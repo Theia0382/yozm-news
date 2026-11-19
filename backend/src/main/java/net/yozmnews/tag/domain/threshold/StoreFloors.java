@@ -14,15 +14,17 @@ import net.yozmnews.tag.domain.queue.EvaluationSchedule;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 저장 바닥 계산 — 정본 · docs/specs/tag.md §4 · tag-R12 · tag-R29 · tag-R36.
+ * 저장 바닥 계산 — 정본 · docs/specs/tag.md §4 · tag-R12 · tag-R29 · tag-R32 · tag-R36.
  * <p>
  * 저장 바닥은 한 버전 · 한 태그 종류의 평가 시각 축 위에서, 그 시각의 평가에 어느 확률까지 저장돼 있는가다. 평가마다 쓴 저장 기준은 기록되지
  * 않아 이력과 끝난 채움 기록으로 되짚는다. 이력 행 i 의 저장 기준은 닫힌 구간 {@code [c_i, c_{i+1}]} 동안 유효하다(마지막은 끝없이, 다음
  * 행의 시각이 앞서면 {@code c_i} 한 순간) — 바뀐 그 순간의 평가는 두 값 어느 쪽으로도 읽었을 수 있다. 회차는 기준을 시작 때 읽고 평가
- * 시각은 결과 뒤에 찍으므로, 평가 시각 t 의 저장 기준은 {@code [t − 읽기 지연, t]} 와 겹치는 행의 값 가운데 가장 큰 것으로 본다. 바닥은 그
+ * 시각은 결과 뒤에 찍으므로, 평가 시각 t 의 저장 기준은 {@code [읽기 지연의 readFrom(t), t]} 와 겹치는 행의 값 가운데 가장 큰 것으로 본다 —
+ * 읽기 지연({@link ReadLag})은 회차의 점유 기간이고 시계가 넘긴 시간을 뺀 경과로 잰다. 바닥은 그
  * 값과 t 를 덮은 채움의 저장 기준 가운데 작은 것이다. 모든 판단은 바닥을 크게 잡는 쪽(경고를 놓치지 않는 쪽)이다.
  * <p>
- * 바닥은 경계(바뀐 시각 · 바뀐 시각 + 읽기 지연 · 덮은 범위의 양 끝) 사이에서 상수라, 경계와 경계 사이 한 점의 값으로 구간 전체를 판단한다.
+ * 바닥은 경계(바뀐 시각 · 바뀐 시각의 {@code settledAt} · 덮은 범위의 양 끝) 사이에서 상수라, 경계와 경계 사이 한 점의 값으로 구간 전체를
+ * 판단한다.
  */
 public final class StoreFloors {
 
@@ -33,11 +35,11 @@ public final class StoreFloors {
 
 	private final List<StoreCoverage> coverages;
 
-	private final Duration readLag;
+	private final ReadLag readLag;
 
 	private final Instant origin;
 
-	private StoreFloors(List<Row> rows, List<StoreCoverage> coverages, Duration readLag) {
+	private StoreFloors(List<Row> rows, List<StoreCoverage> coverages, ReadLag readLag) {
 		this.rows = rows;
 		this.coverages = coverages;
 		this.readLag = readLag;
@@ -45,11 +47,21 @@ public final class StoreFloors {
 	}
 
 	/**
-	 * 평가의 기준 읽기 지연을 회차의 점유 기간({@link EvaluationSchedule#LEASE})으로 잡는다 — 프로덕션 소비자는 모두 이것을 부른다.
-	 * @see #of(MultiTagKind, List, List, Duration)
+	 * 평가의 기준 읽기 지연을 회차의 점유 기간({@link EvaluationSchedule#LEASE})으로 잡는다 — 넘긴 기록이 없는 시계에서의 지연이다. 프로덕션
+	 * 결선은 시계로 만든 지연을 넘긴다({@code StoreFloorsReader}).
+	 * @see #of(MultiTagKind, List, List, ReadLag)
 	 */
 	public static StoreFloors of(MultiTagKind kind, List<ThresholdChangeView> changes, List<StoreCoverage> coverages) {
 		return of(kind, changes, coverages, EvaluationSchedule.LEASE);
+	}
+
+	/**
+	 * 측정 시각으로 고정 길이인 읽기 지연으로 저장 바닥을 만든다.
+	 * @see #of(MultiTagKind, List, List, ReadLag)
+	 */
+	public static StoreFloors of(MultiTagKind kind, List<ThresholdChangeView> changes, List<StoreCoverage> coverages,
+			Duration readLag) {
+		return of(kind, changes, coverages, ReadLag.fixed(readLag));
 	}
 
 	/**
@@ -57,12 +69,12 @@ public final class StoreFloors {
 	 * @param changes 그 버전의 태그 기준 · 저장 기준 이력 — 저장소 순서(최근 것부터) 그대로이고, 같은 시각 행의 앞뒤는 이 순서가 정한다.
 	 * 다른 태그 종류는 거른다
 	 * @param coverages 그 버전 · 그 태그 종류의 끝난 채움 — 건너뛴 평가가 있는 버전의 것은 넣지 않는다
-	 * @param readLag 평가가 쓴 저장 기준을 읽은 시각이 평가 시각보다 앞설 수 있는 최대 시간
+	 * @param readLag 평가가 쓴 저장 기준을 읽은 시각의 범위
 	 * @throws IllegalStateException 그 태그 종류의 가장 오래된 행이 처음 값 행(이전 값 없음)이 아닐 때 — 처음 값이 첫 행이라는 불변식이
 	 * 깨진 것이다
 	 */
 	public static StoreFloors of(MultiTagKind kind, List<ThresholdChangeView> changes, List<StoreCoverage> coverages,
-			Duration readLag) {
+			ReadLag readLag) {
 		Objects.requireNonNull(kind, "kind");
 		Objects.requireNonNull(readLag, "readLag");
 		List<ThresholdChangeView> chronological = new ArrayList<>();
@@ -116,7 +128,7 @@ public final class StoreFloors {
 
 	/** 평가 시각 at 의 바닥 — at 은 처음 값 시각 이후다 */
 	private BigDecimal floor(Instant at) {
-		Instant readFrom = at.minus(this.readLag);
+		Instant readFrom = this.readLag.readFrom(at);
 		BigDecimal stored = null;
 		for (Row row : this.rows) {
 			boolean overlaps = !row.start().isAfter(at) && (row.end() == null || !row.end().isBefore(readFrom));
@@ -160,7 +172,7 @@ public final class StoreFloors {
 		for (Row row : this.rows) {
 			boundaries.add(row.start());
 			if (row.end() != null) {
-				boundaries.add(row.end().plus(this.readLag));
+				boundaries.add(this.readLag.settledAt(row.end()));
 			}
 		}
 		for (StoreCoverage coverage : this.coverages) {

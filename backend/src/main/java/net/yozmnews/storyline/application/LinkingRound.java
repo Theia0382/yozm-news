@@ -1,7 +1,6 @@
 package net.yozmnews.storyline.application;
 
 import java.time.Instant;
-import java.time.InstantSource;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -13,6 +12,7 @@ import net.yozmnews.evaluation.FlowCandidate;
 import net.yozmnews.evaluation.FlowMembership;
 import net.yozmnews.evaluation.FlowMembershipJudgement;
 import net.yozmnews.evaluation.FlowMembershipQuery;
+import net.yozmnews.platform.AppClock;
 import net.yozmnews.storyline.domain.linking.LinkingCriteria;
 import net.yozmnews.storyline.domain.linking.LinkingCriteriaRepository;
 import net.yozmnews.storyline.domain.queue.LinkingQueueRepository;
@@ -51,10 +51,10 @@ public class LinkingRound {
 
 	private final TransactionTemplate transaction;
 
-	private final InstantSource clock;
+	private final AppClock clock;
 
 	LinkingRound(LinkingQueueRepository queue, LinkingCriteriaRepository criteriaHistory, LinkingCriteria criteria,
-			StorylineLinker linker, FlowMembership membership, TransactionTemplate transaction, InstantSource clock) {
+			StorylineLinker linker, FlowMembership membership, TransactionTemplate transaction, AppClock clock) {
 		this.queue = queue;
 		this.criteriaHistory = criteriaHistory;
 		this.criteria = criteria;
@@ -88,7 +88,8 @@ public class LinkingRound {
 	private List<PendingEvent> claim(Instant now) {
 		List<PendingEvent> claimed = this.transaction.execute(status -> {
 			List<PendingEvent> leased = new ArrayList<>();
-			for (PendingEvent due : this.queue.lockDue(now, LinkingSchedule.BATCH_SIZE)) {
+			Instant expiredBy = this.clock.expiredBy(LinkingSchedule.LEASE);
+			for (PendingEvent due : this.queue.lockDue(now, expiredBy, LinkingSchedule.BATCH_SIZE)) {
 				PendingEvent next = due.claim(UUID.randomUUID(), now);
 				this.queue.saveLocked(next);
 				leased.add(next);

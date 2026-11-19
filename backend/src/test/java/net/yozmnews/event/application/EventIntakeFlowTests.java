@@ -6,16 +6,19 @@ import static org.awaitility.Awaitility.await;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.InstantSource;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import net.yozmnews.TestClocks;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleDirectory;
 import net.yozmnews.article.ArticleId;
@@ -35,6 +38,7 @@ import net.yozmnews.event.domain.feature.KeyTermExtractor;
 import net.yozmnews.event.domain.feature.MatchFeatures;
 import net.yozmnews.event.domain.feature.MatchFeaturesRepository;
 import net.yozmnews.event.domain.intake.IntakeQueueRepository;
+import net.yozmnews.platform.AppClock;
 import net.yozmnews.source.SourceDeleted;
 import net.yozmnews.source.SourceId;
 import org.jspecify.annotations.Nullable;
@@ -280,6 +284,43 @@ class EventIntakeFlowTests {
 		}
 	}
 
+	/**
+	 * 측정용 시계를 넘겨도 다른 회차가 점유 중인 기사는 다시 가져가지 않는다 — 임대(10분)는 시계가 넘긴 시간을 뺀 경과로 잰다. 점유는 NOW 에
+	 * 했고 만료는 NOW + 10분이다.
+	 */
+	@Test
+	void aJumpOfTheClockLeavesAnotherRoundsLeaseAlone() {
+		long article = enqueued("국회 본회의 통과", null);
+		UUID other = UUID.fromString("6f1d2c3b-4a59-4e87-9b0c-1d2e3f405162");
+		leaseHeld(article, other, NOW.plus(Duration.ofMinutes(10)));
+
+		round(this.features, EventEmbeddings.hashing(), TestClocks.movable(NOW).jump(Duration.ofHours(24))).run();
+
+		assertThat(rowsLeasedTo(other)).isEqualTo(1);
+		assertThat(featureRows()).isZero();
+		// 대조 — 넘기지 않고 11분이 흐르면 임대가 지나 다시 가져가 쓴다
+		round(this.features, EventEmbeddings.hashing(), TestClocks.movable(NOW).advance(Duration.ofMinutes(11))).run();
+		assertThat(rowsLeasedTo(other)).isZero();
+		assertThat(featureRows()).isEqualTo(1);
+	}
+
+	private void leaseHeld(long article, UUID token, Instant expiresAt) {
+		this.jdbc.sql("""
+				update event_intake_queue set lease_token = :token, lease_expires_at = :expires where article_id = :article
+				""")
+			.param("token", token)
+			.param("expires", expiresAt.atOffset(ZoneOffset.UTC))
+			.param("article", article)
+			.update();
+	}
+
+	private long rowsLeasedTo(UUID token) {
+		return this.jdbc.sql("select count(*) from event_intake_queue where lease_token = :token")
+			.param("token", token)
+			.query(Long.class)
+			.single();
+	}
+
 	@Test
 	void aQueuedArticleThatNoLongerExistsLeavesTheQueueWithoutCallingTheEmbedder(CapturedOutput output) {
 		this.queue.enqueue(new ArticleId(999_999), NOW);
@@ -481,8 +522,12 @@ class EventIntakeFlowTests {
 	}
 
 	private EventIntakeRound round(MatchFeaturesRepository repository, TextEmbedding embedding) {
+		return round(repository, embedding, TestClocks.fixed(NOW));
+	}
+
+	private EventIntakeRound round(MatchFeaturesRepository repository, TextEmbedding embedding, AppClock clock) {
 		return new EventIntakeRound(this.queue, repository, this.assignmentQueue, this.articles, this.keyTerms,
-				embedding, this.transaction, (InstantSource) () -> NOW);
+				embedding, this.transaction, clock);
 	}
 
 	private EventIntakeListener listener() {
