@@ -10,7 +10,7 @@ import net.yozmnews.event.EventId;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 항목 하나 — 한 흐름으로 묶은 고른 사건들 · docs/specs/digest.md §5
+ * 항목 하나 — 한 흐름으로 묶은 고른 사건들 · docs/specs/digest.md §5 · digest-R46
  *
  * @param events 항목의 사건 — 비지 않음, 같은 사건은 한 번
  * @param bigRow 큰 판정 나무의 항목이면 그 큰 판정 행의 위치 — 아니면 null

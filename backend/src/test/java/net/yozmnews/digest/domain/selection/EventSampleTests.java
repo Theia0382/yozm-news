@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test;
 /**
  * 사건마다 생성에 넘길 기사 — (사건 ID, 기사 ID) 해시 순으로 앞 5 건, 같은 사건이면 같은 표본.
  * <p>
- * 지키는 규칙: 사건마다 표본(docs/specs/digest.md §5 후보 선별)
+ * 지키는 규칙: digest-R17(후보 사건의 기사 순서) · digest-R45
  */
 class EventSampleTests {
 

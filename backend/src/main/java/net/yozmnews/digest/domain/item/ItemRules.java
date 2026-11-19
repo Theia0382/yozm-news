@@ -3,7 +3,7 @@ package net.yozmnews.digest.domain.item;
 import net.yozmnews.digest.domain.output.DigestOutputSchema;
 
 /**
- * 항목 가르기의 상수 — 정본 · docs/specs/digest.md §5
+ * 항목 가르기의 상수 — 정본 · docs/specs/digest.md §5 · digest-R47
  */
 public final class ItemRules {
 

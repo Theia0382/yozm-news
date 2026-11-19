@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 /**
  * 사건의 공유 값 — 주제 · 지역은 평가 있는 소속 기사 절반 이상에 붙은 키, 중요도는 최대, {@code low_confidence} 는 모두일 때.
  * <p>
- * 지키는 규칙: 사건의 값(docs/specs/digest.md §5 후보 선별)
+ * 지키는 규칙: digest-R44
  */
 class EventFactsTests {
 

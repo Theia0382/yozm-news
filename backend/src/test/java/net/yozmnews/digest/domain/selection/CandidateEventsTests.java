@@ -14,8 +14,10 @@ import net.yozmnews.user.TopicSubscription;
 import org.junit.jupiter.api.Test;
 
 /**
- * 후보 사건 꾸리기 — 사건 없는 기사 버림(D1), 발행 시각 하한(기간 시작 − 24시간, 경계 포함), 기사 제외(형식 · 소스 · 싫어요 — 지역은 보지
+ * 후보 사건 꾸리기 — 사건 없는 기사 버림, 발행 시각 하한(기간 시작 − 24시간, 경계 포함), 기사 제외(형식 · 소스 · 싫어요 — 지역은 보지
  * 않음)는 기사마다, 값이 없는 사건 버림, 큰 판정 행 사건의 후보(지역 제외는 사건의 지역, 지난 기사가 없으면 없음)
+ * <p>
+ * 지키는 규칙: digest-R17 · digest-R19
  */
 class CandidateEventsTests {
 

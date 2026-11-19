@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * 사건마다 생성에 넘길 기사(표본) — 정본 · docs/specs/digest.md §5.
+ * 사건마다 생성에 넘길 기사(표본) — 정본 · docs/specs/digest.md §5 · digest-R45.
  * <p>
  * 후보 사건의 기사({@link CandidateEvent#articles()}) 가운데 (사건 ID, 기사 ID) 해시({@link #hash}) 오름차순 — 부호 없는 64비트로 견주고
  * 같으면 기사 ID 순 — 으로 앞 {@link #ARTICLES_PER_EVENT} 건을 고른다. 같은 사건 · 같은 기사면 언제나 같은 표본이고, 기사가 늘어도 앞서

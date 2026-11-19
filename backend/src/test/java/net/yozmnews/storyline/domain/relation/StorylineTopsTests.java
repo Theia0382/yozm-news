@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 /**
  * 사건마다 포함 나무의 꼭대기와 그 순서.
  * <p>
- * 지키는 규칙: storyline-R21(소속 점수는 싣지 않는다) · storyline-R25(포함은 상위 하나 — 꼭대기가 하나로 정해진다)
+ * 지키는 규칙: storyline-R37 · storyline-R21(소속 점수는 싣지 않는다) · storyline-R25(포함은 상위 하나 — 꼭대기가 하나로 정해진다)
  */
 class StorylineTopsTests {
 

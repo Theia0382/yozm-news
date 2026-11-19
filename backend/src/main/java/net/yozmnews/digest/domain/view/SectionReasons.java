@@ -8,7 +8,7 @@ import net.yozmnews.digest.SelectionReason;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 섹션(항목) 하나의 선정 이유 — 화면의 배지 하나 — 정본 · docs/specs/digest.md §5 다이제스트 조회.
+ * 섹션(항목) 하나의 선정 이유 — 화면의 배지 하나 — 정본 · docs/specs/digest.md §5 · digest-R48.
  * <p>
  * 항목 안 사건의 이유 가운데 구독 주제가 아닌 것을 고른다 — 큰 슬롯 사건이 있으면 {@link SelectionReason#MAJOR_STORYLINE}(큰 화제),
  * 아니면 관심도로 든 사건이 있으면 {@link SelectionReason#INTEREST}(관심 반영), 아니면 {@link SelectionReason#SUBSCRIBED}. 큰 슬롯 사건은

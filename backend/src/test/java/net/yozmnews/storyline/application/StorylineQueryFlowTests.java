@@ -64,7 +64,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 큰 판정 기준은 인스턴스에 한 행이라 시작과 끝에 비우고 처음 값을 다시 적재한다. 사건 · 스토리라인 행과 이 시험이 넣은 평가 행도 시작과 끝에
  * 지운다. 상태는 고정 시계로 본다.
  * <p>
- * 지키는 규칙: storyline-R16 · storyline-R19 ~ R23 · storyline-R25 · storyline-R33
+ * 지키는 규칙: storyline-R16 · storyline-R19 ~ R23 · storyline-R25 · storyline-R33 · storyline-R37
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest

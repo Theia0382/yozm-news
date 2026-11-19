@@ -8,7 +8,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * 사건의 키(주제 중분류 · 지역)를 정하는 몫 규칙 — 정본 · docs/specs/digest.md §5.
+ * 사건의 키(주제 중분류 · 지역)를 정하는 몫 규칙 — 정본 · docs/specs/digest.md §5 · digest-R44.
  * <p>
  * 평가 있는 소속 기사 가운데 그 키가 붙은 기사의 몫이 {@link #SHARE_THRESHOLD} 이상이면 사건의 키다. 미분류 기사(키 없음)도 분모에 든다.
  * 기사 둘이 서로 다른 키면 둘 다 사건의 키다.

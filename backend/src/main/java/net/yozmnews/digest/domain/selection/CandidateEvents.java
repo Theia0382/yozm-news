@@ -13,7 +13,7 @@ import net.yozmnews.event.EventId;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 후보 사건 꾸리기 — 사건마다 그 사용자에게 그 기간에 든 기사를 모은다. 정본 · docs/specs/digest.md §5
+ * 후보 사건 꾸리기 — 사건마다 그 사용자에게 그 기간에 든 기사를 모은다. 정본 · docs/specs/digest.md §5 · digest-R17 · digest-R19
  * <p>
  * 후보는 사건이다 — 사건에 배정되지 않은 기사는 그 기간의 후보가 아니다. 기사 제외({@link UserFilter#passesArticleExclusions})는 기사마다 거르고,
  * 사건이 후보로 남는지는 사건의 값으로 정한다.

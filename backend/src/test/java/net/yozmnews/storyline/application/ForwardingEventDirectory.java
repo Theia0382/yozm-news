@@ -55,11 +55,6 @@ class ForwardingEventDirectory implements EventDirectory {
 	}
 
 	@Override
-	public Map<EventId, ArticleId> representatives(Map<EventId, ? extends Collection<ArticleId>> among) {
-		return this.delegate.representatives(among);
-	}
-
-	@Override
 	public Map<EventId, ArticleId> representativesOfAll(Collection<EventId> events) {
 		return this.delegate.representativesOfAll(events);
 	}

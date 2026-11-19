@@ -14,7 +14,7 @@ import net.yozmnews.storyline.StorylineId;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 고른 사건을 항목으로 묶기 — 정본 · docs/specs/digest.md §5
+ * 고른 사건을 항목으로 묶기 — 정본 · docs/specs/digest.md §5 · digest-R46
  * <p>
  * ① 큰 슬롯 사건은 그 큰 판정 행의 항목에 든다. ② 그 밖의 사건은 꼭대기가 없으면 혼자 한 항목이다. ③ 꼭대기가 하나면 그 꼭대기의 항목에 든다.
  * ④ 여럿이면 큰 판정 나무의 꼭대기를 먼저 → 고른 사건(큰 슬롯 사건 포함) 가운데 그 꼭대기를 가진 사건이 많은 꼭대기 → 꼭대기 조회의 순서(소속

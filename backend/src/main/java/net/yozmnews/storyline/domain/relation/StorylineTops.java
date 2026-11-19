@@ -12,7 +12,7 @@ import net.yozmnews.storyline.domain.storyline.DirectMembership;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 사건마다 그 사건이 걸친 포함 나무의 꼭대기와 그 순서 — 정본 · docs/specs/storyline.md §5.
+ * 사건마다 그 사건이 걸친 포함 나무의 꼭대기와 그 순서 — 정본 · docs/specs/storyline.md §5 · storyline-R37.
  * <p>
  * 꼭대기는 사건이 직접 든 스토리라인에서 포함의 상위를 끝까지 따른 뿌리다 — 상위가 없으면 자기다. 이어짐은 따르지 않는다. 순서는 그 꼭대기
  * 아래 직접 소속의 가장 높은 소속 점수 내림차순이다 — 점수 없는 소속(합치기로 옮긴 것)만 있는 꼭대기는 뒤, 같으면 꼭대기 ID 오름차순. 점수는

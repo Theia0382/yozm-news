@@ -11,7 +11,7 @@ import net.yozmnews.digest.domain.selection.CandidateRank;
 import net.yozmnews.digest.domain.selection.SelectedEvent;
 
 /**
- * 항목의 순위와 주요 뉴스 · 헤드라인 가르기 — 정본 · docs/specs/digest.md §5
+ * 항목의 순위와 주요 뉴스 · 헤드라인 가르기 — 정본 · docs/specs/digest.md §5 · digest-R47
  * <p>
  * 항목 점수는 항목 안 사건 점수({@link CandidateRank#score})의 최대다 — 점수가 있는 사건이 없으면 맨 뒤. 순서는 항목 점수 내림차순 → 항목의
  * 가장 작은 사건 ID 오름차순. 큰 판정 나무의 항목({@link DigestItemPlan#bigRow()} 있음)은 모두 주요 뉴스, 나머지는 순서대로

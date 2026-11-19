@@ -10,7 +10,7 @@ import net.yozmnews.tag.TopicStatus;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 사건 하나의 공유 값 — 평가 있는 소속 기사 전부로 센다. 사용자와 무관하고 저장하지 않는다 — 정본 · docs/specs/digest.md §5.
+ * 사건 하나의 공유 값 — 평가 있는 소속 기사 전부로 센다. 사용자와 무관하고 저장하지 않는다 — 정본 · docs/specs/digest.md §5 · digest-R44.
  * <p>
  * 주제 중분류 · 지역은 {@link EventShares} 의 몫 규칙, 중요도는 소속 기사 중요도의 최대, {@code low_confidence} 는 소속 기사가 모두
  * {@link TopicStatus#LOW_CONFIDENCE} 인가다. 키는 모두 활성 태그 체계 버전의 키다.

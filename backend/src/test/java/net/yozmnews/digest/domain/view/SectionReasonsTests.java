@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 /**
  * 항목(섹션)의 선정 이유 하나 — 구독 주제가 아닌 이유를 고른다: 큰 화제 &gt; 관심 반영 &gt; 구독 주제.
  * <p>
- * 지키는 규칙: 섹션의 선정 이유(docs/specs/digest.md §5 다이제스트 조회)
+ * 지키는 규칙: digest-R48
  */
 class SectionReasonsTests {
 
