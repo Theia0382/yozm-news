@@ -78,6 +78,11 @@ class FakeStorylineDirectory implements StorylineDirectory {
 	}
 
 	@Override
+	public Map<EventId, List<StorylineId>> topsOf(Collection<EventId> events) {
+		throw new UnsupportedOperationException("운영자 API 는 사건의 꼭대기를 읽지 않는다");
+	}
+
+	@Override
 	public List<StorylineRelationView> relationsOf(StorylineId id) {
 		throw new UnsupportedOperationException("운영자 API 는 스토리라인의 관계를 읽지 않는다");
 	}

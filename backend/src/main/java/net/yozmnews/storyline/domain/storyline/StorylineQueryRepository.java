@@ -29,6 +29,11 @@ public interface StorylineQueryRepository {
 	/** 이 사건 가운데 하나라도 직접 든, 합쳐지지 않은 스토리라인 — 스토리라인 ID 순. 빈 입력이면 빈 목록 */
 	List<StoredStoryline> having(Collection<Long> eventIds);
 
+	/**
+	 * 이 사건들의 직접 소속 — 합쳐지지 않은 스토리라인의 것만, 소속 점수와 함께. 순서 무관. 빈 입력이면 빈 목록
+	 */
+	List<DirectMembership> directMemberships(Collection<Long> eventIds);
+
 	/** 이 가운데 합쳐지지 않은 스토리라인 — 스토리라인 ID 순. 빈 입력이면 빈 목록 */
 	List<StoredStoryline> byIds(Collection<Long> storylineIds);
 

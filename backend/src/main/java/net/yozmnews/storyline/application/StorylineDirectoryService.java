@@ -37,6 +37,7 @@ import net.yozmnews.storyline.domain.big.BigStorylineRule;
 import net.yozmnews.storyline.domain.big.BigTrees;
 import net.yozmnews.storyline.domain.relation.RelationGraph;
 import net.yozmnews.storyline.domain.relation.RelationRepository;
+import net.yozmnews.storyline.domain.relation.StorylineTops;
 import net.yozmnews.storyline.domain.storyline.ClosedMembers;
 import net.yozmnews.storyline.domain.storyline.StateCriteria;
 import net.yozmnews.storyline.domain.storyline.StoredStoryline;
@@ -140,6 +141,23 @@ class StorylineDirectoryService implements StorylineDirectory {
 		for (StorylineView view : views) {
 			found.add(new EventStoryline(view, direct.contains(view.id().value())));
 		}
+		return found;
+	}
+
+	@Override
+	public Map<EventId, List<StorylineId>> topsOf(Collection<EventId> events) {
+		Objects.requireNonNull(events, "events");
+		Set<EventId> distinct = new LinkedHashSet<>(events);
+		if (distinct.size() > MAX_TOP_EVENTS) {
+			throw new IllegalArgumentException("꼭대기 조회는 한 번에 사건 " + MAX_TOP_EVENTS + " 개까지다: " + distinct.size());
+		}
+		if (distinct.isEmpty()) {
+			return Map.of();
+		}
+		List<Long> present = this.events.views(distinct).keySet().stream().map(EventId::value).toList();
+		Map<Long, List<Long>> tops = StorylineTops.of(this.storylines.directMemberships(present), graph());
+		Map<EventId, List<StorylineId>> found = new LinkedHashMap<>();
+		tops.forEach((event, roots) -> found.put(new EventId(event), roots.stream().map(StorylineId::new).toList()));
 		return found;
 	}
 

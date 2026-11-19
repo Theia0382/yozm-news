@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import net.yozmnews.storyline.domain.storyline.DirectMembership;
 import net.yozmnews.storyline.domain.storyline.StoredStoryline;
 import net.yozmnews.storyline.domain.storyline.StorylineQueryRepository;
 import org.jspecify.annotations.Nullable;
@@ -79,6 +80,23 @@ class JdbcStorylineQueryRepository implements StorylineQueryRepository {
 		return this.jdbc.sql("select " + COLUMNS + " from storylines s where " + HAVING_EVENTS + " order by s.id")
 			.param("events", eventIds.toArray(Long[]::new))
 			.query(JdbcStorylineQueryRepository::storyline)
+			.list();
+	}
+
+	@Override
+	public List<DirectMembership> directMemberships(Collection<Long> eventIds) {
+		if (eventIds.isEmpty()) {
+			return List.of();
+		}
+		return this.jdbc.sql("""
+				select m.event_id, m.storyline_id, m.score
+				from storyline_members m
+				join storylines s on s.id = m.storyline_id
+				where s.merged_into is null and m.event_id = any(:events)
+				""")
+			.param("events", eventIds.toArray(Long[]::new))
+			.query((rs, row) -> new DirectMembership(rs.getLong("event_id"), rs.getLong("storyline_id"),
+					rs.getObject("score", Double.class)))
 			.list();
 	}
 
