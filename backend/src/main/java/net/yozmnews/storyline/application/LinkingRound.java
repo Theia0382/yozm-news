@@ -8,6 +8,7 @@ import java.util.Objects;
 import java.util.OptionalInt;
 import java.util.UUID;
 
+import net.yozmnews.evaluation.EvaluatorTiming;
 import net.yozmnews.evaluation.FlowCandidate;
 import net.yozmnews.evaluation.FlowMembership;
 import net.yozmnews.evaluation.FlowMembershipJudgement;
@@ -184,7 +185,7 @@ public class LinkingRound {
 				logger.error("스토리라인 잇기 판정이 거듭 실패해 대기에서 뺐다 — 사건 {}, 실패 {}회", eventId, count);
 				return;
 			}
-			this.queue.defer(eventId, LinkingSchedule.retryAt(count, this.clock.instant()));
+			this.queue.defer(eventId, this.clock.instant().plus(EvaluatorTiming.retryDelay(count)));
 		});
 	}
 

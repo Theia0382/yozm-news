@@ -12,6 +12,7 @@ import java.util.OptionalInt;
 import java.util.UUID;
 
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.evaluation.EvaluatorTiming;
 import net.yozmnews.evaluation.FlowDescriptor;
 import net.yozmnews.evaluation.FlowHappening;
 import net.yozmnews.evaluation.FlowRelation;
@@ -368,13 +369,14 @@ public class RelationRound {
 	}
 
 	/**
-	 * 평가기 일시 실패 — 실패 수를 하나 올리고 점유를 풀고 판정 가능 시각을 미룬다. 실패 수에 상한이 없어 대기에서 빼지 않는다(storyline-R31)
+	 * 평가기 일시 실패 — 실패 수를 하나 올리고 점유를 풀고 판정 가능 시각을 지금 + {@link EvaluatorTiming#retryDelay} 로 미룬다. 실패 수에
+	 * 상한이 없어 대기에서 빼지 않는다(storyline-R31)
 	 */
 	private void defer(long storylineId, UUID token) {
 		this.transaction.executeWithoutResult(status -> {
 			OptionalInt failures = this.queue.recordFailureIfLeased(storylineId, token);
 			if (failures.isPresent()) {
-				this.queue.defer(storylineId, RelationSchedule.retryAt(failures.getAsInt(), this.clock.instant()));
+				this.queue.defer(storylineId, this.clock.instant().plus(EvaluatorTiming.retryDelay(failures.getAsInt())));
 			}
 		});
 	}

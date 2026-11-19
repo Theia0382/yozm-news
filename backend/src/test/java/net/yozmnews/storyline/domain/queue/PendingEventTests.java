@@ -60,15 +60,4 @@ class PendingEventTests {
 		assertThat(LinkingSchedule.failuresExhausted(5)).isTrue();
 	}
 
-	@Test
-	void aTransientFailureIsRetriedAfterADoublingDelayUpToAnHour() {
-		Instant now = Instant.parse("2026-11-10T00:00:00Z");
-
-		assertThat(LinkingSchedule.retryAt(1, now)).isEqualTo(Instant.parse("2026-11-10T00:01:00Z"));
-		assertThat(LinkingSchedule.retryAt(2, now)).isEqualTo(Instant.parse("2026-11-10T00:02:00Z"));
-		assertThat(LinkingSchedule.retryAt(4, now)).isEqualTo(Instant.parse("2026-11-10T00:08:00Z"));
-		assertThat(LinkingSchedule.retryAt(7, now)).isEqualTo(Instant.parse("2026-11-10T01:00:00Z"));
-		assertThatIllegalArgumentException().isThrownBy(() -> LinkingSchedule.retryAt(0, now));
-	}
-
 }

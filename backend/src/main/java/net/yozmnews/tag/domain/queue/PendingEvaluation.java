@@ -5,6 +5,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.evaluation.EvaluatorTiming;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -44,14 +45,14 @@ public record PendingEvaluation(ArticleId articleId, Instant eligibleAt, int att
 	}
 
 	/**
-	 * 일시 실패 — 시도 수를 하나 늘리고 재시도 간격({@link EvaluationSchedule#retryDelay}) 뒤로 미룬다. 시도 수에 상한이 없어 실패로
+	 * 일시 실패 — 시도 수를 하나 늘리고 재시도 간격({@link EvaluatorTiming#retryDelay}) 뒤로 미룬다. 시도 수에 상한이 없어 실패로
 	 * 남기지 않는다. 점유를 푼다.
 	 * @throws IllegalStateException 실패로 남은 행일 때
 	 */
 	public PendingEvaluation afterTransient(String message, Instant now) {
 		requireWaiting();
 		int next = this.attempts + 1;
-		return new PendingEvaluation(this.articleId, now.plus(EvaluationSchedule.retryDelay(next)), next, null, null,
+		return new PendingEvaluation(this.articleId, now.plus(EvaluatorTiming.retryDelay(next)), next, null, null,
 				message);
 	}
 

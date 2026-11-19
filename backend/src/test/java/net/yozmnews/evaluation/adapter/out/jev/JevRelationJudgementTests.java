@@ -22,6 +22,7 @@ import java.util.Map;
 
 import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
+import net.yozmnews.evaluation.EvaluatorTiming;
 import net.yozmnews.evaluation.RelationAnswer;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationFailure;
 import net.yozmnews.evaluation.domain.evaluator.FlowText;
@@ -183,7 +184,7 @@ class JevRelationJudgementTests {
 
 	private JevArticleEvaluator evaluator() {
 		JevArticleEvaluator evaluator = new JevArticleEvaluator(URI.create(server.baseUrl() + "/api/"), "jev-latest",
-				JevApiKey.of(KEY), JevArticleEvaluator.RESPONSE_DEADLINE);
+				JevApiKey.of(KEY), EvaluatorTiming.REQUEST_DEADLINE);
 		this.evaluators.add(evaluator);
 		return evaluator;
 	}

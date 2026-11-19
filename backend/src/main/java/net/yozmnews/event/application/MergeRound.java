@@ -14,6 +14,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.evaluation.EvaluatorTiming;
 import net.yozmnews.evaluation.EventDescriptor;
 import net.yozmnews.evaluation.EventMembership;
 import net.yozmnews.evaluation.MembershipJudgement;
@@ -55,7 +56,8 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 잠그고, 둘 다 열려 있고 모델 버전이 같고 잠근 배정 수가 사건의 기사 수와 같을 때만 합친다.
  * 합쳐질 사건에는 합치기 직전의 대표 기사({@link EventQueryRepository#representativesOfAll})를 남긴다.
  * 확인을 끝내지 못한 사건(판정의 일시 실패 · 판정할 기사 없음 · 합치지 못함)은 표시하지 않고 미룬다({@link EventRepository#deferMerge}) —
- * 다시 볼 시각은 {@link AssignmentSchedule#retryAt} 에 이어서 미룬 횟수를 넣은 값이고, 그 시각이 지난 회차가 미루지 않은 사건 다음에 본다.
+ * 다시 볼 시각은 지금 + {@link EvaluatorTiming#retryDelay} 에 이어서 미룬 횟수를 넣은 값이고, 그 시각이 지난 회차가 미루지 않은 사건 다음에
+ * 본다.
  * 사건 소속 판정은 트랜잭션 밖에서 부른다. 회차마다 {@link AssignmentSchedule#MERGE_BATCH} 사건까지 본다. 예외를 밖으로 던지지 않는다.
  * 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통).
  */
@@ -191,11 +193,12 @@ public class MergeRound {
 
 	/**
 	 * 확인을 끝내지 못한 사건을 미룬다 — 표시하지 않아 대상으로 남고, 다시 볼 시각까지는 회차의 자리를 차지하지 않는다. 미룸은 확인을
-	 * 표시하거나 합칠 때 지워진다.
+	 * 표시하거나 합칠 때 지워진다. 다시 볼 시각은 미룬 까닭과 무관하게 평가기 일시 실패의 간격({@link EvaluatorTiming#retryDelay})에 이어서
+	 * 미룬 횟수를 넣은 값이다(ADR-0213).
 	 */
 	private Step defer(MergeSubject subject, Instant now) {
 		int deferrals = subject.deferrals() + 1;
-		this.events.deferMerge(subject.id(), deferrals, AssignmentSchedule.retryAt(now, deferrals));
+		this.events.deferMerge(subject.id(), deferrals, now.plus(EvaluatorTiming.retryDelay(deferrals)));
 		return new Step.Next();
 	}
 

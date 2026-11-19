@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
-import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -58,15 +57,6 @@ class PendingEvaluationTests {
 				null, "서버 오류"));
 		assertThat(hundredth).isEqualTo(new PendingEvaluation(ARTICLE, Instant.parse("2026-11-02T01:00:00Z"), 100, null,
 				null, "요청 제한"));
-	}
-
-	@Test
-	void theRetryDelayStopsAtOneHourWithoutOverflowing() {
-		assertThat(EvaluationSchedule.retryDelay(6)).isEqualTo(Duration.ofMinutes(32));
-		assertThat(EvaluationSchedule.retryDelay(7)).isEqualTo(Duration.ofHours(1));
-		assertThat(EvaluationSchedule.retryDelay(8)).isEqualTo(Duration.ofHours(1));
-		assertThat(EvaluationSchedule.retryDelay(Integer.MAX_VALUE)).isEqualTo(Duration.ofHours(1));
-		assertThatIllegalArgumentException().isThrownBy(() -> EvaluationSchedule.retryDelay(0));
 	}
 
 	@Test
