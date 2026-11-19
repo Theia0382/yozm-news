@@ -31,7 +31,7 @@ import org.junit.jupiter.api.Test;
  * 시계 정본 — main 클래스가 벽시계를 시계 결선 밖에서 직접 읽지 않는지 본다. 앱의 지금은 {@code AppClock} bean 하나에서 읽는다.
  * <p>
  * 호출과 메서드 참조({@code Instant::now} 류)를 함께 본다. 실제 경과를 재는 단조 시계({@code System.nanoTime})는 지금을 읽는 곳이 아니라 규칙
- * 밖이다. 지키는 규칙: docs/specs/platform.md §5 의 시계 정본 규칙
+ * 밖이다. 지키는 규칙: platform-R26
  */
 class ClockSourceTests {
 

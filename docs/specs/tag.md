@@ -911,24 +911,24 @@ sequenceDiagram
 - `TagSetSeeding` — 첫 기동 적재(들어오는 쪽). `seedIfEmpty()` 가 한 트랜잭션에서 표를 잠그고 버전이 없을 때만 버전 1 과 처음 태그 기준 · 저장 기준을 쓴다. 적재하면 정보 로그 `기본 태그 체계를 버전 1로 적재했다` 를, 적재하지 않았고 기본 체계 파일과 내용이 같은 버전이 없으면 정보 로그 `기본 체계 파일과 내용이 같은 태그 체계 버전이 없다 — 파일의 개정을 들이려면 체계 변경으로 새 버전을 만든다` 를 남긴다(tag-R2)
 - `TagSetDirectoryService` — 공개 API `TagSetDirectory` 의 구현. 트랜잭션 · 역할 애너테이션이 없다(tag-R3). 버전 하나의 내용은 `TagSetViews` 로 옮긴다
 - `TagSetViews` — 체계 버전을 공개 타입(`TagSetView`)으로 옮기는 정본. 활성 버전 조회와 평가 결과의 버전 조회(`of(TagSetId)` — 없는 버전이면 `IllegalStateException`)가 함께 쓴다(tag-R9)
-- `ArticleEventsListener` — 리스너(들어오는 쪽). 넣기는 시각을 `InstantSource` 에서 얻는다. 지우기는 한 트랜잭션에서 대기 행을 먼저, 평가 · 태그 행을 나중에 지운다(tag-R21)
-- `PendingEvaluations` — 대기 점유. `claimDue(now)` 가 한 트랜잭션에서 평가할 수 있는 대기를 `CLAIM_BATCH`(50 — 측정 전 목표, 정본)까지 잠그고 점유를 써 커밋한다(tag-R19)
-- `EvaluationRound` — 평가 회차 하나(tag-R19 · R20). 태그 판정은 `evaluation` 의 `ArticleTagging.judge` 로 한다 — 기사 ID 와 그 버전의 `TagSetView.questions()`. 시각은 `InstantSource` 에서 얻는다. 로그: `평가 대기 기사가 지워져 대기에서 뺐다 — 기사 {ID}` · `활성 태그 체계가 바뀌어 회차를 멈췄다 — 기사 {ID}`(정보), `평가기를 쓸 수 없어 회차를 멈췄다 — 기사 {ID}: {문구}`(경고), `태그 판정이 실패해 회차를 멈췄다 — 기사 {ID}`(오류 — 예외 동봉. 판정 결과가 질문 묶음과 어긋난 것도 `evaluation` 의 예외로 여기에 든다)
+- `ArticleEventsListener` — 리스너(들어오는 쪽). 넣기는 시각을 `platform` 의 앱 시계(`InstantSource` — platform-R26)에서 얻는다. 지우기는 한 트랜잭션에서 대기 행을 먼저, 평가 · 태그 행을 나중에 지운다(tag-R21)
+- `PendingEvaluations` — 대기 점유. `claimDue(now, expiredBy)` 가 한 트랜잭션에서 평가할 수 있는 대기(점유 만료 ≤ `expiredBy`)를 `CLAIM_BATCH`(50 — 측정 전 목표, 정본)까지 잠그고 점유를 써 커밋한다(tag-R19)
+- `EvaluationRound` — 평가 회차 하나(tag-R19 · R20). 태그 판정은 `evaluation` 의 `ArticleTagging.judge` 로 한다 — 기사 ID 와 그 버전의 `TagSetView.questions()`. 시각과 임대 만료 상한은 `platform` 의 앱 시계(`AppClock` — `expiredBy(EvaluationSchedule.LEASE)`, platform-R28)에서 얻는다. 로그: `평가 대기 기사가 지워져 대기에서 뺐다 — 기사 {ID}` · `활성 태그 체계가 바뀌어 회차를 멈췄다 — 기사 {ID}`(정보), `평가기를 쓸 수 없어 회차를 멈췄다 — 기사 {ID}: {문구}`(경고), `태그 판정이 실패해 회차를 멈췄다 — 기사 {ID}`(오류 — 예외 동봉. 판정 결과가 질문 묶음과 어긋난 것도 `evaluation` 의 예외로 여기에 든다)
 - `ArticleEvaluationsService` — 공개 API `ArticleEvaluations` 의 구현(tag-R15). `findAll` 은 서로 다른 기사로 상한을 세고 `findLatestAll` 의 평가마다 `find` 와 같은 판정을 한다 — 버전 내용 · 태그 기준은 버전마다 한 번 읽어 그 호출 안에서 다시 쓴다
 - `EvaluationAdministrationService` — 공개 운영 API `EvaluationAdministration` 의 구현. `overview` 는 `PlatformTransactionManager` 로 만든 읽기 전용 `REPEATABLE READ` `TransactionTemplate` 안에서 센다 — 저장 바닥은 `StoreFloorsReader` 에서 얻는다(tag-R29)
 - `TopicCoverageService` — 공개 조회 `TopicCoverage` 의 구현. 같은 모양의 트랜잭션 안에서 센다 — 평가에 나온 버전마다 체계 · 지금 기준 · 계보 표를 한 번씩 읽는다(호출 하나 안). 역할 애너테이션이 없다(tag-R30)
-- `TagBackfillAdministrationService` — 공개 운영 API `TagBackfillAdministration` 의 구현(tag-R31). 요청은 한 트랜잭션에서 `tag_sets` 표를 `SHARE` 로 잠근 뒤 모든 버전의 지금 저장 기준과 범위의 평가 수로 버전별 계획을 만들어 기록한다. 기록하지 못하면 끝나지 않은 채움을 읽어 `AlreadyOpen` 으로 — 그 사이 끝나 읽기가 비면 기록을 한 번 더 한다. 시각은 `InstantSource` 에서 얻는다
-- `TagBackfillRound` — 채움 회차 하나(tag-R31). 점유를 커밋한 뒤 버전마다 체계와 채울 기준(저장 기준은 계획의 값, 태그 기준은 거르기에 쓰이지 않아 지금 값)을 한 번 읽고, 묶음마다 한 트랜잭션에서 잠가 읽기 → 다시 읽기(`ArticleTagging.reread` — 판정 원본 ID 와 그 버전의 질문 묶음, 대조까지 `evaluation` 이 한다) → 더하기 → 진행 쓰기를 한다. 멈춤 갈래는 셋이다 — 남은 평가가 없으면 끝냄, 진행 쓰기에서 토큰이 맞지 않으면 그 묶음을 되돌리고 멈춤(점유를 다른 회차가 가져갔다), 그 밖의 예외(계획에 없는 버전의 평가 · DB 오류)면 그 묶음을 되돌리고 점유를 풀고 멈춤. 다시 읽기의 예상 못한 예외는 그 평가를 읽을 수 없음으로 세고 이어 간다. 로그: `빠진 태그 채움 {ID} 을 끝냈다 — 평가 {n}건, 더한 태그 {m}건, 건너뜀 {k}건` · `빠진 태그 채움 {ID} 의 점유를 다른 회차가 가져가 멈췄다`(정보), `빠진 태그 채움 {ID} 에서 판정 원본을 다시 읽다 예상 못한 예외가 났다 — 평가 {ID}` · `빠진 태그 채움 {ID} 을 멈췄다 — 다음 회차가 이어서 한다`(오류)
+- `TagBackfillAdministrationService` — 공개 운영 API `TagBackfillAdministration` 의 구현(tag-R31). 요청은 한 트랜잭션에서 `tag_sets` 표를 `SHARE` 로 잠근 뒤 모든 버전의 지금 저장 기준과 범위의 평가 수로 버전별 계획을 만들어 기록한다. 기록하지 못하면 끝나지 않은 채움을 읽어 `AlreadyOpen` 으로 — 그 사이 끝나 읽기가 비면 기록을 한 번 더 한다. 시각은 `platform` 의 앱 시계(`InstantSource` — platform-R26)에서 얻는다
+- `TagBackfillRound` — 채움 회차 하나(tag-R31). 시각과 임대 만료 상한은 `platform` 의 앱 시계(`AppClock` — `expiredBy(BackfillSchedule.LEASE)`, platform-R28)에서 얻는다. 점유를 커밋한 뒤 버전마다 체계와 채울 기준(저장 기준은 계획의 값, 태그 기준은 거르기에 쓰이지 않아 지금 값)을 한 번 읽고, 묶음마다 한 트랜잭션에서 잠가 읽기 → 다시 읽기(`ArticleTagging.reread` — 판정 원본 ID 와 그 버전의 질문 묶음, 대조까지 `evaluation` 이 한다) → 더하기 → 진행 쓰기를 한다. 멈춤 갈래는 셋이다 — 남은 평가가 없으면 끝냄, 진행 쓰기에서 토큰이 맞지 않으면 그 묶음을 되돌리고 멈춤(점유를 다른 회차가 가져갔다), 그 밖의 예외(계획에 없는 버전의 평가 · DB 오류)면 그 묶음을 되돌리고 점유를 풀고 멈춤. 다시 읽기의 예상 못한 예외는 그 평가를 읽을 수 없음으로 세고 이어 간다. 로그: `빠진 태그 채움 {ID} 을 끝냈다 — 평가 {n}건, 더한 태그 {m}건, 건너뜀 {k}건` · `빠진 태그 채움 {ID} 의 점유를 다른 회차가 가져가 멈췄다`(정보), `빠진 태그 채움 {ID} 에서 판정 원본을 다시 읽다 예상 못한 예외가 났다 — 평가 {ID}` · `빠진 태그 채움 {ID} 을 멈췄다 — 다음 회차가 이어서 한다`(오류)
 - `TagSetViews` · `PendingEvaluations` · `EvaluationRound` · `ArticleEvaluationsService` · `EvaluationAdministrationService` · `TagBackfillAdministrationService` · `TagBackfillRound` · `TopicCoverageService` 는 트랜잭션 · 역할 애너테이션이 없다 — 두 역할 공통이고, 점유 · 회차 · 집계 · 채움 요청은 `TransactionTemplate` 으로 트랜잭션을 연다. `ArticleEventsListener` 는 리스너마다 새 트랜잭션이다
-- `TagSetAdministrationService` — 공개 API `TagSetAdministration` 의 구현. 태그 기준 · 저장 기준 변경은 한 트랜잭션에서 표 잠금(활성 전환과 줄 서기) → 활성 버전 조회 → 태그 기준 · 저장 기준 행 잠금 → 지난 저장 기준 최댓값(`StoreFloorsReader` 의 `StoreFloors.pastMax` — 이력과 끝난 채움) → 판정 → 쓰기다. 시각은 `InstantSource` 에서 얻는다(tag-R11 ~ R13). 버전 연산은 `TagSetVersioning` 에 맡긴다
-- `TagSetVersioning` — 버전 목록 · 원문 내보내기 · 확인 · 활성화(tag-R16 · R22 ~ R25 · R27). 활성화는 재평가 대상 기사를 트랜잭션 밖에서 읽은 뒤 한 트랜잭션(`TransactionTemplate`)에서 표 잠금 → 대조 → 쓰기 → `TagSetActivated` 발행이다. 시각은 `InstantSource` 에서 얻는다. 활성화하면 정보 로그 `태그 체계 버전 {번호}를 활성으로 바꿨다 — 재평가 대기 {건}건` 을 남긴다
+- `TagSetAdministrationService` — 공개 API `TagSetAdministration` 의 구현. 태그 기준 · 저장 기준 변경은 한 트랜잭션에서 표 잠금(활성 전환과 줄 서기) → 활성 버전 조회 → 태그 기준 · 저장 기준 행 잠금 → 지난 저장 기준 최댓값(`StoreFloorsReader` 의 `StoreFloors.pastMax` — 이력과 끝난 채움) → 판정 → 쓰기다. 시각은 `platform` 의 앱 시계(`InstantSource` — platform-R26)에서 얻는다(tag-R11 ~ R13). 버전 연산은 `TagSetVersioning` 에 맡긴다
+- `TagSetVersioning` — 버전 목록 · 원문 내보내기 · 확인 · 활성화(tag-R16 · R22 ~ R25 · R27). 활성화는 재평가 대상 기사를 트랜잭션 밖에서 읽은 뒤 한 트랜잭션(`TransactionTemplate`)에서 표 잠금 → 대조 → 쓰기 → `TagSetActivated` 발행이다. 시각은 `platform` 의 앱 시계(`InstantSource` — platform-R26)에서 얻는다. 활성화하면 정보 로그 `태그 체계 버전 {번호}를 활성으로 바꿨다 — 재평가 대기 {건}건` 을 남긴다
 - `TagSetVersionStore` — 새 버전 쓰기(버전 행과 그 버전의 처음 태그 기준 · 저장 기준 · 이력 첫 행)의 정본(tag-R2 · R3 · R13 · R16). 첫 적재(`TagSetSeeding`)는 버전 1 을, 활성화(`TagSetVersioning`)는 기준 버전을 끈 뒤 다음 버전을 쓴다. 트랜잭션을 열지 않는다 — 부르는 쪽의 트랜잭션 · 표 잠금 안에서 쓴다. 빈이 아니다
 - `TagKeyLineageService` — 공개 API `TagKeyLineage` 의 구현(tag-R26). 트랜잭션 · 역할 애너테이션이 없다
 - `EvaluationReviewService` — 공개 운영 API `EvaluationReview` 의 구현(tag-R33 · R34). 읽기 전용 `REPEATABLE READ` `TransactionTemplate` 안에서 읽는다. 역할 애너테이션이 없다
 - `EvaluationReviewViews` — 저장된 평가와 판정을 검수의 공개 값(`EvaluationRow` · `EvaluationDetailView`)으로 옮기는 정본
 - `JudgedSamples` — 흘려 받은 `SampleRow` 를 묶음(`JudgedSamples.BATCH`(1,000 — 판정 원본 조회 묶음, 측정 전 목표))마다 모아 `ArticleTagging.find` 로 판정 원본의 입력 토큰을 붙여 `EvaluationSample` 로 넘기는 정본 — 평가 현황 · 기준 미리보기가 쓴다. 부르는 쪽 트랜잭션 안에서 읽는다. 판정 원본이 없는 평가(지운 기사 따르기가 두 모듈의 두 트랜잭션이라 그 사이에 보일 수 있다)는 넘기지 않는다(tag-R29)
 - `ThresholdPreviews` — 기준 미리보기(tag-R35). 읽기 전용 `REPEATABLE READ` `TransactionTemplate` 안에서 읽는다 — 저장 바닥은 `StoreFloorsReader` 에서 얻는다. `TagSetAdministrationService` 가 맡긴다
-- `StoreFloorsReader` — 저장 바닥 결선(tag-R32). 그 버전 · 태그 종류의 이력(부르는 쪽이 같은 트랜잭션에서 읽어 넘긴다)과 `TagBackfillRepository.coverages` 로 `StoreFloors` 를 만든다. 트랜잭션을 열지 않는다 — 부르는 쪽의 트랜잭션 안에서 읽는다. 역할 애너테이션이 없다(두 역할 공통). 기준 변경 · 기준 상태 · 기준 미리보기 · 평가 현황이 쓴다
+- `StoreFloorsReader` — 저장 바닥 결선(tag-R32). 그 버전 · 태그 종류의 이력(부르는 쪽이 같은 트랜잭션에서 읽어 넘긴다)과 `TagBackfillRepository.coverages`, `platform` 의 앱 시계(`AppClock`)로 만든 읽기 지연(`ReadLag` — `before(t, EvaluationSchedule.LEASE)` · `after(바뀐 시각, EvaluationSchedule.LEASE)`)으로 `StoreFloors` 를 만든다. 트랜잭션을 열지 않는다 — 부르는 쪽의 트랜잭션 안에서 읽는다. 역할 애너테이션이 없다(두 역할 공통). 기준 변경 · 기준 상태 · 기준 미리보기 · 평가 현황이 쓴다
 
 ### `domain`
 
@@ -964,7 +964,8 @@ sequenceDiagram
 #### `domain/threshold`
 
 - `ThresholdRule` — 태그 기준 · 저장 기준 변경 판정과 경고의 정본(tag-R11 · R12)
-- `StoreFloors` — 저장 바닥 계산의 정본(tag-R32). 이력(저장소 순서 그대로)과 끝난 채움의 덮음(`StoreCoverage` — 덮은 범위와 채운 저장 기준)으로 지난 저장 기준 최댓값(`pastMax`)과 기간 안 바닥이 섞였는지(`mixed(from, to)`), 버전 전체의 바닥이 섞였는지(`mixed()`)를 낸다. 표본점의 바닥 모으기는 세 연산이 함께 쓴다 — 크기로 견줘 scale 만 다른 값은 하나다. 읽기 지연은 세 인자 `of` 가 `EvaluationSchedule.LEASE` 로 정한다 — 경고 · 평가 현황 · 기준 상태 · 기준 미리보기는 모두 `StoreFloorsReader` 를 거쳐 이것을 부른다
+- `StoreFloors` — 저장 바닥 계산의 정본(tag-R32). 이력(저장소 순서 그대로)과 끝난 채움의 덮음(`StoreCoverage` — 덮은 범위와 채운 저장 기준)으로 지난 저장 기준 최댓값(`pastMax`)과 기간 안 바닥이 섞였는지(`mixed(from, to)`), 버전 전체의 바닥이 섞였는지(`mixed()`)를 낸다. 표본점의 바닥 모으기는 세 연산이 함께 쓴다 — 크기로 견줘 scale 만 다른 값은 하나다. 읽기 지연은 `ReadLag`(평가가 저장 기준을 읽었을 수 있는 가장 이른 시각 `readFrom(t)` 과 바뀐 저장 기준을 모두 읽었다고 볼 가장 이른 평가 시각 `settledAt(c)`)으로 받는다 — 경고 · 평가 현황 · 기준 상태 · 기준 미리보기는 모두 `StoreFloorsReader` 가 시계로 만든 지연으로 이것을 부른다. 세 인자 `of` 는 넘긴 기록이 없는 지연(`ReadLag.fixed(EvaluationSchedule.LEASE)`)이다
+- `ReadLag` — 저장 바닥의 읽기 지연 — 평가 시각의 평가가 저장 기준을 읽었을 수 있는 가장 이른 시각(`readFrom`)과 바뀐 저장 기준을 모든 평가가 읽었다고 볼 가장 이른 평가 시각(`settledAt`). `fixed(Duration)` 은 넘긴 기록이 없는 지연이다(tag-R32)
 - `ThresholdValues` — 태그 기준 · 저장 기준 한 쌍과 값 규칙(tag-R10). 공개 값 `TagThresholds` 로 옮기는 것도 이것이 한다
 - `ThresholdStanding` — 어긋난 상태 판정의 정본(`of` — 지금 값과 그 태그 종류의 `StoreFloors` 를 받는다, tag-R36)
 - 저장 단위: aggregate 가 없다 — 태그 기준 · 저장 기준은 상태 전이가 아니라 값 갱신과 이력 추가이고, 판정은 `ThresholdRule` 이 한다. 저장소 `ThresholdRepository` 가 쓴다
@@ -993,7 +994,7 @@ sequenceDiagram
       Optional<Long> insertIfNoneOpen(int days, Instant from, Instant to, Instant eligibleAt,
               List<BackfillVersionPlan> versions);                      // 끝나지 않은 채움이 없으면 넣고 그 ID — 있으면 빈 값
       Optional<TagBackfill> findOpen();
-      Optional<TagBackfill> lockDue(Instant now);                       // 시작할 수 있고 점유가 없거나 만료된 채움 — 잡힌 행은 건너뛴다
+      Optional<TagBackfill> lockDue(Instant now, Instant expiredBy);    // 시작할 수 있고(≤ now) 점유가 없거나 만료된(≤ expiredBy — AppClock.expiredBy) 채움 — 잡힌 행은 건너뛴다
       void saveLocked(TagBackfill claimed);                             // lockDue 로 잠근 채움의 점유
       boolean advance(long id, UUID token, long cursor, Map<TagSetId, BackfillCounts> counts,
               Instant leaseExpiresAt);                                  // 토큰이 맞을 때만 커서 · 버전별 건수 · 점유 갱신
@@ -1020,7 +1021,7 @@ sequenceDiagram
   public interface EvaluationQueueRepository {
       void enqueue(ArticleId articleId, Instant now);                  // 없으면 넣기 — 평가 가능 시각은 정착 시간 뒤. 있으면 그대로
       int requeue(Collection<ArticleId> articleIds, Instant now);     // 재평가 — 없으면 넣고 실패 행은 되돌린다. 평가 가능 시각은 now. 넣거나 되돌린 행 수
-      List<PendingEvaluation> lockDue(Instant now, int limit);        // 평가할 수 있는 행 — 평가 가능 시각, 기사 ID 순. 잡힌 행은 건너뛴다
+      List<PendingEvaluation> lockDue(Instant now, Instant expiredBy, int limit); // 평가할 수 있는 행(평가 가능 시각 ≤ now · 점유 만료 ≤ expiredBy) — 평가 가능 시각, 기사 ID 순. 잡힌 행은 건너뛴다
       void saveLocked(PendingEvaluation next);                         // lockDue 로 잠근 행 갱신
       boolean replaceIfLeased(UUID token, PendingEvaluation next);    // 토큰이 맞을 때만 갱신
       boolean deleteIfLeased(ArticleId articleId, UUID token);        // 토큰이 맞을 때만 삭제
@@ -1184,7 +1185,7 @@ sequenceDiagram
 판단의 이유는 [ADR-0059](../adr/0059-evaluation-job-limits-concurrency-and-retries-with-db-leases-on-queue-rows.md) · [ADR-0060](../adr/0060-article-deletion-announced-by-removed-article-ids-and-followed-by-referencing-modules.md) · [ADR-0061](../adr/0061-worker-role-does-not-run-without-an-evaluator.md)에 있다.
 
 - **tag-R18** — 평가 대기: 새 기사(`ArticleStored`)를 평가 대기에 넣는다. 기사마다 한 행이고 이미 있으면 그대로다 — 같은 이벤트를 다시 처리해도 결과가 같다. 평가 가능 시각은 넣은 시각 + 정착 시간 30분이다 — 같은 기사의 다른 피드 엔트리(섹션 · 카테고리)가 붙은 뒤에 평가한다. 이 모듈이 생기기 전에 저장된 기사는 대기 테이블을 만드는 마이그레이션이 한 번 넣고, 그 기사들은 바로 평가할 수 있다. 재평가(tag-R25)로 넣거나 되돌린 행의 평가 가능 시각은 그 시각이다 — 이미 엔트리가 붙은 기사라 정착 시간을 두지 않는다(정본 `EvaluationSchedule.eligibleAfterRequeue`). 활성 버전으로 평가에 성공하면 대기 행을 지운다 — 대기 행은 기사에 지금 활성 버전의 평가가 있게 된 트랜잭션에서만 지운다(지운 기사는 예외 — tag-R19 · R21)
-- **tag-R19** — 점유와 회차: 반복 작업(1분, 재시도 없음)의 회차는 실패로 남지 않았고 평가 가능 시각이 지났고 점유가 없거나 만료된 대기 행을 평가 가능 시각 · 기사 ID 순으로 50건까지 잠가(다른 트랜잭션이 잡은 행은 건너뛴다) 점유(토큰 · 만료 = 지금 + 30분)를 쓰고 커밋한다. 반복 작업은 이전 실행이 대기 · 처리 중이면 그 회차를 건너뛴다. 재평가 행도 같은 순서다 — 활성화 시각에 넣은 재평가 행은 그 뒤에 들어온 새 기사(평가 가능 시각 = 넣은 시각 + 30분)보다 앞선다.
+- **tag-R19** — 점유와 회차: 반복 작업(1분, 재시도 없음)의 회차는 실패로 남지 않았고 평가 가능 시각이 지났고 점유가 없거나 만료된(점유한 뒤 시계가 넘긴 시간을 뺀 경과가 임대 이상 — platform-R28) 대기 행을 평가 가능 시각 · 기사 ID 순으로 50건까지 잠가(다른 트랜잭션이 잡은 행은 건너뛴다) 점유(토큰 · 만료 = 지금 + 30분)를 쓰고 커밋한다. 반복 작업은 이전 실행이 대기 · 처리 중이면 그 회차를 건너뛴다. 재평가 행도 같은 순서다 — 활성화 시각에 넣은 재평가 행은 그 뒤에 들어온 새 기사(평가 가능 시각 = 넣은 시각 + 30분)보다 앞선다.
   - 회차는 활성 버전과 그 버전의 태그 기준 · 저장 기준을 트랜잭션 밖에서 읽고, 점유 순으로 기사마다 태그 판정(`ArticleTagging.judge`)을 트랜잭션 밖에서 차례로 부른다 — 평가는 작업 서버 worker 가운데 많아야 하나를 쓴다. 기사 내용 · 피드 맥락은 `evaluation` 이 판정할 때 기사 ID 로 읽는다([evaluation-R40](evaluation.md#태그-판정))
   - 결과는 기사마다 새 트랜잭션에서 점유 토큰이 맞을 때만 반영한다 — 점유가 만료돼 다른 회차가 가져갔거나 기사가 지워져 대기 행이 없으면 늦은 결과를 버린다
   - 점유한 기사에 그 버전의 평가가 이미 있으면 판정하지 않고 대기 행을 지운다. 태그 판정이 기사 없음을 돌려주면(지워진 기사 — 평가기를 부르지 않았다) 대기 행을 지운다(정보 로그)
@@ -1279,7 +1280,7 @@ sequenceDiagram
 - **tag-R31** — 빠진 태그 채움:
   - 운영자가 일수 1 ~ 180(`TagBackfillAdministration.MAX_DAYS`)을 정한다. 덮는 범위는 요청 시각 − 일수 × 24시간 이후(포함)부터 요청 시각(제외)까지의 평가 시각이다. 버전과 무관하게 범위 안 모든 평가가 대상이고, 각 평가는 그 버전의 채울 저장 기준까지 채운다
   - 요청은 한 트랜잭션에서 `tag_sets` 표를 `SHARE` 로 잠그고 모든 버전의 지금 저장 기준(주제 · 지역)을 채울 저장 기준으로 기록한다 — 실행 중 기준이 바뀌어도 기록한 값까지 채운다. 끝나지 않은 채움은 하나뿐이다 — 있으면 기록하지 않고 그 채움을 돌려준다. 확인은 같은 범위의 평가 수를 버전별로 세고 아무것도 쓰지 않는다
-  - 실행은 작업 역할의 반복 작업(1분, 재시도 없음)이다. 시작 가능 시각(요청 + 1분 — 평가 시각을 찍은 결과가 커밋되기까지의 여유)이 지났고 점유(10분, 묶음마다 갱신)가 없거나 만료된 채움을 점유한다. 범위 안 평가를 평가 ID 순으로 500건씩 한 트랜잭션에서 키 공유 잠금으로 읽고, 평가마다 `evaluation` 이 그 평가의 판정 원본을 그 평가 버전의 질문 묶음으로 다시 읽는다(`ArticleTagging.reread` — [evaluation-R42](evaluation.md#태그-판정)) — 모델을 부르지 않는다. 읽히면 채울 저장 기준 이상인 주제 · 지역 확률 가운데 태그 행이 없는 것만 더한다(거르기는 tag-R15 의 저장 거르기와 같다). 평가 행은 고치지 않는다 — 같은 원본에서 같은 확률이 나오므로 있는 행은 그대로이고, 다시 돌려도 결과가 같다. 정본은 `TagBackfillRound` · `BackfillSchedule` 이다
+  - 실행은 작업 역할의 반복 작업(1분, 재시도 없음)이다. 시작 가능 시각(요청 + 1분 — 평가 시각을 찍은 결과가 커밋되기까지의 여유)이 지났고 점유(10분, 묶음마다 갱신)가 없거나 만료된(마지막으로 갱신한 뒤의 경과가 임대 이상 — platform-R28) 채움을 점유한다. 범위 안 평가를 평가 ID 순으로 500건씩 한 트랜잭션에서 키 공유 잠금으로 읽고, 평가마다 `evaluation` 이 그 평가의 판정 원본을 그 평가 버전의 질문 묶음으로 다시 읽는다(`ArticleTagging.reread` — [evaluation-R42](evaluation.md#태그-판정)) — 모델을 부르지 않는다. 읽히면 채울 저장 기준 이상인 주제 · 지역 확률 가운데 태그 행이 없는 것만 더한다(거르기는 tag-R15 의 저장 거르기와 같다). 평가 행은 고치지 않는다 — 같은 원본에서 같은 확률이 나오므로 있는 행은 그대로이고, 다시 돌려도 결과가 같다. 정본은 `TagBackfillRound` · `BackfillSchedule` 이다
   - 평가기가 다르면(다른 평가기) · 판정 원본을 읽을 수 없거나 질문 묶음과 어긋나거나 판정 원본이 없으면(읽을 수 없음) · 다시 읽기가 예상 못한 예외를 던지면(읽을 수 없음) 그 평가를 건너뛰고 버전별로 센다
   - 묶음 끝에 커서 · 버전별 건수 · 점유를 점유 토큰이 맞을 때만 쓴다 — 맞지 않으면 그 묶음을 되돌리고 멈춘다. 그 밖의 예외는 그 묶음을 되돌리고 점유를 풀고 멈춘다 — 다음 회차가 커서부터 잇는다. 범위에 남은 평가가 없으면 끝낸다
   - 열린 채움이 이어 가지 못하는 경우가 있다 — 요청 때 없던 버전의 평가가 범위에 있으면(프로세스 사이 시계가 어긋났을 때만 생긴다) 회차마다 같은 묶음에서 멈추고, 점유 뒤 체계 · 기준 읽기가 계속 실패하면 점유 만료마다 다시 시도한다. 그동안 새 요청은 그 채움을 돌려받는다 — 채움을 취소하는 길은 없다
@@ -1287,7 +1288,7 @@ sequenceDiagram
   - **(미설계)** 판정 원본 보존(180일 — [data-model "보존 정책"](../data-model.md#보존-정책-초안))을 구현하면 원본이 없는 평가는 채울 수 없다 — 그 처분은 보존을 구현하는 작업이 정한다
 - **tag-R32** — 저장 바닥(정본 `StoreFloors`):
   - 평가마다 쓴 저장 기준은 기록하지 않아 이력과 끝난 채움으로 되짚는다. 이력 행의 저장 기준은 그 행의 시각부터 다음 행의 시각까지(양 끝 포함 — 다음 행의 시각이 앞서면 그 행의 시각 하나) 유효하고, 마지막 행은 끝없이 유효하다
-  - 평가 시각 t 의 평가가 쓴 저장 기준은 `[t − 30분, t]` 와 겹치는 행의 값 가운데 가장 큰 것으로 본다 — 회차는 기준을 시작 때 읽고 평가 시각은 결과 뒤에 찍으며, 회차는 점유 기간(`EvaluationSchedule.LEASE` 30분) 안에 끝난다
+  - 평가 시각 t 의 평가가 쓴 저장 기준은 `[t 까지의 경과가 30분인 시각, t]` 와 겹치는 행의 값 가운데 가장 큰 것으로 본다 — 회차는 기준을 시작 때 읽고 평가 시각은 결과 뒤에 찍으며, 회차는 점유 기간(`EvaluationSchedule.LEASE` 30분) 안에 끝난다. 경과는 시계가 넘긴 시간을 뺀 것이라(platform-R28) 넘긴 기록이 없으면 `[t − 30분, t]` 이고, 측정용 시계를 넘긴 구간은 30분에 들지 않는다
   - t 를 덮은 끝난 채움이 있으면 바닥은 그 값과 채움의 채울 저장 기준 가운데 작은 것이다. 덮음은 끝났고 그 버전에서 건너뛴 평가가 없는 채움만이다 — 진행 중이거나 건너뛴 평가가 있는 채움은 바닥을 내리지 않는다
   - 지난 저장 기준 최댓값(tag-R12)은 처음 값 시각부터 끝없이의 바닥 최댓값이다 — 채움이 없으면 이력의 저장 기준 최댓값과 같다. 그래서 저장 기준을 내린 뒤 30분 안에 채움을 요청하면 "요청 시각부터 내린 시각 + 30분까지"가 덮이지 않아 경고가 남는다
   - 평가 현황의 저장 기준 섞임(tag-R29)은 집계 기간(처음 값 시각 전은 빼고) 안에서 바닥이 둘 이상인가다 — 실제 평가가 있는 시각만이 아니라 시각 축으로 본다. 섞이지 않았는데 참일 수는 있어도 섞였는데 거짓이지는 않다
@@ -1367,3 +1368,4 @@ sequenceDiagram
 | [0175](../adr/0175-tag-preferences-follow-tag-set-activation-events-and-are-rewritten-to-active-keys.md) | 태그 선호는 체계 활성 전환 이벤트를 받아 활성 버전의 키로 고쳐 쓴다 |
 | [0182](../adr/0182-startup-work-reading-the-active-tag-set-runs-in-a-lifecycle-phase-after-first-start-seeding-and-before-the-web-server.md) | 기동 때 활성 태그 체계를 읽는 작업은 웹 서버 앞의 기동 단계에서 첫 기동 적재 뒤에 돈다 |
 | [0219](../adr/0219-candidate-selection-hands-over-the-prompt-material-read-once-with-its-token-estimate.md) | 태그 이름만 필요한 쪽을 위해 버전의 키 · 이름 조회(`TagSetDirectory.names`)를 낸다 |
+| [0252](../adr/0252-the-stall-and-duration-of-work-in-progress-are-measured-as-elapsed-time-without-the-jumps-of-the-clock.md) | 진행 중 작업의 멈춤과 걸린 시간은 시계가 넘긴 시간을 뺀 경과로 잰다 |

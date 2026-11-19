@@ -293,8 +293,8 @@ public interface SourceAdministration {
 | `operatorProfileText` | 운영자 원문 — 프리셋을 참조하는 소스면 비어 있다 |
 | `registerPreset` · `registerOperatorProfile` | 소스 등록(source-R1 ~ source-R3) |
 | `reviseOperatorProfile` | 운영자 원문 수정(source-R50) |
-| `previewOperatorProfile` | 등록 전 원문의 피드 하나 미리보기(source-R9) |
-| `enableSource` · `disableSource` · `enableFeed` · `disableFeed` | 켜기 · 끄기(source-R4 · source-R5 · source-R9) |
+| `previewOperatorProfile` | 등록 전 원문의 피드 하나 미리보기(source-R9). 받을 피드가 있는데 앱의 시각이 실제 시간이 아니면(측정용 시계) 요청 전에 `platform` 의 `RealTimeRequiredException`(source-R58) |
+| `enableSource` · `disableSource` · `enableFeed` · `disableFeed` | 켜기 · 끄기(source-R4 · source-R5 · source-R9). 받아 미리볼 피드를 켤 때 앱의 시각이 실제 시간이 아니면 요청 전에 `platform` 의 `RealTimeRequiredException`(source-R58) |
 | `changeSourcePollInterval` · `changeFeedPollInterval` | 운영자 수집 주기 — null 이면 지운다. 하한보다 짧으면 바꾸지 않고 false(source-R14) |
 | `hideSource` · `unhideSource` · `hideFeed` · `unhideFeed` | 숨기기 · 다시 보이기(source-R53). 피드는 프로필을 얻었고 그 프로필에 없는 피드만 숨긴다(source-R54) |
 | `deleteSource` · `deleteFeed` | 삭제(source-R55). 피드는 숨기기와 같은 대상만 지운다(source-R54) |
@@ -542,8 +542,8 @@ sequenceDiagram
 
 ### `application`
 
-- `PollScheduler` — 지금 수집할 피드를 점유한다. 대상 잠금 · 점유 기록을 한 트랜잭션에서 하고, 수집 작업 등록은 커밋 뒤 호출자(`PollDueFeedsJob`)가 한다 — 작업 저장소는 그 트랜잭션에 참여하지 않는다(source-R15 · source-R19)
-- `FeedPoller` — 점유한 피드를 한 번 수집한다. 요청 시작 시각 예약과 결과 반영 · 발행을 각각 한 트랜잭션에서 하고, 피드 요청은 트랜잭션 밖에서 한다. 프로필을 얻지 못한 갈래는 미룸만 한 트랜잭션에서 쓴다(source-R16 ~ source-R19)
+- `PollScheduler` — 지금 수집할 피드를 점유한다. 앱의 시각이 실제 시간이 아니면(`platform` 의 `AppClock.realTime()`) 점유하지 않는다(source-R58). 대상 잠금 · 점유 기록을 한 트랜잭션에서 하고, 수집 작업 등록은 커밋 뒤 호출자(`PollDueFeedsJob`)가 한다 — 작업 저장소는 그 트랜잭션에 참여하지 않는다(source-R15 · source-R19)
+- `FeedPoller` — 점유한 피드를 한 번 수집한다. 앱의 시각이 실제 시간이 아니면 점유를 확인하기 전에 끝낸다 — 점유는 만료된다(source-R58). 요청 시작 시각 예약과 결과 반영 · 발행을 각각 한 트랜잭션에서 하고, 피드 요청은 트랜잭션 밖에서 한다. 프로필을 얻지 못한 갈래는 미룸만 한 트랜잭션에서 쓴다(source-R16 ~ source-R19)
 - `SourceFetchSlots` — 같은 소스의 요청 시작 시각을 한 트랜잭션에서 예약하고(행을 잠근 뒤 지금 시각을 읽는다) 그 시각까지 기다린다. 소스가 그사이 지워졌으면 예약하지 않고 빈 결과다. 수집 작업과 피드 켜기가 쓴다(source-R18 · source-R56)
 
   ```java
@@ -551,17 +551,17 @@ sequenceDiagram
   ```
 
 - `SourceRegistration` — 소스를 등록하고 운영자 원문을 고친다. 등록은 소스 행과 프로필의 피드마다 꺼진 피드 행 · 수집 상태 행을 만들고 출처 이름을 기록하는 일을 한 트랜잭션에서 한다(source-R1 ~ source-R3 · source-R57). 원문 수정은 원문 교체 · 소스 · 피드 끄기 · 새 피드 더하기 · 다시 생긴 숨긴 피드 다시 보이기 · 그 소스의 피드 행 전부 저장 · 출처 이름 기록을 한 트랜잭션에서 한다(source-R50 · source-R53 · source-R57)
-- `SourceOperations` — 소스 · 피드를 켜고 끄고 수집 주기를 바꾼다. 숨긴 소스 · 숨긴 피드 · 숨긴 소스의 피드는 없는 대상이다(source-R53). 피드 켜기 밖의 연산은 한 트랜잭션이다. 피드 켜기는 읽고 판정하는 트랜잭션 → 요청 시작 시각 예약 트랜잭션 → 트랜잭션 밖에서 대기 · 요청 → 다시 읽고 판정 · 저장하는 트랜잭션으로 나뉘므로 호출자의 트랜잭션 밖에서 부른다. 예약하는 사이 소스가 지워졌으면 없는 피드로 끝난다(source-R56). 대기가 중단되면 예외로 끝나고 예약만 남는다. 켜기는 지금의 프로필로 판정하고, 거절하면 저장하는 것은 피드를 받으려 잡은 요청 시작 시각 예약뿐이다(source-R4 · source-R5 · source-R9 · source-R14 · source-R18)
+- `SourceOperations` — 소스 · 피드를 켜고 끄고 수집 주기를 바꾼다. 피드 켜기의 미리보기는 요청 시작 시각을 예약하기 전에 `platform` 의 `AppClock.requireRealTime()` 을 부른다(source-R58). 숨긴 소스 · 숨긴 피드 · 숨긴 소스의 피드는 없는 대상이다(source-R53). 피드 켜기 밖의 연산은 한 트랜잭션이다. 피드 켜기는 읽고 판정하는 트랜잭션 → 요청 시작 시각 예약 트랜잭션 → 트랜잭션 밖에서 대기 · 요청 → 다시 읽고 판정 · 저장하는 트랜잭션으로 나뉘므로 호출자의 트랜잭션 밖에서 부른다. 예약하는 사이 소스가 지워졌으면 없는 피드로 끝난다(source-R56). 대기가 중단되면 예외로 끝나고 예약만 남는다. 켜기는 지금의 프로필로 판정하고, 거절하면 저장하는 것은 피드를 받으려 잡은 요청 시작 시각 예약뿐이다(source-R4 · source-R5 · source-R9 · source-R14 · source-R18)
 - `SourceRemoval` — 소스 · 피드를 숨기고 다시 보이고 지운다. 연산마다 한 트랜잭션이고, 운영자의 동작은 커밋 뒤 경고 로그로 남긴다. 삭제는 소스 행을 배타 잠금한 뒤 자식 행부터 지우고 같은 트랜잭션에서 `SourceDeleted` · `FeedDeleted` 를 발행한다(source-R53 ~ source-R55)
 - `SourceDirectoryService` — 공개 조회 `SourceDirectory` 의 구현. 트랜잭션을 열지 않는다(source-R55)
 - `FeedLabelService` — 공개 조회 `FeedLabels` 의 구현. `SourceCatalog` 에 맡긴다(source-R57)
 - `SourceNameService` — 공개 조회 `SourceNames` 의 구현. `SourceCatalog` 가 숨기지 않은 소스 행과 기록된 출처 이름으로 ID · 이름을 낸다 — 피드 · 수집 상태는 읽지 않는다(source-R51 · R57)
-- `ProfilePreviewer` — 등록 전 운영자 프로필 원문의 피드 하나를 미리본다. DB 를 쓰지 않고 요청 시작 시각을 예약하지 않는다(source-R9)
+- `ProfilePreviewer` — 등록 전 운영자 프로필 원문의 피드 하나를 미리본다. DB 를 쓰지 않고 요청 시작 시각을 예약하지 않는다(source-R9). 받을 피드가 있으면 요청 전에 `platform` 의 `AppClock.requireRealTime()` 을 부른다(source-R58)
 - `SourceAdministrationService` — 공개 API `SourceAdministration` 의 구현. 유스케이스 · `SourceCatalog` 에 맡기고 결과를 공개 타입으로 옮긴다. 트랜잭션을 열지 않는다 — 피드 켜기 · 원문 미리보기는 트랜잭션 밖에서 받는다(source-R51 · source-R52)
 - `SourceCatalog` — 운영 목록과 피드의 출처 이름 · 섹션. 읽기 전용 트랜잭션 하나에서 소스 · 피드 행과 피드의 수집 상태 행 · 출처 이름을 읽고, 소스마다 지금의 프로필을 얻어 상태 · 실제 주기를 정한다. 숨긴 소스와 숨기지 않은 소스, 숨긴 피드와 숨기지 않은 피드를 가른다. 수집 상태 행이 없는 피드는 목록을 실패시킨다. 이름(프로필 이름 → 기록된 출처 이름)과 섹션(프로필에 그 피드가 있을 때만)의 해석은 함수 하나씩이고 운영 목록과 `labels`(숨긴 것 포함, 수집 상태는 읽지 않음)가 함께 쓴다(source-R51 · source-R53 · source-R57)
 - `FeedProvisioner` — 피드 행과 그 수집 상태 행을 함께 만든다. 이미 있으면 아무것도 하지 않는다 — 등록 · 원문 수정 · 기동 대조가 호출자의 트랜잭션 안에서 쓴다(source-R3 · source-R8)
 - `PresetFeedReconciliation` — 기동 대조(들어오는 쪽). 숨긴 소스를 포함해 프로필을 얻은 소스마다 한 트랜잭션에서 소스 행을 공유 잠금한 뒤 출처 이름을 기록하고, 프로필에 새로 생긴 피드를 더하고, 다시 생긴 숨긴 피드를 다시 보인다. 프로필을 얻지 못한 소스는 경고 로그만 남긴다(숨긴 소스면 debug). 한 소스의 대조가 지워진 소스 · 동시 수정을 만나면 그 소스만 건너뛴다(source-R8 · source-R53 · source-R56 · source-R57)
-- `FeedHealthCheck` — 피드 건강 검사(들어오는 쪽). 대상 행 잠금 · 판정 · 바뀐 행 쓰기 · 전이 발행을 한 트랜잭션에서 하고, 전이 로그는 커밋 뒤에 남긴다(source-R30 · source-R31 · source-R47 ~ source-R49)
+- `FeedHealthCheck` — 피드 건강 검사(들어오는 쪽). 앱의 시각이 실제 시간이 아니면 판정하지 않는다(source-R58). 대상 행 잠금 · 판정 · 바뀐 행 쓰기 · 전이 발행을 한 트랜잭션에서 하고, 전이 로그는 커밋 뒤에 남긴다(source-R30 · source-R31 · source-R47 ~ source-R49)
 
   ```java
   public List<FeedStatusChange> run()   // 이번에 바뀐 피드 — 피드 ID 순
@@ -939,6 +939,12 @@ RSS 품질이 피드마다 크게 다르므로 사전 보정 → 파싱 → 필�
 
 - **source-R57** — 등록 · 운영자 원문 수정 · 기동 대조가 그때 얻은 프로필의 소스 이름을 소스마다 기록한다. 기록된 이름과 같으면 쓰지 않는다(기록 시각 포함) — 여러 인스턴스가 함께 해도 결과가 같다. 운영 설정과 다른 행이라 운영자의 변경과 서로를 덮어쓰지 않는다. 프로필을 얻지 못한 소스의 운영 목록 이름 · 공개 조회 `FeedLabels` 의 출처 이름은 기록된 이름이다(source-R51). 소스를 지우면 기록도 지운다(source-R55)
 
+### 측정용 시계
+
+판단의 이유는 [ADR-0253](../adr/0253-the-measurement-clock-does-not-collect-feeds.md)에 있다.
+
+- **source-R58** — 수집은 앱의 시각이 실제 시간일 때만 한다(`platform` 의 `AppClock.realTime()` — 측정용 시계면 거짓, [platform Spec](platform.md#앱-시계) platform-R27). 측정용 시계에서는 수집 대상 점유(source-R15), 점유한 수집 작업(source-R16 — 다른 인스턴스의 덤프에 남은 점유 · 예약 작업 포함), 피드 건강 검사(source-R47)가 돌지 않는다 — 반복 작업과 예약 작업의 등록은 그대로이고 회차가 아무것도 하지 않는다(debug 로그). 남은 점유는 바꾸지 않아 만료된다. 실제 피드를 요청하는 운영자 길 — 피드 켜기의 미리보기(source-R9 · source-R18)와 등록 전 원문의 미리보기 — 은 요청 전에 `AppClock.requireRealTime()` 으로 거부한다(`platform` 의 `RealTimeRequiredException`, 화면용 API 는 409 — platform-R30). 받을 피드가 없는 원문 미리보기(`FeedNotInProfile`)와 미리보기가 필요 없는 피드 켜기는 거부하지 않는다. 그래서 측정 인스턴스는 새 기사를 받지 않고 피드 상태는 덤프 시점 그대로 남는다
+
 ## 6. 데이터
 
 컬럼 타입 · 인덱스 · 제약 문면의 정본은 `backend/src/main/resources/db/migration/V3__sources_and_feeds.sql` · `V4__feed_status.sql` · `V7__source_attributions.sql` · `V8__source_feed_hidden.sql` 이다.
@@ -982,3 +988,4 @@ RSS 품질이 피드마다 크게 다르므로 사전 보정 → 파싱 → 필�
 | [0065](../adr/0065-blocked-address-fetch-failure-counts-as-temporary.md) | 막힌 주소로 가는 피드 요청은 일시 실패로 센다 |
 | [0066](../adr/0066-overflow-suspected-only-when-previous-and-current-fetches-both-have-ten-or-more-keys.md) | 넘침 의심은 직전 · 이번 수집의 키가 모두 10개 이상일 때만 본다 |
 | [0135](../adr/0135-feed-status-changes-publish-each-check-runs-transitions-and-gather-into-one-unread-notice-per-active-admin-read-up-to-the-seen-revision.md) | 피드 상태 변화는 검사 회차마다 전이를 실은 이벤트로 알리고, 그때의 운영자 계정마다 안 읽은 알림 하나에 모으며, 읽음은 화면이 받은 판까지다 |
+| [0253](../adr/0253-the-measurement-clock-does-not-collect-feeds.md) | 측정용 시계에서는 수집하지 않는다 |

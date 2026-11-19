@@ -562,11 +562,11 @@ sequenceDiagram
 
 ### `application`
 
-- `ArticleTaggingService` — 공개 API `ArticleTagging` 의 구현(evaluation-R40 ~ R42). `judge` 는 트랜잭션 안에서 부르면 `IllegalStateException`. 평가기는 `ObjectProvider` 로 부를 때 찾고 없으면 `IllegalStateException` — 생성자에서 요구하지 않아 평가기 없는 화면 역할도 뜬다. 원본 쓰기와 다시 본 뒤의 지우기는 각각 `TransactionTemplate` 의 짧은 트랜잭션이다. `reread` · `find` 는 트랜잭션 애너테이션이 없다 — 부르는 쪽 트랜잭션 안에서 읽는다. 시각은 `InstantSource` 에서 얻는다. 로그: `태그 판정 중 기사가 지워져 판정 원본을 지웠다 — 기사 {ID}`(정보)
+- `ArticleTaggingService` — 공개 API `ArticleTagging` 의 구현(evaluation-R40 ~ R42). `judge` 는 트랜잭션 안에서 부르면 `IllegalStateException`. 평가기는 `ObjectProvider` 로 부를 때 찾고 없으면 `IllegalStateException` — 생성자에서 요구하지 않아 평가기 없는 화면 역할도 뜬다. 원본 쓰기와 다시 본 뒤의 지우기는 각각 `TransactionTemplate` 의 짧은 트랜잭션이다. `reread` · `find` 는 트랜잭션 애너테이션이 없다 — 부르는 쪽 트랜잭션 안에서 읽는다. 시각은 `platform` 의 앱 시계(`InstantSource` — platform-R26)에서 얻는다. 로그: `태그 판정 중 기사가 지워져 판정 원본을 지웠다 — 기사 {ID}`(정보)
 - `MembershipCall` — 소속 판정 한 번의 흐름(트랜잭션 밖 · 평가기 확인 · 기사 읽기 · `MembershipPlan` · 포트 호출 · `MembershipCheck` · 원본 쓰기 · 다시 보기)의 정본 — 사건 소속 · 흐름 소속이 판정 이름 · 후보의 이름 · 문구 · 원본 쓰기 · 결과 꼴을 넘겨 함께 쓴다. 패키지 비공개
 - `FlowMembershipService` — 공개 API `FlowMembership` 의 구현(evaluation-R51 · R52). `MembershipCall` 에 흐름 소속의 값을 넘긴다. 로그는 `EventMembershipService` 와 같은 꼴이고 판정 이름(흐름 소속)을 싣는다
-- `EventMembershipService` — 공개 API `EventMembership` 의 구현(evaluation-R37 · R38). 트랜잭션 안에서 부르면 `IllegalStateException`. 평가기는 `ObjectProvider` 로 부를 때 찾고 없으면 `IllegalStateException`. 원본 쓰기와 다시 본 뒤의 지우기는 각각 `TransactionTemplate` 의 짧은 트랜잭션이다. 시각은 `InstantSource` 에서 얻는다. 로그: `판정 중 기사가 지워져 판정 원본을 지웠다 — 기사 {ID}`(정보)
-- `FlowRelationService` — 공개 API `FlowRelation` 의 구현(evaluation-R48 · R49). 트랜잭션 안에서 부르면 `IllegalStateException`. 평가기는 `ObjectProvider` 로 부를 때 찾고 없으면 `IllegalStateException`. 원본 쓰기는 `TransactionTemplate` 의 짧은 트랜잭션이다. 시각은 `InstantSource` 에서 얻는다
+- `EventMembershipService` — 공개 API `EventMembership` 의 구현(evaluation-R37 · R38). 트랜잭션 안에서 부르면 `IllegalStateException`. 평가기는 `ObjectProvider` 로 부를 때 찾고 없으면 `IllegalStateException`. 원본 쓰기와 다시 본 뒤의 지우기는 각각 `TransactionTemplate` 의 짧은 트랜잭션이다. 시각은 `platform` 의 앱 시계(`InstantSource` — platform-R26)에서 얻는다. 로그: `판정 중 기사가 지워져 판정 원본을 지웠다 — 기사 {ID}`(정보)
+- `FlowRelationService` — 공개 API `FlowRelation` 의 구현(evaluation-R48 · R49). 트랜잭션 안에서 부르면 `IllegalStateException`. 평가기는 `ObjectProvider` 로 부를 때 찾고 없으면 `IllegalStateException`. 원본 쓰기는 `TransactionTemplate` 의 짧은 트랜잭션이다. 시각은 `platform` 의 앱 시계(`InstantSource` — platform-R26)에서 얻는다
 - `EventJudgementLogService` — 공개 조회 `EventJudgementLog` 의 구현(evaluation-R39). 쪽 크기를 판정하고 한 건 더 읽어 다음 쪽 커서를 만든다
 - `RelationJudgementLogService` — 공개 조회 `RelationJudgementLog` 의 구현(evaluation-R50). ID 수를 판정하고 원본을 한 번에 읽는다. 평가기는 `ObjectProvider` 로 부를 때 찾고 없으면 원본마다 `Unread(NO_EVALUATOR)` 다 — 평가기 없는 화면 역할에서도 원본의 나머지 값을 낸다. 다시 읽은 결과 분기는 `default` 없는 `switch` 식이다
 - `JudgementRemovalListener` — 리스너(들어오는 쪽). 한 트랜잭션에서 사건 소속 판정 원본, 흐름 소속 판정 원본, 태그 판정 원본 순으로 지운다(evaluation-R44)

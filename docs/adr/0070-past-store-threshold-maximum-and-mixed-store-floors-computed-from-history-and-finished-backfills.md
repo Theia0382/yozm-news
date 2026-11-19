@@ -42,3 +42,4 @@
 ## 후속 기록
 
 - 2026-11-04: 결정 첫 항 "경고 · 평가 현황 · 기준 상태가 함께 부른다"의 기준 상태 쪽 섞임(버전 전체) — [tag Spec "빠진 태그 채움 · 저장 바닥"](../specs/tag.md#빠진-태그-채움--저장-바닥) tag-R32 · [tag Spec "평가 검수 · 기준 미리보기"](../specs/tag.md#평가-검수--기준-미리보기) tag-R36
+- 2026-11-19: 결정 "읽기 지연 30분은 평가 회차의 점유 기간이다"의 30분은 시계가 넘긴 시간을 뺀 경과로 잰다 — 측정용 시계를 넘긴 구간은 30분에 들지 않는다. 넘긴 기록이 없는 운영에서는 `[t − 30분, t]` 그대로다 — [ADR-0252](0252-the-stall-and-duration-of-work-in-progress-are-measured-as-elapsed-time-without-the-jumps-of-the-clock.md) · [tag Spec "빠진 태그 채움 · 저장 바닥"](../specs/tag.md#빠진-태그-채움--저장-바닥) tag-R32
