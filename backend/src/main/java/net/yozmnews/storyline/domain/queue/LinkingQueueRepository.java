@@ -13,7 +13,10 @@ import org.jspecify.annotations.Nullable;
  */
 public interface LinkingQueueRepository {
 
-	/** 대기에 넣는다 — 이미 있으면 다시 알림 수를 하나 올리고 순서 키를 새 값으로 바꾼다(점유 · 실패 수는 그대로) */
+	/**
+	 * 대기에 넣는다 — 이미 있으면 다시 알림 수를 하나 올리고 순서 키를 새 값으로 바꾼다(점유 · 실패 수 · 일시 실패 수 · 판정 가능 시각은
+	 * 그대로)
+	 */
 	void enqueue(long eventId, @Nullable Instant orderAt, Instant now);
 
 	/**
@@ -46,14 +49,20 @@ public interface LinkingQueueRepository {
 	boolean releaseIfLeased(long eventId, UUID token);
 
 	/**
-	 * 점유 토큰이 맞을 때만 실패 수를 하나 올리고 점유를 푼다.
+	 * 점유 토큰이 맞을 때만 실패 수(판정이 예상하지 못한 예외로 실패한 수)를 하나 올리고 점유를 푼다.
 	 * @return 올린 뒤의 실패 수 — 토큰이 맞지 않으면 빈 값
 	 */
 	OptionalInt recordFailureIfLeased(long eventId, UUID token);
 
 	/**
-	 * 판정 가능 시각을 정한다 — 평가기 일시 실패 뒤 미룰 때, 같은 트랜잭션에서 {@link #recordFailureIfLeased} 로 실패를 센 뒤에
-	 * 부른다. 행이 지워진 뒤에 다시 넣으면 판정 가능 시각이 없다
+	 * 점유 토큰이 맞을 때만 일시 실패 수(흐름 소속 판정이 평가기 일시 실패로 끝난 수)를 하나 올리고 점유를 푼다. 실패 수는 그대로다.
+	 * @return 올린 뒤의 일시 실패 수 — 토큰이 맞지 않으면 빈 값
+	 */
+	OptionalInt recordTransientFailureIfLeased(long eventId, UUID token);
+
+	/**
+	 * 판정 가능 시각을 정한다 — 평가기 일시 실패 뒤 미룰 때, 같은 트랜잭션에서 {@link #recordTransientFailureIfLeased} 로 일시 실패를
+	 * 센 뒤에 부른다. 행이 지워진 뒤에 다시 넣으면 판정 가능 시각이 없다
 	 */
 	void defer(long eventId, Instant retryAt);
 

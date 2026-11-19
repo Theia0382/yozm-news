@@ -14,6 +14,7 @@
 - **기사 임베딩** — 텍스트 묶음을 벡터로 바꾸는 공개 API(`TextEmbedding`)를 사건 묶기에 낸다. 텍스트는 부르는 쪽이 만들어 넘기고, 결과의 수 · 차원을 확인해 돌려주며, 결과를 기록하지 않는다. 임베더 포트(`ArticleEmbedder`)와 운영 구현(앱 안 로컬 모델 — 기본, OpenAI 호환 외부 API) · 로컬 대체물(`FakeArticleEmbedder`)을 둔다. 작업 역할은 임베더 없이 운영하지 않는다(evaluation-R45 ~ R47, [ADR-0114](../adr/0114-article-embedding-is-a-gateway-operation-of-evaluation-taking-callers-texts-checking-results-and-recording-nothing.md) · [ADR-0115](../adr/0115-embedding-api-in-both-roles-looks-up-the-embedder-on-call-and-a-worker-startup-check-requires-one.md) · [ADR-0090](../adr/0090-article-embedding-defaults-to-an-in-app-local-model-with-an-openai-compatible-api-by-setting.md) · [ADR-0091](../adr/0091-local-embedding-model-is-multilingual-e5-small-int8-fetched-at-build-into-the-image-with-onnx-telemetry-off.md))
 - **판정 원본 조회** — 운영자 화면에 공개 조회로 낸다. 판정 시각이 기간 안인 사건 소속 판정 원본(`EventJudgementLog` — 판정의 쓰임 · 결과는 `event` 가 낸다)과, ID 로 찾는 관계 판정 원본(`RelationJudgementLog` — 원본 응답을 평가기가 다시 읽어 답마다의 확률을 낸다)이다(evaluation-R39 · R50, [ADR-0138](../adr/0138-relation-judgement-probabilities-are-read-for-operators-by-the-evaluator-rereading-stored-raw-responses.md))
 - **지운 기사 따르기** — `article` 이 기사를 지우면 그 기사의 판정 원본(사건 소속 · 흐름 소속 · 태그)을 지운다(evaluation-R44)
+- **평가기 시간** — 평가기 요청 하나의 마감, 판정 한 번이 평가기를 기다리는 가장 긴 시간, 일시 실패 뒤 다시 묻기까지의 간격을 공개 상수 · 함수(`EvaluatorTiming`)로 낸다. 판정을 부르는 모듈은 점유 기간과 다시 물을 시각을 이 값에서 정한다(evaluation-R53, [ADR-0259](../adr/0259-evaluator-timing-is-owned-by-one-evaluation-type-and-judging-queues-derive-their-leases-from-the-longest-judgement.md))
 
 질문 문장과 판정 원본의 소유는 판정마다 다르다 — 태그 질문 문장은 `tag` 의 체계 데이터로 넘어오고(운영자가 바꾸는 질문 틀 · 설명), 사건 소속 · 흐름 소속 질문 문구와 관계 판정의 문구는 이 모듈의 코드 상수다(evaluation-R37 · R48 · R51). 판정 원본은 판정마다 이 모듈이 남긴다. 임베딩의 입력 텍스트는 부르는 쪽이 만들고, 벡터와 그 모델 버전은 부르는 쪽이 저장한다(evaluation-R45).
 
@@ -52,7 +53,7 @@
 
 ## 3. 공개 인터페이스
 
-모듈 최상위 패키지 `net.yozmnews.evaluation` 의 공개 타입은 태그 판정 `ArticleTagging` 과 그 질문 묶음 `TagQuestions` · 값 타입(`TopicCategory` · `AskedTag` · `FormatChoice` · `FormatOption` · `ImportanceScale` · `ImportanceLevel`) · 결과 타입, 사건 소속 판정 `EventMembership`, 관계 판정 `FlowRelation`, 판정 원본 조회 `EventJudgementLog` · `RelationJudgementLog`, 판정 원본 조회 기간 `JudgementPeriod`, 그 값 · 결과 타입과 평가기 실패 갈래 `EvaluatorFailureKind`, 기사 임베딩 `TextEmbedding` 과 그 값 · 결과 타입(`EmbedderInfo` · `Embedding` · `EmbeddingResult` · `Embeddings` · `EmbeddingFailure`)과 임베딩 실패 갈래 `EmbedderFailureKind` 다. 이벤트는 내지 않는다.
+모듈 최상위 패키지 `net.yozmnews.evaluation` 의 공개 타입은 태그 판정 `ArticleTagging` 과 그 질문 묶음 `TagQuestions` · 값 타입(`TopicCategory` · `AskedTag` · `FormatChoice` · `FormatOption` · `ImportanceScale` · `ImportanceLevel`) · 결과 타입, 사건 소속 판정 `EventMembership`, 관계 판정 `FlowRelation`, 판정 원본 조회 `EventJudgementLog` · `RelationJudgementLog`, 판정 원본 조회 기간 `JudgementPeriod`, 그 값 · 결과 타입과 평가기 실패 갈래 `EvaluatorFailureKind`, 평가기 시간 `EvaluatorTiming`, 기사 임베딩 `TextEmbedding` 과 그 값 · 결과 타입(`EmbedderInfo` · `Embedding` · `EmbeddingResult` · `Embeddings` · `EmbeddingFailure`)과 임베딩 실패 갈래 `EmbedderFailureKind` 다. 이벤트는 내지 않는다.
 
 받는 이벤트는 `article` 의 `ArticlesRemoved` 이고, 판정의 입력은 `article` 의 공개 조회 `ArticleDirectory.findAll` 과 `source` 의 공개 조회 `FeedLabels` 로 읽는다([article Spec §3](article.md#3-공개-인터페이스) · [source Spec §3](source.md#3-공개-인터페이스)).
 
@@ -398,6 +399,29 @@ public record JudgementPeriod(Instant from, Instant to) {
 
 관련 규칙: evaluation-R39.
 
+### EvaluatorTiming
+
+평가기 시간 — 판정을 부르는 모듈이 점유 기간과 일시 실패 뒤 다시 물을 시각을 정하는 값이다.
+
+```java
+public final class EvaluatorTiming {
+    public static final Duration REQUEST_DEADLINE = Duration.ofSeconds(15);
+    public static final Duration LONGEST_JUDGEMENT;   // REQUEST_DEADLINE × 판정 한 번의 요청 수 상한(2)
+    public static final Duration FIRST_RETRY = Duration.ofMinutes(1);
+    public static final Duration MAX_RETRY = Duration.ofHours(1);
+    public static Duration retryDelay(int transientFailures);
+}
+```
+
+| 멤버 | 뜻 |
+|---|---|
+| `REQUEST_DEADLINE` | 평가기 요청 하나(헤더 · 본문 전부)의 마감 — Jev 구현이 쓴다 |
+| `LONGEST_JUDGEMENT` | 판정 공개 API 한 번이 평가기를 기다리는 가장 긴 시간 — 판정 한 번은 요청을 많아야 둘(본 요청 · 문맥 초과의 확인 요청) 보내고, 다시 보내지 않는다. 판정을 부르는 회차는 점유 기간을 `LONGEST_JUDGEMENT` × 묶음 크기 × 항목마다 판정 수 + 여유로 계산한다 |
+| `FIRST_RETRY` · `MAX_RETRY` | 일시 실패 뒤 간격의 첫 값과 상한 |
+| `retryDelay` | 일시 실패(`EvaluatorFailureKind.TRANSIENT`) 뒤 다시 묻기까지의 간격 — `min(FIRST_RETRY × 2^(transientFailures − 1), MAX_RETRY)`. `transientFailures` 는 이번 실패를 센 뒤의 일시 실패 수(1 이상)이고, 1 미만이면 `IllegalArgumentException`. 상한에 이르면 더 곱하지 않아 수가 커도 넘치지 않는다 |
+
+관련 규칙: evaluation-R53.
+
 ### TextEmbedding · EmbedderInfo · Embedding · EmbeddingResult · Embeddings · EmbeddingFailure · EmbedderFailureKind
 
 기사 임베딩 — 사건 묶기가 표현 텍스트 묶음을 벡터로 바꾸고, 지금 임베더의 모델 버전을 묻는다. 구현은 `application` 의 `TextEmbeddingService` 다.
@@ -454,7 +478,7 @@ public enum EmbedderFailureKind { TRANSIENT, INPUT_REJECTED, EMBEDDER_UNAVAILABL
 
 | 패키지 | 책임 |
 |---|---|
-| (최상위) | 공개 API `ArticleTagging` · `EventMembership` · `FlowMembership` · `FlowRelation` · `EventJudgementLog` · `RelationJudgementLog` · `TextEmbedding` 과 질문 묶음 `TagQuestions` · 조회 기간 `JudgementPeriod`, 그 값 · 결과 타입과 실패 갈래 `EvaluatorFailureKind` · `EmbedderFailureKind`(§3) |
+| (최상위) | 공개 API `ArticleTagging` · `EventMembership` · `FlowMembership` · `FlowRelation` · `EventJudgementLog` · `RelationJudgementLog` · `TextEmbedding` 과 질문 묶음 `TagQuestions` · 조회 기간 `JudgementPeriod` · 평가기 시간 `EvaluatorTiming`, 그 값 · 결과 타입과 실패 갈래 `EvaluatorFailureKind` · `EmbedderFailureKind`(§3) |
 | `domain/evaluator` | 모델 포트와 그 입력 · 결과 · 실패, 피드 맥락의 카테고리 상한 · 서술 제목 상한, 소속 판정(사건 · 흐름)의 질문 문구, 관계 판정의 문구와 서술, 결과와 질문의 대조 |
 | `domain/jev` | Jev 요청 본문 · 응답 읽기 · 오류 갈래 · 키 형식의 판정 |
 | `domain/embedder` | 임베더 포트, 임베더 결과 확인 |
@@ -834,7 +858,7 @@ public record Relation(Map<RelationAnswer, Double> probabilities, double firstOn
 
 - `JevArticleEvaluator`(`adapter/out/jev`) — v1 구현. TypeSafe System One API(`POST {기본 주소}/v1/systemone`)를 JDK `HttpClient` 로 부른다. 기본 주소 · 모델 · 키는 설정(§7)이고, 같은 스키마를 내는 경로(OpenRouter 의 호환 경로 등)는 기본 주소와 모델 이름을 바꿔 쓴다 — 다른 스키마로 옮기는 변환은 없다([ADR-0063](../adr/0063-jev-called-through-one-system-one-schema-context-overflow-probed-with-empty-state-latest-model-alias-by-default.md))
   - 평가 · 판정 모두 기사 하나에 요청 하나다. 문맥 초과(400 `max_tokens_exceeded`)면 같은 질문을 빈 state 로 한 번 더 묻는다 — 확인 요청은 결과가 아니고 그 답은 쓰지 않는다. 태그 판정 요청은 여전히 기사당 하나 · state 한 번이다(evaluation-R40). 판정의 확인 요청도 같은 질문(서술) · 빈 state 다 — 판정은 질문(서술)도 요청마다 다르지만 서술 상한(evaluation-R37)으로 질문 쪽 초과를 막는다
-  - 연결 마감 5초, 요청 하나(헤더 · 본문 전부)의 마감 15초 — 요청 객체의 시간 제한은 응답 헤더까지만 덮고, 본문까지는 응답 전체를 기다리는 마감이 덮는다. 회차 한 묶음 × 기사당 요청 둘 × 요청 마감이 점유 기간 안에 든다. 응답 본문은 1 MiB 까지 받는다(본문 수신자는 `platform` 의 `CappedBody`). 리다이렉트를 따르지 않고 시스템 프록시를 읽지 않으며, 요청을 다시 보내지 않는다 — 재시도는 부르는 쪽(평가 대기 · 판정을 부른 작업)이 한다. 전송 · 결말 분기 · 확인 요청은 평가와 판정이 함께 쓴다
+  - 연결 마감 5초, 요청 하나(헤더 · 본문 전부)의 마감은 `EvaluatorTiming.REQUEST_DEADLINE`(15초 — evaluation-R53) — 요청 객체의 시간 제한은 응답 헤더까지만 덮고, 본문까지는 응답 전체를 기다리는 마감이 덮는다. 응답 본문은 1 MiB 까지 받는다(본문 수신자는 `platform` 의 `CappedBody`). 리다이렉트를 따르지 않고 시스템 프록시를 읽지 않으며, 요청을 다시 보내지 않는다 — 재시도는 부르는 쪽(평가 대기 · 판정을 부른 작업)이 한다. 전송 · 결말 분기 · 확인 요청은 평가와 판정이 함께 쓴다
   - Jev 대응표(정본 `JevErrors` · `JevArticleEvaluator`) — 응답 본문이 상한을 넘으면 상태와 무관하게 평가기 사용 불가다. 그 밖에는:
 
     | 응답 | 갈래 |
@@ -1059,6 +1083,16 @@ public interface ArticleEmbedder {
   - 그 프로세스에 평가기가 없으면 원본마다 읽지 못함(평가기 없음)이다. 다른 평가기가 남긴 원본이면 읽지 못함(다른 평가기), 모르는 문구 판의 원본이거나, 형식이 아니거나, 읽은 결과가 그 판의 답과 어긋나면(`RelationCheck`) 읽지 못함(읽을 수 없음)이다 — 나머지 값은 그대로 낸다
   - 원본 응답 · 서술은 내지 않는다
 
+### 평가기 시간
+
+판단의 이유는 [ADR-0259](../adr/0259-evaluator-timing-is-owned-by-one-evaluation-type-and-judging-queues-derive-their-leases-from-the-longest-judgement.md)에 있다.
+
+- **evaluation-R53** — 평가기 시간의 정본은 `EvaluatorTiming` 이다.
+  - 평가기 요청 하나의 마감은 15초(`REQUEST_DEADLINE`)다. 판정 한 번은 요청을 많아야 둘 보내므로 판정 한 번이 평가기를 기다리는 가장 긴 시간은 30초(`LONGEST_JUDGEMENT`)다
+  - 판정을 부르는 회차는 점유 기간을 `LONGEST_JUDGEMENT` × 묶음 크기 × 항목마다 판정 수 + 여유로 계산한다 — 평가 대기([tag-R19](tag.md#평가-대기와-평가-작업)) · 사건 배정([event-R16](event.md#사건-배정)) · 스토리라인 잇기([storyline-R3](storyline.md#잇기-대기와-회차)) · 관계([storyline-R31](storyline.md#스토리라인-사이-관계))
+  - 판정이 일시 실패로 끝나 다시 묻는 쪽은 그 대상의 일시 실패 수로 `retryDelay` 뒤에 묻는다 — 1분부터 두 배씩, 1시간에서 멈춘다. 다시 물을지 · 상한을 둘지는 부르는 쪽이 정한다(`EvaluatorFailureKind`)
+  - 값은 측정 전 목표다
+
 ### 기사 임베딩
 
 판단의 이유는 [ADR-0114](../adr/0114-article-embedding-is-a-gateway-operation-of-evaluation-taking-callers-texts-checking-results-and-recording-nothing.md) · [ADR-0115](../adr/0115-embedding-api-in-both-roles-looks-up-the-embedder-on-call-and-a-worker-startup-check-requires-one.md) · [ADR-0090](../adr/0090-article-embedding-defaults-to-an-in-app-local-model-with-an-openai-compatible-api-by-setting.md) · [ADR-0092](../adr/0092-embedder-failures-in-three-kinds-with-rejected-articles-isolated-and-dropped-after-a-limit.md) · [ADR-0093](../adr/0093-worker-role-does-not-run-without-an-embedder-built-only-in-the-worker-role.md)에 있다.
@@ -1138,3 +1172,4 @@ public interface ArticleEmbedder {
 | [0114](../adr/0114-article-embedding-is-a-gateway-operation-of-evaluation-taking-callers-texts-checking-results-and-recording-nothing.md) | 기사 임베딩은 `evaluation` 관문의 연산으로 두고, 텍스트는 부르는 쪽이 넘기며, 결과는 관문이 확인하고 기록하지 않는다 |
 | [0115](../adr/0115-embedding-api-in-both-roles-looks-up-the-embedder-on-call-and-a-worker-startup-check-requires-one.md) | 기사 임베딩 공개 API 는 두 역할 공통 빈으로 두고 임베더는 부를 때 찾으며, 작업 역할의 임베더 요구는 `evaluation` 의 기동 검사가 맡는다 |
 | [0194](../adr/0194-storyline-linking-asks-jev-only-for-band-candidates-and-reuses-recorded-probabilities-until-either-side-doubles.md) | 스토리라인 잇기는 띠 안 후보만 Jev 에 같은 사안의 전개인지 묻고, 물은 확률을 쌍마다 기록해 크기가 두 배가 될 때까지 다시 쓴다 |
+| [0259](../adr/0259-evaluator-timing-is-owned-by-one-evaluation-type-and-judging-queues-derive-their-leases-from-the-longest-judgement.md) | 평가기 요청 마감 · 판정 한 번의 가장 긴 시간 · 일시 실패 뒤 간격은 `evaluation` 의 공개 타입 하나가 정본이고, 판정을 부르는 대기의 점유 기간은 판정 한 번의 가장 긴 시간에서 계산한다 |

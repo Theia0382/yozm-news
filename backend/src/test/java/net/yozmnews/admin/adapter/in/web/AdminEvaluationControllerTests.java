@@ -229,7 +229,7 @@ class AdminEvaluationControllerTests {
 		this.mockMvc.perform(authorized(get("/api/admin/evaluation-queue")))
 			.andExpect(status().isOk())
 			.andExpect(content().json("""
-					{"waiting":3,"rejected":1,"exhausted":2}
+					{"waiting":3,"rejected":1,"retrying":2}
 					""", JsonCompareMode.STRICT));
 	}
 

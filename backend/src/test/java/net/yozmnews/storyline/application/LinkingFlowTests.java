@@ -302,8 +302,8 @@ class LinkingFlowTests {
 	}
 
 	/**
-	 * 측정용 시계를 넘겨도 다른 회차가 점유 중인 사건은 다시 가져가지 않는다 — 임대(40분)는 시계가 넘긴 시간을 뺀 경과로 잰다. 점유는 NOW 에
-	 * 했고 만료는 NOW + 40분이다.
+	 * 측정용 시계를 넘겨도 다른 회차가 점유 중인 사건은 다시 가져가지 않는다 — 임대(50분)는 시계가 넘긴 시간을 뺀 경과로 잰다. 점유는 NOW 에
+	 * 했고 만료는 NOW + 50분이다.
 	 */
 	@Test
 	void aJumpOfTheClockLeavesAnotherRoundsLeaseAlone() {
@@ -314,15 +314,15 @@ class LinkingFlowTests {
 				update storyline_linking_queue set lease_token = :token, lease_expires_at = :expires where event_id = :event
 				""")
 			.param("token", other)
-			.param("expires", NOW.plus(Duration.ofMinutes(40)).atOffset(ZoneOffset.UTC))
+			.param("expires", NOW.plus(Duration.ofMinutes(50)).atOffset(ZoneOffset.UTC))
 			.param("event", only)
 			.update();
 
 		round(evenly(), CRITERIA, TestClocks.movable(NOW).jump(Duration.ofHours(24))).run();
 
 		assertThat(queued(only)).hasValueSatisfying(row -> assertThat(row).containsEntry("lease_token", other));
-		// 대조 — 넘기지 않고 41분이 흐르면 임대가 지나 다시 가져가 판정한다
-		round(evenly(), CRITERIA, TestClocks.movable(NOW).advance(Duration.ofMinutes(41))).run();
+		// 대조 — 넘기지 않고 51분이 흐르면 임대가 지나 다시 가져가 판정한다
+		round(evenly(), CRITERIA, TestClocks.movable(NOW).advance(Duration.ofMinutes(51))).run();
 		assertThat(queued(only)).isEmpty();
 	}
 

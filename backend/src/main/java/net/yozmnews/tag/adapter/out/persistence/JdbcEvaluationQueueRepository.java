@@ -129,11 +129,11 @@ class JdbcEvaluationQueueRepository implements EvaluationQueueRepository {
 		return this.jdbc.sql("""
 				select count(*) filter (where failure is null) as waiting,
 				    count(*) filter (where failure = 'ARTICLE_REJECTED') as rejected,
-				    count(*) filter (where failure = 'RETRIES_EXHAUSTED') as exhausted
+				    count(*) filter (where failure is null and attempts > 0) as retrying
 				from evaluation_queue
 				""")
 			.query((rs, row) -> new EvaluationQueueCounts(rs.getLong("waiting"), rs.getLong("rejected"),
-					rs.getLong("exhausted")))
+					rs.getLong("retrying")))
 			.single();
 	}
 

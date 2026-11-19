@@ -13,8 +13,8 @@ import net.yozmnews.event.EventView;
 import org.junit.jupiter.api.Test;
 
 /**
- * 잇기 대기 행 — 순서 키는 그대로인 사건의 첫 기사 시각(지워졌거나 합쳐졌으면 없음), 점유는 지금 + 10분까지, 다시 알림 수 · 실패 수는
- * 그대로. 실패 상한은 3.
+ * 잇기 대기 행 — 순서 키는 그대로인 사건의 첫 기사 시각(지워졌거나 합쳐졌으면 없음), 점유는 지금 + 50분까지, 다시 알림 수 · 실패 수는
+ * 그대로. 실패 상한(예상 못한 예외)은 5.
  * <p>
  * 지키는 규칙: storyline-R1 · storyline-R3 · storyline-R4
  */
@@ -42,7 +42,7 @@ class PendingEventTests {
 
 		PendingEvent claimed = pending.claim(token, Instant.parse("2026-11-10T00:00:00Z"));
 
-		assertThat(claimed.lease()).isEqualTo(new LinkingLease(token, Instant.parse("2026-11-10T00:40:00Z")));
+		assertThat(claimed.lease()).isEqualTo(new LinkingLease(token, Instant.parse("2026-11-10T00:50:00Z")));
 		assertThat(claimed.notifications()).isEqualTo(2);
 		assertThat(claimed.failures()).isEqualTo(1);
 		assertThat(claimed.orderAt()).isEqualTo(Instant.parse("2026-11-01T00:00:00Z"));
@@ -58,17 +58,6 @@ class PendingEventTests {
 	void failuresAreExhaustedAtFive() {
 		assertThat(LinkingSchedule.failuresExhausted(4)).isFalse();
 		assertThat(LinkingSchedule.failuresExhausted(5)).isTrue();
-	}
-
-	@Test
-	void aTransientFailureIsRetriedAfterADoublingDelayUpToAnHour() {
-		Instant now = Instant.parse("2026-11-10T00:00:00Z");
-
-		assertThat(LinkingSchedule.retryAt(1, now)).isEqualTo(Instant.parse("2026-11-10T00:01:00Z"));
-		assertThat(LinkingSchedule.retryAt(2, now)).isEqualTo(Instant.parse("2026-11-10T00:02:00Z"));
-		assertThat(LinkingSchedule.retryAt(4, now)).isEqualTo(Instant.parse("2026-11-10T00:08:00Z"));
-		assertThat(LinkingSchedule.retryAt(7, now)).isEqualTo(Instant.parse("2026-11-10T01:00:00Z"));
-		assertThatIllegalArgumentException().isThrownBy(() -> LinkingSchedule.retryAt(0, now));
 	}
 
 }

@@ -18,6 +18,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import net.yozmnews.evaluation.EvaluatorFailureKind;
+import net.yozmnews.evaluation.EvaluatorTiming;
 import net.yozmnews.evaluation.TagQuestions;
 import net.yozmnews.evaluation.domain.evaluator.ArticleEvaluator;
 import net.yozmnews.evaluation.domain.evaluator.Evaluation;
@@ -56,12 +57,6 @@ public final class JevArticleEvaluator implements ArticleEvaluator, AutoCloseabl
 	/** 연결 마감 */
 	static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(5);
 
-	/**
-	 * 요청 하나(헤더 · 본문 전부)의 마감 — 부르는 쪽 회차가 한 점유 안에서 차례로 판정하는 기사 수 × 기사당 요청 둘 × 이 마감이 그
-	 * 점유 기간 안에 들어야 한다(docs/specs/evaluation.md §4)
-	 */
-	static final Duration RESPONSE_DEADLINE = Duration.ofSeconds(15);
-
 	/** 응답 본문의 상한(바이트) */
 	static final int MAX_RESPONSE_BYTES = 1_048_576;
 
@@ -90,10 +85,11 @@ public final class JevArticleEvaluator implements ArticleEvaluator, AutoCloseabl
 	private final Duration deadline;
 
 	/**
+	 * 요청 하나의 마감은 {@link EvaluatorTiming#REQUEST_DEADLINE} 이다.
 	 * @param baseUrl 기본 주소 — 끝의 {@code /} 는 떼고 {@value #PATH} 를 붙인다
 	 */
 	JevArticleEvaluator(URI baseUrl, String model, JevApiKey key) {
-		this(baseUrl, model, key, RESPONSE_DEADLINE);
+		this(baseUrl, model, key, EvaluatorTiming.REQUEST_DEADLINE);
 	}
 
 	/** 시험이 마감을 줄인다 */

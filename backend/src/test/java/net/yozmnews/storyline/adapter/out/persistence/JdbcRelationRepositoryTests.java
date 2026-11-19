@@ -211,11 +211,11 @@ class JdbcRelationRepositoryTests {
 		this.queue.enqueue(this.a, NOW);
 		this.queue.enqueue(this.c, NOW.plusSeconds(60));
 
-		List<PendingStoryline> due = this.queue.lockDue(NOW, 100).stream().filter(this::mine).toList();
+		List<PendingStoryline> due = this.queue.lockDue(NOW, NOW, 100).stream().filter(this::mine).toList();
 
 		assertThat(due).containsExactly(new PendingStoryline(this.a, 0, 0, null),
 				new PendingStoryline(this.c, 1, 0, null));
-		assertThat(this.queue.lockDue(NOW, 100).stream().filter(this::mine).limit(1).toList()).hasSize(1);
+		assertThat(this.queue.lockDue(NOW, NOW, 100).stream().filter(this::mine).limit(1).toList()).hasSize(1);
 	}
 
 	@Test
@@ -224,9 +224,9 @@ class JdbcRelationRepositoryTests {
 		PendingStoryline claimed = new PendingStoryline(this.a, 0, 0, null).claim(TOKEN, NOW);
 		this.queue.saveLocked(claimed);
 
-		assertThat(this.queue.lockDue(NOW.plusSeconds(1199), 100).stream().filter(this::mine).toList()).isEmpty();
+		assertThat(this.queue.lockDue(NOW, NOW.plusSeconds(1199), 100).stream().filter(this::mine).toList()).isEmpty();
 		// 만료 시각 포함
-		assertThat(this.queue.lockDue(NOW.plusSeconds(1200), 100).stream().filter(this::mine).toList())
+		assertThat(this.queue.lockDue(NOW, NOW.plusSeconds(1200), 100).stream().filter(this::mine).toList())
 			.containsExactly(new PendingStoryline(this.a, 0, 0, new LinkingLease(TOKEN, NOW.plusSeconds(1200))));
 
 		UUID other = UUID.fromString("00000000-0000-0000-0000-00000000000d");
@@ -236,7 +236,7 @@ class JdbcRelationRepositoryTests {
 		this.queue.enqueue(this.a, NOW.plusSeconds(10));
 		assertThat(this.queue.deleteIfUnchanged(this.a, TOKEN, 0)).isFalse();
 		assertThat(this.queue.recordFailureIfLeased(this.a, TOKEN)).hasValue(1);
-		assertThat(this.queue.lockDue(NOW, 100).stream().filter(this::mine).toList())
+		assertThat(this.queue.lockDue(NOW, NOW, 100).stream().filter(this::mine).toList())
 			.containsExactly(new PendingStoryline(this.a, 1, 1, null));
 
 		this.queue.saveLocked(new PendingStoryline(this.a, 1, 1, null).claim(TOKEN, NOW));
@@ -248,6 +248,23 @@ class JdbcRelationRepositoryTests {
 		this.queue.enqueue(this.b, NOW);
 		this.queue.delete(this.b);
 		assertThat(queued()).isEmpty();
+	}
+
+	@Test
+	void aDeferredRowStaysHiddenUntilItsRetryTimeAndANotificationKeepsIt() {
+		this.queue.enqueue(this.a, NOW);
+		this.queue.saveLocked(new PendingStoryline(this.a, 0, 0, null).claim(TOKEN, NOW));
+		assertThat(this.queue.recordFailureIfLeased(this.a, TOKEN)).hasValue(1);
+		this.queue.defer(this.a, NOW.plusSeconds(60));
+		// 미룬 동안 다시 들어와도 판정 가능 시각 · 실패 수는 그대로다
+		this.queue.enqueue(this.a, NOW.plusSeconds(10));
+
+		Instant beforeRetry = NOW.plusSeconds(59);
+		Instant retry = NOW.plusSeconds(60);
+		assertThat(this.queue.lockDue(beforeRetry, beforeRetry, 100).stream().filter(this::mine).toList()).isEmpty();
+		// 판정 가능 시각 포함
+		assertThat(this.queue.lockDue(retry, retry, 100).stream().filter(this::mine).toList())
+			.containsExactly(new PendingStoryline(this.a, 1, 1, null));
 	}
 
 	/** 이 시험의 스토리라인 사이 관계만 — 다른 시험이 남긴 행을 거른다 */

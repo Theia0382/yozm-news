@@ -46,7 +46,7 @@
 |---|---|
 | 소속 | 사건 하나가 스토리라인 하나에 든 것(`storyline_members` 한 행). 사건은 스토리라인 0개 이상에 든다. 정한 것 · 점수 · 기준 · 시각과, 띠 안에서 판정으로 정했으면 판정 확률 · 판정 원본 ID 를 갖는다(storyline-R14) |
 | 구성 사건 | 스토리라인에 소속이 있는 사건 |
-| 잇기 대기 | 판정할 사건의 목록(`storyline_linking_queue` — 사건마다 한 행). 순서 키 · 다시 알림 수 · 실패 수 · 점유를 갖는다(storyline-R2) |
+| 잇기 대기 | 판정할 사건의 목록(`storyline_linking_queue` — 사건마다 한 행). 순서 키 · 다시 알림 수 · 실패 수 · 일시 실패 수 · 판정 가능 시각 · 점유를 갖는다(storyline-R2 · R4) |
 | 다시 알림 수 | 대기에 있는 사건에 알림이 다시 온 횟수 — 처리 중에 다시 온 알림을 놓치지 않게 한다(storyline-R2 · R3) |
 | 순서 키 | 대기를 점유하는 순서 — 사건의 첫 기사 시각, 지워졌거나 합쳐진 사건이면 없다(맨 앞)(storyline-R1 · R3) |
 | 회차 | 반복 작업이 한 번 돌 때 하는 일 — 대기를 점유해 사건마다 판정한다(storyline-R3) |
@@ -85,7 +85,7 @@
 | 상위 · 하위 | 포함의 앞 · 뒤. 스토리라인은 상위를 하나까지 갖는다(storyline-R25) |
 | 직접 소속 · 물려받은 소속 | 사건이 그 스토리라인에 소속 행으로 든 것이 직접 소속, 하위 스토리라인의 구성 사건이라 상위에 든 것으로 보는 것이 물려받은 소속이다. 물려받은 소속은 저장하지 않는다(storyline-R33) |
 | 닫은 사건 집합 | 스토리라인의 직접 소속과, 포함을 따라 내려간 모든 하위의 직접 소속을 사건 ID 로 합친 것 — 공개 조회가 센다(storyline-R33) |
-| 관계 대기 | 관계를 판정할 스토리라인의 목록(`storyline_relation_queue` — 스토리라인마다 한 행)(storyline-R26) |
+| 관계 대기 | 관계를 판정할 스토리라인의 목록(`storyline_relation_queue` — 스토리라인마다 한 행). 다시 알림 수 · 실패 수 · 판정 가능 시각 · 점유를 갖는다(storyline-R26 · R31) |
 | 후보 쌍 | 관계를 물을 스토리라인 쌍 — 사건을 함께 가졌거나 점수가 후보 기준 이상이고, 두 스토리라인 모두 사건 수가 하한 이상인 쌍(storyline-R27) |
 | 서술 사건 | 관계 판정에 제목(일부는 요약문)을 싣는 사건 — 직접 소속 가운데 기사 수가 많은 순으로 고른다(storyline-R28) |
 | 물은 기록 | 쌍마다 마지막으로 물은 결말(`storyline_relation_asked` 한 행) — 그때의 작은 쪽 사건 수 · 결말 · 판정 원본 · 기준. 다시 물을 때를 정한다(storyline-R30) |
@@ -336,7 +336,7 @@ public sealed interface BigStorylineCriteriaChangeResult {
 
 `StorylineLinker` 는 먼저 `StorylineRepository.lockLinking` 으로 모듈 잠금을 잡고, `EventDirectory.find` 로 사건의 지금 상태를 가른다. 지워졌거나 합쳐졌으면 `StorylineRepository.storylinesOf` 의 스토리라인마다 `removeMember` · `moveMember` 로 소속을 맞추고 그 스토리라인들을 정돈한다. 그대로면 `EventDirectory.profiles` 로 사건과 그 사건이 든 스토리라인의 구성 사건 표현을 읽어 `Representation.of` 로 표현을 다시 저장하고(`save`), `Representation.without` 으로 그 사건을 뺀 비교 대상을 만든다. `EventDirectory.termCounts` 로 그 사건 상위 핵심 말의 사건 수를 읽어 말의 무게(`TermWeights`)를 만든다. `StorylineRepository.candidates` 로 창 안 후보 스토리라인을 읽어 `LinkingScoring` 으로 점수를 매기고 `LinkingRule.attach` 로 붙일 곳을 정한다(`addMember`). 붙일 곳이 없고 소속이 없으면 `EventDirectory.neighbors` 로 이웃을 읽어 `StorylineRepository.affiliated` 와 `LinkingRule.pair` 로 짝을 정해 `open` · `addMember` 로 연다. 소속이 늘었으면 `LinkingRule.requeue` 로 고른 이웃을 `LinkingQueueRepository.enqueue` 로 다시 넣는다 — 짝으로 연 상대 사건의 이웃은 그 사건의 말의 무게를 따로 읽어 점수를 매긴다. 끝으로 그 사건이 든 스토리라인과 붙인 스토리라인을 정돈한다.
 
-띠 판정(storyline-R36): 점수를 매긴 뒤 띠 안 후보가 있으면 `LinkingAskedRepository.ofLink` · `ofPair` 로 그 후보의 물은 기록을 읽고, `LinkingAsk.due` 로 다시 물을 때인 기록을 빼고 `LinkingRule.attach` · `pair` 에 넘긴다. 규칙이 `Ask` 를 내면 `StorylineLinker` 는 아무것도 쓰지 않고 `LinkingOutcome.Ask` 를 낸다 — 붙이기 후보마다 `LinkingAsk.describe` 로 고른 가까운 구성 사건의 대표 기사(`EventDirectory.representativesOfAll`), 짝 이웃마다 그 사건의 대표 기사, 판정할 사건의 대표 기사를 싣는다. `LinkingRound` 는 트랜잭션 밖에서 `evaluation` 의 `FlowMembership.judge` 에 묻고, 짧은 트랜잭션에서 `StorylineLinker.record` 로 물은 기록에 쓴 뒤(모듈 잠금, 사건이 그대로일 때만) 다시 판정한다. 평가기 일시 실패면 `LinkingQueueRepository.recordFailureIfLeased` · `defer` 로 판정 가능 시각을 미루고, 쓸 수 없으면 남은 점유를 풀고 회차를 멈춘다.
+띠 판정(storyline-R36): 점수를 매긴 뒤 띠 안 후보가 있으면 `LinkingAskedRepository.ofLink` · `ofPair` 로 그 후보의 물은 기록을 읽고, `LinkingAsk.due` 로 다시 물을 때인 기록을 빼고 `LinkingRule.attach` · `pair` 에 넘긴다. 규칙이 `Ask` 를 내면 `StorylineLinker` 는 아무것도 쓰지 않고 `LinkingOutcome.Ask` 를 낸다 — 붙이기 후보마다 `LinkingAsk.describe` 로 고른 가까운 구성 사건의 대표 기사(`EventDirectory.representativesOfAll`), 짝 이웃마다 그 사건의 대표 기사, 판정할 사건의 대표 기사를 싣는다. `LinkingRound` 는 트랜잭션 밖에서 `evaluation` 의 `FlowMembership.judge` 에 묻고, 짧은 트랜잭션에서 `StorylineLinker.record` 로 물은 기록에 쓴 뒤(모듈 잠금, 사건이 그대로일 때만) 다시 판정한다. 평가기 일시 실패면 `LinkingQueueRepository.recordTransientFailureIfLeased` · `defer` 로 판정 가능 시각을 미루고, 쓸 수 없으면 남은 점유를 풀고 회차를 멈춘다.
 
 정돈은 스토리라인마다 `StorylineRepository.members` 로 구성 사건을, `storylinesOf`(첫 구성 사건) · `members` 로 그 사건을 가진 다른 스토리라인의 구성 사건을 읽어 `Tidying.decide` 로 정하고, 결과에 따라 표현을 다시 정하거나(`save`) · 지우거나(`delete`) · 합치거나(`StorylineMerger.merge`) · 풀어 그 사건을 `PendingEvent.orderAt` 의 순서 키로 다시 넣는다(`delete` · `enqueue`). 한 정돈에서 이미 지웠거나 합친 스토리라인은 건너뛴다. 합치거나 지운 스토리라인이 있으면 정돈 끝에 `StorylinesRetired` 를 한 번 발행한다(`ApplicationEventPublisher` — 같은 트랜잭션).
 
@@ -414,11 +414,11 @@ sequenceDiagram
 ### `application`
 
 - `StorylineLinkingListener` — 리스너(들어오는 쪽). 시각은 `platform` 의 앱 시계(`InstantSource` — platform-R26)에서 얻는다. 알림 하나의 사건을 사건 ID 오름차순으로 넣는다
-- `LinkingRound` — 회차 하나(storyline-R3 · R4 · R36). 시각과 임대 만료 상한은 `platform` 의 앱 시계(`AppClock` — `expiredBy(LinkingSchedule.LEASE)`, platform-R28)에서 얻는다. 점유 · 판정 · 물은 기록 · 실패 기록은 `TransactionTemplate` 의 짧은 트랜잭션이고, 흐름 소속 판정(`FlowMembership`)은 트랜잭션 밖이다. 판정 결말 · 평가기 실패 갈래는 `default` 없는 `switch` 식이다. 판정의 예외를 밖으로 던지지 않는다 — 기준 등록 · 점유 · 실패 기록의 DB 예외는 회차 밖으로 나간다. 기준 등록 · 점유가 실패하면 점유한 사건이 없어 다음 회차가 가져가고, 실패 기록이 실패하면 그 회차가 점유한 사건(아직 판정하지 않은 사건 포함)이 점유가 만료된 뒤 다시 판정된다. 트랜잭션 · 역할 애너테이션이 없다. 로그: `스토리라인 잇기 판정이 예상하지 못한 오류로 실패했다 — 사건 {ID}, 실패 {n}회`(오류, 예외와 함께) · `스토리라인 잇기 판정이 거듭 실패해 대기에서 뺐다 — 사건 {ID}, 실패 {n}회`(오류) · `스토리라인 잇기 판정을 멈췄다 — 평가기를 쓸 수 없다: {메시지}`(오류)
+- `LinkingRound` — 회차 하나(storyline-R3 · R4 · R36). 시각과 임대 만료 상한은 `platform` 의 앱 시계(`AppClock` — `expiredBy(LinkingSchedule.LEASE)`, platform-R28)에서 얻는다. 점유 · 판정 · 물은 기록 · 실패 기록은 `TransactionTemplate` 의 짧은 트랜잭션이고, 흐름 소속 판정(`FlowMembership`)은 트랜잭션 밖이다. 판정 결말 · 평가기 실패 갈래는 `default` 없는 `switch` 식이다. 평가기 일시 실패면 한 트랜잭션에서 일시 실패 수를 올리고(`recordTransientFailureIfLeased`) 판정 가능 시각을 미룬다(`defer` — `evaluation` 의 `EvaluatorTiming.retryDelay`). 판정의 예외를 밖으로 던지지 않는다 — 기준 등록 · 점유 · 실패 기록의 DB 예외는 회차 밖으로 나간다. 기준 등록 · 점유가 실패하면 점유한 사건이 없어 다음 회차가 가져가고, 실패 기록이 실패하면 그 회차가 점유한 사건(아직 판정하지 않은 사건 포함)이 점유가 만료된 뒤 다시 판정된다. 트랜잭션 · 역할 애너테이션이 없다. 로그: `스토리라인 잇기 판정이 예상하지 못한 오류로 실패했다 — 사건 {ID}, 실패 {n}회`(오류, 예외와 함께) · `스토리라인 잇기 판정이 거듭 실패해 대기에서 뺐다 — 사건 {ID}, 실패 {n}회`(오류) · `스토리라인 잇기 판정을 멈췄다 — 평가기를 쓸 수 없다: {메시지}`(오류)
 - `LinkingOutcome` — 판정 시도 하나의 결말: 마침(`Done`) · 물을 것(`Ask` — 붙이기 · 짝, 판정할 사건 · 그 대표 기사 · 기사 수, 후보 흐름마다 서술 기사 · 크기). 패키지 비공개
 - `StorylineLinker` — 사건 하나의 따르기 · 판정 · 정돈 · 쓰기(storyline-R5 ~ R14 · R17 · R18 · R36), 물은 확률의 기록(`record` — storyline-R36)과 관계 대기에 넣기(storyline-R26), 합치거나 지운 스토리라인의 알림(storyline-R35). 합치기는 `StorylineMerger` 가 한다. 트랜잭션 안에서 부른다. 시각 · 기준 · 기준 ID 는 회차가 넘긴다
 - `StorylineMerger` — 스토리라인 하나를 다른 스토리라인에 합치는 실행의 정본(storyline-R17 · R18 · R32). 정돈과 조각 합치기가 함께 쓴다. 트랜잭션 · 모듈 잠금 안에서 부른다. 알릴 합쳐진 스토리라인(`RetiredStoryline`)을 돌려준다
-- `RelationRound` — 관계 회차 하나(storyline-R17 · R27 ~ R31). 시각과 임대 만료 상한은 `platform` 의 앱 시계(`AppClock` — `expiredBy(RelationSchedule.LEASE)`, platform-R28)에서 얻는다. 점유 · 후보 읽기 · 반영 · 실패 기록은 `TransactionTemplate` 의 짧은 트랜잭션이고, 관계 판정은 트랜잭션 밖이다. 판정 · 실패 갈래는 `default` 없는 `switch` 식이다. 평가기 사용 불가 · 예상 못한 예외면 회차를 멈춘다 — 점유는 만료로 풀린다. 트랜잭션 · 역할 애너테이션이 없다. 로그: `스토리라인 관계 판정이 거듭 실패해 대기에서 뺐다 — 스토리라인 {ID}, 실패 {n}회`(오류) · `스토리라인 관계 판정을 멈췄다 — 평가기를 쓸 수 없다: {문구}`(오류)
+- `RelationRound` — 관계 회차 하나(storyline-R17 · R27 ~ R31). 시각과 임대 만료 상한은 `platform` 의 앱 시계(`AppClock` — `expiredBy(RelationSchedule.LEASE)`, platform-R28)에서 얻는다. 점유 · 후보 읽기 · 반영 · 실패 기록은 `TransactionTemplate` 의 짧은 트랜잭션이고, 관계 판정은 트랜잭션 밖이다. 판정 · 실패 갈래는 `default` 없는 `switch` 식이다. 평가기 일시 실패면 한 트랜잭션에서 실패 수를 올리고(`recordFailureIfLeased`) 판정 가능 시각을 미룬다(`defer` — `evaluation` 의 `EvaluatorTiming.retryDelay`). 평가기 사용 불가 · 예상 못한 예외면 회차를 멈춘다 — 점유는 만료로 풀린다. 트랜잭션 · 역할 애너테이션이 없다. 로그: `스토리라인 관계 판정을 멈췄다 — 평가기를 쓸 수 없다: {문구}`(오류)
 - `RelationProperties` · `RelationConfiguration` — 관계 기준 설정(`yozmnews.storyline-relation`, 기본값의 정본은 레코드 컴포넌트의 `@DefaultValue`)과 그것을 검증된 `RelationCriteria` 빈으로 바꾸는 결선. 값이 틀리면 기동하지 않는다. 역할 애너테이션이 없다
 - `StorylineLinkingAdministrationService` — 공개 운영 API `StorylineLinkingAdministration` 의 구현(storyline-R15). 시각은 `platform` 의 앱 시계(`InstantSource` — platform-R26)에서 얻는다
 - `StorylineDirectoryService` — 공개 조회 `StorylineDirectory` 의 구현(storyline-R19 · R21 ~ R23 · R33). 닫은 사건 집합(`ClosedMembers`)을 만드는 길 하나를 스토리라인 값 · 타임라인 · 사건의 스토리라인 · 기간 집계가 함께 쓴다. 큰 판정은 패키지 비공개 `bigStorylines(EventPeriod, BigStorylineCriteria)` 하나를 공개 조회(지금 기준)와 미리보기(제안 기준)가 함께 쓰고, 기간의 스토리라인에 기간 집계를 다는 길 하나와 분모를 만드는 길 하나(`basis`)를 목록과 큰 판정이 함께 쓴다 — 기간의 스토리라인(목록은 쪽)이 비면 기간 전체 집계를 읽지 않는다. `list` 는 한 건 더 읽어 다음 커서를 정한다. 시각은 `platform` 의 앱 시계(`InstantSource` — platform-R26)에서 얻는다. 트랜잭션 · 역할 애너테이션이 없다
@@ -515,7 +515,7 @@ sequenceDiagram
 - `RelationMove` — 합칠 때 관계를 옮기는 계획의 정본(storyline-R32). `plan(지금 관계, 합쳐질 스토리라인, 남는 스토리라인)` 이 지울 관계와 끝을 바꿀 관계(`Moved(from, to)` — 확률 · 판정 원본 · 기준은 그대로 간다)를 낸다. 옮길 관계는 종류 · 앞 · 뒤 순으로 하나씩 본다
 - `RelationDescription` — 서술 사건 고르기의 정본(storyline-R28). `of(직접 소속 사건)` 이 서술 사건(사건 ID · 첫 기사 시각 · 요약문을 싣는가)을 시각 순으로 낸다
 - `PendingStoryline(long storylineId, int notifications, int failures, @Nullable LinkingLease lease)` — 관계 대기 행 하나. `claim(토큰, 지금)` 이 점유(만료 = 지금 + `RelationSchedule.LEASE`)
-- `RelationSchedule` — 관계 대기 상수(점유 기간 · 묶음 크기 · 스토리라인마다 쌍 수 · 실패 상한)의 정본(storyline-R31)
+- `RelationSchedule` — 관계 대기 상수(묶음 크기 · 스토리라인마다 쌍 수 · 점유 기간)의 정본(storyline-R31). 점유 기간(`LEASE`)은 `evaluation` 의 `EvaluatorTiming.LONGEST_JUDGEMENT` × `BATCH_SIZE` × `MAX_PAIRS` + 여유 10분 = 20분이다. 일시 실패 뒤 간격은 `EvaluatorTiming.retryDelay` 가 정본이다(evaluation-R53)
 
   ```java
   public final class RelationCandidates {
@@ -550,12 +550,13 @@ sequenceDiagram
   }
 
   public interface RelationQueueRepository {
-      void enqueue(long storylineId, Instant now);                       // 이미 있으면 다시 알림 + 1
-      List<PendingStoryline> lockDue(Instant expiredBy, int limit);      // 점유 없음/만료(≤ expiredBy — AppClock.expiredBy) — 스토리라인 ID 순 FOR UPDATE SKIP LOCKED
+      void enqueue(long storylineId, Instant now);                       // 이미 있으면 다시 알림 + 1 — 점유 · 실패 수 · 판정 가능 시각은 그대로
+      List<PendingStoryline> lockDue(Instant now, Instant expiredBy, int limit); // 판정 가능 시각 없음/≤ now · 점유 없음/만료(≤ expiredBy — AppClock.expiredBy) — 스토리라인 ID 순 FOR UPDATE SKIP LOCKED
       void saveLocked(PendingStoryline next);
       boolean deleteIfUnchanged(long storylineId, UUID token, int notifications);
       boolean releaseIfLeased(long storylineId, UUID token);
-      OptionalInt recordFailureIfLeased(long storylineId, UUID token);
+      OptionalInt recordFailureIfLeased(long storylineId, UUID token);   // 실패 + 1 · 점유 해제 — 올린 뒤의 수
+      void defer(long storylineId, Instant retryAt);                     // 판정 가능 시각을 미룬다(storyline-R31)
       void delete(long storylineId);
   }
   ```
@@ -579,19 +580,20 @@ sequenceDiagram
 
 #### `domain/queue`
 
-- `PendingEvent(long eventId, @Nullable Instant orderAt, int notifications, int failures, @Nullable LinkingLease lease)` — 대기 행 하나. `claim(토큰, 지금)` 이 점유(만료 = 지금 + `LinkingSchedule.LEASE`). 정적 `orderAt(사건 ID, 지금 상태)` 가 지금 상태로 순서 키를 정하는 규칙의 정본이다(storyline-R1 — 리스너와 풀기가 쓴다)
+- `PendingEvent(long eventId, @Nullable Instant orderAt, int notifications, int failures, @Nullable LinkingLease lease)` — 대기 행 하나. `failures` 는 판정이 예상하지 못한 예외로 실패한 수다 — 일시 실패 수는 저장소가 세고 행에 싣지 않는다. `claim(토큰, 지금)` 이 점유(만료 = 지금 + `LinkingSchedule.LEASE`). 정적 `orderAt(사건 ID, 지금 상태)` 가 지금 상태로 순서 키를 정하는 규칙의 정본이다(storyline-R1 — 리스너와 풀기가 쓴다)
 - `LinkingLease(UUID token, Instant expiresAt)` — 점유
-- `LinkingSchedule` — 대기 상수(점유 기간 · 묶음 크기 · 실패 상한 · 점유 한 번의 시도 수)와 판정 가능 시각(`retryAt(실패 수, 지금)`)의 정본(storyline-R3 · R4)
+- `LinkingSchedule` — 대기 상수(묶음 크기 · 실패 상한 · 점유 한 번의 시도 수 · 점유 기간)의 정본(storyline-R3 · R4). 점유 기간(`LEASE`)은 `evaluation` 의 `EvaluatorTiming.LONGEST_JUDGEMENT` × `BATCH_SIZE` × `MAX_ATTEMPTS_PER_CLAIM` + 여유 2분 = 50분이다 — 시도마다 흐름 소속 판정을 한 번까지 묻는다. 일시 실패 뒤 간격은 `EvaluatorTiming.retryDelay` 가 정본이다(evaluation-R53)
 
   ```java
   public interface LinkingQueueRepository {
-      void enqueue(long eventId, @Nullable Instant orderAt, Instant now);   // 이미 있으면 다시 알림 + 1 · 순서 키를 새 값으로(storyline-R2)
+      void enqueue(long eventId, @Nullable Instant orderAt, Instant now);   // 이미 있으면 다시 알림 + 1 · 순서 키를 새 값으로 — 점유 · 실패 수 · 일시 실패 수 · 판정 가능 시각은 그대로(storyline-R2)
       int enqueueAll(Map<Long, Instant> orderAtByEvent, Instant now);       // 같은 넣기 — 새로 넣은 행 수
       List<PendingEvent> lockDue(Instant now, Instant expiredBy, int limit); // 판정 가능 시각 ≤ now · 점유 없음/만료(≤ expiredBy — AppClock.expiredBy) — 순서 키(없음 먼저) · 사건 ID 순 FOR UPDATE SKIP LOCKED
       void saveLocked(PendingEvent next);
       boolean deleteIfUnchanged(long eventId, UUID token, int notifications);  // 토큰 · 다시 알림 수가 모두 맞을 때만
       boolean releaseIfLeased(long eventId, UUID token);
-      OptionalInt recordFailureIfLeased(long eventId, UUID token);          // 실패 + 1 · 점유 해제 — 올린 뒤의 수
+      OptionalInt recordFailureIfLeased(long eventId, UUID token);          // 실패(예상 못한 예외) + 1 · 점유 해제 — 올린 뒤의 수
+      OptionalInt recordTransientFailureIfLeased(long eventId, UUID token); // 일시 실패 + 1 · 점유 해제 — 올린 뒤의 수, 실패 수는 그대로(storyline-R4)
       void defer(long eventId, Instant retryAt);                             // 판정 가능 시각을 미룬다(storyline-R4)
       void delete(long eventId);
   }
@@ -616,14 +618,15 @@ sequenceDiagram
 
 ### 잇기 대기와 회차
 
-판단의 이유는 [ADR-0105](../adr/0105-storylines-link-incrementally-from-event-change-notifications-and-events-publish-changed-event-ids.md)에 있다.
+판단의 이유는 [ADR-0105](../adr/0105-storylines-link-incrementally-from-event-change-notifications-and-events-publish-changed-event-ids.md)와 [ADR-0255](../adr/0255-storyline-linking-and-relation-queues-defer-transient-failures-until-a-retry-time-and-never-drop-them.md)(일시 실패한 사건의 미룸), [ADR-0259](../adr/0259-evaluator-timing-is-owned-by-one-evaluation-type-and-judging-queues-derive-their-leases-from-the-longest-judgement.md)(점유 기간)에 있다.
 
 - **storyline-R1** — 알림 받기: `EventsChanged` 의 사건마다 `EventDirectory.find` 로 지금 상태를 읽어 순서 키를 정하고 대기에 넣는다(storyline-R2). 그대로인 사건이면 그 사건의 첫 기사 시각이다. 지워졌거나(빈 값) 합쳐졌으면(다른 ID) 순서 키가 없다(`PendingEvent.orderAt` — 정본, 풀기(storyline-R17)도 쓴다). 한 알림의 사건은 사건 ID 오름차순으로 넣는다. 다시 처리해도 다시 알림 수만 는다
-- **storyline-R2** — 잇기 대기: 사건마다 한 행이다. 넣을 때 행이 없으면 다시 알림 수 0 으로 넣고, 있으면 다시 알림 수를 하나 올리고 순서 키를 새 값으로 바꾼다(점유 · 실패 수는 그대로). 리스너(storyline-R1) · 다시 넣기(storyline-R12) · 풀기(storyline-R17) · 채우기(storyline-R15)가 같은 넣기를 쓴다. 이 기능이 켜지기 전의 사건은 운영자가 채우기 전까지 대기에 들어가지 않는다
-- **storyline-R3** — 회차: 반복 작업(1분, 재시도 없음)의 회차는 지금 기준을 기준 이력에 등록하고(storyline-R14), 점유가 없거나 만료됐고(만료 시각 ≤ `AppClock.expiredBy(40분)` — 점유한 뒤 시계가 넘긴 시간을 뺀 경과가 임대 이상, platform-R28) 판정 가능 시각이 없거나 지난(≤ 지금) 대기 행을 순서 키(없음이 먼저) · 사건 ID 순으로 32건(`LinkingSchedule.BATCH_SIZE`)까지 잠가(다른 트랜잭션이 잡은 행은 건너뛴다) 점유(토큰 · 만료 = 지금 + 40분, `LinkingSchedule.LEASE`)를 쓰고 커밋한다. 반복 작업은 이전 실행이 대기 · 처리 중이면 그 회차를 건너뛴다.
+- **storyline-R2** — 잇기 대기: 사건마다 한 행이다. 넣을 때 행이 없으면 다시 알림 수 0 으로 넣고, 있으면 다시 알림 수를 하나 올리고 순서 키를 새 값으로 바꾼다(점유 · 실패 수 · 일시 실패 수 · 판정 가능 시각은 그대로). 리스너(storyline-R1) · 다시 넣기(storyline-R12) · 풀기(storyline-R17) · 채우기(storyline-R15)가 같은 넣기를 쓴다. 이 기능이 켜지기 전의 사건은 운영자가 채우기 전까지 대기에 들어가지 않는다
+- **storyline-R3** — 회차: 반복 작업(1분, 재시도 없음)의 회차는 지금 기준을 기준 이력에 등록하고(storyline-R14), 점유가 없거나 만료됐고(만료 시각 ≤ `AppClock.expiredBy(50분)` — 점유한 뒤 시계가 넘긴 시간을 뺀 경과가 임대 이상, platform-R28) 판정 가능 시각이 없거나 지난(≤ 지금) 대기 행을 순서 키(없음이 먼저) · 사건 ID 순으로 32건(`LinkingSchedule.BATCH_SIZE`)까지 잠가(다른 트랜잭션이 잡은 행은 건너뛴다) 점유(토큰 · 만료 = 지금 + 50분, `LinkingSchedule.LEASE` — 사건마다 시도 상한만큼 판정을 가장 길게 기다려도 안에 든다, [evaluation-R53](evaluation.md#평가기-시간))를 쓰고 커밋한다. 반복 작업은 이전 실행이 대기 · 처리 중이면 그 회차를 건너뛴다.
   - 사건마다 한 트랜잭션에서 판정 · 정돈하고(storyline-R5 ~ R14 · R17 · R18), 같은 트랜잭션에서 점유 토큰과 다시 알림 수가 점유할 때와 같으면 대기 행을 지운다. 판정이 띠 안 후보를 물어야 하면(storyline-R36) 그 트랜잭션은 아무것도 쓰지 않고, 회차가 트랜잭션 밖에서 묻고 기록한 뒤 다시 판정한다 — 사건 하나에 3번(`LinkingSchedule.MAX_ATTEMPTS_PER_CLAIM`)까지, 남으면 점유만 풀어 다음 회차가 잇는다. 다시 알림 수가 달라졌으면(처리 중에 그 사건이 또 바뀌었다) 점유만 풀어 다음 회차가 다시 판정한다
   - 회차 도중 프로세스가 죽으면 점유가 만료된 뒤 다른 회차가 가져간다
-- **storyline-R4** — 실패: 판정이 예상하지 못한 예외를 내면 그 판정의 쓰기는 롤백된다. 새 트랜잭션에서 토큰이 맞을 때 실패 수를 하나 올리고 점유를 푼 뒤 다음 사건으로 넘어간다(오류). 흐름 소속 판정의 평가기 일시 실패(storyline-R36)도 실패 수를 하나 올리고 점유를 풀며, 판정 가능 시각을 지금 + 1분 × 2^(실패 수 − 1)(1시간까지, `LinkingSchedule.retryAt`)로 미룬다(로그 없음). 올린 실패 수가 상한(5, `LinkingSchedule.MAX_FAILURES`)에 이르면 그 대기 행을 지운다(오류). 뺀 사건은 운영자 채우기(storyline-R15)가 실패 수 0 으로 다시 넣을 수 있다
+- **storyline-R4** — 실패: 판정이 예상하지 못한 예외를 내면 그 판정의 쓰기는 롤백된다. 새 트랜잭션에서 토큰이 맞을 때 실패 수를 하나 올리고 점유를 푼 뒤 다음 사건으로 넘어간다(오류). 올린 실패 수가 상한(5, `LinkingSchedule.MAX_FAILURES`)에 이르면 그 대기 행을 지운다(오류). 뺀 사건은 운영자 채우기(storyline-R15)가 실패 수 0 으로 다시 넣을 수 있다.
+  - 흐름 소속 판정의 평가기 일시 실패(storyline-R36)는 실패 수가 아니라 일시 실패 수를 센다 — 한 트랜잭션에서 토큰이 맞을 때 일시 실패 수를 하나 올리고 점유를 풀고, 판정 가능 시각을 지금 + 1분 × 2^(일시 실패 수 − 1)(1시간에서 멈춤, `EvaluatorTiming.retryDelay` — [evaluation-R53](evaluation.md#평가기-시간))로 미룬다(로그 없음). 일시 실패 수에는 상한이 없어 대기에서 빼지 않는다 — 평가기가 일시 실패로만 답하는 장애가 길어도 사건은 대기에 남고, 장애가 풀리면 늦어도 1시간 안에 그 사건이 바뀌지 않아도 다시 묻는다. 미룬 동안 점유하지 않아 다른 사건의 판정을 막지 않는다. 실패 수 · 일시 실패 수 · 판정 가능 시각은 대기 행을 지울 때까지 남는다
 - **storyline-R5** — 직렬화: 판정 트랜잭션은 처음에 모듈 잠금(트랜잭션 advisory 잠금 하나)을 잡는다 — 판정은 한 번에 하나다. 리스너 · 채우기는 잡지 않는다
 
 ### 사건 변화 따르기
@@ -665,7 +668,7 @@ sequenceDiagram
   - 서술: 판정할 사건은 대표 기사(`EventDirectory.representativesOfAll`)로 넘긴다. 붙이기 후보는 판정할 사건과 중심 코사인이 큰 구성 사건 5개(`LinkingAsk.DESCRIBED_EVENTS` — 자신 제외, 같은 모델 버전)의 대표 기사, 짝 이웃은 그 사건의 대표 기사다. 대표 기사가 없는 사건은 서술에서 빠진다. 서술이 모두 빠진 후보는 묻지 않고 확률 없이 기록한다. 판정할 사건의 대표 기사가 없으면 묻지 못하고 그 판정에서 띠 후보는 고르지 않는다
   - 물은 기록(정본): 붙이기는 (E, 스토리라인), 짝은 (E, 이웃 사건)마다 한 행에 확률 · 판정 원본 ID · 물었을 때 E 의 기사 수 · 상대의 크기(스토리라인은 구성 사건 수, 이웃은 기사 수) · 시각을 둔다. 방향이 있다 — (P, E) 는 (E, P) 를 대신하지 않는다. 다시 물을 때(`LinkingAsk.due`)는 E 의 기사 수나 상대의 크기가 물었을 때의 두 배 이상일 때다 — 그 기록은 쓰지 않고 다시 묻는다. 다시 물으면 덮어쓴다. 잇기 기준을 바꿔도 기록은 그대로 쓴다(확률 기준은 기록을 읽을 때 쓴다)
   - 묻기는 DB 트랜잭션 밖이다(storyline-R3). 답은 짧은 트랜잭션에서 모듈 잠금을 잡고 기록한다 — 그사이 E 가 지워졌거나 합쳐졌으면 기록하지 않고(그 변화의 알림이 다시 판정한다), 그사이 합쳐졌거나 지워진 후보 스토리라인의 답은 버린다. 기록한 뒤 지금 상태로 다시 판정한다
-  - 결말: 확률을 받으면 기록한다. 평가기가 판정할 기사를 거부하면 물은 후보를 확률 없이 기록하고 판정을 잇는다 — 같은 기사라 다시 보내도 같고, 다시 물을 때가 되면 다시 묻는다. 판정할 기사가 지워졌으면 점유만 푼다(사건 변화의 알림이 다시 넣는다). 평가기 일시 실패면 실패를 세고 판정 가능 시각을 미룬다(storyline-R4). 평가기를 쓸 수 없으면 남은 점유를 풀고 회차를 멈춘다(오류)
+  - 결말: 확률을 받으면 기록한다. 평가기가 판정할 기사를 거부하면 물은 후보를 확률 없이 기록하고 판정을 잇는다 — 같은 기사라 다시 보내도 같고, 다시 물을 때가 되면 다시 묻는다. 판정할 기사가 지워졌으면 점유만 푼다(사건 변화의 알림이 다시 넣는다). 평가기 일시 실패면 일시 실패를 세고 판정 가능 시각을 미룬다 — 대기에서 빼지 않는다(storyline-R4). 평가기를 쓸 수 없으면 남은 점유를 풀고 회차를 멈춘다(오류)
   - 따르기: 스토리라인이 지워지면 그 붙이기 기록이 함께 지워지고(FK), 합쳐지면 합쳐질 쪽의 기록을 지운다(storyline-R18). 사건이 지워지거나 합쳐지면 그 사건이 판정할 쪽 · 이웃 쪽인 기록을 지운다(storyline-R6)
   - 문구: 질문 문구는 `evaluation` 이 갖는다(evaluation-R51). 물은 기록에는 문구 판이 없다 — 문구 판을 바꾸는 변경은 마이그레이션으로 잇기 물은 기록 둘을 비운다
 
@@ -744,7 +747,7 @@ sequenceDiagram
 
 ### 스토리라인 사이 관계
 
-판단의 이유는 [ADR-0131](../adr/0131-storyline-relations-are-explicit-links-with-containment-as-a-single-parent-tree-gathered-at-query-time.md)(관계의 표현 · 구조 · 조회)과 [ADR-0132](../adr/0132-storyline-relations-are-judged-by-jev-on-candidate-pairs-and-linked-only-above-a-probability-threshold.md)(판정 방법)에 있다. 관계 판정의 요청 · 문구 · 판정 원본은 [evaluation Spec](evaluation.md#관계-판정)에 있다.
+판단의 이유는 [ADR-0131](../adr/0131-storyline-relations-are-explicit-links-with-containment-as-a-single-parent-tree-gathered-at-query-time.md)(관계의 표현 · 구조 · 조회)과 [ADR-0132](../adr/0132-storyline-relations-are-judged-by-jev-on-candidate-pairs-and-linked-only-above-a-probability-threshold.md)(판정 방법), [ADR-0255](../adr/0255-storyline-linking-and-relation-queues-defer-transient-failures-until-a-retry-time-and-never-drop-them.md)(일시 실패한 스토리라인의 미룸)에 있다. 관계 판정의 요청 · 문구 · 판정 원본은 [evaluation Spec](evaluation.md#관계-판정)에 있다.
 
 - **storyline-R25** — 관계와 구조 제약(`RelationGraph` — 정본): 관계는 합쳐지지 않은 스토리라인 둘의 고리이고 종류는 포함 · 이어짐 둘이다. 포함은 앞이 상위 · 뒤가 하위, 이어짐은 앞이 뒤를 낳았다.
   - 스토리라인은 자기 자신과 관계를 갖지 않는다. 한 쌍의 관계는 하나다(종류 · 방향과 무관)
@@ -752,7 +755,7 @@ sequenceDiagram
   - 포함끼리 · 이어짐끼리 순환을 이루지 않는다 — 넣을 관계의 뒤에서 같은 종류의 고리를 따라 앞에 닿으면 넣지 않는다
   - 자기 자신 · 쌍마다 하나 · 상위 하나는 DB 제약이 함께 막고, 순환은 판정이 모듈 잠금 안에서 확인한다(storyline-R5 — 관계를 쓰는 트랜잭션은 한 번에 하나다)
   - 나란한 흐름(같은 원인에서 나온 별개의 흐름)은 종류가 아니다 — 같은 상위의 하위들로만 드러난다
-- **storyline-R26** — 관계 대기: 판정 트랜잭션(storyline-R6 ~ R12)이 정돈(storyline-R17)에서 남은 스토리라인 — 그대로 둔 것과 합치기의 남는 쪽 — 과 짝으로 연 스토리라인을 관계 대기에 넣는다. 조각을 합친 관계 반영도 남는 쪽을 넣는다 — 다음 회차가 지금 구성으로 후보를 다시 고른다. 스토리라인마다 한 행이고, 이미 있으면 다시 알림 수를 하나 올린다. 관계 대기에 든 적이 없는 스토리라인은 그 구성 사건이 다시 판정될 때 들어간다 — 운영자는 채우기(storyline-R15)로 다시 판정할 수 있다
+- **storyline-R26** — 관계 대기: 판정 트랜잭션(storyline-R6 ~ R12)이 정돈(storyline-R17)에서 남은 스토리라인 — 그대로 둔 것과 합치기의 남는 쪽 — 과 짝으로 연 스토리라인을 관계 대기에 넣는다. 조각을 합친 관계 반영도 남는 쪽을 넣는다 — 다음 회차가 지금 구성으로 후보를 다시 고른다. 스토리라인마다 한 행이고, 이미 있으면 다시 알림 수를 하나 올린다(점유 · 실패 수 · 판정 가능 시각은 그대로). 관계 대기에 든 적이 없는 스토리라인은 그 구성 사건이 다시 판정될 때 들어간다 — 운영자는 채우기(storyline-R15)로 다시 판정할 수 있다
 - **storyline-R27** — 후보 쌍(`RelationCandidates.partners` — 정본): 스토리라인 S 의 상대는 S 와 사건을 함께 가진 합쳐지지 않은 스토리라인과, 점수가 후보 점수 기준 이상인 스토리라인이다. S 와 상대 모두 구성 사건 수가 사건 수 하한 이상이어야 하고, 다시 물을 때(storyline-R30)가 된 쌍만 든다.
   - 점수는 잇기의 산식 그대로다(`LinkingScoring` — storyline-R8). 쌍 가운데 구성 사건 수가 적은 스토리라인(같으면 ID 가 큰 쪽)을 판정할 쪽으로, 다른 쪽을 견줄 것으로 둔다. 판정할 쪽이 S 가 아닌 쌍은 그 상대의 표현을 읽어 같은 식으로 매긴다
   - 점수 후보는 판정할 쪽과 모델 버전이 같고, 시각 범위가 [판정할 쪽의 첫 기사 시각 − 창, 마지막 기사 시각 + 창] 과 겹치고, 코사인이 `LinkingScoring.cosineFloor(후보 점수 기준)` 이상인 스토리라인이다(`StorylineRepository.candidates`). 말의 무게는 같은 구간의 말 수로 센다(`EventDirectory.termCounts`). 창은 관계 기준의 시간 창이다
@@ -777,13 +780,13 @@ sequenceDiagram
   - 기준을 바꿔도 물은 쌍을 곧바로 다시 묻지 않는다 — 바꾼 기준은 그 뒤의 판정에 쓴다
   - 합친 쌍은 물은 기록을 남기지 않는다 — 한쪽이 사라졌고, 근거는 합쳐진 행이 갖는다(storyline-R18)
   - 관계 판정의 문구 판을 올리면 물은 기록을 모두 비우고 합쳐지지 않은 스토리라인을 모두 관계 대기에 넣는다 — 마이그레이션(`V64`)이 한다. 지금 관계 · 스토리라인 행은 지우지 않고, 다시 물은 쌍의 판정이 고쳐 쓴다([ADR-0236](../adr/0236-raising-the-relation-wording-version-clears-asked-records-and-asks-every-storyline-again.md))
-- **storyline-R31** — 관계 회차: 반복 작업(1분, 재시도 없음)의 회차는 지금 기준을 관계 기준 이력에 등록하고, 점유가 없거나 만료된(점유한 뒤의 경과가 임대 이상 — platform-R28) 관계 대기 행을 스토리라인 ID 순으로 4건(`RelationSchedule.BATCH_SIZE`)까지 잠가 점유(토큰 · 만료 = 지금 + 20분, `RelationSchedule.LEASE`)를 쓰고 커밋한다.
+- **storyline-R31** — 관계 회차: 반복 작업(1분, 재시도 없음)의 회차는 지금 기준을 관계 기준 이력에 등록하고, 점유가 없거나 만료됐고(점유한 뒤의 경과가 임대 이상 — platform-R28) 판정 가능 시각이 없거나 지난(≤ 지금) 관계 대기 행을 스토리라인 ID 순으로 4건(`RelationSchedule.BATCH_SIZE`)까지 잠가 점유(토큰 · 만료 = 지금 + 20분, `RelationSchedule.LEASE` — 스토리라인마다 쌍 상한만큼 판정을 가장 길게 기다려도 안에 든다, [evaluation-R53](evaluation.md#평가기-시간))를 쓰고 커밋한다.
   - 스토리라인마다 후보 쌍을 5쌍(`RelationSchedule.MAX_PAIRS`)까지 순서대로 묻고(storyline-R27 · R28), 쌍마다 모듈 잠금을 잡은 짧은 트랜잭션에서 반영한다(storyline-R29 · R30). 반영 전에 두 스토리라인을 다시 읽어 합쳐졌거나 지워졌으면 그 쌍은 버린다. 반영이 두 스토리라인을 합쳤으면 그 스토리라인의 남은 쌍은 묻지 않고 점유를 푼다 — 합치기 전의 구성으로 고른 쌍이라서다
   - 스토리라인이 없거나 합쳐졌거나 구성 사건 수가 하한 미만이면 후보가 없다. 후보를 모두 물었고 토큰과 다시 알림 수가 점유할 때와 같으면 대기 행을 지운다. 후보가 남았거나 다시 알림 수가 달라졌으면 점유만 풀어 다음 회차가 잇는다
-  - 일시 실패면 그 스토리라인의 실패 수를 하나 올리고 점유를 푼다(오류 로그 없음). 올린 실패 수가 상한(3, `RelationSchedule.MAX_FAILURES`)에 이르면 대기 행을 지운다(오류)
+  - 일시 실패면 그 스토리라인의 남은 쌍을 묻지 않는다. 한 트랜잭션에서 토큰이 맞을 때 실패 수를 하나 올리고 점유를 풀고, 판정 가능 시각을 지금 + 1분 × 2^(실패 수 − 1)(1시간에서 멈춤, `EvaluatorTiming.retryDelay` — [evaluation-R53](evaluation.md#평가기-시간))로 미룬다(로그 없음). 실패 수에는 상한이 없어 대기에서 빼지 않는다 — 평가기가 일시 실패로만 답하는 장애가 길어도 스토리라인은 대기에 남고, 장애가 풀리면 늦어도 1시간 안에 그 스토리라인이 바뀌지 않아도 다시 묻는다. 그 스토리라인 탓으로 거듭 실패해도 1시간에 한 번 묻고, 미룬 동안 점유하지 않아 다른 스토리라인의 판정을 막지 않는다. 실패 수 · 판정 가능 시각은 대기 행을 지울 때까지 남는다([ADR-0255](../adr/0255-storyline-linking-and-relation-queues-defer-transient-failures-until-a-retry-time-and-never-drop-them.md))
   - 물을 서술이 없거나(`NothingToAsk`) 기사 거부면 물은 기록에 그 결말(`NOTHING_TO_ASK` · `REJECTED`)을 남기고 다음 쌍으로 간다 — 관계는 건드리지 않는다
   - 평가기 사용 불가 · 예상 못한 예외면 회차를 멈춘다(오류). 점유는 만료로 풀려 다음 회차가 가져간다
-  - 회차 하나의 판정은 많아야 4 × 5 번이다 — 요청 마감(`evaluation` 의 Jev 요청 마감)으로도 점유 기간 안에 끝난다
+  - 회차 하나의 판정은 많아야 4 × 5 번이다 — 점유 기간이 이 수와 판정 한 번의 가장 긴 시간으로 계산된다
 - **storyline-R32** — 병합 · 삭제 따르기(`RelationMove` — 정본): 스토리라인 M 이 S 에 합쳐질 때(storyline-R18 — 정돈 · 조각 합치기 모두) 같은 트랜잭션에서 M 의 관계를 S 로 옮긴다.
   - 옮기면 자기 자신이 되는 관계(M 과 S 사이의 관계)는 지운다
   - 옮길 쌍에 S 가 이미 관계를 가졌으면 S 의 것을 남기고 M 의 것을 지운다
@@ -811,7 +814,7 @@ sequenceDiagram
 
 ## 6. 데이터
 
-컬럼 타입 · 인덱스 · 제약 문면의 정본은 `backend/src/main/resources/db/migration/V24__storylines.sql` · `V25__storyline_merges.sql` · `V28__storyline_big_criteria.sql` · `V35__storyline_relations.sql` · `V40__storyline_big_criteria_intensity.sql` · `V49__storyline_link_asked.sql` · `V62__storyline_relation_fragments.sql`(물은 기록의 결말) · `V63__storyline_fragment_merge.sql`(조각 합치기) · `V64__storyline_relation_reask.sql`(문구 판을 올린 뒤 다시 묻기 — storyline-R30) 이다 — `V28` 이 만든 큰 판정 기준 테이블 둘은 `V40` 이 지우고 다시 만든다. `event_id` · `representative_event_id` 는 `event` 의 사건을 가리키지만 FK 를 두지 않는다 — 모듈 사이는 ID 로만 참조한다. 보존 기간은 [data-model.md "보존 정책"](../data-model.md#보존-정책-초안)에 있다.
+컬럼 타입 · 인덱스 · 제약 문면의 정본은 `backend/src/main/resources/db/migration/V24__storylines.sql` · `V25__storyline_merges.sql` · `V28__storyline_big_criteria.sql` · `V35__storyline_relations.sql` · `V40__storyline_big_criteria_intensity.sql` · `V49__storyline_link_asked.sql` · `V62__storyline_relation_fragments.sql`(물은 기록의 결말) · `V63__storyline_fragment_merge.sql`(조각 합치기) · `V64__storyline_relation_reask.sql`(문구 판을 올린 뒤 다시 묻기 — storyline-R30) · `V68__storyline_relation_queue_retry.sql`(관계 대기의 판정 가능 시각 — storyline-R31) · `V69__storyline_linking_queue_transient_failures.sql`(잇기 대기의 일시 실패 수 — storyline-R4) 이다 — `V28` 이 만든 큰 판정 기준 테이블 둘은 `V40` 이 지우고 다시 만든다. `event_id` · `representative_event_id` 는 `event` 의 사건을 가리키지만 FK 를 두지 않는다 — 모듈 사이는 ID 로만 참조한다. 보존 기간은 [data-model.md "보존 정책"](../data-model.md#보존-정책-초안)에 있다.
 
 | 테이블 | 주요 컬럼 | 뜻 |
 |---|---|---|
@@ -821,11 +824,11 @@ sequenceDiagram
 | `storyline_members` | storyline_id, event_id, linked_by(`RULE`/`PAIR`/`MERGE`), score, cosine, key_term_overlap, criteria_id, probability, judgement_id, linked_at, merged_from | 소속 — (storyline_id, event_id) 기본 키(storyline-R14). `MERGE` 면 점수 · 코사인 · 겹침 · 기준 · 확률이 없고 그 밖이면 점수 · 코사인 · 겹침 · 기준이 모두 있다(제약). 확률(0 ~ 1)과 판정 원본 ID 는 함께 있거나 함께 없다(제약 — 띠 안 판정, storyline-R36). `judgement_id` 는 `evaluation` 의 흐름 소속 판정 원본이고 FK 가 없다. `criteria_id` 는 기준 이력 FK 다. 사건의 소속은 `event_id` 인덱스로 찾는다. 스토리라인을 지우면 함께 지워진다(FK `ON DELETE CASCADE`). `merged_from` 은 스토리라인 합치기로 옮겨 온 소속의 합쳐진 스토리라인이고 FK 가 없다(storyline-R18) |
 | `storyline_link_asked` | event_id, storyline_id, probability(0 ~ 1 · 없을 수 있음), judgement_id, event_articles(1 이상), storyline_events(1 이상), asked_at | 붙이기 띠의 잇기 물은 기록 — (event_id, storyline_id) 기본 키(storyline-R36). 확률과 판정 원본 ID 는 함께 있거나 함께 없다(제약). `storyline_id` 는 스토리라인 FK `ON DELETE CASCADE` 이고 인덱스로 찾는다. `event_id` · `judgement_id` 는 FK 가 없다 |
 | `storyline_pair_asked` | event_id, partner_id, probability(0 ~ 1 · 없을 수 있음), judgement_id, event_articles(1 이상), partner_articles(1 이상), asked_at | 짝 띠의 잇기 물은 기록 — (event_id, partner_id) 기본 키, 두 ID 는 다르다(제약, storyline-R36). 확률과 판정 원본 ID 는 함께 있거나 함께 없다(제약). `partner_id` 인덱스로 찾는다. FK 가 없다 |
-| `storyline_linking_queue` | event_id(기본 키), order_at, notifications(0 이상), failures(0 이상), enqueued_at, lease_token, lease_expires_at, retry_at | 잇기 대기 — 사건마다 한 행(storyline-R2). `order_at` 은 순서 키이고 없을 수 있다. `retry_at` 은 판정 가능 시각이고 없을 수 있다(storyline-R4). 점유 둘은 함께 있거나 함께 없다(제약). 회차의 잠금은 `(order_at NULLS FIRST, event_id)` 인덱스로 찾는다(storyline-R3) |
+| `storyline_linking_queue` | event_id(기본 키), order_at, notifications(0 이상), failures(0 이상), transient_failures(0 이상), enqueued_at, lease_token, lease_expires_at, retry_at | 잇기 대기 — 사건마다 한 행(storyline-R2). `order_at` 은 순서 키이고 없을 수 있다. `failures` 는 판정의 예상 못한 예외, `transient_failures` 는 평가기 일시 실패의 수다. `retry_at` 은 판정 가능 시각이고 없을 수 있다(storyline-R4). 점유 둘은 함께 있거나 함께 없다(제약). 회차의 잠금은 `(order_at NULLS FIRST, event_id)` 인덱스로 찾는다(storyline-R3) |
 | `storyline_relation_criteria` | id, probability, one_matter, min_events, candidate_score, window_seconds, merge_probability, created_at | 관계 기준 이력 — 여섯 값이 고유하다(storyline-R31). 합치기 확률 기준은 확률 기준 이상 1 이하다(제약). 이 칸이 생기기 전의 행은 1.0 이다(조각을 합치지 않던 기준). 관계 · 물은 기록이 그 ID 를 가리킨다 |
 | `storyline_relations` | id, kind(`CONTAINS`/`FOLLOWS`), source_id, target_id, probability, judgement_id, criteria_id, linked_at | 스토리라인 사이 관계(storyline-R25). `source_id` · `target_id` 는 스토리라인 FK `ON DELETE CASCADE` 이고 서로 다르다(제약). 쌍마다 한 행 — 두 ID 의 작은 쪽 · 큰 쪽의 고유 인덱스. 포함의 하위는 상위 하나 — `target_id` 의 부분 고유 인덱스(포함만). `judgement_id` 는 `evaluation` 의 관계 판정 원본을 가리키지만 FK 가 없다 — 원본은 먼저 지워질 수 있다. `criteria_id` 는 관계 기준 이력 FK 다 |
 | `storyline_relation_asked` | low_id, high_id, smaller_events(1 이상), outcome, judgement_id, criteria_id, asked_at | 물은 기록 — (low_id, high_id) 기본 키, `low_id < high_id`(제약), 두 ID 는 스토리라인 FK `ON DELETE CASCADE`(storyline-R30). `outcome` 은 `LINKED`/`NOT_RELATED`/`LOW_PROBABILITY`/`NOT_ONE_MATTER`/`CYCLE`/`SECOND_PARENT`/`UNMERGED`/`NOTHING_TO_ASK`/`REJECTED`. `judgement_id` 는 판정 원본이 남지 않은 결말(`NOTHING_TO_ASK` · `REJECTED`)이면 없다 |
-| `storyline_relation_queue` | storyline_id(기본 키), notifications(0 이상), failures(0 이상), enqueued_at, lease_token, lease_expires_at | 관계 대기 — 스토리라인마다 한 행(storyline-R26). 스토리라인 FK `ON DELETE CASCADE`. 점유 둘은 함께 있거나 함께 없다(제약) |
+| `storyline_relation_queue` | storyline_id(기본 키), notifications(0 이상), failures(0 이상), enqueued_at, lease_token, lease_expires_at, retry_at | 관계 대기 — 스토리라인마다 한 행(storyline-R26). 스토리라인 FK `ON DELETE CASCADE`. 점유 둘은 함께 있거나 함께 없다(제약). `retry_at` 은 일시 실패 뒤 판정 가능 시각이고 없을 수 있다(storyline-R31) |
 | `storyline_big_criteria` | id(1 고정), min_intensity(`NUMERIC(6, 2)`, 0 초과), changed_at | 큰 판정 기준의 지금 값 — 한 행(storyline-R20). 처음 값은 기동 때 앱이 넣는다 |
 | `storyline_big_criteria_changes` | id, previous_min_intensity, min_intensity, actor(`SYSTEM`/`OPERATOR`), changed_at | 큰 판정 기준 이력 — 추가만 한다(storyline-R20). 이전 값은 처음 값이면 없다 |
 
@@ -878,3 +881,5 @@ sequenceDiagram
 | [0235](../adr/0235-the-big-list-has-one-row-per-containment-tree-carrying-the-big-storylines-under-it.md) | 큰 판정 목록은 포함 나무마다 한 행으로 내고 그 아래의 큰 스토리라인을 행에 싣는다 |
 | [0236](../adr/0236-raising-the-relation-wording-version-clears-asked-records-and-asks-every-storyline-again.md) | 관계 판정의 문구 판을 올리면 물은 기록을 비우고 모든 스토리라인을 관계 대기에 넣어 다시 묻는다 |
 | [0252](../adr/0252-the-stall-and-duration-of-work-in-progress-are-measured-as-elapsed-time-without-the-jumps-of-the-clock.md) | 진행 중 작업의 멈춤과 걸린 시간은 시계가 넘긴 시간을 뺀 경과로 잰다 |
+| [0255](../adr/0255-storyline-linking-and-relation-queues-defer-transient-failures-until-a-retry-time-and-never-drop-them.md) | 스토리라인 잇기 · 관계 판정이 일시 실패한 대상은 대기 행의 판정 가능 시각까지 미루고, 일시 실패 수로 대기에서 빼지 않는다 |
+| [0259](../adr/0259-evaluator-timing-is-owned-by-one-evaluation-type-and-judging-queues-derive-their-leases-from-the-longest-judgement.md) | 평가기 요청 마감 · 판정 한 번의 가장 긴 시간 · 일시 실패 뒤 간격은 `evaluation` 의 공개 타입 하나가 정본이고, 판정을 부르는 대기의 점유 기간은 판정 한 번의 가장 긴 시간에서 계산한다 |

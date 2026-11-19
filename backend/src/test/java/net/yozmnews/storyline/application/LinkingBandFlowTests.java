@@ -198,7 +198,8 @@ class LinkingBandFlowTests {
 		long storyline = onlyStoryline();
 		assertThat(this.storylines.storylinesOf(story.e3())).isEmpty();
 		assertThat(askedRows()).isZero();
-		assertThat(queued(story.e3())).hasValueSatisfying(row -> assertThat(row).containsEntry("failures", 1)
+		assertThat(queued(story.e3())).hasValueSatisfying(row -> assertThat(row).containsEntry("transient_failures", 1)
+			.containsEntry("failures", 0)
 			.containsEntry("lease_token", null)
 			.containsEntry("retry_at", Instant.parse("2026-11-10T00:01:00Z")));
 		assertThat(storyline).isPositive();
@@ -208,6 +209,36 @@ class LinkingBandFlowTests {
 		assertThat(asking.queries).hasSize(1);
 		round(asking, NOW.plusSeconds(60)).run();
 		assertThat(asking.queries).hasSize(2);
+	}
+
+	/**
+	 * 평가기가 세 시간 동안 일시 실패로만 답해도 사건은 잇기 대기에서 빠지지 않고, 장애가 풀린 뒤 그 사건이 바뀌지 않아도 다시 묻는다. 장애
+	 * 동안 회차는 1분마다 돈다 — 실패는 0 · 1 · 3 · 7 · 15 · 31 · 63 · 123분에 여덟 번이고, 간격은 1시간에서 멈춘다. 실패 수(예상 못한
+	 * 예외)는 오르지 않는다.
+	 */
+	@Test
+	void aLongRunOfTransientFailuresKeepsTheEventQueuedUntilTheEvaluatorRecovers(CapturedOutput output) {
+		Story story = storyWithBandEvent();
+		Asking outage = new Asking(
+				query -> new FlowMembershipJudgement.Failed(EvaluatorFailureKind.TRANSIENT, "시험이 넣은 일시 실패"));
+
+		for (int minute = 0; minute <= 180; minute++) {
+			round(outage, NOW.plus(Duration.ofMinutes(minute))).run();
+		}
+
+		assertThat(outage.queries).hasSize(8);
+		assertThat(queued(story.e3())).hasValueSatisfying(row -> assertThat(row).containsEntry("transient_failures", 8)
+			.containsEntry("failures", 0)
+			.containsEntry("lease_token", null)
+			.containsEntry("retry_at", NOW.plus(Duration.ofMinutes(183))));
+		assertThat(output).doesNotContain("스토리라인 잇기 판정이 거듭 실패해 대기에서 뺐다");
+
+		Asking recovered = new Asking(query -> judged(78, query, 0.71));
+		round(recovered, NOW.plus(Duration.ofMinutes(183))).run();
+
+		assertThat(recovered.queries).hasSize(1);
+		assertThat(member(onlyStoryline(), story.e3())).containsEntry("linked_by", "RULE").containsEntry("probability", 0.71);
+		assertThat(queued(story.e3())).isEmpty();
 	}
 
 	@Test
@@ -293,7 +324,8 @@ class LinkingBandFlowTests {
 		// 확인을 지나 평가기까지 갔다. 트랜잭션 안에서 불렀다면 예상 못한 예외로 실패만 세고 판정 가능 시각이 없다
 		round(this.wired).run();
 
-		assertThat(queued(story.e3())).hasValueSatisfying(row -> assertThat(row).containsEntry("failures", 1)
+		assertThat(queued(story.e3())).hasValueSatisfying(row -> assertThat(row).containsEntry("transient_failures", 1)
+			.containsEntry("failures", 0)
 			.containsEntry("retry_at", Instant.parse("2026-11-10T00:01:00Z")));
 		assertThat(output).doesNotContain("스토리라인 잇기 판정이 예상하지 못한 오류로 실패했다");
 		assertThat(askedRows()).isZero();
@@ -445,7 +477,8 @@ class LinkingBandFlowTests {
 
 	private Optional<Map<String, Object>> queued(long event) {
 		return this.jdbc.sql("""
-				select notifications, failures, lease_token, retry_at from storyline_linking_queue where event_id = :event
+				select notifications, failures, transient_failures, lease_token, retry_at
+				from storyline_linking_queue where event_id = :event
 				""").param("event", event).query().listOfRows().stream().findFirst().map(row -> {
 			Map<String, Object> copy = new HashMap<>(row);
 			Object retryAt = copy.get("retry_at");

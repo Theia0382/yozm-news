@@ -5,6 +5,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.evaluation.EvaluatorTiming;
 import net.yozmnews.event.domain.intake.IntakeLease;
 import org.jspecify.annotations.Nullable;
 
@@ -38,11 +39,13 @@ public record PendingAssignment(ArticleId articleId, Instant enqueuedAt, int att
 	}
 
 	/**
-	 * 일시 실패 — 시도 수를 하나 늘리고 재시도 간격 뒤로 미루고 점유를 푼다. 상한에 이르렀는지는 {@link #exhausted()} 가 정한다.
+	 * 일시 실패 — 시도 수를 하나 늘리고 재시도 간격({@link EvaluatorTiming#retryDelay}) 뒤로 미루고 점유를 푼다. 상한에 이르렀는지는
+	 * {@link #exhausted()} 가 정한다.
 	 */
 	public PendingAssignment afterTransient(Instant now) {
 		int next = this.attempts + 1;
-		return new PendingAssignment(this.articleId, this.enqueuedAt, next, AssignmentSchedule.retryAt(now, next), null);
+		return new PendingAssignment(this.articleId, this.enqueuedAt, next, now.plus(EvaluatorTiming.retryDelay(next)),
+				null);
 	}
 
 	/** 일시 실패가 상한({@link AssignmentSchedule#MAX_ATTEMPTS})에 이르렀다 — 판정 실패로 끝낸다 */

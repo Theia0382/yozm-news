@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -407,22 +408,67 @@ class RelationRoundFlowTests {
 		assertThat(askedRow(a, b)).containsEntry("outcome", "NOTHING_TO_ASK");
 	}
 
+	/**
+	 * 일시 실패한 스토리라인은 실패 수를 올려 1분 미루고 점유를 푼다 — 그동안 다른 스토리라인은 그대로 묻고, 미룬 스토리라인은 판정 가능 시각에
+	 * 다시 가져간다. 오류 로그는 없다.
+	 */
 	@Test
-	void aTransientFailureKeepsTheRowAndDropsItAfterThreeFailures(CapturedOutput output) {
+	void aTransientFailureDefersTheStorylineWithoutBlockingOthers(CapturedOutput output) {
 		long shared = event(EARLY, 1);
 		long a = storyline("[1,0]", EARLY, LATE, shared, event(EARLY, 1), event(EARLY, 1));
-		storyline("[0,1]", LATE, LATE, shared, event(LATE, 1), event(LATE, 1));
+		long b = storyline("[0,1]", LATE, LATE, shared, event(LATE, 1), event(LATE, 1));
 		this.queue.enqueue(a, NOW);
-		FlowRelation failing = query -> new RelationJudgement.Failed(EvaluatorFailureKind.TRANSIENT, "잠시 실패");
 
-		round(failing).run();
+		round(query -> new RelationJudgement.Failed(EvaluatorFailureKind.TRANSIENT, "잠시 실패")).run();
+
 		assertThat(queueRow(a)).containsEntry("failures", 1).containsEntry("lease_token", null);
+		assertThat(retryAt(a)).isEqualTo(NOW.plus(Duration.ofMinutes(1)));
 		assertThat(this.jdbc.sql("select count(*) from storyline_relation_asked").query(Long.class).single()).isZero();
 
-		round(failing).run();
-		round(failing).run();
+		// 미룬 동안 들어온 b 는 a 를 기다리지 않고 묻는다 — a 는 아직 가져가지 않는다
+		this.queue.enqueue(b, NOW);
+		round(withRepresentatives(), answer(RelationAnswer.SECOND_PART_OF_FIRST, 0.7, 0.9, 0.8, 58),
+				TestClocks.fixed(NOW.plusSeconds(30))).run();
+
+		assertThat(this.relations.all()).containsExactly(new Relation(a, b, RelationKind.CONTAINS));
+		assertThat(queued()).containsExactly(a);
+		assertThat(this.asked).hasSize(2);
+
+		// 판정 가능 시각이 되면 a 를 다시 가져간다 — 그 쌍은 이미 물어 묻지 않고 대기에서 뺀다
+		round(withRepresentatives(), answer(RelationAnswer.NONE, 0.9, 0.9, 0.9, 59),
+				TestClocks.fixed(NOW.plus(Duration.ofMinutes(1)))).run();
+
 		assertThat(queued()).isEmpty();
-		assertThat(output.getAll()).contains("스토리라인 관계 판정이 거듭 실패해 대기에서 뺐다 — 스토리라인 " + a + ", 실패 3회");
+		assertThat(this.asked).hasSize(2);
+		assertThat(output.getAll()).doesNotContain("스토리라인 관계 판정이");
+	}
+
+	/**
+	 * 평가기가 세 시간 동안 일시 실패로만 답해도 스토리라인은 관계 대기에서 빠지지 않고, 장애가 풀린 뒤 그 스토리라인이 바뀌지 않아도 다시 묻는다.
+	 * 장애 동안 회차는 1분마다 돈다 — 실패는 0 · 1 · 3 · 7 · 15 · 31 · 63 · 123분에 여덟 번이고, 간격은 1시간에서 멈춘다.
+	 */
+	@Test
+	void aLongRunOfTransientFailuresKeepsTheStorylineQueuedUntilTheEvaluatorRecovers() {
+		long shared = event(EARLY, 1);
+		long a = storyline("[1,0]", EARLY, LATE, shared, event(EARLY, 1), event(EARLY, 1));
+		long b = storyline("[0,1]", LATE, LATE, shared, event(LATE, 1), event(LATE, 1));
+		this.queue.enqueue(a, NOW);
+		FlowRelation outage = query -> new RelationJudgement.Failed(EvaluatorFailureKind.TRANSIENT, "잠시 실패");
+
+		for (int minute = 0; minute <= 180; minute++) {
+			round(withRepresentatives(), outage, TestClocks.fixed(NOW.plus(Duration.ofMinutes(minute)))).run();
+		}
+
+		assertThat(queued()).containsExactly(a);
+		assertThat(queueRow(a)).containsEntry("failures", 8).containsEntry("lease_token", null);
+		assertThat(this.asked).hasSize(8);
+
+		round(withRepresentatives(), answer(RelationAnswer.SECOND_PART_OF_FIRST, 0.7, 0.9, 0.8, 57),
+				TestClocks.fixed(NOW.plus(Duration.ofMinutes(183)))).run();
+
+		assertThat(this.relations.all()).containsExactly(new Relation(a, b, RelationKind.CONTAINS));
+		assertThat(askedRow(a, b)).containsEntry("outcome", "LINKED");
+		assertThat(queued()).isEmpty();
 	}
 
 	@Test
@@ -810,6 +856,16 @@ class RelationRoundFlowTests {
 				select notifications, failures, lease_token::text as lease_token from storyline_relation_queue
 				where storyline_id = :id
 				""").param("id", storyline).query().singleRow();
+	}
+
+	private @Nullable Instant retryAt(long storyline) {
+		return this.jdbc.sql("select retry_at from storyline_relation_queue where storyline_id = :id")
+			.param("id", storyline)
+			.query((rs, row) -> {
+				OffsetDateTime at = rs.getObject("retry_at", OffsetDateTime.class);
+				return (at != null) ? at.toInstant() : null;
+			})
+			.single();
 	}
 
 	private Map<String, @Nullable Object> relationRow() {
