@@ -150,7 +150,7 @@ erDiagram
 | 잇기 대기 (`storyline_linking_queue`) | 판정하면 지운다. 판정이 거듭 실패하면 뺀다 | 판정할 사건의 목록이다([storyline-R3](specs/storyline.md#잇기-대기와-회차) · [storyline-R4](specs/storyline.md#잇기-대기와-회차)) |
 | 스토리라인 사이 관계 (`storyline_relations`) · 물은 기록 (`storyline_relation_asked`) · 관계 기준 이력 (`storyline_relation_criteria`) | 무기한. 스토리라인을 지우면 그 관계 · 물은 기록을 함께 지운다. 합칠 때 합쳐진 쪽의 관계는 남는 쪽으로 옮기고 물은 기록은 지운다. 다시 물은 판정이 맺지 않으면 그 관계를 지운다 | 관계는 타임라인 · 집계의 근거이고, 물은 기록은 같은 쌍을 다시 물을 때를 정한다([storyline-R29 · R30 · R32](specs/storyline.md#스토리라인-사이-관계)) |
 | 잇기 물은 기록 (`storyline_link_asked` · `storyline_pair_asked`) | 무기한. 스토리라인을 지우면 그 붙이기 기록을 함께 지우고, 합칠 때 합쳐진 쪽의 기록을 지운다. 사건이 지워지거나 합쳐지면 그 사건의 기록을 지운다. 크기가 두 배가 되면 다시 물어 덮어쓴다. 흐름 소속 판정의 문구 판을 바꾸면 비운다 | 같은 쌍을 거듭 묻지 않게 하는 확률의 정본이다([storyline-R36](specs/storyline.md#띠-판정)) |
-| 관계 대기 (`storyline_relation_queue`) | 후보를 모두 물으면 지운다. 판정이 거듭 실패하면 뺀다 | 판정할 스토리라인의 목록이다([storyline-R26 · R31](specs/storyline.md#스토리라인-사이-관계)) |
+| 관계 대기 (`storyline_relation_queue`) | 후보를 모두 물으면 지운다. 판정이 일시 실패하면 미룰 뿐 빼지 않는다 | 판정할 스토리라인의 목록이다([storyline-R26 · R31](specs/storyline.md#스토리라인-사이-관계)) |
 | 사건 소속 판정 원본 (`article_event_judgements`) | 180일 | 태그 판정 원본과 같다 |
 | 흐름 소속 판정 원본 (`flow_membership_judgements`) | 180일 | 태그 판정 원본과 같다. 소속 · 잇기 물은 기록이 가리키는 원본이 먼저 지워질 수 있다 — 그 ID 는 FK 가 아니다 |
 | 관계 판정 원본 (`flow_relation_judgements`) | 180일 | 태그 판정 원본과 같다. 관계 · 물은 기록이 가리키는 원본이 먼저 지워질 수 있다 — 그 ID 는 FK 가 아니다 |

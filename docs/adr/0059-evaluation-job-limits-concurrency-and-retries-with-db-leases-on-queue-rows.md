@@ -1,6 +1,6 @@
 # ADR-0059: 평가 작업은 대기 행의 DB 점유와 상태로 동시성 · 재시도를 제한하고, 정착 시간 뒤 평가하며, 결과가 체계와 어긋나거나 평가기가 예상 못한 예외를 던지면 회차를 멈춘다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 일시 실패의 시도 상한([ADR-0254](0254-evaluation-queue-defers-transient-failures-without-an-attempt-limit-and-counts-retrying-rows-for-the-operator.md))
 - 날짜: 2026-11-02
 - 근거: [이슈 #69](https://github.com/Theia0382/yozm-news/issues/69) — 평가 대기 · 평가 작업을 만들며 JobRunr OSS 의 재시도 · 반복 작업 규칙과 수집 작업의 점유(ADR-0033)를 대조하고, 프리셋의 피드 구성 · 기본 수집 주기를 확인. 구현 `320f143`(일정 · 판정 규칙) · `90aa870`(대기 · 결과 저장소) · `a62ae65`(회차 · 작업)
 - 관련: [ADR-0023](0023-jobrunr-oss-framework-schema-and-event-resubmission.md)(작업 종류별 동시성 제한은 기능을 구현할 때 정한다 — 이 ADR 이 정한다), [ADR-0033](0033-feed-polling-db-lease-per-feed-new-items-and-per-source-request-spacing.md)(수집의 DB 점유), [ADR-0058](0058-evaluator-failures-in-three-kinds-and-unavailable-evaluator-skips-article-retries.md)(실패 세 갈래)
@@ -16,9 +16,11 @@
 ## 결정
 
 - **평가는 대기 행 하나가 기사 하나인 DB 대기열로 한다.** 반복 작업(1분, JobRunr 재시도 없음)의 회차가 평가할 수 있는 행을 `FOR UPDATE SKIP LOCKED` 로 묶음(50건)만큼 잠그고 점유(토큰 · 만료)를 써 커밋한 뒤, 트랜잭션 밖에서 기사마다 차례로 평가기를 부르고, 결과는 기사마다 새 트랜잭션에서 토큰이 맞을 때만 반영한다. 회차 비중첩은 반복 작업의 규칙이, 인스턴스 사이 · 점유 만료 뒤 겹침은 토큰이 막는다. 평가는 작업 서버 worker 가운데 많아야 하나를 쓴다.
+> 부분 대체(둘째 문장) — [ADR-0254](0254-evaluation-queue-defers-transient-failures-without-an-attempt-limit-and-counts-retrying-rows-for-the-operator.md). 지금 상태: [tag Spec tag-R20](../specs/tag.md#평가-대기와-평가-작업)
 - **재시도는 대기 행의 상태로 한다.** 일시 실패는 시도 수를 늘리고 간격(1분부터 두 배, 상한 1시간)만큼 평가 가능 시각을 미루며 다섯 번째에 실패로 남긴다. 기사 거부는 바로 실패로 남긴다. 실패로 남은 행은 운영자가 셀 수 있다.
 - **새 기사는 정착 시간(30분) 뒤에 평가한다.** 다른 피드 엔트리가 붙은 입력으로 한 번뿐인 평가를 한다.
 - **결과가 체계와 어긋나거나 평가기가 예상 못한 예외를 던지면 평가기 사용 불가와 같이 회차를 멈춘다.** 그 기사부터 남은 점유를 풀고(시도 수 그대로) 오류 로그에 기사 ID 를 남긴다. 체계와 맞는다는 것은 태그 종류마다 키 집합이 같고 원본 응답을 저장할 수 있다는 것이다.
+> 부분 대체(괄호의 "시도 상한") — [ADR-0254](0254-evaluation-queue-defers-transient-failures-without-an-attempt-limit-and-counts-retrying-rows-for-the-operator.md). 지금 상태: [tag Spec tag-R20](../specs/tag.md#평가-대기와-평가-작업)
 - 값(정착 시간 · 점유 기간 · 묶음 · 시도 상한 · 간격)은 측정 전 목표이고 코드의 상수 하나씩이다.
 
 ## 결과

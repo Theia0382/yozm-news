@@ -11,7 +11,7 @@
 - **태그 기준 · 저장 기준** — 주제 · 지역마다 태그 기준 · 저장 기준을 두고, 운영자의 변경을 이력과 함께 받는다. 앱은 태그 기준 · 저장 기준을 막지 않고, 이전 기사와 어긋날 수 있는 변경에 경고한다. 바꾸기 전에 고른 기간의 평가로 미리 보이고, 지금 값의 어긋난 상태를 낸다(tag-R10 ~ R13 · R35 · R36)
 - **활성 체계 조회** — 평가 · 후보 선별이 쓰는 활성 버전과 태그 기준 · 저장 기준을 공개 API(`TagSetDirectory`)로 낸다
 - **공유 평가** — 새 기사를 평가 대기에 넣고, 1분마다 대기를 묶어 기사마다 `evaluation` 의 태그 판정(`ArticleTagging.judge` — 기사 ID 와 활성 버전의 질문 묶음)을 부르고, 돌려받은 태그 · 형식 · 중요도 분포를 판정 원본 ID 와 함께 저장한다(tag-R14 · R15 · R18 ~ R20). 요청 조립 · 모델 호출 · 판정 원본 기록은 `evaluation` 이 한다
-- **평가 결과 조회** — 기사의 붙은 태그 · 형식 · 중요도를 조회 시점의 태그 기준 · 저장 기준으로 판정해 공개 API(`ArticleEvaluations`)로 낸다. 대기 · 실패 건수를 공개 운영 API(`EvaluationAdministration`)로 낸다(tag-R15 · R20)
+- **평가 결과 조회** — 기사의 붙은 태그 · 형식 · 중요도를 조회 시점의 태그 기준 · 저장 기준으로 판정해 공개 API(`ArticleEvaluations`)로 낸다. 대기 · 일시 실패를 겪은 대기 · 실패 건수를 공개 운영 API(`EvaluationAdministration`)로 낸다(tag-R15 · R20)
 - **평가 검수** — 버전 하나의 평가 가운데 평가 시각이 기간 안인 것을 태그 · 주제 판정으로 걸러 최근 것부터 내고, 씨앗으로 같은 표본을 다시 뽑으며, 평가 하나의 저장 행 전부와 분포, 판정 원본의 평가기 · 모델 · 토큰을 공개 운영 API(`EvaluationReview`)로 낸다(tag-R33 · R34)
 - **평가 현황** — 버전 하나의 평가 가운데 평가 시각이 집계 기간 안인 것의 주제 판정 · 태그 분포 · 붙은 태그 수 · 확률 분포 · 중요도 · 입력 토큰을 공개 운영 API(`EvaluationAdministration.overview`)로 낸다. 입력 토큰은 판정 원본에서 읽는다(tag-R28 · R29)
 - **주제별 보도량** — 첫 평가 시각이 집계 기간 안인 기사를 최신 평가의 조회 시점 판정과 태그 키 계보로 활성 버전의 주제마다 세어 공개 조회(`TopicCoverage`)로 낸다(tag-R28 · R30)
@@ -56,7 +56,7 @@
 | 활성화 | 운영자 원문을 확인과 같은 판정으로 대조해 새 버전으로 저장하고 활성으로 바꾸는 연산(tag-R16) |
 | 재평가 기간 | 활성화 요청이 정하는 일수(0 ~ 30, 기본 0). 활성화 시각에서 그 일수 안에 처음 본 기사를 재평가 대기에 넣는다(tag-R25) |
 | 실패 갈래 | 태그 판정의 예상한 실패 종류(`evaluation` 의 `EvaluatorFailureKind`) — 일시 · 기사 거부 · 평가기 사용 불가. 평가 작업의 재시도가 이 갈래로 나뉜다([ADR-0058](../adr/0058-evaluator-failures-in-three-kinds-and-unavailable-evaluator-skips-article-retries.md)) |
-| 평가 대기 | 평가할 기사의 목록(`evaluation_queue` — 기사마다 한 행). 평가 가능 시각 · 일시 실패 수 · 점유 · 실패 까닭을 갖는다(tag-R18) |
+| 평가 대기 | 평가할 기사의 목록(`evaluation_queue` — 기사마다 한 행). 평가 가능 시각 · 일시 실패 수 · 점유 · 실패 까닭을 갖는다(tag-R18). 실패로 남는 것은 기사 거부뿐이고, 일시 실패는 상한 없이 미룬다(tag-R20) |
 | 정착 시간 | 대기에 넣은 뒤 평가할 수 있기까지의 시간(30분). 같은 기사의 다른 피드 엔트리가 붙을 시간이다(tag-R18) |
 | 회차 | 반복 작업 한 번 — 대기를 묶어 점유하고 차례로 평가한다(tag-R19) |
 | 점유 | 회차가 대기 행을 가져갔다는 표시(토큰 · 만료). 결과는 토큰이 맞을 때만 반영한다(tag-R19) |
@@ -460,16 +460,16 @@ public interface EvaluationAdministration {
     Optional<EvaluationOverview> overview(TagSetId version, EvaluationPeriod period);
 }
 
-public record EvaluationQueueCounts(long waiting, long rejected, long exhausted) {}
+public record EvaluationQueueCounts(long waiting, long rejected, long retrying) {}
 ```
 
 | 멤버 · 필드 | 뜻 |
 |---|---|
-| `queueCounts()` | 지금의 대기 · 실패 건수 — 질의 하나로 센다. 트랜잭션을 열지 않는다 |
+| `queueCounts()` | 지금의 대기 · 일시 실패를 겪은 대기 · 실패 건수 — 질의 하나로 센다. 트랜잭션을 열지 않는다 |
 | `overview` | 그 버전의 평가 가운데 평가 시각이 기간 안인 것의 평가 현황 — 없는 버전이면 빈 값. 읽기 전용 `REPEATABLE READ` 트랜잭션 하나(한 스냅숏)에서 센다(tag-R29) |
 | `waiting` | 실패로 남지 않은 대기 — 점유 중 포함 |
 | `rejected` | 기사 거부로 실패로 남은 대기 |
-| `exhausted` | 일시 실패가 시도 상한에 이르러 실패로 남은 대기 |
+| `retrying` | 실패로 남지 않은 대기 가운데 일시 실패를 한 번 이상 겪은 것(시도 수 1 이상) — `waiting` 에 든다. 평가기가 일시 실패로 답하는 장애 동안 늘고, 줄지 않으면 그 기사 탓으로 거듭 실패하는 기사가 있다(tag-R20). `waiting` 보다 크면 `IllegalArgumentException` |
 
 관련 규칙: tag-R18 · tag-R20 · tag-R29.
 
@@ -858,7 +858,7 @@ sequenceDiagram
         else 기사 없음
             R->>Q: 토큰이 맞으면 대기 행 삭제 (tag-R19)
         else 일시 · 기사 거부
-            R->>Q: 토큰이 맞으면 재시도 일정 · 실패 (tag-R20)
+            R->>Q: 토큰이 맞으면 일시는 재시도 일정, 기사 거부는 실패 (tag-R20)
         else 평가기 사용 불가 · 판정 예외
             R->>Q: 남은 점유 해제 — 회차 멈춤 (tag-R20)
         end
@@ -1013,7 +1013,7 @@ sequenceDiagram
 
 #### `domain/queue`
 
-- `EvaluationSchedule` — 정착 시간(`SETTLE_DELAY` 30분 — 재평가로 넣은 행에는 없다, `eligibleAfterRequeue`) · 점유 기간(`LEASE` 30분) · 일시 실패의 시도 상한(`MAX_ATTEMPTS` 5) · 재시도 간격(`FIRST_RETRY` 1분부터 두 배씩, `MAX_RETRY` 1시간에서 멈춤)의 정본. 값은 측정 전 목표다(tag-R18 ~ R20)
+- `EvaluationSchedule` — 정착 시간(`SETTLE_DELAY` 30분 — 재평가로 넣은 행에는 없다, `eligibleAfterRequeue`) · 점유 기간(`LEASE` 30분) · 재시도 간격(`FIRST_RETRY` 1분부터 두 배씩, `MAX_RETRY` 1시간에서 멈춤 — 시도 상한은 없다)의 정본. 값은 측정 전 목표다(tag-R18 ~ R20)
 - `PendingEvaluation` — 대기 행 하나와 그 전이 `claim` · `afterTransient` · `afterRejected` · `released`. 실패로 남은 행은 점유가 없고 다시 전이하지 않는다(tag-R19 · R20)
 - 저장 단위: aggregate 가 없다 — 대기 행의 전이는 `PendingEvaluation` 이 계산하고, 점유 토큰을 조건으로 한 SQL 갱신 · 삭제로 쓴다(수집 상태와 같은 모양 — [ADR-0033](../adr/0033-feed-polling-db-lease-per-feed-new-items-and-per-source-request-spacing.md)). 저장소 `EvaluationQueueRepository` 가 쓴다
 
@@ -1030,7 +1030,7 @@ sequenceDiagram
   }
   ```
 
-- 그 밖의 값: `EvaluationLease` · `QueueFailure`(`ARTICLE_REJECTED` · `RETRIES_EXHAUSTED`)
+- 그 밖의 값: `EvaluationLease` · `QueueFailure`(`ARTICLE_REJECTED`)
 
 #### `domain/result`
 
@@ -1182,7 +1182,7 @@ sequenceDiagram
 
 ### 평가 대기와 평가 작업
 
-판단의 이유는 [ADR-0059](../adr/0059-evaluation-job-limits-concurrency-and-retries-with-db-leases-on-queue-rows.md) · [ADR-0060](../adr/0060-article-deletion-announced-by-removed-article-ids-and-followed-by-referencing-modules.md) · [ADR-0061](../adr/0061-worker-role-does-not-run-without-an-evaluator.md)에 있다.
+판단의 이유는 [ADR-0059](../adr/0059-evaluation-job-limits-concurrency-and-retries-with-db-leases-on-queue-rows.md) · [ADR-0254](../adr/0254-evaluation-queue-defers-transient-failures-without-an-attempt-limit-and-counts-retrying-rows-for-the-operator.md) · [ADR-0060](../adr/0060-article-deletion-announced-by-removed-article-ids-and-followed-by-referencing-modules.md) · [ADR-0061](../adr/0061-worker-role-does-not-run-without-an-evaluator.md)에 있다.
 
 - **tag-R18** — 평가 대기: 새 기사(`ArticleStored`)를 평가 대기에 넣는다. 기사마다 한 행이고 이미 있으면 그대로다 — 같은 이벤트를 다시 처리해도 결과가 같다. 평가 가능 시각은 넣은 시각 + 정착 시간 30분이다 — 같은 기사의 다른 피드 엔트리(섹션 · 카테고리)가 붙은 뒤에 평가한다. 이 모듈이 생기기 전에 저장된 기사는 대기 테이블을 만드는 마이그레이션이 한 번 넣고, 그 기사들은 바로 평가할 수 있다. 재평가(tag-R25)로 넣거나 되돌린 행의 평가 가능 시각은 그 시각이다 — 이미 엔트리가 붙은 기사라 정착 시간을 두지 않는다(정본 `EvaluationSchedule.eligibleAfterRequeue`). 활성 버전으로 평가에 성공하면 대기 행을 지운다 — 대기 행은 기사에 지금 활성 버전의 평가가 있게 된 트랜잭션에서만 지운다(지운 기사는 예외 — tag-R19 · R21)
 - **tag-R19** — 점유와 회차: 반복 작업(1분, 재시도 없음)의 회차는 실패로 남지 않았고 평가 가능 시각이 지났고 점유가 없거나 만료된(점유한 뒤 시계가 넘긴 시간을 뺀 경과가 임대 이상 — platform-R28) 대기 행을 평가 가능 시각 · 기사 ID 순으로 50건까지 잠가(다른 트랜잭션이 잡은 행은 건너뛴다) 점유(토큰 · 만료 = 지금 + 30분)를 쓰고 커밋한다. 반복 작업은 이전 실행이 대기 · 처리 중이면 그 회차를 건너뛴다. 재평가 행도 같은 순서다 — 활성화 시각에 넣은 재평가 행은 그 뒤에 들어온 새 기사(평가 가능 시각 = 넣은 시각 + 30분)보다 앞선다.
@@ -1192,8 +1192,8 @@ sequenceDiagram
   - 결과를 반영하는 트랜잭션(성공 · 일시 실패 · 기사 거부 · 그 버전의 평가가 이미 있어 지우기)은 먼저 `tag_sets` 표를 `SHARE` 로 잠그고 회차가 읽은 버전이 아직 활성인지 본다. 활성이 아니면 그 기사의 점유만 풀고(시도 수 · 평가 가능 시각은 그대로), 성공이면 그 기사 · 그 버전의 평가가 아직 없을 때 평가 · 태그 행을 저장한다 — 옛 버전의 평가도 유효하다. 그리고 남은 점유를 풀고 회차를 멈춘다 — 정보 로그 `활성 태그 체계가 바뀌어 회차를 멈췄다 — 기사 {ID}`. 다음 회차가 새 활성 버전으로 평가한다. 대기 행을 먼저 고치고 결과 행을 나중에 쓴다(tag-R21). 지운 기사를 대기에서 빼는 것은 버전과 무관해 확인하지 않는다
 - **tag-R20** — 결과 갈래와 재시도(갈래 분기는 `default` 가 없다):
   - 판정됐으면 저장한다(tag-R15). 결과가 질문 묶음과 맞는지는 `evaluation` 이 판정할 때 대조했다
-  - 일시 실패면 시도 수를 하나 늘린다. 다섯 번째면 실패(`RETRIES_EXHAUSTED`)로 남기고, 아니면 결과를 받은 시각 + min(1분 × 2^(시도 − 1), 1시간) 뒤로 미룬다 — 1 · 2 · 4 · 8분
-  - 기사 거부면 바로 실패(`ARTICLE_REJECTED`)로 남긴다. 실패로 남은 행은 회차가 다시 평가하지 않고, 마지막 실패 문구와 함께 남아 운영 API 가 센다. 체계를 활성으로 바꿀 때 재평가 기간 안의 실패 행은 대기로 되돌린다(tag-R25)
+  - 일시 실패면 시도 수를 하나 늘리고 결과를 받은 시각 + min(1분 × 2^(시도 − 1), 1시간) 뒤로 미룬다 — 1 · 2 · 4 · 8 · 16 · 32분, 그 뒤로는 1시간. 시도 수에는 상한이 없어 실패로 남기지 않는다 — 평가기가 일시 실패로만 답하는 장애가 길어도 기사는 대기에 남고, 장애가 풀리면 늦어도 1시간 안에 다시 평가한다. 그 기사 탓으로 거듭 실패하는 기사도 1시간에 한 번 묻는다 — 평가 가능 시각이 뒤로 가 다른 기사의 평가를 막지 않는다. 일시 실패는 로그를 남기지 않고, 운영 API 가 일시 실패를 겪은 대기를 센다
+  - 기사 거부면 바로 실패(`ARTICLE_REJECTED`)로 남긴다 — 실패로 남는 까닭은 이것 하나다. 실패로 남은 행은 회차가 다시 평가하지 않고, 마지막 실패 문구와 함께 남아 운영 API 가 센다. 체계를 활성으로 바꿀 때 재평가 기간 안의 실패 행은 대기로 되돌린다(tag-R25)
   - 평가기 사용 불가 · 태그 판정의 예외(결과가 질문 묶음과 어긋남 · 평가기의 예상 못한 예외 — [evaluation-R41](evaluation.md#태그-판정))면 그 기사부터 남은 점유를 풀고(시도 수 · 평가 가능 시각은 그대로) 회차를 멈춘다 — 기사를 잃지 않고 다음 회차가 다시 가져간다. 사용 불가는 경고, 예외는 오류 로그에 기사 ID 를 남긴다
   - 일정 값의 정본은 `EvaluationSchedule`, 점유 상한은 `PendingEvaluations.CLAIM_BATCH` 이고 모두 측정 전 목표다
   - 작업 역할은 평가기 없이 운영하지 않는다 — 그 기동 검사는 `evaluation` 이 한다([evaluation-R43](evaluation.md#태그-판정))
@@ -1234,7 +1234,7 @@ sequenceDiagram
   - `thresholds` — 원문의 태그 기준 · 저장 기준이 기준 버전의 지금 값과 크기가 다른 태그 종류
   - 목록은 태그 종류 순, 그 안에서 체계 순이다 — 추가 · 문구 변경은 새 버전의 순서, 삭제는 기준 버전의 순서. 순서만 바뀌어도 내용이 다르다 — 목록이 모두 빌 수 있다
 - **tag-R25** — 재평가: 활성화 요청이 재평가 기간을 정한다 — 0 ~ 30일(`TagSetAdministration.MAX_REEVALUATION_DAYS`), 기본 0.
-  - 대상은 `article` 이 활성화 시각 − 기간 × 24시간 이후(그 시각 포함)에 처음 본 기사다. 활성화 트랜잭션에서 재평가 대기에 넣는다 — 대기 행이 없으면 넣고, 실패로 남은 행(`ARTICLE_REJECTED` · `RETRIES_EXHAUSTED`)은 실패 · 시도 수 · 마지막 문구를 지우고 되돌린다. 평가 가능 시각은 활성화 시각이다(tag-R18). 대기 중 · 점유 중인 행은 그대로 두고, 회차가 새 활성 버전으로 평가한다(tag-R19)
+  - 대상은 `article` 이 활성화 시각 − 기간 × 24시간 이후(그 시각 포함)에 처음 본 기사다. 활성화 트랜잭션에서 재평가 대기에 넣는다 — 대기 행이 없으면 넣고, 실패로 남은 행(`ARTICLE_REJECTED`)은 실패 · 시도 수 · 마지막 문구를 지우고 되돌린다. 평가 가능 시각은 활성화 시각이다(tag-R18). 대기 중 · 점유 중인 행은 그대로 두고, 회차가 새 활성 버전으로 평가한다(tag-R19)
   - 기간이 0 이면 기사를 읽지도 넣지도 않는다. 기간 밖 기사는 이전 버전 결과를 유지한다
   - 요약문이 없는 기사도 대상이다 — 제목만으로 평가한다
   - **(미구현)** 보존 정책으로 요약문을 지운 기사는 뺀다([ADR-0029](../adr/0029-indefinite-summary-retention-with-optional-deletion.md)) — 요약문 자동 삭제를 만드는 작업이 지운 요약문을 구별해 뺀다
@@ -1323,7 +1323,7 @@ sequenceDiagram
 
 ## 6. 데이터
 
-컬럼 타입 · 인덱스 · 제약 문면의 정본은 `backend/src/main/resources/db/migration/V9__tag_sets.sql`(태그 체계 · 태그 기준 · 저장 기준)과 `V10__evaluation_queue_and_results.sql`(평가 대기 · 평가 · 태그), `V11__tag_key_lineage.sql`(태그 키 계보), `V12__article_evaluations_period_indexes.sql`(기간 집계의 인덱스), `V13__tag_backfills.sql`(빠진 태그 채움), `V26__article_tag_judgements.sql`(평가의 판정 원본 ID — 원본 응답 · 평가기 · 모델 버전 · 입력 토큰을 판정 원본으로 옮긴 마이그레이션)이다. 태그 종류 · 행위자 · 실패 까닭 · 계보 종류 값은 대문자 상수 이름(`TOPIC` · `REGION` · `FORMAT` · `SYSTEM` · `OPERATOR` · `ARTICLE_REJECTED` · `RETRIES_EXHAUSTED` · `RENAME` · `SPLIT` · `MERGE`)으로 저장한다.
+컬럼 타입 · 인덱스 · 제약 문면의 정본은 `backend/src/main/resources/db/migration/V9__tag_sets.sql`(태그 체계 · 태그 기준 · 저장 기준)과 `V10__evaluation_queue_and_results.sql`(평가 대기 · 평가 · 태그), `V11__tag_key_lineage.sql`(태그 키 계보), `V12__article_evaluations_period_indexes.sql`(기간 집계의 인덱스), `V13__tag_backfills.sql`(빠진 태그 채움), `V26__article_tag_judgements.sql`(평가의 판정 원본 ID — 원본 응답 · 평가기 · 모델 버전 · 입력 토큰을 판정 원본으로 옮긴 마이그레이션), `V67__evaluation_queue_transient_without_limit.sql`(시도 상한으로 실패로 남았던 행을 대기로 되돌리고 실패 까닭을 기사 거부 하나로 좁힌 마이그레이션 — tag-R20)이다. 태그 종류 · 행위자 · 실패 까닭 · 계보 종류 값은 대문자 상수 이름(`TOPIC` · `REGION` · `FORMAT` · `SYSTEM` · `OPERATOR` · `ARTICLE_REJECTED` · `RENAME` · `SPLIT` · `MERGE`)으로 저장한다.
 
 | 테이블 | 주요 컬럼 | 뜻 |
 |---|---|---|
@@ -1332,7 +1332,7 @@ sequenceDiagram
 | `importance_rubrics` | tag_set_id, level(1~5), description | 중요도 Score 기준. (tag_set_id, level) 고유 |
 | `tag_set_thresholds` | tag_set_id, tag_kind(`TOPIC`/`REGION`), tag_threshold, store_threshold | 버전 · 태그 종류마다 지금 태그 기준 · 저장 기준(tag-R10). 값은 0 ~ 1, 소수 셋째 자리 |
 | `tag_set_threshold_changes` | id, tag_set_id, tag_kind, previous_tag_threshold, previous_store_threshold, tag_threshold, store_threshold, actor(`SYSTEM`/`OPERATOR`), changed_at | 태그 기준 · 저장 기준의 이력 — 추가만 한다(tag-R13). 이전 값 둘은 함께 있거나 함께 없다(처음 값) |
-| `evaluation_queue` | article_id(기본 키), enqueued_at, eligible_at, attempts, lease_token, lease_expires_at, failure(`ARTICLE_REJECTED`/`RETRIES_EXHAUSTED`), last_error | 평가 대기 — 기사마다 한 행(tag-R18). 점유 둘은 함께 있거나 함께 없고, 실패로 남은 행은 점유가 없다(제약). 회차의 잠금은 `(eligible_at, article_id)` 부분 인덱스(실패 아닌 행)로 찾는다(tag-R19). 성공하면 지운다 |
+| `evaluation_queue` | article_id(기본 키), enqueued_at, eligible_at, attempts, lease_token, lease_expires_at, failure(`ARTICLE_REJECTED`), last_error | 평가 대기 — 기사마다 한 행(tag-R18). 점유 둘은 함께 있거나 함께 없고, 실패로 남은 행은 점유가 없다(제약). 회차의 잠금은 `(eligible_at, article_id)` 부분 인덱스(실패 아닌 행)로 찾는다(tag-R19). 성공하면 지운다 |
 | `article_evaluations` | id, article_id, tag_set_id, judgement_id(고유), format_key, format_probability, format_distribution(jsonb), importance, importance_distribution(jsonb), evaluated_at | 평가 — (article_id, tag_set_id) 고유(tag-R15). `tag_set_id` 는 같은 모듈의 `tag_sets` FK. `judgement_id` 는 `evaluation` 의 판정 원본(`article_tag_judgements`)을 가리키는 ID 이고 FK 가 없다 — 평가 하나에 판정 원본 하나. `format_key` · `format_probability` 는 대표 형식, `importance` 는 기대값(1 ~ 5, 확률 합이 0 이면 null). `low_confidence` · 미분류는 저장하지 않는다 — 조회 때 판정한다. 원본 응답 · 평가기 · 모델 버전 · 입력 토큰은 판정 원본에 있다. 갱신하지 않고 버전 단위로 지우지 않는다(tag-R30). 기간 집계는 `evaluated_at` 인덱스(주제별 보도량)와 `(tag_set_id, evaluated_at)` 인덱스(평가 현황)로 찾는다 |
 | `article_tags` | evaluation_id, article_id, tag_kind(`TOPIC`/`REGION`), tag_key, probability | 주제 · 지역 태그 — (evaluation_id, tag_kind, tag_key) 기본 키, `article_id` 인덱스. 평가 때 저장 기준 이상인 태그를 확률과 함께 저장하고, 빠진 태그 채움이 채울 저장 기준 이상인데 없는 행을 더한다(tag-R31). 붙었는지는 조회 때 태그 기준과 비교한다. 대분류는 저장하지 않고 조회 때 `parent_key` 로 펼친다 |
 | `tag_key_lineage` | tag_set_id, tag_kind(`TOPIC`/`REGION`/`FORMAT`), from_key, to_key, kind(`RENAME`/`SPLIT`/`MERGE`) | 태그 키 계보 — (tag_set_id, tag_kind, from_key, to_key) 기본 키. 이 버전에서 기준 버전(번호 − 1)의 이전 키가 어느 새 키로 이어지는지(tag-R22 · R23). 새 키는 같은 버전 · 같은 태그 종류의 태그 행이다(커밋 때 확인하는 FK). 이전 키는 기준 버전의 키라 FK 가 없다 — 활성화가 확인한다. 버전과 함께 한 번 쓰고 바꾸지 않는다. 사용자 선호와 주제별 시계열이 따라간다(tag-R26) |
@@ -1369,3 +1369,4 @@ sequenceDiagram
 | [0182](../adr/0182-startup-work-reading-the-active-tag-set-runs-in-a-lifecycle-phase-after-first-start-seeding-and-before-the-web-server.md) | 기동 때 활성 태그 체계를 읽는 작업은 웹 서버 앞의 기동 단계에서 첫 기동 적재 뒤에 돈다 |
 | [0219](../adr/0219-candidate-selection-hands-over-the-prompt-material-read-once-with-its-token-estimate.md) | 태그 이름만 필요한 쪽을 위해 버전의 키 · 이름 조회(`TagSetDirectory.names`)를 낸다 |
 | [0252](../adr/0252-the-stall-and-duration-of-work-in-progress-are-measured-as-elapsed-time-without-the-jumps-of-the-clock.md) | 진행 중 작업의 멈춤과 걸린 시간은 시계가 넘긴 시간을 뺀 경과로 잰다 |
+| [0254](../adr/0254-evaluation-queue-defers-transient-failures-without-an-attempt-limit-and-counts-retrying-rows-for-the-operator.md) | 평가 대기의 일시 실패는 시도 상한 없이 1시간까지 늘어나는 간격으로 미루고, 운영자 건수는 시도 소진 대신 일시 실패를 겪은 대기를 센다 |
