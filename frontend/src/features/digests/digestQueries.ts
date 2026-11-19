@@ -22,7 +22,7 @@ export type DigestRequestResult =
 export type DigestStatus = DigestAttempt["status"];
 export type DigestFailure = NonNullable<DigestAttempt["failure"]>;
 export type DigestFailureCause = NonNullable<DigestAttempt["cause"]>;
-export type SelectionReason = DigestCitation["reason"];
+export type SelectionReason = NonNullable<DigestSection["reason"]>;
 export type DigestDayState = DigestDates["dates"][number]["state"];
 
 /** 독자 화면의 다이제스트 조회 키의 접두 */

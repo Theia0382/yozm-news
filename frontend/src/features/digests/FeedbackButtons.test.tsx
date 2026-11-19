@@ -105,7 +105,7 @@ describe("nextFeedback", () => {
 });
 
 describe("다이제스트 화면의 좋아요 · 싫어요", () => {
-  it("주요 뉴스 · 추가 헤드라인의 인용 줄마다 버튼 묶음이 있고 개요에는 없다", async () => {
+  it("주요 뉴스 · 헤드라인 항목의 출처 줄마다 버튼 묶음이 있고 개요에는 없다", async () => {
     renderDay();
 
     for (const id of [1, 2, 3, 4]) {
@@ -212,12 +212,14 @@ describe("다이제스트 화면의 좋아요 · 싫어요", () => {
             kind: "TOP_STORY",
             title: "첫 주요 뉴스",
             body: "요약 하나",
+            reason: "SUBSCRIBED",
             citations: [citation(1), citation(2)],
           },
           {
             kind: "TOP_STORY",
             title: "둘째 주요 뉴스",
             body: "요약 둘",
+            reason: "SUBSCRIBED",
             citations: [citation(1)],
           },
         ],
@@ -332,6 +334,7 @@ describe("다이제스트 화면의 좋아요 · 싫어요", () => {
             kind: "TOP_STORY",
             title: "주요 뉴스 제목",
             body: "주요 뉴스 요약",
+            reason: "SUBSCRIBED",
             citations: [citation(2), citation(3)],
           },
         ],
@@ -464,6 +467,7 @@ describe("다이제스트 화면의 좋아요 · 싫어요", () => {
             kind: "TOP_STORY",
             title: "주요 뉴스 제목",
             body: "주요 뉴스 요약",
+            reason: "SUBSCRIBED",
             citations: [citation(1)],
           },
         ],
@@ -570,6 +574,7 @@ describe("다이제스트 화면의 좋아요 · 싫어요", () => {
             kind: "TOP_STORY",
             title: "주요 뉴스 제목",
             body: "주요 뉴스 요약",
+            reason: "SUBSCRIBED",
             citations: [citation(1), citation(3)],
           },
         ],

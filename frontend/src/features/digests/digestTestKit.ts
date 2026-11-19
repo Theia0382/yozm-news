@@ -32,8 +32,6 @@ export function citation(
       publishedAt: "2026-11-17T22:30:00Z",
       url: `https://news.example/${articleId}`,
     },
-    note: null,
-    reason: "SUBSCRIBED",
     ...overrides,
   };
 }
@@ -43,23 +41,22 @@ export const SECTIONS: DigestSection[] = [
     kind: "OVERVIEW",
     title: null,
     body: "오늘의 흐름 <b>굵게</b>",
+    reason: null,
     citations: [],
   },
   {
     kind: "TOP_STORY",
     title: "주요 뉴스 제목",
     body: "주요 뉴스 요약",
-    citations: [
-      citation(1),
-      citation(2, { reason: "MAJOR_STORYLINE" }),
-      citation(3, { reason: "INTEREST" }),
-    ],
+    reason: "MAJOR_STORYLINE",
+    citations: [citation(1), citation(2), citation(3)],
   },
   {
-    kind: "MORE_HEADLINES",
-    title: null,
-    body: null,
-    citations: [citation(4, { note: "한 줄 코멘트" })],
+    kind: "HEADLINE",
+    title: "헤드라인 제목",
+    body: "한 줄 코멘트",
+    reason: "INTEREST",
+    citations: [citation(4)],
   },
 ];
 

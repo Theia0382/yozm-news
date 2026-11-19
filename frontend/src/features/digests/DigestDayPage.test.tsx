@@ -7,6 +7,7 @@ import {
   citation,
   day,
   noFeedback,
+  SECTIONS,
   shown,
 } from "@/features/digests/digestTestKit";
 import { json, problem } from "@/test/fakeServer";
@@ -25,7 +26,7 @@ function renderDay(response: DigestDay | Response, date = "2026-11-18") {
 }
 
 describe("DigestDayPage", () => {
-  it("보이는 다이제스트의 요약 · 주요 뉴스 · 추가 헤드라인을 기사 정보와 함께 그린다", async () => {
+  it("보이는 다이제스트의 요약 · 주요 뉴스 · 헤드라인 항목을 출처 기사와 함께 그린다", async () => {
     renderDay(day());
 
     expect(
@@ -37,7 +38,7 @@ describe("DigestDayPage", () => {
     // 종합문은 글자로만 — HTML 로 해석하지 않는다
     expect(screen.getByText("오늘의 흐름 <b>굵게</b>")).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { level: 3, name: "주요 뉴스 제목" }),
+      screen.getByRole("heading", { level: 3, name: /주요 뉴스 제목/ }),
     ).toBeInTheDocument();
     expect(screen.getByText("주요 뉴스 요약")).toBeInTheDocument();
     const link = screen.getByRole("link", { name: "기사 1" });
@@ -46,7 +47,14 @@ describe("DigestDayPage", () => {
     expect(link.closest("li")).toHaveTextContent(
       "기사 1 · 한국일보 · 2026. 11. 18. 오전 7:30 GMT+9",
     );
+    // 주요 뉴스 항목의 출처 기사 셋이 한 목록이다
+    expect(link.closest("ul")?.querySelectorAll("li")).toHaveLength(3);
+    // 헤드라인 항목 — 제목 · 코멘트 · 출처 기사
+    expect(
+      screen.getByRole("heading", { level: 3, name: /헤드라인 제목/ }),
+    ).toBeInTheDocument();
     expect(screen.getByText("한 줄 코멘트")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "기사 4" })).toBeInTheDocument();
     expect(
       screen.getByText(
         "기간 2026. 11. 17. 오전 7:00 GMT+9 ~ 2026. 11. 18. 오전 7:00 GMT+9",
@@ -54,35 +62,76 @@ describe("DigestDayPage", () => {
     ).toBeInTheDocument();
   });
 
-  it("선정 이유는 구독 주제가 아닌 인용에만 표시하고 범례를 둔다", async () => {
-    renderDay(day());
+  it("선정 이유 배지는 항목에 하나이고 구독 주제가 아닌 항목에만 두며 범례를 둔다", async () => {
+    renderDay(
+      day({
+        shown: shown({
+          sections: [
+            ...SECTIONS,
+            {
+              kind: "HEADLINE",
+              title: "구독 헤드라인",
+              body: null,
+              reason: "SUBSCRIBED",
+              citations: [citation(5)],
+            },
+          ],
+        }),
+      }),
+    );
 
-    const subscribed = (
-      await screen.findByRole("link", { name: "기사 1" })
-    ).closest("li") as HTMLElement;
-    const big = screen.getByRole("link", { name: "기사 2" }).closest("li");
-    const interest = screen.getByRole("link", { name: "기사 3" }).closest("li");
+    const story = await screen.findByRole("heading", {
+      level: 3,
+      name: /주요 뉴스 제목/,
+    });
+    const headline = screen.getByRole("heading", {
+      level: 3,
+      name: /헤드라인 제목/,
+    });
+    const subscribed = screen.getByRole("heading", {
+      level: 3,
+      name: "구독 헤드라인",
+    });
+    expect(story).toHaveTextContent("큰 화제");
+    // 낭독되는 제목 이름은 제목과 배지 사이에 구분 글자가 있다
+    expect(
+      screen.getByRole("heading", {
+        level: 3,
+        name: /^주요 뉴스 제목\s*·\s*큰 화제$/,
+      }),
+    ).toBe(story);
+    expect(
+      screen.getByRole("heading", {
+        level: 3,
+        name: /^헤드라인 제목\s*·\s*관심 반영$/,
+      }),
+    ).toBe(headline);
+    expect(headline).toHaveTextContent("관심 반영");
     expect(within(subscribed).queryByText("구독 주제")).not.toBeInTheDocument();
-    expect(big).toHaveTextContent("큰 화제");
-    expect(interest).toHaveTextContent("관심 반영");
+    // 배지는 항목에만 — 출처 기사 줄에는 없다
+    expect(screen.getAllByText("큰 화제")).toHaveLength(1);
+    expect(
+      screen.getByRole("link", { name: "기사 2" }).closest("li"),
+    ).not.toHaveTextContent("큰 화제");
     // 관심 반영도 구독한 주제의 기사다(ADR-0216) — 범례가 구독 밖으로 읽히지 않게
     expect(
       screen.getByText(/‘관심 반영’은 구독한 주제 가운데/),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/표시가 없는 기사는 구독한 주제에서 왔습니다/),
+      screen.getByText(/표시가 없는 항목은 구독한 주제에서 왔습니다/),
     ).toBeInTheDocument();
   });
 
-  it("구독 주제 인용만 있으면 범례를 두지 않는다", async () => {
+  it("구독 주제 항목만 있으면 범례를 두지 않는다", async () => {
     renderDay(
       day({
         shown: shown({
           sections: [
             {
-              kind: "MORE_HEADLINES",
-              title: null,
+              kind: "HEADLINE",
+              title: "구독 헤드라인",
               body: null,
+              reason: "SUBSCRIBED",
               citations: [citation(1)],
             },
           ],
@@ -92,7 +141,7 @@ describe("DigestDayPage", () => {
 
     expect(await screen.findByRole("link", { name: "기사 1" })).toBeVisible();
     expect(
-      screen.queryByText(/표시가 없는 기사는 구독한 주제에서 왔습니다/),
+      screen.queryByText(/표시가 없는 항목은 구독한 주제에서 왔습니다/),
     ).not.toBeInTheDocument();
   });
 

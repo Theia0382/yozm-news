@@ -374,6 +374,13 @@ describe("InterestsPage", () => {
     expect(volume.getByRole("radio", { name: "보통" })).toBeChecked();
     expect(volume.getByRole("radio", { name: "짧게" })).not.toBeChecked();
     expect(volume.getByRole("radio", { name: "자세히" })).not.toBeChecked();
+    // 최대 후보 수 · 큰 화제는 사건 단위로 안내한다
+    expect(
+      volume.getByText(/후보는 다이제스트에 넣을 사건/),
+    ).toBeInTheDocument();
+    expect(
+      volume.getByText(/큰 화제 사건은 최대 후보 수의 절반을 넘지 않습니다/),
+    ).toBeInTheDocument();
   });
 
   it("요약 길이를 골라 분량과 함께 저장한다", async () => {

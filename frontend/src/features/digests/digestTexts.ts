@@ -30,7 +30,7 @@ export function digestDayTitle(date: string): string {
   return `${formatDate(date)} 다이제스트`;
 }
 
-/** 선정 이유의 화면 이름 — 구독 주제는 표시하지 않고 범례로 알린다(ADR-0241) */
+/** 항목의 선정 이유의 화면 이름 — 항목마다 하나, 구독 주제는 표시하지 않고 범례로 알린다 */
 export const selectionReasonLabels = {
   SUBSCRIBED: "구독 주제",
   INTEREST: "관심 반영",
@@ -39,7 +39,7 @@ export const selectionReasonLabels = {
 
 /** 선정 이유의 범례 */
 export const SELECTION_REASON_LEGEND =
-  "‘관심 반영’은 구독한 주제 가운데 좋아요 · 구독 변경으로 관심이 높아진 주제라서 앞 순위에 든 기사, ‘큰 화제’는 구독하지 않은 주제라도 이 기간에 크게 보도된 소식이라 들어온 기사입니다. 표시가 없는 기사는 구독한 주제에서 왔습니다.";
+  "‘관심 반영’은 구독한 주제 가운데 좋아요 · 구독 변경으로 관심이 높아진 주제라서 앞 순위에 든 소식이 있는 항목, ‘큰 화제’는 구독하지 않은 주제라도 이 기간에 크게 보도된 흐름의 항목입니다. 표시가 없는 항목은 구독한 주제에서 왔습니다.";
 
 /** 좋아요 버튼의 이름 */
 export const FEEDBACK_LIKE_LABEL = "좋아요";
@@ -109,7 +109,7 @@ export const FAILED_DAY_LINK = "그 날짜 다이제스트 보기";
 export const digestFailureTexts: Record<DigestFailure, string> = {
   UNREADABLE_OUTPUT:
     "모델의 답을 다이제스트 형식으로 읽지 못했습니다. 한 번 더 물었지만 마찬가지였습니다.",
-  NO_CITATION: "모델의 답에 후보 기사를 인용한 항목이 없었습니다.",
+  NO_CITATION: "모델의 답에서 다이제스트 항목이 하나도 남지 않았습니다.",
   KEY_MISSING: "쓸 모델의 공급자에 등록한 LLM 키가 없었습니다.",
   KEY_INVALID: "공급자가 등록한 LLM 키를 받아 주지 않았습니다.",
   PERMISSION_DENIED: "키에 이 모델을 쓸 권한이 없었습니다.",
