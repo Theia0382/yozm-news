@@ -150,7 +150,7 @@ function renderPage(handlers: Partial<Record<string, Handler>> = {}) {
   const server = fakeServer({
     [COVERAGE_PATH]: () => json(COVERAGE),
     [OVERVIEW_PATH]: () => json(OVERVIEW),
-    [QUEUE_PATH]: () => json({ waiting: 12, rejected: 3, exhausted: 4 }),
+    [QUEUE_PATH]: () => json({ waiting: 12, rejected: 3, retrying: 4 }),
     [TAG_SETS_PATH]: () => json(TAG_SETS),
     ...(handlers as Record<string, Handler>),
   });
@@ -370,8 +370,8 @@ describe("EvaluationPage", () => {
     const queue = await screen.findByRole("region", { name: "평가 대기" });
     await within(queue).findByText("12");
     expect(queue).toHaveTextContent("대기 중12");
+    expect(queue).toHaveTextContent("그중 일시 실패로 미룸4");
     expect(queue).toHaveTextContent("실패 — 기사 거부3");
-    expect(queue).toHaveTextContent("실패 — 재시도 소진4");
   });
 
   it("서버의 400 문구를 보이고, 상한을 넘거나 끝이 앞서면 보내기 전에 안내한다", async () => {

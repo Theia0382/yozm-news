@@ -42,4 +42,4 @@
 
 ## 후속 기록
 
-- 2026-11-19: 결정 "생성 때 검증 뒤 인용이 하나도 남지 않으면 그 다이제스트는 실패"의 인용 없음 — 출력은 항목을 가리키고 인용은 항목의 표본이라, 항목 대조 뒤 남는 항목이 없는 것이다([ADR-0256](0256-chosen-events-are-grouped-into-items-by-containment-tree-top-code-splits-top-stories-and-headlines-the-llm-writes-per-item-and-an-item-has-one-badge.md)), 지금 상태는 [digest Spec "인용 검증"](../specs/digest.md#인용-검증) digest-R6
+- 2026-11-19: 결정 "생성 때 검증 뒤 인용이 하나도 남지 않으면 그 다이제스트는 실패"의 인용 없음 — 출력은 항목을 가리키고 인용은 항목의 표본이라, 항목 대조 뒤 남는 항목이 없는 것이다([ADR-0262](0262-chosen-events-are-grouped-into-items-by-containment-tree-top-code-splits-top-stories-and-headlines-the-llm-writes-per-item-and-an-item-has-one-badge.md)), 지금 상태는 [digest Spec "인용 검증"](../specs/digest.md#인용-검증) digest-R6

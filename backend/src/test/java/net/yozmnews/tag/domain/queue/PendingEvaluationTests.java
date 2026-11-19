@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
-import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -12,7 +11,7 @@ import net.yozmnews.article.ArticleId;
 import org.junit.jupiter.api.Test;
 
 /**
- * 평가 대기의 일정과 전이 — 정착 시간 · 점유 · 일시 실패의 재시도 간격과 상한 · 기사 거부 · 점유 해제.
+ * 평가 대기의 일정과 전이 — 정착 시간 · 점유 · 상한 없는 일시 실패의 재시도 간격 · 기사 거부 · 점유 해제.
  * <p>
  * 지키는 규칙: tag-R18 · tag-R20
  */
@@ -38,7 +37,7 @@ class PendingEvaluationTests {
 	}
 
 	@Test
-	void transientFailuresBackOffOneTwoFourEightMinutesAndTheFifthFails() {
+	void transientFailuresBackOffOneTwoFourEightMinutesAndNeverFail() {
 		PendingEvaluation row = waiting(0);
 
 		PendingEvaluation first = row.claim(TOKEN, T).afterTransient("시간 초과", T);
@@ -46,6 +45,7 @@ class PendingEvaluationTests {
 		PendingEvaluation third = second.claim(TOKEN, T).afterTransient("시간 초과", T);
 		PendingEvaluation fourth = third.claim(TOKEN, T).afterTransient("시간 초과", T);
 		PendingEvaluation fifth = fourth.claim(TOKEN, T).afterTransient("서버 오류", T);
+		PendingEvaluation hundredth = waiting(99).claim(TOKEN, T).afterTransient("요청 제한", T);
 
 		assertThat(first).isEqualTo(new PendingEvaluation(ARTICLE, Instant.parse("2026-11-02T00:01:00Z"), 1, null, null,
 				"시간 초과"));
@@ -53,17 +53,10 @@ class PendingEvaluationTests {
 		assertThat(third.eligibleAt()).isEqualTo(Instant.parse("2026-11-02T00:04:00Z"));
 		assertThat(fourth).isEqualTo(new PendingEvaluation(ARTICLE, Instant.parse("2026-11-02T00:08:00Z"), 4, null,
 				null, "시간 초과"));
-		assertThat(fifth).isEqualTo(new PendingEvaluation(ARTICLE, Instant.parse("2026-11-02T00:08:00Z"), 5, null,
-				QueueFailure.RETRIES_EXHAUSTED, "서버 오류"));
-	}
-
-	@Test
-	void theRetryDelayStopsAtOneHourWithoutOverflowing() {
-		assertThat(EvaluationSchedule.retryDelay(6)).isEqualTo(Duration.ofMinutes(32));
-		assertThat(EvaluationSchedule.retryDelay(7)).isEqualTo(Duration.ofHours(1));
-		assertThat(EvaluationSchedule.retryDelay(8)).isEqualTo(Duration.ofHours(1));
-		assertThat(EvaluationSchedule.retryDelay(Integer.MAX_VALUE)).isEqualTo(Duration.ofHours(1));
-		assertThatIllegalArgumentException().isThrownBy(() -> EvaluationSchedule.retryDelay(0));
+		assertThat(fifth).isEqualTo(new PendingEvaluation(ARTICLE, Instant.parse("2026-11-02T00:16:00Z"), 5, null,
+				null, "서버 오류"));
+		assertThat(hundredth).isEqualTo(new PendingEvaluation(ARTICLE, Instant.parse("2026-11-02T01:00:00Z"), 100, null,
+				null, "요청 제한"));
 	}
 
 	@Test
@@ -83,11 +76,12 @@ class PendingEvaluationTests {
 
 	@Test
 	void aFailedRowCannotBeClaimedOrLeased() {
-		PendingEvaluation failed = new PendingEvaluation(ARTICLE, T, 5, null, QueueFailure.RETRIES_EXHAUSTED, "x");
+		PendingEvaluation failed = new PendingEvaluation(ARTICLE, T, 0, null, QueueFailure.ARTICLE_REJECTED, "x");
 
 		assertThatIllegalStateException().isThrownBy(() -> failed.claim(TOKEN, T));
-		assertThatIllegalArgumentException().isThrownBy(() -> new PendingEvaluation(ARTICLE, T, 5,
-				new EvaluationLease(TOKEN, T), QueueFailure.RETRIES_EXHAUSTED, "x"));
+		assertThatIllegalStateException().isThrownBy(() -> failed.afterTransient("x", T));
+		assertThatIllegalArgumentException().isThrownBy(() -> new PendingEvaluation(ARTICLE, T, 0,
+				new EvaluationLease(TOKEN, T), QueueFailure.ARTICLE_REJECTED, "x"));
 	}
 
 	private static PendingEvaluation waiting(int attempts) {

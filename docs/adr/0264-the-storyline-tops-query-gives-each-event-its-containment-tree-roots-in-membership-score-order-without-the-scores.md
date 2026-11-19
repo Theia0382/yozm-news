@@ -1,13 +1,13 @@
-# ADR-0258: 스토리라인 꼭대기 조회는 사건마다 포함 나무 뿌리를 소속 점수 순으로 내고 점수는 싣지 않는다
+# ADR-0264: 스토리라인 꼭대기 조회는 사건마다 포함 나무 뿌리를 소속 점수 순으로 내고 점수는 싣지 않는다
 
 - 상태: 승인
 - 날짜: 2026-11-19
 - 근거: [이슈 #225](https://github.com/Theia0382/yozm-news/issues/225) — 항목 묶기의 꼭대기 조회를 `storyline` 의 공개 조회로 두는 것은 수용 기준이고, 여러 나무에 걸친 사건의 셋째 열쇠(소속 점수)를 꼭대기의 순서로만 내는 쪽을 리드가 골랐다. 구현 커밋 `7f401c6`
-- 관련: [ADR-0131](0131-storyline-relations-are-explicit-links-with-containment-as-a-single-parent-tree-gathered-at-query-time.md)(보충 — 상위 하나인 포함 나무의 뿌리를 사건마다 공개 조회로 낸다), [ADR-0235](0235-the-big-list-has-one-row-per-containment-tree-carrying-the-big-storylines-under-it.md)(큰 판정 목록은 포함 나무마다 한 행), [ADR-0256](0256-chosen-events-are-grouped-into-items-by-containment-tree-top-code-splits-top-stories-and-headlines-the-llm-writes-per-item-and-an-item-has-one-badge.md)(항목 묶기)
+- 관련: [ADR-0131](0131-storyline-relations-are-explicit-links-with-containment-as-a-single-parent-tree-gathered-at-query-time.md)(보충 — 상위 하나인 포함 나무의 뿌리를 사건마다 공개 조회로 낸다), [ADR-0235](0235-the-big-list-has-one-row-per-containment-tree-carrying-the-big-storylines-under-it.md)(큰 판정 목록은 포함 나무마다 한 행), [ADR-0262](0262-chosen-events-are-grouped-into-items-by-containment-tree-top-code-splits-top-stories-and-headlines-the-llm-writes-per-item-and-an-item-has-one-badge.md)(항목 묶기)
 
 ## 맥락
 
-- 다이제스트는 고른 사건을 포함 나무의 꼭대기로 묶고, 사건이 나무 여럿에 걸치면 마지막 열쇠로 소속 점수를 쓴다([ADR-0256](0256-chosen-events-are-grouped-into-items-by-containment-tree-top-code-splits-top-stories-and-headlines-the-llm-writes-per-item-and-an-item-has-one-badge.md)).
+- 다이제스트는 고른 사건을 포함 나무의 꼭대기로 묶고, 사건이 나무 여럿에 걸치면 마지막 열쇠로 소속 점수를 쓴다([ADR-0262](0262-chosen-events-are-grouped-into-items-by-containment-tree-top-code-splits-top-stories-and-headlines-the-llm-writes-per-item-and-an-item-has-one-badge.md)).
 - 사건의 스토리라인 조회(`storylinesOf`)는 사건 하나씩 직접 든 스토리라인과 그 상위 전부를 낸다. 소속 점수는 판정 근거라 사용자 쪽 공개 조회에 싣지 않고 운영자 조회만 낸다. 합치기로 옮긴 소속은 점수가 없다.
 - 포함의 상위는 하나라 스토리라인마다 뿌리가 하나다. 큰 판정 목록의 행 머리도 그 나무의 뿌리다 — 하위가 크면 상위도 크다.
 

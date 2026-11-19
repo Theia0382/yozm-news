@@ -27,6 +27,7 @@ import java.util.Map;
 import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import net.yozmnews.evaluation.AskedTag;
+import net.yozmnews.evaluation.EvaluatorTiming;
 import net.yozmnews.evaluation.FormatChoice;
 import net.yozmnews.evaluation.FormatOption;
 import net.yozmnews.evaluation.ImportanceLevel;
@@ -362,7 +363,7 @@ class JevArticleEvaluatorTests {
 		try (ServerSocket socket = new ServerSocket(0)) {
 			closedPort = socket.getLocalPort();
 		}
-		assertThat(evaluator(URI.create("http://127.0.0.1:" + closedPort), JevArticleEvaluator.RESPONSE_DEADLINE)
+		assertThat(evaluator(URI.create("http://127.0.0.1:" + closedPort), EvaluatorTiming.REQUEST_DEADLINE)
 			.judgeMembership(MEMBERSHIP))
 			.isEqualTo(new EvaluationFailure(TRANSIENT, "Jev 와 주고받지 못했다 — ConnectException"));
 	}
@@ -412,7 +413,7 @@ class JevArticleEvaluatorTests {
 	}
 
 	private JevArticleEvaluator evaluator() {
-		return evaluator(JevArticleEvaluator.RESPONSE_DEADLINE);
+		return evaluator(EvaluatorTiming.REQUEST_DEADLINE);
 	}
 
 	private JevArticleEvaluator evaluator(Duration deadline) {

@@ -37,4 +37,4 @@
 ## 후속 기록
 
 - 2026-11-17: 결과 "그 상한을 한도보다 크게 하거나 사용자 설정으로 열면 한도를 다시 본다" — 최대 후보 수를 사용자 설정(직접 입력 상한 150)으로 열었고 한도(300 / 10분)의 창 하나에 든다([ADR-0209](0209-maximum-candidates-and-big-slots-are-user-settings-and-the-big-slot-takes-at-most-half.md)), 지금 상태는 [user Spec "요청 방어"](../specs/user.md#요청-방어)(user-R38) · [user Spec "관심 설정"](../specs/user.md#관심-설정)(user-R56)
-- 2026-11-19: 결과 "다이제스트 하나가 인용하는 서로 다른 기사는 그 다이제스트의 후보 수를 넘지 않는다" — 후보가 사건이고 인용은 사건마다 표본(상한 5)이라 서로 다른 인용 기사는 많아야 750 이고, 한도를 750 / 10분으로 두었다([ADR-0257](0257-articles-sent-per-event-are-sampled-up-to-a-cap-with-a-fixed-seed-from-those-in-the-period-and-the-sample-is-the-citations-and-sources.md)), 지금 상태는 [user Spec "요청 방어"](../specs/user.md#요청-방어) user-R38
+- 2026-11-19: 결과 "다이제스트 하나가 인용하는 서로 다른 기사는 그 다이제스트의 후보 수를 넘지 않는다" — 후보가 사건이고 인용은 사건마다 표본(상한 5)이라 서로 다른 인용 기사는 많아야 750 이고, 한도를 750 / 10분으로 두었다([ADR-0263](0263-articles-sent-per-event-are-sampled-up-to-a-cap-with-a-fixed-seed-from-those-in-the-period-and-the-sample-is-the-citations-and-sources.md)), 지금 상태는 [user Spec "요청 방어"](../specs/user.md#요청-방어) user-R38

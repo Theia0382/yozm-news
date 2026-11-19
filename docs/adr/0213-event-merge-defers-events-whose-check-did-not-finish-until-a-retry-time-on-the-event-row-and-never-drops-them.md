@@ -46,3 +46,7 @@
 | 병합 대기 테이블을 두어 시도 수 · 판정 가능 시각을 갖게 한다 | 사건을 바꾸는 모든 쓰기에 넣기를 더해야 한다([ADR-0084](0084-event-merge-applies-assignment-scoring-between-events-and-keeps-merged-rows-pointing-to-survivors.md)의 기각 이유 그대로). 회차가 겹치지 않아 점유도 필요 없다 |
 | 사건이 바뀔 때마다 미룸을 지운다 | 기사가 계속 붙는 사건이 회차마다 미루지 않은 사건으로 돌아온다 — 그런 사건이 회차 크기 이상이면 같은 막힘이 다시 생긴다 |
 | 미룬 사건과 미루지 않은 사건을 가리지 않고 사건 ID 순으로 읽는다 | 같은 때 미룬 사건들이 다시 볼 시각에 한꺼번에 돌아와 앞자리를 다시 차지한다 |
+
+## 후속 기록
+
+- 2026-11-19: 결정 절의 "배정 대기의 재시도 식" — 정본은 `evaluation` 의 `EvaluatorTiming.retryDelay` 다([ADR-0259](0259-evaluator-timing-is-owned-by-one-evaluation-type-and-judging-queues-derive-their-leases-from-the-longest-judgement.md) · [event Spec §5](../specs/event.md#사건-정리) event-R13)

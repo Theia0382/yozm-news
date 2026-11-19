@@ -1,6 +1,6 @@
 # ADR-0220: 큰 슬롯 후보는 큰 판정 행마다 묶어 프롬프트에 보이고, 다이제스트 LLM 은 묶음을 새로 만들거나 잇지 않는다
 
-- 상태: 대체됨([ADR-0256](0256-chosen-events-are-grouped-into-items-by-containment-tree-top-code-splits-top-stories-and-headlines-the-llm-writes-per-item-and-an-item-has-one-badge.md))
+- 상태: 대체됨([ADR-0262](0262-chosen-events-are-grouped-into-items-by-containment-tree-top-code-splits-top-stories-and-headlines-the-llm-writes-per-item-and-an-item-has-one-badge.md))
 - 날짜: 2026-11-18
 - 근거: [이슈 #177](https://github.com/Theia0382/yozm-news/issues/177) — 수용 기준의 결정 "스토리라인 정보를 프롬프트에 넣을지 · 어떻게 넣을지". 구현 커밋 `c3d15ed`(선별의 행 위치 · 묶음 · 묶음 몫) · `011bcbe`(묶음 줄 · 지시)
 - 관련: [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)(보충 — 결과의 "다이제스트가 스토리라인을 어떻게 쓰는지는 다이제스트를 설계할 때 정한다"), [ADR-0210](0210-candidate-selection-cuts-to-the-input-token-budget-with-one-estimate-the-prompt-follows.md)(부분 대체 — 결정의 예산 산식에 묶음 몫이 더해짐), [ADR-0208](0208-the-big-slot-takes-the-representatives-of-the-heaviest-events-of-each-big-storyline-row.md)(관련 — 큰 슬롯은 행마다 사건의 대표 기사)

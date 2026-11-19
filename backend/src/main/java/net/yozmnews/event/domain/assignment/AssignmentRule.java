@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+import net.yozmnews.evaluation.MembershipQuery;
 import net.yozmnews.event.AssignmentCriteria;
 import net.yozmnews.event.DecidedBy;
 
@@ -21,7 +22,7 @@ import net.yozmnews.event.DecidedBy;
  */
 public final class AssignmentRule {
 
-	/** 한 번에 묻는 후보 수의 상한 — 사건 소속 판정의 후보 상한(10) 이하 */
+	/** 한 번에 묻는 후보 수의 상한 — 사건 소속 판정의 후보 상한({@link MembershipQuery#MAX_CANDIDATES}) 이하 */
 	public static final int MAX_ASKED = 5;
 
 	private static final Comparator<StoredCandidate> BY_SCORE = Comparator

@@ -327,8 +327,9 @@ class EvaluationFlowTests {
 		assertThat(queueRows()).isZero();
 	}
 
+	/** 한 기사만 거듭 일시 실패해도 그 기사를 미룰 뿐 실패로 남기지 않고, 같은 회차의 다른 기사와 그 뒤에 들어온 기사는 평가한다 */
 	@Test
-	void transientFailuresRetryUntilTheLimitWhileOthersInTheRoundAreEvaluated() {
+	void transientFailuresDeferTheArticleWithoutFailingItWhileOthersAreEvaluated() {
 		long transientArticle = enqueued("지연");
 		long rejected = enqueued("거부");
 		long ordinary = enqueued("경제 지표 발표");
@@ -348,8 +349,50 @@ class EvaluationFlowTests {
 			round(failing).run();
 		}
 
-		assertThat(failure(transientArticle)).isEqualTo("RETRIES_EXHAUSTED");
-		assertThat(this.administration.queueCounts()).isEqualTo(new EvaluationQueueCounts(0, 1, 1));
+		// 다섯 번째 일시 실패도 실패로 남기지 않고 16분 뒤로 미룬다
+		assertThat(waitingWithoutLease(transientArticle)).isTrue();
+		assertThat(attemptsAndEligible(transientArticle)).isEqualTo(Map.of("attempts", 5, "eligible",
+				Instant.parse("2026-11-02T01:01:00Z")));
+		assertThat(this.administration.queueCounts()).isEqualTo(new EvaluationQueueCounts(1, 1, 1));
+
+		// 미룬 동안 들어온 기사는 그 기사를 기다리지 않고 평가한다
+		long later = article("날씨 맑음", 1, 11);
+		this.queue.enqueue(new ArticleId(later), Instant.parse("2026-11-02T00:20:00Z"));
+		this.now.set(Instant.parse("2026-11-02T00:50:00Z"));
+		round(failing).run();
+
+		assertThat(evaluatedArticles()).containsExactly(ordinary, later);
+		assertThat(failing.calls()).filteredOn(call -> call.query().articleId().value() == transientArticle).hasSize(5);
+	}
+
+	/**
+	 * 평가기가 세 시간 동안 일시 실패로만 답해도 대기의 기사는 실패로 남지 않고, 장애가 풀린 뒤 운영자의 체계 변경 없이 평가된다. 장애 동안 회차는
+	 * 1분마다 돌고, 평가할 수 있게 된 기사를 모두 묻는다 — 시도는 0 · 1 · 3 · 7 · 15 · 31 · 63 · 123분에 여덟 번이고, 간격은 1시간에서 멈춘다.
+	 */
+	@Test
+	void aLongRunOfTransientFailuresLeavesTheArticlesWaitingUntilTheEvaluatorRecovers() {
+		long first = enqueued("지연");
+		long second = enqueued("경제 지표 발표");
+		ScriptedTagging outage = scripted().judging(query -> failed(EvaluatorFailureKind.TRANSIENT));
+
+		for (int minute = 0; minute <= 180; minute++) {
+			this.now.set(DUE.plus(Duration.ofMinutes(minute)));
+			round(outage).run();
+		}
+
+		Instant retry = DUE.plus(Duration.ofMinutes(183));
+		for (long article : List.of(first, second)) {
+			assertThat(waitingWithoutLease(article)).isTrue();
+			assertThat(attemptsAndEligible(article)).isEqualTo(Map.of("attempts", 8, "eligible", retry));
+		}
+		assertThat(outage.calls()).hasSize(16);
+		assertThat(this.administration.queueCounts()).isEqualTo(new EvaluationQueueCounts(2, 0, 2));
+
+		this.now.set(retry);
+		round(scripted()).run();
+
+		assertThat(evaluatedArticles()).containsExactly(first, second);
+		assertThat(queueRows()).isZero();
 	}
 
 	@Test

@@ -10,7 +10,7 @@
 - **수집 현황** — 피드마다 수집 상태와 엔트리 지표, 소스마다 그 합
 - **이벤트 발행** — 남겨진 이벤트 발행의 목록 · 다시 처리 · 폐기
 - **태그 체계** — 버전 목록 · 버전 원문 조회, 운영자 원문의 확인 · 활성화(재평가 기간 포함)
-- **평가 현황** — 기간을 골라 주제별 보도량, 버전 하나의 평가 품질 지표, 지금의 평가 대기 · 실패 건수
+- **평가 현황** — 기간을 골라 주제별 보도량, 버전 하나의 평가 품질 지표, 지금의 평가 대기 · 일시 실패를 겪은 대기 · 실패 건수
 - **평가 검수** — 버전 · 기간의 평가 목록(태그 · 주제 판정 거르기)과 표본, 평가 하나의 상세. 기사 정보(제목 · 출처 · 섹션 · 카테고리 · 요약문 · 원문 링크)를 맞붙인다
 - **태그 기준 · 저장 기준** — 지금 값 · 어긋난 상태 · 이력, 바꾸기 전 미리보기, 변경
 - **빠진 태그 채움** — 채울 기간(일)의 확인 · 요청, 채움 목록과 진행 · 결과
@@ -76,7 +76,7 @@ HTTP 엔드포인트 — 모두 운영자 경로다(`ADMIN` 계정 세션 또는
 | `POST /api/admin/tag-sets` | 운영자 원문(본문 `text`)으로 새 버전을 만들어 활성으로 바꾼다. 본문 `recentDays` 는 재평가 기간(없으면 0 — 재평가하지 않는다) |
 | `GET /api/admin/topic-coverage` | 주제별 보도량 — 질의 `from` · `to`(시작일 · 종료일, `yyyy-MM-dd`, 끝 포함) · `zone`(날짜를 해석할 시간대) · 선택 `topic`(되풀이 — 없으면 모든 주제). 활성 버전 ID 와 날짜 범위의 상한(`maxDays`)을 함께 낸다([tag-R28](tag.md#평가-현황--주제별-보도량) · R30) |
 | `GET /api/admin/evaluation-overview` | 평가 현황 — 질의 `version`(태그 체계 버전 ID) · `from` · `to` · `zone`([tag-R29](tag.md#평가-현황--주제별-보도량)) |
-| `GET /api/admin/evaluation-queue` | 지금의 평가 대기 · 실패 건수 — 기간과 무관하다 |
+| `GET /api/admin/evaluation-queue` | 지금의 평가 대기 · 그 가운데 일시 실패를 겪은 대기 · 실패 건수(`waiting` · `retrying` · `rejected`) — 기간과 무관하다 |
 | `GET /api/admin/evaluations` | 평가 목록 — 질의 `version` · `from` · `to` · `zone`, 선택 `tagKind` · `tag`(함께) · `topicStatus` · 커서 `afterEvaluatedAt` · `afterId`(함께) · `limit`(기본 20). 행마다 판정과 기사의 제목 · 출처([tag-R33](tag.md#평가-검수--기준-미리보기)) |
 | `GET /api/admin/evaluations/{id}` | 평가 하나의 상세와 기사의 제목 · 요약문 · 정규 URL · 엔트리별 출처 이름 · 섹션 · RSS 카테고리 |
 | `GET /api/admin/evaluation-samples` | 표본 — 질의 `version` · `from` · `to` · `zone` · `seed` · `size`(기본 `EvaluationReview.DEFAULT_SAMPLE_SIZE`). 행 모양은 목록과 같다([tag-R34](tag.md#평가-검수--기준-미리보기)) |

@@ -124,10 +124,10 @@ function QueueSection({
         <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
           <dt>대기 중</dt>
           <dd className="tabular-nums">{queue.data.waiting}</dd>
+          <dt>그중 일시 실패로 미룸</dt>
+          <dd className="tabular-nums">{queue.data.retrying}</dd>
           <dt>실패 — 기사 거부</dt>
           <dd className="tabular-nums">{queue.data.rejected}</dd>
-          <dt>실패 — 재시도 소진</dt>
-          <dd className="tabular-nums">{queue.data.exhausted}</dd>
         </dl>
       )}
       <p className="text-muted-foreground">기간과 무관한 지금 값이다.</p>

@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.UUID;
 
 import net.yozmnews.tag.domain.queue.EvaluationQueueRepository;
+import net.yozmnews.tag.domain.queue.EvaluationSchedule;
 import net.yozmnews.tag.domain.queue.PendingEvaluation;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -17,9 +18,6 @@ import org.springframework.transaction.support.TransactionTemplate;
  */
 @Service
 class PendingEvaluations {
-
-	/** 한 회차에 점유하는 최대 기사 수 — 측정 전 목표다 */
-	static final int CLAIM_BATCH = 50;
 
 	private final EvaluationQueueRepository queue;
 
@@ -38,7 +36,7 @@ class PendingEvaluations {
 	List<PendingEvaluation> claimDue(Instant now, Instant expiredBy) {
 		return this.transaction.execute(status -> {
 			List<PendingEvaluation> claimed = new ArrayList<>();
-			for (PendingEvaluation due : this.queue.lockDue(now, expiredBy, CLAIM_BATCH)) {
+			for (PendingEvaluation due : this.queue.lockDue(now, expiredBy, EvaluationSchedule.BATCH_SIZE)) {
 				PendingEvaluation lease = due.claim(UUID.randomUUID(), now);
 				this.queue.saveLocked(lease);
 				claimed.add(lease);

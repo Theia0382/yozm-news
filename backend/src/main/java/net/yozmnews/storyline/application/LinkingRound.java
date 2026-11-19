@@ -8,6 +8,7 @@ import java.util.Objects;
 import java.util.OptionalInt;
 import java.util.UUID;
 
+import net.yozmnews.evaluation.EvaluatorTiming;
 import net.yozmnews.evaluation.FlowCandidate;
 import net.yozmnews.evaluation.FlowMembership;
 import net.yozmnews.evaluation.FlowMembershipJudgement;
@@ -29,10 +30,10 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 지금 기준을 기준 이력에 등록하고, 대기를 순서 키 순으로 점유해 커밋한 뒤 사건마다 판정을 시도한다. 시도는 한 트랜잭션에서
  * {@link StorylineLinker#link} 를 부르고, 마쳤으면 점유 토큰과 다시 알림 수가 그대로일 때만 대기 행을 지운다 — 달라졌으면 점유만 푼다.
  * 물을 것이 있으면 트랜잭션 밖에서 {@link FlowMembership} 에 묻고 짧은 트랜잭션에서 답을 기록한 뒤 다시 시도한다 — 사건 하나에
- * {@link LinkingSchedule#MAX_ATTEMPTS_PER_CLAIM} 번까지, 남으면 점유를 풀어 다음 회차가 잇는다. 평가기 일시 실패면 실패를 세고 판정 가능
- * 시각을 미룬다. 평가기를 쓸 수 없으면 이 사건부터 남은 점유를 풀고 회차를 멈춘다. 판정이 예상 못한 예외를 내면 그 트랜잭션은 롤백되고,
- * 새 트랜잭션에서 실패 수를 올리고 다음 사건으로 넘어간다. 실패 수가 상한이면 대기에서 뺀다. 판정의 예외를 밖으로 던지지 않는다. 트랜잭션 ·
- * 역할 애너테이션이 없다(두 역할 공통).
+ * {@link LinkingSchedule#MAX_ATTEMPTS_PER_CLAIM} 번까지, 남으면 점유를 풀어 다음 회차가 잇는다. 평가기 일시 실패면 일시 실패를 세고 판정
+ * 가능 시각을 미룬다 — 대기에서 빼지 않는다. 평가기를 쓸 수 없으면 이 사건부터 남은 점유를 풀고 회차를 멈춘다. 판정이 예상 못한 예외를 내면
+ * 그 트랜잭션은 롤백되고, 새 트랜잭션에서 실패 수를 올리고 다음 사건으로 넘어간다. 실패 수가 상한이면 대기에서 뺀다. 판정의 예외를 밖으로
+ * 던지지 않는다. 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통).
  */
 @Service
 public class LinkingRound {
@@ -171,20 +172,17 @@ public class LinkingRound {
 		};
 	}
 
-	/** 평가기 일시 실패 — 실패 수를 올리고 판정 가능 시각을 미룬다. 상한이면 대기에서 뺀다(storyline-R4) */
+	/**
+	 * 평가기 일시 실패 — 일시 실패 수를 올리고 점유를 풀고 판정 가능 시각을 지금 + {@link EvaluatorTiming#retryDelay} 로 미룬다. 일시 실패
+	 * 수에 상한이 없어 대기에서 빼지 않고, 실패 수(예상 못한 예외)는 올리지 않는다(storyline-R4)
+	 */
 	private void defer(long eventId, UUID token) {
 		this.transaction.executeWithoutResult(status -> {
-			OptionalInt failures = this.queue.recordFailureIfLeased(eventId, token);
-			if (failures.isEmpty()) {
-				return;
+			OptionalInt transientFailures = this.queue.recordTransientFailureIfLeased(eventId, token);
+			if (transientFailures.isPresent()) {
+				this.queue.defer(eventId,
+						this.clock.instant().plus(EvaluatorTiming.retryDelay(transientFailures.getAsInt())));
 			}
-			int count = failures.getAsInt();
-			if (LinkingSchedule.failuresExhausted(count)) {
-				this.queue.delete(eventId);
-				logger.error("스토리라인 잇기 판정이 거듭 실패해 대기에서 뺐다 — 사건 {}, 실패 {}회", eventId, count);
-				return;
-			}
-			this.queue.defer(eventId, LinkingSchedule.retryAt(count, this.clock.instant()));
 		});
 	}
 

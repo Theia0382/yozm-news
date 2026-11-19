@@ -56,4 +56,4 @@
 
 - 2026-11-14: 결정 "상위와 하위를 가리지 않고 낸다" — 큰 판정의 식이 정해진 뒤에도 그대로다([ADR-0147](0147-storyline-big-judgement-compares-importance-weighted-coverage-per-source-and-day-with-one-criterion-at-query-time.md)), 지금 상태는 [storyline Spec "큰 판정"](../specs/storyline.md#큰-판정)
 - 2026-11-18: 결과 "그런 상위를 여는 방법은 정하지 않았다" — 나란한 흐름은 관계 판정의 답으로도 두지 않기로 하고 미결 사항으로 남겼다([ADR-0234](0234-fragments-of-one-matter-are-recognised-by-the-relation-judgement-and-merged-above-a-merge-probability-without-a-way-back.md) · [미결 사항](../open-questions.md) 37)
-- 2026-11-19: 결정 "포함은 나무다"의 뿌리 — 사건마다 그 사건이 걸친 포함 나무의 꼭대기를 공개 조회로 낸다([ADR-0258](0258-the-storyline-tops-query-gives-each-event-its-containment-tree-roots-in-membership-score-order-without-the-scores.md)), 지금 상태는 [storyline Spec "공개 조회"](../specs/storyline.md#공개-조회) storyline-R37
+- 2026-11-19: 결정 "포함은 나무다"의 뿌리 — 사건마다 그 사건이 걸친 포함 나무의 꼭대기를 공개 조회로 낸다([ADR-0264](0264-the-storyline-tops-query-gives-each-event-its-containment-tree-roots-in-membership-score-order-without-the-scores.md)), 지금 상태는 [storyline Spec "공개 조회"](../specs/storyline.md#공개-조회) storyline-R37

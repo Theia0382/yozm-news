@@ -19,8 +19,8 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 섹션을 항목 단위로 바꾸는 마이그레이션(V67) — 실제 PostgreSQL 의 별도 스키마에 V66 까지만 올려 기사 단위의 옛 섹션 · 인용 · 후보 행을 넣고,
- * V67 까지 올린 뒤 그 행이 모두 지워지고 다이제스트 행은 남는지, 섹션 종류 검사가 새 값만 받는지, 섹션 사건 행이 섹션을 따라 지워지는지 본다. 앱이
+ * 섹션을 항목 단위로 바꾸는 마이그레이션(V70) — 실제 PostgreSQL 의 별도 스키마에 V69 까지만 올려 기사 단위의 옛 섹션 · 인용 · 후보 행을 넣고,
+ * V70 까지 올린 뒤 그 행이 모두 지워지고 다이제스트 행은 남는지, 섹션 종류 검사가 새 값만 받는지, 섹션 사건 행이 섹션을 따라 지워지는지 본다. 앱이
  * 쓰는 스키마와 섞이지 않게 스키마를 따로 두고 시험 뒤 지운다.
  */
 @JdbcTest
@@ -44,7 +44,7 @@ class DigestSectionsByItemMigrationTests {
 
 	@Test
 	void oldSectionsAndCandidatesAreRemovedAndTheDigestRowStays() {
-		flyway("66").migrate();
+		flyway("69").migrate();
 		long digest = digest();
 		long overview = section(digest, "OVERVIEW", 0);
 		long headlines = section(digest, "MORE_HEADLINES", 1);
@@ -55,7 +55,7 @@ class DigestSectionsByItemMigrationTests {
 			.update();
 		assertThat(overview).isPositive();
 
-		flyway("67").migrate();
+		flyway("70").migrate();
 
 		assertThat(count("digest_sections")).isZero();
 		assertThat(count("digest_items")).isZero();
@@ -68,7 +68,7 @@ class DigestSectionsByItemMigrationTests {
 
 	@Test
 	void theKindTakesOnlyTheNewValuesAndSectionEventsFollowTheirSection() {
-		flyway("67").migrate();
+		flyway("70").migrate();
 		long digest = digest();
 
 		assertThatThrownBy(() -> section(digest, "MORE_HEADLINES", 1)).isInstanceOf(DataIntegrityViolationException.class);

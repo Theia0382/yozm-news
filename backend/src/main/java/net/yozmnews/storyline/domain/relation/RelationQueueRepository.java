@@ -10,15 +10,15 @@ import java.util.UUID;
  */
 public interface RelationQueueRepository {
 
-	/** 대기에 넣는다 — 이미 있으면 다시 알림 수를 하나 올린다(점유 · 실패 수는 그대로) */
+	/** 대기에 넣는다 — 이미 있으면 다시 알림 수를 하나 올린다(점유 · 실패 수 · 판정 가능 시각은 그대로) */
 	void enqueue(long storylineId, Instant now);
 
 	/**
-	 * 점유가 없거나 만료된(만료 시각 ≤ {@code expiredBy}) 행을 스토리라인 ID 순으로 {@code limit} 개까지 잠근다. 다른 트랜잭션이 잠근 행은
-	 * 건너뛴다. 트랜잭션 안에서 부른다.
+	 * 점유가 없거나 만료됐고(만료 시각 ≤ {@code expiredBy}) 판정 가능 시각이 없거나 지난(≤ {@code now}) 행을 스토리라인 ID 순으로
+	 * {@code limit} 개까지 잠근다. 다른 트랜잭션이 잠근 행은 건너뛴다. 트랜잭션 안에서 부른다.
 	 * @param expiredBy 만료 시각의 상한 — 부르는 쪽이 시계가 넘긴 시간을 뺀 경과로 정한다({@code AppClock#expiredBy})
 	 */
-	List<PendingStoryline> lockDue(Instant expiredBy, int limit);
+	List<PendingStoryline> lockDue(Instant now, Instant expiredBy, int limit);
 
 	/** {@link #lockDue} 로 잠근 행의 점유를 쓴다 */
 	void saveLocked(PendingStoryline next);
@@ -40,6 +40,9 @@ public interface RelationQueueRepository {
 	 * @return 올린 뒤의 실패 수 — 토큰이 맞지 않으면 빈 값
 	 */
 	OptionalInt recordFailureIfLeased(long storylineId, UUID token);
+
+	/** 판정 가능 시각을 미룬다 — 그 시각까지 {@link #lockDue} 가 잠그지 않는다 */
+	void defer(long storylineId, Instant retryAt);
 
 	/** 대기 행을 지운다 */
 	void delete(long storylineId);

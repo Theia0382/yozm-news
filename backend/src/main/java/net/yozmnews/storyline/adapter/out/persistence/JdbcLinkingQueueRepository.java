@@ -136,6 +136,22 @@ class JdbcLinkingQueueRepository implements LinkingQueueRepository {
 	}
 
 	@Override
+	public OptionalInt recordTransientFailureIfLeased(long eventId, UUID token) {
+		return this.jdbc.sql("""
+				update storyline_linking_queue
+				set transient_failures = transient_failures + 1, lease_token = null, lease_expires_at = null
+				where event_id = :event and lease_token = :token
+				returning transient_failures
+				""")
+			.param("event", eventId)
+			.param("token", token)
+			.query(Integer.class)
+			.optional()
+			.map(OptionalInt::of)
+			.orElseGet(OptionalInt::empty);
+	}
+
+	@Override
 	public void defer(long eventId, Instant retryAt) {
 		this.jdbc.sql("update storyline_linking_queue set retry_at = :retryAt where event_id = :event")
 			.param("event", eventId)

@@ -92,7 +92,7 @@ class RelationGraphTests {
 	}
 
 	@Test
-	void aClaimedRowExpiresAfterTwentyMinutesAndFailuresRunOutAtThree() {
+	void aClaimedRowExpiresAfterTwentyMinutes() {
 		Instant now = Instant.parse("2026-11-10T00:00:00Z");
 		UUID token = UUID.fromString("00000000-0000-0000-0000-00000000000b");
 
@@ -100,8 +100,6 @@ class RelationGraphTests {
 			.isEqualTo(new PendingStoryline(7, 2, 1, new LinkingLease(token, Instant.parse("2026-11-10T00:20:00Z"))));
 		assertThat(RelationSchedule.BATCH_SIZE).isEqualTo(4);
 		assertThat(RelationSchedule.MAX_PAIRS).isEqualTo(5);
-		assertThat(RelationSchedule.failuresExhausted(2)).isFalse();
-		assertThat(RelationSchedule.failuresExhausted(3)).isTrue();
 		assertThatIllegalArgumentException().isThrownBy(() -> new PendingStoryline(7, -1, 0, null));
 	}
 
