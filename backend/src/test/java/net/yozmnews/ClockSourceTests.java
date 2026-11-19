@@ -52,8 +52,8 @@ class ClockSourceTests {
 
 	@Test
 	void mainClassesReadTheWallClockOnlyThroughTheClockConfiguration() {
-		// 대상이 있는지 먼저 센다 — 같은 판정이 허용 클래스의 실제 시간 원천 호출 하나를 잡는다
-		assertThat(CLASSES.get(CLOCK_CONFIGURATION).getAccessesFromSelf()).filteredOn(WALL_CLOCK_READ).hasSize(1);
+		// 대상이 있는지 먼저 센다 — 같은 판정이 허용 클래스의 실제 시간 원천 호출 둘(실제 시간의 시계 · 측정용 시계)을 잡는다
+		assertThat(CLASSES.get(CLOCK_CONFIGURATION).getAccessesFromSelf()).filteredOn(WALL_CLOCK_READ).hasSize(2);
 		noClasses().that()
 			.doNotHaveFullyQualifiedName(CLOCK_CONFIGURATION)
 			.should()

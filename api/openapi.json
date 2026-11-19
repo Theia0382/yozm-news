@@ -1974,6 +1974,122 @@
         "tags" : [ "admin-invitation-controller" ]
       }
     },
+    "/api/admin/measurement-clock" : {
+      "get" : {
+        "operationId" : "status",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MeasurementClockResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "세션이 없거나 만료됐다 · 운영자 토큰(Bearer)이 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "비밀번호를 바꿔야 한다 · 운영자 권한이 없다"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "측정용 시계가 켜져 있지 않다"
+          }
+        },
+        "tags" : [ "admin-measurement-clock-controller" ]
+      }
+    },
+    "/api/admin/measurement-clock/advance" : {
+      "post" : {
+        "operationId" : "advance",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AdvanceRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MeasurementClockResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "본문 형식이 틀렸거나 넘길 길이 · 도착 시각이 틀렸다"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "세션이 없거나 만료됐다 · 운영자 토큰(Bearer)이 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "요청 보호 토큰이 없거나 맞지 않는다 · 비밀번호를 바꿔야 한다 · 운영자 권한이 없다"
+          },
+          "409" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "측정용 시계가 켜져 있지 않다"
+          }
+        },
+        "tags" : [ "admin-measurement-clock-controller" ]
+      }
+    },
     "/api/admin/presets" : {
       "get" : {
         "operationId" : "presets",
@@ -5852,6 +5968,21 @@
         },
         "required" : [ "change", "key", "kind", "mode", "name" ]
       },
+      "AdvanceRequest" : {
+        "type" : "object",
+        "properties" : {
+          "by" : {
+            "type" : [ "string", "null" ],
+            "format" : "duration",
+            "example" : "PT24H"
+          },
+          "to" : {
+            "type" : [ "string", "null" ],
+            "format" : "date-time"
+          }
+        },
+        "required" : [ "by", "to" ]
+      },
       "ApiProblem" : {
         "type" : "object",
         "properties" : {
@@ -6213,6 +6344,20 @@
           }
         },
         "required" : [ "key", "name", "subtopics" ]
+      },
+      "ClockJumpResponse" : {
+        "type" : "object",
+        "properties" : {
+          "from" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "to" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        },
+        "required" : [ "from", "to" ]
       },
       "CollectionStatusResponse" : {
         "type" : "object",
@@ -8445,6 +8590,26 @@
           }
         },
         "required" : [ "displayName", "email", "llmKeyRequired", "passwordChangeRequired", "result", "role", "userId" ]
+      },
+      "MeasurementClockResponse" : {
+        "type" : "object",
+        "properties" : {
+          "jumps" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ClockJumpResponse"
+            }
+          },
+          "now" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "startedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        },
+        "required" : [ "jumps", "now", "startedAt" ]
       },
       "MergePairResponse" : {
         "type" : "object",

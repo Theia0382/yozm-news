@@ -11,6 +11,9 @@ import java.time.InstantSource;
 import net.yozmnews.evaluation.adapter.out.jev.JevArticleEvaluator;
 import net.yozmnews.evaluation.domain.evaluator.ArticleEvaluator;
 import net.yozmnews.platform.AppClock;
+import net.yozmnews.platform.MeasurementClockAdministration;
+import net.yozmnews.platform.MeasurementClockStatus;
+import net.yozmnews.platform.application.SystemClock;
 import net.yozmnews.platform.domain.ActiveRoles;
 import org.jobrunr.server.BackgroundJobServer;
 import org.junit.jupiter.api.Test;
@@ -83,6 +86,10 @@ class BothRolesTests {
 		assertThat(this.context.getBeansOfType(AppClock.class)).hasSize(1);
 		assertThat(this.context.getBeansOfType(InstantSource.class)).hasSize(1);
 		assertThat(this.context.getBeansOfType(Clock.class)).isEmpty();
+		// 측정 profile 이 아니면 실제 시간의 시계이고, 측정용 시계 운영 API 는 Off 다
+		assertThat(this.context.getBean(AppClock.class)).isInstanceOf(SystemClock.class);
+		assertThat(this.context.getBean(MeasurementClockAdministration.class).status())
+			.isInstanceOf(MeasurementClockStatus.Off.class);
 	}
 
 	@Test
