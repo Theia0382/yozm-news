@@ -1,12 +1,12 @@
 package net.yozmnews.source.application;
 
 import java.time.Instant;
-import java.time.InstantSource;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
+import net.yozmnews.platform.AppClock;
 import net.yozmnews.source.ArticleFetched;
 import net.yozmnews.source.FeedId;
 import net.yozmnews.source.FetchedArticle;
@@ -32,9 +32,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 점유한 피드의 수집 한 회차 — docs/specs/source.md §4 · source-R16 ~ source-R21.
+ * 점유한 피드의 수집 한 회차 — docs/specs/source.md §4 · source-R16 ~ source-R21 · source-R58.
  * <p>
  * 작업 서버는 예약 작업을 poll 간격만큼 일찍 시작할 수 있어, 예약 시각까지 기다린 뒤 수집한다. 기다리다 중단되면 수집하지 않고 점유가
+ * 만료되기를 둔다. 앱의 시각이 실제 시간이 아니면(측정용 시계 — 다른 인스턴스의 덤프에 남은 점유 · 예약 작업) 수집하지 않고 점유가
  * 만료되기를 둔다.
  */
 @Service
@@ -56,11 +57,11 @@ public class FeedPoller {
 
 	private final TransactionTemplate transaction;
 
-	private final InstantSource clock;
+	private final AppClock clock;
 
 	FeedPoller(FeedPollStateRepository pollStates, SourceFetchSlots fetchSlots, SourceRepository sources,
 			ProfileResolver resolver, ArticleSource articleSource, ApplicationEventPublisher events,
-			TransactionTemplate transaction, InstantSource clock) {
+			TransactionTemplate transaction, AppClock clock) {
 		this.pollStates = pollStates;
 		this.fetchSlots = fetchSlots;
 		this.sources = sources;
@@ -72,6 +73,10 @@ public class FeedPoller {
 	}
 
 	public void poll(FeedId feedId, UUID token) {
+		if (!this.clock.realTime()) {
+			logger.debug("앱의 시각이 실제 시간이 아니라 수집하지 않는다 — 피드 {} 토큰 {}", feedId.value(), token);
+			return;
+		}
 		Optional<FeedPollContext> leased = this.pollStates.findLeased(feedId, token);
 		if (leased.isEmpty()) {
 			logger.debug("점유가 없어 수집하지 않는다 — 피드 {} 토큰 {}", feedId.value(), token);

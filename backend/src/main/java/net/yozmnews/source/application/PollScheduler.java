@@ -1,7 +1,6 @@
 package net.yozmnews.source.application;
 
 import java.time.Instant;
-import java.time.InstantSource;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -10,6 +9,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import net.yozmnews.platform.AppClock;
 import net.yozmnews.source.ActivationRefusal;
 import net.yozmnews.source.SourceId;
 import net.yozmnews.source.domain.poll.FeedPollContext;
@@ -27,7 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 지금 수집할 피드의 점유 — docs/specs/source.md §4 · source-R15 · source-R19
+ * 지금 수집할 피드의 점유 — docs/specs/source.md §4 · source-R15 · source-R19 · source-R58
  */
 @Service
 public class PollScheduler {
@@ -45,10 +45,10 @@ public class PollScheduler {
 
 	private final TransactionTemplate transaction;
 
-	private final InstantSource clock;
+	private final AppClock clock;
 
 	PollScheduler(FeedPollStateRepository pollStates, SourceRepository sources, ProfileResolver resolver,
-			TransactionTemplate transaction, InstantSource clock) {
+			TransactionTemplate transaction, AppClock clock) {
 		this.pollStates = pollStates;
 		this.sources = sources;
 		this.resolver = resolver;
@@ -57,10 +57,14 @@ public class PollScheduler {
 	}
 
 	/**
-	 * 지금 수집할 피드를 점유한다.
+	 * 지금 수집할 피드를 점유한다 — 앱의 시각이 실제 시간이 아니면(측정용 시계) 점유하지 않는다.
 	 * @return 점유한 수집 — 예약 시각 순이 아닐 수 있다
 	 */
 	public List<ClaimedPoll> claimDueFeeds() {
+		if (!this.clock.realTime()) {
+			logger.debug("앱의 시각이 실제 시간이 아니라 수집할 피드를 점유하지 않는다");
+			return List.of();
+		}
 		Instant now = this.clock.instant();
 		List<Deferred> deferred = new ArrayList<>();
 		List<ClaimedPoll> claimed = this.transaction.execute(status -> claim(now, deferred));

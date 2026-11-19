@@ -22,7 +22,9 @@ import java.util.Map;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import com.github.tomakehurst.wiremock.stubbing.ServeEvent;
+import net.yozmnews.TestClocks;
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.platform.RealTimeRequiredException;
 import net.yozmnews.source.ActivationRefusal;
 import net.yozmnews.source.Criterion;
 import net.yozmnews.source.FeedId;
@@ -298,13 +300,31 @@ class SourceOperationsTests {
 		}).when(deleting).lockNextFetchAt(any());
 		SourceOperations operations = new SourceOperations(this.sourceRepository, this.feedRepository, this.resolver,
 				this.articleSource, new SourceFetchSlots(deleting, this.transaction), this.transaction,
-				InstantSource.system());
+				TestClocks.of(InstantSource.system()));
 
 		// 대조 — 지우지 않은 소스의 피드는 같은 대역으로 켜진다
 		assertThat(operations.enableFeed(all)).isInstanceOf(FeedActivation.Activated.class);
 
 		assertThatExceptionOfType(UnknownFeedException.class).isThrownBy(() -> operations.enableFeed(one));
 		assertThat(server.findAll(getRequestedFor(urlEqualTo("/multi/one.xml")))).isEmpty();
+	}
+
+	/** 측정용 시계에서는 켤 피드를 받아 미리보지 않는다 — 실제 피드를 요청하기 전에 거부한다 */
+	@Test
+	void aMeasurementClockRefusesToRequestTheFeedToEnable() {
+		long source = preset("solo");
+		FeedId all = new FeedId(this.rows.feedId(source, "all"));
+		server.stubFor(get("/solo/all.xml").willReturn(TestFeeds.rss("s1")));
+		SourceOperations measuring = new SourceOperations(this.sourceRepository, this.feedRepository, this.resolver,
+				this.articleSource, new SourceFetchSlots(this.slotRepository, this.transaction), this.transaction,
+				TestClocks.movable(Instant.now()));
+
+		assertThatExceptionOfType(RealTimeRequiredException.class).isThrownBy(() -> measuring.enableFeed(all));
+
+		assertThat(server.findAll(getRequestedFor(urlEqualTo("/solo/all.xml")))).isEmpty();
+		// 대조 — 실제 시간의 시계는 받아 미리보고 켠다
+		assertThat(this.operations.enableFeed(all)).isInstanceOf(FeedActivation.Activated.class);
+		assertThat(server.findAll(getRequestedFor(urlEqualTo("/solo/all.xml")))).hasSize(1);
 	}
 
 	@Test

@@ -5,6 +5,7 @@ import java.util.Objects;
 import jakarta.servlet.http.HttpServletRequest;
 import net.yozmnews.platform.ApiProblem;
 import net.yozmnews.platform.ProblemResponses;
+import net.yozmnews.platform.RealTimeRequiredException;
 import net.yozmnews.platform.WebRole;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -49,6 +50,11 @@ class ProblemResponseAdvice extends ResponseEntityExceptionHandler {
 	@ExceptionHandler(OptimisticLockingFailureException.class)
 	ResponseEntity<ApiProblem> concurrentChange(HttpServletRequest request) {
 		return this.problems.entity(HttpStatus.CONFLICT, "다른 요청이 먼저 바꿨다 — 다시 읽고 시도한다", request);
+	}
+
+	@ExceptionHandler(RealTimeRequiredException.class)
+	ResponseEntity<ApiProblem> notRealTime(HttpServletRequest request) {
+		return this.problems.entity(HttpStatus.CONFLICT, RealTimeRequiredException.MESSAGE, request);
 	}
 
 	/** 처리하지 못한 예외 — 본문에 예외 메시지를 싣지 않는다 */

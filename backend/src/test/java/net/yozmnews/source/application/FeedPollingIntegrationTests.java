@@ -25,7 +25,9 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
+import net.yozmnews.TestClocks;
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.platform.AppClock;
 import net.yozmnews.source.ArticleFetched;
 import net.yozmnews.source.FeedId;
 import net.yozmnews.source.FetchFailureReason;
@@ -372,6 +374,32 @@ class FeedPollingIntegrationTests {
 		assertThat(this.feeds.requests("/fits.xml")).isEqualTo(1);
 	}
 
+	/**
+	 * 측정용 시계에서는 수집하지 않는다 — 수집할 피드를 점유하지 않고, 다른 인스턴스의 덤프에 남은 점유로 예약된 수집도 실제 피드를 요청하지
+	 * 않는다.
+	 */
+	@Test
+	void aMeasurementClockNeitherClaimsNorPollsFeeds() {
+		long feed = this.feeds.source("/measure.xml").getFirst();
+		server.stubFor(get("/measure.xml").willReturn(TestFeeds.rss("m1")));
+		AppClock measuring = TestClocks.movable(Instant.now());
+
+		assertThat(new PollScheduler(this.pollStates, this.sourceRepository, this.resolver, this.transaction, measuring)
+			.claimDueFeeds()).isEmpty();
+		assertThat(state(feed).lease()).isNull();
+
+		// 덤프에 남은 점유 — 실제 시간의 회차가 점유한 수집을 측정용 시계의 수집기가 돌린다
+		ClaimedPoll leftover = claim(feed);
+		new FeedPoller(this.pollStates, this.fetchSlots, this.sourceRepository, this.resolver, this.articleSource,
+				this.events, this.transaction, measuring)
+			.poll(new FeedId(feed), leftover.token());
+		assertThat(this.feeds.requests("/measure.xml")).isZero();
+		assertThat(this.recorder.forFeed(feed)).isEmpty();
+		// 대조 — 실제 시간의 수집기는 같은 점유로 요청한다
+		this.pollFeedJob.run(feed, leftover.token());
+		assertThat(this.feeds.requests("/measure.xml")).isEqualTo(1);
+	}
+
 	@Test
 	void aSourceDeletedRightAfterTheLeaseIsCheckedEndsThePollQuietly() {
 		long deleted = this.feeds.source("/deleted.xml").getFirst();
@@ -395,7 +423,7 @@ class FeedPollingIntegrationTests {
 			return leased;
 		}).when(deleting).findLeased(any(), any());
 		FeedPoller poller = new FeedPoller(deleting, this.fetchSlots, this.sourceRepository, this.resolver,
-				this.articleSource, this.events, this.transaction, InstantSource.system());
+				this.articleSource, this.events, this.transaction, TestClocks.of(InstantSource.system()));
 
 		// 대조 — 지우지 않은 소스의 피드는 같은 대역으로 수집한다
 		poller.poll(new FeedId(kept), keptToken);

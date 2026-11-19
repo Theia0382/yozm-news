@@ -46,4 +46,14 @@ public interface AppClock extends InstantSource {
 		return before(term).plus(term);
 	}
 
+	/**
+	 * 앱의 시각이 실제 시간이 아니면 거부한다 — 실제 시간의 외부 요청을 하는 길이 요청 전에 부른다.
+	 * @throws RealTimeRequiredException 측정용 시계일 때
+	 */
+	default void requireRealTime() {
+		if (!realTime()) {
+			throw new RealTimeRequiredException();
+		}
+	}
+
 }
