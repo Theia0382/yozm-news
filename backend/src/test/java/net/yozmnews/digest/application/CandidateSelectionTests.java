@@ -413,6 +413,30 @@ class CandidateSelectionTests {
 	}
 
 	@Test
+	void aSubscribedStorylineCountsTheTopicOfEachEventByItsMembersNotByItsRepresentative() {
+		// 지난 사건의 대표 기사는 경제, 나머지 소속 둘은 입법 — 사건의 주제는 입법(2/3)이라 입법 몫 1, 가중치 ≈ 1.17 이고
+		// 3.6 × 1.17 ≈ 4.2 가 4.0 앞이다. 대표 기사로 세면 경제 몫 1 이라 입법 기사는 4.0 뒤다
+		long legislature = article("의회 넷이", "politics.legislature", 3.6, "2026-11-05T06:00:00Z", 1);
+		long representative = article("지난 경제", "economy.markets", 3.0, "2026-11-01T00:00:00Z", 1);
+		long event = this.rows.event(3, "2026-11-01T00:00:00Z", "2026-11-01T02:00:00Z");
+		this.rows.assign(representative, event, "2026-11-01T00:00:00Z");
+		this.rows.assign(article("지난 의회 하나", "politics.legislature", 3.0, "2026-11-01T01:00:00Z", 2), event,
+				"2026-11-01T01:00:00Z");
+		this.rows.assign(article("지난 의회 둘", "politics.legislature", 3.0, "2026-11-01T02:00:00Z", 3), event,
+				"2026-11-01T02:00:00Z");
+		this.jdbc.sql("""
+				update events set status = 'CLOSED', closed_at = '2026-11-02T00:00:00Z', representative_article_id = :article
+				where id = :event
+				""").param("article", representative).param("event", event).update();
+		long storyline = this.rows.storyline("2026-11-01T00:00:00Z", "2026-11-01T02:00:00Z", event);
+		this.rows.member(storyline, event);
+		subscribeStoryline(storyline, "USER");
+
+		assertThat(candidates(this.selection.select(new UserId(this.user), DAY, ONE_CANDIDATE)))
+			.containsExactly(new DigestCandidate(new ArticleId(legislature), SelectionReason.INTEREST));
+	}
+
+	@Test
 	void aStorylineSubscriptionRewrittenByAMergeIsNotASignal() {
 		article("의회 넷이", "politics.legislature", 3.6, "2026-11-05T06:00:00Z", 1);
 		subscribeStoryline(legislatureStoryline(), "STORYLINE_MERGED");

@@ -1,6 +1,7 @@
 package net.yozmnews.digest.application;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,6 +18,7 @@ import net.yozmnews.digest.domain.interest.InterestSignals;
 import net.yozmnews.digest.domain.interest.InterestWindow;
 import net.yozmnews.digest.domain.interest.StorylineTopics;
 import net.yozmnews.digest.domain.selection.ActiveEvaluation;
+import net.yozmnews.digest.domain.selection.EventFacts;
 import net.yozmnews.event.EventDirectory;
 import net.yozmnews.event.EventId;
 import net.yozmnews.feedback.ArticleFeedback;
@@ -33,7 +35,7 @@ import org.springframework.stereotype.Service;
 
 /**
  * 관심도의 재료를 범위 하나에서 읽는다 — 노출 행(자기 인용 행) · 좋아요 / 싫어요 이력({@code feedback}) · 주제 구독 변경 · 스토리라인 구독 변경
- * ({@code user}) · 스토리라인 사건의 대표 기사({@code storyline} · {@code event}) · 노출 기사와 대표 기사의 평가({@code tag}). 기준 시각마다
+ * ({@code user}) · 스토리라인 사건의 소속 기사({@code storyline} · {@code event}) · 노출 기사와 소속 기사의 평가({@code tag}). 기준 시각마다
  * 창으로 자르는 일은 {@link InterestWindow}, 행을 고르는 판단은 {@link InterestSignals}, 계산은 {@link InterestFormula} 가 한다.
  * docs/specs/digest.md §4 · §5
  * <p>
@@ -99,20 +101,31 @@ class InterestMaterials {
 				storylineChanges, shares.get()));
 	}
 
-	/** 스토리라인마다 사건 대표 기사의 주제 몫 — 버전이 어긋나면 빈 값 */
+	/**
+	 * 스토리라인마다 사건의 주제 몫 — 닫은 사건 집합의 사건마다 평가 있는 소속 기사로 사건의 주제({@link EventFacts})를 세어
+	 * {@link StorylineTopics} 에 넘긴다. 평가 있는 소속 기사가 없는 사건은 빠진다. 버전이 어긋나면 빈 값
+	 */
 	private Optional<Map<StorylineId, Map<String, Double>>> shares(Set<StorylineId> ids, TagSetId active) {
 		Map<StorylineId, Map<String, Double>> shares = new HashMap<>();
 		for (StorylineId id : ids) {
 			List<EventId> eventIds = this.storylines.events(id).stream().map(member -> member.event().id()).toList();
-			Map<EventId, ArticleId> representatives = eventIds.isEmpty() ? Map.of()
-					: this.events.representativesOfAll(eventIds);
+			Map<EventId, List<ArticleId>> members = eventIds.isEmpty() ? Map.of() : this.events.articleIdsOf(eventIds);
 			Optional<Map<ArticleId, ActiveEvaluation>> evaluated = this.activeEvaluations
-				.read(representatives.values(), active);
+				.read(members.values().stream().flatMap(List::stream).toList(), active);
 			if (evaluated.isEmpty()) {
 				return Optional.empty();
 			}
-			shares.put(id, StorylineTopics.shares(
-					evaluated.get().values().stream().map(ActiveEvaluation::subtopics).toList()));
+			List<Set<String>> eventTopics = new ArrayList<>();
+			members.forEach((event, articles) -> {
+				List<ActiveEvaluation> ofEvent = articles.stream()
+					.map(evaluated.get()::get)
+					.filter(Objects::nonNull)
+					.toList();
+				if (!ofEvent.isEmpty()) {
+					eventTopics.add(EventFacts.of(event, ofEvent).subtopics());
+				}
+			});
+			shares.put(id, StorylineTopics.shares(eventTopics));
 		}
 		return Optional.of(shares);
 	}

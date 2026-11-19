@@ -112,6 +112,12 @@ final class Facts {
 			return this;
 		}
 
+		/** 같은 값의 활성 키 평가 — 사건의 값({@link EventFacts})의 재료 */
+		ActiveEvaluation evaluation() {
+			return new ActiveEvaluation(new ArticleId(this.id), this.subtopics, this.regions, this.formats, this.status,
+					this.importance);
+		}
+
 		ArticleFacts build() {
 			return new ArticleFacts(new ArticleId(this.id), this.subtopics, this.regions, this.formats, this.status,
 					this.importance, this.sources, this.published, this.disliked);

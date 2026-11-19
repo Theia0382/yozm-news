@@ -11,7 +11,7 @@ import net.yozmnews.tag.TagKind;
 import net.yozmnews.tag.TagProbability;
 
 /**
- * 기사 평가의 키를 활성 버전의 키로 푸는 정본 — 후보 선별 · 관심도의 노출 기사 · 스토리라인 대표가 함께 쓴다. docs/specs/digest.md §5
+ * 기사 평가의 키를 활성 버전의 키로 푸는 정본 — 후보 선별 · 관심도의 노출 기사 · 스토리라인 사건의 소속 기사가 함께 쓴다. docs/specs/digest.md §5
  */
 public final class ActiveKeys {
 
