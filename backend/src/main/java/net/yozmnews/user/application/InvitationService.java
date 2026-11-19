@@ -23,7 +23,6 @@ import net.yozmnews.user.domain.invitation.InvitationPolicy;
 import net.yozmnews.user.domain.invitation.InvitationRepository;
 import net.yozmnews.user.domain.secret.InvitationToken;
 import org.jspecify.annotations.Nullable;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,11 +39,6 @@ public class InvitationService implements InvitationAdministration {
 	private final InstantSource clock;
 
 	private final SecureRandom random = new SecureRandom();
-
-	@Autowired
-	InvitationService(InvitationRepository invitations, AccountRepository accounts) {
-		this(invitations, accounts, InstantSource.system());
-	}
 
 	InvitationService(InvitationRepository invitations, AccountRepository accounts, InstantSource clock) {
 		this.invitations = Objects.requireNonNull(invitations, "invitations");

@@ -18,7 +18,6 @@ import net.yozmnews.user.application.SessionSignIn;
 import net.yozmnews.user.application.SignUp;
 import net.yozmnews.user.application.SignUpForm;
 import net.yozmnews.user.application.SignUpOutcome;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -40,12 +39,6 @@ class SignUpController {
 	private final SessionSignIn sessions;
 
 	private final InstantSource clock;
-
-	@Autowired
-	SignUpController(SignUpPolicyAdministration policy, SignUp signUp, InvitationService invitations,
-			SessionSignIn sessions) {
-		this(policy, signUp, invitations, sessions, InstantSource.system());
-	}
 
 	SignUpController(SignUpPolicyAdministration policy, SignUp signUp, InvitationService invitations,
 			SessionSignIn sessions, InstantSource clock) {

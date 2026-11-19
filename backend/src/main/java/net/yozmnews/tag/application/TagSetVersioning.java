@@ -30,7 +30,6 @@ import net.yozmnews.tag.domain.tagset.TagSetWriter;
 import net.yozmnews.tag.domain.threshold.ThresholdRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -65,12 +64,6 @@ class TagSetVersioning {
 	private final InstantSource clock;
 
 	private final TagSetParser parser = new TagSetParser();
-
-	@Autowired
-	TagSetVersioning(TagSetRepository tagSets, ThresholdRepository thresholds, EvaluationQueueRepository queue,
-			ArticleDirectory articles, TransactionTemplate transaction, ApplicationEventPublisher events) {
-		this(tagSets, thresholds, queue, articles, transaction, events, InstantSource.system());
-	}
 
 	TagSetVersioning(TagSetRepository tagSets, ThresholdRepository thresholds, EvaluationQueueRepository queue,
 			ArticleDirectory articles, TransactionTemplate transaction, ApplicationEventPublisher events, InstantSource clock) {

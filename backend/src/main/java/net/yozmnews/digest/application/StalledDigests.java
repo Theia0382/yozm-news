@@ -16,7 +16,6 @@ import net.yozmnews.digest.domain.schedule.DigestScheduleRules;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -56,13 +55,6 @@ public class StalledDigests {
 
 	private final InstantSource clock;
 
-	@Autowired
-	StalledDigests(DigestRepository digests, DigestLedger ledger, DigestEndings endings, DigestDispatch dispatch,
-			TransactionTemplate transaction) {
-		this(digests, ledger, endings, dispatch, transaction, InstantSource.system());
-	}
-
-	/** 시험이 시계를 넣는다 */
 	StalledDigests(DigestRepository digests, DigestLedger ledger, DigestEndings endings, DigestDispatch dispatch,
 			TransactionTemplate transaction, InstantSource clock) {
 		this.digests = Objects.requireNonNull(digests, "digests");

@@ -23,7 +23,6 @@ import net.yozmnews.user.DigestScheduleEntry;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -56,14 +55,6 @@ public class DigestScheduling {
 
 	private final InstantSource clock;
 
-	@Autowired
-	DigestScheduling(DigestScheduleDirectory schedules, DigestModelDirectory models, DigestLedger ledger,
-			DigestOwnerLock owners, DigestGeneration generation, DigestDispatch dispatch,
-			TransactionTemplate transaction) {
-		this(schedules, models, ledger, owners, generation, dispatch, transaction, InstantSource.system());
-	}
-
-	/** 시험이 시계를 넣는다 */
 	DigestScheduling(DigestScheduleDirectory schedules, DigestModelDirectory models, DigestLedger ledger,
 			DigestOwnerLock owners, DigestGeneration generation, DigestDispatch dispatch,
 			TransactionTemplate transaction, InstantSource clock) {

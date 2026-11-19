@@ -29,7 +29,6 @@ import net.yozmnews.user.domain.preference.PreferenceSet;
 import net.yozmnews.user.domain.preference.TagPreferenceRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -66,13 +65,6 @@ class PreferenceFollowups {
 	private final TransactionTemplate transaction;
 
 	private final InstantSource clock;
-
-	@Autowired
-	PreferenceFollowups(InterestSettingsRepository settings, TagPreferenceRepository preferences,
-			NoticeRepository notices, PreferenceVersionFence fence, TagSetDirectory tagSets, TagKeyLineage lineage,
-			TransactionTemplate transaction) {
-		this(settings, preferences, notices, fence, tagSets, lineage, transaction, InstantSource.system());
-	}
 
 	PreferenceFollowups(InterestSettingsRepository settings, TagPreferenceRepository preferences,
 			NoticeRepository notices, PreferenceVersionFence fence, TagSetDirectory tagSets, TagKeyLineage lineage,

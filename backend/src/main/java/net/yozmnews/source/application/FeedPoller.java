@@ -27,7 +27,6 @@ import net.yozmnews.source.domain.registry.SourceRepository;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -58,13 +57,6 @@ public class FeedPoller {
 	private final TransactionTemplate transaction;
 
 	private final InstantSource clock;
-
-	@Autowired
-	FeedPoller(FeedPollStateRepository pollStates, SourceFetchSlots fetchSlots, SourceRepository sources,
-			ProfileResolver resolver, ArticleSource articleSource, ApplicationEventPublisher events,
-			TransactionTemplate transaction) {
-		this(pollStates, fetchSlots, sources, resolver, articleSource, events, transaction, InstantSource.system());
-	}
 
 	FeedPoller(FeedPollStateRepository pollStates, SourceFetchSlots fetchSlots, SourceRepository sources,
 			ProfileResolver resolver, ArticleSource articleSource, ApplicationEventPublisher events,

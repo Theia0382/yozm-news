@@ -12,7 +12,6 @@ import net.yozmnews.digest.domain.digest.DigestRepository;
 import net.yozmnews.digest.domain.input.DigestInput;
 import net.yozmnews.llm.LlmModel;
 import net.yozmnews.user.DigestModelDirectory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -46,13 +45,6 @@ public class DigestRun {
 
 	private final InstantSource clock;
 
-	@Autowired
-	DigestRun(DigestRepository digests, DigestModelDirectory models, CandidateSelection selection,
-			DigestGeneration generation, DigestEndings endings, TransactionTemplate transaction) {
-		this(digests, models, selection, generation, endings, transaction, InstantSource.system());
-	}
-
-	/** 시험이 시계를 넣는다 */
 	DigestRun(DigestRepository digests, DigestModelDirectory models, CandidateSelection selection,
 			DigestGeneration generation, DigestEndings endings, TransactionTemplate transaction, InstantSource clock) {
 		this.digests = Objects.requireNonNull(digests, "digests");

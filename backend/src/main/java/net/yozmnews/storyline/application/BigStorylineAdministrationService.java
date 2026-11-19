@@ -16,7 +16,6 @@ import net.yozmnews.storyline.domain.big.BigStorylineCriteriaRepository;
 import net.yozmnews.platform.ChangeActor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -38,12 +37,6 @@ class BigStorylineAdministrationService implements BigStorylineAdministration {
 	private final TransactionTemplate transaction;
 
 	private final InstantSource clock;
-
-	@Autowired
-	BigStorylineAdministrationService(BigStorylineCriteriaRepository criteria, StorylineDirectoryService directory,
-			TransactionTemplate transaction) {
-		this(criteria, directory, transaction, InstantSource.system());
-	}
 
 	BigStorylineAdministrationService(BigStorylineCriteriaRepository criteria, StorylineDirectoryService directory,
 			TransactionTemplate transaction, InstantSource clock) {

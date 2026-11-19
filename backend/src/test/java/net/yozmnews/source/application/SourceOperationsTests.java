@@ -14,6 +14,7 @@ import static org.mockito.Mockito.mock;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.InstantSource;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -296,7 +297,8 @@ class SourceOperationsTests {
 			return this.slotRepository.lockNextFetchAt(reserved);
 		}).when(deleting).lockNextFetchAt(any());
 		SourceOperations operations = new SourceOperations(this.sourceRepository, this.feedRepository, this.resolver,
-				this.articleSource, new SourceFetchSlots(deleting, this.transaction), this.transaction);
+				this.articleSource, new SourceFetchSlots(deleting, this.transaction), this.transaction,
+				InstantSource.system());
 
 		// 대조 — 지우지 않은 소스의 피드는 같은 대역으로 켜진다
 		assertThat(operations.enableFeed(all)).isInstanceOf(FeedActivation.Activated.class);

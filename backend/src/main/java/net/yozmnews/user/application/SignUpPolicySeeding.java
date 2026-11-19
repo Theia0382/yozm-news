@@ -6,7 +6,6 @@ import net.yozmnews.user.domain.signup.SignUpPolicyRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.SmartInitializingSingleton;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -25,11 +24,6 @@ class SignUpPolicySeeding implements SmartInitializingSingleton {
 	private final TransactionTemplate transaction;
 
 	private final InstantSource clock;
-
-	@Autowired
-	SignUpPolicySeeding(SignUpPolicyRepository policy, TransactionTemplate transaction) {
-		this(policy, transaction, InstantSource.system());
-	}
 
 	SignUpPolicySeeding(SignUpPolicyRepository policy, TransactionTemplate transaction, InstantSource clock) {
 		this.policy = policy;

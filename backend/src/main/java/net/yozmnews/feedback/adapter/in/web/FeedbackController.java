@@ -20,7 +20,6 @@ import net.yozmnews.platform.GuardedAction;
 import net.yozmnews.platform.RequestLimited;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.platform.WebRole;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -45,11 +44,6 @@ class FeedbackController {
 	private final FeedbackStates states;
 
 	private final InstantSource clock;
-
-	@Autowired
-	FeedbackController(FeedbackRecording recording, FeedbackStates states) {
-		this(recording, states, InstantSource.system());
-	}
 
 	FeedbackController(FeedbackRecording recording, FeedbackStates states, InstantSource clock) {
 		this.recording = Objects.requireNonNull(recording, "recording");

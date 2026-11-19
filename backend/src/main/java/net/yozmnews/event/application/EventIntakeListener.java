@@ -20,7 +20,6 @@ import net.yozmnews.event.domain.event.LockedEvent;
 import net.yozmnews.event.domain.feature.MatchFeatures;
 import net.yozmnews.event.domain.feature.MatchFeaturesRepository;
 import net.yozmnews.event.domain.intake.IntakeQueueRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
 
@@ -49,13 +48,6 @@ class EventIntakeListener {
 	private final EventShrinkWriter shrinks;
 
 	private final InstantSource clock;
-
-	@Autowired
-	EventIntakeListener(IntakeQueueRepository queue, AssignmentQueueRepository assignmentQueue,
-			MatchFeaturesRepository features, EventRepository events, EventArticleRepository assignments,
-			EventShrinkWriter shrinks) {
-		this(queue, assignmentQueue, features, events, assignments, shrinks, InstantSource.system());
-	}
 
 	EventIntakeListener(IntakeQueueRepository queue, AssignmentQueueRepository assignmentQueue,
 			MatchFeaturesRepository features, EventRepository events, EventArticleRepository assignments,

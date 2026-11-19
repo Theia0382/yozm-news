@@ -5,7 +5,6 @@ import java.util.Objects;
 
 import net.yozmnews.user.domain.throttle.LoginFailures;
 import net.yozmnews.user.domain.throttle.LoginThrottle;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
@@ -18,11 +17,6 @@ public class LoginFailureCleanup {
 	private final LoginFailures failures;
 
 	private final InstantSource clock;
-
-	@Autowired
-	LoginFailureCleanup(LoginFailures failures) {
-		this(failures, InstantSource.system());
-	}
 
 	LoginFailureCleanup(LoginFailures failures, InstantSource clock) {
 		this.failures = Objects.requireNonNull(failures, "failures");

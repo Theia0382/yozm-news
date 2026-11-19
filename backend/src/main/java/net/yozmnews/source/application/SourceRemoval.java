@@ -25,7 +25,6 @@ import net.yozmnews.source.domain.registry.SourceRepository;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -59,13 +58,6 @@ class SourceRemoval {
 	private final TransactionTemplate transaction;
 
 	private final InstantSource clock;
-
-	@Autowired
-	SourceRemoval(SourceRepository sources, FeedRepository feeds, ProfileResolver resolver,
-			FeedPollStateRepository pollStates, SourceFetchSlotRepository fetchSlots,
-			SourceAttributionRepository attributions, ApplicationEventPublisher events, TransactionTemplate transaction) {
-		this(sources, feeds, resolver, pollStates, fetchSlots, attributions, events, transaction, InstantSource.system());
-	}
 
 	SourceRemoval(SourceRepository sources, FeedRepository feeds, ProfileResolver resolver,
 			FeedPollStateRepository pollStates, SourceFetchSlotRepository fetchSlots,

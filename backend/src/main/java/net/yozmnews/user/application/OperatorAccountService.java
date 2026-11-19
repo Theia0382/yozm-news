@@ -20,7 +20,6 @@ import net.yozmnews.user.domain.credential.PasswordCredentialRepository;
 import net.yozmnews.user.domain.credential.PasswordPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -49,13 +48,6 @@ class OperatorAccountService implements AccountAdministration {
 	private final TransactionTemplate transaction;
 
 	private final InstantSource clock;
-
-	@Autowired
-	OperatorAccountService(AccountProvisioning provisioning, AccountRepository accounts,
-			PasswordCredentialRepository credentials, PasswordHashing hashing, OtherSessions sessions,
-			TransactionTemplate transaction) {
-		this(provisioning, accounts, credentials, hashing, sessions, transaction, InstantSource.system());
-	}
 
 	OperatorAccountService(AccountProvisioning provisioning, AccountRepository accounts,
 			PasswordCredentialRepository credentials, PasswordHashing hashing, OtherSessions sessions,

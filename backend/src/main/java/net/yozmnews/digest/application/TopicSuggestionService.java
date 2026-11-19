@@ -27,7 +27,6 @@ import net.yozmnews.user.TopicSuggestionDecline;
 import net.yozmnews.user.TopicSuggestionDeclineList;
 import net.yozmnews.user.TopicSuggestionDeclines;
 import net.yozmnews.user.UserTimezones;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
@@ -55,13 +54,6 @@ class TopicSuggestionService implements TopicSuggestions, TopicInterestNow {
 
 	private final InstantSource clock;
 
-	@Autowired
-	TopicSuggestionService(DigestInterestsDirectory digestInterests, TopicSuggestionDeclines declines,
-			TagSetDirectory tagSets, UserTimezones timezones, CurrentInterests interests) {
-		this(digestInterests, declines, tagSets, timezones, interests, InstantSource.system());
-	}
-
-	/** 시험이 시계를 넣는다 */
 	TopicSuggestionService(DigestInterestsDirectory digestInterests, TopicSuggestionDeclines declines,
 			TagSetDirectory tagSets, UserTimezones timezones, CurrentInterests interests, InstantSource clock) {
 		this.digestInterests = Objects.requireNonNull(digestInterests, "digestInterests");

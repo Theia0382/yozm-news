@@ -28,7 +28,6 @@ import net.yozmnews.source.domain.registry.ProfileResolver;
 import net.yozmnews.source.domain.registry.ProfileRevision;
 import net.yozmnews.source.domain.registry.Source;
 import net.yozmnews.source.domain.registry.SourceRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -58,13 +57,6 @@ class SourceRegistration {
 	private final TransactionTemplate transaction;
 
 	private final InstantSource clock;
-
-	@Autowired
-	SourceRegistration(PresetCatalog catalog, ProfileParser parser, SourceRepository sources, FeedRepository feeds,
-			ProfileResolver resolver, FeedProvisioner provisioner, SourceAttributionRepository attributions,
-			TransactionTemplate transaction) {
-		this(catalog, parser, sources, feeds, resolver, provisioner, attributions, transaction, InstantSource.system());
-	}
 
 	SourceRegistration(PresetCatalog catalog, ProfileParser parser, SourceRepository sources, FeedRepository feeds,
 			ProfileResolver resolver, FeedProvisioner provisioner, SourceAttributionRepository attributions,

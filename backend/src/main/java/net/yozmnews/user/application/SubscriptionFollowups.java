@@ -22,7 +22,6 @@ import net.yozmnews.user.domain.subscription.SubscriptionChange;
 import net.yozmnews.user.domain.subscription.SubscriptionFollow;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -55,12 +54,6 @@ class SubscriptionFollowups {
 	private final TransactionTemplate transaction;
 
 	private final InstantSource clock;
-
-	@Autowired
-	SubscriptionFollowups(StorylineSubscriptionRepository subscriptions, InterestSettingsRepository settings,
-			NoticeRepository notices, CurrentStorylines storylines, TransactionTemplate transaction) {
-		this(subscriptions, settings, notices, storylines, transaction, InstantSource.system());
-	}
 
 	SubscriptionFollowups(StorylineSubscriptionRepository subscriptions, InterestSettingsRepository settings,
 			NoticeRepository notices, CurrentStorylines storylines, TransactionTemplate transaction,

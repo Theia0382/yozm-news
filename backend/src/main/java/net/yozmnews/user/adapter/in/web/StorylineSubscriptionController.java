@@ -18,7 +18,6 @@ import net.yozmnews.user.application.StorylineSubscriptionHistory;
 import net.yozmnews.user.application.StorylineSubscriptions;
 import net.yozmnews.user.domain.subscription.SubscriptionChangeCursor;
 import org.jspecify.annotations.Nullable;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -45,11 +44,6 @@ class StorylineSubscriptionController {
 	private final StorylineSubscriptionHistory history;
 
 	private final InstantSource clock;
-
-	@Autowired
-	StorylineSubscriptionController(StorylineSubscriptions subscriptions, StorylineSubscriptionHistory history) {
-		this(subscriptions, history, InstantSource.system());
-	}
 
 	StorylineSubscriptionController(StorylineSubscriptions subscriptions, StorylineSubscriptionHistory history,
 			InstantSource clock) {

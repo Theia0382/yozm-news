@@ -5,7 +5,6 @@ import java.util.Objects;
 
 import net.yozmnews.user.domain.notice.NoticeRepository;
 import net.yozmnews.user.domain.notice.NoticeRetention;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
@@ -18,11 +17,6 @@ public class NoticeCleanup {
 	private final NoticeRepository notices;
 
 	private final InstantSource clock;
-
-	@Autowired
-	NoticeCleanup(NoticeRepository notices) {
-		this(notices, InstantSource.system());
-	}
 
 	NoticeCleanup(NoticeRepository notices, InstantSource clock) {
 		this.notices = Objects.requireNonNull(notices, "notices");

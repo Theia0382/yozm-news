@@ -33,7 +33,6 @@ import net.yozmnews.storyline.StorylineRelationView;
 import net.yozmnews.storyline.StorylineSummary;
 import net.yozmnews.storyline.StorylineView;
 import org.jspecify.annotations.Nullable;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -60,12 +59,6 @@ class StorylineScreenController {
 	private final ReceivedMarks received;
 
 	private final InstantSource clock;
-
-	@Autowired
-	StorylineScreenController(StorylineDirectory storylines, EventDirectory events, ArticleDirectory articles,
-			ReceivedArticles received) {
-		this(storylines, events, articles, received, InstantSource.system());
-	}
 
 	StorylineScreenController(StorylineDirectory storylines, EventDirectory events, ArticleDirectory articles,
 			ReceivedArticles received, InstantSource clock) {

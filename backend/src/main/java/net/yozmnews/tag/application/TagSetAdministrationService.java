@@ -29,7 +29,6 @@ import net.yozmnews.tag.domain.threshold.ThresholdRepository;
 import net.yozmnews.tag.domain.threshold.ThresholdRule;
 import net.yozmnews.tag.domain.threshold.ThresholdStanding;
 import net.yozmnews.tag.domain.threshold.ThresholdValues;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -60,13 +59,6 @@ class TagSetAdministrationService implements TagSetAdministration {
 	private final StoreFloorsReader floors;
 
 	private final ThresholdPreviews previews;
-
-	@Autowired
-	TagSetAdministrationService(TagSetRepository tagSets, ThresholdRepository thresholds,
-			TransactionTemplate transaction, TagSetVersioning versioning, StoreFloorsReader floors,
-			ThresholdPreviews previews) {
-		this(tagSets, thresholds, transaction, InstantSource.system(), versioning, floors, previews);
-	}
 
 	TagSetAdministrationService(TagSetRepository tagSets, ThresholdRepository thresholds,
 			TransactionTemplate transaction, InstantSource clock, TagSetVersioning versioning,

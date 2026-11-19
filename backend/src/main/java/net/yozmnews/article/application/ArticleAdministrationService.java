@@ -9,7 +9,6 @@ import net.yozmnews.article.domain.EntryStatisticsRepository;
 import net.yozmnews.article.domain.EntryWindow;
 import net.yozmnews.source.FeedId;
 import net.yozmnews.source.SourceId;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
@@ -25,11 +24,6 @@ class ArticleAdministrationService implements ArticleAdministration {
 	private final ArticleRepository articles;
 
 	private final InstantSource clock;
-
-	@Autowired
-	ArticleAdministrationService(EntryStatisticsRepository statistics, ArticleRepository articles) {
-		this(statistics, articles, InstantSource.system());
-	}
 
 	ArticleAdministrationService(EntryStatisticsRepository statistics, ArticleRepository articles,
 			InstantSource clock) {

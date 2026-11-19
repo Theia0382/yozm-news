@@ -17,7 +17,6 @@ import net.yozmnews.source.domain.registry.SourceRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.dao.OptimisticLockingFailureException;
@@ -48,12 +47,6 @@ class PresetFeedReconciliation {
 	private final TransactionTemplate transaction;
 
 	private final InstantSource clock;
-
-	@Autowired
-	PresetFeedReconciliation(SourceRepository sources, FeedRepository feeds, ProfileResolver resolver,
-			FeedProvisioner provisioner, SourceAttributionRepository attributions, TransactionTemplate transaction) {
-		this(sources, feeds, resolver, provisioner, attributions, transaction, InstantSource.system());
-	}
 
 	PresetFeedReconciliation(SourceRepository sources, FeedRepository feeds, ProfileResolver resolver,
 			FeedProvisioner provisioner, SourceAttributionRepository attributions, TransactionTemplate transaction,

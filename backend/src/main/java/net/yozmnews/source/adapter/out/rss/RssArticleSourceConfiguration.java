@@ -69,8 +69,8 @@ class RssArticleSourceConfiguration {
 	}
 
 	@Bean(destroyMethod = "close")
-	ArticleSource articleSource(UserAgent feedUserAgent, AddressPolicy feedAddressPolicy) {
-		return RssArticleSource.create(feedAddressPolicy, InstantSource.system(), FetchLimits.DEFAULT, feedUserAgent);
+	ArticleSource articleSource(UserAgent feedUserAgent, AddressPolicy feedAddressPolicy, InstantSource clock) {
+		return RssArticleSource.create(feedAddressPolicy, clock, FetchLimits.DEFAULT, feedUserAgent);
 	}
 
 }

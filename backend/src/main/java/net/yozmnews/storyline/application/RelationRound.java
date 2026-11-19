@@ -48,7 +48,6 @@ import net.yozmnews.storyline.domain.storyline.StorylineSnapshot;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -90,15 +89,6 @@ public class RelationRound {
 
 	private final InstantSource clock;
 
-	@Autowired
-	RelationRound(RelationQueueRepository queue, RelationRepository relations, StorylineRepository storylines,
-			EventDirectory events, FlowRelation judge, RelationCriteria criteria, StorylineMerger merger,
-			ApplicationEventPublisher publisher, TransactionTemplate transaction) {
-		this(queue, relations, storylines, events, judge, criteria, merger, publisher, transaction,
-				InstantSource.system());
-	}
-
-	/** 시험이 시계를 넣는다 */
 	RelationRound(RelationQueueRepository queue, RelationRepository relations, StorylineRepository storylines,
 			EventDirectory events, FlowRelation judge, RelationCriteria criteria, StorylineMerger merger,
 			ApplicationEventPublisher publisher, TransactionTemplate transaction, InstantSource clock) {

@@ -23,7 +23,6 @@ import net.yozmnews.tag.domain.threshold.ThresholdRepository;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -59,13 +58,6 @@ public class EvaluationRound {
 	private final TransactionTemplate transaction;
 
 	private final InstantSource clock;
-
-	@Autowired
-	EvaluationRound(PendingEvaluations pending, TagSetDirectory directory, ThresholdRepository thresholds,
-			ArticleTagging tagging, EvaluationResultRepository results, EvaluationQueueRepository queue,
-			TagSetRepository tagSets, TransactionTemplate transaction) {
-		this(pending, directory, thresholds, tagging, results, queue, tagSets, transaction, InstantSource.system());
-	}
 
 	EvaluationRound(PendingEvaluations pending, TagSetDirectory directory, ThresholdRepository thresholds,
 			ArticleTagging tagging, EvaluationResultRepository results, EvaluationQueueRepository queue,

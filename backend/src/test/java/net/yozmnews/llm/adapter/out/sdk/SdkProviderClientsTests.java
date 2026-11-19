@@ -6,6 +6,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
+import net.yozmnews.TestClocks;
 import net.yozmnews.llm.KeyValidationResult;
 import net.yozmnews.llm.LlmClientFactory;
 import net.yozmnews.llm.LlmFailureKind;
@@ -61,7 +62,9 @@ class SdkProviderClientsTests {
 
 	@Test
 	void theGatewayIsWiredOnTheOperationalPortInEveryProfile() {
-		new ApplicationContextRunner().withUserConfiguration(SdkProviderClientsConfiguration.class, Gateway.class)
+		new ApplicationContextRunner()
+			.withUserConfiguration(SdkProviderClientsConfiguration.class, Gateway.class,
+					TestClocks.FixedClockConfiguration.class)
 			.run(context -> {
 				assertThat(context).hasSingleBean(LlmProviderClients.class);
 				assertThat(context.getBean(LlmProviderClients.class)).isInstanceOf(SdkProviderClients.class);

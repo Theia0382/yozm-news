@@ -24,7 +24,6 @@ import net.yozmnews.tag.domain.result.EvaluationResultRepository;
 import net.yozmnews.tag.domain.tagset.TagSet;
 import net.yozmnews.tag.domain.tagset.TagSetRepository;
 import net.yozmnews.tag.domain.threshold.ThresholdRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -48,12 +47,6 @@ class TagBackfillAdministrationService implements TagBackfillAdministration {
 	private final TransactionTemplate transaction;
 
 	private final InstantSource clock;
-
-	@Autowired
-	TagBackfillAdministrationService(TagSetRepository tagSets, ThresholdRepository thresholds,
-			EvaluationResultRepository results, TagBackfillRepository backfills, TransactionTemplate transaction) {
-		this(tagSets, thresholds, results, backfills, transaction, InstantSource.system());
-	}
 
 	TagBackfillAdministrationService(TagSetRepository tagSets, ThresholdRepository thresholds,
 			EvaluationResultRepository results, TagBackfillRepository backfills, TransactionTemplate transaction,

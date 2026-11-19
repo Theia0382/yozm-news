@@ -86,12 +86,12 @@ public class AssignmentRound {
 	AssignmentRound(AssignmentQueueRepository queue, IntakeQueueRepository intake, MatchFeaturesRepository features,
 			EventRepository events, EventArticleRepository assignments, CriteriaRepository criteriaHistory,
 			AssignmentSettings settings, ArticleDirectory articles, EventMembership membership, TextEmbedding embedding,
-			TransactionTemplate transaction) {
+			TransactionTemplate transaction, InstantSource clock) {
 		this(queue, intake, features, events, assignments, criteriaHistory, settings.criteria(), articles, membership,
-				embedding, transaction, InstantSource.system());
+				embedding, transaction, clock);
 	}
 
-	/** 시험이 시계를 넣는다 */
+	/** 시험이 기준을 넣는다 */
 	AssignmentRound(AssignmentQueueRepository queue, IntakeQueueRepository intake, MatchFeaturesRepository features,
 			EventRepository events, EventArticleRepository assignments, CriteriaRepository criteriaHistory,
 			AssignmentCriteria criteria, ArticleDirectory articles, EventMembership membership, TextEmbedding embedding,

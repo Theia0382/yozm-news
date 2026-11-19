@@ -62,11 +62,11 @@ class FlowRelationService implements FlowRelation {
 
 	@Autowired
 	FlowRelationService(ObjectProvider<ArticleEvaluator> evaluators, ArticleDirectory articles,
-			RelationJudgementRepository judgements, TransactionTemplate transaction) {
-		this(evaluators::getIfAvailable, articles, judgements, transaction, InstantSource.system());
+			RelationJudgementRepository judgements, TransactionTemplate transaction, InstantSource clock) {
+		this(evaluators::getIfAvailable, articles, judgements, transaction, clock);
 	}
 
-	/** 시험이 평가기 · 시계를 넣는다 */
+	/** 시험이 평가기를 넣는다 */
 	FlowRelationService(Supplier<@Nullable ArticleEvaluator> evaluator, ArticleDirectory articles,
 			RelationJudgementRepository judgements, TransactionTemplate transaction, InstantSource clock) {
 		this.evaluator = evaluator;

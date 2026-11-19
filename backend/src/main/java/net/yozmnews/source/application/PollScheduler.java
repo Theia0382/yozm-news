@@ -23,7 +23,6 @@ import net.yozmnews.source.domain.registry.Source;
 import net.yozmnews.source.domain.registry.SourceRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -47,12 +46,6 @@ public class PollScheduler {
 	private final TransactionTemplate transaction;
 
 	private final InstantSource clock;
-
-	@Autowired
-	PollScheduler(FeedPollStateRepository pollStates, SourceRepository sources, ProfileResolver resolver,
-			TransactionTemplate transaction) {
-		this(pollStates, sources, resolver, transaction, InstantSource.system());
-	}
 
 	PollScheduler(FeedPollStateRepository pollStates, SourceRepository sources, ProfileResolver resolver,
 			TransactionTemplate transaction, InstantSource clock) {

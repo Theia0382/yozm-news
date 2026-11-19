@@ -68,11 +68,11 @@ class FlowMembershipService implements FlowMembership {
 
 	@Autowired
 	FlowMembershipService(ObjectProvider<ArticleEvaluator> evaluators, ArticleDirectory articles,
-			FlowMembershipJudgementRepository judgements, TransactionTemplate transaction) {
-		this(evaluators::getIfAvailable, articles, judgements, transaction, InstantSource.system());
+			FlowMembershipJudgementRepository judgements, TransactionTemplate transaction, InstantSource clock) {
+		this(evaluators::getIfAvailable, articles, judgements, transaction, clock);
 	}
 
-	/** 시험이 평가기 · 시계를 넣는다 */
+	/** 시험이 평가기를 넣는다 */
 	FlowMembershipService(Supplier<@Nullable ArticleEvaluator> evaluator, ArticleDirectory articles,
 			FlowMembershipJudgementRepository judgements, TransactionTemplate transaction, InstantSource clock) {
 		this.call = new MembershipCall(evaluator, articles, transaction, clock);

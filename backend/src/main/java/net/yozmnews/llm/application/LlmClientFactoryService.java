@@ -72,8 +72,8 @@ class LlmClientFactoryService implements LlmClientFactory {
 	private final Sleeper sleeper;
 
 	@Autowired
-	LlmClientFactoryService(LlmProviderClients clients, StoredKeySource storedKeys) {
-		this(clients, storedKeys, InstantSource.system(), Thread::sleep);
+	LlmClientFactoryService(LlmProviderClients clients, StoredKeySource storedKeys, InstantSource clock) {
+		this(clients, storedKeys, clock, Thread::sleep);
 	}
 
 	LlmClientFactoryService(LlmProviderClients clients, StoredKeySource storedKeys, InstantSource clock,

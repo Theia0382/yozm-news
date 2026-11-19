@@ -14,6 +14,7 @@ import static org.mockito.Mockito.mock;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.InstantSource;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
@@ -394,7 +395,7 @@ class FeedPollingIntegrationTests {
 			return leased;
 		}).when(deleting).findLeased(any(), any());
 		FeedPoller poller = new FeedPoller(deleting, this.fetchSlots, this.sourceRepository, this.resolver,
-				this.articleSource, this.events, this.transaction);
+				this.articleSource, this.events, this.transaction, InstantSource.system());
 
 		// 대조 — 지우지 않은 소스의 피드는 같은 대역으로 수집한다
 		poller.poll(new FeedId(kept), keptToken);

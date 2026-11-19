@@ -17,7 +17,6 @@ import net.yozmnews.source.domain.poll.LastError;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -43,11 +42,6 @@ public class FeedHealthCheck {
 	private final ApplicationEventPublisher events;
 
 	private final InstantSource clock;
-
-	@Autowired
-	FeedHealthCheck(FeedStatusRepository statuses, TransactionTemplate transaction, ApplicationEventPublisher events) {
-		this(statuses, transaction, events, InstantSource.system());
-	}
 
 	FeedHealthCheck(FeedStatusRepository statuses, TransactionTemplate transaction, ApplicationEventPublisher events,
 			InstantSource clock) {

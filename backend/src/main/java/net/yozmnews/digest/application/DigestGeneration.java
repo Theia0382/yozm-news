@@ -45,7 +45,6 @@ import net.yozmnews.platform.UserId;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -86,14 +85,6 @@ public class DigestGeneration {
 
 	private final InstantSource clock;
 
-	@Autowired
-	DigestGeneration(DigestRepository digests, DigestSectionRepository sections,
-			DigestCandidateRepository candidates, ArticleDirectory articles, DigestGenerator generator,
-			DigestEndings endings, TransactionTemplate transaction) {
-		this(digests, sections, candidates, articles, generator, endings, transaction, InstantSource.system());
-	}
-
-	/** 시험이 생성기와 시계를 넣는다 */
 	DigestGeneration(DigestRepository digests, DigestSectionRepository sections, DigestCandidateRepository candidates,
 			ArticleDirectory articles, DigestGenerator generator, DigestEndings endings,
 			TransactionTemplate transaction, InstantSource clock) {

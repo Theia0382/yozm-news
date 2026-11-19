@@ -16,7 +16,6 @@ import net.yozmnews.llm.Provider;
 import net.yozmnews.llm.StoredKey;
 import net.yozmnews.llm.StoredKeySource;
 import net.yozmnews.platform.UserId;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -40,12 +39,6 @@ class StoredKeys implements StoredKeySource {
 	private final TransactionTemplate transaction;
 
 	private final InstantSource clock;
-
-	@Autowired
-	StoredKeys(LlmKeyRepository keys, EnvelopeCipher cipher, ApplicationEventPublisher events,
-			TransactionTemplate transaction) {
-		this(keys, cipher, events, transaction, InstantSource.system());
-	}
 
 	StoredKeys(LlmKeyRepository keys, EnvelopeCipher cipher, ApplicationEventPublisher events,
 			TransactionTemplate transaction, InstantSource clock) {

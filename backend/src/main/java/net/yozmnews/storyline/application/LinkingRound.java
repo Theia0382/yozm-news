@@ -20,7 +20,6 @@ import net.yozmnews.storyline.domain.queue.LinkingSchedule;
 import net.yozmnews.storyline.domain.queue.PendingEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -54,13 +53,6 @@ public class LinkingRound {
 
 	private final InstantSource clock;
 
-	@Autowired
-	LinkingRound(LinkingQueueRepository queue, LinkingCriteriaRepository criteriaHistory, LinkingCriteria criteria,
-			StorylineLinker linker, FlowMembership membership, TransactionTemplate transaction) {
-		this(queue, criteriaHistory, criteria, linker, membership, transaction, InstantSource.system());
-	}
-
-	/** 시험이 시계를 넣는다 */
 	LinkingRound(LinkingQueueRepository queue, LinkingCriteriaRepository criteriaHistory, LinkingCriteria criteria,
 			StorylineLinker linker, FlowMembership membership, TransactionTemplate transaction, InstantSource clock) {
 		this.queue = queue;

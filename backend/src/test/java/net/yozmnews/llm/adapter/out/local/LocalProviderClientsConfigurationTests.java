@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
 
+import net.yozmnews.TestClocks;
 import net.yozmnews.llm.GenerationStop;
 import net.yozmnews.llm.KeyValidationResult;
 import net.yozmnews.llm.LlmClientFactory;
@@ -35,7 +36,7 @@ import org.springframework.context.annotation.FilterType;
 class LocalProviderClientsConfigurationTests {
 
 	private final ApplicationContextRunner runner = new ApplicationContextRunner()
-		.withUserConfiguration(Wiring.class);
+		.withUserConfiguration(Wiring.class, TestClocks.FixedClockConfiguration.class);
 
 	@Test
 	void theSubstituteTakesThePortInLocalDevelopment() {

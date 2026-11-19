@@ -23,7 +23,6 @@ import net.yozmnews.source.domain.registry.ProfileResolver;
 import net.yozmnews.source.domain.registry.Source;
 import net.yozmnews.source.domain.registry.SourceRepository;
 import org.jspecify.annotations.Nullable;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -48,12 +47,6 @@ class SourceOperations {
 	private final TransactionTemplate transaction;
 
 	private final InstantSource clock;
-
-	@Autowired
-	SourceOperations(SourceRepository sources, FeedRepository feeds, ProfileResolver resolver,
-			ArticleSource articleSource, SourceFetchSlots fetchSlots, TransactionTemplate transaction) {
-		this(sources, feeds, resolver, articleSource, fetchSlots, transaction, InstantSource.system());
-	}
 
 	SourceOperations(SourceRepository sources, FeedRepository feeds, ProfileResolver resolver,
 			ArticleSource articleSource, SourceFetchSlots fetchSlots, TransactionTemplate transaction,

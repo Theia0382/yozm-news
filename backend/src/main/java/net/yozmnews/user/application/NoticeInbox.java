@@ -11,7 +11,6 @@ import net.yozmnews.user.domain.notice.NoticeRepository;
 import net.yozmnews.user.domain.notice.NoticeRetention;
 import net.yozmnews.user.domain.notice.SeenNotice;
 import org.jspecify.annotations.Nullable;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,11 +28,6 @@ public class NoticeInbox {
 	private final RemovedSubscriptionTitles titles;
 
 	private final InstantSource clock;
-
-	@Autowired
-	NoticeInbox(NoticeRepository notices, RemovedSubscriptionTitles titles) {
-		this(notices, titles, InstantSource.system());
-	}
 
 	NoticeInbox(NoticeRepository notices, RemovedSubscriptionTitles titles, InstantSource clock) {
 		this.notices = Objects.requireNonNull(notices, "notices");

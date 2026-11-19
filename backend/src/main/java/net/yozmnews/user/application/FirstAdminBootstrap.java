@@ -13,7 +13,6 @@ import net.yozmnews.user.domain.bootstrap.FirstAdminLock;
 import net.yozmnews.user.domain.bootstrap.FirstAdminValues;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.SmartLifecycle;
 import org.springframework.stereotype.Component;
@@ -44,12 +43,6 @@ class FirstAdminBootstrap implements SmartLifecycle {
 	private final InstantSource clock;
 
 	private volatile boolean ran;
-
-	@Autowired
-	FirstAdminBootstrap(FirstAdminProperties properties, AccountProvisioning provisioning, AccountRepository accounts,
-			FirstAdminLock lock) {
-		this(properties, provisioning, accounts, lock, InstantSource.system());
-	}
 
 	FirstAdminBootstrap(FirstAdminProperties properties, AccountProvisioning provisioning, AccountRepository accounts,
 			FirstAdminLock lock, InstantSource clock) {

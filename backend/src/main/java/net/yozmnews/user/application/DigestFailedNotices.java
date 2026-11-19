@@ -6,7 +6,6 @@ import java.util.Objects;
 import net.yozmnews.user.DigestFailed;
 import net.yozmnews.user.domain.notice.DigestFailedContent;
 import net.yozmnews.user.domain.notice.NoticeRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,11 +19,6 @@ public class DigestFailedNotices {
 	private final NoticeRepository notices;
 
 	private final InstantSource clock;
-
-	@Autowired
-	DigestFailedNotices(NoticeRepository notices) {
-		this(notices, InstantSource.system());
-	}
 
 	DigestFailedNotices(NoticeRepository notices, InstantSource clock) {
 		this.notices = Objects.requireNonNull(notices, "notices");

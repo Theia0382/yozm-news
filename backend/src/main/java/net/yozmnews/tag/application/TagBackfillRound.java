@@ -28,7 +28,6 @@ import net.yozmnews.tag.domain.result.EvaluationResultRepository;
 import net.yozmnews.tag.domain.threshold.ThresholdRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -61,13 +60,6 @@ public class TagBackfillRound {
 	private final TransactionTemplate transaction;
 
 	private final InstantSource clock;
-
-	@Autowired
-	TagBackfillRound(TagBackfillRepository backfills, EvaluationResultRepository results,
-			ThresholdRepository thresholds, TagSetViews views, ArticleTagging tagging,
-			TransactionTemplate transaction) {
-		this(backfills, results, thresholds, views, tagging, transaction, InstantSource.system());
-	}
 
 	TagBackfillRound(TagBackfillRepository backfills, EvaluationResultRepository results,
 			ThresholdRepository thresholds, TagSetViews views, ArticleTagging tagging, TransactionTemplate transaction,

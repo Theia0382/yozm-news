@@ -20,7 +20,6 @@ import net.yozmnews.platform.UserId;
 import net.yozmnews.user.DigestModelDirectory;
 import net.yozmnews.user.UserTimezones;
 import org.jspecify.annotations.Nullable;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -54,14 +53,6 @@ class DigestRequestsService implements DigestRequests {
 
 	private final InstantSource clock;
 
-	@Autowired
-	DigestRequestsService(UserTimezones timezones, DigestModelDirectory models, DigestLedger ledger,
-			DigestOwnerLock owners, DigestGeneration generation, DigestDispatch dispatch,
-			TransactionTemplate transaction) {
-		this(timezones, models, ledger, owners, generation, dispatch, transaction, InstantSource.system());
-	}
-
-	/** 시험이 시계를 넣는다 */
 	DigestRequestsService(UserTimezones timezones, DigestModelDirectory models, DigestLedger ledger,
 			DigestOwnerLock owners, DigestGeneration generation, DigestDispatch dispatch,
 			TransactionTemplate transaction, InstantSource clock) {

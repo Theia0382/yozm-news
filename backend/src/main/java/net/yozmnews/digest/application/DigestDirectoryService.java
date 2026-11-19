@@ -27,7 +27,6 @@ import net.yozmnews.user.DigestModelDirectory;
 import net.yozmnews.user.DigestScheduleEntry;
 import net.yozmnews.user.UserDigestSchedules;
 import org.jspecify.annotations.Nullable;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -56,13 +55,6 @@ class DigestDirectoryService implements DigestDirectory {
 
 	private final InstantSource clock;
 
-	@Autowired
-	DigestDirectoryService(DigestLedger ledger, DigestDayRepository days, UserDigestSchedules schedules,
-			DigestModelDirectory models, TransactionTemplate transaction) {
-		this(ledger, days, schedules, models, transaction, InstantSource.system());
-	}
-
-	/** 시험이 시계를 넣는다 */
 	DigestDirectoryService(DigestLedger ledger, DigestDayRepository days, UserDigestSchedules schedules,
 			DigestModelDirectory models, TransactionTemplate transaction, InstantSource clock) {
 		this.ledger = Objects.requireNonNull(ledger, "ledger");

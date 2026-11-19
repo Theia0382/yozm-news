@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Instant;
 
+import net.yozmnews.TestClocks;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.source.FeedDeleted;
 import net.yozmnews.source.FeedId;
@@ -28,7 +29,7 @@ import org.springframework.test.context.TestPropertySource;
  * 지키는 규칙: article-R11 · article-R15
  */
 @ApplicationModuleTest
-@Import({ TestcontainersConfiguration.class, AllFeedsExist.class })
+@Import({ TestcontainersConfiguration.class, AllFeedsExist.class, TestClocks.FixedClockConfiguration.class })
 @TestPropertySource(properties = "jobrunr.background-job-server.enabled=false")
 class ArticleModuleTests {
 

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 import java.time.Duration;
+import java.time.InstantSource;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -43,7 +44,8 @@ class LlmClientFactoryServiceTests {
 
 	private final RecordingSource source = new RecordingSource();
 
-	private final LlmClientFactoryService service = new LlmClientFactoryService(this.clients, this.source);
+	private final LlmClientFactoryService service = new LlmClientFactoryService(this.clients, this.source,
+			InstantSource.system());
 
 	@Test
 	void aReachableProviderMakesTheKeyValid() {
