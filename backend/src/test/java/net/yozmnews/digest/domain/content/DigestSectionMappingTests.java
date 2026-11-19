@@ -160,22 +160,20 @@ class DigestSectionMappingTests {
 
 		this.sections.saveAll(DigestSection.of(digest.id(), cited));
 
-		// digest_items.note 는 쓰지 않는다 — 헤드라인의 코멘트는 섹션 본문이다
+		// 인용은 기사와 그 사건의 이유만 — 헤드라인의 코멘트는 섹션 본문이다
 		assertThat(this.jdbc.sql("""
-				select s.kind, s.position as section, s.title, s.body, i.position as item, i.article_id, i.note,
-				       i.selection_reason
+				select s.kind, s.position as section, s.title, s.body, i.position as item, i.article_id, i.selection_reason
 				from digest_sections s left join digest_items i on i.digest_section_id = s.id
 				where s.digest_id = :digest
 				order by s.position, i.position
 				""").param("digest", digest.id().value()).query().listOfRows())
 			.extracting(row -> List.of(String.valueOf(row.get("kind")), String.valueOf(row.get("section")),
 					String.valueOf(row.get("title")), String.valueOf(row.get("body")), String.valueOf(row.get("item")),
-					String.valueOf(row.get("article_id")), String.valueOf(row.get("note")),
-					String.valueOf(row.get("selection_reason"))))
-			.containsExactly(List.of("OVERVIEW", "0", "null", "흐름", "null", "null", "null", "null"),
-					List.of("TOP_STORY", "1", "하나", "요약", "0", "12", "null", "MAJOR_STORYLINE"),
-					List.of("TOP_STORY", "1", "하나", "요약", "1", "11", "null", "SUBSCRIBED"),
-					List.of("HEADLINE", "2", "헤드라인", "한 줄", "0", "13", "null", "SUBSCRIBED"));
+					String.valueOf(row.get("article_id")), String.valueOf(row.get("selection_reason"))))
+			.containsExactly(List.of("OVERVIEW", "0", "null", "흐름", "null", "null", "null"),
+					List.of("TOP_STORY", "1", "하나", "요약", "0", "12", "MAJOR_STORYLINE"),
+					List.of("TOP_STORY", "1", "하나", "요약", "1", "11", "SUBSCRIBED"),
+					List.of("HEADLINE", "2", "헤드라인", "한 줄", "0", "13", "SUBSCRIBED"));
 		assertThat(this.jdbc.sql("""
 				select s.position || ':' || e.position || ':' || e.event_id || ':' || e.selection_reason
 				from digest_sections s join digest_section_events e on e.digest_section_id = s.id

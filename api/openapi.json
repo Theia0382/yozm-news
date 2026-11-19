@@ -6471,16 +6471,9 @@
           "articleId" : {
             "type" : "integer",
             "format" : "int64"
-          },
-          "note" : {
-            "type" : [ "string", "null" ]
-          },
-          "reason" : {
-            "type" : "string",
-            "enum" : [ "SUBSCRIBED", "INTEREST", "MAJOR_STORYLINE" ]
           }
         },
-        "required" : [ "article", "articleId", "note", "reason" ]
+        "required" : [ "article", "articleId" ]
       },
       "DigestDateResponse" : {
         "type" : "object",
@@ -6663,11 +6656,15 @@
             "type" : "string",
             "enum" : [ "OVERVIEW", "TOP_STORY", "HEADLINE" ]
           },
+          "reason" : {
+            "type" : [ "string", "null" ],
+            "enum" : [ "SUBSCRIBED", "INTEREST", "MAJOR_STORYLINE" ]
+          },
           "title" : {
             "type" : [ "string", "null" ]
           }
         },
-        "required" : [ "body", "citations", "kind", "title" ]
+        "required" : [ "body", "citations", "kind", "reason", "title" ]
       },
       "DigestUnresolvedFailureResponse" : {
         "type" : "object",

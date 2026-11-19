@@ -86,7 +86,7 @@ public class DigestScreenScopeTests {
 		LlmKeyRows.give(this.jdbc, b.id().value());
 		long article = this.readerRows.article("격리 시험 기사");
 		long digest = this.rows.digest(a.id().value(), "2026-11-05", "READY", 100, 20, null);
-		this.rows.cite(this.rows.section(digest, "HEADLINE", 0, null, null), 0, article, null, "SUBSCRIBED");
+		this.rows.cite(this.rows.section(digest, "HEADLINE", 0, "헤드라인", null), 0, article, "SUBSCRIBED");
 
 		// 빈 본문끼리 같아 통과하지 않게 A 의 세션으로 A 의 다이제스트가 보임을 먼저 본다
 		this.mockMvc.perform(get("/api/digests/latest").with(a))

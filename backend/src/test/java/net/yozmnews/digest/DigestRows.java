@@ -49,8 +49,8 @@ public final class DigestRows {
 				returning id
 				""").param("digest", digest).query(Long.class).single();
 		jdbc.sql("""
-				insert into digest_items (digest_section_id, position, article_id, note, selection_reason)
-				values (:section, 0, :article, null, 'SUBSCRIBED')
+				insert into digest_items (digest_section_id, position, article_id, selection_reason)
+				values (:section, 0, :article, 'SUBSCRIBED')
 				""").param("section", section).param("article", article).update();
 	}
 

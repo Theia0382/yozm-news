@@ -63,8 +63,8 @@ public final class InterestRows {
 					returning id
 					""").param("digest", digest).param("position", i).query(Long.class).single();
 			this.jdbc.sql("""
-					insert into digest_items (digest_section_id, position, article_id, note, selection_reason)
-					values (:section, 0, :article, null, 'SUBSCRIBED')
+					insert into digest_items (digest_section_id, position, article_id, selection_reason)
+					values (:section, 0, :article, 'SUBSCRIBED')
 					""").param("section", section).param("article", articles[i]).update();
 		}
 	}

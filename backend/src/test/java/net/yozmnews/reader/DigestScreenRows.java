@@ -81,16 +81,28 @@ public final class DigestScreenRows {
 			.single();
 	}
 
-	/** 섹션의 인용 하나 */
-	public void cite(long section, int position, long article, @Nullable String note, String reason) {
+	/** 섹션의 인용(출처 기사) 하나 */
+	public void cite(long section, int position, long article, String reason) {
 		this.jdbc.sql("""
-				insert into digest_items (digest_section_id, position, article_id, note, selection_reason)
-				values (:section, :position, :article, :note, :reason)
+				insert into digest_items (digest_section_id, position, article_id, selection_reason)
+				values (:section, :position, :article, :reason)
 				""")
 			.param("section", section)
 			.param("position", position)
 			.param("article", article)
-			.param("note", note)
+			.param("reason", reason)
+			.update();
+	}
+
+	/** 섹션(항목)의 사건 하나와 그 선정 이유 */
+	public void sectionEvent(long section, int position, long event, String reason) {
+		this.jdbc.sql("""
+				insert into digest_section_events (digest_section_id, position, event_id, selection_reason)
+				values (:section, :position, :event, :reason)
+				""")
+			.param("section", section)
+			.param("position", position)
+			.param("event", event)
 			.param("reason", reason)
 			.update();
 	}
