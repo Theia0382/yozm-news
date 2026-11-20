@@ -12,14 +12,27 @@ import org.jspecify.annotations.Nullable;
  */
 public sealed interface Completion {
 
-	/** 인용이 있는 다이제스트를 저장했다 */
-	record Ready(TokenUsage usage, Duration took) implements Completion {
+	/**
+	 * 인용이 있는 다이제스트를 저장했다.
+	 * @param firstMissing 처음 읽은 출력에 없던 항목 수
+	 * @param substituted 끝내 대체 헤드라인으로 남긴 항목 수 — 처음 읽은 출력에 없던 수를 넘지 않는다
+	 */
+	record Ready(TokenUsage usage, Duration took, int firstMissing, int substituted) implements Completion {
 
+		/**
+		 * @throws IllegalArgumentException 소요 시간이 음수이거나, 항목 수가 음수이거나, 대체한 수가 처음 없던 수를 넘을 때
+		 */
 		public Ready {
 			Objects.requireNonNull(usage, "usage");
 			Objects.requireNonNull(took, "took");
 			if (took.isNegative()) {
 				throw new IllegalArgumentException("소요 시간이 음수다: " + took);
+			}
+			if (firstMissing < 0 || substituted < 0) {
+				throw new IllegalArgumentException("항목 수가 음수다: " + firstMissing + ", " + substituted);
+			}
+			if (substituted > firstMissing) {
+				throw new IllegalArgumentException("대체한 항목 수가 처음 없던 항목 수를 넘는다: " + substituted + " > " + firstMissing);
 			}
 		}
 

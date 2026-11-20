@@ -62,6 +62,12 @@ public final class Digest {
 
 	private final @Nullable String errorMessage;
 
+	/** 처음 읽은 출력에 없던 항목 수 — {@code READY} 로 끝낼 때만 있다 */
+	private final @Nullable Integer firstMissingItems;
+
+	/** 끝내 대체 헤드라인으로 남긴 항목 수 — {@code READY} 로 끝낼 때만 있다 */
+	private final @Nullable Integer substitutedItems;
+
 	private final Instant createdAt;
 
 	private final UUID dispatchToken;
@@ -84,8 +90,8 @@ public final class Digest {
 			DigestStatus status, DigestTrigger trigger, @Nullable String provider, @Nullable String model,
 			@Nullable Integer candidateCount, @Nullable Integer inputTokens, @Nullable Integer outputTokens,
 			@Nullable Long durationMs, @Nullable DigestFailure errorCode, @Nullable String errorMessage,
-			Instant createdAt, UUID dispatchToken, Instant dispatchedAt, @Nullable Instant startedAt,
-			@Nullable Instant completedAt, @Nullable Long version) {
+			@Nullable Integer firstMissingItems, @Nullable Integer substitutedItems, Instant createdAt, UUID dispatchToken,
+			Instant dispatchedAt, @Nullable Instant startedAt, @Nullable Instant completedAt, @Nullable Long version) {
 		this.id = id;
 		this.userId = userId;
 		this.digestDate = Objects.requireNonNull(digestDate, "digestDate");
@@ -101,6 +107,8 @@ public final class Digest {
 		this.durationMs = durationMs;
 		this.errorCode = errorCode;
 		this.errorMessage = errorMessage;
+		this.firstMissingItems = firstMissingItems;
+		this.substitutedItems = substitutedItems;
 		this.createdAt = Objects.requireNonNull(createdAt, "createdAt");
 		this.dispatchToken = Objects.requireNonNull(dispatchToken, "dispatchToken");
 		this.dispatchedAt = Objects.requireNonNull(dispatchedAt, "dispatchedAt");
@@ -118,7 +126,7 @@ public final class Digest {
 		Objects.requireNonNull(user, "user");
 		Objects.requireNonNull(period, "period");
 		return new Digest(null, user.value(), digestDate, period.start(), period.end(), DigestStatus.SCHEDULED, trigger,
-				null, null, null, null, null, null, null, null, now, dispatchToken, now, null, null, null);
+				null, null, null, null, null, null, null, null, null, null, now, dispatchToken, now, null, null, null);
 	}
 
 	/**
@@ -133,7 +141,8 @@ public final class Digest {
 		}
 		return new Digest(this.id, this.userId, this.digestDate, this.periodStart, this.periodEnd, this.status,
 				this.trigger, this.provider, this.model, this.candidateCount, this.inputTokens, this.outputTokens,
-				this.durationMs, this.errorCode, this.errorMessage, this.createdAt, token, now, this.startedAt,
+				this.durationMs, this.errorCode, this.errorMessage, this.firstMissingItems, this.substitutedItems,
+				this.createdAt, token, now, this.startedAt,
 				this.completedAt, this.version);
 	}
 
@@ -153,7 +162,8 @@ public final class Digest {
 		}
 		return new Digest(this.id, this.userId, this.digestDate, this.periodStart, this.periodEnd,
 				DigestStatus.RUNNING, this.trigger, model.provider().key(), model.id(), candidateCount, null, null,
-				null, null, null, this.createdAt, this.dispatchToken, this.dispatchedAt, now, null, this.version);
+				null, null, null, null, null, this.createdAt, this.dispatchToken, this.dispatchedAt, now, null,
+				this.version);
 	}
 
 	/**
@@ -167,10 +177,11 @@ public final class Digest {
 			throw new IllegalStateException("생성 중이 아닌 다이제스트는 끝낼 수 없다: " + this.status);
 		}
 		return switch (completion) {
-			case Completion.Ready ready -> finish(DigestStatus.READY, ready.usage(), ready.took(), null, null, now);
-			case Completion.Empty empty -> finish(DigestStatus.EMPTY, null, null, null, null, now);
+			case Completion.Ready ready -> finish(DigestStatus.READY, ready.usage(), ready.took(), null, null,
+					ready.firstMissing(), ready.substituted(), now);
+			case Completion.Empty empty -> finish(DigestStatus.EMPTY, null, null, null, null, null, null, now);
 			case Completion.Failed failed -> finish(DigestStatus.FAILED, failed.usage(), failed.took(),
-					failed.failure(), CodePoints.prefix(failed.message(), MAX_ERROR_MESSAGE), now);
+					failed.failure(), CodePoints.prefix(failed.message(), MAX_ERROR_MESSAGE), null, null, now);
 		};
 	}
 
@@ -185,15 +196,18 @@ public final class Digest {
 		if (this.status.finished()) {
 			throw new IllegalStateException("끝난 다이제스트는 실패로 끝낼 수 없다: " + this.status);
 		}
-		return finish(DigestStatus.FAILED, null, null, failure, CodePoints.prefix(message, MAX_ERROR_MESSAGE), now);
+		return finish(DigestStatus.FAILED, null, null, failure, CodePoints.prefix(message, MAX_ERROR_MESSAGE), null,
+				null, now);
 	}
 
 	private Digest finish(DigestStatus finished, @Nullable TokenUsage usage, @Nullable Duration took,
-			@Nullable DigestFailure failure, @Nullable String message, Instant now) {
+			@Nullable DigestFailure failure, @Nullable String message, @Nullable Integer firstMissing,
+			@Nullable Integer substituted, Instant now) {
 		return new Digest(this.id, this.userId, this.digestDate, this.periodStart, this.periodEnd, finished,
 				this.trigger, this.provider, this.model, this.candidateCount,
 				usage == null ? null : usage.inputTokens(), usage == null ? null : usage.outputTokens(),
-				took == null ? null : took.toMillis(), failure, message, this.createdAt, this.dispatchToken,
+				took == null ? null : took.toMillis(), failure, message, firstMissing, substituted, this.createdAt,
+				this.dispatchToken,
 				this.dispatchedAt, this.startedAt, now, this.version);
 	}
 
@@ -246,6 +260,20 @@ public final class Digest {
 	 */
 	public Optional<Integer> candidateCount() {
 		return Optional.ofNullable(this.candidateCount);
+	}
+
+	/**
+	 * @return 처음 읽은 출력에 없던 항목 수 — {@code READY} 로 끝낸 다이제스트만 있다
+	 */
+	public Optional<Integer> firstMissingItems() {
+		return Optional.ofNullable(this.firstMissingItems);
+	}
+
+	/**
+	 * @return 끝내 대체 헤드라인으로 남긴 항목 수 — {@code READY} 로 끝낸 다이제스트만 있다
+	 */
+	public Optional<Integer> substitutedItems() {
+		return Optional.ofNullable(this.substitutedItems);
 	}
 
 	/**

@@ -137,8 +137,8 @@ public final class DigestPrompts {
 	}
 
 	/**
-	 * 파싱에 실패한 뒤 다시 묻는 프롬프트 — 첫 요청의 지시에 진단과 다시 출력하라는 문장을 덧붙인다. 사용자 구획 · 스키마는 같다.
-	 * @param diagnosis 읽기의 진단 — 출력 원문이 없다. {@link PromptRules#MAX_DIAGNOSIS} 코드 포인트까지만 싣는다
+	 * 출력을 읽지 못했거나 칸이 빠진 항목이 있어 다시 묻는 프롬프트 — 첫 요청의 지시에 진단과 다시 출력하라는 문장을 덧붙인다. 사용자 구획 · 스키마는 같다.
+	 * @param diagnosis 읽기 또는 빠진 항목의 진단 — 출력 원문이 없다. {@link PromptRules#MAX_DIAGNOSIS} 코드 포인트까지만 싣는다
 	 */
 	public static DigestPrompt retry(DigestPrompt first, String diagnosis) {
 		Objects.requireNonNull(first, "first");

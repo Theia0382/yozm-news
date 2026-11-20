@@ -236,6 +236,13 @@ class DigestGenerationTests {
 				""").param("id", id.value()).query(String.class).list();
 	}
 
+	private Map<String, Object> fills(DigestId id) {
+		return this.jdbc.sql("select first_missing_items, substituted_items from digests where id = :id")
+			.param("id", id.value())
+			.query()
+			.singleRow();
+	}
+
 	private String a(int index) {
 		return String.valueOf(this.articleIds.get(index - 1));
 	}
@@ -306,7 +313,7 @@ class DigestGenerationTests {
 				"TOP_STORY:로컬 주요 뉴스 1:로컬 대체물이 만든 요약이다.", "TOP_STORY:로컬 주요 뉴스 2:로컬 대체물이 만든 요약이다.",
 				"TOP_STORY:로컬 주요 뉴스 3:로컬 대체물이 만든 요약이다.", "HEADLINE:로컬 헤드라인 1:-", "HEADLINE:로컬 헤드라인 2:-");
 		// 대조 — 지운 것이 없으면 정보 로그가 없다
-		assertThat(log.getOut()).doesNotContain("다이제스트 출력에서 지운 것이 있다");
+		assertThat(log.getOut()).doesNotContain("다이제스트 출력에 항목이 빠졌다");
 		// 실패가 아니면 실패 이벤트가 없다
 		assertThat(this.events.stream(DigestFailed.class)).isEmpty();
 	}
@@ -368,7 +375,8 @@ class DigestGenerationTests {
 		assertThat(row(id)).containsEntry("input_tokens", 2_400)
 			.containsEntry("output_tokens", 680)
 			.containsEntry("duration_ms", 4_000L);
-		assertThat(itemRows(id)).containsExactly("TOP_STORY:1:0:" + a(1));
+		// 다시 물은 출력에도 I2 칸이 없어 I2 는 대체 헤드라인으로 남는다
+		assertThat(itemRows(id)).containsExactly("TOP_STORY:1:0:" + a(1), "HEADLINE:2:0:" + a(2));
 		// 첫 요청의 프롬프트는 입력으로 만든 것이다 — 사용자 구획에 항목의 별칭 · 칸과 기사 제목이 있고 기사 별칭은 없다
 		DigestRequest first = this.requests.get(0);
 		DigestRequest second = this.requests.get(1);
@@ -489,10 +497,18 @@ class DigestGenerationTests {
 	}
 
 	@Test
-	void failsWithoutCitationWhenEveryAliasIsUnknown() {
-		DigestGeneration generation = generation(scripted(new AtomicInteger(), request -> """
-				{ "overview": "흐름", "top_stories": { "Z9": { "title": "t", "summary": "s" } }, "headlines": {} }
-				"""));
+	void failsWithoutCitationWhenEverySampledArticleIsDeletedDuringGeneration() {
+		// 생성 중에 항목 I1 · I2 의 기사를 모두 지웠다 — 대조할 항목이 남지 않는다(출력이 무엇이든)
+		DigestGeneration generation = generation(scripted(new AtomicInteger(), request -> {
+			for (int index = 0; index < 2; index++) {
+				long article = this.articleIds.get(index);
+				this.jdbc.sql("delete from article_feed_entries where article_id = :id").param("id", article).update();
+				this.jdbc.sql("delete from articles where id = :id").param("id", article).update();
+			}
+			return """
+					{ "overview": "흐름", "top_stories": { "I1": { "title": "t", "summary": "s" } }, "headlines": {} }
+					""";
+		}));
 		DigestId id = schedule(generation);
 
 		assertThat(generation.run(id, MODEL, candidates(2))).isEqualTo(DigestStatus.FAILED);
@@ -502,6 +518,64 @@ class DigestGenerationTests {
 		assertThat(this.events.stream(DigestFailed.class)).extracting(DigestFailed::cause)
 			.containsExactly(DigestFailureCause.OUTPUT);
 		assertThat(count("select count(*) from digest_sections where digest_id = :id", id)).isZero();
+	}
+
+	@Test
+	void anItemMissingFromBothAnswersStaysAsAHeadlineWithTheTitleOfItsFirstCitedArticle(CapturedOutput log) {
+		// 항목 I1 · I2(둘 다 주요 뉴스). 첫 · 다시 물은 출력 모두 I2 칸이 없다
+		AtomicInteger calls = new AtomicInteger();
+		DigestGeneration generation = generation(scripted(calls, request -> """
+				{ "overview": "흐름", "top_stories": { "I1": { "title": "t", "summary": "s" } }, "headlines": {} }
+				"""));
+		DigestId id = schedule(generation);
+
+		assertThat(generation.run(id, MODEL, candidates(2))).isEqualTo(DigestStatus.READY);
+
+		// 섹션 먼저 — I2 는 헤드라인으로 남고 제목은 첫 인용 기사(기사 2)의 제목, 코멘트 없음, 인용 · 섹션 사건은 그대로
+		assertThat(sectionTexts(id)).containsExactly("OVERVIEW:-:흐름", "TOP_STORY:t:s", "HEADLINE:다이제스트 시험 기사 2:-");
+		assertThat(itemRows(id)).containsExactly("TOP_STORY:1:0:" + a(1), "HEADLINE:2:0:" + a(2));
+		assertThat(sectionEventRows(id)).containsExactly("TOP_STORY:1:0:" + a(1) + ":SUBSCRIBED",
+				"HEADLINE:2:0:" + a(2) + ":MAJOR_STORYLINE");
+		assertThat(calls).hasValue(2);
+		assertThat(this.requests.get(1).prompt().instructions()).contains("앞 출력이 출력 스키마에 맞지 않았다: 출력에 없는 항목: I2");
+		assertThat(fills(id)).containsEntry("first_missing_items", 1).containsEntry("substituted_items", 1);
+		assertThat(log.getOut()).contains("다이제스트 출력에 항목이 빠졌다 — 다이제스트 " + id.value()
+				+ ", 처음 읽은 출력에 없던 항목 1, 대체한 항목 1");
+	}
+
+	@Test
+	void anItemMissingOnlyFromTheFirstAnswerIsWrittenByTheSecond() {
+		AtomicInteger calls = new AtomicInteger();
+		DigestGeneration generation = generation(scripted(calls, request -> (calls.get() == 1) ? """
+				{ "overview": "흐름", "top_stories": { "I1": { "title": "t", "summary": "s" } }, "headlines": {} }
+				""" : """
+				{ "overview": "다시", "top_stories": { "I1": { "title": "t1", "summary": "s1" }, "I2": { "title": "t2", "summary": "s2" } },
+				  "headlines": {} }
+				"""));
+		DigestId id = schedule(generation);
+
+		assertThat(generation.run(id, MODEL, candidates(2))).isEqualTo(DigestStatus.READY);
+
+		assertThat(sectionTexts(id)).containsExactly("OVERVIEW:-:다시", "TOP_STORY:t1:s1", "TOP_STORY:t2:s2");
+		assertThat(calls).hasValue(2);
+		assertThat(fills(id)).containsEntry("first_missing_items", 1).containsEntry("substituted_items", 0);
+	}
+
+	@Test
+	void anAnswerCoveringEveryItemIsNotAskedAgainAndRecordsNothingMissing(CapturedOutput log) {
+		AtomicInteger calls = new AtomicInteger();
+		DigestGeneration generation = generation(scripted(calls, request -> """
+				{ "overview": "흐름", "top_stories": { "I1": { "title": "t1", "summary": "s1" }, "I2": { "title": "t2", "summary": "s2" } },
+				  "headlines": {} }
+				"""));
+		DigestId id = schedule(generation);
+
+		assertThat(generation.run(id, MODEL, candidates(2))).isEqualTo(DigestStatus.READY);
+
+		assertThat(sectionTexts(id)).containsExactly("OVERVIEW:-:흐름", "TOP_STORY:t1:s1", "TOP_STORY:t2:s2");
+		assertThat(calls).hasValue(1);
+		assertThat(fills(id)).containsEntry("first_missing_items", 0).containsEntry("substituted_items", 0);
+		assertThat(log.getOut()).doesNotContain("다이제스트 출력에 항목이 빠졌다");
 	}
 
 	@Test
@@ -657,7 +731,7 @@ class DigestGenerationTests {
 		assertThat(itemRows(id)).containsExactly("TOP_STORY:1:0:" + a(1),
 				"TOP_STORY:2:0:" + a(3), "HEADLINE:3:0:" + a(4),
 				"HEADLINE:4:0:" + a(5));
-		assertThat(log.getOut()).doesNotContain("다이제스트 출력에서 지운 것이 있다").doesNotContain("로컬 대체물이 만든");
+		assertThat(log.getOut()).doesNotContain("다이제스트 출력에 항목이 빠졌다").doesNotContain("로컬 대체물이 만든");
 	}
 
 	/**

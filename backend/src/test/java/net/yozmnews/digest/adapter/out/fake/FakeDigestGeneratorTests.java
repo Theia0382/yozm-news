@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import net.yozmnews.digest.DigestInputs;
 import net.yozmnews.digest.SelectionReason;
@@ -70,7 +71,8 @@ class FakeDigestGeneratorTests {
 		assertThat(read).isInstanceOf(OutputRead.Read.class);
 		OutputRead.Read result = (OutputRead.Read) read;
 		assertThat(result.overLimit()).isZero();
-		return CitationCheck.check(result.draft(), set);
+		// 로컬 대체물은 모든 항목 칸을 쓰므로 대체할 제목이 필요 없다
+		return CitationCheck.check(result.draft(), set, Map.of());
 	}
 
 	@Test
@@ -84,7 +86,7 @@ class FakeDigestGeneratorTests {
 						new CitedStory(item(set, "I3"), "로컬 주요 뉴스 3", "로컬 대체물이 만든 요약이다.")),
 				List.of(new CitedHeadline(item(set, "I4"), "로컬 헤드라인 1", null),
 						new CitedHeadline(item(set, "I5"), "로컬 헤드라인 2", null))),
-				new CitationDrops(0, 0)));
+				new CitationDrops(0)));
 	}
 
 	@Test
@@ -95,7 +97,7 @@ class FakeDigestGeneratorTests {
 				"로컬 대체물이 만든 다이제스트다. 항목 2개.", List.of(),
 				List.of(new CitedHeadline(item(set, "I1"), "로컬 헤드라인 1", null),
 						new CitedHeadline(item(set, "I2"), "로컬 헤드라인 2", null))),
-				new CitationDrops(0, 0)));
+				new CitationDrops(0)));
 	}
 
 	@Test
@@ -105,7 +107,7 @@ class FakeDigestGeneratorTests {
 		assertThat(generateAndCheck(set)).isEqualTo(new CitationResult.Cited(new CitedDigest(
 				"로컬 대체물이 만든 다이제스트다. 항목 1개.",
 				List.of(new CitedStory(item(set, "I1"), "로컬 주요 뉴스 1", "로컬 대체물이 만든 요약이다.")), List.of()),
-				new CitationDrops(0, 0)));
+				new CitationDrops(0)));
 	}
 
 	@Test
@@ -116,14 +118,14 @@ class FakeDigestGeneratorTests {
 
 	@Test
 	void writesWithinTheLimitsForTheLargestDigest() {
-		// 주요 뉴스 상한 20 · 헤드라인 상한 150 — 넘친 원소가 없다
+		// 주요 뉴스 20 · 헤드라인 150 — 모든 항목 칸을 쓰고 대체가 없다
 		CitationResult result = generateAndCheck(items(20, 150));
 
 		assertThat(result).isInstanceOf(CitationResult.Cited.class);
 		CitedDigest digest = ((CitationResult.Cited) result).digest();
 		assertThat(digest.stories()).hasSize(20);
 		assertThat(digest.headlines()).hasSize(150);
-		assertThat(result.drops()).isEqualTo(new CitationDrops(0, 0));
+		assertThat(result.drops()).isEqualTo(new CitationDrops(0));
 	}
 
 	private static AliasedItem item(CandidateSet set, String alias) {

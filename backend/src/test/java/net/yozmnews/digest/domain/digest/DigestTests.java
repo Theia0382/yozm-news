@@ -144,14 +144,42 @@ class DigestTests {
 	@Test
 	void completesReadyWithUsageAndDuration() {
 		Digest ready = scheduled().start(MODEL, 5, T1)
-			.complete(new Completion.Ready(new TokenUsage(1_200, 340), Duration.ofMillis(2_000)), T2);
+			.complete(new Completion.Ready(new TokenUsage(1_200, 340), Duration.ofMillis(2_000), 3, 1), T2);
 
 		assertThat(ready.status()).isEqualTo(DigestStatus.READY);
 		assertThat(ready.usage()).contains(new TokenUsage(1_200, 340));
+		assertThat(ready.firstMissingItems()).contains(3);
+		assertThat(ready.substitutedItems()).contains(1);
 		assertThat(ready.durationMs()).contains(2_000L);
 		assertThat(ready.completedAt()).contains(T2);
 		assertThat(ready.failure()).isEmpty();
 		assertThat(ready.provider()).contains("anthropic");
+	}
+
+	@Test
+	void aReadyCompletionRefusesNegativeItemCountsAndMoreSubstitutedThanFirstMissing() {
+		TokenUsage usage = new TokenUsage(1, 1);
+
+		assertThatThrownBy(() -> new Completion.Ready(usage, Duration.ZERO, -1, 0))
+			.isInstanceOf(IllegalArgumentException.class);
+		assertThatThrownBy(() -> new Completion.Ready(usage, Duration.ZERO, 0, -1))
+			.isInstanceOf(IllegalArgumentException.class);
+		assertThatThrownBy(() -> new Completion.Ready(usage, Duration.ZERO, 1, 2))
+			.isInstanceOf(IllegalArgumentException.class);
+		assertThat(new Completion.Ready(usage, Duration.ZERO, 2, 2).substituted()).isEqualTo(2);
+	}
+
+	@Test
+	void onlyAReadyDigestHasTheItemCounts() {
+		Digest empty = scheduled().start(MODEL, 0, T1).complete(new Completion.Empty(), T2);
+		Digest failed = scheduled().start(MODEL, 1, T1)
+			.complete(new Completion.Failed(DigestFailure.NO_CITATION, "x", null, null), T2);
+
+		assertThat(empty.firstMissingItems()).isEmpty();
+		assertThat(empty.substitutedItems()).isEmpty();
+		assertThat(failed.firstMissingItems()).isEmpty();
+		assertThat(failed.substitutedItems()).isEmpty();
+		assertThat(scheduled().firstMissingItems()).isEmpty();
 	}
 
 	@Test
@@ -208,7 +236,7 @@ class DigestTests {
 	@Test
 	void refusesToStartAFinishedDigest() {
 		Digest ready = scheduled().start(MODEL, 5, T1)
-			.complete(new Completion.Ready(new TokenUsage(1, 1), Duration.ZERO), T2);
+			.complete(new Completion.Ready(new TokenUsage(1, 1), Duration.ZERO, 0, 0), T2);
 
 		assertThatThrownBy(() -> ready.start(MODEL, 5, T2)).isInstanceOf(IllegalStateException.class);
 	}
