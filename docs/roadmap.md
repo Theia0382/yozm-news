@@ -63,7 +63,7 @@
 
 ## M7. 피드백과 관심사 히스토리
 
-- 좋아요/싫어요, 싫어요 기사 후보 제외, 스토리라인 구독 · 해제, 구독 변경 이력 — 추가 전용 기록 ([ADR-0028](adr/0028-explicit-signals-and-interest-weighted-candidates.md) · [ADR-0101](adr/0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md))
+- 다이제스트 항목의 좋아요/싫어요(항목의 사건마다 기록), 싫어요 사건 후보 제외, 스토리라인 구독 · 해제, 구독 변경 이력 — 추가 전용 기록 ([ADR-0028](adr/0028-explicit-signals-and-interest-weighted-candidates.md) · [ADR-0101](adr/0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md))
 - 관심도 계산과 후보 순위 반영, 구독 제안
 - 웹 UI: 관심사 히스토리(기간별 주제 관심도, 새로 생긴 관심 · 사라진 관심)
 - **완료 기준**: 신호가 쌓인 테스트 사용자의 후보 순위에 관심도가 반영된다. 선정 이유별 반응(좋아요 / 싫어요)을 측정한다.

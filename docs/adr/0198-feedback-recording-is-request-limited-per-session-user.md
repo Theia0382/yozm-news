@@ -1,6 +1,6 @@
 # ADR-0198: 피드백 기록에 세션 사용자 축 요청 제한을 건다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 한도의 근거([ADR-0265](0265-feedback-is-pressed-once-per-digest-item-and-recorded-on-each-event-of-the-item-the-screen-shows-the-item-value-and-signals-use-event-records.md))
 - 날짜: 2026-11-17
 - 근거: [이슈 #183](https://github.com/Theia0382/yozm-news/issues/183) — 기점 `156d2a5` 의 요청 제한 정책 표와 표시가 달린 처리기, 신호 이력 테이블의 보존을 대조
 - 관련: [ADR-0170](0170-request-limits-count-fixed-windows-in-a-user-postgresql-table-with-a-code-constant-policy-table.md)(보충 — 정책 표에 동작 하나를 더한다), [ADR-0028](0028-explicit-signals-and-interest-weighted-candidates.md)(신호 이력은 추가 전용이다)
@@ -14,6 +14,7 @@
 
 ## 결정
 
+> 부분 대체(둘째 문장의 한도 근거) — [ADR-0265](0265-feedback-is-pressed-once-per-digest-item-and-recorded-on-each-event-of-the-item-the-screen-shows-the-item-value-and-signals-use-event-records.md). 지금 상태: [user Spec](../specs/user.md#요청-방어) user-R38
 - **누르기 · 되돌리기 처리기에 요청 제한을 건다.** 세션 사용자로 세고, 한도는 다이제스트 하나가 인용한 기사를 하나씩 누르는 사용이 창 하나에 들어가는 값으로 둔다(측정 전 목표값 — 정책 표가 정본).
 - **현재 상태 조회에는 걸지 않는다.** 읽기이고 행을 늘리지 않는다.
 - **봇 차단은 걸지 않는다.** 세션 사용자의 요청이다.

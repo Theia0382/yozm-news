@@ -1,6 +1,6 @@
 # ADR-0260: 다이제스트 후보는 사건이고, 기간에 첫 평가된 기사가 있는 배정된 사건만 든다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 기사 제외 가운데 싫어요([ADR-0265](0265-feedback-is-pressed-once-per-digest-item-and-recorded-on-each-event-of-the-item-the-screen-shows-the-item-value-and-signals-use-event-records.md))
 - 날짜: 2026-11-19
 - 근거: [이슈 #225](https://github.com/Theia0382/yozm-news/issues/225) — 리드가 단위를 사건으로 정하고(주요 뉴스 = 사건 묶음, 큰 스토리라인은 그 행의 사건을 묶음 그대로, 최대 후보 수 = 사건 수), 배정 전 기사의 처분(사건이 있는 기사만)을 골랐다. 측정 인스턴스에서 평가와 사건 배정이 따로 돌아 첫 평가 뒤에 배정된 기사가 흔했으나, 재판정이 배정 시각을 다시 써 배정이 늦은 기사의 크기는 재지 못했다. 구현 커밋 `4c4a33b`(후보 사건 · 순위 · 큰 슬롯 · 몫 · 선정 이유 · 후보 수)
 - 관련: [ADR-0208](0208-the-big-slot-takes-the-representatives-of-the-heaviest-events-of-each-big-storyline-row.md)(전체 대체 — 큰 슬롯이 넣는 것이 사건의 대표 기사에서 사건으로), [ADR-0028](0028-explicit-signals-and-interest-weighted-candidates.md)(부분 대체 — 결정 "후보 선별 순서"의 사건 단위 중복 제거와 기사마다 선정 이유), [ADR-0209](0209-maximum-candidates-and-big-slots-are-user-settings-and-the-big-slot-takes-at-most-half.md)(부분 대체 — 큰 슬롯 상한의 단위), [ADR-0216](0216-the-interest-selection-reason-marks-subscribed-candidates-that-enter-only-by-interest-with-a-weight-above-neutral.md)(부분 대체 — `INTEREST` 를 가르는 단계와 단위), [ADR-0207](0207-digest-candidates-enter-a-period-by-first-evaluation-time-with-a-published-time-floor.md)(부분 대체 — 결과 "정착 시간 동안 수집된 기사가 다음 다이제스트에 든다"), [ADR-0102](0102-an-event-is-the-reports-of-one-happening-narrowed-by-the-event-membership-question-wording.md)(사건의 범위), [ADR-0261](0261-event-topics-and-regions-are-keys-on-at-least-half-of-evaluated-members-importance-is-the-maximum-and-digest-counts-them-at-query-time.md)(사건의 값)
@@ -13,6 +13,7 @@
 
 ## 결정
 
+> 부분 대체(둘째 문장의 기사 제외 가운데 싫어요) — [ADR-0265](0265-feedback-is-pressed-once-per-digest-item-and-recorded-on-each-event-of-the-item-the-screen-shows-the-item-value-and-signals-use-event-records.md). 지금 상태: [digest Spec "후보 선별"](../specs/digest.md#후보-선별) digest-R17
 - **후보는 사건이다.** 구독 후보 사건은 읽는 기간에 첫 평가된 기사 가운데 발행 시각 하한과 사용자의 기사 제외(형식 · 소스 · 싫어요)를 지난 기사가 하나 이상 있는, 배정된 사건이다. 그 기사들이 그 사용자에게 그 기간에 든 사건의 기사다. **선별 때 사건에 배정되지 않은 기사는 그 기간의 후보가 아니다.**
 - 지역 제외와 구독 대조는 사건의 값([ADR-0261](0261-event-topics-and-regions-are-keys-on-at-least-half-of-evaluated-members-importance-is-the-maximum-and-digest-counts-them-at-query-time.md))으로 본다 — 사건의 지역이 제외 지역과 겹치면 빼고, 사건의 주제가 구독 행과 겹쳐야 구독 후보다.
 - **순위는 사건 점수다** — 사건 중요도 × (`low_confidence` 면 0.7) × 관심도 가중치(사건 주제 중분류 가중치의 평균). 같으면 그 사건의 기간에 든 기사 가운데 가장 늦은 발행 시각, 그다음 사건 ID 순이다.
@@ -35,3 +36,7 @@
 | 기사 단위 후보에 사건 단위 중복 제거를 둔다 | 큰 사건도 기사 하나로만 들고, 어느 기사들이 한 흐름인지를 LLM 이 정해 주요 뉴스가 사용자 · 날마다 다르게 묶인다 |
 | 기간에 드는 시각을 첫 평가 시각과 배정 시각 가운데 늦은 것으로 | 재판정이 배정 시각을 다시 써 재판정된 기사의 사건이 다시 후보가 된다. `event` 의 공개 조회가 바뀐다 |
 | 배정 전 기사를 혼자 한 사건처럼 다룬다 | 저장 · 입력에 사건이 없는 항목 갈래가 생기고, 그 기사와 그 기사가 곧 들 사건이 같은 다이제스트에 따로 오를 수 있다 |
+
+## 후속 기록
+
+- 2026-11-20: 결정 "순위는 사건 점수다"의 관심도 가중치(사건 주제 중분류 가중치의 평균)는 [ADR-0222](0222-interest-per-subtopic-is-smoothed-reactions-over-exposures-with-a-half-life-and-exposures-are-all-ready-citations.md) 결정 "여러 주제에 걸친 기사의 가중치는 그 기사 주제 중분류 가중치의 평균이다"의 단위를 사건으로 바꾼 것이다 — 0222 에 부분 대체 표시, 지금 상태는 [digest Spec "관심도"](../specs/digest.md#관심도) digest-R23

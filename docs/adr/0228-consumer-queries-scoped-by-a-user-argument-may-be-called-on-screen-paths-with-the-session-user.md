@@ -30,3 +30,7 @@
 |---|---|
 | 계약을 두고 관심사 히스토리를 백그라운드 작업이 계산해 저장한다 | 관심사를 저장하지 않는다는 결정([ADR-0215](0215-interests-are-not-stored-entities-and-are-computed-from-signal-history-at-query-time.md))과 조회 때 계산([ADR-0028](0028-explicit-signals-and-interest-weighted-candidates.md))을 다시 연다 |
 | 같은 읽기를 화면 경로 전용 조회로 `feedback` · `user` 에 따로 연다 | 같은 읽기의 계약이 둘이 된다 |
+
+## 후속 기록
+
+- 2026-11-20: 결정의 대상 목록 가운데 `feedback` 의 `ArticleFeedback`(지금은 사건 단위 `EventFeedback`) — [ADR-0266](0266-feedback-is-recorded-under-the-original-event-id-and-feedback-resolves-merged-events-through-event-when-reading-with-the-last-pressed-value-winning.md) · [feedback Spec](../specs/feedback.md#eventfeedback--feedbackchange) `EventFeedback`

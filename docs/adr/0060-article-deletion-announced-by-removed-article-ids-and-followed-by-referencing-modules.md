@@ -35,4 +35,5 @@
 ## 후속 기록
 
 - 2026-11-16: 다이제스트가 따르는 범위(후보 · 인용 행과 인용이 남지 않은 섹션) — [ADR-0186](0186-digests-follow-removed-articles-by-deleting-their-rows-and-show-no-summary-without-any-citation.md) · [digest Spec "지운 기사 따르기"](../specs/digest.md#지운-기사-따르기) digest-R10
-- 2026-11-17: 피드백이 따르는 범위(현재 상태 · 이력 행)와 기록과의 차례 — [ADR-0197](0197-feedback-on-removed-articles-is-deleted-from-both-the-current-state-and-the-history-and-recording-and-removal-are-ordered-by-a-fence-lock.md) · [feedback Spec "지운 기사 따르기"](../specs/feedback.md#지운-기사-따르기) feedback-R5 · R6
+- 2026-11-17: 피드백이 따르는 범위(현재 상태 · 이력 행)와 기록과의 차례 — [ADR-0197](0197-feedback-on-removed-articles-is-deleted-from-both-the-current-state-and-the-history-and-recording-and-removal-are-ordered-by-a-fence-lock.md) · [feedback Spec "지운 사건 · 지운 항목 따르기"](../specs/feedback.md#지운-사건--지운-항목-따르기) feedback-R5 · R6
+- 2026-11-20: 결정의 꼴(지운 것을 ID 로 알리고 가리키는 모듈이 따른다)을 사건 삭제로 넓히고, 피드백이 따르는 것이 지운 기사에서 지운 사건으로 바뀜 — [ADR-0267](0267-removed-events-are-announced-by-event-and-feedback-deletes-their-feedback-with-recording-and-removal-ordered-by-a-fence.md) · [event Spec "사건 변화 알림 · 잇기의 재료"](../specs/event.md#사건-변화-알림--잇기의-재료) event-R25 · [feedback Spec "지운 사건 · 지운 항목 따르기"](../specs/feedback.md#지운-사건--지운-항목-따르기) feedback-R5

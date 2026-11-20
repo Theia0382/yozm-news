@@ -1,6 +1,6 @@
 # ADR-0197: 지운 기사의 피드백은 현재 상태와 이력을 모두 지우고, 기록과 삭제는 울타리 잠금으로 차례를 세운다
 
-- 상태: 승인
+- 상태: 대체됨([ADR-0267](0267-removed-events-are-announced-by-event-and-feedback-deletes-their-feedback-with-recording-and-removal-ordered-by-a-fence.md))
 - 날짜: 2026-11-17
 - 근거: [이슈 #183](https://github.com/Theia0382/yozm-news/issues/183) — 기점 `156d2a5` 의 지운 기사 따르기(`digest` · `tag` 의 리스너와 그 실행 시점)와 선호 버전 울타리의 꼴을 대조
 - 관련: [ADR-0028](0028-explicit-signals-and-interest-weighted-candidates.md)(보충 — "신호는 추가 전용 이벤트 기록이 정본이다"의 이력에서 지운 기사의 행을 지운다), [ADR-0060](0060-article-deletion-announced-by-removed-article-ids-and-followed-by-referencing-modules.md)(보충 — `feedback` 이 따르는 범위), [ADR-0186](0186-digests-follow-removed-articles-by-deleting-their-rows-and-show-no-summary-without-any-citation.md)(지운 기사의 인용을 지운다 — 같은 기준)
