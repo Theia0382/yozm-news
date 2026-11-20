@@ -1,11 +1,17 @@
 package net.yozmnews.digest.domain.generator;
 
+import static net.yozmnews.digest.DigestInputs.event;
+import static net.yozmnews.digest.DigestInputs.item;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import net.yozmnews.digest.DigestFailure;
+import net.yozmnews.digest.DigestInputs;
+import net.yozmnews.digest.SelectionReason;
+import net.yozmnews.digest.domain.candidate.CandidateSet;
 import net.yozmnews.digest.domain.generator.GenerationVerdict.Fail;
 import net.yozmnews.digest.domain.generator.GenerationVerdict.Read;
 import net.yozmnews.digest.domain.generator.GenerationVerdict.Retry;
+import net.yozmnews.digest.domain.item.ItemKind;
 import net.yozmnews.llm.GenerationStop;
 import org.junit.jupiter.api.Test;
 
@@ -15,8 +21,12 @@ import org.junit.jupiter.api.Test;
  */
 class GenerationVerdictTests {
 
+	/** 항목 I1 하나(주요 뉴스) */
+	private static final CandidateSet SET = CandidateSet
+		.of(DigestInputs.items(item(ItemKind.TOP_STORY, event(1, SelectionReason.SUBSCRIBED, 11))));
+
 	private static final String READABLE = """
-			{"overview":"흐름","top_stories":[{"ref":"I1","title":"t","summary":"s"}],"headlines":[]}""";
+			{"overview":"흐름","top_stories":{"I1":{"title":"t","summary":"s"}},"headlines":{}}""";
 
 	private static final TokenUsage USAGE = new TokenUsage(10, 20);
 
@@ -24,24 +34,24 @@ class GenerationVerdictTests {
 	void aCompleteReadableAnswerIsRead() {
 		GenerationOutcome outcome = new GenerationOutcome.Generated(READABLE, USAGE, GenerationStop.COMPLETE);
 
-		assertThat(GenerationVerdict.judge(outcome)).isInstanceOf(Read.class);
-		assertThat(GenerationVerdict.settle(outcome)).isInstanceOf(Read.class);
+		assertThat(GenerationVerdict.judge(outcome, SET)).isInstanceOf(Read.class);
+		assertThat(GenerationVerdict.settle(outcome, SET)).isInstanceOf(Read.class);
 	}
 
 	@Test
 	void aCompleteUnreadableAnswerIsAskedAgainOnceAndThenFails() {
 		GenerationOutcome outcome = new GenerationOutcome.Generated("not json", USAGE, GenerationStop.COMPLETE);
 
-		assertThat(GenerationVerdict.judge(outcome)).isEqualTo(new Retry("JSON 이 아니다"));
-		assertThat(GenerationVerdict.settle(outcome)).isEqualTo(new Fail(DigestFailure.UNREADABLE_OUTPUT, "JSON 이 아니다"));
+		assertThat(GenerationVerdict.judge(outcome, SET)).isEqualTo(new Retry("JSON 이 아니다"));
+		assertThat(GenerationVerdict.settle(outcome, SET)).isEqualTo(new Fail(DigestFailure.UNREADABLE_OUTPUT, "JSON 이 아니다"));
 	}
 
 	@Test
 	void aTruncatedOrRefusedAnswerIsNeverAskedAgainEvenIfReadable() {
 		for (String text : new String[] { "not json", READABLE }) {
-			assertThat(GenerationVerdict.judge(new GenerationOutcome.Generated(text, USAGE, GenerationStop.TRUNCATED)))
+			assertThat(GenerationVerdict.judge(new GenerationOutcome.Generated(text, USAGE, GenerationStop.TRUNCATED), SET))
 				.isEqualTo(new Fail(DigestFailure.OUTPUT_TRUNCATED, "출력이 출력 토큰 상한에 닿아 잘렸다"));
-			assertThat(GenerationVerdict.judge(new GenerationOutcome.Generated(text, USAGE, GenerationStop.REFUSED)))
+			assertThat(GenerationVerdict.judge(new GenerationOutcome.Generated(text, USAGE, GenerationStop.REFUSED), SET))
 				.isEqualTo(new Fail(DigestFailure.OUTPUT_REFUSED, "모델이 출력을 거절했다"));
 		}
 	}
@@ -50,10 +60,10 @@ class GenerationVerdictTests {
 	void aGeneratorFailureKeepsItsCodeAndMessage() {
 		GenerationOutcome failed = new GenerationOutcome.Failed(DigestFailure.KEY_INVALID, "OpenAI 401");
 
-		assertThat(GenerationVerdict.judge(failed)).isEqualTo(new Fail(DigestFailure.KEY_INVALID, "OpenAI 401"));
-		assertThat(GenerationVerdict.settle(failed)).isEqualTo(new Fail(DigestFailure.KEY_INVALID, "OpenAI 401"));
+		assertThat(GenerationVerdict.judge(failed, SET)).isEqualTo(new Fail(DigestFailure.KEY_INVALID, "OpenAI 401"));
+		assertThat(GenerationVerdict.settle(failed, SET)).isEqualTo(new Fail(DigestFailure.KEY_INVALID, "OpenAI 401"));
 		// 대조 — 생성기가 낸 읽기 실패 코드도 다시 묻지 않는다(다시 묻기는 끝까지 쓴 응답을 읽지 못했을 때뿐이다)
-		assertThat(GenerationVerdict.judge(new GenerationOutcome.Failed(DigestFailure.UNREADABLE_OUTPUT, "x")))
+		assertThat(GenerationVerdict.judge(new GenerationOutcome.Failed(DigestFailure.UNREADABLE_OUTPUT, "x"), SET))
 			.isInstanceOf(Fail.class);
 	}
 

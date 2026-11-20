@@ -29,9 +29,9 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * 프롬프트가 후보 선별의 토큰 어림 안에 드는가(ADR-0210) — 지시 + 출력 스키마는 지시 예약 안, 프로필(고정 틀 포함) · 기사 줄은 각 어림
- * 안, 사건 · 항목의 괄호 · 항목 별칭 · 칸 이름은 사건마다 사건 몫 안. 긴 이름 · 이스케이프가 많은 글 · 가장 긴 시간대 ID · 가장 긴 항목
- * 별칭으로 자르기와 몫을 걸고, 짧은 줄은 자르지 않는 대조를 둔다. 어림은
+ * 프롬프트가 후보 선별의 토큰 어림 안에 드는가(ADR-0210) — 지시 + 항목이 없는 출력 스키마는 지시 예약 안, 프로필(고정 틀 포함) · 기사
+ * 줄은 각 어림 안, 사건 · 항목의 괄호 · 항목 별칭 · 칸 이름과 출력 스키마에서 그 항목의 칸 서술은 사건마다 사건 몫 안. 긴 이름 ·
+ * 이스케이프가 많은 글 · 가장 긴 시간대 ID · 가장 긴 항목 별칭으로 자르기와 몫을 걸고, 짧은 줄은 자르지 않는 대조를 둔다. 어림은
  * {@link CandidateCost} 의 공개 함수로 센다 — 비율을 다시 적지 않는다.
  */
 class DigestPromptsBudgetTests {
@@ -171,6 +171,34 @@ class DigestPromptsBudgetTests {
 		int allowed = CandidateCost.tokens(CandidateCost.PROFILE_TAG_COST + CandidateCost.PROFILE_OVERHEAD)
 				+ 149 * CandidateCost.event(List.of(line)) + 3 * CandidateCost.event(List.of(line, line));
 		assertThat(CandidateCost.tokens(codePoints(compose(input).userContent()))).isLessThanOrEqualTo(allowed);
+	}
+
+	@Test
+	void anItemsShareOfTheUserSegmentAndOfTheOutputSchemaFitsItsEventEstimate() throws Exception {
+		// 사건 하나 · 기사 하나짜리 항목 150 개 — 마지막 항목의 별칭은 가장 긴 I150 이다. 출력 서술은 항목마다 칸 하나를 더하고, 스키마는 구조화
+		// 출력이어도 공급자가 입력으로 셀 수 있다. 항목 하나가 사용자 구획과 출력 서술에 더하는 몫이 함께 그 사건의 어림 안이어야 한다
+		for (ItemKind kind : ItemKind.values()) {
+			DigestInput all = singles(150, kind);
+			DigestInput lessOne = singles(149, kind);
+			DigestPrompt prompt = compose(all);
+			JsonNode last = JSON.readTree(prompt.userContent()).get("items").get(149);
+			int schemaShare = codePoints(prompt.outputSchema()) - codePoints(compose(lessOne).outputSchema());
+
+			assertThat(last.get(0).asString()).isEqualTo("I150");
+			assertThat(tokens(last) + CandidateCost.tokens(schemaShare)).as("%s", kind)
+				.isLessThanOrEqualTo(CandidateCost.event(List.of(CandidateCost.candidate(2, 0))));
+		}
+	}
+
+	/** 사건 하나 · 기사 하나(제목 "제목", 요약문 없음)짜리 항목 {@code count} 개 */
+	private static DigestInput singles(int count, ItemKind kind) {
+		List<InputItem> items = new ArrayList<>();
+		for (int i = 1; i <= count; i++) {
+			CandidateArticle line = new CandidateArticle(new DigestCandidate(new ArticleId(i), SelectionReason.SUBSCRIBED),
+					"제목", "", List.of(), PUBLISHED, List.of(), List.of());
+			items.add(new InputItem(kind, List.of(event(i, line))));
+		}
+		return input(profile(SummaryLength.NORMAL, "", "Asia/Seoul"), items);
 	}
 
 	private static DigestPrompt compose(DigestInput input) {

@@ -31,9 +31,9 @@ class BudgetCutTests {
 
 	@Test
 	void anEventCostsItsArticleLinesPlusTheEventOverhead() {
-		// 420 + 80 + 40 = 540
-		assertThat(CandidateCost.event(List.of(420, 80))).isEqualTo(540);
-		assertThat(CandidateCost.event(List.of(80))).isEqualTo(120);
+		// 420 + 80 + 210 = 710
+		assertThat(CandidateCost.event(List.of(420, 80))).isEqualTo(710);
+		assertThat(CandidateCost.event(List.of(80))).isEqualTo(290);
 		assertThatIllegalArgumentException().isThrownBy(() -> CandidateCost.event(List.of()));
 		assertThatIllegalArgumentException().isThrownBy(() -> CandidateCost.event(List.of(-1)));
 	}

@@ -3,7 +3,9 @@ package net.yozmnews.digest.domain.generator;
 import java.util.Objects;
 
 import net.yozmnews.digest.DigestFailure;
+import net.yozmnews.digest.domain.candidate.CandidateSet;
 import net.yozmnews.digest.domain.output.DigestOutputReader;
+import net.yozmnews.digest.domain.output.DigestOutputSchema;
 import net.yozmnews.digest.domain.output.OutputRead;
 import net.yozmnews.llm.GenerationStop;
 
@@ -25,27 +27,35 @@ public final class GenerationVerdict {
 	private GenerationVerdict() {
 	}
 
-	/** 첫 호출의 판정 — 끝까지 쓴 응답을 읽지 못하면 다시 묻는다 */
-	public static Verdict judge(GenerationOutcome outcome) {
+	/**
+	 * 첫 호출의 판정 — 끝까지 쓴 응답을 읽지 못하면 다시 묻는다
+	 * @param set 이번 생성의 항목 — 출력 서술({@link DigestOutputSchema#root})을 정한다
+	 */
+	public static Verdict judge(GenerationOutcome outcome, CandidateSet set) {
 		Objects.requireNonNull(outcome, "outcome");
+		Objects.requireNonNull(set, "set");
 		return switch (outcome) {
 			case GenerationOutcome.Generated generated when generated.stop() == GenerationStop.COMPLETE ->
-				switch (DigestOutputReader.read(generated.text())) {
+				switch (DigestOutputReader.read(generated.text(), DigestOutputSchema.root(set))) {
 					case OutputRead.Read read -> new Read(read);
 					case OutputRead.Unreadable unreadable -> new Retry(unreadable.reason());
 				};
-			case GenerationOutcome.Generated generated -> settle(generated);
-			case GenerationOutcome.Failed failed -> settle(failed);
+			case GenerationOutcome.Generated generated -> settle(generated, set);
+			case GenerationOutcome.Failed failed -> settle(failed, set);
 		};
 	}
 
-	/** 다시 물은 호출(또는 다시 묻지 않을 결과)의 판정 — 읽지 못하면 실패다 */
-	public static Settled settle(GenerationOutcome outcome) {
+	/**
+	 * 다시 물은 호출(또는 다시 묻지 않을 결과)의 판정 — 읽지 못하면 실패다
+	 * @param set 이번 생성의 항목 — 출력 서술({@link DigestOutputSchema#root})을 정한다
+	 */
+	public static Settled settle(GenerationOutcome outcome, CandidateSet set) {
 		Objects.requireNonNull(outcome, "outcome");
+		Objects.requireNonNull(set, "set");
 		return switch (outcome) {
 			case GenerationOutcome.Failed failed -> new Fail(failed.failure(), failed.message());
 			case GenerationOutcome.Generated generated -> switch (generated.stop()) {
-				case COMPLETE -> switch (DigestOutputReader.read(generated.text())) {
+				case COMPLETE -> switch (DigestOutputReader.read(generated.text(), DigestOutputSchema.root(set))) {
 					case OutputRead.Read read -> new Read(read);
 					case OutputRead.Unreadable unreadable -> new Fail(DigestFailure.UNREADABLE_OUTPUT, unreadable.reason());
 				};

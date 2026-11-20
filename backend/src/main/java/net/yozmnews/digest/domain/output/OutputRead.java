@@ -9,7 +9,7 @@ public sealed interface OutputRead {
 
 	/**
 	 * 출력을 읽었다.
-	 * @param overLimit 상한을 넘어 버린 원소 · 읽지 않은 배열 꼬리 원소 · 지운 값의 수
+	 * @param overLimit 상한을 넘어 버린 항목 칸 · 지운 값의 수 — 버린 항목 칸은 그 항목이 빠진 것이기도 하다
 	 */
 	record Read(DigestDraft draft, int overLimit) implements OutputRead {
 

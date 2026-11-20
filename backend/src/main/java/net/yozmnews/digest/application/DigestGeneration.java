@@ -135,12 +135,12 @@ public class DigestGeneration {
 		Instant asked = this.clock.instant();
 		GenerationOutcome first = this.generator.generate(new DigestRequest(started.user(), model, effort, set, prompt));
 		GenerationOutcome second = null;
-		Settled settled = switch (GenerationVerdict.judge(first)) {
+		Settled settled = switch (GenerationVerdict.judge(first, set)) {
 			case Settled done -> done;
 			case Retry retry -> {
 				second = this.generator.generate(new DigestRequest(started.user(), model, effort, set,
 						DigestPrompts.retry(prompt, retry.diagnosis())));
-				yield GenerationVerdict.settle(second);
+				yield GenerationVerdict.settle(second, set);
 			}
 		};
 		TokenUsage usage = sum(usage(first), (second == null) ? null : usage(second));

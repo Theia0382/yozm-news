@@ -1,8 +1,7 @@
 package net.yozmnews.digest.domain.output;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 
@@ -16,8 +15,9 @@ import tools.jackson.databind.json.JsonMapper;
 /**
  * 출력 원문 읽기 — 정본 · docs/specs/digest.md §5 · digest-R4 · digest-R5
  * <p>
- * {@link DigestOutputSchema#ROOT} 를 따라 걸으며 필수 · 타입 · 상한 · 넘을 때의 처분을 가른다. 걸은 값은 속성 이름 → 값의 맵 · 목록 ·
- * 문자열 · {@code null}(없음)로 모은 뒤 {@link DigestDraft} 로 옮긴다.
+ * 이번 요청의 출력 서술({@link DigestOutputSchema#root})을 따라 걸으며 필수 · 타입 · 상한 · 넘을 때의 처분을 가른다. 걸은 값은 속성
+ * 이름 → 값의 맵 · 문자열 · {@code null}(없음)로 모은 뒤 {@link DigestDraft} 로 옮긴다. 항목 칸에서 없는 키는 빼고 읽는다 — 빠진 항목은
+ * 부르는 쪽이 서술의 키와 견준다.
  */
 public final class DigestOutputReader {
 
@@ -33,21 +33,25 @@ public final class DigestOutputReader {
 	private DigestOutputReader() {
 	}
 
-	/** 출력 원문을 읽는다 */
-	public static OutputRead read(String text) {
+	/**
+	 * 출력 원문을 읽는다
+	 * @param root 이번 요청의 출력 서술({@link DigestOutputSchema#root})
+	 */
+	public static OutputRead read(String text, OutputShape.Obj root) {
 		Objects.requireNonNull(text, "text");
-		JsonNode root;
+		Objects.requireNonNull(root, "root");
+		JsonNode node;
 		try {
-			root = JSON.readTree(unfence(text.strip()));
+			node = JSON.readTree(unfence(text.strip()));
 		}
 		catch (JacksonException ex) {
 			return new OutputRead.Unreadable("JSON 이 아니다");
 		}
-		if (root == null || root.isMissingNode()) {
+		if (node == null || node.isMissingNode()) {
 			return new OutputRead.Unreadable("JSON 이 아니다");
 		}
 		Walker walker = new Walker();
-		return switch (walker.walk(root, DigestOutputSchema.ROOT, "$")) {
+		return switch (walker.walk(node, root, "$")) {
 			case Walked.Value value -> new OutputRead.Read(draft(map(value.value())), walker.overLimit);
 			case Walked.Drop drop -> new OutputRead.Unreadable("$: 최상위를 버릴 수 없다");
 			case Walked.Fail fail -> new OutputRead.Unreadable(fail.reason());
@@ -75,30 +79,25 @@ public final class DigestOutputReader {
 	}
 
 	private static DigestDraft draft(Map<String, @Nullable Object> root) {
-		List<StoryDraft> stories = new ArrayList<>();
-		for (Object element : list(root.get(DigestOutputSchema.TOP_STORIES))) {
+		Map<String, StoryDraft> stories = new LinkedHashMap<>();
+		map(root.get(DigestOutputSchema.TOP_STORIES)).forEach((alias, element) -> {
 			Map<String, @Nullable Object> story = map(element);
-			stories.add(new StoryDraft(string(story.get(DigestOutputSchema.REF)),
-					string(story.get(DigestOutputSchema.TITLE)), string(story.get(DigestOutputSchema.SUMMARY))));
-		}
-		List<HeadlineDraft> headlines = new ArrayList<>();
-		for (Object element : list(root.get(DigestOutputSchema.HEADLINES))) {
+			stories.put(alias, new StoryDraft(string(story.get(DigestOutputSchema.TITLE)),
+					string(story.get(DigestOutputSchema.SUMMARY))));
+		});
+		Map<String, HeadlineDraft> headlines = new LinkedHashMap<>();
+		map(root.get(DigestOutputSchema.HEADLINES)).forEach((alias, element) -> {
 			Map<String, @Nullable Object> headline = map(element);
 			Object note = headline.get(DigestOutputSchema.NOTE);
-			headlines.add(new HeadlineDraft(string(headline.get(DigestOutputSchema.REF)),
-					string(headline.get(DigestOutputSchema.TITLE)), note == null ? null : string(note)));
-		}
+			headlines.put(alias, new HeadlineDraft(string(headline.get(DigestOutputSchema.TITLE)),
+					note == null ? null : string(note)));
+		});
 		return new DigestDraft(string(root.get(DigestOutputSchema.OVERVIEW)), stories, headlines);
 	}
 
 	@SuppressWarnings("unchecked")
 	private static Map<String, @Nullable Object> map(@Nullable Object value) {
 		return (Map<String, @Nullable Object>) Objects.requireNonNull(value, "value");
-	}
-
-	@SuppressWarnings("unchecked")
-	private static List<Object> list(@Nullable Object value) {
-		return (List<Object>) Objects.requireNonNull(value, "value");
 	}
 
 	private static String string(@Nullable Object value) {
@@ -112,7 +111,7 @@ public final class DigestOutputReader {
 		record Value(@Nullable Object value) implements Walked {
 		}
 
-		/** 이 값을 가진 배열 원소를 버린다 */
+		/** 이 값을 가진 항목 칸을 버린다 */
 		record Drop() implements Walked {
 		}
 
@@ -130,13 +129,13 @@ public final class DigestOutputReader {
 		Walked walk(JsonNode node, OutputShape shape, String path) {
 			return switch (shape) {
 				case OutputShape.Obj obj -> object(node, obj, path);
-				case OutputShape.Arr arr -> array(node, arr, path);
+				case OutputShape.Keyed keyed -> keyed(node, keyed, path);
 				case OutputShape.Str str -> string(node, str, path);
 			};
 		}
 
 		/**
-		 * 속성을 모두 걷는다 — 어느 속성이든 읽지 못하면 객체를 버릴 속성이 있어도 읽지 못한 것이다. 버린 객체 안에서 센 수는 버린 원소
+		 * 속성을 모두 걷는다 — 어느 속성이든 읽지 못하면 객체를 버릴 속성이 있어도 읽지 못한 것이다. 버린 객체 안에서 센 수는 버린 칸
 		 * 하나로 센다.
 		 */
 		private Walked object(JsonNode node, OutputShape.Obj shape, String path) {
@@ -179,23 +178,23 @@ public final class DigestOutputReader {
 			return new Walked.Value(values);
 		}
 
-		private Walked array(JsonNode node, OutputShape.Arr shape, String path) {
-			if (!node.isArray()) {
-				return new Walked.Fail(path + ": 배열이 아니다");
+		/**
+		 * 키마다 걷는다 — 없는 키 · {@code null} 인 키는 뺀다. 값을 버리면 그 키를 빼고 하나로 센다. 서술하지 않은 키는 무시한다. 값이 출력
+		 * 전체를 읽지 못하게 하면 그대로 읽지 못한 것이다.
+		 */
+		private Walked keyed(JsonNode node, OutputShape.Keyed shape, String path) {
+			if (!node.isObject()) {
+				return new Walked.Fail(path + ": 객체가 아니다");
 			}
-			List<Object> values = new ArrayList<>();
-			int size = node.size();
-			int read = Math.min(size, shape.maxItems());
-			this.overLimit += size - read;
-			for (int index = 0; index < read; index++) {
-				String at = path + "[" + index + "]";
-				JsonNode element = node.get(index);
-				if (element.isNull()) {
-					return new Walked.Fail(at + ": null 이다");
+			Map<String, @Nullable Object> values = new LinkedHashMap<>();
+			for (String key : shape.keys()) {
+				JsonNode child = node.get(key);
+				if (child == null || child.isMissingNode() || child.isNull()) {
+					continue;
 				}
-				Walked walked = walk(element, shape.item(), at);
+				Walked walked = walk(child, shape.value(), path + "." + key);
 				switch (walked) {
-					case Walked.Value value -> values.add(Objects.requireNonNull(value.value(), at));
+					case Walked.Value value -> values.put(key, Objects.requireNonNull(value.value(), key));
 					case Walked.Drop drop -> this.overLimit++;
 					case Walked.Fail fail -> {
 						return fail;

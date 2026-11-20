@@ -2,6 +2,7 @@ package net.yozmnews.digest.domain.output;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * 출력 구조의 서술 마디 — 읽기와 JSON Schema 문서가 함께 따르는 꼴 · docs/specs/digest.md §5 · digest-R4
@@ -20,14 +21,20 @@ public sealed interface OutputShape {
 	}
 
 	/**
-	 * 배열 — 원소가 {@code maxItems} 를 넘으면 앞에서부터 그만큼만 읽는다.
+	 * 키마다 같은 꼴의 값을 갖는 객체 — 키는 이번 요청의 항목 별칭이다. JSON Schema 는 모든 키를 필수로 그리고, 읽기는 없는 키 · {@code null}
+	 * 인 키를 빼고 읽는다(출력 전체를 읽지 못한 것이 아니다). 값을 버리면 그 키를 빼고, 서술하지 않은 키는 무시한다.
+	 * @param keys 키 — 순서대로, 비지 않고 겹치지 않는다
 	 */
-	record Arr(OutputShape item, int maxItems) implements OutputShape {
+	record Keyed(List<String> keys, OutputShape value) implements OutputShape {
 
-		public Arr {
-			Objects.requireNonNull(item, "item");
-			if (maxItems < 1) {
-				throw new IllegalArgumentException("배열 상한이 1 보다 작다: " + maxItems);
+		public Keyed {
+			keys = List.copyOf(keys);
+			Objects.requireNonNull(value, "value");
+			if (keys.isEmpty()) {
+				throw new IllegalArgumentException("키가 없다");
+			}
+			if (Set.copyOf(keys).size() != keys.size()) {
+				throw new IllegalArgumentException("겹친 키가 있다: " + keys);
 			}
 		}
 

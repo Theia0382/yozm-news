@@ -22,6 +22,7 @@ import net.yozmnews.digest.domain.output.CitedDigest;
 import net.yozmnews.digest.domain.output.CitedHeadline;
 import net.yozmnews.digest.domain.output.CitedStory;
 import net.yozmnews.digest.domain.output.DigestOutputReader;
+import net.yozmnews.digest.domain.output.DigestOutputSchema;
 import net.yozmnews.digest.domain.output.OutputRead;
 import net.yozmnews.digest.domain.prompt.DigestPrompt;
 import net.yozmnews.llm.GenerationStop;
@@ -65,7 +66,7 @@ class FakeDigestGeneratorTests {
 		GenerationOutcome.Generated output = (GenerationOutcome.Generated) outcome;
 		assertThat(output.usage()).isEqualTo(new TokenUsage(0, 0));
 		assertThat(output.stop()).isEqualTo(GenerationStop.COMPLETE);
-		OutputRead read = DigestOutputReader.read(output.text());
+		OutputRead read = DigestOutputReader.read(output.text(), DigestOutputSchema.root(set));
 		assertThat(read).isInstanceOf(OutputRead.Read.class);
 		OutputRead.Read result = (OutputRead.Read) read;
 		assertThat(result.overLimit()).isZero();

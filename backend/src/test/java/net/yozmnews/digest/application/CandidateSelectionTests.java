@@ -73,8 +73,8 @@ import net.yozmnews.digest.DigestRounds;
  * 관심도의 기준 시각은 기간 끝 11-06 0시다. 노출 · 반응 · 구독 변경은 그 앞 하루 남짓이라 무게가 1 에 가깝고, 기대값은 순위가 바뀌는지만 본다
  * — 무게의 값은 산식 단위 시험(InterestFormulaTests)이 고정한다.
  * <p>
- * 토큰 어림: 기사 줄 = 제목 + 요약문 "요약" 2 + 80, 사건 = 기사 줄의 합 + 40. 사건 E1(기사 "정치 하나" 5 · "정치 둘" 4) = 87 + 86 + 40 =
- * 213, 제목 다섯 글자 기사 하나뿐인 사건 = 87 + 40 = 127.
+ * 토큰 어림: 기사 줄 = 제목 + 요약문 "요약" 2 + 80, 사건 = 기사 줄의 합 + 210. 사건 E1(기사 "정치 하나" 5 · "정치 둘" 4) = 87 + 86 + 210 =
+ * 383, 제목 다섯 글자 기사 하나뿐인 사건 = 87 + 210 = 297.
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -89,8 +89,8 @@ class CandidateSelectionTests {
 
 	private static final LlmModel ROOMY = new LlmModel(Provider.OPENAI, "gpt-test", 32_000, true);
 
-	/** 지시 2,000 + 프로필(구독 행 1 × 20 + 고정 틀 200) + 사건 E1 213 — 사건 E1 하나만 든다 */
-	private static final LlmModel ONE_CANDIDATE = new LlmModel(Provider.OPENAI, "gpt-test", 2_000 + 20 + 200 + 213,
+	/** 지시 2,000 + 프로필(구독 행 1 × 20 + 고정 틀 200) + 사건 E1 383 — 사건 E1 하나만 든다 */
+	private static final LlmModel ONE_CANDIDATE = new LlmModel(Provider.OPENAI, "gpt-test", 2_000 + 20 + 200 + 383,
 			true);
 
 	@Autowired
@@ -337,7 +337,7 @@ class CandidateSelectionTests {
 
 	@Test
 	void theInputTokenBudgetCutsTheTailByEvent() {
-		// 예산 = 지시 2,000 + 프로필 220 + 사건 E1 213 → 사건 E1 하나만(사건 5 의 127 은 들 자리가 없다)
+		// 예산 = 지시 2,000 + 프로필 220 + 사건 E1 383 → 사건 E1 하나만(사건 5 의 297 은 들 자리가 없다)
 		assertThat(events(this.selection.select(new UserId(this.user), DAY, ONE_CANDIDATE)))
 			.containsExactly(this.e1 + ":SUBSCRIBED");
 	}
@@ -377,13 +377,13 @@ class CandidateSelectionTests {
 	@Test
 	void theBigEventTakesItsShareOfTheBudgetFirst() {
 		long[] conflict = bigStoryline();
-		// 큰 슬롯 사건 = 87("분쟁 하나") + 86 + 86 + 40 = 299. 예산 = 지시 2,000 + 프로필 220 + 299 → 구독 사건은 들 자리가 없다
-		LlmModel tight = new LlmModel(Provider.OPENAI, "gpt-test", 2_000 + 220 + 299, true);
+		// 큰 슬롯 사건 = 87("분쟁 하나") + 86 + 86 + 210 = 469. 예산 = 지시 2,000 + 프로필 220 + 469 → 구독 사건은 들 자리가 없다
+		LlmModel tight = new LlmModel(Provider.OPENAI, "gpt-test", 2_000 + 220 + 469, true);
 
 		assertThat(events(this.selection.select(new UserId(this.user), DAY, tight)))
 			.containsExactly(event(conflict[0]) + ":MAJOR_STORYLINE");
 
-		// 대조: 큰 슬롯을 끄면 같은 예산(후보 몫 299)에 사건 E1(213)이 든다 — 사건 5(127)까지는 넘는다
+		// 대조: 큰 슬롯을 끄면 같은 예산(후보 몫 469)에 사건 E1(383)이 든다 — 사건 5(297)까지는 넘는다
 		this.jdbc.sql("update user_settings set big_slots = 0 where user_id = :user").param("user", this.user).update();
 		assertThat(events(this.selection.select(new UserId(this.user), DAY, tight)))
 			.containsExactly(this.e1 + ":SUBSCRIBED");
@@ -599,7 +599,7 @@ class CandidateSelectionTests {
 
 	@Test
 	void theNeutralResultIsCutByTheSameBudgetWithItsOwnEvents() {
-		// 사건마다 기사 하나(127). 최대 후보 10 · 예산 9 개. 북한(D 4.8)은 뺌 넷으로 가중치 0.5, 외교(Z 4.55)는 더함 넷으로 1.5.
+		// 사건마다 기사 하나(297). 최대 후보 10 · 예산 9 개. 북한(D 4.8)은 뺌 넷으로 가중치 0.5, 외교(Z 4.55)는 더함 넷으로 1.5.
 		// 관심도 결과 10: Z · n1 ~ n4 · n6 ~ n9 · n11 → 예산 9: Z · n1 ~ n4 · n6 ~ n9
 		// 중립 결과 10: n1 ~ n4 · D · n6 ~ n9 · Z → 예산 9: n1 ~ n4 · D · n6 ~ n9 — Z 는 중립으로는 들지 못해 INTEREST.
 		// 중립에만 든 D 의 토큰을 읽지 않으면 중립 결과가 D 를 버리고 Z 를 담아 Z 가 SUBSCRIBED 가 된다
@@ -618,7 +618,7 @@ class CandidateSelectionTests {
 			topicChange("politics.north-korea", "REMOVE");
 			topicChange("politics.diplomacy-defense", "ADD");
 		}
-		LlmModel nine = new LlmModel(Provider.OPENAI, "gpt-test", 2_000 + 20 + 200 + 9 * 127, true);
+		LlmModel nine = new LlmModel(Provider.OPENAI, "gpt-test", 2_000 + 20 + 200 + 9 * 297, true);
 
 		DigestInput input = this.selection.select(new UserId(this.user), DAY, nine).orElseThrow();
 

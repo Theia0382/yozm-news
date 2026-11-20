@@ -1,17 +1,21 @@
 package net.yozmnews.digest.domain.output;
 
-import java.util.List;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Objects;
 
 /**
  * 읽은 출력 — 항목 대조 전 · docs/specs/digest.md §4
+ * @param topStories 읽은 주요 뉴스 칸 — 항목 별칭 → 주요 뉴스, 서술의 키 순서. 출력에 없던 항목은 없다
+ * @param headlines 읽은 헤드라인 칸 — 항목 별칭 → 헤드라인, 서술의 키 순서. 출력에 없던 항목은 없다
  */
-public record DigestDraft(String overview, List<StoryDraft> topStories, List<HeadlineDraft> headlines) {
+public record DigestDraft(String overview, Map<String, StoryDraft> topStories, Map<String, HeadlineDraft> headlines) {
 
 	public DigestDraft {
 		Objects.requireNonNull(overview, "overview");
-		topStories = List.copyOf(topStories);
-		headlines = List.copyOf(headlines);
+		topStories = Collections.unmodifiableMap(new LinkedHashMap<>(topStories));
+		headlines = Collections.unmodifiableMap(new LinkedHashMap<>(headlines));
 	}
 
 }

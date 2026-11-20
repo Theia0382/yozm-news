@@ -16,8 +16,8 @@ class ProviderSchemasTests {
 
 	private static final JsonMapper JSON = JsonMapper.builder().build();
 
-	/** 다이제스트 출력 스키마(`DigestOutputSchema.json()`)와 같은 꼴을 줄인 것 */
-	private static final String DIGEST_LIKE = """
+	/** 배열 칸(원소 객체 · 개수 상한) · 문자열 길이 제약 · null 을 받는 속성이 있는 객체 — 공급자 맞춤의 키워드 처분을 본다 */
+	private static final String WITH_ARRAY = """
 			{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object",
 			 "properties":{
 			  "overview":{"type":"string","minLength":1,"maxLength":1000},
@@ -32,7 +32,7 @@ class ProviderSchemasTests {
 
 	@Test
 	void openAiDropsUnsupportedKeywordsAndRequiresEveryProperty() {
-		assertSameJson(OpenAiSchemas.strict(DIGEST_LIKE), """
+		assertSameJson(OpenAiSchemas.strict(WITH_ARRAY), """
 				{"type":"object",
 				 "properties":{
 				  "overview":{"type":"string"},
@@ -48,7 +48,7 @@ class ProviderSchemasTests {
 
 	@Test
 	void anthropicDropsUnsupportedKeywordsAndKeepsOptionalProperties() {
-		assertSameJson(AnthropicSchemas.supported(DIGEST_LIKE), """
+		assertSameJson(AnthropicSchemas.supported(WITH_ARRAY), """
 				{"type":"object",
 				 "properties":{
 				  "overview":{"type":"string"},
@@ -133,7 +133,7 @@ class ProviderSchemasTests {
 
 	@Test
 	void openRouterKeepsOnlyTheKeywordsBothProvidersTakeAndRequiresEveryProperty() {
-		assertSameJson(OpenRouterSchemas.common(DIGEST_LIKE), """
+		assertSameJson(OpenRouterSchemas.common(WITH_ARRAY), """
 				{"type":"object",
 				 "properties":{
 				  "overview":{"type":"string"},
@@ -180,6 +180,31 @@ class ProviderSchemasTests {
 	void openRouterKeywordsAreTheKeywordsBothProvidersKeep() {
 		assertThat(OpenRouterSchemas.ALLOWED).containsExactlyInAnyOrder("type", "properties", "required",
 				"additionalProperties", "items", "enum", "description");
+	}
+
+	@Test
+	void itemAliasKeysOfAKeyedFieldStayRequiredForEveryProvider() {
+		// 다이제스트 출력 서술의 칸 꼴 — 항목 별칭이 필수 키인 객체. 키 이름은 거르지 않고, 모든 키가 필수로 남는다
+		String keyed = """
+				{"type":"object",
+				 "properties":{
+				  "I1":{"type":"object","properties":{"title":{"type":"string","minLength":1,"maxLength":200}},
+				        "required":["title"],"additionalProperties":false},
+				  "I2":{"type":"object","properties":{"title":{"type":"string","minLength":1,"maxLength":200}},
+				        "required":["title"],"additionalProperties":false}},
+				 "required":["I1","I2"],"additionalProperties":false}
+				""";
+		String expected = """
+				{"type":"object",
+				 "properties":{
+				  "I1":{"type":"object","properties":{"title":{"type":"string"}},"required":["title"],"additionalProperties":false},
+				  "I2":{"type":"object","properties":{"title":{"type":"string"}},"required":["title"],"additionalProperties":false}},
+				 "required":["I1","I2"],"additionalProperties":false}
+				""";
+
+		assertSameJson(OpenAiSchemas.strict(keyed), expected);
+		assertSameJson(AnthropicSchemas.supported(keyed), expected);
+		assertSameJson(OpenRouterSchemas.common(keyed), expected);
 	}
 
 	@Test

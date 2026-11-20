@@ -353,7 +353,7 @@ class DigestGenerationTests {
 	void asksOnceMoreWithTheDiagnosisAndStoresTheSecondAnswer() {
 		AtomicInteger calls = new AtomicInteger();
 		DigestGeneration generation = generation(scripted(calls, request -> (calls.get() == 1) ? "not json" : """
-				{ "overview": "흐름", "top_stories": [ { "ref": "I1", "title": "t", "summary": "s" } ], "headlines": [] }
+				{ "overview": "흐름", "top_stories": { "I1": { "title": "t", "summary": "s" } }, "headlines": {} }
 				"""));
 		DigestId id = schedule(generation);
 		// 추론 강도는 기본값(보통)과 다른 값으로 — 요청이 입력 프로필의 값을 실었는지 가린다
@@ -491,7 +491,7 @@ class DigestGenerationTests {
 	@Test
 	void failsWithoutCitationWhenEveryAliasIsUnknown() {
 		DigestGeneration generation = generation(scripted(new AtomicInteger(), request -> """
-				{ "overview": "흐름", "top_stories": [ { "ref": "Z9", "title": "t", "summary": "s" } ], "headlines": [] }
+				{ "overview": "흐름", "top_stories": { "Z9": { "title": "t", "summary": "s" } }, "headlines": {} }
 				"""));
 		DigestId id = schedule(generation);
 
@@ -653,13 +653,11 @@ class DigestGenerationTests {
 		assertThat(generation.run(id, MODEL, candidates(5))).isEqualTo(DigestStatus.READY);
 
 		assertThat(candidateRows(id)).containsExactly("A1:" + a(1), "A3:" + a(3), "A4:" + a(4), "A5:" + a(5));
-		// 기사가 남지 않은 항목 I2 는 대조에서 모르는 항목이라 대체물이 쓴 원소를 버린다
+		// 기사가 남지 않은 항목 I2 는 대조할 항목에서 빠진다 — 대체물이 쓴 I2 칸은 모르는 키라 찾지 않고, 빠진 항목으로도 세지 않는다
 		assertThat(itemRows(id)).containsExactly("TOP_STORY:1:0:" + a(1),
 				"TOP_STORY:2:0:" + a(3), "HEADLINE:3:0:" + a(4),
 				"HEADLINE:4:0:" + a(5));
-		assertThat(log.getOut()).contains("다이제스트 출력에서 지운 것이 있다 — 다이제스트 " + id.value()
-				+ ", 버린 원소 1, 출력에 없는 항목 0, 상한으로 버린 수 0")
-			.doesNotContain("로컬 대체물이 만든");
+		assertThat(log.getOut()).doesNotContain("다이제스트 출력에서 지운 것이 있다").doesNotContain("로컬 대체물이 만든");
 	}
 
 	/**

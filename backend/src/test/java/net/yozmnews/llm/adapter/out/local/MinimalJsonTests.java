@@ -35,6 +35,28 @@ class MinimalJsonTests {
 	}
 
 	@Test
+	void fillsEveryRequiredItemKeyOfAKeyedField() {
+		// 다이제스트 출력 서술의 칸 꼴 — 항목 별칭이 필수 키인 객체. 빈 칸 객체는 빈 객체다
+		String schema = """
+				{"type":"object","properties":{
+				  "top_stories":{"type":"object","properties":{
+				    "I1":{"type":"object","properties":{"title":{"type":"string"},"summary":{"type":"string"}},
+				          "required":["title","summary"],"additionalProperties":false},
+				    "I2":{"type":"object","properties":{"title":{"type":"string"},"summary":{"type":"string"}},
+				          "required":["title","summary"],"additionalProperties":false}},
+				   "required":["I1","I2"],"additionalProperties":false},
+				  "headlines":{"type":"object","properties":{},"required":[],"additionalProperties":false}},
+				 "required":["top_stories","headlines"]}
+				""";
+
+		assertSameJson(MinimalJson.of(schema), """
+				{"top_stories":{"I1":{"title":"로컬 대체물이 만든 본문이다.","summary":"로컬 대체물이 만든 본문이다."},
+				                "I2":{"title":"로컬 대체물이 만든 본문이다.","summary":"로컬 대체물이 만든 본문이다."}},
+				 "headlines":{}}
+				""");
+	}
+
+	@Test
 	void takesTheFirstValueOfAValueListAndTheZeroOfEachType() {
 		String schema = """
 				{"type":"object","properties":{

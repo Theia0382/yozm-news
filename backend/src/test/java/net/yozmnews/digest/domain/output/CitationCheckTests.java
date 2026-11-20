@@ -4,7 +4,9 @@ import static net.yozmnews.digest.DigestInputs.event;
 import static net.yozmnews.digest.DigestInputs.item;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import net.yozmnews.article.ArticleId;
@@ -16,8 +18,8 @@ import net.yozmnews.digest.domain.item.ItemKind;
 import org.junit.jupiter.api.Test;
 
 /**
- * 항목 대조 — 모르는 항목 별칭 · 다른 칸의 항목 · 앞에서 이미 쓴 항목은 버리고, 출력에 없는 항목은 센다. 남은 원소는 항목 순서로 둔다. 인용
- * 없음. 스프링 없이 돈다.
+ * 항목 대조 — 항목 순서대로 그 칸에서 항목 별칭의 칸을 찾고, 다른 칸의 키 · 모르는 키는 찾지 않으며, 출력에 없는 항목은 센다. 인용 없음.
+ * 스프링 없이 돈다.
  * <p>
  * 지키는 규칙: digest-R6
  * <p>
@@ -42,8 +44,8 @@ class CitationCheckTests {
 	@Test
 	void keepsAnOutputThatCoversEveryItemInItsField() {
 		DigestDraft draft = new DigestDraft("흐름",
-				List.of(new StoryDraft("I1", "t1", "s1"), new StoryDraft("I2", "t2", "s2")),
-				List.of(new HeadlineDraft("I3", "h3", "한 줄"), new HeadlineDraft("I4", "h4", null)));
+				stories("I1", new StoryDraft("t1", "s1"), "I2", new StoryDraft("t2", "s2")),
+				headlines("I3", new HeadlineDraft("h3", "한 줄"), "I4", new HeadlineDraft("h4", null)));
 
 		assertThat(CitationCheck.check(draft, ITEMS)).isEqualTo(new CitationResult.Cited(
 				new CitedDigest("흐름", List.of(new CitedStory(I1, "t1", "s1"), new CitedStory(I2, "t2", "s2")),
@@ -52,44 +54,21 @@ class CitationCheckTests {
 	}
 
 	@Test
-	void dropsUnknownItemsAndCountsTheMissingOnes() {
-		DigestDraft draft = new DigestDraft("흐름", List.of(new StoryDraft("Z9", "t", "s"), new StoryDraft("i1", "t", "s"),
-				new StoryDraft("A1", "기사 별칭", "s"), new StoryDraft("I2", "t2", "s2")), List.of());
-
-		// 남은 것은 I2 하나 — 버린 원소 셋, 출력에 없는 항목 셋(I1 · I3 · I4)
-		assertThat(CitationCheck.check(draft, ITEMS)).isEqualTo(new CitationResult.Cited(
-				new CitedDigest("흐름", List.of(new CitedStory(I2, "t2", "s2")), List.of()), new CitationDrops(3, 3)));
-	}
-
-	@Test
-	void dropsAnItemWrittenInTheOtherField() {
-		DigestDraft draft = new DigestDraft("흐름", List.of(new StoryDraft("I1", "t1", "s1"), new StoryDraft("I3", "t3", "s3")),
-				List.of(new HeadlineDraft("I2", "h2", null), new HeadlineDraft("I4", "h4", null)));
-
-		// 헤드라인 항목 I3 을 주요 뉴스에, 주요 뉴스 항목 I2 를 헤드라인에 쓴 원소는 버린다
-		assertThat(CitationCheck.check(draft, ITEMS)).isEqualTo(new CitationResult.Cited(
-				new CitedDigest("흐름", List.of(new CitedStory(I1, "t1", "s1")),
-						List.of(new CitedHeadline(I4, "h4", null))),
-				new CitationDrops(2, 2)));
-	}
-
-	@Test
-	void keepsTheFirstOfARepeatedItem() {
+	void countsTheMissingItemsAndDoesNotLookInTheOtherFieldOrAtUnknownKeys() {
+		// 주요 뉴스 칸에 I2 와 헤드라인 항목 I3 · 모르는 키 Z9, 헤드라인 칸에 주요 뉴스 항목 I1 — 남는 것은 I2 하나, 출력에 없는 항목은 I1 · I3 · I4
 		DigestDraft draft = new DigestDraft("흐름",
-				List.of(new StoryDraft("I1", "앞", "s"), new StoryDraft("I1", "뒤", "s")),
-				List.of(new HeadlineDraft("I1", "헤드라인으로 또", null), new HeadlineDraft("I3", "앞", null),
-						new HeadlineDraft("I3", "뒤", null)));
+				stories("I2", new StoryDraft("t2", "s2"), "I3", new StoryDraft("t3", "s3"), "Z9", new StoryDraft("t", "s")),
+				headlines("I1", new HeadlineDraft("h1", null)));
 
 		assertThat(CitationCheck.check(draft, ITEMS)).isEqualTo(new CitationResult.Cited(
-				new CitedDigest("흐름", List.of(new CitedStory(I1, "앞", "s")), List.of(new CitedHeadline(I3, "앞", null))),
-				new CitationDrops(3, 2)));
+				new CitedDigest("흐름", List.of(new CitedStory(I2, "t2", "s2")), List.of()), new CitationDrops(0, 3)));
 	}
 
 	@Test
-	void putsTheKeptElementsInItemOrderNotInOutputOrder() {
+	void putsTheKeptItemsInItemOrderNotInOutputOrder() {
 		DigestDraft draft = new DigestDraft("흐름",
-				List.of(new StoryDraft("I2", "t2", "s2"), new StoryDraft("I1", "t1", "s1")),
-				List.of(new HeadlineDraft("I4", "h4", null), new HeadlineDraft("I3", "h3", null)));
+				stories("I2", new StoryDraft("t2", "s2"), "I1", new StoryDraft("t1", "s1")),
+				headlines("I4", new HeadlineDraft("h4", null), "I3", new HeadlineDraft("h3", null)));
 
 		CitationResult.Cited cited = (CitationResult.Cited) CitationCheck.check(draft, ITEMS);
 
@@ -100,11 +79,11 @@ class CitationCheckTests {
 
 	@Test
 	void findsNoCitationWhenNothingIsLeft() {
-		DigestDraft draft = new DigestDraft("흐름", List.of(new StoryDraft("Z1", "t", "s")),
-				List.of(new HeadlineDraft("I1", "다른 칸", null)));
+		DigestDraft draft = new DigestDraft("흐름", stories("Z1", new StoryDraft("t", "s")),
+				headlines("I1", new HeadlineDraft("다른 칸", null)));
 
-		assertThat(CitationCheck.check(draft, ITEMS)).isEqualTo(new CitationResult.NoCitation(new CitationDrops(2, 4)));
-		assertThat(CitationCheck.check(new DigestDraft("흐름", List.of(), List.of()), ITEMS))
+		assertThat(CitationCheck.check(draft, ITEMS)).isEqualTo(new CitationResult.NoCitation(new CitationDrops(0, 4)));
+		assertThat(CitationCheck.check(new DigestDraft("흐름", Map.of(), Map.of()), ITEMS))
 			.isEqualTo(new CitationResult.NoCitation(new CitationDrops(0, 4)));
 	}
 
@@ -112,24 +91,32 @@ class CitationCheckTests {
 	void treatsAnItemLeftWithoutArticlesAsUnknownAndCitesOnlyTheRemainingSample() {
 		// 기사 12 를 그 사이 지웠다 — I2 는 기사 13 만 남고, 기사 15 를 지워 I4 는 빠진다
 		CandidateSet present = ITEMS.retain(Set.of(new ArticleId(11), new ArticleId(13), new ArticleId(14)));
-		DigestDraft draft = new DigestDraft("흐름", List.of(new StoryDraft("I2", "t2", "s2")),
-				List.of(new HeadlineDraft("I4", "h4", null)));
+		DigestDraft draft = new DigestDraft("흐름", stories("I2", new StoryDraft("t2", "s2")),
+				headlines("I4", new HeadlineDraft("h4", null)));
 
 		CitationResult result = CitationCheck.check(draft, present);
 
-		assertThat(result.drops()).isEqualTo(new CitationDrops(1, 2));
+		// 남은 항목 I1 · I2 · I3 가운데 출력에 없는 것은 I1 · I3 — I4 의 칸은 모르는 키다
+		assertThat(result.drops()).isEqualTo(new CitationDrops(0, 2));
 		CitedStory story = ((CitationResult.Cited) result).digest().stories().getFirst();
 		assertThat(story.item().articles()).extracting(article -> article.articleId().value()).containsExactly(13L);
 		assertThat(story.item().events()).hasSize(1);
 	}
 
-	@Test
-	void treatsAnEmptyAliasAsUnknown() {
-		DigestDraft draft = new DigestDraft("흐름", List.of(new StoryDraft("", "t", "s"), new StoryDraft("I1", "t", "s")),
-				List.of(new HeadlineDraft("", "h", null)));
+	private static Map<String, StoryDraft> stories(Object... aliasAndDraft) {
+		Map<String, StoryDraft> map = new LinkedHashMap<>();
+		for (int i = 0; i < aliasAndDraft.length; i += 2) {
+			map.put((String) aliasAndDraft[i], (StoryDraft) aliasAndDraft[i + 1]);
+		}
+		return map;
+	}
 
-		assertThat(CitationCheck.check(draft, ITEMS)).isEqualTo(new CitationResult.Cited(
-				new CitedDigest("흐름", List.of(new CitedStory(I1, "t", "s")), List.of()), new CitationDrops(2, 3)));
+	private static Map<String, HeadlineDraft> headlines(Object... aliasAndDraft) {
+		Map<String, HeadlineDraft> map = new LinkedHashMap<>();
+		for (int i = 0; i < aliasAndDraft.length; i += 2) {
+			map.put((String) aliasAndDraft[i], (HeadlineDraft) aliasAndDraft[i + 1]);
+		}
+		return map;
 	}
 
 }
