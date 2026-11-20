@@ -82,15 +82,14 @@ public final class DigestScreenRows {
 	}
 
 	/** 섹션의 인용(출처 기사) 하나 */
-	public void cite(long section, int position, long article, String reason) {
+	public void cite(long section, int position, long article) {
 		this.jdbc.sql("""
-				insert into digest_items (digest_section_id, position, article_id, selection_reason)
-				values (:section, :position, :article, :reason)
+				insert into digest_items (digest_section_id, position, article_id)
+				values (:section, :position, :article)
 				""")
 			.param("section", section)
 			.param("position", position)
 			.param("article", article)
-			.param("reason", reason)
 			.update();
 	}
 

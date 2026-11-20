@@ -6649,6 +6649,13 @@
               "$ref" : "#/components/schemas/DigestCitationResponse"
             }
           },
+          "eventIds" : {
+            "type" : "array",
+            "items" : {
+              "type" : "integer",
+              "format" : "int64"
+            }
+          },
           "kind" : {
             "type" : "string",
             "enum" : [ "OVERVIEW", "TOP_STORY", "HEADLINE" ]
@@ -6661,7 +6668,7 @@
             "type" : [ "string", "null" ]
           }
         },
-        "required" : [ "body", "citations", "kind", "reason", "title" ]
+        "required" : [ "body", "citations", "eventIds", "kind", "reason", "title" ]
       },
       "DigestUnresolvedFailureResponse" : {
         "type" : "object",

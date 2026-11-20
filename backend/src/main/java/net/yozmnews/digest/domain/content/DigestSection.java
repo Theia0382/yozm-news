@@ -84,7 +84,7 @@ public final class DigestSection {
 	private static List<DigestItem> items(AliasedItem item) {
 		List<DigestItem> items = new ArrayList<>(item.articles().size());
 		for (DigestCandidate article : item.articles()) {
-			items.add(new DigestItem(article.articleId().value(), article.reason()));
+			items.add(new DigestItem(article.articleId().value()));
 		}
 		return items;
 	}

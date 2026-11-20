@@ -7,6 +7,7 @@ import net.yozmnews.article.ArticleId;
 import net.yozmnews.digest.DigestSectionView;
 import net.yozmnews.digest.SectionKind;
 import net.yozmnews.digest.SelectionReason;
+import net.yozmnews.event.EventId;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -17,9 +18,10 @@ import org.jspecify.annotations.Nullable;
  * @param body 개요 · 주요 뉴스의 요약 · 헤드라인의 코멘트 — 코멘트가 없는 헤드라인이면 null
  * @param reason 항목의 선정 이유(배지 하나) — 개요면 null
  * @param citations 인용(출처 기사) — 위치 순. 그새 지운 기사의 인용은 빠진다
+ * @param eventIds 항목의 사건 — 위치 순, 첫 사건이 항목 키(좋아요 / 싫어요를 누르는 손잡이 — docs/specs/feedback.md). 개요는 비어 있다
  */
 record DigestSectionResponse(SectionKind kind, @Nullable String title, @Nullable String body,
-		@Nullable SelectionReason reason, List<DigestCitationResponse> citations) {
+		@Nullable SelectionReason reason, List<DigestCitationResponse> citations, List<Long> eventIds) {
 
 	static DigestSectionResponse of(DigestSectionView section, Map<ArticleId, NewsArticleResponse> articles) {
 		return new DigestSectionResponse(section.kind(), section.title(), section.body(), section.reason(),
@@ -28,7 +30,8 @@ record DigestSectionResponse(SectionKind kind, @Nullable String title, @Nullable
 					.filter(citation -> articles.containsKey(citation.article()))
 					.map(citation -> new DigestCitationResponse(citation.article().value(),
 							articles.get(citation.article())))
-					.toList());
+					.toList(),
+				section.events().stream().map(EventId::value).toList());
 	}
 
 }

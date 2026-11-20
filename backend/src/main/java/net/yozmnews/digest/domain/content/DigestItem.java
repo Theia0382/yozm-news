@@ -1,24 +1,19 @@
 package net.yozmnews.digest.domain.content;
 
-import java.util.Objects;
-
-import net.yozmnews.digest.SelectionReason;
 import org.springframework.data.relational.core.mapping.Table;
 
 /**
- * 섹션의 인용 한 줄 — 노출 기록 · docs/specs/digest.md §6
+ * 섹션의 인용 한 줄 — 항목의 표본 기사(화면 출처 목록) · docs/specs/digest.md §6. 선정 이유는 사건마다 {@link SectionEvent} 에 있다
  *
  * @param articleId 인용한 기사 — 항목의 표본 기사
- * @param selectionReason 그 기사가 든 사건의 선정 이유
  */
 @Table("digest_items")
-public record DigestItem(long articleId, SelectionReason selectionReason) {
+public record DigestItem(long articleId) {
 
 	public DigestItem {
 		if (articleId < 1) {
 			throw new IllegalArgumentException("기사 식별자는 1 이상이어야 한다: " + articleId);
 		}
-		Objects.requireNonNull(selectionReason, "selectionReason");
 	}
 
 }

@@ -215,7 +215,7 @@ class DigestGenerationTests {
 
 	private List<String> itemRows(DigestId id) {
 		return this.jdbc.sql("""
-				select s.kind || ':' || s.position || ':' || i.position || ':' || i.article_id || ':' || i.selection_reason
+				select s.kind || ':' || s.position || ':' || i.position || ':' || i.article_id
 				from digest_sections s join digest_items i on i.digest_section_id = s.id
 				where s.digest_id = :id order by s.position, i.position
 				""").param("id", id.value()).query(String.class).list();
@@ -296,9 +296,9 @@ class DigestGenerationTests {
 				"A5:" + a(5));
 		// 개요 · 주요 뉴스 항목 셋 · 헤드라인 항목 둘 — 헤드라인은 항목마다 섹션 하나
 		assertThat(count("select count(*) from digest_sections where digest_id = :id", id)).isEqualTo(6);
-		assertThat(itemRows(id)).containsExactly("TOP_STORY:1:0:" + a(1) + ":SUBSCRIBED",
-				"TOP_STORY:2:0:" + a(2) + ":MAJOR_STORYLINE", "TOP_STORY:3:0:" + a(3) + ":SUBSCRIBED",
-				"HEADLINE:4:0:" + a(4) + ":SUBSCRIBED", "HEADLINE:5:0:" + a(5) + ":SUBSCRIBED");
+		assertThat(itemRows(id)).containsExactly("TOP_STORY:1:0:" + a(1),
+				"TOP_STORY:2:0:" + a(2), "TOP_STORY:3:0:" + a(3),
+				"HEADLINE:4:0:" + a(4), "HEADLINE:5:0:" + a(5));
 		assertThat(sectionEventRows(id)).containsExactly("TOP_STORY:1:0:" + a(1) + ":SUBSCRIBED",
 				"TOP_STORY:2:0:" + a(2) + ":MAJOR_STORYLINE", "TOP_STORY:3:0:" + a(3) + ":SUBSCRIBED",
 				"HEADLINE:4:0:" + a(4) + ":SUBSCRIBED", "HEADLINE:5:0:" + a(5) + ":SUBSCRIBED");
@@ -368,7 +368,7 @@ class DigestGenerationTests {
 		assertThat(row(id)).containsEntry("input_tokens", 2_400)
 			.containsEntry("output_tokens", 680)
 			.containsEntry("duration_ms", 4_000L);
-		assertThat(itemRows(id)).containsExactly("TOP_STORY:1:0:" + a(1) + ":SUBSCRIBED");
+		assertThat(itemRows(id)).containsExactly("TOP_STORY:1:0:" + a(1));
 		// 첫 요청의 프롬프트는 입력으로 만든 것이다 — 사용자 구획에 항목의 별칭 · 칸과 기사 제목이 있고 기사 별칭은 없다
 		DigestRequest first = this.requests.get(0);
 		DigestRequest second = this.requests.get(1);
@@ -654,9 +654,9 @@ class DigestGenerationTests {
 
 		assertThat(candidateRows(id)).containsExactly("A1:" + a(1), "A3:" + a(3), "A4:" + a(4), "A5:" + a(5));
 		// 기사가 남지 않은 항목 I2 는 대조에서 모르는 항목이라 대체물이 쓴 원소를 버린다
-		assertThat(itemRows(id)).containsExactly("TOP_STORY:1:0:" + a(1) + ":SUBSCRIBED",
-				"TOP_STORY:2:0:" + a(3) + ":SUBSCRIBED", "HEADLINE:3:0:" + a(4) + ":SUBSCRIBED",
-				"HEADLINE:4:0:" + a(5) + ":SUBSCRIBED");
+		assertThat(itemRows(id)).containsExactly("TOP_STORY:1:0:" + a(1),
+				"TOP_STORY:2:0:" + a(3), "HEADLINE:3:0:" + a(4),
+				"HEADLINE:4:0:" + a(5));
 		assertThat(log.getOut()).contains("다이제스트 출력에서 지운 것이 있다 — 다이제스트 " + id.value()
 				+ ", 버린 원소 1, 출력에 없는 항목 0, 상한으로 버린 수 0")
 			.doesNotContain("로컬 대체물이 만든");
@@ -681,9 +681,9 @@ class DigestGenerationTests {
 
 		assertThat(row(id)).containsEntry("candidate_count", 3);
 		assertThat(candidateRows(id)).hasSize(5);
-		assertThat(itemRows(id)).containsExactly("TOP_STORY:1:0:" + a(1) + ":MAJOR_STORYLINE",
-				"TOP_STORY:1:1:" + a(2) + ":MAJOR_STORYLINE", "TOP_STORY:1:2:" + a(3) + ":MAJOR_STORYLINE",
-				"TOP_STORY:1:3:" + a(4) + ":SUBSCRIBED", "HEADLINE:2:0:" + a(5) + ":INTEREST");
+		assertThat(itemRows(id)).containsExactly("TOP_STORY:1:0:" + a(1),
+				"TOP_STORY:1:1:" + a(2), "TOP_STORY:1:2:" + a(3),
+				"TOP_STORY:1:3:" + a(4), "HEADLINE:2:0:" + a(5));
 		assertThat(sectionEventRows(id)).containsExactly("TOP_STORY:1:0:900:MAJOR_STORYLINE",
 				"TOP_STORY:1:1:800:SUBSCRIBED", "HEADLINE:2:0:700:INTEREST");
 	}
@@ -702,7 +702,7 @@ class DigestGenerationTests {
 		assertThat(generation.run(id, MODEL, input)).isEqualTo(DigestStatus.READY);
 
 		assertThat(row(id)).containsEntry("candidate_count", 1);
-		assertThat(itemRows(id)).containsExactly("TOP_STORY:1:0:" + a(1) + ":SUBSCRIBED");
+		assertThat(itemRows(id)).containsExactly("TOP_STORY:1:0:" + a(1));
 		assertThat(sectionEventRows(id)).containsExactly("TOP_STORY:1:0:900:SUBSCRIBED");
 	}
 
