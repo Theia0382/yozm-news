@@ -21,6 +21,17 @@ public sealed interface OutputShape {
 	}
 
 	/**
+	 * 배열 — 원소마다 같은 꼴이다. 개수 상한은 두지 않는다(원문 크기는 생성 관문의 본문 상한이 묶는다).
+	 */
+	record Arr(OutputShape item) implements OutputShape {
+
+		public Arr {
+			Objects.requireNonNull(item, "item");
+		}
+
+	}
+
+	/**
 	 * 키마다 같은 꼴의 값을 갖는 객체 — 키는 이번 요청의 항목 별칭이다. JSON Schema 는 모든 키를 필수로 그리고, 읽기는 없는 키 · {@code null}
 	 * 인 키를 빼고 읽는다(출력 전체를 읽지 못한 것이 아니다). 값을 버리면 그 키를 빼고, 서술하지 않은 키는 무시한다.
 	 * @param keys 키 — 순서대로, 비지 않고 겹치지 않는다

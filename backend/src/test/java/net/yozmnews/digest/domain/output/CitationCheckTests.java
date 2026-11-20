@@ -19,7 +19,7 @@ import net.yozmnews.digest.domain.item.ItemKind;
 import org.junit.jupiter.api.Test;
 
 /**
- * 항목 대조 — 항목 순서대로 그 칸에서 항목 별칭의 칸을 찾고, 다른 칸의 키 · 모르는 키는 찾지 않으며, 칸이 없는 항목은 첫 인용 기사 제목의
+ * 항목 대조 — 항목 순서대로 그 칸에서 항목 별칭의 칸을 찾고, 다른 칸의 별칭 · 모르는 별칭은 찾지 않으며, 칸이 없는 항목은 첫 인용 기사 제목의
  * 헤드라인으로 대체한다. 인용 없음은 대조할 항목이 없을 때뿐이다. 스프링 없이 돈다.
  * <p>
  * 지키는 규칙: digest-R6
@@ -75,11 +75,12 @@ class CitationCheckTests {
 
 	@Test
 	void doesNotLookInTheOtherFieldOrAtUnknownKeysAndSubstitutesWhatIsMissing() {
-		// 주요 뉴스 칸에 I2 와 헤드라인 항목 I3 · 모르는 키 Z9, 헤드라인 칸에 주요 뉴스 항목 I1 — 칸이 있는 것은 I2 하나,
-		// I1 · I3 · I4 는 대체 헤드라인
+		// 주요 뉴스 칸에 I2 와 헤드라인 항목 I3 · 모르는 키 Z9, 헤드라인 칸(원소의 별칭)에 주요 뉴스 항목 I1 · 모르는 별칭 Z9 · 빈 별칭 —
+		// 칸이 있는 것은 I2 하나, I1 · I3 · I4 는 대체 헤드라인
 		DigestDraft draft = new DigestDraft("흐름",
 				stories("I2", new StoryDraft("t2", "s2"), "I3", new StoryDraft("t3", "s3"), "Z9", new StoryDraft("t", "s")),
-				headlines("I1", new HeadlineDraft("h1", null)));
+				headlines("I1", new HeadlineDraft("h1", null), "Z9", new HeadlineDraft("h", null), "",
+						new HeadlineDraft("h", null)));
 
 		assertThat(CitationCheck.check(draft, ITEMS, TITLES)).isEqualTo(new CitationResult.Cited(
 				new CitedDigest("흐름", List.of(new CitedStory(I2, "t2", "s2")),

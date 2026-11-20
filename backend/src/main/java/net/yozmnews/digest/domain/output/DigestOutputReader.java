@@ -1,7 +1,9 @@
 package net.yozmnews.digest.domain.output;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -16,8 +18,9 @@ import tools.jackson.databind.json.JsonMapper;
  * 출력 원문 읽기 — 정본 · docs/specs/digest.md §5 · digest-R4 · digest-R5
  * <p>
  * 이번 요청의 출력 서술({@link DigestOutputSchema#root})을 따라 걸으며 필수 · 타입 · 상한 · 넘을 때의 처분을 가른다. 걸은 값은 속성
- * 이름 → 값의 맵 · 문자열 · {@code null}(없음)로 모은 뒤 {@link DigestDraft} 로 옮긴다. 항목 칸에서 없는 키는 빼고 읽는다 — 빠진 항목은
- * 부르는 쪽이 서술의 키와 견준다.
+ * 이름 → 값의 맵 · 원소 목록 · 문자열 · {@code null}(없음)로 모은 뒤 {@link DigestDraft} 로 옮긴다. 주요 뉴스 칸에서 없는 키는 빼고
+ * 읽고, 헤드라인 원소는 별칭({@link DigestOutputSchema#REF})으로 모은다 — 같은 별칭이 또 나오면 처음 원소만 쓴다. 빠진 항목은 부르는
+ * 쪽이 항목 별칭과 견준다.
  */
 public final class DigestOutputReader {
 
@@ -86,11 +89,11 @@ public final class DigestOutputReader {
 					string(story.get(DigestOutputSchema.SUMMARY))));
 		});
 		Map<String, HeadlineDraft> headlines = new LinkedHashMap<>();
-		map(root.get(DigestOutputSchema.HEADLINES)).forEach((alias, element) -> {
+		list(root.get(DigestOutputSchema.HEADLINES)).forEach(element -> {
 			Map<String, @Nullable Object> headline = map(element);
 			Object note = headline.get(DigestOutputSchema.NOTE);
-			headlines.put(alias, new HeadlineDraft(string(headline.get(DigestOutputSchema.TITLE)),
-					note == null ? null : string(note)));
+			headlines.putIfAbsent(string(headline.get(DigestOutputSchema.REF)),
+					new HeadlineDraft(string(headline.get(DigestOutputSchema.TITLE)), note == null ? null : string(note)));
 		});
 		return new DigestDraft(string(root.get(DigestOutputSchema.OVERVIEW)), stories, headlines);
 	}
@@ -98,6 +101,11 @@ public final class DigestOutputReader {
 	@SuppressWarnings("unchecked")
 	private static Map<String, @Nullable Object> map(@Nullable Object value) {
 		return (Map<String, @Nullable Object>) Objects.requireNonNull(value, "value");
+	}
+
+	@SuppressWarnings("unchecked")
+	private static List<Object> list(@Nullable Object value) {
+		return (List<Object>) Objects.requireNonNull(value, "value");
 	}
 
 	private static String string(@Nullable Object value) {
@@ -111,7 +119,7 @@ public final class DigestOutputReader {
 		record Value(@Nullable Object value) implements Walked {
 		}
 
-		/** 이 값을 가진 항목 칸을 버린다 */
+		/** 이 값을 가진 항목 칸(주요 뉴스 키의 값 · 헤드라인 원소)을 버린다 */
 		record Drop() implements Walked {
 		}
 
@@ -129,6 +137,7 @@ public final class DigestOutputReader {
 		Walked walk(JsonNode node, OutputShape shape, String path) {
 			return switch (shape) {
 				case OutputShape.Obj obj -> object(node, obj, path);
+				case OutputShape.Arr arr -> array(node, arr, path);
 				case OutputShape.Keyed keyed -> keyed(node, keyed, path);
 				case OutputShape.Str str -> string(node, str, path);
 			};
@@ -174,6 +183,33 @@ public final class DigestOutputReader {
 			if (dropped) {
 				this.overLimit = overLimitBefore;
 				return new Walked.Drop();
+			}
+			return new Walked.Value(values);
+		}
+
+		/**
+		 * 원소마다 걷는다 — 원소를 버리면 그 원소를 빼고 하나로 센다. {@code null} 원소 · 출력 전체를 읽지 못하게 하는 원소는 그대로 읽지 못한
+		 * 것이다.
+		 */
+		private Walked array(JsonNode node, OutputShape.Arr shape, String path) {
+			if (!node.isArray()) {
+				return new Walked.Fail(path + ": 배열이 아니다");
+			}
+			List<Object> values = new ArrayList<>();
+			for (int index = 0; index < node.size(); index++) {
+				String at = path + "[" + index + "]";
+				JsonNode element = node.get(index);
+				if (element.isNull()) {
+					return new Walked.Fail(at + ": null 이다");
+				}
+				Walked walked = walk(element, shape.item(), at);
+				switch (walked) {
+					case Walked.Value value -> values.add(Objects.requireNonNull(value.value(), at));
+					case Walked.Drop drop -> this.overLimit++;
+					case Walked.Fail fail -> {
+						return fail;
+					}
+				}
 			}
 			return new Walked.Value(values);
 		}

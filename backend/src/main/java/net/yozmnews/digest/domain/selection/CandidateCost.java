@@ -19,14 +19,17 @@ public final class CandidateCost {
 	public static final int CANDIDATE_OVERHEAD = 80;
 
 	/**
-	 * 사건 하나에서 기사 줄 밖의 몫(코드 포인트) — 사용자 구획의 사건 괄호와, 사건이 든 항목의 괄호 · 항목 별칭 · 칸 이름 · 구분 기호,
-	 * 그리고 출력 스키마에서 그 항목의 칸 서술(가장 긴 별칭 · 주요 뉴스 칸 기준). 스키마는 구조화 출력이어도 공급자가 입력으로 셀 수 있어 늘
-	 * 센다. 항목의 몫을 항목 안 사건마다 센다
+	 * 사건 하나에서 기사 줄 밖의 몫(코드 포인트) — 사건 괄호와, 사건이 든 항목의 괄호 · 항목 별칭 · 칸 이름 · 구분 기호. 항목의 몫을 항목
+	 * 안 사건마다 센다. 출력 스키마의 몫은 세지 않는다 — 헤드라인 칸은 배열이라 항목 수와 함께 늘지 않고, 주요 뉴스 칸이 가득 찬 몫은
+	 * {@link #INSTRUCTION_RESERVE} 가 덮는다
 	 */
-	public static final int EVENT_OVERHEAD = 210;
+	public static final int EVENT_OVERHEAD = 40;
 
-	/** 지시 구획(역할 · 규칙 · 항목이 없는 출력 스키마 — 고정 부분)의 몫(토큰) — 모델 예산에서 먼저 뺀다 */
-	public static final int INSTRUCTION_RESERVE = 2_000;
+	/**
+	 * 지시 구획(역할 · 규칙 · 주요 뉴스 칸이 가득 찬 출력 스키마 · 다시 묻는 진단)의 몫(토큰) — 모델 예산에서 먼저 뺀다. 스키마는 구조화 출력이어도
+	 * 공급자가 입력으로 셀 수 있어 늘 센다. 주요 뉴스 칸은 항목 별칭을 키로 한 객체라 주요 뉴스 항목의 위쪽까지 덮는다
+	 */
+	public static final int INSTRUCTION_RESERVE = 6_000;
 
 	/** 사용자 프로필 구획에서 구독 주제 · 지역 선호 하나의 몫(코드 포인트) — 이름과 구분 기호 */
 	public static final int PROFILE_TAG_COST = 20;

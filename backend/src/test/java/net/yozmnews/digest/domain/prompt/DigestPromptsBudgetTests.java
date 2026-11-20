@@ -18,12 +18,14 @@ import net.yozmnews.digest.domain.input.DigestProfile;
 import net.yozmnews.digest.domain.input.InputEvent;
 import net.yozmnews.digest.domain.input.InputItem;
 import net.yozmnews.digest.domain.item.ItemKind;
+import net.yozmnews.digest.domain.item.ItemRules;
 import net.yozmnews.digest.domain.selection.CandidateCost;
 import net.yozmnews.event.EventId;
 import net.yozmnews.llm.LlmModel;
 import net.yozmnews.llm.Provider;
 import net.yozmnews.llm.ReasoningEffort;
 import net.yozmnews.user.SummaryLength;
+import net.yozmnews.user.domain.interest.DigestVolume;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -44,11 +46,14 @@ class DigestPromptsBudgetTests {
 	private static final String ESCAPY = "\"\\".repeat(150);
 
 	@Test
-	void theInstructionsAndTheSchemaFitTheReserveInEveryCombination() {
+	void theInstructionsAndAFullTopStoriesSchemaFitTheReserveInEveryCombination() {
+		// 주요 뉴스 항목은 많아야 큰 슬롯 상한 + 큰 슬롯 밖 주요 뉴스 수(지금 10 + 5 = 15)이고 항목 순서의 앞이라 별칭은 I1 부터다 — 주요 뉴스
+		// 칸은 그 키를 모두 그린다. 두 상수를 올리면 이 시험이 그 수로 다시 잰다
+		int mostTopStories = DigestVolume.MAX_BIG_SLOTS + ItemRules.TOP_STORIES;
 		for (SummaryLength length : SummaryLength.values()) {
 			for (boolean structured : new boolean[] { true, false }) {
-				DigestInput empty = input(profile(length, "", "Asia/Seoul"), List.of());
-				DigestPrompt first = DigestPrompts.compose(empty, CandidateSet.of(empty),
+				DigestInput full = input(profile(length, "", "Asia/Seoul"), singles(mostTopStories, ItemKind.TOP_STORY).items());
+				DigestPrompt first = DigestPrompts.compose(full, CandidateSet.of(full),
 						new LlmModel(Provider.OPENAI, "gpt-test", 32_000, structured));
 				DigestPrompt retry = DigestPrompts.retry(first, "가".repeat(PromptRules.MAX_DIAGNOSIS + 50));
 				for (DigestPrompt prompt : List.of(first, retry)) {
@@ -174,20 +179,15 @@ class DigestPromptsBudgetTests {
 	}
 
 	@Test
-	void anItemsShareOfTheUserSegmentAndOfTheOutputSchemaFitsItsEventEstimate() throws Exception {
-		// 사건 하나 · 기사 하나짜리 항목 150 개 — 마지막 항목의 별칭은 가장 긴 I150 이다. 출력 서술은 항목마다 칸 하나를 더하고, 스키마는 구조화
-		// 출력이어도 공급자가 입력으로 셀 수 있다. 항목 하나가 사용자 구획과 출력 서술에 더하는 몫이 함께 그 사건의 어림 안이어야 한다
-		for (ItemKind kind : ItemKind.values()) {
-			DigestInput all = singles(150, kind);
-			DigestInput lessOne = singles(149, kind);
-			DigestPrompt prompt = compose(all);
-			JsonNode last = JSON.readTree(prompt.userContent()).get("items").get(149);
-			int schemaShare = codePoints(prompt.outputSchema()) - codePoints(compose(lessOne).outputSchema());
+	void aHeadlineItemAddsNothingToTheOutputSchemaAndItsUserShareFitsItsEventEstimate() throws Exception {
+		// 사건 하나 · 기사 하나짜리 헤드라인 항목 150 개 — 마지막 항목의 별칭은 가장 긴 I150 이다. 헤드라인 칸은 원소 배열이라 항목이 하나 늘어도
+		// 출력 스키마는 같고, 항목 하나가 사용자 구획에 더하는 몫은 그 사건의 어림 안이다
+		DigestPrompt prompt = compose(singles(150, ItemKind.HEADLINE));
+		JsonNode last = JSON.readTree(prompt.userContent()).get("items").get(149);
 
-			assertThat(last.get(0).asString()).isEqualTo("I150");
-			assertThat(tokens(last) + CandidateCost.tokens(schemaShare)).as("%s", kind)
-				.isLessThanOrEqualTo(CandidateCost.event(List.of(CandidateCost.candidate(2, 0))));
-		}
+		assertThat(last.get(0).asString()).isEqualTo("I150");
+		assertThat(prompt.outputSchema()).isEqualTo(compose(singles(149, ItemKind.HEADLINE)).outputSchema());
+		assertThat(tokens(last)).isLessThanOrEqualTo(CandidateCost.event(List.of(CandidateCost.candidate(2, 0))));
 	}
 
 	/** 사건 하나 · 기사 하나(제목 "제목", 요약문 없음)짜리 항목 {@code count} 개 */

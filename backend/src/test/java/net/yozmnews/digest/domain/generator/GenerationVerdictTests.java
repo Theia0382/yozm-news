@@ -28,7 +28,7 @@ class GenerationVerdictTests {
 		.of(DigestInputs.items(item(ItemKind.TOP_STORY, event(1, SelectionReason.SUBSCRIBED, 11))));
 
 	private static final String READABLE = """
-			{"overview":"흐름","top_stories":{"I1":{"title":"t","summary":"s"}},"headlines":{}}""";
+			{"overview":"흐름","top_stories":{"I1":{"title":"t","summary":"s"}},"headlines":[]}""";
 
 	private static final TokenUsage USAGE = new TokenUsage(10, 20);
 
@@ -46,13 +46,13 @@ class GenerationVerdictTests {
 			item(ItemKind.HEADLINE, event(2, SelectionReason.SUBSCRIBED, 12))));
 
 	private static final String BOTH = """
-			{"overview":"둘","top_stories":{"I1":{"title":"t","summary":"s"}},"headlines":{"I2":{"title":"h"}}}""";
+			{"overview":"둘","top_stories":{"I1":{"title":"t","summary":"s"}},"headlines":[{"ref":"I2","title":"h"}]}""";
 
 	private static final String WITHOUT_I2 = """
-			{"overview":"하나","top_stories":{"I1":{"title":"t","summary":"s"}},"headlines":{}}""";
+			{"overview":"하나","top_stories":{"I1":{"title":"t","summary":"s"}},"headlines":[]}""";
 
 	private static final String NEITHER = """
-			{"overview":"없음","top_stories":{},"headlines":{}}""";
+			{"overview":"없음","top_stories":{},"headlines":[]}""";
 
 	@Test
 	void anAnswerCoveringEveryItemIsReadWithNothingMissing() {

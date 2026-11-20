@@ -202,7 +202,7 @@ class LlmDigestGeneratorFlowTests {
 		UserId user = account("digest-flow-ready@example.com");
 		List<GenerationRequest> asked = new ArrayList<>();
 		LlmClientFactory recording = recording(asked, """
-				{"overview":"흐름","top_stories":{"I1":{"title":"제목","summary":"요약"}},"headlines":{}}""");
+				{"overview":"흐름","top_stories":{"I1":{"title":"제목","summary":"요약"}},"headlines":[]}""");
 
 		DigestInput input = input(ReasoningEffort.HIGH);
 		Map<String, Object> row = run(user, generator(recording), input);

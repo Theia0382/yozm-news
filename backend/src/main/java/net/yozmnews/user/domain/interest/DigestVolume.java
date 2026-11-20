@@ -30,7 +30,10 @@ public record DigestVolume(CandidateVolume volume, @Nullable Integer customCount
 	/** 큰 슬롯 수의 하한 — 0 은 큰 슬롯을 끈다 */
 	public static final int MIN_BIG_SLOTS = 0;
 
-	/** 큰 슬롯 수의 상한 */
+	/**
+	 * 큰 슬롯 수의 상한 — 이 값과 큰 슬롯 밖 주요 뉴스 수({@code digest} 의 {@code ItemRules.TOP_STORIES})의 합이 다이제스트 출력의 주요 뉴스
+	 * 칸(항목 별칭을 키로 한 필수 객체)에 공급자가 받는 키 수 안이어야 한다 — 이 값을 올리면 그 한도를 함께 본다
+	 */
 	public static final int MAX_BIG_SLOTS = 10;
 
 	/**

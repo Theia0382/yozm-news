@@ -45,14 +45,15 @@ class MinimalJsonTests {
 				    "I2":{"type":"object","properties":{"title":{"type":"string"},"summary":{"type":"string"}},
 				          "required":["title","summary"],"additionalProperties":false}},
 				   "required":["I1","I2"],"additionalProperties":false},
-				  "headlines":{"type":"object","properties":{},"required":[],"additionalProperties":false}},
+				  "headlines":{"type":"array","items":{"type":"object","properties":{"ref":{"type":"string"},"title":{"type":"string"}},
+				               "required":["ref","title"],"additionalProperties":false}}},
 				 "required":["top_stories","headlines"]}
 				""";
 
 		assertSameJson(MinimalJson.of(schema), """
 				{"top_stories":{"I1":{"title":"로컬 대체물이 만든 본문이다.","summary":"로컬 대체물이 만든 본문이다."},
 				                "I2":{"title":"로컬 대체물이 만든 본문이다.","summary":"로컬 대체물이 만든 본문이다."}},
-				 "headlines":{}}
+				 "headlines":[]}
 				""");
 	}
 

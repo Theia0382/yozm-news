@@ -10,7 +10,8 @@ import net.yozmnews.digest.domain.candidate.AliasedItem;
 /**
  * 읽은 출력 — 항목 대조 전 · docs/specs/digest.md §4
  * @param topStories 읽은 주요 뉴스 칸 — 항목 별칭 → 주요 뉴스, 서술의 키 순서. 출력에 없던 항목은 없다
- * @param headlines 읽은 헤드라인 칸 — 항목 별칭 → 헤드라인, 서술의 키 순서. 출력에 없던 항목은 없다
+ * @param headlines 읽은 헤드라인 칸 — 원소의 항목 별칭 → 헤드라인, 출력의 원소 순서(같은 별칭은 처음 원소). 서술 밖 별칭 · 주요 뉴스 항목의
+ *     별칭도 들어 있을 수 있다 — 항목은 {@link #covers} 로만 찾는다
  */
 public record DigestDraft(String overview, Map<String, StoryDraft> topStories, Map<String, HeadlineDraft> headlines) {
 

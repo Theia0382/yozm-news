@@ -13,7 +13,8 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * 출력 구조의 JSON Schema 문서 — 항목 집합에서 만든 서술을 그린 문서가 손으로 쓴 문서와 같다. 칸마다 그 칸의 항목 별칭이 모두 필수 키다.
+ * 출력 구조의 JSON Schema 문서 — 항목 집합에서 만든 서술을 그린 문서가 손으로 쓴 문서와 같다. 주요 뉴스 칸은 주요 뉴스 항목 별칭이 모두
+ * 필수 키이고, 헤드라인 칸은 항목 수와 무관한 원소 배열이다.
  * 스프링 없이 돈다.
  * <p>
  * 지키는 규칙: digest-R4 · digest-R5
@@ -45,10 +46,11 @@ class DigestOutputSchemaTests {
 			{
 			  "type": "object",
 			  "properties": {
+			    "ref": { "type": "string", "minLength": 1, "maxLength": 16 },
 			    "title": { "type": "string", "minLength": 1, "maxLength": 200 },
 			    "note": { "type": ["string", "null"], "maxLength": 300 }
 			  },
-			  "required": ["title"],
+			  "required": ["ref", "title"],
 			  "additionalProperties": false
 			}""";
 
@@ -64,12 +66,7 @@ class DigestOutputSchemaTests {
 			      "required": ["I1", "I2"],
 			      "additionalProperties": false
 			    },
-			    "headlines": {
-			      "type": "object",
-			      "properties": { "I3": %2$s },
-			      "required": ["I3"],
-			      "additionalProperties": false
-			    }
+			    "headlines": { "type": "array", "items": %2$s }
 			  },
 			  "required": ["overview", "top_stories", "headlines"],
 			  "additionalProperties": false
@@ -77,14 +74,14 @@ class DigestOutputSchemaTests {
 			""".formatted(STORY, HEADLINE);
 
 	@Test
-	void drawsEveryItemOfTheRequestAsARequiredKeyOfItsField() {
+	void drawsEveryTopStoryAsARequiredKeyAndHeadlinesAsAnArrayOfElements() {
 		JsonNode drawn = JSON.readTree(DigestOutputSchema.json(DigestOutputSchema.root(SET)));
 
 		assertThat(drawn).isEqualTo(JSON.readTree(EXPECTED));
 	}
 
 	@Test
-	void drawsAFieldWithoutItemsAsAnEmptyObject() {
+	void drawsHeadlinesAsTheSameArrayWhenThereIsNoHeadlineItem() {
 		CandidateSet storiesOnly = CandidateSet
 			.of(DigestInputs.items(item(ItemKind.TOP_STORY, event(1, SelectionReason.SUBSCRIBED, 11))));
 
@@ -92,7 +89,19 @@ class DigestOutputSchemaTests {
 			.get("properties")
 			.get("headlines");
 
-		assertThat(headlines).isEqualTo(JSON.readTree("""
+		assertThat(headlines).isEqualTo(JSON.readTree("{ \"type\": \"array\", \"items\": %s }".formatted(HEADLINE)));
+	}
+
+	@Test
+	void drawsTopStoriesWithoutItemsAsAnEmptyObject() {
+		CandidateSet headlinesOnly = CandidateSet
+			.of(DigestInputs.items(item(ItemKind.HEADLINE, event(1, SelectionReason.SUBSCRIBED, 11))));
+
+		JsonNode topStories = JSON.readTree(DigestOutputSchema.json(DigestOutputSchema.root(headlinesOnly)))
+			.get("properties")
+			.get("top_stories");
+
+		assertThat(topStories).isEqualTo(JSON.readTree("""
 				{ "type": "object", "properties": {}, "required": [], "additionalProperties": false }
 				"""));
 	}

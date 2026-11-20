@@ -69,9 +69,8 @@ class DigestPromptsTests {
 					+ "칸은 그 항목을 쓸 출력의 칸(top_stories 또는 headlines)이다.")
 			.contains("- top_stories 는 칸이 top_stories 인 항목마다 그 항목 별칭을 키로 한 칸 하나다 — title 은 제목, "
 					+ "summary 는 그 항목 사건들의 기사를 종합한 300~600자의 요약이다.")
-			.contains("- headlines 는 칸이 headlines 인 항목마다 그 항목 별칭을 키로 한 칸 하나다 — title 은 제목, note 는 짧은 코멘트다.")
-			.contains("- 모든 항목의 칸을 쓴다. 키는 항목의 순서대로 쓴다.")
-			.doesNotContain("ref")
+			.contains("- headlines 에는 칸이 headlines 인 항목마다 원소 하나를 쓴다 — ref 는 항목 별칭, title 은 제목, note 는 짧은 코멘트다.")
+			.contains("- 모든 항목을 쓴다. 키와 원소는 항목의 순서대로 쓴다.")
 			.doesNotContain("<")
 			.doesNotContain("more_headlines")
 			.doesNotContain("A1");

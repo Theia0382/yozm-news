@@ -14,9 +14,10 @@ import tools.jackson.databind.json.JsonMapper;
 /**
  * 출력 구조와 상한 — 정본 · docs/specs/digest.md §5 · digest-R4 · digest-R5
  * <p>
- * 출력 서술은 요청마다 그 항목 집합에서 만든다({@link #root}) — 주요 뉴스 · 헤드라인 칸은 항목 별칭을 키로 한 객체이고, JSON Schema 는 모든
- * 키를 필수로 그려 구조화 출력이 모든 항목을 쓰게 한다. 같은 항목 집합이면 같은 서술이다. 문자열 상한은 측정 전 목표다. {@link #json} 은 서술을
- * 그린 것이고 따로 적지 않는다.
+ * 출력 서술은 요청마다 그 항목 집합에서 만든다({@link #root}) — 주요 뉴스 칸은 항목 별칭을 키로 한 객체이고, JSON Schema 는 모든 키를
+ * 필수로 그려 구조화 출력이 모든 주요 뉴스 항목을 쓰게 한다. 헤드라인 칸은 원소마다 항목 별칭({@link #REF})을 단 배열이다 — 키 꼴은 항목
+ * 수만큼 문법이 커져 공급자가 거부하므로 수에 한도가 없는 헤드라인은 배열로 두고, 출력에 빠진 헤드라인 항목은 부르는 쪽이 처분한다. 같은
+ * 항목 집합이면 같은 서술이다. 문자열 상한은 측정 전 목표다. {@link #json} 은 서술을 그린 것이고 따로 적지 않는다.
  */
 public final class DigestOutputSchema {
 
@@ -32,6 +33,8 @@ public final class DigestOutputSchema {
 	/** 헤드라인 {@code note} 의 최대 코드 포인트 */
 	public static final int MAX_NOTE = 300;
 
+	/** 헤드라인 원소 별칭의 최대 코드 포인트 — 넘으면 그 원소를 버린다 */
+	public static final int MAX_ALIAS = 16;
 
 	/** 오늘의 흐름 */
 	public static final String OVERVIEW = "overview";
@@ -39,8 +42,11 @@ public final class DigestOutputSchema {
 	/** 주요 뉴스 칸 — 항목 별칭을 키로 한 객체. 사용자 구획에서 주요 뉴스 항목의 칸 이름이기도 하다 */
 	public static final String TOP_STORIES = "top_stories";
 
-	/** 헤드라인 칸 — 항목 별칭을 키로 한 객체. 사용자 구획에서 헤드라인 항목의 칸 이름이기도 하다 */
+	/** 헤드라인 칸 — 원소 배열. 사용자 구획에서 헤드라인 항목의 칸 이름이기도 하다 */
 	public static final String HEADLINES = "headlines";
+
+	/** 헤드라인 원소가 가리키는 항목 별칭 */
+	public static final String REF = "ref";
 
 	/** 주요 뉴스 · 헤드라인의 제목 */
 	public static final String TITLE = "title";
@@ -59,9 +65,11 @@ public final class DigestOutputSchema {
 			new OutputShape.Property(SUMMARY, new OutputShape.Str(MAX_SUMMARY, OnBlank.UNREADABLE, OverLimit.DROP_ITEM), true,
 					false)));
 
-	private static final OutputShape.Obj HEADLINE = new OutputShape.Obj(List.of(
+	private static final OutputShape.Arr HEADLINE_ELEMENTS = new OutputShape.Arr(new OutputShape.Obj(List.of(
+			new OutputShape.Property(REF, new OutputShape.Str(MAX_ALIAS, OnBlank.KEEP, OverLimit.DROP_ITEM), true, false),
 			new OutputShape.Property(TITLE, ITEM_TITLE, true, false),
-			new OutputShape.Property(NOTE, new OutputShape.Str(MAX_NOTE, OnBlank.ABSENT, OverLimit.DROP_VALUE), false, true)));
+			new OutputShape.Property(NOTE, new OutputShape.Str(MAX_NOTE, OnBlank.ABSENT, OverLimit.DROP_VALUE), false,
+					true))));
 
 	/** 항목이 없는 칸의 서술 — 키 없는 빈 객체 */
 	private static final OutputShape.Obj EMPTY = new OutputShape.Obj(List.of());
@@ -74,20 +82,25 @@ public final class DigestOutputSchema {
 	}
 
 	/**
-	 * 이번 요청의 출력 서술 — 개요와, 칸마다 그 칸의 항목 별칭(항목 순서)을 키로 한 객체. 칸에 항목이 없으면 그 칸은 빈 객체다
+	 * 이번 요청의 출력 서술 — 개요, 주요 뉴스 항목 별칭(항목 순서)을 키로 한 객체(주요 뉴스 항목이 없으면 빈 객체), 헤드라인 원소 배열(헤드라인
+	 * 항목이 없어도 배열)
 	 */
 	public static OutputShape.Obj root(CandidateSet set) {
 		Objects.requireNonNull(set, "set");
 		return new OutputShape.Obj(List.of(
 				new OutputShape.Property(OVERVIEW, new OutputShape.Str(MAX_OVERVIEW, OnBlank.UNREADABLE, OverLimit.UNREADABLE),
 						true, false),
-				new OutputShape.Property(TOP_STORIES, slot(set, ItemKind.TOP_STORY, STORY), true, false),
-				new OutputShape.Property(HEADLINES, slot(set, ItemKind.HEADLINE, HEADLINE), true, false)));
+				new OutputShape.Property(TOP_STORIES, topStories(set), true, false),
+				new OutputShape.Property(HEADLINES, HEADLINE_ELEMENTS, true, false)));
 	}
 
-	private static OutputShape slot(CandidateSet set, ItemKind kind, OutputShape.Obj value) {
-		List<String> aliases = set.items().stream().filter(item -> item.kind() == kind).map(AliasedItem::alias).toList();
-		return aliases.isEmpty() ? EMPTY : new OutputShape.Keyed(aliases, value);
+	private static OutputShape topStories(CandidateSet set) {
+		List<String> aliases = set.items()
+			.stream()
+			.filter(item -> item.kind() == ItemKind.TOP_STORY)
+			.map(AliasedItem::alias)
+			.toList();
+		return aliases.isEmpty() ? EMPTY : new OutputShape.Keyed(aliases, STORY);
 	}
 
 	/**
@@ -118,6 +131,10 @@ public final class DigestOutputSchema {
 				node.put("properties", properties);
 				node.put("required", required);
 				node.put("additionalProperties", false);
+			}
+			case OutputShape.Arr arr -> {
+				node.put("type", type("array", nullable));
+				node.put("items", draw(arr.item(), false));
 			}
 			case OutputShape.Keyed keyed -> {
 				node.put("type", type("object", nullable));

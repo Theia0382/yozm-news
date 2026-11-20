@@ -31,6 +31,7 @@ import net.yozmnews.digest.DigestInputs;
 import net.yozmnews.digest.DigestStatus;
 import net.yozmnews.digest.SelectionReason;
 import net.yozmnews.digest.adapter.out.fake.FakeDigestGenerator;
+import net.yozmnews.digest.domain.candidate.AliasedItem;
 import net.yozmnews.digest.domain.candidate.DigestCandidate;
 import net.yozmnews.digest.domain.candidate.DigestCandidateRepository;
 import net.yozmnews.digest.domain.content.DigestSectionRepository;
@@ -360,7 +361,7 @@ class DigestGenerationTests {
 	void asksOnceMoreWithTheDiagnosisAndStoresTheSecondAnswer() {
 		AtomicInteger calls = new AtomicInteger();
 		DigestGeneration generation = generation(scripted(calls, request -> (calls.get() == 1) ? "not json" : """
-				{ "overview": "흐름", "top_stories": { "I1": { "title": "t", "summary": "s" } }, "headlines": {} }
+				{ "overview": "흐름", "top_stories": { "I1": { "title": "t", "summary": "s" } }, "headlines": [] }
 				"""));
 		DigestId id = schedule(generation);
 		// 추론 강도는 기본값(보통)과 다른 값으로 — 요청이 입력 프로필의 값을 실었는지 가린다
@@ -506,7 +507,7 @@ class DigestGenerationTests {
 				this.jdbc.sql("delete from articles where id = :id").param("id", article).update();
 			}
 			return """
-					{ "overview": "흐름", "top_stories": { "I1": { "title": "t", "summary": "s" } }, "headlines": {} }
+					{ "overview": "흐름", "top_stories": { "I1": { "title": "t", "summary": "s" } }, "headlines": [] }
 					""";
 		}));
 		DigestId id = schedule(generation);
@@ -525,7 +526,7 @@ class DigestGenerationTests {
 		// 항목 I1 · I2(둘 다 주요 뉴스). 첫 · 다시 물은 출력 모두 I2 칸이 없다
 		AtomicInteger calls = new AtomicInteger();
 		DigestGeneration generation = generation(scripted(calls, request -> """
-				{ "overview": "흐름", "top_stories": { "I1": { "title": "t", "summary": "s" } }, "headlines": {} }
+				{ "overview": "흐름", "top_stories": { "I1": { "title": "t", "summary": "s" } }, "headlines": [] }
 				"""));
 		DigestId id = schedule(generation);
 
@@ -547,10 +548,10 @@ class DigestGenerationTests {
 	void anItemMissingOnlyFromTheFirstAnswerIsWrittenByTheSecond() {
 		AtomicInteger calls = new AtomicInteger();
 		DigestGeneration generation = generation(scripted(calls, request -> (calls.get() == 1) ? """
-				{ "overview": "흐름", "top_stories": { "I1": { "title": "t", "summary": "s" } }, "headlines": {} }
+				{ "overview": "흐름", "top_stories": { "I1": { "title": "t", "summary": "s" } }, "headlines": [] }
 				""" : """
 				{ "overview": "다시", "top_stories": { "I1": { "title": "t1", "summary": "s1" }, "I2": { "title": "t2", "summary": "s2" } },
-				  "headlines": {} }
+				  "headlines": [] }
 				"""));
 		DigestId id = schedule(generation);
 
@@ -566,7 +567,7 @@ class DigestGenerationTests {
 		AtomicInteger calls = new AtomicInteger();
 		DigestGeneration generation = generation(scripted(calls, request -> """
 				{ "overview": "흐름", "top_stories": { "I1": { "title": "t1", "summary": "s1" }, "I2": { "title": "t2", "summary": "s2" } },
-				  "headlines": {} }
+				  "headlines": [] }
 				"""));
 		DigestId id = schedule(generation);
 
@@ -576,6 +577,61 @@ class DigestGenerationTests {
 		assertThat(calls).hasValue(1);
 		assertThat(fills(id)).containsEntry("first_missing_items", 0).containsEntry("substituted_items", 0);
 		assertThat(log.getOut()).doesNotContain("다이제스트 출력에 항목이 빠졌다");
+	}
+
+	@Test
+	void writesEveryHeadlineOfADigestWithManyHeadlinesAsArrayElements() {
+		// 항목 I1 ~ I3(주요 뉴스) · I4 ~ I21(헤드라인 18 개 — 헤드라인 칸이 키 꼴이면 공급자가 거부하는 수)
+		manyArticles(21);
+		AtomicInteger calls = new AtomicInteger();
+		DigestGeneration generation = generation(scripted(calls, request -> everyItem(request, "")));
+		DigestId id = schedule(generation);
+
+		assertThat(generation.run(id, MODEL, candidates(21))).isEqualTo(DigestStatus.READY);
+
+		assertThat(sectionTexts(id)).hasSize(22).filteredOn(text -> text.startsWith("HEADLINE:h")).hasSize(18);
+		assertThat(calls).hasValue(1);
+		assertThat(fills(id)).containsEntry("first_missing_items", 0).containsEntry("substituted_items", 0);
+	}
+
+	@Test
+	void aHeadlineElementMissingFromBothAnswersStaysAsAHeadlineWithTheTitleOfItsFirstCitedArticle() {
+		manyArticles(21);
+		AtomicInteger calls = new AtomicInteger();
+		DigestGeneration generation = generation(scripted(calls, request -> everyItem(request, "I21")));
+		DigestId id = schedule(generation);
+
+		assertThat(generation.run(id, MODEL, candidates(21))).isEqualTo(DigestStatus.READY);
+
+		assertThat(sectionTexts(id)).hasSize(22).last().isEqualTo("HEADLINE:다이제스트 시험 기사 21:-");
+		assertThat(calls).hasValue(2);
+		assertThat(this.requests.get(1).prompt().instructions()).contains("출력에 없는 항목: I21");
+		assertThat(fills(id)).containsEntry("first_missing_items", 1).containsEntry("substituted_items", 1);
+	}
+
+	/** 기사를 {@code count} 개까지 채운다 — 앞 다섯은 준비가 넣었다 */
+	private void manyArticles(int count) {
+		for (int index = this.articleIds.size() + 1; index <= count; index++) {
+			this.articleIds.add(EventArticles.insert(this.jdbc, "다이제스트 시험 기사 " + index, null));
+		}
+	}
+
+	/** 요청의 항목을 모두 쓴 원문 — 주요 뉴스는 별칭 키, 헤드라인은 원소. {@code skip} 별칭은 쓰지 않는다 */
+	private static String everyItem(DigestRequest request, String skip) {
+		StringBuilder stories = new StringBuilder();
+		StringBuilder headlines = new StringBuilder();
+		for (AliasedItem item : request.candidates().items()) {
+			if (item.alias().equals(skip)) {
+				continue;
+			}
+			switch (item.kind()) {
+				case TOP_STORY -> stories.append(stories.isEmpty() ? "" : ",")
+					.append("\"%s\":{\"title\":\"t\",\"summary\":\"s\"}".formatted(item.alias()));
+				case HEADLINE -> headlines.append(headlines.isEmpty() ? "" : ",")
+					.append("{\"ref\":\"%s\",\"title\":\"h\"}".formatted(item.alias()));
+			}
+		}
+		return "{\"overview\":\"흐름\",\"top_stories\":{%s},\"headlines\":[%s]}".formatted(stories, headlines);
 	}
 
 	@Test
