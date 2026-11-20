@@ -66,10 +66,12 @@ public final class BigSlotPicker {
 	}
 
 	/**
-	 * 상한을 넘으면 행 순서로 돌며 하나씩 담는다 — 결과는 행 순서 · 행 안 사건 순서
+	 * 행마다 고르게 줄이기 — 정본. 상한을 넘으면 행 순서로 돌며 하나씩 담는다(앞 행이 하나 더). 결과는 행 순서 · 행 안 사건 순서. 고르기의
+	 * 상한과 예산 자르기({@link BudgetCut})가 함께 쓴다
+	 * @param chosen 행마다 사건 — 행 순서, 행 안 사건 순서
 	 * @param chosenRows {@code chosen} 의 행마다 입력 행의 위치
 	 */
-	private static BigSlots trim(List<List<CandidateEvent>> chosen, List<Integer> chosenRows, int cap) {
+	static BigSlots trim(List<List<CandidateEvent>> chosen, List<Integer> chosenRows, int cap) {
 		int[] keep = new int[chosen.size()];
 		int kept = 0;
 		boolean more = true;

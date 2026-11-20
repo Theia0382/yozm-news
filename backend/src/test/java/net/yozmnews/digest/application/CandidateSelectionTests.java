@@ -375,18 +375,19 @@ class CandidateSelectionTests {
 	}
 
 	@Test
-	void theBigEventTakesItsShareOfTheBudgetFirst() {
+	void theBudgetKeepsTheBigSlotWithinHalfOfWhatIsLeftOnceSubscribedEventsAreCut() {
 		long[] conflict = bigStoryline();
-		// 큰 슬롯 사건 = 87("분쟁 하나") + 86 + 86 + 40 = 299. 예산 = 지시 6,000 + 프로필 220 + 299 → 구독 사건은 들 자리가 없다
+		// 큰 슬롯 사건 = 87("분쟁 하나") + 86 + 86 + 40 = 299, 구독 사건 E1 213 · 사건 5 127. 후보 몫 299: 사건 5(구독 꼬리 — 남는 2 의 절반
+		// 1 = 큰 1) → 큰 슬롯 사건(남는 1 의 절반 0 < 큰 1) 순으로 빠져 E1 만 든다
 		LlmModel tight = new LlmModel(Provider.OPENAI, "gpt-test", 6_000 + 220 + 299, true);
 
 		assertThat(events(this.selection.select(new UserId(this.user), DAY, tight)))
-			.containsExactly(event(conflict[0]) + ":MAJOR_STORYLINE");
-
-		// 대조: 큰 슬롯을 끄면 같은 예산(후보 몫 299)에 사건 E1(213)이 든다 — 사건 5(127)까지는 넘는다
-		this.jdbc.sql("update user_settings set big_slots = 0 where user_id = :user").param("user", this.user).update();
-		assertThat(events(this.selection.select(new UserId(this.user), DAY, tight)))
 			.containsExactly(this.e1 + ":SUBSCRIBED");
+
+		// 대조: 후보 몫 512(= 299 + 213)면 사건 5 만 빠지고 큰 슬롯 사건과 E1 이 든다
+		LlmModel twoFit = new LlmModel(Provider.OPENAI, "gpt-test", 6_000 + 220 + 299 + 213, true);
+		assertThat(events(this.selection.select(new UserId(this.user), DAY, twoFit)))
+			.containsExactly(event(conflict[0]) + ":MAJOR_STORYLINE", this.e1 + ":SUBSCRIBED");
 	}
 
 	@Test
