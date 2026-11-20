@@ -30,6 +30,7 @@ import net.yozmnews.event.EventArticles;
 import net.yozmnews.event.EventEmbeddings;
 import net.yozmnews.event.EventId;
 import net.yozmnews.event.EventsChanged;
+import net.yozmnews.event.EventsRemoved;
 import net.yozmnews.event.domain.assignment.AssignmentQueueRepository;
 import net.yozmnews.event.domain.assignment.CriteriaRepository;
 import net.yozmnews.event.domain.event.EventArticleRepository;
@@ -109,6 +110,57 @@ class RejudgementFlowTests {
 	@AfterEach
 	void reset() {
 		EventArticles.clear(this.jdbc);
+		this.jdbc.sql("delete from feedback").update();
+		this.jdbc.sql("delete from feedback_events").update();
+	}
+
+	@Test
+	void aSplitLeavesTheFeedbackOfTheEventThatStays() throws Exception {
+		// 재판정으로 기사가 떠나도 원래 사건이 남으면 그 사건의 반응은 그대로다 — 반응은 원래 사건 ID 를 따라가지 않고 그 자리에 남는다
+		long a = assigned("[1,0]", null);
+		long event = eventOf(a);
+		long x = assigned("[4,3]", 0.7);
+		feedback(42, event);
+
+		rejudge(new AssignmentCriteria(Duration.ofHours(72), 0.80, 0.55, 0.40, 0.80));
+		awaitFeedbackListeners();
+
+		assertThat(eventOf(x)).isNotEqualTo(event);
+		assertThat(feedbackEvents()).containsExactly("feedback:" + event, "feedback_events:" + event);
+	}
+
+	@Test
+	void anEmptiedEventLosesItsFeedback() throws Exception {
+		// 대조 — 재판정으로 원래 사건이 비어 지워지면 그 사건의 반응도 지워진다(C-2). 기사를 받은 사건의 반응은 아래 시험이 본다
+		long a = assigned("[1,0]", null);
+		long event = eventOf(a);
+		long x = assigned("[4,3]", 0.3);
+		long opened = eventOf(x);
+		assertThat(opened).isNotEqualTo(event);
+		feedback(42, opened);
+		assertThat(feedbackEvents()).containsExactly("feedback:" + opened, "feedback_events:" + opened);
+
+		rejudge(new AssignmentCriteria(Duration.ofHours(72), 0.55, 0.50, 0.40, 0.50));
+		awaitFeedbackListeners();
+
+		assertThat(feedbackEvents()).isEmpty();
+	}
+
+	@Test
+	void aMoveLeavesTheFeedbackOfTheEventThatReceivesTheArticle() throws Exception {
+		// 재판정으로 기사를 받아 바뀐 사건의 반응은 그대로다 — 지운 사건의 반응만 지운다
+		long a = assigned("[1,0]", null);
+		long event = eventOf(a);
+		long x = assigned("[4,3]", 0.3);
+		long opened = eventOf(x);
+		feedback(42, opened);
+		feedback(42, event);
+
+		rejudge(new AssignmentCriteria(Duration.ofHours(72), 0.55, 0.50, 0.40, 0.50));
+		awaitFeedbackListeners();
+
+		assertThat(eventOf(x)).isEqualTo(event);
+		assertThat(feedbackEvents()).containsExactly("feedback:" + event, "feedback_events:" + event);
 	}
 
 	@Test
@@ -124,6 +176,8 @@ class RejudgementFlowTests {
 
 		// 옮기기 — 옮길 사건을 고치고, 빈 옛 사건을 지운다(event-R23)
 		assertThat(changes()).containsExactly(List.of(event), List.of(opened));
+		// 재판정으로 빈 사건도 지웠다고 알린다(event-R25)
+		assertThat(removals()).containsExactly(List.of(opened));
 
 		assertThat(eventOf(x)).isEqualTo(event);
 		// x 는 판정 때 연 사건에서 옮겨졌다 — 연 사건 표지가 거짓이 된다. 판정 원본은 처음 판정의 것 그대로다
@@ -160,6 +214,8 @@ class RejudgementFlowTests {
 		long split = eventOf(x);
 		// 떼어 내기 — 새 사건을 열고, 옛 사건을 줄인다(event-R23)
 		assertThat(changes()).containsExactly(List.of(split), List.of(event));
+		// 떼어 내기는 옛 사건을 줄일 뿐이라 지운 사건이 없다(event-R25)
+		assertThat(removals()).isEmpty();
 		assertThat(split).isNotEqualTo(event);
 		// 떼어 낸 새 사건은 그 기사가 연 사건이다. 판정 원본은 그대로다
 		assertThat(assignment(x)).containsEntry("decided_by", "EVALUATOR")
@@ -577,6 +633,49 @@ class RejudgementFlowTests {
 	private List<List<Long>> changes() {
 		return this.published.stream(EventsChanged.class)
 			.map(changed -> changed.eventIds().stream().map(EventId::value).toList())
+			.toList();
+	}
+
+	/** 그 사용자 · 사건의 반응 행 하나씩 — 현재 상태 · 이력 */
+	private void feedback(long user, long event) {
+		this.jdbc.sql("""
+				insert into feedback (user_id, event_id, value, digest_id, updated_at)
+				values (:user, :event, 'DISLIKE', 1, now())
+				""").param("user", user).param("event", event).update();
+		this.jdbc.sql("""
+				insert into feedback_events (user_id, event_id, value, digest_id, occurred_at)
+				values (:user, :event, 'DISLIKE', 1, now())
+				""").param("user", user).param("event", event).update();
+	}
+
+	/** 반응 행이 가리키는 사건 — "표:사건" */
+	private List<String> feedbackEvents() {
+		return this.jdbc.sql("""
+				select 'feedback' as t, event_id from feedback
+				union all
+				select 'feedback_events', event_id from feedback_events
+				order by 1, 2
+				""").query((rs, row) -> rs.getString(1) + ":" + rs.getLong(2)).list();
+	}
+
+	/**
+	 * {@code feedback} 의 리스너가 받은 발행을 모두 처리할 때까지 기다린다 — 발행 기록은 발행한 트랜잭션에서 남고 처리를 마치면 지워진다
+	 */
+	private void awaitFeedbackListeners() throws InterruptedException {
+		for (int attempt = 0; attempt < 300; attempt++) {
+			long pending = count("select count(*) from event_publication where listener_id like '%.feedback.%'");
+			if (pending == 0) {
+				return;
+			}
+			Thread.sleep(100);
+		}
+		throw new AssertionError("feedback 리스너의 발행이 30초 안에 끝나지 않았다");
+	}
+
+	/** 삭제 알림마다 사건 ID 목록 — 발행 순(event-R25) */
+	private List<List<Long>> removals() {
+		return this.published.stream(EventsRemoved.class)
+			.map(removed -> removed.eventIds().stream().map(EventId::value).toList())
 			.toList();
 	}
 

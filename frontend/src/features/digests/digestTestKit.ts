@@ -11,13 +11,12 @@ import type {
 } from "@/features/digests/digestQueries";
 import type { components } from "@/shared/api/schema";
 
-/** 좋아요 · 싫어요 현재 상태 응답 */
-export type FeedbackStatesBody =
-  components["schemas"]["FeedbackStatesResponse"];
+/** 다이제스트 하나의 항목마다 누른 값 응답 */
+export type FeedbackItemsBody = components["schemas"]["FeedbackItemsResponse"];
 
-/** 현재 상태가 하나도 없는 응답 */
-export function noFeedback(): FeedbackStatesBody {
-  return { states: [] };
+/** 누른 항목이 하나도 없는 응답 */
+export function noFeedback(): FeedbackItemsBody {
+  return { items: [] };
 }
 
 export function citation(
@@ -42,6 +41,7 @@ export const SECTIONS: DigestSection[] = [
     title: null,
     body: "오늘의 흐름 <b>굵게</b>",
     reason: null,
+    eventIds: [],
     citations: [],
   },
   {
@@ -49,6 +49,8 @@ export const SECTIONS: DigestSection[] = [
     title: "주요 뉴스 제목",
     body: "주요 뉴스 요약",
     reason: "MAJOR_STORYLINE",
+    // 사건 둘을 묶은 항목 — 항목 키는 첫 사건 101 이다
+    eventIds: [101, 102],
     citations: [citation(1), citation(2), citation(3)],
   },
   {
@@ -56,6 +58,7 @@ export const SECTIONS: DigestSection[] = [
     title: "헤드라인 제목",
     body: "한 줄 코멘트",
     reason: "INTEREST",
+    eventIds: [104],
     citations: [citation(4)],
   },
 ];

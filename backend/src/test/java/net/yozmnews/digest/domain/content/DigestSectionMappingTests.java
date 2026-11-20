@@ -160,20 +160,19 @@ class DigestSectionMappingTests {
 
 		this.sections.saveAll(DigestSection.of(digest.id(), cited));
 
-		// 인용은 기사와 그 사건의 이유만 — 헤드라인의 코멘트는 섹션 본문이다
+		// 인용은 기사만 — 선정 이유는 섹션 사건 행에, 헤드라인의 코멘트는 섹션 본문에 있다
 		assertThat(this.jdbc.sql("""
-				select s.kind, s.position as section, s.title, s.body, i.position as item, i.article_id, i.selection_reason
+				select s.kind, s.position as section, s.title, s.body, i.position as item, i.article_id
 				from digest_sections s left join digest_items i on i.digest_section_id = s.id
 				where s.digest_id = :digest
 				order by s.position, i.position
 				""").param("digest", digest.id().value()).query().listOfRows())
 			.extracting(row -> List.of(String.valueOf(row.get("kind")), String.valueOf(row.get("section")),
 					String.valueOf(row.get("title")), String.valueOf(row.get("body")), String.valueOf(row.get("item")),
-					String.valueOf(row.get("article_id")), String.valueOf(row.get("selection_reason"))))
-			.containsExactly(List.of("OVERVIEW", "0", "null", "흐름", "null", "null", "null"),
-					List.of("TOP_STORY", "1", "하나", "요약", "0", "12", "MAJOR_STORYLINE"),
-					List.of("TOP_STORY", "1", "하나", "요약", "1", "11", "SUBSCRIBED"),
-					List.of("HEADLINE", "2", "헤드라인", "한 줄", "0", "13", "SUBSCRIBED"));
+					String.valueOf(row.get("article_id"))))
+			.containsExactly(List.of("OVERVIEW", "0", "null", "흐름", "null", "null"),
+					List.of("TOP_STORY", "1", "하나", "요약", "0", "12"), List.of("TOP_STORY", "1", "하나", "요약", "1", "11"),
+					List.of("HEADLINE", "2", "헤드라인", "한 줄", "0", "13"));
 		assertThat(this.jdbc.sql("""
 				select s.position || ':' || e.position || ':' || e.event_id || ':' || e.selection_reason
 				from digest_sections s join digest_section_events e on e.digest_section_id = s.id
@@ -186,8 +185,7 @@ class DigestSectionMappingTests {
 		this.sections.findAll().forEach(read::add);
 		DigestSection story = read.stream().filter(section -> section.kind() == SectionKind.TOP_STORY).findFirst()
 			.orElseThrow();
-		assertThat(story.items()).containsExactly(new DigestItem(12, SelectionReason.MAJOR_STORYLINE),
-				new DigestItem(11, SelectionReason.SUBSCRIBED));
+		assertThat(story.items()).containsExactly(new DigestItem(12), new DigestItem(11));
 		assertThat(story.events()).containsExactly(new SectionEvent(30, SelectionReason.MAJOR_STORYLINE),
 				new SectionEvent(20, SelectionReason.SUBSCRIBED));
 	}

@@ -1,18 +1,14 @@
 package net.yozmnews.feedback.adapter.in.web;
 
-import java.time.Instant;
 import java.time.InstantSource;
-import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;
-import net.yozmnews.article.ArticleId;
+import net.yozmnews.event.EventId;
 import net.yozmnews.feedback.application.FeedbackRecording;
 import net.yozmnews.feedback.application.FeedbackStates;
 import net.yozmnews.platform.ApiProblem;
@@ -31,7 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
- * 좋아요 / 싫어요 — 누르기 · 되돌리기와 현재 상태. docs/specs/feedback.md §3 · feedback-R9
+ * 좋아요 / 싫어요 — 다이제스트 항목의 누르기 · 되돌리기와 항목 기록. docs/specs/feedback.md §3 · feedback-R9
  * <p>
  * 둘 다 세션 사용자의 것이고 키 관문 뒤다(키 없이 여는 표시가 없다). 누르기 · 되돌리기에만 요청 제한이 걸린다.
  */
@@ -51,48 +47,33 @@ class FeedbackController {
 		this.clock = Objects.requireNonNull(clock, "clock");
 	}
 
-	/** 누르기 · 되돌리기 — 기사 ID · 다이제스트 ID 가 1 보다 작으면 400 */
+	/** 누르기 · 되돌리기 — 항목의 사건 ID(항목 키) · 다이제스트 ID 가 1 보다 작으면 400 */
 	@RequestLimited(GuardedAction.FEEDBACK)
-	@PutMapping("/api/feedback/{articleId}")
-	FeedbackResponse record(UserId user, @PathVariable long articleId, @Valid @RequestBody FeedbackRequest request) {
+	@PutMapping("/api/feedback/{eventId}")
+	FeedbackResponse record(UserId user, @PathVariable long eventId, @Valid @RequestBody FeedbackRequest request) {
+		if (eventId < 1) {
+			throw badRequest("사건 ID 는 1 이상이다: " + eventId);
+		}
 		long digestId = request.digestId();
 		if (digestId < 1) {
 			throw badRequest("다이제스트 ID 는 1 이상이다: " + digestId);
 		}
-		return FeedbackResponse
-			.of(this.recording.record(user, article(articleId), request.value(), digestId, this.clock.instant()));
+		return FeedbackResponse.of(
+				this.recording.record(user, new EventId(eventId), request.value(), digestId, this.clock.instant()));
 	}
 
-	/** 현재 상태 — 물은 기사 가운데 세션 사용자의 현재 상태가 있는 것 */
+	/** 항목 기록 — 그 다이제스트에서 세션 사용자가 값을 누른 항목 */
 	@GetMapping("/api/feedback")
 	@ApiResponse(responseCode = "200", description = "OK", useReturnTypeSchema = true)
-	@ApiResponse(responseCode = "400", description = "articleIds 가 비었거나 너무 많거나 1 미만 ID 가 있다",
+	@ApiResponse(responseCode = "400", description = "digestId 가 없거나 1 미만이다",
 			content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
 					schema = @Schema(implementation = ApiProblem.class)))
-	FeedbackStatesResponse states(UserId user,
-			@Parameter(description = "기사 ID — 쉼표로 이은 것, 서로 다른 ID 는 " + FeedbackStates.MAX_ARTICLES
-					+ "개까지") @RequestParam List<Long> articleIds) {
-		if (articleIds.isEmpty()) {
-			throw badRequest("articleIds 가 비었다");
+	FeedbackItemsResponse items(UserId user,
+			@Parameter(description = "다이제스트 ID") @RequestParam long digestId) {
+		if (digestId < 1) {
+			throw badRequest("다이제스트 ID 는 1 이상이다: " + digestId);
 		}
-		Set<ArticleId> articles = new LinkedHashSet<>();
-		for (Long id : articleIds) {
-			if (id == null || id < 1) {
-				throw badRequest("기사 ID 는 1 이상이다: " + id);
-			}
-			articles.add(new ArticleId(id));
-		}
-		if (articles.size() > FeedbackStates.MAX_ARTICLES) {
-			throw badRequest("서로 다른 기사는 " + FeedbackStates.MAX_ARTICLES + "개까지다: " + articles.size());
-		}
-		return FeedbackStatesResponse.of(this.states.among(user, articles));
-	}
-
-	private static ArticleId article(long articleId) {
-		if (articleId < 1) {
-			throw badRequest("기사 ID 는 1 이상이다: " + articleId);
-		}
-		return new ArticleId(articleId);
+		return FeedbackItemsResponse.of(this.states.itemsOf(user, digestId));
 	}
 
 	private static ResponseStatusException badRequest(String detail) {

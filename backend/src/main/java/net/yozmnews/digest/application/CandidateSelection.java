@@ -56,7 +56,7 @@ import net.yozmnews.event.EventDirectory;
 import net.yozmnews.event.EventId;
 import net.yozmnews.event.EventPeriod;
 import net.yozmnews.event.EventTally;
-import net.yozmnews.feedback.ArticleFeedback;
+import net.yozmnews.feedback.EventFeedback;
 import net.yozmnews.llm.LlmModel;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.source.SourceId;
@@ -85,8 +85,9 @@ import org.springframework.stereotype.Service;
  * {@link IllegalStateException} 이다 — 관심도 재료({@link InterestMaterials})의 키 버전도 같다. 계정이 없으면 빈 값이다. 백그라운드 작업
  * 전용이다 — 화면 경로에서 부르지 않는다.
  * <p>
- * 순위는 관심도(기준 시각 = 기간 끝)를 곱하고, 그 사용자가 지금 싫어요를 누른 기사는 후보 사건의 기사에서 뺀다. 구독 사건은 같은 재료를 중립
- * 순위로도 골라 견준다 — 사건의 값은 한 번 읽고, 표본 내용(토큰 어림)은 두 결과의 사건을 함께 읽는다.
+ * 순위는 관심도(기준 시각 = 기간 끝)를 곱하고, 그 사용자의 값이 싫어요인 사건은 후보에서 뺀다 — 구독 사건과 큰 슬롯 사건이 같은 판정
+ * ({@link UserFilter#passesEvent})을 쓴다. 싫어요는 구독 후보의 사건을 필터를 만들기 전에, 큰 슬롯 사건을 그 사건이 정해진 뒤에 따로 묻는다.
+ * 구독 사건은 같은 재료를 중립 순위로도 골라 견준다 — 사건의 값은 한 번 읽고, 표본 내용(토큰 어림)은 두 결과의 사건을 함께 읽는다.
  * <p>
  * 표본 기사의 제목 · 요약문은 토큰 어림에 쓴 읽기의 값을 그대로 입력에 싣는다 — 어림과 프롬프트의 글이 같다(ADR-0210).
  * <p>
@@ -115,14 +116,14 @@ public class CandidateSelection {
 
 	private final InterestMaterials interestMaterials;
 
-	private final ArticleFeedback feedback;
+	private final EventFeedback feedback;
 
 	private final InstantSource clock;
 
 	CandidateSelection(DigestInterestsDirectory interests, ArticleEvaluations evaluations,
 			ActiveEvaluations activeEvaluations, TagSetDirectory tagSets, ArticleDirectory articles,
 			EventDirectory events, StorylineDirectory storylines, InterestMaterials interestMaterials,
-			ArticleFeedback feedback, InstantSource clock) {
+			EventFeedback feedback, InstantSource clock) {
 		this.interests = Objects.requireNonNull(interests, "interests");
 		this.evaluations = Objects.requireNonNull(evaluations, "evaluations");
 		this.activeEvaluations = Objects.requireNonNull(activeEvaluations, "activeEvaluations");
@@ -174,8 +175,7 @@ public class CandidateSelection {
 		TopicInterests weights = InterestWindow.levels(interestRecord.get(), period.end(), now).weights();
 		Instant from = latest(period.start(), period.end().minus(EvaluationPeriod.MAX_LENGTH));
 		EvaluationPeriod readPeriod = EvaluationPeriod.of(from, period.end()).orElseThrow();
-		Optional<List<ArticleFacts>> facts = facts(user, this.evaluations.firstEvaluatedIn(readPeriod),
-				interests.tagSet());
+		Optional<List<ArticleFacts>> facts = facts(this.evaluations.firstEvaluatedIn(readPeriod), interests.tagSet());
 		if (facts.isEmpty()) {
 			return Optional.empty();
 		}
@@ -186,7 +186,7 @@ public class CandidateSelection {
 		if (eventFacts.isEmpty()) {
 			return Optional.empty();
 		}
-		UserFilter filter = UserFilter.of(interests);
+		UserFilter filter = UserFilter.of(interests, disliked(user, eventOf.values()));
 		List<CandidateEvent> pool = CandidateEvents.subscribed(facts.get(), eventOf, eventFacts.get(), filter, from);
 		List<CandidateEvent> ranked = SubscriptionFilter.select(pool, filter, weights);
 		List<CandidateEvent> neutral = SubscriptionFilter.select(pool, filter, TopicInterests.NEUTRAL_ALL);
@@ -290,6 +290,7 @@ public class CandidateSelection {
 	/**
 	 * 큰 슬롯 — 기간의 큰 판정 목록(보도 강도 순)의 행마다 기간 안 기사가 있는 사건과 그 중요도 합을 읽고, 그 사건들의 값(평가 있는 소속
 	 * 기사 전부)과 기간 안 기사 가운데 평가가 있는 기사로 후보 사건({@link CandidateEvents#big})을 꾸려 {@link BigSlotPicker} 에 넘긴다.
+	 * 기간 안 기사가 있는 사건의 싫어요를 물어 필터에 더한다.
 	 * 기간 안 기사가 없는 사건은 읽지 않는다. 조회 기간은 끝에서 {@link EventPeriod#MAX_LENGTH} 까지로 줄인다. 큰 슬롯 수가 0 이면 읽지
 	 * 않는다.
 	 * @param known 이미 읽은 사건의 값 — 다시 읽지 않는다
@@ -332,11 +333,12 @@ public class CandidateSelection {
 		if (eventFacts.isEmpty()) {
 			return Optional.empty();
 		}
-		Optional<List<ArticleFacts>> facts = facts(user,
-				inPeriod.values().stream().flatMap(List::stream).distinct().toList(), interests.tagSet());
+		Optional<List<ArticleFacts>> facts = facts(inPeriod.values().stream().flatMap(List::stream).distinct().toList(),
+				interests.tagSet());
 		if (facts.isEmpty()) {
 			return Optional.empty();
 		}
+		UserFilter bigFilter = filter.withDisliked(disliked(user, inPeriod.keySet()));
 		Map<ArticleId, ArticleFacts> evaluated = new HashMap<>();
 		facts.get().forEach(article -> evaluated.put(article.id(), article));
 		List<BigRow> rows = new ArrayList<>(rowEvents.size());
@@ -350,7 +352,7 @@ public class CandidateSelection {
 					.filter(Objects::nonNull)
 					.toList();
 				return new BigEvent(event, tallies.get(event).importanceSum(),
-						(ofEvent == null) ? null : CandidateEvents.big(ofEvent, articles, filter));
+						(ofEvent == null) ? null : CandidateEvents.big(ofEvent, articles, bigFilter));
 			})
 			.toList())));
 		return Optional.of(new BigPick(
@@ -381,11 +383,11 @@ public class CandidateSelection {
 	}
 
 	/**
-	 * 기사들의 재료 — 평가를 활성 키로 푼 것({@link ActiveEvaluations})에 발행 시각 · 소스 · 그 사용자의 싫어요 여부를 얹는다. 평가가 없거나
-	 * 그 사이 지운 기사는 빠진다.
+	 * 기사들의 재료 — 평가를 활성 키로 푼 것({@link ActiveEvaluations})에 발행 시각 · 소스를 얹는다. 평가가 없거나 그 사이 지운 기사는
+	 * 빠진다.
 	 * @return 계보 표의 활성 버전이 관심 설정의 버전과 다르면 빈 값
 	 */
-	private Optional<List<ArticleFacts>> facts(UserId user, List<ArticleId> ids, TagSetId active) {
+	private Optional<List<ArticleFacts>> facts(List<ArticleId> ids, TagSetId active) {
 		Optional<Map<ArticleId, ActiveEvaluation>> resolved = this.activeEvaluations.read(ids, active);
 		if (resolved.isEmpty()) {
 			return Optional.empty();
@@ -396,7 +398,6 @@ public class CandidateSelection {
 		}
 		Map<ArticleId, Instant> published = this.articles.publishedAt(evaluated.keySet());
 		Map<ArticleId, Set<SourceId>> sources = this.articles.sources(evaluated.keySet());
-		Set<ArticleId> disliked = disliked(user, List.copyOf(evaluated.keySet()));
 		List<ArticleFacts> facts = new ArrayList<>(evaluated.size());
 		for (ActiveEvaluation evaluation : evaluated.values()) {
 			Instant publishedAt = published.get(evaluation.id());
@@ -404,16 +405,17 @@ public class CandidateSelection {
 			if (publishedAt == null || articleSources == null) {
 				continue;
 			}
-			facts.add(ArticleFacts.of(evaluation, articleSources, publishedAt, disliked.contains(evaluation.id())));
+			facts.add(ArticleFacts.of(evaluation, articleSources, publishedAt));
 		}
 		return Optional.of(facts);
 	}
 
-	/** 그 사용자가 지금 싫어요를 누른 기사 — {@link ArticleFeedback#MAX_ARTICLES} 씩 나눠 묻는다 */
-	private Set<ArticleId> disliked(UserId user, List<ArticleId> ids) {
-		Set<ArticleId> disliked = new HashSet<>();
-		for (int i = 0; i < ids.size(); i += ArticleFeedback.MAX_ARTICLES) {
-			int end = Math.min(ids.size(), i + ArticleFeedback.MAX_ARTICLES);
+	/** 사건 가운데 그 사용자의 값이 싫어요인 사건 — {@link EventFeedback#MAX_EVENTS} 씩 나눠 묻는다 */
+	private Set<EventId> disliked(UserId user, Collection<EventId> events) {
+		List<EventId> ids = events.stream().distinct().toList();
+		Set<EventId> disliked = new HashSet<>();
+		for (int i = 0; i < ids.size(); i += EventFeedback.MAX_EVENTS) {
+			int end = Math.min(ids.size(), i + EventFeedback.MAX_EVENTS);
 			disliked.addAll(this.feedback.dislikedAmong(user, ids.subList(i, end)));
 		}
 		return disliked;

@@ -1,6 +1,6 @@
 # ADR-0028: 관심 신호는 명시적 행동만 쓰고, 관심도를 후보 순위에 반영하되 큰 사건을 끼워 넣는다
 
-- 상태: 승인. 부분 대체 — 관심 신호의 이슈 추적 · 해제와 그 기록 모듈([ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)) · 후보 선별과 구독 밖 노출의 큰 사건 슬롯([ADR-0103](0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md)) · 구독 밖 노출을 큰 슬롯이 늘 맡는 것([ADR-0209](0209-maximum-candidates-and-big-slots-are-user-settings-and-the-big-slot-takes-at-most-half.md)) · 후보 선별 순서의 사건 단위 중복 제거와 기사마다 선정 이유([ADR-0260](0260-digest-candidates-are-events-and-only-assigned-events-with-an-article-first-evaluated-in-the-period-enter.md))
+- 상태: 승인. 부분 대체 — 관심 신호의 이슈 추적 · 해제와 그 기록 모듈([ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)) · 관심 신호와 현재 상태의 기사 단위 좋아요 / 싫어요([ADR-0265](0265-feedback-is-pressed-once-per-digest-item-and-recorded-on-each-event-of-the-item-the-screen-shows-the-item-value-and-signals-use-event-records.md)) · 후보 선별과 구독 밖 노출의 큰 사건 슬롯([ADR-0103](0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md)) · 구독 밖 노출을 큰 슬롯이 늘 맡는 것([ADR-0209](0209-maximum-candidates-and-big-slots-are-user-settings-and-the-big-slot-takes-at-most-half.md)) · 후보 선별 순서의 사건 단위 중복 제거와 기사마다 선정 이유([ADR-0260](0260-digest-candidates-are-events-and-only-assigned-events-with-an-article-first-evaluated-in-the-period-enter.md))
 - 날짜: 2026-10-27
 - 근거: [이슈 #36](https://github.com/Theia0382/yozm-news/issues/36) — 기점 `e4dbe0d` 의 설계 문서 · ADR 과 Spring Modulith 2.1.1 의 모듈 순환 판정을 대조해 확인
 - 관련: [ADR-0002](0002-shared-evaluation-with-jev.md)(개인화 주체 — 이 ADR 이 부분 대체한다), [ADR-0010](0010-tag-taxonomy.md)(주제 구독), [ADR-0025](0025-long-term-personal-news-history-in-v1.md)(관심사 히스토리 · 이슈), [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md)(큰 사건)
@@ -15,7 +15,7 @@
 
 ## 결정
 
-> 부분 대체(아래 두 항목의 이슈 추적 · 해제, 추적 여부, `storyline`) — [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md). 지금 상태: [`overview` §6](../overview.md#6-횡단-규약)
+> 부분 대체 — 아래 두 항목의 이슈 추적 · 해제, 추적 여부, `storyline` 은 [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md), 첫 항목의 "기사 좋아요 / 싫어요"와 둘째 항목의 "기사 피드백"은 [ADR-0265](0265-feedback-is-pressed-once-per-digest-item-and-recorded-on-each-event-of-the-item-the-screen-shows-the-item-value-and-signals-use-event-records.md). 지금 상태: [`overview` §6](../overview.md#6-횡단-규약) · [feedback Spec](../specs/feedback.md#값과-기록) feedback-R1
 - **관심 신호는 사용자의 명시적 행동만 쓴다.** 기사 좋아요 / 싫어요, 이슈 추적 · 해제, 구독 설정 변경이다. 클릭 · 열람은 추적하지 않고, 원문 링크는 원문으로 바로 이동한다.
 - **신호는 추가 전용 이벤트 기록이 정본이다.** 현재 상태(기사 피드백 · 추적 여부 · 구독)는 그 투영이다. 신호는 각 모듈이 자기 것을 기록한다(`feedback` · `storyline` · `user`).
 - **관심도**는 기간 × 주제마다 신호를 노출 수로 나눈 값이고, 최근 신호에 더 큰 가중치를 준다. 노출은 서비스가 보여 준 다이제스트 항목이라 행동 추적이 아니다. 관심도는 조회할 때 계산한다. 산식은 노출 기록을 가진 `digest` 의 `domain` 한 곳에 둔다. 신호가 없으면 중립이다.
@@ -48,7 +48,7 @@
 ## 후속 기록
 
 - 2026-11-15: 결정 절 "신호는 추가 전용 이벤트 기록이 정본이다"의 구독 변경 기록에 원인(사용자 · 계정을 만들 때 기본값 · 체계 변경)을 두고, 관심 신호는 원인이 사용자인 행만이다 — [ADR-0175](0175-tag-preferences-follow-tag-set-activation-events-and-are-rewritten-to-active-keys.md) · [`user` user-R45](../specs/user.md#관심-설정)
-- 2026-11-17: 결정 절 "신호는 추가 전용 이벤트 기록이 정본이다"의 좋아요 / 싫어요 이력 가운데 지운 기사의 행 — [ADR-0197](0197-feedback-on-removed-articles-is-deleted-from-both-the-current-state-and-the-history-and-recording-and-removal-are-ordered-by-a-fence-lock.md) · [`feedback` feedback-R5](../specs/feedback.md#지운-기사-따르기)
+- 2026-11-17: 결정 절 "신호는 추가 전용 이벤트 기록이 정본이다"의 좋아요 / 싫어요 이력 가운데 지운 기사의 행 — [ADR-0197](0197-feedback-on-removed-articles-is-deleted-from-both-the-current-state-and-the-history-and-recording-and-removal-are-ordered-by-a-fence-lock.md) · [`feedback` feedback-R5](../specs/feedback.md#지운-사건--지운-항목-따르기)
 - 2026-11-17: 결정 절 "후보 선별 순서"의 구독 필터가 기간에 넣는 시각 — [ADR-0207](0207-digest-candidates-enter-a-period-by-first-evaluation-time-with-a-published-time-floor.md), 지금 상태는 [`pipeline` 후보 선별](../pipeline.md#후보-선별)
 - 2026-11-18: 결정 절 "관심도는 기간 × 주제마다 신호를 노출 수로 나눈 값이고, 최근 신호에 더 큰 가중치를 준다"의 산식 · 상수 · 노출 정의 — [ADR-0222](0222-interest-per-subtopic-is-smoothed-reactions-over-exposures-with-a-half-life-and-exposures-are-all-ready-citations.md), 스토리라인 구독 변경의 주제 몫 — [ADR-0214](0214-a-storyline-subscription-enters-topic-interest-by-the-topic-shares-of-its-event-representatives.md), 지금 상태는 [digest Spec "관심도"](../specs/digest.md#관심도)
 - 2026-11-18: 결정 절 "후보 선별 순서"의 "기사마다 선정 이유 기록 · 표시" 가운데 관심도(`INTEREST`)의 뜻 — [ADR-0216](0216-the-interest-selection-reason-marks-subscribed-candidates-that-enter-only-by-interest-with-a-weight-above-neutral.md), 지금 상태는 [digest Spec "후보 선별"](../specs/digest.md#후보-선별) digest-R22

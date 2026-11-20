@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import net.yozmnews.article.ArticleId;
+import net.yozmnews.event.EventId;
 import net.yozmnews.feedback.FeedbackChange;
 import net.yozmnews.feedback.FeedbackValue;
 import net.yozmnews.storyline.StorylineId;
@@ -21,8 +21,8 @@ import net.yozmnews.user.TopicSubscriptionChange;
 import org.junit.jupiter.api.Test;
 
 /**
- * 관심 신호로 쓸 행 고르기 — 원인이 사용자인 구독 변경만, 지금도 있는 스토리라인만, 기사마다 기록 순 마지막 반응, 노출되지 않은 기사의 반응은 버림,
- * 평가 없는 노출 기사는 빠짐.
+ * 관심 신호로 쓸 행 고르기 — 원인이 사용자인 구독 변경만, 지금도 있는 스토리라인만, 지금 사건마다 기록 순 마지막 반응(기록한 사건이 달라도
+ * 같은 사건으로 풀리면 한 줄기), 노출되지 않은 · 지운 사건의 반응은 버림, 주제 없는 노출 사건은 빠짐.
  */
 class InterestSignalsTests {
 
@@ -31,23 +31,38 @@ class InterestSignalsTests {
 	private static final TagSetId V1 = new TagSetId(1);
 
 	@Test
-	void theLastReactionOfEachExposedArticleCounts() {
-		ArticleId liked = new ArticleId(1);
-		ArticleId undone = new ArticleId(2);
-		ArticleId unrated = new ArticleId(3);
-		ArticleId unevaluated = new ArticleId(4);
-		ArticleId notExposed = new ArticleId(5);
-		Map<ArticleId, Instant> exposures = Map.of(liked, AT, undone, AT, unrated, AT, unevaluated, AT);
+	void theLastReactionOfEachExposedEventCounts() {
+		EventId liked = new EventId(1);
+		EventId undone = new EventId(2);
+		EventId unrated = new EventId(3);
+		EventId untopical = new EventId(4);
+		EventId notExposed = new EventId(5);
+		Map<EventId, Exposure> exposures = Map.of(liked, new Exposure(AT, 1.0), undone, new Exposure(AT, 0.5), unrated,
+				new Exposure(AT, 1.0), untopical, new Exposure(AT, 1.0));
 		List<FeedbackChange> feedback = List.of(reaction(liked, FeedbackValue.DISLIKE),
 				reaction(undone, FeedbackValue.LIKE), reaction(liked, FeedbackValue.LIKE),
 				reaction(undone, FeedbackValue.NONE), reaction(notExposed, FeedbackValue.LIKE));
-		Map<ArticleId, Set<String>> subtopics = Map.of(liked, Set.of("a"), undone, Set.of("b"), unrated,
-				Set.of("c"), notExposed, Set.of("d"));
+		Map<EventId, Set<String>> subtopics = Map.of(liked, Set.of("a"), undone, Set.of("b"), unrated, Set.of("c"),
+				notExposed, Set.of("d"));
 
 		assertThat(InterestSignals.exposed(exposures, feedback, subtopics)).containsExactlyInAnyOrder(
-				new ExposedArticle(Set.of("a"), AT, FeedbackValue.LIKE),
-				new ExposedArticle(Set.of("b"), AT, FeedbackValue.NONE),
-				new ExposedArticle(Set.of("c"), AT, FeedbackValue.NONE));
+				new ExposedEvent(Set.of("a"), AT, 1.0, FeedbackValue.LIKE),
+				new ExposedEvent(Set.of("b"), AT, 0.5, FeedbackValue.NONE),
+				new ExposedEvent(Set.of("c"), AT, 1.0, FeedbackValue.NONE));
+	}
+
+	@Test
+	void reactionsRecordedOnEventsMergedIntoOneMakeOneStreamAndRemovedOnesDropOut() {
+		// 1 · 2 가 2 로 합쳐졌다 — 1 의 좋아요 뒤 2 의 싫어요가 마지막이다. 지운 사건(지금 사건 없음)의 좋아요는 버린다
+		EventId survivor = new EventId(2);
+		Map<EventId, Exposure> exposures = Map.of(survivor, new Exposure(AT, 1.0));
+		List<FeedbackChange> feedback = List.of(
+				new FeedbackChange(new EventId(1), survivor, FeedbackValue.LIKE, 1, AT),
+				new FeedbackChange(survivor, survivor, FeedbackValue.DISLIKE, 1, AT),
+				new FeedbackChange(new EventId(9), null, FeedbackValue.LIKE, 1, AT));
+
+		assertThat(InterestSignals.exposed(exposures, feedback, Map.of(survivor, Set.of("a"))))
+			.containsExactly(new ExposedEvent(Set.of("a"), AT, 1.0, FeedbackValue.DISLIKE));
 	}
 
 	@Test
@@ -89,8 +104,9 @@ class InterestSignalsTests {
 					new SubscriptionSignal(Map.of("a", 0.5), -1, AT));
 	}
 
-	private static FeedbackChange reaction(ArticleId article, FeedbackValue value) {
-		return new FeedbackChange(article, value, 1, AT);
+	/** 그대로인 사건의 이력 행 — 기록한 사건과 지금 사건이 같다 */
+	private static FeedbackChange reaction(EventId event, FeedbackValue value) {
+		return new FeedbackChange(event, event, value, 1, AT);
 	}
 
 	private static TopicSubscriptionChange topic(String key, Set<String> subtopics, TopicSubscriptionAction action,

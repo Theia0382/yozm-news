@@ -9,7 +9,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import net.yozmnews.article.ArticleId;
+import net.yozmnews.event.EventId;
 import net.yozmnews.feedback.FeedbackChange;
 import net.yozmnews.feedback.FeedbackValue;
 import net.yozmnews.storyline.StorylineId;
@@ -23,7 +23,8 @@ import net.yozmnews.user.TopicSubscriptionChange;
 /**
  * 읽은 이력 행에서 관심도 산식의 입력을 고르는 정본 — docs/specs/digest.md §5
  * <ul>
- * <li>노출 기사는 평가(활성 중분류)가 있는 것만, 반응은 그 기사의 기록 순 마지막 이력 값 — 노출되지 않은 기사의 피드백은 버린다</li>
+ * <li>노출 사건은 사건의 주제(활성 중분류)를 셀 수 있는 것만, 반응은 지금 사건이 그 사건인 이력 행의 기록 순 마지막 값 — 기록한 사건이 달라도
+ * 같은 사건으로 풀리면 한 줄기다. 노출되지 않은 사건 · 지운 사건의 반응은 버린다</li>
  * <li>구독 변경은 원인이 사용자인 행만 관심 신호다 — 계정을 만들 때 기본값 · 체계 변경 · 스토리라인 합쳐짐 · 지움을 따른 고쳐 쓰기는 아니다</li>
  * <li>스토리라인 구독은 지금도 있는 스토리라인(합쳐졌으면 남는 쪽)의 행만 — 지워진 스토리라인은 주제를 모을 수 없다</li>
  * </ul>
@@ -34,23 +35,28 @@ public final class InterestSignals {
 	}
 
 	/**
-	 * @param exposures 노출 기사 → 가장 늦은 노출 시각
+	 * @param exposures 지금 사건 → 창 안 가장 늦은 노출(시각 · 몫)
 	 * @param feedback 그 사용자의 이력 행 — 기록 순서
-	 * @param subtopics 기사 → 활성 중분류 — 평가가 없는 기사는 없다
-	 * @return 노출 기사 가운데 평가가 있는 기사마다 하나
+	 * @param subtopics 지금 사건 → 활성 중분류 — 주제를 셀 수 없는 사건은 없다
+	 * @return 노출 사건 가운데 주제가 있는 사건마다 하나
 	 */
-	public static List<ExposedArticle> exposed(Map<ArticleId, Instant> exposures, List<FeedbackChange> feedback,
-			Map<ArticleId, Set<String>> subtopics) {
+	public static List<ExposedEvent> exposed(Map<EventId, Exposure> exposures, List<FeedbackChange> feedback,
+			Map<EventId, Set<String>> subtopics) {
 		Objects.requireNonNull(exposures, "exposures");
 		Objects.requireNonNull(feedback, "feedback");
 		Objects.requireNonNull(subtopics, "subtopics");
-		Map<ArticleId, FeedbackValue> last = new HashMap<>();
-		feedback.forEach(change -> last.put(change.article(), change.value()));
-		List<ExposedArticle> exposed = new ArrayList<>();
-		exposures.forEach((article, at) -> {
-			Set<String> topics = subtopics.get(article);
+		Map<EventId, FeedbackValue> last = new HashMap<>();
+		for (FeedbackChange change : feedback) {
+			if (change.current() != null) {
+				last.put(change.current(), change.value());
+			}
+		}
+		List<ExposedEvent> exposed = new ArrayList<>();
+		exposures.forEach((event, exposure) -> {
+			Set<String> topics = subtopics.get(event);
 			if (topics != null) {
-				exposed.add(new ExposedArticle(topics, at, last.getOrDefault(article, FeedbackValue.NONE)));
+				exposed.add(new ExposedEvent(topics, exposure.at(), exposure.share(),
+						last.getOrDefault(event, FeedbackValue.NONE)));
 			}
 		});
 		return exposed;

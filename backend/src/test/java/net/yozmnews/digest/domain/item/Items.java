@@ -53,7 +53,7 @@ final class Items {
 				false);
 		ArticleFacts article = new ArticleFacts(new ArticleId(id * 10), Set.of("politics.executive"),
 				Set.of("domestic"), Set.of("straight"), TopicStatus.TAGGED, importance, Set.of(new SourceId(1)),
-				Instant.parse("2026-11-16T12:00:00Z"), false);
+				Instant.parse("2026-11-16T12:00:00Z"));
 		return new CandidateEvent(facts, List.of(article));
 	}
 

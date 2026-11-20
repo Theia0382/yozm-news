@@ -31,13 +31,14 @@ import net.yozmnews.event.EventId;
 import net.yozmnews.digest.domain.exposure.ExposureRepository;
 import net.yozmnews.event.EventArticles;
 import net.yozmnews.event.EventDirectory;
-import net.yozmnews.feedback.ArticleFeedback;
+import net.yozmnews.feedback.EventFeedback;
 import net.yozmnews.llm.LlmModel;
 import net.yozmnews.llm.Provider;
 import net.yozmnews.llm.ReasoningEffort;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.reader.ReaderRows;
 import net.yozmnews.storyline.StorylineDirectory;
+import net.yozmnews.storyline.StorylineRows;
 import net.yozmnews.tag.ArticleEvaluations;
 import net.yozmnews.tag.TagKeyLineage;
 import net.yozmnews.tag.TagKeyMapping;
@@ -65,7 +66,8 @@ import net.yozmnews.digest.DigestRounds;
  * <p>
  * 지키는 규칙: digest-R15 ~ digest-R19 · digest-R21 · digest-R22 · digest-R25 · digest-R44 ~ digest-R46 — 후보는 사건(사건 없는 기사는 버림), 구독 필터는 사건의 주제 · 지역 제외는 사건의 지역 · 기사 제외는 기사마다, 사건 중요도는 소속
  * 기사의 최대, 표본(기간에 든 · 제외를 지난 기사), 상한 · 선정 이유, 항목 묶기(꼭대기), 관심 설정과 계보 표의 활성 버전 대조, 관심도 순위와
- * {@code INTEREST}(노출 · 좋아요 · 주제 구독 변경 · 스토리라인 구독 변경), 싫어요 거름(구독 사건 · 큰 슬롯 사건의 기사), 중립 결과의 토큰 어림,
+ * {@code INTEREST}(노출 · 좋아요 · 주제 구독 변경 · 스토리라인 구독 변경), 싫어요 거름(구독 사건 · 큰 슬롯 사건 — 합쳐진 사건의 싫어요 포함), 중립
+ * 결과의 토큰 어림,
  * 관심도 재료를 읽는 범위의 끝(부르는 시각), 생성의 입력(프로필 · 항목 · 사건 · 표본 기사 재료)
  * <p>
  * 관심도의 기준 시각은 기간 끝 11-06 0시다. 노출 · 반응 · 구독 변경은 그 앞 하루 남짓이라 무게가 1 에 가깝고, 기대값은 순위가 바뀌는지만 본다
@@ -122,7 +124,7 @@ class CandidateSelectionTests {
 	InterestMaterials interestMaterials;
 
 	@Autowired
-	ArticleFeedback feedback;
+	EventFeedback feedback;
 
 	@Autowired
 	ExposureRepository exposures;
@@ -459,7 +461,7 @@ class CandidateSelectionTests {
 
 	@Test
 	void anEventOnATopicTheUserLikedEntersByInterest() {
-		// 입법 3.6 은 중립이면 E1(4.0) 뒤라 사건 하나의 예산 밖이다. 지난 다이제스트가 입법 기사 일곱을 보였고 모두 좋아요 —
+		// 입법 3.6 은 중립이면 E1(4.0) 뒤라 사건 하나의 예산 밖이다. 지난 다이제스트가 입법 사건 일곱을 보였고 모두 좋아요 —
 		// 입법 가중치 ≈ 1 + 0.5 × 7 ÷ 10 ≈ 1.35 라 3.6 × 1.35 ≈ 4.8 이 4.0 앞이다
 		long legislature = event(eventArticle("의회 넷이", "politics.legislature", 3.6, "2026-11-05T06:00:00Z", 1));
 		long[] shown = likedLegislatureShown(7);
@@ -468,8 +470,8 @@ class CandidateSelectionTests {
 			.containsExactly(legislature + ":INTEREST");
 
 		// 대조 — 좋아요를 모두 없음으로 되돌리면 중립 순서 그대로
-		for (long article : shown) {
-			react(article, "NONE", "2026-11-04T08:00:00Z");
+		for (long event : shown) {
+			react(event, "NONE", "2026-11-04T08:00:00Z");
 		}
 		assertThat(events(this.selection.select(new UserId(this.user), DAY, ONE_CANDIDATE)))
 			.containsExactly(this.e1 + ":SUBSCRIBED");
@@ -519,32 +521,57 @@ class CandidateSelectionTests {
 	}
 
 	@Test
-	void aDislikedArticleLeavesTheSampleOfItsEvent() {
-		// 1 · 2 는 같은 사건 — 1 에 싫어요를 누르면 사건은 남고 표본은 2 만
-		dislike(this.a1);
+	void aDislikedEventLeavesTheSubscribedCandidatesWithAllItsArticles() {
+		// 1 · 2 는 같은 사건 E1 — 사건에 싫어요를 누르면 사건이 빠지고 그 사건의 어느 기사도 표본에 들지 않는다
+		press(this.e1, "DISLIKE");
+
+		DigestInput input = this.selection.select(new UserId(this.user), DAY, ROOMY).orElseThrow();
+
+		assertThat(events(input)).containsExactly(event(this.a5) + ":SUBSCRIBED");
+		assertThat(articles(input)).doesNotContain(this.a1, this.a2);
+	}
+
+	@Test
+	void aLikedEventStaysWithItsArticles() {
+		// 대조 — 싫어요를 좋아요로 바꾸면 사건과 그 기사가 다시 든다
+		press(this.e1, "DISLIKE");
+		press(this.e1, "LIKE");
 
 		DigestInput input = this.selection.select(new UserId(this.user), DAY, ROOMY).orElseThrow();
 
 		assertThat(events(input)).containsExactly(this.e1 + ":SUBSCRIBED", event(this.a5) + ":SUBSCRIBED");
-		assertThat(articlesOf(input, this.e1)).containsExactly(this.a2);
-
-		// 대조 — 좋아요로 바꾸면 다시 표본에 든다
-		like(this.a1);
-		assertThat(articlesOf(this.selection.select(new UserId(this.user), DAY, ROOMY).orElseThrow(), this.e1))
-			.containsExactly(this.a1, this.a2);
+		assertThat(articlesOf(input, this.e1)).containsExactly(this.a1, this.a2);
 	}
 
 	@Test
-	void aDislikedArticleLeavesTheSampleOfTheBigEvent() {
+	void aDislikeOnAnEventMergedIntoACandidateLeavesTheCandidateOut() {
+		// 싫어요를 누른 사건 M 이 뒤에 E1 에 합쳐졌다 — 남는 사건 E1 이 빠진다
+		long merged = this.rows.event(1, "2026-11-01T00:00:00Z", "2026-11-01T00:00:00Z");
+		StorylineRows.merge(this.jdbc, merged, this.e1);
+		press(merged, "DISLIKE");
+
+		assertThat(events(this.selection.select(new UserId(this.user), DAY, ROOMY)))
+			.containsExactly(event(this.a5) + ":SUBSCRIBED");
+	}
+
+	@Test
+	void aDislikedBigEventLeavesTheBigSlot() {
 		long[] conflict = bigStoryline();
-		dislike(conflict[0]);
+		press(event(conflict[0]), "DISLIKE");
 
-		assertThat(articlesOf(this.selection.select(new UserId(this.user), DAY, ROOMY).orElseThrow(),
-				event(conflict[0])))
-			.containsExactly(conflict[1], conflict[2]);
+		DigestInput input = this.selection.select(new UserId(this.user), DAY, ROOMY).orElseThrow();
 
-		// 대조 — 좋아요로 바꾸면 다시 표본에 든다
-		like(conflict[0]);
+		assertThat(events(input)).doesNotContain(event(conflict[0]) + ":MAJOR_STORYLINE");
+		assertThat(articles(input)).doesNotContain(conflict[0], conflict[1], conflict[2]);
+	}
+
+	@Test
+	void aLikedBigEventKeepsTheBigSlot() {
+		// 대조 — 좋아요로 바꾸면 큰 슬롯에 든다
+		long[] conflict = bigStoryline();
+		press(event(conflict[0]), "DISLIKE");
+		press(event(conflict[0]), "LIKE");
+
 		assertThat(articlesOf(this.selection.select(new UserId(this.user), DAY, ROOMY).orElseThrow(),
 				event(conflict[0])))
 			.containsExactly(conflict[0], conflict[1], conflict[2]);
@@ -632,15 +659,18 @@ class CandidateSelectionTests {
 	}
 
 	/**
-	 * 지난 다이제스트(11-04 06시에 끝냄)가 입법 기사 여럿을 보였고 사용자가 모두 좋아요를 눌렀다 — 기사의 첫 평가는 기간 앞이라 후보가 아니다
-	 * @return 보인 기사
+	 * 지난 다이제스트(11-04 06시에 끝냄)가 입법 사건 여럿을 저마다 사건 하나인 항목으로 보였고 사용자가 모두 좋아요를 눌렀다 — 사건마다 입법
+	 * 기사 하나(기간 앞 11-01 에 평가 · 배정)라 후보가 아니다. 몫은 저마다 1 이다
+	 * @return 보인 사건
 	 */
 	private long[] likedLegislatureShown(int count) {
 		long digest = DigestRows.digest(this.jdbc, this.user, "2026-11-04", "2026-11-04T06:00:00Z");
 		long[] shown = new long[count];
 		for (int i = 0; i < count; i++) {
-			shown[i] = article("의회 과거 " + i, "politics.legislature", 3.0, "2026-11-01T00:00:00Z", 1);
-			DigestRows.cite(this.jdbc, digest, shown[i]);
+			long article = article("의회 과거 " + i, "politics.legislature", 3.0, "2026-11-01T00:00:00Z", 1);
+			shown[i] = this.rows.event(1, "2026-11-01T00:00:00Z", "2026-11-01T00:00:00Z");
+			this.rows.assign(article, shown[i], "2026-11-01T00:00:00Z");
+			DigestRows.item(this.jdbc, digest, shown[i]);
 			react(shown[i], "LIKE", "2026-11-04T07:00:00Z");
 		}
 		return shown;
@@ -685,25 +715,22 @@ class CandidateSelectionTests {
 			.update();
 	}
 
-	private void react(long article, String value, String at) {
+	/** 사건 하나의 이력 한 줄 — 관심도의 반응 */
+	private void react(long event, String value, String at) {
 		this.jdbc.sql("""
-				insert into feedback_events (user_id, article_id, value, digest_id, occurred_at)
-				values (:user, :article, :value, 1, cast(:at as timestamptz))
-				""").param("user", this.user).param("article", article).param("value", value).param("at", at).update();
+				insert into feedback_events (user_id, event_id, value, digest_id, occurred_at)
+				values (:user, :event, :value, 1, cast(:at as timestamptz))
+				""").param("user", this.user).param("event", event).param("value", value).param("at", at).update();
 	}
 
-	private void dislike(long article) {
+	/** 사건 하나에 누른 값 — 이력 한 줄을 더하고 현재 상태를 그 값으로 둔다 */
+	private void press(long event, String value) {
+		react(event, value, "2026-11-04T07:00:00Z");
 		this.jdbc.sql("""
-				insert into feedback (user_id, article_id, value, digest_id, updated_at)
-				values (:user, :article, 'DISLIKE', 1, now())
-				""").param("user", this.user).param("article", article).update();
-	}
-
-	private void like(long article) {
-		this.jdbc.sql("update feedback set value = 'LIKE' where user_id = :user and article_id = :article")
-			.param("user", this.user)
-			.param("article", article)
-			.update();
+				insert into feedback (user_id, event_id, value, digest_id, updated_at)
+				values (:user, :event, :value, 1, now())
+				on conflict (user_id, event_id) do update set value = excluded.value
+				""").param("user", this.user).param("event", event).param("value", value).update();
 	}
 
 	/**

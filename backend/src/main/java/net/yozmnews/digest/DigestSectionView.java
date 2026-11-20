@@ -3,6 +3,7 @@ package net.yozmnews.digest;
 import java.util.List;
 import java.util.Objects;
 
+import net.yozmnews.event.EventId;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -13,13 +14,15 @@ import org.jspecify.annotations.Nullable;
  * @param body 개요 · 주요 뉴스의 요약 · 헤드라인의 코멘트 — 코멘트가 없는 헤드라인이면 null
  * @param reason 항목의 선정 이유(화면의 배지 하나 — {@code domain/view} 의 {@code SectionReasons}) — 개요면 null
  * @param citations 인용(출처 기사) — 위치 순. 개요는 비어 있다
+ * @param events 항목의 사건 — 위치 순(첫 사건이 항목 키 — 반응을 누르는 손잡이). 개요는 비어 있다
  */
 public record DigestSectionView(SectionKind kind, @Nullable String title, @Nullable String body,
-		@Nullable SelectionReason reason, List<DigestCitation> citations) {
+		@Nullable SelectionReason reason, List<DigestCitation> citations, List<EventId> events) {
 
 	public DigestSectionView {
 		Objects.requireNonNull(kind, "kind");
 		citations = List.copyOf(Objects.requireNonNull(citations, "citations"));
+		events = List.copyOf(Objects.requireNonNull(events, "events"));
 	}
 
 }

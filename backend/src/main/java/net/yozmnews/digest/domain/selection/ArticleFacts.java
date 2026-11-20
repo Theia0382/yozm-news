@@ -20,11 +20,9 @@ import org.jspecify.annotations.Nullable;
  * @param importance 중요도 기대값(1 ~ 5) — 없으면 null
  * @param sources 기사의 엔트리 소스
  * @param publishedAt 발행 시각
- * @param disliked 그 사용자가 지금 싫어요를 누른 기사인가
  */
 public record ArticleFacts(ArticleId id, Set<String> subtopics, Set<String> regions, Set<String> formats,
-		TopicStatus topicStatus, @Nullable Double importance, Set<SourceId> sources, Instant publishedAt,
-		boolean disliked) {
+		TopicStatus topicStatus, @Nullable Double importance, Set<SourceId> sources, Instant publishedAt) {
 
 	public ArticleFacts {
 		Objects.requireNonNull(id, "id");
@@ -36,12 +34,11 @@ public record ArticleFacts(ArticleId id, Set<String> subtopics, Set<String> regi
 		Objects.requireNonNull(publishedAt, "publishedAt");
 	}
 
-	/** 활성 키로 푼 평가에 소스 · 발행 시각 · 싫어요 여부를 얹는다 */
-	public static ArticleFacts of(ActiveEvaluation evaluation, Set<SourceId> sources, Instant publishedAt,
-			boolean disliked) {
+	/** 활성 키로 푼 평가에 소스 · 발행 시각을 얹는다 */
+	public static ArticleFacts of(ActiveEvaluation evaluation, Set<SourceId> sources, Instant publishedAt) {
 		Objects.requireNonNull(evaluation, "evaluation");
 		return new ArticleFacts(evaluation.id(), evaluation.subtopics(), evaluation.regions(), evaluation.formats(),
-				evaluation.topicStatus(), evaluation.importance(), sources, publishedAt, disliked);
+				evaluation.topicStatus(), evaluation.importance(), sources, publishedAt);
 	}
 
 }

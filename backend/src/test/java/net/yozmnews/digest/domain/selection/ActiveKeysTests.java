@@ -10,7 +10,7 @@ import java.util.Map;
 import java.util.Set;
 
 import net.yozmnews.article.ArticleId;
-import net.yozmnews.digest.domain.interest.ExposedArticle;
+import net.yozmnews.digest.domain.interest.ExposedEvent;
 import net.yozmnews.digest.domain.interest.InterestFormula;
 import net.yozmnews.digest.domain.interest.TopicInterests;
 import net.yozmnews.feedback.FeedbackValue;
@@ -47,12 +47,12 @@ class ActiveKeysTests {
 
 	@Test
 	void theReactionOnAnOldVersionArticleGoesToTheActiveSubtopic() {
-		// 노출 1 · 좋아요 → x = 1 ÷ 4 → g = 1.125 가 새 키에 간다
+		// 노출 1(몫 1) · 좋아요 → x = 1 ÷ 4 → g = 1.125 가 새 키에 간다
 		Instant now = Instant.parse("2026-11-17T00:00:00Z");
 		ActiveEvaluation resolved = ActiveKeys.resolve(view(V1, "econ.old"), V1_TO_V2);
 
 		TopicInterests interests = InterestFormula
-			.interests(List.of(new ExposedArticle(resolved.subtopics(), now, FeedbackValue.LIKE)), List.of(), now);
+			.interests(List.of(new ExposedEvent(resolved.subtopics(), now, 1.0, FeedbackValue.LIKE)), List.of(), now);
 
 		assertThat(interests.weight("econ.new")).isCloseTo(1.125, within(1e-12));
 		assertThat(interests.weight("econ.old")).isEqualTo(1.0);

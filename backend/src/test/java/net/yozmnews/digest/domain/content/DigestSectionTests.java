@@ -54,16 +54,15 @@ class DigestSectionTests {
 		assertThat(sections.get(0).events()).isEmpty();
 		assertThat(sections.get(1).title()).contains("하나");
 		assertThat(sections.get(1).body()).contains("요약 하나");
-		// 인용은 항목의 표본 기사 — 기사마다 그 사건의 선정 이유
-		assertThat(sections.get(1).items()).containsExactly(new DigestItem(11, SelectionReason.MAJOR_STORYLINE),
-				new DigestItem(12, SelectionReason.MAJOR_STORYLINE), new DigestItem(13, SelectionReason.SUBSCRIBED));
+		// 인용은 항목의 표본 기사 — 선정 이유는 섹션 사건에 있다
+		assertThat(sections.get(1).items()).containsExactly(new DigestItem(11), new DigestItem(12), new DigestItem(13));
 		// 섹션 사건은 항목의 사건 순서
 		assertThat(sections.get(1).events()).containsExactly(new SectionEvent(30, SelectionReason.MAJOR_STORYLINE),
 				new SectionEvent(40, SelectionReason.SUBSCRIBED));
 		// 헤드라인은 제목 · 본문(코멘트)
 		assertThat(sections.get(3).title()).contains("헤드라인 셋");
 		assertThat(sections.get(3).body()).contains("한 줄");
-		assertThat(sections.get(3).items()).containsExactly(new DigestItem(15, SelectionReason.SUBSCRIBED));
+		assertThat(sections.get(3).items()).containsExactly(new DigestItem(15));
 		assertThat(sections.get(3).events()).containsExactly(new SectionEvent(60, SelectionReason.SUBSCRIBED));
 		assertThat(sections.get(4).body()).isEmpty();
 		assertThat(sections).allSatisfy(section -> assertThat(section.digestId()).isEqualTo(new DigestId(9)));

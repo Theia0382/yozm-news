@@ -59,7 +59,7 @@ final class Facts {
 	static UserFilter politicsAndMarkets() {
 		return new UserFilter(List.of(new TopicSubscription("economy.markets", Set.of("economy.markets")),
 				new TopicSubscription("politics", Set.of("politics.executive", "politics.legislature"))), Set.of(),
-				Set.of(), Set.of());
+				Set.of(), Set.of(), Set.of());
 	}
 
 	static DigestInterests interests(List<TopicSubscription> topics, Set<String> excludedRegions,
@@ -85,8 +85,6 @@ final class Facts {
 		private Set<SourceId> sources = Set.of(new SourceId(1));
 
 		private Instant published = PUBLISHED;
-
-		private boolean disliked;
 
 		private Builder(long id) {
 			this.id = id;
@@ -133,11 +131,6 @@ final class Facts {
 			return this;
 		}
 
-		Builder disliked() {
-			this.disliked = true;
-			return this;
-		}
-
 		/** 같은 값의 활성 키 평가 — 사건의 값({@link EventFacts})의 재료 */
 		ActiveEvaluation evaluation() {
 			return new ActiveEvaluation(new ArticleId(this.id), this.subtopics, this.regions, this.formats, this.status,
@@ -146,7 +139,7 @@ final class Facts {
 
 		ArticleFacts build() {
 			return new ArticleFacts(new ArticleId(this.id), this.subtopics, this.regions, this.formats, this.status,
-					this.importance, this.sources, this.published, this.disliked);
+					this.importance, this.sources, this.published);
 		}
 
 	}

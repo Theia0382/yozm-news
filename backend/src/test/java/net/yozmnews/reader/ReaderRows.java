@@ -158,8 +158,8 @@ public final class ReaderRows {
 				returning id
 				""").param("digest", digest).query(Long.class).single();
 		this.jdbc.sql("""
-				insert into digest_items (digest_section_id, position, article_id, selection_reason)
-				values (:section, 0, :article, 'SUBSCRIBED')
+				insert into digest_items (digest_section_id, position, article_id)
+				values (:section, 0, :article)
 				""").param("section", section).param("article", article).update();
 	}
 

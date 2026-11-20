@@ -25,8 +25,9 @@ import net.yozmnews.digest.InterestTimeline;
 import net.yozmnews.digest.TopicSubscriptionStep;
 import net.yozmnews.digest.domain.exposure.ExposureRepository;
 import net.yozmnews.event.EventArticles;
+import net.yozmnews.storyline.StorylineRows;
 import net.yozmnews.event.EventDirectory;
-import net.yozmnews.feedback.ArticleFeedback;
+import net.yozmnews.feedback.EventFeedback;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.storyline.StorylineDirectory;
 import net.yozmnews.tag.ArticleEvaluations;
@@ -51,7 +52,8 @@ import org.springframework.test.context.TestPropertySource;
 
 /**
  * 관심사 히스토리 조회 — 사용자 시간대의 주 경계, 기간 끝 뒤 신호가 지난 기간에 들지 않음, 기간마다 붙는 주제 구독 변경, 리포트 꼴의 기준 시각 조회,
- * 계정 없음, 평가 키가 계보로 푼 활성 키로 보임, 재료의 키 버전 어긋남. 실제 PostgreSQL 위에서 다이제스트 인용 · 피드백 이력 · 선호 이력 행을 직접 넣는다.
+ * 계정 없음, 평가 키가 계보로 푼 활성 키로 보임, 노출 사건의 풀기(합쳐진 사건은 남는 사건 · 지운 사건은 빠짐), 재료의 키 버전 어긋남. 실제
+ * PostgreSQL 위에서 사건 · 배정 · 다이제스트 섹션 사건 · 피드백 이력 · 선호 이력 행을 직접 넣는다.
  * <p>
  * 지금은 2026-11-18(수) 12:00 서울이다. 관심 x 의 값은 산식 · 창의 단위 시험(InterestFormulaTests · InterestWindowTests ·
  * InterestTimelinesTests)이 고정하고, 여기서는 어느 기간에 값 · 변화 · 구독 변경이 붙는지를 본다. 기준 시각 조회만 실제 저장 행을 지난 관심 x 를
@@ -81,7 +83,7 @@ class InterestHistoryServiceTests {
 	ExposureRepository exposures;
 
 	@Autowired
-	ArticleFeedback feedback;
+	EventFeedback feedback;
 
 	@Autowired
 	ArticleEvaluations evaluations;
@@ -146,12 +148,12 @@ class InterestHistoryServiceTests {
 
 	@Test
 	void signalsAfterAPeriodEndDoNotReachThatPeriod() {
-		// 11-10(화) 서울 09:00 에 끝낸 다이제스트가 입법 기사 둘을 보였고 바로 좋아요 — 11-09 주 안
+		// 11-10(화) 서울 09:00 에 끝낸 다이제스트가 입법 사건 둘을 보였고 바로 좋아요 — 11-09 주 안
 		long digest = DigestRows.digest(this.jdbc, this.user, "2026-11-10", "2026-11-10T00:00:00Z");
 		for (int i = 0; i < 2; i++) {
-			long article = article("의회 " + i, "politics.legislature");
-			DigestRows.cite(this.jdbc, digest, article);
-			react(article, "LIKE", "2026-11-10T01:00:00Z");
+			long event = event("의회 " + i, "politics.legislature");
+			DigestRows.item(this.jdbc, digest, event);
+			react(event, "LIKE", "2026-11-10T01:00:00Z");
 		}
 
 		InterestTimeline timeline = recent(InterestHistorySpan.WEEKS_13);
@@ -206,9 +208,9 @@ class InterestHistoryServiceTests {
 	@Test
 	void referencesChosenByTheCallerGiveAPointForEachAfterTheFirst() {
 		long digest = DigestRows.digest(this.jdbc, this.user, "2026-11-10", "2026-11-10T00:00:00Z");
-		long article = article("의회", "politics.legislature");
-		DigestRows.cite(this.jdbc, digest, article);
-		react(article, "LIKE", "2026-11-10T01:00:00Z");
+		long event = event("의회", "politics.legislature");
+		DigestRows.item(this.jdbc, digest, event);
+		react(event, "LIKE", "2026-11-10T01:00:00Z");
 		topicEvent("USER", this.tagSets.activeTagSet().id(), "economy.markets", "ADD", "2026-11-12T00:00:00Z");
 
 		List<InterestPoint> points = this.service
@@ -238,9 +240,9 @@ class InterestHistoryServiceTests {
 	void callingAtTheVeryStartOfAPeriodRepeatsThePreviousReferenceWithoutAShift() {
 		// 11-10 인용 · 좋아요 — 지금이 11-16(월) 00:00 서울이면 11-09 주의 끝과 진행 중 주의 기준 시각이 같다
 		long digest = DigestRows.digest(this.jdbc, this.user, "2026-11-10", "2026-11-10T00:00:00Z");
-		long article = article("의회", "politics.legislature");
-		DigestRows.cite(this.jdbc, digest, article);
-		react(article, "LIKE", "2026-11-10T01:00:00Z");
+		long event = event("의회", "politics.legislature");
+		DigestRows.item(this.jdbc, digest, event);
+		react(event, "LIKE", "2026-11-10T01:00:00Z");
 		Instant mondayMidnight = Instant.parse("2026-11-15T15:00:00Z");
 		InterestHistoryService atMonday = new InterestHistoryService(this.timezones, this.tagSets, this.materials,
 				InstantSource.fixed(mondayMidnight));
@@ -272,7 +274,7 @@ class InterestHistoryServiceTests {
 	void anEvaluationKeyAppearsAsTheActiveKeyItResolvesTo() {
 		// 재료 쪽 계보 표가 politics.legislature 를 politics.executive 로 옮긴다(이름이 바뀐 버전의 표를 흉내 낸다)
 		long digest = DigestRows.digest(this.jdbc, this.user, "2026-11-10", "2026-11-10T00:00:00Z");
-		DigestRows.cite(this.jdbc, digest, article("의회", "politics.legislature"));
+		DigestRows.item(this.jdbc, digest, event("의회", "politics.legislature"));
 		TagKeyLineage renamed = from -> {
 			TagKeyMapping real = this.lineage.toActive(from);
 			Map<TagKind, Map<String, Set<String>>> keys = new HashMap<>(real.keys());
@@ -290,6 +292,44 @@ class InterestHistoryServiceTests {
 	}
 
 	@Test
+	void anExposedEventMergedLaterCountsWithTheTopicOfItsSurvivor() {
+		// 11-10 에 보인 사건 M 이 뒤에 입법 사건 S 에 합쳐졌다 — M 의 기사는 S 로 옮겨 가 M 에는 배정이 없다
+		long survivor = event("의회", "politics.legislature");
+		long merged = EventArticles.event(this.jdbc);
+		StorylineRows.merge(this.jdbc, merged, survivor);
+		long digest = DigestRows.digest(this.jdbc, this.user, "2026-11-10", "2026-11-10T00:00:00Z");
+		DigestRows.item(this.jdbc, digest, merged);
+		react(merged, "LIKE", "2026-11-10T01:00:00Z");
+
+		assertThat(period(recent(InterestHistorySpan.WEEKS_13), LocalDate.of(2026, 11, 9)).point().levels())
+			.containsOnlyKeys("politics.legislature");
+	}
+
+	@Test
+	void anExposedEventThatStaysCountsWithItsOwnTopic() {
+		// 대조 — 그대로인 사건은 자기 주제로 센다
+		long event = event("시장", "economy.markets");
+		long digest = DigestRows.digest(this.jdbc, this.user, "2026-11-10", "2026-11-10T00:00:00Z");
+		DigestRows.item(this.jdbc, digest, event);
+
+		assertThat(period(recent(InterestHistorySpan.WEEKS_13), LocalDate.of(2026, 11, 9)).point().levels())
+			.containsOnlyKeys("economy.markets");
+	}
+
+	@Test
+	void theExposureAndReactionOfARemovedEventDropOut() {
+		// 보인 사건 X 가 지워졌다 — 그 기사도 다시 배정되지 않았다. 노출 · 반응 모두 빠진다
+		long removed = event("의회", "politics.legislature");
+		long digest = DigestRows.digest(this.jdbc, this.user, "2026-11-10", "2026-11-10T00:00:00Z");
+		DigestRows.item(this.jdbc, digest, removed);
+		react(removed, "LIKE", "2026-11-10T01:00:00Z");
+		this.jdbc.sql("delete from event_articles where event_id = :id").param("id", removed).update();
+		this.jdbc.sql("delete from events where id = :id").param("id", removed).update();
+
+		assertThat(period(recent(InterestHistorySpan.WEEKS_13), LocalDate.of(2026, 11, 9)).point().levels()).isEmpty();
+	}
+
+	@Test
 	void noAccountHasNoHistory() {
 		UserId nobody = new UserId(Long.MAX_VALUE);
 
@@ -302,7 +342,7 @@ class InterestHistoryServiceTests {
 	@Test
 	void aMismatchedActiveVersionOfTheMaterialsIsRetriedOnceAndThenRefused() {
 		long digest = DigestRows.digest(this.jdbc, this.user, "2026-11-10", "2026-11-10T00:00:00Z");
-		DigestRows.cite(this.jdbc, digest, article("의회", "politics.legislature"));
+		DigestRows.item(this.jdbc, digest, event("의회", "politics.legislature"));
 		TagSetId elsewhere = new TagSetId(this.tagSets.activeTagSet().id().value() + 1_000);
 		AtomicInteger skewed = new AtomicInteger(1);
 
@@ -363,6 +403,11 @@ class InterestHistoryServiceTests {
 		return id;
 	}
 
+	/** 평가 있는 기사 하나(주제 하나)를 배정한 사건 */
+	private long event(String title, String topic) {
+		return EventArticles.event(this.jdbc, article(title, topic));
+	}
+
 	/** 기사 · 엔트리와 그 평가 — 주제 하나(확률 0.9), 첫 평가 11-01 */
 	private long article(String title, String topic) {
 		long article = EventArticles.insert(this.jdbc, title, "요약", 1, 11);
@@ -384,11 +429,11 @@ class InterestHistoryServiceTests {
 		return article;
 	}
 
-	private void react(long article, String value, String at) {
+	private void react(long event, String value, String at) {
 		this.jdbc.sql("""
-				insert into feedback_events (user_id, article_id, value, digest_id, occurred_at)
-				values (:user, :article, :value, 1, cast(:at as timestamptz))
-				""").param("user", this.user).param("article", article).param("value", value).param("at", at).update();
+				insert into feedback_events (user_id, event_id, value, digest_id, occurred_at)
+				values (:user, :event, :value, 1, cast(:at as timestamptz))
+				""").param("user", this.user).param("event", event).param("value", value).param("at", at).update();
 	}
 
 	private void topicEvent(String cause, TagSetId tagSet, String key, String action, String at) {

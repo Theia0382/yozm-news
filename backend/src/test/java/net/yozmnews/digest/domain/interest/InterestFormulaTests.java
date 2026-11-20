@@ -15,7 +15,8 @@ import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
 
 /**
- * 관심도 산식 — 기대값은 산식을 시험 안에서 다시 계산하지 않고 손으로 계산해 적은 리터럴이다(상수: 반감기 30일 · β 0.5 · γ 1 · K 3).
+ * 관심도 산식 — 기대값은 산식을 시험 안에서 다시 계산하지 않고 손으로 계산해 적은 리터럴이다(상수: 반감기 30일 · β 0.5 · γ 1 · K 3). 노출
+ * 사건의 몫은 따로 적지 않으면 1 이다.
  */
 class InterestFormulaTests {
 
@@ -44,7 +45,7 @@ class InterestFormulaTests {
 	@Test
 	void reactionsAreNormalizedByExposures() {
 		// 노출 10 · 좋아요 3 · 싫어요 1 → x = 2 ÷ 13 → g = 1 + 1/13
-		List<ExposedArticle> exposed = new ArrayList<>();
+		List<ExposedEvent> exposed = new ArrayList<>();
 		for (int i = 0; i < 3; i++) {
 			exposed.add(exposed(Set.of("a"), T, FeedbackValue.LIKE));
 		}
@@ -109,7 +110,7 @@ class InterestFormulaTests {
 	}
 
 	@Test
-	void anArticleOnSeveralTopicsCountsForEachOfThem() {
+	void anEventOnSeveralTopicsCountsForEachOfThem() {
 		// 노출 {a, b} 하나 · 좋아요 → a · b 모두 x = 1 ÷ 4 → g = 1.125
 		TopicInterests interests = InterestFormula
 			.interests(List.of(exposed(Set.of("a", "b"), T, FeedbackValue.LIKE)), List.of(), T);
@@ -130,7 +131,7 @@ class InterestFormulaTests {
 	@Test
 	void levelsGiveTheInterestBeforeItBecomesAWeight() {
 		// 노출 10 · 좋아요 5 → x = 5 ÷ 13 · g = 15.5 ÷ 13, 노출 2 · 싫어요 2 → x = −2 ÷ 5 · g = 0.8, 신호 없는 주제는 0
-		List<ExposedArticle> exposed = new ArrayList<>();
+		List<ExposedEvent> exposed = new ArrayList<>();
 		for (int i = 0; i < 5; i++) {
 			exposed.add(exposed(Set.of("a"), T, FeedbackValue.LIKE));
 			exposed.add(exposed(Set.of("a"), T, FeedbackValue.NONE));
@@ -149,8 +150,26 @@ class InterestFormulaTests {
 		assertThat(interests.weight("b")).isCloseTo(0.8, EXACT);
 	}
 
-	private static ExposedArticle exposed(Set<String> subtopics, Instant at, FeedbackValue reaction) {
-		return new ExposedArticle(subtopics, at, reaction);
+	@Test
+	void theShareOfAnEventInATwoEventItemWeighsBothItsExposureAndItsReaction() {
+		// 사건 둘인 항목의 사건 하나(몫 1/2) · 좋아요 · 기준 시각에 노출(무게 1) → E = 0.5 · F = 0.5 → x = 0.5 ÷ 3.5 = 1/7
+		InterestLevels levels = InterestFormula
+			.levels(List.of(new ExposedEvent(Set.of("a"), T, 0.5, FeedbackValue.LIKE)), List.of(), T);
+
+		assertThat(levels.level("a")).isCloseTo(0.14285714285714285, EXACT);
+	}
+
+	@Test
+	void anEventAloneInItsItemWeighsOne() {
+		// 대조 — 몫 1 이면 E = 1 · F = 1 → x = 1 ÷ 4
+		InterestLevels levels = InterestFormula
+			.levels(List.of(new ExposedEvent(Set.of("a"), T, 1.0, FeedbackValue.LIKE)), List.of(), T);
+
+		assertThat(levels.level("a")).isCloseTo(0.25, EXACT);
+	}
+
+	private static ExposedEvent exposed(Set<String> subtopics, Instant at, FeedbackValue reaction) {
+		return new ExposedEvent(subtopics, at, 1.0, reaction);
 	}
 
 	private static SubscriptionSignal added(Map<String, Double> shares, Instant at) {

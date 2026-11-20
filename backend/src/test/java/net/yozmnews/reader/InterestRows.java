@@ -7,7 +7,8 @@ import net.yozmnews.event.EventArticles;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 /**
- * 관심사 히스토리 시험의 행 — 평가가 있는 기사(주제 하나) · 다이제스트 인용 · 좋아요 / 싫어요 이력 · 주제 구독 이력. 시험이 SQL 로 직접 넣는다.
+ * 관심사 히스토리 시험의 행 — 평가가 있는 기사(주제 하나)와 그 기사만 배정한 사건 · 다이제스트 항목(섹션 사건과 인용) · 그 사건의 좋아요 /
+ * 싫어요 이력 · 주제 구독 이력. 시험이 SQL 로 직접 넣는다. 시험은 기사 ID 로 부르고, 노출 · 반응은 그 기사의 사건에 남는다.
  */
 public final class InterestRows {
 
@@ -21,12 +22,13 @@ public final class InterestRows {
 	public void clear() {
 		this.jdbc.sql("delete from digests").update();
 		this.jdbc.sql("delete from feedback_events").update();
+		this.jdbc.sql("delete from feedback").update();
 		this.jdbc.sql("delete from article_tags").update();
 		this.jdbc.sql("delete from article_evaluations").update();
 		EventArticles.clear(this.jdbc);
 	}
 
-	/** 활성 버전으로 평가한 기사 하나 — 주제 중분류 하나(확률 0.9) */
+	/** 활성 버전으로 평가한 기사 하나 — 주제 중분류 하나(확률 0.9). 그 기사만 배정한 사건도 넣는다 */
 	public long article(String title, String topic) {
 		long article = EventArticles.insert(this.jdbc, title, "요약", 1, 11);
 		long evaluation = this.jdbc.sql("""
@@ -44,10 +46,11 @@ public final class InterestRows {
 				insert into article_tags (evaluation_id, article_id, tag_kind, tag_key, probability)
 				values (:evaluation, :article, 'TOPIC', :topic, 0.9)
 				""").param("evaluation", evaluation).param("article", article).param("topic", topic).update();
+		EventArticles.event(this.jdbc, article);
 		return article;
 	}
 
-	/** 그 사용자의 READY 다이제스트 하나가 기사들을 인용한다 — 끝낸 시각 */
+	/** 그 사용자의 READY 다이제스트 하나가 기사마다 항목 하나(그 기사의 사건 · 그 기사 인용)를 보인다 — 끝낸 시각 */
 	public void cite(long user, Instant completedAt, long... articles) {
 		long digest = this.jdbc.sql("""
 				insert into digests (user_id, digest_date, period_start, period_end, status, trigger, created_at,
@@ -63,23 +66,35 @@ public final class InterestRows {
 					returning id
 					""").param("digest", digest).param("position", i).query(Long.class).single();
 			this.jdbc.sql("""
-					insert into digest_items (digest_section_id, position, article_id, selection_reason)
-					values (:section, 0, :article, 'SUBSCRIBED')
+					insert into digest_section_events (digest_section_id, position, event_id, selection_reason)
+					values (:section, 0, :event, 'SUBSCRIBED')
+					""").param("section", section).param("event", eventOf(articles[i])).update();
+			this.jdbc.sql("""
+					insert into digest_items (digest_section_id, position, article_id)
+					values (:section, 0, :article)
 					""").param("section", section).param("article", articles[i]).update();
 		}
 	}
 
-	/** 좋아요 / 싫어요 이력 한 행 */
+	/** 그 기사의 사건에 좋아요 / 싫어요 이력 한 행 */
 	public void react(long user, long article, String value, Instant at) {
 		this.jdbc.sql("""
-				insert into feedback_events (user_id, article_id, value, digest_id, occurred_at)
-				values (:user, :article, :value, 1, :at)
+				insert into feedback_events (user_id, event_id, value, digest_id, occurred_at)
+				values (:user, :event, :value, 1, :at)
 				""")
 			.param("user", user)
-			.param("article", article)
+			.param("event", eventOf(article))
 			.param("value", value)
 			.param("at", at.atOffset(ZoneOffset.UTC))
 			.update();
+	}
+
+	/** 기사만 배정한 사건 — {@link #article} 이 넣은 것 */
+	private long eventOf(long article) {
+		return this.jdbc.sql("select event_id from event_articles where article_id = :article")
+			.param("article", article)
+			.query(Long.class)
+			.single();
 	}
 
 	/** 사용자가 직접 바꾼 주제 구독 이력 한 행 — 활성 버전의 키 */

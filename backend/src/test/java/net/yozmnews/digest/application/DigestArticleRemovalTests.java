@@ -9,6 +9,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
@@ -38,6 +39,8 @@ import net.yozmnews.digest.domain.item.ItemKind;
 import net.yozmnews.digest.domain.removal.DigestContentCleanup;
 import net.yozmnews.digest.domain.removal.SectionCitations;
 import net.yozmnews.event.EventArticles;
+import net.yozmnews.event.EventId;
+import net.yozmnews.feedback.DigestItemRemoval;
 import net.yozmnews.llm.LlmModel;
 import net.yozmnews.llm.Provider;
 import net.yozmnews.platform.UserId;
@@ -54,8 +57,8 @@ import org.jobrunr.scheduling.JobScheduler;
 import net.yozmnews.digest.DigestRounds;
 
 /**
- * 지운 기사 따르기 — 후보 · 인용 행과 인용이 다 지워진 섹션, 인용 섹션이 남지 않는 다이제스트의 개요를 지우고 다이제스트 행은 남긴다. 생성과
- * 엇갈린 지우기도 지운 기사를 남기지 않는다.
+ * 지운 기사 따르기 — 후보 · 인용 행과 인용이 다 지워진 섹션, 인용 섹션이 남지 않는 다이제스트의 개요를 지우고 다이제스트 행은 남긴다. 지운
+ * 항목 섹션의 항목 기록({@code feedback})도 같은 트랜잭션에서 지운다. 생성과 엇갈린 지우기도 지운 기사를 남기지 않는다.
  * <p>
  * 지키는 규칙: digest-R9 · digest-R10
  * <p>
@@ -100,6 +103,9 @@ class DigestArticleRemovalTests {
 	DigestContentCleanup content;
 
 	@Autowired
+	DigestItemRemoval itemRemoval;
+
+	@Autowired
 	JdbcClient jdbc;
 
 	private final List<Long> articleIds = new ArrayList<>();
@@ -120,6 +126,7 @@ class DigestArticleRemovalTests {
 	@AfterEach
 	void clear() {
 		this.jdbc.sql("delete from digests").update();
+		this.jdbc.sql("delete from feedback_items").update();
 		for (Long id : this.articleIds) {
 			this.jdbc.sql("delete from article_feed_entries where article_id = :id").param("id", id).update();
 			this.jdbc.sql("delete from articles where id = :id").param("id", id).update();
@@ -205,6 +212,21 @@ class DigestArticleRemovalTests {
 				""").param("id", id.value()).query(String.class).list();
 	}
 
+	/** 항목에 누른 값 하나 — 사용자 42, 그 다이제스트 · 항목 키 */
+	private void pressed(DigestId digest, String itemKey) {
+		this.jdbc.sql("""
+				insert into feedback_items (user_id, digest_id, item_event_id, value, updated_at)
+				values (42, :digest, :item, 'LIKE', now())
+				""").param("digest", digest.value()).param("item", Long.parseLong(itemKey)).update();
+	}
+
+	/** 항목 기록 — 다이제스트:항목 키 */
+	private List<String> itemRecords() {
+		return this.jdbc.sql("select digest_id || ':' || item_event_id from feedback_items order by digest_id, item_event_id")
+			.query(String.class)
+			.list();
+	}
+
 	private String status(DigestId id) {
 		return this.jdbc.sql("select status from digests where id = :id").param("id", id.value()).query(String.class).single();
 	}
@@ -221,6 +243,32 @@ class DigestArticleRemovalTests {
 		// 지운 섹션의 섹션 사건 행도 함께 지워진다 — 남은 섹션의 사건 행은 그대로
 		assertThat(sectionEventRows(id)).containsExactly("1:" + a(1), "3:" + a(3), "4:" + a(4));
 		assertThat(status(id)).isEqualTo("READY");
+	}
+
+	@Test
+	void forgetsTheItemRecordsOfTheItemsItRemovesInEveryDigest() {
+		// 기사 2 의 주요 뉴스 항목(항목 키 = 사건 a2)이 두 다이제스트에 있다 — 둘 다 지워지고 그 항목 기록도 지워진다
+		DigestId first = ready(1, 2);
+		DigestId second = ready(2, 5);
+		pressed(first, a(2));
+		pressed(second, a(2));
+		pressed(first, a(1));
+		pressed(second, a(5));
+
+		remove(2);
+
+		assertThat(itemRecords()).containsExactly(first.value() + ":" + a(1), second.value() + ":" + a(5));
+	}
+
+	@Test
+	void keepsTheItemRecordOfAnItemThatRemains() {
+		// 대조 — 인용이 남은 헤드라인 항목(항목 키 = 사건 a4)은 섹션이 남아 그 항목 기록도 남는다
+		DigestId id = ready(1, 2, 3, 4, 5);
+		pressed(id, a(4));
+
+		remove(4);
+
+		assertThat(itemRecords()).containsExactly(id.value() + ":" + a(4));
 	}
 
 	@Test
@@ -320,7 +368,7 @@ class DigestArticleRemovalTests {
 		CountDownLatch read = new CountDownLatch(1);
 		CountDownLatch resume = new CountDownLatch(1);
 		DigestArticleRemoval pausing = new DigestArticleRemoval(this.candidates,
-				new PausingContent(this.content, read, resume));
+				new PausingContent(this.content, read, resume), this.itemRemoval);
 		try {
 			// 나뉘어 발행된 지운 기사 이벤트 둘 — 헤드라인 항목의 기사 4 와 5 를 하나씩 지운다
 			// 시험이 만든 유스케이스는 프록시가 아니라 트랜잭션을 시험이 연다
@@ -357,6 +405,11 @@ class DigestArticleRemovalTests {
 			this.read.countDown();
 			awaitQuietly(this.resume);
 			return sections;
+		}
+
+		@Override
+		public Map<Long, List<EventId>> itemKeysOf(Collection<Long> sectionIds) {
+			return this.delegate.itemKeysOf(sectionIds);
 		}
 
 		@Override

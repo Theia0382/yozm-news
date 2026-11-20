@@ -58,7 +58,7 @@ public final class UserScopedEndpoints {
 			Map.entry("GET /api/digests/{date}", DigestScreenScopeTests.class),
 			Map.entry("GET /api/digests", DigestScreenScopeTests.class),
 			Map.entry("POST /api/digests", DigestScreenScopeTests.class),
-			Map.entry("PUT /api/feedback/{articleId}", FeedbackScopeTests.class),
+			Map.entry("PUT /api/feedback/{eventId}", FeedbackScopeTests.class),
 			Map.entry("GET /api/feedback", FeedbackScopeTests.class));
 
 	private UserScopedEndpoints() {

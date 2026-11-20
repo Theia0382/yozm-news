@@ -38,6 +38,7 @@ import net.yozmnews.digest.domain.digest.DigestLedger;
 import net.yozmnews.digest.domain.digest.DigestOwnerLock;
 import net.yozmnews.digest.domain.digest.DigestRepository;
 import net.yozmnews.digest.domain.view.DigestDayRepository;
+import net.yozmnews.event.EventId;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.tag.TagSetDirectory;
 import net.yozmnews.user.DigestFailureCause;
@@ -156,21 +157,22 @@ class DigestDirectoryServiceTests {
 		long ready = row(user, "2026-11-18", "READY", 100, 20, null);
 		section(ready, "OVERVIEW", 0, null, "오늘의 흐름");
 		long story = section(ready, "TOP_STORY", 1, "주요 뉴스 제목", "주요 뉴스 요약");
-		item(story, 0, 7, "MAJOR_STORYLINE");
-		item(story, 1, 9, "SUBSCRIBED");
+		item(story, 0, 7);
+		item(story, 1, 9);
 		sectionEvent(story, 0, 70, "MAJOR_STORYLINE");
 		sectionEvent(story, 1, 90, "SUBSCRIBED");
 		long more = section(ready, "HEADLINE", 2, "헤드라인 제목", "한 줄 코멘트");
-		item(more, 0, 8, "INTEREST");
+		item(more, 0, 8);
 		sectionEvent(more, 0, 80, "INTEREST");
 		long plain = section(ready, "HEADLINE", 3, "구독 헤드라인", null);
-		item(plain, 0, 6, "SUBSCRIBED");
+		item(plain, 0, 6);
 		sectionEvent(plain, 0, 60, "SUBSCRIBED");
 		// 관심도 사건의 표본이 모두 지워져 인용은 구독 사건의 기사뿐이어도 항목의 이유는 섹션 사건 전부로 정한다
 		long followed = section(ready, "HEADLINE", 4, "남은 인용 헤드라인", null);
-		item(followed, 0, 5, "SUBSCRIBED");
-		sectionEvent(followed, 0, 50, "SUBSCRIBED");
+		item(followed, 0, 5);
+		// 위치 순으로 읽는다 — 뒤 위치를 먼저 넣는다
 		sectionEvent(followed, 1, 51, "INTEREST");
+		sectionEvent(followed, 0, 50, "SUBSCRIBED");
 		// 공급자가 답하지 않은 실패 — 시도 수에는 들고 토큰 합에는 들지 않는다
 		row(user, "2026-11-18", "FAILED", null, null, "PROVIDER_UNAVAILABLE");
 		long failed = row(user, "2026-11-18", "FAILED", 50, 0, "NO_CITATION");
@@ -179,17 +181,19 @@ class DigestDirectoryServiceTests {
 
 		assertThat(day.shown()).isEqualTo(new ShownDigest(ready, Instant.parse("2026-11-17T15:00:00Z"),
 				Instant.parse("2026-11-18T15:00:00Z"), "openai", "m", 30, 100, 20, Instant.parse("2026-11-18T15:05:00Z"),
-				List.of(new DigestSectionView(SectionKind.OVERVIEW, null, "오늘의 흐름", null, List.of()),
-						// 항목의 이유 하나 — 큰 슬롯 사건이 있으면 큰 화제, 관심도 사건이 있으면 관심 반영, 아니면 구독 주제
+				List.of(new DigestSectionView(SectionKind.OVERVIEW, null, "오늘의 흐름", null, List.of(), List.of()),
+						// 항목의 이유 하나 — 큰 슬롯 사건이 있으면 큰 화제, 관심도 사건이 있으면 관심 반영, 아니면 구독 주제.
+						// 항목의 사건은 위치 순이다(첫 사건이 항목 키)
 						new DigestSectionView(SectionKind.TOP_STORY, "주요 뉴스 제목", "주요 뉴스 요약",
 								SelectionReason.MAJOR_STORYLINE,
-								List.of(new DigestCitation(new ArticleId(7)), new DigestCitation(new ArticleId(9)))),
+								List.of(new DigestCitation(new ArticleId(7)), new DigestCitation(new ArticleId(9))),
+								List.of(new EventId(70), new EventId(90))),
 						new DigestSectionView(SectionKind.HEADLINE, "헤드라인 제목", "한 줄 코멘트", SelectionReason.INTEREST,
-								List.of(new DigestCitation(new ArticleId(8)))),
+								List.of(new DigestCitation(new ArticleId(8))), List.of(new EventId(80))),
 						new DigestSectionView(SectionKind.HEADLINE, "구독 헤드라인", null, SelectionReason.SUBSCRIBED,
-								List.of(new DigestCitation(new ArticleId(6)))),
+								List.of(new DigestCitation(new ArticleId(6))), List.of(new EventId(60))),
 						new DigestSectionView(SectionKind.HEADLINE, "남은 인용 헤드라인", null, SelectionReason.INTEREST,
-								List.of(new DigestCitation(new ArticleId(5)))))));
+								List.of(new DigestCitation(new ArticleId(5))), List.of(new EventId(50), new EventId(51))))));
 		assertThat(day.latest()).isEqualTo(new DigestAttempt(failed, DigestStatus.FAILED, DigestFailure.NO_CITATION,
 				DigestFailureCause.OUTPUT, Instant.parse("2026-11-18T15:05:00Z")));
 		assertThat(day.usage()).isEqualTo(new DigestDayUsage(3, 150, 20));
@@ -490,15 +494,14 @@ class DigestDirectoryServiceTests {
 			.single();
 	}
 
-	private void item(long section, int position, long article, String reason) {
+	private void item(long section, int position, long article) {
 		this.jdbc.sql("""
-				insert into digest_items (digest_section_id, position, article_id, selection_reason)
-				values (:section, :position, :article, :reason)
+				insert into digest_items (digest_section_id, position, article_id)
+				values (:section, :position, :article)
 				""")
 			.param("section", section)
 			.param("position", position)
 			.param("article", article)
-			.param("reason", reason)
 			.update();
 	}
 

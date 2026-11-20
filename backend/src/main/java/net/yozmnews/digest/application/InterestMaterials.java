@@ -1,6 +1,7 @@
 package net.yozmnews.digest.application;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -16,11 +17,10 @@ import net.yozmnews.digest.domain.interest.InterestRecord;
 import net.yozmnews.digest.domain.interest.InterestSignals;
 import net.yozmnews.digest.domain.interest.InterestWindow;
 import net.yozmnews.digest.domain.interest.StorylineTopics;
-import net.yozmnews.digest.domain.selection.ActiveEvaluation;
 import net.yozmnews.digest.domain.selection.EventFacts;
 import net.yozmnews.event.EventDirectory;
 import net.yozmnews.event.EventId;
-import net.yozmnews.feedback.ArticleFeedback;
+import net.yozmnews.feedback.EventFeedback;
 import net.yozmnews.feedback.FeedbackChange;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.storyline.StorylineDirectory;
@@ -33,8 +33,9 @@ import net.yozmnews.user.TopicSubscriptionHistory;
 import org.springframework.stereotype.Service;
 
 /**
- * 관심도의 재료를 범위 하나에서 읽는다 — 노출 행(자기 인용 행) · 좋아요 / 싫어요 이력({@code feedback}) · 주제 구독 변경 · 스토리라인 구독 변경
- * ({@code user}) · 스토리라인 사건의 소속 기사({@code storyline} · {@code event}) · 노출 기사와 소속 기사의 평가({@code tag}). 기준 시각마다
+ * 관심도의 재료를 범위 하나에서 읽는다 — 노출 행(자기 섹션 사건 행과 몫) · 좋아요 / 싫어요 이력({@code feedback} — 행마다 지금 사건) · 주제
+ * 구독 변경 · 스토리라인 구독 변경({@code user}) · 스토리라인 사건의 소속 기사({@code storyline} · {@code event}) · 노출 사건과 스토리라인
+ * 사건의 주제(소속 기사의 평가 — {@code tag}). 노출 행의 사건은 {@code event} 로 지금 사건으로 풀고, 지운 사건의 행은 버린다. 기준 시각마다
  * 창으로 자르는 일은 {@link InterestWindow}, 행을 고르는 판단은 {@link InterestSignals}, 계산은 {@link InterestFormula} 가 한다.
  * docs/specs/digest.md §4 · §5
  * <p>
@@ -45,7 +46,7 @@ class InterestMaterials {
 
 	private final ExposureRepository exposures;
 
-	private final ArticleFeedback feedback;
+	private final EventFeedback feedback;
 
 	private final ActiveEvaluations activeEvaluations;
 
@@ -57,7 +58,7 @@ class InterestMaterials {
 
 	private final EventDirectory events;
 
-	InterestMaterials(ExposureRepository exposures, ArticleFeedback feedback, ActiveEvaluations activeEvaluations,
+	InterestMaterials(ExposureRepository exposures, EventFeedback feedback, ActiveEvaluations activeEvaluations,
 			TopicSubscriptionHistory topicHistory, StorylineSubscriptionDirectory storylineSubscriptions,
 			StorylineDirectory storylines, EventDirectory events) {
 		this.exposures = Objects.requireNonNull(exposures, "exposures");
@@ -79,10 +80,10 @@ class InterestMaterials {
 	Optional<InterestRecord> read(UserId user, TagSetId active, Instant from, Instant to) {
 		Objects.requireNonNull(user, "user");
 		Objects.requireNonNull(active, "active");
-		List<ExposureRow> exposed = this.exposures.exposures(user, from, to);
-		Optional<Map<ArticleId, ActiveEvaluation>> evaluated = this.activeEvaluations
-			.read(exposed.stream().map(ExposureRow::article).toList(), active);
-		if (evaluated.isEmpty()) {
+		List<ExposureRow> exposed = current(this.exposures.exposures(user, from, to));
+		Optional<Map<EventId, Set<String>>> subtopics = subtopics(
+				exposed.stream().map(ExposureRow::event).distinct().toList(), active);
+		if (subtopics.isEmpty()) {
 			return Optional.empty();
 		}
 		List<FeedbackChange> reactions = this.feedback.changes(user, from, to);
@@ -96,7 +97,7 @@ class InterestMaterials {
 		if (shares.isEmpty()) {
 			return Optional.empty();
 		}
-		return Optional.of(new InterestRecord(active, exposed, subtopics(evaluated.get()), reactions, topics.changes(),
+		return Optional.of(new InterestRecord(active, exposed, subtopics.get(), reactions, topics.changes(),
 				storylineChanges, shares.get()));
 	}
 
@@ -119,10 +120,39 @@ class InterestMaterials {
 		return Optional.of(shares);
 	}
 
-	private static Map<ArticleId, Set<String>> subtopics(Map<ArticleId, ActiveEvaluation> evaluated) {
-		Map<ArticleId, Set<String>> subtopics = new HashMap<>();
-		evaluated.forEach((article, evaluation) -> subtopics.put(article, evaluation.subtopics()));
-		return subtopics;
+	/**
+	 * 노출 행의 사건을 지금 사건으로 푼다 — {@link EventDirectory#MAX_RESOLVE_EVENTS} 씩 나눠 묻고, 지운 사건의 행은 버린다. 순서 그대로
+	 */
+	private List<ExposureRow> current(List<ExposureRow> rows) {
+		List<EventId> ids = rows.stream().map(ExposureRow::event).distinct().toList();
+		Map<EventId, EventId> current = new HashMap<>();
+		for (int i = 0; i < ids.size(); i += EventDirectory.MAX_RESOLVE_EVENTS) {
+			int end = Math.min(ids.size(), i + EventDirectory.MAX_RESOLVE_EVENTS);
+			current.putAll(this.events.currentOf(ids.subList(i, end)));
+		}
+		List<ExposureRow> resolved = new ArrayList<>(rows.size());
+		for (ExposureRow row : rows) {
+			EventId now = current.get(row.event());
+			if (now != null) {
+				resolved.add(row.withEvent(now));
+			}
+		}
+		return resolved;
+	}
+
+	/**
+	 * 노출한 (지금) 사건마다 사건의 주제 — 평가 있는 소속 기사 전부로 센다({@link ActiveEvaluations#eventFacts}). 평가 있는 소속 기사가 없는
+	 * 사건은 빠진다. 버전이 어긋나면 빈 값
+	 */
+	private Optional<Map<EventId, Set<String>>> subtopics(List<EventId> events, TagSetId active) {
+		Map<EventId, List<ArticleId>> members = events.isEmpty() ? Map.of() : this.events.articleIdsOf(events);
+		Optional<Map<EventId, EventFacts>> facts = this.activeEvaluations.eventFacts(members, active);
+		if (facts.isEmpty()) {
+			return Optional.empty();
+		}
+		Map<EventId, Set<String>> subtopics = new HashMap<>();
+		facts.get().forEach((event, ofEvent) -> subtopics.put(event, ofEvent.subtopics()));
+		return Optional.of(subtopics);
 	}
 
 }

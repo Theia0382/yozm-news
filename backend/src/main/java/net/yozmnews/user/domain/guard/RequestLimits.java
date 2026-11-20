@@ -31,7 +31,7 @@ public final class RequestLimits {
 			case SIGN_UP -> List.of(new LimitRule(LimitAxis.CLIENT_ADDRESS, 5, HOUR));
 			case LLM_KEY_CHECK -> List.of(new LimitRule(LimitAxis.SESSION_USER, 20, HOUR),
 					new LimitRule(LimitAxis.CLIENT_ADDRESS, 60, HOUR));
-			// 다이제스트 하나의 인용 기사(많아야 사건당 표본 5 × 최대 후보 수 상한 150 = 750)를 하나씩 누르는 사용이 창 하나에 든다
+			// 다이제스트 하나의 항목(많아야 최대 후보 수 상한 150)을 누르고 고쳐 누르는 사용이 창 하나에 든다 — 항목마다 다섯 번까지 덮는다
 			case FEEDBACK -> List.of(new LimitRule(LimitAxis.SESSION_USER, 750, TEN_MINUTES));
 		};
 	}

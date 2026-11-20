@@ -100,4 +100,14 @@ class ForwardingEventDirectory implements EventDirectory {
 		return this.delegate.lastArticleSince(since);
 	}
 
+	@Override
+	public Map<EventId, EventId> currentOf(Collection<EventId> ids) {
+		return this.delegate.currentOf(ids);
+	}
+
+	@Override
+	public Map<EventId, List<EventId>> absorbedInto(Collection<EventId> survivors) {
+		return this.delegate.absorbedInto(survivors);
+	}
+
 }

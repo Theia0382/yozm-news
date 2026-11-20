@@ -33,7 +33,7 @@
 | [0025](0025-long-term-personal-news-history-in-v1.md) | 장기 개인 뉴스 히스토리를 v1 핵심 가치로 둔다 — 공유 사건 · 사용자별 이슈 · 변화 리포트 | 승인 (부분 대체: 0047 · 0101) |
 | [0026](0026-event-clustering-with-local-embeddings-and-jev.md) | 사건 묶기는 로컬 임베딩과 고유명사 산식으로 하고, 애매한 구간만 Jev 로 판정한다 | 승인 (부분 대체: 0063 · 0101 · 0103 · 0114) |
 | [0027](0027-pgvector-for-vector-storage.md) | 벡터 저장은 PostgreSQL pgvector 확장으로 한다 | 승인 (부분 대체: 0075 · 0079 · 0088) |
-| [0028](0028-explicit-signals-and-interest-weighted-candidates.md) | 관심 신호는 명시적 행동만 쓰고, 관심도를 후보 순위에 반영하되 큰 사건을 끼워 넣는다 | 승인 (부분 대체: 0101 · 0103 · 0209 · 0260) |
+| [0028](0028-explicit-signals-and-interest-weighted-candidates.md) | 관심 신호는 명시적 행동만 쓰고, 관심도를 후보 순위에 반영하되 큰 사건을 끼워 넣는다 | 승인 (부분 대체: 0101 · 0103 · 0209 · 0260 · 0265) |
 | [0029](0029-indefinite-summary-retention-with-optional-deletion.md) | RSS 요약문은 기본 무기한 보존하고, 자동 삭제는 운영 설정으로 켠다 | 승인 (부분 대체: 0068 · 0101) |
 | [0030](0030-feed-xml-own-parser-and-rome-for-format-title-link.md) | 피드 문서는 자체 구성한 XML 파서로 읽어 DTD 선언을 거부하고, Rome 은 형식 판별 · 제목 · 링크에만 쓴다 | 승인 |
 | [0031](0031-feed-request-blocks-internal-addresses-with-apache-httpclient-deadline.md) | 피드 요청은 내부 주소를 기본으로 막고, Apache HttpClient 로 한 번의 수집 전체에 마감 · 크기 상한을 건다 | 승인 (부분 대체: 0049 · 0065) |
@@ -201,9 +201,9 @@
 | [0193](0193-the-per-user-storyline-information-is-the-received-news-counted-from-the-digest-shown-for-each-date.md) | 사용자마다 달라지는 스토리라인 정보는 타임라인의 받은 소식 하나이고, 날짜별로 보이는 다이제스트의 인용으로 센다 | 승인 |
 | [0194](0194-storyline-linking-asks-jev-only-for-band-candidates-and-reuses-recorded-probabilities-until-either-side-doubles.md) | 스토리라인 잇기는 띠 안 후보만 Jev 에 같은 사안의 전개인지 묻고, 물은 확률을 쌍마다 기록해 크기가 두 배가 될 때까지 다시 쓴다 | 승인 (부분 대체: 0255) |
 | [0195](0195-storyline-linking-band-and-probability-defaults-chosen-for-precision-by-simulator-grid-evaluation-instance-and-operator-sample-review.md) | 스토리라인 잇기의 띠와 확률 기준의 처음 값은 시뮬레이터 격자로 좁히고 평가 인스턴스와 운영자 표본 검수로 정밀도를 앞세워 정한다 | 승인 |
-| [0196](0196-feedback-is-accepted-only-on-articles-cited-by-the-users-digest-and-digest-answers-through-an-interface-declared-by-feedback.md) | 피드백은 그 사용자의 다이제스트가 인용한 기사에만 받고, 그 확인은 `feedback` 이 선언한 인터페이스를 `digest` 가 구현해 답한다 | 승인 |
-| [0197](0197-feedback-on-removed-articles-is-deleted-from-both-the-current-state-and-the-history-and-recording-and-removal-are-ordered-by-a-fence-lock.md) | 지운 기사의 피드백은 현재 상태와 이력을 모두 지우고, 기록과 삭제는 울타리 잠금으로 차례를 세운다 | 승인 |
-| [0198](0198-feedback-recording-is-request-limited-per-session-user.md) | 피드백 기록에 세션 사용자 축 요청 제한을 건다 | 승인 |
+| [0196](0196-feedback-is-accepted-only-on-articles-cited-by-the-users-digest-and-digest-answers-through-an-interface-declared-by-feedback.md) | 피드백은 그 사용자의 다이제스트가 인용한 기사에만 받고, 그 확인은 `feedback` 이 선언한 인터페이스를 `digest` 가 구현해 답한다 | 승인 (부분 대체: 0265) |
+| [0197](0197-feedback-on-removed-articles-is-deleted-from-both-the-current-state-and-the-history-and-recording-and-removal-are-ordered-by-a-fence-lock.md) | 지운 기사의 피드백은 현재 상태와 이력을 모두 지우고, 기록과 삭제는 울타리 잠금으로 차례를 세운다 | 대체됨 (0267) |
+| [0198](0198-feedback-recording-is-request-limited-per-session-user.md) | 피드백 기록에 세션 사용자 축 요청 제한을 건다 | 승인 (부분 대체: 0265) |
 | [0199](0199-generation-requests-carry-only-the-tasks-own-inputs-and-the-gateway-maps-them-to-each-provider.md) | 생성 호출의 요청은 과제의 것만 받고, 공급자의 꼴로 옮기는 일은 관문이 한다 | 승인 |
 | [0200](0200-generation-results-carry-the-stop-reason-and-schema-enforcement-and-failures-use-the-five-key-check-kinds.md) | 생성 호출의 결과는 종료 사유와 스키마 강제 여부를 싣고, 실패는 검증과 같은 다섯 종류로 낸다 | 승인 |
 | [0201](0201-the-gateway-resends-only-transient-generation-failures-and-sets-the-request-deadline-per-call-kind.md) | 생성 호출은 관문이 일시 장애만 다시 보내고, 요청 하나의 마감은 관문이 호출 종류마다 정한다 | 승인 |
@@ -227,7 +227,7 @@
 | [0219](0219-candidate-selection-hands-over-the-prompt-material-read-once-with-its-token-estimate.md) | 프롬프트 재료는 후보 선별이 토큰 어림과 같은 한 번의 읽기로 낸다 | 승인 (부분 대체: 0262) |
 | [0220](0220-big-slot-candidates-are-grouped-by-big-storyline-row-in-the-prompt-and-the-digest-llm-neither-makes-nor-links-groups.md) | 큰 슬롯 후보는 큰 판정 행마다 묶어 프롬프트에 보이고, 다이제스트 LLM 은 묶음을 새로 만들거나 잇지 않는다 | 대체됨 (0262) |
 | [0221](0221-generator-results-are-success-or-failure-and-the-use-case-asks-once-more-only-for-a-complete-unreadable-answer.md) | 다이제스트 생성기의 결과는 성공 · 실패 갈래이고, 끝까지 쓴 응답을 읽지 못하면 유스케이스가 한 번 다시 묻는다 | 승인 |
-| [0222](0222-interest-per-subtopic-is-smoothed-reactions-over-exposures-with-a-half-life-and-exposures-are-all-ready-citations.md) | 관심도는 주제 중분류마다 노출로 나눈 반응에 가상 노출을 더해 평활하고 반감기로 감쇠하며, 노출은 덮인 다이제스트를 포함한 인용 전부다 | 승인 |
+| [0222](0222-interest-per-subtopic-is-smoothed-reactions-over-exposures-with-a-half-life-and-exposures-are-all-ready-citations.md) | 관심도는 주제 중분류마다 노출로 나눈 반응에 가상 노출을 더해 평활하고 반감기로 감쇠하며, 노출은 덮인 다이제스트를 포함한 인용 전부다 | 승인 (부분 대체: 0260 · 0268) |
 | [0223](0223-the-digest-summary-length-is-a-user-setting-in-the-digest-volume-section.md) | 다이제스트의 요약 길이는 사용자 설정이고 "다이제스트 분량" 구획에 있다 | 승인 |
 | [0224](0224-sign-in-rechecks-the-credential-version-under-its-lock-after-storing-the-session-and-sessions-are-saved-as-they-change.md) | 로그인은 세션을 저장한 뒤 자격 행을 잠가 대조한 자격의 버전을 다시 확인하고, 세션 저장소는 세션 변경을 곧바로 저장한다 | 승인 |
 | [0225](0225-interest-history-values-read-only-the-window-before-each-reference-time-and-the-period-in-progress-is-measured-at-the-call.md) | 관심사 히스토리의 기간 값은 기준 시각 앞 120일의 창만 읽어 다이제스트와 같은 산식으로 계산하고, 진행 중인 기간은 부르는 시각을 기준으로 한다 | 승인 |
@@ -262,11 +262,15 @@
 | [0254](0254-evaluation-queue-defers-transient-failures-without-an-attempt-limit-and-counts-retrying-rows-for-the-operator.md) | 평가 대기의 일시 실패는 시도 상한 없이 1시간까지 늘어나는 간격으로 미루고, 운영자 건수는 시도 소진 대신 일시 실패를 겪은 대기를 센다 | 승인 |
 | [0255](0255-storyline-linking-and-relation-queues-defer-transient-failures-until-a-retry-time-and-never-drop-them.md) | 스토리라인 잇기 · 관계 판정이 일시 실패한 대상은 대기 행의 판정 가능 시각까지 미루고, 일시 실패 수로 대기에서 빼지 않는다 | 승인 |
 | [0259](0259-evaluator-timing-is-owned-by-one-evaluation-type-and-judging-queues-derive-their-leases-from-the-longest-judgement.md) | 평가기 요청 마감 · 판정 한 번의 가장 긴 시간 · 일시 실패 뒤 간격은 evaluation 의 공개 타입 하나가 정본이고, 판정을 부르는 대기의 점유 기간은 판정 한 번의 가장 긴 시간에서 계산한다 | 승인 |
-| [0260](0260-digest-candidates-are-events-and-only-assigned-events-with-an-article-first-evaluated-in-the-period-enter.md) | 다이제스트 후보는 사건이고, 기간에 첫 평가된 기사가 있는 배정된 사건만 든다 | 승인 |
+| [0260](0260-digest-candidates-are-events-and-only-assigned-events-with-an-article-first-evaluated-in-the-period-enter.md) | 다이제스트 후보는 사건이고, 기간에 첫 평가된 기사가 있는 배정된 사건만 든다 | 승인 (부분 대체: 0265) |
 | [0261](0261-event-topics-and-regions-are-keys-on-at-least-half-of-evaluated-members-importance-is-the-maximum-and-digest-counts-them-at-query-time.md) | 사건의 주제 · 지역은 평가 있는 소속 기사의 절반 이상에 붙은 키, 중요도는 최대이고, `digest` 가 조회 때 센다 | 승인 |
-| [0262](0262-chosen-events-are-grouped-into-items-by-containment-tree-top-code-splits-top-stories-and-headlines-the-llm-writes-per-item-and-an-item-has-one-badge.md) | 고른 사건은 포함 나무 꼭대기로 항목을 묶고, 주요 뉴스와 헤드라인은 코드가 가르며, LLM 은 항목마다 쓰고 배지는 항목에 하나다 | 승인 |
-| [0263](0263-articles-sent-per-event-are-sampled-up-to-a-cap-with-a-fixed-seed-from-those-in-the-period-and-the-sample-is-the-citations-and-sources.md) | 사건마다 LLM 에 넘기는 기사는 그 기간에 든 기사에서 고정 시드로 상한까지 뽑고, 그 표본이 인용 · 출처다 | 승인 |
+| [0262](0262-chosen-events-are-grouped-into-items-by-containment-tree-top-code-splits-top-stories-and-headlines-the-llm-writes-per-item-and-an-item-has-one-badge.md) | 고른 사건은 포함 나무 꼭대기로 항목을 묶고, 주요 뉴스와 헤드라인은 코드가 가르며, LLM 은 항목마다 쓰고 배지는 항목에 하나다 | 승인 (부분 대체: 0265) |
+| [0263](0263-articles-sent-per-event-are-sampled-up-to-a-cap-with-a-fixed-seed-from-those-in-the-period-and-the-sample-is-the-citations-and-sources.md) | 사건마다 LLM 에 넘기는 기사는 그 기간에 든 기사에서 고정 시드로 상한까지 뽑고, 그 표본이 인용 · 출처다 | 승인 (부분 대체: 0265 · 0268) |
 | [0264](0264-the-storyline-tops-query-gives-each-event-its-containment-tree-roots-in-membership-score-order-without-the-scores.md) | 스토리라인 꼭대기 조회는 사건마다 포함 나무 뿌리를 소속 점수 순으로 내고 점수는 싣지 않는다 | 승인 |
+| [0265](0265-feedback-is-pressed-once-per-digest-item-and-recorded-on-each-event-of-the-item-the-screen-shows-the-item-value-and-signals-use-event-records.md) | 반응은 다이제스트 항목에 한 번 누르고 그 항목의 사건들에 기록하며, 화면은 항목에 누른 값을 보이고 신호는 사건 기록이 맡는다 | 승인 |
+| [0266](0266-feedback-is-recorded-under-the-original-event-id-and-feedback-resolves-merged-events-through-event-when-reading-with-the-last-pressed-value-winning.md) | 반응은 원래 사건 ID 로 기록하고 읽을 때 `feedback` 이 `event` 로 합쳐진 사건을 풀며, 풀린 사건들의 값은 마지막으로 누른 값이다 | 승인 |
+| [0267](0267-removed-events-are-announced-by-event-and-feedback-deletes-their-feedback-with-recording-and-removal-ordered-by-a-fence.md) | 사건을 지우면 `event` 가 지운 사건 ID 를 알리고 `feedback` 이 그 사건의 반응을 지우며, 기록과 삭제는 울타리로 차례를 세운다 | 승인 |
+| [0268](0268-interest-counts-exposures-and-reactions-per-event-splitting-an-item-weight-one-over-n-and-counting-an-event-once-with-its-latest-share.md) | 관심도의 노출 · 반응 단위는 사건이고 항목 하나의 무게를 그 사건들에 1/n 씩 나누며, 같은 사건은 가장 늦은 노출의 몫으로 한 번 센다 | 승인 |
 
 ## 운영 규칙
 

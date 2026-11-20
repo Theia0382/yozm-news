@@ -47,7 +47,7 @@ class HandlerGuardsRegistrationTests {
 				"POST /api/account-recoveries", "ACCOUNT_RECOVERY", "POST /api/invitation-checks", "INVITATION_CHECK",
 				"POST /api/invitation-acceptances", "INVITATION_ACCEPTANCE", "POST /api/sign-ups", "SIGN_UP",
 				"PUT /api/llm-keys/{provider}", "LLM_KEY_CHECK", "POST /api/llm-keys/{provider}/checks",
-				"LLM_KEY_CHECK", "PUT /api/feedback/{articleId}", "FEEDBACK"));
+				"LLM_KEY_CHECK", "PUT /api/feedback/{eventId}", "FEEDBACK"));
 	}
 
 	@Test

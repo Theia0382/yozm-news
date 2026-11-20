@@ -1,7 +1,7 @@
 package net.yozmnews.digest;
 
 /**
- * 후보의 선정 이유 — 인용에 남는 노출 기록의 칸. 공개 타입 · docs/specs/digest.md §3 · §6
+ * 후보의 선정 이유 — 후보 행과 섹션 사건 행(항목이 다룬 사건)의 칸, 화면 항목의 배지. 공개 타입 · docs/specs/digest.md §3 · §6
  */
 public enum SelectionReason {
 

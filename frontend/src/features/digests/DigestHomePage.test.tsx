@@ -424,11 +424,12 @@ describe("DigestHomePage 의 좋아요 · 싫어요", () => {
       }),
     });
     const { server } = renderHome(regeneratedEmpty, {
-      "PUT /api/feedback/1": () => json({ result: "RECORDED", value: "LIKE" }),
+      "PUT /api/feedback/101": () =>
+        json({ result: "RECORDED", value: "LIKE" }),
     });
     const user = userEvent.setup();
     const buttons = within(
-      await screen.findByRole("group", { name: "기사 1 반응" }),
+      await screen.findByRole("group", { name: "주요 뉴스 제목 반응" }),
     );
     await waitFor(() =>
       expect(buttons.getByRole("button", { name: "좋아요" })).toBeEnabled(),
@@ -443,8 +444,14 @@ describe("DigestHomePage 의 좋아요 · 싫어요", () => {
           .getAttribute("aria-pressed"),
       ).toBe("true"),
     );
-    expect(bodiesOf(server, "PUT", "/api/feedback/1")).toEqual([
+    expect(bodiesOf(server, "PUT", "/api/feedback/101")).toEqual([
       { digestId: 11, value: "LIKE" },
     ]);
+    // 항목 상태도 보이는 다이제스트의 것을 묻는다
+    expect(
+      server.requests
+        .filter((r) => r.method === "GET" && r.path === "/api/feedback")
+        .map((r) => r.search),
+    ).toEqual(["?digestId=11"]);
   });
 });

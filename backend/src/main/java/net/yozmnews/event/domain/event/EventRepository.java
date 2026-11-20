@@ -55,7 +55,8 @@ public interface EventRepository {
 
 	/**
 	 * 사건과 그 핵심 말을 지운다 — 그 사건에 합쳐진 사건 행, 이 사건들을 가리키는 배정 후보와 병합 판정 기록도 함께. 그 사건의 배정이 먼저
-	 * 지워지거나 옮겨져 있어야 한다
+	 * 지워지거나 옮겨져 있어야 한다. 지운 사건 ID(이 사건과 합쳐진 사건)를 {@link net.yozmnews.event.EventsRemoved} 로도 발행한다(event-R25) —
+	 * 지운 행이 없으면 발행하지 않는다
 	 */
 	void delete(long eventId);
 

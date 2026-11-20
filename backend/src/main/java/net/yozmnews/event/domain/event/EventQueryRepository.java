@@ -58,6 +58,12 @@ public interface EventQueryRepository {
 	/** 이 사건을 가리키는 합쳐진 사건 — 합친 시각 · 사건 ID 순. 확률은 (그 사건, 이 사건) 쌍의 병합 판정 기록 */
 	List<MergedEvent> mergedInto(long survivor);
 
+	/** 사건마다 지금 사건 — 합쳐졌으면 남는 사건, 아니면 그 사건. 없는 사건은 빠진다 */
+	Map<Long, Long> currentOf(Collection<Long> eventIds);
+
+	/** 사건마다 그 사건으로 합쳐진 사건들 — 사건 ID 순. 합쳐진 사건이 없는 사건은 빠진다 */
+	Map<Long, List<Long>> absorbedInto(Collection<Long> survivors);
+
 	/**
 	 * 판정 원본을 가리키는 배정 — 원본 ID → 그 기사의 지금 배정.
 	 * @throws IllegalStateException 한 원본을 배정 둘이 가리킬 때

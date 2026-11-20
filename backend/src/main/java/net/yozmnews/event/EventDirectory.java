@@ -11,8 +11,8 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * 다른 모듈이 사건을 읽는 조회 — 사건 · 사건의 기사 · 기사의 사건 · 대표 기사 · 사건 목록 · 기간 안 사건 · 사건 묶음의 기간
- * 집계와 스토리라인 잇기의 재료(사건 표현 · 이웃 사건 · 말 수 · 채우기 대상) · docs/specs/event.md §3 · event-R14 · event-R15 · event-R20 ·
- * event-R24.
+ * 집계와 스토리라인 잇기의 재료(사건 표현 · 이웃 사건 · 말 수 · 채우기 대상), 합쳐진 사건 풀기(지금 사건 · 합쳐진 사건들) ·
+ * docs/specs/event.md §3 · event-R13 · event-R14 · event-R15 · event-R20 · event-R24.
  * <p>
  * 사용자 정보를 받지 않는다. 트랜잭션을 열지 않는다 — 각 질의는 그 순간의 값이고, 기간 집계의 재료(소스 · 중요도)는 다른 모듈의 공개 조회로
  * 따로 읽는다.
@@ -30,6 +30,9 @@ public interface EventDirectory {
 
 	/** 말 수 조회 한 번에 묻는 말의 상한 — 정본. {@link #MAX_KEY_TERMS}(표현 · 이웃이 내는 핵심 말 수)와 다른 값이다 */
 	int MAX_TERMS = 100;
+
+	/** 풀기 조회({@link #currentOf} · {@link #absorbedInto}) 한 번에 묻는 서로 다른 사건 수의 상한 — 정본. 측정 전 목표 */
+	int MAX_RESOLVE_EVENTS = 1000;
 
 	/**
 	 * 사건 하나 — 합쳐진 사건(event-R13)이면 남는 사건을 낸다.
@@ -124,5 +127,19 @@ public interface EventDirectory {
 	 * 쓴다.
 	 */
 	List<EventView> lastArticleSince(Instant since);
+
+	/**
+	 * 사건마다 지금 사건 — 합쳐진 사건이면 남는 사건, 아니면 그 사건(event-R13 — 가리킴은 평평하다). 기록한 사건 ID 를 읽을 때 푸는 데 쓴다.
+	 * @return 사건 ID → 지금 사건 ID — 없는(지운) 사건은 빠진다. 같은 사건은 한 번. 빈 입력이면 빈 맵
+	 * @throws IllegalArgumentException 서로 다른 사건이 {@link #MAX_RESOLVE_EVENTS} 개를 넘을 때
+	 */
+	Map<EventId, EventId> currentOf(Collection<EventId> ids);
+
+	/**
+	 * 사건마다 그 사건으로 합쳐진 사건들 — 사건 ID 순(event-R13). 남는 사건으로 풀리는 기록을 찾는 데 쓴다.
+	 * @return 사건 ID → 그 사건에 합쳐진 사건 ID 목록 — 합쳐진 사건이 없는 사건 · 없는 사건은 빠진다. 빈 입력이면 빈 맵
+	 * @throws IllegalArgumentException 서로 다른 사건이 {@link #MAX_RESOLVE_EVENTS} 개를 넘을 때
+	 */
+	Map<EventId, List<EventId>> absorbedInto(Collection<EventId> survivors);
 
 }
