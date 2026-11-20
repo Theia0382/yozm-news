@@ -271,7 +271,7 @@
 | [0266](0266-feedback-is-recorded-under-the-original-event-id-and-feedback-resolves-merged-events-through-event-when-reading-with-the-last-pressed-value-winning.md) | 반응은 원래 사건 ID 로 기록하고 읽을 때 `feedback` 이 `event` 로 합쳐진 사건을 풀며, 풀린 사건들의 값은 마지막으로 누른 값이다 | 승인 |
 | [0267](0267-removed-events-are-announced-by-event-and-feedback-deletes-their-feedback-with-recording-and-removal-ordered-by-a-fence.md) | 사건을 지우면 `event` 가 지운 사건 ID 를 알리고 `feedback` 이 그 사건의 반응을 지우며, 기록과 삭제는 울타리로 차례를 세운다 | 승인 |
 | [0268](0268-interest-counts-exposures-and-reactions-per-event-splitting-an-item-weight-one-over-n-and-counting-an-event-once-with-its-latest-share.md) | 관심도의 노출 · 반응 단위는 사건이고 항목 하나의 무게를 그 사건들에 1/n 씩 나누며, 같은 사건은 가장 늦은 노출의 몫으로 한 번 센다 | 승인 |
-| [0269](0269-the-digest-output-is-a-required-field-per-item-keyed-by-its-alias-drawn-for-each-request.md) | 다이제스트 출력은 요청마다 그린 서술의, 항목 별칭을 키로 한 필수 칸이다 | 승인 |
+| [0269](0269-the-digest-output-keys-top-stories-by-item-alias-as-required-fields-and-lists-headlines-as-elements.md) | 다이제스트 출력의 주요 뉴스 칸은 항목 별칭을 키로 한 필수 칸이고, 헤드라인 칸은 원소 배열이다 | 승인 |
 | [0270](0270-an-item-missing-from-the-output-is-asked-once-more-and-then-kept-as-a-headline-and-the-counts-are-recorded.md) | 출력에 빠진 항목은 한 번 다시 묻고, 그래도 빠지면 첫 인용 기사 제목의 헤드라인으로 남기며, 그 수를 다이제스트 행에 기록한다 | 승인 |
 
 ## 운영 규칙

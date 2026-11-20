@@ -95,7 +95,7 @@
 
 ### 검증과 저장
 
-- 출력은 요청마다 그린 서술의, 항목 별칭을 키로 한 필수 칸이다 — 구조화 출력이면 공급자가 모든 항목 칸을 강제한다([ADR-0269](adr/0269-the-digest-output-is-a-required-field-per-item-keyed-by-its-alias-drawn-for-each-request.md)). 항목 대조(그 칸의 별칭 찾기 · 칸이 없는 항목의 대체 헤드라인 · 대조할 항목 없음)와 실패 처리는 [digest Spec](specs/digest.md#인용-검증) digest-R6 · R8 에 있다. 항목은 출력 순서가 아니라 항목 순서로 저장한다.
+- 출력은 요청마다 그린 서술이다 — 주요 뉴스 칸은 항목 별칭을 키로 한 필수 칸이라 구조화 출력이면 공급자가 모든 주요 뉴스 칸을 강제하고, 헤드라인 칸은 항목 별칭을 단 원소 배열이다([ADR-0269](adr/0269-the-digest-output-keys-top-stories-by-item-alias-as-required-fields-and-lists-headlines-as-elements.md)). 항목 대조(그 칸의 별칭 찾기 · 칸이 없는 항목의 대체 헤드라인 · 대조할 항목 없음)와 실패 처리는 [digest Spec](specs/digest.md#인용-검증) digest-R6 · R8 에 있다. 항목은 출력 순서가 아니라 항목 순서로 저장한다.
 - 끝까지 쓴 응답을 읽지 못하거나 칸이 빠진 항목이 있으면 진단(읽기의 진단 · 빠진 항목 별칭)과 "스키마에 맞게 다시 출력하라"는 문장을 지시에 덧붙여 한 번 다시 묻는다. 빠진 항목 때문에 다시 물었으면 두 출력 가운데 빠진 항목이 적은 쪽을 쓰고, 그래도 빠진 항목은 첫 인용 기사 제목의 헤드라인으로 남기며 그 수를 다이제스트 행에 적는다. 잘린 응답 · 거절은 다시 묻지 않는다([digest Spec](specs/digest.md#생성-판정과-다시-묻기) digest-R27 · [ADR-0221](adr/0221-generator-results-are-success-or-failure-and-the-use-case-asks-once-more-only-for-a-complete-unreadable-answer.md) · [ADR-0270](adr/0270-an-item-missing-from-the-output-is-asked-once-more-and-then-kept-as-a-headline-and-the-counts-are-recorded.md)).
 - 화면의 링크, 출처, 발행 시각은 **항상 DB의 기사 정보로 렌더링**한다. LLM이 쓴 URL은 쓰지 않는다.
 - 섹션 하나가 항목 하나다. 섹션마다 그 항목의 사건과 사건마다 선정 이유, 인용(그 항목의 표본 기사)을 저장한다([digest Spec](specs/digest.md#내용-저장-꼴) digest-R7). 섹션 사건이 노출 기록이고, 관심도(§7)가 노출로 쓴다. 화면은 항목마다 선정 이유 배지 하나 · 좋아요 / 싫어요 버튼 한 벌과 출처 기사 목록을 보인다([digest Spec](specs/digest.md#다이제스트-조회) digest-R48 · [ADR-0241](adr/0241-selection-reasons-mark-only-citations-outside-subscribed-topics-named-interest-and-big-topic.md)).
