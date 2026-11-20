@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import net.yozmnews.article.ArticleId;
+import net.yozmnews.event.EventId;
 import net.yozmnews.digest.InterestPoint;
 import net.yozmnews.digest.TopicSubscriptionStep;
 import net.yozmnews.feedback.FeedbackChange;
@@ -43,9 +43,9 @@ class InterestTimelinesTests {
 	@Test
 	void eachReferenceAfterTheFirstHasItsInterestShiftAndSubscriptionSteps() {
 		InterestRecord record = new InterestRecord(TAG_SET,
-				// c: 기사 1 · 2 를 T1 에 인용, 하루 뒤 좋아요 · d: 기사 3 · 4 를 T1 에 인용, 하루 뒤 싫어요
+				// c: 사건 1 · 2 를 T1 에 노출, 하루 뒤 좋아요 · d: 사건 3 · 4 를 T1 에 노출, 하루 뒤 싫어요
 				List.of(exposure(1, T1), exposure(2, T1), exposure(3, T1), exposure(4, T1)),
-				Map.of(article(1), Set.of("c"), article(2), Set.of("c"), article(3), Set.of("d"), article(4),
+				Map.of(event(1), Set.of("c"), event(2), Set.of("c"), event(3), Set.of("d"), event(4),
 						Set.of("d")),
 				List.of(feedback(1, FeedbackValue.LIKE), feedback(2, FeedbackValue.LIKE),
 						feedback(3, FeedbackValue.DISLIKE), feedback(4, FeedbackValue.DISLIKE)),
@@ -65,7 +65,7 @@ class InterestTimelinesTests {
 
 		assertThat(points).extracting(InterestPoint::reference).containsExactly(T1, T2);
 		InterestPoint first = points.get(0);
-		// T1: a 는 더함 둘(무게 0.5) → S = 1 → x = 1/3. c · d 의 T1 인용은 창 끝(T1) 밖
+		// T1: a 는 더함 둘(무게 0.5) → S = 1 → x = 1/3. c · d 의 T1 노출은 창 끝(T1) 밖
 		assertThat(first.levels()).containsOnlyKeys("a");
 		assertThat(first.levels().get("a")).isCloseTo(0.3333333333333333, EXACT);
 		assertThat(first.entered()).containsExactly("a");
@@ -120,16 +120,17 @@ class InterestTimelinesTests {
 		assertThat(repeated.subscriptionChanges()).as("[T1, T1) 은 비었다").isEmpty();
 	}
 
-	private static ArticleId article(long id) {
-		return new ArticleId(id);
+	private static EventId event(long id) {
+		return new EventId(id);
 	}
 
-	private static ExposureRow exposure(long article, Instant at) {
-		return new ExposureRow(article(article), at);
+	/** 사건 하나인 항목의 노출 행(몫 1) — 다이제스트는 사건마다 다르다 */
+	private static ExposureRow exposure(long event, Instant at) {
+		return new ExposureRow(event, event(event), at, 1.0);
 	}
 
-	private static FeedbackChange feedback(long article, FeedbackValue value) {
-		return new FeedbackChange(article(article), value, 1, T1.plus(Duration.ofDays(1)));
+	private static FeedbackChange feedback(long event, FeedbackValue value) {
+		return new FeedbackChange(event(event), event(event), value, 1, T1.plus(Duration.ofDays(1)));
 	}
 
 	private static TopicSubscriptionChange topic(Set<String> subtopics, TopicSubscriptionAction action,

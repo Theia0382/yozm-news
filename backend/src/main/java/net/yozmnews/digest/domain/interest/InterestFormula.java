@@ -16,8 +16,9 @@ import net.yozmnews.feedback.FeedbackValue;
  * <p>
  * 기준 시각 T 에서 무게 w(at) = 0.5 ^ (max(0, T − at) ÷ {@link InterestRules#HALF_LIFE}) — T 뒤의 시각은 무게 1. 주제 중분류 t 마다
  * <ul>
- * <li>노출 E = t 가 붙은 노출 기사의 w(노출 시각) 합</li>
- * <li>반응 F = 같은 기사의 w(노출 시각) × (좋아요 +1 · 싫어요 −1 · 없음 0) 합 — 반응도 노출 시각으로 감쇠해 F 가 E 를 넘지 않는다</li>
+ * <li>노출 E = t 가 붙은 노출 사건의 w(노출 시각) × 몫 합 — 몫은 항목 무게 1 을 그 항목의 사건 n 개에 나눈 1/n</li>
+ * <li>반응 F = 같은 사건의 w(노출 시각) × 몫 × (좋아요 +1 · 싫어요 −1 · 없음 0) 합 — 반응도 노출 시각 · 몫으로 무게를 매겨 F 가 E 를 넘지
+ * 않는다</li>
  * <li>구독 S = t 를 몫으로 가진 신호의 w(바꾼 시각) × 부호 × 몫 합</li>
  * <li>관심 x = clamp((F + γ·S) ÷ (E + K), −1, 1), 가중치 g = 1 + β·x — γ {@link InterestRules#SUBSCRIPTION_SIGNAL}, K
  * {@link InterestRules#PRIOR_EXPOSURES}, β {@link InterestRules#STRENGTH}</li>
@@ -32,22 +33,22 @@ public final class InterestFormula {
 
 	/**
 	 * 가중치 — {@link #levels} 의 관심을 {@link InterestLevels#weights} 로 옮긴 것
-	 * @param exposed 노출 기사 — 기사마다 하나
+	 * @param exposed 노출 사건 — 사건마다 하나
 	 * @param signals 구독 변경 신호
 	 * @param reference 기준 시각 — 다이제스트는 기간 끝, 관심사 히스토리는 기간의 기준 시각, 구독 제안은 부르는 시각
 	 */
-	public static TopicInterests interests(Collection<ExposedArticle> exposed, Collection<SubscriptionSignal> signals,
+	public static TopicInterests interests(Collection<ExposedEvent> exposed, Collection<SubscriptionSignal> signals,
 			Instant reference) {
 		return levels(exposed, signals, reference).weights();
 	}
 
 	/**
 	 * 관심 x — 노출 또는 구독 신호가 있는 중분류마다
-	 * @param exposed 노출 기사 — 기사마다 하나
+	 * @param exposed 노출 사건 — 사건마다 하나
 	 * @param signals 구독 변경 신호
 	 * @param reference 기준 시각 — 다이제스트는 기간 끝, 관심사 히스토리는 기간의 기준 시각, 구독 제안은 부르는 시각
 	 */
-	public static InterestLevels levels(Collection<ExposedArticle> exposed, Collection<SubscriptionSignal> signals,
+	public static InterestLevels levels(Collection<ExposedEvent> exposed, Collection<SubscriptionSignal> signals,
 			Instant reference) {
 		Objects.requireNonNull(exposed, "exposed");
 		Objects.requireNonNull(signals, "signals");
@@ -55,10 +56,10 @@ public final class InterestFormula {
 		Map<String, Double> exposures = new HashMap<>();
 		Map<String, Double> reactions = new HashMap<>();
 		Map<String, Double> subscriptions = new HashMap<>();
-		for (ExposedArticle article : exposed) {
-			double weight = decay(article.exposedAt(), reference);
-			double reaction = weight * value(article.reaction());
-			for (String subtopic : article.subtopics()) {
+		for (ExposedEvent event : exposed) {
+			double weight = decay(event.exposedAt(), reference) * event.share();
+			double reaction = weight * value(event.reaction());
+			for (String subtopic : event.subtopics()) {
 				exposures.merge(subtopic, weight, Double::sum);
 				reactions.merge(subtopic, reaction, Double::sum);
 			}

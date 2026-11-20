@@ -23,8 +23,8 @@ public record DigestVolume(CandidateVolume volume, @Nullable Integer customCount
 
 	/**
 	 * 직접 입력한 최대 후보 수의 상한 — 최대 후보 수는 사건 수다. 다이제스트 출력 서술의 헤드라인 상한({@code digest} 의
-	 * {@code DigestOutputSchema.MAX_HEADLINES})이 이 값과 같아야 하고, 다이제스트 하나의 인용 기사 수 위쪽(사건당 기사 상한 × 이 값)을
-	 * {@code feedback} 의 현재 상태 조회 상한과 피드백 요청 제한({@code RequestLimits})이 덮어야 한다 — 이 값을 올리면 그 값들을 함께 본다
+	 * {@code DigestOutputSchema.MAX_HEADLINES})이 이 값과 같아야 하고, 다이제스트 하나의 항목 수 위쪽(이 값)을 고쳐 누르는 사용을 피드백 요청
+	 * 제한({@code RequestLimits})이 덮어야 한다 — 이 값을 올리면 그 값들을 함께 본다
 	 */
 	public static final int MAX_COUNT = 150;
 

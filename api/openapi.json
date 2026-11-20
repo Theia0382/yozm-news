@@ -4136,18 +4136,15 @@
     },
     "/api/feedback" : {
       "get" : {
-        "operationId" : "states",
+        "operationId" : "items",
         "parameters" : [ {
-          "description" : "기사 ID — 쉼표로 이은 것, 서로 다른 ID 는 750개까지",
+          "description" : "다이제스트 ID",
           "in" : "query",
-          "name" : "articleIds",
+          "name" : "digestId",
           "required" : true,
           "schema" : {
-            "type" : "array",
-            "items" : {
-              "type" : "integer",
-              "format" : "int64"
-            }
+            "type" : "integer",
+            "format" : "int64"
           }
         } ],
         "responses" : {
@@ -4155,7 +4152,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/FeedbackStatesResponse"
+                  "$ref" : "#/components/schemas/FeedbackItemsResponse"
                 }
               }
             },
@@ -4169,7 +4166,7 @@
                 }
               }
             },
-            "description" : "articleIds 가 비었거나 너무 많거나 1 미만 ID 가 있다"
+            "description" : "digestId 가 없거나 1 미만이다"
           },
           "401" : {
             "content" : {
@@ -4195,12 +4192,12 @@
         "tags" : [ "feedback-controller" ]
       }
     },
-    "/api/feedback/{articleId}" : {
+    "/api/feedback/{eventId}" : {
       "put" : {
         "operationId" : "record",
         "parameters" : [ {
           "in" : "path",
-          "name" : "articleId",
+          "name" : "eventId",
           "required" : true,
           "schema" : {
             "type" : "integer",
@@ -7649,6 +7646,32 @@
         },
         "required" : [ "feeds" ]
       },
+      "FeedbackItemState" : {
+        "type" : "object",
+        "properties" : {
+          "eventId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "value" : {
+            "type" : "string",
+            "enum" : [ "LIKE", "DISLIKE" ]
+          }
+        },
+        "required" : [ "eventId", "value" ]
+      },
+      "FeedbackItemsResponse" : {
+        "type" : "object",
+        "properties" : {
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/FeedbackItemState"
+            }
+          }
+        },
+        "required" : [ "items" ]
+      },
       "FeedbackRequest" : {
         "type" : "object",
         "properties" : {
@@ -7676,32 +7699,6 @@
           }
         },
         "required" : [ "result", "value" ]
-      },
-      "FeedbackStateItem" : {
-        "type" : "object",
-        "properties" : {
-          "articleId" : {
-            "type" : "integer",
-            "format" : "int64"
-          },
-          "value" : {
-            "type" : "string",
-            "enum" : [ "LIKE", "DISLIKE" ]
-          }
-        },
-        "required" : [ "articleId", "value" ]
-      },
-      "FeedbackStatesResponse" : {
-        "type" : "object",
-        "properties" : {
-          "states" : {
-            "type" : "array",
-            "items" : {
-              "$ref" : "#/components/schemas/FeedbackStateItem"
-            }
-          }
-        },
-        "required" : [ "states" ]
       },
       "FetchFailureView" : {
         "type" : "object",

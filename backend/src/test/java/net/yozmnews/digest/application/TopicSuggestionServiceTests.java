@@ -15,7 +15,7 @@ import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.digest.TopicSuggestionList;
 import net.yozmnews.digest.domain.exposure.ExposureRepository;
 import net.yozmnews.event.EventDirectory;
-import net.yozmnews.feedback.ArticleFeedback;
+import net.yozmnews.feedback.EventFeedback;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.reader.InterestRows;
 import net.yozmnews.storyline.StorylineDirectory;
@@ -78,7 +78,7 @@ class TopicSuggestionServiceTests {
 	ExposureRepository exposures;
 
 	@Autowired
-	ArticleFeedback feedback;
+	EventFeedback feedback;
 
 	@Autowired
 	ArticleEvaluations evaluations;

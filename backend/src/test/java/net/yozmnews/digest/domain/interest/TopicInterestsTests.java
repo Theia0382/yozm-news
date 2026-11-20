@@ -9,7 +9,7 @@ import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 /**
- * 기사의 가중치 — 주제 중분류 가중치의 산술 평균. 기대값은 손으로 계산한 리터럴이다.
+ * 후보 사건의 가중치 — 사건의 주제 중분류 가중치의 산술 평균. 기대값은 손으로 계산한 리터럴이다.
  */
 class TopicInterestsTests {
 

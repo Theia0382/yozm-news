@@ -9,7 +9,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import jakarta.servlet.http.Cookie;
 import net.yozmnews.LlmKeyRows;
 import net.yozmnews.TestcontainersConfiguration;
-import net.yozmnews.digest.DigestRows;
 import net.yozmnews.user.SignedInUsers;
 import net.yozmnews.user.application.PasswordHashing;
 import net.yozmnews.user.domain.account.AccountRepository;
@@ -27,7 +26,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 /**
- * 좋아요 / 싫어요의 사용자 격리 — A 가 남긴 값은 B 의 현재 상태에 없고, B 는 A 의 다이제스트로 누르지 못하며 A 의 행이 그대로다. 세션 없이
+ * 좋아요 / 싫어요의 사용자 격리 — A 가 남긴 값은 B 의 항목 기록에 없고(A 의 다이제스트 ID 로 물어도), B 는 A 의 다이제스트로 누르지
+ * 못하며 A 의 행이 그대로다. 세션 없이
  * 부르면 두 경로 모두 401 이고, 키가 없는 세션은 403 이다(docs/qa/test-strategy.md §13). 키 관문 뒤라 A · B 는 키 행이 있다.
  * <p>
  * 지키는 규칙: user-R5 · user-R6 · feedback-R2 · feedback-R9
@@ -68,41 +68,42 @@ public class FeedbackScopeTests {
 		SignedInUsers.SignedInUser b = users.signIn("feedback-b@example.com");
 		LlmKeyRows.give(this.jdbc, a.id().value());
 		LlmKeyRows.give(this.jdbc, b.id().value());
-		long article = FeedbackRows.article(this.jdbc, "격리 시험 기사");
-		long digestA = DigestRows.digest(this.jdbc, a.id().value(), "2026-11-05");
-		DigestRows.cite(this.jdbc, digestA, article);
-		long digestB = DigestRows.digest(this.jdbc, b.id().value(), "2026-11-05");
-		DigestRows.cite(this.jdbc, digestB, article);
+		long event = FeedbackRows.event(this.jdbc);
+		long digestA = FeedbackRows.digestWithItem(this.jdbc, a.id().value(), "2026-11-05", event);
+		long digestB = FeedbackRows.digestWithItem(this.jdbc, b.id().value(), "2026-11-05", event);
 
-		this.mockMvc.perform(press(a, article, "LIKE", digestA))
+		this.mockMvc.perform(press(a, event, "LIKE", digestA))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.result").value("RECORDED"));
-		// A 의 현재 상태에 행이 있다 — 아래 B 의 빈 목록이 빈 본문끼리의 일치가 아니다
-		this.mockMvc.perform(get("/api/feedback").param("articleIds", String.valueOf(article)).with(a))
+		// A 의 항목 기록에 행이 있다 — 아래 B 의 빈 목록이 빈 본문끼리의 일치가 아니다
+		this.mockMvc.perform(get("/api/feedback").param("digestId", String.valueOf(digestA)).with(a))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.states.length()").value(1))
-			.andExpect(jsonPath("$.states[0].value").value("LIKE"));
+			.andExpect(jsonPath("$.items.length()").value(1))
+			.andExpect(jsonPath("$.items[0].value").value("LIKE"));
 
-		this.mockMvc.perform(get("/api/feedback").param("articleIds", String.valueOf(article)).with(b))
+		// B 가 A 의 다이제스트 ID 로 물어도 B 의 항목 기록만 읽는다
+		this.mockMvc.perform(get("/api/feedback").param("digestId", String.valueOf(digestA)).with(b))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.states").isEmpty());
+			.andExpect(jsonPath("$.items").isEmpty());
 		// B 가 A 의 다이제스트로 누르면 받지 않고, A 의 행은 그대로다
-		this.mockMvc.perform(press(b, article, "NONE", digestA))
+		this.mockMvc.perform(press(b, event, "NONE", digestA))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.result").value("NOT_IN_DIGEST"));
-		this.mockMvc.perform(press(b, article, "DISLIKE", digestA))
+		this.mockMvc.perform(press(b, event, "DISLIKE", digestA))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.result").value("NOT_IN_DIGEST"));
-		assertThat(FeedbackRows.current(this.jdbc, a.id().value())).containsExactly(article + ":LIKE:" + digestA);
+		assertThat(FeedbackRows.current(this.jdbc, a.id().value())).containsExactly(event + ":LIKE:" + digestA);
+		assertThat(FeedbackRows.items(this.jdbc, a.id().value())).containsExactly(digestA + ":" + event + ":LIKE");
 		assertThat(FeedbackRows.current(this.jdbc, b.id().value())).isEmpty();
 
 		// B 가 자기 다이제스트로 남긴 값은 B 의 것이다 — A 의 값을 바꾸지 않는다
-		this.mockMvc.perform(press(b, article, "DISLIKE", digestB))
+		this.mockMvc.perform(press(b, event, "DISLIKE", digestB))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.result").value("RECORDED"));
-		this.mockMvc.perform(get("/api/feedback").param("articleIds", String.valueOf(article)).with(a))
+		this.mockMvc.perform(get("/api/feedback").param("digestId", String.valueOf(digestA)).with(a))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.states[0].value").value("LIKE"));
+			.andExpect(jsonPath("$.items[0].value").value("LIKE"));
+		assertThat(FeedbackRows.current(this.jdbc, a.id().value())).containsExactly(event + ":LIKE:" + digestA);
 	}
 
 	@Test
@@ -110,7 +111,7 @@ public class FeedbackScopeTests {
 		SignedInUsers.SignedInUser keyless = new SignedInUsers(this.mockMvc, this.accounts, this.credentials,
 				this.hashing)
 			.signIn("feedback-keyless@example.com");
-		this.mockMvc.perform(get("/api/feedback").param("articleIds", "1").with(keyless))
+		this.mockMvc.perform(get("/api/feedback").param("digestId", "1").with(keyless))
 			.andExpect(status().isForbidden())
 			.andExpect(jsonPath("$.type").value("urn:yozmnews:problem:llm-key-required"));
 		this.mockMvc.perform(press(keyless, 1, "LIKE", 1))
@@ -118,7 +119,7 @@ public class FeedbackScopeTests {
 			.andExpect(jsonPath("$.type").value("urn:yozmnews:problem:llm-key-required"));
 
 		Cookie csrf = new Cookie("XSRF-TOKEN", "feedback-scope");
-		this.mockMvc.perform(get("/api/feedback").param("articleIds", "1")).andExpect(status().isUnauthorized());
+		this.mockMvc.perform(get("/api/feedback").param("digestId", "1")).andExpect(status().isUnauthorized());
 		this.mockMvc
 			.perform(put("/api/feedback/1").cookie(csrf)
 				.header("X-XSRF-TOKEN", "feedback-scope")
@@ -129,8 +130,8 @@ public class FeedbackScopeTests {
 	}
 
 	private static MockHttpServletRequestBuilder press(
-			SignedInUsers.SignedInUser user, long article, String value, long digest) {
-		return put("/api/feedback/{articleId}", article).with(user)
+			SignedInUsers.SignedInUser user, long event, String value, long digest) {
+		return put("/api/feedback/{eventId}", event).with(user)
 			.contentType(MediaType.APPLICATION_JSON)
 			.content("""
 					{"value":"%s","digestId":%d}""".formatted(value, digest));

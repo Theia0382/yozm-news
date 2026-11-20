@@ -47,6 +47,44 @@ public final class EventArticles {
 	}
 
 	/**
+	 * 열린 사건 하나와 그 사건에 주어진 기사들의 배정을 넣는다 — 배정의 발행 시각 · 기준 · 사건 표현은 시험용 값이다. 기사가 없으면 배정 없는
+	 * 사건이다(합쳐질 사건 등).
+	 * @return 사건 ID
+	 */
+	public static long event(JdbcClient jdbc, long... articles) {
+		long event = jdbc.sql("""
+				insert into events (status, model_version, centroid, article_count, first_article_at, last_article_at,
+				                    created_at, last_joined_at)
+				values ('OPEN', 'model-a', cast('[1,0]' as halfvec), :count, now(), now(), now(), now())
+				returning id
+				""").param("count", Math.max(1, articles.length)).query(Long.class).single();
+		if (articles.length == 0) {
+			return event;
+		}
+		// 기준 행은 값마다 하나다 — 이미 있으면 그 행을 쓴다
+		long criteria = jdbc.sql("""
+				with inserted as (
+				    insert into event_assignment_criteria (window_seconds, upper, lower, store, probability, created_at)
+				    values (259200, 0.8, 0.55, 0.4, 0.5, now())
+				    on conflict do nothing
+				    returning id)
+				select id from inserted
+				union all
+				select id from event_assignment_criteria
+				where window_seconds = 259200 and upper = 0.8 and lower = 0.55 and store = 0.4
+				limit 1
+				""").query(Long.class).single();
+		for (long article : articles) {
+			jdbc.sql("""
+					insert into event_articles (article_id, event_id, published_at, score, decided_by, opened, criteria_id,
+					                            assigned_at)
+					values (:article, :event, '2026-11-05T00:00:00Z', 0.9, 'FORMULA', false, :criteria, now())
+					""").param("article", article).param("event", event).param("criteria", criteria).update();
+		}
+		return event;
+	}
+
+	/**
 	 * 기사 · 엔트리와 사건 묶기 · 배정 · 평가 대기, 기사 표현, 사건 · 배정 · 후보 · 기준 이력 행을 모두 지운다 — 기사를 저장하면 평가 대기에도
 	 * 들어간다
 	 */

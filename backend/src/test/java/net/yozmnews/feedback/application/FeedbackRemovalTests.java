@@ -12,9 +12,8 @@ import java.util.concurrent.TimeoutException;
 
 import net.yozmnews.Latches;
 import net.yozmnews.TestcontainersConfiguration;
-import net.yozmnews.article.ArticleId;
-import net.yozmnews.article.ArticlesRemoved;
-import net.yozmnews.digest.DigestRows;
+import net.yozmnews.event.EventId;
+import net.yozmnews.event.EventsRemoved;
 import net.yozmnews.feedback.FeedbackRows;
 import net.yozmnews.feedback.FeedbackValue;
 import net.yozmnews.feedback.domain.record.RemovalFence;
@@ -29,11 +28,11 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 지운 기사 따르기 — 그 기사의 현재 상태 · 이력 행을 지우고, 진행 중인 기록을 기다린다.
+ * 지운 사건 따르기 — 그 사건의 현재 상태 · 이력 행을 지우고 항목 기록은 남기며, 진행 중인 기록을 기다린다.
  * <p>
  * 지키는 규칙: feedback-R5 · feedback-R6
  * <p>
- * 실제 PostgreSQL 위에서 돈다. 기록이 진행 중인 틈은 트랜잭션 안에서 래치로 멈춰 만든다.
+ * 실제 PostgreSQL 위에서 돈다(커밋 경계를 지나므로 시험 트랜잭션이 없다). 기록이 진행 중인 틈은 트랜잭션 안에서 래치로 멈춰 만든다.
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -61,21 +60,33 @@ class FeedbackRemovalTests {
 	}
 
 	@Test
-	void theRemovedArticlesRowsAreDeletedAndOthersStay() {
+	void theRemovedEventsRowsAreDeletedAndOthersStay() {
 		rows(42, 901);
 		rows(43, 901);
 		rows(42, 902);
 		rows(43, 903);
+		rows(42, 904);
+		item(42, 7, 901);
 
-		new FeedbackArticleRemovalListener(this.removal).on(new ArticlesRemoved(List.of(new ArticleId(901))));
+		// 순서에 기대지 않는다 — 지운 사건 둘을 아무 순서로
+		listener().on(new EventsRemoved(List.of(new EventId(904), new EventId(901))));
 
-		assertThat(articles("feedback")).containsExactly("42:902", "43:903");
-		assertThat(articles("feedback_events")).containsExactly("42:902", "43:903");
+		assertThat(events("feedback")).containsExactly("42:902", "43:903");
+		assertThat(events("feedback_events")).containsExactly("42:902", "43:903");
+		// 항목 기록은 남는다 — 그 항목에 누른 사실은 섹션과 함께 남는다
+		assertThat(FeedbackRows.items(this.jdbc, 42)).containsExactly("7:901:LIKE");
+	}
 
-		// 다시 처리해도 결과가 같다
-		new FeedbackArticleRemovalListener(this.removal).on(new ArticlesRemoved(List.of(new ArticleId(901))));
-		assertThat(articles("feedback")).containsExactly("42:902", "43:903");
-		assertThat(articles("feedback_events")).containsExactly("42:902", "43:903");
+	@Test
+	void handlingTheSameRemovalAgainLeavesTheSameRows() {
+		// 대조 — 다시 처리해도 결과가 같다. 리스너를 거치지 않고 지우기 유스케이스를 바로 부른다
+		rows(42, 901);
+		rows(42, 902);
+		this.removal.apply(List.of(new EventId(901)));
+		this.removal.apply(List.of(new EventId(901)));
+
+		assertThat(events("feedback")).containsExactly("42:902");
+		assertThat(events("feedback_events")).containsExactly("42:902");
 	}
 
 	@Test
@@ -91,30 +102,29 @@ class FeedbackRemovalTests {
 		Latches.awaitQuietly(entered);
 
 		CompletableFuture<Void> removing = CompletableFuture
-			.runAsync(() -> this.removal.apply(List.of(new ArticleId(901))));
+			.runAsync(() -> this.removal.apply(List.of(new EventId(901))));
 
 		// 기록이 울타리를 쥔 동안 삭제는 끝나지 않는다
 		assertThatThrownBy(() -> removing.get(2, TimeUnit.SECONDS)).isInstanceOf(TimeoutException.class);
-		assertThat(articles("feedback")).containsExactly("42:901");
+		assertThat(events("feedback")).containsExactly("42:901");
 		release.countDown();
 		recording.get(30, TimeUnit.SECONDS);
 		removing.get(30, TimeUnit.SECONDS);
-		assertThat(articles("feedback")).isEmpty();
-		assertThat(articles("feedback_events")).isEmpty();
+		assertThat(events("feedback")).isEmpty();
+		assertThat(events("feedback_events")).isEmpty();
 	}
 
 	@Test
 	void removalWaitsForAnUncommittedRecordingAndThenDeletesItsRows() throws Exception {
 		// 기록 유스케이스가 울타리를 실제로 잡는지 — 위 시험은 울타리를 직접 잡는다
-		long article = FeedbackRows.article(this.jdbc, "시험 기사 하나");
-		long digest = DigestRows.digest(this.jdbc, 42, "2026-11-01");
-		DigestRows.cite(this.jdbc, digest, article);
+		long event = FeedbackRows.event(this.jdbc);
+		long digest = FeedbackRows.digestWithItem(this.jdbc, 42, "2026-11-01", event);
 		CountDownLatch written = new CountDownLatch(1);
 		CountDownLatch release = new CountDownLatch(1);
 		CompletableFuture<RecordOutcome> recorded = CompletableFuture
 			.supplyAsync(() -> this.transaction.execute(status -> {
-				RecordOutcome outcome = this.recording.record(new UserId(42), new ArticleId(article),
-						FeedbackValue.LIKE, digest, Instant.parse("2026-11-17T01:00:00Z"));
+				RecordOutcome outcome = this.recording.record(new UserId(42), new EventId(event), FeedbackValue.LIKE,
+						digest, Instant.parse("2026-11-17T01:00:00Z"));
 				written.countDown();
 				Latches.awaitQuietly(release);
 				return outcome;
@@ -122,16 +132,32 @@ class FeedbackRemovalTests {
 		Latches.awaitQuietly(written);
 
 		CompletableFuture<Void> removing = CompletableFuture
-			.runAsync(() -> this.removal.apply(List.of(new ArticleId(article))));
+			.runAsync(() -> this.removal.apply(List.of(new EventId(event))));
 
 		// 기록이 커밋하기 전에는 삭제가 끝나지 않는다
 		assertThatThrownBy(() -> removing.get(2, TimeUnit.SECONDS)).isInstanceOf(TimeoutException.class);
 		release.countDown();
 		assertThat(recorded.get(30, TimeUnit.SECONDS)).isEqualTo(new RecordOutcome.Recorded(FeedbackValue.LIKE));
 		removing.get(30, TimeUnit.SECONDS);
-		// 먼저 커밋된 기록의 행을 삭제가 지운다
-		assertThat(articles("feedback")).isEmpty();
-		assertThat(articles("feedback_events")).isEmpty();
+		// 먼저 커밋된 기록의 사건 행을 삭제가 지운다 — 항목 기록은 남는다
+		assertThat(events("feedback")).isEmpty();
+		assertThat(events("feedback_events")).isEmpty();
+		assertThat(FeedbackRows.items(this.jdbc, 42)).containsExactly(digest + ":" + event + ":LIKE");
+	}
+
+	@Test
+	void aRecordingAfterTheEventIsGoneWritesNoEventRow() {
+		// 삭제가 지나간 뒤에 시작한 기록 — 그 사건이 지금 없어 사건 행을 쓰지 않는다
+		long event = FeedbackRows.event(this.jdbc);
+		long digest = FeedbackRows.digestWithItem(this.jdbc, 42, "2026-11-01", event);
+		FeedbackRows.deleteEvent(this.jdbc, event);
+		this.removal.apply(List.of(new EventId(event)));
+
+		this.recording.record(new UserId(42), new EventId(event), FeedbackValue.LIKE, digest,
+				Instant.parse("2026-11-17T01:00:00Z"));
+
+		assertThat(events("feedback")).isEmpty();
+		assertThat(events("feedback_events")).isEmpty();
 	}
 
 	@Test
@@ -153,20 +179,31 @@ class FeedbackRemovalTests {
 		holder.get(30, TimeUnit.SECONDS);
 	}
 
-	private void rows(long user, long article) {
-		this.jdbc.sql("""
-				insert into feedback (user_id, article_id, value, digest_id, updated_at)
-				values (:user, :article, 'LIKE', 1, now())
-				""").param("user", user).param("article", article).update();
-		this.jdbc.sql("""
-				insert into feedback_events (user_id, article_id, value, digest_id, occurred_at)
-				values (:user, :article, 'LIKE', 1, now())
-				""").param("user", user).param("article", article).update();
+	private FeedbackEventRemovalListener listener() {
+		return new FeedbackEventRemovalListener(this.removal);
 	}
 
-	private List<String> articles(String table) {
-		return this.jdbc.sql("select user_id, article_id from " + table + " order by user_id, article_id")
-			.query((rs, row) -> rs.getLong("user_id") + ":" + rs.getLong("article_id"))
+	private void rows(long user, long event) {
+		this.jdbc.sql("""
+				insert into feedback (user_id, event_id, value, digest_id, updated_at)
+				values (:user, :event, 'LIKE', 1, now())
+				""").param("user", user).param("event", event).update();
+		this.jdbc.sql("""
+				insert into feedback_events (user_id, event_id, value, digest_id, occurred_at)
+				values (:user, :event, 'LIKE', 1, now())
+				""").param("user", user).param("event", event).update();
+	}
+
+	private void item(long user, long digest, long itemKey) {
+		this.jdbc.sql("""
+				insert into feedback_items (user_id, digest_id, item_event_id, value, updated_at)
+				values (:user, :digest, :item, 'LIKE', now())
+				""").param("user", user).param("digest", digest).param("item", itemKey).update();
+	}
+
+	private List<String> events(String table) {
+		return this.jdbc.sql("select user_id, event_id from " + table + " order by user_id, event_id")
+			.query((rs, row) -> rs.getLong("user_id") + ":" + rs.getLong("event_id"))
 			.list();
 	}
 

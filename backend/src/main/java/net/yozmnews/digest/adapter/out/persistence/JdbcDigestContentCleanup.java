@@ -13,6 +13,7 @@ import net.yozmnews.article.ArticleId;
 import net.yozmnews.digest.SectionKind;
 import net.yozmnews.digest.domain.removal.DigestContentCleanup;
 import net.yozmnews.digest.domain.removal.SectionCitations;
+import net.yozmnews.event.EventId;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
@@ -76,6 +77,24 @@ class JdbcDigestContentCleanup implements DigestContentCleanup {
 			result.add(new SectionCitations(section.id(), section.digestId(), section.kind(), section.cited()));
 		}
 		return result;
+	}
+
+	@Override
+	public Map<Long, List<EventId>> itemKeysOf(Collection<Long> sectionIds) {
+		if (sectionIds.isEmpty()) {
+			return Map.of();
+		}
+		Map<Long, List<EventId>> keys = new LinkedHashMap<>();
+		this.jdbc.sql("""
+				select s.digest_id, e.event_id
+				from digest_sections s join digest_section_events e on e.digest_section_id = s.id
+				where s.id = any(:ids) and s.kind in ('TOP_STORY', 'HEADLINE') and e.position = 0
+				order by s.digest_id, s.position
+				""").param("ids", sectionIds.toArray(Long[]::new)).query((ResultSet rs) -> {
+					keys.computeIfAbsent(rs.getLong("digest_id"), digest -> new ArrayList<>())
+						.add(new EventId(rs.getLong("event_id")));
+				});
+		return keys;
 	}
 
 	@Override

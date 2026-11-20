@@ -124,14 +124,14 @@ class RequestGuardTests {
 		SignedInUsers.SignedInUser user = this.users.signIn("guard-feedback@example.com");
 		LlmKeyRows.give(this.jdbc, user.id().value());
 		try {
-			// 인용되지 않은 기사라 판정 결과는 NOT_IN_DIGEST(200)다 — 결과와 무관하게 센다
-			assertLimited("/api/feedback/{articleId}", 750, () -> put("/api/feedback/1").with(user)
+			// 찾을 수 없는 항목이라 판정 결과는 NOT_IN_DIGEST(200)다 — 결과와 무관하게 센다
+			assertLimited("/api/feedback/{eventId}", 750, () -> put("/api/feedback/1").with(user)
 				.header("X-Real-IP", "192.0.2.20")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 						{"value":"LIKE","digestId":1}"""), 600);
-			// 대조 — 표시는 누르기 · 되돌리기에만 있다. 같은 사용자의 현재 상태 조회는 막히지 않는다
-			assertThat(this.mockMvc.perform(get("/api/feedback").param("articleIds", "1").with(user))
+			// 대조 — 표시는 누르기 · 되돌리기에만 있다. 같은 사용자의 항목 기록 조회는 막히지 않는다
+			assertThat(this.mockMvc.perform(get("/api/feedback").param("digestId", "1").with(user))
 				.andReturn()
 				.getResponse()
 				.getStatus()).isEqualTo(200);

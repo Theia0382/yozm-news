@@ -9,8 +9,8 @@ import net.yozmnews.digest.domain.interest.TopicInterests;
 /**
  * 구독 필터 — 정본 — docs/specs/digest.md §5
  * <p>
- * 후보 사건({@link CandidateEvents#subscribed}) 가운데 사건의 지역이 제외와 겹치지 않고 사건의 주제가 구독 행과 겹치는 사건. 주제가 없는
- * 사건은 겹치지 않는다. 결과는 {@link CandidateRank} 순서다.
+ * 후보 사건({@link CandidateEvents#subscribed}) 가운데 사건 제외({@link UserFilter#passesEvent} — 지역 · 싫어요)를 지나고 사건의 주제가
+ * 구독 행과 겹치는 사건. 주제가 없는 사건은 겹치지 않는다. 결과는 {@link CandidateRank} 순서다.
  */
 public final class SubscriptionFilter {
 
@@ -26,7 +26,7 @@ public final class SubscriptionFilter {
 		Objects.requireNonNull(events, "events");
 		Objects.requireNonNull(filter, "filter");
 		return events.stream()
-			.filter(event -> filter.passesRegions(event.facts()))
+			.filter(event -> filter.passesEvent(event.facts()))
 			.filter(event -> !filter.subscriptions(event.facts()).isEmpty())
 			.sorted(CandidateRank.order(interests))
 			.toList();

@@ -25,8 +25,8 @@ public final class CandidateEvents {
 
 	/**
 	 * 구독 후보의 재료 — 첫 평가 시각이 기간 안인 기사 가운데 발행 시각이 기간 시작 − {@link SelectionRules#PUBLISHED_LOOKBACK} 이상이고
-	 * (경계 포함) 기사 제외를 지난 기사를 사건마다 모은다. 사건이 없는 기사와 값이 없는 사건(평가 있는 소속 기사가 없는 사건)은 버린다. 지역 ·
-	 * 구독 행은 보지 않는다 — {@link SubscriptionFilter} 가 본다.
+	 * (경계 포함) 기사 제외를 지난 기사를 사건마다 모은다. 사건이 없는 기사와 값이 없는 사건(평가 있는 소속 기사가 없는 사건)은 버린다. 사건
+	 * 제외(지역 · 싫어요) · 구독 행은 보지 않는다 — {@link SubscriptionFilter} 가 본다.
 	 * @param period 첫 평가 시각이 기간 안인 기사
 	 * @param eventOf 기사 → 사건 — 배정이 없는 기사는 빠져 있다
 	 * @param facts 사건 → 사건의 값
@@ -57,8 +57,8 @@ public final class CandidateEvents {
 	}
 
 	/**
-	 * 큰 판정 행의 사건 하나의 후보 — 그 사건의 기간 안(발행 시각) 기사 가운데 기사 제외를 지난 기사. 사건의 지역이 제외와 겹치거나 지난 기사가
-	 * 없으면 후보가 없다
+	 * 큰 판정 행의 사건 하나의 후보 — 그 사건의 기간 안(발행 시각) 기사 가운데 기사 제외를 지난 기사. 사건이 사건 제외(지역 · 싫어요 —
+	 * {@link UserFilter#passesEvent})를 지나지 못하거나 지난 기사가 없으면 후보가 없다
 	 * @param inPeriod 그 사건의 기간 안 기사 가운데 평가가 있는 기사
 	 * @return 후보 사건 — 없으면 null
 	 */
@@ -66,7 +66,7 @@ public final class CandidateEvents {
 		Objects.requireNonNull(facts, "facts");
 		Objects.requireNonNull(inPeriod, "inPeriod");
 		Objects.requireNonNull(filter, "filter");
-		if (!filter.passesRegions(facts)) {
+		if (!filter.passesEvent(facts)) {
 			return null;
 		}
 		List<ArticleFacts> passed = inPeriod.stream().filter(filter::passesArticleExclusions).toList();

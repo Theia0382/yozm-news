@@ -10,7 +10,7 @@ import net.yozmnews.feedback.FeedbackValue;
 public sealed interface RecordOutcome {
 
 	/**
-	 * 값이 바뀌었다 — 현재 상태를 쓰고 이력 한 줄을 더했다.
+	 * 값이 바뀌었다 — 항목 기록이나 항목의 사건 하나 이상의 현재 상태를 쓰고, 바뀐 사건마다 이력 한 줄을 더했다.
 	 * @param value 지금 값
 	 */
 	record Recorded(FeedbackValue value) implements RecordOutcome {
@@ -22,7 +22,7 @@ public sealed interface RecordOutcome {
 	}
 
 	/**
-	 * 이미 그 값이다 — 아무것도 쓰지 않았다.
+	 * 항목 기록과 항목의 사건이 모두 이미 그 값이다 — 아무것도 쓰지 않았다.
 	 * @param value 지금 값
 	 */
 	record Unchanged(FeedbackValue value) implements RecordOutcome {
@@ -33,7 +33,7 @@ public sealed interface RecordOutcome {
 
 	}
 
-	/** 받을 수 없는 기사다 — 기사가 없거나 그 사용자의 그 다이제스트가 인용하지 않았다. 아무것도 쓰지 않았다. */
+	/** 받을 수 없는 항목이다 — 그 사용자의 그 다이제스트에서 그 사건이 든 항목을 찾지 못했다. 아무것도 쓰지 않았다. */
 	record NotInDigest() implements RecordOutcome {
 	}
 

@@ -92,7 +92,7 @@ class CandidateSelectorTests {
 
 	@Test
 	void noSubscriptionsAndNoBigStorylinesGiveNoCandidates() {
-		UserFilter nothing = UserFilter.of(Facts.interests(List.of(), Set.of(), Set.of(), Set.of()));
+		UserFilter nothing = UserFilter.of(Facts.interests(List.of(), Set.of(), Set.of(), Set.of()), Set.of());
 		List<CandidateEvent> ranked = SubscriptionFilter.select(List.of(Facts.single(Facts.article(1))), nothing,
 				TopicInterests.NEUTRAL_ALL);
 

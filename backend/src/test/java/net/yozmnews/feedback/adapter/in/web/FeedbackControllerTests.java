@@ -5,9 +5,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.util.stream.Collectors;
-import java.util.stream.LongStream;
-
 import net.yozmnews.LlmKeyRows;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.digest.DigestRows;
@@ -30,8 +27,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 /**
- * 좋아요 / 싫어요 API — 판정 결과는 판별자 하나의 200 이고 손으로 쓴 JSON 과 STRICT 로 견준다. 꼴이 틀린 요청은 400 이다. 실제
- * PostgreSQL 에서 본다.
+ * 좋아요 / 싫어요 API — 항목의 누르기 · 되돌리기와 항목 기록. 판정 결과는 판별자 하나의 200 이고 손으로 쓴 JSON 과 STRICT 로 견준다. 꼴이
+ * 틀린 요청은 400 이다. 실제 PostgreSQL 에서 본다.
  * <p>
  * 지키는 규칙: feedback-R2 · feedback-R3 · feedback-R7 · feedback-R9
  */
@@ -74,23 +71,22 @@ class FeedbackControllerTests {
 
 	@Test
 	void pressingAnswersEachOutcome() throws Exception {
-		long article = FeedbackRows.article(this.jdbc, "처리기 시험 기사");
-		long digest = DigestRows.digest(this.jdbc, this.user.id().value(), "2026-11-05");
-		DigestRows.cite(this.jdbc, digest, article);
+		long event = FeedbackRows.event(this.jdbc);
+		long digest = FeedbackRows.digestWithItem(this.jdbc, this.user.id().value(), "2026-11-05", event);
 
-		this.mockMvc.perform(press(article, "LIKE", digest))
+		this.mockMvc.perform(press(event, "LIKE", digest))
 			.andExpect(status().isOk())
 			.andExpect(content().json("""
 					{"result":"RECORDED","value":"LIKE"}""", JsonCompareMode.STRICT));
-		this.mockMvc.perform(press(article, "LIKE", digest))
+		this.mockMvc.perform(press(event, "LIKE", digest))
 			.andExpect(status().isOk())
 			.andExpect(content().json("""
 					{"result":"UNCHANGED","value":"LIKE"}""", JsonCompareMode.STRICT));
-		this.mockMvc.perform(press(article, "NONE", digest))
+		this.mockMvc.perform(press(event, "NONE", digest))
 			.andExpect(status().isOk())
 			.andExpect(content().json("""
 					{"result":"RECORDED","value":"NONE"}""", JsonCompareMode.STRICT));
-		this.mockMvc.perform(press(article, "DISLIKE", digest + 1000))
+		this.mockMvc.perform(press(event, "DISLIKE", digest + 1000))
 			.andExpect(status().isOk())
 			.andExpect(content().json("""
 					{"result":"NOT_IN_DIGEST","value":null}""", JsonCompareMode.STRICT));
@@ -113,53 +109,52 @@ class FeedbackControllerTests {
 	}
 
 	@Test
-	void statesListOnlyArticlesWithAStateInArticleOrder() throws Exception {
-		long first = FeedbackRows.article(this.jdbc, "현재 상태 기사 하나");
-		long second = FeedbackRows.article(this.jdbc, "현재 상태 기사 둘");
-		long none = FeedbackRows.article(this.jdbc, "현재 상태 기사 셋");
+	void itemsListTheItemsPressedInTheDigestInItemKeyOrder() throws Exception {
+		long first = FeedbackRows.event(this.jdbc);
+		long second = FeedbackRows.event(this.jdbc);
+		long member = FeedbackRows.event(this.jdbc);
+		long none = FeedbackRows.event(this.jdbc);
 		long digest = DigestRows.digest(this.jdbc, this.user.id().value(), "2026-11-05");
-		DigestRows.cite(this.jdbc, digest, first);
-		DigestRows.cite(this.jdbc, digest, second);
-		DigestRows.cite(this.jdbc, digest, none);
-		this.mockMvc.perform(press(second, "DISLIKE", digest)).andExpect(status().isOk());
+		DigestRows.item(this.jdbc, digest, first);
+		DigestRows.item(this.jdbc, digest, second, member);
+		DigestRows.item(this.jdbc, digest, none);
+		long other = FeedbackRows.digestWithItem(this.jdbc, this.user.id().value(), "2026-11-06", none);
+		// 항목의 둘째 사건으로 눌러도 항목 키(첫 사건)로 남는다
+		this.mockMvc.perform(press(member, "DISLIKE", digest)).andExpect(status().isOk());
 		this.mockMvc.perform(press(first, "LIKE", digest)).andExpect(status().isOk());
+		// 다른 다이제스트의 항목은 그 다이제스트의 것이다
+		this.mockMvc.perform(press(none, "LIKE", other)).andExpect(status().isOk());
 
-		this.mockMvc
-			.perform(get("/api/feedback").param("articleIds", second + "," + none + "," + first + "," + second)
-				.with(this.user))
+		this.mockMvc.perform(get("/api/feedback").param("digestId", String.valueOf(digest)).with(this.user))
 			.andExpect(status().isOk())
 			.andExpect(content().json("""
-					{"states":[{"articleId":%d,"value":"LIKE"},{"articleId":%d,"value":"DISLIKE"}]}"""
+					{"items":[{"eventId":%d,"value":"LIKE"},{"eventId":%d,"value":"DISLIKE"}]}"""
 				.formatted(first, second), JsonCompareMode.STRICT));
 	}
 
 	@Test
-	void malformedStateQueriesAreBadRequests() throws Exception {
+	void malformedItemQueriesAreBadRequests() throws Exception {
 		this.mockMvc.perform(get("/api/feedback").with(this.user)).andExpect(status().isBadRequest());
-		this.mockMvc.perform(get("/api/feedback").param("articleIds", "").with(this.user))
+		this.mockMvc.perform(get("/api/feedback").param("digestId", "").with(this.user))
 			.andExpect(status().isBadRequest());
-		this.mockMvc.perform(get("/api/feedback").param("articleIds", "1,0").with(this.user))
+		this.mockMvc.perform(get("/api/feedback").param("digestId", "0").with(this.user))
 			.andExpect(status().isBadRequest());
-		this.mockMvc.perform(get("/api/feedback").param("articleIds", ids(751)).with(this.user))
+		this.mockMvc.perform(get("/api/feedback").param("digestId", "abc").with(this.user))
 			.andExpect(status().isBadRequest());
-		// 대조 — 겹친 ID 를 섞어 서로 다른 750 개는 받는다
-		this.mockMvc.perform(get("/api/feedback").param("articleIds", ids(750) + ",1,2").with(this.user))
+		// 대조 — 꼴이 맞으면 누른 항목이 없어도 빈 목록 200 이다
+		this.mockMvc.perform(get("/api/feedback").param("digestId", "1").with(this.user))
 			.andExpect(status().isOk())
 			.andExpect(content().json("""
-					{"states":[]}""", JsonCompareMode.STRICT));
+					{"items":[]}""", JsonCompareMode.STRICT));
 	}
 
-	private MockHttpServletRequestBuilder press(long article, String value, long digest) {
-		return withBody(put("/api/feedback/{articleId}", article), """
+	private MockHttpServletRequestBuilder press(long event, String value, long digest) {
+		return withBody(put("/api/feedback/{eventId}", event), """
 				{"value":"%s","digestId":%d}""".formatted(value, digest));
 	}
 
 	private MockHttpServletRequestBuilder withBody(MockHttpServletRequestBuilder request, String body) {
 		return request.with(this.user).contentType(MediaType.APPLICATION_JSON).content(body);
-	}
-
-	private static String ids(int count) {
-		return LongStream.rangeClosed(1, count).mapToObj(String::valueOf).collect(Collectors.joining(","));
 	}
 
 }

@@ -7,8 +7,8 @@ import org.jspecify.annotations.Nullable;
 /**
  * 누르기 · 되돌리기의 결과 — 판정 결과 200. docs/specs/feedback.md §3 · feedback-R2 · feedback-R3
  *
- * @param result 기록 · 바뀌지 않음 · 받을 수 없는 기사
- * @param value 요청 뒤의 지금 값(없음이면 {@code NONE}) — 받을 수 없는 기사면 없다
+ * @param result 기록 · 바뀌지 않음 · 받을 수 없는 항목
+ * @param value 요청 뒤의 지금 값(없음이면 {@code NONE}) — 받을 수 없는 항목이면 없다
  */
 record FeedbackResponse(Result result, @Nullable FeedbackValue value) {
 
@@ -29,7 +29,7 @@ record FeedbackResponse(Result result, @Nullable FeedbackValue value) {
 		/** 이미 그 값이다 — 바꾸지 않았다 */
 		UNCHANGED,
 
-		/** 받을 수 없는 기사다 — 기사가 없거나 그 사용자의 그 다이제스트가 인용하지 않았다 */
+		/** 받을 수 없는 항목이다 — 그 사용자의 그 다이제스트에서 그 사건이 든 항목을 찾지 못했다 */
 		NOT_IN_DIGEST
 
 	}

@@ -8,11 +8,12 @@ import java.util.Map;
 import java.util.Set;
 
 import net.yozmnews.digest.domain.interest.TopicInterests;
+import net.yozmnews.event.EventId;
 import net.yozmnews.user.TopicSubscription;
 import org.junit.jupiter.api.Test;
 
 /**
- * 구독 필터 · 사건 순위 — 구독 행 대조는 사건의 주제(대분류 펼침 · 중분류), 지역 제외는 사건의 지역, 주제 없는 사건, 사건 점수(사건 중요도 =
+ * 구독 필터 · 사건 순위 — 구독 행 대조는 사건의 주제(대분류 펼침 · 중분류), 지역 제외는 사건의 지역, 싫어요는 사건, 주제 없는 사건, 사건 점수(사건 중요도 =
  * 소속 최대 · low_confidence 0.7 · 관심도 가중치 · 중요도 없음 맨 뒤), 같은 점수면 후보 기사의 가장 늦은 발행 시각 · 사건 ID
  */
 class SubscriptionFilterTests {
@@ -57,7 +58,7 @@ class SubscriptionFilterTests {
 	void anEventIsLeftOutWhenHalfOrMoreOfItsMembersAreInAnExcludedRegion() {
 		UserFilter filter = UserFilter.of(Facts.interests(
 				List.of(new TopicSubscription("politics", Set.of("politics.executive"))), Set.of("us"), Set.of(),
-				Set.of()));
+				Set.of()), Set.of());
 		// 소속 둘 가운데 하나가 us — 몫 1/2 이라 사건의 지역에 든다
 		CandidateEvent half = Facts.event(10, Facts.article(1).regions("us"), Facts.article(2));
 		// 소속 셋 가운데 하나가 us — 사건의 지역이 아니라 남고, 그 기사도 후보 기사로 남는다
@@ -69,6 +70,19 @@ class SubscriptionFilterTests {
 		assertThat(ids(selected)).containsExactly(11L);
 		assertThat(selected.getFirst().articles()).extracting(article -> article.id().value())
 			.containsExactly(3L, 4L, 5L);
+	}
+
+	@Test
+	void aDislikedEventIsLeftOutWithAllItsArticles() {
+		UserFilter filter = UserFilter.of(Facts.interests(
+				List.of(new TopicSubscription("politics", Set.of("politics.executive"))), Set.of(), Set.of(), Set.of()),
+				Set.of(new EventId(10)));
+		CandidateEvent disliked = Facts.event(10, Facts.article(1), Facts.article(2));
+		// 대조 — 싫어요가 아닌 사건은 남는다
+		CandidateEvent kept = Facts.event(11, Facts.article(3));
+
+		assertThat(ids(SubscriptionFilter.select(List.of(disliked, kept), filter, TopicInterests.NEUTRAL_ALL)))
+			.containsExactly(11L);
 	}
 
 	@Test
