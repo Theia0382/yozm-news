@@ -14,17 +14,22 @@ import { useApiClient } from "@/shared/api/client";
 import type { components } from "@/shared/api/schema";
 
 export type FeedbackValue = components["schemas"]["FeedbackRequest"]["value"];
-export type FeedbackState = components["schemas"]["FeedbackStateItem"]["value"];
+export type FeedbackState = components["schemas"]["FeedbackItemState"]["value"];
 export type FeedbackResult = components["schemas"]["FeedbackResponse"];
 
-/** 피드백 조회 키의 접두 — 현재 상태 조회와 기록의 변경 키는 모두 이 아래 */
+/** 피드백 조회 키의 접두 — 항목 상태 조회와 기록의 변경 키는 모두 이 아래 */
 export const FEEDBACK_QUERY_KEY = ["feedback"] as const;
 
-/** 현재 상태 조회 키의 접두 — 셋째 원소가 물은 기사 ID 목록이다 */
-const STATES_KEY = [...FEEDBACK_QUERY_KEY, "states"] as const;
+/** 다이제스트 하나의 항목 상태 조회 키 */
+function itemsKey(digestId: number): QueryKey {
+  return [...FEEDBACK_QUERY_KEY, "items", digestId];
+}
 
-/** 기사 ID → 현재 상태(좋아요 · 싫어요). 현재 상태가 없는 기사는 없다 */
+/** 항목 키 → 그 항목에 누른 값(좋아요 · 싫어요). 누른 값이 없는 항목은 없다 */
 export type FeedbackStates = ReadonlyMap<number, FeedbackState>;
+
+/** 반응을 받는 항목 — 항목 키(그 항목의 첫 사건 ID)와 버튼 묶음 이름에 쓸 제목 */
+export type FeedbackItem = { key: number; title: string };
 
 /** 피드백 요청이 실패했다(2xx 가 아님) — 화면이 응답 · 문제 본문으로 안내를 고른다 */
 export class FeedbackRequestError extends Error {
@@ -39,43 +44,42 @@ export class FeedbackRequestError extends Error {
 }
 
 /**
- * 상태를 물을 기사 ID — 주요 뉴스 · 헤드라인 항목의 출처 기사(개요는 인용이 없다 — docs/specs/digest.md digest-R7). 중복을 없애고
- * 오름차순으로 정규화해, 같은 다이제스트는 인용 순서 · 겹침과 무관하게 같은 조회 키가 된다
+ * 섹션이 반응을 받는 항목이면 그 항목 — 주요 뉴스 · 헤드라인 항목이고 항목 키는 섹션의 첫 사건(eventIds 의 첫 원소)이다. 개요는 항목이
+ * 아니다(docs/specs/digest.md digest-R7)
  */
-export function feedbackArticleIds(sections: DigestSection[]): number[] {
-  const ids = new Set<number>();
-  for (const section of sections) {
-    if (section.kind === "TOP_STORY" || section.kind === "HEADLINE") {
-      for (const citation of section.citations) {
-        ids.add(citation.articleId);
-      }
-    }
+export function feedbackItemOf(section: DigestSection): FeedbackItem | null {
+  if (section.kind !== "TOP_STORY" && section.kind !== "HEADLINE") {
+    return null;
   }
-  return [...ids].sort((a, b) => a - b);
+  const key = section.eventIds[0];
+  return key === undefined || section.title === null
+    ? null
+    : { key, title: section.title };
 }
 
 /**
- * 현재 상태 — 세션 사용자의 것(docs/specs/feedback.md feedback-R7). ids 가 비었으면 묻지 않는다 — 빈 목록은 400 이다(feedback-R9)
+ * 다이제스트 하나에서 세션 사용자가 항목마다 누른 값(docs/specs/feedback.md feedback-R7). 반응을 받는 항목이 없으면(enabled 가 거짓)
+ * 묻지 않는다
  */
-export function useFeedbackStates(ids: number[]) {
+export function useFeedbackStates(digestId: number, enabled: boolean) {
   const client = useApiClient();
   return useQuery({
-    queryKey: [...STATES_KEY, ids],
+    queryKey: itemsKey(digestId),
     queryFn: async (): Promise<FeedbackStates> => {
       const { data, error, response } = await client.GET("/api/feedback", {
-        params: { query: { articleIds: ids } },
+        params: { query: { digestId } },
       });
       if (!response.ok || !data) {
         throw new FeedbackRequestError(response, error);
       }
       return new Map(
-        data.states.map((state): [number, FeedbackState] => [
-          state.articleId,
-          state.value,
+        data.items.map((item): [number, FeedbackState] => [
+          item.eventId,
+          item.value,
         ]),
       );
     },
-    enabled: ids.length > 0,
+    enabled,
   });
 }
 
@@ -87,61 +91,43 @@ export function nextFeedback(
   return current === pressed ? "NONE" : pressed;
 }
 
-/** 누르기 · 되돌리기 한 번의 입력 — 기사 ID 는 훅이 갖는다(변경 키와 요청 경로가 같은 값을 쓴다) */
-export type FeedbackPress = { digestId: number; value: FeedbackValue };
-
-function recordKey(articleId: number): QueryKey {
-  return [...FEEDBACK_QUERY_KEY, "record", articleId];
-}
-
-/** 현재 상태 조회 가운데 물은 기사 ID 목록에 그 기사가 있는 것 */
-function statesHolding(articleId: number) {
-  return {
-    queryKey: STATES_KEY,
-    predicate: (query: { queryKey: QueryKey }) => {
-      const ids = query.queryKey[STATES_KEY.length];
-      return Array.isArray(ids) && ids.includes(articleId);
-    },
-  };
+function recordKey(digestId: number, itemKey: number): QueryKey {
+  return [...FEEDBACK_QUERY_KEY, "record", digestId, itemKey];
 }
 
 /**
- * 그 기사를 담은 현재 상태 조회에 지금 값을 써 넣는다 — 같은 기사의 모든 자리 · 캐시된 다른 날짜가 함께 바뀐다. 써 넣기 전에 진행 중인 다시
- * 읽기를 멈춘다 — 누르기 전에 시작된 읽기가 뒤늦게 옛 값으로 덮지 않게 한다. 처음 읽기를 멈춘 조회는 값 없이 읽기 전으로 돌아가 스스로 다시
- * 읽지 않으므로(그동안 버튼을 누를 수 없다) 써 넣지 않고 지금 다시 읽는다 — 이 응답 뒤의 읽기라 지금 값을 받는다
+ * 그 다이제스트의 항목 상태 조회에 그 항목의 지금 값을 써 넣는다 — 다른 다이제스트(다른 날짜)의 항목은 같은 사건을 담아도 그 항목에 누른
+ * 값만 보이므로 건드리지 않는다. 써 넣기 전에 진행 중인 다시 읽기를 멈춘다 — 누르기 전에 시작된 읽기가 뒤늦게 옛 값으로 덮지 않게 한다. 값이
+ * 없는 조회(처음 읽기를 멈춘 조회는 값 없이 읽기 전으로 돌아가 스스로 다시 읽지 않는다)는 써 넣지 않고 지금 다시 읽는다 — 이 응답 뒤의
+ * 읽기라 지금 값을 받는다
  */
 async function writeState(
   queryClient: QueryClient,
-  articleId: number,
+  digestId: number,
+  itemKey: number,
   value: FeedbackValue,
 ): Promise<void> {
-  const filters = statesHolding(articleId);
-  await queryClient.cancelQueries(filters);
-  for (const [key, states] of queryClient.getQueriesData<FeedbackStates>(
-    filters,
-  )) {
-    if (states === undefined) {
-      continue;
-    }
-    const next = new Map(states);
-    if (value === "NONE") {
-      next.delete(articleId);
-    } else {
-      next.set(articleId, value);
-    }
-    queryClient.setQueryData<FeedbackStates>(key, next);
+  const key = itemsKey(digestId);
+  await queryClient.cancelQueries({ queryKey: key, exact: true });
+  const states = queryClient.getQueryData<FeedbackStates>(key);
+  if (states === undefined) {
+    await queryClient.refetchQueries({ queryKey: key, exact: true });
+    return;
   }
-  await queryClient.refetchQueries({
-    queryKey: STATES_KEY,
-    predicate: (query) =>
-      filters.predicate(query) && query.state.data === undefined,
-  });
+  const next = new Map(states);
+  if (value === "NONE") {
+    next.delete(itemKey);
+  } else {
+    next.set(itemKey, value);
+  }
+  queryClient.setQueryData<FeedbackStates>(key, next);
 }
 
 /** 결과마다 응답 뒤에 할 일 — 결과가 늘면 타입 검사가 잡는다 */
 async function settle(
   queryClient: QueryClient,
-  articleId: number,
+  digestId: number,
+  itemKey: number,
   result: FeedbackResult,
 ): Promise<void> {
   switch (result.result) {
@@ -149,11 +135,11 @@ async function settle(
     case "UNCHANGED":
       // 응답 값은 요청 뒤의 지금 값이다 — 이 두 결과에서 null 이 아니다(FeedbackResponse)
       if (result.value !== null) {
-        await writeState(queryClient, articleId, result.value);
+        await writeState(queryClient, digestId, itemKey, result.value);
       }
       return;
     case "NOT_IN_DIGEST":
-      // 화면을 열어 둔 사이 기사가 지워졌다 — 다시 읽은 다이제스트는 그 인용을 뺀다(docs/specs/reader.md reader-R9)
+      // 화면을 열어 둔 사이 항목의 인용 기사가 모두 지워져 항목이 없어졌다 — 다시 읽은 다이제스트는 그 항목을 뺀다(docs/specs/reader.md reader-R9)
       await queryClient.invalidateQueries({ queryKey: DIGESTS_QUERY_KEY });
       return;
   }
@@ -162,32 +148,32 @@ async function settle(
 }
 
 /**
- * 기사 하나의 누르기 · 되돌리기 — 서버 응답 뒤에 반영한다(낙관적 반영 없음). 누른 다이제스트는 그 인용을 그린 보이는 다이제스트다
- * (docs/specs/feedback.md feedback-R2)
+ * 항목 하나의 누르기 · 되돌리기 — 서버 응답 뒤에 반영한다(낙관적 반영 없음). 요청 경로는 항목 키이고, 누른 다이제스트는 그 항목을 그린
+ * 보이는 다이제스트다(docs/specs/feedback.md feedback-R2)
  */
-export function useRecordFeedback(articleId: number) {
+export function useRecordFeedback(digestId: number, itemKey: number) {
   const client = useApiClient();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationKey: recordKey(articleId),
-    mutationFn: async ({
-      digestId,
-      value,
-    }: FeedbackPress): Promise<FeedbackResult> => {
+    mutationKey: recordKey(digestId, itemKey),
+    mutationFn: async (value: FeedbackValue): Promise<FeedbackResult> => {
       const { data, error, response } = await client.PUT(
-        "/api/feedback/{articleId}",
-        { params: { path: { articleId } }, body: { digestId, value } },
+        "/api/feedback/{eventId}",
+        {
+          params: { path: { eventId: itemKey } },
+          body: { digestId, value },
+        },
       );
       if (!response.ok || !data) {
         throw new FeedbackRequestError(response, error);
       }
       return data;
     },
-    onSuccess: (result) => settle(queryClient, articleId, result),
+    onSuccess: (result) => settle(queryClient, digestId, itemKey, result),
   });
 }
 
-/** 그 기사의 기록이 진행 중인가 — 같은 기사의 모든 자리가 함께 잠긴다 */
-export function useFeedbackPending(articleId: number): boolean {
-  return useIsMutating({ mutationKey: recordKey(articleId) }) > 0;
+/** 그 항목의 기록이 진행 중인가 */
+export function useFeedbackPending(digestId: number, itemKey: number): boolean {
+  return useIsMutating({ mutationKey: recordKey(digestId, itemKey) }) > 0;
 }

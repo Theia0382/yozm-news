@@ -62,6 +62,36 @@ describe("DigestDayPage", () => {
     ).toBeInTheDocument();
   });
 
+  it("좋아요 · 싫어요는 주요 뉴스 · 헤드라인 항목 머리마다 한 벌이고 출처 기사 줄에는 없다", async () => {
+    renderDay(day());
+
+    const story = await screen.findByRole("group", {
+      name: "주요 뉴스 제목 반응",
+    });
+    const headline = screen.getByRole("group", { name: "헤드라인 제목 반응" });
+    expect(screen.getAllByRole("group")).toEqual([story, headline]);
+    // 묶음은 항목 제목과 같은 항목(article) 안, 출처 목록 밖에 있다
+    expect(story.closest("li")).toBeNull();
+    expect(story.closest("article")).toBe(
+      screen
+        .getByRole("heading", { level: 3, name: /주요 뉴스 제목/ })
+        .closest("article"),
+    );
+    for (const name of ["기사 1", "기사 2", "기사 3", "기사 4"]) {
+      const line = screen.getByRole("link", { name }).closest("li");
+      expect(line).not.toBeNull();
+      expect(within(line as HTMLElement).queryByRole("button")).toBeNull();
+    }
+  });
+
+  it("개요에는 좋아요 · 싫어요가 없다", async () => {
+    renderDay(day());
+
+    const overview = await screen.findByRole("region", { name: "요약" });
+    expect(within(overview).queryByRole("group")).toBeNull();
+    expect(within(overview).queryByRole("button")).toBeNull();
+  });
+
   it("선정 이유 배지는 항목에 하나이고 구독 주제가 아닌 항목에만 두며 범례를 둔다", async () => {
     renderDay(
       day({
@@ -73,6 +103,7 @@ describe("DigestDayPage", () => {
               title: "구독 헤드라인",
               body: null,
               reason: "SUBSCRIBED",
+              eventIds: [105],
               citations: [citation(5)],
             },
           ],
@@ -132,6 +163,7 @@ describe("DigestDayPage", () => {
               title: "구독 헤드라인",
               body: null,
               reason: "SUBSCRIBED",
+              eventIds: [101],
               citations: [citation(1)],
             },
           ],

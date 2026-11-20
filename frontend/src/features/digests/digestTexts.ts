@@ -50,26 +50,27 @@ export const FEEDBACK_DISLIKE_LABEL = "싫어요";
 /** 눌린 버튼의 안내 — 다시 누르면 없음으로 되돌린다 */
 export const FEEDBACK_UNDO_HINT = "누르면 되돌립니다";
 
-/** 인용 줄 하나의 좋아요 · 싫어요 묶음의 이름 */
+/** 항목 하나의 좋아요 · 싫어요 묶음의 이름 — 항목 제목을 담는다 */
 export function feedbackGroupLabel(title: string): string {
   return `${title} 반응`;
 }
 
 /**
- * 좋아요 · 싫어요의 효과 — 관심도의 반응 입력이고(docs/specs/digest.md digest-R23 ~ R25), 싫어요 기사는 후보에서 빠지지만 기간이 겹치지
- * 않아 같은 기간으로 다시 만들 때만 듣는다(digest-R30 · R31)
+ * 좋아요 · 싫어요의 효과 — 누르기는 그 항목의 사건들에 기록되어 관심도의 반응 입력이 되고(docs/specs/digest.md digest-R23 ~ R25), 싫어요
+ * 사건은 뒤에 만드는 다이제스트의 후보에서 빠진다 — 사건은 여러 날에 걸쳐 다음 기간의 후보로도 다시 들므로 다시 만들기와 다음 다이제스트
+ * 모두에 듣는다(digest-R17)
  */
 export const FEEDBACK_LEGEND =
-  "좋아요 · 싫어요는 그 기사 주제의 관심도에 반영되어 다음 다이제스트의 순위를 움직입니다. 싫어요를 누른 기사는 다이제스트를 다시 만들 때 빠집니다.";
+  "좋아요 · 싫어요는 그 항목 주제의 관심도에 반영되어 다음 다이제스트의 순위를 움직입니다. 싫어요를 누른 항목의 소식은 뒤에 만드는 다이제스트에서 빠집니다.";
 
-/** 받을 수 없는 기사 — 화면을 열어 둔 사이 기사가 지워졌다 */
-export const FEEDBACK_NOT_IN_DIGEST = "이 기사에는 더 반응을 남길 수 없습니다.";
+/** 받을 수 없는 항목 — 화면을 열어 둔 사이 항목의 인용 기사가 모두 지워졌다 */
+export const FEEDBACK_NOT_IN_DIGEST = "이 항목에는 더 반응을 남길 수 없습니다.";
 
 /** 좋아요 · 싫어요를 남기지 못했다 — 요청 제한 밖의 실패 */
 export const FEEDBACK_FAILED =
   "반응을 남기지 못했습니다. 잠시 뒤 다시 눌러 주세요.";
 
-/** 현재 상태를 읽지 못했다 — 버튼을 누를 수 없다 */
+/** 항목 상태를 읽지 못했다 — 버튼을 누를 수 없다 */
 export const FEEDBACK_STATES_FAILED =
   "좋아요 · 싫어요 상태를 읽지 못해 지금은 누를 수 없습니다.";
 

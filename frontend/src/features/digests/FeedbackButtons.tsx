@@ -1,6 +1,7 @@
 import { ThumbsDown, ThumbsUp, type LucideIcon } from "lucide-react";
 import { type ReactElement, useState } from "react";
 import {
+  type FeedbackItem,
   type FeedbackResult,
   type FeedbackState,
   FeedbackRequestError,
@@ -18,7 +19,7 @@ import {
 } from "@/features/digests/digestTexts";
 import { guardRejectionText } from "@/shared/api/problems";
 
-/** 결과에 따라 줄에 남길 안내 — 바뀐 것이 버튼에 그대로 보이는 결과는 안내가 없다 */
+/** 결과에 따라 항목에 남길 안내 — 바뀐 것이 버튼에 그대로 보이는 결과는 안내가 없다 */
 function feedbackNoticeOf(result: FeedbackResult): string | null {
   switch (result.result) {
     case "RECORDED":
@@ -38,43 +39,38 @@ function feedbackFailureText(error: Error): string {
 }
 
 /**
- * 인용 줄 하나의 좋아요 · 싫어요 — 눌린 버튼을 다시 누르면 되돌린다. 서버 응답 뒤에 바뀌고, 상태를 읽기 전(ready 가 거짓)이거나 그 기사의
- * 기록이 진행 중이면(같은 기사의 다른 자리 포함) 누를 수 없다(docs/specs/feedback.md feedback-R2 ~ R4).
+ * 항목 하나의 좋아요 · 싫어요 — 항목 머리에 한 벌, 눌린 버튼을 다시 누르면 되돌린다. 서버 응답 뒤에 바뀌고, 상태를 읽기 전(ready 가
+ * 거짓)이거나 그 항목의 기록이 진행 중이면 누를 수 없다. 안내는 버튼 묶음 아래에 둔다(docs/specs/feedback.md feedback-R2 ~ R4).
  */
 export function FeedbackButtons({
-  articleId,
   digestId,
-  title,
+  item,
   current,
   ready,
 }: {
-  articleId: number;
   digestId: number;
-  title: string;
+  item: FeedbackItem;
   current: FeedbackState | null;
   ready: boolean;
 }): ReactElement {
-  const record = useRecordFeedback(articleId);
-  const pending = useFeedbackPending(articleId);
+  const record = useRecordFeedback(digestId, item.key);
+  const pending = useFeedbackPending(digestId, item.key);
   const [notice, setNotice] = useState<string | null>(null);
 
   function press(pressed: FeedbackState) {
     setNotice(null);
-    record.mutate(
-      { digestId, value: nextFeedback(current, pressed) },
-      {
-        onSuccess: (result) => setNotice(feedbackNoticeOf(result)),
-        onError: (error) => setNotice(feedbackFailureText(error)),
-      },
-    );
+    record.mutate(nextFeedback(current, pressed), {
+      onSuccess: (result) => setNotice(feedbackNoticeOf(result)),
+      onError: (error) => setNotice(feedbackFailureText(error)),
+    });
   }
 
   return (
-    <>
-      <span
+    <div className="shrink-0 space-y-1 text-right">
+      <div
         role="group"
-        aria-label={feedbackGroupLabel(title)}
-        className="ml-2 inline-flex gap-1 align-middle whitespace-nowrap"
+        aria-label={feedbackGroupLabel(item.title)}
+        className="inline-flex gap-1 whitespace-nowrap"
       >
         <PressButton
           label={FEEDBACK_LIKE_LABEL}
@@ -90,13 +86,13 @@ export function FeedbackButtons({
           disabled={!ready || pending}
           onPress={() => press("DISLIKE")}
         />
-      </span>
+      </div>
       {notice && (
-        <span role="alert" className="ml-2 text-xs">
+        <p role="alert" className="max-w-48 text-xs">
           {notice}
-        </span>
+        </p>
       )}
-    </>
+    </div>
   );
 }
 

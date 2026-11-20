@@ -10,7 +10,7 @@ import type {
 import { FeedbackButtons } from "@/features/digests/FeedbackButtons";
 import {
   type FeedbackStates,
-  feedbackArticleIds,
+  feedbackItemOf,
   useFeedbackStates,
 } from "@/features/digests/feedbackQueries";
 import {
@@ -37,8 +37,8 @@ import { formatDateTime } from "@/shared/lib/dateTime";
 
 /**
  * 날짜 하나의 다이제스트 — 가장 최근 시도의 상태 · 보이는 다이제스트의 섹션 · 사용량(docs/specs/reader.md reader-R9). 링크 · 출처 · 발행 시각은
- * 응답의 기사 정보로만 그리고, 종합문은 글자로만 그린다(HTML 로 해석하지 않는다). 주요 뉴스 · 헤드라인 항목마다 배지 하나와 출처 기사
- * 목록을 두고 출처 줄마다 좋아요 · 싫어요를 두며, 현재 상태는 다이제스트마다 한 번 읽는다(docs/specs/feedback.md feedback-R7).
+ * 응답의 기사 정보로만 그리고, 종합문은 글자로만 그린다(HTML 로 해석하지 않는다). 주요 뉴스 · 헤드라인 항목마다 배지 하나 · 좋아요 /
+ * 싫어요 한 벌 · 출처 기사 목록을 두고, 항목에 누른 값은 다이제스트마다 한 번 읽는다(docs/specs/feedback.md feedback-R7).
  */
 export function DigestDayView({ day }: { day: DigestDay }) {
   const { shown, latest, usage } = day;
@@ -117,14 +117,14 @@ function CauseLink({ cause }: { cause: DigestAttempt["cause"] }) {
   );
 }
 
-/** 인용 줄의 버튼이 쓰는 현재 상태 — 조회가 성공했을 때만 누를 수 있다 */
+/** 항목 머리의 버튼이 쓰는 항목 상태 — 조회가 성공했을 때만 누를 수 있다 */
 type FeedbackView = { states: FeedbackStates; ready: boolean };
 
 const NO_STATES: FeedbackStates = new Map();
 
 function ShownContent({ shown }: { shown: ShownDigest }) {
-  const ids = feedbackArticleIds(shown.sections);
-  const states = useFeedbackStates(ids);
+  const hasItems = shown.sections.some((s) => feedbackItemOf(s) !== null);
+  const states = useFeedbackStates(shown.digestId, hasItems);
   const feedback: FeedbackView = states.isSuccess
     ? { states: states.data, ready: true }
     : { states: NO_STATES, ready: false };
@@ -188,7 +188,7 @@ function ShownContent({ shown }: { shown: ShownDigest }) {
           {SELECTION_REASON_LEGEND}
         </p>
       )}
-      {ids.length > 0 && (
+      {hasItems && (
         <p className="text-xs text-muted-foreground">{FEEDBACK_LEGEND}</p>
       )}
     </div>
@@ -206,21 +206,19 @@ function Story({
 }) {
   return (
     <article className="space-y-2 border-l-2 border-input pl-4">
-      <h3 className="font-medium break-words">
-        {story.title}
-        <ReasonBadge section={story} />
-      </h3>
-      <p className="break-words whitespace-pre-line">{story.body}</p>
-      <Citations
-        citations={story.citations}
+      <ItemHead
+        section={story}
         digestId={digestId}
         feedback={feedback}
+        className="font-medium break-words"
       />
+      <p className="break-words whitespace-pre-line">{story.body}</p>
+      <Citations citations={story.citations} />
     </article>
   );
 }
 
-/** 더 볼 헤드라인 항목 하나 — 제목 · 배지 · 코멘트 · 출처 기사 */
+/** 더 볼 헤드라인 항목 하나 — 제목 · 배지 · 좋아요 / 싫어요 · 코멘트 · 출처 기사 */
 function Headline({
   headline,
   digestId,
@@ -232,21 +230,52 @@ function Headline({
 }) {
   return (
     <article className="space-y-1">
-      <h3 className="text-sm font-medium break-words">
-        {headline.title}
-        <ReasonBadge section={headline} />
-      </h3>
+      <ItemHead
+        section={headline}
+        digestId={digestId}
+        feedback={feedback}
+        className="text-sm font-medium break-words"
+      />
       {headline.body && (
         <p className="text-sm break-words text-muted-foreground">
           {headline.body}
         </p>
       )}
-      <Citations
-        citations={headline.citations}
-        digestId={digestId}
-        feedback={feedback}
-      />
+      <Citations citations={headline.citations} />
     </article>
+  );
+}
+
+/**
+ * 항목 머리 — 제목(선정 이유 배지 포함)과 그 항목의 좋아요 / 싫어요 한 벌. 버튼은 제목 요소 밖에 두어 낭독되는 제목 이름에 섞이지 않는다
+ */
+function ItemHead({
+  section,
+  digestId,
+  feedback,
+  className,
+}: {
+  section: DigestSection;
+  digestId: number;
+  feedback: FeedbackView;
+  className: string;
+}) {
+  const item = feedbackItemOf(section);
+  return (
+    <div className="flex items-start justify-between gap-2">
+      <h3 className={className}>
+        {section.title}
+        <ReasonBadge section={section} />
+      </h3>
+      {item && (
+        <FeedbackButtons
+          digestId={digestId}
+          item={item}
+          current={feedback.states.get(item.key) ?? null}
+          ready={feedback.ready}
+        />
+      )}
+    </div>
   );
 }
 
@@ -268,16 +297,8 @@ function ReasonBadge({ section }: { section: DigestSection }) {
   );
 }
 
-/** 항목의 출처 기사 목록 — 줄마다 제목 링크 · 출처 · 발행 시각 · 좋아요 / 싫어요 */
-function Citations({
-  citations,
-  digestId,
-  feedback,
-}: {
-  citations: DigestCitation[];
-  digestId: number;
-  feedback: FeedbackView;
-}) {
+/** 항목의 출처 기사 목록 — 줄마다 제목 링크 · 출처 · 발행 시각 */
+function Citations({ citations }: { citations: DigestCitation[] }) {
   return (
     <ul className="space-y-1 text-sm">
       {citations.map((citation, index) => (
@@ -296,13 +317,6 @@ function Citations({
             {" · "}
             {formatDateTime(citation.article.publishedAt)}
           </span>
-          <FeedbackButtons
-            articleId={citation.articleId}
-            digestId={digestId}
-            title={citation.article.title}
-            current={feedback.states.get(citation.articleId) ?? null}
-            ready={feedback.ready}
-          />
         </li>
       ))}
     </ul>
