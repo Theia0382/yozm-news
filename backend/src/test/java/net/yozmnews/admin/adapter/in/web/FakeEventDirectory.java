@@ -132,6 +132,16 @@ class FakeEventDirectory implements EventDirectory {
 		throw new UnsupportedOperationException("운영자 API 는 채우기 대상을 읽지 않는다");
 	}
 
+	@Override
+	public Map<EventId, EventId> currentOf(Collection<EventId> ids) {
+		throw new UnsupportedOperationException("운영자 API 는 사건을 풀지 않는다");
+	}
+
+	@Override
+	public Map<EventId, List<EventId>> absorbedInto(Collection<EventId> survivors) {
+		throw new UnsupportedOperationException("운영자 API 는 사건을 풀지 않는다");
+	}
+
 	/** 운영자 API 슬라이스에 대역을 싣는다 */
 	@TestConfiguration(proxyBeanMethods = false)
 	static class Config {

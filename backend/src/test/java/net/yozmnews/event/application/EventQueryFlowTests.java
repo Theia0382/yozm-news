@@ -269,6 +269,58 @@ class EventQueryFlowTests {
 		assertThat(this.directory.representativesOfAll(List.of(new EventId(999_999)))).isEmpty();
 	}
 
+	@Test
+	void mergedEventsResolveToTheirSurvivorAndRemovedOnesDropOut() {
+		// m1 · m2 를 X 에 합쳤다(가리킴은 평평하다) — 지운 사건(999_999)은 행이 없다
+		long m1 = merged(this.eventX);
+		long m2 = merged(this.eventX);
+		EventId x = new EventId(this.eventX);
+		EventId y = new EventId(this.eventY);
+
+		assertThat(this.directory.currentOf(List.of(new EventId(m2), y, new EventId(999_999), new EventId(m1),
+				new EventId(m2))))
+			.containsOnly(Map.entry(new EventId(m1), x), Map.entry(new EventId(m2), x), Map.entry(y, y));
+		// 남는 사건마다 그 사건에 합쳐진 사건 — 사건 ID 순. 합쳐진 사건이 없는 Y 와 없는 사건은 빠진다
+		assertThat(this.directory.absorbedInto(List.of(y, x, new EventId(999_999), x)))
+			.containsExactly(Map.entry(x, List.of(new EventId(m1), new EventId(m2))));
+	}
+
+	@Test
+	void theResolvingQueriesAnswerAnEmptyInputWithAnEmptyMap() {
+		// 합쳐진 사건이 있어도 묻지 않은 사건은 내지 않는다
+		merged(this.eventX);
+
+		assertThat(this.directory.currentOf(List.of())).isEmpty();
+		assertThat(this.directory.absorbedInto(List.of())).isEmpty();
+	}
+
+	@Test
+	void theResolvingQueriesTakeAtMostTheLimitOfDistinctEvents() {
+		List<EventId> limit = new ArrayList<>();
+		for (long id = 1; id <= 1000; id++) {
+			limit.add(new EventId(id));
+		}
+		// 같은 사건이 겹쳐도 서로 다른 사건만 센다
+		limit.add(new EventId(1));
+		assertThat(EventDirectory.MAX_RESOLVE_EVENTS).isEqualTo(1000);
+		assertThat(this.directory.currentOf(limit)).isNotNull();
+		assertThat(this.directory.absorbedInto(limit)).isNotNull();
+
+		limit.add(new EventId(1001));
+		assertThatIllegalArgumentException().isThrownBy(() -> this.directory.currentOf(limit));
+		assertThatIllegalArgumentException().isThrownBy(() -> this.directory.absorbedInto(limit));
+	}
+
+	/** 남는 사건에 합쳐진 사건 하나 — 배정은 없다(합칠 때 남는 사건으로 옮겨 갔다) */
+	private long merged(long survivor) {
+		return this.jdbc.sql("""
+				insert into events (status, model_version, centroid, article_count, first_article_at, last_article_at,
+				                    created_at, last_joined_at, merged_into, closed_at)
+				values ('MERGED', 'model-a', cast('[1,0]' as halfvec), 1, now(), now(), now(), now(), :survivor, now())
+				returning id
+				""").param("survivor", survivor).query(Long.class).single();
+	}
+
 	private void clear() {
 		EventArticles.clear(this.jdbc);
 		if (!this.evaluated.isEmpty()) {

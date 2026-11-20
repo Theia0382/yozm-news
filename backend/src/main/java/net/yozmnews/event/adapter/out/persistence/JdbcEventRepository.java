@@ -17,6 +17,7 @@ import net.yozmnews.article.ArticleId;
 import net.yozmnews.event.EventId;
 import net.yozmnews.event.EventStatus;
 import net.yozmnews.event.EventsChanged;
+import net.yozmnews.event.EventsRemoved;
 import net.yozmnews.event.domain.assignment.CandidateScoring;
 import net.yozmnews.event.domain.assignment.EventSnapshot;
 import net.yozmnews.event.domain.event.EventRepository;
@@ -41,7 +42,8 @@ import org.springframework.transaction.annotation.Transactional;
  * 표시하거나 합칠 때 지운다.
  * <p>
  * 사건을 열고 · 고치고 · 지우고 · 합치고 · 닫는 다섯 메서드는 트랜잭션 안에서만 돌고({@link Propagation#MANDATORY}), 끝에
- * {@link EventsChanged} 를 한 번 발행한다(event-R23) — 트랜잭션 밖이면 커밋 뒤 리스너가 불리지 않아 알림이 조용히 빠진다.
+ * {@link EventsChanged} 를 한 번 발행한다(event-R23) — 트랜잭션 밖이면 커밋 뒤 리스너가 불리지 않아 알림이 조용히 빠진다. 지우기는
+ * 지운 사건(그 사건과 함께 지운 합쳐진 사건 포함)을 {@link EventsRemoved} 로도 한 번 발행한다(event-R25).
  */
 @Repository
 class JdbcEventRepository implements EventRepository {
@@ -167,6 +169,7 @@ class JdbcEventRepository implements EventRepository {
 		this.jdbc.sql("delete from events where merged_into = :id").param("id", eventId).update();
 		this.jdbc.sql("delete from events where id = :id").param("id", eventId).update();
 		changed(ids);
+		removed(ids);
 	}
 
 	@Override
@@ -285,6 +288,14 @@ class JdbcEventRepository implements EventRepository {
 	/** 바뀐 사건을 알린다 — 부르는 트랜잭션의 발행 레지스트리에 남는다(event-R23) */
 	private void changed(long... eventIds) {
 		this.publisher.publishEvent(new EventsChanged(Arrays.stream(eventIds).mapToObj(EventId::new).toList()));
+	}
+
+	/** 지운 사건을 알린다 — 지운 행이 없으면(이미 없는 사건) 알리지 않는다(event-R25) */
+	private void removed(Long[] eventIds) {
+		if (eventIds.length == 0) {
+			return;
+		}
+		this.publisher.publishEvent(new EventsRemoved(Arrays.stream(eventIds).map(EventId::new).toList()));
 	}
 
 	/** 지운 행이 없으면(이미 없는 사건) 알리지 않는다 */

@@ -214,6 +214,39 @@ class EventDirectoryService implements EventDirectory {
 		return this.events.lastArticleSince(Objects.requireNonNull(since, "since"));
 	}
 
+	@Override
+	public Map<EventId, EventId> currentOf(Collection<EventId> ids) {
+		List<Long> distinct = resolveIds(ids);
+		if (distinct.isEmpty()) {
+			return Map.of();
+		}
+		Map<EventId, EventId> result = new LinkedHashMap<>();
+		this.events.currentOf(distinct).forEach((event, current) -> result.put(new EventId(event), new EventId(current)));
+		return Collections.unmodifiableMap(result);
+	}
+
+	@Override
+	public Map<EventId, List<EventId>> absorbedInto(Collection<EventId> survivors) {
+		List<Long> distinct = resolveIds(survivors);
+		if (distinct.isEmpty()) {
+			return Map.of();
+		}
+		Map<EventId, List<EventId>> result = new LinkedHashMap<>();
+		this.events.absorbedInto(distinct)
+			.forEach((survivor, absorbed) -> result.put(new EventId(survivor),
+					absorbed.stream().map(EventId::new).toList()));
+		return Collections.unmodifiableMap(result);
+	}
+
+	/** 풀기 조회의 입력 — 서로 다른 사건 ID, 상한 확인 */
+	private static List<Long> resolveIds(Collection<EventId> ids) {
+		List<Long> distinct = ids.stream().map(EventId::value).distinct().toList();
+		if (distinct.size() > MAX_RESOLVE_EVENTS) {
+			throw new IllegalArgumentException("사건은 한 번에 " + MAX_RESOLVE_EVENTS + "개까지 묻는다: " + distinct.size());
+		}
+		return distinct;
+	}
+
 	private static void requireRange(Instant from, Instant to) {
 		if (from.isAfter(to)) {
 			throw new IllegalArgumentException("구간의 시작이 끝보다 늦다: " + from + " > " + to);

@@ -198,6 +198,35 @@ class JdbcEventQueryRepository implements EventQueryRepository {
 	}
 
 	@Override
+	public Map<Long, Long> currentOf(Collection<Long> eventIds) {
+		if (eventIds.isEmpty()) {
+			return Map.of();
+		}
+		Map<Long, Long> current = new LinkedHashMap<>();
+		this.jdbc.sql("select id, coalesce(merged_into, id) as current from events where id = any(:ids) order by id")
+			.param("ids", eventIds.toArray(Long[]::new))
+			.query((ResultSet rs) -> {
+				current.put(rs.getLong("id"), rs.getLong("current"));
+			});
+		return current;
+	}
+
+	@Override
+	public Map<Long, List<Long>> absorbedInto(Collection<Long> survivors) {
+		if (survivors.isEmpty()) {
+			return Map.of();
+		}
+		Map<Long, List<Long>> absorbed = new LinkedHashMap<>();
+		// 부분 인덱스 events_merged_into_idx — 가리킴은 평평해 한 단계면 된다
+		this.jdbc.sql("select merged_into, id from events where merged_into = any(:ids) order by merged_into, id")
+			.param("ids", survivors.toArray(Long[]::new))
+			.query((ResultSet rs) -> {
+				absorbed.computeIfAbsent(rs.getLong("merged_into"), key -> new ArrayList<>()).add(rs.getLong("id"));
+			});
+		return absorbed;
+	}
+
+	@Override
 	public List<MergedEvent> mergedInto(long survivor) {
 		return this.jdbc.sql("""
 				select e.id, e.article_count, e.first_article_at, e.last_article_at, e.created_at, e.closed_at,

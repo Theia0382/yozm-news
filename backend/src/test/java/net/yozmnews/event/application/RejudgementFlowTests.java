@@ -30,6 +30,7 @@ import net.yozmnews.event.EventArticles;
 import net.yozmnews.event.EventEmbeddings;
 import net.yozmnews.event.EventId;
 import net.yozmnews.event.EventsChanged;
+import net.yozmnews.event.EventsRemoved;
 import net.yozmnews.event.domain.assignment.AssignmentQueueRepository;
 import net.yozmnews.event.domain.assignment.CriteriaRepository;
 import net.yozmnews.event.domain.event.EventArticleRepository;
@@ -124,6 +125,8 @@ class RejudgementFlowTests {
 
 		// 옮기기 — 옮길 사건을 고치고, 빈 옛 사건을 지운다(event-R23)
 		assertThat(changes()).containsExactly(List.of(event), List.of(opened));
+		// 재판정으로 빈 사건도 지웠다고 알린다(event-R25)
+		assertThat(removals()).containsExactly(List.of(opened));
 
 		assertThat(eventOf(x)).isEqualTo(event);
 		// x 는 판정 때 연 사건에서 옮겨졌다 — 연 사건 표지가 거짓이 된다. 판정 원본은 처음 판정의 것 그대로다
@@ -160,6 +163,8 @@ class RejudgementFlowTests {
 		long split = eventOf(x);
 		// 떼어 내기 — 새 사건을 열고, 옛 사건을 줄인다(event-R23)
 		assertThat(changes()).containsExactly(List.of(split), List.of(event));
+		// 떼어 내기는 옛 사건을 줄일 뿐이라 지운 사건이 없다(event-R25)
+		assertThat(removals()).isEmpty();
 		assertThat(split).isNotEqualTo(event);
 		// 떼어 낸 새 사건은 그 기사가 연 사건이다. 판정 원본은 그대로다
 		assertThat(assignment(x)).containsEntry("decided_by", "EVALUATOR")
@@ -577,6 +582,13 @@ class RejudgementFlowTests {
 	private List<List<Long>> changes() {
 		return this.published.stream(EventsChanged.class)
 			.map(changed -> changed.eventIds().stream().map(EventId::value).toList())
+			.toList();
+	}
+
+	/** 삭제 알림마다 사건 ID 목록 — 발행 순(event-R25) */
+	private List<List<Long>> removals() {
+		return this.published.stream(EventsRemoved.class)
+			.map(removed -> removed.eventIds().stream().map(EventId::value).toList())
 			.toList();
 	}
 

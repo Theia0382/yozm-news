@@ -28,6 +28,7 @@ import net.yozmnews.event.EventArticles;
 import net.yozmnews.event.EventEmbeddings;
 import net.yozmnews.event.EventId;
 import net.yozmnews.event.EventsChanged;
+import net.yozmnews.event.EventsRemoved;
 import net.yozmnews.event.domain.assignment.AssignmentQueueRepository;
 import net.yozmnews.event.domain.assignment.CriteriaRepository;
 import net.yozmnews.event.domain.assignment.StoredCandidate;
@@ -193,9 +194,13 @@ class EventRemovalFlowTests {
 		assertThat(other).isNotEqualTo(this.event);
 		assertThat(count("select count(*) from event_article_candidates where article_id = " + y + " and event_id = "
 				+ this.event)).isEqualTo(1);
+		this.published.clear();
 
 		remove(this.a, this.b, this.c);
 		remove(this.a, this.b, this.c);
+
+		// 빈 사건을 지웠다고 한 번 알린다 — 다시 처리할 때는 지울 행이 없어 알리지 않는다(event-R25)
+		assertThat(removals()).containsExactly(List.of(this.event));
 
 		assertThat(count("select count(*) from events where id = " + this.event)).isZero();
 		assertThat(count("select count(*) from event_key_terms where event_id = " + this.event)).isZero();
@@ -251,8 +256,13 @@ class EventRemovalFlowTests {
 				insert into event_merge_judgements (event_low, event_high, probability, judged_at)
 				values (:low, :high, 0.7, now())
 				""").param("low", Math.min(merged, this.event)).param("high", Math.max(merged, this.event)).update();
+		this.published.clear();
 
 		remove(this.a, this.b, this.c);
+
+		// 함께 지운 합쳐진 사건도 알린다 — 그 사건 ID 로 남긴 기록을 따라 지울 수 있게(event-R25)
+		assertThat(removals()).hasSize(1);
+		assertThat(removals().getFirst()).containsExactlyInAnyOrder(this.event, merged);
 
 		assertThat(count("select count(*) from events where id in (" + this.event + ", " + merged + ")")).isZero();
 		assertThat(count("select count(*) from event_article_candidates where article_id = 999")).isZero();
@@ -272,6 +282,8 @@ class EventRemovalFlowTests {
 
 		// 기사 삭제 따르기 — 줄인 사건과 비어 지운 사건을 알린다(event-R23)
 		assertThat(changes()).containsExactlyInAnyOrder(List.of(this.event), List.of(other));
+		// 지운 것은 빈 사건뿐이다 — 줄인 사건은 삭제 알림에 없다(event-R25)
+		assertThat(removals()).containsExactly(List.of(other));
 
 		assertThat(eventRow(this.event)).containsEntry("centroid", "[1,0]")
 			.containsEntry("article_count", 2)
@@ -429,6 +441,13 @@ class EventRemovalFlowTests {
 	private List<List<Long>> changes() {
 		return this.published.stream(EventsChanged.class)
 			.map(changed -> changed.eventIds().stream().map(EventId::value).toList())
+			.toList();
+	}
+
+	/** 삭제 알림마다 사건 ID 목록 — 발행 순(event-R25) */
+	private List<List<Long>> removals() {
+		return this.published.stream(EventsRemoved.class)
+			.map(removed -> removed.eventIds().stream().map(EventId::value).toList())
 			.toList();
 	}
 
