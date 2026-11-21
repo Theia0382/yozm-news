@@ -159,8 +159,8 @@ class InterestControllerTests {
 	@Test
 	void volumeHasTheDefaultsAndSavesOrSaysWhichFieldIsOutOfRange() throws Exception {
 		String presets = """
-				"presets":[{"volume":"FEW","count":30},{"volume":"NORMAL","count":60},{"volume":"MANY","count":90}],
-				"countRange":{"min":10,"max":150},"bigSlotRange":{"min":0,"max":10},
+				"presets":[{"volume":"FEW","count":20},{"volume":"NORMAL","count":40},{"volume":"MANY","count":60}],
+				"countRange":{"min":10,"max":100},"bigSlotRange":{"min":0,"max":10},
 				"summaryLengths":["SHORT","NORMAL","DETAILED"]""";
 		this.mockMvc.perform(get("/api/interests/volume").with(this.user))
 			.andExpect(status().isOk())
@@ -169,19 +169,19 @@ class InterestControllerTests {
 				.formatted(presets), JsonCompareMode.STRICT));
 
 		this.mockMvc.perform(json(put("/api/interests/volume").with(this.user), """
-				{"volume":"CUSTOM","customCount":150,"bigSlots":0,"summaryLength":"DETAILED"}"""))
+				{"volume":"CUSTOM","customCount":100,"bigSlots":0,"summaryLength":"DETAILED"}"""))
 			.andExpect(status().isOk())
 			.andExpect(content().json("""
-					{"result":"SAVED","volume":{"volume":"CUSTOM","customCount":150,"bigSlots":0,
+					{"result":"SAVED","volume":{"volume":"CUSTOM","customCount":100,"bigSlots":0,
 					 "summaryLength":"DETAILED",%s},"range":null}""".formatted(presets), JsonCompareMode.STRICT));
 		this.mockMvc.perform(json(put("/api/interests/volume").with(this.user), """
-				{"volume":"CUSTOM","customCount":151,"bigSlots":0,"summaryLength":"SHORT"}"""))
+				{"volume":"CUSTOM","customCount":101,"bigSlots":0,"summaryLength":"SHORT"}"""))
 			.andExpect(content().json("""
-					{"result":"COUNT_OUT_OF_RANGE","volume":null,"range":{"min":10,"max":150}}""", JsonCompareMode.STRICT));
+					{"result":"COUNT_OUT_OF_RANGE","volume":null,"range":{"min":10,"max":100}}""", JsonCompareMode.STRICT));
 		this.mockMvc.perform(json(put("/api/interests/volume").with(this.user), """
 				{"volume":"CUSTOM","customCount":9,"bigSlots":11,"summaryLength":"SHORT"}"""))
 			.andExpect(content().json("""
-					{"result":"COUNT_OUT_OF_RANGE","volume":null,"range":{"min":10,"max":150}}""", JsonCompareMode.STRICT));
+					{"result":"COUNT_OUT_OF_RANGE","volume":null,"range":{"min":10,"max":100}}""", JsonCompareMode.STRICT));
 		this.mockMvc.perform(json(put("/api/interests/volume").with(this.user), """
 				{"volume":"MANY","bigSlots":11,"summaryLength":"SHORT"}"""))
 			.andExpect(content().json("""
@@ -209,7 +209,7 @@ class InterestControllerTests {
 			.andExpect(status().isBadRequest());
 		this.mockMvc.perform(get("/api/interests/volume").with(this.user))
 			.andExpect(jsonPath("$.volume").value("CUSTOM"))
-			.andExpect(jsonPath("$.customCount").value(150))
+			.andExpect(jsonPath("$.customCount").value(100))
 			.andExpect(jsonPath("$.bigSlots").value(0))
 			.andExpect(jsonPath("$.summaryLength").value("DETAILED"));
 

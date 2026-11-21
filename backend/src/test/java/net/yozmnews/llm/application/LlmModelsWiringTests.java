@@ -36,9 +36,9 @@ class LlmModelsWiringTests {
 						"anthropic/claude-sonnet-5.5", "anthropic/claude-opus-5.5", "anthropic/claude-haiku-5.5",
 						"anthropic/claude-fable-5.2");
 			assertThat(models.find(Provider.OPENROUTER, "anthropic/claude-haiku-5.5"))
-				.contains(new LlmModel(Provider.OPENROUTER, "anthropic/claude-haiku-5.5", 32_000, true));
+				.contains(new LlmModel(Provider.OPENROUTER, "anthropic/claude-haiku-5.5", 120_000, true));
 			assertThat(models.find(Provider.ANTHROPIC, "claude-haiku-5-5"))
-				.contains(new LlmModel(Provider.ANTHROPIC, "claude-haiku-5-5", 32_000, true));
+				.contains(new LlmModel(Provider.ANTHROPIC, "claude-haiku-5-5", 120_000, true));
 			assertThat(models.find(Provider.ANTHROPIC, "claude-unknown")).isEmpty();
 		});
 	}

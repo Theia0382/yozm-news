@@ -54,7 +54,8 @@ class RequestLimitsTests {
 
 	@Test
 	void feedbackCountsSevenHundredFiftyPerUserEachTenMinutes() {
-		// 다이제스트 하나의 항목(많아야 최대 후보 수 상한 150)을 누르고 고쳐 누르는 사용이 창 하나에 든다 — 항목마다 다섯 번까지 덮는다
+		// 다이제스트 하나의 항목(많아야 최대 후보 수 — 직접 입력 상한 100, 상한을 낮추기 전에 저장된 값은 150 까지)을 누르고 고쳐 누르는
+		// 사용이 창 하나에 든다 — 항목마다 다섯 번까지 덮는다
 		assertThat(RequestLimits.rulesOf(GuardedAction.FEEDBACK))
 			.containsExactly(new LimitRule(LimitAxis.SESSION_USER, 750, Duration.parse("PT10M")));
 	}

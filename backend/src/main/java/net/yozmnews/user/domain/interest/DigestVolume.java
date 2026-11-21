@@ -22,10 +22,11 @@ public record DigestVolume(CandidateVolume volume, @Nullable Integer customCount
 	public static final int MIN_COUNT = 10;
 
 	/**
-	 * 직접 입력한 최대 후보 수의 상한 — 최대 후보 수는 사건 수다. 다이제스트 하나의 항목 수 위쪽(이 값)을 고쳐 누르는 사용을 피드백 요청
-	 * 제한({@code RequestLimits})이 덮어야 한다 — 이 값을 올리면 그 값을 함께 본다
+	 * 직접 입력한 최대 후보 수의 상한 — 최대 후보 수는 사건 수다. 다이제스트 하나의 항목 수 위쪽(이 값, 범위는 저장할 때만 보므로 상한을
+	 * 낮추기 전에 저장된 값은 150 까지)을 고쳐 누르는 사용을 피드백 요청 제한({@code RequestLimits})이 덮어야 한다 — 이 값을 올리면 그 값을
+	 * 함께 본다
 	 */
-	public static final int MAX_COUNT = 150;
+	public static final int MAX_COUNT = 100;
 
 	/** 큰 슬롯 수의 하한 — 0 은 큰 슬롯을 끈다 */
 	public static final int MIN_BIG_SLOTS = 0;

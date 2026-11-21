@@ -32,7 +32,7 @@ public final class InterestDefaults {
 	/** 다이제스트 최대 후보 수의 단계 */
 	public static final CandidateVolume CANDIDATE_VOLUME = CandidateVolume.NORMAL;
 
-	/** 다이제스트 큰 슬롯 수 — 측정 전 목표 */
+	/** 다이제스트 큰 슬롯 수 — 한 공급자 모델로 사용자 넷의 7일치 다이제스트를 만들어 재고 정했다 */
 	public static final int BIG_SLOTS = 3;
 
 	/** 다이제스트 요약 길이 */
