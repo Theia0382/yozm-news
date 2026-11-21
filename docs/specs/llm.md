@@ -508,7 +508,7 @@ v1 구현(`adapter/out/sdk`):
 - **llm-R1** — 공급자는 OpenAI(`openai`) · Anthropic(`anthropic`) · OpenRouter(`openrouter`) 셋이다. OpenRouter 는 중계 공급자다 — 요청을 그 모델의 회사나 호스팅 공급자로 옮겨 보낸다. 공급자마다 클라이언트를 고르는 자리(`SdkProviderClients.open`)는 `Provider` 를 `default` 없는 `switch` 로 가른다 — 공급자를 더하면 그 자리가 컴파일 오류로 드러나고, 실패 분류 · 스키마 맞춤은 그 클라이언트가 고른다. 공급자 값은 `llm` 밖에도 저장된다(키 · 고른 모델 · 다이제스트의 공급자 칸 CHECK 제약, 화면용 API 명세의 enum) — 공급자를 더하는 변경은 그 자리를 함께 고친다
 - **llm-R2** — 허용 모델 목록 파일은 YAML 이고 최상위 키는 `providers` 하나다. 그 아래 키는 공급자 키(llm-R1)이고 공급자마다 `models` 목록을 갖는다. 모델은 `id`(1 ~ 128자 · 출력 가능한 ASCII U+0021 ~ U+007E, 공급자 안에서 유일) · `input-token-budget`(정수 1 ~ 10,000,000) · `structured-output`(불리언)을 모두 갖는다. 모르는 키 · 모르는 공급자는 오류다. 공급자는 빠져도 되고 `models` 는 빈 목록이어도 된다 — 그 공급자의 허용 모델이 없다. 전체 모델 수는 1 이상이다. 원문은 65,536자까지다(`ModelCatalogParser.MAX_CHARS`). 문제는 모두 모아 경로 · 줄:열과 함께 낸다
 - **llm-R3** — 목록은 기동 때 한 번 읽는다. 설정 `yozmnews.llm.models-file` 이 있으면 그 파일이 목록 전체이고(기본 목록과 합치지 않는다), 없으면 앱에 든 기본 파일 `llm-models/default.yaml` 이 목록이다. 설정 값이 비었거나, 설정이 가리키는 파일이 없거나 읽지 못하거나 형식이 틀리면 기동하지 않는다 — 문구에 설정 이름 · 환경 변수 이름과 문제 목록이 있다. 기본 목록으로 조용히 떨어지지 않는다. 기본 파일이 틀려도 기동하지 않는다. 두 역할 모두 읽는다
-- **llm-R4** — 기본 파일의 입력 토큰 예산은 측정 전의 잠정값이다 — 모델의 문맥 한도가 아니라 다이제스트 한 번의 입력 상한으로 잡은 값이고, 실제 다이제스트의 입력을 재서 고친다([open-questions.md](../open-questions.md) "운영하면서 결정" 9번)
+- **llm-R4** — 입력 토큰 예산은 다이제스트 한 번의 입력 상한이다 — 모델의 문맥 한도가 아니라 공급자 입력 한도 초과와 비용 최악값을 막는 안전 상한이고, 평소 분량은 최대 후보 수가 정한다([user Spec](user.md#관심-설정) user-R56). 기본 파일은 모든 모델에 120,000 을 두고, 그 값은 모델의 문맥 한도가 입력과 출력 상한을 함께 받는 안이어야 한다([ADR-0272](../adr/0272-the-input-token-budget-is-a-safety-ceiling-and-the-maximum-candidate-steps-set-the-digest-volume.md) · [open-questions.md](../open-questions.md) "운영하면서 결정" 9번)
 
 ### 키 검증
 
@@ -613,3 +613,4 @@ v1 구현(`adapter/out/sdk`):
 | [0205](../adr/0205-an-openrouter-403-invalidates-the-key-only-with-the-permission-mark-and-an-error-inside-an-ok-answer-is-unexpected.md) | OpenRouter 의 403 은 권한 표시가 있을 때만 키를 무효로 하고, 200 응답 안의 오류는 예상 밖의 답이다 |
 | [0206](../adr/0206-schemas-sent-to-openrouter-satisfy-both-providers-rules-and-an-optional-value-list-takes-null-without-a-type.md) | OpenRouter 로 보내는 출력 스키마는 두 공급자 맞춤을 함께 만족하고, 값 목록이 있는 선택 속성은 타입 없이 null 을 받는다 |
 | [0252](../adr/0252-the-stall-and-duration-of-work-in-progress-are-measured-as-elapsed-time-without-the-jumps-of-the-clock.md) | 진행 중 작업의 멈춤과 걸린 시간은 시계가 넘긴 시간을 뺀 경과로 잰다 |
+| [0272](../adr/0272-the-input-token-budget-is-a-safety-ceiling-and-the-maximum-candidate-steps-set-the-digest-volume.md) | 입력 토큰 예산은 안전 상한이고, 다이제스트 분량은 최대 후보 수 단계가 정한다 |

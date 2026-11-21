@@ -214,7 +214,7 @@
 | [0206](0206-schemas-sent-to-openrouter-satisfy-both-providers-rules-and-an-optional-value-list-takes-null-without-a-type.md) | OpenRouter 로 보내는 출력 스키마는 두 공급자 맞춤을 함께 만족하고, 값 목록이 있는 선택 속성은 타입 없이 null 을 받는다 | 승인 |
 | [0207](0207-digest-candidates-enter-a-period-by-first-evaluation-time-with-a-published-time-floor.md) | 다이제스트 후보는 첫 평가 시각으로 기간에 넣고, 발행 시각 하한으로 오래된 기사를 막는다 | 승인 (부분 대체: 0260) |
 | [0208](0208-the-big-slot-takes-the-representatives-of-the-heaviest-events-of-each-big-storyline-row.md) | 큰 슬롯은 큰 판정 행마다 기간 안 중요도 합이 큰 사건 몇 개의 대표 기사를 넣는다 | 대체됨 (0260) |
-| [0209](0209-maximum-candidates-and-big-slots-are-user-settings-and-the-big-slot-takes-at-most-half.md) | 최대 후보 수와 큰 슬롯 수는 사용자 설정이고, 큰 슬롯은 최대 후보 수의 절반을 넘지 않는다 | 승인 (부분 대체: 0260) |
+| [0209](0209-maximum-candidates-and-big-slots-are-user-settings-and-the-big-slot-takes-at-most-half.md) | 최대 후보 수와 큰 슬롯 수는 사용자 설정이고, 큰 슬롯은 최대 후보 수의 절반을 넘지 않는다 | 승인 (부분 대체: 0260 · 0272) |
 | [0210](0210-candidate-selection-cuts-to-the-input-token-budget-with-one-estimate-the-prompt-follows.md) | 입력 토큰 예산은 후보 선별이 `digest` 의 한 추정 규칙으로 세어 자르고, 프롬프트 구성이 그 규칙을 따른다 | 승인 (부분 대체: 0219 · 0220 · 0263 · 0271) |
 | [0211](0211-the-digest-consumer-query-of-interest-settings-writes-nothing-and-returns-followed-preferences-with-expanded-topics.md) | 다이제스트가 읽는 관심 설정 조회는 쓰지 않고, 따라가기 결과와 펼친 주제 구독을 낸다 | 승인 (부분 대체: 0219) |
 | [0212](0212-migrations-never-delete-user-data-or-the-shared-rows-and-ids-it-references-and-moved-data-is-checked-by-a-data-test.md) | 마이그레이션은 사용자 데이터와 그것이 가리키는 공유 데이터의 행 · ID 를 지우지 않고, 데이터를 옮기면 데이터 시험으로 대조한다 | 승인 |
@@ -274,6 +274,7 @@
 | [0269](0269-the-digest-output-keys-top-stories-by-item-alias-as-required-fields-and-lists-headlines-as-elements.md) | 다이제스트 출력의 주요 뉴스 칸은 항목 별칭을 키로 한 필수 칸이고, 헤드라인 칸은 원소 배열이다 | 승인 |
 | [0270](0270-an-item-missing-from-the-output-is-asked-once-more-and-then-kept-as-a-headline-and-the-counts-are-recorded.md) | 출력에 빠진 항목은 한 번 다시 묻고, 그래도 빠지면 첫 인용 기사 제목의 헤드라인으로 남기며, 그 수를 다이제스트 행에 기록한다 | 승인 |
 | [0271](0271-when-the-input-token-budget-cuts-candidates-the-big-slot-keeps-at-most-half-of-what-is-left-and-uses-what-subscribed-events-leave.md) | 입력 토큰 예산으로 자를 때 큰 슬롯 사건은 남는 사건의 절반을 넘지 않고, 구독 사건이 모자라면 남는 예산을 쓴다 | 승인 |
+| [0272](0272-the-input-token-budget-is-a-safety-ceiling-and-the-maximum-candidate-steps-set-the-digest-volume.md) | 입력 토큰 예산은 안전 상한이고, 다이제스트 분량은 최대 후보 수 단계가 정한다 | 승인 |
 
 ## 운영 규칙
 
