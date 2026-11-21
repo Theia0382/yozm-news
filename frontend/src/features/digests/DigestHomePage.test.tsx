@@ -406,7 +406,9 @@ describe("DigestHomePage", () => {
       screen.queryByText(/끝날 때까지 만들 수 없습니다/),
     ).not.toBeInTheDocument();
     await act(() => vi.advanceTimersByTimeAsync(5000));
-    expect(await screen.findByRole("link", { name: "기사 1" })).toBeVisible();
+    expect(
+      await screen.findByRole("link", { name: "기사 1" }),
+    ).toBeInTheDocument();
     expect(latestRequests(server)).toBe(2);
 
     await act(() => vi.advanceTimersByTimeAsync(15000));

@@ -120,7 +120,10 @@ describe("다이제스트 화면의 좋아요 · 싫어요", () => {
     }
     // 사건 둘을 묶은 주요 뉴스 항목도 묶음은 하나다
     expect(
-      screen.getAllByRole("group").map((g) => g.getAttribute("aria-label")),
+      screen
+        .getAllByRole("group")
+        .filter((g) => g.tagName !== "DETAILS")
+        .map((g) => g.getAttribute("aria-label")),
     ).toEqual([STORY, HEADLINE]);
     expect(screen.getAllByRole("button", { name: "좋아요" })).toHaveLength(2);
     for (const name of ["기사 1", "기사 2", "기사 3", "기사 4"]) {

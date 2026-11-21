@@ -1,4 +1,4 @@
-import { screen, within } from "@testing-library/react";
+import { fireEvent, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { DigestDayPage } from "@/features/digests/DigestDayPage";
 import type { DigestDay } from "@/features/digests/digestQueries";
@@ -69,7 +69,10 @@ describe("DigestDayPage", () => {
       name: "주요 뉴스 제목 반응",
     });
     const headline = screen.getByRole("group", { name: "헤드라인 제목 반응" });
-    expect(screen.getAllByRole("group")).toEqual([story, headline]);
+    // 출처 목록의 접기(details — 역할 group)는 버튼 묶음이 아니다
+    expect(
+      screen.getAllByRole("group").filter((g) => g.tagName !== "DETAILS"),
+    ).toEqual([story, headline]);
     // 묶음은 항목 제목과 같은 항목(article) 안, 출처 목록 밖에 있다
     expect(story.closest("li")).toBeNull();
     expect(story.closest("article")).toBe(
@@ -82,6 +85,22 @@ describe("DigestDayPage", () => {
       expect(line).not.toBeNull();
       expect(within(line as HTMLElement).queryByRole("button")).toBeNull();
     }
+  });
+
+  it("항목의 출처 기사 목록은 기본으로 접혀 있고 요약 줄을 누르면 펼쳐진다", async () => {
+    renderDay(day());
+
+    const heading = await screen.findByRole("heading", {
+      level: 3,
+      name: /주요 뉴스 제목/,
+    });
+    const item = within(heading.closest("article") as HTMLElement);
+    const summary = item.getByText("출처 기사 3건");
+    expect(item.getByRole("link", { name: "기사 1" })).not.toBeVisible();
+
+    fireEvent.click(summary);
+
+    expect(item.getByRole("link", { name: "기사 1" })).toBeVisible();
   });
 
   it("개요에는 좋아요 · 싫어요가 없다", async () => {
@@ -171,7 +190,9 @@ describe("DigestDayPage", () => {
       }),
     );
 
-    expect(await screen.findByRole("link", { name: "기사 1" })).toBeVisible();
+    expect(
+      await screen.findByRole("link", { name: "기사 1" }),
+    ).toBeInTheDocument();
     expect(
       screen.queryByText(/표시가 없는 항목은 구독한 주제에서 왔습니다/),
     ).not.toBeInTheDocument();
