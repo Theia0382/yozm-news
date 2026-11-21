@@ -59,7 +59,7 @@ class DigestOutputSchemaTests {
 			  "$schema": "https://json-schema.org/draft/2020-12/schema",
 			  "type": "object",
 			  "properties": {
-			    "overview": { "type": "string", "minLength": 1, "maxLength": 1000 },
+			    "overview": { "type": "string", "minLength": 1, "maxLength": 1500 },
 			    "top_stories": {
 			      "type": "object",
 			      "properties": { "I1": %1$s, "I2": %1$s },

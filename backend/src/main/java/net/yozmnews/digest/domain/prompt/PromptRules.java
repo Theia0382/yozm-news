@@ -6,7 +6,7 @@ import net.yozmnews.user.SummaryLength;
 /**
  * 프롬프트 구성의 상수 · 길이 기준 — 정본 — docs/specs/digest.md §5 · digest-R26
  * <p>
- * 길이 기준은 측정 전 목표다 — 실제 공급자로 만든 다이제스트의 출력 길이를 재서 고친다. 기준은 출력 서술의 상한({@link DigestOutputSchema}) 안이다.
+ * 길이 기준은 한 공급자 모델로 사용자 넷의 7일치 다이제스트를 만들어 재고 정했다. 기준은 출력 서술의 상한({@link DigestOutputSchema}) 안이다.
  */
 public final class PromptRules {
 
@@ -25,18 +25,18 @@ public final class PromptRules {
 	/** 주요 뉴스 요약({@code summary})의 길이 기준(코드 포인트) */
 	public static Range summary(SummaryLength length) {
 		return switch (length) {
-			case SHORT -> new Range(150, 300);
-			case NORMAL -> new Range(300, 600);
-			case DETAILED -> new Range(600, 1_200);
+			case SHORT -> new Range(100, 300);
+			case NORMAL -> new Range(200, 500);
+			case DETAILED -> new Range(400, 800);
 		};
 	}
 
 	/** 개요({@code overview})의 길이 기준(코드 포인트) */
 	public static Range overview(SummaryLength length) {
 		return switch (length) {
-			case SHORT -> new Range(100, 250);
-			case NORMAL -> new Range(200, 450);
-			case DETAILED -> new Range(400, 800);
+			case SHORT -> new Range(250, 400);
+			case NORMAL -> new Range(500, 800);
+			case DETAILED -> new Range(800, 1_200);
 		};
 	}
 

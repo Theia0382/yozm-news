@@ -266,13 +266,13 @@ class DigestOutputReaderTests {
 	void failsWhenTheOverviewIsOverTheLimit() {
 		String atLimit = """
 				{ "overview": "%s", "top_stories": {}, "headlines": [] }
-				""".formatted(WIDE.repeat(1_000));
+				""".formatted(WIDE.repeat(1_500));
 		String overLimit = """
 				{ "overview": "%s", "top_stories": {}, "headlines": [] }
-				""".formatted(WIDE.repeat(1_001));
+				""".formatted(WIDE.repeat(1_501));
 
 		assertThat(read(atLimit)).isInstanceOf(OutputRead.Read.class);
-		assertThat(read(overLimit)).isEqualTo(new OutputRead.Unreadable("$.overview: 1000 코드 포인트를 넘는다"));
+		assertThat(read(overLimit)).isEqualTo(new OutputRead.Unreadable("$.overview: 1500 코드 포인트를 넘는다"));
 	}
 
 	@Test

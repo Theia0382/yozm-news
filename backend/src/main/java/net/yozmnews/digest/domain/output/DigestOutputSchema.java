@@ -22,7 +22,7 @@ import tools.jackson.databind.json.JsonMapper;
 public final class DigestOutputSchema {
 
 	/** {@code overview} 의 최대 코드 포인트 */
-	public static final int MAX_OVERVIEW = 1_000;
+	public static final int MAX_OVERVIEW = 1_500;
 
 	/** 주요 뉴스 · 헤드라인 {@code title} 의 최대 코드 포인트 */
 	public static final int MAX_TITLE = 200;
