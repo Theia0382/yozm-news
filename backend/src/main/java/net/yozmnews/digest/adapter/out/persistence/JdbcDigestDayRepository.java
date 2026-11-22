@@ -27,6 +27,7 @@ import net.yozmnews.digest.domain.view.FailedAttempt;
 import net.yozmnews.digest.domain.view.SectionReasons;
 import net.yozmnews.event.EventId;
 import net.yozmnews.platform.UserId;
+import net.yozmnews.storyline.StorylineId;
 import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
@@ -68,7 +69,7 @@ class JdbcDigestDayRepository implements DigestDayRepository {
 	public List<DigestSectionView> sectionsOf(long digestId) {
 		Map<Long, SectionRows> sections = new LinkedHashMap<>();
 		this.jdbc.sql("""
-				select s.id, s.kind, s.title, s.body, i.article_id
+				select s.id, s.kind, s.title, s.body, s.storyline_id, i.article_id
 				from digest_sections s
 				left join digest_items i on i.digest_section_id = s.id
 				where s.digest_id = :digest
@@ -78,7 +79,8 @@ class JdbcDigestDayRepository implements DigestDayRepository {
 			SectionRows section = sections.get(id);
 			if (section == null) {
 				section = new SectionRows(SectionKind.valueOf(rs.getString("kind")), rs.getString("title"),
-						rs.getString("body"), new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
+						rs.getString("body"), rs.getObject("storyline_id", Long.class), new ArrayList<>(),
+						new ArrayList<>(), new ArrayList<>());
 				sections.put(id, section);
 			}
 			long article = rs.getLong("article_id");
@@ -102,7 +104,8 @@ class JdbcDigestDayRepository implements DigestDayRepository {
 		return sections.values()
 			.stream()
 			.map(section -> new DigestSectionView(section.kind(), section.title(), section.body(),
-					SectionReasons.of(section.kind(), section.reasons()), section.citations(), section.events()))
+					SectionReasons.of(section.kind(), section.reasons()), section.citations(), section.events(),
+					(section.storyline() == null) ? null : new StorylineId(section.storyline())))
 			.toList();
 	}
 
@@ -175,7 +178,7 @@ class JdbcDigestDayRepository implements DigestDayRepository {
 
 	/** 섹션 한 줄과 모은 인용 */
 	private record SectionRows(SectionKind kind, @Nullable String title, @Nullable String body,
-			List<DigestCitation> citations, List<SelectionReason> reasons, List<EventId> events) {
+			@Nullable Long storyline, List<DigestCitation> citations, List<SelectionReason> reasons, List<EventId> events) {
 	}
 
 }

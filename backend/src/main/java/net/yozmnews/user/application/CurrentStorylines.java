@@ -10,8 +10,8 @@ import net.yozmnews.storyline.StorylineId;
 import org.springframework.stereotype.Component;
 
 /**
- * 기록된 스토리라인 ID 를 지금 가리키는 스토리라인 ID 로 푸는 정본 — 합쳐졌으면 남는 쪽, 지워졌으면 빠진다. 구독 따라가기 · 소비자 조회 ·
- * 내 구독 이력이 함께 쓴다. 풀기 자체는 {@code storyline} 의 {@link StorylineDirectory#findAll} 이 한다. docs/specs/user.md §4 ·
+ * 기록된 스토리라인 ID 를 지금 가리키는 스토리라인 ID 로 푸는 정본 — 합쳐졌으면 남는 쪽, 지워졌으면 빠진다. 사용자 스토리라인 맞추기(추적 씨앗
+ * 따라가기) · 소비자 조회 · 구독 이력이 함께 쓴다. 풀기 자체는 {@code storyline} 의 {@link StorylineDirectory#findAll} 이 한다. docs/specs/user.md §4 ·
  * user-R53 · user-R55 · user-R63
  */
 @Component

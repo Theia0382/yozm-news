@@ -12,10 +12,11 @@ import net.yozmnews.user.application.StorylineSubscriptions.SubscribedStoryline;
  * @param subscribedAt 처음 구독한 시각
  * @param state 조회 시각의 상태(진행 · 잠잠 · 끝남)
  */
-record StorylineSubscriptionItem(long storylineId, Instant subscribedAt, StorylineState state) {
+record StorylineSubscriptionItem(long storylineId, Instant subscribedAt, StorylineState state, long userStorylineId) {
 
 	static StorylineSubscriptionItem of(SubscribedStoryline subscribed) {
-		return new StorylineSubscriptionItem(subscribed.id().value(), subscribed.subscribedAt(), subscribed.state());
+		return new StorylineSubscriptionItem(subscribed.id().value(), subscribed.subscribedAt(), subscribed.state(),
+				subscribed.userStoryline().value());
 	}
 
 }

@@ -13,6 +13,7 @@ import java.util.List;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.storyline.StorylineRows;
 import net.yozmnews.user.SignedInUsers;
+import net.yozmnews.user.UserStorylineFixtures;
 import net.yozmnews.user.StorylineSubscriptionAction;
 import net.yozmnews.user.StorylineSubscriptionCause;
 import net.yozmnews.user.application.PasswordHashing;
@@ -134,6 +135,52 @@ class StorylineSubscriptionControllerTests {
 			.andExpect(status().isOk())
 			.andExpect(content().json("""
 					{"result":"NOT_SUBSCRIBED"}""", JsonCompareMode.STRICT));
+	}
+
+	@Test
+	void theTrackingStatesAnswerEachAskedStorylineInOrder() throws Exception {
+		long earlier = storyline();
+		long later = storyline();
+		long other = storyline();
+		UserStorylineFixtures.follows(this.jdbc, earlier, later);
+		this.mockMvc.perform(put("/api/storyline-subscriptions/{id}", earlier).with(this.user));
+
+		// 앞 흐름을 추적하면 뒤 흐름도 추적 중이다. 없는 스토리라인 · 관계없는 스토리라인은 아니고, 같은 ID 는 처음 자리 한 번이다
+		this.mockMvc
+			.perform(get("/api/storyline-subscriptions/states")
+				.param("ids", later + "," + other + ",999999999," + earlier + "," + later)
+				.with(this.user))
+			.andExpect(status().isOk())
+			.andExpect(content().json("""
+					{"states":[{"storylineId":%d,"tracked":true},{"storylineId":%d,"tracked":false},
+					           {"storylineId":999999999,"tracked":false},{"storylineId":%d,"tracked":true}]}"""
+				.formatted(later, other, earlier), JsonCompareMode.STRICT));
+		// 목록의 줄은 누른 스토리라인과 그것이 든 사용자 스토리라인을 싣는다
+		long userStoryline = this.jdbc.sql("select id from user_storylines").query(Long.class).single();
+		this.mockMvc.perform(get("/api/storyline-subscriptions").with(this.user))
+			.andExpect(status().isOk())
+			.andExpect(content().json("""
+					{"subscriptions":[{"storylineId":%d,"userStorylineId":%d}],"limit":100}""".formatted(earlier,
+					userStoryline)));
+	}
+
+	@Test
+	void brokenTrackingStateIdsAreABadRequest() throws Exception {
+		this.mockMvc.perform(get("/api/storyline-subscriptions/states").with(this.user))
+			.andExpect(status().isBadRequest());
+		this.mockMvc.perform(get("/api/storyline-subscriptions/states").param("ids", "0").with(this.user))
+			.andExpect(status().isBadRequest());
+		String tooMany = java.util.stream.IntStream.rangeClosed(1, 101)
+			.mapToObj(String::valueOf)
+			.collect(java.util.stream.Collectors.joining(","));
+		this.mockMvc.perform(get("/api/storyline-subscriptions/states").param("ids", tooMany).with(this.user))
+			.andExpect(status().isBadRequest());
+		// 대조 — 100개는 받는다
+		String atLimit = java.util.stream.IntStream.rangeClosed(1, 100)
+			.mapToObj(String::valueOf)
+			.collect(java.util.stream.Collectors.joining(","));
+		this.mockMvc.perform(get("/api/storyline-subscriptions/states").param("ids", atLimit).with(this.user))
+			.andExpect(status().isOk());
 	}
 
 	@Test

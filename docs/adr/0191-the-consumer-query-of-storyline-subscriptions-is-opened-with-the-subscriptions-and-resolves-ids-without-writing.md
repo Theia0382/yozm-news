@@ -29,3 +29,7 @@
 |---|---|
 | 소비자의 작업이 조회를 연다 | 소비자 작업이 구독 따라가기의 규칙을 다시 읽어 조회를 만들어야 한다 |
 | 소비자 조회도 읽을 때 따라가 고쳐 쓴다 | 백그라운드 작업이 사용자 데이터를 고치는 길이 늘고 읽기 전용 트랜잭션이 깨진다 |
+
+## 후속 기록
+
+- 2026-11-22: 결정의 소비자 조회가 내는 지금 구독 — 추적 중인 사용자 스토리라인의 추적 씨앗이다. 쓰지 않는 것은 그대로다([ADR-0282](0282-flow-tracking-points-to-a-user-storyline-which-user-handlers-store-under-the-settings-lock-while-readers-get-the-result-of-the-same-rule.md)), 지금 상태는 [user Spec "스토리라인 구독"](../specs/user.md#스토리라인-구독) user-R55

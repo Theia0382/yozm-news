@@ -28,8 +28,8 @@ class DigestInputTests {
 	@Test
 	void theItemsEventsAndArticlesKeepTheirOrder() {
 		InputItem big = new InputItem(ItemKind.TOP_STORY,
-				List.of(event(30, SelectionReason.MAJOR_STORYLINE, 7, 3), event(10, SelectionReason.SUBSCRIBED, 1)));
-		InputItem headline = new InputItem(ItemKind.HEADLINE, List.of(event(20, SelectionReason.INTEREST, 9)));
+				List.of(event(30, SelectionReason.MAJOR_STORYLINE, 7, 3), event(10, SelectionReason.SUBSCRIBED, 1)), null);
+		InputItem headline = new InputItem(ItemKind.HEADLINE, List.of(event(20, SelectionReason.INTEREST, 9)), null);
 
 		DigestInput input = new DigestInput(PROFILE, List.of(big, headline));
 
@@ -45,13 +45,13 @@ class DigestInputTests {
 	void inconsistentInputsAreRefused() {
 		// 같은 사건 두 번
 		assertThatIllegalArgumentException().isThrownBy(() -> new DigestInput(PROFILE,
-				List.of(new InputItem(ItemKind.TOP_STORY, List.of(event(10, SelectionReason.SUBSCRIBED, 1))),
-						new InputItem(ItemKind.HEADLINE, List.of(event(10, SelectionReason.SUBSCRIBED, 2))))));
+				List.of(new InputItem(ItemKind.TOP_STORY, List.of(event(10, SelectionReason.SUBSCRIBED, 1)), null),
+						new InputItem(ItemKind.HEADLINE, List.of(event(10, SelectionReason.SUBSCRIBED, 2)), null))));
 		// 같은 기사 두 번 — 다른 사건이어도
 		assertThatIllegalArgumentException().isThrownBy(() -> new DigestInput(PROFILE,
 				List.of(new InputItem(ItemKind.TOP_STORY,
-						List.of(event(10, SelectionReason.SUBSCRIBED, 1), event(11, SelectionReason.SUBSCRIBED, 1))))));
-		assertThatIllegalArgumentException().isThrownBy(() -> new InputItem(ItemKind.TOP_STORY, List.of()));
+						List.of(event(10, SelectionReason.SUBSCRIBED, 1), event(11, SelectionReason.SUBSCRIBED, 1)), null))));
+		assertThatIllegalArgumentException().isThrownBy(() -> new InputItem(ItemKind.TOP_STORY, List.of(), null));
 		assertThatIllegalArgumentException()
 			.isThrownBy(() -> new InputEvent(new EventId(10), SelectionReason.SUBSCRIBED, List.of()));
 		// 기사의 선정 이유는 사건의 것이어야 한다

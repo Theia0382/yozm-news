@@ -13,6 +13,9 @@ public enum StorylineSubscriptionCause {
 	STORYLINE_MERGED,
 
 	/** 구독한 스토리라인이 지워져(풀기 포함) 구독에서 뺐다 */
-	STORYLINE_REMOVED
+	STORYLINE_REMOVED,
+
+	/** 추적 중인 사용자 스토리라인이 갈라져, 갈라진 조각이 추적을 물려받았다 */
+	STORYLINE_SPLIT
 
 }

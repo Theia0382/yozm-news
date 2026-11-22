@@ -34,3 +34,4 @@
 ## 후속 기록
 
 - 2026-11-20: 결정의 대상 목록 가운데 `feedback` 의 `ArticleFeedback`(지금은 사건 단위 `EventFeedback`) — [ADR-0266](0266-feedback-is-recorded-under-the-original-event-id-and-feedback-resolves-merged-events-through-event-when-reading-with-the-last-pressed-value-winning.md) · [feedback Spec](../specs/feedback.md#eventfeedback--feedbackchange) `EventFeedback`
+- 2026-11-22: 결정의 대상 목록에 사용자 스토리라인 조회(`UserStorylineDirectory`)가 든다 — 관심사 히스토리 · 구독 제안의 화면 경로에서 세션 사용자로 불린다([ADR-0282](0282-flow-tracking-points-to-a-user-storyline-which-user-handlers-store-under-the-settings-lock-while-readers-get-the-result-of-the-same-rule.md)), 지금 상태는 [user Spec](../specs/user.md#userstorylinedirectory)

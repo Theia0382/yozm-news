@@ -23,7 +23,7 @@ describe("PrivacyPage", () => {
     expect(collected.getByText("관심 설정")).toBeInTheDocument();
     expect(
       collected.getByText(
-        "관심 신호 이력(좋아요 · 싫어요, 주제와 스토리라인의 구독 변경)",
+        "관심 신호 이력(좋아요 · 싫어요, 주제 구독과 흐름 추적의 변경)",
       ),
     ).toBeInTheDocument();
     expect(collected.getByText("다이제스트와 변화 리포트")).toBeInTheDocument();
@@ -73,9 +73,7 @@ describe("PrivacyPage", () => {
     // 묶음 이름 · 대표 기사 제목은 보내지 않는다
     expect(transfer.queryByText(/큰 스토리라인 묶음/)).not.toBeInTheDocument();
     expect(
-      transfer.getByText(
-        "그 기간에 구독한 스토리라인의 변화 · 보도량 · 관심도 통계",
-      ),
+      transfer.getByText("그 기간에 추적한 흐름의 변화 · 보도량 · 관심도 통계"),
     ).toBeInTheDocument();
     expect(transfer.getByText("직전 리포트의 요약")).toBeInTheDocument();
     // 봇 차단을 끈 인스턴스에는 봇 차단 서비스의 항목이 없다

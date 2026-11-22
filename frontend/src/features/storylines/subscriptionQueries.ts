@@ -1,4 +1,5 @@
 import {
+  keepPreviousData,
   useInfiniteQuery,
   useMutation,
   useQuery,
@@ -35,8 +36,9 @@ export const STORYLINE_SUBSCRIPTIONS_QUERY_KEY = [
 ] as const;
 
 /**
- * 내 구독 — 스토리라인 ID · 구독 시각 · 지금 상태와 상한(docs/specs/user.md user-R52). 목록 · 타임라인 · 내 구독이 같은 조회를
- * 함께 쓴다.
+ * 추적 중인 흐름 목록 — 추적 씨앗(누른 스토리라인)마다 한 줄: 스토리라인 ID · 그 줄의 사용자 스토리라인 ID · 추적 시각 · 지금
+ * 상태와 상한(docs/specs/user.md user-R52). 같은 사용자 스토리라인 ID 의 줄은 한 흐름이다. 버튼의 상태는 이 목록이 아니라
+ * 추적 상태 조회({@link useTrackingStates})로 읽는다
  */
 export function useStorylineSubscriptions() {
   const client = useApiClient();
@@ -52,6 +54,62 @@ export function useStorylineSubscriptions() {
       return data;
     },
   });
+}
+
+/** 스토리라인 ID → 그 흐름을 추적 중인가 — 묻지 않은 ID 는 없다 */
+export type TrackingStates = ReadonlyMap<number, boolean>;
+
+/** 추적 상태 조회 한 번에 물을 수 있는 ID 수(docs/specs/user.md) */
+const STATES_PER_REQUEST = 100;
+
+/**
+ * 추적 상태 — 스토리라인마다 그 흐름(사용자 스토리라인)을 추적 중인가. 같은 흐름의 어느 스토리라인에서 물어도 같다. 화면이 보이는 ID 를 한 번에
+ * 묻고 버튼들이 그 값을 나눠 쓴다. ID 가 한 번의 상한을 넘으면 나눠 묻고 합친다. ID 가 없으면 묻지 않는다. 추적 · 해제 뒤 다시 읽히게 구독
+ * 조회 키 아래에 두고, ID 가 늘어 다시 읽는 동안에는 앞 값을 그대로 보인다
+ */
+export function useTrackingStates(ids: number[]) {
+  const client = useApiClient();
+  const unique = [...new Set(ids)].sort((a, b) => a - b);
+  return useQuery({
+    queryKey: [...STORYLINE_SUBSCRIPTIONS_QUERY_KEY, "states", unique],
+    queryFn: async (): Promise<TrackingStates> => {
+      const states = new Map<number, boolean>();
+      for (let from = 0; from < unique.length; from += STATES_PER_REQUEST) {
+        const { data, response } = await client.GET(
+          "/api/storyline-subscriptions/states",
+          {
+            params: {
+              query: { ids: unique.slice(from, from + STATES_PER_REQUEST) },
+            },
+          },
+        );
+        if (!response.ok || !data) {
+          throw new StorylineRequestError(response.status);
+        }
+        for (const state of data.states) {
+          states.set(state.storylineId, state.tracked);
+        }
+      }
+      return states;
+    },
+    enabled: unique.length > 0,
+    placeholderData: keepPreviousData,
+  });
+}
+
+/** 버튼이 쓰는 추적 상태 — 조회가 성공했을 때만 누를 수 있다 */
+export type TrackingView = { states: TrackingStates; ready: boolean };
+
+const NO_TRACKING: TrackingStates = new Map();
+
+/** 화면의 스토리라인 ID 들의 추적 상태를 한 번 읽어 버튼에 넘길 꼴로 낸다 */
+export function useTrackingView(ids: number[]): TrackingView & {
+  failed: boolean;
+} {
+  const states = useTrackingStates(ids);
+  return states.data !== undefined
+    ? { states: states.data, ready: true, failed: false }
+    : { states: NO_TRACKING, ready: false, failed: states.isError };
 }
 
 /** 구독 · 해제 한 번의 결과 */
@@ -100,28 +158,34 @@ export function useSubscriptionToggle() {
   });
 }
 
-/** ID 여럿의 카드를 한 번에 — 받은 ID 로 찾게 맵으로 낸다(docs/specs/reader.md reader-R6) */
+/** 카드 조회 한 번에 물을 수 있는 ID 수(docs/specs/reader.md reader-R6) */
+const CARDS_PER_REQUEST = 100;
+
+/**
+ * ID 여럿의 카드 — 받은 ID 로 찾게 맵으로 낸다(docs/specs/reader.md reader-R6). ID 가 한 번의 상한을 넘으면 나눠 묻고 합친다
+ */
 async function fetchCards(
   client: ReturnType<typeof useApiClient>,
   ids: number[],
 ): Promise<CardsById> {
-  const { data, response } = await client.GET("/api/storyline-cards", {
-    params: { query: { ids } },
-  });
-  if (!response.ok || !data) {
-    throw new StorylineRequestError(response.status);
+  const cards = new Map<number, StorylineCard>();
+  for (let from = 0; from < ids.length; from += CARDS_PER_REQUEST) {
+    const { data, response } = await client.GET("/api/storyline-cards", {
+      params: { query: { ids: ids.slice(from, from + CARDS_PER_REQUEST) } },
+    });
+    if (!response.ok || !data) {
+      throw new StorylineRequestError(response.status);
+    }
+    for (const entry of data.cards) {
+      cards.set(entry.requestedId, entry.storyline);
+    }
   }
-  return new Map(
-    data.cards.map((entry): [number, StorylineCard] => [
-      entry.requestedId,
-      entry.storyline,
-    ]),
-  );
+  return cards;
 }
 
 /**
- * 내 구독의 카드 — 제목 · 상태 · 마지막 기사 시각. 카드 처리기는 빈 ids 를 받지 않으므로 구독이 없으면 묻지 않는다. 구독 수는 카드 한 번의
- * 상한 이하다(user-R63 — 서버 시험이 지킨다)
+ * 추적 중인 흐름의 카드 — 제목 · 상태 · 마지막 기사 시각. 카드 처리기는 빈 ids 를 받지 않으므로 줄이 없으면 묻지 않는다. 줄은 추적 씨앗마다라
+ * 한 흐름에서 여러 스토리라인을 누르면 상한(추적 중인 흐름의 수)보다 많을 수 있다 — 카드는 나눠 묻는다
  */
 export function useStorylineCards(ids: number[]) {
   const client = useApiClient();

@@ -24,9 +24,24 @@ const C = 3;
 const SUBSCRIBED: StorylineSubscriptions = {
   limit: 100,
   subscriptions: [
-    { storylineId: A, subscribedAt: "2026-11-03T00:00:00Z", state: "ACTIVE" },
-    { storylineId: B, subscribedAt: "2026-11-02T00:00:00Z", state: "QUIET" },
-    { storylineId: C, subscribedAt: "2026-11-01T00:00:00Z", state: "ENDED" },
+    {
+      storylineId: A,
+      userStorylineId: A,
+      subscribedAt: "2026-11-03T00:00:00Z",
+      state: "ACTIVE",
+    },
+    {
+      storylineId: B,
+      userStorylineId: B,
+      subscribedAt: "2026-11-02T00:00:00Z",
+      state: "QUIET",
+    },
+    {
+      storylineId: C,
+      userStorylineId: C,
+      subscribedAt: "2026-11-01T00:00:00Z",
+      state: "ENDED",
+    },
   ],
 };
 
@@ -92,12 +107,12 @@ describe("SubscriptionsPage", () => {
     expect(screen.getByRole("combobox", { name: "순서" })).toHaveValue(
       "LATEST_ARTICLE",
     );
-    expect(screen.getByText("구독 3 / 100")).toBeInTheDocument();
+    expect(screen.getByText("추적 3 / 100")).toBeInTheDocument();
     const first = within(following).getAllByRole("listitem")[0]!;
     expect(
       within(first).getByRole("link", { name: "반도체 수출" }),
     ).toHaveAttribute("href", "/storylines/2");
-    expect(first).toHaveTextContent(/^반도체 수출구독 해제잠잠 · 마지막 기사 /);
+    expect(first).toHaveTextContent(/^반도체 수출추적 해제잠잠 · 마지막 기사 /);
     // 구독한 흐름의 소식은 구독하지 않은 주제여도 다이제스트에 들 수 있다
     expect(
       screen.getByText(
@@ -151,7 +166,61 @@ describe("SubscriptionsPage", () => {
     ).toEqual(["반도체 수출", "의대 정원"]);
   });
 
-  it("구독 해제를 누르면 그 ID 로 해제하고 다시 읽어 행이 빠진다", async () => {
+  it("한 흐름의 줄이 여럿이면 줄은 추적 씨앗마다 보이고 수는 흐름으로 센다", async () => {
+    // A 와 B 가 같은 사용자 스토리라인(한 흐름), C 는 다른 흐름
+    renderRoutes(ROUTES, PAGE, {
+      "GET /api/storyline-subscriptions": () =>
+        json({
+          ...SUBSCRIBED,
+          subscriptions: SUBSCRIBED.subscriptions.map((one) =>
+            one.storylineId === B ? { ...one, userStorylineId: A } : one,
+          ),
+        }),
+      "GET /api/storyline-cards": cardsHandler,
+      ...NO_HISTORY,
+    });
+
+    expect(
+      titlesIn(
+        await screen.findByRole("list", { name: "이어지는 스토리라인" }),
+      ),
+    ).toHaveLength(2);
+    expect(screen.getByText("추적 2 / 100")).toBeInTheDocument();
+  });
+
+  it("줄이 100개를 넘으면 카드를 100개씩 나눠 묻는다", async () => {
+    // 한 흐름에서 스토리라인 101개를 눌렀다 — 줄은 101개, 흐름은 하나
+    const ids = Array.from({ length: 101 }, (_, index) => index + 1);
+    const { server } = renderRoutes(ROUTES, PAGE, {
+      "GET /api/storyline-subscriptions": () =>
+        json({
+          limit: 100,
+          subscriptions: ids.map((storylineId) => ({
+            storylineId,
+            userStorylineId: 1,
+            subscribedAt: "2026-11-03T00:00:00Z",
+            state: "ACTIVE",
+          })),
+        }),
+      "GET /api/storyline-cards": cardsHandler,
+      ...NO_HISTORY,
+    });
+
+    // 둘째 요청까지 받아 줄을 그린다 — 카드가 있는 셋이 제목으로 보인다
+    expect(await screen.findByText("추적 1 / 100")).toBeInTheDocument();
+    expect(await screen.findByText("의대 정원")).toBeInTheDocument();
+    const reads = server.requests
+      .filter((r) => r.path === "/api/storyline-cards")
+      .map(
+        (r) =>
+          new URLSearchParams(r.search)
+            .getAll("ids")
+            .flatMap((value) => value.split(",")).length,
+      );
+    expect(reads).toEqual([100, 1]);
+  });
+
+  it("추적 해제를 누르면 그 ID 로 해제하고 다시 읽어 행이 빠진다", async () => {
     let current = SUBSCRIBED;
     const { server } = renderRoutes(ROUTES, PAGE, {
       "GET /api/storyline-subscriptions": () => json(current),
@@ -173,7 +242,7 @@ describe("SubscriptionsPage", () => {
     const row = within(following).getAllByRole("listitem")[1]!;
 
     await userEvent.click(
-      within(row).getByRole("button", { name: "구독 해제" }),
+      within(row).getByRole("button", { name: "추적 해제" }),
     );
 
     await waitFor(() =>
@@ -184,7 +253,7 @@ describe("SubscriptionsPage", () => {
     expect(
       server.requests.filter((r) => r.method === "DELETE").map((r) => r.path),
     ).toEqual([`/api/storyline-subscriptions/${A}`]);
-    expect(screen.getByText("구독 2 / 100")).toBeInTheDocument();
+    expect(screen.getByText("추적 2 / 100")).toBeInTheDocument();
   });
 
   it("카드를 받지 못한 구독은 사라진 스토리라인으로 끝에 둔다", async () => {
@@ -230,14 +299,14 @@ describe("SubscriptionsPage", () => {
     });
 
     expect(
-      await screen.findByText("구독한 스토리라인이 없습니다."),
+      await screen.findByText("추적 중인 흐름이 없습니다."),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: "스토리라인 목록에서 구독하기" }),
+      screen.getByRole("link", { name: "스토리라인 목록에서 추적하기" }),
     ).toHaveAttribute("href", "/storylines");
-    const history = await screen.findByRole("list", { name: "구독 기록" });
+    const history = await screen.findByRole("list", { name: "추적 기록" });
     expect(within(history).getByRole("listitem")).toHaveTextContent(
-      "구독 · 사라진 스토리라인",
+      "흐름 추적 · 사라진 스토리라인",
     );
     expect(
       server.requests.filter((r) => r.path === "/api/storyline-cards"),
@@ -277,20 +346,20 @@ describe("SubscriptionsPage", () => {
               next: { occurredAt: "2026-11-02T00:00:00.123456Z", id: 41 },
             }),
     });
-    const history = await screen.findByRole("list", { name: "구독 기록" });
+    const history = await screen.findByRole("list", { name: "추적 기록" });
     const rows = within(history).getAllByRole("listitem");
     expect(rows).toHaveLength(2);
-    expect(rows[0]).toHaveTextContent("구독 해제 · 헌법 소원");
+    expect(rows[0]).toHaveTextContent("추적 해제 · 헌법 소원");
     expect(
       within(rows[0]!).getByRole("link", { name: "헌법 소원" }),
     ).toHaveAttribute("href", "/storylines/9");
-    expect(rows[1]).toHaveTextContent("구독 · 사라진 스토리라인");
+    expect(rows[1]).toHaveTextContent("흐름 추적 · 사라진 스토리라인");
 
     await userEvent.click(screen.getByRole("button", { name: "더 보기" }));
 
     await waitFor(() =>
       expect(
-        within(screen.getByRole("list", { name: "구독 기록" })).getAllByRole(
+        within(screen.getByRole("list", { name: "추적 기록" })).getAllByRole(
           "listitem",
         ),
       ).toHaveLength(3),
@@ -314,7 +383,7 @@ describe("SubscriptionsPage", () => {
       ...NO_HISTORY,
     });
     expect(
-      await screen.findByText("구독 기록이 없습니다."),
+      await screen.findByText("추적 기록이 없습니다."),
     ).toBeInTheDocument();
   });
 });

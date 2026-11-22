@@ -29,3 +29,7 @@
 |---|---|
 | `user` 에 "지금 주제 구독"만 내는 좁은 조회를 새로 연다 | 같은 읽기의 계약이 둘이 된다 — ADR-0228 이 기각한 길과 같은 결이다 |
 | 제안을 백그라운드 작업(다이제스트 생성)이 계산해 저장한다 | 수락 · 거절 · 구독 변경 뒤 저장한 목록이 다음 생성까지 낡고, 관심을 조회 때 계산한다는 결정과 결이 어긋나는 파생 저장이 생긴다 |
+
+## 후속 기록
+
+- 2026-11-22: 구독 제안 · 관심 설정 조회의 화면 경로가 사용자 스토리라인 조회(`UserStorylineDirectory`)도 세션 사용자로 부른다 — [ADR-0282](0282-flow-tracking-points-to-a-user-storyline-which-user-handlers-store-under-the-settings-lock-while-readers-get-the-result-of-the-same-rule.md), 지금 상태는 [user Spec](../specs/user.md#userstorylinedirectory)

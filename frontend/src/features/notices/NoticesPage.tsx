@@ -166,7 +166,7 @@ function noticeTitle(notice: Notice): string {
     case "PREFERENCES_ADJUSTED":
       return "태그 체계가 바뀌어 관심 설정을 맞췄습니다";
     case "STORYLINE_SUBSCRIPTIONS_REMOVED":
-      return "구독한 스토리라인이 사라졌습니다";
+      return "추적하던 흐름이 사라졌습니다";
     case "DIGEST_FAILED":
       return "다이제스트를 만들지 못했습니다";
   }
@@ -358,7 +358,7 @@ function StorylineSubscriptionsRemovedBody({
   return (
     <div className="space-y-2 text-sm">
       <p>
-        구독한 스토리라인이 더 이어지지 않아 구독에서 뺐습니다. 관련 소식은 다른
+        추적하던 흐름이 더 이어지지 않아 추적에서 뺐습니다. 관련 소식은 다른
         스토리라인으로 이어질 수 있습니다.
       </p>
       <ul className="space-y-1">
@@ -373,7 +373,7 @@ function StorylineSubscriptionsRemovedBody({
         ))}
       </ul>
       <Link to={SUBSCRIPTIONS_PATH} className="underline">
-        내 구독 보기
+        추적 중인 흐름 보기
       </Link>
     </div>
   );

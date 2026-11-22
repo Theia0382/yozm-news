@@ -22,7 +22,7 @@
 
 하지 않는 것:
 
-- 사용자를 모른다. 스토리라인 구독은 `user` 가, 사용자마다 달라지는 스토리라인 정보와 관심사는 `digest` 가 갖는다
+- 사용자를 모른다. 사용자 스토리라인과 스토리라인 구독은 `user` 가, 사용자마다 달라지는 스토리라인 정보와 관심사는 `digest` 가 갖는다
 - 기사를 가리키지 않는다 — 사건 ID 만 저장한다. 기사 삭제는 `event` 가 사건을 줄이거나 지워 알리는 것으로 따른다(storyline-R6). 관계 판정에 넘길 사건의 대표 기사 ID 는 `event` 에서 받아 `evaluation` 에 넘기기만 하고 저장하지 않는다(storyline-R28)
 - 기사를 세지 않는다 — 큰 판정의 재료(기간 안 기사의 중요도 합, 기간에 기사가 있는 소스 수)는 `event` 의 사건 묶음 집계와 기간 전체 집계로 받는다(storyline-R19)
 - 스토리라인의 주제 · 지역 태그, 같은 원인에서 나온 나란한 흐름을 묶는 상위 스토리라인을 여는 법은 아직 없다 — **(미설계)**. 관계 판정에도 나란한 흐름이라는 답이 없어, 나란한 두 흐름은 관계 없이 따로 남는다([미결 사항](../open-questions.md) 37)
@@ -125,13 +125,13 @@ public sealed interface LinkingFillResult {
 
 ### StorylineDirectory
 
-스토리라인 조회 — 다른 모듈이 스토리라인(하나 · 여럿) · 스토리라인의 사건 · 사건의 스토리라인 · 사건마다 포함 나무의 꼭대기 · 스토리라인마다 포함 나무의 꼭대기 · 조회 기간의 스토리라인 목록 · 큰 스토리라인 · 소속 없는 사건 · 스토리라인의 관계를 읽는다(storyline-R19 · R21 ~ R23 · R33 · R37). 구현은 `application` 의 `StorylineDirectoryService` 다.
+스토리라인 조회 — 다른 모듈이 스토리라인(하나 · 여럿) · 스토리라인의 사건 · 사건의 스토리라인 · 사건마다 포함 나무의 꼭대기 · 스토리라인마다 포함 나무의 꼭대기 · 스토리라인마다 이어짐으로 닿는 꼭대기 · 조회 기간의 스토리라인 목록 · 큰 스토리라인 · 소속 없는 사건 · 스토리라인의 관계를 읽는다(storyline-R19 · R21 ~ R23 · R33 · R37 · R38). 구현은 `application` 의 `StorylineDirectoryService` 다.
 
 ```java
 public interface StorylineDirectory {
     int MAX_PAGE_SIZE = 100;                              // 목록 한 쪽의 상한 — 정본. 측정 전 목표
     int MAX_TOP_EVENTS = 1000;                            // 꼭대기 조회 한 번에 묻는 서로 다른 사건 수의 상한 — 정본. 측정 전 목표
-    int MAX_TOP_STORYLINES = 1000;                        // 스토리라인 꼭대기 조회 한 번에 묻는 서로 다른 스토리라인 수의 상한 — 정본. 측정 전 목표
+    int MAX_TOP_STORYLINES = 1000;                        // 스토리라인 꼭대기 · 이어짐 조회 한 번에 묻는 서로 다른 스토리라인 수의 상한 — 정본. 측정 전 목표
 
     Optional<StorylineView> find(StorylineId id);
     Map<StorylineId, StorylineView> findAll(Collection<StorylineId> ids);
@@ -139,6 +139,7 @@ public interface StorylineDirectory {
     List<EventStoryline> storylinesOf(EventId event);
     Map<EventId, List<StorylineId>> topsOf(Collection<EventId> events);
     Map<StorylineId, StorylineId> topsOfStorylines(Collection<StorylineId> storylines);
+    Map<StorylineId, Set<StorylineId>> continuationsOf(Collection<StorylineId> storylines);
     StorylinePage list(EventPeriod period, @Nullable StorylineCursor after, int size);
     List<BigStoryline> bigStorylines(EventPeriod period);
     UnlinkedEvents unlinked(EventPeriod period);
@@ -154,6 +155,7 @@ public interface StorylineDirectory {
 | `storylinesOf` | 사건이 든 스토리라인 — 직접 든 스토리라인과 그 상위 전부를 한 번씩, 스토리라인 ID 순. 스토리라인마다 직접 든 것인지 싣는다(storyline-R33). 합쳐진 사건이면 남는 사건의 것이고, 없는 사건이면 빈 목록(storyline-R21) |
 | `topsOf` | 사건마다 그 사건이 걸친 포함 나무의 꼭대기 — 직접 든 합쳐지지 않은 스토리라인에서 포함의 상위를 끝까지 따른 뿌리(상위가 없으면 자기)를, 그 꼭대기 아래 직접 소속의 가장 높은 소속 점수 순으로 낸다(점수는 싣지 않는다). 소속이 없는 사건 · 합쳐졌거나 없는 사건은 빠지고, 빈 입력이면 빈 맵. 서로 다른 사건이 `MAX_TOP_EVENTS` 개를 넘으면 `IllegalArgumentException`(storyline-R37) |
 | `topsOfStorylines` | 스토리라인마다 그 포함 나무의 꼭대기 — 포함의 상위를 끝까지 따른 뿌리(상위가 없으면 자기). 키는 받은 ID 이고, 합쳐진 스토리라인이면 남는 스토리라인의 꼭대기다. 없는 스토리라인(지웠거나 처음부터 없는 ID)은 빠지고, 빈 입력이면 빈 맵. 서로 다른 스토리라인이 `MAX_TOP_STORYLINES` 개를 넘으면 `IllegalArgumentException`(storyline-R37) |
+| `continuationsOf` | 스토리라인마다 그 포함 나무의 꼭대기에서 이어짐을 앞에서 뒤로 끝까지 따라 닿는 꼭대기 — 자기 꼭대기는 없고, 닿는 것이 없으면 빈 집합이다. 키는 받은 ID 이고, 합쳐진 스토리라인이면 남는 스토리라인의 것이다. 없는 스토리라인(지웠거나 처음부터 없는 ID)은 빠지고, 빈 입력이면 빈 맵. 서로 다른 스토리라인이 `MAX_TOP_STORYLINES` 개를 넘으면 `IllegalArgumentException`(storyline-R38) |
 | `list` | 기간의 스토리라인 — 직접 소속의 마지막 기사 시각 내림차순, 스토리라인 ID 내림차순으로 `size` 건. 집계 · 큰 여부는 그 기간 · 지금 기준이고 닫은 사건 집합으로 센다(storyline-R22 · R33). `size` 가 1 ~ `MAX_PAGE_SIZE` 밖이면 `IllegalArgumentException` |
 | `bigStorylines` | 기간의 스토리라인 가운데 큰 스토리라인 — 지금 기준으로 판정한다(storyline-R19). 포함 나무마다 한 행이다 — 큰 스토리라인 가운데 그 나무에서 가장 위의 것이 행이고, 그 아래의 큰 스토리라인은 행의 `branches` 에 실린다. 행과 아래 행 모두 보도 강도 내림차순, 스토리라인 ID 순 |
 | `unlinked` | 조회 기간 안 기사가 있는 사건 가운데 소속 없는 사건의 수와 그 사건들의 기간 안 기사 수(storyline-R23) |
@@ -208,7 +210,7 @@ public record UnlinkedEvents(int events, int articles) {}
 
 ### StorylinesRetired · RetiredStoryline
 
-정돈이나 조각 합치기가 합치거나 정돈이 지운 스토리라인의 알림 — `user` 가 받아 스토리라인 구독을 따른다(storyline-R35).
+정돈이나 조각 합치기가 합치거나 정돈이 지운 스토리라인의 알림 — `user` 가 받아 사용자 스토리라인과 스토리라인 구독을 따른다(storyline-R35).
 
 ```java
 public record StorylinesRetired(List<RetiredStoryline> storylines) {}  // 비었거나 같은 스토리라인이 두 번이면 IllegalArgumentException
@@ -518,6 +520,7 @@ sequenceDiagram
 - `RelationCriteria(double probability, double oneMatter, int minEvents, double candidateScore, Duration window, double mergeProbability)` — 관계 기준. 확률 기준 · 후보 점수 기준은 0 보다 크고 1 이하, 한 사안 기준은 0 ~ 1, 사건 수 하한은 2 이상, 창은 0 보다 큰 초 단위, 합치기 확률 기준은 확률 기준 이상 1 이하(storyline-R17 · R27 · R29)
 - `RelationGraph` — 구조 제약의 정본(storyline-R25). 지금 관계의 목록으로 만들고, 상위(`parentOf`) · 하위 전부(`descendants`) · 상위들(`ancestors` — 가까운 순) · 넣으면 순환이 되는가(`closesCycle` — 같은 종류의 고리를 따라 `target` 에서 `source` 로 닿는가)를 답한다. 그 쌍의 관계(`between`)와 그 쌍의 관계를 뺀 그래프(`without`)도 낸다
 - `StorylineTops` — 사건마다 포함 나무의 꼭대기와 그 순서, 스토리라인 하나의 꼭대기(`rootOf`)의 정본(storyline-R37). 직접 소속(`DirectMembership`)과 `RelationGraph` 를 받아 사건마다 꼭대기 ID 목록을 낸다 — 꼭대기는 `ancestors` 의 마지막(없으면 자기 — 공개 정적 `rootOf(스토리라인 ID, RelationGraph)` 가 정본), 순서는 꼭대기 아래 가장 높은 소속 점수 내림차순 · 점수 없는 꼭대기는 뒤 · 같으면 ID 순. 사건의 꼭대기 조회와 스토리라인의 꼭대기 조회가 함께 쓴다
+- `TopContinuations` — 스토리라인마다 그 꼭대기에서 이어짐을 앞에서 뒤로 따라 닿는 꼭대기의 정본(storyline-R38). `RelationGraph` 를 받아 이어짐의 두 끝을 꼭대기(`StorylineTops.rootOf`)로 올린 고리를 따른다
 - `RelationCandidates` — 후보 쌍의 정본(storyline-R27 · R28 · R30) — `partners` · `askable` · `due` · `firstIs` · `subjectIs`
 - `RelationRule` — 판정의 정본(storyline-R29). `decide` 가 `Link(관계, 확률)` · `Fragments(first, second, 확률)` · `None(사유)` 가운데 하나를 낸다(sealed). 사유는 `NOT_RELATED` · `LOW_PROBABILITY` · `NOT_ONE_MATTER` · `CYCLE` · `SECOND_PARENT`. 판정의 결말(최상위 `RelationOutcome`)은 `outcomeOf(판정)` 이 정한다(`default` 없는 `switch`)
 - `FragmentMerge` — 조각을 합칠지의 정본(storyline-R17). `decide(Fragments, RelationCriteria)` 가 `Merge(남는 스토리라인 ID, 합쳐질 스토리라인 ID)` — ID 가 작은 쪽이 남는다 — 이나 `Keep()` 을 낸다(sealed). 확률이 합치기 확률 기준 이상이면 합친다(경계 포함)
@@ -758,6 +761,12 @@ sequenceDiagram
   - 서로 다른 사건이 `StorylineDirectory.MAX_TOP_EVENTS`(1,000 — 측정 전 목표)를 넘으면 `IllegalArgumentException` 이다 — 같은 사건이 여러 번 와도 한 번 센다. 빈 입력이면 빈 맵이다
   - 사건 · 직접 소속 · 관계를 따로 읽는다 — 한 스냅숏이 아니고 모듈 잠금(storyline-R5)을 잡지 않는다
   - 스토리라인의 꼭대기(`topsOfStorylines`)는 받은 스토리라인을 남는 스토리라인으로 풀고(storyline-R21 — `findAll` 과 같은 길) 그 스토리라인에서 포함의 상위를 끝까지 따른다(`StorylineTops.rootOf`). 키는 받은 ID 이고 없는 스토리라인은 결과에 없다. 서로 다른 스토리라인이 `StorylineDirectory.MAX_TOP_STORYLINES`(1,000 — 측정 전 목표)를 넘으면 `IllegalArgumentException` 이다 — 같은 스토리라인이 여러 번 와도 한 번 센다. 빈 입력이면 빈 맵이다
+- **storyline-R38** — 이어짐으로 닿는 꼭대기(`continuationsOf` · `TopContinuations` — 정본): 스토리라인마다 그 포함 나무의 꼭대기에서 이어짐을 앞에서 뒤로 끝까지 따라 닿는 꼭대기를 낸다. 판단의 이유는 [ADR-0281](../adr/0281-a-user-storyline-is-a-flow-that-received-interest-signals-and-tracks-the-tops-reached-forward-along-follows-from-its-seeds-as-one-group.md)에 있다.
+  - 이어짐은 아무 스토리라인 둘 사이에 맺히므로 두 끝을 포함 나무의 꼭대기(`StorylineTops.rootOf` — storyline-R37)로 올려 꼭대기 사이의 고리로 본다. 두 끝의 꼭대기가 같은 고리(한 나무 안의 이어짐)는 버린다
+  - 앞에서 뒤로만 따른다 — 뒤 흐름에서 앞 흐름은 닿지 않는다. 닿는 것은 이행 닫힘이다(뒤의 뒤도 닿는다). 자기 꼭대기는 결과에 없다
+  - 순환 금지(storyline-R25)는 같은 종류의 원래 스토리라인 사이에서만 확인하므로 꼭대기로 올린 고리는 순환을 이룰 수 있다 — 이미 본 꼭대기는 다시 가지 않는다
+  - 받은 스토리라인은 남는 스토리라인으로 푼다(storyline-R21 — `findAll` 과 같은 길). 키는 받은 ID 이고 없는 스토리라인은 결과에 없다. 서로 다른 스토리라인이 `StorylineDirectory.MAX_TOP_STORYLINES`(1,000 — 측정 전 목표)를 넘으면 `IllegalArgumentException` 이다 — 같은 스토리라인이 여러 번 와도 한 번 센다. 빈 입력이면 빈 맵이다
+  - 관계를 읽을 때의 지금 상태다 — 모듈 잠금(storyline-R5)을 잡지 않고, 꼭대기 조회(storyline-R37)와 한 스냅숏이 아니다
 - **storyline-R24** — 합계: 여러 스토리라인의 합계는 구성 사건 ID 의 합집합으로 센다 — 같은 사건을 한 번만 세고, 기사는 사건 하나에만 배정되므로 기사도 한 번이다. `EventDirectory.tallies` 의 묶음 하나가 이 합집합이다. 합계를 내는 공개 조회는 없다 — **(미구현)** 그것을 쓰는 기능(변화 리포트의 보도량)을 만들 때 둔다. 포함 관계의 상위는 하위의 사건을 닫은 사건 집합으로 센다(storyline-R33) — 상위와 그 하위를 함께 합치면 하위의 사건이 상위의 집합에 이미 있어 한 번만 세어진다
   - 스토리라인의 보도량은 닫은 사건 집합의 조회 기간 안 기사 수다 — 기간 집계의 기사 수이고 중요도로 무게를 주지 않는다([ADR-0148](../adr/0148-storyline-coverage-is-the-article-count-in-the-period-over-the-closed-event-set.md)). 상위의 보도량은 하위의 것을 품으므로 상위와 하위의 보도량을 그대로 더하지 않고 합집합으로 센다
   - 기간 안 기사는 사건 배정의 발행 시각으로 고른다(storyline-R22). 주제별 보도량은 기사의 첫 평가 시각으로 기간에 넣으므로([tag Spec](tag.md)) 두 보도량의 기간 시각이 다르다
@@ -901,3 +910,4 @@ sequenceDiagram
 | [0255](../adr/0255-storyline-linking-and-relation-queues-defer-transient-failures-until-a-retry-time-and-never-drop-them.md) | 스토리라인 잇기 · 관계 판정이 일시 실패한 대상은 대기 행의 판정 가능 시각까지 미루고, 일시 실패 수로 대기에서 빼지 않는다 |
 | [0259](../adr/0259-evaluator-timing-is-owned-by-one-evaluation-type-and-judging-queues-derive-their-leases-from-the-longest-judgement.md) | 평가기 요청 마감 · 판정 한 번의 가장 긴 시간 · 일시 실패 뒤 간격은 `evaluation` 의 공개 타입 하나가 정본이고, 판정을 부르는 대기의 점유 기간은 판정 한 번의 가장 긴 시간에서 계산한다 |
 | [0264](../adr/0264-the-storyline-tops-query-gives-each-event-its-containment-tree-roots-in-membership-score-order-without-the-scores.md) | 스토리라인 꼭대기 조회는 사건마다 포함 나무 뿌리를 소속 점수 순으로 내고 점수는 싣지 않는다 |
+| [0281](../adr/0281-a-user-storyline-is-a-flow-that-received-interest-signals-and-tracks-the-tops-reached-forward-along-follows-from-its-seeds-as-one-group.md) | 사용자 스토리라인은 관심 신호를 받은 흐름이고, 씨앗에서 이어짐을 앞에서 뒤로 따라 닿는 꼭대기를 한 묶음으로 추적한다 |

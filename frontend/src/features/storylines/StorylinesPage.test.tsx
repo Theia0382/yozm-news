@@ -7,6 +7,7 @@ import {
   card,
   page,
   subscriptionHandlers,
+  trackingStates,
 } from "@/features/storylines/storylineTestKit";
 import { type fakeServer, json, problem } from "@/test/fakeServer";
 import { renderRoutes } from "@/test/renderRoutes";
@@ -16,7 +17,7 @@ const ROUTES = [
   { path: "/storylines/:id", element: <StorylinePage /> },
 ];
 
-/** 목록 요청만 — 구독 버튼이 내 구독을 함께 읽는다 */
+/** 목록 요청만 — 흐름 추적 버튼이 추적 상태를 함께 읽는다 */
 function listRequests(server: ReturnType<typeof fakeServer>) {
   return server.requests.filter((r) => r.path === "/api/storylines");
 }
@@ -59,10 +60,9 @@ describe("StorylinesPage", () => {
       "aria-pressed",
       "true",
     );
-    expect(screen.getByRole("link", { name: "내 구독" })).toHaveAttribute(
-      "href",
-      "/storylines/subscriptions",
-    );
+    expect(
+      screen.getByRole("link", { name: "추적 중인 흐름" }),
+    ).toHaveAttribute("href", "/storylines/subscriptions");
   });
 
   it("기간을 고르면 그 기간으로 다시 받는다", async () => {
@@ -125,7 +125,7 @@ describe("StorylinesPage", () => {
     );
   });
 
-  it("카드마다 구독 버튼이 내 구독을 따르고, 누르면 그 카드의 ID 로 구독 · 해제한다", async () => {
+  it("카드마다 흐름 추적 버튼이 추적 상태를 따르고, 누르면 그 카드의 ID 로 추적 · 해제한다", async () => {
     const { server } = renderRoutes(ROUTES, "/storylines", {
       "GET /api/storylines": () =>
         json(page([card(7), card(8, { parentId: 7 })])),
@@ -134,25 +134,32 @@ describe("StorylinesPage", () => {
     const list = await screen.findByRole("list", { name: "스토리라인" });
     const [first, child] = within(list).getAllByRole("listitem");
     const subscribed = await within(first!).findByRole("button", {
-      name: "구독 중",
+      name: "추적 중",
     });
     expect(subscribed).toHaveAttribute("aria-pressed", "true");
     expect(
-      within(child!).getByRole("button", { name: "구독" }),
+      within(child!).getByRole("button", { name: "흐름 추적" }),
     ).toHaveAttribute("aria-pressed", "false");
-    // 카드 둘의 버튼이 내 구독 조회 한 번을 함께 쓴다
+    // 카드 둘의 버튼이 추적 상태 조회 한 번을 함께 쓴다 — 추적 중인 흐름 목록은 읽지 않는다
     const listReads = () =>
-      server.requests.filter((r) => r.path === "/api/storyline-subscriptions");
-    expect(listReads()).toHaveLength(1);
-
-    // 하위 행은 자기 ID 로 구독한다
-    await userEvent.click(within(child!).getByRole("button", { name: "구독" }));
+      server.requests.filter(
+        (r) => r.path === "/api/storyline-subscriptions/states",
+      );
+    expect(listReads().map((r) => r.search)).toEqual(["?ids=7&ids=8"]);
     expect(
-      await within(child!).findByRole("button", { name: "구독 중" }),
+      server.requests.filter((r) => r.path === "/api/storyline-subscriptions"),
+    ).toHaveLength(0);
+
+    // 하위 행은 자기 ID 로 추적한다
+    await userEvent.click(
+      within(child!).getByRole("button", { name: "흐름 추적" }),
+    );
+    expect(
+      await within(child!).findByRole("button", { name: "추적 중" }),
     ).toBeInTheDocument();
     await userEvent.click(subscribed);
     expect(
-      await within(first!).findByRole("button", { name: "구독" }),
+      await within(first!).findByRole("button", { name: "흐름 추적" }),
     ).toBeInTheDocument();
 
     const changes = server.requests.filter((r) => r.method !== "GET");
@@ -160,7 +167,7 @@ describe("StorylinesPage", () => {
       "PUT /api/storyline-subscriptions/8",
       "DELETE /api/storyline-subscriptions/7",
     ]);
-    // 구독 · 해제마다 내 구독을 한 번씩 다시 읽는다
+    // 추적 · 해제마다 추적 상태를 한 번씩 다시 읽는다
     expect(listReads()).toHaveLength(3);
     expect(screen.queryByRole("alert")).toBeNull();
   });
@@ -170,20 +177,20 @@ describe("StorylinesPage", () => {
       json({ result: "LIMIT_REACHED", storylineId: null, limit: 100 });
     renderRoutes(ROUTES, "/storylines", {
       "GET /api/storylines": () => json(page([card(8)])),
-      "GET /api/storyline-subscriptions": () =>
-        json({ limit: 100, subscriptions: [] }),
+      "GET /api/storyline-subscriptions/states": (request) =>
+        trackingStates(request, () => false),
       "PUT /api/storyline-subscriptions/8": () => answer(),
     });
-    const button = await screen.findByRole("button", { name: "구독" });
+    const button = await screen.findByRole("button", { name: "흐름 추적" });
     await waitFor(() => expect(button).toBeEnabled());
 
     await userEvent.click(button);
     const limited = await screen.findByRole("alert");
     expect(limited).toHaveTextContent(
-      "구독은 100개까지입니다. 내 구독에서 정리해 주세요.",
+      "흐름 추적은 100개까지입니다. 추적 중인 흐름에서 정리해 주세요.",
     );
     expect(
-      within(limited).getByRole("link", { name: "내 구독" }),
+      within(limited).getByRole("link", { name: "추적 중인 흐름" }),
     ).toHaveAttribute("href", "/storylines/subscriptions");
 
     answer = () =>
@@ -196,18 +203,39 @@ describe("StorylinesPage", () => {
     answer = () => problem(500, "오류");
     await userEvent.click(button);
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "구독을 바꾸지 못했습니다.",
+      "흐름 추적을 바꾸지 못했습니다.",
     );
     expect(button).toHaveAttribute("aria-pressed", "false");
   });
 
-  it("내 구독을 읽기 전에는 구독 버튼을 누를 수 없다", async () => {
+  it("추적 상태를 읽지 못하면 흐름 추적 버튼을 누를 수 없고 그렇게 알린다", async () => {
     renderRoutes(ROUTES, "/storylines", {
       "GET /api/storylines": () => json(page([card(8)])),
-      "GET /api/storyline-subscriptions": () => problem(500, "오류"),
+      "GET /api/storyline-subscriptions/states": () => problem(500, "오류"),
     });
 
-    const button = await screen.findByRole("button", { name: "구독" });
+    const button = await screen.findByRole("button", { name: "흐름 추적" });
     expect(button).toBeDisabled();
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "흐름 추적 상태를 불러오지 못해 지금은 추적을 바꿀 수 없습니다.",
+    );
+    expect(button).toBeDisabled();
+  });
+
+  it("카드가 100개를 넘으면 추적 상태를 100개씩 나눠 묻는다", async () => {
+    const ids = Array.from({ length: 101 }, (_, index) => index + 1);
+    const { server } = renderRoutes(ROUTES, "/storylines", {
+      "GET /api/storylines": () => json(page(ids.map((id) => card(id)))),
+      "GET /api/storyline-subscriptions/states": (request) =>
+        trackingStates(request, (id) => id === 101),
+    });
+
+    // 둘째 요청의 답까지 합쳐 읽는다
+    const buttons = await screen.findAllByRole("button", { name: "추적 중" });
+    expect(buttons).toHaveLength(1);
+    const reads = server.requests
+      .filter((r) => r.path === "/api/storyline-subscriptions/states")
+      .map((r) => new URLSearchParams(r.search).getAll("ids").length);
+    expect(reads).toEqual([100, 1]);
   });
 });

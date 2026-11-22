@@ -9,6 +9,7 @@ import java.util.Set;
 
 import net.yozmnews.event.EventId;
 import net.yozmnews.feedback.FeedbackChange;
+import net.yozmnews.storyline.StorylineId;
 import net.yozmnews.user.StorylineSubscriptionChange;
 import net.yozmnews.user.TopicSubscriptionChange;
 
@@ -58,7 +59,7 @@ public final class InterestWindow {
 		}
 		Map<EventId, Exposure> exposures = new HashMap<>();
 		latest.forEach((event, row) -> exposures.put(event, new Exposure(row.at(), Math.min(1.0, row.share()))));
-		Set<EventId> repeated = StorylineRepeats.repeated(record.tops(), rows);
+		Set<EventId> repeated = StorylineRepeats.repeated(record.tops(), record.flows(), rows);
 		List<FeedbackChange> feedback = record.feedback()
 			.stream()
 			.filter(change -> within(change.occurredAt(), from, windowEnd))
@@ -74,10 +75,19 @@ public final class InterestWindow {
 		InterestLevels topicLevels = new InterestLevels(InterestFormula.levels(
 				InterestSignals.topicExposed(exposures, feedback, record.subtopics(), repeated),
 				InterestSignals.topics(topics), reference, InterestRules.TOPIC));
-		StorylineLevels storylineLevels = new StorylineLevels(InterestFormula.levels(
-				InterestSignals.storylineExposed(exposures, feedback, record.tops()),
-				InterestSignals.storylines(storylines, record.storylineTops()), reference, InterestRules.STORYLINE));
-		return new Interests(topicLevels, storylineLevels);
+		Map<Integer, Double> flowLevels = InterestFormula.levels(
+				InterestSignals.storylineExposed(exposures, feedback, record.tops(), record.flows()),
+				InterestSignals.storylines(storylines, record.storylineTops(), record.flows()), reference,
+				InterestRules.STORYLINE);
+		// 묶음의 관심을 그 묶음의 모든 꼭대기에 같은 값으로 펼친다 — 선별은 꼭대기마다의 값을 쓴다
+		Map<StorylineId, Double> ofTop = new HashMap<>();
+		record.flows().flowOfTop().forEach((top, flow) -> {
+			Double level = flowLevels.get(flow);
+			if (level != null) {
+				ofTop.put(top, level);
+			}
+		});
+		return new Interests(topicLevels, new StorylineLevels(ofTop));
 	}
 
 	private static boolean within(Instant at, Instant from, Instant to) {

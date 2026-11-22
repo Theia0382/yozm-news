@@ -1,4 +1,5 @@
-import { fireEvent, screen, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { DigestDayPage } from "@/features/digests/DigestDayPage";
 import type { DigestDay } from "@/features/digests/digestQueries";
@@ -10,10 +11,18 @@ import {
   SECTIONS,
   shown,
 } from "@/features/digests/digestTestKit";
-import { json, problem } from "@/test/fakeServer";
+import {
+  subscriptionHandlers,
+  trackingStates,
+} from "@/features/storylines/storylineTestKit";
+import { type Handler, json, problem } from "@/test/fakeServer";
 import { renderRoutes } from "@/test/renderRoutes";
 
-function renderDay(response: DigestDay | Response, date = "2026-11-18") {
+function renderDay(
+  response: DigestDay | Response,
+  date = "2026-11-18",
+  handlers: Record<string, Handler> = {},
+) {
   return renderRoutes(
     [{ path: "/digests/:date", element: <DigestDayPage /> }],
     `/digests/${date}`,
@@ -21,8 +30,31 @@ function renderDay(response: DigestDay | Response, date = "2026-11-18") {
       [`GET /api/digests/${date}`]: () =>
         response instanceof Response ? response : json(response),
       "GET /api/feedback": () => json(noFeedback()),
+      ...handlers,
     },
   );
+}
+
+/** 주요 뉴스(흐름 7) · 헤드라인(흐름 8) · 흐름 없는 헤드라인 — 개요는 SECTIONS 의 것 */
+function flowSections(): DigestDay {
+  return day({
+    shown: shown({
+      sections: [
+        SECTIONS[0]!,
+        { ...SECTIONS[1]!, storylineId: 7 },
+        { ...SECTIONS[2]!, storylineId: 8 },
+        {
+          kind: "HEADLINE",
+          title: "흐름 없는 헤드라인",
+          body: null,
+          reason: "SUBSCRIBED",
+          storylineId: null,
+          eventIds: [105],
+          citations: [citation(5)],
+        },
+      ],
+    }),
+  });
 }
 
 describe("DigestDayPage", () => {
@@ -103,6 +135,130 @@ describe("DigestDayPage", () => {
     expect(item.getByRole("link", { name: "기사 1" })).toBeVisible();
   });
 
+  it("흐름이 있는 항목에만 흐름 추적 버튼을 두고, 상태는 그 다이제스트의 흐름을 한 번에 물어 읽는다", async () => {
+    const { server } = renderDay(
+      flowSections(),
+      "2026-11-18",
+      subscriptionHandlers([7], [7, 8]),
+    );
+
+    // 버튼의 이름은 항목 제목을 담는다 — 주요 뉴스는 추적 중, 헤드라인은 아니다
+    const tracked = await screen.findByRole("button", {
+      name: "주요 뉴스 제목 추적 중",
+    });
+    expect(tracked).toHaveAttribute("aria-pressed", "true");
+    const untracked = screen.getByRole("button", {
+      name: "헤드라인 제목 흐름 추적",
+    });
+    expect(untracked).toHaveAttribute("aria-pressed", "false");
+    await waitFor(() => expect(untracked).toBeEnabled());
+    // 흐름 없는 항목 · 개요에는 없다
+    expect(
+      screen.queryByRole("button", {
+        name: /^흐름 없는 헤드라인 (흐름 추적|추적 중)$/,
+      }),
+    ).toBeNull();
+    expect(
+      within(screen.getByRole("region", { name: "요약" })).queryByRole(
+        "button",
+      ),
+    ).toBeNull();
+    const stateReads = () =>
+      server.requests.filter(
+        (r) => r.path === "/api/storyline-subscriptions/states",
+      );
+    expect(stateReads().map((r) => r.search)).toEqual(["?ids=7&ids=8"]);
+
+    // 항목에서 추적하면 그 흐름의 ID 로 보내고 상태를 다시 읽는다
+    await userEvent.click(untracked);
+    expect(
+      await screen.findByRole("button", { name: "헤드라인 제목 추적 중" }),
+    ).toBeInTheDocument();
+    expect(
+      server.requests
+        .filter((r) => r.method !== "GET")
+        .map((r) => `${r.method} ${r.path}`),
+    ).toEqual(["PUT /api/storyline-subscriptions/8"]);
+    expect(stateReads()).toHaveLength(2);
+  });
+
+  it("두 항목이 같은 흐름이면 한쪽에서 추적할 때 다른 쪽도 추적 중이 된다", async () => {
+    // 서버는 같은 사용자 스토리라인의 스토리라인을 함께 추적 중으로 답한다 — 7 과 8 이 한 흐름
+    let on = false;
+    renderDay(flowSections(), "2026-11-18", {
+      "GET /api/storyline-subscriptions/states": (request) =>
+        trackingStates(request, () => on),
+      "PUT /api/storyline-subscriptions/8": () => {
+        on = true;
+        return json({ result: "SUBSCRIBED", storylineId: 8, limit: null });
+      },
+    });
+    const later = await screen.findByRole("button", {
+      name: "헤드라인 제목 흐름 추적",
+    });
+    await waitFor(() => expect(later).toBeEnabled());
+
+    await userEvent.click(later);
+
+    expect(
+      await screen.findByRole("button", { name: "주요 뉴스 제목 추적 중" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(
+      screen.getByRole("button", { name: "헤드라인 제목 추적 중" }),
+    ).toBeInTheDocument();
+  });
+
+  it("흐름 추적의 상한은 항목 안에 알리고 추적 중인 흐름으로 가는 링크를 둔다", async () => {
+    renderDay(flowSections(), "2026-11-18", {
+      "GET /api/storyline-subscriptions/states": (request) =>
+        trackingStates(request, () => false),
+      "PUT /api/storyline-subscriptions/7": () =>
+        json({ result: "LIMIT_REACHED", storylineId: null, limit: 100 }),
+    });
+    const button = await screen.findByRole("button", {
+      name: "주요 뉴스 제목 흐름 추적",
+    });
+    await waitFor(() => expect(button).toBeEnabled());
+
+    await userEvent.click(button);
+
+    const limited = await screen.findByRole("alert");
+    expect(limited).toHaveTextContent(
+      "흐름 추적은 100개까지입니다. 추적 중인 흐름에서 정리해 주세요.",
+    );
+    expect(
+      within(limited).getByRole("link", { name: "추적 중인 흐름" }),
+    ).toHaveAttribute("href", "/storylines/subscriptions");
+    // 알림은 그 항목 안에 있다
+    expect(limited.closest("article")).toHaveTextContent("주요 뉴스 제목");
+  });
+
+  it("추적 상태를 읽지 못하면 버튼을 누를 수 없고 그렇게 알린다", async () => {
+    renderDay(flowSections(), "2026-11-18", {
+      "GET /api/storyline-subscriptions/states": () => problem(500, "오류"),
+    });
+
+    expect(
+      await screen.findByText(
+        "흐름 추적 상태를 불러오지 못해 지금은 추적을 바꿀 수 없습니다.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "주요 뉴스 제목 흐름 추적" }),
+    ).toBeDisabled();
+  });
+
+  it("흐름이 있는 항목이 없으면 추적 상태를 묻지 않는다", async () => {
+    const { server } = renderDay(day());
+
+    await screen.findByRole("heading", { level: 3, name: /주요 뉴스 제목/ });
+    expect(
+      server.requests.filter((r) =>
+        r.path.startsWith("/api/storyline-subscriptions"),
+      ),
+    ).toHaveLength(0);
+  });
+
   it("개요에는 좋아요 · 싫어요가 없다", async () => {
     renderDay(day());
 
@@ -122,6 +278,7 @@ describe("DigestDayPage", () => {
               title: "구독 헤드라인",
               body: null,
               reason: "SUBSCRIBED",
+              storylineId: null,
               eventIds: [105],
               citations: [citation(5)],
             },
@@ -166,7 +323,7 @@ describe("DigestDayPage", () => {
     // 관심 반영은 주제 · 흐름 관심으로 앞선 소식과, 구독하지 않은 주제의 따라가는 흐름 소식을 함께 말한다
     expect(
       screen.getByText(
-        /‘관심 반영’은 좋아요 · 구독으로 관심이 높아진 주제나 흐름이라 앞 순위에 든 소식, 또는 구독했거나 관심이 높은 흐름의 소식이라 구독하지 않은 주제여도/,
+        /‘관심 반영’은 좋아요 · 구독 · 흐름 추적으로 관심이 높아진 주제나 흐름이라 앞 순위에 든 소식, 또는 추적하거나 관심이 높은 흐름의 소식이라 구독하지 않은 주제여도/,
       ),
     ).toBeInTheDocument();
     expect(
@@ -184,6 +341,7 @@ describe("DigestDayPage", () => {
               title: "구독 헤드라인",
               body: null,
               reason: "SUBSCRIBED",
+              storylineId: null,
               eventIds: [101],
               citations: [citation(1)],
             },

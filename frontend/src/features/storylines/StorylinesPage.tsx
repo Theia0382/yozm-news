@@ -1,6 +1,10 @@
 import { Link, useSearchParams } from "react-router";
 import { SubscribeButton } from "@/features/storylines/SubscribeButton";
 import {
+  type TrackingView,
+  useTrackingView,
+} from "@/features/storylines/subscriptionQueries";
+import {
   type StorylineCard,
   type StorylineWindow,
   useStorylinePage,
@@ -13,6 +17,7 @@ import {
   STORYLINES_TITLE,
   SUBSCRIPTIONS_PATH,
   SUBSCRIPTIONS_TITLE,
+  TRACKING_STATES_FAILED,
   UNTITLED,
   WINDOWS,
   bigInWindow,
@@ -31,13 +36,14 @@ function readWindow(value: string | null): StorylineWindow {
 
 /**
  * 독자 화면의 스토리라인 목록 — 목록 기간을 고르고, 기간에 기사가 있는 스토리라인을 마지막 기사 순으로 본다(docs/specs/reader.md reader-R1 ·
- * R2). 카드마다 구독 버튼이 있다(docs/specs/user.md user-R52)
+ * R2). 카드마다 흐름 추적 버튼이 있고, 추적 상태는 보이는 카드 전부를 한 번에 읽는다(docs/specs/user.md user-R52)
  */
 export function StorylinesPage() {
   const [params, setParams] = useSearchParams();
   const chosen = readWindow(params.get("window"));
   const page = useStorylinePage(chosen);
   const cards = page.data?.pages.flatMap((one) => one.storylines) ?? [];
+  const tracking = useTrackingView(cards.map((card) => card.id));
 
   return (
     <section className={`${PAGE_FRAME} ${NARROW_WIDTH} space-y-6`}>
@@ -78,12 +84,21 @@ export function StorylinesPage() {
       </div>
       {page.isPending && <p className="text-muted-foreground">불러오는 중…</p>}
       {page.isError && <p role="alert">{LOAD_FAILED}</p>}
+      {tracking.failed && (
+        <p role="alert" className="text-sm">
+          {TRACKING_STATES_FAILED}
+        </p>
+      )}
       {page.data && cards.length === 0 && <p>{EMPTY_WINDOW}</p>}
       {cards.length > 0 && (
         <ul aria-label={STORYLINES_TITLE} className="space-y-4">
           {cards.map((card) => (
             <li key={card.id}>
-              <StorylineCardItem card={card} chosen={chosen} />
+              <StorylineCardItem
+                card={card}
+                chosen={chosen}
+                tracking={tracking}
+              />
             </li>
           ))}
         </ul>
@@ -105,9 +120,11 @@ export function StorylinesPage() {
 function StorylineCardItem({
   card,
   chosen,
+  tracking,
 }: {
   card: StorylineCard;
   chosen: StorylineWindow;
+  tracking: TrackingView;
 }) {
   return (
     <article className="space-y-1 rounded-md border border-input p-4">
@@ -117,7 +134,7 @@ function StorylineCardItem({
             {card.title?.title ?? UNTITLED}
           </Link>
         </h2>
-        <SubscribeButton storylineId={card.id} />
+        <SubscribeButton storylineId={card.id} tracking={tracking} />
       </div>
       {card.period?.big && (
         <p className="text-sm font-medium" title={bigInWindow(chosen)}>

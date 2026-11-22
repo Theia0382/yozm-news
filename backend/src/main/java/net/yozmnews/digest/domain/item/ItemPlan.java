@@ -32,7 +32,8 @@ public final class ItemPlan {
 		Comparator<SelectedEvent> eventOrder = Comparator.comparing(SelectedEvent::event,
 				CandidateRank.order(weights));
 		List<DigestItemPlan> ordered = items.stream()
-			.map(item -> new DigestItemPlan(item.events().stream().sorted(eventOrder).toList(), item.bigRow()))
+			.map(item -> new DigestItemPlan(item.events().stream().sorted(eventOrder).toList(), item.bigRow(),
+					item.top()))
 			.sorted(Comparator.comparing((DigestItemPlan item) -> score(item, weights).isEmpty())
 				.thenComparing(item -> score(item, weights).orElse(0), Comparator.reverseOrder())
 				.thenComparingLong(ItemPlan::smallestEvent))

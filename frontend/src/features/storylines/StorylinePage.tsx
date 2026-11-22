@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { SubscribeButton } from "@/features/storylines/SubscribeButton";
+import { useTrackingView } from "@/features/storylines/subscriptionQueries";
 import {
   type NewsArticle,
   type StorylineRef,
@@ -30,7 +31,7 @@ function readId(value: string | undefined): number | null {
   return Number.isSafeInteger(id) && id >= 1 ? id : null;
 }
 
-/** 독자 화면의 스토리라인 하나 — 사건 타임라인 · 관계 · 받은 소식(docs/specs/reader.md reader-R3 ~ R5)과 구독 버튼(docs/specs/user.md user-R52) */
+/** 독자 화면의 스토리라인 하나 — 사건 타임라인 · 관계 · 받은 소식(docs/specs/reader.md reader-R3 ~ R5)과 흐름 추적 버튼(docs/specs/user.md user-R52) */
 export function StorylinePage() {
   const id = readId(useParams().id);
   return (
@@ -49,6 +50,7 @@ function Timeline({ id }: { id: number }) {
   const timeline = useStorylineTimeline(id);
   const navigate = useNavigate();
   const shown = timeline.data?.storyline.id;
+  const tracking = useTrackingView(shown === undefined ? [] : [shown]);
 
   // 합쳐진 스토리라인의 ID 로 왔으면 남는 스토리라인의 주소로 바꾼다
   useEffect(() => {
@@ -75,8 +77,8 @@ function Timeline({ id }: { id: number }) {
           <h1 className="min-w-0 text-2xl font-bold tracking-tight break-words">
             {storyline.title?.title ?? UNTITLED}
           </h1>
-          {/* 응답의 ID — 합쳐진 ID 로 왔어도 남는 스토리라인을 구독한다 */}
-          <SubscribeButton storylineId={storyline.id} />
+          {/* 응답의 ID — 합쳐진 ID 로 왔어도 남는 스토리라인으로 추적한다 */}
+          <SubscribeButton storylineId={storyline.id} tracking={tracking} />
         </div>
         {storyline.title && <ArticleLine article={storyline.title} />}
         <p className="text-sm text-muted-foreground tabular-nums">

@@ -34,6 +34,8 @@ class ItemGroupingTests {
 		// 항목은 첫 사건이 나온 순서 — 1 · 2 는 나무 100, 4 는 꼭대기가 없어 혼자, 3 은 나무 200
 		assertThat(items).extracting(Items::ids).containsExactly(List.of(1L, 2L), List.of(4L), List.of(3L));
 		assertThat(items).extracting(DigestItemPlan::bigRow).containsOnlyNulls();
+		// 항목은 자기를 묶은 꼭대기를 싣는다 — 혼자 한 항목은 없다
+		assertThat(items).extracting(DigestItemPlan::top).containsExactly(storyline(100), null, storyline(200));
 	}
 
 	@Test
@@ -60,6 +62,8 @@ class ItemGroupingTests {
 
 		assertThat(items).extracting(Items::ids).containsExactly(List.of(1L), List.of(3L));
 		assertThat(items).extracting(DigestItemPlan::bigRow).containsExactly(0, null);
+		// 큰 판정 행의 항목은 그 행 머리의 꼭대기(900)를 싣는다 — 큰 슬롯 사건 1 은 제 꼭대기가 없어도 그렇다
+		assertThat(items).extracting(DigestItemPlan::top).containsExactly(storyline(900), storyline(100));
 	}
 
 	@Test

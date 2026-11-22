@@ -31,3 +31,4 @@
 
 - 2026-11-18: 맥락 "내 구독 목록을 관심 설정 화면에 둘지 스토리라인 화면에 둘지는 구독 화면을 만들 때 정한다" — [ADR-0242](0242-the-storyline-subscription-list-lives-on-the-key-gated-storyline-screen.md)(키가 있어야 가는 스토리라인 화면에 둔다 — 결과 "키를 모두 지운 사용자도 구독을 보고 해제할 수 있다"는 처리기 수준의 결과로 남는다)
 - 2026-11-18: 결정 "스토리라인 구독 처리기를 키 없이 연다"의 처리기에 구독 이력 처리기가 든다 — [ADR-0244](0244-the-storyline-subscription-history-handler-is-opened-by-user-without-a-key-and-reads-recent-pages-in-the-module.md), 지금 상태는 [user Spec "스토리라인 구독"](../specs/user.md#스토리라인-구독) user-R63
+- 2026-11-22: 결정 "스토리라인 구독 처리기를 키 없이 연다"의 처리기에 추적 상태 처리기가 든다 — [ADR-0282](0282-flow-tracking-points-to-a-user-storyline-which-user-handlers-store-under-the-settings-lock-while-readers-get-the-result-of-the-same-rule.md), 지금 상태는 [user Spec "사용자 스토리라인"](../specs/user.md#사용자-스토리라인) user-R67

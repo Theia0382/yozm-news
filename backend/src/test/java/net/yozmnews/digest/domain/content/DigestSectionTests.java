@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import net.yozmnews.article.ArticleId;
@@ -15,10 +16,12 @@ import net.yozmnews.digest.SelectionReason;
 import net.yozmnews.digest.domain.candidate.AliasedItem;
 import net.yozmnews.digest.domain.candidate.CandidateSet;
 import net.yozmnews.digest.domain.digest.DigestId;
+import net.yozmnews.digest.domain.input.InputItem;
 import net.yozmnews.digest.domain.item.ItemKind;
 import net.yozmnews.digest.domain.output.CitedDigest;
 import net.yozmnews.digest.domain.output.CitedHeadline;
 import net.yozmnews.digest.domain.output.CitedStory;
+import net.yozmnews.storyline.StorylineId;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -79,6 +82,30 @@ class DigestSectionTests {
 
 		assertThat(story.items()).extracting(DigestItem::articleId).containsExactly(11L, 13L);
 		assertThat(story.events()).extracting(SectionEvent::eventId).containsExactly(30L, 40L);
+	}
+
+	@Test
+	void anItemSectionCarriesTheTopThatGroupedItAndTheOverviewCarriesNone() {
+		// I1 은 꼭대기 100 의 항목, I2 는 혼자 한 항목, I3 는 꼭대기 200 의 헤드라인 — 기사를 지워 남긴 항목도 값을 지닌다
+		CandidateSet items = CandidateSet
+			.of(DigestInputs.items(
+					new InputItem(ItemKind.TOP_STORY,
+							List.of(event(30, SelectionReason.SUBSCRIBED, 11), event(40, SelectionReason.SUBSCRIBED, 12)),
+							new StorylineId(100)),
+					item(ItemKind.TOP_STORY, event(50, SelectionReason.SUBSCRIBED, 13)),
+					new InputItem(ItemKind.HEADLINE, List.of(event(60, SelectionReason.INTEREST, 14)),
+							new StorylineId(200))))
+			.retain(Set.of(new ArticleId(11), new ArticleId(13), new ArticleId(14)));
+		CitedDigest cited = new CitedDigest("흐름",
+				List.of(new CitedStory(items.item("I1").orElseThrow(), "하나", "s"),
+						new CitedStory(items.item("I2").orElseThrow(), "둘", "s")),
+				List.of(new CitedHeadline(items.item("I3").orElseThrow(), "셋", null)));
+
+		List<DigestSection> sections = DigestSection.of(new DigestId(9), cited);
+
+		assertThat(sections).extracting(DigestSection::storyline)
+			.containsExactly(Optional.empty(), Optional.of(new StorylineId(100)), Optional.empty(),
+					Optional.of(new StorylineId(200)));
 	}
 
 	@Test
