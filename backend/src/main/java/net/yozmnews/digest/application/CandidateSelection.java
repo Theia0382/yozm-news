@@ -73,7 +73,6 @@ import net.yozmnews.tag.TagSetId;
 import net.yozmnews.tag.TagSetNames;
 import net.yozmnews.user.DigestInterests;
 import net.yozmnews.user.DigestInterestsDirectory;
-import net.yozmnews.user.StorylineSubscriptionDirectory;
 import net.yozmnews.user.TopicSubscription;
 import org.springframework.stereotype.Service;
 
@@ -96,7 +95,7 @@ import org.springframework.stereotype.Service;
  * <p>
  * 표본 기사의 제목 · 요약문은 토큰 어림에 쓴 읽기의 값을 그대로 입력에 싣는다 — 어림과 프롬프트의 글이 같다(ADR-0210).
  * <p>
- * 주제 구독 밖 관심 흐름의 사건은 지금 구독 중인 스토리라인을 꼭대기로 풀어 관심 흐름을 정하고({@link FollowedStorylines}) 구독 사건의
+ * 주제 구독 밖 관심 흐름의 사건은 추적 중인 사용자 스토리라인의 꼭대기로 관심 흐름을 정하고({@link FollowedStorylines}) 구독 사건의
  * 자리에서 몫 상한 안으로 먼저 담는다 — 중립 결과에는 그 길이 없어 그 사건은 {@code INTEREST} 다.
  * <p>
  * 큰 슬롯은 큰 판정 목록의 행을 그대로 쓴다. 목록은 포함 나무마다 한 행이라 한 포함 나무는 슬롯 하나를 쓴다 — 행의 사건에는 그
@@ -126,14 +125,12 @@ public class CandidateSelection {
 
 	private final EventFeedback feedback;
 
-	private final StorylineSubscriptionDirectory storylineSubscriptions;
-
 	private final InstantSource clock;
 
 	CandidateSelection(DigestInterestsDirectory interests, ArticleEvaluations evaluations,
 			ActiveEvaluations activeEvaluations, TagSetDirectory tagSets, ArticleDirectory articles,
 			EventDirectory events, StorylineDirectory storylines, InterestMaterials interestMaterials,
-			EventFeedback feedback, StorylineSubscriptionDirectory storylineSubscriptions, InstantSource clock) {
+			EventFeedback feedback, InstantSource clock) {
 		this.interests = Objects.requireNonNull(interests, "interests");
 		this.evaluations = Objects.requireNonNull(evaluations, "evaluations");
 		this.activeEvaluations = Objects.requireNonNull(activeEvaluations, "activeEvaluations");
@@ -143,7 +140,6 @@ public class CandidateSelection {
 		this.storylines = Objects.requireNonNull(storylines, "storylines");
 		this.interestMaterials = Objects.requireNonNull(interestMaterials, "interestMaterials");
 		this.feedback = Objects.requireNonNull(feedback, "feedback");
-		this.storylineSubscriptions = Objects.requireNonNull(storylineSubscriptions, "storylineSubscriptions");
 		this.clock = Objects.requireNonNull(clock, "clock");
 	}
 
@@ -209,10 +205,8 @@ public class CandidateSelection {
 		if (big.isEmpty()) {
 			return Optional.empty();
 		}
-		Set<StorylineId> followed = levels.storylines()
-			.followed(Set.copyOf(StorylineTopsQueries
-				.ofStorylines(this.storylines, this.storylineSubscriptions.subscriptions(user))
-				.values()));
+		// 추적 중인 사용자 스토리라인의 꼭대기 — 추적한 흐름과 그 흐름이 이어짐으로 따라가는 뒤 흐름
+		Set<StorylineId> followed = levels.storylines().followed(interestRecord.get().flows().trackedTops());
 		Set<EventId> taken = big.get()
 			.slots()
 			.events()

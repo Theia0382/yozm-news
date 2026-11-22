@@ -37,6 +37,7 @@ import net.yozmnews.tag.TagKind;
 import net.yozmnews.tag.TagSetDirectory;
 import net.yozmnews.tag.TagSetId;
 import net.yozmnews.user.StorylineSubscriptionDirectory;
+import net.yozmnews.user.UserStorylineDirectory;
 import net.yozmnews.user.TopicSubscriptionAction;
 import net.yozmnews.user.TopicSubscriptionHistory;
 import net.yozmnews.user.UserTimezones;
@@ -96,6 +97,9 @@ class InterestHistoryServiceTests {
 
 	@Autowired
 	StorylineSubscriptionDirectory storylineSubscriptions;
+
+	@Autowired
+	UserStorylineDirectory userStorylines;
 
 	@Autowired
 	StorylineDirectory storylines;
@@ -374,7 +378,7 @@ class InterestHistoryServiceTests {
 	private InterestHistoryService withLineage(TagKeyLineage materialLineage) {
 		InterestMaterials skewedMaterials = new InterestMaterials(this.exposures, this.feedback,
 				new ActiveEvaluations(this.evaluations, materialLineage), this.topicHistory,
-				this.storylineSubscriptions, this.storylines, this.events);
+				this.storylineSubscriptions, this.storylines, this.events, this.userStorylines);
 		return new InterestHistoryService(this.timezones, this.tagSets, skewedMaterials, InstantSource.fixed(NOW));
 	}
 

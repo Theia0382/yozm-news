@@ -28,7 +28,7 @@ public final class InterestRules {
 	public static final double STORYLINE_EXCLUSION_THRESHOLD = -0.2;
 
 	/**
-	 * 관심 흐름의 기준 — 관심 x 가 이 값 이상인 꼭대기는 (지금 구독 중인 스토리라인의 꼭대기와 함께) 관심 흐름이다
+	 * 관심 흐름의 기준 — 관심 x 가 이 값 이상인 꼭대기는 (추적 중인 사용자 스토리라인의 꼭대기와 함께) 관심 흐름이다
 	 * ({@link StorylineLevels#followed}). 주제 구독 밖 관심 흐름의 길도 같은 정의를 쓴다
 	 */
 	public static final double STORYLINE_FOLLOW_THRESHOLD = 0.35;

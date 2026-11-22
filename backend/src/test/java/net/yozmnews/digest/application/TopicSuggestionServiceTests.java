@@ -26,6 +26,7 @@ import net.yozmnews.tag.TagSetDirectory;
 import net.yozmnews.tag.TagSetId;
 import net.yozmnews.user.DigestInterestsDirectory;
 import net.yozmnews.user.StorylineSubscriptionDirectory;
+import net.yozmnews.user.UserStorylineDirectory;
 import net.yozmnews.user.TopicSubscriptionHistory;
 import net.yozmnews.user.TopicSuggestionDeclineList;
 import net.yozmnews.user.TopicSuggestionDeclines;
@@ -91,6 +92,9 @@ class TopicSuggestionServiceTests {
 
 	@Autowired
 	StorylineSubscriptionDirectory storylineSubscriptions;
+
+	@Autowired
+	UserStorylineDirectory userStorylines;
 
 	@Autowired
 	StorylineDirectory storylines;
@@ -251,7 +255,7 @@ class TopicSuggestionServiceTests {
 	private TopicSuggestionService withLineage(TagKeyLineage materialLineage, Instant now) {
 		InterestMaterials skewedMaterials = new InterestMaterials(this.exposures, this.feedback,
 				new ActiveEvaluations(this.evaluations, materialLineage), this.topicHistory,
-				this.storylineSubscriptions, this.storylines, this.events);
+				this.storylineSubscriptions, this.storylines, this.events, this.userStorylines);
 		return new TopicSuggestionService(this.digestInterests, this.declines, this.tagSets, this.timezones,
 				new CurrentInterests(skewedMaterials), InstantSource.fixed(now));
 	}

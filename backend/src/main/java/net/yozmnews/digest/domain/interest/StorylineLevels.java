@@ -11,7 +11,8 @@ import net.yozmnews.storyline.StorylineId;
 
 /**
  * 한 사용자의 스토리라인(포함 나무의 꼭대기)마다 관심 x(−1 ~ 1) — {@link InterestWindow#levels} 가 {@link InterestRules#STORYLINE} 묶음으로
- * 낸다. 맵에 없는 꼭대기는 0(신호 없음)이다. 가중치 변환과 거른 꼭대기 · 관심 흐름 · 남길 흐름의 판정이 여기 한 곳에 있다.
+ * 낸다. 관심의 키는 사용자 스토리라인 묶음({@link StorylineFlows})이고, 한 묶음의 꼭대기는 모두 그 묶음의 값을 갖는다. 맵에 없는 꼭대기는
+ * 0(신호 없음)이다. 가중치 변환과 거른 꼭대기 · 관심 흐름 · 남길 흐름의 판정이 여기 한 곳에 있다.
  * docs/specs/digest.md §5
  */
 public final class StorylineLevels {
@@ -66,7 +67,7 @@ public final class StorylineLevels {
 	/**
 	 * 관심 흐름 — x 가 {@link InterestRules#STORYLINE_FOLLOW_THRESHOLD} 이상인 꼭대기와 {@code subscribed} 에서 거른 꼭대기를 뺀 것. 거름이
 	 * 앞선다 — 구독한 흐름도 거른 꼭대기면 관심 흐름이 아니다
-	 * @param subscribed 지금 구독 중인 스토리라인의 꼭대기
+	 * @param subscribed 추적 중인 사용자 스토리라인의 꼭대기({@link StorylineFlows#trackedTops})
 	 */
 	public Set<StorylineId> followed(Set<StorylineId> subscribed) {
 		Objects.requireNonNull(subscribed, "subscribed");
