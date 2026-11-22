@@ -95,7 +95,7 @@ erDiagram
 
 ## 사용자
 
-계정 · 자격 · 복구 코드 · 실패 기록 · 요청 제한 기록 · 화면 내 알림 · 가입 정책 · 초대 · 관심 설정 · 스토리라인 구독 · 구독 제안 거절 테이블(`users` · `user_password_credentials` · `user_recovery_codes` · `login_failures` · `request_limit_counts` · `user_notices` · `user_feed_status_receipts` · `user_sign_up_policy` · `user_sign_up_policy_changes` · `user_invitations` · `user_settings` · `user_tag_preferences` · `user_tag_preference_events` · `user_excluded_sources` · `user_storyline_subscriptions` · `user_storyline_subscription_events` · `user_topic_suggestion_declines`)은 [user Spec §6](specs/user.md#6-데이터)에 있다. 다이제스트의 최대 후보 수 · 큰 슬롯 수 · 요약 길이와 생성의 추론 강도는 설정 행의 칸이다([user Spec](specs/user.md#관심-설정) user-R56 · R59).
+계정 · 자격 · 복구 코드 · 실패 기록 · 요청 제한 기록 · 화면 내 알림 · 가입 정책 · 초대 · 관심 설정 · 사용자 스토리라인 · 스토리라인 구독 · 구독 제안 거절 테이블(`users` · `user_password_credentials` · `user_recovery_codes` · `login_failures` · `request_limit_counts` · `user_notices` · `user_feed_status_receipts` · `user_sign_up_policy` · `user_sign_up_policy_changes` · `user_invitations` · `user_settings` · `user_tag_preferences` · `user_tag_preference_events` · `user_excluded_sources` · `user_storylines` · `user_storyline_members` · `user_storyline_tracked_seeds` · `user_storyline_subscriptions` · `user_storyline_subscription_events` · `user_topic_suggestion_declines`)은 [user Spec §6](specs/user.md#6-데이터)에 있다. 다이제스트의 최대 후보 수 · 큰 슬롯 수 · 요약 길이와 생성의 추론 강도는 설정 행의 칸이다([user Spec](specs/user.md#관심-설정) user-R56 · R59).
 
 ## LLM 키 (BYOK)
 
@@ -115,13 +115,13 @@ erDiagram
 
 ## 다이제스트
 
-다이제스트 테이블(`digests` · `digest_sections` · `digest_section_events` · `digest_items` · `digest_candidates`)은 [digest Spec §6](specs/digest.md#6-데이터)에 있다. 섹션 하나가 항목 하나이고, 섹션 사건(`digest_section_events`)은 그 항목의 사건을 ID 로 가리킨다 — 사건의 값은 복사해 두지 않는다. 인용(`digest_items`)과 후보 행(`digest_candidates`)은 기사를 ID 로 가리킨다. 모두 모듈 사이라 FK 가 없고, 지운 기사는 `digest` 가 따른다([digest Spec](specs/digest.md#지운-기사-따르기) digest-R10).
+다이제스트 테이블(`digests` · `digest_sections` · `digest_section_events` · `digest_items` · `digest_candidates`)은 [digest Spec §6](specs/digest.md#6-데이터)에 있다. 섹션 하나가 항목 하나이고, 섹션 사건(`digest_section_events`)은 그 항목의 사건을 ID 로 가리킨다 — 사건의 값은 복사해 두지 않는다. 섹션은 항목을 묶은 스토리라인(생성 때의 포함 나무 꼭대기)도 ID 로 가리키고, 조회가 지금 꼭대기로 푼다. 인용(`digest_items`)과 후보 행(`digest_candidates`)은 기사를 ID 로 가리킨다. 모두 모듈 사이라 FK 가 없고, 지운 기사는 `digest` 가 따른다([digest Spec](specs/digest.md#지운-기사-따르기) digest-R10).
 
 ## 스토리라인
 
 - 공유 스토리라인 테이블(`storylines` · `storyline_key_terms` — 사용자를 모른다), 사건의 소속(`storyline_members` — 사건 하나가 스토리라인 0개 이상에 든다), 잇기 대기(`storyline_linking_queue`), 기준 이력(`storyline_linking_criteria`), 잇기 물은 기록(`storyline_link_asked` · `storyline_pair_asked` — 띠 안 후보에 물은 확률), 스토리라인 사이 관계(`storyline_relations` — 포함 · 이어짐, 쌍마다 한 행), 물은 기록(`storyline_relation_asked`), 관계 대기(`storyline_relation_queue`), 관계 기준 이력(`storyline_relation_criteria`), 큰 판정 기준 테이블(`storyline_big_criteria` · `storyline_big_criteria_changes`)은 [storyline Spec §6](specs/storyline.md#6-데이터)에 있다. 사건은 ID 로만 가리킨다
 - 포함의 상위가 하위의 사건을 갖는 것은 저장하지 않는다 — 소속은 직접 소속만 있고 조회할 때 관계를 따라 모은다([ADR-0131](adr/0131-storyline-relations-are-explicit-links-with-containment-as-a-single-parent-tree-gathered-at-query-time.md)). 관계 판정 원본(`flow_relation_judgements`)과 흐름 소속 판정 원본(`flow_membership_judgements`)은 [evaluation Spec §6](specs/evaluation.md#6-데이터)에 있다
-- 스토리라인 구독과 그 변경 이력(`user_storyline_subscriptions` · `user_storyline_subscription_events` — 추가 전용 이력, 현재 구독은 그 투영)은 `user` 의 테이블이고 [user Spec §6](specs/user.md#6-데이터)에 있다. 스토리라인은 ID 로만 가리킨다 — 합치거나 지운 스토리라인은 `storyline` 의 알림으로 따른다
+- 사용자 스토리라인(`user_storylines` — 추적 대상 `user_storyline_members` · 추적 씨앗 `user_storyline_tracked_seeds`)과 스토리라인 구독 · 그 변경 이력(`user_storyline_subscriptions` · `user_storyline_subscription_events` — 구독 행은 사용자 스토리라인을 가리키고, 추가 전용 이력의 투영은 추적 씨앗이다)은 `user` 의 테이블이고 [user Spec §6](specs/user.md#6-데이터)에 있다. 스토리라인은 ID 로만 가리킨다 — 합치거나 지운 스토리라인과 바뀐 관계는 `storyline` 의 알림과 사용자의 조회 · 저장 앞에서 따른다
 
 ## 피드백
 
@@ -162,7 +162,7 @@ erDiagram
 | 관심 신호 이력(`feedback_events` · `user_tag_preference_events` · `user_storyline_subscription_events`) · 변화 리포트 | 사용자 탈퇴 시까지. 지운 사건의 좋아요 / 싫어요 이력(`feedback_events`)은 그 사건을 지울 때 지운다. 리포트 인용(`report_items`)은 지운 사건 · 스토리라인을 가리켜도 남고 조회가 뺀다 | 관심사 히스토리 · 리포트의 근거. 지운 사건은 주제를 셀 소속 기사가 없어 그 이력이 관심도에 쓰이지 못한다([feedback Spec](specs/feedback.md#지운-사건--지운-항목-따르기) feedback-R5) |
 | 계정 (`users` · `user_password_credentials`) | 사용자 탈퇴 시까지 | 사용자 데이터의 주인이고 로그인의 근거다([user Spec](specs/user.md#계정과-자격)) |
 | 관심 설정의 현재 상태 (`user_settings` · `user_tag_preferences` · `user_excluded_sources`) | 사용자 탈퇴 시까지. 태그 체계를 바꿔 활성하면 태그 선호를 활성 키로 고쳐 쓰고, 소스를 지우면 그 소스의 제외를 지운다 | 다이제스트 후보 선별의 입력이다([user Spec](specs/user.md#관심-설정) user-R47 · R49) |
-| 스토리라인 구독의 현재 상태 (`user_storyline_subscriptions`) | 사용자 탈퇴 시까지. 합쳐진 스토리라인의 구독은 남는 스토리라인으로 옮기고, 사라진 스토리라인의 구독은 뺀다 | 구독 이력의 투영이다([user Spec](specs/user.md#스토리라인-구독) user-R53) |
+| 사용자 스토리라인(`user_storylines` · `user_storyline_members` · `user_storyline_tracked_seeds`)과 스토리라인 구독의 현재 상태(`user_storyline_subscriptions`) | 사용자 탈퇴 시까지. 추적 중이 아닌 사용자 스토리라인은 관심 창(120일) 안에 신호가 없으면 다음 맞추기에서 지운다. 합쳐진 스토리라인의 추적 씨앗은 남는 스토리라인으로 옮기고, 사라진 스토리라인의 추적 씨앗은 뺀다 | 사용자 스토리라인은 신호 이력과 지금 관계에서 다시 낼 수 있고, 추적 씨앗은 구독 이력의 투영이다([user Spec](specs/user.md#사용자-스토리라인) user-R53 · R66) |
 | 좋아요 / 싫어요의 사건마다 현재 상태 (`feedback`) | 사용자 탈퇴 시까지. 지운 사건의 행은 그 사건을 지울 때 지운다 | 사건마다 지금 값이다 — 바뀐 차례는 `feedback_events` 에 있다([feedback Spec](specs/feedback.md#지운-사건--지운-항목-따르기) feedback-R5) |
 | 항목에 누른 값 (`feedback_items`) | 사용자 탈퇴 시까지. 지운 항목 섹션의 행은 그 섹션을 지울 때 지운다 | 화면이 그 항목에 보이는 값이다 — 관심 신호는 사건마다의 이력이 맡는다([feedback Spec](specs/feedback.md#지운-사건--지운-항목-따르기) feedback-R5) |
 | LLM 키 (`llm_credentials`) | 사용자가 지우거나 탈퇴할 때까지. 교체하면 옛 행을 지우고 새 행을 넣는다 | 다이제스트 생성에 쓴다. 상태가 `INVALID` 여도 남는다([credential Spec](specs/credential.md#등록과-삭제) credential-R11 · R16) |

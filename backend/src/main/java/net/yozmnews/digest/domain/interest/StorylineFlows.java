@@ -10,7 +10,7 @@ import net.yozmnews.storyline.StorylineId;
 
 /**
  * 사용자 스토리라인 묶음 — 스토리라인 관심의 키. 꼭대기마다 그것을 추적 대상으로 가진 사용자 스토리라인(묶음 번호)과 추적 중인 묶음.
- * docs/specs/digest.md §5
+ * docs/specs/digest.md §5 · digest-R49
  * <p>
  * 묶음은 {@code user} 가 낸다 — 사용자가 관심 신호를 준 흐름과 그 흐름이 이어짐으로 따라가는 뒤 흐름이 한 묶음이다. 묶음 번호는 이 값 안에서만
  * 뜻이 있다. 묶음이 없는 꼭대기는 스토리라인 관심의 키가 없다(중립).

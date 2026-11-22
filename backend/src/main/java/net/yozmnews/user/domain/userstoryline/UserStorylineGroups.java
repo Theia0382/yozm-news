@@ -11,7 +11,7 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 
 /**
- * 씨앗을 묶음으로 — 정본 · docs/specs/user.md §5.
+ * 씨앗을 묶음으로 — 정본 · docs/specs/user.md §5 · user-R66.
  * <p>
  * 씨앗마다 추적 대상은 그 씨앗과 그 씨앗에서 이어짐을 앞 → 뒤로 따라 닿는 꼭대기다. 추적 대상이 하나라도 겹치는 씨앗들은 한 묶음이다(겹침을
  * 거듭 따른다) — 갈라지는 가지도, 한 흐름으로 모이는 흐름들도 한 묶음이 된다. 한 꼭대기는 한 묶음에만 든다.

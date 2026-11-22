@@ -11,7 +11,7 @@ import java.util.Set;
 import java.util.TreeSet;
 
 /**
- * 스토리라인마다 그 포함 나무의 꼭대기에서 이어짐을 앞 → 뒤로 끝까지 따라 닿는 꼭대기 — 정본 · docs/specs/storyline.md §5.
+ * 스토리라인마다 그 포함 나무의 꼭대기에서 이어짐을 앞 → 뒤로 끝까지 따라 닿는 꼭대기 — 정본 · docs/specs/storyline.md §5 · storyline-R38.
  * <p>
  * 이어짐은 아무 스토리라인 둘 사이에 맺히므로 두 끝을 포함 나무의 꼭대기({@link StorylineTops#rootOf})로 올려 꼭대기 사이의 고리로 본다. 두
  * 끝의 꼭대기가 같은 고리(한 나무 안의 이어짐)는 버린다. 순환 금지(storyline-R25)는 같은 종류의 원래 스토리라인 사이에서만 확인하므로 올린

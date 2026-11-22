@@ -16,7 +16,7 @@ import net.yozmnews.user.domain.userstoryline.UserStorylineGroups.Group;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 저장한 사용자 스토리라인을 지금의 묶음에 잇기 — 정본 · docs/specs/user.md §5.
+ * 저장한 사용자 스토리라인을 지금의 묶음에 잇기 — 정본 · docs/specs/user.md §5 · user-R66.
  * <p>
  * 평가 순서:
  * <ol>

@@ -8,7 +8,7 @@ import java.util.Set;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 저장한 사용자 스토리라인 하나 · docs/specs/user.md §5.
+ * 저장한 사용자 스토리라인 하나 · docs/specs/user.md §5 · user-R66.
  *
  * @param id 사용자 스토리라인 ID
  * @param tops 마지막으로 맞춘 추적 대상 — 지금 꼭대기로 푼 것

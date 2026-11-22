@@ -78,7 +78,7 @@ class StorylineSubscriptionController {
 		return StorylineUnsubscribeResponse.of(this.subscriptions.unsubscribe(user, storyline(storylineId), now()));
 	}
 
-	/** 흐름 추적 상태 — 받은 스토리라인마다 그 흐름을 추적 중인가. 없는 스토리라인은 추적 중이 아니다 */
+	/** 흐름 추적 상태 — 받은 스토리라인마다 그 흐름을 추적 중인가. 없는 스토리라인은 추적 중이 아니다(user-R67) */
 	@AllowedWithoutLlmKey(reason = OPEN_WITHOUT_KEY)
 	@GetMapping("/api/storyline-subscriptions/states")
 	@ApiResponse(responseCode = "200", description = "OK", useReturnTypeSchema = true)

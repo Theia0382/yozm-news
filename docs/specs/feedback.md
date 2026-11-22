@@ -11,7 +11,7 @@
 - **받을 수 있는 항목** — 그 사용자의 다이제스트에서 요청의 사건이 든 항목에만 받는다. 항목의 사건들은 이 모듈이 선언한 공급 인터페이스 `DigestItems` 로 묻고 `digest` 가 답한다
 - **지운 사건 · 지운 항목 따르기** — `event` 가 지운 사건의 현재 상태 · 이력 행을 지우고, `digest` 가 지운 항목 섹션의 항목 기록을 지운다
 - **화면용 API** — 항목의 누르기 · 되돌리기와, 화면이 쓸 항목 기록 조회
-- **소비자 조회** — 다이제스트 후보 선별 · 관심도 · 관심사 히스토리가 읽는 싫어요 사건과 기간의 이력(`EventFeedback`). 합쳐진 사건은 읽을 때 `event` 로 푼다
+- **소비자 조회** — 다이제스트 후보 선별 · 관심도 · 관심사 히스토리와 `user` 의 사용자 스토리라인 맞추기가 읽는 싫어요 사건과 기간의 이력(`EventFeedback`). 합쳐진 사건은 읽을 때 `event` 로 푼다
 - **(미구현)** 탈퇴한 사용자의 항목 기록 · 현재 상태 · 이력 지우기
 
 하지 않는 것:
@@ -71,7 +71,7 @@ public enum FeedbackValue { LIKE, DISLIKE, NONE }
 
 ### EventFeedback · FeedbackChange
 
-좋아요 / 싫어요의 소비자 조회 — 사건마다의 기록을 다이제스트 후보 선별 · 관심도 · 관심사 히스토리가 읽는다. 구현은 `application` 의 `EventFeedbackService` 다.
+좋아요 / 싫어요의 소비자 조회 — 사건마다의 기록을 다이제스트 후보 선별 · 관심도 · 관심사 히스토리가 읽고, 기간의 이력은 `user` 의 사용자 스토리라인 맞추기도 읽는다([user-R66](user.md#사용자-스토리라인)). 구현은 `application` 의 `EventFeedbackService` 다.
 
 ```java
 public interface EventFeedback {
