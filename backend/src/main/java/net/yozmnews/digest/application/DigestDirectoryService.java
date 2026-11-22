@@ -8,11 +8,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 import net.yozmnews.digest.DigestDates;
 import net.yozmnews.digest.DigestDay;
 import net.yozmnews.digest.DigestDirectory;
 import net.yozmnews.digest.DigestRequestStatus;
+import net.yozmnews.digest.DigestItemCursor;
+import net.yozmnews.digest.DigestItemPage;
+import net.yozmnews.digest.DigestItemRef;
 import net.yozmnews.digest.DigestSectionView;
 import net.yozmnews.digest.DigestUnresolvedFailure;
 import net.yozmnews.digest.domain.digest.DigestLedger;
@@ -125,6 +129,35 @@ class DigestDirectoryService implements DigestDirectory {
 					Math.max(0, DigestScheduleRules.MANUAL_PER_DAY - used), ManualTargets.nextDayStart(today, zone),
 					target.date(), target.regenerated(), scheduledAt, unresolved);
 		})));
+	}
+
+	@Override
+	public DigestItemPage itemsOfStorylines(UserId user, Set<StorylineId> tops, @Nullable DigestItemCursor before,
+			int size) {
+		Objects.requireNonNull(user, "user");
+		Objects.requireNonNull(tops, "tops");
+		if (size < 1 || size > MAX_ITEMS) {
+			throw new IllegalArgumentException("한 쪽의 항목 수는 1 ~ " + MAX_ITEMS + " 이다: " + size);
+		}
+		if (tops.isEmpty()) {
+			return DigestItemPage.EMPTY;
+		}
+		return Objects.requireNonNull(this.readOnly.execute(status -> {
+			// 저장한 꼭대기(생성 때의 값)를 지금 꼭대기로 풀어 주어진 꼭대기에 드는 것만 고른다 — 날짜 보기와 같은 풀기
+			List<StorylineId> stored = this.days.storedStorylines(user).stream().map(StorylineId::new).toList();
+			Map<StorylineId, StorylineId> current = StorylineTopsQueries.ofStorylines(this.storylines, stored);
+			List<Long> matching = stored.stream()
+				// 지워진 스토리라인은 풀리지 않는다 — 그 항목은 흐름을 다시 찾지 않는다
+				.filter(one -> current.get(one) != null && tops.contains(current.get(one)))
+				.map(StorylineId::value)
+				.toList();
+			List<DigestItemRef> rows = this.days.itemsOf(user, matching, before, size + 1);
+			if (rows.size() <= size) {
+				return new DigestItemPage(rows, null);
+			}
+			DigestItemRef last = rows.get(size - 1);
+			return new DigestItemPage(rows.subList(0, size), new DigestItemCursor(last.date(), last.position()));
+		}));
 	}
 
 	/** 트랜잭션 안에서 — 그 날짜의 행 · 보이는 다이제스트의 섹션 · 이웃 날짜 */

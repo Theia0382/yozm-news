@@ -8,6 +8,7 @@ import java.util.Set;
 
 import net.yozmnews.digest.InterestPoint;
 import net.yozmnews.digest.TopicSubscriptionStep;
+import net.yozmnews.storyline.StorylineId;
 import net.yozmnews.user.TopicSubscriptionChange;
 
 /**
@@ -33,18 +34,24 @@ public final class InterestTimelines {
 		requireReferences(references);
 		List<TopicSubscriptionChange> changes = InterestSignals.subscriberTopicChanges(record.topicChanges());
 		List<InterestPoint> points = new ArrayList<>();
-		InterestLevels before = InterestWindow.levels(record, references.get(0), references.get(0)).topics();
+		Interests first = InterestWindow.levels(record, references.get(0), references.get(0));
+		InterestLevels before = first.topics();
+		Set<StorylineId> shownBefore = StorylineShifts.first(first.storylines());
 		for (int i = 1; i < references.size(); i++) {
 			Instant from = references.get(i - 1);
 			Instant reference = references.get(i);
-			InterestLevels levels = InterestWindow.levels(record, reference, reference).topics();
+			Interests interests = InterestWindow.levels(record, reference, reference);
+			InterestLevels levels = interests.topics();
+			StorylineShifts.Shift flows = StorylineShifts.between(shownBefore, interests.storylines());
 			InterestShifts.Shift shift = InterestShifts.between(before, levels);
 			List<TopicSubscriptionStep> steps = changes.stream()
 				.filter(change -> !change.occurredAt().isBefore(from) && change.occurredAt().isBefore(reference))
 				.map(change -> new TopicSubscriptionStep(change.occurredAt(), change.action(), change.subtopics()))
 				.toList();
-			points.add(new InterestPoint(reference, levels.levels(), shift.entered(), shift.left(), steps));
+			points.add(new InterestPoint(reference, levels.levels(), shift.entered(), shift.left(), steps,
+					interests.storylines().levels(), flows.entered(), flows.left()));
 			before = levels;
+			shownBefore = flows.shown();
 		}
 		return List.copyOf(points);
 	}
