@@ -10,6 +10,7 @@ import java.util.TreeMap;
 
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.event.EventId;
+import net.yozmnews.storyline.StorylineId;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -30,14 +31,17 @@ public final class CandidateEvents {
 	 * @param period 첫 평가 시각이 기간 안인 기사
 	 * @param eventOf 기사 → 사건 — 배정이 없는 기사는 빠져 있다
 	 * @param facts 사건 → 사건의 값
+	 * @param tops 사건 → 꼭대기 — 키가 없는 사건은 꼭대기가 없다
 	 * @param periodStart 읽은 기간의 시작 — 조회 기간을 상한으로 줄였으면 줄인 시작
 	 * @return 사건 ID 순
 	 */
 	public static List<CandidateEvent> subscribed(Collection<ArticleFacts> period, Map<ArticleId, EventId> eventOf,
-			Map<EventId, EventFacts> facts, UserFilter filter, Instant periodStart) {
+			Map<EventId, EventFacts> facts, Map<EventId, List<StorylineId>> tops, UserFilter filter,
+			Instant periodStart) {
 		Objects.requireNonNull(period, "period");
 		Objects.requireNonNull(eventOf, "eventOf");
 		Objects.requireNonNull(facts, "facts");
+		Objects.requireNonNull(tops, "tops");
 		Objects.requireNonNull(filter, "filter");
 		Instant earliest = Objects.requireNonNull(periodStart, "periodStart").minus(SelectionRules.PUBLISHED_LOOKBACK);
 		Map<Long, List<ArticleFacts>> byEvent = new TreeMap<>();
@@ -52,25 +56,29 @@ public final class CandidateEvents {
 			eventFacts.put(event.value(), ofEvent);
 		}
 		List<CandidateEvent> events = new ArrayList<>(byEvent.size());
-		byEvent.forEach((event, articles) -> events.add(new CandidateEvent(eventFacts.get(event), articles)));
+		byEvent.forEach((event, articles) -> events.add(new CandidateEvent(eventFacts.get(event),
+				tops.getOrDefault(new EventId(event), List.of()), articles)));
 		return List.copyOf(events);
 	}
 
 	/**
-	 * 큰 판정 행의 사건 하나의 후보 — 그 사건의 기간 안(발행 시각) 기사 가운데 기사 제외를 지난 기사. 사건이 사건 제외(지역 · 싫어요 —
-	 * {@link UserFilter#passesEvent})를 지나지 못하거나 지난 기사가 없으면 후보가 없다
+	 * 큰 판정 행의 사건 하나의 후보 — 그 사건의 기간 안(발행 시각) 기사 가운데 기사 제외를 지난 기사. 사건이 사건 제외(지역 · 싫어요 · 거른
+	 * 꼭대기 — {@link UserFilter#passesEvent})를 지나지 못하거나 지난 기사가 없으면 후보가 없다
+	 * @param tops 그 사건의 꼭대기 — 없으면 빈 목록
 	 * @param inPeriod 그 사건의 기간 안 기사 가운데 평가가 있는 기사
 	 * @return 후보 사건 — 없으면 null
 	 */
-	public static @Nullable CandidateEvent big(EventFacts facts, Collection<ArticleFacts> inPeriod, UserFilter filter) {
+	public static @Nullable CandidateEvent big(EventFacts facts, List<StorylineId> tops,
+			Collection<ArticleFacts> inPeriod, UserFilter filter) {
 		Objects.requireNonNull(facts, "facts");
+		Objects.requireNonNull(tops, "tops");
 		Objects.requireNonNull(inPeriod, "inPeriod");
 		Objects.requireNonNull(filter, "filter");
-		if (!filter.passesEvent(facts)) {
+		if (!filter.passesEvent(facts, tops)) {
 			return null;
 		}
 		List<ArticleFacts> passed = inPeriod.stream().filter(filter::passesArticleExclusions).toList();
-		return passed.isEmpty() ? null : new CandidateEvent(facts, passed);
+		return passed.isEmpty() ? null : new CandidateEvent(facts, tops, passed);
 	}
 
 }

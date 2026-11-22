@@ -91,31 +91,12 @@ class InterestMaterials {
 			return Optional.empty();
 		}
 		List<StorylineSubscriptionChange> storylineChanges = this.storylineSubscriptions.changes(user, from, to);
-		Map<EventId, List<StorylineId>> tops = tops(exposed.stream().map(ExposureRow::event).distinct().toList());
-		Map<StorylineId, StorylineId> storylineTops = storylineTops(
-				List.copyOf(InterestSignals.storylinesToRead(storylineChanges)));
+		Map<EventId, List<StorylineId>> tops = StorylineTopsQueries.ofEvents(this.storylines,
+				exposed.stream().map(ExposureRow::event).toList());
+		Map<StorylineId, StorylineId> storylineTops = StorylineTopsQueries.ofStorylines(this.storylines,
+				InterestSignals.storylinesToRead(storylineChanges));
 		return Optional.of(new InterestRecord(active, exposed, subtopics.get(), tops, reactions, topics.changes(),
 				storylineChanges, storylineTops));
-	}
-
-	/** 노출한 지금 사건마다 꼭대기 — {@link StorylineDirectory#MAX_TOP_EVENTS} 씩 나눠 묻는다. 소속이 없는 사건은 빠진다 */
-	private Map<EventId, List<StorylineId>> tops(List<EventId> events) {
-		Map<EventId, List<StorylineId>> tops = new HashMap<>();
-		for (int i = 0; i < events.size(); i += StorylineDirectory.MAX_TOP_EVENTS) {
-			int end = Math.min(events.size(), i + StorylineDirectory.MAX_TOP_EVENTS);
-			tops.putAll(this.storylines.topsOf(events.subList(i, end)));
-		}
-		return tops;
-	}
-
-	/** 스토리라인마다 꼭대기 — {@link StorylineDirectory#MAX_TOP_STORYLINES} 씩 나눠 묻는다. 없는 스토리라인은 빠진다 */
-	private Map<StorylineId, StorylineId> storylineTops(List<StorylineId> storylines) {
-		Map<StorylineId, StorylineId> tops = new HashMap<>();
-		for (int i = 0; i < storylines.size(); i += StorylineDirectory.MAX_TOP_STORYLINES) {
-			int end = Math.min(storylines.size(), i + StorylineDirectory.MAX_TOP_STORYLINES);
-			tops.putAll(this.storylines.topsOfStorylines(storylines.subList(i, end)));
-		}
-		return tops;
 	}
 
 	/**

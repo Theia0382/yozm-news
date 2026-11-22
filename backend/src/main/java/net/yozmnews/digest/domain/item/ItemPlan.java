@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.OptionalDouble;
 
-import net.yozmnews.digest.domain.interest.TopicInterests;
+import net.yozmnews.digest.domain.interest.InterestWeights;
 import net.yozmnews.digest.domain.selection.CandidateRank;
 import net.yozmnews.digest.domain.selection.SelectedEvent;
 
@@ -23,18 +23,18 @@ public final class ItemPlan {
 	}
 
 	/**
-	 * @param interests 사건 점수의 관심도 가중치 — 후보 선별의 순위와 같은 값
+	 * @param weights 사건 점수의 관심도 가중치 — 후보 선별의 순위와 같은 값
 	 * @return 주요 뉴스 항목(순서대로) 다음 헤드라인 항목(순서대로)
 	 */
-	public static List<ArrangedItem> arrange(List<DigestItemPlan> items, TopicInterests interests) {
+	public static List<ArrangedItem> arrange(List<DigestItemPlan> items, InterestWeights weights) {
 		Objects.requireNonNull(items, "items");
-		Objects.requireNonNull(interests, "interests");
+		Objects.requireNonNull(weights, "weights");
 		Comparator<SelectedEvent> eventOrder = Comparator.comparing(SelectedEvent::event,
-				CandidateRank.order(interests));
+				CandidateRank.order(weights));
 		List<DigestItemPlan> ordered = items.stream()
 			.map(item -> new DigestItemPlan(item.events().stream().sorted(eventOrder).toList(), item.bigRow()))
-			.sorted(Comparator.comparing((DigestItemPlan item) -> score(item, interests).isEmpty())
-				.thenComparing(item -> score(item, interests).orElse(0), Comparator.reverseOrder())
+			.sorted(Comparator.comparing((DigestItemPlan item) -> score(item, weights).isEmpty())
+				.thenComparing(item -> score(item, weights).orElse(0), Comparator.reverseOrder())
 				.thenComparingLong(ItemPlan::smallestEvent))
 			.toList();
 		List<ArrangedItem> topStories = new ArrayList<>();
@@ -58,10 +58,10 @@ public final class ItemPlan {
 	}
 
 	/** 항목 점수 — 항목 안 사건 점수의 최대, 점수가 있는 사건이 없으면 빈 값 */
-	static OptionalDouble score(DigestItemPlan item, TopicInterests interests) {
+	static OptionalDouble score(DigestItemPlan item, InterestWeights weights) {
 		return item.events()
 			.stream()
-			.map(event -> CandidateRank.score(event.event(), interests))
+			.map(event -> CandidateRank.score(event.event(), weights))
 			.filter(OptionalDouble::isPresent)
 			.mapToDouble(OptionalDouble::getAsDouble)
 			.max();

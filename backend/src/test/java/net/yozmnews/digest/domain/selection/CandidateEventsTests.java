@@ -32,7 +32,7 @@ class CandidateEventsTests {
 		List<CandidateEvent> events = CandidateEvents.subscribed(List.of(first, second, unassigned),
 				Map.of(first.id(), new EventId(10), second.id(), new EventId(10)),
 				Map.of(new EventId(10), Facts.eventFacts(10, List.of(Facts.article(1), Facts.article(2)))),
-				Facts.politicsAndMarkets(), START);
+				Map.of(), Facts.politicsAndMarkets(), START);
 
 		assertThat(events).hasSize(1);
 		assertThat(events.getFirst().facts().id()).isEqualTo(new EventId(10));
@@ -44,7 +44,7 @@ class CandidateEventsTests {
 		ArticleFacts article = Facts.article(1).build();
 
 		assertThat(CandidateEvents.subscribed(List.of(article), Map.of(article.id(), new EventId(10)), Map.of(),
-				Facts.politicsAndMarkets(), START))
+				Map.of(), Facts.politicsAndMarkets(), START))
 			.isEmpty();
 	}
 
@@ -54,7 +54,7 @@ class CandidateEventsTests {
 		ArticleFacts justBefore = Facts.article(2).published("2026-11-15T21:59:59Z").build();
 
 		assertThat(articleIds(CandidateEvents.subscribed(List.of(atBound, justBefore), singleEvents(atBound, justBefore),
-				facts(1, 2), Facts.politicsAndMarkets(), START)))
+				facts(1, 2), Map.of(), Facts.politicsAndMarkets(), START)))
 			.containsExactly(1L);
 	}
 
@@ -66,7 +66,7 @@ class CandidateEventsTests {
 		ArticleFacts justBefore = Facts.article(2).published("2026-10-31T03:59:59Z").build();
 
 		assertThat(articleIds(CandidateEvents.subscribed(List.of(atBound, justBefore), singleEvents(atBound, justBefore),
-				facts(1, 2), Facts.politicsAndMarkets(), newYorkMidnight)))
+				facts(1, 2), Map.of(), Facts.politicsAndMarkets(), newYorkMidnight)))
 			.containsExactly(1L);
 	}
 
@@ -74,7 +74,7 @@ class CandidateEventsTests {
 	void formatsAndSourcesAreFilteredPerArticleButRegionsAndDislikesAreNot() {
 		UserFilter filter = UserFilter.of(Facts.interests(
 				List.of(new TopicSubscription("politics", Set.of("politics.executive"))), Set.of("us"),
-				Set.of("brief"), Set.of(new SourceId(9))), Set.of(new EventId(10)));
+				Set.of("brief"), Set.of(new SourceId(9))), Set.of(new EventId(10)), Set.of());
 		ArticleFacts plain = Facts.article(1).build();
 		ArticleFacts inUs = Facts.article(2).regions("domestic", "us").build();
 		ArticleFacts brief = Facts.article(3).formats("brief").build();
@@ -89,7 +89,7 @@ class CandidateEventsTests {
 		all.forEach(article -> oneEvent.put(article.id(), new EventId(10)));
 
 		List<CandidateEvent> events = CandidateEvents.subscribed(all, oneEvent,
-				Map.of(new EventId(10), Facts.eventFacts(10, List.of(Facts.article(1)))), filter, START);
+				Map.of(new EventId(10), Facts.eventFacts(10, List.of(Facts.article(1)))), Map.of(), filter, START);
 
 		// 지역 us 가 붙은 2 는 남는다 — 지역 제외는 사건의 지역으로 본다. 싫어요인 사건 10 도 남는다 — 구독 필터가 사건으로 본다
 		assertThat(articleIds(events)).containsExactly(1L, 2L, 5L, 6L);
@@ -107,28 +107,28 @@ class CandidateEventsTests {
 	@Test
 	void aBigEventKeepsItsPassingArticlesAndHasNoCandidateWhenItsRegionIsExcludedOrNothingPasses() {
 		UserFilter filter = UserFilter.of(Facts.interests(List.of(), Set.of("us"), Set.of(), Set.of(new SourceId(9))),
-				Set.of());
+				Set.of(), Set.of());
 		EventFacts domestic = Facts.eventFacts(10, List.of(Facts.article(1)));
 		ArticleFacts kept = Facts.article(1).build();
 		ArticleFacts fromNine = Facts.article(2).sources(9).build();
 
-		CandidateEvent big = CandidateEvents.big(domestic, List.of(kept, fromNine), filter);
+		CandidateEvent big = CandidateEvents.big(domestic, List.of(), List.of(kept, fromNine), filter);
 		assertThat(big).isNotNull();
 		assertThat(ids(big.articles())).containsExactly(1L);
 
-		assertThat(CandidateEvents.big(domestic, List.of(fromNine), filter)).as("지난 기사가 없다").isNull();
+		assertThat(CandidateEvents.big(domestic, List.of(), List.of(fromNine), filter)).as("지난 기사가 없다").isNull();
 		// 소속 둘 가운데 하나가 us — 몫 1/2 이라 사건의 지역에 us 가 든다
 		EventFacts halfUs = Facts.eventFacts(11, List.of(Facts.article(3).regions("us"), Facts.article(4)));
-		assertThat(CandidateEvents.big(halfUs, List.of(Facts.article(4).build()), filter)).as("사건의 지역이 제외").isNull();
+		assertThat(CandidateEvents.big(halfUs, List.of(), List.of(Facts.article(4).build()), filter)).as("사건의 지역이 제외").isNull();
 	}
 
 	@Test
 	void aDislikedBigEventHasNoCandidate() {
 		EventFacts domestic = Facts.eventFacts(10, List.of(Facts.article(1)));
-		UserFilter disliking = UserFilter.of(Facts.interests(List.of(), Set.of(), Set.of(), Set.of()), Set.of())
+		UserFilter disliking = UserFilter.of(Facts.interests(List.of(), Set.of(), Set.of(), Set.of()), Set.of(), Set.of())
 			.withDisliked(Set.of(new EventId(10)));
 
-		assertThat(CandidateEvents.big(domestic, List.of(Facts.article(1).build()), disliking)).isNull();
+		assertThat(CandidateEvents.big(domestic, List.of(), List.of(Facts.article(1).build()), disliking)).isNull();
 	}
 
 	@Test
@@ -136,9 +136,9 @@ class CandidateEventsTests {
 		// 대조 — 다른 사건의 싫어요는 이 사건을 빼지 않는다
 		EventFacts domestic = Facts.eventFacts(10, List.of(Facts.article(1)));
 		UserFilter disliking = UserFilter.of(Facts.interests(List.of(), Set.of(), Set.of(), Set.of()),
-				Set.of(new EventId(11)));
+				Set.of(new EventId(11)), Set.of());
 
-		assertThat(CandidateEvents.big(domestic, List.of(Facts.article(1).build()), disliking)).isNotNull();
+		assertThat(CandidateEvents.big(domestic, List.of(), List.of(Facts.article(1).build()), disliking)).isNotNull();
 	}
 
 	private static Map<ArticleId, EventId> singleEvents(ArticleFacts... articles) {

@@ -8,7 +8,7 @@ import java.util.stream.Collectors;
 
 import net.yozmnews.digest.SelectionReason;
 import net.yozmnews.digest.domain.interest.InterestRules;
-import net.yozmnews.digest.domain.interest.TopicInterests;
+import net.yozmnews.digest.domain.interest.InterestWeights;
 import net.yozmnews.digest.domain.selection.BigSlotPicker.BigSlots;
 import net.yozmnews.event.EventId;
 
@@ -44,16 +44,16 @@ public final class CandidateSelector {
 
 	/**
 	 * 예산으로 자른 두 결과로 선정 이유를 붙인다 — 큰 슬롯 사건은 {@link SelectionReason#MAJOR_STORYLINE} 과 그 큰 판정 행. 구독 사건은
-	 * 중립 결과의 구독 사건에 없고 관심도 가중치(사건 주제의)가 중립보다 크면 {@link SelectionReason#INTEREST}(관심도로 들어온 사건), 아니면
-	 * {@link SelectionReason#SUBSCRIBED} 다. 관심도 때문에 밀려난 사건은 이유가 남지 않는다. 큰 슬롯 사건이 먼저, 구독 사건은 관심도 결과의
-	 * 순서다.
+	 * 중립 결과의 구독 사건에 없고 관심도 가중치(사건 주제 × 꼭대기의 곱)가 중립보다 크면 {@link SelectionReason#INTEREST}(관심도로
+	 * 들어온 사건), 아니면 {@link SelectionReason#SUBSCRIBED} 다. 관심도 때문에 밀려난 사건은 이유가 남지 않는다. 큰 슬롯 사건이 먼저,
+	 * 구독 사건은 관심도 결과의 순서다.
 	 * @param cut 관심도 순위로 고른 결과를 {@link BudgetCut#apply} 로 자른 것
-	 * @param neutralCut 같은 재료를 중립 순위({@link TopicInterests#NEUTRAL_ALL})로 고른 결과를 같은 어림 · 예산으로 자른 것
+	 * @param neutralCut 같은 재료를 중립 순위({@link InterestWeights#NEUTRAL_ALL})로 고른 결과를 같은 어림 · 예산으로 자른 것
 	 */
-	public static List<SelectedEvent> candidates(Shortlist cut, Shortlist neutralCut, TopicInterests interests) {
+	public static List<SelectedEvent> candidates(Shortlist cut, Shortlist neutralCut, InterestWeights weights) {
 		Objects.requireNonNull(cut, "cut");
 		Objects.requireNonNull(neutralCut, "neutralCut");
-		Objects.requireNonNull(interests, "interests");
+		Objects.requireNonNull(weights, "weights");
 		Set<EventId> withoutInterest = neutralCut.subscribed()
 			.stream()
 			.map(event -> event.facts().id())
@@ -64,7 +64,7 @@ public final class CandidateSelector {
 		}
 		for (CandidateEvent event : cut.subscribed()) {
 			boolean byInterest = !withoutInterest.contains(event.facts().id())
-					&& interests.weightOf(event.facts().subtopics()) > InterestRules.NEUTRAL;
+					&& weights.weightOf(event.facts().subtopics(), event.tops()) > InterestRules.NEUTRAL;
 			selected.add(new SelectedEvent(event, byInterest ? SelectionReason.INTEREST : SelectionReason.SUBSCRIBED,
 					null));
 		}

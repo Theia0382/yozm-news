@@ -490,6 +490,50 @@ class CandidateSelectionTests {
 	}
 
 	@Test
+	void aCandidateInASubscribedStorylineRisesByItsStorylineWeight() {
+		// 후보 "의회 넷이"(3.6)를 구독한 스토리라인의 소속으로 더한다 — 꼭대기 관심 1 ÷ 3, 가중치 1 + 0.5 × 1 ÷ 3 = 1.1666… 이라
+		// 3.6 × 1.1666… = 4.2 가 E1(4.0) 앞이고, 중립 순서로는 들지 못하므로 INTEREST
+		long legislature = event(eventArticle("의회 넷이", "politics.legislature", 3.6, "2026-11-05T06:00:00Z", 1));
+		long storyline = legislatureStoryline();
+		subscribeStoryline(storyline, "USER");
+		// 대조 — 소속이 아니면 주제에 들지 않아 중립 순서 그대로
+		assertThat(events(this.selection.select(new UserId(this.user), DAY, ONE_CANDIDATE)))
+			.containsExactly(this.e1 + ":SUBSCRIBED");
+
+		this.rows.member(storyline, legislature);
+
+		assertThat(events(this.selection.select(new UserId(this.user), DAY, ONE_CANDIDATE)))
+			.containsExactly(legislature + ":INTEREST");
+	}
+
+	@Test
+	void aStorylineDislikedTheDayBeforeLeavesItsNewEventAndItsBigRowOut() {
+		long[] conflict = bigStoryline();
+		long bigEvent = event(conflict[0]);
+		long storyline = storylineOf(bigEvent);
+		// 같은 스토리라인의 새 사건 — 구독한 정치 행정, 기간 안(큰 판정 행의 사건이라 큰 슬롯으로 든다)
+		long fresh = event(eventArticle("분쟁 속 정부 대응", "politics.executive", 3.5, "2026-11-05T06:00:00Z", 1));
+		this.rows.member(storyline, fresh);
+		// 그 스토리라인의 지난 사건 — 11-04 다이제스트가 혼자인 항목으로 보였다(몫 1)
+		long pastArticle = article("분쟁 지난 일", "world.conflict", 3.0, "2026-11-01T00:00:00Z", 1);
+		long past = this.rows.event(1, "2026-11-01T00:00:00Z", "2026-11-01T00:00:00Z");
+		this.rows.assign(pastArticle, past, "2026-11-01T00:00:00Z");
+		this.rows.member(storyline, past);
+		DigestRows.item(this.jdbc, DigestRows.digest(this.jdbc, this.user, "2026-11-04", "2026-11-04T06:00:00Z"), past);
+		// 대조 — 싫어요 전에는 그 스토리라인의 두 사건이 큰 슬롯으로 든다
+		assertThat(events(this.selection.select(new UserId(this.user), DAY, ROOMY))).containsExactly(
+				bigEvent + ":MAJOR_STORYLINE", fresh + ":MAJOR_STORYLINE", this.e1 + ":SUBSCRIBED",
+				event(this.a5) + ":SUBSCRIBED");
+
+		// 지난 사건에 싫어요 — 꼭대기 관심 −1 ÷ (1 + 3) = −0.25 ≤ −0.2 라 거른 꼭대기다. 큰 판정 행을 건너뛰고(다음 행이 없다), 새 사건은
+		// 꼭대기가 모두 거른 꼭대기라 구독 사건으로도 들지 않는다
+		react(past, "DISLIKE", "2026-11-04T07:00:00Z");
+
+		assertThat(events(this.selection.select(new UserId(this.user), DAY, ROOMY)))
+			.containsExactly(this.e1 + ":SUBSCRIBED", event(this.a5) + ":SUBSCRIBED");
+	}
+
+	@Test
 	void aStorylineSubscriptionRewrittenByAMergeIsNotASignal() {
 		eventArticle("의회 넷이", "politics.legislature", 3.6, "2026-11-05T06:00:00Z", 1);
 		subscribeStoryline(legislatureStoryline(), "STORYLINE_MERGED");
@@ -657,6 +701,14 @@ class CandidateSelectionTests {
 			react(shown[i], "LIKE", reactedAt);
 		}
 		return shown;
+	}
+
+	/** 사건이 직접 든 스토리라인 하나 */
+	private long storylineOf(long event) {
+		return this.jdbc.sql("select storyline_id from storyline_members where event_id = :event")
+			.param("event", event)
+			.query(Long.class)
+			.single();
 	}
 
 	/** 기간 앞(11-01)의 입법 기사 하나를 가진 사건과 그 사건만의 스토리라인 — 보도 강도가 작아 크지 않다 */

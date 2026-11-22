@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import net.yozmnews.digest.domain.selection.CandidateEvent;
 import net.yozmnews.digest.domain.selection.SelectedEvent;
 import net.yozmnews.event.EventId;
 import net.yozmnews.storyline.StorylineId;
@@ -30,16 +31,13 @@ public final class ItemGrouping {
 	}
 
 	/**
-	 * @param events 고른 사건 — 같은 사건은 한 번
-	 * @param tops 사건 → 포함 나무의 꼭대기(소속 점수 순 — {@code StorylineDirectory.topsOf}). 키가 없는 사건은 꼭대기가 없다
+	 * @param events 고른 사건 — 같은 사건은 한 번. 사건의 꼭대기는 후보 사건이 싣는다({@link CandidateEvent#tops()} — 소속 점수 순)
 	 * @param bigHeads 자르기 뒤 큰 슬롯 사건이 남은 큰 판정 행의 위치 → 그 행의 머리(그 나무의 꼭대기)
 	 * @return 항목 — 첫 사건이 나온 순서, 항목 안 사건은 입력 순서
 	 * @throws IllegalArgumentException 큰 슬롯 사건의 행이 {@code bigHeads} 에 없을 때
 	 */
-	public static List<DigestItemPlan> group(List<SelectedEvent> events, Map<EventId, List<StorylineId>> tops,
-			Map<Integer, StorylineId> bigHeads) {
+	public static List<DigestItemPlan> group(List<SelectedEvent> events, Map<Integer, StorylineId> bigHeads) {
 		Objects.requireNonNull(events, "events");
-		Objects.requireNonNull(tops, "tops");
 		Objects.requireNonNull(bigHeads, "bigHeads");
 		Map<StorylineId, Integer> bigRowOf = new HashMap<>();
 		bigHeads.entrySet()
@@ -48,7 +46,7 @@ public final class ItemGrouping {
 			.forEach(entry -> bigRowOf.putIfAbsent(entry.getValue(), entry.getKey()));
 		Map<StorylineId, Integer> holders = new HashMap<>();
 		for (SelectedEvent event : events) {
-			topsOf(event, tops).forEach(top -> holders.merge(top, 1, Integer::sum));
+			topsOf(event).forEach(top -> holders.merge(top, 1, Integer::sum));
 		}
 		Map<Object, Group> groups = new LinkedHashMap<>();
 		for (SelectedEvent event : events) {
@@ -60,7 +58,7 @@ public final class ItemGrouping {
 				groups.computeIfAbsent(new RowKey(row), key -> new Group(row)).events.add(event);
 				continue;
 			}
-			List<StorylineId> ofEvent = topsOf(event, tops);
+			List<StorylineId> ofEvent = topsOf(event);
 			if (ofEvent.isEmpty()) {
 				groups.put(new SoloKey(event.event().facts().id()), new Group(null, event));
 				continue;
@@ -84,9 +82,8 @@ public final class ItemGrouping {
 		return ordered.getFirst();
 	}
 
-	private static List<StorylineId> topsOf(SelectedEvent event, Map<EventId, List<StorylineId>> tops) {
-		List<StorylineId> found = tops.get(event.event().facts().id());
-		return (found == null) ? List.of() : found;
+	private static List<StorylineId> topsOf(SelectedEvent event) {
+		return event.event().tops();
 	}
 
 	private record RowKey(int row) {
