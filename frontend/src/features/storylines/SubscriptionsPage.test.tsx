@@ -98,8 +98,11 @@ describe("SubscriptionsPage", () => {
       within(first).getByRole("link", { name: "반도체 수출" }),
     ).toHaveAttribute("href", "/storylines/2");
     expect(first).toHaveTextContent(/^반도체 수출구독 해제잠잠 · 마지막 기사 /);
+    // 구독한 흐름의 소식은 구독하지 않은 주제여도 다이제스트에 들 수 있다
     expect(
-      screen.getByText(/다이제스트에 따로 넣지는 않습니다/),
+      screen.getByText(
+        /구독하지 않은 주제여도 그 흐름의 소식을 받을 수 있습니다/,
+      ),
     ).toBeInTheDocument();
   });
 

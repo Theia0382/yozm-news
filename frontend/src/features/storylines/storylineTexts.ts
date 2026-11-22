@@ -75,11 +75,12 @@ export const SUBSCRIBE_LABEL = "구독";
 export const SUBSCRIBED_LABEL = "구독 중";
 
 /**
- * 구독의 효과 한 줄 — 구독 버튼의 설명. 구독은 그 흐름의 기사를 다이제스트에 따로 넣지 않고 주제별 관심도에만 한동안 든다(docs/specs/digest.md
- * 관심도 · ADR-0214)
+ * 구독의 효과 한 줄 — 구독 버튼의 설명. 구독은 그 흐름(포함 나무의 꼭대기)의 관심에 들어 그 흐름 사건의 순위를 올리고, 구독한 흐름의 사건은
+ * 구독하지 않은 주제여도 흐름마다 한 사건까지, 구독 사건 자리의 몫 상한 안에서 다이제스트에 들 수 있다 — 사건 제외 · 큰 슬롯 · 입력 토큰
+ * 예산으로 빠질 수도 있다(docs/specs/digest.md 관심도 · 후보 선별 digest-R52)
  */
 export const SUBSCRIPTION_EFFECT_SHORT =
-  "구독하면 이 흐름의 주제를 다이제스트 순위에 한동안 반영합니다";
+  "구독하면 이 흐름의 소식이 다이제스트 순위에서 앞서고, 구독하지 않은 주제여도 들어올 수 있습니다";
 
 /** 구독 수가 상한이다 */
 export function limitReached(limit: number): string {
@@ -99,11 +100,12 @@ export const SUBSCRIPTIONS_TITLE = "내 구독";
 export const UNSUBSCRIBE_LABEL = "구독 해제";
 
 /**
- * 구독의 효과 — 내 구독 머리의 설명. 버튼 설명(SUBSCRIPTION_EFFECT_SHORT)과 같은 사실이다: 그 흐름의 기사를 다이제스트에 따로 넣지 않고,
- * 주제별 관심도에 구독 · 해제한 때 한 번 든 뒤 차츰 줄어든다(docs/specs/digest.md 관심도 · ADR-0214)
+ * 구독의 효과 — 내 구독 머리의 설명. 버튼 설명(SUBSCRIPTION_EFFECT_SHORT)과 같은 사실이다: 구독은 그 흐름의 관심에 구독 · 해제한 때 한 번
+ * 든 뒤 차츰 줄어들고, 구독한 흐름의 사건은 구독하지 않은 주제여도 흐름마다 한 사건까지, 구독 사건 자리의 몫 상한 안에서 다이제스트에 들 수
+ * 있다(docs/specs/digest.md 관심도 · 후보 선별 digest-R52)
  */
 export const SUBSCRIPTION_EFFECT =
-  "구독하면 그 흐름의 주제를 관심 있게 본 것으로 다이제스트 순위에 한동안 반영합니다. 구독한 흐름의 기사를 다이제스트에 따로 넣지는 않습니다. 따라가는 흐름은 여기서 다시 찾아볼 수 있습니다.";
+  "구독하면 그 흐름을 관심 있게 본 것으로 다이제스트 순위에 한동안 반영하고, 구독하지 않은 주제여도 그 흐름의 소식을 받을 수 있습니다. 따라가는 흐름은 여기서 다시 찾아볼 수 있습니다.";
 
 /** 지금 구독 수와 상한 */
 export function subscriptionCount(count: number, limit: number): string {

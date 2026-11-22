@@ -68,6 +68,12 @@ describe("TopicSuggestionCard", () => {
         "괜찮아요를 누르면 다시 권하지 않습니다. 관심이 더 커지면 다시 권할 수 있습니다.",
       ),
     ).toBeInTheDocument();
+    // 주제 관심은 좋아요로 오른다 — 스토리라인 구독은 주제 관심에 들지 않는다
+    expect(
+      screen.getByText(
+        "최근 좋아요를 보면 관심이 있는 주제입니다. 구독하면 매일 다이제스트에 이 주제의 기사가 들어옵니다.",
+      ),
+    ).toBeInTheDocument();
   });
 
   it("제안이 없으면 아무것도 그리지 않는다", async () => {

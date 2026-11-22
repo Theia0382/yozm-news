@@ -212,6 +212,13 @@ describe("InterestHistoryPage", () => {
     expect(
       within(how).getByText(/좋아요를 누르면 그 항목 주제의 관심이 오르고/),
     ).toBeInTheDocument();
+    // 이미 본 흐름의 반응은 주제 대신 흐름에 들고, 스토리라인 구독은 주제에 들지 않는다
+    expect(
+      within(how).getByText(
+        /이미 본 흐름의 소식에 누른 반응은 주제 대신 그 흐름의 관심에 듭니다/,
+      ),
+    ).toBeInTheDocument();
+    expect(within(how).queryByText(/스토리라인/)).not.toBeInTheDocument();
     expect(
       screen.getByText(/^주제마다 관심이 기간에 따라 어떻게 달라졌는지/),
     ).toBeInTheDocument();
