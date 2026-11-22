@@ -10,6 +10,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+import net.yozmnews.digest.DigestItemCursor;
 import net.yozmnews.event.EventPeriod;
 import net.yozmnews.storyline.StorylineCursor;
 import net.yozmnews.storyline.StorylineDirectory;
@@ -116,6 +117,29 @@ final class ScreenRequests {
 		catch (DateTimeParseException ex) {
 			throw badRequest("날짜는 ISO-8601 형식(YYYY-MM-DD)이다: " + value);
 		}
+	}
+
+	/**
+	 * 지난 다이제스트 항목의 다음 쪽 커서 — 두 값은 함께 오거나 함께 없다.
+	 * @return 둘 다 없으면 null
+	 * @throws ResponseStatusException 400 — 하나만 왔거나 날짜를 읽을 수 없거나 위치가 0 보다 작을 때
+	 */
+	static @Nullable DigestItemCursor itemCursor(@Nullable String beforeDate, @Nullable Integer beforePosition) {
+		if (beforeDate == null && beforePosition == null) {
+			return null;
+		}
+		if (beforeDate == null || beforePosition == null) {
+			throw badRequest("커서는 beforeDate 와 beforePosition 을 함께 넘긴다");
+		}
+		if (beforePosition < 0) {
+			throw badRequest("beforePosition 은 0 이상이다: " + beforePosition);
+		}
+		return new DigestItemCursor(date(beforeDate), beforePosition);
+	}
+
+	/** 그 사용자의 정리된 사용자 스토리라인이 없을 때의 404 */
+	static ResponseStatusException unknownUserStoryline(long id) {
+		return new ResponseStatusException(HttpStatus.NOT_FOUND, "없는 사용자 스토리라인: " + id);
 	}
 
 	/** 그 날짜에 다이제스트가 없을 때의 404 */

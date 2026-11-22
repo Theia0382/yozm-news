@@ -127,7 +127,7 @@ class StorylineSummaryRunTests {
 			assertThat(summary.events()).isEqualTo(Map.of(eventOf(first), first, eventOf(second), second));
 			assertThat(summary.whole().summary()).isEqualTo("사건 2건을 정리했다.");
 			assertThat(summary.whole().title()).startsWith(FakeStorylineSummarizer.MARK);
-			assertThat(List.of(summary.provider(), summary.model())).containsExactly("ANTHROPIC", "claude-sonnet-5-5");
+			assertThat(List.of(summary.provider(), summary.model())).containsExactly("anthropic", "claude-sonnet-5-5");
 			assertThat(summary.version()).isZero();
 			assertThat(summary.createdAt()).isEqualTo(summary.updatedAt());
 		});

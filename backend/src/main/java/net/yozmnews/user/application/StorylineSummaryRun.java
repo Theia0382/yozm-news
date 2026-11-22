@@ -252,7 +252,7 @@ public class StorylineSummaryRun {
 			texts.put(topOrder.get(i), read.tops().get(i));
 		}
 		StorylineSummary existing = flow.summary();
-		StorylineSummary next = new StorylineSummary(flow.id(), read.whole(), texts, articles, model.provider().name(),
+		StorylineSummary next = new StorylineSummary(flow.id(), read.whole(), texts, articles, model.provider().key(),
 				model.id(), generated.inputTokens(), generated.outputTokens(), (existing == null) ? at : existing.createdAt(),
 				at, (existing == null) ? 0 : existing.version());
 		Boolean stored = this.transaction.execute(status -> {

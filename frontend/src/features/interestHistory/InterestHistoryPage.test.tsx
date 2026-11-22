@@ -39,6 +39,8 @@ function period(
     entered: [],
     left: [],
     subscriptionChanges: [],
+    enteredUserStorylines: [],
+    leftUserStorylines: [],
     ...overrides,
   };
 }
@@ -84,6 +86,7 @@ function twoWeeks(span: InterestHistory["span"] = "WEEKS_13"): InterestHistory {
       topic("politics.legislature", "국회·정당·선거", [0, null], false),
       topic("economy.markets", "증권·투자", [null, -0.25], true),
     ],
+    userStorylines: [],
   };
 }
 

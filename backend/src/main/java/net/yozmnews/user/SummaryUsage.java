@@ -5,7 +5,7 @@ import java.util.Objects;
 /**
  * 사용자 스토리라인 하나의 정리에 쓴 모델과 토큰 — 금액으로 바꾸지 않는다. docs/specs/user.md §3
  *
- * @param provider 마지막 정리의 공급자 이름
+ * @param provider 마지막 정리의 공급자 키 — 다이제스트의 사용량이 내는 것과 같은 값
  * @param model 마지막 정리의 모델 ID
  * @param inputTokens 마지막 정리의 입력 토큰
  * @param outputTokens 마지막 정리의 출력 토큰

@@ -11,7 +11,7 @@ import java.util.Objects;
  * @param whole 흐름 전체의 글
  * @param tops 꼭대기(스토리라인 ID)마다의 글 — 이 키들이 정리 때의 추적 대상이다. 비지 않는다
  * @param events 정리에 넣은 사건 ID → 그때의 대표 기사 ID
- * @param provider 마지막 정리의 공급자 이름
+ * @param provider 마지막 정리의 공급자 키 — 다이제스트 행이 적는 것과 같은 값
  * @param model 마지막 정리의 모델 ID
  * @param inputTokens 마지막 정리의 입력 토큰
  * @param outputTokens 마지막 정리의 출력 토큰
