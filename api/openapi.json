@@ -5608,6 +5608,67 @@
         "tags" : [ "storyline-subscription-controller" ]
       }
     },
+    "/api/storyline-subscriptions/states" : {
+      "get" : {
+        "operationId" : "states",
+        "parameters" : [ {
+          "description" : "스토리라인 ID — 쉼표로 이은 1 ~ 100개(같은 ID 포함)",
+          "in" : "query",
+          "name" : "ids",
+          "required" : true,
+          "schema" : {
+            "type" : "array",
+            "items" : {
+              "type" : "integer",
+              "format" : "int64"
+            }
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StorylineTrackingStatesResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "ids 가 비었거나 너무 많거나 1 미만 ID 가 있다"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "세션이 없거나 만료됐다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "비밀번호를 바꿔야 한다"
+          }
+        },
+        "tags" : [ "storyline-subscription-controller" ]
+      }
+    },
     "/api/storyline-subscriptions/{storylineId}" : {
       "delete" : {
         "operationId" : "unsubscribe",
@@ -9727,6 +9788,19 @@
         },
         "required" : [ "enabled", "feeds", "hiddenFeeds", "homepage", "id", "name", "pollIntervalMinutes", "presetKey", "profileState", "termsReviewedAt" ]
       },
+      "State" : {
+        "type" : "object",
+        "properties" : {
+          "storylineId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "tracked" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "storylineId", "tracked" ]
+      },
       "StatusCriteriaResponse" : {
         "type" : "object",
         "properties" : {
@@ -10415,9 +10489,13 @@
           "subscribedAt" : {
             "type" : "string",
             "format" : "date-time"
+          },
+          "userStorylineId" : {
+            "type" : "integer",
+            "format" : "int64"
           }
         },
-        "required" : [ "state", "storylineId", "subscribedAt" ]
+        "required" : [ "state", "storylineId", "subscribedAt", "userStorylineId" ]
       },
       "StorylineSubscriptionsRemovedNoticeResponse" : {
         "type" : "object",
@@ -10486,6 +10564,18 @@
           }
         },
         "required" : [ "children", "events", "following", "parent", "preceding", "storyline" ]
+      },
+      "StorylineTrackingStatesResponse" : {
+        "type" : "object",
+        "properties" : {
+          "states" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/State"
+            }
+          }
+        },
+        "required" : [ "states" ]
       },
       "StorylineUnsubscribeResponse" : {
         "type" : "object",

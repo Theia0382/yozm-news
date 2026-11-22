@@ -748,7 +748,7 @@ class CandidateSelectionTests {
 		subscribeStoryline(storyline, cause, "2026-11-05T12:00:00Z");
 	}
 
-	/** 스토리라인 구독 — 이력 한 줄(더함)과 지금 구독 행 */
+	/** 스토리라인 구독 — 이력 한 줄(더함)과 추적 중인 사용자 스토리라인 하나(추적 대상 · 추적 씨앗이 그 스토리라인) */
 	private void subscribeStoryline(long storyline, String cause, String at) {
 		this.jdbc.sql("""
 				insert into user_storyline_subscription_events (user_id, storyline_id, action, cause, occurred_at)
@@ -759,11 +759,21 @@ class CandidateSelectionTests {
 			.param("cause", cause)
 			.param("at", at)
 			.update();
+		long userStoryline = this.jdbc.sql("""
+				insert into user_storylines (user_id, created_at) values (:user, cast(:at as timestamptz)) returning id
+				""").param("user", this.user).param("at", at).query(Long.class).single();
+		this.jdbc.sql("insert into user_storyline_members (user_storyline_id, storyline_id) values (:id, :storyline)")
+			.param("id", userStoryline)
+			.param("storyline", storyline)
+			.update();
+		this.jdbc.sql("insert into user_storyline_tracked_seeds (user_storyline_id, storyline_id) values (:id, :storyline)")
+			.param("id", userStoryline)
+			.param("storyline", storyline)
+			.update();
 		this.jdbc.sql("""
-				insert into user_storyline_subscriptions (user_id, storyline_id, created_at)
-				values (:user, :storyline, cast(:at as timestamptz))
-				on conflict do nothing
-				""").param("user", this.user).param("storyline", storyline).param("at", at).update();
+				insert into user_storyline_subscriptions (user_id, user_storyline_id, created_at)
+				values (:user, :id, cast(:at as timestamptz))
+				""").param("user", this.user).param("id", userStoryline).param("at", at).update();
 	}
 
 	private void topicChange(String key, String action) {

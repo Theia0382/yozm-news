@@ -53,7 +53,7 @@ class FrameworkSchemaMigrationTests {
 			.containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16",
 					"17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", "33",
 					"34", "35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45", "46", "47", "48", "49", "50", "51", "53", "54",
-					"55", "60", "61", "62", "63", "64", "65", "66", "67", "68", "69", "70", "71", "72", "73", "74", "75");
+					"55", "60", "61", "62", "63", "64", "65", "66", "67", "68", "69", "70", "71", "72", "73", "74", "75", "76");
 		assertThat(this.jdbc.sql("""
 				select table_name from information_schema.tables
 				where table_schema = 'public' and table_type = 'BASE TABLE'
@@ -79,7 +79,8 @@ class FrameworkSchemaMigrationTests {
 					"user_storyline_subscriptions",
 					"user_storyline_subscription_events", "feedback", "feedback_events", "feedback_items",
 					"user_topic_suggestion_declines", "measurement_clock", "measurement_clock_jumps", "reports",
-					"report_sections", "report_items");
+					"report_sections", "report_items", "user_storylines", "user_storyline_members",
+					"user_storyline_tracked_seeds");
 		assertThat(this.jdbc.sql("""
 				select table_name from information_schema.tables
 				where table_schema = 'public' and table_type = 'VIEW'

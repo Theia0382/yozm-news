@@ -15,6 +15,7 @@ import net.yozmnews.user.StorylineSubscriptionAction;
 import net.yozmnews.user.StorylineSubscriptionCause;
 import net.yozmnews.user.StorylineSubscriptionChange;
 import net.yozmnews.user.StorylineSubscriptionDirectory;
+import net.yozmnews.user.UserStorylineFixtures;
 import net.yozmnews.user.domain.subscription.StorylineSubscriptionRepository;
 import net.yozmnews.user.domain.subscription.SubscriptionChange;
 import org.junit.jupiter.api.AfterEach;
@@ -82,7 +83,8 @@ class StorylineSubscriptionDirectoryServiceTests {
 		// 합쳐진 행과 남는 행은 하나로, 지운 것은 빠지고, ID 순이다
 		assertThat(current).containsExactly(new StorylineId(survivor), new StorylineId(kept));
 		// 쓰지 않는다 — 저장된 행은 그대로다
-		assertThat(this.repository.load(user)).containsOnlyKeys(merged, survivor, kept, removed);
+		assertThat(UserStorylineFixtures.saved(this.jdbc, user)).flatExtracting(saved -> saved.seeds())
+			.containsExactlyInAnyOrder(merged, survivor, kept, removed);
 	}
 
 	@Test
@@ -136,7 +138,7 @@ class StorylineSubscriptionDirectoryServiceTests {
 	}
 
 	private void add(UserId user, long storyline, Instant at) {
-		this.transaction.executeWithoutResult(status -> this.repository.add(user, storyline, at));
+		UserStorylineFixtures.tracked(this.jdbc, user, storyline, at);
 	}
 
 	private void record(UserId user, long storyline, StorylineSubscriptionAction action, Instant at) {

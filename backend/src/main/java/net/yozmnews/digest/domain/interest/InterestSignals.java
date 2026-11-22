@@ -166,7 +166,7 @@ public final class InterestSignals {
 	private static boolean bySubscriber(StorylineSubscriptionCause cause) {
 		return switch (cause) {
 			case USER -> true;
-			case STORYLINE_MERGED, STORYLINE_REMOVED -> false;
+			case STORYLINE_MERGED, STORYLINE_REMOVED, STORYLINE_SPLIT -> false;
 		};
 	}
 
