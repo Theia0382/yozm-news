@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 
 import net.yozmnews.TestcontainersConfiguration;
@@ -108,8 +109,10 @@ class JdbcExposureRepositoryTests {
 		this.jdbc.sql("update digests set status = 'EMPTY' where id = :id").param("id", empty).update();
 
 		assertThat(this.exposures.exposures(new UserId(USER), FROM, TO)).containsExactly(
-				new ExposureRow(covered, new EventId(901), Instant.parse("2026-11-02T06:00:00Z"), 1.0),
-				new ExposureRow(shown, new EventId(902), Instant.parse("2026-11-02T08:00:00Z"), 1.0));
+				new ExposureRow(covered, LocalDate.parse("2026-11-02"), new EventId(901),
+						Instant.parse("2026-11-02T06:00:00Z"), 1.0),
+				new ExposureRow(shown, LocalDate.parse("2026-11-02"), new EventId(902),
+						Instant.parse("2026-11-02T08:00:00Z"), 1.0));
 	}
 
 	@Test
@@ -120,6 +123,16 @@ class JdbcExposureRepositoryTests {
 
 		assertThat(this.exposures.exposures(new UserId(USER), FROM, TO)).extracting(row -> row.exposedAt().toString())
 			.containsExactly("2026-11-03T06:00:00Z", "2026-11-04T06:00:00Z", "2026-11-05T06:00:00Z");
+	}
+
+	@Test
+	void aRowCarriesTheDateOfItsDigestNotTheDayItFinished() {
+		// 사용자 시간대의 11-04 다이제스트를 UTC 11-03 20:00 에 끝냈다 — 행의 날짜는 다이제스트의 날짜다
+		long digest = DigestRows.digest(this.jdbc, USER, "2026-11-04", "2026-11-03T20:00:00Z");
+		DigestRows.item(this.jdbc, digest, 908);
+
+		assertThat(this.exposures.exposures(new UserId(USER), FROM, TO)).extracting(ExposureRow::digestDate)
+			.containsExactly(LocalDate.parse("2026-11-04"));
 	}
 
 	@Test

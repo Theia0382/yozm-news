@@ -1,6 +1,6 @@
 # ADR-0209: 최대 후보 수와 큰 슬롯 수는 사용자 설정이고, 큰 슬롯은 최대 후보 수의 절반을 넘지 않는다
 
-- 상태: 승인. 부분 대체 — 최대 후보 수 단계 값과 직접 입력 범위([ADR-0272](0272-the-input-token-budget-is-a-safety-ceiling-and-the-maximum-candidate-steps-set-the-digest-volume.md)) · 큰 슬롯 상한을 세는 단위([ADR-0260](0260-digest-candidates-are-events-and-only-assigned-events-with-an-article-first-evaluated-in-the-period-enter.md))
+- 상태: 승인. 부분 대체 — 최대 후보 수 단계 값과 직접 입력 범위([ADR-0272](0272-the-input-token-budget-is-a-safety-ceiling-and-the-maximum-candidate-steps-set-the-digest-volume.md)) · 큰 슬롯 상한을 세는 단위([ADR-0260](0260-digest-candidates-are-events-and-only-assigned-events-with-an-article-first-evaluated-in-the-period-enter.md)) · 구독 밖 노출을 큰 슬롯만 맡는 것([ADR-0280](0280-events-of-followed-flows-outside-the-subscribed-topics-enter-one-per-flow-within-a-share-of-the-subscribed-seats-as-interest.md))
 - 날짜: 2026-11-17
 - 근거: [이슈 #176](https://github.com/Theia0382/yozm-news/issues/176) — 리드가 최대 후보 수(단계 · 직접 입력 · 최대값)와 큰 슬롯 수를 사용자 설정으로 정함. 구현 커밋 `641e7d4`(설정) · `b1b3161`(화면) · `b3cfac1`(상한)
 - 관련: [ADR-0028](0028-explicit-signals-and-interest-weighted-candidates.md)(결정 "구독 밖 노출은 큰 사건 슬롯이 맡는다" — 부분 대체: 큰 슬롯을 끈 사용자에게는 구독 밖 노출이 없다), [ADR-0103](0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md)(큰 슬롯), [ADR-0208](0208-the-big-slot-takes-the-representatives-of-the-heaviest-events-of-each-big-storyline-row.md)(큰 슬롯에 넣는 기사), [ADR-0198](0198-feedback-recording-is-request-limited-per-session-user.md)(결과 "사용자 설정으로 열면 한도를 다시 본다" — 보충: 직접 입력의 상한 150 이 피드백 한도 안이다)
@@ -8,6 +8,7 @@
 ## 맥락
 
 - 다이제스트 후보는 사용자 키로 LLM 공급자에 보내는 입력이다. 많을수록 입력 토큰(사용자 비용)이 는다.
+> 부분 대체(첫 문장) — [ADR-0280](0280-events-of-followed-flows-outside-the-subscribed-topics-enter-one-per-flow-within-a-share-of-the-subscribed-seats-as-interest.md). 지금 상태: [digest Spec "후보 선별"](../specs/digest.md#후보-선별) digest-R52
 - 큰 슬롯은 구독 밖 노출을 맡는다. 큰 스토리라인 하나가 사건 여럿을 넣으므로 슬롯 수와 최대 후보 수는 서로의 자리를 먹는다.
 
 ## 결정
@@ -22,6 +23,7 @@
 ## 결과
 
 - 사용자가 자기 비용과 구독 밖 노출을 고른다. 관심 설정 화면에 "다이제스트 분량" 구획이 있다.
+> 부분 대체("구독 밖 노출이 없고") — [ADR-0280](0280-events-of-followed-flows-outside-the-subscribed-topics-enter-one-per-flow-within-a-share-of-the-subscribed-seats-as-interest.md). 지금 상태: [digest Spec "후보 선별"](../specs/digest.md#후보-선별) digest-R52
 - 큰 슬롯을 끈 사용자에게는 구독 밖 노출이 없고, 구독 제안의 재료(구독 밖 기사에 받은 좋아요)도 생기지 않는다.
 - 최대 후보 수가 입력 토큰 예산보다 크면 예산이 먼저 자른다.
 - 다이제스트 하나가 인용하는 서로 다른 기사는 많아야 150 이라 피드백 요청 제한(세션 사용자 300 / 10분 — [user Spec](../specs/user.md#요청-방어) user-R38)의 창 하나에 든다.

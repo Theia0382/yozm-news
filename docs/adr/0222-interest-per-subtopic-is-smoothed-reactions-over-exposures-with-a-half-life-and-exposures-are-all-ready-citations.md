@@ -54,3 +54,4 @@
 ## 후속 기록
 
 - 2026-11-18: 결정 "기준 시각은 기간 끝이고, 읽는 범위의 끝은 부르는 시각이다"는 다이제스트의 관심도에 적용되는 규칙으로 밝힘([ADR-0225](0225-interest-history-values-read-only-the-window-before-each-reference-time-and-the-period-in-progress-is-measured-at-the-call.md)), 지금 상태는 [digest Spec "관심도"](../specs/digest.md#관심도) digest-R25
+- 2026-11-22: 결정 "상수는 넷이다"의 산식 · 상수를 스토리라인(포함 나무의 꼭대기) 관심에 쓰는 것 — [ADR-0277](0277-storyline-interest-is-counted-per-containment-tree-top-with-the-topic-formula-and-reactions-to-a-flow-seen-within-seven-days-go-to-the-storyline-only.md) · [digest Spec "관심도"](../specs/digest.md#관심도) digest-R23 · R49

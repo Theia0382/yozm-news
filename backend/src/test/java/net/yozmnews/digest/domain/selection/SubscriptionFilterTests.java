@@ -7,8 +7,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import net.yozmnews.digest.domain.interest.InterestWeights;
+import net.yozmnews.digest.domain.interest.StorylineInterests;
 import net.yozmnews.digest.domain.interest.TopicInterests;
 import net.yozmnews.event.EventId;
+import net.yozmnews.storyline.StorylineId;
 import net.yozmnews.user.TopicSubscription;
 import org.junit.jupiter.api.Test;
 
@@ -26,7 +29,7 @@ class SubscriptionFilterTests {
 		CandidateEvent several = Facts.single(Facts.article(4).subtopics("economy.finance", "politics.legislature"));
 
 		assertThat(ids(SubscriptionFilter.select(List.of(executive, markets, finance, several),
-				Facts.politicsAndMarkets(), TopicInterests.NEUTRAL_ALL)))
+				Facts.politicsAndMarkets(), InterestWeights.NEUTRAL_ALL)))
 			.containsExactlyInAnyOrder(1L, 2L, 4L);
 	}
 
@@ -43,14 +46,14 @@ class SubscriptionFilterTests {
 				List.of(Facts.article(4)));
 
 		assertThat(ids(SubscriptionFilter.select(List.of(byMembers, outside), Facts.politicsAndMarkets(),
-				TopicInterests.NEUTRAL_ALL)))
+				InterestWeights.NEUTRAL_ALL)))
 			.containsExactly(10L);
 	}
 
 	@Test
 	void anEventWithoutTopicsHasNothingToMatch() {
 		assertThat(SubscriptionFilter.select(List.of(Facts.single(Facts.article(1).unclassified())),
-				Facts.politicsAndMarkets(), TopicInterests.NEUTRAL_ALL))
+				Facts.politicsAndMarkets(), InterestWeights.NEUTRAL_ALL))
 			.isEmpty();
 	}
 
@@ -58,14 +61,14 @@ class SubscriptionFilterTests {
 	void anEventIsLeftOutWhenHalfOrMoreOfItsMembersAreInAnExcludedRegion() {
 		UserFilter filter = UserFilter.of(Facts.interests(
 				List.of(new TopicSubscription("politics", Set.of("politics.executive"))), Set.of("us"), Set.of(),
-				Set.of()), Set.of());
+				Set.of()), Set.of(), Set.of());
 		// 소속 둘 가운데 하나가 us — 몫 1/2 이라 사건의 지역에 든다
 		CandidateEvent half = Facts.event(10, Facts.article(1).regions("us"), Facts.article(2));
 		// 소속 셋 가운데 하나가 us — 사건의 지역이 아니라 남고, 그 기사도 후보 기사로 남는다
 		CandidateEvent third = Facts.event(11, Facts.article(3).regions("us"), Facts.article(4), Facts.article(5));
 
 		List<CandidateEvent> selected = SubscriptionFilter.select(List.of(half, third), filter,
-				TopicInterests.NEUTRAL_ALL);
+				InterestWeights.NEUTRAL_ALL);
 
 		assertThat(ids(selected)).containsExactly(11L);
 		assertThat(selected.getFirst().articles()).extracting(article -> article.id().value())
@@ -76,12 +79,12 @@ class SubscriptionFilterTests {
 	void aDislikedEventIsLeftOutWithAllItsArticles() {
 		UserFilter filter = UserFilter.of(Facts.interests(
 				List.of(new TopicSubscription("politics", Set.of("politics.executive"))), Set.of(), Set.of(), Set.of()),
-				Set.of(new EventId(10)));
+				Set.of(new EventId(10)), Set.of());
 		CandidateEvent disliked = Facts.event(10, Facts.article(1), Facts.article(2));
 		// 대조 — 싫어요가 아닌 사건은 남는다
 		CandidateEvent kept = Facts.event(11, Facts.article(3));
 
-		assertThat(ids(SubscriptionFilter.select(List.of(disliked, kept), filter, TopicInterests.NEUTRAL_ALL)))
+		assertThat(ids(SubscriptionFilter.select(List.of(disliked, kept), filter, InterestWeights.NEUTRAL_ALL)))
 			.containsExactly(11L);
 	}
 
@@ -97,10 +100,10 @@ class SubscriptionFilterTests {
 		// 3(13시) · 3(12시, 사건 1) · 3(12시, 사건 6) · 2.8(low 4) · 2 · 없음
 		assertThat(ids(SubscriptionFilter.select(
 				List.of(none, tagged2, low4, tagged3SameTimeLargerId, tagged3Later, tagged3),
-				Facts.politicsAndMarkets(), TopicInterests.NEUTRAL_ALL)))
+				Facts.politicsAndMarkets(), InterestWeights.NEUTRAL_ALL)))
 			.containsExactly(5L, 1L, 6L, 2L, 3L, 4L);
-		assertThat(CandidateRank.score(low4, TopicInterests.NEUTRAL_ALL).orElseThrow()).isCloseTo(2.8, within(1e-9));
-		assertThat(CandidateRank.score(none, TopicInterests.NEUTRAL_ALL)).isEmpty();
+		assertThat(CandidateRank.score(low4, InterestWeights.NEUTRAL_ALL).orElseThrow()).isCloseTo(2.8, within(1e-9));
+		assertThat(CandidateRank.score(none, InterestWeights.NEUTRAL_ALL)).isEmpty();
 	}
 
 	@Test
@@ -111,9 +114,9 @@ class SubscriptionFilterTests {
 		CandidateEvent single = Facts.single(Facts.article(20).importance(3.5));
 
 		assertThat(ids(SubscriptionFilter.select(List.of(single, wide), Facts.politicsAndMarkets(),
-				TopicInterests.NEUTRAL_ALL)))
+				InterestWeights.NEUTRAL_ALL)))
 			.containsExactly(10L, 20L);
-		assertThat(CandidateRank.score(wide, TopicInterests.NEUTRAL_ALL).orElseThrow()).isCloseTo(4.0, within(1e-9));
+		assertThat(CandidateRank.score(wide, InterestWeights.NEUTRAL_ALL).orElseThrow()).isCloseTo(4.0, within(1e-9));
 	}
 
 	@Test
@@ -126,7 +129,7 @@ class SubscriptionFilterTests {
 		CandidateEvent tagged = Facts.single(Facts.article(12).importance(3.5));
 
 		assertThat(ids(SubscriptionFilter.select(List.of(allLow, mixed, tagged), Facts.politicsAndMarkets(),
-				TopicInterests.NEUTRAL_ALL)))
+				InterestWeights.NEUTRAL_ALL)))
 			.containsExactly(11L, 12L, 10L);
 	}
 
@@ -139,14 +142,14 @@ class SubscriptionFilterTests {
 		CandidateEvent thirty = Facts.event(30, Facts.article(31).published("2026-11-16T14:00:00Z"), Facts.article(32));
 
 		assertThat(ids(SubscriptionFilter.select(List.of(fifteen, ten, twenty, thirty), Facts.politicsAndMarkets(),
-				TopicInterests.NEUTRAL_ALL)))
+				InterestWeights.NEUTRAL_ALL)))
 			.containsExactly(30L, 20L, 10L, 15L);
 	}
 
 	@Test
 	void theInterestWeightMultipliesTheRank() {
 		// 시장 가중치 1.5 — 3 × 1.5 = 4.5 가 4 × 1 = 4.0 앞, low 4 × 0.7 × 1.5 = 4.2 도 4.0 앞
-		TopicInterests interests = new TopicInterests(Map.of("economy.markets", 1.5));
+		InterestWeights interests = new InterestWeights(new TopicInterests(Map.of("economy.markets", 1.5)), StorylineInterests.NEUTRAL_ALL);
 		CandidateEvent markets3 = Facts.single(Facts.article(1).subtopics("economy.markets").importance(3.0));
 		CandidateEvent politics4 = Facts.single(Facts.article(2).importance(4.0));
 		CandidateEvent marketsLow4 = Facts
@@ -158,7 +161,7 @@ class SubscriptionFilterTests {
 		assertThat(CandidateRank.score(markets3, interests).orElseThrow()).isCloseTo(4.5, within(1e-9));
 		assertThat(CandidateRank.score(marketsLow4, interests).orElseThrow()).isCloseTo(4.2, within(1e-9));
 		assertThat(ids(SubscriptionFilter.select(List.of(politics4, marketsLow4, markets3), Facts.politicsAndMarkets(),
-				TopicInterests.NEUTRAL_ALL)))
+				InterestWeights.NEUTRAL_ALL)))
 			.as("중립이면 중요도 순")
 			.containsExactly(2L, 1L, 3L);
 	}
@@ -166,7 +169,7 @@ class SubscriptionFilterTests {
 	@Test
 	void anEventOnSeveralTopicsIsWeightedByTheMeanOfItsTopics() {
 		// 시장 1.5 · 정치 행정 1.0 의 평균 1.25 — 4 × 1.25 = 5.0
-		TopicInterests interests = new TopicInterests(Map.of("economy.markets", 1.5));
+		InterestWeights interests = new InterestWeights(new TopicInterests(Map.of("economy.markets", 1.5)), StorylineInterests.NEUTRAL_ALL);
 		CandidateEvent both = Facts
 			.single(Facts.article(1).subtopics("economy.markets", "politics.executive").importance(4.0));
 
@@ -175,6 +178,22 @@ class SubscriptionFilterTests {
 
 	private static List<Long> ids(List<CandidateEvent> events) {
 		return events.stream().map(event -> event.facts().id().value()).toList();
+	}
+
+	@Test
+	void anEventWhoseTopsAreAllExcludedIsLeftOut() {
+		StorylineId excluded = new StorylineId(100);
+		UserFilter filter = UserFilter.of(Facts.interests(
+				List.of(new TopicSubscription("politics", Set.of("politics.executive"))), Set.of(), Set.of(), Set.of()),
+				Set.of(), Set.of(excluded));
+		CandidateEvent onlyExcluded = Facts.withTops(Facts.event(10, Facts.article(1)), excluded);
+		// 대조 — 거르지 않은 꼭대기도 가진 사건 · 꼭대기 없는 사건은 남는다
+		CandidateEvent alsoOther = Facts.withTops(Facts.event(11, Facts.article(2)), excluded, new StorylineId(200));
+		CandidateEvent untreed = Facts.event(12, Facts.article(3));
+
+		assertThat(ids(SubscriptionFilter.select(List.of(onlyExcluded, alsoOther, untreed), filter,
+				InterestWeights.NEUTRAL_ALL)))
+			.containsExactlyInAnyOrder(11L, 12L);
 	}
 
 }

@@ -10,6 +10,7 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import java.util.List;
 import java.util.Map;
 
+import net.yozmnews.digest.domain.selection.SelectedEvent;
 import net.yozmnews.event.EventId;
 import net.yozmnews.storyline.StorylineId;
 import org.junit.jupiter.api.Test;
@@ -27,7 +28,7 @@ class ItemGroupingTests {
 		Map<EventId, List<StorylineId>> tops = Map.of(new EventId(1), List.of(storyline(100)), new EventId(2),
 				List.of(storyline(100)), new EventId(3), List.of(storyline(200)));
 
-		List<DigestItemPlan> items = ItemGrouping.group(
+		List<DigestItemPlan> items = group(
 				List.of(subscribed(1), subscribed(4), subscribed(2), subscribed(3)), tops, Map.of());
 
 		// 항목은 첫 사건이 나온 순서 — 1 · 2 는 나무 100, 4 는 꼭대기가 없어 혼자, 3 은 나무 200
@@ -42,7 +43,7 @@ class ItemGroupingTests {
 		Map<EventId, List<StorylineId>> tops = Map.of(new EventId(1), List.of(storyline(100)), new EventId(3),
 				List.of(storyline(100)), new EventId(4), List.of(storyline(300)));
 
-		List<DigestItemPlan> items = ItemGrouping.group(List.of(big(1, 2), big(2, 2), subscribed(3), subscribed(4)),
+		List<DigestItemPlan> items = group(List.of(big(1, 2), big(2, 2), subscribed(3), subscribed(4)),
 				tops, Map.of(2, storyline(100)));
 
 		assertThat(items).extracting(Items::ids).containsExactly(List.of(1L, 2L, 3L), List.of(4L));
@@ -51,10 +52,10 @@ class ItemGroupingTests {
 
 	@Test
 	void aTreeOfABigRowThatWasNotPickedIsAnOrdinaryItem() {
-		// 꼭대기 100 은 큰 판정 목록에 있지만 큰 슬롯 사건이 남지 않은 행이라 bigHeads 에 없다 — 그 나무의 구독 사건은 bigRow 가 없다
+		// 꼭대기 100 은 큰 판정 목록에 있지만 큰 슬롯 사건이 남지 않은 행이라 bigTops 에 없다 — 그 나무의 구독 사건은 bigRow 가 없다
 		Map<EventId, List<StorylineId>> tops = Map.of(new EventId(3), List.of(storyline(100)));
 
-		List<DigestItemPlan> items = ItemGrouping.group(List.of(big(1, 0), subscribed(3)), tops,
+		List<DigestItemPlan> items = group(List.of(big(1, 0), subscribed(3)), tops,
 				Map.of(0, storyline(900)));
 
 		assertThat(items).extracting(Items::ids).containsExactly(List.of(1L), List.of(3L));
@@ -67,7 +68,7 @@ class ItemGroupingTests {
 		Map<EventId, List<StorylineId>> tops = Map.of(new EventId(1), List.of(storyline(100)), new EventId(3),
 				List.of(storyline(200), storyline(100)));
 
-		List<DigestItemPlan> items = ItemGrouping.group(List.of(big(1, 0), subscribed(3)), tops,
+		List<DigestItemPlan> items = group(List.of(big(1, 0), subscribed(3)), tops,
 				Map.of(0, storyline(100)));
 		assertThat(items).extracting(Items::ids).containsExactly(List.of(1L, 3L));
 
@@ -75,7 +76,7 @@ class ItemGroupingTests {
 
 		// 대조 — 같은 꼭대기에서 행 0 의 머리가 다른 꼭대기(900)면 100 은 큰 판정 나무가 아니다. 사건 3 은 100 의 일반 항목이고(고른
 		// 사건 가운데 100 을 가진 사건이 둘이라 200 보다 앞선다) 큰 슬롯 항목과 갈린다
-		List<DigestItemPlan> notBig = ItemGrouping.group(List.of(big(1, 0), subscribed(3)), tops,
+		List<DigestItemPlan> notBig = group(List.of(big(1, 0), subscribed(3)), tops,
 				Map.of(0, storyline(900)));
 		assertThat(notBig).extracting(Items::ids).containsExactly(List.of(1L), List.of(3L));
 		assertThat(notBig).extracting(DigestItemPlan::bigRow).containsExactly(0, null);
@@ -84,13 +85,13 @@ class ItemGroupingTests {
 	@Test
 	void amongSeveralTopsTheTopHeldByMoreSelectedEventsComesNext() {
 		// 사건 3 의 꼭대기는 100 · 200 순, 사건 5 는 200 만 — 200 을 가진 고른 사건이 둘이라 3 은 200 의 항목
-		List<DigestItemPlan> items = ItemGrouping.group(List.of(subscribed(3), subscribed(5)),
+		List<DigestItemPlan> items = group(List.of(subscribed(3), subscribed(5)),
 				Map.of(new EventId(3), List.of(storyline(100), storyline(200)), new EventId(5), List.of(storyline(200))),
 				Map.of());
 		assertThat(items).extracting(Items::ids).containsExactly(List.of(3L, 5L));
 
 		// 대조 — 사건 5 가 300 이면 100 · 200 이 각 하나라 꼭대기 조회의 순서로 100
-		List<DigestItemPlan> tie = ItemGrouping.group(List.of(subscribed(3), subscribed(5)),
+		List<DigestItemPlan> tie = group(List.of(subscribed(3), subscribed(5)),
 				Map.of(new EventId(3), List.of(storyline(100), storyline(200)), new EventId(5), List.of(storyline(300))),
 				Map.of());
 		assertThat(tie).extracting(Items::ids).containsExactly(List.of(3L), List.of(5L));
@@ -100,14 +101,14 @@ class ItemGroupingTests {
 	void amongSeveralTopsTheOrderOfTheTopsDecidesLast() {
 		// 사건 8 은 100 만, 사건 9 는 200 만 — 100 · 200 을 가진 고른 사건이 각 둘이라 앞 두 열쇠가 같다. 사건 3 은 꼭대기 조회의 순서
 		// (소속 점수 순)로 앞선 꼭대기의 항목
-		List<DigestItemPlan> first200 = ItemGrouping.group(List.of(subscribed(8), subscribed(9), subscribed(3)),
+		List<DigestItemPlan> first200 = group(List.of(subscribed(8), subscribed(9), subscribed(3)),
 				Map.of(new EventId(3), List.of(storyline(200), storyline(100)), new EventId(8), List.of(storyline(100)),
 						new EventId(9), List.of(storyline(200))),
 				Map.of());
 		assertThat(first200).extracting(Items::ids).containsExactly(List.of(8L), List.of(9L, 3L));
 
 		// 대조 — 순서만 바꾸면 100 의 항목
-		List<DigestItemPlan> first100 = ItemGrouping.group(List.of(subscribed(8), subscribed(9), subscribed(3)),
+		List<DigestItemPlan> first100 = group(List.of(subscribed(8), subscribed(9), subscribed(3)),
 				Map.of(new EventId(3), List.of(storyline(100), storyline(200)), new EventId(8), List.of(storyline(100)),
 						new EventId(9), List.of(storyline(200))),
 				Map.of());
@@ -116,7 +117,16 @@ class ItemGroupingTests {
 
 	@Test
 	void aBigSlotEventWhoseRowHasNoHeadIsRefused() {
-		assertThatIllegalArgumentException().isThrownBy(() -> ItemGrouping.group(List.of(big(1, 0)), Map.of(), Map.of()));
+		assertThatIllegalArgumentException().isThrownBy(() -> group(List.of(big(1, 0)), Map.of(), Map.of()));
+	}
+
+	/** 사건의 꼭대기를 맵으로 적어 고른 사건에 싣고 묶는다 — 키가 없는 사건은 꼭대기가 없다 */
+	private static List<DigestItemPlan> group(List<SelectedEvent> events, Map<EventId, List<StorylineId>> tops,
+			Map<Integer, StorylineId> bigTops) {
+		List<SelectedEvent> withTops = events.stream()
+			.map(event -> Items.withTops(event, tops.getOrDefault(event.event().facts().id(), List.of())))
+			.toList();
+		return ItemGrouping.group(withTops, bigTops);
 	}
 
 }

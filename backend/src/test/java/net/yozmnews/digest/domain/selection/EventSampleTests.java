@@ -39,7 +39,7 @@ class EventSampleTests {
 
 	@Test
 	void anEventWithFewArticlesGivesThemAllInPublishedOrder() {
-		CandidateEvent small = new CandidateEvent(facts(7), List.of(article(103).published("2026-11-16T12:00:00Z").build(),
+		CandidateEvent small = new CandidateEvent(facts(7), List.of(), List.of(article(103).published("2026-11-16T12:00:00Z").build(),
 				article(101).published("2026-11-16T13:00:00Z").build()));
 
 		assertThat(ids(EventSample.of(small))).containsExactly(103L, 101L);
@@ -58,17 +58,17 @@ class EventSampleTests {
 
 	@Test
 	void aCandidateEventHoldsItsArticlesInPublishedOrderAndIsNeverEmpty() {
-		CandidateEvent event = new CandidateEvent(facts(7), List.of(article(103).published("2026-11-16T13:00:00Z").build(),
+		CandidateEvent event = new CandidateEvent(facts(7), List.of(), List.of(article(103).published("2026-11-16T13:00:00Z").build(),
 				article(102).published("2026-11-16T12:00:00Z").build(),
 				article(101).published("2026-11-16T13:00:00Z").build()));
 
 		// 발행 시각 순, 같으면 기사 ID 순
 		assertThat(ids(event.articles())).containsExactly(102L, 101L, 103L);
-		assertThatIllegalArgumentException().isThrownBy(() -> new CandidateEvent(facts(7), List.of()));
+		assertThatIllegalArgumentException().isThrownBy(() -> new CandidateEvent(facts(7), List.of(), List.of()));
 	}
 
 	private static CandidateEvent event(long event, long fromArticle, long toArticle) {
-		return new CandidateEvent(facts(event),
+		return new CandidateEvent(facts(event), List.of(),
 				LongStream.rangeClosed(fromArticle, toArticle).mapToObj(id -> article(id).build()).toList());
 	}
 

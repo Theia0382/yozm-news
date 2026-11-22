@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import static org.assertj.core.api.Assertions.within;
 
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -12,6 +13,8 @@ import java.util.Set;
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.digest.domain.interest.ExposedEvent;
 import net.yozmnews.digest.domain.interest.InterestFormula;
+import net.yozmnews.digest.domain.interest.InterestLevels;
+import net.yozmnews.digest.domain.interest.InterestRules;
 import net.yozmnews.digest.domain.interest.TopicInterests;
 import net.yozmnews.feedback.FeedbackValue;
 import net.yozmnews.tag.ArticleEvaluationView;
@@ -51,8 +54,11 @@ class ActiveKeysTests {
 		Instant now = Instant.parse("2026-11-17T00:00:00Z");
 		ActiveEvaluation resolved = ActiveKeys.resolve(view(V1, "econ.old"), V1_TO_V2);
 
-		TopicInterests interests = InterestFormula
-			.interests(List.of(new ExposedEvent(resolved.subtopics(), now, 1.0, FeedbackValue.LIKE)), List.of(), now);
+		Map<String, Double> keys = new HashMap<>();
+		resolved.subtopics().forEach(subtopic -> keys.put(subtopic, 1.0));
+		TopicInterests interests = new InterestLevels(InterestFormula.levels(
+				List.of(new ExposedEvent<>(keys, now, 1.0, FeedbackValue.LIKE)), List.of(), now, InterestRules.TOPIC))
+			.weights();
 
 		assertThat(interests.weight("econ.new")).isCloseTo(1.125, within(1e-12));
 		assertThat(interests.weight("econ.old")).isEqualTo(1.0);

@@ -162,6 +162,29 @@ class StorylineDirectoryService implements StorylineDirectory {
 	}
 
 	@Override
+	public Map<StorylineId, StorylineId> topsOfStorylines(Collection<StorylineId> storylines) {
+		Objects.requireNonNull(storylines, "storylines");
+		Set<StorylineId> distinct = new LinkedHashSet<>(storylines);
+		if (distinct.size() > MAX_TOP_STORYLINES) {
+			throw new IllegalArgumentException(
+					"스토리라인 꼭대기 조회는 한 번에 스토리라인 " + MAX_TOP_STORYLINES + " 개까지다: " + distinct.size());
+		}
+		if (distinct.isEmpty()) {
+			return Map.of();
+		}
+		// 합쳐진 스토리라인은 남는 행으로 풀린다 — 키는 받은 ID 다
+		Map<Long, StoredStoryline> found = this.storylines.findAll(distinct.stream().map(StorylineId::value).toList());
+		if (found.isEmpty()) {
+			return Map.of();
+		}
+		RelationGraph graph = graph();
+		Map<StorylineId, StorylineId> tops = new LinkedHashMap<>();
+		found.forEach((requested, stored) -> tops.put(new StorylineId(requested),
+				new StorylineId(StorylineTops.rootOf(stored.id(), graph))));
+		return tops;
+	}
+
+	@Override
 	public StorylinePage list(EventPeriod period, @Nullable StorylineCursor after, int size) {
 		Objects.requireNonNull(period, "period");
 		if (size < 1 || size > MAX_PAGE_SIZE) {

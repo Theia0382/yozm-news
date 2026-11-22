@@ -36,3 +36,4 @@
 ## 후속 기록
 
 - 2026-11-18: 결과 "무엇을 언제 따라가기 시작했는지(스토리라인)는 이 화면에 없다 — 스토리라인 구독 화면의 범위다" — [ADR-0243](0243-the-subscription-history-on-the-subscription-screen-shows-only-the-users-own-subscribe-and-unsubscribe.md)(내 구독 화면의 구독 이력은 사용자가 직접 한 구독 · 해제만), 지금 상태는 [user Spec "스토리라인 구독"](../specs/user.md#스토리라인-구독) user-R63
+- 2026-11-22: 결정 "관심사 히스토리는 그 사용자의 관심 추적이다"에 보일 흐름의 기준 — [ADR-0278](0278-followed-flows-are-tops-at-or-above-the-follow-threshold-or-subscribed-less-the-excluded-and-the-keep-threshold-is-0-2.md) · [digest Spec "관심도"](../specs/digest.md#관심도) digest-R51

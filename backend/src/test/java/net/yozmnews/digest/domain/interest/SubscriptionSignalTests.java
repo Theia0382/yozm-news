@@ -17,20 +17,20 @@ class SubscriptionSignalTests {
 
 	@Test
 	void sharesAboveZeroUpToOneAndASignOfOneAreAccepted() {
-		assertThat(new SubscriptionSignal(Map.of("a", 1.0, "b", 0.25), -1, T).shares())
+		assertThat(new SubscriptionSignal<>(Map.of("a", 1.0, "b", 0.25), -1, T).shares())
 			.isEqualTo(Map.of("a", 1.0, "b", 0.25));
 	}
 
 	@Test
 	void aShareOutsideZeroToOneIsRefused() {
-		assertThatIllegalArgumentException().isThrownBy(() -> new SubscriptionSignal(Map.of("a", 0.0), 1, T));
-		assertThatIllegalArgumentException().isThrownBy(() -> new SubscriptionSignal(Map.of("a", 1.5), 1, T));
+		assertThatIllegalArgumentException().isThrownBy(() -> new SubscriptionSignal<>(Map.of("a", 0.0), 1, T));
+		assertThatIllegalArgumentException().isThrownBy(() -> new SubscriptionSignal<>(Map.of("a", 1.5), 1, T));
 	}
 
 	@Test
 	void aSignOtherThanPlusOrMinusOneIsRefused() {
-		assertThatIllegalArgumentException().isThrownBy(() -> new SubscriptionSignal(Map.of("a", 1.0), 0, T));
-		assertThatIllegalArgumentException().isThrownBy(() -> new SubscriptionSignal(Map.of("a", 1.0), 2, T));
+		assertThatIllegalArgumentException().isThrownBy(() -> new SubscriptionSignal<>(Map.of("a", 1.0), 0, T));
+		assertThatIllegalArgumentException().isThrownBy(() -> new SubscriptionSignal<>(Map.of("a", 1.0), 2, T));
 	}
 
 }

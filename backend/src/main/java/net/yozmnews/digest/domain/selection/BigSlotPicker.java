@@ -5,18 +5,20 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
 import net.yozmnews.event.EventId;
+import net.yozmnews.storyline.StorylineId;
 import org.jspecify.annotations.Nullable;
 
 /**
  * 큰 슬롯 고르기 — 정본 — docs/specs/digest.md §5
  * <p>
- * 큰 판정 행을 앞에서부터 사용자의 큰 슬롯 수만큼 쓴다 — 후보 사건을 하나도 내지 못한 행은 세지 않고 다음 행으로 간다. 행마다 사건을 기간 안
- * 중요도 합 내림차순(같으면 사건 ID 오름차순)으로 {@link SelectionRules#BIG_EVENTS_PER_STORYLINE} 개까지 — 후보가 없거나 앞 행이 쓴
- * 사건은 세지 않고 다음 사건으로 간다. 큰 슬롯 사건 수가 상한을 넘으면 행 순서로 돌며 하나씩 담아 행마다 고르게 줄인다. 결과는 행 순서, 행
+ * 큰 판정 행을 앞에서부터 사용자의 큰 슬롯 수만큼 쓴다 — 머리의 포함 나무 꼭대기가 거른 꼭대기인 행({@link UserFilter#passesStoryline})과
+ * 후보 사건을 하나도 내지 못한 행은 세지 않고 다음 행으로 간다. 행마다 사건을 기간 안 중요도 합 내림차순(같으면 사건 ID 오름차순)으로
+ * {@link SelectionRules#BIG_EVENTS_PER_STORYLINE} 개까지 — 후보가 없거나 앞 행이 쓴 사건은 세지 않고 다음 사건으로 간다. 큰 슬롯 사건 수가 상한을 넘으면 행 순서로 돌며 하나씩 담아 행마다 고르게 줄인다. 결과는 행 순서, 행
  * 안에서는 사건 순서다.
  */
 public final class BigSlotPicker {
@@ -32,9 +34,11 @@ public final class BigSlotPicker {
 	 * @param rows 큰 판정 행 — 큰 판정 목록의 순서 그대로
 	 * @param bigSlots 사용자의 큰 슬롯 수 — 0 이면 빈 결과
 	 * @param cap 큰 슬롯 사건 수의 상한({@link SelectionRules#bigSeats})
+	 * @param filter 그 사용자의 필터 — 행의 머리를 거르는 판정
 	 */
-	public static BigSlots pick(List<BigRow> rows, int bigSlots, int cap) {
+	public static BigSlots pick(List<BigRow> rows, int bigSlots, int cap, UserFilter filter) {
 		Objects.requireNonNull(rows, "rows");
+		Objects.requireNonNull(filter, "filter");
 		if (bigSlots <= 0 || cap <= 0) {
 			return BigSlots.NONE;
 		}
@@ -45,6 +49,9 @@ public final class BigSlotPicker {
 			BigRow row = rows.get(index);
 			if (chosen.size() == bigSlots) {
 				break;
+			}
+			if (!filter.passesStoryline(row.top())) {
+				continue;
 			}
 			List<CandidateEvent> picked = new ArrayList<>();
 			for (BigEvent event : row.events().stream().sorted(EVENT_ORDER).toList()) {
@@ -98,12 +105,26 @@ public final class BigSlotPicker {
 
 	/**
 	 * 큰 판정 행 하나 — 그 스토리라인의 기간 안 사건
+	 * @param head 행의 머리 — 큰 판정 행의 스토리라인
+	 * @param top 머리의 포함 나무 꼭대기 — 거름을 견주는 키. {@link #resolved} 가 정한다
 	 * @param events 기간 안 기사가 있는 사건 — 순서 무관
 	 */
-	public record BigRow(List<BigEvent> events) {
+	public record BigRow(StorylineId head, StorylineId top, List<BigEvent> events) {
 
 		public BigRow {
+			Objects.requireNonNull(head, "head");
+			Objects.requireNonNull(top, "top");
 			events = List.copyOf(Objects.requireNonNull(events, "events"));
+		}
+
+		/**
+		 * 머리의 꼭대기를 풀어 행을 만든다 — 정본. 꼭대기를 모르는 머리(조회 사이에 지워진 스토리라인)는 머리 자신을 꼭대기로 본다 — 큰
+		 * 판정이 낸 행이라 거름이 걸리지 않아도 해가 없다
+		 * @param tops 스토리라인 → 그 포함 나무의 꼭대기({@code StorylineDirectory.topsOfStorylines})
+		 */
+		public static BigRow resolved(StorylineId head, Map<StorylineId, StorylineId> tops, List<BigEvent> events) {
+			Objects.requireNonNull(tops, "tops");
+			return new BigRow(head, tops.getOrDefault(Objects.requireNonNull(head, "head"), head), events);
 		}
 
 	}

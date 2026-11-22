@@ -163,9 +163,11 @@ describe("DigestDayPage", () => {
     expect(
       screen.getByRole("link", { name: "기사 2" }).closest("li"),
     ).not.toHaveTextContent("큰 화제");
-    // 관심 반영도 구독한 주제의 기사다(ADR-0216) — 범례가 구독 밖으로 읽히지 않게
+    // 관심 반영은 주제 · 흐름 관심으로 앞선 소식과, 구독하지 않은 주제의 따라가는 흐름 소식을 함께 말한다
     expect(
-      screen.getByText(/‘관심 반영’은 구독한 주제 가운데/),
+      screen.getByText(
+        /‘관심 반영’은 좋아요 · 구독으로 관심이 높아진 주제나 흐름이라 앞 순위에 든 소식, 또는 구독했거나 관심이 높은 흐름의 소식이라 구독하지 않은 주제여도/,
+      ),
     ).toBeInTheDocument();
     expect(
       screen.getByText(/표시가 없는 항목은 구독한 주제에서 왔습니다/),

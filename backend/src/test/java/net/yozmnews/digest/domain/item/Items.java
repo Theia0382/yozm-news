@@ -43,6 +43,13 @@ final class Items {
 		return new StorylineId(id);
 	}
 
+	/** 같은 고른 사건에 꼭대기를 실은 것 */
+	static SelectedEvent withTops(SelectedEvent event, List<StorylineId> tops) {
+		CandidateEvent candidate = event.event();
+		return new SelectedEvent(new CandidateEvent(candidate.facts(), tops, candidate.articles()), event.reason(),
+				event.bigRow());
+	}
+
 	/** 항목의 사건 ID — 순서대로 */
 	static List<Long> ids(DigestItemPlan item) {
 		return item.events().stream().map(event -> event.event().facts().id().value()).toList();
@@ -54,7 +61,7 @@ final class Items {
 		ArticleFacts article = new ArticleFacts(new ArticleId(id * 10), Set.of("politics.executive"),
 				Set.of("domestic"), Set.of("straight"), TopicStatus.TAGGED, importance, Set.of(new SourceId(1)),
 				Instant.parse("2026-11-16T12:00:00Z"));
-		return new CandidateEvent(facts, List.of(article));
+		return new CandidateEvent(facts, List.of(), List.of(article));
 	}
 
 }

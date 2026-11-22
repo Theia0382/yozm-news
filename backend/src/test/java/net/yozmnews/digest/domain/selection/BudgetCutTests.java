@@ -50,19 +50,49 @@ class BudgetCutTests {
 
 	@Test
 	void eachStepCutsTheBigSlotWhileItIsOverHalfOfWhatIsLeftAndOtherwiseTheSubscribedTail() {
-		Shortlist shortlist = new Shortlist(List.of(B1, B2), List.of(S3, S4), List.of(0, 2));
+		Shortlist shortlist = new Shortlist(List.of(B1, B2), List.of(S3, S4), List.of(), List.of(0, 2));
 		Map<EventId, Integer> tokens = Map.of(id(B1), 100, id(B2), 100, id(S3), 100, id(S4), 100);
 
 		assertThat(BudgetCut.apply(shortlist, tokens, 400)).isEqualTo(shortlist);
 		// 남는 3 의 절반 1 < 큰 2 — 큰 슬롯에서, 행마다 하나씩이라 뒤 행 B2
 		assertThat(BudgetCut.apply(shortlist, tokens, 399))
-			.isEqualTo(new Shortlist(List.of(B1), List.of(S3, S4), List.of(0)));
+			.isEqualTo(new Shortlist(List.of(B1), List.of(S3, S4), List.of(), List.of(0)));
 		// 다음 걸음은 남는 2 의 절반 1 = 큰 1 — 구독 꼬리 S4
 		assertThat(BudgetCut.apply(shortlist, tokens, 200))
-			.isEqualTo(new Shortlist(List.of(B1), List.of(S3), List.of(0)));
+			.isEqualTo(new Shortlist(List.of(B1), List.of(S3), List.of(), List.of(0)));
 		// 남는 1 의 절반 0 < 큰 1 — 큰 슬롯 B1
-		assertThat(BudgetCut.apply(shortlist, tokens, 199)).isEqualTo(new Shortlist(List.of(), List.of(S3), List.of()));
-		assertThat(BudgetCut.apply(shortlist, tokens, 0)).isEqualTo(new Shortlist(List.of(), List.of(), List.of()));
+		assertThat(BudgetCut.apply(shortlist, tokens, 199))
+			.isEqualTo(new Shortlist(List.of(), List.of(S3), List.of(), List.of()));
+		assertThat(BudgetCut.apply(shortlist, tokens, 0))
+			.isEqualTo(new Shortlist(List.of(), List.of(), List.of(), List.of()));
+	}
+
+	@Test
+	void theSubscribedTailGoesBeforeTheFollowedEvents() {
+		// 구독 S3 · S4, 새 길 F5 · F6 — 사건마다 100. 구독 꼬리가 먼저 빠지고, 구독이 다 빠진 뒤에 새 길 꼬리
+		CandidateEvent f5 = Facts.single(Facts.article(5));
+		CandidateEvent f6 = Facts.single(Facts.article(6));
+		Shortlist shortlist = new Shortlist(List.of(), List.of(S3, S4), List.of(f5, f6), List.of());
+		Map<EventId, Integer> tokens = Map.of(id(S3), 100, id(S4), 100, id(f5), 100, id(f6), 100);
+
+		// 대조 — 예산 안이면 그대로
+		assertThat(BudgetCut.apply(shortlist, tokens, 400)).isEqualTo(shortlist);
+		assertThat(BudgetCut.apply(shortlist, tokens, 200))
+			.isEqualTo(new Shortlist(List.of(), List.of(), List.of(f5, f6), List.of()));
+		assertThat(BudgetCut.apply(shortlist, tokens, 100))
+			.isEqualTo(new Shortlist(List.of(), List.of(), List.of(f5), List.of()));
+	}
+
+	@Test
+	void followedEventsCountAmongWhatIsLeftForTheBigSlotHalf() {
+		// 큰 B1 · B2, 새 길 F5 · F6 — 400 → 300: 남는 3 의 절반 1 < 큰 2 라 큰 슬롯에서(새 길도 남는 사건으로 센다)
+		CandidateEvent f5 = Facts.single(Facts.article(5));
+		CandidateEvent f6 = Facts.single(Facts.article(6));
+		Shortlist shortlist = new Shortlist(List.of(B1, B2), List.of(), List.of(f5, f6), List.of(0, 2));
+		Map<EventId, Integer> tokens = Map.of(id(B1), 100, id(B2), 100, id(f5), 100, id(f6), 100);
+
+		assertThat(BudgetCut.apply(shortlist, tokens, 300))
+			.isEqualTo(new Shortlist(List.of(B1), List.of(), List.of(f5, f6), List.of(0)));
 	}
 
 	@Test
@@ -70,10 +100,10 @@ class BudgetCutTests {
 		// 큰 슬롯 행 셋(행 0 · 1 · 2 에 넷씩) · 구독 12 · 사건마다 100 · 예산 10 개 — 큰 7 · 구독 7 이 번갈아 빠져 큰 5(2 · 2 · 1) · 구독 5
 		List<CandidateEvent> big = events(100, 12);
 		List<CandidateEvent> subscribed = events(200, 12);
-		Shortlist shortlist = new Shortlist(big, subscribed, List.of(0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2));
+		Shortlist shortlist = new Shortlist(big, subscribed, List.of(), List.of(0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2));
 
 		assertThat(BudgetCut.apply(shortlist, hundredEach(big, subscribed), 1_000)).isEqualTo(new Shortlist(
-				List.of(big.get(0), big.get(1), big.get(4), big.get(5), big.get(8)), subscribed.subList(0, 5),
+				List.of(big.get(0), big.get(1), big.get(4), big.get(5), big.get(8)), subscribed.subList(0, 5), List.of(),
 				List.of(0, 0, 1, 1, 2)));
 	}
 
@@ -82,51 +112,51 @@ class BudgetCutTests {
 		// 큰 12(행마다 넷) · 구독 2 · 예산 10 개 — 구독 2 는 남고 큰 슬롯이 남는 예산을 쓴다: 큰 8(3 · 3 · 2) · 구독 2
 		List<CandidateEvent> big = events(100, 12);
 		List<CandidateEvent> subscribed = events(200, 2);
-		Shortlist shortlist = new Shortlist(big, subscribed, List.of(0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2));
+		Shortlist shortlist = new Shortlist(big, subscribed, List.of(), List.of(0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2));
 
 		assertThat(BudgetCut.apply(shortlist, hundredEach(big, subscribed), 1_000)).isEqualTo(new Shortlist(
 				List.of(big.get(0), big.get(1), big.get(2), big.get(4), big.get(5), big.get(6), big.get(8),
 						big.get(9)),
-				subscribed, List.of(0, 0, 0, 1, 1, 1, 2, 2)));
+				subscribed, List.of(), List.of(0, 0, 0, 1, 1, 1, 2, 2)));
 	}
 
 	@Test
 	void theBigSlotAloneIsCutEvenlyAcrossRows() {
 		// 행 0 에 둘(B1 · B2) · 행 2 에 하나(S3 를 큰 슬롯으로) — 하나 빼기는 가장 많이 남은 행 0 의 마지막 B2
-		Shortlist shortlist = new Shortlist(List.of(B1, B2, S3), List.of(), List.of(0, 0, 2));
+		Shortlist shortlist = new Shortlist(List.of(B1, B2, S3), List.of(), List.of(), List.of(0, 0, 2));
 		Map<EventId, Integer> tokens = Map.of(id(B1), 100, id(B2), 100, id(S3), 100);
 
 		assertThat(BudgetCut.apply(shortlist, tokens, 200))
-			.isEqualTo(new Shortlist(List.of(B1, S3), List.of(), List.of(0, 2)));
+			.isEqualTo(new Shortlist(List.of(B1, S3), List.of(), List.of(), List.of(0, 2)));
 	}
 
 	@Test
 	void subscribedEventsAloneAreCutFromTheTail() {
-		Shortlist shortlist = new Shortlist(List.of(), List.of(S3, S4), List.of());
+		Shortlist shortlist = new Shortlist(List.of(), List.of(S3, S4), List.of(), List.of());
 		Map<EventId, Integer> tokens = Map.of(id(S3), 100, id(S4), 100);
 
-		assertThat(BudgetCut.apply(shortlist, tokens, 100)).isEqualTo(new Shortlist(List.of(), List.of(S3), List.of()));
+		assertThat(BudgetCut.apply(shortlist, tokens, 100)).isEqualTo(new Shortlist(List.of(), List.of(S3), List.of(), List.of()));
 	}
 
 	@Test
 	void oneBigAndOneSubscribedEventInARoomForOneKeepsTheSubscribedEvent() {
-		Shortlist shortlist = new Shortlist(List.of(B1), List.of(S3), List.of(0));
+		Shortlist shortlist = new Shortlist(List.of(B1), List.of(S3), List.of(), List.of(0));
 		Map<EventId, Integer> tokens = Map.of(id(B1), 100, id(S3), 100);
 
-		assertThat(BudgetCut.apply(shortlist, tokens, 100)).isEqualTo(new Shortlist(List.of(), List.of(S3), List.of()));
+		assertThat(BudgetCut.apply(shortlist, tokens, 100)).isEqualTo(new Shortlist(List.of(), List.of(S3), List.of(), List.of()));
 	}
 
 	@Test
 	void anEventWithoutATokenEstimateIsLeftOutWithItsRow() {
-		Shortlist shortlist = new Shortlist(List.of(B1, B2), List.of(S3, S4), List.of(1, 3));
+		Shortlist shortlist = new Shortlist(List.of(B1, B2), List.of(S3, S4), List.of(), List.of(1, 3));
 
 		assertThat(BudgetCut.apply(shortlist, Map.of(id(B2), 100, id(S4), 100), 10_000))
-			.isEqualTo(new Shortlist(List.of(B2), List.of(S4), List.of(3)));
+			.isEqualTo(new Shortlist(List.of(B2), List.of(S4), List.of(), List.of(3)));
 	}
 
 	@Test
 	void aShortlistNeedsOneRowPerBigEvent() {
-		assertThatIllegalArgumentException().isThrownBy(() -> new Shortlist(List.of(B1, B2), List.of(), List.of(0)));
+		assertThatIllegalArgumentException().isThrownBy(() -> new Shortlist(List.of(B1, B2), List.of(), List.of(), List.of(0)));
 	}
 
 	/** 기사 {@code from} 부터 하나씩 사건 {@code count} 개 */

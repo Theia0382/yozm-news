@@ -32,3 +32,7 @@
 | x 의 부호(x > 0)로 본다 | 노출 하나에 좋아요 하나도 관심이 되고, 감쇠로는 x 가 0 에 다가가기만 해 사라짐이 거의 안 생긴다 |
 | 기간마다 관심 상위 N 주제를 관심 있음으로 본다 | 다른 주제가 오르면 내 관심이 그대로여도 사라짐이 된다. 신호가 적은 사용자에게는 0 근처 주제까지 관심으로 보인다 |
 | 화면에 x 가 있는 모든 주제를 행으로 보인다 | 0 근처 행이 많아 생김 · 사라짐이 묻힌다 |
+
+## 후속 기록
+
+- 2026-11-22: 결정 "관심 x 가 기준값 θ 이상인 주제를 그 기간의 '관심 있음'으로 본다"에 대응하는 스토리라인 관심의 기준 — [ADR-0278](0278-followed-flows-are-tops-at-or-above-the-follow-threshold-or-subscribed-less-the-excluded-and-the-keep-threshold-is-0-2.md) · [digest Spec "관심도"](../specs/digest.md#관심도) digest-R51

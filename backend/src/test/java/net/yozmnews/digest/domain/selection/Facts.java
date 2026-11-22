@@ -9,6 +9,7 @@ import net.yozmnews.article.ArticleId;
 import net.yozmnews.event.EventId;
 import net.yozmnews.llm.ReasoningEffort;
 import net.yozmnews.source.SourceId;
+import net.yozmnews.storyline.StorylineId;
 import net.yozmnews.tag.TagSetId;
 import net.yozmnews.tag.TopicStatus;
 import net.yozmnews.user.DigestInterests;
@@ -47,7 +48,12 @@ final class Facts {
 	 * @param inPeriod 그 가운데 기간에 든 · 제외를 지난 기사
 	 */
 	static CandidateEvent event(long id, List<Builder> members, List<Builder> inPeriod) {
-		return new CandidateEvent(eventFacts(id, members), inPeriod.stream().map(Builder::build).toList());
+		return new CandidateEvent(eventFacts(id, members), List.of(), inPeriod.stream().map(Builder::build).toList());
+	}
+
+	/** 같은 사건에 꼭대기를 실은 것 */
+	static CandidateEvent withTops(CandidateEvent event, StorylineId... tops) {
+		return new CandidateEvent(event.facts(), List.of(tops), event.articles());
 	}
 
 	/** 사건의 값 — 소속 기사의 평가로 센다 */
@@ -59,7 +65,7 @@ final class Facts {
 	static UserFilter politicsAndMarkets() {
 		return new UserFilter(List.of(new TopicSubscription("economy.markets", Set.of("economy.markets")),
 				new TopicSubscription("politics", Set.of("politics.executive", "politics.legislature"))), Set.of(),
-				Set.of(), Set.of(), Set.of());
+				Set.of(), Set.of(), Set.of(), Set.of());
 	}
 
 	static DigestInterests interests(List<TopicSubscription> topics, Set<String> excludedRegions,

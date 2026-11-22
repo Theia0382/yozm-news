@@ -446,7 +446,8 @@ class CandidateSelectionTests {
 		AtomicInteger skewed = new AtomicInteger(1);
 		CandidateSelection once = new CandidateSelection(this.interests, this.evaluations,
 				new ActiveEvaluations(this.evaluations, skewing(skewed, elsewhere)), this.tagSets, this.articles, this.events,
-				this.storylines, this.interestMaterials, this.feedback, InstantSource.system());
+				this.storylines, this.interestMaterials, this.feedback, this.storylineSubscriptions,
+				InstantSource.system());
 
 		assertThat(events(once.select(new UserId(this.user), DAY, ROOMY)))
 			.containsExactly(this.e1 + ":SUBSCRIBED", event(this.a5) + ":SUBSCRIBED");
@@ -455,7 +456,8 @@ class CandidateSelectionTests {
 		AtomicInteger always = new AtomicInteger(Integer.MAX_VALUE);
 		CandidateSelection never = new CandidateSelection(this.interests, this.evaluations,
 				new ActiveEvaluations(this.evaluations, skewing(always, elsewhere)), this.tagSets, this.articles, this.events,
-				this.storylines, this.interestMaterials, this.feedback, InstantSource.system());
+				this.storylines, this.interestMaterials, this.feedback, this.storylineSubscriptions,
+				InstantSource.system());
 		assertThatIllegalStateException().isThrownBy(() -> never.select(new UserId(this.user), DAY, ROOMY))
 			.withMessageContaining("2 번 어긋났다");
 	}
@@ -479,37 +481,78 @@ class CandidateSelectionTests {
 	}
 
 	@Test
-	void aSubscribedStorylineRaisesTheTopicsOfItsEvents() {
-		// 입법 기사 하나뿐인 사건의 스토리라인을 구독했다 — 입법 몫 1, 가중치 ≈ 1 + 0.5 × 1 ÷ 3 ≈ 1.17 이라 3.6 × 1.17 ≈ 4.2 가 4.0 앞이다
-		long legislature = event(eventArticle("의회 넷이", "politics.legislature", 3.6, "2026-11-05T06:00:00Z", 1));
+	void aSubscribedStorylineDoesNotRaiseTheTopicsOfItsEvents() {
+		// 입법 기사 하나뿐인 지난 사건의 스토리라인을 구독했다 — 스토리라인 구독은 그 스토리라인의 꼭대기 관심에만 들고 주제(입법)에는 들지 않는다.
+		// 후보 "의회 넷이"(3.6)는 그 스토리라인의 소속이 아니라 중립 순서 그대로 E1(4.0)이 사건 하나의 예산을 쓴다
+		eventArticle("의회 넷이", "politics.legislature", 3.6, "2026-11-05T06:00:00Z", 1);
 		subscribeStoryline(legislatureStoryline(), "USER");
+
+		assertThat(events(this.selection.select(new UserId(this.user), DAY, ONE_CANDIDATE)))
+			.containsExactly(this.e1 + ":SUBSCRIBED");
+	}
+
+	@Test
+	void aCandidateInASubscribedStorylineRisesByItsStorylineWeight() {
+		// 후보 "의회 넷이"(3.6)를 구독한 스토리라인의 소속으로 더한다 — 꼭대기 관심 1 ÷ 3, 가중치 1 + 0.5 × 1 ÷ 3 = 1.1666… 이라
+		// 3.6 × 1.1666… = 4.2 가 E1(4.0) 앞이고, 중립 순서로는 들지 못하므로 INTEREST
+		long legislature = event(eventArticle("의회 넷이", "politics.legislature", 3.6, "2026-11-05T06:00:00Z", 1));
+		long storyline = legislatureStoryline();
+		subscribeStoryline(storyline, "USER");
+		// 대조 — 소속이 아니면 주제에 들지 않아 중립 순서 그대로
+		assertThat(events(this.selection.select(new UserId(this.user), DAY, ONE_CANDIDATE)))
+			.containsExactly(this.e1 + ":SUBSCRIBED");
+
+		this.rows.member(storyline, legislature);
 
 		assertThat(events(this.selection.select(new UserId(this.user), DAY, ONE_CANDIDATE)))
 			.containsExactly(legislature + ":INTEREST");
 	}
 
 	@Test
-	void aSubscribedStorylineCountsTheTopicOfEachEventByItsMembersNotByItsRepresentative() {
-		// 지난 사건의 대표 기사는 경제, 나머지 소속 둘은 입법 — 사건의 주제는 입법(2/3)이라 입법 몫 1, 가중치 ≈ 1.17 이고
-		// 3.6 × 1.17 ≈ 4.2 가 4.0 앞이다. 대표 기사로 세면 경제 몫 1 이라 입법 사건은 4.0 뒤다
-		long legislature = event(eventArticle("의회 넷이", "politics.legislature", 3.6, "2026-11-05T06:00:00Z", 1));
-		long representative = article("지난 경제", "economy.markets", 3.0, "2026-11-01T00:00:00Z", 1);
-		long event = this.rows.event(3, "2026-11-01T00:00:00Z", "2026-11-01T02:00:00Z");
-		this.rows.assign(representative, event, "2026-11-01T00:00:00Z");
-		this.rows.assign(article("지난 의회 하나", "politics.legislature", 3.0, "2026-11-01T01:00:00Z", 2), event,
-				"2026-11-01T01:00:00Z");
-		this.rows.assign(article("지난 의회 둘", "politics.legislature", 3.0, "2026-11-01T02:00:00Z", 3), event,
-				"2026-11-01T02:00:00Z");
-		this.jdbc.sql("""
-				update events set status = 'CLOSED', closed_at = '2026-11-02T00:00:00Z', representative_article_id = :article
-				where id = :event
-				""").param("article", representative).param("event", event).update();
-		long storyline = this.rows.storyline("2026-11-01T00:00:00Z", "2026-11-01T02:00:00Z", event);
-		this.rows.member(storyline, event);
+	void aStorylineDislikedTheDayBeforeLeavesItsNewEventAndItsBigRowOut() {
+		long[] conflict = bigStoryline();
+		long bigEvent = event(conflict[0]);
+		long storyline = storylineOf(bigEvent);
+		// 같은 스토리라인의 새 사건 — 구독한 정치 행정, 기간 안(큰 판정 행의 사건이라 큰 슬롯으로 든다)
+		long fresh = event(eventArticle("분쟁 속 정부 대응", "politics.executive", 3.5, "2026-11-05T06:00:00Z", 1));
+		this.rows.member(storyline, fresh);
+		// 그 스토리라인의 지난 사건 — 11-04 다이제스트가 혼자인 항목으로 보였다(몫 1)
+		long pastArticle = article("분쟁 지난 일", "world.conflict", 3.0, "2026-11-01T00:00:00Z", 1);
+		long past = this.rows.event(1, "2026-11-01T00:00:00Z", "2026-11-01T00:00:00Z");
+		this.rows.assign(pastArticle, past, "2026-11-01T00:00:00Z");
+		this.rows.member(storyline, past);
+		DigestRows.item(this.jdbc, DigestRows.digest(this.jdbc, this.user, "2026-11-04", "2026-11-04T06:00:00Z"), past);
+		// 대조 — 싫어요 전에는 그 스토리라인의 두 사건이 큰 슬롯으로 든다
+		assertThat(events(this.selection.select(new UserId(this.user), DAY, ROOMY))).containsExactly(
+				bigEvent + ":MAJOR_STORYLINE", fresh + ":MAJOR_STORYLINE", this.e1 + ":SUBSCRIBED",
+				event(this.a5) + ":SUBSCRIBED");
+
+		// 지난 사건에 싫어요 — 꼭대기 관심 −1 ÷ (1 + 3) = −0.25 ≤ −0.2 라 거른 꼭대기다. 큰 판정 행을 건너뛰고(다음 행이 없다), 새 사건은
+		// 꼭대기가 모두 거른 꼭대기라 구독 사건으로도 들지 않는다
+		react(past, "DISLIKE", "2026-11-04T07:00:00Z");
+
+		assertThat(events(this.selection.select(new UserId(this.user), DAY, ROOMY)))
+			.containsExactly(this.e1 + ":SUBSCRIBED", event(this.a5) + ":SUBSCRIBED");
+	}
+
+	@Test
+	void anEventOfASubscribedStorylineOutsideTheSubscribedTopicsEntersByInterest() {
+		// 구독 밖(국제 분쟁) 기사 하나뿐인 사건과 그 스토리라인 — 보도 강도가 작아 크지 않다
+		long article = article("분쟁 소식", "world.conflict", 3.0, "2026-11-05T06:00:00Z", 1);
+		long flowEvent = this.rows.event(1, "2026-11-05T06:00:00Z", "2026-11-05T06:00:00Z");
+		this.rows.assign(article, flowEvent, "2026-11-05T06:00:00Z");
+		long storyline = this.rows.storyline("2026-11-05T06:00:00Z", "2026-11-05T06:00:00Z", flowEvent);
+		this.rows.member(storyline, flowEvent);
+		// 대조 — 구독 전에는 구독 주제 밖이라 들지 않는다
+		assertThat(events(this.selection.select(new UserId(this.user), DAY, ROOMY)))
+			.containsExactly(this.e1 + ":SUBSCRIBED", event(this.a5) + ":SUBSCRIBED");
+
 		subscribeStoryline(storyline, "USER");
 
-		assertThat(events(this.selection.select(new UserId(this.user), DAY, ONE_CANDIDATE)))
-			.containsExactly(legislature + ":INTEREST");
+		// 구독한 스토리라인은 관심 흐름 — 그 사건이 새 길로 들고 표본 기사가 입력에 실린다
+		DigestInput input = this.selection.select(new UserId(this.user), DAY, ROOMY).orElseThrow();
+		assertThat(events(input)).contains(flowEvent + ":INTEREST");
+		assertThat(articlesOf(input, flowEvent)).containsExactly(article);
 	}
 
 	@Test
@@ -580,10 +623,10 @@ class CandidateSelectionTests {
 
 	@Test
 	void signalsAfterThePeriodEndAreReadUpToNow() {
-		// 스토리라인 구독(USER)이 기간 끝 11-06 0시 뒤 12시다 — 지금이 그 뒤면 읽혀 무게 1 로 세고(≈ 1 + 0.5 × 1 ÷ 3 ≈ 1.17,
-		// 3.6 × 1.17 ≈ 4.2 가 4.0 앞), 지금이 그 앞이면 읽는 범위 밖이라 중립 순서다
+		// 지난 다이제스트(11-04)가 보인 입법 사건 일곱에 좋아요를 기간 끝 11-06 0시 뒤 12시에 눌렀다 — 지금이 그 뒤면 읽혀 무게 1 로 세고
+		// (입법 가중치 ≈ 1 + 0.5 × 7 ÷ 10 ≈ 1.35, 3.6 × 1.35 ≈ 4.8 이 4.0 앞), 지금이 그 앞이면 읽는 범위 밖이라 중립 순서다
 		long legislature = event(eventArticle("의회 넷이", "politics.legislature", 3.6, "2026-11-05T06:00:00Z", 1));
-		subscribeStoryline(legislatureStoryline(), "USER", "2026-11-06T12:00:00Z");
+		likedLegislatureShown(7, "2026-11-06T12:00:00Z");
 
 		assertThat(events(selectionAt("2026-11-07T00:00:00Z").select(new UserId(this.user), DAY, ONE_CANDIDATE)))
 			.containsExactly(legislature + ":INTEREST");
@@ -595,7 +638,8 @@ class CandidateSelectionTests {
 	private CandidateSelection selectionAt(String now) {
 		return new CandidateSelection(this.interests, this.evaluations,
 				new ActiveEvaluations(this.evaluations, this.lineage), this.tagSets, this.articles, this.events,
-				this.storylines, this.interestMaterials, this.feedback, InstantSource.fixed(Instant.parse(now)));
+				this.storylines, this.interestMaterials, this.feedback, this.storylineSubscriptions,
+				InstantSource.fixed(Instant.parse(now)));
 	}
 
 	@Test
@@ -656,7 +700,7 @@ class CandidateSelectionTests {
 				this.storylineSubscriptions, this.storylines, this.events);
 		return new CandidateSelection(this.interests, this.evaluations,
 				new ActiveEvaluations(this.evaluations, this.lineage), this.tagSets, this.articles, this.events,
-				this.storylines, materials, this.feedback, InstantSource.system());
+				this.storylines, materials, this.feedback, this.storylineSubscriptions, InstantSource.system());
 	}
 
 	/**
@@ -665,6 +709,11 @@ class CandidateSelectionTests {
 	 * @return 보인 사건
 	 */
 	private long[] likedLegislatureShown(int count) {
+		return likedLegislatureShown(count, "2026-11-04T07:00:00Z");
+	}
+
+	/** {@link #likedLegislatureShown(int)} 의 좋아요를 {@code reactedAt} 에 누른 것 */
+	private long[] likedLegislatureShown(int count, String reactedAt) {
 		long digest = DigestRows.digest(this.jdbc, this.user, "2026-11-04", "2026-11-04T06:00:00Z");
 		long[] shown = new long[count];
 		for (int i = 0; i < count; i++) {
@@ -672,9 +721,17 @@ class CandidateSelectionTests {
 			shown[i] = this.rows.event(1, "2026-11-01T00:00:00Z", "2026-11-01T00:00:00Z");
 			this.rows.assign(article, shown[i], "2026-11-01T00:00:00Z");
 			DigestRows.item(this.jdbc, digest, shown[i]);
-			react(shown[i], "LIKE", "2026-11-04T07:00:00Z");
+			react(shown[i], "LIKE", reactedAt);
 		}
 		return shown;
+	}
+
+	/** 사건이 직접 든 스토리라인 하나 */
+	private long storylineOf(long event) {
+		return this.jdbc.sql("select storyline_id from storyline_members where event_id = :event")
+			.param("event", event)
+			.query(Long.class)
+			.single();
 	}
 
 	/** 기간 앞(11-01)의 입법 기사 하나를 가진 사건과 그 사건만의 스토리라인 — 보도 강도가 작아 크지 않다 */
@@ -691,6 +748,7 @@ class CandidateSelectionTests {
 		subscribeStoryline(storyline, cause, "2026-11-05T12:00:00Z");
 	}
 
+	/** 스토리라인 구독 — 이력 한 줄(더함)과 지금 구독 행 */
 	private void subscribeStoryline(long storyline, String cause, String at) {
 		this.jdbc.sql("""
 				insert into user_storyline_subscription_events (user_id, storyline_id, action, cause, occurred_at)
@@ -701,6 +759,11 @@ class CandidateSelectionTests {
 			.param("cause", cause)
 			.param("at", at)
 			.update();
+		this.jdbc.sql("""
+				insert into user_storyline_subscriptions (user_id, storyline_id, created_at)
+				values (:user, :storyline, cast(:at as timestamptz))
+				on conflict do nothing
+				""").param("user", this.user).param("storyline", storyline).param("at", at).update();
 	}
 
 	private void topicChange(String key, String action) {

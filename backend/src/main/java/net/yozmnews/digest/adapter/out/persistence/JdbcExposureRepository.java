@@ -3,6 +3,7 @@ package net.yozmnews.digest.adapter.out.persistence;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Objects;
 
@@ -30,7 +31,7 @@ class JdbcExposureRepository implements ExposureRepository {
 	@Override
 	public List<ExposureRow> exposures(UserId user, Instant from, Instant to) {
 		return this.jdbc.sql("""
-				select d.id as digest_id, d.completed_at, e.event_id,
+				select d.id as digest_id, d.digest_date, d.completed_at, e.event_id,
 				       1.0 / count(*) over (partition by e.digest_section_id) as share
 				from digest_section_events e
 				join digest_sections s on s.id = e.digest_section_id
@@ -41,7 +42,8 @@ class JdbcExposureRepository implements ExposureRepository {
 			.param("user", user.value())
 			.param("from", Timestamp.from(from))
 			.param("to", Timestamp.from(to))
-			.query((ResultSet rs, int row) -> new ExposureRow(rs.getLong("digest_id"), new EventId(rs.getLong("event_id")),
+			.query((ResultSet rs, int row) -> new ExposureRow(rs.getLong("digest_id"),
+					rs.getObject("digest_date", LocalDate.class), new EventId(rs.getLong("event_id")),
 					rs.getTimestamp("completed_at").toInstant(), rs.getDouble("share")))
 			.list();
 	}

@@ -9,6 +9,8 @@ import java.util.List;
 import java.util.Map;
 
 import net.yozmnews.digest.SelectionReason;
+import net.yozmnews.digest.domain.interest.InterestWeights;
+import net.yozmnews.digest.domain.interest.StorylineInterests;
 import net.yozmnews.digest.domain.interest.TopicInterests;
 import net.yozmnews.digest.domain.selection.SelectedEvent;
 import org.junit.jupiter.api.Test;
@@ -33,7 +35,7 @@ class ItemPlanTests {
 			items.add(new DigestItemPlan(List.of(subscribed(10 + i, scores[i])), null));
 		}
 
-		List<ArrangedItem> arranged = ItemPlan.arrange(items, TopicInterests.NEUTRAL_ALL);
+		List<ArrangedItem> arranged = ItemPlan.arrange(items, InterestWeights.NEUTRAL_ALL);
 
 		// 주요 뉴스: 9 · 8 · 7 · 6 · 5 다음 큰 항목 둘(3 — 사건 1 · 2 순)은 순위대로 섞이고, 4 · 2 는 헤드라인
 		assertThat(arranged).extracting(item -> Items.ids(item.plan()).getFirst(), ArrangedItem::kind)
@@ -58,7 +60,7 @@ class ItemPlanTests {
 		}
 		items.add(new DigestItemPlan(List.of(big(1, 0)), 0));
 
-		List<ArrangedItem> arranged = ItemPlan.arrange(items, TopicInterests.NEUTRAL_ALL);
+		List<ArrangedItem> arranged = ItemPlan.arrange(items, InterestWeights.NEUTRAL_ALL);
 
 		assertThat(arranged).extracting(item -> Items.ids(item.plan()).getFirst())
 			.containsExactly(10L, 11L, 12L, 13L, 14L, 1L, 15L);
@@ -73,13 +75,13 @@ class ItemPlanTests {
 		DigestItemPlan b = new DigestItemPlan(List.of(subscribed(7, 4.0)), null);
 		DigestItemPlan c = new DigestItemPlan(List.of(subscribed(8, null)), null);
 
-		List<ArrangedItem> arranged = ItemPlan.arrange(List.of(c, b, a), TopicInterests.NEUTRAL_ALL);
+		List<ArrangedItem> arranged = ItemPlan.arrange(List.of(c, b, a), InterestWeights.NEUTRAL_ALL);
 
 		// 항목 안 사건은 사건 순위대로 — 6(4.5) 다음 5(2)
 		assertThat(arranged).extracting(item -> Items.ids(item.plan()))
 			.containsExactly(List.of(6L, 5L), List.of(7L), List.of(8L));
-		assertThat(ItemPlan.score(a, TopicInterests.NEUTRAL_ALL).orElseThrow()).isEqualTo(4.5);
-		assertThat(ItemPlan.score(c, TopicInterests.NEUTRAL_ALL)).isEmpty();
+		assertThat(ItemPlan.score(a, InterestWeights.NEUTRAL_ALL).orElseThrow()).isEqualTo(4.5);
+		assertThat(ItemPlan.score(c, InterestWeights.NEUTRAL_ALL)).isEmpty();
 	}
 
 	@Test
@@ -87,7 +89,7 @@ class ItemPlanTests {
 		DigestItemPlan later = new DigestItemPlan(List.of(subscribed(9)), null);
 		DigestItemPlan earlier = new DigestItemPlan(List.of(subscribed(12), subscribed(4)), null);
 
-		assertThat(ItemPlan.arrange(List.of(later, earlier), TopicInterests.NEUTRAL_ALL))
+		assertThat(ItemPlan.arrange(List.of(later, earlier), InterestWeights.NEUTRAL_ALL))
 			.extracting(item -> Items.ids(item.plan()).contains(4L))
 			.containsExactly(true, false);
 	}
@@ -95,7 +97,7 @@ class ItemPlanTests {
 	@Test
 	void theItemScoreUsesTheInterestWeight() {
 		// 정치 행정 가중치 0.5 — 항목 점수는 관심도를 곱한 사건 점수: 4 × 0.5 = 2.0, 3 × 0.5 = 1.5
-		TopicInterests interests = new TopicInterests(Map.of("politics.executive", 0.5));
+		InterestWeights interests = new InterestWeights(new TopicInterests(Map.of("politics.executive", 0.5)), StorylineInterests.NEUTRAL_ALL);
 		DigestItemPlan politics4 = new DigestItemPlan(List.of(subscribed(2, 4.0)), null);
 		DigestItemPlan politics3 = new DigestItemPlan(List.of(subscribed(1, 3.0)), null);
 
