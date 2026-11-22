@@ -30,6 +30,9 @@ export function digestDayTitle(date: string): string {
   return `${formatDate(date)} 다이제스트`;
 }
 
+/** 항목을 묶은 흐름이 정리돼 있을 때 그 정리 제목 앞의 말 */
+export const ITEM_FLOW = "흐름";
+
 /** 항목의 선정 이유의 화면 이름 — 항목마다 하나, 구독 주제는 표시하지 않고 범례로 알린다 */
 export const selectionReasonLabels = {
   SUBSCRIBED: "구독 주제",
