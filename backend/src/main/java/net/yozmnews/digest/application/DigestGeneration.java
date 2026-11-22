@@ -3,13 +3,16 @@ package net.yozmnews.digest.application;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
 
+import net.yozmnews.article.ArticleContent;
 import net.yozmnews.article.ArticleDirectory;
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.digest.DigestFailure;
@@ -30,6 +33,7 @@ import net.yozmnews.digest.domain.generator.DigestRequest;
 import net.yozmnews.digest.domain.generator.GenerationOutcome;
 import net.yozmnews.digest.domain.generator.GenerationVerdict;
 import net.yozmnews.digest.domain.generator.GenerationVerdict.Retry;
+import net.yozmnews.digest.domain.generator.GenerationVerdict.RetryMissing;
 import net.yozmnews.digest.domain.generator.GenerationVerdict.Settled;
 import net.yozmnews.digest.domain.generator.TokenUsage;
 import net.yozmnews.digest.domain.input.DigestInput;
@@ -109,7 +113,7 @@ public class DigestGeneration {
 	}
 
 	/**
-	 * 시작 → 후보가 있으면 프롬프트 구성 · 생성 · 읽기(끝까지 쓴 응답을 읽지 못하면 한 번 다시 묻기) → 항목 대조 → 저장. 끝났거나 생성 중인
+	 * 시작 → 후보가 있으면 프롬프트 구성 · 생성 · 읽기(끝까지 쓴 응답을 읽지 못하거나 칸이 빠진 항목이 있으면 한 번 다시 묻기) → 항목 대조 → 저장. 끝났거나 생성 중인
 	 * 다이제스트면 아무것도 하지 않는다 — 생성 중인 다이제스트를 다시 시작하지 않는다. 생성과 다시 묻기는 트랜잭션 밖이다. 토큰은 공급자가 답한 호출의 합이고, 소요 시간은 첫 호출 시작부터 마지막 호출 끝까지다.
 	 * <p>
 	 * 후보 선별과 생성은 같은 모델을 쓴다 — 쓸 모델은 그 입력을 고른 선별에 넘긴 모델이어야 하고, 입력 토큰 예산은 선별이 그 모델의 예산으로 자른 것이고 여기서 다시 자르지 않는다.
@@ -135,12 +139,17 @@ public class DigestGeneration {
 		Instant asked = this.clock.instant();
 		GenerationOutcome first = this.generator.generate(new DigestRequest(started.user(), model, effort, set, prompt));
 		GenerationOutcome second = null;
-		Settled settled = switch (GenerationVerdict.judge(first)) {
+		Settled settled = switch (GenerationVerdict.judge(first, set)) {
 			case Settled done -> done;
 			case Retry retry -> {
 				second = this.generator.generate(new DigestRequest(started.user(), model, effort, set,
 						DigestPrompts.retry(prompt, retry.diagnosis())));
-				yield GenerationVerdict.settle(second);
+				yield GenerationVerdict.settle(second, set);
+			}
+			case RetryMissing retry -> {
+				second = this.generator.generate(new DigestRequest(started.user(), model, effort, set,
+						DigestPrompts.retry(prompt, retry.diagnosis())));
+				yield GenerationVerdict.settle(second, set, retry.first());
 			}
 		};
 		TokenUsage usage = sum(usage(first), (second == null) ? null : usage(second));
@@ -200,7 +209,8 @@ public class DigestGeneration {
 	private Completion complete(DigestId id, CandidateSet set, Settled settled, @Nullable TokenUsage usage,
 			Duration took) {
 		Set<ArticleId> kept = this.candidates.lockArticles(id);
-		Set<ArticleId> present = new HashSet<>(this.articles.findAll(kept).keySet());
+		Map<ArticleId, ArticleContent> found = this.articles.findAll(kept);
+		Set<ArticleId> present = new HashSet<>(found.keySet());
 		present.retainAll(kept);
 		Set<ArticleId> gone = new HashSet<>(kept);
 		gone.removeAll(present);
@@ -210,17 +220,23 @@ public class DigestGeneration {
 			case GenerationVerdict.Read verdict -> {
 				OutputRead.Read read = verdict.output();
 				TokenUsage spent = Objects.requireNonNull(usage, "읽은 응답은 공급자가 센 토큰이 있다");
-				CitationResult cited = CitationCheck.check(read.draft(), set.retain(present));
-				if (cited.drops().droppedItems() > 0 || cited.drops().missingItems() > 0 || read.overLimit() > 0) {
-					logger.info("다이제스트 출력에서 지운 것이 있다 — 다이제스트 {}, 버린 원소 {}, 출력에 없는 항목 {}, 상한으로 버린 수 {}",
-							id.value(), cited.drops().droppedItems(), cited.drops().missingItems(), read.overLimit());
+				Map<ArticleId, String> titles = new HashMap<>();
+				present.forEach(article -> titles.put(article, found.get(article).title()));
+				CitationResult cited = CitationCheck.check(read.draft(), set.retain(present), titles);
+				int substituted = cited.drops().substituted();
+				if (verdict.firstMissing() > 0 || substituted > 0) {
+					logger.warn("다이제스트 출력에 항목이 빠졌다 — 다이제스트 {}, 처음 읽은 출력에 없던 항목 {}, 대체한 항목 {}", id.value(),
+							verdict.firstMissing(), substituted);
+				}
+				else if (read.overLimit() > 0) {
+					logger.info("다이제스트 출력에서 상한으로 지운 것이 있다 — 다이제스트 {}, 상한으로 버린 수 {}", id.value(), read.overLimit());
 				}
 				yield switch (cited) {
 					case CitationResult.NoCitation none -> new Completion.Failed(DigestFailure.NO_CITATION,
 							NO_CITATION, spent, took);
 					case CitationResult.Cited ok -> {
 						this.sections.saveAll(DigestSection.of(id, ok.digest()));
-						yield new Completion.Ready(spent, took);
+						yield new Completion.Ready(spent, took, verdict.firstMissing(), substituted);
 					}
 				};
 			}

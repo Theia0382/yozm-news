@@ -24,6 +24,7 @@ import {
   RETRY_EMPTY_TEXT,
   RETRY_FAILED_TEXT,
   SELECTION_REASON_LEGEND,
+  citationsSummary,
   dayUsageText,
   digestFailureCauseLinks,
   digestFailureCauseTexts,
@@ -173,14 +174,16 @@ function ShownContent({ shown }: { shown: ShownDigest }) {
           <h2 className="text-lg font-semibold">
             {sectionHeadings.moreHeadlines}
           </h2>
-          {headlines.map((headline, index) => (
-            <Headline
-              key={`headline-${index}`}
-              headline={headline}
-              digestId={shown.digestId}
-              feedback={feedback}
-            />
-          ))}
+          <div className="divide-y">
+            {headlines.map((headline, index) => (
+              <Headline
+                key={`headline-${index}`}
+                headline={headline}
+                digestId={shown.digestId}
+                feedback={feedback}
+              />
+            ))}
+          </div>
         </section>
       )}
       {marked && (
@@ -205,7 +208,7 @@ function Story({
   feedback: FeedbackView;
 }) {
   return (
-    <article className="space-y-2 border-l-2 border-input pl-4">
+    <article className="space-y-2 rounded-lg border bg-card p-4 text-card-foreground">
       <ItemHead
         section={story}
         digestId={digestId}
@@ -229,7 +232,7 @@ function Headline({
   feedback: FeedbackView;
 }) {
   return (
-    <article className="space-y-1">
+    <article className="space-y-1 py-3 first:pt-0 last:pb-0">
       <ItemHead
         section={headline}
         digestId={digestId}
@@ -297,10 +300,27 @@ function ReasonBadge({ section }: { section: DigestSection }) {
   );
 }
 
-/** 항목의 출처 기사 목록 — 줄마다 제목 링크 · 출처 · 발행 시각 */
+/**
+ * 항목의 출처 기사 목록 — 기본은 접혀 있고 요약 줄("출처 기사 N건")을 누르면 펼친다. 줄마다 제목 링크 · 출처 · 발행 시각. 펼침 상태는 저장하지
+ * 않는다
+ */
 function Citations({ citations }: { citations: DigestCitation[] }) {
+  if (citations.length === 0) {
+    return null;
+  }
   return (
-    <ul className="space-y-1 text-sm">
+    <details className="text-sm">
+      <summary className="cursor-pointer text-muted-foreground select-none">
+        {citationsSummary(citations.length)}
+      </summary>
+      <CitationList citations={citations} />
+    </details>
+  );
+}
+
+function CitationList({ citations }: { citations: DigestCitation[] }) {
+  return (
+    <ul className="mt-1 space-y-1">
       {citations.map((citation, index) => (
         <li key={`${citation.articleId}-${index}`} className="break-words">
           <a

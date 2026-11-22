@@ -94,7 +94,7 @@ import org.springframework.stereotype.Service;
  * 큰 슬롯은 큰 판정 목록의 행을 그대로 쓴다. 목록은 포함 나무마다 한 행이라 한 포함 나무는 슬롯 하나를 쓴다 — 행의 사건에는 그
  * 아래 하위의 사건이 함께 든다. 앞 행이 쓴 사건은 뒤 행에서 다시 들지 않는다.
  * <p>
- * 항목은 고른 사건의 포함 나무 꼭대기({@link StorylineDirectory#topsOf})로 묶는다 — 고른 사건은 최대 후보 수(직접 입력 상한 150) 이하라
+ * 항목은 고른 사건의 포함 나무 꼭대기({@link StorylineDirectory#topsOf})로 묶는다 — 고른 사건은 최대 후보 수(직접 입력 상한 — 저장된 값은 150 까지) 이하라
  * 한 번에 묻는 상한({@link StorylineDirectory#MAX_TOP_EVENTS})을 넘지 않지만, 넘으면 나눠 묻는다.
  */
 @Service

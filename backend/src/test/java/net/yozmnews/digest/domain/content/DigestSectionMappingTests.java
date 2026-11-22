@@ -80,7 +80,7 @@ class DigestSectionMappingTests {
 
 		Digest running = this.digests.save(scheduled.start(MODEL, 2, T0));
 		Digest ready = this.digests
-			.save(running.complete(new Completion.Ready(new TokenUsage(1_200, 340), Duration.ofMillis(2_000)), T1));
+			.save(running.complete(new Completion.Ready(new TokenUsage(1_200, 340), Duration.ofMillis(2_000), 2, 1), T1));
 
 		Digest read = this.digests.lock(ready.id().value()).orElseThrow();
 		assertThat(read.status()).isEqualTo(DigestStatus.READY);
@@ -92,6 +92,8 @@ class DigestSectionMappingTests {
 		assertThat(read.model()).contains("gpt-5.5-mini");
 		assertThat(read.candidateCount()).contains(2);
 		assertThat(read.usage()).contains(new TokenUsage(1_200, 340));
+		assertThat(read.firstMissingItems()).contains(2);
+		assertThat(read.substitutedItems()).contains(1);
 		assertThat(read.durationMs()).contains(2_000L);
 		assertThat(read.startedAt()).contains(T0);
 		assertThat(read.completedAt()).contains(T1);

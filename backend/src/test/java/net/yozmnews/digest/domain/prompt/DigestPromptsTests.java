@@ -67,9 +67,10 @@ class DigestPromptsTests {
 					+ "items 의 줄은 [항목 별칭, 칸, 사건들]이다. 사건은 한 번 일어난 일을 다룬 기사 줄의 목록이고, "
 					+ "기사 줄은 [출처, 발행 시각, 주제, 지역, 제목, 요약문]이다. 한 항목의 사건들은 같은 흐름에 속한다. "
 					+ "칸은 그 항목을 쓸 출력의 칸(top_stories 또는 headlines)이다.")
-			.contains("- 칸이 top_stories 인 항목마다 top_stories 에 원소 하나를 쓴다 — ref 는 항목 별칭, title 은 제목, "
-					+ "summary 는 그 항목 사건들의 기사를 종합한 300~600자의 요약이다.")
-			.contains("- 칸이 headlines 인 항목마다 headlines 에 원소 하나를 쓴다 — ref 는 항목 별칭, title 은 제목, note 는 짧은 코멘트다.")
+			.contains("- top_stories 는 칸이 top_stories 인 항목마다 그 항목 별칭을 키로 한 칸 하나다 — title 은 제목, "
+					+ "summary 는 그 항목 사건들의 기사를 종합한 200~500자의 요약이다.")
+			.contains("- headlines 에는 칸이 headlines 인 항목마다 원소 하나를 쓴다 — ref 는 항목 별칭, title 은 제목, note 는 짧은 코멘트다.")
+			.contains("- 모든 항목을 쓴다. 키와 원소는 항목의 순서대로 쓴다.")
 			.doesNotContain("<")
 			.doesNotContain("more_headlines")
 			.doesNotContain("A1");
@@ -160,11 +161,13 @@ class DigestPromptsTests {
 
 		DigestPrompt structured = compose(PROFILE, items, STRUCTURED);
 		DigestPrompt plain = compose(PROFILE, items, PLAIN);
+		String schema = DigestOutputSchema
+			.json(DigestOutputSchema.root(CandidateSet.of(new DigestInput(PROFILE, items))));
 
-		assertThat(structured.outputSchema()).isEqualTo(DigestOutputSchema.json());
-		assertThat(plain.outputSchema()).isEqualTo(DigestOutputSchema.json());
+		assertThat(structured.outputSchema()).isEqualTo(schema).contains("\"I1\"");
+		assertThat(plain.outputSchema()).isEqualTo(schema);
 		assertThat(structured.instructions()).doesNotContain("출력 스키마:").doesNotContain("\"top_stories\"");
-		assertThat(plain.instructions()).contains("출력 스키마:\n" + DigestOutputSchema.json());
+		assertThat(plain.instructions()).contains("출력 스키마:\n" + schema);
 	}
 
 	@Test
@@ -172,24 +175,32 @@ class DigestPromptsTests {
 		List<InputItem> items = List.of(single(ItemKind.TOP_STORY, BIG_ID, "제목"));
 
 		assertThat(compose(withLength(SummaryLength.SHORT), items, STRUCTURED).instructions())
-			.contains("overview 는 오늘 소식 전체의 개요로 100~250자로 쓴다.")
-			.contains("종합한 150~300자의 요약이다.");
+			.contains("overview 는 오늘 소식 전체의 개요로 250~400자로 쓴다.")
+			.contains("종합한 100~300자의 요약이다.");
 		assertThat(compose(withLength(SummaryLength.NORMAL), items, STRUCTURED).instructions())
-			.contains("overview 는 오늘 소식 전체의 개요로 200~450자로 쓴다.")
-			.contains("종합한 300~600자의 요약이다.");
+			.contains("overview 는 오늘 소식 전체의 개요로 500~800자로 쓴다.")
+			.contains("종합한 200~500자의 요약이다.");
 		assertThat(compose(withLength(SummaryLength.DETAILED), items, STRUCTURED).instructions())
-			.contains("overview 는 오늘 소식 전체의 개요로 400~800자로 쓴다.")
-			.contains("종합한 600~1200자의 요약이다.");
+			.contains("overview 는 오늘 소식 전체의 개요로 800~1200자로 쓴다.")
+			.contains("종합한 400~800자의 요약이다.");
+	}
+
+	@Test
+	void theInstructionsKeepToTheFactsOfTheArticlesAndAllowShortWritingForThinMaterial() {
+		assertThat(compose(PROFILE, List.of(single(ItemKind.TOP_STORY, BIG_ID, "제목")), STRUCTURED).instructions())
+			.contains("- 기사의 예고 · 안내 · 홍보 문장은 옮기지 않고 기사가 전하는 사실만 쓴다.")
+			.contains("- 넘겨받은 기사나 입력 자체에 대해서는 쓰지 않는다.")
+			.contains("- 기사가 담은 사실이 적으면 길이 기준보다 짧게 써도 된다.");
 	}
 
 	@Test
 	void theRetryAddsTheDiagnosisToTheSameRequest() {
 		DigestPrompt first = compose(PROFILE, List.of(single(ItemKind.TOP_STORY, BIG_ID, "제목")), STRUCTURED);
 
-		DigestPrompt retry = DigestPrompts.retry(first, "$.top_stories[0].ref: 문자열이 아니다");
+		DigestPrompt retry = DigestPrompts.retry(first, "$.top_stories.I1.title: 문자열이 아니다");
 
 		assertThat(retry.instructions()).startsWith(first.instructions())
-			.endsWith("\n앞 출력이 출력 스키마에 맞지 않았다: $.top_stories[0].ref: 문자열이 아니다\n출력 스키마에 맞는 JSON 객체 하나만 다시 출력하라.");
+			.endsWith("\n앞 출력이 출력 스키마에 맞지 않았다: $.top_stories.I1.title: 문자열이 아니다\n출력 스키마에 맞는 JSON 객체 하나만 다시 출력하라.");
 		assertThat(retry.userContent()).isEqualTo(first.userContent());
 		assertThat(retry.outputSchema()).isEqualTo(first.outputSchema());
 	}

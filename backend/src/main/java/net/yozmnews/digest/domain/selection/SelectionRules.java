@@ -20,21 +20,26 @@ public final class SelectionRules {
 	public static final int BIG_EVENTS_PER_STORYLINE = 10;
 
 	/**
-	 * 큰 슬롯 사건이 차지할 수 있는 최대 후보 수(사건 수)의 몫 — 최대 후보 수 × 이 값을 내림한 수까지. 관심 설정 화면의 안내 문구("최대 후보 수의
-	 * 절반" — {@code frontend/src/features/interests/interestTexts.ts} 의 {@code BIG_SLOTS_HELP_TEXT})가 이 값을 말로 적는다 —
-	 * 값을 바꾸면 그 문구도 고친다
+	 * 큰 슬롯 사건이 차지할 수 있는 사건 수의 몫 — 고를 때는 최대 후보 수 × 이 값을 내림한 수까지, 입력 토큰 예산으로 자를 때는 남는 사건 수 × 이
+	 * 값을 내림한 수까지(구독 사건이 하나라도 빠졌을 때 — 구독 사건이 모자라면 큰 슬롯이 남는 예산을 쓴다, {@link BudgetCut}). 관심 설정
+	 * 화면의 안내 문구("최대 후보 수의 절반" — {@code frontend/src/features/interests/interestTexts.ts} 의
+	 * {@code BIG_SLOTS_HELP_TEXT})가 이 값을 말로 적는다 — 값을 바꾸면 그 문구도 고친다
 	 */
 	public static final double BIG_SHARE = 0.5;
 
 	private SelectionRules() {
 	}
 
-	/** 최대 후보 수에서 큰 슬롯 사건이 차지할 수 있는 수 — {@link #BIG_SHARE} 를 곱해 내림 */
-	public static int bigSeats(int maxCandidates) {
-		if (maxCandidates < 0) {
-			throw new IllegalArgumentException("최대 후보 수가 음수다: " + maxCandidates);
+	/**
+	 * 사건 수에서 큰 슬롯 사건이 차지할 수 있는 수 — {@link #BIG_SHARE} 를 곱해 내림. 고르기는 최대 후보 수로({@link BigSlotPicker}), 예산
+	 * 자르기는 남는 사건 수로({@link BudgetCut}) 부른다
+	 * @param events 사건 수
+	 */
+	public static int bigSeats(int events) {
+		if (events < 0) {
+			throw new IllegalArgumentException("사건 수가 음수다: " + events);
 		}
-		return (int) Math.floor(maxCandidates * BIG_SHARE);
+		return (int) Math.floor(events * BIG_SHARE);
 	}
 
 }

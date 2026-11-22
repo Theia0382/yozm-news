@@ -69,11 +69,11 @@ const VOLUME: InterestVolume = {
   bigSlots: 3,
   summaryLength: "NORMAL",
   presets: [
-    { volume: "FEW", count: 30 },
-    { volume: "NORMAL", count: 60 },
-    { volume: "MANY", count: 90 },
+    { volume: "FEW", count: 20 },
+    { volume: "NORMAL", count: 40 },
+    { volume: "MANY", count: 60 },
   ],
-  countRange: { min: 10, max: 150 },
+  countRange: { min: 10, max: 100 },
   bigSlotRange: { min: 0, max: 10 },
   summaryLengths: ["SHORT", "NORMAL", "DETAILED"],
 };
@@ -359,16 +359,16 @@ describe("InterestsPage", () => {
     const volume = await section("다이제스트 분량");
 
     expect(
-      await volume.findByRole("radio", { name: "보통 (60건)" }),
+      await volume.findByRole("radio", { name: "보통 (40건)" }),
     ).toBeChecked();
     expect(
-      volume.getByRole("radio", { name: "적게 (30건)" }),
+      volume.getByRole("radio", { name: "적게 (20건)" }),
     ).not.toBeChecked();
     expect(
-      volume.getByRole("radio", { name: "많이 (90건)" }),
+      volume.getByRole("radio", { name: "많이 (60건)" }),
     ).not.toBeChecked();
     expect(
-      volume.getByLabelText("직접 입력한 후보 수 (10 ~ 150건)"),
+      volume.getByLabelText("직접 입력한 후보 수 (10 ~ 100건)"),
     ).toBeDisabled();
     expect(volume.getByLabelText("큰 화제 수 (0 ~ 10개)")).toHaveValue(3);
     expect(volume.getByRole("radio", { name: "보통" })).toBeChecked();
@@ -469,7 +469,7 @@ describe("InterestsPage", () => {
     const volume = await section("다이제스트 분량");
 
     await user.click(await volume.findByRole("radio", { name: "직접 입력" }));
-    const count = volume.getByLabelText("직접 입력한 후보 수 (10 ~ 150건)");
+    const count = volume.getByLabelText("직접 입력한 후보 수 (10 ~ 100건)");
     expect(count).toBeEnabled();
     await user.clear(count);
     await user.type(count, "45");
@@ -490,7 +490,7 @@ describe("InterestsPage", () => {
       },
     ]);
     expect(
-      await volume.findByLabelText("직접 입력한 후보 수 (10 ~ 150건)"),
+      await volume.findByLabelText("직접 입력한 후보 수 (10 ~ 100건)"),
     ).toHaveValue(45);
   });
 
@@ -506,7 +506,7 @@ describe("InterestsPage", () => {
     const user = userEvent.setup();
     const volume = await section("다이제스트 분량");
 
-    await user.click(await volume.findByRole("radio", { name: "많이 (90건)" }));
+    await user.click(await volume.findByRole("radio", { name: "많이 (60건)" }));
     await user.click(volume.getByRole("button", { name: "분량 저장" }));
 
     expect(await volume.findByRole("status")).toBeInTheDocument();
@@ -520,7 +520,7 @@ describe("InterestsPage", () => {
     ]);
   });
 
-  // 저장 결과의 범위는 조회한 범위(10 ~ 150 · 0 ~ 10)와 다르게 둔다 — 안내가 저장 결과의 범위를 읽는지 가린다
+  // 저장 결과의 범위는 조회한 범위(10 ~ 100 · 0 ~ 10)와 다르게 둔다 — 안내가 저장 결과의 범위를 읽는지 가린다
   it.each([
     [
       "COUNT_OUT_OF_RANGE",

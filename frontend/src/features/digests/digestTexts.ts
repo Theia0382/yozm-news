@@ -74,6 +74,11 @@ export const FEEDBACK_FAILED =
 export const FEEDBACK_STATES_FAILED =
   "좋아요 · 싫어요 상태를 읽지 못해 지금은 누를 수 없습니다.";
 
+/** 항목의 출처 기사 목록을 펼치는 요약 줄 — 기본은 접혀 있다 */
+export function citationsSummary(count: number): string {
+  return `출처 기사 ${count}건`;
+}
+
 /** 섹션 머리 */
 export const sectionHeadings = {
   overview: "요약",
