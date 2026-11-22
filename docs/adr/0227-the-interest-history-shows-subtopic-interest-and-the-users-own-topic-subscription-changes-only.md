@@ -1,6 +1,6 @@
 # ADR-0227: 관심사 히스토리는 주제 중분류의 관심과 사용자가 직접 바꾼 주제 구독만 보인다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 관심사 히스토리의 단위([ADR-0293](0293-the-interest-history-also-shows-the-interest-of-summarized-flows.md))
 - 날짜: 2026-11-18
 - 근거: [이슈 #189](https://github.com/Theia0382/yozm-news/issues/189) — 문서가 관심사 히스토리에 걸어 둔 것(넓어진 흐름 · 신호 · 주제별 보도량)을 대조하고 리드와 정함. 구현 커밋 `bb602eb` · `95bb4cd` · `27a151a`
 - 관련: [ADR-0064](0064-topic-coverage-counts-articles-by-first-evaluation-time-with-query-time-judgement-over-key-lineage-in-the-app.md)(맥락 · 결과의 "관심사 히스토리가 보도량을 쓴다" — 보충), [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)(개인 쪽은 스토리라인 구독과 관심사 둘이다), [ADR-0214](0214-a-storyline-subscription-enters-topic-interest-by-the-topic-shares-of-its-event-representatives.md)(스토리라인 구독은 주제 몫으로 관심도에 든다)
@@ -13,6 +13,7 @@
 
 ## 결정
 
+> 부분 대체(둘째 문장) — [ADR-0293](0293-the-interest-history-also-shows-the-interest-of-summarized-flows.md). 지금 상태: [`reader` reader-R8](../specs/reader.md#관심사-히스토리)
 - **관심사 히스토리는 그 사용자의 관심 추적이다 — 대분류 · 중분류 계층의 흐름을 판정하지 않는다.** 단위는 주제 중분류이고 행에 대분류 이름을 붙여 태그 체계 순으로 늘어놓는다. 대분류 관심도는 계산하지 않는다.
 - **신호 행 가운데 사용자가 직접 바꾼 주제 구독(더함 · 뺌)만 기간마다 보인다.** 좋아요 / 싫어요는 관심 값에만 반영하고 기사 목록으로 보이지 않는다. 스토리라인 구독 이력은 이 화면에 두지 않고 스토리라인 구독 화면이 맡는다.
 - **주제별 보도량은 보이지 않는다** — 보도와 관심의 견줌은 변화 리포트가 한다.

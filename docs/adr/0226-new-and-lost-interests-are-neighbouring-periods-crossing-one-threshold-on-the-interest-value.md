@@ -36,3 +36,4 @@
 ## 후속 기록
 
 - 2026-11-22: 결정 "관심 x 가 기준값 θ 이상인 주제를 그 기간의 '관심 있음'으로 본다"에 대응하는 스토리라인 관심의 기준 — [ADR-0278](0278-followed-flows-are-tops-at-or-above-the-follow-threshold-or-subscribed-less-the-excluded-and-the-keep-threshold-is-0-2.md) · [digest Spec "관심도"](../specs/digest.md#관심도) digest-R51
+- 2026-11-23: 결정 "앞 기간에 관심 있음이 아니었고 이번 기간에 관심 있음이면 새로 생긴 관심, 반대면 사라진 관심이다"에 대응하는 흐름의 생김 · 사라짐(만들 기준 · 남길 기준) — [ADR-0293](0293-the-interest-history-also-shows-the-interest-of-summarized-flows.md) · [digest Spec "관심사 히스토리"](../specs/digest.md#관심사-히스토리) digest-R36

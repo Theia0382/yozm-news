@@ -1,6 +1,6 @@
 # ADR-0193: 사용자마다 달라지는 스토리라인 정보는 타임라인의 받은 소식 하나이고, 날짜별로 보이는 다이제스트의 인용으로 센다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 사용자마다 달라지는 스토리라인 정보([ADR-0287](0287-user-storyline-summaries-are-made-and-stored-by-user-with-the-users-key-and-digest-supplies-the-flow-standing.md))
 - 날짜: 2026-11-16
 - 근거: [이슈 #180](https://github.com/Theia0382/yozm-news/issues/180) — 기점 `0a8b984` 의 다이제스트 저장(`V46__digests.sql` — 다이제스트 · 섹션 · 인용)과 사건 조회(`EventDirectory`)를 대조하고, 스토리라인 화면의 개인 정보를 리드와 정함
 - 관련: [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)(보충 — 결정 "개인 쪽은 스토리라인 구독과 관심사 둘이다"의 "둘지는 다이제스트 설계"를 정한다), [ADR-0192](0192-reader-screens-are-composed-by-the-reader-module-over-module-public-queries.md)(맞붙이는 모듈), [ADR-0186](0186-digests-follow-removed-articles-by-deleting-their-rows-and-show-no-summary-without-any-citation.md)(지운 기사의 인용)
@@ -14,6 +14,7 @@
 
 ## 결정
 
+> 부분 대체(첫 문장) — [ADR-0287](0287-user-storyline-summaries-are-made-and-stored-by-user-with-the-users-key-and-digest-supplies-the-flow-standing.md). 지금 상태: [`user` "사용자 스토리라인의 정리"](../specs/user.md#사용자-스토리라인의-정리)
 - **사용자마다 달라지는 스토리라인 정보는 "받은 소식" 하나다.** 스토리라인 타임라인의 사건 가운데 그 사용자의 다이제스트가 인용한 기사가 있는 사건에 받은 날짜를 단다. 목록 행에는 달지 않는다.
 - **받은 기사는 날짜별로 보이는 다이제스트의 인용이다** — 그 날짜의 `READY` 다이제스트 가운데 ID 가 가장 큰 것. 같은 날짜의 덮인 다이제스트 · `EMPTY` · `FAILED` 의 인용은 세지 않는다. 받은 날짜는 그런 다이제스트의 날짜 가운데 가장 이른 것이다.
 - **`digest` 는 기사 ID 와 받은 날짜만 낸다.** 기사 → 사건 맞붙이기와 사건마다 가장 이른 날짜를 고르는 것은 화면 응답을 엮는 `reader` 가 한다(ADR-0192).

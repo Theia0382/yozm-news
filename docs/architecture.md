@@ -4,7 +4,7 @@
 
 ## 핵심 인터페이스
 
-`evaluation` 의 모델 평가 포트 `ArticleEvaluator` 와 기사 임베딩 포트 `ArticleEmbedder` 는 evaluation Spec 의 [`ArticleEvaluator`](specs/evaluation.md#articleevaluator) · [`ArticleEmbedder`](specs/evaluation.md#articleembedder)에, `tag` 의 평가 작업은 [tag Spec](specs/tag.md#평가-대기와-평가-작업)에, `event` 의 사건 묶기 작업은 [event Spec](specs/event.md#들어오는-쪽)에, `digest` 의 다이제스트 생성기 포트 `DigestGenerator` 는 [digest Spec](specs/digest.md#digestgenerator)에, `report` 의 리포트 생성기 포트 `ReportGenerator` 는 [report Spec](specs/report.md#reportgenerator)에 있다. LLM 관문 `LlmClientFactory` 는 [llm Spec](specs/llm.md#llmclientfactory)에 있다.
+`evaluation` 의 모델 평가 포트 `ArticleEvaluator` 와 기사 임베딩 포트 `ArticleEmbedder` 는 evaluation Spec 의 [`ArticleEvaluator`](specs/evaluation.md#articleevaluator) · [`ArticleEmbedder`](specs/evaluation.md#articleembedder)에, `tag` 의 평가 작업은 [tag Spec](specs/tag.md#평가-대기와-평가-작업)에, `event` 의 사건 묶기 작업은 [event Spec](specs/event.md#들어오는-쪽)에, `digest` 의 다이제스트 생성기 포트 `DigestGenerator` 는 [digest Spec](specs/digest.md#digestgenerator)에, `report` 의 리포트 생성기 포트 `ReportGenerator` 는 [report Spec](specs/report.md#reportgenerator)에 있다. `user` 의 정리 생성기 포트 `StorylineSummarizer` 와 정리 작업은 [user Spec](specs/user.md#나가는-쪽)에 있다. LLM 관문 `LlmClientFactory` 는 [llm Spec](specs/llm.md#llmclientfactory)에 있다.
 
 - BYOK에서는 **요청마다 사용자 키로 공급자 클라이언트를 만들고 쓰고 닫는다**. `llm` 이 이 일을 한다([llm Spec](specs/llm.md#공급자-클라이언트)).
 

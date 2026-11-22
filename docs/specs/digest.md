@@ -19,15 +19,18 @@
 - **일정** — 1분마다 생성 시각이 된 사용자(생성 시각 뒤 2시간 안)의 다이제스트를 쓸 모델이 있으면 날짜마다 한 번 만들고, 커밋 뒤 생성 작업을 등록한다. 생성 작업은 쓸 모델을 다시 정하고 후보를 골라 생성한다(digest-R29 · R30)
 - **수동 생성** — 사용자가 요청하면 오늘(사용자 시간대) 다이제스트를 같은 기간으로 다시 만들거나 새로 만든다 — 하루 세 번, 진행 중 · 쓸 모델 없음은 거절한다. 공개 API(`DigestRequests`)이고 화면용 처리기는 `reader` 가 낸다(digest-R31)
 - **거두기** — 시작되지 않은 다이제스트를 다시 등록하거나 시작 기한 뒤 실패로 끝내고, 임대가 지나도 끝나지 않는 생성을 실패로 끝낸다(digest-R32)
-- **실패 알림 발행** — 다이제스트를 실패로 끝내면 같은 트랜잭션에서 `user` 가 선언한 `DigestFailed` 를 실패의 갈래와 함께 낸다(digest-R33)
+- **끝남 알림 발행** — 다이제스트를 끝내면 같은 트랜잭션에서 `user` 가 선언한 이벤트를 낸다 — 실패면 `DigestFailed`(실패의 갈래와 함께), 내용 있음 · 후보 없음이면 `DigestCompleted`(digest-R33)
 - **다이제스트 조회** — 독자 화면이 날짜마다 보이는 다이제스트(digest-R13 — 섹션마다 선정 이유 하나, digest-R48) · 그 날짜의 가장 최근 시도 · 사용량 · 이웃 날짜, 다이제스트가 있는 날짜 목록, 수동 생성 상태를 공개 조회(`DigestDirectory`)로 낸다. 화면용 API 는 `reader` 가 낸다(digest-R38 ~ R40 · R48, [ADR-0192](../adr/0192-reader-screens-are-composed-by-the-reader-module-over-module-public-queries.md) · [ADR-0238](../adr/0238-a-digest-date-shows-the-visible-digest-with-the-latest-attempt-and-the-list-holds-every-date-with-a-state.md))
 - **관심도** — 사용자 × 주제 중분류 · 스토리라인(`user` 의 사용자 스토리라인 — 그 값을 포함 나무의 꼭대기마다 펼친다) × 기준 시각의 관심 크기를 신호 이력(좋아요 / 싫어요 · 주제 구독 변경 · 스토리라인 구독 변경)과 노출 기록(섹션 사건)에서 조회할 때 계산한다 — 노출 · 반응은 다시 본 흐름인지로 주제와 스토리라인에 나눈다. 관심 흐름 · 남길 흐름의 판정을 낸다. 저장하지 않는다(digest-R23 ~ R25 · R49 ~ R51)
-- **관심사 히스토리** — 기준 시각마다 관심도와 같은 산식으로 계산한 주제 관심, 이웃 기준 시각 사이의 새로 생긴 관심 · 사라진 관심, 그 사이 사용자가 직접 바꾼 주제 구독을 공개 조회(`InterestHistory`)로 낸다 — 화면용은 사용자 시간대의 주 · 월 기간, 리포트용은 부르는 쪽의 기준 시각 목록. 저장하지 않는다(digest-R34 ~ R37)
+- **관심사 히스토리** — 기준 시각마다 관심도와 같은 산식으로 계산한 주제 관심과 스토리라인 관심, 이웃 기준 시각 사이의 새로 생긴 관심 · 사라진 관심(주제)과 보이게 된 · 보이지 않게 된 꼭대기(흐름), 그 사이 사용자가 직접 바꾼 주제 구독을 공개 조회(`InterestHistory`)로 낸다 — 화면용은 사용자 시간대의 주 · 월 기간, 리포트용은 부르는 쪽의 기준 시각 목록. 저장하지 않는다(digest-R34 ~ R37)
+- **흐름 판정의 공급** — `user` 가 선언한 공급 인터페이스(`StorylineStandingNow`)를 구현해 사용자 하나의 지금 관심 흐름 · 남길 흐름의 꼭대기를 답한다 — `user` 의 정리 실행이 부른다. 저장하지 않는다(digest-R51)
+- **흐름에 묶인 지난 항목** — 날짜별로 보이는 다이제스트의 항목 가운데 항목을 묶은 흐름이 주어진 꼭대기에 드는 것을 공개 조회(`DigestDirectory.itemsOfStorylines`)로 낸다 — 개인 흐름 화면이 읽는다(digest-R53)
 - **구독 제안** — 구독하지 않은 주제 중분류 가운데 지금 관심이 제안 기준 이상이고 거절에 막히지 않은 것을 공개 조회(`TopicSuggestions`)로 낸다. 거절의 기록은 `user` 의 것이고, 거절 때의 관심은 `user` 가 선언한 공급 인터페이스(`TopicInterestNow`)를 구현해 답한다. 저장하지 않는다(digest-R41 ~ R43)
 
 하지 않는 것:
 
 - 기사를 평가하지 않는다 — 태그 · 중요도는 `tag` 의 공유 평가를 읽는다
+- 사용자 스토리라인의 정리를 만들거나 저장하지 않는다 — `user` 의 것이고, 이 모듈은 끝났다는 이벤트를 내고 흐름 판정을 답할 뿐이다([ADR-0287](../adr/0287-user-storyline-summaries-are-made-and-stored-by-user-with-the-users-key-and-digest-supplies-the-flow-standing.md))
 - 공급자 · Spring AI 를 모르고 키를 다루지 않는다 — LLM 호출과 키 복호화는 `llm` 관문의 것이다([ADR-0151](../adr/0151-spring-ai-and-sdk-types-stay-inside-llm-and-the-gateway-exposes-only-its-own-types.md))
 - 출력의 링크 · 출처 · 발행 시각을 쓰지 않는다 — 인용은 기사 ID 로만 저장하고, 화면은 기사 정보를 `article` 에서 읽는다
 
@@ -85,7 +88,7 @@
 
 ## 3. 공개 인터페이스
 
-모듈 최상위 패키지 `net.yozmnews.digest` 의 공개 타입은 받은 소식의 공개 조회 `ReceivedArticles`, 수동 생성의 공개 API `DigestRequests` 와 그 결과 `DigestRequestOutcome`, 다이제스트 조회 `DigestDirectory` 와 그 값(`DigestDay` · `ShownDigest` · `DigestSectionView` · `DigestCitation` · `DigestAttempt` · `DigestDayUsage` · `DigestDates` · `DigestDateEntry` · `DigestDayState` · `DigestRequestStatus` · `DigestUnresolvedFailure`), 관심사 히스토리의 공개 조회 `InterestHistory` 와 그 값(`InterestHistorySpan` · `InterestTimeline` · `InterestPeriodView` · `InterestPoint` · `TopicSubscriptionStep`), 구독 제안의 공개 조회 `TopicSuggestions` 와 그 값 `TopicSuggestionList`, 공개 값이 쓰는 enum 넷(`DigestStatus` · `DigestFailure` · `SelectionReason` · `SectionKind` — 상태 · 실패 코드 · 선정 이유 · 섹션 종류, digest-R1 · R7 · R8)이다. HTTP 엔드포인트는 없다 — 화면용 API 는 `reader` 가 낸다. 받는 이벤트는 `article` 의 `ArticlesRemoved` 다(§4 들어오는 쪽). 내는 이벤트는 `user` 가 선언한 `DigestFailed` 다(digest-R33 — [user Spec](user.md#digestfailed)). 다른 모듈이 선언한 인터페이스 둘을 구현한다 — `feedback` 의 `DigestItems`([feedback Spec](feedback.md#digestitems) — 구현 `application` 의 `DigestItemsService`, digest-R14)와 `user` 의 `TopicInterestNow`([user Spec](user.md#topicinterestnow) — 구현 `application` 의 `TopicSuggestionService`, digest-R43).
+모듈 최상위 패키지 `net.yozmnews.digest` 의 공개 타입은 받은 소식의 공개 조회 `ReceivedArticles`, 수동 생성의 공개 API `DigestRequests` 와 그 결과 `DigestRequestOutcome`, 다이제스트 조회 `DigestDirectory` 와 그 값(`DigestDay` · `ShownDigest` · `DigestSectionView` · `DigestCitation` · `DigestAttempt` · `DigestDayUsage` · `DigestDates` · `DigestDateEntry` · `DigestDayState` · `DigestRequestStatus` · `DigestUnresolvedFailure` · `DigestItemPage` · `DigestItemRef` · `DigestItemCursor`), 관심사 히스토리의 공개 조회 `InterestHistory` 와 그 값(`InterestHistorySpan` · `InterestTimeline` · `InterestPeriodView` · `InterestPoint` · `TopicSubscriptionStep`), 구독 제안의 공개 조회 `TopicSuggestions` 와 그 값 `TopicSuggestionList`, 공개 값이 쓰는 enum 넷(`DigestStatus` · `DigestFailure` · `SelectionReason` · `SectionKind` — 상태 · 실패 코드 · 선정 이유 · 섹션 종류, digest-R1 · R7 · R8)이다. HTTP 엔드포인트는 없다 — 화면용 API 는 `reader` 가 낸다. 받는 이벤트는 `article` 의 `ArticlesRemoved` 다(§4 들어오는 쪽). 내는 이벤트는 `user` 가 선언한 `DigestFailed` · `DigestCompleted` 다(digest-R33 — [user Spec](user.md#digestfailed) · [`DigestCompleted`](user.md#digestcompleted)). 다른 모듈이 선언한 인터페이스 넷을 구현한다 — `feedback` 의 `DigestItems`([feedback Spec](feedback.md#digestitems) — 구현 `application` 의 `DigestItemsService`, digest-R14)와 `user` 의 `TopicInterestNow`([user Spec](user.md#topicinterestnow) — 구현 `application` 의 `TopicSuggestionService`, digest-R43) · `InterestSignalWindow`([user Spec](user.md#interestsignalwindow) — 구현 `application` 의 `InterestSignalWindows`) · `StorylineStandingNow`([user Spec](user.md#storylinestandingnow) — 구현 `application` 의 `StorylineStandingService`, digest-R51).
 
 ### ReceivedArticles
 
@@ -146,7 +149,16 @@ public interface DigestDirectory {
     Optional<DigestDay> on(UserId user, LocalDate date);
     DigestDates dates(UserId user, @Nullable LocalDate before, int limit);
     Optional<DigestRequestStatus> requestStatus(UserId user);
+    int MAX_ITEMS = 50;                                               // itemsOfStorylines 한 쪽의 상한 — 정본. 측정 전 목표
+    DigestItemPage itemsOfStorylines(UserId user, Set<StorylineId> tops, @Nullable DigestItemCursor before, int size);
 }
+
+public record DigestItemPage(List<DigestItemRef> items, @Nullable DigestItemCursor next) {
+    public static final DigestItemPage EMPTY;
+}
+public record DigestItemRef(LocalDate date, int position, SectionKind kind, @Nullable String title,
+        List<EventId> events) {}
+public record DigestItemCursor(LocalDate date, int position) {}   // 위치가 0 보다 작으면 IllegalArgumentException
 
 public record DigestDay(LocalDate date, @Nullable LocalDate previousDate, @Nullable LocalDate nextDate,
         @Nullable ShownDigest shown, DigestAttempt latest, DigestDayUsage usage) { }
@@ -176,6 +188,9 @@ public record DigestUnresolvedFailure(LocalDate digestDate, Instant failedAt) { 
 | `on` | 그 날짜의 날짜 보기 — 그 날짜의 행이 없으면 빈 값(digest-R38) |
 | `dates` | 다이제스트 행이 있는 날짜를 늦은 순으로 `limit` 개, `before` 가 있으면 그보다 이른 날짜만. `limit` 이 1 ~ `MAX_DATES` 밖이면 `IllegalArgumentException`(digest-R39) |
 | `requestStatus` | 수동 생성 상태 — 계정이 없으면 빈 값(digest-R40) |
+| `itemsOfStorylines` | 그 사용자의 날짜별로 보이는 다이제스트의 항목 가운데 항목을 묶은 흐름이 `tops` 에 드는 것 — 날짜 내림차순, 같은 날짜면 섹션 위치 내림차순으로 `size` 개. `before` 가 있으면 그 커서보다 뒤(더 이른 날짜, 같은 날짜면 더 앞 위치)만. `tops` 가 비면 빈 쪽. `size` 가 1 ~ `MAX_ITEMS` 밖이면 `IllegalArgumentException`(digest-R53) |
+| `DigestItemRef` | 항목 하나 — 다이제스트 날짜 · 섹션 위치 · 종류(주요 뉴스 · 헤드라인) · 제목(없으면 null) · 항목의 사건(섹션 사건 위치 순) |
+| `DigestItemPage.next` | 더 있으면 이 쪽 마지막 항목의 날짜와 위치 — 없으면 null |
 | `DigestDay.shown` | 그 날짜의 보이는 다이제스트(digest-R13) — 없으면 null. 섹션 · 인용은 위치 순이고 섹션이 0개일 수 있다(digest-R10) |
 | `DigestDay.latest` | 그 날짜의 ID 가 가장 큰 행 — `shown` 과 같은 행일 수 있다. `failure` · `cause` 는 `FAILED` 일 때만 있다. 실패 메시지는 싣지 않는다 |
 | `DigestDay.usage` | 그 날짜 모든 행의 수와, 공급자가 답한 행의 입력 · 출력 토큰 합 |
@@ -191,12 +206,12 @@ public record DigestUnresolvedFailure(LocalDate digestDate, Instant failedAt) { 
 
 - 계약
   - 사용자를 인자로 받는다 — 화면 경로에서는 세션 사용자로만 부른다. 다른 사용자의 다이제스트는 보지 않는다. 쓰지 않는다
-  - `latest` · `on` · `dates` 는 읽기 전용 트랜잭션 하나다 — 날짜 보기는 행 · 섹션 · 이웃 날짜를 한 스냅숏으로 읽는다. `requestStatus` 는 일정(시간대 · 생성 시각 — `user` 의 `UserDigestSchedules`) · 쓸 모델을 트랜잭션 밖에서 읽고 행 조회는 읽기 전용 트랜잭션 하나에서 잠그지 않고 읽는다 — 실제 요청의 판정은 `DigestRequests.request` 가 잠금 안에서 다시 한다
+  - `latest` · `on` · `dates` · `itemsOfStorylines` 는 읽기 전용 트랜잭션 하나다 — 날짜 보기는 행 · 섹션 · 이웃 날짜를 한 스냅숏으로 읽는다. `requestStatus` 는 일정(시간대 · 생성 시각 — `user` 의 `UserDigestSchedules`) · 쓸 모델을 트랜잭션 밖에서 읽고 행 조회는 읽기 전용 트랜잭션 하나에서 잠그지 않고 읽는다 — 실제 요청의 판정은 `DigestRequests.request` 가 잠금 안에서 다시 한다
   - 역할 애너테이션이 없다
 
 ### InterestHistory
 
-관심사 히스토리 — 기준 시각마다 관심도와 같은 산식으로 계산한 주제 관심과 그 변화(digest-R34 ~ R37). `reader` 가 관심사 히스토리 화면에 엮고(`recent`), 변화 리포트가 자기 기간 경계로 부른다(`at`). 구현은 `application` 의 `InterestHistoryService` 다.
+관심사 히스토리 — 기준 시각마다 관심도와 같은 산식으로 계산한 주제 관심 · 스토리라인 관심과 그 변화(digest-R34 ~ R37). `reader` 가 관심사 히스토리 화면에 엮고(`recent`), 변화 리포트가 자기 기간 경계로 부른다(`at`). 구현은 `application` 의 `InterestHistoryService` 다.
 
 ```java
 public interface InterestHistory {
@@ -217,7 +232,8 @@ public record InterestTimeline(TagSetId tagSet, ZoneId zone, InterestHistorySpan
         List<InterestPeriodView> periods, Set<String> prominent) {}
 public record InterestPeriodView(LocalDate firstDay, LocalDate lastDay, boolean inProgress, InterestPoint point) {}
 public record InterestPoint(Instant reference, Map<String, Double> levels, Set<String> entered, Set<String> left,
-        List<TopicSubscriptionStep> subscriptionChanges) {}
+        List<TopicSubscriptionStep> subscriptionChanges, Map<StorylineId, Double> storylineLevels,
+        Set<StorylineId> storylineEntered, Set<StorylineId> storylineLeft) {}
 public record TopicSubscriptionStep(Instant at, TopicSubscriptionAction action, Set<String> subtopics) {}
 ```
 
@@ -230,6 +246,8 @@ public record TopicSubscriptionStep(Instant at, TopicSubscriptionAction action, 
 | `InterestPoint.levels` | 주제 중분류(활성 키) → 관심 — 노출 · 구독 신호가 있는 중분류만(digest-R35) |
 | `InterestPoint.entered` · `left` | 앞 기준 시각 대비 새로 생긴 관심 · 사라진 관심(digest-R36) |
 | `InterestPoint.subscriptionChanges` | 앞 기준 시각 이상 · 이 기준 시각 미만에 사용자가 직접 바꾼 주제 구독 — 시각 순(digest-R36) |
+| `InterestPoint.storylineLevels` | 포함 나무의 꼭대기 → 스토리라인 관심 — 신호가 있는 꼭대기만(digest-R35) |
+| `InterestPoint.storylineEntered` · `storylineLeft` | 앞 기준 시각 대비 보이게 된 · 보이지 않게 된 꼭대기(digest-R36) |
 | `TopicSubscriptionStep.subtopics` | 그 행이 덮던 중분류를 활성 키로 푼 것 — 비지 않는다 |
 
 - 계약
@@ -320,12 +338,12 @@ sequenceDiagram
 - 반복 작업 — `CandidateCleanupJob`(작업 역할, 하루마다 — ID `digest-candidate-cleanup`, 실패해도 재시도하지 않는다 — 다음 회차가 잇는다). `CandidateCleanup` 을 부른다(digest-R11)
 - 반복 작업 — `ScheduleDueDigestsJob`(작업 역할, 1분마다 — ID `schedule-due-digests`) → `DigestScheduling`(digest-R29), `RecoverStalledDigestsJob`(작업 역할, 5분마다 — ID `recover-stalled-digests`) → `StalledDigests`(digest-R32). 둘 다 재시도하지 않는다 — 다음 회차가 잇는다
 - 생성 작업 — `GenerateDigestJob.run(digestId, token)`(작업 역할 — 작업 ID 는 등록 토큰, 재시도하지 않는다) → `DigestRun`(digest-R29). 등록은 일정 회차 · 수동 생성 · 거두기가 커밋 뒤 `DigestDispatch` 로 한다
-- 공개 API — `DigestRequests`(digest-R31) · 공개 조회 `DigestDirectory`(digest-R38 ~ R40) · `TopicSuggestions`(digest-R42). 부르는 쪽은 `reader` 의 화면용 처리기다. `user` 의 거절 처리기가 `TopicInterestNow`(digest-R43)를 부른다. 컨트롤러는 없다
+- 공개 API — `DigestRequests`(digest-R31) · 공개 조회 `DigestDirectory`(digest-R38 ~ R40) · `TopicSuggestions`(digest-R42). 부르는 쪽은 `reader` 의 화면용 처리기다. `user` 의 거절 처리기가 `TopicInterestNow`(digest-R43)를, `user` 의 정리 실행이 `StorylineStandingNow`(digest-R51)를 부른다. 컨트롤러는 없다
 
 ### `application`
 
 - `DigestGeneration` — 다이제스트 예약(`schedule` — 새 등록 토큰으로 행을 만들고 `ScheduledDigest` 를 낸다)과 생성(`run(DigestId, LlmModel, DigestInput)`). 생성은 트랜잭션 ①(시작) · 프롬프트 구성 · 생성기 호출과 판정 · 다시 묻기(트랜잭션 밖) · 트랜잭션 ②(항목 대조 · 저장)로 나뉘고, 두 트랜잭션은 다이제스트 행을 먼저 잠근다(digest-R2 · R8 · R9 · R27). 생성기는 생성자로 받는다 — 어느 프로세스에나 하나다(digest-R12 · R28). 인용 없음 메시지는 이 클래스의 상수가 정본이다. 소요 시간은 `platform` 의 `AppClock.elapsedSince` 로 잰다 — 시계가 넘긴 시간을 뺀 경과다(platform-R28)
-- `DigestEndings` — 끝낸 행 저장의 정본 — 끝나지 않은 행은 거부하고 트랜잭션 안에서만 저장하며, 실패면 같은 트랜잭션에서 `DigestFailed` 를 낸다(digest-R33). 생성 · 생성 작업 · 거두기가 모두 이것으로 끝낸다
+- `DigestEndings` — 끝낸 행 저장의 정본 — 끝나지 않은 행은 거부하고 트랜잭션 안에서만 저장하며, 같은 트랜잭션에서 실패면 `DigestFailed` 를, 내용 있음 · 후보 없음이면 `DigestCompleted` 를 낸다(digest-R33 — 상태의 망라 분기). 생성 · 생성 작업 · 거두기가 모두 이것으로 끝낸다
 - `DigestDispatch` — 생성 작업 등록의 정본 — 트랜잭션 안이면 거부하고 포트 `DigestJobQueue` 에 맡긴다(digest-R29)
 - `DigestScheduling` — 일정 회차(digest-R29 · R30). 시계는 `platform` 의 앱 시계(`InstantSource` — platform-R26)
 - `DigestRun` — 생성 작업 — 생성을 기다리는 다이제스트만, 쓸 모델을 다시 정해 선별 · 생성한다(digest-R29)
@@ -342,7 +360,8 @@ sequenceDiagram
 - `StorylineTopsQueries` — `storyline` 의 꼭대기 조회를 한 번에 묻는 상한씩 나눠 부른다 — 사건의 꼭대기(`topsOf` — `MAX_TOP_EVENTS`) · 스토리라인의 꼭대기(`topsOfStorylines` — `MAX_TOP_STORYLINES`). 관심도 재료와 후보 선별이 함께 쓰는 패키지 비공개 도우미다
 - `InterestMaterials` — 관심도 재료 읽기(`read(UserId, TagSetId, Instant from, Instant to)` → `Optional<InterestRecord>`) — 범위 하나에서 노출 행(`ExposureRepository` — 다이제스트 날짜 포함)을 읽어 그 사건을 `event` 의 `EventDirectory.currentOf` 로 지금 사건으로 풀고(`MAX_RESOLVE_EVENTS` 씩 — 지운 사건의 행은 버린다), 지금 사건의 주제를 `EventDirectory.articleIdsOf` → `ActiveEvaluations.eventFacts` 로 센다. 이어서 `feedback` 의 `EventFeedback.changes`(행마다 지금 사건), `user` 의 `TopicSubscriptionHistory` · `StorylineSubscriptionDirectory.changes`, `storyline` 의 `StorylineDirectory.topsOf`(노출 사건의 꼭대기) · `topsOfStorylines`(관심 신호로 셀 구독 행 스토리라인의 꼭대기 — `StorylineTopsQueries`), `user` 의 `UserStorylineDirectory.of`(같은 범위 — 사용자 스토리라인을 묶음 `StorylineFlows` 로 옮긴다)를 읽어 재료로 낸다 — 계산하지 않는다. 트랜잭션 없음, 키 버전이 어긋나면 빈 값. 사용자를 인자로 받는다 — 화면 경로에서는 세션 사용자로만(digest-R24 · R25)
 - `InterestHistoryService` — `InterestHistory` 의 구현. `user` 의 `UserTimezones` 로 계정 · 시간대를 읽고, `tag` 의 `TagSetDirectory.activeTagSet` 으로 맞출 버전을, `InterestMaterials` 로 첫 기준 시각의 창 시작부터 마지막 기준 시각까지의 재료를 한 번 읽어 `InterestPeriods` · `InterestTimelines` 에 넘긴다. 트랜잭션 없음, 역할 애너테이션 없음, 시계는 `platform` 의 앱 시계(`InstantSource` — platform-R26)(digest-R34 ~ R37)
-- `CurrentInterests` — 지금의 주제 관심 — 기준 시각과 창 끝을 모두 부르는 시각으로 두고 `InterestMaterials` 로 읽어 `InterestWindow.levels` 의 주제 관심을 낸다. 재료 키 버전이 어긋나면 빈 값. 구독 제안 조회와 거절 때 관심이 함께 쓰는 정본이다(digest-R41 · R43)
+- `CurrentInterests` — 지금의 주제 관심 — 기준 시각과 창 끝을 모두 부르는 시각으로 두고 `InterestMaterials` 로 읽어 `InterestWindow.levels` 의 주제 관심을 낸다. 재료 키 버전이 어긋나면 빈 값. 구독 제안 조회와 거절 때 관심이 함께 쓰는 정본이다(digest-R41 · R43). 같은 재료 · 같은 창으로 지금의 스토리라인 관심과 추적 중인 꼭대기도 낸다(`storylines` — 흐름 판정의 공급이 쓴다, digest-R51)
+- `StorylineStandingService` — `user` 의 `StorylineStandingNow` 의 구현. `user` 의 `UserTimezones` 로 계정을 확인하고 `CurrentInterests.storylines` 로 지금의 스토리라인 관심과 추적 중인 꼭대기를 읽어 `StorylineLevels` 의 관심 흐름 · 남길 흐름을 낸다. 트랜잭션 없이 조회를 차례로 부르고, 재료 키 버전이 어긋나면 처음부터 다시 한다(digest-R51)
 - `TopicSuggestionService` — `TopicSuggestions` 와 `user` 의 `TopicInterestNow` 의 구현. 제안 조회는 `user` 의 `DigestInterestsDirectory`(구독한 중분류) · `TopicSuggestionDeclines`(거절)와 `CurrentInterests` · `tag` 의 `TagSetDirectory.names`(체계 순서)를 읽어 `TopicSuggestionRule` 에 넘긴다. 트랜잭션 없음, 역할 애너테이션 없음, 시계는 `platform` 의 앱 시계(`InstantSource` — platform-R26)(digest-R41 ~ R43)
 - `DigestItemsService` — `feedback` 의 `DigestItems` 의 구현. 다이제스트 ID 가 1 보다 작으면 빈 목록이고 그 밖은 저장소에 맡긴다. 읽기 전용 트랜잭션(부르는 쪽의 트랜잭션이 있으면 거기에 든다), 역할 애너테이션 없음(digest-R14)
 
@@ -375,7 +394,7 @@ sequenceDiagram
 
 - `DigestDays` · `DigestDayStates` · `UnresolvedFailures` — 날짜 보기 만들기 · 날짜의 상태와 날짜 목록 한 쪽 · 해결되지 않은 마지막 실패의 정본(digest-R38 ~ R40)
 - `SectionReasons` — 섹션(항목) 하나의 선정 이유의 정본(digest-R48)
-- `DigestDayRepository` — 다이제스트 조회 저장소 — 그 날짜의 행(보이는 표시와 함께) · 섹션과 인용 · 이웃 날짜 · 날짜 목록의 재료, 가장 최근 실패(`FailedAttempt`) · 기간을 덮는 행의 가장 큰 ID. 쓰지 않는다(digest-R38 ~ R40)
+- `DigestDayRepository` — 다이제스트 조회 저장소 — 그 날짜의 행(보이는 표시와 함께) · 섹션과 인용 · 이웃 날짜 · 날짜 목록의 재료, 가장 최근 실패(`FailedAttempt`) · 기간을 덮는 행의 가장 큰 ID, 보이는 다이제스트의 항목 섹션이 저장한 꼭대기(`storedStorylines`)와 그 꼭대기로 고른 항목(`itemsOf`). 쓰지 않는다(digest-R38 ~ R40 · R53)
 - `ItemRepository` — 항목 확인 저장소 — 그 사용자의 그 다이제스트에서 그 사건이 든 항목 섹션이 하나면 그 섹션의 사건들(위치 순)(digest-R14)
 - `SelectionRules` · `CandidateCost` — 후보 선별 상수의 정본(digest-R15 ~ R22)
 - `EventShares` · `EventFacts` — 사건의 값의 정본(digest-R44)
@@ -390,7 +409,7 @@ sequenceDiagram
 - `TopicSuggestionRule` — 구독 제안 판정과 순서의 정본(값 `DeclinedTopic`) — 제안할 중분류가 순서 표에 없으면 `IllegalArgumentException`(digest-R41)
 - `InterestSignals` — 관심 신호로 쓸 행 고르기(사용자가 바꾼 주제 구독 행 `subscriberTopicChanges` 포함)와 노출 사건을 주제 쪽(`topicExposed`) · 스토리라인 쪽(`storylineExposed` — 꼭대기마다 그 묶음에 1/k)으로 나누기, 스토리라인 구독 신호(`storylines` — 꼭대기의 묶음에 몫 1)의 정본(digest-R25 · R49 · R50)
 - `InterestWindow` — 창 시작(`start`)과 창 안 행 고르기 — 사건마다 가장 늦은 노출과 그 몫, 창 안 행으로 가른 반복 — 의 정본(digest-R25 · R35 · R50). 몫 범위 확인(0 보다 크고 1 이하)의 정본은 `Exposure.requireShare` 다
-- `InterestPeriods` · `InterestShifts` · `InterestTimelines` — 관심사 히스토리의 기간 경계 · 생김 · 사라짐 · 드러남 · 기준 시각마다의 관심과 변화의 정본(digest-R34 ~ R36)
+- `InterestPeriods` · `InterestShifts` · `StorylineShifts` · `InterestTimelines` — 관심사 히스토리의 기간 경계 · 생김 · 사라짐 · 드러남 · 흐름이 보이고 사라지는 판정 · 기준 시각마다의 관심과 변화의 정본(digest-R34 ~ R36)
 - `ExposureRepository` — 노출 저장소 — 계약이 노출 정의의 정본이다(digest-R24)
 
   ```java
@@ -680,7 +699,7 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
 - **digest-R50** — 반복과 나누기(`StorylineRepeats` · `FlowKey` · `InterestSignals.topicExposed`): 흐름은 꼭대기의 묶음이고, 묶음이 없는 꼭대기는 그 꼭대기가 흐름이다. 사건 e 는 꼭대기가 있고, 그 꼭대기의 흐름 가운데 하나를 가진 창 안 노출 행(어느 사건이든) 가운데 다이제스트 날짜 d 가 e 의 첫 노출 날짜 − `STORYLINE_REPEAT_WINDOW`(7일) 이상 · 첫 노출 날짜 미만인 행이 있으면 반복이다 — 이어진 앞 흐름을 본 뒤 7일 안의 뒤 흐름 첫 사건은 반복이다
   - 기준은 그 사건의 창 안 첫 노출 날짜다 — 같은 사건이 뒤에 다시 노출돼도 판정이 바뀌지 않는다. 같은 날짜를 다시 만든 다이제스트는 앞선 날짜가 아니다. 창 밖 행은 보지 않는다 — 첫 노출이 창 시작 7일 안이면 그 앞 노출을 보지 못해 반복이 아니다(창 시작의 무게는 1/16)
   - 꼭대기가 없는 사건은 주제 관심에만, 처음 본 흐름의 사건(꼭대기가 있고 반복이 아닌 사건)은 주제 관심과(꼭대기에 묶음이 있으면) 스토리라인 관심 둘 다, 반복인 사건은 스토리라인 관심에만 든다 — 노출과 반응이 같은 길을 간다(사건마다 판정 하나). 노출 · 반응의 무게는 가장 늦은 노출이다(digest-R24)
-- **digest-R51** — 거른 꼭대기 · 관심 흐름 · 남길 흐름(`StorylineLevels`): 거른 꼭대기는 스토리라인 관심 x ≤ `STORYLINE_EXCLUSION_THRESHOLD`(−0.2, 경계 포함)인 꼭대기다(`excluded`). 관심 흐름은 x ≥ `STORYLINE_FOLLOW_THRESHOLD`(0.35)인 꼭대기와 추적 중인 사용자 스토리라인의 모든 꼭대기(`StorylineFlows.trackedTops` — 추적한 흐름과 그 흐름이 이어짐으로 따라가는 뒤 흐름)에서 거른 꼭대기를 뺀 것이다(`followed`) — 거름이 앞서, 추적한 흐름도 거른 꼭대기면 관심 흐름이 아니다. 남길 흐름은 x ≥ `STORYLINE_KEEP_THRESHOLD`(0.2)인 꼭대기다(`kept`)
+- **digest-R51** — 거른 꼭대기 · 관심 흐름 · 남길 흐름(`StorylineLevels`): 거른 꼭대기는 스토리라인 관심 x ≤ `STORYLINE_EXCLUSION_THRESHOLD`(−0.2, 경계 포함)인 꼭대기다(`excluded`). 관심 흐름은 x ≥ `STORYLINE_FOLLOW_THRESHOLD`(0.35)인 꼭대기와 추적 중인 사용자 스토리라인의 모든 꼭대기(`StorylineFlows.trackedTops` — 추적한 흐름과 그 흐름이 이어짐으로 따라가는 뒤 흐름)에서 거른 꼭대기를 뺀 것이다(`followed`) — 거름이 앞서, 추적한 흐름도 거른 꼭대기면 관심 흐름이 아니다. 남길 흐름은 x ≥ `STORYLINE_KEEP_THRESHOLD`(0.2)인 꼭대기다(`kept`). 지금을 기준 시각으로 둔 관심 흐름과 남길 흐름은 `user` 가 선언한 `StorylineStandingNow` 로도 답한다(`StorylineStandingService`) — 계정이 없으면 빈 값이고, 재료의 키 버전이 `ActiveEvaluations.ATTEMPTS` 번 모두 어긋나면 `IllegalStateException` 이다. `user` 의 정리 실행이 정리를 만들 흐름 · 남길 흐름을 가릴 때 부른다([user Spec](user.md#사용자-스토리라인의-정리) user-R68 · R69)
   - 관심 흐름은 주제 구독 밖 관심 흐름의 길(digest-R52)이 쓴다. 남길 흐름은 한 번 보인 흐름을 남길 기준이고 공개 조회가 없다 — 화면용 조회는 그것을 쓰는 화면이 연다([ADR-0278](../adr/0278-followed-flows-are-tops-at-or-above-the-follow-threshold-or-subscribed-less-the-excluded-and-the-keep-threshold-is-0-2.md))
   - 거른 꼭대기는 사건 제외(digest-R17)와 큰 판정 행 머리의 꼭대기 판정(digest-R19)이 쓴다
 
@@ -689,11 +708,12 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
 판단의 이유는 [ADR-0225](../adr/0225-interest-history-values-read-only-the-window-before-each-reference-time-and-the-period-in-progress-is-measured-at-the-call.md) · [ADR-0226](../adr/0226-new-and-lost-interests-are-neighbouring-periods-crossing-one-threshold-on-the-interest-value.md) · [ADR-0227](../adr/0227-the-interest-history-shows-subtopic-interest-and-the-users-own-topic-subscription-changes-only.md) · [ADR-0228](../adr/0228-consumer-queries-scoped-by-a-user-argument-may-be-called-on-screen-paths-with-the-session-user.md) · [ADR-0229](../adr/0229-interest-history-periods-are-monday-weeks-and-calendar-months-in-the-users-zone-and-the-query-takes-a-span-or-reference-times.md) · [ADR-0215](../adr/0215-interests-are-not-stored-entities-and-are-computed-from-signal-history-at-query-time.md)에 있다. θ 는 측정 전 목표다([open-questions.md](../open-questions.md) "운영하면서 결정" 24번).
 
 - **digest-R34** — 기간 경계(`InterestPeriods`): 사용자 시간대(`user` 의 `UserTimezones` — 관심 설정의 시간대, 설정 행이 없으면 계정을 만들 때의 값)에서 주는 월요일, 월은 1일에 시작하고 경계는 그날의 시작 시각이다(자정이 없는 날은 첫 유효 시각). 부르는 시각을 담은 기간을 마지막으로 `span.count()` + 1 개를 만들고 맨 앞은 견줌용이다. 지난 기간의 기준 시각은 기간 끝, 진행 중인 기간의 기준 시각은 부르는 시각이다 — 기간이 시작되는 정각에 부르면 앞 기간 끝과 같은 기준 시각이라 진행 중인 기간은 앞 기간과 관심이 같고 변화가 없다. 고를 수 있는 기간은 `InterestHistorySpan` — 주 13 · 26 · 52, 월 12 · 24 · 36, 처음 13주, 단위를 바꾸면 주 13 · 월 12
-- **digest-R35** — 기준 시각마다의 관심(`InterestTimelines` · `InterestWindow`): 재료는 첫 기준 시각의 창 시작부터 마지막 기준 시각까지 한 번 읽고, 기준 시각 T 마다 창 끝을 T 로 둔 주제 관심을 digest-R23 의 산식으로 낸다 — 반복 판정(digest-R50)도 T 의 창 안 행으로 한다 — T 뒤의 노출 · 반응 · 구독 변경은 그 기간에 들지 않는다. 주제는 활성 체계의 중분류이고 지난 기간의 노출 사건(소속 기사의 평가) · 구독도 계보로 활성 키로 풀린다
+- **digest-R35** — 기준 시각마다의 관심(`InterestTimelines` · `InterestWindow`): 재료는 첫 기준 시각의 창 시작부터 마지막 기준 시각까지 한 번 읽고, 기준 시각 T 마다 창 끝을 T 로 둔 주제 관심을 digest-R23 의 산식으로 낸다 — 반복 판정(digest-R50)도 T 의 창 안 행으로 한다 — T 뒤의 노출 · 반응 · 구독 변경은 그 기간에 들지 않는다. 같은 창의 스토리라인 관심(digest-R49)도 꼭대기마다 낸다 — 신호가 있는 꼭대기만이다. 주제는 활성 체계의 중분류이고 지난 기간의 노출 사건(소속 기사의 평가) · 구독도 계보로 활성 키로 풀린다
 - **digest-R36** — 판정(`InterestShifts` · `InterestTimelines` · `InterestRules.PRESENCE_THRESHOLD` 0.2):
   - 관심 있음 = 관심 ≥ θ. 새로 생긴 관심 = 이번 기준 시각에 관심 있음이고 앞 기준 시각에 아닌 중분류, 사라진 관심은 그 반대다. 싫어요 쪽(관심 ≤ −θ)은 관심 있음이 아니다
   - 드러난 주제 = 보인 기간(견줌용 제외) 가운데 한 번이라도 |관심| ≥ θ 인 중분류
   - 기간마다의 주제 구독 변경 = 앞 기준 시각 이상 · 이 기준 시각 미만에 원인이 사용자이고 푼 중분류가 있는 주제 구독 이력 행(`InterestSignals.subscriberTopicChanges` — 관심 신호와 같은 고르기). 좋아요 / 싫어요 · 스토리라인 구독 이력은 행으로 내지 않는다
+  - 흐름이 보이고 사라지는 판정(`StorylineShifts` — 기준은 digest-R51 의 것 그대로): 꼭대기는 스토리라인 관심이 만들 기준(0.35) 이상이면 보이고, 한 번 보인 꼭대기는 남길 기준(0.2) 이상인 동안 남는다. 보이게 된 꼭대기 = 앞 기준 시각에 보이지 않았고 이번에 보이는 것, 보이지 않게 된 꼭대기는 그 반대다. 맨 앞(견줌용) 기준 시각에 보이는 것은 만들 기준 이상인 꼭대기뿐이다. 추적은 넣지 않는다 — 관심 값만으로 본다([ADR-0293](../adr/0293-the-interest-history-also-shows-the-interest-of-summarized-flows.md))
 - **digest-R37** — 조회(`InterestHistoryService`): 계정이 없으면(`UserTimezones` 가 빈 값) 빈 값이다. 맞출 버전은 그때의 활성 버전이고, 재료의 키 버전이 어긋나면 처음부터 다시 해 `ActiveEvaluations.ATTEMPTS` 번 모두 어긋나면 `IllegalStateException` 이다. 기준 시각 조건(둘 이상 · 시간 순 — 같은 시각 허용, 앞이 뒤보다 늦으면 `IllegalArgumentException`)은 재료를 읽기 전에 본다. 리포트는 백그라운드 작업으로 `at` 을 자기 경계로 부른다
 
 ### 구독 제안
@@ -785,9 +805,9 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
 
 ### 끝내기와 실패 이벤트
 
-판단의 이유는 [ADR-0233](../adr/0233-digest-failure-notices-come-through-an-event-declared-by-the-receiving-user-module-for-every-failed-digest.md)에 있다.
+판단의 이유는 [ADR-0233](../adr/0233-digest-failure-notices-come-through-an-event-declared-by-the-receiving-user-module-for-every-failed-digest.md) · [ADR-0287](../adr/0287-user-storyline-summaries-are-made-and-stored-by-user-with-the-users-key-and-digest-supplies-the-flow-standing.md)에 있다.
 
-- **digest-R33** — 끝낸 행은 `DigestEndings` 하나로 저장한다 — 생성(트랜잭션 ① 의 `EMPTY` · 트랜잭션 ②) · 생성 작업의 시작 전 끝내기 · 거두기. 끝나지 않은 행은 거부하고 트랜잭션 안에서만 저장한다. `FAILED` 면 같은 트랜잭션에서 `user` 가 선언한 `DigestFailed`(사용자 · 다이제스트 ID · 날짜 · 갈래 · 끝낸 시각)를 하나 낸다(계기 무관). 실패 코드의 갈래(`FailureCauses` — 망라 분기)는 `KEY`: `KEY_MISSING` · `KEY_INVALID` · `NO_USABLE_MODEL`, `PROVIDER_ACCOUNT`: `PERMISSION_DENIED` · `QUOTA_EXHAUSTED`, `TEMPORARY`: `PROVIDER_UNAVAILABLE` · `PROVIDER_UNEXPECTED` · `INTERRUPTED`, `OUTPUT`: `UNREADABLE_OUTPUT` · `NO_CITATION` · `OUTPUT_TRUNCATED` · `OUTPUT_REFUSED` 다. 알림은 `user` 가 남긴다([user Spec](user.md#화면-내-알림) user-R62)
+- **digest-R33** — 끝낸 행은 `DigestEndings` 하나로 저장한다 — 생성(트랜잭션 ① 의 `EMPTY` · 트랜잭션 ②) · 생성 작업의 시작 전 끝내기 · 거두기. 끝나지 않은 행은 거부하고 트랜잭션 안에서만 저장한다. `FAILED` 면 같은 트랜잭션에서 `user` 가 선언한 `DigestFailed`(사용자 · 다이제스트 ID · 날짜 · 갈래 · 끝낸 시각)를 하나 낸다(계기 무관). 실패 코드의 갈래(`FailureCauses` — 망라 분기)는 `KEY`: `KEY_MISSING` · `KEY_INVALID` · `NO_USABLE_MODEL`, `PROVIDER_ACCOUNT`: `PERMISSION_DENIED` · `QUOTA_EXHAUSTED`, `TEMPORARY`: `PROVIDER_UNAVAILABLE` · `PROVIDER_UNEXPECTED` · `INTERRUPTED`, `OUTPUT`: `UNREADABLE_OUTPUT` · `NO_CITATION` · `OUTPUT_TRUNCATED` · `OUTPUT_REFUSED` 다. 알림은 `user` 가 남긴다([user Spec](user.md#화면-내-알림) user-R62). `READY` · `EMPTY` 면 같은 트랜잭션에서 `user` 가 선언한 `DigestCompleted`(사용자 · 다이제스트 ID · 날짜 · 끝낸 시각)를 하나 낸다(계기 무관 — 덮이는 다이제스트를 다시 만들어 끝나도 낸다). `user` 가 받아 그 사용자의 정리 작업을 등록한다([user Spec](user.md#사용자-스토리라인의-정리) user-R68). 상태의 분기는 망라 `switch` 다
 
 ### 다이제스트 조회
 
@@ -805,6 +825,7 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
 - **digest-R40** — 수동 생성 상태(`DigestDirectoryService.requestStatus`): 일정(`user` 의 `UserDigestSchedules` — 시간대 · 생성 시각)이 없으면(계정 없음) 빈 값이다. 오늘은 지금의 사용자 시간대 날짜, 시간대는 일정의 시간대, 쓸 모델 유무는 `DigestModelDirectory.modelOf`, 진행 중은 `DigestLedger.inProgress`, 남은 횟수는 max(0, `MANUAL_PER_DAY` − 오늘 만든 수동 행 수), 다시 차는 시각은 다음 날 0시, 대상 날짜와 다시 만들기 여부는 지금 요청하면 만들 것이다 — 셋 모두 수동 생성(digest-R31)과 같은 `ManualTargets` 로 읽는다. 잠그지 않으므로 그 순간의 값이다
   - 오늘 일정 생성 시각(`DigestScheduleRules.upcomingToday`): 일정이 오늘을 만들 것(쓸 모델이 있고 가장 늦은 다이제스트 날짜가 오늘보다 앞섬 — digest-R29 와 같은 재료)이고 지금이 오늘 생성 시각 T(`generationTime`) 전이면 T, 아니면 없음. 기간 확인(digest-R30)은 보지 않는다 — 기간 끝은 언제나 그 행을 만든 시각 이전이라 T 가 지금보다 뒤면 기간이 선다
   - 해결되지 않은 마지막 실패(`UnresolvedFailures`): 그 사용자의 가장 최근 `FAILED` 행(ID 가 가장 큼) 뒤(ID 가 더 큰 행)에 기간을 덮는 행(`READY` · `EMPTY` — digest-R30 과 같은 조건 `CoveringDigestSql`)이 없으면 그 실패의 날짜와 끝낸 시각, 아니면 없음. 날짜는 보지 않고, 생성을 기다리거나 생성 중인 행은 해결로 치지 않는다. 끝낸 시각은 그 실패의 `DigestFailed.failedAt` 과 같은 값이다(digest-R33 — 둘 다 마이크로초로 자른 aggregate 의 값) — 독자 화면이 실패 알림과 맞추는 열쇠다
+- **digest-R53** — 흐름에 묶인 지난 항목(`DigestDirectory.itemsOfStorylines`): 그 사용자의 날짜별로 보이는 다이제스트(digest-R13)의 항목 섹션이 저장한 꼭대기를 지금 꼭대기로 풀어(digest-R38 의 풀기와 같다) 주어진 꼭대기에 드는 섹션을 낸다. 덮인 다이제스트의 항목, 흐름 없이 저장한 항목, 저장한 스토리라인이 지워진 항목은 들지 않는다. 순서는 날짜 내림차순 · 같은 날짜면 섹션 위치 내림차순이고, 한 쪽은 1 ~ `DigestDirectory.MAX_ITEMS`(50 — 측정 전 목표)개다. 다음 쪽이 있으면 이 쪽 마지막 항목의 (날짜, 위치)를 커서로 낸다 — 커서보다 뒤의 항목부터 이어져 빠지거나 겹치지 않는다. 항목마다 날짜 · 위치 · 종류 · 제목 · 사건을 싣고 본문 · 인용은 싣지 않는다. 읽기 전용 트랜잭션 하나에서 읽는다. 사용자를 인자로 받는 조회다 — 화면 경로에서는 세션 사용자로만 부른다([ADR-0290](../adr/0290-the-readers-storyline-tab-shows-the-users-summarized-flows-and-the-tracking-list-has-one-row-per-user-storyline.md))
 
 ## 6. 데이터
 
@@ -890,3 +911,6 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
 | [0280](../adr/0280-events-of-followed-flows-outside-the-subscribed-topics-enter-one-per-flow-within-a-share-of-the-subscribed-seats-as-interest.md) | 주제 구독 밖에 있는 관심 흐름의 사건은 흐름마다 하나, 구독 사건 자리의 몫 상한 안에서 `INTEREST` 로 든다 |
 | [0283](../adr/0283-storyline-interest-is-keyed-by-user-storyline-and-its-value-is-spread-to-each-top-for-selection.md) | 스토리라인 관심의 키는 사용자 스토리라인이고, 값을 그 꼭대기마다 펼쳐 선별에 쓴다 |
 | [0284](../adr/0284-a-digest-item-keeps-the-top-that-grouped-it-on-its-section-and-items-with-a-flow-carry-a-flow-tracking-button.md) | 다이제스트 항목은 묶은 꼭대기를 섹션에 남기고, 흐름이 있는 항목에 흐름 추적 버튼을 둔다 |
+| [0287](../adr/0287-user-storyline-summaries-are-made-and-stored-by-user-with-the-users-key-and-digest-supplies-the-flow-standing.md) | 사용자 스토리라인의 정리는 `user` 가 만들고, 이 모듈은 끝났다는 이벤트를 내고 흐름 판정을 공급한다 |
+| [0290](../adr/0290-the-readers-storyline-tab-shows-the-users-summarized-flows-and-the-tracking-list-has-one-row-per-user-storyline.md) | 개인 흐름 화면이 그 흐름에 묶인 지난 다이제스트 항목을 보인다 |
+| [0293](../adr/0293-the-interest-history-also-shows-the-interest-of-summarized-flows.md) | 관심사 히스토리는 정리된 흐름의 관심도 보인다 |

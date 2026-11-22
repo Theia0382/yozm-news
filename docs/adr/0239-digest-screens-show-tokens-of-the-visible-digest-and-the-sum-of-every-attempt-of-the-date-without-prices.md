@@ -27,3 +27,7 @@
 | 보이는 다이제스트의 토큰만 | 다시 만들기 · 실패의 비용이 보이지 않는다 |
 | 시도마다 한 줄 | 화면이 무겁고 운영자 화면에 가까운 정보다 |
 | 금액 환산 | 가격 표가 없고 가격이 바뀐다 |
+
+## 후속 기록
+
+- 2026-11-23: 다이제스트 화면 밖의 사용자 비용(사용자 스토리라인의 정리에 쓴 토큰) — [ADR-0291](0291-tokens-spent-on-a-summary-are-shown-on-the-personal-flow-screen-as-the-last-summary-and-the-running-total.md) · [`reader` reader-R13](../specs/reader.md#정리된-흐름)

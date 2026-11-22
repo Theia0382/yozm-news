@@ -33,3 +33,7 @@
 | 추적 상태를 다이제스트 응답에 싣는다 | 다이제스트 조회가 사용자 스토리라인을 맞춰야 하고, 추적 · 해제 뒤 다이제스트를 다시 읽어야 한다 |
 | 다이제스트 항목만 "흐름 추적", 스토리라인 화면은 "구독" | 같은 일에 이름이 둘이다 |
 | 정리된 스토리라인이 있는 항목에만 버튼을 둔다 | 정리 전의 흐름을 따라갈 길이 없다 |
+
+## 후속 기록
+
+- 2026-11-23: 결과 "항목의 흐름으로 가는 링크와 흐름의 정리는 개인 스토리라인 화면이 정한다" — [ADR-0290](0290-the-readers-storyline-tab-shows-the-users-summarized-flows-and-the-tracking-list-has-one-row-per-user-storyline.md) · [`reader` reader-R9](../specs/reader.md#다이제스트)
