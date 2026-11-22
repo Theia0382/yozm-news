@@ -112,7 +112,10 @@ public sealed interface OutputShape {
 		DROP_ITEM,
 
 		/** 그 값만 지운다(없음으로) — 선택 속성에만 쓴다 */
-		DROP_VALUE
+		DROP_VALUE,
+
+		/** 상한까지의 앞부분만 남긴다 — 코드 포인트로 자른다 */
+		TRUNCATE
 
 	}
 

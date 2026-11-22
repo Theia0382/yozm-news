@@ -232,6 +232,11 @@ public final class StructuredOutputReader {
 					this.overLimit++;
 					yield new Walked.Value(null);
 				}
+				case TRUNCATE -> {
+					this.overLimit++;
+					yield new Walked.Value(new OutputValue.Str(
+							value.substring(0, value.offsetByCodePoints(0, shape.maxCodePoints())).strip()));
+				}
 			};
 		}
 
