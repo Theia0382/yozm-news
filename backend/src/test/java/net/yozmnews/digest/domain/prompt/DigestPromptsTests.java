@@ -22,6 +22,7 @@ import net.yozmnews.event.EventId;
 import net.yozmnews.llm.LlmModel;
 import net.yozmnews.llm.Provider;
 import net.yozmnews.llm.ReasoningEffort;
+import net.yozmnews.platform.StructuredOutputSchema;
 import net.yozmnews.user.SummaryLength;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
@@ -161,7 +162,7 @@ class DigestPromptsTests {
 
 		DigestPrompt structured = compose(PROFILE, items, STRUCTURED);
 		DigestPrompt plain = compose(PROFILE, items, PLAIN);
-		String schema = DigestOutputSchema
+		String schema = StructuredOutputSchema
 			.json(DigestOutputSchema.root(CandidateSet.of(new DigestInput(PROFILE, items))));
 
 		assertThat(structured.outputSchema()).isEqualTo(schema).contains("\"I1\"");

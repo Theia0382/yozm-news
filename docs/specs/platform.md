@@ -17,6 +17,7 @@
 - **요청 방어 표시** — 요청 제한을 거는 처리기의 표시(`@RequestLimited`) · 봇 차단을 거는 처리기의 표시(`@HumanChecked`), 표시가 가리키는 지키는 동작(`GuardedAction`)과 표시의 판정(`HandlerGuards`)(platform-R25). 표시를 읽어 요청을 세고 사람 확인 토큰을 확인하는 장치는 `user` 의 것이다([user Spec](user.md#요청-방어))
 - **오류 응답 형식** — 화면용 API 의 오류 본문(`ApiProblem`)과 그것을 만드는 정본(`ProblemResponses`), 컨트롤러 오류 · 보안 거부의 문제 응답
 - **YAML 원문 읽기** — YAML 원문을 이벤트 API 로 읽어 트리로 옮기고, 문서 종류와 무관한 공통 거부(앵커 · 별칭 · 명시 태그 · 중복 키 · 알 수 없는 키 · 빈 값 · 형 오류 등)를 하는 공개 타입. 수집 프로필(`source`)과 기본 태그 체계(`tag`)가 쓴다
+- **LLM 출력 읽기** — LLM 출력의 구조를 적는 서술 마디(`OutputShape`), 서술을 따라 출력 원문을 읽는 공개 타입(`StructuredOutputReader` — 걸은 값 `OutputValue`, 결과 `StructuredRead`)과 서술을 JSON Schema 문서로 그리는 공개 타입(`StructuredOutputSchema`)(platform-R31 · R32). 다이제스트(`digest`)와 변화 리포트(`report`)가 자기 출력 서술로 쓴다
 - **코드 포인트 자르기** — 텍스트를 앞 몇 코드 포인트로 자르는 공개 타입(`CodePoints`). 피드 요약문(`source`) · 판정 입력(`evaluation`) · 기사 표현 텍스트(`event`) · 첫 운영자의 표시 이름(`user`)의 길이 상한이 쓴다
 - **날짜 범위 변환** — 날짜 범위를 시간대의 자정으로 시각 범위에 옮기고, 시간대 전환 여유를 더한 시각 길이 상한을 내는 공개 타입(`DayRange`). 집계 기간(`tag` 의 `EvaluationPeriod`) · 판정 원본 조회 기간(`evaluation` 의 `JudgementPeriod`) · 사건 조회 기간(`event` 의 `EventPeriod`)이 쓴다
 - **운영 설정의 행위자 종류** — 운영 설정을 정한 주체의 종류(`ChangeActor` — 시스템 · 운영자). 태그 기준 · 저장 기준 · 태그 체계 버전(`tag`), 큰 판정 기준(`storyline`), 가입 정책(`user`)의 이력이 쓴다
@@ -31,6 +32,7 @@
 - 다른 모듈의 도메인 규칙을 갖지 않는다. 이벤트를 다시 처리할 뿐, 이벤트를 받아 처리하는 일은 각 리스너 모듈의 것이다
 - 화면용 API 명세 파일(`api/openapi.json`)을 소유하지 않는다 — 명세는 각 모듈의 컨트롤러에서 만들어진다
 - YAML 문서의 형식(키 목록) · 값 규칙 · 길이 상한 값을 갖지 않는다 — 문서를 가진 모듈의 `domain` 이 정본이고, 이 모듈은 공통 거부만 한다(platform-R17)
+- LLM 출력의 서술(칸 구성 · 속성 이름 · 상한 값)과 걸은 값의 뜻을 갖지 않는다 — 출력을 쓰는 과제 모듈의 `domain` 이 정본이고, 이 모듈은 서술을 따라 읽고 그리는 방법만 갖는다(platform-R31 · R32)
 - 각 모듈 구성요소의 역할을 정하지 않는다 — 역할 애너테이션은 각 모듈이 자기 구성요소에 단다. 이 모듈은 그 표시와 소속 규칙(platform-R9)을 갖는다
 - 로컬 대체물을 갖지 않는다 — 각 모듈이 자기 대체물의 결선에 `@LocalDevelopment` 를 단다(platform-R18)
 - 확장을 쓰는 테이블 · 검색은 갖지 않는다 — 쓰는 모듈의 것이다. 이 모듈은 확장이 있고 최소 버전 이상인지만 본다(platform-R19)
@@ -292,6 +294,67 @@ public final class StrictYamlBinding {
   - 모듈의 문제 코드가 공통 종류와 같은 이름을 담으면 그 변환은 `default` 없는 망라 `switch` 로 쓴다 — 공통 종류가 늘면 컴파일이 깨진다([ADR-0056](../adr/0056-platform-reads-yaml-text-and-applies-common-rejection.md))
 
 관련 규칙: platform-R17.
+
+### OutputShape · OutputValue · StructuredRead · StructuredOutputReader · StructuredOutputSchema
+
+LLM 출력 읽기(platform-R31 · R32). 출력을 쓰는 과제 모듈이 요청마다 자기 서술을 만들어 읽기와 JSON Schema 문서에 함께 넘긴다 — 빈이 아닌 값 · 정적 함수다.
+
+```java
+public sealed interface OutputShape {
+    record Obj(List<Property> properties) implements OutputShape {}
+    record Arr(OutputShape item) implements OutputShape {}
+    record Keyed(List<String> keys, OutputShape value) implements OutputShape {}   // 키가 없거나 겹치면 IllegalArgumentException
+    record Str(int maxCodePoints, OnBlank onBlank, OverLimit onOverLimit) implements OutputShape {}   // 상한이 1 보다 작으면 IllegalArgumentException
+    record Property(String name, OutputShape shape, boolean required, boolean nullable) {}
+    enum OnBlank { UNREADABLE, ABSENT, KEEP }
+    enum OverLimit { UNREADABLE, DROP_ITEM, DROP_VALUE }
+}
+
+public sealed interface OutputValue {
+    record Obj(Map<String, OutputValue> values) implements OutputValue {
+        public String string(String name);
+        public Optional<String> optionalString(String name);
+        public Obj obj(String name);
+        public Arr arr(String name);
+    }
+    record Arr(List<OutputValue> items) implements OutputValue {}
+    record Str(String value) implements OutputValue {}
+}
+
+public sealed interface StructuredRead {
+    record Read(OutputValue.Obj root, int overLimit) implements StructuredRead {}   // overLimit 이 음수면 IllegalArgumentException
+    record Unreadable(String reason) implements StructuredRead {}
+}
+
+public final class StructuredOutputReader {
+    public static StructuredRead read(String text, OutputShape.Obj root);
+}
+
+public final class StructuredOutputSchema {
+    public static String json(OutputShape.Obj root);
+}
+```
+
+| 타입 · 멤버 | 뜻 |
+|---|---|
+| `OutputShape.Obj` | 객체 — 서술한 속성만 읽고 모르는 속성은 무시한다 |
+| `OutputShape.Arr` | 배열 — 원소마다 같은 꼴이다. 개수 상한은 두지 않는다 |
+| `OutputShape.Keyed` | 키마다 같은 꼴의 값을 갖는 객체 — 키는 요청마다 정한다(예: 항목 · 갈래). 서술한 키는 모두 필수로 그리고, 읽을 때는 없는 키 · `null` 인 키를 뺀다 |
+| `OutputShape.Str` | 문자열 — 앞뒤 공백을 지운 값을 코드 포인트로 잰다 |
+| `OutputShape.Property` | 객체의 속성 하나 — 필수면 빠졌을 때 읽지 못한 것이고, null 을 받으면 null 을 없음으로 받는다 |
+| `OnBlank` | 문자열이 비었을 때 — 출력 전체를 읽지 못함(`UNREADABLE`) · 없음으로 받음(`ABSENT` — 선택 속성에만) · 빈 문자열 그대로(`KEEP` — 뒤의 대조가 처분한다) |
+| `OverLimit` | 문자열이 상한을 넘을 때 — 출력 전체를 읽지 못함(`UNREADABLE`) · 그 문자열을 가진 가장 가까운 키 꼴의 값 또는 배열 원소를 버림(`DROP_ITEM`) · 그 값만 지움(`DROP_VALUE` — 선택 속성에만) |
+| `OutputValue` | 서술대로 확인한 뒤의 값 — 객체(서술 순서 · 없는 선택 속성 · null · 없음으로 받은 빈 문자열 · 지운 값은 키가 없다, 키 꼴은 남은 키만), 배열, 문자열. 객체의 접근자는 그 이름의 값이 없거나 꼴이 다르면 `IllegalStateException` 이다 — 서술대로 읽은 값에서는 생기지 않는다 |
+| `StructuredRead.Read.overLimit` | 상한을 넘어 버린 칸 · 원소와 지운 값의 수 |
+| `StructuredRead.Unreadable.reason` | 짧은 진단 — 어느 속성이 왜. 출력 원문을 싣지 않는다 |
+| `StructuredOutputSchema.json` | 서술을 그린 JSON Schema(draft 2020-12) 문서 — 읽기보다 엄격하다 |
+
+- 계약
+  - 서술은 부르는 쪽의 것이다 — 이 모듈은 칸 구성 · 이름 · 상한 값을 갖지 않는다
+  - 같은 서술이면 같은 문서 · 같은 읽기다
+  - 원문 · 진단을 로그에 남기지 않는다
+
+관련 규칙: platform-R31 · R32. 판단의 이유는 [ADR-0276](../adr/0276-platform-describes-reads-and-draws-llm-output-and-task-modules-keep-their-own-shape-and-value-mapping.md)에 있다.
 
 ### CodePoints
 
@@ -575,7 +638,7 @@ HTTP 엔드포인트:
 
 | 패키지 | 책임 |
 |---|---|
-| (최상위) | 역할 애너테이션 · 화면용 API 경로 규약 · 공개 처리기 표시와 그 판정 · 요청 방어 표시와 그 판정 · 문제 응답 · 이벤트 발행 운영 API · YAML 원문 읽기 · 코드 포인트 자르기 · 날짜 범위 변환 · HTTP 응답 본문 상한 · 벡터의 pgvector 텍스트 표현 · 앱 시계 · 실제 시간 요구 예외 · 측정용 시계 운영 API(§3) |
+| (최상위) | 역할 애너테이션 · 화면용 API 경로 규약 · 공개 처리기 표시와 그 판정 · 요청 방어 표시와 그 판정 · 문제 응답 · 이벤트 발행 운영 API · YAML 원문 읽기 · LLM 출력 읽기 · 코드 포인트 자르기 · 날짜 범위 변환 · HTTP 응답 본문 상한 · 벡터의 pgvector 텍스트 표현 · 앱 시계 · 실제 시간 요구 예외 · 측정용 시계 운영 API(§3) |
 | `adapter/in/job` | 이벤트 발행 재처리 반복 작업 |
 | `adapter/in/web` | API 계약 확인 엔드포인트, 화면용 API 명세 설정, 컨트롤러 오류의 문제 응답 |
 | `adapter/out/persistence` | 이벤트 발행 레지스트리 행의 읽기 · 조건부 삭제, 설치된 DB 확장의 버전 읽기, 측정용 시계의 시계 행 · 넘긴 기록 읽기 · 쓰기 |
@@ -743,6 +806,20 @@ stateDiagram-v2
 
 - **platform-R17** — YAML 원문은 snakeyaml-engine 의 이벤트 API 로만 읽는다 — 태그로 객체를 만드는 단계가 없다. 해석은 YAML 1.2 JSON 스키마 규칙이다 — 불리언은 소문자 `true` · `false` 뿐이고 `no` · `015` · `~` 와 따옴표 친 값은 문자열이다. 원문 길이 상한(문자 수)은 문서를 가진 모듈이 정해 넘기고, 넘으면 읽지 않는다. 문서는 하나이고 최상위는 매핑이다 — 빈 원문 · 내용 없는 문서는 빈 매핑이다. 공통 거부는 앵커 · 별칭 · 명시 태그, 같은 매핑 안 중복 키, 문자열이 아닌 키, 알 수 없는 키(무엇이 알려진 키인지는 문서를 가진 모듈이 정한다), 빈 값(`null` · 값을 적지 않음), 형 오류다. 별칭은 값을 쓸 수 없고, 앵커 · 태그가 붙은 값은 알린 뒤에도 계속 읽어 다른 문제를 함께 모은다. 문제는 경로 · 줄:열과 함께 찾은 순서대로 한 번에 모두 넘긴다 — 문서를 가진 모듈이 자기 문제와 같은 목록에 넣어 원문 순서를 지킨다
 
+### LLM 출력 읽기
+
+판단의 이유는 [ADR-0276](../adr/0276-platform-describes-reads-and-draws-llm-output-and-task-modules-keep-their-own-shape-and-value-mapping.md)에 있다.
+
+- **platform-R31** — 출력 원문은 이렇게 읽는다(`StructuredOutputReader.read`):
+  - 앞뒤 공백을 지운 원문이 코드 펜스(```` ``` ```` 또는 ```` ```json ```` 로 시작하는 첫 줄과 ```` ``` ```` 로 끝남)로 감싸여 있으면 한 겹만 벗긴다
+  - JSON 객체 하나여야 한다 — 객체 뒤에 다른 내용이 있거나 한 객체 안에 같은 키가 두 번 있으면 읽지 못한 것이다
+  - 서술을 따라 걷는다 — 객체는 서술한 속성만 읽고 모르는 속성은 무시한다. 필수 속성이 없으면 읽지 못한 것이고, 선택 속성은 없음이다. `null` 은 null 을 받는 속성에서만 없음이고 그 밖에서는 읽지 못한 것이다. 타입이 다르면 읽지 못한 것이다(숫자를 문자열로 바꾸지 않는다). 키 꼴은 서술한 키만 보고 없는 키 · `null` 인 키를 빼며, 서술하지 않은 키는 무시한다. 배열의 `null` 원소는 읽지 못한 것이다
+  - 문자열은 앞뒤 공백을 지운 값이다. 비었을 때 · 상한을 넘을 때는 서술의 처분을 따른다 — `DROP_ITEM` 은 그 문자열을 가진 가장 가까운 키 꼴의 값 또는 배열 원소를 버리고, 그 사이의 객체도 함께 버린다. 최상위 객체는 버릴 수 없다(읽지 못한 것이다)
+  - 한 객체 안에서 읽지 못할 속성과 버릴 속성이 함께 있으면 읽지 못한 것이다 — 속성의 순서와 무관하다
+  - 버린 키 꼴의 값 · 배열 원소와 지운 값의 수를 센다 — 버린 값 안에서 센 수는 버린 것 하나로 센다
+  - 읽지 못하면 짧은 진단(어느 속성이 왜)을 낸다. 출력 원문을 싣지 않는다
+- **platform-R32** — 생성에 넘기는 JSON Schema(draft 2020-12) 문서(`StructuredOutputSchema.json`)는 같은 서술을 그린 것이다 — 객체는 서술의 속성만 허용하고(`additionalProperties: false`) 필수 속성을 적는다, 키 꼴은 서술한 키를 모두 속성 · 필수 키로 적고 모르는 키를 허용하지 않는다, 배열은 `type array` 와 원소 서술(`items`)이고 개수 제약은 없다, 비었을 때 없음으로 받지 않는 문자열은 `minLength` 1, 문자열은 `maxLength`, null 을 받는 속성은 타입에 `null` 을 더한다. 이 문서는 읽기보다 엄격하다(모르는 속성 · 빠진 키 꼴의 키) — 구조화 출력이면 공급자가 서술한 칸을 모두 강제한다
+
 ### 사용자 식별자
 
 판단의 이유는 [ADR-0156](../adr/0156-user-id-is-a-platform-public-type.md)에 있다.
@@ -808,3 +885,4 @@ stateDiagram-v2
 | [0251](../adr/0251-the-measurement-clock-starts-only-with-the-measurement-profile-and-a-clock-row-and-moves-forward-through-the-operator-api.md) | 측정용 시계는 profile `measurement` 와 운영자가 넣는 DB 시계 행이 함께 있을 때만 뜨고, 운영자 API 로 앞으로만 넘긴다 |
 | [0252](../adr/0252-the-stall-and-duration-of-work-in-progress-are-measured-as-elapsed-time-without-the-jumps-of-the-clock.md) | 진행 중 작업의 멈춤과 걸린 시간은 시계가 넘긴 시간을 뺀 경과로 잰다 |
 | [0253](../adr/0253-the-measurement-clock-does-not-collect-feeds.md) | 측정용 시계에서는 수집하지 않는다 |
+| [0276](../adr/0276-platform-describes-reads-and-draws-llm-output-and-task-modules-keep-their-own-shape-and-value-mapping.md) | LLM 출력의 서술 · 읽기 · JSON Schema 그리기는 `platform` 이 맡고, 과제 모듈은 자기 서술과 값 옮기기만 한다 |
