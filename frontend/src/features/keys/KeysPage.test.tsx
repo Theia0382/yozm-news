@@ -117,6 +117,16 @@ describe("KeysPage", () => {
     ).toBeInTheDocument();
     // 묶음 이름 · 대표 기사 제목은 보내지 않는다
     expect(transfer.queryByText(/큰 스토리라인 묶음/)).not.toBeInTheDocument();
+    // 흐름의 정리를 만들 때 가는 것
+    expect(
+      transfer.getByRole("heading", { name: "관심이 쌓인 흐름을 정리할 때" }),
+    ).toBeInTheDocument();
+    expect(
+      transfer.getByText("그 흐름의 사건마다 날짜와 대표 기사의 제목 · 요약문"),
+    ).toBeInTheDocument();
+    expect(
+      transfer.getByText("그 흐름의 지난 정리(제목 · 흐름 요약 · 최근 전개)"),
+    ).toBeInTheDocument();
     expect(
       transfer.getByText("그 기간에 추적한 흐름의 변화 · 보도량 · 관심도 통계"),
     ).toBeInTheDocument();
