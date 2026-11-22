@@ -41,9 +41,9 @@ class DigestDaysTests {
 	private static final DigestNeighbors NEIGHBORS = new DigestNeighbors(LocalDate.parse("2026-11-16"), null);
 
 	private static final List<DigestSectionView> SECTIONS = List.of(
-			new DigestSectionView(SectionKind.OVERVIEW, null, "개요", null, List.of(), List.of()),
+			new DigestSectionView(SectionKind.OVERVIEW, null, "개요", null, List.of(), List.of(), null),
 			new DigestSectionView(SectionKind.TOP_STORY, "제목", "요약", SelectionReason.MAJOR_STORYLINE,
-					List.of(new DigestCitation(new ArticleId(7))), List.of(new EventId(70))));
+					List.of(new DigestCitation(new ArticleId(7))), List.of(new EventId(70)), null));
 
 	@Test
 	void theShownRowTheLatestRowAndTheTokensOfAnsweredRows() {

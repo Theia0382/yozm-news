@@ -8,6 +8,7 @@ import {
   HISTORY_TITLE,
   NO_HISTORY,
   NO_SUBSCRIPTIONS,
+  TRACK_FROM_LIST,
   ORDERS,
   REMOVED_STORYLINE,
   STORYLINES_PATH,
@@ -18,6 +19,7 @@ import {
   SUBSCRIPTIONS_TITLE,
   type SubscriptionOrder,
   UNSUBSCRIBE_LABEL,
+  trackedAt,
   UNTITLED,
   groupHeadings,
   historyActionLabels,
@@ -78,7 +80,7 @@ function orderSubscriptions(
 }
 
 /**
- * 내 구독 — 따라가는 스토리라인을 이어지는 것(진행 · 잠잠)과 끝난 것으로 나눠 고른 순서로 보이고 해제한다. 아래에 사용자가 직접 한 구독 ·
+ * 추적 중인 흐름 — 따라가는 스토리라인을 이어지는 것(진행 · 잠잠)과 끝난 것으로 나눠 고른 순서로 보이고 해제한다. 아래에 사용자가 직접 한 구독 ·
  * 해제의 기록을 최근부터 보인다(docs/specs/user.md user-R52 · user-R63, ADR-0242 · ADR-0243). 제목 · 상태는 카드의 값이다
  */
 export function SubscriptionsPage() {
@@ -103,7 +105,14 @@ export function SubscriptionsPage() {
         <p className="text-muted-foreground">{SUBSCRIPTION_EFFECT}</p>
         {subscriptions.data && (
           <p className="text-sm text-muted-foreground tabular-nums">
-            {subscriptionCount(ids.length, subscriptions.data.limit)}
+            {subscriptionCount(
+              new Set(
+                subscriptions.data.subscriptions.map(
+                  (one) => one.userStorylineId,
+                ),
+              ).size,
+              subscriptions.data.limit,
+            )}
           </p>
         )}
       </header>
@@ -117,7 +126,7 @@ export function SubscriptionsPage() {
         <p>
           {NO_SUBSCRIPTIONS}{" "}
           <Link to={STORYLINES_PATH} className="underline">
-            {STORYLINES_TITLE} 목록에서 구독하기
+            {STORYLINES_TITLE} {TRACK_FROM_LIST}
           </Link>
         </p>
       )}
@@ -218,7 +227,7 @@ function SubscribedItem({ row }: { row: Row }) {
           {REMOVED_STORYLINE}
         </h3>
         <p className="text-sm text-muted-foreground">
-          구독 {formatDateTime(subscription.subscribedAt)}
+          {trackedAt(subscription.subscribedAt)}
         </p>
       </article>
     );

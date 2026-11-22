@@ -32,3 +32,4 @@
 
 - 2026-11-18: 결정 "관심사 히스토리도 기간마다 같은 산식으로 계산해 견준다"의 기간 값 · 읽는 창 — [ADR-0225](0225-interest-history-values-read-only-the-window-before-each-reference-time-and-the-period-in-progress-is-measured-at-the-call.md), 지금 상태는 [digest Spec "관심사 히스토리"](../specs/digest.md#관심사-히스토리)
 - 2026-11-18: 결과 "새로 생긴 관심 · 사라진 관심은 계산 결과를 견주는 기준이 하나 더 필요하다" — [ADR-0226](0226-new-and-lost-interests-are-neighbouring-periods-crossing-one-threshold-on-the-interest-value.md), 지금 상태는 [digest Spec "관심사 히스토리"](../specs/digest.md#관심사-히스토리)
+- 2026-11-22: 결정 "관심은 저장하지 않는다" — 스토리라인 관심의 키가 되는 묶음(사용자 스토리라인)은 `user` 가 저장하고 내지만 관심 값은 여전히 조회 때 계산한다([ADR-0283](0283-storyline-interest-is-keyed-by-user-storyline-and-its-value-is-spread-to-each-top-for-selection.md)), 지금 상태는 [digest Spec "관심도"](../specs/digest.md#관심도) digest-R49

@@ -165,7 +165,7 @@ describe("StorylinePage", () => {
     );
   });
 
-  it("합쳐진 ID 로 와도 구독 버튼은 남는 스토리라인을 구독한다", async () => {
+  it("합쳐진 ID 로 와도 흐름 추적 버튼은 남는 스토리라인으로 추적한다", async () => {
     const { server } = renderRoutes(ROUTES, "/storylines/5", {
       "GET /api/storylines/5": () =>
         json(timeline({ storyline: card(9, { period: null }) })),
@@ -175,13 +175,13 @@ describe("StorylinePage", () => {
     });
     // 남는 스토리라인의 주소로 바뀐 뒤 그린 버튼
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: "구독" })).toBeEnabled(),
+      expect(screen.getByRole("button", { name: "흐름 추적" })).toBeEnabled(),
     );
 
-    await userEvent.click(screen.getByRole("button", { name: "구독" }));
+    await userEvent.click(screen.getByRole("button", { name: "흐름 추적" }));
 
     expect(
-      await screen.findByRole("button", { name: "구독 중" }),
+      await screen.findByRole("button", { name: "추적 중" }),
     ).toHaveAttribute("aria-pressed", "true");
     expect(
       server.requests.filter((r) => r.method === "PUT").map((r) => r.path),

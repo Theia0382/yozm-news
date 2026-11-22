@@ -13,6 +13,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.stream.Collectors;
 
 import net.yozmnews.event.EventDirectory;
 import net.yozmnews.event.EventId;
@@ -38,6 +39,7 @@ import net.yozmnews.storyline.domain.big.BigTrees;
 import net.yozmnews.storyline.domain.relation.RelationGraph;
 import net.yozmnews.storyline.domain.relation.RelationRepository;
 import net.yozmnews.storyline.domain.relation.StorylineTops;
+import net.yozmnews.storyline.domain.relation.TopContinuations;
 import net.yozmnews.storyline.domain.storyline.ClosedMembers;
 import net.yozmnews.storyline.domain.storyline.StateCriteria;
 import net.yozmnews.storyline.domain.storyline.StoredStoryline;
@@ -182,6 +184,30 @@ class StorylineDirectoryService implements StorylineDirectory {
 		found.forEach((requested, stored) -> tops.put(new StorylineId(requested),
 				new StorylineId(StorylineTops.rootOf(stored.id(), graph))));
 		return tops;
+	}
+
+	@Override
+	public Map<StorylineId, Set<StorylineId>> continuationsOf(Collection<StorylineId> storylines) {
+		Objects.requireNonNull(storylines, "storylines");
+		Set<StorylineId> distinct = new LinkedHashSet<>(storylines);
+		if (distinct.size() > MAX_TOP_STORYLINES) {
+			throw new IllegalArgumentException(
+					"스토리라인 이어짐 조회는 한 번에 스토리라인 " + MAX_TOP_STORYLINES + " 개까지다: " + distinct.size());
+		}
+		if (distinct.isEmpty()) {
+			return Map.of();
+		}
+		// 합쳐진 스토리라인은 남는 행으로 풀린다 — 키는 받은 ID 다
+		Map<Long, StoredStoryline> found = this.storylines.findAll(distinct.stream().map(StorylineId::value).toList());
+		if (found.isEmpty()) {
+			return Map.of();
+		}
+		Map<Long, Set<Long>> reached = TopContinuations
+			.of(found.values().stream().map(StoredStoryline::id).distinct().toList(), graph());
+		Map<StorylineId, Set<StorylineId>> continuations = new LinkedHashMap<>();
+		found.forEach((requested, stored) -> continuations.put(new StorylineId(requested),
+				reached.get(stored.id()).stream().map(StorylineId::new).collect(Collectors.toUnmodifiableSet())));
+		return continuations;
 	}
 
 	@Override

@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import net.yozmnews.event.EventId;
 import net.yozmnews.event.EventPeriod;
@@ -72,6 +73,15 @@ public interface StorylineDirectory {
 	 * @throws IllegalArgumentException 서로 다른 스토리라인이 {@link #MAX_TOP_STORYLINES} 를 넘을 때
 	 */
 	Map<StorylineId, StorylineId> topsOfStorylines(Collection<StorylineId> storylines);
+
+	/**
+	 * 스토리라인마다 그 포함 나무의 꼭대기에서 이어짐을 앞 → 뒤로 끝까지 따라 닿는 꼭대기. 이어짐의 두 끝은 포함 나무의 꼭대기로 올려
+	 * 보고, 뒤 → 앞으로는 따르지 않는다. 합쳐진 스토리라인(storyline-R18)이면 남는 스토리라인의 것이다(storyline-R38).
+	 * @return 받은 스토리라인 ID → 닿는 꼭대기(자기 꼭대기는 없다 — 닿는 것이 없으면 빈 집합). 없는 스토리라인(지웠거나 처음부터 없는
+	 *         ID)은 빠진다. 빈 입력이면 빈 맵
+	 * @throws IllegalArgumentException 서로 다른 스토리라인이 {@link #MAX_TOP_STORYLINES} 를 넘을 때
+	 */
+	Map<StorylineId, Set<StorylineId>> continuationsOf(Collection<StorylineId> storylines);
 
 	/**
 	 * 기간의 스토리라인(닫은 사건 집합에 조회 기간 안 기사가 있는 사건이 하나라도 있는, 합쳐지지 않은 스토리라인) — 직접 소속의 마지막 기사 시각

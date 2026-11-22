@@ -4,21 +4,21 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import java.time.Instant;
-import java.time.ZoneOffset;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeSet;
 
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.storyline.StorylineId;
-import net.yozmnews.storyline.StorylineRows;
 import net.yozmnews.storyline.StorylineState;
+import net.yozmnews.user.UserStorylineFixtures;
+import net.yozmnews.user.UserStorylineFixtures.Saved;
+import net.yozmnews.user.UserStorylineId;
 import net.yozmnews.user.application.StorylineSubscriptions.SubscribeOutcome;
 import net.yozmnews.user.application.StorylineSubscriptions.SubscribedStoryline;
 import net.yozmnews.user.application.StorylineSubscriptions.UnsubscribeOutcome;
-import net.yozmnews.user.domain.subscription.StorylineSubscriptionRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,14 +28,14 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.IllegalTransactionStateException;
-import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 스토리라인 구독 · 해제 · 조회 — 받은 ID 를 남는 스토리라인으로 풀어 저장하고, 바뀌지 않으면 이력이 없으며, 상한 100 을 넘지 않는다. 조회 ·
- * 저장 앞에서 먼저 따라가 합쳐진 행을 남는 스토리라인으로 고친다. 현재 구독은 이력을 차례로 재생한 집합과 같다. 끝난 스토리라인의 구독은 남는다.
- * 실제 PostgreSQL 에서 본다 — 스토리라인은 행으로 직접 만든다.
+ * 흐름 추적(스토리라인 구독)의 추적 · 해제 · 조회 · 추적 상태 — 추적은 사용자 스토리라인에 붙고 누른 스토리라인은 추적 씨앗으로 남는다. 받은
+ * ID 는 남는 스토리라인으로 풀고, 그 흐름의 어느 스토리라인(하위 · 이어진 뒤 흐름)에서 물어도 같은 추적이다. 해제는 그 흐름의 추적을 끈다.
+ * 이력은 추적 씨앗마다 한 행이고 지금 추적 씨앗은 이력을 차례로 재생한 집합과 같다. 추적 중인 사용자 스토리라인은 100 을 넘지 않는다. 실제
+ * PostgreSQL 에서 본다 — 스토리라인과 관계는 행으로 직접 만든다.
  * <p>
- * 지키는 규칙: user-R52 · user-R53
+ * 지키는 규칙: user-R52 · user-R53 · 사용자 스토리라인(docs/specs/user.md §5)
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -48,13 +48,7 @@ class StorylineSubscriptionsTests {
 	StorylineSubscriptions subscriptions;
 
 	@Autowired
-	SubscriptionFollowups followups;
-
-	@Autowired
-	StorylineSubscriptionRepository repository;
-
-	@Autowired
-	TransactionTemplate transaction;
+	UserStorylineFollowups followups;
 
 	@Autowired
 	JdbcClient jdbc;
@@ -62,118 +56,229 @@ class StorylineSubscriptionsTests {
 	@BeforeEach
 	@AfterEach
 	void reset() {
-		this.jdbc.sql("delete from users").update();
-		StorylineRows.clear(this.jdbc);
+		UserStorylineFixtures.clear(this.jdbc);
 	}
 
 	@Test
-	void aSubscriptionIsStoredAndRecordedOnceAndASecondTimeChangesNothing() {
-		UserId user = user("alice@example.com");
-		long storyline = storyline(NOW);
+	void aTrackingIsStoredAndRecordedOnceAndASecondTimeChangesNothing() {
+		UserId user = user();
+		long storyline = storyline();
 
 		assertThat(this.subscriptions.subscribe(user, new StorylineId(storyline), NOW))
 			.isEqualTo(new SubscribeOutcome.Subscribed(new StorylineId(storyline)));
-		assertThat(this.subscriptions.subscribe(user, new StorylineId(storyline), NOW.plusSeconds(60)))
+		assertThat(this.subscriptions.subscribe(user, new StorylineId(storyline), at(60)))
 			.isEqualTo(new SubscribeOutcome.AlreadySubscribed(new StorylineId(storyline)));
 
-		assertThat(this.repository.load(user)).containsExactly(Map.entry(storyline, NOW));
+		assertThat(saved(user)).singleElement().satisfies(one -> {
+			assertThat(one.subscribedAt()).isEqualTo(NOW);
+			assertThat(one.members()).containsExactly(storyline);
+			assertThat(one.seeds()).containsExactly(storyline);
+		});
 		assertThat(history(user)).containsExactly(List.of(storyline, "ADD", "USER"));
 	}
 
 	@Test
-	void aMergedIdIsSubscribedAsItsSurvivorAndAnUnknownIdIsRejected() {
-		UserId user = user("alice@example.com");
-		long survivor = storyline(NOW);
-		long merged = storyline(NOW);
-		merge(merged, survivor);
+	void aMergedIdIsTrackedAsItsSurvivorAndAnUnknownIdIsRejected() {
+		UserId user = user();
+		long survivor = storyline();
+		long merged = storyline();
+		UserStorylineFixtures.merge(this.jdbc, merged, survivor);
 
 		assertThat(this.subscriptions.subscribe(user, new StorylineId(merged), NOW))
 			.isEqualTo(new SubscribeOutcome.Subscribed(new StorylineId(survivor)));
-		assertThat(this.subscriptions.subscribe(user, new StorylineId(999_999_999L), NOW))
+		assertThat(this.subscriptions.subscribe(user, new StorylineId(999_999_999L), at(60)))
 			.isEqualTo(new SubscribeOutcome.UnknownStoryline());
-		assertThat(this.repository.load(user)).containsOnlyKeys(survivor);
+		assertThat(saved(user)).singleElement().extracting(Saved::seeds).isEqualTo(Set.of(survivor));
 	}
 
 	@Test
-	void theHundredAndFirstSubscriptionIsRejected() {
-		UserId user = user("alice@example.com");
-		for (int i = 0; i < 99; i++) {
-			this.subscriptions.subscribe(user, new StorylineId(storyline(NOW)), NOW);
+	void pressingAChildTracksTheFlowOfItsTopAndTheListShowsThePressedStoryline() {
+		UserId user = user();
+		long top = storyline();
+		long child = storyline();
+		long unrelated = storyline();
+		UserStorylineFixtures.contains(this.jdbc, top, child);
+
+		this.subscriptions.subscribe(user, new StorylineId(child), NOW);
+
+		// 추적 대상은 꼭대기, 추적 씨앗은 누른 하위 스토리라인이다
+		assertThat(saved(user)).singleElement().satisfies(one -> {
+			assertThat(one.members()).containsExactly(top);
+			assertThat(one.seeds()).containsExactly(child);
+		});
+		// 그 흐름의 어느 스토리라인에서 물어도 추적 중이다. 대조 — 관계없는 스토리라인은 아니다
+		assertThat(this.subscriptions.states(user,
+				List.of(new StorylineId(top), new StorylineId(child), new StorylineId(unrelated)), at(60)))
+			.containsExactly(Map.entry(new StorylineId(top), true), Map.entry(new StorylineId(child), true),
+					Map.entry(new StorylineId(unrelated), false));
+		// 목록의 줄은 누른 스토리라인이다 — 꼭대기가 아니다
+		assertThat(this.subscriptions.view(user, at(60)).subscriptions()).extracting(SubscribedStoryline::id)
+			.containsExactly(new StorylineId(child));
+	}
+
+	@Test
+	void trackingAnEarlierFlowTracksItsLaterFlowAndUntrackingFromTheLaterFlowTurnsBothOff() {
+		UserId user = user();
+		long earlier = storyline();
+		long later = storyline();
+		UserStorylineFixtures.follows(this.jdbc, earlier, later);
+		this.subscriptions.subscribe(user, new StorylineId(earlier), NOW);
+		long flow = saved(user).getFirst().id();
+
+		// 앞 흐름을 추적하면 뒤 흐름도 같은 사용자 스토리라인의 추적 대상이다
+		assertThat(saved(user)).singleElement().extracting(Saved::members).isEqualTo(Set.of(earlier, later));
+		assertThat(this.subscriptions.states(user, List.of(new StorylineId(later)), at(60)))
+			.containsExactly(Map.entry(new StorylineId(later), true));
+
+		// 뒤 흐름에서 해제해도 그 흐름을 받게 만든 앞 흐름의 추적을 끈다
+		assertThat(this.subscriptions.unsubscribe(user, new StorylineId(later), at(120)))
+			.isEqualTo(new UnsubscribeOutcome.Unsubscribed(new StorylineId(later)));
+		assertThat(this.subscriptions.states(user, List.of(new StorylineId(earlier), new StorylineId(later)), at(180)))
+			.containsExactly(Map.entry(new StorylineId(earlier), false), Map.entry(new StorylineId(later), false));
+		assertThat(history(user)).containsExactly(List.of(earlier, "ADD", "USER"), List.of(earlier, "REMOVE", "USER"));
+
+		// 사용자 스토리라인은 남아 있다 — 다시 추적하면 같은 사용자 스토리라인이다
+		this.subscriptions.subscribe(user, new StorylineId(later), at(240));
+		assertThat(saved(user)).singleElement().satisfies(one -> {
+			assertThat(one.id()).isEqualTo(flow);
+			assertThat(one.tracked()).isTrue();
+			assertThat(one.seeds()).containsExactly(later);
+		});
+	}
+
+	@Test
+	void trackingTheLaterFlowDoesNotTrackTheEarlierFlow() {
+		UserId user = user();
+		long earlier = storyline();
+		long later = storyline();
+		UserStorylineFixtures.follows(this.jdbc, earlier, later);
+
+		this.subscriptions.subscribe(user, new StorylineId(later), NOW);
+
+		// 대조 — 이어짐은 앞에서 뒤로만 따른다
+		assertThat(saved(user)).singleElement().extracting(Saved::members).isEqualTo(Set.of(later));
+		assertThat(this.subscriptions.states(user, List.of(new StorylineId(earlier)), at(60)))
+			.containsExactly(Map.entry(new StorylineId(earlier), false));
+	}
+
+	@Test
+	void anotherStorylineOfATrackedFlowAddsATrackedSeedAndUntrackingRecordsEachSeed() {
+		UserId user = user();
+		long earlier = storyline();
+		long later = storyline();
+		UserStorylineFixtures.follows(this.jdbc, earlier, later);
+		this.subscriptions.subscribe(user, new StorylineId(earlier), NOW);
+
+		assertThat(this.subscriptions.subscribe(user, new StorylineId(later), at(60)))
+			.isEqualTo(new SubscribeOutcome.Subscribed(new StorylineId(later)));
+
+		// 추적 중인 사용자 스토리라인은 그대로 하나이고 추적 씨앗이 둘이다 — 추적 시각은 처음 것
+		assertThat(saved(user)).singleElement().satisfies(one -> {
+			assertThat(one.subscribedAt()).isEqualTo(NOW);
+			assertThat(one.seeds()).containsExactly(earlier, later);
+		});
+		assertThat(history(user)).containsExactly(List.of(earlier, "ADD", "USER"), List.of(later, "ADD", "USER"));
+
+		this.subscriptions.unsubscribe(user, new StorylineId(earlier), at(120));
+
+		assertThat(saved(user)).singleElement().satisfies(one -> {
+			assertThat(one.tracked()).isFalse();
+			assertThat(one.seeds()).isEmpty();
+		});
+		assertThat(history(user)).endsWith(List.of(earlier, "REMOVE", "USER"), List.of(later, "REMOVE", "USER"));
+	}
+
+	@Test
+	void theHundredAndFirstTrackedFlowIsRejectedButATrackedFlowTakesAnotherSeed() {
+		UserId user = user();
+		long earlier = storyline();
+		long later = storyline();
+		UserStorylineFixtures.follows(this.jdbc, earlier, later);
+		this.subscriptions.subscribe(user, new StorylineId(earlier), NOW);
+		for (int i = 0; i < 98; i++) {
+			UserStorylineFixtures.tracked(this.jdbc, user, storyline(), NOW);
 		}
-		// 대조 — 99개에서는 하나 더 구독한다
-		assertThat(this.subscriptions.subscribe(user, new StorylineId(storyline(NOW)), NOW))
+		// 대조 — 99개에서는 하나 더 추적한다
+		assertThat(this.subscriptions.subscribe(user, new StorylineId(storyline()), at(60)))
 			.isInstanceOf(SubscribeOutcome.Subscribed.class);
 
-		assertThat(this.subscriptions.subscribe(user, new StorylineId(storyline(NOW)), NOW))
+		assertThat(this.subscriptions.subscribe(user, new StorylineId(storyline()), at(120)))
 			.isEqualTo(new SubscribeOutcome.LimitReached(100));
-		assertThat(this.repository.load(user)).hasSize(100);
+		// 이미 추적 중인 흐름의 다른 스토리라인은 상한과 무관하게 추적 씨앗이 된다
+		assertThat(this.subscriptions.subscribe(user, new StorylineId(later), at(180)))
+			.isEqualTo(new SubscribeOutcome.Subscribed(new StorylineId(later)));
+		assertThat(saved(user).stream().filter(Saved::tracked)).hasSize(100);
 	}
 
 	@Test
-	void aMergedIdUnsubscribesItsSurvivor() {
-		UserId user = user("alice@example.com");
-		long survivor = storyline(NOW);
-		long merged = storyline(NOW);
-		this.subscriptions.subscribe(user, new StorylineId(survivor), NOW);
-		merge(merged, survivor);
-
-		// 합쳐진 옛 ID 로 해제해도 남는 스토리라인의 구독을 푼다
-		assertThat(this.subscriptions.unsubscribe(user, new StorylineId(merged), NOW))
-			.isEqualTo(new UnsubscribeOutcome.Unsubscribed(new StorylineId(survivor)));
-		assertThat(this.repository.load(user)).isEmpty();
-		assertThat(history(user)).containsExactly(List.of(survivor, "ADD", "USER"), List.of(survivor, "REMOVE", "USER"));
-	}
-
-	@Test
-	void anUnsubscribeRemovesTheRowAndAnUnsubscribedOneChangesNothing() {
-		UserId user = user("alice@example.com");
-		long storyline = storyline(NOW);
-		long other = storyline(NOW);
+	void anUntrackTurnsTheTrackingOffAndAnUntrackedFlowChangesNothing() {
+		UserId user = user();
+		long storyline = storyline();
+		long other = storyline();
 		this.subscriptions.subscribe(user, new StorylineId(storyline), NOW);
 
-		assertThat(this.subscriptions.unsubscribe(user, new StorylineId(storyline), NOW))
+		assertThat(this.subscriptions.unsubscribe(user, new StorylineId(storyline), at(60)))
 			.isEqualTo(new UnsubscribeOutcome.Unsubscribed(new StorylineId(storyline)));
-		assertThat(this.subscriptions.unsubscribe(user, new StorylineId(other), NOW))
+		assertThat(this.subscriptions.unsubscribe(user, new StorylineId(other), at(120)))
+			.isEqualTo(new UnsubscribeOutcome.NotSubscribed());
+		assertThat(this.subscriptions.unsubscribe(user, new StorylineId(999_999_999L), at(180)))
 			.isEqualTo(new UnsubscribeOutcome.NotSubscribed());
 
-		assertThat(this.repository.load(user)).isEmpty();
+		assertThat(saved(user)).noneMatch(Saved::tracked);
 		assertThat(history(user)).containsExactly(List.of(storyline, "ADD", "USER"), List.of(storyline, "REMOVE", "USER"));
 	}
 
 	@Test
+	void aMergedIdUntracksTheFlowOfItsSurvivor() {
+		UserId user = user();
+		long survivor = storyline();
+		long merged = storyline();
+		this.subscriptions.subscribe(user, new StorylineId(survivor), NOW);
+		UserStorylineFixtures.merge(this.jdbc, merged, survivor);
+
+		assertThat(this.subscriptions.unsubscribe(user, new StorylineId(merged), at(60)))
+			.isEqualTo(new UnsubscribeOutcome.Unsubscribed(new StorylineId(survivor)));
+		assertThat(saved(user)).noneMatch(Saved::tracked);
+	}
+
+	@Test
 	void aViewFollowsFirstAndKeepsAnEndedStoryline() {
-		UserId user = user("alice@example.com");
+		UserId user = user();
 		// 상태는 조회하는 지금 시각으로 정한다 — 진행인 스토리라인은 마지막 기사를 지금으로, 끝난 것은 오래전으로 둔다
-		long survivor = storyline(Instant.now());
-		long merged = storyline(Instant.now());
-		long ended = storyline(Instant.parse("2026-09-01T00:00:00Z"));
-		this.subscriptions.subscribe(user, new StorylineId(merged), NOW.minusSeconds(60));
-		this.subscriptions.subscribe(user, new StorylineId(ended), NOW);
+		long survivor = UserStorylineFixtures.storyline(this.jdbc, Instant.now());
+		long merged = UserStorylineFixtures.storyline(this.jdbc, Instant.now());
+		long ended = UserStorylineFixtures.storyline(this.jdbc, Instant.parse("2026-09-01T00:00:00Z"));
+		this.subscriptions.subscribe(user, new StorylineId(merged), NOW);
+		this.subscriptions.subscribe(user, new StorylineId(ended), at(60));
 		// 이벤트 없이 합친다 — 조회 앞의 따라가기만 고친다
-		merge(merged, survivor);
+		UserStorylineFixtures.merge(this.jdbc, merged, survivor);
 
-		List<SubscribedStoryline> view = this.subscriptions.view(user, NOW).subscriptions();
+		List<SubscribedStoryline> view = this.subscriptions.view(user, at(120)).subscriptions();
 
-		// 구독 시각 내림차순 — 끝난 스토리라인의 구독은 그대로다
-		assertThat(view).containsExactly(new SubscribedStoryline(new StorylineId(ended), NOW, StorylineState.ENDED),
-				new SubscribedStoryline(new StorylineId(survivor), NOW.minusSeconds(60), StorylineState.ACTIVE));
-		assertThat(this.subscriptions.view(user, NOW).limit()).isEqualTo(100);
+		List<Saved> saved = saved(user);
+		// 추적 시각 내림차순 — 끝난 스토리라인의 추적은 그대로이고, 합쳐진 추적 씨앗은 남는 스토리라인으로 옮겼다
+		assertThat(view).containsExactly(
+				new SubscribedStoryline(new StorylineId(ended), at(60), StorylineState.ENDED,
+						new UserStorylineId(saved.get(1).id())),
+				new SubscribedStoryline(new StorylineId(survivor), NOW, StorylineState.ACTIVE,
+						new UserStorylineId(saved.get(0).id())));
+		assertThat(this.subscriptions.view(user, at(180)).limit()).isEqualTo(100);
 		assertThat(history(user)).contains(List.of(merged, "REMOVE", "STORYLINE_MERGED"),
 				List.of(survivor, "ADD", "STORYLINE_MERGED"));
 	}
 
 	@Test
-	void theCurrentSubscriptionsAreTheReplayOfTheHistory() {
-		UserId user = user("alice@example.com");
-		long a = storyline(NOW);
-		long b = storyline(NOW);
-		long c = storyline(NOW);
+	void theCurrentTrackedSeedsAreTheReplayOfTheHistory() {
+		UserId user = user();
+		long a = storyline();
+		long b = storyline();
+		long c = storyline();
 		this.subscriptions.subscribe(user, new StorylineId(a), NOW);
-		this.subscriptions.subscribe(user, new StorylineId(b), NOW);
-		this.subscriptions.subscribe(user, new StorylineId(c), NOW);
-		this.subscriptions.unsubscribe(user, new StorylineId(a), NOW);
-		merge(b, c);
-		this.subscriptions.view(user, NOW);
+		this.subscriptions.subscribe(user, new StorylineId(b), at(60));
+		this.subscriptions.subscribe(user, new StorylineId(c), at(120));
+		this.subscriptions.unsubscribe(user, new StorylineId(a), at(180));
+		UserStorylineFixtures.merge(this.jdbc, b, c);
+		this.subscriptions.view(user, at(240));
 
 		TreeSet<Long> replayed = new TreeSet<>();
 		for (List<Object> row : history(user)) {
@@ -184,52 +289,38 @@ class StorylineSubscriptionsTests {
 				replayed.remove((Long) row.get(0));
 			}
 		}
+		TreeSet<Long> seeds = new TreeSet<>();
+		saved(user).forEach(one -> seeds.addAll(one.seeds()));
 		assertThat(replayed).containsExactly(c);
-		assertThat(this.repository.load(user)).containsOnlyKeys(c);
+		assertThat(seeds).containsExactly(c);
 	}
 
 	@Test
 	void followingOutsideATransactionIsRefused() {
-		UserId user = user("alice@example.com");
+		UserId user = user();
 
 		assertThatExceptionOfType(IllegalTransactionStateException.class)
 			.isThrownBy(() -> this.followups.followLocked(user, Map.of(), NOW));
 	}
 
-	private UserId user(String email) {
-		return new UserId(this.jdbc.sql("""
-				insert into users (email, display_name, role, status, created_at, version)
-				values (:email, :email, 'USER', 'ACTIVE', now(), 0) returning id
-				""").param("email", email).query(Long.class).single());
+	private UserId user() {
+		return UserStorylineFixtures.user(this.jdbc, "alice@example.com");
 	}
 
-	private long storyline(Instant lastArticleAt) {
-		return this.jdbc.sql("""
-				insert into storylines (model_version, centroid, article_count, first_article_at, last_article_at,
-				                        representative_event_id, created_at, updated_at)
-				values ('model-a', cast('[1,0]' as halfvec), 1, :at, :at, 1, :at, :at)
-				returning id
-				""").param("at", lastArticleAt.atOffset(ZoneOffset.UTC)).query(Long.class).single();
+	private long storyline() {
+		return UserStorylineFixtures.storyline(this.jdbc, NOW);
 	}
 
-	private void merge(long merged, long survivor) {
-		this.jdbc.sql("update storylines set merged_into = :into, merged_at = now() where id = :id")
-			.param("into", survivor)
-			.param("id", merged)
-			.update();
+	private static Instant at(long seconds) {
+		return NOW.plusSeconds(seconds);
 	}
 
-	/** 이력 행 — [스토리라인 ID, 동작, 원인], 행 순 */
+	private List<Saved> saved(UserId user) {
+		return UserStorylineFixtures.saved(this.jdbc, user);
+	}
+
 	private List<List<Object>> history(UserId user) {
-		List<List<Object>> rows = new ArrayList<>();
-		this.jdbc.sql("""
-				select storyline_id, action, cause from user_storyline_subscription_events
-				where user_id = :user order by id
-				""").param("user", user.value()).query((rs, n) -> {
-			rows.add(List.of(rs.getLong("storyline_id"), rs.getString("action"), rs.getString("cause")));
-			return n;
-		}).list();
-		return rows;
+		return UserStorylineFixtures.history(this.jdbc, user);
 	}
 
 }

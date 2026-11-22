@@ -12,6 +12,7 @@ import net.yozmnews.digest.domain.digest.DigestId;
 import net.yozmnews.digest.domain.output.CitedDigest;
 import net.yozmnews.digest.domain.output.CitedHeadline;
 import net.yozmnews.digest.domain.output.CitedStory;
+import net.yozmnews.storyline.StorylineId;
 import org.jspecify.annotations.Nullable;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.PersistenceCreator;
@@ -41,6 +42,8 @@ public final class DigestSection {
 
 	private final @Nullable String body;
 
+	private final @Nullable Long storylineId;
+
 	@MappedCollection(idColumn = "digest_section_id", keyColumn = "position")
 	private final List<DigestItem> items;
 
@@ -49,36 +52,42 @@ public final class DigestSection {
 
 	@PersistenceCreator
 	DigestSection(@Nullable Long id, long digestId, SectionKind kind, int position, @Nullable String title,
-			@Nullable String body, List<DigestItem> items, List<SectionEvent> events) {
+			@Nullable String body, @Nullable Long storylineId, List<DigestItem> items, List<SectionEvent> events) {
 		this.id = id;
 		this.digestId = digestId;
 		this.kind = Objects.requireNonNull(kind, "kind");
 		this.position = position;
 		this.title = title;
 		this.body = body;
+		this.storylineId = storylineId;
 		this.items = List.copyOf(items);
 		this.events = List.copyOf(events);
 	}
 
 	/**
 	 * 항목과 대조한 출력을 섹션으로 나눈다 — 개요(0), 주요 뉴스 항목마다(1 … k — 제목 · 요약), 헤드라인 항목마다(k + 1 … — 제목 · 본문은
-	 * 코멘트). 인용은 항목의 남은 표본 기사, 섹션 사건은 항목의 사건 순서다.
+	 * 코멘트). 인용은 항목의 남은 표본 기사, 섹션 사건은 항목의 사건 순서다. 인용 섹션은 항목을 묶은 꼭대기를 싣는다(개요는 없다).
 	 */
 	public static List<DigestSection> of(DigestId digest, CitedDigest cited) {
 		Objects.requireNonNull(digest, "digest");
 		Objects.requireNonNull(cited, "cited");
 		List<DigestSection> sections = new ArrayList<>();
 		sections.add(new DigestSection(null, digest.value(), SectionKind.OVERVIEW, 0, null, cited.overview(),
-				List.of(), List.of()));
+				null, List.of(), List.of()));
 		for (CitedStory story : cited.stories()) {
 			sections.add(new DigestSection(null, digest.value(), SectionKind.TOP_STORY, sections.size(), story.title(),
-					story.summary(), items(story.item()), story.item().events()));
+					story.summary(), storyline(story.item()), items(story.item()), story.item().events()));
 		}
 		for (CitedHeadline headline : cited.headlines()) {
 			sections.add(new DigestSection(null, digest.value(), SectionKind.HEADLINE, sections.size(),
-					headline.title(), headline.note(), items(headline.item()), headline.item().events()));
+					headline.title(), headline.note(), storyline(headline.item()), items(headline.item()),
+					headline.item().events()));
 		}
 		return List.copyOf(sections);
+	}
+
+	private static @Nullable Long storyline(AliasedItem item) {
+		return (item.storyline() == null) ? null : item.storyline().value();
 	}
 
 	private static List<DigestItem> items(AliasedItem item) {
@@ -121,6 +130,13 @@ public final class DigestSection {
 	 */
 	public Optional<String> body() {
 		return Optional.ofNullable(this.body);
+	}
+
+	/**
+	 * @return 항목을 묶은 포함 나무의 꼭대기(생성 때의 값) — 개요 · 혼자 한 항목이면 빈 값
+	 */
+	public Optional<StorylineId> storyline() {
+		return Optional.ofNullable(this.storylineId).map(StorylineId::new);
 	}
 
 	/** 인용 — 순서대로 */

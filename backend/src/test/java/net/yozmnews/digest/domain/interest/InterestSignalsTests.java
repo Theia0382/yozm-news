@@ -100,10 +100,12 @@ class InterestSignalsTests {
 		assertThat(InterestSignals.storylinesToRead(changes)).containsExactly(kept, survivor);
 		// kept 의 꼭대기는 top, survivor 는 꼭대기를 모른다(그 사이 지워짐) — 꼭대기에 몫 1 로 든다
 		StorylineId top = new StorylineId(100);
-		assertThat(InterestSignals.storylines(changes, Map.of(kept, top)))
-			.as("꼭대기를 모르는 스토리라인은 신호가 아니다")
-			.containsExactly(new SubscriptionSignal<>(Map.of(top, 1.0), 1, AT),
-					new SubscriptionSignal<>(Map.of(top, 1.0), -1, AT));
+		assertThat(InterestSignals.storylines(changes, Map.of(kept, top), new StorylineFlows(Map.of(top, 7), Set.of())))
+			.as("꼭대기를 모르는 스토리라인은 신호가 아니다 — 신호는 그 꼭대기의 묶음에 든다")
+			.containsExactly(new SubscriptionSignal<>(Map.of(7, 1.0), 1, AT),
+					new SubscriptionSignal<>(Map.of(7, 1.0), -1, AT));
+		// 대조 — 꼭대기에 묶음이 없으면 신호가 아니다
+		assertThat(InterestSignals.storylines(changes, Map.of(kept, top), StorylineFlows.NONE)).isEmpty();
 	}
 
 	@Test
@@ -131,10 +133,23 @@ class InterestSignalsTests {
 				untreed, new Exposure(AT, 1.0));
 		Map<EventId, List<StorylineId>> tops = Map.of(twoTrees, List.of(tree, other), untopical, List.of(tree));
 
-		assertThat(InterestSignals.storylineExposed(exposures, List.of(reaction(twoTrees, FeedbackValue.LIKE)), tops))
-			.containsExactlyInAnyOrder(
-					new ExposedEvent<>(Map.of(tree, 0.5, other, 0.5), AT, 1.0, FeedbackValue.LIKE),
-					new ExposedEvent<>(Map.of(tree, 1.0), AT, 0.5, FeedbackValue.NONE));
+		List<FeedbackChange> liked = List.of(reaction(twoTrees, FeedbackValue.LIKE));
+		// 꼭대기마다 다른 묶음 — 꼭대기 둘이면 묶음마다 1/2
+		assertThat(InterestSignals.storylineExposed(exposures, liked, tops,
+				new StorylineFlows(Map.of(tree, 0, other, 1), Set.of())))
+			.containsExactlyInAnyOrder(new ExposedEvent<>(Map.of(0, 0.5, 1, 0.5), AT, 1.0, FeedbackValue.LIKE),
+					new ExposedEvent<>(Map.of(0, 1.0), AT, 0.5, FeedbackValue.NONE));
+		// 두 꼭대기가 같은 묶음(이어진 흐름) — 몫이 그 묶음에 모인다
+		assertThat(InterestSignals.storylineExposed(exposures, liked, tops,
+				new StorylineFlows(Map.of(tree, 0, other, 0), Set.of())))
+			.containsExactlyInAnyOrder(new ExposedEvent<>(Map.of(0, 1.0), AT, 1.0, FeedbackValue.LIKE),
+					new ExposedEvent<>(Map.of(0, 1.0), AT, 0.5, FeedbackValue.NONE));
+		// 묶음이 없는 꼭대기의 몫은 버린다 — tree 에만 묶음이 있으면 twoTrees 는 1/2 만 든다
+		assertThat(InterestSignals.storylineExposed(exposures, liked, tops, new StorylineFlows(Map.of(tree, 0), Set.of())))
+			.containsExactlyInAnyOrder(new ExposedEvent<>(Map.of(0, 0.5), AT, 1.0, FeedbackValue.LIKE),
+					new ExposedEvent<>(Map.of(0, 1.0), AT, 0.5, FeedbackValue.NONE));
+		// 대조 — 묶음이 하나도 없으면 스토리라인 쪽 재료가 없다
+		assertThat(InterestSignals.storylineExposed(exposures, liked, tops, StorylineFlows.NONE)).isEmpty();
 	}
 
 	/** 그대로인 사건의 이력 행 — 기록한 사건과 지금 사건이 같다 */

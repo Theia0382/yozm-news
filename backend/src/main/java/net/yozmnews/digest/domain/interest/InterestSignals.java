@@ -67,19 +67,29 @@ public final class InterestSignals {
 	 * @param exposures 지금 사건 → 창 안 가장 늦은 노출(시각 · 몫)
 	 * @param feedback 그 사용자의 이력 행 — 기록 순서
 	 * @param tops 지금 사건 → 꼭대기 — 소속이 없는 사건은 없다
-	 * @return 꼭대기가 있는 노출 사건마다 하나 — 꼭대기 k 개면 꼭대기마다 몫 배수 1/k. 주제를 셀 수 없는 사건도 든다
+	 * @param flows 꼭대기 → 사용자 스토리라인 묶음
+	 * @return 묶음이 있는 꼭대기를 가진 노출 사건마다 하나 — 꼭대기 k 개면 꼭대기마다 그 묶음에 몫 배수 1/k(같은 묶음의 꼭대기 둘이면
+	 *         2/k). 묶음이 없는 꼭대기의 몫은 버린다. 주제를 셀 수 없는 사건도 든다
 	 */
-	public static List<ExposedEvent<StorylineId>> storylineExposed(Map<EventId, Exposure> exposures,
-			List<FeedbackChange> feedback, Map<EventId, List<StorylineId>> tops) {
+	public static List<ExposedEvent<Integer>> storylineExposed(Map<EventId, Exposure> exposures,
+			List<FeedbackChange> feedback, Map<EventId, List<StorylineId>> tops, StorylineFlows flows) {
 		Objects.requireNonNull(exposures, "exposures");
 		Objects.requireNonNull(tops, "tops");
+		Objects.requireNonNull(flows, "flows");
 		Map<EventId, FeedbackValue> last = lastReactions(feedback);
-		List<ExposedEvent<StorylineId>> exposed = new ArrayList<>();
+		List<ExposedEvent<Integer>> exposed = new ArrayList<>();
 		exposures.forEach((event, exposure) -> {
 			List<StorylineId> roots = tops.get(event);
-			if (roots != null && !roots.isEmpty()) {
-				Map<StorylineId, Double> keys = new HashMap<>();
-				roots.forEach(top -> keys.put(top, 1.0 / roots.size()));
+			if (roots == null || roots.isEmpty()) {
+				return;
+			}
+			Map<Integer, Double> keys = new HashMap<>();
+			for (StorylineId top : roots) {
+				flows.flowOf(top).ifPresent(flow -> keys.merge(flow, 1.0 / roots.size(), Double::sum));
+			}
+			if (!keys.isEmpty()) {
+				// 같은 묶음의 몫을 더한 값이 1 을 넘지 않게 한다(부동소수 합)
+				keys.replaceAll((flow, multiple) -> Math.min(1.0, multiple));
 				exposed.add(new ExposedEvent<>(keys, exposure.at(), exposure.share(),
 						last.getOrDefault(event, FeedbackValue.NONE)));
 			}
@@ -125,21 +135,25 @@ public final class InterestSignals {
 	}
 
 	/**
-	 * 스토리라인 구독 변경 — {@link #storylinesToRead} 와 같은 행 가운데 꼭대기를 아는 행마다, 그 꼭대기에 몫 1.
+	 * 스토리라인 구독 변경 — {@link #storylinesToRead} 와 같은 행 가운데 꼭대기와 그 묶음을 아는 행마다, 그 묶음에 몫 1.
 	 * @param storylineTops 지금 스토리라인 → 꼭대기 — 없는 스토리라인은 없다
+	 * @param flows 꼭대기 → 사용자 스토리라인 묶음 — 묶음이 없는 꼭대기의 행은 버린다
 	 */
-	public static List<SubscriptionSignal<StorylineId>> storylines(List<StorylineSubscriptionChange> changes,
-			Map<StorylineId, StorylineId> storylineTops) {
+	public static List<SubscriptionSignal<Integer>> storylines(List<StorylineSubscriptionChange> changes,
+			Map<StorylineId, StorylineId> storylineTops, StorylineFlows flows) {
 		Objects.requireNonNull(changes, "changes");
 		Objects.requireNonNull(storylineTops, "storylineTops");
-		List<SubscriptionSignal<StorylineId>> signals = new ArrayList<>();
+		Objects.requireNonNull(flows, "flows");
+		List<SubscriptionSignal<Integer>> signals = new ArrayList<>();
 		for (StorylineSubscriptionChange change : changes) {
 			if (!counts(change)) {
 				continue;
 			}
 			StorylineId top = storylineTops.get(change.current());
 			if (top != null) {
-				signals.add(new SubscriptionSignal<>(Map.of(top, 1.0), sign(change.action()), change.occurredAt()));
+				flows.flowOf(top)
+					.ifPresent(flow -> signals
+						.add(new SubscriptionSignal<>(Map.of(flow, 1.0), sign(change.action()), change.occurredAt())));
 			}
 		}
 		return signals;
@@ -166,7 +180,7 @@ public final class InterestSignals {
 	private static boolean bySubscriber(StorylineSubscriptionCause cause) {
 		return switch (cause) {
 			case USER -> true;
-			case STORYLINE_MERGED, STORYLINE_REMOVED -> false;
+			case STORYLINE_MERGED, STORYLINE_REMOVED, STORYLINE_SPLIT -> false;
 		};
 	}
 

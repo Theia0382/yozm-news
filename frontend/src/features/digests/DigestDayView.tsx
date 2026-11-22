@@ -34,12 +34,19 @@ import {
   selectionReasonLabels,
   shownUsageText,
 } from "@/features/digests/digestTexts";
+import { SubscribeButton } from "@/features/storylines/SubscribeButton";
+import {
+  type TrackingView,
+  useTrackingView,
+} from "@/features/storylines/subscriptionQueries";
+import { TRACKING_STATES_FAILED } from "@/features/storylines/storylineTexts";
 import { formatDateTime } from "@/shared/lib/dateTime";
 
 /**
  * 날짜 하나의 다이제스트 — 가장 최근 시도의 상태 · 보이는 다이제스트의 섹션 · 사용량(docs/specs/reader.md reader-R9). 링크 · 출처 · 발행 시각은
  * 응답의 기사 정보로만 그리고, 종합문은 글자로만 그린다(HTML 로 해석하지 않는다). 주요 뉴스 · 헤드라인 항목마다 배지 하나 · 좋아요 /
- * 싫어요 한 벌 · 출처 기사 목록을 두고, 항목에 누른 값은 다이제스트마다 한 번 읽는다(docs/specs/feedback.md feedback-R7).
+ * 싫어요 한 벌 · 출처 기사 목록을 두고, 항목에 누른 값은 다이제스트마다 한 번 읽는다(docs/specs/feedback.md feedback-R7). 흐름이 있는
+ * 항목에는 흐름 추적 버튼을 두고, 추적 상태는 그 다이제스트의 흐름 전부를 한 번에 읽는다(docs/specs/user.md user-R52).
  */
 export function DigestDayView({ day }: { day: DigestDay }) {
   const { shown, latest, usage } = day;
@@ -129,6 +136,11 @@ function ShownContent({ shown }: { shown: ShownDigest }) {
   const feedback: FeedbackView = states.isSuccess
     ? { states: states.data, ready: true }
     : { states: NO_STATES, ready: false };
+  const tracking = useTrackingView(
+    shown.sections
+      .map((s) => s.storylineId)
+      .filter((id): id is number => id !== null),
+  );
   const overview = shown.sections.filter((s) => s.kind === "OVERVIEW");
   const stories = shown.sections.filter((s) => s.kind === "TOP_STORY");
   const headlines = shown.sections.filter((s) => s.kind === "HEADLINE");
@@ -144,6 +156,11 @@ function ShownContent({ shown }: { shown: ShownDigest }) {
       {states.isError && (
         <p role="alert" className="text-sm">
           {FEEDBACK_STATES_FAILED}
+        </p>
+      )}
+      {tracking.failed && (
+        <p role="alert" className="text-sm">
+          {TRACKING_STATES_FAILED}
         </p>
       )}
       {overview.map((section, index) => (
@@ -165,6 +182,7 @@ function ShownContent({ shown }: { shown: ShownDigest }) {
               story={story}
               digestId={shown.digestId}
               feedback={feedback}
+              tracking={tracking}
             />
           ))}
         </section>
@@ -181,6 +199,7 @@ function ShownContent({ shown }: { shown: ShownDigest }) {
                 headline={headline}
                 digestId={shown.digestId}
                 feedback={feedback}
+                tracking={tracking}
               />
             ))}
           </div>
@@ -202,10 +221,12 @@ function Story({
   story,
   digestId,
   feedback,
+  tracking,
 }: {
   story: DigestSection;
   digestId: number;
   feedback: FeedbackView;
+  tracking: TrackingView;
 }) {
   return (
     <article className="space-y-2 rounded-lg border bg-card p-4 text-card-foreground">
@@ -213,6 +234,7 @@ function Story({
         section={story}
         digestId={digestId}
         feedback={feedback}
+        tracking={tracking}
         className="font-medium break-words"
       />
       <p className="break-words whitespace-pre-line">{story.body}</p>
@@ -221,15 +243,17 @@ function Story({
   );
 }
 
-/** 더 볼 헤드라인 항목 하나 — 제목 · 배지 · 좋아요 / 싫어요 · 코멘트 · 출처 기사 */
+/** 더 볼 헤드라인 항목 하나 — 제목 · 배지 · 흐름 추적 · 좋아요 / 싫어요 · 코멘트 · 출처 기사 */
 function Headline({
   headline,
   digestId,
   feedback,
+  tracking,
 }: {
   headline: DigestSection;
   digestId: number;
   feedback: FeedbackView;
+  tracking: TrackingView;
 }) {
   return (
     <article className="space-y-1 py-3 first:pt-0 last:pb-0">
@@ -237,6 +261,7 @@ function Headline({
         section={headline}
         digestId={digestId}
         feedback={feedback}
+        tracking={tracking}
         className="text-sm font-medium break-words"
       />
       {headline.body && (
@@ -250,34 +275,46 @@ function Headline({
 }
 
 /**
- * 항목 머리 — 제목(선정 이유 배지 포함)과 그 항목의 좋아요 / 싫어요 한 벌. 버튼은 제목 요소 밖에 두어 낭독되는 제목 이름에 섞이지 않는다
+ * 항목 머리 — 제목(선정 이유 배지 포함)과 그 항목의 흐름 추적 버튼(항목을 묶은 흐름이 있을 때) · 좋아요 / 싫어요 한 벌. 버튼은 제목 요소
+ * 밖에 두어 낭독되는 제목 이름에 섞이지 않는다. 좁은 화면에서는 버튼 묶음이 제목 아래로 내려간다
  */
 function ItemHead({
   section,
   digestId,
   feedback,
+  tracking,
   className,
 }: {
   section: DigestSection;
   digestId: number;
   feedback: FeedbackView;
+  tracking: TrackingView;
   className: string;
 }) {
   const item = feedbackItemOf(section);
   return (
-    <div className="flex items-start justify-between gap-2">
-      <h3 className={className}>
+    <div className="flex flex-wrap items-start justify-between gap-2">
+      <h3 className={`min-w-0 flex-1 basis-48 ${className}`}>
         {section.title}
         <ReasonBadge section={section} />
       </h3>
-      {item && (
-        <FeedbackButtons
-          digestId={digestId}
-          item={item}
-          current={feedback.states.get(item.key) ?? null}
-          ready={feedback.ready}
-        />
-      )}
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {section.storylineId !== null && (
+          <SubscribeButton
+            storylineId={section.storylineId}
+            tracking={tracking}
+            itemTitle={section.title ?? undefined}
+          />
+        )}
+        {item && (
+          <FeedbackButtons
+            digestId={digestId}
+            item={item}
+            current={feedback.states.get(item.key) ?? null}
+            ready={feedback.ready}
+          />
+        )}
+      </div>
     </div>
   );
 }

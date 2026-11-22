@@ -23,6 +23,7 @@ import net.yozmnews.llm.LlmModel;
 import net.yozmnews.llm.Provider;
 import net.yozmnews.llm.ReasoningEffort;
 import net.yozmnews.platform.StructuredOutputSchema;
+import net.yozmnews.storyline.StorylineId;
 import net.yozmnews.user.SummaryLength;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
@@ -51,6 +52,9 @@ class DigestPromptsTests {
 
 	/** 시험 사건 ID — 구획 어디에도 나오지 않아야 하는 큰 값 */
 	private static final long EVENT_ID = 876_543_210L;
+
+	/** 항목을 묶은 꼭대기의 ID — 프롬프트 어디에도 나타나면 안 되는 값 */
+	private static final long STORYLINE_ID = 765_432_109L;
 
 	private static final DigestProfile PROFILE = new DigestProfile(List.of("정치", "증권·시장"), List.of("미국"),
 			"반도체 공급망", ZoneId.of("America/New_York"), SummaryLength.NORMAL, ReasoningEffort.MEDIUM);
@@ -82,7 +86,7 @@ class DigestPromptsTests {
 		// 항목 I1(주요 뉴스): 사건 하나에 기사 둘 · 사건 하나에 기사 하나. 항목 I2(헤드라인): 기사 하나
 		InputItem top = new InputItem(ItemKind.TOP_STORY,
 				List.of(event(EVENT_ID, article(BIG_ID, "분쟁 소식"), article(SECOND_ID, "분쟁 후속")),
-						event(EVENT_ID + 1, article(THIRD_ID, "분쟁 반응"))));
+						event(EVENT_ID + 1, article(THIRD_ID, "분쟁 반응"))), new StorylineId(STORYLINE_ID));
 		InputItem headline = single(ItemKind.HEADLINE, 11L, "정치 소식");
 		DigestPrompt prompt = compose(PROFILE, List.of(top, headline), STRUCTURED);
 		JsonNode root = JSON.readTree(prompt.userContent());
@@ -99,12 +103,13 @@ class DigestPromptsTests {
 		JsonNode second = root.get("items").get(1);
 		assertThat(second.get(0).asString()).isEqualTo("I2");
 		assertThat(second.get(1).asString()).isEqualTo("headlines");
-		// 기사 별칭 · DB ID(기사 · 사건)는 어디에도 없다
+		// 기사 별칭 · DB ID(기사 · 사건 · 항목을 묶은 스토리라인)는 어디에도 없다
 		assertThat(prompt.userContent()).doesNotContain("\"A1\"")
 			.doesNotContain("987654321")
 			.doesNotContain("987654322")
-			.doesNotContain("876543210");
-		assertThat(prompt.instructions()).doesNotContain("987654321");
+			.doesNotContain("876543210")
+			.doesNotContain("765432109");
+		assertThat(prompt.instructions()).doesNotContain("987654321").doesNotContain("765432109");
 	}
 
 	@Test
@@ -115,7 +120,7 @@ class DigestPromptsTests {
 				List.of("국내"));
 
 		JsonNode root = JSON.readTree(
-				compose(PROFILE, List.of(new InputItem(ItemKind.TOP_STORY, List.of(event(EVENT_ID, article)))), STRUCTURED)
+				compose(PROFILE, List.of(new InputItem(ItemKind.TOP_STORY, List.of(event(EVENT_ID, article)), null)), STRUCTURED)
 					.userContent());
 
 		// 발행 시각은 프로필 시간대(뉴욕 — UTC 03:30 은 전날 22:30)
@@ -135,7 +140,7 @@ class DigestPromptsTests {
 				Instant.parse("2026-11-17T03:30:00Z"), List.of(), List.of());
 
 		JsonNode root = JSON.readTree(
-				compose(PROFILE, List.of(new InputItem(ItemKind.TOP_STORY, List.of(event(EVENT_ID, article)))), STRUCTURED)
+				compose(PROFILE, List.of(new InputItem(ItemKind.TOP_STORY, List.of(event(EVENT_ID, article)), null)), STRUCTURED)
 					.userContent());
 
 		assertThat(root.get("items")).hasSize(1);
@@ -150,7 +155,7 @@ class DigestPromptsTests {
 				Instant.parse("2026-11-17T03:30:00Z"), List.of(), List.of());
 
 		JsonNode root = JSON.readTree(
-				compose(PROFILE, List.of(new InputItem(ItemKind.TOP_STORY, List.of(event(EVENT_ID, article)))), STRUCTURED)
+				compose(PROFILE, List.of(new InputItem(ItemKind.TOP_STORY, List.of(event(EVENT_ID, article)), null)), STRUCTURED)
 					.userContent());
 
 		assertThat(root.get("items").get(0).get(2).get(0).get(0).get(5).asString()).isEmpty();
@@ -239,7 +244,7 @@ class DigestPromptsTests {
 
 	/** 기사 하나뿐인 사건 하나의 항목 — 사건 ID 는 기사 ID */
 	private static InputItem single(ItemKind kind, long id, String title) {
-		return new InputItem(kind, List.of(event(id, article(id, title))));
+		return new InputItem(kind, List.of(event(id, article(id, title))), null);
 	}
 
 	private static InputEvent event(long id, CandidateArticle... articles) {

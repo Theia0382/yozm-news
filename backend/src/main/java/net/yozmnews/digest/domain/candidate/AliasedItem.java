@@ -5,6 +5,8 @@ import java.util.Objects;
 
 import net.yozmnews.digest.domain.content.SectionEvent;
 import net.yozmnews.digest.domain.item.ItemKind;
+import net.yozmnews.storyline.StorylineId;
+import org.jspecify.annotations.Nullable;
 
 /**
  * 별칭을 매긴 항목 — 별칭은 이번 생성에서만 쓰는 짧은 이름 · docs/specs/digest.md §5 · digest-R3
@@ -13,8 +15,10 @@ import net.yozmnews.digest.domain.item.ItemKind;
  * @param kind 주요 뉴스 · 헤드라인
  * @param events 항목의 사건과 선정 이유 — 입력 순서, 비지 않음
  * @param articles 항목의 표본 기사와 선정 이유 — 입력 순서, 비지 않음. 인용이 된다
+ * @param storyline 항목을 묶은 포함 나무의 꼭대기 — 혼자 한 항목이면 null
  */
-public record AliasedItem(String alias, ItemKind kind, List<SectionEvent> events, List<DigestCandidate> articles) {
+public record AliasedItem(String alias, ItemKind kind, List<SectionEvent> events, List<DigestCandidate> articles,
+		@Nullable StorylineId storyline) {
 
 	/**
 	 * @throws IllegalArgumentException 사건이나 기사가 없을 때

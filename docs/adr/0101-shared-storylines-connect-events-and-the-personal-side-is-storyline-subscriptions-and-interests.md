@@ -1,6 +1,6 @@
 # ADR-0101: 사건을 잇는 흐름은 모든 사용자가 공유하는 스토리라인이 맡고, 개인 쪽은 스토리라인 구독과 관심사로 나눈다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 개인 쪽의 개체가 둘이라는 것과 사용자마다 달라지는 스토리라인 정보의 자리([ADR-0281](0281-a-user-storyline-is-a-flow-that-received-interest-signals-and-tracks-the-tops-reached-forward-along-follows-from-its-seeds-as-one-group.md))
 - 날짜: 2026-11-09
 - 근거: [이슈 #116](https://github.com/Theia0382/yozm-news/issues/116) — 라벨 기준 2판 검토(#100)에서 리드가 정한 층과 이름을 바탕으로, 스토리라인의 소속 · 관계 · 행사 · 개인 쪽 모듈 배치를 리드와 정함
 - 관련: [ADR-0025](0025-long-term-personal-news-history-in-v1.md)(세 층 가운데 이슈 항목 · 다이제스트 입출력의 이슈 문장 · 모듈 항목, 변화 리포트 입력의 이슈 변화, 결과의 이슈 세 항목, 검토한 대안의 이름 행 — 부분 대체), [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md)(결정 "그보다 긴 전개는 사용자별 이슈가 잇는다" — 부분 대체), [ADR-0028](0028-explicit-signals-and-interest-weighted-candidates.md)(관심 신호의 이슈 추적 · 해제와 그 기록 모듈 — 부분 대체), [ADR-0029](0029-indefinite-summary-retention-with-optional-deletion.md)(다이제스트 호출에 넘기는 이슈 상태 요약 — 부분 대체), [ADR-0086](0086-events-close-after-an-idle-period-since-the-last-join-or-a-maximum-period-since-opening.md)(긴 전개를 잇는 단위 — 부분 대체), [ADR-0102](0102-an-event-is-the-reports-of-one-happening-narrowed-by-the-event-membership-question-wording.md)(사건의 범위), [ADR-0103](0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md)(큰 판정의 단위와 마일스톤)
@@ -21,6 +21,7 @@
 - **스토리라인 사이에는 관계가 있다.** 종류는 둘이다 — 포함(큰 흐름과 그 갈래)과 이어짐 · 인과(앞 흐름이 뒤 흐름을 낳음). 관계를 소속에서 끌어낼지 명시 고리로 둘지, 판정 방법, 데이터는 스토리라인을 구현할 때 정한다.
 - **행사(포럼 · 박람회)는 스토리라인이다.** 강연 · 발표 · 행사 자체를 다룬 보도는 각각 사건이고 그 행사의 스토리라인에 든다. 발표 사건은 그 내용의 흐름에도 들 수 있다.
 - **주제는 스토리라인 층 밖이다.** 주제(태그)는 기사의 분류이고, 흐름이 아니다.
+> 부분 대체(첫 문장 · 셋째 문장) — [ADR-0281](0281-a-user-storyline-is-a-flow-that-received-interest-signals-and-tracks-the-tops-reached-forward-along-follows-from-its-seeds-as-one-group.md). 지금 상태: [user Spec "사용자 스토리라인"](../specs/user.md#사용자-스토리라인) user-R66
 - **개인 쪽은 스토리라인 구독과 관심사 둘이다.** 스토리라인 구독(사용자와 스토리라인의 관계와 그 변경 이력)은 주제 구독과 같은 자리인 `user` 에 둔다. 사용자마다 달라지는 스토리라인 정보(그 사용자가 받은 소식 등 — 둘지는 다이제스트 설계)와 관심사(관심도 · 관심사 히스토리)는 `digest` 에 둔다. 관심사를 개체로 세울지는 관심도를 설계할 때 정한다.
 - **이름은 개발 이름과 코드가 같다** — 사건은 `event`, 스토리라인은 `storyline`. "이슈"는 개발 이름으로 쓰지 않는다. 화면 문구는 화면을 만들 때 따로 정한다. 사건 단위의 구독은 두지 않는다 — 개인이 따라가는 단위는 스토리라인이다.
 - **모듈 `storyline` 은 공유 스토리라인이 이어받는다.** 지금 설계의 사용자별 일(추적 · 해제 · 상태 전이)은 스토리라인 구독(`user`)과 `digest` 로 옮긴다. 공유 스토리라인의 책임 · 계약은 구현할 때 정한다.
@@ -64,3 +65,4 @@
 - 2026-11-18: 결과 "다이제스트가 스토리라인을 어떻게 쓰는지는 다이제스트를 설계할 때 정한다" — [ADR-0220](0220-big-slot-candidates-are-grouped-by-big-storyline-row-in-the-prompt-and-the-digest-llm-neither-makes-nor-links-groups.md)(큰 슬롯 후보를 큰 판정 행마다 묶어 보이고 묶음을 새로 만들거나 잇지 않음), 지금 상태는 [digest Spec "프롬프트 구성"](../specs/digest.md#프롬프트-구성)
 - 2026-11-18: 결정 "이름은 개발 이름과 코드가 같다"의 "화면 문구는 화면을 만들 때 따로 정한다" — 다이제스트의 선정 이유 · 큰 슬롯의 화면 이름(구독 주제 · 관심 반영 · 큰 화제 — [ADR-0241](0241-selection-reasons-mark-only-citations-outside-subscribed-topics-named-interest-and-big-topic.md)), 지금 상태는 [`overview` §8](../overview.md#8-용어)
 - 2026-11-22: 결정 "개인 쪽은 스토리라인 구독과 관심사 둘이다"의 관심사에 드는 스토리라인 관심 — [ADR-0277](0277-storyline-interest-is-counted-per-containment-tree-top-with-the-topic-formula-and-reactions-to-a-flow-seen-within-seven-days-go-to-the-storyline-only.md) · [digest Spec "관심도"](../specs/digest.md#관심도) digest-R49
+- 2026-11-22: 결정 "개인 쪽은 스토리라인 구독과 관심사 둘이다"의 스토리라인 구독 — 구독은 사용자 스토리라인을 가리킨다([ADR-0282](0282-flow-tracking-points-to-a-user-storyline-which-user-handlers-store-under-the-settings-lock-while-readers-get-the-result-of-the-same-rule.md)), 지금 상태는 [user Spec "스토리라인 구독"](../specs/user.md#스토리라인-구독) user-R52 · R53

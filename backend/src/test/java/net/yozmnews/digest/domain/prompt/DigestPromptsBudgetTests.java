@@ -83,7 +83,7 @@ class DigestPromptsBudgetTests {
 				new DigestCandidate(new ArticleId(4), SelectionReason.SUBSCRIBED), "제목", "요약문", List.of("연합뉴스"),
 				PUBLISHED, List.of("정치", "국회·정당"), sixRegions);
 		DigestInput input = input(profile(SummaryLength.NORMAL, "", "Asia/Seoul"),
-				List.of(new InputItem(ItemKind.TOP_STORY, List.of(event(10, crowded, escapy, plain, regional)))));
+				List.of(new InputItem(ItemKind.TOP_STORY, List.of(event(10, crowded, escapy, plain, regional)), null)));
 
 		JsonNode lines = JSON.readTree(compose(input).userContent()).get("items").get(0).get(2).get(0);
 
@@ -160,7 +160,7 @@ class DigestPromptsBudgetTests {
 				}
 				ofItem.add(event(i * 10L + e, lines));
 			}
-			items.add(new InputItem(ItemKind.TOP_STORY, ofItem));
+			items.add(new InputItem(ItemKind.TOP_STORY, ofItem, null));
 		}
 		DigestInput input = input(profile(SummaryLength.NORMAL, "", "Asia/Seoul"), items);
 
@@ -196,7 +196,7 @@ class DigestPromptsBudgetTests {
 		for (int i = 1; i <= count; i++) {
 			CandidateArticle line = new CandidateArticle(new DigestCandidate(new ArticleId(i), SelectionReason.SUBSCRIBED),
 					"제목", "", List.of(), PUBLISHED, List.of(), List.of());
-			items.add(new InputItem(kind, List.of(event(i, line))));
+			items.add(new InputItem(kind, List.of(event(i, line)), null));
 		}
 		return input(profile(SummaryLength.NORMAL, "", "Asia/Seoul"), items);
 	}

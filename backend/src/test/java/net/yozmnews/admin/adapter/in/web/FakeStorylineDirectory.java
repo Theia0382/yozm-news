@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import net.yozmnews.event.EventId;
 import net.yozmnews.event.EventPeriod;
@@ -85,6 +86,11 @@ class FakeStorylineDirectory implements StorylineDirectory {
 	@Override
 	public Map<StorylineId, StorylineId> topsOfStorylines(Collection<StorylineId> storylines) {
 		throw new UnsupportedOperationException("운영자 API 는 스토리라인의 꼭대기를 읽지 않는다");
+	}
+
+	@Override
+	public Map<StorylineId, Set<StorylineId>> continuationsOf(Collection<StorylineId> storylines) {
+		throw new UnsupportedOperationException("운영자 API 는 스토리라인의 이어짐을 읽지 않는다");
 	}
 
 	@Override

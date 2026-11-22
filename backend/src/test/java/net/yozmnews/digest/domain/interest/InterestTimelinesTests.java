@@ -62,7 +62,7 @@ class InterestTimelinesTests {
 								T1.plus(Duration.ofDays(2))),
 						topic(Set.of("e"), TopicSubscriptionAction.REMOVE, TopicSubscriptionCause.USER,
 								T1.plus(Duration.ofDays(5)))),
-				List.of(), Map.of());
+				List.of(), Map.of(), StorylineFlows.NONE);
 
 		List<InterestPoint> points = InterestTimelines.points(record, List.of(T0, T1, T2));
 
@@ -95,7 +95,7 @@ class InterestTimelinesTests {
 	@Test
 	void theReferencesAreAtLeastTwoAndNotGoingBack() {
 		InterestRecord empty = new InterestRecord(TAG_SET, List.of(), Map.of(), Map.of(), List.of(), List.of(), List.of(),
-				Map.of());
+				Map.of(), StorylineFlows.NONE);
 
 		assertThatIllegalArgumentException().isThrownBy(() -> InterestTimelines.points(empty, List.of(T0)));
 		assertThatIllegalArgumentException().isThrownBy(() -> InterestTimelines.points(empty, List.of(T1, T0)));
@@ -109,7 +109,7 @@ class InterestTimelinesTests {
 		InterestRecord record = new InterestRecord(TAG_SET, List.of(), Map.of(), Map.of(), List.of(),
 				List.of(topic(Set.of("a"), TopicSubscriptionAction.ADD, TopicSubscriptionCause.USER, T0),
 						topic(Set.of("a"), TopicSubscriptionAction.ADD, TopicSubscriptionCause.USER, T0)),
-				List.of(), Map.of());
+				List.of(), Map.of(), StorylineFlows.NONE);
 
 		List<InterestPoint> points = InterestTimelines.points(record, List.of(T0, T1, T1));
 

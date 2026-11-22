@@ -45,3 +45,7 @@
 | 헤드라인 항목을 상수만큼만 생성에 넘긴다 | 최대 후보 수의 뜻이 "사건 수, 단 헤드라인은 몇 개까지"로 갈린다 — 비용 위쪽은 분량 단계로 고른다 |
 | 헤드라인을 섹션 하나에 담는다 | 헤드라인 항목마다 제목 · 코멘트 · 사건 · 출처가 있어 섹션과 사건의 짝이 항목을 잃는다 |
 | 출력이 기사 별칭도 인용한다 | 인용이 표본이라 LLM 이 고를 것이 없다 |
+
+## 후속 기록
+
+- 2026-11-22: 결정의 섹션이 갖는 것 — 항목을 묶은 꼭대기도 섹션에 남긴다([ADR-0284](0284-a-digest-item-keeps-the-top-that-grouped-it-on-its-section-and-items-with-a-flow-carry-a-flow-tracking-button.md)), 지금 상태는 [digest Spec](../specs/digest.md) digest-R7 · R46

@@ -17,20 +17,21 @@ import java.util.concurrent.atomic.AtomicInteger;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleDirectory;
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.digest.DigestRounds;
 import net.yozmnews.digest.DigestRows;
 import net.yozmnews.digest.SelectionReason;
 import net.yozmnews.digest.domain.candidate.DigestCandidate;
 import net.yozmnews.digest.domain.digest.DigestPeriod;
+import net.yozmnews.digest.domain.exposure.ExposureRepository;
 import net.yozmnews.digest.domain.input.CandidateArticle;
 import net.yozmnews.digest.domain.input.DigestInput;
 import net.yozmnews.digest.domain.input.DigestProfile;
 import net.yozmnews.digest.domain.input.InputEvent;
 import net.yozmnews.digest.domain.input.InputItem;
 import net.yozmnews.digest.domain.item.ItemKind;
-import net.yozmnews.event.EventId;
-import net.yozmnews.digest.domain.exposure.ExposureRepository;
 import net.yozmnews.event.EventArticles;
 import net.yozmnews.event.EventDirectory;
+import net.yozmnews.event.EventId;
 import net.yozmnews.feedback.EventFeedback;
 import net.yozmnews.llm.LlmModel;
 import net.yozmnews.llm.Provider;
@@ -38,6 +39,7 @@ import net.yozmnews.llm.ReasoningEffort;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.reader.ReaderRows;
 import net.yozmnews.storyline.StorylineDirectory;
+import net.yozmnews.storyline.StorylineId;
 import net.yozmnews.storyline.StorylineRows;
 import net.yozmnews.tag.ArticleEvaluations;
 import net.yozmnews.tag.TagKeyLineage;
@@ -45,9 +47,12 @@ import net.yozmnews.tag.TagKeyMapping;
 import net.yozmnews.tag.TagSetDirectory;
 import net.yozmnews.tag.TagSetId;
 import net.yozmnews.user.DigestInterestsDirectory;
-import net.yozmnews.user.SummaryLength;
 import net.yozmnews.user.StorylineSubscriptionDirectory;
+import net.yozmnews.user.SummaryLength;
 import net.yozmnews.user.TopicSubscriptionHistory;
+import net.yozmnews.user.UserStorylineDirectory;
+import net.yozmnews.user.UserStorylineFixtures;
+import org.jobrunr.scheduling.JobScheduler;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -56,8 +61,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.TestPropertySource;
-import org.jobrunr.scheduling.JobScheduler;
-import net.yozmnews.digest.DigestRounds;
 
 /**
  * 후보 선별의 재료 경로 — 실제 PostgreSQL 의 사용자 설정 · 기사 · 평가 · 사건 · 스토리라인 행에서 관심 설정 조회 · 첫 평가 시각 · 평가 · 발행
@@ -134,6 +137,9 @@ class CandidateSelectionTests {
 
 	@Autowired
 	StorylineSubscriptionDirectory storylineSubscriptions;
+
+	@Autowired
+	UserStorylineDirectory userStorylines;
 
 	private ReaderRows rows;
 
@@ -287,6 +293,8 @@ class CandidateSelectionTests {
 		assertThat(input.items()).extracting(item -> item.events().stream().map(e -> e.event().value()).toList())
 			.containsExactly(List.of(this.e1, event(this.a5)), List.of(alone));
 		assertThat(input.items()).extracting(InputItem::kind).containsOnly(ItemKind.TOP_STORY);
+		// 항목은 자기를 묶은 꼭대기를 싣는다 — 혼자 한 사건의 항목은 없다
+		assertThat(input.items()).extracting(InputItem::storyline).containsExactly(new StorylineId(storyline), null);
 	}
 
 	@Test
@@ -446,8 +454,7 @@ class CandidateSelectionTests {
 		AtomicInteger skewed = new AtomicInteger(1);
 		CandidateSelection once = new CandidateSelection(this.interests, this.evaluations,
 				new ActiveEvaluations(this.evaluations, skewing(skewed, elsewhere)), this.tagSets, this.articles, this.events,
-				this.storylines, this.interestMaterials, this.feedback, this.storylineSubscriptions,
-				InstantSource.system());
+				this.storylines, this.interestMaterials, this.feedback, InstantSource.system());
 
 		assertThat(events(once.select(new UserId(this.user), DAY, ROOMY)))
 			.containsExactly(this.e1 + ":SUBSCRIBED", event(this.a5) + ":SUBSCRIBED");
@@ -456,8 +463,7 @@ class CandidateSelectionTests {
 		AtomicInteger always = new AtomicInteger(Integer.MAX_VALUE);
 		CandidateSelection never = new CandidateSelection(this.interests, this.evaluations,
 				new ActiveEvaluations(this.evaluations, skewing(always, elsewhere)), this.tagSets, this.articles, this.events,
-				this.storylines, this.interestMaterials, this.feedback, this.storylineSubscriptions,
-				InstantSource.system());
+				this.storylines, this.interestMaterials, this.feedback, InstantSource.system());
 		assertThatIllegalStateException().isThrownBy(() -> never.select(new UserId(this.user), DAY, ROOMY))
 			.withMessageContaining("2 번 어긋났다");
 	}
@@ -556,6 +562,62 @@ class CandidateSelectionTests {
 	}
 
 	@Test
+	void aDislikedEarlierFlowLeavesTheNewEventOfItsLaterFlowOut() {
+		// 앞 흐름 — 지난 사건 하나(11-04 다이제스트가 혼자인 항목으로 보였다)에 싫어요: 그 흐름의 관심 −1 ÷ 4 = −0.25 ≤ −0.2
+		long earlier = shownAndDislikedStoryline();
+		// 뒤 흐름 — 구독한 정치 행정의 새 사건 하나뿐인 다른 스토리라인
+		long fresh = event(eventArticle("정부 새 대응", "politics.executive", 3.5, "2026-11-05T06:00:00Z", 1));
+		long later = this.rows.storyline("2026-11-05T06:00:00Z", "2026-11-05T06:00:00Z", fresh);
+		this.rows.member(later, fresh);
+		// 대조 — 이어짐이 없으면 다른 흐름이라 새 사건이 구독 사건으로 든다
+		assertThat(events(this.selection.select(new UserId(this.user), DAY, ROOMY))).contains(fresh + ":SUBSCRIBED");
+
+		UserStorylineFixtures.follows(this.jdbc, earlier, later);
+
+		// 사용자 스토리라인이 뒤 흐름을 따라가 같은 관심을 쓴다 — 새 사건의 꼭대기가 거른 흐름이라 빠진다
+		assertThat(events(this.selection.select(new UserId(this.user), DAY, ROOMY)))
+			.containsExactly(this.e1 + ":SUBSCRIBED", event(this.a5) + ":SUBSCRIBED");
+	}
+
+	@Test
+	void anEventOfTheLaterFlowOfATrackedFlowOutsideTheSubscribedTopicsEntersByInterest() {
+		long tracked = legislatureStoryline();
+		subscribeStoryline(tracked, "USER");
+		// 뒤 흐름 — 구독 밖(국제 분쟁) 기사 하나뿐인 사건과 그 스토리라인, 보도 강도가 작아 크지 않다
+		long article = article("분쟁 소식", "world.conflict", 3.0, "2026-11-05T06:00:00Z", 1);
+		long flowEvent = this.rows.event(1, "2026-11-05T06:00:00Z", "2026-11-05T06:00:00Z");
+		this.rows.assign(article, flowEvent, "2026-11-05T06:00:00Z");
+		long later = this.rows.storyline("2026-11-05T06:00:00Z", "2026-11-05T06:00:00Z", flowEvent);
+		this.rows.member(later, flowEvent);
+		// 대조 — 이어짐이 없으면 추적하지 않는 흐름이고 구독 주제 밖이라 들지 않는다
+		assertThat(events(this.selection.select(new UserId(this.user), DAY, ROOMY)))
+			.containsExactly(this.e1 + ":SUBSCRIBED", event(this.a5) + ":SUBSCRIBED");
+
+		UserStorylineFixtures.follows(this.jdbc, tracked, later);
+
+		// 추적한 흐름이 이어진 뒤 흐름도 관심 흐름이다 — 저장한 추적 대상에 아직 없어도(읽을 때 계산) 새 길로 든다
+		DigestInput input = this.selection.select(new UserId(this.user), DAY, ROOMY).orElseThrow();
+		assertThat(events(input)).contains(flowEvent + ":INTEREST");
+		assertThat(articlesOf(input, flowEvent)).containsExactly(article);
+	}
+
+	@Test
+	void aBigRowWhoseTopIsTheLaterFlowOfADislikedFlowIsSkipped() {
+		long bigEvent = event(bigStoryline()[0]);
+		long big = storylineOf(bigEvent);
+		long earlier = shownAndDislikedStoryline();
+		// 대조 — 이어짐이 없으면 큰 슬롯으로 든다
+		assertThat(events(this.selection.select(new UserId(this.user), DAY, ROOMY))).containsExactly(
+				bigEvent + ":MAJOR_STORYLINE", this.e1 + ":SUBSCRIBED", event(this.a5) + ":SUBSCRIBED");
+
+		UserStorylineFixtures.follows(this.jdbc, earlier, big);
+
+		// 큰 판정 행 머리의 꼭대기가 거른 흐름의 뒤 흐름이라 건너뛴다(다음 행이 없다)
+		assertThat(events(this.selection.select(new UserId(this.user), DAY, ROOMY)))
+			.containsExactly(this.e1 + ":SUBSCRIBED", event(this.a5) + ":SUBSCRIBED");
+	}
+
+	@Test
 	void aStorylineSubscriptionRewrittenByAMergeIsNotASignal() {
 		eventArticle("의회 넷이", "politics.legislature", 3.6, "2026-11-05T06:00:00Z", 1);
 		subscribeStoryline(legislatureStoryline(), "STORYLINE_MERGED");
@@ -638,7 +700,7 @@ class CandidateSelectionTests {
 	private CandidateSelection selectionAt(String now) {
 		return new CandidateSelection(this.interests, this.evaluations,
 				new ActiveEvaluations(this.evaluations, this.lineage), this.tagSets, this.articles, this.events,
-				this.storylines, this.interestMaterials, this.feedback, this.storylineSubscriptions,
+				this.storylines, this.interestMaterials, this.feedback,
 				InstantSource.fixed(Instant.parse(now)));
 	}
 
@@ -697,10 +759,10 @@ class CandidateSelectionTests {
 	private CandidateSelection selectionWithInterestLineage(TagKeyLineage interestLineage) {
 		InterestMaterials materials = new InterestMaterials(this.exposures, this.feedback,
 				new ActiveEvaluations(this.evaluations, interestLineage), this.topicHistory,
-				this.storylineSubscriptions, this.storylines, this.events);
+				this.storylineSubscriptions, this.storylines, this.events, this.userStorylines);
 		return new CandidateSelection(this.interests, this.evaluations,
 				new ActiveEvaluations(this.evaluations, this.lineage), this.tagSets, this.articles, this.events,
-				this.storylines, materials, this.feedback, this.storylineSubscriptions, InstantSource.system());
+				this.storylines, materials, this.feedback, InstantSource.system());
 	}
 
 	/**
@@ -744,11 +806,26 @@ class CandidateSelectionTests {
 		return storyline;
 	}
 
+	/**
+	 * 구독 밖(국제 분쟁)의 지난 사건(11-01) 하나뿐인 스토리라인 — 11-04 다이제스트가 그 사건을 혼자인 항목으로 보였고(몫 1) 사용자가 싫어요를
+	 * 눌렀다. 보도 강도가 작아 크지 않다
+	 */
+	private long shownAndDislikedStoryline() {
+		long article = article("분쟁 지난 일", "world.conflict", 3.0, "2026-11-01T00:00:00Z", 1);
+		long past = this.rows.event(1, "2026-11-01T00:00:00Z", "2026-11-01T00:00:00Z");
+		this.rows.assign(article, past, "2026-11-01T00:00:00Z");
+		long storyline = this.rows.storyline("2026-11-01T00:00:00Z", "2026-11-01T00:00:00Z", past);
+		this.rows.member(storyline, past);
+		DigestRows.item(this.jdbc, DigestRows.digest(this.jdbc, this.user, "2026-11-04", "2026-11-04T06:00:00Z"), past);
+		react(past, "DISLIKE", "2026-11-04T07:00:00Z");
+		return storyline;
+	}
+
 	private void subscribeStoryline(long storyline, String cause) {
 		subscribeStoryline(storyline, cause, "2026-11-05T12:00:00Z");
 	}
 
-	/** 스토리라인 구독 — 이력 한 줄(더함)과 지금 구독 행 */
+	/** 스토리라인 구독 — 이력 한 줄(더함)과 추적 중인 사용자 스토리라인 하나(추적 대상 · 추적 씨앗이 그 스토리라인) */
 	private void subscribeStoryline(long storyline, String cause, String at) {
 		this.jdbc.sql("""
 				insert into user_storyline_subscription_events (user_id, storyline_id, action, cause, occurred_at)
@@ -759,11 +836,21 @@ class CandidateSelectionTests {
 			.param("cause", cause)
 			.param("at", at)
 			.update();
+		long userStoryline = this.jdbc.sql("""
+				insert into user_storylines (user_id, created_at) values (:user, cast(:at as timestamptz)) returning id
+				""").param("user", this.user).param("at", at).query(Long.class).single();
+		this.jdbc.sql("insert into user_storyline_members (user_storyline_id, storyline_id) values (:id, :storyline)")
+			.param("id", userStoryline)
+			.param("storyline", storyline)
+			.update();
+		this.jdbc.sql("insert into user_storyline_tracked_seeds (user_storyline_id, storyline_id) values (:id, :storyline)")
+			.param("id", userStoryline)
+			.param("storyline", storyline)
+			.update();
 		this.jdbc.sql("""
-				insert into user_storyline_subscriptions (user_id, storyline_id, created_at)
-				values (:user, :storyline, cast(:at as timestamptz))
-				on conflict do nothing
-				""").param("user", this.user).param("storyline", storyline).param("at", at).update();
+				insert into user_storyline_subscriptions (user_id, user_storyline_id, created_at)
+				values (:user, :id, cast(:at as timestamptz))
+				""").param("user", this.user).param("id", userStoryline).param("at", at).update();
 	}
 
 	private void topicChange(String key, String action) {

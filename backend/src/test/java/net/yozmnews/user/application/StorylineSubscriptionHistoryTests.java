@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Set;
 
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.platform.UserId;
@@ -12,6 +13,7 @@ import net.yozmnews.storyline.StorylineId;
 import net.yozmnews.storyline.StorylineRows;
 import net.yozmnews.user.StorylineSubscriptionAction;
 import net.yozmnews.user.StorylineSubscriptionCause;
+import net.yozmnews.user.UserStorylineFixtures;
 import net.yozmnews.user.application.StorylineSubscriptionHistory.HistoryEntry;
 import net.yozmnews.user.application.StorylineSubscriptionHistory.HistoryPage;
 import net.yozmnews.user.domain.subscription.StorylineSubscriptionRepository;
@@ -159,19 +161,23 @@ class StorylineSubscriptionHistoryTests {
 		UserId user = user("history-a@example.com");
 		long survivor = storyline();
 		long merged = storyline();
-		this.transaction.executeWithoutResult(status -> this.repository.add(user, merged, T1));
-		record(user, merged, StorylineSubscriptionAction.ADD, StorylineSubscriptionCause.USER, T1);
+		// 추적 중인 사용자 스토리라인 하나 — 추적 씨앗과 이력(더함 · 사용자)이 merged 다
+		UserStorylineFixtures.tracked(this.jdbc, user, merged, T1);
 		merge(merged, survivor);
 		long events = events(user);
 
 		this.history.page(user, null);
 
 		// 합쳐진 ID 의 구독 행이 있어도 고쳐 쓰지 않는다
-		assertThat(this.repository.load(user)).containsOnlyKeys(merged);
+		assertThat(UserStorylineFixtures.saved(this.jdbc, user)).singleElement()
+			.extracting(saved -> saved.seeds())
+			.isEqualTo(Set.of(merged));
 		assertThat(events(user)).isEqualTo(events);
 		// 대조 — 같은 상태에서 내 구독 조회는 따라가기로 행을 옮기고 이력을 남긴다
 		this.subscriptions.view(user, T2);
-		assertThat(this.repository.load(user)).containsOnlyKeys(survivor);
+		assertThat(UserStorylineFixtures.saved(this.jdbc, user)).singleElement()
+			.extracting(saved -> saved.seeds())
+			.isEqualTo(Set.of(survivor));
 		assertThat(events(user)).isGreaterThan(events);
 	}
 

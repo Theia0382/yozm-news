@@ -106,7 +106,7 @@
 | [0098](0098-label-rule-2-samples-hold-no-big-event-gold-and-big-event-precision-is-not-measured-without-marks.md) | 라벨 기준 2판 표본에는 큰 사건 정답을 두지 않고, 큰 사건 표시가 없는 표본은 큰 사건 정밀도를 재지 않는다 | 대체됨 (0116) |
 | [0099](0099-importance-judged-by-what-the-matter-changes-and-its-reach-with-levels-written-as-reach-without-article-type-examples.md) | 중요도는 사안이 실제로 바꾸거나 일으킨 일의 크기와 영향 범위로 매기고, 수준 설명은 기사 종류 예시 없이 영향 범위로 쓴다 | 승인 |
 | [0100](0100-repository-tool-unit-tests-run-in-one-tools-check-service-and-docs-check-checks-links-only.md) | 저장소 도구의 단위 테스트는 검사 서비스 `tools` 하나가 돌리고, 문서 검사는 링크와 앵커만 본다 | 승인 (부분 대체: 0104) |
-| [0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md) | 사건을 잇는 흐름은 모든 사용자가 공유하는 스토리라인이 맡고, 개인 쪽은 스토리라인 구독과 관심사로 나눈다 | 승인 |
+| [0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md) | 사건을 잇는 흐름은 모든 사용자가 공유하는 스토리라인이 맡고, 개인 쪽은 스토리라인 구독과 관심사로 나눈다 | 승인 (부분 대체: 0281) |
 | [0102](0102-an-event-is-the-reports-of-one-happening-narrowed-by-the-event-membership-question-wording.md) | 사건은 한 번 일어난 일을 다룬 보도들이고, 시스템의 사건 범위는 사건 소속 질문 문구로 좁힌다 | 승인 |
 | [0103](0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md) | 큰 판정은 스토리라인 단위로 하고, 사건 묶기 바로 뒤 스토리라인 마일스톤이 사건의 큰 사건 판정을 거둔다 | 승인 |
 | [0104](0104-arm64-run-checked-on-arm64-runners-with-a-symmetric-deploy-check-per-architecture.md) | arm64 실행은 arm64 러너의 배포 검사로 확인하고, 배포 검사는 아키텍처마다 대칭 job 으로 둔다 | 승인 |
@@ -193,7 +193,7 @@
 | [0185](0185-admin-paths-stay-outside-the-llm-key-gate-and-look-only-at-the-role.md) | 운영자 경로는 LLM 키 관문 밖이다 — 역할만 본다 | 승인 |
 | [0186](0186-digests-follow-removed-articles-by-deleting-their-rows-and-show-no-summary-without-any-citation.md) | 다이제스트는 지운 기사의 행을 따라 지우고, 인용이 하나도 없는 종합문은 생성 때도 기사 삭제 뒤에도 보이지 않는다 | 승인 |
 | [0187](0187-the-digest-generators-local-substitute-always-stands-in-the-local-profile-and-real-generators-register-only-outside-it.md) | 다이제스트 생성기의 로컬 대체물은 `local` 에서 언제나 서고, 실제 생성기는 `local` 밖에서만 등록된다 | 승인 |
-| [0188](0188-storyline-subscriptions-follow-retired-storylines-by-event-and-before-each-use-and-notices-point-to-the-remaining-event.md) | 스토리라인 구독은 `storyline` 이 알리는 합침 · 지움과 사용자의 조회 · 저장 앞에서 따라가고, 사라진 구독은 남은 사건을 가리켜 알린다 | 승인 |
+| [0188](0188-storyline-subscriptions-follow-retired-storylines-by-event-and-before-each-use-and-notices-point-to-the-remaining-event.md) | 스토리라인 구독은 `storyline` 이 알리는 합침 · 지움과 사용자의 조회 · 저장 앞에서 따라가고, 사라진 구독은 남은 사건을 가리켜 알린다 | 승인 (부분 대체: 0282) |
 | [0189](0189-subscriptions-to-ended-storylines-stay-and-the-query-carries-the-current-state.md) | 끝난 스토리라인의 구독은 그대로 두고, 구독 조회가 지금 상태를 함께 낸다 | 승인 |
 | [0190](0190-storyline-subscription-handlers-are-open-without-a-key.md) | 스토리라인 구독 처리기는 키 없이 연다 | 승인 |
 | [0191](0191-the-consumer-query-of-storyline-subscriptions-is-opened-with-the-subscriptions-and-resolves-ids-without-writing.md) | 스토리라인 구독의 소비자 조회는 구독을 만든 작업이 열고, 쓰지 않고 남는 스토리라인 ID 로 풀어 낸다 | 승인 (부분 대체: 0228) |
@@ -279,10 +279,14 @@
 | [0274](0274-change-reports-cite-only-storylines-and-events-and-keep-topics-in-the-stats-snapshot.md) | 변화 리포트는 스토리라인 · 사건만 인용하고, 주제는 통계 스냅숏으로 둔다 | 승인 |
 | [0275](0275-report-citations-resolve-removed-and-merged-events-and-storylines-when-read-and-a-section-that-lost-every-citation-is-hidden.md) | 리포트 인용은 지운 · 합친 사건과 스토리라인을 읽을 때 풀고, 인용을 모두 잃은 섹션은 보이지 않는다 | 승인 |
 | [0276](0276-platform-describes-reads-and-draws-llm-output-and-task-modules-keep-their-own-shape-and-value-mapping.md) | LLM 출력의 서술 · 읽기 · JSON Schema 그리기는 `platform` 이 맡고, 과제 모듈은 자기 서술과 값 옮기기만 한다 | 승인 |
-| [0277](0277-storyline-interest-is-counted-per-containment-tree-top-with-the-topic-formula-and-reactions-to-a-flow-seen-within-seven-days-go-to-the-storyline-only.md) | 스토리라인 관심은 포함 나무의 꼭대기마다 주제와 같은 산식으로 세고, 7일 안에 다시 본 흐름의 반응 · 노출과 스토리라인 구독은 스토리라인에만 든다 | 승인 |
-| [0278](0278-followed-flows-are-tops-at-or-above-the-follow-threshold-or-subscribed-less-the-excluded-and-the-keep-threshold-is-0-2.md) | 관심 흐름은 스토리라인 관심이 0.35 이상이거나 구독한 흐름에서 거른 흐름을 뺀 것이고, 남길 기준은 0.2 다 | 승인 |
+| [0277](0277-storyline-interest-is-counted-per-containment-tree-top-with-the-topic-formula-and-reactions-to-a-flow-seen-within-seven-days-go-to-the-storyline-only.md) | 스토리라인 관심은 포함 나무의 꼭대기마다 주제와 같은 산식으로 세고, 7일 안에 다시 본 흐름의 반응 · 노출과 스토리라인 구독은 스토리라인에만 든다 | 승인 (부분 대체: 0283) |
+| [0278](0278-followed-flows-are-tops-at-or-above-the-follow-threshold-or-subscribed-less-the-excluded-and-the-keep-threshold-is-0-2.md) | 관심 흐름은 스토리라인 관심이 0.35 이상이거나 구독한 흐름에서 거른 흐름을 뺀 것이고, 남길 기준은 0.2 다 | 승인 (부분 대체: 0283) |
 | [0279](0279-storyline-interest-multiplies-the-candidate-rank-and-flows-at-or-below-the-exclusion-threshold-leave-subscribed-candidates-and-the-big-slot.md) | 스토리라인 관심은 후보 순위에 곱하고, 거름 기준 이하의 흐름은 구독 후보와 큰 슬롯에서 뺀다 | 승인 |
 | [0280](0280-events-of-followed-flows-outside-the-subscribed-topics-enter-one-per-flow-within-a-share-of-the-subscribed-seats-as-interest.md) | 주제 구독 밖에 있는 관심 흐름의 사건은 흐름마다 하나, 구독 사건 자리의 몫 상한 안에서 `INTEREST` 로 든다 | 승인 |
+| [0281](0281-a-user-storyline-is-a-flow-that-received-interest-signals-and-tracks-the-tops-reached-forward-along-follows-from-its-seeds-as-one-group.md) | 사용자 스토리라인은 관심 신호를 받은 흐름이고, 씨앗에서 이어짐을 앞에서 뒤로 따라 닿는 꼭대기를 한 묶음으로 추적한다 | 승인 |
+| [0282](0282-flow-tracking-points-to-a-user-storyline-which-user-handlers-store-under-the-settings-lock-while-readers-get-the-result-of-the-same-rule.md) | 흐름 추적은 사용자 스토리라인을 가리키고, 사용자 스토리라인은 `user` 의 처리기가 잠그고 저장하며 읽는 쪽은 같은 규칙의 결과를 받는다 | 승인 |
+| [0283](0283-storyline-interest-is-keyed-by-user-storyline-and-its-value-is-spread-to-each-top-for-selection.md) | 스토리라인 관심의 키는 사용자 스토리라인이고, 값을 그 꼭대기마다 펼쳐 선별에 쓴다 | 승인 |
+| [0284](0284-a-digest-item-keeps-the-top-that-grouped-it-on-its-section-and-items-with-a-flow-carry-a-flow-tracking-button.md) | 다이제스트 항목은 묶은 꼭대기를 섹션에 남기고, 흐름이 있는 항목에 흐름 추적 버튼을 둔다 | 승인 |
 
 ## 운영 규칙
 

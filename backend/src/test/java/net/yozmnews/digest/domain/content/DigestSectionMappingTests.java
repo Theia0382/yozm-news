@@ -13,24 +13,26 @@ import java.util.UUID;
 
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.digest.DigestFailure;
+import net.yozmnews.digest.DigestInputs;
 import net.yozmnews.digest.DigestStatus;
 import net.yozmnews.digest.SectionKind;
 import net.yozmnews.digest.SelectionReason;
-import net.yozmnews.digest.DigestInputs;
 import net.yozmnews.digest.domain.candidate.CandidateSet;
-import net.yozmnews.digest.domain.item.ItemKind;
 import net.yozmnews.digest.domain.digest.Completion;
 import net.yozmnews.digest.domain.digest.Digest;
 import net.yozmnews.digest.domain.digest.DigestPeriod;
 import net.yozmnews.digest.domain.digest.DigestRepository;
 import net.yozmnews.digest.domain.digest.DigestTrigger;
 import net.yozmnews.digest.domain.generator.TokenUsage;
+import net.yozmnews.digest.domain.input.InputItem;
+import net.yozmnews.digest.domain.item.ItemKind;
 import net.yozmnews.digest.domain.output.CitedDigest;
 import net.yozmnews.digest.domain.output.CitedHeadline;
 import net.yozmnews.digest.domain.output.CitedStory;
 import net.yozmnews.llm.LlmModel;
 import net.yozmnews.llm.Provider;
 import net.yozmnews.platform.UserId;
+import net.yozmnews.storyline.StorylineId;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jdbc.test.autoconfigure.DataJdbcTest;
@@ -156,7 +158,8 @@ class DigestSectionMappingTests {
 		CandidateSet items = CandidateSet.of(DigestInputs.items(
 				DigestInputs.item(ItemKind.TOP_STORY, DigestInputs.event(30, SelectionReason.MAJOR_STORYLINE, 12),
 						DigestInputs.event(20, SelectionReason.SUBSCRIBED, 11)),
-				DigestInputs.item(ItemKind.HEADLINE, DigestInputs.event(40, SelectionReason.SUBSCRIBED, 13))));
+				new InputItem(ItemKind.HEADLINE, List.of(DigestInputs.event(40, SelectionReason.SUBSCRIBED, 13)),
+						new StorylineId(700))));
 		CitedDigest cited = new CitedDigest("흐름", List.of(new CitedStory(items.item("I1").orElseThrow(), "하나", "요약")),
 				List.of(new CitedHeadline(items.item("I2").orElseThrow(), "헤드라인", "한 줄")));
 
@@ -182,6 +185,13 @@ class DigestSectionMappingTests {
 				order by s.position, e.position
 				""").param("digest", digest.id().value()).query(String.class).list())
 			.containsExactly("1:0:30:MAJOR_STORYLINE", "1:1:20:SUBSCRIBED", "2:0:40:SUBSCRIBED");
+		// 항목을 묶은 꼭대기는 섹션 행에 — 개요와 혼자 한 항목은 NULL
+		assertThat(this.jdbc
+			.sql("select position || ':' || coalesce(cast(storyline_id as text), 'null') from digest_sections "
+					+ "where digest_id = :digest order by position")
+			.param("digest", digest.id().value())
+			.query(String.class)
+			.list()).containsExactly("0:null", "1:null", "2:700");
 
 		List<DigestSection> read = new ArrayList<>();
 		this.sections.findAll().forEach(read::add);
@@ -190,6 +200,9 @@ class DigestSectionMappingTests {
 		assertThat(story.items()).containsExactly(new DigestItem(12), new DigestItem(11));
 		assertThat(story.events()).containsExactly(new SectionEvent(30, SelectionReason.MAJOR_STORYLINE),
 				new SectionEvent(20, SelectionReason.SUBSCRIBED));
+		assertThat(story.storyline()).isEmpty();
+		assertThat(read.stream().filter(section -> section.kind() == SectionKind.HEADLINE).findFirst().orElseThrow()
+			.storyline()).contains(new StorylineId(700));
 	}
 
 	@Test

@@ -3,6 +3,7 @@ package net.yozmnews.digest.application;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -16,6 +17,7 @@ import net.yozmnews.digest.domain.interest.InterestFormula;
 import net.yozmnews.digest.domain.interest.InterestRecord;
 import net.yozmnews.digest.domain.interest.InterestSignals;
 import net.yozmnews.digest.domain.interest.InterestWindow;
+import net.yozmnews.digest.domain.interest.StorylineFlows;
 import net.yozmnews.digest.domain.selection.EventFacts;
 import net.yozmnews.event.EventDirectory;
 import net.yozmnews.event.EventId;
@@ -29,13 +31,16 @@ import net.yozmnews.user.StorylineSubscriptionChange;
 import net.yozmnews.user.StorylineSubscriptionDirectory;
 import net.yozmnews.user.TopicSubscriptionChanges;
 import net.yozmnews.user.TopicSubscriptionHistory;
+import net.yozmnews.user.UserStorylineDirectory;
+import net.yozmnews.user.UserStorylineView;
 import org.springframework.stereotype.Service;
 
 /**
  * 관심도의 재료를 범위 하나에서 읽는다 — 노출 행(자기 섹션 사건 행 · 다이제스트 날짜 · 몫) · 좋아요 / 싫어요 이력({@code feedback} — 행마다 지금
  * 사건) · 주제 구독 변경 · 스토리라인 구독 변경({@code user}) · 노출 사건의 주제(소속 기사의 평가 — {@code tag}) · 노출 사건의 꼭대기와 구독
- * 스토리라인의 꼭대기({@code storyline}). 노출 행의 사건은 {@code event} 로 지금 사건으로 풀고, 지운 사건의 행은 버린다. 기준 시각마다 창으로
- * 자르는 일은 {@link InterestWindow}, 행을 고르는 판단은 {@link InterestSignals}, 계산은 {@link InterestFormula} 가 한다.
+ * 스토리라인의 꼭대기({@code storyline}) · 사용자 스토리라인 묶음({@code user} 의 {@link UserStorylineDirectory} — 같은 범위의 신호로 낸
+ * 것, 쓰지 않는다). 노출 행의 사건은 {@code event} 로 지금 사건으로 풀고, 지운 사건의 행은 버린다. 기준 시각마다 창으로 자르는 일은
+ * {@link InterestWindow}, 행을 고르는 판단은 {@link InterestSignals}, 계산은 {@link InterestFormula} 가 한다.
  * docs/specs/digest.md §4 · §5
  * <p>
  * 트랜잭션 없이 조회를 차례로 부른다. 사용자를 인자로 받는다 — 화면 경로에서는 세션 사용자로만 부른다.
@@ -57,9 +62,11 @@ class InterestMaterials {
 
 	private final EventDirectory events;
 
+	private final UserStorylineDirectory userStorylines;
+
 	InterestMaterials(ExposureRepository exposures, EventFeedback feedback, ActiveEvaluations activeEvaluations,
 			TopicSubscriptionHistory topicHistory, StorylineSubscriptionDirectory storylineSubscriptions,
-			StorylineDirectory storylines, EventDirectory events) {
+			StorylineDirectory storylines, EventDirectory events, UserStorylineDirectory userStorylines) {
 		this.exposures = Objects.requireNonNull(exposures, "exposures");
 		this.feedback = Objects.requireNonNull(feedback, "feedback");
 		this.activeEvaluations = Objects.requireNonNull(activeEvaluations, "activeEvaluations");
@@ -67,6 +74,7 @@ class InterestMaterials {
 		this.storylineSubscriptions = Objects.requireNonNull(storylineSubscriptions, "storylineSubscriptions");
 		this.storylines = Objects.requireNonNull(storylines, "storylines");
 		this.events = Objects.requireNonNull(events, "events");
+		this.userStorylines = Objects.requireNonNull(userStorylines, "userStorylines");
 	}
 
 	/**
@@ -96,7 +104,23 @@ class InterestMaterials {
 		Map<StorylineId, StorylineId> storylineTops = StorylineTopsQueries.ofStorylines(this.storylines,
 				InterestSignals.storylinesToRead(storylineChanges));
 		return Optional.of(new InterestRecord(active, exposed, subtopics.get(), tops, reactions, topics.changes(),
-				storylineChanges, storylineTops));
+				storylineChanges, storylineTops, flows(this.userStorylines.of(user, from, to))));
+	}
+
+	/** {@code user} 의 사용자 스토리라인을 묶음으로 옮긴다 — 묶음 번호는 받은 순서다 */
+	private static StorylineFlows flows(List<UserStorylineView> userStorylines) {
+		Map<StorylineId, Integer> flowOfTop = new HashMap<>();
+		Set<Integer> tracked = new HashSet<>();
+		for (int flow = 0; flow < userStorylines.size(); flow++) {
+			UserStorylineView view = userStorylines.get(flow);
+			for (StorylineId top : view.tops()) {
+				flowOfTop.put(top, flow);
+			}
+			if (view.tracked()) {
+				tracked.add(flow);
+			}
+		}
+		return new StorylineFlows(flowOfTop, tracked);
 	}
 
 	/**

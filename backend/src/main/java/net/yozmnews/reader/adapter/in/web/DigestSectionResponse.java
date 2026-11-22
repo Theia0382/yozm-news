@@ -19,9 +19,11 @@ import org.jspecify.annotations.Nullable;
  * @param reason 항목의 선정 이유(배지 하나) — 개요면 null
  * @param citations 인용(출처 기사) — 위치 순. 그새 지운 기사의 인용은 빠진다
  * @param eventIds 항목의 사건 — 위치 순, 첫 사건이 항목 키(좋아요 / 싫어요를 누르는 손잡이 — docs/specs/feedback.md). 개요는 비어 있다
+ * @param storylineId 항목을 묶은 흐름(스토리라인 포함 나무의 지금 꼭대기) — 흐름 추적의 대상. 개요 · 흐름 없는 항목이면 null
  */
 record DigestSectionResponse(SectionKind kind, @Nullable String title, @Nullable String body,
-		@Nullable SelectionReason reason, List<DigestCitationResponse> citations, List<Long> eventIds) {
+		@Nullable SelectionReason reason, List<DigestCitationResponse> citations, List<Long> eventIds,
+		@Nullable Long storylineId) {
 
 	static DigestSectionResponse of(DigestSectionView section, Map<ArticleId, NewsArticleResponse> articles) {
 		return new DigestSectionResponse(section.kind(), section.title(), section.body(), section.reason(),
@@ -31,7 +33,8 @@ record DigestSectionResponse(SectionKind kind, @Nullable String title, @Nullable
 					.map(citation -> new DigestCitationResponse(citation.article().value(),
 							articles.get(citation.article())))
 					.toList(),
-				section.events().stream().map(EventId::value).toList());
+				section.events().stream().map(EventId::value).toList(),
+				(section.storyline() == null) ? null : section.storyline().value());
 	}
 
 }

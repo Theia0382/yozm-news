@@ -14,7 +14,7 @@ import net.yozmnews.storyline.StorylineId;
 /**
  * 주제 구독 밖 관심 흐름의 길 — 정본 — docs/specs/digest.md §5
  * <p>
- * 관심 흐름(구독한 스토리라인의 꼭대기와 스토리라인 관심이 기준 이상인 꼭대기에서 거른 꼭대기를 뺀 것 —
+ * 관심 흐름(추적 중인 사용자 스토리라인의 꼭대기와 스토리라인 관심이 기준 이상인 꼭대기에서 거른 꼭대기를 뺀 것 —
  * {@link net.yozmnews.digest.domain.interest.StorylineLevels#followed})의 사건 가운데 구독 행과 겹치지 않아 구독 필터로는 들지 못하는
  * 사건을 고른다. 구독 행과 겹치는 관심 흐름의 사건은 이 길을 타지 않고 구독 필터의 순위로 다툰다. 사건 제외({@link UserFilter#passesEvent})를
  * 지나고 큰 슬롯이 쓰지 않은 사건을 순위({@link CandidateRank#order})로 훑어, 아직 대표가 없는 관심 흐름을 가진 사건을 담고 그 사건의 관심

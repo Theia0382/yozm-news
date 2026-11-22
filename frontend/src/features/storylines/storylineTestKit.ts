@@ -81,7 +81,7 @@ export function timeline(
   };
 }
 
-/** 내 구독 응답 — 구독 시각은 모두 T, 상태는 진행 */
+/** 추적 중인 흐름 응답 — 구독 시각은 모두 T, 상태는 진행 */
 export function subscriptions(
   ids: number[],
   limit = 100,
@@ -90,15 +90,30 @@ export function subscriptions(
     limit,
     subscriptions: ids.map((storylineId) => ({
       storylineId,
+      userStorylineId: storylineId,
       subscribedAt: T,
       state: "ACTIVE",
     })),
   };
 }
 
+/** 추적 상태 응답 — 요청의 `ids` 마다 `tracked` 가 판정한 값 */
+export function trackingStates(
+  request: Request,
+  tracked: (storylineId: number) => boolean,
+): Response {
+  const ids = new URL(request.url).searchParams.getAll("ids").map(Number);
+  return json({
+    states: ids.map((storylineId) => ({
+      storylineId,
+      tracked: tracked(storylineId),
+    })),
+  });
+}
+
 /**
- * 구독 경로 셋의 가짜 — 구독한 ID 집합을 들고, `ids` 의 스토리라인마다 구독하면 더하고(SUBSCRIBED) 해제하면 뺀다(UNSUBSCRIBED ·
- * NOT_SUBSCRIBED). 내 구독은 그 집합을 낸다.
+ * 흐름 추적 경로의 가짜 — 추적한 ID 집합을 들고, `ids` 의 스토리라인마다 추적하면 더하고(SUBSCRIBED) 해제하면 뺀다(UNSUBSCRIBED ·
+ * NOT_SUBSCRIBED). 추적 중인 흐름 목록과 추적 상태는 그 집합을 낸다(스토리라인마다 제 흐름).
  */
 export function subscriptionHandlers(
   initial: number[],
@@ -108,6 +123,8 @@ export function subscriptionHandlers(
   const handlers: Record<string, Handler> = {
     "GET /api/storyline-subscriptions": () =>
       json(subscriptions([...subscribed])),
+    "GET /api/storyline-subscriptions/states": (request) =>
+      trackingStates(request, (id) => subscribed.has(id)),
   };
   for (const id of ids) {
     handlers[`PUT /api/storyline-subscriptions/${id}`] = () => {

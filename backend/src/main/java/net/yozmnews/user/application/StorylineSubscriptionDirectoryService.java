@@ -1,40 +1,54 @@
 package net.yozmnews.user.application;
 
 import java.time.Instant;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.TreeSet;
 
 import net.yozmnews.platform.UserId;
 import net.yozmnews.storyline.StorylineId;
 import net.yozmnews.user.StorylineSubscriptionChange;
 import net.yozmnews.user.StorylineSubscriptionDirectory;
-import net.yozmnews.user.domain.subscription.StorylineSubscriptionRepository;
 import net.yozmnews.user.domain.subscription.StoredSubscriptionChange;
+import net.yozmnews.user.domain.subscription.StorylineSubscriptionRepository;
+import net.yozmnews.user.domain.userstoryline.UserStorylineRepository;
+import net.yozmnews.user.domain.userstoryline.UserStorylineRow;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * {@link StorylineSubscriptionDirectory} 의 구현 — 저장된 구독 · 이력을 읽어 {@link CurrentStorylines} 로 남는 쪽으로 푼다. 쓰지 않는다.
- * docs/specs/user.md §4 · user-R55
+ * {@link StorylineSubscriptionDirectory} 의 구현 — 저장된 추적 씨앗 · 이력을 읽어 {@link CurrentStorylines} 로 남는 쪽으로 푼다. 쓰지
+ * 않는다. docs/specs/user.md §4 · user-R55
  */
 @Service
 class StorylineSubscriptionDirectoryService implements StorylineSubscriptionDirectory {
 
 	private final StorylineSubscriptionRepository subscriptions;
 
+	private final UserStorylineRepository userStorylines;
+
 	private final CurrentStorylines current;
 
-	StorylineSubscriptionDirectoryService(StorylineSubscriptionRepository subscriptions, CurrentStorylines current) {
+	StorylineSubscriptionDirectoryService(StorylineSubscriptionRepository subscriptions,
+			UserStorylineRepository userStorylines, CurrentStorylines current) {
 		this.subscriptions = Objects.requireNonNull(subscriptions, "subscriptions");
+		this.userStorylines = Objects.requireNonNull(userStorylines, "userStorylines");
 		this.current = Objects.requireNonNull(current, "current");
 	}
 
 	@Override
 	@Transactional(readOnly = true)
 	public List<StorylineId> subscriptions(UserId user) {
-		TreeSet<Long> ids = new TreeSet<>(this.current.resolve(this.subscriptions.load(user).keySet()).values());
+		Set<Long> seeds = new HashSet<>();
+		for (UserStorylineRow row : this.userStorylines.load(user)) {
+			if (row.subscribedAt() != null) {
+				seeds.addAll(row.seeds());
+			}
+		}
+		TreeSet<Long> ids = new TreeSet<>(this.current.resolve(seeds).values());
 		return ids.stream().map(StorylineId::new).toList();
 	}
 

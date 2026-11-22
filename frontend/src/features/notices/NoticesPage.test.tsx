@@ -396,9 +396,9 @@ describe("NoticesPage", () => {
     expect(
       within(item).getByRole("link", { name: "관심 설정에서 확인하기" }),
     ).toHaveAttribute("href", "/interests");
-    // 내 구독 링크는 사라진 구독 알림에만 있다
+    // 추적 중인 흐름 링크는 사라진 구독 알림에만 있다
     expect(
-      within(item).queryByRole("link", { name: "내 구독 보기" }),
+      within(item).queryByRole("link", { name: "추적 중인 흐름 보기" }),
     ).not.toBeInTheDocument();
   });
 
@@ -407,17 +407,17 @@ describe("NoticesPage", () => {
 
     const item = await screen.findByRole("article");
     expect(within(item).getByRole("heading", { level: 2 })).toHaveTextContent(
-      "새 알림구독한 스토리라인이 사라졌습니다",
+      "새 알림추적하던 흐름이 사라졌습니다",
     );
     expect(item).toHaveTextContent(
-      "구독한 스토리라인이 더 이어지지 않아 구독에서 뺐습니다.",
+      "추적하던 흐름이 더 이어지지 않아 추적에서 뺐습니다.",
     );
     const rows = within(item).getAllByRole("listitem");
     expect(rows).toHaveLength(2);
     expect(rows[0]).toHaveTextContent("의대 정원 조정안 발표");
     expect(rows[1]).toHaveTextContent("제목을 알 수 없는 스토리라인");
     expect(
-      within(item).getByRole("link", { name: "내 구독 보기" }),
+      within(item).getByRole("link", { name: "추적 중인 흐름 보기" }),
     ).toHaveAttribute("href", "/storylines/subscriptions");
   });
 

@@ -54,7 +54,7 @@ public final class DigestInputs {
 
 	/** 항목 하나 — 사건들을 그 순서로 */
 	public static InputItem item(ItemKind kind, InputEvent... events) {
-		return new InputItem(kind, List.of(events));
+		return new InputItem(kind, List.of(events), null);
 	}
 
 	/** 사건 하나 — 기사들을 그 순서로, 기사마다 선정 이유는 사건의 것 */

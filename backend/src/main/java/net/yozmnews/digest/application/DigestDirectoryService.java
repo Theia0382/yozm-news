@@ -5,6 +5,7 @@ import java.time.InstantSource;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -23,6 +24,8 @@ import net.yozmnews.digest.domain.view.DigestDayStates;
 import net.yozmnews.digest.domain.view.DigestDays;
 import net.yozmnews.digest.domain.view.UnresolvedFailures;
 import net.yozmnews.platform.UserId;
+import net.yozmnews.storyline.StorylineDirectory;
+import net.yozmnews.storyline.StorylineId;
 import net.yozmnews.user.DigestModelDirectory;
 import net.yozmnews.user.DigestScheduleEntry;
 import net.yozmnews.user.UserDigestSchedules;
@@ -53,15 +56,19 @@ class DigestDirectoryService implements DigestDirectory {
 
 	private final TransactionTemplate readOnly;
 
+	private final StorylineDirectory storylines;
+
 	private final InstantSource clock;
 
 	DigestDirectoryService(DigestLedger ledger, DigestDayRepository days, UserDigestSchedules schedules,
-			DigestModelDirectory models, TransactionTemplate transaction, InstantSource clock) {
+			DigestModelDirectory models, StorylineDirectory storylines, TransactionTemplate transaction,
+			InstantSource clock) {
 		this.ledger = Objects.requireNonNull(ledger, "ledger");
 		this.days = Objects.requireNonNull(days, "days");
 		this.targets = new ManualTargets(ledger);
 		this.schedules = Objects.requireNonNull(schedules, "schedules");
 		this.models = Objects.requireNonNull(models, "models");
+		this.storylines = Objects.requireNonNull(storylines, "storylines");
 		this.readOnly = new TransactionTemplate(
 				Objects.requireNonNull(Objects.requireNonNull(transaction, "transaction").getTransactionManager()),
 				transaction);
@@ -127,8 +134,27 @@ class DigestDirectoryService implements DigestDirectory {
 			return Optional.empty();
 		}
 		@Nullable DigestDayRow shown = DigestDays.shownRow(rows);
-		List<DigestSectionView> sections = (shown == null) ? List.of() : this.days.sectionsOf(shown.id());
+		List<DigestSectionView> sections = (shown == null) ? List.of() : current(this.days.sectionsOf(shown.id()));
 		return Optional.of(DigestDays.of(date, rows, sections, this.days.neighbors(user, date)));
+	}
+
+	/**
+	 * 섹션이 저장한 꼭대기(생성 때의 값)를 지금 꼭대기로 푼다 — 합쳐졌으면 남는 쪽의, 다른 나무에 들었으면 그 나무의 꼭대기. 지워진 스토리라인은
+	 * 빈 값이 된다
+	 */
+	private List<DigestSectionView> current(List<DigestSectionView> sections) {
+		List<StorylineId> stored = sections.stream()
+			.map(DigestSectionView::storyline)
+			.filter(Objects::nonNull)
+			.toList();
+		if (stored.isEmpty()) {
+			return sections;
+		}
+		Map<StorylineId, StorylineId> tops = StorylineTopsQueries.ofStorylines(this.storylines, stored);
+		return sections.stream()
+			.map(section -> (section.storyline() == null) ? section
+					: section.withStoryline(tops.get(section.storyline())))
+			.toList();
 	}
 
 }
