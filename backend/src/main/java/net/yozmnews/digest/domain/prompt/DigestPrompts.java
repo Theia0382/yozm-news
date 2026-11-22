@@ -20,6 +20,7 @@ import net.yozmnews.digest.domain.output.DigestOutputSchema;
 import net.yozmnews.digest.domain.prompt.PromptRules.Range;
 import net.yozmnews.digest.domain.selection.CandidateCost;
 import net.yozmnews.llm.LlmModel;
+import net.yozmnews.platform.StructuredOutputSchema;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ArrayNode;
@@ -111,7 +112,7 @@ public final class DigestPrompts {
 		Objects.requireNonNull(input, "input");
 		Objects.requireNonNull(set, "set");
 		Objects.requireNonNull(model, "model");
-		String schema = DigestOutputSchema.json(DigestOutputSchema.root(set));
+		String schema = StructuredOutputSchema.json(DigestOutputSchema.root(set));
 		return new DigestPrompt(instructions(input.profile(), model.structuredOutput() ? null : schema),
 				userContent(input, aliases(input, set)), schema);
 	}

@@ -8,6 +8,7 @@ import net.yozmnews.digest.DigestInputs;
 import net.yozmnews.digest.SelectionReason;
 import net.yozmnews.digest.domain.candidate.CandidateSet;
 import net.yozmnews.digest.domain.item.ItemKind;
+import net.yozmnews.platform.StructuredOutputSchema;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -75,7 +76,7 @@ class DigestOutputSchemaTests {
 
 	@Test
 	void drawsEveryTopStoryAsARequiredKeyAndHeadlinesAsAnArrayOfElements() {
-		JsonNode drawn = JSON.readTree(DigestOutputSchema.json(DigestOutputSchema.root(SET)));
+		JsonNode drawn = JSON.readTree(StructuredOutputSchema.json(DigestOutputSchema.root(SET)));
 
 		assertThat(drawn).isEqualTo(JSON.readTree(EXPECTED));
 	}
@@ -85,7 +86,7 @@ class DigestOutputSchemaTests {
 		CandidateSet storiesOnly = CandidateSet
 			.of(DigestInputs.items(item(ItemKind.TOP_STORY, event(1, SelectionReason.SUBSCRIBED, 11))));
 
-		JsonNode headlines = JSON.readTree(DigestOutputSchema.json(DigestOutputSchema.root(storiesOnly)))
+		JsonNode headlines = JSON.readTree(StructuredOutputSchema.json(DigestOutputSchema.root(storiesOnly)))
 			.get("properties")
 			.get("headlines");
 
@@ -97,7 +98,7 @@ class DigestOutputSchemaTests {
 		CandidateSet headlinesOnly = CandidateSet
 			.of(DigestInputs.items(item(ItemKind.HEADLINE, event(1, SelectionReason.SUBSCRIBED, 11))));
 
-		JsonNode topStories = JSON.readTree(DigestOutputSchema.json(DigestOutputSchema.root(headlinesOnly)))
+		JsonNode topStories = JSON.readTree(StructuredOutputSchema.json(DigestOutputSchema.root(headlinesOnly)))
 			.get("properties")
 			.get("top_stories");
 

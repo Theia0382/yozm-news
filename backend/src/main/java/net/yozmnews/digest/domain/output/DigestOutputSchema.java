@@ -1,15 +1,14 @@
 package net.yozmnews.digest.domain.output;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
 import net.yozmnews.digest.domain.candidate.AliasedItem;
 import net.yozmnews.digest.domain.candidate.CandidateSet;
 import net.yozmnews.digest.domain.item.ItemKind;
-import tools.jackson.databind.json.JsonMapper;
+import net.yozmnews.platform.OutputShape;
+import net.yozmnews.platform.OutputShape.OnBlank;
+import net.yozmnews.platform.OutputShape.OverLimit;
 
 /**
  * 출력 구조와 상한 — 정본 · docs/specs/digest.md §5 · digest-R4 · digest-R5
@@ -17,7 +16,7 @@ import tools.jackson.databind.json.JsonMapper;
  * 출력 서술은 요청마다 그 항목 집합에서 만든다({@link #root}) — 주요 뉴스 칸은 항목 별칭을 키로 한 객체이고, JSON Schema 는 모든 키를
  * 필수로 그려 구조화 출력이 모든 주요 뉴스 항목을 쓰게 한다. 헤드라인 칸은 원소마다 항목 별칭({@link #REF})을 단 배열이다 — 키 꼴은 항목
  * 수만큼 문법이 커져 공급자가 거부하므로 수에 한도가 없는 헤드라인은 배열로 두고, 출력에 빠진 헤드라인 항목은 부르는 쪽이 처분한다. 같은
- * 항목 집합이면 같은 서술이다. 문자열 상한은 측정 전 목표다. {@link #json} 은 서술을 그린 것이고 따로 적지 않는다.
+ * 항목 집합이면 같은 서술이다. 문자열 상한은 측정 전 목표다. 생성에 넘기는 JSON Schema 문서는 서술을 그린 것({@code StructuredOutputSchema.json})이고 따로 적지 않는다.
  */
 public final class DigestOutputSchema {
 
@@ -74,10 +73,6 @@ public final class DigestOutputSchema {
 	/** 항목이 없는 칸의 서술 — 키 없는 빈 객체 */
 	private static final OutputShape.Obj EMPTY = new OutputShape.Obj(List.of());
 
-	private static final String DIALECT = "https://json-schema.org/draft/2020-12/schema";
-
-	private static final JsonMapper JSON = JsonMapper.builder().build();
-
 	private DigestOutputSchema() {
 	}
 
@@ -101,68 +96,6 @@ public final class DigestOutputSchema {
 			.map(AliasedItem::alias)
 			.toList();
 		return aliases.isEmpty() ? EMPTY : new OutputShape.Keyed(aliases, STORY);
-	}
-
-	/**
-	 * 서술을 JSON Schema(draft 2020-12) 문서로 그린다 — 객체는 모르는 속성을 허용하지 않고, 비었을 때 없음으로 받지 않는
-	 * 문자열은 {@code minLength} 1, null 을 받는 속성은 타입에 {@code "null"} 을 더한다. 생성에 넘기는 문서라 읽기보다 엄격하다.
-	 */
-	public static String json(OutputShape.Obj root) {
-		Objects.requireNonNull(root, "root");
-		Map<String, Object> document = new LinkedHashMap<>();
-		document.put("$schema", DIALECT);
-		document.putAll(draw(root, false));
-		return JSON.writeValueAsString(document);
-	}
-
-	private static Map<String, Object> draw(OutputShape shape, boolean nullable) {
-		Map<String, Object> node = new LinkedHashMap<>();
-		switch (shape) {
-			case OutputShape.Obj obj -> {
-				node.put("type", type("object", nullable));
-				Map<String, Object> properties = new LinkedHashMap<>();
-				List<String> required = new ArrayList<>();
-				for (OutputShape.Property property : obj.properties()) {
-					properties.put(property.name(), draw(property.shape(), property.nullable()));
-					if (property.required()) {
-						required.add(property.name());
-					}
-				}
-				node.put("properties", properties);
-				node.put("required", required);
-				node.put("additionalProperties", false);
-			}
-			case OutputShape.Arr arr -> {
-				node.put("type", type("array", nullable));
-				node.put("items", draw(arr.item(), false));
-			}
-			case OutputShape.Keyed keyed -> {
-				node.put("type", type("object", nullable));
-				Map<String, Object> properties = new LinkedHashMap<>();
-				for (String key : keyed.keys()) {
-					properties.put(key, draw(keyed.value(), false));
-				}
-				node.put("properties", properties);
-				node.put("required", keyed.keys());
-				node.put("additionalProperties", false);
-			}
-			case OutputShape.Str str -> {
-				node.put("type", type("string", nullable));
-				boolean rejectsBlank = switch (str.onBlank()) {
-					case UNREADABLE, KEEP -> true;
-					case ABSENT -> false;
-				};
-				if (rejectsBlank) {
-					node.put("minLength", 1);
-				}
-				node.put("maxLength", str.maxCodePoints());
-			}
-		}
-		return node;
-	}
-
-	private static Object type(String type, boolean nullable) {
-		return nullable ? List.of(type, "null") : type;
 	}
 
 }

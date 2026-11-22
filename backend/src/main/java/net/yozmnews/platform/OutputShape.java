@@ -1,11 +1,13 @@
-package net.yozmnews.digest.domain.output;
+package net.yozmnews.platform;
 
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
 /**
- * 출력 구조의 서술 마디 — 읽기와 JSON Schema 문서가 함께 따르는 꼴 · docs/specs/digest.md §5 · digest-R4
+ * LLM 출력 구조의 서술 마디 — 읽기와 JSON Schema 문서가 함께 따르는 꼴 · docs/specs/platform.md §3 · platform-R31 · platform-R32
+ * <p>
+ * 서술은 출력을 쓰는 과제 모듈이 요청마다 만든다 — 칸 구성 · 속성 이름 · 상한 값은 그 모듈의 정본이다.
  */
 public sealed interface OutputShape {
 
@@ -32,8 +34,8 @@ public sealed interface OutputShape {
 	}
 
 	/**
-	 * 키마다 같은 꼴의 값을 갖는 객체 — 키는 이번 요청의 항목 별칭이다. JSON Schema 는 모든 키를 필수로 그리고, 읽기는 없는 키 · {@code null}
-	 * 인 키를 빼고 읽는다(출력 전체를 읽지 못한 것이 아니다). 값을 버리면 그 키를 빼고, 서술하지 않은 키는 무시한다.
+	 * 키마다 같은 꼴의 값을 갖는 객체 — 키는 요청마다 정한다(예: 항목 별칭 · 갈래). JSON Schema 는 모든 키를 필수로 그리고, 읽기는 없는 키 ·
+	 * {@code null} 인 키를 빼고 읽는다(출력 전체를 읽지 못한 것이 아니다). 값을 버리면 그 키를 빼고, 서술하지 않은 키는 무시한다.
 	 * @param keys 키 — 순서대로, 비지 않고 겹치지 않는다
 	 */
 	record Keyed(List<String> keys, OutputShape value) implements OutputShape {
@@ -77,6 +79,40 @@ public sealed interface OutputShape {
 			Objects.requireNonNull(name, "name");
 			Objects.requireNonNull(shape, "shape");
 		}
+
+	}
+
+	/**
+	 * 문자열이 비었을 때(앞뒤 공백을 지운 값이 빈 문자열)의 처분.
+	 */
+	enum OnBlank {
+
+		/** 출력 전체를 읽지 못한 것으로 한다 */
+		UNREADABLE,
+
+		/** 없음으로 받는다 — 선택 속성에만 쓴다 */
+		ABSENT,
+
+		/** 빈 문자열 그대로 받는다 — 뒤의 대조가 처분한다 */
+		KEEP
+
+	}
+
+	/**
+	 * 문자열이 상한을 넘을 때의 처분.
+	 */
+	enum OverLimit {
+
+		/** 출력 전체를 읽지 못한 것으로 한다 */
+		UNREADABLE,
+
+		/**
+		 * 그 문자열을 가진 가장 가까운 버릴 수 있는 칸 — 키 꼴의 값 또는 배열의 원소 — 을 버린다. 그 칸은 출력에 없는 것이 된다
+		 */
+		DROP_ITEM,
+
+		/** 그 값만 지운다(없음으로) — 선택 속성에만 쓴다 */
+		DROP_VALUE
 
 	}
 
