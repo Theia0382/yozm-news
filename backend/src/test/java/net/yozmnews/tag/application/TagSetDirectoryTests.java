@@ -62,9 +62,9 @@ class TagSetDirectoryTests {
 		assertThat(tagSet.format().question()).isEqualTo("이 기사의 형식은 무엇인가");
 		assertThat(tagSet.format().options()).hasSize(6);
 		assertThat(tagSet.importance().question()).isEqualTo(
-				"이 기사가 다루는 사안은 얼마나 중요한가. 등장하는 인물이나 다루는 주제가 아니라 사안이 실제로 바꾸거나 일으킨 일의 크기와 그 영향이 미치는 범위로 판단한다. "
+				"이 기사가 다루는 사안은 얼마나 중요한가. 등장하는 인물이나 다루는 주제가 아니라 사안이 지금 실제로 바꾸거나 일으키는 일의 크기와 그 영향이 미치는 범위로 판단한다. "
 						+ "발언 · 주장 · 반응은 그것이 일으킨 일만큼으로 본다");
-		assertThat(tagSet.importance().levels()).extracting(ImportanceLevel::level).containsExactly(1, 2, 3, 4, 5);
+		assertThat(tagSet.importance().levels()).extracting(ImportanceLevel::level).containsExactly(1, 2, 3, 4);
 	}
 
 	@Test
