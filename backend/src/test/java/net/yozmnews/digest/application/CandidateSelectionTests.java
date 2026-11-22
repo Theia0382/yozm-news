@@ -446,7 +446,8 @@ class CandidateSelectionTests {
 		AtomicInteger skewed = new AtomicInteger(1);
 		CandidateSelection once = new CandidateSelection(this.interests, this.evaluations,
 				new ActiveEvaluations(this.evaluations, skewing(skewed, elsewhere)), this.tagSets, this.articles, this.events,
-				this.storylines, this.interestMaterials, this.feedback, InstantSource.system());
+				this.storylines, this.interestMaterials, this.feedback, this.storylineSubscriptions,
+				InstantSource.system());
 
 		assertThat(events(once.select(new UserId(this.user), DAY, ROOMY)))
 			.containsExactly(this.e1 + ":SUBSCRIBED", event(this.a5) + ":SUBSCRIBED");
@@ -455,7 +456,8 @@ class CandidateSelectionTests {
 		AtomicInteger always = new AtomicInteger(Integer.MAX_VALUE);
 		CandidateSelection never = new CandidateSelection(this.interests, this.evaluations,
 				new ActiveEvaluations(this.evaluations, skewing(always, elsewhere)), this.tagSets, this.articles, this.events,
-				this.storylines, this.interestMaterials, this.feedback, InstantSource.system());
+				this.storylines, this.interestMaterials, this.feedback, this.storylineSubscriptions,
+				InstantSource.system());
 		assertThatIllegalStateException().isThrownBy(() -> never.select(new UserId(this.user), DAY, ROOMY))
 			.withMessageContaining("2 번 어긋났다");
 	}
@@ -531,6 +533,26 @@ class CandidateSelectionTests {
 
 		assertThat(events(this.selection.select(new UserId(this.user), DAY, ROOMY)))
 			.containsExactly(this.e1 + ":SUBSCRIBED", event(this.a5) + ":SUBSCRIBED");
+	}
+
+	@Test
+	void anEventOfASubscribedStorylineOutsideTheSubscribedTopicsEntersByInterest() {
+		// 구독 밖(국제 분쟁) 기사 하나뿐인 사건과 그 스토리라인 — 보도 강도가 작아 크지 않다
+		long article = article("분쟁 소식", "world.conflict", 3.0, "2026-11-05T06:00:00Z", 1);
+		long flowEvent = this.rows.event(1, "2026-11-05T06:00:00Z", "2026-11-05T06:00:00Z");
+		this.rows.assign(article, flowEvent, "2026-11-05T06:00:00Z");
+		long storyline = this.rows.storyline("2026-11-05T06:00:00Z", "2026-11-05T06:00:00Z", flowEvent);
+		this.rows.member(storyline, flowEvent);
+		// 대조 — 구독 전에는 구독 주제 밖이라 들지 않는다
+		assertThat(events(this.selection.select(new UserId(this.user), DAY, ROOMY)))
+			.containsExactly(this.e1 + ":SUBSCRIBED", event(this.a5) + ":SUBSCRIBED");
+
+		subscribeStoryline(storyline, "USER");
+
+		// 구독한 스토리라인은 관심 흐름 — 그 사건이 새 길로 들고 표본 기사가 입력에 실린다
+		DigestInput input = this.selection.select(new UserId(this.user), DAY, ROOMY).orElseThrow();
+		assertThat(events(input)).contains(flowEvent + ":INTEREST");
+		assertThat(articlesOf(input, flowEvent)).containsExactly(article);
 	}
 
 	@Test
@@ -616,7 +638,8 @@ class CandidateSelectionTests {
 	private CandidateSelection selectionAt(String now) {
 		return new CandidateSelection(this.interests, this.evaluations,
 				new ActiveEvaluations(this.evaluations, this.lineage), this.tagSets, this.articles, this.events,
-				this.storylines, this.interestMaterials, this.feedback, InstantSource.fixed(Instant.parse(now)));
+				this.storylines, this.interestMaterials, this.feedback, this.storylineSubscriptions,
+				InstantSource.fixed(Instant.parse(now)));
 	}
 
 	@Test
@@ -677,7 +700,7 @@ class CandidateSelectionTests {
 				this.storylineSubscriptions, this.storylines, this.events);
 		return new CandidateSelection(this.interests, this.evaluations,
 				new ActiveEvaluations(this.evaluations, this.lineage), this.tagSets, this.articles, this.events,
-				this.storylines, materials, this.feedback, InstantSource.system());
+				this.storylines, materials, this.feedback, this.storylineSubscriptions, InstantSource.system());
 	}
 
 	/**
@@ -725,6 +748,7 @@ class CandidateSelectionTests {
 		subscribeStoryline(storyline, cause, "2026-11-05T12:00:00Z");
 	}
 
+	/** 스토리라인 구독 — 이력 한 줄(더함)과 지금 구독 행 */
 	private void subscribeStoryline(long storyline, String cause, String at) {
 		this.jdbc.sql("""
 				insert into user_storyline_subscription_events (user_id, storyline_id, action, cause, occurred_at)
@@ -735,6 +759,11 @@ class CandidateSelectionTests {
 			.param("cause", cause)
 			.param("at", at)
 			.update();
+		this.jdbc.sql("""
+				insert into user_storyline_subscriptions (user_id, storyline_id, created_at)
+				values (:user, :storyline, cast(:at as timestamptz))
+				on conflict do nothing
+				""").param("user", this.user).param("storyline", storyline).param("at", at).update();
 	}
 
 	private void topicChange(String key, String action) {

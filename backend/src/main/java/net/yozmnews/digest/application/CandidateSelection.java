@@ -15,6 +15,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import net.yozmnews.article.ArticleContent;
 import net.yozmnews.article.ArticleDirectory;
@@ -47,6 +48,7 @@ import net.yozmnews.digest.domain.selection.CandidateEvents;
 import net.yozmnews.digest.domain.selection.CandidateSelector;
 import net.yozmnews.digest.domain.selection.EventFacts;
 import net.yozmnews.digest.domain.selection.EventSample;
+import net.yozmnews.digest.domain.selection.FollowedStorylines;
 import net.yozmnews.digest.domain.selection.SelectedEvent;
 import net.yozmnews.digest.domain.selection.SelectionRules;
 import net.yozmnews.digest.domain.selection.Shortlist;
@@ -71,6 +73,7 @@ import net.yozmnews.tag.TagSetId;
 import net.yozmnews.tag.TagSetNames;
 import net.yozmnews.user.DigestInterests;
 import net.yozmnews.user.DigestInterestsDirectory;
+import net.yozmnews.user.StorylineSubscriptionDirectory;
 import net.yozmnews.user.TopicSubscription;
 import org.springframework.stereotype.Service;
 
@@ -92,6 +95,9 @@ import org.springframework.stereotype.Service;
  * 구독 사건은 같은 재료를 중립 순위로도 골라 견준다 — 사건의 값은 한 번 읽고, 표본 내용(토큰 어림)은 두 결과의 사건을 함께 읽는다.
  * <p>
  * 표본 기사의 제목 · 요약문은 토큰 어림에 쓴 읽기의 값을 그대로 입력에 싣는다 — 어림과 프롬프트의 글이 같다(ADR-0210).
+ * <p>
+ * 주제 구독 밖 관심 흐름의 사건은 지금 구독 중인 스토리라인을 꼭대기로 풀어 관심 흐름을 정하고({@link FollowedStorylines}) 구독 사건의
+ * 자리에서 몫 상한 안으로 먼저 담는다 — 중립 결과에는 그 길이 없어 그 사건은 {@code INTEREST} 다.
  * <p>
  * 큰 슬롯은 큰 판정 목록의 행을 그대로 쓴다. 목록은 포함 나무마다 한 행이라 한 포함 나무는 슬롯 하나를 쓴다 — 행의 사건에는 그
  * 아래 하위의 사건이 함께 든다. 앞 행이 쓴 사건은 뒤 행에서 다시 들지 않는다.
@@ -120,12 +126,14 @@ public class CandidateSelection {
 
 	private final EventFeedback feedback;
 
+	private final StorylineSubscriptionDirectory storylineSubscriptions;
+
 	private final InstantSource clock;
 
 	CandidateSelection(DigestInterestsDirectory interests, ArticleEvaluations evaluations,
 			ActiveEvaluations activeEvaluations, TagSetDirectory tagSets, ArticleDirectory articles,
 			EventDirectory events, StorylineDirectory storylines, InterestMaterials interestMaterials,
-			EventFeedback feedback, InstantSource clock) {
+			EventFeedback feedback, StorylineSubscriptionDirectory storylineSubscriptions, InstantSource clock) {
 		this.interests = Objects.requireNonNull(interests, "interests");
 		this.evaluations = Objects.requireNonNull(evaluations, "evaluations");
 		this.activeEvaluations = Objects.requireNonNull(activeEvaluations, "activeEvaluations");
@@ -135,6 +143,7 @@ public class CandidateSelection {
 		this.storylines = Objects.requireNonNull(storylines, "storylines");
 		this.interestMaterials = Objects.requireNonNull(interestMaterials, "interestMaterials");
 		this.feedback = Objects.requireNonNull(feedback, "feedback");
+		this.storylineSubscriptions = Objects.requireNonNull(storylineSubscriptions, "storylineSubscriptions");
 		this.clock = Objects.requireNonNull(clock, "clock");
 	}
 
@@ -142,8 +151,8 @@ public class CandidateSelection {
 	 * @param period 다이제스트 기간 — 시각 범위. 사용자 시간대의 날로 만드는 일은 부르는 쪽이 한다
 	 * @param model 쓸 모델 — 입력 토큰 예산
 	 * @return 생성의 입력 — 항목은 주요 뉴스 다음 헤드라인, 각각 항목 순위. 사건의 선정 이유는 큰 슬롯 사건 {@code MAJOR_STORYLINE},
-	 *     구독 사건은 관심도로 들어왔으면 {@code INTEREST} 아니면 {@code SUBSCRIBED}. 후보가 없어도 프로필이 있는 입력이다. 계정이 없으면
-	 *     빈 값
+	 *     구독 사건은 관심도로 들어왔으면 {@code INTEREST} 아니면 {@code SUBSCRIBED}, 주제 구독 밖 관심 흐름의 길로 든 사건은
+	 *     {@code INTEREST}. 후보가 없어도 프로필이 있는 입력이다. 계정이 없으면 빈 값
 	 * @throws IllegalStateException 관심 설정과 기사 평가 키의 활성 버전이 {@link ActiveEvaluations#ATTEMPTS} 번 모두 어긋났을 때
 	 */
 	public Optional<DigestInput> select(UserId user, DigestPeriod period, LlmModel model) {
@@ -200,9 +209,21 @@ public class CandidateSelection {
 		if (big.isEmpty()) {
 			return Optional.empty();
 		}
-		Shortlist shortlist = CandidateSelector.shortlist(ranked, big.get().slots(), filter, interests.maxCandidates());
+		Set<StorylineId> followed = levels.storylines()
+			.followed(Set.copyOf(StorylineTopsQueries
+				.ofStorylines(this.storylines, this.storylineSubscriptions.subscriptions(user))
+				.values()));
+		Set<EventId> taken = big.get()
+			.slots()
+			.events()
+			.stream()
+			.map(event -> event.facts().id())
+			.collect(Collectors.toSet());
+		List<CandidateEvent> byFlow = FollowedStorylines.pick(pool, filter, weights, followed, taken);
+		Shortlist shortlist = CandidateSelector.shortlist(ranked, big.get().slots(), filter, interests.maxCandidates(),
+				byFlow);
 		Shortlist neutralShortlist = CandidateSelector.shortlist(neutral, big.get().slots(), filter,
-				interests.maxCandidates());
+				interests.maxCandidates(), List.of());
 		Map<EventId, List<ArticleFacts>> samples = samples(shortlist, neutralShortlist);
 		Map<ArticleId, ArticleContent> contents = contents(samples);
 		int budget = CandidateCost.candidateBudget(model.inputTokenBudget(), codePoints(interests.interestText()),
@@ -422,11 +443,11 @@ public class CandidateSelection {
 		return disliked;
 	}
 
-	/** 두 결과의 사건마다 표본 — 사건 ID 순으로 한 번씩 */
+	/** 두 결과의 사건마다 표본 — 큰 슬롯 · 구독 · 새 길 사건, 사건 ID 순으로 한 번씩 */
 	private static Map<EventId, List<ArticleFacts>> samples(Shortlist ranked, Shortlist neutral) {
 		Map<EventId, List<ArticleFacts>> samples = new LinkedHashMap<>();
 		for (Shortlist shortlist : List.of(ranked, neutral)) {
-			for (List<CandidateEvent> events : List.of(shortlist.big(), shortlist.subscribed())) {
+			for (List<CandidateEvent> events : List.of(shortlist.big(), shortlist.subscribed(), shortlist.followed())) {
 				events.forEach(event -> samples.computeIfAbsent(event.facts().id(), id -> EventSample.of(event)));
 			}
 		}

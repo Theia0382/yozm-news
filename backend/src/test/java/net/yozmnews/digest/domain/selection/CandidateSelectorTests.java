@@ -65,7 +65,7 @@ class CandidateSelectorTests {
 		BigSlots big = BigSlotPicker.pick(
 				List.of(new BigRow(HEAD, List.of(new BigEvent(new EventId(30), new BigDecimal("12"), bigEvent)))), 3,
 				SelectionRules.bigSeats(60), filter);
-		Shortlist shortlist = CandidateSelector.shortlist(ranked, big, filter, 60);
+		Shortlist shortlist = CandidateSelector.shortlist(ranked, big, filter, 60, List.of());
 		Shortlist cut = BudgetCut.apply(shortlist, Map.of(new EventId(10), 100, new EventId(20), 100,
 				new EventId(30), 100, new EventId(50), 100), 10_000);
 		List<SelectedEvent> selected = CandidateSelector.candidates(cut, cut, InterestWeights.NEUTRAL_ALL);
@@ -90,7 +90,7 @@ class CandidateSelectorTests {
 						new BigEvent(new EventId(93), BigDecimal.ZERO, Facts.single(Facts.article(93)))))),
 				3, SelectionRules.bigSeats(4), Facts.politicsAndMarkets());
 
-		Shortlist shortlist = CandidateSelector.shortlist(ranked, big, Facts.politicsAndMarkets(), 4);
+		Shortlist shortlist = CandidateSelector.shortlist(ranked, big, Facts.politicsAndMarkets(), 4, List.of());
 
 		assertThat(shortlist.big()).extracting(event -> event.facts().id().value()).containsExactly(91L, 92L);
 		assertThat(shortlist.subscribed()).extracting(event -> event.facts().id().value()).containsExactly(1L, 2L);
@@ -103,7 +103,7 @@ class CandidateSelectorTests {
 		List<CandidateEvent> ranked = SubscriptionFilter.select(List.of(Facts.single(Facts.article(1))), nothing,
 				InterestWeights.NEUTRAL_ALL);
 
-		Shortlist shortlist = CandidateSelector.shortlist(ranked, BigSlots.NONE, nothing, 60);
+		Shortlist shortlist = CandidateSelector.shortlist(ranked, BigSlots.NONE, nothing, 60, List.of());
 
 		assertThat(ranked).isEmpty();
 		Shortlist cut = BudgetCut.apply(shortlist, Map.of(), 10_000);
@@ -113,7 +113,7 @@ class CandidateSelectorTests {
 		BigSlots big = BigSlotPicker.pick(
 				List.of(new BigRow(HEAD, List.of(new BigEvent(new EventId(40), BigDecimal.ONE, Facts.single(Facts.article(40)))))),
 				3, SelectionRules.bigSeats(60), nothing);
-		Shortlist bigOnly = CandidateSelector.shortlist(ranked, big, nothing, 60);
+		Shortlist bigOnly = CandidateSelector.shortlist(ranked, big, nothing, 60, List.of());
 		Shortlist bigOnlyCut = BudgetCut.apply(bigOnly, Map.of(new EventId(40), 100), 10_000);
 		assertThat(CandidateSelector.candidates(bigOnlyCut, bigOnlyCut, InterestWeights.NEUTRAL_ALL))
 			.extracting(event -> event.event().facts().id().value(), SelectedEvent::reason)
@@ -181,6 +181,44 @@ class CandidateSelectorTests {
 	}
 
 	@Test
+	void followedEventsTakeUpToAFifthOfTheSubscribedSeatsFirst() {
+		// 최대 10 · 큰 슬롯 없음 — 자리 10, 새 길은 ⌊10 × 0.2⌋ = 2 까지(후보 셋 가운데 앞 둘), 구독은 남은 8
+		List<CandidateEvent> ranked = new java.util.ArrayList<>();
+		for (long id = 1; id <= 10; id++) {
+			ranked.add(Facts.single(Facts.article(id)));
+		}
+		List<CandidateEvent> followed = List.of(Facts.single(Facts.article(21).subtopics("world.conflict")),
+				Facts.single(Facts.article(22).subtopics("world.conflict")),
+				Facts.single(Facts.article(23).subtopics("world.conflict")));
+		// 대조 — 새 길이 없으면 구독이 자리 10 을 쓴다
+		assertThat(CandidateSelector.shortlist(ranked, BigSlots.NONE, Facts.politicsAndMarkets(), 10, List.of())
+			.subscribed()).hasSize(10);
+
+		Shortlist shortlist = CandidateSelector.shortlist(ranked, BigSlots.NONE, Facts.politicsAndMarkets(), 10,
+				followed);
+
+		assertThat(shortlist.followed()).extracting(event -> event.facts().id().value()).containsExactly(21L, 22L);
+		assertThat(shortlist.subscribed()).hasSize(8);
+		// 내림 — 최대 9 면 ⌊9 × 0.2⌋ = ⌊1.8⌋ = 1, 구독은 남은 8
+		Shortlist nine = CandidateSelector.shortlist(ranked, BigSlots.NONE, Facts.politicsAndMarkets(), 9, followed);
+		assertThat(nine.followed()).extracting(event -> event.facts().id().value()).containsExactly(21L);
+		assertThat(nine.subscribed()).hasSize(8);
+	}
+
+	@Test
+	void aFollowedEventIsAlwaysMarkedInterest() {
+		// 새 길 사건은 가중치가 1 이어도 INTEREST — 중립 결과에는 그 길이 없다
+		CandidateEvent flow = Facts.single(Facts.article(21).subtopics("world.conflict"));
+		Shortlist cut = new Shortlist(List.of(), List.of(Facts.single(Facts.article(1))), List.of(flow), List.of());
+		Shortlist neutralCut = new Shortlist(List.of(), List.of(Facts.single(Facts.article(1))), List.of(), List.of());
+
+		assertThat(CandidateSelector.candidates(cut, neutralCut, InterestWeights.NEUTRAL_ALL))
+			.extracting(event -> event.event().facts().id().value(), SelectedEvent::reason)
+			.containsExactly(org.assertj.core.groups.Tuple.tuple(1L, SelectionReason.SUBSCRIBED),
+					org.assertj.core.groups.Tuple.tuple(21L, SelectionReason.INTEREST));
+	}
+
+	@Test
 	void aBigRowBelongsOnlyToABigSlotEvent() {
 		CandidateEvent event = Facts.single(Facts.article(1));
 
@@ -194,9 +232,9 @@ class CandidateSelectorTests {
 			int max) {
 		UserFilter filter = Facts.politicsAndMarkets();
 		Shortlist ranked = CandidateSelector.shortlist(SubscriptionFilter.select(events, filter, interests),
-				BigSlots.NONE, filter, max);
+				BigSlots.NONE, filter, max, List.of());
 		Shortlist neutral = CandidateSelector.shortlist(
-				SubscriptionFilter.select(events, filter, InterestWeights.NEUTRAL_ALL), BigSlots.NONE, filter, max);
+				SubscriptionFilter.select(events, filter, InterestWeights.NEUTRAL_ALL), BigSlots.NONE, filter, max, List.of());
 		Map<EventId, Integer> tokens = Map.of(new EventId(1), 100, new EventId(2), 100);
 		return CandidateSelector
 			.candidates(BudgetCut.apply(ranked, tokens, 10_000), BudgetCut.apply(neutral, tokens, 10_000), interests)

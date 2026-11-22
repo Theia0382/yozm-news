@@ -11,8 +11,9 @@ import net.yozmnews.event.EventId;
 /**
  * 입력 토큰 예산으로 자르기 — 정본 — docs/specs/digest.md §5
  * <p>
- * 토큰 어림의 합이 예산을 넘는 동안 하나씩 뺀다 — 하나를 뺀 뒤 큰 슬롯 사건이 남는 사건의 절반({@link SelectionRules#bigSeats})보다 많으면
- * 큰 슬롯에서, 아니면 구독 사건의 꼬리에서 뺀다. 그래서 구독 사건이 하나라도 빠졌으면 큰 슬롯 사건은 남는 사건의 절반을 넘지 않고, 구독 사건이
+ * 토큰 어림의 합이 예산을 넘는 동안 하나씩 뺀다 — 하나를 뺀 뒤 큰 슬롯 사건이 남는 사건(구독 사건 · 새 길 사건 포함)의 절반
+ * ({@link SelectionRules#bigSeats})보다 많으면 큰 슬롯에서, 아니면 구독 사건의 꼬리에서, 구독 사건이 다 빠졌으면 주제 구독 밖 관심 흐름의
+ * 길로 든 사건(새 길 사건)의 꼬리에서 뺀다 — 누락을 막으려 연 길이 먼저 잘리지 않는다. 그래서 구독 사건이 하나라도 빠졌으면 큰 슬롯 사건은 남는 사건의 절반을 넘지 않고, 구독 사건이
  * 모자라면 남는 예산은 큰 슬롯이 쓴다. 큰 슬롯에서는 행마다 고르게 뺀다({@link BigSlotPicker#trim} — 가장 많이 남은 행의 마지막 사건, 같으면
  * 뒤 행). 토큰 어림이 없는 사건(표본 기사의 내용을 하나도 읽지 못한 — 그 사이 지운 기사뿐인 사건)은 먼저 뺀다.
  */
@@ -37,9 +38,10 @@ public final class BudgetCut {
 			}
 		}
 		List<CandidateEvent> subscribed = known(shortlist.subscribed(), tokens);
-		long total = sum(big, tokens) + sum(subscribed, tokens);
-		while (total > budget && !(big.isEmpty() && subscribed.isEmpty())) {
-			int left = big.size() + subscribed.size() - 1;
+		List<CandidateEvent> followed = known(shortlist.followed(), tokens);
+		long total = sum(big, tokens) + sum(subscribed, tokens) + sum(followed, tokens);
+		while (total > budget && !(big.isEmpty() && subscribed.isEmpty() && followed.isEmpty())) {
+			int left = big.size() + subscribed.size() + followed.size() - 1;
 			if (big.size() > SelectionRules.bigSeats(left)) {
 				BigSlots kept = evenly(big, bigRows, big.size() - 1);
 				for (CandidateEvent event : big) {
@@ -50,11 +52,14 @@ public final class BudgetCut {
 				big = new ArrayList<>(kept.events());
 				bigRows = new ArrayList<>(kept.rows());
 			}
-			else {
+			else if (!subscribed.isEmpty()) {
 				total -= tokens.get(subscribed.removeLast().facts().id());
 			}
+			else {
+				total -= tokens.get(followed.removeLast().facts().id());
+			}
 		}
-		return new Shortlist(big, subscribed, bigRows);
+		return new Shortlist(big, subscribed, followed, bigRows);
 	}
 
 	/** 행 순서의 큰 슬롯 사건을 행마다 모아 {@code count} 개로 고르게 줄인다 */
