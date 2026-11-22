@@ -175,7 +175,7 @@ sequenceDiagram
 - `ReportVerdict` — 생성 한 번의 판정의 정본(report-R8)
 - `ReportSection` — 내용 aggregate(`report_sections`, 인용 `report_items`) — 대조한 출력에서 섹션을 만드는 규칙(report-R9)
 - `ReportSectionRepository` — 내용 저장소
-- `ReportViews` — 조회의 풀기 · 숨기기 판단의 정본(report-R11 · R12)
+- `ReportViews` — 조회의 풀기 · 숨기기 · 쪽 나누기 판단의 정본(report-R11 · R12)
 - `ReportViewRepository` — 조회 저장소 — 사용자의 리포트 한 쪽 · 사용자 + ID 의 행 · 그 리포트의 섹션과 인용. 질의마다 사용자 조건이 있다. 쓰지 않는다
 
 ### 나가는 쪽
