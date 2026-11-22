@@ -9,7 +9,7 @@ import java.util.Objects;
  *
  * @param instructions 지시 구획 — 역할 · 규칙 · 길이 기준
  * @param userContent 사용자 구획 — 프로필 · 항목의 JSON 문서 하나. 신뢰할 수 없는 글은 모두 여기에만 있다
- * @param outputSchema 출력 JSON Schema 문서 — 이번 요청의 출력 서술을 그린 것({@code DigestOutputSchema.json(DigestOutputSchema.root(set))})
+ * @param outputSchema 출력 JSON Schema 문서 — 이번 요청의 출력 서술을 그린 것({@code StructuredOutputSchema.json(DigestOutputSchema.root(set))})
  */
 public record DigestPrompt(String instructions, String userContent, String outputSchema) {
 

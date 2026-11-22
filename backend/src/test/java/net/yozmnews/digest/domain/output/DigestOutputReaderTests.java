@@ -11,6 +11,7 @@ import net.yozmnews.digest.DigestInputs;
 import net.yozmnews.digest.SelectionReason;
 import net.yozmnews.digest.domain.candidate.CandidateSet;
 import net.yozmnews.digest.domain.item.ItemKind;
+import net.yozmnews.platform.OutputShape;
 import org.junit.jupiter.api.Test;
 
 /**
