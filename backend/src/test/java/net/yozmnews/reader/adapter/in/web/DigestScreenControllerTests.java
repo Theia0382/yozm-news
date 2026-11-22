@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.Instant;
 import java.time.LocalDate;
 
 import com.jayway.jsonpath.JsonPath;
@@ -16,6 +17,7 @@ import net.yozmnews.digest.DigestRounds;
 import net.yozmnews.reader.DigestScreenRows;
 import net.yozmnews.reader.ReaderRows;
 import net.yozmnews.user.SignedInUsers;
+import net.yozmnews.user.UserStorylineFixtures;
 import net.yozmnews.user.application.PasswordHashing;
 import net.yozmnews.user.domain.account.AccountRepository;
 import net.yozmnews.user.domain.credential.PasswordCredentialRepository;
@@ -85,6 +87,7 @@ class DigestScreenControllerTests {
 	void clear() {
 		this.rows.clear();
 		this.readerRows.clear();
+		this.jdbc.sql("delete from storylines").update();
 		this.jdbc.sql("delete from users").update();
 		this.jdbc.sql("delete from login_failures").update();
 		this.jdbc.sql("delete from llm_credentials").update();
@@ -106,6 +109,12 @@ class DigestScreenControllerTests {
 		long more = this.rows.section(ready, "HEADLINE", 2, "헤드라인 제목", "한 줄 코멘트");
 		this.rows.cite(more, 0, kept);
 		this.rows.sectionEvent(more, 0, 80, "INTEREST");
+		// 주요 뉴스 항목을 묶은 흐름 — 헤드라인은 혼자 한 항목이다
+		long flow = UserStorylineFixtures.storyline(this.jdbc, Instant.parse("2026-11-05T00:00:00Z"));
+		this.jdbc.sql("update digest_sections set storyline_id = :flow where id = :id")
+			.param("flow", flow)
+			.param("id", story)
+			.update();
 		long failed = this.rows.digest(user, "2026-11-05", "FAILED", 50, 0, "NO_CITATION");
 		this.rows.digest(user, "2026-11-04", "EMPTY", null, null, null);
 		String url = this.jdbc.sql("select canonical_url from articles where id = :id")
@@ -132,12 +141,15 @@ class DigestScreenControllerTests {
 			.andExpect(jsonPath("$.day.shown.sections[0].reason").isEmpty())
 			.andExpect(jsonPath("$.day.shown.sections[0].citations").isEmpty())
 			.andExpect(jsonPath("$.day.shown.sections[0].eventIds").isEmpty())
+			.andExpect(jsonPath("$.day.shown.sections[0].storylineId").isEmpty())
 			.andExpect(jsonPath("$.day.shown.sections[1].kind").value("TOP_STORY"))
 			.andExpect(jsonPath("$.day.shown.sections[1].title").value("주요 뉴스 제목"))
 			.andExpect(jsonPath("$.day.shown.sections[1].body").value("주요 뉴스 요약"))
 			.andExpect(jsonPath("$.day.shown.sections[1].reason").value("MAJOR_STORYLINE"))
 			// 항목의 사건 — 위치 순, 첫 사건이 항목 키(반응을 누르는 손잡이)
 			.andExpect(jsonPath("$.day.shown.sections[1].eventIds").value(contains(70, 71)))
+			// 항목을 묶은 흐름 — 흐름 추적의 대상
+			.andExpect(jsonPath("$.day.shown.sections[1].storylineId").value(flow))
 			// 지운 기사의 인용은 빠진다
 			.andExpect(jsonPath("$.day.shown.sections[1].citations.length()").value(1))
 			.andExpect(jsonPath("$.day.shown.sections[1].citations[0].articleId").value(kept))
@@ -152,6 +164,7 @@ class DigestScreenControllerTests {
 			.andExpect(jsonPath("$.day.shown.sections[2].body").value("한 줄 코멘트"))
 			.andExpect(jsonPath("$.day.shown.sections[2].reason").value("INTEREST"))
 			.andExpect(jsonPath("$.day.shown.sections[2].eventIds").value(contains(80)))
+			.andExpect(jsonPath("$.day.shown.sections[2].storylineId").isEmpty())
 			.andExpect(jsonPath("$.day.shown.sections[2].citations[0].articleId").value(kept))
 			.andExpect(jsonPath("$.day.shown.sections[2].citations[0].note").doesNotExist())
 			.andExpect(jsonPath("$.day.latest.digestId").value(failed))

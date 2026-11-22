@@ -28,11 +28,11 @@ class ItemPlanTests {
 		assertThat(ItemRules.TOP_STORIES).isEqualTo(5);
 		// 큰 항목 둘(점수 3) + 나머지 일곱(점수 9 · 8 · 7 · 6 · 5 · 4 · 2)
 		List<DigestItemPlan> items = new ArrayList<>();
-		items.add(new DigestItemPlan(List.of(big(1, 0)), 0));
-		items.add(new DigestItemPlan(List.of(big(2, 1)), 1));
+		items.add(new DigestItemPlan(List.of(big(1, 0)), 0, null));
+		items.add(new DigestItemPlan(List.of(big(2, 1)), 1, null));
 		double[] scores = { 9, 8, 7, 6, 5, 4, 2 };
 		for (int i = 0; i < scores.length; i++) {
-			items.add(new DigestItemPlan(List.of(subscribed(10 + i, scores[i])), null));
+			items.add(new DigestItemPlan(List.of(subscribed(10 + i, scores[i])), null, null));
 		}
 
 		List<ArrangedItem> arranged = ItemPlan.arrange(items, InterestWeights.NEUTRAL_ALL);
@@ -56,9 +56,9 @@ class ItemPlanTests {
 		List<DigestItemPlan> items = new ArrayList<>();
 		double[] scores = { 9, 8, 7, 6, 5, 4 };
 		for (int i = 0; i < scores.length; i++) {
-			items.add(new DigestItemPlan(List.of(subscribed(10 + i, scores[i])), null));
+			items.add(new DigestItemPlan(List.of(subscribed(10 + i, scores[i])), null, null));
 		}
-		items.add(new DigestItemPlan(List.of(big(1, 0)), 0));
+		items.add(new DigestItemPlan(List.of(big(1, 0)), 0, null));
 
 		List<ArrangedItem> arranged = ItemPlan.arrange(items, InterestWeights.NEUTRAL_ALL);
 
@@ -71,9 +71,9 @@ class ItemPlanTests {
 	@Test
 	void theItemScoreIsTheBestEventScoreAndMissingScoresGoLast() {
 		// 항목 A: 사건 5(2) · 사건 6(4.5) → 4.5. 항목 B: 사건 7(4) → 4. 항목 C: 사건 8(없음) → 맨 뒤
-		DigestItemPlan a = new DigestItemPlan(List.of(subscribed(5, 2.0), subscribed(6, 4.5)), null);
-		DigestItemPlan b = new DigestItemPlan(List.of(subscribed(7, 4.0)), null);
-		DigestItemPlan c = new DigestItemPlan(List.of(subscribed(8, null)), null);
+		DigestItemPlan a = new DigestItemPlan(List.of(subscribed(5, 2.0), subscribed(6, 4.5)), null, null);
+		DigestItemPlan b = new DigestItemPlan(List.of(subscribed(7, 4.0)), null, null);
+		DigestItemPlan c = new DigestItemPlan(List.of(subscribed(8, null)), null, null);
 
 		List<ArrangedItem> arranged = ItemPlan.arrange(List.of(c, b, a), InterestWeights.NEUTRAL_ALL);
 
@@ -86,8 +86,8 @@ class ItemPlanTests {
 
 	@Test
 	void equalScoresAreOrderedByTheSmallestEventId() {
-		DigestItemPlan later = new DigestItemPlan(List.of(subscribed(9)), null);
-		DigestItemPlan earlier = new DigestItemPlan(List.of(subscribed(12), subscribed(4)), null);
+		DigestItemPlan later = new DigestItemPlan(List.of(subscribed(9)), null, null);
+		DigestItemPlan earlier = new DigestItemPlan(List.of(subscribed(12), subscribed(4)), null, null);
 
 		assertThat(ItemPlan.arrange(List.of(later, earlier), InterestWeights.NEUTRAL_ALL))
 			.extracting(item -> Items.ids(item.plan()).contains(4L))
@@ -98,8 +98,8 @@ class ItemPlanTests {
 	void theItemScoreUsesTheInterestWeight() {
 		// 정치 행정 가중치 0.5 — 항목 점수는 관심도를 곱한 사건 점수: 4 × 0.5 = 2.0, 3 × 0.5 = 1.5
 		InterestWeights interests = new InterestWeights(new TopicInterests(Map.of("politics.executive", 0.5)), StorylineInterests.NEUTRAL_ALL);
-		DigestItemPlan politics4 = new DigestItemPlan(List.of(subscribed(2, 4.0)), null);
-		DigestItemPlan politics3 = new DigestItemPlan(List.of(subscribed(1, 3.0)), null);
+		DigestItemPlan politics4 = new DigestItemPlan(List.of(subscribed(2, 4.0)), null, null);
+		DigestItemPlan politics3 = new DigestItemPlan(List.of(subscribed(1, 3.0)), null, null);
 
 		assertThat(ItemPlan.score(politics4, interests).orElseThrow()).isEqualTo(2.0);
 		assertThat(ItemPlan.arrange(List.of(politics3, politics4), interests))
@@ -112,9 +112,9 @@ class ItemPlanTests {
 		SelectedEvent event = subscribed(1);
 
 		org.assertj.core.api.Assertions.assertThatIllegalArgumentException()
-			.isThrownBy(() -> new DigestItemPlan(List.of(), null));
+			.isThrownBy(() -> new DigestItemPlan(List.of(), null, null));
 		org.assertj.core.api.Assertions.assertThatIllegalArgumentException()
-			.isThrownBy(() -> new DigestItemPlan(List.of(event, event), null));
+			.isThrownBy(() -> new DigestItemPlan(List.of(event, event), null, null));
 		assertThat(event.reason()).isEqualTo(SelectionReason.SUBSCRIBED);
 	}
 

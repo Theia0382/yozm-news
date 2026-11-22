@@ -48,9 +48,9 @@ class CandidateSetTests {
 				new AliasedItem("I1", ItemKind.TOP_STORY,
 						List.of(new SectionEvent(30, SelectionReason.MAJOR_STORYLINE),
 								new SectionEvent(10, SelectionReason.SUBSCRIBED)),
-						List.of(C7, C3, C1)),
+						List.of(C7, C3, C1), null),
 				new AliasedItem("I2", ItemKind.HEADLINE, List.of(new SectionEvent(20, SelectionReason.INTEREST)),
-						List.of(C5)));
+						List.of(C5), null));
 		assertThat(set.item("I2")).map(AliasedItem::kind).contains(ItemKind.HEADLINE);
 		assertThat(set.item("i2")).isEmpty();
 		assertThat(set.item("I3")).isEmpty();
@@ -76,7 +76,7 @@ class CandidateSetTests {
 		assertThat(kept.items()).containsExactly(new AliasedItem("I1", ItemKind.TOP_STORY,
 				List.of(new SectionEvent(30, SelectionReason.MAJOR_STORYLINE),
 						new SectionEvent(10, SelectionReason.SUBSCRIBED)),
-				List.of(C3, C1)));
+				List.of(C3, C1), null));
 		assertThat(kept.item("I2")).isEmpty();
 		assertThat(kept.size()).isEqualTo(2);
 	}

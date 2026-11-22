@@ -17,20 +17,21 @@ import java.util.concurrent.atomic.AtomicInteger;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleDirectory;
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.digest.DigestRounds;
 import net.yozmnews.digest.DigestRows;
 import net.yozmnews.digest.SelectionReason;
 import net.yozmnews.digest.domain.candidate.DigestCandidate;
 import net.yozmnews.digest.domain.digest.DigestPeriod;
+import net.yozmnews.digest.domain.exposure.ExposureRepository;
 import net.yozmnews.digest.domain.input.CandidateArticle;
 import net.yozmnews.digest.domain.input.DigestInput;
 import net.yozmnews.digest.domain.input.DigestProfile;
 import net.yozmnews.digest.domain.input.InputEvent;
 import net.yozmnews.digest.domain.input.InputItem;
 import net.yozmnews.digest.domain.item.ItemKind;
-import net.yozmnews.event.EventId;
-import net.yozmnews.digest.domain.exposure.ExposureRepository;
 import net.yozmnews.event.EventArticles;
 import net.yozmnews.event.EventDirectory;
+import net.yozmnews.event.EventId;
 import net.yozmnews.feedback.EventFeedback;
 import net.yozmnews.llm.LlmModel;
 import net.yozmnews.llm.Provider;
@@ -38,6 +39,7 @@ import net.yozmnews.llm.ReasoningEffort;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.reader.ReaderRows;
 import net.yozmnews.storyline.StorylineDirectory;
+import net.yozmnews.storyline.StorylineId;
 import net.yozmnews.storyline.StorylineRows;
 import net.yozmnews.tag.ArticleEvaluations;
 import net.yozmnews.tag.TagKeyLineage;
@@ -45,11 +47,12 @@ import net.yozmnews.tag.TagKeyMapping;
 import net.yozmnews.tag.TagSetDirectory;
 import net.yozmnews.tag.TagSetId;
 import net.yozmnews.user.DigestInterestsDirectory;
-import net.yozmnews.user.SummaryLength;
 import net.yozmnews.user.StorylineSubscriptionDirectory;
+import net.yozmnews.user.SummaryLength;
+import net.yozmnews.user.TopicSubscriptionHistory;
 import net.yozmnews.user.UserStorylineDirectory;
 import net.yozmnews.user.UserStorylineFixtures;
-import net.yozmnews.user.TopicSubscriptionHistory;
+import org.jobrunr.scheduling.JobScheduler;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -58,8 +61,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.TestPropertySource;
-import org.jobrunr.scheduling.JobScheduler;
-import net.yozmnews.digest.DigestRounds;
 
 /**
  * 후보 선별의 재료 경로 — 실제 PostgreSQL 의 사용자 설정 · 기사 · 평가 · 사건 · 스토리라인 행에서 관심 설정 조회 · 첫 평가 시각 · 평가 · 발행
@@ -292,6 +293,8 @@ class CandidateSelectionTests {
 		assertThat(input.items()).extracting(item -> item.events().stream().map(e -> e.event().value()).toList())
 			.containsExactly(List.of(this.e1, event(this.a5)), List.of(alone));
 		assertThat(input.items()).extracting(InputItem::kind).containsOnly(ItemKind.TOP_STORY);
+		// 항목은 자기를 묶은 꼭대기를 싣는다 — 혼자 한 사건의 항목은 없다
+		assertThat(input.items()).extracting(InputItem::storyline).containsExactly(new StorylineId(storyline), null);
 	}
 
 	@Test

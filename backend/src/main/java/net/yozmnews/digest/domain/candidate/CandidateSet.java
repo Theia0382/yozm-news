@@ -65,7 +65,8 @@ public final class CandidateSet {
 					articles.add(article.candidate());
 				}
 			}
-			items.add(new AliasedItem(ITEM_PREFIX + (items.size() + 1), item.kind(), events, articles));
+			items.add(new AliasedItem(ITEM_PREFIX + (items.size() + 1), item.kind(), events, articles,
+					item.storyline()));
 		}
 		return new CandidateSet(entries, items);
 	}
@@ -112,7 +113,7 @@ public final class CandidateSet {
 				.filter(article -> present.contains(article.articleId()))
 				.toList();
 			if (!articles.isEmpty()) {
-				items.add(new AliasedItem(item.alias(), item.kind(), item.events(), articles));
+				items.add(new AliasedItem(item.alias(), item.kind(), item.events(), articles, item.storyline()));
 			}
 		}
 		return new CandidateSet(kept, items);

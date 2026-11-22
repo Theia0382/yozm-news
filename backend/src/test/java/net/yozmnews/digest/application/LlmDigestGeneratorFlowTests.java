@@ -258,7 +258,7 @@ class LlmDigestGeneratorFlowTests {
 		return new DigestInput(
 				new DigestProfile(List.of("정치"), List.of(), "", ZoneId.of("Asia/Seoul"), SummaryLength.NORMAL, effort),
 				List.of(new InputItem(ItemKind.TOP_STORY,
-						List.of(new InputEvent(new EventId(this.articleIds.get(0)), SelectionReason.SUBSCRIBED, withTitles)))));
+						List.of(new InputEvent(new EventId(this.articleIds.get(0)), SelectionReason.SUBSCRIBED, withTitles)), null)));
 	}
 
 	/** 생성 요청을 모으고 인용이 있는 본문으로 답하는 관문 대역 — 토큰 900 · 120 */

@@ -6725,11 +6725,15 @@
             "type" : [ "string", "null" ],
             "enum" : [ "SUBSCRIBED", "INTEREST", "MAJOR_STORYLINE" ]
           },
+          "storylineId" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int64"
+          },
           "title" : {
             "type" : [ "string", "null" ]
           }
         },
-        "required" : [ "body", "citations", "eventIds", "kind", "reason", "title" ]
+        "required" : [ "body", "citations", "eventIds", "kind", "reason", "storylineId", "title" ]
       },
       "DigestUnresolvedFailureResponse" : {
         "type" : "object",

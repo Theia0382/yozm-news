@@ -40,10 +40,13 @@ import net.yozmnews.digest.domain.digest.DigestRepository;
 import net.yozmnews.digest.domain.view.DigestDayRepository;
 import net.yozmnews.event.EventId;
 import net.yozmnews.platform.UserId;
+import net.yozmnews.storyline.StorylineDirectory;
+import net.yozmnews.storyline.StorylineId;
 import net.yozmnews.tag.TagSetDirectory;
 import net.yozmnews.user.DigestFailureCause;
 import net.yozmnews.user.DigestModelDirectory;
 import net.yozmnews.user.UserDigestSchedules;
+import net.yozmnews.user.UserStorylineFixtures;
 import net.yozmnews.user.UserTimezones;
 import org.jobrunr.scheduling.JobScheduler;
 import org.jspecify.annotations.Nullable;
@@ -116,6 +119,9 @@ class DigestDirectoryServiceTests {
 	TagSetDirectory tagSets;
 
 	@Autowired
+	StorylineDirectory storylines;
+
+	@Autowired
 	TransactionTemplate transaction;
 
 	@Autowired
@@ -129,6 +135,8 @@ class DigestDirectoryServiceTests {
 	@AfterEach
 	void clear() {
 		this.jdbc.sql("delete from digests").update();
+		this.jdbc.sql("delete from storyline_relations").update();
+		this.jdbc.sql("delete from storylines").update();
 		this.jdbc.sql("delete from llm_credentials where user_id in (select id from users where email like 'digest-view-%')")
 			.update();
 		this.jdbc.sql("delete from users where email like 'digest-view-%'").update();
@@ -139,7 +147,8 @@ class DigestDirectoryServiceTests {
 	}
 
 	private DigestDirectoryService directory(Instant now) {
-		return new DigestDirectoryService(this.ledger, this.days, this.schedules, this.models, this.transaction,
+		return new DigestDirectoryService(this.ledger, this.days, this.schedules, this.models, this.storylines,
+				this.transaction,
 				() -> now);
 	}
 
@@ -149,6 +158,57 @@ class DigestDirectoryServiceTests {
 		return new DigestRequestsService(this.timezones, this.models, this.ledger, this.owners, generation,
 				new DigestDispatch((id, token) -> {
 				}), this.transaction, () -> NOW);
+	}
+
+	@Test
+	void aSectionCarriesTheCurrentTopOfTheFlowThatGroupedItsItem() {
+		UserId user = user("digest-view-flow@example.com", "VALID");
+		Instant at = Instant.parse("2026-11-17T00:00:00Z");
+		long kept = UserStorylineFixtures.storyline(this.jdbc, at);
+		long merged = UserStorylineFixtures.storyline(this.jdbc, at);
+		long survivor = UserStorylineFixtures.storyline(this.jdbc, at);
+		long parent = UserStorylineFixtures.storyline(this.jdbc, at);
+		long removed = UserStorylineFixtures.storyline(this.jdbc, at);
+		long ready = row(user, "2026-11-18", "READY", 100, 20, null);
+		section(ready, "OVERVIEW", 0, null, "오늘의 흐름");
+		long[] items = { section(ready, "TOP_STORY", 1, "그대로", "s"), section(ready, "TOP_STORY", 2, "합쳐짐", "s"),
+				section(ready, "HEADLINE", 3, "지워짐", null), section(ready, "HEADLINE", 4, "혼자", null) };
+		for (int i = 0; i < items.length; i++) {
+			item(items[i], 0, 7 + i);
+			sectionEvent(items[i], 0, 70 + i, "SUBSCRIBED");
+		}
+		storylineOf(items[0], kept);
+		storylineOf(items[1], merged);
+		storylineOf(items[2], removed);
+		// 대조 — 생성 때의 꼭대기가 그대로면 그 값이다
+		assertThat(flows(user)).containsExactly(null, new StorylineId(kept), new StorylineId(merged),
+				new StorylineId(removed), null);
+
+		// 저장한 뒤 — 하나는 다른 스토리라인에 합쳐지고 그 남는 쪽이 더 큰 나무에 들었다, 하나는 지워졌다
+		UserStorylineFixtures.merge(this.jdbc, merged, survivor);
+		UserStorylineFixtures.contains(this.jdbc, parent, survivor);
+		this.jdbc.sql("delete from storylines where id = :id").param("id", removed).update();
+
+		assertThat(flows(user)).as("합쳐졌으면 남는 쪽의 지금 꼭대기, 지워졌으면 없다")
+			.containsExactly(null, new StorylineId(kept), new StorylineId(parent), null, null);
+	}
+
+	/** 2026-11-18 의 보이는 다이제스트 섹션마다의 흐름 — 위치 순 */
+	private List<@Nullable StorylineId> flows(UserId user) {
+		return directory().on(user, LocalDate.parse("2026-11-18"))
+			.orElseThrow()
+			.shown()
+			.sections()
+			.stream()
+			.map(DigestSectionView::storyline)
+			.toList();
+	}
+
+	private void storylineOf(long section, long storyline) {
+		this.jdbc.sql("update digest_sections set storyline_id = :storyline where id = :id")
+			.param("storyline", storyline)
+			.param("id", section)
+			.update();
 	}
 
 	@Test
@@ -181,19 +241,19 @@ class DigestDirectoryServiceTests {
 
 		assertThat(day.shown()).isEqualTo(new ShownDigest(ready, Instant.parse("2026-11-17T15:00:00Z"),
 				Instant.parse("2026-11-18T15:00:00Z"), "openai", "m", 30, 100, 20, Instant.parse("2026-11-18T15:05:00Z"),
-				List.of(new DigestSectionView(SectionKind.OVERVIEW, null, "오늘의 흐름", null, List.of(), List.of()),
+				List.of(new DigestSectionView(SectionKind.OVERVIEW, null, "오늘의 흐름", null, List.of(), List.of(), null),
 						// 항목의 이유 하나 — 큰 슬롯 사건이 있으면 큰 화제, 관심도 사건이 있으면 관심 반영, 아니면 구독 주제.
 						// 항목의 사건은 위치 순이다(첫 사건이 항목 키)
 						new DigestSectionView(SectionKind.TOP_STORY, "주요 뉴스 제목", "주요 뉴스 요약",
 								SelectionReason.MAJOR_STORYLINE,
 								List.of(new DigestCitation(new ArticleId(7)), new DigestCitation(new ArticleId(9))),
-								List.of(new EventId(70), new EventId(90))),
+								List.of(new EventId(70), new EventId(90)), null),
 						new DigestSectionView(SectionKind.HEADLINE, "헤드라인 제목", "한 줄 코멘트", SelectionReason.INTEREST,
-								List.of(new DigestCitation(new ArticleId(8))), List.of(new EventId(80))),
+								List.of(new DigestCitation(new ArticleId(8))), List.of(new EventId(80)), null),
 						new DigestSectionView(SectionKind.HEADLINE, "구독 헤드라인", null, SelectionReason.SUBSCRIBED,
-								List.of(new DigestCitation(new ArticleId(6))), List.of(new EventId(60))),
+								List.of(new DigestCitation(new ArticleId(6))), List.of(new EventId(60)), null),
 						new DigestSectionView(SectionKind.HEADLINE, "남은 인용 헤드라인", null, SelectionReason.INTEREST,
-								List.of(new DigestCitation(new ArticleId(5))), List.of(new EventId(50), new EventId(51))))));
+								List.of(new DigestCitation(new ArticleId(5))), List.of(new EventId(50), new EventId(51)), null))));
 		assertThat(day.latest()).isEqualTo(new DigestAttempt(failed, DigestStatus.FAILED, DigestFailure.NO_CITATION,
 				DigestFailureCause.OUTPUT, Instant.parse("2026-11-18T15:05:00Z")));
 		assertThat(day.usage()).isEqualTo(new DigestDayUsage(3, 150, 20));

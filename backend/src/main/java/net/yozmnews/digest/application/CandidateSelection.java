@@ -273,7 +273,7 @@ public class CandidateSelection {
 				}
 				inputEvents.add(new InputEvent(event.event().facts().id(), event.reason(), articles));
 			}
-			inputItems.add(new InputItem(item.kind(), inputEvents));
+			inputItems.add(new InputItem(item.kind(), inputEvents, item.plan().top()));
 		}
 		DigestProfile profile = new DigestProfile(
 				ordered(interests.topics().stream().map(TopicSubscription::key).toList(), names.topicOrder(),
