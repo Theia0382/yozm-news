@@ -402,6 +402,47 @@ class StorylineQueryFlowTests {
 	}
 
 	@Test
+	void theTopOfAStorylineIsTheRootOfItsTreeFollowingAMergedStorylineToItsSurvivor() {
+		// wide ⊃ narrow — narrow 의 꼭대기는 wide, 상위가 없는 quiet 는 자기
+		contains(this.wide, this.narrow);
+		long merged = storyline("2026-11-05T10:00:00Z", "2026-11-05T10:00:00Z", this.eventC);
+		this.jdbc.sql("update storylines set merged_into = :into, merged_at = now() where id = :id")
+			.param("into", this.narrow)
+			.param("id", merged)
+			.update();
+
+		Map<StorylineId, StorylineId> tops = this.directory.topsOfStorylines(List.of(new StorylineId(this.narrow),
+				new StorylineId(merged), new StorylineId(this.quiet), new StorylineId(this.wide),
+				new StorylineId(999_999_999L), new StorylineId(this.narrow)));
+
+		// 없는 스토리라인은 빠지고, 합쳐진 스토리라인은 받은 ID 를 키로 남는 쪽(narrow)의 꼭대기를 낸다
+		assertThat(tops).containsOnlyKeys(new StorylineId(this.narrow), new StorylineId(merged),
+				new StorylineId(this.quiet), new StorylineId(this.wide));
+		// 대조 — 상위가 없는 스토리라인은 자기 자신이 꼭대기다(포함이 없는 quiet · 나무의 뿌리 wide)
+		assertThat(tops.get(new StorylineId(this.quiet))).isEqualTo(new StorylineId(this.quiet));
+		assertThat(tops.get(new StorylineId(this.wide))).isEqualTo(new StorylineId(this.wide));
+		assertThat(tops.get(new StorylineId(this.narrow))).isEqualTo(new StorylineId(this.wide));
+		assertThat(tops.get(new StorylineId(merged))).isEqualTo(new StorylineId(this.wide));
+
+		assertThat(this.directory.topsOfStorylines(List.of())).isEmpty();
+	}
+
+	@Test
+	void theStorylineTopsQueryRefusesMoreStorylinesThanItsLimit() {
+		List<StorylineId> tooMany = LongStream.rangeClosed(1, StorylineDirectory.MAX_TOP_STORYLINES + 1)
+			.mapToObj(StorylineId::new)
+			.toList();
+		List<StorylineId> atLimit = tooMany.subList(0, StorylineDirectory.MAX_TOP_STORYLINES);
+
+		assertThatIllegalArgumentException().isThrownBy(() -> this.directory.topsOfStorylines(tooMany));
+		assertThat(this.directory.topsOfStorylines(atLimit)).isNotNull();
+		// 상한은 서로 다른 스토리라인 수다 — 같은 스토리라인을 한 번 더 넣어도 받는다
+		List<StorylineId> repeated = new ArrayList<>(atLimit);
+		repeated.add(atLimit.getFirst());
+		assertThat(this.directory.topsOfStorylines(repeated)).isNotNull();
+	}
+
+	@Test
 	void aParentHoldsTheEventsOfItsChildrenAndMarksTheInheritedOnes() {
 		contains(this.wide, this.narrow);
 

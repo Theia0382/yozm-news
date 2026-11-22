@@ -25,6 +25,9 @@ public interface StorylineDirectory {
 	/** 꼭대기 조회 한 번에 묻는 서로 다른 사건 수의 상한 — 정본. 측정 전 목표 */
 	int MAX_TOP_EVENTS = 1000;
 
+	/** 스토리라인 꼭대기 조회 한 번에 묻는 서로 다른 스토리라인 수의 상한 — 정본. 측정 전 목표 */
+	int MAX_TOP_STORYLINES = 1000;
+
 	/**
 	 * 스토리라인 하나 — 합쳐진 스토리라인(storyline-R18)이면 남는 스토리라인을 낸다.
 	 * @return 없는 스토리라인이면 빈 값
@@ -61,6 +64,14 @@ public interface StorylineDirectory {
 	 * @throws IllegalArgumentException 서로 다른 사건이 {@link #MAX_TOP_EVENTS} 를 넘을 때
 	 */
 	Map<EventId, List<StorylineId>> topsOf(Collection<EventId> events);
+
+	/**
+	 * 스토리라인마다 그 포함 나무의 꼭대기 — 포함의 상위를 끝까지 따른 뿌리(상위가 없으면 자기). 이어짐은 따르지 않는다. 합쳐진
+	 * 스토리라인(storyline-R18)이면 남는 스토리라인의 꼭대기다(storyline-R37).
+	 * @return 받은 스토리라인 ID → 꼭대기. 없는 스토리라인(지웠거나 처음부터 없는 ID)은 빠진다. 빈 입력이면 빈 맵
+	 * @throws IllegalArgumentException 서로 다른 스토리라인이 {@link #MAX_TOP_STORYLINES} 를 넘을 때
+	 */
+	Map<StorylineId, StorylineId> topsOfStorylines(Collection<StorylineId> storylines);
 
 	/**
 	 * 기간의 스토리라인(닫은 사건 집합에 조회 기간 안 기사가 있는 사건이 하나라도 있는, 합쳐지지 않은 스토리라인) — 직접 소속의 마지막 기사 시각
