@@ -4,7 +4,7 @@
 export const COLLECTED_ITEMS: readonly string[] = [
   "이메일, 표시 이름, 비밀번호 해시",
   "관심 설정",
-  "관심 신호 이력(좋아요 · 싫어요, 주제와 스토리라인의 구독 변경)",
+  "관심 신호 이력(좋아요 · 싫어요, 주제 구독과 흐름 추적의 변경)",
   "다이제스트와 변화 리포트",
   "암호화한 LLM 키",
   "요청 제한을 위한 IP 주소의 다이제스트 — 제한 창이 끝나면 지웁니다(창은 길어야 1시간)",
@@ -20,7 +20,7 @@ export const DIGEST_TRANSFER_ITEMS: readonly string[] = [
 
 /** 변화 리포트를 만들 때 쓸 모델의 공급자로 가는 것 */
 export const REPORT_TRANSFER_ITEMS: readonly string[] = [
-  "그 기간에 구독한 스토리라인의 변화 · 보도량 · 관심도 통계",
+  "그 기간에 추적한 흐름의 변화 · 보도량 · 관심도 통계",
   "직전 리포트의 요약",
 ];
 

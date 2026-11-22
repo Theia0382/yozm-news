@@ -118,9 +118,7 @@ describe("KeysPage", () => {
     // 묶음 이름 · 대표 기사 제목은 보내지 않는다
     expect(transfer.queryByText(/큰 스토리라인 묶음/)).not.toBeInTheDocument();
     expect(
-      transfer.getByText(
-        "그 기간에 구독한 스토리라인의 변화 · 보도량 · 관심도 통계",
-      ),
+      transfer.getByText("그 기간에 추적한 흐름의 변화 · 보도량 · 관심도 통계"),
     ).toBeInTheDocument();
     expect(transfer.getByText("직전 리포트의 요약")).toBeInTheDocument();
     expect(

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router";
 import {
   type SubscriptionChangeResult,
-  useStorylineSubscriptions,
+  type TrackingView,
   useSubscriptionToggle,
 } from "@/features/storylines/subscriptionQueries";
 import {
@@ -14,19 +14,14 @@ import {
   SUBSCRIPTIONS_PATH,
   SUBSCRIPTIONS_TITLE,
   limitReached,
+  trackingNameOf,
 } from "@/features/storylines/storylineTexts";
 
-/** 버튼 옆 안내 — 상한이면 내 구독으로 가는 링크를 함께 둔다 */
+/** 버튼 옆 안내 — 상한이면 추적 중인 흐름으로 가는 링크를 함께 둔다 */
 type Notice = { text: string; toSubscriptions: boolean };
 
-/**
- * 결과에 따라 버튼 옆에 남길 안내 — 바뀐 것이 그대로 보이는 결과는 안내가 없다.
- * @param listLimit 내 구독 응답의 상한 — 상한 결과에 상한이 실리지 않았을 때 쓴다
- */
-function noticeOf(
-  change: SubscriptionChangeResult,
-  listLimit: number,
-): Notice | null {
+/** 결과에 따라 버튼 옆에 남길 안내 — 바뀐 것이 그대로 보이는 결과는 안내가 없다 */
+function noticeOf(change: SubscriptionChangeResult): Notice | null {
   if (change.kind === "unsubscribe") {
     return null;
   }
@@ -38,42 +33,52 @@ function noticeOf(
       return { text: NOT_FOUND, toSubscriptions: false };
     case "LIMIT_REACHED":
       return {
-        text: limitReached(change.result.limit ?? listLimit),
+        text:
+          change.result.limit === null
+            ? SUBSCRIPTION_CHANGE_FAILED
+            : limitReached(change.result.limit),
         toSubscriptions: true,
       };
   }
 }
 
 /**
- * 스토리라인 하나의 구독 버튼 — 내 구독을 읽기 전에는 누를 수 없고, 누르면 구독 · 해제한 뒤 내 구독을 다시 읽어 상태를 바꾼다. 상한 · 없는
- * 스토리라인 · 실패는 버튼 옆에 알린다(docs/specs/user.md user-R52).
+ * 스토리라인 하나의 흐름 추적 버튼 — 스토리라인 목록 · 타임라인 · 다이제스트 항목이 같은 버튼을 쓴다. 상태는 화면이 한 번 읽은 추적 상태
+ * (`tracking`)에서 받고, 읽기 전에는 누를 수 없다. 누르면 추적 · 해제한 뒤 추적 상태를 다시 읽는다 — 같은 흐름의 다른 버튼도 함께 바뀐다.
+ * 상한 · 없는 스토리라인 · 실패는 버튼 옆에 알린다(docs/specs/user.md user-R52).
+ * @param itemTitle 다이제스트 항목의 버튼이면 그 항목의 제목 — 버튼의 접근 이름에 담는다
  */
-export function SubscribeButton({ storylineId }: { storylineId: number }) {
-  const subscriptions = useStorylineSubscriptions();
+export function SubscribeButton({
+  storylineId,
+  tracking,
+  itemTitle,
+}: {
+  storylineId: number;
+  tracking: TrackingView;
+  itemTitle?: string;
+}) {
   const change = useSubscriptionToggle();
   const [notice, setNotice] = useState<Notice | null>(null);
-  const subscribed =
-    subscriptions.data?.subscriptions.some(
-      (one) => one.storylineId === storylineId,
-    ) ?? false;
+  const ready = tracking.ready && tracking.states.has(storylineId);
+  const tracked = tracking.states.get(storylineId) ?? false;
+  const label = tracked ? SUBSCRIBED_LABEL : SUBSCRIBE_LABEL;
 
   return (
     <span className="inline-flex flex-wrap items-center gap-2">
       <button
         type="button"
-        aria-pressed={subscribed}
+        aria-label={
+          itemTitle === undefined ? undefined : trackingNameOf(itemTitle, label)
+        }
+        aria-pressed={tracked}
         title={SUBSCRIPTION_EFFECT_SHORT}
-        disabled={subscriptions.data === undefined || change.isPending}
+        disabled={!ready || change.isPending}
         onClick={() => {
-          const list = subscriptions.data;
-          if (list === undefined) {
-            return;
-          }
           setNotice(null);
           change.mutate(
-            { storylineId, subscribe: !subscribed },
+            { storylineId, subscribe: !tracked },
             {
-              onSuccess: (result) => setNotice(noticeOf(result, list.limit)),
+              onSuccess: (result) => setNotice(noticeOf(result)),
               onError: () =>
                 setNotice({
                   text: SUBSCRIPTION_CHANGE_FAILED,
@@ -83,10 +88,10 @@ export function SubscribeButton({ storylineId }: { storylineId: number }) {
           );
         }}
         className={`rounded-md border px-3 py-1 text-sm whitespace-nowrap disabled:opacity-50 ${
-          subscribed ? "border-foreground font-medium" : "border-input"
+          tracked ? "border-foreground font-medium" : "border-input"
         }`}
       >
-        {subscribed ? SUBSCRIBED_LABEL : SUBSCRIBE_LABEL}
+        {label}
       </button>
       {notice && (
         <span role="alert" className="text-sm">
