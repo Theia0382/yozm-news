@@ -7,7 +7,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * 한 사용자의 주제 중분류마다 관심 x(−1 ~ 1) — {@link InterestFormula#levels} 가 낸다. 맵에 없는 중분류는 0(신호 없음)이다.
+ * 한 사용자의 주제 중분류마다 관심 x(−1 ~ 1) — {@link InterestFormula#levels} 가 주제 묶음({@link InterestRules#TOPIC})으로 낸 값을 담는다.
+ * 맵에 없는 중분류는 0(신호 없음)이다.
  * 가중치({@link TopicInterests})로 옮기는 변환과 "관심 있음"의 판정이 여기 한 곳에 있다. docs/specs/digest.md §5 · digest-R23 · digest-R36
  */
 public final class InterestLevels {
@@ -42,11 +43,11 @@ public final class InterestLevels {
 		return this.levels;
 	}
 
-	/** 가중치 — 중분류마다 g = {@link InterestRules#NEUTRAL} + {@link InterestRules#STRENGTH} × x. 변환의 정본 */
+	/** 가중치 — 중분류마다 g = {@link InterestRules#NEUTRAL} + β({@link InterestRules#TOPIC} 의 세기) × x. 변환의 정본 */
 	public TopicInterests weights() {
 		Map<String, Double> weights = new HashMap<>();
-		this.levels.forEach(
-				(subtopic, level) -> weights.put(subtopic, InterestRules.NEUTRAL + InterestRules.STRENGTH * level));
+		this.levels.forEach((subtopic, level) -> weights.put(subtopic,
+				InterestRules.NEUTRAL + InterestRules.TOPIC.strength() * level));
 		return new TopicInterests(weights);
 	}
 

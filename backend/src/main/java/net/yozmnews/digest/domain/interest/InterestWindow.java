@@ -66,10 +66,11 @@ public final class InterestWindow {
 			.stream()
 			.filter(change -> within(change.occurredAt(), from, windowEnd))
 			.toList();
-		List<SubscriptionSignal> signals = new ArrayList<>(InterestSignals.topics(topics));
+		List<SubscriptionSignal<String>> signals = new ArrayList<>(InterestSignals.topics(topics));
 		signals.addAll(InterestSignals.storylines(storylines, record.storylineShares()));
-		return InterestFormula.levels(InterestSignals.exposed(exposures, feedback, record.subtopics()), signals,
-				reference);
+		return new InterestLevels(InterestFormula.levels(
+				InterestSignals.exposed(exposures, feedback, record.subtopics()), signals, reference,
+				InterestRules.TOPIC));
 	}
 
 	private static boolean within(Instant at, Instant from, Instant to) {

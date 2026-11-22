@@ -40,7 +40,7 @@ public final class InterestSignals {
 	 * @param subtopics 지금 사건 → 활성 중분류 — 주제를 셀 수 없는 사건은 없다
 	 * @return 노출 사건 가운데 주제가 있는 사건마다 하나
 	 */
-	public static List<ExposedEvent> exposed(Map<EventId, Exposure> exposures, List<FeedbackChange> feedback,
+	public static List<ExposedEvent<String>> exposed(Map<EventId, Exposure> exposures, List<FeedbackChange> feedback,
 			Map<EventId, Set<String>> subtopics) {
 		Objects.requireNonNull(exposures, "exposures");
 		Objects.requireNonNull(feedback, "feedback");
@@ -51,11 +51,11 @@ public final class InterestSignals {
 				last.put(change.current(), change.value());
 			}
 		}
-		List<ExposedEvent> exposed = new ArrayList<>();
+		List<ExposedEvent<String>> exposed = new ArrayList<>();
 		exposures.forEach((event, exposure) -> {
 			Set<String> topics = subtopics.get(event);
 			if (topics != null) {
-				exposed.add(new ExposedEvent(topics, exposure.at(), exposure.share(),
+				exposed.add(new ExposedEvent<>(each(topics), exposure.at(), exposure.share(),
 						last.getOrDefault(event, FeedbackValue.NONE)));
 			}
 		});
@@ -71,12 +71,10 @@ public final class InterestSignals {
 	}
 
 	/** 주제 구독 변경 — {@link #subscriberTopicChanges} 의 행마다, 중분류마다 몫 1 */
-	public static List<SubscriptionSignal> topics(List<TopicSubscriptionChange> changes) {
-		List<SubscriptionSignal> signals = new ArrayList<>();
+	public static List<SubscriptionSignal<String>> topics(List<TopicSubscriptionChange> changes) {
+		List<SubscriptionSignal<String>> signals = new ArrayList<>();
 		for (TopicSubscriptionChange change : subscriberTopicChanges(changes)) {
-			Map<String, Double> shares = new HashMap<>();
-			change.subtopics().forEach(subtopic -> shares.put(subtopic, 1.0));
-			signals.add(new SubscriptionSignal(shares, sign(change.action()), change.occurredAt()));
+			signals.add(new SubscriptionSignal<>(each(change.subtopics()), sign(change.action()), change.occurredAt()));
 		}
 		return signals;
 	}
@@ -93,21 +91,28 @@ public final class InterestSignals {
 	 * 스토리라인 구독 변경 — {@link #storylinesToRead} 와 같은 행 가운데 주제 몫이 있는 행마다.
 	 * @param shares 스토리라인 → 주제 몫({@link StorylineTopics#shares})
 	 */
-	public static List<SubscriptionSignal> storylines(List<StorylineSubscriptionChange> changes,
+	public static List<SubscriptionSignal<String>> storylines(List<StorylineSubscriptionChange> changes,
 			Map<StorylineId, Map<String, Double>> shares) {
 		Objects.requireNonNull(changes, "changes");
 		Objects.requireNonNull(shares, "shares");
-		List<SubscriptionSignal> signals = new ArrayList<>();
+		List<SubscriptionSignal<String>> signals = new ArrayList<>();
 		for (StorylineSubscriptionChange change : changes) {
 			if (!counts(change)) {
 				continue;
 			}
 			Map<String, Double> share = shares.getOrDefault(change.current(), Map.of());
 			if (!share.isEmpty()) {
-				signals.add(new SubscriptionSignal(share, sign(change.action()), change.occurredAt()));
+				signals.add(new SubscriptionSignal<>(share, sign(change.action()), change.occurredAt()));
 			}
 		}
 		return signals;
+	}
+
+	/** 키마다 몫 1 — 주제 중분류는 사건의 주제 · 구독이 덮는 중분류마다 온전히 든다 */
+	private static Map<String, Double> each(Set<String> subtopics) {
+		Map<String, Double> shares = new HashMap<>();
+		subtopics.forEach(subtopic -> shares.put(subtopic, 1.0));
+		return shares;
 	}
 
 	private static boolean counts(StorylineSubscriptionChange change) {

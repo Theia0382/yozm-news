@@ -46,9 +46,9 @@ class InterestSignalsTests {
 				notExposed, Set.of("d"));
 
 		assertThat(InterestSignals.exposed(exposures, feedback, subtopics)).containsExactlyInAnyOrder(
-				new ExposedEvent(Set.of("a"), AT, 1.0, FeedbackValue.LIKE),
-				new ExposedEvent(Set.of("b"), AT, 0.5, FeedbackValue.NONE),
-				new ExposedEvent(Set.of("c"), AT, 1.0, FeedbackValue.NONE));
+				new ExposedEvent<>(Map.of("a", 1.0), AT, 1.0, FeedbackValue.LIKE),
+				new ExposedEvent<>(Map.of("b", 1.0), AT, 0.5, FeedbackValue.NONE),
+				new ExposedEvent<>(Map.of("c", 1.0), AT, 1.0, FeedbackValue.NONE));
 	}
 
 	@Test
@@ -62,7 +62,7 @@ class InterestSignalsTests {
 				new FeedbackChange(new EventId(9), null, FeedbackValue.LIKE, 1, AT));
 
 		assertThat(InterestSignals.exposed(exposures, feedback, Map.of(survivor, Set.of("a"))))
-			.containsExactly(new ExposedEvent(Set.of("a"), AT, 1.0, FeedbackValue.DISLIKE));
+			.containsExactly(new ExposedEvent<>(Map.of("a", 1.0), AT, 1.0, FeedbackValue.DISLIKE));
 	}
 
 	@Test
@@ -78,8 +78,8 @@ class InterestSignalsTests {
 				topic("economy.crypto", Set.of(), TopicSubscriptionAction.ADD, TopicSubscriptionCause.USER));
 
 		assertThat(InterestSignals.topics(changes)).containsExactly(
-				new SubscriptionSignal(Map.of("economy.macro", 1.0, "economy.markets", 1.0), 1, AT),
-				new SubscriptionSignal(Map.of("politics.executive", 1.0), -1, AT));
+				new SubscriptionSignal<>(Map.of("economy.macro", 1.0, "economy.markets", 1.0), 1, AT),
+				new SubscriptionSignal<>(Map.of("politics.executive", 1.0), -1, AT));
 	}
 
 	@Test
@@ -100,8 +100,8 @@ class InterestSignalsTests {
 		assertThat(InterestSignals.storylinesToRead(changes)).containsExactly(kept, survivor);
 		assertThat(InterestSignals.storylines(changes, Map.of(kept, Map.of("a", 0.5), survivor, Map.of())))
 			.as("몫이 빈 스토리라인은 신호가 아니다")
-			.containsExactly(new SubscriptionSignal(Map.of("a", 0.5), 1, AT),
-					new SubscriptionSignal(Map.of("a", 0.5), -1, AT));
+			.containsExactly(new SubscriptionSignal<>(Map.of("a", 0.5), 1, AT),
+					new SubscriptionSignal<>(Map.of("a", 0.5), -1, AT));
 	}
 
 	/** 그대로인 사건의 이력 행 — 기록한 사건과 지금 사건이 같다 */
