@@ -6,6 +6,8 @@ import static org.assertj.core.api.Assertions.within;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -47,6 +49,7 @@ class InterestTimelinesTests {
 				List.of(exposure(1, T1), exposure(2, T1), exposure(3, T1), exposure(4, T1)),
 				Map.of(event(1), Set.of("c"), event(2), Set.of("c"), event(3), Set.of("d"), event(4),
 						Set.of("d")),
+				Map.of(),
 				List.of(feedback(1, FeedbackValue.LIKE), feedback(2, FeedbackValue.LIKE),
 						feedback(3, FeedbackValue.DISLIKE), feedback(4, FeedbackValue.DISLIKE)),
 				List.of(
@@ -91,7 +94,7 @@ class InterestTimelinesTests {
 
 	@Test
 	void theReferencesAreAtLeastTwoAndNotGoingBack() {
-		InterestRecord empty = new InterestRecord(TAG_SET, List.of(), Map.of(), List.of(), List.of(), List.of(),
+		InterestRecord empty = new InterestRecord(TAG_SET, List.of(), Map.of(), Map.of(), List.of(), List.of(), List.of(),
 				Map.of());
 
 		assertThatIllegalArgumentException().isThrownBy(() -> InterestTimelines.points(empty, List.of(T0)));
@@ -103,7 +106,7 @@ class InterestTimelinesTests {
 	@Test
 	void aRepeatedReferenceHasTheSameInterestAndNoShiftOrStep() {
 		// 기간이 시작되는 정각에 부르면 앞 기간 끝과 진행 중 기간의 기준 시각이 같다 — a: T0 에 사용자가 두 번 더함
-		InterestRecord record = new InterestRecord(TAG_SET, List.of(), Map.of(), List.of(),
+		InterestRecord record = new InterestRecord(TAG_SET, List.of(), Map.of(), Map.of(), List.of(),
 				List.of(topic(Set.of("a"), TopicSubscriptionAction.ADD, TopicSubscriptionCause.USER, T0),
 						topic(Set.of("a"), TopicSubscriptionAction.ADD, TopicSubscriptionCause.USER, T0)),
 				List.of(), Map.of());
@@ -126,7 +129,7 @@ class InterestTimelinesTests {
 
 	/** 사건 하나인 항목의 노출 행(몫 1) — 다이제스트는 사건마다 다르다 */
 	private static ExposureRow exposure(long event, Instant at) {
-		return new ExposureRow(event, event(event), at, 1.0);
+		return new ExposureRow(event, LocalDate.ofInstant(at, ZoneOffset.UTC), event(event), at, 1.0);
 	}
 
 	private static FeedbackChange feedback(long event, FeedbackValue value) {

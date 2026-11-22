@@ -36,7 +36,7 @@ class CurrentInterests {
 		Objects.requireNonNull(version, "version");
 		Objects.requireNonNull(now, "now");
 		return this.materials.read(user, version, InterestWindow.start(now), now)
-			.map(record -> InterestWindow.levels(record, now, now));
+			.map(record -> InterestWindow.levels(record, now, now).topics());
 	}
 
 }

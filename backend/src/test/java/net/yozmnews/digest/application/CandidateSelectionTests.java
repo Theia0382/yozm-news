@@ -479,37 +479,14 @@ class CandidateSelectionTests {
 	}
 
 	@Test
-	void aSubscribedStorylineRaisesTheTopicsOfItsEvents() {
-		// 입법 기사 하나뿐인 사건의 스토리라인을 구독했다 — 입법 몫 1, 가중치 ≈ 1 + 0.5 × 1 ÷ 3 ≈ 1.17 이라 3.6 × 1.17 ≈ 4.2 가 4.0 앞이다
-		long legislature = event(eventArticle("의회 넷이", "politics.legislature", 3.6, "2026-11-05T06:00:00Z", 1));
+	void aSubscribedStorylineDoesNotRaiseTheTopicsOfItsEvents() {
+		// 입법 기사 하나뿐인 지난 사건의 스토리라인을 구독했다 — 스토리라인 구독은 그 스토리라인의 꼭대기 관심에만 들고 주제(입법)에는 들지 않는다.
+		// 후보 "의회 넷이"(3.6)는 그 스토리라인의 소속이 아니라 중립 순서 그대로 E1(4.0)이 사건 하나의 예산을 쓴다
+		eventArticle("의회 넷이", "politics.legislature", 3.6, "2026-11-05T06:00:00Z", 1);
 		subscribeStoryline(legislatureStoryline(), "USER");
 
 		assertThat(events(this.selection.select(new UserId(this.user), DAY, ONE_CANDIDATE)))
-			.containsExactly(legislature + ":INTEREST");
-	}
-
-	@Test
-	void aSubscribedStorylineCountsTheTopicOfEachEventByItsMembersNotByItsRepresentative() {
-		// 지난 사건의 대표 기사는 경제, 나머지 소속 둘은 입법 — 사건의 주제는 입법(2/3)이라 입법 몫 1, 가중치 ≈ 1.17 이고
-		// 3.6 × 1.17 ≈ 4.2 가 4.0 앞이다. 대표 기사로 세면 경제 몫 1 이라 입법 사건은 4.0 뒤다
-		long legislature = event(eventArticle("의회 넷이", "politics.legislature", 3.6, "2026-11-05T06:00:00Z", 1));
-		long representative = article("지난 경제", "economy.markets", 3.0, "2026-11-01T00:00:00Z", 1);
-		long event = this.rows.event(3, "2026-11-01T00:00:00Z", "2026-11-01T02:00:00Z");
-		this.rows.assign(representative, event, "2026-11-01T00:00:00Z");
-		this.rows.assign(article("지난 의회 하나", "politics.legislature", 3.0, "2026-11-01T01:00:00Z", 2), event,
-				"2026-11-01T01:00:00Z");
-		this.rows.assign(article("지난 의회 둘", "politics.legislature", 3.0, "2026-11-01T02:00:00Z", 3), event,
-				"2026-11-01T02:00:00Z");
-		this.jdbc.sql("""
-				update events set status = 'CLOSED', closed_at = '2026-11-02T00:00:00Z', representative_article_id = :article
-				where id = :event
-				""").param("article", representative).param("event", event).update();
-		long storyline = this.rows.storyline("2026-11-01T00:00:00Z", "2026-11-01T02:00:00Z", event);
-		this.rows.member(storyline, event);
-		subscribeStoryline(storyline, "USER");
-
-		assertThat(events(this.selection.select(new UserId(this.user), DAY, ONE_CANDIDATE)))
-			.containsExactly(legislature + ":INTEREST");
+			.containsExactly(this.e1 + ":SUBSCRIBED");
 	}
 
 	@Test
@@ -580,10 +557,10 @@ class CandidateSelectionTests {
 
 	@Test
 	void signalsAfterThePeriodEndAreReadUpToNow() {
-		// 스토리라인 구독(USER)이 기간 끝 11-06 0시 뒤 12시다 — 지금이 그 뒤면 읽혀 무게 1 로 세고(≈ 1 + 0.5 × 1 ÷ 3 ≈ 1.17,
-		// 3.6 × 1.17 ≈ 4.2 가 4.0 앞), 지금이 그 앞이면 읽는 범위 밖이라 중립 순서다
+		// 지난 다이제스트(11-04)가 보인 입법 사건 일곱에 좋아요를 기간 끝 11-06 0시 뒤 12시에 눌렀다 — 지금이 그 뒤면 읽혀 무게 1 로 세고
+		// (입법 가중치 ≈ 1 + 0.5 × 7 ÷ 10 ≈ 1.35, 3.6 × 1.35 ≈ 4.8 이 4.0 앞), 지금이 그 앞이면 읽는 범위 밖이라 중립 순서다
 		long legislature = event(eventArticle("의회 넷이", "politics.legislature", 3.6, "2026-11-05T06:00:00Z", 1));
-		subscribeStoryline(legislatureStoryline(), "USER", "2026-11-06T12:00:00Z");
+		likedLegislatureShown(7, "2026-11-06T12:00:00Z");
 
 		assertThat(events(selectionAt("2026-11-07T00:00:00Z").select(new UserId(this.user), DAY, ONE_CANDIDATE)))
 			.containsExactly(legislature + ":INTEREST");
@@ -665,6 +642,11 @@ class CandidateSelectionTests {
 	 * @return 보인 사건
 	 */
 	private long[] likedLegislatureShown(int count) {
+		return likedLegislatureShown(count, "2026-11-04T07:00:00Z");
+	}
+
+	/** {@link #likedLegislatureShown(int)} 의 좋아요를 {@code reactedAt} 에 누른 것 */
+	private long[] likedLegislatureShown(int count, String reactedAt) {
 		long digest = DigestRows.digest(this.jdbc, this.user, "2026-11-04", "2026-11-04T06:00:00Z");
 		long[] shown = new long[count];
 		for (int i = 0; i < count; i++) {
@@ -672,7 +654,7 @@ class CandidateSelectionTests {
 			shown[i] = this.rows.event(1, "2026-11-01T00:00:00Z", "2026-11-01T00:00:00Z");
 			this.rows.assign(article, shown[i], "2026-11-01T00:00:00Z");
 			DigestRows.item(this.jdbc, digest, shown[i]);
-			react(shown[i], "LIKE", "2026-11-04T07:00:00Z");
+			react(shown[i], "LIKE", reactedAt);
 		}
 		return shown;
 	}

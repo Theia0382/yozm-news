@@ -45,7 +45,7 @@ class InterestSignalsTests {
 		Map<EventId, Set<String>> subtopics = Map.of(liked, Set.of("a"), undone, Set.of("b"), unrated, Set.of("c"),
 				notExposed, Set.of("d"));
 
-		assertThat(InterestSignals.exposed(exposures, feedback, subtopics)).containsExactlyInAnyOrder(
+		assertThat(InterestSignals.topicExposed(exposures, feedback, subtopics, Set.of())).containsExactlyInAnyOrder(
 				new ExposedEvent<>(Map.of("a", 1.0), AT, 1.0, FeedbackValue.LIKE),
 				new ExposedEvent<>(Map.of("b", 1.0), AT, 0.5, FeedbackValue.NONE),
 				new ExposedEvent<>(Map.of("c", 1.0), AT, 1.0, FeedbackValue.NONE));
@@ -61,7 +61,7 @@ class InterestSignalsTests {
 				new FeedbackChange(survivor, survivor, FeedbackValue.DISLIKE, 1, AT),
 				new FeedbackChange(new EventId(9), null, FeedbackValue.LIKE, 1, AT));
 
-		assertThat(InterestSignals.exposed(exposures, feedback, Map.of(survivor, Set.of("a"))))
+		assertThat(InterestSignals.topicExposed(exposures, feedback, Map.of(survivor, Set.of("a")), Set.of()))
 			.containsExactly(new ExposedEvent<>(Map.of("a", 1.0), AT, 1.0, FeedbackValue.DISLIKE));
 	}
 
@@ -98,10 +98,43 @@ class InterestSignalsTests {
 				storyline(kept, kept, StorylineSubscriptionAction.REMOVE, StorylineSubscriptionCause.USER));
 
 		assertThat(InterestSignals.storylinesToRead(changes)).containsExactly(kept, survivor);
-		assertThat(InterestSignals.storylines(changes, Map.of(kept, Map.of("a", 0.5), survivor, Map.of())))
-			.as("몫이 빈 스토리라인은 신호가 아니다")
-			.containsExactly(new SubscriptionSignal<>(Map.of("a", 0.5), 1, AT),
-					new SubscriptionSignal<>(Map.of("a", 0.5), -1, AT));
+		// kept 의 꼭대기는 top, survivor 는 꼭대기를 모른다(그 사이 지워짐) — 꼭대기에 몫 1 로 든다
+		StorylineId top = new StorylineId(100);
+		assertThat(InterestSignals.storylines(changes, Map.of(kept, top)))
+			.as("꼭대기를 모르는 스토리라인은 신호가 아니다")
+			.containsExactly(new SubscriptionSignal<>(Map.of(top, 1.0), 1, AT),
+					new SubscriptionSignal<>(Map.of(top, 1.0), -1, AT));
+	}
+
+	@Test
+	void aRepeatedEventStaysOutOfTheTopicSide() {
+		EventId first = new EventId(1);
+		EventId repeated = new EventId(2);
+		Map<EventId, Exposure> exposures = Map.of(first, new Exposure(AT, 1.0), repeated, new Exposure(AT, 1.0));
+		Map<EventId, Set<String>> subtopics = Map.of(first, Set.of("a"), repeated, Set.of("a"));
+
+		// 대조 — 반복이 없으면 둘 다 주제 쪽
+		assertThat(InterestSignals.topicExposed(exposures, List.of(), subtopics, Set.of())).hasSize(2);
+		assertThat(InterestSignals.topicExposed(exposures, List.of(reaction(repeated, FeedbackValue.DISLIKE)),
+				subtopics, Set.of(repeated)))
+			.containsExactly(new ExposedEvent<>(Map.of("a", 1.0), AT, 1.0, FeedbackValue.NONE));
+	}
+
+	@Test
+	void theStorylineSideSplitsAnEventAmongItsTopsAndTakesEventsWithoutTopics() {
+		EventId twoTrees = new EventId(1);
+		EventId untopical = new EventId(2);
+		EventId untreed = new EventId(3);
+		StorylineId tree = new StorylineId(100);
+		StorylineId other = new StorylineId(200);
+		Map<EventId, Exposure> exposures = Map.of(twoTrees, new Exposure(AT, 1.0), untopical, new Exposure(AT, 0.5),
+				untreed, new Exposure(AT, 1.0));
+		Map<EventId, List<StorylineId>> tops = Map.of(twoTrees, List.of(tree, other), untopical, List.of(tree));
+
+		assertThat(InterestSignals.storylineExposed(exposures, List.of(reaction(twoTrees, FeedbackValue.LIKE)), tops))
+			.containsExactlyInAnyOrder(
+					new ExposedEvent<>(Map.of(tree, 0.5, other, 0.5), AT, 1.0, FeedbackValue.LIKE),
+					new ExposedEvent<>(Map.of(tree, 1.0), AT, 0.5, FeedbackValue.NONE));
 	}
 
 	/** 그대로인 사건의 이력 행 — 기록한 사건과 지금 사건이 같다 */

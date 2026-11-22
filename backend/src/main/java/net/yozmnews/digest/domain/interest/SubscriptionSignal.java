@@ -7,7 +7,7 @@ import java.util.Objects;
 /**
  * 구독 변경 신호 하나 — 주제 구독 · 스토리라인 구독의 더함 · 뺌. docs/specs/digest.md §5
  *
- * @param shares 키 → 몫(0 초과 1 이하). 주제 구독은 덮는 중분류마다 1, 스토리라인 구독은 그 스토리라인의 주제 몫
+ * @param shares 키 → 몫(0 초과 1 이하). 주제 구독은 덮는 중분류마다 1, 스토리라인 구독은 그 스토리라인의 꼭대기 하나에 1
  * @param sign 더함 +1 · 뺌 −1
  * @param occurredAt 바꾼 시각
  * @param <K> 관심의 키

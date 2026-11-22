@@ -71,7 +71,7 @@ class ActiveEvaluations {
 	}
 
 	/**
-	 * 사건들의 값 — 사건마다 배정된 기사 전부의 평가를 활성 키로 풀어 {@link EventFacts#of} 로 센다. 후보 선별과 관심도 재료(스토리라인 주제 몫)가
+	 * 사건들의 값 — 사건마다 배정된 기사 전부의 평가를 활성 키로 풀어 {@link EventFacts#of} 로 센다. 후보 선별과 관심도 재료(노출 사건의 주제)가
 	 * 함께 쓰는 읽기다.
 	 * @param members 사건 → 배정된 기사({@code EventDirectory.articleIdsOf})
 	 * @param active 맞출 활성 버전

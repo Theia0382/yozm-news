@@ -1,6 +1,7 @@
 package net.yozmnews.digest.domain.interest;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Objects;
 
 import net.yozmnews.event.EventId;
@@ -10,13 +11,15 @@ import net.yozmnews.event.EventId;
  * docs/specs/digest.md §5 · digest-R24
  *
  * @param digestId 그 다이제스트
+ * @param digestDate 그 다이제스트의 날짜(사용자 시간대의 날 — {@code digests.digest_date}) — 스토리라인 반복 판정의 날짜
  * @param event 보인 사건 — 저장소가 읽은 행은 섹션에 쓴 사건, 관심도 재료({@link InterestRecord})의 행은 지금 사건으로 푼 것
  * @param exposedAt 그 다이제스트를 끝낸 시각
  * @param share 항목 무게 1 을 그 항목의 사건 행 수 n 으로 나눈 몫 1/n — 0 보다 크고 1 이하
  */
-public record ExposureRow(long digestId, EventId event, Instant exposedAt, double share) {
+public record ExposureRow(long digestId, LocalDate digestDate, EventId event, Instant exposedAt, double share) {
 
 	public ExposureRow {
+		Objects.requireNonNull(digestDate, "digestDate");
 		Objects.requireNonNull(event, "event");
 		Objects.requireNonNull(exposedAt, "exposedAt");
 		Exposure.requireShare(share);
@@ -24,7 +27,7 @@ public record ExposureRow(long digestId, EventId event, Instant exposedAt, doubl
 
 	/** 같은 다이제스트 · 시각 · 몫으로 사건만 바꾼 행 */
 	public ExposureRow withEvent(EventId current) {
-		return new ExposureRow(this.digestId, current, this.exposedAt, this.share);
+		return new ExposureRow(this.digestId, this.digestDate, current, this.exposedAt, this.share);
 	}
 
 }

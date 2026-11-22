@@ -33,11 +33,11 @@ public final class InterestTimelines {
 		requireReferences(references);
 		List<TopicSubscriptionChange> changes = InterestSignals.subscriberTopicChanges(record.topicChanges());
 		List<InterestPoint> points = new ArrayList<>();
-		InterestLevels before = InterestWindow.levels(record, references.get(0), references.get(0));
+		InterestLevels before = InterestWindow.levels(record, references.get(0), references.get(0)).topics();
 		for (int i = 1; i < references.size(); i++) {
 			Instant from = references.get(i - 1);
 			Instant reference = references.get(i);
-			InterestLevels levels = InterestWindow.levels(record, reference, reference);
+			InterestLevels levels = InterestWindow.levels(record, reference, reference).topics();
 			InterestShifts.Shift shift = InterestShifts.between(before, levels);
 			List<TopicSubscriptionStep> steps = changes.stream()
 				.filter(change -> !change.occurredAt().isBefore(from) && change.occurredAt().isBefore(reference))

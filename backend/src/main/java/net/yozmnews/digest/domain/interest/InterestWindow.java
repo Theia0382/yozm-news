@@ -1,11 +1,11 @@
 package net.yozmnews.digest.domain.interest;
 
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 import net.yozmnews.event.EventId;
 import net.yozmnews.feedback.FeedbackChange;
@@ -22,6 +22,7 @@ import net.yozmnews.user.TopicSubscriptionChange;
  * <li>반응은 창 안 이력 가운데 지금 사건이 그 사건인 행의 기록 순 마지막 값 — 창 시작 앞에 누른 반응은 읽지 않으므로, 창 시작을 걸쳐 같은 사건이
  * 다시 노출된 경우에만 그 반응을 없음으로 센다</li>
  * <li>주제 · 스토리라인 구독 변경은 창 안 행</li>
+ * <li>노출 · 반응은 주제 쪽과 스토리라인 쪽으로 나눈다 — 반복({@link StorylineRepeats})은 창 안 행으로 가른다({@link InterestSignals})</li>
  * </ul>
  * 창 끝은 다이제스트가 부르는 시각(기간 끝 뒤의 노출 · 반응 · 구독 변경도 무게 1 로 센다), 관심사 히스토리가 기준 시각이다(기준 시각 뒤 신호를 넣지
  * 않는다). 구독 제안은 기준 시각과 창 끝이 모두 부르는 시각이다. 창 끝이 창 시작 이하이면 빈 창이다.
@@ -41,19 +42,23 @@ public final class InterestWindow {
 	 * @param record 창을 덮는 범위에서 읽은 재료
 	 * @param reference 기준 시각 — 감쇠의 기준
 	 * @param windowEnd 창 끝(제외)
+	 * @return 주제 관심(주제 묶음)과 스토리라인 관심(스토리라인 묶음) — 반복은 창 안 행으로 가른다
 	 */
-	public static InterestLevels levels(InterestRecord record, Instant reference, Instant windowEnd) {
+	public static Interests levels(InterestRecord record, Instant reference, Instant windowEnd) {
 		Objects.requireNonNull(record, "record");
 		Objects.requireNonNull(windowEnd, "windowEnd");
 		Instant from = start(reference);
+		List<ExposureRow> rows = record.exposures()
+			.stream()
+			.filter(row -> within(row.exposedAt(), from, windowEnd))
+			.toList();
 		Map<EventId, Latest> latest = new HashMap<>();
-		for (ExposureRow row : record.exposures()) {
-			if (within(row.exposedAt(), from, windowEnd)) {
-				latest.merge(row.event(), Latest.of(row), Latest::merge);
-			}
+		for (ExposureRow row : rows) {
+			latest.merge(row.event(), Latest.of(row), Latest::merge);
 		}
 		Map<EventId, Exposure> exposures = new HashMap<>();
 		latest.forEach((event, row) -> exposures.put(event, new Exposure(row.at(), Math.min(1.0, row.share()))));
+		Set<EventId> repeated = StorylineRepeats.repeated(record.tops(), rows);
 		List<FeedbackChange> feedback = record.feedback()
 			.stream()
 			.filter(change -> within(change.occurredAt(), from, windowEnd))
@@ -66,11 +71,13 @@ public final class InterestWindow {
 			.stream()
 			.filter(change -> within(change.occurredAt(), from, windowEnd))
 			.toList();
-		List<SubscriptionSignal<String>> signals = new ArrayList<>(InterestSignals.topics(topics));
-		signals.addAll(InterestSignals.storylines(storylines, record.storylineShares()));
-		return new InterestLevels(InterestFormula.levels(
-				InterestSignals.exposed(exposures, feedback, record.subtopics()), signals, reference,
-				InterestRules.TOPIC));
+		InterestLevels topicLevels = new InterestLevels(InterestFormula.levels(
+				InterestSignals.topicExposed(exposures, feedback, record.subtopics(), repeated),
+				InterestSignals.topics(topics), reference, InterestRules.TOPIC));
+		StorylineLevels storylineLevels = new StorylineLevels(InterestFormula.levels(
+				InterestSignals.storylineExposed(exposures, feedback, record.tops()),
+				InterestSignals.storylines(storylines, record.storylineTops()), reference, InterestRules.STORYLINE));
+		return new Interests(topicLevels, storylineLevels);
 	}
 
 	private static boolean within(Instant at, Instant from, Instant to) {

@@ -8,13 +8,18 @@ import java.time.Duration;
 import org.junit.jupiter.api.Test;
 
 /**
- * 관심 상수 묶음 — 주제 묶음의 값과 값의 범위 검사.
+ * 관심 상수 묶음 — 주제 · 스토리라인 묶음의 값과 값의 범위 검사.
  */
 class InterestConstantsTests {
 
 	@Test
 	void theTopicBundleHoldsTheTopicConstants() {
 		assertThat(InterestRules.TOPIC).isEqualTo(new InterestConstants(Duration.ofDays(30), 3.0, 1.0, 0.5));
+	}
+
+	@Test
+	void theStorylineBundleStartsWithTheTopicValues() {
+		assertThat(InterestRules.STORYLINE).isEqualTo(new InterestConstants(Duration.ofDays(30), 3.0, 1.0, 0.5));
 	}
 
 	@Test

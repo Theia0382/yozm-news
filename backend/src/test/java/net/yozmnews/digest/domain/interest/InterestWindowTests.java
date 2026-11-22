@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.within;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -27,6 +29,8 @@ import org.junit.jupiter.api.Test;
  * 기준 시각 하나의 관심 — 재료를 창으로 자른다. 기대값은 손으로 계산한 리터럴이다(반감기 30일 · K 3 · γ 1, 30일 전 무게 0.5). 다이제스트의 창 끝은
  * 부르는 시각, 관심사 히스토리의 창 끝은 기준 시각이다. 노출 행은 지금 사건으로 푼 것이고, 몫은 따로 적지 않으면 1 · 다이제스트는 행마다 다르다.
  * <p>
+ * 스토리라인 · 반복 시험은 기준 시각 뒤에 노출해 무게를 1 로 두고(창 끝은 넉넉히 뒤), 다이제스트 날짜는 노출 시각의 UTC 날짜다.
+ * <p>
  * 지키는 규칙: digest-R25 · digest-R35
  */
 class InterestWindowTests {
@@ -40,9 +44,17 @@ class InterestWindowTests {
 	/** 다이제스트가 부르는 시각 — 기준 시각(기간 끝) 이틀 뒤 */
 	private static final Instant NOW = T.plus(Duration.ofDays(2));
 
+	/** 기준 시각 뒤의 노출을 무게 1 로 넉넉히 담는 창 끝 — 스토리라인 · 반복 시험 */
+	private static final Instant LATER = T.plus(Duration.ofDays(30));
+
 	private static final TagSetId TAG_SET = new TagSetId(7);
 
 	private static final Offset<Double> EXACT = within(1e-12);
+
+	/** 포함 나무의 꼭대기 */
+	private static final StorylineId TREE = new StorylineId(100);
+
+	private static final StorylineId OTHER_TREE = new StorylineId(200);
 
 	@Test
 	void theWindowStartsOneHundredTwentyDaysBeforeTheReference() {
@@ -57,9 +69,9 @@ class InterestWindowTests {
 				List.of(feedback(1, FeedbackValue.LIKE, T.minus(Duration.ofDays(29)))), List.of(), List.of(), Map.of());
 
 		// 히스토리: 노출 30일 전(무게 0.5) · 좋아요 → x = 0.5 ÷ 3.5 = 1/7
-		assertThat(InterestWindow.levels(record, T, T).level("a")).isCloseTo(0.14285714285714285, EXACT);
+		assertThat(InterestWindow.levels(record, T, T).topics().level("a")).isCloseTo(0.14285714285714285, EXACT);
 		// 다이제스트: 노출 하루 뒤(무게 1) · 좋아요 → x = 1 ÷ 4
-		assertThat(InterestWindow.levels(record, T, NOW).level("a")).isCloseTo(0.25, EXACT);
+		assertThat(InterestWindow.levels(record, T, NOW).topics().level("a")).isCloseTo(0.25, EXACT);
 	}
 
 	@Test
@@ -69,9 +81,9 @@ class InterestWindowTests {
 				List.of(feedback(2, FeedbackValue.LIKE, DAY_AFTER)), List.of(), List.of(), Map.of());
 
 		// 히스토리: 반응 없음 → x = 0 ÷ 3.5 = 0
-		assertThat(InterestWindow.levels(record, T, T).levels()).containsEntry("b", 0.0);
+		assertThat(InterestWindow.levels(record, T, T).topics().levels()).containsEntry("b", 0.0);
 		// 다이제스트: 좋아요 → x = 0.5 ÷ 3.5 = 1/7
-		assertThat(InterestWindow.levels(record, T, NOW).level("b")).isCloseTo(0.14285714285714285, EXACT);
+		assertThat(InterestWindow.levels(record, T, NOW).topics().level("b")).isCloseTo(0.14285714285714285, EXACT);
 	}
 
 	@Test
@@ -83,7 +95,7 @@ class InterestWindowTests {
 				List.of(feedback(3, FeedbackValue.LIKE, beforeStart), feedback(4, FeedbackValue.LIKE, beforeStart)),
 				List.of(), List.of(), Map.of());
 
-		InterestLevels levels = InterestWindow.levels(record, T, T);
+		InterestLevels levels = InterestWindow.levels(record, T, T).topics();
 
 		assertThat(levels.levels()).containsOnlyKeys("c");
 		assertThat(levels.level("c")).as("창 시작 앞의 좋아요는 읽지 않는다").isEqualTo(0.0);
@@ -99,7 +111,7 @@ class InterestWindowTests {
 				List.of(), List.of(), Map.of());
 
 		// x = −0.5 ÷ 3.5 = −1/7
-		assertThat(InterestWindow.levels(record, T, T).level("e")).isCloseTo(-0.14285714285714285, EXACT);
+		assertThat(InterestWindow.levels(record, T, T).topics().level("e")).isCloseTo(-0.14285714285714285, EXACT);
 	}
 
 	@Test
@@ -110,17 +122,19 @@ class InterestWindowTests {
 						topic("g", TopicSubscriptionCause.ONBOARDING, MONTH_BEFORE),
 						topic("h", TopicSubscriptionCause.USER, DAY_AFTER)),
 				List.of(storyline(kept, kept, MONTH_BEFORE), storyline(new StorylineId(32), null, MONTH_BEFORE)),
-				Map.of(kept, Map.of("i", 0.5)));
+				Map.of(kept, TREE));
 
-		InterestLevels history = InterestWindow.levels(record, T, T);
+		Interests history = InterestWindow.levels(record, T, T);
 
 		// 주제 구독 더함 30일 전 → S = 0.5 → x = 0.5 ÷ 3 = 1/6
-		assertThat(history.level("f")).isCloseTo(0.16666666666666666, EXACT);
-		// 스토리라인 구독(몫 0.5) 30일 전 → S = 0.25 → x = 0.25 ÷ 3 = 1/12
-		assertThat(history.level("i")).isCloseTo(0.08333333333333333, EXACT);
-		assertThat(history.levels()).as("기본값 · 기준 시각 뒤 · 지워진 스토리라인의 행은 신호가 아니다").containsOnlyKeys("f", "i");
+		assertThat(history.topics().level("f")).isCloseTo(0.16666666666666666, EXACT);
+		assertThat(history.topics().levels()).as("기본값 · 기준 시각 뒤의 행은 신호가 아니고, 스토리라인 구독은 주제에 들지 않는다")
+			.containsOnlyKeys("f");
+		// 스토리라인 구독(꼭대기 TREE) 30일 전 → S = 0.5 → x = 0.5 ÷ 3 = 1/6. 지워진 스토리라인의 행은 신호가 아니다
+		assertThat(history.storylines().levels()).containsOnlyKeys(TREE);
+		assertThat(history.storylines().level(TREE)).isCloseTo(0.16666666666666666, EXACT);
 		// 다이제스트 창에는 기준 시각 하루 뒤의 더함이 무게 1 로 든다 → x = 1 ÷ 3
-		assertThat(InterestWindow.levels(record, T, NOW).level("h")).isCloseTo(0.3333333333333333, EXACT);
+		assertThat(InterestWindow.levels(record, T, NOW).topics().level("h")).isCloseTo(0.3333333333333333, EXACT);
 	}
 
 	@Test
@@ -131,13 +145,13 @@ class InterestWindowTests {
 				List.of(feedback(6, FeedbackValue.LIKE, MONTH_BEFORE)), List.of(), List.of(), Map.of());
 
 		// 창 끝 = 기준 시각 20일 전 — 30일 전 노출 · 좋아요만 → x = 0.5 ÷ 3.5 = 1/7
-		InterestLevels early = InterestWindow.levels(record, T, T.minus(Duration.ofDays(20)));
+		InterestLevels early = InterestWindow.levels(record, T, T.minus(Duration.ofDays(20))).topics();
 		assertThat(early.levels()).containsOnlyKeys("j");
 		assertThat(early.level("j")).isCloseTo(0.14285714285714285, EXACT);
 		// 창 끝이 창 시작 이하면 빈 창
-		assertThat(InterestWindow.levels(record, T, InterestWindow.start(T))).isEqualTo(InterestLevels.NONE);
+		assertThat(InterestWindow.levels(record, T, InterestWindow.start(T))).isEqualTo(Interests.NONE);
 		assertThat(InterestWindow.levels(record, T, InterestWindow.start(T).minusSeconds(1)))
-			.isEqualTo(InterestLevels.NONE);
+			.isEqualTo(Interests.NONE);
 	}
 
 	@Test
@@ -148,7 +162,7 @@ class InterestWindowTests {
 				Map.of(event(8), Set.of("l"), event(9), Set.of("m")),
 				List.of(feedback(8, FeedbackValue.LIKE, start)), List.of(), List.of(), Map.of());
 
-		InterestLevels history = InterestWindow.levels(record, T, T);
+		InterestLevels history = InterestWindow.levels(record, T, T).topics();
 
 		assertThat(history.levels()).as("기준 시각 정각의 노출은 다음 기간의 것").containsOnlyKeys("l");
 		// 120일 전 무게 1/16 → x = 0.0625 ÷ 3.0625 = 1/49
@@ -161,7 +175,7 @@ class InterestWindowTests {
 		InterestRecord record = record(List.of(exposure(1, event(1), MONTH_BEFORE, 1.0 / 3), exposure(2, event(1), DAY_AFTER, 1.0)),
 				Map.of(event(1), Set.of("a")), List.of(feedback(1, FeedbackValue.LIKE, T)), List.of(), List.of(), Map.of());
 
-		assertThat(InterestWindow.levels(record, T, NOW).level("a")).isCloseTo(0.25, EXACT);
+		assertThat(InterestWindow.levels(record, T, NOW).topics().level("a")).isCloseTo(0.25, EXACT);
 	}
 
 	@Test
@@ -170,7 +184,7 @@ class InterestWindowTests {
 		InterestRecord record = record(List.of(exposure(1, event(1), MONTH_BEFORE, 1.0), exposure(2, event(1), DAY_AFTER, 1.0 / 3)),
 				Map.of(event(1), Set.of("a")), List.of(feedback(1, FeedbackValue.LIKE, T)), List.of(), List.of(), Map.of());
 
-		assertThat(InterestWindow.levels(record, T, NOW).level("a")).isCloseTo(0.1, EXACT);
+		assertThat(InterestWindow.levels(record, T, NOW).topics().level("a")).isCloseTo(0.1, EXACT);
 	}
 
 	@Test
@@ -183,7 +197,7 @@ class InterestWindowTests {
 				Map.of(event(2), Set.of("b"), event(3), Set.of("c")),
 				List.of(new FeedbackChange(event(1), event(2), FeedbackValue.LIKE, 5, T)), List.of(), List.of(), Map.of());
 
-		InterestLevels levels = InterestWindow.levels(record, T, NOW);
+		InterestLevels levels = InterestWindow.levels(record, T, NOW).topics();
 
 		assertThat(levels.level("b")).isCloseTo(0.18181818181818182, EXACT);
 		assertThat(levels.levels()).containsEntry("c", 0.0);
@@ -195,7 +209,7 @@ class InterestWindowTests {
 		InterestRecord record = record(List.of(exposure(5, event(2), DAY_AFTER, 1.0), exposure(5, event(2), DAY_AFTER, 0.5)),
 				Map.of(event(2), Set.of("b")), List.of(feedback(2, FeedbackValue.LIKE, T)), List.of(), List.of(), Map.of());
 
-		assertThat(InterestWindow.levels(record, T, NOW).level("b")).isCloseTo(0.25, EXACT);
+		assertThat(InterestWindow.levels(record, T, NOW).topics().level("b")).isCloseTo(0.25, EXACT);
 	}
 
 	@Test
@@ -204,13 +218,129 @@ class InterestWindowTests {
 		InterestRecord record = record(List.of(exposure(6, event(2), DAY_AFTER, 1.0 / 3), exposure(5, event(2), DAY_AFTER, 0.5)),
 				Map.of(event(2), Set.of("b")), List.of(feedback(2, FeedbackValue.LIKE, T)), List.of(), List.of(), Map.of());
 
-		assertThat(InterestWindow.levels(record, T, NOW).level("b")).isCloseTo(0.1, EXACT);
+		assertThat(InterestWindow.levels(record, T, NOW).topics().level("b")).isCloseTo(0.1, EXACT);
 	}
 
+	@Test
+	void aDislikeOnAnEventOfATreeLowersTheInterestOfItsTop() {
+		// 대조 — 꼭대기 없는 사건 2 는 스토리라인 관심을 만들지 않는다
+		InterestRecord untreed = record(List.of(exposure(2, DAY_AFTER)), Map.of(event(2), Set.of("t")), Map.of(),
+				List.of(feedback(2, FeedbackValue.DISLIKE, DAY_AFTER)));
+		assertThat(InterestWindow.levels(untreed, T, LATER).storylines()).isEqualTo(StorylineLevels.NONE);
+		// 꼭대기 TREE 인 사건 1(몫 1, 기준 시각 뒤라 무게 1)에 싫어요 → TREE = −1 ÷ (1 + 3) = −0.25
+		InterestRecord record = record(List.of(exposure(1, DAY_AFTER)), Map.of(event(1), Set.of("t")),
+				Map.of(event(1), List.of(TREE)), List.of(feedback(1, FeedbackValue.DISLIKE, DAY_AFTER)));
+
+		assertThat(InterestWindow.levels(record, T, LATER).storylines().level(TREE)).isCloseTo(-0.25, EXACT);
+	}
+
+	@Test
+	void anEventOnTwoTreesSplitsItsShareBetweenTheirTops() {
+		// 대조 — 꼭대기 하나면 1 ÷ (1 + 3) = 0.25
+		InterestRecord single = record(List.of(exposure(1, DAY_AFTER)), Map.of(event(1), Set.of("t")),
+				Map.of(event(1), List.of(TREE)), List.of(feedback(1, FeedbackValue.LIKE, DAY_AFTER)));
+		assertThat(InterestWindow.levels(single, T, LATER).storylines().level(TREE)).isCloseTo(0.25, EXACT);
+		// 꼭대기 둘 — 꼭대기마다 몫 배수 1/2 → E = F = 0.5 → x = 0.5 ÷ 3.5 = 1/7
+		InterestRecord record = record(List.of(exposure(1, DAY_AFTER)), Map.of(event(1), Set.of("t")),
+				Map.of(event(1), List.of(TREE, OTHER_TREE)), List.of(feedback(1, FeedbackValue.LIKE, DAY_AFTER)));
+
+		StorylineLevels levels = InterestWindow.levels(record, T, LATER).storylines();
+
+		assertThat(levels.level(TREE)).isCloseTo(0.14285714285714285, EXACT);
+		assertThat(levels.level(OTHER_TREE)).isCloseTo(0.14285714285714285, EXACT);
+	}
+
+	@Test
+	void anEventWithATopButNoCountableTopicStillCountsForItsTop() {
+		// 대조 — 같은 사건에 주제가 있으면 처음 본 흐름이라 주제에도 든다: t = −1 ÷ 4
+		InterestRecord topical = record(List.of(exposure(1, DAY_AFTER)), Map.of(event(1), Set.of("t")),
+				Map.of(event(1), List.of(TREE)), List.of(feedback(1, FeedbackValue.DISLIKE, DAY_AFTER)));
+		assertThat(InterestWindow.levels(topical, T, LATER).topics().level("t")).isCloseTo(-0.25, EXACT);
+		// 평가 있는 소속 기사가 없는 사건(주제 없음) — 주제에는 들지 않고 꼭대기에는 든다
+		InterestRecord record = record(List.of(exposure(1, DAY_AFTER)), Map.of(), Map.of(event(1), List.of(TREE)),
+				List.of(feedback(1, FeedbackValue.DISLIKE, DAY_AFTER)));
+
+		Interests interests = InterestWindow.levels(record, T, LATER);
+
+		assertThat(interests.topics()).isEqualTo(InterestLevels.NONE);
+		assertThat(interests.storylines().level(TREE)).isCloseTo(-0.25, EXACT);
+	}
+
+	@Test
+	void aDislikeOnAFlowSeenTheDayBeforeStaysOutOfTheTopic() {
+		// 대조 — b 가 a 의 8일 뒤(7일 밖)면 처음 본 흐름: t = −1 ÷ (2 + 3) = −0.2 · TREE = −0.2
+		InterestRecord late = flow(T.plus(Duration.ofDays(9)));
+		assertThat(InterestWindow.levels(late, T, LATER).topics().level("t")).isCloseTo(-0.2, EXACT);
+		assertThat(InterestWindow.levels(late, T, LATER).storylines().level(TREE)).isCloseTo(-0.2, EXACT);
+		// 같은 꼭대기 TREE 의 사건 a(하루 뒤, 주제 t)와 b(이틀 뒤, 주제 t), b 에 싫어요 — b 는 반복이라 주제에 없다
+		InterestRecord record = flow(T.plus(Duration.ofDays(2)));
+
+		Interests interests = InterestWindow.levels(record, T, LATER);
+
+		// 주제 t: a 만 — E = 1 · F = 0 → x = 0 ÷ 4 = 0. TREE: a · b — E = 2 · F = −1 → x = −1 ÷ 5 = −0.2
+		assertThat(interests.topics().levels()).containsEntry("t", 0.0);
+		assertThat(interests.storylines().level(TREE)).isCloseTo(-0.2, EXACT);
+	}
+
+	@Test
+	void aRepeatIsJudgedOnlyByRowsInsideTheWindow() {
+		Instant start = InterestWindow.start(T);
+		// 대조 — 창 안에 같은 꼭대기의 앞 노출(사건 3, 창 시작 정각)이 있으면 반복이라 주제에 없다
+		InterestRecord seen = record(
+				List.of(exposure(3, start), exposure(2, start.plus(Duration.ofDays(1)))),
+				Map.of(event(3), Set.of("s"), event(2), Set.of("t")),
+				Map.of(event(3), List.of(TREE), event(2), List.of(TREE)), List.of());
+		assertThat(InterestWindow.levels(seen, T, T).topics().levels()).containsOnlyKeys("s");
+		// 같은 꼭대기의 사건 1 이 창 시작 하루 앞(창 밖)에, 사건 2 가 창 시작 하루 뒤에 노출 — 날짜로는 이틀 사이지만 창 밖 행은 보지 않는다
+		InterestRecord record = record(
+				List.of(exposure(1, start.minus(Duration.ofDays(1))), exposure(2, start.plus(Duration.ofDays(1)))),
+				Map.of(event(1), Set.of("s"), event(2), Set.of("t")),
+				Map.of(event(1), List.of(TREE), event(2), List.of(TREE)), List.of());
+
+		assertThat(InterestWindow.levels(record, T, T).topics().levels()).as("처음 본 흐름이라 주제에 든다")
+			.containsOnlyKeys("t");
+	}
+
+	@Test
+	void aStorylineSubscriptionCountsOnlyForTheTopOfItsTree() {
+		StorylineId lower = new StorylineId(31);
+		// 대조 — 원인이 합쳐짐인 행(합쳐진 33 의 구독을 lower 로 고쳐 쓴 것)은 신호가 아니다
+		InterestRecord rewritten = new InterestRecord(TAG_SET, List.of(), Map.of(), Map.of(), List.of(), List.of(),
+				List.of(new StorylineSubscriptionChange(new StorylineId(33), lower, StorylineSubscriptionAction.ADD,
+						StorylineSubscriptionCause.STORYLINE_MERGED, DAY_AFTER)),
+				Map.of(lower, TREE));
+		assertThat(InterestWindow.levels(rewritten, T, LATER)).isEqualTo(Interests.NONE);
+		// 하위 스토리라인 lower(꼭대기 TREE)를 사용자가 구독 — 기준 시각 뒤라 무게 1 → TREE = 1 ÷ 3, 주제에는 들지 않는다
+		InterestRecord record = new InterestRecord(TAG_SET, List.of(), Map.of(), Map.of(), List.of(), List.of(),
+				List.of(storyline(lower, lower, DAY_AFTER)), Map.of(lower, TREE));
+
+		Interests interests = InterestWindow.levels(record, T, LATER);
+
+		assertThat(interests.topics()).isEqualTo(InterestLevels.NONE);
+		assertThat(interests.storylines().levels()).containsOnlyKeys(TREE);
+		assertThat(interests.storylines().level(TREE)).isCloseTo(0.3333333333333333, EXACT);
+	}
+
+	/** 같은 꼭대기 TREE 의 사건 a(1 — 하루 뒤)와 b(2 — {@code second}), 둘 다 주제 t, b 에 싫어요 */
+	private static InterestRecord flow(Instant second) {
+		return record(List.of(exposure(1, DAY_AFTER), exposure(2, second)),
+				Map.of(event(1), Set.of("t"), event(2), Set.of("t")),
+				Map.of(event(1), List.of(TREE), event(2), List.of(TREE)),
+				List.of(feedback(2, FeedbackValue.DISLIKE, second)));
+	}
+
+	/** 꼭대기 없는 재료 — 주제 관심만의 시험 */
 	private static InterestRecord record(List<ExposureRow> exposures, Map<EventId, Set<String>> subtopics,
 			List<FeedbackChange> feedback, List<TopicSubscriptionChange> topics,
-			List<StorylineSubscriptionChange> storylines, Map<StorylineId, Map<String, Double>> shares) {
-		return new InterestRecord(TAG_SET, exposures, subtopics, feedback, topics, storylines, shares);
+			List<StorylineSubscriptionChange> storylines, Map<StorylineId, StorylineId> storylineTops) {
+		return new InterestRecord(TAG_SET, exposures, subtopics, Map.of(), feedback, topics, storylines,
+				storylineTops);
+	}
+
+	/** 노출 사건의 꼭대기가 있는 재료 */
+	private static InterestRecord record(List<ExposureRow> exposures, Map<EventId, Set<String>> subtopics,
+			Map<EventId, List<StorylineId>> tops, List<FeedbackChange> feedback) {
+		return new InterestRecord(TAG_SET, exposures, subtopics, tops, feedback, List.of(), List.of(), Map.of());
 	}
 
 	private static EventId event(long id) {
@@ -223,7 +353,7 @@ class InterestWindowTests {
 	}
 
 	private static ExposureRow exposure(long digest, EventId event, Instant at, double share) {
-		return new ExposureRow(digest, event, at, share);
+		return new ExposureRow(digest, LocalDate.ofInstant(at, ZoneOffset.UTC), event, at, share);
 	}
 
 	/** 그대로인 사건의 이력 행 — 기록한 사건과 지금 사건이 같다 */

@@ -172,7 +172,7 @@ public class CandidateSelection {
 		if (interestRecord.isEmpty()) {
 			return Optional.empty();
 		}
-		TopicInterests weights = InterestWindow.levels(interestRecord.get(), period.end(), now).weights();
+		TopicInterests weights = InterestWindow.levels(interestRecord.get(), period.end(), now).topics().weights();
 		Instant from = latest(period.start(), period.end().minus(EvaluationPeriod.MAX_LENGTH));
 		EvaluationPeriod readPeriod = EvaluationPeriod.of(from, period.end()).orElseThrow();
 		Optional<List<ArticleFacts>> facts = facts(this.evaluations.firstEvaluatedIn(readPeriod), interests.tagSet());

@@ -19,14 +19,15 @@ import net.yozmnews.user.TopicSubscriptionChange;
  * @param tagSet 키를 푼 활성 태그 체계 버전
  * @param exposures 노출 행 — 사건을 지금 사건으로 푼 것(지운 사건의 행은 없다), 끝낸 시각 · 다이제스트 · 사건 순
  * @param subtopics 노출한 지금 사건 → 활성 중분류(사건의 주제) — 평가 있는 소속 기사가 없는 사건은 없다
+ * @param tops 노출한 지금 사건 → 포함 나무의 꼭대기({@code storyline} 의 꼭대기 조회 순서) — 소속이 없는 사건은 없다
  * @param feedback 좋아요 / 싫어요 이력 — 기록 순, 행마다 기록한 사건과 지금 사건
  * @param topicChanges 주제 구독 이력 — 시각 · 행 순
  * @param storylineChanges 스토리라인 구독 이력 — 시각 · 행 순
- * @param storylineShares 주제를 모을 스토리라인 → 주제 몫({@link StorylineTopics#shares})
+ * @param storylineTops 관심 신호로 셀 구독 행의 지금 스토리라인({@link InterestSignals#storylinesToRead}) → 그 꼭대기. 없는 스토리라인은 없다
  */
 public record InterestRecord(TagSetId tagSet, List<ExposureRow> exposures, Map<EventId, Set<String>> subtopics,
-		List<FeedbackChange> feedback, List<TopicSubscriptionChange> topicChanges,
-		List<StorylineSubscriptionChange> storylineChanges, Map<StorylineId, Map<String, Double>> storylineShares) {
+		Map<EventId, List<StorylineId>> tops, List<FeedbackChange> feedback, List<TopicSubscriptionChange> topicChanges,
+		List<StorylineSubscriptionChange> storylineChanges, Map<StorylineId, StorylineId> storylineTops) {
 
 	public InterestRecord {
 		Objects.requireNonNull(tagSet, "tagSet");
@@ -35,13 +36,13 @@ public record InterestRecord(TagSetId tagSet, List<ExposureRow> exposures, Map<E
 		Objects.requireNonNull(subtopics, "subtopics")
 			.forEach((event, keys) -> subtopicsCopy.put(event, Set.copyOf(keys)));
 		subtopics = Map.copyOf(subtopicsCopy);
+		Map<EventId, List<StorylineId>> topsCopy = new HashMap<>();
+		Objects.requireNonNull(tops, "tops").forEach((event, roots) -> topsCopy.put(event, List.copyOf(roots)));
+		tops = Map.copyOf(topsCopy);
 		feedback = List.copyOf(Objects.requireNonNull(feedback, "feedback"));
 		topicChanges = List.copyOf(Objects.requireNonNull(topicChanges, "topicChanges"));
 		storylineChanges = List.copyOf(Objects.requireNonNull(storylineChanges, "storylineChanges"));
-		Map<StorylineId, Map<String, Double>> sharesCopy = new HashMap<>();
-		Objects.requireNonNull(storylineShares, "storylineShares")
-			.forEach((storyline, shares) -> sharesCopy.put(storyline, Map.copyOf(shares)));
-		storylineShares = Map.copyOf(sharesCopy);
+		storylineTops = Map.copyOf(Objects.requireNonNull(storylineTops, "storylineTops"));
 	}
 
 }
