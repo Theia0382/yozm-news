@@ -25,6 +25,7 @@ import {
   historyActionLabels,
   orderLabels,
   storylinePath,
+  userStorylinePath,
   subscriptionCount,
   subscriptionTimes,
 } from "@/features/storylines/storylineTexts";
@@ -43,8 +44,13 @@ import { NARROW_WIDTH, PAGE_FRAME } from "@/shared/ui/widths";
 
 type Subscription = StorylineSubscriptions["subscriptions"][number];
 
-/** 구독 하나와 그 카드 — 카드가 없으면 그새 지워진 스토리라인이다 */
+/** 추적 중인 흐름 하나와 그 첫 추적 씨앗의 카드 — 카드가 없으면 그새 지워진 스토리라인이다 */
 type Row = { subscription: Subscription; card: StorylineCard | undefined };
+
+/** 그 흐름의 첫 추적 씨앗 — 응답의 추적 씨앗은 ID 순이고 하나 이상이다 */
+function firstSeed(subscription: Subscription): number {
+  return subscription.storylineIds[0]!;
+}
 
 function readOrder(value: string | null): SubscriptionOrder {
   return ORDERS.find((one) => one === value) ?? DEFAULT_ORDER;
@@ -72,7 +78,7 @@ function orderSubscriptions(
             Date.parse(b.card.lastArticleAt) - Date.parse(a.card.lastArticleAt);
           return byTime !== 0
             ? byTime
-            : a.subscription.storylineId - b.subscription.storylineId;
+            : a.subscription.userStorylineId - b.subscription.userStorylineId;
         }),
         ...removed,
       ];
@@ -80,15 +86,16 @@ function orderSubscriptions(
 }
 
 /**
- * 추적 중인 흐름 — 따라가는 스토리라인을 이어지는 것(진행 · 잠잠)과 끝난 것으로 나눠 고른 순서로 보이고 해제한다. 아래에 사용자가 직접 한 구독 ·
- * 해제의 기록을 최근부터 보인다(docs/specs/user.md user-R52 · user-R63, ADR-0242 · ADR-0243). 제목 · 상태는 카드의 값이다
+ * 추적 중인 흐름 — 흐름(사용자 스토리라인)마다 한 줄로, 이어지는 것(진행 · 잠잠)과 끝난 것으로 나눠 고른 순서로 보이고 해제한다. 아래에
+ * 사용자가 직접 한 구독 · 해제의 기록을 최근부터 보인다(docs/specs/user.md user-R52 · user-R63). 제목은 정리가 있으면 정리의 제목이고
+ * 없으면 첫 추적 씨앗의 카드 제목이다. 상태는 응답의 값(추적 씨앗 가운데 가장 이어지는 것)이다
  */
 export function SubscriptionsPage() {
   const [params, setParams] = useSearchParams();
   const order = readOrder(params.get("order"));
   const subscriptions = useStorylineSubscriptions();
   const ids =
-    subscriptions.data?.subscriptions.map((one) => one.storylineId) ?? [];
+    subscriptions.data?.subscriptions.map((one) => firstSeed(one)) ?? [];
   const cards = useStorylineCards(ids);
 
   return (
@@ -106,11 +113,7 @@ export function SubscriptionsPage() {
         {subscriptions.data && (
           <p className="text-sm text-muted-foreground tabular-nums">
             {subscriptionCount(
-              new Set(
-                subscriptions.data.subscriptions.map(
-                  (one) => one.userStorylineId,
-                ),
-              ).size,
+              subscriptions.data.subscriptions.length,
               subscriptions.data.limit,
             )}
           </p>
@@ -131,7 +134,7 @@ export function SubscriptionsPage() {
         <Subscribed
           rows={subscriptions.data.subscriptions.map((subscription) => ({
             subscription,
-            card: cards.data.get(subscription.storylineId),
+            card: cards.data.get(firstSeed(subscription)),
           }))}
           order={order}
           onOrder={(next) =>
@@ -161,8 +164,8 @@ function Subscribed({
   onOrder: (order: SubscriptionOrder) => void;
 }) {
   const ordered = orderSubscriptions(rows, order);
-  const following = ordered.filter((row) => row.card?.state !== "ENDED");
-  const ended = ordered.filter((row) => row.card?.state === "ENDED");
+  const following = ordered.filter((row) => row.subscription.state !== "ENDED");
+  const ended = ordered.filter((row) => row.subscription.state === "ENDED");
   return (
     <div className="space-y-6">
       <label className="flex items-center gap-2 text-sm">
@@ -204,7 +207,7 @@ function Group({
       {note && <p className="text-sm text-muted-foreground">{note}</p>}
       <ul aria-label={heading} className="space-y-3">
         {rows.map((row) => (
-          <li key={row.subscription.storylineId}>
+          <li key={row.subscription.userStorylineId}>
             <SubscribedItem row={row} />
           </li>
         ))}
@@ -217,7 +220,7 @@ function SubscribedItem({ row }: { row: Row }) {
   const { subscription, card } = row;
   const toggle = useSubscriptionToggle();
   const [failed, setFailed] = useState(false);
-  if (card === undefined) {
+  if (card === undefined && subscription.title === null) {
     return (
       <article className="space-y-1 rounded-md border border-input p-4">
         <h3 className="font-medium text-muted-foreground">
@@ -229,12 +232,17 @@ function SubscribedItem({ row }: { row: Row }) {
       </article>
     );
   }
+  // 정리가 있으면 개인 흐름 화면으로, 없으면 첫 추적 씨앗의 타임라인으로 간다
+  const to =
+    subscription.title !== null
+      ? userStorylinePath(subscription.userStorylineId)
+      : storylinePath(firstSeed(subscription));
   return (
     <article className="space-y-1 rounded-md border border-input p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <h3 className="min-w-0 font-semibold break-words">
-          <Link to={storylinePath(card.id)} className="hover:underline">
-            {card.title?.title ?? UNTITLED}
+          <Link to={to} className="hover:underline">
+            {subscription.title ?? card?.title?.title ?? UNTITLED}
           </Link>
         </h3>
         <button
@@ -242,8 +250,9 @@ function SubscribedItem({ row }: { row: Row }) {
           disabled={toggle.isPending}
           onClick={() => {
             setFailed(false);
+            // 어느 추적 씨앗으로 해제해도 그 흐름의 추적이 꺼진다
             toggle.mutate(
-              { storylineId: subscription.storylineId, subscribe: false },
+              { storylineId: firstSeed(subscription), subscribe: false },
               { onError: () => setFailed(true) },
             );
           }}
@@ -253,8 +262,10 @@ function SubscribedItem({ row }: { row: Row }) {
         </button>
       </div>
       <p className="text-sm text-muted-foreground">
-        {storylineStateLabels[card.state]} ·{" "}
-        {subscriptionTimes(card.lastArticleAt, subscription.subscribedAt)}
+        {storylineStateLabels[subscription.state]} ·{" "}
+        {card === undefined
+          ? trackedAt(subscription.subscribedAt)
+          : subscriptionTimes(card.lastArticleAt, subscription.subscribedAt)}
       </p>
       {failed && (
         <p role="alert" className="text-sm">

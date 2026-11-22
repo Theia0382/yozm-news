@@ -36,8 +36,8 @@ export const STORYLINE_SUBSCRIPTIONS_QUERY_KEY = [
 ] as const;
 
 /**
- * 추적 중인 흐름 목록 — 추적 씨앗(누른 스토리라인)마다 한 줄: 스토리라인 ID · 그 줄의 사용자 스토리라인 ID · 추적 시각 · 지금
- * 상태와 상한(docs/specs/user.md user-R52). 같은 사용자 스토리라인 ID 의 줄은 한 흐름이다. 버튼의 상태는 이 목록이 아니라
+ * 추적 중인 흐름 목록 — 사용자 스토리라인마다 한 줄: 사용자 스토리라인 ID · 추적 시각 · 지금 있는 추적 씨앗의 스토리라인 ID 들 ·
+ * 지금 상태 · 정리의 제목(없으면 null)과 상한(docs/specs/user.md user-R52). 버튼의 상태는 이 목록이 아니라
  * 추적 상태 조회({@link useTrackingStates})로 읽는다
  */
 export function useStorylineSubscriptions() {
@@ -184,8 +184,8 @@ async function fetchCards(
 }
 
 /**
- * 추적 중인 흐름의 카드 — 제목 · 상태 · 마지막 기사 시각. 카드 처리기는 빈 ids 를 받지 않으므로 줄이 없으면 묻지 않는다. 줄은 추적 씨앗마다라
- * 한 흐름에서 여러 스토리라인을 누르면 상한(추적 중인 흐름의 수)보다 많을 수 있다 — 카드는 나눠 묻는다
+ * 스토리라인 ID 여럿의 카드 — 제목 · 상태 · 마지막 기사 시각. 카드 처리기는 빈 ids 를 받지 않으므로 ID 가 없으면 묻지 않는다. 추적 중인
+ * 흐름 목록은 흐름마다 첫 추적 씨앗 하나를, 추적 기록은 한 쪽의 스토리라인을 묻는다 — 한 번의 상한을 넘으면 나눠 묻는다
  */
 export function useStorylineCards(ids: number[]) {
   const client = useApiClient();

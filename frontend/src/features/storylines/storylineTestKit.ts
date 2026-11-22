@@ -123,7 +123,7 @@ export function timeline(
   };
 }
 
-/** 추적 중인 흐름 응답 — 구독 시각은 모두 T, 상태는 진행 */
+/** 추적 중인 흐름 응답 — 스토리라인마다 제 흐름(추적 씨앗 하나 · 정리 없음), 구독 시각은 모두 T, 상태는 진행 */
 export function subscriptions(
   ids: number[],
   limit = 100,
@@ -131,10 +131,11 @@ export function subscriptions(
   return {
     limit,
     subscriptions: ids.map((storylineId) => ({
-      storylineId,
       userStorylineId: storylineId,
       subscribedAt: T,
+      storylineIds: [storylineId],
       state: "ACTIVE",
+      title: null,
     })),
   };
 }

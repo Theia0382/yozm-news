@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,6 +23,8 @@ import net.yozmnews.user.UserStorylineId;
 import net.yozmnews.user.domain.subscription.StorylineSubscriptionLimit;
 import net.yozmnews.user.domain.subscription.StorylineSubscriptionRepository;
 import net.yozmnews.user.domain.subscription.SubscriptionChange;
+import net.yozmnews.user.domain.summary.StorylineSummary;
+import net.yozmnews.user.domain.summary.StorylineSummaryRepository;
 import net.yozmnews.user.domain.userstoryline.StoredUserStoryline;
 import net.yozmnews.user.domain.userstoryline.UserStorylineRepository;
 import org.jspecify.annotations.Nullable;
@@ -51,41 +54,69 @@ public class StorylineSubscriptions {
 
 	private final StorylineDirectory storylines;
 
+	private final StorylineSummaryRepository summaries;
+
 	StorylineSubscriptions(InterestSettingsLock lock, UserStorylineFollowups followups,
 			UserStorylineMaterials materials, UserStorylineRepository userStorylines,
-			StorylineSubscriptionRepository history, StorylineDirectory storylines) {
+			StorylineSubscriptionRepository history, StorylineDirectory storylines,
+			StorylineSummaryRepository summaries) {
 		this.lock = Objects.requireNonNull(lock, "lock");
 		this.followups = Objects.requireNonNull(followups, "followups");
 		this.materials = Objects.requireNonNull(materials, "materials");
 		this.userStorylines = Objects.requireNonNull(userStorylines, "userStorylines");
 		this.history = Objects.requireNonNull(history, "history");
 		this.storylines = Objects.requireNonNull(storylines, "storylines");
+		this.summaries = Objects.requireNonNull(summaries, "summaries");
 	}
 
 	/**
-	 * 내 추적 — 추적 중인 사용자 스토리라인의 추적 씨앗마다 한 줄. 추적 시각 내림차순, 같으면 스토리라인 ID 순. 지금 상태를 함께 싣는다
+	 * 내 추적 — 추적 중인 사용자 스토리라인마다 한 줄. 추적 시각 내림차순, 같으면 사용자 스토리라인 ID 순. 줄마다 지금 있는 추적 씨앗(ID 순)과
+	 * 그 가운데 가장 이어지는 상태, 정리가 있으면 정리의 제목을 싣는다. 추적 씨앗이 하나도 남지 않은 줄은 내지 않는다
 	 */
 	@Transactional
 	public SubscriptionsView view(UserId user, Instant now) {
-		List<TrackedSeed> seeds = new ArrayList<>();
-		for (StoredUserStoryline storyline : followed(user, now)) {
-			if (storyline.tracked()) {
-				storyline.trackedSeeds()
-					.keySet()
-					.forEach(seed -> seeds.add(new TrackedSeed(seed, storyline.id(), storyline.subscribedAt())));
-			}
+		List<StoredUserStoryline> tracked = followed(user, now).stream().filter(StoredUserStoryline::tracked).toList();
+		Map<StorylineId, StorylineView> views = this.storylines.findAll(tracked.stream()
+			.flatMap(storyline -> storyline.trackedSeeds().keySet().stream())
+			.map(StorylineId::new)
+			.toList());
+		Map<Long, String> titles = new HashMap<>();
+		for (StorylineSummary summary : this.summaries.load(user)) {
+			titles.put(summary.userStorylineId(), summary.whole().title());
 		}
-		Map<StorylineId, StorylineView> views = this.storylines
-			.findAll(seeds.stream().map(seed -> new StorylineId(seed.storyline())).toList());
-		List<SubscribedStoryline> subscribed = seeds.stream()
-			.filter(seed -> views.containsKey(new StorylineId(seed.storyline())))
-			.map(seed -> new SubscribedStoryline(new StorylineId(seed.storyline()), seed.subscribedAt(),
-					views.get(new StorylineId(seed.storyline())).state(), new UserStorylineId(seed.userStoryline())))
-			.sorted(Comparator.comparing(SubscribedStoryline::subscribedAt)
-				.reversed()
-				.thenComparing(subscription -> subscription.id().value()))
-			.toList();
+		List<SubscribedUserStoryline> subscribed = new ArrayList<>();
+		for (StoredUserStoryline storyline : tracked) {
+			List<StorylineId> seeds = storyline.trackedSeeds()
+				.keySet()
+				.stream()
+				.sorted()
+				.map(StorylineId::new)
+				.filter(views::containsKey)
+				.toList();
+			if (seeds.isEmpty()) {
+				continue;
+			}
+			subscribed.add(new SubscribedUserStoryline(new UserStorylineId(storyline.id()), storyline.subscribedAt(),
+					seeds, liveliest(seeds.stream().map(seed -> views.get(seed).state()).toList()),
+					titles.get(storyline.id())));
+		}
+		subscribed.sort(Comparator.comparing(SubscribedUserStoryline::subscribedAt)
+			.reversed()
+			.thenComparing(subscription -> subscription.id().value()));
 		return new SubscriptionsView(subscribed, StorylineSubscriptionLimit.MAX);
+	}
+
+	/** 추적 씨앗들의 상태 가운데 가장 이어지는 것 — 하나라도 진행이면 진행, 아니고 하나라도 잠잠이면 잠잠, 모두 끝났을 때만 끝남 */
+	static StorylineState liveliest(List<StorylineState> states) {
+		StorylineState liveliest = StorylineState.ENDED;
+		for (StorylineState state : states) {
+			liveliest = switch (state) {
+				case ACTIVE -> StorylineState.ACTIVE;
+				case QUIET -> (liveliest == StorylineState.ACTIVE) ? liveliest : StorylineState.QUIET;
+				case ENDED -> liveliest;
+			};
+		}
+		return liveliest;
 	}
 
 	/**
@@ -189,16 +220,13 @@ public class StorylineSubscriptions {
 		return current.stream().filter(storyline -> storyline.tops().contains(top)).findFirst().orElse(null);
 	}
 
-	private record TrackedSeed(long storyline, long userStoryline, Instant subscribedAt) {
-	}
-
 	/**
 	 * 내 추적.
 	 *
 	 * @param subscriptions 추적 시각 내림차순
 	 * @param limit 추적 중인 사용자 스토리라인 수의 상한
 	 */
-	public record SubscriptionsView(List<SubscribedStoryline> subscriptions, int limit) {
+	public record SubscriptionsView(List<SubscribedUserStoryline> subscriptions, int limit) {
 
 		public SubscriptionsView {
 			subscriptions = List.copyOf(subscriptions);
@@ -207,15 +235,21 @@ public class StorylineSubscriptions {
 	}
 
 	/**
-	 * 추적 씨앗 하나.
+	 * 추적 중인 사용자 스토리라인 하나.
 	 *
-	 * @param id 사용자가 누른(또는 갈라질 때 물려받은) 스토리라인
-	 * @param subscribedAt 그 사용자 스토리라인을 추적하기 시작한 시각
-	 * @param state 조회 시각의 상태 — 끝나도 추적은 남는다
-	 * @param userStoryline 그 추적 씨앗이 든 사용자 스토리라인 — 같은 값인 줄은 한 흐름이다
+	 * @param id 사용자 스토리라인
+	 * @param subscribedAt 추적하기 시작한 시각
+	 * @param storylines 지금 있는 추적 씨앗(사용자가 누른, 또는 갈라질 때 물려받은 스토리라인) — ID 순, 하나 이상
+	 * @param state 조회 시각의 상태 — 추적 씨앗 가운데 가장 이어지는 것. 끝나도 추적은 남는다
+	 * @param title 정리의 제목 — 정리가 없으면 null
 	 */
-	public record SubscribedStoryline(StorylineId id, Instant subscribedAt, StorylineState state,
-			UserStorylineId userStoryline) {
+	public record SubscribedUserStoryline(UserStorylineId id, Instant subscribedAt, List<StorylineId> storylines,
+			StorylineState state, @Nullable String title) {
+
+		public SubscribedUserStoryline {
+			storylines = List.copyOf(storylines);
+		}
+
 	}
 
 	/** 추적의 결과 */

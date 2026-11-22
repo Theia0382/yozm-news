@@ -10716,20 +10716,26 @@
             "type" : "string",
             "enum" : [ "ACTIVE", "QUIET", "ENDED" ]
           },
-          "storylineId" : {
-            "type" : "integer",
-            "format" : "int64"
+          "storylineIds" : {
+            "type" : "array",
+            "items" : {
+              "type" : "integer",
+              "format" : "int64"
+            }
           },
           "subscribedAt" : {
             "type" : "string",
             "format" : "date-time"
+          },
+          "title" : {
+            "type" : [ "string", "null" ]
           },
           "userStorylineId" : {
             "type" : "integer",
             "format" : "int64"
           }
         },
-        "required" : [ "state", "storylineId", "subscribedAt", "userStorylineId" ]
+        "required" : [ "state", "storylineIds", "subscribedAt", "title", "userStorylineId" ]
       },
       "StorylineSubscriptionsRemovedNoticeResponse" : {
         "type" : "object",

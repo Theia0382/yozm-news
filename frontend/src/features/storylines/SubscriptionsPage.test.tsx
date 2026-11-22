@@ -25,22 +25,25 @@ const SUBSCRIBED: StorylineSubscriptions = {
   limit: 100,
   subscriptions: [
     {
-      storylineId: A,
       userStorylineId: A,
       subscribedAt: "2026-11-03T00:00:00Z",
+      storylineIds: [A],
       state: "ACTIVE",
+      title: null,
     },
     {
-      storylineId: B,
       userStorylineId: B,
       subscribedAt: "2026-11-02T00:00:00Z",
+      storylineIds: [B],
       state: "QUIET",
+      title: null,
     },
     {
-      storylineId: C,
       userStorylineId: C,
       subscribedAt: "2026-11-01T00:00:00Z",
+      storylineIds: [C],
       state: "ENDED",
+      title: null,
     },
   ],
 };
@@ -162,38 +165,80 @@ describe("SubscriptionsPage", () => {
     ).toEqual(["반도체 수출", "의대 정원"]);
   });
 
-  it("한 흐름의 줄이 여럿이면 줄은 추적 씨앗마다 보이고 수는 흐름으로 센다", async () => {
-    // A 와 B 가 같은 사용자 스토리라인(한 흐름), C 는 다른 흐름
-    renderRoutes(ROUTES, PAGE, {
+  it("추적 씨앗이 둘인 흐름도 한 줄이고, 정리가 있으면 정리의 제목으로 개인 흐름 화면에 · 없으면 카드 제목으로 타임라인에 잇는다", async () => {
+    // 흐름 7 은 A 와 B 를 눌러 추적했고 정리가 있다. C 는 정리 없는 다른 흐름이다
+    const { server } = renderRoutes(ROUTES, PAGE, {
       "GET /api/storyline-subscriptions": () =>
         json({
-          ...SUBSCRIBED,
-          subscriptions: SUBSCRIBED.subscriptions.map((one) =>
-            one.storylineId === B ? { ...one, userStorylineId: A } : one,
-          ),
+          limit: 100,
+          subscriptions: [
+            {
+              userStorylineId: 7,
+              subscribedAt: "2026-11-03T00:00:00Z",
+              storylineIds: [A, B],
+              state: "ACTIVE",
+              title: "의대 정원 갈등의 전개",
+            },
+            SUBSCRIBED.subscriptions[2]!,
+          ],
         }),
       "GET /api/storyline-cards": cardsHandler,
+      [`DELETE /api/storyline-subscriptions/${A}`]: () =>
+        json({ result: "UNSUBSCRIBED" }),
       ...NO_HISTORY,
     });
 
+    const following = await screen.findByRole("list", {
+      name: "이어지는 흐름",
+    });
+    const rows = within(following).getAllByRole("listitem");
+    expect(rows).toHaveLength(1);
     expect(
-      titlesIn(await screen.findByRole("list", { name: "이어지는 흐름" })),
-    ).toHaveLength(2);
+      within(rows[0]!).getByRole("link", { name: "의대 정원 갈등의 전개" }),
+    ).toHaveAttribute("href", "/user-storylines/7");
+    expect(
+      within(screen.getByRole("list", { name: "끝난 흐름" })).getByRole(
+        "link",
+        { name: "지방 선거" },
+      ),
+    ).toHaveAttribute("href", `/storylines/${C}`);
     expect(screen.getByText("추적 2 / 100")).toBeInTheDocument();
+    // 카드는 흐름마다 첫 추적 씨앗만 묻는다
+    expect(
+      server.requests
+        .filter((r) => r.path === "/api/storyline-cards")
+        .map((r) =>
+          new URLSearchParams(r.search)
+            .getAll("ids")
+            .flatMap((value) => value.split(","))
+            .map(Number),
+        ),
+    ).toEqual([[A, C]]);
+
+    // 해제는 첫 추적 씨앗으로 보낸다
+    await userEvent.click(
+      within(rows[0]!).getByRole("button", { name: "추적 해제" }),
+    );
+    await waitFor(() =>
+      expect(
+        server.requests.filter((r) => r.method === "DELETE").map((r) => r.path),
+      ).toEqual([`/api/storyline-subscriptions/${A}`]),
+    );
   });
 
-  it("줄이 100개를 넘으면 카드를 100개씩 나눠 묻는다", async () => {
-    // 한 흐름에서 스토리라인 101개를 눌렀다 — 줄은 101개, 흐름은 하나
+  it("카드 ID 가 100개를 넘으면 100개씩 나눠 묻는다", async () => {
+    // 카드 조회의 나눠 묻기를 본다 — 흐름 101개(서버의 상한 밖)를 응답으로 준다
     const ids = Array.from({ length: 101 }, (_, index) => index + 1);
     const { server } = renderRoutes(ROUTES, PAGE, {
       "GET /api/storyline-subscriptions": () =>
         json({
           limit: 100,
           subscriptions: ids.map((storylineId) => ({
-            storylineId,
-            userStorylineId: 1,
+            userStorylineId: storylineId,
             subscribedAt: "2026-11-03T00:00:00Z",
+            storylineIds: [storylineId],
             state: "ACTIVE",
+            title: null,
           })),
         }),
       "GET /api/storyline-cards": cardsHandler,
@@ -201,7 +246,7 @@ describe("SubscriptionsPage", () => {
     });
 
     // 둘째 요청까지 받아 줄을 그린다 — 카드가 있는 셋이 제목으로 보인다
-    expect(await screen.findByText("추적 1 / 100")).toBeInTheDocument();
+    expect(await screen.findByText("추적 101 / 100")).toBeInTheDocument();
     expect(await screen.findByText("의대 정원")).toBeInTheDocument();
     const reads = server.requests
       .filter((r) => r.path === "/api/storyline-cards")
@@ -223,7 +268,7 @@ describe("SubscriptionsPage", () => {
         current = {
           ...current,
           subscriptions: current.subscriptions.filter(
-            (one) => one.storylineId !== A,
+            (one) => one.storylineIds[0] !== A,
           ),
         };
         return json({ result: "UNSUBSCRIBED" });
@@ -250,16 +295,18 @@ describe("SubscriptionsPage", () => {
     expect(screen.getByText("추적 2 / 100")).toBeInTheDocument();
   });
 
-  it("카드를 받지 못한 구독은 사라진 스토리라인으로 끝에 둔다", async () => {
+  it("카드를 받지 못한 정리 없는 흐름은 사라진 흐름으로 끝에 둔다", async () => {
     renderRoutes(ROUTES, PAGE, {
       "GET /api/storyline-subscriptions": () =>
         json({
           limit: 100,
           subscriptions: [
             {
-              storylineId: 4,
+              userStorylineId: 4,
               subscribedAt: "2026-11-05T00:00:00Z",
+              storylineIds: [4],
               state: "ACTIVE",
+              title: null,
             },
             ...SUBSCRIBED.subscriptions,
           ],

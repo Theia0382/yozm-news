@@ -1,9 +1,11 @@
 package net.yozmnews.user.adapter.in.web;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.Instant;
@@ -119,14 +121,18 @@ class StorylineSubscriptionControllerTests {
 	}
 
 	@Test
-	void theListCarriesIdTimeAndStateAndUnsubscribingAnswersEachOutcome() throws Exception {
+	void theListCarriesTheFlowItsSeedsStateAndTitleAndUnsubscribingAnswersEachOutcome() throws Exception {
 		long storyline = storyline();
 		this.mockMvc.perform(put("/api/storyline-subscriptions/{id}", storyline).with(this.user));
+		long userStoryline = this.jdbc.sql("select id from user_storylines").query(Long.class).single();
 
 		this.mockMvc.perform(get("/api/storyline-subscriptions").with(this.user))
 			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.subscriptions[0].subscribedAt").isString())
+			.andExpect(jsonPath("$.subscriptions[0].length()").value(5))
 			.andExpect(content().json("""
-					{"subscriptions":[{"storylineId":%d,"state":"ACTIVE"}],"limit":100}""".formatted(storyline)));
+					{"subscriptions":[{"userStorylineId":%d,"storylineIds":[%d],"state":"ACTIVE","title":null}],
+					 "limit":100}""".formatted(userStoryline, storyline)));
 		this.mockMvc.perform(delete("/api/storyline-subscriptions/{id}", storyline).with(this.user))
 			.andExpect(status().isOk())
 			.andExpect(content().json("""
@@ -135,6 +141,29 @@ class StorylineSubscriptionControllerTests {
 			.andExpect(status().isOk())
 			.andExpect(content().json("""
 					{"result":"NOT_SUBSCRIBED"}""", JsonCompareMode.STRICT));
+	}
+
+	@Test
+	void aFlowTrackedFromTwoStorylinesIsOneLineOfTheList() throws Exception {
+		long earlier = storyline();
+		long later = storyline();
+		long alone = storyline();
+		UserStorylineFixtures.follows(this.jdbc, earlier, later);
+		// 대조 — 씨앗 하나인 흐름은 한 줄이다
+		this.mockMvc.perform(put("/api/storyline-subscriptions/{id}", alone).with(this.user));
+		this.mockMvc.perform(get("/api/storyline-subscriptions").with(this.user))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.subscriptions.length()").value(1));
+
+		// 한 흐름의 스토리라인 둘을 눌러도 줄은 하나 늘 뿐이다
+		this.mockMvc.perform(put("/api/storyline-subscriptions/{id}", earlier).with(this.user));
+		this.mockMvc.perform(put("/api/storyline-subscriptions/{id}", later).with(this.user));
+
+		assertThat(this.jdbc.sql("select count(*) from user_storyline_tracked_seeds").query(Integer.class).single())
+			.as("추적 씨앗은 셋이다").isEqualTo(3);
+		this.mockMvc.perform(get("/api/storyline-subscriptions").with(this.user))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.subscriptions.length()").value(2));
 	}
 
 	@Test
@@ -160,7 +189,7 @@ class StorylineSubscriptionControllerTests {
 		this.mockMvc.perform(get("/api/storyline-subscriptions").with(this.user))
 			.andExpect(status().isOk())
 			.andExpect(content().json("""
-					{"subscriptions":[{"storylineId":%d,"userStorylineId":%d}],"limit":100}""".formatted(earlier,
+					{"subscriptions":[{"storylineIds":[%d],"userStorylineId":%d}],"limit":100}""".formatted(earlier,
 					userStoryline)));
 	}
 
