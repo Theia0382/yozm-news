@@ -11,6 +11,7 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.LongStream;
 
 import net.yozmnews.TestcontainersConfiguration;
@@ -428,6 +429,48 @@ class StorylineQueryFlowTests {
 	}
 
 	@Test
+	void continuationsAreTheTopsReachedForwardFromTheTopOfEachStoryline() {
+		// wide ⊃ narrow, narrow → quiet — 꼭대기로 올리면 wide → quiet
+		contains(this.wide, this.narrow);
+		follows(this.narrow, this.quiet);
+		long merged = storyline("2026-11-05T10:00:00Z", "2026-11-05T10:00:00Z", this.eventC);
+		this.jdbc.sql("update storylines set merged_into = :into, merged_at = now() where id = :id")
+			.param("into", this.narrow)
+			.param("id", merged)
+			.update();
+
+		Map<StorylineId, Set<StorylineId>> reached = this.directory
+			.continuationsOf(List.of(new StorylineId(this.wide), new StorylineId(this.narrow), new StorylineId(merged),
+					new StorylineId(this.quiet), new StorylineId(999_999_999L), new StorylineId(this.wide)));
+
+		// 없는 스토리라인은 빠지고, 하위 · 합쳐진 스토리라인은 받은 ID 를 키로 그 꼭대기(wide)에서 닿는 꼭대기를 낸다
+		assertThat(reached).containsOnlyKeys(new StorylineId(this.wide), new StorylineId(this.narrow),
+				new StorylineId(merged), new StorylineId(this.quiet));
+		assertThat(reached.get(new StorylineId(this.wide))).containsExactly(new StorylineId(this.quiet));
+		assertThat(reached.get(new StorylineId(this.narrow))).containsExactly(new StorylineId(this.quiet));
+		assertThat(reached.get(new StorylineId(merged))).containsExactly(new StorylineId(this.quiet));
+		// 대조 — 뒤 흐름에서 앞으로는 따르지 않는다
+		assertThat(reached.get(new StorylineId(this.quiet))).isEmpty();
+
+		assertThat(this.directory.continuationsOf(List.of())).isEmpty();
+	}
+
+	@Test
+	void theContinuationsQueryRefusesMoreStorylinesThanItsLimit() {
+		List<StorylineId> tooMany = LongStream.rangeClosed(1, StorylineDirectory.MAX_TOP_STORYLINES + 1)
+			.mapToObj(StorylineId::new)
+			.toList();
+		List<StorylineId> atLimit = tooMany.subList(0, StorylineDirectory.MAX_TOP_STORYLINES);
+
+		assertThatIllegalArgumentException().isThrownBy(() -> this.directory.continuationsOf(tooMany));
+		assertThat(this.directory.continuationsOf(atLimit)).isNotNull();
+		// 상한은 서로 다른 스토리라인 수다 — 같은 스토리라인을 한 번 더 넣어도 받는다
+		List<StorylineId> repeated = new ArrayList<>(atLimit);
+		repeated.add(atLimit.getFirst());
+		assertThat(this.directory.continuationsOf(repeated)).isNotNull();
+	}
+
+	@Test
 	void theStorylineTopsQueryRefusesMoreStorylinesThanItsLimit() {
 		List<StorylineId> tooMany = LongStream.rangeClosed(1, StorylineDirectory.MAX_TOP_STORYLINES + 1)
 			.mapToObj(StorylineId::new)
@@ -697,6 +740,12 @@ class StorylineQueryFlowTests {
 			.param("representative", representative)
 			.query(Long.class)
 			.single();
+	}
+
+	/** 이어짐 관계를 심는다 — earlier → later */
+	private void follows(long earlier, long later) {
+		long criteriaId = this.relations.registerCriteria(RELATION_CRITERIA, NOW);
+		this.relations.link(new Relation(earlier, later, RelationKind.FOLLOWS), 0.7, 1, criteriaId, NOW);
 	}
 
 	/** 포함 관계를 심는다 — parent ⊃ child */
