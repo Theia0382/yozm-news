@@ -79,7 +79,7 @@ KEK (운영자가 주는 파일, 버전 관리)
 
 - RSS 제목 · 요약문 · 출처 이름과 자유 텍스트 관심사는 **신뢰할 수 없는 입력**이다. 지시와 사용자 구획을 나누고, 사용자 구획은 JSON 문서 하나로 실어 글이 구획 구조를 흉내 내지 못하게 하며, 그 안의 지시를 따르지 않도록 지시에 명시한다. DB ID 는 싣지 않고 요청마다의 별칭만 쓴다 — 규칙은 [digest Spec](specs/digest.md#프롬프트-구성) digest-R26.
 - LLM 출력은 데이터로 다룬다.
-  - 출력 JSON을 스키마로 검증하고, 인용 ID는 후보 목록과 대조한다 — 규칙은 [digest Spec](specs/digest.md#출력-읽기) digest-R4 ~ R6.
+  - 출력 JSON을 스키마로 검증하고, 인용 ID는 후보 목록과 대조한다 — 읽기 · 스키마 그리기는 [platform Spec](specs/platform.md#llm-출력-읽기) platform-R31 · R32, 서술과 대조는 [digest Spec](specs/digest.md#출력-읽기) digest-R4 ~ R6 · [report Spec](specs/report.md#출력-서술과-읽기) report-R5 ~ R7.
   - 링크는 DB에서 렌더링한다. LLM이 생성한 URL은 쓰지 않는다.
   - 종합문은 일반 텍스트(또는 제한된 마크다운)로 렌더링하고, `dangerouslySetInnerHTML`을 쓰지 않는다. 마크다운을 쓴다면 HTML을 허용하지 않는 렌더러와 링크 허용 목록을 쓴다.
 - 자유 텍스트 관심사(`interest_text`)도 프롬프트에 들어가지만, 본인 키로 본인 다이제스트를 만드는 데만 쓰이므로 영향 범위가 본인에게 한정된다.

@@ -38,3 +38,7 @@
 | 울타리 없이 기록 때 사건이 있는지만 확인한다 | 확인과 커밋 사이에 삭제가 지나가면 지운 사건을 가리키는 행이 남고 다시 지울 계기가 없다 |
 | 지운 항목 섹션의 항목 기록을 둔다 | 그 다이제스트 화면에 항목이 없어 보이지 않을 뿐, 가리킬 항목 없는 행이 탈퇴 때까지 남는다 |
 | `digest` 가 섹션 삭제를 이벤트로 알리고 `feedback` 이 받는다 | `digest` 가 `feedback` 을 읽어 반대 방향 의존은 순환이다 |
+
+## 후속 기록
+
+- 2026-11-22: 결과 "다이제스트의 섹션 사건 행은 지운 사건 ID 를 그대로 둔다"의 예외(생성 때 보인 구성의 기록)를 변화 리포트의 인용으로 넓힘 — [ADR-0275](0275-report-citations-resolve-removed-and-merged-events-and-storylines-when-read-and-a-section-that-lost-every-citation-is-hidden.md) · [report Spec "리포트 조회"](../specs/report.md#리포트-조회) report-R11 · R12

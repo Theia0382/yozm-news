@@ -89,6 +89,8 @@ erDiagram
 
     reports ||--o{ report_sections : ""
     report_sections ||--o{ report_items : ""
+    storylines ||--o{ report_items : ""
+    events ||--o{ report_items : ""
 ```
 
 ## 사용자
@@ -127,11 +129,7 @@ erDiagram
 
 ## 변화 리포트
 
-| 테이블 | 주요 컬럼 | 비고 |
-|---|---|---|
-| `reports` | id, user_id, period_kind(`WEEK`/`MONTH`), period_start, period_end, status(`SCHEDULED`/`RUNNING`/`READY`/`EMPTY`/`FAILED`), provider, model, input_tokens, output_tokens, stats_snapshot(jsonb), error_code, error_message, created_at, completed_at | 생성에 쓴 통계를 `stats_snapshot` 에 함께 저장한다. 이전 리포트와의 비교는 이 스냅숏으로 한다 |
-| `report_sections` | id, report_id, kind, position, title, body | |
-| `report_items` | report_section_id, position, storyline_id, article_id | 섹션이 인용한 스토리라인 · 기사(둘 중 하나) |
+변화 리포트 테이블(`reports` · `report_sections` · `report_items`)은 [report Spec §6](specs/report.md#6-데이터)에 있다. 생성에 쓴 통계를 `reports.stats_snapshot` 에 함께 저장하고, 이전 리포트와의 비교는 이 스냅숏으로 한다. 섹션은 개요 또는 갈래 하나이고, 인용(`report_items`)은 스토리라인 또는 사건을 생성 때의 ID 그대로 가리킨다 — 모두 모듈 사이라 FK 가 없고, 합쳐지거나 지워진 사건 · 스토리라인은 조회가 푼다([report Spec](specs/report.md#리포트-조회) report-R11).
 
 ## 프레임워크 테이블
 
@@ -161,7 +159,7 @@ erDiagram
 | 관계 판정 원본 (`flow_relation_judgements`) | 180일 | 태그 판정 원본과 같다. 관계 · 물은 기록이 가리키는 원본이 먼저 지워질 수 있다 — 그 ID 는 FK 가 아니다 |
 | 태그 판정 원본 (`article_tag_judgements`) | 180일 | 태그 기준 · 저장 기준 분석과 저장 기준을 낮춘 뒤 빠진 태그 채움([tag-R31](specs/tag.md#빠진-태그-채움--저장-바닥) — 채울 기간의 상한도 180일)에 충분한 기간. **(미설계)** 지운 뒤 원본이 없는 평가의 채움 처분은 보존을 구현하는 작업이 정한다 |
 | 다이제스트 | 사용자 탈퇴 시까지. 지운 기사의 인용과 인용이 남지 않은 섹션은 지운다 — 다이제스트 행은 남는다 | 섹션 사건은 노출 기록이다([digest Spec](specs/digest.md#지운-기사-따르기) digest-R10) |
-| 관심 신호 이력(`feedback_events` · `user_tag_preference_events` · `user_storyline_subscription_events`) · 변화 리포트 | 사용자 탈퇴 시까지. 지운 사건의 좋아요 / 싫어요 이력(`feedback_events`)은 그 사건을 지울 때 지운다 | 관심사 히스토리 · 리포트의 근거. 지운 사건은 주제를 셀 소속 기사가 없어 그 이력이 관심도에 쓰이지 못한다([feedback Spec](specs/feedback.md#지운-사건--지운-항목-따르기) feedback-R5) |
+| 관심 신호 이력(`feedback_events` · `user_tag_preference_events` · `user_storyline_subscription_events`) · 변화 리포트 | 사용자 탈퇴 시까지. 지운 사건의 좋아요 / 싫어요 이력(`feedback_events`)은 그 사건을 지울 때 지운다. 리포트 인용(`report_items`)은 지운 사건 · 스토리라인을 가리켜도 남고 조회가 뺀다 | 관심사 히스토리 · 리포트의 근거. 지운 사건은 주제를 셀 소속 기사가 없어 그 이력이 관심도에 쓰이지 못한다([feedback Spec](specs/feedback.md#지운-사건--지운-항목-따르기) feedback-R5) |
 | 계정 (`users` · `user_password_credentials`) | 사용자 탈퇴 시까지 | 사용자 데이터의 주인이고 로그인의 근거다([user Spec](specs/user.md#계정과-자격)) |
 | 관심 설정의 현재 상태 (`user_settings` · `user_tag_preferences` · `user_excluded_sources`) | 사용자 탈퇴 시까지. 태그 체계를 바꿔 활성하면 태그 선호를 활성 키로 고쳐 쓰고, 소스를 지우면 그 소스의 제외를 지운다 | 다이제스트 후보 선별의 입력이다([user Spec](specs/user.md#관심-설정) user-R47 · R49) |
 | 스토리라인 구독의 현재 상태 (`user_storyline_subscriptions`) | 사용자 탈퇴 시까지. 합쳐진 스토리라인의 구독은 남는 스토리라인으로 옮기고, 사라진 스토리라인의 구독은 뺀다 | 구독 이력의 투영이다([user Spec](specs/user.md#스토리라인-구독) user-R53) |
