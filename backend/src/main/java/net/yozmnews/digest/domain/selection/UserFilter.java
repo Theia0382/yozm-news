@@ -82,7 +82,7 @@ public record UserFilter(List<TopicSubscription> topics, Set<String> excludedReg
 				&& !filteredOut;
 	}
 
-	/** 큰 판정 행의 머리(그 나무의 꼭대기)가 거른 꼭대기가 아닌가 — 거른 꼭대기면 그 행은 큰 슬롯에 쓰지 않는다 */
+	/** 큰 판정 행 머리의 포함 나무 꼭대기가 거른 꼭대기가 아닌가 — 거른 꼭대기면 그 행은 큰 슬롯에 쓰지 않는다 */
 	public boolean passesStoryline(StorylineId top) {
 		Objects.requireNonNull(top, "top");
 		return !this.excludedStorylines.contains(top);

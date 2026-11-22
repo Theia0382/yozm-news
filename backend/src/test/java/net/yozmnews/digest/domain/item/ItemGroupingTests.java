@@ -52,7 +52,7 @@ class ItemGroupingTests {
 
 	@Test
 	void aTreeOfABigRowThatWasNotPickedIsAnOrdinaryItem() {
-		// 꼭대기 100 은 큰 판정 목록에 있지만 큰 슬롯 사건이 남지 않은 행이라 bigHeads 에 없다 — 그 나무의 구독 사건은 bigRow 가 없다
+		// 꼭대기 100 은 큰 판정 목록에 있지만 큰 슬롯 사건이 남지 않은 행이라 bigTops 에 없다 — 그 나무의 구독 사건은 bigRow 가 없다
 		Map<EventId, List<StorylineId>> tops = Map.of(new EventId(3), List.of(storyline(100)));
 
 		List<DigestItemPlan> items = group(List.of(big(1, 0), subscribed(3)), tops,
@@ -122,11 +122,11 @@ class ItemGroupingTests {
 
 	/** 사건의 꼭대기를 맵으로 적어 고른 사건에 싣고 묶는다 — 키가 없는 사건은 꼭대기가 없다 */
 	private static List<DigestItemPlan> group(List<SelectedEvent> events, Map<EventId, List<StorylineId>> tops,
-			Map<Integer, StorylineId> bigHeads) {
+			Map<Integer, StorylineId> bigTops) {
 		List<SelectedEvent> withTops = events.stream()
 			.map(event -> Items.withTops(event, tops.getOrDefault(event.event().facts().id(), List.of())))
 			.toList();
-		return ItemGrouping.group(withTops, bigHeads);
+		return ItemGrouping.group(withTops, bigTops);
 	}
 
 }

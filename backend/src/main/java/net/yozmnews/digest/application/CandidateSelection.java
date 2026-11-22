@@ -232,14 +232,14 @@ public class CandidateSelection {
 		Shortlist cut = BudgetCut.apply(shortlist, tokens, budget);
 		Shortlist neutralCut = BudgetCut.apply(neutralShortlist, tokens, budget);
 		List<SelectedEvent> selected = CandidateSelector.candidates(cut, neutralCut, weights);
-		Map<Integer, StorylineId> bigHeads = new LinkedHashMap<>();
+		Map<Integer, StorylineId> bigTops = new LinkedHashMap<>();
 		for (SelectedEvent event : selected) {
 			Integer row = event.bigRow();
 			if (row != null) {
-				bigHeads.put(row, big.get().rows().get(row).storyline().id());
+				bigTops.put(row, big.get().tops().get(row));
 			}
 		}
-		List<ArrangedItem> items = ItemPlan.arrange(ItemGrouping.group(selected, bigHeads), weights);
+		List<ArrangedItem> items = ItemPlan.arrange(ItemGrouping.group(selected, bigTops), weights);
 		return Optional.of(new Attempt(Optional.of(input(interests, items, samples, contents))));
 	}
 
@@ -306,8 +306,9 @@ public class CandidateSelection {
 	/**
 	 * 큰 슬롯 — 기간의 큰 판정 목록(보도 강도 순)의 행마다 기간 안 기사가 있는 사건과 그 중요도 합을 읽고, 그 사건들의 값(평가 있는 소속
 	 * 기사 전부)과 기간 안 기사 가운데 평가가 있는 기사로 후보 사건({@link CandidateEvents#big})을 꾸려 {@link BigSlotPicker} 에 넘긴다.
-	 * 기간 안 기사가 있는 사건의 싫어요를 물어 필터에 더하고, 꼭대기를 모르는 사건의 꼭대기를 {@code tops} 에 더해 후보 사건에 싣는다. 머리가
-	 * 거른 꼭대기인 행은 {@link BigSlotPicker} 가 건너뛴다.
+	 * 기간 안 기사가 있는 사건의 싫어요를 물어 필터에 더하고, 꼭대기를 모르는 사건의 꼭대기를 {@code tops} 에 더해 후보 사건에 싣는다. 행의
+	 * 머리마다 포함 나무의 꼭대기를 한 번에 물어({@link StorylineDirectory#topsOfStorylines}) 행에 싣고, 그 꼭대기가 거른 꼭대기인 행은
+	 * {@link BigSlotPicker} 가 건너뛴다.
 	 * 기간 안 기사가 없는 사건은 읽지 않는다. 조회 기간은 끝에서 {@link EventPeriod#MAX_LENGTH} 까지로 줄인다. 큰 슬롯 수가 0 이면 읽지
 	 * 않는다.
 	 * @param known 이미 읽은 사건의 값 — 다시 읽지 않는다
@@ -361,8 +362,9 @@ public class CandidateSelection {
 		UserFilter bigFilter = filter.withDisliked(disliked(user, inPeriod.keySet()));
 		Map<ArticleId, ArticleFacts> evaluated = new HashMap<>();
 		facts.get().forEach(article -> evaluated.put(article.id(), article));
+		Map<StorylineId, StorylineId> rowTops = StorylineTopsQueries.ofStorylines(this.storylines, rowEvents.keySet());
 		List<BigRow> rows = new ArrayList<>(rowEvents.size());
-		rowEvents.forEach((storyline, ofRow) -> rows.add(new BigRow(storyline, ofRow.stream()
+		rowEvents.forEach((storyline, ofRow) -> rows.add(BigRow.resolved(storyline, rowTops, ofRow.stream()
 			.filter(inPeriod::containsKey)
 			.map(event -> {
 				EventFacts ofEvent = eventFacts.get().get(event);
@@ -379,7 +381,7 @@ public class CandidateSelection {
 		return Optional.of(new BigPick(
 				BigSlotPicker.pick(rows, interests.bigSlots(), SelectionRules.bigSeats(interests.maxCandidates()),
 						bigFilter),
-				big));
+				rows.stream().map(BigRow::top).toList()));
 	}
 
 	/**
@@ -497,10 +499,10 @@ public class CandidateSelection {
 	}
 
 	/**
-	 * 고른 큰 슬롯과 그 재료인 큰 판정 행
-	 * @param rows 큰 판정 행 — 위치가 {@link BigSlots#rows} 의 값
+	 * 고른 큰 슬롯과 큰 판정 행마다 머리의 포함 나무 꼭대기
+	 * @param tops 큰 판정 행마다 {@link BigRow#top} — 위치가 {@link BigSlots#rows} 의 값
 	 */
-	private record BigPick(BigSlots slots, List<BigStoryline> rows) {
+	private record BigPick(BigSlots slots, List<StorylineId> tops) {
 
 		static final BigPick NONE = new BigPick(BigSlots.NONE, List.of());
 

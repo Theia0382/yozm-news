@@ -22,7 +22,7 @@ import org.jspecify.annotations.Nullable;
  * 점수 순)로 하나를 고른다. 고른 꼭대기가 큰 판정 나무면 그 행의 항목에 든다 — 큰 판정 나무의 항목은 그 행의 위치를 갖는다. 이어짐은 보지
  * 않는다.
  * <p>
- * 큰 판정 나무는 자르기 뒤 큰 슬롯 사건이 하나 이상 남은 큰 판정 행의 나무다({@code bigHeads}). 고르지 않은 큰 판정 행의 나무는 큰 판정 나무가
+ * 큰 판정 나무는 자르기 뒤 큰 슬롯 사건이 하나 이상 남은 큰 판정 행의 나무다({@code bigTops}). 고르지 않은 큰 판정 행의 나무는 큰 판정 나무가
  * 아니라 그 나무에 든 구독 사건은 일반 항목이 된다.
  */
 public final class ItemGrouping {
@@ -32,15 +32,15 @@ public final class ItemGrouping {
 
 	/**
 	 * @param events 고른 사건 — 같은 사건은 한 번. 사건의 꼭대기는 후보 사건이 싣는다({@link CandidateEvent#tops()} — 소속 점수 순)
-	 * @param bigHeads 자르기 뒤 큰 슬롯 사건이 남은 큰 판정 행의 위치 → 그 행의 머리(그 나무의 꼭대기)
+	 * @param bigTops 자르기 뒤 큰 슬롯 사건이 남은 큰 판정 행의 위치 → 그 행 머리의 포함 나무 꼭대기(부르는 쪽이 {@code StorylineDirectory.topsOfStorylines} 로 푼 값)
 	 * @return 항목 — 첫 사건이 나온 순서, 항목 안 사건은 입력 순서
-	 * @throws IllegalArgumentException 큰 슬롯 사건의 행이 {@code bigHeads} 에 없을 때
+	 * @throws IllegalArgumentException 큰 슬롯 사건의 행이 {@code bigTops} 에 없을 때
 	 */
-	public static List<DigestItemPlan> group(List<SelectedEvent> events, Map<Integer, StorylineId> bigHeads) {
+	public static List<DigestItemPlan> group(List<SelectedEvent> events, Map<Integer, StorylineId> bigTops) {
 		Objects.requireNonNull(events, "events");
-		Objects.requireNonNull(bigHeads, "bigHeads");
+		Objects.requireNonNull(bigTops, "bigTops");
 		Map<StorylineId, Integer> bigRowOf = new HashMap<>();
-		bigHeads.entrySet()
+		bigTops.entrySet()
 			.stream()
 			.sorted(Map.Entry.comparingByKey())
 			.forEach(entry -> bigRowOf.putIfAbsent(entry.getValue(), entry.getKey()));
@@ -52,8 +52,8 @@ public final class ItemGrouping {
 		for (SelectedEvent event : events) {
 			Integer row = event.bigRow();
 			if (row != null) {
-				if (!bigHeads.containsKey(row)) {
-					throw new IllegalArgumentException("큰 슬롯 사건의 큰 판정 행 " + row + " 의 머리가 없다");
+				if (!bigTops.containsKey(row)) {
+					throw new IllegalArgumentException("큰 슬롯 사건의 큰 판정 행 " + row + " 의 꼭대기가 없다");
 				}
 				groups.computeIfAbsent(new RowKey(row), key -> new Group(row)).events.add(event);
 				continue;

@@ -63,7 +63,7 @@ class CandidateSelectorTests {
 		List<CandidateEvent> ranked = SubscriptionFilter.select(pool, filter, InterestWeights.NEUTRAL_ALL);
 		CandidateEvent bigEvent = pool.stream().filter(event -> event.facts().id().value() == 30).findFirst().orElseThrow();
 		BigSlots big = BigSlotPicker.pick(
-				List.of(new BigRow(HEAD, List.of(new BigEvent(new EventId(30), new BigDecimal("12"), bigEvent)))), 3,
+				List.of(new BigRow(HEAD, HEAD, List.of(new BigEvent(new EventId(30), new BigDecimal("12"), bigEvent)))), 3,
 				SelectionRules.bigSeats(60), filter);
 		Shortlist shortlist = CandidateSelector.shortlist(ranked, big, filter, 60, List.of());
 		Shortlist cut = BudgetCut.apply(shortlist, Map.of(new EventId(10), 100, new EventId(20), 100,
@@ -85,7 +85,7 @@ class CandidateSelectorTests {
 		List<CandidateEvent> ranked = List.of(Facts.single(Facts.article(1)), Facts.single(Facts.article(2)),
 				Facts.single(Facts.article(3)));
 		BigSlots big = BigSlotPicker.pick(
-				List.of(new BigRow(HEAD, List.of(new BigEvent(new EventId(91), BigDecimal.TEN, Facts.single(Facts.article(91))),
+				List.of(new BigRow(HEAD, HEAD, List.of(new BigEvent(new EventId(91), BigDecimal.TEN, Facts.single(Facts.article(91))),
 						new BigEvent(new EventId(92), BigDecimal.ONE, Facts.single(Facts.article(92))),
 						new BigEvent(new EventId(93), BigDecimal.ZERO, Facts.single(Facts.article(93)))))),
 				3, SelectionRules.bigSeats(4), Facts.politicsAndMarkets());
@@ -111,7 +111,7 @@ class CandidateSelectorTests {
 
 		// 구독이 없어도 큰 슬롯은 들어간다
 		BigSlots big = BigSlotPicker.pick(
-				List.of(new BigRow(HEAD, List.of(new BigEvent(new EventId(40), BigDecimal.ONE, Facts.single(Facts.article(40)))))),
+				List.of(new BigRow(HEAD, HEAD, List.of(new BigEvent(new EventId(40), BigDecimal.ONE, Facts.single(Facts.article(40)))))),
 				3, SelectionRules.bigSeats(60), nothing);
 		Shortlist bigOnly = CandidateSelector.shortlist(ranked, big, nothing, 60, List.of());
 		Shortlist bigOnlyCut = BudgetCut.apply(bigOnly, Map.of(new EventId(40), 100), 10_000);
