@@ -415,7 +415,7 @@ describe("NoticesPage", () => {
     const rows = within(item).getAllByRole("listitem");
     expect(rows).toHaveLength(2);
     expect(rows[0]).toHaveTextContent("의대 정원 조정안 발표");
-    expect(rows[1]).toHaveTextContent("제목을 알 수 없는 스토리라인");
+    expect(rows[1]).toHaveTextContent("제목을 알 수 없는 흐름");
     expect(
       within(item).getByRole("link", { name: "추적 중인 흐름 보기" }),
     ).toHaveAttribute("href", "/storylines/subscriptions");

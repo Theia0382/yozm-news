@@ -8,7 +8,7 @@ import {
   HISTORY_TITLE,
   NO_HISTORY,
   NO_SUBSCRIPTIONS,
-  TRACK_FROM_LIST,
+  TRACK_HOW,
   ORDERS,
   REMOVED_STORYLINE,
   STORYLINES_PATH,
@@ -124,10 +124,7 @@ export function SubscriptionsPage() {
       )}
       {subscriptions.data && ids.length === 0 && (
         <p>
-          {NO_SUBSCRIPTIONS}{" "}
-          <Link to={STORYLINES_PATH} className="underline">
-            {STORYLINES_TITLE} {TRACK_FROM_LIST}
-          </Link>
+          {NO_SUBSCRIPTIONS} {TRACK_HOW}
         </p>
       )}
       {subscriptions.data && ids.length > 0 && cards.data && (

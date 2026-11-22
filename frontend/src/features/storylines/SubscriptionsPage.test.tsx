@@ -46,7 +46,7 @@ const SUBSCRIBED: StorylineSubscriptions = {
 };
 
 function titled(id: number, title: string, overrides: Partial<StorylineCard>) {
-  const base = card(id, { period: null, ...overrides });
+  const base = card(id, overrides);
   return { ...base, title: base.title && { ...base.title, title } };
 }
 
@@ -99,10 +99,10 @@ describe("SubscriptionsPage", () => {
     });
 
     const following = await screen.findByRole("list", {
-      name: "이어지는 스토리라인",
+      name: "이어지는 흐름",
     });
     expect(titlesIn(following)).toEqual(["반도체 수출", "의대 정원"]);
-    const ended = screen.getByRole("list", { name: "끝난 스토리라인" });
+    const ended = screen.getByRole("list", { name: "끝난 흐름" });
     expect(titlesIn(ended)).toEqual(["지방 선거"]);
     expect(screen.getByRole("combobox", { name: "순서" })).toHaveValue(
       "LATEST_ARTICLE",
@@ -127,7 +127,7 @@ describe("SubscriptionsPage", () => {
       "GET /api/storyline-cards": cardsHandler,
       ...NO_HISTORY,
     });
-    await screen.findByRole("list", { name: "이어지는 스토리라인" });
+    await screen.findByRole("list", { name: "이어지는 흐름" });
 
     await userEvent.selectOptions(
       screen.getByRole("combobox", { name: "순서" }),
@@ -135,7 +135,7 @@ describe("SubscriptionsPage", () => {
     );
 
     expect(
-      titlesIn(screen.getByRole("list", { name: "이어지는 스토리라인" })),
+      titlesIn(screen.getByRole("list", { name: "이어지는 흐름" })),
     ).toEqual(["의대 정원", "반도체 수출"]);
     expect(router.state.location.search).toBe("?order=SUBSCRIBED");
   });
@@ -147,9 +147,7 @@ describe("SubscriptionsPage", () => {
       ...NO_HISTORY,
     });
     expect(
-      titlesIn(
-        await screen.findByRole("list", { name: "이어지는 스토리라인" }),
-      ),
+      titlesIn(await screen.findByRole("list", { name: "이어지는 흐름" })),
     ).toEqual(["의대 정원", "반도체 수출"]);
   });
 
@@ -160,9 +158,7 @@ describe("SubscriptionsPage", () => {
       ...NO_HISTORY,
     });
     expect(
-      titlesIn(
-        await screen.findByRole("list", { name: "이어지는 스토리라인" }),
-      ),
+      titlesIn(await screen.findByRole("list", { name: "이어지는 흐름" })),
     ).toEqual(["반도체 수출", "의대 정원"]);
   });
 
@@ -181,9 +177,7 @@ describe("SubscriptionsPage", () => {
     });
 
     expect(
-      titlesIn(
-        await screen.findByRole("list", { name: "이어지는 스토리라인" }),
-      ),
+      titlesIn(await screen.findByRole("list", { name: "이어지는 흐름" })),
     ).toHaveLength(2);
     expect(screen.getByText("추적 2 / 100")).toBeInTheDocument();
   });
@@ -237,7 +231,7 @@ describe("SubscriptionsPage", () => {
       ...NO_HISTORY,
     });
     const following = await screen.findByRole("list", {
-      name: "이어지는 스토리라인",
+      name: "이어지는 흐름",
     });
     const row = within(following).getAllByRole("listitem")[1]!;
 
@@ -247,7 +241,7 @@ describe("SubscriptionsPage", () => {
 
     await waitFor(() =>
       expect(
-        titlesIn(screen.getByRole("list", { name: "이어지는 스토리라인" })),
+        titlesIn(screen.getByRole("list", { name: "이어지는 흐름" })),
       ).toEqual(["반도체 수출"]),
     );
     expect(
@@ -275,10 +269,8 @@ describe("SubscriptionsPage", () => {
     });
 
     expect(
-      titlesIn(
-        await screen.findByRole("list", { name: "이어지는 스토리라인" }),
-      ),
-    ).toEqual(["반도체 수출", "의대 정원", "사라진 스토리라인"]);
+      titlesIn(await screen.findByRole("list", { name: "이어지는 흐름" })),
+    ).toEqual(["반도체 수출", "의대 정원", "사라진 흐름"]);
   });
 
   it("구독이 없으면 안내하고, 지금 ID 가 없는 기록 쪽이면 카드를 묻지 않는다", async () => {
@@ -299,14 +291,13 @@ describe("SubscriptionsPage", () => {
     });
 
     expect(
-      await screen.findByText("추적 중인 흐름이 없습니다."),
+      await screen.findByText(
+        "추적 중인 흐름이 없습니다. 다이제스트 항목이나 사건 타임라인의 흐름 추적 버튼으로 추적할 수 있습니다.",
+      ),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: "스토리라인 목록에서 추적하기" }),
-    ).toHaveAttribute("href", "/storylines");
     const history = await screen.findByRole("list", { name: "추적 기록" });
     expect(within(history).getByRole("listitem")).toHaveTextContent(
-      "흐름 추적 · 사라진 스토리라인",
+      "흐름 추적 · 사라진 흐름",
     );
     expect(
       server.requests.filter((r) => r.path === "/api/storyline-cards"),
@@ -353,7 +344,7 @@ describe("SubscriptionsPage", () => {
     expect(
       within(rows[0]!).getByRole("link", { name: "헌법 소원" }),
     ).toHaveAttribute("href", "/storylines/9");
-    expect(rows[1]).toHaveTextContent("흐름 추적 · 사라진 스토리라인");
+    expect(rows[1]).toHaveTextContent("흐름 추적 · 사라진 흐름");
 
     await userEvent.click(screen.getByRole("button", { name: "더 보기" }));
 

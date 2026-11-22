@@ -51,7 +51,6 @@ public final class UserScopedEndpoints {
 			Map.entry("DELETE /api/storyline-subscriptions/{storylineId}", StorylineSubscriptionScopeTests.class),
 			Map.entry("GET /api/storyline-subscriptions/changes", StorylineSubscriptionScopeTests.class),
 			Map.entry("GET /api/storyline-subscriptions/states", StorylineSubscriptionScopeTests.class),
-			Map.entry("GET /api/storylines", StorylineScreenScopeTests.class),
 			Map.entry("GET /api/storylines/{id}", StorylineScreenScopeTests.class),
 			Map.entry("GET /api/storyline-cards", StorylineScreenScopeTests.class),
 			Map.entry("GET /api/user-storylines", UserStorylineScreenScopeTests.class),

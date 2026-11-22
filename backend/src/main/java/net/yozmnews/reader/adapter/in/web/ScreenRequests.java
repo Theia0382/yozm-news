@@ -1,18 +1,13 @@
 package net.yozmnews.reader.adapter.in.web;
 
-import java.time.DateTimeException;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
 
 import net.yozmnews.digest.DigestItemCursor;
-import net.yozmnews.event.EventPeriod;
-import net.yozmnews.storyline.StorylineCursor;
 import net.yozmnews.storyline.StorylineDirectory;
 import net.yozmnews.storyline.StorylineId;
 import org.jspecify.annotations.Nullable;
@@ -20,7 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
- * 독자 화면의 요청 매개변수 읽기와 그 400 · 404 — docs/specs/reader.md §5 reader-R1 · R2 · R4 · R6 · R9 · R10.
+ * 독자 화면의 요청 매개변수 읽기와 그 400 · 404 — docs/specs/reader.md §5 reader-R4 · R6 · R9 · R10.
  */
 final class ScreenRequests {
 
@@ -28,44 +23,6 @@ final class ScreenRequests {
 	private static final Pattern DATE = Pattern.compile("\\d{4}-\\d{2}-\\d{2}");
 
 	private ScreenRequests() {
-	}
-
-	/**
-	 * 목록 기간 — {@code [until − 길이, until)}.
-	 * @param until 기간 끝 — 없으면 지금
-	 * @throws ResponseStatusException 400 — 시각 형식이 틀렸거나, 지금보다 뒤거나, 기간을 만들 수 없을 때
-	 */
-	static EventPeriod period(StorylineWindow window, @Nullable String until, Instant now) {
-		Instant end = (until == null) ? now : instant(until);
-		if (end.isAfter(now)) {
-			throw badRequest("until 은 지금보다 뒤일 수 없다: " + until);
-		}
-		Instant start;
-		try {
-			start = end.minus(window.length());
-		}
-		catch (ArithmeticException | DateTimeException ex) {
-			throw badRequest("기간을 만들 수 없다: " + until);
-		}
-		return EventPeriod.of(start, end).orElseThrow(() -> badRequest("기간을 만들 수 없다: " + until));
-	}
-
-	/**
-	 * 다음 쪽 커서 — 둘 다 없으면 첫 쪽.
-	 * @throws ResponseStatusException 400 — 하나만 오거나, 시각 형식이 틀렸거나, ID 가 1 미만일 때
-	 */
-	static @Nullable StorylineCursor cursor(@Nullable String afterLastArticleAt, @Nullable Long afterId) {
-		if ((afterLastArticleAt == null) != (afterId == null)) {
-			throw badRequest("afterLastArticleAt 과 afterId 는 함께 준다");
-		}
-		if (afterLastArticleAt == null) {
-			return null;
-		}
-		long id = Objects.requireNonNull(afterId);
-		if (id < 1) {
-			throw badRequest("스토리라인 ID 는 1 이상이다: " + id);
-		}
-		return new StorylineCursor(instant(afterLastArticleAt), new StorylineId(id));
 	}
 
 	/**
@@ -145,15 +102,6 @@ final class ScreenRequests {
 	/** 그 날짜에 다이제스트가 없을 때의 404 */
 	static ResponseStatusException unknownDigest(LocalDate date) {
 		return new ResponseStatusException(HttpStatus.NOT_FOUND, "그 날짜의 다이제스트가 없다: " + date);
-	}
-
-	private static Instant instant(String value) {
-		try {
-			return Instant.parse(value);
-		}
-		catch (DateTimeParseException ex) {
-			throw badRequest("시각은 ISO-8601 형식이다: " + value);
-		}
 	}
 
 	private static ResponseStatusException badRequest(String detail) {
