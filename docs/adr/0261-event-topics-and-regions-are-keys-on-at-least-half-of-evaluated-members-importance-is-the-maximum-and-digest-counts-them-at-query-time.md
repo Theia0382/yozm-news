@@ -1,6 +1,6 @@
 # ADR-0261: 사건의 주제 · 지역은 평가 있는 소속 기사의 절반 이상에 붙은 키, 중요도는 최대이고, `digest` 가 조회 때 센다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 스토리라인 구독의 주제 몫([ADR-0277](0277-storyline-interest-is-counted-per-containment-tree-top-with-the-topic-formula-and-reactions-to-a-flow-seen-within-seven-days-go-to-the-storyline-only.md))
 - 날짜: 2026-11-19
 - 근거: [이슈 #225](https://github.com/Theia0382/yozm-news/issues/225) — 리드가 몫의 문턱(절반 이상)과 사건 중요도(최대)를 골랐다. 측정 인스턴스의 14일치 후보 사건에서 최대 · 평균 · 합의 순위와 몫 문턱 셋(엄격 과반 · 절반 이상 · 최빈)의 결과를 견주었다 — 주제 구독과 관심도를 걸지 않은 전체 집단이다. 구현 커밋 `f545d30`(사건의 값 · 스토리라인 주제 몫) · `4c4a33b`(선별 · 큰 슬롯이 쓰고 읽기를 한 곳으로)
 - 관련: [ADR-0214](0214-a-storyline-subscription-enters-topic-interest-by-the-topic-shares-of-its-event-representatives.md)(부분 대체 — 사건 대표 기사의 주제 대신 사건의 주제로 몫을 센다. 몫 = 붙은 사건 수 ÷ 사건 수 · 구독 변경을 몫으로 나누기는 그대로), [ADR-0260](0260-digest-candidates-are-events-and-only-assigned-events-with-an-article-first-evaluated-in-the-period-enter.md)(후보는 사건), [ADR-0099](0099-importance-judged-by-what-the-matter-changes-and-its-reach-with-levels-written-as-reach-without-article-type-examples.md)(기사 중요도는 그 기사가 다루는 사안의 중요도)
@@ -17,6 +17,7 @@
 - **사건의 주제 중분류 · 지역은 평가 있는 소속 기사 가운데 그 키가 붙은 기사의 몫이 절반 이상(경계 포함)인 키다.** 키는 활성 태그 체계의 키로 푼 것이고, 미분류 기사도 분모에 든다. 절반은 측정 전 목표다.
 - **사건 중요도는 평가 있는 소속 기사 중요도의 최대다.** 중요도가 있는 기사가 없으면 없다(순위 맨 뒤). **사건의 `low_confidence` 는 평가 있는 소속 기사가 모두 `low_confidence` 일 때다.**
 - **사건의 값은 사건의 평가 있는 소속 기사 전부로 센다** — 다이제스트 기간 · 사용자의 제외와 무관한 공유 값이다. 평가 있는 소속 기사가 없는 사건은 값이 없다.
+> 부분 대체(아래 두 항목의 스토리라인 구독 주제 몫) — [ADR-0277](0277-storyline-interest-is-counted-per-containment-tree-top-with-the-topic-formula-and-reactions-to-a-flow-seen-within-seven-days-go-to-the-storyline-only.md). 지금 상태: [digest Spec "관심도"](../specs/digest.md#관심도) digest-R25
 - **저장하지 않고 `digest` 가 읽을 때 센다.** 규칙의 정본은 `digest` 의 `domain` 한 곳이고, 후보 선별 · 큰 슬롯 · 스토리라인 구독의 주제 몫이 같은 읽기를 쓴다.
 - **스토리라인 구독의 주제 몫은 닫은 사건마다 사건의 주제로 센다** — 몫 = 그 중분류가 사건의 주제인 사건 수 ÷ 평가 있는 소속 기사가 있는 사건 수.
 
@@ -26,6 +27,7 @@
 - 기간에 든 기사의 태그가 구독 밖이어도 사건의 주제가 구독이면 후보다. 반대로 기간에 든 기사의 태그가 구독이어도 사건의 주제가 아니면 후보가 아니다.
 - 소속 기사가 늘면 같은 사건의 값이 바뀐다 — 조회할 때 정한다.
 - 후보 선별과 관심도가 사건마다 소속 기사 전부의 평가를 읽는다 — 큰 스토리라인을 구독하면 읽는 행이 는다. 비용은 재지 않았다.
+> 부분 대체(스토리라인 주제 몫) — [ADR-0277](0277-storyline-interest-is-counted-per-containment-tree-top-with-the-topic-formula-and-reactions-to-a-flow-seen-within-seven-days-go-to-the-storyline-only.md). 지금 상태: [digest Spec "관심도"](../specs/digest.md#관심도) digest-R25
 - 몫을 세는 산식(붙은 수 ÷ 전체 수)은 사건의 키와 스토리라인 주제 몫에 따로 있다 — 앞은 키를 정하는 문턱, 뒤는 관심도에 나눠 더할 몫이라 따로 바뀔 수 있다.
 
 ## 검토한 대안

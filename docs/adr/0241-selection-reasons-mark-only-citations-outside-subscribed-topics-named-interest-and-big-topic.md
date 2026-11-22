@@ -30,3 +30,7 @@
 | 큰 슬롯을 "큰 스토리라인"으로 | 개발 이름이 다이제스트 화면에 나온다 — 다이제스트만 읽는 사용자가 스토리라인을 먼저 알아야 한다 |
 | "오늘의 화제" | 지난 날짜 화면 · 72시간 기간에서 "오늘"이 맞지 않는다 |
 | `INTEREST` 를 "좋아요 반영"으로 | 관심도는 좋아요만이 아니라 구독 변경도 반영한다 |
+
+## 후속 기록
+
+- 2026-11-22: 맥락의 `INTEREST`(구독 후보 가운데 관심도로 들어온 것)의 뜻과 범례 문구 — [ADR-0280](0280-events-of-followed-flows-outside-the-subscribed-topics-enter-one-per-flow-within-a-share-of-the-subscribed-seats-as-interest.md) · [digest Spec "후보 선별"](../specs/digest.md#후보-선별) digest-R22 · R52

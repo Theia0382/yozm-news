@@ -1,6 +1,6 @@
 # ADR-0225: 관심사 히스토리의 기간 값은 기준 시각 앞 120일의 창만 읽어 다이제스트와 같은 산식으로 계산하고, 진행 중인 기간은 부르는 시각을 기준으로 한다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 결과의 스토리라인 구독 주제 몫([ADR-0277](0277-storyline-interest-is-counted-per-containment-tree-top-with-the-topic-formula-and-reactions-to-a-flow-seen-within-seven-days-go-to-the-storyline-only.md))
 - 날짜: 2026-11-18
 - 근거: [이슈 #189](https://github.com/Theia0382/yozm-news/issues/189) — 관심도 재료 읽기의 범위와 감쇠를 대조해 지난 기간 값에 그 뒤 신호가 섞이는 것을 확인하고 리드와 정함. 구현 커밋 `77bfe43` · `7d7a1f8` · `bb602eb`
 - 관련: [ADR-0222](0222-interest-per-subtopic-is-smoothed-reactions-over-exposures-with-a-half-life-and-exposures-are-all-ready-citations.md)(결정 "기준 시각은 기간 끝이고, 읽는 범위의 끝은 부르는 시각이다" — 다이제스트에 적용되는 규칙으로 밝힘, 보충), [ADR-0215](0215-interests-are-not-stored-entities-and-are-computed-from-signal-history-at-query-time.md)(결정 "관심사 히스토리도 기간마다 같은 산식으로 계산해 견준다" · 결과 "기간 여럿을 매번 계산한다(비용 미측정)" — 보충), [ADR-0028](0028-explicit-signals-and-interest-weighted-candidates.md)(관심도는 조회할 때 계산한다)
@@ -20,6 +20,7 @@
 
 ## 결과
 
+> 부분 대체(마지막 문장) — [ADR-0277](0277-storyline-interest-is-counted-per-containment-tree-top-with-the-topic-formula-and-reactions-to-a-flow-seen-within-seven-days-go-to-the-storyline-only.md). 지금 상태: [digest Spec "관심도"](../specs/digest.md#관심도) digest-R25
 - 지난 기간 값은 그 뒤의 행동으로 바뀌지 않는다. 다만 운영자가 기사를 지우거나(인용 · 좋아요 이력이 함께 지워진다) 산식 · 상수를 바꾸면 지난 기간도 바뀐다([ADR-0215](0215-interests-are-not-stored-entities-and-are-computed-from-signal-history-at-query-time.md) 결과와 같다). 스토리라인 구독의 주제 몫은 지금 그 스토리라인의 구성으로 센다([ADR-0214](0214-a-storyline-subscription-enters-topic-interest-by-the-topic-shares-of-its-event-representatives.md)).
 - "범위 안 기사마다 가장 늦은 노출" 고르기가 저장소 질의에서 `domain` 의 창 고르기로 옮겨 한 곳에 있다 — 노출 저장소는 (기사, 끝낸 시각) 행을 낸다.
 - 가장 긴 선택지(36개월)는 읽는 범위가 약 1,215일이고 기준 시각마다 재료 전체를 다시 훑는다. 읽기 비용 · 지연은 재지 않았다.

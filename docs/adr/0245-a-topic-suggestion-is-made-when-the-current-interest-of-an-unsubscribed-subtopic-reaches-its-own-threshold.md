@@ -1,6 +1,6 @@
 # ADR-0245: 구독 제안은 구독하지 않은 활성 중분류의 지금 관심이 "관심 있음" 기준과 따로 둔 제안 기준 이상일 때 낸다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 구독 신호의 스토리라인 구독 주제 몫([ADR-0277](0277-storyline-interest-is-counted-per-containment-tree-top-with-the-topic-formula-and-reactions-to-a-flow-seen-within-seven-days-go-to-the-storyline-only.md))
 - 날짜: 2026-11-19
 - 근거: [이슈 #188](https://github.com/Theia0382/yozm-news/issues/188) — 기점 `91ba014` 의 관심도 산식으로 신호 조합마다 관심 x 를 감쇠와 함께 손으로 계산하고 리드와 정함. 구현 커밋 `ac24312`
 - 관련: [ADR-0028](0028-explicit-signals-and-interest-weighted-candidates.md)(보충 — 결정 "구독 밖 주제에 관심이 반복되면 그 주제의 구독을 제안"의 기준), [ADR-0222](0222-interest-per-subtopic-is-smoothed-reactions-over-exposures-with-a-half-life-and-exposures-are-all-ready-citations.md)(산식 · 상수), [ADR-0226](0226-new-and-lost-interests-are-neighbouring-periods-crossing-one-threshold-on-the-interest-value.md)("관심 있음" θ), [ADR-0103](0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md)(보충 — 결정 절의 "구독 제안 … 이 쓰는 '큰' 것"), [ADR-0209](0209-maximum-candidates-and-big-slots-are-user-settings-and-the-big-slot-takes-at-most-half.md)(보충 — 결과 절의 "구독 제안의 재료 … 도 생기지 않는다")
@@ -9,6 +9,7 @@
 
 - 관심 x 는 주제 중분류마다 (반응 + 구독 신호) ÷ (노출 + 가상 노출 3)이고 반감기 30일로 감쇠한다. 노출 시각은 다이제스트를 끝낸 시각이라 판정하는 시각보다 늘 앞서고, 노출과 반응이 같은 무게를 받는다.
 - 구독하지 않은 중분류의 노출은 두 길에서 생긴다 — 큰 슬롯 기사, 그리고 구독한 중분류와 함께 붙은 구독 후보. 산식은 한 기사의 반응을 붙은 중분류마다 나누지 않고 더한다.
+> 부분 대체(스토리라인 구독의 주제 몫) — [ADR-0277](0277-storyline-interest-is-counted-per-containment-tree-top-with-the-topic-formula-and-reactions-to-a-flow-seen-within-seven-days-go-to-the-storyline-only.md). 지금 상태: [digest Spec "관심도"](../specs/digest.md#관심도) digest-R25
 - 구독 신호는 그 주제의 직접 구독 · 해제(원인이 사용자인 행)와 스토리라인 구독의 주제 몫이다.
 - "관심 있음" θ 0.2 는 관심사 히스토리의 새로 생긴 관심 · 사라진 관심과 화면에 드러낼 주제를 정한다. 이 값이면 큰 슬롯 기사 좋아요 하나(약 12.5일 안 0.2 이상) · 스토리라인 구독 하나(약 22일 안)로 넘는다.
 - 감쇠 없는 계산에서 노출 둘 · 좋아요 둘은 2 ÷ 5 = 0.4 이지만, 판정 시각이 노출보다 늦어 실제로는 0.4 에 닿지 않는다(1일 뒤 약 0.394).
