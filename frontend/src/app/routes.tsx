@@ -57,11 +57,20 @@ export const routes: RouteObject[] = [
             }),
           },
           {
-            // 스토리라인 — 기사 내용을 보이므로 키가 있어야 간다(키 없이 가는 화면이 아니다)
+            // 사건 흐름 탭 — 정리된 내 흐름. 기사 내용을 보이므로 키가 있어야 간다(키 없이 가는 화면이 아니다)
             path: "storylines",
             lazy: async () => ({
               Component: (await import("@/features/storylines/StorylinesPage"))
                 .StorylinesPage,
+            }),
+          },
+          {
+            // 개인 흐름 화면 — 정리된 흐름 하나. 그 사용자의 키로 만든 글이고 기사 내용을 보이므로 키가 있어야 간다
+            path: "user-storylines/:id",
+            lazy: async () => ({
+              Component: (
+                await import("@/features/storylines/UserStorylinePage")
+              ).UserStorylinePage,
             }),
           },
           {

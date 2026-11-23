@@ -1,6 +1,7 @@
 package net.yozmnews.digest.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
@@ -54,6 +55,7 @@ import net.yozmnews.llm.Provider;
 import net.yozmnews.llm.ReasoningEffort;
 import net.yozmnews.platform.AppClock;
 import net.yozmnews.platform.UserId;
+import net.yozmnews.user.DigestCompleted;
 import net.yozmnews.user.DigestFailed;
 import net.yozmnews.user.DigestFailureCause;
 import org.junit.jupiter.api.AfterEach;
@@ -258,6 +260,10 @@ class DigestGenerationTests {
 
 		assertThat(calls).hasValue(0);
 		assertThat(this.events.stream(DigestFailed.class)).isEmpty();
+		// 후보 없음도 실패가 아닌 끝이다 — 끝남 이벤트 하나
+		assertThat(this.events.stream(DigestCompleted.class))
+			.extracting(DigestCompleted::user, DigestCompleted::digestId, DigestCompleted::digestDate)
+			.containsExactly(tuple(new UserId(42), id.value(), LocalDate.parse("2026-11-16")));
 		Map<String, Object> row = row(id);
 		assertThat(row).containsEntry("status", "EMPTY")
 			.containsEntry("provider", "anthropic")
@@ -317,6 +323,17 @@ class DigestGenerationTests {
 		assertThat(log.getOut()).doesNotContain("다이제스트 출력에 항목이 빠졌다");
 		// 실패가 아니면 실패 이벤트가 없다
 		assertThat(this.events.stream(DigestFailed.class)).isEmpty();
+		// 내용 있음으로 끝나면 끝남 이벤트 하나 — 끝낸 시각은 행의 것이다
+		assertThat(this.events.stream(DigestCompleted.class)).singleElement().satisfies(completed -> {
+			assertThat(completed.user()).isEqualTo(new UserId(42));
+			assertThat(completed.digestId()).isEqualTo(id.value());
+			assertThat(completed.digestDate()).isEqualTo(LocalDate.parse("2026-11-16"));
+			assertThat(completed.completedAt()).isEqualTo(this.jdbc.sql("select completed_at from digests where id = :id")
+				.param("id", id.value())
+				.query(java.time.OffsetDateTime.class)
+				.single()
+				.toInstant());
+		});
 	}
 
 	/** 생성 중에 측정용 시계를 넘겨도 소요 시간은 실제로 흐른 만큼이다 — 호출마다 2초가 흐르고 24시간을 넘긴다. 두 번 물어 4초다 */
@@ -436,6 +453,8 @@ class DigestGenerationTests {
 		// 실패 이벤트 하나 — 끝낸 시각은 생성기가 시계를 2초 넘긴 뒤다
 		assertThat(this.events.stream(DigestFailed.class)).containsExactly(new DigestFailed(new UserId(42), id.value(),
 				LocalDate.parse("2026-11-16"), DigestFailureCause.PROVIDER_ACCOUNT, Instant.parse("2026-11-15T22:45:02Z")));
+		// 실패로 끝나면 끝남 이벤트가 없다
+		assertThat(this.events.stream(DigestCompleted.class)).isEmpty();
 	}
 
 	/**

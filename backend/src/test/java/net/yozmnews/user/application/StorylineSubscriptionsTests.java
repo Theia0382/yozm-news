@@ -17,7 +17,7 @@ import net.yozmnews.user.UserStorylineFixtures;
 import net.yozmnews.user.UserStorylineFixtures.Saved;
 import net.yozmnews.user.UserStorylineId;
 import net.yozmnews.user.application.StorylineSubscriptions.SubscribeOutcome;
-import net.yozmnews.user.application.StorylineSubscriptions.SubscribedStoryline;
+import net.yozmnews.user.application.StorylineSubscriptions.SubscribedUserStoryline;
 import net.yozmnews.user.application.StorylineSubscriptions.UnsubscribeOutcome;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -111,9 +111,9 @@ class StorylineSubscriptionsTests {
 				List.of(new StorylineId(top), new StorylineId(child), new StorylineId(unrelated)), at(60)))
 			.containsExactly(Map.entry(new StorylineId(top), true), Map.entry(new StorylineId(child), true),
 					Map.entry(new StorylineId(unrelated), false));
-		// 목록의 줄은 누른 스토리라인이다 — 꼭대기가 아니다
-		assertThat(this.subscriptions.view(user, at(60)).subscriptions()).extracting(SubscribedStoryline::id)
-			.containsExactly(new StorylineId(child));
+		// 목록의 줄이 싣는 추적 씨앗은 누른 스토리라인이다 — 꼭대기가 아니다
+		assertThat(this.subscriptions.view(user, at(60)).subscriptions()).singleElement()
+			.satisfies(row -> assertThat(row.storylines()).containsExactly(new StorylineId(child)));
 	}
 
 	@Test
@@ -253,18 +253,56 @@ class StorylineSubscriptionsTests {
 		// 이벤트 없이 합친다 — 조회 앞의 따라가기만 고친다
 		UserStorylineFixtures.merge(this.jdbc, merged, survivor);
 
-		List<SubscribedStoryline> view = this.subscriptions.view(user, at(120)).subscriptions();
+		List<SubscribedUserStoryline> view = this.subscriptions.view(user, at(120)).subscriptions();
 
 		List<Saved> saved = saved(user);
 		// 추적 시각 내림차순 — 끝난 스토리라인의 추적은 그대로이고, 합쳐진 추적 씨앗은 남는 스토리라인으로 옮겼다
 		assertThat(view).containsExactly(
-				new SubscribedStoryline(new StorylineId(ended), at(60), StorylineState.ENDED,
-						new UserStorylineId(saved.get(1).id())),
-				new SubscribedStoryline(new StorylineId(survivor), NOW, StorylineState.ACTIVE,
-						new UserStorylineId(saved.get(0).id())));
+				new SubscribedUserStoryline(new UserStorylineId(saved.get(1).id()), at(60),
+						List.of(new StorylineId(ended)), StorylineState.ENDED, null),
+				new SubscribedUserStoryline(new UserStorylineId(saved.get(0).id()), NOW,
+						List.of(new StorylineId(survivor)), StorylineState.ACTIVE, null));
 		assertThat(this.subscriptions.view(user, at(180)).limit()).isEqualTo(100);
 		assertThat(history(user)).contains(List.of(merged, "REMOVE", "STORYLINE_MERGED"),
 				List.of(survivor, "ADD", "STORYLINE_MERGED"));
+	}
+
+	@Test
+	void aFlowWithTwoTrackedSeedsIsOneRowWithTheLiveliestStateAndTheSummaryTitle() {
+		UserId user = user();
+		// 앞 흐름은 오래전에 끝났고 뒤 흐름은 지금 이어진다 — 상태는 조회하는 지금 시각으로 정한다
+		long earlier = UserStorylineFixtures.storyline(this.jdbc, Instant.parse("2026-09-01T00:00:00Z"));
+		long later = UserStorylineFixtures.storyline(this.jdbc, Instant.now());
+		long alone = UserStorylineFixtures.storyline(this.jdbc, Instant.parse("2026-09-01T00:00:00Z"));
+		UserStorylineFixtures.follows(this.jdbc, earlier, later);
+		this.subscriptions.subscribe(user, new StorylineId(later), NOW);
+		this.subscriptions.subscribe(user, new StorylineId(earlier), at(60));
+		this.subscriptions.subscribe(user, new StorylineId(alone), at(120));
+		Saved flow = saved(user).stream().filter(one -> one.seeds().size() == 2).findFirst().orElseThrow();
+		Saved single = saved(user).stream().filter(one -> one.seeds().size() == 1).findFirst().orElseThrow();
+		summarize(flow, "의대 정원 갈등");
+
+		List<SubscribedUserStoryline> view = this.subscriptions.view(user, at(180)).subscriptions();
+
+		// 씨앗 둘인 흐름이 한 줄이다 — 씨앗은 ID 순, 상태는 둘 가운데 이어지는 쪽, 제목은 정리의 제목, 추적 시각은 처음 것.
+		// 대조 — 씨앗 하나인 흐름은 그 씨앗의 상태 그대로이고 정리가 없어 제목이 없다
+		assertThat(view).containsExactly(
+				new SubscribedUserStoryline(new UserStorylineId(single.id()), at(120),
+						List.of(new StorylineId(alone)), StorylineState.ENDED, null),
+				new SubscribedUserStoryline(new UserStorylineId(flow.id()), NOW,
+						List.of(new StorylineId(earlier), new StorylineId(later)), StorylineState.ACTIVE,
+						"의대 정원 갈등"));
+	}
+
+	@Test
+	void theLiveliestStateIsActiveThenQuietAndEndedOnlyWhenAllEnded() {
+		assertThat(StorylineSubscriptions.liveliest(List.of(StorylineState.ENDED, StorylineState.QUIET)))
+			.isEqualTo(StorylineState.QUIET);
+		assertThat(StorylineSubscriptions
+			.liveliest(List.of(StorylineState.QUIET, StorylineState.ACTIVE, StorylineState.ENDED)))
+			.isEqualTo(StorylineState.ACTIVE);
+		assertThat(StorylineSubscriptions.liveliest(List.of(StorylineState.ENDED, StorylineState.ENDED)))
+			.isEqualTo(StorylineState.ENDED);
 	}
 
 	@Test
@@ -313,6 +351,21 @@ class StorylineSubscriptionsTests {
 
 	private static Instant at(long seconds) {
 		return NOW.plusSeconds(seconds);
+	}
+
+	/** 그 사용자 스토리라인의 정리 행 — 추적 대상마다 글 없는 꼭대기 행을 함께 둔다(저장 모델의 불변식) */
+	private void summarize(Saved userStoryline, String title) {
+		this.jdbc.sql("""
+				insert into user_storyline_summaries (user_storyline_id, title, summary, recent, provider, model,
+				    input_tokens, output_tokens, created_at, updated_at, version)
+				values (:id, :title, '요약', '최근', 'anthropic', 'claude-sonnet-5-5', 10, 5, now(), now(), 0)
+				""").param("id", userStoryline.id()).param("title", title).update();
+		for (long top : userStoryline.members()) {
+			this.jdbc.sql("""
+					insert into user_storyline_top_summaries (user_storyline_id, storyline_id, title, summary, recent)
+					values (:id, :top, '', '', '')
+					""").param("id", userStoryline.id()).param("top", top).update();
+		}
 	}
 
 	private List<Saved> saved(UserId user) {

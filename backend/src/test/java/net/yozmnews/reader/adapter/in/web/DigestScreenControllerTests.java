@@ -16,6 +16,7 @@ import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.digest.DigestRounds;
 import net.yozmnews.reader.DigestScreenRows;
 import net.yozmnews.reader.ReaderRows;
+import net.yozmnews.reader.UserStorylineSummaryRows;
 import net.yozmnews.user.SignedInUsers;
 import net.yozmnews.user.UserStorylineFixtures;
 import net.yozmnews.user.application.PasswordHashing;
@@ -150,6 +151,8 @@ class DigestScreenControllerTests {
 			.andExpect(jsonPath("$.day.shown.sections[1].eventIds").value(contains(70, 71)))
 			// 항목을 묶은 흐름 — 흐름 추적의 대상
 			.andExpect(jsonPath("$.day.shown.sections[1].storylineId").value(flow))
+			// 그 흐름의 정리된 사용자 스토리라인이 없으면 제목 · 링크가 없다
+			.andExpect(jsonPath("$.day.shown.sections[1].userStoryline").isEmpty())
 			// 지운 기사의 인용은 빠진다
 			.andExpect(jsonPath("$.day.shown.sections[1].citations.length()").value(1))
 			.andExpect(jsonPath("$.day.shown.sections[1].citations[0].articleId").value(kept))
@@ -189,6 +192,49 @@ class DigestScreenControllerTests {
 	 * 수동 생성 상태의 시간대 · 해결되지 않은 마지막 실패. 오늘 일정 생성 시각의 값은 이 계층에 시계를 넣을 수 없어(시스템 시계) 고정 시계의
 	 * 다이제스트 조회 시험이 보고, 여기서는 가장 늦은 날짜가 오늘보다 늦은 행으로 null 만 본다.
 	 */
+	@Test
+	void anItemOfASummarizedFlowCarriesTheTitleAndIdOfThatUserStoryline() throws Exception {
+		long user = this.reader.id().value();
+		Instant at = Instant.parse("2026-11-05T00:00:00Z");
+		long summarized = UserStorylineFixtures.storyline(this.jdbc, at);
+		long unsummarized = UserStorylineFixtures.storyline(this.jdbc, at);
+		long ready = this.rows.digest(user, "2026-11-05", "READY", 100, 20, null);
+		this.rows.section(ready, "OVERVIEW", 0, null, "오늘의 흐름");
+		long[] items = { this.rows.section(ready, "TOP_STORY", 1, "정리된 흐름의 항목", "요약"),
+				this.rows.section(ready, "HEADLINE", 2, "정리 없는 흐름의 항목", null),
+				this.rows.section(ready, "HEADLINE", 3, "흐름 없는 항목", null) };
+		for (int i = 0; i < items.length; i++) {
+			this.rows.sectionEvent(items[i], 0, 70 + i, "SUBSCRIBED");
+		}
+		this.jdbc.sql("update digest_sections set storyline_id = :flow where id = :id")
+			.param("flow", summarized)
+			.param("id", items[0])
+			.update();
+		this.jdbc.sql("update digest_sections set storyline_id = :flow where id = :id")
+			.param("flow", unsummarized)
+			.param("id", items[1])
+			.update();
+		UserStorylineSummaryRows summaries = new UserStorylineSummaryRows(this.jdbc);
+		long userStoryline = summaries.userStoryline(user, summarized);
+		summaries.summarize(userStoryline, "정리된 흐름", at);
+		summaries.userStoryline(user, unsummarized);
+
+		for (String path : new String[] { "/api/digests/latest", "/api/digests/2026-11-05" }) {
+			String day = path.endsWith("latest") ? "$.day" : "$";
+			this.mockMvc.perform(get(path).with(this.reader))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath(day + ".shown.sections[0].userStoryline").isEmpty())
+				.andExpect(jsonPath(day + ".shown.sections[1].storylineId").value(summarized))
+				.andExpect(jsonPath(day + ".shown.sections[1].userStoryline.id").value(userStoryline))
+				.andExpect(jsonPath(day + ".shown.sections[1].userStoryline.title").value("정리된 흐름 제목"))
+				// 정리가 없는 사용자 스토리라인의 흐름은 버튼의 대상만 있고 제목 · 링크가 없다
+				.andExpect(jsonPath(day + ".shown.sections[2].storylineId").value(unsummarized))
+				.andExpect(jsonPath(day + ".shown.sections[2].userStoryline").isEmpty())
+				.andExpect(jsonPath(day + ".shown.sections[3].storylineId").isEmpty())
+				.andExpect(jsonPath(day + ".shown.sections[3].userStoryline").isEmpty());
+		}
+	}
+
 	@Test
 	void theStatusCarriesTheTimezoneAndTheUnresolvedFailureUntilACoveringRow() throws Exception {
 		long user = this.reader.id().value();

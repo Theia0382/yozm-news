@@ -17,6 +17,7 @@ import net.yozmnews.digest.InterestPoint;
 import net.yozmnews.digest.TopicSubscriptionStep;
 import net.yozmnews.feedback.FeedbackChange;
 import net.yozmnews.feedback.FeedbackValue;
+import net.yozmnews.storyline.StorylineId;
 import net.yozmnews.tag.TagSetId;
 import net.yozmnews.user.TopicSubscriptionAction;
 import net.yozmnews.user.TopicSubscriptionCause;
@@ -121,6 +122,51 @@ class InterestTimelinesTests {
 		assertThat(repeated.entered()).isEmpty();
 		assertThat(repeated.left()).isEmpty();
 		assertThat(repeated.subscriptionChanges()).as("[T1, T1) 은 비었다").isEmpty();
+	}
+
+	/**
+	 * 꼭대기 9 의 사건 넷을 T1 에 노출하고 하루 뒤 모두 좋아요 — 스토리라인 관심 x = 4w ÷ (4w + 3), w 는 노출 뒤 30일마다 반이다. T2(30일
+	 * 뒤)에 2 ÷ 5 = 0.4 로 만들 기준 0.35 를 넘어 보이게 되고, T3(60일 뒤)에 1 ÷ 4 = 0.25 로 남길 기준 0.2 위라 남고, T4(90일 뒤)에
+	 * 0.5 ÷ 3.5 = 1/7 로 사라진다
+	 */
+	@Test
+	void aFlowAppearsAtTheFollowThresholdStaysAboveTheKeepThresholdAndLeavesBelowIt() {
+		StorylineId top = new StorylineId(9);
+		Instant t3 = T2.plus(Duration.ofDays(30));
+		Instant t4 = t3.plus(Duration.ofDays(30));
+		InterestRecord record = new InterestRecord(TAG_SET,
+				List.of(exposure(1, T1), exposure(2, T1), exposure(3, T1), exposure(4, T1)), Map.of(),
+				Map.of(event(1), List.of(top), event(2), List.of(top), event(3), List.of(top), event(4), List.of(top)),
+				List.of(feedback(1, FeedbackValue.LIKE), feedback(2, FeedbackValue.LIKE), feedback(3, FeedbackValue.LIKE),
+						feedback(4, FeedbackValue.LIKE)),
+				List.of(), List.of(), Map.of(), new StorylineFlows(Map.of(top, 0), Set.of()));
+
+		List<InterestPoint> points = InterestTimelines.points(record, List.of(T0, T1, T2, t3, t4));
+
+		assertThat(points).extracting(InterestPoint::reference).containsExactly(T1, T2, t3, t4);
+		assertThat(points.get(0).storylineEntered()).isEmpty();
+		assertThat(points.get(0).storylineLeft()).isEmpty();
+		assertThat(points.get(1).storylineLevels().get(top)).isCloseTo(0.4, EXACT);
+		assertThat(points.get(1).storylineEntered()).containsExactly(top);
+		assertThat(points.get(1).storylineLeft()).isEmpty();
+		assertThat(points.get(2).storylineLevels().get(top)).isCloseTo(0.25, EXACT);
+		assertThat(points.get(2).storylineEntered()).isEmpty();
+		assertThat(points.get(2).storylineLeft()).isEmpty();
+		assertThat(points.get(3).storylineLevels().get(top)).isCloseTo(1.0 / 7.0, EXACT);
+		assertThat(points.get(3).storylineEntered()).isEmpty();
+		assertThat(points.get(3).storylineLeft()).containsExactly(top);
+	}
+
+	@Test
+	void pointsWithoutFlowsCarryNoStorylineValues() {
+		InterestRecord empty = new InterestRecord(TAG_SET, List.of(), Map.of(), Map.of(), List.of(), List.of(), List.of(),
+				Map.of(), StorylineFlows.NONE);
+
+		assertThat(InterestTimelines.points(empty, List.of(T0, T1))).singleElement().satisfies(point -> {
+			assertThat(point.storylineLevels()).isEmpty();
+			assertThat(point.storylineEntered()).isEmpty();
+			assertThat(point.storylineLeft()).isEmpty();
+		});
 	}
 
 	private static EventId event(long id) {

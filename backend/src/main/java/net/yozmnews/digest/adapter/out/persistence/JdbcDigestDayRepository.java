@@ -6,6 +6,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -15,6 +16,8 @@ import java.util.OptionalLong;
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.digest.DigestCitation;
 import net.yozmnews.digest.DigestFailure;
+import net.yozmnews.digest.DigestItemCursor;
+import net.yozmnews.digest.DigestItemRef;
 import net.yozmnews.digest.DigestSectionView;
 import net.yozmnews.digest.DigestStatus;
 import net.yozmnews.digest.SectionKind;
@@ -163,6 +166,62 @@ class JdbcDigestDayRepository implements DigestDayRepository {
 		return id.map(OptionalLong::of).orElseGet(OptionalLong::empty);
 	}
 
+	@Override
+	public List<Long> storedStorylines(UserId user) {
+		return this.jdbc.sql("""
+				select distinct s.storyline_id
+				from digests d
+				join digest_sections s on s.digest_id = d.id
+				where d.user_id = :user and d.id = %s and s.storyline_id is not null
+				order by s.storyline_id
+				""".formatted(ShownDigestSql.shownIdOf("d"))).param("user", user.value()).query(Long.class).list();
+	}
+
+	@Override
+	public List<DigestItemRef> itemsOf(UserId user, Collection<Long> storedStorylines,
+			@Nullable DigestItemCursor before, int limit) {
+		if (storedStorylines.isEmpty()) {
+			return List.of();
+		}
+		Map<Long, List<EventId>> events = new LinkedHashMap<>();
+		List<ItemRow> rows = this.jdbc.sql("""
+				select s.id, d.digest_date, s.position, s.kind, s.title
+				from digests d
+				join digest_sections s on s.digest_id = d.id
+				where d.user_id = :user and d.id = %s and s.storyline_id in (:storylines)
+				  and (cast(:beforeDate as date) is null
+				       or (d.digest_date, s.position) < (cast(:beforeDate as date), cast(:beforePosition as integer)))
+				order by d.digest_date desc, s.position desc
+				limit :limit
+				""".formatted(ShownDigestSql.shownIdOf("d")))
+			.param("user", user.value())
+			.param("storylines", List.copyOf(storedStorylines))
+			.param("beforeDate", (before == null) ? null : before.date())
+			.param("beforePosition", (before == null) ? null : before.position())
+			.param("limit", limit)
+			.query((rs, n) -> {
+				long id = rs.getLong("id");
+				events.put(id, new ArrayList<>());
+				return new ItemRow(id, rs.getObject("digest_date", LocalDate.class), rs.getInt("position"),
+						SectionKind.valueOf(rs.getString("kind")), rs.getString("title"));
+			})
+			.list();
+		if (rows.isEmpty()) {
+			return List.of();
+		}
+		this.jdbc.sql("""
+				select digest_section_id, event_id from digest_section_events
+				where digest_section_id in (:sections)
+				order by digest_section_id, position
+				""").param("sections", List.copyOf(events.keySet())).query((rs, n) -> {
+			events.get(rs.getLong("digest_section_id")).add(new EventId(rs.getLong("event_id")));
+			return n;
+		}).list();
+		return rows.stream()
+			.map(row -> new DigestItemRef(row.date(), row.position(), row.kind(), row.title(), events.get(row.id())))
+			.toList();
+	}
+
 	private static Instant instant(ResultSet rs, String column) throws SQLException {
 		return rs.getObject(column, OffsetDateTime.class).toInstant();
 	}
@@ -174,6 +233,10 @@ class JdbcDigestDayRepository implements DigestDayRepository {
 
 	private static @Nullable DigestFailure failure(@Nullable String code) {
 		return (code == null) ? null : DigestFailure.valueOf(code);
+	}
+
+	/** 항목 섹션 한 줄 */
+	private record ItemRow(long id, LocalDate date, int position, SectionKind kind, @Nullable String title) {
 	}
 
 	/** 섹션 한 줄과 모은 인용 */

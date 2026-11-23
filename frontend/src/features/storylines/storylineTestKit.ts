@@ -1,13 +1,16 @@
-// 독자 스토리라인 화면 시험의 응답 조각 — 목록 · 상세 · 구독 시험이 함께 쓴다.
+// 독자 흐름 화면 시험의 응답 조각 — 탭 · 개인 흐름 화면 · 타임라인 · 구독 시험이 함께 쓴다.
 
 import type {
   NewsArticle,
   StorylineCard,
-  StorylinePage,
   StorylineTimeline,
   TimelineEvent,
 } from "@/features/storylines/storylineQueries";
 import type { StorylineSubscriptions } from "@/features/storylines/subscriptionQueries";
+import type {
+  UserStorylineCard,
+  UserStorylineDetail,
+} from "@/features/storylines/userStorylineQueries";
 import { type Handler, json } from "@/test/fakeServer";
 
 export const T = "2026-11-05T00:00:00Z";
@@ -32,21 +35,60 @@ export function card(
     firstArticleAt: "2026-11-01T00:00:00Z",
     lastArticleAt: T,
     parentId: null,
-    period: { articles: 4, big: false },
     ...overrides,
   };
 }
 
-export function page(
-  storylines: StorylineCard[],
-  overrides: Partial<StorylinePage> = {},
-): StorylinePage {
+/** 정리된 흐름의 카드 — 추적 대상 스토리라인은 ID 에 100 을 더한 값 */
+export function userCard(
+  id: number,
+  overrides: Partial<UserStorylineCard> = {},
+): UserStorylineCard {
   return {
-    window: "WEEK",
-    from: "2026-10-29T00:00:00Z",
-    until: T,
-    storylines,
-    next: null,
+    id,
+    title: "의대 정원 갈등",
+    summary: "정부와 의료계가 정원을 두고 맞서 왔다.",
+    recent: "협의체가 다시 열렸다.",
+    tracked: false,
+    storylineId: id + 100,
+    topCount: 1,
+    updatedAt: T,
+    ...overrides,
+  };
+}
+
+/** 정리된 흐름 하나 — 갈래 하나, 처음 한 번 정리했다 */
+export function userDetail(
+  id: number,
+  overrides: Partial<UserStorylineDetail> = {},
+): UserStorylineDetail {
+  return {
+    id,
+    title: "의대 정원 갈등",
+    summary: "정부와 의료계가 정원을 두고 맞서 왔다.",
+    recent: "협의체가 다시 열렸다.",
+    tracked: false,
+    storylineId: id + 100,
+    tops: [
+      {
+        storylineId: id + 100,
+        state: "ACTIVE",
+        title: "의대 정원 갈등",
+        summary: "정부와 의료계가 정원을 두고 맞서 왔다.",
+        recent: "협의체가 다시 열렸다.",
+      },
+    ],
+    usage: {
+      provider: "anthropic",
+      model: "claude-sonnet-5-5",
+      inputTokens: 1200,
+      outputTokens: 340,
+      calls: 1,
+      totalInputTokens: 1200,
+      totalOutputTokens: 340,
+    },
+    createdAt: "2026-11-01T00:00:00Z",
+    updatedAt: T,
     ...overrides,
   };
 }
@@ -71,7 +113,7 @@ export function timeline(
   overrides: Partial<StorylineTimeline> = {},
 ): StorylineTimeline {
   return {
-    storyline: card(7, { period: null }),
+    storyline: card(7),
     parent: null,
     children: [],
     preceding: [],
@@ -81,7 +123,7 @@ export function timeline(
   };
 }
 
-/** 추적 중인 흐름 응답 — 구독 시각은 모두 T, 상태는 진행 */
+/** 추적 중인 흐름 응답 — 스토리라인마다 제 흐름(추적 씨앗 하나 · 정리 없음), 구독 시각은 모두 T, 상태는 진행 */
 export function subscriptions(
   ids: number[],
   limit = 100,
@@ -89,10 +131,11 @@ export function subscriptions(
   return {
     limit,
     subscriptions: ids.map((storylineId) => ({
-      storylineId,
       userStorylineId: storylineId,
       subscribedAt: T,
+      storylineIds: [storylineId],
       state: "ACTIVE",
+      title: null,
     })),
   };
 }

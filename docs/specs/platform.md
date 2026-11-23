@@ -307,7 +307,7 @@ public sealed interface OutputShape {
     record Str(int maxCodePoints, OnBlank onBlank, OverLimit onOverLimit) implements OutputShape {}   // 상한이 1 보다 작으면 IllegalArgumentException
     record Property(String name, OutputShape shape, boolean required, boolean nullable) {}
     enum OnBlank { UNREADABLE, ABSENT, KEEP }
-    enum OverLimit { UNREADABLE, DROP_ITEM, DROP_VALUE }
+    enum OverLimit { UNREADABLE, DROP_ITEM, DROP_VALUE, TRUNCATE }
 }
 
 public sealed interface OutputValue {
@@ -343,9 +343,9 @@ public final class StructuredOutputSchema {
 | `OutputShape.Str` | 문자열 — 앞뒤 공백을 지운 값을 코드 포인트로 잰다 |
 | `OutputShape.Property` | 객체의 속성 하나 — 필수면 빠졌을 때 읽지 못한 것이고, null 을 받으면 null 을 없음으로 받는다 |
 | `OnBlank` | 문자열이 비었을 때 — 출력 전체를 읽지 못함(`UNREADABLE`) · 없음으로 받음(`ABSENT` — 선택 속성에만) · 빈 문자열 그대로(`KEEP` — 뒤의 대조가 처분한다) |
-| `OverLimit` | 문자열이 상한을 넘을 때 — 출력 전체를 읽지 못함(`UNREADABLE`) · 그 문자열을 가진 가장 가까운 키 꼴의 값 또는 배열 원소를 버림(`DROP_ITEM`) · 그 값만 지움(`DROP_VALUE` — 선택 속성에만) |
+| `OverLimit` | 문자열이 상한을 넘을 때 — 출력 전체를 읽지 못함(`UNREADABLE`) · 그 문자열을 가진 가장 가까운 키 꼴의 값 또는 배열 원소를 버림(`DROP_ITEM`) · 그 값만 지움(`DROP_VALUE` — 선택 속성에만) · 상한까지의 앞부분만 남김(`TRUNCATE` — 코드 포인트로 자르고 끝의 공백을 지운다) |
 | `OutputValue` | 서술대로 확인한 뒤의 값 — 객체(서술 순서 · 없는 선택 속성 · null · 없음으로 받은 빈 문자열 · 지운 값은 키가 없다, 키 꼴은 남은 키만), 배열, 문자열. 객체의 접근자는 그 이름의 값이 없거나 꼴이 다르면 `IllegalStateException` 이다 — 서술대로 읽은 값에서는 생기지 않는다 |
-| `StructuredRead.Read.overLimit` | 상한을 넘어 버린 칸 · 원소와 지운 값의 수 |
+| `StructuredRead.Read.overLimit` | 상한을 넘어 버린 칸 · 원소와 지운 값 · 자른 값의 수 |
 | `StructuredRead.Unreadable.reason` | 짧은 진단 — 어느 속성이 왜. 출력 원문을 싣지 않는다 |
 | `StructuredOutputSchema.json` | 서술을 그린 JSON Schema(draft 2020-12) 문서 — 읽기보다 엄격하다 |
 
@@ -814,7 +814,7 @@ stateDiagram-v2
   - 앞뒤 공백을 지운 원문이 코드 펜스(```` ``` ```` 또는 ```` ```json ```` 로 시작하는 첫 줄과 ```` ``` ```` 로 끝남)로 감싸여 있으면 한 겹만 벗긴다
   - JSON 객체 하나여야 한다 — 객체 뒤에 다른 내용이 있거나 한 객체 안에 같은 키가 두 번 있으면 읽지 못한 것이다
   - 서술을 따라 걷는다 — 객체는 서술한 속성만 읽고 모르는 속성은 무시한다. 필수 속성이 없으면 읽지 못한 것이고, 선택 속성은 없음이다. `null` 은 null 을 받는 속성에서만 없음이고 그 밖에서는 읽지 못한 것이다. 타입이 다르면 읽지 못한 것이다(숫자를 문자열로 바꾸지 않는다). 키 꼴은 서술한 키만 보고 없는 키 · `null` 인 키를 빼며, 서술하지 않은 키는 무시한다. 배열의 `null` 원소는 읽지 못한 것이다
-  - 문자열은 앞뒤 공백을 지운 값이다. 비었을 때 · 상한을 넘을 때는 서술의 처분을 따른다 — `DROP_ITEM` 은 그 문자열을 가진 가장 가까운 키 꼴의 값 또는 배열 원소를 버리고, 그 사이의 객체도 함께 버린다. 최상위 객체는 버릴 수 없다(읽지 못한 것이다)
+  - 문자열은 앞뒤 공백을 지운 값이다. 비었을 때 · 상한을 넘을 때는 서술의 처분을 따른다 — `DROP_ITEM` 은 그 문자열을 가진 가장 가까운 키 꼴의 값 또는 배열 원소를 버리고, 그 사이의 객체도 함께 버린다. 최상위 객체는 버릴 수 없다(읽지 못한 것이다). `TRUNCATE` 는 상한까지의 코드 포인트만 남기고 끝의 공백을 지운다 — 값은 남고 읽기는 이어진다
   - 한 객체 안에서 읽지 못할 속성과 버릴 속성이 함께 있으면 읽지 못한 것이다 — 속성의 순서와 무관하다
   - 버린 키 꼴의 값 · 배열 원소와 지운 값의 수를 센다 — 버린 값 안에서 센 수는 버린 것 하나로 센다
   - 읽지 못하면 짧은 진단(어느 속성이 왜)을 낸다. 출력 원문을 싣지 않는다

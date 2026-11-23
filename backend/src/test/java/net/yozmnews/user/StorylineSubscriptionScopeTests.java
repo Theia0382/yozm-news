@@ -101,7 +101,7 @@ public class StorylineSubscriptionScopeTests {
 		this.mockMvc.perform(get("/api/storyline-subscriptions").with(a))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.subscriptions.length()").value(1))
-			.andExpect(jsonPath("$.subscriptions[0].storylineId").value(storyline));
+			.andExpect(jsonPath("$.subscriptions[0].storylineIds[0]").value(storyline));
 	}
 
 	@Test

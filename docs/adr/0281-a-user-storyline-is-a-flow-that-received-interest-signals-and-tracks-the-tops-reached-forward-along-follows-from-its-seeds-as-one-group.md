@@ -40,3 +40,7 @@
 | 갈라지면 추적을 한 조각에만 남긴다 | 어느 조각이 사용자가 따라가던 흐름인지 알 수 없다 — 남기고 사용자가 해제하게 한다 |
 | 관심 값이 0 이 되면 지운다 | 좋아요와 싫어요가 상쇄된 흐름이 신호가 있는데 사라지고, 값은 저장하지 않아(ADR-0215) 지울 때를 따로 계산해야 한다 |
 | 노출도 사용자 스토리라인을 만든다 | 받은 흐름마다 개체가 생긴다 — 사용자가 관심을 밝힌 흐름이 아니다 |
+
+## 후속 기록
+
+- 2026-11-23: 결과 "사용자에게 드러나는 것(정리 · 탭)은 개인 스토리라인 화면이 정한다" — [ADR-0289](0289-shown-flows-are-user-storylines-with-a-summary-which-the-summary-job-creates-and-removes.md) · [ADR-0290](0290-the-readers-storyline-tab-shows-the-users-summarized-flows-and-the-tracking-list-has-one-row-per-user-storyline.md) · [`reader` reader-R13](../specs/reader.md#정리된-흐름)

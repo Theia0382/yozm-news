@@ -359,14 +359,14 @@ function StorylineSubscriptionsRemovedBody({
     <div className="space-y-2 text-sm">
       <p>
         추적하던 흐름이 더 이어지지 않아 추적에서 뺐습니다. 관련 소식은 다른
-        스토리라인으로 이어질 수 있습니다.
+        흐름으로 이어질 수 있습니다.
       </p>
       <ul className="space-y-1">
         {body.removed.map((item) => (
           <li key={item.storylineId}>
             {item.title ?? (
               <span className="text-muted-foreground">
-                제목을 알 수 없는 스토리라인
+                제목을 알 수 없는 흐름
               </span>
             )}
           </li>

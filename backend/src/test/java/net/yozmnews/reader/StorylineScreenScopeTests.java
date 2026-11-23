@@ -89,14 +89,9 @@ public class StorylineScreenScopeTests {
 		// A 만 그 기사를 받았다
 		this.rows.cite(this.rows.digest(a.id().value(), "2026-11-05"), article);
 
-		// 기간 끝을 고정해 두 요청의 기간이 같게 한다
-		String list = "/api/storylines?until=" + at.plus(Duration.ofHours(1));
-		String listA = body(list, a);
 		String cardsA = body("/api/storyline-cards?ids=" + storyline, a);
 		// 빈 본문끼리 같아 통과하지 않게 행이 있음을 먼저 본다
-		assertThat(listA).contains("\"id\":" + storyline);
 		assertThat(cardsA).contains("\"requestedId\":" + storyline);
-		assertThat(body(list, b)).isEqualTo(listA);
 		assertThat(body("/api/storyline-cards?ids=" + storyline, b)).isEqualTo(cardsA);
 		this.mockMvc.perform(get("/api/storylines/{id}", storyline).with(a))
 			.andExpect(status().isOk())
@@ -112,7 +107,7 @@ public class StorylineScreenScopeTests {
 				this.hashing)
 			.signIn("reader-keyless@example.com");
 
-		for (String path : new String[] { "/api/storylines", "/api/storylines/1", "/api/storyline-cards?ids=1" }) {
+		for (String path : new String[] { "/api/storylines/1", "/api/storyline-cards?ids=1" }) {
 			this.mockMvc.perform(get(path)).andExpect(status().isUnauthorized());
 			this.mockMvc.perform(get(path).with(keyless))
 				.andExpect(status().isForbidden())

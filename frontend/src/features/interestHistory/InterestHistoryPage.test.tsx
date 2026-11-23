@@ -39,6 +39,8 @@ function period(
     entered: [],
     left: [],
     subscriptionChanges: [],
+    enteredUserStorylines: [],
+    leftUserStorylines: [],
     ...overrides,
   };
 }
@@ -84,6 +86,7 @@ function twoWeeks(span: InterestHistory["span"] = "WEEKS_13"): InterestHistory {
       topic("politics.legislature", "국회·정당·선거", [0, null], false),
       topic("economy.markets", "증권·투자", [null, -0.25], true),
     ],
+    userStorylines: [],
   };
 }
 
@@ -195,7 +198,7 @@ describe("InterestHistoryPage", () => {
     });
 
     expect(
-      await screen.findByText(/아직 관심의 흐름을 보일 신호가 없습니다/),
+      await screen.findByText(/아직 관심의 변화를 보일 신호가 없습니다/),
     ).toBeInTheDocument();
     expect(screen.queryByRole("table")).toBeNull();
   });
@@ -208,7 +211,7 @@ describe("InterestHistoryPage", () => {
     const how = await screen.findByRole("region", {
       name: "관심은 어떻게 바뀌나요",
     });
-    expect(within(how).getAllByRole("listitem")).toHaveLength(5);
+    expect(within(how).getAllByRole("listitem")).toHaveLength(6);
     expect(
       within(how).getByText(/좋아요를 누르면 그 항목 주제의 관심이 오르고/),
     ).toBeInTheDocument();
@@ -220,8 +223,84 @@ describe("InterestHistoryPage", () => {
     ).toBeInTheDocument();
     expect(within(how).queryByText(/스토리라인/)).not.toBeInTheDocument();
     expect(
-      screen.getByText(/^주제마다 관심이 기간에 따라 어떻게 달라졌는지/),
+      screen.getByText(
+        /^주제와 정리된 흐름마다 관심이 기간에 따라 어떻게 달라졌는지/,
+      ),
     ).toBeInTheDocument();
+  });
+
+  it("정리된 흐름마다 기간별 관심을 제목 링크와 함께 보이고, 관심이 생기거나 사라진 흐름을 기간에 적는다", async () => {
+    const base = twoWeeks();
+    renderRoutes(ROUTES, "/interest-history", {
+      "GET /api/interest-history": () =>
+        json({
+          ...base,
+          periods: [
+            { ...base.periods[0]!, enteredUserStorylines: [3] },
+            // 99 는 지금 정리된 흐름이 아니다 — 제목을 몰라 적지 않는다
+            { ...base.periods[1]!, leftUserStorylines: [3, 99] },
+          ],
+          userStorylines: [
+            {
+              id: 3,
+              title: "의대 정원 갈등",
+              levels: [{ level: 0.5 }, { level: null }],
+            },
+          ],
+        }),
+    });
+
+    const table = await screen.findByRole("table", { name: "흐름별 관심" });
+    const row = within(table).getByRole("row", { name: /의대 정원 갈등/ });
+    expect(
+      within(row).getByRole("link", { name: "의대 정원 갈등" }),
+    ).toHaveAttribute("href", "/user-storylines/3");
+    expect(
+      within(row)
+        .getAllByRole("cell")
+        .map((cell) => cell.textContent),
+    ).toEqual(["관심 +0.50", "신호 없음"]);
+    // 주제 표는 그대로 따로 있다
+    expect(
+      screen.getByRole("table", { name: "주제별 관심" }),
+    ).toBeInTheDocument();
+    const changes = screen.getByRole("list", { name: "기간마다 바뀐 것" });
+    expect(
+      within(changes).getByText("관심이 생긴 흐름: 의대 정원 갈등"),
+    ).toBeInTheDocument();
+    expect(
+      within(changes).getByText("관심이 사라진 흐름: 의대 정원 갈등"),
+    ).toBeInTheDocument();
+  });
+
+  it("정리된 흐름이 없으면 흐름 표를 두지 않는다", async () => {
+    renderRoutes(ROUTES, "/interest-history", {
+      "GET /api/interest-history": () => json(twoWeeks()),
+    });
+
+    await screen.findByRole("table", { name: "주제별 관심" });
+    expect(screen.queryByRole("table", { name: "흐름별 관심" })).toBeNull();
+    expect(screen.queryByText(/관심이 생긴 흐름/)).toBeNull();
+  });
+
+  it("주제 신호가 없어도 정리된 흐름이 있으면 흐름 표를 보인다", async () => {
+    renderRoutes(ROUTES, "/interest-history", {
+      "GET /api/interest-history": () =>
+        json({
+          ...twoWeeks(),
+          periods: [period("2026-11-16", "2026-11-22", { inProgress: true })],
+          topics: [],
+          userStorylines: [
+            { id: 3, title: "의대 정원 갈등", levels: [{ level: 0.4 }] },
+          ],
+        }),
+    });
+
+    expect(
+      await screen.findByRole("table", { name: "흐름별 관심" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("table", { name: "주제별 관심" })).toBeNull();
+    expect(screen.queryByText(/아직 관심의 변화를 보일 신호가/)).toBeNull();
   });
 
   it("요청이 실패하면 알린다", async () => {

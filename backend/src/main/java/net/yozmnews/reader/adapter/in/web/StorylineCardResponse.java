@@ -12,17 +12,13 @@ import org.jspecify.annotations.Nullable;
  *
  * @param title 대표 사건의 대표 기사 — 대표가 없거나(대표 사건이 그새 합쳐졌거나 지워짐) 기사가 지워졌으면 null
  * @param parentId 이 스토리라인을 포함하는 상위 — 없으면 null
- * @param period 목록 기간의 값 — 목록 행에만 있고 타임라인 · 카드에서는 null
  */
 record StorylineCardResponse(long id, @Nullable NewsArticleResponse title, StorylineState state, int eventCount,
-		int articleCount, Instant firstArticleAt, Instant lastArticleAt, @Nullable Long parentId,
-		@Nullable StorylinePeriodResponse period) {
+		int articleCount, Instant firstArticleAt, Instant lastArticleAt, @Nullable Long parentId) {
 
-	static StorylineCardResponse of(StorylineView view, @Nullable NewsArticleResponse title,
-			@Nullable StorylinePeriodResponse period) {
+	static StorylineCardResponse of(StorylineView view, @Nullable NewsArticleResponse title) {
 		return new StorylineCardResponse(view.id().value(), title, view.state(), view.eventCount(), view.articleCount(),
-				view.firstArticleAt(), view.lastArticleAt(), (view.parent() == null) ? null : view.parent().value(),
-				period);
+				view.firstArticleAt(), view.lastArticleAt(), (view.parent() == null) ? null : view.parent().value());
 	}
 
 }

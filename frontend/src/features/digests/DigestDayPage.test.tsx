@@ -49,6 +49,7 @@ function flowSections(): DigestDay {
           body: null,
           reason: "SUBSCRIBED",
           storylineId: null,
+          userStoryline: null,
           eventIds: [105],
           citations: [citation(5)],
         },
@@ -267,6 +268,61 @@ describe("DigestDayPage", () => {
     expect(within(overview).queryByRole("button")).toBeNull();
   });
 
+  it("항목을 묶은 흐름이 정리돼 있으면 제목 아래에 정리의 제목을 개인 흐름 화면 링크로 두고, 없으면 두지 않는다", async () => {
+    renderDay(
+      day({
+        shown: shown({
+          sections: [
+            {
+              kind: "HEADLINE",
+              title: "정리된 흐름의 소식",
+              body: null,
+              reason: "SUBSCRIBED",
+              storylineId: null,
+              userStoryline: { id: 3, title: "의대 정원 갈등" },
+              eventIds: [105],
+              citations: [citation(5)],
+            },
+            {
+              kind: "HEADLINE",
+              title: "정리 없는 소식",
+              body: null,
+              reason: "SUBSCRIBED",
+              storylineId: null,
+              userStoryline: null,
+              eventIds: [106],
+              citations: [citation(6)],
+            },
+          ],
+        }),
+      }),
+    );
+
+    const linked = await screen.findByRole("heading", {
+      level: 3,
+      name: "정리된 흐름의 소식",
+    });
+    const flow = screen.getByRole("link", { name: "의대 정원 갈등" });
+    expect(flow).toHaveAttribute("href", "/user-storylines/3");
+    // 링크는 제목 요소 밖이다 — 낭독되는 제목 이름에 섞이지 않는다
+    expect(linked).not.toContainElement(flow);
+    expect(linked.parentElement).toContainElement(flow);
+    expect(flow.closest("p")).toHaveTextContent("흐름 의대 정원 갈등");
+    // 정리 없는 항목에는 흐름 줄이 없다 — 화면의 흐름 링크는 하나다
+    const plain = screen.getByRole("heading", {
+      level: 3,
+      name: "정리 없는 소식",
+    });
+    expect(plain.parentElement).not.toHaveTextContent("흐름");
+    expect(
+      screen
+        .getAllByRole("link")
+        .filter((link) =>
+          link.getAttribute("href")?.startsWith("/user-storylines/"),
+        ),
+    ).toHaveLength(1);
+  });
+
   it("선정 이유 배지는 항목에 하나이고 구독 주제가 아닌 항목에만 두며 범례를 둔다", async () => {
     renderDay(
       day({
@@ -279,6 +335,7 @@ describe("DigestDayPage", () => {
               body: null,
               reason: "SUBSCRIBED",
               storylineId: null,
+              userStoryline: null,
               eventIds: [105],
               citations: [citation(5)],
             },
@@ -342,6 +399,7 @@ describe("DigestDayPage", () => {
               body: null,
               reason: "SUBSCRIBED",
               storylineId: null,
+              userStoryline: null,
               eventIds: [101],
               citations: [citation(1)],
             },

@@ -117,11 +117,11 @@ describe("RequireSignIn", () => {
     );
   });
 
-  it("스토리라인 링크를 머리줄에 둔다", async () => {
+  it("사건 흐름 링크를 머리줄에 둔다", async () => {
     renderGuarded("/", () => json(SIGNED_IN));
 
     await screen.findByText("첫 화면");
-    expect(screen.getByRole("link", { name: "스토리라인" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "사건 흐름" })).toHaveAttribute(
       "href",
       "/storylines",
     );
