@@ -211,7 +211,7 @@ class AdminEvaluationReviewControllerTests {
 					 "importanceLevels":[{"key":"3","name":"여러 분야","probability":1.0}],
 					 "importance":3.0,
 					 "article":{"title":"국회 본회의 통과","summary":"<b>요약</b> 원문",
-					  "canonicalUrl":"https://news.example/a/41",
+					  "canonicalUrl":"https://news.example/a/41","publishedAt":"2026-10-28T00:00:00Z",
 					  "entries":[{"sourceName":"한겨레","section":"정치","categories":["정치","국회"]},
 					             {"sourceName":null,"section":null,"categories":[]},
 					             {"sourceName":"한겨레","section":"사회","categories":["사회"]}]}}

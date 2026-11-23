@@ -278,6 +278,64 @@
         "tags" : [ "admin-account-controller" ]
       }
     },
+    "/api/admin/articles/{id}" : {
+      "get" : {
+        "operationId" : "article",
+        "parameters" : [ {
+          "description" : "기사 ID",
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ArticleReviewResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "세션이 없거나 만료됐다 · 운영자 토큰(Bearer)이 맞지 않는다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "비밀번호를 바꿔야 한다 · 운영자 권한이 없다"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "없는 기사다 — 그새 지운 기사 포함"
+          }
+        },
+        "tags" : [ "admin-article-controller" ]
+      }
+    },
     "/api/admin/big-storyline-criteria" : {
       "get" : {
         "operationId" : "criteria",
@@ -6171,6 +6229,62 @@
         },
         "required" : [ "detail", "instance", "status", "title", "type" ]
       },
+      "ArticleAssignmentResponse" : {
+        "type" : "object",
+        "properties" : {
+          "assignedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "candidates" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/AssignmentCandidateResponse"
+            }
+          },
+          "criteria" : {
+            "$ref" : "#/components/schemas/AssignmentCriteriaResponse"
+          },
+          "decidedBy" : {
+            "type" : "string",
+            "enum" : [ "FORMULA", "EVALUATOR", "JUDGEMENT_FAILED" ]
+          },
+          "event" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/AssignedEventResponse"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "eventId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "judgement" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/ArticleJudgementResponse"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "judgementId" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int64"
+          },
+          "opened" : {
+            "type" : "boolean"
+          },
+          "publishedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "score" : {
+            "type" : [ "number", "null" ],
+            "format" : "double"
+          }
+        },
+        "required" : [ "assignedAt", "candidates", "criteria", "decidedBy", "event", "eventId", "judgement", "judgementId", "opened", "publishedAt", "score" ]
+      },
       "ArticleDetailResponse" : {
         "type" : "object",
         "properties" : {
@@ -6184,6 +6298,10 @@
               "$ref" : "#/components/schemas/ArticleEntryResponse"
             }
           },
+          "publishedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
           "summary" : {
             "type" : [ "string", "null" ]
           },
@@ -6191,7 +6309,7 @@
             "type" : "string"
           }
         },
-        "required" : [ "canonicalUrl", "entries", "summary", "title" ]
+        "required" : [ "canonicalUrl", "entries", "publishedAt", "summary", "title" ]
       },
       "ArticleEntryResponse" : {
         "type" : "object",
@@ -6210,6 +6328,141 @@
           }
         },
         "required" : [ "categories", "section", "sourceName" ]
+      },
+      "ArticleEvaluationResponse" : {
+        "type" : "object",
+        "properties" : {
+          "evaluatedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "format" : {
+            "$ref" : "#/components/schemas/NamedTag"
+          },
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "importance" : {
+            "type" : [ "number", "null" ],
+            "format" : "double"
+          },
+          "regions" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/NamedTag"
+            }
+          },
+          "topicCategories" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/TagName"
+            }
+          },
+          "topicStatus" : {
+            "type" : "string",
+            "enum" : [ "TAGGED", "LOW_CONFIDENCE", "UNCLASSIFIED" ]
+          },
+          "topics" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/NamedTag"
+            }
+          },
+          "version" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "versionNumber" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        },
+        "required" : [ "evaluatedAt", "format", "id", "importance", "regions", "topicCategories", "topicStatus", "topics", "version", "versionNumber" ]
+      },
+      "ArticleJudgementResponse" : {
+        "type" : "object",
+        "properties" : {
+          "candidates" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/JudgedEventResponse"
+            }
+          },
+          "evaluator" : {
+            "type" : "string"
+          },
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "inputTokens" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "judgedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "modelVersion" : {
+            "type" : "string"
+          },
+          "wordingVersion" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "candidates", "evaluator", "id", "inputTokens", "judgedAt", "modelVersion", "wordingVersion" ]
+      },
+      "ArticleKeyTermsResponse" : {
+        "type" : "object",
+        "properties" : {
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "modelVersion" : {
+            "type" : "string"
+          },
+          "terms" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          }
+        },
+        "required" : [ "createdAt", "modelVersion", "terms" ]
+      },
+      "ArticleReviewResponse" : {
+        "type" : "object",
+        "properties" : {
+          "article" : {
+            "$ref" : "#/components/schemas/ArticleDetailResponse"
+          },
+          "assignment" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/ArticleAssignmentResponse"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "evaluations" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ArticleEvaluationResponse"
+            }
+          },
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "keyTerms" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ArticleKeyTermsResponse"
+            }
+          }
+        },
+        "required" : [ "article", "assignment", "evaluations", "id", "keyTerms" ]
       },
       "ArticleSampleView" : {
         "type" : "object",
@@ -6241,6 +6494,50 @@
           }
         },
         "required" : [ "sources", "title" ]
+      },
+      "AssignedEventResponse" : {
+        "type" : "object",
+        "properties" : {
+          "articleCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "firstArticleAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "lastArticleAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "OPEN", "CLOSED", "MERGED" ]
+          }
+        },
+        "required" : [ "articleCount", "firstArticleAt", "lastArticleAt", "status" ]
+      },
+      "AssignmentCandidateResponse" : {
+        "type" : "object",
+        "properties" : {
+          "currentEventId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "eventId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "probability" : {
+            "type" : [ "number", "null" ],
+            "format" : "double"
+          },
+          "score" : {
+            "type" : "number",
+            "format" : "double"
+          }
+        },
+        "required" : [ "currentEventId", "eventId", "probability", "score" ]
       },
       "AssignmentCriteriaResponse" : {
         "type" : "object",
