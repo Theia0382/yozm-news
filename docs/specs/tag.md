@@ -46,7 +46,7 @@
 | 채울 저장 기준 | 채움을 요청한 순간 버전마다의 지금 저장 기준 — 요청이 기록하고 실행은 이 값까지 채운다(tag-R31) |
 | 저장 바닥 | 평가 시각 t 의 평가에 저장돼 있다고 볼 수 있는 확률의 하한 — 그때 쓰였을 수 있는 저장 기준과 t 를 덮은 끝난 채움의 채울 저장 기준 가운데 작은 것(tag-R32) |
 | 기본 제외 | 형식 태그의 속성. 계정을 만들 때, 그리고 그 형식이 새로 생긴 버전을 켤 때 사용자의 제외로 넣는다([user Spec](user.md#관심-설정) user-R43 · R47) |
-| 기본 체계 파일 | 저장소의 `backend/src/main/resources/tag-sets/default.yaml`. 첫 기동에 버전 1 로 들어간다(tag-R1 · R2). 첫 체계는 [조사 초안](../research/2026-10-news-categories.md) 3.2 를 바탕으로 하고, 문구는 평가 세트로 정했다 — 중요도 문구의 판단 원칙은 [ADR-0099](../adr/0099-importance-judged-by-what-the-matter-changes-and-its-reach-with-levels-written-as-reach-without-article-type-examples.md) |
+| 기본 체계 파일 | 저장소의 `backend/src/main/resources/tag-sets/default.yaml`. 첫 기동에 버전 1 로 들어간다(tag-R1 · R2). 첫 체계는 [조사 초안](../research/2026-10-news-categories.md) 3.2 를 바탕으로 하고, 문구는 평가 세트로 정했다 — 중요도 문구의 판단 원칙은 [ADR-0099](../adr/0099-importance-judged-by-what-the-matter-changes-and-its-reach-with-levels-written-as-reach-without-article-type-examples.md) · [ADR-0285](../adr/0285-importance-asks-what-the-matter-now-changes-and-levels-run-to-society-wide-in-four-steps-without-field-words.md) |
 | 첫 기동 적재 | 버전이 하나도 없을 때 기본 체계 파일을 버전 1 로 저장하는 기동 시 동작(tag-R2) |
 | 행위자 | 태그 기준 · 저장 기준을 정하거나 버전을 만든 주체의 종류 — 시스템(첫 기동 적재) · 운영자(공개 운영 API) |
 | 기준 버전 | 새 버전을 대조하는 버전 — 확인 · 활성화 때의 활성 버전이다. 버전은 만들 때 바로 활성이 되므로 버전 n 의 기준 버전은 n − 1 이다(tag-R16) |
@@ -163,7 +163,7 @@ public record TagSetView(TagSetId id, int number, List<TopicCategory> topics, Li
 | `TagSetView.topics` | 주제 대분류와 그 중분류 — 파일에 적힌 순서. 대분류는 질문이 없다(모델에 묻지 않는다), 중분류의 키는 전체 키다 | 대분류 1개 이상, 대분류마다 중분류 1개 이상(tag-R7) |
 | `TagSetView.regions` | 지역 태그 — 파일에 적힌 순서 | 1개 이상(tag-R7) |
 | `TagSetView.format` | 형식 Choice 질문과 그 선택지 — 파일에 적힌 순서. `excludedByDefault` 는 기본 제외 형식인가 | 선택지 2개 이상(tag-R7) |
-| `TagSetView.importance` | 중요도 Score 질문과 수준별 기준 — 수준 순 | 수준 `ImportanceScale.MIN_LEVEL` ~ `MAX_LEVEL`(1 ~ 5)이 하나씩(tag-R7) |
+| `TagSetView.importance` | 중요도 Score 질문과 수준별 기준 — 수준 순 | 수준이 `ImportanceScale.MIN_LEVEL`(1) 부터 빈 곳 없이 하나씩, 2 ~ `MAX_LEVEL`(5) 개(tag-R7) |
 | `AskedTag.question` | 질문 틀에 설명을 끼운 질문 문장 — 이 모듈이 만든다(tag-R9) | — |
 | `questions()` | 이 버전의 질문 묶음(`evaluation` 의 `TagQuestions`) — 태그 판정 · 다시 읽기에 넘긴다 | — |
 
@@ -1137,7 +1137,7 @@ sequenceDiagram
 
 - **tag-R5** — 파일은 65,536자까지다(`TagSetParser.MAX_CHARS`). YAML 공통 거부(문서 하나 · 최상위 매핑 · 앵커 · 별칭 · 명시 태그 · 같은 매핑 안 중복 키 · 알 수 없는 키 · 빈 값 · 형 오류)는 [platform-R17](platform.md#yaml-원문-읽기)이다. 최상위 키는 `questions`(`topic` · `region` · `format` · `importance`) · `thresholds`(`topic` · `region`, 각각 `tagThreshold` · `storeThreshold`) · `topics`(항목마다 `key` · `name` · `description` · `subtopics` — 중분류마다 `key` · `name` · `description`) · `regions`(`key` · `name` · `description`) · `formats`(`key` · `name` · `description`, 선택 `excludedByDefault`) · `importance`(`level` · `description`)이고 모두 필수다. 선택 최상위 키 `lineage`(항목마다 `kind` · `change` · `from` · `to` — tag-R22)가 있다. 그 밖의 선택 키는 `excludedByDefault` 하나이고 없으면 거짓이다. 순서는 파일에 적힌 순서다. 문제는 경로 · 줄:열과 함께 한 번에 모두 돌려준다
 - **tag-R6** — 키의 조각은 영문 소문자 · 숫자를 하이픈 하나로 이은 40자 이하다. 중분류는 짧은 조각만 적고 저장 키는 대분류 키를 점으로 붙인 전체 키(`politics.executive`)다. 키는 태그 종류 안에서 겹치지 않는다 — 대분류끼리, 같은 대분류의 중분류끼리, 지역끼리, 형식끼리. 다른 대분류의 같은 조각(`world.politics` · `economy.politics`)은 전체 키가 달라 겹치지 않는다
-- **tag-R7** — 태그 종류 구성: 주제 대분류 1개 이상, 대분류마다 중분류 1개 이상, 지역 1개 이상, 형식 2개 이상(Choice 선택지), 중요도 수준은 1 ~ 5 가 하나씩. 대분류는 모델에 묻지 않고, 중분류가 붙으면 그 대분류도 붙은 것으로 본다. 코드 · 설정은 특정 태그 키를 알지 않는다 — 어느 형식이 기본 제외인지도 체계 데이터다
+- **tag-R7** — 태그 종류 구성: 주제 대분류 1개 이상, 대분류마다 중분류 1개 이상, 지역 1개 이상, 형식 2개 이상(Choice 선택지), 중요도 수준은 1 부터 빈 곳 없이 하나씩 2 ~ 5 개(수준 하나로는 순서 척도가 되지 않는다 — [ADR-0286](../adr/0286-the-number-of-importance-levels-is-set-by-the-tag-set-from-one-without-gaps-two-to-five.md)). 대분류는 모델에 묻지 않고, 중분류가 붙으면 그 대분류도 붙은 것으로 본다. 코드 · 설정은 특정 태그 키를 알지 않는다 — 어느 형식이 기본 제외인지도 체계 데이터다
 - **tag-R8** — 문구는 공백만이 아니고 한 줄이다(줄바꿈 없음). 이름은 40자, 설명 · 중요도 기준은 120자, 질문(틀 포함)은 200자까지다(문자 수). 주제 · 지역 질문 틀은 자리표시자 `{description}` 을 정확히 하나 갖고, 형식 · 중요도 질문은 자리표시자를 갖지 않는다
 - **tag-R9** — 주제 중분류 · 지역 태그의 질문 문장은 그 태그 종류의 질문 틀에서 `{description}` 을 태그 설명으로 바꾼 것이다. 설명은 틀에 끼울 수 있는 명사구로 쓴다
 
@@ -1164,7 +1164,7 @@ sequenceDiagram
   | 주제 | 중분류마다 그 질문 문장(tag-R9) | Yes/No | 다중 |
   | 지역 | 지역마다 그 질문 문장 | Yes/No | 다중 |
   | 형식 | 형식 질문과 선택지 | Choice | 단일 |
-  | 중요도 | 중요도 질문과 1 ~ 5 기준 | Score | 단일 값 |
+  | 중요도 | 중요도 질문과 수준별 기준(체계의 수준 수만큼) | Score | 단일 값 |
 
 - **tag-R15** — 결과 해석과 판정:
   - 저장 — 태그 체계 버전과 판정 원본 ID 를 저장한다. 원본 응답 · 평가기 이름 · 모델 버전 · 입력 토큰은 판정 원본에 있다(`evaluation` — [evaluation-R41](evaluation.md#태그-판정)). 기사 하나에 체계 버전마다 평가 하나이고, 평가 하나에 판정 원본 하나다
@@ -1371,3 +1371,5 @@ sequenceDiagram
 | [0252](../adr/0252-the-stall-and-duration-of-work-in-progress-are-measured-as-elapsed-time-without-the-jumps-of-the-clock.md) | 진행 중 작업의 멈춤과 걸린 시간은 시계가 넘긴 시간을 뺀 경과로 잰다 |
 | [0254](../adr/0254-evaluation-queue-defers-transient-failures-without-an-attempt-limit-and-counts-retrying-rows-for-the-operator.md) | 평가 대기의 일시 실패는 시도 상한 없이 1시간까지 늘어나는 간격으로 미루고, 운영자 건수는 시도 소진 대신 일시 실패를 겪은 대기를 센다 |
 | [0259](../adr/0259-evaluator-timing-is-owned-by-one-evaluation-type-and-judging-queues-derive-their-leases-from-the-longest-judgement.md) | 평가기 요청 마감 · 판정 한 번의 가장 긴 시간 · 일시 실패 뒤 간격은 `evaluation` 의 공개 타입 하나가 정본이고, 판정을 부르는 대기의 점유 기간은 판정 한 번의 가장 긴 시간에서 계산한다 |
+| [0285](../adr/0285-importance-asks-what-the-matter-now-changes-and-levels-run-to-society-wide-in-four-steps-without-field-words.md) | 중요도 질문은 사안이 지금 일으키는 일로 묻고, 수준은 분야 말 없이 사회 전반까지 네 단계로 쓴다 |
+| [0286](../adr/0286-the-number-of-importance-levels-is-set-by-the-tag-set-from-one-without-gaps-two-to-five.md) | 중요도 수준 수는 체계가 정한다 — 1 부터 빈 곳 없이 2 ~ 5 개 |

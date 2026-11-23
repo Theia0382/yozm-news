@@ -104,7 +104,7 @@
 | [0096](0096-instance-bound-evaluation-data-kept-out-of-the-public-repository-and-defaults-cite-only-the-evaluation-set.md) | 인스턴스에 묶인 평가 데이터는 공개 저장소 밖에 두고, 기본값의 근거는 "평가 세트로 정했다"로 적는다 | 승인 |
 | [0097](0097-event-clustering-evaluation-labels-reports-of-one-happening-narrower-than-the-system-event.md) | 사건 묶기 평가의 정답 사건은 한 번 일어난 일을 다룬 보도들로 붙이고, 지금 시스템의 사건보다 좁은 차이는 정밀도 손실로 읽는다 | 승인 (부분 대체: 0102) |
 | [0098](0098-label-rule-2-samples-hold-no-big-event-gold-and-big-event-precision-is-not-measured-without-marks.md) | 라벨 기준 2판 표본에는 큰 사건 정답을 두지 않고, 큰 사건 표시가 없는 표본은 큰 사건 정밀도를 재지 않는다 | 대체됨 (0116) |
-| [0099](0099-importance-judged-by-what-the-matter-changes-and-its-reach-with-levels-written-as-reach-without-article-type-examples.md) | 중요도는 사안이 실제로 바꾸거나 일으킨 일의 크기와 영향 범위로 매기고, 수준 설명은 기사 종류 예시 없이 영향 범위로 쓴다 | 승인 |
+| [0099](0099-importance-judged-by-what-the-matter-changes-and-its-reach-with-levels-written-as-reach-without-article-type-examples.md) | 중요도는 사안이 실제로 바꾸거나 일으킨 일의 크기와 영향 범위로 매기고, 수준 설명은 기사 종류 예시 없이 영향 범위로 쓴다 | 승인 (부분 대체: 0285) |
 | [0100](0100-repository-tool-unit-tests-run-in-one-tools-check-service-and-docs-check-checks-links-only.md) | 저장소 도구의 단위 테스트는 검사 서비스 `tools` 하나가 돌리고, 문서 검사는 링크와 앵커만 본다 | 승인 (부분 대체: 0104) |
 | [0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md) | 사건을 잇는 흐름은 모든 사용자가 공유하는 스토리라인이 맡고, 개인 쪽은 스토리라인 구독과 관심사로 나눈다 | 승인 (부분 대체: 0281) |
 | [0102](0102-an-event-is-the-reports-of-one-happening-narrowed-by-the-event-membership-question-wording.md) | 사건은 한 번 일어난 일을 다룬 보도들이고, 시스템의 사건 범위는 사건 소속 질문 문구로 좁힌다 | 승인 |
@@ -287,6 +287,8 @@
 | [0282](0282-flow-tracking-points-to-a-user-storyline-which-user-handlers-store-under-the-settings-lock-while-readers-get-the-result-of-the-same-rule.md) | 흐름 추적은 사용자 스토리라인을 가리키고, 사용자 스토리라인은 `user` 의 처리기가 잠그고 저장하며 읽는 쪽은 같은 규칙의 결과를 받는다 | 승인 (부분 대체: 0287 · 0290) |
 | [0283](0283-storyline-interest-is-keyed-by-user-storyline-and-its-value-is-spread-to-each-top-for-selection.md) | 스토리라인 관심의 키는 사용자 스토리라인이고, 값을 그 꼭대기마다 펼쳐 선별에 쓴다 | 승인 (부분 대체: 0294) |
 | [0284](0284-a-digest-item-keeps-the-top-that-grouped-it-on-its-section-and-items-with-a-flow-carry-a-flow-tracking-button.md) | 다이제스트 항목은 묶은 꼭대기를 섹션에 남기고, 흐름이 있는 항목에 흐름 추적 버튼을 둔다 | 승인 |
+| [0285](0285-importance-asks-what-the-matter-now-changes-and-levels-run-to-society-wide-in-four-steps-without-field-words.md) | 중요도 질문은 사안이 지금 일으키는 일로 묻고, 수준은 분야 말 없이 사회 전반까지 네 단계로 쓴다 | 승인 |
+| [0286](0286-the-number-of-importance-levels-is-set-by-the-tag-set-from-one-without-gaps-two-to-five.md) | 중요도 수준 수는 체계가 정한다 — 1 부터 빈 곳 없이 2 ~ 5 개 | 승인 |
 | [0287](0287-user-storyline-summaries-are-made-and-stored-by-user-with-the-users-key-and-digest-supplies-the-flow-standing.md) | 사용자 스토리라인의 정리는 `user` 가 사용자 키로 만들고 저장하며, 흐름 판정은 `digest` 가 공급한다 | 승인 |
 | [0288](0288-summaries-are-made-after-a-digest-ends-only-for-changed-flows-and-extended-with-new-events.md) | 정리는 다이제스트가 끝난 뒤 바뀐 흐름만, 지난 정리에 새 사건을 더해 고친다 | 승인 |
 | [0289](0289-shown-flows-are-user-storylines-with-a-summary-which-the-summary-job-creates-and-removes.md) | 보이는 흐름은 정리가 있는 사용자 스토리라인이고, 정리 작업이 만들고 지운다 | 승인 |

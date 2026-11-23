@@ -75,7 +75,7 @@ class EvaluationReviewTests {
 	private static final Map<String, Double> OPINION = Map.of("straight", 0.1, "analysis", 0.1, "opinion", 0.6,
 			"interview", 0.1, "press-release", 0.05, "brief", 0.05);
 
-	private static final Map<Integer, Double> IMPORTANCE = Map.of(1, 0.0, 2, 0.25, 3, 0.75, 4, 0.0, 5, 0.0);
+	private static final Map<Integer, Double> IMPORTANCE = Map.of(1, 0.0, 2, 0.25, 3, 0.75, 4, 0.0);
 
 	@Autowired
 	EvaluationReview review;
@@ -274,8 +274,7 @@ class EvaluationReviewTests {
 		assertThat(detail.format()).isEqualTo("straight");
 		assertThat(detail.importanceLevels()).extracting(DistributionShare::key, DistributionShare::probability)
 			.containsExactly(tuple("1", 0.0), tuple("2", 0.25),
-					tuple("3", 0.75), tuple("4", 0.0),
-					tuple("5", 0.0));
+					tuple("3", 0.75), tuple("4", 0.0));
 		assertThat(detail.importanceLevels().get(2).name())
 			.isEqualTo("영향이 여러 업계 · 지역 · 집단에 걸치지만 사회 전반의 제도나 흐름은 바꾸지 않는 사안, 결과가 아직 정해지지 않은 다툼 · 주장");
 		assertThat(detail.importance()).isEqualTo(2.75);

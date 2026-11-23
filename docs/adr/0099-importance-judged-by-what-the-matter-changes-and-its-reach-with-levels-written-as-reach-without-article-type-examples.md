@@ -1,6 +1,6 @@
 # ADR-0099: 중요도는 사안이 실제로 바꾸거나 일으킨 일의 크기와 영향 범위로 매기고, 수준 설명은 기사 종류 예시 없이 영향 범위로 쓴다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 질문 원칙의 시점 · 수준 사다리의 끝([ADR-0285](0285-importance-asks-what-the-matter-now-changes-and-levels-run-to-society-wide-in-four-steps-without-field-words.md))
 - 날짜: 2026-11-08
 - 근거: [이슈 #74](https://github.com/Theia0382/yozm-news/issues/74) — 기본 체계의 중요도 문구를 평가 세트로 여러 판 시험
 - 관련: [ADR-0010](0010-tag-taxonomy.md)(중요도는 Score 질문 하나 — 그 판단 원칙을 정함, 보충 · 후속 기록), [ADR-0054](0054-tag-set-seeded-from-default-yaml-on-first-start-with-immutable-versions-and-question-templates.md)(문구는 버전 내용 — 이미 적재한 인스턴스는 새 버전으로 들인다), [ADR-0082](0082-big-events-judged-at-query-time-by-distinct-sources-and-mean-importance-both-reaching-criteria.md)(큰 사건 판정이 중요도 평균을 쓴다)
@@ -16,8 +16,10 @@
 
 ## 결정
 
+> 부분 대체(첫 문장) — [ADR-0285](0285-importance-asks-what-the-matter-now-changes-and-levels-run-to-society-wide-in-four-steps-without-field-words.md). 지금 상태: [`tag` 기본 체계 파일](../specs/tag.md#2-용어)
 - **중요도는 등장하는 인물이나 다루는 주제가 아니라 사안이 실제로 바꾸거나 일으킨 일의 크기와 그 영향이 미치는 범위로 매긴다. 발언 · 주장 · 반응은 그것이 일으킨 일만큼으로 본다.** 이 원칙은 중요도 질문 문장에 둔다.
 - **기준은 기사가 속한 사안이다.** 해설 · 전망 · 칼럼처럼 새로 일어난 일을 보도하지 않는 기사도 다루는 사안의 무게를 받는다.
+> 부분 대체(사다리의 끝 두 칸) — [ADR-0285](0285-importance-asks-what-the-matter-now-changes-and-levels-run-to-society-wide-in-four-steps-without-field-words.md). 지금 상태: [`tag` 기본 체계 파일](../specs/tag.md#2-용어)
 - **수준 설명은 기사 종류 예시 없이 영향 범위의 사다리로 쓰고, 관심(화제성)도 범위에 넣는다** — 당사자와 그 주변 → 한 업계 · 지역 · 집단 → 여러 업계 · 지역 · 집단(사회 전반의 제도 · 흐름은 바꾸지 않음) → 사회 전반의 제도나 정치 · 경제의 흐름 → 나라 전체의 진로나 국제 질서.
 - **결과가 아직 정해지지 않은 다툼 · 주장은 수준 3 에 자리를 둔다.**
 - 문구는 평가 세트로 정했다. 정본은 기본 체계 파일이다.
