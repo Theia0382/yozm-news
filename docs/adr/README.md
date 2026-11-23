@@ -264,7 +264,7 @@
 | [0259](0259-evaluator-timing-is-owned-by-one-evaluation-type-and-judging-queues-derive-their-leases-from-the-longest-judgement.md) | 평가기 요청 마감 · 판정 한 번의 가장 긴 시간 · 일시 실패 뒤 간격은 evaluation 의 공개 타입 하나가 정본이고, 판정을 부르는 대기의 점유 기간은 판정 한 번의 가장 긴 시간에서 계산한다 | 승인 |
 | [0260](0260-digest-candidates-are-events-and-only-assigned-events-with-an-article-first-evaluated-in-the-period-enter.md) | 다이제스트 후보는 사건이고, 기간에 첫 평가된 기사가 있는 배정된 사건만 든다 | 승인 (부분 대체: 0265 · 0279 · 0280) |
 | [0261](0261-event-topics-and-regions-are-keys-on-at-least-half-of-evaluated-members-importance-is-the-maximum-and-digest-counts-them-at-query-time.md) | 사건의 주제 · 지역은 평가 있는 소속 기사의 절반 이상에 붙은 키, 중요도는 최대이고, `digest` 가 조회 때 센다 | 승인 (부분 대체: 0277) |
-| [0262](0262-chosen-events-are-grouped-into-items-by-containment-tree-top-code-splits-top-stories-and-headlines-the-llm-writes-per-item-and-an-item-has-one-badge.md) | 고른 사건은 포함 나무 꼭대기로 항목을 묶고, 주요 뉴스와 헤드라인은 코드가 가르며, LLM 은 항목마다 쓰고 배지는 항목에 하나다 | 승인 (부분 대체: 0265 · 0269 · 0270) |
+| [0262](0262-chosen-events-are-grouped-into-items-by-containment-tree-top-code-splits-top-stories-and-headlines-the-llm-writes-per-item-and-an-item-has-one-badge.md) | 고른 사건은 포함 나무 꼭대기로 항목을 묶고, 주요 뉴스와 헤드라인은 코드가 가르며, LLM 은 항목마다 쓰고 배지는 항목에 하나다 | 승인 (부분 대체: 0265 · 0269 · 0270 · 0297) |
 | [0263](0263-articles-sent-per-event-are-sampled-up-to-a-cap-with-a-fixed-seed-from-those-in-the-period-and-the-sample-is-the-citations-and-sources.md) | 사건마다 LLM 에 넘기는 기사는 그 기간에 든 기사에서 고정 시드로 상한까지 뽑고, 그 표본이 인용 · 출처다 | 승인 (부분 대체: 0265 · 0268) |
 | [0264](0264-the-storyline-tops-query-gives-each-event-its-containment-tree-roots-in-membership-score-order-without-the-scores.md) | 스토리라인 꼭대기 조회는 사건마다 포함 나무 뿌리를 소속 점수 순으로 내고 점수는 싣지 않는다 | 승인 |
 | [0265](0265-feedback-is-pressed-once-per-digest-item-and-recorded-on-each-event-of-the-item-the-screen-shows-the-item-value-and-signals-use-event-records.md) | 반응은 다이제스트 항목에 한 번 누르고 그 항목의 사건들에 기록하며, 화면은 항목에 누른 값을 보이고 신호는 사건 기록이 맡는다 | 승인 |
@@ -294,6 +294,7 @@
 | [0291](0291-tokens-spent-on-a-summary-are-shown-on-the-personal-flow-screen-as-the-last-summary-and-the-running-total.md) | 정리에 쓴 토큰은 개인 흐름 화면에 마지막 정리와 지금까지의 합으로 보인다 | 승인 |
 | [0292](0292-reader-screens-call-a-storyline-an-event-flow.md) | 독자 화면은 스토리라인을 "사건 흐름"으로 부른다 | 승인 |
 | [0293](0293-the-interest-history-also-shows-the-interest-of-summarized-flows.md) | 관심사 히스토리는 정리된 흐름의 관심도 보인다 | 승인 |
+| [0297](0297-top-stories-outside-the-big-slot-take-at-most-two-per-subscribed-row-and-the-cap-is-off-when-too-few-rows-could-fill-them.md) | 큰 슬롯 밖 주요 뉴스는 한 구독 행이 둘까지 차지하고, 그 상한으로 칸을 다 채울 만큼 구독 행이 없으면 걸지 않는다 | 승인 |
 
 ## 운영 규칙
 
