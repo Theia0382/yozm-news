@@ -1,6 +1,6 @@
 # ADR-0281: 사용자 스토리라인은 관심 신호를 받은 흐름이고, 씨앗에서 이어짐을 앞에서 뒤로 따라 닿는 꼭대기를 한 묶음으로 추적한다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 겹치는 씨앗을 한 묶음으로 합치기([ADR-0294](0294-a-user-storyline-is-one-per-head-and-a-top-before-a-fork-belongs-to-several-of-them.md)) · 갈라질 때 잇기와 물려받기([ADR-0294](0294-a-user-storyline-is-one-per-head-and-a-top-before-a-fork-belongs-to-several-of-them.md))
 - 날짜: 2026-11-22
 - 근거: [이슈 #244](https://github.com/Theia0382/yozm-news/issues/244) — 스토리라인 구독과 스토리라인 관심이 이어진 뒤 흐름을 따라가지 않아, 앞 흐름을 구독하거나 거듭 싫어요한 사용자에게 뒤 흐름이 새 흐름으로 다시 왔다. 리드가 구독 · 관심을 물려주는 대신 그 값을 가진 개체를 세우기로 정했고, 측정 기록을 재생해 개체 수와 앞 · 뒤 흐름 반응의 부호를 확인했다. 구현 커밋 `c995bb8` · `a029668` · `3db16e1`
 - 관련: [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)(부분 대체 — 결정 "개인 쪽은 스토리라인 구독과 관심사 둘이다": 사용자 스토리라인 개체가 생기고 `user` 에 둔다), [ADR-0264](0264-the-storyline-tops-query-gives-each-event-its-containment-tree-roots-in-membership-score-order-without-the-scores.md)(꼭대기 조회는 이어짐을 따르지 않는다 — 그대로), [ADR-0282](0282-flow-tracking-points-to-a-user-storyline-which-user-handlers-store-under-the-settings-lock-while-readers-get-the-result-of-the-same-rule.md)(저장과 흐름 추적), [ADR-0283](0283-storyline-interest-is-keyed-by-user-storyline-and-its-value-is-spread-to-each-top-for-selection.md)(관심의 키)
@@ -16,7 +16,9 @@
 
 - **사용자 스토리라인은 그 사용자가 관심 신호를 준 흐름이다.** 신호는 좋아요 · 싫어요(되돌리기 포함 — 이력 행이 있으면)와 흐름 추적(구독 · 해제)이다. 노출은 만들지 않는다. 공용 스토리라인과 따로 `user` 가 갖는다.
 - **씨앗은 관심 창 안에 반응을 받은 사건의 지금 꼭대기, 창 안에 사용자가 추적 · 해제한 스토리라인의 지금 꼭대기, 추적 중인 스토리라인(추적 씨앗)의 지금 꼭대기다.** 추적 씨앗은 창과 무관하다.
+> 부분 대체(첫 문장 · 셋째 문장) — [ADR-0294](0294-a-user-storyline-is-one-per-head-and-a-top-before-a-fork-belongs-to-several-of-them.md). 지금 상태: [`user` user-R66](../specs/user.md#사용자-스토리라인)
 - **추적 대상은 씨앗과, 씨앗에서 지금의 이어짐을 앞에서 뒤로 따라 닿는 꼭대기다.** 뒤에서 앞으로는 따르지 않는다 — 신호를 준 순간부터 잇는다. 추적 대상이 하나라도 겹치는 씨앗들은 한 사용자 스토리라인이다(갈라진 가지 전체가 한 묶음이고, 겹치면 합친다).
+> 부분 대체(셋째 문장) — [ADR-0294](0294-a-user-storyline-is-one-per-head-and-a-top-before-a-fork-belongs-to-several-of-them.md). 지금 상태: [`user` user-R66](../specs/user.md#사용자-스토리라인)
 - **공용 관계의 변화를 따른다.** 맞출 때마다 지금 관계로 묶음을 다시 낸다. 이어짐이 사라져 묶음이 갈라지면 저장한 개체는 겹치는 꼭대기가 가장 많은 조각이 잇고, 추적 중이었으면 다른 조각도 추적을 물려받는다 — 물려받은 것은 사용자의 신호가 아니다. 합쳐지면 ID 가 가장 작은 개체가 잇고 추적 시각은 가장 이른 것이다.
 - **창 안에 신호가 없고 추적도 없으면 사라진다.** 관심 값이 0 인지가 아니라 신호가 있는지로 정한다.
 - 꼭대기 단위의 이어짐 닫힘은 `storyline` 의 공개 조회 하나가 낸다. 묶기 · 잇기의 판정은 `user` 의 `domain` 에 둔다.
