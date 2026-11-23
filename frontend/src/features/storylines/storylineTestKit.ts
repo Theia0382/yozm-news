@@ -133,6 +133,7 @@ export function subscriptions(
     subscriptions: ids.map((storylineId) => ({
       userStorylineId: storylineId,
       subscribedAt: T,
+      headStorylineId: storylineId,
       storylineIds: [storylineId],
       state: "ACTIVE",
       title: null,

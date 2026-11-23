@@ -158,7 +158,7 @@ export const SUBSCRIPTIONS_PATH = `${STORYLINES_PATH}/subscriptions`;
 /** 추적 중인 흐름 화면 이름 */
 export const SUBSCRIPTIONS_TITLE = "추적 중인 흐름";
 
-/** 추적 해제 버튼 — 그 흐름의 추적을 끈다(같은 흐름의 줄이 함께 사라진다) */
+/** 추적 해제 버튼 — 그 줄의 흐름(헤드로 보낸다)의 추적만 끈다. 같은 앞 흐름에서 갈라진 다른 줄은 남는다 */
 export const UNSUBSCRIBE_LABEL = "추적 해제";
 
 /**

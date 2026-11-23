@@ -174,7 +174,8 @@ public class StorylineSubscriptions {
 
 	/**
 	 * 해제 — 받은 스토리라인의 꼭대기를 추적 대상으로 가진 추적 중인 사용자 스토리라인 모두의 추적을 끈다(갈래의 헤드에서 누르면 그 갈래만,
-	 * 갈라지기 전 꼭대기에서 누르면 모든 갈래). 그 추적 씨앗을 모두 지우고 씨앗마다 이력을 남긴다. 사용자 스토리라인은 지우지 않는다 — 신호가 관심 창 안에 있는 동안 남아, 다시 추적하면 같은 사용자 스토리라인이다.
+	 * 갈라지기 전 꼭대기에서 누르면 모든 갈래). 그 추적 씨앗을 모두 지우고 씨앗마다 이력을 남긴다. 사용자 스토리라인은 지우지 않는다 — 신호가
+	 * 관심 창 안에 있는 동안 남아, 다시 추적하면 같은 사용자 스토리라인이다.
 	 */
 	@Transactional
 	public UnsubscribeOutcome unsubscribe(UserId user, StorylineId storyline, Instant now) {
@@ -258,8 +259,8 @@ public class StorylineSubscriptions {
 	 * @param state 조회 시각의 상태 — 추적 씨앗 가운데 가장 이어지는 것. 끝나도 추적은 남는다
 	 * @param title 정리의 제목 — 정리가 없으면 null
 	 */
-	public record SubscribedUserStoryline(UserStorylineId id, StorylineId head, Instant subscribedAt, List<StorylineId> storylines,
-			StorylineState state, @Nullable String title) {
+	public record SubscribedUserStoryline(UserStorylineId id, StorylineId head, Instant subscribedAt,
+			List<StorylineId> storylines, StorylineState state, @Nullable String title) {
 
 		public SubscribedUserStoryline {
 			storylines = List.copyOf(storylines);

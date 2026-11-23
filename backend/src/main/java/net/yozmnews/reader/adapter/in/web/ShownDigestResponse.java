@@ -27,7 +27,7 @@ record ShownDigestResponse(long digestId, Instant periodStart, Instant periodEnd
 		int candidateCount, int inputTokens, int outputTokens, Instant completedAt, List<DigestSectionResponse> sections) {
 
 	static ShownDigestResponse of(ShownDigest shown, Map<ArticleId, NewsArticleResponse> articles,
-			Map<StorylineId, UserStorylineSummaryRef> userStorylines) {
+			Map<StorylineId, List<UserStorylineSummaryRef>> userStorylines) {
 		return new ShownDigestResponse(shown.digestId(), shown.periodStart(), shown.periodEnd(), shown.provider(),
 				shown.model(), shown.candidateCount(), shown.inputTokens(), shown.outputTokens(), shown.completedAt(),
 				shown.sections()

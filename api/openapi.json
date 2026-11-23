@@ -6906,15 +6906,14 @@
           "title" : {
             "type" : [ "string", "null" ]
           },
-          "userStoryline" : {
-            "oneOf" : [ {
+          "userStorylines" : {
+            "type" : "array",
+            "items" : {
               "$ref" : "#/components/schemas/RefResponse"
-            }, {
-              "type" : "null"
-            } ]
+            }
           }
         },
-        "required" : [ "body", "citations", "eventIds", "kind", "reason", "storylineId", "title", "userStoryline" ]
+        "required" : [ "body", "citations", "eventIds", "kind", "reason", "storylineId", "title", "userStorylines" ]
       },
       "DigestUnresolvedFailureResponse" : {
         "type" : "object",
@@ -10712,6 +10711,10 @@
       "StorylineSubscriptionItem" : {
         "type" : "object",
         "properties" : {
+          "headStorylineId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
           "state" : {
             "type" : "string",
             "enum" : [ "ACTIVE", "QUIET", "ENDED" ]
@@ -10735,7 +10738,7 @@
             "format" : "int64"
           }
         },
-        "required" : [ "state", "storylineIds", "subscribedAt", "title", "userStorylineId" ]
+        "required" : [ "headStorylineId", "state", "storylineIds", "subscribedAt", "title", "userStorylineId" ]
       },
       "StorylineSubscriptionsRemovedNoticeResponse" : {
         "type" : "object",
