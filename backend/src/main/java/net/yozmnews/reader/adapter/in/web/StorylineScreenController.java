@@ -1,7 +1,5 @@
 package net.yozmnews.reader.adapter.in.web;
 
-import java.time.Instant;
-import java.time.InstantSource;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -21,16 +19,13 @@ import net.yozmnews.article.ArticleDirectory;
 import net.yozmnews.digest.ReceivedArticles;
 import net.yozmnews.event.EventDirectory;
 import net.yozmnews.event.EventId;
-import net.yozmnews.event.EventPeriod;
 import net.yozmnews.platform.ApiProblem;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.platform.WebRole;
 import net.yozmnews.storyline.StorylineDirectory;
 import net.yozmnews.storyline.StorylineEvent;
 import net.yozmnews.storyline.StorylineId;
-import net.yozmnews.storyline.StorylinePage;
 import net.yozmnews.storyline.StorylineRelationView;
-import net.yozmnews.storyline.StorylineSummary;
 import net.yozmnews.storyline.StorylineView;
 import org.jspecify.annotations.Nullable;
 import org.springframework.http.MediaType;
@@ -40,17 +35,14 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 독자 화면의 스토리라인 — 목록 기간의 목록 · 스토리라인 하나의 타임라인 · ID 여럿의 카드. docs/specs/reader.md §3 · reader-R1 ~ R7.
+ * 독자 화면의 공용 스토리라인 — 스토리라인 하나의 타임라인 · ID 여럿의 카드. docs/specs/reader.md §3 · reader-R3 ~ R7.
  * <p>
- * {@code storyline} · {@code event} · {@code article} · {@code digest} 의 공개 조회만 부르고 응답 모양을 정한다. 세 처리기 모두 세션이 필요하고
+ * {@code storyline} · {@code event} · {@code article} · {@code digest} 의 공개 조회만 부르고 응답 모양을 정한다. 두 처리기 모두 세션이 필요하고
  * 키 관문 뒤다(키 없이 여는 표시 · 요청 방어 표시가 없다). 트랜잭션을 열지 않는다 — 여러 공개 조회는 한 스냅숏이 아니다.
  */
 @WebRole
 @RestController
 class StorylineScreenController {
-
-	/** 목록 한 쪽의 스토리라인 수 — {@link StorylineDirectory#MAX_PAGE_SIZE} 이하. 측정 전 목표 */
-	static final int PAGE_SIZE = 30;
 
 	private final StorylineDirectory storylines;
 
@@ -58,41 +50,11 @@ class StorylineScreenController {
 
 	private final ReceivedMarks received;
 
-	private final InstantSource clock;
-
 	StorylineScreenController(StorylineDirectory storylines, EventDirectory events, ArticleDirectory articles,
-			ReceivedArticles received, InstantSource clock) {
+			ReceivedArticles received) {
 		this.storylines = Objects.requireNonNull(storylines, "storylines");
 		this.titles = new StorylineTitles(events, new ScreenArticles(articles));
 		this.received = new ReceivedMarks(events, received);
-		this.clock = Objects.requireNonNull(clock, "clock");
-	}
-
-	@GetMapping("/api/storylines")
-	@ApiResponse(responseCode = "200", description = "OK", useReturnTypeSchema = true)
-	@ApiResponse(responseCode = "400", description = "기간 끝 · 커서가 틀렸다",
-			content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
-					schema = @Schema(implementation = ApiProblem.class)))
-	StorylinePageResponse storylinePage(
-			@Parameter(description = "목록 기간 — 기간 끝에서 거슬러 잰 24시간 · 7일 · 30일") @RequestParam(
-					defaultValue = "WEEK") StorylineWindow window,
-			@Parameter(description = "기간 끝(ISO-8601, 제외) — 없으면 지금. 다음 쪽은 앞 응답의 until 을 넘긴다") @RequestParam(
-					required = false) @Nullable String until,
-			@Parameter(description = "다음 쪽 커서의 마지막 기사 시각(ISO-8601) — afterId 와 함께") @RequestParam(
-					required = false) @Nullable String afterLastArticleAt,
-			@Parameter(description = "다음 쪽 커서의 스토리라인 ID — afterLastArticleAt 과 함께") @RequestParam(
-					required = false) @Nullable Long afterId) {
-		EventPeriod period = ScreenRequests.period(window, until, this.clock.instant());
-		StorylinePage page = this.storylines.list(period, ScreenRequests.cursor(afterLastArticleAt, afterId),
-				PAGE_SIZE);
-		Map<EventId, NewsArticleResponse> titles = this.titles
-			.of(page.storylines().stream().map(summary -> summary.storyline().representativeEvent()).toList());
-		List<StorylineCardResponse> cards = page.storylines()
-			.stream()
-			.map(summary -> card(summary, titles))
-			.toList();
-		return new StorylinePageResponse(window, period.from(), period.to(), cards,
-				(page.next() == null) ? null : StorylinePageCursorResponse.of(page.next()));
 	}
 
 	@GetMapping("/api/storylines/{id}")
@@ -122,7 +84,7 @@ class StorylineScreenController {
 			.toList();
 		StorylineRefResponse parent = (view.parent() == null) ? null
 				: refs(List.of(view.parent()), related, titles).stream().findFirst().orElse(null);
-		return new StorylineTimelineResponse(StorylineCardResponse.of(view, titles.get(view.representativeEvent()), null),
+		return new StorylineTimelineResponse(StorylineCardResponse.of(view, titles.get(view.representativeEvent())),
 				parent, refs(relations.children(), related, titles), refs(relations.preceding(), related, titles),
 				refs(relations.following(), related, titles), events);
 	}
@@ -143,16 +105,10 @@ class StorylineScreenController {
 			StorylineView view = found.get(id);
 			if (view != null) {
 				cards.add(new StorylineCardEntryResponse(id.value(),
-						StorylineCardResponse.of(view, titles.get(view.representativeEvent()), null)));
+						StorylineCardResponse.of(view, titles.get(view.representativeEvent()))));
 			}
 		}
 		return new StorylineCardsResponse(cards);
-	}
-
-	private static StorylineCardResponse card(StorylineSummary summary, Map<EventId, NewsArticleResponse> titles) {
-		StorylineView view = summary.storyline();
-		return StorylineCardResponse.of(view, titles.get(view.representativeEvent()),
-				new StorylinePeriodResponse(summary.tally().articles(), summary.big()));
 	}
 
 	/** 관계 상대 — findAll 이 낸 값(합쳐졌으면 남는 쪽)으로, 그새 없어진 상대는 빼고 같은 ID 는 한 번 */

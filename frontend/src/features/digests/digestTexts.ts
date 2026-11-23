@@ -30,6 +30,9 @@ export function digestDayTitle(date: string): string {
   return `${formatDate(date)} 다이제스트`;
 }
 
+/** 항목을 묶은 흐름이 정리돼 있을 때 그 정리 제목 앞의 말 */
+export const ITEM_FLOW = "흐름";
+
 /** 항목의 선정 이유의 화면 이름 — 항목마다 하나, 구독 주제는 표시하지 않고 범례로 알린다 */
 export const selectionReasonLabels = {
   SUBSCRIBED: "구독 주제",
@@ -59,7 +62,7 @@ export function feedbackGroupLabel(title: string): string {
  * 좋아요 · 싫어요의 효과 — 누르기는 그 항목의 사건들에 기록되어 주제 · 흐름(스토리라인) 관심도의 반응 입력이 되고(docs/specs/digest.md
  * digest-R23 ~ R25 · R49 · R50), 싫어요 사건은 뒤에 만드는 다이제스트의 후보에서 빠진다 — 사건은 여러 날에 걸쳐 다음 기간의 후보로도 다시
  * 들므로 다시 만들기와 다음 다이제스트 모두에 듣는다(digest-R17). 흐름 관심이 거름 기준 이하로 내려가면 꼭대기가 모두 그런 흐름인 사건과
- * 머리가 그런 흐름인 큰 판정 행이 빠진다(digest-R17 · R19 · R51)
+ * 머리가 그런 흐름인 큰 판정 행이 빠지고, 주제 관심의 평균이 거름 기준 이하인 사건은 큰 슬롯에서 빠진다(digest-R17 · R19 · R51)
  */
 export const FEEDBACK_LEGEND =
   "좋아요 · 싫어요는 그 항목의 주제나 흐름의 관심도에 반영되어 다음 다이제스트의 순위를 움직입니다. 싫어요를 누른 항목의 소식은 뒤에 만드는 다이제스트에서 빠지고, 그 흐름의 다음 소식도 빠질 수 있습니다.";

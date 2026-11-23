@@ -5,6 +5,8 @@ import type { components } from "@/shared/api/schema";
 export type InterestHistory = components["schemas"]["InterestHistoryResponse"];
 export type InterestPeriod = components["schemas"]["InterestPeriodResponse"];
 export type InterestTopic = components["schemas"]["InterestTopicResponse"];
+export type InterestUserStoryline =
+  components["schemas"]["InterestUserStorylineResponse"];
 export type InterestSpanChoices =
   components["schemas"]["InterestSpanChoicesResponse"];
 export type TopicSubscriptionStep =

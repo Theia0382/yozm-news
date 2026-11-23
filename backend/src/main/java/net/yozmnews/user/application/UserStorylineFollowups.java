@@ -107,20 +107,26 @@ class UserStorylineFollowups {
 		for (Kept kept : result.kept()) {
 			UserStorylineRow row = rows.get(kept.id());
 			changed |= write(user, row, kept.tops(), kept.trackedSeeds(), kept.subscribedAt());
+			if (row.head() == null || row.head() != kept.head()) {
+				this.userStorylines.setHead(kept.id(), kept.head());
+				changed = true;
+			}
 			kept.inherited().forEach(seed -> inherited.add(new SubscriptionChange(seed, StorylineSubscriptionAction.ADD)));
 			next.add(new StoredUserStoryline(kept.id(), kept.tops(), kept.trackedSeeds(), kept.subscribedAt(),
-					row.createdAt()));
+					row.createdAt(), kept.head()));
 		}
 		for (Created created : result.created()) {
 			long id = this.userStorylines.create(user, now);
 			this.userStorylines.replaceMembers(id, created.tops());
+			this.userStorylines.setHead(id, created.head());
 			if (created.subscribedAt() != null) {
 				this.userStorylines.subscribe(user, id, created.subscribedAt());
 				this.userStorylines.replaceSeeds(id, created.trackedSeeds().keySet());
 			}
 			created.inherited()
 				.forEach(seed -> inherited.add(new SubscriptionChange(seed, StorylineSubscriptionAction.ADD)));
-			next.add(new StoredUserStoryline(id, created.tops(), created.trackedSeeds(), created.subscribedAt(), now));
+			next.add(new StoredUserStoryline(id, created.tops(), created.trackedSeeds(), created.subscribedAt(), now,
+					created.head()));
 			changed = true;
 		}
 		List<RemovedSubscription> vanished = new ArrayList<>();

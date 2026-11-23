@@ -6,6 +6,8 @@ import java.util.Map;
 
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.digest.ShownDigest;
+import net.yozmnews.storyline.StorylineId;
+import net.yozmnews.user.UserStorylineSummaryRef;
 
 /**
  * 날짜의 보이는 다이제스트 — 기간 · 모델 · 토큰 · 섹션. docs/specs/reader.md §5 · reader-R9
@@ -24,10 +26,14 @@ import net.yozmnews.digest.ShownDigest;
 record ShownDigestResponse(long digestId, Instant periodStart, Instant periodEnd, String provider, String model,
 		int candidateCount, int inputTokens, int outputTokens, Instant completedAt, List<DigestSectionResponse> sections) {
 
-	static ShownDigestResponse of(ShownDigest shown, Map<ArticleId, NewsArticleResponse> articles) {
+	static ShownDigestResponse of(ShownDigest shown, Map<ArticleId, NewsArticleResponse> articles,
+			Map<StorylineId, List<UserStorylineSummaryRef>> userStorylines) {
 		return new ShownDigestResponse(shown.digestId(), shown.periodStart(), shown.periodEnd(), shown.provider(),
 				shown.model(), shown.candidateCount(), shown.inputTokens(), shown.outputTokens(), shown.completedAt(),
-				shown.sections().stream().map(section -> DigestSectionResponse.of(section, articles)).toList());
+				shown.sections()
+					.stream()
+					.map(section -> DigestSectionResponse.of(section, articles, userStorylines))
+					.toList());
 	}
 
 }

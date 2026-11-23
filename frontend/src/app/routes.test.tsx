@@ -24,6 +24,7 @@ import { InterestsPage } from "@/features/interests/InterestsPage";
 import { StorylinePage as ReaderStorylinePage } from "@/features/storylines/StorylinePage";
 import { StorylinesPage as ReaderStorylinesPage } from "@/features/storylines/StorylinesPage";
 import { SubscriptionsPage } from "@/features/storylines/SubscriptionsPage";
+import { UserStorylinePage } from "@/features/storylines/UserStorylinePage";
 import { NoticesPage } from "@/features/notices/NoticesPage";
 import { ApiClientContext, createApiClient } from "@/shared/api/client";
 import type { components } from "@/shared/api/schema";
@@ -147,8 +148,9 @@ describe("routes", () => {
     ["storylines", ReaderStorylinesPage],
     ["storylines/subscriptions", SubscriptionsPage],
     ["storylines/:id", ReaderStorylinePage],
+    ["user-storylines/:id", UserStorylinePage],
   ])(
-    "로그인 틀 아래 %s 경로가 독자 스토리라인 화면을 내려받는다",
+    "로그인 틀 아래 %s 경로가 독자 흐름 화면을 내려받는다",
     async (path, page) => {
       const signedIn = routes[0]?.children?.find(
         (route) => route.path === undefined,

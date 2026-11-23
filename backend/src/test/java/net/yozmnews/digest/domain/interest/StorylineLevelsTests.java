@@ -70,4 +70,31 @@ class StorylineLevelsTests {
 		assertThatIllegalArgumentException().isThrownBy(() -> new StorylineLevels(Map.of(A, Double.NaN)));
 	}
 
+
+	@Test
+	void aTopInSeveralFlowsWeighsByTheMeanAndIsExcludedOnlyWhenAllAreExcluded() {
+		StorylineId shared = new StorylineId(5);
+		// 묶음 값 0.4 · −0.3 → 관심(평균) 0.05 · 가중치 1.025, 거름 아님(−0.3 하나만), 관심 흐름 · 남길 흐름(0.4 가 0.35 · 0.2 이상)
+		StorylineLevels mixed = StorylineLevels.ofFlows(Map.of(shared, List.of(0.4, -0.3)));
+		assertThat(mixed.level(shared)).isCloseTo(0.05, within(1e-12));
+		assertThat(mixed.weights().weight(shared)).isCloseTo(1.025, within(1e-12));
+		assertThat(mixed.excluded()).isEmpty();
+		assertThat(mixed.followed(Set.of())).containsExactly(shared);
+		assertThat(mixed.kept()).containsExactly(shared);
+
+		// 묶음 값 −0.3 · −0.25 → 모두 −0.2 이하 → 거름, 관심 흐름에서도 빠진다
+		StorylineLevels allExcluded = StorylineLevels.ofFlows(Map.of(shared, List.of(-0.3, -0.25)));
+		assertThat(allExcluded.excluded()).containsExactly(shared);
+		assertThat(allExcluded.followed(Set.of(shared))).isEmpty();
+		// 평균 −0.2 지만 하나가 −0.1 이면 거름이 아니다
+		assertThat(StorylineLevels.ofFlows(Map.of(shared, List.of(-0.3, -0.1))).excluded()).isEmpty();
+	}
+
+	@Test
+	void aTopInOneFlowIsTheSameAsTheSingleValueConstructor() {
+		// 대조 — 묶음 하나면 지금의 꼴과 같다
+		StorylineId top = new StorylineId(7);
+		assertThat(StorylineLevels.ofFlows(Map.of(top, List.of(-0.25)))).isEqualTo(new StorylineLevels(Map.of(top, -0.25)));
+		assertThat(StorylineLevels.ofFlows(Map.of(top, List.of()))).as("빈 목록은 신호 없음").isEqualTo(StorylineLevels.NONE);
+	}
 }

@@ -1,6 +1,7 @@
 package net.yozmnews.digest.domain.interest;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -79,15 +80,15 @@ public final class InterestWindow {
 				InterestSignals.storylineExposed(exposures, feedback, record.tops(), record.flows()),
 				InterestSignals.storylines(storylines, record.storylineTops(), record.flows()), reference,
 				InterestRules.STORYLINE);
-		// 묶음의 관심을 그 묶음의 모든 꼭대기에 같은 값으로 펼친다 — 선별은 꼭대기마다의 값을 쓴다
-		Map<StorylineId, Double> ofTop = new HashMap<>();
-		record.flows().flowOfTop().forEach((top, flow) -> {
+		// 묶음의 관심을 그 묶음의 모든 꼭대기에 펼친다 — 묶음 여럿에 든 꼭대기는 그 묶음들의 값을 모두 받는다(판정은 StorylineLevels)
+		Map<StorylineId, List<Double>> ofTop = new HashMap<>();
+		record.flows().flowsOfTop().forEach((top, flows) -> flows.forEach(flow -> {
 			Double level = flowLevels.get(flow);
 			if (level != null) {
-				ofTop.put(top, level);
+				ofTop.computeIfAbsent(top, ignored -> new ArrayList<>()).add(level);
 			}
-		});
-		return new Interests(topicLevels, new StorylineLevels(ofTop));
+		}));
+		return new Interests(topicLevels, StorylineLevels.ofFlows(ofTop));
 	}
 
 	private static boolean within(Instant at, Instant from, Instant to) {

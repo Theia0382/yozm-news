@@ -35,13 +35,13 @@ import org.jobrunr.scheduling.JobScheduler;
 import net.yozmnews.digest.DigestRounds;
 
 /**
- * 독자 화면의 스토리라인 — 목록 기간의 목록(카드 · 기간 기사 수 · 큰 여부 · 커서 · until), 타임라인(사건 순서 · 직접 소속 · 대표 기사 · 관계 넷 ·
+ * 독자 화면의 공용 스토리라인 — 타임라인(사건 순서 · 직접 소속 · 대표 기사 · 관계 넷 ·
  * 받은 날짜 · 합쳐진 ID), 카드 여럿, 요청의 400 · 404. 응답 객체마다 키 집합을 STRICT 로 본다 — 판정 근거 · 보도 강도 · 요약문이 새지 않는다.
  * <p>
  * 실제 PostgreSQL 위에서 행을 SQL 로 넣는다. 시각은 지금에서 거슬러 정한다(상태가 진행으로 정해지게). 기사의 출처 이름은 이름 있는 피드가 없어 비어
  * 있다 — 엮는 규칙은 {@code article} 의 시험이 본다.
  * <p>
- * 지키는 규칙: reader-R1 ~ reader-R7
+ * 지키는 규칙: reader-R3 ~ reader-R7
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -70,7 +70,7 @@ class StorylineScreenControllerTests {
 
 	private SignedInUsers.SignedInUser reader;
 
-	/** 기준 시각 — 지금을 시 단위로 자르고 30시간 거슬러 간다. 목록 기간(하루)의 끝은 T0 + 24시간 */
+	/** 기준 시각 — 지금을 시 단위로 자르고 30시간 거슬러 간다 */
 	private Instant t0;
 
 	private long s;
@@ -152,88 +152,6 @@ class StorylineScreenControllerTests {
 	}
 
 	@Test
-	void theListPagesTheStorylinesOfTheWindowWithCardsAndTheirPeriodValues() throws Exception {
-		JsonNode page = json("/api/storylines?window=DAY&until=" + at(24));
-
-		assertKeys(page, "window", "from", "until", "storylines", "next");
-		assertThat(page.path("window").asString()).isEqualTo("DAY");
-		assertThat(page.path("from").asString()).isEqualTo(at(0));
-		assertThat(page.path("until").asString()).isEqualTo(at(24));
-		assertThat(page.path("next").isNull()).isTrue();
-		// 직접 소속의 마지막 기사 시각 내림차순 — F(7시) · C(5시) · S(3시). P 는 기간 안 기사가 없다
-		assertThat(ids(page.path("storylines"))).containsExactly(this.f, this.c, this.s);
-		JSONAssert.assertEquals("""
-				{"id":%d,
-				 "title":{"title":"국회 본회의 통과","sources":[],"publishedAt":"2026-11-05T00:00:00Z","url":"%s"},
-				 "state":"ACTIVE","eventCount":3,"articleCount":4,"firstArticleAt":"%s","lastArticleAt":"%s",
-				 "parentId":null,"period":{"articles":4,"big":true}}
-				""".formatted(this.s, url(this.a1), at(1), at(5)), row(page, this.s).toString(), JSONCompareMode.STRICT);
-		// 하위 행은 상위 ID 를 싣고, 중요도가 없는 기사 하나라 크지 않다
-		JSONAssert.assertEquals("""
-				{"parentId":%d,"period":{"articles":1,"big":false}}
-				""".formatted(this.s), row(page, this.c).toString(), JSONCompareMode.LENIENT);
-	}
-
-	@Test
-	void theDefaultWindowIsAWeekEndingNowAndTheCursorContinuesTheSameWindow() throws Exception {
-		JsonNode week = json("/api/storylines");
-		assertThat(week.path("window").asString()).isEqualTo("WEEK");
-		assertThat(Duration.between(Instant.parse(week.path("from").asString()),
-				Instant.parse(week.path("until").asString())))
-			.isEqualTo(Duration.ofDays(7));
-		// 7일 기간에는 P 도 든다 — F · C · S · P
-		assertThat(ids(week.path("storylines"))).containsExactly(this.f, this.c, this.s, this.p);
-
-		// 커서 — F 다음부터, 같은 until 로
-		JsonNode next = json("/api/storylines?window=DAY&until=" + at(24) + "&afterLastArticleAt=" + at(7)
-				+ "&afterId=" + this.f);
-		assertThat(ids(next.path("storylines"))).containsExactly(this.c, this.s);
-		assertThat(next.path("until").asString()).isEqualTo(at(24));
-	}
-
-	@Test
-	void theListRejectsAFutureEndABadTimeAndAHalfCursor() throws Exception {
-		this.mockMvc.perform(get("/api/storylines?until=2999-01-01T00:00:00Z").with(this.reader))
-			.andExpect(status().isBadRequest());
-		this.mockMvc.perform(get("/api/storylines?until=어제").with(this.reader)).andExpect(status().isBadRequest());
-		this.mockMvc.perform(get("/api/storylines?afterId=3").with(this.reader)).andExpect(status().isBadRequest());
-		this.mockMvc.perform(get("/api/storylines?afterLastArticleAt=" + at(7) + "&afterId=0").with(this.reader))
-			.andExpect(status().isBadRequest());
-		this.mockMvc.perform(get("/api/storylines?window=YEAR").with(this.reader)).andExpect(status().isBadRequest());
-		// 기간 끝에서 길이를 빼면 시각의 범위를 벗어난다 — 기간을 만들 수 없다
-		this.mockMvc.perform(get("/api/storylines?until=-1000000000-01-01T00:00:00Z").with(this.reader))
-			.andExpect(status().isBadRequest());
-	}
-
-	@Test
-	void aFullPageCarriesTheCursorAndTheNextPageKeepsTheSameWindow() throws Exception {
-		// 7일 기간에 S · C · P · F 와 27 개를 더해 31 개 — 한 쪽 30 개를 넘는다. 더한 것은 -20 ~ -46 시에 하나씩
-		List<Long> extra = new ArrayList<>();
-		for (int i = 0; i < 27; i++) {
-			String time = at(-20 - i);
-			long event = this.rows.event(1, time, time);
-			long article = this.rows.article("추가 기사 " + i);
-			this.rows.assign(article, event, time);
-			long storyline = this.rows.storyline(time, time, event);
-			this.rows.member(storyline, event);
-			extra.add(storyline);
-		}
-
-		JsonNode first = json("/api/storylines?window=WEEK&until=" + at(24));
-		assertThat(first.path("storylines").size()).isEqualTo(30);
-		// 서른째 행(-45 시)이 커서다
-		assertKeys(first.path("next"), "lastArticleAt", "id");
-		assertThat(first.path("next").path("lastArticleAt").asString()).isEqualTo(at(-45));
-		assertThat(first.path("next").path("id").asLong()).isEqualTo(extra.get(25));
-
-		JsonNode second = json("/api/storylines?window=WEEK&until=" + at(24) + "&afterLastArticleAt=" + at(-45)
-				+ "&afterId=" + extra.get(25));
-		assertThat(ids(second.path("storylines"))).containsExactly(extra.get(26));
-		assertThat(second.path("until").asString()).isEqualTo(at(24));
-		assertThat(second.path("next").isNull()).isTrue();
-	}
-
-	@Test
 	void theTimelineCarriesTheEventsTheRelationsAndTheReceivedDates() throws Exception {
 		JsonNode timeline = json("/api/storylines/" + this.s);
 
@@ -242,7 +160,7 @@ class StorylineScreenControllerTests {
 				{"id":%d,
 				 "title":{"title":"국회 본회의 통과","sources":[],"publishedAt":"2026-11-05T00:00:00Z","url":"%s"},
 				 "state":"ACTIVE","eventCount":3,"articleCount":4,"firstArticleAt":"%s","lastArticleAt":"%s",
-				 "parentId":null,"period":null}
+				 "parentId":null}
 				""".formatted(this.s, url(this.a1), at(1), at(5)), timeline.path("storyline").toString(),
 				JSONCompareMode.STRICT);
 		JSONAssert.assertEquals("""
@@ -288,7 +206,7 @@ class StorylineScreenControllerTests {
 		assertKeys(cards, "cards");
 		assertThat(cards.path("cards").size()).isEqualTo(2);
 		JSONAssert.assertEquals("""
-				{"requestedId":%d,"storyline":{"id":%d,"title":{"title":"시행령 입법 예고"},"period":null}}
+				{"requestedId":%d,"storyline":{"id":%d,"title":{"title":"시행령 입법 예고"}}}
 				""".formatted(this.c, this.c), cards.path("cards").get(0).toString(), JSONCompareMode.LENIENT);
 		// 합쳐진 ID 는 받은 ID 와 남는 스토리라인의 카드
 		JSONAssert.assertEquals("""
@@ -313,7 +231,6 @@ class StorylineScreenControllerTests {
 	@Test
 	void noResponseCarriesJudgementGroundsCoverageIntensityOrSummaries() throws Exception {
 		List<String> keys = new ArrayList<>();
-		collectKeys(json("/api/storylines?window=DAY&until=" + at(24)), keys);
 		collectKeys(json("/api/storylines/" + this.s), keys);
 		collectKeys(json("/api/storyline-cards?ids=" + this.s), keys);
 
@@ -348,21 +265,6 @@ class StorylineScreenControllerTests {
 			.getResponse()
 			.getContentAsString();
 		return JsonMapper.builder().build().readTree(body);
-	}
-
-	private static List<Long> ids(JsonNode storylines) {
-		List<Long> ids = new ArrayList<>();
-		storylines.forEach(row -> ids.add(row.path("id").asLong()));
-		return ids;
-	}
-
-	private static JsonNode row(JsonNode page, long id) {
-		for (JsonNode row : page.path("storylines")) {
-			if (row.path("id").asLong() == id) {
-				return row;
-			}
-		}
-		throw new AssertionError("행이 없다: " + id);
 	}
 
 	private static void assertKeys(JsonNode node, String... keys) {

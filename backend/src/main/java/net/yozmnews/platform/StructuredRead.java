@@ -9,7 +9,7 @@ public sealed interface StructuredRead {
 
 	/**
 	 * 출력을 읽었다.
-	 * @param overLimit 상한을 넘어 버린 칸(키 꼴의 값 · 배열 원소)과 지운 값의 수
+	 * @param overLimit 상한을 넘어 버린 칸(키 꼴의 값 · 배열 원소) · 지운 값 · 자른 문자열의 수
 	 */
 	record Read(OutputValue.Obj root, int overLimit) implements StructuredRead {
 

@@ -1,10 +1,13 @@
 package net.yozmnews.digest.domain.view;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalLong;
 
+import net.yozmnews.digest.DigestItemCursor;
+import net.yozmnews.digest.DigestItemRef;
 import net.yozmnews.digest.DigestSectionView;
 import net.yozmnews.platform.UserId;
 import org.jspecify.annotations.Nullable;
@@ -35,5 +38,17 @@ public interface DigestDayRepository {
 
 	/** 그 사용자의 기간을 덮는 행({@code READY} · {@code EMPTY} — digest-R30) 가운데 가장 큰 ID. 없으면 빈 값 */
 	OptionalLong latestCoveringId(UserId user);
+
+	/** 그 사용자의 날짜별로 보이는 다이제스트의 항목 섹션이 저장한 꼭대기(스토리라인 ID) — 서로 다른 것, ID 순 */
+	List<Long> storedStorylines(UserId user);
+
+	/**
+	 * 그 사용자의 날짜별로 보이는 다이제스트의 항목 섹션 가운데 저장한 꼭대기가 주어진 것에 드는 섹션 — 날짜 내림차순, 같은 날짜면 섹션 위치
+	 * 내림차순으로 {@code limit} 개까지.
+	 * @param storedStorylines 저장한 꼭대기(스토리라인 ID) — 비면 빈 목록
+	 * @param before 이 커서보다 뒤의 섹션만 — 없으면 처음부터
+	 */
+	List<DigestItemRef> itemsOf(UserId user, Collection<Long> storedStorylines, @Nullable DigestItemCursor before,
+			int limit);
 
 }

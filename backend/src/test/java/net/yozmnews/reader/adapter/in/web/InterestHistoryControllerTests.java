@@ -1,6 +1,7 @@
 package net.yozmnews.reader.adapter.in.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.greaterThan;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -16,7 +17,9 @@ import com.jayway.jsonpath.JsonPath;
 import net.yozmnews.LlmKeyRows;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.reader.InterestRows;
+import net.yozmnews.reader.UserStorylineSummaryRows;
 import net.yozmnews.user.SignedInUsers;
+import net.yozmnews.user.UserStorylineFixtures;
 import net.yozmnews.user.application.PasswordHashing;
 import net.yozmnews.user.domain.account.AccountRepository;
 import net.yozmnews.user.domain.credential.PasswordCredentialRepository;
@@ -74,6 +77,7 @@ class InterestHistoryControllerTests {
 	@AfterEach
 	void clear() {
 		this.rows.clear();
+		this.jdbc.sql("delete from storylines").update();
 		this.jdbc.sql("delete from users").update();
 		this.jdbc.sql("delete from login_failures").update();
 		this.jdbc.sql("delete from llm_credentials").update();
@@ -126,9 +130,10 @@ class InterestHistoryControllerTests {
 		assertThat(names).containsExactly("대통령실·행정부", "국회·정당·선거", "증권·투자");
 		List<String> categoryNames = JsonPath.read(body, "$.topics[*].categoryName");
 		assertThat(categoryNames).containsExactly("정치", "정치", "경제");
-		// 노출 둘에 좋아요 둘 · 구독 더함과 노출 하나는 관심이 드러나고, 반응 없는 노출 하나는 x = 0 이라 드러나지 않는다
+		// 노출 둘에 좋아요 둘은 관심이 드러나고, 반응 없는 노출 하나는 x = 0, 구독 더함과 노출 하나는 x = 0 ÷ 4 + 0.1 = 0.1 —
+		// 구독만으로는 관심 있음(0.2)이 아니라 드러나지 않는다
 		List<Boolean> prominent = JsonPath.read(body, "$.topics[*].prominent");
-		assertThat(prominent).containsExactly(true, false, true);
+		assertThat(prominent).containsExactly(true, false, false);
 		List<Object> executiveLevels = JsonPath.read(body, "$.topics[0].levels");
 		assertThat(executiveLevels).hasSize(13);
 		Object firstLevel = JsonPath.read(body, "$.topics[0].levels[0].level");
@@ -143,8 +148,108 @@ class InterestHistoryControllerTests {
 			.satisfies(change -> assertThat(change).containsEntry("action", "ADD")
 				.containsEntry("topics", List.of("economy.markets")));
 		List<List<String>> entered = JsonPath.read(body, "$.periods[*].entered");
+		// 시장은 구독 더함과 반응 없는 노출 하나(x = 0.1) — 관심 있음이 아니라 생기지 않는다
 		assertThat(entered.stream().flatMap(List::stream).toList()).as("처음 드러난 기간에 한 번씩")
-			.containsExactlyInAnyOrder("politics.executive", "economy.markets");
+			.containsExactly("politics.executive");
+	}
+
+	/**
+	 * 정리된 사용자 스토리라인의 행 — 값과 생김은 그 헤드의 것이다(저장 헤드가 없는 이 행은 추적 대상 하나가 손잡이). 흐름의 사건 넷을 하루 전에 보이고
+	 * 좋아요를 눌러 지금 관심은 4w ÷ (4w + 3) ≈ 0.57(w ≈ 0.977)로 만들 기준 0.35 위다. 정리가 없는 사용자 스토리라인은 행이 없다
+	 */
+	@Test
+	void summarizedUserStorylinesHaveARowWithALevelCellForEachPeriodAndAppearWhenTheyReachTheThreshold() throws Exception {
+		long user = this.reader.id().value();
+		Instant shown = Instant.now().truncatedTo(ChronoUnit.HOURS).minus(Duration.ofDays(1));
+		long flow = UserStorylineFixtures.storyline(this.jdbc, shown);
+		long unsummarizedFlow = UserStorylineFixtures.storyline(this.jdbc, shown);
+		long[] liked = new long[4];
+		for (int i = 0; i < liked.length; i++) {
+			liked[i] = this.rows.article("흐름 사건 " + i, "politics.executive");
+			link(flow, liked[i]);
+		}
+		long other = this.rows.article("다른 흐름 사건", "politics.executive");
+		link(unsummarizedFlow, other);
+		this.rows.cite(user, shown, liked[0], liked[1], liked[2], liked[3], other);
+		for (long article : liked) {
+			this.rows.react(user, article, "LIKE", shown.plus(Duration.ofMinutes(5)));
+		}
+		this.rows.react(user, other, "LIKE", shown.plus(Duration.ofMinutes(5)));
+		UserStorylineSummaryRows summaries = new UserStorylineSummaryRows(this.jdbc);
+		long summarized = summaries.userStoryline(user, flow);
+		summaries.summarize(summarized, "정리된 흐름", shown);
+		summaries.userStoryline(user, unsummarizedFlow);
+
+		String body = this.mockMvc.perform(get("/api/interest-history").with(this.reader))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.userStorylines.length()").value(1))
+			.andExpect(jsonPath("$.userStorylines[0].id").value(summarized))
+			.andExpect(jsonPath("$.userStorylines[0].title").value("정리된 흐름 제목"))
+			.andExpect(jsonPath("$.userStorylines[0].levels.length()").value(13))
+			// 신호가 생기기 전의 기간은 값이 없고, 진행 중인 기간은 만들 기준 위다
+			.andExpect(jsonPath("$.userStorylines[0].levels[0].level").isEmpty())
+			.andExpect(jsonPath("$.userStorylines[0].levels[12].level").value(greaterThan(0.5)))
+			.andExpect(jsonPath("$.periods[12].leftUserStorylines").isEmpty())
+			.andReturn()
+			.getResponse()
+			.getContentAsString();
+		// 보이게 된 기간은 하나다 — 하루 전이 지난 기간이면 그 기간, 아니면 진행 중인 기간
+		List<Integer> entered = com.jayway.jsonpath.JsonPath.read(body, "$.periods[*].enteredUserStorylines[*]");
+		assertThat(entered).containsExactly((int) summarized);
+	}
+
+	/**
+	 * 행의 값과 생김은 저장 헤드의 것이다 — 추적 대상 {before, flow} 에 헤드 flow 를 두면 가장 작은 꼭대기 before(신호 없음)가 아니라 flow 의 관심이
+	 * 행에 든다
+	 */
+	@Test
+	void theRowOfAUserStorylineFollowsItsStoredHead() throws Exception {
+		long user = this.reader.id().value();
+		Instant shown = Instant.now().truncatedTo(ChronoUnit.HOURS).minus(Duration.ofDays(1));
+		long before = UserStorylineFixtures.storyline(this.jdbc, shown);
+		long flow = UserStorylineFixtures.storyline(this.jdbc, shown);
+		long[] liked = new long[4];
+		for (int i = 0; i < liked.length; i++) {
+			liked[i] = this.rows.article("헤드 흐름 사건 " + i, "politics.executive");
+			link(flow, liked[i]);
+		}
+		this.rows.cite(user, shown, liked[0], liked[1], liked[2], liked[3]);
+		for (long article : liked) {
+			this.rows.react(user, article, "LIKE", shown.plus(Duration.ofMinutes(5)));
+		}
+		UserStorylineSummaryRows summaries = new UserStorylineSummaryRows(this.jdbc);
+		long summarized = summaries.userStoryline(user, before, flow);
+		summaries.summarize(summarized, "헤드 흐름", shown);
+		this.jdbc.sql("update user_storylines set head = :head where id = :id")
+			.param("head", flow)
+			.param("id", summarized)
+			.update();
+
+		String body = this.mockMvc.perform(get("/api/interest-history").with(this.reader))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.userStorylines.length()").value(1))
+			.andExpect(jsonPath("$.userStorylines[0].levels[12].level").value(greaterThan(0.5)))
+			.andReturn()
+			.getResponse()
+			.getContentAsString();
+		List<Integer> entered = com.jayway.jsonpath.JsonPath.read(body, "$.periods[*].enteredUserStorylines[*]");
+		assertThat(entered).containsExactly((int) summarized);
+	}
+
+	@Test
+	void aUserWithoutSummariesHasNoUserStorylineRows() throws Exception {
+		this.mockMvc.perform(get("/api/interest-history").with(this.reader))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.userStorylines").isEmpty())
+			.andExpect(jsonPath("$.periods[12].enteredUserStorylines").isEmpty())
+			.andExpect(jsonPath("$.periods[12].leftUserStorylines").isEmpty());
+	}
+
+	private void link(long storyline, long article) {
+		this.jdbc.sql("""
+				insert into storyline_members (storyline_id, event_id, linked_by, linked_at)
+				values (:storyline, (select event_id from event_articles where article_id = :article), 'MERGE', now())
+				""").param("storyline", storyline).param("article", article).update();
 	}
 
 	@Test

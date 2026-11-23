@@ -42,6 +42,7 @@ export const SECTIONS: DigestSection[] = [
     body: "오늘의 흐름 <b>굵게</b>",
     reason: null,
     storylineId: null,
+    userStorylines: [],
     eventIds: [],
     citations: [],
   },
@@ -51,6 +52,7 @@ export const SECTIONS: DigestSection[] = [
     body: "주요 뉴스 요약",
     reason: "MAJOR_STORYLINE",
     storylineId: null,
+    userStorylines: [],
     // 사건 둘을 묶은 항목 — 항목 키는 첫 사건 101 이다
     eventIds: [101, 102],
     citations: [citation(1), citation(2), citation(3)],
@@ -61,6 +63,7 @@ export const SECTIONS: DigestSection[] = [
     body: "한 줄 코멘트",
     reason: "INTEREST",
     storylineId: null,
+    userStorylines: [],
     eventIds: [104],
     citations: [citation(4)],
   },

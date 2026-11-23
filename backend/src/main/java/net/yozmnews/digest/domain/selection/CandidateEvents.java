@@ -9,6 +9,7 @@ import java.util.Objects;
 import java.util.TreeMap;
 
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.digest.domain.interest.InterestLevels;
 import net.yozmnews.event.EventId;
 import net.yozmnews.storyline.StorylineId;
 import org.jspecify.annotations.Nullable;
@@ -63,18 +64,21 @@ public final class CandidateEvents {
 
 	/**
 	 * 큰 판정 행의 사건 하나의 후보 — 그 사건의 기간 안(발행 시각) 기사 가운데 기사 제외를 지난 기사. 사건이 사건 제외(지역 · 싫어요 · 거른
-	 * 꼭대기 — {@link UserFilter#passesEvent})를 지나지 못하거나 지난 기사가 없으면 후보가 없다
+	 * 꼭대기 — {@link UserFilter#passesEvent})를 지나지 못하거나, 주제 관심의 평균이 거름 기준 이하이거나({@link InterestLevels#excluded}
+	 * — 큰 슬롯에만 거는 거름, 구독 후보에는 걸지 않는다), 지난 기사가 없으면 후보가 없다
 	 * @param tops 그 사건의 꼭대기 — 없으면 빈 목록
 	 * @param inPeriod 그 사건의 기간 안 기사 가운데 평가가 있는 기사
+	 * @param topicLevels 그 사용자의 주제 관심
 	 * @return 후보 사건 — 없으면 null
 	 */
 	public static @Nullable CandidateEvent big(EventFacts facts, List<StorylineId> tops,
-			Collection<ArticleFacts> inPeriod, UserFilter filter) {
+			Collection<ArticleFacts> inPeriod, UserFilter filter, InterestLevels topicLevels) {
 		Objects.requireNonNull(facts, "facts");
 		Objects.requireNonNull(tops, "tops");
 		Objects.requireNonNull(inPeriod, "inPeriod");
 		Objects.requireNonNull(filter, "filter");
-		if (!filter.passesEvent(facts, tops)) {
+		Objects.requireNonNull(topicLevels, "topicLevels");
+		if (!filter.passesEvent(facts, tops) || topicLevels.excluded(facts.subtopics())) {
 			return null;
 		}
 		List<ArticleFacts> passed = inPeriod.stream().filter(filter::passesArticleExclusions).toList();

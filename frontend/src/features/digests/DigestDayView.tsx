@@ -33,13 +33,17 @@ import {
   sectionHeadings,
   selectionReasonLabels,
   shownUsageText,
+  ITEM_FLOW,
 } from "@/features/digests/digestTexts";
 import { SubscribeButton } from "@/features/storylines/SubscribeButton";
 import {
   type TrackingView,
   useTrackingView,
 } from "@/features/storylines/subscriptionQueries";
-import { TRACKING_STATES_FAILED } from "@/features/storylines/storylineTexts";
+import {
+  TRACKING_STATES_FAILED,
+  userStorylinePath,
+} from "@/features/storylines/storylineTexts";
 import { formatDateTime } from "@/shared/lib/dateTime";
 
 /**
@@ -275,8 +279,9 @@ function Headline({
 }
 
 /**
- * 항목 머리 — 제목(선정 이유 배지 포함)과 그 항목의 흐름 추적 버튼(항목을 묶은 흐름이 있을 때) · 좋아요 / 싫어요 한 벌. 버튼은 제목 요소
- * 밖에 두어 낭독되는 제목 이름에 섞이지 않는다. 좁은 화면에서는 버튼 묶음이 제목 아래로 내려간다
+ * 항목 머리 — 제목(선정 이유 배지 포함)과 그 항목의 흐름 추적 버튼(항목을 묶은 흐름이 있을 때) · 좋아요 / 싫어요 한 벌. 항목을 묶은 흐름이
+ * 정리돼 있으면 제목 아래에 그 정리의 제목을 개인 흐름 화면 링크로 둔다. 버튼과 흐름 링크는 제목 요소 밖에 두어 낭독되는 제목 이름에 섞이지
+ * 않는다. 좁은 화면에서는 버튼 묶음이 제목 아래로 내려간다
  */
 function ItemHead({
   section,
@@ -294,10 +299,28 @@ function ItemHead({
   const item = feedbackItemOf(section);
   return (
     <div className="flex flex-wrap items-start justify-between gap-2">
-      <h3 className={`min-w-0 flex-1 basis-48 ${className}`}>
-        {section.title}
-        <ReasonBadge section={section} />
-      </h3>
+      <div className="min-w-0 flex-1 basis-48 space-y-1">
+        <h3 className={className}>
+          {section.title}
+          <ReasonBadge section={section} />
+        </h3>
+        {section.userStorylines.length > 0 && (
+          <p className="text-sm text-muted-foreground">
+            {ITEM_FLOW}{" "}
+            {section.userStorylines.map((flow, index) => (
+              <span key={flow.id}>
+                {index > 0 && " · "}
+                <Link
+                  to={userStorylinePath(flow.id)}
+                  className="break-words underline"
+                >
+                  {flow.title}
+                </Link>
+              </span>
+            ))}
+          </p>
+        )}
+      </div>
       <div className="flex flex-wrap items-center justify-end gap-2">
         {section.storylineId !== null && (
           <SubscribeButton

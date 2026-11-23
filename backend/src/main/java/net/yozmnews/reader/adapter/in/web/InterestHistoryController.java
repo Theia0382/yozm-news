@@ -22,6 +22,9 @@ import net.yozmnews.digest.InterestTimeline;
 import net.yozmnews.digest.TopicSubscriptionStep;
 import net.yozmnews.platform.ApiProblem;
 import net.yozmnews.platform.UserId;
+import net.yozmnews.storyline.StorylineId;
+import net.yozmnews.user.UserStorylineSummaries;
+import net.yozmnews.user.UserStorylineSummaryView;
 import net.yozmnews.platform.WebRole;
 import net.yozmnews.tag.TagSetDirectory;
 import net.yozmnews.tag.TagSetNames;
@@ -32,9 +35,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 독자 화면의 관심사 히스토리 — 세션 사용자의 기간별 주제 관심 · 새로 생긴 관심 · 사라진 관심 · 주제 구독 변경. docs/specs/reader.md §3 · reader-R8
+ * 독자 화면의 관심사 히스토리 — 세션 사용자의 기간별 주제 관심 · 새로 생긴 관심 · 사라진 관심 · 주제 구독 변경과 정리된 사용자
+ * 스토리라인의 관심. docs/specs/reader.md §3 · reader-R8
  * <p>
- * {@code digest} 의 {@link InterestHistory} 와 {@code tag} 의 이름 조회만 부르고 응답 모양을 정한다 — 기간 · 관심 · 변화의 판단은
+ * {@code digest} 의 {@link InterestHistory}, {@code tag} 의 이름 조회, {@code user} 의 정리 조회만 부르고 응답 모양을 정한다 — 기간 · 관심 · 변화의 판단은
  * {@code digest} 의 것이다. 세션이 필요하고 키 관문 뒤다(키 없이 여는 표시 · 요청 방어 표시가 없다).
  */
 @WebRole
@@ -45,9 +49,12 @@ class InterestHistoryController {
 
 	private final TagSetDirectory tagSets;
 
-	InterestHistoryController(InterestHistory history, TagSetDirectory tagSets) {
+	private final UserStorylineSummaries summaries;
+
+	InterestHistoryController(InterestHistory history, TagSetDirectory tagSets, UserStorylineSummaries summaries) {
 		this.history = Objects.requireNonNull(history, "history");
 		this.tagSets = Objects.requireNonNull(tagSets, "tagSets");
+		this.summaries = Objects.requireNonNull(summaries, "summaries");
 	}
 
 	@GetMapping("/api/interest-history")
@@ -61,22 +68,40 @@ class InterestHistoryController {
 		InterestHistorySpan chosen = (span != null) ? span : InterestHistorySpan.DEFAULT;
 		Optional<InterestTimeline> timeline = this.history.recent(user, chosen);
 		if (timeline.isEmpty()) {
-			return new InterestHistoryResponse(chosen, choices(), List.of(), List.of());
+			return new InterestHistoryResponse(chosen, choices(), List.of(), List.of(), List.of());
 		}
 		TagSetNames names = this.tagSets.names(timeline.get().tagSet());
 		Map<String, Integer> order = names.topicOrder();
 		List<InterestPeriodView> periods = timeline.get().periods();
+		// 흐름의 행은 지금 정리된 사용자 스토리라인이고, 값과 변화는 그 헤드의 것이다 — 헤드는 그 사용자 스토리라인에만 들어 값이 그 하나의 것이다
+		List<UserStorylineSummaryView> flows = this.summaries.shown(user);
 		List<InterestPeriodResponse> periodResponses = periods.stream()
 			.map(period -> new InterestPeriodResponse(period.firstDay(), period.lastDay(), period.inProgress(),
 					ordered(period.point().entered(), order), ordered(period.point().left(), order),
-					period.point().subscriptionChanges().stream().map(step -> step(step, order)).toList()))
+					period.point().subscriptionChanges().stream().map(step -> step(step, order)).toList(),
+					among(flows, period.point().storylineEntered()), among(flows, period.point().storylineLeft())))
 			.toList();
 		Set<String> keys = new LinkedHashSet<>();
 		periods.forEach(period -> keys.addAll(period.point().levels().keySet()));
 		List<InterestTopicResponse> topics = ordered(keys, order).stream()
 			.map(key -> topic(key, names, periods, timeline.get().prominent().contains(key)))
 			.toList();
-		return new InterestHistoryResponse(chosen, choices(), periodResponses, topics);
+		List<InterestUserStorylineResponse> userStorylines = flows.stream()
+			.map(flow -> new InterestUserStorylineResponse(flow.id().value(), flow.title(),
+					periods.stream()
+						.map(period -> new InterestLevelResponse(
+								period.point().storylineLevels().get(flow.head())))
+						.toList()))
+			.toList();
+		return new InterestHistoryResponse(chosen, choices(), periodResponses, topics, userStorylines);
+	}
+
+	/** 헤드가 주어진 꼭대기에 드는 흐름의 ID — 흐름 행의 순서 */
+	private static List<Long> among(List<UserStorylineSummaryView> flows, Set<StorylineId> tops) {
+		return flows.stream()
+			.filter(flow -> tops.contains(flow.head()))
+			.map(flow -> flow.id().value())
+			.toList();
 	}
 
 	/** 고를 수 있는 기간 — 단위마다 그 단위의 선택지와 단위를 바꿨을 때의 기간 */

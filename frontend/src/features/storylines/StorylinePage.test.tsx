@@ -48,7 +48,7 @@ describe("StorylinePage", () => {
     ).toHaveAttribute("href", "/storylines/2");
     expect(
       within(relations).getByRole("link", {
-        name: "제목을 아직 정하지 못한 스토리라인",
+        name: "제목을 아직 정하지 못한 흐름",
       }),
     ).toHaveAttribute("href", "/storylines/8");
     expect(
@@ -62,7 +62,7 @@ describe("StorylinePage", () => {
       within(relations)
         .getAllByRole("heading", { level: 2 })
         .map((heading) => heading.textContent),
-    ).toEqual(["상위 스토리라인", "하위 스토리라인", "앞 흐름", "이어진 흐름"]);
+    ).toEqual(["상위 흐름", "하위 흐름", "앞 흐름", "이어진 흐름"]);
     expect(screen.getByText(/사건 3건 · 기사 12건$/)).toBeInTheDocument();
     // 머리 · 사건의 원문 링크는 모두 새 창으로, 여는 쪽을 넘기지 않는다
     const originals = screen.getAllByRole("link", { name: "원문" });
@@ -101,7 +101,7 @@ describe("StorylinePage", () => {
       "GET /api/storylines/7": () =>
         json(
           timeline({
-            storyline: card(7, { title: null, period: null }),
+            storyline: card(7, { title: null }),
             events: [event(70, { representative: null })],
           }),
         ),
@@ -110,7 +110,7 @@ describe("StorylinePage", () => {
     expect(
       await screen.findByRole("heading", {
         level: 1,
-        name: "제목을 아직 정하지 못한 스토리라인",
+        name: "제목을 아직 정하지 못한 흐름",
       }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "원문" })).toBeNull();
@@ -127,10 +127,8 @@ describe("StorylinePage", () => {
 
   it("합쳐진 스토리라인의 ID 로 오면 남는 스토리라인의 주소로 바꾼다", async () => {
     const { router } = renderRoutes(ROUTES, "/storylines/5", {
-      "GET /api/storylines/5": () =>
-        json(timeline({ storyline: card(7, { period: null }) })),
-      "GET /api/storylines/7": () =>
-        json(timeline({ storyline: card(7, { period: null }) })),
+      "GET /api/storylines/5": () => json(timeline({ storyline: card(7) })),
+      "GET /api/storylines/7": () => json(timeline({ storyline: card(7) })),
     });
 
     await waitFor(() =>
@@ -143,7 +141,7 @@ describe("StorylinePage", () => {
       "GET /api/storylines/99": () => problem(404, "없는 스토리라인: 99"),
     });
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "없는 스토리라인입니다.",
+      "없는 흐름입니다.",
     );
     expect(server.requests).toHaveLength(1);
   });
@@ -151,7 +149,7 @@ describe("StorylinePage", () => {
   it("경로가 ID 꼴이 아니면 요청 없이 없는 스토리라인으로 알린다", async () => {
     const { server } = renderRoutes(ROUTES, "/storylines/abc", {});
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "없는 스토리라인입니다.",
+      "없는 흐름입니다.",
     );
     expect(server.requests).toHaveLength(0);
   });
@@ -161,16 +159,14 @@ describe("StorylinePage", () => {
       "GET /api/storylines/7": () => problem(500, "오류"),
     });
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "스토리라인을 불러오지 못했습니다.",
+      "흐름을 불러오지 못했습니다.",
     );
   });
 
   it("합쳐진 ID 로 와도 흐름 추적 버튼은 남는 스토리라인으로 추적한다", async () => {
     const { server } = renderRoutes(ROUTES, "/storylines/5", {
-      "GET /api/storylines/5": () =>
-        json(timeline({ storyline: card(9, { period: null }) })),
-      "GET /api/storylines/9": () =>
-        json(timeline({ storyline: card(9, { period: null }) })),
+      "GET /api/storylines/5": () => json(timeline({ storyline: card(9) })),
+      "GET /api/storylines/9": () => json(timeline({ storyline: card(9) })),
       ...subscriptionHandlers([], [5, 9]),
     });
     // 남는 스토리라인의 주소로 바뀐 뒤 그린 버튼

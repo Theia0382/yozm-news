@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,6 +23,9 @@ import net.yozmnews.user.UserStorylineId;
 import net.yozmnews.user.domain.subscription.StorylineSubscriptionLimit;
 import net.yozmnews.user.domain.subscription.StorylineSubscriptionRepository;
 import net.yozmnews.user.domain.subscription.SubscriptionChange;
+import net.yozmnews.user.domain.summary.StorylineSummary;
+import net.yozmnews.user.domain.summary.StorylineSummaryRepository;
+import net.yozmnews.user.domain.userstoryline.BranchUntracking;
 import net.yozmnews.user.domain.userstoryline.StoredUserStoryline;
 import net.yozmnews.user.domain.userstoryline.UserStorylineRepository;
 import org.jspecify.annotations.Nullable;
@@ -51,47 +55,75 @@ public class StorylineSubscriptions {
 
 	private final StorylineDirectory storylines;
 
+	private final StorylineSummaryRepository summaries;
+
 	StorylineSubscriptions(InterestSettingsLock lock, UserStorylineFollowups followups,
 			UserStorylineMaterials materials, UserStorylineRepository userStorylines,
-			StorylineSubscriptionRepository history, StorylineDirectory storylines) {
+			StorylineSubscriptionRepository history, StorylineDirectory storylines,
+			StorylineSummaryRepository summaries) {
 		this.lock = Objects.requireNonNull(lock, "lock");
 		this.followups = Objects.requireNonNull(followups, "followups");
 		this.materials = Objects.requireNonNull(materials, "materials");
 		this.userStorylines = Objects.requireNonNull(userStorylines, "userStorylines");
 		this.history = Objects.requireNonNull(history, "history");
 		this.storylines = Objects.requireNonNull(storylines, "storylines");
+		this.summaries = Objects.requireNonNull(summaries, "summaries");
 	}
 
 	/**
-	 * 내 추적 — 추적 중인 사용자 스토리라인의 추적 씨앗마다 한 줄. 추적 시각 내림차순, 같으면 스토리라인 ID 순. 지금 상태를 함께 싣는다
+	 * 내 추적 — 추적 중인 사용자 스토리라인마다 한 줄. 추적 시각 내림차순, 같으면 사용자 스토리라인 ID 순. 줄마다 지금 있는 추적 씨앗(ID 순)과
+	 * 그 가운데 가장 이어지는 상태, 정리가 있으면 정리의 제목을 싣는다. 추적 씨앗이 하나도 남지 않은 줄은 내지 않는다
 	 */
 	@Transactional
 	public SubscriptionsView view(UserId user, Instant now) {
-		List<TrackedSeed> seeds = new ArrayList<>();
-		for (StoredUserStoryline storyline : followed(user, now)) {
-			if (storyline.tracked()) {
-				storyline.trackedSeeds()
-					.keySet()
-					.forEach(seed -> seeds.add(new TrackedSeed(seed, storyline.id(), storyline.subscribedAt())));
-			}
+		List<StoredUserStoryline> tracked = followed(user, now).stream().filter(StoredUserStoryline::tracked).toList();
+		Map<StorylineId, StorylineView> views = this.storylines.findAll(tracked.stream()
+			.flatMap(storyline -> storyline.trackedSeeds().keySet().stream())
+			.map(StorylineId::new)
+			.toList());
+		Map<Long, String> titles = new HashMap<>();
+		for (StorylineSummary summary : this.summaries.load(user)) {
+			titles.put(summary.userStorylineId(), summary.whole().title());
 		}
-		Map<StorylineId, StorylineView> views = this.storylines
-			.findAll(seeds.stream().map(seed -> new StorylineId(seed.storyline())).toList());
-		List<SubscribedStoryline> subscribed = seeds.stream()
-			.filter(seed -> views.containsKey(new StorylineId(seed.storyline())))
-			.map(seed -> new SubscribedStoryline(new StorylineId(seed.storyline()), seed.subscribedAt(),
-					views.get(new StorylineId(seed.storyline())).state(), new UserStorylineId(seed.userStoryline())))
-			.sorted(Comparator.comparing(SubscribedStoryline::subscribedAt)
-				.reversed()
-				.thenComparing(subscription -> subscription.id().value()))
-			.toList();
+		List<SubscribedUserStoryline> subscribed = new ArrayList<>();
+		for (StoredUserStoryline storyline : tracked) {
+			List<StorylineId> seeds = storyline.trackedSeeds()
+				.keySet()
+				.stream()
+				.sorted()
+				.map(StorylineId::new)
+				.filter(views::containsKey)
+				.toList();
+			if (seeds.isEmpty()) {
+				continue;
+			}
+			subscribed.add(new SubscribedUserStoryline(new UserStorylineId(storyline.id()), headOf(storyline),
+					storyline.subscribedAt(), seeds, liveliest(seeds.stream().map(seed -> views.get(seed).state()).toList()),
+					titles.get(storyline.id())));
+		}
+		subscribed.sort(Comparator.comparing(SubscribedUserStoryline::subscribedAt)
+			.reversed()
+			.thenComparing(subscription -> subscription.id().value()));
 		return new SubscriptionsView(subscribed, StorylineSubscriptionLimit.MAX);
 	}
 
+	/** 추적 씨앗들의 상태 가운데 가장 이어지는 것 — 하나라도 진행이면 진행, 아니고 하나라도 잠잠이면 잠잠, 모두 끝났을 때만 끝남 */
+	static StorylineState liveliest(List<StorylineState> states) {
+		StorylineState liveliest = StorylineState.ENDED;
+		for (StorylineState state : states) {
+			liveliest = switch (state) {
+				case ACTIVE -> StorylineState.ACTIVE;
+				case QUIET -> (liveliest == StorylineState.ACTIVE) ? liveliest : StorylineState.QUIET;
+				case ENDED -> liveliest;
+			};
+		}
+		return liveliest;
+	}
+
 	/**
-	 * 추적 — 받은 ID 가 합쳐졌으면 남는 스토리라인을 추적 씨앗으로 삼아 그 꼭대기의 사용자 스토리라인을 추적한다. 그 꼭대기를 추적 대상으로 가진
-	 * 사용자 스토리라인이 없으면 만든다. 이미 추적 중인 사용자 스토리라인의 다른 스토리라인을 누르면 추적 씨앗만 더한다(상한을 보지 않는다 —
-	 * 추적 중인 수가 늘지 않는다).
+	 * 추적 — 받은 ID 가 합쳐졌으면 남는 스토리라인을 추적 씨앗으로 삼아 그 꼭대기를 추적 대상으로 가진 사용자 스토리라인 모두를 추적한다(갈라지기
+	 * 전 꼭대기를 누르면 그 뒤 갈래 모두). 그런 사용자 스토리라인이 없으면 만든다. 이미 추적 중인 사용자 스토리라인에는 추적 씨앗만 더한다. 상한은
+	 * 새로 추적 중이 되는 수로 본다 — 이미 모두 추적 중이면 보지 않는다.
 	 */
 	@Transactional
 	public SubscribeOutcome subscribe(UserId user, StorylineId storyline, Instant now) {
@@ -105,40 +137,48 @@ public class StorylineSubscriptions {
 		if (top == null) {
 			return new SubscribeOutcome.UnknownStoryline();
 		}
-		StoredUserStoryline holder = holderOf(top, current);
-		if (holder != null && holder.tracked()) {
-			if (holder.trackedSeeds().containsKey(survivor)) {
-				return new SubscribeOutcome.AlreadySubscribed(found.id());
-			}
-			Set<Long> seeds = new TreeSet<>(holder.trackedSeeds().keySet());
-			seeds.add(survivor);
-			this.userStorylines.replaceSeeds(holder.id(), seeds);
+		List<StoredUserStoryline> holders = holdersOf(top, current);
+		if (!holders.isEmpty() && holders.stream()
+			.allMatch(holder -> holder.tracked() && holder.trackedSeeds().containsKey(survivor))) {
+			return new SubscribeOutcome.AlreadySubscribed(found.id());
 		}
-		else {
-			if (current.stream().filter(StoredUserStoryline::tracked).count() >= StorylineSubscriptionLimit.MAX) {
-				return new SubscribeOutcome.LimitReached(StorylineSubscriptionLimit.MAX);
-			}
-			long id;
-			if (holder == null) {
-				id = this.userStorylines.create(user, now);
-				this.userStorylines.replaceMembers(id, Set.of(top));
-			}
-			else {
-				id = holder.id();
-			}
+		long untracked = holders.stream().filter(holder -> !holder.tracked()).count();
+		long willTrack = holders.isEmpty() ? 1 : untracked;
+		long tracked = current.stream().filter(StoredUserStoryline::tracked).count();
+		if (willTrack > 0 && tracked + willTrack > StorylineSubscriptionLimit.MAX) {
+			return new SubscribeOutcome.LimitReached(StorylineSubscriptionLimit.MAX);
+		}
+		if (holders.isEmpty()) {
+			long id = this.userStorylines.create(user, now);
+			this.userStorylines.replaceMembers(id, Set.of(top));
 			this.userStorylines.subscribe(user, id, now);
 			this.userStorylines.replaceSeeds(id, Set.of(survivor));
 		}
+		// 그 꼭대기를 가진 사용자 스토리라인 모두 — 갈라지기 전 꼭대기를 누르면 모든 갈래를 추적한다
+		for (StoredUserStoryline holder : holders) {
+			if (holder.tracked()) {
+				Set<Long> seeds = new TreeSet<>(holder.trackedSeeds().keySet());
+				seeds.add(survivor);
+				this.userStorylines.replaceSeeds(holder.id(), seeds);
+			}
+			else {
+				this.userStorylines.subscribe(user, holder.id(), now);
+				this.userStorylines.replaceSeeds(holder.id(), Set.of(survivor));
+			}
+		}
 		this.history.record(user, List.of(new SubscriptionChange(survivor, StorylineSubscriptionAction.ADD)),
 				StorylineSubscriptionCause.USER, now);
-		// 새 추적 씨앗으로 추적 대상(이어진 뒤 흐름)을 채우고 겹치는 사용자 스토리라인과 합친다
+		// 새 추적 씨앗으로 추적 대상(이어진 뒤 흐름)을 채우고 헤드마다 맞춘다
 		this.followups.followLocked(user, Map.of(), now);
 		return new SubscribeOutcome.Subscribed(found.id());
 	}
 
 	/**
-	 * 해제 — 받은 스토리라인의 꼭대기를 추적 대상으로 가진 사용자 스토리라인의 추적을 끈다. 그 추적 씨앗을 모두 지우고 씨앗마다 이력을
-	 * 남긴다. 사용자 스토리라인은 지우지 않는다 — 신호가 관심 창 안에 있는 동안 남아, 다시 추적하면 같은 사용자 스토리라인이다.
+	 * 해제 — 받은 스토리라인의 꼭대기를 추적 대상으로 가진 추적 중인 사용자 스토리라인 모두의 추적을 끈다(갈래의 헤드에서 누르면 그 갈래만,
+	 * 갈라지기 전 꼭대기에서 누르면 모든 갈래). 끄는 쪽과 남는 추적 중 사용자 스토리라인이 꼭대기를 함께 가진 추적 씨앗은 먼저 양쪽 모두 각자의
+	 * 헤드로 바꾸고 그 바꿈을 사용자 신호가 아닌 이력(갈라져 물려받음)으로 남긴다({@link BranchUntracking}) — 남는 쪽이 끈 쪽을 다시 추적 중으로
+	 * 만들지 않는다. 그 뒤 끄는 쪽의 추적 씨앗을 모두 지우고 남는 쪽에 없는 씨앗마다 사용자의 해제 이력을 남긴다. 사용자 스토리라인은 지우지 않는다
+	 * — 신호가 관심 창 안에 있는 동안 남아, 다시 추적하면 같은 사용자 스토리라인이다.
 	 */
 	@Transactional
 	public UnsubscribeOutcome unsubscribe(UserId user, StorylineId storyline, Instant now) {
@@ -146,14 +186,35 @@ public class StorylineSubscriptions {
 		StorylineView found = this.storylines.findAll(List.of(storyline)).get(storyline);
 		StorylineId target = (found == null) ? storyline : found.id();
 		Long top = (found == null) ? null : this.materials.topsOfStorylines(List.of(target.value())).get(target.value());
-		StoredUserStoryline holder = (top == null) ? null : holderOf(top, current);
-		if (holder == null || !holder.tracked()) {
+		List<StoredUserStoryline> trackedHolders = (top == null) ? List.of()
+				: holdersOf(top, current).stream().filter(StoredUserStoryline::tracked).toList();
+		if (trackedHolders.isEmpty()) {
 			return new UnsubscribeOutcome.NotSubscribed();
 		}
-		this.userStorylines.unsubscribe(holder.id());
-		this.userStorylines.replaceSeeds(holder.id(), Set.of());
+		// 그 꼭대기를 가진 추적 중 사용자 스토리라인 모두 — 갈래 항목에서 누르면 그 갈래만, 갈라지기 전 꼭대기에서 누르면 모든 갈래
+		Set<Long> leaving = new TreeSet<>();
+		trackedHolders.forEach(holder -> leaving.add(holder.id()));
+		BranchUntracking split = BranchUntracking
+			.decide(current.stream().filter(StoredUserStoryline::tracked).toList(), leaving);
+		split.seeds().forEach(this.userStorylines::replaceSeeds);
+		List<SubscriptionChange> moved = new ArrayList<>();
+		split.splitRemoved()
+			.stream()
+			.sorted()
+			.forEach(seed -> moved.add(new SubscriptionChange(seed, StorylineSubscriptionAction.REMOVE)));
+		split.splitAdded()
+			.stream()
+			.sorted()
+			.forEach(seed -> moved.add(new SubscriptionChange(seed, StorylineSubscriptionAction.ADD)));
+		this.history.record(user, moved, StorylineSubscriptionCause.STORYLINE_SPLIT, now);
+		for (StoredUserStoryline holder : trackedHolders) {
+			this.userStorylines.unsubscribe(holder.id());
+			this.userStorylines.replaceSeeds(holder.id(), Set.of());
+		}
 		this.history.record(user,
-				new TreeSet<>(holder.trackedSeeds().keySet()).stream()
+				split.userRemoved()
+					.stream()
+					.sorted()
 					.map(seed -> new SubscriptionChange(seed, StorylineSubscriptionAction.REMOVE))
 					.toList(),
 				StorylineSubscriptionCause.USER, now);
@@ -161,7 +222,8 @@ public class StorylineSubscriptions {
 	}
 
 	/**
-	 * 추적 상태 — 받은 스토리라인마다 그 꼭대기를 추적 대상으로 가진 사용자 스토리라인이 추적 중인가. 없는 스토리라인은 추적 중이 아니다.
+	 * 추적 상태 — 받은 스토리라인마다 그 꼭대기를 추적 대상으로 가진 사용자 스토리라인 가운데 하나라도 추적 중인가. 없는 스토리라인은 추적 중이
+	 * 아니다.
 	 * @return 받은 순서대로 스토리라인 ID → 추적 중인가
 	 */
 	@Transactional
@@ -172,10 +234,14 @@ public class StorylineSubscriptions {
 		Map<StorylineId, Boolean> states = new LinkedHashMap<>();
 		for (StorylineId id : storylineIds) {
 			Long top = tops.get(id.value());
-			StoredUserStoryline holder = (top == null) ? null : holderOf(top, current);
-			states.put(id, holder != null && holder.tracked());
+			states.put(id, top != null && holdersOf(top, current).stream().anyMatch(StoredUserStoryline::tracked));
 		}
 		return states;
+	}
+
+	/** 맞춘 사용자 스토리라인의 헤드 — 저장하는 맞추기가 쓴 뒤라 비지 않는다 */
+	private static StorylineId headOf(StoredUserStoryline storyline) {
+		return new StorylineId(Objects.requireNonNull(storyline.head(), "저장하는 맞추기 뒤의 헤드"));
 	}
 
 	/** 설정 행을 만들고 · 잠그고 · 태그 선호와 사용자 스토리라인을 맞춘 뒤의 사용자 스토리라인 */
@@ -184,12 +250,9 @@ public class StorylineSubscriptions {
 		return this.followups.followLocked(user, Map.of(), now);
 	}
 
-	/** 그 꼭대기를 추적 대상으로 가진 사용자 스토리라인 — 한 꼭대기는 한 사용자 스토리라인에만 든다 */
-	private static @Nullable StoredUserStoryline holderOf(long top, List<StoredUserStoryline> current) {
-		return current.stream().filter(storyline -> storyline.tops().contains(top)).findFirst().orElse(null);
-	}
-
-	private record TrackedSeed(long storyline, long userStoryline, Instant subscribedAt) {
+	/** 그 꼭대기를 추적 대상으로 가진 사용자 스토리라인 모두 — 갈라지기 전 꼭대기는 그 뒤 갈래의 사용자 스토리라인 여럿에 든다 */
+	private static List<StoredUserStoryline> holdersOf(long top, List<StoredUserStoryline> current) {
+		return current.stream().filter(storyline -> storyline.tops().contains(top)).toList();
 	}
 
 	/**
@@ -198,7 +261,7 @@ public class StorylineSubscriptions {
 	 * @param subscriptions 추적 시각 내림차순
 	 * @param limit 추적 중인 사용자 스토리라인 수의 상한
 	 */
-	public record SubscriptionsView(List<SubscribedStoryline> subscriptions, int limit) {
+	public record SubscriptionsView(List<SubscribedUserStoryline> subscriptions, int limit) {
 
 		public SubscriptionsView {
 			subscriptions = List.copyOf(subscriptions);
@@ -207,15 +270,22 @@ public class StorylineSubscriptions {
 	}
 
 	/**
-	 * 추적 씨앗 하나.
+	 * 추적 중인 사용자 스토리라인 하나.
 	 *
-	 * @param id 사용자가 누른(또는 갈라질 때 물려받은) 스토리라인
-	 * @param subscribedAt 그 사용자 스토리라인을 추적하기 시작한 시각
-	 * @param state 조회 시각의 상태 — 끝나도 추적은 남는다
-	 * @param userStoryline 그 추적 씨앗이 든 사용자 스토리라인 — 같은 값인 줄은 한 흐름이다
+	 * @param id 사용자 스토리라인
+	 * @param head 헤드 — 그 사용자 스토리라인의 손잡이(화면의 추적 버튼 · 해제 대상)
+	 * @param subscribedAt 추적하기 시작한 시각
+	 * @param storylines 지금 있는 추적 씨앗(사용자가 누른, 또는 갈라질 때 물려받은 스토리라인) — ID 순, 하나 이상
+	 * @param state 조회 시각의 상태 — 추적 씨앗 가운데 가장 이어지는 것. 끝나도 추적은 남는다
+	 * @param title 정리의 제목 — 정리가 없으면 null
 	 */
-	public record SubscribedStoryline(StorylineId id, Instant subscribedAt, StorylineState state,
-			UserStorylineId userStoryline) {
+	public record SubscribedUserStoryline(UserStorylineId id, StorylineId head, Instant subscribedAt,
+			List<StorylineId> storylines, StorylineState state, @Nullable String title) {
+
+		public SubscribedUserStoryline {
+			storylines = List.copyOf(storylines);
+		}
+
 	}
 
 	/** 추적의 결과 */

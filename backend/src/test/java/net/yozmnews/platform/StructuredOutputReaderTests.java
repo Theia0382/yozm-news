@@ -200,4 +200,23 @@ class StructuredOutputReaderTests {
 		return (StructuredRead.Read) read;
 	}
 
+	@Test
+	void truncatesAStringOverTheLimitToItsFirstCodePointsAndCountsIt() {
+		OutputShape.Obj cut = new OutputShape.Obj(List.of(
+				new OutputShape.Property("text", new OutputShape.Str(3, OnBlank.UNREADABLE, OverLimit.TRUNCATE), true, false)));
+
+		StructuredRead.Read over = (StructuredRead.Read) StructuredOutputReader.read("{\"text\":\"가나다라마\"}", cut);
+		StructuredRead.Read atLimit = (StructuredRead.Read) StructuredOutputReader.read("{\"text\":\"가나다\"}", cut);
+		StructuredRead.Read pairs = (StructuredRead.Read) StructuredOutputReader
+			.read("{\"text\":\"\uD83D\uDE00\uD83D\uDE00\uD83D\uDE00\uD83D\uDE00\"}", cut);
+		StructuredRead.Read spaced = (StructuredRead.Read) StructuredOutputReader.read("{\"text\":\"가나 다\"}", cut);
+
+		assertThat(over.root().string("text")).isEqualTo("가나다");
+		assertThat(over.overLimit()).isEqualTo(1);
+		assertThat(atLimit.root().string("text")).isEqualTo("가나다");
+		assertThat(atLimit.overLimit()).isZero();
+		assertThat(pairs.root().string("text")).isEqualTo("\uD83D\uDE00\uD83D\uDE00\uD83D\uDE00");
+		assertThat(spaced.root().string("text")).isEqualTo("가나");
+	}
+
 }

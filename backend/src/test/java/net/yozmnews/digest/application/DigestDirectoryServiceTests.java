@@ -25,6 +25,10 @@ import net.yozmnews.digest.DigestFailure;
 import net.yozmnews.digest.DigestRequestOutcome;
 import net.yozmnews.digest.DigestRequestStatus;
 import net.yozmnews.digest.DigestRounds;
+import net.yozmnews.digest.DigestItemCursor;
+import net.yozmnews.digest.DigestItemPage;
+import net.yozmnews.digest.DigestItemRef;
+import java.util.Set;
 import net.yozmnews.digest.DigestSectionView;
 import net.yozmnews.digest.DigestStatus;
 import net.yozmnews.digest.DigestUnresolvedFailure;
@@ -191,6 +195,96 @@ class DigestDirectoryServiceTests {
 
 		assertThat(flows(user)).as("합쳐졌으면 남는 쪽의 지금 꼭대기, 지워졌으면 없다")
 			.containsExactly(null, new StorylineId(kept), new StorylineId(parent), null, null);
+	}
+
+	@Test
+	void itemsOfAFlowAreFoundAcrossDatesByTheCurrentTopOfTheStoredOneLatestFirst() {
+		UserId user = user("digest-view-items@example.com", "VALID");
+		UserId other = user("digest-view-items-other@example.com", "VALID");
+		Instant at = Instant.parse("2026-11-15T00:00:00Z");
+		long flow = UserStorylineFixtures.storyline(this.jdbc, at);
+		long merged = UserStorylineFixtures.storyline(this.jdbc, at);
+		long elsewhere = UserStorylineFixtures.storyline(this.jdbc, at);
+		long removed = UserStorylineFixtures.storyline(this.jdbc, at);
+		long first = row(user, "2026-11-16", "READY", 1, 1, null);
+		storylineOf(itemSection(first, "TOP_STORY", 1, "16일 주요", 161), flow);
+		storylineOf(itemSection(first, "HEADLINE", 2, "16일 다른 흐름", 162), elsewhere);
+		long covered = row(user, "2026-11-17", "READY", 1, 1, null);
+		storylineOf(itemSection(covered, "TOP_STORY", 1, "17일 덮인 것", 170), flow);
+		long second = row(user, "2026-11-17", "READY", 1, 1, null);
+		storylineOf(itemSection(second, "TOP_STORY", 1, "17일 합쳐진 것", 171), merged);
+		itemSection(second, "HEADLINE", 2, "17일 흐름 없음", 172);
+		storylineOf(itemSection(second, "HEADLINE", 3, "17일 헤드라인", 173, 174), flow);
+		storylineOf(itemSection(second, "HEADLINE", 4, "17일 지워진 것", 175), removed);
+		long failed = row(user, "2026-11-18", "FAILED", null, null, "PROVIDER_UNAVAILABLE");
+		storylineOf(itemSection(failed, "TOP_STORY", 1, "18일 실패", 180), flow);
+		long others = row(other, "2026-11-18", "READY", 1, 1, null);
+		storylineOf(itemSection(others, "TOP_STORY", 1, "다른 사용자", 190), flow);
+		// 저장한 뒤 — 하나는 흐름에 합쳐지고 하나는 지워졌다
+		UserStorylineFixtures.merge(this.jdbc, merged, flow);
+		this.jdbc.sql("delete from storylines where id = :id").param("id", removed).update();
+
+		DigestItemPage page = directory().itemsOfStorylines(user, Set.of(new StorylineId(flow)), null, 50);
+
+		assertThat(page).isEqualTo(new DigestItemPage(List.of(
+				new DigestItemRef(LocalDate.parse("2026-11-17"), 3, SectionKind.HEADLINE, "17일 헤드라인",
+						List.of(new EventId(173), new EventId(174))),
+				new DigestItemRef(LocalDate.parse("2026-11-17"), 1, SectionKind.TOP_STORY, "17일 합쳐진 것",
+						List.of(new EventId(171))),
+				new DigestItemRef(LocalDate.parse("2026-11-16"), 1, SectionKind.TOP_STORY, "16일 주요",
+						List.of(new EventId(161)))),
+				null));
+		// 대조 — 다른 흐름은 그 흐름의 항목만, 다른 사용자는 자기 것만
+		assertThat(directory().itemsOfStorylines(user, Set.of(new StorylineId(elsewhere)), null, 50).items())
+			.extracting(DigestItemRef::title)
+			.containsExactly("16일 다른 흐름");
+		assertThat(directory().itemsOfStorylines(other, Set.of(new StorylineId(flow)), null, 50).items())
+			.extracting(DigestItemRef::title)
+			.containsExactly("다른 사용자");
+		assertThat(directory().itemsOfStorylines(user, Set.of(new StorylineId(removed)), null, 50)).isEqualTo(DigestItemPage.EMPTY);
+	}
+
+	@Test
+	void itemsOfAFlowArePagedByDateAndSectionPosition() {
+		UserId user = user("digest-view-items-page@example.com", "VALID");
+		long flow = UserStorylineFixtures.storyline(this.jdbc, Instant.parse("2026-11-15T00:00:00Z"));
+		long first = row(user, "2026-11-16", "READY", 1, 1, null);
+		storylineOf(itemSection(first, "TOP_STORY", 1, "16일 1", 161), flow);
+		long second = row(user, "2026-11-17", "READY", 1, 1, null);
+		storylineOf(itemSection(second, "TOP_STORY", 1, "17일 1", 171), flow);
+		storylineOf(itemSection(second, "HEADLINE", 2, "17일 2", 172), flow);
+		Set<StorylineId> tops = Set.of(new StorylineId(flow));
+
+		DigestItemPage firstPage = directory().itemsOfStorylines(user, tops, null, 2);
+		DigestItemPage lastPage = directory().itemsOfStorylines(user, tops, firstPage.next(), 2);
+
+		assertThat(firstPage.items()).extracting(DigestItemRef::title).containsExactly("17일 2", "17일 1");
+		assertThat(firstPage.next()).isEqualTo(new DigestItemCursor(LocalDate.parse("2026-11-17"), 1));
+		assertThat(lastPage).isEqualTo(new DigestItemPage(List.of(new DigestItemRef(LocalDate.parse("2026-11-16"), 1,
+				SectionKind.TOP_STORY, "16일 1", List.of(new EventId(161)))), null));
+		// 한 쪽에 꼭 맞으면 다음 쪽이 없다
+		assertThat(directory().itemsOfStorylines(user, tops, null, 3).next()).isNull();
+	}
+
+	@Test
+	void itemsOfNoTopsAreEmptyAndThePageSizeIsBounded() {
+		UserId user = user("digest-view-items-size@example.com", "VALID");
+
+		assertThat(directory().itemsOfStorylines(user, Set.of(), null, 50)).isEqualTo(DigestItemPage.EMPTY);
+		assertThat(directory().itemsOfStorylines(user, Set.of(new StorylineId(1)), null, 1)).isEqualTo(DigestItemPage.EMPTY);
+		assertThatIllegalArgumentException()
+			.isThrownBy(() -> directory().itemsOfStorylines(user, Set.of(new StorylineId(1)), null, 0));
+		assertThatIllegalArgumentException()
+			.isThrownBy(() -> directory().itemsOfStorylines(user, Set.of(new StorylineId(1)), null, 51));
+	}
+
+	/** 항목 섹션 하나와 그 사건들 */
+	private long itemSection(long digest, String kind, int position, String title, long... events) {
+		long section = section(digest, kind, position, title, null);
+		for (int i = 0; i < events.length; i++) {
+			sectionEvent(section, i, events[i], "SUBSCRIBED");
+		}
+		return section;
 	}
 
 	/** 2026-11-18 의 보이는 다이제스트 섹션마다의 흐름 — 위치 순 */

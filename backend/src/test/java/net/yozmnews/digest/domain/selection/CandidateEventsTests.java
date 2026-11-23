@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Set;
 
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.digest.domain.interest.InterestLevels;
 import net.yozmnews.event.EventId;
 import net.yozmnews.source.SourceId;
 import net.yozmnews.user.TopicSubscription;
@@ -15,7 +16,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * 후보 사건 꾸리기 — 사건 없는 기사 버림, 발행 시각 하한(기간 시작 − 24시간, 경계 포함), 기사 제외(형식 · 소스 — 지역 · 싫어요는 보지
- * 않음)는 기사마다, 값이 없는 사건 버림, 큰 판정 행 사건의 후보(사건 제외는 사건의 지역 · 싫어요, 지난 기사가 없으면 없음)
+ * 않음)는 기사마다, 값이 없는 사건 버림, 큰 판정 행 사건의 후보(사건 제외는 사건의 지역 · 싫어요, 주제 관심의 평균이 거름 기준 이하이거나 지난 기사가 없으면 없음)
  * <p>
  * 지키는 규칙: digest-R17 · digest-R19
  */
@@ -112,14 +113,14 @@ class CandidateEventsTests {
 		ArticleFacts kept = Facts.article(1).build();
 		ArticleFacts fromNine = Facts.article(2).sources(9).build();
 
-		CandidateEvent big = CandidateEvents.big(domestic, List.of(), List.of(kept, fromNine), filter);
+		CandidateEvent big = CandidateEvents.big(domestic, List.of(), List.of(kept, fromNine), filter, InterestLevels.NONE);
 		assertThat(big).isNotNull();
 		assertThat(ids(big.articles())).containsExactly(1L);
 
-		assertThat(CandidateEvents.big(domestic, List.of(), List.of(fromNine), filter)).as("지난 기사가 없다").isNull();
+		assertThat(CandidateEvents.big(domestic, List.of(), List.of(fromNine), filter, InterestLevels.NONE)).as("지난 기사가 없다").isNull();
 		// 소속 둘 가운데 하나가 us — 몫 1/2 이라 사건의 지역에 us 가 든다
 		EventFacts halfUs = Facts.eventFacts(11, List.of(Facts.article(3).regions("us"), Facts.article(4)));
-		assertThat(CandidateEvents.big(halfUs, List.of(), List.of(Facts.article(4).build()), filter)).as("사건의 지역이 제외").isNull();
+		assertThat(CandidateEvents.big(halfUs, List.of(), List.of(Facts.article(4).build()), filter, InterestLevels.NONE)).as("사건의 지역이 제외").isNull();
 	}
 
 	@Test
@@ -128,7 +129,7 @@ class CandidateEventsTests {
 		UserFilter disliking = UserFilter.of(Facts.interests(List.of(), Set.of(), Set.of(), Set.of()), Set.of(), Set.of())
 			.withDisliked(Set.of(new EventId(10)));
 
-		assertThat(CandidateEvents.big(domestic, List.of(), List.of(Facts.article(1).build()), disliking)).isNull();
+		assertThat(CandidateEvents.big(domestic, List.of(), List.of(Facts.article(1).build()), disliking, InterestLevels.NONE)).isNull();
 	}
 
 	@Test
@@ -138,7 +139,28 @@ class CandidateEventsTests {
 		UserFilter disliking = UserFilter.of(Facts.interests(List.of(), Set.of(), Set.of(), Set.of()),
 				Set.of(new EventId(11)), Set.of());
 
-		assertThat(CandidateEvents.big(domestic, List.of(), List.of(Facts.article(1).build()), disliking)).isNotNull();
+		assertThat(CandidateEvents.big(domestic, List.of(), List.of(Facts.article(1).build()), disliking, InterestLevels.NONE)).isNotNull();
+	}
+
+	@Test
+	void aBigEventWhoseTopicInterestIsAtMostTheThresholdHasNoCandidate() {
+		EventFacts trial = Facts.eventFacts(10, List.of(Facts.article(1).subtopics("society.law")));
+		UserFilter filter = UserFilter.of(Facts.interests(List.of(), Set.of(), Set.of(), Set.of()), Set.of(), Set.of());
+
+		assertThat(CandidateEvents.big(trial, List.of(), List.of(Facts.article(1).build()), filter,
+				new InterestLevels(Map.of("society.law", -0.25))))
+			.isNull();
+	}
+
+	@Test
+	void aBigEventJustAboveTheThresholdKeepsItsCandidate() {
+		// 대조 — 같은 사건 · 관심 −0.19 는 거름 기준 위다
+		EventFacts trial = Facts.eventFacts(10, List.of(Facts.article(1).subtopics("society.law")));
+		UserFilter filter = UserFilter.of(Facts.interests(List.of(), Set.of(), Set.of(), Set.of()), Set.of(), Set.of());
+
+		assertThat(CandidateEvents.big(trial, List.of(), List.of(Facts.article(1).build()), filter,
+				new InterestLevels(Map.of("society.law", -0.19))))
+			.isNotNull();
 	}
 
 	private static Map<ArticleId, EventId> singleEvents(ArticleFacts... articles) {

@@ -1,5 +1,6 @@
 package net.yozmnews.digest.application;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.InstantSource;
 import java.util.ArrayList;
@@ -28,6 +29,7 @@ import net.yozmnews.digest.domain.input.DigestInput;
 import net.yozmnews.digest.domain.input.DigestProfile;
 import net.yozmnews.digest.domain.input.InputEvent;
 import net.yozmnews.digest.domain.input.InputItem;
+import net.yozmnews.digest.domain.interest.InterestLevels;
 import net.yozmnews.digest.domain.interest.InterestRecord;
 import net.yozmnews.digest.domain.interest.InterestWeights;
 import net.yozmnews.digest.domain.interest.InterestWindow;
@@ -37,6 +39,7 @@ import net.yozmnews.digest.domain.item.ItemGrouping;
 import net.yozmnews.digest.domain.item.ItemPlan;
 import net.yozmnews.digest.domain.selection.ActiveEvaluation;
 import net.yozmnews.digest.domain.selection.ArticleFacts;
+import net.yozmnews.digest.domain.selection.BigRowOrder;
 import net.yozmnews.digest.domain.selection.BigSlotPicker;
 import net.yozmnews.digest.domain.selection.BigSlotPicker.BigEvent;
 import net.yozmnews.digest.domain.selection.BigSlotPicker.BigRow;
@@ -201,7 +204,8 @@ public class CandidateSelection {
 				from);
 		List<CandidateEvent> ranked = SubscriptionFilter.select(pool, filter, weights);
 		List<CandidateEvent> neutral = SubscriptionFilter.select(pool, filter, InterestWeights.NEUTRAL_ALL);
-		Optional<BigPick> big = bigSlots(user, interests, period, filter, eventFacts.get(), tops);
+		Optional<BigPick> big = bigSlots(user, interests, period, filter, levels.topics(), weights, eventFacts.get(),
+				tops);
 		if (big.isEmpty()) {
 			return Optional.empty();
 		}
@@ -300,17 +304,21 @@ public class CandidateSelection {
 	/**
 	 * 큰 슬롯 — 기간의 큰 판정 목록(보도 강도 순)의 행마다 기간 안 기사가 있는 사건과 그 중요도 합을 읽고, 그 사건들의 값(평가 있는 소속
 	 * 기사 전부)과 기간 안 기사 가운데 평가가 있는 기사로 후보 사건({@link CandidateEvents#big})을 꾸려 {@link BigSlotPicker} 에 넘긴다.
-	 * 기간 안 기사가 있는 사건의 싫어요를 물어 필터에 더하고, 꼭대기를 모르는 사건의 꼭대기를 {@code tops} 에 더해 후보 사건에 싣는다. 행의
-	 * 머리마다 포함 나무의 꼭대기를 한 번에 물어({@link StorylineDirectory#topsOfStorylines}) 행에 싣고, 그 꼭대기가 거른 꼭대기인 행은
-	 * {@link BigSlotPicker} 가 건너뛴다.
+	 * 기간 안 기사가 있는 사건의 싫어요를 물어 필터에 더하고, 꼭대기를 모르는 사건의 꼭대기를 {@code tops} 에 더해 후보 사건에 싣는다. 주제
+	 * 관심의 평균이 거름 기준 이하인 사건은 후보가 없다({@link InterestLevels#excluded}). 행의 머리마다 포함 나무의 꼭대기를 한 번에
+	 * 물어({@link StorylineDirectory#topsOfStorylines}) 행에 싣고, 그 꼭대기가 거른 꼭대기인 행은 {@link BigSlotPicker} 가 건너뛴다. 행은
+	 * 보도 강도에 관심 가중치를 곱한 순서({@link BigRowOrder})로 넘기고, 큰 판정 행의 꼭대기 목록도 그 순서다.
 	 * 기간 안 기사가 없는 사건은 읽지 않는다. 조회 기간은 끝에서 {@link EventPeriod#MAX_LENGTH} 까지로 줄인다. 큰 슬롯 수가 0 이면 읽지
 	 * 않는다.
+	 * @param topicLevels 그 사용자의 주제 관심 — 큰 슬롯 사건의 주제 거름
+	 * @param weights 그 사용자의 관심 가중치 — 행 순서
 	 * @param known 이미 읽은 사건의 값 — 다시 읽지 않는다
 	 * @param tops 이미 읽은 사건의 꼭대기 — 행의 사건 가운데 없는 것을 읽어 더한다(항목 묶기가 같은 맵을 쓴다)
 	 * @return 고른 큰 슬롯과 큰 판정 행 — 계보 표의 활성 버전이 관심 설정의 버전과 다르면 빈 값
 	 */
 	private Optional<BigPick> bigSlots(UserId user, DigestInterests interests, DigestPeriod period, UserFilter filter,
-			Map<EventId, EventFacts> known, Map<EventId, List<StorylineId>> tops) {
+			InterestLevels topicLevels, InterestWeights weights, Map<EventId, EventFacts> known,
+			Map<EventId, List<StorylineId>> tops) {
 		if (interests.bigSlots() <= 0) {
 			return Optional.of(BigPick.NONE);
 		}
@@ -321,8 +329,10 @@ public class CandidateSelection {
 			return Optional.of(BigPick.NONE);
 		}
 		Map<StorylineId, List<EventId>> rowEvents = new LinkedHashMap<>();
+		Map<StorylineId, BigDecimal> intensities = new HashMap<>();
 		Map<EventId, Set<EventId>> singles = new LinkedHashMap<>();
 		for (BigStoryline row : big) {
+			intensities.put(row.storyline().id(), row.intensity());
 			List<EventId> ofRow = this.storylines.events(row.storyline().id())
 				.stream()
 				.map(member -> member.event().id())
@@ -358,7 +368,8 @@ public class CandidateSelection {
 		facts.get().forEach(article -> evaluated.put(article.id(), article));
 		Map<StorylineId, StorylineId> rowTops = StorylineTopsQueries.ofStorylines(this.storylines, rowEvents.keySet());
 		List<BigRow> rows = new ArrayList<>(rowEvents.size());
-		rowEvents.forEach((storyline, ofRow) -> rows.add(BigRow.resolved(storyline, rowTops, ofRow.stream()
+		rowEvents.forEach((storyline, ofRow) -> rows.add(BigRow.resolved(storyline, rowTops,
+				intensities.get(storyline), ofRow.stream()
 			.filter(inPeriod::containsKey)
 			.map(event -> {
 				EventFacts ofEvent = eventFacts.get().get(event);
@@ -369,13 +380,15 @@ public class CandidateSelection {
 					.toList();
 				return new BigEvent(event, tallies.get(event).importanceSum(),
 						(ofEvent == null) ? null
-								: CandidateEvents.big(ofEvent, tops.getOrDefault(event, List.of()), articles, bigFilter));
+								: CandidateEvents.big(ofEvent, tops.getOrDefault(event, List.of()), articles, bigFilter,
+										topicLevels));
 			})
 			.toList())));
+		List<BigRow> ordered = BigRowOrder.order(rows, weights);
 		return Optional.of(new BigPick(
-				BigSlotPicker.pick(rows, interests.bigSlots(), SelectionRules.bigSeats(interests.maxCandidates()),
+				BigSlotPicker.pick(ordered, interests.bigSlots(), SelectionRules.bigSeats(interests.maxCandidates()),
 						bigFilter),
-				rows.stream().map(BigRow::top).toList()));
+				ordered.stream().map(BigRow::top).toList()));
 	}
 
 	/**
@@ -494,7 +507,7 @@ public class CandidateSelection {
 
 	/**
 	 * 고른 큰 슬롯과 큰 판정 행마다 머리의 포함 나무 꼭대기
-	 * @param tops 큰 판정 행마다 {@link BigRow#top} — 위치가 {@link BigSlots#rows} 의 값
+	 * @param tops 관심을 곱한 순서의 큰 판정 행마다 {@link BigRow#top} — 위치가 {@link BigSlots#rows} 의 값
 	 */
 	private record BigPick(BigSlots slots, List<StorylineId> tops) {
 

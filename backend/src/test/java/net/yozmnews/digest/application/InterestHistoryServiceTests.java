@@ -227,9 +227,10 @@ class InterestHistoryServiceTests {
 			assertThat(point.levels()).containsOnlyKeys("politics.legislature", "economy.markets");
 			// 입법: 6일 전 노출 · 좋아요 → w = 0.5^(6/30) → x = w ÷ (w + 3) ≈ 0.2249
 			assertThat(point.levels().get("politics.legislature")).isCloseTo(0.22491646835761048, EXACT);
-			// 시장: 4일 전 사용자 더함 → x = 0.5^(4/30) ÷ 3 ≈ 0.3039
-			assertThat(point.levels().get("economy.markets")).isCloseTo(0.30390749618607227, EXACT);
-			assertThat(point.entered()).containsExactlyInAnyOrder("politics.legislature", "economy.markets");
+			// 시장: 4일 전 사용자 더함 → x = 0.1 × 0.5^(4/30) ≈ 0.0912 — 구독 신호는 노출 분모 밖의 항
+			assertThat(point.levels().get("economy.markets")).isCloseTo(0.09117224885582169, EXACT);
+			// 시장은 구독만(0.0912) — 관심 있음(0.2)이 아니라 생기지 않는다
+			assertThat(point.entered()).containsExactly("politics.legislature");
 			assertThat(point.left()).isEmpty();
 			assertThat(point.subscriptionChanges()).containsExactly(new TopicSubscriptionStep(
 					Instant.parse("2026-11-12T00:00:00Z"), TopicSubscriptionAction.ADD, Set.of("economy.markets")));
