@@ -14,12 +14,13 @@ class InterestConstantsTests {
 
 	@Test
 	void theTopicBundleHoldsTheTopicConstants() {
-		assertThat(InterestRules.TOPIC).isEqualTo(new InterestConstants(Duration.ofDays(30), 3.0, 1.0, 0.5));
+		assertThat(InterestRules.TOPIC).isEqualTo(new InterestConstants(Duration.ofDays(30), 3.0, 0.1, 0.5));
 	}
 
 	@Test
-	void theStorylineBundleStartsWithTheTopicValues() {
-		assertThat(InterestRules.STORYLINE).isEqualTo(new InterestConstants(Duration.ofDays(30), 3.0, 1.0, 0.5));
+	void theStorylineBundleHoldsTheStorylineConstants() {
+		// 주제와 γ 만 다르다 — 추적만 한 흐름의 관심 1/3
+		assertThat(InterestRules.STORYLINE).isEqualTo(new InterestConstants(Duration.ofDays(30), 3.0, 1.0 / 3.0, 0.5));
 	}
 
 	@Test

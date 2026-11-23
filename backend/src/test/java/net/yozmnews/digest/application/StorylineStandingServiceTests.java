@@ -42,13 +42,13 @@ import org.springframework.test.context.TestPropertySource;
  * 흐름 추적 행을 넣고, 지금을 기준 시각으로 둔 관심 흐름 · 남길 흐름의 꼭대기를 손으로 계산한 집합으로 단언한다.
  * <p>
  * 다이제스트를 끝낸 시각 {@link #COMPLETED} 의 하루 뒤가 지금이라 노출 · 반응 · 추적의 무게 w 는 0.5 ^ (1 ÷ 30) ≈ 0.977 이다. 스토리라인 관심
- * x = (F + S) ÷ (E + 3) —
+ * x = F ÷ (E + 3) + S ÷ 3(추적 신호는 노출 분모 밖의 항, γ 1/3) —
  * <ul>
  * <li>좋아요 둘: 2w ÷ (2w + 3) ≈ 0.394 — 만들 기준 0.35 이상</li>
  * <li>좋아요 하나: w ÷ (w + 3) ≈ 0.246 — 남길 기준 0.2 이상 · 만들 기준 미만</li>
- * <li>추적 + 싫어요 셋: (−3w + w) ÷ (3w + 3) ≈ −0.329 — 거름 기준 −0.2 이하</li>
+ * <li>추적 + 싫어요 넷: −4w ÷ (4w + 3) + w ÷ 3 ≈ −0.240 — 거름 기준 −0.2 이하(싫어요 셋이면 ≈ −0.169 라 거르지 않는다)</li>
  * <li>추적만: w ÷ 3 ≈ 0.326 — 남길 기준 이상 · 만들 기준 미만</li>
- * <li>추적 + 싫어요 하나: (−w + w) ÷ (w + 3) ≈ 0 — 거름 기준 초과 · 남길 기준 미만</li>
+ * <li>추적 + 싫어요 하나: −w ÷ (w + 3) + w ÷ 3 ≈ 0.080 — 거름 기준 초과 · 남길 기준 미만</li>
  * </ul>
  * <p>
  * 지키는 규칙: digest-R49 · digest-R51
@@ -147,7 +147,9 @@ class StorylineStandingServiceTests {
 
 	@Test
 	void aTrackedFlowDislikedIntoExclusionIsNeitherFollowedNorKept() {
-		long flow = flow("DISLIKE", "DISLIKE", "DISLIKE");
+		// 추적 + 노출 넷 모두 싫어요 → x = −4w ÷ (4w + 3) + w ÷ 3 ≈ −0.240 ≤ −0.2 — 추적 신호는 노출로 묽어지지 않아 셋으로는
+		// −3w ÷ (3w + 3) + w ÷ 3 ≈ −0.169 라 걸러지지 않는다
+		long flow = flow("DISLIKE", "DISLIKE", "DISLIKE", "DISLIKE");
 		UserStorylineFixtures.tracked(this.jdbc, this.user, flow, COMPLETED);
 
 		assertThat(at(NOW).standingOf(this.user)).contains(new StorylineStanding(Set.of(), Set.of()));
@@ -166,7 +168,7 @@ class StorylineStandingServiceTests {
 	void flowsAreJudgedSeparately() {
 		long likedTwice = flow("LIKE", "LIKE");
 		long likedOnce = flow("LIKE");
-		long excluded = flow("DISLIKE", "DISLIKE", "DISLIKE");
+		long excluded = flow("DISLIKE", "DISLIKE", "DISLIKE", "DISLIKE");
 		UserStorylineFixtures.tracked(this.jdbc, this.user, excluded, COMPLETED);
 		long trackedOnly = UserStorylineFixtures.storyline(this.jdbc, COMPLETED);
 		UserStorylineFixtures.tracked(this.jdbc, this.user, trackedOnly, COMPLETED);

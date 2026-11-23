@@ -130,9 +130,10 @@ class InterestHistoryControllerTests {
 		assertThat(names).containsExactly("대통령실·행정부", "국회·정당·선거", "증권·투자");
 		List<String> categoryNames = JsonPath.read(body, "$.topics[*].categoryName");
 		assertThat(categoryNames).containsExactly("정치", "정치", "경제");
-		// 노출 둘에 좋아요 둘 · 구독 더함과 노출 하나는 관심이 드러나고, 반응 없는 노출 하나는 x = 0 이라 드러나지 않는다
+		// 노출 둘에 좋아요 둘은 관심이 드러나고, 반응 없는 노출 하나는 x = 0, 구독 더함과 노출 하나는 x = 0 ÷ 4 + 0.1 = 0.1 —
+		// 구독만으로는 관심 있음(0.2)이 아니라 드러나지 않는다
 		List<Boolean> prominent = JsonPath.read(body, "$.topics[*].prominent");
-		assertThat(prominent).containsExactly(true, false, true);
+		assertThat(prominent).containsExactly(true, false, false);
 		List<Object> executiveLevels = JsonPath.read(body, "$.topics[0].levels");
 		assertThat(executiveLevels).hasSize(13);
 		Object firstLevel = JsonPath.read(body, "$.topics[0].levels[0].level");
@@ -147,8 +148,9 @@ class InterestHistoryControllerTests {
 			.satisfies(change -> assertThat(change).containsEntry("action", "ADD")
 				.containsEntry("topics", List.of("economy.markets")));
 		List<List<String>> entered = JsonPath.read(body, "$.periods[*].entered");
+		// 시장은 구독 더함과 반응 없는 노출 하나(x = 0.1) — 관심 있음이 아니라 생기지 않는다
 		assertThat(entered.stream().flatMap(List::stream).toList()).as("처음 드러난 기간에 한 번씩")
-			.containsExactlyInAnyOrder("politics.executive", "economy.markets");
+			.containsExactly("politics.executive");
 	}
 
 	/**

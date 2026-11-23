@@ -499,7 +499,7 @@ class CandidateSelectionTests {
 
 	@Test
 	void aCandidateInASubscribedStorylineRisesByItsStorylineWeight() {
-		// 후보 "의회 넷이"(3.6)를 구독한 스토리라인의 소속으로 더한다 — 꼭대기 관심 1 ÷ 3, 가중치 1 + 0.5 × 1 ÷ 3 = 1.1666… 이라
+		// 후보 "의회 넷이"(3.6)를 구독한 스토리라인의 소속으로 더한다 — 꼭대기 관심 γ 1/3 × 1 = 1/3, 가중치 1 + 0.5 × 1/3 = 1.1666… 이라
 		// 3.6 × 1.1666… = 4.2 가 E1(4.0) 앞이고, 중립 순서로는 들지 못하므로 INTEREST
 		long legislature = event(eventArticle("의회 넷이", "politics.legislature", 3.6, "2026-11-05T06:00:00Z", 1));
 		long storyline = legislatureStoryline();

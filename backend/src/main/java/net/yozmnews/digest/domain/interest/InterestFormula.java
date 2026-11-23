@@ -22,7 +22,8 @@ import net.yozmnews.feedback.FeedbackValue;
  * <li>반응 F = 같은 사건의 w(노출 시각) × 몫 × 몫 배수 × (좋아요 +1 · 싫어요 −1 · 없음 0) 합 — 반응도 노출 시각 · 몫으로 무게를 매겨 F 가 E 를
  * 넘지 않는다</li>
  * <li>구독 S = k 를 몫으로 가진 신호의 w(바꾼 시각) × 부호 × 몫 합</li>
- * <li>관심 x = clamp((F + γ·S) ÷ (E + K), −1, 1), 가중치 g = 1 + β·x — γ · K · β 는 묶음의 값</li>
+ * <li>관심 x = clamp(F ÷ (E + K) + γ·S, −1, 1), 가중치 g = 1 + β·x — γ · K · β 는 묶음의 값. 구독 신호는 노출 분모 밖의 항이라
+ * 노출이 쌓여도 묽어지지 않는다 — 구독만 한 키의 관심은 γ·S 다</li>
  * </ul>
  * 노출도 구독 신호도 없는 키는 결과에 없다 — 중립(관심 0 · 가중치 1)이다. 주제 중분류의 가중치 변환은 {@link InterestLevels#weights} 가 한다.
  * 조회할 때 계산하고 저장하지 않는다.
@@ -65,10 +66,10 @@ public final class InterestFormula {
 		keys.addAll(subscriptions.keySet());
 		Map<K, Double> levels = new HashMap<>();
 		for (K key : keys) {
-			double numerator = reactions.getOrDefault(key, 0.0)
-					+ constants.subscriptionSignal() * subscriptions.getOrDefault(key, 0.0);
-			double denominator = exposures.getOrDefault(key, 0.0) + constants.priorExposures();
-			levels.put(key, Math.max(-1.0, Math.min(1.0, numerator / denominator)));
+			double reacted = reactions.getOrDefault(key, 0.0)
+					/ (exposures.getOrDefault(key, 0.0) + constants.priorExposures());
+			double subscribed = constants.subscriptionSignal() * subscriptions.getOrDefault(key, 0.0);
+			levels.put(key, Math.max(-1.0, Math.min(1.0, reacted + subscribed)));
 		}
 		return Map.copyOf(levels);
 	}

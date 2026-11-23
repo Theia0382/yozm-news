@@ -28,8 +28,9 @@ import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
 
 /**
- * 기준 시각 하나의 관심 — 재료를 창으로 자른다. 기대값은 손으로 계산한 리터럴이다(반감기 30일 · K 3 · γ 1, 30일 전 무게 0.5). 다이제스트의 창 끝은
- * 부르는 시각, 관심사 히스토리의 창 끝은 기준 시각이다. 노출 행은 지금 사건으로 푼 것이고, 몫은 따로 적지 않으면 1 · 다이제스트는 행마다 다르다.
+ * 기준 시각 하나의 관심 — 재료를 창으로 자른다. 기대값은 손으로 계산한 리터럴이다(반감기 30일 · K 3 · γ 주제 0.1 · 스토리라인 1/3, 30일 전
+ * 무게 0.5). 다이제스트의 창 끝은 부르는 시각, 관심사 히스토리의 창 끝은 기준 시각이다. 노출 행은 지금 사건으로 푼 것이고, 몫은 따로
+ * 적지 않으면 1 · 다이제스트는 행마다 다르다.
  * <p>
  * 스토리라인 · 반복 시험은 기준 시각 뒤에 노출해 무게를 1 로 두고(창 끝은 넉넉히 뒤), 다이제스트 날짜는 노출 시각의 UTC 날짜다.
  * <p>
@@ -128,15 +129,15 @@ class InterestWindowTests {
 
 		Interests history = InterestWindow.levels(record, T, T);
 
-		// 주제 구독 더함 30일 전 → S = 0.5 → x = 0.5 ÷ 3 = 1/6
-		assertThat(history.topics().level("f")).isCloseTo(0.16666666666666666, EXACT);
+		// 주제 구독 더함 30일 전 → S = 0.5 → x = 0.1 × 0.5 = 0.05
+		assertThat(history.topics().level("f")).isCloseTo(0.05, EXACT);
 		assertThat(history.topics().levels()).as("기본값 · 기준 시각 뒤의 행은 신호가 아니고, 스토리라인 구독은 주제에 들지 않는다")
 			.containsOnlyKeys("f");
-		// 스토리라인 구독(꼭대기 TREE) 30일 전 → S = 0.5 → x = 0.5 ÷ 3 = 1/6. 지워진 스토리라인의 행은 신호가 아니다
+		// 스토리라인 구독(꼭대기 TREE) 30일 전 → S = 0.5 → x = (1/3) × 0.5 = 1/6. 지워진 스토리라인의 행은 신호가 아니다
 		assertThat(history.storylines().levels()).containsOnlyKeys(TREE);
 		assertThat(history.storylines().level(TREE)).isCloseTo(0.16666666666666666, EXACT);
-		// 다이제스트 창에는 기준 시각 하루 뒤의 더함이 무게 1 로 든다 → x = 1 ÷ 3
-		assertThat(InterestWindow.levels(record, T, NOW).topics().level("h")).isCloseTo(0.3333333333333333, EXACT);
+		// 다이제스트 창에는 기준 시각 하루 뒤의 더함이 무게 1 로 든다 → x = 0.1
+		assertThat(InterestWindow.levels(record, T, NOW).topics().level("h")).isCloseTo(0.1, EXACT);
 	}
 
 	@Test
@@ -312,7 +313,7 @@ class InterestWindowTests {
 						StorylineSubscriptionCause.STORYLINE_MERGED, DAY_AFTER)),
 				Map.of(lower, TREE), flowsOf(List.of(TREE)));
 		assertThat(InterestWindow.levels(rewritten, T, LATER)).isEqualTo(Interests.NONE);
-		// 하위 스토리라인 lower(꼭대기 TREE)를 사용자가 구독 — 기준 시각 뒤라 무게 1 → TREE = 1 ÷ 3, 주제에는 들지 않는다
+		// 하위 스토리라인 lower(꼭대기 TREE)를 사용자가 구독 — 기준 시각 뒤라 무게 1 → TREE = (1/3) × 1 = 1/3, 주제에는 들지 않는다
 		InterestRecord record = new InterestRecord(TAG_SET, List.of(), Map.of(), Map.of(), List.of(), List.of(),
 				List.of(storyline(lower, lower, DAY_AFTER)), Map.of(lower, TREE), flowsOf(List.of(TREE)));
 
@@ -376,7 +377,7 @@ class InterestWindowTests {
 		StorylineId second = new StorylineId(32);
 		StorylineFlows flows = new StorylineFlows(Map.of(TREE, 0, OTHER_TREE, 0), Set.of(0));
 		Map<StorylineId, StorylineId> storylineTops = Map.of(first, TREE, second, OTHER_TREE);
-		// 대조 — 사용자가 누른 것 하나: 1 ÷ 3
+		// 대조 — 사용자가 누른 것 하나: (1/3) × 1 = 1/3
 		assertThat(InterestWindow
 			.levels(new InterestRecord(TAG_SET, List.of(), Map.of(), Map.of(), List.of(), List.of(),
 					List.of(storyline(first, first, DAY_AFTER)), storylineTops, flows), T, LATER)
@@ -392,7 +393,7 @@ class InterestWindowTests {
 			.storylines()
 			.level(TREE)).isCloseTo(0.3333333333333333, EXACT);
 
-		// 한 묶음의 두 스토리라인을 사용자가 눌렀다 — 그 묶음에 +2: 2 ÷ 3
+		// 한 묶음의 두 스토리라인을 사용자가 눌렀다 — 그 묶음에 +2: (1/3) × 2 = 2/3
 		StorylineLevels levels = InterestWindow
 			.levels(new InterestRecord(TAG_SET, List.of(), Map.of(), Map.of(), List.of(), List.of(),
 					List.of(storyline(first, first, DAY_AFTER), storyline(second, second, DAY_AFTER)), storylineTops,

@@ -8,6 +8,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -27,7 +29,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * 기준 시각마다의 관심 · 새로 생긴 관심 · 사라진 관심 · 두 기준 시각 사이의 주제 구독 변경 · 드러난 주제. 기준 시각은 30일 간격이라 앞 기준 시각의
- * 행은 무게 0.5, 두 칸 앞은 0.25 다. 기대값은 손으로 계산한 리터럴이다(K 3 · γ 1 · θ 0.2).
+ * 행은 무게 0.5, 두 칸 앞은 0.25 다. 기대값은 손으로 계산한 리터럴이다(K 3 · 주제 γ 0.1 · θ 0.2 — 구독만 한 주제는 S ≥ 2 라야 관심 있음).
  * <p>
  * 지키는 규칙: digest-R35 · digest-R36
  */
@@ -53,10 +55,8 @@ class InterestTimelinesTests {
 				Map.of(),
 				List.of(feedback(1, FeedbackValue.LIKE), feedback(2, FeedbackValue.LIKE),
 						feedback(3, FeedbackValue.DISLIKE), feedback(4, FeedbackValue.DISLIKE)),
-				List.of(
-						// a: T0 에 사용자가 두 번 더함 · b: 기본값 · 빈 중분류(계보 없이 지운 키) · e: 사용자가 뺌
-						topic(Set.of("a"), TopicSubscriptionAction.ADD, TopicSubscriptionCause.USER, T0),
-						topic(Set.of("a"), TopicSubscriptionAction.ADD, TopicSubscriptionCause.USER, T0),
+				userAdds(5, "a", T0,
+						// a: T0 에 사용자가 다섯 번 더함 · b: 기본값 · 빈 중분류(계보 없이 지운 키) · e: 사용자가 뺌
 						topic(Set.of("b"), TopicSubscriptionAction.ADD, TopicSubscriptionCause.ONBOARDING,
 								T0.plus(Duration.ofDays(1))),
 						topic(Set.of(), TopicSubscriptionAction.ADD, TopicSubscriptionCause.USER,
@@ -69,19 +69,19 @@ class InterestTimelinesTests {
 
 		assertThat(points).extracting(InterestPoint::reference).containsExactly(T1, T2);
 		InterestPoint first = points.get(0);
-		// T1: a 는 더함 둘(무게 0.5) → S = 1 → x = 1/3. c · d 의 T1 노출은 창 끝(T1) 밖
+		// T1: a 는 더함 다섯(무게 0.5) → S = 2.5 → x = 0.1 × 2.5 = 0.25 — 관심 있음(0.2) 이상. c · d 의 T1 노출은 창 끝(T1) 밖
 		assertThat(first.levels()).containsOnlyKeys("a");
-		assertThat(first.levels().get("a")).isCloseTo(0.3333333333333333, EXACT);
+		assertThat(first.levels().get("a")).isCloseTo(0.25, EXACT);
 		assertThat(first.entered()).containsExactly("a");
 		assertThat(first.left()).isEmpty();
-		assertThat(first.subscriptionChanges()).as("T0 이상 T1 미만, 사용자가 바꾸고 중분류가 있는 행").containsExactly(
-				new TopicSubscriptionStep(T0, TopicSubscriptionAction.ADD, Set.of("a")),
-				new TopicSubscriptionStep(T0, TopicSubscriptionAction.ADD, Set.of("a")));
+		assertThat(first.subscriptionChanges()).as("T0 이상 T1 미만, 사용자가 바꾸고 중분류가 있는 행")
+			.containsExactlyElementsOf(
+					Collections.nCopies(5, new TopicSubscriptionStep(T0, TopicSubscriptionAction.ADD, Set.of("a"))));
 
 		InterestPoint second = points.get(1);
-		// T2: a 는 무게 0.25 둘 → x = 0.5/3 = 1/6(관심 있음 아님 → 사라짐), c 는 노출 둘(0.5) · 좋아요 둘 → x = 1/4,
+		// T2: a 는 무게 0.25 다섯 → S = 1.25 → x = 0.125(관심 있음 아님 → 사라짐), c 는 노출 둘(0.5) · 좋아요 둘 → x = 1/4,
 		// d 는 싫어요 둘 → x = −1/4
-		assertThat(second.levels().get("a")).isCloseTo(0.16666666666666666, EXACT);
+		assertThat(second.levels().get("a")).isCloseTo(0.125, EXACT);
 		assertThat(second.levels().get("c")).isCloseTo(0.25, EXACT);
 		assertThat(second.levels().get("d")).isCloseTo(-0.25, EXACT);
 		assertThat(second.entered()).containsExactly("c");
@@ -89,7 +89,7 @@ class InterestTimelinesTests {
 		assertThat(second.subscriptionChanges()).containsExactly(
 				new TopicSubscriptionStep(T1.plus(Duration.ofDays(5)), TopicSubscriptionAction.REMOVE, Set.of("e")));
 
-		// 드러난 주제 — |x| ≥ 0.2: a(1/3) · c(1/4) · d(−1/4). e 는 뺌 하나(25일 전) → |x| 는 0.2 미만
+		// 드러난 주제 — |x| ≥ 0.2: a(0.25) · c(1/4) · d(−1/4). e 는 뺌 하나(25일 전) → |x| 는 0.2 미만
 		assertThat(InterestTimelines.prominent(points)).containsExactlyInAnyOrder("a", "c", "d");
 	}
 
@@ -106,19 +106,18 @@ class InterestTimelinesTests {
 
 	@Test
 	void aRepeatedReferenceHasTheSameInterestAndNoShiftOrStep() {
-		// 기간이 시작되는 정각에 부르면 앞 기간 끝과 진행 중 기간의 기준 시각이 같다 — a: T0 에 사용자가 두 번 더함
+		// 기간이 시작되는 정각에 부르면 앞 기간 끝과 진행 중 기간의 기준 시각이 같다 — a: T0 에 사용자가 다섯 번 더함
 		InterestRecord record = new InterestRecord(TAG_SET, List.of(), Map.of(), Map.of(), List.of(),
-				List.of(topic(Set.of("a"), TopicSubscriptionAction.ADD, TopicSubscriptionCause.USER, T0),
-						topic(Set.of("a"), TopicSubscriptionAction.ADD, TopicSubscriptionCause.USER, T0)),
-				List.of(), Map.of(), StorylineFlows.NONE);
+				userAdds(5, "a", T0), List.of(), Map.of(), StorylineFlows.NONE);
 
 		List<InterestPoint> points = InterestTimelines.points(record, List.of(T0, T1, T1));
 
 		assertThat(points).extracting(InterestPoint::reference).containsExactly(T1, T1);
+		// 첫 기준 시각에 a 가 관심 있음으로 생긴다 — S = 2.5 → x = 0.25
 		assertThat(points.get(0).entered()).containsExactly("a");
 		InterestPoint repeated = points.get(1);
 		assertThat(repeated.levels()).as("같은 창 — 같은 관심").isEqualTo(points.get(0).levels());
-		assertThat(repeated.levels().get("a")).isCloseTo(0.3333333333333333, EXACT);
+		assertThat(repeated.levels().get("a")).isCloseTo(0.25, EXACT);
 		assertThat(repeated.entered()).isEmpty();
 		assertThat(repeated.left()).isEmpty();
 		assertThat(repeated.subscriptionChanges()).as("[T1, T1) 은 비었다").isEmpty();
@@ -180,6 +179,15 @@ class InterestTimelinesTests {
 
 	private static FeedbackChange feedback(long event, FeedbackValue value) {
 		return new FeedbackChange(event(event), event(event), value, 1, T1.plus(Duration.ofDays(1)));
+	}
+
+	/** 사용자가 같은 시각에 중분류 하나를 {@code count} 번 더한 행 뒤에 {@code others} 를 잇는다 */
+	private static List<TopicSubscriptionChange> userAdds(int count, String subtopic, Instant at,
+			TopicSubscriptionChange... others) {
+		List<TopicSubscriptionChange> changes = new ArrayList<>(Collections.nCopies(count,
+				topic(Set.of(subtopic), TopicSubscriptionAction.ADD, TopicSubscriptionCause.USER, at)));
+		changes.addAll(List.of(others));
+		return changes;
 	}
 
 	private static TopicSubscriptionChange topic(Set<String> subtopics, TopicSubscriptionAction action,

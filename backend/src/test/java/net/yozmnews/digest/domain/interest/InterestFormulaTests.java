@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.within;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -16,14 +17,18 @@ import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
 
 /**
- * 관심도 산식 — 기대값은 산식을 시험 안에서 다시 계산하지 않고 손으로 계산해 적은 리터럴이다(상수: 반감기 30일 · β 0.5 · γ 1 · K 3). 노출
- * 사건의 몫은 따로 적지 않으면 1 이다.
+ * 관심도 산식 — 기대값은 산식을 시험 안에서 다시 계산하지 않고 손으로 계산해 적은 리터럴이다(상수: 반감기 30일 · β 0.5 · γ 0.1 · K 3 — 구독
+ * 신호는 노출 분모 밖의 항). 노출 사건의 몫은 따로 적지 않으면 1 이다.
  */
 class InterestFormulaTests {
 
 	private static final Instant T = Instant.parse("2026-11-17T00:00:00Z");
 
 	private static final Offset<Double> EXACT = within(1e-12);
+
+	/** 구독 신호는 노출 분모 밖의 항 — 리터럴 상수 묶음(반감기 30일 · K 3 · γ 0.1 · β 0.5) */
+	private static final InterestConstants SUBSCRIPTION_OUTSIDE = new InterestConstants(Duration.ofDays(30), 3.0, 0.1,
+			0.5);
 
 	@Test
 	void withoutSignalsEveryTopicIsNeutral() {
@@ -35,11 +40,11 @@ class InterestFormulaTests {
 	}
 
 	@Test
-	void aSubscriptionWithoutExposureIsSmoothedByThePriorExposures() {
-		// x = 1 ÷ (0 + 3) → g = 1 + 0.5/3
+	void aSubscriptionWithoutExposureAddsTheSubscriptionValue() {
+		// x = 0 ÷ (0 + 3) + 0.1 × 1 = 0.1 → g = 1 + 0.5 × 0.1
 		TopicInterests interests = weights(List.of(), List.of(added(Map.of("a", 1.0), T)), T);
 
-		assertThat(interests.weight("a")).isCloseTo(1.1666666666666667, EXACT);
+		assertThat(interests.weight("a")).isCloseTo(1.05, EXACT);
 		assertThat(interests.weight("b")).as("신호 없는 주제").isEqualTo(1.0);
 	}
 
@@ -80,11 +85,11 @@ class InterestFormulaTests {
 
 	@Test
 	void olderSubscriptionChangesWeighLessByTheHalfLife() {
-		// 30일 전 주제 구독 더함 · 노출 0 → S = 0.5 → x = 0.5 ÷ 3 → g = 1 + 1/12
+		// 30일 전 주제 구독 더함 · 노출 0 → S = 0.5 → x = 0.1 × 0.5 = 0.05 → g = 1.025
 		TopicInterests interests = weights(List.of(),
 				List.of(added(Map.of("a", 1.0), T.minus(Duration.ofDays(30)))), T);
 
-		assertThat(interests.weight("a")).isCloseTo(1.0833333333333333, EXACT);
+		assertThat(interests.weight("a")).isCloseTo(1.025, EXACT);
 	}
 
 	@Test
@@ -103,9 +108,9 @@ class InterestFormulaTests {
 
 	@Test
 	void theInterestIsClampedToOne() {
-		// 노출 0 · 더함 4 → x = 4 ÷ 3 → 1 로 자름 → g = 1.5
+		// 노출 0 · 더함 11 → x = 0.1 × 11 = 1.1 → 1 로 자름 → g = 1.5
 		SubscriptionSignal<String> add = added(Map.of("a", 1.0), T);
-		TopicInterests interests = weights(List.of(), List.of(add, add, add, add), T);
+		TopicInterests interests = weights(List.of(), Collections.nCopies(11, add), T);
 
 		assertThat(interests.weight("a")).isCloseTo(1.5, EXACT);
 	}
@@ -121,11 +126,11 @@ class InterestFormulaTests {
 
 	@Test
 	void aShareScalesTheSubscriptionSignalAndARemovalSubtracts() {
-		// 노출 1(없음) · 몫 0.5 의 뺌 → x = −0.5 ÷ 4 → g = 1 − 0.0625
+		// 노출 1(없음) · 몫 0.5 의 뺌 → x = 0 ÷ 4 + 0.1 × (−0.5) = −0.05 → g = 0.975
 		TopicInterests interests = weights(List.of(exposed(Set.of("a"), T, FeedbackValue.NONE)),
 				List.of(new SubscriptionSignal<>(Map.of("a", 0.5), -1, T)), T);
 
-		assertThat(interests.weight("a")).isCloseTo(0.9375, EXACT);
+		assertThat(interests.weight("a")).isCloseTo(0.975, EXACT);
 	}
 
 	@Test
@@ -204,13 +209,55 @@ class InterestFormulaTests {
 
 	@Test
 	void theSubscriptionSignalComesFromTheGivenBundle() {
-		// 노출 0 · 주제 구독 더함 하나 — 주제 묶음(γ 1)이면 x = 1 ÷ 3, γ 2 묶음이면 x = 2 ÷ 3
-		InterestConstants signalTwo = new InterestConstants(Duration.ofDays(30), 3.0, 2.0, 0.5);
+		// 노출 0 · 주제 구독 더함 하나 — 주제 묶음(γ 0.1)이면 x = 0.1, γ 0.25 묶음이면 x = 0.25
+		InterestConstants signalQuarter = new InterestConstants(Duration.ofDays(30), 3.0, 0.25, 0.5);
 		List<SubscriptionSignal<String>> signals = List.of(added(Map.of("a", 1.0), T));
 
-		assertThat(InterestFormula.levels(List.of(), signals, T, InterestRules.TOPIC).get("a"))
-			.isCloseTo(0.3333333333333333, EXACT);
-		assertThat(InterestFormula.levels(List.of(), signals, T, signalTwo).get("a")).isCloseTo(0.6666666666666666, EXACT);
+		assertThat(InterestFormula.levels(List.of(), signals, T, InterestRules.TOPIC).get("a")).isCloseTo(0.1, EXACT);
+		assertThat(InterestFormula.levels(List.of(), signals, T, signalQuarter).get("a")).isCloseTo(0.25, EXACT);
+	}
+
+	@Test
+	void aSubscriptionIsNotDilutedByExposures() {
+		// 구독 1 · 노출 30 · 반응 0 → x = 0 ÷ 33 + 0.1 × 1 = 0.1 (노출이 늘어도 그대로)
+		List<ExposedEvent<String>> exposed = new ArrayList<>();
+		for (int i = 0; i < 30; i++) {
+			exposed.add(exposed(Set.of("a"), T, FeedbackValue.NONE));
+		}
+		List<SubscriptionSignal<String>> signals = List.of(added(Map.of("a", 1.0), T));
+
+		assertThat(InterestFormula.levels(exposed, signals, T, SUBSCRIPTION_OUTSIDE).get("a")).isCloseTo(0.1, EXACT);
+		assertThat(InterestFormula.levels(List.of(), signals, T, SUBSCRIPTION_OUTSIDE).get("a"))
+			.as("노출 0 이어도 같은 값")
+			.isCloseTo(0.1, EXACT);
+	}
+
+	@Test
+	void reactionsAndASubscriptionAreAddedOutsideTheDenominator() {
+		// 노출 9 · 좋아요 3 · 구독 1 → x = 3 ÷ (9 + 3) + 0.1 = 0.35
+		List<ExposedEvent<String>> exposed = new ArrayList<>();
+		for (int i = 0; i < 3; i++) {
+			exposed.add(exposed(Set.of("a"), T, FeedbackValue.LIKE));
+		}
+		for (int i = 0; i < 6; i++) {
+			exposed.add(exposed(Set.of("a"), T, FeedbackValue.NONE));
+		}
+
+		assertThat(InterestFormula.levels(exposed, List.of(added(Map.of("a", 1.0), T)), T, SUBSCRIPTION_OUTSIDE).get("a"))
+			.isCloseTo(0.35, EXACT);
+	}
+
+	@Test
+	void theSumIsClampedToOne() {
+		// γ 0.5 묶음 · 노출 9 · 좋아요 9 · 구독 1 → 9 ÷ 12 + 0.5 = 1.25 → 1
+		InterestConstants half = new InterestConstants(Duration.ofDays(30), 3.0, 0.5, 0.5);
+		List<ExposedEvent<String>> exposed = new ArrayList<>();
+		for (int i = 0; i < 9; i++) {
+			exposed.add(exposed(Set.of("a"), T, FeedbackValue.LIKE));
+		}
+
+		assertThat(InterestFormula.levels(exposed, List.of(added(Map.of("a", 1.0), T)), T, half).get("a"))
+			.isEqualTo(1.0);
 	}
 
 	private static InterestLevels levels(List<ExposedEvent<String>> exposed, List<SubscriptionSignal<String>> signals,
