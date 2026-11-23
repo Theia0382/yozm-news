@@ -262,7 +262,7 @@
 | [0254](0254-evaluation-queue-defers-transient-failures-without-an-attempt-limit-and-counts-retrying-rows-for-the-operator.md) | 평가 대기의 일시 실패는 시도 상한 없이 1시간까지 늘어나는 간격으로 미루고, 운영자 건수는 시도 소진 대신 일시 실패를 겪은 대기를 센다 | 승인 |
 | [0255](0255-storyline-linking-and-relation-queues-defer-transient-failures-until-a-retry-time-and-never-drop-them.md) | 스토리라인 잇기 · 관계 판정이 일시 실패한 대상은 대기 행의 판정 가능 시각까지 미루고, 일시 실패 수로 대기에서 빼지 않는다 | 승인 |
 | [0259](0259-evaluator-timing-is-owned-by-one-evaluation-type-and-judging-queues-derive-their-leases-from-the-longest-judgement.md) | 평가기 요청 마감 · 판정 한 번의 가장 긴 시간 · 일시 실패 뒤 간격은 evaluation 의 공개 타입 하나가 정본이고, 판정을 부르는 대기의 점유 기간은 판정 한 번의 가장 긴 시간에서 계산한다 | 승인 |
-| [0260](0260-digest-candidates-are-events-and-only-assigned-events-with-an-article-first-evaluated-in-the-period-enter.md) | 다이제스트 후보는 사건이고, 기간에 첫 평가된 기사가 있는 배정된 사건만 든다 | 승인 (부분 대체: 0265 · 0279 · 0280) |
+| [0260](0260-digest-candidates-are-events-and-only-assigned-events-with-an-article-first-evaluated-in-the-period-enter.md) | 다이제스트 후보는 사건이고, 기간에 첫 평가된 기사가 있는 배정된 사건만 든다 | 승인 (부분 대체: 0265 · 0279 · 0280 · 0296 · 0297) |
 | [0261](0261-event-topics-and-regions-are-keys-on-at-least-half-of-evaluated-members-importance-is-the-maximum-and-digest-counts-them-at-query-time.md) | 사건의 주제 · 지역은 평가 있는 소속 기사의 절반 이상에 붙은 키, 중요도는 최대이고, `digest` 가 조회 때 센다 | 승인 (부분 대체: 0277) |
 | [0262](0262-chosen-events-are-grouped-into-items-by-containment-tree-top-code-splits-top-stories-and-headlines-the-llm-writes-per-item-and-an-item-has-one-badge.md) | 고른 사건은 포함 나무 꼭대기로 항목을 묶고, 주요 뉴스와 헤드라인은 코드가 가르며, LLM 은 항목마다 쓰고 배지는 항목에 하나다 | 승인 (부분 대체: 0265 · 0269 · 0270) |
 | [0263](0263-articles-sent-per-event-are-sampled-up-to-a-cap-with-a-fixed-seed-from-those-in-the-period-and-the-sample-is-the-citations-and-sources.md) | 사건마다 LLM 에 넘기는 기사는 그 기간에 든 기사에서 고정 시드로 상한까지 뽑고, 그 표본이 인용 · 출처다 | 승인 (부분 대체: 0265 · 0268) |
@@ -281,7 +281,7 @@
 | [0276](0276-platform-describes-reads-and-draws-llm-output-and-task-modules-keep-their-own-shape-and-value-mapping.md) | LLM 출력의 서술 · 읽기 · JSON Schema 그리기는 `platform` 이 맡고, 과제 모듈은 자기 서술과 값 옮기기만 한다 | 승인 |
 | [0277](0277-storyline-interest-is-counted-per-containment-tree-top-with-the-topic-formula-and-reactions-to-a-flow-seen-within-seven-days-go-to-the-storyline-only.md) | 스토리라인 관심은 포함 나무의 꼭대기마다 주제와 같은 산식으로 세고, 7일 안에 다시 본 흐름의 반응 · 노출과 스토리라인 구독은 스토리라인에만 든다 | 승인 (부분 대체: 0283 · 0295) |
 | [0278](0278-followed-flows-are-tops-at-or-above-the-follow-threshold-or-subscribed-less-the-excluded-and-the-keep-threshold-is-0-2.md) | 관심 흐름은 스토리라인 관심이 0.35 이상이거나 구독한 흐름에서 거른 흐름을 뺀 것이고, 남길 기준은 0.2 다 | 승인 (부분 대체: 0283 · 0287) |
-| [0279](0279-storyline-interest-multiplies-the-candidate-rank-and-flows-at-or-below-the-exclusion-threshold-leave-subscribed-candidates-and-the-big-slot.md) | 스토리라인 관심은 후보 순위에 곱하고, 거름 기준 이하의 흐름은 구독 후보와 큰 슬롯에서 뺀다 | 승인 |
+| [0279](0279-storyline-interest-multiplies-the-candidate-rank-and-flows-at-or-below-the-exclusion-threshold-leave-subscribed-candidates-and-the-big-slot.md) | 스토리라인 관심은 후보 순위에 곱하고, 거름 기준 이하의 흐름은 구독 후보와 큰 슬롯에서 뺀다 | 승인 (부분 대체: 0296) |
 | [0280](0280-events-of-followed-flows-outside-the-subscribed-topics-enter-one-per-flow-within-a-share-of-the-subscribed-seats-as-interest.md) | 주제 구독 밖에 있는 관심 흐름의 사건은 흐름마다 하나, 구독 사건 자리의 몫 상한 안에서 `INTEREST` 로 든다 | 승인 |
 | [0281](0281-a-user-storyline-is-a-flow-that-received-interest-signals-and-tracks-the-tops-reached-forward-along-follows-from-its-seeds-as-one-group.md) | 사용자 스토리라인은 관심 신호를 받은 흐름이고, 씨앗에서 이어짐을 앞에서 뒤로 따라 닿는 꼭대기를 한 묶음으로 추적한다 | 승인 (부분 대체: 0294) |
 | [0282](0282-flow-tracking-points-to-a-user-storyline-which-user-handlers-store-under-the-settings-lock-while-readers-get-the-result-of-the-same-rule.md) | 흐름 추적은 사용자 스토리라인을 가리키고, 사용자 스토리라인은 `user` 의 처리기가 잠그고 저장하며 읽는 쪽은 같은 규칙의 결과를 받는다 | 승인 (부분 대체: 0287 · 0290) |
@@ -296,6 +296,8 @@
 | [0293](0293-the-interest-history-also-shows-the-interest-of-summarized-flows.md) | 관심사 히스토리는 정리된 흐름의 관심도 보인다 | 승인 (부분 대체: 0294) |
 | [0294](0294-a-user-storyline-is-one-per-head-and-a-top-before-a-fork-belongs-to-several-of-them.md) | 사용자 스토리라인은 헤드마다 하나이고, 갈라지기 전 꼭대기는 여러 사용자 스토리라인에 든다 | 승인 |
 | [0295](0295-the-subscription-signal-of-interest-is-a-term-outside-the-exposure-denominator-and-the-topic-value-is-below-the-presence-threshold.md) | 관심의 구독 신호는 노출 분모 밖 항이고, 주제의 값은 관심 있음 기준보다 작다 | 승인 |
+| [0296](0296-the-big-slot-takes-big-judgement-rows-in-the-order-of-intensity-times-the-interest-weight.md) | 큰 슬롯은 보도 강도에 관심 가중치를 곱한 순서로 큰 판정 행을 쓴다 | 승인 |
+| [0297](0297-an-event-whose-mean-topic-interest-is-at-or-below-the-exclusion-threshold-does-not-enter-the-big-slot.md) | 주제 관심의 평균이 거름 기준 이하인 사건은 큰 슬롯에 넣지 않는다 | 승인 |
 
 ## 운영 규칙
 
