@@ -515,7 +515,7 @@ public record TokenBucket(int lower, int upper, long count) {}
 
 ### EvaluationReview
 
-평가 검수 — 운영자 화면이 평가 결과를 한 건씩 보고 표본을 검수한다. 구현은 `application` 의 `EvaluationReviewService` 다.
+평가 검수 — 운영자 화면이 평가 결과를 한 건씩 보고 표본을 검수하고, 기사 하나의 평가를 버전마다 본다. 구현은 `application` 의 `EvaluationReviewService` 다.
 
 ```java
 public interface EvaluationReview {
@@ -528,7 +528,10 @@ public interface EvaluationReview {
             @Nullable EvaluationCursor after, int limit);
     EvaluationSampleResult sample(TagSetId version, EvaluationPeriod period, long seed, int size);
     Optional<EvaluationDetailView> detail(EvaluationId id);
+    List<VersionedEvaluationRow> ofArticle(ArticleId articleId);
 }
+
+public record VersionedEvaluationRow(TagSetId version, int versionNumber, EvaluationRow evaluation) {}
 ```
 
 | 멤버 | 뜻 |
@@ -539,9 +542,11 @@ public interface EvaluationReview {
 | `list` | 평가 목록 — `after` 다음부터 거르기에 맞는 것 `limit` 건(tag-R33) |
 | `sample` | 표본 — 씨앗으로 고른 `size` 건(tag-R34) |
 | `detail` | 평가 하나 — 저장 행 전부와 그 버전의 지금 기준으로 붙었는지, 분포 · 모델 · 토큰. 없는 평가면 빈 값이고, 판정 원본이 없는 평가(tag-R21)도 빈 값 |
+| `ofArticle` | 기사 하나의 평가 — 버전마다 하나, 버전 번호 내림차순. 첫째가 `ArticleEvaluations.find` 와 같은 평가다. 평가하지 않은 기사면 빈 목록 |
+| `VersionedEvaluationRow` | 기사의 평가 가운데 한 버전의 것 — 그 버전 · 번호와 평가 한 건의 판정(`EvaluationRow` — 그 버전의 지금 기준으로 판정) |
 
 - 계약
-  - 세 연산 모두 읽기 전용 `REPEATABLE READ` 트랜잭션 하나에서 읽는다. 사용자 정보를 받지 않는다
+  - 연산마다 읽기 전용 `REPEATABLE READ` 트랜잭션 하나에서 읽는다. 사용자 정보를 받지 않는다
   - 판정은 그 평가 버전의 지금 태그 기준 · 저장 기준으로 조회 때 한다(tag-R15). 태그 키 · 이름 · 순서는 그 평가 버전의 것이다
   - 기사 내용 · 출처 이름은 싣지 않는다 — 부르는 쪽이 `article` · `source` 의 공개 조회로 맞붙인다
 
@@ -777,7 +782,7 @@ public record TagKeyMapping(TagSetId from, TagSetId to, Map<TagKind, Map<String,
 
 집계: `EvaluationAdministrationService.overview` 와 `TopicCoverageService` 는 각자 읽기 전용 `REPEATABLE READ` 트랜잭션 하나(`TransactionTemplate`)를 연다. 평가 현황은 `TagSetRepository.existsById` 로 버전을 보고, `TagSetViews` · `ThresholdRepository`(`current` · `changes`)와 `StoreFloorsReader` 가 낸 태그 종류별 `StoreFloors` 로 `OverviewTally` 를 만들어 `EvaluationResultRepository.streamVersionPeriod` 의 평가를 넣는다 — 흘려 받은 평가를 묶음마다 모아 `ArticleTagging.find` 로 판정 원본의 입력 토큰을 붙인 뒤 하나씩 넣고, 판정은 `TagJudgement` 가 한다. 보도량은 `TagSetDirectory` 로 활성 버전을 읽고 `CoverageTally.unknownTopics` 로 고른 키를 본 뒤, `streamFirstEvaluatedIn` 의 기사마다 그 평가 버전의 `TagSetViews` · `ThresholdRepository.current` · `TagKeyLineage.toActive` 를(버전마다 한 번) 얻어 `TagJudgement` 의 판정과 계보 표를 `CoverageTally` 에 넣는다. 결과 저장소는 평가 행을 fetch size 커서로 나눠 받는다.
 
-검수 · 미리보기: `EvaluationReviewService` 는 같은 모양의 트랜잭션에서 `TagSetRepository.existsById` 로 버전을 보고 `TagSetViews` · `ThresholdRepository.current` 로 그 버전의 체계 · 기준을 얻는다. 목록은 `ReviewFilter` 로 거를 키와 저장소가 좁힐 조건(저장 행 필요조건 · 대표 형식)을 보고 `EvaluationResultRepository.scanNewestFirst` 의 평가를 `TagJudgement` 로 판정해 `ReviewFilter.matches` 로 거르며, 쪽이 차면 흘려 받기를 멈춘다. 표본은 `streamIds` 로 `EvaluationSampler` 를 채우고 고른 평가를 `findListed` 로 읽는다. 상세는 `findDetail` 로 읽고 `ArticleTagging.find` 로 판정 원본의 평가기 · 모델 버전 · 입력 토큰을 붙인다. 공개 값으로 옮기기는 `EvaluationReviewViews` 가 한다. `TagSetAdministrationService` 는 기준 상태를 `ThresholdRepository`(`current` · `changes`)와 `StoreFloorsReader` 가 낸 태그 종류별 `StoreFloors` 를 `ThresholdStanding` 에 넘겨 내고, 미리보기는 `ThresholdPreviews` 에 맡긴다 — 활성 버전 · 기준 · 이력을 읽어 `StoreFloorsReader` 로 태그 종류별 `StoreFloors` 를 얻고 `ThresholdRule.decide` 로 판정하고, `ThresholdImpactTally` 에 `streamVersionPeriod` 의 평가를 평가 현황과 같은 방식(판정 원본의 입력 토큰을 묶음마다 붙임)으로 넣는다.
+검수 · 미리보기: `EvaluationReviewService` 는 같은 모양의 트랜잭션에서 `TagSetRepository.existsById` 로 버전을 보고 `TagSetViews` · `ThresholdRepository.current` 로 그 버전의 체계 · 기준을 얻는다. 목록은 `ReviewFilter` 로 거를 키와 저장소가 좁힐 조건(저장 행 필요조건 · 대표 형식)을 보고 `EvaluationResultRepository.scanNewestFirst` 의 평가를 `TagJudgement` 로 판정해 `ReviewFilter.matches` 로 거르며, 쪽이 차면 흘려 받기를 멈춘다. 표본은 `streamIds` 로 `EvaluationSampler` 를 채우고 고른 평가를 `findListed` 로 읽는다. 상세는 `findDetail` 로 읽고 `ArticleTagging.find` 로 판정 원본의 평가기 · 모델 버전 · 입력 토큰을 붙인다. 기사의 평가는 `findListedByArticle` 의 평가마다 그 버전의 체계 · 기준으로 `TagJudgement` 판정을 해 버전 번호 내림차순으로 늘어놓는다. 공개 값으로 옮기기는 `EvaluationReviewViews` 가 한다. `TagSetAdministrationService` 는 기준 상태를 `ThresholdRepository`(`current` · `changes`)와 `StoreFloorsReader` 가 낸 태그 종류별 `StoreFloors` 를 `ThresholdStanding` 에 넘겨 내고, 미리보기는 `ThresholdPreviews` 에 맡긴다 — 활성 버전 · 기준 · 이력을 읽어 `StoreFloorsReader` 로 태그 종류별 `StoreFloors` 를 얻고 `ThresholdRule.decide` 로 판정하고, `ThresholdImpactTally` 에 `streamVersionPeriod` 의 평가를 평가 현황과 같은 방식(판정 원본의 입력 토큰을 묶음마다 붙임)으로 넣는다.
 
 #### 첫 기동
 
@@ -1058,6 +1063,7 @@ sequenceDiagram
               Predicate<ListedEvaluation> sink); // 그 버전 · [from, to) · 커서 뒤 — 평가 시각 · ID 내림차순, sink 가 거짓이면 멈춘다
       void streamIds(TagSetId version, Instant from, Instant to, LongConsumer sink); // 그 버전 · [from, to) 의 평가 ID
       List<ListedEvaluation> findListed(Collection<EvaluationId> ids);  // 없는 ID 는 빠진다
+      List<ListedEvaluation> findListedByArticle(ArticleId articleId);  // 기사 하나의 평가(버전마다 하나)와 태그 행 — 순서 없음
       Optional<StoredEvaluationDetail> findDetail(EvaluationId id);
       List<BackfillTarget> lockForBackfill(Instant from, Instant to, long afterId,
               int limit);                                              // 채움 — 평가 시각 [from, to) · ID 가 afterId 뒤 · ID 순 limit 건, 키 공유 잠금
