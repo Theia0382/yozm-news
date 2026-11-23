@@ -1,7 +1,7 @@
 package net.yozmnews.digest.domain.item;
 
 /**
- * 항목 가르기의 상수 — 정본 · docs/specs/digest.md §5 · digest-R47
+ * 항목 가르기의 상수 — 정본 · docs/specs/digest.md §5 · digest-R47 · digest-R54
  */
 public final class ItemRules {
 
@@ -11,6 +11,12 @@ public final class ItemRules {
 	 * 공급자가 받는 키 수 안이어야 한다 — 이 값을 올리면 그 한도를 함께 본다(시험이 묶는다)
 	 */
 	public static final int TOP_STORIES = 5;
+
+	/**
+	 * 큰 슬롯 밖 주요 뉴스에서 구독 행 하나가 차지하는 항목 수의 상한 — 측정 전 목표. 큰 슬롯 밖 항목에 나온 구독 행 수 × 이 값이
+	 * {@link #TOP_STORIES} 보다 작으면 걸지 않는다
+	 */
+	public static final int TOP_STORIES_PER_TOPIC = 2;
 
 	private ItemRules() {
 	}

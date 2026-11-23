@@ -233,7 +233,7 @@ public class CandidateSelection {
 				bigTops.put(row, big.get().tops().get(row));
 			}
 		}
-		List<ArrangedItem> items = ItemPlan.arrange(ItemGrouping.group(selected, bigTops), weights);
+		List<ArrangedItem> items = ItemPlan.arrange(ItemGrouping.group(selected, bigTops), weights, filter);
 		return Optional.of(new Attempt(Optional.of(input(interests, items, samples, contents))));
 	}
 

@@ -2,6 +2,7 @@ package net.yozmnews.digest.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
+import static org.assertj.core.api.Assertions.tuple;
 
 import java.time.Instant;
 import java.time.InstantSource;
@@ -67,8 +68,8 @@ import org.springframework.test.context.TestPropertySource;
  * 시각 · 소스 · 사건 · 사건의 소속 기사 평가 · 꼭대기 · 내용 조회를 거쳐 규칙까지. 기본 체계(버전 1)로 본다. 기간은 2026-11-05 하루(UTC)이고
  * 기사는 모두 그날 0시 발행이다({@link EventArticles#insert}).
  * <p>
- * 지키는 규칙: digest-R15 ~ digest-R19 · digest-R21 · digest-R22 · digest-R25 · digest-R44 ~ digest-R46 — 후보는 사건(사건 없는 기사는 버림), 구독 필터는 사건의 주제 · 지역 제외는 사건의 지역 · 기사 제외는 기사마다, 사건 중요도는 소속
- * 기사의 최대, 표본(기간에 든 · 제외를 지난 기사), 상한 · 선정 이유, 항목 묶기(꼭대기), 관심 설정과 계보 표의 활성 버전 대조, 관심도 순위와
+ * 지키는 규칙: digest-R15 ~ digest-R19 · digest-R21 · digest-R22 · digest-R25 · digest-R44 ~ digest-R46 · digest-R54 — 후보는 사건(사건 없는 기사는 버림), 구독 필터는 사건의 주제 · 지역 제외는 사건의 지역 · 기사 제외는 기사마다, 사건 중요도는 소속
+ * 기사의 최대, 표본(기간에 든 · 제외를 지난 기사), 상한 · 선정 이유, 항목 묶기(꼭대기), 구독 행마다 주요 뉴스 상한(사용자의 구독 행), 관심 설정과 계보 표의 활성 버전 대조, 관심도 순위와
  * {@code INTEREST}(노출 · 좋아요 · 주제 구독 변경 · 스토리라인 구독 변경), 싫어요 거름(구독 사건 · 큰 슬롯 사건 — 합쳐진 사건의 싫어요 포함), 중립
  * 결과의 토큰 어림,
  * 관심도 재료를 읽는 범위의 끝(부르는 시각), 생성의 입력(프로필 · 항목 · 사건 · 표본 기사 재료)
@@ -152,6 +153,8 @@ class CandidateSelectionTests {
 
 	private long a2;
 
+	private long a4;
+
 	private long a5;
 
 	private long a6;
@@ -178,7 +181,7 @@ class CandidateSelectionTests {
 		// 3: 제외 소스 2 만 · 사건 없음 — 빠짐(사건에 배정하지 않는다 — 기간에 사건 기사가 있는 소스가 늘면 큰 판정의 보도 강도가
 		// 바뀐다). 4: 구독 밖 주제 — 빠짐. 5: 혼자인 사건 — 남음. 6: 첫 평가가 기간 전 — 빠짐
 		article("정치 셋", "politics.legislature", 2.0, "2026-11-05T06:00:00Z", 2);
-		eventArticle("시장", "economy.markets", 5.0, "2026-11-05T06:00:00Z", 1);
+		this.a4 = eventArticle("시장", "economy.markets", 5.0, "2026-11-05T06:00:00Z", 1);
 		this.a5 = eventArticle("정치 다섯", "politics.executive", 1.0, "2026-11-05T06:00:00Z", 1);
 		this.a6 = eventArticle("정치 여섯", "politics.executive", 5.0, "2026-11-04T23:59:59Z", 1);
 	}
@@ -295,6 +298,26 @@ class CandidateSelectionTests {
 		assertThat(input.items()).extracting(InputItem::kind).containsOnly(ItemKind.TOP_STORY);
 		// 항목은 자기를 묶은 꼭대기를 싣는다 — 혼자 한 사건의 항목은 없다
 		assertThat(input.items()).extracting(InputItem::storyline).containsExactly(new StorylineId(storyline), null);
+	}
+
+	@Test
+	void aSubscribedRowTakesAtMostTwoTopStoriesOnceThreeRowsHaveItems() {
+		// 경제 · 국제도 구독해 세 행 — 시장(경제 5) · 정치 4.9 · 4.8 · 4.7 · E1(정치 4) · 분쟁(국제 2) · 사건 5(정치 1)
+		subscribeTopic("economy");
+		subscribeTopic("world");
+		long p1 = event(eventArticle("정치 일", "politics.executive", 4.9, "2026-11-05T06:00:00Z", 1));
+		long p2 = event(eventArticle("정치 이", "politics.executive", 4.8, "2026-11-05T06:00:00Z", 1));
+		long p3 = event(eventArticle("정치 삼", "politics.executive", 4.7, "2026-11-05T06:00:00Z", 1));
+		long conflict = event(eventArticle("분쟁", "world.conflict", 2.0, "2026-11-05T06:00:00Z", 1));
+
+		DigestInput input = this.selection.select(new UserId(this.user), DAY, ROOMY).orElseThrow();
+
+		// 1차: 시장 · 정치 4.9 · 4.8 · 분쟁 — 정치 4.7 · E1 · 사건 5 는 정치 몫이 차 건너뛴다. 2차: 남은 한 자리는 순위대로 정치 4.7.
+		// 순위만 보면 분쟁 대신 E1 이 주요 뉴스다
+		assertThat(input.items()).extracting(item -> item.events().getFirst().event().value(), InputItem::kind)
+			.containsExactly(tuple(event(this.a4), ItemKind.TOP_STORY), tuple(p1, ItemKind.TOP_STORY),
+					tuple(p2, ItemKind.TOP_STORY), tuple(p3, ItemKind.TOP_STORY), tuple(conflict, ItemKind.TOP_STORY),
+					tuple(this.e1, ItemKind.HEADLINE), tuple(event(this.a5), ItemKind.HEADLINE));
 	}
 
 	@Test
@@ -961,6 +984,14 @@ class CandidateSelectionTests {
 		long article = article(title, topic, importance, evaluatedAt, source);
 		eventOf(article);
 		return article;
+	}
+
+	/** 대분류를 하나 더 구독한다 — 구독 변경 이력은 남기지 않는다 */
+	private void subscribeTopic(String key) {
+		this.jdbc.sql("""
+				insert into user_tag_preferences (user_id, tag_kind, tag_key, mode, created_at)
+				values (:user, 'TOPIC', :key, 'SUBSCRIBE', now())
+				""").param("user", this.user).param("key", key).update();
 	}
 
 	/** 기사의 평가에 지역을 붙인다 */
