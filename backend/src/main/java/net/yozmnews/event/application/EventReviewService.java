@@ -6,8 +6,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
+import net.yozmnews.article.ArticleId;
 import net.yozmnews.evaluation.EventJudgementId;
+import net.yozmnews.event.ArticleAssignment;
+import net.yozmnews.event.ArticleKeyTerms;
 import net.yozmnews.event.AssignmentCriteria;
 import net.yozmnews.event.EventId;
 import net.yozmnews.event.EventReview;
@@ -20,8 +24,8 @@ import org.springframework.stereotype.Service;
 /**
  * 공개 API {@link EventReview} 의 구현 — docs/specs/event.md §4 · event-R22.
  * <p>
- * 판정 원본의 쓰임은 배정과 병합 판정 기록을 각각 원본 ID 로 찾아 합친다 — 한 원본을 둘이 함께 가리키면 불변식 위반이라 크게 실패한다.
- * 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통).
+ * 판정 원본의 쓰임은 배정과 병합 판정 기록을 각각 원본 ID 로 찾아 합친다 — 한 원본을 둘이 함께 가리키면 불변식 위반이라 크게 실패한다. 기사
+ * 하나의 배정 · 핵심 말은 조회 저장소에 맡긴다. 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통).
  */
 @Service
 class EventReviewService implements EventReview {
@@ -69,6 +73,18 @@ class EventReviewService implements EventReview {
 			}
 		}
 		return Collections.unmodifiableMap(uses);
+	}
+
+	@Override
+	public Optional<ArticleAssignment> assignmentOf(ArticleId articleId) {
+		Objects.requireNonNull(articleId, "articleId");
+		return this.events.assignmentOf(articleId);
+	}
+
+	@Override
+	public List<ArticleKeyTerms> keyTermsOf(ArticleId articleId) {
+		Objects.requireNonNull(articleId, "articleId");
+		return this.events.keyTermsOf(articleId);
 	}
 
 }
