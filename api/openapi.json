@@ -818,21 +818,15 @@
             "type" : "string"
           }
         }, {
-          "description" : "거를 태그의 종류 — tag 와 함께",
+          "description" : "거를 태그 — {종류}:{키}(종류는 TOPIC · REGION · FORMAT, 주제 키는 대분류 키 · 중분류 전체 키). 여러 번 주거나 쉼표로 잇고, 고른 태그가 모두 맞는 평가만 낸다. 같은 태그는 한 번으로 세어 10개까지, 형식은 하나까지",
           "in" : "query",
-          "name" : "tagKind",
+          "name" : "tags",
           "required" : false,
           "schema" : {
-            "type" : [ "string", "null" ],
-            "enum" : [ "TOPIC", "REGION", "FORMAT" ]
-          }
-        }, {
-          "description" : "거를 태그의 키 — 주제는 대분류 키 · 중분류 전체 키",
-          "in" : "query",
-          "name" : "tag",
-          "required" : false,
-          "schema" : {
-            "type" : [ "string", "null" ]
+            "type" : [ "array", "null" ],
+            "items" : {
+              "type" : "string"
+            }
           }
         }, {
           "description" : "거를 주제 판정",

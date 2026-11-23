@@ -34,6 +34,10 @@ class ReviewFilterTests {
 	private static final Judged TAGGED = judge(List.of(topic(EXECUTIVE, 0.8), topic(ASSEMBLY, 0.4),
 			region("domestic", 0.9)));
 
+	/** 행정부 0.8 · 국회 0.6 · 국제 0.7 · 국내 0.6 — 같은 종류의 태그가 둘씩 붙었다, TAGGED */
+	private static final Judged PAIRS = judge(List.of(topic(EXECUTIVE, 0.8), topic(ASSEMBLY, 0.6),
+			region("world", 0.7), region("domestic", 0.6)));
+
 	/** 금융 0.3 하나 — 태그 기준 아래, 저장 기준 이상이라 그 하나로 LOW_CONFIDENCE */
 	private static final Judged LOW = judge(List.of(topic(FINANCE, 0.3)));
 
@@ -43,88 +47,151 @@ class ReviewFilterTests {
 	@Test
 	void theJudgementsOfTheFixtureAreWhatTheTestsAssume() {
 		assertThat(TAGGED.status()).isEqualTo(TopicStatus.TAGGED);
+		assertThat(TAGGED.topics()).hasSize(1);
+		assertThat(PAIRS.status()).isEqualTo(TopicStatus.TAGGED);
+		assertThat(PAIRS.topics()).hasSize(2);
+		assertThat(PAIRS.regions()).hasSize(2);
 		assertThat(LOW.status()).isEqualTo(TopicStatus.LOW_CONFIDENCE);
 		assertThat(NONE.status()).isEqualTo(TopicStatus.UNCLASSIFIED);
 	}
 
 	@Test
-	void aTagNotInThatKindOfTheVersionIsUnknown() {
-		assertThat(ReviewFilter.unknown(tag(TagKind.TOPIC, "politics"), TAG_SET)).isEmpty();
-		assertThat(ReviewFilter.unknown(tag(TagKind.TOPIC, EXECUTIVE), TAG_SET)).isEmpty();
-		assertThat(ReviewFilter.unknown(tag(TagKind.REGION, "domestic"), TAG_SET)).isEmpty();
-		assertThat(ReviewFilter.unknown(tag(TagKind.FORMAT, "opinion"), TAG_SET)).isEmpty();
-		assertThat(ReviewFilter.unknown(EvaluationFilter.NONE, TAG_SET)).isEmpty();
+	void theFilterKeepsTheChosenOrderAndTheSameTagOnce() {
+		EvaluationFilter filter = filter(regionTag("domestic"), topicTag("politics"), regionTag("domestic"));
 
-		assertThat(ReviewFilter.unknown(tag(TagKind.TOPIC, "sports"), TAG_SET))
-			.contains(new TagRef(TagKind.TOPIC, "sports"));
-		// 다른 태그 종류의 키는 그 종류에 없다
-		assertThat(ReviewFilter.unknown(tag(TagKind.TOPIC, "domestic"), TAG_SET))
-			.contains(new TagRef(TagKind.TOPIC, "domestic"));
-		assertThat(ReviewFilter.unknown(tag(TagKind.REGION, "politics"), TAG_SET))
-			.contains(new TagRef(TagKind.REGION, "politics"));
-		assertThat(ReviewFilter.unknown(tag(TagKind.FORMAT, "video"), TAG_SET))
-			.contains(new TagRef(TagKind.FORMAT, "video"));
+		assertThat(filter.tags()).containsExactly(regionTag("domestic"), topicTag("politics"));
+		assertThat(EvaluationFilter.NONE.tags()).isEmpty();
 	}
 
 	@Test
-	void theStoredKeysAreTheNecessaryConditionOfTheTag() {
-		// 대분류는 하위 중분류 전부
-		assertThat(ReviewFilter.storedKeys(tag(TagKind.TOPIC, "politics"), TAG_SET))
-			.contains(new StoredKeys(MultiTagKind.TOPIC, Set.of(EXECUTIVE, ASSEMBLY)));
-		assertThat(ReviewFilter.storedKeys(tag(TagKind.TOPIC, FINANCE), TAG_SET))
-			.contains(new StoredKeys(MultiTagKind.TOPIC, Set.of(FINANCE)));
-		assertThat(ReviewFilter.storedKeys(tag(TagKind.REGION, "domestic"), TAG_SET))
-			.contains(new StoredKeys(MultiTagKind.REGION, Set.of("domestic")));
+	void theTagsNotInThatKindOfTheVersionAreUnknownInTheChosenOrder() {
+		assertThat(ReviewFilter.unknown(filter(topicTag("politics")), TAG_SET)).isEmpty();
+		assertThat(ReviewFilter.unknown(filter(topicTag(EXECUTIVE)), TAG_SET)).isEmpty();
+		assertThat(ReviewFilter.unknown(filter(regionTag("domestic")), TAG_SET)).isEmpty();
+		assertThat(ReviewFilter.unknown(filter(formatTag("opinion")), TAG_SET)).isEmpty();
+		assertThat(ReviewFilter.unknown(EvaluationFilter.NONE, TAG_SET)).isEmpty();
+
+		assertThat(ReviewFilter.unknown(filter(topicTag("sports")), TAG_SET)).containsExactly(topicTag("sports"));
+		assertThat(ReviewFilter.unknown(filter(formatTag("video")), TAG_SET)).containsExactly(formatTag("video"));
+		// 다른 태그 종류의 키는 그 종류에 없다. 있는 태그는 빠지고 없는 태그는 모두 고른 순서로 나온다
+		assertThat(ReviewFilter.unknown(
+				filter(regionTag("politics"), topicTag("politics"), topicTag("domestic"), regionTag("domestic")),
+				TAG_SET))
+			.containsExactly(regionTag("politics"), topicTag("domestic"));
+	}
+
+	@Test
+	void twoFormatTagsAreMultipleFormats() {
+		assertThat(ReviewFilter.multipleFormats(filter(formatTag("straight"), formatTag("opinion")))).isTrue();
+		// 없는 형식 키도 형식 태그로 센다
+		assertThat(ReviewFilter.multipleFormats(filter(formatTag("straight"), formatTag("video")))).isTrue();
+
+		assertThat(ReviewFilter.multipleFormats(filter(formatTag("straight"), topicTag("politics"),
+				regionTag("domestic")))).isFalse();
+		// 같은 형식 태그는 한 번으로 센다
+		assertThat(ReviewFilter.multipleFormats(filter(formatTag("straight"), formatTag("straight")))).isFalse();
+		assertThat(ReviewFilter.multipleFormats(EvaluationFilter.NONE)).isFalse();
+	}
+
+	@Test
+	void eachTopicOrRegionTagHasItsOwnNecessaryCondition() {
+		// 대분류는 하위 중분류 전부, 중분류 · 지역은 그 키 — 고른 순서로 태그마다 하나
+		assertThat(ReviewFilter.storedKeys(filter(topicTag("politics"), formatTag("straight"),
+				regionTag("domestic"), topicTag(FINANCE)), TAG_SET))
+			.containsExactly(new StoredKeys(MultiTagKind.TOPIC, Set.of(EXECUTIVE, ASSEMBLY)),
+					new StoredKeys(MultiTagKind.REGION, Set.of("domestic")),
+					new StoredKeys(MultiTagKind.TOPIC, Set.of(FINANCE)));
 		// 형식 · 주제 판정만은 저장 행 필요조건이 없다
-		assertThat(ReviewFilter.storedKeys(tag(TagKind.FORMAT, "straight"), TAG_SET)).isEmpty();
-		assertThat(ReviewFilter.storedKeys(new EvaluationFilter(null, TopicStatus.UNCLASSIFIED), TAG_SET)).isEmpty();
+		assertThat(ReviewFilter.storedKeys(filter(formatTag("straight")), TAG_SET)).isEmpty();
+		assertThat(ReviewFilter.storedKeys(new EvaluationFilter(List.of(), TopicStatus.UNCLASSIFIED), TAG_SET))
+			.isEmpty();
 		assertThat(ReviewFilter.storedKeys(EvaluationFilter.NONE, TAG_SET)).isEmpty();
-		assertThatThrownBy(() -> ReviewFilter.storedKeys(tag(TagKind.TOPIC, "sports"), TAG_SET))
-			.isInstanceOf(IllegalArgumentException.class);
 	}
 
 	@Test
 	void onlyAFormatTagNarrowsByTheStoredRepresentativeFormat() {
-		assertThat(ReviewFilter.formatKey(tag(TagKind.FORMAT, "opinion"), TAG_SET)).contains("opinion");
-		assertThat(ReviewFilter.formatKey(tag(TagKind.TOPIC, "politics"), TAG_SET)).isEmpty();
-		assertThat(ReviewFilter.formatKey(tag(TagKind.REGION, "domestic"), TAG_SET)).isEmpty();
-		assertThat(ReviewFilter.formatKey(new EvaluationFilter(null, TopicStatus.TAGGED), TAG_SET)).isEmpty();
-		assertThatThrownBy(() -> ReviewFilter.formatKey(tag(TagKind.FORMAT, "video"), TAG_SET))
-			.isInstanceOf(IllegalArgumentException.class);
+		assertThat(ReviewFilter.formatKey(filter(topicTag("politics"), formatTag("opinion")), TAG_SET))
+			.contains("opinion");
+		assertThat(ReviewFilter.formatKey(filter(topicTag("politics"), regionTag("domestic")), TAG_SET)).isEmpty();
+		assertThat(ReviewFilter.formatKey(new EvaluationFilter(List.of(), TopicStatus.TAGGED), TAG_SET)).isEmpty();
+	}
+
+	@Test
+	void aFilterThatDidNotPassTheChecksIsRefused() {
+		EvaluationFilter unknown = filter(topicTag("politics"), topicTag("sports"));
+		EvaluationFilter formats = filter(formatTag("straight"), formatTag("opinion"));
+
+		for (EvaluationFilter filter : List.of(unknown, formats)) {
+			assertThatThrownBy(() -> ReviewFilter.storedKeys(filter, TAG_SET))
+				.isInstanceOf(IllegalArgumentException.class);
+			assertThatThrownBy(() -> ReviewFilter.formatKey(filter, TAG_SET))
+				.isInstanceOf(IllegalArgumentException.class);
+			assertThatThrownBy(() -> ReviewFilter.matches(filter, TAG_SET, TAGGED, "straight"))
+				.isInstanceOf(IllegalArgumentException.class);
+		}
 	}
 
 	@Test
 	void aTopicTagMatchesTheAttachedCategoryOrSubtopic() {
-		assertThat(matches(tag(TagKind.TOPIC, "politics"), TAGGED, "straight")).isTrue();
-		assertThat(matches(tag(TagKind.TOPIC, "economy"), TAGGED, "straight")).isFalse();
-		assertThat(matches(tag(TagKind.TOPIC, EXECUTIVE), TAGGED, "straight")).isTrue();
+		assertThat(matches(filter(topicTag("politics")), TAGGED, "straight")).isTrue();
+		assertThat(matches(filter(topicTag("economy")), TAGGED, "straight")).isFalse();
+		assertThat(matches(filter(topicTag(EXECUTIVE)), TAGGED, "straight")).isTrue();
 		// 대조: 국회는 저장 행이 있지만(필요조건은 지난다) 태그 기준 아래라 붙지 않았다
-		assertThat(matches(tag(TagKind.TOPIC, ASSEMBLY), TAGGED, "straight")).isFalse();
+		assertThat(matches(filter(topicTag(ASSEMBLY)), TAGGED, "straight")).isFalse();
 		// low_confidence 로 붙은 하나도 그 키 · 그 대분류 거르기에 나온다
-		assertThat(matches(tag(TagKind.TOPIC, FINANCE), LOW, "straight")).isTrue();
-		assertThat(matches(tag(TagKind.TOPIC, "economy"), LOW, "straight")).isTrue();
+		assertThat(matches(filter(topicTag(FINANCE)), LOW, "straight")).isTrue();
+		assertThat(matches(filter(topicTag("economy")), LOW, "straight")).isTrue();
 	}
 
 	@Test
 	void aRegionTagMatchesTheAttachedRegionAndAFormatTagTheRepresentativeFormat() {
-		assertThat(matches(tag(TagKind.REGION, "domestic"), TAGGED, "straight")).isTrue();
-		assertThat(matches(tag(TagKind.REGION, "world"), TAGGED, "straight")).isFalse();
-		assertThat(matches(tag(TagKind.FORMAT, "straight"), TAGGED, "straight")).isTrue();
-		assertThat(matches(tag(TagKind.FORMAT, "opinion"), TAGGED, "straight")).isFalse();
+		assertThat(matches(filter(regionTag("domestic")), TAGGED, "straight")).isTrue();
+		assertThat(matches(filter(regionTag("world")), TAGGED, "straight")).isFalse();
+		assertThat(matches(filter(formatTag("straight")), TAGGED, "straight")).isTrue();
+		assertThat(matches(filter(formatTag("opinion")), TAGGED, "straight")).isFalse();
 	}
 
 	@Test
-	void aTopicStatusMatchesThatStatusAndBothMustMatchTogether() {
-		EvaluationFilter low = new EvaluationFilter(null, TopicStatus.LOW_CONFIDENCE);
+	void everyChosenTagMustMatchAcrossKinds() {
+		assertThat(matches(filter(topicTag("politics"), regionTag("domestic"), formatTag("straight")), TAGGED,
+				"straight")).isTrue();
+		// 하나라도 맞지 않으면 맞지 않는다
+		assertThat(matches(filter(topicTag("politics"), regionTag("world")), TAGGED, "straight")).isFalse();
+		assertThat(matches(filter(topicTag(EXECUTIVE), formatTag("opinion")), TAGGED, "straight")).isFalse();
+		assertThat(matches(filter(topicTag("economy"), regionTag("domestic")), TAGGED, "straight")).isFalse();
+	}
+
+	@Test
+	void tagsOfTheSameKindMustAllBeAttachedToo() {
+		assertThat(matches(filter(topicTag(EXECUTIVE), topicTag(ASSEMBLY)), PAIRS, "straight")).isTrue();
+		assertThat(matches(filter(regionTag("world"), regionTag("domestic")), PAIRS, "straight")).isTrue();
+		// 대조: 국회는 저장 행만 있고 붙지 않았다 · 국제는 저장 행도 없다
+		assertThat(matches(filter(topicTag(EXECUTIVE), topicTag(ASSEMBLY)), TAGGED, "straight")).isFalse();
+		assertThat(matches(filter(regionTag("world"), regionTag("domestic")), TAGGED, "straight")).isFalse();
+		// 두 대분류 — 붙은 중분류가 둘 다 정치라 경제는 맞지 않는다
+		assertThat(matches(filter(topicTag("politics"), topicTag("economy")), PAIRS, "straight")).isFalse();
+	}
+
+	@Test
+	void aCategoryWithItsOwnSubtopicIsTheSameAsTheSubtopicAlone() {
+		assertThat(matches(filter(topicTag("politics"), topicTag(EXECUTIVE)), TAGGED, "straight")).isTrue();
+		assertThat(matches(filter(topicTag("politics"), topicTag(ASSEMBLY)), TAGGED, "straight")).isFalse();
+		assertThat(matches(filter(topicTag(ASSEMBLY)), TAGGED, "straight")).isFalse();
+		assertThat(matches(filter(topicTag("economy"), topicTag(FINANCE)), LOW, "straight")).isTrue();
+	}
+
+	@Test
+	void aTopicStatusMatchesThatStatusAndMustMatchWithTheTags() {
+		EvaluationFilter low = new EvaluationFilter(List.of(), TopicStatus.LOW_CONFIDENCE);
 		assertThat(matches(low, LOW, "straight")).isTrue();
 		assertThat(matches(low, TAGGED, "straight")).isFalse();
-		assertThat(matches(new EvaluationFilter(null, TopicStatus.UNCLASSIFIED), NONE, "straight")).isTrue();
+		assertThat(matches(new EvaluationFilter(List.of(), TopicStatus.UNCLASSIFIED), NONE, "straight")).isTrue();
 
-		assertThat(matches(new EvaluationFilter(new TagRef(TagKind.TOPIC, "politics"), TopicStatus.TAGGED), TAGGED,
-				"straight")).isTrue();
-		assertThat(matches(new EvaluationFilter(new TagRef(TagKind.TOPIC, "politics"), TopicStatus.LOW_CONFIDENCE),
-				TAGGED, "straight")).isFalse();
-		assertThat(matches(new EvaluationFilter(new TagRef(TagKind.REGION, "world"), TopicStatus.TAGGED), TAGGED,
+		List<TagRef> politicsAtHome = List.of(topicTag("politics"), regionTag("domestic"));
+		assertThat(matches(new EvaluationFilter(politicsAtHome, TopicStatus.TAGGED), TAGGED, "straight")).isTrue();
+		assertThat(matches(new EvaluationFilter(politicsAtHome, TopicStatus.LOW_CONFIDENCE), TAGGED, "straight"))
+			.isFalse();
+		assertThat(matches(new EvaluationFilter(List.of(regionTag("world")), TopicStatus.TAGGED), TAGGED,
 				"straight")).isFalse();
 		assertThat(matches(EvaluationFilter.NONE, NONE, "feature")).isTrue();
 	}
@@ -133,8 +200,20 @@ class ReviewFilterTests {
 		return ReviewFilter.matches(filter, TAG_SET, judged, formatKey);
 	}
 
-	private static EvaluationFilter tag(TagKind kind, String key) {
-		return new EvaluationFilter(new TagRef(kind, key), null);
+	private static EvaluationFilter filter(TagRef... tags) {
+		return new EvaluationFilter(List.of(tags), null);
+	}
+
+	private static TagRef topicTag(String key) {
+		return new TagRef(TagKind.TOPIC, key);
+	}
+
+	private static TagRef regionTag(String key) {
+		return new TagRef(TagKind.REGION, key);
+	}
+
+	private static TagRef formatTag(String key) {
+		return new TagRef(TagKind.FORMAT, key);
 	}
 
 	private static Judged judge(List<StoredTag> stored) {
