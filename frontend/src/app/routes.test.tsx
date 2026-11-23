@@ -16,6 +16,7 @@ import { EventsPage } from "@/features/admin/EventsPage";
 import { SamplePage } from "@/features/admin/SamplePage";
 import { StorylineDetailPage } from "@/features/admin/StorylineDetailPage";
 import { StorylinesPage } from "@/features/admin/StorylinesPage";
+import { TagSetsPage } from "@/features/admin/TagSetsPage";
 import { ThresholdsPage } from "@/features/admin/ThresholdsPage";
 import { DigestDatesPage } from "@/features/digests/DigestDatesPage";
 import { DigestDayPage } from "@/features/digests/DigestDayPage";
@@ -193,6 +194,7 @@ describe("routes", () => {
     ["evaluations", "EvaluationListPage", () => EvaluationListPage],
     ["evaluations/:id", "EvaluationDetailPage", () => EvaluationDetailPage],
     ["samples", "SamplePage", () => SamplePage],
+    ["tag-sets", "TagSetsPage", () => TagSetsPage],
     ["thresholds", "ThresholdsPage", () => ThresholdsPage],
     ["events", "EventsPage", () => EventsPage],
     ["events/:id", "EventDetailPage", () => EventDetailPage],

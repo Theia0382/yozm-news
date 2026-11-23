@@ -248,6 +248,7 @@ describe("AdminLayout", () => {
       ["평가 현황", "/admin/evaluation"],
       ["평가 결과", "/admin/evaluations"],
       ["표본 검수", "/admin/samples"],
+      ["태그 체계", "/admin/tag-sets"],
       ["태그 기준", "/admin/thresholds"],
       ["사건", "/admin/events"],
       ["스토리라인", "/admin/storylines"],

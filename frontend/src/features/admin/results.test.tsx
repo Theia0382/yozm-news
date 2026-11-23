@@ -5,7 +5,7 @@ import type { Schemas } from "@/features/admin/adminClient";
 import {
   FeedEnableResultView,
   PreviewResultView,
-  ProfileProblems,
+  TextProblems,
 } from "@/features/admin/results";
 
 const REPORT: Schemas["PreviewReport"] = {
@@ -224,7 +224,7 @@ describe("FeedEnableResultView", () => {
   });
 });
 
-describe("PreviewResultView · ProfileProblems", () => {
+describe("PreviewResultView · TextProblems", () => {
   it("원문 문제를 줄:열 · 경로 · 문구로 보인다", () => {
     render(
       <PreviewResultView
@@ -253,7 +253,7 @@ describe("PreviewResultView · ProfileProblems", () => {
 
   it("위치를 모르는 문제는 줄:열 없이 보인다", () => {
     render(
-      <ProfileProblems
+      <TextProblems
         problems={[
           {
             path: "",
@@ -269,5 +269,57 @@ describe("PreviewResultView · ProfileProblems", () => {
     expect(screen.getByRole("listitem")).toHaveTextContent(
       /^YAML 문법이 틀렸다$/,
     );
+  });
+
+  it("자리로 가기를 주면 줄:열이 단추다 — 열을 모르면 그 줄의 처음으로 간다", async () => {
+    const located: [number, number][] = [];
+    render(
+      <TextProblems
+        problems={[
+          {
+            path: "topics",
+            code: "DUPLICATE_KEY",
+            message: "같은 키가 두 번 있다",
+            line: 3,
+            column: 7,
+          },
+          {
+            path: "regions",
+            code: "EMPTY",
+            message: "비어 있다",
+            line: 9,
+            column: null,
+          },
+        ]}
+        onLocate={(line, column) => located.push([line, column])}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "3:7" }));
+    await userEvent.click(screen.getByRole("button", { name: "9:?" }));
+
+    expect(located).toEqual([
+      [3, 7],
+      [9, 1],
+    ]);
+  });
+
+  it("자리로 가기가 없으면 줄:열은 글자다", () => {
+    render(
+      <TextProblems
+        problems={[
+          {
+            path: "topics",
+            code: "DUPLICATE_KEY",
+            message: "같은 키가 두 번 있다",
+            line: 3,
+            column: 7,
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText("3:7")).toBeInTheDocument();
+    expect(screen.queryByRole("button")).toBeNull();
   });
 });

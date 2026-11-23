@@ -200,6 +200,13 @@ export const routes: RouteObject[] = [
             }),
           },
           {
+            path: "tag-sets",
+            lazy: async () => ({
+              Component: (await import("@/features/admin/TagSetsPage"))
+                .TagSetsPage,
+            }),
+          },
+          {
             path: "thresholds",
             lazy: async () => ({
               Component: (await import("@/features/admin/ThresholdsPage"))
