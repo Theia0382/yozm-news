@@ -2,7 +2,6 @@ package net.yozmnews.reader.adapter.in.web;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -43,7 +42,7 @@ final class UserStorylineResponses {
 	 * @param summary 흐름 요약
 	 * @param recent 최근 전개
 	 * @param tracked 추적 중인가
-	 * @param storylineId 흐름 추적 버튼이 누를 스토리라인 — 추적 대상 가운데 ID 가 가장 작은 꼭대기
+	 * @param storylineId 흐름 추적 버튼이 누를 스토리라인 — 헤드(추적 대상 가운데 뒤 흐름이 없는 꼭대기, 이 사용자 스토리라인에만 든다)
 	 * @param topCount 추적 대상 꼭대기 수
 	 * @param updatedAt 마지막으로 정리한 시각
 	 */
@@ -52,7 +51,7 @@ final class UserStorylineResponses {
 
 		static CardResponse of(UserStorylineSummaryView view) {
 			return new CardResponse(view.id().value(), view.title(), view.summary(), view.recent(), view.tracked(),
-					firstTop(view).value(), view.members().size(), view.updatedAt());
+					view.head().value(), view.members().size(), view.updatedAt());
 		}
 
 	}
@@ -65,7 +64,7 @@ final class UserStorylineResponses {
 	 * @param summary 흐름 요약
 	 * @param recent 최근 전개
 	 * @param tracked 추적 중인가
-	 * @param storylineId 흐름 추적 버튼이 누를 스토리라인 — 추적 대상 가운데 ID 가 가장 작은 꼭대기
+	 * @param storylineId 흐름 추적 버튼이 누를 스토리라인 — 헤드(추적 대상 가운데 뒤 흐름이 없는 꼭대기, 이 사용자 스토리라인에만 든다)
 	 * @param tops 추적 대상 꼭대기 — 스토리라인 ID 순. 그새 없어진 스토리라인은 빠진다
 	 * @param usage 정리에 쓴 모델과 토큰
 	 * @param createdAt 처음 정리한 시각
@@ -76,7 +75,7 @@ final class UserStorylineResponses {
 
 		static DetailResponse of(UserStorylineSummaryView view, Map<StorylineId, StorylineView> storylines) {
 			return new DetailResponse(view.id().value(), view.title(), view.summary(), view.recent(), view.tracked(),
-					firstTop(view).value(),
+					view.head().value(),
 					view.tops()
 						.stream()
 						.filter(top -> storylines.containsKey(top.storyline()))
@@ -173,11 +172,6 @@ final class UserStorylineResponses {
 			return new RefResponse(ref.id().value(), ref.title());
 		}
 
-	}
-
-	/** 추적 대상 가운데 ID 가 가장 작은 꼭대기 */
-	static StorylineId firstTop(UserStorylineSummaryView view) {
-		return Collections.min(view.members(), (a, b) -> Long.compare(a.value(), b.value()));
 	}
 
 }

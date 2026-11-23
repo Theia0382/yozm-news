@@ -17,9 +17,10 @@ import org.jspecify.annotations.Nullable;
  * @param subscribedAt 추적을 시작한 시각 — 추적 중이 아니면 null. 추적 중이면 추적 씨앗이 하나 이상이어야 하지만, 추적 씨앗의 스토리라인이
  *        모두 지워진 개체는 씨앗 없이 올 수 있다(맞추기가 고친다)
  * @param createdAt 만든 시각
+ * @param head 저장한 헤드의 지금 꼭대기 — 헤드 열이 생기기 전에 저장된 개체 · 헤드 스토리라인이 지워진 개체는 null
  */
 public record StoredUserStoryline(long id, Set<Long> tops, Map<Long, Long> trackedSeeds, @Nullable Instant subscribedAt,
-		Instant createdAt) {
+		Instant createdAt, @Nullable Long head) {
 
 	/**
 	 * @throws IllegalArgumentException 추적 중이 아닌데 추적 씨앗이 있을 때

@@ -35,7 +35,7 @@ class JdbcUserStorylines implements UserStorylineRepository {
 		Map<Long, Set<Long>> members = storylines("user_storyline_members", user);
 		Map<Long, Set<Long>> seeds = storylines("user_storyline_tracked_seeds", user);
 		return this.jdbc.sql("""
-				select u.id, u.created_at, s.created_at as subscribed_at
+				select u.id, u.created_at, u.head, s.created_at as subscribed_at
 				from user_storylines u
 				left join user_storyline_subscriptions s on s.user_storyline_id = u.id
 				where u.user_id = :user
@@ -43,9 +43,10 @@ class JdbcUserStorylines implements UserStorylineRepository {
 				""").param("user", user.value()).query((rs, n) -> {
 			long id = rs.getLong("id");
 			OffsetDateTime subscribedAt = rs.getObject("subscribed_at", OffsetDateTime.class);
+			Long head = rs.getObject("head", Long.class);
 			return new UserStorylineRow(id, rs.getObject("created_at", OffsetDateTime.class).toInstant(),
 					(subscribedAt == null) ? null : subscribedAt.toInstant(), members.getOrDefault(id, Set.of()),
-					seeds.getOrDefault(id, Set.of()));
+					seeds.getOrDefault(id, Set.of()), head);
 		}).list();
 	}
 
@@ -72,6 +73,11 @@ class JdbcUserStorylines implements UserStorylineRepository {
 			.param("at", utc(now))
 			.query(Long.class)
 			.single();
+	}
+
+	@Override
+	public void setHead(long id, long head) {
+		this.jdbc.sql("update user_storylines set head = :head where id = :id").param("head", head).param("id", id).update();
 	}
 
 	@Override

@@ -49,7 +49,7 @@ function flowSections(): DigestDay {
           body: null,
           reason: "SUBSCRIBED",
           storylineId: null,
-          userStoryline: null,
+          userStorylines: [],
           eventIds: [105],
           citations: [citation(5)],
         },
@@ -279,7 +279,7 @@ describe("DigestDayPage", () => {
               body: null,
               reason: "SUBSCRIBED",
               storylineId: null,
-              userStoryline: { id: 3, title: "의대 정원 갈등" },
+              userStorylines: [{ id: 3, title: "의대 정원 갈등" }],
               eventIds: [105],
               citations: [citation(5)],
             },
@@ -289,7 +289,7 @@ describe("DigestDayPage", () => {
               body: null,
               reason: "SUBSCRIBED",
               storylineId: null,
-              userStoryline: null,
+              userStorylines: [],
               eventIds: [106],
               citations: [citation(6)],
             },
@@ -323,6 +323,53 @@ describe("DigestDayPage", () => {
     ).toHaveLength(1);
   });
 
+  it("갈라지기 전 흐름의 항목은 그 흐름을 가진 정리된 흐름마다 링크를 받은 순서대로 둔다", async () => {
+    renderDay(
+      day({
+        shown: shown({
+          sections: [
+            {
+              kind: "HEADLINE",
+              title: "갈라지기 전 흐름의 소식",
+              body: null,
+              reason: "SUBSCRIBED",
+              storylineId: null,
+              userStorylines: [
+                { id: 3, title: "의대 정원 갈등" },
+                { id: 7, title: "전공의 복귀 협상" },
+              ],
+              eventIds: [105],
+              citations: [citation(5)],
+            },
+          ],
+        }),
+      }),
+    );
+
+    await screen.findByRole("heading", {
+      level: 3,
+      name: "갈라지기 전 흐름의 소식",
+    });
+    const flows = screen
+      .getAllByRole("link")
+      .filter((link) =>
+        link.getAttribute("href")?.startsWith("/user-storylines/"),
+      );
+    expect(flows.map((link) => link.textContent)).toEqual([
+      "의대 정원 갈등",
+      "전공의 복귀 협상",
+    ]);
+    expect(flows.map((link) => link.getAttribute("href"))).toEqual([
+      "/user-storylines/3",
+      "/user-storylines/7",
+    ]);
+    // 한 줄에 함께 둔다
+    expect(flows[0]!.closest("p")).toBe(flows[1]!.closest("p"));
+    expect(flows[0]!.closest("p")).toHaveTextContent(
+      "흐름 의대 정원 갈등 · 전공의 복귀 협상",
+    );
+  });
+
   it("선정 이유 배지는 항목에 하나이고 구독 주제가 아닌 항목에만 두며 범례를 둔다", async () => {
     renderDay(
       day({
@@ -335,7 +382,7 @@ describe("DigestDayPage", () => {
               body: null,
               reason: "SUBSCRIBED",
               storylineId: null,
-              userStoryline: null,
+              userStorylines: [],
               eventIds: [105],
               citations: [citation(5)],
             },
@@ -399,7 +446,7 @@ describe("DigestDayPage", () => {
               body: null,
               reason: "SUBSCRIBED",
               storylineId: null,
-              userStoryline: null,
+              userStorylines: [],
               eventIds: [101],
               citations: [citation(1)],
             },

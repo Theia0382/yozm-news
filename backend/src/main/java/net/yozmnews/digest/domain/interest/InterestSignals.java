@@ -68,8 +68,8 @@ public final class InterestSignals {
 	 * @param feedback 그 사용자의 이력 행 — 기록 순서
 	 * @param tops 지금 사건 → 꼭대기 — 소속이 없는 사건은 없다
 	 * @param flows 꼭대기 → 사용자 스토리라인 묶음
-	 * @return 묶음이 있는 꼭대기를 가진 노출 사건마다 하나 — 꼭대기 k 개면 꼭대기마다 그 묶음에 몫 배수 1/k(같은 묶음의 꼭대기 둘이면
-	 *         2/k). 묶음이 없는 꼭대기의 몫은 버린다. 주제를 셀 수 없는 사건도 든다
+	 * @return 묶음이 있는 꼭대기를 가진 노출 사건마다 하나 — 꼭대기 k 개면 꼭대기마다 그 꼭대기의 묶음 모두에 각각 몫 배수 1/k(같은
+	 *         묶음의 꼭대기 둘이면 2/k). 묶음이 없는 꼭대기의 몫은 버린다. 주제를 셀 수 없는 사건도 든다
 	 */
 	public static List<ExposedEvent<Integer>> storylineExposed(Map<EventId, Exposure> exposures,
 			List<FeedbackChange> feedback, Map<EventId, List<StorylineId>> tops, StorylineFlows flows) {
@@ -85,7 +85,8 @@ public final class InterestSignals {
 			}
 			Map<Integer, Double> keys = new HashMap<>();
 			for (StorylineId top : roots) {
-				flows.flowOf(top).ifPresent(flow -> keys.merge(flow, 1.0 / roots.size(), Double::sum));
+				// 꼭대기의 묶음 모두에 각각 온전히 — 갈라지기 전 꼭대기의 신호는 뒤 갈래 모두의 것이다
+				flows.flowsOf(top).forEach(flow -> keys.merge(flow, 1.0 / roots.size(), Double::sum));
 			}
 			if (!keys.isEmpty()) {
 				// 같은 묶음의 몫을 더한 값이 1 을 넘지 않게 한다(부동소수 합)
@@ -135,7 +136,7 @@ public final class InterestSignals {
 	}
 
 	/**
-	 * 스토리라인 구독 변경 — {@link #storylinesToRead} 와 같은 행 가운데 꼭대기와 그 묶음을 아는 행마다, 그 묶음에 몫 1.
+	 * 스토리라인 구독 변경 — {@link #storylinesToRead} 와 같은 행 가운데 꼭대기와 그 묶음을 아는 행마다, 그 꼭대기의 묶음 모두에 각각 몫 1.
 	 * @param storylineTops 지금 스토리라인 → 꼭대기 — 없는 스토리라인은 없다
 	 * @param flows 꼭대기 → 사용자 스토리라인 묶음 — 묶음이 없는 꼭대기의 행은 버린다
 	 */
@@ -150,10 +151,10 @@ public final class InterestSignals {
 				continue;
 			}
 			StorylineId top = storylineTops.get(change.current());
-			if (top != null) {
-				flows.flowOf(top)
-					.ifPresent(flow -> signals
-						.add(new SubscriptionSignal<>(Map.of(flow, 1.0), sign(change.action()), change.occurredAt())));
+			if (top != null && !flows.flowsOf(top).isEmpty()) {
+				Map<Integer, Double> shares = new HashMap<>();
+				flows.flowsOf(top).forEach(flow -> shares.put(flow, 1.0));
+				signals.add(new SubscriptionSignal<>(shares, sign(change.action()), change.occurredAt()));
 			}
 		}
 		return signals;

@@ -44,12 +44,15 @@ import { NARROW_WIDTH, PAGE_FRAME } from "@/shared/ui/widths";
 
 type Subscription = StorylineSubscriptions["subscriptions"][number];
 
-/** 추적 중인 흐름 하나와 그 첫 추적 씨앗의 카드 — 카드가 없으면 그새 지워진 스토리라인이다 */
+/** 추적 중인 흐름 하나와 그 헤드의 카드 — 카드가 없으면 그새 지워진 스토리라인이다 */
 type Row = { subscription: Subscription; card: StorylineCard | undefined };
 
-/** 그 흐름의 첫 추적 씨앗 — 응답의 추적 씨앗은 ID 순이고 하나 이상이다 */
-function firstSeed(subscription: Subscription): number {
-  return subscription.storylineIds[0]!;
+/**
+ * 그 흐름의 손잡이 — 헤드(추적 대상 가운데 뒤 흐름이 없는 꼭대기)는 그 흐름에만 든다. 갈라지기 전 흐름을 추적 씨앗으로 둔 갈래들도 줄마다
+ * 다른 카드를 보이고 해제는 그 갈래만 끈다
+ */
+function headOf(subscription: Subscription): number {
+  return subscription.headStorylineId;
 }
 
 function readOrder(value: string | null): SubscriptionOrder {
@@ -88,14 +91,13 @@ function orderSubscriptions(
 /**
  * 추적 중인 흐름 — 흐름(사용자 스토리라인)마다 한 줄로, 이어지는 것(진행 · 잠잠)과 끝난 것으로 나눠 고른 순서로 보이고 해제한다. 아래에
  * 사용자가 직접 한 구독 · 해제의 기록을 최근부터 보인다(docs/specs/user.md user-R52 · user-R63). 제목은 정리가 있으면 정리의 제목이고
- * 없으면 첫 추적 씨앗의 카드 제목이다. 상태는 응답의 값(추적 씨앗 가운데 가장 이어지는 것)이다
+ * 없으면 헤드의 카드 제목이다. 상태는 응답의 값(추적 씨앗 가운데 가장 이어지는 것)이다
  */
 export function SubscriptionsPage() {
   const [params, setParams] = useSearchParams();
   const order = readOrder(params.get("order"));
   const subscriptions = useStorylineSubscriptions();
-  const ids =
-    subscriptions.data?.subscriptions.map((one) => firstSeed(one)) ?? [];
+  const ids = subscriptions.data?.subscriptions.map((one) => headOf(one)) ?? [];
   const cards = useStorylineCards(ids);
 
   return (
@@ -134,7 +136,7 @@ export function SubscriptionsPage() {
         <Subscribed
           rows={subscriptions.data.subscriptions.map((subscription) => ({
             subscription,
-            card: cards.data.get(firstSeed(subscription)),
+            card: cards.data.get(headOf(subscription)),
           }))}
           order={order}
           onOrder={(next) =>
@@ -232,11 +234,11 @@ function SubscribedItem({ row }: { row: Row }) {
       </article>
     );
   }
-  // 정리가 있으면 개인 흐름 화면으로, 없으면 첫 추적 씨앗의 타임라인으로 간다
+  // 정리가 있으면 개인 흐름 화면으로, 없으면 헤드의 타임라인으로 간다
   const to =
     subscription.title !== null
       ? userStorylinePath(subscription.userStorylineId)
-      : storylinePath(firstSeed(subscription));
+      : storylinePath(headOf(subscription));
   return (
     <article className="space-y-1 rounded-md border border-input p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -250,9 +252,9 @@ function SubscribedItem({ row }: { row: Row }) {
           disabled={toggle.isPending}
           onClick={() => {
             setFailed(false);
-            // 어느 추적 씨앗으로 해제해도 그 흐름의 추적이 꺼진다
+            // 헤드로 해제한다 — 헤드는 이 흐름에만 들어 다른 갈래의 추적은 그대로다
             toggle.mutate(
-              { storylineId: firstSeed(subscription), subscribe: false },
+              { storylineId: headOf(subscription), subscribe: false },
               { onError: () => setFailed(true) },
             );
           }}

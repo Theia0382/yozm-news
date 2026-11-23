@@ -110,9 +110,9 @@ class DigestScreenController {
 		return DigestDayResponse.of(day, cited, userStorylinesOf(user, DigestDayResponse.flows(day)));
 	}
 
-	/** 항목을 묶은 흐름마다 그 흐름의 정리된 사용자 스토리라인 — 한 번에 묻는 상한씩 나눠 묻는다 */
-	private Map<StorylineId, UserStorylineSummaryRef> userStorylinesOf(UserId user, List<StorylineId> flows) {
-		Map<StorylineId, UserStorylineSummaryRef> found = new HashMap<>();
+	/** 항목을 묶은 흐름마다 그 흐름의 정리된 사용자 스토리라인 모두 — 한 번에 묻는 상한씩 나눠 묻는다 */
+	private Map<StorylineId, List<UserStorylineSummaryRef>> userStorylinesOf(UserId user, List<StorylineId> flows) {
+		Map<StorylineId, List<UserStorylineSummaryRef>> found = new HashMap<>();
 		for (int from = 0; from < flows.size(); from += UserStorylineSummaries.MAX_TOPS) {
 			found.putAll(this.summaries.ofTops(user,
 					flows.subList(from, Math.min(from + UserStorylineSummaries.MAX_TOPS, flows.size()))));

@@ -26,11 +26,11 @@ public interface UserStorylineSummaries {
 	Optional<UserStorylineSummaryView> find(UserId user, UserStorylineId id);
 
 	/**
-	 * 꼭대기마다 그 꼭대기를 저장한 추적 대상으로 가진 정리된 사용자 스토리라인.
+	 * 꼭대기마다 그 꼭대기를 저장한 추적 대상으로 가진 정리된 사용자 스토리라인 모두 — 갈라지기 전 꼭대기는 그 뒤 갈래의 것 여럿이다.
 	 * @param tops 스토리라인 포함 나무의 꼭대기 — {@link #MAX_TOPS} 개까지(같은 것은 하나로 센다)
-	 * @return 꼭대기 → 정리된 사용자 스토리라인 — 그런 것이 없는 꼭대기는 빠진다. 빈 입력이면 빈 맵
+	 * @return 꼭대기 → 정리된 사용자 스토리라인(사용자 스토리라인 ID 순, 비지 않음) — 그런 것이 없는 꼭대기는 빠진다. 빈 입력이면 빈 맵
 	 * @throws IllegalArgumentException 꼭대기가 상한보다 많을 때
 	 */
-	Map<StorylineId, UserStorylineSummaryRef> ofTops(UserId user, Collection<StorylineId> tops);
+	Map<StorylineId, List<UserStorylineSummaryRef>> ofTops(UserId user, Collection<StorylineId> tops);
 
 }

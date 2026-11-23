@@ -16,9 +16,9 @@ import org.jspecify.annotations.Nullable;
 /**
  * 큰 슬롯 고르기 — 정본 — docs/specs/digest.md §5
  * <p>
- * 큰 판정 행을 앞에서부터 사용자의 큰 슬롯 수만큼 쓴다 — 머리의 포함 나무 꼭대기가 거른 꼭대기인 행({@link UserFilter#passesStoryline})과
- * 후보 사건을 하나도 내지 못한 행은 세지 않고 다음 행으로 간다. 행마다 사건을 기간 안 중요도 합 내림차순(같으면 사건 ID 오름차순)으로
- * {@link SelectionRules#BIG_EVENTS_PER_STORYLINE} 개까지 — 후보가 없거나 앞 행이 쓴 사건은 세지 않고 다음 사건으로 간다. 큰 슬롯 사건 수가 상한을 넘으면 행 순서로 돌며 하나씩 담아 행마다 고르게 줄인다. 결과는 행 순서, 행
+ * 받은 큰 판정 행(관심을 곱한 순서 — {@link BigRowOrder})을 앞에서부터 사용자의 큰 슬롯 수만큼 쓴다 — 머리의 포함 나무 꼭대기가 거른
+ * 꼭대기인 행({@link UserFilter#passesStoryline})과 후보 사건을 하나도 내지 못한 행은 세지 않고 다음 행으로 간다. 행마다 사건을 기간 안
+ * 중요도 합 내림차순(같으면 사건 ID 오름차순)으로 {@link SelectionRules#BIG_EVENTS_PER_STORYLINE} 개까지 — 후보가 없거나 앞 행이 쓴 사건은 세지 않고 다음 사건으로 간다. 큰 슬롯 사건 수가 상한을 넘으면 행 순서로 돌며 하나씩 담아 행마다 고르게 줄인다. 결과는 행 순서, 행
  * 안에서는 사건 순서다.
  */
 public final class BigSlotPicker {
@@ -31,7 +31,7 @@ public final class BigSlotPicker {
 	}
 
 	/**
-	 * @param rows 큰 판정 행 — 큰 판정 목록의 순서 그대로
+	 * @param rows 큰 판정 행 — 받은 순서대로 쓴다(관심을 곱한 순서 — {@link BigRowOrder#order})
 	 * @param bigSlots 사용자의 큰 슬롯 수 — 0 이면 빈 결과
 	 * @param cap 큰 슬롯 사건 수의 상한({@link SelectionRules#bigSeats})
 	 * @param filter 그 사용자의 필터 — 행의 머리를 거르는 판정
@@ -107,13 +107,15 @@ public final class BigSlotPicker {
 	 * 큰 판정 행 하나 — 그 스토리라인의 기간 안 사건
 	 * @param head 행의 머리 — 큰 판정 행의 스토리라인
 	 * @param top 머리의 포함 나무 꼭대기 — 거름을 견주는 키. {@link #resolved} 가 정한다
+	 * @param intensity 행의 보도 강도({@code storyline.BigStoryline.intensity}) — 행 순서({@link BigRowOrder})가 관심 가중치를 곱한다
 	 * @param events 기간 안 기사가 있는 사건 — 순서 무관
 	 */
-	public record BigRow(StorylineId head, StorylineId top, List<BigEvent> events) {
+	public record BigRow(StorylineId head, StorylineId top, BigDecimal intensity, List<BigEvent> events) {
 
 		public BigRow {
 			Objects.requireNonNull(head, "head");
 			Objects.requireNonNull(top, "top");
+			Objects.requireNonNull(intensity, "intensity");
 			events = List.copyOf(Objects.requireNonNull(events, "events"));
 		}
 
@@ -121,10 +123,12 @@ public final class BigSlotPicker {
 		 * 머리의 꼭대기를 풀어 행을 만든다 — 정본. 꼭대기를 모르는 머리(조회 사이에 지워진 스토리라인)는 머리 자신을 꼭대기로 본다 — 큰
 		 * 판정이 낸 행이라 거름이 걸리지 않아도 해가 없다
 		 * @param tops 스토리라인 → 그 포함 나무의 꼭대기({@code StorylineDirectory.topsOfStorylines})
+		 * @param intensity 행의 보도 강도
 		 */
-		public static BigRow resolved(StorylineId head, Map<StorylineId, StorylineId> tops, List<BigEvent> events) {
+		public static BigRow resolved(StorylineId head, Map<StorylineId, StorylineId> tops, BigDecimal intensity,
+				List<BigEvent> events) {
 			Objects.requireNonNull(tops, "tops");
-			return new BigRow(head, tops.getOrDefault(Objects.requireNonNull(head, "head"), head), events);
+			return new BigRow(head, tops.getOrDefault(Objects.requireNonNull(head, "head"), head), intensity, events);
 		}
 
 	}
