@@ -271,18 +271,19 @@ class InterestWindowTests {
 
 	@Test
 	void aDislikeOnAFlowSeenTheDayBeforeStaysOutOfTheTopic() {
-		// 대조 — b 가 a 의 8일 뒤(7일 밖)면 처음 본 흐름: t = −1 ÷ (2 + 3) = −0.2 · TREE = −0.2
+		// 대조 — b 가 a 의 8일 뒤(7일 밖)면 처음 본 흐름: t = −1 ÷ (2 + 3) = −0.2. TREE 는 스토리라인 묶음이 반응이 앞선 무반응 노출을
+		// 대신해 a 가 빠진다 — −1 ÷ (1 + 3) = −0.25. 주제는 대신하지 않아 a 가 남는다
 		InterestRecord late = flow(T.plus(Duration.ofDays(9)));
 		assertThat(InterestWindow.levels(late, T, LATER).topics().level("t")).isCloseTo(-0.2, EXACT);
-		assertThat(InterestWindow.levels(late, T, LATER).storylines().level(TREE)).isCloseTo(-0.2, EXACT);
+		assertThat(InterestWindow.levels(late, T, LATER).storylines().level(TREE)).isCloseTo(-0.25, EXACT);
 		// 같은 꼭대기 TREE 의 사건 a(하루 뒤, 주제 t)와 b(이틀 뒤, 주제 t), b 에 싫어요 — b 는 반복이라 주제에 없다
 		InterestRecord record = flow(T.plus(Duration.ofDays(2)));
 
 		Interests interests = InterestWindow.levels(record, T, LATER);
 
-		// 주제 t: a 만 — E = 1 · F = 0 → x = 0 ÷ 4 = 0. TREE: a · b — E = 2 · F = −1 → x = −1 ÷ 5 = −0.2
+		// 주제 t: a 만 — E = 1 · F = 0 → x = 0 ÷ 4 = 0. TREE: b 의 싫어요가 앞선 무반응 a 를 대신한다 — E = 1 · F = −1 → x = −1 ÷ 4 = −0.25
 		assertThat(interests.topics().levels()).containsEntry("t", 0.0);
-		assertThat(interests.storylines().level(TREE)).isCloseTo(-0.2, EXACT);
+		assertThat(interests.storylines().level(TREE)).isCloseTo(-0.25, EXACT);
 	}
 
 	@Test

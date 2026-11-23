@@ -19,6 +19,8 @@ import org.junit.jupiter.api.Test;
 /**
  * 관심도 산식 — 기대값은 산식을 시험 안에서 다시 계산하지 않고 손으로 계산해 적은 리터럴이다(상수: 반감기 30일 · β 0.5 · γ 0.1 · K 3 — 구독
  * 신호는 노출 분모 밖의 항). 노출 사건의 몫은 따로 적지 않으면 1 이다.
+ * <p>
+ * 지키는 규칙: digest-R23(반응이 앞선 무반응 노출을 대신하는 묶음 포함)
  */
 class InterestFormulaTests {
 
@@ -28,7 +30,7 @@ class InterestFormulaTests {
 
 	/** 구독 신호는 노출 분모 밖의 항 — 리터럴 상수 묶음(반감기 30일 · K 3 · γ 0.1 · β 0.5) */
 	private static final InterestConstants SUBSCRIPTION_OUTSIDE = new InterestConstants(Duration.ofDays(30), 3.0, 0.1,
-			0.5);
+			0.5, false);
 
 	@Test
 	void withoutSignalsEveryTopicIsNeutral() {
@@ -186,7 +188,7 @@ class InterestFormulaTests {
 	@Test
 	void theConstantsComeFromTheGivenBundle() {
 		// 같은 재료(노출 1 · 좋아요)에 K 1 묶음 → x = 1 ÷ (1 + 1) = 0.5 — 주제 묶음(K 3)이면 0.25
-		InterestConstants priorOne = new InterestConstants(Duration.ofDays(30), 1.0, 1.0, 0.5);
+		InterestConstants priorOne = new InterestConstants(Duration.ofDays(30), 1.0, 1.0, 0.5, false);
 		List<ExposedEvent<String>> exposed = List.of(exposed(Set.of("a"), T, FeedbackValue.LIKE));
 
 		assertThat(InterestFormula.levels(exposed, List.of(), T, priorOne).get("a")).isCloseTo(0.5, EXACT);
@@ -197,7 +199,7 @@ class InterestFormulaTests {
 	void theHalfLifeComesFromTheGivenBundle() {
 		// 60일 전 노출 · 좋아요 — 주제 묶음(반감기 30일)이면 무게 0.25 → x = 0.25 ÷ 3.25 = 1/13,
 		// 반감기 60일 묶음이면 무게 0.5 → x = 0.5 ÷ 3.5 = 1/7
-		InterestConstants halfLifeSixty = new InterestConstants(Duration.ofDays(60), 3.0, 1.0, 0.5);
+		InterestConstants halfLifeSixty = new InterestConstants(Duration.ofDays(60), 3.0, 1.0, 0.5, false);
 		List<ExposedEvent<String>> exposed = List
 			.of(exposed(Set.of("a"), T.minus(Duration.ofDays(60)), FeedbackValue.LIKE));
 
@@ -210,7 +212,7 @@ class InterestFormulaTests {
 	@Test
 	void theSubscriptionSignalComesFromTheGivenBundle() {
 		// 노출 0 · 주제 구독 더함 하나 — 주제 묶음(γ 0.1)이면 x = 0.1, γ 0.25 묶음이면 x = 0.25
-		InterestConstants signalQuarter = new InterestConstants(Duration.ofDays(30), 3.0, 0.25, 0.5);
+		InterestConstants signalQuarter = new InterestConstants(Duration.ofDays(30), 3.0, 0.25, 0.5, false);
 		List<SubscriptionSignal<String>> signals = List.of(added(Map.of("a", 1.0), T));
 
 		assertThat(InterestFormula.levels(List.of(), signals, T, InterestRules.TOPIC).get("a")).isCloseTo(0.1, EXACT);
@@ -232,6 +234,98 @@ class InterestFormulaTests {
 			.isCloseTo(0.1, EXACT);
 	}
 
+	/** 반응이 앞선 무반응 노출을 대신하는 묶음 — 반감기 30일 · K 3 · γ 1/3 · β 0.5(스토리라인 묶음과 같은 값의 리터럴) */
+	private static final InterestConstants REPLACING = new InterestConstants(Duration.ofDays(30), 3.0, 1.0 / 3.0, 0.5,
+			true);
+
+	/** {@link #REPLACING} 과 같은 값에 대신하지 않는 묶음 */
+	private static final InterestConstants NOT_REPLACING = new InterestConstants(Duration.ofDays(30), 3.0, 1.0 / 3.0,
+			0.5, false);
+
+	private static final Instant DAY_BEFORE = T.minus(Duration.ofDays(1));
+
+	@Test
+	void aReactionReplacesTheSilentExposuresBeforeIt() {
+		// 무반응(하루 전) → 싫어요(T) — 무반응이 빠져 x = −1 ÷ (1 + 3) = −0.25
+		List<ExposedEvent<String>> exposed = List.of(exposed(Set.of("k"), DAY_BEFORE, FeedbackValue.NONE),
+				exposed(Set.of("k"), T, FeedbackValue.DISLIKE));
+
+		assertThat(InterestFormula.levels(exposed, List.of(), T, REPLACING).get("k")).isCloseTo(-0.25, EXACT);
+	}
+
+	@Test
+	void withoutTheRuleTheSilenceDilutesTheReaction() {
+		// 대조 — 끈 묶음: −1 ÷ (0.5^(1/30) + 1 + 3)
+		List<ExposedEvent<String>> exposed = List.of(exposed(Set.of("k"), DAY_BEFORE, FeedbackValue.NONE),
+				exposed(Set.of("k"), T, FeedbackValue.DISLIKE));
+
+		assertThat(InterestFormula.levels(exposed, List.of(), T, NOT_REPLACING).get("k"))
+			.isCloseTo(-0.20091779375027558, EXACT);
+	}
+
+	@Test
+	void silenceAfterTheReactionStays() {
+		// 대조 — 싫어요(하루 전) → 무반응(T): −0.5^(1/30) ÷ (0.5^(1/30) + 1 + 3)
+		List<ExposedEvent<String>> exposed = List.of(exposed(Set.of("k"), DAY_BEFORE, FeedbackValue.DISLIKE),
+				exposed(Set.of("k"), T, FeedbackValue.NONE));
+
+		assertThat(InterestFormula.levels(exposed, List.of(), T, REPLACING).get("k"))
+			.isCloseTo(-0.19632882499889762, EXACT);
+	}
+
+	@Test
+	void silenceAtTheSameTimeAsTheReactionStays() {
+		// 대조 — 같은 다이제스트의 다른 항목(같은 노출 시각)은 앞이 아니다: −1 ÷ (2 + 3) = −0.2
+		List<ExposedEvent<String>> exposed = List.of(exposed(Set.of("k"), T, FeedbackValue.NONE),
+				exposed(Set.of("k"), T, FeedbackValue.DISLIKE));
+
+		assertThat(InterestFormula.levels(exposed, List.of(), T, REPLACING).get("k")).isCloseTo(-0.2, EXACT);
+	}
+
+	@Test
+	void aLikeAlsoReplacesTheSilenceBeforeIt() {
+		// 무반응(하루 전) → 좋아요(T): 1 ÷ (1 + 3) = 0.25
+		List<ExposedEvent<String>> exposed = List.of(exposed(Set.of("k"), DAY_BEFORE, FeedbackValue.NONE),
+				exposed(Set.of("k"), T, FeedbackValue.LIKE));
+
+		assertThat(InterestFormula.levels(exposed, List.of(), T, REPLACING).get("k")).isCloseTo(0.25, EXACT);
+	}
+
+	@Test
+	void theSilenceLeavesOnlyTheKeysThatHaveALaterReaction() {
+		// 무반응 사건(하루 전)이 k1 · k2 에 들고, 싫어요 사건(T)은 k1 에만 — k1 은 −1 ÷ (1 + 3), k2 는 노출만 남아 0
+		List<ExposedEvent<String>> exposed = List.of(exposed(Set.of("k1", "k2"), DAY_BEFORE, FeedbackValue.NONE),
+				exposed(Set.of("k1"), T, FeedbackValue.DISLIKE));
+
+		Map<String, Double> levels = InterestFormula.levels(exposed, List.of(), T, REPLACING);
+
+		assertThat(levels.get("k1")).isCloseTo(-0.25, EXACT);
+		assertThat(levels).containsEntry("k2", 0.0);
+	}
+
+	@Test
+	void aSubscriptionIsNotAReactionThatReplacesSilence() {
+		// 싫어요(T+1시간) → 무반응(T+2시간) → 구독 더함(T+3시간), 모두 무게 1 — 무반응은 반응 뒤라 남는다: −1 ÷ (2 + 3) + 1/3 = 2/15
+		List<ExposedEvent<String>> exposed = List.of(
+				exposed(Set.of("k"), T.plus(Duration.ofHours(1)), FeedbackValue.DISLIKE),
+				exposed(Set.of("k"), T.plus(Duration.ofHours(2)), FeedbackValue.NONE));
+
+		assertThat(InterestFormula
+			.levels(exposed, List.of(added(Map.of("k", 1.0), T.plus(Duration.ofHours(3)))), T, REPLACING)
+			.get("k")).isCloseTo(0.13333333333333333, EXACT);
+	}
+
+	@Test
+	void theLatestReactionSetsTheLine() {
+		// 싫어요(T+1시간) → 무반응(T+2시간) → 싫어요(T+3시간), 모두 무게 1 — 무반응이 가장 늦은 반응 앞이라 빠진다: −2 ÷ (2 + 3) = −0.4
+		List<ExposedEvent<String>> exposed = List.of(
+				exposed(Set.of("k"), T.plus(Duration.ofHours(1)), FeedbackValue.DISLIKE),
+				exposed(Set.of("k"), T.plus(Duration.ofHours(2)), FeedbackValue.NONE),
+				exposed(Set.of("k"), T.plus(Duration.ofHours(3)), FeedbackValue.DISLIKE));
+
+		assertThat(InterestFormula.levels(exposed, List.of(), T, REPLACING).get("k")).isCloseTo(-0.4, EXACT);
+	}
+
 	@Test
 	void reactionsAndASubscriptionAreAddedOutsideTheDenominator() {
 		// 노출 9 · 좋아요 3 · 구독 1 → x = 3 ÷ (9 + 3) + 0.1 = 0.35
@@ -250,7 +344,7 @@ class InterestFormulaTests {
 	@Test
 	void theSumIsClampedToOne() {
 		// γ 0.5 묶음 · 노출 9 · 좋아요 9 · 구독 1 → 9 ÷ 12 + 0.5 = 1.25 → 1
-		InterestConstants half = new InterestConstants(Duration.ofDays(30), 3.0, 0.5, 0.5);
+		InterestConstants half = new InterestConstants(Duration.ofDays(30), 3.0, 0.5, 0.5, false);
 		List<ExposedEvent<String>> exposed = new ArrayList<>();
 		for (int i = 0; i < 9; i++) {
 			exposed.add(exposed(Set.of("a"), T, FeedbackValue.LIKE));

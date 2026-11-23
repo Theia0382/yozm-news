@@ -523,10 +523,7 @@ class CandidateSelectionTests {
 		long fresh = event(eventArticle("분쟁 속 정부 대응", "politics.executive", 3.5, "2026-11-05T06:00:00Z", 1));
 		this.rows.member(storyline, fresh);
 		// 그 스토리라인의 지난 사건 — 11-04 다이제스트가 혼자인 항목으로 보였다(몫 1)
-		long pastArticle = article("분쟁 지난 일", "world.conflict", 3.0, "2026-11-01T00:00:00Z", 1);
-		long past = this.rows.event(1, "2026-11-01T00:00:00Z", "2026-11-01T00:00:00Z");
-		this.rows.assign(pastArticle, past, "2026-11-01T00:00:00Z");
-		this.rows.member(storyline, past);
+		long past = pastMemberOf(storyline, "분쟁 지난 일");
 		DigestRows.item(this.jdbc, DigestRows.digest(this.jdbc, this.user, "2026-11-04", "2026-11-04T06:00:00Z"), past);
 		// 대조 — 싫어요 전에는 그 스토리라인의 두 사건이 큰 슬롯으로 든다
 		assertThat(events(this.selection.select(new UserId(this.user), DAY, ROOMY))).containsExactly(
@@ -539,6 +536,29 @@ class CandidateSelectionTests {
 
 		assertThat(events(this.selection.select(new UserId(this.user), DAY, ROOMY)))
 			.containsExactly(this.e1 + ":SUBSCRIBED", event(this.a5) + ":SUBSCRIBED");
+	}
+
+	@Test
+	void aDislikeAfterASilentExposureOfTheSameFlowLeavesItsBigRowOut() {
+		long[] conflict = bigStoryline();
+		long storyline = storylineOf(event(conflict[0]));
+		// 그 스토리라인의 지난 사건 a · b — 11-03 다이제스트가 a 를 혼자인 항목으로 보였고 반응이 없었다. 11-04 다이제스트가 b 를 혼자인 항목으로
+		// 보였고 싫어요. 스토리라인 묶음은 b 의 싫어요가 앞선 무반응 a 를 대신한다 — x ≈ −0.96 ÷ (0.96 + 3) ≈ −0.242 ≤ −0.2 라 행을
+		// 건너뛴다(대신하지 않으면 a 가 분모에 남아 ≈ −0.196 으로 들어온다)
+		long a = pastMemberOf(storyline, "분쟁 그제 일");
+		long b = pastMemberOf(storyline, "분쟁 어제 일");
+		DigestRows.item(this.jdbc, DigestRows.digest(this.jdbc, this.user, "2026-11-03", "2026-11-03T06:00:00Z"), a);
+		DigestRows.item(this.jdbc, DigestRows.digest(this.jdbc, this.user, "2026-11-04", "2026-11-04T06:00:00Z"), b);
+		react(b, "DISLIKE", "2026-11-04T07:00:00Z");
+
+		assertThat(events(this.selection.select(new UserId(this.user), DAY, ROOMY)))
+			.containsExactly(this.e1 + ":SUBSCRIBED", event(this.a5) + ":SUBSCRIBED");
+
+		// 대조 — b 를 좋아요로 바꾸면 행이 든다
+		react(b, "LIKE", "2026-11-04T08:00:00Z");
+
+		assertThat(events(this.selection.select(new UserId(this.user), DAY, ROOMY))).first()
+			.isEqualTo(event(conflict[0]) + ":MAJOR_STORYLINE");
 	}
 
 	@Test
@@ -983,6 +1003,15 @@ class CandidateSelectionTests {
 			DigestRows.item(this.jdbc, digest, past);
 			react(past, "DISLIKE", "2026-11-04T07:00:00Z");
 		}
+	}
+
+	/** 기간 앞(11-01)의 구독 밖(국제 분쟁) 기사 하나를 가진 사건을 그 스토리라인의 소속으로 — 사건 ID */
+	private long pastMemberOf(long storyline, String title) {
+		long article = article(title, "world.conflict", 3.0, "2026-11-01T00:00:00Z", 1);
+		long event = this.rows.event(1, "2026-11-01T00:00:00Z", "2026-11-01T00:00:00Z");
+		this.rows.assign(article, event, "2026-11-01T00:00:00Z");
+		this.rows.member(storyline, event);
+		return event;
 	}
 
 	/** 입력의 사건마다 "사건 ID:선정 이유" — 항목 순서, 항목 안 사건 순서. 계정이 있어야 한다 */

@@ -11,15 +11,17 @@ public final class InterestRules {
 
 	/**
 	 * 주제 중분류 관심의 상수 — 반감기 30일 · K 3(노출이 적은 주제를 중립 쪽으로) · γ 0.1(구독 변경 하나가 관심에 더하는 값 — "관심 있음" 기준
-	 * {@link #PRESENCE_THRESHOLD} 보다 작아 구독만으로는 관심 있음이 되지 않는다) · β 0.5(가중치는 0.5 ~ 1.5)
+	 * {@link #PRESENCE_THRESHOLD} 보다 작아 구독만으로는 관심 있음이 되지 않는다) · β 0.5(가중치는 0.5 ~ 1.5). 반응이 앞선 무반응 노출을
+	 * 대신하지 않는다 — 주제는 날마다 서로 다른 이야기가 노출되어 침묵이 그 주제가 덜 끌린다는 독립된 증거다
 	 */
-	public static final InterestConstants TOPIC = new InterestConstants(Duration.ofDays(30), 3.0, 0.1, 0.5);
+	public static final InterestConstants TOPIC = new InterestConstants(Duration.ofDays(30), 3.0, 0.1, 0.5, false);
 
 	/**
 	 * 스토리라인(포함 나무의 꼭대기) 관심의 상수 — 반감기 30일 · K 3 · γ 1/3(추적만 한 흐름의 관심 — 노출이 쌓여도 그대로) · β 0.5. 주제와
-	 * 따로 바꿀 수 있게 따로 둔다
+	 * 따로 바꿀 수 있게 따로 둔다. 반응이 앞선 무반응 노출을 대신한다 — 흐름은 같은 이야기를 거듭 보이므로 반응 앞의 침묵이 독립된 증거가 아니다
 	 */
-	public static final InterestConstants STORYLINE = new InterestConstants(Duration.ofDays(30), 3.0, 1.0 / 3.0, 0.5);
+	public static final InterestConstants STORYLINE = new InterestConstants(Duration.ofDays(30), 3.0, 1.0 / 3.0, 0.5,
+			true);
 
 	/**
 	 * 관심의 거름 기준 — 흐름 관심과 큰 슬롯 사건의 주제 관심이 같은 값을 쓴다. 스토리라인 관심 x 가 이 값 이하(경계 포함)인 꼭대기는 거른다
