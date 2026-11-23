@@ -30,10 +30,10 @@ class BigSlotPickerTests {
 
 	@Test
 	void rowsAreTakenInOrderUpToTheUsersBigSlotsSkippingRowsWithoutCandidates() {
-		BigRow first = new BigRow(HEAD, HEAD, List.of(event(1, "5")));
-		BigRow nothing = new BigRow(HEAD, HEAD, List.of(new BigEvent(new EventId(2), new BigDecimal("9"), null)));
-		BigRow second = new BigRow(HEAD, HEAD, List.of(event(3, "4")));
-		BigRow third = new BigRow(HEAD, HEAD, List.of(event(4, "3")));
+		BigRow first = new BigRow(HEAD, HEAD, BigDecimal.ONE, List.of(event(1, "5")));
+		BigRow nothing = new BigRow(HEAD, HEAD, BigDecimal.ONE, List.of(new BigEvent(new EventId(2), new BigDecimal("9"), null)));
+		BigRow second = new BigRow(HEAD, HEAD, BigDecimal.ONE, List.of(event(3, "4")));
+		BigRow third = new BigRow(HEAD, HEAD, BigDecimal.ONE, List.of(event(4, "3")));
 
 		BigSlots slots = BigSlotPicker.pick(List.of(first, nothing, second, third), 2, 30, NO_EXCLUSIONS);
 
@@ -45,9 +45,9 @@ class BigSlotPickerTests {
 	@Test
 	void aRowWhoseHeadIsAnExcludedTopIsSkippedAndKeepsItsPosition() {
 		StorylineId excluded = new StorylineId(100);
-		BigRow first = new BigRow(excluded, excluded, List.of(event(1, "9")));
-		BigRow second = new BigRow(HEAD, HEAD, List.of(event(2, "8")));
-		BigRow third = new BigRow(new StorylineId(300), new StorylineId(300), List.of(event(3, "7")));
+		BigRow first = new BigRow(excluded, excluded, BigDecimal.ONE, List.of(event(1, "9")));
+		BigRow second = new BigRow(HEAD, HEAD, BigDecimal.ONE, List.of(event(2, "8")));
+		BigRow third = new BigRow(new StorylineId(300), new StorylineId(300), BigDecimal.ONE, List.of(event(3, "7")));
 		// 대조 — 거른 꼭대기가 없으면 첫 행부터
 		assertThat(BigSlotPicker.pick(List.of(first, second, third), 2, 30, NO_EXCLUSIONS).rows()).containsExactly(0, 1);
 
@@ -64,8 +64,8 @@ class BigSlotPickerTests {
 		StorylineId excludedTop = new StorylineId(100);
 		StorylineId excludedHead = new StorylineId(200);
 		// 머리 201 의 꼭대기가 거른 꼭대기 100 — 건너뛴다. 머리 200 은 거른 꼭대기지만 그 꼭대기 300 은 아니다 — 쓴다
-		BigRow underExcludedTop = new BigRow(new StorylineId(201), excludedTop, List.of(event(1, "9")));
-		BigRow excludedHeadOnly = new BigRow(excludedHead, new StorylineId(300), List.of(event(2, "8")));
+		BigRow underExcludedTop = new BigRow(new StorylineId(201), excludedTop, BigDecimal.ONE, List.of(event(1, "9")));
+		BigRow excludedHeadOnly = new BigRow(excludedHead, new StorylineId(300), BigDecimal.ONE, List.of(event(2, "8")));
 		UserFilter filter = UserFilter.of(Facts.interests(List.of(), Set.of(), Set.of(), Set.of()), Set.of(),
 				Set.of(excludedTop, excludedHead));
 
@@ -82,8 +82,8 @@ class BigSlotPickerTests {
 		StorylineId unknown = new StorylineId(202);
 		Map<StorylineId, StorylineId> tops = Map.of(head, top);
 
-		assertThat(BigRow.resolved(head, tops, List.of()).top()).isEqualTo(top);
-		assertThat(BigRow.resolved(unknown, tops, List.of()).top()).isEqualTo(unknown);
+		assertThat(BigRow.resolved(head, tops, BigDecimal.ONE, List.of()).top()).isEqualTo(top);
+		assertThat(BigRow.resolved(unknown, tops, BigDecimal.ONE, List.of()).top()).isEqualTo(unknown);
 	}
 
 	@Test
@@ -95,7 +95,7 @@ class BigSlotPickerTests {
 		// 같은 중요도 합 11 이 하나 더 — 사건 ID 가 작은 쪽이 먼저(사건 12 > 사건 11)
 		events.add(event(12, "11"));
 
-		BigSlots slots = BigSlotPicker.pick(List.of(new BigRow(HEAD, HEAD, events)), 3, 30, NO_EXCLUSIONS);
+		BigSlots slots = BigSlotPicker.pick(List.of(new BigRow(HEAD, HEAD, BigDecimal.ONE, events)), 3, 30, NO_EXCLUSIONS);
 
 		// 11(ID 11) · 11(ID 12) · 10 · 9 · … · 3 — 중요도 합 2 · 1 은 빠진다
 		assertThat(ids(slots)).containsExactly(11L, 12L, 10L, 9L, 8L, 7L, 6L, 5L, 4L, 3L);
@@ -103,7 +103,7 @@ class BigSlotPickerTests {
 
 	@Test
 	void eventsWithoutCandidatesOrUsedByAnEarlierRowDoNotCount() {
-		BigRow first = new BigRow(HEAD, HEAD, List.of(event(1, "9"), event(2, "8")));
+		BigRow first = new BigRow(HEAD, HEAD, BigDecimal.ONE, List.of(event(1, "9"), event(2, "8")));
 		// 둘째 행: 사건 1 은 첫 행이 썼고 사건 5 는 후보가 없다 — k 를 세지 않고 다음 사건으로
 		List<BigEvent> secondEvents = new ArrayList<>(
 				List.of(event(1, "20"), new BigEvent(new EventId(5), new BigDecimal("19"), null)));
@@ -111,7 +111,7 @@ class BigSlotPickerTests {
 			secondEvents.add(event(i, "1"));
 		}
 
-		BigSlots slots = BigSlotPicker.pick(List.of(first, new BigRow(HEAD, HEAD, secondEvents)), 2, 30, NO_EXCLUSIONS);
+		BigSlots slots = BigSlotPicker.pick(List.of(first, new BigRow(HEAD, HEAD, BigDecimal.ONE, secondEvents)), 2, 30, NO_EXCLUSIONS);
 
 		// 첫 행 1 · 2, 둘째 행은 사건 6 ~ 15 의 열 개(16 은 빠진다)
 		assertThat(ids(slots)).containsExactly(1L, 2L, 6L, 7L, 8L, 9L, 10L, 11L, 12L, 13L, 14L, 15L);
@@ -120,9 +120,9 @@ class BigSlotPickerTests {
 	@Test
 	void overTheCapEachRowIsTrimmedEvenlyAndTheCapCountsEvents() {
 		// 사건마다 기사 셋 — 상한은 사건 수라 기사 수와 무관하다
-		BigRow first = new BigRow(HEAD, HEAD, List.of(event(1, "9", 3), event(2, "8", 3), event(3, "7", 3)));
-		BigRow second = new BigRow(HEAD, HEAD, List.of(event(4, "9", 3)));
-		BigRow third = new BigRow(HEAD, HEAD, List.of(event(5, "9", 3), event(6, "8", 3), event(7, "7", 3)));
+		BigRow first = new BigRow(HEAD, HEAD, BigDecimal.ONE, List.of(event(1, "9", 3), event(2, "8", 3), event(3, "7", 3)));
+		BigRow second = new BigRow(HEAD, HEAD, BigDecimal.ONE, List.of(event(4, "9", 3)));
+		BigRow third = new BigRow(HEAD, HEAD, BigDecimal.ONE, List.of(event(5, "9", 3), event(6, "8", 3), event(7, "7", 3)));
 
 		// 상한 5 — 행 순서로 하나씩: 1 · 4 · 5 · 2 · 6
 		BigSlots slots = BigSlotPicker.pick(List.of(first, second, third), 3, 5, NO_EXCLUSIONS);
@@ -135,7 +135,7 @@ class BigSlotPickerTests {
 
 	@Test
 	void zeroBigSlotsTurnTheSlotOff() {
-		BigRow row = new BigRow(HEAD, HEAD, List.of(event(1, "9")));
+		BigRow row = new BigRow(HEAD, HEAD, BigDecimal.ONE, List.of(event(1, "9")));
 
 		assertThat(BigSlotPicker.pick(List.of(row), 0, 30, NO_EXCLUSIONS)).isEqualTo(BigSlots.NONE);
 		assertThat(BigSlotPicker.pick(List.of(), 3, 30, NO_EXCLUSIONS).events()).isEmpty();

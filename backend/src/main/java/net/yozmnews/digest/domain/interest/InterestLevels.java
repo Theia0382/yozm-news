@@ -9,7 +9,7 @@ import java.util.stream.Collectors;
 /**
  * 한 사용자의 주제 중분류마다 관심 x(−1 ~ 1) — {@link InterestFormula#levels} 가 주제 묶음({@link InterestRules#TOPIC})으로 낸 값을 담는다.
  * 맵에 없는 중분류는 0(신호 없음)이다.
- * 가중치({@link TopicInterests})로 옮기는 변환과 "관심 있음"의 판정이 여기 한 곳에 있다. docs/specs/digest.md §5 · digest-R23 · digest-R36
+ * 가중치({@link TopicInterests})로 옮기는 변환과 "관심 있음" · 큰 슬롯 사건의 주제 거름 판정이 여기 한 곳에 있다. docs/specs/digest.md §5 · digest-R23 · digest-R36
  */
 public final class InterestLevels {
 
@@ -43,12 +43,27 @@ public final class InterestLevels {
 		return this.levels;
 	}
 
-	/** 가중치 — 중분류마다 g = {@link InterestRules#NEUTRAL} + β({@link InterestRules#TOPIC} 의 세기) × x. 변환의 정본 */
+	/** 가중치 — 중분류마다 g = {@link InterestRules#NEUTRAL} + β({@link InterestRules#TOPIC} 의 세기) × x */
 	public TopicInterests weights() {
 		Map<String, Double> weights = new HashMap<>();
-		this.levels.forEach((subtopic, level) -> weights.put(subtopic,
-				InterestRules.NEUTRAL + InterestRules.TOPIC.strength() * level));
+		this.levels.forEach((subtopic, level) -> weights.put(subtopic, weightAt(level)));
 		return new TopicInterests(weights);
+	}
+
+	/**
+	 * 큰 슬롯에서 거를 사건인가 — 사건의 주제 가중치({@link TopicInterests#weightOf} — 중분류 가중치의 산술 평균, 신호 없는 중분류는 중립)가
+	 * {@link InterestRules#EXCLUSION_THRESHOLD} 를 가중치로 옮긴 값 이하(경계 포함)이면 참이다. 가중치는 관심의 1차 증가식이라 주제 관심의
+	 * 평균이 거름 기준 이하라는 뜻과 같다. 주제가 없으면 중립이라 거짓 — docs/specs/digest.md §5 · digest-R19
+	 * @param subtopics 사건의 주제 중분류
+	 */
+	public boolean excluded(Set<String> subtopics) {
+		Objects.requireNonNull(subtopics, "subtopics");
+		return weights().weightOf(subtopics) <= weightAt(InterestRules.EXCLUSION_THRESHOLD);
+	}
+
+	/** 관심 x 를 가중치로 옮기는 변환 — 정본 */
+	private static double weightAt(double level) {
+		return InterestRules.NEUTRAL + InterestRules.TOPIC.strength() * level;
 	}
 
 	/** 관심 있음 — x 가 {@link InterestRules#PRESENCE_THRESHOLD} 이상인 중분류 */

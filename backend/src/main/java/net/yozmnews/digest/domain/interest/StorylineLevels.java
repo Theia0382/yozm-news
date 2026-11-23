@@ -93,11 +93,11 @@ public final class StorylineLevels {
 		return new StorylineInterests(weights);
 	}
 
-	/** 거른 꼭대기 — 그 꼭대기의 묶음이 모두(최대가) {@link InterestRules#STORYLINE_EXCLUSION_THRESHOLD} 이하(경계 포함) */
+	/** 거른 꼭대기 — 그 꼭대기의 묶음이 모두(최대가) {@link InterestRules#EXCLUSION_THRESHOLD} 이하(경계 포함) */
 	public Set<StorylineId> excluded() {
 		return this.highest.entrySet()
 			.stream()
-			.filter(entry -> entry.getValue() <= InterestRules.STORYLINE_EXCLUSION_THRESHOLD)
+			.filter(entry -> entry.getValue() <= InterestRules.EXCLUSION_THRESHOLD)
 			.map(Map.Entry::getKey)
 			.collect(Collectors.toUnmodifiableSet());
 	}

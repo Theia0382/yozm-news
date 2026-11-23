@@ -22,10 +22,12 @@ public final class InterestRules {
 	public static final InterestConstants STORYLINE = new InterestConstants(Duration.ofDays(30), 3.0, 1.0 / 3.0, 0.5);
 
 	/**
-	 * 스토리라인 관심의 거름 기준 — 관심 x 가 이 값 이하(경계 포함)인 꼭대기는 거른다({@link StorylineLevels#excluded}): 그 꼭대기만 가진
-	 * 사건은 후보에서 빠지고, 머리가 그 꼭대기인 큰 판정 행은 건너뛴다. 처음 값은 혼자인 항목의 사건 하나에 싫어요 한 번으로 닿는 높이다
+	 * 관심의 거름 기준 — 흐름 관심과 큰 슬롯 사건의 주제 관심이 같은 값을 쓴다. 스토리라인 관심 x 가 이 값 이하(경계 포함)인 꼭대기는 거른다
+	 * ({@link StorylineLevels#excluded}): 그 꼭대기만 가진 사건은 후보에서 빠지고, 머리가 그 꼭대기인 큰 판정 행은 건너뛴다. 주제 관심의
+	 * 평균이 이 값 이하(경계 포함)인 사건은 큰 슬롯에 넣지 않는다({@link InterestLevels#excluded}). 처음 값은 혼자인 항목의 사건 하나에 싫어요
+	 * 한 번으로 닿는 높이다(주제 · 흐름 모두 K 3 이라 −0.25)
 	 */
-	public static final double STORYLINE_EXCLUSION_THRESHOLD = -0.2;
+	public static final double EXCLUSION_THRESHOLD = -0.2;
 
 	/**
 	 * 관심 흐름의 기준 — 관심 x 가 이 값 이상인 꼭대기는 (추적 중인 사용자 스토리라인의 꼭대기와 함께) 관심 흐름이다
