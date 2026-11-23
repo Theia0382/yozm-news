@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import net.yozmnews.article.ArticleContent;
@@ -102,6 +103,11 @@ class EventMembershipServiceTests {
 		@Override
 		public List<EventJudgementView> page(Instant from, Instant to, @Nullable Instant afterJudgedAt,
 				@Nullable Long afterId, int limit) {
+			throw new UnsupportedOperationException("읽지 않는다");
+		}
+
+		@Override
+		public Optional<EventJudgementView> find(EventJudgementId id) {
 			throw new UnsupportedOperationException("읽지 않는다");
 		}
 

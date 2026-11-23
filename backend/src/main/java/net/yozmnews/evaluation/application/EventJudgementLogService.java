@@ -2,8 +2,10 @@ package net.yozmnews.evaluation.application;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 import net.yozmnews.evaluation.EventJudgementCursor;
+import net.yozmnews.evaluation.EventJudgementId;
 import net.yozmnews.evaluation.EventJudgementLog;
 import net.yozmnews.evaluation.EventJudgementPage;
 import net.yozmnews.evaluation.EventJudgementView;
@@ -15,7 +17,7 @@ import org.springframework.stereotype.Service;
 /**
  * 공개 API {@link EventJudgementLog} 의 구현 — docs/specs/evaluation.md §4 · evaluation-R39.
  * <p>
- * 한 건 더 읽어 다음 쪽이 있는지 안다. 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통) — 질의 하나다.
+ * 한 건 더 읽어 다음 쪽이 있는지 안다. 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통) — 연산마다 질의 하나다.
  */
 @Service
 class EventJudgementLogService implements EventJudgementLog {
@@ -41,6 +43,12 @@ class EventJudgementLogService implements EventJudgementLog {
 			next = new EventJudgementCursor(last.judgedAt(), last.id());
 		}
 		return new EventJudgementPage(page, next);
+	}
+
+	@Override
+	public Optional<EventJudgementView> find(EventJudgementId id) {
+		Objects.requireNonNull(id, "id");
+		return this.judgements.find(id);
 	}
 
 }

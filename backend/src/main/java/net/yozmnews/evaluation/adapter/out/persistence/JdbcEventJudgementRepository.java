@@ -8,6 +8,7 @@ import java.time.ZoneOffset;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.evaluation.EventJudgementId;
@@ -26,7 +27,7 @@ import tools.jackson.databind.json.JsonMapper;
  * <p>
  * 판정 원본은 넣기 한 번이고 갱신하지 않는다 — aggregate 가 없다. 넣기 · 지우기는 흐름 소속 표와 함께 쓰는
  * {@link MembershipJudgementRows} 이고, 물은 후보의 ID 키는 {@code eventId} 다. 기간 읽기는 {@code (judged_at, id)} 인덱스를 거꾸로
- * 훑는다.
+ * 훑고, ID 로 읽기는 기본 키로 찾는다.
  */
 @Repository
 class JdbcEventJudgementRepository implements EventJudgementRepository {
@@ -72,6 +73,16 @@ class JdbcEventJudgementRepository implements EventJudgementRepository {
 				.param("afterId", Objects.requireNonNull(afterId));
 		}
 		return statement.query(JdbcEventJudgementRepository::view).list();
+	}
+
+	@Override
+	public Optional<EventJudgementView> find(EventJudgementId id) {
+		return this.jdbc.sql("""
+				select id, article_id, evaluator, model_version, wording_version, candidates::text as candidates,
+				       input_tokens, judged_at
+				from article_event_judgements
+				where id = :id
+				""").param("id", id.value()).query(JdbcEventJudgementRepository::view).optional();
 	}
 
 	@Override
