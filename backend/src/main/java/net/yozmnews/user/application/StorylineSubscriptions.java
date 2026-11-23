@@ -25,6 +25,7 @@ import net.yozmnews.user.domain.subscription.StorylineSubscriptionRepository;
 import net.yozmnews.user.domain.subscription.SubscriptionChange;
 import net.yozmnews.user.domain.summary.StorylineSummary;
 import net.yozmnews.user.domain.summary.StorylineSummaryRepository;
+import net.yozmnews.user.domain.userstoryline.BranchUntracking;
 import net.yozmnews.user.domain.userstoryline.StoredUserStoryline;
 import net.yozmnews.user.domain.userstoryline.UserStorylineRepository;
 import org.jspecify.annotations.Nullable;
@@ -174,8 +175,10 @@ public class StorylineSubscriptions {
 
 	/**
 	 * 해제 — 받은 스토리라인의 꼭대기를 추적 대상으로 가진 추적 중인 사용자 스토리라인 모두의 추적을 끈다(갈래의 헤드에서 누르면 그 갈래만,
-	 * 갈라지기 전 꼭대기에서 누르면 모든 갈래). 그 추적 씨앗을 모두 지우고 씨앗마다 이력을 남긴다. 사용자 스토리라인은 지우지 않는다 — 신호가
-	 * 관심 창 안에 있는 동안 남아, 다시 추적하면 같은 사용자 스토리라인이다.
+	 * 갈라지기 전 꼭대기에서 누르면 모든 갈래). 끄는 쪽과 남는 추적 중 사용자 스토리라인이 꼭대기를 함께 가진 추적 씨앗은 먼저 양쪽 모두 각자의
+	 * 헤드로 바꾸고 그 바꿈을 사용자 신호가 아닌 이력(갈라져 물려받음)으로 남긴다({@link BranchUntracking}) — 남는 쪽이 끈 쪽을 다시 추적 중으로
+	 * 만들지 않는다. 그 뒤 끄는 쪽의 추적 씨앗을 모두 지우고 남는 쪽에 없는 씨앗마다 사용자의 해제 이력을 남긴다. 사용자 스토리라인은 지우지 않는다
+	 * — 신호가 관심 창 안에 있는 동안 남아, 다시 추적하면 같은 사용자 스토리라인이다.
 	 */
 	@Transactional
 	public UnsubscribeOutcome unsubscribe(UserId user, StorylineId storyline, Instant now) {
@@ -189,14 +192,31 @@ public class StorylineSubscriptions {
 			return new UnsubscribeOutcome.NotSubscribed();
 		}
 		// 그 꼭대기를 가진 추적 중 사용자 스토리라인 모두 — 갈래 항목에서 누르면 그 갈래만, 갈라지기 전 꼭대기에서 누르면 모든 갈래
-		Set<Long> removed = new TreeSet<>();
+		Set<Long> leaving = new TreeSet<>();
+		trackedHolders.forEach(holder -> leaving.add(holder.id()));
+		BranchUntracking split = BranchUntracking
+			.decide(current.stream().filter(StoredUserStoryline::tracked).toList(), leaving);
+		split.seeds().forEach(this.userStorylines::replaceSeeds);
+		List<SubscriptionChange> moved = new ArrayList<>();
+		split.splitRemoved()
+			.stream()
+			.sorted()
+			.forEach(seed -> moved.add(new SubscriptionChange(seed, StorylineSubscriptionAction.REMOVE)));
+		split.splitAdded()
+			.stream()
+			.sorted()
+			.forEach(seed -> moved.add(new SubscriptionChange(seed, StorylineSubscriptionAction.ADD)));
+		this.history.record(user, moved, StorylineSubscriptionCause.STORYLINE_SPLIT, now);
 		for (StoredUserStoryline holder : trackedHolders) {
 			this.userStorylines.unsubscribe(holder.id());
 			this.userStorylines.replaceSeeds(holder.id(), Set.of());
-			removed.addAll(holder.trackedSeeds().keySet());
 		}
 		this.history.record(user,
-				removed.stream().map(seed -> new SubscriptionChange(seed, StorylineSubscriptionAction.REMOVE)).toList(),
+				split.userRemoved()
+					.stream()
+					.sorted()
+					.map(seed -> new SubscriptionChange(seed, StorylineSubscriptionAction.REMOVE))
+					.toList(),
 				StorylineSubscriptionCause.USER, now);
 		return new UnsubscribeOutcome.Unsubscribed(target);
 	}

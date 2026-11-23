@@ -355,6 +355,37 @@ class StorylineSubscriptionsTests {
 	}
 
 	@Test
+	void untrackingOneBranchAfterTrackingTheTopBeforeTheForkKeepsTheOtherBranchesOnly() {
+		UserId user = user();
+		Fork fork = fork(user);
+		// 갈라지기 전 root 를 눌러 두 갈래(헤드 left · right) 모두 씨앗 root 로 추적 중
+		this.subscriptions.subscribe(user, new StorylineId(fork.root()), at(60));
+
+		assertThat(this.subscriptions.unsubscribe(user, new StorylineId(fork.left()), at(120)))
+			.isEqualTo(new UnsubscribeOutcome.Unsubscribed(new StorylineId(fork.left())));
+
+		// 다음 맞추기 뒤에도 left 갈래만 꺼져 있다 — 남은 갈래의 씨앗이 제 헤드라 root 를 거쳐 left 로 돌아가지 않는다
+		assertThat(this.subscriptions.states(user, List.of(new StorylineId(fork.left()), new StorylineId(fork.right()),
+				new StorylineId(fork.middle()), new StorylineId(fork.root())), at(180)))
+			.containsExactly(Map.entry(new StorylineId(fork.left()), false), Map.entry(new StorylineId(fork.right()), true),
+					Map.entry(new StorylineId(fork.middle()), true), Map.entry(new StorylineId(fork.root()), true));
+		assertThat(this.subscriptions.view(user, at(180)).subscriptions()).singleElement().satisfies(row -> {
+			assertThat(row.head()).isEqualTo(new StorylineId(fork.right()));
+			assertThat(row.storylines()).containsExactly(new StorylineId(fork.right()));
+		});
+		// 씨앗 바꾸기는 사용자 신호가 아닌 이력, 사용자의 해제는 끈 갈래의 헤드 하나 — 이력을 차례로 재생하면 지금 씨앗 {right}
+		assertThat(history(user)).containsExactly(List.of(fork.root(), "ADD", "USER"),
+				List.of(fork.root(), "REMOVE", "STORYLINE_SPLIT"), List.of(fork.left(), "ADD", "STORYLINE_SPLIT"),
+				List.of(fork.right(), "ADD", "STORYLINE_SPLIT"), List.of(fork.left(), "REMOVE", "USER"));
+
+		// 대조 — 갈라지기 전 root 를 다시 누르면 두 갈래 모두 추적 중으로 돌아간다
+		this.subscriptions.subscribe(user, new StorylineId(fork.root()), at(240));
+		assertThat(this.subscriptions.states(user, List.of(new StorylineId(fork.left()), new StorylineId(fork.right())),
+				at(300)))
+			.containsExactly(Map.entry(new StorylineId(fork.left()), true), Map.entry(new StorylineId(fork.right()), true));
+	}
+
+	@Test
 	void theTopBeforeTheForkTracksAndUntracksEveryBranch() {
 		UserId user = user();
 		Fork fork = fork(user);
