@@ -88,11 +88,24 @@ class UserStorylineSummariesServiceTests {
 			this.summaries.recordStored(id, 1_200, 300);
 		});
 
+		// 헤드를 저장하기 전의 개체라 손잡이는 가장 작은 꼭대기다
 		assertThat(this.directory.shown(this.alice)).containsExactly(new UserStorylineSummaryView(new UserStorylineId(id),
-				"전체 제목", "전체 요약", "전체 최근", true, Set.of(new StorylineId(11), new StorylineId(12)),
+				new StorylineId(11), "전체 제목", "전체 요약", "전체 최근", true, Set.of(new StorylineId(11), new StorylineId(12)),
 				List.of(new TopSummary(new StorylineId(11), "가 제목", "가 요약", "가 최근"),
 						TopSummary.without(new StorylineId(12))),
 				new SummaryUsage("ANTHROPIC", "claude-sonnet-5-5", 1_200, 300, 2, 1_500, 340), FIRST, LATER));
+	}
+
+	@Test
+	void theHandleIsTheStoredHead() {
+		long id = userStoryline(this.alice, Set.of(11L, 12L), true);
+		this.transaction.executeWithoutResult(status -> this.userStorylines.setHead(id, 12));
+		summarize(id, "전체", Map.of(11L, SummaryText.NONE, 12L, SummaryText.NONE), FIRST, LATER);
+
+		// 대조 — 저장한 헤드가 가장 작은 꼭대기보다 앞선다
+		assertThat(this.directory.shown(this.alice)).singleElement()
+			.extracting(UserStorylineSummaryView::head)
+			.isEqualTo(new StorylineId(12));
 	}
 
 	@Test

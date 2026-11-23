@@ -106,7 +106,8 @@ class UserStorylineSummariesService implements UserStorylineSummaries {
 						: new TopSummary(new StorylineId(member), text.title(), text.summary(), text.recent()));
 			}
 			SummaryAttempt attempt = attempts.get(summary.userStorylineId());
-			views.add(new UserStorylineSummaryView(new UserStorylineId(summary.userStorylineId()), summary.whole().title(),
+			views.add(new UserStorylineSummaryView(new UserStorylineId(summary.userStorylineId()), handle(row),
+					summary.whole().title(),
 					summary.whole().summary(), summary.whole().recent(), row.subscribedAt() != null,
 					row.members().stream().map(StorylineId::new).collect(Collectors.toUnmodifiableSet()), tops,
 					new SummaryUsage(summary.provider(), summary.model(), summary.inputTokens(), summary.outputTokens(),
@@ -115,6 +116,14 @@ class UserStorylineSummariesService implements UserStorylineSummaries {
 					summary.createdAt(), summary.updatedAt()));
 		}
 		return List.copyOf(views);
+	}
+
+	/**
+	 * 저장한 헤드 — 헤드 열이 생기기 전에 저장된 개체(그 사용자의 다음 저장하는 맞추기 전까지)는 저장한 추적 대상 가운데 가장 작은 꼭대기. 이 대체는
+	 * 여기 한 곳뿐이다 — 맞춘 값을 쓰는 다른 자리는 헤드가 비지 않는다
+	 */
+	private static StorylineId handle(UserStorylineRow row) {
+		return new StorylineId((row.head() != null) ? row.head() : new TreeSet<>(row.members()).first());
 	}
 
 }

@@ -17,7 +17,7 @@ public interface UserStorylineDirectory {
 	/**
 	 * 창 [{@code from}, {@code to}) 의 신호와 지금 관계로 낸 그 사용자의 사용자 스토리라인. 추적 중인 사용자 스토리라인은 창과 무관하게
 	 * 든다.
-	 * @return 사용자 스토리라인 — 추적 대상의 가장 작은 꼭대기 ID 순. 없으면 빈 목록
+	 * @return 사용자 스토리라인 — 헤드 ID 순. 없으면 빈 목록
 	 * @throws IllegalArgumentException {@code from} 이 {@code to} 보다 늦을 때
 	 */
 	List<UserStorylineView> of(UserId user, Instant from, Instant to);

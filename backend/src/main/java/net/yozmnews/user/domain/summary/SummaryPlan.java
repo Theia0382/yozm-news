@@ -2,7 +2,6 @@ package net.yozmnews.user.domain.summary;
 
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -30,16 +29,20 @@ public final class SummaryPlan {
 	 * 사용자 스토리라인 하나와 그 정리의 지금 상태.
 	 *
 	 * @param id 사용자 스토리라인 ID
+	 * @param head 헤드 — 보일 흐름 · 남길 흐름의 판정은 헤드로 한다(헤드는 이 사용자 스토리라인에만 든다)
 	 * @param tops 저장한 추적 대상(스토리라인 ID)
 	 * @param tracked 추적 중인가
 	 * @param summary 정리 — 없으면 null
 	 * @param attempt 시도 기록 — 없으면 null
 	 */
-	public record Flow(long id, Set<Long> tops, boolean tracked, @Nullable StorylineSummary summary,
+	public record Flow(long id, long head, Set<Long> tops, boolean tracked, @Nullable StorylineSummary summary,
 			@Nullable SummaryAttempt attempt) {
 
 		public Flow {
 			tops = Set.copyOf(Objects.requireNonNull(tops, "tops"));
+			if (!tops.contains(head)) {
+				throw new IllegalArgumentException("헤드는 추적 대상에 든다: " + head + " · " + tops);
+			}
 		}
 
 	}
@@ -85,7 +88,7 @@ public final class SummaryPlan {
 	public static Set<Long> needingMaterials(List<Flow> flows, Set<Long> followed) {
 		Set<Long> needing = new HashSet<>();
 		for (Flow flow : flows) {
-			if (flow.summary() != null || touches(flow.tops(), followed)) {
+			if (flow.summary() != null || followed.contains(flow.head())) {
 				needing.add(flow.id());
 			}
 		}
@@ -155,7 +158,8 @@ public final class SummaryPlan {
 			Map<Long, Map<Long, Instant>> byTop, Instant now) {
 		Map<Long, Instant> events = new HashMap<>();
 		byTop.values().forEach(events::putAll);
-		boolean showable = touches(flow.tops(), followed);
+		// 헤드로 판정한다 — 갈라지기 전 꼭대기가 관심 흐름이어도 형제 갈래는 제 헤드가 관심 흐름일 때만 보인다
+		boolean showable = followed.contains(flow.head());
 		StorylineSummary summary = flow.summary();
 		if (summary == null) {
 			if (!showable || events.isEmpty() || resting(flow.attempt(), now)) {
@@ -164,7 +168,7 @@ public final class SummaryPlan {
 			return new Action.Create(flow.id(), flow.tops(), chosen(byTop, events, events.keySet()),
 					Set.copyOf(events.keySet()));
 		}
-		if (!showable && !touches(flow.tops(), kept)) {
+		if (!showable && !kept.contains(flow.head())) {
 			return new Action.Remove(flow.id());
 		}
 		if (resting(flow.attempt(), now)) {
@@ -184,10 +188,6 @@ public final class SummaryPlan {
 		}
 		return new Action.Extend(flow.id(), summary.version(), flow.tops(), chosen(byTop, events, added),
 				Set.copyOf(events.keySet()));
-	}
-
-	private static boolean touches(Set<Long> tops, Set<Long> judged) {
-		return !Collections.disjoint(tops, judged);
 	}
 
 	private static boolean resting(@Nullable SummaryAttempt attempt, Instant now) {
