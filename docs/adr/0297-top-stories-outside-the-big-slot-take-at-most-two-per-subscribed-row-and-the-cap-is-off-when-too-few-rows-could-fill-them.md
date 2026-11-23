@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-24
-- 근거: [이슈 #234](https://github.com/Theia0382/yozm-news/issues/234) — 주요 뉴스는 사건 점수(중요도 × 관심도 가중치) 순위의 앞에서 고르는데, 주제마다 중요도 평균이 달라(국제 · 정치가 높다) 여러 주제를 구독해도 주요 뉴스가 한두 주제로 채워졌다. 쏠림을 줄이는 방식 넷(주제 안 정규화 · 주요 뉴스의 주제 겹침 제한 · 이미 고른 주제의 감쇠 · 그대로) 가운데 겹침 제한을 골랐다. 중요도 쏠림 자체는 단계 문구 점검([이슈 #236](https://github.com/Theia0382/yozm-news/issues/236))이 다루고, 상한의 값은 그 결과를 본 뒤 정한다
+- 근거: [이슈 #234](https://github.com/Theia0382/yozm-news/issues/234) — 주요 뉴스는 사건 점수(중요도 × 관심도 가중치) 순위의 앞에서 고르는데, 주제마다 중요도 평균이 달라(국제 · 정치가 높다) 여러 주제를 구독해도 주요 뉴스가 한두 주제로 채워졌다. 쏠림을 줄이는 방식 넷(주제 안 정규화 · 주요 뉴스의 주제 겹침 제한 · 이미 고른 주제의 감쇠 · 그대로) 가운데 겹침 제한을 골랐다. 중요도 쏠림 자체는 단계 문구 점검([이슈 #236](https://github.com/Theia0382/yozm-news/issues/236))이 다루고, 상한의 값은 그 결과를 본 뒤 정한다. 구현 커밋 `66e9395`
 - 관련: [ADR-0262](0262-chosen-events-are-grouped-into-items-by-containment-tree-top-code-splits-top-stories-and-headlines-the-llm-writes-per-item-and-an-item-has-one-badge.md)(부분 대체 — 큰 슬롯 밖 주요 뉴스를 항목 순위대로 고르는 것), [ADR-0099](0099-importance-judged-by-what-the-matter-changes-and-its-reach-with-levels-written-as-reach-without-article-type-examples.md)(중요도는 사안이 바꾼 일의 크기와 범위), [ADR-0269](0269-the-digest-output-keys-top-stories-by-item-alias-as-required-fields-and-lists-headlines-as-elements.md)(주요 뉴스 칸의 키 수 위쪽), [ADR-0280](0280-events-of-followed-flows-outside-the-subscribed-topics-enter-one-per-flow-within-a-share-of-the-subscribed-seats-as-interest.md)(주제 구독 밖 관심 흐름의 사건)
 
 ## 맥락
