@@ -76,6 +76,9 @@ public interface EvaluationResultRepository {
 	/** 평가들과 그 태그 행 — 순서 없음, 없는 ID 는 빠진다 */
 	List<ListedEvaluation> findListed(Collection<EvaluationId> ids);
 
+	/** 기사 하나의 평가들(버전마다 하나)과 그 태그 행 — 순서 없음, 평가하지 않은 기사면 빈 목록 */
+	List<ListedEvaluation> findListedByArticle(ArticleId articleId);
+
 	/** 평가 하나와 그 분포 · 태그 행 */
 	Optional<StoredEvaluationDetail> findDetail(EvaluationId id);
 

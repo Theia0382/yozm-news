@@ -1,12 +1,14 @@
 package net.yozmnews.tag.application;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import net.yozmnews.article.ArticleId;
 import net.yozmnews.evaluation.ArticleTagging;
 import net.yozmnews.tag.EvaluationCursor;
 import net.yozmnews.tag.EvaluationDetailView;
@@ -23,6 +25,7 @@ import net.yozmnews.tag.TagRef;
 import net.yozmnews.tag.TagSetId;
 import net.yozmnews.tag.TagSetThresholds;
 import net.yozmnews.tag.TagSetView;
+import net.yozmnews.tag.VersionedEvaluationRow;
 import net.yozmnews.tag.domain.result.EvaluationResultRepository;
 import net.yozmnews.tag.domain.result.ListedEvaluation;
 import net.yozmnews.tag.domain.result.TagJudgement;
@@ -42,7 +45,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 공개 운영 API {@link EvaluationReview} 의 구현 — docs/specs/tag.md §4 · tag-R33 · tag-R34. 역할 애너테이션이
  * 없다(두 역할 공통).
  * <p>
- * 세 연산 모두 읽기 전용 {@code REPEATABLE READ} 트랜잭션 하나에서 읽는다 — 체계 · 기준 · 평가 행이 한 스냅숏이다. 판정은
+ * 연산마다 읽기 전용 {@code REPEATABLE READ} 트랜잭션 하나에서 읽는다 — 체계 · 기준 · 평가 행이 한 스냅숏이다. 판정은
  * {@link TagJudgement}, 거르기는 {@link ReviewFilter}, 표집은 {@link EvaluationSampler} 가 한다.
  */
 @Service
@@ -165,6 +168,23 @@ class EvaluationReviewService implements EvaluationReview {
 			return Optional.ofNullable(this.tagging.find(List.of(detail.judgementId())).get(detail.judgementId()))
 				.map(judgement -> EvaluationReviewViews.detail(detail, judgement, tagSet, current, judged));
 		})));
+	}
+
+	@Override
+	public List<VersionedEvaluationRow> ofArticle(ArticleId articleId) {
+		Objects.requireNonNull(articleId, "articleId");
+		return Objects.requireNonNull(this.snapshot.execute(status -> {
+			List<VersionedEvaluationRow> rows = new ArrayList<>();
+			for (ListedEvaluation listed : this.results.findListedByArticle(articleId)) {
+				TagSetId version = listed.sample().evaluation().tagSetId();
+				TagSetView tagSet = this.views.of(version);
+				Judged judged = judge(listed, tagSet, this.thresholds.current(version));
+				rows.add(new VersionedEvaluationRow(version, tagSet.number(),
+						EvaluationReviewViews.row(listed, tagSet, judged)));
+			}
+			rows.sort(Comparator.comparingInt(VersionedEvaluationRow::versionNumber).reversed());
+			return List.copyOf(rows);
+		}));
 	}
 
 	private static Judged judge(ListedEvaluation listed, TagSetView tagSet, TagSetThresholds current) {
