@@ -138,7 +138,7 @@ class InterestTimelinesTests {
 				Map.of(event(1), List.of(top), event(2), List.of(top), event(3), List.of(top), event(4), List.of(top)),
 				List.of(feedback(1, FeedbackValue.LIKE), feedback(2, FeedbackValue.LIKE), feedback(3, FeedbackValue.LIKE),
 						feedback(4, FeedbackValue.LIKE)),
-				List.of(), List.of(), Map.of(), new StorylineFlows(Map.of(top, 0), Set.of()));
+				List.of(), List.of(), Map.of(), new StorylineFlows(Map.of(top, Set.of(0)), Set.of()));
 
 		List<InterestPoint> points = InterestTimelines.points(record, List.of(T0, T1, T2, t3, t4));
 
