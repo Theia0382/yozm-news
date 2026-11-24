@@ -60,3 +60,4 @@
 
 - 2026-11-15: 결과 절 "활성 전환을 알리는 이벤트는 없다"가 미룬 활성 전환 이벤트와 사용자 선호 옮기기 · 계보 없이 지운 태그의 선호 해제 — [ADR-0175](0175-tag-preferences-follow-tag-set-activation-events-and-are-rewritten-to-active-keys.md) · [tag Spec](../specs/tag.md#체계-변경) tag-R16 · [`user` user-R47](../specs/user.md#관심-설정)
 - 2026-11-19: 결정 "재평가 기간"의 실패로 남은 행(시도 소진) — [ADR-0254](0254-evaluation-queue-defers-transient-failures-without-an-attempt-limit-and-counts-retrying-rows-for-the-operator.md) · [tag Spec](../specs/tag.md#체계-변경) tag-R25
+- 2026-11-23: 결정 "운영자 HTTP 는 `admin` 이 낸다"가 들이지 않은 편집 화면 — [ADR-0307](0307-the-tag-set-screen-edits-the-whole-text-activates-only-what-was-reviewed-and-reports-interference-by-comparing-results.md) · [운영 안내 — 화면에서 바꾸기](../operations/tag-sets.md#화면에서-바꾸기)
