@@ -356,7 +356,7 @@ class ReportMaterialCollectionTests {
 	private ReportId previousReport(UserId user, String snapshot) {
 		ReportGeneration generation = generation();
 		ReportId id = generation.schedule(user, PREVIOUS);
-		generation.run(id, ReportFixtures.MODEL, new ReportInput(user, PREVIOUS, SEOUL,
+		generation.run(id, ReportFixtures.MODEL, ReportFixtures.EFFORT, new ReportInput(user, PREVIOUS, SEOUL,
 				List.of(new StorylinesSection(List.of(ReportFixtures.flow(this.storylineA)))), List.of(), snapshot));
 		return id;
 	}

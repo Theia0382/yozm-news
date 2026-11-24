@@ -10,6 +10,7 @@ import java.util.Set;
 import net.yozmnews.event.EventId;
 import net.yozmnews.llm.LlmModel;
 import net.yozmnews.llm.Provider;
+import net.yozmnews.llm.ReasoningEffort;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.report.domain.input.CoverageSection;
 import net.yozmnews.report.domain.input.Count;
@@ -35,6 +36,9 @@ public final class ReportFixtures {
 
 	/** 쓸 모델 */
 	public static final LlmModel MODEL = new LlmModel(Provider.OPENAI, "gpt-5.5-mini", 100_000, true);
+
+	/** 추론 강도 */
+	public static final ReasoningEffort EFFORT = ReasoningEffort.MEDIUM;
 
 	/** 통계 스냅숏 */
 	public static final String SNAPSHOT = "{\"coverage\":{\"이번\":12,\"직전\":7}}";

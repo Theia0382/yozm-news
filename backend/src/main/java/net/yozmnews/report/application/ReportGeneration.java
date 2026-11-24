@@ -7,9 +7,9 @@ import java.util.Optional;
 import java.util.function.Supplier;
 
 import net.yozmnews.llm.LlmModel;
+import net.yozmnews.llm.ReasoningEffort;
 import net.yozmnews.platform.AppClock;
 import net.yozmnews.platform.OutputShape;
-import net.yozmnews.platform.StructuredOutputSchema;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.report.ReportFailure;
 import net.yozmnews.report.ReportId;
@@ -26,6 +26,12 @@ import net.yozmnews.report.domain.input.ReportInput;
 import net.yozmnews.report.domain.output.CitedReport;
 import net.yozmnews.report.domain.output.ReportCitationCheck;
 import net.yozmnews.report.domain.output.ReportOutputSchema;
+import net.yozmnews.report.domain.prompt.FittedInput;
+import net.yozmnews.report.domain.prompt.FittedInput.Trimmed;
+import net.yozmnews.report.domain.prompt.ReportInputBudget;
+import net.yozmnews.report.domain.prompt.ReportInputFit;
+import net.yozmnews.report.domain.prompt.ReportPrompt;
+import net.yozmnews.report.domain.prompt.ReportPrompts;
 import net.yozmnews.report.domain.report.Completion;
 import net.yozmnews.report.domain.report.Report;
 import net.yozmnews.report.domain.report.ReportPeriod;
@@ -42,8 +48,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 /**
  * 리포트 생성 유스케이스 — 예약과 생성 · docs/specs/report.md §4 · report-R13
  * <p>
- * 생성은 시작(트랜잭션 ①) · 생성기 호출과 판정(트랜잭션 밖) · 대조 · 저장(트랜잭션 ②)으로 나뉘고, 두 트랜잭션은 리포트 행을 먼저 잠근다. 트랜잭션 ①
- * 은 생성을 기다리는 리포트만 시작한다 — 같은 리포트의 생성기 호출은 하나다. 트랜잭션 ② 는 리포트의 버전이 트랜잭션 ① 뒤의 값과 다르거나 이미
+ * 생성은 입력 맞추기(트랜잭션 밖) · 시작(트랜잭션 ①) · 프롬프트 · 생성기 호출과 판정 · 한 번 다시 묻기(트랜잭션 밖) · 대조 · 저장(트랜잭션 ②)으로
+ * 나뉘고, 두 트랜잭션은 리포트 행을 먼저 잠근다. 트랜잭션 ① 은 생성을 기다리는 리포트만 시작한다 — 같은 리포트의 생성은 한 실행이 하고, 그 실행의
+ * 생성기 호출은 다시 묻기를 더해 많아야 둘이다. 별칭 · 서술 · 프롬프트는 맞춘 입력으로, 사용자 · 기간 대조와 스냅숏은 맞추기 전 입력으로 한다. 트랜잭션 ② 는 리포트의 버전이 트랜잭션 ① 뒤의 값과 다르거나 이미
  * 끝났으면 아무것도 쓰지 않는다. 생성기는 생성할 때 찾는다 — profile {@code local} 은 로컬 대체물이 있고, 그 밖은 실제 생성기가 서기 전까지
  * 없다. 트랜잭션 안에서 부르면 거부한다.
  */
@@ -91,19 +98,26 @@ public class ReportGeneration {
 	}
 
 	/**
-	 * 시작 → 갈래가 있고 생성기가 있으면 생성 · 판정 → 대조 → 저장. 끝났거나 생성 중인 리포트면 아무것도 하지 않는다.
+	 * 입력 맞추기 → 시작 → 갈래가 있고 생성기가 있으면 프롬프트 · 생성 · 판정(한 번 다시 묻기) → 대조 → 저장. 끝났거나 생성 중인 리포트면 아무것도
+	 * 하지 않는다. 토큰은 공급자가 답한 호출의 합이고, 소요 시간은 첫 호출 시작부터 마지막 호출 끝까지다.
+	 * @param model 쓸 모델 — 입력 예산 · 구조화 출력 여부를 함께 정한다
+	 * @param effort 추론 강도 — 사용자 설정
 	 * @return 이 실행 뒤 그 리포트의 상태 — 다른 실행이 생성 중이면 {@link ReportStatus#RUNNING}
 	 * @throws IllegalArgumentException 없는 리포트일 때, 입력의 사용자 · 기간이 리포트 행과 다를 때 — 아무것도 쓰지 않는다
 	 * @throws IllegalStateException 트랜잭션 안에서 불렀을 때 — 아무것도 쓰지 않는다
 	 */
-	public ReportStatus run(ReportId id, LlmModel model, ReportInput input) {
+	public ReportStatus run(ReportId id, LlmModel model, ReasoningEffort effort, ReportInput input) {
 		Objects.requireNonNull(id, "id");
 		Objects.requireNonNull(model, "model");
+		Objects.requireNonNull(effort, "effort");
 		Objects.requireNonNull(input, "input");
 		if (TransactionSynchronizationManager.isActualTransactionActive()) {
 			throw new IllegalStateException(IN_TRANSACTION);
 		}
-		ReportAliases aliases = ReportAliases.of(input);
+		int budget = ReportInputBudget.userContent(model, input.period().kind());
+		FittedInput fitted = ReportInputFit.fit(input, budget);
+		ReportInput sent = fitted.input();
+		ReportAliases aliases = ReportAliases.of(sent);
 		OutputShape.Obj root = ReportOutputSchema.root(aliases);
 		Started started = Objects.requireNonNull(
 				this.transaction.execute(status -> start(id, model, input, aliases)));
@@ -111,16 +125,55 @@ public class ReportGeneration {
 			return started.finished();
 		}
 		ReportGenerator found = Objects.requireNonNull(started.generator(), "generator");
+		if (fitted.trimmedAnything() || fitted.overBudget()) {
+			Trimmed trimmed = fitted.trimmed();
+			logger.info(
+					"리포트 입력을 예산에 맞춰 덜어 냈다 — 리포트 {}, 예산 {}, 직전 글 자름 {}, 관심 줄의 정리 뺌 {}, 관심 줄 뺌 {}, 사건 줄 뺌 {}, 흐름 요약 뺌 {}, 흐름 뺌 {}, 예산을 넘긴 채 {}",
+					id.value(), budget, trimmed.priorsCut(), trimmed.flowSummariesDropped(),
+					trimmed.flowInterestLinesDropped(), trimmed.eventLinesDropped(), trimmed.flowOverviewsDropped(),
+					trimmed.flowsDropped(), fitted.overBudget());
+		}
+		ReportPrompt prompt = ReportPrompts.compose(sent, aliases, model);
 		Instant asked = this.clock.instant();
-		ReportOutcome outcome = found
-			.generate(new ReportRequest(started.user(), model, input, aliases, StructuredOutputSchema.json(root)));
+		ReportOutcome first = found.generate(new ReportRequest(started.user(), model, effort, aliases, prompt));
+		ReportOutcome second = null;
+		ReportVerdict.Settled settled = switch (ReportVerdict.judge(first, root, aliases)) {
+			case ReportVerdict.Settled done -> done;
+			case ReportVerdict.Retry retry -> {
+				logger.info("리포트 생성을 다시 물었다 — 리포트 {}, 까닭 읽지 못함", id.value());
+				second = found.generate(new ReportRequest(started.user(), model, effort, aliases,
+						ReportPrompts.retry(prompt, retry.diagnosis())));
+				yield ReportVerdict.settle(second, root);
+			}
+			case ReportVerdict.RetryMissing retry -> {
+				logger.info("리포트 생성을 다시 물었다 — 리포트 {}, 까닭 빠진 갈래 {}", id.value(), retry.missing());
+				second = found.generate(new ReportRequest(started.user(), model, effort, aliases,
+						ReportPrompts.retry(prompt, retry.diagnosis())));
+				yield ReportVerdict.settle(second, root, aliases, retry.first());
+			}
+		};
+		TokenUsage usage = sum(usage(first), (second == null) ? null : usage(second));
 		Duration took = this.clock.elapsedSince(asked);
-		ReportVerdict verdict = ReportVerdict.judge(outcome, root);
-		TokenUsage usage = switch (outcome) {
+		return finish(id, started.version(), settled, aliases, usage, took);
+	}
+
+	/** 공급자가 센 토큰 — 공급자가 답하지 못한 호출은 없다 */
+	private static @Nullable TokenUsage usage(ReportOutcome outcome) {
+		return switch (outcome) {
 			case ReportOutcome.Generated generated -> generated.usage();
 			case ReportOutcome.Failed failed -> null;
 		};
-		return finish(id, started.version(), verdict, aliases, usage, took);
+	}
+
+	/** 두 호출의 토큰 합 — 한쪽만 있으면 그쪽, 둘 다 없으면 없음 */
+	private static @Nullable TokenUsage sum(@Nullable TokenUsage a, @Nullable TokenUsage b) {
+		if (a == null) {
+			return b;
+		}
+		if (b == null) {
+			return a;
+		}
+		return new TokenUsage(a.inputTokens() + b.inputTokens(), a.outputTokens() + b.outputTokens());
 	}
 
 	private Started start(ReportId id, LlmModel model, ReportInput input, ReportAliases aliases) {
@@ -149,7 +202,7 @@ public class ReportGeneration {
 	}
 
 	/** 리포트 행을 잠그고, 시작 뒤 그대로면 판정대로 끝낸다 */
-	private ReportStatus finish(ReportId id, long version, ReportVerdict verdict, ReportAliases aliases,
+	private ReportStatus finish(ReportId id, long version, ReportVerdict.Settled verdict, ReportAliases aliases,
 			@Nullable TokenUsage usage, Duration took) {
 		return Objects.requireNonNull(this.transaction.execute(status -> {
 			Report report = lock(id);
