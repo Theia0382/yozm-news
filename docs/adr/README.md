@@ -108,7 +108,7 @@
 | [0100](0100-repository-tool-unit-tests-run-in-one-tools-check-service-and-docs-check-checks-links-only.md) | 저장소 도구의 단위 테스트는 검사 서비스 `tools` 하나가 돌리고, 문서 검사는 링크와 앵커만 본다 | 승인 (부분 대체: 0104) |
 | [0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md) | 사건을 잇는 흐름은 모든 사용자가 공유하는 스토리라인이 맡고, 개인 쪽은 스토리라인 구독과 관심사로 나눈다 | 승인 (부분 대체: 0281) |
 | [0102](0102-an-event-is-the-reports-of-one-happening-narrowed-by-the-event-membership-question-wording.md) | 사건은 한 번 일어난 일을 다룬 보도들이고, 시스템의 사건 범위는 사건 소속 질문 문구로 좁힌다 | 승인 |
-| [0103](0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md) | 큰 판정은 스토리라인 단위로 하고, 사건 묶기 바로 뒤 스토리라인 마일스톤이 사건의 큰 사건 판정을 거둔다 | 승인 |
+| [0103](0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md) | 큰 판정은 스토리라인 단위로 하고, 사건 묶기 바로 뒤 스토리라인 마일스톤이 사건의 큰 사건 판정을 거둔다 | 승인 (부분 대체: 0303) |
 | [0104](0104-arm64-run-checked-on-arm64-runners-with-a-symmetric-deploy-check-per-architecture.md) | arm64 실행은 arm64 러너의 배포 검사로 확인하고, 배포 검사는 아키텍처마다 대칭 job 으로 둔다 | 승인 |
 | [0105](0105-storylines-link-incrementally-from-event-change-notifications-and-events-publish-changed-event-ids.md) | 스토리라인은 사건 변화 알림으로 증분으로 잇고, `event` 는 바뀐 사건 ID 를 발행한다 | 승인 (부분 대체: 0194) |
 | [0106](0106-provisional-storyline-linking-opens-only-with-a-partner-event-and-adds-the-single-best-storyline-without-removal.md) | 스토리라인의 임시 잇기 규칙 — 다른 사건과 이어질 때만 열고, 기준 이상 가운데 가장 높은 하나를 더하며 빼지 않는다 | 승인 (부분 대체: 0108 · 0121 · 0194) |
@@ -275,8 +275,8 @@
 | [0270](0270-an-item-missing-from-the-output-is-asked-once-more-and-then-kept-as-a-headline-and-the-counts-are-recorded.md) | 출력에 빠진 항목은 한 번 다시 묻고, 그래도 빠지면 첫 인용 기사 제목의 헤드라인으로 남기며, 그 수를 다이제스트 행에 기록한다 | 승인 |
 | [0271](0271-when-the-input-token-budget-cuts-candidates-the-big-slot-keeps-at-most-half-of-what-is-left-and-uses-what-subscribed-events-leave.md) | 입력 토큰 예산으로 자를 때 큰 슬롯 사건은 남는 사건의 절반을 넘지 않고, 구독 사건이 모자라면 남는 예산을 쓴다 | 승인 |
 | [0272](0272-the-input-token-budget-is-a-safety-ceiling-and-the-maximum-candidate-steps-set-the-digest-volume.md) | 입력 토큰 예산은 안전 상한이고, 다이제스트 분량은 최대 후보 수 단계가 정한다 | 승인 |
-| [0273](0273-change-reports-are-written-in-fixed-sections-per-material-kind-keyed-as-required-fields.md) | 변화 리포트는 갈래마다 고정 섹션으로 쓰고, 출력은 갈래를 키로 한 필수 칸이다 | 승인 |
-| [0274](0274-change-reports-cite-only-storylines-and-events-and-keep-topics-in-the-stats-snapshot.md) | 변화 리포트는 스토리라인 · 사건만 인용하고, 주제는 통계 스냅숏으로 둔다 | 승인 |
+| [0273](0273-change-reports-are-written-in-fixed-sections-per-material-kind-keyed-as-required-fields.md) | 변화 리포트는 갈래마다 고정 섹션으로 쓰고, 출력은 갈래를 키로 한 필수 칸이다 | 승인 (부분 대체: 0303) |
+| [0274](0274-change-reports-cite-only-storylines-and-events-and-keep-topics-in-the-stats-snapshot.md) | 변화 리포트는 스토리라인 · 사건만 인용하고, 주제는 통계 스냅숏으로 둔다 | 승인 (부분 대체: 0305) |
 | [0275](0275-report-citations-resolve-removed-and-merged-events-and-storylines-when-read-and-a-section-that-lost-every-citation-is-hidden.md) | 리포트 인용은 지운 · 합친 사건과 스토리라인을 읽을 때 풀고, 인용을 모두 잃은 섹션은 보이지 않는다 | 승인 |
 | [0276](0276-platform-describes-reads-and-draws-llm-output-and-task-modules-keep-their-own-shape-and-value-mapping.md) | LLM 출력의 서술 · 읽기 · JSON Schema 그리기는 `platform` 이 맡고, 과제 모듈은 자기 서술과 값 옮기기만 한다 | 승인 |
 | [0277](0277-storyline-interest-is-counted-per-containment-tree-top-with-the-topic-formula-and-reactions-to-a-flow-seen-within-seven-days-go-to-the-storyline-only.md) | 스토리라인 관심은 포함 나무의 꼭대기마다 주제와 같은 산식으로 세고, 7일 안에 다시 본 흐름의 반응 · 노출과 스토리라인 구독은 스토리라인에만 든다 | 승인 (부분 대체: 0283 · 0295 · 0298) |
@@ -302,6 +302,10 @@
 | [0297](0297-an-event-whose-mean-topic-interest-is-at-or-below-the-exclusion-threshold-does-not-enter-the-big-slot.md) | 주제 관심의 평균이 거름 기준 이하인 사건은 큰 슬롯에 넣지 않는다 | 승인 |
 | [0298](0298-storyline-interest-drops-silent-exposures-before-the-latest-reacted-exposure-per-flow-and-topics-and-tracking-are-left-out.md) | 스토리라인 관심은 묶음마다 반응한 가장 늦은 노출보다 앞선 무반응 노출을 노출에서 빼고, 주제 관심과 흐름 추적에는 그 규칙을 걸지 않는다 | 승인 |
 | [0299](0299-the-big-judgement-criterion-first-value-is-fourteen-to-keep-its-strictness-on-the-four-level-importance-scale.md) | 큰 판정 기준의 처음 값은 네 단계 중요도 척도에서 같은 엄격함을 지키도록 14.00 으로 둔다 | 승인 |
+| [0303](0303-a-change-report-covers-only-what-relates-to-the-user-in-three-sections-tracked-flows-subscribed-topic-coverage-and-interest-changes.md) | 변화 리포트는 그 사용자와 관계된 것만 다루고, 갈래는 추적한 흐름 · 구독 주제 보도량 · 관심 변화 셋이다 | 승인 |
+| [0304](0304-a-change-report-takes-previous-values-from-the-previous-reports-snapshot-matched-one-to-one-and-keeps-them-in-its-own-snapshot.md) | 변화 리포트의 직전 기간 비교는 직전 리포트의 스냅숏에서 1:1 로 이은 값으로 하고, 이은 값을 자기 스냅숏에 함께 남긴다 | 승인 |
+| [0305](0305-a-change-report-describes-flows-by-the-user-storyline-summary-and-events-by-the-representative-article-title-and-cites-a-flow-by-its-head.md) | 변화 리포트는 흐름을 사용자 스토리라인의 정리로, 사건을 대표 기사 제목으로 설명하고, 흐름은 헤드의 스토리라인 ID 로 인용한다 | 승인 |
+| [0306](0306-a-change-report-compares-subscribed-topic-coverage-and-flow-coverage-each-only-with-its-own-previous-value.md) | 변화 리포트는 구독 주제 보도량과 흐름 보도량을 서로 견주지 않고 각자 자기 직전 값과만 견준다 | 승인 |
 
 ## 운영 규칙
 

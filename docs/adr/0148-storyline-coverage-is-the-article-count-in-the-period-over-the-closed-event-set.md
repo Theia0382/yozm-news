@@ -34,3 +34,7 @@
 | 서로 다른 소스 수를 보도량으로 한다 | 켠 소스 수에서 금방 차 흐름 사이의 차이가 드러나지 않는다 |
 | 상위는 직접 소속만 센다 | 큰 흐름이 갈래의 보도를 세지 못한다([ADR-0131](0131-storyline-relations-are-explicit-links-with-containment-as-a-single-parent-tree-gathered-at-query-time.md)) |
 | 기간을 처음 본 시각으로 고른다 | 큰 판정 · 목록과 기간의 뜻이 달라지고, 사건 배정이 가진 시각이 아니다 |
+
+## 후속 기록
+
+- 2026-11-24: 결과 "합계를 내는 공개 조회는 그것을 쓰는 기능을 만들 때 둔다" — 변화 리포트의 흐름 보도량이 쓰는 묶음 집계(`StorylineDirectory.tallies`)가 생겼다, 지금 상태는 [storyline Spec "공개 조회"](../specs/storyline.md#공개-조회) storyline-R24. 결과 "한 기간의 스토리라인 보도량과 주제별 보도량은 기간에 넣는 시각이 달라 기사 단위로 맞지 않는다"의 리포트에서의 처리 — [ADR-0306](0306-a-change-report-compares-subscribed-topic-coverage-and-flow-coverage-each-only-with-its-own-previous-value.md)

@@ -15,7 +15,7 @@
 - **스토리라인 사이 관계** — 포함(큰 흐름과 그 갈래)과 이어짐(앞 흐름이 뒤 흐름을 낳음)을 스토리라인 둘의 고리로 둔다. 소속이 바뀐 스토리라인의 후보 쌍을 `evaluation` 의 관계 판정(Jev)에 물어 종류 · 방향을 정하고, 확률이 기준 이상인 것만 맺는다. 포함은 상위 하나의 나무이고 순환을 이루지 않는다(storyline-R25 ~ R32, [ADR-0131](../adr/0131-storyline-relations-are-explicit-links-with-containment-as-a-single-parent-tree-gathered-at-query-time.md) · [ADR-0132](../adr/0132-storyline-relations-are-judged-by-jev-on-candidate-pairs-and-linked-only-above-a-probability-threshold.md))
 - **조각 합치기** — 관계 판정이 두 스토리라인을 같은 사안의 조각(둘로 기록된 하나의 흐름)으로 답하고 그 확률이 합치기 확률 기준 이상이면 ID 가 작은 쪽에 합친다. 소속은 근거 그대로 옮기고 어디서 왔는지와 합친 판정 · 기준을 남긴다. 기준 미만이면 둘로 두고 관계를 맺지 않는다. 되돌리는 길은 두지 않는다(storyline-R17 · R18 · R29, [ADR-0234](../adr/0234-fragments-of-one-matter-are-recognised-by-the-relation-judgement-and-merged-above-a-merge-probability-without-a-way-back.md))
 - **채우기** — 운영자가 기간을 정해, 그 기간에 마지막 기사가 있는 사건을 잇기 대기에 넣는다(storyline-R15)
-- **공개 조회** — 다른 모듈이 스토리라인을 읽는다(`StorylineDirectory`) — ID 로 찾기(하나 · 여럿), 스토리라인의 사건(타임라인), 사건의 스토리라인, 사건마다 포함 나무의 꼭대기(소속 점수 순 — 점수는 싣지 않는다), 스토리라인마다 포함 나무의 꼭대기, 조회 기간의 스토리라인 목록 · 큰 스토리라인 · 소속 없는 사건, 스토리라인의 관계. 스토리라인의 사건 · 집계는 포함을 따라 하위의 사건까지 세고, 직접 든 것인지 물려받은 것인지 표시한다. 합쳐진 스토리라인 · 사건의 ID 는 남는 쪽을 따른다 — 꼭대기 조회는 합쳐진 사건을 뺀다(storyline-R21 ~ R24 · R33 · R37)
+- **공개 조회** — 다른 모듈이 스토리라인을 읽는다(`StorylineDirectory`) — ID 로 찾기(하나 · 여럿), 스토리라인의 사건(타임라인), 사건의 스토리라인, 사건마다 포함 나무의 꼭대기(소속 점수 순 — 점수는 싣지 않는다), 스토리라인마다 포함 나무의 꼭대기, 조회 기간의 스토리라인 목록 · 큰 스토리라인 · 소속 없는 사건, 스토리라인 묶음마다의 기간 집계, 스토리라인의 관계. 스토리라인의 사건 · 집계는 포함을 따라 하위의 사건까지 세고, 직접 든 것인지 물려받은 것인지 표시한다. 합쳐진 스토리라인 · 사건의 ID 는 남는 쪽을 따른다 — 꼭대기 조회는 합쳐진 사건을 뺀다(storyline-R21 ~ R24 · R33 · R37)
 - **운영자 조회** — 운영자 화면이 판정 근거를 읽는다(`StorylineReview`) — 스토리라인과 그 하위의 소속마다 판정 근거(합치기로 옮겨 온 소속은 어디서 왔는지), 관계의 확률 · 판정 원본 ID · 기준, 물은 기록, 이 스토리라인에 합쳐진 스토리라인과 그 합치기의 판정 · 기준, 지금 잇기 · 관계 기준(storyline-R34)
 - **큰 판정** — 구독과 무관하게 알릴 만한 스토리라인을 조회할 때 지금 기준으로 고른다. 보도 강도(조회 기간 안 기사의 중요도 합을 그 기간에 기사가 있는 소스 수와 기간의 일수로 나눈 값)가 기준 이상인 스토리라인이고, 기간 집계는 `event` 가 사건 묶음 단위로 센다. 큰 스토리라인은 포함 나무마다 한 행으로 내고 그 아래의 큰 스토리라인은 행에 싣는다(storyline-R19, [ADR-0235](../adr/0235-the-big-list-has-one-row-per-containment-tree-carrying-the-big-storylines-under-it.md) · [ADR-0147](../adr/0147-storyline-big-judgement-compares-importance-weighted-coverage-per-source-and-day-with-one-criterion-at-query-time.md) · [ADR-0116](../adr/0116-storyline-big-judgement-starts-with-a-provisional-rule-of-distinct-sources-and-mean-importance-judged-at-query-time.md) · [ADR-0117](../adr/0117-big-judgement-materials-are-tallied-by-event-per-group-of-events-and-storyline-passes-only-event-ids.md))
 - **큰 판정 기준** — 운영자 설정(지금 값 한 행)과 추가 전용 이력으로 두고, 기동 때 처음 값을 적재하고, 공개 운영 API(`BigStorylineAdministration`)로 지금 값 · 변경 · 이력 · 미리보기를 낸다(storyline-R20, [ADR-0118](../adr/0118-big-judgement-criteria-are-storyline-operator-settings-and-do-not-inherit-event-criteria-values-or-history.md))
@@ -125,13 +125,13 @@ public sealed interface LinkingFillResult {
 
 ### StorylineDirectory
 
-스토리라인 조회 — 다른 모듈이 스토리라인(하나 · 여럿) · 스토리라인의 사건 · 사건의 스토리라인 · 사건마다 포함 나무의 꼭대기 · 스토리라인마다 포함 나무의 꼭대기 · 스토리라인마다 이어짐으로 닿는 꼭대기 · 조회 기간의 스토리라인 목록 · 큰 스토리라인 · 소속 없는 사건 · 스토리라인의 관계를 읽는다(storyline-R19 · R21 ~ R23 · R33 · R37 · R38). 구현은 `application` 의 `StorylineDirectoryService` 다.
+스토리라인 조회 — 다른 모듈이 스토리라인(하나 · 여럿) · 스토리라인의 사건 · 사건의 스토리라인 · 사건마다 포함 나무의 꼭대기 · 스토리라인마다 포함 나무의 꼭대기 · 스토리라인마다 이어짐으로 닿는 꼭대기 · 조회 기간의 스토리라인 목록 · 큰 스토리라인 · 소속 없는 사건 · 스토리라인 묶음마다의 기간 집계 · 스토리라인의 관계를 읽는다(storyline-R19 · R21 ~ R24 · R33 · R37 · R38). 구현은 `application` 의 `StorylineDirectoryService` 다.
 
 ```java
 public interface StorylineDirectory {
     int MAX_PAGE_SIZE = 100;                              // 목록 한 쪽의 상한 — 정본. 측정 전 목표
     int MAX_TOP_EVENTS = 1000;                            // 꼭대기 조회 한 번에 묻는 서로 다른 사건 수의 상한 — 정본. 측정 전 목표
-    int MAX_TOP_STORYLINES = 1000;                        // 스토리라인 꼭대기 · 이어짐 조회 한 번에 묻는 서로 다른 스토리라인 수의 상한 — 정본. 측정 전 목표
+    int MAX_TOP_STORYLINES = 1000;                        // 스토리라인 여럿을 묻는 조회(꼭대기 · 이어짐 · 묶음 집계) 한 번의 서로 다른 스토리라인 수의 상한 — 정본. 측정 전 목표
 
     Optional<StorylineView> find(StorylineId id);
     Map<StorylineId, StorylineView> findAll(Collection<StorylineId> ids);
@@ -143,6 +143,7 @@ public interface StorylineDirectory {
     StorylinePage list(EventPeriod period, @Nullable StorylineCursor after, int size);
     List<BigStoryline> bigStorylines(EventPeriod period);
     UnlinkedEvents unlinked(EventPeriod period);
+    <K> Map<K, EventTally> tallies(Map<K, ? extends Collection<StorylineId>> groups, EventPeriod period);
     List<StorylineRelationView> relationsOf(StorylineId id);
 }
 ```
@@ -159,6 +160,7 @@ public interface StorylineDirectory {
 | `list` | 기간의 스토리라인 — 직접 소속의 마지막 기사 시각 내림차순, 스토리라인 ID 내림차순으로 `size` 건. 집계 · 큰 여부는 그 기간 · 지금 기준이고 닫은 사건 집합으로 센다(storyline-R22 · R33). `size` 가 1 ~ `MAX_PAGE_SIZE` 밖이면 `IllegalArgumentException` |
 | `bigStorylines` | 기간의 스토리라인 가운데 큰 스토리라인 — 지금 기준으로 판정한다(storyline-R19). 포함 나무마다 한 행이다 — 큰 스토리라인 가운데 그 나무에서 가장 위의 것이 행이고, 그 아래의 큰 스토리라인은 행의 `branches` 에 실린다. 행과 아래 행 모두 보도 강도 내림차순, 스토리라인 ID 순 |
 | `unlinked` | 조회 기간 안 기사가 있는 사건 가운데 소속 없는 사건의 수와 그 사건들의 기간 안 기사 수(storyline-R23) |
+| `tallies` | 스토리라인 묶음마다 기간 집계 — 묶음의 스토리라인들의 닫은 사건 집합의 합집합을 `event` 가 센다(storyline-R24). 합쳐진 스토리라인이면 남는 스토리라인의 것이고, 상위와 그 하위를 함께 넣어도 사건은 한 번이다. 입력의 모든 키가 있다 — 남는 스토리라인이 없거나 기간 안 기사가 없는 묶음은 기사 0 · 소스 0 · 중요도 없음이다. 빈 입력이면 빈 맵. 서로 다른 스토리라인이 `MAX_TOP_STORYLINES` 개를 넘으면 `IllegalArgumentException` |
 | `relationsOf` | 스토리라인이 앞이거나 뒤인 관계 — 종류(포함 먼저) · 앞 ID · 뒤 ID 순. 합쳐진 스토리라인이면 남는 스토리라인의 것이고, 없는 스토리라인이면 빈 목록(storyline-R21 · R25) |
 
 - 계약
@@ -767,7 +769,7 @@ sequenceDiagram
   - 순환 금지(storyline-R25)는 같은 종류의 원래 스토리라인 사이에서만 확인하므로 꼭대기로 올린 고리는 순환을 이룰 수 있다 — 이미 본 꼭대기는 다시 가지 않는다
   - 받은 스토리라인은 남는 스토리라인으로 푼다(storyline-R21 — `findAll` 과 같은 길). 키는 받은 ID 이고 없는 스토리라인은 결과에 없다. 서로 다른 스토리라인이 `StorylineDirectory.MAX_TOP_STORYLINES`(1,000 — 측정 전 목표)를 넘으면 `IllegalArgumentException` 이다 — 같은 스토리라인이 여러 번 와도 한 번 센다. 빈 입력이면 빈 맵이다
   - 관계를 읽을 때의 지금 상태다 — 모듈 잠금(storyline-R5)을 잡지 않고, 꼭대기 조회(storyline-R37)와 한 스냅숏이 아니다
-- **storyline-R24** — 합계: 여러 스토리라인의 합계는 구성 사건 ID 의 합집합으로 센다 — 같은 사건을 한 번만 세고, 기사는 사건 하나에만 배정되므로 기사도 한 번이다. `EventDirectory.tallies` 의 묶음 하나가 이 합집합이다. 합계를 내는 공개 조회는 없다 — **(미구현)** 그것을 쓰는 기능(변화 리포트의 보도량)을 만들 때 둔다. 포함 관계의 상위는 하위의 사건을 닫은 사건 집합으로 센다(storyline-R33) — 상위와 그 하위를 함께 합치면 하위의 사건이 상위의 집합에 이미 있어 한 번만 세어진다
+- **storyline-R24** — 합계: 여러 스토리라인의 합계는 구성 사건 ID 의 합집합으로 센다 — 같은 사건을 한 번만 세고, 기사는 사건 하나에만 배정되므로 기사도 한 번이다. `EventDirectory.tallies` 의 묶음 하나가 이 합집합이다. 합계를 내는 공개 조회는 묶음 집계(`tallies`)다 — 받은 스토리라인을 남는 스토리라인으로 풀고(storyline-R21 — `findAll` 과 같은 길) 묶음마다 닫은 사건 집합(storyline-R33)의 합집합을 `EventDirectory.tallies` 의 묶음 하나로 넘긴다. 서로 다른 스토리라인이 `StorylineDirectory.MAX_TOP_STORYLINES` 를 넘으면 `IllegalArgumentException` 이다 — 같은 스토리라인이 여러 묶음에 와도 한 번 센다. 변화 리포트의 흐름 보도량이 쓴다([report Spec](report.md#재료) report-R16). 포함 관계의 상위는 하위의 사건을 닫은 사건 집합으로 센다(storyline-R33) — 상위와 그 하위를 함께 합치면 하위의 사건이 상위의 집합에 이미 있어 한 번만 세어진다
   - 스토리라인의 보도량은 닫은 사건 집합의 조회 기간 안 기사 수다 — 기간 집계의 기사 수이고 중요도로 무게를 주지 않는다([ADR-0148](../adr/0148-storyline-coverage-is-the-article-count-in-the-period-over-the-closed-event-set.md)). 상위의 보도량은 하위의 것을 품으므로 상위와 하위의 보도량을 그대로 더하지 않고 합집합으로 센다
   - 기간 안 기사는 사건 배정의 발행 시각으로 고른다(storyline-R22). 주제별 보도량은 기사의 첫 평가 시각으로 기간에 넣으므로([tag Spec](tag.md)) 두 보도량의 기간 시각이 다르다
 

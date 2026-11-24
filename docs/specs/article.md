@@ -127,7 +127,7 @@ public record ArticleHeadline(ArticleId id, String title, List<String> sources, 
 | 타입 · 멤버 | 뜻 |
 |---|---|
 | `findAll` | 기사들의 내용 — 없는(지운) 기사는 결과에 없다. 빈 입력이면 빈 맵 |
-| `headlines` | 기사들의 헤드라인 — 없는(지운) 기사는 결과에 없다. 빈 입력이면 빈 맵. 운영자 화면(`admin`)과 독자 화면(`reader`)이 기사 한 줄을 그린다(article-R17) |
+| `headlines` | 기사들의 헤드라인 — 없는(지운) 기사는 결과에 없다. 빈 입력이면 빈 맵. 운영자 화면(`admin`)과 독자 화면(`reader`)이 기사 한 줄을 그리고, 변화 리포트의 재료 조립이 사건 줄의 대표 기사 제목을 읽는다(article-R17) |
 | `ArticleHeadline.sources` | 출처 이름 — 엔트리 순서, 같은 이름은 한 번, 이름이 없는 피드는 뺀다(article-R17). 비어 있을 수 있다 |
 | `firstSeenSince` | 처음 본 시각(`first_seen_at`)이 `since` 이상인 기사의 ID — ID 순. `tag` 가 체계를 바꿀 때 재평가 대상을, `event` 가 사건 묶기 채우기 대상을 고른다 |
 | `publishedAt` | 기사들의 발행 시각(`ArticleContent.publishedAt` 과 같은 값) — 질의 하나, 내용 전체를 읽지 않는다. 없는(지운) 기사는 결과에 없다. 빈 입력이면 빈 맵. 다이제스트 후보 선별이 발행 시각 하한 · 순위에 쓴다 |
