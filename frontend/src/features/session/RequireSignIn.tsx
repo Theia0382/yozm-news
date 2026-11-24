@@ -11,6 +11,7 @@ import {
 } from "@/features/interestHistory/interestHistoryTexts";
 import { INTERESTS_PATH } from "@/features/interests/interestTexts";
 import { NoticesLink } from "@/features/notices/NoticesLink";
+import { REPORTS_PATH, REPORTS_TITLE } from "@/features/reports/reportTexts";
 import { withNext } from "@/features/session/safeNext";
 import { useMe } from "@/features/session/sessionQueries";
 import { useSignOut } from "@/features/session/useSignOut";
@@ -107,6 +108,9 @@ export function RequireSignIn() {
             </Link>
             <Link to={INTEREST_HISTORY_PATH} className="underline">
               {INTEREST_HISTORY_TITLE}
+            </Link>
+            <Link to={REPORTS_PATH} className="underline">
+              {REPORTS_TITLE}
             </Link>
             <Link to={INTERESTS_PATH} className="underline">
               관심 설정

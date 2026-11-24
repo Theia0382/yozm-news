@@ -16,9 +16,11 @@ import java.util.stream.Collectors;
 import net.yozmnews.llm.LlmModel;
 import net.yozmnews.platform.CodePoints;
 import net.yozmnews.platform.StructuredOutputSchema;
+import net.yozmnews.report.InterestShift;
 import net.yozmnews.report.ReportCitation;
 import net.yozmnews.report.ReportPeriodKind;
 import net.yozmnews.report.ReportSectionKind;
+import net.yozmnews.report.ReportTrend;
 import net.yozmnews.report.domain.alias.AliasedSection;
 import net.yozmnews.report.domain.alias.ReportAliases;
 import net.yozmnews.report.domain.input.CoverageSection;
@@ -28,7 +30,6 @@ import net.yozmnews.report.domain.input.FlowInterestLine;
 import net.yozmnews.report.domain.input.FlowMaterial;
 import net.yozmnews.report.domain.input.FlowSummary;
 import net.yozmnews.report.domain.input.InputSection;
-import net.yozmnews.report.domain.input.InterestShift;
 import net.yozmnews.report.domain.input.InterestsSection;
 import net.yozmnews.report.domain.input.PriorReport;
 import net.yozmnews.report.domain.input.PriorSection;
@@ -37,9 +38,9 @@ import net.yozmnews.report.domain.input.StorylinesSection;
 import net.yozmnews.report.domain.input.TopicCoverageLine;
 import net.yozmnews.report.domain.input.TopicInterestLine;
 import net.yozmnews.report.domain.input.TopicSubscriptionLine;
-import net.yozmnews.report.domain.material.CoverageTrend;
 import net.yozmnews.report.domain.output.ReportOutputSchema;
 import net.yozmnews.report.domain.prompt.ReportPromptRules.Range;
+import net.yozmnews.report.domain.report.ReportPeriod;
 import net.yozmnews.storyline.StorylineState;
 import net.yozmnews.user.TopicSubscriptionAction;
 import org.jspecify.annotations.Nullable;
@@ -120,7 +121,7 @@ public final class ReportPrompts {
 			- 출력은 출력 스키마를 따르는 JSON 객체 하나뿐이다. 앞뒤에 다른 글을 쓰지 않는다."""
 		.replace("<period_kinds>", meanings(ReportPeriodKind.values(), ReportPrompts::meaning))
 		.replace("<states>", meanings(StorylineState.values(), ReportPrompts::meaning))
-		.replace("<trends>", meanings(CoverageTrend.Trend.values(), ReportPrompts::meaning))
+		.replace("<trends>", meanings(ReportTrend.values(), ReportPrompts::meaning))
 		.replace("<shifts>", meanings(InterestShift.values(), ReportPrompts::meaning))
 		.replace("<actions>", meanings(TopicSubscriptionAction.values(), ReportPrompts::meaning))
 		.replace("<period>", PERIOD)
@@ -362,13 +363,14 @@ public final class ReportPrompts {
 		line.add(BigDecimal.valueOf(value).setScale(ReportPromptRules.INTEREST_SCALE, RoundingMode.HALF_UP).doubleValue());
 	}
 
-	private static String day(Instant instant, ZoneId zone) {
-		return DAY.format(instant.atZone(zone));
+	/** 기간 [시작, 끝) 의 첫날(report-R26 — {@link ReportPeriod#firstDay}) */
+	private static String day(Instant start, ZoneId zone) {
+		return DAY.format(ReportPeriod.firstDay(start, zone));
 	}
 
-	/** 기간 [시작, 끝) 의 마지막 날 — 끝 바로 앞 순간의 날짜 */
+	/** 기간 [시작, 끝) 의 마지막 날(report-R26 — {@link ReportPeriod#lastDay}) */
 	private static String lastDay(Instant end, ZoneId zone) {
-		return DAY.format(end.minusNanos(1).atZone(zone));
+		return DAY.format(ReportPeriod.lastDay(end, zone));
 	}
 
 	private static <T> String meanings(T[] values, Function<T, String> meaning) {
@@ -390,7 +392,7 @@ public final class ReportPrompts {
 		};
 	}
 
-	private static String meaning(CoverageTrend.Trend trend) {
+	private static String meaning(ReportTrend trend) {
 		return switch (trend) {
 			case NO_COMPARISON -> "비교할 직전 값이 없다";
 			case NEW -> "새로 나타났다";

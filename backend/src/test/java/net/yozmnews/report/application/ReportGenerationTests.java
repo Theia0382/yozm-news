@@ -9,6 +9,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -121,7 +122,9 @@ class ReportGenerationTests {
 			.containsEntry("input_tokens", 0)
 			.containsEntry("output_tokens", 0)
 			.containsEntry("duration_ms", 0L)
-			.containsEntry("error_code", null);
+			.containsEntry("error_code", null)
+			.containsEntry("zone", "Asia/Seoul")
+			.containsEntry("previous_report_id", null);
 		assertThat(instant(id, "started_at")).isEqualTo(T0);
 		assertThat(instant(id, "completed_at")).isEqualTo(T0);
 		assertThat(JSON.readTree((String) row.get("snapshot")))
@@ -131,6 +134,30 @@ class ReportGenerationTests {
 				"3 COVERAGE 로컬 섹션 3 로컬 대체물이 만든 본문이다.");
 		// 다른 갈래에 다시 든 흐름(S31)은 같은 별칭으로 인용되고, 구독 주제 보도량은 인용이 없다
 		assertThat(itemRows(id)).containsExactly("1:0 S31", "1:1 E902", "2:0 S31");
+	}
+
+	@Test
+	void recordsThePreviousReportOfTheInputWhenItStarts() {
+		ReportGeneration generation = generation(new FakeReportGenerator());
+		ReportId previous = generation.schedule(new UserId(7),
+				new ReportPeriod(ReportPeriodKind.WEEK, WEEK.start().minus(Duration.ofDays(7)), WEEK.start()));
+		ReportId withPrevious = generation.schedule(new UserId(7), WEEK);
+		ReportId empty = generation.schedule(new UserId(7), WEEK);
+		ReportInput base = input(interests());
+
+		generation.run(withPrevious, ReportFixtures.MODEL, ReportFixtures.EFFORT, new ReportInput(base.user(),
+				base.period(), base.zone(), base.sections(), base.priors(), base.statsSnapshot(), previous));
+		generation.run(empty, ReportFixtures.MODEL, ReportFixtures.EFFORT,
+				new ReportInput(base.user(), base.period(), base.zone(), List.of(), base.priors(), base.statsSnapshot(),
+						previous));
+
+		assertThat(row(withPrevious)).containsEntry("status", "READY")
+			.containsEntry("previous_report_id", previous.value())
+			.containsEntry("zone", "Asia/Seoul");
+		// 갈래가 없어 바로 끝나는 시작도 함께 쓴다
+		assertThat(row(empty)).containsEntry("status", "EMPTY")
+			.containsEntry("previous_report_id", previous.value())
+			.containsEntry("zone", "Asia/Seoul");
 	}
 
 	@Test
@@ -149,8 +176,10 @@ class ReportGenerationTests {
 			assertThatIllegalArgumentException().as(other.user() + " " + other.period())
 				.isThrownBy(() -> generation.run(id, ReportFixtures.MODEL, ReportFixtures.EFFORT, other))
 				.withMessageContaining("입력의 사용자 · 기간이 리포트 행과 다르다");
-			// 아무것도 쓰지 않았다 — 예약 그대로, 스냅숏 없음
-			assertThat(row(id)).containsEntry("status", "SCHEDULED").containsEntry("snapshot", null);
+			// 아무것도 쓰지 않았다 — 예약 그대로, 스냅숏 · 시간대 없음
+			assertThat(row(id)).containsEntry("status", "SCHEDULED")
+				.containsEntry("snapshot", null)
+				.containsEntry("zone", null);
 		}
 		// 대조 — 같은 사용자 · 기간이면 생성한다
 		assertThat(generation.run(id, ReportFixtures.MODEL, ReportFixtures.EFFORT, input(new UserId(7), WEEK, interests())))
@@ -167,6 +196,7 @@ class ReportGenerationTests {
 
 		assertThat(calls).hasValue(0);
 		assertThat(row(id)).containsEntry("status", "EMPTY")
+			.containsEntry("zone", "Asia/Seoul")
 			.containsEntry("provider", "openai")
 			.containsEntry("input_tokens", null)
 			.containsEntry("duration_ms", null);
@@ -513,7 +543,7 @@ class ReportGenerationTests {
 	private Map<String, Object> row(ReportId id) {
 		return this.jdbc.sql("""
 				select user_id, period_kind, status, provider, model, input_tokens, output_tokens, duration_ms, error_code,
-				       error_message, started_at, completed_at, stats_snapshot::text as snapshot
+				       error_message, started_at, completed_at, stats_snapshot::text as snapshot, zone, previous_report_id
 				from reports where id = :id""").param("id", id.value()).query().singleRow();
 	}
 

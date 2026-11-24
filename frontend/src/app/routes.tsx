@@ -83,6 +83,21 @@ export const routes: RouteObject[] = [
             }),
           },
           {
+            // 변화 리포트 목록 — 사용자 키로 만든 글이고 기사 내용을 보이므로 키가 있어야 간다
+            path: "reports",
+            lazy: async () => ({
+              Component: (await import("@/features/reports/ReportsPage"))
+                .ReportsPage,
+            }),
+          },
+          {
+            path: "reports/:id",
+            lazy: async () => ({
+              Component: (await import("@/features/reports/ReportPage"))
+                .ReportPage,
+            }),
+          },
+          {
             // 내 구독 — 제목을 카드 처리기(키 관문 뒤)로 붙이므로 키가 있어야 간다(ADR-0242). 정적 조각이라 storylines/:id 보다 먼저 고른다
             path: "storylines/subscriptions",
             lazy: async () => ({

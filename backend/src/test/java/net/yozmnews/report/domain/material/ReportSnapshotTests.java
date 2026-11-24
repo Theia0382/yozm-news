@@ -7,18 +7,27 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import net.yozmnews.report.InterestShift;
 import net.yozmnews.report.ReportPeriodKind;
+import net.yozmnews.report.ReportTrend;
 import net.yozmnews.report.domain.input.CoverageSection;
 import net.yozmnews.report.domain.input.Count;
 import net.yozmnews.report.domain.input.FlowInterestLine;
 import net.yozmnews.report.domain.input.FlowMaterial;
-import net.yozmnews.report.domain.input.InterestShift;
 import net.yozmnews.report.domain.input.InterestsSection;
 import net.yozmnews.report.domain.input.StorylinesSection;
 import net.yozmnews.report.domain.input.TopicCoverageLine;
 import net.yozmnews.report.domain.input.TopicInterestLine;
+import net.yozmnews.report.domain.material.ReportSnapshot.CoverageStats;
+import net.yozmnews.report.domain.material.ReportSnapshot.FlowLevelStat;
+import net.yozmnews.report.domain.material.ReportSnapshot.FlowStat;
+import net.yozmnews.report.domain.material.ReportSnapshot.FlowStats;
+import net.yozmnews.report.domain.material.ReportSnapshot.InterestStats;
 import net.yozmnews.report.domain.material.ReportSnapshot.SnapshotFlow;
+import net.yozmnews.report.domain.material.ReportSnapshot.SnapshotStats;
 import net.yozmnews.report.domain.material.ReportSnapshot.SnapshotValues;
+import net.yozmnews.report.domain.material.ReportSnapshot.TopicLevelStat;
+import net.yozmnews.report.domain.material.ReportSnapshot.TopicStat;
 import net.yozmnews.report.domain.report.ReportPeriod;
 import net.yozmnews.storyline.StorylineId;
 import net.yozmnews.storyline.StorylineState;
@@ -27,7 +36,8 @@ import org.junit.jupiter.api.Test;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * 스냅숏 꼴 — 손으로 쓴 JSON 과 견준 쓰기와 읽기, 모르는 판 · 깨진 문자열, 두 보도량의 기간 시각. 지키는 규칙: report-R19
+ * 스냅숏 꼴 — 손으로 쓴 JSON 과 견준 쓰기와 읽기(다음 리포트가 견줄 값 · 모든 칸), 모르는 판 · 깨진 문자열 · 꼴이 틀린 칸, 두 보도량의 기간
+ * 시각. 지키는 규칙: report-R19
  */
 class ReportSnapshotTests {
 
@@ -105,6 +115,53 @@ class ReportSnapshotTests {
 			.isEmpty();
 		assertThat(ReportSnapshot.read("{")).isEmpty();
 		assertThat(ReportSnapshot.read(null)).isEmpty();
+	}
+
+	@Test
+	void statsReadsEveryFieldOfEachSectionFromAHandWrittenSnapshot() {
+		assertThat(ReportSnapshot.stats("""
+				{ "version": 1, "tagSet": 4,
+				  "period": { "kind": "WEEK", "start": "2026-11-16T15:00:00Z", "end": "2026-11-23T15:00:00Z" },
+				  "storylines": { "basis": "PUBLISHED",
+				    "flows": [ { "head": 12, "tops": [15, 12], "articles": 30, "previous": 20, "trend": "ROSE",
+				                 "trackedInPeriod": false } ] },
+				  "coverage": { "basis": "FIRST_EVALUATED",
+				    "topics": [ { "key": "economy.trade", "name": "무역", "articles": 4, "previous": null,
+				                  "trend": "NO_COMPARISON" } ] },
+				  "interests": {
+				    "topics": [ { "key": "economy.finance", "name": "금융", "start": 0.25, "end": null, "shift": "LEFT" } ],
+				    "flows": [ { "head": 12, "start": null, "end": 0.6, "shift": "ENTERED" } ] } }"""))
+			.contains(new SnapshotStats(new TagSetId(4),
+					new CoverageStats(
+							List.of(new TopicStat("economy.trade", "무역", 4, null, ReportTrend.NO_COMPARISON))),
+					new FlowStats(List.of(new FlowStat(new StorylineId(12), Set.of(new StorylineId(12), new StorylineId(15)),
+							30, 20L, ReportTrend.ROSE, false))),
+					new InterestStats(
+							List.of(new TopicLevelStat("economy.finance", "금융", 0.25, null, InterestShift.LEFT)),
+							List.of(new FlowLevelStat(new StorylineId(12), null, 0.6, InterestShift.ENTERED)))));
+	}
+
+	@Test
+	void statsLeavesASectionThatIsNotInTheSnapshotEmpty() {
+		assertThat(ReportSnapshot.stats("""
+				{ "version": 1, "tagSet": 4,
+				  "period": { "kind": "MONTH", "start": "2026-10-31T15:00:00Z", "end": "2026-11-30T15:00:00Z" },
+				  "coverage": { "basis": "FIRST_EVALUATED", "topics": [] } }"""))
+			.contains(new SnapshotStats(new TagSetId(4), new CoverageStats(List.of()), null, null));
+	}
+
+	@Test
+	void statsReadsNothingFromAnUnknownVersionOrAFieldOfTheWrongKind() {
+		String flow = """
+				{ "version": %d, "tagSet": 4, "storylines": { "flows": [ { "head": 12, "tops": [12], "articles": 30,
+				  "previous": 20, "trend": "%s", "trackedInPeriod": false } ] } }""";
+		assertThat(ReportSnapshot.stats(flow.formatted(1, "ROSE"))).isPresent();
+		assertThat(ReportSnapshot.stats(flow.formatted(2, "ROSE"))).isEmpty();
+		assertThat(ReportSnapshot.stats(flow.formatted(1, "SOARED"))).isEmpty();
+		assertThat(ReportSnapshot.stats(flow.formatted(1, "ROSE").replace("\"previous\": 20", "\"previous\": \"20\"")))
+			.isEmpty();
+		assertThat(ReportSnapshot.stats(flow.formatted(1, "ROSE").replace("false", "\"no\""))).isEmpty();
+		assertThat(ReportSnapshot.stats(null)).isEmpty();
 	}
 
 }

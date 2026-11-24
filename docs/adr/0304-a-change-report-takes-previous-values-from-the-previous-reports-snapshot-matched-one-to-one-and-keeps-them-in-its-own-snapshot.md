@@ -38,3 +38,8 @@
 | 직전 스냅숏에 없는 대상만 지금 센다 | 한 표의 직전 값 출처가 둘이라 같은 표의 수가 다른 기준이다 |
 | 풀린 대상이 여럿이면 값을 더하거나 나눈다 | 합침 · 갈라짐의 사건이 겹칠 수 있어 더한 값이 실제 보도량과 다르다 |
 | 이번 기간 값만 남긴다 | 화면이 직전 스냅숏을 함께 읽어 같은 대조를 다시 해야 하고, 그때의 관계로 풀어 생성 때와 다른 짝이 나올 수 있다 |
+
+## 후속 기록
+
+- 2026-11-24: 결정 절 "화면은 스냅숏 하나로 리포트의 글과 같은 비교를 보인다"의 보이는 꼴 — [ADR-0316](0316-a-change-report-view-carries-each-visible-sections-numbers-as-typed-values-and-resolves-flow-lines-like-citations.md) · [report Spec](../specs/report.md#리포트-조회) report-R25
+- 2026-11-24: 결정 절 "직전 값은 직전 리포트의 스냅숏에서 꺼낸다"의 직전 리포트를 리포트 행에 남기는 것 — [ADR-0317](0317-a-change-report-row-points-to-the-previous-report-it-took-the-previous-values-from.md) · [report Spec](../specs/report.md#직전-리포트와-스냅숏) report-R18

@@ -15,6 +15,7 @@ import java.util.stream.IntStream;
 import java.util.stream.LongStream;
 
 import net.yozmnews.event.EventId;
+import net.yozmnews.report.InterestShift;
 import net.yozmnews.report.ReportFixtures;
 import net.yozmnews.report.ReportId;
 import net.yozmnews.report.ReportPeriodKind;
@@ -25,7 +26,6 @@ import net.yozmnews.report.domain.input.FlowInterestLine;
 import net.yozmnews.report.domain.input.FlowMaterial;
 import net.yozmnews.report.domain.input.FlowSummary;
 import net.yozmnews.report.domain.input.InputSection;
-import net.yozmnews.report.domain.input.InterestShift;
 import net.yozmnews.report.domain.input.InterestsSection;
 import net.yozmnews.report.domain.input.PriorReport;
 import net.yozmnews.report.domain.input.PriorSection;
@@ -263,7 +263,7 @@ class ReportInputFitTests {
 
 	private static ReportInput input(List<InputSection> sections, List<PriorReport> priors) {
 		return new ReportInput(ReportFixtures.USER, ReportFixtures.PERIOD, ReportFixtures.ZONE, sections, priors,
-				ReportFixtures.SNAPSHOT);
+				ReportFixtures.SNAPSHOT, null);
 	}
 
 	private static PriorReport prior(long id, String body) {

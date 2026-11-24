@@ -25,6 +25,7 @@ import net.yozmnews.event.EventDirectory;
 import net.yozmnews.event.EventId;
 import net.yozmnews.llm.ReasoningEffort;
 import net.yozmnews.platform.UserId;
+import net.yozmnews.report.InterestShift;
 import net.yozmnews.report.ReportDirectory;
 import net.yozmnews.report.ReportFixtures;
 import net.yozmnews.report.ReportId;
@@ -39,7 +40,6 @@ import net.yozmnews.report.domain.input.FlowInterestLine;
 import net.yozmnews.report.domain.input.FlowMaterial;
 import net.yozmnews.report.domain.input.FlowSummary;
 import net.yozmnews.report.domain.input.InputSection;
-import net.yozmnews.report.domain.input.InterestShift;
 import net.yozmnews.report.domain.input.InterestsSection;
 import net.yozmnews.report.domain.input.PriorReport;
 import net.yozmnews.report.domain.input.PriorSection;
@@ -247,6 +247,8 @@ class ReportMaterialCollectionTests {
 				new FlowInterestLine(SUMMARY_ONLY, new FlowSummary("지난 흐름", "지난 요약", "지난 전개", SUMMARIZED), 0.5, null,
 						InterestShift.LEFT));
 		assertThat(interests.subscriptionChanges()).isEmpty();
+		// 직전 리포트 — 시작할 때 행에 남긴다
+		assertThat(input.previous()).isEqualTo(previous);
 		// 직전 리포트의 보이는 글
 		assertThat(input.priors()).containsExactly(new PriorReport(previous, ReportPeriodKind.WEEK, PREVIOUS.start(),
 				PREVIOUS.end(), "로컬 대체물이 만든 리포트다. 섹션 1개.",
@@ -274,6 +276,17 @@ class ReportMaterialCollectionTests {
 		assertThat(((StorylinesSection) input.sections().get(0)).flows().getFirst().articles()).isEqualTo(new Count(2, null));
 		assertThat(((CoverageSection) input.sections().get(1)).topics().getFirst().articles()).isEqualTo(new Count(0, null));
 		assertThat(input.priors()).isEmpty();
+		assertThat(input.previous()).isNull();
+	}
+
+	@Test
+	void carriesThePreviousReportEvenWhenItsSnapshotCannotBeRead() {
+		ReportId previous = previousReport(USER, "{\"version\": 2}");
+
+		ReportInput input = collection(this.tagSets).collect(USER, WEEK, List.of()).orElseThrow();
+
+		assertThat(input.previous()).isEqualTo(previous);
+		assertThat(((CoverageSection) input.sections().get(1)).topics().getFirst().articles()).isEqualTo(new Count(0, null));
 	}
 
 	@Test
@@ -357,7 +370,7 @@ class ReportMaterialCollectionTests {
 		ReportGeneration generation = generation();
 		ReportId id = generation.schedule(user, PREVIOUS);
 		generation.run(id, ReportFixtures.MODEL, ReportFixtures.EFFORT, new ReportInput(user, PREVIOUS, SEOUL,
-				List.of(new StorylinesSection(List.of(ReportFixtures.flow(this.storylineA)))), List.of(), snapshot));
+				List.of(new StorylinesSection(List.of(ReportFixtures.flow(this.storylineA)))), List.of(), snapshot, null));
 		return id;
 	}
 

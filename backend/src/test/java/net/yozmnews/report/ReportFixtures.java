@@ -12,13 +12,13 @@ import net.yozmnews.llm.LlmModel;
 import net.yozmnews.llm.Provider;
 import net.yozmnews.llm.ReasoningEffort;
 import net.yozmnews.platform.UserId;
+import net.yozmnews.report.InterestShift;
 import net.yozmnews.report.domain.input.CoverageSection;
 import net.yozmnews.report.domain.input.Count;
 import net.yozmnews.report.domain.input.EventLine;
 import net.yozmnews.report.domain.input.FlowInterestLine;
 import net.yozmnews.report.domain.input.FlowMaterial;
 import net.yozmnews.report.domain.input.InputSection;
-import net.yozmnews.report.domain.input.InterestShift;
 import net.yozmnews.report.domain.input.InterestsSection;
 import net.yozmnews.report.domain.input.ReportInput;
 import net.yozmnews.report.domain.input.StorylinesSection;
@@ -103,7 +103,7 @@ public final class ReportFixtures {
 	}
 
 	public static ReportInput input(UserId user, ReportPeriod period, InputSection... sections) {
-		return new ReportInput(user, period, ZONE, List.of(sections), List.of(), SNAPSHOT);
+		return new ReportInput(user, period, ZONE, List.of(sections), List.of(), SNAPSHOT, null);
 	}
 
 }

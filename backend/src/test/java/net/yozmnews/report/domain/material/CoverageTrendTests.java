@@ -2,7 +2,7 @@ package net.yozmnews.report.domain.material;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import net.yozmnews.report.domain.material.CoverageTrend.Trend;
+import net.yozmnews.report.ReportTrend;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
@@ -23,7 +23,7 @@ class CoverageTrendTests {
 			"10, 6, STEADY",
 			"2, 0, STEADY",
 			"3, 0, FELL" })
-	void judgesTheChangeInTheRuleOrder(Long previous, long current, Trend expected) {
+	void judgesTheChangeInTheRuleOrder(Long previous, long current, ReportTrend expected) {
 		assertThat(CoverageTrend.of(current, previous)).isEqualTo(expected);
 	}
 

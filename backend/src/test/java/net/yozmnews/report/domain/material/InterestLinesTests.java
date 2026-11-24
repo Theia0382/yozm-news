@@ -9,9 +9,9 @@ import java.util.Set;
 
 import net.yozmnews.digest.InterestPoint;
 import net.yozmnews.digest.TopicSubscriptionStep;
+import net.yozmnews.report.InterestShift;
 import net.yozmnews.report.domain.input.FlowInterestLine;
 import net.yozmnews.report.domain.input.FlowSummary;
-import net.yozmnews.report.domain.input.InterestShift;
 import net.yozmnews.report.domain.input.TopicInterestLine;
 import net.yozmnews.report.domain.input.TopicSubscriptionLine;
 import net.yozmnews.report.domain.material.InterestLines.FlowRef;

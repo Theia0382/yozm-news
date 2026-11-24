@@ -16,10 +16,10 @@ public interface ReportDirectory {
 	int MAX_PAGE_SIZE = 50;
 
 	/**
-	 * 그 사용자의 리포트 — ID 내림차순으로 {@code size} 건, {@code before} 가 있으면 그보다 작은 ID 만
+	 * 그 사용자의 그 종류 리포트 — ID 내림차순으로 {@code size} 건, {@code before} 가 있으면 그보다 작은 ID 만
 	 * @throws IllegalArgumentException {@code size} 가 1 ~ {@link #MAX_PAGE_SIZE} 밖일 때
 	 */
-	ReportPage list(UserId user, @Nullable ReportId before, int size);
+	ReportPage list(UserId user, ReportPeriodKind kind, @Nullable ReportId before, int size);
 
 	/**
 	 * 그 사용자의 리포트 한 편 — 없거나 다른 사용자의 리포트면 빈 값

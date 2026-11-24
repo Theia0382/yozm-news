@@ -8,6 +8,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 import net.yozmnews.digest.DigestItemCursor;
+import net.yozmnews.report.ReportId;
 import net.yozmnews.storyline.StorylineDirectory;
 import net.yozmnews.storyline.StorylineId;
 import org.jspecify.annotations.Nullable;
@@ -15,7 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
- * 독자 화면의 요청 매개변수 읽기와 그 400 · 404 — docs/specs/reader.md §5 reader-R4 · R6 · R9 · R10.
+ * 독자 화면의 요청 매개변수 읽기와 그 400 · 404 — docs/specs/reader.md §5 reader-R4 · R6 · R9 · R10 · R15 · R16.
  */
 final class ScreenRequests {
 
@@ -97,6 +98,26 @@ final class ScreenRequests {
 	/** 그 사용자의 정리된 사용자 스토리라인이 없을 때의 404 */
 	static ResponseStatusException unknownUserStoryline(long id) {
 		return new ResponseStatusException(HttpStatus.NOT_FOUND, "없는 사용자 스토리라인: " + id);
+	}
+
+	/**
+	 * 리포트 목록의 다음 쪽 커서.
+	 * @return 없으면 null
+	 * @throws ResponseStatusException 400 — 1 보다 작을 때
+	 */
+	static @Nullable ReportId reportCursor(@Nullable Long before) {
+		if (before == null) {
+			return null;
+		}
+		if (before < 1) {
+			throw badRequest("before 는 1 이상이다: " + before);
+		}
+		return new ReportId(before);
+	}
+
+	/** 그 사용자의 리포트가 없을 때의 404 */
+	static ResponseStatusException unknownReport(long id) {
+		return new ResponseStatusException(HttpStatus.NOT_FOUND, "없는 리포트: " + id);
 	}
 
 	/** 그 날짜에 다이제스트가 없을 때의 404 */

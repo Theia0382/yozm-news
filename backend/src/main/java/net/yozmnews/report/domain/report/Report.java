@@ -23,8 +23,8 @@ import org.springframework.data.relational.core.mapping.Table;
 /**
  * 리포트 상태 aggregate — 상태 전이의 정본 · docs/specs/report.md §4 · report-R1
  * <p>
- * 바꾸는 메서드는 새 값을 돌려준다. 공급자 · 모델은 시작할 때 요청의 쓸 모델을 적는다. 통계 스냅숏(jsonb 칸)은 이 aggregate 의 속성이 아니다 —
- * 시작 저장 직전에 {@link ReportRepository#writeSnapshot} 이 쓴다.
+ * 바꾸는 메서드는 새 값을 돌려준다. 공급자 · 모델은 시작할 때 요청의 쓸 모델을 적는다. 통계 스냅숏(jsonb 칸) · 직전 리포트 · 사용자 시간대는
+ * 이 aggregate 의 속성이 아니다 — 시작 저장 직전에 {@link ReportRepository#writeStart} 가 쓴다.
  */
 @Table("reports")
 public final class Report {

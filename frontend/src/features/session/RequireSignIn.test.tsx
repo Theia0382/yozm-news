@@ -136,6 +136,16 @@ describe("RequireSignIn", () => {
     ).toHaveAttribute("href", "/interest-history");
   });
 
+  it("변화 리포트 링크를 머리줄에 둔다", async () => {
+    renderGuarded("/", () => json(SIGNED_IN));
+
+    await screen.findByText("첫 화면");
+    expect(screen.getByRole("link", { name: "변화 리포트" })).toHaveAttribute(
+      "href",
+      "/reports",
+    );
+  });
+
   it("LLM 키 링크를 머리줄에 둔다", async () => {
     renderGuarded("/digest", () => json(SIGNED_IN));
 

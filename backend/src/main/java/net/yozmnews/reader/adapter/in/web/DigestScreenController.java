@@ -1,8 +1,6 @@
 package net.yozmnews.reader.adapter.in.web;
 
 import java.time.LocalDate;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -18,9 +16,7 @@ import net.yozmnews.digest.DigestDirectory;
 import net.yozmnews.digest.DigestRequests;
 import net.yozmnews.platform.ApiProblem;
 import net.yozmnews.platform.UserId;
-import net.yozmnews.storyline.StorylineId;
 import net.yozmnews.user.UserStorylineSummaries;
-import net.yozmnews.user.UserStorylineSummaryRef;
 import net.yozmnews.platform.WebRole;
 import org.jspecify.annotations.Nullable;
 import org.springframework.http.MediaType;
@@ -52,14 +48,14 @@ class DigestScreenController {
 
 	private final ScreenArticles articles;
 
-	private final UserStorylineSummaries summaries;
+	private final UserStorylineRefs refs;
 
 	DigestScreenController(DigestDirectory digests, DigestRequests requests, ArticleDirectory articles,
 			UserStorylineSummaries summaries) {
 		this.digests = Objects.requireNonNull(digests, "digests");
 		this.requests = Objects.requireNonNull(requests, "requests");
 		this.articles = new ScreenArticles(articles);
-		this.summaries = Objects.requireNonNull(summaries, "summaries");
+		this.refs = new UserStorylineRefs(summaries);
 	}
 
 	@GetMapping("/api/digests/latest")
@@ -107,17 +103,7 @@ class DigestScreenController {
 	/** 날짜 보기 — 인용 기사의 정보는 응답 하나에 한 번 읽는다(reader-R7) */
 	private DigestDayResponse response(UserId user, DigestDay day) {
 		Map<ArticleId, NewsArticleResponse> cited = this.articles.of(DigestDayResponse.citedArticles(day));
-		return DigestDayResponse.of(day, cited, userStorylinesOf(user, DigestDayResponse.flows(day)));
-	}
-
-	/** 항목을 묶은 흐름마다 그 흐름의 정리된 사용자 스토리라인 모두 — 한 번에 묻는 상한씩 나눠 묻는다 */
-	private Map<StorylineId, List<UserStorylineSummaryRef>> userStorylinesOf(UserId user, List<StorylineId> flows) {
-		Map<StorylineId, List<UserStorylineSummaryRef>> found = new HashMap<>();
-		for (int from = 0; from < flows.size(); from += UserStorylineSummaries.MAX_TOPS) {
-			found.putAll(this.summaries.ofTops(user,
-					flows.subList(from, Math.min(from + UserStorylineSummaries.MAX_TOPS, flows.size()))));
-		}
-		return found;
+		return DigestDayResponse.of(day, cited, this.refs.of(user, DigestDayResponse.flows(day)));
 	}
 
 }

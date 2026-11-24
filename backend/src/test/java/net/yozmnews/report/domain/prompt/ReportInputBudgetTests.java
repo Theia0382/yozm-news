@@ -62,7 +62,7 @@ class ReportInputBudgetTests {
 		ReportPeriod month = new ReportPeriod(ReportPeriodKind.MONTH, ReportFixtures.PERIOD.start(),
 				ReportFixtures.PERIOD.start().plusSeconds(31L * 24 * 3600));
 		ReportInput input = new ReportInput(ReportFixtures.USER, month, ReportFixtures.ZONE,
-				List.of(flows(flow(31, 902)), coverage(), interests(31)), List.of(), ReportFixtures.SNAPSHOT);
+				List.of(flows(flow(31, 902)), coverage(), interests(31)), List.of(), ReportFixtures.SNAPSHOT, null);
 		String diagnosis = "가".repeat(ReportPromptRules.MAX_DIAGNOSIS);
 		for (boolean structured : new boolean[] { true, false }) {
 			ReportPrompt first = ReportPrompts.compose(input, ReportAliases.of(input), model(120_000, structured));

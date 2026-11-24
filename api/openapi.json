@@ -5362,6 +5362,131 @@
         "tags" : [ "ping-controller" ]
       }
     },
+    "/api/reports" : {
+      "get" : {
+        "operationId" : "reports",
+        "parameters" : [ {
+          "description" : "리포트 종류 — 주간(WEEK) · 월간(MONTH)",
+          "in" : "query",
+          "name" : "kind",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "enum" : [ "WEEK", "MONTH" ]
+          }
+        }, {
+          "description" : "이 ID 보다 작은 리포트만(1 이상) — 다음 쪽은 앞 응답의 next 를 넘긴다",
+          "in" : "query",
+          "name" : "before",
+          "required" : false,
+          "schema" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ReportListResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "종류가 없거나 틀렸다, 또는 커서가 1 보다 작다"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "세션이 없거나 만료됐다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "비밀번호를 바꿔야 한다 · LLM 키를 등록해야 한다"
+          }
+        },
+        "tags" : [ "report-screen-controller" ]
+      }
+    },
+    "/api/reports/{id}" : {
+      "get" : {
+        "operationId" : "report",
+        "parameters" : [ {
+          "description" : "리포트 ID",
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ReportDetailResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "세션이 없거나 만료됐다"
+          },
+          "403" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "비밀번호를 바꿔야 한다 · LLM 키를 등록해야 한다"
+          },
+          "404" : {
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description" : "없는 리포트다"
+          }
+        },
+        "tags" : [ "report-screen-controller" ]
+      }
+    },
     "/api/session" : {
       "delete" : {
         "operationId" : "signOut",
@@ -9984,6 +10109,306 @@
           }
         },
         "required" : [ "storylineId", "title" ]
+      },
+      "ReportCitationResponse" : {
+        "type" : "object",
+        "properties" : {
+          "article" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/NewsArticleResponse"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "eventId" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int64"
+          },
+          "flow" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/ReportFlowResponse"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "kind" : {
+            "type" : "string",
+            "enum" : [ "STORYLINE", "EVENT" ]
+          }
+        },
+        "required" : [ "article", "eventId", "flow", "kind" ]
+      },
+      "ReportDetailResponse" : {
+        "type" : "object",
+        "properties" : {
+          "hiddenSections" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "previous" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/ReportSummaryResponse"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "report" : {
+            "$ref" : "#/components/schemas/ReportSummaryResponse"
+          },
+          "sections" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ReportSectionResponse"
+            }
+          },
+          "usage" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/ReportUsageResponse"
+            }, {
+              "type" : "null"
+            } ]
+          }
+        },
+        "required" : [ "hiddenSections", "previous", "report", "sections", "usage" ]
+      },
+      "ReportFlowCountResponse" : {
+        "type" : "object",
+        "properties" : {
+          "articles" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "flow" : {
+            "$ref" : "#/components/schemas/ReportFlowResponse"
+          },
+          "previous" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int64"
+          },
+          "trackedInPeriod" : {
+            "type" : "boolean"
+          },
+          "trend" : {
+            "type" : "string",
+            "enum" : [ "NEW", "ROSE", "FELL", "STEADY", "NO_COMPARISON" ]
+          }
+        },
+        "required" : [ "articles", "flow", "previous", "trackedInPeriod", "trend" ]
+      },
+      "ReportFlowLevelResponse" : {
+        "type" : "object",
+        "properties" : {
+          "end" : {
+            "type" : [ "number", "null" ],
+            "format" : "double"
+          },
+          "flow" : {
+            "$ref" : "#/components/schemas/ReportFlowResponse"
+          },
+          "shift" : {
+            "type" : "string",
+            "enum" : [ "ENTERED", "LEFT", "NONE" ]
+          },
+          "start" : {
+            "type" : [ "number", "null" ],
+            "format" : "double"
+          }
+        },
+        "required" : [ "end", "flow", "shift", "start" ]
+      },
+      "ReportFlowResponse" : {
+        "type" : "object",
+        "properties" : {
+          "storylineId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "title" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/NewsArticleResponse"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "userStorylines" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/RefResponse"
+            }
+          }
+        },
+        "required" : [ "storylineId", "title", "userStorylines" ]
+      },
+      "ReportInterestsResponse" : {
+        "type" : "object",
+        "properties" : {
+          "flows" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ReportFlowLevelResponse"
+            }
+          },
+          "topics" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ReportTopicLevelResponse"
+            }
+          }
+        },
+        "required" : [ "flows", "topics" ]
+      },
+      "ReportListResponse" : {
+        "type" : "object",
+        "properties" : {
+          "next" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int64"
+          },
+          "reports" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ReportSummaryResponse"
+            }
+          }
+        },
+        "required" : [ "next", "reports" ]
+      },
+      "ReportSectionResponse" : {
+        "type" : "object",
+        "properties" : {
+          "body" : {
+            "type" : "string"
+          },
+          "citations" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ReportCitationResponse"
+            }
+          },
+          "flows" : {
+            "type" : [ "array", "null" ],
+            "items" : {
+              "$ref" : "#/components/schemas/ReportFlowCountResponse"
+            }
+          },
+          "interests" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/ReportInterestsResponse"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "kind" : {
+            "type" : "string",
+            "enum" : [ "OVERVIEW", "STORYLINES", "COVERAGE", "INTERESTS" ]
+          },
+          "title" : {
+            "type" : [ "string", "null" ]
+          },
+          "topics" : {
+            "type" : [ "array", "null" ],
+            "items" : {
+              "$ref" : "#/components/schemas/ReportTopicCountResponse"
+            }
+          }
+        },
+        "required" : [ "body", "citations", "flows", "interests", "kind", "title", "topics" ]
+      },
+      "ReportSummaryResponse" : {
+        "type" : "object",
+        "properties" : {
+          "completedAt" : {
+            "type" : [ "string", "null" ],
+            "format" : "date-time"
+          },
+          "failure" : {
+            "type" : [ "string", "null" ],
+            "enum" : [ "UNREADABLE_OUTPUT", "OUTPUT_TRUNCATED", "OUTPUT_REFUSED", "KEY_MISSING", "KEY_INVALID", "PERMISSION_DENIED", "QUOTA_EXHAUSTED", "PROVIDER_UNAVAILABLE", "PROVIDER_UNEXPECTED" ]
+          },
+          "firstDay" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "kind" : {
+            "type" : "string",
+            "enum" : [ "WEEK", "MONTH" ]
+          },
+          "lastDay" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "SCHEDULED", "RUNNING", "READY", "EMPTY", "FAILED" ]
+          }
+        },
+        "required" : [ "completedAt", "failure", "firstDay", "id", "kind", "lastDay", "status" ]
+      },
+      "ReportTopicCountResponse" : {
+        "type" : "object",
+        "properties" : {
+          "articles" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "previous" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int64"
+          },
+          "trend" : {
+            "type" : "string",
+            "enum" : [ "NEW", "ROSE", "FELL", "STEADY", "NO_COMPARISON" ]
+          }
+        },
+        "required" : [ "articles", "name", "previous", "trend" ]
+      },
+      "ReportTopicLevelResponse" : {
+        "type" : "object",
+        "properties" : {
+          "end" : {
+            "type" : [ "number", "null" ],
+            "format" : "double"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "shift" : {
+            "type" : "string",
+            "enum" : [ "ENTERED", "LEFT", "NONE" ]
+          },
+          "start" : {
+            "type" : [ "number", "null" ],
+            "format" : "double"
+          }
+        },
+        "required" : [ "end", "name", "shift", "start" ]
+      },
+      "ReportUsageResponse" : {
+        "type" : "object",
+        "properties" : {
+          "inputTokens" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int32"
+          },
+          "model" : {
+            "type" : "string"
+          },
+          "outputTokens" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int32"
+          },
+          "provider" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "inputTokens", "model", "outputTokens", "provider" ]
       },
       "ResubmissionItemResponse" : {
         "type" : "object",

@@ -15,9 +15,9 @@ import org.jspecify.annotations.Nullable;
 public interface ReportViewRepository {
 
 	/**
-	 * 그 사용자의 리포트 — ID 내림차순으로 {@code limit} 건, {@code before} 가 있으면 그보다 작은 ID 만
+	 * 그 사용자의 그 종류 리포트 — ID 내림차순으로 {@code limit} 건, {@code before} 가 있으면 그보다 작은 ID 만
 	 */
-	List<ReportRow> page(UserId user, @Nullable ReportId before, int limit);
+	List<ReportRow> page(UserId user, ReportPeriodKind kind, @Nullable ReportId before, int limit);
 
 	/** 그 사용자의 리포트 한 행 — 없거나 다른 사용자의 것이면 빈 값 */
 	Optional<ReportRow> find(UserId user, ReportId id);

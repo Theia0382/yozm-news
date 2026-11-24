@@ -6,11 +6,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.time.Instant;
 import java.util.List;
 
+import net.yozmnews.report.InterestShift;
 import net.yozmnews.report.ReportSectionKind;
 import net.yozmnews.report.domain.input.Count;
 import net.yozmnews.report.domain.input.CoverageSection;
 import net.yozmnews.report.domain.input.InputSection;
-import net.yozmnews.report.domain.input.InterestShift;
 import net.yozmnews.report.domain.input.StorylinesSection;
 import net.yozmnews.report.domain.input.TopicCoverageLine;
 import net.yozmnews.report.domain.input.TopicInterestLine;
