@@ -58,11 +58,11 @@ class StorylineResultTest(unittest.TestCase):
                                                {"source": "s1", "target": "s9", "kind": "NEXT"}],
                                  "big": [{"storyline": "s9", "day": "2026-11-04"},
                                          {"storyline": "s1", "day": "11-04"}]})
-        for expected in ("meta 에 linking 가 없다", "storylines[1]: id s1 가 둘이다", "스토리라인 s3 에 기사가 없다",
+        for expected in ("meta 에 linking 가 없다", "storylines[1]: id s1 가 둘이다", "흐름 s3 에 기사가 없다",
                          "storylines[3]: articles 가 기사 ID(정수) 배열이 아니다", "storylines[4]: id 가 빈 문자열",
-                         "스토리라인 s5 에 같은 기사가 둘이다", "relations[0]: 스토리라인 s9 가 storylines 에 없다",
-                         "relations[1]: 스토리라인 s1 가 자기 자신과 이어졌다", "relations[2]: kind 는 CONTAINS 이나 FOLLOWS 다",
-                         "big[0]: 스토리라인 's9' 가 storylines 에 없다", "big[1]: 날짜를 읽을 수 없다"):
+                         "흐름 s5 에 같은 기사가 둘이다", "relations[0]: 흐름 s9 가 storylines 에 없다",
+                         "relations[1]: 흐름 s1 가 자기 자신과 이어졌다", "relations[2]: kind 는 CONTAINS 이나 FOLLOWS 다",
+                         "big[0]: 흐름 's9' 가 storylines 에 없다", "big[1]: 날짜를 읽을 수 없다"):
             self.assertIn(expected, message)
 
     def test_ends_of_another_type_are_problems(self):
@@ -70,8 +70,8 @@ class StorylineResultTest(unittest.TestCase):
         message = self.problems({**RESULT, "relations": [{"source": ["s1"], "target": "s2", "kind": "FOLLOWS"},
                                                          {"source": "s1", "target": "s2", "kind": ["FOLLOWS"]}],
                                  "big": [{"storyline": ["s1"], "day": "2026-11-04"}]})
-        for expected in ("relations[0]: 스토리라인 ['s1'] 가 storylines 에 없다", "relations[1]: kind 는 CONTAINS 이나 FOLLOWS 다",
-                         "big[0]: 스토리라인 ['s1'] 가 storylines 에 없다"):
+        for expected in ("relations[0]: 흐름 ['s1'] 가 storylines 에 없다", "relations[1]: kind 는 CONTAINS 이나 FOLLOWS 다",
+                         "big[0]: 흐름 ['s1'] 가 storylines 에 없다"):
             self.assertIn(expected, message)
 
     def test_meta_shapes(self):
