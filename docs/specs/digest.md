@@ -657,7 +657,7 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
 
 ### 항목 묶기와 가르기
 
-판단의 이유는 [ADR-0262](../adr/0262-chosen-events-are-grouped-into-items-by-containment-tree-top-code-splits-top-stories-and-headlines-the-llm-writes-per-item-and-an-item-has-one-badge.md) · [ADR-0264](../adr/0264-the-storyline-tops-query-gives-each-event-its-containment-tree-roots-in-membership-score-order-without-the-scores.md) · [ADR-0299](../adr/0299-a-subscribed-row-takes-at-most-forty-percent-of-the-top-story-seats-big-slot-items-included-and-the-cap-is-off-below-three-rows.md)(구독 행마다 상한)에 있다. 큰 슬롯 밖 주요 뉴스 수와 구독 행마다 상한은 측정 전 목표다([open-questions.md](../open-questions.md) "운영하면서 결정" 39번).
+판단의 이유는 [ADR-0262](../adr/0262-chosen-events-are-grouped-into-items-by-containment-tree-top-code-splits-top-stories-and-headlines-the-llm-writes-per-item-and-an-item-has-one-badge.md) · [ADR-0264](../adr/0264-the-storyline-tops-query-gives-each-event-its-containment-tree-roots-in-membership-score-order-without-the-scores.md) · [ADR-0300](../adr/0300-a-subscribed-row-takes-at-most-forty-percent-of-the-top-story-seats-big-slot-items-included-and-the-cap-is-off-below-three-rows.md)(구독 행마다 상한)에 있다. 큰 슬롯 밖 주요 뉴스 수와 구독 행마다 상한은 측정 전 목표다([open-questions.md](../open-questions.md) "운영하면서 결정" 39번).
 
 - **digest-R46** — 항목 묶기(`ItemGrouping`): 예산 자르기 뒤 남은 사건(큰 슬롯 사건 · 구독 사건 · 새 길 사건)을 후보 사건이 실은 꼭대기(digest-R16 — `storyline` 의 꼭대기 조회 `StorylineDirectory.topsOf`, 사건마다 포함 나무의 꼭대기, 소속 점수 순 — [storyline-R37](storyline.md#공개-조회))로 묶는다 — 꼭대기를 다시 묻지 않는다
   - 큰 판정 나무는 예산 자르기 뒤 큰 슬롯 사건이 하나 이상 남은 큰 판정 행의 나무다 — 그 나무의 꼭대기는 행 머리(`BigStoryline.storyline`)의 포함 나무 꼭대기(digest-R19 — `BigRow.top`)다. 고르지 않은 행(큰 슬롯 수 밖이거나 사건이 모두 잘린 행)의 나무는 큰 판정 나무가 아니다
@@ -926,4 +926,4 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
 | [0296](../adr/0296-the-big-slot-takes-big-judgement-rows-in-the-order-of-intensity-times-the-interest-weight.md) | 큰 슬롯은 보도 강도에 관심 가중치를 곱한 순서로 큰 판정 행을 쓴다 |
 | [0297](../adr/0297-an-event-whose-mean-topic-interest-is-at-or-below-the-exclusion-threshold-does-not-enter-the-big-slot.md) | 주제 관심의 평균이 거름 기준 이하인 사건은 큰 슬롯에 넣지 않는다 |
 | [0298](../adr/0298-storyline-interest-drops-silent-exposures-before-the-latest-reacted-exposure-per-flow-and-topics-and-tracking-are-left-out.md) | 스토리라인 관심은 묶음마다 반응한 가장 늦은 노출보다 앞선 무반응 노출을 노출에서 빼고, 주제 관심과 흐름 추적에는 그 규칙을 걸지 않는다 |
-| [0299](../adr/0299-a-subscribed-row-takes-at-most-forty-percent-of-the-top-story-seats-big-slot-items-included-and-the-cap-is-off-below-three-rows.md) | 주요 뉴스는 한 구독 행이 칸의 40% 까지 차지하고, 큰 슬롯 항목도 그 몫을 쓰며, 구독 행이 셋 미만이면 걸지 않는다 |
+| [0300](../adr/0300-a-subscribed-row-takes-at-most-forty-percent-of-the-top-story-seats-big-slot-items-included-and-the-cap-is-off-below-three-rows.md) | 주요 뉴스는 한 구독 행이 칸의 40% 까지 차지하고, 큰 슬롯 항목도 그 몫을 쓰며, 구독 행이 셋 미만이면 걸지 않는다 |
