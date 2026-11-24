@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import net.yozmnews.account.AccountDirectory;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.tag.TagKeyLineage;
 import net.yozmnews.tag.TagKeyMapping;
@@ -14,7 +15,6 @@ import net.yozmnews.tag.TagSetId;
 import net.yozmnews.user.TopicSuggestionDecline;
 import net.yozmnews.user.TopicSuggestionDeclineList;
 import net.yozmnews.user.TopicSuggestionDeclines;
-import net.yozmnews.user.domain.account.AccountRepository;
 import net.yozmnews.user.domain.suggestion.RecordedDecline;
 import net.yozmnews.user.domain.suggestion.TopicSuggestionDeclineRepository;
 import org.springframework.stereotype.Service;
@@ -32,7 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 class TopicSuggestionDeclinesService implements TopicSuggestionDeclines {
 
-	private final AccountRepository accounts;
+	private final AccountDirectory accounts;
 
 	private final TopicSuggestionDeclineRepository declines;
 
@@ -40,7 +40,7 @@ class TopicSuggestionDeclinesService implements TopicSuggestionDeclines {
 
 	private final TagKeyLineage lineage;
 
-	TopicSuggestionDeclinesService(AccountRepository accounts, TopicSuggestionDeclineRepository declines,
+	TopicSuggestionDeclinesService(AccountDirectory accounts, TopicSuggestionDeclineRepository declines,
 			TagSetDirectory tagSets, TagKeyLineage lineage) {
 		this.accounts = Objects.requireNonNull(accounts, "accounts");
 		this.declines = Objects.requireNonNull(declines, "declines");
@@ -53,7 +53,7 @@ class TopicSuggestionDeclinesService implements TopicSuggestionDeclines {
 	public TopicSuggestionDeclineList declinesOf(UserId user) {
 		Objects.requireNonNull(user, "user");
 		TagSetId active = this.tagSets.activeTagSet().id();
-		if (!this.accounts.existsById(user.value())) {
+		if (!this.accounts.exists(user)) {
 			return new TopicSuggestionDeclineList(active, List.of());
 		}
 		Map<TagSetId, TagKeyMapping> mappings = new HashMap<>();

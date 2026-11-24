@@ -39,7 +39,7 @@ import org.springframework.web.util.pattern.PathPatternParser;
  * 있는지, 등록이 낡지 않았는지, 사용자 ID 를 요청에서 받지 않는지, 비밀번호 변경 전 허용 표시가 세션 처리기에만 이유와 함께 달렸는지
  * 본다. {@code UserScopeTests} 가 앱에, 틀 자체의 시험이 일부러 틀린 시험 컨텍스트에 돌린다.
  * <p>
- * 지키는 규칙: user-R5 · user-R6 · platform-R21
+ * 지키는 규칙: account-R5 · account-R6 · platform-R21
  */
 public final class UserScopeRules {
 
@@ -140,7 +140,7 @@ public final class UserScopeRules {
 		return annotation == null || reason.apply(annotation).isBlank();
 	}
 
-	/** 사용자 ID 를 요청에서 받는 인자 — 사용자는 묶기 애너테이션 없는 {@link UserId} 로만 받는다(user-R6) */
+	/** 사용자 ID 를 요청에서 받는 인자 — 사용자는 묶기 애너테이션 없는 {@link UserId} 로만 받는다(account-R6) */
 	private static List<String> userIdInputs(String key, HandlerMethod handler) {
 		List<String> violations = new ArrayList<>();
 		for (MethodParameter parameter : handler.getMethodParameters()) {

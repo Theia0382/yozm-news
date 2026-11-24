@@ -16,22 +16,23 @@ import java.util.stream.IntStream;
 
 import jakarta.servlet.http.Cookie;
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.account.PasswordChangeMethod;
+import net.yozmnews.account.SignedInUsers;
+import net.yozmnews.account.application.PasswordHashing;
+import net.yozmnews.account.domain.account.AccountRepository;
+import net.yozmnews.account.domain.account.AccountRole;
+import net.yozmnews.account.domain.credential.PasswordCredentialRepository;
 import net.yozmnews.event.EventArticles;
 import net.yozmnews.llm.Provider;
 import net.yozmnews.source.FeedId;
 import net.yozmnews.source.FeedStatus;
 import net.yozmnews.storyline.StorylineRows;
 import net.yozmnews.tag.TagKind;
-import net.yozmnews.user.SignedInUsers;
-import net.yozmnews.user.application.PasswordHashing;
-import net.yozmnews.user.domain.account.AccountRepository;
-import net.yozmnews.user.domain.account.AccountRole;
-import net.yozmnews.user.domain.credential.PasswordCredentialRepository;
+import net.yozmnews.user.UserTables;
 import net.yozmnews.user.domain.notice.FeedStatusContent;
 import net.yozmnews.user.domain.notice.FeedStatusEntry;
 import net.yozmnews.user.domain.notice.KeyInvalidatedContent;
 import net.yozmnews.user.domain.notice.NoticeRepository;
-import net.yozmnews.user.domain.notice.PasswordChangeMethod;
 import net.yozmnews.user.domain.notice.PasswordChangedContent;
 import net.yozmnews.user.domain.notice.PreferencesAdjustedContent;
 import net.yozmnews.user.domain.notice.RemovedSubscription;
@@ -97,14 +98,14 @@ class NoticeControllerTests {
 
 	@BeforeEach
 	void signIn() throws Exception {
-		this.jdbc.sql("delete from users").update();
+		UserTables.deleteAll(this.jdbc);
 		this.admin = new SignedInUsers(this.mockMvc, this.accounts, this.credentials, this.hashing)
 			.signIn("notices@example.com", AccountRole.ADMIN);
 	}
 
 	@AfterEach
 	void reset() {
-		this.jdbc.sql("delete from users").update();
+		UserTables.deleteAll(this.jdbc);
 	}
 
 	@Test

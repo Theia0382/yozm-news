@@ -7,6 +7,7 @@ import net.yozmnews.tag.TagSetActivationResult;
 import net.yozmnews.tag.TagSetAdministration;
 import net.yozmnews.tag.TagSetId;
 import net.yozmnews.tag.application.TagSetRows;
+import net.yozmnews.user.UserTables;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 /**
@@ -72,7 +73,7 @@ final class SecondTagSet {
 
 	/** 계정 · 리스너 발행 · 버전 2 이상을 지우고 버전 1 을 처음 모양으로 */
 	void clean() {
-		this.jdbc.sql("delete from users").update();
+		UserTables.deleteAll(this.jdbc);
 		this.jdbc.sql("delete from event_publication where listener_id like :listener")
 			.param("listener", LISTENER)
 			.update();

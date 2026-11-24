@@ -13,14 +13,15 @@ import java.time.ZoneOffset;
 import java.util.List;
 
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.account.SignedInUsers;
+import net.yozmnews.account.application.PasswordHashing;
+import net.yozmnews.account.domain.account.AccountRepository;
+import net.yozmnews.account.domain.credential.PasswordCredentialRepository;
 import net.yozmnews.storyline.StorylineRows;
-import net.yozmnews.user.SignedInUsers;
-import net.yozmnews.user.UserStorylineFixtures;
 import net.yozmnews.user.StorylineSubscriptionAction;
 import net.yozmnews.user.StorylineSubscriptionCause;
-import net.yozmnews.user.application.PasswordHashing;
-import net.yozmnews.user.domain.account.AccountRepository;
-import net.yozmnews.user.domain.credential.PasswordCredentialRepository;
+import net.yozmnews.user.UserStorylineFixtures;
+import net.yozmnews.user.UserTables;
 import net.yozmnews.user.domain.subscription.StorylineSubscriptionRepository;
 import net.yozmnews.user.domain.subscription.SubscriptionChange;
 import org.junit.jupiter.api.AfterEach;
@@ -78,7 +79,7 @@ class StorylineSubscriptionControllerTests {
 
 	@AfterEach
 	void reset() {
-		this.jdbc.sql("delete from users").update();
+		UserTables.deleteAll(this.jdbc);
 		StorylineRows.clear(this.jdbc);
 	}
 

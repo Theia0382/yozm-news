@@ -18,13 +18,13 @@
 - 비밀번호 강제 변경이 먼저다 — 강제 변경 중인 세션 사용자는 변경 전 허용 표시만으로 판정한다.
 - 키 유무는 요청마다 `credential` 에 묻고 세션에 저장하지 않는다. 표시가 있는 처리기 · 공개 처리기의 요청에는 묻지 않는다.
 
-규칙은 [user Spec](../specs/user.md#화면용-api-의-공개와-세션-사용자) user-R5, [platform Spec](../specs/platform.md#화면용-api-경로와-공개-처리기) platform-R21 에 있다.
+규칙은 [user Spec](../specs/user.md#옮긴-규칙) user-R5, [platform Spec](../specs/platform.md#화면용-api-경로와-공개-처리기) platform-R21 에 있다.
 
 ## 결과
 
 - 새 모듈의 처리기는 표시가 없으면 키 없는 사용자에게 닫힌다 — 빠뜨린 쪽이 닫힌다.
 - 표시가 없는 처리기의 요청마다 키 유무 조회가 하나 는다.
-> 부분 대체 — [ADR-0185](0185-admin-paths-stay-outside-the-llm-key-gate-and-look-only-at-the-role.md). 지금 상태: [`user` Spec "운영자 접근 통제"](../specs/user.md#운영자-접근-통제) user-R1
+> 부분 대체 — [ADR-0185](0185-admin-paths-stay-outside-the-llm-key-gate-and-look-only-at-the-role.md). 지금 상태: [`account` Spec "운영자 접근 통제"](../specs/account.md#운영자-접근-통제) account-R1
 - 운영자 경로는 운영자 토큰의 체인이라 이 규칙과 무관하다.
 
 ## 검토한 대안

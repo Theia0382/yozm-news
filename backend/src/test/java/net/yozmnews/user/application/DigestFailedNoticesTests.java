@@ -9,14 +9,16 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import net.yozmnews.account.application.PasswordHashing;
 
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.account.SignedInUsers;
+import net.yozmnews.account.domain.account.AccountRepository;
+import net.yozmnews.account.domain.credential.PasswordCredentialRepository;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.user.DigestFailed;
 import net.yozmnews.user.DigestFailureCause;
-import net.yozmnews.user.SignedInUsers;
-import net.yozmnews.user.domain.account.AccountRepository;
-import net.yozmnews.user.domain.credential.PasswordCredentialRepository;
+import net.yozmnews.user.UserTables;
 import net.yozmnews.user.domain.notice.DigestFailedContent;
 import net.yozmnews.user.domain.notice.Notice;
 import net.yozmnews.user.domain.notice.NoticeContent;
@@ -117,7 +119,7 @@ class DigestFailedNoticesTests {
 	@Test
 	void aFailureOfAMissingAccountLeavesNothingAndDoesNotThrow() throws Exception {
 		UserId alice = this.users.signIn("digest-notice-gone@example.com").id();
-		this.jdbc.sql("delete from users where id = :id").param("id", alice.value()).update();
+		UserTables.delete(this.jdbc, alice.value());
 
 		this.digestNotices.record(new DigestFailed(alice, 904, DATE, DigestFailureCause.KEY, FAILED_AT));
 

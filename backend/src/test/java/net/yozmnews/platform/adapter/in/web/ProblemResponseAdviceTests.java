@@ -8,9 +8,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import jakarta.servlet.http.Cookie;
+import net.yozmnews.account.application.WebSliceSecurity;
 import net.yozmnews.platform.PublicApi;
 import net.yozmnews.platform.RealTimeRequiredException;
-import net.yozmnews.user.application.WebSliceSecurity;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -37,7 +37,7 @@ import org.springframework.web.server.ResponseStatusException;
 @Import({ WebSliceSecurity.class, ProblemResponseAdviceTests.FailingController.class })
 class ProblemResponseAdviceTests {
 
-	/** 변경 요청의 CSRF — 쿠키와 같은 값을 헤더로 돌려보낸다(user-R10). 값은 아무 문자열이어도 쿠키 저장소가 쿠키에서 읽는다 */
+	/** 변경 요청의 CSRF — 쿠키와 같은 값을 헤더로 돌려보낸다(account-R10). 값은 아무 문자열이어도 쿠키 저장소가 쿠키에서 읽는다 */
 	private static final String CSRF_TOKEN = "problem-response-advice-tests";
 
 	private static final Cookie CSRF_COOKIE = new Cookie("XSRF-TOKEN", CSRF_TOKEN);

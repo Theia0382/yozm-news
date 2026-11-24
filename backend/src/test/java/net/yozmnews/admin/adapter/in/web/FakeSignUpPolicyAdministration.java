@@ -3,10 +3,10 @@ package net.yozmnews.admin.adapter.in.web;
 import java.util.ArrayList;
 import java.util.List;
 
+import net.yozmnews.account.SignUpPolicyAdministration;
+import net.yozmnews.account.SignUpPolicyChange;
+import net.yozmnews.account.SignUpPolicyChangeResult;
 import net.yozmnews.platform.ChangeActor;
-import net.yozmnews.user.SignUpPolicyAdministration;
-import net.yozmnews.user.SignUpPolicyChange;
-import net.yozmnews.user.SignUpPolicyChangeResult;
 import org.jspecify.annotations.Nullable;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;

@@ -1,6 +1,6 @@
 import type { Middleware } from "openapi-fetch";
 
-// 변경 요청의 CSRF 토큰 — 서버가 준 XSRF-TOKEN 쿠키 값을 X-XSRF-TOKEN 헤더로 돌려보낸다(docs/specs/user.md user-R10).
+// 변경 요청의 CSRF 토큰 — 서버가 준 XSRF-TOKEN 쿠키 값을 X-XSRF-TOKEN 헤더로 돌려보낸다(docs/specs/account.md account-R10).
 
 /** 서버가 CSRF 토큰을 싣는 쿠키 */
 export const CSRF_COOKIE = "XSRF-TOKEN";

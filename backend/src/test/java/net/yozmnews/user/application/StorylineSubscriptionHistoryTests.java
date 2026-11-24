@@ -14,6 +14,7 @@ import net.yozmnews.storyline.StorylineRows;
 import net.yozmnews.user.StorylineSubscriptionAction;
 import net.yozmnews.user.StorylineSubscriptionCause;
 import net.yozmnews.user.UserStorylineFixtures;
+import net.yozmnews.user.UserTables;
 import net.yozmnews.user.application.StorylineSubscriptionHistory.HistoryEntry;
 import net.yozmnews.user.application.StorylineSubscriptionHistory.HistoryPage;
 import net.yozmnews.user.domain.subscription.StorylineSubscriptionRepository;
@@ -66,7 +67,7 @@ class StorylineSubscriptionHistoryTests {
 	@BeforeEach
 	@AfterEach
 	void reset() {
-		this.jdbc.sql("delete from users").update();
+		UserTables.deleteAll(this.jdbc);
 		StorylineRows.clear(this.jdbc);
 	}
 

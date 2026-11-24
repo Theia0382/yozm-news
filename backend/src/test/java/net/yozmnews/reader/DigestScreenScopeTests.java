@@ -9,11 +9,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import jakarta.servlet.http.Cookie;
 import net.yozmnews.LlmKeyRows;
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.account.SignedInUsers;
+import net.yozmnews.account.application.PasswordHashing;
+import net.yozmnews.account.domain.account.AccountRepository;
+import net.yozmnews.account.domain.credential.PasswordCredentialRepository;
 import net.yozmnews.digest.DigestRounds;
-import net.yozmnews.user.SignedInUsers;
-import net.yozmnews.user.application.PasswordHashing;
-import net.yozmnews.user.domain.account.AccountRepository;
-import net.yozmnews.user.domain.credential.PasswordCredentialRepository;
+import net.yozmnews.user.UserTables;
 import org.jobrunr.scheduling.JobScheduler;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,7 +31,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * 독자 화면 다이제스트의 사용자 격리 — A 의 다이제스트는 B 의 세션으로 홈 · 날짜 · 날짜 목록 어디서도 보이지 않고, B 의 수동 생성 요청은 B 의 행만
  * 만든다. 네 경로 모두 세션 없이 401, 키가 없으면 403(키 관문)이다(docs/qa/test-strategy.md §13). 생성 작업은 돌지 않는다(작업 서버 끔).
  * <p>
- * 지키는 규칙: user-R5 · user-R6 · reader-R9 ~ reader-R11
+ * 지키는 규칙: account-R5 · account-R6 · reader-R9 ~ reader-R11
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -72,7 +73,7 @@ public class DigestScreenScopeTests {
 		this.readerRows = new ReaderRows(this.jdbc);
 		this.rows.clear();
 		this.readerRows.clear();
-		this.jdbc.sql("delete from users").update();
+		UserTables.deleteAll(this.jdbc);
 		this.jdbc.sql("delete from login_failures").update();
 		this.jdbc.sql("delete from llm_credentials").update();
 	}

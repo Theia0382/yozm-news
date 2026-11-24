@@ -11,19 +11,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import net.yozmnews.account.SignedInUsers;
 
 import net.yozmnews.LlmKeyRows;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.UserScopeRules;
 import net.yozmnews.UserScopedEndpoints;
 import net.yozmnews.YozmnewsApplication;
+import net.yozmnews.account.application.PasswordHashing;
+import net.yozmnews.account.domain.account.AccountRepository;
+import net.yozmnews.account.domain.credential.PasswordCredentialRepository;
 import net.yozmnews.platform.AllowedBeforePasswordChange;
 import net.yozmnews.platform.AllowedWithoutLlmKey;
 import net.yozmnews.platform.PublicApi;
 import net.yozmnews.platform.UserId;
-import net.yozmnews.user.application.PasswordHashing;
-import net.yozmnews.user.domain.account.AccountRepository;
-import net.yozmnews.user.domain.credential.PasswordCredentialRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -47,7 +48,7 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
  * 처리기(공개도 등록도 아님 · 경로 · 질의에서 userId · 본문 · 질의 레코드의 UserId · 묶기 애너테이션을 단 UserId · 빈 공개 이유 · 빈
  * 비밀번호 변경 전 허용 이유 · 공개 처리기의 허용 표시 · 낡은 등록)를 모두 잡는다.
  * <p>
- * 지키는 규칙: user-R5 · user-R6
+ * 지키는 규칙: account-R5 · account-R6
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest(classes = { YozmnewsApplication.class, UserScopeFixtureTests.NotesController.class,

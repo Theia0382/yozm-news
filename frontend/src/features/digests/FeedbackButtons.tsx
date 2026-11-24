@@ -30,7 +30,7 @@ function feedbackNoticeOf(result: FeedbackResult): string | null {
   }
 }
 
-/** 실패 안내 — 요청 제한은 세션 사용자로 센다(docs/specs/user.md user-R38) */
+/** 실패 안내 — 요청 제한은 세션 사용자로 센다(docs/specs/account.md account-R30) */
 function feedbackFailureText(error: Error): string {
   return error instanceof FeedbackRequestError
     ? (guardRejectionText(error.response, error.problem, "ACCOUNT") ??

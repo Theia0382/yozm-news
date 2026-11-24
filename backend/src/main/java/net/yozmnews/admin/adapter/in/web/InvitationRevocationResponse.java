@@ -1,7 +1,7 @@
 package net.yozmnews.admin.adapter.in.web;
 
-import net.yozmnews.user.InvitationRevocationResult;
-import net.yozmnews.user.InvitationState;
+import net.yozmnews.account.InvitationRevocationResult;
+import net.yozmnews.account.InvitationState;
 import org.jspecify.annotations.Nullable;
 
 /**

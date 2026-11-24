@@ -6,14 +6,15 @@ import java.time.Instant;
 import java.util.List;
 
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.account.domain.account.Account;
+import net.yozmnews.account.domain.account.AccountRepository;
+import net.yozmnews.account.domain.account.AccountRole;
+import net.yozmnews.account.domain.account.DisplayName;
+import net.yozmnews.account.domain.account.EmailAddress;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.source.FeedId;
 import net.yozmnews.source.FeedStatus;
-import net.yozmnews.user.domain.account.Account;
-import net.yozmnews.user.domain.account.AccountRepository;
-import net.yozmnews.user.domain.account.AccountRole;
-import net.yozmnews.user.domain.account.DisplayName;
-import net.yozmnews.user.domain.account.EmailAddress;
+import net.yozmnews.user.UserTables;
 import net.yozmnews.user.domain.notice.FeedStatusContent;
 import net.yozmnews.user.domain.notice.FeedStatusEntry;
 import net.yozmnews.user.domain.notice.NoticeRepository;
@@ -56,7 +57,7 @@ class NoticeCleanupTests {
 	@BeforeEach
 	@AfterEach
 	void reset() {
-		this.jdbc.sql("delete from users").update();
+		UserTables.deleteAll(this.jdbc);
 	}
 
 	@Test

@@ -25,11 +25,11 @@ import net.yozmnews.digest.InterestTimeline;
 import net.yozmnews.digest.TopicSubscriptionStep;
 import net.yozmnews.digest.domain.exposure.ExposureRepository;
 import net.yozmnews.event.EventArticles;
-import net.yozmnews.storyline.StorylineRows;
 import net.yozmnews.event.EventDirectory;
 import net.yozmnews.feedback.EventFeedback;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.storyline.StorylineDirectory;
+import net.yozmnews.storyline.StorylineRows;
 import net.yozmnews.tag.ArticleEvaluations;
 import net.yozmnews.tag.TagKeyLineage;
 import net.yozmnews.tag.TagKeyMapping;
@@ -37,9 +37,10 @@ import net.yozmnews.tag.TagKind;
 import net.yozmnews.tag.TagSetDirectory;
 import net.yozmnews.tag.TagSetId;
 import net.yozmnews.user.StorylineSubscriptionDirectory;
-import net.yozmnews.user.UserStorylineDirectory;
 import net.yozmnews.user.TopicSubscriptionAction;
 import net.yozmnews.user.TopicSubscriptionHistory;
+import net.yozmnews.user.UserStorylineDirectory;
+import net.yozmnews.user.UserTables;
 import net.yozmnews.user.UserTimezones;
 import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.AfterEach;
@@ -129,7 +130,7 @@ class InterestHistoryServiceTests {
 		this.jdbc.sql("delete from article_tags").update();
 		this.jdbc.sql("delete from article_evaluations").update();
 		EventArticles.clear(this.jdbc);
-		this.jdbc.sql("delete from users").update();
+		UserTables.deleteAll(this.jdbc);
 	}
 
 	@Test

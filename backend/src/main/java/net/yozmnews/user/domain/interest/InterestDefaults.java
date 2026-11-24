@@ -20,6 +20,9 @@ public final class InterestDefaults {
 	/** 다이제스트 생성 시각 */
 	public static final LocalTime DIGEST_TIME = LocalTime.of(7, 0);
 
+	/** 기본 일정 — 시간대 · 생성 시각. 설정 행이 없는 계정의 일정이기도 하다(일정 목록 · 사용자 시간대 — user-R60 · user-R61) */
+	public static final DigestSchedule SCHEDULE = new DigestSchedule(TIMEZONE, DIGEST_TIME);
+
 	/** 주간 변화 리포트를 받는가 */
 	public static final boolean WEEKLY_REPORT = true;
 

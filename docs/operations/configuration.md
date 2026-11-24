@@ -165,7 +165,7 @@
 
 | 변수 | 필수 | 쓰는 곳 | 값 예시 | 바꾸는 것 |
 |---|---|---|---|---|
-| `YOZMNEWS_ADMIN_TOKEN` | 아니오 | `app` → `yozmnews.admin.token` | `openssl rand -hex 32` 의 출력(64자) | 스크립트 · 도구(평가 도구 · 태그 체계 curl · 배포 스모크)가 운영자 API 를 `Authorization: Bearer` 로 부를 때 쓰는 운영자 토큰 — [비밀 값](#비밀-값) · [user Spec §7](../specs/user.md#7-설정) |
+| `YOZMNEWS_ADMIN_TOKEN` | 아니오 | `app` → `yozmnews.admin.token` | `openssl rand -hex 32` 의 출력(64자) | 스크립트 · 도구(평가 도구 · 태그 체계 curl · 배포 스모크)가 운영자 API 를 `Authorization: Bearer` 로 부를 때 쓰는 운영자 토큰 — [비밀 값](#비밀-값) · [account Spec §7](../specs/account.md#7-설정) |
 
 - 운영자 화면(`/admin`)은 이 토큰이 아니라 운영자 계정으로 로그인해 연다 — 첫 운영자는 [계정과 고지](#계정과-고지)에 있다. 줄이 없거나 값이 비면 Bearer 로 부르는 길이 없을 뿐 운영자 화면 · 운영자 API 는 계정 세션으로 쓴다
 - 값은 32 ~ 512자이고 영문 대소문자 · 숫자 · `-` `.` `_` `~` `+` `/` 와 끝의 `=` 만 쓴다. 어기면 앱이 뜨지 않는다. 사람이 지은 문자열이 아니라 위 명령 같은 무작위 값을 쓴다 — 틀린 토큰의 요청을 따로 제한하지 않는다
@@ -206,7 +206,7 @@
 
 | 변수 | 필수 | 쓰는 곳 | 값 예시 | 바꾸는 것 |
 |---|---|---|---|---|
-| `YOZMNEWS_HUMAN_CHECK_PROVIDER` | 아니오 | `app` → `yozmnews.human-check.provider` | `turnstile` | 봇 차단 공급자 — `off`(기본) · `turnstile` — [user Spec §7](../specs/user.md#7-설정) |
+| `YOZMNEWS_HUMAN_CHECK_PROVIDER` | 아니오 | `app` → `yozmnews.human-check.provider` | `turnstile` | 봇 차단 공급자 — `off`(기본) · `turnstile` — [account Spec §7](../specs/account.md#7-설정) |
 | `YOZMNEWS_HUMAN_CHECK_TURNSTILE_SITE_KEY` | `turnstile` 이면 예 | `app` → `yozmnews.human-check.turnstile.site-key` | Cloudflare 대시보드의 사이트 키 | 화면의 Turnstile 위젯이 쓰는 사이트 키(공개 값) |
 | `YOZMNEWS_HUMAN_CHECK_TURNSTILE_SECRET_KEY` | `turnstile` 이면 예 | `app` → `yozmnews.human-check.turnstile.secret-key` | Cloudflare 대시보드의 비밀 키 | 서버가 토큰을 확인할 때 보내는 비밀 키 — [비밀 값](#비밀-값) |
 

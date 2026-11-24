@@ -10,17 +10,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import net.yozmnews.account.application.PasswordHashing;
 
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.account.SignedInUsers;
+import net.yozmnews.account.domain.account.AccountRepository;
+import net.yozmnews.account.domain.credential.PasswordCredentialRepository;
 import net.yozmnews.credential.CredentialInvalidated;
 import net.yozmnews.llm.LlmFailureKind;
 import net.yozmnews.llm.Provider;
 import net.yozmnews.llm.ScriptedProviderClients;
 import net.yozmnews.llm.domain.provider.ProbeResult;
 import net.yozmnews.platform.UserId;
-import net.yozmnews.user.SignedInUsers;
-import net.yozmnews.user.domain.account.AccountRepository;
-import net.yozmnews.user.domain.credential.PasswordCredentialRepository;
 import net.yozmnews.user.domain.notice.KeyInvalidatedContent;
 import net.yozmnews.user.domain.notice.Notice;
 import net.yozmnews.user.domain.notice.NoticeContent;

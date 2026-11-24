@@ -8,15 +8,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.time.Instant;
 import java.util.List;
+import net.yozmnews.account.SignedInUsers;
 
 import jakarta.servlet.http.Cookie;
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.account.application.PasswordHashing;
+import net.yozmnews.account.domain.account.AccountRepository;
+import net.yozmnews.account.domain.account.AccountRole;
+import net.yozmnews.account.domain.credential.PasswordCredentialRepository;
 import net.yozmnews.source.FeedId;
 import net.yozmnews.source.FeedStatus;
-import net.yozmnews.user.application.PasswordHashing;
-import net.yozmnews.user.domain.account.AccountRepository;
-import net.yozmnews.user.domain.account.AccountRole;
-import net.yozmnews.user.domain.credential.PasswordCredentialRepository;
 import net.yozmnews.user.domain.notice.FeedStatusContent;
 import net.yozmnews.user.domain.notice.FeedStatusEntry;
 import net.yozmnews.user.domain.notice.NoticeRepository;
@@ -36,7 +37,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * 알림 경로의 사용자 격리 — 사용자 A 의 세션으로 B 의 알림을 목록 · 수에서 볼 수 없고, B 의 알림 ID · 판으로 읽음을 보내도 B 의 알림은 그대로다.
  * 세션 없이 부르면 401 이다(docs/qa/test-strategy.md §13).
  * <p>
- * 지키는 규칙: user-R6 · user-R27
+ * 지키는 규칙: account-R6 · user-R27
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -69,7 +70,7 @@ public class NoticeScopeTests {
 	@BeforeEach
 	@AfterEach
 	void reset() {
-		this.jdbc.sql("delete from users").update();
+		UserTables.deleteAll(this.jdbc);
 	}
 
 	@Test

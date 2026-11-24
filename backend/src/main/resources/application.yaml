@@ -10,11 +10,11 @@ spring:
       accept-float-as-int: false
   session:
     jdbc:
-      # 세션 스키마의 정본은 Flyway 마이그레이션(V32)이다 — docs/specs/user.md §7
+      # 세션 스키마의 정본은 Flyway 마이그레이션(V32)이다 — docs/specs/account.md §7
       initialize-schema: never
-      # Spring Session 의 자체 정리 작업을 끈다 — 작업 역할의 반복 작업이 지운다 · docs/specs/user.md §7 · user-R12
+      # Spring Session 의 자체 정리 작업을 끈다 — 작업 역할의 반복 작업이 지운다 · docs/specs/account.md §7 · account-R12
       cleanup-cron: "-"
-      # 세션 변경을 요청 끝이 아니라 바뀔 때 곧바로 저장한다 — 로그인이 세션을 저장한 뒤 자격을 다시 확인한다 · docs/specs/user.md §7 · user-R18
+      # 세션 변경을 요청 끝이 아니라 바뀔 때 곧바로 저장한다 — 로그인이 세션을 저장한 뒤 자격을 다시 확인한다 · docs/specs/account.md §7 · account-R18
       flush-mode: immediate
   docker:
     compose:

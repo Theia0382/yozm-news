@@ -18,7 +18,7 @@ import tools.jackson.databind.json.JsonMapper;
  * 화면용 API 명세의 운영자 경로 거부 응답 — 앱의 운영자 처리기에서 명세를 읽어, 401 · 403 설명을 손으로 적은 문구와 견준다. 변경 메서드의
  * 403 에는 CSRF 의 까닭이 앞선다(서버의 판정 순서).
  * <p>
- * 지키는 규칙: platform-R6 · user-R1 · user-R3
+ * 지키는 규칙: platform-R6 · account-R1 · account-R3
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest(classes = YozmnewsApplication.class, properties = "springdoc.api-docs.enabled=true")

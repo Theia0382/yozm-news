@@ -1,6 +1,6 @@
 # ADR-0169: 요청 제한 · 봇 차단은 `platform` 의 처리기 표시를 `user` 세션 체인이 처리기 앞에서 요청 제한 → 봇 차단 순으로 걸고, 거부는 429 `rate-limited` · 403 `human-check-failed` 다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 장치의 모듈([ADR-0308](0308-account-authentication-and-security-live-in-the-account-module-while-interests-and-notices-stay-in-user.md))
 - 날짜: 2026-11-15
 - 근거: [이슈 #152](https://github.com/Theia0382/yozm-news/issues/152) — 요청 제한 `bc453f5`, 봇 차단 `b998fa2`
 - 관련: [ADR-0124](0124-security-configuration-lives-in-the-user-module-and-platform-keeps-only-the-screen-api-path-convention.md)(보충 — 요청 방어 장치도 보안 구성과 함께 `user` 에 있다), [ADR-0044](0044-screen-api-results-as-flat-discriminated-200-and-rfc9457-problems.md)(보충 — HTTP 오류에 429 를 더한다), [ADR-0158](0158-requests-of-session-users-without-a-key-are-closed-by-default-and-handlers-open-without-a-key-carry-a-platform-annotation.md)(같은 꼴 — `platform` 표시를 `user` 체인이 읽는다)
@@ -14,6 +14,7 @@
 ## 결정
 
 - **처리기 메서드에 `platform` 의 표시를 단다** — 요청 제한은 `@RequestLimited(동작)`, 봇 차단은 `@HumanChecked(동작)`. 동작은 `platform` 의 `GuardedAction` 이다. 표시는 메서드에만 달리고, `@HumanChecked` 는 같은 동작의 `@RequestLimited` 와 함께 단다.
+> 부분 대체 — [ADR-0308](0308-account-authentication-and-security-live-in-the-account-module-while-interests-and-notices-stay-in-user.md). 지금 상태: [`account` Spec](../specs/account.md#요청-방어) account-R32
 - **장치는 `user` 에 있다** — 세는 장치 · 기록 테이블 · 봇 차단 검증 포트와 구현 · 클라이언트 주소 읽기 · 적용 필터. `user` 의 세션 체인이 인가 뒤 · 처리기 앞에서 처리기의 표시를 읽어 건다 — 앞선 필터 · 인가가 거부한 요청은 세지 않는다.
 - **순서는 요청 제한 → 봇 차단 → 처리기다.** 요청 제한에 걸린 요청은 봇 차단 검증(외부 요청)을 부르지 않는다. 봇 차단 토큰은 본문이 아니라 요청 헤더(`X-Human-Check`)로 받아 본문을 읽기 전에 거부한다.
 - **거부는 문제 응답이다** — 요청 제한은 429 `urn:yozmnews:problem:rate-limited` 와 `Retry-After`(초), 봇 차단 실패는 403 `urn:yozmnews:problem:human-check-failed`. 모든 대상 경로에 같은 꼴이다. 명세 설정이 표시를 읽어 그 연산에 429 · 403 까닭을 단다.

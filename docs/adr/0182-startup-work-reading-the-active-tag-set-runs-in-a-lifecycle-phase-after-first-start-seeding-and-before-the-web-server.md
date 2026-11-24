@@ -1,6 +1,6 @@
 # ADR-0182: 기동 때 활성 태그 체계를 읽는 작업은 웹 서버 앞의 기동 단계에서 첫 기동 적재 뒤에 돈다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 첫 운영자 생성의 기동 단계([ADR-0309](0309-account-facts-are-published-after-commit-and-user-writes-interest-defaults-and-password-notices-from-them.md))
 - 날짜: 2026-11-15
 - 근거: [이슈 #151](https://github.com/Theia0382/yozm-news/issues/151) — Spring Boot 4.1 의 웹 서버 시작 단계(`Integer.MAX_VALUE − 2048`)와 JobRunr 작업 서버의 시작 시점(`ApplicationReadyEvent`)을 확인
 - 관련: [ADR-0054](0054-tag-set-seeded-from-default-yaml-on-first-start-with-immutable-versions-and-question-templates.md)(첫 기동 적재는 싱글톤을 모두 만든 뒤 · 웹 서버 전), [ADR-0139](0139-first-admin-is-created-only-from-environment-variables-and-startup-warns-without-an-admin-or-about-leftover-values.md)(첫 운영자는 기동 때 만든다)
@@ -13,8 +13,10 @@
 
 ## 결정
 
+> 부분 대체(괄호 안 "첫 운영자 생성") — [ADR-0309](0309-account-facts-are-published-after-commit-and-user-writes-interest-defaults-and-password-notices-from-them.md). 지금 상태: [`account` Spec](../specs/account.md#첫-운영자와-운영자의-계정-운영) account-R27
 - **기동 때 활성 태그 체계를 읽는 작업(첫 운영자 생성 · 기존 계정의 설정 채우기)은 `SmartLifecycle` 의 기동 단계에서 돈다.** 단계는 웹 서버 시작 단계보다 작은 코드 상수 하나다.
 - 첫 기동 적재가 `SmartInitializingSingleton` 단계라는 것은 이 작업이 기대는 계약이다.
+> 부분 대체 — [ADR-0309](0309-account-facts-are-published-after-commit-and-user-writes-interest-defaults-and-password-notices-from-them.md). 지금 상태: [`account` Spec](../specs/account.md#첫-운영자와-운영자의-계정-운영) account-R27
 - 기동 단계의 실패(첫 운영자의 기동 거부)는 앱을 띄우지 않는다.
 
 ## 결과

@@ -12,6 +12,11 @@ import java.util.Map;
 
 import net.yozmnews.TestClocks;
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.account.domain.account.Account;
+import net.yozmnews.account.domain.account.AccountRepository;
+import net.yozmnews.account.domain.account.AccountRole;
+import net.yozmnews.account.domain.account.DisplayName;
+import net.yozmnews.account.domain.account.EmailAddress;
 import net.yozmnews.article.ArticleDirectory;
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.credential.CredentialInvalidated;
@@ -21,6 +26,7 @@ import net.yozmnews.credential.domain.key.KeyHint;
 import net.yozmnews.credential.domain.key.LlmKeyRepository;
 import net.yozmnews.credential.domain.key.StoredLlmKey;
 import net.yozmnews.digest.DigestInputs;
+import net.yozmnews.digest.DigestRounds;
 import net.yozmnews.digest.DigestStatus;
 import net.yozmnews.digest.SelectionReason;
 import net.yozmnews.digest.adapter.out.llm.LlmDigestGenerator;
@@ -38,9 +44,9 @@ import net.yozmnews.digest.domain.input.DigestProfile;
 import net.yozmnews.digest.domain.input.InputEvent;
 import net.yozmnews.digest.domain.input.InputItem;
 import net.yozmnews.digest.domain.item.ItemKind;
-import net.yozmnews.event.EventId;
 import net.yozmnews.digest.domain.output.DigestOutputSchema;
 import net.yozmnews.event.EventArticles;
+import net.yozmnews.event.EventId;
 import net.yozmnews.llm.GenerationRequest;
 import net.yozmnews.llm.GenerationResult;
 import net.yozmnews.llm.GenerationStop;
@@ -52,14 +58,12 @@ import net.yozmnews.llm.ReasoningEffort;
 import net.yozmnews.llm.StoredGeneration;
 import net.yozmnews.llm.StoredKeyValidation;
 import net.yozmnews.platform.SecretValue;
+import net.yozmnews.platform.StructuredOutputSchema;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.user.DigestFailed;
 import net.yozmnews.user.SummaryLength;
-import net.yozmnews.user.domain.account.Account;
-import net.yozmnews.user.domain.account.AccountRepository;
-import net.yozmnews.user.domain.account.AccountRole;
-import net.yozmnews.user.domain.account.DisplayName;
-import net.yozmnews.user.domain.account.EmailAddress;
+import net.yozmnews.user.UserTables;
+import org.jobrunr.scheduling.JobScheduler;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -68,9 +72,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.transaction.support.TransactionTemplate;
-import org.jobrunr.scheduling.JobScheduler;
-import net.yozmnews.digest.DigestRounds;
-import net.yozmnews.platform.StructuredOutputSchema;
 
 /**
  * 실제 생성기의 전체 흐름 — profile {@code local} 문맥에서 관문의 로컬 대체물(가짜 키 {@code yozm-local-<낱말>})로 실제 생성기
@@ -148,7 +149,7 @@ class LlmDigestGeneratorFlowTests {
 		awaitNoticeEventsHandled();
 		this.jdbc.sql("delete from digests").update();
 		this.jdbc.sql("delete from llm_credentials").update();
-		this.jdbc.sql("delete from users where email like 'digest-flow-%'").update();
+		UserTables.deleteByEmail(this.jdbc, "digest-flow-%");
 		for (Long id : this.articleIds) {
 			this.jdbc.sql("delete from article_feed_entries where article_id = :id").param("id", id).update();
 			this.jdbc.sql("delete from articles where id = :id").param("id", id).update();

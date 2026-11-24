@@ -6,7 +6,7 @@ v1은 **자체 로그인(이메일·비밀번호)** 하나를 지원한다 ([ADR
 
 ### 가입
 
-누가 계정을 만들 수 있는가와 첫 운영자 계정을 만드는 방법이다 ([ADR-0048](adr/0048-sign-up-closed-by-default-with-invitations-and-operator-bootstrap.md)). 규칙은 [user Spec](specs/user.md#계정을-만드는-길) user-R28 ~ R35 에 있다.
+누가 계정을 만들 수 있는가와 첫 운영자 계정을 만드는 방법이다 ([ADR-0048](adr/0048-sign-up-closed-by-default-with-invitations-and-operator-bootstrap.md)). 규칙은 [account Spec](specs/account.md#계정을-만드는-길) account-R21 ~ R28 에 있다.
 
 - 가입은 기본으로 닫혀 있다. 운영자가 운영자 화면에서 공개 가입을 열 수 있고(바꾼 이력이 남는다 — [ADR-0140](adr/0140-sign-up-policy-is-a-user-module-operator-setting-with-append-only-history-and-starts-closed.md)), 열면 계정 존재 노출을 감추는 일반 문구를 쓰고, 가입에 IP별 요청 제한이 걸리며, 봇 차단을 켠 인스턴스에서는 가입 화면에 봇 차단이 붙는다 — 아래 자체 로그인 표와 [악용 방지](#악용-방지).
 - 닫힌 가입에서 계정을 만드는 길은 둘이다.
@@ -25,33 +25,33 @@ v1은 **자체 로그인(이메일·비밀번호)** 하나를 지원한다 ([ADR
 - 세션은 마지막 요청 뒤 비활성 기간이 지나면 끝나고 절대 상한은 없다. 로그인 때 "로그인 유지"를 고르면 7일 · 지속 쿠키, 고르지 않으면 2시간 · 브라우저 세션 쿠키다([ADR-0127](adr/0127-sessions-idle-out-after-seven-days-without-an-absolute-limit-and-without-keep-signed-in-use-a-browser-cookie-and-two-hours.md)).
 - 로그인에 성공하면 세션 ID를 새로 발급한다(세션 고정 방지).
 - CSRF: Spring Security의 쿠키 기반 CSRF 토큰을 SPA가 헤더로 돌려보낸다. 로그인 · 로그아웃 요청에도 건다.
-- 세션 · 쿠키 · CSRF 의 규칙은 [user Spec "세션"](specs/user.md#세션)에 있다.
+- 세션 · 쿠키 · CSRF 의 규칙은 [account Spec "세션"](specs/account.md#세션)에 있다.
 
 ### 자체 로그인
 
 | 항목 | 정책 |
 |---|---|
-| 비밀번호 저장 | Argon2id 해시. 파라미터는 서버 사양에 맞춰 로그인 1회가 수백 ms 이내가 되도록 조정하고, 파라미터를 해시 문자열에 함께 저장한다. 값은 [user Spec](specs/user.md#계정과-자격) user-R15 |
-| 비밀번호 규칙 | 최소 8자, 최대 128자(NFKC 정규화 뒤 코드 포인트). 문자 종류 강제 규칙은 두지 않고 흔한 비밀번호 목록과 대조하지 않는다([ADR-0129](adr/0129-passwords-are-free-form-from-eight-to-128-code-points-without-a-common-password-list.md) · [user Spec](specs/user.md#계정과-자격) user-R14) |
+| 비밀번호 저장 | Argon2id 해시. 파라미터는 서버 사양에 맞춰 로그인 1회가 수백 ms 이내가 되도록 조정하고, 파라미터를 해시 문자열에 함께 저장한다. 값은 [account Spec](specs/account.md#계정과-자격) account-R15 |
+| 비밀번호 규칙 | 최소 8자, 최대 128자(NFKC 정규화 뒤 코드 포인트). 문자 종류 강제 규칙은 두지 않고 흔한 비밀번호 목록과 대조하지 않는다([ADR-0129](adr/0129-passwords-are-free-form-from-eight-to-128-code-points-without-a-common-password-list.md) · [account Spec](specs/account.md#계정과-자격) account-R14) |
 | 이메일 | 로그인 식별자로만 쓰고 인증하지 않는다. 신원 근거로 쓰지 않는다 |
-| 복구 코드 | 가입 직후(초기 비밀번호로 만든 계정은 첫 로그인에서 비밀번호를 바꾼 직후) 한 번 보여주는 무작위 코드(160비트, 계정마다 하나). SHA-256 다이제스트로만 저장. 복구 코드로 비밀번호를 재설정하면 기존 코드는 폐기하고 새 코드를 보여주며, 다른 세션을 모두 끊는다 — 재설정 전에 옛 비밀번호로 대조를 마친 로그인도 세션을 남기지 못한다([ADR-0224](adr/0224-sign-in-rechecks-the-credential-version-under-its-lock-after-storing-the-session-and-sessions-are-saved-as-they-change.md) · [user Spec](specs/user.md#로그인) user-R18). 설정 화면에서 재발급할 수 있다(현재 비밀번호 확인 필요) |
+| 복구 코드 | 가입 직후(초기 비밀번호로 만든 계정은 첫 로그인에서 비밀번호를 바꾼 직후) 한 번 보여주는 무작위 코드(160비트, 계정마다 하나). SHA-256 다이제스트로만 저장. 복구 코드로 비밀번호를 재설정하면 기존 코드는 폐기하고 새 코드를 보여주며, 다른 세션을 모두 끊는다 — 재설정 전에 옛 비밀번호로 대조를 마친 로그인도 세션을 남기지 못한다([ADR-0224](adr/0224-sign-in-rechecks-the-credential-version-under-its-lock-after-storing-the-session-and-sessions-are-saved-as-they-change.md) · [account Spec](specs/account.md#로그인) account-R18). 설정 화면에서 재발급할 수 있다(현재 비밀번호 확인 필요) |
 | 계정 복구 | 복구 코드로만 가능하다. 복구 코드가 없으면 복구할 수 없음을 가입 화면(초기 비밀번호로 만든 계정은 첫 로그인 화면)에서 안내한다 |
 | 계정 존재 노출 방지 | 로그인 실패와 복구 코드 실패에 같은 응답을 준다. 가입(공개 가입 · 초대 링크로 가입) 시 이메일 중복은 메일 없이는 숨길 수 없으므로 "가입할 수 없는 이메일"이라는 일반 문구를 쓰고, 가입 요청 제한을 강하게 건다 |
-| 무차별 대입 방어 | 연속 실패 시 지연을 점점 늘린다(잠금이 아니라 지연). 실패는 제출된 이메일마다 세어, 계정이 없는 이메일도 같은 기록 · 같은 지연을 받는다 — 지연 중에는 비밀번호를 대조하지 않고 남은 시간을 알린다. 복구 코드 실패는 같은 일정의 다른 기록으로 세고, 비밀번호 변경 · 복구 코드 재발급의 현재 비밀번호 확인 실패는 로그인 실패 기록에 센다([ADR-0144](adr/0144-recovery-code-failures-are-delayed-on-the-sign-in-schedule-in-a-separate-record-and-current-password-checks-share-the-sign-in-record.md) · [ADR-0130](adr/0130-sign-in-failure-delays-count-per-digest-of-the-submitted-normalized-email-regardless-of-account.md) · [user Spec](specs/user.md#로그인) user-R19). IP별 요청 제한, 봇 차단을 켠 인스턴스에서 로그인 · 복구 코드 사용 · 공개 가입의 봇 차단(Turnstile — 끌 수 있다) — [악용 방지](#악용-방지) |
-| 초기 비밀번호 | 운영자가 만든 계정과 서버 설정으로 만든 첫 운영자 계정(초기 비밀번호로 만든 계정)은 첫 로그인 때 비밀번호를 바꿔야 한다. 바꾸기 전에는 서버가 비밀번호 변경 · 로그인 상태 조회 · 로그아웃만 연다([ADR-0146](adr/0146-sessions-of-accounts-with-an-initial-password-open-only-password-change-status-and-sign-out-marked-by-a-platform-annotation.md) · [user Spec](specs/user.md#비밀번호-변경과-복구-코드) user-R29) |
+| 무차별 대입 방어 | 연속 실패 시 지연을 점점 늘린다(잠금이 아니라 지연). 실패는 제출된 이메일마다 세어, 계정이 없는 이메일도 같은 기록 · 같은 지연을 받는다 — 지연 중에는 비밀번호를 대조하지 않고 남은 시간을 알린다. 복구 코드 실패는 같은 일정의 다른 기록으로 세고, 비밀번호 변경 · 복구 코드 재발급의 현재 비밀번호 확인 실패는 로그인 실패 기록에 센다([ADR-0144](adr/0144-recovery-code-failures-are-delayed-on-the-sign-in-schedule-in-a-separate-record-and-current-password-checks-share-the-sign-in-record.md) · [ADR-0130](adr/0130-sign-in-failure-delays-count-per-digest-of-the-submitted-normalized-email-regardless-of-account.md) · [account Spec](specs/account.md#로그인) account-R19). IP별 요청 제한, 봇 차단을 켠 인스턴스에서 로그인 · 복구 코드 사용 · 공개 가입의 봇 차단(Turnstile — 끌 수 있다) — [악용 방지](#악용-방지) |
+| 초기 비밀번호 | 운영자가 만든 계정과 서버 설정으로 만든 첫 운영자 계정(초기 비밀번호로 만든 계정)은 첫 로그인 때 비밀번호를 바꿔야 한다. 바꾸기 전에는 서버가 비밀번호 변경 · 로그인 상태 조회 · 로그아웃만 연다([ADR-0146](adr/0146-sessions-of-accounts-with-an-initial-password-open-only-password-change-status-and-sign-out-marked-by-a-platform-annotation.md) · [account Spec](specs/account.md#비밀번호-변경과-복구-코드) account-R22) |
 | 비밀번호 변경 | 현재 비밀번호 확인 필수. 변경 시 지금 세션의 ID 를 바꾸고 다른 세션 종료, 화면 내 알림 기록(첫 로그인의 강제 변경은 알림 없음 — [ADR-0145](adr/0145-password-notices-are-left-for-password-changes-and-recovery-resets-but-not-for-the-forced-first-sign-in-change.md)) |
 | 2단계 인증 | v1 범위 밖. 이후 TOTP 추가 검토 |
 
 ## 인가와 데이터 격리
 
 - 화면 · API 요청의 사용자 데이터 조회는 세션의 `userId`로 범위를 제한한다. 요청 파라미터로 받은 사용자 ID를 신뢰하지 않는다.
-- 화면용 API 처리기는 사용자를 세션에서 채우는 인자로만 받고, 공개 표시가 없는 처리기는 세션을 요구한다([user Spec](specs/user.md#화면용-api-의-공개와-세션-사용자) user-R5 · user-R6).
+- 화면용 API 처리기는 사용자를 세션에서 채우는 인자로만 받고, 공개 표시가 없는 처리기는 세션을 요구한다([account Spec](specs/account.md#화면용-api-의-공개와-세션-사용자) account-R5 · account-R6).
 - 사용자 범위가 없는 조회는 백그라운드 작업(다이제스트 일정 · 보존 정리 등) 전용 조회 모델에만 두고, 화면 · API 경로에서는 쓰지 않는다. 사용자 A로 사용자 B의 알림·다이제스트·키·피드백·스토리라인 구독(추적 상태 포함)·사용자 스토리라인의 정리와 그 흐름의 지난 다이제스트 항목·관심사 히스토리·구독 제안과 그 거절·변화 리포트에 접근하는 테스트를 기본 테스트 세트에 포함한다 — 운영자 경로 밖의 처리기는 공개 표시가 있거나 격리 시험에 등록되어야 하고, 등록 가드가 앱의 처리기를 열거해 확인한다([test-strategy](qa/test-strategy.md#13-사용자-격리-시험)).
-- LLM 키가 없는 세션 사용자는 키 등록 · 계정(비밀번호 변경 · 복구 코드 재발급) · 알림 · 관심 설정만 쓴다 — 그 밖의 화면용 API 는 서버가 403 으로 막는다. 저장한 키가 하나라도 있으면(상태 무관) 키가 있는 것이다([user Spec](specs/user.md#화면용-api-의-공개와-세션-사용자) user-R5).
+- LLM 키가 없는 세션 사용자는 키 등록 · 계정(비밀번호 변경 · 복구 코드 재발급) · 알림 · 관심 설정만 쓴다 — 그 밖의 화면용 API 는 서버가 403 으로 막는다. 저장한 키가 하나라도 있으면(상태 무관) 키가 있는 것이다([account Spec](specs/account.md#화면용-api-의-공개와-세션-사용자) account-R5).
 - 운영자 기능(`/api/admin/**`)은 `ADMIN` 역할만 접근할 수 있다. 운영자도 사용자의 LLM 키 평문은 볼 수 없다.
 - 초대 링크 발급 · 취소, 계정 생성 · 초기 비밀번호 다시 정하기, 공개 가입 켬 · 끔은 `ADMIN` 만 할 수 있다.
 - 운영자 경로는 `ADMIN` 계정 세션으로 인증하고, 세션으로 인증한 변경 요청에는 CSRF 토큰(공통 절)을 요구한다. 비밀번호를 바꿔야 하는 운영자는 바꾸기 전에 쓰지 못하고, LLM 키는 보지 않는다([ADR-0183](adr/0183-admin-paths-open-with-admin-account-sessions-and-keep-the-operator-token-as-an-optional-script-bearer-with-csrf-only-for-sessions.md) · [ADR-0185](adr/0185-admin-paths-stay-outside-the-llm-key-gate-and-look-only-at-the-role.md)).
-- 스크립트 · 도구(평가 도구 · 태그 체계 curl · 배포 스모크)는 선택 설정인 운영자 토큰(서버 설정 하나)을 `Authorization: Bearer` 로 보낸다 — 운영자 경로만 열고, 쿠키 자격이 아니라 CSRF 를 면하며, 세션에 남지 않는다. 틀린 토큰은 세션으로 넘어가지 않고 거부된다. 화면은 토큰을 쓰지 않는다. 토큰 형식 · 대조 · 거부 응답의 규칙은 [user Spec "운영자 접근 통제"](specs/user.md#운영자-접근-통제)에 있다.
+- 스크립트 · 도구(평가 도구 · 태그 체계 curl · 배포 스모크)는 선택 설정인 운영자 토큰(서버 설정 하나)을 `Authorization: Bearer` 로 보낸다 — 운영자 경로만 열고, 쿠키 자격이 아니라 CSRF 를 면하며, 세션에 남지 않는다. 틀린 토큰은 세션으로 넘어가지 않고 거부된다. 화면은 토큰을 쓰지 않는다. 토큰 형식 · 대조 · 거부 응답의 규칙은 [account Spec "운영자 접근 통제"](specs/account.md#운영자-접근-통제)에 있다.
 
 ## BYOK 키 보관
 
@@ -99,9 +99,9 @@ KEK (운영자가 주는 파일, 버전 관리)
 | 운영자 토큰(스크립트용 선택 설정) | 32자 이상 무작위 값으로 대입을 막는다. 대조는 상수 시간이고 요청 제한은 두지 않는다. 운영자 화면의 로그인은 자체 로그인의 실패 지연 · 요청 제한 · 봇 차단을 그대로 받는다 |
 | 운영자 비용 (Jev) | 사용자 행동과 무관하게 기사 수에만 비례한다. 사용자 피드 추가를 열 때 별도 상한이 필요하다 |
 
-- **요청 제한** — 처리기 앞에서 지키는 동작마다 클라이언트 주소 · 세션 사용자로 고정 창 하나의 요청을 세고, 넘으면 429 와 다시 시도할 때까지의 초를 준다. 세는 기록은 여러 앱 프로세스가 함께 쓰는 DB 에 있고, 대상(IP · 사용자 ID)은 다이제스트로만 둔다. 한도 · 축 · 창은 [user Spec "요청 방어"](specs/user.md#요청-방어) user-R38 이 정본이다([ADR-0169](adr/0169-request-limits-and-bot-checks-are-platform-marks-applied-by-the-user-session-chain-before-the-handler.md) · [ADR-0170](adr/0170-request-limits-count-fixed-windows-in-a-user-postgresql-table-with-a-code-constant-policy-table.md)). 창 경계 앞뒤로 한도의 두 배까지 몰릴 수 있다.
+- **요청 제한** — 처리기 앞에서 지키는 동작마다 클라이언트 주소 · 세션 사용자로 고정 창 하나의 요청을 세고, 넘으면 429 와 다시 시도할 때까지의 초를 준다. 세는 기록은 여러 앱 프로세스가 함께 쓰는 DB 에 있고, 대상(IP · 사용자 ID)은 다이제스트로만 둔다. 한도 · 축 · 창은 [account Spec "요청 방어"](specs/account.md#요청-방어) account-R30 이 정본이다([ADR-0169](adr/0169-request-limits-and-bot-checks-are-platform-marks-applied-by-the-user-session-chain-before-the-handler.md) · [ADR-0170](adr/0170-request-limits-count-fixed-windows-in-a-user-postgresql-table-with-a-code-constant-policy-table.md)). 창 경계 앞뒤로 한도의 두 배까지 몰릴 수 있다.
 - **클라이언트 IP 의 신뢰 경계** — 클라이언트 IP 는 배포 proxy 가 정한다. proxy 는 운영자가 정한 신뢰 범위(기본 사설 대역)의 앞단(Tunnel · 리버스 프록시)에서 온 요청만 헤더의 IP 를 오른쪽부터 읽고(클라이언트가 왼쪽에 적은 값은 믿지 않는다), 앱으로 넘길 때 헤더 하나에 덮어쓴다. 앱은 그 헤더만 읽고, proxy 뒤에만 있어 호스트에 공개되지 않는다([ADR-0168](adr/0168-client-ip-is-read-by-the-proxy-from-trusted-ranges-right-to-left-and-passed-as-one-overwritten-header.md) · [운영 설정 "공개"](operations/configuration.md#공개)). 신뢰 범위를 잘못 두면 IP별 요청 제한이 무너진다 — 앞단 뒤인데 아무것도 믿지 않으면 모든 사용자가 앞단 주소 하나로 세여 한도를 함께 쓰고, 직접 공개한 proxy 앞의 클라이언트가 신뢰 범위 안에 있으면 헤더로 주소를 바꿔 한도를 비켜 갈 수 있다.
-- **봇 차단** — 운영자가 켜고 끄며 기본은 끔이다(끄면 요청 제한만 남는다). 켜면 로그인 · 복구 코드 사용 · 공개 가입에서 화면의 Turnstile 위젯이 준 토큰을 서버가 Cloudflare 에 확인한다 — 토큰은 한 번만 쓰이고, 다른 화면의 토큰은 동작 이름이 달라 거부한다. 서버가 검증 서비스에 닿지 못하면 경고를 남기고 통과시킨다 — 그동안은 끈 것과 같다. 브라우저가 위젯 스크립트를 받지 못하면 그 화면은 제출할 수 없다([ADR-0172](adr/0172-bot-checks-use-turnstile-or-off-pass-when-the-verifier-is-unreachable-and-match-the-action.md) · [user Spec](specs/user.md#요청-방어) user-R41).
+- **봇 차단** — 운영자가 켜고 끄며 기본은 끔이다(끄면 요청 제한만 남는다). 켜면 로그인 · 복구 코드 사용 · 공개 가입에서 화면의 Turnstile 위젯이 준 토큰을 서버가 Cloudflare 에 확인한다 — 토큰은 한 번만 쓰이고, 다른 화면의 토큰은 동작 이름이 달라 거부한다. 서버가 검증 서비스에 닿지 못하면 경고를 남기고 통과시킨다 — 그동안은 끈 것과 같다. 브라우저가 위젯 스크립트를 받지 못하면 그 화면은 제출할 수 없다([ADR-0172](adr/0172-bot-checks-use-turnstile-or-off-pass-when-the-verifier-is-unreachable-and-match-the-action.md) · [account Spec](specs/account.md#요청-방어) account-R33).
 - **남의 로그인 늦추기(남은 위험)** — 실패 지연은 제출된 이메일마다 세므로, 남의 이메일로 일부러 틀려 그 사람의 로그인을 지연 상한까지 늦출 수 있다. 요청 제한은 IP 로만 세어(이메일로 세지 않는다 — 남이 한도를 써 버리는 길을 하나 더 만들지 않는다) 한 주소에서 실패를 빠르게 쌓는 속도만 줄이고, 여러 주소를 쓰는 공격자는 막지 못한다. 봇 차단을 켜면 실패 한 번마다 사람 확인이 필요해 비용이 오른다. 복구 코드 실패는 따로 세므로 그동안에도 복구 코드로는 비밀번호를 다시 정할 수 있다([ADR-0171](adr/0171-sign-in-and-recovery-are-limited-per-ip-while-the-email-axis-stays-the-failure-delay.md) · [ADR-0130](adr/0130-sign-in-failure-delays-count-per-digest-of-the-submitted-normalized-email-regardless-of-account.md)).
 
 ## 개인정보

@@ -10,20 +10,19 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import net.yozmnews.account.application.ProvisionedAccounts;
 
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.account.domain.account.Onboarding;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.tag.TagSetAdministration;
 import net.yozmnews.tag.TagSetDirectory;
 import net.yozmnews.tag.TagSetId;
+import net.yozmnews.user.AccountEvents;
 import net.yozmnews.user.application.DigestSettings.DigestSettingsOutcome;
 import net.yozmnews.user.application.DigestSettings.DigestSettingsView;
 import net.yozmnews.user.application.TagPreferences.TagPreferenceSaveOutcome;
 import net.yozmnews.user.application.TagPreferences.TagPreferenceView;
-import net.yozmnews.user.domain.account.DisplayName;
-import net.yozmnews.user.domain.account.EmailAddress;
-import net.yozmnews.user.domain.account.Onboarding;
-import net.yozmnews.user.domain.credential.PasswordPolicy;
 import net.yozmnews.user.domain.interest.DigestSchedule;
 import net.yozmnews.user.domain.interest.InterestText;
 import net.yozmnews.user.domain.interest.ReportSettings;
@@ -33,10 +32,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.TestPropertySource;
-import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * 태그 선호 조회 · 저장 — 저장은 정규화해 통째로 바꾸고 차이를 이력(원인 USER)으로 남긴다. 화면이 본 버전이 다르면 바꾸지 않는다. 선호 버전이
@@ -59,16 +58,13 @@ class TagPreferencesTests {
 	DigestSettings digestSettings;
 
 	@Autowired
-	AccountProvisioning provisioning;
+	ApplicationContext context;
 
 	@Autowired
 	TagSetAdministration administration;
 
 	@Autowired
 	TagSetDirectory tagSets;
-
-	@Autowired
-	TransactionTemplate transaction;
 
 	@Autowired
 	JdbcClient jdbc;
@@ -217,11 +213,9 @@ class TagPreferencesTests {
 	}
 
 	private UserId account(String email) {
-		ProvisionResult result = this.transaction.execute(status -> this.provisioning.provision(Onboarding.OPEN_SIGN_UP,
-				EmailAddress.parse(email).orElseThrow(), new DisplayName("사용자"),
-				PasswordPolicy.normalize("correct horse battery"), NOW));
-		assertThat(result).isInstanceOf(ProvisionResult.Created.class);
-		return ((ProvisionResult.Created) result).user();
+		UserId user = ProvisionedAccounts.provision(this.context, Onboarding.OPEN_SIGN_UP, email, "사용자", "correct horse battery", NOW).orElseThrow();
+		AccountEvents.awaitCreatedHandled(this.jdbc);
+		return user;
 	}
 
 	private long version(UserId user) {

@@ -14,7 +14,7 @@
 
 ## 결정
 
-> 부분 대체(둘째 문장의 한도 근거) — [ADR-0265](0265-feedback-is-pressed-once-per-digest-item-and-recorded-on-each-event-of-the-item-the-screen-shows-the-item-value-and-signals-use-event-records.md). 지금 상태: [user Spec](../specs/user.md#요청-방어) user-R38
+> 부분 대체(둘째 문장의 한도 근거) — [ADR-0265](0265-feedback-is-pressed-once-per-digest-item-and-recorded-on-each-event-of-the-item-the-screen-shows-the-item-value-and-signals-use-event-records.md). 지금 상태: [account Spec](../specs/account.md#요청-방어) account-R30
 - **누르기 · 되돌리기 처리기에 요청 제한을 건다.** 세션 사용자로 세고, 한도는 다이제스트 하나가 인용한 기사를 하나씩 누르는 사용이 창 하나에 들어가는 값으로 둔다(측정 전 목표값 — 정책 표가 정본).
 - **현재 상태 조회에는 걸지 않는다.** 읽기이고 행을 늘리지 않는다.
 - **봇 차단은 걸지 않는다.** 세션 사용자의 요청이다.
@@ -37,5 +37,5 @@
 
 ## 후속 기록
 
-- 2026-11-17: 결과 "그 상한을 한도보다 크게 하거나 사용자 설정으로 열면 한도를 다시 본다" — 최대 후보 수를 사용자 설정(직접 입력 상한 150)으로 열었고 한도(300 / 10분)의 창 하나에 든다([ADR-0209](0209-maximum-candidates-and-big-slots-are-user-settings-and-the-big-slot-takes-at-most-half.md)), 지금 상태는 [user Spec "요청 방어"](../specs/user.md#요청-방어)(user-R38) · [user Spec "관심 설정"](../specs/user.md#관심-설정)(user-R56)
-- 2026-11-19: 결과 "다이제스트 하나가 인용하는 서로 다른 기사는 그 다이제스트의 후보 수를 넘지 않는다" — 후보가 사건이고 인용은 사건마다 표본(상한 5)이라 서로 다른 인용 기사는 많아야 750 이고, 한도를 750 / 10분으로 두었다([ADR-0263](0263-articles-sent-per-event-are-sampled-up-to-a-cap-with-a-fixed-seed-from-those-in-the-period-and-the-sample-is-the-citations-and-sources.md)), 지금 상태는 [user Spec "요청 방어"](../specs/user.md#요청-방어) user-R38
+- 2026-11-17: 결과 "그 상한을 한도보다 크게 하거나 사용자 설정으로 열면 한도를 다시 본다" — 최대 후보 수를 사용자 설정(직접 입력 상한 150)으로 열었고 한도(300 / 10분)의 창 하나에 든다([ADR-0209](0209-maximum-candidates-and-big-slots-are-user-settings-and-the-big-slot-takes-at-most-half.md)), 지금 상태는 [user Spec "요청 방어"](../specs/user.md#옮긴-규칙)(user-R38) · [user Spec "관심 설정"](../specs/user.md#관심-설정)(user-R56)
+- 2026-11-19: 결과 "다이제스트 하나가 인용하는 서로 다른 기사는 그 다이제스트의 후보 수를 넘지 않는다" — 후보가 사건이고 인용은 사건마다 표본(상한 5)이라 서로 다른 인용 기사는 많아야 750 이고, 한도를 750 / 10분으로 두었다([ADR-0263](0263-articles-sent-per-event-are-sampled-up-to-a-cap-with-a-fixed-seed-from-those-in-the-period-and-the-sample-is-the-citations-and-sources.md)), 지금 상태는 [user Spec "요청 방어"](../specs/user.md#옮긴-규칙) user-R38

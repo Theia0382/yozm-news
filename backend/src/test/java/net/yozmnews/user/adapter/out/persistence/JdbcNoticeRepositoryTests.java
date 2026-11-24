@@ -12,25 +12,25 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.account.PasswordChangeMethod;
+import net.yozmnews.account.domain.account.Account;
+import net.yozmnews.account.domain.account.AccountRepository;
+import net.yozmnews.account.domain.account.AccountRole;
+import net.yozmnews.account.domain.account.DisplayName;
+import net.yozmnews.account.domain.account.EmailAddress;
 import net.yozmnews.llm.Provider;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.source.FeedId;
 import net.yozmnews.source.FeedStatus;
 import net.yozmnews.user.DigestFailureCause;
-import net.yozmnews.user.domain.account.Account;
-import net.yozmnews.user.domain.account.AccountRepository;
-import net.yozmnews.user.domain.account.AccountRole;
-import net.yozmnews.user.domain.account.DisplayName;
-import net.yozmnews.user.domain.account.EmailAddress;
+import net.yozmnews.user.UserTables;
 import net.yozmnews.user.domain.notice.DigestFailedContent;
 import net.yozmnews.user.domain.notice.FeedStatusContent;
 import net.yozmnews.user.domain.notice.FeedStatusEntry;
 import net.yozmnews.user.domain.notice.KeyInvalidatedContent;
 import net.yozmnews.user.domain.notice.Notice;
 import net.yozmnews.user.domain.notice.NoticeKind;
-import net.yozmnews.user.domain.notice.NoticeRecipients;
 import net.yozmnews.user.domain.notice.NoticeRepository;
-import net.yozmnews.user.domain.notice.PasswordChangeMethod;
 import net.yozmnews.user.domain.notice.PasswordChangedContent;
 import net.yozmnews.user.domain.notice.RemovedSubscription;
 import net.yozmnews.user.domain.notice.SeenNotice;
@@ -52,7 +52,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 알림 저장소 — 안 읽은 피드 상태 알림은 사용자마다 하나, 반영 기준 잠금은 같은 사용자를 줄 세우고, 읽음은 받은 판이 그대로인 이
  * 사용자의 알림만 바꾼다. 경합은 두 트랜잭션(스레드 둘 · 래치)으로 재현한다.
  * <p>
- * 지키는 규칙: user-R21 · user-R22 · user-R24 · user-R25 · user-R36
+ * 지키는 규칙: user-R21 · user-R24 · user-R25 · user-R36 · user-R74
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -73,9 +73,6 @@ class JdbcNoticeRepositoryTests {
 	NoticeRepository notices;
 
 	@Autowired
-	NoticeRecipients recipients;
-
-	@Autowired
 	AccountRepository accounts;
 
 	@Autowired
@@ -87,7 +84,7 @@ class JdbcNoticeRepositoryTests {
 	@BeforeEach
 	@AfterEach
 	void reset() {
-		this.jdbc.sql("delete from users").update();
+		UserTables.deleteAll(this.jdbc);
 	}
 
 	@Test
@@ -146,8 +143,6 @@ class JdbcNoticeRepositoryTests {
 		DigestFailedContent other = new DigestFailedContent(902, LocalDate.parse("2026-11-19"),
 				DigestFailureCause.KEY, Instant.parse("2026-11-18T23:00:00Z"));
 		assertThat(this.notices.createOnce(alice, other, T1)).isTrue();
-		// 계정이 없으면 만들지 않는다
-		assertThat(this.notices.createOnce(new UserId(Long.MAX_VALUE), content, T1)).isFalse();
 
 		List<Notice> page = this.notices.page(alice, null, 50);
 		assertThat(page).extracting(Notice::kind, Notice::content)
@@ -211,11 +206,30 @@ class JdbcNoticeRepositoryTests {
 	}
 
 	@Test
-	void otherKindsAreNotHeldToOneByTheKeyNoticeIndex() {
+	void aPasswordNoticeIsStoredOncePerChange() {
 		UserId alice = account("alice@example.com", AccountRole.USER);
-		PasswordChangedContent same = new PasswordChangedContent(PasswordChangeMethod.CHANGE, T1);
+		UserId bob = account("bob@example.com", AccountRole.USER);
+		PasswordChangedContent content = new PasswordChangedContent(PasswordChangeMethod.CHANGE, T1);
 
-		// 대조 — 고유 인덱스는 키 무효 알림에만 건다. 같은 내용의 비밀번호 알림은 둘 다 남는다
+		assertThat(this.notices.createOnce(alice, content, T1)).isTrue();
+		// 같은 사용자 · 바꾼 시각 — 같은 변경을 거듭 받았다
+		assertThat(this.notices.createOnce(alice, content, T2)).isFalse();
+		// 바꾼 시각이 다르면 다른 변경이다, 사용자가 다르면 다른 사람의 알림이다
+		assertThat(this.notices.createOnce(alice, new PasswordChangedContent(PasswordChangeMethod.RECOVERY, T2), T2))
+			.isTrue();
+		assertThat(this.notices.createOnce(bob, content, T1)).isTrue();
+
+		assertThat(this.notices.page(alice, null, 50)).extracting(Notice::content)
+			.containsExactly(new PasswordChangedContent(PasswordChangeMethod.RECOVERY, T2), content);
+	}
+
+	@Test
+	void otherKindsAreNotHeldToOneByTheKeyAndPasswordNoticeIndexes() {
+		UserId alice = account("alice@example.com", AccountRole.USER);
+		StorylineSubscriptionsRemovedContent same = new StorylineSubscriptionsRemovedContent(
+				List.of(new RemovedSubscription(31, 77L)));
+
+		// 대조 — 고유 인덱스는 키 무효 · 비밀번호 알림(과 다이제스트 실패 알림)에만 건다. 같은 내용의 사라진 구독 알림은 둘 다 남는다
 		this.notices.create(alice, same, T1);
 		this.notices.create(alice, same, T1);
 
@@ -394,17 +408,6 @@ class JdbcNoticeRepositoryTests {
 		}
 
 		assertThat(locking.get(10, TimeUnit.SECONDS)).isEmpty();
-	}
-
-	@Test
-	void recipientsAreActiveAdminsInIdOrder() {
-		UserId first = account("first@example.com", AccountRole.ADMIN);
-		account("user@example.com", AccountRole.USER);
-		UserId suspended = account("suspended@example.com", AccountRole.ADMIN);
-		this.jdbc.sql("update users set status = 'SUSPENDED' where id = :id").param("id", suspended.value()).update();
-		UserId second = account("second@example.com", AccountRole.ADMIN);
-
-		assertThat(this.recipients.activeAdmins()).containsExactly(first, second);
 	}
 
 	@Test

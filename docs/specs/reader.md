@@ -21,7 +21,7 @@
 - 판정 · 저장을 하지 않는다 — 그 지식을 가진 모듈의 공개 조회에 맡긴다. 받은 소식의 뜻은 `digest`(digest-R13), 무엇이 정리된 흐름인지는 `user`(user-R73), 흐름에 묶인 지난 항목은 `digest`(digest-R53), 상태는 `storyline`, 대표 기사는 `event`, 출처 이름 엮기는 `article`(article-R17)이 정한다
 - 판정 근거(소속의 점수 · 관계의 확률 · 물은 기록 · 기준)와 보도 강도 · 중요도를 내지 않는다 — 운영자 화면(`admin`)의 것이다
 - RSS 요약문 · 피드 섹션 · RSS 카테고리를 내지 않는다([ADR-0068](../adr/0068-rss-summaries-shown-only-on-operator-screens-and-users-get-processed-information.md))
-- 사용자를 인증하지 않는다 — 세션 · 키 관문은 `user` 의 보안 구성이 한다([user Spec](user.md#화면용-api-의-공개와-세션-사용자) user-R5 · R6)
+- 사용자를 인증하지 않는다 — 세션 · 키 관문은 `account` 의 보안 구성이 한다([account Spec](account.md#화면용-api-의-공개와-세션-사용자) account-R5 · R6)
 
 다른 모듈과의 의존과 이벤트 흐름은 [overview.md §5](../overview.md#5-모듈-지도)에 있다.
 
@@ -40,7 +40,7 @@
 
 모듈 최상위 패키지 `net.yozmnews.reader` 에 공개 타입이 없다. 다른 모듈이 부르는 공개 API 는 없다.
 
-HTTP 엔드포인트 — 모두 세션이 필요하고 키 관문 뒤다(키 없이 여는 표시가 없다 — user-R5). 요청 방어 표시(`@RequestLimited` · `@HumanChecked`)도 없다(user-R40):
+HTTP 엔드포인트 — 모두 세션이 필요하고 키 관문 뒤다(키 없이 여는 표시가 없다 — account-R5). 요청 방어 표시(`@RequestLimited` · `@HumanChecked`)도 없다(account-R32):
 
 | 메서드 · 경로 | 용도 |
 |---|---|

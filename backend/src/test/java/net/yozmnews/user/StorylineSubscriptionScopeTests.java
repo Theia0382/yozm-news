@@ -9,14 +9,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.time.Instant;
 import java.time.ZoneOffset;
+import net.yozmnews.account.SignedInUsers;
 
 import jakarta.servlet.http.Cookie;
 import net.yozmnews.LlmKeyRows;
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.account.application.PasswordHashing;
+import net.yozmnews.account.domain.account.AccountRepository;
+import net.yozmnews.account.domain.credential.PasswordCredentialRepository;
 import net.yozmnews.storyline.StorylineRows;
-import net.yozmnews.user.application.PasswordHashing;
-import net.yozmnews.user.domain.account.AccountRepository;
-import net.yozmnews.user.domain.credential.PasswordCredentialRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,7 +32,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * 스토리라인 구독의 사용자 격리 — 사용자 A 의 구독은 B 의 목록에 없고, B 의 해제는 A 의 구독을 지우지 않으며, 구독 이력은 자기 행만
  * 낸다. 키가 없는 사용자도 쓴다. 세션 없이 부르면 네 경로 모두 401 이다(docs/qa/test-strategy.md §13).
  * <p>
- * 지키는 규칙: user-R5 · user-R6 · user-R52 · user-R63
+ * 지키는 규칙: account-R5 · account-R6 · user-R52 · user-R63
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -56,7 +57,7 @@ public class StorylineSubscriptionScopeTests {
 	@BeforeEach
 	@AfterEach
 	void reset() {
-		this.jdbc.sql("delete from users").update();
+		UserTables.deleteAll(this.jdbc);
 		this.jdbc.sql("delete from login_failures").update();
 		this.jdbc.sql("delete from llm_credentials").update();
 		StorylineRows.clear(this.jdbc);

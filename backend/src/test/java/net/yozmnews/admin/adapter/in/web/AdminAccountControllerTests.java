@@ -8,11 +8,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import net.yozmnews.account.AccountCreationResult;
+import net.yozmnews.account.InitialPasswordResetResult;
+import net.yozmnews.account.PasswordProblem;
+import net.yozmnews.account.application.WebSliceSecurity;
 import net.yozmnews.platform.UserId;
-import net.yozmnews.user.AccountCreationResult;
-import net.yozmnews.user.InitialPasswordResetResult;
-import net.yozmnews.user.PasswordProblem;
-import net.yozmnews.user.application.WebSliceSecurity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,7 +25,7 @@ import org.springframework.test.web.servlet.MockMvc;
 /**
  * 운영자 API 의 계정 — 생성 · 초기 비밀번호 다시 정하기의 판별자, 형식 · 규칙 위반 400, 없는 계정 404, 토큰.
  * <p>
- * 지키는 규칙: admin-R1 · admin-R2 · admin-R3 · user-R35
+ * 지키는 규칙: admin-R1 · admin-R2 · admin-R3 · account-R28
  */
 @WebMvcTest(controllers = AdminAccountController.class, properties = AdminRequests.TOKEN_PROPERTY)
 @Import({ WebSliceSecurity.class, FakeAccountAdministration.Config.class })

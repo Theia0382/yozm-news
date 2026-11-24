@@ -18,6 +18,7 @@ import net.yozmnews.platform.UserId;
 import net.yozmnews.tag.TagSetDirectory;
 import net.yozmnews.user.DigestFailed;
 import net.yozmnews.user.DigestFailureCause;
+import net.yozmnews.user.UserTables;
 import org.jobrunr.scheduling.JobScheduler;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -70,7 +71,7 @@ class DigestRunTests {
 		this.jdbc.sql("delete from digests").update();
 		this.jdbc.sql("delete from llm_credentials where user_id in (select id from users where email like 'digest-run-%')")
 			.update();
-		this.jdbc.sql("delete from users where email like 'digest-run-%'").update();
+		UserTables.deleteByEmail(this.jdbc, "digest-run-%");
 	}
 
 	@Test

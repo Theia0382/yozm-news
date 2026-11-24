@@ -7,31 +7,30 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import net.yozmnews.account.application.ProvisionedAccounts;
 
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.account.domain.account.Onboarding;
 import net.yozmnews.llm.ReasoningEffort;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.source.SourceId;
 import net.yozmnews.tag.TagSetAdministration;
 import net.yozmnews.tag.TagSetDirectory;
 import net.yozmnews.tag.TagSetId;
+import net.yozmnews.user.AccountEvents;
 import net.yozmnews.user.DigestInterests;
 import net.yozmnews.user.DigestInterestsDirectory;
 import net.yozmnews.user.SummaryLength;
 import net.yozmnews.user.TopicSubscription;
-import net.yozmnews.user.domain.account.DisplayName;
-import net.yozmnews.user.domain.account.EmailAddress;
-import net.yozmnews.user.domain.account.Onboarding;
-import net.yozmnews.user.domain.credential.PasswordPolicy;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.TestPropertySource;
-import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * 다이제스트가 읽는 관심 설정 — 활성 버전의 사용자는 저장 값을 펼쳐 내고, 선호 버전이 옛 버전인 사용자는 따라가기 결과를 계산해 내되 저장 행 · 이력 ·
@@ -55,16 +54,13 @@ class DigestInterestsDirectoryTests {
 	DigestInterestsDirectory directory;
 
 	@Autowired
-	AccountProvisioning provisioning;
+	ApplicationContext context;
 
 	@Autowired
 	TagSetAdministration administration;
 
 	@Autowired
 	TagSetDirectory tagSets;
-
-	@Autowired
-	TransactionTemplate transaction;
 
 	@Autowired
 	JdbcClient jdbc;
@@ -169,11 +165,9 @@ class DigestInterestsDirectoryTests {
 	}
 
 	private UserId account(String email) {
-		ProvisionResult result = this.transaction.execute(status -> this.provisioning.provision(Onboarding.OPEN_SIGN_UP,
-				EmailAddress.parse(email).orElseThrow(), new DisplayName("사용자"),
-				PasswordPolicy.normalize("correct horse battery"), NOW));
-		assertThat(result).isInstanceOf(ProvisionResult.Created.class);
-		return ((ProvisionResult.Created) result).user();
+		UserId user = ProvisionedAccounts.provision(this.context, Onboarding.OPEN_SIGN_UP, email, "사용자", "correct horse battery", NOW).orElseThrow();
+		AccountEvents.awaitCreatedHandled(this.jdbc);
+		return user;
 	}
 
 	private void preference(UserId user, String kind, String key, String mode) {

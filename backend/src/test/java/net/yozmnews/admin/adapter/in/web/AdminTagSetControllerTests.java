@@ -14,8 +14,8 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
+import net.yozmnews.account.application.WebSliceSecurity;
 import net.yozmnews.platform.ChangeActor;
-import net.yozmnews.user.application.WebSliceSecurity;
 import net.yozmnews.tag.LineageKind;
 import net.yozmnews.tag.MultiTagKind;
 import net.yozmnews.tag.TagKind;

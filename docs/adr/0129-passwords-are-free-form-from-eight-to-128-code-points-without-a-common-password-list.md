@@ -21,7 +21,7 @@
 
 - 목록 파일을 저장소 · 이미지에 두지 않고, 갱신 · 출처 관리가 없다.
 - 흔한 비밀번호도 8 자 이상이면 받는다. 대입 방어는 로그인 실패 지연([ADR-0130](0130-sign-in-failure-delays-count-per-digest-of-the-submitted-normalized-email-regardless-of-account.md))과 요청 제한이 맡는다.
-- 규칙의 정본은 [user Spec](../specs/user.md#계정과-자격) user-R14 다.
+- 규칙의 정본은 [user Spec](../specs/user.md#옮긴-규칙) user-R14 다.
 
 ## 검토한 대안
 

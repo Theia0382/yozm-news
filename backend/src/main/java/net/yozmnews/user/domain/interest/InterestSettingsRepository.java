@@ -1,6 +1,8 @@
 package net.yozmnews.user.domain.interest;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import net.yozmnews.platform.UserId;
@@ -8,7 +10,7 @@ import net.yozmnews.tag.TagSetId;
 
 /**
  * 설정 행 저장 — 구현은 {@code adapter/out/persistence} 의 {@code JdbcInterestSettings} — docs/specs/user.md §4 · user-R43 ·
- * user-R44 · user-R46 · user-R47
+ * user-R44 · user-R46 · user-R47 · user-R61
  */
 public interface InterestSettingsRepository {
 
@@ -27,16 +29,13 @@ public interface InterestSettingsRepository {
 	 */
 	void update(InterestSettings settings);
 
-	/** 설정 행이 없는 계정 — 계정 ID 가 {@code afterUserId} 보다 큰 것부터 ID 순으로 {@code limit} 개까지 */
-	List<UserId> withoutSettings(long afterUserId, int limit);
+	/** 주어진 사용자 가운데 설정 행이 없는 것 — 사용자 ID 순 */
+	List<UserId> withoutSettingsAmong(Collection<UserId> users);
 
 	/** 선호 버전이 {@code active} 가 아닌 사용자 — 사용자 ID 가 {@code afterUserId} 보다 큰 것부터 ID 순으로 {@code limit} 개까지 */
 	List<UserId> withPreferenceVersionOtherThan(TagSetId active, long afterUserId, int limit);
 
-	/**
-	 * 쓰는({@code ACTIVE}) 계정 가운데 설정 행이 있는 사용자의 다이제스트 일정 — 사용자 ID 가 {@code afterUserId} 보다 큰 것부터 ID 순으로
-	 * {@code limit} 개까지
-	 */
-	List<ScheduledUser> activeSchedules(long afterUserId, int limit);
+	/** 주어진 사용자 가운데 설정 행이 있는 것의 다이제스트 일정 — 설정 행이 없는 사용자는 맵에 없다 */
+	Map<UserId, DigestSchedule> schedulesOf(Collection<UserId> users);
 
 }

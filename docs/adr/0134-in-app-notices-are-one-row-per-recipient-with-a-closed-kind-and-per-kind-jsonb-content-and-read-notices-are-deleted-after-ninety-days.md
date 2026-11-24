@@ -1,6 +1,6 @@
 # ADR-0134: 화면 내 알림은 받는 사용자마다 한 행이고, 종류는 닫힌 열거 · 내용은 종류마다 정한 레코드(jsonb)이며, 읽은 알림은 읽고 90일 뒤 지운다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 계정과 함께 지움([ADR-0308](0308-account-authentication-and-security-live-in-the-account-module-while-interests-and-notices-stay-in-user.md))
 - 날짜: 2026-11-13
 - 근거: [이슈 #146](https://github.com/Theia0382/yozm-news/issues/146) — 구현 `83eb094`(저장 · 보존) · `d17b8d0`(알림함 API)
 - 관련: [ADR-0011](0011-no-email-in-v1.md)("보안 알림 메일은 보내지 않고 다음 로그인 때 화면 안 알림으로 보여준다" — 이 ADR 이 그 알림의 저장 꼴을 정한다), [ADR-0135](0135-feed-status-changes-publish-each-check-runs-transitions-and-gather-into-one-unread-notice-per-active-admin-read-up-to-the-seen-revision.md)(첫 종류 — 피드 상태 알림)
@@ -18,6 +18,7 @@
 - **종류는 닫힌 열거다.** 종류를 더하는 이슈가 열거 값 · 마이그레이션의 종류 검사 · 내용 레코드를 함께 더한다. 종류로 가르는 곳은 기본 갈래 없는 망라 분기다.
 - **내용은 종류마다 정한 레코드를 jsonb 한 칸에 둔다.** 저장 모양은 저장소 구현이 정하고, 화면 응답은 종류 판별자와 그 종류의 본문 하나다.
 - **판(revision)을 둔다.** 만들 때 1 이고 내용을 고칠 때마다 하나 오른다. 읽음을 판으로 가르는 결정은 [ADR-0135](0135-feed-status-changes-publish-each-check-runs-transitions-and-gather-into-one-unread-notice-per-active-admin-read-up-to-the-seen-revision.md) 다.
+> 부분 대체(마지막 문장) — [ADR-0308](0308-account-authentication-and-security-live-in-the-account-module-while-interests-and-notices-stay-in-user.md). 지금 상태: [`user` Spec §6](../specs/user.md#6-데이터)
 - **읽은 알림은 읽고 90일 뒤 지운다.** 작업 역할의 반복 작업이 하루 한 번 지운다. 안 읽은 알림은 기간과 무관하게 남는다. 계정을 지우면 함께 지워진다.
 
 ## 결과

@@ -77,7 +77,7 @@ if [[ $body == '{"message":"pong"}' ]]; then pass "K5 /api/ping 응답"; else fa
 # K6 OIDC 로그인 경로는 넘기지 않는다(SPA 가 답한다)
 check "K6 /login/oauth2/… 는 넘기지 않음" /login/oauth2/code/smoke 200 text/html
 check "K6 /oauth2/… 는 넘기지 않음" /oauth2/authorization/smoke 200 text/html
-# K13 운영자 경로는 로그인하지 않은 요청에 열리지 않는다 — 운영자 토큰을 넣었든 넣지 않았든 같다(docs/specs/user.md "운영자 접근 통제")
+# K13 운영자 경로는 로그인하지 않은 요청에 열리지 않는다 — 운영자 토큰을 넣었든 넣지 않았든 같다(docs/specs/account.md "운영자 접근 통제")
 # 세션 없는 요청은 로그인을 요구하고, 틀린 운영자 토큰(Bearer)은 토큰 인증 실패다 — 토큰을 넣지 않은 배포도 어떤 Bearer 에나 같은 답이다
 k13="K13 운영자 경로 로그인 요구"
 check "$k13" /api/admin/sources 401 application/problem+json

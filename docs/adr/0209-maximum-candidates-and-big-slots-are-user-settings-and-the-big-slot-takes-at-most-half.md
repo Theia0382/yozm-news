@@ -26,7 +26,7 @@
 > 부분 대체("구독 밖 노출이 없고") — [ADR-0280](0280-events-of-followed-flows-outside-the-subscribed-topics-enter-one-per-flow-within-a-share-of-the-subscribed-seats-as-interest.md). 지금 상태: [digest Spec "후보 선별"](../specs/digest.md#후보-선별) digest-R52
 - 큰 슬롯을 끈 사용자에게는 구독 밖 노출이 없고, 구독 제안의 재료(구독 밖 기사에 받은 좋아요)도 생기지 않는다.
 - 최대 후보 수가 입력 토큰 예산보다 크면 예산이 먼저 자른다.
-- 다이제스트 하나가 인용하는 서로 다른 기사는 많아야 150 이라 피드백 요청 제한(세션 사용자 300 / 10분 — [user Spec](../specs/user.md#요청-방어) user-R38)의 창 하나에 든다.
+- 다이제스트 하나가 인용하는 서로 다른 기사는 많아야 150 이라 피드백 요청 제한(세션 사용자 300 / 10분 — [user Spec](../specs/user.md#옮긴-규칙) user-R38)의 창 하나에 든다.
 - 단계 값 · 범위 · 절반은 측정 전 목표다.
 
 ## 검토한 대안
@@ -42,6 +42,6 @@
 
 - 2026-11-18: 결과 "관심 설정 화면에 '다이제스트 분량' 구획이 있다" — 같은 구획에 요약 길이가 더해졌다([ADR-0223](0223-the-digest-summary-length-is-a-user-setting-in-the-digest-volume-section.md)), 지금 상태는 [user Spec "관심 설정"](../specs/user.md#관심-설정) user-R56
 - 2026-11-19: 결과 "큰 슬롯을 끈 사용자에게는 … 구독 제안의 재료(구독 밖 기사에 받은 좋아요)도 생기지 않는다" — 구독한 중분류와 함께 붙은 구독 후보도 구독하지 않은 중분류의 재료가 된다([ADR-0245](0245-a-topic-suggestion-is-made-when-the-current-interest-of-an-unsubscribed-subtopic-reaches-its-own-threshold.md)), 지금 상태는 [digest Spec "구독 제안"](../specs/digest.md#구독-제안) digest-R41
-- 2026-11-19: 결과 "다이제스트 하나가 인용하는 서로 다른 기사는 많아야 150 이라 피드백 요청 제한 … 의 창 하나에 든다" — 인용은 사건마다 표본이라 서로 다른 인용 기사는 많아야 750 이고 피드백 요청 제한도 750 / 10분이다([ADR-0263](0263-articles-sent-per-event-are-sampled-up-to-a-cap-with-a-fixed-seed-from-those-in-the-period-and-the-sample-is-the-citations-and-sources.md)), 지금 상태는 [user Spec "요청 방어"](../specs/user.md#요청-방어) user-R38 · [feedback Spec](../specs/feedback.md#5-규칙과-불변식) feedback-R7
+- 2026-11-19: 결과 "다이제스트 하나가 인용하는 서로 다른 기사는 많아야 150 이라 피드백 요청 제한 … 의 창 하나에 든다" — 인용은 사건마다 표본이라 서로 다른 인용 기사는 많아야 750 이고 피드백 요청 제한도 750 / 10분이다([ADR-0263](0263-articles-sent-per-event-are-sampled-up-to-a-cap-with-a-fixed-seed-from-those-in-the-period-and-the-sample-is-the-citations-and-sources.md)), 지금 상태는 [user Spec "요청 방어"](../specs/user.md#옮긴-규칙) user-R38 · [feedback Spec](../specs/feedback.md#5-규칙과-불변식) feedback-R7
 - 2026-11-21: 결과 "최대 후보 수가 입력 토큰 예산보다 크면 예산이 먼저 자른다"의 예산으로 자를 때 큰 슬롯 몫 — [ADR-0271](0271-when-the-input-token-budget-cuts-candidates-the-big-slot-keeps-at-most-half-of-what-is-left-and-uses-what-subscribed-events-leave.md) · [digest Spec "후보 선별"](../specs/digest.md#후보-선별) digest-R22
-- 2026-11-22: 결과 "다이제스트 하나가 인용하는 서로 다른 기사는 많아야 150 이라 피드백 요청 제한 … 의 창 하나에 든다"의 근거 — [ADR-0265](0265-feedback-is-pressed-once-per-digest-item-and-recorded-on-each-event-of-the-item-the-screen-shows-the-item-value-and-signals-use-event-records.md) · [ADR-0272](0272-the-input-token-budget-is-a-safety-ceiling-and-the-maximum-candidate-steps-set-the-digest-volume.md) · [user Spec "요청 방어"](../specs/user.md#요청-방어) user-R38
+- 2026-11-22: 결과 "다이제스트 하나가 인용하는 서로 다른 기사는 많아야 150 이라 피드백 요청 제한 … 의 창 하나에 든다"의 근거 — [ADR-0265](0265-feedback-is-pressed-once-per-digest-item-and-recorded-on-each-event-of-the-item-the-screen-shows-the-item-value-and-signals-use-event-records.md) · [ADR-0272](0272-the-input-token-budget-is-a-safety-ceiling-and-the-maximum-candidate-steps-set-the-digest-volume.md) · [user Spec "요청 방어"](../specs/user.md#옮긴-규칙) user-R38

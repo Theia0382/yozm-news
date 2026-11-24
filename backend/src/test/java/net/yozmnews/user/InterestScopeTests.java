@@ -11,10 +11,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import jakarta.servlet.http.Cookie;
 import net.yozmnews.LlmKeyRows;
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.account.SignedInUsers;
+import net.yozmnews.account.application.PasswordHashing;
+import net.yozmnews.account.domain.account.AccountRepository;
+import net.yozmnews.account.domain.credential.PasswordCredentialRepository;
 import net.yozmnews.tag.TagSetDirectory;
-import net.yozmnews.user.application.PasswordHashing;
-import net.yozmnews.user.domain.account.AccountRepository;
-import net.yozmnews.user.domain.credential.PasswordCredentialRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,7 +32,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
  * 관심 설정의 사용자 격리 — 사용자 A 의 세션으로 태그 선호 · 제외 소스 · 일정 · 모델을 저장해도 B 의 것은 그대로이고, B 의 조회는 B 의 값만
  * 낸다. A 가 구독 제안을 거절해도 B 의 거절은 비어 있다. 세션 없이 부르면 처리기 열둘 모두 401 이다(docs/qa/test-strategy.md §13).
  * <p>
- * 지키는 규칙: user-R6
+ * 지키는 규칙: account-R6
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -65,7 +66,7 @@ public class InterestScopeTests {
 	@BeforeEach
 	@AfterEach
 	void reset() {
-		this.jdbc.sql("delete from users").update();
+		UserTables.deleteAll(this.jdbc);
 		this.jdbc.sql("delete from login_failures").update();
 		this.jdbc.sql("delete from llm_credentials").update();
 		this.jdbc.sql("delete from source_attributions where source_id in (select id from sources where preset_key = :key)")

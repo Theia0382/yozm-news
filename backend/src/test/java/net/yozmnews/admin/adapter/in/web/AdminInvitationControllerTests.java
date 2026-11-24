@@ -12,11 +12,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.time.Instant;
 import java.util.List;
 
-import net.yozmnews.user.InvitationRevocationResult;
-import net.yozmnews.user.InvitationState;
-import net.yozmnews.user.InvitationView;
-import net.yozmnews.user.IssuedInvitation;
-import net.yozmnews.user.application.WebSliceSecurity;
+import net.yozmnews.account.InvitationRevocationResult;
+import net.yozmnews.account.InvitationState;
+import net.yozmnews.account.InvitationView;
+import net.yozmnews.account.IssuedInvitation;
+import net.yozmnews.account.application.WebSliceSecurity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,7 +29,7 @@ import org.springframework.test.web.servlet.MockMvc;
 /**
  * 운영자 API 의 초대 — 목록 · 발급 · 취소의 JSON 모양과 판별자, 메모 초과 400, 없는 초대 · 1 미만 ID 404, 토큰.
  * <p>
- * 지키는 규칙: admin-R1 · admin-R2 · admin-R3 · user-R31
+ * 지키는 규칙: admin-R1 · admin-R2 · admin-R3 · account-R24
  */
 @WebMvcTest(controllers = AdminInvitationController.class, properties = AdminRequests.TOKEN_PROPERTY)
 @Import({ WebSliceSecurity.class, FakeInvitationAdministration.Config.class })

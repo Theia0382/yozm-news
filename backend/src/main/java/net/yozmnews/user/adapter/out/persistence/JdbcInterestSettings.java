@@ -6,16 +6,18 @@ import java.sql.Timestamp;
 import java.time.DayOfWeek;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import net.yozmnews.llm.Provider;
 import net.yozmnews.llm.ReasoningEffort;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.tag.TagSetId;
 import net.yozmnews.user.SummaryLength;
-import net.yozmnews.user.domain.account.AccountStatus;
 import net.yozmnews.user.domain.interest.CandidateVolume;
 import net.yozmnews.user.domain.interest.DigestSchedule;
 import net.yozmnews.user.domain.interest.DigestVolume;
@@ -24,7 +26,6 @@ import net.yozmnews.user.domain.interest.InterestSettingsRepository;
 import net.yozmnews.user.domain.interest.InterestText;
 import net.yozmnews.user.domain.interest.ModelRef;
 import net.yozmnews.user.domain.interest.ReportSettings;
-import net.yozmnews.user.domain.interest.ScheduledUser;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
@@ -90,12 +91,16 @@ class JdbcInterestSettings implements InterestSettingsRepository {
 	}
 
 	@Override
-	public List<UserId> withoutSettings(long afterUserId, int limit) {
+	public List<UserId> withoutSettingsAmong(Collection<UserId> users) {
+		if (users.isEmpty()) {
+			return List.of();
+		}
 		return this.jdbc.sql("""
-				select u.id from users u
-				where u.id > :after and not exists (select 1 from user_settings s where s.user_id = u.id)
-				order by u.id limit :limit
-				""").param("after", afterUserId).param("limit", limit).query((rs, n) -> new UserId(rs.getLong(1))).list();
+				select id from unnest(:users) as given(id)
+				where not exists (select 1 from user_settings s where s.user_id = given.id)
+				order by id
+				""")
+			.param("users", ids(users)).query((rs, n) -> new UserId(rs.getLong(1))).list();
 	}
 
 	@Override
@@ -113,18 +118,20 @@ class JdbcInterestSettings implements InterestSettingsRepository {
 	}
 
 	@Override
-	public List<ScheduledUser> activeSchedules(long afterUserId, int limit) {
-		return this.jdbc.sql("""
-				select s.user_id, s.timezone, s.digest_time from user_settings s
-				join users u on u.id = s.user_id
-				where u.status = :active and s.user_id > :after
-				order by s.user_id limit :limit
-				""")
-			.param("active", AccountStatus.ACTIVE.name())
-			.param("after", afterUserId)
-			.param("limit", limit)
-			.query((rs, n) -> new ScheduledUser(new UserId(rs.getLong("user_id")), schedule(rs)))
-			.list();
+	public Map<UserId, DigestSchedule> schedulesOf(Collection<UserId> users) {
+		if (users.isEmpty()) {
+			return Map.of();
+		}
+		return this.jdbc.sql("select user_id, timezone, digest_time from user_settings where user_id = any(:users)")
+			.param("users", ids(users))
+			.query((rs, n) -> Map.entry(new UserId(rs.getLong("user_id")), schedule(rs)))
+			.list()
+			.stream()
+			.collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
+	}
+
+	private static Long[] ids(Collection<UserId> users) {
+		return users.stream().map(UserId::value).distinct().toArray(Long[]::new);
 	}
 
 	private static DigestSchedule schedule(ResultSet rs) throws SQLException {

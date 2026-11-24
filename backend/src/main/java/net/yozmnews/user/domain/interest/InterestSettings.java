@@ -54,7 +54,7 @@ public final class InterestSettings {
 	/** 계정을 만들 때의 설정 행 — 기본값({@link InterestDefaults}) · 고른 모델 없음 · 관심사 없음(user-R43) */
 	public static InterestSettings defaults(UserId user, TagSetId activeVersion, Instant now) {
 		return new InterestSettings(user, activeVersion,
-				new DigestSchedule(InterestDefaults.TIMEZONE, InterestDefaults.DIGEST_TIME), InterestText.NONE, null,
+				InterestDefaults.SCHEDULE, InterestText.NONE, null,
 				InterestDefaults.REASONING_EFFORT,
 				new ReportSettings(InterestDefaults.WEEKLY_REPORT, InterestDefaults.WEEKLY_REPORT_DAY,
 						InterestDefaults.MONTHLY_REPORT),

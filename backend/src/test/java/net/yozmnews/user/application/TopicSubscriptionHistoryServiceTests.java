@@ -7,32 +7,31 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
+import net.yozmnews.account.application.ProvisionedAccounts;
 
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.account.domain.account.Onboarding;
 import net.yozmnews.platform.ChangeActor;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.tag.TagSetActivationResult;
 import net.yozmnews.tag.TagSetAdministration;
 import net.yozmnews.tag.TagSetDirectory;
 import net.yozmnews.tag.TagSetId;
+import net.yozmnews.user.AccountEvents;
 import net.yozmnews.user.TopicSubscriptionAction;
 import net.yozmnews.user.TopicSubscriptionCause;
 import net.yozmnews.user.TopicSubscriptionChange;
 import net.yozmnews.user.TopicSubscriptionChanges;
 import net.yozmnews.user.TopicSubscriptionHistory;
-import net.yozmnews.user.domain.account.DisplayName;
-import net.yozmnews.user.domain.account.EmailAddress;
-import net.yozmnews.user.domain.account.Onboarding;
-import net.yozmnews.user.domain.credential.PasswordPolicy;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.TestPropertySource;
-import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * 주제 구독 이력 조회 — 선호 이력의 주제 행만 기간(반열림)으로 읽어, 기록 당시 버전의 구조로 펼치고 계보로 활성 버전의 중분류로 푼다. 쓰지 않는다.
@@ -64,16 +63,13 @@ class TopicSubscriptionHistoryServiceTests {
 	TopicSubscriptionHistory history;
 
 	@Autowired
-	AccountProvisioning provisioning;
+	ApplicationContext context;
 
 	@Autowired
 	TagSetAdministration administration;
 
 	@Autowired
 	TagSetDirectory tagSets;
-
-	@Autowired
-	TransactionTemplate transaction;
 
 	@Autowired
 	JdbcClient jdbc;
@@ -176,11 +172,9 @@ class TopicSubscriptionHistoryServiceTests {
 	}
 
 	private UserId account(String email) {
-		ProvisionResult result = this.transaction.execute(status -> this.provisioning.provision(Onboarding.OPEN_SIGN_UP,
-				EmailAddress.parse(email).orElseThrow(), new DisplayName("사용자"),
-				PasswordPolicy.normalize("correct horse battery"), NOW));
-		assertThat(result).isInstanceOf(ProvisionResult.Created.class);
-		return ((ProvisionResult.Created) result).user();
+		UserId user = ProvisionedAccounts.provision(this.context, Onboarding.OPEN_SIGN_UP, email, "사용자", "correct horse battery", NOW).orElseThrow();
+		AccountEvents.awaitCreatedHandled(this.jdbc);
+		return user;
 	}
 
 	private void event(UserId user, String cause, TagSetId version, String kind, String key, String mode,

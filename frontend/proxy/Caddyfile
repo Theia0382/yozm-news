@@ -19,7 +19,7 @@
 	import backend-paths.caddy
 	handle @backend {
 		reverse_proxy app:8080 {
-			# 앱은 이 헤더 하나로 클라이언트 IP 를 읽는다 — 클라이언트가 보낸 같은 헤더는 덮어쓴다(docs/specs/user.md user-R37)
+			# 앱은 이 헤더 하나로 클라이언트 IP 를 읽는다 — 클라이언트가 보낸 같은 헤더는 덮어쓴다(docs/specs/account.md account-R29)
 			header_up X-Real-IP {client_ip}
 		}
 	}

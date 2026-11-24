@@ -3,6 +3,7 @@ package net.yozmnews.user.application;
 import java.time.InstantSource;
 import java.util.Objects;
 
+import net.yozmnews.account.AccountDirectory;
 import net.yozmnews.user.DigestFailed;
 import net.yozmnews.user.domain.notice.DigestFailedContent;
 import net.yozmnews.user.domain.notice.NoticeRepository;
@@ -16,11 +17,14 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class DigestFailedNotices {
 
+	private final AccountDirectory accounts;
+
 	private final NoticeRepository notices;
 
 	private final InstantSource clock;
 
-	DigestFailedNotices(NoticeRepository notices, InstantSource clock) {
+	DigestFailedNotices(AccountDirectory accounts, NoticeRepository notices, InstantSource clock) {
+		this.accounts = Objects.requireNonNull(accounts, "accounts");
 		this.notices = Objects.requireNonNull(notices, "notices");
 		this.clock = Objects.requireNonNull(clock, "clock");
 	}
@@ -28,6 +32,9 @@ public class DigestFailedNotices {
 	/** 실패 하나를 알림으로 남긴다 — 이벤트 하나가 트랜잭션 하나다 */
 	@Transactional
 	public void record(DigestFailed failed) {
+		if (!this.accounts.exists(failed.user())) {
+			return;
+		}
 		this.notices.createOnce(failed.user(), new DigestFailedContent(failed.digestId(), failed.digestDate(),
 				failed.cause(), failed.failedAt()), this.clock.instant());
 	}

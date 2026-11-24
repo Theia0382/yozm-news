@@ -9,6 +9,7 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 
+import net.yozmnews.account.PasswordChangeMethod;
 import net.yozmnews.llm.Provider;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.source.FeedId;
@@ -23,7 +24,6 @@ import net.yozmnews.user.domain.notice.Notice;
 import net.yozmnews.user.domain.notice.NoticeContent;
 import net.yozmnews.user.domain.notice.NoticeKind;
 import net.yozmnews.user.domain.notice.NoticeRepository;
-import net.yozmnews.user.domain.notice.PasswordChangeMethod;
 import net.yozmnews.user.domain.notice.PasswordChangedContent;
 import net.yozmnews.user.domain.notice.PreferencesAdjustedContent;
 import net.yozmnews.user.domain.notice.RemovedSubscription;
@@ -122,11 +122,24 @@ class JdbcNoticeRepository implements NoticeRepository {
 	}
 
 	@Override
+	public boolean createOnce(UserId user, PasswordChangedContent content, Instant now) {
+		return this.jdbc.sql("""
+				insert into user_notices (user_id, kind, content, revision, created_at, updated_at)
+				values (:user, :kind, cast(:content as jsonb), 1, :now, :now)
+				on conflict (user_id, (content ->> 'changedAt')) where kind = 'PASSWORD_CHANGED' do nothing
+				""")
+			.param("user", user.value())
+			.param("kind", content.kind().name())
+			.param("content", json(content))
+			.param("now", utc(now))
+			.update() == 1;
+	}
+
+	@Override
 	public boolean createOnce(UserId user, DigestFailedContent content, Instant now) {
 		return this.jdbc.sql("""
 				insert into user_notices (user_id, kind, content, revision, created_at, updated_at)
-				select :user, :kind, cast(:content as jsonb), 1, :now, :now
-				where exists (select 1 from users where id = :user)
+				values (:user, :kind, cast(:content as jsonb), 1, :now, :now)
 				on conflict (user_id, (content ->> 'digestId')) where kind = 'DIGEST_FAILED' do nothing
 				""")
 			.param("user", user.value())

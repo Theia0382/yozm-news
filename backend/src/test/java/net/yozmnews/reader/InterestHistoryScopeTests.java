@@ -12,10 +12,11 @@ import java.time.temporal.ChronoUnit;
 
 import net.yozmnews.LlmKeyRows;
 import net.yozmnews.TestcontainersConfiguration;
-import net.yozmnews.user.SignedInUsers;
-import net.yozmnews.user.application.PasswordHashing;
-import net.yozmnews.user.domain.account.AccountRepository;
-import net.yozmnews.user.domain.credential.PasswordCredentialRepository;
+import net.yozmnews.account.SignedInUsers;
+import net.yozmnews.account.application.PasswordHashing;
+import net.yozmnews.account.domain.account.AccountRepository;
+import net.yozmnews.account.domain.credential.PasswordCredentialRepository;
+import net.yozmnews.user.UserTables;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,7 +31,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * 관심사 히스토리의 사용자 격리 — 사용자 A 의 노출 · 좋아요 · 주제 구독 변경은 A 의 응답에만 있고 B 의 응답에는 없다. 세션 없이 401, 키가 없으면
  * 403(키 관문)이다(docs/qa/test-strategy.md §13).
  * <p>
- * 지키는 규칙: user-R5 · user-R6 · reader-R8
+ * 지키는 규칙: account-R5 · account-R6 · reader-R8
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -59,7 +60,7 @@ public class InterestHistoryScopeTests {
 	void reset() {
 		this.rows = new InterestRows(this.jdbc);
 		this.rows.clear();
-		this.jdbc.sql("delete from users").update();
+		UserTables.deleteAll(this.jdbc);
 		this.jdbc.sql("delete from login_failures").update();
 		this.jdbc.sql("delete from llm_credentials").update();
 	}

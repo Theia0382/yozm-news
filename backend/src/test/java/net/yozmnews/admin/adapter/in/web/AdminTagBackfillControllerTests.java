@@ -13,7 +13,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 
-import net.yozmnews.user.application.WebSliceSecurity;
+import net.yozmnews.account.application.WebSliceSecurity;
 import net.yozmnews.tag.TagBackfillRequestResult;
 import net.yozmnews.tag.TagBackfillReviewResult;
 import net.yozmnews.tag.TagBackfillRunView;

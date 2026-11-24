@@ -7,14 +7,15 @@ import java.time.Instant;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import net.yozmnews.account.application.ProvisionedAccounts;
 
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.account.domain.account.Onboarding;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.tag.TagSetDirectory;
-import net.yozmnews.user.domain.account.DisplayName;
-import net.yozmnews.user.domain.account.EmailAddress;
-import net.yozmnews.user.domain.account.Onboarding;
-import net.yozmnews.user.domain.credential.PasswordPolicy;
+import net.yozmnews.user.AccountEvents;
+import net.yozmnews.user.UserTables;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,16 +23,18 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 관심 설정 기본값 — 계정을 만드는 길 넷 모두 같은 트랜잭션에서 설정 행(기본값 · 선호 버전 = 활성 버전)과 기본 제외 형식의 제외(이력 원인
- * ONBOARDING)를 얻는다. 같은 이메일이면 아무것도 쓰지 않고, 설정 행이 있으면 다시 쓰지 않는다. 실제 PostgreSQL 과 기동 때 적재된 기본 체계로 본다.
+ * 관심 설정 기본값 — 계정을 만드는 길 넷 모두 계정 생김을 받은 리스너가 커밋 뒤 설정 행(기본값 · 선호 버전 = 활성 버전)과 기본 제외 형식의
+ * 제외(이력 원인 ONBOARDING)를 쓴다. 같은 이메일이면 아무것도 쓰지 않고, 설정 행이 있으면 다시 쓰지 않는다. 실제 PostgreSQL 과 기동 때 적재된
+ * 기본 체계로 본다.
  * <p>
- * 지키는 규칙: user-R28 · user-R43 · user-R45
+ * 지키는 규칙: user-R43 · user-R45 · account-R35
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -41,7 +44,7 @@ class InterestDefaultsTests {
 	private static final Instant NOW = Instant.parse("2026-11-15T09:00:00Z");
 
 	@Autowired
-	AccountProvisioning provisioning;
+	ApplicationContext context;
 
 	@Autowired
 	InterestDefaultsWriter defaults;
@@ -58,7 +61,8 @@ class InterestDefaultsTests {
 	@BeforeEach
 	@AfterEach
 	void reset() {
-		this.jdbc.sql("delete from users").update();
+		AccountEvents.awaitCreatedHandled(this.jdbc);
+		UserTables.deleteAll(this.jdbc);
 	}
 
 	@ParameterizedTest
@@ -98,11 +102,10 @@ class InterestDefaultsTests {
 	void theSameEmailWritesNoSecondSettingsRow() {
 		provision(Onboarding.OPEN_SIGN_UP, "dave@example.com");
 
-		ProvisionResult again = this.transaction.execute(status -> this.provisioning.provision(Onboarding.OPERATOR,
-				EmailAddress.parse("dave@example.com").orElseThrow(), new DisplayName("데이브"),
-				PasswordPolicy.normalize("correct horse battery"), NOW));
+		Optional<UserId> again = ProvisionedAccounts.provision(this.context, Onboarding.OPERATOR, "dave@example.com",
+				"데이브", "correct horse battery", NOW);
 
-		assertThat(again).isInstanceOf(ProvisionResult.EmailTaken.class);
+		assertThat(again).as("같은 이메일").isEmpty();
 		assertThat(count("user_settings")).isOne();
 		assertThat(count("user_tag_preference_events")).isEqualTo(2);
 	}
@@ -120,11 +123,9 @@ class InterestDefaultsTests {
 	}
 
 	private UserId provision(Onboarding onboarding, String email) {
-		ProvisionResult result = this.transaction.execute(status -> this.provisioning.provision(onboarding,
-				EmailAddress.parse(email).orElseThrow(), new DisplayName("사용자"),
-				PasswordPolicy.normalize("correct horse battery"), NOW));
-		assertThat(result).isInstanceOf(ProvisionResult.Created.class);
-		return ((ProvisionResult.Created) result).user();
+		UserId user = ProvisionedAccounts.provision(this.context, onboarding, email, "사용자", "correct horse battery", NOW).orElseThrow();
+		AccountEvents.awaitCreatedHandled(this.jdbc);
+		return user;
 	}
 
 	private List<Map<String, Object>> preferences(UserId user) {

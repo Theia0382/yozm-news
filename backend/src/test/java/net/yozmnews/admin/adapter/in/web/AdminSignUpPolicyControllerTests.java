@@ -12,10 +12,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.time.Instant;
 import java.util.List;
 
+import net.yozmnews.account.SignUpPolicyChange;
+import net.yozmnews.account.SignUpPolicyChangeResult;
+import net.yozmnews.account.application.WebSliceSecurity;
 import net.yozmnews.platform.ChangeActor;
-import net.yozmnews.user.SignUpPolicyChange;
-import net.yozmnews.user.SignUpPolicyChangeResult;
-import net.yozmnews.user.application.WebSliceSecurity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,7 +28,7 @@ import org.springframework.test.web.servlet.MockMvc;
 /**
  * 운영자 API 의 가입 정책 — 지금 값 · 이력의 JSON 모양, 변경의 판별자와 운영자 행위자, 본문 400, 토큰.
  * <p>
- * 지키는 규칙: admin-R1 · admin-R3 · user-R32
+ * 지키는 규칙: admin-R1 · admin-R3 · account-R25
  */
 @WebMvcTest(controllers = AdminSignUpPolicyController.class, properties = AdminRequests.TOKEN_PROPERTY)
 @Import({ WebSliceSecurity.class, FakeSignUpPolicyAdministration.Config.class })

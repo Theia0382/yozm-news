@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-import net.yozmnews.user.application.WebSliceSecurity;
+import net.yozmnews.account.application.WebSliceSecurity;
 import net.yozmnews.tag.CategoryCoverage;
 import net.yozmnews.tag.CountBucket;
 import net.yozmnews.tag.EvaluationOverview;

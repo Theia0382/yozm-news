@@ -15,7 +15,10 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Repository
 class JdbcPreferenceVersionFence implements PreferenceVersionFence {
 
-	/** 선호 버전 울타리의 둘째 키 — 첫 키는 이 모듈의 잠금 이름공간({@link JdbcFirstAdminLock#USER_LOCK_NAMESPACE}) */
+	/** advisory lock 의 첫 키 — 이 모듈의 잠금을 다른 잠금과 가른다('USER') */
+	static final int USER_LOCK_NAMESPACE = 0x55534552;
+
+	/** 선호 버전 울타리의 둘째 키 */
 	static final int PREFERENCE_VERSION_KEY = 1;
 
 	private final JdbcClient jdbc;
@@ -31,7 +34,7 @@ class JdbcPreferenceVersionFence implements PreferenceVersionFence {
 	@Override
 	public void enterShared() {
 		this.jdbc.sql("select pg_advisory_xact_lock_shared(:namespace, :key)")
-			.param("namespace", JdbcFirstAdminLock.USER_LOCK_NAMESPACE)
+			.param("namespace", USER_LOCK_NAMESPACE)
 			.param("key", PREFERENCE_VERSION_KEY)
 			.query()
 			.singleRow();
@@ -40,7 +43,7 @@ class JdbcPreferenceVersionFence implements PreferenceVersionFence {
 	@Override
 	public void passExclusive() {
 		this.ownTransaction.executeWithoutResult(status -> this.jdbc.sql("select pg_advisory_xact_lock(:namespace, :key)")
-			.param("namespace", JdbcFirstAdminLock.USER_LOCK_NAMESPACE)
+			.param("namespace", USER_LOCK_NAMESPACE)
 			.param("key", PREFERENCE_VERSION_KEY)
 			.query()
 			.singleRow());

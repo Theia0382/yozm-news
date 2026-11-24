@@ -3,23 +3,23 @@ package net.yozmnews.user.application;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Instant;
+import net.yozmnews.account.application.ProvisionedAccounts;
 
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.account.domain.account.Onboarding;
 import net.yozmnews.llm.LlmModel;
 import net.yozmnews.platform.UserId;
+import net.yozmnews.user.AccountEvents;
 import net.yozmnews.user.DigestModelDirectory;
-import net.yozmnews.user.domain.account.DisplayName;
-import net.yozmnews.user.domain.account.EmailAddress;
-import net.yozmnews.user.domain.account.Onboarding;
-import net.yozmnews.user.domain.credential.PasswordPolicy;
+import net.yozmnews.user.UserTables;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.TestPropertySource;
-import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * 다이제스트가 읽는 쓸 모델 — 고른 모델을 쓸 수 있으면 그것, 아니면 쓸 수 있는 키가 있는 공급자의 첫 허용 모델, 그것도 없으면 빈 값. 정지 ·
@@ -39,10 +39,7 @@ class DigestModelDirectoryTests {
 	DigestModelDirectory directory;
 
 	@Autowired
-	AccountProvisioning provisioning;
-
-	@Autowired
-	TransactionTemplate transaction;
+	ApplicationContext context;
 
 	@Autowired
 	JdbcClient jdbc;
@@ -51,7 +48,8 @@ class DigestModelDirectoryTests {
 	void clear() {
 		this.jdbc.sql("delete from llm_credentials where user_id in (select id from users where email like 'digest-model-%')")
 			.update();
-		this.jdbc.sql("delete from users where email like 'digest-model-%'").update();
+		AccountEvents.awaitCreatedHandled(this.jdbc);
+		UserTables.deleteByEmail(this.jdbc, "digest-model-%");
 	}
 
 	@Test
@@ -115,11 +113,9 @@ class DigestModelDirectoryTests {
 	}
 
 	private UserId account(String email) {
-		ProvisionResult result = this.transaction.execute(status -> this.provisioning.provision(Onboarding.OPEN_SIGN_UP,
-				EmailAddress.parse(email).orElseThrow(), new DisplayName("사용자"),
-				PasswordPolicy.normalize("correct horse battery"), NOW));
-		assertThat(result).isInstanceOf(ProvisionResult.Created.class);
-		return ((ProvisionResult.Created) result).user();
+		UserId user = ProvisionedAccounts.provision(this.context, Onboarding.OPEN_SIGN_UP, email, "사용자", "correct horse battery", NOW).orElseThrow();
+		AccountEvents.awaitCreatedHandled(this.jdbc);
+		return user;
 	}
 
 	private void key(UserId user, String provider, String status) {

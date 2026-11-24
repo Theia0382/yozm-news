@@ -2,6 +2,7 @@ package net.yozmnews;
 
 import java.util.Map;
 
+import net.yozmnews.account.AccountScopeTests;
 import net.yozmnews.credential.LlmKeyScopeTests;
 import net.yozmnews.feedback.FeedbackScopeTests;
 import net.yozmnews.reader.DigestScreenScopeTests;
@@ -9,7 +10,6 @@ import net.yozmnews.reader.InterestHistoryScopeTests;
 import net.yozmnews.reader.StorylineScreenScopeTests;
 import net.yozmnews.reader.TopicSuggestionScopeTests;
 import net.yozmnews.reader.UserStorylineScreenScopeTests;
-import net.yozmnews.user.AccountScopeTests;
 import net.yozmnews.user.InterestScopeTests;
 import net.yozmnews.user.NoticeScopeTests;
 import net.yozmnews.user.StorylineSubscriptionScopeTests;
@@ -19,7 +19,7 @@ import net.yozmnews.user.StorylineSubscriptionScopeTests;
  * {@code "메서드 경로"}(매핑 그대로, 예 {@code "GET /api/digests/{date}"}), 값은 사용자 A 의 세션으로 B 의 데이터에 닿지 않음을 보는 시험
  * 클래스다. 등록 가드는 {@link UserScopeTests}, 규범은 docs/qa/test-strategy.md §13.
  * <p>
- * 지키는 규칙: user-R6
+ * 지키는 규칙: account-R6
  */
 public final class UserScopedEndpoints {
 

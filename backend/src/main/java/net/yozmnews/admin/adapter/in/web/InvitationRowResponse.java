@@ -2,8 +2,8 @@ package net.yozmnews.admin.adapter.in.web;
 
 import java.time.Instant;
 
-import net.yozmnews.user.InvitationState;
-import net.yozmnews.user.InvitationView;
+import net.yozmnews.account.InvitationState;
+import net.yozmnews.account.InvitationView;
 import org.jspecify.annotations.Nullable;
 
 /**

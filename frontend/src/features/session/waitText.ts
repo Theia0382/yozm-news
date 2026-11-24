@@ -1,4 +1,4 @@
-// 시도 대기 안내 — 남은 초를 사람이 읽는 단위로 바꾼다(docs/specs/user.md user-R17).
+// 시도 대기 안내 — 남은 초를 사람이 읽는 단위로 바꾼다(docs/specs/account.md account-R17).
 
 import { remainingText } from "@/shared/lib/remaining";
 

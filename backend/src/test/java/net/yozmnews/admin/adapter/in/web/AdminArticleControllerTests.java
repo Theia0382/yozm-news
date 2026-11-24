@@ -11,6 +11,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 
+import net.yozmnews.account.application.WebSliceSecurity;
 import net.yozmnews.article.ArticleContent;
 import net.yozmnews.article.ArticleEntryView;
 import net.yozmnews.article.ArticleId;
@@ -35,7 +36,6 @@ import net.yozmnews.tag.TagName;
 import net.yozmnews.tag.TagSetId;
 import net.yozmnews.tag.TopicStatus;
 import net.yozmnews.tag.VersionedEvaluationRow;
-import net.yozmnews.user.application.WebSliceSecurity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

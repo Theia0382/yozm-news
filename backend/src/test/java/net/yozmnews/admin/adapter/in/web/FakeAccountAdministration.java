@@ -3,9 +3,9 @@ package net.yozmnews.admin.adapter.in.web;
 import java.util.ArrayList;
 import java.util.List;
 
-import net.yozmnews.user.AccountAdministration;
-import net.yozmnews.user.AccountCreationResult;
-import net.yozmnews.user.InitialPasswordResetResult;
+import net.yozmnews.account.AccountAdministration;
+import net.yozmnews.account.AccountCreationResult;
+import net.yozmnews.account.InitialPasswordResetResult;
 import org.jspecify.annotations.Nullable;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;

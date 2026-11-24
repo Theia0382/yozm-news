@@ -7,7 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import net.yozmnews.user.application.WebSliceSecurity;
+import net.yozmnews.account.application.WebSliceSecurity;
 import net.yozmnews.storyline.LinkingFillResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

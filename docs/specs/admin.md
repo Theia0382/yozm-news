@@ -21,13 +21,13 @@
 - **스토리라인 조회** — 기간의 스토리라인 목록(상태 · 상위 · 사건 수 · 기간 / 전체 기사 수 · 보도 강도 · 소스 수 · 중요도 평균 · 큰 여부 · 대표 기사)과 그 기간의 소속 없는 사건 수, 지금 잇기 · 관계 기준, 스토리라인 하나의 상세(타임라인 — 사건마다 직접 · 물려받음과 그 사건을 직접 가진 스토리라인의 소속 근거, 관계 — 확률 · 판정 원본, 물은 쌍 — 결말 · 판정 원본, 이 스토리라인에 합쳐진 스토리라인 — 합친 시각 · 조각 합치기면 기준 · 판정 원본). 판정 원본은 답마다의 확률을 다시 읽어 싣는다
 - **큰 스토리라인 · 큰 판정 기준** — 기간의 큰 스토리라인과 그 기간의 소속 없는 사건 수, 큰 판정 기준의 지금 값 · 이력, 바꾸기 전 미리보기(같은 기간을 지금 기준 · 제안 기준으로), 변경
 - **판정 기록** — 기간의 사건 소속 판정 원본(후보 사건 · 확률 · 입력 토큰)과 그 지금 결과(배정 · 병합 · 반영 안 됨), 지금 사건 배정 기준(읽기 전용)
-- **계정 · 초대 · 가입 정책** — 공개 가입 켬 · 끔과 그 이력, 초대 발급 · 최근 목록 · 취소, 운영자 계정 생성, 첫 로그인 전 계정의 초기 비밀번호 다시 정하기([user Spec](user.md#첫-운영자와-운영자의-계정-운영))
+- **계정 · 초대 · 가입 정책** — 공개 가입 켬 · 끔과 그 이력, 초대 발급 · 최근 목록 · 취소, 운영자 계정 생성, 첫 로그인 전 계정의 초기 비밀번호 다시 정하기([account Spec](account.md#첫-운영자와-운영자의-계정-운영))
 - **응답 모양** — 모듈의 운영 결과를 판별자 하나의 평평한 응답으로 옮기고, 요청의 문제를 HTTP 오류로 낸다
 
 하지 않는 것:
 
 - 판정 · 저장 · 조회를 하지 않는다 — 그 지식을 가진 모듈의 공개 API(운영 API · 공개 조회)에 맡긴다
-- 운영자를 인증하지 않는다 — 운영자 경로의 보호는 `user` 의 보안 구성이 한다([user Spec "운영자 접근 통제"](user.md#운영자-접근-통제))
+- 운영자를 인증하지 않는다 — 운영자 경로의 보호는 `account` 의 보안 구성이 한다([account Spec "운영자 접근 통제"](account.md#운영자-접근-통제))
 - 사건 배정 기준을 바꾸지 않는다 — 설정이다([event-R17](event.md#기준과-재판정)). 판정 기록 응답은 지금 값을 읽기만 한다
 - 스토리라인 관계와 잇기 기준 · 관계 기준을 바꾸지 않는다 — 관계는 관계 판정만 맺고, 기준은 설정이다([ADR-0137](../adr/0137-storyline-relations-are-not-edited-one-by-one-by-operators-and-are-tuned-through-relation-criteria.md)). 스토리라인 응답은 지금 기준을 읽기만 한다
 
@@ -43,7 +43,7 @@
 
 모듈 최상위 패키지 `net.yozmnews.admin` 에 공개 타입이 없다. 다른 모듈이 부르는 공개 API 는 없다.
 
-HTTP 엔드포인트 — 모두 운영자 경로다(`ADMIN` 계정 세션 또는 스크립트용 운영자 토큰 — 거부 응답은 [user Spec "운영자 접근 통제"](user.md#운영자-접근-통제) user-R1 · user-R3):
+HTTP 엔드포인트 — 모두 운영자 경로다(`ADMIN` 계정 세션 또는 스크립트용 운영자 토큰 — 거부 응답은 [account Spec "운영자 접근 통제"](account.md#운영자-접근-통제) account-R1 · account-R3):
 
 | 메서드 · 경로 | 용도 |
 |---|---|
@@ -99,12 +99,12 @@ HTTP 엔드포인트 — 모두 운영자 경로다(`ADMIN` 계정 세션 또는
 | `POST /api/admin/big-storyline-criteria-previews` | 큰 판정 기준 미리보기 — 본문 `minIntensity` · `from` · `to` · `zone`. 지금 기준 · 제안 기준과 같은 기간의 두 목록. 아무것도 쓰지 않는다 |
 | `PUT /api/admin/big-storyline-criteria` | 큰 판정 기준 변경 — 본문 `minIntensity`, 행위자는 운영자 |
 | `GET /api/admin/event-judgements` | 판정 기록 — 질의 `from` · `to` · `zone`(판정 시각의 날짜 범위), 커서 `afterJudgedAt` · `afterId`(함께). 한 쪽은 50건. 원본마다 판정할 기사의 제목 · 출처, 물은 후보 · 확률 · 입력 토큰, 쓰임(`use`)과 지금 결과, 지금 사건 배정 기준, `maxDays`([evaluation-R39](evaluation.md#사건-소속-판정) · [event-R22](event.md#판정-원본의-쓰임) · admin-R7) |
-| `GET /api/admin/sign-up-policy` | 가입 정책 — 공개 가입이 열렸는가와 이력(최근부터 — 앞 값 · 값 · 행위자 · 시각)([user-R32](user.md#가입-정책)) |
+| `GET /api/admin/sign-up-policy` | 가입 정책 — 공개 가입이 열렸는가와 이력(최근부터 — 앞 값 · 값 · 행위자 · 시각)([account-R25](account.md#가입-정책)) |
 | `PUT /api/admin/sign-up-policy` | 가입 정책 변경 — 본문 `open`, 행위자는 운영자 |
-| `GET /api/admin/invitations` | 최근 초대 50개(발급 역순) — 메모 · 발급 · 만료 · 상태 · 쓴 시각 · 가입한 계정의 이메일 · 취소 시각. 토큰은 없다([user-R31](user.md#초대)) |
+| `GET /api/admin/invitations` | 최근 초대 50개(발급 역순) — 메모 · 발급 · 만료 · 상태 · 쓴 시각 · 가입한 계정의 이메일 · 취소 시각. 토큰은 없다([account-R24](account.md#초대)) |
 | `POST /api/admin/invitations` | 초대 발급 — 본문 `memo`(선택). `id` · `token` · `expiresAt` — 토큰은 이 응답에만 나간다. 링크는 화면이 `/invite#토큰` 으로 만든다 |
 | `POST /api/admin/invitations/{id}/revoke` | 초대 취소 |
-| `POST /api/admin/accounts` | 계정 생성 — 본문 `email` · `displayName` · `initialPassword`. 만든 계정은 일반 사용자이고 첫 로그인에서 비밀번호를 바꾼다([user-R35](user.md#첫-운영자와-운영자의-계정-운영)) |
+| `POST /api/admin/accounts` | 계정 생성 — 본문 `email` · `displayName` · `initialPassword`. 만든 계정은 일반 사용자이고 첫 로그인에서 비밀번호를 바꾼다([account-R28](account.md#첫-운영자와-운영자의-계정-운영)) |
 | `PUT /api/admin/accounts/initial-password` | 첫 로그인 전 계정의 초기 비밀번호 다시 정하기 — 본문 `email` · `initialPassword`. 그 계정의 세션이 모두 끝난다 |
 
 요청 · 응답 형식의 정본은 [`api/openapi.json`](../../api/openapi.json)이다([ADR-0020](../adr/0020-screen-api-contract-from-committed-openapi-spec.md)). 결과 · 오류의 대응은 admin-R1 ~ admin-R3, 수집 현황의 응답은 admin-R4, 평가 현황 · 보도량 · 대기 건수의 응답은 admin-R5, 운영자 응답의 기사 정보는 admin-R6, 사건 · 스토리라인 · 큰 스토리라인 · 판정 기록의 응답은 admin-R7, 기사 상세의 응답은 admin-R8 이다. 빠진 태그 채움의 응답은 `evaluation` 의 결과 · 보기를 옮기고 버전 ID 를 JSON 수로 낸다(admin-R1). 이벤트 발행 목록은 `platform` 의 `StrandedPublications` 를 옮기기만 하고 이벤트 내용을 싣지 않는다(platform-R14).
@@ -115,10 +115,10 @@ HTTP 엔드포인트 — 모두 운영자 경로다(`ADMIN` 계정 세션 또는
 
 | 패키지 | 책임 |
 |---|---|
-| (최상위) | 모듈 선언 — 의존을 `source` · `article` · `tag` · `evaluation` · `event` · `storyline` · `user` · `platform` 으로 둔다(`package-info`) |
+| (최상위) | 모듈 선언 — 의존을 `source` · `article` · `tag` · `evaluation` · `event` · `storyline` · `account` · `platform` 으로 둔다(`package-info`) |
 | `adapter/in/web` | 운영자 컨트롤러, 결과 · 목록의 응답 레코드, 요청 매개변수 읽기, 없는 대상의 404 |
 
-협력: 컨트롤러는 `source` 의 공개 운영 API `SourceAdministration`, `article` 의 공개 운영 API `ArticleAdministration`, `tag` 의 공개 운영 API `TagSetAdministration` · `EvaluationAdministration` · `EvaluationReview` · `TagBackfillAdministration` 과 공개 조회 `TopicCoverage`, `evaluation` 의 공개 조회 `EventJudgementLog` · `RelationJudgementLog`, `event` 의 공개 운영 API `EventIntakeAdministration` 과 공개 조회 `EventDirectory` · `EventReview`, `storyline` 의 공개 운영 API `StorylineLinkingAdministration` · `BigStorylineAdministration` 과 공개 조회 `StorylineDirectory` · 운영자 조회 `StorylineReview`, `article` 의 공개 조회 `ArticleDirectory`, `source` 의 공개 조회 `FeedLabels`, `user` 의 공개 운영 API `AccountAdministration` · `InvitationAdministration` · `SignUpPolicyAdministration`, `platform` 의 공개 운영 API `EventPublicationAdministration` · `MeasurementClockAdministration` 만 부르고, 결과를 응답 레코드의 정적 팩토리로 옮긴다. 오류 응답은 `platform` 의 `ProblemResponses` 로 만든다. `application` · `domain` 이 없다 — 판단이 없다.
+협력: 컨트롤러는 `source` 의 공개 운영 API `SourceAdministration`, `article` 의 공개 운영 API `ArticleAdministration`, `tag` 의 공개 운영 API `TagSetAdministration` · `EvaluationAdministration` · `EvaluationReview` · `TagBackfillAdministration` 과 공개 조회 `TopicCoverage`, `evaluation` 의 공개 조회 `EventJudgementLog` · `RelationJudgementLog`, `event` 의 공개 운영 API `EventIntakeAdministration` 과 공개 조회 `EventDirectory` · `EventReview`, `storyline` 의 공개 운영 API `StorylineLinkingAdministration` · `BigStorylineAdministration` 과 공개 조회 `StorylineDirectory` · 운영자 조회 `StorylineReview`, `article` 의 공개 조회 `ArticleDirectory`, `source` 의 공개 조회 `FeedLabels`, `account` 의 공개 운영 API `AccountAdministration` · `InvitationAdministration` · `SignUpPolicyAdministration`, `platform` 의 공개 운영 API `EventPublicationAdministration` · `MeasurementClockAdministration` 만 부르고, 결과를 응답 레코드의 정적 팩토리로 옮긴다. 오류 응답은 `platform` 의 `ProblemResponses` 로 만든다. `application` · `domain` 이 없다 — 판단이 없다.
 
 역할: 모든 구성 요소가 화면 역할(`@WebRole`)이다(platform-R9).
 
@@ -145,7 +145,7 @@ HTTP 엔드포인트 — 모두 운영자 경로다(`ADMIN` 계정 세션 또는
 | 사건 묶기 채우기 | `AdminEventIntakeController` | `POST /api/admin/event-intake-fills` | `event` 의 `EventIntakeAdministration.fill` 결과를 옮긴다. 채울 기간의 범위는 공개 API 가 판정하고 컨트롤러는 그 결과를 400 으로 옮긴다(admin-R1 · admin-R3) |
 | 스토리라인 잇기 채우기 | `AdminStorylineLinkingController` | `POST /api/admin/storyline-linking-fills` | `storyline` 의 `StorylineLinkingAdministration.fill` 결과를 옮긴다. 채울 기간의 범위는 공개 API 가 판정하고 컨트롤러는 그 결과를 400 으로 옮긴다(admin-R1 · admin-R3) |
 | 빠진 태그 채움 | `AdminTagBackfillController` | `POST /api/admin/tag-backfill-reviews` · `POST /api/admin/tag-backfills` · `GET /api/admin/tag-backfills` | 확인 · 요청 · 목록의 결과를 옮긴다. 채울 기간의 범위는 공개 API 가 판정하고 컨트롤러는 그 결과를 400 으로 옮긴다(admin-R1 · admin-R3) |
-| 계정 · 초대 · 가입 정책 | `AdminAccountController` · `AdminInvitationController` · `AdminSignUpPolicyController` | `/api/admin/accounts/**` · `/api/admin/invitations/**` · `/api/admin/sign-up-policy` | `user` 의 운영 API 셋의 결과를 옮긴다. 가입 정책 변경은 `ChangeActor.OPERATOR` 로 부른다. 거부 설명의 길이는 `AccountAdministration` 의 상수에서 읽는다(admin-R1 ~ admin-R3) |
+| 계정 · 초대 · 가입 정책 | `AdminAccountController` · `AdminInvitationController` · `AdminSignUpPolicyController` | `/api/admin/accounts/**` · `/api/admin/invitations/**` · `/api/admin/sign-up-policy` | `account` 의 운영 API 셋의 결과를 옮긴다. 가입 정책 변경은 `ChangeActor.OPERATOR` 로 부른다. 거부 설명의 길이는 `AccountAdministration` 의 상수에서 읽는다(admin-R1 ~ admin-R3) |
 | 없는 대상 | `AdminExceptionHandling` | 운영자 컨트롤러의 공개 예외 | 없는 소스 · 피드 · 초대를 404 문제 응답으로 낸다(admin-R2) |
 
 컨트롤러는 트랜잭션을 열지 않는다 — 피드 켜기 · 원문 미리보기는 피드를 받으므로 응답까지 걸린다(source-R9).
@@ -158,7 +158,7 @@ HTTP 엔드포인트 — 모두 운영자 경로다(`ADMIN` 계정 세션 또는
 
 ### `domain`
 
-해당 없음 — 판단과 저장은 그 기능을 가진 모듈(`source` · `article` · `tag` · `evaluation` · `event` · `storyline` · `user` · `platform`)에 있다.
+해당 없음 — 판단과 저장은 그 기능을 가진 모듈(`source` · `article` · `tag` · `evaluation` · `event` · `storyline` · `account` · `platform`)에 있다.
 
 ### 나가는 쪽
 

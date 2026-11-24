@@ -24,7 +24,7 @@ public final class UserStorylineFixtures {
 
 	/** 사용자 · 스토리라인 · 사건 · 반응 이력을 비운다 */
 	public static void clear(JdbcClient jdbc) {
-		jdbc.sql("delete from users").update();
+		UserTables.deleteAll(jdbc);
 		jdbc.sql("delete from feedback_events").update();
 		StorylineRows.clear(jdbc);
 	}

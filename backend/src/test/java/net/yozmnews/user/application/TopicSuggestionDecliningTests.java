@@ -12,6 +12,7 @@ import net.yozmnews.platform.UserId;
 import net.yozmnews.tag.TagSetDirectory;
 import net.yozmnews.tag.TagSetId;
 import net.yozmnews.user.TopicInterestNow;
+import net.yozmnews.user.UserTables;
 import net.yozmnews.user.application.TopicSuggestionDeclining.DeclineOutcome;
 import net.yozmnews.user.application.TopicSuggestionDeclining.UnknownTopicException;
 import net.yozmnews.user.domain.suggestion.RecordedDecline;
@@ -60,7 +61,7 @@ class TopicSuggestionDecliningTests {
 
 	@AfterEach
 	void clean() {
-		this.jdbc.sql("delete from users").update();
+		UserTables.deleteAll(this.jdbc);
 	}
 
 	@Test

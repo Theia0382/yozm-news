@@ -52,6 +52,7 @@ import net.yozmnews.user.SummaryLength;
 import net.yozmnews.user.TopicSubscriptionHistory;
 import net.yozmnews.user.UserStorylineDirectory;
 import net.yozmnews.user.UserStorylineFixtures;
+import net.yozmnews.user.UserTables;
 import org.jobrunr.scheduling.JobScheduler;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -192,7 +193,7 @@ class CandidateSelectionTests {
 		this.jdbc.sql("delete from article_evaluations").update();
 		this.rows.clear();
 		EventArticles.clear(this.jdbc);
-		this.jdbc.sql("delete from users").update();
+		UserTables.deleteAll(this.jdbc);
 		this.soloEvents.clear();
 	}
 

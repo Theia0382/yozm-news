@@ -19,9 +19,9 @@
 
 - 공급자에 요청을 보내지 않는다 — 검증과 호출은 `llm` 의 것이다
 - 복호화한 키를 내놓는 공개 API 를 두지 않는다 — 평문은 `StoredKeySource` 의 구현을 거쳐 `llm` 에만 간다(credential-R13)
-- 키 없는 사용자의 요청을 막지 않는다 — 세션 체인의 관문은 `user` 의 것이고, 이 모듈은 키 유무 · 키의 공급자를 답하기만 한다
+- 키 없는 사용자의 요청을 막지 않는다 — 세션 체인의 관문은 `account` 의 것이고, 이 모듈은 키 유무 · 키의 공급자를 답하기만 한다
 - 알림을 남기지 않는다 — 이벤트를 받은 `user` 가 남긴다
-- 키 등록 · 검증 경로의 요청 제한을 세지 않는다 — 두 처리기에 `platform` 의 요청 제한 표시(`@RequestLimited(LLM_KEY_CHECK)`)를 달고, 세고 거부하는 것은 `user` 의 요청 방어다([user Spec](user.md#요청-방어) user-R38 · R40)
+- 키 등록 · 검증 경로의 요청 제한을 세지 않는다 — 두 처리기에 `platform` 의 요청 제한 표시(`@RequestLimited(LLM_KEY_CHECK)`)를 달고, 세고 거부하는 것은 `account` 의 요청 방어다([account Spec](account.md#요청-방어) account-R30 · R32)
 
 다른 모듈과의 의존과 이벤트 흐름은 [overview.md §5](../overview.md#5-모듈-지도)에 있다.
 
@@ -52,7 +52,7 @@ HTTP 엔드포인트:
 | `/api/llm-keys/{provider}/checks` | `POST` | 다시 검증 — `VALID` · `INVALID` · `UNDETERMINED`(+실패 종류) · `MISSING`(credential-R12 · R14) |
 | `/api/llm-keys/{provider}` | `DELETE` | 키 삭제 — 없어도 204(credential-R16) |
 
-네 경로 모두 세션이 필요하고 사용자 격리 시험에 등록돼 있으며([user Spec](user.md#화면용-api-의-공개와-세션-사용자) user-R6), 키가 없는 세션 사용자에게도 연다(`@AllowedWithoutLlmKey` — user-R5). 등록 · 다시 검증은 요청마다 공급자에 한 번 묻고, 한도(세션 사용자 · 클라이언트 주소 — 둘이 함께 쓴다)를 넘으면 처리기 앞에서 429 다(user-R38 · R40). `{provider}` 는 `llm` 의 `Provider` 이름(`OPENAI` · `ANTHROPIC` · `OPENROUTER`)이고 모르는 값은 400 이다. 판정 결과는 200 이고, 요청 · 응답 형식은 `api/openapi.json` 에 있다.
+네 경로 모두 세션이 필요하고 사용자 격리 시험에 등록돼 있으며([account Spec](account.md#화면용-api-의-공개와-세션-사용자) account-R6), 키가 없는 세션 사용자에게도 연다(`@AllowedWithoutLlmKey` — account-R5). 등록 · 다시 검증은 요청마다 공급자에 한 번 묻고, 한도(세션 사용자 · 클라이언트 주소 — 둘이 함께 쓴다)를 넘으면 처리기 앞에서 429 다(account-R30 · R32). `{provider}` 는 `llm` 의 `Provider` 이름(`OPENAI` · `ANTHROPIC` · `OPENROUTER`)이고 모르는 값은 400 이다. 판정 결과는 200 이고, 요청 · 응답 형식은 `api/openapi.json` 에 있다.
 
 ### LlmKeys
 
@@ -230,7 +230,7 @@ sequenceDiagram
 
 | 테이블 | 주요 컬럼 | 뜻 |
 |---|---|---|
-| `llm_credentials` | id, user_id, provider(`openai`/`anthropic`/`openrouter`), ciphertext, encrypted_dek, kek_version, key_hint, status(`VALID`/`INVALID`), validated_at, created_at | 사용자 LLM 키 — 주인(`user_id` · `provider`)마다 하나(credential-R11). `user_id` 는 `user` 의 사용자 ID 를 가리킨다 — 모듈 사이라 FK 가 없다. `provider` 는 `Provider` 의 키다. `ciphertext` · `encrypted_dek` 의 꼴은 credential-R3, `kek_version` 은 DEK 를 감싼 KEK 의 버전(credential-R6 · R7), `key_hint` 는 credential-R9, `status` · `validated_at` 은 credential-R14 |
+| `llm_credentials` | id, user_id, provider(`openai`/`anthropic`/`openrouter`), ciphertext, encrypted_dek, kek_version, key_hint, status(`VALID`/`INVALID`), validated_at, created_at | 사용자 LLM 키 — 주인(`user_id` · `provider`)마다 하나(credential-R11). `user_id` 는 `account` 의 사용자 ID 를 가리킨다 — 모듈 사이라 FK 가 없다. `provider` 는 `Provider` 의 키다. `ciphertext` · `encrypted_dek` 의 꼴은 credential-R3, `kek_version` 은 DEK 를 감싼 KEK 의 버전(credential-R6 · R7), `key_hint` 는 credential-R9, `status` · `validated_at` 은 credential-R14 |
 
 ## 7. 설정
 

@@ -7,12 +7,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import net.yozmnews.LlmKeyRows;
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.account.SignedInUsers;
+import net.yozmnews.account.application.PasswordHashing;
+import net.yozmnews.account.domain.account.AccountRepository;
+import net.yozmnews.account.domain.credential.PasswordCredentialRepository;
 import net.yozmnews.digest.DigestRows;
 import net.yozmnews.feedback.FeedbackRows;
-import net.yozmnews.user.SignedInUsers;
-import net.yozmnews.user.application.PasswordHashing;
-import net.yozmnews.user.domain.account.AccountRepository;
-import net.yozmnews.user.domain.credential.PasswordCredentialRepository;
+import net.yozmnews.user.UserTables;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -65,7 +66,7 @@ class FeedbackControllerTests {
 	@AfterEach
 	void reset() {
 		FeedbackRows.clear(this.jdbc);
-		this.jdbc.sql("delete from users").update();
+		UserTables.deleteAll(this.jdbc);
 		this.jdbc.sql("delete from llm_credentials").update();
 	}
 

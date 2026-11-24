@@ -1,6 +1,6 @@
 # ADR-0140: 가입 정책은 `user` 의 운영자 설정(지금 값 한 행 · 추가 전용 이력)이고 처음 값은 닫힘이다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 가입 정책의 모듈([ADR-0308](0308-account-authentication-and-security-live-in-the-account-module-while-interests-and-notices-stay-in-user.md))
 - 날짜: 2026-11-13
 - 근거: [이슈 #147](https://github.com/Theia0382/yozm-news/issues/147) — 구현 `d0319b6`
 - 관련: [ADR-0048](0048-sign-up-closed-by-default-with-invitations-and-operator-bootstrap.md)(운영 설정으로 공개 가입을 연다 — 그 자리와 설정 이름을 정한다), [ADR-0118](0118-big-judgement-criteria-are-storyline-operator-settings-and-do-not-inherit-event-criteria-values-or-history.md)(운영자 설정의 같은 꼴)
@@ -13,6 +13,7 @@
 
 ## 결정
 
+> 부분 대체 — [ADR-0308](0308-account-authentication-and-security-live-in-the-account-module-while-interests-and-notices-stay-in-user.md). 지금 상태: [`account` Spec](../specs/account.md#가입-정책) account-R25
 - **가입 정책은 `user` 의 운영자 설정이다** — 지금 값 한 행과 추가 전용 이력. 운영자는 운영자 화면에서 켜고 끈다.
 - **처음 값은 닫힘이다.** 기동 때 지금 값이 없으면 닫힘을 이력(행위자 시스템)과 함께 넣는다 — 두 역할 공통이고, 동시에 떠도 한 행이다.
 - 지금 값과 같은 값으로 바꾸면 바꾸지 않고 이력도 남기지 않는다.
@@ -32,5 +33,5 @@
 
 ## 후속 기록
 
-- 2026-11-15: 결과 절 "가입 요청 제한 · 봇 차단은 아직 없다" — [ADR-0169](0169-request-limits-and-bot-checks-are-platform-marks-applied-by-the-user-session-chain-before-the-handler.md) · [ADR-0170](0170-request-limits-count-fixed-windows-in-a-user-postgresql-table-with-a-code-constant-policy-table.md) · [ADR-0172](0172-bot-checks-use-turnstile-or-off-pass-when-the-verifier-is-unreachable-and-match-the-action.md) · [`user` "요청 방어"](../specs/user.md#요청-방어) user-R38 · user-R41 · [`user` user-R32](../specs/user.md#가입-정책)
-- 2026-11-15: 결과 절 "운영자 경로가 계정 세션이 되면 그 작업이 계정 행위자를 정한다" — [ADR-0183](0183-admin-paths-open-with-admin-account-sessions-and-keep-the-operator-token-as-an-optional-script-bearer-with-csrf-only-for-sessions.md) 결과 절 · [`user` user-R32](../specs/user.md#가입-정책)
+- 2026-11-15: 결과 절 "가입 요청 제한 · 봇 차단은 아직 없다" — [ADR-0169](0169-request-limits-and-bot-checks-are-platform-marks-applied-by-the-user-session-chain-before-the-handler.md) · [ADR-0170](0170-request-limits-count-fixed-windows-in-a-user-postgresql-table-with-a-code-constant-policy-table.md) · [ADR-0172](0172-bot-checks-use-turnstile-or-off-pass-when-the-verifier-is-unreachable-and-match-the-action.md) · [`user` "요청 방어"](../specs/user.md#옮긴-규칙) user-R38 · user-R41 · [`user` user-R32](../specs/user.md#옮긴-규칙)
+- 2026-11-15: 결과 절 "운영자 경로가 계정 세션이 되면 그 작업이 계정 행위자를 정한다" — [ADR-0183](0183-admin-paths-open-with-admin-account-sessions-and-keep-the-operator-token-as-an-optional-script-bearer-with-csrf-only-for-sessions.md) 결과 절 · [`user` user-R32](../specs/user.md#옮긴-규칙)
