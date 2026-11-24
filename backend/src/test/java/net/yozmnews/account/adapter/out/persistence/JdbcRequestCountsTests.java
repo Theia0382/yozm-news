@@ -20,7 +20,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
  * 요청 제한 기록 — 같은 키 · 창은 한 행에 더하고, 창이나 키가 다르면 1부터 센다. 정리는 끝이 기준보다 이른 창만 지운다(기준과 같은 끝은
  * 남는다).
  * <p>
- * 지키는 규칙: user-R39 · user-R42
+ * 지키는 규칙: account-R31 · account-R34
  */
 @JdbcTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)

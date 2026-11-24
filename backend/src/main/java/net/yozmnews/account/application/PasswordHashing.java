@@ -8,7 +8,7 @@ import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 /**
- * 비밀번호 해시 · 대조 — Argon2id. docs/specs/user.md §4 · user-R15 · user-R17
+ * 비밀번호 해시 · 대조 — Argon2id. docs/specs/account.md §4 · account-R15 · account-R17
  * <p>
  * 받는 비밀번호는 {@code PasswordPolicy.normalize} 로 정규화한 값이다. 비밀번호 · 해시를 로그 · 예외 문구에 싣지 않는다.
  */
@@ -54,7 +54,7 @@ public class PasswordHashing {
 	}
 
 	/**
-	 * 계정이 없거나 쓰지 않는 계정일 때의 대조 — 더미 해시와 한 번 대조해 있는 계정과 같은 계산을 하고 언제나 거짓이다(user-R17).
+	 * 계정이 없거나 쓰지 않는 계정일 때의 대조 — 더미 해시와 한 번 대조해 있는 계정과 같은 계산을 하고 언제나 거짓이다(account-R17).
 	 */
 	public boolean matchesNobody(String normalized) {
 		this.encoder.matches(Objects.requireNonNull(normalized, "normalized"), this.nobody);

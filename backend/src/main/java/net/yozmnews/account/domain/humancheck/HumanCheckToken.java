@@ -6,7 +6,7 @@ import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 봇 차단 위젯이 준 사람 확인 토큰 — 화면이 요청 헤더로 보낸다. 한 번만 검증된다. docs/specs/user.md §4 · user-R41
+ * 봇 차단 위젯이 준 사람 확인 토큰 — 화면이 요청 헤더로 보낸다. 한 번만 검증된다. docs/specs/account.md §4 · account-R33
  * <p>
  * 문자열 표현은 값을 숨긴다 — 토큰은 로그 · 문구에 남기지 않는다.
  *

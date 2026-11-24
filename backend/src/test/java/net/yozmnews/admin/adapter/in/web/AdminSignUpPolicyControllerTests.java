@@ -28,7 +28,7 @@ import org.springframework.test.web.servlet.MockMvc;
 /**
  * 운영자 API 의 가입 정책 — 지금 값 · 이력의 JSON 모양, 변경의 판별자와 운영자 행위자, 본문 400, 토큰.
  * <p>
- * 지키는 규칙: admin-R1 · admin-R3 · user-R32
+ * 지키는 규칙: admin-R1 · admin-R3 · account-R25
  */
 @WebMvcTest(controllers = AdminSignUpPolicyController.class, properties = AdminRequests.TOKEN_PROPERTY)
 @Import({ WebSliceSecurity.class, FakeSignUpPolicyAdministration.Config.class })

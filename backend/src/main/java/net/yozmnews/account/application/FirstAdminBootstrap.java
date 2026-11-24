@@ -18,7 +18,7 @@ import org.springframework.context.SmartLifecycle;
 import org.springframework.stereotype.Component;
 
 /**
- * 첫 운영자 — 기동 때 첫 운영자 설정 값과 운영자 계정 유무로 판정해 만들거나 경고하거나 기동을 멈춘다. docs/specs/user.md §4.
+ * 첫 운영자 — 기동 때 첫 운영자 설정 값과 운영자 계정 유무로 판정해 만들거나 경고하거나 기동을 멈춘다. docs/specs/account.md §4.
  * <p>
  * 두 역할 공통이다. 판정 · 생성은 advisory 잠금 안의 트랜잭션 하나라 함께 기동한 프로세스들이 줄을 서 하나만 만들고, 나중 프로세스는 운영자를
  * 보고 값이 남았다고 경고한다. 로그 · 기동 실패 문구에 비밀번호를 싣지 않는다.

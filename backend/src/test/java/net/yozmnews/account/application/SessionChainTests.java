@@ -53,7 +53,7 @@ import org.springframework.web.bind.annotation.RestController;
  * 세션 체인 — 실제 PostgreSQL 의 Spring Session 위에서 공개 처리기 · 세션 사용자 요구, CSRF, 세션 쿠키 속성과 수명, 세션 ID 교체, 요청마다 계정
  * 확인(비밀번호 강제 변경 포함), 로그아웃, 만료 세션 정리를 본다. 세션은 시험 처리기가 {@link SessionSignIn} 을 직접 불러 만든다.
  * <p>
- * 지키는 규칙: user-R3 · user-R5 · user-R6 · user-R7 · user-R8 · user-R9 · user-R10 · user-R11 · user-R12
+ * 지키는 규칙: account-R3 · account-R5 · account-R6 · account-R7 · account-R8 · account-R9 · account-R10 · account-R11 · account-R12
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest(classes = { YozmnewsApplication.class, SessionChainTests.SessionProbe.class })

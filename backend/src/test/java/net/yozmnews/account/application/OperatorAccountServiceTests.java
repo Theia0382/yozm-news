@@ -34,7 +34,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * 운영자의 계정 운영 — 만든 계정은 일반 사용자 · 강제 변경이라 첫 로그인에서 비밀번호를 바꿔야 하고, 첫 로그인 전 계정의 초기 비밀번호를 다시 정하면
  * 앞 세션이 끝나며, 본인이 바꾼 계정은 다시 정하지 않는다.
  * <p>
- * 지키는 규칙: user-R28 · user-R29 · user-R35
+ * 지키는 규칙: account-R21 · account-R22 · account-R28
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest

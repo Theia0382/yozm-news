@@ -8,7 +8,7 @@ import org.springframework.session.jdbc.JdbcIndexedSessionRepository;
 import org.springframework.stereotype.Component;
 
 /**
- * 한 사용자의 세션 지우기 — 세션 저장소의 사용자 이름 색인(사용자 ID 의 문자열)으로 찾는다. docs/specs/user.md §4 · user-R7
+ * 한 사용자의 세션 지우기 — 세션 저장소의 사용자 이름 색인(사용자 ID 의 문자열)으로 찾는다. docs/specs/account.md §4 · account-R7
  * <p>
  * 세션 저장소는 부르는 쪽의 트랜잭션에 들지 않고 자기 트랜잭션으로 곧바로 커밋한다. 그래서 자격을 바꾸는 유스케이스는 이것을 커밋 직전의 마지막
  * 단계로 부른다 — 지우기가 실패하면 예외로 자격 변경이 롤백되고, 지운 뒤 커밋이 실패하면 세션만 끊긴다.

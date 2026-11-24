@@ -18,7 +18,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * 운영자 토큰을 설정하지 않은 인스턴스 — 운영자 경로가 닫히지 않는다. Bearer 헤더를 낸 요청은 어떤 토큰이어도 401
  * {@code admin-unauthorized} 이고, 헤더가 없으면 세션 인증으로 넘어가 세션이 없으므로 401 {@code unauthenticated} 다.
  * <p>
- * 지키는 규칙: user-R1 · user-R2 · user-R3
+ * 지키는 규칙: account-R1 · account-R2 · account-R3
  */
 @WebMvcTest(controllers = AdminSecurityTests.ProbeController.class)
 @Import({ WebSliceSecurity.class, AdminSecurityTests.ProbeController.class })

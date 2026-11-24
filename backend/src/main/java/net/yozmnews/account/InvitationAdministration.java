@@ -5,7 +5,7 @@ import java.util.List;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 초대의 운영 — 발급 · 최근 목록 · 취소. {@code admin} 이 운영자 요청으로 부른다. docs/specs/user.md §3.
+ * 초대의 운영 — 발급 · 최근 목록 · 취소. {@code admin} 이 운영자 요청으로 부른다. docs/specs/account.md §3.
  * <p>
  * 초대는 이메일에 묶지 않은 일회용 링크다 — 링크를 가진 사람이 자기 이메일로 가입한다. 만료는 발급에서 7일이다.
  */

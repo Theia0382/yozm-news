@@ -48,7 +48,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
  * 비밀번호 변경 · 복구 코드 재발급 · 복구 코드 재설정 — 실제 PostgreSQL 의 세션 위에서 판정 결과, 세션 유지 · 종료, 복구 코드의 교체, 비밀번호
  * 알림, 실패 기록의 종류를 본다.
  * <p>
- * 지키는 규칙: user-R11 · user-R17 · user-R19 · user-R21 · user-R29 · user-R30
+ * 지키는 규칙: account-R11 · account-R17 · account-R19 · account-R22 · account-R23 · user-R74
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest

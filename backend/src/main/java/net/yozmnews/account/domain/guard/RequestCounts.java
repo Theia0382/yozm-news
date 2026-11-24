@@ -4,7 +4,7 @@ import java.time.Instant;
 
 /**
  * 요청 제한 기록의 저장 인터페이스 — 키와 창마다 요청 수 하나. 구현은 {@code adapter/out/persistence} 의 {@code JdbcRequestCounts}.
- * docs/specs/user.md §4 · user-R39 · user-R42
+ * docs/specs/account.md §4 · account-R31 · account-R34
  */
 public interface RequestCounts {
 

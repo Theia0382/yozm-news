@@ -10,7 +10,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 /**
  * 운영자 자격의 형식 · 설정 여부 · 대조.
  * <p>
- * 지키는 규칙: user-R2
+ * 지키는 규칙: account-R2
  */
 class AdminCredentialTests {
 

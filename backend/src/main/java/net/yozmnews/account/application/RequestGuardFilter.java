@@ -26,7 +26,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.method.HandlerMethod;
 
 /**
- * 요청 방어 — 처리기 앞에서 요청 제한을 걸고, 그 다음 봇 차단을 건다. docs/specs/user.md §4 · user-R40 · user-R41
+ * 요청 방어 — 처리기 앞에서 요청 제한을 걸고, 그 다음 봇 차단을 건다. docs/specs/account.md §4 · account-R32 · account-R33
  * <ol>
  * <li>처리기에 {@link net.yozmnews.platform.RequestLimited} 가 있으면 그 동작의 한도로 요청을 세고, 넘었으면 429 {@code rate-limited} 와
  * {@code Retry-After}(초)로 끝낸다 — 봇 차단 검증(외부 요청)은 부르지 않는다</li>

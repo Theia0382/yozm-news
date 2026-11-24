@@ -8,7 +8,7 @@ import net.yozmnews.account.PasswordProblem;
 import net.yozmnews.account.domain.secret.RecoveryCode;
 
 /**
- * 비밀번호 변경의 결과 — 바꿈 · 거절 · 대기 · 새 비밀번호 규칙 위반. docs/specs/user.md §4
+ * 비밀번호 변경의 결과 — 바꿈 · 거절 · 대기 · 새 비밀번호 규칙 위반. docs/specs/account.md §4
  */
 public sealed interface PasswordChangeOutcome {
 

@@ -19,7 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 비밀번호 변경 유스케이스 — 세션 사용자가 현재 비밀번호를 확인하고 새 비밀번호로 바꾼다. 한 번의 변경이 트랜잭션 하나다. docs/specs/user.md §4
+ * 비밀번호 변경 유스케이스 — 세션 사용자가 현재 비밀번호를 확인하고 새 비밀번호로 바꾼다. 한 번의 변경이 트랜잭션 하나다. docs/specs/account.md §4
  * <p>
  * 새 비밀번호 규칙 → 현재 비밀번호 확인(로그인 실패 기록 · 자격 잠금) → 자격 변경. 강제 변경 중이었으면 강제 변경이 풀리고 복구 코드를 새로
  * 주며 비밀번호 바뀜을 알리지 않는다(본인이 막 만든 계정의 첫 단계). 그 밖이면 같은 트랜잭션에서 {@link PasswordChanged} 를 낸다(account-R36).

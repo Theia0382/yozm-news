@@ -5,7 +5,7 @@ import net.yozmnews.account.domain.guard.ClientAddress;
 
 /**
  * 요청의 클라이언트 주소 — 배포 proxy 가 정해 덮어쓴 헤더 {@value #HEADER} 의 주소, 없거나 읽지 못하면 직접 연결한 주소(개발 · 시험).
- * docs/specs/user.md §4 · user-R37
+ * docs/specs/account.md §4 · account-R29
  * <p>
  * 앱은 proxy 뒤에만 있어 이 헤더를 믿는다 — 신뢰할 앞단 범위와 읽는 방향은 proxy 설정이 정한다. 헤더 이름은 이 상수가 코드 쪽 정본이고,
  * proxy 설정(Caddyfile)과의 일치는 시험이 본다.

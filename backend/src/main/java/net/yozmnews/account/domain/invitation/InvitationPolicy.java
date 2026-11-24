@@ -6,7 +6,7 @@ import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 초대의 상수와 메모 규칙 — 만료 · 메모(앞뒤 공백 · 길이) · 목록 크기의 정본. docs/specs/user.md §4
+ * 초대의 상수와 메모 규칙 — 만료 · 메모(앞뒤 공백 · 길이) · 목록 크기의 정본. docs/specs/account.md §4
  */
 public final class InvitationPolicy {
 

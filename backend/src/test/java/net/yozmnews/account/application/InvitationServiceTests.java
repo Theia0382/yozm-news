@@ -37,7 +37,7 @@ import org.springframework.test.context.TestPropertySource;
  * 초대의 운영 — 토큰은 발급 결과에 한 번 나가고 다이제스트로만 저장되며, 메모는 앞뒤 공백을 지운 100 코드 포인트까지, 목록은 최근부터 쓴 계정의
  * 이메일과 함께, 취소는 유효한 초대만, 상태 확인은 읽을 수 없는 토큰을 가르지 않는다.
  * <p>
- * 지키는 규칙: user-R31
+ * 지키는 규칙: account-R24
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest

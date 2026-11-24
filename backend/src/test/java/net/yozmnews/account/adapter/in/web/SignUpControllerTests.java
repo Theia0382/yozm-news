@@ -48,7 +48,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
  * 가입 — 실제 PostgreSQL 의 세션 위에서 공개 가입을 끈 상태 · 켠 상태, 초대 상태 확인과 초대 가입, 가입할 수 없는 이메일의 같은 결과, 가입 뒤의
  * 새 세션과 한 번 나가는 복구 코드를 본다.
  * <p>
- * 지키는 규칙: user-R8 · user-R11 · user-R28 · user-R30 · user-R31 · user-R32 · user-R33
+ * 지키는 규칙: account-R8 · account-R11 · account-R21 · account-R23 · account-R24 · account-R25 · account-R26
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest

@@ -25,7 +25,7 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
  * 동작인지, 봇 차단 처리기가 같은 동작의 요청 제한을 갖는지, 사용자로 세는 동작의 표시가 세션 없는 공개 처리기에 달리지 않았는지 본다(달리면
  * 요청 제한이 그 요청에서 실패한다).
  * <p>
- * 지키는 규칙: platform-R25 · user-R38 · user-R41
+ * 지키는 규칙: platform-R25 · account-R30 · account-R33
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest

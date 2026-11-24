@@ -6,7 +6,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 /**
- * 로그인 실패 지연 일정의 정본 — docs/specs/user.md §4 · user-R19
+ * 로그인 실패 지연 일정의 정본 — docs/specs/account.md §4 · account-R19
  * <p>
  * 마지막 실패에서 {@link #FORGET_AFTER} 안의 연속 실패가 n 회면, 다시 시도할 수 있는 때는 마지막 실패 시각 + 대기다. 대기는 n ≤
  * {@link #FREE_FAILURES} 이면 0, 그 밖 {@code min(FIRST_WAIT × 2^(n−4), MAX_WAIT)}. 그보다 오래된 기록은 실패 0 회로 본다.

@@ -9,7 +9,7 @@ type RecoveryCodeNoticeProps = {
 };
 
 /**
- * 복구 코드 안내 — 코드는 이 화면에서 한 번만 보인다. 복사 단추와 안내를 두고, 저장했다고 확인해야 다음으로 간다(docs/specs/user.md §4).
+ * 복구 코드 안내 — 코드는 이 화면에서 한 번만 보인다. 복사 단추와 안내를 두고, 저장했다고 확인해야 다음으로 간다(docs/specs/account.md §4).
  */
 export function RecoveryCodeNotice({ code, onDone }: RecoveryCodeNoticeProps) {
   const [saved, setSaved] = useState(false);

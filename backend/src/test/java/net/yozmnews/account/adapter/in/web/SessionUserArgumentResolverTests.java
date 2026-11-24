@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RequestParam;
  * 세션 사용자 인자 — 묶기 애너테이션이 없는 {@link UserId} 만 채운다. 세션 사용자로 채우는 동작은 {@code SessionChainTests} 가 실제 세션으로
  * 본다.
  * <p>
- * 지키는 규칙: user-R6
+ * 지키는 규칙: account-R6
  */
 class SessionUserArgumentResolverTests {
 

@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 운영자 API 의 초대 — 최근 목록 · 발급 · 취소. {@code user} 의 {@link InvitationAdministration} 결과를 옮긴다. docs/specs/admin.md §3 ·
+ * 운영자 API 의 초대 — 최근 목록 · 발급 · 취소. {@code account} 의 {@link InvitationAdministration} 결과를 옮긴다. docs/specs/admin.md §3 ·
  * admin-R1 ~ admin-R3
  */
 @WebRole

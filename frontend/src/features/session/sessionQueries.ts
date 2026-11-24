@@ -10,7 +10,7 @@ export const SESSION_QUERY_KEY = ["session"] as const;
 /** 로그인 상태 조회의 키 */
 export const ME_QUERY_KEY = [...SESSION_QUERY_KEY, "me"] as const;
 
-/** 로그인 상태 — 로그인 여부와 무관하게 200 판정 결과다(docs/specs/user.md user-R20) */
+/** 로그인 상태 — 로그인 여부와 무관하게 200 판정 결과다(docs/specs/account.md account-R20) */
 export function useMe() {
   const client = useApiClient();
   return useQuery({

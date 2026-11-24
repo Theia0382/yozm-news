@@ -40,7 +40,7 @@ import org.springframework.test.context.TestPropertySource;
  * 첫 운영자 기동 처리 — 실제 PostgreSQL 에서 값으로 만든 운영자 계정, 다시 기동할 때의 경고, 값이 없을 때 · 하나만 · 이미 있는 이메일 · 정지한
  * 운영자만 남은 경우, 함께 기동한 두 프로세스를 본다. 로그 · 기동 실패 문구에 비밀번호가 없다.
  * <p>
- * 지키는 규칙: user-R28 · user-R29 · user-R34
+ * 지키는 규칙: account-R21 · account-R22 · account-R27
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest

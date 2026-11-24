@@ -15,7 +15,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
 /**
- * {@link SignUpPolicyRepository} 의 JdbcClient 구현 — docs/specs/user.md §4 · §6.
+ * {@link SignUpPolicyRepository} 의 JdbcClient 구현 — docs/specs/account.md §4 · §6.
  * <p>
  * 처음 값은 고정 키 행의 {@code INSERT … ON CONFLICT DO NOTHING} 이라 두 프로세스가 동시에 넣어도 한 행 · 한 이력이다. 변경은 행 잠금 뒤다.
  */

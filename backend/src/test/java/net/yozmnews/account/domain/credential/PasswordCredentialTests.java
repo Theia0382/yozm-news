@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 /**
  * 자격의 강제 변경 — 본인이 바꾸면 풀리고, 초기 비밀번호를 다시 정해도 그대로이며, 본인이 바꾼 뒤에는 다시 정하지 않는다.
  * <p>
- * 지키는 규칙: user-R29
+ * 지키는 규칙: account-R22
  */
 class PasswordCredentialTests {
 

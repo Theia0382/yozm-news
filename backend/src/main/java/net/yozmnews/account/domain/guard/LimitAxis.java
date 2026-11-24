@@ -1,7 +1,7 @@
 package net.yozmnews.account.domain.guard;
 
 /**
- * 요청 제한이 무엇으로 세는가 — docs/specs/user.md §4 · user-R38
+ * 요청 제한이 무엇으로 세는가 — docs/specs/account.md §4 · account-R30
  */
 public enum LimitAxis {
 

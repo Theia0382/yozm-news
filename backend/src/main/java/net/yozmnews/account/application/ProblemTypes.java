@@ -3,8 +3,8 @@ package net.yozmnews.account.application;
 import java.net.URI;
 
 /**
- * 보안 거부(운영자 접근 통제 · 세션 체인 · 요청 방어)가 내는 문제 유형과 제목 — 정본. 그 밖의 문제는 {@code about:blank} 다(docs/specs/user.md
- * §4 · user-R3).
+ * 보안 거부(운영자 접근 통제 · 세션 체인 · 요청 방어)가 내는 문제 유형과 제목 — 정본. 그 밖의 문제는 {@code about:blank} 다(docs/specs/account.md
+ * §4 · account-R3).
  */
 final class ProblemTypes {
 

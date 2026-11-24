@@ -9,7 +9,7 @@ import org.springframework.mock.web.MockHttpServletRequest;
 /**
  * 요청의 클라이언트 주소 — proxy 가 덮어쓴 {@code X-Real-IP} 가 IP 리터럴이면 그것, 없거나 읽지 못하면 직접 연결한 주소다.
  * <p>
- * 지키는 규칙: user-R37
+ * 지키는 규칙: account-R29
  */
 class ClientAddressesTests {
 

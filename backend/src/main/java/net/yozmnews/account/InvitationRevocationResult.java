@@ -3,7 +3,7 @@ package net.yozmnews.account;
 import java.util.Objects;
 
 /**
- * 초대 취소의 결과 — 취소 · 취소할 수 없음. docs/specs/user.md §3
+ * 초대 취소의 결과 — 취소 · 취소할 수 없음. docs/specs/account.md §3
  */
 public sealed interface InvitationRevocationResult {
 

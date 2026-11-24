@@ -31,7 +31,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 로그인 · 로그아웃 · 로그인 상태 조회 — docs/specs/user.md §3 · user-R11 · user-R17 · user-R20
+ * 로그인 · 로그아웃 · 로그인 상태 조회 — docs/specs/account.md §3 · account-R11 · account-R17 · account-R20
  */
 @WebRole
 @RestController
@@ -66,7 +66,7 @@ class SessionController {
 		return switch (this.signIn.attempt(body.email(), body.password(), now)) {
 			case SignInOutcome.SignedIn signedIn -> {
 				this.sessions.signIn(signedIn.userId(), body.keep(), request, response);
-				// 세션이 저장소에 들어간 뒤 확인해야, 그 사이 자격을 바꾼 쪽의 세션 지우기가 이 세션을 놓치지 않는다(user-R18)
+				// 세션이 저장소에 들어간 뒤 확인해야, 그 사이 자격을 바꾼 쪽의 세션 지우기가 이 세션을 놓치지 않는다(account-R18)
 				if (!this.signIn.stillCurrent(signedIn)) {
 					this.sessions.signOut(request, response);
 					yield SignInResponse.rejected();

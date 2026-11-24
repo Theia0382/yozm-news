@@ -12,7 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 복구 코드 재발급 — 세션 사용자가 현재 비밀번호를 확인하고 새 복구 코드를 받는다. 앞 코드는 무효가 된다. docs/specs/user.md §4 · user-R30
+ * 복구 코드 재발급 — 세션 사용자가 현재 비밀번호를 확인하고 새 복구 코드를 받는다. 앞 코드는 무효가 된다. docs/specs/account.md §4 · account-R23
  */
 @Service
 public class RecoveryCodeReissue {

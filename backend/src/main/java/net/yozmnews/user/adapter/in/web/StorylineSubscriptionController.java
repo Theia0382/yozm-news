@@ -36,7 +36,7 @@ import org.springframework.web.server.ResponseStatusException;
  * 스토리라인 구독(화면 이름 "흐름 추적") — 추적 중인 흐름 목록 · 추적 상태 · 추적 · 해제 · 추적 이력. docs/specs/user.md §3 · user-R52 ·
  * user-R63 · user-R67
  * <p>
- * 모두 세션 사용자의 것이고 키 없이도 연다 — 스토리라인 ID · 시각 · 상태 · 더함 뺌만 내고 기사 내용을 내지 않는다(user-R5).
+ * 모두 세션 사용자의 것이고 키 없이도 연다 — 스토리라인 ID · 시각 · 상태 · 더함 뺌만 내고 기사 내용을 내지 않는다(account-R5).
  */
 @WebRole
 @RestController

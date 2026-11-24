@@ -7,7 +7,7 @@ import org.springframework.data.jdbc.repository.query.Query;
 import org.springframework.data.repository.CrudRepository;
 
 /**
- * 초대 저장소 — docs/specs/user.md §4. 토큰은 다이제스트로만 찾는다.
+ * 초대 저장소 — docs/specs/account.md §4. 토큰은 다이제스트로만 찾는다.
  */
 public interface InvitationRepository extends CrudRepository<Invitation, Long> {
 

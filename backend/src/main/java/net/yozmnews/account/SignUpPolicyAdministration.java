@@ -5,7 +5,7 @@ import java.util.List;
 import net.yozmnews.platform.ChangeActor;
 
 /**
- * 가입 정책의 운영 — 지금 값 · 변경 · 이력. {@code admin} 이 운영자 요청으로 부른다. docs/specs/user.md §3.
+ * 가입 정책의 운영 — 지금 값 · 변경 · 이력. {@code admin} 이 운영자 요청으로 부른다. docs/specs/account.md §3.
  * <p>
  * 가입 정책은 공개 가입이 열렸는지 하나다 — 처음 값은 닫힘이다. 바꾸면 다음 가입 요청부터 반영된다.
  */

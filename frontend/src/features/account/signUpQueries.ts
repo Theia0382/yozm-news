@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useApiClient } from "@/shared/api/client";
 
-/** 공개 가입 정책 — 로그인 화면의 가입 링크와 가입 화면이 읽는다(docs/specs/user.md §4) */
+/** 공개 가입 정책 — 로그인 화면의 가입 링크와 가입 화면이 읽는다(docs/specs/account.md §4) */
 export function useSignUpPolicy() {
   const client = useApiClient();
   return useQuery({

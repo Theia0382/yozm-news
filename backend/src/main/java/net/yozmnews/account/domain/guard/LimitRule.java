@@ -4,7 +4,7 @@ import java.time.Duration;
 import java.util.Objects;
 
 /**
- * 요청 제한 규칙 하나 — 한 축의 대상마다 창 하나에 받는 요청 수. docs/specs/user.md §4 · user-R38
+ * 요청 제한 규칙 하나 — 한 축의 대상마다 창 하나에 받는 요청 수. docs/specs/account.md §4 · account-R30
  *
  * @param axis 세는 축
  * @param maxRequests 창 하나에 받는 요청 수 — 1 이상

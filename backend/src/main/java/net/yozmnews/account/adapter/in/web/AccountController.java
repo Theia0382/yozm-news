@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 계정의 비밀번호 · 복구 — 비밀번호 변경, 복구 코드 재발급, 복구 코드로 비밀번호 재설정. docs/specs/user.md §3
+ * 계정의 비밀번호 · 복구 — 비밀번호 변경, 복구 코드 재발급, 복구 코드로 비밀번호 재설정. docs/specs/account.md §3
  */
 @WebRole
 @RestController

@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 /**
  * 요청 제한 판정 — 이 요청까지 센 수가 한도보다 크면 창 끝까지 넘었다. 여러 규칙이면 가장 늦게 풀리는 것.
  * <p>
- * 지키는 규칙: user-R39
+ * 지키는 규칙: account-R31
  */
 class LimitDecisionTests {
 

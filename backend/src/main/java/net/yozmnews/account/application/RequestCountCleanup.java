@@ -7,7 +7,7 @@ import net.yozmnews.account.domain.guard.RequestCounts;
 import org.springframework.stereotype.Service;
 
 /**
- * 끝난 요청 제한 창 정리 유스케이스 — 창 끝이 지금보다 이른 기록을 지운다. docs/specs/user.md §4 · user-R42
+ * 끝난 요청 제한 창 정리 유스케이스 — 창 끝이 지금보다 이른 기록을 지운다. docs/specs/account.md §4 · account-R34
  */
 @Service
 public class RequestCountCleanup {

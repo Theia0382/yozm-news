@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 /**
  * 고정 창 — 유닉스 기원부터 길이로 나눈 칸이고, 시작은 포함 · 끝은 제외다.
  * <p>
- * 지키는 규칙: user-R39
+ * 지키는 규칙: account-R31
  */
 class LimitWindowTests {
 

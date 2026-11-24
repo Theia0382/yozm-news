@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
  * 세션 체인의 인가 판정 — 처리기의 표시 · 세션 사용자 · 강제 변경 · 키 유무의 조합을 손으로 적은 표와 견주고, 키 유무를 묻지 않아야 하는
  * 갈래에서 묻지 않음을 센다. 스프링 없이 돈다.
  * <p>
- * 지키는 규칙: user-R5
+ * 지키는 규칙: account-R5
  */
 class SessionAccessTests {
 

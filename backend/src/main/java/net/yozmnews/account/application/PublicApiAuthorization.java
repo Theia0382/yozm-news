@@ -23,8 +23,8 @@ import org.springframework.web.method.HandlerMethod;
  * 세션 체인의 인가 — 요청의 처리기에 {@link PublicApi} 가 있으면 세션 없이 열고, 처리기가 없으면 열고(404 · 405 · 415 는 MVC 가 낸다), 그
  * 밖은 세션 사용자를 요구한다. 비밀번호를 바꿔야 하는 세션 사용자에게는 {@link AllowedBeforePasswordChange} 가 있는 처리기만, LLM 키가 없는
  * 세션 사용자에게는 {@link AllowedWithoutLlmKey} 가 있는 처리기만 연다 — 판정은 {@link SessionAccess} 가 하고, 거부면 판정 값을 요청
- * 속성({@link #DENIAL})에 둬 세션 체인의 거부 처리기가 문제 유형을 가른다. 처리기는 {@link HandlerLookup} 이 찾는다. docs/specs/user.md §4 ·
- * user-R5
+ * 속성({@link #DENIAL})에 둬 세션 체인의 거부 처리기가 문제 유형을 가른다. 처리기는 {@link HandlerLookup} 이 찾는다. docs/specs/account.md §4 ·
+ * account-R5
  */
 final class PublicApiAuthorization implements AuthorizationManager<RequestAuthorizationContext> {
 

@@ -26,7 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
  * 만들지 않으며, 틀림 · 다른 스킴 · 스킴 없음은 401 {@code admin-unauthorized}. 헤더가 없으면 세션 인증으로 넘어가 세션이 없으므로 401
  * {@code unauthenticated}(변경 요청은 CSRF 가 먼저 막아 403). 운영자 경로 밖은 토큰 없이 열린다.
  * <p>
- * 지키는 규칙: user-R1 · user-R2 · user-R3 · user-R10 · platform-R12
+ * 지키는 규칙: account-R1 · account-R2 · account-R3 · account-R10 · platform-R12
  */
 @WebMvcTest(controllers = AdminSecurityTests.ProbeController.class,
 		properties = "yozmnews.admin.token=" + AdminSecurityTests.TOKEN)

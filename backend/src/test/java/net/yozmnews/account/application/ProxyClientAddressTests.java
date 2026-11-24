@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
  * (기본 사설 대역)에서 헤더를 오른쪽부터 읽도록 결선했는지 본다. Caddy 가 그 설정을 어떻게 해석하고 어느 주소를 고르는지는 이 시험 밖이다
  * — 원문만 대조한다. 파일 경로는 Gradle 이 시스템 속성으로 넘긴다({@code backend/build.gradle.kts}).
  * <p>
- * 지키는 규칙: user-R37 · docs/operations/configuration.md "공개"
+ * 지키는 규칙: account-R29 · docs/operations/configuration.md "공개"
  */
 class ProxyClientAddressTests {
 

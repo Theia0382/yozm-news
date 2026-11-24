@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test;
 /**
  * 초대 메모 — 앞뒤 공백을 지우고 비면 없음, 100 코드 포인트까지.
  * <p>
- * 지키는 규칙: user-R31
+ * 지키는 규칙: account-R24
  */
 class InvitationPolicyTests {
 

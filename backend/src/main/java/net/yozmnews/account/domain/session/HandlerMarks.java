@@ -1,7 +1,7 @@
 package net.yozmnews.account.domain.session;
 
 /**
- * 요청의 처리기와 그 표시 — 세션 접근 판정의 입력(user-R5).
+ * 요청의 처리기와 그 표시 — 세션 접근 판정의 입력(account-R5).
  *
  * @param present 요청을 받을 처리기가 있는가
  * @param isPublic 공개 표시가 있는가

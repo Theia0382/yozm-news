@@ -12,7 +12,7 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 import org.springframework.web.util.ServletRequestPathUtils;
 
 /**
- * 세션 체인에서 요청의 처리기를 찾는다 — 인가와 요청 방어 필터가 함께 쓰는 정본. docs/specs/user.md §4 · user-R5 · user-R40
+ * 세션 체인에서 요청의 처리기를 찾는다 — 인가와 요청 방어 필터가 함께 쓰는 정본. docs/specs/account.md §4 · account-R5 · account-R32
  * <p>
  * 체인은 {@code DispatcherServlet} 앞이라 처리기 매핑에 묻기 전에 요청 경로를 파싱해 두고, 물은 뒤 원래 상태로 돌린다.
  */

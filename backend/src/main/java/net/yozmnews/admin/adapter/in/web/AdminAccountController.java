@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 운영자 API 의 계정 — 계정 생성과 첫 로그인 전 계정의 초기 비밀번호 다시 정하기. {@code user} 의 {@link AccountAdministration} 결과를 옮긴다.
+ * 운영자 API 의 계정 — 계정 생성과 첫 로그인 전 계정의 초기 비밀번호 다시 정하기. {@code account} 의 {@link AccountAdministration} 결과를 옮긴다.
  * docs/specs/admin.md §3 · admin-R1 ~ admin-R3
  */
 @WebRole

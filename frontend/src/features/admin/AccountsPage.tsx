@@ -99,7 +99,7 @@ export function AccountsPage() {
   );
 }
 
-/** 공개 가입의 봇 차단 상태 문구 — 켬 · 끔은 서버 설정이 정한다(docs/specs/user.md user-R32) */
+/** 공개 가입의 봇 차단 상태 문구 — 켬 · 끔은 서버 설정이 정한다(docs/specs/account.md account-R25) */
 function humanCheckText(
   provider: Schemas["HumanCheckResponse"]["provider"] | undefined,
   failed: boolean,

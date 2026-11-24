@@ -2,7 +2,7 @@ package net.yozmnews.account.domain.account;
 
 /**
  * 계정을 만드는 길 — 닫힌 집합의 정본. 길마다 만드는 계정의 역할, 첫 로그인의 비밀번호 강제 변경, 만들 때 복구 코드를 주는지가 정해진다.
- * docs/specs/user.md §4.
+ * docs/specs/account.md §4.
  * <p>
  * 초대 · 운영자 생성은 언제나 {@link AccountRole#USER} 이고, {@link AccountRole#ADMIN} 이 생기는 길은 첫 운영자 하나다. 남이 정한 초기
  * 비밀번호로 만든 계정은 첫 로그인에서 바꾸기 전까지 강제 변경이고, 복구 코드는 그때 준다.

@@ -13,7 +13,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
 /**
- * {@link LoginFailures} 의 JdbcClient 구현 — docs/specs/user.md §4 · user-R18 · user-R19.
+ * {@link LoginFailures} 의 JdbcClient 구현 — docs/specs/account.md §4 · account-R18 · account-R19.
  * <p>
  * 잠금은 자리 행을 {@code INSERT … ON CONFLICT DO NOTHING} 으로 넣은 뒤 {@code SELECT … FOR UPDATE} 다 — 위반 예외는 트랜잭션을 깨므로
  * 쓰지 않는다. 같은 종류 · 같은 이메일의 동시 시도는 이 잠금에서 줄을 선다.

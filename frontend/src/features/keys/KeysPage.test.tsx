@@ -392,7 +392,7 @@ describe("KeysPage 요청 제한", () => {
 
     await user.type(openai.getByLabelText("새 OpenAI API 키"), "sk-new");
     await user.click(openai.getByRole("button", { name: "새 키로 바꾸기" }));
-    // 키 확인은 세션 사용자 · 클라이언트 주소 두 축으로 센다(user-R38) — 어느 쪽에 걸렸는지 모르므로 "이 네트워크" 라고 하지 않는다
+    // 키 확인은 세션 사용자 · 클라이언트 주소 두 축으로 센다(account-R30) — 어느 쪽에 걸렸는지 모르므로 "이 네트워크" 라고 하지 않는다
     const registerAlert = await openai.findByRole("alert");
     expect(registerAlert.textContent).toBe(
       "요청이 너무 많아 잠시 막혔습니다. 30분 뒤에 다시 시도해 주세요.",

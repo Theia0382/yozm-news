@@ -16,8 +16,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 로그인 유스케이스 — 한 번의 시도가 트랜잭션 하나이고, 성공하면 세션을 연 뒤 자격을 다시 확인한다. docs/specs/user.md §4 · user-R17 ·
- * user-R18 · user-R19
+ * 로그인 유스케이스 — 한 번의 시도가 트랜잭션 하나이고, 성공하면 세션을 연 뒤 자격을 다시 확인한다. docs/specs/account.md §4 · account-R17 ·
+ * account-R18 · account-R19
  * <p>
  * 제출된 이메일의 로그인 실패 기록에 걸어 대조한다({@link FailureThrottle}) — 계정이 없거나 쓰지 않으면 더미 해시와 대조하고, 128 코드
  * 포인트를 넘는 비밀번호는 대조 없이 실패로 센다. 대조는 자격 행을 잠그지 않으므로, 대조한 자격의 버전을 결과에 싣고 세션을 저장한 뒤
@@ -69,7 +69,7 @@ public class SignIn {
 			.orElse(false);
 	}
 
-	/** 맞는 비밀번호의 쓰는 계정과 대조한 자격의 버전 — 계정이 없거나 쓰지 않으면 더미 해시와 대조해 같은 계산을 한다(user-R17) */
+	/** 맞는 비밀번호의 쓰는 계정과 대조한 자격의 버전 — 계정이 없거나 쓰지 않으면 더미 해시와 대조해 같은 계산을 한다(account-R17) */
 	private Optional<SignInOutcome.SignedIn> verify(Optional<EmailAddress> email, String password) {
 		if (!PasswordPolicy.comparable(password)) {
 			return Optional.empty();

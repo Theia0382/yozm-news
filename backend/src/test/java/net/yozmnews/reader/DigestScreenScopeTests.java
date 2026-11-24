@@ -31,7 +31,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * 독자 화면 다이제스트의 사용자 격리 — A 의 다이제스트는 B 의 세션으로 홈 · 날짜 · 날짜 목록 어디서도 보이지 않고, B 의 수동 생성 요청은 B 의 행만
  * 만든다. 네 경로 모두 세션 없이 401, 키가 없으면 403(키 관문)이다(docs/qa/test-strategy.md §13). 생성 작업은 돌지 않는다(작업 서버 끔).
  * <p>
- * 지키는 규칙: user-R5 · user-R6 · reader-R9 ~ reader-R11
+ * 지키는 규칙: account-R5 · account-R6 · reader-R9 ~ reader-R11
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest

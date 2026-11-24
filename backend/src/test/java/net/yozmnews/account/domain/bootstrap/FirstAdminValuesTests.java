@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 /**
  * 첫 운영자 설정 값 — 빈 값은 없는 것, 하나만 · 규칙 위반은 그 변수 이름을 말하고, 비밀번호는 정규화하며 문자열에 싣지 않는다.
  * <p>
- * 지키는 규칙: user-R34
+ * 지키는 규칙: account-R27
  */
 class FirstAdminValuesTests {
 

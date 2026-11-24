@@ -37,7 +37,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
  * 세션 지우기가 실패하면 자격 변경이 남지 않는다 — 세션 저장소는 자기 트랜잭션으로 곧바로 커밋하므로, 유스케이스는 세션 지우기를 커밋 직전의 마지막
  * 단계로 불러 그 실패가 자격 변경 · 복구 코드 · 알림을 롤백시키게 한다.
  * <p>
- * 지키는 규칙: user-R29 · user-R30 · user-R35
+ * 지키는 규칙: account-R22 · account-R23 · account-R28
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest

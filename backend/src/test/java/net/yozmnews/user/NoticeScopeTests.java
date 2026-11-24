@@ -37,7 +37,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * 알림 경로의 사용자 격리 — 사용자 A 의 세션으로 B 의 알림을 목록 · 수에서 볼 수 없고, B 의 알림 ID · 판으로 읽음을 보내도 B 의 알림은 그대로다.
  * 세션 없이 부르면 401 이다(docs/qa/test-strategy.md §13).
  * <p>
- * 지키는 규칙: user-R6 · user-R27
+ * 지키는 규칙: account-R6 · user-R27
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest

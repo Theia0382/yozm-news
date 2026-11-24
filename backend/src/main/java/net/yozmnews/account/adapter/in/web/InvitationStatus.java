@@ -5,7 +5,7 @@ import java.util.Optional;
 import net.yozmnews.account.InvitationState;
 
 /**
- * 링크를 연 사람에게 알리는 초대 상태 — 초대의 상태에 "읽을 수 없거나 없는 토큰"을 더한다. docs/specs/user.md §3
+ * 링크를 연 사람에게 알리는 초대 상태 — 초대의 상태에 "읽을 수 없거나 없는 토큰"을 더한다. docs/specs/account.md §3
  */
 enum InvitationStatus {
 

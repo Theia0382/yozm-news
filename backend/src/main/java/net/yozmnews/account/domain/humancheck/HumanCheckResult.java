@@ -3,7 +3,7 @@ package net.yozmnews.account.domain.humancheck;
 import java.util.Objects;
 
 /**
- * 사람 확인의 결과 — 통과 · 거부 · 검증 서비스에 닿지 못함. docs/specs/user.md §4 · user-R41
+ * 사람 확인의 결과 — 통과 · 거부 · 검증 서비스에 닿지 못함. docs/specs/account.md §4 · account-R33
  * <p>
  * 까닭은 고정 문구 · 오류 코드뿐이다 — 토큰 · 비밀 키를 담지 않는다.
  */

@@ -1,7 +1,7 @@
 package net.yozmnews.account;
 
 /**
- * 가입 정책 변경의 결과 — docs/specs/user.md §3
+ * 가입 정책 변경의 결과 — docs/specs/account.md §3
  */
 public sealed interface SignUpPolicyChangeResult {
 

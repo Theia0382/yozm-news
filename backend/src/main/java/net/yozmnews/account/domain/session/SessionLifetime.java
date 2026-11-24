@@ -3,7 +3,7 @@ package net.yozmnews.account.domain.session;
 import java.time.Duration;
 
 /**
- * 세션 수명의 정본 — 마지막 요청 뒤의 비활성 기간이고 절대 상한이 없다. docs/specs/user.md §4 · user-R8
+ * 세션 수명의 정본 — 마지막 요청 뒤의 비활성 기간이고 절대 상한이 없다. docs/specs/account.md §4 · account-R8
  */
 public final class SessionLifetime {
 

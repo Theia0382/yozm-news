@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 /**
  * 봇 차단 설정의 판정 — 없음 · 빈 값 · off 는 끔, turnstile 은 사이트 키가 있어야 한다. 실패 문구에 값을 싣지 않는다.
  * <p>
- * 지키는 규칙: user-R41
+ * 지키는 규칙: account-R33
  */
 class HumanCheckSettingTests {
 

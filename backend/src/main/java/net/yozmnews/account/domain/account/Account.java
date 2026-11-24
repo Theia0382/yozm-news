@@ -11,7 +11,7 @@ import org.springframework.data.annotation.Version;
 import org.springframework.data.relational.core.mapping.Table;
 
 /**
- * 계정 aggregate — docs/specs/user.md §4 · user-R13 · user-R16
+ * 계정 aggregate — docs/specs/account.md §4 · account-R13 · account-R16
  * <p>
  * 비밀번호 해시를 갖지 않는다 — 자격은 {@code PasswordCredential} 이 사용자 ID 로 잇는다.
  */
@@ -65,7 +65,7 @@ public final class Account {
 		return new UserId(this.id);
 	}
 
-	/** 로그인 · 세션을 받는 상태인가(user-R7 · user-R17) */
+	/** 로그인 · 세션을 받는 상태인가(account-R7 · account-R17) */
 	public boolean active() {
 		return this.status == AccountStatus.ACTIVE;
 	}

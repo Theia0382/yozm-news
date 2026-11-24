@@ -20,7 +20,7 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 
 /**
- * 요청 하나를 그 동작의 규칙마다 세고 판정한다 — docs/specs/user.md §4 · user-R38 · user-R39.
+ * 요청 하나를 그 동작의 규칙마다 세고 판정한다 — docs/specs/account.md §4 · account-R30 · account-R31.
  * <p>
  * 규칙마다 한 문장으로 세고(트랜잭션 없음) 판정을 모은다 — 넘은 규칙이 있어도 나머지 규칙에서도 센다. 결과와 무관하게 센 요청은 남는다.
  */

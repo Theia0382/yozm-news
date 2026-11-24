@@ -6,7 +6,7 @@ import java.util.function.BooleanSupplier;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 세션 체인의 인가 판정 — 정본 · docs/specs/user.md §4 · user-R5
+ * 세션 체인의 인가 판정 — 정본 · docs/specs/account.md §4 · account-R5
  */
 public enum SessionAccess {
 

@@ -1,7 +1,7 @@
 package net.yozmnews.account;
 
 /**
- * 비밀번호 규칙을 어긴 까닭 — docs/specs/user.md §3 · user-R14. 운영자 계정 생성의 거부 이유로 {@code admin} 이 읽는다
+ * 비밀번호 규칙을 어긴 까닭 — docs/specs/account.md §3 · account-R14. 운영자 계정 생성의 거부 이유로 {@code admin} 이 읽는다
  */
 public enum PasswordProblem {
 

@@ -8,7 +8,7 @@ import net.yozmnews.account.domain.credential.PasswordPolicy;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 첫 운영자 설정 값 — 이메일 · 초기 비밀번호 두 변수의 읽기. 빈 값은 없는 것이다. docs/specs/user.md §4.
+ * 첫 운영자 설정 값 — 이메일 · 초기 비밀번호 두 변수의 읽기. 빈 값은 없는 것이다. docs/specs/account.md §4.
  * <p>
  * 이유 문구에는 변수 이름만 싣고 값은 싣지 않는다. 문자열 표현에 비밀번호를 싣지 않는다.
  */

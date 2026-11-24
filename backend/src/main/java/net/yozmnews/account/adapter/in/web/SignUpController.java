@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 가입 — 가입 정책 조회, 공개 가입, 초대 상태 확인, 초대 가입. 가입하면 들고 온 세션을 버리고 새 세션으로 로그인한다. docs/specs/user.md §3
+ * 가입 — 가입 정책 조회, 공개 가입, 초대 상태 확인, 초대 가입. 가입하면 들고 온 세션을 버리고 새 세션으로 로그인한다. docs/specs/account.md §3
  */
 @WebRole
 @RestController

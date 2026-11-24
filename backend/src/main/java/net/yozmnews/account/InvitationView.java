@@ -6,7 +6,7 @@ import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 운영자 목록의 초대 하나 — 토큰은 싣지 않는다. docs/specs/user.md §3
+ * 운영자 목록의 초대 하나 — 토큰은 싣지 않는다. docs/specs/account.md §3
  *
  * @param id 초대 ID
  * @param memo 메모 — 없으면 null

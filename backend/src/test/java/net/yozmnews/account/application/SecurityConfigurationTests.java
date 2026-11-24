@@ -21,7 +21,7 @@ import org.springframework.security.web.SecurityFilterChain;
 /**
  * 보안 구성의 기동 — 잘못된 운영자 토큰은 기동을 멈추고, 기본 사용자 · 생성 비밀번호가 생기지 않는다.
  * <p>
- * 지키는 규칙: user-R1 · user-R2 · user-R4
+ * 지키는 규칙: account-R1 · account-R2 · account-R4
  */
 class SecurityConfigurationTests {
 

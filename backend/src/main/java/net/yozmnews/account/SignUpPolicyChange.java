@@ -7,7 +7,7 @@ import net.yozmnews.platform.ChangeActor;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 가입 정책 이력의 한 행 — docs/specs/user.md §3
+ * 가입 정책 이력의 한 행 — docs/specs/account.md §3
  *
  * @param previousOpen 바꾸기 전 값 — 처음 값이면 null
  * @param open 바꾼 뒤 값

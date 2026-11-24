@@ -22,8 +22,8 @@ import org.springframework.security.core.context.SecurityContextHolderStrategy;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * 운영자 토큰(스크립트용 Bearer)을 인증한다 — {@code Authorization} 헤더를 낸 요청은 토큰으로만 판정한다. docs/specs/user.md §4 ·
- * user-R1 · user-R2
+ * 운영자 토큰(스크립트용 Bearer)을 인증한다 — {@code Authorization} 헤더를 낸 요청은 토큰으로만 판정한다. docs/specs/account.md §4 ·
+ * account-R1 · account-R2
  * <p>
  * 헤더가 없으면 아무것도 하지 않고 넘긴다(세션 인증으로). {@code Bearer} 토큰이 맞으면 운영자 인증으로 이 요청의 보안 문맥을 덮고 넘긴다.
  * 스킴이 다르거나 형식이 틀리거나 토큰이 맞지 않거나 토큰을 설정하지 않았으면 세션으로 넘어가지 않고 401 {@code admin-unauthorized} 로

@@ -32,7 +32,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * 스토리라인 구독의 사용자 격리 — 사용자 A 의 구독은 B 의 목록에 없고, B 의 해제는 A 의 구독을 지우지 않으며, 구독 이력은 자기 행만
  * 낸다. 키가 없는 사용자도 쓴다. 세션 없이 부르면 네 경로 모두 401 이다(docs/qa/test-strategy.md §13).
  * <p>
- * 지키는 규칙: user-R5 · user-R6 · user-R52 · user-R63
+ * 지키는 규칙: account-R5 · account-R6 · user-R52 · user-R63
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest

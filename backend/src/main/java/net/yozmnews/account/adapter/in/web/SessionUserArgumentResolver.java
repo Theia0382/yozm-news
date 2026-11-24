@@ -12,7 +12,7 @@ import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.ModelAndViewContainer;
 
 /**
- * 처리기 인자 {@link UserId} 를 요청의 세션 사용자로 채운다 — 묶기 애너테이션이 없는 인자만 받는다. docs/specs/user.md §4 · user-R6
+ * 처리기 인자 {@link UserId} 를 요청의 세션 사용자로 채운다 — 묶기 애너테이션이 없는 인자만 받는다. docs/specs/account.md §4 · account-R6
  * <p>
  * 세션 체인이 세션 사용자 없는 요청을 먼저 막으므로, 세션 사용자가 없는데 여기 오면 결선 오류다.
  */

@@ -36,7 +36,7 @@ import tools.jackson.databind.json.JsonMapper;
  * 많아야 경계 하나를 넘으므로, 한도의 두 배 + 1 번 안에 429 가 반드시 나온다 — 정확히 몇 번째인지는 고정 시계의
  * {@code RequestLimiterTests} 가 본다. 헤더 이름 · 문제 유형은 리터럴이다.
  * <p>
- * 지키는 규칙: user-R37 · user-R38 · user-R39 · user-R40
+ * 지키는 규칙: account-R29 · account-R30 · account-R31 · account-R32
  */
 @Import({ TestcontainersConfiguration.class, ScriptedProviderClients.Config.class })
 @SpringBootTest

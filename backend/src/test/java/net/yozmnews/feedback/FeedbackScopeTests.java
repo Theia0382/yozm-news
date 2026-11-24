@@ -31,7 +31,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
  * 못하며 A 의 행이 그대로다. 세션 없이
  * 부르면 두 경로 모두 401 이고, 키가 없는 세션은 403 이다(docs/qa/test-strategy.md §13). 키 관문 뒤라 A · B 는 키 행이 있다.
  * <p>
- * 지키는 규칙: user-R5 · user-R6 · feedback-R2 · feedback-R9
+ * 지키는 규칙: account-R5 · account-R6 · feedback-R2 · feedback-R9
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest

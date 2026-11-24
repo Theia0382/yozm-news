@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 /**
  * 복구 코드 — 160비트 Crockford Base32 32자, 4자씩 8묶음으로 보이고, 읽을 때 대소문자 · 공백 · {@code -} 와 헷갈리는 글자를 너그럽게 읽는다.
  * <p>
- * 지키는 규칙: user-R30
+ * 지키는 규칙: account-R23
  */
 class RecoveryCodeTests {
 

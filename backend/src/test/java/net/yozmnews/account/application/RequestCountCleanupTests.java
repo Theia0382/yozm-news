@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
 /**
  * 끝난 요청 제한 창 정리 — 지금을 기준으로 저장소에 정리를 맡기고 지운 수를 돌려준다.
  * <p>
- * 지키는 규칙: user-R42
+ * 지키는 규칙: account-R34
  */
 class RequestCountCleanupTests {
 

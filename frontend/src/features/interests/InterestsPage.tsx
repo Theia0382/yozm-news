@@ -60,7 +60,7 @@ type Message = { tone: "status" | "alert"; text: string };
 
 /**
  * 관심 설정 — 주제 구독 · 지역 · 형식 제외, 제외 소스, 일정 · 관심사 · 변화 리포트, 다이제스트 분량, 모델. 절마다 저장한다. 키가 없어도 쓰고, 모델 절만
- * 키 등록을 안내한다(docs/specs/user.md §3 · user-R5). 주소에 절의 id(`#interest-model` 등)가 있으면 조회가 모두 끝난 뒤 그 절로 내려간다.
+ * 키 등록을 안내한다(docs/specs/account.md §3 · account-R5). 주소에 절의 id(`#interest-model` 등)가 있으면 조회가 모두 끝난 뒤 그 절로 내려간다.
  */
 export function InterestsPage() {
   const tags = useInterestTags();

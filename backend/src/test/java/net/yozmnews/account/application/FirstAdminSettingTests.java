@@ -23,7 +23,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 /**
  * 첫 운영자 설정의 결선 — 앱의 첫 운영자 처리는 설정 {@code yozmnews.first-admin.email} · {@code password} 를 읽는다.
  * <p>
- * 지키는 규칙: user-R34
+ * 지키는 규칙: account-R27
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest(properties = { "jobrunr.background-job-server.enabled=false",

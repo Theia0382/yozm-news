@@ -32,7 +32,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * 계정 경로의 사용자 격리 — 사용자 A 의 세션으로 비밀번호를 바꾸거나 복구 코드를 다시 받아도 B 의 비밀번호 · 복구 코드는 그대로다. 세션 없이 부르면
  * 401 이다(docs/qa/test-strategy.md §13).
  * <p>
- * 지키는 규칙: user-R6
+ * 지키는 규칙: account-R6
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest

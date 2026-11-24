@@ -32,10 +32,10 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 
 /**
  * 관심 설정 처리기 — 응답 모양, 판정 결과(저장 · 체계 버전이 바뀜 · 받지 않는 시간대 · 관심사가 김 · 키 없는 공급자 · 허용 목록에 없는 모델 ·
- * 구독 제안 거절), 형식 400, 키 없는 사용자도 쓴다(user-R5). 로그인 시험 도우미가 만든 계정은 설정 행이 없어 첫 요청이 기본값을
+ * 구독 제안 거절), 형식 400, 키 없는 사용자도 쓴다(account-R5). 로그인 시험 도우미가 만든 계정은 설정 행이 없어 첫 요청이 기본값을
  * 만든다. 실제 PostgreSQL 과 기본 체계 · 기본 허용 모델 목록으로 본다.
  * <p>
- * 지키는 규칙: user-R5 · user-R46 · user-R49 ~ user-R51 · user-R64
+ * 지키는 규칙: account-R5 · user-R46 · user-R49 ~ user-R51 · user-R64
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest

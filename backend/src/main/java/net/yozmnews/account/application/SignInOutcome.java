@@ -6,7 +6,7 @@ import java.util.Objects;
 import net.yozmnews.platform.UserId;
 
 /**
- * 로그인 시도의 결과 — 로그인됨 · 거절 · 대기. docs/specs/user.md §4 · user-R17
+ * 로그인 시도의 결과 — 로그인됨 · 거절 · 대기. docs/specs/account.md §4 · account-R17
  */
 public sealed interface SignInOutcome {
 

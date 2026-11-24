@@ -15,7 +15,7 @@ import org.springframework.test.util.ReflectionTestUtils;
  * ({@code "-"})이 아니면 기동 때 스케줄러(필드 {@code taskScheduler})를 만들므로, 그 필드가 비어 있음을 본다. 라이브러리가 필드 이름을 바꾸면
  * 이 시험이 실패한다.
  * <p>
- * 지키는 규칙: user-R12
+ * 지키는 규칙: account-R12
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest

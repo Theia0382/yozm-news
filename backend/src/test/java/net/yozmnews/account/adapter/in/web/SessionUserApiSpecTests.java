@@ -23,7 +23,7 @@ import tools.jackson.databind.json.JsonMapper;
  * 화면용 API 명세의 세션 사용자 인자 — 세션에서 채우는 {@code UserId} 인자는 명세의 요청 인자가 아니다. 알림 목록의 인자는 커서
  * {@code before} 하나뿐이다.
  * <p>
- * 지키는 규칙: user-R6
+ * 지키는 규칙: account-R6
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest(properties = "springdoc.api-docs.enabled=true")

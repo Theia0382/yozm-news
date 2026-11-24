@@ -28,7 +28,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 /**
  * 가입 정책 — 처음 값은 닫힘이고 기동 때 한 번 적재되며(동시에 적재해도 한 행 · 한 이력), 변경은 이력을 남기고 같은 값이면 아무것도 쓰지 않는다.
  * <p>
- * 지키는 규칙: user-R32
+ * 지키는 규칙: account-R25
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest

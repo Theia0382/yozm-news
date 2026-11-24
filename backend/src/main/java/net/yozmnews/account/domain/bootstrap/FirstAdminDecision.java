@@ -5,7 +5,7 @@ import java.util.Objects;
 import net.yozmnews.account.domain.account.EmailAddress;
 
 /**
- * 기동 때 첫 운영자를 어떻게 할지 — 판정의 정본. docs/specs/user.md §4.
+ * 기동 때 첫 운영자를 어떻게 할지 — 판정의 정본. docs/specs/account.md §4.
  * <p>
  * 운영자(쓰는 {@code ADMIN} 계정)가 있으면 값은 쓰이지 않는다 — 무엇이 남았든(하나만 · 규칙 위반 포함) 남아 있다고 경고만 한다. 운영자가 없으면
  * 값이 없을 때 경고하고 운영자 없이 기동하며, 하나만 있거나 규칙을 어기거나 이미 있는 계정의 이메일이면 이유를 말하고 기동하지 않고, 그 밖이면

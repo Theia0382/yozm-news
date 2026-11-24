@@ -11,7 +11,7 @@ import org.springframework.data.annotation.Version;
 import org.springframework.data.relational.core.mapping.Table;
 
 /**
- * 자체 로그인 자격 aggregate — 계정마다 하나. 계정과 사용자 ID 로만 잇는다. docs/specs/user.md §4 · user-R15 · user-R16
+ * 자체 로그인 자격 aggregate — 계정마다 하나. 계정과 사용자 ID 로만 잇는다. docs/specs/account.md §4 · account-R15 · account-R16
  * <p>
  * 버전이 비어 있으면 새 행이다 — 식별자(사용자 ID)를 만들 때 정하므로 저장소가 버전으로 새 행을 가른다. 강제 변경({@link #mustChange()})은
  * 남이 정한 초기 비밀번호인 동안 참이고, 본인이 비밀번호를 바꾸면 풀린다.

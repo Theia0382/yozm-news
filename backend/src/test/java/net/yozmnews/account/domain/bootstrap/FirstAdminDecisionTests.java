@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test;
  * 첫 운영자 판정 — 운영자가 있으면 무엇이 남았든 경고만, 운영자가 없으면 값 없음은 경고 · 하나만 · 규칙 위반 · 이미 있는 이메일은 기동 실패 ·
  * 그 밖은 만든다.
  * <p>
- * 지키는 규칙: user-R34
+ * 지키는 규칙: account-R27
  */
 class FirstAdminDecisionTests {
 

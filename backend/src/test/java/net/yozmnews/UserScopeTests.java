@@ -13,7 +13,7 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
  * 사용자 격리 등록 가드 — 앱의 모든 화면용 API 처리기(운영자 경로 밖)가 공개 표시나 격리 시험 등록 가운데 꼭 하나를 갖고, 사용자 ID 를 요청에서
  * 받지 않는다. 규범은 docs/qa/test-strategy.md §13.
  * <p>
- * 지키는 규칙: user-R5 · user-R6
+ * 지키는 규칙: account-R5 · account-R6
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest

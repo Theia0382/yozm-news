@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 /**
  * 로그인 실패 지연 일정 — 3회까지 없음, 4회째부터 1초에서 두 배씩, 상한 15분, 마지막 실패에서 24시간이 지나면 잊는다.
  * <p>
- * 지키는 규칙: user-R19
+ * 지키는 규칙: account-R19
  */
 class LoginThrottleTests {
 

@@ -13,7 +13,7 @@ import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * 봇 차단의 결선 — 설정 값의 판정과, 비밀 키가 있을 때의 Turnstile 검증기. 두 역할 공통이다. docs/specs/user.md §7 · user-R41
+ * 봇 차단의 결선 — 설정 값의 판정과, 비밀 키가 있을 때의 Turnstile 검증기. 두 역할 공통이다. docs/specs/account.md §7 · account-R33
  * <p>
  * 비밀 키가 없을 때의 검증기는 로컬 대체물 결선(profile {@code local})이 정하고, 봇 차단을 켰는데 검증기가 없으면 봇 차단 유스케이스가 기동을
  * 멈춘다.

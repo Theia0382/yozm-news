@@ -7,7 +7,7 @@ import java.util.HexFormat;
 import java.util.Objects;
 
 /**
- * 높은 엔트로피 비밀(운영자 토큰 · 초대 토큰 · 복구 코드)의 SHA-256 다이제스트 — 저장 · 대조의 정본. docs/specs/user.md §4.
+ * 높은 엔트로피 비밀(운영자 토큰 · 초대 토큰 · 복구 코드)의 SHA-256 다이제스트 — 저장 · 대조의 정본. docs/specs/account.md §4.
  * <p>
  * 비밀은 추측할 수 없는 길이라 느린 해시가 필요 없다. 비밀 자체는 갖지 않고, 대조는 상수 시간이다. {@link #toString()} 은 앞 4바이트만 보인다.
  */

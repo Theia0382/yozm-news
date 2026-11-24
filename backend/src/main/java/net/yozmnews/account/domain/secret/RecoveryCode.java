@@ -6,7 +6,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 /**
- * 복구 코드 — 계정마다 하나인 160비트 무작위 값. Crockford Base32 32자이고, 4자씩 {@code -} 로 이어 보인다. docs/specs/user.md §4.
+ * 복구 코드 — 계정마다 하나인 160비트 무작위 값. Crockford Base32 32자이고, 4자씩 {@code -} 로 이어 보인다. docs/specs/account.md §4.
  * <p>
  * 비교 · 저장은 정규형(대문자 32자)의 {@link SecretDigest} 로만 한다. 읽을 때 대소문자 · 공백 · {@code -} 를 무시하고, 헷갈리는 글자
  * {@code I} · {@code L} 은 {@code 1}, {@code O} 는 {@code 0} 으로 읽는다. {@link #toString()} 은 값을 숨긴다.

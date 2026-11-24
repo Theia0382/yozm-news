@@ -5,7 +5,7 @@ import java.time.Instant;
 import java.util.Objects;
 
 /**
- * 요청 제한의 고정 창 — 시작은 포함, 끝은 제외. docs/specs/user.md §4 · user-R39
+ * 요청 제한의 고정 창 — 시작은 포함, 끝은 제외. docs/specs/account.md §4 · account-R31
  *
  * @param start 창 시작
  * @param end 창 끝 — 시작보다 뒤

@@ -1,7 +1,7 @@
 package net.yozmnews.account.domain.account;
 
 /**
- * 계정의 역할 — docs/specs/user.md §4 · §6
+ * 계정의 역할 — docs/specs/account.md §4 · §6
  */
 public enum AccountRole {
 

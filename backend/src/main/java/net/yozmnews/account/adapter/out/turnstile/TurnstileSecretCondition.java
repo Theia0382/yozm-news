@@ -8,7 +8,7 @@ import org.springframework.core.type.AnnotatedTypeMetadata;
 
 /**
  * Turnstile 비밀 키가 설정됐는가 — 정본. 비어 있지 않은 {@value #PROPERTY} 다. Turnstile 결선과 로컬 대체물 결선이 함께 읽는다 —
- * docs/specs/user.md §7 · user-R41.
+ * docs/specs/account.md §7 · account-R33.
  * <p>
  * 빈 값(예: 값을 비운 환경 변수 줄)은 비밀 키가 없는 것이다.
  */

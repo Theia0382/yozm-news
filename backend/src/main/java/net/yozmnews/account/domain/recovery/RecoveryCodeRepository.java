@@ -8,7 +8,7 @@ import net.yozmnews.platform.UserId;
 
 /**
  * 복구 코드의 저장 인터페이스 — 계정마다 많아야 하나. 구현은 {@code adapter/out/persistence} 의 {@code JdbcRecoveryCodes}.
- * docs/specs/user.md §4
+ * docs/specs/account.md §4
  */
 public interface RecoveryCodeRepository {
 

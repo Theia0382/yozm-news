@@ -12,7 +12,7 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
  * 봇 차단 결선 — 설정 판정 빈, 비밀 키가 있을 때의 Turnstile 검증기(profile 무관), 켰는데 검증기가 없을 때의 기동 실패. 로컬 대체물 결선은
  * {@code LocalHumanVerifierConfigurationTests} 가 본다. 활성 · 기본 profile 은 Spring 환경이 같은 이름의 속성에서 읽는다.
  * <p>
- * 지키는 규칙: user-R41 · platform-R18
+ * 지키는 규칙: account-R33 · platform-R18
  */
 class HumanCheckConfigurationTests {
 

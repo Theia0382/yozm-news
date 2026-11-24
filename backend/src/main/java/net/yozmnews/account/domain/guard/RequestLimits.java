@@ -7,7 +7,7 @@ import java.util.Objects;
 import net.yozmnews.platform.GuardedAction;
 
 /**
- * 요청 제한 정책 표 — 동작마다 규칙의 정본. docs/specs/user.md §4 · user-R38
+ * 요청 제한 정책 표 — 동작마다 규칙의 정본. docs/specs/account.md §4 · account-R30
  * <p>
  * 값은 측정 전 목표값이다. 로그인 · 복구의 사용자 축은 이메일별 실패 지연이 맡으므로 여기서는 클라이언트 주소로만 센다.
  */

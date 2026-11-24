@@ -14,7 +14,7 @@ import org.springframework.data.annotation.Version;
 import org.springframework.data.relational.core.mapping.Table;
 
 /**
- * 초대 aggregate({@code user_invitations}) — 이메일에 묶지 않은 일회용 가입 링크. 토큰은 다이제스트로만 갖는다. docs/specs/user.md §4.
+ * 초대 aggregate({@code user_invitations}) — 이메일에 묶지 않은 일회용 가입 링크. 토큰은 다이제스트로만 갖는다. docs/specs/account.md §4.
  * <p>
  * 상태는 조회 때 정한다 — 쓴 것 · 취소한 것 · 만료한 것(만료 시각 포함) · 유효한 것 순이다.
  */

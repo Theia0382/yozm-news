@@ -8,7 +8,7 @@ import java.util.regex.Pattern;
 
 /**
  * 초대 토큰 — 128비트 무작위 값의 base64url(채움 없음) 22자. 링크의 조각({@code #})에 실려 전해지고, 저장 · 대조는 {@link SecretDigest} 로만
- * 한다. docs/specs/user.md §4. {@link #toString()} 은 값을 숨긴다.
+ * 한다. docs/specs/account.md §4. {@link #toString()} 은 값을 숨긴다.
  */
 public final class InvitationToken {
 

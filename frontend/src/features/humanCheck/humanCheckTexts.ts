@@ -1,4 +1,4 @@
-// 봇 차단의 화면 계약 — 요청 헤더 · 위젯 동작 이름 · 안내(docs/specs/user.md user-R41).
+// 봇 차단의 화면 계약 — 요청 헤더 · 위젯 동작 이름 · 안내(docs/specs/account.md account-R33).
 
 /** 사람 확인 토큰을 싣는 요청 헤더 */
 export const HUMAN_CHECK_HEADER = "X-Human-Check";

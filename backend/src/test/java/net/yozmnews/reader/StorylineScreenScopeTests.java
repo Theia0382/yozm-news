@@ -32,7 +32,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * 독자 화면의 사용자 격리 — 목록 · 카드는 사용자 데이터가 없어 두 사용자가 같은 본문을 받고, 타임라인의 받은 날짜는 그 사용자의 다이제스트에서만 온다. 세
  * 경로 모두 세션 없이 401, 키가 없으면 403(키 관문)이다(docs/qa/test-strategy.md §13).
  * <p>
- * 지키는 규칙: user-R5 · user-R6 · reader-R5
+ * 지키는 규칙: account-R5 · account-R6 · reader-R5
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest

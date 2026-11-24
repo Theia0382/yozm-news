@@ -8,7 +8,7 @@ import org.springframework.session.web.http.CookieSerializer;
 import org.springframework.session.web.http.DefaultCookieSerializer;
 
 /**
- * 세션 · CSRF 쿠키 속성의 정본 — 언제나 {@code Secure} 이고 {@code SameSite=Lax} 다. docs/specs/user.md §4 · user-R8 · user-R9
+ * 세션 · CSRF 쿠키 속성의 정본 — 언제나 {@code Secure} 이고 {@code SameSite=Lax} 다. docs/specs/account.md §4 · account-R8 · account-R9
  * <p>
  * Spring Boot 의 쿠키 설정 키에 기대지 않고 여기 한 곳에 둔다 — 이 빈이 있으면 Spring Boot 가 쿠키 직렬화기를 만들지 않는다.
  */
@@ -25,7 +25,7 @@ class SessionCookies {
 	private static final String SAME_SITE = "Lax";
 
 	/**
-	 * 세션 쿠키 — 로그인 유지 요청 속성이 있으면 지속 쿠키로 써서 수명을 서버 만료에 맡기고, 없으면 브라우저 세션 쿠키다(user-R8).
+	 * 세션 쿠키 — 로그인 유지 요청 속성이 있으면 지속 쿠키로 써서 수명을 서버 만료에 맡기고, 없으면 브라우저 세션 쿠키다(account-R8).
 	 */
 	@Bean
 	CookieSerializer sessionCookieSerializer() {
@@ -39,7 +39,7 @@ class SessionCookies {
 		return serializer;
 	}
 
-	/** CSRF 토큰 쿠키 — 화면이 읽어 헤더로 돌려보내므로 {@code HttpOnly} 가 아니다(user-R9 · user-R10) */
+	/** CSRF 토큰 쿠키 — 화면이 읽어 헤더로 돌려보내므로 {@code HttpOnly} 가 아니다(account-R9 · account-R10) */
 	static CookieCsrfTokenRepository csrfTokens() {
 		CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
 		repository.setCookieName(CSRF_COOKIE);

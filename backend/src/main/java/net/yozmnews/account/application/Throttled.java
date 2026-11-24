@@ -4,7 +4,7 @@ import java.time.Instant;
 import java.util.Objects;
 
 /**
- * 실패 지연을 거는 대조의 결과 — 맞음 · 틀림 · 대기. docs/specs/user.md §4 · user-R18
+ * 실패 지연을 거는 대조의 결과 — 맞음 · 틀림 · 대기. docs/specs/account.md §4 · account-R18
  */
 sealed interface Throttled<T> {
 

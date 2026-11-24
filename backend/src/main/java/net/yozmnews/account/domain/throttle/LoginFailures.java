@@ -4,7 +4,7 @@ import java.time.Instant;
 
 /**
  * 실패 기록의 저장 인터페이스 — 종류({@link ThrottledAttempt})와 제출된 이메일마다 하나. 구현은 {@code adapter/out/persistence} 의
- * {@code JdbcLoginFailures}. docs/specs/user.md §4 · user-R18 · user-R19
+ * {@code JdbcLoginFailures}. docs/specs/account.md §4 · account-R18 · account-R19
  */
 public interface LoginFailures {
 

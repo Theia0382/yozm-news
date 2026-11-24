@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test;
 /**
  * 클라이언트 주소 — IP 리터럴만 읽고(이름 조회 없음), IPv6 은 앞 64비트로 묶어 세며, IPv4 사상 주소는 IPv4 로 본다.
  * <p>
- * 지키는 규칙: user-R37
+ * 지키는 규칙: account-R29
  */
 class ClientAddressTests {
 

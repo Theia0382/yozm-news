@@ -18,7 +18,7 @@ import net.yozmnews.account.domain.signup.SignUpPolicyRepository;
 import org.springframework.stereotype.Service;
 
 /**
- * 가입 유스케이스 — 공개 가입과 초대 가입. 한 번의 가입이 트랜잭션 하나다. docs/specs/user.md §4.
+ * 가입 유스케이스 — 공개 가입과 초대 가입. 한 번의 가입이 트랜잭션 하나다. docs/specs/account.md §4.
  * <p>
  * 칸의 형식(이메일 · 표시 이름 · 비밀번호) → 공개 가입은 가입 정책, 초대 가입은 초대를 잠그고 상태 → 계정을 만드는 정본으로 계정 · 자격 ·
  * 복구 코드 → (초대 가입이면) 초대를 쓴 것으로. 같은 이메일은 정본이 먼저 거르고, 먼저 본 뒤 끼어든 같은 이메일은 고유 제약이 트랜잭션을 깨므로

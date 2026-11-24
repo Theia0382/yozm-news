@@ -24,7 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 운영자의 계정 운영 — {@link AccountAdministration} 의 구현. docs/specs/user.md §4.
+ * 운영자의 계정 운영 — {@link AccountAdministration} 의 구현. docs/specs/account.md §4.
  * <p>
  * 계정 생성은 계정을 만드는 정본의 운영자 길(일반 사용자 · 강제 변경 · 복구 코드는 비밀번호를 바꾼 직후)이다. 초기 비밀번호 다시 정하기는 자격
  * 행을 잠근 뒤 강제 변경 대기인지 판정하고(같은 계정의 비밀번호 변경과 줄을 선다), 마지막으로 그 계정의 세션을 모두 지운다 — 앞 초기 비밀번호로

@@ -7,7 +7,7 @@ import net.yozmnews.account.domain.throttle.RetryAfter;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 복구 코드 재발급 결과 — 판정 결과 200. docs/specs/user.md §3
+ * 복구 코드 재발급 결과 — 판정 결과 200. docs/specs/account.md §3
  *
  * @param result 재발급 · 거절 · 대기
  * @param recoveryCode 새 복구 코드(4자씩 {@code -}) — 재발급일 때만, 그 밖 null

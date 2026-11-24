@@ -7,7 +7,7 @@ import net.yozmnews.account.domain.secret.RecoveryCode;
 import net.yozmnews.platform.UserId;
 
 /**
- * 계정 만들기의 결과 — 만들었음 · 이미 있는 이메일. docs/specs/user.md §4
+ * 계정 만들기의 결과 — 만들었음 · 이미 있는 이메일. docs/specs/account.md §4
  */
 sealed interface ProvisionResult {
 

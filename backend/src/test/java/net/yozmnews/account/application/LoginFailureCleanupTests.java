@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test;
 /**
  * 실패 기록 정리 유스케이스 — 지금에서 24시간 전을 기준으로 저장소에 정리를 맡기고 지운 수를 돌려준다.
  * <p>
- * 지키는 규칙: user-R19
+ * 지키는 규칙: account-R19
  */
 class LoginFailureCleanupTests {
 

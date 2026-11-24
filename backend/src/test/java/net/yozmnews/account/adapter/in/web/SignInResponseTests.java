@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test;
 /**
  * 대기의 남은 초 — 올림이고 1 이상이다.
  * <p>
- * 지키는 규칙: user-R17
+ * 지키는 규칙: account-R17
  */
 class SignInResponseTests {
 

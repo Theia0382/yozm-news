@@ -10,7 +10,7 @@ import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
- * 화면용 API 의 세션 사용자 인자 — docs/specs/user.md §4 · user-R6.
+ * 화면용 API 의 세션 사용자 인자 — docs/specs/account.md §4 · account-R6.
  * <p>
  * 세션 사용자 인자는 요청에서 받지 않으므로 화면용 API 명세에 그리지 않는다 — 그리지 않으면 명세가 묶기 애너테이션 없는 인자를 질의 인자로
  * 그려, 화면의 생성 타입이 사용자 ID 를 보내라고 요구하게 된다.

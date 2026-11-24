@@ -10,7 +10,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
 /**
- * {@link RequestCounts} 의 JdbcClient 구현 — docs/specs/user.md §4 · user-R39 · user-R42.
+ * {@link RequestCounts} 의 JdbcClient 구현 — docs/specs/account.md §4 · account-R31 · account-R34.
  * <p>
  * 더하기는 {@code INSERT … ON CONFLICT DO UPDATE … RETURNING} 한 문장이다 — 충돌한 행을 그 문장 동안만 잠그고, 여러 프로세스가 같은 키 ·
  * 창에 더해도 빠지지 않는다.

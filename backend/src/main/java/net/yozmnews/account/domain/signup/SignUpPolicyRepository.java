@@ -9,7 +9,7 @@ import net.yozmnews.platform.ChangeActor;
 
 /**
  * 가입 정책의 저장 인터페이스 — 지금 값 한 행과 추가 전용 이력. 구현은 {@code adapter/out/persistence} 의 {@code JdbcSignUpPolicy}.
- * docs/specs/user.md §4
+ * docs/specs/account.md §4
  */
 public interface SignUpPolicyRepository {
 

@@ -6,7 +6,7 @@ import java.util.Objects;
 import net.yozmnews.account.domain.secret.RecoveryCode;
 
 /**
- * 복구 코드 재발급의 결과 — 재발급 · 거절 · 대기. docs/specs/user.md §4
+ * 복구 코드 재발급의 결과 — 재발급 · 거절 · 대기. docs/specs/account.md §4
  */
 public sealed interface ReissueOutcome {
 

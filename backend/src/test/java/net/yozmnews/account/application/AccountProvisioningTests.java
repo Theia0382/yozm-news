@@ -45,7 +45,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 계정을 만드는 정본 — 한 트랜잭션에서 계정 · 자격(· 복구 코드)을 함께 만들고, 길마다 역할 · 강제 변경 · 복구 코드가 갈리며, 같은 이메일이면
  * 아무것도 쓰지 않는다. 계정을 만든 트랜잭션에서 계정 생김을 하나 내고, 그 트랜잭션은 관심 설정을 쓰지 않는다. 실제 PostgreSQL 에서 본다.
  * <p>
- * 지키는 규칙: user-R13 · user-R15 · user-R16 · user-R28 · user-R30 · account-R35
+ * 지키는 규칙: account-R13 · account-R15 · account-R16 · account-R21 · account-R23 · account-R35
  */
 @Import({ TestcontainersConfiguration.class, AccountProvisioningTests.CommitProbe.class })
 @RecordApplicationEvents

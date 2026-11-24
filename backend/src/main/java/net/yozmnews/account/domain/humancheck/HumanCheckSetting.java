@@ -6,7 +6,7 @@ import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 봇 차단 설정 — 끔 · Turnstile(사이트 키). 설정 값의 판정 정본이다. docs/specs/user.md §7 · user-R41
+ * 봇 차단 설정 — 끔 · Turnstile(사이트 키). 설정 값의 판정 정본이다. docs/specs/account.md §7 · account-R33
  * <p>
  * 비밀 키는 여기서 보지 않는다 — 비밀 키 유무는 검증기의 등록 조건이다.
  */

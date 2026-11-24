@@ -8,7 +8,7 @@ import net.yozmnews.account.domain.throttle.RetryAfter;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 복구 코드 재설정 결과 — 판정 결과 200. 거절은 계정 · 코드 유무와 무관하게 같은 본문이다. docs/specs/user.md §3
+ * 복구 코드 재설정 결과 — 판정 결과 200. 거절은 계정 · 코드 유무와 무관하게 같은 본문이다. docs/specs/account.md §3
  *
  * @param result 재설정 · 거절 · 대기 · 새 비밀번호 규칙 위반
  * @param recoveryCode 새 복구 코드(4자씩 {@code -}) — 재설정일 때만, 그 밖 null

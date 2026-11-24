@@ -6,7 +6,7 @@ import net.yozmnews.account.domain.secret.SecretDigest;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 운영자 자격 — 운영자 토큰을 설정했는지와 제시된 토큰이 맞는지의 판정. docs/specs/user.md §4 · user-R2.
+ * 운영자 자격 — 운영자 토큰을 설정했는지와 제시된 토큰이 맞는지의 판정. docs/specs/account.md §4 · account-R2.
  * <p>
  * 값은 다이제스트({@link SecretDigest})로만 갖고, 예외 메시지 · {@link #toString()} 에 담지 않는다.
  */

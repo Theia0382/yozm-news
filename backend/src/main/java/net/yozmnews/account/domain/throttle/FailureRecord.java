@@ -5,7 +5,7 @@ import java.time.Instant;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 한 이메일의 연속 로그인 실패 — 횟수와 마지막 실패 시각. 0 회면 시각이 없다. docs/specs/user.md §4 · user-R19
+ * 한 이메일의 연속 로그인 실패 — 횟수와 마지막 실패 시각. 0 회면 시각이 없다. docs/specs/account.md §4 · account-R19
  *
  * @param failures 연속 실패 횟수
  * @param lastFailedAt 마지막 실패 시각 — 0 회면 null

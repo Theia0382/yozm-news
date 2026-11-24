@@ -6,7 +6,7 @@ import org.springframework.data.jdbc.repository.query.Query;
 import org.springframework.data.repository.CrudRepository;
 
 /**
- * 자체 로그인 자격 저장소 — 식별자는 사용자 ID. docs/specs/user.md §4 · user-R16
+ * 자체 로그인 자격 저장소 — 식별자는 사용자 ID. docs/specs/account.md §4 · account-R16
  */
 public interface PasswordCredentialRepository extends CrudRepository<PasswordCredential, Long> {
 

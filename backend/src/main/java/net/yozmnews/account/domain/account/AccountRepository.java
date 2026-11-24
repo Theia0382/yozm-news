@@ -7,7 +7,7 @@ import org.springframework.data.jdbc.repository.query.Query;
 import org.springframework.data.repository.CrudRepository;
 
 /**
- * 계정 저장소 — docs/specs/user.md §4 · user-R13. 같은 이메일의 판정은 {@code users.email} 의 고유 제약이 한다.
+ * 계정 저장소 — docs/specs/account.md §4 · account-R13. 같은 이메일의 판정은 {@code users.email} 의 고유 제약이 한다.
  */
 public interface AccountRepository extends CrudRepository<Account, Long> {
 

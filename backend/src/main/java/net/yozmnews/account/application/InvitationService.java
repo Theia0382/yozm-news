@@ -27,7 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 초대 — 운영(발급 · 최근 목록 · 취소, {@link InvitationAdministration} 의 구현)과 링크를 연 사람의 상태 확인. docs/specs/user.md §4
+ * 초대 — 운영(발급 · 최근 목록 · 취소, {@link InvitationAdministration} 의 구현)과 링크를 연 사람의 상태 확인. docs/specs/account.md §4
  */
 @Service
 public class InvitationService implements InvitationAdministration {

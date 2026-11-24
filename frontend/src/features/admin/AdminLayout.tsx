@@ -22,8 +22,8 @@ type AdminLayoutProps = {
  * 운영자 화면의 틀 — 운영자 계정 세션으로 연다. 로그인 상태를 읽어, 로그인하지 않았으면 로그인 화면으로(돌아올 주소를 next 로),
  * 첫 로그인의 비밀번호 변경이 남았으면 비밀번호 변경 화면으로(바꾼 뒤 돌아올 주소를 next 로) 보내고, 운영자가 아니면 권한 없음을
  * 알린다. 운영자면 머리줄에 운영자 메뉴 · 알림 링크 · 사용자 화면 링크 · 이름 · 로그아웃을 둔다. 운영자 API 가 401(세션이 끝남)로
- * 답하면 로그인 상태를 다시 읽어 로그인 화면으로 보낸다. LLM 키는 보지 않는다 — 운영자 경로는 키 관문 밖이다(docs/specs/user.md
- * user-R1).
+ * 답하면 로그인 상태를 다시 읽어 로그인 화면으로 보낸다. LLM 키는 보지 않는다 — 운영자 경로는 키 관문 밖이다(docs/specs/account.md
+ * account-R1).
  */
 export function AdminLayout({ baseUrl, fetch }: AdminLayoutProps) {
   const queryClient = useQueryClient();

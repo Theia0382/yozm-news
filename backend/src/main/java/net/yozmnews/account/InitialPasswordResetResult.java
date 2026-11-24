@@ -3,7 +3,7 @@ package net.yozmnews.account;
 import java.util.Objects;
 
 /**
- * 초기 비밀번호 다시 정하기의 결과 — docs/specs/user.md §3
+ * 초기 비밀번호 다시 정하기의 결과 — docs/specs/account.md §3
  */
 public sealed interface InitialPasswordResetResult {
 

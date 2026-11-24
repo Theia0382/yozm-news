@@ -9,7 +9,7 @@ import net.yozmnews.account.domain.throttle.RetryAfter;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 비밀번호 변경 결과 — 판정 결과 200. docs/specs/user.md §3
+ * 비밀번호 변경 결과 — 판정 결과 200. docs/specs/account.md §3
  *
  * @param result 바꿈 · 거절 · 대기 · 새 비밀번호 규칙 위반
  * @param recoveryCode 강제 변경이 풀리며 새로 준 복구 코드(4자씩 {@code -}) — 그 밖 null

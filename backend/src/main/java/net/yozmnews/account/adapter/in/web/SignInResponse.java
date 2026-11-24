@@ -6,7 +6,7 @@ import net.yozmnews.account.domain.throttle.RetryAfter;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 로그인 결과 — 판정 결과 200. 계정 유무와 무관하게 같은 본문이다. docs/specs/user.md §3 · user-R17
+ * 로그인 결과 — 판정 결과 200. 계정 유무와 무관하게 같은 본문이다. docs/specs/account.md §3 · account-R17
  *
  * @param result 로그인됨 · 거절 · 대기
  * @param retryAfterSeconds 대기면 다시 시도할 수 있을 때까지 남은 초(올림), 그 밖 null

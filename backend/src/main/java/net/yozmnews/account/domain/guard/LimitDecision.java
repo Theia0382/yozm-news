@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * 요청 제한 판정 — 받는다 · 넘었다. docs/specs/user.md §4 · user-R39
+ * 요청 제한 판정 — 받는다 · 넘었다. docs/specs/account.md §4 · account-R31
  */
 public sealed interface LimitDecision {
 

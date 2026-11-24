@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 계정 조회 — 로그인 상태 조회가 세션 사용자의 계정을 읽는다. docs/specs/user.md §4 · user-R20
+ * 계정 조회 — 로그인 상태 조회가 세션 사용자의 계정을 읽는다. docs/specs/account.md §4 · account-R20
  */
 @Service
 public class AccountQueries {

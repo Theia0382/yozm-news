@@ -43,7 +43,7 @@ import tools.jackson.databind.json.JsonMapper;
  * 토큰 없이 처리기 결과다. 요청 제한에 걸린 요청은 검증기를 부르지 않는다. 헤더 이름 · 문제 유형은 리터럴이다. 끈 앱(기본)에서 요청 제한만
  * 남는 것은 {@code RequestGuardTests} 가 본다.
  * <p>
- * 지키는 규칙: user-R40 · user-R41
+ * 지키는 규칙: account-R32 · account-R33
  */
 @Import({ TestcontainersConfiguration.class, ScriptedProviderClients.Config.class,
 		HumanCheckGuardTests.ScriptedVerifier.Config.class })

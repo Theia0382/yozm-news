@@ -16,7 +16,7 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
  * 로컬 개발의 항상 통과 봇 차단 검증기 — 로컬 개발에서 Turnstile 비밀 키가 없을 때만 등록되고, 어떤 토큰에도 통과한다. 활성 · 기본 profile 은
  * Spring 환경이 같은 이름의 속성에서 읽는다.
  * <p>
- * 지키는 규칙: user-R41 · platform-R18
+ * 지키는 규칙: account-R33 · platform-R18
  */
 class LocalHumanVerifierConfigurationTests {
 

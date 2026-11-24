@@ -7,7 +7,7 @@ export type HumanCheckSetting = components["schemas"]["HumanCheckResponse"];
 /** 봇 차단 설정의 조회 키 */
 export const HUMAN_CHECK_QUERY_KEY = ["human-check"] as const;
 
-/** 봇 차단 설정 — 로그인 없이 읽는다(docs/specs/user.md user-R41) */
+/** 봇 차단 설정 — 로그인 없이 읽는다(docs/specs/account.md account-R33) */
 export function useHumanCheck() {
   const client = useApiClient();
   return useQuery({

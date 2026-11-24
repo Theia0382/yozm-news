@@ -5,7 +5,7 @@ import net.yozmnews.account.domain.credential.PasswordPolicy;
 
 /**
  * 계정의 운영 — 운영자가 이메일 · 표시 이름 · 초기 비밀번호로 계정을 만들고, 첫 로그인 전 계정의 초기 비밀번호를 다시 정한다. {@code admin} 이
- * 운영자 요청으로 부른다. docs/specs/user.md §3.
+ * 운영자 요청으로 부른다. docs/specs/account.md §3.
  * <p>
  * 운영자가 만든 계정은 언제나 일반 사용자이고, 첫 로그인에서 비밀번호를 바꿔야 한다. 운영자는 신뢰 주체라 이메일 중복을 그대로 알린다.
  */

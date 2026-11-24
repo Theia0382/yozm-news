@@ -9,7 +9,7 @@ import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.core.authority.AuthorityUtils;
 
 /**
- * 세션 사용자 인증 — 세션에 직렬화되는 유일한 앱 타입. docs/specs/user.md §4 · user-R7
+ * 세션 사용자 인증 — 세션에 직렬화되는 유일한 앱 타입. docs/specs/account.md §4 · account-R7
  * <p>
  * 세션에는 권한 없는 형태({@link #stored})로 사용자 ID 만 담는다. 요청마다 계정을 읽어 권한을 단 형태({@link #forRequest})를 그 요청의
  * 보안 문맥에만 둔다 — 권한은 역할 하나이고, 비밀번호를 바꿔야 하는 계정은 역할 대신 {@value #PASSWORD_CHANGE_REQUIRED} 하나다. 사용자
@@ -20,7 +20,7 @@ public final class AccountAuthentication extends AbstractAuthenticationToken {
 	@Serial
 	private static final long serialVersionUID = 1L;
 
-	/** 비밀번호를 바꿔야 하는 계정의 유일한 권한 — 역할 권한을 두지 않는다(user-R7) */
+	/** 비밀번호를 바꿔야 하는 계정의 유일한 권한 — 역할 권한을 두지 않는다(account-R7) */
 	static final String PASSWORD_CHANGE_REQUIRED = "PASSWORD_CHANGE_REQUIRED";
 
 	private final long userId;

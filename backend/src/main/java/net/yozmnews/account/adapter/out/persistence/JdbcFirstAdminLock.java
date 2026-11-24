@@ -5,7 +5,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
 /**
- * {@link FirstAdminLock} 의 PostgreSQL 구현 — 트랜잭션 advisory 잠금. docs/specs/user.md §4
+ * {@link FirstAdminLock} 의 PostgreSQL 구현 — 트랜잭션 advisory 잠금. docs/specs/account.md §4
  */
 @Repository
 class JdbcFirstAdminLock implements FirstAdminLock {

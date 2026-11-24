@@ -19,7 +19,7 @@ type PasswordChangeFormProps = {
 };
 
 /**
- * 비밀번호 변경 입력 — 지금 비밀번호와 새 비밀번호(확인). 바꾸면 다른 기기의 로그인이 끝난다(docs/specs/user.md §4). 결과 판별자마다
+ * 비밀번호 변경 입력 — 지금 비밀번호와 새 비밀번호(확인). 바꾸면 다른 기기의 로그인이 끝난다(docs/specs/account.md §4). 결과 판별자마다
  * 안내 하나(망라 switch).
  */
 export function PasswordChangeForm({ onChanged }: PasswordChangeFormProps) {

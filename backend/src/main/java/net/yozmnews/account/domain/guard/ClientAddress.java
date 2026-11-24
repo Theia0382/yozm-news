@@ -10,7 +10,7 @@ import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 요청을 보낸 클라이언트의 주소 — 요청 제한이 IP 로 세는 대상이다. docs/specs/user.md §4 · user-R37
+ * 요청을 보낸 클라이언트의 주소 — 요청 제한이 IP 로 세는 대상이다. docs/specs/account.md §4 · account-R29
  * <p>
  * IP 리터럴만 읽고 이름을 조회하지 않는다. IPv6 은 앞 64비트로 묶어 센다 — 한 가입자가 보통 /64 이상을 받아 그 안의 주소를 마음대로 바꿀 수
  * 있다. IPv4 사상 IPv6 주소는 IPv4 로 읽는다.

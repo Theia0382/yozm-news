@@ -32,7 +32,7 @@ import org.springframework.test.context.TestPropertySource;
  * 동시 가입 — 같은 초대로 둘이 동시에 가입하면 하나만 쓰고, 같은 이메일로 둘이 동시에 공개 가입하면 하나만 만든다(나머지는 가입할 수 없는
  * 이메일).
  * <p>
- * 지키는 규칙: user-R28 · user-R31 · user-R33
+ * 지키는 규칙: account-R21 · account-R24 · account-R26
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest

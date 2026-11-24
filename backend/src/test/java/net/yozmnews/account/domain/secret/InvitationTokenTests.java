@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 /**
  * 초대 토큰 — 128비트 base64url 22자, 앞뒤 공백만 너그럽게 읽는다.
  * <p>
- * 지키는 규칙: user-R31
+ * 지키는 규칙: account-R24
  */
 class InvitationTokenTests {
 

@@ -11,7 +11,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
 /**
- * {@link SessionAccounts} 의 JdbcClient 구현 — docs/specs/user.md §4 · user-R7.
+ * {@link SessionAccounts} 의 JdbcClient 구현 — docs/specs/account.md §4 · account-R7.
  * <p>
  * 계정과 자격을 한 번의 조회로 잇는다. 자격 행이 없는 계정은 강제 변경이 아닌 것으로 읽는다 — "계정마다 자격 하나"는 DB 가 강제하지 않으므로
  * 행이 빠져도 세션이 지워지지 않게 한다. 비밀번호 해시 칸은 읽지 않는다.

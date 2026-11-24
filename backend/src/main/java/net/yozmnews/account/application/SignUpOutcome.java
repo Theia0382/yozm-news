@@ -9,7 +9,7 @@ import net.yozmnews.account.domain.secret.RecoveryCode;
 import net.yozmnews.platform.UserId;
 
 /**
- * 가입(공개 가입 · 초대 가입)의 결과 — docs/specs/user.md §4
+ * 가입(공개 가입 · 초대 가입)의 결과 — docs/specs/account.md §4
  */
 public sealed interface SignUpOutcome {
 

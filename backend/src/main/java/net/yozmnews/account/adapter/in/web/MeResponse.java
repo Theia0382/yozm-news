@@ -5,7 +5,7 @@ import net.yozmnews.account.domain.account.AccountRole;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 로그인 상태 — 판정 결과 200. docs/specs/user.md §3 · user-R20
+ * 로그인 상태 — 판정 결과 200. docs/specs/account.md §3 · account-R20
  *
  * @param result 로그인됨 · 익명
  * @param userId 사용자 ID — 익명이면 null

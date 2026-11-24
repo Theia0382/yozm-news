@@ -14,7 +14,7 @@ import org.springframework.security.web.access.intercept.RequestAuthorizationCon
 /**
  * 운영자 체인의 인가 — 이 요청의 인증(운영자 토큰 인증 · 세션 사용자 · 익명)으로 {@link AdminAccess} 가 판정하고, 거부면 판정 값을 요청
  * 속성({@link #DENIAL})에 둬 운영자 체인의 거부 처리기가 문제 유형을 가른다. 처리기를 찾지 않는다 — 처리기 없는 운영자 경로도 인증 · 역할
- * 판정이 먼저다. docs/specs/user.md §4 · user-R1
+ * 판정이 먼저다. docs/specs/account.md §4 · account-R1
  */
 final class AdminAuthorization implements AuthorizationManager<RequestAuthorizationContext> {
 

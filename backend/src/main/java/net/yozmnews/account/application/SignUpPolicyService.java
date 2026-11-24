@@ -15,7 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 가입 정책의 운영 — {@link SignUpPolicyAdministration} 의 구현. docs/specs/user.md §4
+ * 가입 정책의 운영 — {@link SignUpPolicyAdministration} 의 구현. docs/specs/account.md §4
  */
 @Service
 class SignUpPolicyService implements SignUpPolicyAdministration {

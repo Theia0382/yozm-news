@@ -5,7 +5,7 @@ import net.yozmnews.account.application.SignUpOutcome;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 가입(공개 가입 · 초대 가입) 결과 — 판정 결과 200. docs/specs/user.md §3
+ * 가입(공개 가입 · 초대 가입) 결과 — 판정 결과 200. docs/specs/account.md §3
  *
  * @param result 가입 · 닫힘 · 초대를 쓸 수 없음 · 가입할 수 없는 이메일 · 이메일 형식 · 표시 이름 형식 · 비밀번호 규칙 위반
  * @param recoveryCode 복구 코드(4자씩 {@code -}) — 가입일 때만 한 번, 그 밖 null

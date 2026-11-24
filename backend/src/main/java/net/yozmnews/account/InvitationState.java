@@ -1,7 +1,7 @@
 package net.yozmnews.account;
 
 /**
- * 초대의 상태 — 판정 정본은 초대 aggregate 이고, 운영자 목록 · 취소 결과가 이 열거를 낸다. docs/specs/user.md §3.
+ * 초대의 상태 — 판정 정본은 초대 aggregate 이고, 운영자 목록 · 취소 결과가 이 열거를 낸다. docs/specs/account.md §3.
  * <p>
  * 우선순위는 쓴 것 · 취소한 것 · 만료한 것 · 유효한 것 순이다 — 쓴 초대는 만료 시각이 지나도 쓴 것이다.
  */

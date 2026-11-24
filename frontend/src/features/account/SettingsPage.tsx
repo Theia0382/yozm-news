@@ -17,7 +17,7 @@ import { Button } from "@/shared/ui/button";
 import { NARROW_WIDTH, PAGE_FRAME } from "@/shared/ui/widths";
 
 /**
- * 설정 — 비밀번호 변경과 복구 코드 새로 받기. 둘 다 지금 비밀번호를 확인한다(docs/specs/user.md §4).
+ * 설정 — 비밀번호 변경과 복구 코드 새로 받기. 둘 다 지금 비밀번호를 확인한다(docs/specs/account.md §4).
  */
 export function SettingsPage() {
   const [changed, setChanged] = useState(false);

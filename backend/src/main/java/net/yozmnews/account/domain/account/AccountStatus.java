@@ -1,7 +1,7 @@
 package net.yozmnews.account.domain.account;
 
 /**
- * 계정의 상태 — 로그인 · 세션은 {@link #ACTIVE} 만 받는다. docs/specs/user.md §4 · user-R7 · user-R17
+ * 계정의 상태 — 로그인 · 세션은 {@link #ACTIVE} 만 받는다. docs/specs/account.md §4 · account-R7 · account-R17
  */
 public enum AccountStatus {
 

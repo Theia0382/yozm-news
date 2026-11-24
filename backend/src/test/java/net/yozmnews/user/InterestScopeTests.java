@@ -32,7 +32,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
  * 관심 설정의 사용자 격리 — 사용자 A 의 세션으로 태그 선호 · 제외 소스 · 일정 · 모델을 저장해도 B 의 것은 그대로이고, B 의 조회는 B 의 값만
  * 낸다. A 가 구독 제안을 거절해도 B 의 거절은 비어 있다. 세션 없이 부르면 처리기 열둘 모두 401 이다(docs/qa/test-strategy.md §13).
  * <p>
- * 지키는 규칙: user-R6
+ * 지키는 규칙: account-R6
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest

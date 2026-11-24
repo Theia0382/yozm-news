@@ -6,7 +6,7 @@ import net.yozmnews.account.domain.account.AccountRole;
 import net.yozmnews.platform.UserId;
 
 /**
- * 세션 체인이 요청마다 읽는 쓰는 계정 — 역할과 비밀번호 강제 변경 여부. docs/specs/user.md §4 · user-R7
+ * 세션 체인이 요청마다 읽는 쓰는 계정 — 역할과 비밀번호 강제 변경 여부. docs/specs/account.md §4 · account-R7
  *
  * @param id 사용자 ID
  * @param role 역할

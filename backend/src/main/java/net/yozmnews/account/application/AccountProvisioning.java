@@ -26,7 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 계정을 만드는 정본 — 모든 길(공개 가입 · 초대 가입 · 운영자 계정 생성 · 첫 운영자)이 이것을 거친다. docs/specs/user.md §4.
+ * 계정을 만드는 정본 — 모든 길(공개 가입 · 초대 가입 · 운영자 계정 생성 · 첫 운영자)이 이것을 거친다. docs/specs/account.md §4.
  * <p>
  * 부르는 쪽의 트랜잭션 안에서 계정 · 자격(· 복구 코드)을 함께 만들고 같은 트랜잭션에서 {@link AccountCreated} 를 낸다(account-R35) — "계정마다 자격
  * 하나"는 DB 가 강제하지 않으므로 같은 트랜잭션이 지킨다. 다른 모듈의 표는 쓰지 않는다 — 관심 설정 기본값은 이벤트를 받은 쪽이 쓴다.

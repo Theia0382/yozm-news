@@ -36,7 +36,7 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 
 /**
  * 보안 구성 — 체인 셋: 운영자 경로는 운영자 계정 세션 · CSRF 와 스크립트용 운영자 토큰, 그 밖의 화면용 API 는 세션 · CSRF, 나머지는 연다.
- * docs/specs/user.md §4 · user-R1 · user-R2 · user-R4 · user-R5 · user-R7 · user-R10
+ * docs/specs/account.md §4 · account-R1 · account-R2 · account-R4 · account-R5 · account-R7 · account-R10
  * <p>
  * 두 역할 공통이다 — 역할에 묶으면 그 역할이 없는 프로세스에 Spring Boot 의 기본 보안(모든 요청 인증 · 생성 비밀번호)이 선다.
  */
@@ -68,7 +68,7 @@ class SecurityConfiguration {
 		return new AdminTokenAuthenticationProvider(credential);
 	}
 
-	/** 세션의 보안 문맥 저장소 — 두 세션 인증 체인과 로그인이 함께 쓴다. 읽지 못하는 세션은 지운다(user-R7) */
+	/** 세션의 보안 문맥 저장소 — 두 세션 인증 체인과 로그인이 함께 쓴다. 읽지 못하는 세션은 지운다(account-R7) */
 	@Bean
 	SessionSecurityContexts sessionSecurityContexts() {
 		return new SessionSecurityContexts();
@@ -89,7 +89,7 @@ class SecurityConfiguration {
 	/**
 	 * 운영자 체인 — 운영자 경로. 세션 사용자는 세션 체인과 같은 구성으로 읽고, {@code Authorization} 헤더를 낸 요청은 운영자 토큰으로만
 	 * 판정한다(틀리면 401 {@code admin-unauthorized} 로 끝). 변경 요청은 CSRF 토큰을 요구하되 운영자 토큰으로 인증한 요청은 면한다 — 쿠키
-	 * 자격이 아니다. 인가는 {@link AdminAccess}(토큰 · 세션 사용자 · 강제 변경 · 역할 — LLM 키는 보지 않는다)다(user-R1).
+	 * 자격이 아니다. 인가는 {@link AdminAccess}(토큰 · 세션 사용자 · 강제 변경 · 역할 — LLM 키는 보지 않는다)다(account-R1).
 	 */
 	@Bean
 	@Order(1)
@@ -112,10 +112,10 @@ class SecurityConfiguration {
 	}
 
 	/**
-	 * 세션 체인 — 운영자 경로 밖의 화면용 API. 세션의 사용자 ID 로 요청마다 계정과 비밀번호 강제 변경 여부를 읽고(user-R7), 공개 표시가
+	 * 세션 체인 — 운영자 경로 밖의 화면용 API. 세션의 사용자 ID 로 요청마다 계정과 비밀번호 강제 변경 여부를 읽고(account-R7), 공개 표시가
 	 * 없는 처리기는 세션 사용자를 요구하되 비밀번호를 바꿔야 하는 세션 사용자에게는 비밀번호 변경 전 허용 표시가 있는 처리기만, LLM 키가 없는
-	 * 세션 사용자에게는 키 없이 허용 표시가 있는 처리기만 열며(user-R5), 변경 요청은 CSRF 토큰을 요구한다(user-R10). 인가 뒤에는 요청 제한
-	 * 표시가 있는 처리기의 요청을 처리기 앞에서 세고, 봇 차단 표시가 있으면 사람 확인 토큰을 본다(user-R40 · user-R41).
+	 * 세션 사용자에게는 키 없이 허용 표시가 있는 처리기만 열며(account-R5), 변경 요청은 CSRF 토큰을 요구한다(account-R10). 인가 뒤에는 요청 제한
+	 * 표시가 있는 처리기의 요청을 처리기 앞에서 세고, 봇 차단 표시가 있으면 사람 확인 토큰을 본다(account-R32 · account-R33).
 	 */
 	@Bean
 	@Order(2)
@@ -167,20 +167,20 @@ class SecurityConfiguration {
 			.requestCache(AbstractHttpConfigurer::disable);
 	}
 
-	/** 두 세션 인증 체인의 401 — 세션 사용자가 없다(user-R3) */
+	/** 두 세션 인증 체인의 401 — 세션 사용자가 없다(account-R3) */
 	private static void writeUnauthenticated(HttpServletRequest request, HttpServletResponse response,
 			ProblemResponses problems) throws IOException {
 		problems.write(response, problems.problem(ProblemTypes.UNAUTHENTICATED, ProblemTypes.UNAUTHENTICATED_TITLE,
 				HttpStatus.UNAUTHORIZED, "로그인하지 않았거나 세션이 만료됐다", request));
 	}
 
-	/** 두 세션 인증 체인의 403 — CSRF 토큰이 없거나 틀리다(user-R10) */
+	/** 두 세션 인증 체인의 403 — CSRF 토큰이 없거나 틀리다(account-R10) */
 	private static ApiProblem csrfRejected(HttpServletRequest request, ProblemResponses problems) {
 		return problems.problem(ProblemTypes.CSRF_REJECTED, ProblemTypes.CSRF_REJECTED_TITLE, HttpStatus.FORBIDDEN,
 				"요청 보호 토큰(X-XSRF-TOKEN)이 없거나 맞지 않는다", request);
 	}
 
-	/** 두 세션 인증 체인의 403 — 세션 사용자가 비밀번호를 바꿔야 한다(user-R29) */
+	/** 두 세션 인증 체인의 403 — 세션 사용자가 비밀번호를 바꿔야 한다(account-R22) */
 	private static ApiProblem passwordChangeRequired(HttpServletRequest request, ProblemResponses problems) {
 		return problems.problem(ProblemTypes.PASSWORD_CHANGE_REQUIRED, ProblemTypes.PASSWORD_CHANGE_REQUIRED_TITLE,
 				HttpStatus.FORBIDDEN, "비밀번호를 바꾸기 전에는 비밀번호 변경 · 로그인 상태 조회 · 로그아웃만 쓴다", request);
@@ -194,8 +194,8 @@ class SecurityConfiguration {
 
 	/**
 	 * 운영자 체인의 403 — CSRF 토큰이 없거나 틀리면 {@code csrf-rejected}, 인가가 남긴 판정 값이 비밀번호 변경 필요면
-	 * {@code password-change-required}, 운영자 아님이면 {@code admin-forbidden}, 판정 값이 없는 그 밖의 거부는 일반 403(user-R1 ·
-	 * user-R3)
+	 * {@code password-change-required}, 운영자 아님이면 {@code admin-forbidden}, 판정 값이 없는 그 밖의 거부는 일반 403(account-R1 ·
+	 * account-R3)
 	 */
 	private static ApiProblem adminDenial(HttpServletRequest request, AccessDeniedException ex,
 			ProblemResponses problems) {
@@ -217,8 +217,8 @@ class SecurityConfiguration {
 
 	/**
 	 * 세션 체인의 403 — CSRF 토큰이 없거나 틀리면 {@code csrf-rejected}, 인가가 남긴 판정 값이 비밀번호 변경 필요면
-	 * {@code password-change-required}, 키 필요면 {@code llm-key-required}, 판정 값이 없는 그 밖의 거부는 일반 403(user-R3 · user-R5 ·
-	 * user-R10)
+	 * {@code password-change-required}, 키 필요면 {@code llm-key-required}, 판정 값이 없는 그 밖의 거부는 일반 403(account-R3 · account-R5 ·
+	 * account-R10)
 	 */
 	private static ApiProblem sessionDenial(HttpServletRequest request, AccessDeniedException ex,
 			ProblemResponses problems) {

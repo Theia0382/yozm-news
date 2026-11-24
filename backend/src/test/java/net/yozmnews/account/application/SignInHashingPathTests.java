@@ -33,7 +33,7 @@ import org.springframework.test.util.ReflectionTestUtils;
  * 로그인의 대조 경로 — 있는 계정 · 없는 계정 모두 Argon2 대조를 한 번 하고(없는 계정은 더미 해시), 128 코드 포인트를 넘는 비밀번호는 대조하지
  * 않는다. 시간이 아니라 같은 단계를 지나는지(대조 호출 횟수)로 본다.
  * <p>
- * 지키는 규칙: user-R17 · user-R19
+ * 지키는 규칙: account-R17 · account-R19
  */
 class SignInHashingPathTests {
 

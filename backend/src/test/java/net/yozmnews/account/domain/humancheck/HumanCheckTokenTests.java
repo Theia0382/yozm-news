@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test;
 /**
  * 사람 확인 토큰 — 1 ~ 2,048자만 받고, 문자열 표현에 값이 없다.
  * <p>
- * 지키는 규칙: user-R41
+ * 지키는 규칙: account-R33
  */
 class HumanCheckTokenTests {
 

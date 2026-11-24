@@ -7,7 +7,7 @@ import org.jobrunr.jobs.annotations.Recurring;
 import org.springframework.stereotype.Component;
 
 /**
- * 끝난 요청 제한 창 정리 반복 작업 — docs/specs/user.md §4 · user-R42.
+ * 끝난 요청 제한 창 정리 반복 작업 — docs/specs/account.md §4 · account-R34.
  * <p>
  * 실패해도 재시도하지 않는다 — 다음 회차가 이어 지운다. JobRunr 가 다른 패키지에서 반사로 부르므로 클래스가 public 이어야 한다.
  */

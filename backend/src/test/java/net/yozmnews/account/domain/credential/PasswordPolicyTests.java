@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 /**
  * 비밀번호 규칙 — NFKC 정규화 뒤 코드 포인트로 8 ~ 128 자, 문자 종류 · 목록 검사 없음.
  * <p>
- * 지키는 규칙: user-R14
+ * 지키는 규칙: account-R14
  */
 class PasswordPolicyTests {
 

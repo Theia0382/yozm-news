@@ -11,7 +11,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Turnstile 검증 응답의 판정 정본 — docs/specs/user.md §4 · user-R41.
+ * Turnstile 검증 응답의 판정 정본 — docs/specs/account.md §4 · account-R33.
  * <p>
  * 5xx 이거나 본문을 읽지 못하면(JSON 아님 · {@code success} 가 불리언이 아님) 닿지 못함이다. 그 밖은 본문의 {@code success} 로 가른다 —
  * 참이고 {@code action} 이 그 동작의 이름이면 통과, 동작이 다르면 거부, 거짓이면 오류 코드와 함께 거부(서비스 내부 오류 {@code internal-error}

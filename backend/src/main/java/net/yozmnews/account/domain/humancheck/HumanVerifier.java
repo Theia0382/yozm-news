@@ -5,7 +5,7 @@ import net.yozmnews.platform.GuardedAction;
 
 /**
  * 봇 차단 검증 포트 — 사람 확인 토큰을 외부 서비스에 물어 확인한다. 구현은 {@code adapter/out/turnstile} 의 Turnstile 검증기와,
- * 로컬 개발의 항상 통과 검증기({@code adapter/out/local}). docs/specs/user.md §4 · user-R41
+ * 로컬 개발의 항상 통과 검증기({@code adapter/out/local}). docs/specs/account.md §4 · account-R33
  */
 public interface HumanVerifier {
 

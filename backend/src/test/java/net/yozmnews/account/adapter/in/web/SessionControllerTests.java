@@ -52,7 +52,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
  * 로그인 API — 실제 PostgreSQL 위에서 로그인 · 거절 · 대기의 판정 결과, 계정 유무와 무관한 같은 본문, 실패 기록, 로그인 상태 조회, 로그아웃을
  * 본다.
  * <p>
- * 지키는 규칙: user-R10 · user-R11 · user-R17 · user-R18 · user-R19 · user-R20
+ * 지키는 규칙: account-R10 · account-R11 · account-R17 · account-R18 · account-R19 · account-R20
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest

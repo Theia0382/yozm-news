@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test;
  * 요청 제한 유스케이스 — 동작의 규칙마다 세고, 한도를 넘은 요청은 그 창 끝까지 넘었다. 키 등록 · 검증은 사용자와 주소로 따로 센다. 저장소의
  * 셈은 메모리 대역이다(DB 의 셈은 {@code JdbcRequestCountsTests}).
  * <p>
- * 지키는 규칙: user-R38 · user-R39
+ * 지키는 규칙: account-R30 · account-R31
  */
 class RequestLimiterTests {
 

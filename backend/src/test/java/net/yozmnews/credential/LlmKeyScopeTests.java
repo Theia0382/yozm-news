@@ -31,7 +31,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * 키 경로의 사용자 격리 — 사용자 A 가 등록한 키를 B 의 세션으로 볼 수 없고, B 의 다시 검증 · 삭제 · 등록이 A 의 키 행을 건드리지 않는다. 세션
  * 없이 부르면 401 이다(docs/qa/test-strategy.md §13). 공급자 포트는 키마다 답을 정하는 대역이다.
  * <p>
- * 지키는 규칙: user-R6 · credential-R17
+ * 지키는 규칙: account-R6 · credential-R17
  */
 @Import({ TestcontainersConfiguration.class, ScriptedProviderClients.Config.class })
 @SpringBootTest

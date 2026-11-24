@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Test;
 /**
  * 봇 차단 유스케이스 — 켬 · 끔, 읽지 못하는 토큰은 검증기에 묻지 않고 거부, 켰는데 검증기가 없으면 설정 이름을 말하고 멈춘다.
  * <p>
- * 지키는 규칙: user-R41
+ * 지키는 규칙: account-R33
  */
 class HumanCheckTests {
 

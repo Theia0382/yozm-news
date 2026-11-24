@@ -19,7 +19,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
  * 실패 기록 저장소 — 종류마다 따로 잠그고 · 쓰고 · 지우며, 정리는 종류와 무관하게 마지막 실패가 기준 시각보다 이른 기록만 지운다(기준과 같은
  * 기록은 남는다).
  * <p>
- * 지키는 규칙: user-R19
+ * 지키는 규칙: account-R19
  */
 @JdbcTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)

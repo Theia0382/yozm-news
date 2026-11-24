@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test;
 /**
  * 초대 — 발급에서 7일 뒤 만료(만료 시각 포함), 쓴 것 · 취소한 것 · 만료한 것 · 유효한 것 순의 상태, 유효할 때만 쓰고 취소한다.
  * <p>
- * 지키는 규칙: user-R31
+ * 지키는 규칙: account-R24
  */
 class InvitationTests {
 

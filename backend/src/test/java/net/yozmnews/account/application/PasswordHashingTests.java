@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test;
 /**
  * 비밀번호 해시 — Argon2id 파라미터를 해시 문자열에 담고, 더미 대조는 언제나 거짓이다.
  * <p>
- * 지키는 규칙: user-R15 · user-R17
+ * 지키는 규칙: account-R15 · account-R17
  */
 class PasswordHashingTests {
 

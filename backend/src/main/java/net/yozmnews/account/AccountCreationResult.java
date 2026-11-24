@@ -5,7 +5,7 @@ import java.util.Objects;
 import net.yozmnews.platform.UserId;
 
 /**
- * 운영자 계정 생성의 결과 — docs/specs/user.md §3
+ * 운영자 계정 생성의 결과 — docs/specs/account.md §3
  */
 public sealed interface AccountCreationResult {
 

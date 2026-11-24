@@ -1,4 +1,4 @@
-// 처리기 앞의 요청 방어가 내는 거부 — 요청 제한(429)과 봇 차단(403)의 문제 유형과 안내(docs/specs/user.md user-R3 · user-R40 · user-R41).
+// 처리기 앞의 요청 방어가 내는 거부 — 요청 제한(429)과 봇 차단(403)의 문제 유형과 안내(docs/specs/account.md account-R3 · account-R32 · account-R33).
 
 import { remainingText } from "@/shared/lib/remaining";
 
@@ -7,7 +7,7 @@ export const HUMAN_CHECK_FAILED_TYPE =
   "urn:yozmnews:problem:human-check-failed";
 
 /**
- * 요청 제한을 세는 축 — 그 동작을 무엇으로 세는지(docs/specs/user.md user-R38 의 정책 표). 부르는 곳이 자기 동작의 축을 적는다 — 정책
+ * 요청 제한을 세는 축 — 그 동작을 무엇으로 세는지(docs/specs/account.md account-R30 의 정책 표). 부르는 곳이 자기 동작의 축을 적는다 — 정책
  * 표에서 동작의 축이 바뀌면 그 화면의 축도 함께 고친다.
  * - NETWORK — 클라이언트 주소로만 센다(로그인 · 복구 · 초대 · 가입)
  * - ACCOUNT — 세션 사용자로만 센다(좋아요 · 싫어요)

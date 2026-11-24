@@ -3,7 +3,7 @@ package net.yozmnews.account;
 import java.io.Serial;
 
 /**
- * 없는 초대 — 운영자 취소가 받은 ID 의 초대가 없다. docs/specs/user.md §3
+ * 없는 초대 — 운영자 취소가 받은 ID 의 초대가 없다. docs/specs/account.md §3
  */
 public final class UnknownInvitationException extends RuntimeException {
 

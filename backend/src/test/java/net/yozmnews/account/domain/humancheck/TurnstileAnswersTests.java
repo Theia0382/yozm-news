@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test;
  * Turnstile 응답의 판정 — 5xx · 읽지 못하는 본문은 닿지 못함, 그 밖은 본문의 success 로 가른다. success 가 거짓이면 서비스 내부 오류도
  * 거부다. 동작 이름이 다르면 거부하되, 시험 비밀 키의 답(동작 이름이 없다)은 통과다. 응답 본문은 Turnstile 서버 검증 문서의 모양이다.
  * <p>
- * 지키는 규칙: user-R41
+ * 지키는 규칙: account-R33
  */
 class TurnstileAnswersTests {
 

@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 운영자 API 의 가입 정책 — 지금 값 · 이력과 변경. {@code user} 의 {@link SignUpPolicyAdministration} 결과를 옮기고, 변경은
+ * 운영자 API 의 가입 정책 — 지금 값 · 이력과 변경. {@code account} 의 {@link SignUpPolicyAdministration} 결과를 옮기고, 변경은
  * {@link ChangeActor#OPERATOR} 로 부른다. docs/specs/admin.md §3 · admin-R1 · admin-R3
  */
 @WebRole

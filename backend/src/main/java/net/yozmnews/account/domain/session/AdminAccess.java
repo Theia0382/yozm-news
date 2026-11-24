@@ -3,7 +3,7 @@ package net.yozmnews.account.domain.session;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 운영자 경로의 인가 판정 — 정본 · docs/specs/user.md §4 · user-R1
+ * 운영자 경로의 인가 판정 — 정본 · docs/specs/account.md §4 · account-R1
  * <p>
  * LLM 키는 묻지 않는다 — 운영자 경로는 키 관문 밖이다.
  */

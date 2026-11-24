@@ -4,7 +4,7 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * 봇 차단 설정 {@code yozmnews.human-check} — docs/specs/user.md §7 · user-R41
+ * 봇 차단 설정 {@code yozmnews.human-check} — docs/specs/account.md §7 · account-R33
  *
  * @param provider 공급자 — {@code off}(기본) · {@code turnstile}
  * @param turnstile Turnstile 의 사이트 키 · 비밀 키

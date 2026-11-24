@@ -4,7 +4,7 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * 운영자 접근 통제 설정 — docs/specs/user.md §7.
+ * 운영자 접근 통제 설정 — docs/specs/account.md §7.
  *
  * @param token 운영자 토큰 — 없거나 비면 Bearer 인증이 없다(운영자 경로는 운영자 계정 세션으로 연다)
  */

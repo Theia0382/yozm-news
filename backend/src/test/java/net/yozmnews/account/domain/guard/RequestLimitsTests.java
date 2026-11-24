@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 /**
  * 요청 제한 정책 표 — 동작마다 축 · 한도 · 창. 로그인 · 복구는 클라이언트 주소로만 센다(사용자 축은 실패 지연이 맡는다).
  * <p>
- * 지키는 규칙: user-R38
+ * 지키는 규칙: account-R30
  */
 class RequestLimitsTests {
 

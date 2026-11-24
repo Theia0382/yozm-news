@@ -55,7 +55,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 /**
  * 비밀번호를 바꾸는 길과 겹친 로그인 — 옛 비밀번호로 대조를 마친 로그인이 복구 재설정 · 초기 비밀번호 다시 정하기 뒤에 세션을 남기지 않는다.
  * <p>
- * 지키는 규칙: user-R18 · user-R30 · user-R35
+ * 지키는 규칙: account-R18 · account-R23 · account-R28
  * <p>
  * 실제 PostgreSQL 위에서 로그인 요청(MockMvc — 세션 저장소 필터 포함)을 보내고, spy 로 순서를 정한다 — 로그인의 Argon2 대조
  * ({@link PasswordHashing})를 재설정이 커밋될 때까지 붙잡거나, 세션을 연 뒤의 다시 확인({@link SignIn#stillCurrent})이 버전을 본

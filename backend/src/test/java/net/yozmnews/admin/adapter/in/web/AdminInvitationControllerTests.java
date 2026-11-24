@@ -29,7 +29,7 @@ import org.springframework.test.web.servlet.MockMvc;
 /**
  * 운영자 API 의 초대 — 목록 · 발급 · 취소의 JSON 모양과 판별자, 메모 초과 400, 없는 초대 · 1 미만 ID 404, 토큰.
  * <p>
- * 지키는 규칙: admin-R1 · admin-R2 · admin-R3 · user-R31
+ * 지키는 규칙: admin-R1 · admin-R2 · admin-R3 · account-R24
  */
 @WebMvcTest(controllers = AdminInvitationController.class, properties = AdminRequests.TOKEN_PROPERTY)
 @Import({ WebSliceSecurity.class, FakeInvitationAdministration.Config.class })

@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 /**
  * 높은 엔트로피 비밀의 다이제스트 — SHA-256, 상수 시간 대조, 저장 값의 길이 확인.
  * <p>
- * 지키는 규칙: user-R2 · user-R30
+ * 지키는 규칙: account-R2 · account-R23
  */
 class SecretDigestTests {
 

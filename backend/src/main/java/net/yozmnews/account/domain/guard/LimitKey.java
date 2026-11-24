@@ -10,8 +10,8 @@ import java.util.Objects;
 import net.yozmnews.platform.GuardedAction;
 
 /**
- * 요청 제한 기록의 키 — 동작 · 축 · 대상의 SHA-256 다이제스트. 대상(IP · 사용자 ID)을 평문으로 저장하지 않는다. docs/specs/user.md §4 ·
- * user-R39
+ * 요청 제한 기록의 키 — 동작 · 축 · 대상의 SHA-256 다이제스트. 대상(IP · 사용자 ID)을 평문으로 저장하지 않는다. docs/specs/account.md §4 ·
+ * account-R31
  *
  * @param digest 32바이트
  */

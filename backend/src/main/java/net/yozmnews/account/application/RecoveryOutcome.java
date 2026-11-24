@@ -8,7 +8,7 @@ import net.yozmnews.account.domain.secret.RecoveryCode;
 import net.yozmnews.platform.UserId;
 
 /**
- * 복구 코드 재설정의 결과 — 재설정 · 거절 · 대기 · 새 비밀번호 규칙 위반. 거절은 계정 · 코드 유무를 가르지 않는다. docs/specs/user.md §4
+ * 복구 코드 재설정의 결과 — 재설정 · 거절 · 대기 · 새 비밀번호 규칙 위반. 거절은 계정 · 코드 유무를 가르지 않는다. docs/specs/account.md §4
  */
 public sealed interface RecoveryOutcome {
 

@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test;
 /**
  * 계정을 만드는 길 — 길마다 역할 · 강제 변경 · 만들 때 복구 코드.
  * <p>
- * 지키는 규칙: user-R28
+ * 지키는 규칙: account-R21
  */
 class OnboardingTests {
 

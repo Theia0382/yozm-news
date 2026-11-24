@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 /**
  * 표시 이름 — 앞뒤 공백을 지운 1 ~ 50 코드 포인트, 표시 이름을 받지 않는 계정은 이메일의 {@code @} 앞부분.
  * <p>
- * 지키는 규칙: user-R28
+ * 지키는 규칙: account-R21
  */
 class DisplayNameTests {
 

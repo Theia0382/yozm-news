@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 /**
  * 이메일 정규화 — 앞뒤 공백 · 소문자 · 길이 · {@code @} 하나.
  * <p>
- * 지키는 규칙: user-R13 · user-R19
+ * 지키는 규칙: account-R13 · account-R19
  */
 class EmailAddressTests {
 

@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 가입 정책의 처음 값 적재 — 기동 때 지금 값이 없으면 닫힘을 이력과 함께 넣는다. docs/specs/user.md §4.
+ * 가입 정책의 처음 값 적재 — 기동 때 지금 값이 없으면 닫힘을 이력과 함께 넣는다. docs/specs/account.md §4.
  * <p>
  * 두 역할 공통이다. 두 프로세스가 동시에 떠도 행 · 이력은 하나다.
  */

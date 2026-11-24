@@ -44,7 +44,7 @@ import org.springframework.web.bind.annotation.RestController;
  * 세션 체인 시험의 시험 처리기({@link SessionChainTests.SessionProbe})가 {@link SessionSignIn} 을 직접 불러 만든다. 운영자 토큰을
  * 설정한 문맥이다.
  * <p>
- * 지키는 규칙: user-R1 · user-R3 · user-R5 · user-R7 · user-R10 · user-R29
+ * 지키는 규칙: account-R1 · account-R3 · account-R5 · account-R7 · account-R10 · account-R22
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest(

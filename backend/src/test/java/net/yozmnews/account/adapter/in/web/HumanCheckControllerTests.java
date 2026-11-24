@@ -19,7 +19,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * 봇 차단 설정 조회 — 세션 없이 열고, 끔이면 사이트 키 없이 OFF, Turnstile 이면 사이트 키와 TURNSTILE. 봇 차단 유스케이스는 웹 계층 시험의
  * 대역이고 설정만 정한다.
  * <p>
- * 지키는 규칙: user-R41
+ * 지키는 규칙: account-R33
  */
 @WebMvcTest(HumanCheckController.class)
 @Import(WebSliceSecurity.class)

@@ -6,7 +6,7 @@ import java.util.Optional;
 import net.yozmnews.platform.CodePoints;
 
 /**
- * 표시 이름 — 규칙의 정본. 앞뒤 공백을 지운 1 ~ 50 코드 포인트다. docs/specs/user.md §4.
+ * 표시 이름 — 규칙의 정본. 앞뒤 공백을 지운 1 ~ 50 코드 포인트다. docs/specs/account.md §4.
  *
  * @param value 앞뒤 공백을 지운 표시 이름
  */

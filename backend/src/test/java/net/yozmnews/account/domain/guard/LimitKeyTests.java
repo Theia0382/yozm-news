@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 /**
  * 요청 제한 기록의 키 — 동작 · 축 · 대상의 SHA-256. 셋 가운데 하나만 달라도 다른 키다.
  * <p>
- * 지키는 규칙: user-R39
+ * 지키는 규칙: account-R31
  */
 class LimitKeyTests {
 

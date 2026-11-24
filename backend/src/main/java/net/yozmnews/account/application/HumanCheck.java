@@ -13,7 +13,7 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 
 /**
- * 봇 차단 유스케이스 — 설정이 켜졌는지와, 켜졌을 때 요청 헤더의 토큰 확인. docs/specs/user.md §4 · user-R41
+ * 봇 차단 유스케이스 — 설정이 켜졌는지와, 켜졌을 때 요청 헤더의 토큰 확인. docs/specs/account.md §4 · account-R33
  * <p>
  * 토큰을 읽지 못하면(없음 · 빈 값 · 길이 상한 넘김) 검증기에 묻지 않고 거부한다. 봇 차단을 켰는데 검증기가 없으면(비밀 키 없음) 뜨지 않는다 — 켠
  * 봇 차단에 검증기가 있어야 한다는 설정 규칙이다. 로컬 개발에서 비밀 키가 없으면 항상 통과 검증기가 있어 뜬다.

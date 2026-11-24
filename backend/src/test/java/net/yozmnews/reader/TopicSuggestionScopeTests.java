@@ -32,7 +32,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * 구독 제안의 사용자 격리 — 사용자 A 의 좋아요로 생긴 제안은 A 의 응답에만 있고 B 의 응답에는 없다. A 와 B 가 같은 주제에 같은 신호를 가진 뒤 A 가
  * 거절하면 A 의 제안에서만 빠진다. 세션 없이 401, 키가 없으면 403(키 관문)이다(docs/qa/test-strategy.md §13).
  * <p>
- * 지키는 규칙: user-R5 · user-R6 · reader-R12
+ * 지키는 규칙: account-R5 · account-R6 · reader-R12
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest

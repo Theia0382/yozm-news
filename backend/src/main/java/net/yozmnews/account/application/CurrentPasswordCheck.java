@@ -17,7 +17,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 세션 사용자의 현재 비밀번호 확인 — 비밀번호 변경 · 복구 코드 재발급이 함께 쓰는 정본. docs/specs/user.md §4 · user-R19
+ * 세션 사용자의 현재 비밀번호 확인 — 비밀번호 변경 · 복구 코드 재발급이 함께 쓰는 정본. docs/specs/account.md §4 · account-R19
  * <p>
  * 그 계정 이메일의 로그인 실패 기록에 걸어 대조한다 — 같은 비밀의 추측 예산이 로그인과 하나다. 대조 전에 자격 행을 잠가, 같은 계정의 다른 자격
  * 변경과 줄을 선 뒤의 해시로 대조한다. 부르는 쪽의 트랜잭션 안에서만 돈다.

@@ -31,7 +31,7 @@ import org.springframework.boot.test.system.OutputCaptureExtension;
  * Turnstile 검증기 — WireMock 을 siteverify 자리에 두고 요청 형태(폼 · 비밀 키 · 토큰 · 클라이언트 주소), 답의 판정, 닿지 못하는 갈래(5xx ·
  * 마감 · 본문 상한 · 연결 실패 · 리다이렉트), 로그에 토큰 · 비밀 키가 남지 않는지를 본다. 응답 본문은 Turnstile 서버 검증 문서의 모양이다.
  * <p>
- * 지키는 규칙: user-R41 · docs/security.md(비밀 값이 로그에 남지 않는다)
+ * 지키는 규칙: account-R33 · docs/security.md(비밀 값이 로그에 남지 않는다)
  */
 @ExtendWith(OutputCaptureExtension.class)
 class TurnstileHumanVerifierTests {

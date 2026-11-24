@@ -26,7 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 복구 코드로 비밀번호 재설정 — 로그인하지 않은 사람이 이메일 · 복구 코드 · 새 비밀번호를 낸다. 한 번의 시도가 트랜잭션 하나다.
- * docs/specs/user.md §4 · user-R30
+ * docs/specs/account.md §4 · account-R23
  * <p>
  * 새 비밀번호 규칙(이유를 알려도 계정 유무가 드러나지 않는다) → 제출된 이메일의 복구 실패 기록에 걸어 코드를 대조한다 — 계정이 없거나 쓰지 않거나
  * 코드가 없거나 읽을 수 없으면 더미 다이제스트와 같은 대조를 하고 거절한다(로그인과 같은 응답 규칙). 맞으면 비밀번호를 바꾸고(강제 변경도

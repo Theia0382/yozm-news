@@ -30,7 +30,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * 정리된 사용자 스토리라인 화면의 사용자 격리 — 사용자 A 의 정리는 A 의 목록에만 있고, B 의 세션으로 A 의 사용자 스토리라인 ID 를 부르면 없는
  * 것(404)이다. 같은 흐름의 다이제스트 항목도 자기 것만 본다. 세션 없이 401, 키가 없으면 403(키 관문)이다(docs/qa/test-strategy.md §13).
  * <p>
- * 지키는 규칙: user-R5 · user-R6 · docs/specs/reader.md 의 사용자 스토리라인 화면
+ * 지키는 규칙: account-R5 · account-R6 · docs/specs/reader.md 의 사용자 스토리라인 화면
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest

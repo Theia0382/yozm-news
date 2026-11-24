@@ -28,7 +28,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
  * 계정 · 자격 aggregate 의 저장 — 실제 PostgreSQL 에서 계정을 이메일로 찾고, 같은 이메일은 고유 제약이 막으며, 자격은 계정마다 하나이고 계정과 함께
  * 지워지며, 강제 변경 표시가 저장 · 읽기를 오가고 비밀번호를 바꾸면 풀린다.
  * <p>
- * 지키는 규칙: user-R13 · user-R16 · user-R29
+ * 지키는 규칙: account-R13 · account-R16 · account-R22
  */
 @DataJdbcTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)

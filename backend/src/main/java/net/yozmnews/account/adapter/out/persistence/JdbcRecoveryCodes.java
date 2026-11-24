@@ -11,7 +11,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
 /**
- * {@link RecoveryCodeRepository} 의 JdbcClient 구현 — docs/specs/user.md §4 · §6. 계정마다 한 행을 새 코드로 덮어쓴다.
+ * {@link RecoveryCodeRepository} 의 JdbcClient 구현 — docs/specs/account.md §4 · §6. 계정마다 한 행을 새 코드로 덮어쓴다.
  */
 @Repository
 class JdbcRecoveryCodes implements RecoveryCodeRepository {

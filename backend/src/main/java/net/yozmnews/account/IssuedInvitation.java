@@ -4,7 +4,7 @@ import java.time.Instant;
 import java.util.Objects;
 
 /**
- * 초대 발급의 결과 — 발급 · 메모가 너무 김. docs/specs/user.md §3
+ * 초대 발급의 결과 — 발급 · 메모가 너무 김. docs/specs/account.md §3
  */
 public sealed interface IssuedInvitation {
 

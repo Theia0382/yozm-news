@@ -4,7 +4,7 @@ import net.yozmnews.account.domain.humancheck.HumanCheckSetting;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 봇 차단 설정 — 화면이 로그인 · 복구 · 공개 가입 화면에 위젯을 띄울지 정한다. docs/specs/user.md §3 · user-R41
+ * 봇 차단 설정 — 화면이 로그인 · 복구 · 공개 가입 화면에 위젯을 띄울지 정한다. docs/specs/account.md §3 · account-R33
  *
  * @param provider 끔 · Turnstile
  * @param siteKey Turnstile 이면 위젯의 사이트 키(공개 값), 끔이면 null

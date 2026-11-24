@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 봇 차단 설정 조회 — docs/specs/user.md §3 · user-R41
+ * 봇 차단 설정 조회 — docs/specs/account.md §3 · account-R33
  */
 @WebRole
 @RestController
