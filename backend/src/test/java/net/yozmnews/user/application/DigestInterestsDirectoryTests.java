@@ -92,7 +92,7 @@ class DigestInterestsDirectoryTests {
 			.param("user", alice.value())
 			.update();
 		this.jdbc.sql("""
-				update user_settings set interest_text = '반도체 공급망', timezone = 'America/New_York',
+				update user_settings set timezone = 'America/New_York',
 				  candidate_volume = 'CUSTOM', candidate_count = 45, big_slots = 0, summary_length = 'SHORT',
 				  reasoning_effort = 'HIGH'
 				where user_id = :user
@@ -103,7 +103,7 @@ class DigestInterestsDirectoryTests {
 		assertThat(interests).isEqualTo(new DigestInterests(this.first,
 				List.of(new TopicSubscription("economy.markets", Set.of("economy.markets")),
 						new TopicSubscription("politics", POLITICS)),
-				Set.of("us"), Set.of("brief", "press-release"), Set.of(new SourceId(7)), "반도체 공급망",
+				Set.of("us"), Set.of("brief", "press-release"), Set.of(new SourceId(7)),
 				ZoneId.of("America/New_York"), 45, 0, SummaryLength.SHORT, ReasoningEffort.HIGH));
 	}
 
@@ -131,7 +131,7 @@ class DigestInterestsDirectoryTests {
 
 		assertThat(interests).isEqualTo(new DigestInterests(secondVersion,
 				List.of(new TopicSubscription("politics", POLITICS)), Set.of("nippon"),
-				Set.of("brief", "listicle", "press-release"), Set.of(), "", ZoneId.of("Asia/Seoul"), 40, 3,
+				Set.of("brief", "listicle", "press-release"), Set.of(), ZoneId.of("Asia/Seoul"), 40, 3,
 				SummaryLength.NORMAL, ReasoningEffort.MEDIUM));
 		assertThat(this.jdbc.sql("select tag_set_id from user_settings where user_id = :user")
 			.param("user", bob.value())
@@ -151,7 +151,7 @@ class DigestInterestsDirectoryTests {
 		DigestInterests interests = this.directory.interestsOf(carol).orElseThrow();
 
 		assertThat(interests).isEqualTo(new DigestInterests(this.first, List.of(), Set.of(),
-				Set.of("brief", "press-release"), Set.of(), "", ZoneId.of("Asia/Seoul"), 40, 3, SummaryLength.NORMAL,
+				Set.of("brief", "press-release"), Set.of(), ZoneId.of("Asia/Seoul"), 40, 3, SummaryLength.NORMAL,
 				ReasoningEffort.MEDIUM));
 		assertThat(count("user_settings", carol)).isZero();
 		assertThat(count("user_tag_preferences", carol)).isZero();

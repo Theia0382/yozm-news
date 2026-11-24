@@ -55,8 +55,6 @@ const SOURCES: InterestSources = {
 const SETTINGS: InterestSettings = {
   timezone: "Asia/Seoul",
   digestTime: "07:00",
-  interestText: "",
-  interestTextMax: 500,
   weeklyReport: true,
   weeklyReportDay: "MONDAY",
   monthlyReport: true,
@@ -287,24 +285,28 @@ describe("InterestsPage", () => {
 
   it("리포트 절에서 받은 변화 리포트 목록으로 잇는다", async () => {
     renderInterests({});
-    const schedule = await section("일정 · 관심사 · 변화 리포트");
+    const schedule = await section("일정 · 변화 리포트");
 
     expect(
       schedule.getByRole("link", { name: "받은 변화 리포트 보기" }),
     ).toHaveAttribute("href", "/reports");
   });
 
-  it("일정 · 관심사 · 리포트를 저장한다", async () => {
+  it("일정 · 리포트를 저장한다", async () => {
     const { server } = renderInterests({
       "PUT /api/interests/settings": () =>
-        json({ result: "SAVED", settings: SETTINGS, interestTextMax: null }),
+        json({ result: "SAVED", settings: SETTINGS }),
     });
     const user = userEvent.setup();
-    const schedule = await section("일정 · 관심사 · 변화 리포트");
+    const schedule = await section("일정 · 변화 리포트");
 
-    const text = await schedule.findByLabelText("자유 텍스트 관심사");
-    await user.type(text, "반도체");
-    expect(schedule.getByText(/^3 \/ 500자/)).toBeInTheDocument();
+    expect(await schedule.findByLabelText("시간대")).toHaveValue("Asia/Seoul");
+    expect(schedule.getByLabelText("다이제스트를 만드는 시각")).toHaveValue(
+      "07:00",
+    );
+    expect(
+      schedule.queryByLabelText("자유 텍스트 관심사"),
+    ).not.toBeInTheDocument();
     await user.selectOptions(
       schedule.getByLabelText("주간 리포트 요일"),
       "금요일",
@@ -313,17 +315,16 @@ describe("InterestsPage", () => {
       schedule.getByRole("checkbox", { name: "월간 변화 리포트 받기" }),
     );
     await user.click(
-      schedule.getByRole("button", { name: "일정 · 관심사 · 리포트 저장" }),
+      schedule.getByRole("button", { name: "일정 · 리포트 저장" }),
     );
 
     expect(await schedule.findByRole("status")).toHaveTextContent(
-      "일정 · 관심사 · 리포트를 저장했습니다.",
+      "일정 · 리포트를 저장했습니다.",
     );
     expect(bodiesOf(server, "PUT", "/api/interests/settings")).toEqual([
       {
         timezone: "Asia/Seoul",
         digestTime: "07:00",
-        interestText: "반도체",
         weeklyReport: true,
         weeklyReportDay: "FRIDAY",
         monthlyReport: false,
@@ -333,17 +334,8 @@ describe("InterestsPage", () => {
 
   it.each([
     [
-      "INTEREST_TEXT_TOO_LONG",
-      {
-        result: "INTEREST_TEXT_TOO_LONG",
-        settings: null,
-        interestTextMax: 500,
-      },
-      "관심사는 500자까지 적을 수 있습니다.",
-    ],
-    [
       "UNKNOWN_TIMEZONE",
-      { result: "UNKNOWN_TIMEZONE", settings: null, interestTextMax: null },
+      { result: "UNKNOWN_TIMEZONE", settings: null },
       "모르는 시간대입니다. Asia/Seoul 같은 시간대 이름을 적어 주세요.",
     ],
   ] as const)(
@@ -351,11 +343,11 @@ describe("InterestsPage", () => {
     async (_result, response, text) => {
       renderInterests({ "PUT /api/interests/settings": () => json(response) });
       const user = userEvent.setup();
-      const schedule = await section("일정 · 관심사 · 변화 리포트");
+      const schedule = await section("일정 · 변화 리포트");
 
       await user.click(
         await schedule.findByRole("button", {
-          name: "일정 · 관심사 · 리포트 저장",
+          name: "일정 · 리포트 저장",
         }),
       );
 

@@ -72,14 +72,13 @@ class InterestDefaultsTests {
 		long active = this.tagSets.activeTagSet().id().value();
 
 		Map<String, Object> row = this.jdbc.sql("""
-				select tag_set_id, timezone, digest_time, interest_text, llm_provider, llm_model, weekly_report,
+				select tag_set_id, timezone, digest_time, llm_provider, llm_model, weekly_report,
 				  weekly_report_day, monthly_report, updated_at, version
 				from user_settings where user_id = :user
 				""").param("user", user.value()).query().singleRow();
 		assertThat(row).containsEntry("tag_set_id", active)
 			.containsEntry("timezone", "Asia/Seoul")
 			.containsEntry("digest_time", Time.valueOf(LocalTime.of(7, 0)))
-			.containsEntry("interest_text", "")
 			.containsEntry("llm_provider", null)
 			.containsEntry("llm_model", null)
 			.containsEntry("weekly_report", true)

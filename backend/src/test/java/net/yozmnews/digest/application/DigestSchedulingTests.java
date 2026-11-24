@@ -226,10 +226,10 @@ class DigestSchedulingTests {
 				values (:email, '사용자', 'USER', 'ACTIVE', now(), 0) returning id
 				""").param("email", email).query(Long.class).single());
 		this.jdbc.sql("""
-				insert into user_settings (user_id, tag_set_id, timezone, digest_time, interest_text, weekly_report,
+				insert into user_settings (user_id, tag_set_id, timezone, digest_time, weekly_report,
 				    weekly_report_day, monthly_report, candidate_volume, big_slots, summary_length, reasoning_effort,
 				    updated_at, version)
-				values (:user, :tagSet, 'America/Denver', '03:17', '', true, 1, true, 'NORMAL', 3, 'NORMAL', 'MEDIUM',
+				values (:user, :tagSet, 'America/Denver', '03:17', true, 1, true, 'NORMAL', 3, 'NORMAL', 'MEDIUM',
 				    now(), 0)
 				""").param("user", user.value()).param("tagSet", this.tagSets.activeTagSet().id().value()).update();
 		if (withKey) {

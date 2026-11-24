@@ -25,7 +25,7 @@ import net.yozmnews.user.SummaryLength;
 public final class DigestInputs {
 
 	/** 고정 프로필 */
-	public static final DigestProfile PROFILE = new DigestProfile(List.of("정치"), List.of(), "",
+	public static final DigestProfile PROFILE = new DigestProfile(List.of("정치"), List.of(),
 			ZoneId.of("Asia/Seoul"), SummaryLength.NORMAL, ReasoningEffort.MEDIUM);
 
 	/** {@link #of} 가 주요 뉴스 항목으로 두는 앞 기사 수 — 나머지는 헤드라인 항목 */

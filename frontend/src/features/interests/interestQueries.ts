@@ -79,7 +79,7 @@ export function useInterestSources() {
   });
 }
 
-/** 일정 · 관심사 · 리포트 */
+/** 일정 · 리포트 */
 export function useInterestSettings() {
   const client = useApiClient();
   return useQuery({
