@@ -1,8 +1,10 @@
 package net.yozmnews.admin.adapter.in.web;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -72,9 +74,10 @@ class AdminEvaluationReviewController {
 			@Parameter(description = "시작일(yyyy-MM-dd)") @RequestParam String from,
 			@Parameter(description = "종료일(yyyy-MM-dd, 포함)") @RequestParam String to,
 			@Parameter(description = "날짜를 해석할 시간대(IANA ID)") @RequestParam String zone,
-			@Parameter(description = "거를 태그의 종류 — tag 와 함께") @RequestParam(required = false) @Nullable TagKind tagKind,
-			@Parameter(description = "거를 태그의 키 — 주제는 대분류 키 · 중분류 전체 키") @RequestParam(
-					required = false) @Nullable String tag,
+			@Parameter(description = "거를 태그 — {종류}:{키}(종류는 TOPIC · REGION · FORMAT, 주제 키는 대분류 키 · 중분류 전체 키). "
+					+ "여러 번 주거나 쉼표로 잇고, 고른 태그가 모두 맞는 평가만 낸다. 같은 태그는 한 번으로 세어 "
+					+ EvaluationReview.MAX_FILTER_TAGS + "개까지, 형식은 하나까지") @RequestParam(
+							required = false) @Nullable List<String> tags,
 			@Parameter(description = "거를 주제 판정") @RequestParam(required = false) @Nullable TopicStatus topicStatus,
 			@Parameter(description = "이어 받을 커서의 평가 시각(ISO-8601) — afterId 와 함께") @RequestParam(
 					required = false) @Nullable String afterEvaluatedAt,
@@ -83,14 +86,18 @@ class AdminEvaluationReviewController {
 			@Parameter(description = "한 번에 받을 수 — 없으면 " + DEFAULT_PAGE_SIZE) @RequestParam(required = false) @Nullable Integer limit) {
 		TagSetId id = AdminIds.tagSet(version);
 		EvaluationPeriod period = AdminPeriods.of(from, to, zone);
-		EvaluationFilter filter = new EvaluationFilter(tag(tagKind, tag), topicStatus);
+		EvaluationFilter filter = new EvaluationFilter(tags(tags), topicStatus);
 		EvaluationCursor after = cursor(afterEvaluatedAt, afterId);
 		return switch (this.review.list(id, period, filter, after, (limit != null) ? limit : DEFAULT_PAGE_SIZE)) {
 			case EvaluationListResult.Listed listed ->
 				EvaluationListResponse.of(listed.listing(), rows(listed.listing().rows()));
 			case EvaluationListResult.UnknownVersion unknown -> throw AdminIds.unknownTagSet(version);
-			case EvaluationListResult.UnknownTag unknown -> throw badRequest(
-					"그 태그 체계 버전에 없는 태그다: " + unknown.tag().kind() + " " + unknown.tag().key());
+			case EvaluationListResult.UnknownTags unknown -> throw badRequest("그 태그 체계 버전에 없는 태그다: "
+					+ unknown.tags().stream().map(tag -> tag.kind() + " " + tag.key()).collect(Collectors.joining(", ")));
+			case EvaluationListResult.TooManyTags tooMany ->
+				throw badRequest("태그는 " + EvaluationReview.MAX_FILTER_TAGS + "개까지 고른다");
+			case EvaluationListResult.MultipleFormats multiple ->
+				throw badRequest("형식 태그는 하나만 고른다 — 대표 형식은 평가마다 하나다");
 			case EvaluationListResult.LimitOutOfRange outOfRange ->
 				throw badRequest("한 번에 " + EvaluationReview.MAX_PAGE_SIZE + "건까지 본다");
 		};
@@ -143,11 +150,28 @@ class AdminEvaluationReviewController {
 		return rows.stream().map(row -> EvaluationRowResponse.of(row, summaries.get(row.articleId()))).toList();
 	}
 
-	private static @Nullable TagRef tag(@Nullable TagKind kind, @Nullable String key) {
-		if ((kind == null) != (key == null)) {
-			throw badRequest("tagKind 와 tag 는 함께 준다");
+	/** 받은 값마다 쉼표로 나눠 읽는다 — 스프링은 값이 하나일 때만 쉼표로 나눈다. 태그 키에는 쉼표가 없다(tag-R6) */
+	private static List<TagRef> tags(@Nullable List<String> values) {
+		if (values == null) {
+			return List.of();
 		}
-		return (kind == null) ? null : new TagRef(kind, Objects.requireNonNull(key));
+		return values.stream()
+			.flatMap(value -> Arrays.stream(value.split(",", -1)))
+			.map(AdminEvaluationReviewController::tag)
+			.toList();
+	}
+
+	/** {@code {종류}:{키}} 를 읽는다 — 키가 그 버전에 있는지는 공개 API 가 판정한다 */
+	private static TagRef tag(String value) {
+		int separator = value.indexOf(':');
+		String kind = (separator < 0) ? "" : value.substring(0, separator);
+		String key = value.substring(separator + 1);
+		return Arrays.stream(TagKind.values())
+			.filter(candidate -> candidate.name().equals(kind))
+			.findFirst()
+			.filter(found -> !key.isEmpty())
+			.map(found -> new TagRef(found, key))
+			.orElseThrow(() -> badRequest("거를 태그는 {종류}:{키} 형식이다: " + value));
 	}
 
 	private static @Nullable EvaluationCursor cursor(@Nullable String evaluatedAt, @Nullable Long id) {

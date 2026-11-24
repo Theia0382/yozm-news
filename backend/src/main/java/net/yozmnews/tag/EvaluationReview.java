@@ -15,6 +15,9 @@ public interface EvaluationReview {
 	/** 목록 한 번에 받는 평가 수의 상한 — 정본이다 */
 	int MAX_PAGE_SIZE = 50;
 
+	/** 목록 거르기의 태그 수 상한 — 같은 태그는 한 번으로 센다. 정본이다 */
+	int MAX_FILTER_TAGS = 10;
+
 	/** 표본 크기의 기본값 — 정본이다 */
 	int DEFAULT_SAMPLE_SIZE = 100;
 
