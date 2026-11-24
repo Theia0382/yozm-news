@@ -828,6 +828,11 @@ class EvaluationFlowTests {
 		}
 
 		@Override
+		public List<net.yozmnews.tag.domain.result.ListedEvaluation> findListedByArticle(ArticleId articleId) {
+			return this.delegate.findListedByArticle(articleId);
+		}
+
+		@Override
 		public Optional<net.yozmnews.tag.domain.result.StoredEvaluationDetail> findDetail(
 				net.yozmnews.tag.EvaluationId id) {
 			return this.delegate.findDetail(id);

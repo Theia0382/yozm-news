@@ -6,8 +6,12 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
+import net.yozmnews.article.ArticleId;
 import net.yozmnews.evaluation.EventJudgementId;
+import net.yozmnews.event.ArticleAssignment;
+import net.yozmnews.event.ArticleKeyTerms;
 import net.yozmnews.event.AssignmentCriteria;
 import net.yozmnews.event.EventId;
 import net.yozmnews.event.EventReview;
@@ -28,12 +32,18 @@ class FakeEventReview implements EventReview {
 
 	final Map<EventJudgementId, JudgementUse> uses = new LinkedHashMap<>();
 
+	final Map<ArticleId, ArticleAssignment> assignments = new LinkedHashMap<>();
+
+	final Map<ArticleId, List<ArticleKeyTerms>> keyTerms = new LinkedHashMap<>();
+
 	final List<String> calls = new ArrayList<>();
 
 	void reset() {
 		this.criteria = new AssignmentCriteria(Duration.ofHours(72), 0.8, 0.55, 0.4, 0.5);
 		this.merged.clear();
 		this.uses.clear();
+		this.assignments.clear();
+		this.keyTerms.clear();
 		this.calls.clear();
 	}
 
@@ -60,6 +70,18 @@ class FakeEventReview implements EventReview {
 			}
 		});
 		return found;
+	}
+
+	@Override
+	public Optional<ArticleAssignment> assignmentOf(ArticleId articleId) {
+		this.calls.add("assignmentOf " + articleId.value());
+		return Optional.ofNullable(this.assignments.get(articleId));
+	}
+
+	@Override
+	public List<ArticleKeyTerms> keyTermsOf(ArticleId articleId) {
+		this.calls.add("keyTermsOf " + articleId.value());
+		return this.keyTerms.getOrDefault(articleId, List.of());
 	}
 
 	/** 운영자 API 슬라이스에 대역을 싣는다 */

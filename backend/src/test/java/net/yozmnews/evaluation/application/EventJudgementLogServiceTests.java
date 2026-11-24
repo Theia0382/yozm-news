@@ -7,6 +7,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.evaluation.EventJudgementCursor;
@@ -22,7 +23,7 @@ import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 /**
- * 판정 원본 목록의 쪽 — 한 건 더 읽어 다음 쪽을 알고, 쪽 크기 범위를 거부한다.
+ * 판정 원본 목록의 쪽 — 한 건 더 읽어 다음 쪽을 알고, 쪽 크기 범위를 거부한다. ID 로 찾기는 저장소에 맡긴다.
  * <p>
  * 지키는 규칙: evaluation-R39
  */
@@ -73,6 +74,15 @@ class EventJudgementLogServiceTests {
 				"2026-11-01T00:00:00Z ~ 2026-11-08T00:00:00Z after null/null limit 101");
 	}
 
+	@Test
+	void findsOneJudgementThroughTheRepository() {
+		this.rows.answer = List.of(view(9, "2026-11-05T03:00:00Z"));
+
+		assertThat(this.log.find(new EventJudgementId(9))).contains(view(9, "2026-11-05T03:00:00Z"));
+		assertThat(this.log.find(new EventJudgementId(8))).isEmpty();
+		assertThat(this.rows.calls).containsExactly("find 9", "find 8");
+	}
+
 	private static EventJudgementView view(long id, String judgedAt) {
 		return new EventJudgementView(new EventJudgementId(id), new ArticleId(5),
 				List.of(new JudgedEvent(12, List.of(new ArticleId(3)), 0.83)), "jev", "jev-1.14.0", "membership-1", 812,
@@ -96,6 +106,12 @@ class EventJudgementLogServiceTests {
 				@Nullable Long afterId, int limit) {
 			this.calls.add(from + " ~ " + to + " after " + afterJudgedAt + "/" + afterId + " limit " + limit);
 			return this.answer;
+		}
+
+		@Override
+		public Optional<EventJudgementView> find(EventJudgementId id) {
+			this.calls.add("find " + id.value());
+			return this.answer.stream().filter(view -> view.id().equals(id)).findFirst();
 		}
 
 		@Override

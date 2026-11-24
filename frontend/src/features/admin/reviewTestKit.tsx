@@ -132,6 +132,7 @@ export function detail(
       title: `기사 ${id}`,
       summary: "<b>요약</b> 원문",
       canonicalUrl,
+      publishedAt: "2026-10-31T00:00:00Z",
       entries: [
         { sourceName: "한겨레", section: "정치", categories: ["국회"] },
       ],

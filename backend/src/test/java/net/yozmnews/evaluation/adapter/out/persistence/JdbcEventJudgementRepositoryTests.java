@@ -21,7 +21,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 /**
- * 사건 소속 판정 원본 저장소 — 행 · {@code jsonb} 쓰기, 기간 읽기, 지운 기사 따르기를 Flyway 가 적용된 실제 PostgreSQL 에서 본다. 테스트는
+ * 사건 소속 판정 원본 저장소 — 행 · {@code jsonb} 쓰기, 기간 읽기, ID 로 읽기, 지운 기사 따르기를 Flyway 가 적용된 실제 PostgreSQL 에서 본다. 테스트는
  * 테스트 트랜잭션 안에서 돈다.
  * <p>
  * 지키는 규칙: evaluation-R38 · evaluation-R39 · evaluation-R44
@@ -128,6 +128,23 @@ class JdbcEventJudgementRepositoryTests {
 		assertThat(first).extracting(EventJudgementView::id).containsExactly(b, a);
 		assertThat(second).extracting(EventJudgementView::id).containsExactly(c);
 		assertThat(withinTheSameTime).extracting(EventJudgementView::id).containsExactly(a, c);
+	}
+
+	@Test
+	void findsOneJudgementByIdAndNothingForAnUnknownOrDeletedId() {
+		EventJudgementId kept = this.repository.insert(record(5,
+				List.of(new JudgedEvent(15, List.of(new ArticleId(7)), 0.07),
+						new JudgedEvent(12, List.of(new ArticleId(3), new ArticleId(4)), 0.83))));
+		EventJudgementId deleted = this.repository
+			.insert(record(6, List.of(new JudgedEvent(12, List.of(new ArticleId(3)), 0.5))));
+		this.repository.deleteByArticles(List.of(new ArticleId(6)));
+
+		assertThat(this.repository.find(kept)).contains(new EventJudgementView(kept, new ArticleId(5),
+				List.of(new JudgedEvent(15, List.of(new ArticleId(7)), 0.07),
+						new JudgedEvent(12, List.of(new ArticleId(3), new ArticleId(4)), 0.83)),
+				"jev", "jev-1.14.0", "membership-1", 812, AT));
+		assertThat(this.repository.find(deleted)).isEmpty();
+		assertThat(this.repository.find(new EventJudgementId(deleted.value() + 1_000))).isEmpty();
 	}
 
 	@Test

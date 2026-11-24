@@ -34,6 +34,7 @@ import net.yozmnews.tag.TagSetAdministration;
 import net.yozmnews.tag.TagSetDirectory;
 import net.yozmnews.tag.TagSetId;
 import net.yozmnews.tag.TopicStatus;
+import net.yozmnews.tag.VersionedEvaluationRow;
 import net.yozmnews.tag.domain.result.EvaluationRecord;
 import net.yozmnews.tag.domain.result.EvaluationResultRepository;
 import net.yozmnews.tag.domain.result.StoredTag;
@@ -50,7 +51,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 평가 검수 — 실제 PostgreSQL 에 넣은 평가 행을 결선된 서비스로 목록 · 표본 · 상세로 읽는다. 기본 체계(버전 1, 처음 기준 0.5 / 0.1)를 쓰고,
+ * 평가 검수 — 실제 PostgreSQL 에 넣은 평가 행을 결선된 서비스로 목록 · 표본 · 상세 · 기사의 평가로 읽는다. 기본 체계(버전 1, 처음 기준 0.5 / 0.1)를 쓰고,
  * 테스트마다 평가 행 · 버전 · 기준을 처음으로 되돌린다. 기사 행은 없다 — 평가는 기사 ID 만 가리킨다.
  * <p>
  * 기간 안 버전 1 평가 넷(평가 시각 순): ① 기사 1 — 행정부 0.8 · 국회 0.4(저장됐지만 태그 기준 아래) · 국내 0.9, TAGGED ② 기사 2 — 금융
@@ -343,16 +344,45 @@ class EvaluationReviewTests {
 	}
 
 	@Test
+	void anArticlesEvaluationsAreOnePerVersionNewestVersionFirstEachJudgedByItsVersion() {
+		TagSetId second = this.directory.activeTagSet().id();
+		insert(second, 1, Instant.parse("2026-11-04T01:00:00Z"), "opinion", 0.6, OPINION,
+				List.of(topic("politics.executive", 0.3), region("us", 0.6)));
+
+		List<VersionedEvaluationRow> rows = this.review.ofArticle(new ArticleId(1));
+
+		assertThat(rows).extracting(VersionedEvaluationRow::version, VersionedEvaluationRow::versionNumber)
+			.containsExactly(tuple(second, 2), tuple(this.first, 1));
+		EvaluationRow latest = rows.getFirst().evaluation();
+		assertThat(latest.articleId()).isEqualTo(new ArticleId(1));
+		assertThat(latest.evaluatedAt()).isEqualTo(Instant.parse("2026-11-04T01:00:00Z"));
+		// 저장된 주제 행이 태그 기준 아래라 버전 2 의 판정은 낮은 확신이다
+		assertThat(latest.topicStatus()).isEqualTo(TopicStatus.LOW_CONFIDENCE);
+		assertThat(latest.regions()).containsExactly(new NamedTag("us", "미국", 0.6));
+		assertThat(latest.format()).isEqualTo(new NamedTag("opinion", "오피니언·칼럼", 0.6));
+		EvaluationRow earlier = rows.get(1).evaluation();
+		assertThat(earlier.id()).isEqualTo(evaluationOf(1, this.first));
+		assertThat(earlier.topicStatus()).isEqualTo(TopicStatus.TAGGED);
+		assertThat(earlier.topics()).containsExactly(new NamedTag("politics.executive", "대통령실·행정부", 0.8));
+	}
+
+	@Test
+	void anArticleWithoutEvaluationsHasNone() {
+		assertThat(this.review.ofArticle(new ArticleId(999_999))).isEmpty();
+	}
+
+	@Test
 	void theReviewReadsInOneReadOnlyRepeatableReadTransaction() {
 		// 대조: 검수 밖에서 읽으면 이 기록 수단이 기본 격리 수준 · 쓰기 가능을 적는다
 		this.thresholds.current(this.first);
 		listed(EvaluationFilter.NONE, null, 10);
 		sampled(42, 10);
 		this.review.detail(evaluationOf(1)).orElseThrow();
+		this.review.ofArticle(new ArticleId(1));
 
 		Map<String, String> snapshot = Map.of("isolation", "repeatable read", "readOnly", "on");
 		assertThat(this.settings.seen).containsExactly(Map.of("isolation", "read committed", "readOnly", "off"),
-				snapshot, snapshot, snapshot);
+				snapshot, snapshot, snapshot, snapshot);
 	}
 
 	private EvaluationListing listed(EvaluationFilter filter, EvaluationCursor after,
@@ -371,6 +401,15 @@ class EvaluationReviewTests {
 	private EvaluationId evaluationOf(long article) {
 		return new EvaluationId(this.jdbc.sql("select id from article_evaluations where article_id = :article")
 			.param("article", article)
+			.query(Long.class)
+			.single());
+	}
+
+	private EvaluationId evaluationOf(long article, TagSetId version) {
+		return new EvaluationId(this.jdbc
+			.sql("select id from article_evaluations where article_id = :article and tag_set_id = :version")
+			.param("article", article)
+			.param("version", version.value())
 			.query(Long.class)
 			.single());
 	}
