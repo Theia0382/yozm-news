@@ -59,7 +59,7 @@ import { NARROW_WIDTH, PAGE_FRAME } from "@/shared/ui/widths";
 type Message = { tone: "status" | "alert"; text: string };
 
 /**
- * 관심 설정 — 주제 구독 · 지역 · 형식 제외, 제외 소스, 일정 · 관심사 · 변화 리포트, 다이제스트 분량, 모델. 절마다 저장한다. 키가 없어도 쓰고, 모델 절만
+ * 관심 설정 — 주제 구독 · 지역 · 형식 제외, 제외 소스, 일정 · 변화 리포트, 다이제스트 분량, 모델. 절마다 저장한다. 키가 없어도 쓰고, 모델 절만
  * 키 등록을 안내한다(docs/specs/account.md §3 · account-R5). 주소에 절의 id(`#interest-model` 등)가 있으면 조회가 모두 끝난 뒤 그 절로 내려간다.
  */
 export function InterestsPage() {
@@ -423,7 +423,7 @@ function ScheduleSection() {
   const settings = useInterestSettings();
   const [message, setMessage] = useState<Message | null>(null);
   return (
-    <Section id="interest-schedule" title="일정 · 관심사 · 변화 리포트">
+    <Section id="interest-schedule" title="일정 · 변화 리포트">
       {settings.isPending && <p className="text-muted-foreground">읽는 중…</p>}
       {settings.isError && <p role="alert">설정을 읽지 못했습니다.</p>}
       {settings.data && (
@@ -445,12 +445,10 @@ function ScheduleForm({ data, setMessage }: FormProps<InterestSettings>) {
   const queryClient = useQueryClient();
   const [timezone, setTimezone] = useState(data.timezone);
   const [digestTime, setDigestTime] = useState(data.digestTime);
-  const [interestText, setInterestText] = useState(data.interestText);
   const [weeklyReport, setWeeklyReport] = useState(data.weeklyReport);
   const [weeklyReportDay, setWeeklyReportDay] = useState(data.weeklyReportDay);
   const [monthlyReport, setMonthlyReport] = useState(data.monthlyReport);
   const [busy, setBusy] = useState(false);
-  const length = [...interestText.trim()].length;
 
   function save(event: FormEvent) {
     event.preventDefault();
@@ -461,7 +459,6 @@ function ScheduleForm({ data, setMessage }: FormProps<InterestSettings>) {
           body: {
             timezone,
             digestTime,
-            interestText,
             weeklyReport,
             weeklyReportDay,
             monthlyReport,
@@ -478,17 +475,12 @@ function ScheduleForm({ data, setMessage }: FormProps<InterestSettings>) {
           });
           return {
             tone: "status",
-            text: "일정 · 관심사 · 리포트를 저장했습니다.",
+            text: "일정 · 리포트를 저장했습니다.",
           };
         case "UNKNOWN_TIMEZONE":
           return {
             tone: "alert",
             text: "모르는 시간대입니다. Asia/Seoul 같은 시간대 이름을 적어 주세요.",
-          };
-        case "INTEREST_TEXT_TOO_LONG":
-          return {
-            tone: "alert",
-            text: `관심사는 ${saved.interestTextMax ?? data.interestTextMax}자까지 적을 수 있습니다.`,
           };
       }
       const unknown: never = saved.result;
@@ -523,23 +515,6 @@ function ScheduleForm({ data, setMessage }: FormProps<InterestSettings>) {
           className="w-full rounded-md border border-input bg-background px-2 py-1"
         />
       </label>
-      <div className="space-y-1">
-        <label className="block space-y-1">
-          <span className="text-sm">자유 텍스트 관심사</span>
-          <textarea
-            name="interestText"
-            rows={3}
-            value={interestText}
-            aria-describedby="interest-text-help"
-            onChange={(event) => setInterestText(event.target.value)}
-            className="w-full rounded-md border border-input bg-background px-2 py-1"
-          />
-        </label>
-        <p id="interest-text-help" className="text-sm text-muted-foreground">
-          {length} / {data.interestTextMax}자 — LLM 공급자에게 보내는 프롬프트에
-          들어갑니다.
-        </p>
-      </div>
       <CheckField
         label="주간 변화 리포트 받기"
         checked={weeklyReport}
@@ -569,7 +544,7 @@ function ScheduleForm({ data, setMessage }: FormProps<InterestSettings>) {
         onChange={setMonthlyReport}
       />
       <Button type="submit" disabled={busy}>
-        일정 · 관심사 · 리포트 저장
+        일정 · 리포트 저장
       </Button>
     </form>
   );

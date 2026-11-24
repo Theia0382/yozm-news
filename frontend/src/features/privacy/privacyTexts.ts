@@ -13,7 +13,7 @@ export const COLLECTED_ITEMS: readonly string[] = [
 
 /** 다이제스트를 만들 때 쓸 모델의 공급자로 가는 것 */
 export const DIGEST_TRANSFER_ITEMS: readonly string[] = [
-  "구독 주제, 지역 선호, 자유 텍스트 관심사",
+  "구독 주제, 지역 선호",
   "시간대 — 기사의 발행 시각을 그 시간대로 적습니다",
   "요약 길이",
   "다이제스트 항목(주요 뉴스 · 헤드라인)마다 사건으로 묶인 표본 기사의 정보(제목 · 요약문 · 출처 · 발행 시각 · 주제 · 지역)",

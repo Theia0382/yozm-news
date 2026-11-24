@@ -63,9 +63,7 @@ describe("PrivacyPage", () => {
     expect(
       transfer.getByText(/받은 데이터를 학습에 쓰는 공급자로는 보내지 않지만/),
     ).toBeInTheDocument();
-    expect(
-      transfer.getByText("구독 주제, 지역 선호, 자유 텍스트 관심사"),
-    ).toBeInTheDocument();
+    expect(transfer.getByText("구독 주제, 지역 선호")).toBeInTheDocument();
     expect(
       transfer.getByText("시간대 — 기사의 발행 시각을 그 시간대로 적습니다"),
     ).toBeInTheDocument();

@@ -103,9 +103,7 @@ describe("KeysPage", () => {
     expect(
       transfer.getByText(/OpenRouter를 거쳐, 그 모델을 만든 회사나/),
     ).toBeInTheDocument();
-    expect(
-      transfer.getByText("구독 주제, 지역 선호, 자유 텍스트 관심사"),
-    ).toBeInTheDocument();
+    expect(transfer.getByText("구독 주제, 지역 선호")).toBeInTheDocument();
     expect(
       transfer.getByText("시간대 — 기사의 발행 시각을 그 시간대로 적습니다"),
     ).toBeInTheDocument();
