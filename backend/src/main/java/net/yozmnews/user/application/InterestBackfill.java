@@ -16,8 +16,8 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 기존 계정 채우기 — 설정 행이 없는 계정에 관심 설정 기본값을 넣는다 — docs/specs/user.md §4 · user-R44
  * <p>
  * 기동 단계({@link UserStartup#PHASE})에서 두 역할 공통으로 돈다 — 활성 태그 체계를 읽으므로 첫 기동 적재 뒤다. 대상은 설정 행으로만 고른다 —
- * 형식 제외 행이 없는 계정은 사용자가 모두 풀었을 수 있다. 계정 ID 순 묶음으로 읽어 계정마다 트랜잭션 하나로 쓴다. 동시에 뜬 프로세스 · 가입과
- * 겹쳐도 설정 행을 없을 때만 넣으므로 한 번이다. 한 계정의 실패는 기동을 멈춘다.
+ * 형식 제외 행이 없는 계정은 사용자가 모두 풀었을 수 있다. 계정 ID 순 묶음으로 읽어 계정마다 트랜잭션 하나로 쓴다. 동시에 뜬 프로세스 · 계정 생김
+ * 리스너와 겹쳐도 설정 행을 없을 때만 넣으므로 한 번이다. 한 계정의 실패는 기동을 멈춘다.
  */
 @Component
 class InterestBackfill implements SmartLifecycle {

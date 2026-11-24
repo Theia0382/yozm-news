@@ -23,8 +23,7 @@ import org.springframework.stereotype.Component;
  * 두 역할 공통이다. 판정 · 생성은 advisory 잠금 안의 트랜잭션 하나라 함께 기동한 프로세스들이 줄을 서 하나만 만들고, 나중 프로세스는 운영자를
  * 보고 값이 남았다고 경고한다. 로그 · 기동 실패 문구에 비밀번호를 싣지 않는다.
  * <p>
- * 기동 단계({@link UserStartup#PHASE})에서 돈다 — 계정을 만들 때 활성 태그 체계를 읽으므로 첫 기동 적재(모든
- * {@code SmartInitializingSingleton}) 뒤이고 웹 서버 앞이다(user-R44). 기동 거부는 앱을 띄우지 않는다.
+ * 기동 단계({@link AccountStartup#PHASE})에서 돈다 — 웹 서버가 요청을 받기 전이다(account-R27). 기동 거부는 앱을 띄우지 않는다.
  */
 @Component
 @EnableConfigurationProperties(FirstAdminProperties.class)
@@ -74,7 +73,7 @@ class FirstAdminBootstrap implements SmartLifecycle {
 
 	@Override
 	public int getPhase() {
-		return UserStartup.PHASE;
+		return AccountStartup.PHASE;
 	}
 
 	/**

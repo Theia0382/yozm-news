@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.Map;
 
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.user.AccountCreatedEvents;
 import net.yozmnews.user.domain.bootstrap.FirstAdminDecision;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,6 +38,7 @@ class FirstAdminSettingTests {
 	@BeforeEach
 	@AfterEach
 	void reset() {
+		AccountCreatedEvents.awaitHandled(this.jdbc);
 		this.jdbc.sql("delete from users").update();
 	}
 

@@ -15,6 +15,7 @@ import net.yozmnews.tag.TagSetActivationResult;
 import net.yozmnews.tag.TagSetAdministration;
 import net.yozmnews.tag.TagSetDirectory;
 import net.yozmnews.tag.TagSetId;
+import net.yozmnews.user.AccountCreatedEvents;
 import net.yozmnews.user.TopicSubscriptionAction;
 import net.yozmnews.user.TopicSubscriptionCause;
 import net.yozmnews.user.TopicSubscriptionChange;
@@ -180,6 +181,7 @@ class TopicSubscriptionHistoryServiceTests {
 				EmailAddress.parse(email).orElseThrow(), new DisplayName("사용자"),
 				PasswordPolicy.normalize("correct horse battery"), NOW));
 		assertThat(result).isInstanceOf(ProvisionResult.Created.class);
+		AccountCreatedEvents.awaitHandled(this.jdbc);
 		return ((ProvisionResult.Created) result).user();
 	}
 

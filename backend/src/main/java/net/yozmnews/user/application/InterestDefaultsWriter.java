@@ -17,7 +17,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 관심 설정 기본값 쓰기의 정본 — 계정을 만드는 정본 · 기존 계정 채우기 · 관심 설정 유스케이스가 부른다 — docs/specs/user.md §4 · user-R43
+ * 관심 설정 기본값 쓰기의 정본 — 계정 생김 리스너 · 기존 계정 채우기 · 관심 설정 유스케이스가 부른다 — docs/specs/user.md §4 · user-R43
  * <p>
  * 선호 버전 울타리의 공유 잠금 → 그 순간의 활성 태그 체계 → 설정 행(기본값 · 선호 버전 = 활성 버전)과 활성 버전에서 기본 제외인 형식 전부의
  * 제외(이력 원인 {@code ONBOARDING}). 설정 행이 이미 있으면 아무것도 쓰지 않는다. 코드는 특정 형식 키를 알지 않는다 — 기본 제외는 체계 데이터다.

@@ -11,6 +11,7 @@ import java.util.Map;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.tag.TagSetDirectory;
+import net.yozmnews.user.AccountCreatedEvents;
 import net.yozmnews.user.domain.account.DisplayName;
 import net.yozmnews.user.domain.account.EmailAddress;
 import net.yozmnews.user.domain.account.Onboarding;
@@ -28,10 +29,11 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 관심 설정 기본값 — 계정을 만드는 길 넷 모두 같은 트랜잭션에서 설정 행(기본값 · 선호 버전 = 활성 버전)과 기본 제외 형식의 제외(이력 원인
- * ONBOARDING)를 얻는다. 같은 이메일이면 아무것도 쓰지 않고, 설정 행이 있으면 다시 쓰지 않는다. 실제 PostgreSQL 과 기동 때 적재된 기본 체계로 본다.
+ * 관심 설정 기본값 — 계정을 만드는 길 넷 모두 계정 생김을 받은 리스너가 커밋 뒤 설정 행(기본값 · 선호 버전 = 활성 버전)과 기본 제외 형식의
+ * 제외(이력 원인 ONBOARDING)를 쓴다. 같은 이메일이면 아무것도 쓰지 않고, 설정 행이 있으면 다시 쓰지 않는다. 실제 PostgreSQL 과 기동 때 적재된
+ * 기본 체계로 본다.
  * <p>
- * 지키는 규칙: user-R28 · user-R43 · user-R45
+ * 지키는 규칙: user-R43 · user-R45 · account-R35
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -58,6 +60,7 @@ class InterestDefaultsTests {
 	@BeforeEach
 	@AfterEach
 	void reset() {
+		AccountCreatedEvents.awaitHandled(this.jdbc);
 		this.jdbc.sql("delete from users").update();
 	}
 
@@ -124,6 +127,7 @@ class InterestDefaultsTests {
 				EmailAddress.parse(email).orElseThrow(), new DisplayName("사용자"),
 				PasswordPolicy.normalize("correct horse battery"), NOW));
 		assertThat(result).isInstanceOf(ProvisionResult.Created.class);
+		AccountCreatedEvents.awaitHandled(this.jdbc);
 		return ((ProvisionResult.Created) result).user();
 	}
 

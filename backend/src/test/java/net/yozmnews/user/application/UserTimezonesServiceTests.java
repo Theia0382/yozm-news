@@ -8,6 +8,7 @@ import java.time.ZoneId;
 
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.platform.UserId;
+import net.yozmnews.user.AccountCreatedEvents;
 import net.yozmnews.user.DigestScheduleEntry;
 import net.yozmnews.user.UserDigestSchedules;
 import net.yozmnews.user.UserTimezones;
@@ -99,6 +100,7 @@ class UserTimezonesServiceTests {
 				EmailAddress.parse(email).orElseThrow(), new DisplayName("사용자"),
 				PasswordPolicy.normalize("correct horse battery"), NOW));
 		assertThat(result).isInstanceOf(ProvisionResult.Created.class);
+		AccountCreatedEvents.awaitHandled(this.jdbc);
 		return ((ProvisionResult.Created) result).user();
 	}
 

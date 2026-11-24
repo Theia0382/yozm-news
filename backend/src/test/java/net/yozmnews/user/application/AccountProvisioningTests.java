@@ -7,9 +7,12 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.platform.UserId;
+import net.yozmnews.user.AccountCreated;
+import net.yozmnews.user.AccountCreatedEvents;
 import net.yozmnews.user.domain.account.DisplayName;
 import net.yozmnews.user.domain.account.EmailAddress;
 import net.yozmnews.user.domain.account.Onboarding;
@@ -21,21 +24,30 @@ import net.yozmnews.user.domain.secret.SecretDigest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.event.ApplicationEvents;
+import org.springframework.test.context.event.RecordApplicationEvents;
 import org.springframework.transaction.IllegalTransactionStateException;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * 계정을 만드는 정본 — 한 트랜잭션에서 계정 · 자격(· 복구 코드)을 함께 만들고, 길마다 역할 · 강제 변경 · 복구 코드가 갈리며, 같은 이메일이면
- * 아무것도 쓰지 않는다. 실제 PostgreSQL 에서 본다.
+ * 아무것도 쓰지 않는다. 계정을 만든 트랜잭션에서 계정 생김을 하나 내고, 그 트랜잭션은 관심 설정을 쓰지 않는다. 실제 PostgreSQL 에서 본다.
  * <p>
- * 지키는 규칙: user-R13 · user-R15 · user-R16 · user-R28 · user-R30
+ * 지키는 규칙: user-R13 · user-R15 · user-R16 · user-R28 · user-R30 · account-R35
  */
-@Import(TestcontainersConfiguration.class)
+@Import({ TestcontainersConfiguration.class, AccountProvisioningTests.CommitProbe.class })
+@RecordApplicationEvents
 @SpringBootTest
 @TestPropertySource(properties = "jobrunr.background-job-server.enabled=false")
 class AccountProvisioningTests {
@@ -62,9 +74,13 @@ class AccountProvisioningTests {
 	@Autowired
 	JdbcClient jdbc;
 
+	@Autowired
+	SettingsBeforeCommit settingsBeforeCommit;
+
 	@BeforeEach
 	@AfterEach
 	void reset() {
+		AccountCreatedEvents.awaitHandled(this.jdbc);
 		this.jdbc.sql("delete from users").update();
 	}
 
@@ -148,6 +164,26 @@ class AccountProvisioningTests {
 					new DisplayName("에린"), PasswordPolicy.normalize(PASSWORD), NOW));
 	}
 
+	@ParameterizedTest
+	@EnumSource(Onboarding.class)
+	void everyWayPublishesOneAccountCreatedAndWritesNoSettingsRowInItsTransaction(Onboarding onboarding,
+			ApplicationEvents events) {
+		UserId user = created(provision(onboarding, onboarding.name().toLowerCase() + "@example.com", "사용자")).user();
+
+		assertThat(events.stream(AccountCreated.class)).containsExactly(new AccountCreated(user, NOW));
+		assertThat(this.settingsBeforeCommit.rows.get(user)).as("계정을 만든 트랜잭션이 커밋하기 직전의 설정 행 수").isZero();
+	}
+
+	@Test
+	void theSameEmailPublishesNothing(ApplicationEvents events) {
+		created(provision(Onboarding.OPEN_SIGN_UP, "judy@example.com", "주디"));
+		long afterFirst = events.stream(AccountCreated.class).count();
+
+		assertThat(provision(Onboarding.OPERATOR, "judy@example.com", "주디")).isInstanceOf(ProvisionResult.EmailTaken.class);
+		assertThat(events.stream(AccountCreated.class)).as("같은 이메일의 두 번째 만들기가 더한 계정 생김")
+			.hasSize((int) afterFirst);
+	}
+
 	@Test
 	void refusesAPasswordThatBreaksTheRules() {
 		assertThatIllegalArgumentException().isThrownBy(() -> this.transaction
@@ -182,6 +218,37 @@ class AccountProvisioningTests {
 			.param("id", user.value())
 			.query(byte[].class)
 			.single();
+	}
+
+	/** 계정 생김을 낸 트랜잭션이 커밋하기 직전, 그 트랜잭션 안에서 본 그 사용자의 설정 행 수 */
+	static final class SettingsBeforeCommit {
+
+		final Map<UserId, Long> rows = new ConcurrentHashMap<>();
+
+		private final JdbcClient jdbc;
+
+		SettingsBeforeCommit(JdbcClient jdbc) {
+			this.jdbc = jdbc;
+		}
+
+		@TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
+		public void on(AccountCreated created) {
+			this.rows.put(created.user(), this.jdbc.sql("select count(*) from user_settings where user_id = :user")
+				.param("user", created.user().value())
+				.query(Long.class)
+				.single());
+		}
+
+	}
+
+	@TestConfiguration(proxyBeanMethods = false)
+	static class CommitProbe {
+
+		@Bean
+		SettingsBeforeCommit settingsBeforeCommit(JdbcClient jdbc) {
+			return new SettingsBeforeCommit(jdbc);
+		}
+
 	}
 
 	private int recoveryRows(UserId user) {

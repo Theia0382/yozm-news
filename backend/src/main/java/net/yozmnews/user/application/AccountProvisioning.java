@@ -7,6 +7,7 @@ import java.util.Optional;
 import java.util.function.Supplier;
 
 import net.yozmnews.platform.UserId;
+import net.yozmnews.user.AccountCreated;
 import net.yozmnews.user.domain.account.Account;
 import net.yozmnews.user.domain.account.AccountRepository;
 import net.yozmnews.user.domain.account.DisplayName;
@@ -17,6 +18,7 @@ import net.yozmnews.user.domain.credential.PasswordCredentialRepository;
 import net.yozmnews.user.domain.credential.PasswordPolicy;
 import net.yozmnews.user.domain.recovery.RecoveryCodeRepository;
 import net.yozmnews.user.domain.secret.RecoveryCode;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -26,7 +28,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 /**
  * 계정을 만드는 정본 — 모든 길(공개 가입 · 초대 가입 · 운영자 계정 생성 · 첫 운영자)이 이것을 거친다. docs/specs/user.md §4.
  * <p>
- * 부르는 쪽의 트랜잭션 안에서 계정 · 자격(· 복구 코드)과 관심 설정 기본값(user-R43)을 함께 만든다 — "계정마다 자격 하나"는 DB 가 강제하지 않으므로 같은 트랜잭션이 지킨다.
+ * 부르는 쪽의 트랜잭션 안에서 계정 · 자격(· 복구 코드)을 함께 만들고 같은 트랜잭션에서 {@link AccountCreated} 를 낸다(account-R35) — "계정마다 자격
+ * 하나"는 DB 가 강제하지 않으므로 같은 트랜잭션이 지킨다. 다른 모듈의 표는 쓰지 않는다 — 관심 설정 기본값은 이벤트를 받은 쪽이 쓴다.
  * 길마다의 차이(역할 · 강제 변경 · 만들 때 복구 코드)는 {@link Onboarding} 이 정한다. 비밀번호 해시는 이메일 중복과 무관하게 한 번 계산해
  * 이미 있는 이메일과 새 이메일의 계산량을 맞춘다.
  */
@@ -41,20 +44,20 @@ class AccountProvisioning {
 
 	private final PasswordHashing hashing;
 
-	private final InterestDefaultsWriter interestDefaults;
+	private final ApplicationEventPublisher events;
 
 	private final TransactionTemplate transaction;
 
 	private final SecureRandom random = new SecureRandom();
 
 	AccountProvisioning(AccountRepository accounts, PasswordCredentialRepository credentials,
-			RecoveryCodeRepository recoveryCodes, PasswordHashing hashing, InterestDefaultsWriter interestDefaults,
+			RecoveryCodeRepository recoveryCodes, PasswordHashing hashing, ApplicationEventPublisher events,
 			TransactionTemplate transaction) {
 		this.accounts = Objects.requireNonNull(accounts, "accounts");
 		this.credentials = Objects.requireNonNull(credentials, "credentials");
 		this.recoveryCodes = Objects.requireNonNull(recoveryCodes, "recoveryCodes");
 		this.hashing = Objects.requireNonNull(hashing, "hashing");
-		this.interestDefaults = Objects.requireNonNull(interestDefaults, "interestDefaults");
+		this.events = Objects.requireNonNull(events, "events");
 		this.transaction = Objects.requireNonNull(transaction, "transaction");
 	}
 
@@ -96,7 +99,7 @@ class AccountProvisioning {
 			this.recoveryCodes.replace(user, code.digest(), now);
 			recoveryCode = Optional.of(code);
 		}
-		this.interestDefaults.createFor(user, now);
+		this.events.publishEvent(new AccountCreated(user, now));
 		return new ProvisionResult.Created(user, recoveryCode);
 	}
 

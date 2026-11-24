@@ -9,6 +9,11 @@ import java.util.List;
 
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.platform.UserId;
+import net.yozmnews.user.AccountCreatedEvents;
+import net.yozmnews.user.domain.account.DisplayName;
+import net.yozmnews.user.domain.account.EmailAddress;
+import net.yozmnews.user.domain.account.Onboarding;
+import net.yozmnews.user.domain.credential.PasswordPolicy;
 import net.yozmnews.user.domain.interest.InterestSettingsRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,7 +27,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * 기존 계정 채우기 — 설정 행이 없는 계정만 기본값을 얻는다. 형식 제외를 모두 푼 계정(설정 행은 있다)에 되살리지 않고, 다시 돌려도 같다. 묶음
- * 크기를 넘는 계정도 모두 채운다. 실제 PostgreSQL 에서 본다.
+ * 크기를 넘는 계정도 모두 채운다. 방금 만든 계정의 계정 생김 리스너와 겹쳐도 설정 행 · 제외 이력은 한 벌이다. 실제 PostgreSQL 에서 본다.
  * <p>
  * 지키는 규칙: user-R43 · user-R44
  */
@@ -35,6 +40,9 @@ class InterestBackfillTests {
 
 	@Autowired
 	InterestSettingsRepository settings;
+
+	@Autowired
+	AccountProvisioning provisioning;
 
 	@Autowired
 	InterestDefaultsWriter defaults;
@@ -50,6 +58,7 @@ class InterestBackfillTests {
 	@BeforeEach
 	@AfterEach
 	void reset() {
+		AccountCreatedEvents.awaitHandled(this.jdbc);
 		this.jdbc.sql("delete from users").update();
 		this.backfill = new InterestBackfill(this.settings, this.defaults, this.transaction, InstantSource.fixed(NOW));
 	}
@@ -83,6 +92,25 @@ class InterestBackfillTests {
 
 		assertThat(this.backfill.fill()).isEqualTo(103);
 		assertThat(this.jdbc.sql("select count(*) from user_settings").query(Long.class).single()).isEqualTo(103);
+	}
+
+	@Test
+	void aJustCreatedAccountAndTheBackfillTogetherWriteOneSetOfDefaults() {
+		ProvisionResult result = this.transaction.execute(status -> this.provisioning.provision(Onboarding.FIRST_ADMIN,
+				EmailAddress.parse("kim@example.com").orElseThrow(), new DisplayName("kim"),
+				PasswordPolicy.normalize("initial horse battery"), NOW));
+		long user = ((ProvisionResult.Created) result).user().value();
+
+		this.backfill.fill();
+		AccountCreatedEvents.awaitHandled(this.jdbc);
+
+		assertThat(this.jdbc.sql("select count(*) from user_settings where user_id = :user")
+			.param("user", user)
+			.query(Long.class)
+			.single()).isOne();
+		assertThat(this.jdbc.sql("""
+				select count(*) from user_tag_preference_events where user_id = :user and cause = 'ONBOARDING'
+				""").param("user", user).query(Long.class).single()).isEqualTo(2);
 	}
 
 	private long user(String email) {

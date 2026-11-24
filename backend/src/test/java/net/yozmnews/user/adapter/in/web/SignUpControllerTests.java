@@ -14,6 +14,7 @@ import jakarta.servlet.http.Cookie;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.platform.ChangeActor;
 import net.yozmnews.platform.UserId;
+import net.yozmnews.user.AccountCreatedEvents;
 import net.yozmnews.user.InvitationAdministration;
 import net.yozmnews.user.IssuedInvitation;
 import net.yozmnews.user.SignUpPolicyAdministration;
@@ -89,6 +90,7 @@ class SignUpControllerTests {
 	@AfterEach
 	void reset() {
 		this.jdbc.sql("delete from user_invitations").update();
+		AccountCreatedEvents.awaitHandled(this.jdbc);
 		this.jdbc.sql("delete from users").update();
 		this.policy.change(false, ChangeActor.OPERATOR);
 	}
