@@ -2,7 +2,7 @@
 
 - 상태: 대체됨([ADR-0260](0260-digest-candidates-are-events-and-only-assigned-events-with-an-article-first-evaluated-in-the-period-enter.md))
 - 날짜: 2026-11-17
-- 근거: [이슈 #176](https://github.com/Theia0382/yozm-news/issues/176) — 리드가 넣을 기사(사건 여럿, 상한 10)와 순서(포함 나무를 묶는 작업을 기다리지 않고 지금의 큰 판정 목록 위에서)를 정함. 구현 커밋 `b3cfac1`(규칙) · `5b88a6a`(재료)
+- 근거: [이슈 #176](https://github.com/Theia0382/yozm-news/issues/176) — 넣을 기사(사건 여럿, 상한 10)와 순서(포함 나무를 묶는 작업을 기다리지 않고 지금의 큰 판정 목록 위에서)를 정함. 구현 커밋 `b3cfac1`(규칙) · `5b88a6a`(재료)
 - 관련: [ADR-0103](0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md)(결정 "슬롯에 어떤 기사를 넣는지 … 그 설계에서 정한다" — 보충), [ADR-0147](0147-storyline-big-judgement-compares-importance-weighted-coverage-per-source-and-day-with-one-criterion-at-query-time.md)(큰 판정 — 상위와 하위는 둘 다 낸다), [ADR-0209](0209-maximum-candidates-and-big-slots-are-user-settings-and-the-big-slot-takes-at-most-half.md)(슬롯 수)
 
 ## 맥락

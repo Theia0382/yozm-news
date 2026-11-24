@@ -2,7 +2,7 @@
 
 - 상태: 승인. 부분 대체 — 기준의 범위([ADR-0147](0147-storyline-big-judgement-compares-importance-weighted-coverage-per-source-and-day-with-one-criterion-at-query-time.md))
 - 날짜: 2026-11-12
-- 근거: [이슈 #124](https://github.com/Theia0382/yozm-news/issues/124) — 큰 사건 기준의 저장 · 운영 API 와 `storyline` 의 설정 꼴을 조사해 리드와 정함
+- 근거: [이슈 #124](https://github.com/Theia0382/yozm-news/issues/124) — 큰 사건 기준의 저장 · 운영 API 와 `storyline` 의 설정 꼴을 조사해 정함
 - 관련: [ADR-0083](0083-big-event-criteria-as-operator-settings-with-append-only-history-and-preview.md)(큰 사건 기준 — 전체 대체), [ADR-0116](0116-storyline-big-judgement-starts-with-a-provisional-rule-of-distinct-sources-and-mean-importance-judged-at-query-time.md)(큰 판정의 임시 산식), [ADR-0081](0081-event-assignment-criteria-in-settings-and-rejudgement-within-stored-scores.md)(사건 배정 기준은 설정), [ADR-0103](0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md)(기준을 둘 곳)
 
 ## 맥락

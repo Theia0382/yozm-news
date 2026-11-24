@@ -2,7 +2,7 @@
 
 - 상태: 승인. 부분 대체 — 판정 실패의 상한([ADR-0194](0194-storyline-linking-asks-jev-only-for-band-candidates-and-reuses-recorded-probabilities-until-either-side-doubles.md))
 - 날짜: 2026-11-10
-- 근거: [이슈 #127](https://github.com/Theia0382/yozm-news/issues/127) — 스토리라인 골격(모듈 · 소속 데이터 · 사건 변화 따르기 · 잇기 작업). `event` 의 사건 쓰기 경로 전수 조사와 리드 결정
+- 근거: [이슈 #127](https://github.com/Theia0382/yozm-news/issues/127) — 스토리라인 골격(모듈 · 소속 데이터 · 사건 변화 따르기 · 잇기 작업). `event` 의 사건 쓰기 경로 전수 조사를 거쳐 정함
 - 관련: [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)(결정 "공유 스토리라인의 책임 · 계약은 구현할 때 정한다" — 보충), [ADR-0060](0060-article-deletion-announced-by-removed-article-ids-and-followed-by-referencing-modules.md)(지운 ID 를 이벤트로 알리고 가리키는 쪽이 따르는 꼴 — 같은 꼴), [ADR-0045](0045-admin-module-serves-operator-api-over-module-public-operation-apis.md)(운영 API 의 꼴), [ADR-0106](0106-provisional-storyline-linking-opens-only-with-a-partner-event-and-adds-the-single-best-storyline-without-removal.md)(이 틀 위에서 도는 임시 잇기 규칙)
 
 ## 맥락

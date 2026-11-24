@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-19
-- 근거: [이슈 #188](https://github.com/Theia0382/yozm-news/issues/188) — 기점 `91ba014` 의 모듈 의존(`digest` → `user`)과 태그 선호 · 주제 구독 이력의 키 처리를 대조하고 리드와 정함. 구현 커밋 `3ecb800` · `bdf6bb1`
+- 근거: [이슈 #188](https://github.com/Theia0382/yozm-news/issues/188) — 기점 `91ba014` 의 모듈 의존(`digest` → `user`)과 태그 선호 · 주제 구독 이력의 키 처리를 대조하고 정함. 구현 커밋 `3ecb800` · `bdf6bb1`
 - 관련: [ADR-0192](0192-reader-screens-are-composed-by-the-reader-module-over-module-public-queries.md)(사용자가 정해 두는 것의 화면은 그 데이터를 가진 모듈이 연다), [ADR-0196](0196-feedback-is-accepted-only-on-articles-cited-by-the-users-digest-and-digest-answers-through-an-interface-declared-by-feedback.md) · [ADR-0157](0157-credential-depends-on-llm-and-stored-keys-reach-llm-through-a-supply-interface-that-llm-declares-and-credential-implements.md)(공급 인터페이스의 꼴), [ADR-0246](0246-a-declined-topic-suggestion-returns-only-after-a-period-and-a-higher-interest-and-a-decline-is-not-an-interest-signal.md)(거절 때 관심을 쓰는 규칙)
 
 ## 맥락

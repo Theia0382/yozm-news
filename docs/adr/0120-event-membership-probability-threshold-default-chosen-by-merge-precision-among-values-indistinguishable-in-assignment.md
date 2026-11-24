@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-12
-- 근거: [이슈 #102](https://github.com/Theia0382/yozm-news/issues/102) — 평가 세트에서 확률 기준에 따른 병합 판정의 정밀을 견주고, 고른 값으로 처음부터 다시 묶어 확인하고, 리드가 그 값의 사건 표본을 검수함(`7be22cb`)
+- 근거: [이슈 #102](https://github.com/Theia0382/yozm-news/issues/102) — 평가 세트에서 확률 기준에 따른 병합 판정의 정밀을 견주고, 고른 값으로 처음부터 다시 묶어 확인하고, 그 값의 사건 표본을 검수함(`7be22cb`)
 - 관련: [ADR-0109](0109-event-clustering-defaults-chosen-on-the-evaluation-set-with-operator-review-and-closing-from-operating-records.md)(결정 절의 "같은 품질의 후보 가운데서는 … 고른다"에 병합 판정의 정밀을 더한다 — 보충. 견주는 방법과 표본 검수는 그대로), [ADR-0084](0084-event-merge-applies-assignment-scoring-between-events-and-keeps-merged-rows-pointing-to-survivors.md)(병합도 같은 확률 기준을 쓴다), [ADR-0119](0119-event-merge-does-not-ask-band-pairs-whose-prior-assignment-probability-is-below-the-probability-threshold.md)(병합이 묻는 쌍 — 그 위에서 확인했다), [ADR-0096](0096-instance-bound-evaluation-data-kept-out-of-the-public-repository-and-defaults-cite-only-the-evaluation-set.md)(근거 수치를 공개 문서에 적지 않는다)
 
 ## 맥락

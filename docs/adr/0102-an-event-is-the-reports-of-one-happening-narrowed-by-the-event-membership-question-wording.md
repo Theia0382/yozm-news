@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-09
-- 근거: [이슈 #116](https://github.com/Theia0382/yozm-news/issues/116) — 측정 인스턴스의 기사와 라벨 기준 2판 표본으로 문구 후보를 실제 Jev 에 물어 견주고 리드와 정함. 구현 `4dabf61`
+- 근거: [이슈 #116](https://github.com/Theia0382/yozm-news/issues/116) — 측정 인스턴스의 기사와 라벨 기준 2판 표본으로 문구 후보를 실제 Jev 에 물어 견주고 정함. 구현 `4dabf61`
 - 관련: [ADR-0097](0097-event-clustering-evaluation-labels-reports-of-one-happening-narrower-than-the-system-event.md)(결정 "시스템은 바꾸지 않는다"와 결과 첫 항목 — 부분 대체), [ADR-0072](0072-event-membership-question-wording-as-one-code-constant-with-its-version-in-raw-records.md)(새 문구 판 — 보충), [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md)("같은 사건"의 범위 — 보충), [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)(사건 위의 층)
 
 ## 맥락

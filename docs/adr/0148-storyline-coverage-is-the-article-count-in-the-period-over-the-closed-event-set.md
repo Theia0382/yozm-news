@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-14
-- 근거: [이슈 #137](https://github.com/Theia0382/yozm-news/issues/137) — 기간 집계와 포함 관계의 조회를 조사해 리드와 정함
+- 근거: [이슈 #137](https://github.com/Theia0382/yozm-news/issues/137) — 기간 집계와 포함 관계의 조회를 조사해 정함
 - 관련: [ADR-0117](0117-big-judgement-materials-are-tallied-by-event-per-group-of-events-and-storyline-passes-only-event-ids.md)(상위가 하위를 세는 법 · 보도량을 세는 법 — 보충), [ADR-0103](0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md)(보도량을 어떻게 세는지 — 보충), [ADR-0131](0131-storyline-relations-are-explicit-links-with-containment-as-a-single-parent-tree-gathered-at-query-time.md)(포함은 조회 때 하위를 따라 모은다), [ADR-0147](0147-storyline-big-judgement-compares-importance-weighted-coverage-per-source-and-day-with-one-criterion-at-query-time.md)(큰 판정의 식)
 
 ## 맥락

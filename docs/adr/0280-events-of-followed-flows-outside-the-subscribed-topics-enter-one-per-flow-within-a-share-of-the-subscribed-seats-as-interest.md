@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-22
-- 근거: [이슈 #243](https://github.com/Theia0382/yozm-news/issues/243) — 관심 흐름의 소식이 구독 주제 밖이라 빠지는 경우가 측정 표본(다이제스트 56 개)에서 9 쌍이었다. 리드가 같은 흐름이면 태그가 비슷하겠지만 어느 정도 보장되는 것이 좋고, 관심 흐름이 다이제스트를 많이 차지하지 않게 방어적으로 두며, 구독 주제에 걸리는 사건은 지금처럼 순위로 다투게 하자고 정했다. 구현 커밋 `c9274d3` · `b9af18f`
+- 근거: [이슈 #243](https://github.com/Theia0382/yozm-news/issues/243) — 관심 흐름의 소식이 구독 주제 밖이라 빠지는 경우가 측정 표본(다이제스트 56 개)에서 9 쌍이었다. 같은 흐름이면 태그가 비슷하겠지만 어느 정도 보장되는 것이 좋고, 관심 흐름이 다이제스트를 많이 차지하지 않게 방어적으로 두며, 구독 주제에 걸리는 사건은 지금처럼 순위로 다투게 하기로 정했다. 구현 커밋 `c9274d3` · `b9af18f`
 - 관련: [ADR-0278](0278-followed-flows-are-tops-at-or-above-the-follow-threshold-or-subscribed-less-the-excluded-and-the-keep-threshold-is-0-2.md)(관심 흐름), [ADR-0028](0028-explicit-signals-and-interest-weighted-candidates.md)(부분 대체 — 구독 밖 노출은 큰 사건 슬롯만 맡는다), [ADR-0209](0209-maximum-candidates-and-big-slots-are-user-settings-and-the-big-slot-takes-at-most-half.md)(부분 대체 — 큰 슬롯을 끈 사용자의 구독 밖 노출), [ADR-0260](0260-digest-candidates-are-events-and-only-assigned-events-with-an-article-first-evaluated-in-the-period-enter.md)(부분 대체 — `INTEREST` 를 구독 사건으로 한정한 것), [ADR-0216](0216-the-interest-selection-reason-marks-subscribed-candidates-that-enter-only-by-interest-with-a-weight-above-neutral.md)(부분 대체 — `INTEREST` 는 구독 후보), [ADR-0241](0241-selection-reasons-mark-only-citations-outside-subscribed-topics-named-interest-and-big-topic.md)(보충 — `INTEREST` 범례 문구), [ADR-0271](0271-when-the-input-token-budget-cuts-candidates-the-big-slot-keeps-at-most-half-of-what-is-left-and-uses-what-subscribed-events-leave.md)(예산 자르기 순서)
 
 ## 맥락

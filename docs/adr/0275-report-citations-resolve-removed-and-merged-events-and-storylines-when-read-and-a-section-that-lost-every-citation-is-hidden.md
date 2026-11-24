@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-22
-- 근거: [이슈 #237](https://github.com/Theia0382/yozm-news/issues/237) — 기점 `d25590c` 의 사건 삭제 알림(event-R25) · 스토리라인 합침 · 지움 알림(storyline-R35)과 그것을 따르는 기존 꼴(반응 · 다이제스트 인용 · 섹션 사건 행 · 스토리라인 구독)을 대조하고, 리드가 읽을 때 푸는 꼴을 골랐다
+- 근거: [이슈 #237](https://github.com/Theia0382/yozm-news/issues/237) — 기점 `d25590c` 의 사건 삭제 알림(event-R25) · 스토리라인 합침 · 지움 알림(storyline-R35)과 그것을 따르는 기존 꼴(반응 · 다이제스트 인용 · 섹션 사건 행 · 스토리라인 구독)을 대조하고, 읽을 때 푸는 꼴을 골랐다
 - 관련: [ADR-0267](0267-removed-events-are-announced-by-event-and-feedback-deletes-their-feedback-with-recording-and-removal-ordered-by-a-fence.md)(보충 — 결과의 섹션 사건 행 예외를 리포트 인용으로 넓힌다), [ADR-0266](0266-feedback-is-recorded-under-the-original-event-id-and-feedback-resolves-merged-events-through-event-when-reading-with-the-last-pressed-value-winning.md) · [ADR-0191](0191-the-consumer-query-of-storyline-subscriptions-is-opened-with-the-subscriptions-and-resolves-ids-without-writing.md)(같은 꼴 — 합침은 읽을 때 푼다), [ADR-0186](0186-digests-follow-removed-articles-by-deleting-their-rows-and-show-no-summary-without-any-citation.md)(같은 꼴 — 인용이 없는 글은 보이지 않는다), [ADR-0060](0060-article-deletion-announced-by-removed-article-ids-and-followed-by-referencing-modules.md)(지운 것을 ID 로 알리고 가리키는 모듈이 따른다)
 
 ## 맥락

@@ -2,7 +2,7 @@
 
 - 상태: 승인. 부분 대체 — 평가기 일시 실패의 상한([ADR-0255](0255-storyline-linking-and-relation-queues-defer-transient-failures-until-a-retry-time-and-never-drop-them.md))
 - 날짜: 2026-11-17
-- 근거: [이슈 #169](https://github.com/Theia0382/yozm-news/issues/169) — 문구 후보를 운영자가 판정한 소속 표본으로 견주고, 잇기 시뮬레이터 · 평가 인스턴스 · 운영자 표본 검수로 띠를 재고 리드와 정함
+- 근거: [이슈 #169](https://github.com/Theia0382/yozm-news/issues/169) — 문구 후보를 운영자가 판정한 소속 표본으로 견주고, 잇기 시뮬레이터 · 평가 인스턴스 · 운영자 표본 검수로 띠를 재고 정함
 - 관련: [ADR-0121](0121-storyline-linking-scores-centroid-cosine-plus-idf-weighted-key-term-overlap-without-time-decay-jev-or-topic-tags.md)(결정 "Jev 판정과 주제 태그를 쓰지 않는다"의 Jev 부분 · "기준 점수와 시간 창은 설정"의 기준 점수 — 부분 대체, 판정의 꼴 · 검토한 대안 "점수의 애매한 구간만 Jev 에 묻는다" — 보충), [ADR-0106](0106-provisional-storyline-linking-opens-only-with-a-partner-event-and-adds-the-single-best-storyline-without-removal.md)(결정 "기준 이상 가운데 점수가 가장 높은 하나" · "기준 이상인 이웃을 점수 순으로 보아 소속 없는 첫 사건" — 부분 대체), [ADR-0105](0105-storylines-link-incrementally-from-event-change-notifications-and-events-publish-changed-event-ids.md)(결정의 실패 상한 — 부분 대체, 소속마다 남기는 근거 — 보충), [ADR-0132](0132-storyline-relations-are-judged-by-jev-on-candidate-pairs-and-linked-only-above-a-probability-threshold.md)(결과 "잇기는 여전히 Jev 를 쓰지 않는다" — 부분 대체), [ADR-0071](0071-event-membership-judged-from-article-ids-with-questions-built-in-evaluation.md) · [ADR-0072](0072-event-membership-question-wording-as-one-code-constant-with-its-version-in-raw-records.md)(판정 꼴 · 문구 상수를 흐름 소속 판정에도 쓴다 — 보충), [ADR-0195](0195-storyline-linking-band-and-probability-defaults-chosen-for-precision-by-simulator-grid-evaluation-instance-and-operator-sample-review.md)(띠 · 확률 기준의 처음 값)
 
 ## 맥락

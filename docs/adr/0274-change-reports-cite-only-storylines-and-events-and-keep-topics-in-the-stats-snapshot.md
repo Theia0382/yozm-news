@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-22
-- 근거: [이슈 #237](https://github.com/Theia0382/yozm-news/issues/237) — 기점 `d25590c` 의 데이터 모델 초안(스토리라인 · 기사 인용)과 사건 단위로 바뀐 다이제스트 · 반응을 대조하고, 리드가 스토리라인 · 사건 인용을 골랐다
+- 근거: [이슈 #237](https://github.com/Theia0382/yozm-news/issues/237) — 기점 `d25590c` 의 데이터 모델 초안(스토리라인 · 기사 인용)과 사건 단위로 바뀐 다이제스트 · 반응을 대조하고, 스토리라인 · 사건 인용을 골랐다
 - 관련: [ADR-0025](0025-long-term-personal-news-history-in-v1.md)(변화 리포트 입력에 원문이 없다), [ADR-0262](0262-chosen-events-are-grouped-into-items-by-containment-tree-top-code-splits-top-stories-and-headlines-the-llm-writes-per-item-and-an-item-has-one-badge.md) · [ADR-0265](0265-feedback-is-pressed-once-per-digest-item-and-recorded-on-each-event-of-the-item-the-screen-shows-the-item-value-and-signals-use-event-records.md)(다이제스트 · 반응의 단위는 사건)
 
 ## 맥락

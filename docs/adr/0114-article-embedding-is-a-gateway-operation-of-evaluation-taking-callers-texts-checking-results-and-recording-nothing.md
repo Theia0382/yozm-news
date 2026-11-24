@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-11
-- 근거: [이슈 #131](https://github.com/Theia0382/yozm-news/issues/131) — 임베더를 `event` 에서 `evaluation` 으로 옮기며, 입력 텍스트를 누가 만들고 결과를 누가 확인하고 기록하는지를 리드와 정함
+- 근거: [이슈 #131](https://github.com/Theia0382/yozm-news/issues/131) — 임베더를 `event` 에서 `evaluation` 으로 옮기며, 입력 텍스트를 누가 만들고 결과를 누가 확인하고 기록하는지를 정함
 - 관련: [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md)(결정 절 "임베딩은 `event` 의 `ArticleEmbedder` 포트 뒤에 둔다"의 위치를 부분 대체한다), [ADR-0112](0112-tags-split-into-a-tag-module-and-evaluation-is-the-model-gateway-that-assembles-calls-and-records-each-judgement.md)(관문의 연산을 판정 원본이 없는 임베딩으로 넓힌다 — 보충), [ADR-0090](0090-article-embedding-defaults-to-an-in-app-local-model-with-an-openai-compatible-api-by-setting.md) · [ADR-0091](0091-local-embedding-model-is-multilingual-e5-small-int8-fetched-at-build-into-the-image-with-onnx-telemetry-off.md)(운영 구현과 설정 · 모델 · 배포는 그대로 두고 모듈 위치만 옮긴다 — 보충), [ADR-0092](0092-embedder-failures-in-three-kinds-with-rejected-articles-isolated-and-dropped-after-a-limit.md)(실패 세 갈래와 갈래별 회차 동작은 그대로), [ADR-0075](0075-article-vectors-in-a-dimensionless-vector-column-one-row-per-model-version.md) · [ADR-0079](0079-event-centroids-in-a-dimensionless-halfvec-column-with-a-model-version-per-event.md)(벡터와 모델 버전의 저장은 `event` 에 남는다), [ADR-0115](0115-embedding-api-in-both-roles-looks-up-the-embedder-on-call-and-a-worker-startup-check-requires-one.md)(임베더 유무를 보장하는 장치)
 
 ## 맥락

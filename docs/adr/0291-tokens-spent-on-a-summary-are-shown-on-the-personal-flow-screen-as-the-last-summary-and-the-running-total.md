@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-23
-- 근거: [이슈 #245](https://github.com/Theia0382/yozm-news/issues/245) — 정리는 사용자의 키로 부르는 두 번째 생성 호출이라 그 비용도 사용자에게 보여야 한다. 리드가 자리와 꼴을 다이제스트와 같게 정했다. 구현 커밋 `4e6da46` · `83665ae` · `fc8a373`
+- 근거: [이슈 #245](https://github.com/Theia0382/yozm-news/issues/245) — 정리는 사용자의 키로 부르는 두 번째 생성 호출이라 그 비용도 사용자에게 보여야 한다. 자리와 꼴을 다이제스트와 같게 정했다. 구현 커밋 `4e6da46` · `83665ae` · `fc8a373`
 - 관련: [ADR-0239](0239-digest-screens-show-tokens-of-the-visible-digest-and-the-sum-of-every-attempt-of-the-date-without-prices.md)(보충 — 다이제스트 화면 밖의 사용자 비용), [ADR-0288](0288-summaries-are-made-after-a-digest-ends-only-for-changed-flows-and-extended-with-new-events.md)(시도 기록)
 
 ## 맥락

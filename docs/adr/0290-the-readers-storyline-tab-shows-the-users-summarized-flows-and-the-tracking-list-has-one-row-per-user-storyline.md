@@ -2,7 +2,7 @@
 
 - 상태: 승인. 부분 대체 — 추적 목록 줄의 카드([ADR-0294](0294-a-user-storyline-is-one-per-head-and-a-top-before-a-fork-belongs-to-several-of-them.md))
 - 날짜: 2026-11-23
-- 근거: [이슈 #245](https://github.com/Theia0382/yozm-news/issues/245) — 독자 탭이 모든 사용자의 공용 스토리라인 목록을 보였고, 추적 중인 흐름 목록은 한 흐름이 누른 스토리라인 수만큼 줄로 나뉘었다. 리드가 탭의 내용 · 공용 타임라인의 자리 · 목록의 단위를 정했다. 구현 커밋 `e16498b` · `fc8a373` · `27decd5` · `27a214d`
+- 근거: [이슈 #245](https://github.com/Theia0382/yozm-news/issues/245) — 독자 탭이 모든 사용자의 공용 스토리라인 목록을 보였고, 추적 중인 흐름 목록은 한 흐름이 누른 스토리라인 수만큼 줄로 나뉘었다. 탭의 내용 · 공용 타임라인의 자리 · 목록의 단위를 정했다. 구현 커밋 `e16498b` · `fc8a373` · `27decd5` · `27a214d`
 - 관련: [ADR-0282](0282-flow-tracking-points-to-a-user-storyline-which-user-handlers-store-under-the-settings-lock-while-readers-get-the-result-of-the-same-rule.md)(부분 대체 — 추적 중인 흐름 목록의 줄), [ADR-0284](0284-a-digest-item-keeps-the-top-that-grouped-it-on-its-section-and-items-with-a-flow-carry-a-flow-tracking-button.md)(보충 — 항목의 흐름으로 가는 링크와 흐름의 정리), [ADR-0242](0242-the-storyline-subscription-list-lives-on-the-key-gated-storyline-screen.md)(보충 — 목록의 제목), [ADR-0281](0281-a-user-storyline-is-a-flow-that-received-interest-signals-and-tracks-the-tops-reached-forward-along-follows-from-its-seeds-as-one-group.md)(보충 — 사용자에게 드러나는 것), [ADR-0289](0289-shown-flows-are-user-storylines-with-a-summary-which-the-summary-job-creates-and-removes.md)(보이는 흐름)
 
 ## 맥락

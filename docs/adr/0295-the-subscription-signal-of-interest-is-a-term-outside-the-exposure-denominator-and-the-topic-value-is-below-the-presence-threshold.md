@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-23
-- 근거: [이슈 #190](https://github.com/Theia0382/yozm-news/issues/190) — 측정에서 구독만 하고 반응하지 않은 주제가 관심 있음의 위쪽을 채우고, 반응한 주제는 그 아래에 있었다. 구독 신호가 노출 분모 안에 있어, 노출이 적은 주제에서는 구독 하나가 크게 들고 노출이 쌓인 주제에서는 묽어졌다. 리드가 구독 항을 분모 밖으로 빼고 값을 키 종류마다 정했다. 값은 측정 인스턴스의 반응 기록으로 정했다. 구현 커밋 `c1c4764`
+- 근거: [이슈 #190](https://github.com/Theia0382/yozm-news/issues/190) — 측정에서 구독만 하고 반응하지 않은 주제가 관심 있음의 위쪽을 채우고, 반응한 주제는 그 아래에 있었다. 구독 신호가 노출 분모 안에 있어, 노출이 적은 주제에서는 구독 하나가 크게 들고 노출이 쌓인 주제에서는 묽어졌다. 구독 항을 분모 밖으로 빼고 값을 키 종류마다 정했다. 값은 측정 인스턴스의 반응 기록으로 정했다. 구현 커밋 `c1c4764`
 - 관련: [ADR-0222](0222-interest-per-subtopic-is-smoothed-reactions-over-exposures-with-a-half-life-and-exposures-are-all-ready-citations.md)(부분 대체 — 산식의 관심 x 항목과 상수 γ "구독 변경 하나의 무게"), [ADR-0277](0277-storyline-interest-is-counted-per-containment-tree-top-with-the-topic-formula-and-reactions-to-a-flow-seen-within-seven-days-go-to-the-storyline-only.md)(부분 대체 — "스토리라인 묶음의 처음 값은 주제 묶음과 같다"), [ADR-0226](0226-new-and-lost-interests-are-neighbouring-periods-crossing-one-threshold-on-the-interest-value.md)(보충 — 맥락의 산식 성질이 바뀐다, 관심 있음 기준은 그대로)
 
 ## 맥락

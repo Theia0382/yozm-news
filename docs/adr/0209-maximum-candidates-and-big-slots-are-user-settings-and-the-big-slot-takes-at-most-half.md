@@ -2,7 +2,7 @@
 
 - 상태: 승인. 부분 대체 — 최대 후보 수 단계 값과 직접 입력 범위([ADR-0272](0272-the-input-token-budget-is-a-safety-ceiling-and-the-maximum-candidate-steps-set-the-digest-volume.md)) · 큰 슬롯 상한을 세는 단위([ADR-0260](0260-digest-candidates-are-events-and-only-assigned-events-with-an-article-first-evaluated-in-the-period-enter.md)) · 구독 밖 노출을 큰 슬롯만 맡는 것([ADR-0280](0280-events-of-followed-flows-outside-the-subscribed-topics-enter-one-per-flow-within-a-share-of-the-subscribed-seats-as-interest.md))
 - 날짜: 2026-11-17
-- 근거: [이슈 #176](https://github.com/Theia0382/yozm-news/issues/176) — 리드가 최대 후보 수(단계 · 직접 입력 · 최대값)와 큰 슬롯 수를 사용자 설정으로 정함. 구현 커밋 `641e7d4`(설정) · `b1b3161`(화면) · `b3cfac1`(상한)
+- 근거: [이슈 #176](https://github.com/Theia0382/yozm-news/issues/176) — 최대 후보 수(단계 · 직접 입력 · 최대값)와 큰 슬롯 수를 사용자 설정으로 두기로 정함. 구현 커밋 `641e7d4`(설정) · `b1b3161`(화면) · `b3cfac1`(상한)
 - 관련: [ADR-0028](0028-explicit-signals-and-interest-weighted-candidates.md)(결정 "구독 밖 노출은 큰 사건 슬롯이 맡는다" — 부분 대체: 큰 슬롯을 끈 사용자에게는 구독 밖 노출이 없다), [ADR-0103](0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md)(큰 슬롯), [ADR-0208](0208-the-big-slot-takes-the-representatives-of-the-heaviest-events-of-each-big-storyline-row.md)(큰 슬롯에 넣는 기사), [ADR-0198](0198-feedback-recording-is-request-limited-per-session-user.md)(결과 "사용자 설정으로 열면 한도를 다시 본다" — 보충: 직접 입력의 상한 150 이 피드백 한도 안이다)
 
 ## 맥락

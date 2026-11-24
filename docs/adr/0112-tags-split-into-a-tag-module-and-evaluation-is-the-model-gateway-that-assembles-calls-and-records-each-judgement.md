@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-11
-- 근거: [이슈 #130](https://github.com/Theia0382/yozm-news/issues/130) — `evaluation` 의 태그 지식과 판정 서비스를 나누는 경계를 조사하고, 사건 소속 판정이 `evaluation` 에 기대는 꼴과 같게 태그 판정을 두기로 리드가 정함
+- 근거: [이슈 #130](https://github.com/Theia0382/yozm-news/issues/130) — `evaluation` 의 태그 지식과 판정 서비스를 나누는 경계를 조사하고, 사건 소속 판정이 `evaluation` 에 기대는 꼴과 같게 태그 판정을 두기로 정함
 - 관련: [ADR-0055](0055-tag-and-store-thresholds-change-with-history-and-warn-instead-of-blocking.md)(태그 기준 · 저장 기준을 `evaluation` 이 갖는다는 문장 — 부분 대체), [ADR-0056](0056-platform-reads-yaml-text-and-applies-common-rejection.md)(기본 태그 체계 파일을 `evaluation` 이 읽는다는 문장 — 부분 대체), [ADR-0064](0064-topic-coverage-counts-articles-by-first-evaluation-time-with-query-time-judgement-over-key-lineage-in-the-app.md)(주제별 보도량을 `evaluation` 이 센다는 문장 — 부분 대체), [ADR-0071](0071-event-membership-judged-from-article-ids-with-questions-built-in-evaluation.md) · [ADR-0094](0094-event-membership-judgements-identified-by-id-read-by-operators-and-referenced-by-the-records-that-apply-them.md)(기사 ID 를 넘기고 판정 원본 ID 로 잇는 꼴을 태그 판정으로 넓힘 — 보충), [ADR-0073](0073-event-membership-api-in-both-roles-looks-up-the-evaluator-on-call-and-fails-without-one.md)(평가기를 부를 때 찾는 방식을 태그 판정 API 에도 씀 — 보충)
 
 ## 맥락

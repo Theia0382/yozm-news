@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-19
-- 근거: [이슈 #188](https://github.com/Theia0382/yozm-news/issues/188) — 제안을 둘 화면(다이제스트 홈 · 관심 설정 · 관심사 히스토리)을 리드와 정함. 구현 커밋 `ac24312` · `b9ad4a3`
+- 근거: [이슈 #188](https://github.com/Theia0382/yozm-news/issues/188) — 제안을 둘 화면(다이제스트 홈 · 관심 설정 · 관심사 히스토리)을 정함. 구현 커밋 `ac24312` · `b9ad4a3`
 - 관련: [ADR-0237](0237-the-digest-home-shows-the-latest-date-and-every-date-has-its-own-page-and-a-list.md)(다이제스트 홈), [ADR-0192](0192-reader-screens-are-composed-by-the-reader-module-over-module-public-queries.md)(제안 조회는 `reader` 가 엮는다), [ADR-0246](0246-a-declined-topic-suggestion-returns-only-after-a-period-and-a-higher-interest-and-a-decline-is-not-an-interest-signal.md)(거절의 효과)
 
 ## 맥락
