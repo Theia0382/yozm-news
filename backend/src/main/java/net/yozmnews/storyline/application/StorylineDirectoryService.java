@@ -49,7 +49,7 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 
 /**
- * 공개 조회 {@link StorylineDirectory} 의 구현 — docs/specs/storyline.md §4 · storyline-R19 · storyline-R21 ~ R23 · storyline-R33 · storyline-R37.
+ * 공개 조회 {@link StorylineDirectory} 의 구현 — docs/specs/storyline.md §4 · storyline-R19 · storyline-R21 ~ R24 · storyline-R33 · storyline-R37.
  * <p>
  * 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통). 큰 판정은 {@link #bigStorylines(EventPeriod, BigStorylineCriteria)} 하나를 공개 조회와
  * 미리보기가 함께 쓴다. 스토리라인의 사건은 닫은 사건 집합({@link ClosedMembers} — 직접 소속과 포함을 따라 내려간 하위의 직접 소속)이고, 스토리라인
@@ -211,6 +211,36 @@ class StorylineDirectoryService implements StorylineDirectory {
 	}
 
 	@Override
+	public <K> Map<K, EventTally> tallies(Map<K, ? extends Collection<StorylineId>> groups, EventPeriod period) {
+		Objects.requireNonNull(groups, "groups");
+		Objects.requireNonNull(period, "period");
+		Set<StorylineId> distinct = new LinkedHashSet<>();
+		groups.values().forEach(distinct::addAll);
+		if (distinct.size() > MAX_TOP_STORYLINES) {
+			throw new IllegalArgumentException(
+					"스토리라인 묶음 집계는 한 번에 스토리라인 " + MAX_TOP_STORYLINES + " 개까지다: " + distinct.size());
+		}
+		if (groups.isEmpty()) {
+			return Map.of();
+		}
+		// 합쳐진 스토리라인은 남는 행으로 풀린다 — 없는 스토리라인은 묶음에서 빠진다
+		Map<Long, StoredStoryline> found = distinct.isEmpty() ? Map.of()
+				: this.storylines.findAll(distinct.stream().map(StorylineId::value).toList());
+		Map<K, List<Long>> survivors = new LinkedHashMap<>();
+		groups.forEach((key, storylineIds) -> survivors.put(key,
+				storylineIds.stream()
+					.map(id -> found.get(id.value()))
+					.filter(Objects::nonNull)
+					.map(StoredStoryline::id)
+					.distinct()
+					.toList()));
+		Set<Long> all = new TreeSet<>();
+		survivors.values().forEach(all::addAll);
+		ClosedMembers closure = closure(all, graph());
+		return unionTallies(survivors, closure, period);
+	}
+
+	@Override
 	public StorylinePage list(EventPeriod period, @Nullable StorylineCursor after, int size) {
 		Objects.requireNonNull(period, "period");
 		if (size < 1 || size > MAX_PAGE_SIZE) {
@@ -326,16 +356,31 @@ class StorylineDirectoryService implements StorylineDirectory {
 		return all;
 	}
 
-	/** 스토리라인마다 기간 집계 — 닫은 사건 집합을 묶음으로 넘기고 {@code event} 가 센다(storyline-R19 · R33) */
+	/** 스토리라인마다 기간 집계 — 행마다 그 스토리라인 하나의 묶음(storyline-R19 · R33) */
 	private Map<Long, EventTally> tallied(List<StoredStoryline> rows, ClosedMembers closure, EventPeriod period) {
-		if (rows.isEmpty()) {
+		Map<Long, List<Long>> groups = new LinkedHashMap<>();
+		for (StoredStoryline row : rows) {
+			groups.put(row.id(), List.of(row.id()));
+		}
+		return unionTallies(groups, closure, period);
+	}
+
+	/**
+	 * 스토리라인 묶음마다 기간 집계의 정본 — 묶음의 스토리라인들의 닫은 사건 집합의 합집합을 {@code event} 의 묶음 하나로 넘긴다(storyline-R24 ·
+	 * R33). 묶음의 스토리라인은 남는 스토리라인 ID 이고 {@code closure} 가 그것들을 덮는다
+	 */
+	private <K> Map<K, EventTally> unionTallies(Map<K, ? extends Collection<Long>> groups, ClosedMembers closure,
+			EventPeriod period) {
+		if (groups.isEmpty()) {
 			return Map.of();
 		}
-		Map<Long, List<EventId>> groups = new LinkedHashMap<>();
-		for (StoredStoryline row : rows) {
-			groups.put(row.id(), ids(closure.closed(row.id())));
-		}
-		return this.events.tallies(groups, period);
+		Map<K, List<EventId>> eventGroups = new LinkedHashMap<>();
+		groups.forEach((key, storylineIds) -> {
+			Set<Long> union = new TreeSet<>();
+			storylineIds.forEach(id -> union.addAll(closure.closed(id)));
+			eventGroups.put(key, ids(union));
+		});
+		return this.events.tallies(eventGroups, period);
 	}
 
 	private List<StorylineView> views(List<StoredStoryline> rows) {

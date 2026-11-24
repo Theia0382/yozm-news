@@ -9,6 +9,7 @@ import java.time.Instant;
 import java.time.InstantSource;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -65,7 +66,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 큰 판정 기준은 인스턴스에 한 행이라 시작과 끝에 비우고 처음 값을 다시 적재한다. 사건 · 스토리라인 행과 이 시험이 넣은 평가 행도 시작과 끝에
  * 지운다. 상태는 고정 시계로 본다.
  * <p>
- * 지키는 규칙: storyline-R16 · storyline-R19 ~ R23 · storyline-R25 · storyline-R33 · storyline-R37
+ * 지키는 규칙: storyline-R16 · storyline-R19 ~ R25 · storyline-R33 · storyline-R37
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -483,6 +484,59 @@ class StorylineQueryFlowTests {
 		List<StorylineId> repeated = new ArrayList<>(atLimit);
 		repeated.add(atLimit.getFirst());
 		assertThat(this.directory.topsOfStorylines(repeated)).isNotNull();
+	}
+
+	@Test
+	void aGroupTallyCountsTheUnionOfClosedEventSetsOnceFollowingMergesAndDroppingMissingOnes() {
+		// wide ⊃ narrow — wide 의 닫은 사건 집합 = {A, B, 합쳐진 사건, C, 지난 사건}
+		contains(this.wide, this.narrow);
+		long merged = storyline("2026-11-05T10:00:00Z", "2026-11-05T10:00:00Z", this.eventC);
+		this.jdbc.sql("update storylines set merged_into = :into, merged_at = now() where id = :id")
+			.param("into", this.narrow)
+			.param("id", merged)
+			.update();
+		Map<String, List<StorylineId>> groups = new LinkedHashMap<>();
+		groups.put("parentOnly", List.of(new StorylineId(this.wide)));
+		groups.put("parentAndChild", List.of(new StorylineId(this.wide), new StorylineId(this.narrow)));
+		groups.put("overlapping", List.of(new StorylineId(this.narrow), new StorylineId(this.quiet)));
+		groups.put("merged", List.of(new StorylineId(merged)));
+		groups.put("missing", List.of(new StorylineId(999_999_999L)));
+
+		Map<String, EventTally> tallies = this.directory.tallies(groups, PERIOD);
+
+		assertThat(tallies).containsOnlyKeys("parentOnly", "parentAndChild", "overlapping", "merged", "missing");
+		// 상위 하나 — 닫은 사건 집합이라 하위의 C 가 든다(직접 소속만 세면 A 둘 · B 둘 = 4)
+		assertThat(tallies.get("parentOnly").articles()).isEqualTo(5);
+		assertThat(tallies.get("parentOnly").sources()).isEqualTo(3);
+		// 상위 + 하위 — 기간 안 기사는 A 둘 · B 둘 · C 하나, 하위의 C 를 두 번 세지 않는다(따로 더하면 5 + 1 = 6)
+		assertThat(tallies.get("parentAndChild").articles()).isEqualTo(5);
+		assertThat(tallies.get("parentAndChild").sources()).isEqualTo(3);
+		// 두 스토리라인에 든 지난 사건은 기간 밖이라 수에 들지 않는다 — 기간 안 기사는 C 하나
+		assertThat(tallies.get("overlapping").articles()).isEqualTo(1);
+		assertThat(tallies.get("overlapping").sources()).isEqualTo(1);
+		// 합쳐진 스토리라인은 남는 쪽(narrow)의 것이다
+		assertThat(tallies.get("merged").articles()).isEqualTo(1);
+		// 남는 스토리라인이 없는 묶음도 키가 있고 0 이다
+		assertThat(tallies.get("missing").articles()).isZero();
+		assertThat(tallies.get("missing").sources()).isZero();
+		assertThat(tallies.get("missing").importance()).isNull();
+
+		assertThat(this.directory.tallies(Map.<String, List<StorylineId>>of(), PERIOD)).isEmpty();
+	}
+
+	@Test
+	void theGroupTallyRefusesMoreStorylinesThanItsLimitCountingEachStorylineOnce() {
+		List<StorylineId> tooMany = LongStream.rangeClosed(1, StorylineDirectory.MAX_TOP_STORYLINES + 1)
+			.mapToObj(StorylineId::new)
+			.toList();
+		List<StorylineId> atLimit = tooMany.subList(0, StorylineDirectory.MAX_TOP_STORYLINES);
+
+		assertThatIllegalArgumentException()
+			.isThrownBy(() -> this.directory.tallies(Map.of("all", tooMany), PERIOD));
+		assertThat(this.directory.tallies(Map.of("all", atLimit), PERIOD)).containsOnlyKeys("all");
+		// 상한은 묶음을 넘어 서로 다른 스토리라인 수다 — 같은 스토리라인이 두 묶음에 와도 한 번 센다
+		assertThat(this.directory.tallies(Map.of("first", atLimit, "second", List.of(atLimit.getFirst())), PERIOD))
+			.containsOnlyKeys("first", "second");
 	}
 
 	@Test

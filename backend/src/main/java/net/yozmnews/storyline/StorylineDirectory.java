@@ -8,11 +8,13 @@ import java.util.Set;
 
 import net.yozmnews.event.EventId;
 import net.yozmnews.event.EventPeriod;
+import net.yozmnews.event.EventTally;
 import org.jspecify.annotations.Nullable;
 
 /**
  * 다른 모듈이 스토리라인을 읽는 조회 — 스토리라인 · 스토리라인의 사건(타임라인) · 사건의 스토리라인 · 사건마다 포함 나무의 꼭대기 · 조회 기간의
- * 스토리라인 목록 · 큰 스토리라인 · 소속 없는 사건 · 스토리라인의 관계 · docs/specs/storyline.md §3 · storyline-R19 · storyline-R21 ~ R23 · storyline-R33 · storyline-R37.
+ * 스토리라인 목록 · 큰 스토리라인 · 소속 없는 사건 · 스토리라인 묶음마다의 기간 집계 · 스토리라인의 관계 · docs/specs/storyline.md §3 · storyline-R19 ·
+ * storyline-R21 ~ R24 · storyline-R33 · storyline-R37.
  * <p>
  * 스토리라인의 사건 · 집계는 닫은 사건 집합으로 본다 — 직접 소속과, 포함을 따라 내려간 모든 하위의 직접 소속을 합친 것이다. 사용자 정보를
  * 받지 않는다. 트랜잭션을 열지 않는다 — 각 질의는 그 순간의 값이고, 사건 · 기간 집계는 {@code event} 의 공개 조회로 따로 읽는다. 모듈
@@ -26,7 +28,7 @@ public interface StorylineDirectory {
 	/** 꼭대기 조회 한 번에 묻는 서로 다른 사건 수의 상한 — 정본. 측정 전 목표 */
 	int MAX_TOP_EVENTS = 1000;
 
-	/** 스토리라인 꼭대기 조회 한 번에 묻는 서로 다른 스토리라인 수의 상한 — 정본. 측정 전 목표 */
+	/** 스토리라인 여럿을 묻는 조회(꼭대기 · 이어짐 · 묶음 집계) 한 번의 서로 다른 스토리라인 수의 상한 — 정본. 측정 전 목표 */
 	int MAX_TOP_STORYLINES = 1000;
 
 	/**
@@ -103,6 +105,15 @@ public interface StorylineDirectory {
 
 	/** 조회 기간 안 기사가 있는 사건 가운데 소속 없는 사건의 수와 그 사건들의 기간 안 기사 수(storyline-R23) */
 	UnlinkedEvents unlinked(EventPeriod period);
+
+	/**
+	 * 스토리라인 묶음마다 기간 집계 — 묶음의 스토리라인들의 닫은 사건 집합(storyline-R33)의 합집합을 {@code event} 가 센다(storyline-R24).
+	 * 합쳐진 스토리라인(storyline-R18)이면 남는 스토리라인의 것이다. 상위와 그 하위를 함께 넣어도 사건은 한 번이다.
+	 * @return 묶음 키 → 집계 — 입력의 모든 키가 있다(남는 스토리라인이 없거나 기간 안 기사가 없는 묶음은 기사 0 · 소스 0 · 중요도 없음).
+	 *         빈 입력이면 빈 맵
+	 * @throws IllegalArgumentException 서로 다른 스토리라인이 {@link #MAX_TOP_STORYLINES} 를 넘을 때
+	 */
+	<K> Map<K, EventTally> tallies(Map<K, ? extends Collection<StorylineId>> groups, EventPeriod period);
 
 	/**
 	 * 스토리라인이 앞이거나 뒤인 관계 — 종류(포함 먼저) · 앞 ID · 뒤 ID 순(storyline-R25). 합쳐진 스토리라인이면 남는 스토리라인의 것이다.
