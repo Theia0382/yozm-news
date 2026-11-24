@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-18
-- 근거: [이슈 #179](https://github.com/Theia0382/yozm-news/issues/179) — 수용 기준 "토큰 사용량 표시", 리드와 정함(보이는 다이제스트의 토큰과 그 날짜 모든 시도의 합). 구현 커밋 `39e730a` · `cbe227c` · `7dbf1de`
+- 근거: [이슈 #179](https://github.com/Theia0382/yozm-news/issues/179) — 수용 기준 "토큰 사용량 표시", 정함(보이는 다이제스트의 토큰과 그 날짜 모든 시도의 합). 구현 커밋 `39e730a` · `cbe227c` · `7dbf1de`
 - 관련: [ADR-0003](0003-byok-personalized-digest.md)(관련 — 다이제스트 비용은 사용자의 키)
 
 ## 맥락

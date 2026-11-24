@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-23
-- 근거: [이슈 #245](https://github.com/Theia0382/yozm-news/issues/245) — 독자 화면에서 "흐름 추적" · "이어진 흐름"처럼 "흐름"이라는 말이 이미 쓰이는데 탭과 몇 문구만 "스토리라인"이었다. 리드가 이름을 정했다. 구현 커밋 `fc8a373` · `27a214d`
+- 근거: [이슈 #245](https://github.com/Theia0382/yozm-news/issues/245) — 독자 화면에서 "흐름 추적" · "이어진 흐름"처럼 "흐름"이라는 말이 이미 쓰이는데 탭과 몇 문구만 "스토리라인"이었다. 이름을 정했다. 구현 커밋 `fc8a373` · `27a214d`
 - 관련: [ADR-0284](0284-a-digest-item-keeps-the-top-that-grouped-it-on-its-section-and-items-with-a-flow-carry-a-flow-tracking-button.md)(화면 이름 "흐름 추적"), [ADR-0290](0290-the-readers-storyline-tab-shows-the-users-summarized-flows-and-the-tracking-list-has-one-row-per-user-storyline.md)(탭의 내용)
 
 ## 맥락

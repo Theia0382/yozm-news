@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-23
-- 근거: [이슈 #190](https://github.com/Theia0382/yozm-news/issues/190) — 사용자 스토리라인을 둔 뒤의 측정에서, 흐름 하나를 추적한 사용자에게 같은 앞 흐름에서 갈라진 다른 흐름까지 추적 · 정리됐다. 리드는 [이슈 #244](https://github.com/Theia0382/yozm-news/issues/244)에서 헤드 기준으로 가르는 안을 냈으나 그때는 겹치면 한 묶음으로 합치는 안이 채택됐고, 이 측정을 본 뒤 헤드 기준을 정했다. 구현 커밋 `6fb26a9` · `bc2b859` · `5bd2f81` · `d48a094`
+- 근거: [이슈 #190](https://github.com/Theia0382/yozm-news/issues/190) — 사용자 스토리라인을 둔 뒤의 측정에서, 흐름 하나를 추적한 사용자에게 같은 앞 흐름에서 갈라진 다른 흐름까지 추적 · 정리됐다. [이슈 #244](https://github.com/Theia0382/yozm-news/issues/244)에서 헤드 기준으로 가르는 안이 나왔으나 그때는 겹치면 한 묶음으로 합치는 안이 채택됐고, 이 측정을 본 뒤 헤드 기준을 정했다. 구현 커밋 `6fb26a9` · `bc2b859` · `5bd2f81` · `d48a094`
 - 관련: [ADR-0281](0281-a-user-storyline-is-a-flow-that-received-interest-signals-and-tracks-the-tops-reached-forward-along-follows-from-its-seeds-as-one-group.md)(부분 대체 — 셋째 결정의 "추적 대상이 하나라도 겹치는 씨앗들은 한 사용자 스토리라인", 넷째 결정의 갈라질 때 잇기 · 물려받기), [ADR-0283](0283-storyline-interest-is-keyed-by-user-storyline-and-its-value-is-spread-to-each-top-for-selection.md)(부분 대체 — 꼭대기의 사용자 스토리라인 하나와 "모든 꼭대기에 같은 값"), [ADR-0290](0290-the-readers-storyline-tab-shows-the-users-summarized-flows-and-the-tracking-list-has-one-row-per-user-storyline.md)(부분 대체 — 추적 목록 줄의 카드 "첫 추적 씨앗"), [ADR-0293](0293-the-interest-history-also-shows-the-interest-of-summarized-flows.md)(부분 대체 — 흐름 행의 값 "ID 가 가장 작은 꼭대기"), [ADR-0282](0282-flow-tracking-points-to-a-user-storyline-which-user-handlers-store-under-the-settings-lock-while-readers-get-the-result-of-the-same-rule.md)(보충 — 꼭대기를 가진 사용자 스토리라인이 여럿일 때의 해제 · 추적 상태), [ADR-0287](0287-user-storyline-summaries-are-made-and-stored-by-user-with-the-users-key-and-digest-supplies-the-flow-standing.md)(정리를 읽는 조회는 저장한 행만 읽는다 — 그대로, 헤드도 저장 행이다)
 
 ## 맥락

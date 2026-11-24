@@ -2,7 +2,7 @@
 
 - 상태: 승인. 부분 대체 — 구독 신호의 스토리라인 구독 주제 몫([ADR-0277](0277-storyline-interest-is-counted-per-containment-tree-top-with-the-topic-formula-and-reactions-to-a-flow-seen-within-seven-days-go-to-the-storyline-only.md))
 - 날짜: 2026-11-19
-- 근거: [이슈 #188](https://github.com/Theia0382/yozm-news/issues/188) — 기점 `91ba014` 의 관심도 산식으로 신호 조합마다 관심 x 를 감쇠와 함께 손으로 계산하고 리드와 정함. 구현 커밋 `ac24312`
+- 근거: [이슈 #188](https://github.com/Theia0382/yozm-news/issues/188) — 기점 `91ba014` 의 관심도 산식으로 신호 조합마다 관심 x 를 감쇠와 함께 손으로 계산하고 정함. 구현 커밋 `ac24312`
 - 관련: [ADR-0028](0028-explicit-signals-and-interest-weighted-candidates.md)(보충 — 결정 "구독 밖 주제에 관심이 반복되면 그 주제의 구독을 제안"의 기준), [ADR-0222](0222-interest-per-subtopic-is-smoothed-reactions-over-exposures-with-a-half-life-and-exposures-are-all-ready-citations.md)(산식 · 상수), [ADR-0226](0226-new-and-lost-interests-are-neighbouring-periods-crossing-one-threshold-on-the-interest-value.md)("관심 있음" θ), [ADR-0103](0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md)(보충 — 결정 절의 "구독 제안 … 이 쓰는 '큰' 것"), [ADR-0209](0209-maximum-candidates-and-big-slots-are-user-settings-and-the-big-slot-takes-at-most-half.md)(보충 — 결과 절의 "구독 제안의 재료 … 도 생기지 않는다")
 
 ## 맥락

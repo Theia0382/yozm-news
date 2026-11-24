@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-23
-- 근거: [이슈 #245](https://github.com/Theia0382/yozm-news/issues/245) — 관심이 쌓인 흐름을 사용자 LLM 으로 정리해 보이려는데, 그 글을 어느 모듈이 만들고 어디에 두는지가 정해지지 않았다. 리드가 자리를 `user` 로 정했다. 구현 커밋 `4e6da46` · `d6ebeb9` · `776e35e` · `d552119` · `83665ae`
+- 근거: [이슈 #245](https://github.com/Theia0382/yozm-news/issues/245) — 관심이 쌓인 흐름을 사용자 LLM 으로 정리해 보이려는데, 그 글을 어느 모듈이 만들고 어디에 두는지가 정해지지 않았다. 자리를 `user` 로 정했다. 구현 커밋 `4e6da46` · `d6ebeb9` · `776e35e` · `d552119` · `83665ae`
 - 관련: [ADR-0282](0282-flow-tracking-points-to-a-user-storyline-which-user-handlers-store-under-the-settings-lock-while-readers-get-the-result-of-the-same-rule.md)(부분 대체 — 사용자 스토리라인을 저장하는 계기에 정리 작업이 더해진다), [ADR-0193](0193-the-per-user-storyline-information-is-the-received-news-counted-from-the-digest-shown-for-each-date.md)(부분 대체 — 사용자마다 달라지는 스토리라인 정보가 하나 는다), [ADR-0278](0278-followed-flows-are-tops-at-or-above-the-follow-threshold-or-subscribed-less-the-excluded-and-the-keep-threshold-is-0-2.md)(부분 대체 — 판정을 읽는 길은 화면용 조회가 아니라 `user` 가 선언한 공급 인터페이스다), [ADR-0003](0003-byok-personalized-digest.md)(보충 — 사용자 키로 만드는 생성물이 하나 는다), [ADR-0233](0233-digest-failure-notices-come-through-an-event-declared-by-the-receiving-user-module-for-every-failed-digest.md)(같은 꼴 — 받는 쪽이 선언하는 이벤트), [ADR-0281](0281-a-user-storyline-is-a-flow-that-received-interest-signals-and-tracks-the-tops-reached-forward-along-follows-from-its-seeds-as-one-group.md)(정리의 대상)
 
 ## 맥락

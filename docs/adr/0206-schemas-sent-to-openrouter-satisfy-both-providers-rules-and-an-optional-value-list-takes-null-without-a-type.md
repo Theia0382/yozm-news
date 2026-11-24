@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-17
-- 근거: [이슈 #192](https://github.com/Theia0382/yozm-news/issues/192) — 실제 호출(2026-11-17): 값 목록과 `"null"` 을 더한 타입 배열을 함께 둔 마디를 Anthropic 계열이 OpenRouter 를 거쳐 400 으로 거절(`Enum value … does not match declared type`), 타입 없는 값 목록 · 값 목록 없는 `["string","null"]` 은 두 계열 모두 받음, 고친 맞춤으로 두 계열의 스키마 강제 생성 정상. 리드 결정(교집합 · 값 목록 꼴). 구현 `2669322` · `26b15fa`
+- 근거: [이슈 #192](https://github.com/Theia0382/yozm-news/issues/192) — 실제 호출(2026-11-17): 값 목록과 `"null"` 을 더한 타입 배열을 함께 둔 마디를 Anthropic 계열이 OpenRouter 를 거쳐 400 으로 거절(`Enum value … does not match declared type`), 타입 없는 값 목록 · 값 목록 없는 `["string","null"]` 은 두 계열 모두 받음, 고친 맞춤으로 두 계열의 스키마 강제 생성 정상. 교집합 · 값 목록 꼴을 정함. 구현 `2669322` · `26b15fa`
 - 관련: [ADR-0199](0199-generation-requests-carry-only-the-tasks-own-inputs-and-the-gateway-maps-them-to-each-provider.md)(보충 — 새 공급자의 스키마 맞춤)
 
 ## 맥락

@@ -2,7 +2,7 @@
 
 - 상태: 승인. 부분 대체 — 겹치는 씨앗을 한 묶음으로 합치기([ADR-0294](0294-a-user-storyline-is-one-per-head-and-a-top-before-a-fork-belongs-to-several-of-them.md)) · 갈라질 때 잇기와 물려받기([ADR-0294](0294-a-user-storyline-is-one-per-head-and-a-top-before-a-fork-belongs-to-several-of-them.md))
 - 날짜: 2026-11-22
-- 근거: [이슈 #244](https://github.com/Theia0382/yozm-news/issues/244) — 스토리라인 구독과 스토리라인 관심이 이어진 뒤 흐름을 따라가지 않아, 앞 흐름을 구독하거나 거듭 싫어요한 사용자에게 뒤 흐름이 새 흐름으로 다시 왔다. 리드가 구독 · 관심을 물려주는 대신 그 값을 가진 개체를 세우기로 정했고, 측정 기록을 재생해 개체 수와 앞 · 뒤 흐름 반응의 부호를 확인했다. 구현 커밋 `c995bb8` · `a029668` · `3db16e1`
+- 근거: [이슈 #244](https://github.com/Theia0382/yozm-news/issues/244) — 스토리라인 구독과 스토리라인 관심이 이어진 뒤 흐름을 따라가지 않아, 앞 흐름을 구독하거나 거듭 싫어요한 사용자에게 뒤 흐름이 새 흐름으로 다시 왔다. 구독 · 관심을 물려주는 대신 그 값을 가진 개체를 세우기로 정했고, 측정 기록을 재생해 개체 수와 앞 · 뒤 흐름 반응의 부호를 확인했다. 구현 커밋 `c995bb8` · `a029668` · `3db16e1`
 - 관련: [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)(부분 대체 — 결정 "개인 쪽은 스토리라인 구독과 관심사 둘이다": 사용자 스토리라인 개체가 생기고 `user` 에 둔다), [ADR-0264](0264-the-storyline-tops-query-gives-each-event-its-containment-tree-roots-in-membership-score-order-without-the-scores.md)(꼭대기 조회는 이어짐을 따르지 않는다 — 그대로), [ADR-0282](0282-flow-tracking-points-to-a-user-storyline-which-user-handlers-store-under-the-settings-lock-while-readers-get-the-result-of-the-same-rule.md)(저장과 흐름 추적), [ADR-0283](0283-storyline-interest-is-keyed-by-user-storyline-and-its-value-is-spread-to-each-top-for-selection.md)(관심의 키)
 
 ## 맥락

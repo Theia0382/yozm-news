@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-23
-- 근거: [이슈 #245](https://github.com/Theia0382/yozm-news/issues/245) — 탭 · 다이제스트 항목 · 관심사 히스토리가 "보이는 흐름"을 같은 뜻으로 써야 하고, 화면을 열 때마다 관심 재료를 읽지 않아야 한다. 리드가 판정의 자리와 거른 흐름의 처분을 정했다. 구현 커밋 `776e35e` · `83665ae` · `e16498b`
+- 근거: [이슈 #245](https://github.com/Theia0382/yozm-news/issues/245) — 탭 · 다이제스트 항목 · 관심사 히스토리가 "보이는 흐름"을 같은 뜻으로 써야 하고, 화면을 열 때마다 관심 재료를 읽지 않아야 한다. 판정의 자리와 거른 흐름의 처분을 정했다. 구현 커밋 `776e35e` · `83665ae` · `e16498b`
 - 관련: [ADR-0278](0278-followed-flows-are-tops-at-or-above-the-follow-threshold-or-subscribed-less-the-excluded-and-the-keep-threshold-is-0-2.md)(보충 — 구독했지만 남길 기준 아래로 내려간 흐름을 화면에 둘지), [ADR-0287](0287-user-storyline-summaries-are-made-and-stored-by-user-with-the-users-key-and-digest-supplies-the-flow-standing.md)(정리를 만드는 자리), [ADR-0288](0288-summaries-are-made-after-a-digest-ends-only-for-changed-flows-and-extended-with-new-events.md)(처분)
 
 ## 맥락

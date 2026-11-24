@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-16
-- 근거: [이슈 #180](https://github.com/Theia0382/yozm-news/issues/180) — 기점 `0a8b984` 의 모듈 경계(`storyline` · `digest` · `user` 의 Spec 과 의존 선언, `admin` 의 엮기)를 대조하고, 화면용 API 를 맡을 모듈을 리드와 정함
+- 근거: [이슈 #180](https://github.com/Theia0382/yozm-news/issues/180) — 기점 `0a8b984` 의 모듈 경계(`storyline` · `digest` · `user` 의 Spec 과 의존 선언, `admin` 의 엮기)를 대조하고, 화면용 API 를 맡을 모듈을 정함
 - 관련: [ADR-0013](0013-architecture-patterns.md)(부분 대체 — 결정 "별도 `web` 모듈은 두지 않는다"), [ADR-0045](0045-admin-module-serves-operator-api-over-module-public-operation-apis.md)(보충 — 같은 꼴을 사용자 화면에 둔다), [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)(검토한 대안의 새 모듈 기각과의 관계), [ADR-0068](0068-rss-summaries-shown-only-on-operator-screens-and-users-get-processed-information.md)(사용자 화면의 노출 범위)
 
 ## 맥락

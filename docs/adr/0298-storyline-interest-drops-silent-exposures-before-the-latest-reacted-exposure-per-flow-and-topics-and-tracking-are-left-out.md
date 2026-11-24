@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-24
-- 근거: [이슈 #190](https://github.com/Theia0382/yozm-news/issues/190) — 측정 재생에서 싫어요를 누른 큰 흐름이 다음 날 · 이틀 뒤 다시 들었다. 흐름 관심을 측정 기록으로 다시 세어 보니, 같은 흐름을 며칠 말없이 본 뒤 누른 싫어요가 그 앞의 무반응 노출에 묽어져 거름 기준에 닿지 못했다. 리드는 거름을 관심 값 하나로 두고(별도 지표를 두지 않음) 값의 시간 감쇠는 그대로 두되 거름에 들어가는 문을 고치기로 했고, 기준을 "싫어하는 흐름이 매일 같이 나오지 않음"으로 정했다. 구현 커밋 `7000e48`
+- 근거: [이슈 #190](https://github.com/Theia0382/yozm-news/issues/190) — 측정 재생에서 싫어요를 누른 큰 흐름이 다음 날 · 이틀 뒤 다시 들었다. 흐름 관심을 측정 기록으로 다시 세어 보니, 같은 흐름을 며칠 말없이 본 뒤 누른 싫어요가 그 앞의 무반응 노출에 묽어져 거름 기준에 닿지 못했다. 거름을 관심 값 하나로 두고(별도 지표를 두지 않음) 값의 시간 감쇠는 그대로 두되 거름에 들어가는 문을 고치기로 했고, 기준을 "싫어하는 흐름이 매일 같이 나오지 않음"으로 정했다. 구현 커밋 `7000e48`
 - 관련: [ADR-0277](0277-storyline-interest-is-counted-per-containment-tree-top-with-the-topic-formula-and-reactions-to-a-flow-seen-within-seven-days-go-to-the-storyline-only.md)(부분 대체 — "산식은 키 종류에 무관한 하나"), [ADR-0268](0268-interest-counts-exposures-and-reactions-per-event-splitting-an-item-weight-one-over-n-and-counting-an-event-once-with-its-latest-share.md)(부분 대체 — 산식의 노출 E), [ADR-0222](0222-interest-per-subtopic-is-smoothed-reactions-over-exposures-with-a-half-life-and-exposures-are-all-ready-citations.md)(평활 산식), [ADR-0283](0283-storyline-interest-is-keyed-by-user-storyline-and-its-value-is-spread-to-each-top-for-selection.md)(묶음이 키), [ADR-0295](0295-the-subscription-signal-of-interest-is-a-term-outside-the-exposure-denominator-and-the-topic-value-is-below-the-presence-threshold.md)(구독 항은 분모 밖), [ADR-0279](0279-storyline-interest-multiplies-the-candidate-rank-and-flows-at-or-below-the-exclusion-threshold-leave-subscribed-candidates-and-the-big-slot.md) · [ADR-0297](0297-an-event-whose-mean-topic-interest-is-at-or-below-the-exclusion-threshold-does-not-enter-the-big-slot.md)(거름 — 바꾸지 않는다)
 
 ## 맥락
@@ -32,7 +32,7 @@
 |---|---|
 | 싫어요 기록으로 흐름을 거른다(관심 값과 별도 지표) | 거름도 잊는 값이어야 하고 지표는 관심 값 하나로 둔다 — 관심 값의 시간 감쇠는 맞는 잊기이고 문제는 거름에 들어가는 문이다 |
 | 큰 슬롯 노출을 분모에서 뺀다 | 구독 밖 주제의 관심이 노출에 기댄다 |
-| 사건 거름을 "꼭대기 하나라도"로 | 좋아하는 흐름의 사건이 싫어한 흐름에도 걸쳐 있으면 구독 후보에서까지 빠진다. 리드 기준에서 효과가 작다 |
+| 사건 거름을 "꼭대기 하나라도"로 | 좋아하는 흐름의 사건이 싫어한 흐름에도 걸쳐 있으면 구독 후보에서까지 빠진다. 이 결정의 기준("싫어하는 흐름이 매일 같이 나오지 않음")에서 효과가 작다 |
 | 싫어요만 앞선 침묵을 대신한다 | 거름 효과는 같고 관심 흐름 · 정리 비용을 건드리지 않지만, 같은 산식 안에서 좋아요만 침묵에 계속 묽어지는 비대칭이 생긴다 |
 | 주제에도 건다 | 주제의 침묵은 독립된 증거다 — 주제 관심이 "반응한 것 중 비율"이 되어 침묵이 관심을 낮추지 못한다 |
 | 흐름 추적도 반응으로 본다 | 추적은 이미 묽어지지 않는다 — 추적한 흐름의 관심만 커져 정리 비용이 는다 |

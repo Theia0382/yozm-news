@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-18
-- 근거: [이슈 #186](https://github.com/Theia0382/yozm-news/issues/186) — 기점 `33ab070` 의 키 관문(서버 · 화면)과 구독 · 카드 처리기를 대조하고 리드와 정함
+- 근거: [이슈 #186](https://github.com/Theia0382/yozm-news/issues/186) — 기점 `33ab070` 의 키 관문(서버 · 화면)과 구독 · 카드 처리기를 대조하고 정함
 - 관련: [ADR-0190](0190-storyline-subscription-handlers-are-open-without-a-key.md)(보충 — 맥락 "내 구독 목록을 관심 설정 화면에 둘지 스토리라인 화면에 둘지는 구독 화면을 만들 때 정한다"를 정한다), [ADR-0160](0160-users-without-a-key-may-use-key-account-and-notice-handlers.md) · [ADR-0179](0179-interest-settings-handlers-are-open-without-a-key.md)(관련 — 키 없이 가는 화면의 열거는 그대로다), [ADR-0159](0159-having-a-key-means-having-any-stored-key-regardless-of-its-status.md)(관련 — 키를 모두 지우면 키 화면만 남는다)
 
 ## 맥락

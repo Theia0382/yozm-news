@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-07
-- 근거: [이슈 #98](https://github.com/Theia0382/yozm-news/issues/98) — 닫힌 사건 안의 재판정과 기준이 바뀐 뒤의 닫기 · 병합을 리드와 정하고 구현(`8eba5ca` · `bb34862` · `0551eb3`)
+- 근거: [이슈 #98](https://github.com/Theia0382/yozm-news/issues/98) — 닫힌 사건 안의 재판정과 기준이 바뀐 뒤의 닫기 · 병합을 정하고 구현(`8eba5ca` · `bb34862` · `0551eb3`)
 - 관련: [ADR-0081](0081-event-assignment-criteria-in-settings-and-rejudgement-within-stored-scores.md)(결정 절 "재판정은 자동이다"의 "기간 제한 없이 다시 판정한다"와 검토한 대안 "재판정 대상을 열린 사건이나 최근 기간으로 한정한다" 행을 닫힌 사건을 빼도록 부분 대체한다 — 좁힘. 결과 절 "닫힌 사건 안의 배정을 재판정할지는 사건 닫기를 만드는 작업이 정한다"를 정한다, 후속 기록), [ADR-0084](0084-event-merge-applies-assignment-scoring-between-events-and-keeps-merged-rows-pointing-to-survivors.md) · [ADR-0086](0086-events-close-after-an-idle-period-since-the-last-join-or-a-maximum-period-since-opening.md)(병합 · 닫기)
 
 ## 맥락

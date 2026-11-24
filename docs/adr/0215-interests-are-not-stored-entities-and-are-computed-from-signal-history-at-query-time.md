@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-18
-- 근거: [이슈 #187](https://github.com/Theia0382/yozm-news/issues/187) — 관심도 산식을 정하며 관심사를 저장 단위로 둘지 리드와 정함. 구현 커밋 `e6d32cf` · `1487ffe`
+- 근거: [이슈 #187](https://github.com/Theia0382/yozm-news/issues/187) — 관심도 산식을 정하며 관심사를 저장 단위로 둘지 정함. 구현 커밋 `e6d32cf` · `1487ffe`
 - 관련: [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)(결정 "관심사를 개체로 세울지는 관심도를 설계할 때 정한다" — 보충), [ADR-0028](0028-explicit-signals-and-interest-weighted-candidates.md)(관심도는 조회할 때 계산한다)
 
 ## 맥락

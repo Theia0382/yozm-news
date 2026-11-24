@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-17
-- 근거: [이슈 #192](https://github.com/Theia0382/yozm-news/issues/192) — OpenRouter 문서(오류 코드 · Typed error codes · 200 안의 오류), openai-java SDK 가 숫자 `code` 를 읽는 실험, 실측(2026-11-17): 틀린 키의 401 본문에 `metadata` 없음, 모델을 막는 가드레일은 403 이 아니라 404(라우팅 단계 실패 · `error_type` 없음 · 과금 없음). 리드 결정(403 분류). 구현 `2669322`
+- 근거: [이슈 #192](https://github.com/Theia0382/yozm-news/issues/192) — OpenRouter 문서(오류 코드 · Typed error codes · 200 안의 오류), openai-java SDK 가 숫자 `code` 를 읽는 실험, 실측(2026-11-17): 틀린 키의 401 본문에 `metadata` 없음, 모델을 막는 가드레일은 403 이 아니라 404(라우팅 단계 실패 · `error_type` 없음 · 과금 없음). 403 분류를 정함. 구현 `2669322`
 - 관련: [ADR-0154](0154-key-validation-lists-models-and-failure-kinds-are-sorted-by-one-rule-per-provider-reading-the-error-kind.md)(보충 — 분류 입력 "오류의 종류"를 OpenRouter 에서는 `error.metadata.error_type` 에서 읽는다), [ADR-0165](0165-a-key-is-valid-or-invalid-and-moves-by-validation-results.md)(무효 · 권한 없음이면 키가 무효로 바뀐다 — 그대로), [ADR-0201](0201-the-gateway-resends-only-transient-generation-failures-and-sets-the-request-deadline-per-call-kind.md)(일시 장애만 다시 보낸다 — 그대로)
 
 ## 맥락

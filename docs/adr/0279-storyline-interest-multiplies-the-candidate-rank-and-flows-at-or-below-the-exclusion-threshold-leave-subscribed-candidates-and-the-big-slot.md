@@ -2,7 +2,7 @@
 
 - 상태: 승인. 부분 대체 — 큰 판정 행의 순서([ADR-0296](0296-the-big-slot-takes-big-judgement-rows-in-the-order-of-intensity-times-the-interest-weight.md))
 - 날짜: 2026-11-22
-- 근거: [이슈 #243](https://github.com/Theia0382/yozm-news/issues/243) — 측정에서 큰 슬롯 항목의 싫어요가 32.7% 였고 같은 흐름이 매일 다시 들었다. 기록된 반응으로 거름 기준 −0.2 를 대 보면 큰 슬롯 싫어요 37건 가운데 22건이 빠지고 좋아요는 하나도 빠지지 않았다. 리드가 가중치 곱 · 거름으로 시작하고 효과를 본 뒤 가중치 조정이나 자리 보장을 다시 정하기로 했다. 구현 커밋 `da9a3df`
+- 근거: [이슈 #243](https://github.com/Theia0382/yozm-news/issues/243) — 측정에서 큰 슬롯 항목의 싫어요가 32.7% 였고 같은 흐름이 매일 다시 들었다. 기록된 반응으로 거름 기준 −0.2 를 대 보면 큰 슬롯 싫어요 37건 가운데 22건이 빠지고 좋아요는 하나도 빠지지 않았다. 가중치 곱 · 거름으로 시작하고 효과를 본 뒤 가중치 조정이나 자리 보장을 다시 정하기로 했다. 구현 커밋 `da9a3df`
 - 관련: [ADR-0277](0277-storyline-interest-is-counted-per-containment-tree-top-with-the-topic-formula-and-reactions-to-a-flow-seen-within-seven-days-go-to-the-storyline-only.md)(스토리라인 관심), [ADR-0260](0260-digest-candidates-are-events-and-only-assigned-events-with-an-article-first-evaluated-in-the-period-enter.md)(부분 대체 — 큰 판정 행을 쓰는 순서와 사건이 드는 조건), [ADR-0028](0028-explicit-signals-and-interest-weighted-candidates.md)(부분 대체 — 후보 선별 순서의 관심 순위), [ADR-0103](0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md)(보충 — 큰 흐름을 거듭 싫어한 사용자에게는 넣지 않는다), [ADR-0216](0216-the-interest-selection-reason-marks-subscribed-candidates-that-enter-only-by-interest-with-a-weight-above-neutral.md)(보충 — 관심도 가중치는 주제 × 스토리라인의 곱), [ADR-0209](0209-maximum-candidates-and-big-slots-are-user-settings-and-the-big-slot-takes-at-most-half.md)(대안 표의 되먹임 우려)
 
 ## 맥락
@@ -33,7 +33,7 @@
 | 대안 | 기각 이유 |
 |---|---|
 | 가중치 곱만 둔다 | x = −0.25 면 가중치 0.875 라 거듭 싫어한 흐름이 후보가 모자란 날 그대로 든다 |
-| 가중치 곱 · 거름에 관심 흐름 자리 보장을 더한다 | 보장할 만큼 빠지는지 아직 재지 못했다 — 리드가 곱 · 거름의 효과를 먼저 보기로 했다 |
+| 가중치 곱 · 거름에 관심 흐름 자리 보장을 더한다 | 보장할 만큼 빠지는지 아직 재지 못했다 — 곱 · 거름의 효과를 먼저 보기로 했다 |
 | 큰 판정 행은 그대로 둔다 | 큰 슬롯 싫어요와 같은 흐름의 반복이 남는다 |
 | 남은 큰 판정 행을 보도 강도 × 스토리라인 가중치 순으로 다시 놓는다 | 보도 강도의 폭이 커서 곱의 효과가 작고, 큰 판정 순서와 다른 순서를 하나 더 둔다 |
 

@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-17
-- 근거: [이슈 #192](https://github.com/Theia0382/yozm-news/issues/192) — OpenRouter 공개 모델 목록(2026-11-17)의 모델 ID · 단가 · 지원 인자, 리드 결정(기본 목록 · 첫 모델). 구현 `ab18052` · `2669322` · `a42b38f`
+- 근거: [이슈 #192](https://github.com/Theia0382/yozm-news/issues/192) — OpenRouter 공개 모델 목록(2026-11-17)의 모델 ID · 단가 · 지원 인자. 기본 목록 · 첫 모델을 정함. 구현 `ab18052` · `2669322` · `a42b38f`
 - 관련: [ADR-0008](0008-v1-llm-providers.md)(부분 대체 — "v1은 OpenAI API 와 Anthropic API 만 지원한다"와 검토한 대안 표의 OpenRouter 행. 보충 — 결과 절 "공급자 추가는 `LlmClientFactory` 구현과 모델 목록 추가로 끝나야 한다"), [ADR-0153](0153-allowed-llm-models-come-from-a-bundled-file-that-an-operator-file-replaces-as-a-whole.md)(기본 파일에 공급자를 더한다), [ADR-0178](0178-the-llm-model-to-use-is-decided-at-query-time-from-the-chosen-model-the-allowed-list-and-key-status.md)(대체 순서 — `Provider` 의 순서)
 
 ## 맥락
@@ -34,4 +34,4 @@
 |---|---|
 | 기본 목록에 OpenRouter 모델을 두지 않고 운영자 파일로 더한다 | OpenRouter 키만 있는 사용자에게 쓸 모델이 없어 기본 설치에서 기능이 돌지 않는다 |
 | 기본 목록에 다른 회사의 모델(Gemini 등)도 둔다 | 그 모델의 구조화 출력을 재지 않았고, 외부 전송 고지에 회사가 늘고, 학습 제외 라우팅에 맞는 공급자를 모델마다 확인해야 한다 |
-| 첫 모델을 `anthropic/claude-sonnet-5.5` 로 | 같은 중간 등급이지만 단가가 두 배다(입력 2.00 · 출력 10.00 USD/100만 토큰 대 1.00 · 5.00). 리드가 terra 를 골랐다 |
+| 첫 모델을 `anthropic/claude-sonnet-5.5` 로 | 같은 중간 등급이지만 단가가 두 배다(입력 2.00 · 출력 10.00 USD/100만 토큰 대 1.00 · 5.00). terra 를 골랐다 |

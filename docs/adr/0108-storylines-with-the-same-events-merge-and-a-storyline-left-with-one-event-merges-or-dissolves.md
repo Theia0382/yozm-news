@@ -2,7 +2,7 @@
 
 - 상태: 승인. 부분 대체 — 표현만 비슷한 경우는 합치지 않는다는 결정 · 남는 쪽의 소속 · 표현이 바뀌지 않는다는 결정([ADR-0234](0234-fragments-of-one-matter-are-recognised-by-the-relation-judgement-and-merged-above-a-merge-probability-without-a-way-back.md))
 - 날짜: 2026-11-10
-- 근거: [이슈 #123](https://github.com/Theia0382/yozm-news/issues/123) — 같은 흐름이 둘로 남는 경로를 코드로 따라가 합치기의 범위 · 사건 하나만 남은 스토리라인의 처분 · 합쳐진 행의 처리를 리드와 정함
+- 근거: [이슈 #123](https://github.com/Theia0382/yozm-news/issues/123) — 같은 흐름이 둘로 남는 경로를 코드로 따라가 합치기의 범위 · 사건 하나만 남은 스토리라인의 처분 · 합쳐진 행의 처리를 정함
 - 관련: [ADR-0106](0106-provisional-storyline-linking-opens-only-with-a-partner-event-and-adds-the-single-best-storyline-without-removal.md)(결과 "사건 하나인 스토리라인 · 같은 흐름이 둘로 열린 스토리라인이 남는다" — 부분 대체, 결정 "다시 판정의 계기" — 보충), [ADR-0105](0105-storylines-link-incrementally-from-event-change-notifications-and-events-publish-changed-event-ids.md)(결정 "구성 사건이 없는 스토리라인은 지운다" — 보충), [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)(결정 "공유 스토리라인의 책임 · 계약은 구현할 때 정한다"의 정돈 몫 — 보충), [ADR-0084](0084-event-merge-applies-assignment-scoring-between-events-and-keeps-merged-rows-pointing-to-survivors.md)(합쳐진 행이 남는 쪽을 가리키는 꼴 — 같은 꼴)
 
 ## 맥락
