@@ -247,16 +247,16 @@ class JdbcEvaluationResultRepository implements EvaluationResultRepository {
 
 	@Override
 	public void scanNewestFirst(TagSetId version, Instant from, Instant to, @Nullable EvaluationCursor after,
-			@Nullable StoredKeys required, @Nullable String formatKey, Predicate<ListedEvaluation> sink) {
+			List<StoredKeys> required, @Nullable String formatKey, Predicate<ListedEvaluation> sink) {
 		StringBuilder where = new StringBuilder(
 				"e.tag_set_id = :version and e.evaluated_at >= :from and e.evaluated_at < :to");
 		if (after != null) {
 			where.append(" and (e.evaluated_at, e.id) < (:afterAt, :afterId)");
 		}
-		if (required != null) {
+		for (int i = 0; i < required.size(); i++) {
 			// 거르기의 필요조건 — 기본 키 (evaluation_id, tag_kind, tag_key)로 찾는다
 			where.append(" and exists (select 1 from article_tags k where k.evaluation_id = e.id"
-					+ " and k.tag_kind = :requiredKind and k.tag_key = any(:requiredKeys))");
+					+ " and k.tag_kind = :requiredKind%d and k.tag_key = any(:requiredKeys%d))".formatted(i, i));
 		}
 		if (formatKey != null) {
 			where.append(" and e.format_key = :formatKey");
@@ -274,9 +274,9 @@ class JdbcEvaluationResultRepository implements EvaluationResultRepository {
 		if (after != null) {
 			statement = statement.param("afterAt", timestamp(after.evaluatedAt())).param("afterId", after.id().value());
 		}
-		if (required != null) {
-			statement = statement.param("requiredKind", required.kind().name())
-				.param("requiredKeys", required.keys().toArray(String[]::new));
+		for (int i = 0; i < required.size(); i++) {
+			statement = statement.param("requiredKind" + i, required.get(i).kind().name())
+				.param("requiredKeys" + i, required.get(i).keys().toArray(String[]::new));
 		}
 		if (formatKey != null) {
 			statement = statement.param("formatKey", formatKey);

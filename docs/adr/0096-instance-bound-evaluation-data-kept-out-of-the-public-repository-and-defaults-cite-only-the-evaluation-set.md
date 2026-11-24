@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-08
-- 근거: [이슈 #100](https://github.com/Theia0382/yozm-news/issues/100) — 평가 세트의 자리를 리드와 정하고 도구를 그에 맞춰 구현(`d4e2db7`)
+- 근거: [이슈 #100](https://github.com/Theia0382/yozm-news/issues/100) — 평가 세트의 자리를 정하고 도구를 그에 맞춰 구현(`d4e2db7`)
 - 관련: [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md)(결정 절 "평가 세트의 실제 기사 텍스트는 공개 저장소에 넣지 않는다"에 라벨 · 결과 기록의 자리를 더한다 — 보충), [ADR-0047](0047-self-hosted-software-run-by-instance-operators.md)(공식 인스턴스 없는 셀프 호스팅 소프트웨어), [ADR-0095](0095-event-clustering-evaluated-by-an-operator-tool-comparing-admin-api-results-with-full-day-labels.md)(평가 방법)
 
 ## 맥락

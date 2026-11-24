@@ -2,7 +2,7 @@
 
 - 상태: 승인. 부분 대체 — 긴 전개를 잇는 단위([ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md))
 - 날짜: 2026-11-07
-- 근거: [이슈 #98](https://github.com/Theia0382/yozm-news/issues/98) — 닫는 기준 시각과 계속 이어지는 사건을 리드와 정하고 구현(`8eba5ca` · `0551eb3`)
+- 근거: [이슈 #98](https://github.com/Theia0382/yozm-news/issues/98) — 닫는 기준 시각과 계속 이어지는 사건을 정하고 구현(`8eba5ca` · `0551eb3`)
 - 관련: [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md)(결정 절 "4. 정리"의 닫기와 "사건은 며칠 단위로 닫힌다", 후속 기록), [ADR-0081](0081-event-assignment-criteria-in-settings-and-rejudgement-within-stored-scores.md)(설정 자리 — 사건 기준과 같다), [ADR-0087](0087-closed-event-assignments-are-not-rejudged-and-closing-and-merging-are-not-undone.md)(닫힘은 되돌리지 않는다)
 
 ## 맥락

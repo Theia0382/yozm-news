@@ -297,7 +297,7 @@ public interface BigStorylineAdministration {
 public record BigStorylineCriteria(BigDecimal minIntensity) {
     public static final int INTENSITY_SCALE = 2;                          // 보도 강도 하한의 소수 자릿수 — 정본
     public static final BigDecimal MAX_INTENSITY;                         // 9999.99 — 상한의 정본
-    public static final BigStorylineCriteria DEFAULT;                     // 15.00 — 처음 값의 정본. 평가 세트와 운영자의 날마다 미리보기 검수로 정했다
+    public static final BigStorylineCriteria DEFAULT;                     // 14.00 — 처음 값의 정본. 평가 세트와 운영자의 날마다 미리보기 검수로 정한 값을 네 단계 중요도 척도에 맞췄다
     public static Optional<BigStorylineCriteria> of(BigDecimal minIntensity);
 }
 
@@ -911,3 +911,4 @@ sequenceDiagram
 | [0259](../adr/0259-evaluator-timing-is-owned-by-one-evaluation-type-and-judging-queues-derive-their-leases-from-the-longest-judgement.md) | 평가기 요청 마감 · 판정 한 번의 가장 긴 시간 · 일시 실패 뒤 간격은 `evaluation` 의 공개 타입 하나가 정본이고, 판정을 부르는 대기의 점유 기간은 판정 한 번의 가장 긴 시간에서 계산한다 |
 | [0264](../adr/0264-the-storyline-tops-query-gives-each-event-its-containment-tree-roots-in-membership-score-order-without-the-scores.md) | 스토리라인 꼭대기 조회는 사건마다 포함 나무 뿌리를 소속 점수 순으로 내고 점수는 싣지 않는다 |
 | [0281](../adr/0281-a-user-storyline-is-a-flow-that-received-interest-signals-and-tracks-the-tops-reached-forward-along-follows-from-its-seeds-as-one-group.md) | 사용자 스토리라인은 관심 신호를 받은 흐름이고, 씨앗에서 이어짐을 앞에서 뒤로 따라 닿는 꼭대기를 한 묶음으로 추적한다 |
+| [0299](../adr/0299-the-big-judgement-criterion-first-value-is-fourteen-to-keep-its-strictness-on-the-four-level-importance-scale.md) | 큰 판정 기준의 처음 값은 네 단계 중요도 척도에서 같은 엄격함을 지키도록 14.00 으로 둔다 |

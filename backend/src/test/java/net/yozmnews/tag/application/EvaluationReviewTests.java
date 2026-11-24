@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.tuple;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -76,7 +77,7 @@ class EvaluationReviewTests {
 	private static final Map<String, Double> OPINION = Map.of("straight", 0.1, "analysis", 0.1, "opinion", 0.6,
 			"interview", 0.1, "press-release", 0.05, "brief", 0.05);
 
-	private static final Map<Integer, Double> IMPORTANCE = Map.of(1, 0.0, 2, 0.25, 3, 0.75, 4, 0.0, 5, 0.0);
+	private static final Map<Integer, Double> IMPORTANCE = Map.of(1, 0.0, 2, 0.25, 3, 0.75, 4, 0.0);
 
 	@Autowired
 	EvaluationReview review;
@@ -162,30 +163,54 @@ class EvaluationReviewTests {
 	@Test
 	void aTopicTagIsFilteredByTheQueryTimeJudgementNotByTheStoredRow() {
 		// 기사 1 은 국회 저장 행이 있지만(필요조건은 지난다) 0.4 라 붙지 않았다 — 나오지 않는다
-		assertThat(articles(listed(tag(TagKind.TOPIC, "politics.legislature"), null, 50))).containsExactly(3L);
-		assertThat(articles(listed(tag(TagKind.TOPIC, "politics"), null, 50))).containsExactly(3L, 1L);
+		assertThat(articles(listed(tags(topicTag("politics.legislature")), null, 50))).containsExactly(3L);
+		assertThat(articles(listed(tags(topicTag("politics")), null, 50))).containsExactly(3L, 1L);
 		// low_confidence 로 붙은 금융 하나 — 대분류로도 나온다
-		assertThat(articles(listed(tag(TagKind.TOPIC, "economy"), null, 50))).containsExactly(2L);
-		assertThat(articles(listed(tag(TagKind.REGION, "domestic"), null, 50))).containsExactly(1L);
+		assertThat(articles(listed(tags(topicTag("economy")), null, 50))).containsExactly(2L);
+		assertThat(articles(listed(tags(regionTag("domestic")), null, 50))).containsExactly(1L);
 		// 형식은 저장된 대표 형식으로 좁히고, 판정은 저장 행 필요조건이 없다
-		assertThat(articles(listed(tag(TagKind.FORMAT, "opinion"), null, 50))).containsExactly(4L);
-		assertThat(articles(listed(tag(TagKind.FORMAT, "straight"), null, 50))).containsExactly(3L, 2L, 1L);
-		assertThat(articles(listed(new EvaluationFilter(null, TopicStatus.UNCLASSIFIED), null, 50)))
+		assertThat(articles(listed(tags(formatTag("opinion")), null, 50))).containsExactly(4L);
+		assertThat(articles(listed(tags(formatTag("straight")), null, 50))).containsExactly(3L, 2L, 1L);
+		assertThat(articles(listed(new EvaluationFilter(List.of(), TopicStatus.UNCLASSIFIED), null, 50)))
 			.containsExactly(4L);
-		assertThat(articles(listed(new EvaluationFilter(null, TopicStatus.LOW_CONFIDENCE), null, 50)))
+		assertThat(articles(listed(new EvaluationFilter(List.of(), TopicStatus.LOW_CONFIDENCE), null, 50)))
 			.containsExactly(2L);
-		assertThat(articles(listed(new EvaluationFilter(new TagRef(TagKind.TOPIC, "politics"), TopicStatus.TAGGED),
-				null, 50))).containsExactly(3L, 1L);
+		assertThat(articles(listed(new EvaluationFilter(List.of(topicTag("politics")), TopicStatus.TAGGED), null,
+				50)))
+			.containsExactly(3L, 1L);
+	}
+
+	@Test
+	void severalTagsListOnlyTheEvaluationsThatMatchThemAll() {
+		assertThat(matching(topicTag("politics"), regionTag("domestic"))).containsExactly(1L);
+		assertThat(matching(topicTag("politics"), formatTag("straight"))).containsExactly(3L, 1L);
+		assertThat(matching(topicTag("economy"), regionTag("domestic"))).isEmpty();
+		// 기사 1 은 두 중분류 모두 저장 행이 있어 저장소의 필요조건은 지나지만 국회가 붙지 않아 판정에서 빠진다
+		assertThat(matching(topicTag("politics.executive"), topicTag("politics.legislature"))).isEmpty();
+		// 대분류와 그 하위 중분류는 중분류 하나와 같다
+		assertThat(matching(topicTag("politics"), topicTag("politics.legislature"))).containsExactly(3L);
+		// 같은 태그는 한 번으로 본다
+		assertThat(matching(regionTag("domestic"), regionTag("domestic"))).containsExactly(1L);
+	}
+
+	@Test
+	void severalTagsAndATopicStatusMustAllMatch() {
+		List<TagRef> politicsAtHome = List.of(topicTag("politics"), regionTag("domestic"));
+
+		assertThat(articles(listed(new EvaluationFilter(politicsAtHome, TopicStatus.TAGGED), null, 50)))
+			.containsExactly(1L);
+		assertThat(articles(listed(new EvaluationFilter(politicsAtHome, TopicStatus.LOW_CONFIDENCE), null, 50)))
+			.isEmpty();
 	}
 
 	@Test
 	void aFilteredListPagesOverTheMatchingEvaluationsOnly() {
-		EvaluationListing page = listed(tag(TagKind.TOPIC, "politics"), null, 1);
+		EvaluationListing page = listed(tags(topicTag("politics")), null, 1);
 
 		assertThat(articles(page)).containsExactly(3L);
 		assertThat(page.next()).isNotNull();
 
-		EvaluationListing rest = listed(tag(TagKind.TOPIC, "politics"), page.next(), 1);
+		EvaluationListing rest = listed(tags(topicTag("politics")), page.next(), 1);
 
 		assertThat(articles(rest)).containsExactly(1L);
 		assertThat(rest.next()).isNull();
@@ -193,7 +218,7 @@ class EvaluationReviewTests {
 
 	@Test
 	void theRowCarriesTheJudgementWithNamesOfTheVersion() {
-		EvaluationRow row = listed(tag(TagKind.REGION, "domestic"), null, 50).rows().getFirst();
+		EvaluationRow row = listed(tags(regionTag("domestic")), null, 50).rows().getFirst();
 
 		assertThat(row.articleId()).isEqualTo(new ArticleId(1));
 		assertThat(row.evaluatedAt()).isEqualTo(Instant.parse("2026-10-28T00:00:00Z"));
@@ -207,8 +232,12 @@ class EvaluationReviewTests {
 
 	@Test
 	void anUnknownTagVersionOrPageSizeReadsNothing() {
-		assertThat(this.review.list(this.first, PERIOD, tag(TagKind.TOPIC, "no-such-topic"), null, 10))
-			.isEqualTo(new EvaluationListResult.UnknownTag(new TagRef(TagKind.TOPIC, "no-such-topic")));
+		assertThat(this.review.list(this.first, PERIOD, tags(topicTag("no-such-topic")), null, 10))
+			.isEqualTo(new EvaluationListResult.UnknownTags(List.of(topicTag("no-such-topic"))));
+		// 없는 태그는 고른 순서로 모두 낸다 — 있는 태그는 빠진다
+		assertThat(this.review.list(this.first, PERIOD,
+				tags(regionTag("mars"), topicTag("politics"), formatTag("video"), regionTag("domestic")), null, 10))
+			.isEqualTo(new EvaluationListResult.UnknownTags(List.of(regionTag("mars"), formatTag("video"))));
 		assertThat(this.review.list(new TagSetId(999_999), PERIOD, EvaluationFilter.NONE, null, 10))
 			.isEqualTo(new EvaluationListResult.UnknownVersion());
 		assertThat(this.review.list(this.first, PERIOD, EvaluationFilter.NONE, null, 0))
@@ -218,6 +247,34 @@ class EvaluationReviewTests {
 		// 경계: 상한 그 자체는 받는다
 		assertThat(this.review.list(this.first, PERIOD, EvaluationFilter.NONE, null, 50))
 			.isInstanceOf(EvaluationListResult.Listed.class);
+	}
+
+	@Test
+	void tooManyTagsOrTwoFormatsAreRefusedBeforeReading() {
+		List<TagRef> ten = List.of(topicTag("politics"), topicTag("politics.executive"),
+				topicTag("politics.legislature"), topicTag("politics.north-korea"),
+				topicTag("politics.diplomacy-defense"), topicTag("economy"), topicTag("economy.macro"),
+				topicTag("economy.finance"), regionTag("domestic"), regionTag("us"));
+		List<TagRef> eleven = new ArrayList<>(ten);
+		eleven.add(topicTag("economy.markets"));
+		List<TagRef> tenWithRepeat = new ArrayList<>(ten);
+		tenWithRepeat.add(topicTag("politics"));
+		EvaluationFilter formats = tags(formatTag("straight"), formatTag("opinion"));
+
+		assertThat(this.review.list(this.first, PERIOD, new EvaluationFilter(eleven, null), null, 10))
+			.isEqualTo(new EvaluationListResult.TooManyTags());
+		// 경계: 상한 그 자체는 받는다 · 같은 태그는 한 번으로 센다
+		assertThat(this.review.list(this.first, PERIOD, new EvaluationFilter(ten, null), null, 10))
+			.isInstanceOf(EvaluationListResult.Listed.class);
+		assertThat(this.review.list(this.first, PERIOD, new EvaluationFilter(tenWithRepeat, null), null, 10))
+			.isInstanceOf(EvaluationListResult.Listed.class);
+		assertThat(this.review.list(this.first, PERIOD, formats, null, 10))
+			.isEqualTo(new EvaluationListResult.MultipleFormats());
+		// 버전보다 먼저 본다 — 없는 버전이어도 같다
+		assertThat(this.review.list(new TagSetId(999_999), PERIOD, formats, null, 10))
+			.isEqualTo(new EvaluationListResult.MultipleFormats());
+		assertThat(this.review.list(new TagSetId(999_999), PERIOD, new EvaluationFilter(eleven, null), null, 10))
+			.isEqualTo(new EvaluationListResult.TooManyTags());
 	}
 
 	@Test
@@ -275,8 +332,7 @@ class EvaluationReviewTests {
 		assertThat(detail.format()).isEqualTo("straight");
 		assertThat(detail.importanceLevels()).extracting(DistributionShare::key, DistributionShare::probability)
 			.containsExactly(tuple("1", 0.0), tuple("2", 0.25),
-					tuple("3", 0.75), tuple("4", 0.0),
-					tuple("5", 0.0));
+					tuple("3", 0.75), tuple("4", 0.0));
 		assertThat(detail.importanceLevels().get(2).name())
 			.isEqualTo("영향이 여러 업계 · 지역 · 집단에 걸치지만 사회 전반의 제도나 흐름은 바꾸지 않는 사안, 결과가 아직 정해지지 않은 다툼 · 주장");
 		assertThat(detail.importance()).isEqualTo(2.75);
@@ -366,8 +422,25 @@ class EvaluationReviewTests {
 		return rows.stream().map(row -> row.articleId().value()).toList();
 	}
 
-	private static EvaluationFilter tag(TagKind kind, String key) {
-		return new EvaluationFilter(new TagRef(kind, key), null);
+	/** 그 태그들로 거른 목록 한 쪽(50건)의 기사 */
+	private List<Long> matching(TagRef... tags) {
+		return articles(listed(tags(tags), null, 50));
+	}
+
+	private static EvaluationFilter tags(TagRef... tags) {
+		return new EvaluationFilter(List.of(tags), null);
+	}
+
+	private static TagRef topicTag(String key) {
+		return new TagRef(TagKind.TOPIC, key);
+	}
+
+	private static TagRef regionTag(String key) {
+		return new TagRef(TagKind.REGION, key);
+	}
+
+	private static TagRef formatTag(String key) {
+		return new TagRef(TagKind.FORMAT, key);
 	}
 
 	private void insert(TagSetId version, long article, Instant at, String format, double formatProbability,

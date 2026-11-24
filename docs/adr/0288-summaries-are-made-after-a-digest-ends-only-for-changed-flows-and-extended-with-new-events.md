@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-23
-- 근거: [이슈 #245](https://github.com/Theia0382/yozm-news/issues/245) — 정리 호출은 사용자 비용이다. 실측 인스턴스의 덤프에서 사용자 넷의 14일을 다시 돌려 보니, 새 사건만 더해 고치는 방식의 입력 토큰이 날마다 처음부터 다시 쓰는 방식의 14 ~ 22% 였고, 처음 정리 31번 가운데 29번이 사건 60개 이하였다. 리드가 계기 · 추론 강도 · 실패의 처분 · 길이를 넘는 글의 처분 · 사건이 없는 꼭대기의 처분을 정했다. 구현 커밋 `776e35e` · `d552119`
+- 근거: [이슈 #245](https://github.com/Theia0382/yozm-news/issues/245) — 정리 호출은 사용자 비용이다. 실측 인스턴스의 덤프에서 사용자 넷의 14일을 다시 돌려 보니, 새 사건만 더해 고치는 방식의 입력 토큰이 날마다 처음부터 다시 쓰는 방식의 14 ~ 22% 였고, 처음 정리 31번 가운데 29번이 사건 60개 이하였다. 계기 · 추론 강도 · 실패의 처분 · 길이를 넘는 글의 처분 · 사건이 없는 꼭대기의 처분을 정했다. 구현 커밋 `776e35e` · `d552119`
 - 관련: [ADR-0287](0287-user-storyline-summaries-are-made-and-stored-by-user-with-the-users-key-and-digest-supplies-the-flow-standing.md)(만들고 저장하는 자리), [ADR-0278](0278-followed-flows-are-tops-at-or-above-the-follow-threshold-or-subscribed-less-the-excluded-and-the-keep-threshold-is-0-2.md)(근거 — 관심 흐름의 수가 정리 호출 수이고 사용자 비용이다)
 
 ## 맥락

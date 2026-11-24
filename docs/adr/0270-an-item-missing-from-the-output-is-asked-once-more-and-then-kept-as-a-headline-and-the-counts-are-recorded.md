@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-20
-- 근거: [이슈 #182](https://github.com/Theia0382/yozm-news/issues/182) — 측정 인스턴스에서 LLM 이 항목을 건너뛴 다이제스트가 빠진 항목을 조용히 버리고 `READY` 로 끝났고, 기록은 정보 로그 한 줄뿐이었다. 리드가 다시 묻기 · 대체 헤드라인 · 다이제스트 행의 기록을 골랐고, 대체 제목은 사건 대표 기사(사건 중심에 가장 가까운 기사)가 아니라 항목의 첫 인용 기사로 정했다 — 사용자가 제외한 소스 · 형식이나 기간 밖 기사의 제목을 보이지 않는 것을 앞에 두었다. 구현 커밋 `563b643`
+- 근거: [이슈 #182](https://github.com/Theia0382/yozm-news/issues/182) — 측정 인스턴스에서 LLM 이 항목을 건너뛴 다이제스트가 빠진 항목을 조용히 버리고 `READY` 로 끝났고, 기록은 정보 로그 한 줄뿐이었다. 다시 묻기 · 대체 헤드라인 · 다이제스트 행의 기록을 골랐고, 대체 제목은 사건 대표 기사(사건 중심에 가장 가까운 기사)가 아니라 항목의 첫 인용 기사로 정했다 — 사용자가 제외한 소스 · 형식이나 기간 밖 기사의 제목을 보이지 않는 것을 앞에 두었다. 구현 커밋 `563b643`
 - 관련: [ADR-0269](0269-the-digest-output-keys-top-stories-by-item-alias-as-required-fields-and-lists-headlines-as-elements.md)(출력 계약), [ADR-0262](0262-chosen-events-are-grouped-into-items-by-containment-tree-top-code-splits-top-stories-and-headlines-the-llm-writes-per-item-and-an-item-has-one-badge.md)(부분 대체 — 결정 "출력은 기사를 인용하지 않는다"의 출력에 없는 항목은 저장하지 않는다는 부분, 결과의 빠뜨린 항목은 남지 않는다는 항목), [ADR-0221](0221-generator-results-are-success-or-failure-and-the-use-case-asks-once-more-only-for-a-complete-unreadable-answer.md)(부분 대체 — 다시 묻는 조건을 빠진 항목으로 넓히고, 빠진 항목 때문에 다시 물은 응답을 읽지 못하면 실패가 아니라 첫 읽기를 씀), [ADR-0263](0263-articles-sent-per-event-are-sampled-up-to-a-cap-with-a-fixed-seed-from-those-in-the-period-and-the-sample-is-the-citations-and-sources.md)(인용은 표본), [ADR-0186](0186-digests-follow-removed-articles-by-deleting-their-rows-and-show-no-summary-without-any-citation.md)(인용 없음)
 
 ## 맥락

@@ -56,6 +56,9 @@ final class TagSetValidator {
 
 	static final int MAX_LEVEL = ImportanceScale.MAX_LEVEL;
 
+	/** 중요도 수준 수의 하한 — tag-R7. 수준 하나로는 순서 척도가 되지 않는다(기대값이 언제나 그 수준) */
+	static final int MIN_LEVEL_COUNT = 2;
+
 	private final List<TagSetProblem> problems = new ArrayList<>();
 
 	private TagSetValidator() {
@@ -503,7 +506,10 @@ final class TagSetValidator {
 		}
 		Map<Integer, ImportanceLevelDef> levels = new TreeMap<>();
 		Set<Integer> seen = new HashSet<>();
-		boolean valid = draft.value().size() == MAX_LEVEL - MIN_LEVEL + 1;
+		int count = draft.value().size();
+		int maxCount = MAX_LEVEL - MIN_LEVEL + 1;
+		boolean valid = count >= MIN_LEVEL_COUNT && count <= maxCount;
+		int top = MIN_LEVEL + count - 1;
 		for (LevelDraft level : draft.value()) {
 			Located<Integer> number = level.level();
 			if (number == null) {
@@ -515,7 +521,7 @@ final class TagSetValidator {
 				continue;
 			}
 			int value = number.value();
-			if (value < MIN_LEVEL || value > MAX_LEVEL || !seen.add(value)) {
+			if (value < MIN_LEVEL || value > top || !seen.add(value)) {
 				valid = false;
 			}
 			if (description != null) {
@@ -524,7 +530,9 @@ final class TagSetValidator {
 		}
 		if (!valid) {
 			problem(path, TagSetProblemCode.INVALID_IMPORTANCE_LEVELS,
-					"중요도 수준은 " + MIN_LEVEL + " ~ " + MAX_LEVEL + " 가 하나씩이어야 한다", draft.location());
+					"중요도 수준은 " + MIN_LEVEL + " 부터 빈 곳 없이 하나씩, " + MIN_LEVEL_COUNT + " ~ " + maxCount
+							+ " 개여야 한다",
+					draft.location());
 		}
 		return List.copyOf(levels.values());
 	}

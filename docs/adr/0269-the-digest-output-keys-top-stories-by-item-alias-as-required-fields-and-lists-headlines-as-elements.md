@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-20
-- 근거: [이슈 #182](https://github.com/Theia0382/yozm-news/issues/182) — 측정 인스턴스에서 사건 단위 다이제스트를 일정 생성으로 받자 일부에서 LLM 이 첫 주요 뉴스 하나만 쓰고 나머지 항목을 건너뛰었다(종료 사유 정상 · JSON 유효). 프롬프트는 이미 "항목을 빼지 않는다"를 지시했고, 정적 배열 스키마는 원소 수를 요구하지 않았다. 리드가 출력 계약으로 막는 안을 골랐다. 두 칸 모두 키 꼴로 바꾸자 Anthropic 이 헤드라인이 많은 요청의 출력 스키마를 거부해, 리드가 키 꼴을 주요 뉴스 칸으로 좁히는 안을 골랐다. 구현 커밋 `7d22f46` · `921910f`
+- 근거: [이슈 #182](https://github.com/Theia0382/yozm-news/issues/182) — 측정 인스턴스에서 사건 단위 다이제스트를 일정 생성으로 받자 일부에서 LLM 이 첫 주요 뉴스 하나만 쓰고 나머지 항목을 건너뛰었다(종료 사유 정상 · JSON 유효). 프롬프트는 이미 "항목을 빼지 않는다"를 지시했고, 정적 배열 스키마는 원소 수를 요구하지 않았다. 출력 계약으로 막는 안을 골랐다. 두 칸 모두 키 꼴로 바꾸자 Anthropic 이 헤드라인이 많은 요청의 출력 스키마를 거부해, 키 꼴을 주요 뉴스 칸으로 좁히는 안을 골랐다. 구현 커밋 `7d22f46` · `921910f`
 - 관련: [ADR-0262](0262-chosen-events-are-grouped-into-items-by-containment-tree-top-code-splits-top-stories-and-headlines-the-llm-writes-per-item-and-an-item-has-one-badge.md)(부분 대체 — 결정 "출력은 기사를 인용하지 않는다"의 주요 뉴스 칸에서 모르는 항목 별칭 · 다른 칸의 항목 · 앞에서 이미 쓴 항목을 버린다는 부분, 결과의 출력 상한 20 · 150 항목), [ADR-0270](0270-an-item-missing-from-the-output-is-asked-once-more-and-then-kept-as-a-headline-and-the-counts-are-recorded.md)(빠진 항목의 처분)
 
 ## 맥락

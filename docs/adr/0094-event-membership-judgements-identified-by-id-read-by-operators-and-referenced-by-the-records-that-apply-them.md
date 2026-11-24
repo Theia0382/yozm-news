@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-07
-- 근거: [이슈 #101](https://github.com/Theia0382/yozm-news/issues/101) — 운영자 화면의 "애매한 판정 기록(후보 사건 · 확률 · 결과 · 토큰)"을 만들며 리드와 정하고 구현(`3528f8b` · `ae37a1a` · `c5c3c0d`)
+- 근거: [이슈 #101](https://github.com/Theia0382/yozm-news/issues/101) — 운영자 화면의 "애매한 판정 기록(후보 사건 · 확률 · 결과 · 토큰)"을 만들며 정하고 구현(`3528f8b` · `ae37a1a` · `c5c3c0d`)
 - 관련: [ADR-0071](0071-event-membership-judged-from-article-ids-with-questions-built-in-evaluation.md)(결정 절 "공개 타입과 포트 타입을 나눈다"의 둘째 · 셋째 문장을 부분 대체한다 — 넓힘), [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md)(판정 원본 기록), [ADR-0045](0045-admin-module-serves-operator-api-over-module-public-operation-apis.md)(운영자 API 는 모듈 공개 API 위에)
 
 ## 맥락

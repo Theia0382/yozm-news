@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-07
-- 근거: [이슈 #95](https://github.com/Theia0382/yozm-news/issues/95) — 운영 임베더(로컬 · 외부)의 실패 원천과 지금 회차의 처리(어떤 실패든 묶음 전체를 다음 회차가 다시 시도)를 확인하고 리드와 정함
+- 근거: [이슈 #95](https://github.com/Theia0382/yozm-news/issues/95) — 운영 임베더(로컬 · 외부)의 실패 원천과 지금 회차의 처리(어떤 실패든 묶음 전체를 다음 회차가 다시 시도)를 확인하고 정함
 - 관련: [ADR-0074](0074-article-features-built-by-event-intake-queue-job-and-skipped-without-an-embedder.md)(결정 절 둘째 항목의 끝 문장 "임베더가 실패하거나 결과가 어긋나면 점유를 풀고 회차를 끝낸다"를 입력 거부에 대해 부분 대체한다, 결과 절 넷째 항목의 미룬 사항을 정한다 — 후속 기록), [ADR-0058](0058-evaluator-failures-in-three-kinds-and-unavailable-evaluator-skips-article-retries.md)(평가기 포트의 같은 세 갈래 모양 — 그대로 따른다), [ADR-0090](0090-article-embedding-defaults-to-an-in-app-local-model-with-an-openai-compatible-api-by-setting.md)(운영 임베더)
 
 ## 맥락

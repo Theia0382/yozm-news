@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-18
-- 근거: [이슈 #189](https://github.com/Theia0382/yozm-news/issues/189) — 산식이 내는 관심 x 의 성질(구독 하나 · 노출과 좋아요의 비율 · 감쇠)을 수치로 견주고 리드와 정함. 구현 커밋 `77bfe43` · `bb602eb`
+- 근거: [이슈 #189](https://github.com/Theia0382/yozm-news/issues/189) — 산식이 내는 관심 x 의 성질(구독 하나 · 노출과 좋아요의 비율 · 감쇠)을 수치로 견주고 정함. 구현 커밋 `77bfe43` · `bb602eb`
 - 관련: [ADR-0215](0215-interests-are-not-stored-entities-and-are-computed-from-signal-history-at-query-time.md)(결과 "새로 생긴 관심 · 사라진 관심은 계산 결과를 견주는 기준이 하나 더 필요하다 — 히스토리를 만드는 작업이 정한다" — 보충), [ADR-0222](0222-interest-per-subtopic-is-smoothed-reactions-over-exposures-with-a-half-life-and-exposures-are-all-ready-citations.md)(관심 x 의 산식)
 
 ## 맥락
@@ -37,3 +37,4 @@
 
 - 2026-11-22: 결정 "관심 x 가 기준값 θ 이상인 주제를 그 기간의 '관심 있음'으로 본다"에 대응하는 스토리라인 관심의 기준 — [ADR-0278](0278-followed-flows-are-tops-at-or-above-the-follow-threshold-or-subscribed-less-the-excluded-and-the-keep-threshold-is-0-2.md) · [digest Spec "관심도"](../specs/digest.md#관심도) digest-R51
 - 2026-11-23: 결정 "앞 기간에 관심 있음이 아니었고 이번 기간에 관심 있음이면 새로 생긴 관심, 반대면 사라진 관심이다"에 대응하는 흐름의 생김 · 사라짐(만들 기준 · 남길 기준) — [ADR-0293](0293-the-interest-history-also-shows-the-interest-of-summarized-flows.md) · [digest Spec "관심사 히스토리"](../specs/digest.md#관심사-히스토리) digest-R36
+- 2026-11-23: 맥락의 "산식의 성질(K 3 · γ 1)" — 구독 항이 노출 분모 밖으로 옮겨 구독만 한 주제 · 노출이 쌓인 구독 주제의 값이 바뀌었다: [ADR-0295](0295-the-subscription-signal-of-interest-is-a-term-outside-the-exposure-denominator-and-the-topic-value-is-below-the-presence-threshold.md) · [digest Spec "관심도"](../specs/digest.md#관심도) digest-R23

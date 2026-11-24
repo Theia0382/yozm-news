@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-12
-- 근거: [이슈 #124](https://github.com/Theia0382/yozm-news/issues/124) — 큰 판정 재료(기사의 소스 · 중요도)의 위치와 모듈 의존을 조사해 리드와 정함
+- 근거: [이슈 #124](https://github.com/Theia0382/yozm-news/issues/124) — 큰 판정 재료(기사의 소스 · 중요도)의 위치와 모듈 의존을 조사해 정함
 - 관련: [ADR-0103](0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md)(결과 절 · 대안 표의 "집계도 스토리라인으로 옮겨질 수 있다" — 보충), [ADR-0105](0105-storylines-link-incrementally-from-event-change-notifications-and-events-publish-changed-event-ids.md)(스토리라인은 사건 ID 만 가리키고 기사를 모른다 — 보충), [ADR-0116](0116-storyline-big-judgement-starts-with-a-provisional-rule-of-distinct-sources-and-mean-importance-judged-at-query-time.md)(큰 판정의 임시 산식), [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)(스토리라인)
 
 ## 맥락

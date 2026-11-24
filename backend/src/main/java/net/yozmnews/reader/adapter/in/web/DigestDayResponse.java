@@ -26,7 +26,7 @@ record DigestDayResponse(LocalDate date, @Nullable LocalDate previousDate, @Null
 
 	/** @param articles 인용 기사의 정보 — 없는 기사의 인용은 뺀다(reader-R7) */
 	static DigestDayResponse of(DigestDay day, Map<ArticleId, NewsArticleResponse> articles,
-			Map<StorylineId, UserStorylineSummaryRef> userStorylines) {
+			Map<StorylineId, List<UserStorylineSummaryRef>> userStorylines) {
 		return new DigestDayResponse(day.date(), day.previousDate(), day.nextDate(),
 				(day.shown() == null) ? null : ShownDigestResponse.of(day.shown(), articles, userStorylines),
 				DigestAttemptResponse.of(day.latest()), DigestUsageResponse.of(day.usage()));

@@ -181,7 +181,8 @@ class StorylineSummaryRunTests {
 		link(later, this.rows.article("나 사건 1", "politics.legislature"));
 		UserStorylineFixtures.follows(this.jdbc, earlier, later);
 
-		SummaryRunResult result = run(followed(earlier), NOW.plusSeconds(60)).run(this.user);
+		// 관심 흐름은 사용자 스토리라인의 값이라 그 꼭대기 모두에 든다 — 이어진 뒤 흐름 later 가 헤드다
+		SummaryRunResult result = run(followed(earlier, later), NOW.plusSeconds(60)).run(this.user);
 
 		assertThat(result).isEqualTo(new SummaryRunResult(1, 0, 0, 0));
 		assertThat(this.script.requests.getLast().input().previousWhole()).isNull();
@@ -202,7 +203,8 @@ class StorylineSummaryRunTests {
 		long empty = UserStorylineFixtures.storyline(this.jdbc, NOW);
 		UserStorylineFixtures.follows(this.jdbc, first, empty);
 
-		assertThat(run(followed(first), NOW).run(this.user)).isEqualTo(new SummaryRunResult(1, 0, 0, 0));
+		// 관심 흐름은 사용자 스토리라인의 값이라 그 꼭대기 모두에 든다 — 이어진 뒤 흐름 empty 가 헤드다
+		assertThat(run(followed(first, empty), NOW).run(this.user)).isEqualTo(new SummaryRunResult(1, 0, 0, 0));
 
 		SummaryRequest created = this.script.requests.getLast();
 		assertThat(created.prompt().aliases()).containsExactly("T1");
@@ -219,7 +221,8 @@ class StorylineSummaryRunTests {
 		long added = this.rows.article("나 새 사건", "politics.legislature");
 		link(empty, added);
 
-		assertThat(run(followed(first), NOW.plusSeconds(60)).run(this.user)).isEqualTo(new SummaryRunResult(1, 0, 0, 0));
+		assertThat(run(followed(first, empty), NOW.plusSeconds(60)).run(this.user))
+			.isEqualTo(new SummaryRunResult(1, 0, 0, 0));
 
 		SummaryRequest extended = this.script.requests.getLast();
 		assertThat(extended.prompt().aliases()).containsExactly("T1", "T2");

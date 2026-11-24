@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-19
-- 근거: [이슈 #188](https://github.com/Theia0382/yozm-news/issues/188) — 거절 뒤 다시 내는 방식(고정 기간 · 영구 · 기간과 조건)과 거절을 신호로 셀지를 리드와 정함. 구현 커밋 `bdf6bb1` · `ac24312`
+- 근거: [이슈 #188](https://github.com/Theia0382/yozm-news/issues/188) — 거절 뒤 다시 내는 방식(고정 기간 · 영구 · 기간과 조건)과 거절을 신호로 셀지를 정함. 구현 커밋 `bdf6bb1` · `ac24312`
 - 관련: [ADR-0028](0028-explicit-signals-and-interest-weighted-candidates.md)(보충 — 결정 "관심 신호는 사용자의 명시적 행동만 쓴다"의 목록은 그대로이고 거절은 그 밖이다), [ADR-0245](0245-a-topic-suggestion-is-made-when-the-current-interest-of-an-unsubscribed-subtopic-reaches-its-own-threshold.md)(제안 기준), [ADR-0247](0247-topic-suggestion-declines-are-kept-by-user-with-the-recorded-version-and-digest-answers-the-interest-at-decline-through-an-interface-declared-by-user.md)(거절의 기록)
 
 ## 맥락

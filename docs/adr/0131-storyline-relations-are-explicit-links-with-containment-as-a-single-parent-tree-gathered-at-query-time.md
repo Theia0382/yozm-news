@@ -2,7 +2,7 @@
 
 - 상태: 승인. 부분 대체 — 큰 판정 목록에서 상위와 하위를 가리지 않고 낸다는 결정([ADR-0235](0235-the-big-list-has-one-row-per-containment-tree-carrying-the-big-storylines-under-it.md))
 - 날짜: 2026-11-13
-- 근거: [이슈 #122](https://github.com/Theia0382/yozm-news/issues/122) — 지금 잇기가 낸 스토리라인에서 소속의 겹침과 스토리라인 쌍을 조사하고, 시스템 스토리라인 쌍을 직접 판정해 리드와 정함
+- 근거: [이슈 #122](https://github.com/Theia0382/yozm-news/issues/122) — 지금 잇기가 낸 스토리라인에서 소속의 겹침과 스토리라인 쌍을 조사하고, 시스템 스토리라인 쌍을 직접 판정해 정함
 - 관련: [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)(결정 "관계를 소속에서 끌어낼지 명시 고리로 둘지, 판정 방법, 데이터는 스토리라인을 구현할 때 정한다"와 검토한 대안 "포함을 상위 스토리라인(깊이 2)으로 지금 정한다" — 보충), [ADR-0106](0106-provisional-storyline-linking-opens-only-with-a-partner-event-and-adds-the-single-best-storyline-without-removal.md)(결정의 "관계를 소속에서 끌어내기로 하면 다시 본다" — 보충), [ADR-0108](0108-storylines-with-the-same-events-merge-and-a-storyline-left-with-one-event-merges-or-dissolves.md)(결과 "표현만 비슷한 두 스토리라인과 사건 둘 이상의 포함은 남는다" — 보충), [ADR-0132](0132-storyline-relations-are-judged-by-jev-on-candidate-pairs-and-linked-only-above-a-probability-threshold.md)(관계를 판정하는 방법), [ADR-0111](0111-storyline-gold-links-by-matter-with-mixed-events-on-their-central-happening-and-events-without-a-happening-following-their-matter.md)(정답 쪽의 포함 — 위로 닫는다)
 
 ## 맥락

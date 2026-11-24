@@ -36,8 +36,8 @@ class BigStorylineCriteriaTests {
 	}
 
 	@Test
-	void theFirstValueIsIntensityFifteen() {
-		assertThat(BigStorylineCriteria.DEFAULT).isEqualTo(new BigStorylineCriteria(new BigDecimal("15.00")));
+	void theFirstValueIsIntensityFourteen() {
+		assertThat(BigStorylineCriteria.DEFAULT).isEqualTo(new BigStorylineCriteria(new BigDecimal("14.00")));
 	}
 
 }

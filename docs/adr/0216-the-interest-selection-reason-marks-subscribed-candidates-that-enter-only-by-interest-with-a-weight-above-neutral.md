@@ -2,7 +2,7 @@
 
 - 상태: 승인. 부분 대체 — 구독 후보 기사로 두 순위를 견주는 단계와 단위([ADR-0260](0260-digest-candidates-are-events-and-only-assigned-events-with-an-article-first-evaluated-in-the-period-enter.md)) · `INTEREST` 를 구독 후보로 한정한 것([ADR-0280](0280-events-of-followed-flows-outside-the-subscribed-topics-enter-one-per-flow-within-a-share-of-the-subscribed-seats-as-interest.md))
 - 날짜: 2026-11-18
-- 근거: [이슈 #187](https://github.com/Theia0382/yozm-news/issues/187) — 후보 선별의 순수 단계가 순위 순서로만 기사를 받는 것을 대조하고, 선정 이유의 뜻을 리드와 정함. 구현 커밋 `ff3ba46` · `1487ffe`
+- 근거: [이슈 #187](https://github.com/Theia0382/yozm-news/issues/187) — 후보 선별의 순수 단계가 순위 순서로만 기사를 받는 것을 대조하고, 선정 이유의 뜻을 정함. 구현 커밋 `ff3ba46` · `1487ffe`
 - 관련: [ADR-0028](0028-explicit-signals-and-interest-weighted-candidates.md)(결정 "기사마다 선정 이유 기록 · 표시" — 보충), [ADR-0210](0210-candidate-selection-cuts-to-the-input-token-budget-with-one-estimate-the-prompt-follows.md)(입력 토큰 예산으로 자른다)
 
 ## 맥락

@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-13
-- 근거: [이슈 #122](https://github.com/Theia0382/yozm-news/issues/122) — 평가 세트의 정답 관계와 지표의 셈을 조사하고, 시스템 스토리라인 쌍을 직접 판정해 리드와 정함
+- 근거: [이슈 #122](https://github.com/Theia0382/yozm-news/issues/122) — 평가 세트의 정답 관계와 지표의 셈을 조사하고, 시스템 스토리라인 쌍을 직접 판정해 정함
 - 관련: [ADR-0110](0110-storyline-evaluation-labels-system-events-of-a-fixed-dump-and-measures-overlapping-clusters-from-random-seed-events.md)(층 보기와 관계 지표 — 보충), [ADR-0131](0131-storyline-relations-are-explicit-links-with-containment-as-a-single-parent-tree-gathered-at-query-time.md)(시스템의 포함 — 조회 때 따라 모은다), [ADR-0132](0132-storyline-relations-are-judged-by-jev-on-candidate-pairs-and-linked-only-above-a-probability-threshold.md)(관계를 판정하는 방법과 포함 · 이어짐의 경계), [ADR-0096](0096-instance-bound-evaluation-data-kept-out-of-the-public-repository-and-defaults-cite-only-the-evaluation-set.md)(평가 데이터는 공개 저장소 밖)
 
 ## 맥락

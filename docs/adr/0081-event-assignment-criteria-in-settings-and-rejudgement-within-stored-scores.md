@@ -2,14 +2,14 @@
 
 - 상태: 승인. 부분 대체 — 재판정 범위([ADR-0087](0087-closed-event-assignments-are-not-rejudged-and-closing-and-merging-are-not-undone.md))
 - 날짜: 2026-11-06
-- 근거: [이슈 #97](https://github.com/Theia0382/yozm-news/issues/97) — 사건 배정의 기준을 둘 곳과 재판정을 리드와 정하고 구현(`3f6dcd5` · `738c775`)
+- 근거: [이슈 #97](https://github.com/Theia0382/yozm-news/issues/97) — 사건 배정의 기준을 둘 곳과 재판정을 정하고 구현(`3f6dcd5` · `738c775`)
 - 관련: [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md)(결과 절 "운영자가 표본을 검수해 임계값을 조정한다"를 설정으로 구현한다, 후속 기록), [ADR-0055](0055-tag-and-store-thresholds-change-with-history-and-warn-instead-of-blocking.md)(태그 기준 · 저장 기준 — 저장 기준의 뜻이 같다), [ADR-0080](0080-event-centroids-and-key-terms-accumulated-with-article-counts-and-updated-incrementally.md)(옮길 때의 누적 갱신)
 
 ## 맥락
 
 - 배정은 시간 창 · 위 기준 · 아래 기준 · 판정 확률 기준을 쓴다. 값은 측정 전 목표이고 측정 뒤 바뀐다. 코사인 분포는 임베딩 모델마다 달라, 모델을 바꾼 인스턴스 운영자가 기준을 맞출 길이 있어야 한다(결과 절 "운영자가 표본을 검수해 임계값을 조정한다" — [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md)).
 - 태그는 저장 기준 이상의 확률을 저장하고 태그 기준으로 조회할 때 판정해, 기준을 바꾸면 곧바로 모든 평가에 적용된다([ADR-0055](0055-tag-and-store-thresholds-change-with-history-and-warn-instead-of-blocking.md)). 배정은 사건 중심 · 기사 수를 고치는 누적 상태라 조회할 때 판정할 수 없다.
-- 리드는 태그처럼 재판정이 있어야 하고, 사건 기준과 저장 기준을 나눠 저장된 확률 안에서 재판정하기를 요구했다.
+- 태그처럼 재판정이 있어야 하고, 사건 기준과 저장 기준을 나눠 저장된 확률 안에서 재판정해야 한다.
 
 ## 결정
 

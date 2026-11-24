@@ -304,15 +304,20 @@ function ItemHead({
           {section.title}
           <ReasonBadge section={section} />
         </h3>
-        {section.userStoryline !== null && (
+        {section.userStorylines.length > 0 && (
           <p className="text-sm text-muted-foreground">
             {ITEM_FLOW}{" "}
-            <Link
-              to={userStorylinePath(section.userStoryline.id)}
-              className="break-words underline"
-            >
-              {section.userStoryline.title}
-            </Link>
+            {section.userStorylines.map((flow, index) => (
+              <span key={flow.id}>
+                {index > 0 && " · "}
+                <Link
+                  to={userStorylinePath(flow.id)}
+                  className="break-words underline"
+                >
+                  {flow.title}
+                </Link>
+              </span>
+            ))}
           </p>
         )}
       </div>

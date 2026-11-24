@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-18
-- 근거: [이슈 #186](https://github.com/Theia0382/yozm-news/issues/186) — 기점 `33ab070` 의 구독 이력(원인 셋)과 카드 처리기의 풀기를 대조하고 리드와 정함
+- 근거: [이슈 #186](https://github.com/Theia0382/yozm-news/issues/186) — 기점 `33ab070` 의 구독 이력(원인 셋)과 카드 처리기의 풀기를 대조하고 정함
 - 관련: [ADR-0227](0227-the-interest-history-shows-subtopic-interest-and-the-users-own-topic-subscription-changes-only.md)(보충 — 결과 "무엇을 언제 따라가기 시작했는지(스토리라인)는 이 화면에 없다 — 스토리라인 구독 화면의 범위다"를 이 ADR 이 정한다. 주제 구독도 사용자가 직접 바꾼 행만 보이는 같은 고르기다), [ADR-0188](0188-storyline-subscriptions-follow-retired-storylines-by-event-and-before-each-use-and-notices-point-to-the-remaining-event.md)(관련 — 합쳐져 옮김 · 사라져 뺌과 사라진 구독 알림)
 
 ## 맥락

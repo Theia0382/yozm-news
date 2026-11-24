@@ -2,7 +2,7 @@
 
 - 상태: 승인. 부분 대체 — 임베더가 없는 프로세스의 건너뜀([ADR-0093](0093-worker-role-does-not-run-without-an-embedder-built-only-in-the-worker-role.md)) · 병합이 묻는 띠 쌍의 범위([ADR-0119](0119-event-merge-does-not-ask-band-pairs-whose-prior-assignment-probability-is-below-the-probability-threshold.md)) · 합치지 못한 사건을 다시 보는 때([ADR-0213](0213-event-merge-defers-events-whose-check-did-not-finish-until-a-retry-time-on-the-event-row-and-never-drops-them.md))
 - 날짜: 2026-11-07
-- 근거: [이슈 #98](https://github.com/Theia0382/yozm-news/issues/98) — 병합의 판정 기준 · 실행 자리 · 합쳐진 사건 행을 리드와 정하고 구현(`8eba5ca` · `bb34862` · `ac942e1`)
+- 근거: [이슈 #98](https://github.com/Theia0382/yozm-news/issues/98) — 병합의 판정 기준 · 실행 자리 · 합쳐진 사건 행을 정하고 구현(`8eba5ca` · `bb34862` · `ac942e1`)
 - 관련: [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md)(결정 절 "4. 정리"의 병합을 정한다, 후속 기록), [ADR-0071](0071-event-membership-judged-from-article-ids-with-questions-built-in-evaluation.md)(사건 소속 판정 — 공개 API 를 바꾸지 않고 쓴다), [ADR-0080](0080-event-centroids-and-key-terms-accumulated-with-article-counts-and-updated-incrementally.md)(누적 갱신 — 합친 중심은 기사 수 가중 평균), [ADR-0081](0081-event-assignment-criteria-in-settings-and-rejudgement-within-stored-scores.md)(사건 기준 — 병합도 같은 기준을 쓴다), [ADR-0087](0087-closed-event-assignments-are-not-rejudged-and-closing-and-merging-are-not-undone.md)(합치기는 되돌리지 않는다)
 
 ## 맥락

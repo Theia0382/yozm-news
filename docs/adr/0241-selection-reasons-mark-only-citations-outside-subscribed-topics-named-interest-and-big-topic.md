@@ -2,7 +2,7 @@
 
 - 상태: 승인. 부분 대체 — 인용마다 선정 이유를 표시하는 것([ADR-0262](0262-chosen-events-are-grouped-into-items-by-containment-tree-top-code-splits-top-stories-and-headlines-the-llm-writes-per-item-and-an-item-has-one-badge.md))
 - 날짜: 2026-11-18
-- 근거: [이슈 #179](https://github.com/Theia0382/yozm-news/issues/179) — 수용 기준 "선정 이유 표시 — 화면 문구는 여기서 정한다(큰 슬롯 이름 포함)", 리드와 정함(이름 — 리드가 큰 슬롯 이름을 "큰 화제"로 고침, 개발 이름 "스토리라인"을 다이제스트와 그 설정 화면에 넣지 않으려고 · 구독 주제가 아닌 인용에만 표시). 구현 커밋 `7dbf1de` · `7fa1e6b`(관심 설정)
+- 근거: [이슈 #179](https://github.com/Theia0382/yozm-news/issues/179) — 수용 기준 "선정 이유 표시 — 화면 문구는 여기서 정한다(큰 슬롯 이름 포함)", 정함(이름 — 큰 슬롯 이름을 "큰 화제"로 고침, 개발 이름 "스토리라인"을 다이제스트와 그 설정 화면에 넣지 않으려고 · 구독 주제가 아닌 인용에만 표시). 구현 커밋 `7dbf1de` · `7fa1e6b`(관심 설정)
 - 관련: [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)(보충 — "화면 문구는 화면을 만들 때 따로 정한다"의 다이제스트 선정 이유 · 큰 슬롯), [ADR-0216](0216-the-interest-selection-reason-marks-subscribed-candidates-that-enter-only-by-interest-with-a-weight-above-neutral.md)(관련 — `INTEREST` 의 뜻)
 
 ## 맥락

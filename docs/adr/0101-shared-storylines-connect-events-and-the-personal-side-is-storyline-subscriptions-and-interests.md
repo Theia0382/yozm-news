@@ -2,7 +2,7 @@
 
 - 상태: 승인. 부분 대체 — 개인 쪽의 개체가 둘이라는 것과 사용자마다 달라지는 스토리라인 정보의 자리([ADR-0281](0281-a-user-storyline-is-a-flow-that-received-interest-signals-and-tracks-the-tops-reached-forward-along-follows-from-its-seeds-as-one-group.md))
 - 날짜: 2026-11-09
-- 근거: [이슈 #116](https://github.com/Theia0382/yozm-news/issues/116) — 라벨 기준 2판 검토(#100)에서 리드가 정한 층과 이름을 바탕으로, 스토리라인의 소속 · 관계 · 행사 · 개인 쪽 모듈 배치를 리드와 정함
+- 근거: [이슈 #116](https://github.com/Theia0382/yozm-news/issues/116) — 라벨 기준 2판 검토(#100)에서 정한 층과 이름을 바탕으로, 스토리라인의 소속 · 관계 · 행사 · 개인 쪽 모듈 배치를 정함
 - 관련: [ADR-0025](0025-long-term-personal-news-history-in-v1.md)(세 층 가운데 이슈 항목 · 다이제스트 입출력의 이슈 문장 · 모듈 항목, 변화 리포트 입력의 이슈 변화, 결과의 이슈 세 항목, 검토한 대안의 이름 행 — 부분 대체), [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md)(결정 "그보다 긴 전개는 사용자별 이슈가 잇는다" — 부분 대체), [ADR-0028](0028-explicit-signals-and-interest-weighted-candidates.md)(관심 신호의 이슈 추적 · 해제와 그 기록 모듈 — 부분 대체), [ADR-0029](0029-indefinite-summary-retention-with-optional-deletion.md)(다이제스트 호출에 넘기는 이슈 상태 요약 — 부분 대체), [ADR-0086](0086-events-close-after-an-idle-period-since-the-last-join-or-a-maximum-period-since-opening.md)(긴 전개를 잇는 단위 — 부분 대체), [ADR-0102](0102-an-event-is-the-reports-of-one-happening-narrowed-by-the-event-membership-question-wording.md)(사건의 범위), [ADR-0103](0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md)(큰 판정의 단위와 마일스톤)
 
 ## 맥락

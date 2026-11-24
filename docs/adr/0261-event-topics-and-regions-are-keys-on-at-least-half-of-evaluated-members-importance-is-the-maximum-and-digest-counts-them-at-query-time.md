@@ -2,7 +2,7 @@
 
 - 상태: 승인. 부분 대체 — 스토리라인 구독의 주제 몫([ADR-0277](0277-storyline-interest-is-counted-per-containment-tree-top-with-the-topic-formula-and-reactions-to-a-flow-seen-within-seven-days-go-to-the-storyline-only.md))
 - 날짜: 2026-11-19
-- 근거: [이슈 #225](https://github.com/Theia0382/yozm-news/issues/225) — 리드가 몫의 문턱(절반 이상)과 사건 중요도(최대)를 골랐다. 측정 인스턴스의 14일치 후보 사건에서 최대 · 평균 · 합의 순위와 몫 문턱 셋(엄격 과반 · 절반 이상 · 최빈)의 결과를 견주었다 — 주제 구독과 관심도를 걸지 않은 전체 집단이다. 구현 커밋 `f545d30`(사건의 값 · 스토리라인 주제 몫) · `4c4a33b`(선별 · 큰 슬롯이 쓰고 읽기를 한 곳으로)
+- 근거: [이슈 #225](https://github.com/Theia0382/yozm-news/issues/225) — 몫의 문턱(절반 이상)과 사건 중요도(최대)를 골랐다. 측정 인스턴스의 14일치 후보 사건에서 최대 · 평균 · 합의 순위와 몫 문턱 셋(엄격 과반 · 절반 이상 · 최빈)의 결과를 견주었다 — 주제 구독과 관심도를 걸지 않은 전체 집단이다. 구현 커밋 `f545d30`(사건의 값 · 스토리라인 주제 몫) · `4c4a33b`(선별 · 큰 슬롯이 쓰고 읽기를 한 곳으로)
 - 관련: [ADR-0214](0214-a-storyline-subscription-enters-topic-interest-by-the-topic-shares-of-its-event-representatives.md)(부분 대체 — 사건 대표 기사의 주제 대신 사건의 주제로 몫을 센다. 몫 = 붙은 사건 수 ÷ 사건 수 · 구독 변경을 몫으로 나누기는 그대로), [ADR-0260](0260-digest-candidates-are-events-and-only-assigned-events-with-an-article-first-evaluated-in-the-period-enter.md)(후보는 사건), [ADR-0099](0099-importance-judged-by-what-the-matter-changes-and-its-reach-with-levels-written-as-reach-without-article-type-examples.md)(기사 중요도는 그 기사가 다루는 사안의 중요도)
 
 ## 맥락

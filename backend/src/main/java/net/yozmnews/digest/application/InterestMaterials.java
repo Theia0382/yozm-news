@@ -107,20 +107,20 @@ class InterestMaterials {
 				storylineChanges, storylineTops, flows(this.userStorylines.of(user, from, to))));
 	}
 
-	/** {@code user} 의 사용자 스토리라인을 묶음으로 옮긴다 — 묶음 번호는 받은 순서다 */
+	/** {@code user} 의 사용자 스토리라인을 묶음으로 옮긴다 — 묶음 번호는 받은 순서다. 갈라지기 전 꼭대기는 묶음 여럿에 든다 */
 	private static StorylineFlows flows(List<UserStorylineView> userStorylines) {
-		Map<StorylineId, Integer> flowOfTop = new HashMap<>();
+		Map<StorylineId, Set<Integer>> flowsOfTop = new HashMap<>();
 		Set<Integer> tracked = new HashSet<>();
 		for (int flow = 0; flow < userStorylines.size(); flow++) {
 			UserStorylineView view = userStorylines.get(flow);
 			for (StorylineId top : view.tops()) {
-				flowOfTop.put(top, flow);
+				flowsOfTop.computeIfAbsent(top, ignored -> new HashSet<>()).add(flow);
 			}
 			if (view.tracked()) {
 				tracked.add(flow);
 			}
 		}
-		return new StorylineFlows(flowOfTop, tracked);
+		return new StorylineFlows(flowsOfTop, tracked);
 	}
 
 	/**

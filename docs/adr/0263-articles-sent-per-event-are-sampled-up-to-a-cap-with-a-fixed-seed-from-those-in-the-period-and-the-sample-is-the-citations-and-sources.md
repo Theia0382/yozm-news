@@ -2,7 +2,7 @@
 
 - 상태: 승인. 부분 대체 — 인용이 노출 기록인 것([ADR-0268](0268-interest-counts-exposures-and-reactions-per-event-splitting-an-item-weight-one-over-n-and-counting-an-event-once-with-its-latest-share.md)) · 현재 상태 조회 상한과 요청 제한의 근거([ADR-0265](0265-feedback-is-pressed-once-per-digest-item-and-recorded-on-each-event-of-the-item-the-screen-shows-the-item-value-and-signals-use-event-records.md))
 - 날짜: 2026-11-19
-- 근거: [이슈 #225](https://github.com/Theia0382/yozm-news/issues/225) — 리드가 사건당 기사 상한 · 사건 안 무작위 · 시드 고정 · 출처 다양성 조건 없음과 상한의 처음 값 5 를 정하고, 표본의 모집단(그 기간에 든 기사) · 표본 = 인용 = 출처 · 인용 기사 수 위쪽에 맞춘 `feedback` · `user` 상한(둘 다 750)을 골랐다. 측정 인스턴스에서 후보 사건 대부분은 기사 한 건이고 상한은 큰 사건에서만 걸렸다. 구현 커밋 `f545d30`(표본 규칙) · `4c4a33b`(사건 단위 어림 · 자르기 · 인용 · 상한 750)
+- 근거: [이슈 #225](https://github.com/Theia0382/yozm-news/issues/225) — 사건당 기사 상한 · 사건 안 무작위 · 시드 고정 · 출처 다양성 조건 없음과 상한의 처음 값 5 를 정하고, 표본의 모집단(그 기간에 든 기사) · 표본 = 인용 = 출처 · 인용 기사 수 위쪽에 맞춘 `feedback` · `user` 상한(둘 다 750)을 골랐다. 측정 인스턴스에서 후보 사건 대부분은 기사 한 건이고 상한은 큰 사건에서만 걸렸다. 구현 커밋 `f545d30`(표본 규칙) · `4c4a33b`(사건 단위 어림 · 자르기 · 인용 · 상한 750)
 - 관련: [ADR-0210](0210-candidate-selection-cuts-to-the-input-token-budget-with-one-estimate-the-prompt-follows.md)(부분 대체 — 후보 줄마다의 어림이 사건마다 표본 기사 줄의 합과 사건 몫으로, 묶음 몫 없음), [ADR-0198](0198-feedback-recording-is-request-limited-per-session-user.md)(보충 — 인용 서로 다른 기사의 위쪽과 피드백 요청 제한의 값), [ADR-0209](0209-maximum-candidates-and-big-slots-are-user-settings-and-the-big-slot-takes-at-most-half.md)(보충 — 결과의 인용 서로 다른 기사 수), [ADR-0222](0222-interest-per-subtopic-is-smoothed-reactions-over-exposures-with-a-half-life-and-exposures-are-all-ready-citations.md)(노출은 인용), [ADR-0260](0260-digest-candidates-are-events-and-only-assigned-events-with-an-article-first-evaluated-in-the-period-enter.md)(후보는 사건)
 
 ## 맥락

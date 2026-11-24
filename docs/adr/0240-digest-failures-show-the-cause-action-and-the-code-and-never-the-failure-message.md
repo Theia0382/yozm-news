@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-18
-- 근거: [이슈 #179](https://github.com/Theia0382/yozm-news/issues/179) — 수용 기준 "`FAILED`(원인 · 키 재등록 안내)", 리드와 정함(갈래의 할 일과 코드의 무슨 일). 구현 커밋 `39e730a` · `cbe227c` · `7dbf1de` · `7fa1e6b`(알림) · `7af1a1c`(해결되지 않은 마지막 실패 — 서버) · `f113b4e`(알림의 링크 · 갈래 링크 표 — 화면). UI 확인 뒤 리드와 정함(다시 만들기 링크는 해결되지 않은 마지막 실패에만)
+- 근거: [이슈 #179](https://github.com/Theia0382/yozm-news/issues/179) — 수용 기준 "`FAILED`(원인 · 키 재등록 안내)", 정함(갈래의 할 일과 코드의 무슨 일). 구현 커밋 `39e730a` · `cbe227c` · `7dbf1de` · `7fa1e6b`(알림) · `7af1a1c`(해결되지 않은 마지막 실패 — 서버) · `f113b4e`(알림의 링크 · 갈래 링크 표 — 화면). UI 확인 뒤 정함(다시 만들기 링크는 해결되지 않은 마지막 실패에만)
 - 관련: [ADR-0233](0233-digest-failure-notices-come-through-an-event-declared-by-the-receiving-user-module-for-every-failed-digest.md)(보충 — 알림이 그 날짜의 다이제스트 화면으로 잇고 갈래 문구를 다이제스트 화면과 함께 쓴다)
 
 ## 맥락

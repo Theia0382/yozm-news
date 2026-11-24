@@ -45,8 +45,9 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 공개 운영 API {@link EvaluationReview} 의 구현 — docs/specs/tag.md §4 · tag-R33 · tag-R34. 역할 애너테이션이
  * 없다(두 역할 공통).
  * <p>
- * 연산마다 읽기 전용 {@code REPEATABLE READ} 트랜잭션 하나에서 읽는다 — 체계 · 기준 · 평가 행이 한 스냅숏이다. 판정은
- * {@link TagJudgement}, 거르기는 {@link ReviewFilter}, 표집은 {@link EvaluationSampler} 가 한다.
+ * 연산마다 읽기 전용 {@code REPEATABLE READ} 트랜잭션 하나에서 읽는다 — 체계 · 기준 · 평가 행이 한 스냅숏이다. 쪽 크기 · 거를 태그 수 ·
+ * 형식 태그 수는 트랜잭션을 열기 전에 본다. 판정은 {@link TagJudgement}, 거르기는 {@link ReviewFilter}, 표집은 {@link EvaluationSampler}
+ * 가 한다.
  */
 @Service
 class EvaluationReviewService implements EvaluationReview {
@@ -84,17 +85,23 @@ class EvaluationReviewService implements EvaluationReview {
 		if (limit < 1 || limit > MAX_PAGE_SIZE) {
 			return new EvaluationListResult.LimitOutOfRange();
 		}
+		if (filter.tags().size() > MAX_FILTER_TAGS) {
+			return new EvaluationListResult.TooManyTags();
+		}
+		if (ReviewFilter.multipleFormats(filter)) {
+			return new EvaluationListResult.MultipleFormats();
+		}
 		return Objects.requireNonNull(this.snapshot.execute(status -> {
 			if (!this.tagSets.existsById(version.value())) {
 				return new EvaluationListResult.UnknownVersion();
 			}
 			TagSetView tagSet = this.views.of(version);
-			Optional<TagRef> unknown = ReviewFilter.unknown(filter, tagSet);
-			if (unknown.isPresent()) {
-				return new EvaluationListResult.UnknownTag(unknown.get());
+			List<TagRef> unknown = ReviewFilter.unknown(filter, tagSet);
+			if (!unknown.isEmpty()) {
+				return new EvaluationListResult.UnknownTags(unknown);
 			}
 			TagSetThresholds current = this.thresholds.current(version);
-			StoredKeys required = ReviewFilter.storedKeys(filter, tagSet).orElse(null);
+			List<StoredKeys> required = ReviewFilter.storedKeys(filter, tagSet);
 			String formatKey = ReviewFilter.formatKey(filter, tagSet).orElse(null);
 			List<EvaluationRow> rows = new ArrayList<>(limit);
 			boolean[] more = { false };

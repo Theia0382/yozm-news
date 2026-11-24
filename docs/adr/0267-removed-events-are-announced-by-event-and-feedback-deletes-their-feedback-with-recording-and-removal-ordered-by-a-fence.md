@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-20
-- 근거: [이슈 #226](https://github.com/Theia0382/yozm-news/issues/226) — 리드가 "새 이벤트 발행을 꺼릴 이유가 있나" 물어 기존 꼴(지운 것을 ID 로 알리고 가리키는 모듈이 따른다)과 가리킬 곳 없는 행을 남기지 않는 기준으로 사건 삭제 알림을 골랐고, 재판정으로 원래 사건이 비어 지워지면 그 반응도 지우는 것과 지운 항목 섹션의 항목 기록을 지우는 것을 정했다. 구현 커밋 `cc5da40`(사건 삭제 알림) · `a948926`(반응 따르기 · 울타리 · 지운 항목 섹션의 항목 기록)
+- 근거: [이슈 #226](https://github.com/Theia0382/yozm-news/issues/226) — 기존 꼴(지운 것을 ID 로 알리고 가리키는 모듈이 따른다)과 가리킬 곳 없는 행을 남기지 않는 기준으로 사건 삭제 알림을 골랐고, 재판정으로 원래 사건이 비어 지워지면 그 반응도 지우는 것과 지운 항목 섹션의 항목 기록을 지우는 것을 정했다. 구현 커밋 `cc5da40`(사건 삭제 알림) · `a948926`(반응 따르기 · 울타리 · 지운 항목 섹션의 항목 기록)
 - 관련: [ADR-0197](0197-feedback-on-removed-articles-is-deleted-from-both-the-current-state-and-the-history-and-recording-and-removal-are-ordered-by-a-fence-lock.md)(전체 대체 — 지운 기사의 반응 지우기와 기사 확인 울타리), [ADR-0060](0060-article-deletion-announced-by-removed-article-ids-and-followed-by-referencing-modules.md)(보충 — 지운 것을 ID 로 알리고 가리키는 모듈이 따르는 꼴을 사건 삭제로 넓힌다), [ADR-0265](0265-feedback-is-pressed-once-per-digest-item-and-recorded-on-each-event-of-the-item-the-screen-shows-the-item-value-and-signals-use-event-records.md)(항목 기록 · 사건 기록), [ADR-0266](0266-feedback-is-recorded-under-the-original-event-id-and-feedback-resolves-merged-events-through-event-when-reading-with-the-last-pressed-value-winning.md)(원래 사건 ID 로 기록), [ADR-0186](0186-digests-follow-removed-articles-by-deleting-their-rows-and-show-no-summary-without-any-citation.md)(다이제스트가 지운 기사를 따라 섹션을 지운다), [ADR-0105](0105-storylines-link-incrementally-from-event-change-notifications-and-events-publish-changed-event-ids.md)(사건 변화 알림)
 
 ## 맥락

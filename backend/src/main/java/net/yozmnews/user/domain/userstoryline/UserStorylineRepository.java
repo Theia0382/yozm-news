@@ -30,6 +30,9 @@ public interface UserStorylineRepository {
 	/** 추적 씨앗을 통째로 바꾼다 */
 	void replaceSeeds(long id, Set<Long> storylineIds);
 
+	/** 헤드를 쓴다 — 잇기 결과 */
+	void setHead(long id, long head);
+
 	/** 구독 행을 둔다 — 이미 있으면 추적 시각을 {@code at} 으로 고친다 */
 	void subscribe(UserId user, long id, Instant at);
 

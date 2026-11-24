@@ -9,6 +9,7 @@ import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleId;
@@ -21,6 +22,7 @@ import net.yozmnews.tag.domain.result.EvaluationRecord;
 import net.yozmnews.tag.domain.result.SampleRow;
 import net.yozmnews.tag.domain.result.StoredEvaluation;
 import net.yozmnews.tag.domain.result.StoredTag;
+import net.yozmnews.tag.domain.review.StoredKeys;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,11 +38,11 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * 평가 결과 저장소 — 평가 · 태그 행과 {@code jsonb} 왕복, (기사, 버전) 고유, 최근 버전 조회, 버전 · 기간 흘려 받기, 첫 평가 시각으로 기사
- * 흘려 받기, 지운 기사 따르기, 채움의 잠금 읽기 · 빠진 태그 더하기 · 버전별 수를 Flyway 가 적용된 실제 PostgreSQL 에서
- * 본다. 테스트는 테스트 트랜잭션 안에서 돈다 — 흘려 받기의 트랜잭션 밖 갈래는 그 트랜잭션을 잠시 멈추고 부른다. 지우기와 채움의 잠금
- * 순서는 두 연결이 필요해 {@code EvaluationDeletionLockTests} 가 본다.
+ * 흘려 받기, 평가 목록의 필요조건 · 대표 형식으로 좁힌 훑기, 지운 기사 따르기, 채움의 잠금 읽기 · 빠진 태그 더하기 · 버전별 수를 Flyway 가
+ * 적용된 실제 PostgreSQL 에서 본다. 테스트는 테스트 트랜잭션 안에서 돈다 — 흘려 받기의 트랜잭션 밖 갈래는 그 트랜잭션을 잠시 멈추고
+ * 부른다. 지우기와 채움의 잠금 순서는 두 연결이 필요해 {@code EvaluationDeletionLockTests} 가 본다.
  * <p>
- * 지키는 규칙: tag-R15 · tag-R21 · tag-R29 · tag-R30
+ * 지키는 규칙: tag-R15 · tag-R21 · tag-R29 · tag-R30 · tag-R33
  */
 @JdbcTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -340,6 +342,28 @@ class JdbcEvaluationResultRepositoryTests {
 	}
 
 	@Test
+	void scansNewestFirstOnlyTheEvaluationsWithAStoredRowForEveryNecessaryCondition() {
+		this.repository.insert(record(42, this.first, AT, 1, List.of(new StoredTag(MultiTagKind.TOPIC,
+				"politics.assembly", 0.125), new StoredTag(MultiTagKind.REGION, "domestic", 0.875))));
+		this.repository.insert(record(43, this.first, AT.plusSeconds(10), 2,
+				List.of(new StoredTag(MultiTagKind.TOPIC, "politics.assembly", 0.875))));
+		this.repository.insert(record(44, this.first, AT.plusSeconds(20), 3, List.of(new StoredTag(MultiTagKind.REGION,
+				"domestic", 0.875), new StoredTag(MultiTagKind.TOPIC, "economy.finance", 0.25))));
+		this.repository.insert(record(45, this.first, AT.plusSeconds(30), 4, List.of(new StoredTag(MultiTagKind.TOPIC,
+				"politics.executive", 0.75), new StoredTag(MultiTagKind.REGION, "domestic", 0.375))));
+		StoredKeys politics = new StoredKeys(MultiTagKind.TOPIC, Set.of("politics.assembly", "politics.executive"));
+		StoredKeys domestic = new StoredKeys(MultiTagKind.REGION, Set.of("domestic"));
+		StoredKeys finance = new StoredKeys(MultiTagKind.TOPIC, Set.of("economy.finance"));
+
+		// 확률은 보지 않는다 — 기사 42 의 국회 0.125 도 저장 행이다
+		assertThat(scanned(List.of(politics, domestic), null)).containsExactly(45L, 42L);
+		assertThat(scanned(List.of(politics, domestic, finance), null)).isEmpty();
+		assertThat(scanned(List.of(domestic), "straight")).containsExactly(45L, 44L, 42L);
+		assertThat(scanned(List.of(domestic), "opinion")).isEmpty();
+		assertThat(scanned(List.of(), null)).containsExactly(45L, 44L, 43L, 42L);
+	}
+
+	@Test
 	void countsTheEvaluationsOfThePeriodByVersion() {
 		this.repository.insert(record(42, this.first, AT, 1, List.of()));
 		this.repository.insert(record(43, this.first, AT.plusSeconds(10), 2, List.of()));
@@ -349,6 +373,16 @@ class JdbcEvaluationResultRepositoryTests {
 		assertThat(this.repository.countByVersion(AT, AT.plusSeconds(30)))
 			.isEqualTo(Map.of(this.first, 2L, this.second, 1L));
 		assertThat(this.repository.countByVersion(AT.plusSeconds(40), AT.plusSeconds(50))).isEmpty();
+	}
+
+	/** 첫 버전 · 기간 {@code [AT, AT + 1분)} 을 최근 것부터 훑은 기사 */
+	private List<Long> scanned(List<StoredKeys> required, @Nullable String formatKey) {
+		List<Long> articles = new ArrayList<>();
+		this.repository.scanNewestFirst(this.first, AT, AT.plusSeconds(60), null, required, formatKey, listed -> {
+			articles.add(listed.sample().evaluation().articleId().value());
+			return true;
+		});
+		return articles;
 	}
 
 	private TagSetId tagSet(int number, boolean active) {

@@ -152,7 +152,7 @@ class DigestScreenControllerTests {
 			// 항목을 묶은 흐름 — 흐름 추적의 대상
 			.andExpect(jsonPath("$.day.shown.sections[1].storylineId").value(flow))
 			// 그 흐름의 정리된 사용자 스토리라인이 없으면 제목 · 링크가 없다
-			.andExpect(jsonPath("$.day.shown.sections[1].userStoryline").isEmpty())
+			.andExpect(jsonPath("$.day.shown.sections[1].userStorylines").isEmpty())
 			// 지운 기사의 인용은 빠진다
 			.andExpect(jsonPath("$.day.shown.sections[1].citations.length()").value(1))
 			.andExpect(jsonPath("$.day.shown.sections[1].citations[0].articleId").value(kept))
@@ -186,6 +186,38 @@ class DigestScreenControllerTests {
 
 		// 실패 메시지 · 요약문은 내지 않는다
 		assertThat(body).doesNotContain("운영 로그용 실패 메시지").doesNotContain("errorMessage").doesNotContain("요약문 원문");
+	}
+
+	@Test
+	void anItemOfAFlowBeforeAForkCarriesEverySummarizedUserStorylineHoldingIt() throws Exception {
+		long user = this.reader.id().value();
+		Instant at = Instant.parse("2026-11-05T00:00:00Z");
+		// 갈라지기 전 흐름 shared 가 두 갈래(사용자 스토리라인)의 추적 대상에 함께 든다
+		long shared = UserStorylineFixtures.storyline(this.jdbc, at);
+		long left = UserStorylineFixtures.storyline(this.jdbc, at);
+		long right = UserStorylineFixtures.storyline(this.jdbc, at);
+		long ready = this.rows.digest(user, "2026-11-05", "READY", 100, 20, null);
+		long item = this.rows.section(ready, "TOP_STORY", 0, "갈라지기 전 흐름의 항목", "요약");
+		this.rows.sectionEvent(item, 0, 70, "SUBSCRIBED");
+		this.jdbc.sql("update digest_sections set storyline_id = :flow where id = :id")
+			.param("flow", shared)
+			.param("id", item)
+			.update();
+		UserStorylineSummaryRows summaries = new UserStorylineSummaryRows(this.jdbc);
+		long first = summaries.userStoryline(user, shared, left);
+		summaries.summarize(first, "왼쪽 갈래", at);
+		long second = summaries.userStoryline(user, shared, right);
+		summaries.summarize(second, "오른쪽 갈래", at);
+
+		this.mockMvc.perform(get("/api/digests/2026-11-05").with(this.reader))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.shown.sections[0].storylineId").value(shared))
+			// 두 갈래 모두 — 사용자 스토리라인 ID 순
+			.andExpect(jsonPath("$.shown.sections[0].userStorylines.length()").value(2))
+			.andExpect(jsonPath("$.shown.sections[0].userStorylines[0].id").value(first))
+			.andExpect(jsonPath("$.shown.sections[0].userStorylines[0].title").value("왼쪽 갈래 제목"))
+			.andExpect(jsonPath("$.shown.sections[0].userStorylines[1].id").value(second))
+			.andExpect(jsonPath("$.shown.sections[0].userStorylines[1].title").value("오른쪽 갈래 제목"));
 	}
 
 	/**
@@ -223,15 +255,16 @@ class DigestScreenControllerTests {
 			String day = path.endsWith("latest") ? "$.day" : "$";
 			this.mockMvc.perform(get(path).with(this.reader))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath(day + ".shown.sections[0].userStoryline").isEmpty())
+				.andExpect(jsonPath(day + ".shown.sections[0].userStorylines").isEmpty())
 				.andExpect(jsonPath(day + ".shown.sections[1].storylineId").value(summarized))
-				.andExpect(jsonPath(day + ".shown.sections[1].userStoryline.id").value(userStoryline))
-				.andExpect(jsonPath(day + ".shown.sections[1].userStoryline.title").value("정리된 흐름 제목"))
+				.andExpect(jsonPath(day + ".shown.sections[1].userStorylines.length()").value(1))
+				.andExpect(jsonPath(day + ".shown.sections[1].userStorylines[0].id").value(userStoryline))
+				.andExpect(jsonPath(day + ".shown.sections[1].userStorylines[0].title").value("정리된 흐름 제목"))
 				// 정리가 없는 사용자 스토리라인의 흐름은 버튼의 대상만 있고 제목 · 링크가 없다
 				.andExpect(jsonPath(day + ".shown.sections[2].storylineId").value(unsummarized))
-				.andExpect(jsonPath(day + ".shown.sections[2].userStoryline").isEmpty())
+				.andExpect(jsonPath(day + ".shown.sections[2].userStorylines").isEmpty())
 				.andExpect(jsonPath(day + ".shown.sections[3].storylineId").isEmpty())
-				.andExpect(jsonPath(day + ".shown.sections[3].userStoryline").isEmpty());
+				.andExpect(jsonPath(day + ".shown.sections[3].userStorylines").isEmpty());
 		}
 	}
 

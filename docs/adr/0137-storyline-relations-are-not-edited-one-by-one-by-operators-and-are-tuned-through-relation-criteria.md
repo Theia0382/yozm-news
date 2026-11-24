@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-13
-- 근거: [이슈 #125](https://github.com/Theia0382/yozm-news/issues/125) — 스토리라인 운영자 화면을 설계하며 리드와 정함
+- 근거: [이슈 #125](https://github.com/Theia0382/yozm-news/issues/125) — 스토리라인 운영자 화면을 설계하며 정함
 - 관련: [ADR-0132](0132-storyline-relations-are-judged-by-jev-on-candidate-pairs-and-linked-only-above-a-probability-threshold.md)(부분 대체 — 결과 "운영자가 관계를 고치는 길이 생기기 전까지 틀린 종류로 남는다"), [ADR-0131](0131-storyline-relations-are-explicit-links-with-containment-as-a-single-parent-tree-gathered-at-query-time.md)(관계의 표현과 구조), [ADR-0083](0083-big-event-criteria-as-operator-settings-with-append-only-history-and-preview.md)(운영자가 판정 결과가 아니라 기준을 바꾸는 꼴)
 
 ## 맥락

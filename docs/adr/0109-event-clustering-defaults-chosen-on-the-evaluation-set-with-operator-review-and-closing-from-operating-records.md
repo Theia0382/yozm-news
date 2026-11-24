@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-11
-- 근거: [이슈 #102](https://github.com/Theia0382/yozm-news/issues/102) — 측정 인스턴스에서 라벨 기준 2판 평가 세트로 사건 기준 · 반감기 · 핵심 말 가중치 · 시간 창과 임베딩 모델 셋을 견주고, 리드가 고른 값의 사건 표본을 검수하고, 실측 인스턴스의 운영 기록으로 닫는 기간을 정함
+- 근거: [이슈 #102](https://github.com/Theia0382/yozm-news/issues/102) — 측정 인스턴스에서 라벨 기준 2판 평가 세트로 사건 기준 · 반감기 · 핵심 말 가중치 · 시간 창과 임베딩 모델 셋을 견주고, 고른 값의 사건 표본을 검수하고, 실측 인스턴스의 운영 기록으로 닫는 기간을 정함
 - 관련: [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md)(결정 절 "임계값 · 시간 창 · 모델은 평가 세트로 정한다"와 결과 절 "운영자가 표본을 검수해 임계값을 조정한다"의 첫 값 — 보충), [ADR-0081](0081-event-assignment-criteria-in-settings-and-rejudgement-within-stored-scores.md)(사건 기준 · 저장 기준 기본값의 "측정 전 목표" — 보충), [ADR-0086](0086-events-close-after-an-idle-period-since-the-last-join-or-a-maximum-period-since-opening.md)(닫는 기간 · 최대 기간 기본값의 "측정 전 목표" — 보충), [ADR-0102](0102-an-event-is-the-reports-of-one-happening-narrowed-by-the-event-membership-question-wording.md)(반감기의 값 — 보충), [ADR-0090](0090-article-embedding-defaults-to-an-in-app-local-model-with-an-openai-compatible-api-by-setting.md)(기본을 외부로 옮길 조건 — 보충), [ADR-0096](0096-instance-bound-evaluation-data-kept-out-of-the-public-repository-and-defaults-cite-only-the-evaluation-set.md)(근거 수치를 공개 문서에 적지 않는다)
 
 ## 맥락

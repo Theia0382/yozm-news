@@ -284,17 +284,46 @@ class UserStorylineFollowupsTests {
 
 		List<Saved> split = saved(user);
 		assertThat(split).hasSize(2).allMatch(Saved::tracked);
-		assertThat(split.get(0).members()).containsExactly(earlier);
-		assertThat(split.get(0).seeds()).containsExactly(earlier);
-		// 갈라진 조각은 추적을 물려받고, 그 조각의 씨앗 꼭대기가 추적 씨앗이 된다 — 추적 시각은 원래 것
-		assertThat(split.get(1).members()).containsExactly(later);
-		assertThat(split.get(1).seeds()).containsExactly(later);
-		assertThat(split.get(1).subscribedAt()).isEqualTo(tracked);
+		// 저장 개체는 헤드(later) 쪽 조각을 잇고 추적을 물려받는다 — 그 조각의 씨앗 꼭대기가 추적 씨앗이 되고 추적 시각은 원래 것
+		assertThat(split.get(0).members()).containsExactly(later);
+		assertThat(split.get(0).seeds()).containsExactly(later);
+		assertThat(split.get(0).subscribedAt()).isEqualTo(tracked);
+		// 추적 씨앗의 조각은 새 개체로 추적 중이다
+		assertThat(split.get(1).members()).containsExactly(earlier);
+		assertThat(split.get(1).seeds()).containsExactly(earlier);
 		assertThat(history(user)).containsExactly(List.of(earlier, "ADD", "USER"), List.of(later, "ADD", "STORYLINE_SPLIT"));
 
 		// 물려받은 조각의 반응이 창 밖으로 나가도 추적 중이라 남는다
 		this.subscriptions.view(user, tracked.plus(Duration.ofDays(200)));
 		assertThat(saved(user)).hasSize(2).allMatch(Saved::tracked);
+	}
+
+	@Test
+	void aStoredHeadIsFollowedToItsCurrentTopWhenItsStorylineGetsContained() {
+		UserId user = user("alice@example.com");
+		// 갈래 둘 — root → left · root → right(left 의 ID 가 작다)
+		long root = storyline();
+		long left = storyline();
+		long right = storyline();
+		UserStorylineFixtures.follows(this.jdbc, root, left);
+		UserStorylineFixtures.follows(this.jdbc, root, right);
+		// 갈라지기 전 root 를 추적하면 갈래마다 사용자 스토리라인 — 먼저 만든 것이 헤드가 작은 left 갈래를 잇는다
+		this.subscriptions.subscribe(user, new StorylineId(root), TRACKED);
+		List<Saved> before = saved(user);
+		assertThat(before).extracting(Saved::members).containsExactly(Set.of(root, left), Set.of(root, right));
+		long leftFlow = before.get(0).id();
+		long rightFlow = before.get(1).id();
+
+		// 헤드 left 가 ID 가 가장 큰 새 스토리라인의 하위가 된다 — 그 갈래의 꼭대기는 parent 다
+		long parent = storyline();
+		UserStorylineFixtures.contains(this.jdbc, parent, left);
+		this.subscriptions.view(user, TRACKED.plusSeconds(60));
+
+		// 저장한 헤드 left 를 지금 꼭대기 parent 로 풀어 같은 사용자 스토리라인이 그 갈래를 잇는다. 대조 — 풀지 않으면 헤드를 가진
+		// 묶음이 없어 추적 씨앗 root 의 묶음 가운데 헤드가 작은 right 갈래로 옮겨 가고, right 갈래의 사용자 스토리라인은 합쳐져 사라진다
+		assertThat(saved(user)).extracting(Saved::id, Saved::members, Saved::tracked)
+			.containsExactly(org.assertj.core.groups.Tuple.tuple(leftFlow, Set.of(root, parent), true),
+					org.assertj.core.groups.Tuple.tuple(rightFlow, Set.of(root, right), true));
 	}
 
 	private UserId user(String email) {

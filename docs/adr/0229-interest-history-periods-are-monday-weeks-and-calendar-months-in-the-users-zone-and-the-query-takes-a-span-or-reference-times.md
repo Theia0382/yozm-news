@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-18
-- 근거: [이슈 #189](https://github.com/Theia0382/yozm-news/issues/189) — 화면 · 변화 리포트가 기간 경계를 정하는 자리와 화면의 기간 고르기를 리드와 정함. 구현 커밋 `77bfe43` · `86e0cc0` · `bb602eb` · `95bb4cd` · `27a151a`
+- 근거: [이슈 #189](https://github.com/Theia0382/yozm-news/issues/189) — 화면 · 변화 리포트가 기간 경계를 정하는 자리와 화면의 기간 고르기를 정함. 구현 커밋 `77bfe43` · `86e0cc0` · `bb602eb` · `95bb4cd` · `27a151a`
 - 관련: [ADR-0180](0180-user-settings-changes-publish-no-event-and-consumers-query.md)(소비자의 작업이 조회를 연다 — 시간대 조회를 엶), [ADR-0192](0192-reader-screens-are-composed-by-the-reader-module-over-module-public-queries.md)(`reader` 는 판정하지 않는다), [ADR-0225](0225-interest-history-values-read-only-the-window-before-each-reference-time-and-the-period-in-progress-is-measured-at-the-call.md)(기간 값의 계산)
 
 ## 맥락
@@ -31,5 +31,5 @@
 | 브라우저 시간대를 요청 매개변수로 받는다 | 같은 사용자라도 기기마다 기간 값이 다르고 리포트와 경계가 어긋난다 |
 | 공개 조회를 `recent` 하나만 열고 리포트용은 리포트 작업이 더한다 | 리포트가 같은 조회를 쓰는지가 이 작업에서 확인되지 않는다 |
 | `at` 하나만 열고 경계 계산 함수를 공개해 `reader` 가 엮는다 | 시간대 읽기 · 경계 계산 · 조회의 순서가 화면 쪽에 놓이고, 계산 함수가 공개 API 가 된다 |
-| 드롭다운 하나에 여섯 선택지 · 기본 13주 | 단위마다 기본값이 있다는 리드 답과 맞지 않는다 |
-| 쪽 넘김으로 그 앞 기간을 본다 | 리드 판단 — 드롭다운으로 기간 수를 고른다 |
+| 드롭다운 하나에 여섯 선택지 · 기본 13주 | 단위마다 기본값을 두기로 한 것과 맞지 않는다 |
+| 쪽 넘김으로 그 앞 기간을 본다 | 드롭다운으로 기간 수를 고르는 쪽을 택했다 |

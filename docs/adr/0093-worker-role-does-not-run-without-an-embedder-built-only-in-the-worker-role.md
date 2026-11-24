@@ -2,7 +2,7 @@
 
 - 상태: 승인. 부분 대체 — 반복 작업이 임베더를 생성자로 받는 장치([ADR-0115](0115-embedding-api-in-both-roles-looks-up-the-embedder-on-call-and-a-worker-startup-check-requires-one.md)) · 회차가 임베더를 생성자로 받지 않음([ADR-0115](0115-embedding-api-in-both-roles-looks-up-the-embedder-on-call-and-a-worker-startup-check-requires-one.md))
 - 날짜: 2026-11-07
-- 근거: [이슈 #95](https://github.com/Theia0382/yozm-news/issues/95) — 운영 임베더를 들이며, 임베더가 없는 동안의 건너뜀 · 대기 적체와 그 처분을 운영 구현에 미뤄 둔 결정을 리드와 정함
+- 근거: [이슈 #95](https://github.com/Theia0382/yozm-news/issues/95) — 운영 임베더를 들이며, 임베더가 없는 동안의 건너뜀 · 대기 적체와 그 처분을 운영 구현에 미뤄 둔 결정을 정함
 - 관련: [ADR-0074](0074-article-features-built-by-event-intake-queue-job-and-skipped-without-an-embedder.md)(결정 절 셋째 항목의 첫 세 문장을 부분 대체한다 — 넷째 문장 "리스너와 회차는 임베더를 생성자로 받지 않는다 — 임베더 없는 화면 역할도 뜬다" 는 그대로, 결과 절 첫 항목의 미룬 사항을 정한다 — 후속 기록), [ADR-0084](0084-event-merge-applies-assignment-scoring-between-events-and-keeps-merged-rows-pointing-to-survivors.md)(결과 절 "임베더가 없는 프로세스에서는 다른 회차와 함께 건너뛴다"를 부분 대체한다), [ADR-0061](0061-worker-role-does-not-run-without-an-evaluator.md)(평가기의 같은 원칙), [ADR-0090](0090-article-embedding-defaults-to-an-in-app-local-model-with-an-openai-compatible-api-by-setting.md)(운영 임베더)
 
 ## 맥락

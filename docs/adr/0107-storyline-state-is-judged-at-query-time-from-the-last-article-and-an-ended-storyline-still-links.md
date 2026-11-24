@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-10
-- 근거: [이슈 #123](https://github.com/Theia0382/yozm-news/issues/123) — 임시 잇기 규칙의 도달 범위와 사건 닫기 선례를 조사해 상태 집합 · 판정 시점 · 끝남의 효력을 리드와 정함
+- 근거: [이슈 #123](https://github.com/Theia0382/yozm-news/issues/123) — 임시 잇기 규칙의 도달 범위와 사건 닫기 선례를 조사해 상태 집합 · 판정 시점 · 끝남의 효력을 정함
 - 관련: [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)(결정 "공유 스토리라인의 책임 · 계약은 구현할 때 정한다"의 상태 몫 — 보충), [ADR-0086](0086-events-close-after-an-idle-period-since-the-last-join-or-a-maximum-period-since-opening.md) · [ADR-0087](0087-closed-event-assignments-are-not-rejudged-and-closing-and-merging-are-not-undone.md)(사건의 닫기 — 견준 선례), [ADR-0106](0106-provisional-storyline-linking-opens-only-with-a-partner-event-and-adds-the-single-best-storyline-without-removal.md)(끝난 스토리라인이 후보가 되는지를 정하는 잇기 규칙)
 
 ## 맥락
