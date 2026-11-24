@@ -330,6 +330,11 @@ class DigestRequestsTests {
 		}
 
 		@Override
+		public int readyDayCount(UserId user, Instant from, Instant to) {
+			return this.ledger.readyDayCount(user, from, to);
+		}
+
+		@Override
 		public int manualCountBetween(UserId user, Instant from, Instant to) {
 			return this.ledger.manualCountBetween(user, from, to);
 		}

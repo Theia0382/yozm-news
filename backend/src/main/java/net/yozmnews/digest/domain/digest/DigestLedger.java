@@ -30,6 +30,12 @@ public interface DigestLedger {
 	/** 그 사용자의 다이제스트 가운데 생성을 기다리거나 생성 중인 것이 있는가 */
 	boolean inProgress(UserId user);
 
+	/**
+	 * 그 사용자의 {@code READY} 다이제스트 가운데 기간 끝이 {@code from} 이상 · {@code to} 미만인 것의 서로 다른 다이제스트 날짜 수 — 같은
+	 * 날짜의 행은 하나로 센다
+	 */
+	int readyDayCount(UserId user, Instant from, Instant to);
+
 	/** 그 사용자의 수동 다이제스트 가운데 만든 시각이 {@code from} 이상 · {@code to} 미만인 것의 수 */
 	int manualCountBetween(UserId user, Instant from, Instant to);
 
