@@ -399,7 +399,7 @@ sequenceDiagram
 - `SelectionRules` · `CandidateCost` — 후보 선별 상수의 정본(digest-R15 ~ R22)
 - `EventShares` · `EventFacts` — 사건의 값의 정본(digest-R44)
 - `CandidateEvents` · `UserFilter` · `SubscriptionFilter` · `CandidateRank` · `BigRowOrder` · `BigSlotPicker` · `FollowedStorylines` · `DiversityQuota` · `EventSample` · `BudgetCut` · `CandidateSelector` — 후보 선별 규칙의 정본, 규칙마다 하나(digest-R17 ~ R19 · R21 · R22 · R45 · R52). `CandidateRank.order(InterestWeights)` 가 관심도를 곱한 사건 순위, `CandidateRank.score` 가 사건 점수다. `CandidateEvent` 는 사건의 값 · 사건의 꼭대기 · 후보 사건의 기사, `Shortlist` 는 큰 슬롯 사건 · 구독 사건 · 새 길 사건 · 큰 판정 행의 위치, `SelectedEvent` 는 고른 사건과 선정 이유 · 큰 판정 행의 위치다. `BigSlotPicker.BigRow` 는 행의 머리 · 머리의 포함 나무 꼭대기 · 보도 강도 · 사건이고, 꼭대기는 `BigRow.resolved` 가 정한다(꼭대기를 모르는 머리는 머리 자신). `BigRowOrder.order(행, InterestWeights)` 가 행을 관심을 곱한 순서로 놓고, `CandidateEvents.big(…, InterestLevels)` 가 큰 슬롯 사건의 주제 거름을 건다. `ArticleFacts` 는 기사의 평가 · 발행 시각 · 소스이고 `ArticleFacts.of(ActiveEvaluation, …)` 로 만든다. `UserFilter` 는 그 사용자의 값이 싫어요인 사건(`dislikedEvents`)과 거른 꼭대기(`excludedStorylines`)를 싣고 사건 제외의 판정 하나(`passesEvent(EventFacts, 꼭대기)` — 지역 · 싫어요 · 꼭대기가 모두 거른 꼭대기)를 구독 필터 · 큰 슬롯 · 새 길이 함께 쓴다 — 큰 슬롯 사건의 싫어요는 `withDisliked` 로 더한다. 큰 판정 행의 머리 판정은 `passesStoryline` 이다
-- `ItemGrouping` · `ItemPlan` · `ItemRules` — 항목 묶기 · 항목 순위와 가르기 · 큰 슬롯 밖 주요 뉴스 수와 구독 행마다 상한의 정본(digest-R46 · R47 · R54). 몫을 쓸 행은 다양성 몫과 같은 판정(`DiversityQuota.roomiest`)으로 고른다
+- `ItemGrouping` · `ItemPlan` · `ItemRules` — 항목 묶기 · 항목 순위와 가르기 · 큰 슬롯 밖 주요 뉴스 수와 구독 행마다 상한(주요 뉴스 칸의 비율 · 산식 · 거는 조건)의 정본(digest-R46 · R47 · R54). 몫을 쓸 행은 다양성 몫과 같은 판정(`DiversityQuota.roomiest`)으로 고른다
 - `DigestInput` — 생성의 입력 — 항목 → 사건 → 표본 기사. 같은 사건 · 같은 기사가 두 번이면 거부하고, 항목 · 사건은 비지 않으며 기사의 선정 이유는 그 사건의 것이다(digest-R22)
 - `ActiveKeys` — 평가 키(주제 중분류 · 지역 · 대표 형식)를 계보 표로 활성 키로 푸는 정본(`ActiveEvaluation`)(digest-R16)
 - `InterestRules` · `InterestConstants` · `InterestFormula` · `InterestLevels` · `TopicInterests` — 관심도 상수(주제 묶음 `TOPIC` · 스토리라인 묶음 `STORYLINE`, θ `PRESENCE_THRESHOLD` · 제안 기준 `SUGGESTION_THRESHOLD` · 거절 기간 `SUGGESTION_DECLINE_PERIOD`, 거름 기준 `EXCLUSION_THRESHOLD`(흐름 거름과 큰 슬롯 사건의 주제 거름이 함께 쓴다) · 스토리라인의 관심 흐름 · 남길 기준과 반복 기간 포함) · 산식(식 하나 — 키 종류마다 상수 · 성질은 묶음 `InterestConstants`, 스토리라인 묶음만 반응이 앞선 무반응 노출을 대신) · 주제 관심과 가중치 변환 · 큰 슬롯 사건의 주제 거름 판정(`InterestLevels.excluded`)의 정본(digest-R19 · R23 · R36 · R41 · R49 ~ R51)
@@ -669,10 +669,11 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
 - **digest-R47** — 항목 순위와 가르기(`ItemPlan` · `ItemRules`): 항목 점수는 항목 안 사건 점수(digest-R18)의 최대다 — 점수가 있는 사건이 없으면 맨 뒤. 순서는 항목 점수 내림차순 → 항목의 가장 작은 사건 ID 오름차순이다
   - 큰 판정 나무의 항목은 모두 주요 뉴스(`TOP_STORY`)다. 나머지 항목(일반 항목)에서 `ItemRules.TOP_STORIES`(5) 개(일반 항목이 그보다 적으면 모두)를 구독 행마다 상한(digest-R54)으로 골라 주요 뉴스로 두고, 그 밖은 헤드라인(`HEADLINE`)이다 — 헤드라인 수는 따로 자르지 않는다
   - 생성에 넘기는 항목은 주요 뉴스 항목(순서대로) 다음 헤드라인 항목(순서대로)이다 — 큰 판정 나무의 항목을 앞으로 올리지 않고, 상한으로 건너뛴 일반 항목은 헤드라인 앞쪽에 선다. 항목 안 사건은 사건 순위(digest-R18) 순서다
-- **digest-R54** — 주요 뉴스의 구독 행마다 상한(`ItemPlan` · `ItemRules.TOP_STORIES_PER_TOPIC`): 일반 항목의 구독 행은 항목 안 사건이 겹치는 구독 행(digest-R17 의 겹침 — `UserFilter.subscriptions`)이다 — 주제 구독 밖 관심 흐름의 사건(digest-R52)만 든 항목은 구독 행이 없다. 큰 판정 나무의 항목은 몫을 쓰지 않고 구독 행 수에도 들지 않는다
-  - 일반 항목에 나온 구독 행 수 × `TOP_STORIES_PER_TOPIC`(2)가 `TOP_STORIES` 보다 작으면(구독 행 둘 이하) 상한을 걸지 않는다 — 순서대로 `TOP_STORIES` 개다
-  - 그 밖이면 1차로 일반 항목을 순서대로 훑어 `TOP_STORIES` 개가 찰 때까지 담는다 — 구독 행이 없는 항목은 그대로 담고, 구독 행이 있는 항목은 그 가운데 남은 몫(행마다 `TOP_STORIES_PER_TOPIC` 에서 시작)이 가장 큰 행(같으면 구독 행 순서 앞 — 다양성 몫(digest-R21)과 같은 판정 `DiversityQuota.roomiest`)의 몫 하나를 쓰고 담는다. 남은 몫이 있는 행이 없으면 건너뛴다
-  - 2차로 `TOP_STORIES` 개가 차지 않았으면 건너뛴 일반 항목을 순서대로 채운다 — 주요 뉴스 수는 상한이 없을 때와 같다
+- **digest-R54** — 주요 뉴스의 구독 행마다 상한(`ItemPlan` · `ItemRules.TOPIC_SHARE_PERCENT` · `ItemRules.topicCap` · `ItemRules.topicCapApplies`): 항목의 구독 행은 항목 안 사건이 겹치는 구독 행(digest-R17 의 겹침 — `UserFilter.subscriptions`)이다 — 주제 구독 밖 관심 흐름의 사건(digest-R52)만 든 항목과 구독 밖 주제의 큰 판정 나무 항목은 구독 행이 없다
+  - 한 구독 행의 상한은 주요 뉴스 칸(큰 판정 나무의 항목 수 + `TOP_STORIES`) × `TOPIC_SHARE_PERCENT`(40) ÷ 100 의 내림이다 — 큰 판정 나무의 항목이 0 · 3 · 10 개면 2 · 3 · 6
+  - 모든 항목(큰 판정 나무의 항목 포함)에 나온 구독 행 수 × `TOPIC_SHARE_PERCENT` 가 100 보다 작으면(구독 행 둘 이하) 상한을 걸지 않는다 — 일반 항목을 순서대로 `TOP_STORIES` 개다
+  - 그 밖이면 행마다 몫을 상한에서 시작해, 먼저 큰 판정 나무의 항목이 순서대로 그 구독 행 가운데 남은 몫이 가장 큰 행(같으면 구독 행 순서 앞 — 다양성 몫(digest-R21)과 같은 판정 `DiversityQuota.roomiest`)의 몫 하나를 쓴다 — 남은 몫이 없어도 주요 뉴스다(digest-R47). 그다음 1차로 일반 항목을 순서대로 훑어 `TOP_STORIES` 개가 찰 때까지 담는다 — 구독 행이 없는 항목은 그대로 담고, 구독 행이 있는 항목은 같은 판정으로 고른 행의 몫 하나를 쓰고 담는다. 남은 몫이 있는 행이 없으면 건너뛴다
+  - 2차로 `TOP_STORIES` 개가 차지 않았으면 건너뛴 일반 항목을 순서대로 채운다 — 주요 뉴스 수는 상한이 없을 때와 같다. 내림으로 몫의 합이 칸에 못 미치는 날(큰 판정 나무의 항목 2 개면 칸 7, 상한 2)도 2차가 채운다
 
 ### 관심도
 
