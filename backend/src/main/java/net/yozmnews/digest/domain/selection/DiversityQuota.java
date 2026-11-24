@@ -67,8 +67,16 @@ public final class DiversityQuota {
 		return List.copyOf(kept);
 	}
 
-	/** 겹친 행 가운데 남은 몫이 가장 큰 행 — 같으면 앞 행. 남은 몫이 있는 행이 없으면 null */
-	private static @Nullable String roomiest(List<String> matched, Map<String, Integer> left) {
+	/**
+	 * 겹친 행 가운데 몫을 쓸 행을 고른다 — 남은 몫이 가장 큰 행, 같으면 앞 행. 큰 슬롯 밖 주요 뉴스의 구독 행마다 상한(digest-R54)이 같은
+	 * 판정을 쓴다.
+	 * @param matched 겹친 행 — 행 순서
+	 * @param left 행 → 남은 몫. 없는 행은 0 이다
+	 * @return 남은 몫이 있는 행이 없으면 null
+	 */
+	public static @Nullable String roomiest(List<String> matched, Map<String, Integer> left) {
+		Objects.requireNonNull(matched, "matched");
+		Objects.requireNonNull(left, "left");
 		@Nullable String best = null;
 		int bestLeft = 0;
 		for (String row : matched) {

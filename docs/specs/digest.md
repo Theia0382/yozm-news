@@ -15,7 +15,7 @@
 - **후보 행 보존** — 만든 지 30일이 지난 다이제스트의 후보 행을 지운다
 - **항목 확인** — 주어진 다이제스트가 그 사용자의 것이고 그 사건이 든 항목이 하나면 그 항목의 사건들을 답한다 — `feedback` 이 선언한 인터페이스 `DigestItems` 의 구현이고, 반응을 받을 수 있는 항목의 판정이 쓴다(digest-R14, [ADR-0265](../adr/0265-feedback-is-pressed-once-per-digest-item-and-recorded-on-each-event-of-the-item-the-screen-shows-the-item-value-and-signals-use-event-records.md))
 - **받은 소식** — 사용자가 날짜별로 보이는 다이제스트에서 받은 기사와 받은 날짜를 공개 조회(`ReceivedArticles`)로 낸다 — 독자 화면이 스토리라인 타임라인에 단다(digest-R13, [ADR-0193](../adr/0193-the-per-user-storyline-information-is-the-received-news-counted-from-the-digest-shown-for-each-date.md))
-- **후보 선별** — 사용자의 관심 설정과 기간으로 후보 사건을 고르고 항목으로 묶어 생성의 입력(`DigestInput` — 프로필 · 항목 → 사건 → 표본 기사의 값)을 낸다 — 후보는 그 기간에 첫 평가된 기사가 있는 배정된 사건이다. 사건의 값(주제 · 지역 · 중요도) · 구독 필터 · 순위 · 큰 슬롯 · 구독 행마다 몫 · 최대 후보 수(사건 수) · 사건마다 표본 · 입력 토큰 예산 · 선정 이유(digest-R15 ~ R22 · R44 · R45), 주제 구독 밖 관심 흐름의 길(digest-R52), 포함 나무 꼭대기로 항목 묶기와 주요 뉴스 · 헤드라인 가르기(digest-R46 · R47). 순위는 주제 · 스토리라인 관심도를 곱하고, 사용자의 값이 싫어요인 사건과 거른 꼭대기만 가진 사건은 빼며, 큰 판정 행은 관심을 곱한 순서로 놓고 머리가 거른 꼭대기인 행은 건너뛰고, 주제 관심의 평균이 거름 기준 이하인 사건은 큰 슬롯에 넣지 않는다. 재료는 다른 모듈의 공개 조회로 읽고 판단은 `domain/selection` · `domain/item` 의 순수 규칙이 한다
+- **후보 선별** — 사용자의 관심 설정과 기간으로 후보 사건을 고르고 항목으로 묶어 생성의 입력(`DigestInput` — 프로필 · 항목 → 사건 → 표본 기사의 값)을 낸다 — 후보는 그 기간에 첫 평가된 기사가 있는 배정된 사건이다. 사건의 값(주제 · 지역 · 중요도) · 구독 필터 · 순위 · 큰 슬롯 · 구독 행마다 몫 · 최대 후보 수(사건 수) · 사건마다 표본 · 입력 토큰 예산 · 선정 이유(digest-R15 ~ R22 · R44 · R45), 주제 구독 밖 관심 흐름의 길(digest-R52), 포함 나무 꼭대기로 항목 묶기와 주요 뉴스 · 헤드라인 가르기(digest-R46 · R47 · R54). 순위는 주제 · 스토리라인 관심도를 곱하고, 사용자의 값이 싫어요인 사건과 거른 꼭대기만 가진 사건은 빼며, 큰 판정 행은 관심을 곱한 순서로 놓고 머리가 거른 꼭대기인 행은 건너뛰고, 주제 관심의 평균이 거름 기준 이하인 사건은 큰 슬롯에 넣지 않는다. 재료는 다른 모듈의 공개 조회로 읽고 판단은 `domain/selection` · `domain/item` 의 순수 규칙이 한다
 - **일정** — 1분마다 생성 시각이 된 사용자(생성 시각 뒤 2시간 안)의 다이제스트를 쓸 모델이 있으면 날짜마다 한 번 만들고, 커밋 뒤 생성 작업을 등록한다. 생성 작업은 쓸 모델을 다시 정하고 후보를 골라 생성한다(digest-R29 · R30)
 - **수동 생성** — 사용자가 요청하면 오늘(사용자 시간대) 다이제스트를 같은 기간으로 다시 만들거나 새로 만든다 — 하루 세 번, 진행 중 · 쓸 모델 없음은 거절한다. 공개 API(`DigestRequests`)이고 화면용 처리기는 `reader` 가 낸다(digest-R31)
 - **거두기** — 시작되지 않은 다이제스트를 다시 등록하거나 시작 기한 뒤 실패로 끝내고, 임대가 지나도 끝나지 않는 생성을 실패로 끝낸다(digest-R32)
@@ -56,7 +56,7 @@
 | 인용 | 섹션이 인용한 기사 한 줄 — 그 항목의 표본 기사이고 화면의 출처 기사다 |
 | 상한으로 버린 수 | 읽기가 상한 때문에 버린 항목 칸 · 지운 값의 수 — 버린 칸의 항목은 출력에 없는 것이 된다 |
 | 읽는 기간 | 후보 선별이 기사를 읽는 시각 범위 — 다이제스트 기간의 끝에서 조회 기간의 상한까지로 줄인 것(digest-R15) |
-| 구독 행 | 사용자가 구독한 대분류 또는 중분류 하나와 그 행이 덮는 활성 중분류 — 다양성 몫의 단위(digest-R21) |
+| 구독 행 | 사용자가 구독한 대분류 또는 중분류 하나와 그 행이 덮는 활성 중분류 — 다양성 몫과 주요 뉴스의 구독 행마다 상한의 단위(digest-R21 · R54) |
 | 큰 슬롯 | 구독과 무관하게 큰 스토리라인의 사건을 넣는 자리 — 큰 판정 행을 보도 강도에 관심 가중치를 곱한 순서로 사용자의 큰 슬롯 수만큼 쓰고, 머리의 포함 나무 꼭대기가 거른 꼭대기인 행은 건너뛰며, 주제 관심의 평균이 거름 기준 이하인 사건은 넣지 않는다(digest-R19) |
 | 토큰 어림 | 보내기 전에 코드 포인트로 어림한 입력 토큰 — 프롬프트 구성이 같은 규칙을 따른다(digest-R22) |
 | 관심 | 주제 중분류마다 신호와 노출로 계산한 −1 ~ 1 의 값(관심 x) — 신호가 없으면 0(digest-R23). 스토리라인 관심과 구별할 때는 주제 관심이라 한다 |
@@ -288,7 +288,7 @@ public record TopicSuggestionList(TagSetId tagSet, List<String> subtopics) {}
 | `domain/schedule` | 일정 규칙과 상수의 정본(`DigestScheduleRules` — 따라잡기 창 · 등록 기다림 · 시작 기한 · 임대 · 하루 수동 횟수 · 날짜의 생성 시각 · 만들 날짜 · 오늘 일정이 아직 오지 않은 생성 시각 · 하루의 시작), 기간 산식의 정본(`DigestPeriods`), 수동 생성 대상의 정본(`ManualTarget`) |
 | `domain/candidate` | 항목 · 기사와 별칭의 정본(`CandidateSet`), 후보 행 저장소(`DigestCandidateRepository`), 보존 기한의 정본(`CandidateRetention`), 값(`DigestCandidate` · `AliasedCandidate` · `AliasedItem` — 선정 이유는 공개 enum `SelectionReason`) |
 | `domain/selection` | 후보 선별의 순수 규칙 — 상수의 정본(`SelectionRules` · `CandidateCost`), 평가 키를 활성 키로 풀기(`ActiveKeys`), 사건의 값(`EventShares` · `EventFacts`), 후보 사건 꾸리기(`CandidateEvents`), 사용자 제외(기사의 형식 · 소스, 사건의 지역 · 싫어요 · 거른 꼭대기, 큰 판정 행의 머리, 큰 슬롯 사건의 주제 거름) · 구독 행 대조(`UserFilter`), 구독 필터(`SubscriptionFilter`) · 관심도를 곱한 사건 순위(`CandidateRank`), 큰 판정 행의 순서(`BigRowOrder`), 큰 슬롯(`BigSlotPicker` — 사건마다 큰 판정 행의 위치), 주제 구독 밖 관심 흐름의 길(`FollowedStorylines`), 다양성 몫(`DiversityQuota`), 사건마다 표본(`EventSample`), 예산 자르기(`BudgetCut`), 단계 잇기와 선정 이유(`CandidateSelector`), 값(`ActiveEvaluation` · `ArticleFacts` · `CandidateEvent` · `Shortlist` · `SelectedEvent`) |
-| `domain/item` | 항목의 순수 규칙 — 포함 나무 꼭대기로 묶기(`ItemGrouping`), 항목 순위와 주요 뉴스 · 헤드라인 가르기(`ItemPlan`), 상수의 정본(`ItemRules`), 값(`DigestItemPlan` · `ArrangedItem` · `ItemKind`) |
+| `domain/item` | 항목의 순수 규칙 — 포함 나무 꼭대기로 묶기(`ItemGrouping`), 항목 순위와 주요 뉴스 · 헤드라인 가르기(`ItemPlan` — 구독 행마다 상한 포함), 상수의 정본(`ItemRules`), 값(`DigestItemPlan` · `ArrangedItem` · `ItemKind`) |
 | `domain/input` | 생성의 입력(`DigestInput`)과 그 값(`DigestProfile` · `InputItem` · `InputEvent` · `CandidateArticle`) |
 | `domain/prompt` | 프롬프트 구성의 정본(`DigestPrompts`), 상수 · 길이 기준의 정본(`PromptRules`), 값(`DigestPrompt`) |
 | `domain/interest` | 관심도 · 관심사 히스토리의 순수 규칙 — 상수의 정본(`InterestRules` — 키 종류마다 상수 묶음 `InterestConstants`), 식 하나에 키 종류마다 다른 성질은 묶음이 갖는 산식(`InterestFormula`), 주제 관심 `InterestLevels` · 스토리라인 관심 `StorylineLevels` 과 그 가중치 변환(`TopicInterests` · `StorylineInterests` · 곱 `InterestWeights`), 반복 판정(`StorylineRepeats`), 신호 고르기와 나누기(`InterestSignals`), 창 고르기(`InterestWindow` — 두 관심 `Interests`), 기간 경계(`InterestPeriods`), 생김 · 사라짐 · 드러남(`InterestShifts`), 기준 시각마다의 관심과 변화(`InterestTimelines`), 구독 제안 판정(`TopicSuggestionRule`), 값(`DeclinedTopic` · `ExposedEvent` · `Exposure` · `SubscriptionSignal` · `ExposureRow` · `InterestRecord` · `InterestPeriod`) |
@@ -399,7 +399,7 @@ sequenceDiagram
 - `SelectionRules` · `CandidateCost` — 후보 선별 상수의 정본(digest-R15 ~ R22)
 - `EventShares` · `EventFacts` — 사건의 값의 정본(digest-R44)
 - `CandidateEvents` · `UserFilter` · `SubscriptionFilter` · `CandidateRank` · `BigRowOrder` · `BigSlotPicker` · `FollowedStorylines` · `DiversityQuota` · `EventSample` · `BudgetCut` · `CandidateSelector` — 후보 선별 규칙의 정본, 규칙마다 하나(digest-R17 ~ R19 · R21 · R22 · R45 · R52). `CandidateRank.order(InterestWeights)` 가 관심도를 곱한 사건 순위, `CandidateRank.score` 가 사건 점수다. `CandidateEvent` 는 사건의 값 · 사건의 꼭대기 · 후보 사건의 기사, `Shortlist` 는 큰 슬롯 사건 · 구독 사건 · 새 길 사건 · 큰 판정 행의 위치, `SelectedEvent` 는 고른 사건과 선정 이유 · 큰 판정 행의 위치다. `BigSlotPicker.BigRow` 는 행의 머리 · 머리의 포함 나무 꼭대기 · 보도 강도 · 사건이고, 꼭대기는 `BigRow.resolved` 가 정한다(꼭대기를 모르는 머리는 머리 자신). `BigRowOrder.order(행, InterestWeights)` 가 행을 관심을 곱한 순서로 놓고, `CandidateEvents.big(…, InterestLevels)` 가 큰 슬롯 사건의 주제 거름을 건다. `ArticleFacts` 는 기사의 평가 · 발행 시각 · 소스이고 `ArticleFacts.of(ActiveEvaluation, …)` 로 만든다. `UserFilter` 는 그 사용자의 값이 싫어요인 사건(`dislikedEvents`)과 거른 꼭대기(`excludedStorylines`)를 싣고 사건 제외의 판정 하나(`passesEvent(EventFacts, 꼭대기)` — 지역 · 싫어요 · 꼭대기가 모두 거른 꼭대기)를 구독 필터 · 큰 슬롯 · 새 길이 함께 쓴다 — 큰 슬롯 사건의 싫어요는 `withDisliked` 로 더한다. 큰 판정 행의 머리 판정은 `passesStoryline` 이다
-- `ItemGrouping` · `ItemPlan` · `ItemRules` — 항목 묶기 · 항목 순위와 가르기 · 큰 슬롯 밖 주요 뉴스 수의 정본(digest-R46 · R47)
+- `ItemGrouping` · `ItemPlan` · `ItemRules` — 항목 묶기 · 항목 순위와 가르기 · 큰 슬롯 밖 주요 뉴스 수와 구독 행마다 상한(주요 뉴스 칸의 비율 · 산식 · 거는 조건)의 정본(digest-R46 · R47 · R54). 몫을 쓸 행은 다양성 몫과 같은 판정(`DiversityQuota.roomiest`)으로 고른다
 - `DigestInput` — 생성의 입력 — 항목 → 사건 → 표본 기사. 같은 사건 · 같은 기사가 두 번이면 거부하고, 항목 · 사건은 비지 않으며 기사의 선정 이유는 그 사건의 것이다(digest-R22)
 - `ActiveKeys` — 평가 키(주제 중분류 · 지역 · 대표 형식)를 계보 표로 활성 키로 푸는 정본(`ActiveEvaluation`)(digest-R16)
 - `InterestRules` · `InterestConstants` · `InterestFormula` · `InterestLevels` · `TopicInterests` — 관심도 상수(주제 묶음 `TOPIC` · 스토리라인 묶음 `STORYLINE`, θ `PRESENCE_THRESHOLD` · 제안 기준 `SUGGESTION_THRESHOLD` · 거절 기간 `SUGGESTION_DECLINE_PERIOD`, 거름 기준 `EXCLUSION_THRESHOLD`(흐름 거름과 큰 슬롯 사건의 주제 거름이 함께 쓴다) · 스토리라인의 관심 흐름 · 남길 기준과 반복 기간 포함) · 산식(식 하나 — 키 종류마다 상수 · 성질은 묶음 `InterestConstants`, 스토리라인 묶음만 반응이 앞선 무반응 노출을 대신) · 주제 관심과 가중치 변환 · 큰 슬롯 사건의 주제 거름 판정(`InterestLevels.excluded`)의 정본(digest-R19 · R23 · R36 · R41 · R49 ~ R51)
@@ -657,7 +657,7 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
 
 ### 항목 묶기와 가르기
 
-판단의 이유는 [ADR-0262](../adr/0262-chosen-events-are-grouped-into-items-by-containment-tree-top-code-splits-top-stories-and-headlines-the-llm-writes-per-item-and-an-item-has-one-badge.md) · [ADR-0264](../adr/0264-the-storyline-tops-query-gives-each-event-its-containment-tree-roots-in-membership-score-order-without-the-scores.md)에 있다. 큰 슬롯 밖 주요 뉴스 수는 측정 전 목표다([open-questions.md](../open-questions.md) "운영하면서 결정" 39번).
+판단의 이유는 [ADR-0262](../adr/0262-chosen-events-are-grouped-into-items-by-containment-tree-top-code-splits-top-stories-and-headlines-the-llm-writes-per-item-and-an-item-has-one-badge.md) · [ADR-0264](../adr/0264-the-storyline-tops-query-gives-each-event-its-containment-tree-roots-in-membership-score-order-without-the-scores.md) · [ADR-0300](../adr/0300-a-subscribed-row-takes-at-most-forty-percent-of-the-top-story-seats-big-slot-items-included-and-the-cap-is-off-below-three-rows.md)(구독 행마다 상한)에 있다. 큰 슬롯 밖 주요 뉴스 수와 구독 행마다 상한은 측정 전 목표다([open-questions.md](../open-questions.md) "운영하면서 결정" 39번).
 
 - **digest-R46** — 항목 묶기(`ItemGrouping`): 예산 자르기 뒤 남은 사건(큰 슬롯 사건 · 구독 사건 · 새 길 사건)을 후보 사건이 실은 꼭대기(digest-R16 — `storyline` 의 꼭대기 조회 `StorylineDirectory.topsOf`, 사건마다 포함 나무의 꼭대기, 소속 점수 순 — [storyline-R37](storyline.md#공개-조회))로 묶는다 — 꼭대기를 다시 묻지 않는다
   - 큰 판정 나무는 예산 자르기 뒤 큰 슬롯 사건이 하나 이상 남은 큰 판정 행의 나무다 — 그 나무의 꼭대기는 행 머리(`BigStoryline.storyline`)의 포함 나무 꼭대기(digest-R19 — `BigRow.top`)다. 고르지 않은 행(큰 슬롯 수 밖이거나 사건이 모두 잘린 행)의 나무는 큰 판정 나무가 아니다
@@ -667,8 +667,13 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
   - 큰 판정 나무의 항목은 그 행의 위치를 갖는다 — 그런 항목 수는 사용자의 큰 슬롯 수 이하다. 이어짐은 보지 않는다. 같은 사건은 한 항목에만 든다
   - 항목은 자기를 묶은 꼭대기를 싣는다(`DigestItemPlan.top`) — 꼭대기의 항목은 그 꼭대기, 큰 판정 나무의 항목은 그 행 머리의 꼭대기, 혼자 한 항목은 없다. 생성의 입력(`InputItem.storyline`)과 별칭 항목(`AliasedItem.storyline`)이 날라 섹션에 저장한다(digest-R7). 프롬프트는 읽지 않는다 — 스토리라인 ID 는 모델에 가지 않는다([ADR-0284](../adr/0284-a-digest-item-keeps-the-top-that-grouped-it-on-its-section-and-items-with-a-flow-carry-a-flow-tracking-button.md))
 - **digest-R47** — 항목 순위와 가르기(`ItemPlan` · `ItemRules`): 항목 점수는 항목 안 사건 점수(digest-R18)의 최대다 — 점수가 있는 사건이 없으면 맨 뒤. 순서는 항목 점수 내림차순 → 항목의 가장 작은 사건 ID 오름차순이다
-  - 큰 판정 나무의 항목은 모두 주요 뉴스(`TOP_STORY`)다. 나머지 항목은 순서대로 `ItemRules.TOP_STORIES`(5) 개까지 주요 뉴스, 그 뒤는 헤드라인(`HEADLINE`)이다 — 헤드라인 수는 따로 자르지 않는다
-  - 생성에 넘기는 항목은 주요 뉴스 항목(순서대로) 다음 헤드라인 항목(순서대로)이다 — 큰 판정 나무의 항목을 앞으로 올리지 않는다. 항목 안 사건은 사건 순위(digest-R18) 순서다
+  - 큰 판정 나무의 항목은 모두 주요 뉴스(`TOP_STORY`)다. 나머지 항목(일반 항목)에서 `ItemRules.TOP_STORIES`(5) 개(일반 항목이 그보다 적으면 모두)를 구독 행마다 상한(digest-R54)으로 골라 주요 뉴스로 두고, 그 밖은 헤드라인(`HEADLINE`)이다 — 헤드라인 수는 따로 자르지 않는다
+  - 생성에 넘기는 항목은 주요 뉴스 항목(순서대로) 다음 헤드라인 항목(순서대로)이다 — 큰 판정 나무의 항목을 앞으로 올리지 않고, 상한으로 건너뛴 일반 항목은 헤드라인 앞쪽에 선다. 항목 안 사건은 사건 순위(digest-R18) 순서다
+- **digest-R54** — 주요 뉴스의 구독 행마다 상한(`ItemPlan` · `ItemRules.TOPIC_SHARE_PERCENT` · `ItemRules.topicCap` · `ItemRules.topicCapApplies`): 항목의 구독 행은 항목 안 사건이 겹치는 구독 행(digest-R17 의 겹침 — `UserFilter.subscriptions`)이다 — 주제 구독 밖 관심 흐름의 사건(digest-R52)만 든 항목과 구독 밖 주제의 큰 판정 나무 항목은 구독 행이 없다
+  - 한 구독 행의 상한은 주요 뉴스 칸(큰 판정 나무의 항목 수 + `TOP_STORIES`) × `TOPIC_SHARE_PERCENT`(40) ÷ 100 의 내림이다 — 큰 판정 나무의 항목이 0 · 3 · 10 개면 2 · 3 · 6
+  - 모든 항목(큰 판정 나무의 항목 포함)에 나온 구독 행 수 × `TOPIC_SHARE_PERCENT` 가 100 보다 작으면(구독 행 둘 이하) 상한을 걸지 않는다 — 일반 항목을 순서대로 `TOP_STORIES` 개다
+  - 그 밖이면 행마다 몫을 상한에서 시작해, 먼저 큰 판정 나무의 항목이 순서대로 그 구독 행 가운데 남은 몫이 가장 큰 행(같으면 구독 행 순서 앞 — 다양성 몫(digest-R21)과 같은 판정 `DiversityQuota.roomiest`)의 몫 하나를 쓴다 — 남은 몫이 없어도 주요 뉴스다(digest-R47). 그다음 1차로 일반 항목을 순서대로 훑어 `TOP_STORIES` 개가 찰 때까지 담는다 — 구독 행이 없는 항목은 그대로 담고, 구독 행이 있는 항목은 같은 판정으로 고른 행의 몫 하나를 쓰고 담는다. 남은 몫이 있는 행이 없으면 건너뛴다
+  - 2차로 `TOP_STORIES` 개가 차지 않았으면 건너뛴 일반 항목을 순서대로 채운다 — 주요 뉴스 수는 상한이 없을 때와 같다. 내림으로 몫의 합이 칸에 못 미치는 날(큰 판정 나무의 항목 2 개면 칸 7, 상한 2)도 2차가 채운다
 
 ### 관심도
 
@@ -921,3 +926,4 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
 | [0296](../adr/0296-the-big-slot-takes-big-judgement-rows-in-the-order-of-intensity-times-the-interest-weight.md) | 큰 슬롯은 보도 강도에 관심 가중치를 곱한 순서로 큰 판정 행을 쓴다 |
 | [0297](../adr/0297-an-event-whose-mean-topic-interest-is-at-or-below-the-exclusion-threshold-does-not-enter-the-big-slot.md) | 주제 관심의 평균이 거름 기준 이하인 사건은 큰 슬롯에 넣지 않는다 |
 | [0298](../adr/0298-storyline-interest-drops-silent-exposures-before-the-latest-reacted-exposure-per-flow-and-topics-and-tracking-are-left-out.md) | 스토리라인 관심은 묶음마다 반응한 가장 늦은 노출보다 앞선 무반응 노출을 노출에서 빼고, 주제 관심과 흐름 추적에는 그 규칙을 걸지 않는다 |
+| [0300](../adr/0300-a-subscribed-row-takes-at-most-forty-percent-of-the-top-story-seats-big-slot-items-included-and-the-cap-is-off-below-three-rows.md) | 주요 뉴스는 한 구독 행이 칸의 40% 까지 차지하고, 큰 슬롯 항목도 그 몫을 쓰며, 구독 행이 셋 미만이면 걸지 않는다 |
