@@ -95,7 +95,7 @@ erDiagram
 
 ## 사용자
 
-계정 · 자격 · 복구 코드 · 실패 기록 · 요청 제한 기록 · 화면 내 알림 · 가입 정책 · 초대 · 관심 설정 · 사용자 스토리라인과 그 정리 · 스토리라인 구독 · 구독 제안 거절 테이블(`users` · `user_password_credentials` · `user_recovery_codes` · `login_failures` · `request_limit_counts` · `user_notices` · `user_feed_status_receipts` · `user_sign_up_policy` · `user_sign_up_policy_changes` · `user_invitations` · `user_settings` · `user_tag_preferences` · `user_tag_preference_events` · `user_excluded_sources` · `user_storylines` · `user_storyline_members` · `user_storyline_tracked_seeds` · `user_storyline_subscriptions` · `user_storyline_subscription_events` · `user_storyline_summaries` · `user_storyline_top_summaries` · `user_storyline_summary_events` · `user_storyline_summary_attempts` · `user_topic_suggestion_declines`)은 [user Spec §6](specs/user.md#6-데이터)에 있다. 다이제스트의 최대 후보 수 · 큰 슬롯 수 · 요약 길이와 생성의 추론 강도는 설정 행의 칸이다([user Spec](specs/user.md#관심-설정) user-R56 · R59).
+계정 · 자격 · 복구 코드 · 실패 기록 · 요청 제한 기록 · 가입 정책 · 초대 테이블(`users` · `user_password_credentials` · `user_recovery_codes` · `login_failures` · `request_limit_counts` · `user_sign_up_policy` · `user_sign_up_policy_changes` · `user_invitations`)은 [account Spec §6](specs/account.md#6-데이터)에 있다. 화면 내 알림 · 관심 설정 · 사용자 스토리라인과 그 정리 · 스토리라인 구독 · 구독 제안 거절 테이블(`user_notices` · `user_feed_status_receipts` · `user_settings` · `user_tag_preferences` · `user_tag_preference_events` · `user_excluded_sources` · `user_storylines` · `user_storyline_members` · `user_storyline_tracked_seeds` · `user_storyline_subscriptions` · `user_storyline_subscription_events` · `user_storyline_summaries` · `user_storyline_top_summaries` · `user_storyline_summary_events` · `user_storyline_summary_attempts` · `user_topic_suggestion_declines`)은 [user Spec §6](specs/user.md#6-데이터)에 있다 — 계정은 ID 로만 가리킨다(모듈 사이라 FK 가 없다). 다이제스트의 최대 후보 수 · 큰 슬롯 수 · 요약 길이와 생성의 추론 강도는 설정 행의 칸이다([user Spec](specs/user.md#관심-설정) user-R56 · R59).
 
 ## LLM 키 (BYOK)
 
@@ -136,7 +136,7 @@ erDiagram
 
 - 각 라이브러리가 제공하는 스키마를 Flyway 마이그레이션에 담고, 라이브러리의 스키마 자동 생성은 끈다.
 - JobRunr 작업 테이블과 Spring Modulith 이벤트 발행 레지스트리는 첫 마이그레이션 `V1` 에 라이브러리 원문 그대로 들어 있다. 원문 대조 테스트가 라이브러리가 지금 내놓는 원문과 같은지 확인한다([ADR-0023](adr/0023-jobrunr-oss-framework-schema-and-event-resubmission.md)).
-- Spring Session 의 세션 테이블(`spring_session` · `spring_session_attributes`)은 마이그레이션 `V32` 에 라이브러리 원문 그대로 들어 있고, 같은 원문 대조 테스트가 확인한다. 세션에 담는 값과 수명은 [user Spec](specs/user.md#세션)에 있다.
+- Spring Session 의 세션 테이블(`spring_session` · `spring_session_attributes`)은 마이그레이션 `V32` 에 라이브러리 원문 그대로 들어 있고, 같은 원문 대조 테스트가 확인한다. 세션에 담는 값과 수명은 [account Spec](specs/account.md#세션)에 있다.
 
 ## 보존 정책 (초안)
 
@@ -161,7 +161,7 @@ erDiagram
 | 태그 판정 원본 (`article_tag_judgements`) | 180일 | 태그 기준 · 저장 기준 분석과 저장 기준을 낮춘 뒤 빠진 태그 채움([tag-R31](specs/tag.md#빠진-태그-채움--저장-바닥) — 채울 기간의 상한도 180일)에 충분한 기간. **(미설계)** 지운 뒤 원본이 없는 평가의 채움 처분은 보존을 구현하는 작업이 정한다 |
 | 다이제스트 | 사용자 탈퇴 시까지. 지운 기사의 인용과 인용이 남지 않은 섹션은 지운다 — 다이제스트 행은 남는다 | 섹션 사건은 노출 기록이다([digest Spec](specs/digest.md#지운-기사-따르기) digest-R10) |
 | 관심 신호 이력(`feedback_events` · `user_tag_preference_events` · `user_storyline_subscription_events`) · 변화 리포트 | 사용자 탈퇴 시까지. 지운 사건의 좋아요 / 싫어요 이력(`feedback_events`)은 그 사건을 지울 때 지운다. 리포트 인용(`report_items`)은 지운 사건 · 스토리라인을 가리켜도 남고 조회가 뺀다 | 관심사 히스토리 · 리포트의 근거. 지운 사건은 주제를 셀 소속 기사가 없어 그 이력이 관심도에 쓰이지 못한다([feedback Spec](specs/feedback.md#지운-사건--지운-항목-따르기) feedback-R5) |
-| 계정 (`users` · `user_password_credentials`) | 사용자 탈퇴 시까지 | 사용자 데이터의 주인이고 로그인의 근거다([user Spec](specs/user.md#계정과-자격)) |
+| 계정 (`users` · `user_password_credentials`) | 사용자 탈퇴 시까지 | 사용자 데이터의 주인이고 로그인의 근거다([account Spec](specs/account.md#계정과-자격)) |
 | 관심 설정의 현재 상태 (`user_settings` · `user_tag_preferences` · `user_excluded_sources`) | 사용자 탈퇴 시까지. 태그 체계를 바꿔 활성하면 태그 선호를 활성 키로 고쳐 쓰고, 소스를 지우면 그 소스의 제외를 지운다 | 다이제스트 후보 선별의 입력이다([user Spec](specs/user.md#관심-설정) user-R47 · R49) |
 | 사용자 스토리라인(`user_storylines` · `user_storyline_members` · `user_storyline_tracked_seeds`)과 스토리라인 구독의 현재 상태(`user_storyline_subscriptions`) | 사용자 탈퇴 시까지. 추적 중이 아닌 사용자 스토리라인은 관심 창(120일) 안에 신호가 없으면 다음 맞추기에서 지운다. 합쳐진 스토리라인의 추적 씨앗은 남는 스토리라인으로 옮기고, 사라진 스토리라인의 추적 씨앗은 뺀다 | 사용자 스토리라인은 신호 이력과 지금 관계에서 다시 낼 수 있고, 추적 씨앗은 구독 이력의 투영이다([user Spec](specs/user.md#사용자-스토리라인) user-R53 · R66) |
 | 사용자 스토리라인의 정리(`user_storyline_summaries` · `user_storyline_top_summaries` · `user_storyline_summary_events`)와 시도 기록(`user_storyline_summary_attempts`) | 정리는 그 흐름이 관심 흐름이거나 남길 흐름인 동안. 지운 기사를 넣은 정리는 그 기사를 지울 때 지운다. 시도 기록은 사용자 스토리라인이 사라질 때까지. 모두 사용자 탈퇴 때 지운다 | 정리는 사건의 대표 기사에서 다시 만들 수 있고, 시도 기록은 그 흐름에 쓴 사용자 비용의 합이다([user Spec](specs/user.md#사용자-스토리라인의-정리) user-R69 · R71 · R72) |
@@ -171,11 +171,11 @@ erDiagram
 | `digest_candidates` | 다이제스트를 만들고 30일. 지운 기사의 행은 곧바로 지운다 | 생성 중 지운 기사의 표시이고 그 뒤로는 디버깅용이다. `digest` 의 보존 정리가 지운다([digest Spec](specs/digest.md#후보-행-보존) digest-R11) |
 | 화면 내 알림 (`user_notices`) | 읽은 알림은 읽고 90일 뒤 삭제. 안 읽은 알림은 볼 때까지 남는다 | 지나간 일을 알리는 것이고 장기 기능의 근거가 아니다. 안 읽은 보안 알림은 다음 로그인 때 보여야 한다([ADR-0134](adr/0134-in-app-notices-are-one-row-per-recipient-with-a-closed-kind-and-per-kind-jsonb-content-and-read-notices-are-deleted-after-ninety-days.md)) |
 | 피드 상태 알림의 반영 기준 (`user_feed_status_receipts`) | 사용자 탈퇴 시까지 | 사용자마다 한 행이고, 다시 처리된 회차를 거르는 데 쓴다([user Spec](specs/user.md#화면-내-알림) user-R24) |
-| 복구 코드 (`user_recovery_codes`) | 사용자 탈퇴 시까지 — 새 코드를 주면 바뀐다 | 사용자마다 많아야 한 행([user Spec](specs/user.md#비밀번호-변경과-복구-코드) user-R30) |
-| 가입 정책 이력 (`user_sign_up_policy_changes`) | 무기한 | 추가 전용 — 운영 설정의 이력이다([user Spec](specs/user.md#가입-정책) user-R32) |
-| 초대 (`user_invitations`) | 무기한 — 쓴 · 만료 · 취소 초대도 지우지 않는다 | 행 수가 운영자의 발급 수에 비례한다. 가입한 계정을 지우면 그 칸만 빈다([user Spec](specs/user.md#초대) user-R31) |
+| 복구 코드 (`user_recovery_codes`) | 사용자 탈퇴 시까지 — 새 코드를 주면 바뀐다 | 사용자마다 많아야 한 행([account Spec](specs/account.md#비밀번호-변경과-복구-코드) account-R23) |
+| 가입 정책 이력 (`user_sign_up_policy_changes`) | 무기한 | 추가 전용 — 운영 설정의 이력이다([account Spec](specs/account.md#가입-정책) account-R25) |
+| 초대 (`user_invitations`) | 무기한 — 쓴 · 만료 · 취소 초대도 지우지 않는다 | 행 수가 운영자의 발급 수에 비례한다. 가입한 계정을 지우면 그 칸만 빈다([account Spec](specs/account.md#초대) account-R24) |
 | 탈퇴 사용자 | 즉시 비식별화, 30일 후 완전 삭제 | 실수로 탈퇴한 경우의 복구 기간 |
-| 요청 제한 기록 (`request_limit_counts`) | 창이 끝나면 10분 안에 삭제(창은 길어야 1시간) | 지금 창의 요청 수만 판정에 쓴다. 대상(IP 주소 · 사용자 ID)은 다이제스트로만 둔다([user-R39 · R42](specs/user.md#요청-방어)) |
+| 요청 제한 기록 (`request_limit_counts`) | 창이 끝나면 10분 안에 삭제(창은 길어야 1시간) | 지금 창의 요청 수만 판정에 쓴다. 대상(IP 주소 · 사용자 ID)은 다이제스트로만 둔다([account-R31 · R34](specs/account.md#요청-방어)) |
 | JobRunr 작업 기록 | 성공하고 36시간 뒤 삭제 상태, 다시 72시간 뒤 영구 삭제. 실패한 작업은 남는다 | JobRunr 기본값. 작업의 결과는 각 모듈의 데이터에 남는다 |
 | 이벤트 발행 기록 (`event_publication`) | 완료 즉시 삭제. 실패한 발행은 운영자가 폐기할 때까지 남는다 | 결과는 각 모듈의 데이터에 남고, 실패한 발행은 재처리와 원인 조사의 근거다([ADR-0023](adr/0023-jobrunr-oss-framework-schema-and-event-resubmission.md) · [ADR-0050](adr/0050-operator-resubmits-once-or-discards-stranded-event-publications-read-from-registry.md)) |
 

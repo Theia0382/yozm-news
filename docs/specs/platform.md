@@ -8,21 +8,21 @@
 
 - **이벤트 발행 재처리** — 모듈 사이 이벤트의 리스너가 실패한 발행을 주기적으로 다시 처리하고, 상한을 넘긴 발행을 알린다
 - **남겨진 발행의 운영자 처리** — 재처리가 더 이상 다루지 않는 발행을 운영자가 보고 다시 처리하거나 폐기하는 공개 운영 API
-- **화면용 API 명세 설정** — 백엔드 코드가 만드는 화면용 API 명세의 고정 값과 속성 규칙, 운영자 경로 · 세션 경로 연산의 거부 응답. 구현은 이 모듈의 `OpenApiConfiguration` · `OpenApiPathsConfiguration` 과 `springdoc` 설정이다. 세션 사용자 인자를 명세에서 빼는 설정은 그 인자 타입을 가진 `user` 가 둔다([user Spec](user.md#화면용-api-의-공개와-세션-사용자) user-R6)(정본 규약은 [overview.md §6](../overview.md#6-횡단-규약) "화면용 API 계약")
+- **화면용 API 명세 설정** — 백엔드 코드가 만드는 화면용 API 명세의 고정 값과 속성 규칙, 운영자 경로 · 세션 경로 연산의 거부 응답. 구현은 이 모듈의 `OpenApiConfiguration` · `OpenApiPathsConfiguration` 과 `springdoc` 설정이다. 세션 사용자 인자를 명세에서 빼는 설정은 그 인자 타입을 가진 `account` 가 둔다([account Spec](account.md#화면용-api-의-공개와-세션-사용자) account-R6)(정본 규약은 [overview.md §6](../overview.md#6-횡단-규약) "화면용 API 계약")
 - **API 계약 확인 엔드포인트** — 명세 → 프론트엔드 생성 타입의 파이프라인을 확인하는 엔드포인트
 - **역할** — 앱 역할 profile(`web` · `worker`)과 구성요소의 역할 표시, 역할이 하나도 켜지지 않았을 때의 기동 검사, 작업 역할의 스케줄링
 - **DB 확장 요건** — DB 에 pgvector 확장을 설치하는 마이그레이션과, 설치된 확장이 최소 버전 이상인지 기동 때 확인하는 검사(platform-R19)
 - **로컬 개발 표시** — 로컬 대체물의 결선을 개발용 profile `local` 에서만 등록하는 표시(`@LocalDevelopment`)와 그 규칙(platform-R18)
-- **화면용 API 경로 규약 · 공개 처리기 표시** — 화면용 API 경로(`/api/**`)와 운영자 경로(`/api/admin/**`)의 상수(`ApiPaths`), 세션 없이 여는 처리기의 표시(`@PublicApi`), 비밀번호를 바꿔야 하는 세션 사용자에게도 여는 처리기의 표시(`@AllowedBeforePasswordChange`), LLM 키가 없는 세션 사용자에게도 여는 처리기의 표시(`@AllowedWithoutLlmKey`)(platform-R21). 이 표시를 읽어 요청을 인증하는 보안 구성은 `user` 의 것이다([user Spec](user.md#1-책임과-범위))
-- **요청 방어 표시** — 요청 제한을 거는 처리기의 표시(`@RequestLimited`) · 봇 차단을 거는 처리기의 표시(`@HumanChecked`), 표시가 가리키는 지키는 동작(`GuardedAction`)과 표시의 판정(`HandlerGuards`)(platform-R25). 표시를 읽어 요청을 세고 사람 확인 토큰을 확인하는 장치는 `user` 의 것이다([user Spec](user.md#요청-방어))
+- **화면용 API 경로 규약 · 공개 처리기 표시** — 화면용 API 경로(`/api/**`)와 운영자 경로(`/api/admin/**`)의 상수(`ApiPaths`), 세션 없이 여는 처리기의 표시(`@PublicApi`), 비밀번호를 바꿔야 하는 세션 사용자에게도 여는 처리기의 표시(`@AllowedBeforePasswordChange`), LLM 키가 없는 세션 사용자에게도 여는 처리기의 표시(`@AllowedWithoutLlmKey`)(platform-R21). 이 표시를 읽어 요청을 인증하는 보안 구성은 `account` 의 것이다([account Spec](account.md#1-책임과-범위))
+- **요청 방어 표시** — 요청 제한을 거는 처리기의 표시(`@RequestLimited`) · 봇 차단을 거는 처리기의 표시(`@HumanChecked`), 표시가 가리키는 지키는 동작(`GuardedAction`)과 표시의 판정(`HandlerGuards`)(platform-R25). 표시를 읽어 요청을 세고 사람 확인 토큰을 확인하는 장치는 `account` 의 것이다([account Spec](account.md#요청-방어))
 - **오류 응답 형식** — 화면용 API 의 오류 본문(`ApiProblem`)과 그것을 만드는 정본(`ProblemResponses`), 컨트롤러 오류 · 보안 거부의 문제 응답
 - **YAML 원문 읽기** — YAML 원문을 이벤트 API 로 읽어 트리로 옮기고, 문서 종류와 무관한 공통 거부(앵커 · 별칭 · 명시 태그 · 중복 키 · 알 수 없는 키 · 빈 값 · 형 오류 등)를 하는 공개 타입. 수집 프로필(`source`)과 기본 태그 체계(`tag`)가 쓴다
 - **LLM 출력 읽기** — LLM 출력의 구조를 적는 서술 마디(`OutputShape`), 서술을 따라 출력 원문을 읽는 공개 타입(`StructuredOutputReader` — 걸은 값 `OutputValue`, 결과 `StructuredRead`)과 서술을 JSON Schema 문서로 그리는 공개 타입(`StructuredOutputSchema`)(platform-R31 · R32). 다이제스트(`digest`)와 변화 리포트(`report`)가 자기 출력 서술로 쓴다
-- **코드 포인트 자르기** — 텍스트를 앞 몇 코드 포인트로 자르는 공개 타입(`CodePoints`). 피드 요약문(`source`) · 판정 입력(`evaluation`) · 기사 표현 텍스트(`event`) · 첫 운영자의 표시 이름(`user`)의 길이 상한이 쓴다
+- **코드 포인트 자르기** — 텍스트를 앞 몇 코드 포인트로 자르는 공개 타입(`CodePoints`). 피드 요약문(`source`) · 판정 입력(`evaluation`) · 기사 표현 텍스트(`event`) · 첫 운영자의 표시 이름(`account`)의 길이 상한이 쓴다
 - **날짜 범위 변환** — 날짜 범위를 시간대의 자정으로 시각 범위에 옮기고, 시간대 전환 여유를 더한 시각 길이 상한을 내는 공개 타입(`DayRange`). 집계 기간(`tag` 의 `EvaluationPeriod`) · 판정 원본 조회 기간(`evaluation` 의 `JudgementPeriod`) · 사건 조회 기간(`event` 의 `EventPeriod`)이 쓴다
-- **운영 설정의 행위자 종류** — 운영 설정을 정한 주체의 종류(`ChangeActor` — 시스템 · 운영자). 태그 기준 · 저장 기준 · 태그 체계 버전(`tag`), 큰 판정 기준(`storyline`), 가입 정책(`user`)의 이력이 쓴다
-- **HTTP 응답 본문 상한** — JDK `HttpClient` 의 응답 본문을 상한까지만 받는 공개 타입(`CappedBody`). 외부 API 를 부르는 어댑터(`evaluation` 의 Jev · 외부 임베딩, `llm` 의 공급자 전송, `user` 의 Turnstile 검증)가 쓴다
-- **사용자 식별자** — 사용자를 가리키는 값 타입(`UserId`). 사용자 데이터를 가진 모듈이 주인을 가리키고, 화면용 API 처리기가 세션 사용자를 받는 인자 타입이다(platform-R24). 세션 사용자로 인자를 채우는 일은 `user` 의 것이다
+- **운영 설정의 행위자 종류** — 운영 설정을 정한 주체의 종류(`ChangeActor` — 시스템 · 운영자). 태그 기준 · 저장 기준 · 태그 체계 버전(`tag`), 큰 판정 기준(`storyline`), 가입 정책(`account`)의 이력이 쓴다
+- **HTTP 응답 본문 상한** — JDK `HttpClient` 의 응답 본문을 상한까지만 받는 공개 타입(`CappedBody`). 외부 API 를 부르는 어댑터(`evaluation` 의 Jev · 외부 임베딩, `llm` 의 공급자 전송, `account` 의 Turnstile 검증)가 쓴다
+- **사용자 식별자** — 사용자를 가리키는 값 타입(`UserId`). 사용자 데이터를 가진 모듈이 주인을 가리키고, 화면용 API 처리기가 세션 사용자를 받는 인자 타입이다(platform-R24). 세션 사용자로 인자를 채우는 일은 `account` 의 것이다
 - **비밀 값** — 비밀 값 평문의 래퍼(`SecretValue` — 문자열 표현이 값을 숨기고 직렬화하면 실패한다)와 요청 헤더에 실을 값의 꼴(`HeaderValueShape`). 래퍼는 사용자 LLM 키를 다루는 모듈(`llm` · `credential`)이, 꼴은 API 키를 헤더에 싣는 모듈(`evaluation` 의 Jev 키 · 임베딩 키, `llm` 의 키 검증)이 쓴다(platform-R22 · R23)
 - **벡터의 pgvector 텍스트 표현** — 벡터를 pgvector 의 텍스트 표현으로 쓰고 되읽는 공개 타입(`VectorText`). 기사 표현 · 사건 중심(`event`)과 스토리라인 중심(`storyline`)의 저장소가 쓴다
 - **앱 시계** — 앱의 지금을 내는 시계 정본(`AppClock` bean 하나 — platform-R26), 측정용 시계(profile `measurement` 와 DB 의 시계 행이 함께 있을 때만 뜨고 운영자가 앞으로 넘긴다 — platform-R27 · R29)와 그 상태 표, 시계가 넘긴 시간을 뺀 경과 판정(platform-R28), 측정용 시계 운영 API(`MeasurementClockAdministration` — 처리기는 `admin`), 실제 시간이 아니면 거부하는 표시(`RealTimeRequiredException` — platform-R30)
@@ -96,14 +96,14 @@ public final class ApiPaths {
 
 | 상수 | 뜻 |
 |---|---|
-| `API` | 화면용 API 경로 — 명세가 담는 경로(platform-R6)이고 `user` 의 세션 체인이 맡는 경로다 |
-| `ADMIN` | 운영자 경로 — `user` 의 운영자 체인이 맡고([user Spec](user.md#운영자-접근-통제) user-R1), 명세 설정이 거부 응답을 단다 |
+| `API` | 화면용 API 경로 — 명세가 담는 경로(platform-R6)이고 `account` 의 세션 체인이 맡는 경로다 |
+| `ADMIN` | 운영자 경로 — `account` 의 운영자 체인이 맡고([account Spec](account.md#운영자-접근-통제) account-R1), 명세 설정이 거부 응답을 단다 |
 
 관련 규칙: platform-R6 · platform-R21.
 
 ### PublicApis
 
-처리기 표시의 판정 정본 — 메서드나 그 클래스에 `PublicApi` 가 있으면 공개, `AllowedBeforePasswordChange` 가 있으면 변경 전 허용, `AllowedWithoutLlmKey` 가 있으면 키 없이 허용이다(platform-R21). `user` 의 세션 체인 인가 · 명세 설정 · 사용자 격리 등록 가드가 이 판정을 쓴다.
+처리기 표시의 판정 정본 — 메서드나 그 클래스에 `PublicApi` 가 있으면 공개, `AllowedBeforePasswordChange` 가 있으면 변경 전 허용, `AllowedWithoutLlmKey` 가 있으면 키 없이 허용이다(platform-R21). `account` 의 세션 체인 인가 · 명세 설정 · 사용자 격리 등록 가드가 이 판정을 쓴다.
 
 ```java
 public final class PublicApis {
@@ -117,7 +117,7 @@ public final class PublicApis {
 
 ### GuardedAction
 
-요청 제한 · 봇 차단이 지키는 동작 — 요청 방어 표시가 가리키는 이름이다(platform-R25). 동작마다의 한도는 표시를 읽는 쪽(`user` — [user Spec](user.md#요청-방어) user-R38)이 정한다.
+요청 제한 · 봇 차단이 지키는 동작 — 요청 방어 표시가 가리키는 이름이다(platform-R25). 동작마다의 한도는 표시를 읽는 쪽(`account` — [account Spec](account.md#요청-방어) account-R30)이 정한다.
 
 ```java
 public enum GuardedAction {
@@ -149,7 +149,7 @@ public enum GuardedAction {
 
 ### HandlerGuards
 
-처리기의 요청 방어 표시 판정 정본 — 처리기 메서드의 `RequestLimited` · `HumanChecked` 를 읽는다(표시는 메서드에만 달린다 — platform-R25). `user` 의 요청 방어 필터, 이 모듈의 명세 설정(platform-R6), 등록 가드가 이 판정을 쓴다.
+처리기의 요청 방어 표시 판정 정본 — 처리기 메서드의 `RequestLimited` · `HumanChecked` 를 읽는다(표시는 메서드에만 달린다 — platform-R25). `account` 의 요청 방어 필터, 이 모듈의 명세 설정(platform-R6), 등록 가드가 이 판정을 쓴다.
 
 ```java
 public final class HandlerGuards {
@@ -176,7 +176,7 @@ public record ApiProblem(URI type, String title, int status, String detail, Stri
 | `detail` | 이 요청에 대한 설명 | null 이 아니다 |
 | `instance` | 요청 경로(질의 문자열 제외) | null 이 아니다 |
 
-관련 규칙: platform-R12 · [user Spec](user.md#운영자-접근-통제) user-R3(문제 유형).
+관련 규칙: platform-R12 · [account Spec](account.md#운영자-접근-통제) account-R3(문제 유형).
 
 ### ProblemResponses
 
@@ -432,7 +432,7 @@ public enum ChangeActor { SYSTEM, OPERATOR }
 
 - 계약
   - 사용자를 가리키지 않는다 — 지금 운영자는 토큰 하나라 사람을 구별하지 않는다
-  - 저장 값은 상수 이름(`SYSTEM` · `OPERATOR`)이다 — 쓰는 모듈의 이력 테이블이 이 이름으로 저장한다([tag-R13](tag.md#태그-기준--저장-기준) · [storyline-R20](storyline.md#큰-판정) · [user-R32](user.md#가입-정책))
+  - 저장 값은 상수 이름(`SYSTEM` · `OPERATOR`)이다 — 쓰는 모듈의 이력 테이블이 이 이름으로 저장한다([tag-R13](tag.md#태그-기준--저장-기준) · [storyline-R20](storyline.md#큰-판정) · [account-R25](account.md#가입-정책))
 
 관련 규칙: 없음 — 이력 규칙은 쓰는 모듈이 갖는다.
 
@@ -456,7 +456,7 @@ public final class VectorText {
 
 ### UserId
 
-사용자 식별자 — `user` 의 `users.id` 다. 빈이 아닌 값이다.
+사용자 식별자 — `account` 의 `users.id` 다. 빈이 아닌 값이다.
 
 ```java
 public record UserId(long value) { }
@@ -468,7 +468,7 @@ public record UserId(long value) { }
 
 - 계약
   - 사용자 데이터를 가진 모듈이 이 타입으로 주인을 가리킨다
-  - 화면용 API 처리기는 이 타입의 인자로 세션 사용자를 받는다 — 채우는 것은 `user` 다([user Spec](user.md#화면용-api-의-공개와-세션-사용자) user-R6)
+  - 화면용 API 처리기는 이 타입의 인자로 세션 사용자를 받는다 — 채우는 것은 `account` 다([account Spec](account.md#화면용-api-의-공개와-세션-사용자) account-R6)
 
 관련 규칙: platform-R24
 
@@ -645,7 +645,7 @@ HTTP 엔드포인트:
 | `application` | 재처리 유스케이스, 남겨진 발행의 운영 유스케이스, 재처리 설정과 정책 결선, 역할 검사 결선, DB 확장 요건 검사 결선, 작업 역할의 스케줄링, 명세가 담는 경로, 앱 시계의 결선과 두 구현(실제 시간 · 측정용 시계), 측정 profile 표시, 측정용 시계의 운영 유스케이스 |
 | `domain` | 재처리 대상 · 남겨진 발행 판정과 그 설정 조건, 이벤트를 읽을 수 있는지의 판정, 레지스트리 행 저장 인터페이스, 역할 판정, pgvector 확장 판정과 설치된 확장 저장 인터페이스, 넘긴 기록과 경과 산식, 앱 시계의 기동 판정, 측정용 시계의 상태와 저장 인터페이스 |
 
-협력: `EventResubmissionJob` 이 `EventResubmissionService` 를 부르고, 서비스는 Spring Modulith 의 미완료 발행 전체를 읽어 `EventResubmissionPolicy` 의 판정대로 재제출한다 — 실패 발행은 재제출 전에 `EventReading` 으로 이벤트를 읽어 본다. `admin` 의 운영자 API 는 `EventPublicationAdministrationService` 를 부른다 — 이 서비스는 `RegistryRows`(구현 `JdbcRegistryRows` — 본문은 Spring Modulith 의 `EventSerializer` 로 읽어 `EventReading` 으로 판정한다)로 레지스트리 행을 읽어 같은 정책으로 남겨진 발행을 가르고, 다시 처리는 Spring Modulith 의 재제출 경로로, 폐기는 `RegistryRows` 의 조건부 삭제로 한다. 정책은 `EventResubmissionConfiguration` 이 설정 값(`EventResubmissionProperties`)으로 만든다. `RoleConfiguration` 이 켜진 profile 로 `ActiveRoles` 를 만든다. `VectorExtensionConfiguration` 이 `DatabaseExtensions`(구현 `JdbcDatabaseExtensions`)로 설치된 pgvector 확장의 버전을 읽어 `VectorExtension` 을 만든다. `user` 의 보안 진입점과 이 모듈의 `ProblemResponseAdvice` 는 `ProblemResponses` 로 문제 응답을 쓴다. YAML 원문 읽기는 다른 구성 요소와 협력하지 않는다 — 다른 모듈이 `YamlTextReader` 로 읽은 트리를 `StrictYamlBinding` 으로 바인딩한다. `CodePoints` · `DayRange` 도 협력하지 않는다. `ClockConfiguration` 이 profile 과 `MeasurementClockRows`(구현 `JdbcMeasurementClockRows`)로 `ClockStart` 의 판정을 거쳐 `SystemClock` 이나 `MeasurementClock` 하나를 `AppClock` bean 으로 만든다 — 두 구현의 경과 판정은 `ClockJumps` 에 맡긴다. `admin` 의 운영자 API 는 `MeasurementClockAdministrationService` 를 부르고, 서비스는 측정용 시계 bean 이 있을 때만 그 시계로 상태를 내고 넘긴다 — 넘긴 구간은 시계가 `MeasurementClockRows` 에 먼저 쓴다. `ProblemResponseAdvice` 는 `RealTimeRequiredException` 을 409 로 낸다.
+협력: `EventResubmissionJob` 이 `EventResubmissionService` 를 부르고, 서비스는 Spring Modulith 의 미완료 발행 전체를 읽어 `EventResubmissionPolicy` 의 판정대로 재제출한다 — 실패 발행은 재제출 전에 `EventReading` 으로 이벤트를 읽어 본다. `admin` 의 운영자 API 는 `EventPublicationAdministrationService` 를 부른다 — 이 서비스는 `RegistryRows`(구현 `JdbcRegistryRows` — 본문은 Spring Modulith 의 `EventSerializer` 로 읽어 `EventReading` 으로 판정한다)로 레지스트리 행을 읽어 같은 정책으로 남겨진 발행을 가르고, 다시 처리는 Spring Modulith 의 재제출 경로로, 폐기는 `RegistryRows` 의 조건부 삭제로 한다. 정책은 `EventResubmissionConfiguration` 이 설정 값(`EventResubmissionProperties`)으로 만든다. `RoleConfiguration` 이 켜진 profile 로 `ActiveRoles` 를 만든다. `VectorExtensionConfiguration` 이 `DatabaseExtensions`(구현 `JdbcDatabaseExtensions`)로 설치된 pgvector 확장의 버전을 읽어 `VectorExtension` 을 만든다. `account` 의 보안 진입점과 이 모듈의 `ProblemResponseAdvice` 는 `ProblemResponses` 로 문제 응답을 쓴다. YAML 원문 읽기는 다른 구성 요소와 협력하지 않는다 — 다른 모듈이 `YamlTextReader` 로 읽은 트리를 `StrictYamlBinding` 으로 바인딩한다. `CodePoints` · `DayRange` 도 협력하지 않는다. `ClockConfiguration` 이 profile 과 `MeasurementClockRows`(구현 `JdbcMeasurementClockRows`)로 `ClockStart` 의 판정을 거쳐 `SystemClock` 이나 `MeasurementClock` 하나를 `AppClock` bean 으로 만든다 — 두 구현의 경과 판정은 `ClockJumps` 에 맡긴다. `admin` 의 운영자 API 는 `MeasurementClockAdministrationService` 를 부르고, 서비스는 측정용 시계 bean 이 있을 때만 그 시계로 상태를 내고 넘긴다 — 넘긴 구간은 시계가 `MeasurementClockRows` 에 먼저 쓴다. `ProblemResponseAdvice` 는 `RealTimeRequiredException` 을 409 로 낸다.
 
 역할: `EventResubmissionJob` 과 `WorkerSchedulingConfiguration` 은 작업 역할, `PingController` · `OpenApiConfiguration` · `ProblemResponseAdvice` 는 화면 역할에서만 켜진다. `EventPublicationAdministrationService` · `JdbcRegistryRows` · `VectorExtensionConfiguration` · `JdbcDatabaseExtensions` · `ClockConfiguration` · `MeasurementClockAdministrationService` · `JdbcMeasurementClockRows` 는 공통이다. 나머지는 두 역할 공통이다(platform-R9). YAML 원문 읽기 타입은 빈이 아니다.
 
@@ -746,7 +746,7 @@ stateDiagram-v2
 - **platform-R9** — 역할 소속:
   - 화면 역할 — 각 모듈 `adapter/in/web` 의 구성요소(화면용 API 컨트롤러 · 명세 설정). `@WebRole` 을 단다
   - 작업 역할 — 각 모듈 `adapter/in/job` 의 구성요소(작업 진입점 — 반복 작업 등록 포함), JobRunr 작업 서버, 프리셋 기동 대조, 평가기 키 기동 검사 · 임베더 기동 검사, 운영 임베더(`evaluation` 의 로컬 모델 · 외부 구현의 결선), Spring 스케줄링과 멈춤 감시. 구성요소에는 `@WorkerRole` 을 단다
-  - 공통 — 애플리케이션 서비스 · 도메인 · 저장소, 작업 등록(`JobScheduler`), 피드 요청 관문과 같은 언론사 요청 예약, 이벤트 리스너, 기본 태그 체계의 기동 검증 · 첫 기동 적재, Flyway 마이그레이션, 관리 엔드포인트(health), 역할 검사, DB 확장 요건 검사, 보안 구성([user Spec](user.md#보안-구성) user-R4). 이벤트 리스너에는 역할을 달지 않는다 — 리스너는 발행한 프로세스에서 돌고 발행 기록도 그 프로세스의 리스너에 대해서만 생기므로, 한 역할에서 빼면 그 역할이 발행한 이벤트가 처리되지 않는다. 재제출한 발행의 리스너는 재제출한 프로세스에서 돈다 — 재처리 작업이면 작업 역할, 운영자의 다시 처리면 화면 역할
+  - 공통 — 애플리케이션 서비스 · 도메인 · 저장소, 작업 등록(`JobScheduler`), 피드 요청 관문과 같은 언론사 요청 예약, 이벤트 리스너, 기본 태그 체계의 기동 검증 · 첫 기동 적재, Flyway 마이그레이션, 관리 엔드포인트(health), 역할 검사, DB 확장 요건 검사, 보안 구성([account Spec](account.md#보안-구성) account-R4). 이벤트 리스너에는 역할을 달지 않는다 — 리스너는 발행한 프로세스에서 돌고 발행 기록도 그 프로세스의 리스너에 대해서만 생기므로, 한 역할에서 빼면 그 역할이 발행한 이벤트가 처리되지 않는다. 재제출한 발행의 리스너는 재제출한 프로세스에서 돈다 — 재처리 작업이면 작업 역할, 운영자의 다시 처리면 화면 역할
   - 한 구성요소가 두 역할을 함께 달지 않는다. 역할이 켜는 설정은 작업 역할 설정 파일(§7)에만 두고 기본은 꺼진 값이다 — 역할 설정 파일은 활성화 순서대로 덮어쓰므로 역할끼리 같은 키를 다르게 쓰지 않는다
   - 주기 실행은 JobRunr 반복 작업으로 둔다. Spring 스케줄링은 작업 역할에서만 켜지므로, 공통 구성요소의 `@Scheduled` 는 화면 역할만 켠 프로세스에서 돌지 않는다
 
@@ -777,28 +777,28 @@ stateDiagram-v2
 
 ### 화면용 API 명세
 
-- **platform-R6** — 백엔드가 만드는 화면용 API 명세는 실행 환경과 무관하게 같다: `info` 는 제목 `요즘뉴스 화면용 API` · 버전 `0`(화면용 API 는 프론트엔드와 함께 바뀌어 버전을 매기지 않는다), `servers` 는 `/`(SPA 와 같은 오리진). 객체 스키마의 속성은 모두 필수로 내고(이름 순) — 응답은 null 인 속성도 키째 쓴다 — null 가능성은 JSpecify `@Nullable` 이 타입으로 남긴다. 운영자 경로(platform-R21)의 모든 연산은 401(세션 없음 · 틀린 운영자 토큰)과 403(변경 메서드면 CSRF, 비밀번호를 바꿔야 한다, 운영자 권한이 없다 — [user Spec](user.md#운영자-접근-통제) user-R1) 문제 응답(`ApiProblem`)을 담는다. 운영자 경로 밖 화면용 API 연산은 처리기에 `@PublicApi` 가 없으면 401(세션 없음 — [user Spec](user.md#화면용-api-의-공개와-세션-사용자) user-R5)을, 변경 메서드(`POST` · `PUT` · `PATCH` · `DELETE`)면 공개 처리기여도 403(CSRF — user-R10)을, 공개 처리기도 변경 전 허용 처리기도 아니면 403(비밀번호를 바꿔야 한다 — user-R29)을, 공개 처리기도 키 없이 허용 처리기도 아니면 403(LLM 키를 등록해야 한다 — user-R5)을, `@HumanChecked` 가 있으면 403(사람 확인 실패 — user-R41)을, `@RequestLimited` 가 있으면 429(요청이 너무 많다 — user-R40)를 문제 응답으로 담는다 — 403 은 연산마다 하나라 까닭이 겹치는 연산은 설명 하나에 까닭들을 ` · ` 로 이어 적는다. 거부 응답은 명세 설정 하나가 처리기의 표시를 읽어 달고, 연산이 따로 적었으면 명세 생성이 실패한다. 세션에서 채우는 사용자 인자(`UserId`)는 요청 인자로 담지 않는다 — 그 설정은 `user` 가 둔다(user-R6). 명세는 `/api/**`(`ApiPaths.API`) 경로만 담고, 출력은 키 순 · 들여쓰기로 고정해 커밋된 명세와 바이트로 비교한다. 실행 중인 앱의 명세 엔드포인트는 기본으로 닫혀 있다. 명세가 정본이라는 규약과 프론트엔드 타입 생성은 [overview.md §6](../overview.md#6-횡단-규약) "화면용 API 계약"이 정한다
+- **platform-R6** — 백엔드가 만드는 화면용 API 명세는 실행 환경과 무관하게 같다: `info` 는 제목 `요즘뉴스 화면용 API` · 버전 `0`(화면용 API 는 프론트엔드와 함께 바뀌어 버전을 매기지 않는다), `servers` 는 `/`(SPA 와 같은 오리진). 객체 스키마의 속성은 모두 필수로 내고(이름 순) — 응답은 null 인 속성도 키째 쓴다 — null 가능성은 JSpecify `@Nullable` 이 타입으로 남긴다. 운영자 경로(platform-R21)의 모든 연산은 401(세션 없음 · 틀린 운영자 토큰)과 403(변경 메서드면 CSRF, 비밀번호를 바꿔야 한다, 운영자 권한이 없다 — [account Spec](account.md#운영자-접근-통제) account-R1) 문제 응답(`ApiProblem`)을 담는다. 운영자 경로 밖 화면용 API 연산은 처리기에 `@PublicApi` 가 없으면 401(세션 없음 — [account Spec](account.md#화면용-api-의-공개와-세션-사용자) account-R5)을, 변경 메서드(`POST` · `PUT` · `PATCH` · `DELETE`)면 공개 처리기여도 403(CSRF — account-R10)을, 공개 처리기도 변경 전 허용 처리기도 아니면 403(비밀번호를 바꿔야 한다 — account-R22)을, 공개 처리기도 키 없이 허용 처리기도 아니면 403(LLM 키를 등록해야 한다 — account-R5)을, `@HumanChecked` 가 있으면 403(사람 확인 실패 — account-R33)을, `@RequestLimited` 가 있으면 429(요청이 너무 많다 — account-R32)를 문제 응답으로 담는다 — 403 은 연산마다 하나라 까닭이 겹치는 연산은 설명 하나에 까닭들을 ` · ` 로 이어 적는다. 거부 응답은 명세 설정 하나가 처리기의 표시를 읽어 달고, 연산이 따로 적었으면 명세 생성이 실패한다. 세션에서 채우는 사용자 인자(`UserId`)는 요청 인자로 담지 않는다 — 그 설정은 `account` 가 둔다(account-R6). 명세는 `/api/**`(`ApiPaths.API`) 경로만 담고, 출력은 키 순 · 들여쓰기로 고정해 커밋된 명세와 바이트로 비교한다. 실행 중인 앱의 명세 엔드포인트는 기본으로 닫혀 있다. 명세가 정본이라는 규약과 프론트엔드 타입 생성은 [overview.md §6](../overview.md#6-횡단-규약) "화면용 API 계약"이 정한다
 - **platform-R7** — `GET /api/ping` 은 `{"message": "pong"}` 을 돌려준다. 화면에는 쓰지 않고 사용자 데이터를 담지 않는다. 세션 없이 여는 공개 처리기다(`@PublicApi` — platform-R21)
 
 ### 화면용 API 경로와 공개 처리기
 
 판단의 이유는 [ADR-0124](../adr/0124-security-configuration-lives-in-the-user-module-and-platform-keeps-only-the-screen-api-path-convention.md) · [ADR-0125](../adr/0125-screen-api-handlers-need-a-session-unless-marked-public-and-take-the-user-only-as-a-session-filled-argument.md)에 있다.
 
-- **platform-R10** — (폐지 — 운영자 접근 통제는 [user Spec](user.md#운영자-접근-통제) user-R1 · user-R4 로 옮겼다)
-- **platform-R11** — (폐지 — 운영자 토큰은 [user Spec](user.md#운영자-접근-통제) user-R2 로 옮겼다)
-- **platform-R21** — 화면용 API 경로는 `/api/**`(`ApiPaths.API`), 운영자 경로는 `/api/admin/**`(`ApiPaths.ADMIN`)다 — 코드 쪽 정본은 이 두 상수이고 보안 구성 · 명세 설정 · 시험이 읽는다. `@PublicApi` 는 화면용 API 처리기(클래스나 메서드)에 달아 세션 없이 연다는 표시이고, 공개인 이유(`reason`)를 비울 수 없다. `@AllowedBeforePasswordChange` 는 세션을 요구하는 처리기에 달아 비밀번호를 바꿔야 하는 세션 사용자에게도 연다는 표시이고, 이유를 비울 수 없으며 공개 처리기에는 달지 않는다. `@AllowedWithoutLlmKey` 는 세션을 요구하는 처리기에 달아 LLM 키가 없는 세션 사용자에게도 연다는 표시이고, 이유를 비울 수 없으며 공개 처리기에는 달지 않는다. 표시를 읽는 쪽은 `user` 의 세션 체인 인가([user Spec](user.md#화면용-api-의-공개와-세션-사용자) user-R5) · 명세 설정(platform-R6) · 사용자 격리 등록 가드(user-R6)다
+- **platform-R10** — (폐지 — 운영자 접근 통제는 [account Spec](account.md#운영자-접근-통제) account-R1 · account-R4 로 옮겼다)
+- **platform-R11** — (폐지 — 운영자 토큰은 [account Spec](account.md#운영자-접근-통제) account-R2 로 옮겼다)
+- **platform-R21** — 화면용 API 경로는 `/api/**`(`ApiPaths.API`), 운영자 경로는 `/api/admin/**`(`ApiPaths.ADMIN`)다 — 코드 쪽 정본은 이 두 상수이고 보안 구성 · 명세 설정 · 시험이 읽는다. `@PublicApi` 는 화면용 API 처리기(클래스나 메서드)에 달아 세션 없이 연다는 표시이고, 공개인 이유(`reason`)를 비울 수 없다. `@AllowedBeforePasswordChange` 는 세션을 요구하는 처리기에 달아 비밀번호를 바꿔야 하는 세션 사용자에게도 연다는 표시이고, 이유를 비울 수 없으며 공개 처리기에는 달지 않는다. `@AllowedWithoutLlmKey` 는 세션을 요구하는 처리기에 달아 LLM 키가 없는 세션 사용자에게도 연다는 표시이고, 이유를 비울 수 없으며 공개 처리기에는 달지 않는다. 표시를 읽는 쪽은 `account` 의 세션 체인 인가([account Spec](account.md#화면용-api-의-공개와-세션-사용자) account-R5) · 명세 설정(platform-R6) · 사용자 격리 등록 가드(account-R6)다
 
 ### 요청 방어 표시
 
 판단의 이유는 [ADR-0169](../adr/0169-request-limits-and-bot-checks-are-platform-marks-applied-by-the-user-session-chain-before-the-handler.md)에 있다.
 
-- **platform-R25** — `@RequestLimited` 는 요청 제한을 거는 화면용 API 처리기 메서드에, `@HumanChecked` 는 봇 차단을 거는 메서드에 단다 — 둘 다 메서드에만 달리고(`@Target(METHOD)`) 같은 클래스의 다른 처리기에 번지지 않는다. 값은 지키는 동작(`GuardedAction`)이다. `@HumanChecked` 는 같은 메서드에 같은 동작의 `@RequestLimited` 와 함께 단다 — 봇 차단 검증(외부 요청)은 요청 제한 뒤에 돈다. 사용자로 세는 동작(지금 `LLM_KEY_CHECK` · `FEEDBACK`)의 표시는 세션을 요구하는 처리기에만 단다. 판정 정본은 `HandlerGuards` 이고, 표시를 읽는 쪽은 `user` 의 요청 방어([user Spec](user.md#요청-방어) user-R40 · R41) · 명세 설정(platform-R6) · 등록 가드다. 동작마다의 한도 · 세는 축은 `user` 가 정한다(user-R38)
+- **platform-R25** — `@RequestLimited` 는 요청 제한을 거는 화면용 API 처리기 메서드에, `@HumanChecked` 는 봇 차단을 거는 메서드에 단다 — 둘 다 메서드에만 달리고(`@Target(METHOD)`) 같은 클래스의 다른 처리기에 번지지 않는다. 값은 지키는 동작(`GuardedAction`)이다. `@HumanChecked` 는 같은 메서드에 같은 동작의 `@RequestLimited` 와 함께 단다 — 봇 차단 검증(외부 요청)은 요청 제한 뒤에 돈다. 사용자로 세는 동작(지금 `LLM_KEY_CHECK` · `FEEDBACK`)의 표시는 세션을 요구하는 처리기에만 단다. 판정 정본은 `HandlerGuards` 이고, 표시를 읽는 쪽은 `account` 의 요청 방어([account Spec](account.md#요청-방어) account-R32 · R33) · 명세 설정(platform-R6) · 등록 가드다. 동작마다의 한도 · 세는 축은 `account` 가 정한다(account-R30)
 
 ### 오류 응답 형식
 
 - **platform-R12** — 화면용 API 의 오류 응답은 `application/problem+json` 의 `ApiProblem`(§3)이고 `Cache-Control: no-store` 다. 다섯 속성 모두 값을 갖는다 — `instance` 는 요청 경로(질의 문자열 제외), `detail` 은 언제나 채운다. 따로 정하지 않은 문제는 `type` 이 `about:blank` 이고 `title` 은 상태 코드의 표준 문구다. 컨트롤러 오류는 화면 역할에서 문제 응답으로 낸다 — 프레임워크 예외(본문 · 경로 값 형식 400, 없는 경로 404, `ResponseStatusException` 의 상태와 이유 등)는 그 상태와 설명으로, 동시 수정(`OptimisticLockingFailureException`)과 실제 시간 요구(`RealTimeRequiredException` — platform-R30)는 409 로, 처리하지 못한 예외는 500 으로 낸다. 요청 본문을 읽지 못한 400(깨진 JSON · 빈 본문 · 칸과 다른 종류의 값)은 설명이 `요청 본문의 형식이 틀렸다` 다. 500 은 예외 문구를 싣지 않고 ERROR 로그를 남긴다. 다른 모듈의 조언이 이 조언보다 먼저 받는다. 판정 결과는 오류가 아니라 200 응답이다([ADR-0044](../adr/0044-screen-api-results-as-flat-discriminated-200-and-rfc9457-problems.md))
   - 요청 본문의 정수 칸에 온 소수(`3.5`, `3.0` 포함)는 버림해 받지 않고 본문 형식 400 이다 — 앱의 JSON 역직렬화 설정(§7 `spring.jackson.deserialization.accept-float-as-int`)이 앱 전체에 건다
-- **platform-R13** — (폐지 — 보안 거부의 문제 유형 URI 는 [user Spec](user.md#운영자-접근-통제) user-R3 으로 옮겼다)
+- **platform-R13** — (폐지 — 보안 거부의 문제 유형 URI 는 [account Spec](account.md#운영자-접근-통제) account-R3 으로 옮겼다)
 
 ### YAML 원문 읽기
 
@@ -824,7 +824,7 @@ stateDiagram-v2
 
 판단의 이유는 [ADR-0156](../adr/0156-user-id-is-a-platform-public-type.md)에 있다.
 
-- **platform-R24** — 사용자를 가리키는 값은 `UserId` 하나다 — `user` 의 `users.id` 이고 1 이상이다. 사용자 데이터를 가진 모듈은 주인을 이 타입으로 가리키고, 화면용 API 처리기는 세션 사용자를 이 타입의 인자로만 받는다(user-R6). 이 모듈은 타입만 갖는다 — 세션 사용자로 인자를 채우는 일과 격리 규칙은 `user` 의 것이다
+- **platform-R24** — 사용자를 가리키는 값은 `UserId` 하나다 — `account` 의 `users.id` 이고 1 이상이다. 사용자 데이터를 가진 모듈은 주인을 이 타입으로 가리키고, 화면용 API 처리기는 세션 사용자를 이 타입의 인자로만 받는다(account-R6). 이 모듈은 타입만 갖는다 — 세션 사용자로 인자를 채우는 일과 격리 규칙은 `account` 의 것이다
 
 ### 비밀 값
 

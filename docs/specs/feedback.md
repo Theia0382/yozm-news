@@ -19,8 +19,8 @@
 - 관심도를 계산하지 않는다 — 산식은 노출 기록을 가진 `digest` 의 것이다([pipeline.md §7](../pipeline.md#7-피드백))
 - 다이제스트의 내용 · 항목 구성을 읽지 않는다 — 다이제스트는 ID 로만 가리키고, 항목의 사건은 `digest` 가 답한다
 - 사건을 합치거나 지우지 않는다 — 합쳐진 사건과 지운 사건은 `event` 의 공개 조회 · 이벤트로 안다
-- 요청 제한을 세지 않는다 — 처리기에 표시를 달 뿐이고, 세기와 한도는 `user` 의 것이다([user Spec](user.md#요청-방어) user-R38 · R40)
-- 사용자를 인증하지 않는다 — 세션 · 키 관문은 `user` 의 보안 구성이 한다([user Spec](user.md#화면용-api-의-공개와-세션-사용자) user-R5 · R6)
+- 요청 제한을 세지 않는다 — 처리기에 표시를 달 뿐이고, 세기와 한도는 `account` 의 것이다([account Spec](account.md#요청-방어) account-R30 · R32)
+- 사용자를 인증하지 않는다 — 세션 · 키 관문은 `account` 의 보안 구성이 한다([account Spec](account.md#화면용-api-의-공개와-세션-사용자) account-R5 · R6)
 
 다른 모듈과의 의존과 이벤트 흐름은 [overview.md §5](../overview.md#5-모듈-지도)에 있다.
 
@@ -51,7 +51,7 @@ HTTP 엔드포인트:
 | `/api/feedback/{eventId}` | `PUT` | 누르기 · 되돌리기 — 경로는 항목의 사건 하나(화면은 항목 키를 보낸다), 본문은 값과 누른 다이제스트다. `RECORDED`(+지금 값) · `UNCHANGED`(+지금 값) · `NOT_IN_DIGEST`(feedback-R2 ~ R4) |
 | `/api/feedback` | `GET` | 항목 기록 — 질의 `digestId` 의 다이제스트에서 세션 사용자가 값을 누른 항목의 항목 키와 값(feedback-R7) |
 
-두 경로 모두 세션이 필요하고 키 관문 뒤이며(키 없이 여는 표시가 없다 — [user Spec](user.md#화면용-api-의-공개와-세션-사용자) user-R5) 사용자 격리 시험에 등록돼 있다(user-R6). `PUT` 에는 요청 제한이 걸려 한도를 넘으면 처리기 앞에서 429 다(feedback-R9). 판정 결과는 200 이고, 요청 · 응답 형식은 `api/openapi.json` 에 있다. 항목의 사건 ID 는 독자 화면의 다이제스트 응답이 섹션마다 싣는다([reader Spec](reader.md#다이제스트) reader-R9).
+두 경로 모두 세션이 필요하고 키 관문 뒤이며(키 없이 여는 표시가 없다 — [account Spec](account.md#화면용-api-의-공개와-세션-사용자) account-R5) 사용자 격리 시험에 등록돼 있다(account-R6). `PUT` 에는 요청 제한이 걸려 한도를 넘으면 처리기 앞에서 429 다(feedback-R9). 판정 결과는 200 이고, 요청 · 응답 형식은 `api/openapi.json` 에 있다. 항목의 사건 ID 는 독자 화면의 다이제스트 응답이 섹션마다 싣는다([reader Spec](reader.md#다이제스트) reader-R9).
 
 ### FeedbackValue
 
@@ -270,7 +270,7 @@ aggregate 는 없다 — 항목 기록 · 현재 상태는 행마다 값 하나�
 
 판단의 이유는 [ADR-0198](../adr/0198-feedback-recording-is-request-limited-per-session-user.md) · [ADR-0265](../adr/0265-feedback-is-pressed-once-per-digest-item-and-recorded-on-each-event-of-the-item-the-screen-shows-the-item-value-and-signals-use-event-records.md) · [ADR-0192](../adr/0192-reader-screens-are-composed-by-the-reader-module-over-module-public-queries.md)에 있다.
 
-- **feedback-R9** — 두 처리기는 사용자를 세션에서 채운 `UserId` 인자로만 받는다(user-R6). 키 없이 여는 표시가 없다 — 반응은 다이제스트 화면에서 누르고 그 화면은 키 관문 뒤다. 누르기 · 되돌리기에는 요청 제한 표시(`@RequestLimited(GuardedAction.FEEDBACK)`)가 있다 — 세션 사용자로 세고 한도는 [user Spec](user.md#요청-방어) user-R38 의 정책 표에 있다. 요청 하나에 한 번 세고 결과와 무관하다 — 값이 바뀌지 않는 요청 · 받을 수 없는 항목의 요청도 센다(user-R39). 항목 기록 조회에는 표시가 없다. 꼴 검증: 경로의 사건 ID · 본문의 다이제스트 ID · 조회의 `digestId` 가 1 보다 작으면 400, 본문의 칸이 없거나 값 이름이 틀리면 본문 형식 400, 조회의 `digestId` 가 없거나 숫자가 아니면 400 이다. 받을 수 없는 항목은 오류가 아니라 판정 결과 200 `NOT_IN_DIGEST` 다
+- **feedback-R9** — 두 처리기는 사용자를 세션에서 채운 `UserId` 인자로만 받는다(account-R6). 키 없이 여는 표시가 없다 — 반응은 다이제스트 화면에서 누르고 그 화면은 키 관문 뒤다. 누르기 · 되돌리기에는 요청 제한 표시(`@RequestLimited(GuardedAction.FEEDBACK)`)가 있다 — 세션 사용자로 세고 한도는 [account Spec](account.md#요청-방어) account-R30 의 정책 표에 있다. 요청 하나에 한 번 세고 결과와 무관하다 — 값이 바뀌지 않는 요청 · 받을 수 없는 항목의 요청도 센다(account-R31). 항목 기록 조회에는 표시가 없다. 꼴 검증: 경로의 사건 ID · 본문의 다이제스트 ID · 조회의 `digestId` 가 1 보다 작으면 400, 본문의 칸이 없거나 값 이름이 틀리면 본문 형식 400, 조회의 `digestId` 가 없거나 숫자가 아니면 400 이다. 받을 수 없는 항목은 오류가 아니라 판정 결과 200 `NOT_IN_DIGEST` 다
 
 ## 6. 데이터
 
@@ -282,11 +282,11 @@ aggregate 는 없다 — 항목 기록 · 현재 상태는 행마다 값 하나�
 | `feedback_events` | id, user_id, event_id, value(`LIKE`/`DISLIKE`/`NONE`), digest_id, occurred_at | 이력(feedback-R1) — 사건마다 값이 바뀔 때 한 줄. 순서의 정본은 `id` 다(feedback-R4). (user_id, event_id, id) 인덱스로 사건마다 마지막 행을 읽는다(feedback-R8) |
 | `feedback_items` | user_id, digest_id, item_event_id, value(`LIKE`/`DISLIKE`), updated_at | 항목 기록(feedback-R1) — (user_id, digest_id, item_event_id) 가 기본 키다. `item_event_id` 는 항목 키(그 항목의 첫 사건)다. 없음이면 행이 없고 이력이 없다 |
 
-`user_id` 는 `user` 의 사용자 ID, `event_id` · `item_event_id` 는 `event` 의 사건 ID, `digest_id` 는 `digest` 의 다이제스트 ID 다 — 모듈 사이라 FK 가 없다. 지운 사건과 지운 항목은 feedback-R5 가 따른다(사건 ID 인덱스 · 다이제스트 ID 인덱스). **(미구현)** 탈퇴한 사용자의 행 지우기.
+`user_id` 는 `account` 의 사용자 ID, `event_id` · `item_event_id` 는 `event` 의 사건 ID, `digest_id` 는 `digest` 의 다이제스트 ID 다 — 모듈 사이라 FK 가 없다. 지운 사건과 지운 항목은 feedback-R5 가 따른다(사건 ID 인덱스 · 다이제스트 ID 인덱스). **(미구현)** 탈퇴한 사용자의 행 지우기.
 
 ## 7. 설정
 
-해당 없음 — 읽는 설정 키가 없다. 상한 · 한도는 코드 상수다(`EventFeedback.MAX_EVENTS`, 풀기 조회의 상한은 `event` 의 `EventDirectory.MAX_RESOLVE_EVENTS`, 요청 제한은 `user` 의 정책 표).
+해당 없음 — 읽는 설정 키가 없다. 상한 · 한도는 코드 상수다(`EventFeedback.MAX_EVENTS`, 풀기 조회의 상한은 `event` 의 `EventDirectory.MAX_RESOLVE_EVENTS`, 요청 제한은 `account` 의 정책 표).
 
 ## 8. 결정
 

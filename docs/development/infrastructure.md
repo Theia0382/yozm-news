@@ -119,7 +119,7 @@ IDE 에서 테스트를 Gradle 에 맡기는 것은 1 때문이다([CONTRIBUTING
 - 넘기는 경로의 정본은 `frontend/proxy/backend-paths.caddy` 한 줄이다. 배포 proxy(Caddy)는 이 파일을 `import` 하고, Vite 개발 서버는 `frontend/proxy/backendPaths.ts` 가 같은 파일을 읽어 proxy 항목을 만든다
 - 두 쪽의 차이가 하나 있다 — Caddy 의 경로 일치는 대소문자를 구분하지 않고, Vite 쪽 정규식은 구분한다
 - 넘기지 않는 경로는 SPA 가 답한다. 관리 · 명세 엔드포인트(`/actuator/**` · `/v3/api-docs`)도 넘기지 않는다
-- 배포 proxy 는 넘길 때 클라이언트 IP 를 정해 `X-Real-IP` 에 덮어쓴다 — 신뢰 범위(`YOZMNEWS_TRUSTED_PROXIES`, 기본 사설 대역)의 연결에서만 헤더(`YOZMNEWS_CLIENT_IP_HEADERS`, 기본 `X-Forwarded-For`)를 오른쪽부터 읽는다(`trusted_proxies_strict` — Caddy v2.8 이상, 메이저 태그 `caddy:2` 가 충족한다). 앱은 그 헤더만 읽는다([운영 설정 "공개"](../operations/configuration.md#공개) · [user Spec](../specs/user.md#요청-방어) user-R37). Vite 개발 서버는 이 헤더를 넣지 않아 개발 중 앱은 직접 주소(루프백)로 센다
+- 배포 proxy 는 넘길 때 클라이언트 IP 를 정해 `X-Real-IP` 에 덮어쓴다 — 신뢰 범위(`YOZMNEWS_TRUSTED_PROXIES`, 기본 사설 대역)의 연결에서만 헤더(`YOZMNEWS_CLIENT_IP_HEADERS`, 기본 `X-Forwarded-For`)를 오른쪽부터 읽는다(`trusted_proxies_strict` — Caddy v2.8 이상, 메이저 태그 `caddy:2` 가 충족한다). 앱은 그 헤더만 읽는다([운영 설정 "공개"](../operations/configuration.md#공개) · [account Spec](../specs/account.md#요청-방어) account-R29). Vite 개발 서버는 이 헤더를 넣지 않아 개발 중 앱은 직접 주소(루프백)로 센다
 
 ## CI
 
