@@ -80,11 +80,13 @@ class UserStorylineDirectoryServiceTests {
 		// 쓰지 않는다 — 저장 행은 그대로다(갈라지기 전의 하나)
 		assertThat(UserStorylineFixtures.saved(this.jdbc, user)).isEqualTo(before);
 		assertThat(before).singleElement().extracting(Saved::members).isEqualTo(Set.of(earlier, later));
-		// 갈라진 조각은 추적을 물려받고, 반응만 받은 흐름은 추적 중이 아니다 — 아직 저장되지 않은 묶음은 ID 가 없다
+		// 저장 개체는 헤드(later) 쪽 조각을 잇고 추적을 물려받는다. 추적 씨앗의 조각은 새 묶음으로 추적 중이고, 반응만 받은 흐름은
+		// 추적 중이 아니다 — 아직 저장되지 않은 묶음은 ID 가 없다. 헤드 ID 순이다
 		assertThat(read).containsExactly(
-				new UserStorylineView(new UserStorylineId(before.getFirst().id()), Set.of(new StorylineId(earlier)), true),
-				new UserStorylineView(null, Set.of(new StorylineId(later)), true),
-				new UserStorylineView(null, Set.of(new StorylineId(reacted)), false));
+				new UserStorylineView(null, new StorylineId(earlier), Set.of(new StorylineId(earlier)), true),
+				new UserStorylineView(new UserStorylineId(before.getFirst().id()), new StorylineId(later),
+						Set.of(new StorylineId(later)), true),
+				new UserStorylineView(null, new StorylineId(reacted), Set.of(new StorylineId(reacted)), false));
 
 		// 저장하는 따라가기 뒤에 다시 읽어도 추적 대상과 추적 여부가 같다
 		this.subscriptions.view(user, now);
@@ -105,7 +107,7 @@ class UserStorylineDirectoryServiceTests {
 		// 대조 — 지금 기준의 창에는 그 반응이 없다
 		assertThat(this.directory.of(user, this.window.start(now), now)).isEmpty();
 		assertThat(this.directory.of(user, TRACKED, now))
-			.containsExactly(new UserStorylineView(null, Set.of(new StorylineId(old)), false));
+			.containsExactly(new UserStorylineView(null, new StorylineId(old), Set.of(new StorylineId(old)), false));
 	}
 
 	@Test

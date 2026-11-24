@@ -6,7 +6,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 import net.yozmnews.platform.UserId;
@@ -42,13 +41,13 @@ class UserStorylineDirectoryService implements UserStorylineDirectory {
 		List<UserStorylineView> views = new ArrayList<>();
 		result.kept()
 			.forEach(kept -> views
-				.add(new UserStorylineView(new UserStorylineId(kept.id()), tops(kept.tops()), kept.subscribedAt() != null)));
+				.add(new UserStorylineView(new UserStorylineId(kept.id()), new StorylineId(kept.head()), tops(kept.tops()),
+						kept.subscribedAt() != null)));
 		result.created()
 			.forEach(created -> views
-				.add(new UserStorylineView(null, tops(created.tops()), created.subscribedAt() != null)));
-		views.sort(Comparator.comparingLong(view -> new TreeSet<>(
-				view.tops().stream().map(StorylineId::value).collect(Collectors.toSet()))
-			.first()));
+				.add(new UserStorylineView(null, new StorylineId(created.head()), tops(created.tops()),
+						created.subscribedAt() != null)));
+		views.sort(Comparator.comparingLong(view -> view.head().value()));
 		return List.copyOf(views);
 	}
 

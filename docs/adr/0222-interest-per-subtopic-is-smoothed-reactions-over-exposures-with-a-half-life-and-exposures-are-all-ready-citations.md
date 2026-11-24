@@ -1,6 +1,6 @@
 # ADR-0222: 관심도는 주제 중분류마다 노출로 나눈 반응에 가상 노출을 더해 평활하고 반감기로 감쇠하며, 노출은 덮인 다이제스트를 포함한 인용 전부다
 
-- 상태: 승인. 부분 대체 — 노출 · 반응의 단위(기사)와 노출의 인용 · 기사마다 한 번([ADR-0268](0268-interest-counts-exposures-and-reactions-per-event-splitting-an-item-weight-one-over-n-and-counting-an-event-once-with-its-latest-share.md)) · 여러 주제에 걸친 가중치의 단위([ADR-0260](0260-digest-candidates-are-events-and-only-assigned-events-with-an-article-first-evaluated-in-the-period-enter.md))
+- 상태: 승인. 부분 대체 — 노출 · 반응의 단위(기사)와 노출의 인용 · 기사마다 한 번([ADR-0268](0268-interest-counts-exposures-and-reactions-per-event-splitting-an-item-weight-one-over-n-and-counting-an-event-once-with-its-latest-share.md)) · 관심 x 의 구독 항과 γ([ADR-0295](0295-the-subscription-signal-of-interest-is-a-term-outside-the-exposure-denominator-and-the-topic-value-is-below-the-presence-threshold.md)) · 여러 주제에 걸친 가중치의 단위([ADR-0260](0260-digest-candidates-are-events-and-only-assigned-events-with-an-article-first-evaluated-in-the-period-enter.md))
 - 날짜: 2026-11-18
 - 근거: [이슈 #187](https://github.com/Theia0382/yozm-news/issues/187) — 관심 신호 · 노출 기록의 공개 조회와 후보 선별의 순위를 대조하고, 산식의 꼴 · 노출 정의 · 여러 주제 기사의 가중치를 리드와 정함. 구현 커밋 `e6d32cf` · `ff3ba46` · `1487ffe`
 - 관련: [ADR-0028](0028-explicit-signals-and-interest-weighted-candidates.md)(결정 "관심도는 기간 × 주제마다 신호를 노출 수로 나눈 값이고, 최근 신호에 더 큰 가중치"의 산식 — 보충), [ADR-0196](0196-feedback-is-accepted-only-on-articles-cited-by-the-users-digest-and-digest-answers-through-an-interface-declared-by-feedback.md)(결과 "덮인 다이제스트에서 온 신호를 관심도가 셀지는 노출 수의 정의와 함께 관심도를 구현하는 작업이 정한다" — 보충), [ADR-0193](0193-the-per-user-storyline-information-is-the-received-news-counted-from-the-digest-shown-for-each-date.md)(받은 소식 — 날짜별로 보이는 다이제스트로 세는 다른 정의)
@@ -22,7 +22,9 @@
   - 노출 E = t 가 붙은 노출 기사의 w(노출 시각) 합 — 기사마다 한 번
   - 반응 F = 같은 기사의 w(노출 시각) × (좋아요 +1 · 싫어요 −1 · 없음 0) 합 — 반응은 그 기사의 마지막 값이고 노출 시각으로 감쇠해 F 가 E 를 넘지 않는다
   - 구독 S = t 를 가진 구독 변경의 w(바꾼 시각) × (더함 +1 · 뺌 −1) × 몫
+  > 부분 대체 — [ADR-0295](0295-the-subscription-signal-of-interest-is-a-term-outside-the-exposure-denominator-and-the-topic-value-is-below-the-presence-threshold.md). 지금 상태: [digest Spec "관심도"](../specs/digest.md#관심도) digest-R23
   - 관심 x = clamp((F + γ·S) ÷ (E + K), −1, 1), 가중치 g = 1 + β·x — K 는 가상의 노출 수
+> 부분 대체(γ 의 뜻 "구독 변경 하나의 무게"와 그 처음 값) — [ADR-0295](0295-the-subscription-signal-of-interest-is-a-term-outside-the-exposure-denominator-and-the-topic-value-is-below-the-presence-threshold.md). 지금 상태: [digest Spec "관심도"](../specs/digest.md#관심도) digest-R23 · R49
 - **상수는 넷이다** — 반감기(감쇠) · β(가중치의 세기) · γ(구독 변경 하나의 무게) · K(가상 노출). 처음 값은 30일 · 0.5 · 1 · 3 이고 측정 전 목표다. 읽는 범위는 반감기 × 4 로 반감기에서 나온다.
 > 부분 대체(인용 · 기사마다 한 번 · 그 기사를 인용한 다이제스트) — [ADR-0268](0268-interest-counts-exposures-and-reactions-per-event-splitting-an-item-weight-one-over-n-and-counting-an-event-once-with-its-latest-share.md). 지금 상태: [digest Spec "관심도"](../specs/digest.md#관심도) digest-R23 · R24
 - **노출은 그 사용자의 `READY` 다이제스트 모두의 인용이다** — 같은 날짜의 덮인 다이제스트도 센다. 기사마다 한 번이고 노출 시각은 그 기사를 인용한 다이제스트 가운데 가장 늦게 끝낸 시각이다. 받은 소식과 다른 정의다.

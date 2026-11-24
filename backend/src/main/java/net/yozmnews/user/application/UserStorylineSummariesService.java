@@ -2,6 +2,7 @@ package net.yozmnews.user.application;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -65,7 +66,7 @@ class UserStorylineSummariesService implements UserStorylineSummaries {
 
 	@Override
 	@Transactional(readOnly = true)
-	public Map<StorylineId, UserStorylineSummaryRef> ofTops(UserId user, Collection<StorylineId> tops) {
+	public Map<StorylineId, List<UserStorylineSummaryRef>> ofTops(UserId user, Collection<StorylineId> tops) {
 		Objects.requireNonNull(user, "user");
 		Set<StorylineId> asked = new HashSet<>(Objects.requireNonNull(tops, "tops"));
 		if (asked.size() > MAX_TOPS) {
@@ -74,12 +75,20 @@ class UserStorylineSummariesService implements UserStorylineSummaries {
 		if (asked.isEmpty()) {
 			return Map.of();
 		}
-		Map<StorylineId, UserStorylineSummaryRef> found = new HashMap<>();
-		for (UserStorylineSummaryView view : shown(user)) {
+		Map<StorylineId, List<UserStorylineSummaryRef>> found = new HashMap<>();
+		List<UserStorylineSummaryView> byId = shown(user).stream()
+			.sorted(Comparator.comparingLong(view -> view.id().value()))
+			.toList();
+		for (UserStorylineSummaryView view : byId) {
 			UserStorylineSummaryRef ref = new UserStorylineSummaryRef(view.id(), view.title());
-			view.members().stream().filter(asked::contains).forEach(top -> found.put(top, ref));
+			view.members()
+				.stream()
+				.filter(asked::contains)
+				.forEach(top -> found.computeIfAbsent(top, ignored -> new ArrayList<>()).add(ref));
 		}
-		return Map.copyOf(found);
+		Map<StorylineId, List<UserStorylineSummaryRef>> copied = new HashMap<>();
+		found.forEach((top, refs) -> copied.put(top, List.copyOf(refs)));
+		return Map.copyOf(copied);
 	}
 
 	/** 정리를 받은 순서대로 엮는다 — 사용자 스토리라인 행이 없는 정리는 뺀다(읽는 사이 지워진 것) */
@@ -106,7 +115,8 @@ class UserStorylineSummariesService implements UserStorylineSummaries {
 						: new TopSummary(new StorylineId(member), text.title(), text.summary(), text.recent()));
 			}
 			SummaryAttempt attempt = attempts.get(summary.userStorylineId());
-			views.add(new UserStorylineSummaryView(new UserStorylineId(summary.userStorylineId()), summary.whole().title(),
+			views.add(new UserStorylineSummaryView(new UserStorylineId(summary.userStorylineId()), handle(row),
+					summary.whole().title(),
 					summary.whole().summary(), summary.whole().recent(), row.subscribedAt() != null,
 					row.members().stream().map(StorylineId::new).collect(Collectors.toUnmodifiableSet()), tops,
 					new SummaryUsage(summary.provider(), summary.model(), summary.inputTokens(), summary.outputTokens(),
@@ -115,6 +125,14 @@ class UserStorylineSummariesService implements UserStorylineSummaries {
 					summary.createdAt(), summary.updatedAt()));
 		}
 		return List.copyOf(views);
+	}
+
+	/**
+	 * 저장한 헤드 — 헤드 열이 생기기 전에 저장된 개체(그 사용자의 다음 저장하는 맞추기 전까지)는 저장한 추적 대상 가운데 가장 작은 꼭대기. 이 대체는
+	 * 여기 한 곳뿐이다 — 맞춘 값을 쓰는 다른 자리는 헤드가 비지 않는다
+	 */
+	private static StorylineId handle(UserStorylineRow row) {
+		return new StorylineId((row.head() != null) ? row.head() : new TreeSet<>(row.members()).first());
 	}
 
 }

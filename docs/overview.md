@@ -247,13 +247,13 @@ flowchart LR
 | 사건(Event) | 한 번 일어난 일을 다룬 기사를 사용자와 무관하게 묶은 공유 묶음. 다른 주체의 반응 · 같은 사안의 다음 단계는 다른 사건이다. 비용은 운영자가 부담 — 범위는 [ADR-0102](adr/0102-an-event-is-the-reports-of-one-happening-narrowed-by-the-event-membership-question-wording.md) |
 | 스토리라인(`storyline`) | 사건들이 이어진 흐름 — 같은 큰 일의 여러 갈래와 시간이 지나 생긴 후속. 모든 사용자가 공유하고 운영자 비용으로 잇는다. 사건은 스토리라인 여럿에 들 수 있고, 스토리라인 사이에는 포함(큰 흐름과 그 갈래 — 상위는 하나)과 이어짐(앞 흐름이 뒤 흐름을 낳음) 관계가 있다([storyline Spec](specs/storyline.md#스토리라인-사이-관계)). 독자 화면은 "사건 흐름"(탭 · 화면 제목) · "흐름"(본문)이라 부르고 운영자 화면은 "스토리라인"이라 부른다([ADR-0292](adr/0292-reader-screens-call-a-storyline-an-event-flow.md)). 큰 판정을 지난 것은 "큰 스토리라인"이다 — 다이제스트의 큰 슬롯과 그 선정 이유는 독자 화면에서 "큰 화제"라 부른다([ADR-0241](adr/0241-selection-reasons-mark-only-citations-outside-subscribed-topics-named-interest-and-big-topic.md)) ([ADR-0101](adr/0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)) |
 | 큰 판정 | 구독과 무관하게 알릴 만한 스토리라인을 고르는 판정. 판정 규칙은 [storyline Spec](specs/storyline.md#큰-판정). 다이제스트의 큰 슬롯 · 선정 이유와 변화 리포트의 보도량이 쓴다 ([ADR-0103](adr/0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md)) |
-| 사용자 스토리라인 | 사용자가 관심 신호(좋아요 · 싫어요 · 흐름 추적)를 준 흐름 — 신호를 받은 꼭대기와 거기서 이어짐을 앞에서 뒤로 따라 닿는 꼭대기의 묶음. 공용 스토리라인과 다른 개체이고 `user` 가 갖는다 |
+| 사용자 스토리라인 | 사용자가 관심 신호(좋아요 · 싫어요 · 흐름 추적)를 준 흐름 — 신호를 받은 꼭대기에서 이어짐을 앞에서 뒤로 따라 닿는 끝(헤드)마다의 꼭대기 묶음. 갈라지기 전 꼭대기는 갈래 여럿에 든다. 공용 스토리라인과 다른 개체이고 `user` 가 갖는다 |
 | 정리 | 사용자 스토리라인 하나를 그 사용자의 LLM 키로 간추린 글 — 제목 · 흐름 요약 · 최근 전개. 관심 흐름만 만들고, 정리가 있는 사용자 스토리라인만 독자 화면의 사건 흐름 탭 · 다이제스트 항목 · 관심사 히스토리에 보인다. `user` 가 만들고 갖는다([user Spec](specs/user.md#사용자-스토리라인의-정리)) |
 | 스토리라인 구독 | 사용자 스토리라인을 추적하는 상태와 그 변경 이력 — 화면 이름은 "흐름 추적"이다. `user` 가 갖는다 |
 | 받은 소식 | 사용자가 날짜별로 보이는 다이제스트에서 받은 기사 — 독자 화면은 스토리라인 타임라인의 사건마다 받은 날짜를 단다([digest Spec](specs/digest.md#받은-소식) · [ADR-0193](adr/0193-the-per-user-storyline-information-is-the-received-news-counted-from-the-digest-shown-for-each-date.md)) |
 | 주요 뉴스(`top_stories`) | 다이제스트에서 항목 하나의 여러 기사를 종합한 섹션 — 큰 화제 항목과 순위가 높은 항목이고, 한 구독 주제에 몰리지 않게 고른다. 그 밖의 항목은 헤드라인(제목 · 짧은 코멘트)이다 |
 | 주제 | 태그 체계의 주제 태그(대분류 · 중분류). 보도량과 관심도를 세는 단위이고, Topic 이라는 별도 용어를 두지 않는다 |
-| 관심도 | 명시적 신호로 계산한, 기간 × 주제별 · 스토리라인(사용자 스토리라인 — 그 꼭대기마다 같은 값)별 관심의 크기. 후보 순위 · 거름과 관심사 히스토리에 쓰인다. 계산 방법은 [pipeline.md](pipeline.md) |
+| 관심도 | 명시적 신호로 계산한, 기간 × 주제별 · 스토리라인(사용자 스토리라인 — 그 꼭대기에 펼치고, 묶음 여럿에 든 꼭대기는 평균)별 관심의 크기. 후보 순위 · 거름과 관심사 히스토리에 쓰인다. 계산 방법은 [pipeline.md](pipeline.md) |
 | 관심사 | 한 사용자의 관심과 그 변화 — 관심도 · 관심사 히스토리로 나타낸다. 스토리라인 구독과 다른 개념이다 |
 | 관심사 히스토리 | 쌓인 명시적 신호로 계산한 관심도의 기간별 변화 — 주제 중분류의 관심 · 새로 생긴 관심 · 사라진 관심과 사용자가 바꾼 주제 구독을 보인다 |
 | 자유 텍스트 관심사 | 사용자가 설정에 적는 관심사 문장(`interest_text`). 관심도 · 관심사 히스토리와 구분해 항상 이 이름으로 부른다 |

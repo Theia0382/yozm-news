@@ -88,11 +88,24 @@ class UserStorylineSummariesServiceTests {
 			this.summaries.recordStored(id, 1_200, 300);
 		});
 
+		// 헤드를 저장하기 전의 개체라 손잡이는 가장 작은 꼭대기다
 		assertThat(this.directory.shown(this.alice)).containsExactly(new UserStorylineSummaryView(new UserStorylineId(id),
-				"전체 제목", "전체 요약", "전체 최근", true, Set.of(new StorylineId(11), new StorylineId(12)),
+				new StorylineId(11), "전체 제목", "전체 요약", "전체 최근", true, Set.of(new StorylineId(11), new StorylineId(12)),
 				List.of(new TopSummary(new StorylineId(11), "가 제목", "가 요약", "가 최근"),
 						TopSummary.without(new StorylineId(12))),
 				new SummaryUsage("ANTHROPIC", "claude-sonnet-5-5", 1_200, 300, 2, 1_500, 340), FIRST, LATER));
+	}
+
+	@Test
+	void theHandleIsTheStoredHead() {
+		long id = userStoryline(this.alice, Set.of(11L, 12L), true);
+		this.transaction.executeWithoutResult(status -> this.userStorylines.setHead(id, 12));
+		summarize(id, "전체", Map.of(11L, SummaryText.NONE, 12L, SummaryText.NONE), FIRST, LATER);
+
+		// 대조 — 저장한 헤드가 가장 작은 꼭대기보다 앞선다
+		assertThat(this.directory.shown(this.alice)).singleElement()
+			.extracting(UserStorylineSummaryView::head)
+			.isEqualTo(new StorylineId(12));
 	}
 
 	@Test
@@ -149,7 +162,8 @@ class UserStorylineSummariesServiceTests {
 			.containsExactly(new UserStorylineId(alices));
 		assertThat(this.directory.find(this.alice, new UserStorylineId(bobs))).isEmpty();
 		assertThat(this.directory.ofTops(this.alice, List.of(new StorylineId(11), new StorylineId(21))))
-			.isEqualTo(Map.of(new StorylineId(11), new UserStorylineSummaryRef(new UserStorylineId(alices), "앨리스 제목")));
+			.isEqualTo(Map.of(new StorylineId(11),
+					List.of(new UserStorylineSummaryRef(new UserStorylineId(alices), "앨리스 제목"))));
 	}
 
 	@Test
@@ -162,9 +176,25 @@ class UserStorylineSummariesServiceTests {
 
 		assertThat(this.directory.ofTops(this.alice,
 				List.of(new StorylineId(12), new StorylineId(21), new StorylineId(31), new StorylineId(99), new StorylineId(12))))
-			.isEqualTo(Map.of(new StorylineId(12), new UserStorylineSummaryRef(new UserStorylineId(two), "둘 제목"),
-					new StorylineId(21), new UserStorylineSummaryRef(new UserStorylineId(one), "하나 제목")));
+			.isEqualTo(Map.of(new StorylineId(12), List.of(new UserStorylineSummaryRef(new UserStorylineId(two), "둘 제목")),
+					new StorylineId(21), List.of(new UserStorylineSummaryRef(new UserStorylineId(one), "하나 제목"))));
 		assertThat(this.directory.ofTops(this.alice, List.of())).isEmpty();
+	}
+
+	@Test
+	void aTopBeforeAForkIsMappedToEverySummarizedUserStorylineHoldingIt() {
+		// 갈라지기 전 꼭대기 11 이 두 갈래의 추적 대상에 함께 든다 — 마지막 정리 시각은 뒤 개체가 늦다(shown 은 뒤 개체가 먼저)
+		long first = userStoryline(this.alice, Set.of(11L, 12L), false);
+		long second = userStoryline(this.alice, Set.of(11L, 13L), false);
+		summarize(first, "왼쪽", Map.of(11L, SummaryText.NONE, 12L, SummaryText.NONE), FIRST, FIRST);
+		summarize(second, "오른쪽", Map.of(11L, SummaryText.NONE, 13L, SummaryText.NONE), FIRST, LATER);
+
+		// 사용자 스토리라인 ID 순 — 마지막 정리 시각 순(shown)이 아니다
+		assertThat(this.directory.ofTops(this.alice, List.of(new StorylineId(11), new StorylineId(13))))
+			.isEqualTo(Map.of(new StorylineId(11),
+					List.of(new UserStorylineSummaryRef(new UserStorylineId(first), "왼쪽 제목"),
+							new UserStorylineSummaryRef(new UserStorylineId(second), "오른쪽 제목")),
+					new StorylineId(13), List.of(new UserStorylineSummaryRef(new UserStorylineId(second), "오른쪽 제목"))));
 	}
 
 	@Test

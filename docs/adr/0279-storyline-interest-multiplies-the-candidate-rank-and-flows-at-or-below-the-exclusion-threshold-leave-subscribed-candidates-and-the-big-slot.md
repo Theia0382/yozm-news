@@ -1,6 +1,6 @@
 # ADR-0279: 스토리라인 관심은 후보 순위에 곱하고, 거름 기준 이하의 흐름은 구독 후보와 큰 슬롯에서 뺀다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 큰 판정 행의 순서([ADR-0296](0296-the-big-slot-takes-big-judgement-rows-in-the-order-of-intensity-times-the-interest-weight.md))
 - 날짜: 2026-11-22
 - 근거: [이슈 #243](https://github.com/Theia0382/yozm-news/issues/243) — 측정에서 큰 슬롯 항목의 싫어요가 32.7% 였고 같은 흐름이 매일 다시 들었다. 기록된 반응으로 거름 기준 −0.2 를 대 보면 큰 슬롯 싫어요 37건 가운데 22건이 빠지고 좋아요는 하나도 빠지지 않았다. 리드가 가중치 곱 · 거름으로 시작하고 효과를 본 뒤 가중치 조정이나 자리 보장을 다시 정하기로 했다. 구현 커밋 `da9a3df`
 - 관련: [ADR-0277](0277-storyline-interest-is-counted-per-containment-tree-top-with-the-topic-formula-and-reactions-to-a-flow-seen-within-seven-days-go-to-the-storyline-only.md)(스토리라인 관심), [ADR-0260](0260-digest-candidates-are-events-and-only-assigned-events-with-an-article-first-evaluated-in-the-period-enter.md)(부분 대체 — 큰 판정 행을 쓰는 순서와 사건이 드는 조건), [ADR-0028](0028-explicit-signals-and-interest-weighted-candidates.md)(부분 대체 — 후보 선별 순서의 관심 순위), [ADR-0103](0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md)(보충 — 큰 흐름을 거듭 싫어한 사용자에게는 넣지 않는다), [ADR-0216](0216-the-interest-selection-reason-marks-subscribed-candidates-that-enter-only-by-interest-with-a-weight-above-neutral.md)(보충 — 관심도 가중치는 주제 × 스토리라인의 곱), [ADR-0209](0209-maximum-candidates-and-big-slots-are-user-settings-and-the-big-slot-takes-at-most-half.md)(대안 표의 되먹임 우려)
@@ -16,6 +16,7 @@
 
 - **사건 점수에 스토리라인 관심도 가중치(그 사건 꼭대기 가중치의 평균, 꼭대기가 없으면 1)를 더 곱한다.** 사건의 관심도 가중치는 주제 가중치 × 스토리라인 가중치다.
 - **스토리라인 관심이 거름 기준 −0.2 이하(경계 포함)인 꼭대기를 거른다.** 꼭대기가 모두 거른 꼭대기인 사건은 구독 후보 · 큰 슬롯에서 빠진다. 꼭대기가 없는 사건은 거름이 걸리지 않는다.
+> 부분 대체(셋째 문장) — [ADR-0296](0296-the-big-slot-takes-big-judgement-rows-in-the-order-of-intensity-times-the-interest-weight.md). 지금 상태: [digest Spec "후보 선별"](../specs/digest.md#후보-선별) digest-R19
 - **머리의 포함 나무 꼭대기가 거른 꼭대기인 큰 판정 행은 건너뛰고 다음 행이 큰 슬롯을 쓴다.** 머리의 꼭대기는 `storyline` 의 스토리라인 꼭대기 조회로 명시적으로 푼다 — 큰 판정 규칙이 바뀌어도 거름이 나무 단위로 걸린다. 행의 순서는 큰 판정 순서 그대로다.
 - 관심 흐름에 자리를 보장하지 않는다 — 효과가 부족하면 가중치를 고칠지 자리를 보장할지 측정을 보고 다시 정한다.
 - `INTEREST` 판정의 중립 순위는 주제 · 스토리라인 가중치를 모두 1 로 둔다.

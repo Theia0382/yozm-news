@@ -164,17 +164,23 @@ describe("StorylinePage", () => {
   });
 
   it("합쳐진 ID 로 와도 흐름 추적 버튼은 남는 스토리라인으로 추적한다", async () => {
-    const { server } = renderRoutes(ROUTES, "/storylines/5", {
+    const { server, router } = renderRoutes(ROUTES, "/storylines/5", {
       "GET /api/storylines/5": () => json(timeline({ storyline: card(9) })),
       "GET /api/storylines/9": () => json(timeline({ storyline: card(9) })),
       ...subscriptionHandlers([], [5, 9]),
     });
-    // 남는 스토리라인의 주소로 바뀐 뒤 그린 버튼
-    await waitFor(() =>
-      expect(screen.getByRole("button", { name: "흐름 추적" })).toBeEnabled(),
-    );
+    // 주소 바꾸기는 늦게 그려질 수 있어, 그 사이 바꾸기 전 화면(5)도 추적 상태를 받아 켜진 버튼을 보인다 — 그 버튼은 바꾸기가
+    // 그려지면 사라진다. 남는 스토리라인의 타임라인을 읽기 시작한 뒤(바꾸기가 그려진 뒤) 그린 버튼만 누른다
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/storylines/9");
+      expect(server.requests.map((r) => `${r.method} ${r.path}`)).toContain(
+        "GET /api/storylines/9",
+      );
+    });
+    const track = await screen.findByRole("button", { name: "흐름 추적" });
+    await waitFor(() => expect(track).toBeEnabled());
 
-    await userEvent.click(screen.getByRole("button", { name: "흐름 추적" }));
+    await userEvent.click(track);
 
     expect(
       await screen.findByRole("button", { name: "추적 중" }),

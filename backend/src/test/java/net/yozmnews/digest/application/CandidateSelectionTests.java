@@ -70,7 +70,7 @@ import org.springframework.test.context.TestPropertySource;
  * <p>
  * 지키는 규칙: digest-R15 ~ digest-R19 · digest-R21 · digest-R22 · digest-R25 · digest-R44 ~ digest-R46 · digest-R54 — 후보는 사건(사건 없는 기사는 버림), 구독 필터는 사건의 주제 · 지역 제외는 사건의 지역 · 기사 제외는 기사마다, 사건 중요도는 소속
  * 기사의 최대, 표본(기간에 든 · 제외를 지난 기사), 상한 · 선정 이유, 항목 묶기(꼭대기), 구독 행마다 주요 뉴스 상한(사용자의 구독 행), 관심 설정과 계보 표의 활성 버전 대조, 관심도 순위와
- * {@code INTEREST}(노출 · 좋아요 · 주제 구독 변경 · 스토리라인 구독 변경), 싫어요 거름(구독 사건 · 큰 슬롯 사건 — 합쳐진 사건의 싫어요 포함), 중립
+ * {@code INTEREST}(노출 · 좋아요 · 주제 구독 변경 · 스토리라인 구독 변경), 싫어요 거름(구독 사건 · 큰 슬롯 사건 — 합쳐진 사건의 싫어요 포함), 큰 슬롯의 행 순서(관심을 곱한 순서 · 항목의 꼭대기) · 주제 거름, 중립
  * 결과의 토큰 어림,
  * 관심도 재료를 읽는 범위의 끝(부르는 시각), 생성의 입력(프로필 · 항목 · 사건 · 표본 기사 재료)
  * <p>
@@ -522,7 +522,7 @@ class CandidateSelectionTests {
 
 	@Test
 	void aCandidateInASubscribedStorylineRisesByItsStorylineWeight() {
-		// 후보 "의회 넷이"(3.6)를 구독한 스토리라인의 소속으로 더한다 — 꼭대기 관심 1 ÷ 3, 가중치 1 + 0.5 × 1 ÷ 3 = 1.1666… 이라
+		// 후보 "의회 넷이"(3.6)를 구독한 스토리라인의 소속으로 더한다 — 꼭대기 관심 γ 1/3 × 1 = 1/3, 가중치 1 + 0.5 × 1/3 = 1.1666… 이라
 		// 3.6 × 1.1666… = 4.2 가 E1(4.0) 앞이고, 중립 순서로는 들지 못하므로 INTEREST
 		long legislature = event(eventArticle("의회 넷이", "politics.legislature", 3.6, "2026-11-05T06:00:00Z", 1));
 		long storyline = legislatureStoryline();
@@ -546,10 +546,7 @@ class CandidateSelectionTests {
 		long fresh = event(eventArticle("분쟁 속 정부 대응", "politics.executive", 3.5, "2026-11-05T06:00:00Z", 1));
 		this.rows.member(storyline, fresh);
 		// 그 스토리라인의 지난 사건 — 11-04 다이제스트가 혼자인 항목으로 보였다(몫 1)
-		long pastArticle = article("분쟁 지난 일", "world.conflict", 3.0, "2026-11-01T00:00:00Z", 1);
-		long past = this.rows.event(1, "2026-11-01T00:00:00Z", "2026-11-01T00:00:00Z");
-		this.rows.assign(pastArticle, past, "2026-11-01T00:00:00Z");
-		this.rows.member(storyline, past);
+		long past = pastMemberOf(storyline, "분쟁 지난 일");
 		DigestRows.item(this.jdbc, DigestRows.digest(this.jdbc, this.user, "2026-11-04", "2026-11-04T06:00:00Z"), past);
 		// 대조 — 싫어요 전에는 그 스토리라인의 두 사건이 큰 슬롯으로 든다
 		assertThat(events(this.selection.select(new UserId(this.user), DAY, ROOMY))).containsExactly(
@@ -562,6 +559,29 @@ class CandidateSelectionTests {
 
 		assertThat(events(this.selection.select(new UserId(this.user), DAY, ROOMY)))
 			.containsExactly(this.e1 + ":SUBSCRIBED", event(this.a5) + ":SUBSCRIBED");
+	}
+
+	@Test
+	void aDislikeAfterASilentExposureOfTheSameFlowLeavesItsBigRowOut() {
+		long[] conflict = bigStoryline();
+		long storyline = storylineOf(event(conflict[0]));
+		// 그 스토리라인의 지난 사건 a · b — 11-03 다이제스트가 a 를 혼자인 항목으로 보였고 반응이 없었다. 11-04 다이제스트가 b 를 혼자인 항목으로
+		// 보였고 싫어요. 스토리라인 묶음은 b 의 싫어요가 앞선 무반응 a 를 대신한다 — x ≈ −0.96 ÷ (0.96 + 3) ≈ −0.242 ≤ −0.2 라 행을
+		// 건너뛴다(대신하지 않으면 a 가 분모에 남아 ≈ −0.196 으로 들어온다)
+		long a = pastMemberOf(storyline, "분쟁 그제 일");
+		long b = pastMemberOf(storyline, "분쟁 어제 일");
+		DigestRows.item(this.jdbc, DigestRows.digest(this.jdbc, this.user, "2026-11-03", "2026-11-03T06:00:00Z"), a);
+		DigestRows.item(this.jdbc, DigestRows.digest(this.jdbc, this.user, "2026-11-04", "2026-11-04T06:00:00Z"), b);
+		react(b, "DISLIKE", "2026-11-04T07:00:00Z");
+
+		assertThat(events(this.selection.select(new UserId(this.user), DAY, ROOMY)))
+			.containsExactly(this.e1 + ":SUBSCRIBED", event(this.a5) + ":SUBSCRIBED");
+
+		// 대조 — b 를 좋아요로 바꾸면 행이 든다
+		react(b, "LIKE", "2026-11-04T08:00:00Z");
+
+		assertThat(events(this.selection.select(new UserId(this.user), DAY, ROOMY))).first()
+			.isEqualTo(event(conflict[0]) + ":MAJOR_STORYLINE");
 	}
 
 	@Test
@@ -707,6 +727,56 @@ class CandidateSelectionTests {
 	}
 
 	@Test
+	void aBigEventOnATopicTheUserDislikesLeavesTheBigSlotToTheNextRow() {
+		// 큰 슬롯 1 · 큰 판정 행 둘 — 1위 국내 재판(기사 넷 · 중요도 5 → 보도 강도 20), 2위 국제 분쟁(셋 → 15). 15 < 20 × 0.8 이라 순서만으로는
+		// 뒤집히지 않는다(재판 가중치 0.8 이면 16 > 15)
+		this.jdbc.sql("update user_settings set big_slots = 1 where user_id = :user").param("user", this.user).update();
+		long trial = bigRow("society.law", 5.0, 5.0, 5.0, 5.0)[0];
+		long conflict = event(bigStoryline()[0]);
+		// 대조 ⑴ — 싫어요 전에는 1위 행
+		assertThat(events(this.selection.select(new UserId(this.user), DAY, ROOMY))).first()
+			.isEqualTo(trial + ":MAJOR_STORYLINE");
+
+		// 지난 다이제스트(11-04)의 혼자인 재판 항목 둘에 싫어요 — 재판 관심 ≈ −2 ÷ (2 + 3) = −0.4(가중치 ≈ 0.8). 그 지난 사건들은 스토리라인
+		// 소속이 없어 흐름 거름이 아니라 주제 거름으로 빠진다
+		dislikedShown("society.law", 2);
+
+		List<String> filtered = events(this.selection.select(new UserId(this.user), DAY, ROOMY));
+		assertThat(filtered).first().isEqualTo(conflict + ":MAJOR_STORYLINE");
+		assertThat(filtered).doesNotContain(trial + ":MAJOR_STORYLINE");
+
+		// 대조 ⑵ — 재판을 구독하면(구독 항 γ 0.1 을 더해도 ≈ −0.3) 같은 사건이 큰 슬롯이 아니라 구독 사건으로 든다(주제 거름은 큰 슬롯에만)
+		this.jdbc.sql("""
+				insert into user_tag_preferences (user_id, tag_kind, tag_key, mode, created_at)
+				values (:user, 'TOPIC', 'society.law', 'SUBSCRIBE', now())
+				""").param("user", this.user).update();
+		topicChange("society.law", "ADD");
+
+		assertThat(events(this.selection.select(new UserId(this.user), DAY, ROOMY)))
+			.contains(conflict + ":MAJOR_STORYLINE", trial + ":SUBSCRIBED");
+	}
+
+	@Test
+	void theBigRowOrderMultipliesTheInterestAndTheItemCarriesThatRowsTop() {
+		// 큰 슬롯 1 · 큰 판정 행 둘 — 1위 국제 분쟁(중요도 5 · 5 · 5 · 4 → 19), 2위 입법(셋 → 15)
+		this.jdbc.sql("update user_settings set big_slots = 1 where user_id = :user").param("user", this.user).update();
+		long[] conflict = bigRow("world.conflict", 5.0, 5.0, 5.0, 4.0);
+		long[] legislature = bigRow("politics.legislature", 5.0, 5.0, 5.0);
+		// 대조 — 관심 신호가 없으면 1위 행 · 그 행의 꼭대기
+		DigestInput neutral = this.selection.select(new UserId(this.user), DAY, ROOMY).orElseThrow();
+		assertThat(events(neutral)).first().isEqualTo(conflict[0] + ":MAJOR_STORYLINE");
+		assertThat(neutral.items().getFirst().storyline()).isEqualTo(new StorylineId(conflict[1]));
+
+		// 입법 사건 일곱에 좋아요 — 입법 가중치 ≈ 1.35, 15 × 1.35 ≈ 20.2 > 19
+		likedLegislatureShown(7);
+
+		DigestInput liked = this.selection.select(new UserId(this.user), DAY, ROOMY).orElseThrow();
+		assertThat(events(liked)).first().isEqualTo(legislature[0] + ":MAJOR_STORYLINE");
+		assertThat(events(liked)).doesNotContain(conflict[0] + ":MAJOR_STORYLINE");
+		assertThat(liked.items().getFirst().storyline()).isEqualTo(new StorylineId(legislature[1]));
+	}
+
+	@Test
 	void signalsAfterThePeriodEndAreReadUpToNow() {
 		// 지난 다이제스트(11-04)가 보인 입법 사건 일곱에 좋아요를 기간 끝 11-06 0시 뒤 12시에 눌렀다 — 지금이 그 뒤면 읽혀 무게 1 로 세고
 		// (입법 가중치 ≈ 1 + 0.5 × 7 ÷ 10 ≈ 1.35, 3.6 × 1.35 ≈ 4.8 이 4.0 앞), 지금이 그 앞이면 읽는 범위 밖이라 중립 순서다
@@ -830,11 +900,12 @@ class CandidateSelectionTests {
 	}
 
 	/**
-	 * 구독 밖(국제 분쟁)의 지난 사건(11-01) 하나뿐인 스토리라인 — 11-04 다이제스트가 그 사건을 혼자인 항목으로 보였고(몫 1) 사용자가 싫어요를
-	 * 눌렀다. 보도 강도가 작아 크지 않다
+	 * 구독 밖(국제 정치)의 지난 사건(11-01) 하나뿐인 스토리라인 — 11-04 다이제스트가 그 사건을 혼자인 항목으로 보였고(몫 1) 사용자가 싫어요를
+	 * 눌렀다. 보도 강도가 작아 크지 않다. 주제는 {@link #bigStoryline} 의 국제 분쟁과 다르다 — 싫어요가 큰 판정 사건의 주제 관심을 거름
+	 * 기준까지 내려 흐름 거름과 주제 거름이 섞이지 않게
 	 */
 	private long shownAndDislikedStoryline() {
-		long article = article("분쟁 지난 일", "world.conflict", 3.0, "2026-11-01T00:00:00Z", 1);
+		long article = article("국제 정치 지난 일", "world.politics", 3.0, "2026-11-01T00:00:00Z", 1);
 		long past = this.rows.event(1, "2026-11-01T00:00:00Z", "2026-11-01T00:00:00Z");
 		this.rows.assign(article, past, "2026-11-01T00:00:00Z");
 		long storyline = this.rows.storyline("2026-11-01T00:00:00Z", "2026-11-01T00:00:00Z", past);
@@ -928,6 +999,42 @@ class CandidateSelectionTests {
 		long storyline = this.rows.storyline("2026-11-05T00:00:00Z", "2026-11-05T00:00:00Z", event);
 		this.rows.member(storyline, event);
 		return new long[] { b1, b2, b3 };
+	}
+
+	/**
+	 * 큰 판정 행 하나 — 주제가 같은 기사들(모두 소스 1 · 기간 안 11-05)을 가진 사건 하나와 그것만 가진 스토리라인. 보도 강도 = 중요도 합 ÷ (1 × 1일)
+	 * @return 사건 ID · 스토리라인 ID
+	 */
+	private long[] bigRow(String topic, double... importances) {
+		long event = this.rows.event(importances.length, "2026-11-05T00:00:00Z", "2026-11-05T00:00:00Z");
+		for (int i = 0; i < importances.length; i++) {
+			long article = article(topic + " " + i, topic, importances[i], "2026-11-05T06:00:00Z", 1);
+			this.rows.assign(article, event, "2026-11-05T00:00:00Z");
+		}
+		long storyline = this.rows.storyline("2026-11-05T00:00:00Z", "2026-11-05T00:00:00Z", event);
+		this.rows.member(storyline, event);
+		return new long[] { event, storyline };
+	}
+
+	/** 11-04 다이제스트가 그 주제의 지난 사건(11-01 · 스토리라인 없음)을 혼자인 항목으로 {@code count} 개 보였고 모두 싫어요 */
+	private void dislikedShown(String topic, int count) {
+		long digest = DigestRows.digest(this.jdbc, this.user, "2026-11-04", "2026-11-04T06:00:00Z");
+		for (int i = 0; i < count; i++) {
+			long article = article(topic + " 과거 " + i, topic, 3.0, "2026-11-01T00:00:00Z", 1);
+			long past = this.rows.event(1, "2026-11-01T00:00:00Z", "2026-11-01T00:00:00Z");
+			this.rows.assign(article, past, "2026-11-01T00:00:00Z");
+			DigestRows.item(this.jdbc, digest, past);
+			react(past, "DISLIKE", "2026-11-04T07:00:00Z");
+		}
+	}
+
+	/** 기간 앞(11-01)의 구독 밖(국제 분쟁) 기사 하나를 가진 사건을 그 스토리라인의 소속으로 — 사건 ID */
+	private long pastMemberOf(long storyline, String title) {
+		long article = article(title, "world.conflict", 3.0, "2026-11-01T00:00:00Z", 1);
+		long event = this.rows.event(1, "2026-11-01T00:00:00Z", "2026-11-01T00:00:00Z");
+		this.rows.assign(article, event, "2026-11-01T00:00:00Z");
+		this.rows.member(storyline, event);
+		return event;
 	}
 
 	/** 입력의 사건마다 "사건 ID:선정 이유" — 항목 순서, 항목 안 사건 순서. 계정이 있어야 한다 */

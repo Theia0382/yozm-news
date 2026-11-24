@@ -11,7 +11,7 @@ public record ImportanceScale(String question, List<ImportanceLevel> levels) {
 	/** 가장 낮은 중요도 수준 — 정본(tag-R7) */
 	public static final int MIN_LEVEL = 1;
 
-	/** 가장 높은 중요도 수준 — 정본(tag-R7) */
+	/** 가장 높을 수 있는 중요도 수준 — 정본(tag-R7). 체계마다 몇 수준을 쓰는지는 tag-R7 이 정한다 */
 	public static final int MAX_LEVEL = 5;
 
 	public ImportanceScale {

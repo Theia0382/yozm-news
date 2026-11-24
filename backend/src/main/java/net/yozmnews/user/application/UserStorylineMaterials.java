@@ -78,7 +78,12 @@ class UserStorylineMaterials {
 		SubscriptionFollow seedFollow = SubscriptionFollow.decide(seedTimes, survivors);
 		// 저장한 추적 대상과 남는 추적 씨앗의 지금 꼭대기
 		Set<Long> toResolve = new HashSet<>(survivors.values());
-		rows.forEach(row -> toResolve.addAll(row.members()));
+		rows.forEach(row -> {
+			toResolve.addAll(row.members());
+			if (row.head() != null) {
+				toResolve.add(row.head());
+			}
+		});
 		Map<Long, Long> topOf = topsOfStorylines(toResolve);
 		List<StoredUserStoryline> stored = new ArrayList<>();
 		for (UserStorylineRow row : rows) {
@@ -99,7 +104,8 @@ class UserStorylineMaterials {
 					}
 				}
 			}
-			stored.add(new StoredUserStoryline(row.id(), tops, seeds, row.subscribedAt(), row.createdAt()));
+			Long head = (row.head() == null) ? null : topOf.get(row.head());
+			stored.add(new StoredUserStoryline(row.id(), tops, seeds, row.subscribedAt(), row.createdAt(), head));
 		}
 		Set<Long> trackedSeedTops = new HashSet<>();
 		stored.forEach(entity -> trackedSeedTops.addAll(entity.trackedSeeds().values()));
@@ -148,9 +154,21 @@ class UserStorylineMaterials {
 		return tops;
 	}
 
+	/**
+	 * 씨앗과 씨앗에서 닿는 꼭대기 모두의 이어짐 — 헤드(뒤 흐름이 없는 꼭대기)를 가르려면 닿은 꼭대기의 이어짐도 알아야 한다
+	 */
 	private Map<Long, Set<Long>> continuationsOf(Set<Long> seedTops) {
+		Map<Long, Set<Long>> continuations = reachOf(seedTops);
+		Set<Long> reached = new HashSet<>();
+		continuations.values().forEach(reached::addAll);
+		reached.removeAll(continuations.keySet());
+		continuations.putAll(reachOf(reached));
+		return continuations;
+	}
+
+	private Map<Long, Set<Long>> reachOf(Set<Long> tops) {
 		Map<Long, Set<Long>> continuations = new HashMap<>();
-		for (List<StorylineId> chunk : chunks(seedTops.stream().map(StorylineId::new).toList(),
+		for (List<StorylineId> chunk : chunks(tops.stream().map(StorylineId::new).toList(),
 				StorylineDirectory.MAX_TOP_STORYLINES)) {
 			this.storylines.continuationsOf(chunk).forEach((storyline, reached) -> {
 				Set<Long> ids = new HashSet<>();

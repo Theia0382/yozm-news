@@ -74,7 +74,7 @@ public enum TagSetProblemCode {
 	/** 형식이 둘보다 적다 */
 	TOO_FEW_FORMATS,
 
-	/** 중요도 수준이 1 ~ 5 하나씩이 아니다 */
+	/** 중요도 수준이 1 부터 빈 곳 없이 하나씩이 아니거나 개수가 2 ~ 5 밖이다 */
 	INVALID_IMPORTANCE_LEVELS,
 
 	/** 질문 틀의 자리표시자가 정확히 하나가 아니다 */
