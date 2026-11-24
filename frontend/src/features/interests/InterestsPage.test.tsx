@@ -285,6 +285,15 @@ describe("InterestsPage", () => {
     ]);
   });
 
+  it("리포트 절에서 받은 변화 리포트 목록으로 잇는다", async () => {
+    renderInterests({});
+    const schedule = await section("일정 · 관심사 · 변화 리포트");
+
+    expect(
+      schedule.getByRole("link", { name: "받은 변화 리포트 보기" }),
+    ).toHaveAttribute("href", "/reports");
+  });
+
   it("일정 · 관심사 · 리포트를 저장한다", async () => {
     const { server } = renderInterests({
       "PUT /api/interests/settings": () =>

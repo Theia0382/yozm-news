@@ -49,6 +49,10 @@ import {
 } from "@/features/interests/interestTexts";
 import { providers } from "@/features/keys/keyTexts";
 import { PRIVACY_PATH } from "@/features/privacy/privacyTexts";
+import {
+  INTERESTS_LINK as REPORTS_INTERESTS_LINK,
+  REPORTS_PATH,
+} from "@/features/reports/reportTexts";
 import { SESSION_QUERY_KEY } from "@/features/session/sessionQueries";
 import { useApiClient } from "@/shared/api/client";
 import { Button } from "@/shared/ui/button";
@@ -424,6 +428,11 @@ function ScheduleSection() {
   const [message, setMessage] = useState<Message | null>(null);
   return (
     <Section id="interest-schedule" title="일정 · 관심사 · 변화 리포트">
+      <p className="text-sm">
+        <Link to={REPORTS_PATH} className="underline">
+          {REPORTS_INTERESTS_LINK}
+        </Link>
+      </p>
       {settings.isPending && <p className="text-muted-foreground">읽는 중…</p>}
       {settings.isError && <p role="alert">설정을 읽지 못했습니다.</p>}
       {settings.data && (

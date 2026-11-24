@@ -23,6 +23,8 @@ import { DigestDatesPage } from "@/features/digests/DigestDatesPage";
 import { DigestDayPage } from "@/features/digests/DigestDayPage";
 import { DigestHomePage } from "@/features/digests/DigestHomePage";
 import { InterestsPage } from "@/features/interests/InterestsPage";
+import { ReportPage } from "@/features/reports/ReportPage";
+import { ReportsPage } from "@/features/reports/ReportsPage";
 import { StorylinePage as ReaderStorylinePage } from "@/features/storylines/StorylinePage";
 import { StorylinesPage as ReaderStorylinesPage } from "@/features/storylines/StorylinesPage";
 import { SubscriptionsPage } from "@/features/storylines/SubscriptionsPage";
@@ -151,21 +153,18 @@ describe("routes", () => {
     ["storylines/subscriptions", SubscriptionsPage],
     ["storylines/:id", ReaderStorylinePage],
     ["user-storylines/:id", UserStorylinePage],
-  ])(
-    "로그인 틀 아래 %s 경로가 독자 흐름 화면을 내려받는다",
-    async (path, page) => {
-      const signedIn = routes[0]?.children?.find(
-        (route) => route.path === undefined,
-      );
-      const lazy = signedIn?.children?.find(
-        (route) => route.path === path,
-      )?.lazy;
+    ["reports", ReportsPage],
+    ["reports/:id", ReportPage],
+  ])("로그인 틀 아래 %s 경로가 독자 화면을 내려받는다", async (path, page) => {
+    const signedIn = routes[0]?.children?.find(
+      (route) => route.path === undefined,
+    );
+    const lazy = signedIn?.children?.find((route) => route.path === path)?.lazy;
 
-      expect(typeof lazy).toBe("function");
-      const loaded = await (lazy as () => Promise<{ Component?: unknown }>)();
-      expect(loaded.Component).toBe(page);
-    },
-  );
+    expect(typeof lazy).toBe("function");
+    const loaded = await (lazy as () => Promise<{ Component?: unknown }>)();
+    expect(loaded.Component).toBe(page);
+  });
 
   it("운영자 화면 아래 수집 현황 경로가 수집 현황 화면을 내려받는다", async () => {
     const admin = routes[0]?.children?.find((route) => route.path === "admin");
