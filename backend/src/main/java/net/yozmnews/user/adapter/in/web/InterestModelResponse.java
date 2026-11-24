@@ -17,7 +17,7 @@ import org.jspecify.annotations.Nullable;
  * @param chosen 고른 모델 — 고르지 않았으면 null
  * @param effective 쓸 모델 — 없으면 null
  * @param reason 고른 모델을 쓰는가, 못 쓰면 그 까닭
- * @param effort 다이제스트 생성의 추론 강도
+ * @param effort 다이제스트 · 변화 리포트 생성의 추론 강도
  * @param efforts 고를 수 있는 추론 강도 — 낮음부터
  */
 record InterestModelResponse(List<ModelResponse> choosable, @Nullable ModelResponse chosen,
