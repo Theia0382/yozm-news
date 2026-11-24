@@ -41,7 +41,7 @@ public final class InterestDefaults {
 	/** 다이제스트 요약 길이 */
 	public static final SummaryLength SUMMARY_LENGTH = SummaryLength.NORMAL;
 
-	/** 다이제스트 생성의 추론 강도 — 사용자 비용이 드는 기본값이다(측정 전 — ADR-0218) */
+	/** 다이제스트 · 변화 리포트 생성의 추론 강도 — 사용자 비용이 드는 기본값이다(측정 전 — ADR-0218) */
 	public static final ReasoningEffort REASONING_EFFORT = ReasoningEffort.MEDIUM;
 
 	private InterestDefaults() {

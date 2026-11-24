@@ -31,9 +31,14 @@ public final class ReportAliases {
 
 	private final Map<String, ReportCitation> targets;
 
+	private final Map<ReportCitation, String> aliases;
+
 	private ReportAliases(List<AliasedSection> sections, Map<String, ReportCitation> targets) {
 		this.sections = List.copyOf(sections);
 		this.targets = Collections.unmodifiableMap(new LinkedHashMap<>(targets));
+		Map<ReportCitation, String> aliases = new HashMap<>();
+		targets.forEach((alias, target) -> aliases.put(target, alias));
+		this.aliases = Collections.unmodifiableMap(aliases);
 	}
 
 	/** 입력에서 별칭을 매긴다 */
@@ -74,6 +79,19 @@ public final class ReportAliases {
 	public Optional<ReportCitation> target(String alias) {
 		Objects.requireNonNull(alias, "alias");
 		return Optional.ofNullable(this.targets.get(alias));
+	}
+
+	/**
+	 * 그 대상의 별칭 — 프롬프트가 사용자 구획에 대상을 별칭으로만 싣는다(report-R23)
+	 * @throws IllegalArgumentException 입력에 없는 대상일 때
+	 */
+	public String alias(ReportCitation target) {
+		Objects.requireNonNull(target, "target");
+		String alias = this.aliases.get(target);
+		if (alias == null) {
+			throw new IllegalArgumentException("별칭이 없는 대상이다: " + target);
+		}
+		return alias;
 	}
 
 	/** 갈래가 하나도 없는가 — {@code EMPTY} 의 판정. 별칭이 0 개여도 갈래가 하나 이상이면 거짓이다 */

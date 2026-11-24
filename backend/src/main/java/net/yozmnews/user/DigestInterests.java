@@ -22,7 +22,7 @@ import net.yozmnews.tag.TagSetId;
  * @param maxCandidates 최대 후보 수 — 분량 설정의 단계 값 또는 직접 입력한 수
  * @param bigSlots 큰 슬롯 수 — 0 이면 큰 슬롯을 넣지 않는다
  * @param summaryLength 요약 길이
- * @param effort 다이제스트 생성의 추론 강도
+ * @param effort 다이제스트 · 변화 리포트 생성의 추론 강도
  */
 public record DigestInterests(TagSetId tagSet, List<TopicSubscription> topics, Set<String> excludedRegions,
 		Set<String> excludedFormats, Set<SourceId> excludedSources, String interestText, ZoneId timezone,

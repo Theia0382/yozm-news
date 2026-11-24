@@ -97,14 +97,14 @@ class ReportTests {
 	@Test
 	void failedRecordsTheCodeAndCutsTheMessageAtFiveHundredCodePoints() {
 		String fiveHundred = "가".repeat(500);
-		Report kept = running().complete(new Completion.Failed(ReportFailure.NO_GENERATOR, fiveHundred, null, null), NOW);
+		Report kept = running().complete(new Completion.Failed(ReportFailure.KEY_MISSING, fiveHundred, null, null), NOW);
 		Report cut = running().complete(
 				new Completion.Failed(ReportFailure.UNREADABLE_OUTPUT, fiveHundred + "나", new TokenUsage(1, 2),
 						Duration.ofMillis(3)),
 				NOW);
 
 		assertThat(kept.status()).isEqualTo(ReportStatus.FAILED);
-		assertThat(kept.failure()).contains(ReportFailure.NO_GENERATOR);
+		assertThat(kept.failure()).contains(ReportFailure.KEY_MISSING);
 		assertThat(kept.errorMessage()).contains(fiveHundred);
 		assertThat(kept.usage()).isEmpty();
 		assertThat(kept.took()).isEmpty();

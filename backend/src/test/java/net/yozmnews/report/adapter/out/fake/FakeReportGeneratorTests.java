@@ -12,7 +12,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.List;
 
 import net.yozmnews.llm.GenerationStop;
-import net.yozmnews.platform.StructuredOutputSchema;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.report.ReportFixtures;
 import net.yozmnews.report.ReportSectionKind;
@@ -27,6 +26,7 @@ import net.yozmnews.report.domain.output.ReportCitationCheck;
 import net.yozmnews.report.domain.output.ReportOutputRead;
 import net.yozmnews.report.domain.output.ReportOutputReader;
 import net.yozmnews.report.domain.output.ReportOutputSchema;
+import net.yozmnews.report.domain.prompt.ReportPrompts;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -83,8 +83,8 @@ class FakeReportGeneratorTests {
 
 	private ReportOutcome.Generated generate(ReportInput input) {
 		ReportAliases aliases = ReportAliases.of(input);
-		ReportOutcome outcome = this.generator.generate(new ReportRequest(new UserId(7), ReportFixtures.MODEL, input, aliases,
-				StructuredOutputSchema.json(ReportOutputSchema.root(aliases))));
+		ReportOutcome outcome = this.generator.generate(new ReportRequest(new UserId(7), ReportFixtures.MODEL,
+				ReportFixtures.EFFORT, aliases, ReportPrompts.compose(input, aliases, ReportFixtures.MODEL)));
 		assertThat(outcome).isInstanceOf(ReportOutcome.Generated.class);
 		return (ReportOutcome.Generated) outcome;
 	}

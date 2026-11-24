@@ -30,3 +30,7 @@
 | 코드 상수(낮음 또는 보통) | 비용을 내는 사람이 바꾸지 못한다 |
 | 운영자 파일에 모델마다 | 모델마다 뜻이 달라 단위는 맞지만, 비용을 내는 사용자가 고르지 못한다 |
 | 운영자 파일의 모델마다 기본 + 사용자 설정 | 칸이 두 곳에 생기고 우선순위 규칙이 하나 는다 |
+
+## 후속 기록
+
+- 2026-11-24: 결정 "추론 강도는 사용자 설정이다"의 같은 칸을 변화 리포트 생성도 쓴다 — [ADR-0312](0312-the-reasoning-effort-setting-is-shared-by-digests-and-change-reports-and-report-lengths-are-constants.md) · [user Spec "관심 설정"](../specs/user.md#관심-설정) user-R59

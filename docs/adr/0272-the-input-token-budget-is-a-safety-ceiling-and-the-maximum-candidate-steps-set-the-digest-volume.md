@@ -33,3 +33,7 @@
 | 단계를 그대로 두고 예산만 올린다 | 보통 60 · 많이 90 이면 입력 · 비용이 크게 늘고 무거운 날 여전히 예산이 묶는다 |
 | 예산을 없애고 최대 후보 수만 둔다 | 사건 하나의 입력 차이가 커서 공급자 입력 한도 초과와 비용 최악값을 막지 못한다 |
 | 토큰 어림 비율을 낮춰 같은 예산에 사건을 더 넣는다 | 실제 입력이 예산에 붙어 재지 않은 공급자에서 입력 초과가 날 수 있다 |
+
+## 후속 기록
+
+- 2026-11-24: 입력 토큰 예산을 변화 리포트 입력의 바깥 안전 상한으로도 쓴다 — 리포트의 평소 분량은 주간 · 월간 리포트 상한이 정한다. [ADR-0311](0311-a-change-report-input-fits-the-smaller-of-the-model-budget-and-the-weekly-or-monthly-cap-by-a-share-for-earlier-reports-and-a-fixed-trimming-order.md) · [report Spec "입력 맞추기"](../specs/report.md#입력-맞추기) report-R22 · [llm Spec "공급자와 허용 모델 목록"](../specs/llm.md#공급자와-허용-모델-목록) llm-R4
