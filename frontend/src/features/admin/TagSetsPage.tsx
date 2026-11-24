@@ -145,9 +145,10 @@ export function TagSetsPage() {
           onView={(id) => setViewing(id === viewing ? null : id)}
         />
       )}
+      {/* 같은 부모 아래의 key 는 서로 겹치지 않아야 한다 — 버전 ID 와 편집기의 세대는 둘 다 작은 수라 앞붙이로 가른다 */}
       {viewed && (
         <VersionTextView
-          key={viewed.id}
+          key={`version-${viewed.id}`}
           version={viewed}
           onStart={requestStart}
           onClose={() => setViewing(null)}
@@ -160,7 +161,7 @@ export function TagSetsPage() {
       {activeText.error && <p role="alert">{failureText(activeText.error)}</p>}
       {versions.data && draft && (
         <TagSetEditor
-          key={generation}
+          key={`editor-${generation}`}
           draft={draft}
           maxDays={versions.data.maxReevaluationDays}
           onText={(text) => setDraft((now) => now && { ...now, text })}

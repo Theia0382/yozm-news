@@ -503,6 +503,52 @@ describe("TagSetsPage", () => {
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
   });
 
+  it("원문을 불러온 횟수와 ID 가 같은 버전의 원문을 봐도 원문 · 편집기는 하나씩이다", async () => {
+    // 버전 ID 는 1부터 오고, 편집기는 원문을 불러올 때마다 새로 그린다 — 둘이 같은 수가 되는 화면(ID = 번호: 버전 2 는 ID 2, 버전 1 은 ID 1)
+    const versions: Schemas["TagSetListResponse"] = {
+      ...TAG_SETS,
+      versions: TAG_SETS.versions.map((version) => ({
+        ...version,
+        id: version.number,
+      })),
+    };
+    renderPage({
+      "GET /api/admin/tag-sets": () => json(versions),
+      "GET /api/admin/tag-sets/2/text": () => json({ text: ACTIVE_TEXT }),
+      "GET /api/admin/tag-sets/1/text": () => json({ text: OLD_TEXT }),
+    });
+    await editor();
+    await userEvent.click(
+      screen.getByRole("button", { name: "버전 1 원문 보기" }),
+    );
+    const view = await screen.findByRole("region", { name: "버전 1 원문" });
+    const load = within(view).getByRole("button", {
+      name: "편집기로 불러오기",
+    });
+    await waitFor(() => expect(load).toBeEnabled());
+
+    await userEvent.click(load);
+    await waitFor(async () => expect(await editor()).toHaveValue(OLD_TEXT));
+    await userEvent.type(await editor(), "x");
+    await userEvent.click(load);
+    await userEvent.click(
+      within(await screen.findByRole("alertdialog")).getByRole("button", {
+        name: "취소",
+      }),
+    );
+    await waitFor(() =>
+      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument(),
+    );
+
+    expect(screen.getAllByRole("region", { name: "버전 1 원문" })).toHaveLength(
+      1,
+    );
+    expect(
+      screen.getAllByRole("region", { name: "새 버전 만들기" }),
+    ).toHaveLength(1);
+    expect(await editor()).toHaveValue(`${OLD_TEXT}x`);
+  });
+
   it("버전 목록을 읽지 못하면 그 문구를 보인다", async () => {
     renderPage({
       "GET /api/admin/tag-sets": () => problem(500, "서버 오류"),
