@@ -93,7 +93,7 @@ public class ReportGeneration {
 	/**
 	 * 시작 → 갈래가 있고 생성기가 있으면 생성 · 판정 → 대조 → 저장. 끝났거나 생성 중인 리포트면 아무것도 하지 않는다.
 	 * @return 이 실행 뒤 그 리포트의 상태 — 다른 실행이 생성 중이면 {@link ReportStatus#RUNNING}
-	 * @throws IllegalArgumentException 없는 리포트일 때
+	 * @throws IllegalArgumentException 없는 리포트일 때, 입력의 사용자 · 기간이 리포트 행과 다를 때 — 아무것도 쓰지 않는다
 	 * @throws IllegalStateException 트랜잭션 안에서 불렀을 때 — 아무것도 쓰지 않는다
 	 */
 	public ReportStatus run(ReportId id, LlmModel model, ReportInput input) {
@@ -106,14 +106,14 @@ public class ReportGeneration {
 		ReportAliases aliases = ReportAliases.of(input);
 		OutputShape.Obj root = ReportOutputSchema.root(aliases);
 		Started started = Objects.requireNonNull(
-				this.transaction.execute(status -> start(id, model, input.statsSnapshot(), aliases)));
+				this.transaction.execute(status -> start(id, model, input, aliases)));
 		if (started.finished() != null) {
 			return started.finished();
 		}
 		ReportGenerator found = Objects.requireNonNull(started.generator(), "generator");
 		Instant asked = this.clock.instant();
 		ReportOutcome outcome = found
-			.generate(new ReportRequest(started.user(), model, aliases, StructuredOutputSchema.json(root)));
+			.generate(new ReportRequest(started.user(), model, input, aliases, StructuredOutputSchema.json(root)));
 		Duration took = this.clock.elapsedSince(asked);
 		ReportVerdict verdict = ReportVerdict.judge(outcome, root);
 		TokenUsage usage = switch (outcome) {
@@ -123,13 +123,17 @@ public class ReportGeneration {
 		return finish(id, started.version(), verdict, aliases, usage, took);
 	}
 
-	private Started start(ReportId id, LlmModel model, String snapshot, ReportAliases aliases) {
+	private Started start(ReportId id, LlmModel model, ReportInput input, ReportAliases aliases) {
 		Report report = lock(id);
+		if (!report.userId().equals(input.user()) || !report.period().equals(input.period())) {
+			// 다른 사용자 · 기간의 재료로 이 행의 사용자 키를 부르지 않는다 — 아무것도 쓰지 않고 롤백한다(report-R13)
+			throw new IllegalArgumentException("입력의 사용자 · 기간이 리포트 행과 다르다: 리포트 " + id.value());
+		}
 		if (report.status() != ReportStatus.SCHEDULED) {
 			// 끝났거나 다른 실행이 생성 중이다 — 다시 시작하지 않는다
 			return new Started(report.status(), report.userId(), 0, null);
 		}
-		this.reports.writeSnapshot(id.value(), snapshot);
+		this.reports.writeSnapshot(id.value(), input.statsSnapshot());
 		Report running = this.reports.save(report.start(model, this.clock.instant()));
 		if (aliases.hasNoSections()) {
 			Report empty = this.reports.save(running.complete(new Completion.Empty(), this.clock.instant()));

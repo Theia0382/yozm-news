@@ -1,8 +1,11 @@
 package net.yozmnews.report.adapter.out.fake;
 
+import static net.yozmnews.report.ReportFixtures.coverage;
 import static net.yozmnews.report.ReportFixtures.event;
+import static net.yozmnews.report.ReportFixtures.flow;
+import static net.yozmnews.report.ReportFixtures.flows;
 import static net.yozmnews.report.ReportFixtures.input;
-import static net.yozmnews.report.ReportFixtures.section;
+import static net.yozmnews.report.ReportFixtures.interests;
 import static net.yozmnews.report.ReportFixtures.storyline;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -40,16 +43,13 @@ class FakeReportGeneratorTests {
 
 	@Test
 	void writesEverySectionWithTheAliasesOfItsTargets() {
-		ReportOutcome.Generated generated = generate(input(
-				section(ReportSectionKind.STORYLINES, storyline(31), event(902)),
-				section(ReportSectionKind.INTERESTS),
-				section(ReportSectionKind.COVERAGE, event(903))));
+		ReportOutcome.Generated generated = generate(input(flows(flow(31, 902)), coverage(), interests(44)));
 
 		assertThat(JSON.readTree(generated.text())).isEqualTo(JSON.readTree("""
 				{"overview":"로컬 대체물이 만든 리포트다. 섹션 3개.","sections":{
 				  "storylines":{"title":"로컬 섹션 1","body":"로컬 대체물이 만든 본문이다.","refs":["S1","E1"]},
-				  "interests":{"title":"로컬 섹션 2","body":"로컬 대체물이 만든 본문이다.","refs":[]},
-				  "coverage":{"title":"로컬 섹션 3","body":"로컬 대체물이 만든 본문이다.","refs":["E2"]}}}"""));
+				  "coverage":{"title":"로컬 섹션 2","body":"로컬 대체물이 만든 본문이다.","refs":[]},
+				  "interests":{"title":"로컬 섹션 3","body":"로컬 대체물이 만든 본문이다.","refs":["S2"]}}}"""));
 		assertThat(generated.usage()).isEqualTo(new TokenUsage(0, 0));
 		assertThat(generated.stop()).isEqualTo(GenerationStop.COMPLETE);
 	}
@@ -57,34 +57,33 @@ class FakeReportGeneratorTests {
 	@Test
 	void followsTheInputOrderOfTargets() {
 		ReportOutcome.Generated generated = generate(
-				input(section(ReportSectionKind.STORYLINES, event(902), storyline(31))));
+				input(flows(flow(44, 903), flow(31, 902))));
 
 		assertThat(JSON.readTree(generated.text()).get("sections").get("storylines").get("refs").toString())
-			.isEqualTo("[\"E1\",\"S1\"]");
+			.isEqualTo("[\"S1\",\"E1\",\"S2\",\"E2\"]");
 	}
 
 	@Test
 	void passesTheSameReadingAndCitationCheckWithManyOrNoTargets() {
-		ReportInput many = input(section(ReportSectionKind.STORYLINES, storyline(31), event(902)),
-				section(ReportSectionKind.COVERAGE, storyline(31), event(903)));
-		ReportInput none = input(section(ReportSectionKind.INTERESTS));
+		ReportInput many = input(flows(flow(31, 902)), interests(31, 44));
+		ReportInput none = input(coverage());
 
 		assertThat(cite(many).sections()).containsExactly(
 				new CitedSection(ReportSectionKind.STORYLINES, "로컬 섹션 1", "로컬 대체물이 만든 본문이다.",
 						List.of(storyline(31), event(902))),
-				new CitedSection(ReportSectionKind.COVERAGE, "로컬 섹션 2", "로컬 대체물이 만든 본문이다.",
-						List.of(storyline(31), event(903))));
+				new CitedSection(ReportSectionKind.INTERESTS, "로컬 섹션 2", "로컬 대체물이 만든 본문이다.",
+						List.of(storyline(31), storyline(44))));
 		CitedReport cited = cite(none);
 		assertThat(cited.overview()).isEqualTo("로컬 대체물이 만든 리포트다. 섹션 1개.");
 		assertThat(cited.sections()).containsExactly(
-				new CitedSection(ReportSectionKind.INTERESTS, "로컬 섹션 1", "로컬 대체물이 만든 본문이다.", List.of()));
+				new CitedSection(ReportSectionKind.COVERAGE, "로컬 섹션 1", "로컬 대체물이 만든 본문이다.", List.of()));
 		assertThat(cited.missingSections()).isZero();
 		assertThat(cited.unknownRefs()).isZero();
 	}
 
 	private ReportOutcome.Generated generate(ReportInput input) {
 		ReportAliases aliases = ReportAliases.of(input);
-		ReportOutcome outcome = this.generator.generate(new ReportRequest(new UserId(7), ReportFixtures.MODEL, aliases,
+		ReportOutcome outcome = this.generator.generate(new ReportRequest(new UserId(7), ReportFixtures.MODEL, input, aliases,
 				StructuredOutputSchema.json(ReportOutputSchema.root(aliases))));
 		assertThat(outcome).isInstanceOf(ReportOutcome.Generated.class);
 		return (ReportOutcome.Generated) outcome;
