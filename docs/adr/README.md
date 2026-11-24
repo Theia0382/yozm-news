@@ -294,7 +294,7 @@
 | [0291](0291-tokens-spent-on-a-summary-are-shown-on-the-personal-flow-screen-as-the-last-summary-and-the-running-total.md) | 정리에 쓴 토큰은 개인 흐름 화면에 마지막 정리와 지금까지의 합으로 보인다 | 승인 |
 | [0292](0292-reader-screens-call-a-storyline-an-event-flow.md) | 독자 화면은 스토리라인을 "사건 흐름"으로 부른다 | 승인 |
 | [0293](0293-the-interest-history-also-shows-the-interest-of-summarized-flows.md) | 관심사 히스토리는 정리된 흐름의 관심도 보인다 | 승인 |
-| [0296](0296-the-tag-set-screen-edits-the-whole-text-activates-only-what-was-reviewed-and-reports-interference-by-comparing-results.md) | 태그 체계 화면은 원문 전체를 고치는 한 페이지이고, 확인한 원문 · 재평가 기간 그대로만 확인 대화상자를 거쳐 활성화하며, 끼어든 활성화는 활성화 결과를 확인 결과와 견줘 알린다 | 승인 |
+| [0307](0307-the-tag-set-screen-edits-the-whole-text-activates-only-what-was-reviewed-and-reports-interference-by-comparing-results.md) | 태그 체계 화면은 원문 전체를 고치는 한 페이지이고, 확인한 원문 · 재평가 기간 그대로만 확인 대화상자를 거쳐 활성화하며, 끼어든 활성화는 활성화 결과를 확인 결과와 견줘 알린다 | 승인 |
 
 ## 운영 규칙
 

@@ -70,7 +70,7 @@ function useVersionText(id: number | null) {
 /**
  * 태그 체계 — 버전 목록과 버전 원문을 보고, 원문을 고쳐 확인한 뒤 새 버전으로 활성화한다. 편집기는 활성 버전의 원문에서 시작하고, 예전 버전의
  * 원문을 불러와 되돌리는 새 버전을 낼 수 있다. 고친 원문을 다른 버전의 원문으로 바꿀 때는 묻는다. 화면의 짜임과 끼어든 활성화를 알아차리는 방식은
- * ADR-0296 이 정한다.
+ * ADR-0307 이 정한다.
  */
 export function TagSetsPage() {
   const client = useAdminClient();
