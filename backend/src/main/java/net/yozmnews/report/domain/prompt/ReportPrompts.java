@@ -97,7 +97,7 @@ public final class ReportPrompts {
 			사용자 구획은 JSON 문서 하나다.
 			- <period> 는 기간이다 — <kind> 는 <period_kinds>, <first> 와 <last> 는 첫날과 마지막 날이다.
 			- <storylines> 는 사용자가 추적하는 흐름이다. 줄은 [흐름 별칭, 상태, 기간 안에 추적을 시작했는가, 보도량, 정리, 사건들]이다. \
-			상태는 <states>이다. 정리는 [제목, 흐름 요약, 최근 전개]이거나 null 이다. 사건은 한 번 일어난 일이고 사건 줄은 [사건 별칭, 첫날, \
+			상태는 <states>이다. 정리는 [제목, 흐름 요약, 최근 전개]이거나 null 이다. 흐름 요약이 빈 글이면 싣지 않은 것이다. 사건은 한 번 일어난 일이고 사건 줄은 [사건 별칭, 첫날, \
 			기간 안 기사 수, 기간 안에 시작했는가, 대표 기사 제목]이다.
 			- 보도량은 [이번 기간 기사 수, 직전 기간 기사 수, 판정]이다. 직전 기간 기사 수가 없으면 null 이다. 판정은 <trends>이다.
 			- <coverage> 는 사용자가 구독한 주제의 보도량이다. 줄은 [주제 이름, 이번 기간 기사 수, 직전 기간 기사 수, 판정]이다.
@@ -231,15 +231,24 @@ public final class ReportPrompts {
 		}
 		ArrayNode priors = JSON.createArrayNode();
 		for (PriorReport prior : input.priors()) {
-			if (prior.overview().isBlank() && prior.sections().isEmpty()) {
-				continue;
+			if (shown(prior)) {
+				priors.add(prior(prior, zone));
 			}
-			priors.add(prior(prior, zone));
 		}
 		if (!priors.isEmpty()) {
 			root.set(PRIORS, priors);
 		}
 		return JSON.writeValueAsString(root);
+	}
+
+	/** 싣는 직전 리포트 글인가 — 개요가 비고 섹션이 없는 글(인용을 모두 잃어 섹션이 전부 숨은 리포트)은 싣지 않는다 */
+	static boolean shown(PriorReport prior) {
+		return !(prior.overview().isBlank() && prior.sections().isEmpty());
+	}
+
+	/** 직전 리포트 글 한 편의 줄(JSON) — 입력 맞추기가 편마다 몫을 잰다(report-R22) */
+	static String priorText(PriorReport prior, ZoneId zone) {
+		return JSON.writeValueAsString(prior(prior, zone));
 	}
 
 	/** 흐름 줄 — [헤드 별칭, 상태, 기간 안 추적, 보도량, 정리, 사건 줄들] */
