@@ -263,7 +263,7 @@ class ReportInputFitTests {
 
 	private static ReportInput input(List<InputSection> sections, List<PriorReport> priors) {
 		return new ReportInput(ReportFixtures.USER, ReportFixtures.PERIOD, ReportFixtures.ZONE, sections, priors,
-				ReportFixtures.SNAPSHOT);
+				ReportFixtures.SNAPSHOT, null);
 	}
 
 	private static PriorReport prior(long id, String body) {

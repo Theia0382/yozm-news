@@ -5,13 +5,14 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import static org.assertj.core.api.Assertions.assertThatNoException;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 /**
- * 섹션 값과 한 편의 불변식 — 섹션 종류와 숫자의 짝, 숨긴 섹션 수의 하한. 지키는 규칙: report-R25
+ * 섹션 값 · 요약 · 한 편의 불변식 — 섹션 종류와 숫자의 짝, 기간 날짜의 순서, 숨긴 섹션 수의 하한. 지키는 규칙: report-R25 · report-R26
  */
 class ReportSectionViewTests {
 
@@ -40,14 +41,25 @@ class ReportSectionViewTests {
 	}
 
 	@Test
+	void theLastDayIsNotBeforeTheFirstDay() {
+		assertThatIllegalArgumentException().isThrownBy(() -> new ReportSummary(new ReportId(1), ReportPeriodKind.WEEK,
+				Instant.parse("2026-11-16T00:00:00Z"), Instant.parse("2026-11-23T00:00:00Z"), LocalDate.parse("2026-11-16"),
+				LocalDate.parse("2026-11-15"), ReportStatus.SCHEDULED, null, Instant.parse("2026-11-23T00:00:00Z"), null));
+		assertThatNoException().isThrownBy(() -> new ReportSummary(new ReportId(1), ReportPeriodKind.WEEK,
+				Instant.parse("2026-11-16T00:00:00Z"), Instant.parse("2026-11-17T00:00:00Z"), LocalDate.parse("2026-11-16"),
+				LocalDate.parse("2026-11-16"), ReportStatus.SCHEDULED, null, Instant.parse("2026-11-23T00:00:00Z"), null));
+	}
+
+	@Test
 	void theHiddenSectionCountIsNotNegative() {
 		ReportSummary summary = new ReportSummary(new ReportId(1), ReportPeriodKind.WEEK,
-				Instant.parse("2026-11-16T00:00:00Z"), Instant.parse("2026-11-23T00:00:00Z"), ReportStatus.READY, null,
-				Instant.parse("2026-11-23T00:00:00Z"), Instant.parse("2026-11-23T00:01:00Z"));
+				Instant.parse("2026-11-16T00:00:00Z"), Instant.parse("2026-11-23T00:00:00Z"), LocalDate.parse("2026-11-16"),
+				LocalDate.parse("2026-11-22"), ReportStatus.READY, null, Instant.parse("2026-11-23T00:00:00Z"),
+				Instant.parse("2026-11-23T00:01:00Z"));
 
-		assertThat(new ReportView(summary, null, null, null, null, 0, List.of()).hiddenSections()).isZero();
+		assertThat(new ReportView(summary, null, null, null, null, null, 0, List.of()).hiddenSections()).isZero();
 		assertThatIllegalArgumentException()
-			.isThrownBy(() -> new ReportView(summary, null, null, null, null, -1, List.of()));
+			.isThrownBy(() -> new ReportView(summary, null, null, null, null, null, -1, List.of()));
 	}
 
 	private static ReportSectionView section(ReportSectionKind kind, @Nullable ReportSectionStats stats) {

@@ -250,8 +250,8 @@ public class ReportMaterialCollection {
 
 		// 직전 리포트 글 — 직전 리포트와 넘긴 주간 리포트 가운데 READY 인 보이는 글(report-R20)
 		List<PriorReport> priors = new ArrayList<>();
-		previous.filter(row -> row.summary().status() == ReportStatus.READY)
-			.flatMap(row -> prior(user, row.summary().id()))
+		previous.filter(row -> row.status() == ReportStatus.READY)
+			.flatMap(row -> prior(user, row.id()))
 			.ifPresent(priors::add);
 		weeklyReports.forEach(id -> prior(user, id).ifPresent(priors::add));
 
@@ -260,7 +260,7 @@ public class ReportMaterialCollection {
 		}
 		List<InputSection> sections = ReportSections.of(flows, topics, interestLines);
 		return new Attempt.Done(Optional.of(new ReportInput(user, period, settings.timezone(), sections, priors,
-				ReportSnapshot.write(period, before, sections))));
+				ReportSnapshot.write(period, before, sections), previous.map(ReportRow::id).orElse(null))));
 	}
 
 	/** 흐름 재료 — 직전 값은 나중에 잇는다 */

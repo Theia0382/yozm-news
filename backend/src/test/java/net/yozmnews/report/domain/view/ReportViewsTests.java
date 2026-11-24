@@ -5,6 +5,9 @@ import static net.yozmnews.report.ReportFixtures.storyline;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 
@@ -28,7 +31,7 @@ import org.junit.jupiter.api.Test;
  * 조회의 풀기 · 숨기기 · 숫자 · 쪽 — 합친 것은 남는 것으로, 지운 것은 빼고, 인용을 모두 잃은 섹션 · 개요의 숨김과 그 수, 보이는 갈래
  * 섹션의 숫자와 흐름 줄의 풀기. 기대 숫자는 손으로 쓴 스냅숏 리터럴에서 손으로 옮긴 값이다.
  * <p>
- * 지키는 규칙: report-R11 · report-R12 · report-R25
+ * 지키는 규칙: report-R11 · report-R12 · report-R25 · report-R26
  */
 class ReportViewsTests {
 
@@ -107,7 +110,7 @@ class ReportViewsTests {
 	void aReportThatIsNotReadyHasNoSections() {
 		for (ReportStatus status : List.of(ReportStatus.SCHEDULED, ReportStatus.RUNNING, ReportStatus.EMPTY,
 				ReportStatus.FAILED)) {
-			ReportView view = ReportViews.view(row(1, status, SNAPSHOT), List.of(OVERVIEW,
+			ReportView view = render(row(1, status, SNAPSHOT), List.of(OVERVIEW,
 					new StoredSection(ReportSectionKind.STORYLINES, "흐름", "본문", List.of(storyline(34)))), EVENTS,
 					STORYLINES);
 			assertThat(view.sections()).as(status.name()).isEmpty();
@@ -117,7 +120,7 @@ class ReportViewsTests {
 
 	@Test
 	void showsEachVisibleKindSectionWithItsNumbersAndCountsTheHiddenOnes() {
-		ReportView view = ReportViews.view(row(1, ReportStatus.READY, SNAPSHOT), List.of(OVERVIEW,
+		ReportView view = render(row(1, ReportStatus.READY, SNAPSHOT), List.of(OVERVIEW,
 				new StoredSection(ReportSectionKind.STORYLINES, "흐름", "본문 하나", List.of(storyline(32))),
 				new StoredSection(ReportSectionKind.COVERAGE, "보도량", "본문 둘", List.of()),
 				new StoredSection(ReportSectionKind.INTERESTS, "관심", "본문 셋", List.of(storyline(34)))), EVENTS, HEADS);
@@ -137,7 +140,7 @@ class ReportViewsTests {
 
 	@Test
 	void aVisibleInterestsSectionHasTopicLinesAndTheFlowLinesThatStillExist() {
-		ReportView view = ReportViews.view(row(1, ReportStatus.READY, SNAPSHOT), List.of(OVERVIEW,
+		ReportView view = render(row(1, ReportStatus.READY, SNAPSHOT), List.of(OVERVIEW,
 				new StoredSection(ReportSectionKind.INTERESTS, "관심", "본문", List.of(storyline(31)))), EVENTS, HEADS);
 
 		assertThat(view.hiddenSections()).isZero();
@@ -156,7 +159,7 @@ class ReportViewsTests {
 				new StoredSection(ReportSectionKind.STORYLINES, "흐름", "본문", List.of(storyline(31))));
 
 		for (String snapshot : List.of(withoutCoverage, unknownVersion)) {
-			ReportView view = ReportViews.view(row(1, ReportStatus.READY, snapshot), stored, EVENTS, HEADS);
+			ReportView view = render(row(1, ReportStatus.READY, snapshot), stored, EVENTS, HEADS);
 			assertThat(view.sections()).extracting(ReportSectionView::stats).containsOnlyNulls();
 			assertThat(view.sections()).extracting(ReportSectionView::body).containsExactly("개요", "본문", "본문");
 		}
@@ -164,10 +167,10 @@ class ReportViewsTests {
 
 	@Test
 	void snapshotHeadsAreTheFlowHeadsOfAReadyReport() {
-		assertThat(ReportViews.snapshotHeads(row(1, ReportStatus.READY, SNAPSHOT))).containsExactlyInAnyOrder(
+		assertThat(ReportViews.snapshotHeads(ReportViews.snapshotOf(row(1, ReportStatus.READY, SNAPSHOT)))).containsExactlyInAnyOrder(
 				new StorylineId(31), new StorylineId(32), new StorylineId(33), new StorylineId(34));
-		assertThat(ReportViews.snapshotHeads(row(1, ReportStatus.FAILED, SNAPSHOT))).isEmpty();
-		assertThat(ReportViews.snapshotHeads(row(1, ReportStatus.READY, null))).isEmpty();
+		assertThat(ReportViews.snapshotHeads(ReportViews.snapshotOf(row(1, ReportStatus.FAILED, SNAPSHOT)))).isEmpty();
+		assertThat(ReportViews.snapshotHeads(ReportViews.snapshotOf(row(1, ReportStatus.READY, null)))).isEmpty();
 	}
 
 	@Test
@@ -175,24 +178,63 @@ class ReportViewsTests {
 		List<ReportRow> three = List.of(row(9, ReportStatus.READY, null), row(7, ReportStatus.EMPTY, null),
 				row(4, ReportStatus.READY, null));
 
-		ReportPage first = ReportViews.page(three, 2);
-		ReportPage last = ReportViews.page(three.subList(0, 2), 2);
+		ReportPage first = ReportViews.page(three, 2, ZoneOffset.UTC);
+		ReportPage last = ReportViews.page(three.subList(0, 2), 2, ZoneOffset.UTC);
 
 		assertThat(first.reports()).extracting(ReportSummary::id).containsExactly(new ReportId(9), new ReportId(7));
 		assertThat(first.next()).isEqualTo(new ReportId(7));
 		assertThat(last.reports()).hasSize(2);
 		assertThat(last.next()).isNull();
-		assertThat(ReportViews.page(List.of(), 2)).isEqualTo(new ReportPage(List.of(), null));
+		assertThat(ReportViews.page(List.of(), 2, ZoneOffset.UTC)).isEqualTo(new ReportPage(List.of(), null));
+	}
+
+	@Test
+	void writesThePeriodDaysInTheZoneTheRowRecordedOrInTheCurrentZoneBeforeStart() {
+		// 서울 자정에 시작해 서울 자정에 끝나는 주 — UTC 로는 전날 15 시
+		ReportRow started = new ReportRow(new ReportId(5), ReportPeriodKind.WEEK, Instant.parse("2026-11-15T15:00:00Z"),
+				Instant.parse("2026-11-22T15:00:00Z"), ReportStatus.EMPTY, null, Instant.parse("2026-11-22T15:00:00Z"),
+				Instant.parse("2026-11-22T15:01:00Z"), ZoneId.of("Asia/Seoul"), null, "openai", "gpt-5.5-mini", null, null,
+				"{}");
+		ReportRow scheduled = new ReportRow(new ReportId(6), ReportPeriodKind.WEEK,
+				Instant.parse("2026-11-22T15:00:00Z"), Instant.parse("2026-11-29T15:00:00Z"), ReportStatus.SCHEDULED,
+				null, Instant.parse("2026-11-29T15:00:00Z"), null, null, null, null, null, null, null, null);
+
+		ReportSummary startedSummary = ReportViews.summary(started, ZoneOffset.UTC);
+		ReportSummary scheduledInSeoul = ReportViews.summary(scheduled, ZoneId.of("Asia/Seoul"));
+		ReportSummary scheduledInUtc = ReportViews.summary(scheduled, ZoneOffset.UTC);
+
+		assertThat(startedSummary.firstDay()).isEqualTo(LocalDate.parse("2026-11-16"));
+		assertThat(startedSummary.lastDay()).isEqualTo(LocalDate.parse("2026-11-22"));
+		assertThat(scheduledInSeoul.firstDay()).isEqualTo(LocalDate.parse("2026-11-23"));
+		assertThat(scheduledInSeoul.lastDay()).isEqualTo(LocalDate.parse("2026-11-29"));
+		assertThat(scheduledInUtc.firstDay()).isEqualTo(LocalDate.parse("2026-11-22"));
+		assertThat(scheduledInUtc.lastDay()).isEqualTo(LocalDate.parse("2026-11-29"));
+	}
+
+	@Test
+	void carriesThePreviousReportAsASummaryWhenThereIsOne() {
+		ReportRow previous = row(3, ReportStatus.READY, null);
+
+		assertThat(ReportViews.view(row(4, ReportStatus.READY, null), List.of(OVERVIEW), null, EVENTS, STORYLINES,
+				previous, ZoneOffset.UTC).previous()).extracting(ReportSummary::id).isEqualTo(new ReportId(3));
+		assertThat(render(row(4, ReportStatus.READY, null), List.of(OVERVIEW), EVENTS, STORYLINES).previous()).isNull();
 	}
 
 	private static List<ReportSectionView> view(List<StoredSection> stored) {
-		return ReportViews.view(row(1, ReportStatus.READY, null), stored, EVENTS, STORYLINES).sections();
+		return render(row(1, ReportStatus.READY, null), stored, EVENTS, STORYLINES).sections();
 	}
 
+	/** 조회와 같은 순서 — 스냅숏을 한 번 읽어 넘긴다. 직전 리포트 없음, 대체 시간대 UTC */
+	private static ReportView render(ReportRow row, List<StoredSection> stored, Map<EventId, EventId> events,
+			Map<StorylineId, StorylineId> storylines) {
+		return ReportViews.view(row, stored, ReportViews.snapshotOf(row), events, storylines, null, ZoneOffset.UTC);
+	}
+
+	/** 시작한 행 — 시간대 UTC 를 적었다 */
 	private static ReportRow row(long id, ReportStatus status, @Nullable String snapshot) {
-		return new ReportRow(new ReportSummary(new ReportId(id), ReportPeriodKind.WEEK, Instant.parse("2026-11-16T00:00:00Z"),
-				Instant.parse("2026-11-23T00:00:00Z"), status, null, Instant.parse("2026-11-23T00:00:00Z"), null), null,
-				null, null, null, snapshot);
+		return new ReportRow(new ReportId(id), ReportPeriodKind.WEEK, Instant.parse("2026-11-16T00:00:00Z"),
+				Instant.parse("2026-11-23T00:00:00Z"), status, null, Instant.parse("2026-11-23T00:00:00Z"), null,
+				ZoneOffset.UTC, null, null, null, null, null, snapshot);
 	}
 
 }

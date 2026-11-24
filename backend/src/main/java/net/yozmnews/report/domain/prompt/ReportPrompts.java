@@ -40,6 +40,7 @@ import net.yozmnews.report.domain.input.TopicInterestLine;
 import net.yozmnews.report.domain.input.TopicSubscriptionLine;
 import net.yozmnews.report.domain.output.ReportOutputSchema;
 import net.yozmnews.report.domain.prompt.ReportPromptRules.Range;
+import net.yozmnews.report.domain.report.ReportPeriod;
 import net.yozmnews.storyline.StorylineState;
 import net.yozmnews.user.TopicSubscriptionAction;
 import org.jspecify.annotations.Nullable;
@@ -362,13 +363,14 @@ public final class ReportPrompts {
 		line.add(BigDecimal.valueOf(value).setScale(ReportPromptRules.INTEREST_SCALE, RoundingMode.HALF_UP).doubleValue());
 	}
 
-	private static String day(Instant instant, ZoneId zone) {
-		return DAY.format(instant.atZone(zone));
+	/** 기간 [시작, 끝) 의 첫날(report-R26 — {@link ReportPeriod#firstDay}) */
+	private static String day(Instant start, ZoneId zone) {
+		return DAY.format(ReportPeriod.firstDay(start, zone));
 	}
 
-	/** 기간 [시작, 끝) 의 마지막 날 — 끝 바로 앞 순간의 날짜 */
+	/** 기간 [시작, 끝) 의 마지막 날(report-R26 — {@link ReportPeriod#lastDay}) */
 	private static String lastDay(Instant end, ZoneId zone) {
-		return DAY.format(end.minusNanos(1).atZone(zone));
+		return DAY.format(ReportPeriod.lastDay(end, zone));
 	}
 
 	private static <T> String meanings(T[] values, Function<T, String> meaning) {

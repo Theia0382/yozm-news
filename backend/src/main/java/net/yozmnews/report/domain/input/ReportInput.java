@@ -7,15 +7,17 @@ import java.util.Objects;
 import java.util.Set;
 
 import net.yozmnews.platform.UserId;
+import net.yozmnews.report.ReportId;
 import net.yozmnews.report.ReportSectionKind;
 import net.yozmnews.report.domain.report.ReportPeriod;
+import org.jspecify.annotations.Nullable;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.DeserializationFeature;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * 생성의 입력 — 재료를 모은 사용자 · 리포트 기간 · 사용자 시간대 · 갈래 재료 · 직전 리포트 글 · 통계 스냅숏 · 정본 · docs/specs/report.md §5 ·
+ * 생성의 입력 — 재료를 모은 사용자 · 리포트 기간 · 사용자 시간대 · 갈래 재료 · 직전 리포트 글 · 통계 스냅숏 · 직전 리포트 · 정본 · docs/specs/report.md §5 ·
  * report-R3
  * <p>
  * 갈래는 재료가 있을 때만 든다(report-R14). 직전 리포트 글은 갈래가 아니다(report-R20). 스냅숏의 꼴은 {@code ReportSnapshot} 이 쓰고
@@ -27,9 +29,11 @@ import tools.jackson.databind.json.JsonMapper;
  * @param sections 갈래 — 입력 순서(report-R14)
  * @param priors 직전 리포트 글 — 직전 리포트 · 주간 리포트(report-R20)
  * @param statsSnapshot 통계 스냅숏(JSON 객체 하나)
+ * @param previous 직전 리포트(report-R18) — 없으면 {@code null}. 그 스냅숏을 읽지 못했어도 직전 리포트가 있으면 있다. 시작할 때 리포트 행에
+ * 남긴다
  */
 public record ReportInput(UserId user, ReportPeriod period, ZoneId zone, List<InputSection> sections,
-		List<PriorReport> priors, String statsSnapshot) {
+		List<PriorReport> priors, String statsSnapshot, @Nullable ReportId previous) {
 
 	private static final JsonMapper JSON = JsonMapper.builder()
 		.enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)

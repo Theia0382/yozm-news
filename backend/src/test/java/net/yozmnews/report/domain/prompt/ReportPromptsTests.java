@@ -180,7 +180,7 @@ class ReportPromptsTests {
 	void refusesAliasesOfAnotherInput() {
 		ReportInput input = input(ReportFixtures.ZONE, ReportFixtures.PERIOD, List.of());
 		ReportInput coverageOnly = new ReportInput(ReportFixtures.USER, ReportFixtures.PERIOD, ReportFixtures.ZONE,
-				List.of(coverage()), List.of(), ReportFixtures.SNAPSHOT);
+				List.of(coverage()), List.of(), ReportFixtures.SNAPSHOT, null);
 
 		assertThatThrownBy(() -> ReportPrompts.compose(input, ReportAliases.of(coverageOnly), STRUCTURED))
 			.isInstanceOf(IllegalArgumentException.class);
@@ -211,7 +211,7 @@ class ReportPromptsTests {
 				List.of(new TopicSubscriptionLine(Instant.parse("2026-11-18T00:30:00Z"), TopicSubscriptionAction.ADD,
 						List.of("반도체", "배터리"))));
 		List<InputSection> sections = List.of(new StorylinesSection(List.of(flow)), coverage(), interests);
-		return new ReportInput(ReportFixtures.USER, period, zone, sections, priors, ReportFixtures.SNAPSHOT);
+		return new ReportInput(ReportFixtures.USER, period, zone, sections, priors, ReportFixtures.SNAPSHOT, null);
 	}
 
 	private static CoverageSection coverage() {

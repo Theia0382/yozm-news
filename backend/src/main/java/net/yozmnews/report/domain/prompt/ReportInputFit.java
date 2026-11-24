@@ -158,7 +158,7 @@ public final class ReportInputFit {
 				});
 			}
 			return new ReportInput(this.original.user(), this.original.period(), this.zone, sections, priors,
-					this.original.statsSnapshot());
+					this.original.statsSnapshot(), this.original.previous());
 		}
 
 		/**

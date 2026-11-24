@@ -73,10 +73,10 @@ class ReportAliasesTests {
 			.withMessage("갈래 종류가 겹친다: COVERAGE");
 		for (String snapshot : List.of("[]", "1", "{} {}", "", "{")) {
 			assertThatIllegalArgumentException().as(snapshot)
-				.isThrownBy(() -> new ReportInput(USER, PERIOD, ZONE, List.of(coverage), List.of(), snapshot))
+				.isThrownBy(() -> new ReportInput(USER, PERIOD, ZONE, List.of(coverage), List.of(), snapshot, null))
 				.withMessage("스냅숏이 JSON 객체 하나가 아니다");
 		}
-		assertThat(new ReportInput(USER, PERIOD, ZONE, List.of(coverage), List.of(), "{}").statsSnapshot())
+		assertThat(new ReportInput(USER, PERIOD, ZONE, List.of(coverage), List.of(), "{}", null).statsSnapshot())
 			.isEqualTo("{}");
 	}
 

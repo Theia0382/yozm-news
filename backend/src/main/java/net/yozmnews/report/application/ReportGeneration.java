@@ -172,7 +172,8 @@ public class ReportGeneration {
 			// 끝났거나 다른 실행이 생성 중이다 — 다시 시작하지 않는다
 			return new Started(report.status(), report.userId(), 0);
 		}
-		this.reports.writeSnapshot(id.value(), input.statsSnapshot());
+		this.reports.writeStart(id.value(), input.statsSnapshot(),
+				(input.previous() == null) ? null : input.previous().value(), input.zone().getId());
 		Report running = this.reports.save(report.start(model, this.clock.instant()));
 		if (aliases.hasNoSections()) {
 			Report empty = this.reports.save(running.complete(new Completion.Empty(), this.clock.instant()));

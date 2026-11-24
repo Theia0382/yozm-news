@@ -4,6 +4,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -20,7 +21,6 @@ import net.yozmnews.report.ReportId;
 import net.yozmnews.report.ReportPeriodKind;
 import net.yozmnews.report.ReportSectionKind;
 import net.yozmnews.report.ReportStatus;
-import net.yozmnews.report.ReportSummary;
 import net.yozmnews.report.domain.view.ReportRow;
 import net.yozmnews.report.domain.view.ReportViewRepository;
 import net.yozmnews.report.domain.view.StoredSection;
@@ -36,8 +36,8 @@ import org.springframework.stereotype.Repository;
 class JdbcReportViewRepository implements ReportViewRepository {
 
 	private static final String ROW_COLUMNS = """
-			id, period_kind, period_start, period_end, status, error_code, created_at, completed_at, provider, model,
-			input_tokens, output_tokens, stats_snapshot::text as stats_snapshot""";
+			id, period_kind, period_start, period_end, status, error_code, created_at, completed_at, zone,
+			previous_report_id, provider, model, input_tokens, output_tokens, stats_snapshot::text as stats_snapshot""";
 
 	private final JdbcClient jdbc;
 
@@ -46,11 +46,15 @@ class JdbcReportViewRepository implements ReportViewRepository {
 	}
 
 	@Override
-	public List<ReportRow> page(UserId user, @Nullable ReportId before, int limit) {
+	public List<ReportRow> page(UserId user, ReportPeriodKind kind, @Nullable ReportId before, int limit) {
 		Objects.requireNonNull(user, "user");
-		String sql = "select " + ROW_COLUMNS + " from reports where user_id = :user"
+		Objects.requireNonNull(kind, "kind");
+		String sql = "select " + ROW_COLUMNS + " from reports where user_id = :user and period_kind = :kind"
 				+ ((before == null) ? "" : " and id < :before") + " order by id desc limit :limit";
-		JdbcClient.StatementSpec statement = this.jdbc.sql(sql).param("user", user.value()).param("limit", limit);
+		JdbcClient.StatementSpec statement = this.jdbc.sql(sql)
+			.param("user", user.value())
+			.param("kind", kind.name())
+			.param("limit", limit);
 		if (before != null) {
 			statement = statement.param("before", before.value());
 		}
@@ -121,12 +125,14 @@ class JdbcReportViewRepository implements ReportViewRepository {
 
 	private static ReportRow row(ResultSet rs, int rowNum) throws SQLException {
 		String failure = rs.getString("error_code");
-		ReportSummary summary = new ReportSummary(new ReportId(rs.getLong("id")),
-				ReportPeriodKind.valueOf(rs.getString("period_kind")), instant(rs, "period_start"),
-				instant(rs, "period_end"), ReportStatus.valueOf(rs.getString("status")),
+		String zone = rs.getString("zone");
+		long previousId = rs.getLong("previous_report_id");
+		ReportId previous = rs.wasNull() ? null : new ReportId(previousId);
+		return new ReportRow(new ReportId(rs.getLong("id")), ReportPeriodKind.valueOf(rs.getString("period_kind")),
+				instant(rs, "period_start"), instant(rs, "period_end"), ReportStatus.valueOf(rs.getString("status")),
 				(failure == null) ? null : ReportFailure.valueOf(failure), instant(rs, "created_at"),
-				optionalInstant(rs, "completed_at"));
-		return new ReportRow(summary, rs.getString("provider"), rs.getString("model"),
+				optionalInstant(rs, "completed_at"), (zone == null) ? null : ZoneId.of(zone),
+				previous, rs.getString("provider"), rs.getString("model"),
 				integer(rs, "input_tokens"), integer(rs, "output_tokens"), rs.getString("stats_snapshot"));
 	}
 

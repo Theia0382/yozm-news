@@ -103,7 +103,7 @@ public final class ReportFixtures {
 	}
 
 	public static ReportInput input(UserId user, ReportPeriod period, InputSection... sections) {
-		return new ReportInput(user, period, ZONE, List.of(sections), List.of(), SNAPSHOT);
+		return new ReportInput(user, period, ZONE, List.of(sections), List.of(), SNAPSHOT, null);
 	}
 
 }

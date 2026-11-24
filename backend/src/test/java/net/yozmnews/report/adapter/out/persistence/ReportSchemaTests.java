@@ -14,9 +14,10 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.TestPropertySource;
 
 /**
- * 리포트 테이블의 제약 — 섹션 종류는 개요와 갈래 셋, 인용은 스토리라인 · 사건 가운데 하나, 시작한 행은 스냅숏이 있다.
+ * 리포트 테이블의 제약 — 섹션 종류는 개요와 갈래 셋, 인용은 스토리라인 · 사건 가운데 하나, 시작한 행은 스냅숏 · 시간대가 있다, 직전 리포트는
+ * 다른 행이고 지워지면 칸이 빈다.
  * <p>
- * 지키는 규칙: report-R1 · report-R9 · report-R14
+ * 지키는 규칙: report-R1 · report-R9 · report-R14 · report-R18 · report-R26
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -72,12 +73,50 @@ class ReportSchemaTests {
 				update reports set status = 'RUNNING', provider = 'openai', model = 'gpt-5.5-mini', started_at = now()
 				where id = :id""").param("id", id).update()).isInstanceOf(DataIntegrityViolationException.class)
 			.hasMessageContaining("reports_snapshot");
-		this.jdbc.sql("update reports set stats_snapshot = cast('{}' as jsonb) where id = :id").param("id", id).update();
+		this.jdbc.sql("update reports set stats_snapshot = cast('{}' as jsonb), zone = 'Asia/Seoul' where id = :id")
+			.param("id", id)
+			.update();
 		this.jdbc.sql("""
 				update reports set status = 'RUNNING', provider = 'openai', model = 'gpt-5.5-mini', started_at = now()
 				where id = :id""").param("id", id).update();
 		assertThat(this.jdbc.sql("select status from reports where id = :id").param("id", id).query(String.class).single())
 			.isEqualTo("RUNNING");
+	}
+
+	@Test
+	void aStartedRowHasAZoneWhileAScheduledRowNeedsNone() {
+		long id = scheduled();
+		this.jdbc.sql("update reports set stats_snapshot = cast('{}' as jsonb) where id = :id").param("id", id).update();
+
+		assertThatThrownBy(() -> this.jdbc.sql("""
+				update reports set status = 'RUNNING', provider = 'openai', model = 'gpt-5.5-mini', started_at = now()
+				where id = :id""").param("id", id).update()).isInstanceOf(DataIntegrityViolationException.class)
+			.hasMessageContaining("reports_zone");
+		assertThat(this.jdbc.sql("select status from reports where id = :id").param("id", id).query(String.class).single())
+			.isEqualTo("SCHEDULED");
+	}
+
+	@Test
+	void aPreviousReportIsAnotherRowAndLeavingItEmptiesTheColumn() {
+		long previous = scheduled();
+		long current = scheduled();
+
+		assertThatThrownBy(() -> this.jdbc.sql("update reports set previous_report_id = id where id = :id")
+			.param("id", current)
+			.update()).isInstanceOf(DataIntegrityViolationException.class).hasMessageContaining("reports_previous_not_self");
+		assertThatThrownBy(() -> this.jdbc.sql("update reports set previous_report_id = :missing where id = :id")
+			.param("missing", previous + 1_000)
+			.param("id", current)
+			.update()).isInstanceOf(DataIntegrityViolationException.class);
+		this.jdbc.sql("update reports set previous_report_id = :previous where id = :id")
+			.param("previous", previous)
+			.param("id", current)
+			.update();
+		this.jdbc.sql("delete from reports where id = :id").param("id", previous).update();
+		assertThat(this.jdbc.sql("select previous_report_id is null from reports where id = :id")
+			.param("id", current)
+			.query(Boolean.class)
+			.single()).isTrue();
 	}
 
 	private long scheduled() {
