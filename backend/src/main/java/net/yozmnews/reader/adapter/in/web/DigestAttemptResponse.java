@@ -5,7 +5,7 @@ import java.time.Instant;
 import net.yozmnews.digest.DigestAttempt;
 import net.yozmnews.digest.DigestFailure;
 import net.yozmnews.digest.DigestStatus;
-import net.yozmnews.user.DigestFailureCause;
+import net.yozmnews.user.GenerationFailureCause;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -18,7 +18,7 @@ import org.jspecify.annotations.Nullable;
  * @param completedAt 끝낸 시각 — 끝나기 전이면 null
  */
 record DigestAttemptResponse(long digestId, DigestStatus status, @Nullable DigestFailure failure,
-		@Nullable DigestFailureCause cause, @Nullable Instant completedAt) {
+		@Nullable GenerationFailureCause cause, @Nullable Instant completedAt) {
 
 	static DigestAttemptResponse of(DigestAttempt attempt) {
 		return new DigestAttemptResponse(attempt.digestId(), attempt.status(), attempt.failure(), attempt.cause(),

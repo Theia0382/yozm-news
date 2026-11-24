@@ -47,8 +47,8 @@ import net.yozmnews.platform.UserId;
 import net.yozmnews.storyline.StorylineDirectory;
 import net.yozmnews.storyline.StorylineId;
 import net.yozmnews.tag.TagSetDirectory;
-import net.yozmnews.user.DigestFailureCause;
 import net.yozmnews.user.DigestModelDirectory;
+import net.yozmnews.user.GenerationFailureCause;
 import net.yozmnews.user.UserDigestSchedules;
 import net.yozmnews.user.UserStorylineFixtures;
 import net.yozmnews.user.UserTables;
@@ -350,7 +350,7 @@ class DigestDirectoryServiceTests {
 						new DigestSectionView(SectionKind.HEADLINE, "남은 인용 헤드라인", null, SelectionReason.INTEREST,
 								List.of(new DigestCitation(new ArticleId(5))), List.of(new EventId(50), new EventId(51)), null))));
 		assertThat(day.latest()).isEqualTo(new DigestAttempt(failed, DigestStatus.FAILED, DigestFailure.NO_CITATION,
-				DigestFailureCause.OUTPUT, Instant.parse("2026-11-18T15:05:00Z")));
+				GenerationFailureCause.OUTPUT, Instant.parse("2026-11-18T15:05:00Z")));
 		assertThat(day.usage()).isEqualTo(new DigestDayUsage(3, 150, 20));
 	}
 

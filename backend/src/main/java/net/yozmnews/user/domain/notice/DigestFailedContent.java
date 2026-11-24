@@ -4,7 +4,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Objects;
 
-import net.yozmnews.user.DigestFailureCause;
+import net.yozmnews.user.GenerationFailureCause;
 
 /**
  * 다이제스트 실패 알림의 내용 — 실패한 다이제스트 · 그 날짜 · 실패의 갈래 · 실패 시각. 모으지 않는다(실패한 다이제스트마다 알림 하나).
@@ -15,7 +15,7 @@ import net.yozmnews.user.DigestFailureCause;
  * @param cause 실패의 갈래
  * @param failedAt 실패로 끝낸 시각
  */
-public record DigestFailedContent(long digestId, LocalDate digestDate, DigestFailureCause cause, Instant failedAt)
+public record DigestFailedContent(long digestId, LocalDate digestDate, GenerationFailureCause cause, Instant failedAt)
 		implements NoticeContent {
 
 	public DigestFailedContent {

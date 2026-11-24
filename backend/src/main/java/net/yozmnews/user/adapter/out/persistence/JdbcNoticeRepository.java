@@ -15,7 +15,7 @@ import net.yozmnews.platform.UserId;
 import net.yozmnews.source.FeedId;
 import net.yozmnews.source.FeedStatus;
 import net.yozmnews.tag.TagKind;
-import net.yozmnews.user.DigestFailureCause;
+import net.yozmnews.user.GenerationFailureCause;
 import net.yozmnews.user.domain.notice.DigestFailedContent;
 import net.yozmnews.user.domain.notice.FeedStatusContent;
 import net.yozmnews.user.domain.notice.FeedStatusEntry;
@@ -302,7 +302,7 @@ class JdbcNoticeRepository implements NoticeRepository {
 	 * 다이제스트 실패 알림 내용의 저장 모양 — {@code {"digestId":…,"digestDate":…,"cause":…,"failedAt":…}}. 날짜 · 시각은 ISO 8601
 	 * 문자열이다. {@code digestId} 는 같은 다이제스트의 알림을 하나로 묶는 고유 인덱스의 키다 — 이름을 바꾸면 마이그레이션의 인덱스도 바꾼다
 	 */
-	private record StoredDigestFailed(long digestId, String digestDate, DigestFailureCause cause, String failedAt) {
+	private record StoredDigestFailed(long digestId, String digestDate, GenerationFailureCause cause, String failedAt) {
 
 		static StoredDigestFailed of(DigestFailedContent content) {
 			return new StoredDigestFailed(content.digestId(), content.digestDate().toString(), content.cause(),

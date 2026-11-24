@@ -17,7 +17,7 @@ import net.yozmnews.digest.domain.digest.DigestTrigger;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.tag.TagSetDirectory;
 import net.yozmnews.user.DigestFailed;
-import net.yozmnews.user.DigestFailureCause;
+import net.yozmnews.user.GenerationFailureCause;
 import net.yozmnews.user.UserTables;
 import org.jobrunr.scheduling.JobScheduler;
 import org.junit.jupiter.api.AfterEach;
@@ -106,7 +106,7 @@ class DigestRunTests {
 		assertThat(this.events.stream(DigestFailed.class)).extracting(DigestFailed::user, DigestFailed::digestId,
 				DigestFailed::digestDate, DigestFailed::cause)
 			.containsExactly(org.assertj.core.groups.Tuple.tuple(user, id.value(), LocalDate.parse("2026-11-19"),
-					DigestFailureCause.KEY));
+					GenerationFailureCause.KEY));
 	}
 
 	@Test

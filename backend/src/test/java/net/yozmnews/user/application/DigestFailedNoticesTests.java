@@ -17,7 +17,7 @@ import net.yozmnews.account.domain.account.AccountRepository;
 import net.yozmnews.account.domain.credential.PasswordCredentialRepository;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.user.DigestFailed;
-import net.yozmnews.user.DigestFailureCause;
+import net.yozmnews.user.GenerationFailureCause;
 import net.yozmnews.user.UserTables;
 import net.yozmnews.user.domain.notice.DigestFailedContent;
 import net.yozmnews.user.domain.notice.Notice;
@@ -89,9 +89,9 @@ class DigestFailedNoticesTests {
 		UserId alice = this.users.signIn("digest-notice-alice@example.com").id();
 		UserId bob = this.users.signIn("digest-notice-bob@example.com").id();
 
-		this.digestNotices.record(new DigestFailed(alice, 901, DATE, DigestFailureCause.KEY, FAILED_AT));
+		this.digestNotices.record(new DigestFailed(alice, 901, DATE, GenerationFailureCause.KEY, FAILED_AT));
 
-		assertThat(contents(alice)).containsExactly(new DigestFailedContent(901, DATE, DigestFailureCause.KEY, FAILED_AT));
+		assertThat(contents(alice)).containsExactly(new DigestFailedContent(901, DATE, GenerationFailureCause.KEY, FAILED_AT));
 		assertThat(this.notices.page(alice, null, 50)).extracting(Notice::kind, Notice::revision, Notice::read)
 			.containsExactly(Tuple.tuple(NoticeKind.DIGEST_FAILED, 1, false));
 		assertThat(contents(bob)).isEmpty();
@@ -100,7 +100,7 @@ class DigestFailedNoticesTests {
 	@Test
 	void theSameDigestReceivedTwiceLeavesOneNoticeAndAnotherDigestLeavesAnother() throws Exception {
 		UserId alice = this.users.signIn("digest-notice-twice@example.com").id();
-		DigestFailed failed = new DigestFailed(alice, 902, DATE, DigestFailureCause.TEMPORARY, FAILED_AT);
+		DigestFailed failed = new DigestFailed(alice, 902, DATE, GenerationFailureCause.TEMPORARY, FAILED_AT);
 
 		this.digestNotices.record(failed);
 		this.digestNotices.record(failed);
@@ -109,11 +109,11 @@ class DigestFailedNoticesTests {
 
 		// 같은 날짜의 다른 다이제스트(수동 생성)가 실패했다 — 다른 알림이다
 		this.digestNotices
-			.record(new DigestFailed(alice, 903, DATE, DigestFailureCause.OUTPUT, FAILED_AT.plusSeconds(600)));
+			.record(new DigestFailed(alice, 903, DATE, GenerationFailureCause.OUTPUT, FAILED_AT.plusSeconds(600)));
 
 		assertThat(contents(alice)).containsExactly(
-				new DigestFailedContent(903, DATE, DigestFailureCause.OUTPUT, FAILED_AT.plusSeconds(600)),
-				new DigestFailedContent(902, DATE, DigestFailureCause.TEMPORARY, FAILED_AT));
+				new DigestFailedContent(903, DATE, GenerationFailureCause.OUTPUT, FAILED_AT.plusSeconds(600)),
+				new DigestFailedContent(902, DATE, GenerationFailureCause.TEMPORARY, FAILED_AT));
 	}
 
 	@Test
@@ -121,7 +121,7 @@ class DigestFailedNoticesTests {
 		UserId alice = this.users.signIn("digest-notice-gone@example.com").id();
 		UserTables.delete(this.jdbc, alice.value());
 
-		this.digestNotices.record(new DigestFailed(alice, 904, DATE, DigestFailureCause.KEY, FAILED_AT));
+		this.digestNotices.record(new DigestFailed(alice, 904, DATE, GenerationFailureCause.KEY, FAILED_AT));
 
 		assertThat(this.jdbc.sql("select count(*) from user_notices where user_id = :id")
 			.param("id", alice.value())
@@ -134,7 +134,7 @@ class DigestFailedNoticesTests {
 		SignedInUsers.SignedInUser user = this.users.signIn("digest-notice-flow@example.com");
 
 		this.transaction.executeWithoutResult(status -> this.events
-			.publishEvent(new DigestFailed(user.id(), 905, DATE, DigestFailureCause.PROVIDER_ACCOUNT, FAILED_AT)));
+			.publishEvent(new DigestFailed(user.id(), 905, DATE, GenerationFailureCause.PROVIDER_ACCOUNT, FAILED_AT)));
 
 		await().atMost(Duration.ofSeconds(20)).untilAsserted(() -> assertThat(contents(user.id())).hasSize(1));
 		this.mockMvc.perform(get("/api/notices").with(user))
@@ -149,7 +149,7 @@ class DigestFailedNoticesTests {
 		// 대조 — 트랜잭션이 되돌아가면 이벤트도 알림도 없다
 		SignedInUsers.SignedInUser other = this.users.signIn("digest-notice-rollback@example.com");
 		this.transaction.executeWithoutResult(status -> {
-			this.events.publishEvent(new DigestFailed(other.id(), 906, DATE, DigestFailureCause.KEY, FAILED_AT));
+			this.events.publishEvent(new DigestFailed(other.id(), 906, DATE, GenerationFailureCause.KEY, FAILED_AT));
 			status.setRollbackOnly();
 		});
 		await().during(Duration.ofSeconds(2))

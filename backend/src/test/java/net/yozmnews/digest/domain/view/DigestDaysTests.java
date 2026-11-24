@@ -19,7 +19,7 @@ import net.yozmnews.digest.DigestStatus;
 import net.yozmnews.digest.SectionKind;
 import net.yozmnews.digest.SelectionReason;
 import net.yozmnews.event.EventId;
-import net.yozmnews.user.DigestFailureCause;
+import net.yozmnews.user.GenerationFailureCause;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -78,7 +78,7 @@ class DigestDaysTests {
 
 		assertThat(day.shown()).isNull();
 		assertThat(day.latest())
-			.isEqualTo(new DigestAttempt(12, DigestStatus.FAILED, DigestFailure.KEY_INVALID, DigestFailureCause.KEY, DONE));
+			.isEqualTo(new DigestAttempt(12, DigestStatus.FAILED, DigestFailure.KEY_INVALID, GenerationFailureCause.KEY, DONE));
 		assertThat(day.usage()).isEqualTo(new DigestDayUsage(1, 0, 0));
 	}
 
@@ -94,7 +94,7 @@ class DigestDaysTests {
 		DigestDay day = DigestDays.of(DATE, rows, SECTIONS, NEIGHBORS);
 
 		assertThat(day.usage()).isEqualTo(new DigestDayUsage(3, 150, 20));
-		assertThat(day.latest().cause()).isEqualTo(DigestFailureCause.TEMPORARY);
+		assertThat(day.latest().cause()).isEqualTo(GenerationFailureCause.TEMPORARY);
 	}
 
 	@Test

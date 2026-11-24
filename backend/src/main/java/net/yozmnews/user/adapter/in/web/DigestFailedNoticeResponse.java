@@ -3,7 +3,7 @@ package net.yozmnews.user.adapter.in.web;
 import java.time.Instant;
 import java.time.LocalDate;
 
-import net.yozmnews.user.DigestFailureCause;
+import net.yozmnews.user.GenerationFailureCause;
 import net.yozmnews.user.domain.notice.DigestFailedContent;
 
 /**
@@ -13,7 +13,7 @@ import net.yozmnews.user.domain.notice.DigestFailedContent;
  * @param cause 실패의 갈래 — 화면이 할 일 문구를 고른다
  * @param failedAt 실패로 끝낸 시각
  */
-record DigestFailedNoticeResponse(LocalDate digestDate, DigestFailureCause cause, Instant failedAt) {
+record DigestFailedNoticeResponse(LocalDate digestDate, GenerationFailureCause cause, Instant failedAt) {
 
 	static DigestFailedNoticeResponse of(DigestFailedContent content) {
 		return new DigestFailedNoticeResponse(content.digestDate(), content.cause(), content.failedAt());
