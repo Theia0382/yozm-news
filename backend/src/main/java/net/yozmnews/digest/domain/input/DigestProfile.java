@@ -12,18 +12,16 @@ import net.yozmnews.user.SummaryLength;
  *
  * @param topics 구독 행의 이름 — 활성 태그 체계의 이름, 체계 순서
  * @param excludedRegions 제외한 지역의 이름 — 체계 순서
- * @param interest 자유 텍스트 관심사 — 없으면 빈 문자열
  * @param timezone 사용자 시간대 — 후보의 발행 시각을 이 시간대로 적는다
  * @param summaryLength 요약 길이 — 지시의 길이 기준을 고른다
  * @param effort 생성의 추론 강도
  */
-public record DigestProfile(List<String> topics, List<String> excludedRegions, String interest, ZoneId timezone,
+public record DigestProfile(List<String> topics, List<String> excludedRegions, ZoneId timezone,
 		SummaryLength summaryLength, ReasoningEffort effort) {
 
 	public DigestProfile {
 		topics = List.copyOf(Objects.requireNonNull(topics, "topics"));
 		excludedRegions = List.copyOf(Objects.requireNonNull(excludedRegions, "excludedRegions"));
-		Objects.requireNonNull(interest, "interest");
 		Objects.requireNonNull(timezone, "timezone");
 		Objects.requireNonNull(summaryLength, "summaryLength");
 		Objects.requireNonNull(effort, "effort");

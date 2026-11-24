@@ -52,7 +52,7 @@ class DigestPromptsBudgetTests {
 		int mostTopStories = DigestVolume.MAX_BIG_SLOTS + ItemRules.TOP_STORIES;
 		for (SummaryLength length : SummaryLength.values()) {
 			for (boolean structured : new boolean[] { true, false }) {
-				DigestInput full = input(profile(length, "", "Asia/Seoul"), singles(mostTopStories, ItemKind.TOP_STORY).items());
+				DigestInput full = input(profile(length, "Asia/Seoul"), singles(mostTopStories, ItemKind.TOP_STORY).items());
 				DigestPrompt first = DigestPrompts.compose(full, CandidateSet.of(full),
 						new LlmModel(Provider.OPENAI, "gpt-test", 32_000, structured));
 				DigestPrompt retry = DigestPrompts.retry(first, "가".repeat(PromptRules.MAX_DIAGNOSIS + 50));
@@ -82,7 +82,7 @@ class DigestPromptsBudgetTests {
 		CandidateArticle regional = new CandidateArticle(
 				new DigestCandidate(new ArticleId(4), SelectionReason.SUBSCRIBED), "제목", "요약문", List.of("연합뉴스"),
 				PUBLISHED, List.of("정치", "국회·정당"), sixRegions);
-		DigestInput input = input(profile(SummaryLength.NORMAL, "", "Asia/Seoul"),
+		DigestInput input = input(profile(SummaryLength.NORMAL, "Asia/Seoul"),
 				List.of(new InputItem(ItemKind.TOP_STORY, List.of(event(10, crowded, escapy, plain, regional)), null)));
 
 		JsonNode lines = JSON.readTree(compose(input).userContent()).get("items").get(0).get(2).get(0);
@@ -108,38 +108,39 @@ class DigestPromptsBudgetTests {
 	}
 
 	@Test
-	void theProfileWithTheLongestTimezoneAndAnEscapingInterestFitsItsEstimate() throws Exception {
+	void theProfileWithTheLongestTimezoneAndAnEscapingNameFitsItsEstimate() throws Exception {
 		String longestZone = ZoneId.getAvailableZoneIds()
 			.stream()
 			.max(Comparator.comparingInt(String::length))
 			.orElseThrow();
-		String interest = ESCAPY + "가".repeat(200);
-		List<String> topics = List.of("이름이 아주 아주 아주 긴 주제 하나 둘 셋 넷", "정치");
+		List<String> topics = List.of("이름이 아주 아주 아주 긴 주제 하나 둘 셋 넷", "정치", ESCAPY);
 		List<String> regions = List.of("미국");
-		DigestProfile profile = new DigestProfile(topics, regions, interest, ZoneId.of(longestZone), SummaryLength.NORMAL,
+		DigestProfile profile = new DigestProfile(topics, regions, ZoneId.of(longestZone), SummaryLength.NORMAL,
 				ReasoningEffort.MEDIUM);
 
 		JsonNode root = JSON.readTree(compose(input(profile, List.of())).userContent());
 
-		int allowed = CandidateCost.tokens(codePoints(interest)
-				+ (topics.size() + regions.size()) * CandidateCost.PROFILE_TAG_COST + CandidateCost.PROFILE_OVERHEAD);
+		int allowed = CandidateCost.tokens(
+				(topics.size() + regions.size()) * CandidateCost.PROFILE_TAG_COST + CandidateCost.PROFILE_OVERHEAD);
 		assertThat(CandidateCost.tokens(codePoints(JSON.writeValueAsString(root)))).isLessThanOrEqualTo(allowed);
 		assertThat(root.get("profile").get("timezone").asString()).isEqualTo(longestZone);
 		// 긴 이름은 이름 몫까지 잘리고 짧은 이름은 그대로
 		assertThat(root.get("profile").get("topics").get(0).asString()).startsWith("이름이 아주")
 			.hasSizeLessThan(topics.get(0).length());
 		assertThat(root.get("profile").get("topics").get(1).asString()).isEqualTo("정치");
+		// 이스케이프로 늘어나는 이름도 이름 몫까지 잘린다
+		assertThat(root.get("profile").get("topics").get(2).asString()).startsWith("\"\\").hasSizeLessThan(ESCAPY.length());
 	}
 
 	@Test
-	void theProfileWithoutInterestOrNamesKeepsItsFrame() throws Exception {
-		DigestProfile empty = new DigestProfile(List.of(), List.of(), "", ZoneId.of("UTC"), SummaryLength.SHORT,
+	void theProfileWithoutNamesKeepsItsFrame() throws Exception {
+		DigestProfile empty = new DigestProfile(List.of(), List.of(), ZoneId.of("UTC"), SummaryLength.SHORT,
 				ReasoningEffort.LOW);
 
 		String content = compose(input(empty, List.of())).userContent();
 
 		assertThat(JSON.readTree(content)).isEqualTo(JSON.readTree("""
-				{"profile":{"topics":[],"excludedRegions":[],"interest":"","timezone":"UTC"},"items":[]}"""));
+				{"profile":{"topics":[],"excludedRegions":[],"timezone":"UTC"},"items":[]}"""));
 		assertThat(CandidateCost.tokens(codePoints(content))).isLessThanOrEqualTo(CandidateCost.PROFILE_OVERHEAD);
 	}
 
@@ -162,7 +163,7 @@ class DigestPromptsBudgetTests {
 			}
 			items.add(new InputItem(ItemKind.TOP_STORY, ofItem, null));
 		}
-		DigestInput input = input(profile(SummaryLength.NORMAL, "", "Asia/Seoul"), items);
+		DigestInput input = input(profile(SummaryLength.NORMAL, "Asia/Seoul"), items);
 
 		JsonNode root = JSON.readTree(compose(input).userContent());
 		JsonNode last = root.get("items").get(149);
@@ -198,7 +199,7 @@ class DigestPromptsBudgetTests {
 					"제목", "", List.of(), PUBLISHED, List.of(), List.of());
 			items.add(new InputItem(kind, List.of(event(i, line)), null));
 		}
-		return input(profile(SummaryLength.NORMAL, "", "Asia/Seoul"), items);
+		return input(profile(SummaryLength.NORMAL, "Asia/Seoul"), items);
 	}
 
 	private static DigestPrompt compose(DigestInput input) {
@@ -213,8 +214,8 @@ class DigestPromptsBudgetTests {
 		return new InputEvent(new EventId(id), SelectionReason.SUBSCRIBED, List.of(articles));
 	}
 
-	private static DigestProfile profile(SummaryLength length, String interest, String zone) {
-		return new DigestProfile(List.of("정치"), List.of(), interest, ZoneId.of(zone), length, ReasoningEffort.MEDIUM);
+	private static DigestProfile profile(SummaryLength length, String zone) {
+		return new DigestProfile(List.of("정치"), List.of(), ZoneId.of(zone), length, ReasoningEffort.MEDIUM);
 	}
 
 	/** 배열 줄 하나와 그 뒤 쉼표의 토큰 어림 */

@@ -22,7 +22,7 @@ import org.junit.jupiter.api.Test;
  */
 class DigestInputTests {
 
-	private static final DigestProfile PROFILE = new DigestProfile(List.of("정치"), List.of(), "", ZoneId.of("Asia/Seoul"),
+	private static final DigestProfile PROFILE = new DigestProfile(List.of("정치"), List.of(), ZoneId.of("Asia/Seoul"),
 			SummaryLength.NORMAL, ReasoningEffort.MEDIUM);
 
 	@Test

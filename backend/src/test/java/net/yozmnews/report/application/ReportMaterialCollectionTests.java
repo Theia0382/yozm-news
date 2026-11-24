@@ -344,7 +344,7 @@ class ReportMaterialCollectionTests {
 	}
 
 	private DigestInterests interests(List<TopicSubscription> topics) {
-		return new DigestInterests(this.active, topics, Set.of(), Set.of(), Set.of(), "", SEOUL, 20, 3,
+		return new DigestInterests(this.active, topics, Set.of(), Set.of(), Set.of(), SEOUL, 20, 3,
 				SummaryLength.NORMAL, ReasoningEffort.MEDIUM);
 	}
 

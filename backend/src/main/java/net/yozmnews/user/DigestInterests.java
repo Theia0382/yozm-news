@@ -17,7 +17,6 @@ import net.yozmnews.tag.TagSetId;
  * @param excludedRegions 제외한 지역 키
  * @param excludedFormats 제외한 형식 키
  * @param excludedSources 제외한 소스
- * @param interestText 자유 텍스트 관심사 — 앞뒤 공백 없음, 없으면 빈 문자열
  * @param timezone 사용자 시간대
  * @param maxCandidates 최대 후보 수 — 분량 설정의 단계 값 또는 직접 입력한 수
  * @param bigSlots 큰 슬롯 수 — 0 이면 큰 슬롯을 넣지 않는다
@@ -25,7 +24,7 @@ import net.yozmnews.tag.TagSetId;
  * @param effort 다이제스트 생성의 추론 강도
  */
 public record DigestInterests(TagSetId tagSet, List<TopicSubscription> topics, Set<String> excludedRegions,
-		Set<String> excludedFormats, Set<SourceId> excludedSources, String interestText, ZoneId timezone,
+		Set<String> excludedFormats, Set<SourceId> excludedSources, ZoneId timezone,
 		int maxCandidates, int bigSlots, SummaryLength summaryLength, ReasoningEffort effort) {
 
 	public DigestInterests {
@@ -34,7 +33,6 @@ public record DigestInterests(TagSetId tagSet, List<TopicSubscription> topics, S
 		excludedRegions = Set.copyOf(Objects.requireNonNull(excludedRegions, "excludedRegions"));
 		excludedFormats = Set.copyOf(Objects.requireNonNull(excludedFormats, "excludedFormats"));
 		excludedSources = Set.copyOf(Objects.requireNonNull(excludedSources, "excludedSources"));
-		Objects.requireNonNull(interestText, "interestText");
 		Objects.requireNonNull(timezone, "timezone");
 		Objects.requireNonNull(summaryLength, "summaryLength");
 		Objects.requireNonNull(effort, "effort");

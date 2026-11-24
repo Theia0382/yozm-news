@@ -36,7 +36,7 @@ public final class CandidateCost {
 
 	/**
 	 * 사용자 구획의 고정 틀(코드 포인트) — 문서 · 구획 키 · 괄호 · 시간대 ID. 가장 긴 IANA 시간대 ID 를 덮는다 — 구독 주제 · 지역 선호 ·
-	 * 관심사 · 항목 밖의 글이다
+	 * 항목 밖의 글이다
 	 */
 	public static final int PROFILE_OVERHEAD = 200;
 
@@ -72,14 +72,13 @@ public final class CandidateCost {
 	}
 
 	/**
-	 * 후보가 쓸 수 있는 토큰 — 모델의 입력 토큰 예산에서 지시 구획과 사용자 프로필 구획(구독 주제 · 지역 선호 · 자유 텍스트 관심사 · 고정 틀)의
+	 * 후보가 쓸 수 있는 토큰 — 모델의 입력 토큰 예산에서 지시 구획과 사용자 프로필 구획(구독 주제 · 지역 선호 · 고정 틀)의
 	 * 몫을 뺀 것. 0 보다 작으면 0
 	 * @param topicRows 구독 행 수
 	 * @param excludedRegions 제외한 지역 수
 	 */
-	public static int candidateBudget(int modelBudget, int interestTextCodePoints, int topicRows, int excludedRegions) {
-		int profile = tokens(
-				interestTextCodePoints + (topicRows + excludedRegions) * PROFILE_TAG_COST + PROFILE_OVERHEAD);
+	public static int candidateBudget(int modelBudget, int topicRows, int excludedRegions) {
+		int profile = tokens((topicRows + excludedRegions) * PROFILE_TAG_COST + PROFILE_OVERHEAD);
 		return Math.max(0, modelBudget - INSTRUCTION_RESERVE - profile);
 	}
 
