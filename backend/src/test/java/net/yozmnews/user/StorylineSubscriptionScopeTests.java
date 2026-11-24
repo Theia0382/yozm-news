@@ -56,7 +56,7 @@ public class StorylineSubscriptionScopeTests {
 	@BeforeEach
 	@AfterEach
 	void reset() {
-		this.jdbc.sql("delete from users").update();
+		UserTables.deleteAll(this.jdbc);
 		this.jdbc.sql("delete from login_failures").update();
 		this.jdbc.sql("delete from llm_credentials").update();
 		StorylineRows.clear(this.jdbc);

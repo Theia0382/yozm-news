@@ -19,6 +19,7 @@ import net.yozmnews.source.SourceAdministration;
 import net.yozmnews.source.SourceId;
 import net.yozmnews.source.SourceRegistrationResult;
 import net.yozmnews.user.AccountDirectory;
+import net.yozmnews.user.UserTables;
 import net.yozmnews.user.domain.account.Account;
 import net.yozmnews.user.domain.account.AccountRepository;
 import net.yozmnews.user.domain.account.AccountRole;
@@ -109,7 +110,7 @@ class FeedStatusNoticesTests {
 
 	@BeforeEach
 	void setUp() {
-		this.jdbc.sql("delete from users").update();
+		UserTables.deleteAll(this.jdbc);
 		this.recording = new FeedStatusNotices(this.labels, this.accountDirectory, this.notices, () -> NOW);
 		this.source = SOURCES.incrementAndGet();
 		SourceRegistrationResult registered = this.sources.registerOperatorProfile(PROFILE.formatted(this.source));
@@ -121,7 +122,7 @@ class FeedStatusNoticesTests {
 
 	@AfterEach
 	void tearDown() {
-		this.jdbc.sql("delete from users").update();
+		UserTables.deleteAll(this.jdbc);
 	}
 
 	@Test

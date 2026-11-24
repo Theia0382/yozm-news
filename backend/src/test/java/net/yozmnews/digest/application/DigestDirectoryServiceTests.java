@@ -10,6 +10,7 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
+import java.util.Set;
 import net.yozmnews.TestClocks;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleDirectory;
@@ -22,13 +23,12 @@ import net.yozmnews.digest.DigestDay;
 import net.yozmnews.digest.DigestDayState;
 import net.yozmnews.digest.DigestDayUsage;
 import net.yozmnews.digest.DigestFailure;
-import net.yozmnews.digest.DigestRequestOutcome;
-import net.yozmnews.digest.DigestRequestStatus;
-import net.yozmnews.digest.DigestRounds;
 import net.yozmnews.digest.DigestItemCursor;
 import net.yozmnews.digest.DigestItemPage;
 import net.yozmnews.digest.DigestItemRef;
-import java.util.Set;
+import net.yozmnews.digest.DigestRequestOutcome;
+import net.yozmnews.digest.DigestRequestStatus;
+import net.yozmnews.digest.DigestRounds;
 import net.yozmnews.digest.DigestSectionView;
 import net.yozmnews.digest.DigestStatus;
 import net.yozmnews.digest.DigestUnresolvedFailure;
@@ -51,6 +51,7 @@ import net.yozmnews.user.DigestFailureCause;
 import net.yozmnews.user.DigestModelDirectory;
 import net.yozmnews.user.UserDigestSchedules;
 import net.yozmnews.user.UserStorylineFixtures;
+import net.yozmnews.user.UserTables;
 import net.yozmnews.user.UserTimezones;
 import org.jobrunr.scheduling.JobScheduler;
 import org.jspecify.annotations.Nullable;
@@ -143,7 +144,7 @@ class DigestDirectoryServiceTests {
 		this.jdbc.sql("delete from storylines").update();
 		this.jdbc.sql("delete from llm_credentials where user_id in (select id from users where email like 'digest-view-%')")
 			.update();
-		this.jdbc.sql("delete from users where email like 'digest-view-%'").update();
+		UserTables.deleteByEmail(this.jdbc, "digest-view-%");
 	}
 
 	private DigestDirectoryService directory() {

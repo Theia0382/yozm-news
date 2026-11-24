@@ -10,6 +10,7 @@ import net.yozmnews.user.AccountEvents;
 import net.yozmnews.user.InitialPasswordResetResult;
 import net.yozmnews.user.PasswordChangeMethod;
 import net.yozmnews.user.PasswordChanged;
+import net.yozmnews.user.UserTables;
 import net.yozmnews.user.domain.account.DisplayName;
 import net.yozmnews.user.domain.account.EmailAddress;
 import net.yozmnews.user.domain.account.Onboarding;
@@ -69,7 +70,7 @@ class PasswordChangedEventTests {
 	void reset() {
 		AccountEvents.awaitCreatedHandled(this.jdbc);
 		AccountEvents.awaitPasswordChangeHandled(this.jdbc);
-		this.jdbc.sql("delete from users").update();
+		UserTables.deleteAll(this.jdbc);
 	}
 
 	@Test

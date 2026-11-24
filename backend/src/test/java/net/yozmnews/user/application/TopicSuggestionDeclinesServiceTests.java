@@ -17,6 +17,7 @@ import net.yozmnews.tag.TagSetId;
 import net.yozmnews.user.AccountDirectory;
 import net.yozmnews.user.TopicSuggestionDecline;
 import net.yozmnews.user.TopicSuggestionDeclineList;
+import net.yozmnews.user.UserTables;
 import net.yozmnews.user.domain.suggestion.RecordedDecline;
 import net.yozmnews.user.domain.suggestion.TopicSuggestionDeclineRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -78,7 +79,7 @@ class TopicSuggestionDeclinesServiceTests {
 
 	@AfterEach
 	void clean() {
-		this.jdbc.sql("delete from users").update();
+		UserTables.deleteAll(this.jdbc);
 	}
 
 	@Test

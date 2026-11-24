@@ -7,6 +7,7 @@ import java.time.Instant;
 
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.platform.UserId;
+import net.yozmnews.user.UserTables;
 import net.yozmnews.user.domain.account.Account;
 import net.yozmnews.user.domain.account.AccountRepository;
 import net.yozmnews.user.domain.account.AccountRole;
@@ -102,7 +103,7 @@ class AccountRepositoryTests {
 		assertThat(read.passwordChangedAt()).isEqualTo(NOW);
 		assertThat(read.toString()).doesNotContain("$argon2id$hash");
 
-		this.jdbc.sql("delete from users where id = :id").param("id", id.value()).update();
+		UserTables.delete(this.jdbc, id.value());
 		assertThat(this.credentials.findById(id.value())).isEmpty();
 	}
 

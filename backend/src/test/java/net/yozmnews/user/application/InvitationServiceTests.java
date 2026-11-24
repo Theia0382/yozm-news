@@ -16,6 +16,7 @@ import net.yozmnews.user.InvitationState;
 import net.yozmnews.user.InvitationView;
 import net.yozmnews.user.IssuedInvitation;
 import net.yozmnews.user.UnknownInvitationException;
+import net.yozmnews.user.UserTables;
 import net.yozmnews.user.domain.account.Account;
 import net.yozmnews.user.domain.account.AccountRepository;
 import net.yozmnews.user.domain.account.AccountRole;
@@ -59,7 +60,7 @@ class InvitationServiceTests {
 	void reset() {
 		this.jdbc.sql("delete from user_invitations").update();
 		AccountEvents.awaitCreatedHandled(this.jdbc);
-		this.jdbc.sql("delete from users").update();
+		UserTables.deleteAll(this.jdbc);
 	}
 
 	@Test
@@ -121,7 +122,7 @@ class InvitationServiceTests {
 		assertThat(view.usedByEmail()).isEqualTo("kim@example.com");
 
 		AccountEvents.awaitCreatedHandled(this.jdbc);
-		this.jdbc.sql("delete from users where id = :id").param("id", user.value()).update();
+		UserTables.delete(this.jdbc, user.value());
 		InvitationView afterDeletion = service(T0.plusSeconds(120)).recent().getFirst();
 		assertThat(afterDeletion.state()).as("계정이 지워져도 쓴 시각이 남아 쓴 초대다").isEqualTo(InvitationState.USED);
 		assertThat(afterDeletion.usedAt()).isEqualTo(used);

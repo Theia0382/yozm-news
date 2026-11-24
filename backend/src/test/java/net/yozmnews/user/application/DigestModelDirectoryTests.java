@@ -9,6 +9,7 @@ import net.yozmnews.llm.LlmModel;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.user.AccountEvents;
 import net.yozmnews.user.DigestModelDirectory;
+import net.yozmnews.user.UserTables;
 import net.yozmnews.user.domain.account.DisplayName;
 import net.yozmnews.user.domain.account.EmailAddress;
 import net.yozmnews.user.domain.account.Onboarding;
@@ -53,7 +54,7 @@ class DigestModelDirectoryTests {
 		this.jdbc.sql("delete from llm_credentials where user_id in (select id from users where email like 'digest-model-%')")
 			.update();
 		AccountEvents.awaitCreatedHandled(this.jdbc);
-		this.jdbc.sql("delete from users where email like 'digest-model-%'").update();
+		UserTables.deleteByEmail(this.jdbc, "digest-model-%");
 	}
 
 	@Test

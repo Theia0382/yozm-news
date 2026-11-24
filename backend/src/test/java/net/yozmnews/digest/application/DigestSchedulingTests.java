@@ -24,6 +24,7 @@ import net.yozmnews.platform.UserId;
 import net.yozmnews.tag.TagSetDirectory;
 import net.yozmnews.user.DigestModelDirectory;
 import net.yozmnews.user.DigestScheduleDirectory;
+import net.yozmnews.user.UserTables;
 import org.jobrunr.scheduling.JobScheduler;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -91,7 +92,7 @@ class DigestSchedulingTests {
 		this.jdbc.sql("delete from digests").update();
 		this.jdbc.sql("delete from llm_credentials where user_id in (select id from users where email like 'digest-schedule-round-%')")
 			.update();
-		this.jdbc.sql("delete from users where email like 'digest-schedule-round-%'").update();
+		UserTables.deleteByEmail(this.jdbc, "digest-schedule-round-%");
 	}
 
 	private DigestScheduling scheduling(Instant now) {

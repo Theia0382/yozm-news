@@ -26,10 +26,11 @@ import net.yozmnews.tag.TagSetDirectory;
 import net.yozmnews.tag.TagSetId;
 import net.yozmnews.user.DigestInterestsDirectory;
 import net.yozmnews.user.StorylineSubscriptionDirectory;
-import net.yozmnews.user.UserStorylineDirectory;
 import net.yozmnews.user.TopicSubscriptionHistory;
 import net.yozmnews.user.TopicSuggestionDeclineList;
 import net.yozmnews.user.TopicSuggestionDeclines;
+import net.yozmnews.user.UserStorylineDirectory;
+import net.yozmnews.user.UserTables;
 import net.yozmnews.user.UserTimezones;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -122,7 +123,7 @@ class TopicSuggestionServiceTests {
 	@AfterEach
 	void clean() {
 		this.rows.clear();
-		this.jdbc.sql("delete from users").update();
+		UserTables.deleteAll(this.jdbc);
 	}
 
 	@Test

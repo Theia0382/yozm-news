@@ -15,6 +15,7 @@ import jakarta.servlet.http.Cookie;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.user.AccountEvents;
+import net.yozmnews.user.UserTables;
 import net.yozmnews.user.application.PasswordHashing;
 import net.yozmnews.user.domain.account.Account;
 import net.yozmnews.user.domain.account.AccountRepository;
@@ -88,7 +89,7 @@ class AccountControllerTests {
 	@AfterEach
 	void reset() {
 		AccountEvents.awaitPasswordChangeHandled(this.jdbc);
-		this.jdbc.sql("delete from users").update();
+		UserTables.deleteAll(this.jdbc);
 		this.jdbc.sql("delete from login_failures").update();
 		this.jdbc.sql("delete from spring_session").update();
 	}

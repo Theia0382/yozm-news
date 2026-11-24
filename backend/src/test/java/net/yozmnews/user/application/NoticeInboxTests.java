@@ -11,6 +11,7 @@ import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.event.EventArticles;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.storyline.StorylineRows;
+import net.yozmnews.user.UserTables;
 import net.yozmnews.user.domain.notice.NoticeRepository;
 import net.yozmnews.user.domain.notice.RemovedSubscription;
 import net.yozmnews.user.domain.notice.StorylineSubscriptionsRemovedContent;
@@ -54,7 +55,7 @@ class NoticeInboxTests {
 	@BeforeEach
 	@AfterEach
 	void reset() {
-		this.jdbc.sql("delete from users").update();
+		UserTables.deleteAll(this.jdbc);
 		StorylineRows.clear(this.jdbc);
 		for (long article : this.articles) {
 			this.jdbc.sql("delete from article_feed_entries where article_id = :id").param("id", article).update();

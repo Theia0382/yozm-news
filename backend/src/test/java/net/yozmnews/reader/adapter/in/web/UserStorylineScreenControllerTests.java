@@ -13,9 +13,10 @@ import net.yozmnews.reader.DigestScreenRows;
 import net.yozmnews.reader.UserStorylineSummaryRows;
 import net.yozmnews.user.SignedInUsers;
 import net.yozmnews.user.UserStorylineFixtures;
+import net.yozmnews.user.UserTables;
+import net.yozmnews.user.application.PasswordHashing;
 import net.yozmnews.user.domain.account.AccountRepository;
 import net.yozmnews.user.domain.credential.PasswordCredentialRepository;
-import net.yozmnews.user.application.PasswordHashing;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -79,7 +80,7 @@ class UserStorylineScreenControllerTests {
 	void clear() {
 		this.digests.clear();
 		this.jdbc.sql("delete from storylines").update();
-		this.jdbc.sql("delete from users").update();
+		UserTables.deleteAll(this.jdbc);
 		this.jdbc.sql("delete from login_failures").update();
 		this.jdbc.sql("delete from llm_credentials").update();
 	}

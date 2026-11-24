@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.user.AccountDirectory;
+import net.yozmnews.user.UserTables;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -44,7 +45,7 @@ class AccountDirectoryServiceTests {
 
 	@BeforeEach
 	void accounts() {
-		this.jdbc.sql("delete from users").update();
+		UserTables.deleteAll(this.jdbc);
 		this.admin = account("admin@example.com", "ADMIN", "ACTIVE");
 		this.user = account("user@example.com", "USER", "ACTIVE");
 		this.suspendedAdmin = account("suspended@example.com", "ADMIN", "SUSPENDED");
@@ -54,7 +55,7 @@ class AccountDirectoryServiceTests {
 
 	@AfterEach
 	void clear() {
-		this.jdbc.sql("delete from users").update();
+		UserTables.deleteAll(this.jdbc);
 	}
 
 	@Test

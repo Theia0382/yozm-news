@@ -24,6 +24,7 @@ import net.yozmnews.storyline.StorylineRows;
 import net.yozmnews.tag.TagKind;
 import net.yozmnews.user.PasswordChangeMethod;
 import net.yozmnews.user.SignedInUsers;
+import net.yozmnews.user.UserTables;
 import net.yozmnews.user.application.PasswordHashing;
 import net.yozmnews.user.domain.account.AccountRepository;
 import net.yozmnews.user.domain.account.AccountRole;
@@ -97,14 +98,14 @@ class NoticeControllerTests {
 
 	@BeforeEach
 	void signIn() throws Exception {
-		this.jdbc.sql("delete from users").update();
+		UserTables.deleteAll(this.jdbc);
 		this.admin = new SignedInUsers(this.mockMvc, this.accounts, this.credentials, this.hashing)
 			.signIn("notices@example.com", AccountRole.ADMIN);
 	}
 
 	@AfterEach
 	void reset() {
-		this.jdbc.sql("delete from users").update();
+		UserTables.deleteAll(this.jdbc);
 	}
 
 	@Test

@@ -63,7 +63,7 @@ public class AccountScopeTests {
 	@AfterEach
 	void reset() {
 		AccountEvents.awaitPasswordChangeHandled(this.jdbc);
-		this.jdbc.sql("delete from users").update();
+		UserTables.deleteAll(this.jdbc);
 		this.jdbc.sql("delete from login_failures").update();
 	}
 

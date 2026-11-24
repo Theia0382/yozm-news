@@ -20,6 +20,7 @@ import net.yozmnews.reader.InterestRows;
 import net.yozmnews.reader.UserStorylineSummaryRows;
 import net.yozmnews.user.SignedInUsers;
 import net.yozmnews.user.UserStorylineFixtures;
+import net.yozmnews.user.UserTables;
 import net.yozmnews.user.application.PasswordHashing;
 import net.yozmnews.user.domain.account.AccountRepository;
 import net.yozmnews.user.domain.credential.PasswordCredentialRepository;
@@ -78,7 +79,7 @@ class InterestHistoryControllerTests {
 	void clear() {
 		this.rows.clear();
 		this.jdbc.sql("delete from storylines").update();
-		this.jdbc.sql("delete from users").update();
+		UserTables.deleteAll(this.jdbc);
 		this.jdbc.sql("delete from login_failures").update();
 		this.jdbc.sql("delete from llm_credentials").update();
 	}

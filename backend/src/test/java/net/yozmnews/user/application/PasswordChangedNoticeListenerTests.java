@@ -10,6 +10,7 @@ import net.yozmnews.platform.UserId;
 import net.yozmnews.user.AccountEvents;
 import net.yozmnews.user.PasswordChangeMethod;
 import net.yozmnews.user.PasswordChanged;
+import net.yozmnews.user.UserTables;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -47,7 +48,7 @@ class PasswordChangedNoticeListenerTests {
 	@AfterEach
 	void reset() {
 		AccountEvents.awaitPasswordChangeHandled(this.jdbc);
-		this.jdbc.sql("delete from users").update();
+		UserTables.deleteAll(this.jdbc);
 	}
 
 	@Test

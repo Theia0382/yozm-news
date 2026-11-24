@@ -6,6 +6,7 @@ import java.util.Map;
 
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.user.AccountEvents;
+import net.yozmnews.user.UserTables;
 import net.yozmnews.user.domain.bootstrap.FirstAdminDecision;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,7 +40,7 @@ class FirstAdminSettingTests {
 	@AfterEach
 	void reset() {
 		AccountEvents.awaitCreatedHandled(this.jdbc);
-		this.jdbc.sql("delete from users").update();
+		UserTables.deleteAll(this.jdbc);
 	}
 
 	@Test

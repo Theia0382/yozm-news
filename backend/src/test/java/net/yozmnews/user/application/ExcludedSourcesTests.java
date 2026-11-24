@@ -13,6 +13,7 @@ import net.yozmnews.source.SourceDeleted;
 import net.yozmnews.source.SourceId;
 import net.yozmnews.source.SourceName;
 import net.yozmnews.user.AccountEvents;
+import net.yozmnews.user.UserTables;
 import net.yozmnews.user.application.ExcludedSources.ExcludedSourcesView;
 import net.yozmnews.user.domain.account.DisplayName;
 import net.yozmnews.user.domain.account.EmailAddress;
@@ -63,7 +64,7 @@ class ExcludedSourcesTests {
 	@AfterEach
 	void reset() {
 		AccountEvents.awaitCreatedHandled(this.jdbc);
-		this.jdbc.sql("delete from users").update();
+		UserTables.deleteAll(this.jdbc);
 		for (Long source : this.sources) {
 			this.jdbc.sql("delete from source_attributions where source_id = :source").param("source", source).update();
 			this.jdbc.sql("delete from sources where id = :source").param("source", source).update();

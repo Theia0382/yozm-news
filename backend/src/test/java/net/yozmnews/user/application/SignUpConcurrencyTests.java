@@ -18,6 +18,7 @@ import net.yozmnews.user.AccountEvents;
 import net.yozmnews.user.InvitationState;
 import net.yozmnews.user.IssuedInvitation;
 import net.yozmnews.user.SignUpPolicyAdministration;
+import net.yozmnews.user.UserTables;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -57,7 +58,7 @@ class SignUpConcurrencyTests {
 	void reset() {
 		this.jdbc.sql("delete from user_invitations").update();
 		AccountEvents.awaitCreatedHandled(this.jdbc);
-		this.jdbc.sql("delete from users").update();
+		UserTables.deleteAll(this.jdbc);
 		this.policy.change(false, ChangeActor.OPERATOR);
 	}
 

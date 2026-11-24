@@ -18,6 +18,7 @@ import net.yozmnews.user.AccountEvents;
 import net.yozmnews.user.InvitationAdministration;
 import net.yozmnews.user.IssuedInvitation;
 import net.yozmnews.user.SignUpPolicyAdministration;
+import net.yozmnews.user.UserTables;
 import net.yozmnews.user.application.PasswordHashing;
 import net.yozmnews.user.domain.account.Account;
 import net.yozmnews.user.domain.account.AccountRepository;
@@ -91,7 +92,7 @@ class SignUpControllerTests {
 	void reset() {
 		this.jdbc.sql("delete from user_invitations").update();
 		AccountEvents.awaitCreatedHandled(this.jdbc);
-		this.jdbc.sql("delete from users").update();
+		UserTables.deleteAll(this.jdbc);
 		this.policy.change(false, ChangeActor.OPERATOR);
 	}
 

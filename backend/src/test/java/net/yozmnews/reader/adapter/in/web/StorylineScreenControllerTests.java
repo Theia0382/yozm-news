@@ -13,11 +13,14 @@ import java.util.Map;
 
 import net.yozmnews.LlmKeyRows;
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.digest.DigestRounds;
 import net.yozmnews.reader.ReaderRows;
 import net.yozmnews.user.SignedInUsers;
+import net.yozmnews.user.UserTables;
 import net.yozmnews.user.application.PasswordHashing;
 import net.yozmnews.user.domain.account.AccountRepository;
 import net.yozmnews.user.domain.credential.PasswordCredentialRepository;
+import org.jobrunr.scheduling.JobScheduler;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,8 +34,6 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
-import org.jobrunr.scheduling.JobScheduler;
-import net.yozmnews.digest.DigestRounds;
 
 /**
  * 독자 화면의 공용 스토리라인 — 타임라인(사건 순서 · 직접 소속 · 대표 기사 · 관계 넷 ·
@@ -242,7 +243,7 @@ class StorylineScreenControllerTests {
 
 	private void clear() {
 		this.rows.clear();
-		this.jdbc.sql("delete from users").update();
+		UserTables.deleteAll(this.jdbc);
 		this.jdbc.sql("delete from login_failures").update();
 		this.jdbc.sql("delete from llm_credentials").update();
 	}

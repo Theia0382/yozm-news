@@ -13,6 +13,7 @@ import java.time.temporal.ChronoUnit;
 import net.yozmnews.LlmKeyRows;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.user.SignedInUsers;
+import net.yozmnews.user.UserTables;
 import net.yozmnews.user.application.PasswordHashing;
 import net.yozmnews.user.domain.account.AccountRepository;
 import net.yozmnews.user.domain.credential.PasswordCredentialRepository;
@@ -59,7 +60,7 @@ public class InterestHistoryScopeTests {
 	void reset() {
 		this.rows = new InterestRows(this.jdbc);
 		this.rows.clear();
-		this.jdbc.sql("delete from users").update();
+		UserTables.deleteAll(this.jdbc);
 		this.jdbc.sql("delete from login_failures").update();
 		this.jdbc.sql("delete from llm_credentials").update();
 	}

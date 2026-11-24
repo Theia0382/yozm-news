@@ -14,6 +14,7 @@ import net.yozmnews.user.AccountDirectory;
 import net.yozmnews.user.AccountEvents;
 import net.yozmnews.user.DigestScheduleDirectory;
 import net.yozmnews.user.DigestScheduleEntry;
+import net.yozmnews.user.UserTables;
 import net.yozmnews.user.domain.account.DisplayName;
 import net.yozmnews.user.domain.account.EmailAddress;
 import net.yozmnews.user.domain.account.Onboarding;
@@ -56,7 +57,7 @@ class DigestScheduleDirectoryTests {
 	@AfterEach
 	void clear() {
 		AccountEvents.awaitCreatedHandled(this.jdbc);
-		this.jdbc.sql("delete from users where email like 'digest-schedule-%'").update();
+		UserTables.deleteByEmail(this.jdbc, "digest-schedule-%");
 	}
 
 	@Test

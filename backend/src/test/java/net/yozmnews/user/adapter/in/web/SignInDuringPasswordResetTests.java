@@ -22,6 +22,7 @@ import net.yozmnews.user.AccountAdministration;
 import net.yozmnews.user.AccountCreationResult;
 import net.yozmnews.user.AccountEvents;
 import net.yozmnews.user.InitialPasswordResetResult;
+import net.yozmnews.user.UserTables;
 import net.yozmnews.user.application.AccountRecovery;
 import net.yozmnews.user.application.PasswordHashing;
 import net.yozmnews.user.application.RecoveryOutcome;
@@ -113,7 +114,7 @@ class SignInDuringPasswordResetTests {
 	void reset() {
 		this.jdbc.sql("delete from spring_session").update();
 		AccountEvents.awaitPasswordChangeHandled(this.jdbc);
-		this.jdbc.sql("delete from users").update();
+		UserTables.deleteAll(this.jdbc);
 		this.jdbc.sql("delete from login_failures").update();
 	}
 

@@ -11,6 +11,7 @@ import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.user.AccountDirectory;
 import net.yozmnews.user.AccountEvents;
+import net.yozmnews.user.UserTables;
 import net.yozmnews.user.domain.account.DisplayName;
 import net.yozmnews.user.domain.account.EmailAddress;
 import net.yozmnews.user.domain.account.Onboarding;
@@ -63,7 +64,7 @@ class InterestBackfillTests {
 	@AfterEach
 	void reset() {
 		AccountEvents.awaitCreatedHandled(this.jdbc);
-		this.jdbc.sql("delete from users").update();
+		UserTables.deleteAll(this.jdbc);
 		this.backfill = new InterestBackfill(this.accounts, this.settings, this.defaults, this.transaction,
 				InstantSource.fixed(NOW));
 	}

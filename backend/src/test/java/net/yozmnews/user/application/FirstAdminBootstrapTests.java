@@ -15,6 +15,7 @@ import java.util.concurrent.Future;
 
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.user.AccountEvents;
+import net.yozmnews.user.UserTables;
 import net.yozmnews.user.domain.account.Account;
 import net.yozmnews.user.domain.account.AccountRepository;
 import net.yozmnews.user.domain.account.AccountRole;
@@ -72,7 +73,7 @@ class FirstAdminBootstrapTests {
 	@AfterEach
 	void reset() {
 		AccountEvents.awaitCreatedHandled(this.jdbc);
-		this.jdbc.sql("delete from users").update();
+		UserTables.deleteAll(this.jdbc);
 	}
 
 	@Test

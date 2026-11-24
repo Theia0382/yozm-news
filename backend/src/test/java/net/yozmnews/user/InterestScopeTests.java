@@ -65,7 +65,7 @@ public class InterestScopeTests {
 	@BeforeEach
 	@AfterEach
 	void reset() {
-		this.jdbc.sql("delete from users").update();
+		UserTables.deleteAll(this.jdbc);
 		this.jdbc.sql("delete from login_failures").update();
 		this.jdbc.sql("delete from llm_credentials").update();
 		this.jdbc.sql("delete from source_attributions where source_id in (select id from sources where preset_key = :key)")

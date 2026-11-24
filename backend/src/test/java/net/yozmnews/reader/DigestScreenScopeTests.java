@@ -11,6 +11,7 @@ import net.yozmnews.LlmKeyRows;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.digest.DigestRounds;
 import net.yozmnews.user.SignedInUsers;
+import net.yozmnews.user.UserTables;
 import net.yozmnews.user.application.PasswordHashing;
 import net.yozmnews.user.domain.account.AccountRepository;
 import net.yozmnews.user.domain.credential.PasswordCredentialRepository;
@@ -72,7 +73,7 @@ public class DigestScreenScopeTests {
 		this.readerRows = new ReaderRows(this.jdbc);
 		this.rows.clear();
 		this.readerRows.clear();
-		this.jdbc.sql("delete from users").update();
+		UserTables.deleteAll(this.jdbc);
 		this.jdbc.sql("delete from login_failures").update();
 		this.jdbc.sql("delete from llm_credentials").update();
 	}

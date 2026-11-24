@@ -20,6 +20,7 @@ import net.yozmnews.source.SourceId;
 import net.yozmnews.tag.TagKind;
 import net.yozmnews.tag.TagSetId;
 import net.yozmnews.user.SummaryLength;
+import net.yozmnews.user.UserTables;
 import net.yozmnews.user.domain.interest.CandidateVolume;
 import net.yozmnews.user.domain.interest.DigestSchedule;
 import net.yozmnews.user.domain.interest.DigestVolume;
@@ -251,7 +252,7 @@ class JdbcInterestStorageTests {
 				PreferenceCause.ONBOARDING, new TagSetId(3), NOW);
 		this.excluded.replace(this.alice, Set.of(new SourceId(1)), NOW);
 
-		this.jdbc.sql("delete from users where id = :user").param("user", this.alice.value()).update();
+		UserTables.delete(this.jdbc, this.alice.value());
 
 		for (String table : List.of("user_settings", "user_tag_preferences", "user_tag_preference_events",
 				"user_excluded_sources")) {

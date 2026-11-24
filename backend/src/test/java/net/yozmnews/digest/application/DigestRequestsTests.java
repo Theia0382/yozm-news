@@ -33,6 +33,7 @@ import net.yozmnews.platform.UserId;
 import net.yozmnews.tag.TagSetDirectory;
 import net.yozmnews.user.DigestModelDirectory;
 import net.yozmnews.user.DigestScheduleDirectory;
+import net.yozmnews.user.UserTables;
 import net.yozmnews.user.UserTimezones;
 import org.jobrunr.scheduling.JobScheduler;
 import org.junit.jupiter.api.AfterEach;
@@ -115,7 +116,7 @@ class DigestRequestsTests {
 		this.jdbc.sql("delete from digests").update();
 		this.jdbc.sql("delete from llm_credentials where user_id in (select id from users where email like 'digest-request-%')")
 			.update();
-		this.jdbc.sql("delete from users where email like 'digest-request-%'").update();
+		UserTables.deleteByEmail(this.jdbc, "digest-request-%");
 	}
 
 	private DigestDispatch dispatch() {

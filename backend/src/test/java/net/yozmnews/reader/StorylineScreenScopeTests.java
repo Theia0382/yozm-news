@@ -11,10 +11,13 @@ import java.time.temporal.ChronoUnit;
 
 import net.yozmnews.LlmKeyRows;
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.digest.DigestRounds;
 import net.yozmnews.user.SignedInUsers;
+import net.yozmnews.user.UserTables;
 import net.yozmnews.user.application.PasswordHashing;
 import net.yozmnews.user.domain.account.AccountRepository;
 import net.yozmnews.user.domain.credential.PasswordCredentialRepository;
+import org.jobrunr.scheduling.JobScheduler;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,8 +27,6 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.web.servlet.MockMvc;
-import org.jobrunr.scheduling.JobScheduler;
-import net.yozmnews.digest.DigestRounds;
 
 /**
  * 독자 화면의 사용자 격리 — 목록 · 카드는 사용자 데이터가 없어 두 사용자가 같은 본문을 받고, 타임라인의 받은 날짜는 그 사용자의 다이제스트에서만 온다. 세
@@ -68,7 +69,7 @@ public class StorylineScreenScopeTests {
 	void reset() {
 		this.rows = new ReaderRows(this.jdbc);
 		this.rows.clear();
-		this.jdbc.sql("delete from users").update();
+		UserTables.deleteAll(this.jdbc);
 		this.jdbc.sql("delete from login_failures").update();
 		this.jdbc.sql("delete from llm_credentials").update();
 	}

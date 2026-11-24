@@ -18,6 +18,7 @@ import net.yozmnews.source.FeedId;
 import net.yozmnews.source.FeedStatus;
 import net.yozmnews.user.DigestFailureCause;
 import net.yozmnews.user.PasswordChangeMethod;
+import net.yozmnews.user.UserTables;
 import net.yozmnews.user.domain.account.Account;
 import net.yozmnews.user.domain.account.AccountRepository;
 import net.yozmnews.user.domain.account.AccountRole;
@@ -83,7 +84,7 @@ class JdbcNoticeRepositoryTests {
 	@BeforeEach
 	@AfterEach
 	void reset() {
-		this.jdbc.sql("delete from users").update();
+		UserTables.deleteAll(this.jdbc);
 	}
 
 	@Test
