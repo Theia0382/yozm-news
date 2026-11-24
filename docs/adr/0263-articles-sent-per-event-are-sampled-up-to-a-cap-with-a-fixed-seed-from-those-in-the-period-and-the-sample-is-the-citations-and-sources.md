@@ -19,7 +19,7 @@
 > 부분 대체("노출 기록") — [ADR-0268](0268-interest-counts-exposures-and-reactions-per-event-splitting-an-item-weight-one-over-n-and-counting-an-event-once-with-its-latest-share.md). 지금 상태: [digest Spec "관심도"](../specs/digest.md#관심도) digest-R24
 - **표본이 곧 인용(노출 기록)이고 화면의 출처 기사 목록이다.** 생성 중 지운 표본 기사는 인용에서 빠진다.
 - **토큰 어림은 사건마다다** — 내용을 읽은 표본 기사 줄의 어림 합 + 사건 몫(사건 괄호와 항목 괄호 · 항목 별칭 · 칸 이름을 사건마다 센 40 코드 포인트). 예산 자르기는 사건 단위로 구독 사건의 꼬리부터, 그래도 넘으면 큰 슬롯 사건의 꼬리부터 뺀다. 표본 기사의 내용을 하나도 읽지 못한 사건은 뺀다. 40 은 측정 전 목표다.
-> 부분 대체(둘째 · 셋째 문장) — [ADR-0265](0265-feedback-is-pressed-once-per-digest-item-and-recorded-on-each-event-of-the-item-the-screen-shows-the-item-value-and-signals-use-event-records.md). 지금 상태: [user Spec "요청 방어"](../specs/user.md#요청-방어) user-R38 · [feedback Spec](../specs/feedback.md#화면의-항목-기록-조회) feedback-R7
+> 부분 대체(둘째 · 셋째 문장) — [ADR-0265](0265-feedback-is-pressed-once-per-digest-item-and-recorded-on-each-event-of-the-item-the-screen-shows-the-item-value-and-signals-use-event-records.md). 지금 상태: [account Spec "요청 방어"](../specs/account.md#요청-방어) account-R30 · [feedback Spec](../specs/feedback.md#화면의-항목-기록-조회) feedback-R7
 - **다이제스트 하나의 서로 다른 인용 기사는 많아야 사건당 상한 5 × 최대 후보 수의 직접 입력 상한 150 = 750 이다.** `feedback` 의 현재 상태 조회 상한과 피드백 요청 제한(세션 사용자 · 10분)을 둘 다 750 으로 둔다. 셋의 관계는 시험이 묶는다.
 
 ## 결과

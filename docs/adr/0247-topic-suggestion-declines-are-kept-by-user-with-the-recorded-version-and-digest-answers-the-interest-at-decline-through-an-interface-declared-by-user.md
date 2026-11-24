@@ -1,6 +1,6 @@
 # ADR-0247: 구독 제안의 거절은 `user` 가 기록 당시 버전과 함께 갖고, 거절 때 관심은 `user` 가 선언한 공급 인터페이스로 `digest` 가 답한다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 계정과 함께 지움([ADR-0308](0308-account-authentication-and-security-live-in-the-account-module-while-interests-and-notices-stay-in-user.md))
 - 날짜: 2026-11-19
 - 근거: [이슈 #188](https://github.com/Theia0382/yozm-news/issues/188) — 기점 `91ba014` 의 모듈 의존(`digest` → `user`)과 태그 선호 · 주제 구독 이력의 키 처리를 대조하고 정함. 구현 커밋 `3ecb800` · `bdf6bb1`
 - 관련: [ADR-0192](0192-reader-screens-are-composed-by-the-reader-module-over-module-public-queries.md)(사용자가 정해 두는 것의 화면은 그 데이터를 가진 모듈이 연다), [ADR-0196](0196-feedback-is-accepted-only-on-articles-cited-by-the-users-digest-and-digest-answers-through-an-interface-declared-by-feedback.md) · [ADR-0157](0157-credential-depends-on-llm-and-stored-keys-reach-llm-through-a-supply-interface-that-llm-declares-and-credential-implements.md)(공급 인터페이스의 꼴), [ADR-0246](0246-a-declined-topic-suggestion-returns-only-after-a-period-and-a-higher-interest-and-a-decline-is-not-an-interest-signal.md)(거절 때 관심을 쓰는 규칙)
@@ -23,6 +23,7 @@
 
 - 주제에 대한 사용자 결정이 한 모듈에 모인다. `user` 는 판정을 모르고 "다시 권하지 말라는 기록"만 갖는다.
 - 거절 처리기는 거절 때 관심(창 120일의 재료)을 트랜잭션 밖에서 읽고 쓰기는 한 문장이다. 거절마다 재료를 읽는 비용은 재지 않았다.
+> 부분 대체 — [ADR-0308](0308-account-authentication-and-security-live-in-the-account-module-while-interests-and-notices-stay-in-user.md). 지금 상태: [`user` Spec §6](../specs/user.md#6-데이터)
 - 거절 행은 계정과 함께 지워진다.
 
 ## 검토한 대안

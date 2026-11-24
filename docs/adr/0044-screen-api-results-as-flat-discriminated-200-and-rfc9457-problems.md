@@ -39,4 +39,4 @@
 
 ## 후속 기록
 
-- 2026-11-15: 결정 절의 HTTP 오류 목록(요청 과다 · 사람 확인 실패) — [ADR-0169](0169-request-limits-and-bot-checks-are-platform-marks-applied-by-the-user-session-chain-before-the-handler.md) · [`user` user-R3](../specs/user.md#운영자-접근-통제)
+- 2026-11-15: 결정 절의 HTTP 오류 목록(요청 과다 · 사람 확인 실패) — [ADR-0169](0169-request-limits-and-bot-checks-are-platform-marks-applied-by-the-user-session-chain-before-the-handler.md) · [`user` user-R3](../specs/user.md#옮긴-규칙)

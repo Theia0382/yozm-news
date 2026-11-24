@@ -31,7 +31,7 @@
 
 ## 결과
 
-> 부분 대체(셋째 · 넷째 문장) — [ADR-0124](0124-security-configuration-lives-in-the-user-module-and-platform-keeps-only-the-screen-api-path-convention.md). 지금 상태: [`user` Spec §4](../specs/user.md#4-내부-구조)
+> 부분 대체(셋째 · 넷째 문장) — [ADR-0124](0124-security-configuration-lives-in-the-user-module-and-platform-keeps-only-the-screen-api-path-convention.md). 지금 상태: [`account` Spec §4](../specs/account.md#4-내부-구조)
 - 모든 모듈의 웹 · 작업 진입점이 `platform` 의 역할 애너테이션에 의존한다. 그래서 `platform` 이 다른 모듈의 타입에 의존하면 순환이 된다(Modulith 검증이 실패한다). 앞으로 `platform` 의 보안 설정은 사용자 조회 등을 Spring 인터페이스 타입(`UserDetailsService` · `OAuth2UserService` 등)으로 주입받아 다른 모듈 타입을 import 하지 않는다. 그 길이 막히면 역할 애너테이션의 자리를 다시 본다.
 - 개발 실행 명령이 `local,web,worker` 로 바뀐다. 예전 명령(`local` 만)은 기동 검사가 멈추고 고칠 명령을 알린다.
 - 공통 빈에 Spring `@Scheduled` 를 두면 `web` 만 켠 프로세스에서는 경고 없이 돌지 않는다. 지금 `@Scheduled` 는 없다. 외부 라이브러리가 `web` 에서 Spring 스케줄링을 요구하면 그 기능을 만들 때 다시 본다.

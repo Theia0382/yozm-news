@@ -1,6 +1,6 @@
 # ADR-0156: 사용자 식별자 `UserId` 는 `platform` 의 공개 타입이다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 세션 사용자 인자 · 격리 규칙의 모듈([ADR-0308](0308-account-authentication-and-security-live-in-the-account-module-while-interests-and-notices-stay-in-user.md))
 - 날짜: 2026-11-14
 - 근거: [이슈 #150](https://github.com/Theia0382/yozm-news/issues/150) — `credential` 모듈을 만들며 `user` · `credential` · `llm` 사이의 의존 방향을 확인
 - 관련: [ADR-0125](0125-screen-api-handlers-need-a-session-unless-marked-public-and-take-the-user-only-as-a-session-filled-argument.md)(처리기는 사용자를 `UserId` 인자로만 받는다 — 그 타입의 모듈을 이 ADR 이 옮긴다), [ADR-0152](0152-secret-value-is-a-platform-public-type-that-fails-on-serialization.md)(같은 까닭으로 `platform` 에 둔 횡단 타입)
@@ -14,6 +14,7 @@
 ## 결정
 
 - **`UserId` 는 `platform` 의 공개 타입이다.** 어느 모듈의 지식도 아닌 횡단 식별자다.
+> 부분 대체 — [ADR-0308](0308-account-authentication-and-security-live-in-the-account-module-while-interests-and-notices-stay-in-user.md). 지금 상태: [`account` Spec](../specs/account.md#화면용-api-의-공개와-세션-사용자) account-R6
 - 세션 사용자로 인자를 채우는 일과 사용자 격리의 규칙은 `user` 에 남는다.
 
 타입은 [platform Spec](../specs/platform.md#userid)에 있다.

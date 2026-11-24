@@ -1,6 +1,6 @@
 # ADR-0170: 요청 제한은 `user` 의 PostgreSQL 테이블에 고정 창마다 한 문장으로 세고, 한도는 코드 상수 정책 표 하나다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 기록 테이블의 모듈([ADR-0308](0308-account-authentication-and-security-live-in-the-account-module-while-interests-and-notices-stay-in-user.md))
 - 날짜: 2026-11-15
 - 근거: [이슈 #152](https://github.com/Theia0382/yozm-news/issues/152) — 셈 · 정책 표 · 정리 `bc453f5`
 - 관련: [ADR-0130](0130-sign-in-failure-delays-count-per-digest-of-the-submitted-normalized-email-regardless-of-account.md)(같은 꼴 — 실패 기록도 다이제스트 키의 DB 행이고 작업 역할이 지운다)
@@ -13,6 +13,7 @@
 
 ## 결정
 
+> 부분 대체 — [ADR-0308](0308-account-authentication-and-security-live-in-the-account-module-while-interests-and-notices-stay-in-user.md). 지금 상태: [`account` Spec §6](../specs/account.md#6-데이터)
 - **기록은 `user` 의 PostgreSQL 테이블이다.** 키(동작 · 축 · 대상의 SHA-256)와 고정 창 시작마다 한 행이고, 요청 하나는 규칙마다 `INSERT … ON CONFLICT DO UPDATE … RETURNING` 한 문장으로 1을 더해 더한 수를 받는다 — 트랜잭션 · 명시 잠금 없이 여러 프로세스가 함께 더해도 빠지지 않는다.
 - **창은 고정 창이다**(유닉스 기원부터 창 길이로 나눈 칸). 더한 수가 한도보다 크면 그 창 끝까지 거부한다. 요청은 결과와 무관하게 센다. IPv6 은 앞 64비트로 묶어 센다.
 - **한도는 코드 상수 정책 표 하나(`RequestLimits`)다** — 동작마다 축(클라이언트 주소 · 세션 사용자) · 한도 · 창. 운영 설정으로 열지 않는다. 값은 측정 전 목표값이다.
@@ -37,4 +38,4 @@
 
 ## 후속 기록
 
-- 2026-11-17: 결정 절 "한도는 코드 상수 정책 표 하나(`RequestLimits`)다"의 동작에 좋아요 / 싫어요 기록(세션 사용자 축) — [ADR-0198](0198-feedback-recording-is-request-limited-per-session-user.md) · [`user` user-R38](../specs/user.md#요청-방어)
+- 2026-11-17: 결정 절 "한도는 코드 상수 정책 표 하나(`RequestLimits`)다"의 동작에 좋아요 / 싫어요 기록(세션 사용자 축) — [ADR-0198](0198-feedback-recording-is-request-limited-per-session-user.md) · [`user` user-R38](../specs/user.md#옮긴-규칙)

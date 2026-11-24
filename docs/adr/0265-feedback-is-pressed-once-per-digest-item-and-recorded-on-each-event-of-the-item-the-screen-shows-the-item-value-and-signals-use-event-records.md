@@ -48,4 +48,4 @@
 
 ## 후속 기록
 
-- 2026-11-21: 결정 "피드백 요청 제한은 750 / 10분 그대로이고, 근거는 … 직접 입력 상한 150"의 근거 — [ADR-0272](0272-the-input-token-budget-is-a-safety-ceiling-and-the-maximum-candidate-steps-set-the-digest-volume.md) · [user Spec "요청 방어"](../specs/user.md#요청-방어) user-R38
+- 2026-11-21: 결정 "피드백 요청 제한은 750 / 10분 그대로이고, 근거는 … 직접 입력 상한 150"의 근거 — [ADR-0272](0272-the-input-token-budget-is-a-safety-ceiling-and-the-maximum-candidate-steps-set-the-digest-volume.md) · [user Spec "요청 방어"](../specs/user.md#옮긴-규칙) user-R38

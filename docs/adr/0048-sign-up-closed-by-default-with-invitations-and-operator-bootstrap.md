@@ -20,12 +20,12 @@
   - 초대 링크 — 운영자가 만든 일회용 · 만료 있는 링크를 직접 전한다(메일 없음). 토큰은 해시로만 저장하고 운영자가 취소할 수 있다. 받은 사람은 OIDC 나 자체 로그인 중 골라 가입한다.
   > 부분 대체(마지막 문장) — [ADR-0123](0123-v1-login-is-local-only-and-oidc-and-account-linking-come-after-v1.md). 지금 상태: [`security` "가입"](../security.md#가입)
   - 운영자 계정 생성 — 운영자가 이메일 · 초기 비밀번호로 자체 로그인 계정을 만든다. 첫 로그인 때 비밀번호 변경을 강제하고, 복구 코드는 그때 발급한다. OIDC 만 쓰는 사람은 초대 링크로 들인다.
-> 부분 대체(첫 문장 · 둘째 문장) — [ADR-0139](0139-first-admin-is-created-only-from-environment-variables-and-startup-warns-without-an-admin-or-about-leftover-values.md). 지금 상태: [`user` "첫 운영자와 운영자의 계정 운영"](../specs/user.md#첫-운영자와-운영자의-계정-운영) user-R34
+> 부분 대체(첫 문장 · 둘째 문장) — [ADR-0139](0139-first-admin-is-created-only-from-environment-variables-and-startup-warns-without-an-admin-or-about-leftover-values.md). 지금 상태: [`account` "첫 운영자와 운영자의 계정 운영"](../specs/account.md#첫-운영자와-운영자의-계정-운영) account-R27
 - **첫 운영자**: 운영자(`ADMIN`)가 없으면 기동 때 일회용 운영자 초대 링크(짧은 만료)를 앱 로그에 출력한다(기본). 운영자가 생기면 출력하지 않는다. 환경 변수로 이메일 · 초기 비밀번호를 주면 링크 대신 그 값으로 자체 로그인 운영자 계정을 만든다.
   - 운영자가 없을 때만 적용하고, 그 뒤에는 무시하며 변수가 남아 있다고 경고 로그를 낸다.
   - 첫 로그인 때 비밀번호 변경을 강제하고, 복구 코드는 그때 발급한다.
   - 값이 비밀번호 규칙을 어기면 이유를 말하고 기동하지 않는다.
-  > 부분 대체 — [ADR-0139](0139-first-admin-is-created-only-from-environment-variables-and-startup-warns-without-an-admin-or-about-leftover-values.md). 지금 상태: [`user` "첫 운영자와 운영자의 계정 운영"](../specs/user.md#첫-운영자와-운영자의-계정-운영) user-R34
+  > 부분 대체 — [ADR-0139](0139-first-admin-is-created-only-from-environment-variables-and-startup-warns-without-an-admin-or-about-leftover-values.md). 지금 상태: [`account` "첫 운영자와 운영자의 계정 운영"](../specs/account.md#첫-운영자와-운영자의-계정-운영) account-R27
   - 값이 있으면 초대 링크를 출력하지 않는다.
 > 부분 대체 — [ADR-0123](0123-v1-login-is-local-only-and-oidc-and-account-linking-come-after-v1.md). 지금 상태: [`security` "가입"](../security.md#가입)
 - **OIDC 경로의 닫힘**: 가입이 닫힌 인스턴스에서는 초대 없이 처음 보는 OIDC 계정으로 로그인해도 계정을 만들지 않는다. 닫힘이 OIDC 경로에서도 성립하려면 필요하다.
@@ -68,9 +68,9 @@
 
 - 2026-10-31: 계정 인증 전까지 운영자 기능은 운영자 토큰(`YOZMNEWS_ADMIN_TOKEN`)으로 막는다 — [ADR-0043](0043-admin-functions-guarded-by-env-bearer-token-until-account-roles.md). 계정 인증이 생기면 운영자 경로는 이 ADR 의 `ADMIN` 계정이 연다.
 - 2026-11-09: 결과 절 "M4 가 정할 것"의 마일스톤 번호(지금 M5) — [ADR-0103](0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md) · [로드맵](../roadmap.md)
-- 2026-11-13: 결정 절 "가입 정책"의 운영 설정과 마지막 항목의 설정 이름 — [ADR-0140](0140-sign-up-policy-is-a-user-module-operator-setting-with-append-only-history-and-starts-closed.md) · [`user` user-R32](../specs/user.md#가입-정책)
-- 2026-11-13: 결정 절 "초대 링크"와 마지막 항목의 초대 만료 값 · 저장 테이블 · 화면 — [ADR-0141](0141-invitation-links-are-seven-day-single-use-links-not-bound-to-an-email-with-the-token-in-the-fragment-stored-only-as-a-digest.md) · [`user` user-R31](../specs/user.md#초대)
-- 2026-11-13: 결정 절 "닫힌 가입에서는 두 방식"이 만드는 계정의 역할 — [ADR-0142](0142-invitations-and-operator-created-accounts-are-always-users-and-admins-come-only-from-the-first-admin.md) · [`user` user-R28](../specs/user.md#계정을-만드는-길)
-- 2026-11-13: 결정 절 "운영자 계정 생성"의 첫 로그인 전 초기 비밀번호 다시 정하기 — [ADR-0143](0143-operators-reset-the-initial-password-only-of-accounts-before-their-first-sign-in-and-end-their-sessions.md) · [`user` user-R35](../specs/user.md#첫-운영자와-운영자의-계정-운영)
-- 2026-11-13: 결과 절 "M4 가 정할 것"의 하나만 준 경우 · "운영자가 없다"의 판정 · 이미 있는 계정의 이메일 — [ADR-0139](0139-first-admin-is-created-only-from-environment-variables-and-startup-warns-without-an-admin-or-about-leftover-values.md) · [`user` user-R34](../specs/user.md#첫-운영자와-운영자의-계정-운영)
-- 2026-11-15: 결정 절 "가입 정책"의 가입 요청 제한 · 가입 화면 봇 차단 — [ADR-0169](0169-request-limits-and-bot-checks-are-platform-marks-applied-by-the-user-session-chain-before-the-handler.md) · [ADR-0170](0170-request-limits-count-fixed-windows-in-a-user-postgresql-table-with-a-code-constant-policy-table.md) · [ADR-0172](0172-bot-checks-use-turnstile-or-off-pass-when-the-verifier-is-unreachable-and-match-the-action.md) · [`user` "요청 방어"](../specs/user.md#요청-방어) user-R38 · user-R41
+- 2026-11-13: 결정 절 "가입 정책"의 운영 설정과 마지막 항목의 설정 이름 — [ADR-0140](0140-sign-up-policy-is-a-user-module-operator-setting-with-append-only-history-and-starts-closed.md) · [`user` user-R32](../specs/user.md#옮긴-규칙)
+- 2026-11-13: 결정 절 "초대 링크"와 마지막 항목의 초대 만료 값 · 저장 테이블 · 화면 — [ADR-0141](0141-invitation-links-are-seven-day-single-use-links-not-bound-to-an-email-with-the-token-in-the-fragment-stored-only-as-a-digest.md) · [`user` user-R31](../specs/user.md#옮긴-규칙)
+- 2026-11-13: 결정 절 "닫힌 가입에서는 두 방식"이 만드는 계정의 역할 — [ADR-0142](0142-invitations-and-operator-created-accounts-are-always-users-and-admins-come-only-from-the-first-admin.md) · [`user` user-R28](../specs/user.md#옮긴-규칙)
+- 2026-11-13: 결정 절 "운영자 계정 생성"의 첫 로그인 전 초기 비밀번호 다시 정하기 — [ADR-0143](0143-operators-reset-the-initial-password-only-of-accounts-before-their-first-sign-in-and-end-their-sessions.md) · [`user` user-R35](../specs/user.md#옮긴-규칙)
+- 2026-11-13: 결과 절 "M4 가 정할 것"의 하나만 준 경우 · "운영자가 없다"의 판정 · 이미 있는 계정의 이메일 — [ADR-0139](0139-first-admin-is-created-only-from-environment-variables-and-startup-warns-without-an-admin-or-about-leftover-values.md) · [`user` user-R34](../specs/user.md#옮긴-규칙)
+- 2026-11-15: 결정 절 "가입 정책"의 가입 요청 제한 · 가입 화면 봇 차단 — [ADR-0169](0169-request-limits-and-bot-checks-are-platform-marks-applied-by-the-user-session-chain-before-the-handler.md) · [ADR-0170](0170-request-limits-count-fixed-windows-in-a-user-postgresql-table-with-a-code-constant-policy-table.md) · [ADR-0172](0172-bot-checks-use-turnstile-or-off-pass-when-the-verifier-is-unreachable-and-match-the-action.md) · [`user` "요청 방어"](../specs/user.md#옮긴-규칙) user-R38 · user-R41
