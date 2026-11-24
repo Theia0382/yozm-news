@@ -3,17 +3,15 @@ package net.yozmnews.digest.domain.selection;
 import java.util.List;
 import java.util.Objects;
 
+import net.yozmnews.llm.TokenEstimate;
+
 /**
- * 입력 토큰의 추정 — 정본. 프롬프트 구성은 이 추정을 따른다 — docs/specs/digest.md §5
+ * 후보의 입력 토큰 추정 — 몫 상수와 사건 · 예산 어림의 정본. 프롬프트 구성은 이 추정을 따른다 — docs/specs/digest.md §5
  * <p>
- * 보내기 전에는 공급자가 세는 토큰 수를 알 수 없어 코드 포인트로 어림한다. 한국어 기사 문장은 공급자 토크나이저에서 대략 코드 포인트 하나에 토큰
- * 1 개 이하라 {@link #TOKENS_PER_CODE_POINT} 를 1.0 으로 두어 넉넉히 센다. 후보는 사건이고, 사건 하나의 어림은 표본 기사 줄마다의 어림과
- * 사건 몫의 합이다. 상수는 모두 측정 전 목표다 — 다이제스트에 기록되는 실제 입력 토큰(digest-R1)으로 고친다.
+ * 코드 포인트를 토큰으로 바꾸는 비율 · 함수는 {@code llm} 의 {@link TokenEstimate} 다. 후보는 사건이고, 사건 하나의 어림은 표본 기사 줄마다의
+ * 어림과 사건 몫의 합이다. 상수는 모두 측정 전 목표다 — 다이제스트에 기록되는 실제 입력 토큰(digest-R1)으로 고친다.
  */
 public final class CandidateCost {
-
-	/** 코드 포인트 하나의 토큰 어림 */
-	public static final double TOKENS_PER_CODE_POINT = 1.0;
 
 	/** 기사 줄 하나에서 제목 · 요약문 밖의 몫(코드 포인트) — 출처 · 발행 시각 · 주제 · 지역 태그 · 구분 기호 */
 	public static final int CANDIDATE_OVERHEAD = 80;
@@ -48,7 +46,7 @@ public final class CandidateCost {
 		if (titleCodePoints < 0 || summaryCodePoints < 0) {
 			throw new IllegalArgumentException("코드 포인트 수가 음수다");
 		}
-		return tokens(titleCodePoints + summaryCodePoints + CANDIDATE_OVERHEAD);
+		return TokenEstimate.tokens(titleCodePoints + summaryCodePoints + CANDIDATE_OVERHEAD);
 	}
 
 	/**
@@ -68,7 +66,7 @@ public final class CandidateCost {
 			}
 			sum += tokens;
 		}
-		return sum + tokens(EVENT_OVERHEAD);
+		return sum + TokenEstimate.tokens(EVENT_OVERHEAD);
 	}
 
 	/**
@@ -78,14 +76,9 @@ public final class CandidateCost {
 	 * @param excludedRegions 제외한 지역 수
 	 */
 	public static int candidateBudget(int modelBudget, int interestTextCodePoints, int topicRows, int excludedRegions) {
-		int profile = tokens(
+		int profile = TokenEstimate.tokens(
 				interestTextCodePoints + (topicRows + excludedRegions) * PROFILE_TAG_COST + PROFILE_OVERHEAD);
 		return Math.max(0, modelBudget - INSTRUCTION_RESERVE - profile);
-	}
-
-	/** 코드 포인트 수의 토큰 어림 — 어림 비율의 정본. 프롬프트 구성의 시험이 이 함수로 견준다 */
-	public static int tokens(int codePoints) {
-		return (int) Math.ceil(codePoints * TOKENS_PER_CODE_POINT);
 	}
 
 }

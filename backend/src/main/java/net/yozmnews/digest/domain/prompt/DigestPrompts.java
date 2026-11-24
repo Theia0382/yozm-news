@@ -20,6 +20,7 @@ import net.yozmnews.digest.domain.output.DigestOutputSchema;
 import net.yozmnews.digest.domain.prompt.PromptRules.Range;
 import net.yozmnews.digest.domain.selection.CandidateCost;
 import net.yozmnews.llm.LlmModel;
+import net.yozmnews.llm.TokenEstimate;
 import net.yozmnews.platform.StructuredOutputSchema;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.json.JsonMapper;
@@ -198,12 +199,12 @@ public final class DigestPrompts {
 	private static ObjectNode profile(DigestProfile profile) {
 		List<String> topics = profile.topics().stream().map(DigestPrompts::fitName).toList();
 		List<String> regions = profile.excludedRegions().stream().map(DigestPrompts::fitName).toList();
-		int allowed = CandidateCost.tokens(codePoints(profile.interest())
+		int allowed = TokenEstimate.tokens(codePoints(profile.interest())
 				+ (topics.size() + regions.size()) * CandidateCost.PROFILE_TAG_COST + CandidateCost.PROFILE_OVERHEAD);
 		String interest = profile.interest();
 		ObjectNode node = profileNode(topics, regions, interest, profile);
-		while (CandidateCost.tokens(skeletonCodePoints(node)) > allowed && !interest.isEmpty()) {
-			interest = dropTail(interest, Math.max(1, CandidateCost.tokens(skeletonCodePoints(node)) - allowed));
+		while (TokenEstimate.tokens(skeletonCodePoints(node)) > allowed && !interest.isEmpty()) {
+			interest = dropTail(interest, Math.max(1, TokenEstimate.tokens(skeletonCodePoints(node)) - allowed));
 			node = profileNode(topics, regions, interest, profile);
 		}
 		return node;
@@ -249,8 +250,8 @@ public final class DigestPrompts {
 		List<String> regions = new ArrayList<>(article.regions());
 		String published = PUBLISHED.format(article.publishedAt().atZone(profile.timezone()));
 		ArrayNode line = articleNode(sources, published, topics, regions, article.title(), summary);
-		while (CandidateCost.tokens(lineCodePoints(line)) > allowed) {
-			int over = CandidateCost.tokens(lineCodePoints(line)) - allowed;
+		while (TokenEstimate.tokens(lineCodePoints(line)) > allowed) {
+			int over = TokenEstimate.tokens(lineCodePoints(line)) - allowed;
 			if (!regions.isEmpty()) {
 				regions.removeLast();
 			}
