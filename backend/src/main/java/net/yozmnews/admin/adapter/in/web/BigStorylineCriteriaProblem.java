@@ -15,7 +15,7 @@ final class BigStorylineCriteriaProblem {
 
 	static ResponseStatusException outOfRange() {
 		return new ResponseStatusException(HttpStatus.BAD_REQUEST,
-				"큰 판정 기준은 0 보다 크고 " + BigStorylineCriteria.MAX_INTENSITY.toPlainString() + " 이하인 소수 "
+				"큰 화제 기준은 0 보다 크고 " + BigStorylineCriteria.MAX_INTENSITY.toPlainString() + " 이하인 소수 "
 						+ BigStorylineCriteria.INTENSITY_SCALE + "자리까지다");
 	}
 

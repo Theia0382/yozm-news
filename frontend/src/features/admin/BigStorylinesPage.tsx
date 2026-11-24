@@ -103,7 +103,7 @@ export function BigStorylinesPage() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-semibold">큰 스토리라인</h2>
+      <h2 className="text-xl font-semibold">큰 화제</h2>
       <PeriodFields
         first={first}
         last={last}
@@ -114,20 +114,20 @@ export function BigStorylinesPage() {
       />
       {big.error && <p role="alert">{failureText(big.error)}</p>}
       {big.data && (
-        <section aria-label="기간의 큰 스토리라인" className="space-y-2">
+        <section aria-label="기간의 큰 화제" className="space-y-2">
           <h3 className="text-lg font-semibold">
-            기간의 큰 스토리라인 — 지금 기준 {criteriaText(big.data.criteria)}
+            기간의 큰 화제 — 지금 기준 {criteriaText(big.data.criteria)}
           </h3>
           <p className="text-sm text-muted-foreground">
-            스토리라인에 들지 않은 사건 {big.data.unlinked.events}건 · 기사{" "}
+            흐름에 들지 않은 사건 {big.data.unlinked.events}건 · 기사{" "}
             {big.data.unlinked.articles}건 — 이 기간에 기사가 있지만 어느
-            스토리라인에도 들지 않아 큰 판정에 들지 않는다
+            흐름에도 들지 않아 큰 화제 판정에 들지 않는다
           </p>
           {big.data.storylines.length === 0 ? (
-            <p className="text-sm">이 기간에 큰 스토리라인이 없다</p>
+            <p className="text-sm">이 기간에 큰 화제가 없다</p>
           ) : (
             <BigTable
-              label="기간의 큰 스토리라인"
+              label="기간의 큰 화제"
               rows={big.data.storylines}
               marks={null}
             />
@@ -140,10 +140,10 @@ export function BigStorylinesPage() {
         <section aria-label="기준 바꾸기" className="space-y-3">
           <h3 className="text-lg font-semibold">기준 바꾸기</h3>
           <p className="text-sm text-muted-foreground">
-            보도 강도는 스토리라인에 든 사건들의 기간 안 기사 중요도를 더해, 그
-            기간에 기사가 있는 소스 수와 기간의 일수로 나눈 값이다. 보도 강도가
-            기준 이상이면 큰 스토리라인이다. 미리보기는 위 기간을 제안 기준으로
-            다시 판정해 지금 결과와 견주고, 아무것도 바꾸지 않는다
+            보도 강도는 흐름에 든 사건들의 기간 안 기사 중요도를 더해, 그 기간에
+            기사가 있는 소스 수와 기간의 일수로 나눈 값이다. 보도 강도가 기준
+            이상이면 큰 화제다. 미리보기는 위 기간을 제안 기준으로 다시 판정해
+            지금 결과와 견주고, 아무것도 바꾸지 않는다
           </p>
           <div className="flex flex-wrap items-end gap-4 text-sm">
             <label htmlFor={intensityId} className="space-y-1">
@@ -213,13 +213,13 @@ function PreviewView({
         지금 기준 {criteriaText(preview.current)}:{" "}
         {preview.currentStorylines.length}건 → 제안 기준{" "}
         {criteriaText(preview.proposed)}: {preview.proposedStorylines.length}건
-        — 새로 드는 스토리라인 {added}건, 빠지는 스토리라인 {removed}건
+        — 새로 드는 흐름 {added}건, 빠지는 흐름 {removed}건
       </p>
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="space-y-1">
           <h4 className="font-medium">지금 기준</h4>
           <BigTable
-            label="지금 기준의 큰 스토리라인"
+            label="지금 기준의 큰 화제"
             rows={preview.currentStorylines}
             marks={(row) => (then.has(row.id) ? null : "빠짐")}
           />
@@ -227,7 +227,7 @@ function PreviewView({
         <div className="space-y-1">
           <h4 className="font-medium">제안 기준</h4>
           <BigTable
-            label="제안 기준의 큰 스토리라인"
+            label="제안 기준의 큰 화제"
             rows={preview.proposedStorylines}
             marks={(row) => (now.has(row.id) ? null : "새로 듦")}
           />
@@ -289,7 +289,7 @@ function BigTable({
     >
       <thead>
         <tr>
-          <th className="font-medium">스토리라인</th>
+          <th className="font-medium">흐름</th>
           <th className="font-medium">상태</th>
           <th className="font-medium">사건 수</th>
           <th className="font-medium">보도 강도(기간)</th>
@@ -311,7 +311,7 @@ function BigTable({
                   </span>
                 )}
                 <Link to={storylinePath(row.id)} className="underline">
-                  스토리라인 {row.id}
+                  흐름 {row.id}
                 </Link>
               </td>
               <td>{storylineStateLabels[row.state]}</td>

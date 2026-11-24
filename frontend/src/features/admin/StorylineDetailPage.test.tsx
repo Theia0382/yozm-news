@@ -232,14 +232,17 @@ describe("StorylineDetailPage", () => {
     renderPage(7, () => json(DETAIL));
 
     expect(
-      await screen.findByRole("heading", { name: "스토리라인 7" }),
+      await screen.findByRole("heading", { name: "흐름 7" }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("status")).toBeNull();
-    const values = screen.getByLabelText("스토리라인 값");
+    expect(
+      screen.getByRole("link", { name: "사건 흐름 목록" }),
+    ).toHaveAttribute("href", "/admin/storylines");
+    const values = screen.getByLabelText("흐름 값");
     expect(values).toHaveTextContent("진행");
     expect(values).toHaveTextContent("국회 본회의 통과");
     expect(
-      within(values).getByRole("link", { name: "스토리라인 2" }),
+      within(values).getByRole("link", { name: "흐름 2" }),
     ).toHaveAttribute("href", "/admin/storylines/2");
   });
 
@@ -247,7 +250,7 @@ describe("StorylineDetailPage", () => {
     renderPage(7, () => json(DETAIL));
 
     const table = await screen.findByRole("table", {
-      name: "스토리라인의 사건",
+      name: "흐름의 사건",
     });
     const first = cells(table, 1);
     expect(
@@ -255,7 +258,7 @@ describe("StorylineDetailPage", () => {
     ).toHaveAttribute("href", "/admin/events/70");
     expect(first[1]).toHaveTextContent(/^직접$/);
     expect(first[6]).toHaveTextContent(
-      /^이 스토리라인 · 붙이기 · 점수 0\.81 \(코사인 0\.77 · 겹침 0\.4\)창 3일 · 기준 점수 0\.62 · /,
+      /^이 흐름 · 붙이기 · 점수 0\.81 \(코사인 0\.77 · 겹침 0\.4\)창 3일 · 기준 점수 0\.62 · /,
     );
     // 위 기준 이상으로 붙은 소속은 판정 확률이 없다
     expect(first[6]).not.toHaveTextContent("판정 확률");
@@ -266,13 +269,13 @@ describe("StorylineDetailPage", () => {
     const memberships = within(second[6]!).getAllByRole("listitem");
     // 띠 안에서 판정으로 정한 소속은 판정 확률과 원본 번호, 그 판정의 띠 기준을 보인다
     expect(memberships[0]).toHaveTextContent(
-      /^스토리라인 8 · 짝 · 점수 0\.7 \(코사인 0\.66 · 겹침 0\.2\) · 판정 확률 0\.71 · 원본 #77 · 합쳐진 스토리라인 12 에서 옮겨 옴창 3일 · 띠 0\.6 ~ 0\.62 · 확률 0\.5 · /,
+      /^흐름 8 · 짝 · 점수 0\.7 \(코사인 0\.66 · 겹침 0\.2\) · 판정 확률 0\.71 · 원본 #77 · 합쳐진 흐름 12 에서 옮겨 옴창 3일 · 띠 0\.6 ~ 0\.62 · 확률 0\.5 · /,
     );
     expect(
-      within(memberships[0]!).getByRole("link", { name: "스토리라인 8" }),
+      within(memberships[0]!).getByRole("link", { name: "흐름 8" }),
     ).toHaveAttribute("href", "/admin/storylines/8");
     // 병합 옮김은 점수 · 기준이 없다
-    expect(memberships[1]).toHaveTextContent(/^이 스토리라인 · 병합 옮김/);
+    expect(memberships[1]).toHaveTextContent(/^이 흐름 · 병합 옮김/);
     expect(memberships[1]).not.toHaveTextContent("점수");
     expect(memberships[1]).not.toHaveTextContent("기준 점수");
     expect(memberships[1]).not.toHaveTextContent("판정 확률");
@@ -283,13 +286,13 @@ describe("StorylineDetailPage", () => {
 
     const table = await screen.findByRole("table", { name: "관계" });
     expect(cells(table, 1)[0]).toHaveTextContent(/^포함함$/);
-    expect(cells(table, 1)[1]).toHaveTextContent(/^스토리라인 8$/);
+    expect(cells(table, 1)[1]).toHaveTextContent(/^흐름 8$/);
     expect(cells(table, 1)[2]).toHaveTextContent(/^0\.7$/);
     expect(cells(table, 1)[5]).toHaveTextContent(
       "해당 없음 0.1 · 8 ⊂ 7 0.7 · 7 ⊂ 8 0.05 · 7 → 8 0.1 · 8 → 7 0.05 · 한 사안 7 0.8 · 8 0.6",
     );
     expect(cells(table, 2)[0]).toHaveTextContent(/^포함됨$/);
-    expect(cells(table, 2)[1]).toHaveTextContent(/^스토리라인 2$/);
+    expect(cells(table, 2)[1]).toHaveTextContent(/^흐름 2$/);
     expect(cells(table, 2)[5]).toHaveTextContent(/^원본 없음$/);
     expect(cells(table, 3)[0]).toHaveTextContent(/^낳음$/);
     // 원본의 확률은 관계의 앞 · 뒤가 아니라 원본의 앞 · 뒤 번호로 적는다
@@ -297,7 +300,7 @@ describe("StorylineDetailPage", () => {
       "해당 없음 0.1 · 7 ⊂ 11 0.7 · 11 ⊂ 7 0.05 · 11 → 7 0.1 · 7 → 11 0.05 · 한 사안 11 0.8 · 7 0.6",
     );
     expect(cells(table, 4)[0]).toHaveTextContent(/^이어받음$/);
-    expect(cells(table, 4)[1]).toHaveTextContent(/^스토리라인 5$/);
+    expect(cells(table, 4)[1]).toHaveTextContent(/^흐름 5$/);
   });
 
   it("조각으로 판정된 쌍은 결말과 조각 확률을 보인다", async () => {
@@ -345,7 +348,7 @@ describe("StorylineDetailPage", () => {
     );
 
     const table = await screen.findByRole("table", {
-      name: "합쳐진 스토리라인",
+      name: "합쳐진 흐름",
     });
     expect(cells(table, 1)[0]).toHaveTextContent(/^12$/);
     expect(cells(table, 1)[2]).toHaveTextContent(/^같은 사안의 조각$/);
@@ -365,7 +368,7 @@ describe("StorylineDetailPage", () => {
 
     await screen.findByRole("table", { name: "관계" });
     expect(
-      screen.queryByRole("region", { name: "합쳐진 스토리라인" }),
+      screen.queryByRole("region", { name: "합쳐진 흐름" }),
     ).not.toBeInTheDocument();
   });
 
@@ -400,20 +403,18 @@ describe("StorylineDetailPage", () => {
     );
 
     expect(
-      await screen.findByRole("heading", { name: "스토리라인 7" }),
+      await screen.findByRole("heading", { name: "흐름 7" }),
     ).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent(
-      "합쳐진 스토리라인 5 대신 남는 스토리라인을 보인다",
+      "합쳐진 흐름 5 대신 남는 흐름을 보인다",
     );
     expect(screen.getByText("맺은 관계가 없다")).toBeInTheDocument();
     expect(screen.getByText("관계를 물은 상대가 없다")).toBeInTheDocument();
   });
 
   it("없는 스토리라인은 서버의 설명을 보인다", async () => {
-    renderPage(99, () => problem(404, "없는 스토리라인: 99"));
+    renderPage(99, () => problem(404, "없는 흐름: 99"));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "없는 스토리라인: 99",
-    );
+    expect(await screen.findByRole("alert")).toHaveTextContent("없는 흐름: 99");
   });
 });

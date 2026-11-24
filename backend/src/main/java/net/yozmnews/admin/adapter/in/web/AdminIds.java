@@ -25,7 +25,7 @@ final class AdminIds {
 
 	private static final String EVENT = "사건";
 
-	private static final String STORYLINE = "스토리라인";
+	private static final String STORYLINE = "흐름";
 
 	private AdminIds() {
 	}
