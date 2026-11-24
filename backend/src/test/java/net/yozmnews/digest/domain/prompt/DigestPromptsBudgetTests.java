@@ -24,6 +24,7 @@ import net.yozmnews.event.EventId;
 import net.yozmnews.llm.LlmModel;
 import net.yozmnews.llm.Provider;
 import net.yozmnews.llm.ReasoningEffort;
+import net.yozmnews.llm.TokenEstimate;
 import net.yozmnews.user.SummaryLength;
 import net.yozmnews.user.domain.interest.DigestVolume;
 import org.junit.jupiter.api.Test;
@@ -34,7 +35,7 @@ import tools.jackson.databind.json.JsonMapper;
  * 프롬프트가 후보 선별의 토큰 어림 안에 드는가(ADR-0210) — 지시 + 항목이 없는 출력 스키마는 지시 예약 안, 프로필(고정 틀 포함) · 기사
  * 줄은 각 어림 안, 사건 · 항목의 괄호 · 항목 별칭 · 칸 이름과 출력 스키마에서 그 항목의 칸 서술은 사건마다 사건 몫 안. 긴 이름 ·
  * 이스케이프가 많은 글 · 가장 긴 시간대 ID · 가장 긴 항목 별칭으로 자르기와 몫을 걸고, 짧은 줄은 자르지 않는 대조를 둔다. 어림은
- * {@link CandidateCost} 의 공개 함수로 센다 — 비율을 다시 적지 않는다.
+ * {@link CandidateCost} 의 공개 함수와 {@code llm} 의 {@link TokenEstimate} 로 센다 — 비율을 다시 적지 않는다.
  */
 class DigestPromptsBudgetTests {
 
@@ -59,7 +60,7 @@ class DigestPromptsBudgetTests {
 				for (DigestPrompt prompt : List.of(first, retry)) {
 					// 스키마는 강제 인자로 가도 공급자가 입력으로 셀 수 있다 — 지시에 실렸든 아니든 한 번 센다
 					int schema = structured ? codePoints(prompt.outputSchema()) : 0;
-					assertThat(CandidateCost.tokens(codePoints(prompt.instructions()) + schema))
+					assertThat(TokenEstimate.tokens(codePoints(prompt.instructions()) + schema))
 						.as("%s · 구조화 %s · 다시 묻기 %s", length, structured, prompt == retry)
 						.isLessThanOrEqualTo(CandidateCost.INSTRUCTION_RESERVE);
 				}
@@ -120,9 +121,9 @@ class DigestPromptsBudgetTests {
 
 		JsonNode root = JSON.readTree(compose(input(profile, List.of())).userContent());
 
-		int allowed = CandidateCost.tokens(
+		int allowed = TokenEstimate.tokens(
 				(topics.size() + regions.size()) * CandidateCost.PROFILE_TAG_COST + CandidateCost.PROFILE_OVERHEAD);
-		assertThat(CandidateCost.tokens(codePoints(JSON.writeValueAsString(root)))).isLessThanOrEqualTo(allowed);
+		assertThat(TokenEstimate.tokens(codePoints(JSON.writeValueAsString(root)))).isLessThanOrEqualTo(allowed);
 		assertThat(root.get("profile").get("timezone").asString()).isEqualTo(longestZone);
 		// 긴 이름은 이름 몫까지 잘리고 짧은 이름은 그대로
 		assertThat(root.get("profile").get("topics").get(0).asString()).startsWith("이름이 아주")
@@ -141,7 +142,7 @@ class DigestPromptsBudgetTests {
 
 		assertThat(JSON.readTree(content)).isEqualTo(JSON.readTree("""
 				{"profile":{"topics":[],"excludedRegions":[],"timezone":"UTC"},"items":[]}"""));
-		assertThat(CandidateCost.tokens(codePoints(content))).isLessThanOrEqualTo(CandidateCost.PROFILE_OVERHEAD);
+		assertThat(TokenEstimate.tokens(codePoints(content))).isLessThanOrEqualTo(CandidateCost.PROFILE_OVERHEAD);
 	}
 
 	@Test
@@ -174,9 +175,9 @@ class DigestPromptsBudgetTests {
 		assertThat(tokens(last)).isLessThanOrEqualTo(CandidateCost.event(List.of(line)));
 		assertThat(tokens(many)).isLessThanOrEqualTo(3 * CandidateCost.event(List.of(line, line)));
 		// 사용자 구획 전체가 프로필 몫(구독 행 하나) + 사건마다의 몫 안이다 — 사건 하나짜리 항목 149 개와 사건 셋짜리 항목 하나
-		int allowed = CandidateCost.tokens(CandidateCost.PROFILE_TAG_COST + CandidateCost.PROFILE_OVERHEAD)
+		int allowed = TokenEstimate.tokens(CandidateCost.PROFILE_TAG_COST + CandidateCost.PROFILE_OVERHEAD)
 				+ 149 * CandidateCost.event(List.of(line)) + 3 * CandidateCost.event(List.of(line, line));
-		assertThat(CandidateCost.tokens(codePoints(compose(input).userContent()))).isLessThanOrEqualTo(allowed);
+		assertThat(TokenEstimate.tokens(codePoints(compose(input).userContent()))).isLessThanOrEqualTo(allowed);
 	}
 
 	@Test
@@ -220,7 +221,7 @@ class DigestPromptsBudgetTests {
 
 	/** 배열 줄 하나와 그 뒤 쉼표의 토큰 어림 */
 	private static int tokens(JsonNode line) {
-		return CandidateCost.tokens(codePoints(JSON.writeValueAsString(line)) + 1);
+		return TokenEstimate.tokens(codePoints(JSON.writeValueAsString(line)) + 1);
 	}
 
 	private static int codePoints(String text) {

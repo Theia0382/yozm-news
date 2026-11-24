@@ -20,6 +20,7 @@ import net.yozmnews.digest.domain.output.DigestOutputSchema;
 import net.yozmnews.digest.domain.prompt.PromptRules.Range;
 import net.yozmnews.digest.domain.selection.CandidateCost;
 import net.yozmnews.llm.LlmModel;
+import net.yozmnews.llm.TokenEstimate;
 import net.yozmnews.platform.StructuredOutputSchema;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.json.JsonMapper;
@@ -222,8 +223,8 @@ public final class DigestPrompts {
 		List<String> regions = new ArrayList<>(article.regions());
 		String published = PUBLISHED.format(article.publishedAt().atZone(profile.timezone()));
 		ArrayNode line = articleNode(sources, published, topics, regions, article.title(), summary);
-		while (CandidateCost.tokens(lineCodePoints(line)) > allowed) {
-			int over = CandidateCost.tokens(lineCodePoints(line)) - allowed;
+		while (TokenEstimate.tokens(lineCodePoints(line)) > allowed) {
+			int over = TokenEstimate.tokens(lineCodePoints(line)) - allowed;
 			if (!regions.isEmpty()) {
 				regions.removeLast();
 			}

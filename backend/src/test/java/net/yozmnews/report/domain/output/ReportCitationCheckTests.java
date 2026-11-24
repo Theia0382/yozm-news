@@ -53,4 +53,15 @@ class ReportCitationCheckTests {
 		assertThat(cited.unknownRefs()).isZero();
 	}
 
+	@Test
+	void namesTheMissingSectionsInInputOrder() {
+		ReportDraft onlyCoverage = new ReportDraft("개요",
+				Map.of(ReportSectionKind.COVERAGE, new SectionDraft("보도량", "본문", List.of())));
+
+		assertThat(ReportCitationCheck.missing(onlyCoverage, ALIASES))
+			.containsExactly(ReportSectionKind.STORYLINES, ReportSectionKind.INTERESTS);
+		assertThat(ReportCitationCheck.missing(new ReportDraft("개요", Map.of()), ReportAliases.of(input())))
+			.isEmpty();
+	}
+
 }

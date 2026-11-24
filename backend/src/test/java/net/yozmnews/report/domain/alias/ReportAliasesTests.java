@@ -43,6 +43,17 @@ class ReportAliasesTests {
 	}
 
 	@Test
+	void givesTheAliasOfATargetAndRefusesATargetOutsideTheInput() {
+		ReportAliases aliases = ReportAliases.of(input(flows(flow(31, 902), flow(44, 903)), interests(44, 31)));
+
+		assertThat(aliases.alias(storyline(31))).isEqualTo("S1");
+		assertThat(aliases.alias(storyline(44))).isEqualTo("S2");
+		assertThat(aliases.alias(event(903))).isEqualTo("E2");
+		assertThatIllegalArgumentException().isThrownBy(() -> aliases.alias(storyline(99)));
+		assertThatIllegalArgumentException().isThrownBy(() -> aliases.alias(event(31)));
+	}
+
+	@Test
 	void hasNoSectionsOnlyWhenTheInputHasNoSection() {
 		assertThat(ReportAliases.of(input()).hasNoSections()).isTrue();
 		ReportAliases statsOnly = ReportAliases.of(input(coverage()));

@@ -429,6 +429,12 @@ describe("InterestsPage", () => {
       ).length;
 
     expect(await model.findByRole("radio", { name: "보통" })).toBeChecked();
+    // 추론 강도는 다이제스트와 변화 리포트가 함께 쓴다
+    expect(
+      model.getByText(
+        "다이제스트와 변화 리포트를 만들 때 모델이 얼마나 깊이 생각할지 정합니다. 높을수록 여러 기사를 종합해 쓰는 품질이 나아질 수 있지만 출력 토큰(비용)과 만드는 시간이 늡니다.",
+      ),
+    ).toBeInTheDocument();
     await user.click(model.getByRole("radio", { name: "높음" }));
     const readsBeforeSave = modelReads();
     await user.click(model.getByRole("button", { name: "추론 강도 저장" }));

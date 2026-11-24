@@ -124,14 +124,14 @@ class ReportDirectoryServiceTests {
 				insert into reports (user_id, period_kind, period_start, period_end, status, provider, model, stats_snapshot,
 				                     error_code, error_message, created_at, started_at, completed_at, version)
 				values (7, 'MONTH', timestamptz '2026-10-01 00:00Z', timestamptz '2026-11-01 00:00Z', 'FAILED', 'openai',
-				        'gpt-5.5-mini', cast('{}' as jsonb), 'NO_GENERATOR', '생성기가 없다', timestamptz '2026-11-01 01:00Z',
+				        'gpt-5.5-mini', cast('{}' as jsonb), 'KEY_MISSING', '쓸 모델 공급자의 저장한 키가 없다', timestamptz '2026-11-01 01:00Z',
 				        timestamptz '2026-11-01 01:00Z', timestamptz '2026-11-01 01:00Z', 1)
 				returning id""").query(Long.class).single();
 		section(id, "OVERVIEW", 0, null, "남은 개요");
 
 		ReportView view = this.directory.find(OWNER, new ReportId(id)).orElseThrow();
 
-		assertThat(view.summary().failure()).isEqualTo(ReportFailure.NO_GENERATOR);
+		assertThat(view.summary().failure()).isEqualTo(ReportFailure.KEY_MISSING);
 		assertThat(view.summary().periodKind()).isEqualTo(ReportPeriodKind.MONTH);
 		assertThat(view.inputTokens()).isNull();
 		assertThat(view.sections()).isEmpty();
