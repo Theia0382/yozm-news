@@ -315,6 +315,10 @@
 | [0311](0311-a-change-report-input-fits-the-smaller-of-the-model-budget-and-the-weekly-or-monthly-cap-by-a-share-for-earlier-reports-and-a-fixed-trimming-order.md) | 변화 리포트의 입력은 모델 예산과 주간 · 월간 리포트 상한 가운데 작은 값 안으로, 직전 글의 몫과 정한 순서의 덜어 내기로 맞춘다 | 승인 |
 | [0312](0312-the-reasoning-effort-setting-is-shared-by-digests-and-change-reports-and-report-lengths-are-constants.md) | 추론 강도 설정은 다이제스트와 변화 리포트가 함께 쓰고, 리포트의 글 길이 기준은 상수다 | 승인 |
 | [0313](0313-the-input-token-estimate-is-an-llm-public-type.md) | 입력 토큰 어림은 `llm` 의 공개 타입이 정본이다 | 승인 |
+| [0316](0316-a-change-report-view-carries-each-visible-sections-numbers-as-typed-values-and-resolves-flow-lines-like-citations.md) | 변화 리포트 조회는 보이는 갈래 섹션마다 스냅숏의 숫자를 타입 있는 값으로 싣고, 흐름 줄은 인용과 같은 규칙으로 풀며, 숨긴 섹션 수를 낸다 | 승인 |
+| [0317](0317-a-change-report-row-points-to-the-previous-report-it-took-the-previous-values-from.md) | 변화 리포트 행은 생성 때 직전 값을 꺼낸 직전 리포트를 가리킨다 | 승인 |
+| [0318](0318-change-report-period-days-are-written-in-the-users-zone-at-start-and-the-row-keeps-that-zone.md) | 변화 리포트 기간의 날짜는 생성을 시작할 때의 사용자 시간대로 적고, 그 시간대를 리포트 행에 남긴다 | 승인 |
+| [0319](0319-the-change-report-screen-has-a-list-per-kind-and-a-report-page-with-four-states-and-the-failure-cause-only.md) | 변화 리포트 화면은 종류마다 목록과 한 편 화면으로 보이고, 상태는 넷, 실패는 코드의 무슨 일 문구만 보인다 | 승인 |
 
 ## 운영 규칙
 

@@ -14,11 +14,11 @@
 - **관심사 히스토리** — 세션 사용자의 기간별 주제 관심 · 새로 생긴 관심 · 사라진 관심 · 주제 구독 변경과, 정리된 흐름마다의 기간별 관심 · 관심이 생긴 흐름 · 사라진 흐름을 고른 기간(주 · 월)으로 낸다(reader-R8)
 - **다이제스트** — 세션 사용자의 가장 늦은 날짜의 다이제스트와 수동 생성 상태, 날짜 하나의 다이제스트, 다이제스트가 있는 날짜 목록을 내고, 수동 생성 요청을 받는다. 항목을 묶은 흐름이 정리돼 있으면 그 정리의 제목을 붙인다(reader-R9 ~ R11)
 - **구독 제안** — 세션 사용자에게 지금 제안할 주제 중분류의 이름 · 대분류 이름과 태그 체계 버전을 낸다 — 다이제스트 홈의 제안 카드가 쓴다(reader-R12). 수락 · 거절은 `user` 의 처리기가 받는다
-- **(미구현)** 변화 리포트 열람의 응답 — 그 화면을 만드는 작업이 이 모듈에 처리기를 두고 `report` 의 공개 조회(`ReportDirectory`)를 엮는다
+- **변화 리포트** — 세션 사용자의 종류 하나(주간 · 월간)의 리포트 목록과 리포트 한 편(요약 · 비교한 직전 리포트 · 숨긴 섹션 수 · 사용량 · 섹션마다 제목 · 본문 · 인용 · 그 갈래의 숫자)을 낸다. 인용 · 숫자 줄이 가리키는 흐름에는 지금 꼭대기를 가진 정리된 흐름의 제목과 대표 기사를, 사건에는 대표 기사를 붙인다(reader-R15 · R16)
 
 하지 않는 것:
 
-- 판정 · 저장을 하지 않는다 — 그 지식을 가진 모듈의 공개 조회에 맡긴다. 받은 소식의 뜻은 `digest`(digest-R13), 무엇이 정리된 흐름인지는 `user`(user-R73), 흐름에 묶인 지난 항목은 `digest`(digest-R53), 상태는 `storyline`, 대표 기사는 `event`, 출처 이름 엮기는 `article`(article-R17)이 정한다
+- 판정 · 저장을 하지 않는다 — 그 지식을 가진 모듈의 공개 조회에 맡긴다. 리포트의 비교 · 풀기 · 숨기기 · 기간 날짜는 `report`(report-R11 · R12 · R25 · R26), 받은 소식의 뜻은 `digest`(digest-R13), 무엇이 정리된 흐름인지는 `user`(user-R73), 흐름에 묶인 지난 항목은 `digest`(digest-R53), 상태는 `storyline`, 대표 기사는 `event`, 출처 이름 엮기는 `article`(article-R17)이 정한다
 - 판정 근거(소속의 점수 · 관계의 확률 · 물은 기록 · 기준)와 보도 강도 · 중요도를 내지 않는다 — 운영자 화면(`admin`)의 것이다
 - RSS 요약문 · 피드 섹션 · RSS 카테고리를 내지 않는다([ADR-0068](../adr/0068-rss-summaries-shown-only-on-operator-screens-and-users-get-processed-information.md))
 - 사용자를 인증하지 않는다 — 세션 · 키 관문은 `account` 의 보안 구성이 한다([account Spec](account.md#화면용-api-의-공개와-세션-사용자) account-R5 · R6)
@@ -54,6 +54,8 @@ HTTP 엔드포인트 — 모두 세션이 필요하고 키 관문 뒤다(키 없
 | `GET /api/digests` | 다이제스트가 있는 날짜 한 쪽 — 질의 `before`(YYYY-MM-DD, 다음 쪽은 앞 응답의 `next`) |
 | `POST /api/digests` | 수동 생성 요청 — 판별자 200(받음 · 진행 중 · 오늘 횟수 소진 · 쓸 모델 없음) |
 | `GET /api/topic-suggestions` | 세션 사용자에게 지금 제안할 주제 — 태그 체계 버전 ID(계정이 없으면 null) · 중분류마다 키 · 이름 · 대분류 이름 |
+| `GET /api/reports` | 세션 사용자의 변화 리포트 한 쪽 — 질의 `kind`(`WEEK` · `MONTH`, 필수) · `before`(1 이상, 다음 쪽은 앞 응답의 `next`). 종류가 없거나 틀리면 · `before` 가 1 보다 작으면 400 |
+| `GET /api/reports/{id}` | 변화 리포트 한 편 — 요약 · 비교한 직전 리포트 · 숨긴 섹션 수 · 사용량 · 섹션(제목 · 본문 · 인용 · 숫자). ID 가 1 보다 작거나 그 사용자의 리포트가 아니면 404 |
 | `GET /api/interest-history` | 세션 사용자의 관심사 히스토리 — 질의 `span`(`WEEKS_13` · `WEEKS_26` · `WEEKS_52` · `MONTHS_12` · `MONTHS_24` · `MONTHS_36`, 없으면 `digest` 의 `InterestHistorySpan.DEFAULT`) |
 
 요청 · 응답 형식의 정본은 [`api/openapi.json`](../../api/openapi.json)이다([ADR-0020](../adr/0020-screen-api-contract-from-committed-openapi-spec.md)). 요청의 문제는 400 · 404 문제 응답이다([ADR-0044](../adr/0044-screen-api-results-as-flat-discriminated-200-and-rfc9457-problems.md)).
@@ -64,10 +66,10 @@ HTTP 엔드포인트 — 모두 세션이 필요하고 키 관문 뒤다(키 없
 
 | 패키지 | 책임 |
 |---|---|
-| (최상위) | 모듈 선언 — 의존을 `storyline` · `event` · `article` · `digest` · `tag` · `user` · `platform` 으로 둔다(`package-info`) |
+| (최상위) | 모듈 선언 — 의존을 `storyline` · `event` · `article` · `digest` · `report` · `tag` · `user` · `platform` 으로 둔다(`package-info`) |
 | `adapter/in/web` | 독자 화면 컨트롤러, 응답 레코드, 요청 매개변수 읽기, 기사 정보 · 대표 기사 · 받은 날짜 맞붙이기, 관심사 히스토리 · 구독 제안의 주제 이름 맞붙이기, 다이제스트 인용 기사의 정보와 항목의 정리 맞붙이기, 정리된 흐름의 응답 |
 
-협력: 컨트롤러는 `storyline` 의 공개 조회 `StorylineDirectory`(`find` · `findAll` · `events` · `relationsOf`), `user` 의 공개 조회 `UserStorylineSummaries`(`shown` · `find` · `ofTops`), `event` 의 공개 조회 `EventDirectory`(`representativesOfAll` · `articleIdsOf`), `article` 의 공개 조회 `ArticleDirectory`(`headlines`), `digest` 의 공개 조회 `ReceivedArticles`(`receivedAmong`) · `InterestHistory`(`recent`) · `TopicSuggestions`(`suggestionsOf`) · `DigestDirectory`(`latest` · `on` · `dates` · `requestStatus` · `itemsOfStorylines`)와 공개 API `DigestRequests`(`request`), `tag` 의 공개 조회 `TagSetDirectory`(`names` — `TagSetNames` 의 `topicName` · `categoryOf` · `topicOrder`)만 부르고(`user` 의 그 밖의 것은 값 타입 `TopicSubscriptionAction` · `DigestFailureCause` 만 쓴다), 결과를 응답 레코드의 정적 팩토리로 옮긴다. 오류 응답은 `platform` 의 문제 응답 형식이다. `application` · `domain` 이 없다 — 판단이 없다([ADR-0192](../adr/0192-reader-screens-are-composed-by-the-reader-module-over-module-public-queries.md)).
+협력: 컨트롤러는 `storyline` 의 공개 조회 `StorylineDirectory`(`find` · `findAll` · `events` · `relationsOf` · `topsOfStorylines`), `user` 의 공개 조회 `UserStorylineSummaries`(`shown` · `find` · `ofTops`), `event` 의 공개 조회 `EventDirectory`(`representativesOfAll` · `articleIdsOf`), `article` 의 공개 조회 `ArticleDirectory`(`headlines`), `digest` 의 공개 조회 `ReceivedArticles`(`receivedAmong`) · `InterestHistory`(`recent`) · `TopicSuggestions`(`suggestionsOf`) · `DigestDirectory`(`latest` · `on` · `dates` · `requestStatus` · `itemsOfStorylines`)와 공개 API `DigestRequests`(`request`), `report` 의 공개 조회 `ReportDirectory`(`list` · `find`), `tag` 의 공개 조회 `TagSetDirectory`(`names` — `TagSetNames` 의 `topicName` · `categoryOf` · `topicOrder`)만 부르고(`user` 의 그 밖의 것은 값 타입 `TopicSubscriptionAction` · `DigestFailureCause` 만 쓴다), 결과를 응답 레코드의 정적 팩토리로 옮긴다. 오류 응답은 `platform` 의 문제 응답 형식이다. `application` · `domain` 이 없다 — 판단이 없다([ADR-0192](../adr/0192-reader-screens-are-composed-by-the-reader-module-over-module-public-queries.md)).
 
 역할: 모든 구성 요소가 화면 역할(`@WebRole`)이다(platform-R9).
 
@@ -78,10 +80,11 @@ HTTP 엔드포인트 — 모두 세션이 필요하고 키 관문 뒤다(키 없
 | 스토리라인 | `StorylineScreenController` | `GET /api/storylines/{id}` · `GET /api/storyline-cards` | 타임라인 · 카드(reader-R3 ~ R7). 트랜잭션을 열지 않는다 — 여러 공개 조회는 한 스냅숏이 아니다 |
 | 정리된 흐름 | `UserStorylineScreenController` | `GET /api/user-storylines` · `GET /api/user-storylines/{id}` · `GET /api/user-storylines/{id}/items` | 목록 · 하나 · 지난 다이제스트 항목(reader-R13 · R14). 트랜잭션을 열지 않는다 |
 | 다이제스트 | `DigestScreenController` | `GET /api/digests/latest` · `GET /api/digests/{date}` · `GET /api/digests` · `POST /api/digests` | 홈 · 날짜 · 날짜 목록 · 수동 생성 요청(reader-R9 ~ R11). 트랜잭션을 열지 않는다 — 수동 생성 요청은 트랜잭션 밖에서 불러야 한다 |
+| 변화 리포트 | `ReportScreenController` | `GET /api/reports` · `GET /api/reports/{id}` | 종류 하나의 목록 · 한 편(reader-R15 · R16). 트랜잭션을 열지 않는다 |
 | 관심사 히스토리 | `InterestHistoryController` | `GET /api/interest-history` | 세션 사용자의 관심사 히스토리(reader-R8). 트랜잭션을 열지 않는다 |
 | 구독 제안 | `TopicSuggestionController` | `GET /api/topic-suggestions` | 세션 사용자의 구독 제안(reader-R12). 트랜잭션을 열지 않는다 |
 
-`adapter/in/web` 의 그 밖의 타입: 응답 `UserStorylineResponses`(정리된 흐름의 응답 레코드 묶음 — `ListResponse` · `CardResponse` · `DetailResponse` · `TopResponse` · `UsageResponse` · `ItemsResponse` · `ItemResponse` · `ItemCursorResponse` · `RefResponse`) · `InterestUserStorylineResponse` · `StorylineCardResponse` · `StorylineTimelineResponse` · `StorylineRefResponse` · `TimelineEventResponse` · `StorylineCardsResponse` · `StorylineCardEntryResponse` · `NewsArticleResponse` · `InterestHistoryResponse` · `InterestSpanChoicesResponse` · `InterestPeriodResponse` · `TopicSubscriptionStepResponse` · `InterestTopicResponse` · `InterestLevelResponse` · `DigestHomeResponse` · `DigestDayResponse` · `ShownDigestResponse` · `DigestSectionResponse` · `DigestCitationResponse` · `DigestAttemptResponse` · `DigestUsageResponse` · `DigestDatesResponse`(중첩 `DigestDateResponse`) · `DigestRequestStatusResponse` · `DigestUnresolvedFailureResponse` · `DigestRequestResponse` · `TopicSuggestionsResponse` · `TopicSuggestionResponse`, 보조 `ScreenRequests`(요청 매개변수 읽기와 그 400 · 404) · `ScreenArticles`(기사 정보 맞붙이기) · `StorylineTitles`(사건의 대표 기사 맞붙이기) · `ReceivedMarks`(사건마다 받은 날짜 맞붙이기). 보조 맞붙이기 셋은 스프링 구성 요소가 아니라 컨트롤러가 만든다.
+`adapter/in/web` 의 그 밖의 타입: 응답 `UserStorylineResponses`(정리된 흐름의 응답 레코드 묶음 — `ListResponse` · `CardResponse` · `DetailResponse` · `TopResponse` · `UsageResponse` · `ItemsResponse` · `ItemResponse` · `ItemCursorResponse` · `RefResponse`) · `InterestUserStorylineResponse` · `StorylineCardResponse` · `StorylineTimelineResponse` · `StorylineRefResponse` · `TimelineEventResponse` · `StorylineCardsResponse` · `StorylineCardEntryResponse` · `NewsArticleResponse` · `InterestHistoryResponse` · `InterestSpanChoicesResponse` · `InterestPeriodResponse` · `TopicSubscriptionStepResponse` · `InterestTopicResponse` · `InterestLevelResponse` · `DigestHomeResponse` · `DigestDayResponse` · `ShownDigestResponse` · `DigestSectionResponse` · `DigestCitationResponse` · `DigestAttemptResponse` · `DigestUsageResponse` · `DigestDatesResponse`(중첩 `DigestDateResponse`) · `DigestRequestStatusResponse` · `DigestUnresolvedFailureResponse` · `DigestRequestResponse` · `TopicSuggestionsResponse` · `TopicSuggestionResponse` · `ReportListResponse` · `ReportSummaryResponse` · `ReportDetailResponse` · `ReportUsageResponse` · `ReportSectionResponse` · `ReportCitationResponse` · `ReportFlowResponse` · `ReportFlowCountResponse` · `ReportTopicCountResponse` · `ReportInterestsResponse` · `ReportTopicLevelResponse` · `ReportFlowLevelResponse`, 보조 `ScreenRequests`(요청 매개변수 읽기와 그 400 · 404) · `ScreenArticles`(기사 정보 맞붙이기) · `StorylineTitles`(사건의 대표 기사 맞붙이기) · `ReceivedMarks`(사건마다 받은 날짜 맞붙이기) · `UserStorylineRefs`(꼭대기 → 정리된 사용자 스토리라인 — 다이제스트와 변화 리포트가 함께 쓴다) · `ReportFlows`(변화 리포트의 흐름 · 사건 이름 맞붙이기). 보조 맞붙이기는 스프링 구성 요소가 아니라 컨트롤러가 만든다.
 
 ### `application`
 
@@ -154,6 +157,20 @@ HTTP 엔드포인트 — 모두 세션이 필요하고 키 관문 뒤다(키 없
 - **reader-R10** — 날짜 목록: `GET /api/digests` 는 `DigestDirectory.dates` 를 한 쪽 30개(`DigestScreenController.DATES_PAGE_SIZE` — 측정 전 목표, `DigestDirectory.MAX_DATES` 이하)로 부르고 날짜 · 상태 · 다음 쪽 `next` 를 그대로 낸다(digest-R39). 질의 `before` 는 reader-R9 의 날짜 꼴이어야 한다 — 아니면 400
 - **reader-R11** — 수동 생성: `POST /api/digests` 는 `DigestRequests.request` 를 세션 사용자로 부르고 결과 넷을 판별자 `result`(`REQUESTED` · `IN_PROGRESS` · `DAILY_LIMIT_REACHED` · `NO_USABLE_MODEL`)의 200 으로 옮긴다 — 받았으면 날짜 · 다시 만들기 여부, 오늘 횟수를 다 썼으면 다시 차는 시각을 싣는다(망라 분기). 요청 방어 표시가 없다 — 하루 횟수와 진행 중 거절은 `digest` 가 지킨다(digest-R31, [`docs/security.md`](../security.md) 악용 방지). 홈의 수동 생성 상태는 `DigestDirectory.requestStatus`(digest-R40)다
 
+### 변화 리포트
+
+판단의 이유는 [ADR-0316](../adr/0316-a-change-report-view-carries-each-visible-sections-numbers-as-typed-values-and-resolves-flow-lines-like-citations.md) · [ADR-0317](../adr/0317-a-change-report-row-points-to-the-previous-report-it-took-the-previous-values-from.md) · [ADR-0319](../adr/0319-the-change-report-screen-has-a-list-per-kind-and-a-report-page-with-four-states-and-the-failure-cause-only.md)에 있다. 비교 · 풀기 · 숨기기 · 기간 날짜의 판단은 `report` 의 것이다([report Spec](report.md#리포트-조회) report-R11 · R12 · R25 · R26).
+
+- **reader-R15** — 목록: `GET /api/reports` 는 `ReportDirectory.list` 를 세션 사용자 · 질의의 종류(`kind` — 필수, `ReportPeriodKind` 의 값이 아니면 400) · 커서(`before` — 1 보다 작으면 400, `ScreenRequests.reportCursor`)로 한 쪽 20개(`ReportScreenController.REPORTS_PAGE_SIZE` — 측정 전 목표, `ReportDirectory.MAX_PAGE_SIZE` 이하)씩 부른다. 줄마다 ID · 종류 · 기간 첫날 · 마지막 날 · 상태 · 실패 코드 · 끝낸 시각을 싣고 다음 쪽 `next` 를 그대로 낸다. 실패 메시지는 싣지 않는다
+  - 화면(`/reports`)은 종류 탭 둘(주간 · 월간 — 주소의 `kind`, 없거나 모르는 값이면 주간)마다 최근 순으로 줄마다 기간 링크와 상태(만드는 중 · 보일 변화 없음 · 만들지 못함 — 내용 있음은 적지 않는다)를 그리고, 리포트가 없으면 관심 설정에서 켜면 만들어진다고 안내한다
+- **reader-R16** — 한 편: `GET /api/reports/{id}` 는 경로 ID 가 1 보다 작거나 `ReportDirectory.find` 가 빈 값이면 404 다. 응답은 요약 · 생성 때 이은 직전 리포트의 요약(없으면 null) · 숨긴 갈래 섹션 수 · 사용량(공급자 · 모델 · 토큰 — 시작 전이면 null, 금액으로 바꾸지 않는다) · 보이는 섹션이다. 섹션마다 종류 · 제목 · 본문 · 인용 · 그 갈래의 숫자(흐름 보도량 `flows` · 주제 보도량 `topics` · 관심 `interests` — 그 갈래 밖이거나 숫자가 없으면 null)를 싣는다
+  - 흐름(흐름 인용 · 숫자의 흐름 줄)은 `ReportFlows` 가 이름을 붙인다 — 그 스토리라인의 지금 꼭대기(`StorylineDirectory.topsOfStorylines`, `MAX_TOP_STORYLINES` 씩)를 `UserStorylineSummaries.ofTops`(`MAX_TOPS` 씩)에 물어 정리된 사용자 스토리라인 모두(ID · 제목), 그 스토리라인의 대표 사건 대표 기사(`findAll` · reader-R3)를 싣는다. 생성 뒤 다른 흐름의 하위로 들어간 흐름도 지금 꼭대기의 정리로 잇는다
+  - 사건 인용은 대표 기사(reader-R7)를 싣고, 찾지 못하면 null 이다. 대표 기사는 흐름과 사건을 모아 한 응답에 한 번 읽는다
+  - 화면(`/reports/:id`)은 상태 넷을 가른다 — 만드는 중(`SCHEDULED` · `RUNNING`) · 비어 있음(`EMPTY` — 담을 변화가 없었다) · 실패(`FAILED` — 실패 코드마다 무슨 일 문구, 메시지 · 다시 만들기 없음) · 내용(`READY`). 내용은 개요, 갈래 섹션마다 제목 · 본문 · 숫자 표(직전 값이 없으면 `—`, 관심 값이 없으면 "신호 없음") · 인용 목록(접힘)을 그리고, 숨긴 섹션이 있으면 그 수를, 섹션이 하나도 없으면(갈래 섹션이 모두 숨음) 글 대신 안내를 보인다
+  - 흐름의 이름은 정리된 흐름의 제목(개인 흐름 화면 링크), 없으면 대표 기사 제목(공용 타임라인 링크), 그것도 없으면 이름 없는 흐름(공용 타임라인 링크)이다. 사건은 원문 링크(새 창) · 출처 · 발행 시각, 대표 기사가 없으면 링크 없는 안내다
+  - 비교한 직전 리포트 줄은 내용 · 실패 리포트에만 그린다 — 직전 리포트가 있으면 그 기간의 링크, 없으면 비교가 빈 까닭의 안내. 맨 아래에 모델 · 토큰 · 끝낸 시각을 적는다
+  - 진입은 머리줄의 "변화 리포트"와 관심 설정 리포트 절의 링크다
+
 ## 6. 데이터
 
 해당 없음 — 이 모듈은 자기 테이블이 없다.
@@ -190,3 +207,6 @@ HTTP 엔드포인트 — 모두 세션이 필요하고 키 관문 뒤다(키 없
 | [0292](../adr/0292-reader-screens-call-a-storyline-an-event-flow.md) | 독자 화면은 스토리라인을 "사건 흐름"으로 부른다 |
 | [0293](../adr/0293-the-interest-history-also-shows-the-interest-of-summarized-flows.md) | 관심사 히스토리는 정리된 흐름의 관심도 보인다 |
 | [0294](../adr/0294-a-user-storyline-is-one-per-head-and-a-top-before-a-fork-belongs-to-several-of-them.md) | 정리된 흐름의 손잡이는 헤드이고, 항목의 흐름 링크는 그 흐름을 가진 정리된 흐름 모두다 |
+| [0316](../adr/0316-a-change-report-view-carries-each-visible-sections-numbers-as-typed-values-and-resolves-flow-lines-like-citations.md) | 변화 리포트 조회는 보이는 갈래 섹션마다 스냅숏의 숫자를 싣는다 — 이 모듈은 흐름 · 사건의 표시 이름만 붙인다 |
+| [0317](../adr/0317-a-change-report-row-points-to-the-previous-report-it-took-the-previous-values-from.md) | 변화 리포트 행은 생성 때 직전 값을 꺼낸 직전 리포트를 가리킨다 — 한 편이 그 링크를 단다 |
+| [0319](../adr/0319-the-change-report-screen-has-a-list-per-kind-and-a-report-page-with-four-states-and-the-failure-cause-only.md) | 변화 리포트 화면은 종류마다 목록과 한 편 화면으로 보이고, 상태는 넷, 실패는 코드의 무슨 일 문구만 보인다 |

@@ -6,13 +6,13 @@
 
 `report` 는 사용자마다 주간 · 월간 변화 리포트를 만들고 저장하고 조회로 낸다 — 갈래마다 인용 대상(스토리라인 · 사건)과 통계 스냅숏을 담은 생성의 입력에 별칭을 매겨 생성기에 넘기고, 출력을 서술대로 읽어 별칭을 입력과 대조한 뒤 개요 · 섹션 · 인용으로 저장한다([pipeline.md §10](../pipeline.md#10-변화-리포트)).
 
-- **리포트 상태** — 생성을 기다림 · 생성 중 · 끝(내용 있음 · 재료 없음 · 실패)의 전이와, 쓸 모델 · 토큰 · 소요 시간 · 실패 코드 · 생성에 쓴 통계 스냅숏의 기록(report-R1)
+- **리포트 상태** — 생성을 기다림 · 생성 중 · 끝(내용 있음 · 재료 없음 · 실패)의 전이와, 쓸 모델 · 토큰 · 소요 시간 · 실패 코드 · 생성에 쓴 통계 스냅숏 · 직전 값을 꺼낸 직전 리포트 · 기간 날짜를 적는 사용자 시간대의 기록(report-R1 · R13)
 - **생성 흐름** — 예약, 입력을 예산에 맞추기, 행 잠금 뒤 시작, 갈래 · 대상에 별칭 매기기, 프롬프트 그리기, 생성기를 트랜잭션 밖에서 부르기, 판정과 한 번 다시 묻기, 대조와 저장. 끝났거나 생성 중인 리포트는 건드리지 않는다 — 같은 리포트의 생성은 한 실행이 한다(report-R3 · R4 · R8 · R13)
 - **입력 맞추기** — 입력을 쓸 모델의 입력 예산과 주간 · 월간 리포트 상한 가운데 작은 값 안으로 맞춘다 — 직전 리포트 글은 몫 안으로 본문을 자르고, 재료는 정한 순서로 덜어 낸다(report-R22)
 - **프롬프트** — 지시 · JSON 사용자 구획 · 출력 스키마를 그리고, 다시 묻는 프롬프트를 만든다. 스토리라인 · 사건은 별칭으로만 싣는다(report-R23)
 - **출력 서술 · 읽기 · 대조** — 요청마다 그 갈래 집합에서 만든 출력 서술 하나에서 읽기와 생성에 넘길 JSON Schema 문서가 함께 나온다. 서술을 따라 읽는 기구는 `platform` 의 것이고([platform Spec](platform.md#llm-출력-읽기) platform-R31 · R32), 이 모듈은 리포트의 서술(개요 · 갈래를 키로 한 필수 칸) · 상한 · 걸은 값 옮기기 · 별칭 대조를 갖는다(report-R5 ~ R7)
 - **생성기 포트 · 실제 생성기 · 로컬 대체물** — 생성기 포트(`ReportGenerator`), profile `local` 밖에서 사용자의 저장한 키로 `llm` 의 생성 호출을 부르는 실제 생성기(`LlmReportGenerator`), profile `local` 의 고정 규칙 대체물(`FakeReportGenerator`)(report-R2 · R10 · R24)
-- **리포트 조회** — 사용자의 리포트 목록과 한 편(섹션 · 인용 · 스냅숏)을 공개 조회(`ReportDirectory`)로 낸다. 합쳐진 사건 · 스토리라인은 남는 것으로 풀고 지운 것은 빼며, 인용을 모두 잃은 섹션은 보이지 않는다. 화면용 API 는 `reader` 가 낸다(report-R11 · R12)
+- **리포트 조회** — 사용자의 종류 하나의 리포트 목록과 한 편(섹션 · 인용 · 보이는 갈래 섹션마다 스냅숏의 숫자 · 숨긴 섹션 수 · 직전 리포트)을 공개 조회(`ReportDirectory`)로 낸다. 합쳐진 사건 · 스토리라인은 남는 것으로 풀고 지운 것은 빼며(스냅숏의 흐름 줄도 같다), 인용을 모두 잃은 섹션은 보이지 않는다. 기간은 시작할 때의 사용자 시간대의 날짜로 낸다. 화면용 API 는 `reader` 가 낸다(report-R11 · R12 · R25 · R26)
 - **재료 조립** — (사용자, 리포트 기간)의 생성 입력을 다른 모듈의 공개 조회로 모은다(`ReportMaterialCollection`). 그 사용자와 관계된 것만 — 추적 중인 사용자 스토리라인의 변화(흐름은 정리, 사건은 대표 기사 제목으로), 구독 주제의 보도량, 관심 변화 — 를 갈래 셋으로 싣고, 직전 리포트의 스냅숏과 1:1 로 이어 견주며, 생성에 쓴 통계를 스냅숏의 꼴로 쓴다(report-R14 ~ R21)
 - **(미구현)** 일정과 생성 작업 — 리포트 시점이 된 사용자의 생성 작업을 1시간마다 등록하는 회차(`ScheduleDueReports`)와 생성 작업(`GenerateReport(userId, period)` — 재료 조립 → 스냅숏 → 생성 → 검증 → 저장), 리포트 기간, (사용자, 리포트 기간)마다 한 번의 저장 제약, 거두기 · 실패 알림. 지금은 예약(`ReportGeneration.schedule`)을 부르는 쪽이 시험뿐이다
 - **(미구현)** 탈퇴한 사용자의 리포트 지우기
@@ -35,7 +35,7 @@
 | 재료 | 갈래의 내용 — 갈래마다 꼴이 정해져 있고(`StorylinesSection` · `CoverageSection` · `InterestsSection`), 갈래의 인용 대상은 재료에서 나온다(report-R3 · R14) |
 | 흐름 | 리포트가 다루는 사용자 스토리라인 하나 — 헤드(공용 스토리라인 ID)로 가리키고 인용한다(report-R16) |
 | 사건 줄 | 흐름의 기간 안 기사가 있는 사건 하나 — 대표 기사 제목 · 사용자 시간대의 첫날 · 기간 안 기사 수 · 기간 안에서 시작했는가(report-R16) |
-| 직전 리포트 | 같은 사용자 · 같은 종류이고 끝이 이번 시작과 같은 시작한 리포트 — 그 스냅숏에서 직전 값을 꺼낸다(report-R18) |
+| 직전 리포트 | 같은 사용자 · 같은 종류이고 끝이 이번 시작과 같은 시작한 리포트 — 그 스냅숏에서 직전 값을 꺼내고, 시작할 때 리포트 행에 그 ID 를 남긴다(report-R18) |
 | 인용 대상 | 갈래가 인용할 수 있는 스토리라인 · 사건 — 생성의 입력이 갈래마다 싣는다(report-R3) |
 | 별칭 | 이번 생성에서만 쓰는 짧은 이름 — 스토리라인 `S1` …, 사건 `E1` …. 출력은 인용 대상을 별칭으로만 가리킨다(report-R4) |
 | 통계 스냅숏 | 생성에 쓴 통계 — 생성을 시작할 때 리포트 행에 함께 저장하고, 다음 리포트가 직전 값을 꺼낸다. 꼴은 report-R19(report-R1) |
@@ -43,7 +43,10 @@
 | 서술 | 출력 구조(속성 · 필수 · 타입 · 상한 · 처분)를 적은 정본 — 읽기와 JSON Schema 문서가 함께 따른다(report-R5) |
 | 섹션 | 저장한 리포트의 한 덩어리 — 개요(`OVERVIEW`) 또는 갈래 하나 |
 | 인용 | 갈래 섹션이 인용한 스토리라인 · 사건 한 줄 — 생성 때의 ID 그대로 저장한다(report-R9) |
-| 숨긴 섹션 | 인용이 하나 이상 있었는데 조회에서 인용이 하나도 남지 않은 갈래 섹션 — 조회가 보이지 않는다(report-R12) |
+| 숨긴 섹션 | 인용이 하나 이상 있었는데 조회에서 인용이 하나도 남지 않은 갈래 섹션 — 조회가 보이지 않고 그 수를 낸다(report-R12) |
+| 섹션 숫자 | 보이는 갈래 섹션 하나에 붙는 스냅숏의 그 갈래 칸 — 흐름 · 주제의 보도량, 주제 · 흐름의 관심(report-R25) |
+| 흐름 줄 | 섹션 숫자에서 흐름 하나의 줄 — 생성 때 헤드를 지금 스토리라인으로 풀어 가리킨다(report-R25) |
+| 기간 날짜 | 리포트 기간 [시작, 끝) 의 첫날 · 마지막 날 — 시작할 때 남긴 사용자 시간대로 적는다(report-R26) |
 | 리포트 상한 | 리포트 종류마다 입력에 쓰는 토큰의 상한 — 주간 · 월간이 따로다. 쓸 모델의 입력 예산과 견줘 작은 값이 실제 상한이다(report-R22) |
 | 사용자 구획 예산 | 실제 상한에서 지시 몫을 뺀 토큰 — 입력 맞추기가 사용자 구획을 이 안으로 맞춘다(report-R22) |
 | 직전 글의 몫 | 사용자 구획 예산 가운데 직전 리포트 글이 쓸 수 있는 비율 — 싣는 편마다 고르게 나눈다(report-R22) |
@@ -54,50 +57,70 @@
 
 ## 3. 공개 인터페이스
 
-모듈 최상위 패키지 `net.yozmnews.report` 의 공개 타입은 열하나다 — 공개 조회 하나(`ReportDirectory`)와 그 값 타입 넷(`ReportSummary` · `ReportPage` · `ReportView` · `ReportSectionView`), 값 타입 여섯(`ReportId` · `ReportPeriodKind` · `ReportStatus` · `ReportFailure` · `ReportSectionKind` · `ReportCitation`). 이 모듈이 내는 HTTP 엔드포인트 · 이벤트는 없다.
+모듈 최상위 패키지 `net.yozmnews.report` 의 공개 타입은 열넷이다 — 공개 조회 하나(`ReportDirectory`)와 그 값 타입 다섯(`ReportSummary` · `ReportPage` · `ReportView` · `ReportSectionView` · `ReportSectionStats` — 중첩 레코드 일곱), 값 타입 여덟(`ReportId` · `ReportPeriodKind` · `ReportStatus` · `ReportFailure` · `ReportSectionKind` · `ReportCitation` · `ReportTrend` · `InterestShift`). 이 모듈이 내는 HTTP 엔드포인트 · 이벤트는 없다.
 
-### ReportDirectory · ReportSummary · ReportPage · ReportView · ReportSectionView
+### ReportDirectory · ReportSummary · ReportPage · ReportView · ReportSectionView · ReportSectionStats
 
-리포트 조회 — 사용자의 리포트 목록과 한 편을 읽는다(report-R11 · R12). 구현은 `application` 의 `ReportDirectoryService` 다. 화면용 처리기는 `reader` 가 낸다([ADR-0192](../adr/0192-reader-screens-are-composed-by-the-reader-module-over-module-public-queries.md)).
+리포트 조회 — 사용자의 리포트 목록과 한 편을 읽는다(report-R11 · R12 · R25 · R26). 구현은 `application` 의 `ReportDirectoryService` 다. 화면용 처리기는 `reader` 가 낸다([ADR-0192](../adr/0192-reader-screens-are-composed-by-the-reader-module-over-module-public-queries.md)).
 
 ```java
 public interface ReportDirectory {
     int MAX_PAGE_SIZE = 50;                                 // 목록 한 쪽의 상한 — 정본. 측정 전 목표
 
-    ReportPage list(UserId user, @Nullable ReportId before, int size);
+    ReportPage list(UserId user, ReportPeriodKind kind, @Nullable ReportId before, int size);
     Optional<ReportView> find(UserId user, ReportId id);
 }
 
 public record ReportSummary(ReportId id, ReportPeriodKind periodKind, Instant periodStart, Instant periodEnd,
-        ReportStatus status, @Nullable ReportFailure failure, Instant createdAt, @Nullable Instant completedAt) {}
+        LocalDate firstDay, LocalDate lastDay, ReportStatus status, @Nullable ReportFailure failure,
+        Instant createdAt, @Nullable Instant completedAt) {}   // lastDay 가 firstDay 보다 앞이면 IllegalArgumentException
 public record ReportPage(List<ReportSummary> reports, @Nullable ReportId next) {}
 public record ReportView(ReportSummary summary, @Nullable String provider, @Nullable String model,
-        @Nullable Integer inputTokens, @Nullable Integer outputTokens, @Nullable String statsSnapshot,
-        List<ReportSectionView> sections) {}
+        @Nullable Integer inputTokens, @Nullable Integer outputTokens, @Nullable ReportSummary previous,
+        int hiddenSections, List<ReportSectionView> sections) {}   // hiddenSections 가 0 보다 작으면 IllegalArgumentException
 public record ReportSectionView(ReportSectionKind kind, @Nullable String title, String body,
-        List<ReportCitation> citations) {}
+        List<ReportCitation> citations, @Nullable ReportSectionStats stats) {}   // 종류와 숫자의 짝이 틀리면 IllegalArgumentException
+
+public sealed interface ReportSectionStats {
+    record Flows(List<FlowCount> flows) implements ReportSectionStats {}
+    record FlowCount(StorylineId storyline, long articles, @Nullable Long previous, ReportTrend trend,
+            boolean trackedInPeriod) {}
+    record Coverage(List<TopicCount> topics) implements ReportSectionStats {}
+    record TopicCount(String name, long articles, @Nullable Long previous, ReportTrend trend) {}
+    record Interests(List<TopicLevel> topics, List<FlowLevel> flows) implements ReportSectionStats {}
+    record TopicLevel(String name, @Nullable Double start, @Nullable Double end, InterestShift shift) {}
+    record FlowLevel(StorylineId storyline, @Nullable Double start, @Nullable Double end, InterestShift shift) {}
+}
 ```
 
 | 메서드 · 필드 | 뜻 | 제약 |
 |---|---|---|
-| `list` | 그 사용자의 리포트 — ID 내림차순으로 `size` 건, `before` 가 있으면 그보다 작은 ID 만(report-R11) | `size` 가 1 ~ `MAX_PAGE_SIZE` 밖이면 `IllegalArgumentException` |
+| `list` | 그 사용자의 그 종류 리포트 — ID 내림차순으로 `size` 건, `before` 가 있으면 그보다 작은 ID 만(report-R11) | `size` 가 1 ~ `MAX_PAGE_SIZE` 밖이면 `IllegalArgumentException` |
 | `find` | 그 사용자의 리포트 한 편 | 없거나 다른 사용자의 리포트면 빈 값 |
 | `ReportPage.next` | 다음 쪽의 `before` — 이 쪽의 마지막 ID. 더 없으면 null | — |
+| `ReportSummary.firstDay` · `lastDay` | 기간 날짜 — 시작할 때 남긴 사용자 시간대(시작 전이면 지금 사용자 시간대)의 첫날 · 마지막 날(report-R26) | — |
 | `ReportSummary.failure` | 실패 코드 — `FAILED` 일 때만 | — |
 | `ReportSummary.completedAt` | 끝낸 시각 — 끝난 상태일 때만 | — |
 | `ReportView.provider` · `model` | 시작할 때 적은 공급자 키 · 모델 ID — 시작 전이면 null | — |
 | `ReportView.inputTokens` · `outputTokens` | 공급자가 센 토큰 — 공급자가 답한 생성일 때만 | — |
-| `ReportView.statsSnapshot` | 생성에 쓴 통계 스냅숏(JSON 객체 문자열) — 시작 전이면 null. 저장이 jsonb 라 공백 · 키 순서는 넣은 문자열과 다를 수 있다 | — |
+| `ReportView.previous` | 생성 때 직전 값을 꺼낸 직전 리포트(report-R18)의 요약 — 이은 리포트가 없었거나 그새 지워졌으면 null. 같은 사용자의 행만 읽는다 | — |
+| `ReportView.hiddenSections` | 인용을 모두 잃어 숨긴 갈래 섹션 수(report-R12) — `READY` 가 아니면 0 | — |
 | `ReportView.sections` | 보이는 섹션 — 위치 순. `READY` 가 아니면 빈 목록(report-R12) | — |
 | `ReportSectionView.title` | 갈래 섹션의 제목 — 개요는 null | — |
 | `ReportSectionView.citations` | 지금 가리키는 인용 — 합쳐진 것은 남는 것, 지운 것은 빠진다, 풀린 뒤 같은 대상은 한 번(report-R11). 개요는 빈 목록 | — |
+| `ReportSectionView.stats` | 그 갈래의 숫자(report-R25) — `STORYLINES` 는 `Flows`, `COVERAGE` 는 `Coverage`, `INTERESTS` 는 `Interests`. 개요이거나 스냅숏에 그 갈래 칸이 없거나 스냅숏을 읽지 못하면 null | — |
+| `ReportSectionStats.FlowCount` · `FlowLevel.storyline` | 생성 때 헤드를 지금 스토리라인으로 푼 것(report-R25) | — |
+| `ReportSectionStats.*.previous` | 생성 때 이은 직전 값(report-R18) — 없으면 null | — |
+| `ReportSectionStats.TopicCount` · `TopicLevel.name` | 생성 때 스냅숏에 적은 주제 이름 | — |
+| `ReportSectionStats.*.start` · `end` | 기간 시작 · 끝의 관심 값 — 신호가 없으면 null(report-R17) | — |
 
 - 계약
   - 사용자를 인자로 받는 조회다 — 화면 경로에서는 세션 사용자로만 부른다. 모든 질의가 그 사용자의 리포트만 읽는다
   - 쓰지 않는다. 역할 애너테이션이 없다(두 역할 공통)
   - 풀기는 `event` · `storyline` 의 공개 조회로 그 순간의 값이다
+  - 시작 전 리포트의 기간 날짜는 `user` 의 사용자 시간대 조회로 그 순간의 값이다
 
-### ReportId · ReportPeriodKind · ReportStatus · ReportFailure · ReportSectionKind · ReportCitation
+### ReportId · ReportPeriodKind · ReportStatus · ReportFailure · ReportSectionKind · ReportCitation · ReportTrend · InterestShift
 
 ```java
 public record ReportId(long value) {}                      // 1 보다 작으면 IllegalArgumentException
@@ -115,6 +138,8 @@ public sealed interface ReportCitation {
     record Storyline(StorylineId id) implements ReportCitation {}
     record Event(EventId id) implements ReportCitation {}
 }
+public enum ReportTrend { NEW, ROSE, FELL, STEADY, NO_COMPARISON }
+public enum InterestShift { ENTERED, LEFT, NONE }
 ```
 
 | 타입 · 값 | 뜻 |
@@ -127,6 +152,8 @@ public sealed interface ReportCitation {
 | `ReportFailure.KEY_INVALID` · `PERMISSION_DENIED` · `QUOTA_EXHAUSTED` · `PROVIDER_UNAVAILABLE` · `PROVIDER_UNEXPECTED` | 관문이 가른 실패 종류(`llm` 의 `LlmFailureKind` — 키 무효 · 권한 없음 · 한도 소진 · 일시 장애가 다시 보내도 이어짐 · 예상 밖의 답)마다 하나(report-R24) |
 | `ReportSectionKind` | 개요와 갈래 셋 — `STORYLINES`(이번 기간 추적한 흐름의 변화) · `COVERAGE`(구독 주제의 보도량과 직전 기간 비교) · `INTERESTS`(관심도의 변화, 새로 생긴 · 사라진 관심). 개요는 입력 갈래가 아니다([ADR-0273](../adr/0273-change-reports-are-written-in-fixed-sections-per-material-kind-keyed-as-required-fields.md) · [ADR-0303](../adr/0303-a-change-report-covers-only-what-relates-to-the-user-in-three-sections-tracked-flows-subscribed-topic-coverage-and-interest-changes.md)) |
 | `ReportCitation` | 인용 대상 · 인용 — 스토리라인 또는 사건뿐이다([ADR-0274](../adr/0274-change-reports-cite-only-storylines-and-events-and-keep-topics-in-the-stats-snapshot.md)) |
+| `ReportTrend` | 보도량 판정 — 직전이 0 이고 이번에 생겼다(`NEW`) · 늘었다(`ROSE`) · 줄었다(`FELL`) · 그대로(`STEADY`) · 직전 값이 없다(`NO_COMPARISON`)(report-R15). 판정 규칙과 상수는 `domain/material` 의 `CoverageTrend` 에 있다 |
+| `InterestShift` | 관심 줄의 변화 — 새로 생긴 관심 · 보이게 된 흐름(`ENTERED`) · 사라진 관심 · 보이지 않게 된 흐름(`LEFT`) · 변화 없음(`NONE`)(report-R17) |
 
 `UserId` 는 `platform`, `StorylineId` 는 `storyline`, `EventId` 는 `event` 의 공개 타입이다.
 
@@ -137,15 +164,15 @@ public sealed interface ReportCitation {
 | 패키지 | 책임 |
 |---|---|
 | (최상위) | 모듈 선언(`package-info`), 공개 조회 `ReportDirectory` 와 그 값 타입, 값 타입 · enum(§3) |
-| `domain/report` | 상태 aggregate(`Report`)와 저장소(`ReportRepository` — 행 잠금 · 스냅숏 쓰기), 기간 값(`ReportPeriod`), 끝내기의 값(`Completion`) |
-| `domain/input` | 생성의 입력(`ReportInput`)과 갈래 재료(`InputSection` — `StorylinesSection` · `CoverageSection` · `InterestsSection`), 줄 값(`FlowMaterial` · `FlowSummary` · `EventLine` · `Count` · `TopicCoverageLine` · `TopicInterestLine` · `FlowInterestLine` · `TopicSubscriptionLine` · `InterestShift`), 직전 리포트 글(`PriorReport` · `PriorSection`) |
+| `domain/report` | 상태 aggregate(`Report`)와 저장소(`ReportRepository` — 행 잠금 · 시작의 기록 쓰기), 기간 값과 기간 날짜의 정본(`ReportPeriod`), 끝내기의 값(`Completion`) |
+| `domain/input` | 생성의 입력(`ReportInput`)과 갈래 재료(`InputSection` — `StorylinesSection` · `CoverageSection` · `InterestsSection`), 줄 값(`FlowMaterial` · `FlowSummary` · `EventLine` · `Count` · `TopicCoverageLine` · `TopicInterestLine` · `FlowInterestLine` · `TopicSubscriptionLine`), 직전 리포트 글(`PriorReport` · `PriorSection`) |
 | `domain/material` | 재료 판단의 정본 — 갈래 조건(`ReportSections`), 보도량 판정(`CoverageTrend`), 사건 줄 고르기(`EventLines`), 관심 줄 고르기(`InterestLines`), 기간 안 추적(`TrackedFlows`), 직전 값 잇기(`PreviousMatch`), 스냅숏 꼴(`ReportSnapshot`) |
 | `domain/alias` | 별칭의 정본(`ReportAliases`)과 그 값(`AliasedSection`) |
 | `domain/output` | 출력 서술 · 상한 · 키 이름의 정본(`ReportOutputSchema`), 읽기(`ReportOutputReader`), 대조의 정본(`ReportCitationCheck`), 값(`ReportDraft` · `SectionDraft` · `ReportOutputRead` · `CitedReport` · `CitedSection`) |
 | `domain/prompt` | 입력 예산 · 맞추기의 정본(`ReportInputBudget` · `ReportInputFit` — 값 `FittedInput`), 프롬프트 구성과 그 상수의 정본(`ReportPrompts` · `ReportPromptRules` — 값 `ReportPrompt`) |
 | `domain/generator` | 생성기 포트(`ReportGenerator`)와 그 요청 · 결과(`ReportRequest` · `ReportOutcome` · `TokenUsage`), 생성 판정과 다시 묻기(`ReportVerdict`), 관문 실패 종류의 옮기기(`ReportFailures`) |
 | `domain/content` | 내용 aggregate(`ReportSection` — 인용 `ReportItem` 을 자식으로)와 저장소(`ReportSectionRepository`) |
-| `domain/view` | 조회 판단의 정본(`ReportViews`), 조회 저장소(`ReportViewRepository`), 값(`StoredSection` · `ReportRow`) |
+| `domain/view` | 조회 판단의 정본(`ReportViews` — 풀기 · 숨기기 · 섹션 숫자 · 기간 날짜 · 쪽), 조회 저장소(`ReportViewRepository`), 값(`StoredSection` · `ReportRow`) |
 | `application` | 생성 유스케이스(`ReportGeneration`), 조회 공개 조회의 구현(`ReportDirectoryService`), 재료 조립(`ReportMaterialCollection`) |
 | `adapter/out/persistence` | 조회 저장소의 JdbcClient 구현(`JdbcReportViewRepository`) |
 | `adapter/out/llm` | 실제 생성기와 그 결선 |
@@ -163,7 +190,7 @@ sequenceDiagram
     participant X as ReportGenerator
     U->>G: run(id, 쓸 모델, 추론 강도, 생성의 입력)
     Note over G: 트랜잭션 안이면 거부 · 입력 맞추기(report-R22) · 별칭 · 서술(report-R4 · R5)
-    G->>DB: 트랜잭션 ① — 행 잠금 · 스냅숏 쓰기 · 시작
+    G->>DB: 트랜잭션 ① — 행 잠금 · 시작의 기록 쓰기 · 시작
     Note over G,DB: 갈래 0 개면 EMPTY 로 끝(report-R13)
     Note over G: 프롬프트(report-R23)
     G->>X: generate(요청) — 트랜잭션 밖
@@ -181,26 +208,27 @@ sequenceDiagram
 
 ### 들어오는 쪽
 
-- 공개 조회 — `ReportDirectory`(report-R11 · R12). 지금 부르는 쪽은 시험뿐이고, 변화 리포트 화면을 만드는 작업이 `reader` 의 화면용 처리기에서 부른다. 컨트롤러 · 이벤트 리스너 · 반복 작업은 없다
+- 공개 조회 — `ReportDirectory`(report-R11 · R12 · R25 · R26). `reader` 의 변화 리포트 처리기가 세션 사용자로 부르고([reader Spec](reader.md#변화-리포트) reader-R15 · R16), 재료 조립이 직전 리포트 글을 읽을 때 부른다(report-R20). 컨트롤러 · 이벤트 리스너 · 반복 작업은 없다
 - 생성 유스케이스 — `ReportGeneration.schedule` · `run` 과 재료 조립 `ReportMaterialCollection.collect` 는 모듈 안의 것이다. 지금 부르는 쪽은 시험뿐이고, 일정 · 생성 작업을 만드는 작업이 부른다
 
 ### `application`
 
 - `ReportGeneration` — 예약(`schedule(UserId, ReportPeriod)` → `ReportId` — `SCHEDULED` 행)과 생성(`run(ReportId, LlmModel, ReasoningEffort, ReportInput)` → `ReportStatus`). 생성은 입력 맞추기(트랜잭션 밖) · 트랜잭션 ①(시작) · 프롬프트 · 생성기 호출 · 판정 · 한 번 다시 묻기(트랜잭션 밖) · 트랜잭션 ②(대조 · 저장)로 나뉘고, 두 트랜잭션은 리포트 행을 먼저 잠근다(report-R13). 생성기는 생성자로 받는다 — profile `local` 은 로컬 대체물, 그 밖은 실제 생성기다. 시계는 `platform` 의 `AppClock`(`instant` · 넘긴 시간을 뺀 경과 `elapsedSince` — platform-R28). 역할 애너테이션 없음
 - `ReportMaterialCollection` — 재료 조립(`collect(UserId, ReportPeriod, List<ReportId> weeklyReports)` → `Optional<ReportInput>` — 계정이 없으면 빈 값). 트랜잭션 없이 다른 모듈의 공개 조회를 차례로 부르고 판단은 `domain/material` 에 맡긴다. 키 버전 대조의 시도 수 `ATTEMPTS`(2)의 정본이다. 역할 애너테이션 없음(report-R14 ~ R21)
-- `ReportDirectoryService` — `ReportDirectory` 의 구현. 행 · 섹션 · 인용을 `ReportViewRepository` 로 읽기 전용 트랜잭션 하나에서 읽고, 트랜잭션 밖에서 인용의 사건을 `event` 의 `EventDirectory.currentOf`(`EventDirectory.MAX_RESOLVE_EVENTS` 씩)로, 스토리라인을 `storyline` 의 `StorylineDirectory.findAll` 로 풀어 `ReportViews` 에 넘긴다. 역할 애너테이션 없음(report-R11 · R12)
+- `ReportDirectoryService` — `ReportDirectory` 의 구현. 행 · 섹션 · 인용 · 생성 때 이은 직전 리포트의 행(같은 사용자 조건)을 `ReportViewRepository` 로 읽기 전용 트랜잭션 하나에서 읽고, 트랜잭션 밖에서 인용의 사건을 `event` 의 `EventDirectory.currentOf`(`EventDirectory.MAX_RESOLVE_EVENTS` 씩)로, 인용의 스토리라인과 스냅숏 흐름 줄의 헤드를 `storyline` 의 `StorylineDirectory.findAll` 한 번으로 풀어 `ReportViews` 에 넘긴다. 시간대가 없는 행(시작 전)이 있을 때만 `user` 의 `UserTimezones.timezoneOf` 로 지금 사용자 시간대를 읽는다(빈 값이면 UTC). 역할 애너테이션 없음(report-R11 · R12 · R25 · R26)
 
 ### `domain`
 
 - `Report` — 상태 aggregate(`reports`) — 상태 전이의 정본(report-R1). 바꾸는 메서드는 새 값을 돌려준다. 버전(`@Version`)을 갖는다
-- `ReportRepository` — 상태 저장소. 리포트 행 잠금(`lock`)과 스냅숏 쓰기(`writeSnapshot` — SQL 의 jsonb 캐스트, 버전을 올리지 않는다)
-- `ReportInput` — 생성의 입력의 정본 — 사용자 · 기간 · 사용자 시간대 · 갈래 재료 · 직전 리포트 글 · 스냅숏(report-R3)
+- `ReportRepository` — 상태 저장소. 리포트 행 잠금(`lock`)과 시작의 기록 쓰기(`writeStart` — 스냅숏 · 직전 리포트 · 사용자 시간대를 한 SQL 문장으로, jsonb 캐스트, 버전을 올리지 않는다 — report-R13)
+- `ReportPeriod` — 기간 값과 기간 날짜(첫날 · 마지막 날)의 정본(report-R26)
+- `ReportInput` — 생성의 입력의 정본 — 사용자 · 기간 · 사용자 시간대 · 갈래 재료 · 직전 리포트 글 · 스냅숏 · 직전 리포트(report-R3)
 - `ReportSections` — 갈래 조건과 갈래 순서의 정본(report-R14)
-- `CoverageTrend` — 보도량 판정과 그 상수의 정본(report-R15)
+- `CoverageTrend` — 보도량 판정과 그 상수의 정본(report-R15) — 판정 값은 공개 enum `ReportTrend`
 - `EventLines` · `TrackedFlows` — 사건 줄 고르기 · 기간 안 추적의 정본(report-R16)
 - `InterestLines` — 관심 줄 고르기의 정본(report-R17)
 - `PreviousMatch` — 직전 스냅숏의 값을 지금 대상에 1:1 로 잇는 정본(report-R18)
-- `ReportSnapshot` — 스냅숏 꼴의 정본 — 쓰기와 읽기(report-R19)
+- `ReportSnapshot` — 스냅숏 꼴의 정본 — 쓰기와 읽기(report-R19). 파싱은 모든 칸을 읽는 `stats` 하나이고, 다음 리포트가 견줄 값(`read`)은 그 결과를 옮긴 것이다
 - `ReportAliases` — 별칭의 정본(report-R4)
 - `ReportOutputSchema` — 요청마다의 출력 서술(`root(ReportAliases)`) · 상한 · 키 이름의 정본(report-R5 · R6). 서술을 JSON Schema 문서로 그리는 것은 `platform` 의 `StructuredOutputSchema` 다
 - `ReportOutputReader` — `platform` 의 `StructuredOutputReader` 로 읽고 걸은 값을 리포트 초안으로 옮긴다(report-R5)
@@ -212,8 +240,8 @@ sequenceDiagram
 - `ReportPrompts` · `ReportPromptRules` — 프롬프트 구성(지시 · 사용자 구획 · 다시 묻는 프롬프트)과 그 상수(길이 기준 · 진단 상한 · 출력 본문 토큰)의 정본. 값 `ReportPrompt`(report-R23)
 - `ReportSection` — 내용 aggregate(`report_sections`, 인용 `report_items`) — 대조한 출력에서 섹션을 만드는 규칙(report-R9)
 - `ReportSectionRepository` — 내용 저장소
-- `ReportViews` — 조회의 풀기 · 숨기기 · 쪽 나누기 판단의 정본(report-R11 · R12)
-- `ReportViewRepository` — 조회 저장소 — 사용자의 리포트 한 쪽 · 사용자 + ID 의 행 · 그 리포트의 섹션과 인용 · 직전 리포트의 행(report-R18). 질의마다 사용자 조건이 있다. 쓰지 않는다
+- `ReportViews` — 조회의 풀기 · 숨기기 · 섹션 숫자 · 흐름 줄 풀기 · 기간 날짜 · 쪽 나누기 판단의 정본(report-R11 · R12 · R25 · R26)
+- `ReportViewRepository` — 조회 저장소 — 사용자의 종류 하나의 리포트 한 쪽 · 사용자 + ID 의 행 · 그 리포트의 섹션과 인용 · 직전 리포트의 행(report-R18). 질의마다 사용자 조건이 있다. 쓰지 않는다
 
 ### 나가는 쪽
 
@@ -263,9 +291,9 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
 #### 저장소 구현
 
 - `JdbcReportViewRepository` — `ReportViewRepository` 의 JdbcClient 구현. 스냅숏은 `stats_snapshot::text` 로 읽는다. 직전 리포트 읽기(`previous(UserId, ReportPeriodKind, Instant end)` — 그 사용자의 같은 종류 · 끝이 `end` 인 시작한 리포트 가운데 ID 가 가장 큰 행)도 같은 저장소다(report-R18)
-- 상태 · 내용 저장소는 Spring Data JDBC 다. 스냅숏 쓰기는 상태 저장소의 SQL 문장(`cast(:snapshot as jsonb)`)이다
+- 상태 · 내용 저장소는 Spring Data JDBC 다. 시작의 기록 쓰기(스냅숏 · 직전 리포트 · 사용자 시간대)는 상태 저장소의 SQL 문장 하나(`writeStart` — 스냅숏은 `cast(:snapshot as jsonb)`)다
 
-다른 모듈의 공개 조회: 조회의 풀기는 `event` 의 `EventDirectory.currentOf`([event Spec](event.md#eventdirectory))와 `storyline` 의 `StorylineDirectory.findAll`([storyline Spec](storyline.md#storylinedirectory))을 부른다. 재료 조립은 `user` 의 `DigestInterestsDirectory` · `UserStorylineDirectory` · `UserStorylineSummaries` · `StorylineSubscriptionDirectory`([user Spec](user.md#3-공개-인터페이스)), `tag` 의 `TagSetDirectory` · `TopicCoverage` · `TagKeyLineage`([tag Spec](tag.md#3-공개-인터페이스)), `storyline` 의 `StorylineDirectory.findAll` · `events` · `tallies` · `topsOfStorylines`, `event` 의 `EventDirectory.tallies` · `representativesOfAll`, `article` 의 `ArticleDirectory.headlines`([article Spec](article.md#3-공개-인터페이스)), `digest` 의 `InterestHistory.at`([digest Spec](digest.md#interesthistory))과 이 모듈의 `ReportDirectory.find` 를 부른다. 입력 맞추기는 `llm` 의 `TokenEstimate`([llm Spec](llm.md#tokenestimate))로 어림하고, 실제 생성기는 `llm` 의 `LlmClientFactory.generateStored`([llm Spec](llm.md#llmclientfactory))를 부른다.
+다른 모듈의 공개 조회: 조회의 풀기는 `event` 의 `EventDirectory.currentOf`([event Spec](event.md#eventdirectory))와 `storyline` 의 `StorylineDirectory.findAll`([storyline Spec](storyline.md#storylinedirectory))을, 시작 전 리포트의 기간 날짜는 `user` 의 `UserTimezones`([user Spec](user.md#usertimezones))를 부른다. 재료 조립은 `user` 의 `DigestInterestsDirectory` · `UserStorylineDirectory` · `UserStorylineSummaries` · `StorylineSubscriptionDirectory`([user Spec](user.md#3-공개-인터페이스)), `tag` 의 `TagSetDirectory` · `TopicCoverage` · `TagKeyLineage`([tag Spec](tag.md#3-공개-인터페이스)), `storyline` 의 `StorylineDirectory.findAll` · `events` · `tallies` · `topsOfStorylines`, `event` 의 `EventDirectory.tallies` · `representativesOfAll`, `article` 의 `ArticleDirectory.headlines`([article Spec](article.md#3-공개-인터페이스)), `digest` 의 `InterestHistory.at`([digest Spec](digest.md#interesthistory))과 이 모듈의 `ReportDirectory.find` 를 부른다. 입력 맞추기는 `llm` 의 `TokenEstimate`([llm Spec](llm.md#tokenestimate))로 어림하고, 실제 생성기는 `llm` 의 `LlmClientFactory.generateStored`([llm Spec](llm.md#llmclientfactory))를 부른다.
 
 신뢰할 수 없는 입력: 생성기의 출력(report-R5 ~ R8)과 사용자 구획에 싣는 글 — 흐름의 정리 · 사건의 대표 기사 제목 · 주제 이름 · 직전 리포트 글(report-R23). 출력 원문 · 프롬프트는 로그 · 실패 메시지에 남기지 않는다(report-R8 · R13 · R24).
 
@@ -276,10 +304,10 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
 - **report-R1** — 상태는 `SCHEDULED`(생성을 기다림) · `RUNNING`(생성 중) · `READY`(내용 있음) · `EMPTY`(재료 없음) · `FAILED`(실패)다. 끝난 상태는 `READY` · `EMPTY` · `FAILED` 다
   - 예약은 `SCHEDULED` 로 만든다 — 사용자 · 기간(종류 `WEEK` · `MONTH`, 끝이 시작보다 뒤 — 아니면 `IllegalArgumentException`) · 만든 시각
   - 시작은 `SCHEDULED` 에서만 `RUNNING` 으로 간다. 쓸 모델의 공급자 키(`Provider.key()`) · 모델 ID · 시작 시각을 적는다. 생성 중 · 끝난 리포트는 시작하지 못한다(`IllegalStateException`)
-  - 통계 스냅숏은 시작과 같은 트랜잭션에서 시작 저장 직전에 저장소의 SQL 문장으로 쓴다 — 시작한 행은 언제나 스냅숏이 있다. 스냅숏 쓰기는 버전을 올리지 않는다
+  - 시작의 기록 — 통계 스냅숏 · 직전 값을 꺼낸 직전 리포트(report-R18 — 없으면 비움) · 기간 날짜를 적는 사용자 시간대(입력의 시간대 — report-R26) — 은 시작과 같은 트랜잭션에서 시작 저장 직전에 저장소의 SQL 문장 하나로 쓴다 — 시작한 행은 언제나 스냅숏 · 시간대가 있다. 이 쓰기는 버전을 올리지 않는다
   - 끝내기는 `RUNNING` 에서만 한다(`IllegalStateException`) — `READY` 는 토큰 · 소요 시간(밀리초), `EMPTY` 는 결과 칸 없음, `FAILED` 는 실패 코드 · 메시지(앞 500 코드 포인트까지 자름 — `Report.MAX_ERROR_MESSAGE`, `platform` 의 `CodePoints`)와 생성기를 불렀으면 소요 시간, 공급자가 답했으면 토큰이다. 끝낸 시각을 저장 정밀도(마이크로초)로 적는다
   - 기록하는 공급자 · 모델은 요청의 쓸 모델이다 — 로컬 대체물이 만든 리포트도 요청한 모델을 적고 토큰은 0 이다
-  - 테이블이 지킨다: 공급자와 모델은 함께 있거나 함께 없다, `SCHEDULED` ⇔ 시작 시각이 없다 ⇔ 공급자가 없다, 시작한 행은 스냅숏이 있다, 끝난 상태 ⇔ 끝낸 시각이 있다, `FAILED` ⇔ 실패 코드가 있다, 입력 · 출력 토큰은 함께 있거나 함께 없다
+  - 테이블이 지킨다: 공급자와 모델은 함께 있거나 함께 없다, `SCHEDULED` ⇔ 시작 시각이 없다 ⇔ 공급자가 없다, 시작한 행은 스냅숏 · 시간대가 있다, 직전 리포트는 자기 자신이 아니고 지워지면 비운다, 끝난 상태 ⇔ 끝낸 시각이 있다, `FAILED` ⇔ 실패 코드가 있다, 입력 · 출력 토큰은 함께 있거나 함께 없다
 
 ### 생성기
 
@@ -350,25 +378,32 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
 
 ### 리포트 조회
 
-판단의 이유는 [ADR-0275](../adr/0275-report-citations-resolve-removed-and-merged-events-and-storylines-when-read-and-a-section-that-lost-every-citation-is-hidden.md)에 있다.
+판단의 이유는 [ADR-0275](../adr/0275-report-citations-resolve-removed-and-merged-events-and-storylines-when-read-and-a-section-that-lost-every-citation-is-hidden.md) · [ADR-0316](../adr/0316-a-change-report-view-carries-each-visible-sections-numbers-as-typed-values-and-resolves-flow-lines-like-citations.md) · [ADR-0317](../adr/0317-a-change-report-row-points-to-the-previous-report-it-took-the-previous-values-from.md) · [ADR-0318](../adr/0318-change-report-period-days-are-written-in-the-users-zone-at-start-and-the-row-keeps-that-zone.md)에 있다.
 
-- **report-R11** — 조회는 그 사용자의 리포트만 읽는다 — 다른 사용자의 리포트 ID 는 없는 것과 같다(빈 값). 목록은 ID 내림차순이고 `before` 가 있으면 그보다 작은 ID 만, `size + 1` 개를 읽어 더 있으면 이 쪽의 마지막 ID 를 다음 쪽의 `before` 로 둔다. 한 편의 인용은 저장한 ID 를 풀어 낸다:
+- **report-R11** — 조회는 그 사용자의 리포트만 읽는다 — 다른 사용자의 리포트 ID 는 없는 것과 같다(빈 값). 목록은 고른 종류(주간 · 월간)만 ID 내림차순이고 `before` 가 있으면 그보다 작은 ID 만, `size + 1` 개를 읽어 더 있으면 이 쪽의 마지막 ID 를 다음 쪽의 `before` 로 둔다. 한 편의 인용은 저장한 ID 를 풀어 낸다:
   - 사건은 `event` 의 `EventDirectory.currentOf` 로 지금 사건으로 푼다 — 합쳐진 사건은 남는 사건, 지운 사건은 빠진다
   - 스토리라인은 `storyline` 의 `StorylineDirectory.findAll` 로 지금 스토리라인으로 푼다 — 합쳐진 스토리라인은 남는 스토리라인, 지운 스토리라인은 빠진다
   - 풀린 뒤 같은 대상이 된 인용은 한 섹션 안에서 처음 것만 둔다
   - 저장한 행은 고치지 않는다
+  - 한 편은 생성 때 남긴 직전 리포트(report-R18)의 요약을 함께 낸다 — 같은 사용자의 행만 읽고, 그새 지워졌으면 없다
 - **report-R12** — 보이는 섹션(`ReportViews`): `READY` 리포트의 섹션을 위치 순으로 내되,
   - 저장한 인용이 하나 이상인 갈래 섹션의 인용이 풀린 뒤 하나도 남지 않으면 그 섹션을 숨긴다
   - 처음부터 인용이 없던 갈래 섹션은 보인다
   - 갈래 섹션이 하나 이상 저장돼 있었고 모두 숨었으면 개요도 숨긴다 — 갈래 섹션이 처음부터 없던 리포트는 개요를 보인다
   - `READY` 가 아닌 리포트는 섹션이 없다
+  - 숨긴 갈래 섹션 수를 낸다(`hiddenSections`) — `READY` 가 아니면 0. 섹션 숫자에서 빠진 흐름 줄(report-R25)은 세지 않는다
+- **report-R25** — 섹션 숫자(`ReportViews` — 정본): 보이는 갈래 섹션마다 `READY` 리포트의 스냅숏(report-R19)에서 그 갈래의 칸을 숫자로 붙인다 — `STORYLINES` 는 흐름마다 보도량(이번 · 이은 직전 값 · 판정 · 기간 안 추적), `COVERAGE` 는 구독 행마다 보도량(이름 · 이번 · 이은 직전 값 · 판정), `INTERESTS` 는 주제 줄(이름 · 시작 · 끝 값 · 변화)과 흐름 줄(시작 · 끝 값 · 변화). 개요 · 숨은 섹션은 숫자가 없고, 스냅숏에 그 갈래 칸이 없거나 스냅숏을 읽지 못하면 숫자가 없다(글 · 인용은 그대로)
+  - 흐름 줄은 생성 때 헤드를 인용과 같은 풀기(report-R11 — 같은 `findAll` 결과)로 지금 스토리라인으로 바꾼다 — 지운 헤드의 줄은 빼고, 풀린 뒤 같은 스토리라인이 된 줄은 첫 줄만 둔다. 숫자는 생성 때 센 값 그대로다
+  - 스냅숏은 입력을 덜어 내기 전의 통계라(report-R22) 글이 말하지 않은 흐름의 줄이 있을 수 있다
+  - 조회는 스냅숏을 한 번 읽어 풀기에 넘길 헤드와 숫자에 함께 쓴다
+- **report-R26** — 기간 날짜(`ReportPeriod.firstDay` · `lastDay` — 정본): 첫날은 기간 시작 순간의 날짜, 마지막 날은 끝 바로 앞 순간의 날짜다(끝은 기간에 들지 않는다). 조회의 요약은 시작할 때 행에 남긴 사용자 시간대(report-R1)로 적고, 시작 전 행은 지금 사용자 시간대(`user` 의 `UserTimezones` — 계정이 없으면 UTC)로 적는다. 프롬프트의 기간 · 직전 글의 날짜(report-R23)도 이 정본으로 적는다
 
 ### 생성 흐름
 
 - **report-R13** — 생성(`run(ReportId, LlmModel, ReasoningEffort, ReportInput)`) — 쓸 모델 · 추론 강도(사용자 설정 — [user-R59](user.md#관심-설정)) · 입력은 부르는 쪽이 넘긴다:
   - 트랜잭션 안에서 부르면 아무것도 쓰기 전에 거부한다(`IllegalStateException`) — 생성기 호출은 트랜잭션 밖이어야 한다
   - 입력을 쓸 모델과 기간 종류의 사용자 구획 예산에 맞추고(report-R22), 맞춘 입력의 갈래 · 대상에 별칭을 매기고(report-R4) 서술을 만든다(report-R5)
-  - 트랜잭션 ① 은 리포트 행을 잠근다(없으면 `IllegalArgumentException`). 입력의 사용자 · 기간(종류 · 시작 · 끝)이 행의 것과 다르면 아무것도 쓰지 않고 `IllegalArgumentException` 이다 — 다른 사용자의 재료로 그 행의 사용자 키를 부르지 않는다. 끝났거나 생성 중이면 아무것도 하지 않고 그 상태를 돌려준다 — 같은 리포트를 두 실행이 함께 불러도 생성은 한 실행이 한다. 스냅숏(맞추기 전 입력의 것)을 쓰고 시작한다(report-R1). 갈래가 없으면 생성기를 부르지 않고 `EMPTY` 로 끝낸다
+  - 트랜잭션 ① 은 리포트 행을 잠근다(없으면 `IllegalArgumentException`). 입력의 사용자 · 기간(종류 · 시작 · 끝)이 행의 것과 다르면 아무것도 쓰지 않고 `IllegalArgumentException` 이다 — 다른 사용자의 재료로 그 행의 사용자 키를 부르지 않는다. 끝났거나 생성 중이면 아무것도 하지 않고 그 상태를 돌려준다 — 같은 리포트를 두 실행이 함께 불러도 생성은 한 실행이 한다. 시작의 기록(맞추기 전 입력의 스냅숏 · 직전 리포트 · 사용자 시간대)을 쓰고 시작한다(report-R1). 갈래가 없으면 생성기를 부르지 않고 `EMPTY` 로 끝낸다
   - 맞춘 입력으로 프롬프트를 그려(report-R23) 생성기를 트랜잭션 밖에서 부른다 — 요청은 사용자 · 쓸 모델 · 추론 강도 · 별칭 · 프롬프트다. 판정(report-R8)이 다시 묻기면 다시 묻는 프롬프트로 한 번 더 부른다 — 한 생성의 생성기 호출은 많아야 둘이다. 생성기가 예외를 던지면 그대로 올라가고 리포트는 `RUNNING` 으로 남는다
   - 토큰은 공급자가 답한 호출의 합이고, 소요 시간은 첫 호출 시작부터 마지막 호출 끝까지의 경과(시계가 넘긴 시간을 뺀다 — platform-R28)다
   - 트랜잭션 ② 는 리포트 행을 다시 잠가, 이미 끝났거나 버전이 트랜잭션 ① 뒤의 값과 다르면 아무것도 쓰지 않고 지금 상태를 돌려준다. 판정이 실패면 그 코드 · 메시지로 `FAILED`(공급자가 답한 호출이 있으면 토큰과 함께), 읽었으면 대조해(report-R7) 섹션 · 인용을 저장하고(report-R9) `READY` 로 끝낸다 — 인용이 없어도 `READY` 다
@@ -403,9 +438,9 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
 
 ### 직전 리포트와 스냅숏
 
-판단의 이유는 [ADR-0304](../adr/0304-a-change-report-takes-previous-values-from-the-previous-reports-snapshot-matched-one-to-one-and-keeps-them-in-its-own-snapshot.md)에 있다.
+판단의 이유는 [ADR-0304](../adr/0304-a-change-report-takes-previous-values-from-the-previous-reports-snapshot-matched-one-to-one-and-keeps-them-in-its-own-snapshot.md) · [ADR-0317](../adr/0317-a-change-report-row-points-to-the-previous-report-it-took-the-previous-values-from.md)에 있다.
 
-- **report-R18** — 직전 값(`PreviousMatch` — 정본): 직전 리포트는 그 사용자의 같은 종류이고 끝이 이번 시작과 같은 시작한 리포트 가운데 ID 가 가장 큰 것이다. 직전 리포트가 없거나 그 스냅숏을 읽지 못하면(report-R19) 모든 직전 값이 없다. 있으면 그 스냅숏의 값을 지금 대상에 1:1 로 풀릴 때만 잇고, 아니면 그 대상의 직전 값이 없다
+- **report-R18** — 직전 값(`PreviousMatch` — 정본): 직전 리포트는 그 사용자의 같은 종류이고 끝이 이번 시작과 같은 시작한 리포트 가운데 ID 가 가장 큰 것이다. 재료 조립이 찾은 직전 리포트의 ID 를 입력에 싣고 시작할 때 리포트 행에 남긴다(report-R1) — 스냅숏을 읽지 못해도 직전 리포트가 있으면 남긴다. 직전 리포트가 없거나 그 스냅숏을 읽지 못하면(report-R19) 모든 직전 값이 없다. 있으면 그 스냅숏의 값을 지금 대상에 1:1 로 풀릴 때만 잇고, 아니면 그 대상의 직전 값이 없다
   - 주제 — 직전 스냅숏의 태그 체계 버전이 지금 활성 버전과 같으면 같은 키, 다르면 그 버전 → 활성 버전 계보 표(`tag` 의 `TagKeyLineage.toActive`)에서 직전 키가 활성 키 하나로 가고 그 활성 키로 가는 그 버전의 키가(스냅숏에 없는 키 포함) 하나일 때만 잇는다. 지운 키는 잇지 않는다
   - 흐름 — 직전 흐름의 꼭대기들을 지금 포함 나무의 꼭대기(`StorylineDirectory.topsOfStorylines` — 합쳐진 것은 남는 것)로 푼 집합이 지금 흐름 하나의 꼭대기와만 겹치고, 그 지금 흐름과 겹치는 직전 흐름이 하나일 때만 잇는다
 - **report-R19** — 스냅숏 꼴(`ReportSnapshot` — 정본): 생성에 쓴 통계를 JSON 객체 하나로 쓴다 — 꼴의 판(`version` — `ReportSnapshot.VERSION` 1), 키의 태그 체계 버전(`tagSet`), 기간(`period` — 종류 · 시작 · 끝), 입력에 든 갈래의 칸만
@@ -413,7 +448,7 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
   - `storylines` — 기간 시각의 종류(`basis` `PUBLISHED`)와 흐름마다 헤드 · 꼭대기들 · 기사 수 · 이은 직전 값 · 판정 · 기간 안 추적
   - `interests` — 주제 줄마다 키 · 이름 · 시작 · 끝 값 · 변화, 흐름 줄마다 헤드 · 시작 · 끝 값 · 변화
 
-  주제 이름은 스냅숏에 싣고, 사건 줄과 정리의 글은 싣지 않는다. 이은 직전 값과 판정을 함께 남겨 화면이 스냅숏 하나로 리포트의 글과 같은 비교를 보인다 — 다음 리포트의 대조는 기사 수만 읽는다. 읽기는 판이 `VERSION` 과 같을 때만 값을 내고, 모르는 판 · 읽지 못하는 문자열은 값이 없다. 판을 올리는 변경은 옛 판을 읽는 길이나 옮기는 마이그레이션([ADR-0212](../adr/0212-migrations-never-delete-user-data-or-the-shared-rows-and-ids-it-references-and-moved-data-is-checked-by-a-data-test.md))을 함께 둔다
+  주제 이름은 스냅숏에 싣고, 사건 줄과 정리의 글은 싣지 않는다. 이은 직전 값과 판정을 함께 남겨 화면이 스냅숏 하나로 리포트의 글과 같은 비교를 보인다(report-R25) — 다음 리포트의 대조는 기사 수만 읽는다. 읽기는 모든 칸을 읽는 파서 하나(`stats`)이고 다음 리포트가 견줄 값(`read`)은 그 결과를 옮긴 것이다 — 판이 `VERSION` 과 같을 때만 값을 내고, 모르는 판 · 읽지 못하는 문자열은 값이 없다. 판을 올리는 변경은 옛 판을 읽는 길이나 옮기는 마이그레이션([ADR-0212](../adr/0212-migrations-never-delete-user-data-or-the-shared-rows-and-ids-it-references-and-moved-data-is-checked-by-a-data-test.md))을 함께 둔다
 - **report-R20** — 직전 리포트 글: 직전 리포트(report-R18)가 `READY` 면 그 보이는 글(`ReportDirectory.find` — report-R12, 인용을 모두 잃어 숨은 섹션은 없다)의 개요와 갈래 섹션 제목 · 본문을 싣는다. 월간 리포트는 부르는 쪽이 넘긴 주간 리포트 가운데 그 사용자의 `READY` 인 것도 같은 꼴로 싣는다 — 어느 주간 리포트를 넘길지는 부르는 쪽이 정한다. 직전 리포트 글은 갈래가 아니다
 
 ### 재료 조립
@@ -458,7 +493,7 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
      "priors":[["WEEK","2026-11-24","2026-11-30","개요",[["storylines","제목","본문"], …]], …]}
     ```
 
-    - 흐름 줄은 [헤드 별칭, 헤드의 상태, 기간 안에 추적을 더했는가, 보도량, 정리, 사건 줄들], 사건 줄은 [사건 별칭, 첫날, 기간 안 기사 수, 기간 안에 시작했는가, 대표 기사 제목]이다. 보도량은 [이번, 직전 또는 `null`, 판정 — `Count.trend()` 의 이름(`CoverageTrend.Trend`)]이다
+    - 흐름 줄은 [헤드 별칭, 헤드의 상태, 기간 안에 추적을 더했는가, 보도량, 정리, 사건 줄들], 사건 줄은 [사건 별칭, 첫날, 기간 안 기사 수, 기간 안에 시작했는가, 대표 기사 제목]이다. 보도량은 [이번, 직전 또는 `null`, 판정 — `Count.trend()` 의 이름(`ReportTrend`)]이다
     - 구독 행은 [이름, 이번, 직전 또는 `null`, 판정], 주제 관심 줄은 [이름, 시작 값, 끝 값, 변화 — `InterestShift` 의 이름], 흐름 관심 줄은 [헤드 별칭, 시작 값, 끝 값, 변화, 정리], 구독 변경 줄은 [시각, 더함 · 뺌, 중분류 이름들]이다. 관심 값은 소수 둘째 자리(`ReportPromptRules.INTEREST_SCALE`)
     - 정리는 [제목, 흐름 요약, 최근 전개]이고 없으면 `null` 이다. 흐름 관심 줄의 헤드가 `storylines` 에도 있으면 그 줄의 정리는 `null` 이다 — 같은 헤드의 정리는 한 번만 싣고 지시가 같은 별칭의 흐름 줄을 보라고 한다. 흐름 요약을 덜어 낸 흐름(report-R22)은 그 자리가 빈 문자열이다
     - 날짜 · 시각은 입력의 사용자 시간대로 적는다 — 기간의 `last` 는 끝 바로 앞 순간의 날짜다(기간은 `[시작, 끝)`). 시간대 ID 는 싣지 않는다
@@ -478,11 +513,11 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
 
 ## 6. 데이터
 
-컬럼 타입 · 인덱스 · 제약 문면의 정본은 `backend/src/main/resources/db/migration/V75__reports.sql` 과 갈래의 종류 제약을 바꾼 `V80__report_sections_three_kinds.sql` 이다.
+컬럼 타입 · 인덱스 · 제약 문면의 정본은 `backend/src/main/resources/db/migration/V75__reports.sql`, 갈래의 종류 제약을 바꾼 `V80__report_sections_three_kinds.sql`, 직전 리포트 · 시간대 칸과 목록 인덱스를 더한 `V85__report_previous_and_zone.sql` 이다.
 
 | 테이블 | 주요 컬럼 | 뜻 |
 |---|---|---|
-| `reports` | id, user_id, period_kind(`WEEK`/`MONTH`), period_start, period_end, status(`SCHEDULED`/`RUNNING`/`READY`/`EMPTY`/`FAILED`), provider(`openai`/`anthropic`/`openrouter`), model, input_tokens, output_tokens, duration_ms, stats_snapshot(jsonb), error_code, error_message, created_at, started_at, completed_at, version | 리포트 상태(report-R1). `stats_snapshot` 은 생성에 쓴 통계이고(꼴은 report-R19) 다음 리포트가 직전 값을 꺼낸다 — 시작한 행은 언제나 있다. `user_id` 는 `user` 의 사용자 ID 를 가리킨다 — 모듈 사이라 FK 가 없다. 목록은 `(user_id, id)` 인덱스로 읽는다. `version` 은 낙관적 잠금이다 |
+| `reports` | id, user_id, period_kind(`WEEK`/`MONTH`), period_start, period_end, status(`SCHEDULED`/`RUNNING`/`READY`/`EMPTY`/`FAILED`), provider(`openai`/`anthropic`/`openrouter`), model, input_tokens, output_tokens, duration_ms, stats_snapshot(jsonb), previous_report_id, zone, error_code, error_message, created_at, started_at, completed_at, version | 리포트 상태(report-R1). `stats_snapshot` 은 생성에 쓴 통계이고(꼴은 report-R19) 다음 리포트가 직전 값을 꺼낸다 — 시작한 행은 언제나 있다. `previous_report_id` 는 생성 때 직전 값을 꺼낸 직전 리포트(report-R18) — 같은 테이블의 FK 이고, 자기 자신이 아니며, 직전 리포트를 지우면 비운다. `zone` 은 시작할 때의 사용자 시간대(IANA 이름 — report-R26) — 시작한 행은 언제나 있다. `user_id` 는 `user` 의 사용자 ID 를 가리킨다 — 모듈 사이라 FK 가 없다. 목록은 `(user_id, period_kind, id)` 인덱스로 읽는다. `version` 은 낙관적 잠금이다 |
 | `report_sections` | id, report_id, kind(`OVERVIEW`/`STORYLINES`/`COVERAGE`/`INTERESTS`), position, title, body | 리포트의 섹션(report-R9) — 개요 또는 갈래 하나. 리포트마다 위치 · 종류가 겹치지 않는다. 리포트를 지우면 함께 지워진다 |
 | `report_items` | report_section_id, position, storyline_id, event_id | 섹션이 인용한 스토리라인 또는 사건(둘 중 하나 — report-R9). `storyline_id` · `event_id` 는 `storyline` · `event` 의 ID 다 — 모듈 사이라 FK 가 없고, 합쳐지거나 지워진 것은 조회가 푼다(report-R11). 섹션을 지우면 함께 지워진다 |
 
@@ -523,3 +558,6 @@ public record TokenUsage(int inputTokens, int outputTokens) { }
 | [0311](../adr/0311-a-change-report-input-fits-the-smaller-of-the-model-budget-and-the-weekly-or-monthly-cap-by-a-share-for-earlier-reports-and-a-fixed-trimming-order.md) | 변화 리포트의 입력은 모델 예산과 주간 · 월간 리포트 상한 가운데 작은 값 안으로, 직전 글의 몫과 정한 순서의 덜어 내기로 맞춘다 |
 | [0312](../adr/0312-the-reasoning-effort-setting-is-shared-by-digests-and-change-reports-and-report-lengths-are-constants.md) | 추론 강도 설정은 다이제스트와 변화 리포트가 함께 쓰고, 리포트의 글 길이 기준은 상수다 |
 | [0313](../adr/0313-the-input-token-estimate-is-an-llm-public-type.md) | 입력 토큰 어림은 `llm` 의 공개 타입이 정본이다 |
+| [0316](../adr/0316-a-change-report-view-carries-each-visible-sections-numbers-as-typed-values-and-resolves-flow-lines-like-citations.md) | 변화 리포트 조회는 보이는 갈래 섹션마다 스냅숏의 숫자를 타입 있는 값으로 싣고, 흐름 줄은 인용과 같은 규칙으로 풀며, 숨긴 섹션 수를 낸다 |
+| [0317](../adr/0317-a-change-report-row-points-to-the-previous-report-it-took-the-previous-values-from.md) | 변화 리포트 행은 생성 때 직전 값을 꺼낸 직전 리포트를 가리킨다 |
+| [0318](../adr/0318-change-report-period-days-are-written-in-the-users-zone-at-start-and-the-row-keeps-that-zone.md) | 변화 리포트 기간의 날짜는 생성을 시작할 때의 사용자 시간대로 적고, 그 시간대를 리포트 행에 남긴다 |
