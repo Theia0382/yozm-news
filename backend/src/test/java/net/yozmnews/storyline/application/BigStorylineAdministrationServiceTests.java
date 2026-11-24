@@ -45,7 +45,7 @@ class BigStorylineAdministrationServiceTests {
 
 	private static final Instant CHANGED = Instant.parse("2026-11-07T01:00:00Z");
 
-	private static final BigStorylineCriteria INITIAL = new BigStorylineCriteria(new BigDecimal("15.00"));
+	private static final BigStorylineCriteria INITIAL = new BigStorylineCriteria(new BigDecimal("14.00"));
 
 	@Autowired
 	BigStorylineCriteriaRepository criteria;
@@ -102,7 +102,7 @@ class BigStorylineAdministrationServiceTests {
 		this.seeding.seedIfAbsent();
 		BigStorylineAdministrationService service = service(this.criteria);
 
-		assertThat(service.change(new BigDecimal("15"), ChangeActor.OPERATOR))
+		assertThat(service.change(new BigDecimal("14"), ChangeActor.OPERATOR))
 			.isEqualTo(new BigStorylineCriteriaChangeResult.Unchanged(INITIAL));
 		assertThat(service.changes()).hasSize(1);
 	}

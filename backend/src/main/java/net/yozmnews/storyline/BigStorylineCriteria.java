@@ -20,8 +20,8 @@ public record BigStorylineCriteria(BigDecimal minIntensity) {
 	/** 보도 강도 하한의 상한 — 정본 */
 	public static final BigDecimal MAX_INTENSITY = new BigDecimal("9999.99");
 
-	/** 처음 값 — 정본. 평가 세트와 운영자의 날마다 미리보기 검수로 정했다 */
-	public static final BigStorylineCriteria DEFAULT = new BigStorylineCriteria(new BigDecimal("15.00"));
+	/** 처음 값 — 정본. 평가 세트와 운영자의 날마다 미리보기 검수로 정한 값을 네 단계 중요도 척도에 맞췄다 */
+	public static final BigStorylineCriteria DEFAULT = new BigStorylineCriteria(new BigDecimal("14.00"));
 
 	/**
 	 * @throws IllegalArgumentException 하한이 0 이하이거나 {@link #MAX_INTENSITY} 를 넘거나 소수 둘째 자리를 넘을 때

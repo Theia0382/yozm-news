@@ -107,7 +107,7 @@ class AdminBigStorylineControllerTests {
 		this.mockMvc.perform(authorized(get("/api/admin/big-storylines?" + PERIOD)))
 			.andExpect(status().isOk())
 			.andExpect(content().json("""
-					{"criteria":{"minIntensity":15.00},
+					{"criteria":{"minIntensity":14.00},
 					 "storylines":[
 					   {"id":7,"state":"ACTIVE","eventCount":3,"articleCount":12,"firstArticleAt":"2026-11-01T00:00:00Z",
 					    "lastArticleAt":"2026-11-05T00:00:00Z","intensity":17.50,"periodArticles":2,"periodSources":4,"importance":3.75,
@@ -138,9 +138,9 @@ class AdminBigStorylineControllerTests {
 			.andExpect(content().json("""
 					{"current":{"minIntensity":20.00},
 					 "changes":[
-					   {"previous":{"minIntensity":15.00},"current":{"minIntensity":20.00},
+					   {"previous":{"minIntensity":14.00},"current":{"minIntensity":20.00},
 					    "actor":"OPERATOR","changedAt":"2026-11-06T00:00:00Z"},
-					   {"previous":null,"current":{"minIntensity":15.00},"actor":"SYSTEM",
+					   {"previous":null,"current":{"minIntensity":14.00},"actor":"SYSTEM",
 					    "changedAt":"2026-11-05T00:00:00Z"}]}
 					""", JsonCompareMode.STRICT));
 	}
@@ -156,7 +156,7 @@ class AdminBigStorylineControllerTests {
 					"""))
 			.andExpect(status().isOk())
 			.andExpect(content().json("""
-					{"current":{"minIntensity":15.00},"proposed":{"minIntensity":12.50},
+					{"current":{"minIntensity":14.00},"proposed":{"minIntensity":12.50},
 					 "currentStorylines":[
 					   {"id":7,"state":"ACTIVE","eventCount":3,"articleCount":12,"firstArticleAt":"2026-11-01T00:00:00Z",
 					    "lastArticleAt":"2026-11-05T00:00:00Z","intensity":17.50,"periodArticles":2,"periodSources":4,"importance":3.75,
@@ -194,7 +194,7 @@ class AdminBigStorylineControllerTests {
 		this.mockMvc.perform(json(put("/api/admin/big-storyline-criteria"), "{\"minIntensity\":20}"))
 			.andExpect(status().isOk())
 			.andExpect(content().json("""
-					{"result":"CHANGED","previous":{"minIntensity":15.00},
+					{"result":"CHANGED","previous":{"minIntensity":14.00},
 					 "current":{"minIntensity":20.00}}
 					""", JsonCompareMode.STRICT));
 
@@ -202,7 +202,7 @@ class AdminBigStorylineControllerTests {
 		this.mockMvc.perform(json(put("/api/admin/big-storyline-criteria"), "{\"minIntensity\":15}"))
 			.andExpect(status().isOk())
 			.andExpect(content().json("""
-					{"result":"UNCHANGED","previous":null,"current":{"minIntensity":15.00}}
+					{"result":"UNCHANGED","previous":null,"current":{"minIntensity":14.00}}
 					""", JsonCompareMode.STRICT));
 		assertThat(this.administration.calls).containsExactly("change 20 OPERATOR", "change 15 OPERATOR");
 	}
