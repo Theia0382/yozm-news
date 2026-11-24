@@ -2,7 +2,7 @@
 
 - 상태: 승인. 부분 대체 — 흐름 행의 값을 읽는 꼭대기([ADR-0294](0294-a-user-storyline-is-one-per-head-and-a-top-before-a-fork-belongs-to-several-of-them.md))
 - 날짜: 2026-11-23
-- 근거: [이슈 #245](https://github.com/Theia0382/yozm-news/issues/245) — 관심사 히스토리가 주제의 관심만 보여, 흐름에 쌓인 관심은 어디에도 보이지 않았다. 리드가 흐름을 더하고 생김 · 사라짐의 기준을 정했다. 구현 커밋 `0590ea1` · `e16498b` · `27a214d`
+- 근거: [이슈 #245](https://github.com/Theia0382/yozm-news/issues/245) — 관심사 히스토리가 주제의 관심만 보여, 흐름에 쌓인 관심은 어디에도 보이지 않았다. 흐름을 더하고 생김 · 사라짐의 기준을 정했다. 구현 커밋 `0590ea1` · `e16498b` · `27a214d`
 - 관련: [ADR-0227](0227-the-interest-history-shows-subtopic-interest-and-the-users-own-topic-subscription-changes-only.md)(부분 대체 — 단위에 정리된 흐름이 더해진다), [ADR-0226](0226-new-and-lost-interests-are-neighbouring-periods-crossing-one-threshold-on-the-interest-value.md)(보충 — 흐름의 생김 · 사라짐은 두 기준), [ADR-0278](0278-followed-flows-are-tops-at-or-above-the-follow-threshold-or-subscribed-less-the-excluded-and-the-keep-threshold-is-0-2.md)(만들 기준 · 남길 기준), [ADR-0289](0289-shown-flows-are-user-storylines-with-a-summary-which-the-summary-job-creates-and-removes.md)(보이는 흐름)
 
 ## 맥락

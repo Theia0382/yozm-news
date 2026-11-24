@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-19
-- 근거: [이슈 #225](https://github.com/Theia0382/yozm-news/issues/225) — 항목 묶기의 꼭대기 조회를 `storyline` 의 공개 조회로 두는 것은 수용 기준이고, 여러 나무에 걸친 사건의 셋째 열쇠(소속 점수)를 꼭대기의 순서로만 내는 쪽을 리드가 골랐다. 구현 커밋 `7f401c6`
+- 근거: [이슈 #225](https://github.com/Theia0382/yozm-news/issues/225) — 항목 묶기의 꼭대기 조회를 `storyline` 의 공개 조회로 두는 것은 수용 기준이고, 여러 나무에 걸친 사건의 셋째 열쇠(소속 점수)를 꼭대기의 순서로만 내는 쪽을 골랐다. 구현 커밋 `7f401c6`
 - 관련: [ADR-0131](0131-storyline-relations-are-explicit-links-with-containment-as-a-single-parent-tree-gathered-at-query-time.md)(보충 — 상위 하나인 포함 나무의 뿌리를 사건마다 공개 조회로 낸다), [ADR-0235](0235-the-big-list-has-one-row-per-containment-tree-carrying-the-big-storylines-under-it.md)(큰 판정 목록은 포함 나무마다 한 행), [ADR-0262](0262-chosen-events-are-grouped-into-items-by-containment-tree-top-code-splits-top-stories-and-headlines-the-llm-writes-per-item-and-an-item-has-one-badge.md)(항목 묶기)
 
 ## 맥락
@@ -28,5 +28,5 @@
 | 대안 | 기각 이유 |
 |---|---|
 | 꼭대기 조회에 소속 점수를 싣는다 | 판정 근거를 사용자 쪽 공개 조회에 싣는 예외가 되고, 합치기로 옮긴 소속의 빈 점수 갈래가 생긴다 |
-| 셋째 열쇠를 꼭대기 ID 순 같은 공개 값으로 바꾼다 | 리드가 정한 열쇠(소속 점수)를 바꾼다 |
+| 셋째 열쇠를 꼭대기 ID 순 같은 공개 값으로 바꾼다 | 이미 정한 열쇠(소속 점수)를 바꾼다 |
 | 다이제스트가 사건마다 `storylinesOf` 를 불러 상위가 없는 것을 뿌리로 고른다 | 사건마다 조회가 하나씩 들고, 소속 점수가 없어 셋째 열쇠를 정하지 못한다 |

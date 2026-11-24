@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-11
-- 근거: [이슈 #131](https://github.com/Theia0382/yozm-news/issues/131) — 임베더를 `evaluation` 으로 옮기며, 반복 작업의 생성자 주입이 하던 "작업 역할은 임베더 없이 뜨지 않는다"를 관문 쪽에서 어떻게 보장할지 리드와 정함
+- 근거: [이슈 #131](https://github.com/Theia0382/yozm-news/issues/131) — 임베더를 `evaluation` 으로 옮기며, 반복 작업의 생성자 주입이 하던 "작업 역할은 임베더 없이 뜨지 않는다"를 관문 쪽에서 어떻게 보장할지 정함
 - 관련: [ADR-0114](0114-article-embedding-is-a-gateway-operation-of-evaluation-taking-callers-texts-checking-results-and-recording-nothing.md)(임베딩을 관문에 두는 결정), [ADR-0093](0093-worker-role-does-not-run-without-an-embedder-built-only-in-the-worker-role.md)(결정 절 첫 항목 둘째 문장 "사건 묶기 반복 작업이 임베더를 생성자로 받는다"와 둘째 항목 끝 문장 "리스너 · 회차는 여전히 임베더를 생성자로 받지 않는다"를 부분 대체한다 — 작업 역할은 임베더 없이 뜨지 않고 화면 역할은 임베더를 요구하지 않는다는 동작은 그대로), [ADR-0074](0074-article-features-built-by-event-intake-queue-job-and-skipped-without-an-embedder.md)(결정 절 셋째 항목 넷째 문장 "리스너와 회차는 임베더를 생성자로 받지 않는다"를 부분 대체한다), [ADR-0073](0073-event-membership-api-in-both-roles-looks-up-the-evaluator-on-call-and-fails-without-one.md) · [ADR-0061](0061-worker-role-does-not-run-without-an-evaluator.md)(판정 공개 API · 평가기의 같은 꼴)
 
 ## 맥락

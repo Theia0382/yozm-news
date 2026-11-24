@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-18
-- 근거: [이슈 #189](https://github.com/Theia0382/yozm-news/issues/189) — 산식이 내는 관심 x 의 성질(구독 하나 · 노출과 좋아요의 비율 · 감쇠)을 수치로 견주고 리드와 정함. 구현 커밋 `77bfe43` · `bb602eb`
+- 근거: [이슈 #189](https://github.com/Theia0382/yozm-news/issues/189) — 산식이 내는 관심 x 의 성질(구독 하나 · 노출과 좋아요의 비율 · 감쇠)을 수치로 견주고 정함. 구현 커밋 `77bfe43` · `bb602eb`
 - 관련: [ADR-0215](0215-interests-are-not-stored-entities-and-are-computed-from-signal-history-at-query-time.md)(결과 "새로 생긴 관심 · 사라진 관심은 계산 결과를 견주는 기준이 하나 더 필요하다 — 히스토리를 만드는 작업이 정한다" — 보충), [ADR-0222](0222-interest-per-subtopic-is-smoothed-reactions-over-exposures-with-a-half-life-and-exposures-are-all-ready-citations.md)(관심 x 의 산식)
 
 ## 맥락

@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-23
-- 근거: [이슈 #190](https://github.com/Theia0382/yozm-news/issues/190) — 측정에서 큰 슬롯 항목의 싫어요가 구독 밖 주제의 큰 흐름에 거듭 몰렸다. 리드가 큰 슬롯에도 구독 후보와 같은 관심 가중치(주제 × 스토리라인)를 곱하고, 싫어하는 것은 따로 거르기로 했다(거르기는 [ADR-0297](0297-an-event-whose-mean-topic-interest-is-at-or-below-the-exclusion-threshold-does-not-enter-the-big-slot.md)). 구현 커밋 `cd044ca`
+- 근거: [이슈 #190](https://github.com/Theia0382/yozm-news/issues/190) — 측정에서 큰 슬롯 항목의 싫어요가 구독 밖 주제의 큰 흐름에 거듭 몰렸다. 큰 슬롯에도 구독 후보와 같은 관심 가중치(주제 × 스토리라인)를 곱하고, 싫어하는 것은 따로 거르기로 했다(거르기는 [ADR-0297](0297-an-event-whose-mean-topic-interest-is-at-or-below-the-exclusion-threshold-does-not-enter-the-big-slot.md)). 구현 커밋 `cd044ca`
 - 관련: [ADR-0279](0279-storyline-interest-multiplies-the-candidate-rank-and-flows-at-or-below-the-exclusion-threshold-leave-subscribed-candidates-and-the-big-slot.md)(부분 대체 — "행의 순서는 큰 판정 순서 그대로다"), [ADR-0260](0260-digest-candidates-are-events-and-only-assigned-events-with-an-article-first-evaluated-in-the-period-enter.md)(부분 대체 — 큰 판정 행을 쓰는 순서), [ADR-0103](0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md)(보충 — 큰 판정 행을 사용자마다 관심으로 놓는다), [ADR-0235](0235-the-big-list-has-one-row-per-containment-tree-carrying-the-big-storylines-under-it.md)(큰 판정 목록의 순서는 그대로), [ADR-0209](0209-maximum-candidates-and-big-slots-are-user-settings-and-the-big-slot-takes-at-most-half.md)(대안 표의 되먹임 우려)
 
 ## 맥락

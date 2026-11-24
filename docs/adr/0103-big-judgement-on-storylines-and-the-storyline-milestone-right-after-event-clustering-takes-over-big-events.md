@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-09
-- 근거: [이슈 #116](https://github.com/Theia0382/yozm-news/issues/116) — 큰 사건 판정의 코드 · 소비자 · 평가 도구의 위치를 조사해 거둘 시점과 마일스톤 순서를 리드와 정함
+- 근거: [이슈 #116](https://github.com/Theia0382/yozm-news/issues/116) — 큰 사건 판정의 코드 · 소비자 · 평가 도구의 위치를 조사해 거둘 시점과 마일스톤 순서를 정함
 - 관련: [ADR-0082](0082-big-events-judged-at-query-time-by-distinct-sources-and-mean-importance-both-reaching-criteria.md)(판정의 단위 — 부분 대체), [ADR-0083](0083-big-event-criteria-as-operator-settings-with-append-only-history-and-preview.md)(기준을 둘 곳 — 부분 대체), [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md)(큰 사건 판정과 그 정밀도의 단위 — 부분 대체), [ADR-0028](0028-explicit-signals-and-interest-weighted-candidates.md)(후보 선별 순서와 구독의 큰 사건 슬롯 — 부분 대체), [ADR-0095](0095-event-clustering-evaluated-by-an-operator-tool-comparing-admin-api-results-with-full-day-labels.md) · [ADR-0098](0098-label-rule-2-samples-hold-no-big-event-gold-and-big-event-precision-is-not-measured-without-marks.md)(큰 판정 정밀도와 정답의 단위 — 보충), [ADR-0040](0040-feed-status-stored-in-poll-state-and-rejudged-hourly-by-health-check.md) · [ADR-0048](0048-sign-up-closed-by-default-with-invitations-and-operator-bootstrap.md)(마일스톤 번호 — 보충), [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)(스토리라인)
 
 ## 맥락

@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-18
-- 근거: [이슈 #178](https://github.com/Theia0382/yozm-news/issues/178) — 수용 기준 "수동 재생성 — 사용자당 하루 N회. 결정: 기존 요청 제한(창 1시간 이하)과의 관계와 하루의 경계(사용자 시간대)", 리드 답("바로 받고 싶으면 수동 생성을 활용한다"). 구현 커밋 `d114b4e`(수동 생성 공개 API · 대상 규칙)
+- 근거: [이슈 #178](https://github.com/Theia0382/yozm-news/issues/178) — 수용 기준 "수동 재생성 — 사용자당 하루 N회. 결정: 기존 요청 제한(창 1시간 이하)과의 관계와 하루의 경계(사용자 시간대)", 바로 받으려면 수동 생성을 쓴다는 방향. 구현 커밋 `d114b4e`(수동 생성 공개 API · 대상 규칙)
 - 관련: [ADR-0230](0230-scheduled-digests-are-made-after-the-generation-time-and-a-period-runs-from-the-last-ready-or-empty-end-to-that-time.md)(관련 — 같은 기간 산식 · 날짜 순서), [ADR-0170](0170-request-limits-count-fixed-windows-in-a-user-postgresql-table-with-a-code-constant-policy-table.md)(관련 — 요청 제한을 쓰지 않는 이유)
 
 ## 맥락

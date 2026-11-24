@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-23
-- 근거: [이슈 #190](https://github.com/Theia0382/yozm-news/issues/190) — 측정에서 구독 밖 주제를 싫어한 사용자에게 그 주제의 큰 흐름이 흐름만 바꿔 거듭 들었다. 흐름 거름은 같은 흐름만 막는다. 리드가 "구독 주제 밖의 일을 가져오는 건 좋은데 싫어하는 것까지 끌고 올 이유는 없다"며 큰 슬롯에 주제 관심을 걸고, 흐름 거름과 따로 거르기로 했다. 기준은 흐름 거름과 같은 값으로 정했다. 측정 인스턴스의 반응 기록으로 대 보면 기준을 0 쪽으로 올릴수록 반응 없는 · 좋아한 항목도 빠졌다. 구현 커밋 `cd044ca`
+- 근거: [이슈 #190](https://github.com/Theia0382/yozm-news/issues/190) — 측정에서 구독 밖 주제를 싫어한 사용자에게 그 주제의 큰 흐름이 흐름만 바꿔 거듭 들었다. 흐름 거름은 같은 흐름만 막는다. 구독 주제 밖의 일을 가져오는 것은 좋지만 싫어하는 것까지 끌고 올 이유는 없어, 큰 슬롯에 주제 관심을 걸고, 흐름 거름과 따로 거르기로 했다. 기준은 흐름 거름과 같은 값으로 정했다. 측정 인스턴스의 반응 기록으로 대 보면 기준을 0 쪽으로 올릴수록 반응 없는 · 좋아한 항목도 빠졌다. 구현 커밋 `cd044ca`
 - 관련: [ADR-0279](0279-storyline-interest-multiplies-the-candidate-rank-and-flows-at-or-below-the-exclusion-threshold-leave-subscribed-candidates-and-the-big-slot.md)(같은 거름 기준 · 흐름 거름 — 바꾸지 않는다), [ADR-0260](0260-digest-candidates-are-events-and-only-assigned-events-with-an-article-first-evaluated-in-the-period-enter.md)(부분 대체 — 큰 슬롯 사건이 드는 조건), [ADR-0280](0280-events-of-followed-flows-outside-the-subscribed-topics-enter-one-per-flow-within-a-share-of-the-subscribed-seats-as-interest.md)(주제 구독 밖 관심 흐름의 길 — 거름을 걸지 않는다), [ADR-0103](0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md)(보충 — 싫어하는 주제의 큰 흐름은 넣지 않는다), [ADR-0209](0209-maximum-candidates-and-big-slots-are-user-settings-and-the-big-slot-takes-at-most-half.md)(되먹임 — 음의 관심에만), [ADR-0296](0296-the-big-slot-takes-big-judgement-rows-in-the-order-of-intensity-times-the-interest-weight.md)(큰 슬롯 행 순서)
 
 ## 맥락
@@ -10,7 +10,7 @@
 - 큰 슬롯은 구독과 무관하게 큰 흐름을 넣는다(ADR-0103). 사건 제외(지역 · 싫어요 · 거른 흐름)는 구독 후보와 같은 판정이고, 주제는 보지 않는다.
 - 흐름 거름은 싫어한 흐름(과 이어진 뒤 흐름)에만 걸린다(ADR-0279). 싫어한 주제의 다른 흐름은 새 흐름이라 그대로 든다.
 - 주제 관심은 모든 중분류에 대해 계산되고, 구독 후보의 순위에만 곱해진다.
-- 구독한 주제 안에서 싫어하는 결의 사건은 구독 후보에도 들고, 리드가 그대로 두기로 했다.
+- 구독한 주제 안에서 싫어하는 결의 사건은 구독 후보에도 들고, 그대로 두기로 했다.
 
 ## 결정
 

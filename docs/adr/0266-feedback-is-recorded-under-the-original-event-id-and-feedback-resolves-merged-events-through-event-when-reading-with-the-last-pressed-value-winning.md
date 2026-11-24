@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-20
-- 근거: [이슈 #226](https://github.com/Theia0382/yozm-news/issues/226) — 리드가 원래 사건 ID 로 기록하고 읽을 때 푸는 꼴, 풀기를 `feedback` 이 하는 것, 합쳐진 사건들에 서로 다른 값이 모이면 마지막으로 누른 값, 합쳐진 사건의 싫어요가 남는 사건을 빼는 귀결을 정했다. 구현 커밋 `cc5da40`(`event` 의 여러 사건 풀기 조회) · `a948926`(`feedback` 의 풀기 · 값 고르기 · 소비자 조회)
+- 근거: [이슈 #226](https://github.com/Theia0382/yozm-news/issues/226) — 원래 사건 ID 로 기록하고 읽을 때 푸는 꼴, 풀기를 `feedback` 이 하는 것, 합쳐진 사건들에 서로 다른 값이 모이면 마지막으로 누른 값, 합쳐진 사건의 싫어요가 남는 사건을 빼는 귀결을 정했다. 구현 커밋 `cc5da40`(`event` 의 여러 사건 풀기 조회) · `a948926`(`feedback` 의 풀기 · 값 고르기 · 소비자 조회)
 - 관련: [ADR-0228](0228-consumer-queries-scoped-by-a-user-argument-may-be-called-on-screen-paths-with-the-session-user.md)(보충 — 결정의 대상 목록 가운데 `ArticleFeedback` 은 사건 단위 `EventFeedback` 이 되었다. 화면 경로에서 세션 사용자로 부를 수 있는 것은 그대로다), [ADR-0265](0265-feedback-is-pressed-once-per-digest-item-and-recorded-on-each-event-of-the-item-the-screen-shows-the-item-value-and-signals-use-event-records.md)(사건마다 기록), [ADR-0191](0191-the-consumer-query-of-storyline-subscriptions-is-opened-with-the-subscriptions-and-resolves-ids-without-writing.md) · [ADR-0188](0188-storyline-subscriptions-follow-retired-storylines-by-event-and-before-each-use-and-notices-point-to-the-remaining-event.md)(선례 — 기록을 가진 모듈이 대상 모듈에 의존해 풀고 기록 ID 와 푼 ID 를 함께 낸다), [ADR-0084](0084-event-merge-applies-assignment-scoring-between-events-and-keeps-merged-rows-pointing-to-survivors.md)(합쳐진 사건은 남는 사건을 가리키는 행으로 남는다), [ADR-0028](0028-explicit-signals-and-interest-weighted-candidates.md)(신호는 추가 전용 이력이 정본이다)
 
 ## 맥락

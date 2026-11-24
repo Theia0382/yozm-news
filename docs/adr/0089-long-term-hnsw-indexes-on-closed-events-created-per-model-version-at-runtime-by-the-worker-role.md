@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-07
-- 근거: [이슈 #98](https://github.com/Theia0382/yozm-news/issues/98) — 인덱스를 둘 때와 자리를 리드와 정하고 구현, 실제 PostgreSQL 에서 생성 · 질의 계획의 사용을 확인(`0551eb3`)
+- 근거: [이슈 #98](https://github.com/Theia0382/yozm-news/issues/98) — 인덱스를 둘 때와 자리를 정하고 구현, 실제 PostgreSQL 에서 생성 · 질의 계획의 사용을 확인(`0551eb3`)
 - 관련: [ADR-0014](0014-spring-data-jdbc.md)(결정 표 "스키마" 행을 장기 검색 인덱스에 대해 부분 대체한다 — 좁힘), [ADR-0027](0027-pgvector-for-vector-storage.md)(결정 절 "HNSW 인덱스는 오래된 사건을 찾는 장기 검색에만 건다"의 인덱스를 정한다, 후속 기록), [ADR-0079](0079-event-centroids-in-a-dimensionless-halfvec-column-with-a-model-version-per-event.md)(결과 절 "운영 모델을 고르거나 바꿔도 사건 테이블의 마이그레이션이 없다"를 인덱스에서도 지킨다, 후속 기록)
 
 ## 맥락

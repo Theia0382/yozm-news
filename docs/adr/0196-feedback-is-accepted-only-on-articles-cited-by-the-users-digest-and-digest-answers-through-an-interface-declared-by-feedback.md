@@ -2,7 +2,7 @@
 
 - 상태: 승인. 부분 대체 — 받는 대상(인용한 기사)과 인용 확인 인터페이스 · 화면 상태 조회의 기사 ID 묶음([ADR-0265](0265-feedback-is-pressed-once-per-digest-item-and-recorded-on-each-event-of-the-item-the-screen-shows-the-item-value-and-signals-use-event-records.md))
 - 날짜: 2026-11-17
-- 근거: [이슈 #183](https://github.com/Theia0382/yozm-news/issues/183) — 기점 `156d2a5` 의 모듈 의존 선언(`digest` 의 허용 의존 · 개요 문서의 의존 문단)과 `digest` 의 인용 저장 꼴을 대조하고, 피드백을 받을 범위를 리드와 정함
+- 근거: [이슈 #183](https://github.com/Theia0382/yozm-news/issues/183) — 기점 `156d2a5` 의 모듈 의존 선언(`digest` 의 허용 의존 · 개요 문서의 의존 문단)과 `digest` 의 인용 저장 꼴을 대조하고, 피드백을 받을 범위를 정함
 - 관련: [ADR-0157](0157-credential-depends-on-llm-and-stored-keys-reach-llm-through-a-supply-interface-that-llm-declares-and-credential-implements.md)(같은 꼴 — 필요한 쪽이 선언하고 지식을 가진 쪽이 구현하는 공급 인터페이스), [ADR-0013](0013-architecture-patterns.md)(포트는 외부 의존성에만 — 이 인터페이스는 포트가 아니다), [ADR-0028](0028-explicit-signals-and-interest-weighted-candidates.md)(`digest` 가 `feedback` 을 읽는 방향), [ADR-0193](0193-the-per-user-storyline-information-is-the-received-news-counted-from-the-digest-shown-for-each-date.md)(받은 소식 — 날짜별로 보이는 다이제스트로 세는 다른 정의)
 
 ## 맥락

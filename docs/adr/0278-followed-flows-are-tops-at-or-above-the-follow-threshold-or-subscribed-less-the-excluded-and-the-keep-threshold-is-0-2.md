@@ -2,7 +2,7 @@
 
 - 상태: 승인. 부분 대체 — 관심 흐름의 구독한 흐름([ADR-0283](0283-storyline-interest-is-keyed-by-user-storyline-and-its-value-is-spread-to-each-top-for-selection.md)) · 판정을 읽는 화면용 조회([ADR-0287](0287-user-storyline-summaries-are-made-and-stored-by-user-with-the-users-key-and-digest-supplies-the-flow-standing.md))
 - 날짜: 2026-11-22
-- 근거: [이슈 #243](https://github.com/Theia0382/yozm-news/issues/243) — 개인 스토리라인 화면(탭 · 관심사 히스토리)에 보일 흐름은 사용자 키로 정리 정보를 만드는 흐름이라 그 기준이 곧 사용자 비용이다. 측정 기록으로 기준 하나 · 둘의 정리 호출 수를 세어 리드가 두 기준을 골랐다. 구현 커밋 `1e95385`
+- 근거: [이슈 #243](https://github.com/Theia0382/yozm-news/issues/243) — 개인 스토리라인 화면(탭 · 관심사 히스토리)에 보일 흐름은 사용자 키로 정리 정보를 만드는 흐름이라 그 기준이 곧 사용자 비용이다. 측정 기록으로 기준 하나 · 둘의 정리 호출 수를 세어 보고 두 기준을 골랐다. 구현 커밋 `1e95385`
 - 관련: [ADR-0277](0277-storyline-interest-is-counted-per-containment-tree-top-with-the-topic-formula-and-reactions-to-a-flow-seen-within-seven-days-go-to-the-storyline-only.md)(스토리라인 관심), [ADR-0226](0226-new-and-lost-interests-are-neighbouring-periods-crossing-one-threshold-on-the-interest-value.md)(보충 — 흐름의 생김 · 사라짐은 두 기준으로 본다), [ADR-0227](0227-the-interest-history-shows-subtopic-interest-and-the-users-own-topic-subscription-changes-only.md)(보충 — 관심사 히스토리에 보일 흐름의 기준), [ADR-0279](0279-storyline-interest-multiplies-the-candidate-rank-and-flows-at-or-below-the-exclusion-threshold-leave-subscribed-candidates-and-the-big-slot.md)(거름 기준)
 
 ## 맥락

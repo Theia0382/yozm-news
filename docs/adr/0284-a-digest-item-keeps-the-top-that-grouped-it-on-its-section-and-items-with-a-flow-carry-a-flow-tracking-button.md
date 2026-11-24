@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-22
-- 근거: [이슈 #244](https://github.com/Theia0382/yozm-news/issues/244) — 다이제스트 항목에서 그 흐름을 바로 따라가게 하려는데, 항목이 어느 흐름으로 묶였는지가 생성 뒤에 남지 않았다. 리드가 저장 자리 · 버튼을 둘 항목 · 화면 이름을 정했다. 구현 커밋 `9d04fbb` · `abcba83`
+- 근거: [이슈 #244](https://github.com/Theia0382/yozm-news/issues/244) — 다이제스트 항목에서 그 흐름을 바로 따라가게 하려는데, 항목이 어느 흐름으로 묶였는지가 생성 뒤에 남지 않았다. 저장 자리 · 버튼을 둘 항목 · 화면 이름을 정했다. 구현 커밋 `9d04fbb` · `abcba83`
 - 관련: [ADR-0262](0262-chosen-events-are-grouped-into-items-by-containment-tree-top-code-splits-top-stories-and-headlines-the-llm-writes-per-item-and-an-item-has-one-badge.md)(보충 — 섹션이 항목을 묶은 꼭대기도 갖는다), [ADR-0282](0282-flow-tracking-points-to-a-user-storyline-which-user-handlers-store-under-the-settings-lock-while-readers-get-the-result-of-the-same-rule.md)(추적 상태 조회), [ADR-0193](0193-the-per-user-storyline-information-is-the-received-news-counted-from-the-digest-shown-for-each-date.md)(받은 소식 — 그대로)
 
 ## 맥락

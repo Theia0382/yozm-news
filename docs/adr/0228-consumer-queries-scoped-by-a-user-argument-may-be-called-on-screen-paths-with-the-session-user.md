@@ -2,7 +2,7 @@
 
 - 상태: 승인. 부분 대체 — 화면 경로 대상 목록 · 다이제스트가 읽는 관심 설정의 백그라운드 작업 전용([ADR-0248](0248-the-digest-interests-and-topic-suggestion-queries-may-be-called-on-screen-paths-with-the-session-user.md))
 - 날짜: 2026-11-18
-- 근거: [이슈 #189](https://github.com/Theia0382/yozm-news/issues/189) — 관심사 히스토리를 조회 때 계산하려면 화면 요청 안에서 관심도 재료 조회를 불러야 함을 확인하고 리드와 정함. 구현 커밋 `7d7a1f8` · `86e0cc0`
+- 근거: [이슈 #189](https://github.com/Theia0382/yozm-news/issues/189) — 관심사 히스토리를 조회 때 계산하려면 화면 요청 안에서 관심도 재료 조회를 불러야 함을 확인하고 정함. 구현 커밋 `7d7a1f8` · `86e0cc0`
 - 관련: [ADR-0191](0191-the-consumer-query-of-storyline-subscriptions-is-opened-with-the-subscriptions-and-resolves-ids-without-writing.md)(결정 "조회는 쓰지 않는다 … 백그라운드 작업 전용이다"의 "백그라운드 작업 전용" — 부분 대체), [ADR-0215](0215-interests-are-not-stored-entities-and-are-computed-from-signal-history-at-query-time.md)(관심사는 조회할 때 계산한다), [ADR-0192](0192-reader-screens-are-composed-by-the-reader-module-over-module-public-queries.md)(독자 화면은 `reader` 가 엮는다)
 
 ## 맥락

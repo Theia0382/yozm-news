@@ -2,7 +2,7 @@
 
 - 상태: 승인. 부분 대체 — 상위와 하위를 둘 다 낸다는 결정([ADR-0235](0235-the-big-list-has-one-row-per-containment-tree-carrying-the-big-storylines-under-it.md))
 - 날짜: 2026-11-14
-- 근거: [이슈 #137](https://github.com/Theia0382/yozm-news/issues/137) — 고정 덤프의 스토리라인 평가 세트에서 식의 후보들을 스토리라인 × 날짜의 큰 표시와 견주어 리드와 정함
+- 근거: [이슈 #137](https://github.com/Theia0382/yozm-news/issues/137) — 고정 덤프의 스토리라인 평가 세트에서 식의 후보들을 스토리라인 × 날짜의 큰 표시와 견주어 정함
 - 관련: [ADR-0116](0116-storyline-big-judgement-starts-with-a-provisional-rule-of-distinct-sources-and-mean-importance-judged-at-query-time.md)(큰 판정의 식과 순서 — 부분 대체), [ADR-0118](0118-big-judgement-criteria-are-storyline-operator-settings-and-do-not-inherit-event-criteria-values-or-history.md)(기준의 범위 — 부분 대체), [ADR-0117](0117-big-judgement-materials-are-tallied-by-event-per-group-of-events-and-storyline-passes-only-event-ids.md)(기간 집계의 재료 — 보충), [ADR-0103](0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md)(중요도 세분화 — 보충), [ADR-0131](0131-storyline-relations-are-explicit-links-with-containment-as-a-single-parent-tree-gathered-at-query-time.md)(상위와 하위를 함께 낸다 — 보충), [ADR-0110](0110-storyline-evaluation-labels-system-events-of-a-fixed-dump-and-measures-overlapping-clusters-from-random-seed-events.md)(큰 판정을 스토리라인 × 날짜로 잰다), [ADR-0148](0148-storyline-coverage-is-the-article-count-in-the-period-over-the-closed-event-set.md)(보도량)
 
 ## 맥락

@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-21
-- 근거: [이슈 #182](https://github.com/Theia0382/yozm-news/issues/182) — 측정 인스턴스에서 큰 스토리라인에 사건이 많은 날, 큰 슬롯을 켠 사용자의 다이제스트가 거의 큰 화제뿐이었다. 리드가 예산 자르기에서 절반을 지키는 안을 골랐다. 구현 커밋 `2168a57`
+- 근거: [이슈 #182](https://github.com/Theia0382/yozm-news/issues/182) — 측정 인스턴스에서 큰 스토리라인에 사건이 많은 날, 큰 슬롯을 켠 사용자의 다이제스트가 거의 큰 화제뿐이었다. 예산 자르기에서 절반을 지키는 안을 골랐다. 구현 커밋 `2168a57`
 - 관련: [ADR-0210](0210-candidate-selection-cuts-to-the-input-token-budget-with-one-estimate-the-prompt-follows.md)(부분 대체 — 결정 "넘으면 구독 후보의 꼬리부터, 그래도 넘으면 큰 슬롯의 꼬리부터 뺀다"), [ADR-0209](0209-maximum-candidates-and-big-slots-are-user-settings-and-the-big-slot-takes-at-most-half.md)(보충 — 결과 "최대 후보 수가 입력 토큰 예산보다 크면 예산이 먼저 자른다")
 
 ## 맥락

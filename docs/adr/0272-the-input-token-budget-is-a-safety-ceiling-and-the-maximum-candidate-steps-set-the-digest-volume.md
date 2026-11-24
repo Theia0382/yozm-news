@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-21
-- 근거: [이슈 #182](https://github.com/Theia0382/yozm-news/issues/182) — 측정 인스턴스에서 입력 토큰 예산이 다이제스트의 사건 수를 정해, 사용자가 고른 최대 후보 수의 보통 · 많이 단계와 큰 슬롯 수가 결과를 바꾸지 못했다. 리드가 예산을 안전 상한으로 올리고 분량은 최대 후보 수 단계로 정하는 안과 그 값을 골랐다. 구현 커밋 `26c97f4`
+- 근거: [이슈 #182](https://github.com/Theia0382/yozm-news/issues/182) — 측정 인스턴스에서 입력 토큰 예산이 다이제스트의 사건 수를 정해, 사용자가 고른 최대 후보 수의 보통 · 많이 단계와 큰 슬롯 수가 결과를 바꾸지 못했다. 예산을 안전 상한으로 올리고 분량은 최대 후보 수 단계로 정하는 안과 그 값을 골랐다. 구현 커밋 `26c97f4`
 - 관련: [ADR-0209](0209-maximum-candidates-and-big-slots-are-user-settings-and-the-big-slot-takes-at-most-half.md)(부분 대체 — 결정 첫째 문장의 단계 값과 직접 입력 범위), [ADR-0210](0210-candidate-selection-cuts-to-the-input-token-budget-with-one-estimate-the-prompt-follows.md)(보충 — 예산의 역할), [ADR-0271](0271-when-the-input-token-budget-cuts-candidates-the-big-slot-keeps-at-most-half-of-what-is-left-and-uses-what-subscribed-events-leave.md)(보충 — 예산이 좁은 날), [ADR-0265](0265-feedback-is-pressed-once-per-digest-item-and-recorded-on-each-event-of-the-item-the-screen-shows-the-item-value-and-signals-use-event-records.md)(보충 — 피드백 요청 제한의 근거)
 
 ## 맥락

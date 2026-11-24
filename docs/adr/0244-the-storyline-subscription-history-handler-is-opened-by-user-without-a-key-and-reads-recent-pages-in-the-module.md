@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-18
-- 근거: [이슈 #186](https://github.com/Theia0382/yozm-news/issues/186) — 기점 `33ab070` 의 소비자 조회 `StorylineSubscriptionDirectory.changes` · 구독 처리기 · 이력 색인을 대조하고 리드와 정함
+- 근거: [이슈 #186](https://github.com/Theia0382/yozm-news/issues/186) — 기점 `33ab070` 의 소비자 조회 `StorylineSubscriptionDirectory.changes` · 구독 처리기 · 이력 색인을 대조하고 정함
 - 관련: [ADR-0190](0190-storyline-subscription-handlers-are-open-without-a-key.md)(보충 — 결정 "스토리라인 구독 처리기를 키 없이 연다"의 처리기에 구독 이력 처리기가 든다), [ADR-0228](0228-consumer-queries-scoped-by-a-user-argument-may-be-called-on-screen-paths-with-the-session-user.md)(관련 — 결과 "같은 읽기에 화면용 조회를 따로 열지 않는다"와의 관계는 결과 절), [ADR-0191](0191-the-consumer-query-of-storyline-subscriptions-is-opened-with-the-subscriptions-and-resolves-ids-without-writing.md)(관련 — 남는 쪽으로 푸는 규칙은 한 곳), [ADR-0192](0192-reader-screens-are-composed-by-the-reader-module-over-module-public-queries.md)(관련 — 구독 화면은 데이터를 가진 모듈이 연다), [ADR-0243](0243-the-subscription-history-on-the-subscription-screen-shows-only-the-users-own-subscribe-and-unsubscribe.md)(보이는 행)
 
 ## 맥락

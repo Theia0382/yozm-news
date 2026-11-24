@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-12
-- 근거: [이슈 #102](https://github.com/Theia0382/yozm-news/issues/102) — 평가 세트에서 병합 판정의 품질을 조사하고, 병합이 묻는 쌍의 범위를 리드와 정해 구현 · 처음부터 다시 묶어 확인함(`8e967a0` · `c4bb458`)
+- 근거: [이슈 #102](https://github.com/Theia0382/yozm-news/issues/102) — 평가 세트에서 병합 판정의 품질을 조사하고, 병합이 묻는 쌍의 범위를 정해 구현 · 처음부터 다시 묶어 확인함(`8e967a0` · `c4bb458`)
 - 관련: [ADR-0084](0084-event-merge-applies-assignment-scoring-between-events-and-keeps-merged-rows-pointing-to-survivors.md)(결정 절의 "띠는 사건 소속 판정에 묻는다" · "다시 묻지 않는다"의 범위와 결과 절의 "띠 쌍마다 Jev 요청이 한 번 는다" — 부분 대체), [ADR-0109](0109-event-clustering-defaults-chosen-on-the-evaluation-set-with-operator-review-and-closing-from-operating-records.md)(결과 절의 병합 판정 원인 추정 — 보충), [ADR-0081](0081-event-assignment-criteria-in-settings-and-rejudgement-within-stored-scores.md)(저장 후보 — 병합도 읽는다, 결정은 그대로), [ADR-0096](0096-instance-bound-evaluation-data-kept-out-of-the-public-repository-and-defaults-cite-only-the-evaluation-set.md)(근거 수치를 공개 문서에 적지 않는다)
 
 ## 맥락

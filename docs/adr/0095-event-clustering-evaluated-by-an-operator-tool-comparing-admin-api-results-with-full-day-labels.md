@@ -2,7 +2,7 @@
 
 - 상태: 승인. 부분 대체 — 큰 사건을 읽는 운영자 API([ADR-0116](0116-storyline-big-judgement-starts-with-a-provisional-rule-of-distinct-sources-and-mean-importance-judged-at-query-time.md)) · 큰 사건 정답의 표시와 정밀도([ADR-0098](0098-label-rule-2-samples-hold-no-big-event-gold-and-big-event-precision-is-not-measured-without-marks.md) · [ADR-0116](0116-storyline-big-judgement-starts-with-a-provisional-rule-of-distinct-sources-and-mean-importance-judged-at-query-time.md)) · 큰 사건의 다른 집계([ADR-0116](0116-storyline-big-judgement-starts-with-a-provisional-rule-of-distinct-sources-and-mean-importance-judged-at-query-time.md))
 - 날짜: 2026-11-08
-- 근거: [이슈 #100](https://github.com/Theia0382/yozm-news/issues/100) — 사건 묶기의 판정 규칙 · 운영자 API · 재판정의 범위를 조사하고 리드와 정해 구현(`d4e2db7`)
+- 근거: [이슈 #100](https://github.com/Theia0382/yozm-news/issues/100) — 사건 묶기의 판정 규칙 · 운영자 API · 재판정의 범위를 조사하고 정해 구현(`d4e2db7`)
 - 관련: [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md)(결정 절 "임계값 · 시간 창 · 모델은 평가 세트로 정한다"의 방법을 정한다 — 보충), [ADR-0082](0082-big-events-judged-at-query-time-by-distinct-sources-and-mean-importance-both-reaching-criteria.md) · [ADR-0084](0084-event-merge-applies-assignment-scoring-between-events-and-keeps-merged-rows-pointing-to-survivors.md) · [ADR-0086](0086-events-close-after-an-idle-period-since-the-last-join-or-a-maximum-period-since-opening.md)(평가 세트로 미룬 비교 가운데 이 도구가 재지 않는 것 — 보충), [ADR-0081](0081-event-assignment-criteria-in-settings-and-rejudgement-within-stored-scores.md) · [ADR-0087](0087-closed-event-assignments-are-not-rejudged-and-closing-and-merging-are-not-undone.md)(재판정의 범위), [ADR-0096](0096-instance-bound-evaluation-data-kept-out-of-the-public-repository-and-defaults-cite-only-the-evaluation-set.md)(평가 데이터의 자리)
 
 ## 맥락

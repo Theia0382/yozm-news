@@ -2,7 +2,7 @@
 
 - 상태: 승인. 부분 대체 — 노출 · 반응의 단위(기사)와 노출의 인용 · 기사마다 한 번([ADR-0268](0268-interest-counts-exposures-and-reactions-per-event-splitting-an-item-weight-one-over-n-and-counting-an-event-once-with-its-latest-share.md)) · 관심 x 의 구독 항과 γ([ADR-0295](0295-the-subscription-signal-of-interest-is-a-term-outside-the-exposure-denominator-and-the-topic-value-is-below-the-presence-threshold.md)) · 여러 주제에 걸친 가중치의 단위([ADR-0260](0260-digest-candidates-are-events-and-only-assigned-events-with-an-article-first-evaluated-in-the-period-enter.md))
 - 날짜: 2026-11-18
-- 근거: [이슈 #187](https://github.com/Theia0382/yozm-news/issues/187) — 관심 신호 · 노출 기록의 공개 조회와 후보 선별의 순위를 대조하고, 산식의 꼴 · 노출 정의 · 여러 주제 기사의 가중치를 리드와 정함. 구현 커밋 `e6d32cf` · `ff3ba46` · `1487ffe`
+- 근거: [이슈 #187](https://github.com/Theia0382/yozm-news/issues/187) — 관심 신호 · 노출 기록의 공개 조회와 후보 선별의 순위를 대조하고, 산식의 꼴 · 노출 정의 · 여러 주제 기사의 가중치를 정함. 구현 커밋 `e6d32cf` · `ff3ba46` · `1487ffe`
 - 관련: [ADR-0028](0028-explicit-signals-and-interest-weighted-candidates.md)(결정 "관심도는 기간 × 주제마다 신호를 노출 수로 나눈 값이고, 최근 신호에 더 큰 가중치"의 산식 — 보충), [ADR-0196](0196-feedback-is-accepted-only-on-articles-cited-by-the-users-digest-and-digest-answers-through-an-interface-declared-by-feedback.md)(결과 "덮인 다이제스트에서 온 신호를 관심도가 셀지는 노출 수의 정의와 함께 관심도를 구현하는 작업이 정한다" — 보충), [ADR-0193](0193-the-per-user-storyline-information-is-the-received-news-counted-from-the-digest-shown-for-each-date.md)(받은 소식 — 날짜별로 보이는 다이제스트로 세는 다른 정의)
 
 ## 맥락

@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-18
-- 근거: [이슈 #179](https://github.com/Theia0382/yozm-news/issues/179) — 수용 기준 "오늘 · 날짜별 다이제스트 … 지난 날짜 목록", "홈 진입을 다이제스트 화면으로", 리드와 정함(홈은 가장 늦은 날짜를 보인다 · 화면은 홈 · 날짜 화면 · 목록 화면 셋). 구현 커밋 `39e730a`(공개 조회) · `cbe227c`(화면용 API) · `7dbf1de`(화면) · `7af1a1c`(오늘 일정 생성 시각 — 서버) · `f113b4e`(오늘 안내 — 화면). UI 확인 뒤 리드와 정함(오늘 안내의 시각 판단은 서버 시간으로)
+- 근거: [이슈 #179](https://github.com/Theia0382/yozm-news/issues/179) — 수용 기준 "오늘 · 날짜별 다이제스트 … 지난 날짜 목록", "홈 진입을 다이제스트 화면으로", 정함(홈은 가장 늦은 날짜를 보인다 · 화면은 홈 · 날짜 화면 · 목록 화면 셋). 구현 커밋 `39e730a`(공개 조회) · `cbe227c`(화면용 API) · `7dbf1de`(화면) · `7af1a1c`(오늘 일정 생성 시각 — 서버) · `f113b4e`(오늘 안내 — 화면). UI 확인 뒤 정함(오늘 안내의 시각 판단은 서버 시간으로)
 - 관련: [ADR-0231](0231-manual-generation-remakes-todays-digest-with-its-period-or-makes-a-new-one-and-counts-manual-rows-of-the-users-day.md)(관련 — 수동 생성 대상이 오늘이라 다시 만들기 버튼은 홈에만 둔다), [ADR-0192](0192-reader-screens-are-composed-by-the-reader-module-over-module-public-queries.md)(관련 — 화면용 API 는 `reader`)
 
 ## 맥락

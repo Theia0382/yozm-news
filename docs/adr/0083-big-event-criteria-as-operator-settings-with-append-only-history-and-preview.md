@@ -2,7 +2,7 @@
 
 - 상태: 대체됨([ADR-0118](0118-big-judgement-criteria-are-storyline-operator-settings-and-do-not-inherit-event-criteria-values-or-history.md))
 - 날짜: 2026-11-07
-- 근거: [이슈 #99](https://github.com/Theia0382/yozm-news/issues/99) — 기준을 둘 곳과 변경 이력을 리드와 정하고 구현(`413dbfd` · `bd84e7d`)
+- 근거: [이슈 #99](https://github.com/Theia0382/yozm-news/issues/99) — 기준을 둘 곳과 변경 이력을 정하고 구현(`413dbfd` · `bd84e7d`)
 - 관련: [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md)(결정 절 "임계값은 운영자가 정한다"의 큰 사건 기준을 둘 곳, 후속 기록), [ADR-0055](0055-tag-and-store-thresholds-change-with-history-and-warn-instead-of-blocking.md)(태그 기준 · 저장 기준 — 같은 모양), [ADR-0081](0081-event-assignment-criteria-in-settings-and-rejudgement-within-stored-scores.md)(사건 배정 기준은 설정 — 근거가 달라 대체하지 않는다), [ADR-0082](0082-big-events-judged-at-query-time-by-distinct-sources-and-mean-importance-both-reaching-criteria.md)(판정 식)
 
 ## 맥락

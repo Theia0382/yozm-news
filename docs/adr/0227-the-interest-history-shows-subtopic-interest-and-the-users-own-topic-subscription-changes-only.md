@@ -2,7 +2,7 @@
 
 - 상태: 승인. 부분 대체 — 관심사 히스토리의 단위([ADR-0293](0293-the-interest-history-also-shows-the-interest-of-summarized-flows.md))
 - 날짜: 2026-11-18
-- 근거: [이슈 #189](https://github.com/Theia0382/yozm-news/issues/189) — 문서가 관심사 히스토리에 걸어 둔 것(넓어진 흐름 · 신호 · 주제별 보도량)을 대조하고 리드와 정함. 구현 커밋 `bb602eb` · `95bb4cd` · `27a151a`
+- 근거: [이슈 #189](https://github.com/Theia0382/yozm-news/issues/189) — 문서가 관심사 히스토리에 걸어 둔 것(넓어진 흐름 · 신호 · 주제별 보도량)을 대조하고 정함. 구현 커밋 `bb602eb` · `95bb4cd` · `27a151a`
 - 관련: [ADR-0064](0064-topic-coverage-counts-articles-by-first-evaluation-time-with-query-time-judgement-over-key-lineage-in-the-app.md)(맥락 · 결과의 "관심사 히스토리가 보도량을 쓴다" — 보충), [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)(개인 쪽은 스토리라인 구독과 관심사 둘이다), [ADR-0214](0214-a-storyline-subscription-enters-topic-interest-by-the-topic-shares-of-its-event-representatives.md)(스토리라인 구독은 주제 몫으로 관심도에 든다)
 
 ## 맥락
@@ -28,9 +28,9 @@
 
 | 대안 | 기각 이유 |
 |---|---|
-| 한 대분류 안에서 관심 있는 중분류 수가 늘어난 것을 "넓어진 흐름"으로 판정한다 | 리드 판단 — 대분류 · 중분류가 중요한 것이 아니라 관심도 추적이다 |
+| 한 대분류 안에서 관심 있는 중분류 수가 늘어난 것을 "넓어진 흐름"으로 판정한다 | 대분류 · 중분류가 중요한 것이 아니라 관심도 추적이다 |
 | 구독 단위의 변화(대분류 키 → 중분류 키)를 보인다 | 글자 그대로 좁아지는 방향이고, 관심의 흐름이 아니라 설정 이력이다 |
-| 스토리라인 구독 이력도 히스토리에 보인다 | 리드 판단 — 별개 화면(스토리라인 구독 화면)에 둔다 |
+| 스토리라인 구독 이력도 히스토리에 보인다 | 별개 화면(스토리라인 구독 화면)에 둔다 |
 | 좋아요 / 싫어요를 누른 기사 목록도 보인다 | 관심의 변화보다 누른 기사 보관함에 가깝고, 응답이 기사 수만큼 커진다 |
 | 기간마다 주제별 보도량을 관심 옆에 보인다 | 이슈의 범위 밖이고 같은 견줌을 변화 리포트가 맡는다 |
 

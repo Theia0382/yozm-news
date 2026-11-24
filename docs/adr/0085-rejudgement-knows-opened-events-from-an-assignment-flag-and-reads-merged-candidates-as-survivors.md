@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-07
-- 근거: [이슈 #98](https://github.com/Theia0382/yozm-news/issues/98) — 병합 뒤 재판정이 병합을 푸는 경우를 찾아 리드와 정하고 구현(`8eba5ca`)
+- 근거: [이슈 #98](https://github.com/Theia0382/yozm-news/issues/98) — 병합 뒤 재판정이 병합을 푸는 경우를 찾아 정하고 구현(`8eba5ca`)
 - 관련: [ADR-0081](0081-event-assignment-criteria-in-settings-and-rejudgement-within-stored-scores.md)(결정 절 "재판정은 자동이다"의 연 사건을 아는 방법과 합쳐진 사건의 저장 후보, 후속 기록), [ADR-0084](0084-event-merge-applies-assignment-scoring-between-events-and-keeps-merged-rows-pointing-to-survivors.md)(병합)
 
 ## 맥락
