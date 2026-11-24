@@ -22,7 +22,8 @@ import org.junit.jupiter.api.Test;
 
 /**
  * 항목 순위와 가르기 — 항목 점수 = 사건 점수의 최대(없으면 맨 뒤), 같으면 가장 작은 사건 ID. 큰 판정 나무의 항목은 모두 주요 뉴스, 나머지는
- * 5 개까지 주요 뉴스, 그 뒤 헤드라인. 결과는 주요 뉴스 다음 헤드라인. 나머지 항목에 구독 행이 셋 이상 나오면 한 구독 행은 그 다섯 가운데 둘까지다.
+ * 5 개까지 주요 뉴스, 그 뒤 헤드라인. 결과는 주요 뉴스 다음 헤드라인. 항목에 구독 행이 셋 이상 나오면 한 구독 행은 주요 뉴스 칸(그날 큰 항목 수
+ * + 5)의 40% 까지이고, 큰 항목도 그 몫을 쓴다.
  * 손으로 적은 고른 사건({@link Items})과 구독 행으로 스프링 없이 돈다 — 상한을 보는 시험은 경제 · 정치 · 국제 세 대분류를 구독한 필터를 쓰고,
  * 사건 ID 1x 는 정치 행정 · 2x 는 국제 분쟁 · 3x 는 경제 시장이 주제다.
  * <p>
@@ -114,9 +115,10 @@ class ItemPlanTests {
 	}
 
 	@Test
-	void aSubscribedRowTakesAtMostTwoTopStoriesOnceThreeRowsHaveItems() {
-		assertThat(ItemRules.TOP_STORIES_PER_TOPIC).isEqualTo(2);
-		// 정치 9 · 8 · 7 · 6, 국제 5 · 4, 경제 2 — 정치는 둘까지라 7 · 6 이 헤드라인이고 경제 2 가 주요 뉴스에 오른다
+	void withoutBigItemsASubscribedRowTakesTwoOfTheFiveSeats() {
+		assertThat(ItemRules.TOPIC_SHARE_PERCENT).isEqualTo(40);
+		// 큰 항목이 없으면 칸 5 × 40% = 2. 정치 9 · 8 · 7 · 6, 국제 5 · 4, 경제 2 — 정치는 둘까지라 7 · 6 이 헤드라인이고 경제 2 가 주요 뉴스에
+		// 오른다
 		List<DigestItemPlan> items = List.of(politics(10, 9), politics(11, 8), politics(12, 7), politics(13, 6),
 				world(20, 5), world(21, 4), economy(30, 2));
 
@@ -131,7 +133,7 @@ class ItemPlanTests {
 
 	@Test
 	void twoRowsWithItemsAreTooFewForTheCap() {
-		// 세 행을 구독했지만 그날 항목은 정치 · 국제 두 행뿐 — 2 × 2 < 5 라 상한을 걸지 않고 순위대로 다섯
+		// 세 행을 구독했지만 그날 항목은 정치 · 국제 두 행뿐 — 2 × 40% 로는 칸을 다 채울 수 없어 상한을 걸지 않고 순위대로 다섯
 		List<DigestItemPlan> items = List.of(politics(10, 9), politics(11, 8), politics(12, 7), politics(13, 6),
 				world(20, 5), world(21, 4));
 
@@ -182,27 +184,58 @@ class ItemPlanTests {
 	}
 
 	@Test
-	void aBigItemTakesNoQuotaOfItsRow() {
-		// 큰 항목(정치 1)이 있어도 큰 슬롯 밖 정치는 둘까지 — 큰 항목이 정치 몫을 쓰면 정치 8 이 헤드라인으로 내려간다
+	void aBigItemUsesTheQuotaOfItsRow() {
+		// 큰 항목 하나(정치 1)면 칸 6 × 40% = 2. 큰 항목이 정치 몫 하나를 먼저 써서 큰 슬롯 밖 정치는 9 하나만 들고 8 은 헤드라인이다
 		List<DigestItemPlan> items = List.of(new DigestItemPlan(List.of(big(1, 0)), 0, null), politics(10, 9),
 				politics(11, 8), world(20, 6), world(21, 5), economy(30, 4), economy(31, 3));
 
 		List<ArrangedItem> arranged = ItemPlan.arrange(items, InterestWeights.NEUTRAL_ALL, THREE_ROWS);
 
-		assertThat(topStories(arranged)).containsExactly(10L, 11L, 20L, 21L, 30L, 1L);
-		assertThat(headlines(arranged)).containsExactly(31L);
+		// 큰 항목 1 과 경제 31 은 같은 점수 3 이라 가장 작은 사건 ID 순
+		assertThat(topStories(arranged)).containsExactly(10L, 20L, 21L, 30L, 1L, 31L);
+		assertThat(headlines(arranged)).containsExactly(11L);
 	}
 
 	@Test
-	void theRowOfABigItemIsNotCountedForTheCap() {
-		// 큰 항목은 경제, 큰 슬롯 밖 항목은 정치 · 국제 두 행뿐 — 경제를 세면 세 행이라 정치 6 대신 국제 4 가 오른다
+	void theRowOfABigItemCountsTowardTheRows() {
+		// 큰 항목은 경제, 큰 슬롯 밖 항목은 정치 · 국제 두 행뿐 — 경제까지 세 행이라 상한(칸 6 × 40% = 2)을 건다. 1차로 정치 9 · 8 · 국제 5 · 4,
+		// 남은 한 자리는 순위대로 정치 7 이고 정치 6 은 헤드라인이다
 		List<DigestItemPlan> items = List.of(new DigestItemPlan(List.of(big(1, 0, "economy.markets")), 0, null),
 				politics(10, 9), politics(11, 8), politics(12, 7), politics(13, 6), world(20, 5), world(21, 4));
 
 		List<ArrangedItem> arranged = ItemPlan.arrange(items, InterestWeights.NEUTRAL_ALL, THREE_ROWS);
 
-		assertThat(topStories(arranged)).containsExactly(10L, 11L, 12L, 13L, 20L, 1L);
-		assertThat(headlines(arranged)).containsExactly(21L);
+		assertThat(topStories(arranged)).containsExactly(10L, 11L, 12L, 20L, 21L, 1L);
+		assertThat(headlines(arranged)).containsExactly(13L);
+	}
+
+	@Test
+	void theCapGrowsWithTheBigItemsOfTheDay() {
+		// 구독 밖 주제(문화)의 큰 항목 셋이면 칸 8 × 40% 의 내림 3 — 큰 항목은 몫을 쓰지 않는다. 정치는 9 · 8 · 7 의 셋이 들고 정치 6 · 경제 3 이
+		// 헤드라인이다(큰 항목이 없으면 상한 2 라 정치 7 대신 경제 3 이 든다)
+		List<DigestItemPlan> items = List.of(new DigestItemPlan(List.of(big(1, 0, "culture.books")), 0, null),
+				new DigestItemPlan(List.of(big(2, 1, "culture.books")), 1, null),
+				new DigestItemPlan(List.of(big(3, 2, "culture.books")), 2, null), politics(10, 9), politics(11, 8),
+				politics(12, 7), politics(13, 6), world(20, 5), economy(30, 4), economy(31, 3));
+
+		List<ArrangedItem> arranged = ItemPlan.arrange(items, InterestWeights.NEUTRAL_ALL, THREE_ROWS);
+
+		assertThat(topStories(arranged)).containsExactly(10L, 11L, 12L, 20L, 30L, 1L, 2L, 3L);
+		assertThat(headlines(arranged)).containsExactly(13L, 31L);
+	}
+
+	@Test
+	void bigItemsCanUseUpTheQuotaOfTheirRowAndTheSeatsAreStillFilled() {
+		// 정치 큰 항목 둘이면 칸 7 × 40% = 2 를 큰 항목이 다 쓴다. 1차는 정치 없이 국제 6 · 5 · 경제 4 · 3 의 넷, 남은 한 자리는 순위대로 정치 9
+		// 라 정치 8 만 헤드라인이다 — 내림으로 몫의 합(3 행 × 2)이 칸 7 에 못 미치는 날은 2차가 채운다
+		List<DigestItemPlan> items = List.of(new DigestItemPlan(List.of(big(1, 0)), 0, null),
+				new DigestItemPlan(List.of(big(2, 1)), 1, null), politics(10, 9), politics(11, 8), world(20, 6),
+				world(21, 5), economy(30, 4), economy(31, 3));
+
+		List<ArrangedItem> arranged = ItemPlan.arrange(items, InterestWeights.NEUTRAL_ALL, THREE_ROWS);
+
+		assertThat(topStories(arranged)).containsExactly(10L, 20L, 21L, 30L, 1L, 2L, 31L);
+		assertThat(headlines(arranged)).containsExactly(11L);
 	}
 
 	@Test

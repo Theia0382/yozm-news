@@ -1,7 +1,7 @@
 package net.yozmnews.digest.domain.item;
 
 /**
- * 항목 가르기의 상수 — 정본 · docs/specs/digest.md §5 · digest-R47 · digest-R54
+ * 항목 가르기의 상수와 구독 행마다 상한의 산식 — 정본 · docs/specs/digest.md §5 · digest-R47 · digest-R54
  */
 public final class ItemRules {
 
@@ -13,12 +13,30 @@ public final class ItemRules {
 	public static final int TOP_STORIES = 5;
 
 	/**
-	 * 큰 슬롯 밖 주요 뉴스에서 구독 행 하나가 차지하는 항목 수의 상한 — 측정 전 목표. 큰 슬롯 밖 항목에 나온 구독 행 수 × 이 값이
-	 * {@link #TOP_STORIES} 보다 작으면 걸지 않는다
+	 * 주요 뉴스 칸에서 구독 행 하나가 차지하는 몫(백분율) — 측정 전 목표. 한 구독 행의 상한({@link #topicCap})과 상한을 거는
+	 * 조건({@link #topicCapApplies})을 이 값으로 센다
 	 */
-	public static final int TOP_STORIES_PER_TOPIC = 2;
+	public static final int TOPIC_SHARE_PERCENT = 40;
 
 	private ItemRules() {
+	}
+
+	/**
+	 * 한 구독 행이 차지하는 주요 뉴스 항목 수의 상한을 센다 — 칸 수(큰 슬롯 항목 수 + {@link #TOP_STORIES}) ×
+	 * {@link #TOPIC_SHARE_PERCENT} ÷ 100 의 내림이다.
+	 * @param bigItems 그날 큰 슬롯 항목 수
+	 */
+	static int topicCap(int bigItems) {
+		return (bigItems + TOP_STORIES) * TOPIC_SHARE_PERCENT / 100;
+	}
+
+	/**
+	 * 구독 행마다 상한을 거는지 판정한다 — 구독 행 수 × {@link #TOPIC_SHARE_PERCENT} 가 100 이상일 때다. 한 행이 칸의 그 몫까지라 그보다
+	 * 적은 행으로는 칸을 다 채울 수 없다.
+	 * @param rows 항목(큰 슬롯 항목 포함)에 나온 구독 행 수
+	 */
+	static boolean topicCapApplies(int rows) {
+		return rows * TOPIC_SHARE_PERCENT >= 100;
 	}
 
 }

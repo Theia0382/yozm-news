@@ -25,10 +25,11 @@ import net.yozmnews.user.TopicSubscription;
  * 가장 작은 사건 ID 오름차순. 큰 판정 나무의 항목({@link DigestItemPlan#bigRow()} 있음)은 모두 주요 뉴스, 나머지(일반 항목)에서
  * {@link ItemRules#TOP_STORIES} 개를 주요 뉴스로 고르고, 그 밖은 헤드라인이다. 항목 안 사건은 사건 순위({@link CandidateRank#order})로 둔다.
  * <p>
- * 일반 항목의 구독 행은 항목 안 사건이 겹치는 구독 행({@link UserFilter#subscriptions})이다. 일반 항목에 나온 구독 행 수 ×
- * {@link ItemRules#TOP_STORIES_PER_TOPIC} 이 {@link ItemRules#TOP_STORIES} 이상이면 1차로 순서대로 훑어 구독 행이 없는 항목은 담고, 구독
- * 행이 있는 항목은 몫을 쓸 행({@link DiversityQuota#roomiest} — 행마다 {@link ItemRules#TOP_STORIES_PER_TOPIC} 에서 시작)이 있으면 그 몫
- * 하나를 쓰고 담는다. 2차로(그보다 작으면 이것만) 남은 자리를 순서대로 채운다.
+ * 항목의 구독 행은 항목 안 사건이 겹치는 구독 행({@link UserFilter#subscriptions})이다. 모든 항목에 나온 구독 행으로 상한을 걸면
+ * ({@link ItemRules#topicCapApplies}) 행마다 몫을 {@link ItemRules#topicCap}(큰 판정 나무의 항목 수)에서 시작해, 큰 판정 나무의 항목이 순서대로
+ * 몫을 쓸 행({@link DiversityQuota#roomiest})의 몫 하나를 먼저 쓰고 — 남은 몫이 없어도 주요 뉴스다 — 1차로 일반 항목을 순서대로 훑어 구독 행이
+ * 없는 항목은 담고, 구독 행이 있는 항목은 몫을 쓸 행이 있으면 그 몫 하나를 쓰고 담는다. 2차로(걸지 않으면 이것만) 남은 자리를 순서대로
+ * 채운다.
  */
 public final class ItemPlan {
 
@@ -53,7 +54,8 @@ public final class ItemPlan {
 				.thenComparing(item -> score(item, weights).orElse(0), Comparator.reverseOrder())
 				.thenComparingLong(ItemPlan::smallestEvent))
 			.toList();
-		boolean[] picked = topStories(ordered.stream().filter(item -> item.bigRow() == null).toList(), filter);
+		boolean[] picked = topStories(ordered.stream().filter(item -> item.bigRow() != null).toList(),
+				ordered.stream().filter(item -> item.bigRow() == null).toList(), filter);
 		List<ArrangedItem> topStories = new ArrayList<>();
 		List<ArrangedItem> headlines = new ArrayList<>();
 		int other = 0;
@@ -84,19 +86,29 @@ public final class ItemPlan {
 	}
 
 	/**
-	 * 일반 항목 가운데 주요 뉴스로 고를 것 — 구독 행마다 상한을 건 1차, 남은 자리를 순서대로 채우는 2차
+	 * 일반 항목 가운데 주요 뉴스로 고를 것 — 큰 판정 나무의 항목이 몫을 먼저 쓰고, 구독 행마다 상한을 건 1차, 남은 자리를 순서대로 채우는 2차
+	 * @param big 큰 판정 나무의 항목 — 모두 주요 뉴스, 항목 순위대로
 	 * @param others 일반 항목 — 항목 순위대로
 	 * @return {@code others} 의 위치마다 주요 뉴스인가
 	 */
-	private static boolean[] topStories(List<DigestItemPlan> others, UserFilter filter) {
+	private static boolean[] topStories(List<DigestItemPlan> big, List<DigestItemPlan> others, UserFilter filter) {
 		boolean[] picked = new boolean[others.size()];
+		List<List<String>> bigRows = big.stream().map(item -> rowsOf(item, filter)).toList();
 		List<List<String>> rows = others.stream().map(item -> rowsOf(item, filter)).toList();
 		Set<String> present = new LinkedHashSet<>();
+		bigRows.forEach(present::addAll);
 		rows.forEach(present::addAll);
 		int used = 0;
-		if (present.size() * ItemRules.TOP_STORIES_PER_TOPIC >= ItemRules.TOP_STORIES) {
+		if (ItemRules.topicCapApplies(present.size())) {
+			int cap = ItemRules.topicCap(big.size());
 			Map<String, Integer> left = new HashMap<>();
-			present.forEach(row -> left.put(row, ItemRules.TOP_STORIES_PER_TOPIC));
+			present.forEach(row -> left.put(row, cap));
+			for (List<String> ofBig : bigRows) {
+				String row = DiversityQuota.roomiest(ofBig, left);
+				if (row != null) {
+					left.merge(row, -1, Integer::sum);
+				}
+			}
 			for (int i = 0; i < others.size() && used < ItemRules.TOP_STORIES; i++) {
 				List<String> ofItem = rows.get(i);
 				if (ofItem.isEmpty()) {
