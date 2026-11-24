@@ -139,8 +139,7 @@ class JdbcNoticeRepository implements NoticeRepository {
 	public boolean createOnce(UserId user, DigestFailedContent content, Instant now) {
 		return this.jdbc.sql("""
 				insert into user_notices (user_id, kind, content, revision, created_at, updated_at)
-				select :user, :kind, cast(:content as jsonb), 1, :now, :now
-				where exists (select 1 from users where id = :user)
+				values (:user, :kind, cast(:content as jsonb), 1, :now, :now)
 				on conflict (user_id, (content ->> 'digestId')) where kind = 'DIGEST_FAILED' do nothing
 				""")
 			.param("user", user.value())

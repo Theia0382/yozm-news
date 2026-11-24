@@ -9,11 +9,11 @@ import net.yozmnews.platform.UserId;
 import net.yozmnews.tag.TagSetDirectory;
 import net.yozmnews.tag.TagSetId;
 import net.yozmnews.tag.TagSetView;
+import net.yozmnews.user.AccountDirectory;
 import net.yozmnews.user.DigestInterests;
 import net.yozmnews.user.DigestInterestsDirectory;
 import net.yozmnews.user.TopicSubscription;
 import net.yozmnews.user.application.PreferenceFollowups.Followed;
-import net.yozmnews.user.domain.account.AccountRepository;
 import net.yozmnews.user.domain.interest.DigestVolume;
 import net.yozmnews.user.domain.interest.ExcludedSourceRepository;
 import net.yozmnews.user.domain.interest.InterestSettings;
@@ -35,7 +35,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 class DigestInterestsDirectoryService implements DigestInterestsDirectory {
 
-	private final AccountRepository accounts;
+	private final AccountDirectory accounts;
 
 	private final InterestSettingsRepository settings;
 
@@ -47,7 +47,7 @@ class DigestInterestsDirectoryService implements DigestInterestsDirectory {
 
 	private final PreferenceFollowups followups;
 
-	DigestInterestsDirectoryService(AccountRepository accounts, InterestSettingsRepository settings,
+	DigestInterestsDirectoryService(AccountDirectory accounts, InterestSettingsRepository settings,
 			TagPreferenceRepository preferences, ExcludedSourceRepository excludedSources, TagSetDirectory tagSets,
 			PreferenceFollowups followups) {
 		this.accounts = Objects.requireNonNull(accounts, "accounts");
@@ -62,7 +62,7 @@ class DigestInterestsDirectoryService implements DigestInterestsDirectory {
 	@Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
 	public Optional<DigestInterests> interestsOf(UserId user) {
 		Objects.requireNonNull(user, "user");
-		if (!this.accounts.existsById(user.value())) {
+		if (!this.accounts.exists(user)) {
 			return Optional.empty();
 		}
 		TagSetView active = this.tagSets.activeTagSet();

@@ -13,13 +13,13 @@ import net.yozmnews.source.FeedLabel;
 import net.yozmnews.source.FeedLabels;
 import net.yozmnews.source.FeedStatusTransition;
 import net.yozmnews.source.FeedStatusesChanged;
+import net.yozmnews.user.AccountDirectory;
 import net.yozmnews.user.domain.notice.DigestFailedContent;
 import net.yozmnews.user.domain.notice.FeedStatusContent;
 import net.yozmnews.user.domain.notice.FeedStatusReceipt;
 import net.yozmnews.user.domain.notice.KeyInvalidatedContent;
 import net.yozmnews.user.domain.notice.Notice;
 import net.yozmnews.user.domain.notice.NoticeKind;
-import net.yozmnews.user.domain.notice.NoticeRecipients;
 import net.yozmnews.user.domain.notice.NoticeRepository;
 import net.yozmnews.user.domain.notice.PasswordChangedContent;
 import net.yozmnews.user.domain.notice.PreferencesAdjustedContent;
@@ -39,15 +39,15 @@ public class FeedStatusNotices {
 
 	private final FeedLabels labels;
 
-	private final NoticeRecipients recipients;
+	private final AccountDirectory accounts;
 
 	private final NoticeRepository notices;
 
 	private final InstantSource clock;
 
-	FeedStatusNotices(FeedLabels labels, NoticeRecipients recipients, NoticeRepository notices, InstantSource clock) {
+	FeedStatusNotices(FeedLabels labels, AccountDirectory accounts, NoticeRepository notices, InstantSource clock) {
 		this.labels = Objects.requireNonNull(labels, "labels");
-		this.recipients = Objects.requireNonNull(recipients, "recipients");
+		this.accounts = Objects.requireNonNull(accounts, "accounts");
 		this.notices = Objects.requireNonNull(notices, "notices");
 		this.clock = Objects.requireNonNull(clock, "clock");
 	}
@@ -57,7 +57,7 @@ public class FeedStatusNotices {
 	public void record(FeedStatusesChanged changed) {
 		Map<FeedId, FeedLabel> labels = this.labels
 			.labels(changed.transitions().stream().map(FeedStatusTransition::feedId).toList());
-		List<UserId> recipients = this.recipients.activeAdmins();
+		List<UserId> recipients = this.accounts.activeAdmins();
 		Instant now = this.clock.instant();
 		for (UserId user : recipients) {
 			Optional<Instant> receivedThrough = this.notices.lockFeedStatusReceipt(user);

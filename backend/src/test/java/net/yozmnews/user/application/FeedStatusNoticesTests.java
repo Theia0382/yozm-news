@@ -18,12 +18,12 @@ import net.yozmnews.source.FeedStatusesChanged;
 import net.yozmnews.source.SourceAdministration;
 import net.yozmnews.source.SourceId;
 import net.yozmnews.source.SourceRegistrationResult;
+import net.yozmnews.user.AccountDirectory;
 import net.yozmnews.user.domain.account.Account;
 import net.yozmnews.user.domain.account.AccountRepository;
 import net.yozmnews.user.domain.account.AccountRole;
 import net.yozmnews.user.domain.account.DisplayName;
 import net.yozmnews.user.domain.account.EmailAddress;
-import net.yozmnews.user.domain.notice.NoticeRecipients;
 import net.yozmnews.user.domain.notice.NoticeRepository;
 import net.yozmnews.user.domain.notice.SeenNotice;
 import org.junit.jupiter.api.AfterEach;
@@ -82,7 +82,7 @@ class FeedStatusNoticesTests {
 	FeedLabels labels;
 
 	@Autowired
-	NoticeRecipients recipients;
+	AccountDirectory accountDirectory;
 
 	@Autowired
 	NoticeRepository notices;
@@ -110,7 +110,7 @@ class FeedStatusNoticesTests {
 	@BeforeEach
 	void setUp() {
 		this.jdbc.sql("delete from users").update();
-		this.recording = new FeedStatusNotices(this.labels, this.recipients, this.notices, () -> NOW);
+		this.recording = new FeedStatusNotices(this.labels, this.accountDirectory, this.notices, () -> NOW);
 		this.source = SOURCES.incrementAndGet();
 		SourceRegistrationResult registered = this.sources.registerOperatorProfile(PROFILE.formatted(this.source));
 		assertThat(registered).isInstanceOf(SourceRegistrationResult.Registered.class);

@@ -15,12 +15,12 @@ import net.yozmnews.tag.TagKind;
 import net.yozmnews.tag.TagSetDirectory;
 import net.yozmnews.tag.TagSetId;
 import net.yozmnews.tag.TagSetView;
+import net.yozmnews.user.AccountDirectory;
 import net.yozmnews.user.TopicSubscriptionAction;
 import net.yozmnews.user.TopicSubscriptionCause;
 import net.yozmnews.user.TopicSubscriptionChange;
 import net.yozmnews.user.TopicSubscriptionChanges;
 import net.yozmnews.user.TopicSubscriptionHistory;
-import net.yozmnews.user.domain.account.AccountRepository;
 import net.yozmnews.user.domain.preference.PreferenceAction;
 import net.yozmnews.user.domain.preference.PreferenceCause;
 import net.yozmnews.user.domain.preference.RecordedTopicChange;
@@ -42,7 +42,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 class TopicSubscriptionHistoryService implements TopicSubscriptionHistory {
 
-	private final AccountRepository accounts;
+	private final AccountDirectory accounts;
 
 	private final TagPreferenceRepository preferences;
 
@@ -50,7 +50,7 @@ class TopicSubscriptionHistoryService implements TopicSubscriptionHistory {
 
 	private final TagKeyLineage lineage;
 
-	TopicSubscriptionHistoryService(AccountRepository accounts, TagPreferenceRepository preferences,
+	TopicSubscriptionHistoryService(AccountDirectory accounts, TagPreferenceRepository preferences,
 			TagSetDirectory tagSets, TagKeyLineage lineage) {
 		this.accounts = Objects.requireNonNull(accounts, "accounts");
 		this.preferences = Objects.requireNonNull(preferences, "preferences");
@@ -66,7 +66,7 @@ class TopicSubscriptionHistoryService implements TopicSubscriptionHistory {
 			throw new IllegalArgumentException("기간의 시작이 끝보다 늦다: " + from + " · " + to);
 		}
 		TagSetId active = this.tagSets.activeTagSet().id();
-		if (!this.accounts.existsById(user.value())) {
+		if (!this.accounts.exists(user)) {
 			return new TopicSubscriptionChanges(active, List.of());
 		}
 		Map<TagSetId, TagSetView> views = new HashMap<>();

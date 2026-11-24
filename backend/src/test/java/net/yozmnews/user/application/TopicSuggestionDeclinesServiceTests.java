@@ -14,9 +14,9 @@ import net.yozmnews.tag.TagKeyMapping;
 import net.yozmnews.tag.TagKind;
 import net.yozmnews.tag.TagSetDirectory;
 import net.yozmnews.tag.TagSetId;
+import net.yozmnews.user.AccountDirectory;
 import net.yozmnews.user.TopicSuggestionDecline;
 import net.yozmnews.user.TopicSuggestionDeclineList;
-import net.yozmnews.user.domain.account.AccountRepository;
 import net.yozmnews.user.domain.suggestion.RecordedDecline;
 import net.yozmnews.user.domain.suggestion.TopicSuggestionDeclineRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -45,7 +45,7 @@ class TopicSuggestionDeclinesServiceTests {
 	private static final Instant LATE = Instant.parse("2026-10-01T00:00:00Z");
 
 	@Autowired
-	AccountRepository accounts;
+	AccountDirectory accounts;
 
 	@Autowired
 	TopicSuggestionDeclineRepository declines;

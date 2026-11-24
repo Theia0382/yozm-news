@@ -29,7 +29,6 @@ import net.yozmnews.user.domain.notice.FeedStatusEntry;
 import net.yozmnews.user.domain.notice.KeyInvalidatedContent;
 import net.yozmnews.user.domain.notice.Notice;
 import net.yozmnews.user.domain.notice.NoticeKind;
-import net.yozmnews.user.domain.notice.NoticeRecipients;
 import net.yozmnews.user.domain.notice.NoticeRepository;
 import net.yozmnews.user.domain.notice.PasswordChangedContent;
 import net.yozmnews.user.domain.notice.RemovedSubscription;
@@ -52,7 +51,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 알림 저장소 — 안 읽은 피드 상태 알림은 사용자마다 하나, 반영 기준 잠금은 같은 사용자를 줄 세우고, 읽음은 받은 판이 그대로인 이
  * 사용자의 알림만 바꾼다. 경합은 두 트랜잭션(스레드 둘 · 래치)으로 재현한다.
  * <p>
- * 지키는 규칙: user-R21 · user-R22 · user-R24 · user-R25 · user-R36 · user-R74
+ * 지키는 규칙: user-R21 · user-R24 · user-R25 · user-R36 · user-R74
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -71,9 +70,6 @@ class JdbcNoticeRepositoryTests {
 
 	@Autowired
 	NoticeRepository notices;
-
-	@Autowired
-	NoticeRecipients recipients;
 
 	@Autowired
 	AccountRepository accounts;
@@ -146,8 +142,6 @@ class JdbcNoticeRepositoryTests {
 		DigestFailedContent other = new DigestFailedContent(902, LocalDate.parse("2026-11-19"),
 				DigestFailureCause.KEY, Instant.parse("2026-11-18T23:00:00Z"));
 		assertThat(this.notices.createOnce(alice, other, T1)).isTrue();
-		// 계정이 없으면 만들지 않는다
-		assertThat(this.notices.createOnce(new UserId(Long.MAX_VALUE), content, T1)).isFalse();
 
 		List<Notice> page = this.notices.page(alice, null, 50);
 		assertThat(page).extracting(Notice::kind, Notice::content)
@@ -413,17 +407,6 @@ class JdbcNoticeRepositoryTests {
 		}
 
 		assertThat(locking.get(10, TimeUnit.SECONDS)).isEmpty();
-	}
-
-	@Test
-	void recipientsAreActiveAdminsInIdOrder() {
-		UserId first = account("first@example.com", AccountRole.ADMIN);
-		account("user@example.com", AccountRole.USER);
-		UserId suspended = account("suspended@example.com", AccountRole.ADMIN);
-		this.jdbc.sql("update users set status = 'SUSPENDED' where id = :id").param("id", suspended.value()).update();
-		UserId second = account("second@example.com", AccountRole.ADMIN);
-
-		assertThat(this.recipients.activeAdmins()).containsExactly(first, second);
 	}
 
 	@Test

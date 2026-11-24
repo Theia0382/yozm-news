@@ -10,6 +10,7 @@ import java.util.List;
 
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.platform.UserId;
+import net.yozmnews.user.AccountDirectory;
 import net.yozmnews.user.AccountEvents;
 import net.yozmnews.user.DigestScheduleDirectory;
 import net.yozmnews.user.DigestScheduleEntry;
@@ -27,8 +28,8 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 다이제스트 일정 목록 — 쓰는 계정 가운데 설정 행이 있는 사용자의 시간대 · 생성 시각을 ID 순 쪽으로 낸다. 정지 · 탈퇴 계정과 설정 행이 없는
- * 계정은 빠진다. 실제 PostgreSQL.
+ * 다이제스트 일정 목록 — 쓰는 계정마다 시간대 · 생성 시각을 ID 순 쪽으로 낸다. 설정 행이 없는 계정은 기본 일정이고, 정지 · 탈퇴 계정은
+ * 빠진다. 실제 PostgreSQL.
  * <p>
  * 이 시험의 계정은 마지막에 만들어 ID 가 가장 크다 — 쪽의 시작을 이 시험의 첫 계정 바로 앞으로 두면 다른 시험이 남긴 계정이 섞이지 않는다.
  * 기대값은 손으로 쓴 리터럴이다(계정을 만들 때의 기본값 — `Asia/Seoul` · 07:00).
@@ -59,7 +60,7 @@ class DigestScheduleDirectoryTests {
 	}
 
 	@Test
-	void activeAccountsWithSettingsComeInIdOrderAndOthersAreLeftOut() {
+	void activeAccountsComeInIdOrderWithTheDefaultScheduleWhenTheirSettingsRowIsMissing() {
 		UserId alice = account("digest-schedule-alice@example.com");
 		UserId suspended = account("digest-schedule-suspended@example.com");
 		UserId withdrawn = account("digest-schedule-withdrawn@example.com");
@@ -75,6 +76,7 @@ class DigestScheduleDirectoryTests {
 		List<DigestScheduleEntry> page = this.directory.page(alice.value() - 1, DigestScheduleDirectory.MAX_PAGE);
 
 		assertThat(page).containsExactly(new DigestScheduleEntry(alice, ZoneId.of("Asia/Seoul"), LocalTime.of(7, 0)),
+				new DigestScheduleEntry(unset, ZoneId.of("Asia/Seoul"), LocalTime.of(7, 0)),
 				new DigestScheduleEntry(bob, ZoneId.of("America/New_York"), LocalTime.of(23, 30)));
 	}
 
@@ -89,6 +91,12 @@ class DigestScheduleDirectoryTests {
 
 		assertThat(page).extracting(DigestScheduleEntry::user).containsExactly(first, second);
 		assertThat(next).extracting(DigestScheduleEntry::user).containsExactly(third);
+	}
+
+	@Test
+	void aPageIsNeverLargerThanAnAccountPage() {
+		// 일정 목록의 쪽은 계정 공개 조회의 쪽 하나로 읽는다 — 쪽 상한이 계정 쪽 상한을 넘으면 계정 조회가 거부한다
+		assertThat(DigestScheduleDirectory.MAX_PAGE).isLessThanOrEqualTo(AccountDirectory.MAX_PAGE);
 	}
 
 	@Test

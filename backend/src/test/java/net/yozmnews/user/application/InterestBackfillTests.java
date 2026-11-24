@@ -9,6 +9,7 @@ import java.util.List;
 
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.platform.UserId;
+import net.yozmnews.user.AccountDirectory;
 import net.yozmnews.user.AccountEvents;
 import net.yozmnews.user.domain.account.DisplayName;
 import net.yozmnews.user.domain.account.EmailAddress;
@@ -39,6 +40,9 @@ class InterestBackfillTests {
 	private static final Instant NOW = Instant.parse("2026-11-15T09:00:00Z");
 
 	@Autowired
+	AccountDirectory accounts;
+
+	@Autowired
 	InterestSettingsRepository settings;
 
 	@Autowired
@@ -60,7 +64,8 @@ class InterestBackfillTests {
 	void reset() {
 		AccountEvents.awaitCreatedHandled(this.jdbc);
 		this.jdbc.sql("delete from users").update();
-		this.backfill = new InterestBackfill(this.settings, this.defaults, this.transaction, InstantSource.fixed(NOW));
+		this.backfill = new InterestBackfill(this.accounts, this.settings, this.defaults, this.transaction,
+				InstantSource.fixed(NOW));
 	}
 
 	@Test

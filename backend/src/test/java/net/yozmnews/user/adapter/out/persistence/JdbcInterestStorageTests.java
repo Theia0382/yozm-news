@@ -140,9 +140,10 @@ class JdbcInterestStorageTests {
 	void accountsWithoutSettingsAndUsersOnAnotherVersionArePagedInIdOrder() {
 		this.settings.insertIfAbsent(InterestSettings.defaults(this.bob, new TagSetId(3), NOW));
 
-		assertThat(this.settings.withoutSettings(0, 10)).containsExactly(this.alice, this.carol);
-		assertThat(this.settings.withoutSettings(this.alice.value(), 10)).containsExactly(this.carol);
-		assertThat(this.settings.withoutSettings(0, 1)).containsExactly(this.alice);
+		assertThat(this.settings.withoutSettingsAmong(List.of(this.carol, this.bob, this.alice)))
+			.containsExactly(this.alice, this.carol);
+		assertThat(this.settings.withoutSettingsAmong(List.of(this.bob))).isEmpty();
+		assertThat(this.settings.withoutSettingsAmong(List.of())).isEmpty();
 
 		this.settings.insertIfAbsent(InterestSettings.defaults(this.alice, new TagSetId(2), NOW));
 		this.settings.insertIfAbsent(InterestSettings.defaults(this.carol, new TagSetId(2), NOW));
@@ -151,6 +152,21 @@ class JdbcInterestStorageTests {
 		assertThat(this.settings.withPreferenceVersionOtherThan(new TagSetId(3), this.alice.value(), 10))
 			.containsExactly(this.carol);
 		assertThat(this.settings.withPreferenceVersionOtherThan(new TagSetId(2), 0, 10)).containsExactly(this.bob);
+	}
+
+	@Test
+	void schedulesAreReadOnlyForTheGivenUsersWithASettingsRow() {
+		this.settings.insertIfAbsent(InterestSettings.defaults(this.alice, new TagSetId(3), NOW));
+		this.settings.insertIfAbsent(InterestSettings.defaults(this.bob, new TagSetId(3), NOW));
+		this.jdbc.sql("update user_settings set timezone = 'Europe/Paris', digest_time = '06:15' where user_id = :user")
+			.param("user", this.bob.value())
+			.update();
+
+		assertThat(this.settings.schedulesOf(List.of(this.alice, this.bob, this.carol))).containsOnly(
+				Map.entry(this.alice, new DigestSchedule(ZoneId.of("Asia/Seoul"), LocalTime.of(7, 0))),
+				Map.entry(this.bob, new DigestSchedule(ZoneId.of("Europe/Paris"), LocalTime.of(6, 15))));
+		assertThat(this.settings.schedulesOf(List.of(this.carol))).isEmpty();
+		assertThat(this.settings.schedulesOf(List.of())).isEmpty();
 	}
 
 	@Test

@@ -10,6 +10,7 @@ import java.time.InstantSource;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import net.yozmnews.user.AccountDirectory;
 import net.yozmnews.user.domain.interest.InterestSettingsRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.SmartInitializingSingleton;
@@ -30,15 +31,16 @@ class UserStartupOrderTests {
 	@Test
 	void startupWorkRunsAfterEverySmartInitializingSingletonEvenWhenRegisteredFirst() {
 		List<String> order = new CopyOnWriteArrayList<>();
-		InterestSettingsRepository settings = mock(InterestSettingsRepository.class);
-		when(settings.withoutSettings(anyLong(), anyInt())).thenAnswer(invocation -> {
+		AccountDirectory accounts = mock(AccountDirectory.class);
+		when(accounts.page(anyLong(), anyInt())).thenAnswer(invocation -> {
 			order.add("backfill");
 			return List.of();
 		});
 
 		new ApplicationContextRunner()
 			.withBean(InterestBackfill.class,
-					() -> new InterestBackfill(settings, mock(InterestDefaultsWriter.class), mock(TransactionTemplate.class),
+					() -> new InterestBackfill(accounts, mock(InterestSettingsRepository.class),
+							mock(InterestDefaultsWriter.class), mock(TransactionTemplate.class),
 							InstantSource.system()))
 			.withBean("seeding", SmartInitializingSingleton.class, () -> () -> order.add("seeding"))
 			.run(context -> {

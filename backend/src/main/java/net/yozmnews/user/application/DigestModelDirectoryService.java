@@ -7,9 +7,8 @@ import java.util.Optional;
 import net.yozmnews.llm.LlmModel;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.tag.TagSetDirectory;
+import net.yozmnews.user.AccountDirectory;
 import net.yozmnews.user.DigestModelDirectory;
-import net.yozmnews.user.domain.account.AccountRepository;
-import net.yozmnews.user.domain.account.AccountStatus;
 import net.yozmnews.user.domain.interest.InterestSettings;
 import net.yozmnews.user.domain.interest.InterestSettingsRepository;
 import net.yozmnews.user.domain.interest.ModelRef;
@@ -26,7 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 class DigestModelDirectoryService implements DigestModelDirectory {
 
-	private final AccountRepository accounts;
+	private final AccountDirectory accounts;
 
 	private final InterestSettingsRepository settings;
 
@@ -34,7 +33,7 @@ class DigestModelDirectoryService implements DigestModelDirectory {
 
 	private final ModelResolutions resolutions;
 
-	DigestModelDirectoryService(AccountRepository accounts, InterestSettingsRepository settings,
+	DigestModelDirectoryService(AccountDirectory accounts, InterestSettingsRepository settings,
 			TagSetDirectory tagSets, ModelResolutions resolutions) {
 		this.accounts = Objects.requireNonNull(accounts, "accounts");
 		this.settings = Objects.requireNonNull(settings, "settings");
@@ -46,10 +45,7 @@ class DigestModelDirectoryService implements DigestModelDirectory {
 	@Transactional(readOnly = true)
 	public Optional<LlmModel> modelOf(UserId user) {
 		Objects.requireNonNull(user, "user");
-		boolean active = this.accounts.findById(user.value())
-			.map(account -> account.status() == AccountStatus.ACTIVE)
-			.orElse(false);
-		if (!active) {
+		if (!this.accounts.active(user)) {
 			return Optional.empty();
 		}
 		// 설정 행이 없으면 계정을 만들 때의 값 — InterestDefaultsWriter 와 같은 정본. 고친 시각은 읽지 않는다
