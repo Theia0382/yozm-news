@@ -4,8 +4,8 @@ import java.time.ZoneId;
 import java.util.Objects;
 import java.util.Optional;
 
+import net.yozmnews.account.AccountDirectory;
 import net.yozmnews.platform.UserId;
-import net.yozmnews.user.AccountDirectory;
 import net.yozmnews.user.DigestScheduleEntry;
 import net.yozmnews.user.UserDigestSchedules;
 import net.yozmnews.user.UserTimezones;

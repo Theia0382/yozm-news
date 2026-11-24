@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+import net.yozmnews.account.application.WebSliceSecurity;
 import net.yozmnews.platform.BatchResult;
 import net.yozmnews.platform.DiscardOutcome;
 import net.yozmnews.platform.DiscardResult;
@@ -22,7 +23,6 @@ import net.yozmnews.platform.ResubmissionResult;
 import net.yozmnews.platform.StrandedPublication;
 import net.yozmnews.platform.StrandedPublications;
 import net.yozmnews.platform.StrandedReason;
-import net.yozmnews.user.application.WebSliceSecurity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

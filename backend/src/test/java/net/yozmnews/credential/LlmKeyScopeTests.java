@@ -12,11 +12,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.util.List;
 
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.account.SignedInUsers;
+import net.yozmnews.account.application.PasswordHashing;
+import net.yozmnews.account.domain.account.AccountRepository;
+import net.yozmnews.account.domain.credential.PasswordCredentialRepository;
 import net.yozmnews.llm.ScriptedProviderClients;
-import net.yozmnews.user.SignedInUsers;
-import net.yozmnews.user.application.PasswordHashing;
-import net.yozmnews.user.domain.account.AccountRepository;
-import net.yozmnews.user.domain.credential.PasswordCredentialRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;

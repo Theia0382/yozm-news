@@ -1,0 +1,102 @@
+package net.yozmnews.account.adapter.in.web;
+
+import java.time.Instant;
+import java.time.InstantSource;
+import java.util.Objects;
+import java.util.Optional;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
+import net.yozmnews.account.application.AccountAuthentication;
+import net.yozmnews.account.application.AccountQueries;
+import net.yozmnews.account.application.SessionSignIn;
+import net.yozmnews.account.application.SignIn;
+import net.yozmnews.account.application.SignInOutcome;
+import net.yozmnews.account.domain.account.Account;
+import net.yozmnews.credential.LlmKeys;
+import net.yozmnews.platform.GuardedAction;
+import net.yozmnews.platform.HumanChecked;
+import net.yozmnews.platform.PublicApi;
+import net.yozmnews.platform.RequestLimited;
+import net.yozmnews.platform.WebRole;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+
+/**
+ * 로그인 · 로그아웃 · 로그인 상태 조회 — docs/specs/user.md §3 · user-R11 · user-R17 · user-R20
+ */
+@WebRole
+@RestController
+class SessionController {
+
+	private final SignIn signIn;
+
+	private final SessionSignIn sessions;
+
+	private final AccountQueries accounts;
+
+	private final LlmKeys llmKeys;
+
+	private final InstantSource clock;
+
+	SessionController(SignIn signIn, SessionSignIn sessions, AccountQueries accounts, LlmKeys llmKeys,
+			InstantSource clock) {
+		this.signIn = Objects.requireNonNull(signIn, "signIn");
+		this.sessions = Objects.requireNonNull(sessions, "sessions");
+		this.accounts = Objects.requireNonNull(accounts, "accounts");
+		this.llmKeys = Objects.requireNonNull(llmKeys, "llmKeys");
+		this.clock = Objects.requireNonNull(clock, "clock");
+	}
+
+	@PublicApi(reason = "로그인")
+	@RequestLimited(GuardedAction.SIGN_IN)
+	@HumanChecked(GuardedAction.SIGN_IN)
+	@PostMapping("/api/session")
+	SignInResponse signIn(@Valid @RequestBody SignInRequest body, HttpServletRequest request,
+			HttpServletResponse response) {
+		Instant now = this.clock.instant();
+		return switch (this.signIn.attempt(body.email(), body.password(), now)) {
+			case SignInOutcome.SignedIn signedIn -> {
+				this.sessions.signIn(signedIn.userId(), body.keep(), request, response);
+				// 세션이 저장소에 들어간 뒤 확인해야, 그 사이 자격을 바꾼 쪽의 세션 지우기가 이 세션을 놓치지 않는다(user-R18)
+				if (!this.signIn.stillCurrent(signedIn)) {
+					this.sessions.signOut(request, response);
+					yield SignInResponse.rejected();
+				}
+				yield SignInResponse.signedIn();
+			}
+			case SignInOutcome.Rejected rejected -> SignInResponse.rejected();
+			case SignInOutcome.Wait wait -> SignInResponse.waiting(wait.retryAt(), now);
+		};
+	}
+
+	@PublicApi(reason = "로그아웃 — 세션이 없어도 같은 결과")
+	@DeleteMapping("/api/session")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	void signOut(HttpServletRequest request, HttpServletResponse response) {
+		this.sessions.signOut(request, response);
+	}
+
+	@PublicApi(reason = "로그인 상태 조회")
+	@GetMapping("/api/me")
+	MeResponse me() {
+		Authentication authentication = SecurityContextHolder.getContextHolderStrategy().getContext().getAuthentication();
+		if (!(authentication instanceof AccountAuthentication session)) {
+			return MeResponse.anonymous();
+		}
+		Optional<Account> account = this.accounts.active(session.userId());
+		return account
+			.map(found -> MeResponse.signedIn(found, session.mustChangePassword(),
+					!this.llmKeys.present(session.userId())))
+			.orElseGet(MeResponse::anonymous);
+	}
+
+}

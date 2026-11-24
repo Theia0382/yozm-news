@@ -6,8 +6,10 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import net.yozmnews.account.application.ProvisionedAccounts;
 
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.account.domain.account.Onboarding;
 import net.yozmnews.platform.ChangeActor;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.tag.TagKind;
@@ -16,10 +18,6 @@ import net.yozmnews.tag.TagSetAdministration;
 import net.yozmnews.tag.TagSetDirectory;
 import net.yozmnews.tag.TagSetId;
 import net.yozmnews.user.AccountEvents;
-import net.yozmnews.user.domain.account.DisplayName;
-import net.yozmnews.user.domain.account.EmailAddress;
-import net.yozmnews.user.domain.account.Onboarding;
-import net.yozmnews.user.domain.credential.PasswordPolicy;
 import net.yozmnews.user.domain.notice.Notice;
 import net.yozmnews.user.domain.notice.NoticeRepository;
 import net.yozmnews.user.domain.notice.PreferencesAdjustedContent;
@@ -31,6 +29,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.TestPropertySource;
@@ -56,7 +55,7 @@ class PreferenceFollowupsTests {
 	PreferenceFollowups followups;
 
 	@Autowired
-	AccountProvisioning provisioning;
+	ApplicationContext context;
 
 	@Autowired
 	TagSetAdministration administration;
@@ -191,12 +190,9 @@ class PreferenceFollowupsTests {
 	}
 
 	private UserId account(String email) {
-		ProvisionResult result = this.transaction.execute(status -> this.provisioning.provision(Onboarding.OPEN_SIGN_UP,
-				EmailAddress.parse(email).orElseThrow(), new DisplayName("사용자"),
-				PasswordPolicy.normalize("correct horse battery"), NOW));
-		assertThat(result).isInstanceOf(ProvisionResult.Created.class);
+		UserId user = ProvisionedAccounts.provision(this.context, Onboarding.OPEN_SIGN_UP, email, "사용자", "correct horse battery", NOW).orElseThrow();
 		AccountEvents.awaitCreatedHandled(this.jdbc);
-		return ((ProvisionResult.Created) result).user();
+		return user;
 	}
 
 	private void region(UserId user, String key) {

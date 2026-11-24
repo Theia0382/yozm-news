@@ -1,6 +1,6 @@
 package net.yozmnews.admin.adapter.in.web;
 
-import net.yozmnews.user.InitialPasswordResetResult;
+import net.yozmnews.account.InitialPasswordResetResult;
 
 /**
  * 첫 로그인 전 계정의 초기 비밀번호 다시 정하기 결과 — docs/specs/admin.md §3 · admin-R1. 없는 계정은 404, 비밀번호 규칙 위반은 400 이다.

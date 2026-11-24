@@ -6,8 +6,10 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import net.yozmnews.account.application.ProvisionedAccounts;
 
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.account.domain.account.Onboarding;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.source.SourceDeleted;
 import net.yozmnews.source.SourceId;
@@ -15,15 +17,12 @@ import net.yozmnews.source.SourceName;
 import net.yozmnews.user.AccountEvents;
 import net.yozmnews.user.UserTables;
 import net.yozmnews.user.application.ExcludedSources.ExcludedSourcesView;
-import net.yozmnews.user.domain.account.DisplayName;
-import net.yozmnews.user.domain.account.EmailAddress;
-import net.yozmnews.user.domain.account.Onboarding;
-import net.yozmnews.user.domain.credential.PasswordPolicy;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -47,7 +46,7 @@ class ExcludedSourcesTests {
 	ExcludedSources excludedSources;
 
 	@Autowired
-	AccountProvisioning provisioning;
+	ApplicationContext context;
 
 	@Autowired
 	ApplicationEventPublisher events;
@@ -123,12 +122,9 @@ class ExcludedSourcesTests {
 	}
 
 	private UserId account(String email) {
-		ProvisionResult result = this.transaction.execute(status -> this.provisioning.provision(Onboarding.OPEN_SIGN_UP,
-				EmailAddress.parse(email).orElseThrow(), new DisplayName("사용자"),
-				PasswordPolicy.normalize("correct horse battery"), NOW));
-		assertThat(result).isInstanceOf(ProvisionResult.Created.class);
+		UserId user = ProvisionedAccounts.provision(this.context, Onboarding.OPEN_SIGN_UP, email, "사용자", "correct horse battery", NOW).orElseThrow();
 		AccountEvents.awaitCreatedHandled(this.jdbc);
-		return ((ProvisionResult.Created) result).user();
+		return user;
 	}
 
 	private List<Long> stored(UserId user) {

@@ -7,16 +7,15 @@ import java.time.Instant;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import net.yozmnews.account.application.ProvisionedAccounts;
 
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.account.domain.account.Onboarding;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.tag.TagSetDirectory;
 import net.yozmnews.user.AccountEvents;
 import net.yozmnews.user.UserTables;
-import net.yozmnews.user.domain.account.DisplayName;
-import net.yozmnews.user.domain.account.EmailAddress;
-import net.yozmnews.user.domain.account.Onboarding;
-import net.yozmnews.user.domain.credential.PasswordPolicy;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,6 +23,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.TestPropertySource;
@@ -44,7 +44,7 @@ class InterestDefaultsTests {
 	private static final Instant NOW = Instant.parse("2026-11-15T09:00:00Z");
 
 	@Autowired
-	AccountProvisioning provisioning;
+	ApplicationContext context;
 
 	@Autowired
 	InterestDefaultsWriter defaults;
@@ -102,11 +102,10 @@ class InterestDefaultsTests {
 	void theSameEmailWritesNoSecondSettingsRow() {
 		provision(Onboarding.OPEN_SIGN_UP, "dave@example.com");
 
-		ProvisionResult again = this.transaction.execute(status -> this.provisioning.provision(Onboarding.OPERATOR,
-				EmailAddress.parse("dave@example.com").orElseThrow(), new DisplayName("데이브"),
-				PasswordPolicy.normalize("correct horse battery"), NOW));
+		Optional<UserId> again = ProvisionedAccounts.provision(this.context, Onboarding.OPERATOR, "dave@example.com",
+				"데이브", "correct horse battery", NOW);
 
-		assertThat(again).isInstanceOf(ProvisionResult.EmailTaken.class);
+		assertThat(again).as("같은 이메일").isEmpty();
 		assertThat(count("user_settings")).isOne();
 		assertThat(count("user_tag_preference_events")).isEqualTo(2);
 	}
@@ -124,12 +123,9 @@ class InterestDefaultsTests {
 	}
 
 	private UserId provision(Onboarding onboarding, String email) {
-		ProvisionResult result = this.transaction.execute(status -> this.provisioning.provision(onboarding,
-				EmailAddress.parse(email).orElseThrow(), new DisplayName("사용자"),
-				PasswordPolicy.normalize("correct horse battery"), NOW));
-		assertThat(result).isInstanceOf(ProvisionResult.Created.class);
+		UserId user = ProvisionedAccounts.provision(this.context, onboarding, email, "사용자", "correct horse battery", NOW).orElseThrow();
 		AccountEvents.awaitCreatedHandled(this.jdbc);
-		return ((ProvisionResult.Created) result).user();
+		return user;
 	}
 
 	private List<Map<String, Object>> preferences(UserId user) {

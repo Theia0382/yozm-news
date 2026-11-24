@@ -1,6 +1,6 @@
 package net.yozmnews.admin.adapter.in.web;
 
-import net.yozmnews.user.SignUpPolicyChangeResult;
+import net.yozmnews.account.SignUpPolicyChangeResult;
 import org.jspecify.annotations.Nullable;
 
 /**

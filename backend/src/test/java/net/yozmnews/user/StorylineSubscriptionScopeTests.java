@@ -9,14 +9,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.time.Instant;
 import java.time.ZoneOffset;
+import net.yozmnews.account.SignedInUsers;
 
 import jakarta.servlet.http.Cookie;
 import net.yozmnews.LlmKeyRows;
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.account.application.PasswordHashing;
+import net.yozmnews.account.domain.account.AccountRepository;
+import net.yozmnews.account.domain.credential.PasswordCredentialRepository;
 import net.yozmnews.storyline.StorylineRows;
-import net.yozmnews.user.application.PasswordHashing;
-import net.yozmnews.user.domain.account.AccountRepository;
-import net.yozmnews.user.domain.credential.PasswordCredentialRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

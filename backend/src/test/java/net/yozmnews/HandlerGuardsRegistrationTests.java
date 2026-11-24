@@ -6,11 +6,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import net.yozmnews.account.domain.guard.LimitAxis;
+import net.yozmnews.account.domain.guard.RequestLimits;
 import net.yozmnews.platform.GuardedAction;
 import net.yozmnews.platform.HandlerGuards;
 import net.yozmnews.platform.PublicApis;
-import net.yozmnews.user.domain.guard.LimitAxis;
-import net.yozmnews.user.domain.guard.RequestLimits;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;

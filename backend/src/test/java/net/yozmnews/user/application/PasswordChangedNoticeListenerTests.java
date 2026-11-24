@@ -6,10 +6,10 @@ import java.time.Instant;
 import java.util.List;
 
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.account.PasswordChangeMethod;
+import net.yozmnews.account.PasswordChanged;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.user.AccountEvents;
-import net.yozmnews.user.PasswordChangeMethod;
-import net.yozmnews.user.PasswordChanged;
 import net.yozmnews.user.UserTables;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;

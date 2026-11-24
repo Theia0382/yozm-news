@@ -4,8 +4,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import net.yozmnews.account.AccountDirectory;
 import net.yozmnews.platform.UserId;
-import net.yozmnews.user.AccountDirectory;
 import net.yozmnews.user.DigestScheduleDirectory;
 import net.yozmnews.user.DigestScheduleEntry;
 import net.yozmnews.user.domain.interest.DigestSchedule;

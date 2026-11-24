@@ -3,7 +3,7 @@ package net.yozmnews.user.domain.notice;
 import java.time.Instant;
 import java.util.Objects;
 
-import net.yozmnews.user.PasswordChangeMethod;
+import net.yozmnews.account.PasswordChangeMethod;
 
 /**
  * 비밀번호 알림의 내용 — 바꾼 방법과 시각. 모으지 않는다(바뀔 때마다 알림 하나). 첫 로그인의 강제 변경은 알리지 않는다. docs/specs/user.md §4

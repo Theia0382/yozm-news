@@ -4,10 +4,10 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
 
+import net.yozmnews.account.AccountDirectory;
 import net.yozmnews.llm.LlmModel;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.tag.TagSetDirectory;
-import net.yozmnews.user.AccountDirectory;
 import net.yozmnews.user.DigestModelDirectory;
 import net.yozmnews.user.domain.interest.InterestSettings;
 import net.yozmnews.user.domain.interest.InterestSettingsRepository;

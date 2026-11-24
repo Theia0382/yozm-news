@@ -9,12 +9,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import jakarta.servlet.http.Cookie;
 import net.yozmnews.LlmKeyRows;
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.account.SignedInUsers;
+import net.yozmnews.account.application.PasswordHashing;
+import net.yozmnews.account.domain.account.AccountRepository;
+import net.yozmnews.account.domain.credential.PasswordCredentialRepository;
 import net.yozmnews.digest.DigestRounds;
-import net.yozmnews.user.SignedInUsers;
 import net.yozmnews.user.UserTables;
-import net.yozmnews.user.application.PasswordHashing;
-import net.yozmnews.user.domain.account.AccountRepository;
-import net.yozmnews.user.domain.credential.PasswordCredentialRepository;
 import org.jobrunr.scheduling.JobScheduler;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;

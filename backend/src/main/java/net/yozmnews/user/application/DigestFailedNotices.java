@@ -3,7 +3,7 @@ package net.yozmnews.user.application;
 import java.time.InstantSource;
 import java.util.Objects;
 
-import net.yozmnews.user.AccountDirectory;
+import net.yozmnews.account.AccountDirectory;
 import net.yozmnews.user.DigestFailed;
 import net.yozmnews.user.domain.notice.DigestFailedContent;
 import net.yozmnews.user.domain.notice.NoticeRepository;

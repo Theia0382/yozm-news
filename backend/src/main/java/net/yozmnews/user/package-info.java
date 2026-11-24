@@ -7,8 +7,8 @@
  * 알림의 제목은 {@code event} 의 대표 기사와 {@code article} 의 제목에서 읽는다), 사용자 스토리라인(씨앗이 되는 반응 이력은
  * {@code feedback}, 꼭대기와 이어짐은 {@code storyline} 에서 읽는다). docs/specs/user.md.
  */
-@ApplicationModule(allowedDependencies = { "platform", "source", "credential", "llm", "tag", "evaluation", "storyline",
-		"event", "article", "feedback" })
+@ApplicationModule(allowedDependencies = { "platform", "account", "source", "credential", "llm", "tag", "evaluation",
+		"storyline", "event", "article", "feedback" })
 package net.yozmnews.user;
 
 import org.springframework.modulith.ApplicationModule;

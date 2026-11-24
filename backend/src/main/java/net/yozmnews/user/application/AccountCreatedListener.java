@@ -2,7 +2,7 @@ package net.yozmnews.user.application;
 
 import java.util.Objects;
 
-import net.yozmnews.user.AccountCreated;
+import net.yozmnews.account.AccountCreated;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
 

@@ -3,11 +3,11 @@ package net.yozmnews.admin.adapter.in.web;
 import java.util.ArrayList;
 import java.util.List;
 
-import net.yozmnews.user.InvitationAdministration;
-import net.yozmnews.user.InvitationRevocationResult;
-import net.yozmnews.user.InvitationView;
-import net.yozmnews.user.IssuedInvitation;
-import net.yozmnews.user.UnknownInvitationException;
+import net.yozmnews.account.InvitationAdministration;
+import net.yozmnews.account.InvitationRevocationResult;
+import net.yozmnews.account.InvitationView;
+import net.yozmnews.account.IssuedInvitation;
+import net.yozmnews.account.UnknownInvitationException;
 import org.jspecify.annotations.Nullable;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;

@@ -2,6 +2,7 @@ package net.yozmnews;
 
 import java.util.Map;
 
+import net.yozmnews.account.AccountScopeTests;
 import net.yozmnews.credential.LlmKeyScopeTests;
 import net.yozmnews.feedback.FeedbackScopeTests;
 import net.yozmnews.reader.DigestScreenScopeTests;
@@ -9,7 +10,6 @@ import net.yozmnews.reader.InterestHistoryScopeTests;
 import net.yozmnews.reader.StorylineScreenScopeTests;
 import net.yozmnews.reader.TopicSuggestionScopeTests;
 import net.yozmnews.reader.UserStorylineScreenScopeTests;
-import net.yozmnews.user.AccountScopeTests;
 import net.yozmnews.user.InterestScopeTests;
 import net.yozmnews.user.NoticeScopeTests;
 import net.yozmnews.user.StorylineSubscriptionScopeTests;

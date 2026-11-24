@@ -5,24 +5,22 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.time.Instant;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import net.yozmnews.account.application.ProvisionedAccounts;
 
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.account.domain.account.Onboarding;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.user.AccountEvents;
 import net.yozmnews.user.DigestScheduleEntry;
 import net.yozmnews.user.UserDigestSchedules;
 import net.yozmnews.user.UserTimezones;
-import net.yozmnews.user.domain.account.DisplayName;
-import net.yozmnews.user.domain.account.EmailAddress;
-import net.yozmnews.user.domain.account.Onboarding;
-import net.yozmnews.user.domain.credential.PasswordPolicy;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.TestPropertySource;
-import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * 사용자 시간대 · 일정 조회 — 설정 행의 시간대 · 생성 시각, 설정 행이 없으면 계정을 만들 때의 기본값(Asia/Seoul · 07:00), 계정이
@@ -44,10 +42,7 @@ class UserTimezonesServiceTests {
 	UserDigestSchedules schedules;
 
 	@Autowired
-	AccountProvisioning provisioning;
-
-	@Autowired
-	TransactionTemplate transaction;
+	ApplicationContext context;
 
 	@Autowired
 	JdbcClient jdbc;
@@ -96,12 +91,9 @@ class UserTimezonesServiceTests {
 	}
 
 	private UserId account(String email) {
-		ProvisionResult result = this.transaction.execute(status -> this.provisioning.provision(Onboarding.OPEN_SIGN_UP,
-				EmailAddress.parse(email).orElseThrow(), new DisplayName("사용자"),
-				PasswordPolicy.normalize("correct horse battery"), NOW));
-		assertThat(result).isInstanceOf(ProvisionResult.Created.class);
+		UserId user = ProvisionedAccounts.provision(this.context, Onboarding.OPEN_SIGN_UP, email, "사용자", "correct horse battery", NOW).orElseThrow();
 		AccountEvents.awaitCreatedHandled(this.jdbc);
-		return ((ProvisionResult.Created) result).user();
+		return user;
 	}
 
 }

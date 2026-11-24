@@ -2,8 +2,8 @@ package net.yozmnews.admin.adapter.in.web;
 
 import java.time.Instant;
 
+import net.yozmnews.account.SignUpPolicyChange;
 import net.yozmnews.platform.ChangeActor;
-import net.yozmnews.user.SignUpPolicyChange;
 import org.jspecify.annotations.Nullable;
 
 /**

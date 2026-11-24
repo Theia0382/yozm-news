@@ -12,11 +12,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.time.Instant;
 import java.util.List;
 
-import net.yozmnews.user.InvitationRevocationResult;
-import net.yozmnews.user.InvitationState;
-import net.yozmnews.user.InvitationView;
-import net.yozmnews.user.IssuedInvitation;
-import net.yozmnews.user.application.WebSliceSecurity;
+import net.yozmnews.account.InvitationRevocationResult;
+import net.yozmnews.account.InvitationState;
+import net.yozmnews.account.InvitationView;
+import net.yozmnews.account.IssuedInvitation;
+import net.yozmnews.account.application.WebSliceSecurity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

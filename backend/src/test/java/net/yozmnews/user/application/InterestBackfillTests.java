@@ -6,22 +6,21 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.InstantSource;
 import java.util.List;
+import net.yozmnews.account.application.ProvisionedAccounts;
 
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.account.AccountDirectory;
+import net.yozmnews.account.domain.account.Onboarding;
 import net.yozmnews.platform.UserId;
-import net.yozmnews.user.AccountDirectory;
 import net.yozmnews.user.AccountEvents;
 import net.yozmnews.user.UserTables;
-import net.yozmnews.user.domain.account.DisplayName;
-import net.yozmnews.user.domain.account.EmailAddress;
-import net.yozmnews.user.domain.account.Onboarding;
-import net.yozmnews.user.domain.credential.PasswordPolicy;
 import net.yozmnews.user.domain.interest.InterestSettingsRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.TestPropertySource;
@@ -47,7 +46,7 @@ class InterestBackfillTests {
 	InterestSettingsRepository settings;
 
 	@Autowired
-	AccountProvisioning provisioning;
+	ApplicationContext context;
 
 	@Autowired
 	InterestDefaultsWriter defaults;
@@ -102,10 +101,10 @@ class InterestBackfillTests {
 
 	@Test
 	void aJustCreatedAccountAndTheBackfillTogetherWriteOneSetOfDefaults() {
-		ProvisionResult result = this.transaction.execute(status -> this.provisioning.provision(Onboarding.FIRST_ADMIN,
-				EmailAddress.parse("kim@example.com").orElseThrow(), new DisplayName("kim"),
-				PasswordPolicy.normalize("initial horse battery"), NOW));
-		long user = ((ProvisionResult.Created) result).user().value();
+		long user = ProvisionedAccounts
+			.provision(this.context, Onboarding.FIRST_ADMIN, "kim@example.com", "kim", "initial horse battery", NOW)
+			.orElseThrow()
+			.value();
 
 		this.backfill.fill();
 		AccountEvents.awaitCreatedHandled(this.jdbc);

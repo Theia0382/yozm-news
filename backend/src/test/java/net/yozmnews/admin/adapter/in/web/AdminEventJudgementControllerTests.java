@@ -11,6 +11,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 
+import net.yozmnews.account.application.WebSliceSecurity;
 import net.yozmnews.article.ArticleContent;
 import net.yozmnews.article.ArticleEntryView;
 import net.yozmnews.article.ArticleId;
@@ -25,7 +26,6 @@ import net.yozmnews.event.DecidedBy;
 import net.yozmnews.event.EventId;
 import net.yozmnews.event.JudgementUse;
 import net.yozmnews.event.MergePair;
-import net.yozmnews.user.application.WebSliceSecurity;
 import net.yozmnews.source.FeedId;
 import net.yozmnews.source.SourceId;
 import org.junit.jupiter.api.BeforeEach;

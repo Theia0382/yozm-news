@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import java.time.Duration;
+import net.yozmnews.account.AccountCreated;
+import net.yozmnews.account.PasswordChanged;
 
 import org.springframework.jdbc.core.simple.JdbcClient;
 

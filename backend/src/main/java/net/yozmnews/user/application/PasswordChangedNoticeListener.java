@@ -2,7 +2,7 @@ package net.yozmnews.user.application;
 
 import java.util.Objects;
 
-import net.yozmnews.user.PasswordChanged;
+import net.yozmnews.account.PasswordChanged;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
 

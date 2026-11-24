@@ -2,7 +2,7 @@ package net.yozmnews.admin.adapter.in.web;
 
 import java.time.Instant;
 
-import net.yozmnews.user.IssuedInvitation;
+import net.yozmnews.account.IssuedInvitation;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 

@@ -15,13 +15,13 @@ import java.net.URI;
 import java.time.Instant;
 import java.util.List;
 
+import net.yozmnews.account.application.WebSliceSecurity;
 import net.yozmnews.article.ArticleContent;
 import net.yozmnews.article.ArticleEntryView;
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.event.EventId;
 import net.yozmnews.event.EventTally;
 import net.yozmnews.platform.ChangeActor;
-import net.yozmnews.user.application.WebSliceSecurity;
 import net.yozmnews.source.FeedId;
 import net.yozmnews.source.SourceId;
 import net.yozmnews.storyline.BigStoryline;

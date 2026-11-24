@@ -1,7 +1,7 @@
 package net.yozmnews.admin.adapter.in.web;
 
-import net.yozmnews.user.AccountAdministration;
-import net.yozmnews.user.PasswordProblem;
+import net.yozmnews.account.AccountAdministration;
+import net.yozmnews.account.PasswordProblem;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 

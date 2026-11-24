@@ -8,13 +8,13 @@ import java.util.Map;
 import java.util.Set;
 
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.account.AccountDirectory;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.tag.TagKeyLineage;
 import net.yozmnews.tag.TagKeyMapping;
 import net.yozmnews.tag.TagKind;
 import net.yozmnews.tag.TagSetDirectory;
 import net.yozmnews.tag.TagSetId;
-import net.yozmnews.user.AccountDirectory;
 import net.yozmnews.user.TopicSuggestionDecline;
 import net.yozmnews.user.TopicSuggestionDeclineList;
 import net.yozmnews.user.UserTables;

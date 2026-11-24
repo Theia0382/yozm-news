@@ -8,9 +8,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import jakarta.servlet.http.Cookie;
+import net.yozmnews.account.application.WebSliceSecurity;
 import net.yozmnews.platform.PublicApi;
 import net.yozmnews.platform.RealTimeRequiredException;
-import net.yozmnews.user.application.WebSliceSecurity;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;

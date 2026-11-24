@@ -3,7 +3,7 @@ package net.yozmnews.user.application;
 import java.time.InstantSource;
 import java.util.Objects;
 
-import net.yozmnews.user.PasswordChanged;
+import net.yozmnews.account.PasswordChanged;
 import net.yozmnews.user.domain.notice.NoticeRepository;
 import net.yozmnews.user.domain.notice.PasswordChangedContent;
 import org.springframework.stereotype.Service;

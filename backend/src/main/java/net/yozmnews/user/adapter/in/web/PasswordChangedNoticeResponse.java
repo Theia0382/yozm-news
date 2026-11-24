@@ -2,7 +2,7 @@ package net.yozmnews.user.adapter.in.web;
 
 import java.time.Instant;
 
-import net.yozmnews.user.PasswordChangeMethod;
+import net.yozmnews.account.PasswordChangeMethod;
 import net.yozmnews.user.domain.notice.PasswordChangedContent;
 
 /**

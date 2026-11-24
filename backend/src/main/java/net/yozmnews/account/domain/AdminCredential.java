@@ -1,0 +1,73 @@
+package net.yozmnews.account.domain;
+
+import java.util.regex.Pattern;
+
+import net.yozmnews.account.domain.secret.SecretDigest;
+import org.jspecify.annotations.Nullable;
+
+/**
+ * 운영자 자격 — 운영자 토큰을 설정했는지와 제시된 토큰이 맞는지의 판정. docs/specs/user.md §4 · user-R2.
+ * <p>
+ * 값은 다이제스트({@link SecretDigest})로만 갖고, 예외 메시지 · {@link #toString()} 에 담지 않는다.
+ */
+public final class AdminCredential {
+
+	/** 토큰의 최소 길이 — 정본 */
+	public static final int MIN_LENGTH = 32;
+
+	/** 토큰의 최대 길이 */
+	public static final int MAX_LENGTH = 512;
+
+	/** RFC 6750 b64token */
+	private static final Pattern FORMAT = Pattern.compile("[A-Za-z0-9\\-._~+/]+=*");
+
+	private static final AdminCredential UNCONFIGURED = new AdminCredential(null);
+
+	private final @Nullable SecretDigest digest;
+
+	private AdminCredential(@Nullable SecretDigest digest) {
+		this.digest = digest;
+	}
+
+	/** 토큰을 설정하지 않은 자격 */
+	public static AdminCredential unconfigured() {
+		return UNCONFIGURED;
+	}
+
+	/**
+	 * 설정 값으로 자격을 만든다 — 없거나 빈 값이면 설정하지 않은 자격.
+	 * @throws IllegalArgumentException 길이나 문자가 형식에 맞지 않을 때 — 메시지에 값을 담지 않는다
+	 */
+	public static AdminCredential of(@Nullable String configured) {
+		if (configured == null || configured.isEmpty()) {
+			return UNCONFIGURED;
+		}
+		if (configured.length() < MIN_LENGTH || configured.length() > MAX_LENGTH) {
+			throw new IllegalArgumentException("운영자 토큰은 " + MIN_LENGTH + "자 이상 " + MAX_LENGTH + "자 이하여야 한다 (지금 "
+					+ configured.length() + "자)");
+		}
+		if (!FORMAT.matcher(configured).matches()) {
+			throw new IllegalArgumentException("운영자 토큰은 영문 대소문자 · 숫자 · - . _ ~ + / 와 끝의 = 만 쓸 수 있다");
+		}
+		return new AdminCredential(SecretDigest.of(configured));
+	}
+
+	/** 토큰을 설정했는가 */
+	public boolean configured() {
+		return this.digest != null;
+	}
+
+	/** 제시된 토큰이 맞는가 — 설정하지 않았으면 언제나 아니다. 다이제스트를 상수 시간으로 견준다 */
+	public boolean matches(@Nullable String presented) {
+		if (this.digest == null || presented == null) {
+			return false;
+		}
+		return this.digest.matches(SecretDigest.of(presented));
+	}
+
+	@Override
+	public String toString() {
+		return configured() ? "AdminCredential[configured]" : "AdminCredential[unconfigured]";
+	}
+
+}

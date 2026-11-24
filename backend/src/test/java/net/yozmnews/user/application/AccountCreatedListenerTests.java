@@ -9,8 +9,8 @@ import java.util.List;
 import java.util.Map;
 
 import net.yozmnews.TestcontainersConfiguration;
+import net.yozmnews.account.AccountCreated;
 import net.yozmnews.platform.UserId;
-import net.yozmnews.user.AccountCreated;
 import net.yozmnews.user.AccountEvents;
 import net.yozmnews.user.UserTables;
 import org.junit.jupiter.api.AfterEach;

@@ -1,0 +1,34 @@
+package net.yozmnews.account.application;
+
+import java.time.InstantSource;
+import java.util.Objects;
+
+import net.yozmnews.account.domain.throttle.LoginFailures;
+import net.yozmnews.account.domain.throttle.LoginThrottle;
+import org.springframework.stereotype.Service;
+
+/**
+ * 오래된 실패 기록 정리 유스케이스 — 마지막 실패에서 잊는 기간이 지난 기록을 종류(로그인 · 복구 코드)와 무관하게 지운다.
+ * docs/specs/user.md §4 · user-R19
+ */
+@Service
+public class LoginFailureCleanup {
+
+	private final LoginFailures failures;
+
+	private final InstantSource clock;
+
+	LoginFailureCleanup(LoginFailures failures, InstantSource clock) {
+		this.failures = Objects.requireNonNull(failures, "failures");
+		this.clock = Objects.requireNonNull(clock, "clock");
+	}
+
+	/**
+	 * 잊은 기록을 지운다.
+	 * @return 지운 행 수
+	 */
+	public int run() {
+		return this.failures.forgetOlderThan(LoginThrottle.forgetBefore(this.clock.instant()));
+	}
+
+}

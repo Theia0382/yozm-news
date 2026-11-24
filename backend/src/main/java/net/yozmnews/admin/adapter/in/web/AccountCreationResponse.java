@@ -1,6 +1,6 @@
 package net.yozmnews.admin.adapter.in.web;
 
-import net.yozmnews.user.AccountCreationResult;
+import net.yozmnews.account.AccountCreationResult;
 import org.jspecify.annotations.Nullable;
 
 /**

@@ -9,13 +9,13 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 
+import net.yozmnews.account.PasswordChangeMethod;
 import net.yozmnews.llm.Provider;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.source.FeedId;
 import net.yozmnews.source.FeedStatus;
 import net.yozmnews.tag.TagKind;
 import net.yozmnews.user.DigestFailureCause;
-import net.yozmnews.user.PasswordChangeMethod;
 import net.yozmnews.user.domain.notice.DigestFailedContent;
 import net.yozmnews.user.domain.notice.FeedStatusContent;
 import net.yozmnews.user.domain.notice.FeedStatusEntry;

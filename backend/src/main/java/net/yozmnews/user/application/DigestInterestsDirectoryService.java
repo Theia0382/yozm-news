@@ -5,11 +5,11 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+import net.yozmnews.account.AccountDirectory;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.tag.TagSetDirectory;
 import net.yozmnews.tag.TagSetId;
 import net.yozmnews.tag.TagSetView;
-import net.yozmnews.user.AccountDirectory;
 import net.yozmnews.user.DigestInterests;
 import net.yozmnews.user.DigestInterestsDirectory;
 import net.yozmnews.user.TopicSubscription;

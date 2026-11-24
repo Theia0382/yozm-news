@@ -10,7 +10,7 @@ import java.time.InstantSource;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-import net.yozmnews.user.AccountDirectory;
+import net.yozmnews.account.AccountDirectory;
 import net.yozmnews.user.domain.interest.InterestSettingsRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.SmartInitializingSingleton;
@@ -19,9 +19,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * 기동 단계 — 기존 계정 채우기는 모든 {@code SmartInitializingSingleton}(태그 체계 첫 기동 적재의 대역) 뒤에 돈다. 대역 적재 빈을
- * 기동 단계 빈보다 뒤에 등록해도 순서가 같다 — 순서를 기록해 본다. 기존 계정 채우기와 첫 운영자의 단계는 모두 웹 서버 시작 단계보다 작다.
+ * 기동 단계 빈보다 뒤에 등록해도 순서가 같다 — 순서를 기록해 본다. 단계는 웹 서버 시작 단계보다 작다.
  * <p>
- * 지키는 규칙: user-R44 · account-R27
+ * 지키는 규칙: user-R44
  */
 class UserStartupOrderTests {
 
@@ -53,7 +53,6 @@ class UserStartupOrderTests {
 	@Test
 	void theStartupPhaseComesBeforeTheWebServer() {
 		assertThat(UserStartup.PHASE).isLessThan(WEB_SERVER_PHASE);
-		assertThat(AccountStartup.PHASE).isLessThan(WEB_SERVER_PHASE);
 	}
 
 }

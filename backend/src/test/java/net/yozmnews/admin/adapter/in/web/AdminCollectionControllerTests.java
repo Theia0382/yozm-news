@@ -12,10 +12,10 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
+import net.yozmnews.account.application.WebSliceSecurity;
 import net.yozmnews.article.EntryBucket;
 import net.yozmnews.article.EntryCounts;
 import net.yozmnews.article.EntryStatistics;
-import net.yozmnews.user.application.WebSliceSecurity;
 import net.yozmnews.source.FailurePermanence;
 import net.yozmnews.source.FeedHealthView;
 import net.yozmnews.source.FeedId;

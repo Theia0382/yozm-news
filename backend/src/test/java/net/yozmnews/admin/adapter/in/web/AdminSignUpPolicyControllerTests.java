@@ -12,10 +12,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.time.Instant;
 import java.util.List;
 
+import net.yozmnews.account.SignUpPolicyChange;
+import net.yozmnews.account.SignUpPolicyChangeResult;
+import net.yozmnews.account.application.WebSliceSecurity;
 import net.yozmnews.platform.ChangeActor;
-import net.yozmnews.user.SignUpPolicyChange;
-import net.yozmnews.user.SignUpPolicyChangeResult;
-import net.yozmnews.user.application.WebSliceSecurity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

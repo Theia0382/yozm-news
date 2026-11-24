@@ -13,12 +13,12 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 
+import net.yozmnews.account.application.WebSliceSecurity;
 import net.yozmnews.admin.adapter.in.web.FakeMeasurementClockAdministration.Advance;
 import net.yozmnews.platform.AdvanceRefusal;
 import net.yozmnews.platform.ClockAdvanceResult;
 import net.yozmnews.platform.ClockJumpView;
 import net.yozmnews.platform.MeasurementClockStatus;
-import net.yozmnews.user.application.WebSliceSecurity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
