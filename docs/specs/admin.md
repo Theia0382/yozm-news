@@ -236,7 +236,7 @@ HTTP 엔드포인트 — 모두 운영자 경로다(`ADMIN` 계정 세션 또는
 
 ### 기사 상세
 
-- **admin-R8** — 기사 상세 응답은 기사 정보(admin-R6 의 상세)에 `tag` · `event` · `evaluation` 의 결과를 맞붙인다. 화면 · API 의 꼴은 [ADR-0294](../adr/0294-the-operator-article-detail-is-one-page-and-one-detail-api-and-article-titles-on-operator-screens-link-to-it.md), 싣는 사건 묶기 근거의 범위는 [ADR-0295](../adr/0295-the-article-detail-shows-clustering-evidence-from-the-assignment-its-criteria-stored-candidates-applied-judgement-and-remaining-key-terms.md)에 있다:
+- **admin-R8** — 기사 상세 응답은 기사 정보(admin-R6 의 상세)에 `tag` · `event` · `evaluation` 의 결과를 맞붙인다. 화면 · API 의 꼴은 [ADR-0301](../adr/0301-the-operator-article-detail-is-one-page-and-one-detail-api-and-article-titles-on-operator-screens-link-to-it.md), 싣는 사건 묶기 근거의 범위는 [ADR-0302](../adr/0302-the-article-detail-shows-clustering-evidence-from-the-assignment-its-criteria-stored-candidates-applied-judgement-and-remaining-key-terms.md)에 있다:
   - 기사 정보를 먼저 읽는다 — 없는(지운) 기사면 다른 조회를 부르지 않고 404 다(admin-R2). 기사를 지우면 각 모듈이 그 기사의 평가 · 배정 · 표현 · 판정 원본을 따라 지우므로 남은 조각을 싣지 않는다
   - 평가는 `EvaluationReview.ofArticle` 의 버전마다 한 줄이고 버전 번호 내림차순이다. 행마다 평가 · 버전 ID, 버전 번호, 평가 시각, 그 버전의 지금 기준으로 한 판정(주제 판정 · 붙은 주제 · 대분류 · 지역 · 대표 형식 · 중요도 — [tag-R15](tag.md#공유-평가))을 싣는다. 평가하지 않은 기사는 빈 목록이다
   - 사건 소속은 `EventReview.assignmentOf` 의 배정 — 사건 · 발행 시각 · 점수 · 정한 것 · 연 사건 표지 · 판정에 쓴 기준(창은 초) · 배정 시각 · 저장 후보(배정 때의 사건 · 지금 사건 · 점수 · 판정 확률, 점수 내림차순 · 사건 ID 순)다. 배정이 없으면 `null` 이고 사건 · 판정 원본을 묻지 않는다
@@ -265,5 +265,5 @@ HTTP 엔드포인트 — 모두 운영자 경로다(`ADMIN` 계정 세션 또는
 | [0068](../adr/0068-rss-summaries-shown-only-on-operator-screens-and-users-get-processed-information.md) | RSS 요약문은 운영자 화면에만 보이고, 인스턴스 사용자와 외부 API 에는 가공한 정보만 낸다 |
 | [0183](../adr/0183-admin-paths-open-with-admin-account-sessions-and-keep-the-operator-token-as-an-optional-script-bearer-with-csrf-only-for-sessions.md) | 운영자 경로는 `ADMIN` 계정 세션으로 열고, 운영자 토큰은 스크립트용 선택 Bearer 로 남기며, 세션 요청에만 CSRF 를 건다 |
 | [0251](../adr/0251-the-measurement-clock-starts-only-with-the-measurement-profile-and-a-clock-row-and-moves-forward-through-the-operator-api.md) | 측정용 시계는 profile `measurement` 와 운영자가 넣는 DB 시계 행이 함께 있을 때만 뜨고, 운영자 API 로 앞으로만 넘긴다 |
-| [0294](../adr/0294-the-operator-article-detail-is-one-page-and-one-detail-api-and-article-titles-on-operator-screens-link-to-it.md) | 운영자 기사 상세는 한 페이지 · 상세 API 하나로 기사 · 평가 · 사건 소속을 싣고, 운영자 화면의 기사 제목이 그리로 잇는다 |
-| [0295](../adr/0295-the-article-detail-shows-clustering-evidence-from-the-assignment-its-criteria-stored-candidates-applied-judgement-and-remaining-key-terms.md) | 기사 상세의 사건 묶기 근거는 배정 · 판정에 쓴 기준 · 저장 후보 · 반영한 판정 원본과 남아 있는 표현의 핵심 말이다 |
+| [0301](../adr/0301-the-operator-article-detail-is-one-page-and-one-detail-api-and-article-titles-on-operator-screens-link-to-it.md) | 운영자 기사 상세는 한 페이지 · 상세 API 하나로 기사 · 평가 · 사건 소속을 싣고, 운영자 화면의 기사 제목이 그리로 잇는다 |
+| [0302](../adr/0302-the-article-detail-shows-clustering-evidence-from-the-assignment-its-criteria-stored-candidates-applied-judgement-and-remaining-key-terms.md) | 기사 상세의 사건 묶기 근거는 배정 · 판정에 쓴 기준 · 저장 후보 · 반영한 판정 원본과 남아 있는 표현의 핵심 말이다 |

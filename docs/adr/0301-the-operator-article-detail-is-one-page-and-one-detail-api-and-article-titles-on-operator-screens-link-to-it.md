@@ -1,9 +1,9 @@
-# ADR-0294: 운영자 기사 상세는 한 페이지 · 상세 API 하나로 기사 · 평가 · 사건 소속을 싣고, 운영자 화면의 기사 제목이 그리로 잇는다
+# ADR-0301: 운영자 기사 상세는 한 페이지 · 상세 API 하나로 기사 · 평가 · 사건 소속을 싣고, 운영자 화면의 기사 제목이 그리로 잇는다
 
 - 상태: 승인
 - 날짜: 2026-11-23
 - 근거: [이슈 #129](https://github.com/Theia0382/yozm-news/issues/129) — 운영자 화면에 기사 하나를 보는 곳이 없었다. 사건 상세의 기사 행은 어디로도 이어지지 않았고, 평가 상세는 평가 ID 로만 열렸다
-- 관련: [ADR-0045](0045-admin-module-serves-operator-api-over-module-public-operation-apis.md)(운영자 API 는 `admin` 이 모듈의 공개 API 위에 낸다), [ADR-0068](0068-rss-summaries-shown-only-on-operator-screens-and-users-get-processed-information.md)(요약문 원문은 운영자 화면에만), [ADR-0295](0295-the-article-detail-shows-clustering-evidence-from-the-assignment-its-criteria-stored-candidates-applied-judgement-and-remaining-key-terms.md)(기사 상세가 싣는 사건 묶기 근거)
+- 관련: [ADR-0045](0045-admin-module-serves-operator-api-over-module-public-operation-apis.md)(운영자 API 는 `admin` 이 모듈의 공개 API 위에 낸다), [ADR-0068](0068-rss-summaries-shown-only-on-operator-screens-and-users-get-processed-information.md)(요약문 원문은 운영자 화면에만), [ADR-0302](0302-the-article-detail-shows-clustering-evidence-from-the-assignment-its-criteria-stored-candidates-applied-judgement-and-remaining-key-terms.md)(기사 상세가 싣는 사건 묶기 근거)
 
 ## 맥락
 

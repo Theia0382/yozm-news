@@ -1,9 +1,9 @@
-# ADR-0295: 기사 상세의 사건 묶기 근거는 배정 · 판정에 쓴 기준 · 저장 후보 · 반영한 판정 원본과 남아 있는 표현의 핵심 말이다
+# ADR-0302: 기사 상세의 사건 묶기 근거는 배정 · 판정에 쓴 기준 · 저장 후보 · 반영한 판정 원본과 남아 있는 표현의 핵심 말이다
 
 - 상태: 승인
 - 날짜: 2026-11-23
 - 근거: [이슈 #129](https://github.com/Theia0382/yozm-news/issues/129) — 사건 묶기 근거 가운데 기사 단위로 보일 것의 범위를 정한다
-- 관련: [ADR-0294](0294-the-operator-article-detail-is-one-page-and-one-detail-api-and-article-titles-on-operator-screens-link-to-it.md)(기사 상세의 화면 · API), [ADR-0094](0094-event-membership-judgements-identified-by-id-read-by-operators-and-referenced-by-the-records-that-apply-them.md)(배정이 반영한 판정 원본의 ID), [ADR-0081](0081-event-assignment-criteria-in-settings-and-rejudgement-within-stored-scores.md)(기준 이력 · 저장 후보)
+- 관련: [ADR-0301](0301-the-operator-article-detail-is-one-page-and-one-detail-api-and-article-titles-on-operator-screens-link-to-it.md)(기사 상세의 화면 · API), [ADR-0094](0094-event-membership-judgements-identified-by-id-read-by-operators-and-referenced-by-the-records-that-apply-them.md)(배정이 반영한 판정 원본의 ID), [ADR-0081](0081-event-assignment-criteria-in-settings-and-rejudgement-within-stored-scores.md)(기준 이력 · 저장 후보)
 
 ## 맥락
 

@@ -30,7 +30,7 @@
 
 ### 기사 상세
 
-사건 · 스토리라인 · 판정 기록 화면의 기사 제목이나 평가 상세의 **기사 상세**를 누르면 기사 하나(`/admin/articles/{ID}`)를 본다. 기사 ID 를 알면 주소로 연다. 그새 지운 기사는 "없는 기사"다 — 기사를 지우면 평가 · 사건 소속도 함께 지운다. 화면을 한 페이지로 두고 이 근거까지 보이는 까닭은 [ADR-0294](../adr/0294-the-operator-article-detail-is-one-page-and-one-detail-api-and-article-titles-on-operator-screens-link-to-it.md) · [ADR-0295](../adr/0295-the-article-detail-shows-clustering-evidence-from-the-assignment-its-criteria-stored-candidates-applied-judgement-and-remaining-key-terms.md)에 있다.
+사건 · 스토리라인 · 판정 기록 화면의 기사 제목이나 평가 상세의 **기사 상세**를 누르면 기사 하나(`/admin/articles/{ID}`)를 본다. 기사 ID 를 알면 주소로 연다. 그새 지운 기사는 "없는 기사"다 — 기사를 지우면 평가 · 사건 소속도 함께 지운다. 화면을 한 페이지로 두고 이 근거까지 보이는 까닭은 [ADR-0301](../adr/0301-the-operator-article-detail-is-one-page-and-one-detail-api-and-article-titles-on-operator-screens-link-to-it.md) · [ADR-0302](../adr/0302-the-article-detail-shows-clustering-evidence-from-the-assignment-its-criteria-stored-candidates-applied-judgement-and-remaining-key-terms.md)에 있다.
 
 - **기사** — 제목 · 원문 링크 · 발행 시각, 실린 피드마다 출처 · 섹션 · RSS 카테고리, 요약문. 요약문은 운영자 화면에만 보인다
 - **평가** — 태그 체계 버전마다 한 줄이고 번호가 큰 버전이 위다. 판정은 그 버전의 지금 태그 기준 · 저장 기준으로 한다. 가장 위의 평가가 다이제스트 · 사건 집계가 쓰는 평가다. **평가 N** 을 누르면 그 평가의 상세(저장된 태그 전부 · 분포)를 연다. 평가가 없으면 아직 평가 대기에 있거나 평가하지 못한 기사다
