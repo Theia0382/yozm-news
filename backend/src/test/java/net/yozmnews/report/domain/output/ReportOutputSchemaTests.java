@@ -70,7 +70,8 @@ class ReportOutputSchemaTests {
 		assertThat(ReportOutputSchema.key(ReportSectionKind.STORYLINES)).isEqualTo("storylines");
 		assertThat(ReportOutputSchema.key(ReportSectionKind.COVERAGE)).isEqualTo("coverage");
 		assertThat(ReportOutputSchema.key(ReportSectionKind.INTERESTS)).isEqualTo("interests");
-		assertThat(ReportOutputSchema.key(ReportSectionKind.RISE_AND_FALL)).isEqualTo("rise_and_fall");
+		assertThat(ReportSectionKind.values()).containsExactly(ReportSectionKind.OVERVIEW, ReportSectionKind.STORYLINES,
+				ReportSectionKind.COVERAGE, ReportSectionKind.INTERESTS);
 		assertThatIllegalArgumentException().isThrownBy(() -> ReportOutputSchema.key(ReportSectionKind.OVERVIEW))
 			.withMessage("개요는 갈래 칸이 아니다");
 	}

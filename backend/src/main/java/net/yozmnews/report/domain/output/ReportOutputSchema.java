@@ -82,7 +82,6 @@ public final class ReportOutputSchema {
 			case STORYLINES -> "storylines";
 			case COVERAGE -> "coverage";
 			case INTERESTS -> "interests";
-			case RISE_AND_FALL -> "rise_and_fall";
 			case OVERVIEW -> throw new IllegalArgumentException("개요는 갈래 칸이 아니다");
 		};
 	}

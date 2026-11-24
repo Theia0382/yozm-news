@@ -66,13 +66,13 @@ class FakeReportGeneratorTests {
 	@Test
 	void passesTheSameReadingAndCitationCheckWithManyOrNoTargets() {
 		ReportInput many = input(section(ReportSectionKind.STORYLINES, storyline(31), event(902)),
-				section(ReportSectionKind.RISE_AND_FALL, storyline(31), event(903)));
+				section(ReportSectionKind.COVERAGE, storyline(31), event(903)));
 		ReportInput none = input(section(ReportSectionKind.INTERESTS));
 
 		assertThat(cite(many).sections()).containsExactly(
 				new CitedSection(ReportSectionKind.STORYLINES, "로컬 섹션 1", "로컬 대체물이 만든 본문이다.",
 						List.of(storyline(31), event(902))),
-				new CitedSection(ReportSectionKind.RISE_AND_FALL, "로컬 섹션 2", "로컬 대체물이 만든 본문이다.",
+				new CitedSection(ReportSectionKind.COVERAGE, "로컬 섹션 2", "로컬 대체물이 만든 본문이다.",
 						List.of(storyline(31), event(903))));
 		CitedReport cited = cite(none);
 		assertThat(cited.overview()).isEqualTo("로컬 대체물이 만든 리포트다. 섹션 1개.");
