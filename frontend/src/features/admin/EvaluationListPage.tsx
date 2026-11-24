@@ -31,15 +31,13 @@ type Overview = Schemas["EvaluationOverviewResponse"];
 /** 한 번에 받는 평가 수 — 서버 상한 안 */
 const PAGE_SIZE = 20;
 
-/** 한 번에 고를 수 있는 태그 수 — 서버 상한 안(docs/specs/tag.md) */
-const MAX_TAGS = 10;
-
 const STATUSES: TopicStatus[] = ["TAGGED", "LOW_CONFIDENCE", "UNCLASSIFIED"];
 
 /**
  * 평가 결과 — 버전 하나의 평가 가운데 평가 시각이 기간 안인 것을 최근 것부터 본다. 태그 여럿 · 주제 판정으로 거르면 고른 것이 모두 맞는 평가만
  * 나온다. 선택지 옆의 수는 같은 버전 · 기간의 평가 현황이 태그 하나 · 주제 판정 하나로 센 값이다(목록은 따로 세지 않는다). 상태는 주소 질의에
- * 둔다 — 고른 태그는 `tags` 를 고른 순서로 되풀이한 `{종류}:{키}` 다.
+ * 둔다 — 고른 태그는 `tags` 를 고른 순서로 되풀이한 `{종류}:{키}` 다. 고를 수 있는 태그 수는 목록 응답이 알려 준 상한이고, 아직 모르면
+ * 막지 않는다(정본은 서버의 400).
  */
 export function EvaluationListPage() {
   const client = useAdminClient();
@@ -47,6 +45,7 @@ export function EvaluationListPage() {
   const [zone] = useState(browserZone);
   const tagId = useId();
   const statusId = useId();
+  const [maxTags, setMaxTags] = useState<number | null>(null);
   const versions = useTagSetVersions();
   const version = chosenOrActive(
     params.has("version") ? Number(params.get("version")) : null,
@@ -101,6 +100,13 @@ export function EvaluationListPage() {
     enabled: filled && version !== null,
   });
   const rows = list.data?.pages.flatMap((page) => page.rows) ?? [];
+  const latestMaxTags = list.data?.pages[0]?.maxTags;
+
+  // 상한은 서버가 낸 값을 기억한다 — 거르기가 바뀌어 새 목록을 받는 사이 · 400 뒤에도 막도록. 응답이 바뀐 렌더에서 바로 맞춘다(효과를 거치지 않는다)
+  if (latestMaxTags !== undefined && latestMaxTags !== maxTags) {
+    setMaxTags(latestMaxTags);
+  }
+  const full = maxTags !== null && tags.length >= maxTags;
 
   return (
     <div className="space-y-6">
@@ -124,14 +130,14 @@ export function EvaluationListPage() {
           <select
             id={tagId}
             value=""
-            disabled={tags.length >= MAX_TAGS}
+            disabled={full}
             onChange={(event) =>
               update({ tags: withTag(tags, event.target.value) })
             }
             className="rounded-md border border-input px-2 py-1"
           >
             <option value="">
-              {tags.length >= MAX_TAGS ? `${MAX_TAGS}개까지 고른다` : "고르기"}
+              {full ? `${maxTags}개까지 고른다` : "고르기"}
             </option>
             {overview.data && (
               <TagOptions overview={overview.data} chosen={tags} />

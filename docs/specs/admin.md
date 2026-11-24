@@ -77,7 +77,7 @@ HTTP 엔드포인트 — 모두 운영자 경로다(`ADMIN` 계정 세션 또는
 | `GET /api/admin/topic-coverage` | 주제별 보도량 — 질의 `from` · `to`(시작일 · 종료일, `yyyy-MM-dd`, 끝 포함) · `zone`(날짜를 해석할 시간대) · 선택 `topic`(되풀이 — 없으면 모든 주제). 활성 버전 ID 와 날짜 범위의 상한(`maxDays`)을 함께 낸다([tag-R28](tag.md#평가-현황--주제별-보도량) · R30) |
 | `GET /api/admin/evaluation-overview` | 평가 현황 — 질의 `version`(태그 체계 버전 ID) · `from` · `to` · `zone`([tag-R29](tag.md#평가-현황--주제별-보도량)) |
 | `GET /api/admin/evaluation-queue` | 지금의 평가 대기 · 그 가운데 일시 실패를 겪은 대기 · 실패 건수(`waiting` · `retrying` · `rejected`) — 기간과 무관하다 |
-| `GET /api/admin/evaluations` | 평가 목록 — 질의 `version` · `from` · `to` · `zone`, 선택 `tags`(`{종류}:{키}` — 종류는 `TOPIC` · `REGION` · `FORMAT`. 여러 번 주거나 쉼표로 잇고 고른 태그가 모두 맞는 평가만 낸다) · `topicStatus` · 커서 `afterEvaluatedAt` · `afterId`(함께) · `limit`(기본 20). 행마다 판정과 기사의 제목 · 출처([tag-R33](tag.md#평가-검수--기준-미리보기)) |
+| `GET /api/admin/evaluations` | 평가 목록 — 질의 `version` · `from` · `to` · `zone`, 선택 `tags`(`{종류}:{키}` — 종류는 `TOPIC` · `REGION` · `FORMAT`. 여러 번 주거나 쉼표로 잇고 고른 태그가 모두 맞는 평가만 낸다) · `topicStatus` · 커서 `afterEvaluatedAt` · `afterId`(함께) · `limit`(기본 20). 행마다 판정과 기사의 제목 · 출처, 거를 태그 수의 상한(`maxTags` — `EvaluationReview.MAX_FILTER_TAGS`)([tag-R33](tag.md#평가-검수--기준-미리보기)) |
 | `GET /api/admin/evaluations/{id}` | 평가 하나의 상세와 기사의 제목 · 요약문 · 정규 URL · 엔트리별 출처 이름 · 섹션 · RSS 카테고리 |
 | `GET /api/admin/evaluation-samples` | 표본 — 질의 `version` · `from` · `to` · `zone` · `seed` · `size`(기본 `EvaluationReview.DEFAULT_SAMPLE_SIZE`). 행 모양은 목록과 같다([tag-R34](tag.md#평가-검수--기준-미리보기)) |
 | `GET /api/admin/thresholds` | 활성 버전의 태그 기준 · 저장 기준 — 태그 종류마다 지금 값 · 지난 저장 기준 최댓값 · 어긋난 상태, 이력([tag-R36](tag.md#평가-검수--기준-미리보기)) |

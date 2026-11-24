@@ -1,7 +1,7 @@
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import { json } from "@/test/fakeServer";
+import { json, problem } from "@/test/fakeServer";
 import { EvaluationListPage } from "@/features/admin/EvaluationListPage";
 import {
   OVERVIEW,
@@ -14,6 +14,7 @@ const LIST_PATH = "GET /api/admin/evaluations";
 
 const PERIOD_QUERY = "from=2026-10-28&to=2026-11-03";
 
+/** 목록 응답을 차례로 낸다 — 문제 응답(Response)은 그대로, 나머지는 JSON 으로 */
 function renderRoutes(
   pages: unknown[],
   { query = "", overview = OVERVIEW } = {},
@@ -25,7 +26,10 @@ function renderRoutes(
     {
       "GET /api/admin/tag-sets": () => json(TAG_SETS),
       "GET /api/admin/evaluation-overview": () => json(overview),
-      [LIST_PATH]: () => json(pages[Math.min(call++, pages.length - 1)]),
+      [LIST_PATH]: () => {
+        const next = pages[Math.min(call++, pages.length - 1)];
+        return next instanceof Response ? next : json(next);
+      },
     },
   );
 }
@@ -43,13 +47,18 @@ const TWO_FORMATS = {
   ],
 };
 
-const page = (rows: ReturnType<typeof row>[], next: number | null) => ({
+const page = (
+  rows: ReturnType<typeof row>[],
+  next: number | null,
+  maxTags = 10,
+) => ({
   version: 7,
   from: "2026-10-27T15:00:00Z",
   to: "2026-11-03T15:00:00Z",
   rows,
   nextEvaluatedAt: next === null ? null : "2026-11-01T00:00:00Z",
   nextId: next,
+  maxTags,
 });
 
 function listRequests(server: ReturnType<typeof renderPage>) {
@@ -198,7 +207,50 @@ describe("EvaluationListPage", () => {
     ]);
   });
 
-  it("태그를 상한만큼 고르면 더 고를 수 없다", async () => {
+  it("목록 응답이 알려 준 상한만큼 고르면 더 고를 수 없다", async () => {
+    // 상한을 화면이 따로 두지 않고 응답에서 읽는지 보려고 정본(10)과 다른 값을 준다
+    renderRoutes([page([row(9, "국회 본회의 통과")], null, 3)], {
+      query: "&tags=TOPIC%3Apolitics&tags=REGION%3Adomestic",
+    });
+    await screen.findByRole("table", { name: "평가 결과" });
+    const select = screen.getByLabelText("태그 더하기");
+    expect(select).toBeEnabled();
+
+    await userEvent.selectOptions(
+      select,
+      await screen.findByRole("option", { name: "스트레이트 (4)" }),
+    );
+
+    expect(await screen.findByLabelText("태그 더하기")).toBeDisabled();
+    expect(
+      within(screen.getByLabelText("태그 더하기")).getByRole("option", {
+        name: "3개까지 고른다",
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("받은 상한은 다음 목록이 400 이어도 기억해 막는다", async () => {
+    renderRoutes(
+      [
+        page([row(9, "국회 본회의 통과")], null, 2),
+        problem(400, "그 태그 체계 버전에 없는 태그다: REGION domestic"),
+      ],
+      { query: "&tags=TOPIC%3Apolitics" },
+    );
+    await screen.findByRole("table", { name: "평가 결과" });
+
+    await userEvent.selectOptions(
+      screen.getByLabelText("태그 더하기"),
+      await screen.findByRole("option", { name: "국내 (1)" }),
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "그 태그 체계 버전에 없는 태그다: REGION domestic",
+    );
+    expect(screen.getByLabelText("태그 더하기")).toBeDisabled();
+  });
+
+  it("상한을 아직 모르면 막지 않는다 — 첫 목록이 400 이면 서버 문구가 알린다", async () => {
     const keys = [
       "politics",
       "politics.executive",
@@ -210,17 +262,21 @@ describe("EvaluationListPage", () => {
       "tech.ai",
       "industry",
       "environment",
+      "culture",
     ];
-    renderRoutes([page([row(9, "국회 본회의 통과")], null)], {
+    renderRoutes([problem(400, "태그는 10개까지 고른다")], {
       query: keys.map((key) => `&tags=TOPIC%3A${key}`).join(""),
     });
-    await screen.findByRole("table", { name: "평가 결과" });
 
-    const select = screen.getByLabelText("태그 더하기");
-    expect(select).toBeDisabled();
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "태그는 10개까지 고른다",
+    );
+    expect(screen.getByLabelText("태그 더하기")).toBeEnabled();
     expect(
-      within(select).getByRole("option", { name: "10개까지 고른다" }),
-    ).toBeInTheDocument();
+      within(screen.getByRole("list", { name: "고른 태그" })).getAllByRole(
+        "listitem",
+      ),
+    ).toHaveLength(11);
   });
 
   it("더 보기가 마지막 쪽의 커서로 이어 받는다", async () => {

@@ -106,7 +106,7 @@ class AdminEvaluationReviewControllerTests {
 	}
 
 	@Test
-	void theListCarriesTheRowsWithTheirArticlesAndTheNextCursor() throws Exception {
+	void theListCarriesTheRowsWithTheirArticlesTheNextCursorAndTheTagLimit() throws Exception {
 		this.review.list = new EvaluationListResult.Listed(new EvaluationListing(new TagSetId(1), FROM, TO,
 				List.of(ROW, DELETED), new EvaluationCursor(AT, new EvaluationId(8))));
 
@@ -125,7 +125,7 @@ class AdminEvaluationReviewControllerTests {
 					   "topics":[],"topicCategories":[],"regions":[],
 					   "format":{"key":"opinion","name":"오피니언·칼럼","probability":0.6},"importance":null,
 					   "article":null}],
-					 "nextEvaluatedAt":"2026-11-01T00:00:00Z","nextId":8}
+					 "nextEvaluatedAt":"2026-11-01T00:00:00Z","nextId":8,"maxTags":10}
 					""", JsonCompareMode.STRICT));
 		// 기본 쪽 크기 20, 거르기 · 커서 없음. 헤드라인 조회는 한 번 — 출처 이름은 헤드라인이 엮어 오므로 피드 조회가 없다
 		assertThat(this.review.calls).containsExactly("list 1 " + FROM + " " + TO

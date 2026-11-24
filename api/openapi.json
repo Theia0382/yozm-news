@@ -6979,6 +6979,10 @@
             "type" : "string",
             "format" : "date-time"
           },
+          "maxTags" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
           "nextEvaluatedAt" : {
             "type" : [ "string", "null" ],
             "format" : "date-time"
@@ -7002,7 +7006,7 @@
             "format" : "int64"
           }
         },
-        "required" : [ "from", "nextEvaluatedAt", "nextId", "rows", "to", "version" ]
+        "required" : [ "from", "maxTags", "nextEvaluatedAt", "nextId", "rows", "to", "version" ]
       },
       "EvaluationOverviewResponse" : {
         "type" : "object",
