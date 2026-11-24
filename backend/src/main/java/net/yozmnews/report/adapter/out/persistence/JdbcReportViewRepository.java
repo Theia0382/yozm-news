@@ -4,6 +4,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -63,6 +64,22 @@ class JdbcReportViewRepository implements ReportViewRepository {
 		return this.jdbc.sql("select " + ROW_COLUMNS + " from reports where id = :id and user_id = :user")
 			.param("id", id.value())
 			.param("user", user.value())
+			.query(JdbcReportViewRepository::row)
+			.optional();
+	}
+
+	@Override
+	public Optional<ReportRow> previous(UserId user, ReportPeriodKind kind, Instant end) {
+		Objects.requireNonNull(user, "user");
+		Objects.requireNonNull(kind, "kind");
+		Objects.requireNonNull(end, "end");
+		return this.jdbc.sql("select " + ROW_COLUMNS + """
+				 from reports
+				where user_id = :user and period_kind = :kind and period_end = :end and status <> 'SCHEDULED'
+				order by id desc limit 1""")
+			.param("user", user.value())
+			.param("kind", kind.name())
+			.param("end", end.atOffset(ZoneOffset.UTC))
 			.query(JdbcReportViewRepository::row)
 			.optional();
 	}
