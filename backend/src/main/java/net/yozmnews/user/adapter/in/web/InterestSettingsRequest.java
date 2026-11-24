@@ -5,7 +5,8 @@ import java.time.DayOfWeek;
 import jakarta.validation.constraints.NotNull;
 
 /**
- * 일정 · 리포트 저장 — 통째로 바꾼다. 칸이 없거나 요일 이름이 틀리면 본문 형식 400, 생성 시각이 {@code HH:mm} 이 아니면 400 이다.
+ * 일정 · 리포트 저장 — 통째로 바꾼다. 칸이 없거나 요일 이름이 틀리면 본문 형식 400, 생성 시각이 {@code HH:mm} 이 아니거나 월간 날짜가
+ * 받는 범위({@code ReportSettings.MONTHLY_DAY_MIN} ~ {@code MONTHLY_DAY_MAX}) 밖이면 400 이다.
  * docs/specs/user.md §3 · user-R50
  *
  * @param timezone 시간대 ID
@@ -13,7 +14,8 @@ import jakarta.validation.constraints.NotNull;
  * @param weeklyReport 주간 리포트를 받는가
  * @param weeklyReportDay 주간 리포트의 요일
  * @param monthlyReport 월간 리포트를 받는가
+ * @param monthlyReportDay 월간 리포트의 날짜 — 그 날이 없는 달은 그 달 마지막 날
  */
 record InterestSettingsRequest(@NotNull String timezone, @NotNull String digestTime, @NotNull Boolean weeklyReport,
-		@NotNull DayOfWeek weeklyReportDay, @NotNull Boolean monthlyReport) {
+		@NotNull DayOfWeek weeklyReportDay, @NotNull Boolean monthlyReport, @NotNull Integer monthlyReportDay) {
 }

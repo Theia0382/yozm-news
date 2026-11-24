@@ -573,9 +573,9 @@ class DigestDirectoryServiceTests {
 				""").param("email", email).query(Long.class).single());
 		this.jdbc.sql("""
 				insert into user_settings (user_id, tag_set_id, timezone, digest_time, weekly_report,
-				    weekly_report_day, monthly_report, candidate_volume, big_slots, summary_length, reasoning_effort,
+				    weekly_report_day, monthly_report, monthly_report_day, candidate_volume, big_slots, summary_length, reasoning_effort,
 				    updated_at, version)
-				values (:user, :tagSet, 'America/Los_Angeles', '03:17', true, 1, true, 'NORMAL', 3, 'NORMAL', 'MEDIUM',
+				values (:user, :tagSet, 'America/Los_Angeles', '03:17', true, 1, true, 1, 'NORMAL', 3, 'NORMAL', 'MEDIUM',
 				    now(), 0)
 				""").param("user", user.value()).param("tagSet", this.tagSets.activeTagSet().id().value()).update();
 		this.jdbc.sql("""

@@ -8633,6 +8633,10 @@
           "monthlyReport" : {
             "type" : "boolean"
           },
+          "monthlyReportDay" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
           "timezone" : {
             "type" : "string"
           },
@@ -8644,7 +8648,7 @@
             "enum" : [ "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY" ]
           }
         },
-        "required" : [ "digestTime", "monthlyReport", "timezone", "weeklyReport", "weeklyReportDay" ]
+        "required" : [ "digestTime", "monthlyReport", "monthlyReportDay", "timezone", "weeklyReport", "weeklyReportDay" ]
       },
       "InterestSettingsResponse" : {
         "type" : "object",
@@ -8655,6 +8659,13 @@
           "monthlyReport" : {
             "type" : "boolean"
           },
+          "monthlyReportDay" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "monthlyReportDayRange" : {
+            "$ref" : "#/components/schemas/MonthlyReportDayRangeResponse"
+          },
           "timezone" : {
             "type" : "string"
           },
@@ -8666,7 +8677,7 @@
             "enum" : [ "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY" ]
           }
         },
-        "required" : [ "digestTime", "monthlyReport", "timezone", "weeklyReport", "weeklyReportDay" ]
+        "required" : [ "digestTime", "monthlyReport", "monthlyReportDay", "monthlyReportDayRange", "timezone", "weeklyReport", "weeklyReportDay" ]
       },
       "InterestSettingsSaveResponse" : {
         "type" : "object",
@@ -9453,6 +9464,20 @@
           }
         },
         "required" : [ "id", "provider" ]
+      },
+      "MonthlyReportDayRangeResponse" : {
+        "type" : "object",
+        "properties" : {
+          "max" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "min" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        },
+        "required" : [ "max", "min" ]
       },
       "NamedTag" : {
         "type" : "object",

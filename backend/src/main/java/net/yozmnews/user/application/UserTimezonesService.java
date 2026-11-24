@@ -19,7 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
  * docs/specs/user.md §4 · user-R60
  * <p>
  * 두 조회가 한 클래스인 것은 시간대가 일정({@link #scheduleOf})의 시간대이기 때문이다. 설정 행이 없을 때의 일정은 기본 일정
- * {@code InterestDefaults.SCHEDULE} 하나다 — 일정 목록({@code DigestScheduleDirectoryService})과 같은 정본이다.
+ * {@code InterestDefaults.SCHEDULE} 하나다 — 일정 목록({@code ScheduleRows} — {@code ScheduleSettings.DEFAULTS})과 같은 정본이다.
  */
 @Service
 class UserTimezonesService implements UserTimezones, UserDigestSchedules {

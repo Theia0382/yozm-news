@@ -25,6 +25,7 @@ import net.yozmnews.user.domain.interest.InterestSettings;
 import net.yozmnews.user.domain.interest.InterestSettingsRepository;
 import net.yozmnews.user.domain.interest.ModelRef;
 import net.yozmnews.user.domain.interest.ReportSettings;
+import net.yozmnews.user.domain.interest.ScheduleSettings;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
@@ -37,7 +38,7 @@ class JdbcInterestSettings implements InterestSettingsRepository {
 
 	private static final String COLUMNS = """
 			user_id, tag_set_id, timezone, digest_time, llm_provider, llm_model, reasoning_effort, weekly_report,
-			weekly_report_day, monthly_report, candidate_volume, candidate_count, big_slots, summary_length,
+			weekly_report_day, monthly_report, monthly_report_day, candidate_volume, candidate_count, big_slots, summary_length,
 			updated_at, version""";
 
 	private final JdbcClient jdbc;
@@ -66,7 +67,7 @@ class JdbcInterestSettings implements InterestSettingsRepository {
 	public boolean insertIfAbsent(InterestSettings settings) {
 		return this.jdbc.sql("insert into user_settings (" + COLUMNS + """
 				) values (:user, :tagSet, :timezone, :digestTime, :provider, :model, :effort, :weekly, :weeklyDay,
-				  :monthly, :candidateVolume, :candidateCount, :bigSlots, :summaryLength, :updatedAt, 0)
+				  :monthly, :monthlyDay, :candidateVolume, :candidateCount, :bigSlots, :summaryLength, :updatedAt, 0)
 				on conflict (user_id) do nothing
 				""")
 			.paramSource(params(settings))
@@ -80,6 +81,7 @@ class JdbcInterestSettings implements InterestSettingsRepository {
 				update user_settings set tag_set_id = :tagSet, timezone = :timezone, digest_time = :digestTime,
 				  llm_provider = :provider, llm_model = :model, reasoning_effort = :effort,
 				  weekly_report = :weekly, weekly_report_day = :weeklyDay, monthly_report = :monthly,
+				  monthly_report_day = :monthlyDay,
 				  candidate_volume = :candidateVolume, candidate_count = :candidateCount, big_slots = :bigSlots,
 				  summary_length = :summaryLength, updated_at = :updatedAt, version = version + 1
 				where user_id = :user and version = :version
@@ -117,13 +119,16 @@ class JdbcInterestSettings implements InterestSettingsRepository {
 	}
 
 	@Override
-	public Map<UserId, DigestSchedule> schedulesOf(Collection<UserId> users) {
+	public Map<UserId, ScheduleSettings> scheduleSettingsOf(Collection<UserId> users) {
 		if (users.isEmpty()) {
 			return Map.of();
 		}
-		return this.jdbc.sql("select user_id, timezone, digest_time from user_settings where user_id = any(:users)")
+		return this.jdbc.sql("""
+				select user_id, timezone, digest_time, weekly_report, weekly_report_day, monthly_report, monthly_report_day
+				from user_settings where user_id = any(:users)""")
 			.param("users", ids(users))
-			.query((rs, n) -> Map.entry(new UserId(rs.getLong("user_id")), schedule(rs)))
+			.query((rs, n) -> Map.entry(new UserId(rs.getLong("user_id")),
+					new ScheduleSettings(schedule(rs), reports(rs))))
 			.list()
 			.stream()
 			.collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
@@ -137,6 +142,11 @@ class JdbcInterestSettings implements InterestSettingsRepository {
 		return new DigestSchedule(ZoneId.of(rs.getString("timezone")), rs.getObject("digest_time", LocalTime.class));
 	}
 
+	private static ReportSettings reports(ResultSet rs) throws SQLException {
+		return new ReportSettings(rs.getBoolean("weekly_report"), DayOfWeek.of(rs.getInt("weekly_report_day")),
+				rs.getBoolean("monthly_report"), rs.getInt("monthly_report_day"));
+	}
+
 	private static InterestSettings row(ResultSet rs, int rowNum) throws SQLException {
 		String provider = rs.getString("llm_provider");
 		ModelRef model = null;
@@ -148,8 +158,7 @@ class JdbcInterestSettings implements InterestSettingsRepository {
 		return new InterestSettings(new UserId(rs.getLong("user_id")), new TagSetId(rs.getLong("tag_set_id")),
 				schedule(rs), model,
 				ReasoningEffort.valueOf(rs.getString("reasoning_effort")),
-				new ReportSettings(rs.getBoolean("weekly_report"), DayOfWeek.of(rs.getInt("weekly_report_day")),
-						rs.getBoolean("monthly_report")),
+				reports(rs),
 				new DigestVolume(CandidateVolume.valueOf(rs.getString("candidate_volume")),
 						rs.getObject("candidate_count", Integer.class), rs.getInt("big_slots"),
 						SummaryLength.valueOf(rs.getString("summary_length"))),
@@ -168,6 +177,7 @@ class JdbcInterestSettings implements InterestSettingsRepository {
 			.addValue("weekly", settings.reports().weekly())
 			.addValue("weeklyDay", settings.reports().weeklyDay().getValue())
 			.addValue("monthly", settings.reports().monthly())
+			.addValue("monthlyDay", settings.reports().monthlyDay())
 			.addValue("candidateVolume", settings.volume().volume().name())
 			.addValue("candidateCount", settings.volume().customCount())
 			.addValue("bigSlots", settings.volume().bigSlots())

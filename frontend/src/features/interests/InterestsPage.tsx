@@ -37,9 +37,13 @@ import {
   type CandidateVolume,
   candidateVolumeNames,
   modelReasonTexts,
+  MONTHLY_DAY_HELP_TEXT,
+  MONTHLY_NEEDS_WEEKLY_TEXT,
+  monthlyDayName,
   NO_TOPIC_TEXT,
   REASONING_EFFORT_HELP_TEXT,
   type ReasoningEffort,
+  REPORT_SCHEDULE_HELP_TEXT,
   reasoningEffortNames,
   SUMMARY_LENGTH_HELP_TEXT,
   type SummaryLength,
@@ -457,7 +461,17 @@ function ScheduleForm({ data, setMessage }: FormProps<InterestSettings>) {
   const [weeklyReport, setWeeklyReport] = useState(data.weeklyReport);
   const [weeklyReportDay, setWeeklyReportDay] = useState(data.weeklyReportDay);
   const [monthlyReport, setMonthlyReport] = useState(data.monthlyReport);
+  const [monthlyReportDay, setMonthlyReportDay] = useState(
+    data.monthlyReportDay,
+  );
   const [busy, setBusy] = useState(false);
+  const monthlyDays = Array.from(
+    {
+      length:
+        data.monthlyReportDayRange.max - data.monthlyReportDayRange.min + 1,
+    },
+    (_, index) => data.monthlyReportDayRange.min + index,
+  );
 
   function save(event: FormEvent) {
     event.preventDefault();
@@ -471,6 +485,7 @@ function ScheduleForm({ data, setMessage }: FormProps<InterestSettings>) {
             weeklyReport,
             weeklyReportDay,
             monthlyReport,
+            monthlyReportDay,
           },
         },
       );
@@ -550,8 +565,34 @@ function ScheduleForm({ data, setMessage }: FormProps<InterestSettings>) {
       <CheckField
         label="월간 변화 리포트 받기"
         checked={monthlyReport}
+        disabled={!weeklyReport}
         onChange={setMonthlyReport}
       />
+      {!weeklyReport && (
+        <p className="text-sm text-muted-foreground">
+          {MONTHLY_NEEDS_WEEKLY_TEXT}
+        </p>
+      )}
+      <label className="block space-y-1">
+        <span className="text-sm">월간 리포트 날짜</span>
+        <select
+          name="monthlyReportDay"
+          value={monthlyReportDay}
+          disabled={!weeklyReport || !monthlyReport}
+          onChange={(event) => setMonthlyReportDay(Number(event.target.value))}
+          className="w-full rounded-md border border-input bg-background px-2 py-1"
+        >
+          {monthlyDays.map((day) => (
+            <option key={day} value={day}>
+              {monthlyDayName(day)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <p className="text-sm text-muted-foreground">{MONTHLY_DAY_HELP_TEXT}</p>
+      <p className="text-sm text-muted-foreground">
+        {REPORT_SCHEDULE_HELP_TEXT}
+      </p>
       <Button type="submit" disabled={busy}>
         일정 · 리포트 저장
       </Button>

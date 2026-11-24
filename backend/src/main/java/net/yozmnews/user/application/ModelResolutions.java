@@ -18,8 +18,8 @@ import org.springframework.stereotype.Component;
 /**
  * 쓸 모델 판정의 재료 읽기 — 허용 모델 목록과 그 사용자의 키가 있는 공급자 · 쓸 수 있는 키의 공급자. docs/specs/user.md §4 · user-R51
  * <p>
- * 관심 설정 화면의 모델 조회({@link ModelSelection})와 다이제스트가 읽는 쓸 모델({@link DigestModelDirectoryService})이 함께 쓴다 —
- * 판정은 {@link ModelChoice} 하나다.
+ * 관심 설정 화면의 모델 조회({@link ModelSelection})와 다이제스트 · 리포트가 읽는 쓸 모델({@link UsableModels})이 함께 쓴다 — 판정은
+ * {@link ModelChoice} 하나다.
  */
 @Component
 class ModelResolutions {

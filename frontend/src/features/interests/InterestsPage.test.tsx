@@ -58,6 +58,8 @@ const SETTINGS: InterestSettings = {
   weeklyReport: true,
   weeklyReportDay: "MONDAY",
   monthlyReport: true,
+  monthlyReportDay: 1,
+  monthlyReportDayRange: { min: 1, max: 31 },
 };
 
 /** 새 계정의 분량 — 보통 · 큰 화제 3 · 요약 길이 보통 */
@@ -311,9 +313,20 @@ describe("InterestsPage", () => {
       schedule.getByLabelText("주간 리포트 요일"),
       "금요일",
     );
+    expect(schedule.getByLabelText("월간 리포트 날짜")).toHaveValue("1");
+    expect(
+      within(schedule.getByLabelText("월간 리포트 날짜")).getAllByRole(
+        "option",
+      ),
+    ).toHaveLength(31);
+    await user.selectOptions(
+      schedule.getByLabelText("월간 리포트 날짜"),
+      "31일",
+    );
     await user.click(
       schedule.getByRole("checkbox", { name: "월간 변화 리포트 받기" }),
     );
+    expect(schedule.getByLabelText("월간 리포트 날짜")).toBeDisabled();
     await user.click(
       schedule.getByRole("button", { name: "일정 · 리포트 저장" }),
     );
@@ -328,8 +341,39 @@ describe("InterestsPage", () => {
         weeklyReport: true,
         weeklyReportDay: "FRIDAY",
         monthlyReport: false,
+        monthlyReportDay: 31,
       },
     ]);
+  });
+
+  it("주간 리포트를 끄면 월간 리포트 칸을 막고 까닭을 알린다", async () => {
+    renderInterests({});
+    const user = userEvent.setup();
+    const schedule = await section("일정 · 변화 리포트");
+    const monthly = await schedule.findByRole("checkbox", {
+      name: "월간 변화 리포트 받기",
+    });
+
+    // 대조 — 주간을 켜 두면 월간 칸을 고를 수 있고 안내가 없다
+    expect(monthly).not.toHaveAttribute("aria-disabled", "true");
+    expect(schedule.getByLabelText("월간 리포트 날짜")).toBeEnabled();
+    expect(
+      schedule.queryByText(
+        "월간 리포트는 그 기간의 주간 리포트를 모아 만들어, 주간 리포트를 받을 때만 만듭니다.",
+      ),
+    ).not.toBeInTheDocument();
+
+    await user.click(
+      schedule.getByRole("checkbox", { name: "주간 변화 리포트 받기" }),
+    );
+
+    expect(monthly).toHaveAttribute("aria-disabled", "true");
+    expect(schedule.getByLabelText("월간 리포트 날짜")).toBeDisabled();
+    expect(
+      schedule.getByText(
+        "월간 리포트는 그 기간의 주간 리포트를 모아 만들어, 주간 리포트를 받을 때만 만듭니다.",
+      ),
+    ).toBeInTheDocument();
   });
 
   it.each([
