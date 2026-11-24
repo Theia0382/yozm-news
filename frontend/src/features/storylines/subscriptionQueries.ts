@@ -185,7 +185,7 @@ async function fetchCards(
 
 /**
  * 스토리라인 ID 여럿의 카드 — 제목 · 상태 · 마지막 기사 시각. 카드 처리기는 빈 ids 를 받지 않으므로 ID 가 없으면 묻지 않는다. 추적 중인
- * 흐름 목록은 흐름마다 첫 추적 씨앗 하나를, 추적 기록은 한 쪽의 스토리라인을 묻는다 — 한 번의 상한을 넘으면 나눠 묻는다
+ * 흐름 목록은 흐름마다 헤드 하나를, 추적 기록은 한 쪽의 스토리라인을 묻는다 — 한 번의 상한을 넘으면 나눠 묻는다
  */
 export function useStorylineCards(ids: number[]) {
   const client = useApiClient();

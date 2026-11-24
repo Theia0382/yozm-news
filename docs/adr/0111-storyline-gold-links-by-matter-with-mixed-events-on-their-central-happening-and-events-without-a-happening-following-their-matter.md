@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-11
-- 근거: [이슈 #120](https://github.com/Theia0382/yozm-news/issues/120) — 후속과 이어짐의 경계, 섞인 사건 · 일이 없는 사건의 소속을 조사해 리드와 정함
+- 근거: [이슈 #120](https://github.com/Theia0382/yozm-news/issues/120) — 후속과 이어짐의 경계, 섞인 사건 · 일이 없는 사건의 소속을 조사해 정함
 - 관련: [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)(결정 "같은 큰 일의 여러 갈래와, 시간이 지나 생긴 후속을 함께 담는다"와 결정 "스토리라인 사이에는 관계가 있다"의 정답 쪽 경계 — 보충), [ADR-0097](0097-event-clustering-evaluation-labels-reports-of-one-happening-narrower-than-the-system-event.md)(사건 정답 — 한 번 일어난 일의 경계를 이 정답이 함께 쓴다), [ADR-0110](0110-storyline-evaluation-labels-system-events-of-a-fixed-dump-and-measures-overlapping-clusters-from-random-seed-events.md)(평가 방법)
 
 ## 맥락

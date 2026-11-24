@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-22
-- 근거: [이슈 #237](https://github.com/Theia0382/yozm-news/issues/237) — 기점 `d25590c` 의 변화 리포트 입력 갈래(pipeline §10)와 다이제스트 출력 서술(digest-R4)을 대조하고, 리드가 갈래마다 고정 섹션을 골랐다
+- 근거: [이슈 #237](https://github.com/Theia0382/yozm-news/issues/237) — 기점 `d25590c` 의 변화 리포트 입력 갈래(pipeline §10)와 다이제스트 출력 서술(digest-R4)을 대조하고, 갈래마다 고정 섹션을 골랐다
 - 관련: [ADR-0025](0025-long-term-personal-news-history-in-v1.md)(변화 리포트를 둔다 — 출력 꼴은 적지 않았다), [ADR-0269](0269-the-digest-output-keys-top-stories-by-item-alias-as-required-fields-and-lists-headlines-as-elements.md)(같은 근거 — 구조화 출력이 모든 칸을 쓰게 하는 필수 키 꼴)
 
 ## 맥락

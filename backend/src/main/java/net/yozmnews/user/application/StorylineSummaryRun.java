@@ -164,9 +164,15 @@ public class StorylineSummaryRun {
 		Map<Long, SummaryAttempt> attempts = new HashMap<>();
 		this.summaries.attempts(user).forEach(attempt -> attempts.put(attempt.userStorylineId(), attempt));
 		List<Flow> flows = stored.stream()
-			.map(one -> new Flow(one.id(), one.tops(), one.tracked(), summaries.get(one.id()), attempts.get(one.id())))
+			.map(one -> new Flow(one.id(), headOf(one), one.tops(), one.tracked(), summaries.get(one.id()),
+					attempts.get(one.id())))
 			.toList();
 		return new Snapshot(flows, settings.schedule().timezone());
+	}
+
+	/** 맞춘 사용자 스토리라인의 헤드 — 저장하는 맞추기가 쓴 뒤라 비지 않는다 */
+	private static long headOf(StoredUserStoryline storyline) {
+		return Objects.requireNonNull(storyline.head(), "저장하는 맞추기 뒤의 헤드");
 	}
 
 	private int remove(List<Action> actions) {

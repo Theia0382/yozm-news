@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-17
-- 근거: [이슈 #175](https://github.com/Theia0382/yozm-news/issues/175) — 전송의 마감 결선과 Spring AI 의 요청 선택지 경로를 대조하고, 생성 마감 값은 리드가 정함(180초). 구현 `dba289d` · `9ddad52` · `2e6b35e`
+- 근거: [이슈 #175](https://github.com/Theia0382/yozm-news/issues/175) — 전송의 마감 결선과 Spring AI 의 요청 선택지 경로를 대조하고, 생성 마감 값을 정함(180초). 구현 `dba289d` · `9ddad52` · `2e6b35e`
 - 관련: [ADR-0149](0149-llm-calls-use-spring-ai-2-without-the-starter-and-build-sdk-clients-with-explicit-address-key-and-log-level-and-close-them.md)(보충 — "SDK 의 자동 재시도를 쓸지와 마감은 호출마다 이 모듈이 정해 넘긴다"), [ADR-0150](0150-user-keys-travel-over-an-own-jdk-transport-for-the-sdks-without-redirects-or-proxy-and-with-a-response-body-cap.md)(전송 — 스트리밍 없이 응답 전체를 받는다), [ADR-0154](0154-key-validation-lists-models-and-failure-kinds-are-sorted-by-one-rule-per-provider-reading-the-error-kind.md)(검증은 짧은 마감으로 한 번만 — 그대로)
 
 ## 맥락
@@ -35,5 +35,5 @@
 | 다시 보낼 횟수를 요청이 정한다 | 정책 값이 부르는 쪽마다 흩어진다. 지금 부르는 쪽 둘 다 작업 역할이라 가를 까닭이 없다 |
 | 마감 초과도 다시 보낸다 | 한 호출이 마감 × 네 번까지 길어지고 과금이 겹친다 |
 | 마감 초과는 한 번만 다시 보낸다 | 마감으로 끊긴 요청의 과금이 두 번까지 겹치고, 규칙이 하나 는다 |
-| 생성 마감 60초 · 120초 · 300초 | 60초는 긴 응답을 끊어 과금만 남기고, 300초는 멈춘 요청이 스레드를 오래 쥔다. 120초 · 180초 가운데 리드가 180초를 골랐다 |
+| 생성 마감 60초 · 120초 · 300초 | 60초는 긴 응답을 끊어 과금만 남기고, 300초는 멈춘 요청이 스레드를 오래 쥔다. 120초 · 180초 가운데 180초를 골랐다 |
 | 마감을 Spring AI 선택지 → SDK 요청 선택지로 넘긴다 | Spring AI 가 선택지를 옮기는지에 기대고, 검증 경로는 SDK 의 기본 마감으로 떨어질 수 있다 |

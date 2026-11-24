@@ -58,14 +58,15 @@ public interface EvaluationResultRepository {
 
 	/**
 	 * 그 버전의 평가 가운데 평가 시각이 {@code [from, to)} 이고 커서 뒤인 것과 그 태그 행을 평가 시각 · ID 내림차순으로 한 건씩 넘긴다 —
-	 * sink 가 거짓을 돌려주면 멈춘다. {@code required} 가 있으면 그 태그 종류의 그 키들 가운데 하나의 저장 행이 있는 평가만이다(거르기의
+	 * sink 가 거짓을 돌려주면 멈춘다. {@code required} 의 필요조건마다 그 태그 종류의 그 키들 가운데 하나의 저장 행이 있는 평가만이다(거르기의
 	 * 필요조건 — 붙었는지는 판정이 정한다). {@code formatKey} 가 있으면 대표 형식이 그것인 평가만이다. 커서로 나눠 받으므로 트랜잭션 안에서
 	 * 부른다.
 	 * @param after 커서 — 그 평가 다음부터, 없으면 처음부터
+	 * @param required 필요조건 — 모두 맞아야 한다. 비면 저장 행으로 좁히지 않는다
 	 * @throws IllegalStateException 트랜잭션 밖에서 불렀을 때
 	 */
 	void scanNewestFirst(TagSetId version, Instant from, Instant to, @Nullable EvaluationCursor after,
-			@Nullable StoredKeys required, @Nullable String formatKey, Predicate<ListedEvaluation> sink);
+			List<StoredKeys> required, @Nullable String formatKey, Predicate<ListedEvaluation> sink);
 
 	/**
 	 * 그 버전의 평가 가운데 평가 시각이 {@code [from, to)} 인 것의 ID 를 넘긴다 — 순서 없음. 커서로 나눠 받으므로 트랜잭션 안에서 부른다.
@@ -75,6 +76,9 @@ public interface EvaluationResultRepository {
 
 	/** 평가들과 그 태그 행 — 순서 없음, 없는 ID 는 빠진다 */
 	List<ListedEvaluation> findListed(Collection<EvaluationId> ids);
+
+	/** 기사 하나의 평가들(버전마다 하나)과 그 태그 행 — 순서 없음, 평가하지 않은 기사면 빈 목록 */
+	List<ListedEvaluation> findListedByArticle(ArticleId articleId);
 
 	/** 평가 하나와 그 분포 · 태그 행 */
 	Optional<StoredEvaluationDetail> findDetail(EvaluationId id);

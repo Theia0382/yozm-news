@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-09
-- 근거: [이슈 #116](https://github.com/Theia0382/yozm-news/issues/116) — 큰 사건 판정의 코드 · 소비자 · 평가 도구의 위치를 조사해 거둘 시점과 마일스톤 순서를 리드와 정함
+- 근거: [이슈 #116](https://github.com/Theia0382/yozm-news/issues/116) — 큰 사건 판정의 코드 · 소비자 · 평가 도구의 위치를 조사해 거둘 시점과 마일스톤 순서를 정함
 - 관련: [ADR-0082](0082-big-events-judged-at-query-time-by-distinct-sources-and-mean-importance-both-reaching-criteria.md)(판정의 단위 — 부분 대체), [ADR-0083](0083-big-event-criteria-as-operator-settings-with-append-only-history-and-preview.md)(기준을 둘 곳 — 부분 대체), [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md)(큰 사건 판정과 그 정밀도의 단위 — 부분 대체), [ADR-0028](0028-explicit-signals-and-interest-weighted-candidates.md)(후보 선별 순서와 구독의 큰 사건 슬롯 — 부분 대체), [ADR-0095](0095-event-clustering-evaluated-by-an-operator-tool-comparing-admin-api-results-with-full-day-labels.md) · [ADR-0098](0098-label-rule-2-samples-hold-no-big-event-gold-and-big-event-precision-is-not-measured-without-marks.md)(큰 판정 정밀도와 정답의 단위 — 보충), [ADR-0040](0040-feed-status-stored-in-poll-state-and-rejudged-hourly-by-health-check.md) · [ADR-0048](0048-sign-up-closed-by-default-with-invitations-and-operator-bootstrap.md)(마일스톤 번호 — 보충), [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)(스토리라인)
 
 ## 맥락
@@ -47,3 +47,4 @@
 - 2026-11-17: 결정 "슬롯에 어떤 기사를 넣는지 … 그 설계에서 정한다" — [ADR-0208](0208-the-big-slot-takes-the-representatives-of-the-heaviest-events-of-each-big-storyline-row.md) · 슬롯 수 [ADR-0209](0209-maximum-candidates-and-big-slots-are-user-settings-and-the-big-slot-takes-at-most-half.md), 지금 상태는 [`pipeline` 후보 선별](../pipeline.md#후보-선별) · [digest Spec "후보 선별"](../specs/digest.md#후보-선별)
 - 2026-11-19: 결정 절 "다이제스트의 큰 슬롯 · 선정 이유 · 구독 제안과 변화 리포트의 보도량이 쓰는 '큰' 것" 가운데 구독 제안 — 제안은 큰 판정을 직접 부르지 않고 큰 슬롯 노출을 거친 관심을 본다([ADR-0245](0245-a-topic-suggestion-is-made-when-the-current-interest-of-an-unsubscribed-subtopic-reaches-its-own-threshold.md)), 지금 상태는 [digest Spec "구독 제안"](../specs/digest.md#구독-제안) digest-R41
 - 2026-11-22: 결정 "큰 판정은 구독과 무관하게 알릴 만한 흐름을 고른다"의 큰 판정 행을 사용자의 스토리라인 관심으로 건너뛰는 것 — [ADR-0279](0279-storyline-interest-multiplies-the-candidate-rank-and-flows-at-or-below-the-exclusion-threshold-leave-subscribed-candidates-and-the-big-slot.md) · [digest Spec "후보 선별"](../specs/digest.md#후보-선별) digest-R19
+- 2026-11-23: 결정 "큰 판정은 구독과 무관하게 알릴 만한 흐름을 고른다"의 큰 판정 행을 사용자의 관심을 곱한 순서로 놓고, 주제 관심이 거름 기준 이하인 사건을 넣지 않는 것 — [ADR-0296](0296-the-big-slot-takes-big-judgement-rows-in-the-order-of-intensity-times-the-interest-weight.md) · [ADR-0297](0297-an-event-whose-mean-topic-interest-is-at-or-below-the-exclusion-threshold-does-not-enter-the-big-slot.md) · [digest Spec "후보 선별"](../specs/digest.md#후보-선별) digest-R19

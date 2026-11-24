@@ -1,8 +1,8 @@
 # ADR-0277: 스토리라인 관심은 포함 나무의 꼭대기마다 주제와 같은 산식으로 세고, 7일 안에 다시 본 흐름의 반응 · 노출과 스토리라인 구독은 스토리라인에만 든다
 
-- 상태: 승인. 부분 대체 — 관심의 키인 포함 나무의 꼭대기와 반복의 범위([ADR-0283](0283-storyline-interest-is-keyed-by-user-storyline-and-its-value-is-spread-to-each-top-for-selection.md))
+- 상태: 승인. 부분 대체 — 관심의 키인 포함 나무의 꼭대기와 반복의 범위([ADR-0283](0283-storyline-interest-is-keyed-by-user-storyline-and-its-value-is-spread-to-each-top-for-selection.md)) · 산식이 키 종류에 무관한 하나라는 것([ADR-0298](0298-storyline-interest-drops-silent-exposures-before-the-latest-reacted-exposure-per-flow-and-topics-and-tracking-are-left-out.md)) · 스토리라인 묶음의 처음 값([ADR-0295](0295-the-subscription-signal-of-interest-is-a-term-outside-the-exposure-denominator-and-the-topic-value-is-below-the-presence-threshold.md))
 - 날짜: 2026-11-22
-- 근거: [이슈 #243](https://github.com/Theia0382/yozm-news/issues/243) — 측정 인스턴스의 반응 기록에서 싫어요 74건 가운데 48건이 이미 본 흐름에 눌렸고, 싫어요한 흐름이 다시 나온 항목 83개 가운데 55개가 다시 싫어요였다. 그 싫어요가 사건의 주제로 들어 주제 관심을 끌어내렸다. 리드가 흐름 단위 관심의 꼴 · 나누는 기준 · 반복의 기간 · 스토리라인 구독의 행선지를 골랐다. 구현 커밋 `b1cf943` · `ab1bba5` · `1e95385`
+- 근거: [이슈 #243](https://github.com/Theia0382/yozm-news/issues/243) — 측정 인스턴스의 반응 기록에서 싫어요 74건 가운데 48건이 이미 본 흐름에 눌렸고, 싫어요한 흐름이 다시 나온 항목 83개 가운데 55개가 다시 싫어요였다. 그 싫어요가 사건의 주제로 들어 주제 관심을 끌어내렸다. 흐름 단위 관심의 꼴 · 나누는 기준 · 반복의 기간 · 스토리라인 구독의 행선지를 골랐다. 구현 커밋 `b1cf943` · `ab1bba5` · `1e95385`
 - 관련: [ADR-0214](0214-a-storyline-subscription-enters-topic-interest-by-the-topic-shares-of-its-event-representatives.md)(전체 대체 — 스토리라인 구독은 주제 관심에 들지 않는다), [ADR-0261](0261-event-topics-and-regions-are-keys-on-at-least-half-of-evaluated-members-importance-is-the-maximum-and-digest-counts-them-at-query-time.md)(부분 대체 — 스토리라인 구독의 주제 몫), [ADR-0225](0225-interest-history-values-read-only-the-window-before-each-reference-time-and-the-period-in-progress-is-measured-at-the-call.md)(부분 대체 — 결과의 스토리라인 구독 주제 몫), [ADR-0245](0245-a-topic-suggestion-is-made-when-the-current-interest-of-an-unsubscribed-subtopic-reaches-its-own-threshold.md)(부분 대체 — 맥락의 구독 신호에 든 스토리라인 구독 주제 몫), [ADR-0268](0268-interest-counts-exposures-and-reactions-per-event-splitting-an-item-weight-one-over-n-and-counting-an-event-once-with-its-latest-share.md)(부분 대체 — 주제 관심에 드는 사건을 좁힌다), [ADR-0222](0222-interest-per-subtopic-is-smoothed-reactions-over-exposures-with-a-half-life-and-exposures-are-all-ready-citations.md)(보충 — 같은 산식을 꼭대기 키에도 쓴다), [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)(보충 — 관심사에 스토리라인 관심이 든다), [ADR-0264](0264-the-storyline-tops-query-gives-each-event-its-containment-tree-roots-in-membership-score-order-without-the-scores.md)(꼭대기 조회)
 
 ## 맥락
@@ -14,7 +14,7 @@
 
 ## 결정
 
-> 부분 대체(아래 세 항목의 키 — 꼭대기마다 · 그 사건의 꼭대기 · 지금 꼭대기의 스토리라인 관심) — [ADR-0283](0283-storyline-interest-is-keyed-by-user-storyline-and-its-value-is-spread-to-each-top-for-selection.md). 지금 상태: [digest Spec "관심도"](../specs/digest.md#관심도) digest-R49 · R50
+> 부분 대체 — 아래 세 항목의 키(꼭대기마다 · 그 사건의 꼭대기 · 지금 꼭대기의 스토리라인 관심)는 [ADR-0283](0283-storyline-interest-is-keyed-by-user-storyline-and-its-value-is-spread-to-each-top-for-selection.md), 첫 항목의 "산식(평활 · 반감기 감쇠 · 가중치 변환)은 키 종류에 무관한 하나"는 [ADR-0298](0298-storyline-interest-drops-silent-exposures-before-the-latest-reacted-exposure-per-flow-and-topics-and-tracking-are-left-out.md), 첫 항목의 "스토리라인 묶음의 처음 값은 주제 묶음과 같다"는 [ADR-0295](0295-the-subscription-signal-of-interest-is-a-term-outside-the-exposure-denominator-and-the-topic-value-is-below-the-presence-threshold.md). 지금 상태: [digest Spec "관심도"](../specs/digest.md#관심도) digest-R23 · R49 · R50
 - **스토리라인 관심은 포함 나무의 꼭대기마다 주제 관심과 같은 산식으로 센다.** 산식(평활 · 반감기 감쇠 · 가중치 변환)은 키 종류에 무관한 하나이고, 상수는 키 종류마다 묶음으로 둔다 — 스토리라인 묶음의 처음 값은 주제 묶음과 같다. 사건의 꼭대기가 k 개면 그 사건은 꼭대기마다 몫 1/k 로 든다.
 - **사건의 첫 노출 날짜 앞 7일 안(앞선 날짜)에 그 사건의 꼭대기가 노출됐으면 다시 본 흐름의 사건(반복)이다.** 꼭대기가 없는 사건은 주제 관심에만, 처음 본 흐름의 사건은 주제 · 스토리라인 관심 둘 다, 반복인 사건은 스토리라인 관심에만 든다. 노출과 반응은 같은 길을 간다.
 - **스토리라인 구독 변경은 그 스토리라인의 지금 꼭대기의 스토리라인 관심에만 든다.** 주제 관심에는 들지 않는다.

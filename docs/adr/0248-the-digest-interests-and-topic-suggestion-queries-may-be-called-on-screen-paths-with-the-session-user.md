@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-19
-- 근거: [이슈 #188](https://github.com/Theia0382/yozm-news/issues/188) — 제안 조회가 화면 요청 안에서 지금 주제 구독을 읽어야 함을 확인하고 리드와 정함. 구현 커밋 `3ecb800` · `bdf6bb1` · `ac24312`
+- 근거: [이슈 #188](https://github.com/Theia0382/yozm-news/issues/188) — 제안 조회가 화면 요청 안에서 지금 주제 구독을 읽어야 함을 확인하고 정함. 구현 커밋 `3ecb800` · `bdf6bb1` · `ac24312`
 - 관련: [ADR-0228](0228-consumer-queries-scoped-by-a-user-argument-may-be-called-on-screen-paths-with-the-session-user.md)(부분 대체 — 결정 절의 대상 목록과 결과 절의 "다이제스트가 읽는 관심 설정(`DigestInterestsDirectory`)은 … '백그라운드 작업 전용' 그대로다"), [ADR-0247](0247-topic-suggestion-declines-are-kept-by-user-with-the-recorded-version-and-digest-answers-the-interest-at-decline-through-an-interface-declared-by-user.md)(거절의 조회 · 공급 인터페이스)
 
 ## 맥락

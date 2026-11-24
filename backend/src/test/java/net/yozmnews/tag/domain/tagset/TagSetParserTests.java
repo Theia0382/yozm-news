@@ -274,11 +274,32 @@ class TagSetParserTests {
 	}
 
 	@Test
-	void rejectsImportanceLevelsThatAreNotOneToFiveOnceEach() {
-		assertThat(problems(VALID.replace("  - { level: 5, description: 다섯 }\n", "")))
+	void acceptsImportanceLevelsFromOneWithoutGapsFromTwoToFive() {
+		assertThat(parsed(VALID).content().importance()).extracting(ImportanceLevelDef::level)
+			.containsExactly(1, 2, 3, 4, 5);
+		String four = VALID.replace("  - { level: 5, description: 다섯 }\n", "");
+		assertThat(parsed(four).content().importance()).extracting(ImportanceLevelDef::level).containsExactly(1, 2, 3, 4);
+		String two = VALID.replace("  - { level: 3, description: 셋 }\n", "")
+			.replace("  - { level: 4, description: 넷 }\n", "")
+			.replace("  - { level: 5, description: 다섯 }\n", "");
+		assertThat(parsed(two).content().importance()).extracting(ImportanceLevelDef::level).containsExactly(1, 2);
+	}
+
+	@Test
+	void rejectsImportanceLevelsThatAreNotOneWithoutGapsOrNotTwoToFive() {
+		String onlyOne = VALID.replace("  - { level: 2, description: 둘 }\n", "")
+			.replace("  - { level: 3, description: 셋 }\n", "")
+			.replace("  - { level: 4, description: 넷 }\n", "")
+			.replace("  - { level: 5, description: 다섯 }\n", "");
+		assertThat(problems(onlyOne)).containsExactly("importance INVALID_IMPORTANCE_LEVELS");
+		assertThat(problems(VALID.replace("  - { level: 1, description: 하나 }\n", "")))
 			.containsExactly("importance INVALID_IMPORTANCE_LEVELS");
-		assertThat(problems(VALID.replace("  - { level: 1, description: 하나 }\n",
-				"  - { level: 1, description: 하나 }\n  - { level: 1, description: 또 하나 }\n")))
+		assertThat(problems(VALID.replace("  - { level: 3, description: 셋 }\n", "")))
+			.containsExactly("importance INVALID_IMPORTANCE_LEVELS");
+		assertThat(problems(VALID.replace("  - { level: 5, description: 다섯 }\n",
+				"  - { level: 5, description: 다섯 }\n  - { level: 6, description: 여섯 }\n")))
+			.containsExactly("importance INVALID_IMPORTANCE_LEVELS");
+		assertThat(problems(VALID.replace("{ level: 5, description: 다섯 }", "{ level: 1, description: 또 하나 }")))
 			.containsExactly("importance INVALID_IMPORTANCE_LEVELS");
 		assertThat(problems(VALID.replace("{ level: 5, description: 다섯 }", "{ level: 0, description: 영 }")))
 			.containsExactly("importance INVALID_IMPORTANCE_LEVELS");

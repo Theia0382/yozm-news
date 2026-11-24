@@ -21,7 +21,7 @@ record StorylineTrackingStatesResponse(List<State> states) {
 
 	/**
 	 * @param storylineId 받은 스토리라인 ID
-	 * @param tracked 그 스토리라인의 꼭대기를 추적 대상으로 가진 사용자 스토리라인이 추적 중인가 — 없는 스토리라인은 false
+	 * @param tracked 그 스토리라인의 꼭대기를 추적 대상으로 가진 사용자 스토리라인 가운데 하나라도 추적 중인가 — 없는 스토리라인은 false
 	 */
 	record State(long storylineId, boolean tracked) {
 	}

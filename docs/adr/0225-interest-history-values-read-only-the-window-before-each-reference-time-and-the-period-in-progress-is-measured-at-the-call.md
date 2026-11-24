@@ -2,7 +2,7 @@
 
 - 상태: 승인. 부분 대체 — 결과의 스토리라인 구독 주제 몫([ADR-0277](0277-storyline-interest-is-counted-per-containment-tree-top-with-the-topic-formula-and-reactions-to-a-flow-seen-within-seven-days-go-to-the-storyline-only.md))
 - 날짜: 2026-11-18
-- 근거: [이슈 #189](https://github.com/Theia0382/yozm-news/issues/189) — 관심도 재료 읽기의 범위와 감쇠를 대조해 지난 기간 값에 그 뒤 신호가 섞이는 것을 확인하고 리드와 정함. 구현 커밋 `77bfe43` · `7d7a1f8` · `bb602eb`
+- 근거: [이슈 #189](https://github.com/Theia0382/yozm-news/issues/189) — 관심도 재료 읽기의 범위와 감쇠를 대조해 지난 기간 값에 그 뒤 신호가 섞이는 것을 확인하고 정함. 구현 커밋 `77bfe43` · `7d7a1f8` · `bb602eb`
 - 관련: [ADR-0222](0222-interest-per-subtopic-is-smoothed-reactions-over-exposures-with-a-half-life-and-exposures-are-all-ready-citations.md)(결정 "기준 시각은 기간 끝이고, 읽는 범위의 끝은 부르는 시각이다" — 다이제스트에 적용되는 규칙으로 밝힘, 보충), [ADR-0215](0215-interests-are-not-stored-entities-and-are-computed-from-signal-history-at-query-time.md)(결정 "관심사 히스토리도 기간마다 같은 산식으로 계산해 견준다" · 결과 "기간 여럿을 매번 계산한다(비용 미측정)" — 보충), [ADR-0028](0028-explicit-signals-and-interest-weighted-candidates.md)(관심도는 조회할 때 계산한다)
 
 ## 맥락

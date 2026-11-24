@@ -7,6 +7,8 @@ import java.util.Map;
 import java.util.Optional;
 
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.event.ArticleAssignment;
+import net.yozmnews.event.ArticleKeyTerms;
 import net.yozmnews.event.EventArticleView;
 import net.yozmnews.event.EventNeighbor;
 import net.yozmnews.event.EventProfile;
@@ -35,6 +37,15 @@ public interface EventQueryRepository {
 
 	/** 기사 → 사건 ID — 배정이 없는 기사는 빠진다 */
 	Map<ArticleId, Long> eventsOf(Collection<ArticleId> articleIds);
+
+	/**
+	 * 기사 하나의 배정과 그 기준 이력 · 저장 후보 — 한 문장이다. 저장 후보는 점수 내림차순 · 사건 ID 순이고, 후보의 지금 사건은 합쳐졌으면 남는
+	 * 사건이다. 배정이 없으면 빈 값
+	 */
+	Optional<ArticleAssignment> assignmentOf(ArticleId articleId);
+
+	/** 기사 하나의 표현마다 핵심 말 — 만든 시각 · 모델 버전 순, 벡터는 읽지 않는다 */
+	List<ArticleKeyTerms> keyTermsOf(ArticleId articleId);
 
 	/** 사건 기사 전체에서 사건마다 대표 기사 — 닫을 때 남긴 대표가 있으면 그것 */
 	Map<Long, ArticleId> representativesOfAll(Collection<Long> eventIds);

@@ -90,6 +90,14 @@ describe("EvaluationDetail", () => {
     expect(document.body.textContent).not.toContain("2.5000000000000004");
   });
 
+  it("기사는 기사 상세로 잇는다", async () => {
+    renderAlone(<EvaluationDetail detail={detail(9)} />);
+
+    expect(
+      await screen.findByRole("link", { name: "기사 상세" }),
+    ).toHaveAttribute("href", "/admin/articles/109");
+  });
+
   it("그새 지운 기사는 평가 결과만 보인다", async () => {
     renderAlone(<EvaluationDetail detail={{ ...detail(9), article: null }} />);
 
@@ -99,5 +107,7 @@ describe("EvaluationDetail", () => {
       ),
     ).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "원문 열기" })).toBeNull();
+    // 지운 기사는 상세가 없어 잇지 않는다
+    expect(screen.queryByRole("link", { name: "기사 상세" })).toBeNull();
   });
 });

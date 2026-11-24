@@ -1,6 +1,6 @@
 # ADR-0174: 큰 판정 기준의 처음 값은 평가 세트가 이웃한 값을 가르지 못해 운영자의 날마다 미리보기 검수로 정한다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 처음 값([ADR-0299](0299-the-big-judgement-criterion-first-value-is-fourteen-to-keep-its-strictness-on-the-four-level-importance-scale.md))
 - 날짜: 2026-11-15
 - 근거: [이슈 #126](https://github.com/Theia0382/yozm-news/issues/126) — 정한 잇기 기준 위에서 평가 세트로 큰 판정 기준 후보를 견주고, 실측 인스턴스의 날마다 미리보기를 운영자가 검수함
 - 관련: [ADR-0147](0147-storyline-big-judgement-compares-importance-weighted-coverage-per-source-and-day-with-one-criterion-at-query-time.md)(결정 절 "처음 값은 평가 세트로 정한 측정 전 목표다" — 보충), [ADR-0118](0118-big-judgement-criteria-are-storyline-operator-settings-and-do-not-inherit-event-criteria-values-or-history.md)(맥락 절 "기준값은 측정 전 목표이고 평가 세트와 운영자의 표본 검수로 맞춘다" · 결정 절 "처음 값은 측정 전 목표다" — 보충), [ADR-0173](0173-storyline-linking-threshold-default-chosen-for-precision-on-an-evaluation-set-grid-and-operator-sample-review.md)(잇기 기준 — 큰 판정은 그 위에서 잰다), [ADR-0103](0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md)(M4 완료 기준), [ADR-0096](0096-instance-bound-evaluation-data-kept-out-of-the-public-repository-and-defaults-cite-only-the-evaluation-set.md)(근거 수치를 공개 문서에 적지 않는다)
@@ -14,6 +14,7 @@
 
 ## 결정
 
+> 부분 대체(첫 문장) — [ADR-0299](0299-the-big-judgement-criterion-first-value-is-fourteen-to-keep-its-strictness-on-the-four-level-importance-scale.md). 지금 상태: [storyline Spec "큰 판정"](../specs/storyline.md#큰-판정)
 - **큰 판정 기준의 처음 값은 15.00 그대로다.** 값의 정본은 `BigStorylineCriteria.DEFAULT` 와 [storyline Spec "큰 판정"](../specs/storyline.md#큰-판정)이다.
 - **잇기 기준을 먼저 정하고 큰 판정 기준은 그 위에서 잰다.**
 - **값은 평가 세트와 운영자의 날마다 미리보기 검수로 정하고, 평가 세트가 값을 가르지 못하거나 둘이 엇갈리면 검수를 따른다.** 검수는 실측 인스턴스의 날마다, 후보 값 가운데 가장 낮은 값 이상의 스토리라인을 모두 놓고 그날 알릴 만한가를 판정한다. 낮은 기준의 목록이 높은 기준의 목록을 품으므로 한 번의 판정으로 모든 후보 값의 결과를 낸다.

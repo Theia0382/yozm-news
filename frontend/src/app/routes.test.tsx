@@ -4,6 +4,7 @@ import { createMemoryRouter } from "react-router";
 import { RouterProvider } from "react-router/dom";
 import { describe, expect, it } from "vitest";
 import { routes } from "@/app/routes";
+import { ArticleDetailPage } from "@/features/admin/ArticleDetailPage";
 import { BigStorylinesPage } from "@/features/admin/BigStorylinesPage";
 import { CollectionPage } from "@/features/admin/CollectionPage";
 import { EvaluationDetailPage } from "@/features/admin/EvaluationDetailPage";
@@ -198,6 +199,7 @@ describe("routes", () => {
     ["thresholds", "ThresholdsPage", () => ThresholdsPage],
     ["events", "EventsPage", () => EventsPage],
     ["events/:id", "EventDetailPage", () => EventDetailPage],
+    ["articles/:id", "ArticleDetailPage", () => ArticleDetailPage],
     ["storylines", "StorylinesPage", () => StorylinesPage],
     ["storylines/:id", "StorylineDetailPage", () => StorylineDetailPage],
     ["big-storylines", "BigStorylinesPage", () => BigStorylinesPage],

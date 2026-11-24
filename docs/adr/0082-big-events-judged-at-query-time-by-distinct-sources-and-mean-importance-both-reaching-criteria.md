@@ -2,7 +2,7 @@
 
 - 상태: 대체됨([ADR-0116](0116-storyline-big-judgement-starts-with-a-provisional-rule-of-distinct-sources-and-mean-importance-judged-at-query-time.md))
 - 날짜: 2026-11-07
-- 근거: [이슈 #99](https://github.com/Theia0382/yozm-news/issues/99) — 판정 재료(배정 · 기사 소스 · 중요도)의 위치와 다이제스트 · 운영자 화면 · 리포트의 요구를 조사해 리드와 정하고 구현(`1434b77` · `bd84e7d`)
+- 근거: [이슈 #99](https://github.com/Theia0382/yozm-news/issues/99) — 판정 재료(배정 · 기사 소스 · 중요도)의 위치와 다이제스트 · 운영자 화면 · 리포트의 요구를 조사해 정하고 구현(`1434b77` · `bd84e7d`)
 - 관련: [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md)(결정 절 "큰 사건은 조회 시점에 판정한다 — 사건의 서로 다른 소스 수와 기사의 Jev 중요도"의 식을 정한다, 후속 기록), [ADR-0083](0083-big-event-criteria-as-operator-settings-with-append-only-history-and-preview.md)(기준을 둘 곳)
 
 ## 맥락

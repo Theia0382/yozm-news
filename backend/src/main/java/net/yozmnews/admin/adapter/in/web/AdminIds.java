@@ -2,6 +2,7 @@ package net.yozmnews.admin.adapter.in.web;
 
 import java.util.function.LongFunction;
 
+import net.yozmnews.article.ArticleId;
 import net.yozmnews.event.EventId;
 import net.yozmnews.source.FeedId;
 import net.yozmnews.source.SourceId;
@@ -12,9 +13,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
- * 경로의 ID — 1 미만은 있을 수 없는 소스 · 피드 · 태그 체계 버전 · 평가 · 사건이라 404 다(식별자 생성자의 예외가 500 으로 새지 않게). docs/specs/admin.md §4 · admin-R2.
+ * 경로의 ID — 1 미만은 있을 수 없는 소스 · 피드 · 태그 체계 버전 · 평가 · 사건 · 기사라 404 다(식별자 생성자의 예외가 500 으로 새지 않게). docs/specs/admin.md §4 · admin-R2.
  */
 final class AdminIds {
+
+	private static final String ARTICLE = "기사";
 
 	private static final String TAG_SET = "태그 체계 버전";
 
@@ -73,6 +76,15 @@ final class AdminIds {
 
 	static ResponseStatusException unknownStoryline(long id) {
 		return notFound(STORYLINE, id);
+	}
+
+	static ArticleId article(long id) {
+		return positive(id, ARTICLE, ArticleId::new);
+	}
+
+	/** 없는 기사의 404 — 1 미만 ID 와 없는(지운) 기사의 상세가 함께 쓴다 */
+	static ResponseStatusException unknownArticle(long id) {
+		return notFound(ARTICLE, id);
 	}
 
 	private static <T> T positive(long id, String target, LongFunction<T> create) {

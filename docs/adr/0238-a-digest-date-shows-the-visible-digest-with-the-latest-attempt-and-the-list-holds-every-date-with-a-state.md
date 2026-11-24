@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-18
-- 근거: [이슈 #179](https://github.com/Theia0382/yozm-news/issues/179) — 수용 기준 "날짜별 최신 `READY`", "생성 중 · `EMPTY` · `FAILED`", 리드와 정함(목록은 행이 있는 모든 날짜). 구현 커밋 `39e730a` · `cbe227c` · `7dbf1de`
+- 근거: [이슈 #179](https://github.com/Theia0382/yozm-news/issues/179) — 수용 기준 "날짜별 최신 `READY`", "생성 중 · `EMPTY` · `FAILED`", 정함(목록은 행이 있는 모든 날짜). 구현 커밋 `39e730a` · `cbe227c` · `7dbf1de`
 - 관련: [ADR-0193](0193-the-per-user-storyline-information-is-the-received-news-counted-from-the-digest-shown-for-each-date.md)(관련 — 날짜별로 보이는 다이제스트의 정의를 화면이 그대로 쓴다), [ADR-0231](0231-manual-generation-remakes-todays-digest-with-its-period-or-makes-a-new-one-and-counts-manual-rows-of-the-users-day.md)(관련 — 같은 날짜를 다시 만들기)
 
 ## 맥락

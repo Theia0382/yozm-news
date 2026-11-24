@@ -2,7 +2,7 @@
 
 - 상태: 승인. 부분 대체 — 점수 산식([ADR-0121](0121-storyline-linking-scores-centroid-cosine-plus-idf-weighted-key-term-overlap-without-time-decay-jev-or-topic-tags.md)) · 점수가 가장 높은 하나 · 점수 순 짝 고르기([ADR-0194](0194-storyline-linking-asks-jev-only-for-band-candidates-and-reuses-recorded-probabilities-until-either-side-doubles.md)) · 기준선이라는 자리([ADR-0121](0121-storyline-linking-scores-centroid-cosine-plus-idf-weighted-key-term-overlap-without-time-decay-jev-or-topic-tags.md)) · 사건 하나인 스토리라인 · 같은 흐름이 둘로 열린 스토리라인이 남는다는 결과([ADR-0108](0108-storylines-with-the-same-events-merge-and-a-storyline-left-with-one-event-merges-or-dissolves.md))
 - 날짜: 2026-11-10
-- 근거: [이슈 #127](https://github.com/Theia0382/yozm-news/issues/127) — 잇는 방법을 평가 세트로 견줄 기준선. 소속 판정의 꼴 · 붙일 곳 없는 사건 · 짝 찾기를 리드와 정함
+- 근거: [이슈 #127](https://github.com/Theia0382/yozm-news/issues/127) — 잇는 방법을 평가 세트로 견줄 기준선. 소속 판정의 꼴 · 붙일 곳 없는 사건 · 짝 찾기를 정함
 - 관련: [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)(결정 "소속을 정하는 방법은 스토리라인을 구현할 때 정한다" — 보충, 임시 판), [ADR-0105](0105-storylines-link-incrementally-from-event-change-notifications-and-events-publish-changed-event-ids.md)(이 규칙이 도는 틀)
 
 ## 맥락

@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-22
-- 근거: [이슈 #237](https://github.com/Theia0382/yozm-news/issues/237) — 기점 `d25590c` 의 다이제스트 출력 서술 · 읽기 코드에서 다이제스트를 모르는 부분을 가려 확인하고, 리드가 `digest` 공개와 견준 뒤 `platform` 을 골랐다
+- 근거: [이슈 #237](https://github.com/Theia0382/yozm-news/issues/237) — 기점 `d25590c` 의 다이제스트 출력 서술 · 읽기 코드에서 다이제스트를 모르는 부분을 가려 확인하고, `digest` 공개와 견준 뒤 `platform` 을 골랐다
 - 관련: [ADR-0056](0056-platform-reads-yaml-text-and-applies-common-rejection.md)(같은 꼴 — YAML 원문 읽기), [ADR-0199](0199-generation-requests-carry-only-the-tasks-own-inputs-and-the-gateway-maps-them-to-each-provider.md)(부르는 쪽이 읽기 · 검증을 맡는다 — 바뀌지 않는다), [ADR-0269](0269-the-digest-output-keys-top-stories-by-item-alias-as-required-fields-and-lists-headlines-as-elements.md)(다이제스트 서술 — 바뀌지 않는다)
 
 ## 맥락

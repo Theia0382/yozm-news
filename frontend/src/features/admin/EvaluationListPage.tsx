@@ -34,8 +34,10 @@ const PAGE_SIZE = 20;
 const STATUSES: TopicStatus[] = ["TAGGED", "LOW_CONFIDENCE", "UNCLASSIFIED"];
 
 /**
- * 평가 결과 — 버전 하나의 평가 가운데 평가 시각이 기간 안인 것을 최근 것부터 본다. 태그 · 주제 판정으로 거르고, 선택지 옆의 수는 같은 버전 ·
- * 기간의 평가 현황이 낸 값이다(목록은 따로 세지 않는다). 상태는 주소 질의에 둔다.
+ * 평가 결과 — 버전 하나의 평가 가운데 평가 시각이 기간 안인 것을 최근 것부터 본다. 태그 여럿 · 주제 판정으로 거르면 고른 것이 모두 맞는 평가만
+ * 나온다. 선택지 옆의 수는 같은 버전 · 기간의 평가 현황이 태그 하나 · 주제 판정 하나로 센 값이다(목록은 따로 세지 않는다). 상태는 주소 질의에
+ * 둔다 — 고른 태그는 `tags` 를 고른 순서로 되풀이한 `{종류}:{키}` 다. 고를 수 있는 태그 수는 목록 응답이 알려 준 상한이고, 아직 모르면
+ * 막지 않는다(정본은 서버의 400).
  */
 export function EvaluationListPage() {
   const client = useAdminClient();
@@ -43,6 +45,7 @@ export function EvaluationListPage() {
   const [zone] = useState(browserZone);
   const tagId = useId();
   const statusId = useId();
+  const [maxTags, setMaxTags] = useState<number | null>(null);
   const versions = useTagSetVersions();
   const version = chosenOrActive(
     params.has("version") ? Number(params.get("version")) : null,
@@ -50,20 +53,20 @@ export function EvaluationListPage() {
   );
   const first = params.get("from") ?? defaultFirst(zone);
   const last = params.get("to") ?? today(zone);
-  const tagKind = params.get("tagKind") as TagKind | null;
-  const tag = params.get("tag");
+  const tags = [...new Set(params.getAll("tags"))];
   const topicStatus = params.get("topicStatus") as TopicStatus | null;
   const period = { from: first, to: last, zone };
   const filled = first !== "" && last !== "";
 
-  const update = (changes: Record<string, string | null>) =>
+  const update = (changes: Record<string, string | string[] | null>) =>
     setParams((current) => {
       const next = new URLSearchParams(current);
       for (const [key, value] of Object.entries(changes)) {
-        if (value === null || value === "") {
-          next.delete(key);
-        } else {
-          next.set(key, value);
+        next.delete(key);
+        for (const item of value === null ? [] : [value].flat()) {
+          if (item !== "") {
+            next.append(key, item);
+          }
         }
       }
       return next;
@@ -71,15 +74,7 @@ export function EvaluationListPage() {
 
   const overview = useEvaluationOverview(version, period, filled);
   const list = useInfiniteQuery({
-    queryKey: [
-      ...EVALUATION_KEY,
-      "list",
-      version,
-      period,
-      tagKind,
-      tag,
-      topicStatus,
-    ],
+    queryKey: [...EVALUATION_KEY, "list", version, period, tags, topicStatus],
     initialPageParam: null as { at: string; id: number } | null,
     queryFn: ({ pageParam }) =>
       unwrap(
@@ -88,7 +83,7 @@ export function EvaluationListPage() {
             query: {
               version: version ?? 0,
               ...period,
-              ...(tagKind && tag ? { tagKind, tag } : {}),
+              ...(tags.length > 0 ? { tags } : {}),
               ...(topicStatus ? { topicStatus } : {}),
               ...(pageParam
                 ? { afterEvaluatedAt: pageParam.at, afterId: pageParam.id }
@@ -105,6 +100,13 @@ export function EvaluationListPage() {
     enabled: filled && version !== null,
   });
   const rows = list.data?.pages.flatMap((page) => page.rows) ?? [];
+  const latestMaxTags = list.data?.pages[0]?.maxTags;
+
+  // 상한은 서버가 낸 값을 기억한다 — 거르기가 바뀌어 새 목록을 받는 사이 · 400 뒤에도 막도록. 응답이 바뀐 렌더에서 바로 맞춘다(효과를 거치지 않는다)
+  if (latestMaxTags !== undefined && latestMaxTags !== maxTags) {
+    setMaxTags(latestMaxTags);
+  }
+  const full = maxTags !== null && tags.length >= maxTags;
 
   return (
     <div className="space-y-6">
@@ -121,31 +123,25 @@ export function EvaluationListPage() {
         <VersionSelect
           versions={versions}
           value={version}
-          onChange={(value) =>
-            update({ version: String(value), tagKind: null, tag: null })
-          }
+          onChange={(value) => update({ version: String(value), tags: null })}
         />
         <label htmlFor={tagId} className="flex items-center gap-2">
-          태그
+          태그 더하기
           <select
             id={tagId}
-            value={tagKind && tag ? `${tagKind}:${tag}` : ""}
-            onChange={(event) => {
-              const value = event.target.value;
-              const separator = value.indexOf(":");
-              update(
-                separator < 0
-                  ? { tagKind: null, tag: null }
-                  : {
-                      tagKind: value.slice(0, separator),
-                      tag: value.slice(separator + 1),
-                    },
-              );
-            }}
+            value=""
+            disabled={full}
+            onChange={(event) =>
+              update({ tags: withTag(tags, event.target.value) })
+            }
             className="rounded-md border border-input px-2 py-1"
           >
-            <option value="">전체</option>
-            {overview.data && <TagOptions overview={overview.data} />}
+            <option value="">
+              {full ? `${maxTags}개까지 고른다` : "고르기"}
+            </option>
+            {overview.data && (
+              <TagOptions overview={overview.data} chosen={tags} />
+            )}
           </select>
         </label>
         <label htmlFor={statusId} className="flex items-center gap-2">
@@ -166,11 +162,38 @@ export function EvaluationListPage() {
           </select>
         </label>
       </div>
+      {tags.length > 0 && (
+        <ul aria-label="고른 태그" className="flex flex-wrap gap-2 text-sm">
+          {tags.map((value) => {
+            const { group, name } = describeTag(value, overview.data);
+            return (
+              <li
+                key={value}
+                className="flex items-center gap-1 rounded-md border border-input py-0.5 pr-1 pl-2"
+              >
+                <span className="text-muted-foreground">{group}</span>
+                {name}
+                <button
+                  type="button"
+                  aria-label={`${name} 빼기`}
+                  onClick={() =>
+                    update({ tags: tags.filter((tag) => tag !== value) })
+                  }
+                  className="rounded px-1 hover:bg-muted"
+                >
+                  ×
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
       {overview.data && (
         <p className="text-sm text-muted-foreground">
           이 버전 · 기간의 평가{" "}
           {overview.data.evaluations.toLocaleString("ko-KR")}건 — 선택지 옆의
-          수는 평가 현황의 수다
+          수는 평가 현황이 태그 하나 · 주제 판정 하나로 센 수다. 태그를 여럿
+          고르면 고른 태그가 모두 맞는 평가만 나온다
         </p>
       )}
       {list.error && <p role="alert">{failureText(list.error)}</p>}
@@ -192,14 +215,64 @@ export function EvaluationListPage() {
   );
 }
 
-function TagOptions({ overview }: { overview: Overview }) {
+/** 고른 태그에 하나를 더한다 — 대표 형식은 평가마다 하나라 형식 태그는 고른 형식을 바꾼다 */
+function withTag(tags: string[], value: string): string[] {
+  if (value === "" || tags.includes(value)) {
+    return tags;
+  }
+  const kept = value.startsWith("FORMAT:")
+    ? tags.filter((tag) => !tag.startsWith("FORMAT:"))
+    : tags;
+  return [...kept, value];
+}
+
+/** 고른 태그의 갈래와 이름 — 평가 현황에 없으면(받기 전 · 그 버전에 없는 키) 키를 그대로 쓴다 */
+function describeTag(
+  value: string,
+  overview: Overview | undefined,
+): { group: string; name: string } {
+  const separator = value.indexOf(":");
+  const kind = value.slice(0, separator);
+  const key = value.slice(separator + 1);
+  const named = (shares: Overview["topics"] | undefined) =>
+    shares?.find((share) => share.key === key)?.name;
+  switch (kind) {
+    case "TOPIC": {
+      const category = named(overview?.topicCategories);
+      if (category !== undefined) {
+        return { group: "주제 대분류", name: category };
+      }
+      const topic = named(overview?.topics);
+      return topic !== undefined
+        ? { group: "주제 중분류", name: topic }
+        : { group: "주제", name: key };
+    }
+    case "REGION":
+      return { group: "지역", name: named(overview?.regions) ?? key };
+    case "FORMAT":
+      return { group: "형식", name: named(overview?.formats) ?? key };
+    default:
+      return { group: "", name: value };
+  }
+}
+
+function TagOptions({
+  overview,
+  chosen,
+}: {
+  overview: Overview;
+  chosen: string[];
+}) {
   const group = (label: string, kind: TagKind, shares: Overview["topics"]) => (
     <optgroup label={label}>
-      {shares.map((share) => (
-        <option key={share.key} value={`${kind}:${share.key}`}>
-          {share.name} ({share.share.count})
-        </option>
-      ))}
+      {shares.map((share) => {
+        const value = `${kind}:${share.key}`;
+        return (
+          <option key={value} value={value} disabled={chosen.includes(value)}>
+            {share.name} ({share.share.count})
+          </option>
+        );
+      })}
     </optgroup>
   );
   return (
@@ -207,7 +280,7 @@ function TagOptions({ overview }: { overview: Overview }) {
       {group("주제 대분류", "TOPIC", overview.topicCategories)}
       {group("주제 중분류", "TOPIC", overview.topics)}
       {group("지역", "REGION", overview.regions)}
-      {group("형식(대표 형식)", "FORMAT", overview.formats)}
+      {group("형식(대표 형식 — 하나만)", "FORMAT", overview.formats)}
     </>
   );
 }

@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-07
-- 근거: [이슈 #95](https://github.com/Theia0382/yozm-news/issues/95) — 로컬 모델 · OpenAI 호환 외부 API · 직접 띄우는 임베딩 서버(TEI)를 같은 기사 표본(사건 38개 · 기사 139건)으로 실측하고, 외부 상용 모델 17개를 OpenRouter · Upstage 로 잰 뒤 리드와 정함
+- 근거: [이슈 #95](https://github.com/Theia0382/yozm-news/issues/95) — 로컬 모델 · OpenAI 호환 외부 API · 직접 띄우는 임베딩 서버(TEI)를 같은 기사 표본(사건 38개 · 기사 139건)으로 실측하고, 외부 상용 모델 17개를 OpenRouter · Upstage 로 잰 뒤 정함
 - 관련: [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md)(결정 절 "기본 구현은 로컬 모델(ONNX Runtime)이고, 설정으로 외부 임베딩 API 로 바꿀 수 있다"의 구체 — 보충, 후속 기록), [ADR-0091](0091-local-embedding-model-is-multilingual-e5-small-int8-fetched-at-build-into-the-image-with-onnx-telemetry-off.md)(기본 로컬 모델), [ADR-0089](0089-long-term-hnsw-indexes-on-closed-events-created-per-model-version-at-runtime-by-the-worker-role.md)(차원 상한의 근거), [ADR-0075](0075-article-vectors-in-a-dimensionless-vector-column-one-row-per-model-version.md) · [ADR-0079](0079-event-centroids-in-a-dimensionless-halfvec-column-with-a-model-version-per-event.md)(방식 · 모델을 바꾸면 새 모델 버전)
 
 ## 맥락

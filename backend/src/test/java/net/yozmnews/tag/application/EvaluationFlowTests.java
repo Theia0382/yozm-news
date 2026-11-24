@@ -810,7 +810,7 @@ class EvaluationFlowTests {
 		@Override
 		public void scanNewestFirst(net.yozmnews.tag.TagSetId version, Instant from, Instant to,
 				net.yozmnews.tag.@Nullable EvaluationCursor after,
-				net.yozmnews.tag.domain.review.@Nullable StoredKeys required, @Nullable String formatKey,
+				List<net.yozmnews.tag.domain.review.StoredKeys> required, @Nullable String formatKey,
 				java.util.function.Predicate<net.yozmnews.tag.domain.result.ListedEvaluation> sink) {
 			this.delegate.scanNewestFirst(version, from, to, after, required, formatKey, sink);
 		}
@@ -825,6 +825,11 @@ class EvaluationFlowTests {
 		public List<net.yozmnews.tag.domain.result.ListedEvaluation> findListed(
 				java.util.Collection<net.yozmnews.tag.EvaluationId> ids) {
 			return this.delegate.findListed(ids);
+		}
+
+		@Override
+		public List<net.yozmnews.tag.domain.result.ListedEvaluation> findListedByArticle(ArticleId articleId) {
+			return this.delegate.findListedByArticle(articleId);
 		}
 
 		@Override

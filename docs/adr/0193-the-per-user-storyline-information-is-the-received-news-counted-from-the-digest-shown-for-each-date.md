@@ -2,7 +2,7 @@
 
 - 상태: 승인. 부분 대체 — 사용자마다 달라지는 스토리라인 정보([ADR-0287](0287-user-storyline-summaries-are-made-and-stored-by-user-with-the-users-key-and-digest-supplies-the-flow-standing.md))
 - 날짜: 2026-11-16
-- 근거: [이슈 #180](https://github.com/Theia0382/yozm-news/issues/180) — 기점 `0a8b984` 의 다이제스트 저장(`V46__digests.sql` — 다이제스트 · 섹션 · 인용)과 사건 조회(`EventDirectory`)를 대조하고, 스토리라인 화면의 개인 정보를 리드와 정함
+- 근거: [이슈 #180](https://github.com/Theia0382/yozm-news/issues/180) — 기점 `0a8b984` 의 다이제스트 저장(`V46__digests.sql` — 다이제스트 · 섹션 · 인용)과 사건 조회(`EventDirectory`)를 대조하고, 스토리라인 화면의 개인 정보를 정함
 - 관련: [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)(보충 — 결정 "개인 쪽은 스토리라인 구독과 관심사 둘이다"의 "둘지는 다이제스트 설계"를 정한다), [ADR-0192](0192-reader-screens-are-composed-by-the-reader-module-over-module-public-queries.md)(맞붙이는 모듈), [ADR-0186](0186-digests-follow-removed-articles-by-deleting-their-rows-and-show-no-summary-without-any-citation.md)(지운 기사의 인용)
 
 ## 맥락

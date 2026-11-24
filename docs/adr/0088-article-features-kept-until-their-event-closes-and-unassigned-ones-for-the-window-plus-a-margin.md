@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-07
-- 근거: [이슈 #98](https://github.com/Theia0382/yozm-news/issues/98) — 기사 표현을 읽는 곳을 조사해 보관 기준을 리드와 정하고 구현(`0551eb3` · `ac942e1`)
+- 근거: [이슈 #98](https://github.com/Theia0382/yozm-news/issues/98) — 기사 표현을 읽는 곳을 조사해 보관 기준을 정하고 구현(`0551eb3` · `ac942e1`)
 - 관련: [ADR-0027](0027-pgvector-for-vector-storage.md)(결정 절 "오래 남기는 벡터는 사건 중심 벡터(`halfvec`)뿐이다" 항목의 둘째 문장 "기사 벡터는 사건 배정에 쓰는 기간에 여유를 더한 만큼만 보관하고…"를 부분 대체한다), [ADR-0029](0029-indefinite-summary-retention-with-optional-deletion.md)(요약문 보존 — 그대로 성립), [ADR-0086](0086-events-close-after-an-idle-period-since-the-last-join-or-a-maximum-period-since-opening.md) · [ADR-0087](0087-closed-event-assignments-are-not-rejudged-and-closing-and-merging-are-not-undone.md)(닫기 · 닫힌 사건의 재판정)
 
 ## 맥락

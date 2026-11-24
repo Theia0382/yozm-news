@@ -106,7 +106,7 @@ class AdminEvaluationReviewControllerTests {
 	}
 
 	@Test
-	void theListCarriesTheRowsWithTheirArticlesAndTheNextCursor() throws Exception {
+	void theListCarriesTheRowsWithTheirArticlesTheNextCursorAndTheTagLimit() throws Exception {
 		this.review.list = new EvaluationListResult.Listed(new EvaluationListing(new TagSetId(1), FROM, TO,
 				List.of(ROW, DELETED), new EvaluationCursor(AT, new EvaluationId(8))));
 
@@ -125,11 +125,11 @@ class AdminEvaluationReviewControllerTests {
 					   "topics":[],"topicCategories":[],"regions":[],
 					   "format":{"key":"opinion","name":"오피니언·칼럼","probability":0.6},"importance":null,
 					   "article":null}],
-					 "nextEvaluatedAt":"2026-11-01T00:00:00Z","nextId":8}
+					 "nextEvaluatedAt":"2026-11-01T00:00:00Z","nextId":8,"maxTags":10}
 					""", JsonCompareMode.STRICT));
 		// 기본 쪽 크기 20, 거르기 · 커서 없음. 헤드라인 조회는 한 번 — 출처 이름은 헤드라인이 엮어 오므로 피드 조회가 없다
 		assertThat(this.review.calls).containsExactly("list 1 " + FROM + " " + TO
-				+ " EvaluationFilter[tag=null, topicStatus=null] null 20");
+				+ " " + EvaluationFilter.NONE + " null 20");
 		assertThat(this.articles.calls).containsExactly("headlines [41, 42]");
 		assertThat(this.labels.calls).isEmpty();
 	}
@@ -140,21 +140,48 @@ class AdminEvaluationReviewControllerTests {
 				null));
 
 		this.mockMvc.perform(authorized(get("/api/admin/evaluations?version=1&" + PERIOD
-				+ "&tagKind=TOPIC&tag=politics&topicStatus=TAGGED"
+				+ "&tags=TOPIC:politics&tags=REGION:domestic&topicStatus=TAGGED"
 				+ "&afterEvaluatedAt=2026-11-01T00:00:00Z&afterId=9&limit=5")))
 			.andExpect(status().isOk())
 			.andExpect(content().json("""
 					{"rows":[],"nextEvaluatedAt":null,"nextId":null}
 					"""));
 		assertThat(this.review.calls).containsExactly("list 1 " + FROM + " " + TO + " "
-				+ new EvaluationFilter(new TagRef(TagKind.TOPIC, "politics"), TopicStatus.TAGGED)
+				+ new EvaluationFilter(List.of(new TagRef(TagKind.TOPIC, "politics"),
+						new TagRef(TagKind.REGION, "domestic")), TopicStatus.TAGGED)
 				+ " " + new EvaluationCursor(AT, new EvaluationId(9)) + " 5");
 	}
 
 	@Test
-	void theListRefusesHalfAFilterOrACursorAndBadValues() throws Exception {
-		badRequest("/api/admin/evaluations?version=1&" + PERIOD + "&tagKind=TOPIC", "tagKind 와 tag 는 함께 준다");
-		badRequest("/api/admin/evaluations?version=1&" + PERIOD + "&tag=politics", "tagKind 와 tag 는 함께 준다");
+	void theTagsMayAlsoComeJoinedWithCommasAndKeepTheirOrder() throws Exception {
+		this.review.list = new EvaluationListResult.Listed(new EvaluationListing(new TagSetId(1), FROM, TO, List.of(),
+				null));
+
+		this.mockMvc.perform(authorized(get("/api/admin/evaluations?version=1&" + PERIOD
+				+ "&tags=FORMAT:opinion,TOPIC:politics.executive&tags=TOPIC:politics")))
+			.andExpect(status().isOk());
+		// 같은 태그는 공개 타입이 한 번으로 줄인다 — 컨트롤러는 받은 순서대로 넘긴다
+		this.mockMvc.perform(authorized(get("/api/admin/evaluations?version=1&" + PERIOD
+				+ "&tags=REGION:domestic&tags=REGION:domestic")))
+			.andExpect(status().isOk());
+		assertThat(this.review.calls).containsExactly(
+				"list 1 " + FROM + " " + TO + " " + new EvaluationFilter(List.of(new TagRef(TagKind.FORMAT, "opinion"),
+						new TagRef(TagKind.TOPIC, "politics.executive"), new TagRef(TagKind.TOPIC, "politics")), null)
+						+ " null 20",
+				"list 1 " + FROM + " " + TO + " "
+						+ new EvaluationFilter(List.of(new TagRef(TagKind.REGION, "domestic")), null) + " null 20");
+	}
+
+	@Test
+	void theListRefusesABadTagOrHalfACursorAndBadValues() throws Exception {
+		badRequest("/api/admin/evaluations?version=1&" + PERIOD + "&tags=politics",
+				"거를 태그는 {종류}:{키} 형식이다: politics");
+		badRequest("/api/admin/evaluations?version=1&" + PERIOD + "&tags=TOPIC:politics&tags=COLOR:red",
+				"거를 태그는 {종류}:{키} 형식이다: COLOR:red");
+		badRequest("/api/admin/evaluations?version=1&" + PERIOD + "&tags=topic:politics",
+				"거를 태그는 {종류}:{키} 형식이다: topic:politics");
+		badRequest("/api/admin/evaluations?version=1&" + PERIOD + "&tags=REGION:",
+				"거를 태그는 {종류}:{키} 형식이다: REGION:");
 		badRequest("/api/admin/evaluations?version=1&" + PERIOD + "&afterId=9",
 				"afterEvaluatedAt 과 afterId 는 함께 준다");
 		badRequest("/api/admin/evaluations?version=1&" + PERIOD + "&afterEvaluatedAt=yesterday&afterId=9",
@@ -166,9 +193,20 @@ class AdminEvaluationReviewControllerTests {
 
 	@Test
 	void theListTurnsTheResultsOfThePublicApiIntoProblems() throws Exception {
-		this.review.list = new EvaluationListResult.UnknownTag(new TagRef(TagKind.REGION, "mars"));
-		badRequest("/api/admin/evaluations?version=1&" + PERIOD + "&tagKind=REGION&tag=mars",
+		this.review.list = new EvaluationListResult.UnknownTags(List.of(new TagRef(TagKind.REGION, "mars")));
+		badRequest("/api/admin/evaluations?version=1&" + PERIOD + "&tags=REGION:mars",
 				"그 태그 체계 버전에 없는 태그다: REGION mars");
+		this.review.list = new EvaluationListResult.UnknownTags(
+				List.of(new TagRef(TagKind.REGION, "mars"), new TagRef(TagKind.TOPIC, "sports")));
+		badRequest("/api/admin/evaluations?version=1&" + PERIOD + "&tags=REGION:mars,TOPIC:politics,TOPIC:sports",
+				"그 태그 체계 버전에 없는 태그다: REGION mars, TOPIC sports");
+
+		this.review.list = new EvaluationListResult.TooManyTags();
+		badRequest("/api/admin/evaluations?version=1&" + PERIOD + "&tags=TOPIC:politics", "태그는 10개까지 고른다");
+
+		this.review.list = new EvaluationListResult.MultipleFormats();
+		badRequest("/api/admin/evaluations?version=1&" + PERIOD + "&tags=FORMAT:straight,FORMAT:opinion",
+				"형식 태그는 하나만 고른다 — 대표 형식은 평가마다 하나다");
 
 		this.review.list = new EvaluationListResult.LimitOutOfRange();
 		badRequest("/api/admin/evaluations?version=1&" + PERIOD + "&limit=51", "한 번에 50건까지 본다");
@@ -211,7 +249,7 @@ class AdminEvaluationReviewControllerTests {
 					 "importanceLevels":[{"key":"3","name":"여러 분야","probability":1.0}],
 					 "importance":3.0,
 					 "article":{"title":"국회 본회의 통과","summary":"<b>요약</b> 원문",
-					  "canonicalUrl":"https://news.example/a/41",
+					  "canonicalUrl":"https://news.example/a/41","publishedAt":"2026-10-28T00:00:00Z",
 					  "entries":[{"sourceName":"한겨레","section":"정치","categories":["정치","국회"]},
 					             {"sourceName":null,"section":null,"categories":[]},
 					             {"sourceName":"한겨레","section":"사회","categories":["사회"]}]}}

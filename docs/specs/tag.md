@@ -46,7 +46,7 @@
 | 채울 저장 기준 | 채움을 요청한 순간 버전마다의 지금 저장 기준 — 요청이 기록하고 실행은 이 값까지 채운다(tag-R31) |
 | 저장 바닥 | 평가 시각 t 의 평가에 저장돼 있다고 볼 수 있는 확률의 하한 — 그때 쓰였을 수 있는 저장 기준과 t 를 덮은 끝난 채움의 채울 저장 기준 가운데 작은 것(tag-R32) |
 | 기본 제외 | 형식 태그의 속성. 계정을 만들 때, 그리고 그 형식이 새로 생긴 버전을 켤 때 사용자의 제외로 넣는다([user Spec](user.md#관심-설정) user-R43 · R47) |
-| 기본 체계 파일 | 저장소의 `backend/src/main/resources/tag-sets/default.yaml`. 첫 기동에 버전 1 로 들어간다(tag-R1 · R2). 첫 체계는 [조사 초안](../research/2026-10-news-categories.md) 3.2 를 바탕으로 하고, 문구는 평가 세트로 정했다 — 중요도 문구의 판단 원칙은 [ADR-0099](../adr/0099-importance-judged-by-what-the-matter-changes-and-its-reach-with-levels-written-as-reach-without-article-type-examples.md) |
+| 기본 체계 파일 | 저장소의 `backend/src/main/resources/tag-sets/default.yaml`. 첫 기동에 버전 1 로 들어간다(tag-R1 · R2). 첫 체계는 [조사 초안](../research/2026-10-news-categories.md) 3.2 를 바탕으로 하고, 문구는 평가 세트로 정했다 — 중요도 문구의 판단 원칙은 [ADR-0099](../adr/0099-importance-judged-by-what-the-matter-changes-and-its-reach-with-levels-written-as-reach-without-article-type-examples.md) · [ADR-0285](../adr/0285-importance-asks-what-the-matter-now-changes-and-levels-run-to-society-wide-in-four-steps-without-field-words.md) |
 | 첫 기동 적재 | 버전이 하나도 없을 때 기본 체계 파일을 버전 1 로 저장하는 기동 시 동작(tag-R2) |
 | 행위자 | 태그 기준 · 저장 기준을 정하거나 버전을 만든 주체의 종류 — 시스템(첫 기동 적재) · 운영자(공개 운영 API) |
 | 기준 버전 | 새 버전을 대조하는 버전 — 확인 · 활성화 때의 활성 버전이다. 버전은 만들 때 바로 활성이 되므로 버전 n 의 기준 버전은 n − 1 이다(tag-R16) |
@@ -69,7 +69,7 @@
 | 평가 현황 | 버전 하나 · 집계 기간 하나의 평가 품질 지표 — 주제 판정 · 태그 분포 · 붙은 태그 수 · 확률 분포 · 중요도 기대값 · 입력 토큰(tag-R29) |
 | 주제별 보도량 | 첫 평가 시각이 집계 기간 안인 기사를 활성 버전의 대분류 · 중분류마다 센 수(tag-R30) |
 | 평가 목록 | 버전 하나의 평가 가운데 평가 시각이 집계 기간 안이고 거르기에 맞는 것 — 평가 시각 · 평가 ID 내림차순, 커서로 이어 받는다(tag-R33) |
-| 거르기 | 평가 목록의 조건 — 태그 하나(주제 대분류 · 중분류 · 지역 · 대표 형식)와 주제 판정. 둘 다 있으면 둘 다 맞아야 한다. 조회 시점 판정으로 본다(tag-R33) |
+| 거르기 | 평가 목록의 조건 — 태그 여럿(주제 대분류 · 중분류 · 지역 · 대표 형식 — 형식은 하나까지)과 주제 판정. 고른 것이 모두 맞아야 한다. 조회 시점 판정으로 본다(tag-R33) |
 | 커서 | 평가 목록에서 이어 받을 자리 — 마지막으로 받은 평가의 평가 시각과 평가 ID(tag-R33) |
 | 표본 · 씨앗 | 표본은 버전 하나 · 집계 기간의 평가에서 씨앗으로 고른 일정 수의 평가다. 같은 씨앗이면 같은 평가를 같은 순서로 고른다(tag-R34) |
 | 기준 미리보기 | 한 태그 종류의 태그 기준 · 저장 기준을 바꾸면 고른 기간의 활성 버전 평가에서 판정이 어떻게 달라지는지 — 아무것도 쓰지 않는다(tag-R35) |
@@ -163,7 +163,7 @@ public record TagSetView(TagSetId id, int number, List<TopicCategory> topics, Li
 | `TagSetView.topics` | 주제 대분류와 그 중분류 — 파일에 적힌 순서. 대분류는 질문이 없다(모델에 묻지 않는다), 중분류의 키는 전체 키다 | 대분류 1개 이상, 대분류마다 중분류 1개 이상(tag-R7) |
 | `TagSetView.regions` | 지역 태그 — 파일에 적힌 순서 | 1개 이상(tag-R7) |
 | `TagSetView.format` | 형식 Choice 질문과 그 선택지 — 파일에 적힌 순서. `excludedByDefault` 는 기본 제외 형식인가 | 선택지 2개 이상(tag-R7) |
-| `TagSetView.importance` | 중요도 Score 질문과 수준별 기준 — 수준 순 | 수준 `ImportanceScale.MIN_LEVEL` ~ `MAX_LEVEL`(1 ~ 5)이 하나씩(tag-R7) |
+| `TagSetView.importance` | 중요도 Score 질문과 수준별 기준 — 수준 순 | 수준이 `ImportanceScale.MIN_LEVEL`(1) 부터 빈 곳 없이 하나씩, 2 ~ `MAX_LEVEL`(5) 개(tag-R7) |
 | `AskedTag.question` | 질문 틀에 설명을 끼운 질문 문장 — 이 모듈이 만든다(tag-R9) | — |
 | `questions()` | 이 버전의 질문 묶음(`evaluation` 의 `TagQuestions`) — 태그 판정 · 다시 읽기에 넘긴다 | — |
 
@@ -515,11 +515,12 @@ public record TokenBucket(int lower, int upper, long count) {}
 
 ### EvaluationReview
 
-평가 검수 — 운영자 화면이 평가 결과를 한 건씩 보고 표본을 검수한다. 구현은 `application` 의 `EvaluationReviewService` 다.
+평가 검수 — 운영자 화면이 평가 결과를 한 건씩 보고 표본을 검수하고, 기사 하나의 평가를 버전마다 본다. 구현은 `application` 의 `EvaluationReviewService` 다.
 
 ```java
 public interface EvaluationReview {
     int MAX_PAGE_SIZE = 50;
+    int MAX_FILTER_TAGS = 10;
     int DEFAULT_SAMPLE_SIZE = 100;
     int MAX_SAMPLE_SIZE = 200;
     long MAX_SEED = (1L << 53) - 1;
@@ -528,20 +529,26 @@ public interface EvaluationReview {
             @Nullable EvaluationCursor after, int limit);
     EvaluationSampleResult sample(TagSetId version, EvaluationPeriod period, long seed, int size);
     Optional<EvaluationDetailView> detail(EvaluationId id);
+    List<VersionedEvaluationRow> ofArticle(ArticleId articleId);
 }
+
+public record VersionedEvaluationRow(TagSetId version, int versionNumber, EvaluationRow evaluation) {}
 ```
 
 | 멤버 | 뜻 |
 |---|---|
 | `MAX_PAGE_SIZE` | 목록 한 번에 받는 평가 수의 상한 — 정본 |
+| `MAX_FILTER_TAGS` | 목록 거르기의 태그 수 상한 — 같은 태그는 한 번으로 센다. 정본 |
 | `DEFAULT_SAMPLE_SIZE` · `MAX_SAMPLE_SIZE` | 표본 크기의 기본값 · 상한 — 정본 |
 | `MAX_SEED` | 씨앗의 상한 — 화면(JavaScript 수)이 정확히 나타내는 2^53 − 1. 정본 |
 | `list` | 평가 목록 — `after` 다음부터 거르기에 맞는 것 `limit` 건(tag-R33) |
 | `sample` | 표본 — 씨앗으로 고른 `size` 건(tag-R34) |
 | `detail` | 평가 하나 — 저장 행 전부와 그 버전의 지금 기준으로 붙었는지, 분포 · 모델 · 토큰. 없는 평가면 빈 값이고, 판정 원본이 없는 평가(tag-R21)도 빈 값 |
+| `ofArticle` | 기사 하나의 평가 — 버전마다 하나, 버전 번호 내림차순. 첫째가 `ArticleEvaluations.find` 와 같은 평가다. 평가하지 않은 기사면 빈 목록 |
+| `VersionedEvaluationRow` | 기사의 평가 가운데 한 버전의 것 — 그 버전 · 번호와 평가 한 건의 판정(`EvaluationRow` — 그 버전의 지금 기준으로 판정) |
 
 - 계약
-  - 세 연산 모두 읽기 전용 `REPEATABLE READ` 트랜잭션 하나에서 읽는다. 사용자 정보를 받지 않는다
+  - 연산마다 읽기 전용 `REPEATABLE READ` 트랜잭션 하나에서 읽는다. 사용자 정보를 받지 않는다
   - 판정은 그 평가 버전의 지금 태그 기준 · 저장 기준으로 조회 때 한다(tag-R15). 태그 키 · 이름 · 순서는 그 평가 버전의 것이다
   - 기사 내용 · 출처 이름은 싣지 않는다 — 부르는 쪽이 `article` · `source` 의 공개 조회로 맞붙인다
 
@@ -554,14 +561,16 @@ public record EvaluationId(long value) {}
 
 public record EvaluationCursor(Instant evaluatedAt, EvaluationId id) {}
 
-public record EvaluationFilter(@Nullable TagRef tag, @Nullable TopicStatus topicStatus) {
-    public static final EvaluationFilter NONE = new EvaluationFilter(null, null);
+public record EvaluationFilter(List<TagRef> tags, @Nullable TopicStatus topicStatus) {
+    public static final EvaluationFilter NONE = new EvaluationFilter(List.of(), null);
 }
 
 public sealed interface EvaluationListResult {
     record Listed(EvaluationListing listing) implements EvaluationListResult {}
     record UnknownVersion() implements EvaluationListResult {}
-    record UnknownTag(TagRef tag) implements EvaluationListResult {}
+    record UnknownTags(List<TagRef> tags) implements EvaluationListResult {}
+    record TooManyTags() implements EvaluationListResult {}
+    record MultipleFormats() implements EvaluationListResult {}
     record LimitOutOfRange() implements EvaluationListResult {}
 }
 
@@ -601,9 +610,11 @@ public record DistributionShare(String key, String name, double probability) {}
 |---|---|---|
 | `EvaluationId` | `article_evaluations.id` | 1 이상 |
 | `EvaluationCursor` | 마지막으로 받은 평가의 평가 시각 · ID | — |
-| `EvaluationFilter.tag` | 거를 태그 하나 — 주제는 대분류 키 · 중분류 전체 키, 지역 키, 형식(대표 형식) 키. 없으면 거르지 않는다 | — |
+| `EvaluationFilter.tags` | 거를 태그 — 주제는 대분류 키 · 중분류 전체 키, 지역 키, 형식(대표 형식) 키. 고른 순서이고 같은 태그는 처음 자리 하나만 남는다. 비면 태그로 거르지 않는다 | 원소는 null 이 아니다 |
 | `EvaluationFilter.topicStatus` | 거를 주제 판정. 없으면 거르지 않는다 | — |
-| `UnknownTag` | 거를 태그가 그 버전의 그 태그 종류에 없다 — 아무것도 읽지 않았다 | — |
+| `UnknownTags` | 거를 태그 가운데 그 버전의 그 태그 종류에 없는 것 — 고른 순서. 아무것도 읽지 않았다 | 하나 이상 |
+| `TooManyTags` | 거를 태그가 `MAX_FILTER_TAGS` 개를 넘는다 — 트랜잭션을 열지 않았다 | — |
+| `MultipleFormats` | 형식 태그가 둘 이상이다 — 대표 형식은 평가마다 하나라 맞는 평가가 없다. 트랜잭션을 열지 않았다 | — |
 | `LimitOutOfRange` | `limit` 이 1 ~ `MAX_PAGE_SIZE` 밖이다 | — |
 | `SizeOutOfRange` · `SeedOutOfRange` | `size` 가 1 ~ `MAX_SAMPLE_SIZE` 밖이다 · `seed` 가 0 ~ `MAX_SEED` 밖이다 | — |
 | `UnknownVersion` | 없는 버전이다 | — |
@@ -777,7 +788,7 @@ public record TagKeyMapping(TagSetId from, TagSetId to, Map<TagKind, Map<String,
 
 집계: `EvaluationAdministrationService.overview` 와 `TopicCoverageService` 는 각자 읽기 전용 `REPEATABLE READ` 트랜잭션 하나(`TransactionTemplate`)를 연다. 평가 현황은 `TagSetRepository.existsById` 로 버전을 보고, `TagSetViews` · `ThresholdRepository`(`current` · `changes`)와 `StoreFloorsReader` 가 낸 태그 종류별 `StoreFloors` 로 `OverviewTally` 를 만들어 `EvaluationResultRepository.streamVersionPeriod` 의 평가를 넣는다 — 흘려 받은 평가를 묶음마다 모아 `ArticleTagging.find` 로 판정 원본의 입력 토큰을 붙인 뒤 하나씩 넣고, 판정은 `TagJudgement` 가 한다. 보도량은 `TagSetDirectory` 로 활성 버전을 읽고 `CoverageTally.unknownTopics` 로 고른 키를 본 뒤, `streamFirstEvaluatedIn` 의 기사마다 그 평가 버전의 `TagSetViews` · `ThresholdRepository.current` · `TagKeyLineage.toActive` 를(버전마다 한 번) 얻어 `TagJudgement` 의 판정과 계보 표를 `CoverageTally` 에 넣는다. 결과 저장소는 평가 행을 fetch size 커서로 나눠 받는다.
 
-검수 · 미리보기: `EvaluationReviewService` 는 같은 모양의 트랜잭션에서 `TagSetRepository.existsById` 로 버전을 보고 `TagSetViews` · `ThresholdRepository.current` 로 그 버전의 체계 · 기준을 얻는다. 목록은 `ReviewFilter` 로 거를 키와 저장소가 좁힐 조건(저장 행 필요조건 · 대표 형식)을 보고 `EvaluationResultRepository.scanNewestFirst` 의 평가를 `TagJudgement` 로 판정해 `ReviewFilter.matches` 로 거르며, 쪽이 차면 흘려 받기를 멈춘다. 표본은 `streamIds` 로 `EvaluationSampler` 를 채우고 고른 평가를 `findListed` 로 읽는다. 상세는 `findDetail` 로 읽고 `ArticleTagging.find` 로 판정 원본의 평가기 · 모델 버전 · 입력 토큰을 붙인다. 공개 값으로 옮기기는 `EvaluationReviewViews` 가 한다. `TagSetAdministrationService` 는 기준 상태를 `ThresholdRepository`(`current` · `changes`)와 `StoreFloorsReader` 가 낸 태그 종류별 `StoreFloors` 를 `ThresholdStanding` 에 넘겨 내고, 미리보기는 `ThresholdPreviews` 에 맡긴다 — 활성 버전 · 기준 · 이력을 읽어 `StoreFloorsReader` 로 태그 종류별 `StoreFloors` 를 얻고 `ThresholdRule.decide` 로 판정하고, `ThresholdImpactTally` 에 `streamVersionPeriod` 의 평가를 평가 현황과 같은 방식(판정 원본의 입력 토큰을 묶음마다 붙임)으로 넣는다.
+검수 · 미리보기: `EvaluationReviewService` 는 같은 모양의 트랜잭션에서 `TagSetRepository.existsById` 로 버전을 보고 `TagSetViews` · `ThresholdRepository.current` 로 그 버전의 체계 · 기준을 얻는다. 목록은 트랜잭션을 열기 전에 쪽 크기 · 거를 태그 수 · 형식 태그 수(`ReviewFilter.multipleFormats`)를 보고, `ReviewFilter` 로 거를 태그와 저장소가 좁힐 조건(태그마다 저장 행 필요조건 · 대표 형식)을 보고 `EvaluationResultRepository.scanNewestFirst` 의 평가를 `TagJudgement` 로 판정해 `ReviewFilter.matches` 로 거르며, 쪽이 차면 흘려 받기를 멈춘다. 표본은 `streamIds` 로 `EvaluationSampler` 를 채우고 고른 평가를 `findListed` 로 읽는다. 상세는 `findDetail` 로 읽고 `ArticleTagging.find` 로 판정 원본의 평가기 · 모델 버전 · 입력 토큰을 붙인다. 기사의 평가는 `findListedByArticle` 의 평가마다 그 버전의 체계 · 기준으로 `TagJudgement` 판정을 해 버전 번호 내림차순으로 늘어놓는다. 공개 값으로 옮기기는 `EvaluationReviewViews` 가 한다. `TagSetAdministrationService` 는 기준 상태를 `ThresholdRepository`(`current` · `changes`)와 `StoreFloorsReader` 가 낸 태그 종류별 `StoreFloors` 를 `ThresholdStanding` 에 넘겨 내고, 미리보기는 `ThresholdPreviews` 에 맡긴다 — 활성 버전 · 기준 · 이력을 읽어 `StoreFloorsReader` 로 태그 종류별 `StoreFloors` 를 얻고 `ThresholdRule.decide` 로 판정하고, `ThresholdImpactTally` 에 `streamVersionPeriod` 의 평가를 평가 현황과 같은 방식(판정 원본의 입력 토큰을 묶음마다 붙임)으로 넣는다.
 
 #### 첫 기동
 
@@ -1054,10 +1065,11 @@ sequenceDiagram
       void streamFirstEvaluatedIn(Instant from, Instant to,
               Consumer<StoredEvaluation> sink);                         // 첫 평가 시각 [from, to) 인 기사의 최신 평가와 주제 태그 행 — 기사 ID 순
       void scanNewestFirst(TagSetId version, Instant from, Instant to, @Nullable EvaluationCursor after,
-              @Nullable StoredKeys required, @Nullable String formatKey,
+              List<StoredKeys> required, @Nullable String formatKey,
               Predicate<ListedEvaluation> sink); // 그 버전 · [from, to) · 커서 뒤 — 평가 시각 · ID 내림차순, sink 가 거짓이면 멈춘다
       void streamIds(TagSetId version, Instant from, Instant to, LongConsumer sink); // 그 버전 · [from, to) 의 평가 ID
       List<ListedEvaluation> findListed(Collection<EvaluationId> ids);  // 없는 ID 는 빠진다
+      List<ListedEvaluation> findListedByArticle(ArticleId articleId);  // 기사 하나의 평가(버전마다 하나)와 태그 행 — 순서 없음
       Optional<StoredEvaluationDetail> findDetail(EvaluationId id);
       List<BackfillTarget> lockForBackfill(Instant from, Instant to, long afterId,
               int limit);                                              // 채움 — 평가 시각 [from, to) · ID 가 afterId 뒤 · ID 순 limit 건, 키 공유 잠금
@@ -1068,7 +1080,7 @@ sequenceDiagram
   }
   ```
 
-  흘려 받기(`streamVersionPeriod` · `streamFirstEvaluatedIn` · `scanNewestFirst` · `streamIds`)는 결과를 담아 두지 않고 커서로 나눠 받으므로 트랜잭션 안에서 부른다 — 밖이면 `IllegalStateException`(tag-R29 · R30 · R33 · R34). `scanNewestFirst` 의 `required` 는 거르기의 필요조건(그 태그 종류의 그 키들 가운데 하나의 저장 행이 있다)이고 `formatKey` 는 저장된 대표 형식이 그것인 평가만이다 — 붙었는지는 판정이 정한다(tag-R33)
+  흘려 받기(`streamVersionPeriod` · `streamFirstEvaluatedIn` · `scanNewestFirst` · `streamIds`)는 결과를 담아 두지 않고 커서로 나눠 받으므로 트랜잭션 안에서 부른다 — 밖이면 `IllegalStateException`(tag-R29 · R30 · R33 · R34). `scanNewestFirst` 의 `required` 는 거르기의 필요조건(그 태그 종류의 그 키들 가운데 하나의 저장 행이 있다)들로 모두 맞아야 하고(비면 좁히지 않는다), `formatKey` 는 저장된 대표 형식이 그것인 평가만이다 — 붙었는지는 판정이 정한다(tag-R33)
 
 - 그 밖의 값: `StoredTag` · `StoredEvaluation` · `SampleRow`(저장된 평가 · 대표 형식의 확률 · 판정 원본 ID) · `ListedEvaluation`(평가 ID · 평가 시각 · `SampleRow`) · `StoredEvaluationDetail`(평가 ID · 평가 시각 · 판정 원본 ID · 형식 분포 · 중요도 분포 · `StoredEvaluation`) · `BackfillTarget`(채움이 다시 읽을 평가 — 평가 ID · 기사 · 버전 · 판정 원본 ID)
 - 평가기 · 모델 버전 · 원본 응답 · 입력 토큰은 이 저장소에 없다 — 판정 원본(`evaluation`)에 있고, 평가 행은 판정 원본 ID(`judgement_id`)만 갖는다. 입력 토큰이 필요한 집계(평가 현황 · 기준 미리보기)는 `application` 의 `JudgedSamples` 가 `SampleRow` 를 묶음(`JudgedSamples.BATCH`(1,000 — 판정 원본 조회 묶음, 측정 전 목표))마다 모아 `ArticleTagging.find` 로 입력 토큰을 붙여 `EvaluationSample` 로 옮긴다 — 커서를 연 같은 트랜잭션 · 같은 연결에서 읽는다
@@ -1090,7 +1102,7 @@ sequenceDiagram
 
 검수 · 미리보기의 판단 — 스프링 없이 평가를 하나씩 받는다.
 
-- `ReviewFilter` — 거르기의 정본(tag-R33). `unknown`(그 버전에 없는 키), `storedKeys`(SQL 필요조건 `StoredKeys` — 주제 대분류는 하위 중분류 전체 키, 중분류 · 지역은 그 키, 형식 · 주제 판정만은 없음), `formatKey`(형식 태그로 거를 때 저장소가 좁힐 대표 형식 — 저장된 값이라 판정과 무관하다), `matches`(판정 · 대표 형식이 거르기에 맞는가 — 대분류인지 중분류인지는 체계로 가른다)
+- `ReviewFilter` — 거르기의 정본(tag-R33). `unknown`(그 버전에 없는 태그 — 고른 순서), `multipleFormats`(형식 태그가 둘 이상인가), `storedKeys`(SQL 필요조건 `StoredKeys` — 주제 · 지역 태그마다 하나, 주제 대분류는 하위 중분류 전체 키, 중분류 · 지역은 그 키, 형식 · 주제 판정에는 없음), `formatKey`(형식 태그로 거를 때 저장소가 좁힐 대표 형식 — 저장된 값이라 판정과 무관하다), `matches`(판정 · 대표 형식이 고른 태그 · 주제 판정에 모두 맞는가 — 대분류인지 중분류인지는 체계로 가른다). `storedKeys` · `formatKey` · `matches` 는 `unknown` · `multipleFormats` 를 지난 거르기만 받는다 — 아니면 `IllegalArgumentException`
 - `EvaluationSampler` — 표집의 정본(tag-R34). 씨앗과 평가 ID 의 해시(SplitMix64 마무리 함수)가 작은 `size` 건을 고른다 — 메모리는 `size` 에 비례한다
 - `ThresholdImpactTally` — 기준 미리보기 집계의 정본(tag-R35). 지금 기준 · 제안 기준의 `OverviewTally` 둘에 평가를 넣고, 두 `TagJudgement` 판정의 그 태그 종류 결과가 다른 평가를 센다
 - 그 밖의 값: `StoredKeys`
@@ -1137,7 +1149,7 @@ sequenceDiagram
 
 - **tag-R5** — 파일은 65,536자까지다(`TagSetParser.MAX_CHARS`). YAML 공통 거부(문서 하나 · 최상위 매핑 · 앵커 · 별칭 · 명시 태그 · 같은 매핑 안 중복 키 · 알 수 없는 키 · 빈 값 · 형 오류)는 [platform-R17](platform.md#yaml-원문-읽기)이다. 최상위 키는 `questions`(`topic` · `region` · `format` · `importance`) · `thresholds`(`topic` · `region`, 각각 `tagThreshold` · `storeThreshold`) · `topics`(항목마다 `key` · `name` · `description` · `subtopics` — 중분류마다 `key` · `name` · `description`) · `regions`(`key` · `name` · `description`) · `formats`(`key` · `name` · `description`, 선택 `excludedByDefault`) · `importance`(`level` · `description`)이고 모두 필수다. 선택 최상위 키 `lineage`(항목마다 `kind` · `change` · `from` · `to` — tag-R22)가 있다. 그 밖의 선택 키는 `excludedByDefault` 하나이고 없으면 거짓이다. 순서는 파일에 적힌 순서다. 문제는 경로 · 줄:열과 함께 한 번에 모두 돌려준다
 - **tag-R6** — 키의 조각은 영문 소문자 · 숫자를 하이픈 하나로 이은 40자 이하다. 중분류는 짧은 조각만 적고 저장 키는 대분류 키를 점으로 붙인 전체 키(`politics.executive`)다. 키는 태그 종류 안에서 겹치지 않는다 — 대분류끼리, 같은 대분류의 중분류끼리, 지역끼리, 형식끼리. 다른 대분류의 같은 조각(`world.politics` · `economy.politics`)은 전체 키가 달라 겹치지 않는다
-- **tag-R7** — 태그 종류 구성: 주제 대분류 1개 이상, 대분류마다 중분류 1개 이상, 지역 1개 이상, 형식 2개 이상(Choice 선택지), 중요도 수준은 1 ~ 5 가 하나씩. 대분류는 모델에 묻지 않고, 중분류가 붙으면 그 대분류도 붙은 것으로 본다. 코드 · 설정은 특정 태그 키를 알지 않는다 — 어느 형식이 기본 제외인지도 체계 데이터다
+- **tag-R7** — 태그 종류 구성: 주제 대분류 1개 이상, 대분류마다 중분류 1개 이상, 지역 1개 이상, 형식 2개 이상(Choice 선택지), 중요도 수준은 1 부터 빈 곳 없이 하나씩 2 ~ 5 개(수준 하나로는 순서 척도가 되지 않는다 — [ADR-0286](../adr/0286-the-number-of-importance-levels-is-set-by-the-tag-set-from-one-without-gaps-two-to-five.md)). 대분류는 모델에 묻지 않고, 중분류가 붙으면 그 대분류도 붙은 것으로 본다. 코드 · 설정은 특정 태그 키를 알지 않는다 — 어느 형식이 기본 제외인지도 체계 데이터다
 - **tag-R8** — 문구는 공백만이 아니고 한 줄이다(줄바꿈 없음). 이름은 40자, 설명 · 중요도 기준은 120자, 질문(틀 포함)은 200자까지다(문자 수). 주제 · 지역 질문 틀은 자리표시자 `{description}` 을 정확히 하나 갖고, 형식 · 중요도 질문은 자리표시자를 갖지 않는다
 - **tag-R9** — 주제 중분류 · 지역 태그의 질문 문장은 그 태그 종류의 질문 틀에서 `{description}` 을 태그 설명으로 바꾼 것이다. 설명은 틀에 끼울 수 있는 명사구로 쓴다
 
@@ -1164,7 +1176,7 @@ sequenceDiagram
   | 주제 | 중분류마다 그 질문 문장(tag-R9) | Yes/No | 다중 |
   | 지역 | 지역마다 그 질문 문장 | Yes/No | 다중 |
   | 형식 | 형식 질문과 선택지 | Choice | 단일 |
-  | 중요도 | 중요도 질문과 1 ~ 5 기준 | Score | 단일 값 |
+  | 중요도 | 중요도 질문과 수준별 기준(체계의 수준 수만큼) | Score | 단일 값 |
 
 - **tag-R15** — 결과 해석과 판정:
   - 저장 — 태그 체계 버전과 판정 원본 ID 를 저장한다. 원본 응답 · 평가기 이름 · 모델 버전 · 입력 토큰은 판정 원본에 있다(`evaluation` — [evaluation-R41](evaluation.md#태그-판정)). 기사 하나에 체계 버전마다 평가 하나이고, 평가 하나에 판정 원본 하나다
@@ -1299,11 +1311,12 @@ sequenceDiagram
 
 - **tag-R33** — 평가 목록(정본 `ReviewFilter`):
   - 대상은 그 버전의 평가 가운데 평가 시각이 집계 기간 `[from, to)`(tag-R28) 안인 것이다. 순서는 평가 시각 내림차순, 같으면 평가 ID 내림차순이고, 커서가 있으면 그 평가 다음부터다
-  - 거르기는 그 평가 버전의 지금 태그 기준 · 저장 기준으로 조회 때 판정한 결과로 본다(tag-R15) — 주제 대분류는 붙은 대분류에, 중분류는 붙은 중분류에(`low_confidence` 로 붙은 하나 포함), 지역은 붙은 지역에, 형식은 대표 형식에 있어야 한다. 주제 판정을 함께 고르면 둘 다 맞아야 한다
-  - 저장소는 판정과 무관한 조건으로만 좁힌다 — 버전 · 기간 · 커서, 주제 · 지역 태그로 거를 때 그 키(대분류는 하위 중분류 키 가운데 하나)의 저장 행이 있다(붙은 태그는 저장 행 가운데서 고르므로 이 조건을 지나지 않은 평가는 맞지 않는다), 형식 태그로 거를 때 저장된 대표 형식이 그 키다. 기준과의 비교는 저장소에 두지 않는다
+  - 거르기는 그 평가 버전의 지금 태그 기준 · 저장 기준으로 조회 때 판정한 결과로 본다(tag-R15) — 고른 태그가 모두 맞아야 하고, 주제 둘 · 지역 둘처럼 같은 종류끼리도 모두 붙어 있어야 한다. 주제 대분류는 붙은 대분류에, 중분류는 붙은 중분류에(`low_confidence` 로 붙은 하나 포함), 지역은 붙은 지역에, 형식은 대표 형식에 있어야 한다. 대분류와 그 하위 중분류를 함께 고르면 중분류 하나를 고른 것과 같다(붙은 중분류의 대분류는 붙은 대분류다). 주제 판정을 함께 고르면 그것도 맞아야 한다
+  - 거를 태그는 같은 태그를 한 번으로 세어 `MAX_FILTER_TAGS`(10)개까지이고, 그 가운데 형식 태그는 하나까지다 — 대표 형식은 평가마다 하나라 형식 태그 둘에 맞는 평가는 없다. 넘으면 트랜잭션을 열지 않고 그 결과(`TooManyTags` · `MultipleFormats`)를 낸다. 태그의 순서는 맞는 평가에 영향이 없다
+  - 저장소는 판정과 무관한 조건으로만 좁힌다 — 버전 · 기간 · 커서, 주제 · 지역 태그마다 그 키(대분류는 하위 중분류 키 가운데 하나)의 저장 행이 있다(붙은 태그는 저장 행 가운데서 고르므로 이 조건을 지나지 않은 평가는 맞지 않는다 — 태그마다 모두), 형식 태그로 거를 때 저장된 대표 형식이 그 키다. 기준과의 비교는 저장소에 두지 않는다
   - 한 번에 1 ~ `MAX_PAGE_SIZE`(50)건이다. 맞는 평가가 더 있으면 마지막 행의 커서를 낸다. 쪽이 차면 흘려 받기를 멈춘다 — 드문 거르기는 기간 전체를 판정할 수 있다
-  - 거를 태그가 그 버전의 그 태그 종류에 없으면 아무것도 읽지 않고 그 태그를 낸다. 건수는 세지 않는다 — 같은 버전 · 기간의 수는 평가 현황(tag-R29)이 낸다
-  - 처리 시간 — 개발 기기의 합성 데이터(31일 · 평가 124,000건 · 평가마다 주제 태그 행 10, 모두 태그 기준 이상)에서 쪽 하나(20건)를 거르기 없이 6 ~ 87 ms(8회 가운데 한 번 1.64초), 맞는 평가가 없는 주제 태그로 48 ~ 78 ms, 대표 형식으로 11 ~ 17 ms, 맞는 평가가 없는 `UNCLASSIFIED` 로 2.11 ~ 2.90초를 쟀다. 판정으로만 가를 수 있고 맞는 평가가 드문 거르기는 기간 전체를 판정하므로 위 데이터에서 목표 2초를 넘었다 — 그대로 둔다
+  - 거를 태그 가운데 그 버전의 그 태그 종류에 없는 것이 하나라도 있으면 아무것도 읽지 않고 그 태그들을 고른 순서로 낸다. 건수는 세지 않는다 — 같은 버전 · 기간의 수는 평가 현황(tag-R29)이 낸다
+  - 처리 시간 — 개발 기기의 합성 데이터(31일 · 평가 124,000건 · 평가마다 주제 태그 행 10, 모두 태그 기준 이상)에서 쪽 하나(20건)를 거르기 없이 6 ~ 87 ms(8회 가운데 한 번 1.64초), 맞는 평가가 없는 주제 태그로 48 ~ 78 ms, 대표 형식으로 11 ~ 17 ms, 맞는 평가가 없는 `UNCLASSIFIED` 로 2.11 ~ 2.90초를 쟀다. 판정으로만 가를 수 있고 맞는 평가가 드문 거르기는 기간 전체를 판정하므로 위 데이터에서 목표 2초를 넘었다 — 그대로 둔다. 태그를 여럿 고른 거르기는 재지 않았다 — 태그마다 저장소의 필요조건이 더해져, 판정하는 평가는 그 가운데 주제 · 지역 태그 하나로 거를 때보다 많지 않다
 - **tag-R34** — 표본(정본 `EvaluationSampler`):
   - 모집단은 목록과 같다(그 버전 · 평가 시각이 기간 안, 거르기 없음). 씨앗과 평가 ID 를 SplitMix64 마무리 함수로 섞은 64비트 값(부호 없이 비교, 같으면 평가 ID 순)이 작은 `size` 건을 그 값의 오름차순으로 낸다. 모집단이 `size` 보다 작으면 전부다
   - 같은 씨앗 · 버전 · 기간이면 같은 평가를 같은 순서로 낸다. 모집단에 평가 하나가 들거나 나면 표본에서는 많아야 그 평가와 표본 경계(해시 순 `size` 번째)의 평가 하나가 들고 나고, 나머지 평가와 그 순서는 그대로다 — 한 건씩 뽑는 순서에 기대지 않는다
@@ -1371,3 +1384,5 @@ sequenceDiagram
 | [0252](../adr/0252-the-stall-and-duration-of-work-in-progress-are-measured-as-elapsed-time-without-the-jumps-of-the-clock.md) | 진행 중 작업의 멈춤과 걸린 시간은 시계가 넘긴 시간을 뺀 경과로 잰다 |
 | [0254](../adr/0254-evaluation-queue-defers-transient-failures-without-an-attempt-limit-and-counts-retrying-rows-for-the-operator.md) | 평가 대기의 일시 실패는 시도 상한 없이 1시간까지 늘어나는 간격으로 미루고, 운영자 건수는 시도 소진 대신 일시 실패를 겪은 대기를 센다 |
 | [0259](../adr/0259-evaluator-timing-is-owned-by-one-evaluation-type-and-judging-queues-derive-their-leases-from-the-longest-judgement.md) | 평가기 요청 마감 · 판정 한 번의 가장 긴 시간 · 일시 실패 뒤 간격은 `evaluation` 의 공개 타입 하나가 정본이고, 판정을 부르는 대기의 점유 기간은 판정 한 번의 가장 긴 시간에서 계산한다 |
+| [0285](../adr/0285-importance-asks-what-the-matter-now-changes-and-levels-run-to-society-wide-in-four-steps-without-field-words.md) | 중요도 질문은 사안이 지금 일으키는 일로 묻고, 수준은 분야 말 없이 사회 전반까지 네 단계로 쓴다 |
+| [0286](../adr/0286-the-number-of-importance-levels-is-set-by-the-tag-set-from-one-without-gaps-two-to-five.md) | 중요도 수준 수는 체계가 정한다 — 1 부터 빈 곳 없이 2 ~ 5 개 |

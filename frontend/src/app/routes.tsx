@@ -228,6 +228,13 @@ export const routes: RouteObject[] = [
             }),
           },
           {
+            path: "articles/:id",
+            lazy: async () => ({
+              Component: (await import("@/features/admin/ArticleDetailPage"))
+                .ArticleDetailPage,
+            }),
+          },
+          {
             path: "storylines",
             lazy: async () => ({
               Component: (await import("@/features/admin/StorylinesPage"))

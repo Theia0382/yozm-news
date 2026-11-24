@@ -106,6 +106,22 @@ class UserStorylineScreenControllerTests {
 	}
 
 	@Test
+	void theTrackButtonOfACardAndOfTheDetailIsTheStoredHead() throws Exception {
+		long user = this.reader.id().value();
+		// 추적 대상 11 · 12 에 저장 헤드 12 — 가장 작은 꼭대기(11)가 아니라 헤드가 손잡이다
+		long id = this.rows.userStoryline(user, 11, 12);
+		this.rows.summarize(id, "갈래", AT);
+		this.jdbc.sql("update user_storylines set head = 12 where id = :id").param("id", id).update();
+
+		this.mockMvc.perform(get("/api/user-storylines").with(this.reader))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.userStorylines[0].storylineId").value(12));
+		this.mockMvc.perform(get("/api/user-storylines/{id}", id).with(this.reader))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.storylineId").value(12));
+	}
+
+	@Test
 	void aUserWithoutSummariesHasAnEmptyList() throws Exception {
 		this.rows.userStoryline(this.reader.id().value(), 11);
 

@@ -2,7 +2,7 @@
 
 - 상태: 승인. 부분 대체 — 시스템의 사건 범위([ADR-0102](0102-an-event-is-the-reports-of-one-happening-narrowed-by-the-event-membership-question-wording.md))
 - 날짜: 2026-11-08
-- 근거: [이슈 #100](https://github.com/Theia0382/yozm-news/issues/100) — 개발팀 표본에 첫 라벨 기준으로 라벨을 붙여 리드와 검토하고, 정답 사건의 범위를 다시 정함
+- 근거: [이슈 #100](https://github.com/Theia0382/yozm-news/issues/100) — 개발팀 표본에 첫 라벨 기준으로 라벨을 붙여 검토하고, 정답 사건의 범위를 다시 정함
 - 관련: [ADR-0095](0095-event-clustering-evaluated-by-an-operator-tool-comparing-admin-api-results-with-full-day-labels.md)(평가 방법에 정답 사건의 범위를 더한다 — 보충), [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md) · [ADR-0072](0072-event-membership-question-wording-as-one-code-constant-with-its-version-in-raw-records.md)(지금 시스템의 사건 범위 — 바꾸지 않는다)
 
 ## 맥락

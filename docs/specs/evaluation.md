@@ -12,7 +12,7 @@
 - **흐름 소속 판정** — 기사 하나가 후보 흐름마다 같은 사안의 전개인지 평가기에 묻는 공개 API(`FlowMembership`)를 `storyline` 의 잇기에 낸다. 요청 · 결과의 꼴은 사건 소속 판정과 같고 문구 · 판정 원본이 다르다(evaluation-R51 · R52, [ADR-0194](../adr/0194-storyline-linking-asks-jev-only-for-band-candidates-and-reuses-recorded-probabilities-until-either-side-doubles.md))
 - **관계 판정** — 두 흐름(사건들의 묶음 둘)이 어떤 관계인지 평가기에 묻는 공개 API(`FlowRelation`)를 `storyline` 에 낸다. 흐름 ID 와 서술 사건의 대표 기사 ID · 시각을 받아 제목 · 요약문으로 요청을 만들고, 성공한 판정의 원본을 남겨 그 ID 와 답마다의 확률을 돌려준다. 답에는 같은 사안의 조각이 있다(evaluation-R48 · R49, [ADR-0234](../adr/0234-fragments-of-one-matter-are-recognised-by-the-relation-judgement-and-merged-above-a-merge-probability-without-a-way-back.md) · [ADR-0132](../adr/0132-storyline-relations-are-judged-by-jev-on-candidate-pairs-and-linked-only-above-a-probability-threshold.md))
 - **기사 임베딩** — 텍스트 묶음을 벡터로 바꾸는 공개 API(`TextEmbedding`)를 사건 묶기에 낸다. 텍스트는 부르는 쪽이 만들어 넘기고, 결과의 수 · 차원을 확인해 돌려주며, 결과를 기록하지 않는다. 임베더 포트(`ArticleEmbedder`)와 운영 구현(앱 안 로컬 모델 — 기본, OpenAI 호환 외부 API) · 로컬 대체물(`FakeArticleEmbedder`)을 둔다. 작업 역할은 임베더 없이 운영하지 않는다(evaluation-R45 ~ R47, [ADR-0114](../adr/0114-article-embedding-is-a-gateway-operation-of-evaluation-taking-callers-texts-checking-results-and-recording-nothing.md) · [ADR-0115](../adr/0115-embedding-api-in-both-roles-looks-up-the-embedder-on-call-and-a-worker-startup-check-requires-one.md) · [ADR-0090](../adr/0090-article-embedding-defaults-to-an-in-app-local-model-with-an-openai-compatible-api-by-setting.md) · [ADR-0091](../adr/0091-local-embedding-model-is-multilingual-e5-small-int8-fetched-at-build-into-the-image-with-onnx-telemetry-off.md))
-- **판정 원본 조회** — 운영자 화면에 공개 조회로 낸다. 판정 시각이 기간 안인 사건 소속 판정 원본(`EventJudgementLog` — 판정의 쓰임 · 결과는 `event` 가 낸다)과, ID 로 찾는 관계 판정 원본(`RelationJudgementLog` — 원본 응답을 평가기가 다시 읽어 답마다의 확률을 낸다)이다(evaluation-R39 · R50, [ADR-0138](../adr/0138-relation-judgement-probabilities-are-read-for-operators-by-the-evaluator-rereading-stored-raw-responses.md))
+- **판정 원본 조회** — 운영자 화면에 공개 조회로 낸다. 판정 시각이 기간 안이거나 ID 로 찾는 사건 소속 판정 원본(`EventJudgementLog` — 판정의 쓰임 · 결과는 `event` 가 낸다)과, ID 로 찾는 관계 판정 원본(`RelationJudgementLog` — 원본 응답을 평가기가 다시 읽어 답마다의 확률을 낸다)이다(evaluation-R39 · R50, [ADR-0138](../adr/0138-relation-judgement-probabilities-are-read-for-operators-by-the-evaluator-rereading-stored-raw-responses.md))
 - **지운 기사 따르기** — `article` 이 기사를 지우면 그 기사의 판정 원본(사건 소속 · 흐름 소속 · 태그)을 지운다(evaluation-R44)
 - **평가기 시간** — 평가기 요청 하나의 마감, 판정 한 번이 평가기를 기다리는 가장 긴 시간, 일시 실패 뒤 다시 묻기까지의 간격을 공개 상수 · 함수(`EvaluatorTiming`)로 낸다. 판정을 부르는 모듈은 점유 기간과 다시 물을 시각을 이 값에서 정한다(evaluation-R53, [ADR-0259](../adr/0259-evaluator-timing-is-owned-by-one-evaluation-type-and-judging-queues-derive-their-leases-from-the-longest-judgement.md))
 
@@ -76,8 +76,8 @@ public record FormatChoice(String question, List<FormatOption> options) {}
 public record FormatOption(String key, String name, String description, boolean excludedByDefault) {}
 
 public record ImportanceScale(String question, List<ImportanceLevel> levels) {
-    public static final int MIN_LEVEL = 1;      // 정본(tag-R7)
-    public static final int MAX_LEVEL = 5;
+    public static final int MIN_LEVEL = 1;      // 정본(tag-R7) — 가장 낮은 수준
+    public static final int MAX_LEVEL = 5;      // 정본(tag-R7) — 가장 높을 수 있는 수준. 체계마다 몇 수준을 쓰는지는 tag-R7
 }
 
 public record ImportanceLevel(int level, String description) {}
@@ -90,7 +90,7 @@ public record ImportanceLevel(int level, String description) {}
 | `AskedTag` | 묻는 태그(주제 중분류 · 지역) — 키 · 이름 · 설명과 질문 문장. 중분류의 키는 전체 키다 | `question` 은 `tag` 가 질문 틀에 설명을 끼운 문장이다([tag-R9](tag.md#체계-파일-형식과-검증)) |
 | `FormatChoice` | 형식 Choice 질문과 그 선택지 | — |
 | `FormatOption.excludedByDefault` | 기본 제외 형식인가 — 이 모듈은 쓰지 않는다(`tag` 의 값 — `user` 가 계정을 만들 때와 그 형식이 새로 생긴 버전을 켤 때 사용자의 제외로 넣는다) | — |
-| `ImportanceScale` | 중요도 Score 질문과 수준별 기준 — 수준 순. `MIN_LEVEL` · `MAX_LEVEL` 은 수준 범위의 정본 — `tag` 의 체계 검증이 이 범위를 쓴다 | — |
+| `ImportanceScale` | 중요도 Score 질문과 수준별 기준 — 수준 순. `MIN_LEVEL` · `MAX_LEVEL` 은 가장 낮은 수준과 가장 높을 수 있는 수준의 정본 — `tag` 의 체계 검증이 이 범위를 쓰고, 체계마다 수준 수는 다를 수 있다([tag-R7](tag.md#체계-파일-형식과-검증)) | — |
 
 관련 규칙: evaluation-R40.
 
@@ -301,12 +301,13 @@ public record RelationJudgementId(long value) {}             // 1 이상 — 아
 
 ### EventJudgementLog · EventJudgementId · EventJudgementView · JudgedEvent · EventJudgementCursor · EventJudgementPage
 
-판정 원본 조회 — 운영자 화면이 기간의 판정 원본을 훑는다. 구현은 `application` 의 `EventJudgementLogService` 다.
+판정 원본 조회 — 운영자 화면이 기간의 판정 원본을 훑고, 배정이 가리키는 판정 원본을 ID 로 찾는다. 구현은 `application` 의 `EventJudgementLogService` 다.
 
 ```java
 public interface EventJudgementLog {
     int MAX_PAGE_SIZE = 100;                                 // 한 쪽의 상한 — 정본. 측정 전 목표
     EventJudgementPage list(JudgementPeriod period, @Nullable EventJudgementCursor after, int size);
+    Optional<EventJudgementView> find(EventJudgementId id);
 }
 
 public record EventJudgementId(long value) {}                // 1 이상 — 아니면 IllegalArgumentException
@@ -320,6 +321,7 @@ public record EventJudgementPage(List<EventJudgementView> judgements, @Nullable 
 | 타입 · 멤버 | 뜻 |
 |---|---|
 | `list` | 판정 시각이 기간 안인 판정 원본 — (판정 시각, ID) 내림차순. `size` 가 1 ~ `MAX_PAGE_SIZE` 밖이면 `IllegalArgumentException`(evaluation-R39) |
+| `find` | 판정 원본 하나 — 목록과 같은 값. 없는(지운) 원본이면 빈 값(evaluation-R39) |
 | `EventJudgementView.candidates` | 물은 후보 — 요청 순서 |
 | `EventJudgementView.inputTokens` | 판정 요청의 입력 토큰 — 출력 토큰은 남기지 않는다(Jev 는 출력이 무료 — [ADR-0002](../adr/0002-shared-evaluation-with-jev.md)) |
 | `JudgedEvent.eventId` | 판정 당시의 후보 사건 ID — `event` 의 사건을 가리키는 값이고 `evaluation` 은 그 뜻을 모른다. 그 뒤 합쳐졌거나 지워졌을 수 있다 |
@@ -328,7 +330,7 @@ public record EventJudgementPage(List<EventJudgementView> judgements, @Nullable 
 | `EventJudgementPage.next` | 다음 쪽의 커서 — 더 없으면 null |
 
 - 계약
-  - 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통) — 질의 하나다
+  - 트랜잭션 · 역할 애너테이션이 없다(두 역할 공통) — 연산마다 질의 하나다
   - 원본 응답은 내지 않는다. 판정의 쓰임(배정 · 병합)과 결과는 `event` 의 `EventReview.judgementUses` 가 원본 ID 로 낸다([event Spec §3](event.md#3-공개-인터페이스))
   - 사용자 정보를 받지 않는다
 
@@ -495,7 +497,7 @@ public enum EmbedderFailureKind { TRANSIENT, INPUT_REJECTED, EMBEDDER_UNAVAILABL
 
 태그 판정: `ArticleTaggingService.judge` 는 트랜잭션 밖인지 · 평가기가 있는지(`ObjectProvider` 로 부를 때 찾는다) 본 뒤, `article` 의 `ArticleDirectory.findAll` 로 기사를, `source` 의 `FeedLabels` 로 그 엔트리 피드의 출처 이름 · 섹션을 읽는다. `TaggingInput` 이 포트 입력(`EvaluationInput` — 피드 맥락은 `FeedContext.limited`, 요약은 `EvaluationInput.presentSummary`)을 만들고 포트 `ArticleEvaluator.evaluate` 를 부른다. 성공이면 `ResultCheck` 로 질문 묶음과 대조하고 `TagJudgementRecord` 로 저장할 모양을 만들어 `TagJudgementRepository` 에 쓰고(넣은 행의 ID 를 결과에 싣는다), 커밋 뒤 `findAll` 로 기사를 다시 본다. 다시 읽기는 `TagJudgementRepository.find` 로 원본을 읽어 포트 `ArticleEvaluator.reread` 를 부르고 `ResultCheck` 로 대조한다. 원본 조회는 `TagJudgementRepository.views` 다.
 
-사건 소속 판정: `EventMembershipService` 는 트랜잭션 밖인지 · 평가기가 있는지 본 뒤, `article` 의 `ArticleDirectory.findAll` 로 판정할 기사와 서술 기사를 한 번에 읽는다. `MembershipPlan` 이 물을 후보와 포트 입력(`MembershipInput` — 서술 제목은 `CandidateEvent.limited`, 문구는 `MembershipWording.CURRENT`)을 만들고 포트 `ArticleEvaluator.judgeMembership` 을 부른다. 성공이면 `MembershipCheck` 로 물은 후보와 대조하고 `MembershipRecord` 로 저장할 모양을 만들어 `EventJudgementRepository` 에 쓰고(넣은 행의 ID 를 결과에 싣는다), 커밋 뒤 `findAll` 로 기사를 다시 본다. 판정 원본 조회는 `EventJudgementLogService` 가 `EventJudgementRepository.page` 를 부른다. 읽기 · 조립 · 호출 · 대조 · 기록 · 다시 보기의 흐름은 패키지 비공개 `MembershipCall` 하나가 맡는다.
+사건 소속 판정: `EventMembershipService` 는 트랜잭션 밖인지 · 평가기가 있는지 본 뒤, `article` 의 `ArticleDirectory.findAll` 로 판정할 기사와 서술 기사를 한 번에 읽는다. `MembershipPlan` 이 물을 후보와 포트 입력(`MembershipInput` — 서술 제목은 `CandidateEvent.limited`, 문구는 `MembershipWording.CURRENT`)을 만들고 포트 `ArticleEvaluator.judgeMembership` 을 부른다. 성공이면 `MembershipCheck` 로 물은 후보와 대조하고 `MembershipRecord` 로 저장할 모양을 만들어 `EventJudgementRepository` 에 쓰고(넣은 행의 ID 를 결과에 싣는다), 커밋 뒤 `findAll` 로 기사를 다시 본다. 판정 원본 조회는 `EventJudgementLogService` 가 `EventJudgementRepository.page` · `find` 를 부른다. 읽기 · 조립 · 호출 · 대조 · 기록 · 다시 보기의 흐름은 패키지 비공개 `MembershipCall` 하나가 맡는다.
 
 흐름 소속 판정: `FlowMembershipService` 는 같은 `MembershipCall` 을 판정 이름 · 후보의 이름(흐름) · 문구 `MembershipWording.SAME_MATTER` · 원본 저장소 `FlowMembershipJudgementRepository` · 결과 꼴(`FlowMembershipJudgement`)만 바꿔 부른다 — 포트 메서드는 같은 `ArticleEvaluator.judgeMembership` 이다(evaluation-R51 · R52).
 
@@ -591,7 +593,7 @@ sequenceDiagram
 - `FlowMembershipService` — 공개 API `FlowMembership` 의 구현(evaluation-R51 · R52). `MembershipCall` 에 흐름 소속의 값을 넘긴다. 로그는 `EventMembershipService` 와 같은 꼴이고 판정 이름(흐름 소속)을 싣는다
 - `EventMembershipService` — 공개 API `EventMembership` 의 구현(evaluation-R37 · R38). 트랜잭션 안에서 부르면 `IllegalStateException`. 평가기는 `ObjectProvider` 로 부를 때 찾고 없으면 `IllegalStateException`. 원본 쓰기와 다시 본 뒤의 지우기는 각각 `TransactionTemplate` 의 짧은 트랜잭션이다. 시각은 `platform` 의 앱 시계(`InstantSource` — platform-R26)에서 얻는다. 로그: `판정 중 기사가 지워져 판정 원본을 지웠다 — 기사 {ID}`(정보)
 - `FlowRelationService` — 공개 API `FlowRelation` 의 구현(evaluation-R48 · R49). 트랜잭션 안에서 부르면 `IllegalStateException`. 평가기는 `ObjectProvider` 로 부를 때 찾고 없으면 `IllegalStateException`. 원본 쓰기는 `TransactionTemplate` 의 짧은 트랜잭션이다. 시각은 `platform` 의 앱 시계(`InstantSource` — platform-R26)에서 얻는다
-- `EventJudgementLogService` — 공개 조회 `EventJudgementLog` 의 구현(evaluation-R39). 쪽 크기를 판정하고 한 건 더 읽어 다음 쪽 커서를 만든다
+- `EventJudgementLogService` — 공개 조회 `EventJudgementLog` 의 구현(evaluation-R39). 쪽 크기를 판정하고 한 건 더 읽어 다음 쪽 커서를 만든다. ID 로 찾기는 저장소에 맡긴다
 - `RelationJudgementLogService` — 공개 조회 `RelationJudgementLog` 의 구현(evaluation-R50). ID 수를 판정하고 원본을 한 번에 읽는다. 평가기는 `ObjectProvider` 로 부를 때 찾고 없으면 원본마다 `Unread(NO_EVALUATOR)` 다 — 평가기 없는 화면 역할에서도 원본의 나머지 값을 낸다. 다시 읽은 결과 분기는 `default` 없는 `switch` 식이다
 - `JudgementRemovalListener` — 리스너(들어오는 쪽). 한 트랜잭션에서 사건 소속 판정 원본, 흐름 소속 판정 원본, 태그 판정 원본 순으로 지운다(evaluation-R44)
 - `TextEmbeddingService` — 공개 API `TextEmbedding` 의 구현(evaluation-R45). `embed` 는 트랜잭션 안에서 부르면 `IllegalStateException`. 임베더는 `ObjectProvider` 로 부를 때 찾고 없으면 `IllegalStateException`(`info` 도). 결과 분기는 `default` 없는 `switch` 식이고, 어긋남 예외 문구는 `임베더 결과가 어긋났다 — {EmbeddingCheck 의 문구}` 다
@@ -649,6 +651,7 @@ sequenceDiagram
       EventJudgementId insert(MembershipRecord record);        // 한 행 — 같은 기사의 판정이 여러 번이면 행도 여러 개. 넣은 행의 ID
       List<EventJudgementView> page(Instant from, Instant to, @Nullable Instant afterJudgedAt,
               @Nullable Long afterId, int limit);              // 판정 시각 [from, to), (판정 시각, ID) 내림차순, 커서 미만
+      Optional<EventJudgementView> find(EventJudgementId id);  // 원본 하나 — 기본 키, 없으면 빈 값
       void deleteByArticles(Collection<ArticleId> articleIds); // 지운 기사 따르기 — 판정할 기사 ID 로 지운다
   }
 
@@ -1030,7 +1033,8 @@ public interface ArticleEmbedder {
 - **evaluation-R39** — 판정 원본 조회:
   - 판정 시각이 기간(`JudgementPeriod` — 시작 포함 · 끝 제외) 안인 판정 원본을 (판정 시각, ID) 내림차순으로 한 쪽 100건(`EventJudgementLog.MAX_PAGE_SIZE`)까지 낸다. 커서는 앞 쪽 마지막 원본의 (판정 시각, ID)이고 그보다 작은 것부터 잇는다
   - 원본마다 ID · 판정할 기사 · 물은 후보(판정 당시 사건 ID · 서술 기사 ID · 확률, 요청 순서) · 평가기 · 모델 버전 · 문구 판 · 입력 토큰 · 판정 시각을 낸다. 원본 응답은 내지 않는다
-  - 지운 원본(지운 기사 따르기 — evaluation-R44)은 나오지 않는다. 판정 원본의 보존 기간은 [data-model 보존 정책](../data-model.md#보존-정책-초안)에 있다
+  - ID 로 찾는 조회는 원본 하나를 목록과 같은 값으로 낸다 — 운영자 화면이 배정이 가리키는 원본(event-R22)을 찾는다
+  - 지운 원본(지운 기사 따르기 — evaluation-R44)은 나오지 않는다 — ID 로 찾으면 빈 값이다. 판정 원본의 보존 기간은 [data-model 보존 정책](../data-model.md#보존-정책-초안)에 있다
 
 ### 흐름 소속 판정
 

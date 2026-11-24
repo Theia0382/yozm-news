@@ -129,10 +129,11 @@ class StorylineSubscriptionControllerTests {
 		this.mockMvc.perform(get("/api/storyline-subscriptions").with(this.user))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.subscriptions[0].subscribedAt").isString())
-			.andExpect(jsonPath("$.subscriptions[0].length()").value(5))
+			.andExpect(jsonPath("$.subscriptions[0].length()").value(6))
 			.andExpect(content().json("""
-					{"subscriptions":[{"userStorylineId":%d,"storylineIds":[%d],"state":"ACTIVE","title":null}],
-					 "limit":100}""".formatted(userStoryline, storyline)));
+					{"subscriptions":[{"userStorylineId":%d,"headStorylineId":%d,"storylineIds":[%d],"state":"ACTIVE",
+					                   "title":null}],
+					 "limit":100}""".formatted(userStoryline, storyline, storyline)));
 		this.mockMvc.perform(delete("/api/storyline-subscriptions/{id}", storyline).with(this.user))
 			.andExpect(status().isOk())
 			.andExpect(content().json("""
@@ -184,13 +185,13 @@ class StorylineSubscriptionControllerTests {
 					{"states":[{"storylineId":%d,"tracked":true},{"storylineId":%d,"tracked":false},
 					           {"storylineId":999999999,"tracked":false},{"storylineId":%d,"tracked":true}]}"""
 				.formatted(later, other, earlier), JsonCompareMode.STRICT));
-		// 목록의 줄은 누른 스토리라인과 그것이 든 사용자 스토리라인을 싣는다
+		// 목록의 줄은 누른 스토리라인과 그것이 든 사용자 스토리라인 · 그 헤드(이어진 뒤 흐름)를 싣는다
 		long userStoryline = this.jdbc.sql("select id from user_storylines").query(Long.class).single();
 		this.mockMvc.perform(get("/api/storyline-subscriptions").with(this.user))
 			.andExpect(status().isOk())
 			.andExpect(content().json("""
-					{"subscriptions":[{"storylineIds":[%d],"userStorylineId":%d}],"limit":100}""".formatted(earlier,
-					userStoryline)));
+					{"subscriptions":[{"storylineIds":[%d],"userStorylineId":%d,"headStorylineId":%d}],"limit":100}"""
+				.formatted(earlier, userStoryline, later)));
 	}
 
 	@Test

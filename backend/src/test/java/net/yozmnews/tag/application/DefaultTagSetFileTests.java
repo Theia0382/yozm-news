@@ -19,7 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.core.io.ClassPathResource;
 
 /**
- * 저장소의 기본 체계 파일 — 검증을 통과하고 첫 체계(대분류 9 · 중분류 48 · 지역 7 · 형식 6 · 중요도 1 ~ 5)가 승인한 키 그대로인지 본다.
+ * 저장소의 기본 체계 파일 — 검증을 통과하고 첫 체계(대분류 9 · 중분류 48 · 지역 7 · 형식 6 · 중요도 1 ~ 4)가 승인한 키 그대로인지 본다.
  * 기대값은 손으로 쓴 목록이다.
  * <p>
  * 지키는 규칙: tag-R1 · tag-R5 ~ tag-R8 · tag-R10
@@ -69,7 +69,8 @@ class DefaultTagSetFileTests {
 					org.assertj.core.groups.Tuple.tuple("interview", false),
 					org.assertj.core.groups.Tuple.tuple("press-release", true),
 					org.assertj.core.groups.Tuple.tuple("brief", true));
-		assertThat(content.importance()).extracting(ImportanceLevelDef::level).containsExactly(1, 2, 3, 4, 5);
+		assertThat(content.importance()).extracting(ImportanceLevelDef::level).containsExactly(1, 2, 3, 4);
+		assertThat(content.importance().get(3).description()).isEqualTo("사회 전반의 제도나 흐름을 바꾸거나 바꿀 것이 분명한 사안");
 	}
 
 	@Test
@@ -80,7 +81,7 @@ class DefaultTagSetFileTests {
 		assertThat(content.regionTemplate().text()).isEqualTo("이 기사의 주요 무대가 다음에 해당하는가: {description}");
 		assertThat(content.formatQuestion()).isEqualTo("이 기사의 형식은 무엇인가");
 		assertThat(content.importanceQuestion()).isEqualTo(
-				"이 기사가 다루는 사안은 얼마나 중요한가. 등장하는 인물이나 다루는 주제가 아니라 사안이 실제로 바꾸거나 일으킨 일의 크기와 그 영향이 미치는 범위로 판단한다. "
+				"이 기사가 다루는 사안은 얼마나 중요한가. 등장하는 인물이나 다루는 주제가 아니라 사안이 지금 실제로 바꾸거나 일으키는 일의 크기와 그 영향이 미치는 범위로 판단한다. "
 						+ "발언 · 주장 · 반응은 그것이 일으킨 일만큼으로 본다");
 		assertThat(this.definition.initialThresholds()).containsOnly(
 				entry(MultiTagKind.TOPIC, new ThresholdValues(new BigDecimal("0.5"), new BigDecimal("0.1"))),

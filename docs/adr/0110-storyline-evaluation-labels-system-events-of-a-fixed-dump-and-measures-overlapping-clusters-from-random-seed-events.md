@@ -2,7 +2,7 @@
 
 - 상태: 승인
 - 날짜: 2026-11-11
-- 근거: [이슈 #120](https://github.com/Theia0382/yozm-news/issues/120) — 라벨 단위 · 표본 설계 · 지표 · 결과 입력을 조사해 리드와 정하고 도구를 구현(`df0cfae` · `0bc45cb`)
+- 근거: [이슈 #120](https://github.com/Theia0382/yozm-news/issues/120) — 라벨 단위 · 표본 설계 · 지표 · 결과 입력을 조사해 정하고 도구를 구현(`df0cfae` · `0bc45cb`)
 - 관련: [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)(결정 "겹치는 묶음의 평가 지표는 스토리라인을 구현할 때 정한다" — 보충), [ADR-0098](0098-label-rule-2-samples-hold-no-big-event-gold-and-big-event-precision-is-not-measured-without-marks.md)(결정 "큰 사건 정답의 단위와 표시는 사건보다 큰 단위를 설계할 때 함께 정한다"의 표시 — 보충), [ADR-0103](0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md)(결과 "큰 판정 정답의 단위는 스토리라인이다"의 표시와 정밀도 — 보충), [ADR-0095](0095-event-clustering-evaluated-by-an-operator-tool-comparing-admin-api-results-with-full-day-labels.md)(시트에 시스템 사건을 싣지 않는 결정 — 사건 묶기 평가의 것이라 바꾸지 않는다), [ADR-0096](0096-instance-bound-evaluation-data-kept-out-of-the-public-repository-and-defaults-cite-only-the-evaluation-set.md)(평가 데이터의 자리), [ADR-0106](0106-provisional-storyline-linking-opens-only-with-a-partner-event-and-adds-the-single-best-storyline-without-removal.md)(기준선), [ADR-0111](0111-storyline-gold-links-by-matter-with-mixed-events-on-their-central-happening-and-events-without-a-happening-following-their-matter.md)(정답 스토리라인의 범위)
 
 ## 맥락

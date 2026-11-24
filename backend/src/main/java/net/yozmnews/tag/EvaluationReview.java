@@ -1,19 +1,24 @@
 package net.yozmnews.tag;
 
+import java.util.List;
 import java.util.Optional;
 
+import net.yozmnews.article.ArticleId;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 평가 검수 — 운영자 화면이 평가 결과를 한 건씩 보고 표본을 검수한다 · docs/specs/tag.md §3.
+ * 평가 검수 — 운영자 화면이 평가 결과를 한 건씩 보고 표본을 검수하고, 기사 하나의 평가를 버전마다 본다 · docs/specs/tag.md §3.
  * <p>
- * 구현은 {@code application} 의 {@code EvaluationReviewService} 다. 세 연산 모두 읽기 전용 {@code REPEATABLE READ} 트랜잭션 하나에서
+ * 구현은 {@code application} 의 {@code EvaluationReviewService} 다. 연산마다 읽기 전용 {@code REPEATABLE READ} 트랜잭션 하나에서
  * 읽고, 판정은 그 평가 버전의 지금 태그 기준 · 저장 기준으로 조회 때 한다(tag-R15). 기사 내용 · 출처 이름은 싣지 않는다.
  */
 public interface EvaluationReview {
 
 	/** 목록 한 번에 받는 평가 수의 상한 — 정본이다 */
 	int MAX_PAGE_SIZE = 50;
+
+	/** 목록 거르기의 태그 수 상한 — 같은 태그는 한 번으로 센다. 정본이다 */
+	int MAX_FILTER_TAGS = 10;
 
 	/** 표본 크기의 기본값 — 정본이다 */
 	int DEFAULT_SAMPLE_SIZE = 100;
@@ -40,5 +45,11 @@ public interface EvaluationReview {
 	 * @return 없는 평가면 빈 값
 	 */
 	Optional<EvaluationDetailView> detail(EvaluationId id);
+
+	/**
+	 * 기사 하나의 평가 — 버전마다 하나, 버전 번호 내림차순(첫째가 {@link ArticleEvaluations#find} 와 같은 평가다).
+	 * @return 평가하지 않은 기사면 빈 목록
+	 */
+	List<VersionedEvaluationRow> ofArticle(ArticleId articleId);
 
 }

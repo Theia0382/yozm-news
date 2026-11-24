@@ -3,9 +3,12 @@ package net.yozmnews.admin.adapter.in.web;
 import static net.yozmnews.admin.adapter.in.web.FakeResults.given;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
+import net.yozmnews.article.ArticleId;
 import net.yozmnews.tag.EvaluationCursor;
 import net.yozmnews.tag.EvaluationDetailView;
 import net.yozmnews.tag.EvaluationFilter;
@@ -15,6 +18,7 @@ import net.yozmnews.tag.EvaluationPeriod;
 import net.yozmnews.tag.EvaluationReview;
 import net.yozmnews.tag.EvaluationSampleResult;
 import net.yozmnews.tag.TagSetId;
+import net.yozmnews.tag.VersionedEvaluationRow;
 import org.jspecify.annotations.Nullable;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
@@ -30,12 +34,15 @@ class FakeEvaluationReview implements EvaluationReview {
 
 	Optional<EvaluationDetailView> detail = Optional.empty();
 
+	final Map<ArticleId, List<VersionedEvaluationRow>> ofArticle = new LinkedHashMap<>();
+
 	final List<String> calls = new ArrayList<>();
 
 	void reset() {
 		this.list = null;
 		this.sample = null;
 		this.detail = Optional.empty();
+		this.ofArticle.clear();
 		this.calls.clear();
 	}
 
@@ -57,6 +64,12 @@ class FakeEvaluationReview implements EvaluationReview {
 	public Optional<EvaluationDetailView> detail(EvaluationId id) {
 		this.calls.add("detail " + id.value());
 		return this.detail;
+	}
+
+	@Override
+	public List<VersionedEvaluationRow> ofArticle(ArticleId articleId) {
+		this.calls.add("ofArticle " + articleId.value());
+		return this.ofArticle.getOrDefault(articleId, List.of());
 	}
 
 	/** 운영자 API 슬라이스에 대역을 싣는다 */

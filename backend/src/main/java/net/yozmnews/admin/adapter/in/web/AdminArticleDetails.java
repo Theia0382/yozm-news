@@ -1,6 +1,7 @@
 package net.yozmnews.admin.adapter.in.web;
 
 import java.net.URI;
+import java.time.Instant;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -17,7 +18,7 @@ import net.yozmnews.source.FeedLabels;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 운영자 응답의 기사 상세 맞붙이기(평가 상세) — 정본이다 · docs/specs/admin.md §5 admin-R6.
+ * 운영자 응답의 기사 상세 맞붙이기(평가 상세 · 기사 상세) — 정본이다 · docs/specs/admin.md §5 admin-R6.
  * <p>
  * 기사 하나의 {@code article} 의 {@link ArticleDirectory#findAll} 과 그 엔트리의 피드 ID 로 {@code source} 의 {@link FeedLabels#labels} 를
  * 한 번씩 부른다 — 엔트리마다 출처 이름 · 섹션 · RSS 카테고리를 따로 싣는다(엮지 않는다). 그새 지운 기사는 빈 값이다. 요약문 원문은 운영자 화면에만
@@ -34,7 +35,7 @@ final class AdminArticleDetails {
 		this.labels = Objects.requireNonNull(labels, "labels");
 	}
 
-	/** 상세의 기사 — 제목 · 요약문 · 정규 URL 과 엔트리마다 출처 이름 · 섹션 · RSS 카테고리 */
+	/** 상세의 기사 — 제목 · 요약문 · 정규 URL · 발행 시각과 엔트리마다 출처 이름 · 섹션 · RSS 카테고리 */
 	Optional<Detail> detail(ArticleId id) {
 		ArticleContent content = this.articles.findAll(List.of(id)).get(id);
 		if (content == null) {
@@ -48,16 +49,18 @@ final class AdminArticleDetails {
 			return new Entry((label == null) ? null : label.sourceName(), (label == null) ? null : label.section(),
 					entry.categories());
 		}).toList();
-		return Optional.of(new Detail(content.title(), content.summary(), content.canonicalUrl(), entries));
+		return Optional.of(new Detail(content.title(), content.summary(), content.canonicalUrl(),
+				content.publishedAt(), entries));
 	}
 
 	/**
 	 * 상세의 기사.
 	 * @param summary 저장된 RSS 요약문 — 없으면 null
 	 * @param canonicalUrl 원문 링크(정규 URL)
+	 * @param publishedAt 기사의 발행 시각(article-R8)
 	 * @param entries 엔트리마다 — 받은 시각 순
 	 */
-	record Detail(String title, @Nullable String summary, URI canonicalUrl, List<Entry> entries) {
+	record Detail(String title, @Nullable String summary, URI canonicalUrl, Instant publishedAt, List<Entry> entries) {
 	}
 
 	/**

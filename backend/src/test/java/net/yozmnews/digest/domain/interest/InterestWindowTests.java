@@ -28,8 +28,9 @@ import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
 
 /**
- * 기준 시각 하나의 관심 — 재료를 창으로 자른다. 기대값은 손으로 계산한 리터럴이다(반감기 30일 · K 3 · γ 1, 30일 전 무게 0.5). 다이제스트의 창 끝은
- * 부르는 시각, 관심사 히스토리의 창 끝은 기준 시각이다. 노출 행은 지금 사건으로 푼 것이고, 몫은 따로 적지 않으면 1 · 다이제스트는 행마다 다르다.
+ * 기준 시각 하나의 관심 — 재료를 창으로 자른다. 기대값은 손으로 계산한 리터럴이다(반감기 30일 · K 3 · γ 주제 0.1 · 스토리라인 1/3, 30일 전
+ * 무게 0.5). 다이제스트의 창 끝은 부르는 시각, 관심사 히스토리의 창 끝은 기준 시각이다. 노출 행은 지금 사건으로 푼 것이고, 몫은 따로
+ * 적지 않으면 1 · 다이제스트는 행마다 다르다.
  * <p>
  * 스토리라인 · 반복 시험은 기준 시각 뒤에 노출해 무게를 1 로 두고(창 끝은 넉넉히 뒤), 다이제스트 날짜는 노출 시각의 UTC 날짜다.
  * <p>
@@ -128,15 +129,15 @@ class InterestWindowTests {
 
 		Interests history = InterestWindow.levels(record, T, T);
 
-		// 주제 구독 더함 30일 전 → S = 0.5 → x = 0.5 ÷ 3 = 1/6
-		assertThat(history.topics().level("f")).isCloseTo(0.16666666666666666, EXACT);
+		// 주제 구독 더함 30일 전 → S = 0.5 → x = 0.1 × 0.5 = 0.05
+		assertThat(history.topics().level("f")).isCloseTo(0.05, EXACT);
 		assertThat(history.topics().levels()).as("기본값 · 기준 시각 뒤의 행은 신호가 아니고, 스토리라인 구독은 주제에 들지 않는다")
 			.containsOnlyKeys("f");
-		// 스토리라인 구독(꼭대기 TREE) 30일 전 → S = 0.5 → x = 0.5 ÷ 3 = 1/6. 지워진 스토리라인의 행은 신호가 아니다
+		// 스토리라인 구독(꼭대기 TREE) 30일 전 → S = 0.5 → x = (1/3) × 0.5 = 1/6. 지워진 스토리라인의 행은 신호가 아니다
 		assertThat(history.storylines().levels()).containsOnlyKeys(TREE);
 		assertThat(history.storylines().level(TREE)).isCloseTo(0.16666666666666666, EXACT);
-		// 다이제스트 창에는 기준 시각 하루 뒤의 더함이 무게 1 로 든다 → x = 1 ÷ 3
-		assertThat(InterestWindow.levels(record, T, NOW).topics().level("h")).isCloseTo(0.3333333333333333, EXACT);
+		// 다이제스트 창에는 기준 시각 하루 뒤의 더함이 무게 1 로 든다 → x = 0.1
+		assertThat(InterestWindow.levels(record, T, NOW).topics().level("h")).isCloseTo(0.1, EXACT);
 	}
 
 	@Test
@@ -270,18 +271,19 @@ class InterestWindowTests {
 
 	@Test
 	void aDislikeOnAFlowSeenTheDayBeforeStaysOutOfTheTopic() {
-		// 대조 — b 가 a 의 8일 뒤(7일 밖)면 처음 본 흐름: t = −1 ÷ (2 + 3) = −0.2 · TREE = −0.2
+		// 대조 — b 가 a 의 8일 뒤(7일 밖)면 처음 본 흐름: t = −1 ÷ (2 + 3) = −0.2. TREE 는 스토리라인 묶음이 반응이 앞선 무반응 노출을
+		// 대신해 a 가 빠진다 — −1 ÷ (1 + 3) = −0.25. 주제는 대신하지 않아 a 가 남는다
 		InterestRecord late = flow(T.plus(Duration.ofDays(9)));
 		assertThat(InterestWindow.levels(late, T, LATER).topics().level("t")).isCloseTo(-0.2, EXACT);
-		assertThat(InterestWindow.levels(late, T, LATER).storylines().level(TREE)).isCloseTo(-0.2, EXACT);
+		assertThat(InterestWindow.levels(late, T, LATER).storylines().level(TREE)).isCloseTo(-0.25, EXACT);
 		// 같은 꼭대기 TREE 의 사건 a(하루 뒤, 주제 t)와 b(이틀 뒤, 주제 t), b 에 싫어요 — b 는 반복이라 주제에 없다
 		InterestRecord record = flow(T.plus(Duration.ofDays(2)));
 
 		Interests interests = InterestWindow.levels(record, T, LATER);
 
-		// 주제 t: a 만 — E = 1 · F = 0 → x = 0 ÷ 4 = 0. TREE: a · b — E = 2 · F = −1 → x = −1 ÷ 5 = −0.2
+		// 주제 t: a 만 — E = 1 · F = 0 → x = 0 ÷ 4 = 0. TREE: b 의 싫어요가 앞선 무반응 a 를 대신한다 — E = 1 · F = −1 → x = −1 ÷ 4 = −0.25
 		assertThat(interests.topics().levels()).containsEntry("t", 0.0);
-		assertThat(interests.storylines().level(TREE)).isCloseTo(-0.2, EXACT);
+		assertThat(interests.storylines().level(TREE)).isCloseTo(-0.25, EXACT);
 	}
 
 	@Test
@@ -312,7 +314,7 @@ class InterestWindowTests {
 						StorylineSubscriptionCause.STORYLINE_MERGED, DAY_AFTER)),
 				Map.of(lower, TREE), flowsOf(List.of(TREE)));
 		assertThat(InterestWindow.levels(rewritten, T, LATER)).isEqualTo(Interests.NONE);
-		// 하위 스토리라인 lower(꼭대기 TREE)를 사용자가 구독 — 기준 시각 뒤라 무게 1 → TREE = 1 ÷ 3, 주제에는 들지 않는다
+		// 하위 스토리라인 lower(꼭대기 TREE)를 사용자가 구독 — 기준 시각 뒤라 무게 1 → TREE = (1/3) × 1 = 1/3, 주제에는 들지 않는다
 		InterestRecord record = new InterestRecord(TAG_SET, List.of(), Map.of(), Map.of(), List.of(), List.of(),
 				List.of(storyline(lower, lower, DAY_AFTER)), Map.of(lower, TREE), flowsOf(List.of(TREE)));
 
@@ -334,7 +336,7 @@ class InterestWindowTests {
 		// 대조 — 두 꼭대기가 다른 묶음이면 OTHER_TREE 에는 값이 없다(중립)
 		StorylineLevels apart = InterestWindow
 			.levels(new InterestRecord(TAG_SET, exposures, Map.of(), tops, dislikes, List.of(), List.of(), Map.of(),
-					new StorylineFlows(Map.of(TREE, 0, OTHER_TREE, 1), Set.of())), T, LATER)
+					new StorylineFlows(Map.of(TREE, Set.of(0), OTHER_TREE, Set.of(1)), Set.of())), T, LATER)
 			.storylines();
 		assertThat(apart.levels()).containsOnlyKeys(TREE);
 		assertThat(apart.level(TREE)).isCloseTo(-0.5, EXACT);
@@ -342,12 +344,34 @@ class InterestWindowTests {
 		// 두 꼭대기가 한 묶음 — E = 3 · F = −3 → x = −3 ÷ (3 + 3) = −0.5 가 두 꼭대기에 같은 값으로 든다
 		StorylineLevels together = InterestWindow
 			.levels(new InterestRecord(TAG_SET, exposures, Map.of(), tops, dislikes, List.of(), List.of(), Map.of(),
-					new StorylineFlows(Map.of(TREE, 0, OTHER_TREE, 0), Set.of())), T, LATER)
+					new StorylineFlows(Map.of(TREE, Set.of(0), OTHER_TREE, Set.of(0)), Set.of())), T, LATER)
 			.storylines();
 
 		assertThat(together.levels()).containsOnlyKeys(TREE, OTHER_TREE);
 		assertThat(together.level(TREE)).isCloseTo(-0.5, EXACT);
 		assertThat(together.level(OTHER_TREE)).isCloseTo(-0.5, EXACT);
+	}
+
+	@Test
+	void aTopInSeveralUserStorylinesGetsTheValuesOfAllOfThem() {
+		// 갈라지기 전 꼭대기 TREE 는 묶음 0 · 1 에, 갈래 OTHER_TREE 는 묶음 1 에만. TREE 의 사건 하나에 좋아요 · OTHER_TREE 의 사건
+		// 둘에 싫어요(모두 하루 뒤, 무게 1) — 묶음 0: E = 1 · F = 1 → 1 ÷ 4, 묶음 1: E = 3 · F = −1 → −1 ÷ 6
+		List<ExposureRow> exposures = List.of(exposure(1, DAY_AFTER), exposure(2, DAY_AFTER), exposure(3, DAY_AFTER));
+		Map<EventId, List<StorylineId>> tops = Map.of(event(1), List.of(TREE), event(2), List.of(OTHER_TREE), event(3),
+				List.of(OTHER_TREE));
+		List<FeedbackChange> reactions = List.of(feedback(1, FeedbackValue.LIKE, DAY_AFTER),
+				feedback(2, FeedbackValue.DISLIKE, DAY_AFTER), feedback(3, FeedbackValue.DISLIKE, DAY_AFTER));
+
+		StorylineLevels levels = InterestWindow
+			.levels(new InterestRecord(TAG_SET, exposures, Map.of(), tops, reactions, List.of(), List.of(), Map.of(),
+					new StorylineFlows(Map.of(TREE, Set.of(0, 1), OTHER_TREE, Set.of(1)), Set.of())), T, LATER)
+			.storylines();
+
+		// TREE 의 관심은 두 묶음 값의 평균 (1/4 − 1/6) ÷ 2 = 1/24, 남길 흐름은 묶음 하나라도(1/4 ≥ 0.2)
+		assertThat(levels.level(TREE)).isCloseTo(0.041666666666666664, EXACT);
+		assertThat(levels.level(OTHER_TREE)).isCloseTo(-0.16666666666666666, EXACT);
+		assertThat(levels.kept()).containsExactly(TREE);
+		assertThat(levels.excluded()).isEmpty();
 	}
 
 	@Test
@@ -358,7 +382,7 @@ class InterestWindowTests {
 		// 대조 — 묶음이 있으면 TREE = −1 ÷ 4
 		assertThat(InterestWindow
 			.levels(new InterestRecord(TAG_SET, exposures, Map.of(event(1), Set.of("t")), tops, dislike, List.of(),
-					List.of(), Map.of(), new StorylineFlows(Map.of(TREE, 0), Set.of())), T, LATER)
+					List.of(), Map.of(), new StorylineFlows(Map.of(TREE, Set.of(0)), Set.of())), T, LATER)
 			.storylines()
 			.level(TREE)).isCloseTo(-0.25, EXACT);
 
@@ -374,9 +398,9 @@ class InterestWindowTests {
 	void trackingSignalsOfOneUserStorylineAddUpAndAnInheritedSeedIsNotASignal() {
 		StorylineId first = new StorylineId(31);
 		StorylineId second = new StorylineId(32);
-		StorylineFlows flows = new StorylineFlows(Map.of(TREE, 0, OTHER_TREE, 0), Set.of(0));
+		StorylineFlows flows = new StorylineFlows(Map.of(TREE, Set.of(0), OTHER_TREE, Set.of(0)), Set.of(0));
 		Map<StorylineId, StorylineId> storylineTops = Map.of(first, TREE, second, OTHER_TREE);
-		// 대조 — 사용자가 누른 것 하나: 1 ÷ 3
+		// 대조 — 사용자가 누른 것 하나: (1/3) × 1 = 1/3
 		assertThat(InterestWindow
 			.levels(new InterestRecord(TAG_SET, List.of(), Map.of(), Map.of(), List.of(), List.of(),
 					List.of(storyline(first, first, DAY_AFTER)), storylineTops, flows), T, LATER)
@@ -392,7 +416,7 @@ class InterestWindowTests {
 			.storylines()
 			.level(TREE)).isCloseTo(0.3333333333333333, EXACT);
 
-		// 한 묶음의 두 스토리라인을 사용자가 눌렀다 — 그 묶음에 +2: 2 ÷ 3
+		// 한 묶음의 두 스토리라인을 사용자가 눌렀다 — 그 묶음에 +2: (1/3) × 2 = 2/3
 		StorylineLevels levels = InterestWindow
 			.levels(new InterestRecord(TAG_SET, List.of(), Map.of(), Map.of(), List.of(), List.of(),
 					List.of(storyline(first, first, DAY_AFTER), storyline(second, second, DAY_AFTER)), storylineTops,
@@ -429,11 +453,11 @@ class InterestWindowTests {
 	/** 꼭대기마다 제 사용자 스토리라인 묶음 하나 — 꼭대기 ID 순으로 번호를 준다 */
 	private static StorylineFlows flowsOf(List<StorylineId> tops) {
 		List<StorylineId> ordered = tops.stream().distinct().sorted(Comparator.comparingLong(StorylineId::value)).toList();
-		Map<StorylineId, Integer> flowOfTop = new HashMap<>();
+		Map<StorylineId, Set<Integer>> flowsOfTop = new HashMap<>();
 		for (int flow = 0; flow < ordered.size(); flow++) {
-			flowOfTop.put(ordered.get(flow), flow);
+			flowsOfTop.put(ordered.get(flow), Set.of(flow));
 		}
-		return new StorylineFlows(flowOfTop, Set.of());
+		return new StorylineFlows(flowsOfTop, Set.of());
 	}
 
 	private static EventId event(long id) {

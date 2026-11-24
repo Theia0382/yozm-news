@@ -27,6 +27,7 @@ const SUBSCRIBED: StorylineSubscriptions = {
     {
       userStorylineId: A,
       subscribedAt: "2026-11-03T00:00:00Z",
+      headStorylineId: A,
       storylineIds: [A],
       state: "ACTIVE",
       title: null,
@@ -34,6 +35,7 @@ const SUBSCRIBED: StorylineSubscriptions = {
     {
       userStorylineId: B,
       subscribedAt: "2026-11-02T00:00:00Z",
+      headStorylineId: B,
       storylineIds: [B],
       state: "QUIET",
       title: null,
@@ -41,6 +43,7 @@ const SUBSCRIBED: StorylineSubscriptions = {
     {
       userStorylineId: C,
       subscribedAt: "2026-11-01T00:00:00Z",
+      headStorylineId: C,
       storylineIds: [C],
       state: "ENDED",
       title: null,
@@ -166,7 +169,7 @@ describe("SubscriptionsPage", () => {
   });
 
   it("추적 씨앗이 둘인 흐름도 한 줄이고, 정리가 있으면 정리의 제목으로 개인 흐름 화면에 · 없으면 카드 제목으로 타임라인에 잇는다", async () => {
-    // 흐름 7 은 A 와 B 를 눌러 추적했고 정리가 있다. C 는 정리 없는 다른 흐름이다
+    // 흐름 7 은 A 와 B 를 눌러 추적했고 정리가 있다 — 헤드는 이어진 뒤 흐름 B 다. C 는 정리 없는 다른 흐름이다
     const { server } = renderRoutes(ROUTES, PAGE, {
       "GET /api/storyline-subscriptions": () =>
         json({
@@ -175,6 +178,7 @@ describe("SubscriptionsPage", () => {
             {
               userStorylineId: 7,
               subscribedAt: "2026-11-03T00:00:00Z",
+              headStorylineId: B,
               storylineIds: [A, B],
               state: "ACTIVE",
               title: "의대 정원 갈등의 전개",
@@ -183,7 +187,7 @@ describe("SubscriptionsPage", () => {
           ],
         }),
       "GET /api/storyline-cards": cardsHandler,
-      [`DELETE /api/storyline-subscriptions/${A}`]: () =>
+      [`DELETE /api/storyline-subscriptions/${B}`]: () =>
         json({ result: "UNSUBSCRIBED" }),
       ...NO_HISTORY,
     });
@@ -203,7 +207,7 @@ describe("SubscriptionsPage", () => {
       ),
     ).toHaveAttribute("href", `/storylines/${C}`);
     expect(screen.getByText("추적 2 / 100")).toBeInTheDocument();
-    // 카드는 흐름마다 첫 추적 씨앗만 묻는다
+    // 카드는 흐름마다 헤드만 묻는다 — 첫 추적 씨앗(A)이 아니다
     expect(
       server.requests
         .filter((r) => r.path === "/api/storyline-cards")
@@ -213,16 +217,16 @@ describe("SubscriptionsPage", () => {
             .flatMap((value) => value.split(","))
             .map(Number),
         ),
-    ).toEqual([[A, C]]);
+    ).toEqual([[B, C]]);
 
-    // 해제는 첫 추적 씨앗으로 보낸다
+    // 해제는 헤드로 보낸다 — 헤드는 이 흐름에만 들어 다른 갈래를 끄지 않는다
     await userEvent.click(
       within(rows[0]!).getByRole("button", { name: "추적 해제" }),
     );
     await waitFor(() =>
       expect(
         server.requests.filter((r) => r.method === "DELETE").map((r) => r.path),
-      ).toEqual([`/api/storyline-subscriptions/${A}`]),
+      ).toEqual([`/api/storyline-subscriptions/${B}`]),
     );
   });
 
@@ -236,6 +240,7 @@ describe("SubscriptionsPage", () => {
           subscriptions: ids.map((storylineId) => ({
             userStorylineId: storylineId,
             subscribedAt: "2026-11-03T00:00:00Z",
+            headStorylineId: storylineId,
             storylineIds: [storylineId],
             state: "ACTIVE",
             title: null,
@@ -304,6 +309,7 @@ describe("SubscriptionsPage", () => {
             {
               userStorylineId: 4,
               subscribedAt: "2026-11-05T00:00:00Z",
+              headStorylineId: 4,
               storylineIds: [4],
               state: "ACTIVE",
               title: null,
