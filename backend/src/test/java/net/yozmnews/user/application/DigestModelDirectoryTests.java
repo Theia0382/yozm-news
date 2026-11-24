@@ -7,7 +7,7 @@ import java.time.Instant;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.llm.LlmModel;
 import net.yozmnews.platform.UserId;
-import net.yozmnews.user.AccountCreatedEvents;
+import net.yozmnews.user.AccountEvents;
 import net.yozmnews.user.DigestModelDirectory;
 import net.yozmnews.user.domain.account.DisplayName;
 import net.yozmnews.user.domain.account.EmailAddress;
@@ -52,7 +52,7 @@ class DigestModelDirectoryTests {
 	void clear() {
 		this.jdbc.sql("delete from llm_credentials where user_id in (select id from users where email like 'digest-model-%')")
 			.update();
-		AccountCreatedEvents.awaitHandled(this.jdbc);
+		AccountEvents.awaitCreatedHandled(this.jdbc);
 		this.jdbc.sql("delete from users where email like 'digest-model-%'").update();
 	}
 
@@ -121,7 +121,7 @@ class DigestModelDirectoryTests {
 				EmailAddress.parse(email).orElseThrow(), new DisplayName("사용자"),
 				PasswordPolicy.normalize("correct horse battery"), NOW));
 		assertThat(result).isInstanceOf(ProvisionResult.Created.class);
-		AccountCreatedEvents.awaitHandled(this.jdbc);
+		AccountEvents.awaitCreatedHandled(this.jdbc);
 		return ((ProvisionResult.Created) result).user();
 	}
 

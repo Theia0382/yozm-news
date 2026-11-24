@@ -12,7 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.user.AccountCreated;
-import net.yozmnews.user.AccountCreatedEvents;
+import net.yozmnews.user.AccountEvents;
 import net.yozmnews.user.domain.account.DisplayName;
 import net.yozmnews.user.domain.account.EmailAddress;
 import net.yozmnews.user.domain.account.Onboarding;
@@ -80,7 +80,7 @@ class AccountProvisioningTests {
 	@BeforeEach
 	@AfterEach
 	void reset() {
-		AccountCreatedEvents.awaitHandled(this.jdbc);
+		AccountEvents.awaitCreatedHandled(this.jdbc);
 		this.jdbc.sql("delete from users").update();
 	}
 

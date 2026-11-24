@@ -15,6 +15,7 @@ import net.yozmnews.source.FeedId;
 import net.yozmnews.source.FeedStatus;
 import net.yozmnews.tag.TagKind;
 import net.yozmnews.user.DigestFailureCause;
+import net.yozmnews.user.PasswordChangeMethod;
 import net.yozmnews.user.domain.notice.DigestFailedContent;
 import net.yozmnews.user.domain.notice.FeedStatusContent;
 import net.yozmnews.user.domain.notice.FeedStatusEntry;
@@ -23,7 +24,6 @@ import net.yozmnews.user.domain.notice.Notice;
 import net.yozmnews.user.domain.notice.NoticeContent;
 import net.yozmnews.user.domain.notice.NoticeKind;
 import net.yozmnews.user.domain.notice.NoticeRepository;
-import net.yozmnews.user.domain.notice.PasswordChangeMethod;
 import net.yozmnews.user.domain.notice.PasswordChangedContent;
 import net.yozmnews.user.domain.notice.PreferencesAdjustedContent;
 import net.yozmnews.user.domain.notice.RemovedSubscription;
@@ -113,6 +113,20 @@ class JdbcNoticeRepository implements NoticeRepository {
 				values (:user, :kind, cast(:content as jsonb), 1, :now, :now)
 				on conflict (user_id, (content ->> 'keyId'), (content ->> 'invalidatedAt'))
 				  where kind = 'KEY_INVALIDATED' do nothing
+				""")
+			.param("user", user.value())
+			.param("kind", content.kind().name())
+			.param("content", json(content))
+			.param("now", utc(now))
+			.update() == 1;
+	}
+
+	@Override
+	public boolean createOnce(UserId user, PasswordChangedContent content, Instant now) {
+		return this.jdbc.sql("""
+				insert into user_notices (user_id, kind, content, revision, created_at, updated_at)
+				values (:user, :kind, cast(:content as jsonb), 1, :now, :now)
+				on conflict (user_id, (content ->> 'changedAt')) where kind = 'PASSWORD_CHANGED' do nothing
 				""")
 			.param("user", user.value())
 			.param("kind", content.kind().name())

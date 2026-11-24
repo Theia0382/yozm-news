@@ -12,6 +12,7 @@ import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.user.AccountAdministration;
 import net.yozmnews.user.AccountCreationResult;
+import net.yozmnews.user.AccountEvents;
 import net.yozmnews.user.domain.account.Account;
 import net.yozmnews.user.domain.account.AccountRepository;
 import net.yozmnews.user.domain.account.AccountRole;
@@ -80,6 +81,7 @@ class SessionEndingFailureTests {
 	@BeforeEach
 	@AfterEach
 	void reset() {
+		AccountEvents.awaitPasswordChangeHandled(this.jdbc);
 		this.jdbc.sql("delete from users").update();
 		this.jdbc.sql("delete from login_failures").update();
 	}

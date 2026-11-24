@@ -12,8 +12,8 @@ import java.util.Map;
 import jakarta.servlet.http.Cookie;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.user.AccountAdministration;
-import net.yozmnews.user.AccountCreatedEvents;
 import net.yozmnews.user.AccountCreationResult;
+import net.yozmnews.user.AccountEvents;
 import net.yozmnews.user.InitialPasswordResetResult;
 import net.yozmnews.user.PasswordProblem;
 import org.junit.jupiter.api.AfterEach;
@@ -61,7 +61,7 @@ class OperatorAccountServiceTests {
 	@BeforeEach
 	@AfterEach
 	void reset() {
-		AccountCreatedEvents.awaitHandled(this.jdbc);
+		AccountEvents.awaitCreatedHandled(this.jdbc);
 		this.jdbc.sql("delete from users").update();
 		this.jdbc.sql("delete from login_failures").update();
 	}

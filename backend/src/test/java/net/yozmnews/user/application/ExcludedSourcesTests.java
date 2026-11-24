@@ -12,7 +12,7 @@ import net.yozmnews.platform.UserId;
 import net.yozmnews.source.SourceDeleted;
 import net.yozmnews.source.SourceId;
 import net.yozmnews.source.SourceName;
-import net.yozmnews.user.AccountCreatedEvents;
+import net.yozmnews.user.AccountEvents;
 import net.yozmnews.user.application.ExcludedSources.ExcludedSourcesView;
 import net.yozmnews.user.domain.account.DisplayName;
 import net.yozmnews.user.domain.account.EmailAddress;
@@ -62,7 +62,7 @@ class ExcludedSourcesTests {
 	@BeforeEach
 	@AfterEach
 	void reset() {
-		AccountCreatedEvents.awaitHandled(this.jdbc);
+		AccountEvents.awaitCreatedHandled(this.jdbc);
 		this.jdbc.sql("delete from users").update();
 		for (Long source : this.sources) {
 			this.jdbc.sql("delete from source_attributions where source_id = :source").param("source", source).update();
@@ -126,7 +126,7 @@ class ExcludedSourcesTests {
 				EmailAddress.parse(email).orElseThrow(), new DisplayName("사용자"),
 				PasswordPolicy.normalize("correct horse battery"), NOW));
 		assertThat(result).isInstanceOf(ProvisionResult.Created.class);
-		AccountCreatedEvents.awaitHandled(this.jdbc);
+		AccountEvents.awaitCreatedHandled(this.jdbc);
 		return ((ProvisionResult.Created) result).user();
 	}
 

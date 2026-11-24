@@ -11,7 +11,7 @@ import java.util.Map;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.tag.TagSetDirectory;
-import net.yozmnews.user.AccountCreatedEvents;
+import net.yozmnews.user.AccountEvents;
 import net.yozmnews.user.domain.account.DisplayName;
 import net.yozmnews.user.domain.account.EmailAddress;
 import net.yozmnews.user.domain.account.Onboarding;
@@ -60,7 +60,7 @@ class InterestDefaultsTests {
 	@BeforeEach
 	@AfterEach
 	void reset() {
-		AccountCreatedEvents.awaitHandled(this.jdbc);
+		AccountEvents.awaitCreatedHandled(this.jdbc);
 		this.jdbc.sql("delete from users").update();
 	}
 
@@ -127,7 +127,7 @@ class InterestDefaultsTests {
 				EmailAddress.parse(email).orElseThrow(), new DisplayName("사용자"),
 				PasswordPolicy.normalize("correct horse battery"), NOW));
 		assertThat(result).isInstanceOf(ProvisionResult.Created.class);
-		AccountCreatedEvents.awaitHandled(this.jdbc);
+		AccountEvents.awaitCreatedHandled(this.jdbc);
 		return ((ProvisionResult.Created) result).user();
 	}
 

@@ -9,7 +9,7 @@ import java.util.List;
 
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.platform.UserId;
-import net.yozmnews.user.AccountCreatedEvents;
+import net.yozmnews.user.AccountEvents;
 import net.yozmnews.user.domain.account.DisplayName;
 import net.yozmnews.user.domain.account.EmailAddress;
 import net.yozmnews.user.domain.account.Onboarding;
@@ -58,7 +58,7 @@ class InterestBackfillTests {
 	@BeforeEach
 	@AfterEach
 	void reset() {
-		AccountCreatedEvents.awaitHandled(this.jdbc);
+		AccountEvents.awaitCreatedHandled(this.jdbc);
 		this.jdbc.sql("delete from users").update();
 		this.backfill = new InterestBackfill(this.settings, this.defaults, this.transaction, InstantSource.fixed(NOW));
 	}
@@ -102,7 +102,7 @@ class InterestBackfillTests {
 		long user = ((ProvisionResult.Created) result).user().value();
 
 		this.backfill.fill();
-		AccountCreatedEvents.awaitHandled(this.jdbc);
+		AccountEvents.awaitCreatedHandled(this.jdbc);
 
 		assertThat(this.jdbc.sql("select count(*) from user_settings where user_id = :user")
 			.param("user", user)

@@ -6,6 +6,8 @@ import java.util.Objects;
 import java.util.Optional;
 
 import net.yozmnews.platform.UserId;
+import net.yozmnews.user.PasswordChangeMethod;
+import net.yozmnews.user.PasswordChanged;
 import net.yozmnews.user.PasswordProblem;
 import net.yozmnews.user.domain.account.Account;
 import net.yozmnews.user.domain.account.AccountRepository;
@@ -13,12 +15,12 @@ import net.yozmnews.user.domain.account.EmailAddress;
 import net.yozmnews.user.domain.credential.PasswordCredential;
 import net.yozmnews.user.domain.credential.PasswordCredentialRepository;
 import net.yozmnews.user.domain.credential.PasswordPolicy;
-import net.yozmnews.user.domain.notice.PasswordChangeMethod;
 import net.yozmnews.user.domain.recovery.RecoveryCodeRepository;
 import net.yozmnews.user.domain.secret.RecoveryCode;
 import net.yozmnews.user.domain.secret.SecretDigest;
 import net.yozmnews.user.domain.throttle.EmailDigest;
 import net.yozmnews.user.domain.throttle.ThrottledAttempt;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,7 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>
  * 새 비밀번호 규칙(이유를 알려도 계정 유무가 드러나지 않는다) → 제출된 이메일의 복구 실패 기록에 걸어 코드를 대조한다 — 계정이 없거나 쓰지 않거나
  * 코드가 없거나 읽을 수 없으면 더미 다이제스트와 같은 대조를 하고 거절한다(로그인과 같은 응답 규칙). 맞으면 비밀번호를 바꾸고(강제 변경도
- * 풀린다) 복구 코드를 새로 주며, 비밀번호 알림을 남기고, 마지막으로 이 사용자의 세션을 모두 지운다.
+ * 풀린다) 복구 코드를 새로 주며, 같은 트랜잭션에서 {@link PasswordChanged} 를 내고(account-R36), 마지막으로 이 사용자의 세션을 모두 지운다.
  */
 @Service
 public class AccountRecovery {
@@ -43,7 +45,7 @@ public class AccountRecovery {
 
 	private final FailureThrottle throttle;
 
-	private final PasswordChangedNotices notices;
+	private final ApplicationEventPublisher events;
 
 	private final OtherSessions sessions;
 
@@ -54,13 +56,13 @@ public class AccountRecovery {
 
 	AccountRecovery(AccountRepository accounts, PasswordCredentialRepository credentials,
 			RecoveryCodeRepository recoveryCodes, PasswordHashing hashing, FailureThrottle throttle,
-			PasswordChangedNotices notices, OtherSessions sessions) {
+			ApplicationEventPublisher events, OtherSessions sessions) {
 		this.accounts = Objects.requireNonNull(accounts, "accounts");
 		this.credentials = Objects.requireNonNull(credentials, "credentials");
 		this.recoveryCodes = Objects.requireNonNull(recoveryCodes, "recoveryCodes");
 		this.hashing = Objects.requireNonNull(hashing, "hashing");
 		this.throttle = Objects.requireNonNull(throttle, "throttle");
-		this.notices = Objects.requireNonNull(notices, "notices");
+		this.events = Objects.requireNonNull(events, "events");
 		this.sessions = Objects.requireNonNull(sessions, "sessions");
 	}
 
@@ -101,7 +103,7 @@ public class AccountRecovery {
 		this.credentials.save(credential.changed(this.hashing.hash(normalized), now));
 		RecoveryCode code = RecoveryCode.generate(this.random);
 		this.recoveryCodes.replace(user, code.digest(), now);
-		this.notices.record(user, PasswordChangeMethod.RECOVERY, now);
+		this.events.publishEvent(new PasswordChanged(user, PasswordChangeMethod.RECOVERY, now));
 		this.sessions.endAll(user);
 		return new RecoveryOutcome.Reset(user, code);
 	}

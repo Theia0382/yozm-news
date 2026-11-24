@@ -6,13 +6,15 @@ import java.util.Objects;
 import java.util.Optional;
 
 import net.yozmnews.platform.UserId;
+import net.yozmnews.user.PasswordChangeMethod;
+import net.yozmnews.user.PasswordChanged;
 import net.yozmnews.user.PasswordProblem;
 import net.yozmnews.user.domain.credential.PasswordCredential;
 import net.yozmnews.user.domain.credential.PasswordCredentialRepository;
 import net.yozmnews.user.domain.credential.PasswordPolicy;
-import net.yozmnews.user.domain.notice.PasswordChangeMethod;
 import net.yozmnews.user.domain.recovery.RecoveryCodeRepository;
 import net.yozmnews.user.domain.secret.RecoveryCode;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,7 +22,8 @@ import org.springframework.transaction.annotation.Transactional;
  * 비밀번호 변경 유스케이스 — 세션 사용자가 현재 비밀번호를 확인하고 새 비밀번호로 바꾼다. 한 번의 변경이 트랜잭션 하나다. docs/specs/user.md §4
  * <p>
  * 새 비밀번호 규칙 → 현재 비밀번호 확인(로그인 실패 기록 · 자격 잠금) → 자격 변경. 강제 변경 중이었으면 강제 변경이 풀리고 복구 코드를 새로
- * 주며 알림을 남기지 않는다(본인이 막 만든 계정의 첫 단계). 그 밖이면 비밀번호 알림을 남긴다. 마지막으로 이 세션을 뺀 이 사용자의 세션을 지운다.
+ * 주며 비밀번호 바뀜을 알리지 않는다(본인이 막 만든 계정의 첫 단계). 그 밖이면 같은 트랜잭션에서 {@link PasswordChanged} 를 낸다(account-R36).
+ * 마지막으로 이 세션을 뺀 이 사용자의 세션을 지운다.
  */
 @Service
 public class PasswordChange {
@@ -33,20 +36,20 @@ public class PasswordChange {
 
 	private final PasswordHashing hashing;
 
-	private final PasswordChangedNotices notices;
+	private final ApplicationEventPublisher events;
 
 	private final OtherSessions sessions;
 
 	private final SecureRandom random = new SecureRandom();
 
 	PasswordChange(CurrentPasswordCheck check, PasswordCredentialRepository credentials,
-			RecoveryCodeRepository recoveryCodes, PasswordHashing hashing, PasswordChangedNotices notices,
+			RecoveryCodeRepository recoveryCodes, PasswordHashing hashing, ApplicationEventPublisher events,
 			OtherSessions sessions) {
 		this.check = Objects.requireNonNull(check, "check");
 		this.credentials = Objects.requireNonNull(credentials, "credentials");
 		this.recoveryCodes = Objects.requireNonNull(recoveryCodes, "recoveryCodes");
 		this.hashing = Objects.requireNonNull(hashing, "hashing");
-		this.notices = Objects.requireNonNull(notices, "notices");
+		this.events = Objects.requireNonNull(events, "events");
 		this.sessions = Objects.requireNonNull(sessions, "sessions");
 	}
 
@@ -80,7 +83,7 @@ public class PasswordChange {
 			recoveryCode = Optional.of(code);
 		}
 		else {
-			this.notices.record(user, PasswordChangeMethod.CHANGE, now);
+			this.events.publishEvent(new PasswordChanged(user, PasswordChangeMethod.CHANGE, now));
 		}
 		this.sessions.endAllExcept(user, keepSessionId);
 		return new PasswordChangeOutcome.Changed(recoveryCode);

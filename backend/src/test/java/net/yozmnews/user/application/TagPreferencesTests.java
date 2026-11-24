@@ -16,7 +16,7 @@ import net.yozmnews.platform.UserId;
 import net.yozmnews.tag.TagSetAdministration;
 import net.yozmnews.tag.TagSetDirectory;
 import net.yozmnews.tag.TagSetId;
-import net.yozmnews.user.AccountCreatedEvents;
+import net.yozmnews.user.AccountEvents;
 import net.yozmnews.user.application.DigestSettings.DigestSettingsOutcome;
 import net.yozmnews.user.application.DigestSettings.DigestSettingsView;
 import net.yozmnews.user.application.TagPreferences.TagPreferenceSaveOutcome;
@@ -222,7 +222,7 @@ class TagPreferencesTests {
 				EmailAddress.parse(email).orElseThrow(), new DisplayName("사용자"),
 				PasswordPolicy.normalize("correct horse battery"), NOW));
 		assertThat(result).isInstanceOf(ProvisionResult.Created.class);
-		AccountCreatedEvents.awaitHandled(this.jdbc);
+		AccountEvents.awaitCreatedHandled(this.jdbc);
 		return ((ProvisionResult.Created) result).user();
 	}
 

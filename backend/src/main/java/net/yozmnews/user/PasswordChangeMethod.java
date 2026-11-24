@@ -1,7 +1,7 @@
-package net.yozmnews.user.domain.notice;
+package net.yozmnews.user;
 
 /**
- * 비밀번호를 바꾼 방법 — 비밀번호 알림의 내용. docs/specs/user.md §4
+ * 비밀번호를 바꾼 방법 — 비밀번호 바뀜 이벤트와 비밀번호 알림의 내용이 싣는다. docs/specs/account.md §3
  */
 public enum PasswordChangeMethod {
 

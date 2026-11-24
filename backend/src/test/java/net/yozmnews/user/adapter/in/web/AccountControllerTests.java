@@ -14,6 +14,7 @@ import java.util.List;
 import jakarta.servlet.http.Cookie;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.platform.UserId;
+import net.yozmnews.user.AccountEvents;
 import net.yozmnews.user.application.PasswordHashing;
 import net.yozmnews.user.domain.account.Account;
 import net.yozmnews.user.domain.account.AccountRepository;
@@ -86,6 +87,7 @@ class AccountControllerTests {
 	@BeforeEach
 	@AfterEach
 	void reset() {
+		AccountEvents.awaitPasswordChangeHandled(this.jdbc);
 		this.jdbc.sql("delete from users").update();
 		this.jdbc.sql("delete from login_failures").update();
 		this.jdbc.sql("delete from spring_session").update();
@@ -492,6 +494,7 @@ class AccountControllerTests {
 	}
 
 	private List<String> notices(long user) {
+		AccountEvents.awaitPasswordChangeHandled(this.jdbc);
 		return this.jdbc.sql("""
 				select kind || ':' || coalesce(content ->> 'method', '') from user_notices where user_id = :id order by id
 				""").param("id", user).query(String.class).list();

@@ -10,7 +10,7 @@ import java.util.Optional;
 
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.platform.UserId;
-import net.yozmnews.user.AccountCreatedEvents;
+import net.yozmnews.user.AccountEvents;
 import net.yozmnews.user.InvitationRevocationResult;
 import net.yozmnews.user.InvitationState;
 import net.yozmnews.user.InvitationView;
@@ -58,7 +58,7 @@ class InvitationServiceTests {
 	@AfterEach
 	void reset() {
 		this.jdbc.sql("delete from user_invitations").update();
-		AccountCreatedEvents.awaitHandled(this.jdbc);
+		AccountEvents.awaitCreatedHandled(this.jdbc);
 		this.jdbc.sql("delete from users").update();
 	}
 
@@ -120,7 +120,7 @@ class InvitationServiceTests {
 		assertThat(view.usedAt()).isEqualTo(used);
 		assertThat(view.usedByEmail()).isEqualTo("kim@example.com");
 
-		AccountCreatedEvents.awaitHandled(this.jdbc);
+		AccountEvents.awaitCreatedHandled(this.jdbc);
 		this.jdbc.sql("delete from users where id = :id").param("id", user.value()).update();
 		InvitationView afterDeletion = service(T0.plusSeconds(120)).recent().getFirst();
 		assertThat(afterDeletion.state()).as("계정이 지워져도 쓴 시각이 남아 쓴 초대다").isEqualTo(InvitationState.USED);

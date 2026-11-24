@@ -11,7 +11,7 @@ import java.util.Map;
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.user.AccountCreated;
-import net.yozmnews.user.AccountCreatedEvents;
+import net.yozmnews.user.AccountEvents;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -53,7 +53,7 @@ class AccountCreatedListenerTests {
 	@BeforeEach
 	@AfterEach
 	void reset() {
-		AccountCreatedEvents.awaitHandled(this.jdbc);
+		AccountEvents.awaitCreatedHandled(this.jdbc);
 		this.jdbc.sql("delete from users").update();
 	}
 
@@ -98,7 +98,7 @@ class AccountCreatedListenerTests {
 
 	private void publish(AccountCreated created) {
 		this.transaction.executeWithoutResult(status -> this.events.publishEvent(created));
-		AccountCreatedEvents.awaitHandled(this.jdbc);
+		AccountEvents.awaitCreatedHandled(this.jdbc);
 	}
 
 	private UserId account(String email) {
