@@ -61,13 +61,13 @@ import tools.jackson.databind.json.JsonMapper;
 
 /**
  * 리포트 생성 흐름 — 예약 · 입력 맞추기 · 시작과 스냅숏 · 프롬프트 · 생성 · 판정과 한 번 다시 묻기 · 대조 · 저장이 실제 PostgreSQL 위에서
- * 끝까지 간다. 갈래가 없으면 EMPTY, 생성기가 없으면 NO_GENERATOR, 실패 · 잘림 · 다시 물어도 읽지 못함은 그 코드로 끝난다. 입력의 사용자 ·
+ * 끝까지 간다. 갈래가 없으면 EMPTY, 실패 · 잘림 · 다시 물어도 읽지 못함은 그 코드로 끝난다. 입력의 사용자 ·
  * 기간이 리포트 행과 다르면 아무것도 쓰지 않고 거부한다. 요청은 추론 강도 · 맞춘 입력의 별칭 · 프롬프트를 싣는다.
  * <p>
  * 지키는 규칙: report-R1 · report-R8 · report-R9 · report-R13 · report-R22
  * <p>
  * 시험을 트랜잭션으로 감싸지 않는다 — 유스케이스가 트랜잭션을 둘로 나눈다. 생성기 · 시계는 유스케이스의 패키지 생성자로 넣는다(대본 생성기 · 로컬
- * 대체물). 컨텍스트의 빈은 시험 profile 에 {@code local} 이 없어 생성기가 없다. 기대값은 손으로 쓴 리터럴이다.
+ * 대체물). 컨텍스트의 빈은 시험 profile 에 {@code local} 이 없어 실제 생성기다. 기대값은 손으로 쓴 리터럴이다.
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -189,17 +189,18 @@ class ReportGenerationTests {
 	}
 
 	@Test
-	void theContextUseCaseHasNoGeneratorOutsideLocalAndEndsWithNoGenerator() {
+	void theContextUseCaseCallsTheRealGeneratorOutsideLocalWhichEndsKeyMissingWithoutAKey() {
+		// 시험 profile 에 local 이 없어 컨텍스트의 생성기는 실제 생성기다 — 사용자 7 은 저장한 키가 없어 관문이 보내지 않는다
 		ReportId id = this.contextGeneration.schedule(new UserId(7), WEEK);
 
 		assertThat(this.contextGeneration.run(id, ReportFixtures.MODEL, ReportFixtures.EFFORT, input(interests())))
 			.isEqualTo(ReportStatus.FAILED);
 
 		assertThat(row(id)).containsEntry("status", "FAILED")
-			.containsEntry("error_code", "NO_GENERATOR")
-			.containsEntry("error_message", "생성기가 없다")
-			.containsEntry("input_tokens", null)
-			.containsEntry("duration_ms", null);
+			.containsEntry("error_code", "KEY_MISSING")
+			.containsEntry("error_message", "쓸 모델 공급자의 저장한 키가 없다")
+			.containsEntry("input_tokens", null);
+		assertThat(row(id).get("duration_ms")).isNotNull();
 		assertThat(row(id).get("started_at")).isNotNull();
 		assertThat(JSON.readTree((String) row(id).get("snapshot")))
 			.isEqualTo(JSON.readTree("{\"coverage\": {\"직전\": 7, \"이번\": 12}}"));
@@ -247,7 +248,7 @@ class ReportGenerationTests {
 		AtomicReference<ReportId> target = new AtomicReference<>();
 		ReportGeneration generation = generation(scripted(calls, request -> {
 			this.jdbc.sql("""
-					update reports set status = 'FAILED', error_code = 'NO_GENERATOR', error_message = '다른 실행',
+					update reports set status = 'FAILED', error_code = 'PROVIDER_UNEXPECTED', error_message = '다른 실행',
 					completed_at = now(), version = version + 1 where id = :id""").param("id", target.get().value()).update();
 			return "{\"overview\":\"개요\",\"sections\":{\"interests\":{\"title\":\"제목\",\"body\":\"본문\",\"refs\":[]}}}";
 		}));
@@ -491,7 +492,7 @@ class ReportGenerationTests {
 	}
 
 	private ReportGeneration generation(ReportGenerator generator) {
-		return new ReportGeneration(this.reports, this.sections, () -> generator, this.transaction,
+		return new ReportGeneration(this.reports, this.sections, generator, this.transaction,
 				TestClocks.of(() -> this.now.get()));
 	}
 

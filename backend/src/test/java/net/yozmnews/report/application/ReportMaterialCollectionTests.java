@@ -362,7 +362,7 @@ class ReportMaterialCollectionTests {
 	}
 
 	private ReportGeneration generation() {
-		return new ReportGeneration(this.reportRows, this.sections, FakeReportGenerator::new, this.transaction,
+		return new ReportGeneration(this.reportRows, this.sections, new FakeReportGenerator(), this.transaction,
 				TestClocks.of(() -> Instant.parse("2026-11-12T00:00:00Z")));
 	}
 
