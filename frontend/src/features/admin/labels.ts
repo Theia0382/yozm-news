@@ -30,6 +30,9 @@ type InvitationState = Schemas["InvitationRowResponse"]["state"];
 type LinkedBy = Schemas["StorylineMembershipResponse"]["linkedBy"];
 type RelationOutcome = Schemas["StorylineAskedResponse"]["outcome"];
 type RelationReading = Schemas["RelationJudgementResponse"]["reading"];
+type TagKind = Schemas["TagRef"]["kind"];
+type LineageChange = Schemas["TagLineageView"]["change"];
+type VersionCreator = Schemas["TagSetVersionItem"]["createdBy"];
 
 export const refusalLabels = {
   PROFILE_UNAVAILABLE:
@@ -149,6 +152,26 @@ export const tagKindLabels = {
   TOPIC: "주제",
   REGION: "지역",
 } as const satisfies Record<MultiTagKind, string>;
+
+/** 태그 체계의 태그 종류 — 변경 목록 · 계보의 키가 속한 종류(형식 포함) */
+export const tagSetKindLabels = {
+  TOPIC: "주제",
+  REGION: "지역",
+  FORMAT: "형식",
+} as const satisfies Record<TagKind, string>;
+
+/** 계보 항목의 변경 */
+export const lineageChangeLabels = {
+  RENAME: "이름 변경",
+  SPLIT: "분할",
+  MERGE: "병합",
+} as const satisfies Record<LineageChange, string>;
+
+/** 태그 체계 버전을 만든 쪽 — 시스템은 첫 기동에 기본 체계 파일을 적재한 것이다 */
+export const versionCreatorLabels = {
+  OPERATOR: "운영자",
+  SYSTEM: "기본 체계 파일",
+} as const satisfies Record<VersionCreator, string>;
 
 /** 기준 변경의 경고 — 변경을 막지 않는 알림이다(그 변경이 어긋남을 만들 때만 나온다) */
 export const thresholdWarningLabels = {

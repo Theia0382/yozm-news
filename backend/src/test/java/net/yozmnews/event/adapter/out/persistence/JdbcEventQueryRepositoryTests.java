@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 
 import java.sql.Types;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.Arrays;
@@ -13,6 +14,11 @@ import java.util.Map;
 
 import net.yozmnews.TestcontainersConfiguration;
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.evaluation.EventJudgementId;
+import net.yozmnews.event.ArticleAssignment;
+import net.yozmnews.event.ArticleKeyTerms;
+import net.yozmnews.event.AssignmentCandidate;
+import net.yozmnews.event.AssignmentCriteria;
 import net.yozmnews.event.DecidedBy;
 import net.yozmnews.event.EventArticleView;
 import net.yozmnews.event.EventId;
@@ -33,13 +39,14 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 
 /**
  * 사건 조회 저장소 — 대표 기사의 정렬(표현이 있는 기사의 거리 순 → 표현 없는 기사의 발행 시각 순, 사건 모델 버전의 표현만), 사건 · 배정
- * 읽기, 기사의 사건, 기간 안 배정, 사건 쪽 넘기기를 Flyway 가 적용된 실제 PostgreSQL 에서 본다. 시험은 시험 트랜잭션 안에서 돌고
+ * 읽기, 기사의 사건, 기사 하나의 배정 근거(기준 이력 · 판정 원본 ID · 저장 후보)와 표현의 핵심 말, 기간 안 배정, 사건 쪽 넘기기를 Flyway 가
+ * 적용된 실제 PostgreSQL 에서 본다. 시험은 시험 트랜잭션 안에서 돌고
  * 되돌린다 — 기간 조회는 다른 시험의 행과 겹치지 않게 먼 시각(2031년)을 쓴다.
  * <p>
  * 사건 표현 · 이웃 사건 · 말 수 · 채우기 대상(스토리라인 잇기의 재료)도 본다 — 모델 버전을 시험마다 따로 써 다른 시험의 행과 겹치지 않게
  * 하고, 채우기 대상은 먼 시각(2032년)을, 모델 버전을 가리지 않는 말 수는 먼 시각(2035년)을 쓴다.
  * <p>
- * 지키는 규칙: event-R14 · event-R20 · event-R24
+ * 지키는 규칙: event-R12 · event-R14 · event-R20 · event-R22 · event-R24
  */
 @JdbcTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -160,6 +167,52 @@ class JdbcEventQueryRepositoryTests {
 				new EventArticleView(new ArticleId(92), Instant.parse("2026-11-05T00:00:00Z"), 0.7, DecidedBy.EVALUATOR,
 						assigned));
 		assertThat(this.repository.articles(event + 1_000)).isEmpty();
+	}
+
+	@Test
+	void readsTheAssignmentOfAnArticleWithItsCriteriaJudgementAndStoredCandidates() {
+		long event = event("OPEN", "model-a", "[1,0]", "2026-11-03T00:00:00Z", "2026-11-05T00:00:00Z");
+		long absorbed = event("OPEN", "model-a", "[0,1]", "2026-11-04T00:00:00Z", "2026-11-04T00:00:00Z");
+		long rival = event("OPEN", "model-a", "[0,1]", "2026-11-04T00:00:00Z", "2026-11-04T00:00:00Z");
+		long criteria = criteria();
+		member(191, event, criteria, "2026-11-05T00:00:00Z", DecidedBy.EVALUATOR, 0.62);
+		this.jdbc.sql("update event_articles set opened = true, judgement_id = 4242 where article_id = 191").update();
+		candidate(191, rival, 0.5, null);
+		candidate(191, absorbed, 0.62, 0.3);
+		candidate(191, event, 0.62, 0.81);
+		// 사라진 사건을 가리키는 후보는 빠진다 — 사건을 지울 때 함께 지우므로 보통은 없다
+		candidate(191, rival + 1_000, 0.7, null);
+		merge(absorbed, event);
+		member(192, event, criteria, "2026-11-04T00:00:00Z", DecidedBy.FORMULA, null);
+
+		AssignmentCriteria used = new AssignmentCriteria(Duration.ofHours(72), 0.8, 0.55, 0.4, 0.5);
+		Instant assigned = Instant.parse("2026-11-06T00:00:00Z");
+		// 점수 내림차순, 같으면 사건 ID 순 — 합쳐진 후보는 지금 사건(남는 사건)을 함께 싣는다
+		assertThat(this.repository.assignmentOf(new ArticleId(191))).contains(new ArticleAssignment(new ArticleId(191),
+				new EventId(event), Instant.parse("2026-11-05T00:00:00Z"), 0.62, DecidedBy.EVALUATOR, true, used,
+				assigned, new EventJudgementId(4242),
+				List.of(new AssignmentCandidate(new EventId(event), new EventId(event), 0.62, 0.81),
+						new AssignmentCandidate(new EventId(absorbed), new EventId(event), 0.62, 0.3),
+						new AssignmentCandidate(new EventId(rival), new EventId(rival), 0.5, null))));
+		assertThat(this.repository.assignmentOf(new ArticleId(192))).contains(new ArticleAssignment(new ArticleId(192),
+				new EventId(event), Instant.parse("2026-11-04T00:00:00Z"), null, DecidedBy.FORMULA, false, used,
+				assigned, null, List.of()));
+		assertThat(this.repository.assignmentOf(new ArticleId(193))).isEmpty();
+	}
+
+	@Test
+	void readsTheKeyTermsOfEachRepresentationOfAnArticleWithoutTheVector() {
+		features(195, "model-b", "{이재명,국회}", "2026-11-05T00:00:00Z");
+		features(195, "model-a", "{국회,예산안,ai}", "2026-11-05T00:00:00Z");
+		features(195, "model-c", "{}", "2026-11-04T00:00:00Z");
+		features(196, "model-a", "{다른,기사}", "2026-11-05T00:00:00Z");
+
+		// 만든 시각 순, 같으면 모델 버전 순 — 핵심 말은 처음 나온 순서 그대로이고 빈 목록도 표현이다
+		assertThat(this.repository.keyTermsOf(new ArticleId(195))).containsExactly(
+				new ArticleKeyTerms("model-c", List.of(), Instant.parse("2026-11-04T00:00:00Z")),
+				new ArticleKeyTerms("model-a", List.of("국회", "예산안", "ai"), Instant.parse("2026-11-05T00:00:00Z")),
+				new ArticleKeyTerms("model-b", List.of("이재명", "국회"), Instant.parse("2026-11-05T00:00:00Z")));
+		assertThat(this.repository.keyTermsOf(new ArticleId(197))).isEmpty();
 	}
 
 	@Test
@@ -454,6 +507,30 @@ class JdbcEventQueryRepositoryTests {
 				insert into article_match_features (article_id, model_version, embedding, entities, created_at)
 				values (:article, :model, cast(:embedding as vector), '{}', now())
 				""").param("article", article).param("model", model).param("embedding", embedding).update();
+	}
+
+	private void features(long article, String model, String entities, String createdAt) {
+		this.jdbc.sql("""
+				insert into article_match_features (article_id, model_version, embedding, entities, created_at)
+				values (:article, :model, cast('[1,0]' as vector), cast(:entities as text[]), :createdAt)
+				""")
+			.param("article", article)
+			.param("model", model)
+			.param("entities", entities)
+			.param("createdAt", Instant.parse(createdAt).atOffset(ZoneOffset.UTC))
+			.update();
+	}
+
+	private void candidate(long article, long event, double score, @Nullable Double probability) {
+		this.jdbc.sql("""
+				insert into event_article_candidates (article_id, event_id, score, probability)
+				values (:article, :event, :score, :probability)
+				""")
+			.param("article", article)
+			.param("event", event)
+			.param("score", score)
+			.param("probability", probability, Types.DOUBLE)
+			.update();
 	}
 
 }

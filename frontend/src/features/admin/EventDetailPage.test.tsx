@@ -96,10 +96,18 @@ describe("EventDetailPage", () => {
     ).getAllByRole("row");
     const first = within(articles[1]!).getAllByRole("cell");
     expect(first[0]).toHaveTextContent("한겨레 · 경향신문");
+    // 기사 제목은 기사 상세로 잇는다 — 그새 지운 기사는 상세가 없어 잇지 않는다
+    expect(
+      within(first[0]!).getByRole("link", { name: "국회 본회의 통과" }),
+    ).toHaveAttribute("href", "/admin/articles/41");
+    expect(
+      within(values).getByRole("link", { name: "국회 본회의 통과" }),
+    ).toHaveAttribute("href", "/admin/articles/41");
     expect(first[2]).toHaveTextContent(/^0\.91$/);
     expect(first[3]).toHaveTextContent(/^산식$/);
     const second = within(articles[2]!).getAllByRole("cell");
     expect(second[0]).toHaveTextContent(/^지운 기사 42$/);
+    expect(within(second[0]!).queryByRole("link")).toBeNull();
     expect(second[2]).toHaveTextContent(/^없음$/);
     expect(second[3]).toHaveTextContent(/^판정 실패$/);
     expect(within(articles[3]!).getAllByRole("cell")[3]).toHaveTextContent(

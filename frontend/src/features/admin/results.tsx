@@ -78,7 +78,7 @@ export function PreviewResultView({
       return (
         <div className="space-y-2">
           <p role="alert">원문이 검증에 걸려 받지 않았습니다.</p>
-          <ProfileProblems problems={result.problems} />
+          <TextProblems problems={result.problems} />
         </div>
       );
     case "FEED_NOT_IN_PROFILE":
@@ -158,26 +158,62 @@ export function FetchFailureNotice({ failure }: { failure: FetchFailureView }) {
   );
 }
 
-/** 운영자 원문의 문제 — 경로 · 줄:열 · 문구 */
-export function ProfileProblems({
+/** 운영자 원문(수집 프로필 · 태그 체계)의 문제 하나 — 두 문제 응답의 모양이 같다 */
+type TextProblem = ProfileProblemView | Schemas["TagSetProblemView"];
+
+/**
+ * 운영자 원문의 문제 — 경로 · 줄:열 · 문구. onLocate 를 주면 줄:열이 원문의 그 자리로 가는 단추다(열을 모르면 그 줄의 처음).
+ */
+export function TextProblems({
   problems,
+  onLocate,
 }: {
-  problems: ProfileProblemView[];
+  problems: TextProblem[];
+  onLocate?: (line: number, column: number) => void;
 }) {
   return (
     <ul className="list-disc pl-5 text-sm">
       {problems.map((problem, index) => (
         <li key={index}>
           {problem.line !== null && (
-            <span className="font-mono">
-              {problem.line}:{problem.column ?? "?"}{" "}
-            </span>
+            <>
+              <ProblemPosition
+                line={problem.line}
+                column={problem.column}
+                onLocate={onLocate}
+              />{" "}
+            </>
           )}
           {problem.path && <code>{problem.path} </code>}
           <span>{problem.message}</span>
         </li>
       ))}
     </ul>
+  );
+}
+
+function ProblemPosition({
+  line,
+  column,
+  onLocate,
+}: {
+  line: number;
+  column: number | null;
+  onLocate?: (line: number, column: number) => void;
+}) {
+  const text = `${line}:${column ?? "?"}`;
+  if (!onLocate) {
+    return <span className="font-mono">{text}</span>;
+  }
+  return (
+    <button
+      type="button"
+      title="원문의 이 자리로 간다"
+      className="font-mono underline"
+      onClick={() => onLocate(line, column ?? 1)}
+    >
+      {text}
+    </button>
   );
 }
 

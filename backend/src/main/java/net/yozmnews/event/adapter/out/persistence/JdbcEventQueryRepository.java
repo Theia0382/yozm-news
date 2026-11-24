@@ -3,6 +3,7 @@ package net.yozmnews.event.adapter.out.persistence;
 import java.sql.Array;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -15,6 +16,11 @@ import java.util.Map;
 import java.util.Optional;
 
 import net.yozmnews.article.ArticleId;
+import net.yozmnews.evaluation.EventJudgementId;
+import net.yozmnews.event.ArticleAssignment;
+import net.yozmnews.event.ArticleKeyTerms;
+import net.yozmnews.event.AssignmentCandidate;
+import net.yozmnews.event.AssignmentCriteria;
 import net.yozmnews.event.DecidedBy;
 import net.yozmnews.event.EventArticleView;
 import net.yozmnews.event.EventId;
@@ -40,7 +46,8 @@ import org.springframework.stereotype.Repository;
  * {@code event_articles.published_at} 범위로 고른다(인덱스 {@code event_articles_published_idx}). 이웃 사건은 기준 사건과 같은 모델
  * 버전의 합쳐지지 않은 사건마다 코사인을 센다(인덱스 없음) — 거리가 NaN(영 벡터 중심)인 행은 뺀다. 이웃 · 채우기 대상의 시각 조건은
  * {@code events_unmerged_idx} 로 거른다. 말 수는 두 문장이다 — 범위와 겹치는 합쳐지지 않은 사건을 세는 문장과, 물은 말의 핵심 말 행(인덱스
- * {@code event_key_terms_term_idx})을 그 사건들과 조인해 말마다 세는 문장.
+ * {@code event_key_terms_term_idx})을 그 사건들과 조인해 말마다 세는 문장. 기사 하나의 배정은 기준 이력과 저장 후보까지 한 문장으로
+ * 읽는다 — 후보는 같은 조각으로 고른 배열 넷이고, 후보의 사건은 {@code coalesce(merged_into, id)} 로 지금 사건까지 함께 읽는다.
  */
 @Repository
 class JdbcEventQueryRepository implements EventQueryRepository {
@@ -65,6 +72,19 @@ class JdbcEventQueryRepository implements EventQueryRepository {
 			where a.event_id = any(:events) and %s
 			order by a.event_id, a.published_at, a.article_id
 			""";
+
+	/** 배정 {@code a} 의 저장 후보를 고르고 늘어놓는 조각 — 점수 내림차순 · 사건 ID 순. 후보 배열 넷이 같은 조각이라 순서가 같다 */
+	private static final String CANDIDATES_OF_ASSIGNMENT = """
+			from event_article_candidates k join events e on e.id = k.event_id
+			      where k.article_id = a.article_id order by k.score desc, k.event_id""";
+
+	/** 배정 {@code a} 의 저장 후보 — 후보 사건 · 그 지금 사건(합쳐졌으면 남는 사건) · 점수 · 확률의 배열 넷 */
+	private static final String CANDIDATE_ARRAYS = """
+			array(select k.event_id %1$s) as candidate_events,
+			array(select coalesce(e.merged_into, e.id) %1$s) as candidate_currents,
+			array(select k.score %1$s) as candidate_scores,
+			array(select k.probability %1$s) as candidate_probabilities
+			""".formatted(CANDIDATES_OF_ASSIGNMENT);
 
 	/** 합쳐지지 않았고 첫 ~ 마지막 기사 시각이 [from, to] 와 겹치는 사건 — 말 수의 두 문장이 같은 조건을 쓴다(event-R24) */
 	private static final String UNMERGED_IN_RANGE = "e.status <> 'MERGED' and e.last_article_at >= :from and e.first_article_at <= :to";
@@ -123,6 +143,39 @@ class JdbcEventQueryRepository implements EventQueryRepository {
 				events.put(new ArticleId(rs.getLong("article_id")), rs.getLong("event_id"));
 			});
 		return Collections.unmodifiableMap(events);
+	}
+
+	@Override
+	public Optional<ArticleAssignment> assignmentOf(ArticleId articleId) {
+		return this.jdbc.sql("""
+				select a.event_id, a.published_at, a.score, a.decided_by, a.opened, a.assigned_at, a.judgement_id,
+				       c.window_seconds, c.upper, c.lower, c.store, c.probability,
+				       %s
+				from event_articles a
+				join event_assignment_criteria c on c.id = a.criteria_id
+				where a.article_id = :article
+				""".formatted(CANDIDATE_ARRAYS)).param("article", articleId.value()).query((rs, row) -> {
+					AssignmentCriteria criteria = new AssignmentCriteria(Duration.ofSeconds(rs.getLong("window_seconds")),
+							rs.getDouble("upper"), rs.getDouble("lower"), rs.getDouble("store"),
+							rs.getDouble("probability"));
+					long judgement = rs.getLong("judgement_id");
+					EventJudgementId judgementId = rs.wasNull() ? null : new EventJudgementId(judgement);
+					return new ArticleAssignment(articleId, new EventId(rs.getLong("event_id")),
+							instant(rs, "published_at"), rs.getObject("score", Double.class),
+							DecidedBy.valueOf(rs.getString("decided_by")), rs.getBoolean("opened"), criteria,
+							instant(rs, "assigned_at"), judgementId, candidates(rs));
+				}).optional();
+	}
+
+	@Override
+	public List<ArticleKeyTerms> keyTermsOf(ArticleId articleId) {
+		return this.jdbc.sql("""
+				select model_version, entities, created_at from article_match_features
+				where article_id = :article
+				order by created_at, model_version collate "C"
+				""").param("article", articleId.value()).query((rs, row) -> new ArticleKeyTerms(
+				rs.getString("model_version"), List.of(strings(rs.getArray("entities"))), instant(rs, "created_at")))
+			.list();
 	}
 
 	@Override
@@ -410,6 +463,19 @@ class JdbcEventQueryRepository implements EventQueryRepository {
 			keyTerms.add(new EventKeyTerm(terms[i], counts[i]));
 		}
 		return List.copyOf(keyTerms);
+	}
+
+	private static List<AssignmentCandidate> candidates(ResultSet rs) throws SQLException {
+		Long[] events = (Long[]) rs.getArray("candidate_events").getArray();
+		Long[] currents = (Long[]) rs.getArray("candidate_currents").getArray();
+		Double[] scores = (Double[]) rs.getArray("candidate_scores").getArray();
+		Double[] probabilities = (Double[]) rs.getArray("candidate_probabilities").getArray();
+		List<AssignmentCandidate> candidates = new ArrayList<>(events.length);
+		for (int i = 0; i < events.length; i++) {
+			candidates.add(new AssignmentCandidate(new EventId(events[i]), new EventId(currents[i]), scores[i],
+					probabilities[i]));
+		}
+		return List.copyOf(candidates);
 	}
 
 	private static String[] strings(Array array) throws SQLException {

@@ -123,6 +123,9 @@ export function AdminLayout({ baseUrl, fetch }: AdminLayoutProps) {
             <NavLink to="/admin/samples" className={navLinkClass}>
               표본 검수
             </NavLink>
+            <NavLink to="/admin/tag-sets" className={navLinkClass}>
+              태그 체계
+            </NavLink>
             <NavLink to="/admin/thresholds" className={navLinkClass}>
               태그 기준
             </NavLink>

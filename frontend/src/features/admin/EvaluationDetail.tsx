@@ -1,13 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router";
 import {
   failureText,
   type Schemas,
   unwrap,
 } from "@/features/admin/adminClient";
 import { useAdminClient } from "@/features/admin/adminSession";
+import { ArticleContentView } from "@/features/admin/ArticleContentView";
+import { articlePath } from "@/features/admin/articleQueries";
 import { EVALUATION_KEY } from "@/features/admin/evaluationQueries";
 import { topicStatusLabels } from "@/features/admin/labels";
-import { safeLink } from "@/features/admin/links";
 import { formatProbability } from "@/features/admin/metrics";
 import { REVIEW_TABLE } from "@/features/admin/tables";
 import { formatDateTime } from "@/shared/lib/dateTime";
@@ -104,46 +106,27 @@ export function EvaluationDetail({ detail }: { detail: Detail }) {
 }
 
 function ArticleView({ detail }: { detail: Detail }) {
-  const article = detail.article;
-  if (!article) {
+  if (!detail.article) {
     return (
       <section aria-label="기사">
         <p>그새 지운 기사다 — 평가 결과만 남아 있다(기사 {detail.articleId})</p>
       </section>
     );
   }
-  const link = safeLink(article.canonicalUrl);
   return (
-    <section aria-label="기사" className="space-y-2">
-      <h3 className="text-base font-semibold">{article.title}</h3>
-      {link ? (
-        <a
-          href={link}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline"
-        >
-          원문 열기
-        </a>
-      ) : (
-        <p className="break-all text-muted-foreground">
-          원문 주소: {article.canonicalUrl}
-        </p>
-      )}
-      <ul aria-label="실린 피드" className="space-y-0.5">
-        {article.entries.map((entry, index) => (
-          <li key={index}>
-            {entry.sourceName ?? "이름 없는 출처"}
-            {entry.section && ` · ${entry.section}`}
-            {entry.categories.length > 0 &&
-              ` · 카테고리 ${entry.categories.join(", ")}`}
-          </li>
-        ))}
-      </ul>
-      <p className="rounded-md bg-muted p-2 whitespace-pre-wrap">
-        {article.summary ?? "요약문 없음 — 제목만으로 평가했다"}
+    <ArticleContentView
+      article={detail.article}
+      missingSummary="요약문 없음 — 제목만으로 평가했다"
+    >
+      <p>
+        <Link to={articlePath(detail.articleId)} className="underline">
+          기사 상세
+        </Link>{" "}
+        <span className="text-muted-foreground">
+          — 이 기사의 다른 버전 평가와 사건 소속
+        </span>
       </p>
-    </section>
+    </ArticleContentView>
   );
 }
 

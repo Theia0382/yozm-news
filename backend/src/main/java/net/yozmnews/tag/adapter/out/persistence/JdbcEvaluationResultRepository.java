@@ -318,6 +318,19 @@ class JdbcEvaluationResultRepository implements EvaluationResultRepository {
 	}
 
 	@Override
+	public List<ListedEvaluation> findListedByArticle(ArticleId articleId) {
+		List<ListedEvaluation> listed = new ArrayList<>();
+		scan(this.jdbc.sql("""
+				select %s
+				from article_evaluations e
+				left join article_tags t on t.evaluation_id = e.id
+				where e.article_id = :article
+				order by e.id, t.tag_kind, t.tag_key
+				""".formatted(COLUMNS)).param("article", articleId.value()), false, evaluation -> listed.add(evaluation));
+		return List.copyOf(listed);
+	}
+
+	@Override
 	public Optional<StoredEvaluationDetail> findDetail(EvaluationId id) {
 		return this.jdbc.sql("""
 				select e.id, e.article_id, e.tag_set_id, e.format_key, e.importance, e.judgement_id, e.evaluated_at,

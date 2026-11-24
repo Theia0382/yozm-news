@@ -302,10 +302,13 @@
 | [0297](0297-an-event-whose-mean-topic-interest-is-at-or-below-the-exclusion-threshold-does-not-enter-the-big-slot.md) | 주제 관심의 평균이 거름 기준 이하인 사건은 큰 슬롯에 넣지 않는다 | 승인 |
 | [0298](0298-storyline-interest-drops-silent-exposures-before-the-latest-reacted-exposure-per-flow-and-topics-and-tracking-are-left-out.md) | 스토리라인 관심은 묶음마다 반응한 가장 늦은 노출보다 앞선 무반응 노출을 노출에서 빼고, 주제 관심과 흐름 추적에는 그 규칙을 걸지 않는다 | 승인 |
 | [0299](0299-the-big-judgement-criterion-first-value-is-fourteen-to-keep-its-strictness-on-the-four-level-importance-scale.md) | 큰 판정 기준의 처음 값은 네 단계 중요도 척도에서 같은 엄격함을 지키도록 14.00 으로 둔다 | 승인 |
+| [0301](0301-the-operator-article-detail-is-one-page-and-one-detail-api-and-article-titles-on-operator-screens-link-to-it.md) | 운영자 기사 상세는 한 페이지 · 상세 API 하나로 기사 · 평가 · 사건 소속을 싣고, 운영자 화면의 기사 제목이 그리로 잇는다 | 승인 |
+| [0302](0302-the-article-detail-shows-clustering-evidence-from-the-assignment-its-criteria-stored-candidates-applied-judgement-and-remaining-key-terms.md) | 기사 상세의 사건 묶기 근거는 배정 · 판정에 쓴 기준 · 저장 후보 · 반영한 판정 원본과 남아 있는 표현의 핵심 말이다 | 승인 |
 | [0303](0303-a-change-report-covers-only-what-relates-to-the-user-in-three-sections-tracked-flows-subscribed-topic-coverage-and-interest-changes.md) | 변화 리포트는 그 사용자와 관계된 것만 다루고, 갈래는 추적한 흐름 · 구독 주제 보도량 · 관심 변화 셋이다 | 승인 |
 | [0304](0304-a-change-report-takes-previous-values-from-the-previous-reports-snapshot-matched-one-to-one-and-keeps-them-in-its-own-snapshot.md) | 변화 리포트의 직전 기간 비교는 직전 리포트의 스냅숏에서 1:1 로 이은 값으로 하고, 이은 값을 자기 스냅숏에 함께 남긴다 | 승인 |
 | [0305](0305-a-change-report-describes-flows-by-the-user-storyline-summary-and-events-by-the-representative-article-title-and-cites-a-flow-by-its-head.md) | 변화 리포트는 흐름을 사용자 스토리라인의 정리로, 사건을 대표 기사 제목으로 설명하고, 흐름은 헤드의 스토리라인 ID 로 인용한다 | 승인 |
 | [0306](0306-a-change-report-compares-subscribed-topic-coverage-and-flow-coverage-each-only-with-its-own-previous-value.md) | 변화 리포트는 구독 주제 보도량과 흐름 보도량을 서로 견주지 않고 각자 자기 직전 값과만 견준다 | 승인 |
+| [0307](0307-the-tag-set-screen-edits-the-whole-text-activates-only-what-was-reviewed-and-reports-interference-by-comparing-results.md) | 태그 체계 화면은 원문 전체를 고치는 한 페이지이고, 확인한 원문 · 재평가 기간 그대로만 확인 대화상자를 거쳐 활성화하며, 끼어든 활성화는 활성화 결과를 확인 결과와 견줘 알린다 | 승인 |
 
 ## 운영 규칙
 

@@ -4,6 +4,7 @@ import { createMemoryRouter } from "react-router";
 import { RouterProvider } from "react-router/dom";
 import { describe, expect, it } from "vitest";
 import { routes } from "@/app/routes";
+import { ArticleDetailPage } from "@/features/admin/ArticleDetailPage";
 import { BigStorylinesPage } from "@/features/admin/BigStorylinesPage";
 import { CollectionPage } from "@/features/admin/CollectionPage";
 import { EvaluationDetailPage } from "@/features/admin/EvaluationDetailPage";
@@ -16,6 +17,7 @@ import { EventsPage } from "@/features/admin/EventsPage";
 import { SamplePage } from "@/features/admin/SamplePage";
 import { StorylineDetailPage } from "@/features/admin/StorylineDetailPage";
 import { StorylinesPage } from "@/features/admin/StorylinesPage";
+import { TagSetsPage } from "@/features/admin/TagSetsPage";
 import { ThresholdsPage } from "@/features/admin/ThresholdsPage";
 import { DigestDatesPage } from "@/features/digests/DigestDatesPage";
 import { DigestDayPage } from "@/features/digests/DigestDayPage";
@@ -193,9 +195,11 @@ describe("routes", () => {
     ["evaluations", "EvaluationListPage", () => EvaluationListPage],
     ["evaluations/:id", "EvaluationDetailPage", () => EvaluationDetailPage],
     ["samples", "SamplePage", () => SamplePage],
+    ["tag-sets", "TagSetsPage", () => TagSetsPage],
     ["thresholds", "ThresholdsPage", () => ThresholdsPage],
     ["events", "EventsPage", () => EventsPage],
     ["events/:id", "EventDetailPage", () => EventDetailPage],
+    ["articles/:id", "ArticleDetailPage", () => ArticleDetailPage],
     ["storylines", "StorylinesPage", () => StorylinesPage],
     ["storylines/:id", "StorylineDetailPage", () => StorylineDetailPage],
     ["big-storylines", "BigStorylinesPage", () => BigStorylinesPage],

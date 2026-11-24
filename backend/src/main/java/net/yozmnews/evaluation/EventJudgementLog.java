@@ -1,11 +1,14 @@
 package net.yozmnews.evaluation;
 
+import java.util.Optional;
+
 import org.jspecify.annotations.Nullable;
 
 /**
- * 사건 소속 판정 원본의 조회 — 운영자 화면이 기간의 판정을 훑는다 · docs/specs/evaluation.md §3 · evaluation-R39.
+ * 사건 소속 판정 원본의 조회 — 운영자 화면이 기간의 판정을 훑고, 배정이 가리키는 판정을 ID 로 찾는다 · docs/specs/evaluation.md §3 ·
+ * evaluation-R39.
  * <p>
- * 트랜잭션을 열지 않는다 — 질의 하나다.
+ * 트랜잭션을 열지 않는다 — 연산마다 질의 하나다.
  */
 public interface EventJudgementLog {
 
@@ -18,5 +21,11 @@ public interface EventJudgementLog {
 	 * @throws IllegalArgumentException {@code size} 가 1 ~ {@link #MAX_PAGE_SIZE} 밖일 때
 	 */
 	EventJudgementPage list(JudgementPeriod period, @Nullable EventJudgementCursor after, int size);
+
+	/**
+	 * 판정 원본 하나.
+	 * @return 없는(지운) 원본이면 빈 값
+	 */
+	Optional<EventJudgementView> find(EventJudgementId id);
 
 }

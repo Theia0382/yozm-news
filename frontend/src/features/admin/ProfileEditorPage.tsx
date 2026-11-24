@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router";
 import { failureText, unwrap } from "@/features/admin/adminClient";
 import { ADMIN_QUERY_KEY, useAdminClient } from "@/features/admin/adminSession";
-import { ProfileProblems, PreviewResultView } from "@/features/admin/results";
+import { PreviewResultView, TextProblems } from "@/features/admin/results";
 import { Button } from "@/shared/ui/button";
 import { NARROW_WIDTH } from "@/shared/ui/widths";
 
@@ -192,7 +192,7 @@ function ProfileEditor({
       {register.data?.result === "INVALID_PROFILE" && (
         <div className="space-y-2">
           <p role="alert">원문이 검증에 걸려 등록하지 않았습니다.</p>
-          <ProfileProblems problems={register.data.problems} />
+          <TextProblems problems={register.data.problems} />
         </div>
       )}
       {revise.data?.result === "REVISED" && (
@@ -218,7 +218,7 @@ function ProfileEditor({
       {revise.data?.result === "INVALID_PROFILE" && (
         <div className="space-y-2">
           <p role="alert">원문이 검증에 걸려 저장하지 않았습니다.</p>
-          <ProfileProblems problems={revise.data.problems} />
+          <TextProblems problems={revise.data.problems} />
         </div>
       )}
       {(register.error ?? revise.error) && (
