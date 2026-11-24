@@ -209,6 +209,7 @@ Issue: #12
   - 꼴을 바꿀 때는 새 자리로 옮긴 뒤 옛 자리를 지운다
   - 데이터를 옮기거나 고쳐 쓰는 마이그레이션은 데이터 시험을 함께 둔다 — 실제 PostgreSQL 의 별도 스키마에 직전 버전까지 올려 옛 행을 넣고, 끝까지 올린 뒤 옮긴 값을 대조한다(예: `LinkingBandMigrationTests`)
   - 앱이 설계로 지우거나 바꾸는 경로(탈퇴, 지운 기사 따르기, 스토리라인 구독 따라가기, 태그 선호 따라가기, 보존 정리)는 이 규칙의 대상이 아니다
+  - 기능을 없애 앱이 다시 읽지 않고 사용자도 볼 수 없게 된 설정 칸은, 그 기능을 없앤 ADR 이 칸 지우기까지 정하면 마이그레이션이 지운다 — 이력과 그것이 가리키는 공유 데이터, 설정 행 자체는 지우지 않는다([ADR-0315](docs/adr/0315-a-settings-column-of-a-removed-feature-may-be-dropped-by-a-migration-with-the-adr-that-removed-it.md))
 
 ### 주석
 
