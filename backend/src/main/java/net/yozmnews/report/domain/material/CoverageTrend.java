@@ -1,9 +1,10 @@
 package net.yozmnews.report.domain.material;
 
+import net.yozmnews.report.ReportTrend;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 보도량 판정과 그 상수의 정본 · docs/specs/report.md §5 · report-R15
+ * 보도량 판정과 그 상수의 정본 · docs/specs/report.md §5 · report-R15 — 판정 값은 {@link ReportTrend}
  * <p>
  * 이번 수와 직전 수로 이 순서로 본다 — 직전이 없으면 비교 없음, 차이가 {@link #MIN_CHANGE} 보다 작으면 그대로, 직전이 0 이면 새로,
  * 이번 ≥ 직전 × {@link #RISE_RATIO} 면 늘었다, 이번 ≤ 직전 × {@link #FALL_RATIO} 면 줄었다, 그 밖은 그대로. 상수는 측정 전 목표다.
@@ -22,47 +23,27 @@ public final class CoverageTrend {
 	private CoverageTrend() {
 	}
 
-	/** 보도량의 변화 */
-	public enum Trend {
-
-		/** 직전이 0 이고 이번에 생겼다 */
-		NEW,
-
-		/** 늘었다 */
-		ROSE,
-
-		/** 줄었다 */
-		FELL,
-
-		/** 그대로 */
-		STEADY,
-
-		/** 직전 값이 없다 */
-		NO_COMPARISON
-
-	}
-
 	/**
 	 * @param current 이번 기간 기사 수
 	 * @param previous 직전 기간 기사 수 — 없으면 null
 	 */
-	public static Trend of(long current, @Nullable Long previous) {
+	public static ReportTrend of(long current, @Nullable Long previous) {
 		if (previous == null) {
-			return Trend.NO_COMPARISON;
+			return ReportTrend.NO_COMPARISON;
 		}
 		if (Math.abs(current - previous) < MIN_CHANGE) {
-			return Trend.STEADY;
+			return ReportTrend.STEADY;
 		}
 		if (previous == 0) {
-			return Trend.NEW;
+			return ReportTrend.NEW;
 		}
 		if (current >= previous * RISE_RATIO) {
-			return Trend.ROSE;
+			return ReportTrend.ROSE;
 		}
 		if (current <= previous * FALL_RATIO) {
-			return Trend.FELL;
+			return ReportTrend.FELL;
 		}
-		return Trend.STEADY;
+		return ReportTrend.STEADY;
 	}
 
 }

@@ -1,5 +1,6 @@
 package net.yozmnews.report.domain.input;
 
+import net.yozmnews.report.ReportTrend;
 import net.yozmnews.report.domain.material.CoverageTrend;
 import org.jspecify.annotations.Nullable;
 
@@ -23,7 +24,7 @@ public record Count(long current, @Nullable Long previous) {
 	}
 
 	/** 보도량 판정(report-R15) */
-	public CoverageTrend.Trend trend() {
+	public ReportTrend trend() {
 		return CoverageTrend.of(this.current, this.previous);
 	}
 

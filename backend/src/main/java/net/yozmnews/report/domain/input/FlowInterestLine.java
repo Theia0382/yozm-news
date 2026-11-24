@@ -2,6 +2,7 @@ package net.yozmnews.report.domain.input;
 
 import java.util.Objects;
 
+import net.yozmnews.report.InterestShift;
 import net.yozmnews.storyline.StorylineId;
 import org.jspecify.annotations.Nullable;
 

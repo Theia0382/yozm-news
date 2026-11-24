@@ -11,13 +11,13 @@ import java.util.function.IntPredicate;
 
 import net.yozmnews.llm.TokenEstimate;
 import net.yozmnews.platform.CodePoints;
+import net.yozmnews.report.InterestShift;
 import net.yozmnews.report.domain.alias.ReportAliases;
 import net.yozmnews.report.domain.input.CoverageSection;
 import net.yozmnews.report.domain.input.FlowInterestLine;
 import net.yozmnews.report.domain.input.FlowMaterial;
 import net.yozmnews.report.domain.input.FlowSummary;
 import net.yozmnews.report.domain.input.InputSection;
-import net.yozmnews.report.domain.input.InterestShift;
 import net.yozmnews.report.domain.input.InterestsSection;
 import net.yozmnews.report.domain.input.PriorReport;
 import net.yozmnews.report.domain.input.PriorSection;

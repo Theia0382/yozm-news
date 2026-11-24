@@ -30,10 +30,10 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 리포트 조회 공개 조회의 구현 · docs/specs/report.md §4 · report-R11 · report-R12
+ * 리포트 조회 공개 조회의 구현 · docs/specs/report.md §4 · report-R11 · report-R12 · report-R25
  * <p>
- * 행 · 섹션 · 인용은 읽기 전용 트랜잭션 하나에서 읽고, 인용의 사건 · 스토리라인은 트랜잭션 밖에서 {@code event} · {@code storyline} 의 공개
- * 조회로 지금 것으로 푼다. 판단은 {@link ReportViews} 가 한다. 쓰지 않는다.
+ * 행 · 섹션 · 인용은 읽기 전용 트랜잭션 하나에서 읽고, 인용의 사건 · 스토리라인과 스냅숏 흐름 줄의 헤드는 트랜잭션 밖에서 {@code event} ·
+ * {@code storyline} 의 공개 조회로 지금 것으로 푼다 — 스토리라인은 인용과 헤드를 한 번에 묻는다. 판단은 {@link ReportViews} 가 한다. 쓰지 않는다.
  */
 @Service
 class ReportDirectoryService implements ReportDirectory {
@@ -90,6 +90,7 @@ class ReportDirectoryService implements ReportDirectory {
 				}
 			}
 		}
+		storylineIds.addAll(ReportViews.snapshotHeads(read.row().get()));
 		return Optional.of(ReportViews.view(read.row().get(), read.sections(), currentEvents(eventIds),
 				currentStorylines(storylineIds)));
 	}
@@ -105,7 +106,7 @@ class ReportDirectoryService implements ReportDirectory {
 		return current;
 	}
 
-	/** 스토리라인마다 지금 스토리라인 — 합쳐졌으면 남는 것. 지운 스토리라인은 없다 */
+	/** 스토리라인(인용 · 스냅숏 흐름 줄의 헤드)마다 지금 스토리라인 — 합쳐졌으면 남는 것. 지운 스토리라인은 없다 */
 	private Map<StorylineId, StorylineId> currentStorylines(Set<StorylineId> ids) {
 		Map<StorylineId, StorylineId> current = new HashMap<>();
 		if (ids.isEmpty()) {

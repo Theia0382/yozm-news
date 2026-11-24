@@ -1,7 +1,7 @@
-package net.yozmnews.report.domain.input;
+package net.yozmnews.report;
 
 /**
- * 관심 줄의 변화 — 기간 끝 점이 시작 점 대비 · docs/specs/report.md §5 · report-R17
+ * 관심 줄의 변화 — 기간 끝 점이 시작 점 대비 · docs/specs/report.md §3 · report-R17
  */
 public enum InterestShift {
 

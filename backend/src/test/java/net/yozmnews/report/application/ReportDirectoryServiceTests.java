@@ -19,11 +19,14 @@ import net.yozmnews.report.ReportId;
 import net.yozmnews.report.ReportPage;
 import net.yozmnews.report.ReportPeriodKind;
 import net.yozmnews.report.ReportSectionKind;
+import net.yozmnews.report.ReportSectionStats;
 import net.yozmnews.report.ReportSectionView;
 import net.yozmnews.report.ReportStatus;
 import net.yozmnews.report.ReportSummary;
+import net.yozmnews.report.ReportTrend;
 import net.yozmnews.report.ReportView;
 import net.yozmnews.report.domain.view.ReportViewRepository;
+import net.yozmnews.storyline.StorylineId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,7 +34,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.TestPropertySource;
-import tools.jackson.databind.json.JsonMapper;
 
 /**
  * 리포트 조회 — 사용자 범위, 목록 순서 · 쪽, 한 편의 칸과 스냅숏, 합쳐진 사건 · 스토리라인 풀기와 지운 것 빼기, 인용을 모두 잃은 섹션 숨기기.
@@ -50,7 +52,12 @@ class ReportDirectoryServiceTests {
 
 	private static final UserId OTHER = new UserId(8);
 
-	private static final JsonMapper JSON = JsonMapper.builder().build();
+	/** 시작한 리포트의 스냅숏 — 구독 주제 보도량 하나(report-R19 의 꼴, 손으로 씀) */
+	private static final String SNAPSHOT = """
+			{"version":1,"tagSet":4,
+			 "period":{"kind":"WEEK","start":"2026-11-16T00:00:00Z","end":"2026-11-23T00:00:00Z"},
+			 "coverage":{"basis":"FIRST_EVALUATED","topics":[
+			   {"key":"economy.finance","name":"금융","articles":12,"previous":7,"trend":"ROSE"}]}}""";
 
 	@Autowired
 	ReportDirectory directory;
@@ -99,6 +106,7 @@ class ReportDirectoryServiceTests {
 	void findsTheOwnersReportWithItsFieldsAndNothingForAnotherUser() {
 		long id = report(OWNER, "READY");
 		section(id, "OVERVIEW", 0, null, "개요");
+		section(id, "COVERAGE", 1, "보도량", "본문");
 
 		ReportView view = this.directory.find(OWNER, new ReportId(id)).orElseThrow();
 
@@ -109,11 +117,14 @@ class ReportDirectoryServiceTests {
 		assertThat(view.model()).isEqualTo("gpt-5.5-mini");
 		assertThat(view.inputTokens()).isEqualTo(120);
 		assertThat(view.outputTokens()).isEqualTo(45);
-		assertThat(JSON.readTree(view.statsSnapshot())).isEqualTo(JSON.readTree("{\"coverage\":{\"이번\":12,\"직전\":7}}"));
-		assertThat(view.sections()).containsExactly(new ReportSectionView(ReportSectionKind.OVERVIEW, null, "개요", List.of()));
+		assertThat(view.hiddenSections()).isZero();
+		assertThat(view.sections()).containsExactly(
+				new ReportSectionView(ReportSectionKind.OVERVIEW, null, "개요", List.of(), null),
+				new ReportSectionView(ReportSectionKind.COVERAGE, "보도량", "본문", List.of(), new ReportSectionStats.Coverage(
+						List.of(new ReportSectionStats.TopicCount("금융", 12, 7L, ReportTrend.ROSE)))));
 		assertThat(this.directory.find(OTHER, new ReportId(id))).isEmpty();
 		assertThat(this.directory.find(OWNER, new ReportId(id + 1_000))).isEmpty();
-		assertThat(this.views.sections(OWNER, new ReportId(id))).hasSize(1);
+		assertThat(this.views.sections(OWNER, new ReportId(id))).hasSize(2);
 		assertThat(this.views.sections(OTHER, new ReportId(id))).isEmpty();
 		assertThat(this.views.page(OTHER, null, 10)).isEmpty();
 	}
@@ -165,6 +176,30 @@ class ReportDirectoryServiceTests {
 		assertThat(sections).hasSize(2);
 		assertThat(sections.get(1).citations()).containsExactly(event(survivor), storyline(survivingLine), storyline(line),
 				event(kept));
+	}
+
+	@Test
+	void resolvesTheFlowHeadsOfTheSnapshotThroughTheRealQueriesLikeTheCitations() {
+		long line = storylineOf(FeedbackRows.event(this.jdbc));
+		long mergedLine = storylineOf(FeedbackRows.event(this.jdbc));
+		long survivingLine = storylineOf(FeedbackRows.event(this.jdbc));
+		this.rows.merge(mergedLine, survivingLine);
+		long id = report(OWNER, "READY", """
+				{"version":1,"tagSet":4,
+				 "period":{"kind":"WEEK","start":"2026-11-16T00:00:00Z","end":"2026-11-23T00:00:00Z"},
+				 "storylines":{"basis":"PUBLISHED","flows":[
+				   {"head":%d,"tops":[%d],"articles":8,"previous":2,"trend":"ROSE","trackedInPeriod":false},
+				   {"head":999997,"tops":[999997],"articles":5,"previous":null,"trend":"NO_COMPARISON","trackedInPeriod":false},
+				   {"head":%d,"tops":[%d],"articles":3,"previous":3,"trend":"STEADY","trackedInPeriod":true}]}}"""
+			.formatted(mergedLine, mergedLine, line, line));
+		section(id, "OVERVIEW", 0, null, "개요");
+		item(section(id, "STORYLINES", 1, "흐름", "본문"), 0, line, null);
+
+		ReportView view = this.directory.find(OWNER, new ReportId(id)).orElseThrow();
+
+		assertThat(view.sections().get(1).stats()).isEqualTo(new ReportSectionStats.Flows(List.of(
+				new ReportSectionStats.FlowCount(new StorylineId(survivingLine), 8, 2L, ReportTrend.ROSE, false),
+				new ReportSectionStats.FlowCount(new StorylineId(line), 3, 3L, ReportTrend.STEADY, true))));
 	}
 
 	@Test
@@ -223,6 +258,10 @@ class ReportDirectoryServiceTests {
 	}
 
 	private long report(UserId user, String status) {
+		return report(user, status, SNAPSHOT);
+	}
+
+	private long report(UserId user, String status, String snapshot) {
 		boolean started = !status.equals("SCHEDULED");
 		boolean finished = status.equals("READY") || status.equals("EMPTY");
 		return this.jdbc.sql("""
@@ -238,7 +277,7 @@ class ReportDirectoryServiceTests {
 			.param("model", started ? "gpt-5.5-mini" : null, java.sql.Types.VARCHAR)
 			.param("input", status.equals("READY") ? 120 : null, java.sql.Types.INTEGER)
 			.param("output", status.equals("READY") ? 45 : null, java.sql.Types.INTEGER)
-			.param("snapshot", started ? "{\"coverage\":{\"이번\":12,\"직전\":7}}" : null, java.sql.Types.VARCHAR)
+			.param("snapshot", started ? snapshot : null, java.sql.Types.VARCHAR)
 			.param("started", started ? Instant.parse("2026-11-23T00:30:00Z").atOffset(java.time.ZoneOffset.UTC) : null,
 					java.sql.Types.TIMESTAMP_WITH_TIMEZONE)
 			.param("completed", finished ? Instant.parse("2026-11-23T00:31:00Z").atOffset(java.time.ZoneOffset.UTC) : null,
