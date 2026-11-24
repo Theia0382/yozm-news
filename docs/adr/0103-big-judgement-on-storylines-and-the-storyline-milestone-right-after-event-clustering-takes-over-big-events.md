@@ -1,6 +1,6 @@
 # ADR-0103: 큰 판정은 스토리라인 단위로 하고, 사건 묶기 바로 뒤 스토리라인 마일스톤이 사건의 큰 사건 판정을 거둔다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 변화 리포트의 보도량이 쓰는 "큰" 것([ADR-0303](0303-a-change-report-covers-only-what-relates-to-the-user-in-three-sections-tracked-flows-subscribed-topic-coverage-and-interest-changes.md))
 - 날짜: 2026-11-09
 - 근거: [이슈 #116](https://github.com/Theia0382/yozm-news/issues/116) — 큰 사건 판정의 코드 · 소비자 · 평가 도구의 위치를 조사해 거둘 시점과 마일스톤 순서를 정함
 - 관련: [ADR-0082](0082-big-events-judged-at-query-time-by-distinct-sources-and-mean-importance-both-reaching-criteria.md)(판정의 단위 — 부분 대체), [ADR-0083](0083-big-event-criteria-as-operator-settings-with-append-only-history-and-preview.md)(기준을 둘 곳 — 부분 대체), [ADR-0026](0026-event-clustering-with-local-embeddings-and-jev.md)(큰 사건 판정과 그 정밀도의 단위 — 부분 대체), [ADR-0028](0028-explicit-signals-and-interest-weighted-candidates.md)(후보 선별 순서와 구독의 큰 사건 슬롯 — 부분 대체), [ADR-0095](0095-event-clustering-evaluated-by-an-operator-tool-comparing-admin-api-results-with-full-day-labels.md) · [ADR-0098](0098-label-rule-2-samples-hold-no-big-event-gold-and-big-event-precision-is-not-measured-without-marks.md)(큰 판정 정밀도와 정답의 단위 — 보충), [ADR-0040](0040-feed-status-stored-in-poll-state-and-rejudged-hourly-by-health-check.md) · [ADR-0048](0048-sign-up-closed-by-default-with-invitations-and-operator-bootstrap.md)(마일스톤 번호 — 보충), [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)(스토리라인)
@@ -15,6 +15,7 @@
 
 ## 결정
 
+> 부분 대체(둘째 문장의 "변화 리포트의 보도량") — [ADR-0303](0303-a-change-report-covers-only-what-relates-to-the-user-in-three-sections-tracked-flows-subscribed-topic-coverage-and-interest-changes.md). 지금 상태: [report Spec](../specs/report.md#재료) report-R14
 - **큰 판정의 단위는 스토리라인이다.** 큰 판정은 구독과 무관하게 알릴 만한 흐름을 고른다. 다이제스트의 큰 슬롯 · 선정 이유 · 구독 제안과 변화 리포트의 보도량이 쓰는 "큰" 것도 스토리라인이다. 슬롯에 어떤 기사를 넣는지, 보도량을 어떻게 세는지는 그 설계에서 정한다.
 - **스토리라인의 큰 판정을 만드는 작업이 `event` 의 큰 사건 판정 · 기준 · 운영자 API · 화면을 함께 거둔다.** 그때까지 `event` 의 큰 사건 판정은 지금대로 동작한다.
 - **스토리라인은 사건 묶기 바로 뒤 마일스톤이다(M4).** 사용자와 키 이하가 하나씩 밀린다 — M5 사용자와 키 · M6 다이제스트 · M7 피드백과 관심사 히스토리 · M8 변화 리포트 · M9 릴리스 준비. 사건 묶기(M3)의 완료 기준에서 큰 사건 판정 정밀도를 빼고 스토리라인 마일스톤으로 옮긴다.

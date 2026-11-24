@@ -1,8 +1,11 @@
 package net.yozmnews.report.domain.output;
 
+import static net.yozmnews.report.ReportFixtures.coverage;
 import static net.yozmnews.report.ReportFixtures.event;
+import static net.yozmnews.report.ReportFixtures.flow;
+import static net.yozmnews.report.ReportFixtures.flows;
 import static net.yozmnews.report.ReportFixtures.input;
-import static net.yozmnews.report.ReportFixtures.section;
+import static net.yozmnews.report.ReportFixtures.interests;
 import static net.yozmnews.report.ReportFixtures.storyline;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -21,9 +24,7 @@ import org.junit.jupiter.api.Test;
 class ReportCitationCheckTests {
 
 	private static final ReportAliases ALIASES = ReportAliases.of(input(
-			section(ReportSectionKind.STORYLINES, storyline(31), event(902)),
-			section(ReportSectionKind.COVERAGE, event(903)),
-			section(ReportSectionKind.INTERESTS)));
+			flows(flow(31, 902), flow(44, 903)), coverage(), interests()));
 
 	@Test
 	void keepsKnownAliasesInOrderAndCountsDroppedOnes() {

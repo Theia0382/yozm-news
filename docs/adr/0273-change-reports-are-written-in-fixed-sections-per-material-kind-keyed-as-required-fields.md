@@ -1,12 +1,13 @@
 # ADR-0273: 변화 리포트는 갈래마다 고정 섹션으로 쓰고, 출력은 갈래를 키로 한 필수 칸이다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 맥락의 입력 갈래 넷([ADR-0303](0303-a-change-report-covers-only-what-relates-to-the-user-in-three-sections-tracked-flows-subscribed-topic-coverage-and-interest-changes.md)) · 갈래 집합([ADR-0303](0303-a-change-report-covers-only-what-relates-to-the-user-in-three-sections-tracked-flows-subscribed-topic-coverage-and-interest-changes.md))
 - 날짜: 2026-11-22
 - 근거: [이슈 #237](https://github.com/Theia0382/yozm-news/issues/237) — 기점 `d25590c` 의 변화 리포트 입력 갈래(pipeline §10)와 다이제스트 출력 서술(digest-R4)을 대조하고, 갈래마다 고정 섹션을 골랐다
 - 관련: [ADR-0025](0025-long-term-personal-news-history-in-v1.md)(변화 리포트를 둔다 — 출력 꼴은 적지 않았다), [ADR-0269](0269-the-digest-output-keys-top-stories-by-item-alias-as-required-fields-and-lists-headlines-as-elements.md)(같은 근거 — 구조화 출력이 모든 칸을 쓰게 하는 필수 키 꼴)
 
 ## 맥락
 
+> 부분 대체(둘째 문장) — [ADR-0303](0303-a-change-report-covers-only-what-relates-to-the-user-in-three-sections-tracked-flows-subscribed-topic-coverage-and-interest-changes.md). 지금 상태: [report Spec](../specs/report.md#재료) report-R14
 - 변화 리포트는 한 사용자의 한 기간에 무엇이 달라졌는지 정리한다. 입력은 갈래 넷이다 — 이번 기간 구독한 스토리라인의 변화, 구독 주제와 큰 스토리라인의 보도량과 직전 기간 비교, 관심도의 변화(새로 생긴 · 사라진 관심), 새로 나타난 주제와 보도가 줄어든 스토리라인 · 주제. 직전 리포트의 요약도 입력이지만 비교의 재료다.
 - 데이터 모델 초안은 섹션에 종류 칸만 두고 종류를 정하지 않았다.
 - 화면은 이전 리포트와 견주어 보여야 하고, 재료를 만드는 작업은 갈래마다 재료를 모은다. 두 쪽이 같은 열쇠로 섹션을 찾아야 한다.
@@ -14,6 +15,7 @@
 
 ## 결정
 
+> 부분 대체(둘째 문장) — [ADR-0303](0303-a-change-report-covers-only-what-relates-to-the-user-in-three-sections-tracked-flows-subscribed-topic-coverage-and-interest-changes.md). 지금 상태: [report Spec](../specs/report.md#재료) report-R14
 - **섹션은 개요와 입력 갈래마다 하나다.** 갈래 종류는 닫힌 집합이다 — 구독한 스토리라인(`STORYLINES`) · 보도량(`COVERAGE`) · 관심 변화(`INTERESTS`) · 새로 나타난 것과 줄어든 것(`RISE_AND_FALL`). 개요(`OVERVIEW`)는 출력의 섹션이고 입력 갈래가 아니다.
 - **입력에 재료가 있는 갈래만 섹션이 된다.** 출력은 개요 문자열과, 그 갈래들의 종류를 키로 한 필수 칸이다. 칸마다 제목 · 본문 · 인용 별칭 목록이다.
 

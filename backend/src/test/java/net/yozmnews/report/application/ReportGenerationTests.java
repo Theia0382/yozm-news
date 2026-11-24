@@ -1,9 +1,10 @@
 package net.yozmnews.report.application;
 
-import static net.yozmnews.report.ReportFixtures.event;
+import static net.yozmnews.report.ReportFixtures.coverage;
+import static net.yozmnews.report.ReportFixtures.flow;
+import static net.yozmnews.report.ReportFixtures.flows;
 import static net.yozmnews.report.ReportFixtures.input;
-import static net.yozmnews.report.ReportFixtures.section;
-import static net.yozmnews.report.ReportFixtures.storyline;
+import static net.yozmnews.report.ReportFixtures.interests;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
@@ -24,7 +25,6 @@ import net.yozmnews.report.ReportFailure;
 import net.yozmnews.report.ReportFixtures;
 import net.yozmnews.report.ReportId;
 import net.yozmnews.report.ReportPeriodKind;
-import net.yozmnews.report.ReportSectionKind;
 import net.yozmnews.report.ReportStatus;
 import net.yozmnews.report.adapter.out.fake.FakeReportGenerator;
 import net.yozmnews.report.domain.content.ReportSectionRepository;
@@ -50,7 +50,7 @@ import tools.jackson.databind.json.JsonMapper;
 
 /**
  * 리포트 생성 흐름 — 예약 · 시작과 스냅숏 · 생성 · 판정 · 대조 · 저장이 실제 PostgreSQL 위에서 끝까지 간다. 갈래가 없으면 EMPTY, 생성기가 없으면
- * NO_GENERATOR, 실패 · 잘림 · 읽지 못함은 그 코드로 끝난다.
+ * NO_GENERATOR, 실패 · 잘림 · 읽지 못함은 그 코드로 끝난다. 입력의 사용자 · 기간이 리포트 행과 다르면 아무것도 쓰지 않고 거부한다.
  * <p>
  * 지키는 규칙: report-R1 · report-R9 · report-R13
  * <p>
@@ -95,8 +95,7 @@ class ReportGenerationTests {
 	@Test
 	void savesTheOverviewSectionsAndCitationsOfAReadyReport() {
 		ReportId id = generation(new FakeReportGenerator()).schedule(new UserId(7), WEEK);
-		ReportInput input = input(section(ReportSectionKind.STORYLINES, storyline(31), event(902)),
-				section(ReportSectionKind.INTERESTS), section(ReportSectionKind.COVERAGE, event(903), storyline(31)));
+		ReportInput input = input(flows(flow(31, 902)), interests(31), coverage());
 
 		ReportStatus status = generation(new FakeReportGenerator()).run(id, ReportFixtures.MODEL, input);
 
@@ -118,7 +117,32 @@ class ReportGenerationTests {
 		assertThat(sectionRows(id)).containsExactly("0 OVERVIEW null 로컬 대체물이 만든 리포트다. 섹션 3개.",
 				"1 STORYLINES 로컬 섹션 1 로컬 대체물이 만든 본문이다.", "2 INTERESTS 로컬 섹션 2 로컬 대체물이 만든 본문이다.",
 				"3 COVERAGE 로컬 섹션 3 로컬 대체물이 만든 본문이다.");
-		assertThat(itemRows(id)).containsExactly("1:0 S31", "1:1 E902", "3:0 E903", "3:1 S31");
+		// 다른 갈래에 다시 든 흐름(S31)은 같은 별칭으로 인용되고, 구독 주제 보도량은 인용이 없다
+		assertThat(itemRows(id)).containsExactly("1:0 S31", "1:1 E902", "2:0 S31");
+	}
+
+	@Test
+	void refusesAnInputOfAnotherUserOrPeriodWithoutWritingAnything() {
+		ReportGeneration generation = generation(new FakeReportGenerator());
+		ReportId id = generation.schedule(new UserId(7), WEEK);
+		List<ReportInput> others = List.of(
+				input(new UserId(8), WEEK, interests()),
+				input(new UserId(7), new ReportPeriod(ReportPeriodKind.MONTH, WEEK.start(), WEEK.end()), interests()),
+				input(new UserId(7), new ReportPeriod(ReportPeriodKind.WEEK, Instant.parse("2026-11-16T01:00:00Z"),
+						WEEK.end()), interests()),
+				input(new UserId(7), new ReportPeriod(ReportPeriodKind.WEEK, WEEK.start(),
+						Instant.parse("2026-11-22T23:00:00Z")), interests()));
+
+		for (ReportInput other : others) {
+			assertThatIllegalArgumentException().as(other.user() + " " + other.period())
+				.isThrownBy(() -> generation.run(id, ReportFixtures.MODEL, other))
+				.withMessageContaining("입력의 사용자 · 기간이 리포트 행과 다르다");
+			// 아무것도 쓰지 않았다 — 예약 그대로, 스냅숏 없음
+			assertThat(row(id)).containsEntry("status", "SCHEDULED").containsEntry("snapshot", null);
+		}
+		// 대조 — 같은 사용자 · 기간이면 생성한다
+		assertThat(generation.run(id, ReportFixtures.MODEL, input(new UserId(7), WEEK, interests())))
+			.isEqualTo(ReportStatus.READY);
 	}
 
 	@Test
@@ -144,7 +168,7 @@ class ReportGenerationTests {
 		ReportGeneration generation = generation(new FakeReportGenerator());
 		ReportId id = generation.schedule(new UserId(7), WEEK);
 
-		assertThat(generation.run(id, ReportFixtures.MODEL, input(section(ReportSectionKind.INTERESTS))))
+		assertThat(generation.run(id, ReportFixtures.MODEL, input(interests())))
 			.isEqualTo(ReportStatus.READY);
 
 		assertThat(sectionRows(id)).containsExactly("0 OVERVIEW null 로컬 대체물이 만든 리포트다. 섹션 1개.",
@@ -156,7 +180,7 @@ class ReportGenerationTests {
 	void theContextUseCaseHasNoGeneratorOutsideLocalAndEndsWithNoGenerator() {
 		ReportId id = this.contextGeneration.schedule(new UserId(7), WEEK);
 
-		assertThat(this.contextGeneration.run(id, ReportFixtures.MODEL, input(section(ReportSectionKind.INTERESTS))))
+		assertThat(this.contextGeneration.run(id, ReportFixtures.MODEL, input(interests())))
 			.isEqualTo(ReportStatus.FAILED);
 
 		assertThat(row(id)).containsEntry("status", "FAILED")
@@ -175,10 +199,10 @@ class ReportGenerationTests {
 		AtomicInteger calls = new AtomicInteger();
 		ReportGeneration generation = generation(new FakeReportGenerator());
 		ReportId id = generation.schedule(new UserId(7), WEEK);
-		generation.run(id, ReportFixtures.MODEL, input(section(ReportSectionKind.INTERESTS)));
+		generation.run(id, ReportFixtures.MODEL, input(interests()));
 
 		ReportGeneration again = generation(scripted(calls, request -> "{}"));
-		assertThat(again.run(id, ReportFixtures.MODEL, input(section(ReportSectionKind.COVERAGE, event(1)))))
+		assertThat(again.run(id, ReportFixtures.MODEL, input(coverage())))
 			.isEqualTo(ReportStatus.READY);
 
 		assertThat(calls).hasValue(0);
@@ -192,7 +216,7 @@ class ReportGenerationTests {
 
 		assertThatIllegalStateException()
 			.isThrownBy(() -> this.transaction.executeWithoutResult(
-					status -> generation.run(id, ReportFixtures.MODEL, input(section(ReportSectionKind.INTERESTS)))))
+					status -> generation.run(id, ReportFixtures.MODEL, input(interests()))))
 			.withMessage(ReportGeneration.IN_TRANSACTION);
 		assertThat(row(id)).containsEntry("status", "SCHEDULED").containsEntry("snapshot", null);
 	}
@@ -218,7 +242,7 @@ class ReportGenerationTests {
 		ReportId id = generation.schedule(new UserId(7), WEEK);
 		target.set(id);
 
-		assertThat(generation.run(id, ReportFixtures.MODEL, input(section(ReportSectionKind.INTERESTS))))
+		assertThat(generation.run(id, ReportFixtures.MODEL, input(interests())))
 			.isEqualTo(ReportStatus.FAILED);
 
 		assertThat(calls).hasValue(1);
@@ -239,7 +263,7 @@ class ReportGenerationTests {
 		ReportId id = generation.schedule(new UserId(7), WEEK);
 		target.set(id);
 
-		assertThat(generation.run(id, ReportFixtures.MODEL, input(section(ReportSectionKind.INTERESTS))))
+		assertThat(generation.run(id, ReportFixtures.MODEL, input(interests())))
 			.isEqualTo(ReportStatus.RUNNING);
 
 		assertThat(calls).hasValue(1);
@@ -255,7 +279,7 @@ class ReportGenerationTests {
 		ReportId id = generation.schedule(new UserId(7), WEEK);
 
 		assertThatIllegalStateException()
-			.isThrownBy(() -> generation.run(id, ReportFixtures.MODEL, input(section(ReportSectionKind.INTERESTS))))
+			.isThrownBy(() -> generation.run(id, ReportFixtures.MODEL, input(interests())))
 			.withMessage("예상 밖의 생성기 오류");
 
 		assertThat(row(id)).containsEntry("status", "RUNNING")
@@ -273,7 +297,7 @@ class ReportGenerationTests {
 		});
 		ReportId id = generation.schedule(new UserId(7), WEEK);
 
-		assertThat(generation.run(id, ReportFixtures.MODEL, input(section(ReportSectionKind.INTERESTS))))
+		assertThat(generation.run(id, ReportFixtures.MODEL, input(interests())))
 			.isEqualTo(ReportStatus.FAILED);
 
 		assertThat(row(id)).containsEntry("error_code", "OUTPUT_REFUSED")
@@ -288,7 +312,7 @@ class ReportGenerationTests {
 		ReportGeneration generation = generation(scripted(calls, request -> "{\"overview\":\"개요\"}"));
 		ReportId id = generation.schedule(new UserId(7), WEEK);
 
-		assertThat(generation.run(id, ReportFixtures.MODEL, input(section(ReportSectionKind.INTERESTS))))
+		assertThat(generation.run(id, ReportFixtures.MODEL, input(interests())))
 			.isEqualTo(ReportStatus.FAILED);
 
 		assertThat(row(id)).containsEntry("error_code", "UNREADABLE_OUTPUT")
@@ -306,7 +330,7 @@ class ReportGenerationTests {
 		ReportId id = generation.schedule(new UserId(7), WEEK);
 
 		assertThat(generation.run(id, ReportFixtures.MODEL,
-				input(section(ReportSectionKind.STORYLINES, storyline(31)), section(ReportSectionKind.COVERAGE))))
+				input(flows(flow(31)), coverage())))
 			.isEqualTo(ReportStatus.READY);
 
 		assertThat(sectionRows(id)).containsExactly("0 OVERVIEW null 개요", "1 STORYLINES 흐름 본문");

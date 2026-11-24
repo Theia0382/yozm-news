@@ -700,7 +700,7 @@ public enum TagBackfillState { WAITING, RUNNING, DONE }
 
 ### TopicCoverage · TopicCoverageResult · TopicCoverageView · CategoryCoverage · SubtopicCoverage
 
-주제별 보도량 — 운영자 화면이 쓰고, 변화 리포트가 쓸 것이다. 구현은 `application` 의 `TopicCoverageService` 다.
+주제별 보도량 — 운영자 화면과 변화 리포트의 재료 조립(구독 주제의 보도량)이 쓴다. 구현은 `application` 의 `TopicCoverageService` 다.
 
 ```java
 public interface TopicCoverage {
@@ -736,7 +736,7 @@ public record SubtopicCoverage(String key, String name, long articles) {}
 
 ### TagKeyLineage · TagKeyMapping
 
-태그 키 계보 조회 — 옛 버전의 키를 활성 버전의 키로 푼다. 후보 선별 · 주제별 시계열 · 사용자 선호가 쓴다. 구현은 `application` 의 `TagKeyLineageService` 다.
+태그 키 계보 조회 — 옛 버전의 키를 활성 버전의 키로 푼다. 후보 선별 · 주제별 시계열 · 사용자 선호와 변화 리포트의 직전 스냅숏 대조가 쓴다. 구현은 `application` 의 `TagKeyLineageService` 다.
 
 ```java
 public interface TagKeyLineage {

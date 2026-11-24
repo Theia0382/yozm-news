@@ -1,13 +1,12 @@
 package net.yozmnews.report.domain.generator;
 
 import static net.yozmnews.report.ReportFixtures.input;
-import static net.yozmnews.report.ReportFixtures.section;
+import static net.yozmnews.report.ReportFixtures.interests;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import net.yozmnews.llm.GenerationStop;
 import net.yozmnews.platform.OutputShape;
 import net.yozmnews.report.ReportFailure;
-import net.yozmnews.report.ReportSectionKind;
 import net.yozmnews.report.domain.alias.ReportAliases;
 import net.yozmnews.report.domain.output.ReportOutputSchema;
 import org.junit.jupiter.api.Test;
@@ -20,7 +19,7 @@ import org.junit.jupiter.api.Test;
 class ReportVerdictTests {
 
 	private static final OutputShape.Obj ROOT = ReportOutputSchema
-		.root(ReportAliases.of(input(section(ReportSectionKind.INTERESTS))));
+		.root(ReportAliases.of(input(interests())));
 
 	private static final String READABLE = """
 			{"overview":"개요","sections":{"interests":{"title":"관심","body":"본문","refs":[]}}}""";

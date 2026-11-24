@@ -9,7 +9,8 @@ import net.yozmnews.platform.UserId;
 import net.yozmnews.storyline.StorylineId;
 
 /**
- * 사용자 스토리라인의 정리 조회 — 독자 화면({@code reader})이 정리된 흐름을 엮을 때 읽는다. docs/specs/user.md §3
+ * 사용자 스토리라인의 정리 조회 — 독자 화면({@code reader})이 정리된 흐름을 엮을 때, 변화 리포트의 재료 조립이 흐름의 글을 실을 때 읽는다.
+ * docs/specs/user.md §3
  * <p>
  * 정리가 있는 사용자 스토리라인만 낸다 — 무엇을 정리하고 지울지는 정리 작업이 정하고 이 조회는 저장한 행만 읽는다. 사용자를 인자로 받는 조회다 —
  * 화면 경로에서는 세션 사용자로만 부른다. 쓰지 않고, 사용자 스토리라인을 맞추지 않는다.

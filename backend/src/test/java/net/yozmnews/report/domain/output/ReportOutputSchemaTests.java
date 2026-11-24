@@ -1,8 +1,9 @@
 package net.yozmnews.report.domain.output;
 
-import static net.yozmnews.report.ReportFixtures.event;
+import static net.yozmnews.report.ReportFixtures.coverage;
+import static net.yozmnews.report.ReportFixtures.flow;
+import static net.yozmnews.report.ReportFixtures.flows;
 import static net.yozmnews.report.ReportFixtures.input;
-import static net.yozmnews.report.ReportFixtures.section;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
@@ -23,8 +24,7 @@ class ReportOutputSchemaTests {
 
 	@Test
 	void drawsTheInputKindsInInputOrderAsRequiredSectionFields() {
-		ReportAliases aliases = ReportAliases.of(input(section(ReportSectionKind.COVERAGE, event(1)),
-				section(ReportSectionKind.STORYLINES)));
+		ReportAliases aliases = ReportAliases.of(input(coverage(), flows(flow(1))));
 
 		assertThat(JSON.readTree(StructuredOutputSchema.json(ReportOutputSchema.root(aliases))))
 			.isEqualTo(JSON.readTree("""
@@ -70,7 +70,8 @@ class ReportOutputSchemaTests {
 		assertThat(ReportOutputSchema.key(ReportSectionKind.STORYLINES)).isEqualTo("storylines");
 		assertThat(ReportOutputSchema.key(ReportSectionKind.COVERAGE)).isEqualTo("coverage");
 		assertThat(ReportOutputSchema.key(ReportSectionKind.INTERESTS)).isEqualTo("interests");
-		assertThat(ReportOutputSchema.key(ReportSectionKind.RISE_AND_FALL)).isEqualTo("rise_and_fall");
+		assertThat(ReportSectionKind.values()).containsExactly(ReportSectionKind.OVERVIEW, ReportSectionKind.STORYLINES,
+				ReportSectionKind.COVERAGE, ReportSectionKind.INTERESTS);
 		assertThatIllegalArgumentException().isThrownBy(() -> ReportOutputSchema.key(ReportSectionKind.OVERVIEW))
 			.withMessage("개요는 갈래 칸이 아니다");
 	}

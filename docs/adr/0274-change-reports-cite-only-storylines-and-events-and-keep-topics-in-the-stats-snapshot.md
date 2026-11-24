@@ -1,6 +1,6 @@
 # ADR-0274: 변화 리포트는 스토리라인 · 사건만 인용하고, 주제는 통계 스냅숏으로 둔다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 리포트가 `article` 에 의존하지 않는다는 결과([ADR-0305](0305-a-change-report-describes-flows-by-the-user-storyline-summary-and-events-by-the-representative-article-title-and-cites-a-flow-by-its-head.md))
 - 날짜: 2026-11-22
 - 근거: [이슈 #237](https://github.com/Theia0382/yozm-news/issues/237) — 기점 `d25590c` 의 데이터 모델 초안(스토리라인 · 기사 인용)과 사건 단위로 바뀐 다이제스트 · 반응을 대조하고, 스토리라인 · 사건 인용을 골랐다
 - 관련: [ADR-0025](0025-long-term-personal-news-history-in-v1.md)(변화 리포트 입력에 원문이 없다), [ADR-0262](0262-chosen-events-are-grouped-into-items-by-containment-tree-top-code-splits-top-stories-and-headlines-the-llm-writes-per-item-and-an-item-has-one-badge.md) · [ADR-0265](0265-feedback-is-pressed-once-per-digest-item-and-recorded-on-each-event-of-the-item-the-screen-shows-the-item-value-and-signals-use-event-records.md)(다이제스트 · 반응의 단위는 사건)
@@ -22,6 +22,7 @@
 
 ## 결과
 
+> 부분 대체(둘째 문장) — [ADR-0305](0305-a-change-report-describes-flows-by-the-user-storyline-summary-and-events-by-the-representative-article-title-and-cites-a-flow-by-its-head.md). 지금 상태: [report Spec](../specs/report.md#재료) report-R16
 - 리포트 · 다이제스트 · 반응 · 관심도가 같은 단위로 이어진다. 리포트는 `article` 에 의존하지 않는다.
 - 화면은 사건 인용의 링크를 그리려고 대표 기사를 한 번 더 읽는다.
 - 기사가 지워져도 사건에 기사가 남으면 사건 인용과 글이 남는다 — 지운 기사의 제목이 입력에 들어갔다면 그 문장도 남는다. 인용 기사 일부만 지워진 다이제스트 섹션이 요약을 남기는 것과 같은 수준이다.

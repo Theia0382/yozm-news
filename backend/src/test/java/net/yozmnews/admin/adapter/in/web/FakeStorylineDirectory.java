@@ -10,6 +10,7 @@ import java.util.Set;
 
 import net.yozmnews.event.EventId;
 import net.yozmnews.event.EventPeriod;
+import net.yozmnews.event.EventTally;
 import net.yozmnews.storyline.BigStoryline;
 import net.yozmnews.storyline.EventStoryline;
 import net.yozmnews.storyline.StorylineCursor;
@@ -115,6 +116,11 @@ class FakeStorylineDirectory implements StorylineDirectory {
 	public UnlinkedEvents unlinked(EventPeriod period) {
 		this.calls.add("unlinked " + period.from() + " ~ " + period.to());
 		return this.unlinked;
+	}
+
+	@Override
+	public <K> Map<K, EventTally> tallies(Map<K, ? extends Collection<StorylineId>> groups, EventPeriod period) {
+		throw new UnsupportedOperationException("운영자 API 는 스토리라인 묶음 집계를 읽지 않는다");
 	}
 
 	/** 운영자 API 슬라이스에 대역을 싣는다 */

@@ -14,9 +14,9 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.TestPropertySource;
 
 /**
- * 리포트 테이블의 제약 — 인용은 스토리라인 · 사건 가운데 하나, 시작한 행은 스냅숏이 있다.
+ * 리포트 테이블의 제약 — 섹션 종류는 개요와 갈래 셋, 인용은 스토리라인 · 사건 가운데 하나, 시작한 행은 스냅숏이 있다.
  * <p>
- * 지키는 규칙: report-R1 · report-R9
+ * 지키는 규칙: report-R1 · report-R9 · report-R14
  */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -48,6 +48,23 @@ class ReportSchemaTests {
 	}
 
 	@Test
+	void aSectionKindIsTheOverviewOrOneOfTheThreeMaterialKinds() {
+		long report = scheduled();
+
+		// 대조 — 개요와 갈래 셋은 넣어진다
+		section(report, "OVERVIEW", 0);
+		section(report, "STORYLINES", 1);
+		section(report, "COVERAGE", 2);
+		section(report, "INTERESTS", 3);
+		assertThat(this.jdbc.sql("select count(*) from report_sections where report_id = :r")
+			.param("r", report)
+			.query(Long.class)
+			.single()).isEqualTo(4L);
+		assertThatThrownBy(() -> section(report, "RISE_AND_FALL", 4)).isInstanceOf(DataIntegrityViolationException.class)
+			.hasMessageContaining("report_sections_kind_check");
+	}
+
+	@Test
 	void aStartedRowHasASnapshot() {
 		long id = scheduled();
 
@@ -75,6 +92,12 @@ class ReportSchemaTests {
 		return this.jdbc.sql("""
 				insert into report_sections (report_id, kind, position, title, body)
 				values (:r, 'COVERAGE', 1, '보도량', '본문') returning id""").param("r", report).query(Long.class).single();
+	}
+
+	private void section(long report, String kind, int position) {
+		this.jdbc.sql("""
+				insert into report_sections (report_id, kind, position, title, body)
+				values (:r, :kind, :p, '제목', '본문')""").param("r", report).param("kind", kind).param("p", position).update();
 	}
 
 	private void item(long section, int position, Long storyline, Long event) {

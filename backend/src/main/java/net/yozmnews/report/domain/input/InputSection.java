@@ -1,31 +1,21 @@
 package net.yozmnews.report.domain.input;
 
-import java.util.HashSet;
 import java.util.List;
-import java.util.Objects;
 
 import net.yozmnews.report.ReportCitation;
 import net.yozmnews.report.ReportSectionKind;
 
 /**
- * 생성의 입력의 갈래 하나 — 종류와 인용 대상 · docs/specs/report.md §5 · report-R3
+ * 생성의 입력의 갈래 하나 — 종류마다 재료의 꼴이 정해진 봉인 타입 · docs/specs/report.md §5 · report-R3 · report-R14
  * <p>
- * 갈래 내용(재료)은 재료를 만드는 작업이 더한다. 인용 대상이 없어도 된다(통계만의 갈래).
+ * 갈래의 종류와 인용 대상은 재료에서 나온다 — 따로 들지 않아 재료와 어긋날 수 없다.
  */
-public record InputSection(ReportSectionKind kind, List<ReportCitation> targets) {
+public sealed interface InputSection permits StorylinesSection, CoverageSection, InterestsSection {
 
-	/**
-	 * @throws IllegalArgumentException 종류가 개요이거나 같은 대상이 두 번 있을 때
-	 */
-	public InputSection {
-		Objects.requireNonNull(kind, "kind");
-		targets = List.copyOf(targets);
-		if (kind == ReportSectionKind.OVERVIEW) {
-			throw new IllegalArgumentException("개요는 입력 갈래가 아니다");
-		}
-		if (new HashSet<>(targets).size() != targets.size()) {
-			throw new IllegalArgumentException("한 갈래에 같은 대상이 두 번 있다: " + kind);
-		}
-	}
+	/** 갈래 종류 — 개요가 아니다 */
+	ReportSectionKind kind();
+
+	/** 인용 대상 — 재료의 순서, 같은 대상은 처음 것만(report-R14) */
+	List<ReportCitation> targets();
 
 }
