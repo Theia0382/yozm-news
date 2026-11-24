@@ -215,16 +215,16 @@
 | [0207](0207-digest-candidates-enter-a-period-by-first-evaluation-time-with-a-published-time-floor.md) | 다이제스트 후보는 첫 평가 시각으로 기간에 넣고, 발행 시각 하한으로 오래된 기사를 막는다 | 승인 (부분 대체: 0260) |
 | [0208](0208-the-big-slot-takes-the-representatives-of-the-heaviest-events-of-each-big-storyline-row.md) | 큰 슬롯은 큰 판정 행마다 기간 안 중요도 합이 큰 사건 몇 개의 대표 기사를 넣는다 | 대체됨 (0260) |
 | [0209](0209-maximum-candidates-and-big-slots-are-user-settings-and-the-big-slot-takes-at-most-half.md) | 최대 후보 수와 큰 슬롯 수는 사용자 설정이고, 큰 슬롯은 최대 후보 수의 절반을 넘지 않는다 | 승인 (부분 대체: 0260 · 0272 · 0280) |
-| [0210](0210-candidate-selection-cuts-to-the-input-token-budget-with-one-estimate-the-prompt-follows.md) | 입력 토큰 예산은 후보 선별이 `digest` 의 한 추정 규칙으로 세어 자르고, 프롬프트 구성이 그 규칙을 따른다 | 승인 (부분 대체: 0219 · 0220 · 0263 · 0271 · 0313) |
-| [0211](0211-the-digest-consumer-query-of-interest-settings-writes-nothing-and-returns-followed-preferences-with-expanded-topics.md) | 다이제스트가 읽는 관심 설정 조회는 쓰지 않고, 따라가기 결과와 펼친 주제 구독을 낸다 | 승인 (부분 대체: 0219) |
-| [0212](0212-migrations-never-delete-user-data-or-the-shared-rows-and-ids-it-references-and-moved-data-is-checked-by-a-data-test.md) | 마이그레이션은 사용자 데이터와 그것이 가리키는 공유 데이터의 행 · ID 를 지우지 않고, 데이터를 옮기면 데이터 시험으로 대조한다 | 승인 |
+| [0210](0210-candidate-selection-cuts-to-the-input-token-budget-with-one-estimate-the-prompt-follows.md) | 입력 토큰 예산은 후보 선별이 `digest` 의 한 추정 규칙으로 세어 자르고, 프롬프트 구성이 그 규칙을 따른다 | 승인 (부분 대체: 0219 · 0220 · 0263 · 0271 · 0313 · 0314) |
+| [0211](0211-the-digest-consumer-query-of-interest-settings-writes-nothing-and-returns-followed-preferences-with-expanded-topics.md) | 다이제스트가 읽는 관심 설정 조회는 쓰지 않고, 따라가기 결과와 펼친 주제 구독을 낸다 | 승인 (부분 대체: 0219 · 0314) |
+| [0212](0212-migrations-never-delete-user-data-or-the-shared-rows-and-ids-it-references-and-moved-data-is-checked-by-a-data-test.md) | 마이그레이션은 사용자 데이터와 그것이 가리키는 공유 데이터의 행 · ID 를 지우지 않고, 데이터를 옮기면 데이터 시험으로 대조한다 | 승인 (부분 대체: 0315) |
 | [0213](0213-event-merge-defers-events-whose-check-did-not-finish-until-a-retry-time-on-the-event-row-and-never-drops-them.md) | 병합 회차가 확인을 끝내지 못한 사건은 사건 행에 남긴 다시 볼 시각까지 미루고, 미룬 횟수로 대상에서 빼지 않는다 | 승인 |
 | [0214](0214-a-storyline-subscription-enters-topic-interest-by-the-topic-shares-of-its-event-representatives.md) | 스토리라인 구독은 사건 대표 기사의 주제 몫으로 주제별 관심도에 든다 | 대체됨 (0277) |
 | [0215](0215-interests-are-not-stored-entities-and-are-computed-from-signal-history-at-query-time.md) | 관심사는 개체로 세우지 않고 신호 이력에서 조회 때 계산한다 | 승인 |
 | [0216](0216-the-interest-selection-reason-marks-subscribed-candidates-that-enter-only-by-interest-with-a-weight-above-neutral.md) | 선정 이유 `INTEREST` 는 중립 순위로는 들지 못하고 가중치가 1 보다 큰 구독 후보다 | 승인 (부분 대체: 0260 · 0280) |
 | [0217](0217-title-matching-takes-an-article-seen-in-the-feed-when-the-item-repeats-its-read-published-time.md) | 제목 판정은 이 피드에서 본 기사라도 읽은 발행 시각이 같으면 후보로 둔다 | 승인 |
 | [0218](0218-the-digest-generation-reasoning-effort-is-a-user-setting-defaulting-to-medium.md) | 다이제스트 생성의 추론 강도는 사용자 설정이고 기본은 보통이다 | 승인 |
-| [0219](0219-candidate-selection-hands-over-the-prompt-material-read-once-with-its-token-estimate.md) | 프롬프트 재료는 후보 선별이 토큰 어림과 같은 한 번의 읽기로 낸다 | 승인 (부분 대체: 0262) |
+| [0219](0219-candidate-selection-hands-over-the-prompt-material-read-once-with-its-token-estimate.md) | 프롬프트 재료는 후보 선별이 토큰 어림과 같은 한 번의 읽기로 낸다 | 승인 (부분 대체: 0262 · 0314) |
 | [0220](0220-big-slot-candidates-are-grouped-by-big-storyline-row-in-the-prompt-and-the-digest-llm-neither-makes-nor-links-groups.md) | 큰 슬롯 후보는 큰 판정 행마다 묶어 프롬프트에 보이고, 다이제스트 LLM 은 묶음을 새로 만들거나 잇지 않는다 | 대체됨 (0262) |
 | [0221](0221-generator-results-are-success-or-failure-and-the-use-case-asks-once-more-only-for-a-complete-unreadable-answer.md) | 다이제스트 생성기의 결과는 성공 · 실패 갈래이고, 끝까지 쓴 응답을 읽지 못하면 유스케이스가 한 번 다시 묻는다 | 승인 (부분 대체: 0270) |
 | [0222](0222-interest-per-subtopic-is-smoothed-reactions-over-exposures-with-a-half-life-and-exposures-are-all-ready-citations.md) | 관심도는 주제 중분류마다 노출로 나눈 반응에 가상 노출을 더해 평활하고 반감기로 감쇠하며, 노출은 덮인 다이제스트를 포함한 인용 전부다 | 승인 (부분 대체: 0260 · 0268 · 0295) |
@@ -315,6 +315,8 @@
 | [0311](0311-a-change-report-input-fits-the-smaller-of-the-model-budget-and-the-weekly-or-monthly-cap-by-a-share-for-earlier-reports-and-a-fixed-trimming-order.md) | 변화 리포트의 입력은 모델 예산과 주간 · 월간 리포트 상한 가운데 작은 값 안으로, 직전 글의 몫과 정한 순서의 덜어 내기로 맞춘다 | 승인 |
 | [0312](0312-the-reasoning-effort-setting-is-shared-by-digests-and-change-reports-and-report-lengths-are-constants.md) | 추론 강도 설정은 다이제스트와 변화 리포트가 함께 쓰고, 리포트의 글 길이 기준은 상수다 | 승인 |
 | [0313](0313-the-input-token-estimate-is-an-llm-public-type.md) | 입력 토큰 어림은 `llm` 의 공개 타입이 정본이다 | 승인 |
+| [0314](0314-the-free-text-interest-setting-is-removed-and-its-stored-values-are-dropped-by-migration.md) | 자유 텍스트 관심사 설정을 없애고 저장된 값은 마이그레이션에서 지운다 | 승인 |
+| [0315](0315-a-settings-column-of-a-removed-feature-may-be-dropped-by-a-migration-with-the-adr-that-removed-it.md) | 기능을 없애 앱이 읽지 않고 사용자에게 보이지 않는 설정 칸은 그 결정을 기록한 ADR 과 함께 마이그레이션이 지울 수 있다 | 승인 |
 
 ## 운영 규칙
 

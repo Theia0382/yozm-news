@@ -257,7 +257,7 @@ class LlmDigestGeneratorFlowTests {
 					List.of()));
 		}
 		return new DigestInput(
-				new DigestProfile(List.of("정치"), List.of(), "", ZoneId.of("Asia/Seoul"), SummaryLength.NORMAL, effort),
+				new DigestProfile(List.of("정치"), List.of(), ZoneId.of("Asia/Seoul"), SummaryLength.NORMAL, effort),
 				List.of(new InputItem(ItemKind.TOP_STORY,
 						List.of(new InputEvent(new EventId(this.articleIds.get(0)), SelectionReason.SUBSCRIBED, withTitles)), null)));
 	}

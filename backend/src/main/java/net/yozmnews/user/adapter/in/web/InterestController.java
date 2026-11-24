@@ -33,7 +33,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
- * 관심 설정 — 태그 선호 · 제외 소스 · 일정 · 관심사 · 리포트 · 모델 · 추론 강도 · 다이제스트 분량의 조회 · 저장과 구독 제안 거절.
+ * 관심 설정 — 태그 선호 · 제외 소스 · 일정 · 리포트 · 모델 · 추론 강도 · 다이제스트 분량의 조회 · 저장과 구독 제안 거절.
  * docs/specs/user.md §3 · user-R46 · user-R49 ~ user-R51 · user-R56 · user-R59 · user-R64
  * <p>
  * 모두 세션 사용자의 것이고 키 없이도 연다 — 관심 설정은 내용을 내지 않는다(account-R5).
@@ -115,22 +115,21 @@ class InterestController {
 					.toList());
 	}
 
-	/** 일정 · 관심사 · 리포트 */
+	/** 일정 · 리포트 */
 	@AllowedWithoutLlmKey(reason = OPEN_WITHOUT_KEY)
 	@GetMapping("/api/interests/settings")
 	InterestSettingsResponse settings(UserId user) {
 		return InterestSettingsResponse.of(this.digestSettings.view(user, now()));
 	}
 
-	/** 일정 · 관심사 · 리포트 저장 — 생성 시각이 {@code HH:mm} 이 아니면 400 */
+	/** 일정 · 리포트 저장 — 생성 시각이 {@code HH:mm} 이 아니면 400 */
 	@AllowedWithoutLlmKey(reason = OPEN_WITHOUT_KEY)
 	@PutMapping("/api/interests/settings")
 	InterestSettingsSaveResponse saveSettings(UserId user, @Valid @RequestBody InterestSettingsRequest body) {
 		LocalTime time = DigestTimes.parse(body.digestTime())
 			.orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "생성 시각은 HH:mm 이다"));
 		return InterestSettingsSaveResponse.of(this.digestSettings.save(user, body.timezone(), time,
-				body.interestText(), new ReportSettings(body.weeklyReport(), body.weeklyReportDay(), body.monthlyReport()),
-				now()));
+				new ReportSettings(body.weeklyReport(), body.weeklyReportDay(), body.monthlyReport()), now()));
 	}
 
 	/** 다이제스트 분량 — 최대 후보 수의 단계 · 직접 입력 · 큰 슬롯 수 · 요약 길이와 단계의 값 · 범위 */

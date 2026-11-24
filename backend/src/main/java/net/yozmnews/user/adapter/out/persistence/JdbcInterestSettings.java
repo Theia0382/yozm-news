@@ -23,7 +23,6 @@ import net.yozmnews.user.domain.interest.DigestSchedule;
 import net.yozmnews.user.domain.interest.DigestVolume;
 import net.yozmnews.user.domain.interest.InterestSettings;
 import net.yozmnews.user.domain.interest.InterestSettingsRepository;
-import net.yozmnews.user.domain.interest.InterestText;
 import net.yozmnews.user.domain.interest.ModelRef;
 import net.yozmnews.user.domain.interest.ReportSettings;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -37,9 +36,9 @@ import org.springframework.stereotype.Repository;
 class JdbcInterestSettings implements InterestSettingsRepository {
 
 	private static final String COLUMNS = """
-			user_id, tag_set_id, timezone, digest_time, interest_text, llm_provider, llm_model, reasoning_effort,
-			weekly_report, weekly_report_day, monthly_report, candidate_volume, candidate_count, big_slots,
-			summary_length, updated_at, version""";
+			user_id, tag_set_id, timezone, digest_time, llm_provider, llm_model, reasoning_effort, weekly_report,
+			weekly_report_day, monthly_report, candidate_volume, candidate_count, big_slots, summary_length,
+			updated_at, version""";
 
 	private final JdbcClient jdbc;
 
@@ -66,8 +65,8 @@ class JdbcInterestSettings implements InterestSettingsRepository {
 	@Override
 	public boolean insertIfAbsent(InterestSettings settings) {
 		return this.jdbc.sql("insert into user_settings (" + COLUMNS + """
-				) values (:user, :tagSet, :timezone, :digestTime, :interestText, :provider, :model, :effort, :weekly,
-				  :weeklyDay, :monthly, :candidateVolume, :candidateCount, :bigSlots, :summaryLength, :updatedAt, 0)
+				) values (:user, :tagSet, :timezone, :digestTime, :provider, :model, :effort, :weekly, :weeklyDay,
+				  :monthly, :candidateVolume, :candidateCount, :bigSlots, :summaryLength, :updatedAt, 0)
 				on conflict (user_id) do nothing
 				""")
 			.paramSource(params(settings))
@@ -79,7 +78,7 @@ class JdbcInterestSettings implements InterestSettingsRepository {
 		MapSqlParameterSource params = params(settings).addValue("version", settings.version());
 		int updated = this.jdbc.sql("""
 				update user_settings set tag_set_id = :tagSet, timezone = :timezone, digest_time = :digestTime,
-				  interest_text = :interestText, llm_provider = :provider, llm_model = :model, reasoning_effort = :effort,
+				  llm_provider = :provider, llm_model = :model, reasoning_effort = :effort,
 				  weekly_report = :weekly, weekly_report_day = :weeklyDay, monthly_report = :monthly,
 				  candidate_volume = :candidateVolume, candidate_count = :candidateCount, big_slots = :bigSlots,
 				  summary_length = :summaryLength, updated_at = :updatedAt, version = version + 1
@@ -147,7 +146,7 @@ class JdbcInterestSettings implements InterestSettingsRepository {
 					Objects.requireNonNull(rs.getString("llm_model"), "llm_model"));
 		}
 		return new InterestSettings(new UserId(rs.getLong("user_id")), new TagSetId(rs.getLong("tag_set_id")),
-				schedule(rs), new InterestText(rs.getString("interest_text")), model,
+				schedule(rs), model,
 				ReasoningEffort.valueOf(rs.getString("reasoning_effort")),
 				new ReportSettings(rs.getBoolean("weekly_report"), DayOfWeek.of(rs.getInt("weekly_report_day")),
 						rs.getBoolean("monthly_report")),
@@ -163,7 +162,6 @@ class JdbcInterestSettings implements InterestSettingsRepository {
 			.addValue("tagSet", settings.preferenceVersion().value())
 			.addValue("timezone", settings.schedule().timezone().getId())
 			.addValue("digestTime", settings.schedule().time())
-			.addValue("interestText", settings.interestText().value())
 			.addValue("provider", model == null ? null : model.provider().key())
 			.addValue("model", model == null ? null : model.modelId())
 			.addValue("effort", settings.effort().name())

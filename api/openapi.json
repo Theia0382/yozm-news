@@ -8505,9 +8505,6 @@
           "digestTime" : {
             "type" : "string"
           },
-          "interestText" : {
-            "type" : "string"
-          },
           "monthlyReport" : {
             "type" : "boolean"
           },
@@ -8522,7 +8519,7 @@
             "enum" : [ "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY" ]
           }
         },
-        "required" : [ "digestTime", "interestText", "monthlyReport", "timezone", "weeklyReport", "weeklyReportDay" ]
+        "required" : [ "digestTime", "monthlyReport", "timezone", "weeklyReport", "weeklyReportDay" ]
       },
       "InterestSettingsResponse" : {
         "type" : "object",
@@ -8530,13 +8527,6 @@
           "digestTime" : {
             "type" : "string"
           },
-          "interestText" : {
-            "type" : "string"
-          },
-          "interestTextMax" : {
-            "type" : "integer",
-            "format" : "int32"
-          },
           "monthlyReport" : {
             "type" : "boolean"
           },
@@ -8551,18 +8541,14 @@
             "enum" : [ "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY" ]
           }
         },
-        "required" : [ "digestTime", "interestText", "interestTextMax", "monthlyReport", "timezone", "weeklyReport", "weeklyReportDay" ]
+        "required" : [ "digestTime", "monthlyReport", "timezone", "weeklyReport", "weeklyReportDay" ]
       },
       "InterestSettingsSaveResponse" : {
         "type" : "object",
         "properties" : {
-          "interestTextMax" : {
-            "type" : [ "integer", "null" ],
-            "format" : "int32"
-          },
           "result" : {
             "type" : "string",
-            "enum" : [ "SAVED", "UNKNOWN_TIMEZONE", "INTEREST_TEXT_TOO_LONG" ]
+            "enum" : [ "SAVED", "UNKNOWN_TIMEZONE" ]
           },
           "settings" : {
             "oneOf" : [ {
@@ -8572,7 +8558,7 @@
             } ]
           }
         },
-        "required" : [ "interestTextMax", "result", "settings" ]
+        "required" : [ "result", "settings" ]
       },
       "InterestSourceResponse" : {
         "type" : "object",

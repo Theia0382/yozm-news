@@ -25,7 +25,6 @@ import net.yozmnews.user.domain.interest.CandidateVolume;
 import net.yozmnews.user.domain.interest.DigestSchedule;
 import net.yozmnews.user.domain.interest.DigestVolume;
 import net.yozmnews.user.domain.interest.InterestSettings;
-import net.yozmnews.user.domain.interest.InterestText;
 import net.yozmnews.user.domain.interest.ModelRef;
 import net.yozmnews.user.domain.interest.ReportSettings;
 import net.yozmnews.user.domain.preference.PreferenceAction;
@@ -91,7 +90,6 @@ class JdbcInterestStorageTests {
 		InterestSettings read = this.settings.lockByUser(this.alice).orElseThrow();
 		assertThat(read.preferenceVersion()).isEqualTo(new TagSetId(3));
 		assertThat(read.schedule()).isEqualTo(new DigestSchedule(ZoneId.of("Asia/Seoul"), LocalTime.of(7, 0)));
-		assertThat(read.interestText()).isEqualTo(new InterestText(""));
 		assertThat(read.model()).isNull();
 		assertThat(read.effort()).isEqualTo(ReasoningEffort.MEDIUM);
 		assertThat(read.reports()).isEqualTo(new ReportSettings(true, DayOfWeek.MONDAY, true));
@@ -107,7 +105,7 @@ class JdbcInterestStorageTests {
 		InterestSettings read = this.settings.lockByUser(this.alice).orElseThrow();
 
 		this.settings.update(read.withEffort(ReasoningEffort.LOW, LATER)
-			.withDigest(new DigestSchedule(ZoneId.of("America/New_York"), LocalTime.of(6, 30)), new InterestText("배터리"),
+			.withDigest(new DigestSchedule(ZoneId.of("America/New_York"), LocalTime.of(6, 30)),
 					new ReportSettings(false, DayOfWeek.FRIDAY, false), LATER)
 			.withModel(new ModelRef(Provider.ANTHROPIC, "claude-haiku-5-5"), LATER)
 			.withPreferenceVersion(new TagSetId(5), LATER)
@@ -117,7 +115,6 @@ class JdbcInterestStorageTests {
 		assertThat(again.version()).isOne();
 		assertThat(again.preferenceVersion()).isEqualTo(new TagSetId(5));
 		assertThat(again.schedule()).isEqualTo(new DigestSchedule(ZoneId.of("America/New_York"), LocalTime.of(6, 30)));
-		assertThat(again.interestText()).isEqualTo(new InterestText("배터리"));
 		assertThat(again.model()).isEqualTo(new ModelRef(Provider.ANTHROPIC, "claude-haiku-5-5"));
 		assertThat(again.reports()).isEqualTo(new ReportSettings(false, DayOfWeek.FRIDAY, false));
 		assertThat(again.effort()).isEqualTo(ReasoningEffort.LOW);

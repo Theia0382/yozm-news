@@ -31,7 +31,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 /**
- * 관심 설정 처리기 — 응답 모양, 판정 결과(저장 · 체계 버전이 바뀜 · 받지 않는 시간대 · 관심사가 김 · 키 없는 공급자 · 허용 목록에 없는 모델 ·
+ * 관심 설정 처리기 — 응답 모양, 판정 결과(저장 · 체계 버전이 바뀜 · 받지 않는 시간대 · 키 없는 공급자 · 허용 목록에 없는 모델 ·
  * 구독 제안 거절), 형식 400, 키 없는 사용자도 쓴다(account-R5). 로그인 시험 도우미가 만든 계정은 설정 행이 없어 첫 요청이 기본값을
  * 만든다. 실제 PostgreSQL 과 기본 체계 · 기본 허용 모델 목록으로 본다.
  * <p>
@@ -127,34 +127,41 @@ class InterestControllerTests {
 		this.mockMvc.perform(get("/api/interests/settings").with(this.user))
 			.andExpect(status().isOk())
 			.andExpect(content().json("""
-					{"timezone":"Asia/Seoul","digestTime":"07:00","interestText":"","interestTextMax":500,
-					 "weeklyReport":true,"weeklyReportDay":"MONDAY","monthlyReport":true}""", JsonCompareMode.STRICT));
+					{"timezone":"Asia/Seoul","digestTime":"07:00","weeklyReport":true,"weeklyReportDay":"MONDAY",
+					 "monthlyReport":true}""", JsonCompareMode.STRICT));
 
-		this.mockMvc.perform(json(put("/api/interests/settings").with(this.user), settings("America/New_York", "06:30",
-				"  전력망과 배터리  ")))
+		this.mockMvc.perform(json(put("/api/interests/settings").with(this.user), settings("America/New_York", "06:30")))
 			.andExpect(status().isOk())
 			.andExpect(content().json("""
-					{"result":"SAVED","settings":{"timezone":"America/New_York","digestTime":"06:30",
-					 "interestText":"전력망과 배터리","interestTextMax":500,"weeklyReport":false,"weeklyReportDay":"FRIDAY",
-					 "monthlyReport":false},"interestTextMax":null}""", JsonCompareMode.STRICT));
-		this.mockMvc.perform(json(put("/api/interests/settings").with(this.user), settings("+09:00", "06:30", "")))
+					{"result":"SAVED","settings":{"timezone":"America/New_York","digestTime":"06:30","weeklyReport":false,
+					 "weeklyReportDay":"FRIDAY","monthlyReport":false}}""", JsonCompareMode.STRICT));
+		this.mockMvc.perform(json(put("/api/interests/settings").with(this.user), settings("+09:00", "06:30")))
 			.andExpect(content().json("""
-					{"result":"UNKNOWN_TIMEZONE","settings":null,"interestTextMax":null}""", JsonCompareMode.STRICT));
-		this.mockMvc
-			.perform(json(put("/api/interests/settings").with(this.user), settings("Asia/Seoul", "06:30", "가".repeat(501))))
-			.andExpect(content().json("""
-					{"result":"INTEREST_TEXT_TOO_LONG","settings":null,"interestTextMax":500}""", JsonCompareMode.STRICT));
-		this.mockMvc.perform(json(put("/api/interests/settings").with(this.user), settings("Asia/Seoul", "7:00", "")))
+					{"result":"UNKNOWN_TIMEZONE","settings":null}""", JsonCompareMode.STRICT));
+		this.mockMvc.perform(json(put("/api/interests/settings").with(this.user), settings("Asia/Seoul", "7:00")))
 			.andExpect(status().isBadRequest());
-		this.mockMvc.perform(json(put("/api/interests/settings").with(this.user), settings("Asia/Seoul", "24:00", "")))
+		this.mockMvc.perform(json(put("/api/interests/settings").with(this.user), settings("Asia/Seoul", "24:00")))
 			.andExpect(status().isBadRequest());
 		this.mockMvc.perform(json(put("/api/interests/settings").with(this.user), """
-				{"timezone":"Asia/Seoul","digestTime":"07:00","interestText":"","weeklyReport":true,
-				 "weeklyReportDay":"FUNDAY","monthlyReport":true}"""))
+				{"timezone":"Asia/Seoul","digestTime":"07:00","weeklyReport":true,"weeklyReportDay":"FUNDAY",
+				 "monthlyReport":true}"""))
 			.andExpect(status().isBadRequest());
 		this.mockMvc.perform(get("/api/interests/settings").with(this.user))
-			.andExpect(jsonPath("$.timezone").value("America/New_York"))
-			.andExpect(jsonPath("$.interestText").value("전력망과 배터리"));
+			.andExpect(content().json("""
+					{"timezone":"America/New_York","digestTime":"06:30","weeklyReport":false,"weeklyReportDay":"FRIDAY",
+					 "monthlyReport":false}""", JsonCompareMode.STRICT));
+	}
+
+	@Test
+	void aBodyThatStillCarriesTheRemovedInterestTextIsSavedWithoutIt() throws Exception {
+		// 업그레이드 전에 받은 화면은 관심사 칸을 실어 보낸다 — 모르는 칸이라 읽지 않고 나머지를 저장한다
+		this.mockMvc.perform(json(put("/api/interests/settings").with(this.user), """
+				{"timezone":"Europe/Paris","digestTime":"06:15","interestText":"반도체","weeklyReport":false,
+				 "weeklyReportDay":"FRIDAY","monthlyReport":false}"""))
+			.andExpect(status().isOk())
+			.andExpect(content().json("""
+					{"result":"SAVED","settings":{"timezone":"Europe/Paris","digestTime":"06:15","weeklyReport":false,
+					 "weeklyReportDay":"FRIDAY","monthlyReport":false}}""", JsonCompareMode.STRICT));
 	}
 
 	@Test
@@ -339,10 +346,10 @@ class InterestControllerTests {
 		}
 	}
 
-	private static String settings(String timezone, String time, String interestText) {
+	private static String settings(String timezone, String time) {
 		return """
-				{"timezone":"%s","digestTime":"%s","interestText":"%s","weeklyReport":false,"weeklyReportDay":"FRIDAY",
-				 "monthlyReport":false}""".formatted(timezone, time, interestText);
+				{"timezone":"%s","digestTime":"%s","weeklyReport":false,"weeklyReportDay":"FRIDAY",
+				 "monthlyReport":false}""".formatted(timezone, time);
 	}
 
 	private static MockHttpServletRequestBuilder json(MockHttpServletRequestBuilder request, String body) {

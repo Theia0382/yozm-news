@@ -85,8 +85,8 @@ class DigestInterestsDirectoryService implements DigestInterestsDirectory {
 			.toList();
 		DigestVolume volume = stored.volume();
 		return Optional.of(new DigestInterests(version, topics, current.excludedRegions(), current.excludedFormats(),
-				this.excludedSources.load(user), stored.interestText().value(), stored.schedule().timezone(),
-				volume.maxCandidates(), volume.bigSlots(), volume.summaryLength(), stored.effort()));
+				this.excludedSources.load(user), stored.schedule().timezone(), volume.maxCandidates(),
+				volume.bigSlots(), volume.summaryLength(), stored.effort()));
 	}
 
 }

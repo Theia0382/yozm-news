@@ -43,9 +43,9 @@ class BudgetCutTests {
 
 	@Test
 	void theBudgetLeavesRoomForTheInstructionsAndTheProfile() {
-		// 32,000 − 6,000 − (관심사 100 + (구독 행 3 + 제외 지역 2) × 20 + 고정 틀 200) = 25,600
-		assertThat(CandidateCost.candidateBudget(32_000, 100, 3, 2)).isEqualTo(25_600);
-		assertThat(CandidateCost.candidateBudget(1_000, 0, 0, 0)).isZero();
+		// 32,000 − 6,000 − ((구독 행 3 + 제외 지역 2) × 20 + 고정 틀 200) = 25,700
+		assertThat(CandidateCost.candidateBudget(32_000, 3, 2)).isEqualTo(25_700);
+		assertThat(CandidateCost.candidateBudget(1_000, 0, 0)).isZero();
 	}
 
 	@Test

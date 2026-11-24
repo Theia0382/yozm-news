@@ -93,8 +93,8 @@ public class InterestScopeTests {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.result").value("SAVED"));
 		this.mockMvc.perform(json(put("/api/interests/settings").with(a), """
-				{"timezone":"Europe/Paris","digestTime":"06:15","interestText":"반도체","weeklyReport":false,
-				 "weeklyReportDay":"FRIDAY","monthlyReport":false}"""))
+				{"timezone":"Europe/Paris","digestTime":"06:15","weeklyReport":false,"weeklyReportDay":"FRIDAY",
+				 "monthlyReport":false}"""))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.result").value("SAVED"));
 		this.mockMvc.perform(json(put("/api/interests/model").with(a), """
@@ -120,8 +120,7 @@ public class InterestScopeTests {
 			.andExpect(jsonPath("$.preferences.excludedRegions").isEmpty());
 		this.mockMvc.perform(get("/api/interests/settings").with(b))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.timezone").value("Asia/Seoul"))
-			.andExpect(jsonPath("$.interestText").value(""));
+			.andExpect(jsonPath("$.timezone").value("Asia/Seoul"));
 		this.mockMvc.perform(get("/api/interests/model").with(b))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.chosen").doesNotExist())

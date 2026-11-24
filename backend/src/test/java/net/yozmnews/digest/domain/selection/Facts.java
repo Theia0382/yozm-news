@@ -70,7 +70,7 @@ final class Facts {
 
 	static DigestInterests interests(List<TopicSubscription> topics, Set<String> excludedRegions,
 			Set<String> excludedFormats, Set<SourceId> excludedSources) {
-		return new DigestInterests(new TagSetId(1), topics, excludedRegions, excludedFormats, excludedSources, "",
+		return new DigestInterests(new TagSetId(1), topics, excludedRegions, excludedFormats, excludedSources,
 				ZoneId.of("Asia/Seoul"), 60, 3, SummaryLength.NORMAL, ReasoningEffort.MEDIUM);
 	}
 

@@ -31,12 +31,12 @@ import tools.jackson.databind.node.ObjectNode;
  * 프롬프트 구성 — 정본 — docs/specs/digest.md §5 · digest-R26
  * <p>
  * 지시 구획은 고정 문면과 요약 길이 기준이고, 모델이 구조화 출력을 지원하지 않으면 출력 스키마 문서를 덧붙인다. 사용자 구획은 JSON 문서 하나
- * ({@code profile} · {@code items})이고 JSON 으로 써서 신뢰할 수 없는 글(제목 · 요약문 · 출처 · 관심사)이 구획 구조를 흉내 내지 못한다.
+ * ({@code profile} · {@code items})이고 JSON 으로 써서 신뢰할 수 없는 글(제목 · 요약문 · 출처)이 구획 구조를 흉내 내지 못한다.
  * 항목은 [항목 별칭, 칸 이름, 사건들], 사건은 기사 줄의 목록, 기사 줄은 [출처, 발행 시각, 주제, 지역, 제목, 요약문]이다. 항목은 이번 요청의
  * 항목 별칭으로만 나오고 기사 별칭 · DB ID 는 싣지 않는다.
  * <p>
  * 덩어리마다 후보 선별의 토큰 어림({@link CandidateCost})을 넘지 않게 자른다(ADR-0210) — 기사 줄은 지역 → 주제 → 출처의 꼬리 이름을 먼저
- * 빼고 그래도 넘으면 요약문의 꼬리를, 프로필은 이름마다 몫까지 · 그다음 관심사의 꼬리를 자른다. 사건 · 항목의 괄호 · 항목 별칭 · 칸 이름은
+ * 빼고 그래도 넘으면 요약문의 꼬리를, 프로필은 이름마다 몫까지 자른다. 사건 · 항목의 괄호 · 항목 별칭 · 칸 이름은
  * 사건마다 {@link CandidateCost#EVENT_OVERHEAD} 안이다. 제목은 자르지 않는다 — 이스케이프가 제목 하나로 줄 몫과 요약문 전부를 넘기는 줄은
  * 어림을 넘긴 채 싣는다.
  */
@@ -48,8 +48,6 @@ public final class DigestPrompts {
 	static final String TOPICS = "topics";
 
 	static final String EXCLUDED_REGIONS = "excludedRegions";
-
-	static final String INTEREST = "interest";
 
 	static final String TIMEZONE = "timezone";
 
@@ -65,7 +63,7 @@ public final class DigestPrompts {
 	private static final String INSTRUCTIONS = """
 			너는 사용자 한 사람을 위한 일일 뉴스 다이제스트를 한국어로 쓰는 편집자다.
 			사용자 구획은 JSON 문서 하나다. <profile> 은 사용자의 관심이다 — <topics> 는 구독 주제, <excludedRegions> 는 제외한 지역(이미 걸렀다), \
-			<interest> 는 자유 관심사, <timezone> 은 발행 시각의 시간대다. <items> 의 줄은 [항목 별칭, 칸, 사건들]이다. 사건은 한 번 일어난 일을 \
+			<timezone> 은 발행 시각의 시간대다. <items> 의 줄은 [항목 별칭, 칸, 사건들]이다. 사건은 한 번 일어난 일을 \
 			다룬 기사 줄의 목록이고, 기사 줄은 [출처, 발행 시각, 주제, 지역, 제목, 요약문]이다. 한 항목의 사건들은 같은 흐름에 속한다. \
 			칸은 그 항목을 쓸 출력의 칸(<top_stories> 또는 <headlines>)이다.
 			규칙:
@@ -84,7 +82,6 @@ public final class DigestPrompts {
 		.replace("<profile>", PROFILE)
 		.replace("<topics>", TOPICS)
 		.replace("<excludedRegions>", EXCLUDED_REGIONS)
-		.replace("<interest>", INTEREST)
 		.replace("<timezone>", TIMEZONE)
 		.replace("<items>", ITEMS)
 		.replace("<item>", CandidateSet.ITEM_PREFIX)
@@ -194,40 +191,16 @@ public final class DigestPrompts {
 	}
 
 	/**
-	 * 프로필 — 이름마다 {@link CandidateCost#PROFILE_TAG_COST} 안으로, 그다음 고정 틀과 함께 프로필 몫을 넘으면 관심사의 꼬리를 자른다
+	 * 프로필 — 이름마다 {@link CandidateCost#PROFILE_TAG_COST} 안으로 자른다. 나머지 고정 틀은 {@link CandidateCost#PROFILE_OVERHEAD} 안이다
 	 */
 	private static ObjectNode profile(DigestProfile profile) {
-		List<String> topics = profile.topics().stream().map(DigestPrompts::fitName).toList();
-		List<String> regions = profile.excludedRegions().stream().map(DigestPrompts::fitName).toList();
-		int allowed = TokenEstimate.tokens(codePoints(profile.interest())
-				+ (topics.size() + regions.size()) * CandidateCost.PROFILE_TAG_COST + CandidateCost.PROFILE_OVERHEAD);
-		String interest = profile.interest();
-		ObjectNode node = profileNode(topics, regions, interest, profile);
-		while (TokenEstimate.tokens(skeletonCodePoints(node)) > allowed && !interest.isEmpty()) {
-			interest = dropTail(interest, Math.max(1, TokenEstimate.tokens(skeletonCodePoints(node)) - allowed));
-			node = profileNode(topics, regions, interest, profile);
-		}
-		return node;
-	}
-
-	private static ObjectNode profileNode(List<String> topics, List<String> regions, String interest,
-			DigestProfile profile) {
 		ObjectNode node = JSON.createObjectNode();
 		ArrayNode topicNode = node.putArray(TOPICS);
-		topics.forEach(topicNode::add);
+		profile.topics().stream().map(DigestPrompts::fitName).forEach(topicNode::add);
 		ArrayNode regionNode = node.putArray(EXCLUDED_REGIONS);
-		regions.forEach(regionNode::add);
-		node.put(INTEREST, interest);
+		profile.excludedRegions().stream().map(DigestPrompts::fitName).forEach(regionNode::add);
 		node.put(TIMEZONE, profile.timezone().getId());
 		return node;
-	}
-
-	/** 항목이 빈 문서에 프로필을 넣은 글의 코드 포인트 — 사용자 구획의 고정 틀과 프로필 */
-	static int skeletonCodePoints(ObjectNode profile) {
-		ObjectNode root = JSON.createObjectNode();
-		root.set(PROFILE, profile);
-		root.putArray(ITEMS);
-		return codePoints(JSON.writeValueAsString(root));
 	}
 
 	/** 이름 하나 — 따옴표 · 구분 기호를 더한 글이 {@link CandidateCost#PROFILE_TAG_COST} 안이 되게 꼬리를 자른다 */

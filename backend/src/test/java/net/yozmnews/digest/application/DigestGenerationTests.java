@@ -384,7 +384,7 @@ class DigestGenerationTests {
 		// 추론 강도는 기본값(보통)과 다른 값으로 — 요청이 입력 프로필의 값을 실었는지 가린다
 		DigestInput fixed = candidates(2);
 		DigestInput input = new DigestInput(new DigestProfile(fixed.profile().topics(),
-				fixed.profile().excludedRegions(), fixed.profile().interest(), fixed.profile().timezone(),
+				fixed.profile().excludedRegions(), fixed.profile().timezone(),
 				fixed.profile().summaryLength(), ReasoningEffort.HIGH), fixed.items());
 
 		assertThat(generation.run(id, MODEL, input)).isEqualTo(DigestStatus.READY);

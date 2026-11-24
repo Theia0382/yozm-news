@@ -57,7 +57,7 @@ class DigestPromptsTests {
 	private static final long STORYLINE_ID = 765_432_109L;
 
 	private static final DigestProfile PROFILE = new DigestProfile(List.of("정치", "증권·시장"), List.of("미국"),
-			"반도체 공급망", ZoneId.of("America/New_York"), SummaryLength.NORMAL, ReasoningEffort.MEDIUM);
+			ZoneId.of("America/New_York"), SummaryLength.NORMAL, ReasoningEffort.MEDIUM);
 
 	@Test
 	void theInstructionsCarryTheDataAndItemRules() {
@@ -68,7 +68,7 @@ class DigestPromptsTests {
 			.contains("요약문을 옮겨 적지 않는다. 여러 기사의 사실을 종합해 새 문장으로 쓴다.")
 			// 사용자 구획 · 출력 서술의 이름과 항목 · 기사 줄의 열 순서를 지시가 그대로 말한다
 			.contains("사용자 구획은 JSON 문서 하나다. profile 은 사용자의 관심이다 — topics 는 구독 주제, "
-					+ "excludedRegions 는 제외한 지역(이미 걸렀다), interest 는 자유 관심사, timezone 은 발행 시각의 시간대다. "
+					+ "excludedRegions 는 제외한 지역(이미 걸렀다), timezone 은 발행 시각의 시간대다. "
 					+ "items 의 줄은 [항목 별칭, 칸, 사건들]이다. 사건은 한 번 일어난 일을 다룬 기사 줄의 목록이고, "
 					+ "기사 줄은 [출처, 발행 시각, 주제, 지역, 제목, 요약문]이다. 한 항목의 사건들은 같은 흐름에 속한다. "
 					+ "칸은 그 항목을 쓸 출력의 칸(top_stories 또는 headlines)이다.")
@@ -127,8 +127,7 @@ class DigestPromptsTests {
 		assertThat(root.get("items").get(0)).isEqualTo(JSON.readTree("""
 				["I1","top_stories",[[["연합뉴스, 한겨레","2026-11-16 22:30",["대통령실·행정부"],["국내"],"제목","요약문"]]]]"""));
 		assertThat(root.get("profile")).isEqualTo(JSON.readTree("""
-				{"topics":["정치","증권·시장"],"excludedRegions":["미국"],"interest":"반도체 공급망",
-				 "timezone":"America/New_York"}"""));
+				{"topics":["정치","증권·시장"],"excludedRegions":["미국"],"timezone":"America/New_York"}"""));
 		assertThat(root.properties()).extracting(java.util.Map.Entry::getKey).containsExactly("profile", "items");
 	}
 
@@ -238,8 +237,8 @@ class DigestPromptsTests {
 	}
 
 	private static DigestProfile withLength(SummaryLength length) {
-		return new DigestProfile(PROFILE.topics(), PROFILE.excludedRegions(), PROFILE.interest(), PROFILE.timezone(),
-				length, PROFILE.effort());
+		return new DigestProfile(PROFILE.topics(), PROFILE.excludedRegions(), PROFILE.timezone(), length,
+				PROFILE.effort());
 	}
 
 	/** 기사 하나뿐인 사건 하나의 항목 — 사건 ID 는 기사 ID */

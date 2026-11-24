@@ -1,6 +1,6 @@
 # ADR-0219: 프롬프트 재료는 후보 선별이 토큰 어림과 같은 한 번의 읽기로 낸다
 
-- 상태: 승인. 부분 대체 — 생성의 입력과 프롬프트 덩어리의 꼴([ADR-0262](0262-chosen-events-are-grouped-into-items-by-containment-tree-top-code-splits-top-stories-and-headlines-the-llm-writes-per-item-and-an-item-has-one-badge.md))
+- 상태: 승인. 부분 대체 — 생성의 입력과 프롬프트 덩어리의 꼴([ADR-0262](0262-chosen-events-are-grouped-into-items-by-containment-tree-top-code-splits-top-stories-and-headlines-the-llm-writes-per-item-and-an-item-has-one-badge.md)) · 프로필의 관심사 본문과 낸 값의 관심사 본문([ADR-0314](0314-the-free-text-interest-setting-is-removed-and-its-stored-values-are-dropped-by-migration.md))
 - 날짜: 2026-11-18
 - 근거: [이슈 #177](https://github.com/Theia0382/yozm-news/issues/177) — 생성기 포트가 기사 ID · 선정 이유만 나르고, 관심사는 길이만 공개 조회로 나오던 것을 조사함. 구현 커밋 `d3b074d`(관심 설정 조회) · `c3d15ed`(선별의 `DigestInput` · `tag` 의 이름 조회) · `011bcbe`(프롬프트 구성)
 - 관련: [ADR-0210](0210-candidate-selection-cuts-to-the-input-token-budget-with-one-estimate-the-prompt-follows.md)(부분 대체 — 결정의 예산 산식에 사용자 구획의 고정 틀이 더해짐), [ADR-0211](0211-the-digest-consumer-query-of-interest-settings-writes-nothing-and-returns-followed-preferences-with-expanded-topics.md)(보충 — 미뤄 둔 시간대 · 관심사 본문을 더함, 부분 대체 — 낸 값의 "관심사 길이"), [ADR-0101](0101-shared-storylines-connect-events-and-the-personal-side-is-storyline-subscriptions-and-interests.md)(관련 — 묶음은 ADR-0220)
@@ -13,11 +13,12 @@
 
 ## 결정
 
-> 부분 대체(첫 문장) — [ADR-0262](0262-chosen-events-are-grouped-into-items-by-containment-tree-top-code-splits-top-stories-and-headlines-the-llm-writes-per-item-and-an-item-has-one-badge.md). 지금 상태: [digest Spec "후보 선별"](../specs/digest.md#후보-선별) digest-R22
+> 부분 대체(첫 문장) — [ADR-0262](0262-chosen-events-are-grouped-into-items-by-containment-tree-top-code-splits-top-stories-and-headlines-the-llm-writes-per-item-and-an-item-has-one-badge.md) · [ADR-0314](0314-the-free-text-interest-setting-is-removed-and-its-stored-values-are-dropped-by-migration.md). 지금 상태: [digest Spec "후보 선별"](../specs/digest.md#후보-선별) digest-R22
 - **후보 선별이 생성의 입력(`DigestInput`)을 낸다** — 사용자 프로필(구독 주제 · 제외 지역의 이름, 관심사 본문, 시간대, 요약 길이, 추론 강도), 후보 기사의 값, 큰 스토리라인 묶음. 후보의 제목 · 요약문은 토큰 어림에 쓴 읽기의 값이다.
 - **재료는 `application` 이 공개 조회로 읽고, 프롬프트 문면은 `domain` 의 순수 구성이 만들고, 생성기 어댑터는 관문 호출과 결과 옮기기만 한다.**
 > 부분 대체(첫 문장) — [ADR-0262](0262-chosen-events-are-grouped-into-items-by-containment-tree-top-code-splits-top-stories-and-headlines-the-llm-writes-per-item-and-an-item-has-one-badge.md). 지금 상태: [digest Spec "프롬프트 구성"](../specs/digest.md#프롬프트-구성) digest-R26
 - **프롬프트 구성은 덩어리마다 어림 안으로 자른다** — 후보 줄 · 묶음 줄 · 프로필. 어림에 사용자 구획의 고정 틀(구획 키 · 괄호 · 시간대 ID — `CandidateCost.PROFILE_OVERHEAD`)을 더한다. 값은 측정 전 목표다.
+> 부분 대체 — [ADR-0314](0314-the-free-text-interest-setting-is-removed-and-its-stored-values-are-dropped-by-migration.md). 지금 상태: [user Spec "다이제스트가 읽는 관심 설정"](../specs/user.md#다이제스트가-읽는-관심-설정) user-R57
 - **다이제스트가 읽는 관심 설정은 관심사 본문 · 시간대 · 요약 길이 · 추론 강도를 낸다** — 관심사 길이는 본문에서 센다.
 - **태그 이름은 `tag` 의 이름 조회(`TagSetDirectory.names` → `TagSetNames`)로 읽는다** — `tag` 의 자기 타입으로 내어 `digest` 가 `evaluation` 에 기대지 않는다.
 

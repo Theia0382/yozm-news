@@ -24,7 +24,6 @@ import net.yozmnews.user.application.DigestSettings.DigestSettingsView;
 import net.yozmnews.user.application.TagPreferences.TagPreferenceSaveOutcome;
 import net.yozmnews.user.application.TagPreferences.TagPreferenceView;
 import net.yozmnews.user.domain.interest.DigestSchedule;
-import net.yozmnews.user.domain.interest.InterestText;
 import net.yozmnews.user.domain.interest.ReportSettings;
 import net.yozmnews.user.domain.preference.PreferenceSet;
 import org.junit.jupiter.api.AfterEach;
@@ -181,12 +180,12 @@ class TagPreferencesTests {
 		this.second.awaitListener();
 		behindOn(user, this.first);
 
-		DigestSettingsOutcome outcome = this.digestSettings.save(user, "Europe/Paris", LocalTime.of(6, 30), " 배터리 ",
+		DigestSettingsOutcome outcome = this.digestSettings.save(user, "Europe/Paris", LocalTime.of(6, 30),
 				new ReportSettings(false, DayOfWeek.FRIDAY, true), NOW);
 
 		assertThat(outcome).isEqualTo(new DigestSettingsOutcome.Saved(
 				new DigestSettingsView(new DigestSchedule(ZoneId.of("Europe/Paris"), LocalTime.of(6, 30)),
-						new InterestText("배터리"), new ReportSettings(false, DayOfWeek.FRIDAY, true))));
+						new ReportSettings(false, DayOfWeek.FRIDAY, true))));
 		assertThat(version(user)).isEqualTo(active.value());
 		assertThat(notices(user)).isOne();
 		// 판 — 만들 때 0 → 리스너의 따라가기 1(그 뒤 버전 1 상태로 되돌림, 판은 그대로) → 먼저 따라가기 2 → 저장 3

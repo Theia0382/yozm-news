@@ -224,8 +224,8 @@ public class CandidateSelection {
 				interests.maxCandidates(), List.of());
 		Map<EventId, List<ArticleFacts>> samples = samples(shortlist, neutralShortlist);
 		Map<ArticleId, ArticleContent> contents = contents(samples);
-		int budget = CandidateCost.candidateBudget(model.inputTokenBudget(), codePoints(interests.interestText()),
-				interests.topics().size(), interests.excludedRegions().size());
+		int budget = CandidateCost.candidateBudget(model.inputTokenBudget(), interests.topics().size(),
+				interests.excludedRegions().size());
 		Map<EventId, Integer> tokens = tokens(samples, contents);
 		Shortlist cut = BudgetCut.apply(shortlist, tokens, budget);
 		Shortlist neutralCut = BudgetCut.apply(neutralShortlist, tokens, budget);
@@ -282,8 +282,8 @@ public class CandidateSelection {
 		DigestProfile profile = new DigestProfile(
 				ordered(interests.topics().stream().map(TopicSubscription::key).toList(), names.topicOrder(),
 						names::topicName),
-				ordered(interests.excludedRegions(), names.regionOrder(), names::regionName), interests.interestText(),
-				interests.timezone(), interests.summaryLength(), interests.effort());
+				ordered(interests.excludedRegions(), names.regionOrder(), names::regionName), interests.timezone(),
+				interests.summaryLength(), interests.effort());
 		return new DigestInput(profile, inputItems);
 	}
 
