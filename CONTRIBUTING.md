@@ -1,17 +1,26 @@
 # 기여 가이드
 
-요즘뉴스 팀의 공용 규약이다. 브랜치 · 커밋 · PR · 이슈 · 개발 환경의 정본은 이 문서다. 설계 문서는 [docs/README.md](docs/README.md)부터 읽는다.
+요즘뉴스 팀의 공용 규약이다. 아래 규약의 정본은 이 문서다.
+
+- 개발 환경
+- 이슈
+- 브랜치
+- 커밋
+- PR
+
+설계 문서는 [docs/README.md](docs/README.md)부터 읽는다.
 
 ## 1. 개발 환경
 
 ### 필요한 것
 
-- **Docker**(Compose 플러그인 포함) — 검사(아래)는 컨테이너에서 돌고, 검사에 필요한 호스트 도구는 Docker 뿐이다. privileged 컨테이너를 허용해야 한다(검사 정의의 구성은 [개발 인프라 — 검사 환경](docs/development/infrastructure.md#검사-환경))
+- **Docker**(Compose 플러그인 포함) — 검사(아래)는 컨테이너에서 돌고, 검사에 필요한 호스트 도구는 Docker 뿐이다. privileged 컨테이너를 허용해야 한다(검사 정의의 구성은 [개발 인프라의 검사 환경](docs/development/infrastructure.md#검사-환경))
 
 호스트에서 직접 빌드하거나 개발 서버를 돌릴 때는 다음도 필요하다.
 
 - **JDK 25**
-- Gradle 은 따로 설치하지 않는다 — 저장소의 wrapper(`backend/gradlew`)를 쓴다. 호스트에서 돌리는 테스트도 Testcontainers 로 PostgreSQL 컨테이너를 띄운다
+- Gradle 은 따로 설치하지 않는다 — 저장소의 wrapper(`backend/gradlew`)를 쓴다
+- 호스트에서 돌리는 테스트도 Testcontainers 로 PostgreSQL 컨테이너를 띄운다
 - **Node.js 24** (`frontend/.nvmrc`)
 - **pnpm** — 설치된 버전과 관계없이 `frontend/package.json` 의 `packageManager` 에 고정한 버전으로 실행된다
 
@@ -23,21 +32,26 @@ PR 을 올리기 전에 돌리는 검사다. CI 와 같은 정의(`compose.check
 docker compose -f compose.check.yaml up --build --force-recreate --attach backend --abort-on-container-exit --exit-code-from backend backend docker   # 백엔드: backend/gradlew -p backend build
 docker compose -f compose.check.yaml run --rm --build frontend   # 프론트엔드: 의존성 고정 설치 뒤 build · lint · format:check · test
 docker compose -f compose.check.yaml run --rm --build docs       # 문서: 공개 마크다운의 상대 링크 · 앵커
-docker compose -f compose.check.yaml run --rm --build tools      # 저장소 도구: 도구마다 단위 테스트(사건 평가 도구의 운영자 API 명세 대조 · 라벨 기준 판 대조 포함)
+docker compose -f compose.check.yaml run --rm --build tools      # 저장소 도구: 도구마다 단위 테스트(사건 평가 도구의 운영자 API 명세 대조 · 라벨 기준 버전 대조 포함)
 ```
 
 - 종료 코드가 검사 결과다. 백엔드 로그에 `> Task :test` 가 `UP-TO-DATE` 없이 찍혀야 테스트가 실제로 돈 것이다
 - 백엔드 결과 보고서는 작업 트리에 생기지 않는다. 검사가 끝난 컨테이너에서 꺼낸다 — `docker compose -f compose.check.yaml cp backend:/workspace/backend/build/reports/tests/test <받을 디렉터리>`
-- 정리: `docker compose -f compose.check.yaml down -v` — 멈춘 컨테이너와 검사용 Docker 엔진의 데이터 볼륨을 지운다(다음 백엔드 검사가 PostgreSQL 이미지를 다시 받는다)
+- 지우기: `docker compose -f compose.check.yaml down -v` — 멈춘 컨테이너와 검사용 Docker 엔진의 데이터 볼륨을 지운다(다음 백엔드 검사가 PostgreSQL 이미지를 다시 받는다)
 - 문서 검사 이미지에는 문서와 문서가 가리키는 경로만 들어간다. 문서가 새 경로(예: 새 최상위 디렉터리)를 가리켜 "경로 없음"으로 실패하면 그 경로를 허용 목록 `tools/docs-check/Dockerfile.dockerignore` 에 더한다
 
-배포 구성 검사는 배포 구성을 [배포 구성 실행](docs/operations/deployment.md#배포-구성-실행) 대로 띄워 스모크(`deploy/smoke.sh`)를 돌린다 — 스모크의 종료 코드가 검사 결과다. CI 는 스모크 덧씌우기(`deploy/smoke/compose.yaml` — 시험 피드 서버)를 얹어 띄우고, 운영자 토큰을 넣은 구성으로 `app` 을 다시 띄워 스모크를 한 번 더 돌린다 — 이때 K14(시험 기사 하나의 로컬 모델 추론)를 반드시 돌린다. 로컬에서 K14 까지 보려면 같은 덧씌우기를 얹고 운영자 토큰을 넣어 띄운다([개발 인프라 — CI](docs/development/infrastructure.md#ci)). 검사가 끝나면 DB 볼륨까지 지우는 정지로 정리한다. CI 는 같은 정의로 이미지를 두 아키텍처(`linux/amd64` · `linux/arm64`)로도 빌드하고, 아키텍처마다 그 아키텍처의 러너에서 띄워 스모크를 돈다 — 두 아키텍처 빌드는 로컬에서 `deploy/` 에서 실행한다([개발 인프라 — 이미지](docs/development/infrastructure.md#이미지)).
+배포 구성 검사는 배포 구성을 [배포 구성 실행](docs/operations/deployment.md#배포-구성-실행) 대로 띄워 스모크(`deploy/smoke.sh`)를 돌린다. 스모크의 종료 코드가 검사 결과다.
+
+- CI 는 시험 피드 서버를 더하는 스모크 덧씌우기(`deploy/smoke/compose.yaml`)를 얹어 띄운다. 그다음 운영자 토큰을 넣은 구성으로 `app` 을 다시 띄워 스모크를 한 번 더 돌린다. 이때 K14(시험 기사 하나의 로컬 모델 추론)를 반드시 돌린다
+- 로컬에서 K14 까지 보려면 같은 덧씌우기를 얹고 운영자 토큰을 넣어 띄운다([개발 인프라의 CI](docs/development/infrastructure.md#ci))
+- 검사가 끝나면 배포 구성을 멈추고 DB 볼륨까지 지운다
+- CI 는 같은 정의로 이미지를 두 아키텍처(`linux/amd64` · `linux/arm64`)로도 빌드하고, 아키텍처마다 그 아키텍처의 러너에서 띄워 스모크를 돈다. 두 아키텍처 빌드를 로컬에서 할 때는 `deploy/` 에서 실행한다([개발 인프라의 이미지](docs/development/infrastructure.md#이미지))
 
 ```sh
 docker buildx bake --allow=fs.read=.. --set '*.platform=linux/amd64,linux/arm64' app proxy   # deploy/ 에서 — 두 아키텍처 배포 이미지 빌드(빌드 컨텍스트가 상위 디렉터리라 읽기를 허락한다)
 ```
 
-- 배포 target 의 실행 단계에는 명령(`RUN`)을 두지 않는다 — 에뮬레이션 없는 빌더에서 다른 아키텍처의 빌드가 깨진다. 이미지 구성은 [개발 인프라 — 이미지](docs/development/infrastructure.md#이미지)
+- 배포 target 의 실행 단계에는 명령(`RUN`)을 두지 않는다 — 에뮬레이션 없는 빌더에서 다른 아키텍처의 빌드가 깨진다. 이미지 구성은 [개발 인프라의 이미지](docs/development/infrastructure.md#이미지)
 
 ### 호스트에서 직접 실행 (빠른 반복)
 
@@ -54,9 +68,14 @@ backend/gradlew -p backend llmLiveCheck                          # 실제 LLM �
 
 결과는 `backend/build/test-results/test/` (JUnit XML) 와 `backend/build/reports/tests/test/index.html` 에 남는다.
 
-처음 빌드 · 테스트는 기본 로컬 임베딩 모델(약 135 MB)을 Hugging Face 에서 받아 Gradle 사용자 홈(`~/.gradle/caches/yozmnews-embedding-model/`)에 둔다 — 인터넷 접속이 필요하고, 그 뒤에는 캐시를 쓴다. 모델 정보는 `backend/embedding-model.properties` 에 있다([개발 인프라 — 이미지](docs/development/infrastructure.md#이미지)).
+처음 빌드 · 테스트는 기본 로컬 임베딩 모델(약 135 MB)을 Hugging Face 에서 받아 Gradle 사용자 홈(`~/.gradle/caches/yozmnews-embedding-model/`)에 둔다. 그래서 처음에는 인터넷 접속이 필요하고, 그 뒤에는 캐시를 쓴다. 모델 정보는 `backend/embedding-model.properties` 에 있다([개발 인프라의 이미지](docs/development/infrastructure.md#이미지)).
 
-IDE 에서 테스트를 돌릴 때도 Gradle 로 실행을 위임한다. 위임하지 않으면 저장소 파일을 읽는 테스트(PostgreSQL 컨테이너를 띄우는 테스트 포함)가 시스템 속성이 없다는 메시지로 실패하고, 로컬 임베딩 모델을 여는 테스트가 환경 변수 `ORT_DISABLE_TELEMETRY=1` 이 없다는 메시지로 실패한다 — [테스트가 저장소 파일을 읽는 결선](docs/development/infrastructure.md#테스트가-저장소-파일을-읽는-결선).
+IDE 에서 테스트를 돌릴 때도 Gradle 로 실행을 위임한다. 위임하지 않으면 아래 테스트가 실패한다.
+
+- 저장소 파일을 읽는 테스트(PostgreSQL 컨테이너를 띄우는 테스트 포함)는 시스템 속성이 없다는 메시지로 실패한다
+- 로컬 임베딩 모델을 여는 테스트는 환경 변수 `ORT_DISABLE_TELEMETRY=1` 이 없다는 메시지로 실패한다
+
+결선은 [테스트가 저장소 파일을 읽는 결선](docs/development/infrastructure.md#테스트가-저장소-파일을-읽는-결선)에 있다.
 
 **백엔드 로컬 실행**
 
@@ -70,17 +89,21 @@ docker compose --profile dev down -v                                            
 
 - IDE 에서는 이 Gradle 태스크(`bootRun`)로 실행을 위임한다
 - 역할 profile(`web` · `worker`)을 `local` 과 함께 적는다. 한 역할만 띄워 보려면 `local,web` 또는 `local,worker` 다. `local` 만 적으면 역할이 없어 기동이 멈춘다([platform Spec](docs/specs/platform.md#역할))
-- `local` 은 사건 묶기의 임베딩에 로컬 대체물(문자 2-그램 — 의미가 아니라 표면 겹침)을 쓴다. 실제 모델은 테스트와 배포 이미지에서 돈다. 외부 임베딩 방식을 확인하려면 [운영 설정 — 임베딩](docs/operations/configuration.md#임베딩)의 값을 환경 변수로 준다
-- `local` 은 Jev 키가 없으면 고정 규칙의 대체 평가기로 기사를 평가한다. 실제 Jev 로 확인하려면 키를 넣는다 — 환경 변수 `YOZMNEWS_JEV_API_KEY`, 또는 키 파일을 `yozmnews.jev.api-key` 라는 이름으로 둔 디렉터리를 `--spring.config.import=configtree:<디렉터리>/` 로 넘긴다(키 값이 명령줄에 남지 않는다). 다른 설정은 [운영 설정 — 공유 평가](docs/operations/configuration.md#공유-평가)
+- `local` 은 사건 묶기의 임베딩에 로컬 대체물을 쓴다. 이 대체물은 의미가 아니라 문자 2-그램의 표면 겹침을 본다. 실제 모델은 테스트와 배포 이미지에서 돈다. 외부 임베딩 방식을 확인하려면 [운영 설정의 임베딩](docs/operations/configuration.md#임베딩) 값을 환경 변수로 준다
+- `local` 은 Jev 키가 없으면 고정 규칙의 대체 평가기로 기사를 평가한다. Jev 의 설정은 [운영 설정의 공유 평가](docs/operations/configuration.md#공유-평가)에 있다. 실제 Jev 로 확인하려면 아래 둘 가운데 하나로 키를 넣는다
+  - 환경 변수 `YOZMNEWS_JEV_API_KEY`
+  - 키 파일을 `yozmnews.jev.api-key` 라는 이름으로 둔 디렉터리를 `--spring.config.import=configtree:<디렉터리>/` 로 넘긴다. 키 값이 명령줄에 남지 않는다
 - `local` 은 `yozm-local-` 로 시작하는 LLM 키를 공급자에 묻지 않고 받는다 — 접두 뒤의 낱말이 검증 결과다(`yozm-local-valid` 는 성공, `yozm-local-invalid` · `-denied` · `-quota` · `-transient` · `-unexpected` 는 그 실패 종류). 그 밖의 키는 `local` 에서도 실제 공급자(OpenAI · Anthropic · OpenRouter)에 묻는다([llm Spec](docs/specs/llm.md#로컬-대체물))
 - `local` 은 다이제스트를 언제나 고정 규칙의 대체 생성기로 만든다 — 실제 키 · 가짜 키와 무관하다([digest Spec](docs/specs/digest.md#로컬-대체물))
-- `local` 은 변화 리포트도 언제나 고정 규칙의 대체 생성기로 만든다([report Spec](docs/specs/report.md#로컬-대체물)). 일정은 고른 요일 · 날짜의 다이제스트 생성 시각 뒤 2시간 안에 돌고, 쓸 모델(유효한 키)과 생성 조건(그 주의 READY 다이제스트 3일 이상 — [report Spec](docs/specs/report.md#생성-조건))이 있어야 리포트를 만든다
-- `local` 은 저장소의 개발용 KEK(`dev/local-kek`)로 LLM 키를 암호화한다 — 개발 DB 의 키만 감싸는 값이고 운영에 쓰지 않는다. 다른 파일을 쓰려면 환경 변수 `YOZMNEWS_CREDENTIAL_KEK_FILE` 을 준다([운영 설정 — LLM 키 암호화](docs/operations/configuration.md#llm-키-암호화))
+- `local` 은 변화 리포트도 언제나 고정 규칙의 대체 생성기로 만든다([report Spec](docs/specs/report.md#로컬-대체물))
+- 리포트 일정은 고른 요일 · 날짜의 다이제스트 생성 시각 뒤 2시간 안에 돈다. 쓸 모델(유효한 키)이 있고 생성 조건을 채워야 리포트를 만든다. 생성 조건은 그 주의 READY 다이제스트 3일 이상이다([report Spec](docs/specs/report.md#생성-조건))
+- `local` 은 저장소의 개발용 KEK(`dev/local-kek`)로 LLM 키를 암호화한다. 이 KEK 는 개발 DB 의 키만 감싸는 값이고 운영에 쓰지 않는다. 다른 파일을 쓰려면 환경 변수 `YOZMNEWS_CREDENTIAL_KEK_FILE` 을 준다([운영 설정의 LLM 키 암호화](docs/operations/configuration.md#llm-키-암호화))
 - Compose 를 먼저 띄우지 않았으면 앱이 띄우고, 앱이 끝날 때 멈춘다. 먼저 띄워 두었으면 앱이 끝나도 그대로 둔다
 - 바꿀 수 있는 값(호스트 포트)은 `.env.example` 에 있다. 필요한 줄만 `.env` 로 옮긴다 — `.env` 는 없어도 된다
-- 컨테이너 · 볼륨은 checkout(작업 디렉터리)마다 따로 생긴다. checkout 을 지우기 전에 그 checkout 에서 `down -v` 로 정리한다
-- 운영자 화면(`/admin`)은 운영자 계정으로 로그인해 연다 — 개발 DB 에 운영자가 없으면 `YOZMNEWS_FIRST_ADMIN_EMAIL` · `YOZMNEWS_FIRST_ADMIN_PASSWORD` 를 주고 실행해 첫 운영자를 만들고, 그 값으로 로그인해 비밀번호를 새로 정한다([운영 설정 — 계정과 고지](docs/operations/configuration.md#계정과-고지)). 스크립트로 운영자 API 를 부를 때만 운영자 토큰(`YOZMNEWS_ADMIN_TOKEN` — 예: `openssl rand -hex 32`)을 준다([운영 설정 — 운영자](docs/operations/configuration.md#운영자))
-- 자기 PostgreSQL 을 쓰려면 Compose 연동을 끄고(`SPRING_DOCKER_COMPOSE_ENABLED=false`) DB 접속 환경 변수(`SPRING_DATASOURCE_*` — [운영 설정 — DB 접속](docs/operations/configuration.md#db-접속))를 준다. 그 DB 에는 pgvector 확장(0.8 이상)이 있어야 한다 — 설치 조건은 [배포와 운영 "서비스"](docs/operations/deployment.md#서비스)
+- 컨테이너 · 볼륨은 checkout(작업 디렉터리)마다 따로 생긴다. checkout 을 지우기 전에 그 checkout 에서 `down -v` 로 지운다
+- 운영자 화면(`/admin`)은 운영자 계정으로 로그인해 연다. 개발 DB 에 운영자가 없으면 `YOZMNEWS_FIRST_ADMIN_EMAIL` · `YOZMNEWS_FIRST_ADMIN_PASSWORD` 를 주고 실행해 첫 운영자를 만들고, 그 값으로 로그인해 비밀번호를 새로 정한다([운영 설정의 계정과 고지](docs/operations/configuration.md#계정과-고지))
+- 스크립트로 운영자 API 를 부를 때만 운영자 토큰 `YOZMNEWS_ADMIN_TOKEN` 을 준다. 값은 예컨대 `openssl rand -hex 32` 로 만든다([운영 설정의 운영자](docs/operations/configuration.md#운영자))
+- 자기 PostgreSQL 을 쓰려면 Compose 연동을 끄고(`SPRING_DOCKER_COMPOSE_ENABLED=false`) DB 접속 환경 변수 `SPRING_DATASOURCE_*` 를 준다([운영 설정의 DB 접속](docs/operations/configuration.md#db-접속)). 그 DB 에는 pgvector 확장(0.8 이상)이 있어야 한다. 설치 조건은 [배포와 운영 "서비스"](docs/operations/deployment.md#서비스)에 있다
 - PostgreSQL 이미지는 `compose.yaml` 이 정한다([PostgreSQL 이미지 정본](docs/development/infrastructure.md#postgresql-이미지-정본)). 메이저 버전을 올린 뒤에는 `down -v` 로 개발 DB 를 다시 만든다
 
 **프론트엔드**
@@ -119,7 +142,7 @@ pnpm -C frontend generate:api                 # api/openapi.json 에서 API 타�
 - **제목**은 한국어. 모듈 작업이면 앞에 모듈 이름 — `[digest] 후보 선별 쿼리 구현`
 - **본문**에 목적, 수용 기준(AC), 관련 문서(`docs/` · ADR 링크)를 적는다
 - **라벨은 하나** — 작업 유형([§4 유형](#4-커밋-메시지)에서 `revert` 를 뺀 값). 작업 브랜치 접두사와 같다
-- 큰 묶음은 상위 이슈 + 하위 이슈(sub-issue), 로드맵 단계는 Milestone
+- 큰 작업은 상위 이슈 + 하위 이슈(sub-issue)로 나눈다
 - **담당자** — 작업을 시작할 때 자기를 담당자로 지정한다. 담당자가 있는 열린 이슈가 진행 중인 작업이고, 담당자가 없는 열린 이슈가 백로그다
 - 작업을 시작하기 전에 이슈가 있어야 한다. 버그는 원인과 범위를 파악한 뒤에 정확히 만든다
 - **새 모듈**은 그 모듈의 Spec([docs/specs/](docs/specs/README.md))을 만드는 설계 이슈를 먼저 진행하고, 구현 이슈는 그 Spec 을 토대로 한다
@@ -182,18 +205,29 @@ Issue: #12
 
 - **대상**은 `main`. 하나의 이슈에 PR 하나
 - **제목**은 커밋 메시지 제목과 같은 형식: `{유형}({영역}): {요지}`
-- **본문**은 [PR 템플릿](.github/pull_request_template.md)을 따른다 — 변경 요약, `Closes #{이슈 번호}`, 확인 사항. 리뷰어가 읽고 PR 에 남는 변경 기록이므로 저장소의 변경을 정리해 쓴다
+- **본문**은 [PR 템플릿](.github/pull_request_template.md)을 따른다 — 변경 요약, `Closes #{이슈 번호}`, 확인 사항. 리뷰어가 읽고 PR 에 남는 변경 기록이므로 저장소의 변경을 간추려 쓴다
 - **CI**: PR 과 `main` 에서 GitHub Actions(`.github/workflows/ci.yml`)가 §1 의 검사를 돌리고, 결과가 체크 `backend` · `frontend` · `docs` · `tools` · `deploy-amd64` · `deploy-arm64` 로 표시된다. **여섯 체크가 통과해야 merge 한다**
-- **merge** 는 메인테이너가 한다. 방식은 **merge commit** 만 쓴다(squash · rebase merge 를 쓰지 않는다 — 작업 브랜치의 커밋을 그대로 남긴다). merge 커밋 메시지는 저장소 설정이 만든다 — 제목 `Merge pull request #{번호} from {소유자}/{작업 브랜치}`, 본문은 PR 제목. merge 커밋은 [§4](#4-커밋-메시지) 형식을 따르지 않는다
+- **merge** 는 메인테이너가 한다
+  - 방식은 **merge commit** 만 쓰고 squash · rebase merge 를 쓰지 않는다. 작업 브랜치의 커밋을 그대로 남긴다
+  - merge 커밋 메시지는 저장소 설정이 만든다 — 제목 `Merge pull request #{번호} from {소유자}/{작업 브랜치}`, 본문은 PR 제목. merge 커밋은 [§4](#4-커밋-메시지) 형식을 따르지 않는다
 - **리뷰**: 메인테이너가 GitHub 에서 검토하고, 필요하면 로컬로 받아 확인한다(`gh pr checkout {번호}`). 코드 · 주석은 [§7](#7-코드)을 기준으로 본다
 - **충돌 · 동기화**: 작업 브랜치에 `main` 을 merge 해서 해소하고 다시 push 한다. 이 merge 커밋의 메시지는 `Merge origin/main into {작업 브랜치}` 이고, 마지막 문단에 `Issue: #{이슈 번호}` 를 둔다. force push 하지 않는다
 
 ## 6. 문서
 
-- 문서는 종류 · 독자별 갈래로 나뉜다 — [docs/README.md §2 문서 목록](docs/README.md#2-문서-목록)
-- 모듈의 공개 인터페이스 · 이벤트 · 포트 · 내부 구조(Spec 에 있는 구성 요소) · 작업 · 규칙 · 불변식을 바꾸면 그 모듈의 Spec 을 함께 고친다. Spec 의 구조와 쓰는 규칙은 [docs/specs/README.md](docs/specs/README.md)
+- 문서는 종류 · 독자별로 나뉜다([docs/README.md §2 문서 목록](docs/README.md#2-문서-목록))
+- 모듈의 아래 것을 바꾸면 그 모듈의 Spec 을 함께 고친다
+  - 공개 인터페이스
+  - 이벤트
+  - 포트
+  - 내부 구조(Spec 에 있는 구성 요소)
+  - 작업
+  - 규칙
+  - 불변식
+- 화면을 새로 만들거나 화면 동작 · 화면 이름을 바꾸면 화면 Spec([docs/specs/web.md](docs/specs/web.md))을 함께 고친다
+- Spec 의 구조와 쓰는 규칙은 [docs/specs/README.md](docs/specs/README.md)에 있다
 - 변경이 어떤 문서 갱신을 요구하는지는 [docs/README.md §3 갱신 트리거](docs/README.md#3-갱신-트리거)가 정한다. 해당하는 문서 갱신은 그 PR 에 포함한다
-- 작성 규칙(현재 상태만 쓰기 · 절 번호 유지 · ADR 수정 범위 · 상대 링크)은 [docs/README.md §4](docs/README.md#4-작성-규칙)
+- 작성 규칙은 [docs/README.md §4](docs/README.md#4-작성-규칙)에 있다
 - ADR 은 [docs/adr/README.md](docs/adr/README.md)의 운영 규칙(선별 기준 · 대체와 보충 · 대체 표시)과 양식으로 쓰고, 번호는 모든 브랜치에서 가장 큰 번호 + 1 로 정한 뒤 바로 커밋한다
 
 ## 7. 코드
@@ -201,15 +235,26 @@ Issue: #12
 - 들여쓰기 · 줄바꿈 · 문자 인코딩은 [.editorconfig](.editorconfig)를 따른다
 - 모듈 구조와 패턴은 [ADR-0013](docs/adr/0013-architecture-patterns.md), 데이터 접근은 [ADR-0014](docs/adr/0014-spring-data-jdbc.md)를 따른다
 - 주석은 아래 [주석](#주석)을 따른다
-- 변경 안에서 발견한 작은 정리(낡은 주석 · dead code · 중복)는 같은 PR 에서 끝낸다
+- 변경 안에서 발견한 작은 손질(낡은 주석 · dead code · 중복)은 같은 PR 에서 끝낸다
 - JobRunr · Spring Modulith 의 스키마는 라이브러리 원문을 Flyway 마이그레이션에 담는다([ADR-0023](docs/adr/0023-jobrunr-oss-framework-schema-and-event-resubmission.md)). 구획 규칙은 `V1__jobrunr_and_event_publication.sql` 머리 주석에 있다
   - JobRunr 를 올려 새 스크립트가 생기면 `FrameworkSchemaMigrationTests` 가 실패한다. 그 원문을 Flyway 새 버전 파일에 `-- jobrunr-migration:` 구획으로 옮기고, `-- jobrunr-migration-record` 구획에 기록 행을 더한다
-  - Spring Modulith 를 올릴 때는 이벤트 발행 레지스트리의 스키마 판이 바뀌었는지 릴리스 노트로 확인한다. 테스트는 지금 쓰는 판의 원문만 대조하므로, 그 원문이 바뀌면 실패하지만 판이 바뀐 것은 알리지 못한다. 원문이 `CREATE TABLE IF NOT EXISTS` 라 새 원문을 옮겨도 이미 있는 테이블은 바뀌지 않는다 — 바뀐 부분을 손으로 쓴 마이그레이션으로 더하고, 대조 테스트의 Modulith 대조를 새 원문에 맞게 고친다
+  - Spring Modulith 를 올릴 때는 이벤트 발행 레지스트리의 스키마 버전이 바뀌었는지 릴리스 노트로 확인한다. 테스트는 지금 쓰는 버전의 원문만 대조하므로, 그 원문이 바뀌면 실패하지만 버전이 바뀐 것은 알리지 못한다. 원문이 `CREATE TABLE IF NOT EXISTS` 라 새 원문을 옮겨도 이미 있는 테이블은 바뀌지 않는다 — 바뀐 부분을 손으로 쓴 마이그레이션으로 더하고, 대조 테스트의 Modulith 대조를 새 원문에 맞게 고친다
 - 되돌릴 수 없는 스키마 변경은 두 번의 배포로 나눈다(확장 → 축소)
-- 사용자 데이터를 지우는 마이그레이션을 쓰지 않는다. 사용자 데이터가 가리키는 기사 · 태그 · 태그 체계 · 사건 · 스토리라인도 행을 지우지 않고 ID 를 다시 매기지 않는다([ADR-0212](docs/adr/0212-migrations-never-delete-user-data-or-the-shared-rows-and-ids-it-references-and-moved-data-is-checked-by-a-data-test.md)). 보존 대상과 기간은 [data-model.md 보존 정책](docs/data-model.md#보존-정책-초안)에 있다
+- 사용자 데이터를 지우는 마이그레이션을 쓰지 않는다([ADR-0212](docs/adr/0212-migrations-never-delete-user-data-or-the-shared-rows-and-ids-it-references-and-moved-data-is-checked-by-a-data-test.md)). 보존 대상과 기간은 [data-model.md 보존 정책](docs/data-model.md#보존-정책-초안)에 있다
+  - 사용자 데이터가 가리키는 아래 행도 지우지 않고 ID 를 다시 매기지 않는다
+    - 기사
+    - 태그
+    - 태그 체계
+    - 사건
+    - 스토리라인
   - 꼴을 바꿀 때는 새 자리로 옮긴 뒤 옛 자리를 지운다
   - 데이터를 옮기거나 고쳐 쓰는 마이그레이션은 데이터 시험을 함께 둔다 — 실제 PostgreSQL 의 별도 스키마에 직전 버전까지 올려 옛 행을 넣고, 끝까지 올린 뒤 옮긴 값을 대조한다(예: `LinkingBandMigrationTests`)
-  - 앱이 설계로 지우거나 바꾸는 경로(탈퇴, 지운 기사 따르기, 스토리라인 구독 따라가기, 태그 선호 따라가기, 보존 정리)는 이 규칙의 대상이 아니다
+  - 앱이 설계로 지우거나 바꾸는 아래 경로는 이 규칙의 대상이 아니다
+    - 탈퇴
+    - 지운 기사 따르기
+    - 스토리라인 구독 따라가기
+    - 태그 선호 따라가기
+    - 보존 기한 지우기
   - 기능을 없애 앱이 다시 읽지 않고 사용자도 볼 수 없게 된 설정 칸은, 그 기능을 없앤 ADR 이 칸 지우기까지 정하면 마이그레이션이 지운다 — 이력과 그것이 가리키는 공유 데이터, 설정 행 자체는 지우지 않는다([ADR-0315](docs/adr/0315-a-settings-column-of-a-removed-feature-may-be-dropped-by-a-migration-with-the-adr-that-removed-it.md))
 
 ### 주석
@@ -218,7 +263,8 @@ Issue: #12
 
 - **담는 것** — 주석은 Spec · ADR · 개발 인프라 · 운영 문서가 덮지 않는 것만 담는다
   - 담는다: 동작 · 계약, 코드가 그 모양이어야 하는 외부 제약 사실(한 문장)
-  - 담지 않는다: 설계 판단(대안 비교 · 선택 이유 · trade-off) — ADR 번호로 가리킨다. Spec 의 규칙 본문 · 책임 서술 — Spec 위치와 규칙 식별자로 가리킨다
+  - 담지 않는다: 설계 판단(대안 비교 · 선택 이유 · trade-off) — ADR 번호로 가리킨다
+  - 담지 않는다: Spec 의 규칙 본문 · 책임 서술 — Spec 위치와 규칙 식별자로 가리킨다
   - 판별 기준: "코드나 환경이 바뀌면 이 문장이 거짓이 되는가". 그렇다면 그 문장이 그 자리에 맞는지, 바뀌는 쪽의 정본이 따로 있는지 본다
   - 이슈 번호 · 수용 기준 번호 · 변경 이력을 쓰지 않는다. 아직 없는 동작을 현재형으로 쓰지 않는다
 - **Spec 과 나누기**
@@ -226,13 +272,25 @@ Issue: #12
   - Spec 의 내부 구조 절(§4)에 이름이 오른 구성 요소의 Javadoc 은 한 줄 요약, Spec 위치, Spec 에 없는 클래스 안쪽 상세(필드 · 메서드 · 알고리즘)다
   - 한 줄 요약은 Spec 의 책임 한 줄과 겹쳐도 된다([docs/README.md §1](docs/README.md#1-문서-위계))
   - Spec 이 "그 밖의 값" 줄에 이름만 묶은 타입과 Spec 에 없는 보조 타입은 Javadoc 이 그 타입의 정본이다
-- **Spec 위치 표기** — `docs/specs/{모듈}.md §n` 을 맨 텍스트로 쓴다(절 번호까지, 하위 절은 쓰지 않는다)
-  - 가리킬 규칙이 있으면 식별자 `{모듈}-R{번호}` 를 뒤에 둔다. 여럿은 ` · ` 로 잇고, 연속 구간은 `source-R16 ~ source-R21` 로 쓴다. 위치 · 식별자를 `{@code}` 로 감싸지 않는다
+- **Spec 위치 표기** — `docs/specs/{앞말}.md §n` 을 맨 텍스트로 쓴다(절 번호까지, 하위 절은 쓰지 않는다). 앞말은 모듈 이름이고, 화면 Spec 은 `web` 이다([docs/specs/README.md §3](docs/specs/README.md#3-쓰는-규칙) 규칙 2)
+  - 가리킬 규칙이 있으면 식별자 `{앞말}-R{번호}` 를 뒤에 둔다. 여럿은 ` · ` 로 잇고, 연속 구간은 `source-R16 ~ source-R21` 로 쓴다. 위치 · 식별자를 `{@code}` 로 감싸지 않는다
   - 자리는 첫 문장의 ` — ` 덧붙임 끝이다. 예: `같은 기사 판정 — 정본 · docs/specs/article.md §4 · article-R3 ~ article-R6`
   - 식별자는 그 규칙을 구현하는 클래스의 Javadoc 에 둔다. 한 클래스 안에서 메서드마다 다른 규칙을 구현하고 메서드 이름으로 드러나지 않을 때만 메서드 Javadoc 에 둔다
   - 내부 구조 절에 이름이 오른 구성 요소의 식별자는 그 구성 요소 줄이 단 식별자와 같다
-- **반드시 쓰는 대상** — 모듈 공개 타입 · 포트, Spec 의 내부 구조 절에 이름이 오른 구성 요소, 최상위 타입, 다른 클래스가 쓰는 중첩 타입, 정본 상수 · 산식 · 규칙의 자리, 다른 패키지가 쓰는 멤버 가운데 계약(빈 값 · null · 예외 · 단위 · 순서)이 이름 · 시그니처로 다 드러나지 않는 것, 테스트 클래스
-- **쓰지 않는 대상** — 이름 · 시그니처로 자명한 것(접근자 · 위임 · 생성자 주입 · 프레임워크 진입점 — `main` · 리스너 메서드). 그 밖은 쓰는 사람이 판단한다. 빌드는 형식만 검사하고 누락은 리뷰가 본다
+- **반드시 쓰는 대상**
+  - 모듈 공개 타입 · 포트
+  - Spec 의 내부 구조 절에 이름이 오른 구성 요소
+  - 최상위 타입
+  - 다른 클래스가 쓰는 중첩 타입
+  - 정본 상수 · 산식 · 규칙의 자리
+  - 다른 패키지가 쓰는 멤버 가운데 계약이 이름 · 시그니처로 다 드러나지 않는 것. 여기서 계약은 아래를 말한다
+    - 빈 값
+    - null
+    - 예외
+    - 단위
+    - 순서
+  - 테스트 클래스
+- **쓰지 않는 대상** — 이름 · 시그니처로 자명한 것(접근자 · 위임 · 생성자 주입 · 프레임워크 진입점인 `main` 과 리스너 메서드). 그 밖은 쓰는 사람이 판단한다. 빌드는 형식만 검사하고 누락은 리뷰가 본다
 - **테스트** — 테스트 클래스 Javadoc 은 지키는 Spec 규칙의 식별자와 시험 방법(픽스처 · 오라클 출처 · 트랜잭션 경계 · 실제 PostgreSQL 여부)을 담는다
   - 식별자는 첫 문장 다음 문단에 `지키는 규칙: source-R20 · source-R21` 로 한 줄에 둔다
   - 규칙 문장을 다시 쓰지 않는다. 미구현 · 폐지 규칙은 가리키지 않는다
@@ -243,11 +301,16 @@ Issue: #12
   - 한 줄 Javadoc(설명이 텍스트 한 줄이고 블록 태그가 없는 것)은 마침표 없이, 그 밖의 Javadoc 은 문장마다 마침표로 끝낸다
   - 빈 값 · null 의 뜻은 `@return`, 예외는 `@throws` 로 쓴다(Spec 에 계약이 있는 멤버는 Spec 위치로 충족한다). `@param` 은 이름 · 타입만으로 뜻 · 제약 · 단위가 드러나지 않는 매개변수 · record 컴포넌트에만 쓴다
   - `{@link}` 는 같은 모듈의 타입 · 멤버와 다른 모듈의 공개 타입에만 쓴다. 다른 모듈의 내부 타입은 링크하지 않는다
-  - 코드 조각 · 리터럴 · 설정 키 · SQL 식별자 · 파일 경로는 `{@code}` 로 쓴다
+  - 아래는 `{@code}` 로 쓴다
+    - 코드 조각
+    - 리터럴
+    - 설정 키
+    - SQL 식별자
+    - 파일 경로
   - 문체는 문서와 같다([docs/README.md §4](docs/README.md#4-작성-규칙))
 - **정본 표기** — "정본"은 그 코드 요소가 그 판단 · 상수의 유일한 구현 자리일 때만 첫 문장 덧붙임(` — 정본`)으로 쓴다. 다른 정본을 가리킬 때는 "정본"이라 쓰지 않고 그 자리를 가리킨다. Spec 이 정본이라 부르는 코드 요소는 Javadoc 에 표기가 있어야 한다
 - **줄 주석** — 왜만 쓴다. 무엇은 코드가 말한다. 주석 처리한 코드를 두지 않는다. 값만으로 뜻이 드러나지 않는 데이터에 붙이는 이름표(예: 차단 대역 표의 대역 이름)는 쓸 수 있다
 - **Java 밖 주석** — 위의 담는 것 · 줄 주석은 모든 파일(TypeScript · YAML · Dockerfile · SQL · Gradle · shell 등)에 쓴다. 형식(Java) 규칙과 Javadoc 검사는 Java 에만 쓴다
-  - 인프라 · 설정 파일의 주석은 그 자리의 제약 한 문장과 문서 위치(문서 경로와 제목 — 예: `docs/development/infrastructure.md "불변식과 지키는 장치"`)를 둔다. 불변식 · 지키는 장치 · 이유는 개발 인프라 · 운영 문서 · ADR 이 갖는다
+  - 인프라 · 설정 파일의 주석은 그 자리의 제약 한 문장과 문서 위치(문서 경로와 제목, 예: `docs/development/infrastructure.md "불변식과 지키는 장치"`)를 둔다. 불변식 · 지키는 장치 · 이유는 개발 인프라 · 운영 문서 · ADR 이 갖는다
   - 이미 적용된 Flyway 마이그레이션 파일은 주석도 고치지 않는다 — 주석이 체크섬에 들어가 적용된 DB 의 기동 검증이 실패한다. 새 마이그레이션에만 쓴다
 - **Javadoc 형식 검사** — `build` 가 Javadoc 형식 오류(깨진 참조 · HTML · 태그)로 실패한다. 어느 단계가 무엇을 잡는지는 [docs/development/infrastructure.md "불변식과 지키는 장치"](docs/development/infrastructure.md#불변식과-지키는-장치)에 있다

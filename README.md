@@ -5,19 +5,27 @@ AI로 뉴스 기사를 수집·분류하고, 사용자마다 구독 주제와 �
 - 언론사 RSS에서 기사를 모으고, 결정 모델(Jev)로 주제·지역·형식 태그와 중요도를 매깁니다.
 - 같은 사건을 다룬 기사를 묶어, 여러 매체가 크게 다룬 사건을 알아봅니다.
 - 사용자가 등록한 LLM API 키(OpenAI, Anthropic, OpenRouter)로 여러 기사를 종합한 다이제스트와 주간 · 월간 변화 리포트를 만듭니다.
-- 개인이 자기 서버에 띄워 쓰며, 어떤 소스를 켜고 누구와 함께 쓸지는 인스턴스 운영자가 정합니다. 외부 서비스는 설정으로 교체하거나 끌 수 있게 설계합니다. 기사를 평가하는 평가 모델(Jev)은 핵심 기능이라 교체만 할 수 있습니다.
+- 개인이 자기 서버에 띄워 쓰며, 어떤 소스를 켜고 누구와 함께 쓸지는 인스턴스 운영자가 정합니다.
+- 외부 서비스는 설정으로 교체하거나 끌 수 있게 설계합니다. 기사를 평가하는 평가 모델(Jev)은 핵심 기능이라 교체만 할 수 있습니다.
 
-> 개발 중입니다(v1 릴리스 전). 지금은 언론사 RSS 수집 · 평가 모델(Jev)의 평가 · 사건 묶기 · 스토리라인, 가입 · 로그인과 LLM 키 등록, 매일 다이제스트 · 좋아요 / 싫어요 · 흐름 추적 · 관심사 히스토리 · 주간 · 월간 변화 리포트 화면, 운영자 화면이 동작합니다. 탈퇴 · 데이터 삭제, 이미지 게시와 설치 문서, 백업과 Cloudflare Tunnel 연결은 릴리스 준비 단계에 남아 있습니다([로드맵](docs/roadmap.md)).
+> 개발 중입니다(v1 릴리스 전). 지금 동작하는 것은 아래입니다.
+>
+> - 언론사 RSS 수집, 평가 모델(Jev)의 평가, 사건 묶기 · 스토리라인
+> - 가입 · 로그인과 LLM 키 등록
+> - 매일 다이제스트와 좋아요 / 싫어요, 흐름 추적, 관심사 히스토리, 주간 · 월간 변화 리포트 화면
+> - 운영자 화면
+>
+> 탈퇴 · 데이터 삭제, 이미지 게시와 설치 문서, 백업과 Cloudflare Tunnel 연결은 릴리스 준비 단계에 남아 있습니다([로드맵](docs/roadmap.md)).
 
 ## 저장소 구조
 
 | 경로 | 내용 |
 |---|---|
-| [`docs/`](docs/README.md) | 설계 문서(모듈 Spec 포함), 아키텍처 결정 기록(ADR), 개발 인프라 · 운영 문서, 테스트 전략, 조사 자료 |
+| [`docs/`](docs/README.md) | 설계 문서(모듈 Spec 포함), 아키텍처 결정 기록(ADR), 개발 인프라 · 운영 · 테스트 전략 문서, 조사 자료 |
 | [`backend/`](backend/) | Spring Boot 애플리케이션 (Java 25, Gradle) |
 | [`frontend/`](frontend/) | React SPA (TypeScript, Vite, pnpm) |
 | [`api/`](api/) | 화면용 API 명세(OpenAPI) — 백엔드 코드에서 만들어 커밋하고, 프론트엔드가 여기서 타입을 생성한다 |
-| [`deploy/`](deploy/) | 배포 구성(Docker Compose — proxy · app · PostgreSQL)과 스모크 검사. 실행 방법은 [`docs/operations/deployment.md`](docs/operations/deployment.md#배포-구성-실행) |
+| [`deploy/`](deploy/) | 배포 구성(Docker Compose 의 proxy · app · PostgreSQL)과 스모크 검사. 실행 방법은 [`docs/operations/deployment.md`](docs/operations/deployment.md#배포-구성-실행) |
 | [`tools/`](tools/) | 저장소 도구 — 공개 마크다운의 상대 링크 · 앵커 검사기(`tools/docs-check`), 운영자의 사건 묶기 · 스토리라인 평가 도구(`tools/event-eval`) |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | 개발 환경, 이슈 · 브랜치 · 커밋 · PR 규약 |
 
