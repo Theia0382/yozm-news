@@ -36,7 +36,7 @@
 | 서비스 | 이미지 | 하는 일 |
 |---|---|---|
 | `proxy` | `frontend/Dockerfile` target `proxy` — Caddy 에 SPA 빌드 결과를 담은 이미지 | SPA 정적 파일을 내려주고 백엔드 경로만 `app` 으로 넘긴다. 넘길 때 신뢰 범위로 정한 클라이언트 IP 를 `X-Real-IP` 에 덮어쓴다([공개](configuration.md#공개)). 넘기지 않는 경로(관리 엔드포인트 포함)는 SPA 가 답한다([넘기는 경로](../development/infrastructure.md#proxy-가-넘기는-경로)) |
-| `app` | `backend/Dockerfile` target `app` | 화면용 API 와 백그라운드 작업(작업 서버)을 한 프로세스에서 맡는다 — 정의가 두 역할 profile 을 켠다(`SPRING_PROFILES_ACTIVE: web,worker`, [platform Spec](../specs/platform.md#역할)). **(미구현)** 인증(로그인)도 이 프로세스가 맡는다 |
+| `app` | `backend/Dockerfile` target `app` | 화면용 API 와 백그라운드 작업(작업 서버)을 한 프로세스에서 맡는다 — 정의가 두 역할 profile 을 켠다(`SPRING_PROFILES_ACTIVE: web,worker`, [platform Spec](../specs/platform.md#역할)). 자체 로그인 · 세션도 이 프로세스가 맡는다 |
 | `postgres` | 루트 `compose.yaml` 의 PostgreSQL 이미지(pgvector 확장이 든 이미지) | 데이터. 호스트에 공개하지 않는다 |
 | **(미구현)** `cloudflared` | Cloudflare Tunnel | `proxy` 로만 연결한다([공개 경로와 외부 서비스](#공개-경로와-외부-서비스)) |
 | **(미구현)** `backup` | `pg_dump` + S3 호환 업로드 | [백업과 복구](#백업과-복구) |
@@ -118,7 +118,7 @@ docker compose -f deploy/compose.yaml down -v   # 정지하고 DB 볼륨까지 �
 
 - **헬스 체크** — 앱은 HTTP 로 `health` 엔드포인트만 노출한다(탐색 페이지 `/actuator` 와 probe 그룹 `/actuator/health/liveness` · `/actuator/health/readiness` 포함). 응답에는 집계 상태와 probe 그룹 이름만 담고 구성요소와 상세는 넣지 않는다. 집계에 DB 가 들어 있어 DB 장애 때 상태가 `DOWN` 이 되고 HTTP 503 으로 응답한다
 - proxy 는 `/actuator/**` 를 앱으로 넘기지 않는다. 헬스 체크는 컨테이너 안에서 묻는다(위 healthcheck)
-- 작업 서버 대시보드(JobRunr)는 꺼져 있다 — 앱 보안 설정과 proxy 밖의 별도 포트로 뜨므로, 운영자 접근 통제가 생긴 뒤에 연다([ADR-0023](../adr/0023-jobrunr-oss-framework-schema-and-event-resubmission.md))
+- 작업 서버 대시보드(JobRunr)는 꺼져 있다 — 앱 보안 설정과 proxy 밖의 별도 포트(평문 basic 인증)로 떠서 운영자 계정 세션 · 운영자 토큰이 닿지 않는다([ADR-0023](../adr/0023-jobrunr-oss-framework-schema-and-event-resubmission.md))
 - 로그는 각 서비스의 컨테이너 로그(표준 출력 · 표준 오류)로 남는다 — `docker compose -f deploy/compose.yaml logs`
 - **남겨진 이벤트 발행** — 모듈 사이 이벤트의 처리가 여러 번 실패해 재처리가 멈춘 발행, 이벤트를 읽을 수 없어(이벤트 종류가 없거나 내용이 그 종류로 읽히지 않음) 재처리가 다루지 못하는 발행은 운영자 화면의 "이벤트 발행"(`/admin/event-publications`)에 나온다. 재처리가 멈춘 발행은 `app` 로그에도 `재처리 상한(6회)에 이른 실패 이벤트 발행` 경고로, 이벤트 종류가 없는 발행은 `Event '…' of unknown type '…' found` 경고로, 내용이 그 종류로 읽히지 않는 실패 발행은 `읽을 수 없어 다시 처리하지 않은 실패 이벤트 발행` 경고로 남는다(재처리 작업의 경고는 두 갈래를 ` · ` 로 이은 한 줄이다). 읽을 수 없는 발행이 남은 채 앱을 멈추면 종료 로그에 `Invocation of destroy method failed on bean with name 'eventPublicationRegistry'` 경고가 날 수 있다 — 남은 발행을 나열하다 그 내용을 읽지 못한 것이고 동작에는 영향이 없다. 원인을 고친 뒤 고른 발행을 "다시 처리"하면 지금 한 번 다시 보낸다 — 처리는 뒤에서 이어지므로 잠시 뒤 새로고침해 확인한다(성공하면 목록에서 사라진다). "폐기"는 고른 발행을 지운다 — 되돌릴 수 없고 그 이벤트는 다시 처리되지 않는다(예: 수집한 기사의 저장 이벤트를 지우면 그 기사는 저장되지 않고, 소스 · 피드 삭제 이벤트를 지우면 지운 소스 · 피드만 가진 기사가 지워지지 않고 남는다 — 남은 기사를 다시 지울 운영자 기능은 없으므로 삭제 이벤트는 다시 처리한다). 지운 발행은 `app` 로그에 `운영자가 이벤트 발행을 폐기했다` 경고로 남는다
 - **(미구현)** 로그를 JSON 구조화 로그로 내고, 요청 ID 와 사용자 ID 를 담고, 비밀 값을 마스킹한다
