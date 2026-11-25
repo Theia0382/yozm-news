@@ -1,7 +1,6 @@
 package net.yozmnews.report.application;
 
 import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -22,6 +21,7 @@ import net.yozmnews.report.ReportPeriodKind;
 import net.yozmnews.report.ReportStatus;
 import net.yozmnews.report.ReportView;
 import net.yozmnews.report.domain.material.ReportSnapshot.SnapshotStats;
+import net.yozmnews.report.domain.report.ReportPeriod;
 import net.yozmnews.report.domain.view.ReportRow;
 import net.yozmnews.report.domain.view.ReportViewRepository;
 import net.yozmnews.report.domain.view.ReportViews;
@@ -118,9 +118,9 @@ class ReportDirectoryService implements ReportDirectory {
 	 */
 	private ZoneId fallbackZone(UserId user, List<ReportRow> rows) {
 		if (rows.stream().allMatch(row -> row.zone() != null)) {
-			return ZoneOffset.UTC;
+			return ReportPeriod.NO_ACCOUNT_ZONE;
 		}
-		return this.timezones.timezoneOf(user).orElse(ZoneOffset.UTC);
+		return this.timezones.timezoneOf(user).orElse(ReportPeriod.NO_ACCOUNT_ZONE);
 	}
 
 	/** 사건마다 지금 사건 — {@link EventDirectory#MAX_RESOLVE_EVENTS} 씩 묻는다. 지운 사건은 없다 */
