@@ -27,6 +27,7 @@ import net.yozmnews.user.domain.interest.DigestVolume;
 import net.yozmnews.user.domain.interest.InterestSettings;
 import net.yozmnews.user.domain.interest.ModelRef;
 import net.yozmnews.user.domain.interest.ReportSettings;
+import net.yozmnews.user.domain.interest.ScheduleSettings;
 import net.yozmnews.user.domain.preference.PreferenceAction;
 import net.yozmnews.user.domain.preference.PreferenceCause;
 import net.yozmnews.user.domain.preference.PreferenceChange;
@@ -92,7 +93,7 @@ class JdbcInterestStorageTests {
 		assertThat(read.schedule()).isEqualTo(new DigestSchedule(ZoneId.of("Asia/Seoul"), LocalTime.of(7, 0)));
 		assertThat(read.model()).isNull();
 		assertThat(read.effort()).isEqualTo(ReasoningEffort.MEDIUM);
-		assertThat(read.reports()).isEqualTo(new ReportSettings(true, DayOfWeek.MONDAY, true));
+		assertThat(read.reports()).isEqualTo(new ReportSettings(true, DayOfWeek.MONDAY, true, 1));
 		assertThat(read.volume()).isEqualTo(new DigestVolume(CandidateVolume.NORMAL, null, 3, SummaryLength.NORMAL));
 		assertThat(read.updatedAt()).isEqualTo(NOW);
 		assertThat(read.version()).isZero();
@@ -106,7 +107,7 @@ class JdbcInterestStorageTests {
 
 		this.settings.update(read.withEffort(ReasoningEffort.LOW, LATER)
 			.withDigest(new DigestSchedule(ZoneId.of("America/New_York"), LocalTime.of(6, 30)),
-					new ReportSettings(false, DayOfWeek.FRIDAY, false), LATER)
+					new ReportSettings(false, DayOfWeek.FRIDAY, false, 29), LATER)
 			.withModel(new ModelRef(Provider.ANTHROPIC, "claude-haiku-5-5"), LATER)
 			.withPreferenceVersion(new TagSetId(5), LATER)
 			.withVolume(new DigestVolume(CandidateVolume.CUSTOM, 45, 0, SummaryLength.DETAILED), LATER));
@@ -116,7 +117,7 @@ class JdbcInterestStorageTests {
 		assertThat(again.preferenceVersion()).isEqualTo(new TagSetId(5));
 		assertThat(again.schedule()).isEqualTo(new DigestSchedule(ZoneId.of("America/New_York"), LocalTime.of(6, 30)));
 		assertThat(again.model()).isEqualTo(new ModelRef(Provider.ANTHROPIC, "claude-haiku-5-5"));
-		assertThat(again.reports()).isEqualTo(new ReportSettings(false, DayOfWeek.FRIDAY, false));
+		assertThat(again.reports()).isEqualTo(new ReportSettings(false, DayOfWeek.FRIDAY, false, 29));
 		assertThat(again.effort()).isEqualTo(ReasoningEffort.LOW);
 		assertThat(again.volume()).isEqualTo(new DigestVolume(CandidateVolume.CUSTOM, 45, 0, SummaryLength.DETAILED));
 		assertThat(again.updatedAt()).isEqualTo(LATER);
@@ -153,18 +154,25 @@ class JdbcInterestStorageTests {
 	}
 
 	@Test
-	void schedulesAreReadOnlyForTheGivenUsersWithASettingsRow() {
+	void scheduleSettingsAreReadOnlyForTheGivenUsersWithASettingsRow() {
 		this.settings.insertIfAbsent(InterestSettings.defaults(this.alice, new TagSetId(3), NOW));
 		this.settings.insertIfAbsent(InterestSettings.defaults(this.bob, new TagSetId(3), NOW));
-		this.jdbc.sql("update user_settings set timezone = 'Europe/Paris', digest_time = '06:15' where user_id = :user")
+		this.jdbc.sql("""
+				update user_settings set timezone = 'Europe/Paris', digest_time = '06:15', weekly_report = false,
+				  weekly_report_day = 4, monthly_report = false, monthly_report_day = 31
+				where user_id = :user""")
 			.param("user", this.bob.value())
 			.update();
 
-		assertThat(this.settings.schedulesOf(List.of(this.alice, this.bob, this.carol))).containsOnly(
-				Map.entry(this.alice, new DigestSchedule(ZoneId.of("Asia/Seoul"), LocalTime.of(7, 0))),
-				Map.entry(this.bob, new DigestSchedule(ZoneId.of("Europe/Paris"), LocalTime.of(6, 15))));
-		assertThat(this.settings.schedulesOf(List.of(this.carol))).isEmpty();
-		assertThat(this.settings.schedulesOf(List.of())).isEmpty();
+		assertThat(this.settings.scheduleSettingsOf(List.of(this.alice, this.bob, this.carol))).containsOnly(
+				Map.entry(this.alice,
+						new ScheduleSettings(new DigestSchedule(ZoneId.of("Asia/Seoul"), LocalTime.of(7, 0)),
+								new ReportSettings(true, DayOfWeek.MONDAY, true, 1))),
+				Map.entry(this.bob,
+						new ScheduleSettings(new DigestSchedule(ZoneId.of("Europe/Paris"), LocalTime.of(6, 15)),
+								new ReportSettings(false, DayOfWeek.THURSDAY, false, 31))));
+		assertThat(this.settings.scheduleSettingsOf(List.of(this.carol))).isEmpty();
+		assertThat(this.settings.scheduleSettingsOf(List.of())).isEmpty();
 	}
 
 	@Test

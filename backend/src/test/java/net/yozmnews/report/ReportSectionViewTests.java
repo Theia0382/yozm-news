@@ -57,9 +57,12 @@ class ReportSectionViewTests {
 				LocalDate.parse("2026-11-22"), ReportStatus.READY, null, Instant.parse("2026-11-23T00:00:00Z"),
 				Instant.parse("2026-11-23T00:01:00Z"));
 
-		assertThat(new ReportView(summary, null, null, null, null, null, 0, List.of()).hiddenSections()).isZero();
+		assertThat(new ReportView(summary, null, null, null, null, null, 0, List.of(), null).hiddenSections()).isZero();
 		assertThatIllegalArgumentException()
-			.isThrownBy(() -> new ReportView(summary, null, null, null, null, null, -1, List.of()));
+			.isThrownBy(() -> new ReportView(summary, null, null, null, null, null, -1, List.of(), null));
+		assertThat(new ReportView(summary, null, null, null, null, null, 0, List.of(), 0).regenerationsLeft()).isZero();
+		assertThatIllegalArgumentException()
+			.isThrownBy(() -> new ReportView(summary, null, null, null, null, null, 0, List.of(), -1));
 	}
 
 	private static ReportSectionView section(ReportSectionKind kind, @Nullable ReportSectionStats stats) {

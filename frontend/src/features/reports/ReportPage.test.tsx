@@ -1,3 +1,4 @@
+import userEvent from "@testing-library/user-event";
 import { screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { ReportPage } from "@/features/reports/ReportPage";
@@ -255,7 +256,7 @@ describe("ReportPage", () => {
     },
   );
 
-  it("실패는 코드의 무슨 일만 보이고 메시지 · 다시 만들기가 없다", async () => {
+  it("실패는 코드의 무슨 일과 남은 다시 만들기를 보이고 메시지는 보이지 않는다", async () => {
     renderReport(
       detail(summary(12, { status: "FAILED", failure: "QUOTA_EXHAUSTED" })),
     );
@@ -265,8 +266,137 @@ describe("ReportPage", () => {
     expect(alert).toHaveTextContent(
       "공급자 계정의 잔액이나 지출 한도가 소진됐습니다.",
     );
+    expect(alert).toHaveTextContent(
+      "이 리포트는 3번 더 다시 만들 수 있습니다.",
+    );
+    expect(
+      within(alert).getByRole("button", { name: "다시 만들기" }),
+    ).toBeEnabled();
+  });
+
+  it("다시 만들기를 누르면 요청하고 다시 읽어 만드는 중을 보인다", async () => {
+    let reads = 0;
+    const { server } = renderRoutes(ROUTES, "/reports/12", {
+      "GET /api/reports/12": () =>
+        json(
+          reads++ === 0
+            ? detail(summary(12, { status: "FAILED", failure: "INTERRUPTED" }))
+            : detail(summary(12, { status: "SCHEDULED", failure: null })),
+        ),
+      "POST /api/reports/12/regeneration": () =>
+        json({ result: "REQUESTED", status: null }),
+    });
+    const user = userEvent.setup();
+
+    await user.click(
+      await screen.findByRole("button", { name: "다시 만들기" }),
+    );
+
+    expect(
+      await screen.findByText("리포트를 만드는 중입니다."),
+    ).toBeInTheDocument();
+    expect(
+      server.requests.filter(
+        (request) =>
+          request.method === "POST" &&
+          request.path === "/api/reports/12/regeneration",
+      ),
+    ).toHaveLength(1);
+  });
+
+  it("다시 만들기가 받아지지 않으면 까닭을 알린다", async () => {
+    renderRoutes(ROUTES, "/reports/12", {
+      "GET /api/reports/12": () =>
+        json(detail(summary(12, { status: "FAILED", failure: "KEY_INVALID" }))),
+      "POST /api/reports/12/regeneration": () =>
+        json({ result: "NO_USABLE_MODEL", status: null }),
+    });
+    const user = userEvent.setup();
+
+    await user.click(
+      await screen.findByRole("button", { name: "다시 만들기" }),
+    );
+
+    expect(
+      await screen.findByText(
+        "쓸 수 있는 모델이 없어 다시 만들지 않았습니다. 유효한 LLM 키와 고른 모델을 확인하세요.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("다시 만들기를 받지 않은 까닭은 다시 읽어 만드는 중이 되어도 남는다", async () => {
+    // 다른 곳에서 먼저 다시 만들었다 — 이 화면은 아직 실패를 보이고, 서버는 실패가 아니라고 답한다
+    let reads = 0;
+    renderRoutes(ROUTES, "/reports/12", {
+      "GET /api/reports/12": () =>
+        json(
+          reads++ === 0
+            ? detail(summary(12, { status: "FAILED", failure: "INTERRUPTED" }))
+            : detail(summary(12, { status: "SCHEDULED", failure: null })),
+        ),
+      "POST /api/reports/12/regeneration": () =>
+        json({ result: "NOT_FAILED", status: "SCHEDULED" }),
+    });
+    const user = userEvent.setup();
+
+    await user.click(
+      await screen.findByRole("button", { name: "다시 만들기" }),
+    );
+
+    expect(
+      await screen.findByText("리포트를 만드는 중입니다."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("실패한 리포트가 아니라 다시 만들지 않았습니다."),
+    ).toBeInTheDocument();
+  });
+
+  it("시작하지 않고 실패한 리포트는 비교한 직전 리포트 줄이 없다", async () => {
+    renderReport(
+      detail(summary(12, { status: "FAILED", failure: "NO_USABLE_MODEL" }), {
+        usage: null,
+      }),
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "쓸 수 있는 모델이 없어 만들기를 시작하지 못했습니다.",
+    );
+    expect(screen.queryByText(/비교한 직전 리포트가 없습니다/)).toBeNull();
+  });
+
+  it("다시 만들기 횟수를 다 쓴 실패는 버튼 없이 안내한다", async () => {
+    renderReport(
+      detail(
+        summary(12, { status: "FAILED", failure: "PROVIDER_UNAVAILABLE" }),
+        {
+          regenerationsLeft: 0,
+        },
+      ),
+    );
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(
+      "이 리포트는 다시 만들 수 있는 횟수를 다 썼습니다.",
+    );
     expect(screen.queryByRole("button")).toBeNull();
   });
+
+  it.each([
+    [
+      "NO_USABLE_MODEL",
+      "쓸 수 있는 모델이 없어 만들기를 시작하지 못했습니다. 유효한 LLM 키와 고른 모델을 확인하세요.",
+    ],
+    ["INTERRUPTED", "만들기가 정한 시간 안에 끝나지 않아 멈췄습니다."],
+  ] as const)(
+    "일정의 실패 %s 도 그 코드의 무슨 일을 보인다",
+    async (failure, text) => {
+      renderReport(detail(summary(12, { status: "FAILED", failure })));
+
+      const alert = await screen.findByRole("alert");
+      expect(alert).toHaveTextContent("리포트를 만들지 못했습니다.");
+      expect(alert).toHaveTextContent(text);
+    },
+  );
 
   it("없는 리포트는 찾을 수 없다고 알리고, 숫자가 아닌 주소는 묻지 않는다", async () => {
     renderReport(() => problem(404, "없는 리포트: 12"));

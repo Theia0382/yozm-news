@@ -87,6 +87,26 @@ class JdbcDigestLedger implements DigestLedger {
 				""").param("user", user.value()).query(Boolean.class).single();
 	}
 
+	/**
+	 * {@inheritDoc}
+	 * <p>
+	 * {@code READY} 행이 있는 날짜는 날짜별로 보이는 다이제스트가 있는 날짜({@link ShownDigestSql} — digest-R13)와 같은 집합이다. 기간에
+	 * 드는지는 {@code READY} 행마다 그 행의 기간 끝으로 본다 — 같은 날짜의 {@code READY} 가운데 하나라도 기간 안이면 그 날짜를 센다.
+	 */
+	@Override
+	public int readyDayCount(UserId user, Instant from, Instant to) {
+		// 같은 날짜의 행(수동으로 다시 만든 것)은 하나로 센다 — 행 수가 아니라 날짜 수다
+		return this.jdbc.sql("""
+				select count(distinct digest_date) from digests
+				where user_id = :user and status = 'READY' and period_end >= :from and period_end < :to
+				""")
+			.param("user", user.value())
+			.param("from", from.atOffset(ZoneOffset.UTC))
+			.param("to", to.atOffset(ZoneOffset.UTC))
+			.query(Integer.class)
+			.single();
+	}
+
 	@Override
 	public int manualCountBetween(UserId user, Instant from, Instant to) {
 		return this.jdbc.sql("""

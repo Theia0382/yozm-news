@@ -1099,9 +1099,9 @@ class CandidateSelectionTests {
 				""").query(Long.class).single();
 		this.jdbc.sql("""
 				insert into user_settings (user_id, tag_set_id, timezone, digest_time, weekly_report,
-				    weekly_report_day, monthly_report, candidate_volume, big_slots, summary_length, reasoning_effort,
+				    weekly_report_day, monthly_report, monthly_report_day, candidate_volume, big_slots, summary_length, reasoning_effort,
 				    updated_at, version)
-				values (:user, :tagSet, 'Asia/Seoul', '07:00', true, 1, true, 'NORMAL', 3, 'NORMAL', 'MEDIUM', now(), 0)
+				values (:user, :tagSet, 'Asia/Seoul', '07:00', true, 1, true, 1, 'NORMAL', 3, 'NORMAL', 'MEDIUM', now(), 0)
 				""").param("user", id).param("tagSet", this.tagSets.activeTagSet().id().value()).update();
 		this.jdbc.sql("""
 				insert into user_tag_preferences (user_id, tag_kind, tag_key, mode, created_at)

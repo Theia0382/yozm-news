@@ -122,14 +122,20 @@ class InterestController {
 		return InterestSettingsResponse.of(this.digestSettings.view(user, now()));
 	}
 
-	/** 일정 · 리포트 저장 — 생성 시각이 {@code HH:mm} 이 아니면 400 */
+	/** 일정 · 리포트 저장 — 생성 시각이 {@code HH:mm} 이 아니거나 월간 날짜가 범위 밖이면 400 */
 	@AllowedWithoutLlmKey(reason = OPEN_WITHOUT_KEY)
 	@PutMapping("/api/interests/settings")
 	InterestSettingsSaveResponse saveSettings(UserId user, @Valid @RequestBody InterestSettingsRequest body) {
 		LocalTime time = DigestTimes.parse(body.digestTime())
 			.orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "생성 시각은 HH:mm 이다"));
+		if (!ReportSettings.validMonthlyDay(body.monthlyReportDay())) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "월간 날짜는 " + ReportSettings.MONTHLY_DAY_MIN
+					+ " ~ " + ReportSettings.MONTHLY_DAY_MAX + " 이다");
+		}
 		return InterestSettingsSaveResponse.of(this.digestSettings.save(user, body.timezone(), time,
-				new ReportSettings(body.weeklyReport(), body.weeklyReportDay(), body.monthlyReport()), now()));
+				new ReportSettings(body.weeklyReport(), body.weeklyReportDay(), body.monthlyReport(),
+						body.monthlyReportDay()),
+				now()));
 	}
 
 	/** 다이제스트 분량 — 최대 후보 수의 단계 · 직접 입력 · 큰 슬롯 수 · 요약 길이와 단계의 값 · 범위 */

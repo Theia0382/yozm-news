@@ -74,6 +74,7 @@ docker compose --profile dev down -v                                            
 - `local` 은 Jev 키가 없으면 고정 규칙의 대체 평가기로 기사를 평가한다. 실제 Jev 로 확인하려면 키를 넣는다 — 환경 변수 `YOZMNEWS_JEV_API_KEY`, 또는 키 파일을 `yozmnews.jev.api-key` 라는 이름으로 둔 디렉터리를 `--spring.config.import=configtree:<디렉터리>/` 로 넘긴다(키 값이 명령줄에 남지 않는다). 다른 설정은 [운영 설정 — 공유 평가](docs/operations/configuration.md#공유-평가)
 - `local` 은 `yozm-local-` 로 시작하는 LLM 키를 공급자에 묻지 않고 받는다 — 접두 뒤의 낱말이 검증 결과다(`yozm-local-valid` 는 성공, `yozm-local-invalid` · `-denied` · `-quota` · `-transient` · `-unexpected` 는 그 실패 종류). 그 밖의 키는 `local` 에서도 실제 공급자(OpenAI · Anthropic · OpenRouter)에 묻는다([llm Spec](docs/specs/llm.md#로컬-대체물))
 - `local` 은 다이제스트를 언제나 고정 규칙의 대체 생성기로 만든다 — 실제 키 · 가짜 키와 무관하다([digest Spec](docs/specs/digest.md#로컬-대체물))
+- `local` 은 변화 리포트도 언제나 고정 규칙의 대체 생성기로 만든다([report Spec](docs/specs/report.md#로컬-대체물)). 일정은 고른 요일 · 날짜의 다이제스트 생성 시각 뒤 2시간 안에 돌고, 쓸 모델(유효한 키)과 생성 조건(그 주의 READY 다이제스트 3일 이상 — [report Spec](docs/specs/report.md#생성-조건))이 있어야 리포트를 만든다
 - `local` 은 저장소의 개발용 KEK(`dev/local-kek`)로 LLM 키를 암호화한다 — 개발 DB 의 키만 감싸는 값이고 운영에 쓰지 않는다. 다른 파일을 쓰려면 환경 변수 `YOZMNEWS_CREDENTIAL_KEK_FILE` 을 준다([운영 설정 — LLM 키 암호화](docs/operations/configuration.md#llm-키-암호화))
 - Compose 를 먼저 띄우지 않았으면 앱이 띄우고, 앱이 끝날 때 멈춘다. 먼저 띄워 두었으면 앱이 끝나도 그대로 둔다
 - 바꿀 수 있는 값(호스트 포트)은 `.env.example` 에 있다. 필요한 줄만 `.env` 로 옮긴다 — `.env` 는 없어도 된다

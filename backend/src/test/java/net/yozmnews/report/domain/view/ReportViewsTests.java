@@ -119,6 +119,28 @@ class ReportViewsTests {
 	}
 
 	@Test
+	void onlyAFailedReportCarriesTheRegenerationsLeft() {
+		ReportRow failed = row(1, ReportStatus.FAILED, SNAPSHOT);
+		ReportRow twice = new ReportRow(failed.id(), failed.kind(), failed.start(), failed.end(), failed.status(),
+				failed.failure(), failed.createdAt(), failed.completedAt(), failed.zone(), failed.previous(),
+				failed.provider(), failed.model(), failed.inputTokens(), failed.outputTokens(), failed.statsSnapshot(), 2);
+		ReportRow spent = new ReportRow(failed.id(), failed.kind(), failed.start(), failed.end(), failed.status(),
+				failed.failure(), failed.createdAt(), failed.completedAt(), failed.zone(), failed.previous(),
+				failed.provider(), failed.model(), failed.inputTokens(), failed.outputTokens(), failed.statsSnapshot(), 3);
+
+		assertThat(render(failed, List.of(), EVENTS, STORYLINES).regenerationsLeft()).isEqualTo(3);
+		assertThat(render(twice, List.of(), EVENTS, STORYLINES).regenerationsLeft()).isEqualTo(1);
+		assertThat(render(spent, List.of(), EVENTS, STORYLINES).regenerationsLeft()).isZero();
+		// 대조 — 실패가 아니면 없다
+		for (ReportStatus status : List.of(ReportStatus.SCHEDULED, ReportStatus.RUNNING, ReportStatus.READY,
+				ReportStatus.EMPTY)) {
+			assertThat(render(row(1, status, SNAPSHOT), List.of(), EVENTS, STORYLINES).regenerationsLeft())
+				.as(status.name())
+				.isNull();
+		}
+	}
+
+	@Test
 	void showsEachVisibleKindSectionWithItsNumbersAndCountsTheHiddenOnes() {
 		ReportView view = render(row(1, ReportStatus.READY, SNAPSHOT), List.of(OVERVIEW,
 				new StoredSection(ReportSectionKind.STORYLINES, "흐름", "본문 하나", List.of(storyline(32))),
@@ -194,10 +216,10 @@ class ReportViewsTests {
 		ReportRow started = new ReportRow(new ReportId(5), ReportPeriodKind.WEEK, Instant.parse("2026-11-15T15:00:00Z"),
 				Instant.parse("2026-11-22T15:00:00Z"), ReportStatus.EMPTY, null, Instant.parse("2026-11-22T15:00:00Z"),
 				Instant.parse("2026-11-22T15:01:00Z"), ZoneId.of("Asia/Seoul"), null, "openai", "gpt-5.5-mini", null, null,
-				"{}");
+				"{}", 0);
 		ReportRow scheduled = new ReportRow(new ReportId(6), ReportPeriodKind.WEEK,
 				Instant.parse("2026-11-22T15:00:00Z"), Instant.parse("2026-11-29T15:00:00Z"), ReportStatus.SCHEDULED,
-				null, Instant.parse("2026-11-29T15:00:00Z"), null, null, null, null, null, null, null, null);
+				null, Instant.parse("2026-11-29T15:00:00Z"), null, null, null, null, null, null, null, null, 0);
 
 		ReportSummary startedSummary = ReportViews.summary(started, ZoneOffset.UTC);
 		ReportSummary scheduledInSeoul = ReportViews.summary(scheduled, ZoneId.of("Asia/Seoul"));
@@ -234,7 +256,7 @@ class ReportViewsTests {
 	private static ReportRow row(long id, ReportStatus status, @Nullable String snapshot) {
 		return new ReportRow(new ReportId(id), ReportPeriodKind.WEEK, Instant.parse("2026-11-16T00:00:00Z"),
 				Instant.parse("2026-11-23T00:00:00Z"), status, null, Instant.parse("2026-11-23T00:00:00Z"), null,
-				ZoneOffset.UTC, null, null, null, null, null, snapshot);
+				ZoneOffset.UTC, null, null, null, null, null, snapshot, 0);
 	}
 
 }

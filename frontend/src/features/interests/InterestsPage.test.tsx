@@ -9,7 +9,7 @@ import {
   type InterestVolume,
 } from "@/features/interests/interestQueries";
 import { InterestsPage } from "@/features/interests/InterestsPage";
-import { json, type Handler } from "@/test/fakeServer";
+import { json, problem, type Handler } from "@/test/fakeServer";
 import { bodiesOf, renderRoutes } from "@/test/renderRoutes";
 
 /** 체계 버전 1 — 분야 둘, 지역 하나, 형식 둘(하나는 기본 제외) */
@@ -58,6 +58,8 @@ const SETTINGS: InterestSettings = {
   weeklyReport: true,
   weeklyReportDay: "MONDAY",
   monthlyReport: true,
+  monthlyReportDay: 1,
+  monthlyReportDayRange: { min: 1, max: 31 },
 };
 
 /** 새 계정의 분량 — 보통 · 큰 화제 3 · 요약 길이 보통 */
@@ -98,6 +100,8 @@ function renderInterests(
       "GET /api/interests/settings": () => json(SETTINGS),
       "GET /api/interests/model": () => json(NO_KEY_MODEL),
       "GET /api/interests/volume": () => json(VOLUME),
+      "GET /api/reports/conditions": () =>
+        json({ minDigestDays: 3, minWeeklyReports: 2 }),
       ...handlers,
     },
   );
@@ -112,6 +116,30 @@ afterEach(() => {
 });
 
 describe("InterestsPage", () => {
+  it("리포트 설명은 서버가 낸 생성 조건의 수로 만들지 않는 경우를 안내한다", async () => {
+    renderInterests({});
+    const schedule = await section("일정 · 변화 리포트");
+
+    expect(
+      await schedule.findByText(
+        /그 주에 다이제스트를 받은 날이 3일보다 적으면 주간 리포트를, 그 기간 안의 주간 리포트가 2편보다 적으면 월간 리포트를 만들지 않습니다\./,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("생성 조건을 읽지 못하면 수 없이 안내한다", async () => {
+    renderInterests({
+      "GET /api/reports/conditions": () => problem(500, "읽지 못함"),
+    });
+    const schedule = await section("일정 · 변화 리포트");
+
+    expect(
+      await schedule.findByText(
+        /그 기간에 받은 다이제스트\(주간\)나 주간 리포트\(월간\)가 적으면 만들지 않습니다\./,
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("주소에 절의 id 가 있으면 조회가 모두 끝난 뒤 그 절로 한 번 내려간다", async () => {
     // jsdom 에는 scrollIntoView 가 없다
     const scroll = vi.fn();
@@ -311,9 +339,20 @@ describe("InterestsPage", () => {
       schedule.getByLabelText("주간 리포트 요일"),
       "금요일",
     );
+    expect(schedule.getByLabelText("월간 리포트 날짜")).toHaveValue("1");
+    expect(
+      within(schedule.getByLabelText("월간 리포트 날짜")).getAllByRole(
+        "option",
+      ),
+    ).toHaveLength(31);
+    await user.selectOptions(
+      schedule.getByLabelText("월간 리포트 날짜"),
+      "31일",
+    );
     await user.click(
       schedule.getByRole("checkbox", { name: "월간 변화 리포트 받기" }),
     );
+    expect(schedule.getByLabelText("월간 리포트 날짜")).toBeDisabled();
     await user.click(
       schedule.getByRole("button", { name: "일정 · 리포트 저장" }),
     );
@@ -328,8 +367,39 @@ describe("InterestsPage", () => {
         weeklyReport: true,
         weeklyReportDay: "FRIDAY",
         monthlyReport: false,
+        monthlyReportDay: 31,
       },
     ]);
+  });
+
+  it("주간 리포트를 끄면 월간 리포트 칸을 막고 까닭을 알린다", async () => {
+    renderInterests({});
+    const user = userEvent.setup();
+    const schedule = await section("일정 · 변화 리포트");
+    const monthly = await schedule.findByRole("checkbox", {
+      name: "월간 변화 리포트 받기",
+    });
+
+    // 대조 — 주간을 켜 두면 월간 칸을 고를 수 있고 안내가 없다
+    expect(monthly).not.toHaveAttribute("aria-disabled", "true");
+    expect(schedule.getByLabelText("월간 리포트 날짜")).toBeEnabled();
+    expect(
+      schedule.queryByText(
+        "월간 리포트는 그 기간의 주간 리포트를 모아 만들어, 주간 리포트를 받을 때만 만듭니다.",
+      ),
+    ).not.toBeInTheDocument();
+
+    await user.click(
+      schedule.getByRole("checkbox", { name: "주간 변화 리포트 받기" }),
+    );
+
+    expect(monthly).toHaveAttribute("aria-disabled", "true");
+    expect(schedule.getByLabelText("월간 리포트 날짜")).toBeDisabled();
+    expect(
+      schedule.getByText(
+        "월간 리포트는 그 기간의 주간 리포트를 모아 만들어, 주간 리포트를 받을 때만 만듭니다.",
+      ),
+    ).toBeInTheDocument();
   });
 
   it.each([

@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.UUID;
 
 import net.yozmnews.platform.UserId;
 import net.yozmnews.report.ReportFailure;
@@ -24,20 +25,101 @@ class ReportTests {
 
 	private static final Instant NOW = Instant.parse("2026-11-23T00:00:00Z");
 
+	private static final UUID TOKEN = UUID.fromString("00000000-0000-0000-0000-000000000240");
+
+	private static final UUID AGAIN = UUID.fromString("00000000-0000-0000-0000-000000000241");
+
 	private static final ReportPeriod WEEK = new ReportPeriod(ReportPeriodKind.WEEK,
 			Instant.parse("2026-11-16T00:00:00Z"), Instant.parse("2026-11-23T00:00:00Z"));
 
 	@Test
 	void schedulesWithThePeriodAndNothingElse() {
-		Report report = Report.schedule(new UserId(7), WEEK, NOW);
+		Report report = Report.schedule(new UserId(7), WEEK, TOKEN, NOW);
 
 		assertThat(report.status()).isEqualTo(ReportStatus.SCHEDULED);
 		assertThat(report.userId()).isEqualTo(new UserId(7));
 		assertThat(report.period()).isEqualTo(WEEK);
 		assertThat(report.createdAt()).isEqualTo(NOW);
+		assertThat(report.dispatchToken()).isEqualTo(TOKEN);
+		assertThat(report.dispatchedAt()).isEqualTo(NOW);
+		assertThat(report.scheduledAt()).isEqualTo(NOW);
+		assertThat(report.regenerations()).isZero();
 		assertThat(report.provider()).isEmpty();
 		assertThat(report.startedAt()).isEmpty();
 		assertThat(report.completedAt()).isEmpty();
+	}
+
+	@Test
+	void redispatchesOnlyAScheduledReportWithANewTokenAndKeepsTheScheduledTime() {
+		Report again = scheduled().redispatch(AGAIN, NOW.plusSeconds(900));
+
+		assertThat(again.status()).isEqualTo(ReportStatus.SCHEDULED);
+		assertThat(again.dispatchToken()).isEqualTo(AGAIN);
+		assertThat(again.dispatchedAt()).isEqualTo(NOW.plusSeconds(900));
+		assertThat(again.scheduledAt()).isEqualTo(NOW);
+		Report running = scheduled().start(ReportFixtures.MODEL, NOW.plusSeconds(1));
+		assertThatIllegalStateException().isThrownBy(() -> running.redispatch(AGAIN, NOW))
+			.withMessage("생성을 기다리는 리포트만 다시 등록할 수 있다: RUNNING");
+	}
+
+	@Test
+	void abandonsAScheduledReportWithoutStartingIt() {
+		Report failed = scheduled().abandon(ReportFailure.NO_USABLE_MODEL, "쓸 모델이 없다", NOW.plusSeconds(60));
+
+		assertThat(failed.status()).isEqualTo(ReportStatus.FAILED);
+		assertThat(failed.failure()).contains(ReportFailure.NO_USABLE_MODEL);
+		assertThat(failed.errorMessage()).contains("쓸 모델이 없다");
+		assertThat(failed.provider()).isEmpty();
+		assertThat(failed.model()).isEmpty();
+		assertThat(failed.startedAt()).isEmpty();
+		assertThat(failed.usage()).isEmpty();
+		assertThat(failed.took()).isEmpty();
+		assertThat(failed.completedAt()).contains(NOW.plusSeconds(60));
+	}
+
+	@Test
+	void abandonsARunningReportAndKeepsWhatItStartedWith() {
+		Report failed = scheduled().start(ReportFixtures.MODEL, NOW.plusSeconds(1))
+			.abandon(ReportFailure.INTERRUPTED, "임대 안에 생성이 끝나지 않았다", NOW.plusSeconds(2400));
+
+		assertThat(failed.status()).isEqualTo(ReportStatus.FAILED);
+		assertThat(failed.failure()).contains(ReportFailure.INTERRUPTED);
+		assertThat(failed.provider()).contains("openai");
+		assertThat(failed.startedAt()).contains(NOW.plusSeconds(1));
+		assertThat(failed.usage()).isEmpty();
+		assertThat(failed.took()).isEmpty();
+		// 대조 — 끝난 리포트는 실패로 끝내지 않는다
+		assertThatIllegalStateException().isThrownBy(() -> failed.abandon(ReportFailure.INTERRUPTED, "다시", NOW))
+			.withMessage("끝난 리포트는 실패로 끝낼 수 없다: FAILED");
+	}
+
+	@Test
+	void regeneratesOnlyAFailedReportAndClearsWhatTheAttemptLeft() {
+		Report failed = scheduled().start(ReportFixtures.MODEL, NOW.plusSeconds(1))
+			.complete(new Completion.Failed(ReportFailure.PROVIDER_UNAVAILABLE, "일시 장애", new TokenUsage(10, 0),
+					Duration.ofSeconds(3)), NOW.plusSeconds(5));
+
+		Report again = failed.regenerate(AGAIN, NOW.plusSeconds(86_400));
+
+		assertThat(again.status()).isEqualTo(ReportStatus.SCHEDULED);
+		assertThat(again.dispatchToken()).isEqualTo(AGAIN);
+		assertThat(again.dispatchedAt()).isEqualTo(NOW.plusSeconds(86_400));
+		assertThat(again.scheduledAt()).isEqualTo(NOW.plusSeconds(86_400));
+		assertThat(again.regenerations()).isEqualTo(1);
+		assertThat(again.createdAt()).isEqualTo(NOW);
+		assertThat(again.provider()).isEmpty();
+		assertThat(again.model()).isEmpty();
+		assertThat(again.startedAt()).isEmpty();
+		assertThat(again.completedAt()).isEmpty();
+		assertThat(again.usage()).isEmpty();
+		assertThat(again.took()).isEmpty();
+		assertThat(again.failure()).isEmpty();
+		assertThat(again.errorMessage()).isEmpty();
+		assertThat(again.abandon(ReportFailure.INTERRUPTED, "멈췄다", NOW).regenerate(AGAIN, NOW).regenerations())
+			.isEqualTo(2);
+		// 대조 — 실패가 아닌 리포트는 다시 만들지 않는다
+		assertThatIllegalStateException().isThrownBy(() -> scheduled().regenerate(AGAIN, NOW))
+			.withMessage("실패한 리포트만 다시 만들 수 있다: SCHEDULED");
 	}
 
 	@Test
@@ -128,7 +210,7 @@ class ReportTests {
 	}
 
 	private static Report scheduled() {
-		return Report.schedule(new UserId(7), WEEK, NOW);
+		return Report.schedule(new UserId(7), WEEK, TOKEN, NOW);
 	}
 
 	private static Report running() {

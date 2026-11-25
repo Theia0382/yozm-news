@@ -15,18 +15,22 @@ import org.jspecify.annotations.Nullable;
  * @param previous 생성 때 이은 직전 리포트(report-R18)의 요약 — 이은 리포트가 없었거나 그새 없어졌으면 {@code null}
  * @param hiddenSections 인용을 모두 잃어 숨긴 갈래 섹션 수 — {@code READY} 가 아니면 0
  * @param sections 보이는 섹션 — 위치 순. {@code READY} 가 아니면 빈 목록
+ * @param regenerationsLeft 실패한 리포트를 더 다시 만들 수 있는 횟수 — {@code FAILED} 일 때만, 아니면 {@code null}
  */
 public record ReportView(ReportSummary summary, @Nullable String provider, @Nullable String model,
 		@Nullable Integer inputTokens, @Nullable Integer outputTokens, @Nullable ReportSummary previous,
-		int hiddenSections, List<ReportSectionView> sections) {
+		int hiddenSections, List<ReportSectionView> sections, @Nullable Integer regenerationsLeft) {
 
 	/**
-	 * @throws IllegalArgumentException 숨긴 섹션 수가 0 보다 작을 때
+	 * @throws IllegalArgumentException 숨긴 섹션 수 · 남은 다시 만들기 수가 0 보다 작을 때
 	 */
 	public ReportView {
 		Objects.requireNonNull(summary, "summary");
 		if (hiddenSections < 0) {
 			throw new IllegalArgumentException("숨긴 섹션 수는 0 이상이다: " + hiddenSections);
+		}
+		if (regenerationsLeft != null && regenerationsLeft < 0) {
+			throw new IllegalArgumentException("남은 다시 만들기 수는 0 이상이다: " + regenerationsLeft);
 		}
 		sections = List.copyOf(sections);
 	}

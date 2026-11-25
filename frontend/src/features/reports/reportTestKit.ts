@@ -62,6 +62,7 @@ export function detail(
             outputTokens: report.status === "READY" ? 450 : null,
           },
     sections: [],
+    regenerationsLeft: report.status === "FAILED" ? 3 : null,
     ...overrides,
   };
 }

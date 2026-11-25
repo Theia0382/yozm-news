@@ -18,7 +18,7 @@ import net.yozmnews.platform.UserId;
  * @param cause 실패의 갈래
  * @param failedAt 실패로 끝낸 시각
  */
-public record DigestFailed(UserId user, long digestId, LocalDate digestDate, DigestFailureCause cause,
+public record DigestFailed(UserId user, long digestId, LocalDate digestDate, GenerationFailureCause cause,
 		Instant failedAt) {
 
 	public DigestFailed {

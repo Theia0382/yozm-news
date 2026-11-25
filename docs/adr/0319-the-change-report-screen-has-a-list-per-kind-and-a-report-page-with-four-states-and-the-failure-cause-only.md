@@ -1,6 +1,6 @@
 # ADR-0319: 변화 리포트 화면은 종류마다 목록과 한 편 화면으로 보이고, 상태는 넷, 실패는 코드의 무슨 일 문구만 보인다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 실패 화면의 다시 만들기 버튼 없음([ADR-0325](0325-a-failed-report-is-regenerated-from-the-screen-on-the-same-row-up-to-three-times.md)) · 실패 리포트의 직전 리포트 줄([ADR-0323](0323-report-generation-jobs-and-stalled-report-recovery-follow-the-digest-and-a-report-ending-without-a-start-records-the-zone.md))
 - 날짜: 2026-11-24
 - 근거: [이슈 #241](https://github.com/Theia0382/yozm-news/issues/241) — 리포트 조회(`ReportDirectory`)의 목록이 종류를 가리지 않고, 실패 코드가 다이제스트와 같은 이름이지만 다시 만들기가 없음을 확인. 구현 `07927e7` · `3d3f50f`
 - 관련: [ADR-0192](0192-reader-screens-are-composed-by-the-reader-module-over-module-public-queries.md)(독자 화면은 `reader` 가 엮는다), [ADR-0240](0240-digest-failures-show-the-cause-action-and-the-code-and-never-the-failure-message.md)(같은 꼴의 일부 — 무슨 일 문구 · 메시지 없음), [ADR-0239](0239-digest-screens-show-tokens-of-the-visible-digest-and-the-sum-of-every-attempt-of-the-date-without-prices.md)(토큰만, 금액 없음), [ADR-0317](0317-a-change-report-row-points-to-the-previous-report-it-took-the-previous-values-from.md)(직전 리포트 링크)
@@ -14,7 +14,9 @@
 ## 결정
 
 - **목록은 종류마다 따로 본다.** 리포트 조회가 종류를 인자로 받고, 화면은 주간 · 월간 탭을 주소의 종류로 고른다(기본 주간). 줄마다 기간과 상태를 적는다.
+> 부분 대체(둘째 문장의 "다시 만들기 버튼은 없다") — [ADR-0325](0325-a-failed-report-is-regenerated-from-the-screen-on-the-same-row-up-to-three-times.md). 지금 상태: [reader Spec "변화 리포트"](../specs/reader.md#변화-리포트) reader-R16
 - **한 편의 상태는 넷이다** — 만드는 중(예약 · 생성 중) · 비어 있음(재료 없음) · 실패 · 내용. 실패는 코드마다 무슨 일 문구만 보이고 실패 메시지와 다시 만들기 버튼은 없다. 리포트의 실패 문구 표는 다이제스트의 것과 따로 둔다.
+> 부분 대체(첫 문장) — [ADR-0323](0323-report-generation-jobs-and-stalled-report-recovery-follow-the-digest-and-a-report-ending-without-a-start-records-the-zone.md). 지금 상태: [reader Spec "변화 리포트"](../specs/reader.md#변화-리포트) reader-R16
 - **비교한 직전 리포트 줄은 내용 · 실패 리포트에만 그린다** — 둘 다 생성 입력에서 직전 값과 견주었다. 만드는 중 · 비어 있는 리포트는 비교가 없다.
 - 한 편의 맨 아래에 모델 · 토큰을 적고 금액으로 바꾸지 않는다.
 - 진입은 머리줄 링크와 관심 설정 리포트 절의 링크다. 두 화면 모두 키 관문 뒤다.
@@ -34,3 +36,8 @@
 | 한 목록(최근 순)에 종류 표시만 단다 | 월간만 훑기 어렵다 |
 | 실패에 다이제스트의 문구 표를 함께 쓴다 | 문구가 다이제스트를 말하고 리포트에 없는 코드가 섞인다 |
 | 직전 리포트 줄을 시작한 모든 리포트에 그린다 | 만드는 중 · 비어 있는 리포트는 견준 숫자가 없어 "비교한 직전 리포트"가 뜻이 없다 |
+
+## 후속 기록
+
+- 2026-11-25: 결과 "거두기 전에는 생성기 예외로 생성 중에 남은 리포트가 계속 '만드는 중'으로 보인다" — 임대가 지난 생성 중 리포트를 거두기가 끝나지 않은 실패로 끝낸다([ADR-0323](0323-report-generation-jobs-and-stalled-report-recovery-follow-the-digest-and-a-report-ending-without-a-start-records-the-zone.md)), 지금 상태는 [report Spec "거두기"](../specs/report.md#거두기) report-R30
+- 2026-11-25: 결과 "다시 만들기를 두기로 하면 실패 화면에 할 일을 더한다" — 실패 화면에 남은 횟수와 다시 만들기 버튼을 더했다([ADR-0325](0325-a-failed-report-is-regenerated-from-the-screen-on-the-same-row-up-to-three-times.md)), 지금 상태는 [reader Spec "변화 리포트"](../specs/reader.md#변화-리포트) reader-R16

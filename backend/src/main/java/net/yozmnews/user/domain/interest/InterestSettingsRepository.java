@@ -35,7 +35,7 @@ public interface InterestSettingsRepository {
 	/** 선호 버전이 {@code active} 가 아닌 사용자 — 사용자 ID 가 {@code afterUserId} 보다 큰 것부터 ID 순으로 {@code limit} 개까지 */
 	List<UserId> withPreferenceVersionOtherThan(TagSetId active, long afterUserId, int limit);
 
-	/** 주어진 사용자 가운데 설정 행이 있는 것의 다이제스트 일정 — 설정 행이 없는 사용자는 맵에 없다 */
-	Map<UserId, DigestSchedule> schedulesOf(Collection<UserId> users);
+	/** 주어진 사용자 가운데 설정 행이 있는 것의 일정 · 리포트 설정 — 설정 행이 없는 사용자는 맵에 없다 */
+	Map<UserId, ScheduleSettings> scheduleSettingsOf(Collection<UserId> users);
 
 }

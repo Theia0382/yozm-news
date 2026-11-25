@@ -4,6 +4,7 @@ import type {
   InterestShift,
   ReportFailure,
   ReportKind,
+  ReportRegenerationResult,
   ReportStatus,
   ReportTrend,
 } from "@/features/reports/reportQueries";
@@ -11,6 +12,9 @@ import type { components } from "@/shared/api/schema";
 import { formatDate } from "@/shared/lib/dateTime";
 
 type SectionKind = components["schemas"]["ReportSectionResponse"]["kind"];
+
+type ReportFailureCause =
+  components["schemas"]["ReportFailedNoticeResponse"]["cause"];
 
 /** 목록의 주소 */
 export const REPORTS_PATH = "/reports";
@@ -83,6 +87,9 @@ export const reportFailureTexts: Record<ReportFailure, string> = {
   QUOTA_EXHAUSTED: "공급자 계정의 잔액이나 지출 한도가 소진됐습니다.",
   PROVIDER_UNAVAILABLE: "공급자가 여러 번 다시 보내도 답하지 못했습니다.",
   PROVIDER_UNEXPECTED: "공급자가 예상하지 못한 답을 했습니다.",
+  NO_USABLE_MODEL:
+    "쓸 수 있는 모델이 없어 만들기를 시작하지 못했습니다. 유효한 LLM 키와 고른 모델을 확인하세요.",
+  INTERRUPTED: "만들기가 정한 시간 안에 끝나지 않아 멈췄습니다.",
 };
 
 /** 섹션 종류마다 숫자 표의 이름 — 개요는 표가 없다 */
@@ -193,3 +200,44 @@ export const LIST_LOAD_FAILED = "리포트 목록을 불러오지 못했습니�
 
 /** 한 편을 읽지 못했을 때 */
 export const LOAD_FAILED = "리포트를 불러오지 못했습니다.";
+
+/** 실패 알림의 머리 */
+export const REPORT_FAILED_TITLE = "변화 리포트를 만들지 못했습니다";
+
+/** 실패 알림에서 그 리포트로 가는 링크 */
+export const FAILED_REPORT_LINK = "그 리포트 보기";
+
+/** 실패 알림의 갈래마다 할 일 — 리포트의 할 일을 말한다(다이제스트의 할 일 문구와 따로 둔다) */
+export const reportFailureCauseTexts: Record<ReportFailureCause, string> = {
+  KEY: "LLM 키를 쓸 수 없었습니다. 키를 확인하거나 다시 등록하세요.",
+  PROVIDER_ACCOUNT:
+    "공급자 계정의 권한이나 잔액 때문에 만들지 못했습니다. 공급자 계정을 확인하세요.",
+  TEMPORARY:
+    "공급자가 잠시 답하지 못했거나 만들기가 정한 시간 안에 끝나지 않았습니다. 잠시 뒤 리포트 화면에서 다시 만들어 보세요.",
+  OUTPUT:
+    "모델의 출력을 리포트로 쓰지 못했습니다. 리포트 화면에서 다시 만들거나 관심 설정에서 다른 모델을 골라 보세요.",
+};
+
+/** 실패한 리포트의 다시 만들기 버튼 */
+export const REGENERATE = "다시 만들기";
+
+/** 다시 만들기를 더 할 수 있는 횟수 */
+export function regenerationsLeftText(left: number): string {
+  return `이 리포트는 ${left}번 더 다시 만들 수 있습니다.`;
+}
+
+/** 다시 만들기 횟수를 다 썼을 때 */
+export const REGENERATIONS_SPENT =
+  "이 리포트는 다시 만들 수 있는 횟수를 다 썼습니다.";
+
+/** 다시 만들기가 받아지지 않은 까닭 — 받았으면 문구 없이 만드는 중이 된다 */
+export const regenerationResultTexts = {
+  REQUESTED: null,
+  NOT_FAILED: "실패한 리포트가 아니라 다시 만들지 않았습니다.",
+  LIMIT_REACHED: REGENERATIONS_SPENT,
+  NO_USABLE_MODEL:
+    "쓸 수 있는 모델이 없어 다시 만들지 않았습니다. 유효한 LLM 키와 고른 모델을 확인하세요.",
+} as const satisfies Record<ReportRegenerationResult, string | null>;
+
+/** 다시 만들기 요청이 닿지 못했을 때 */
+export const REGENERATION_FAILED = "다시 만들기를 요청하지 못했습니다.";

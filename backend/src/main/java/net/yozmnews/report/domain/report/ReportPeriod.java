@@ -14,6 +14,9 @@ import net.yozmnews.report.ReportPeriodKind;
  */
 public record ReportPeriod(ReportPeriodKind kind, Instant start, Instant end) {
 
+	/** 사용자 시간대를 얻지 못할 때(계정이 없다) 기간 날짜를 적는 시간대 — 정본 */
+	public static final ZoneId NO_ACCOUNT_ZONE = ZoneId.of("UTC");
+
 	/**
 	 * @throws IllegalArgumentException 끝이 시작보다 뒤가 아닐 때
 	 */

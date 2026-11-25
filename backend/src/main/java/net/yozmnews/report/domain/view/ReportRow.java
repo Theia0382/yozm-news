@@ -21,11 +21,12 @@ import org.jspecify.annotations.Nullable;
  * @param zone 시작할 때 적은 사용자 시간대 — 시작 전이면 {@code null}
  * @param previous 생성 때 이은 직전 리포트 — 없었거나 그새 지워졌으면 {@code null}
  * @param statsSnapshot 스냅숏(jsonb 를 텍스트로) — 시작 전이면 {@code null}
+ * @param regenerations 다시 만든 횟수
  */
 public record ReportRow(ReportId id, ReportPeriodKind kind, Instant start, Instant end, ReportStatus status,
 		@Nullable ReportFailure failure, Instant createdAt, @Nullable Instant completedAt, @Nullable ZoneId zone,
 		@Nullable ReportId previous, @Nullable String provider, @Nullable String model, @Nullable Integer inputTokens,
-		@Nullable Integer outputTokens, @Nullable String statsSnapshot) {
+		@Nullable Integer outputTokens, @Nullable String statsSnapshot, int regenerations) {
 
 	public ReportRow {
 		Objects.requireNonNull(id, "id");

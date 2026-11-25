@@ -7,7 +7,7 @@ import {
   DIGEST_HOME_PATH,
   FAILED_DAY_LINK,
   RETRY_AT_HOME_LINK,
-  digestFailureCauseLinks,
+  failureCauseLinks,
   digestFailureCauseTexts,
   digestPath,
   retryAtHome,
@@ -20,6 +20,13 @@ import {
   useMarkSeen,
   useNoticePages,
 } from "@/features/notices/noticeQueries";
+import {
+  FAILED_REPORT_LINK,
+  REPORT_FAILED_TITLE,
+  reportFailureCauseTexts,
+  reportPath,
+  reportTitle,
+} from "@/features/reports/reportTexts";
 import { SESSION_QUERY_KEY } from "@/features/session/sessionQueries";
 import { SUBSCRIPTIONS_PATH } from "@/features/storylines/storylineTexts";
 import type { components } from "@/shared/api/schema";
@@ -47,6 +54,8 @@ type StorylineSubscriptionsRemovedNotice =
   components["schemas"]["StorylineSubscriptionsRemovedNoticeResponse"];
 
 type DigestFailedNotice = components["schemas"]["DigestFailedNoticeResponse"];
+
+type ReportFailedNotice = components["schemas"]["ReportFailedNoticeResponse"];
 
 type DigestUnresolvedFailure =
   components["schemas"]["DigestUnresolvedFailureResponse"];
@@ -169,6 +178,8 @@ function noticeTitle(notice: Notice): string {
       return "추적하던 흐름이 사라졌습니다";
     case "DIGEST_FAILED":
       return "다이제스트를 만들지 못했습니다";
+    case "REPORT_FAILED":
+      return REPORT_FAILED_TITLE;
   }
 }
 
@@ -190,6 +201,8 @@ function NoticeBody({ notice }: { notice: Notice }): ReactElement {
       );
     case "DIGEST_FAILED":
       return <DigestFailedBody body={notice.digestFailed} />;
+    case "REPORT_FAILED":
+      return <ReportFailedBody body={notice.reportFailed} />;
   }
 }
 
@@ -233,7 +246,7 @@ function DigestFailedBody({
   if (!body) {
     return null;
   }
-  const causeLink = digestFailureCauseLinks[body.cause];
+  const causeLink = failureCauseLinks[body.cause];
   return (
     <div className="space-y-1 text-sm">
       <p>
@@ -258,6 +271,39 @@ function DigestFailedBody({
               {RETRY_AT_HOME_LINK}
             </Link>
           )}
+      </p>
+    </div>
+  );
+}
+
+/** 리포트 실패 — 종류 · 기간 · 실패 시각, 갈래의 할 일, 그 리포트와 갈래마다 가 볼 화면 */
+function ReportFailedBody({
+  body,
+}: {
+  body: ReportFailedNotice | null | undefined;
+}) {
+  if (!body) {
+    return null;
+  }
+  const causeLink = failureCauseLinks[body.cause];
+  return (
+    <div className="space-y-1 text-sm">
+      <p>
+        {reportTitle(body.kind, body.firstDay, body.lastDay)} ·{" "}
+        <time dateTime={body.failedAt}>{formatDateTime(body.failedAt)}</time>
+      </p>
+      <p className="text-muted-foreground">
+        {reportFailureCauseTexts[body.cause]}
+      </p>
+      <p className="flex flex-wrap gap-x-3">
+        <Link to={reportPath(body.reportId)} className="underline">
+          {FAILED_REPORT_LINK}
+        </Link>
+        {causeLink !== null && (
+          <Link to={causeLink.to} className="underline">
+            {causeLink.label}
+          </Link>
+        )}
       </p>
     </div>
   );

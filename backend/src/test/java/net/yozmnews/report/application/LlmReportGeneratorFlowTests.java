@@ -34,7 +34,12 @@ import net.yozmnews.report.adapter.out.llm.LlmReportGenerator;
 import net.yozmnews.report.domain.content.ReportSectionRepository;
 import net.yozmnews.report.domain.input.ReportInput;
 import net.yozmnews.report.domain.report.ReportRepository;
+import net.yozmnews.report.domain.report.ReportLedger;
+import net.yozmnews.tag.TagSetDirectory;
+import net.yozmnews.user.ReportFailed;
+import net.yozmnews.user.ReportModelDirectory;
 import net.yozmnews.user.UserTables;
+import net.yozmnews.user.UserTimezones;
 import org.jobrunr.scheduling.JobScheduler;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -53,6 +58,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 키는 등록 처리기가 검증 성공 때만 저장하므로 저장소 · 봉투 암호로 넣고, 주인은 실제 계정이다 — 무효 이벤트를 알림 리스너가 받는다. 가짜 키
  * {@code valid} 의 본문은 출력 스키마의 필수 속성만 채운 가장 작은 JSON 이라 모든 갈래 칸이 있고 인용은 없다. {@code transient} 는 관문이
  * 2 · 4 · 8 초를 기다려 다시 보낸 뒤 실패한다(llm-R20). 잘림 · 거절 · 못 읽는 출력 · 빠진 갈래는 대역 생성기로 본다(ReportGenerationTests).
+ * 생성 도중 키 무효는 생성 작업({@link ReportRun})부터 끝까지 지난다 — 쓸 모델을 정할 때는 유효하던 키를 공급자가 거절한다.
  * <p>
  * 지키는 규칙: report-R13 · report-R24 · llm-R20
  */
@@ -92,6 +98,24 @@ class LlmReportGeneratorFlowTests {
 
 	@Autowired
 	JdbcClient jdbc;
+
+	@Autowired
+	ReportEndings endings;
+
+	@Autowired
+	ReportLedger ledger;
+
+	@Autowired
+	ReportModelDirectory models;
+
+	@Autowired
+	UserTimezones timezones;
+
+	@Autowired
+	ReportMaterialCollection collection;
+
+	@Autowired
+	TagSetDirectory tagSets;
 
 	@BeforeEach
 	void stopDigestRounds() {
@@ -151,6 +175,48 @@ class LlmReportGeneratorFlowTests {
 			.containsEntry("input_tokens", null);
 	}
 
+	@Test
+	void aKeyFoundInvalidDuringTheRunEndsTheScheduledReportAndNotifiesTheUser() {
+		// 저장한 키는 유효 상태라 쓸 모델이 있다 — 공급자가 생성 도중 키를 거절한다
+		UserId user = account("report-flow-run-invalid@example.com");
+		store(user, "yozm-local-invalid-0123456789");
+		this.jdbc.sql("""
+				insert into user_settings (user_id, tag_set_id, timezone, digest_time, weekly_report,
+				    weekly_report_day, monthly_report, monthly_report_day, candidate_volume, big_slots, summary_length,
+				    reasoning_effort, updated_at, version)
+				values (:user, :tagSet, 'Asia/Seoul', '07:00', true, 1, true, 1, 'NORMAL', 3, 'NORMAL', 'MEDIUM', now(), 0)
+				""").param("user", user.value()).param("tagSet", this.tagSets.activeTagSet().id().value()).update();
+		// 구독 주제 하나 — 보도량 갈래가 있어 생성기를 부른다
+		this.jdbc.sql("""
+				insert into user_tag_preferences (user_id, tag_kind, tag_key, mode, created_at)
+				values (:user, 'TOPIC', 'economy.finance', 'SUBSCRIBE', now())
+				""").param("user", user.value()).update();
+		ReportGeneration generation = new ReportGeneration(this.reports, this.sections, this.endings,
+				new LlmReportGenerator(this.gateway), this.transaction, TestClocks.of(Instant::now));
+		ReportId id = generation.schedule(user, ReportFixtures.PERIOD).id();
+
+		ReportStatus status = new ReportRun(this.reports, this.ledger, this.models, this.timezones, this.collection,
+				generation, this.endings, this.transaction, Instant::now)
+			.run(id);
+
+		assertThat(status).isEqualTo(ReportStatus.FAILED);
+		assertThat(this.jdbc.sql("""
+				select status, error_code, started_at is not null as started from reports where id = :id
+				""").param("id", id.value()).query().singleRow()).containsEntry("status", "FAILED")
+			.containsEntry("error_code", "KEY_INVALID")
+			.containsEntry("started", true);
+		// 키는 무효가 되고, 사용자는 키 무효 알림과 리포트 실패 알림을 하나씩 받는다
+		assertThat(this.jdbc.sql("select status from llm_credentials where user_id = :user")
+			.param("user", user.value())
+			.query(String.class)
+			.single()).isEqualTo("INVALID");
+		await().atMost(Duration.ofSeconds(10))
+			.untilAsserted(() -> assertThat(this.jdbc.sql("select kind from user_notices where user_id = :user order by kind")
+				.param("user", user.value())
+				.query(String.class)
+				.list()).containsExactly("KEY_INVALIDATED", "REPORT_FAILED"));
+	}
+
 	/** 그 낱말의 가짜 키를 가진 새 사용자로 생성한다 */
 	private Map<String, Object> runWithKey(String word) {
 		UserId user = account("report-flow-" + word + "-" + System.nanoTime() + "@example.com");
@@ -159,9 +225,9 @@ class LlmReportGeneratorFlowTests {
 	}
 
 	private Map<String, Object> run(UserId user) {
-		ReportGeneration generation = new ReportGeneration(this.reports, this.sections,
+		ReportGeneration generation = new ReportGeneration(this.reports, this.sections, this.endings,
 				new LlmReportGenerator(this.gateway), this.transaction, TestClocks.of(Instant::now));
-		ReportId id = generation.schedule(user, ReportFixtures.PERIOD);
+		ReportId id = generation.schedule(user, ReportFixtures.PERIOD).id();
 		ReportInput input = ReportFixtures.input(user, ReportFixtures.PERIOD,
 				ReportFixtures.userStorylines(ReportFixtures.userStoryline(31, 902)), ReportFixtures.coverage(), ReportFixtures.interests(31));
 		ReportStatus status = generation.run(id, MODEL, ReportFixtures.EFFORT, input);
@@ -191,7 +257,7 @@ class LlmReportGeneratorFlowTests {
 	private void awaitInvalidationsHandled() {
 		await().atMost(Duration.ofSeconds(10))
 			.untilAsserted(() -> assertThat(this.jdbc.sql("select count(*) from event_publication where event_type in (:types)")
-				.param("types", List.of(CredentialInvalidated.class.getName()))
+				.param("types", List.of(CredentialInvalidated.class.getName(), ReportFailed.class.getName()))
 				.query(Long.class)
 				.single()).isZero());
 	}

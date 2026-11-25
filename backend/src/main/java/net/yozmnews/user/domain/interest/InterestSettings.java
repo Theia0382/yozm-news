@@ -53,8 +53,7 @@ public final class InterestSettings {
 		return new InterestSettings(user, activeVersion,
 				InterestDefaults.SCHEDULE, null,
 				InterestDefaults.REASONING_EFFORT,
-				new ReportSettings(InterestDefaults.WEEKLY_REPORT, InterestDefaults.WEEKLY_REPORT_DAY,
-						InterestDefaults.MONTHLY_REPORT),
+				InterestDefaults.REPORTS,
 				DigestVolume.defaults(), now, 0);
 	}
 

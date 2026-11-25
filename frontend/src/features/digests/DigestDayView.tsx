@@ -26,7 +26,7 @@ import {
   SELECTION_REASON_LEGEND,
   citationsSummary,
   dayUsageText,
-  digestFailureCauseLinks,
+  failureCauseLinks,
   digestFailureCauseTexts,
   digestFailureTexts,
   periodText,
@@ -121,7 +121,7 @@ function FailureNotice({
 
 /** 실패의 갈래가 가리키는 화면 — 없으면 그리지 않는다 */
 function CauseLink({ cause }: { cause: DigestAttempt["cause"] }) {
-  const link = cause === null ? null : digestFailureCauseLinks[cause];
+  const link = cause === null ? null : failureCauseLinks[cause];
   return link === null ? null : (
     <Link to={link.to} className="underline">
       {link.label}

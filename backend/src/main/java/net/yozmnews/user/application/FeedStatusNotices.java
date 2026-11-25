@@ -23,6 +23,7 @@ import net.yozmnews.user.domain.notice.NoticeKind;
 import net.yozmnews.user.domain.notice.NoticeRepository;
 import net.yozmnews.user.domain.notice.PasswordChangedContent;
 import net.yozmnews.user.domain.notice.PreferencesAdjustedContent;
+import net.yozmnews.user.domain.notice.ReportFailedContent;
 import net.yozmnews.user.domain.notice.StorylineSubscriptionsRemovedContent;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -75,6 +76,7 @@ public class FeedStatusNotices {
 					case StorylineSubscriptionsRemovedContent other ->
 						throw new IllegalStateException("피드 상태 알림이 아니다");
 					case DigestFailedContent other -> throw new IllegalStateException("피드 상태 알림이 아니다");
+					case ReportFailedContent other -> throw new IllegalStateException("피드 상태 알림이 아니다");
 				};
 				this.notices.revise(unread.get().id(), content.merge(changed, labels), now);
 			}

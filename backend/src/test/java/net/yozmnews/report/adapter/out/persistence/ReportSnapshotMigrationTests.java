@@ -28,7 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * 리포트 스냅숏을 1판에서 2판으로 옮기는 마이그레이션(V87) — 실제 PostgreSQL 의 별도 스키마에 V86 까지만 올려 1판 스냅숏을 가진 리포트
+ * 리포트 스냅숏을 1판에서 2판으로 옮기는 마이그레이션(V90) — 실제 PostgreSQL 의 별도 스키마에 V89 까지만 올려 1판 스냅숏을 가진 리포트
  * 행(갈래 셋 · 추적 갈래 없음), 1판이 아닌 행, 스냅숏이 없는 행을 넣고, 끝까지 올린 뒤 1판만 2판 · 새 키 · 같은 값이 되는지와 읽기가 넣은 숫자를 내는지 본다. 앱이
  * 쓰는 스키마와 섞이지 않게 스키마를 따로 두고 테스트 뒤 지운다.
  * <p>
@@ -40,7 +40,7 @@ import tools.jackson.databind.json.JsonMapper;
 @Import(TestcontainersConfiguration.class)
 class ReportSnapshotMigrationTests {
 
-	private static final String SCHEMA = "v86_report_snapshot";
+	private static final String SCHEMA = "v89_report_snapshot";
 
 	private static final JsonMapper JSON = JsonMapper.builder().build();
 
@@ -80,13 +80,15 @@ class ReportSnapshotMigrationTests {
 
 	@Test
 	void firstVersionSnapshotsMoveToTheSecondVersionKeepingTheirValues() {
-		flyway("86").migrate();
-		long all = ready(ALL_SECTIONS);
-		long coverageOnly = ready(COVERAGE_ONLY);
-		long otherVersion = ready(OTHER_VERSION);
+		flyway("89").migrate();
+		// 리포트는 (사용자, 종류, 기간)마다 하나라 행마다 사용자를 달리한다
+		long all = ready(7, ALL_SECTIONS);
+		long coverageOnly = ready(8, COVERAGE_ONLY);
+		long otherVersion = ready(9, OTHER_VERSION);
 		long scheduled = this.jdbc.sql("insert into " + SCHEMA + ".reports (user_id, period_kind, period_start, period_end, "
-				+ "status, created_at, version) values (7, 'WEEK', '2026-11-23T15:00:00Z', '2026-11-30T15:00:00Z', 'SCHEDULED', "
-				+ "now(), 0) returning id")
+				+ "status, created_at, version, dispatch_token, dispatched_at, scheduled_at, regenerations) values (7, 'WEEK', "
+				+ "'2026-11-23T15:00:00Z', '2026-11-30T15:00:00Z', 'SCHEDULED', now(), 0, gen_random_uuid(), now(), now(), 0) "
+				+ "returning id")
 			.query(Long.class)
 			.single();
 
@@ -122,11 +124,13 @@ class ReportSnapshotMigrationTests {
 		assertThat(snapshot(scheduled)).isNull();
 	}
 
-	private long ready(String snapshot) {
+	private long ready(long user, String snapshot) {
 		return this.jdbc.sql("insert into " + SCHEMA + ".reports (user_id, period_kind, period_start, period_end, status, "
 				+ "provider, model, input_tokens, output_tokens, duration_ms, stats_snapshot, created_at, started_at, "
-				+ "completed_at, version, zone) values (7, 'WEEK', '2026-11-16T15:00:00Z', '2026-11-23T15:00:00Z', 'READY', "
-				+ "'openai', 'gpt', 10, 20, 30, cast(:snapshot as jsonb), now(), now(), now(), 0, 'Asia/Seoul') returning id")
+				+ "completed_at, version, zone, dispatch_token, dispatched_at, scheduled_at, regenerations) values (:user, 'WEEK', "
+				+ "'2026-11-16T15:00:00Z', '2026-11-23T15:00:00Z', 'READY', 'openai', 'gpt', 10, 20, 30, cast(:snapshot as jsonb), "
+				+ "now(), now(), now(), 0, 'Asia/Seoul', gen_random_uuid(), now(), now(), 0) returning id")
+			.param("user", user)
 			.param("snapshot", snapshot)
 			.query(Long.class)
 			.single();

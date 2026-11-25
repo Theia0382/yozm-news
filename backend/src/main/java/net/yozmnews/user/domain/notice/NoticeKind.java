@@ -23,6 +23,9 @@ public enum NoticeKind {
 	STORYLINE_SUBSCRIPTIONS_REMOVED,
 
 	/** 다이제스트가 실패로 끝났다 — 실패한 다이제스트마다 하나 */
-	DIGEST_FAILED
+	DIGEST_FAILED,
+
+	/** 변화 리포트가 실패로 끝났다 — 실패마다 하나(다시 만든 리포트가 또 실패하면 하나 더) */
+	REPORT_FAILED
 
 }

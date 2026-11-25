@@ -57,7 +57,7 @@ import net.yozmnews.platform.AppClock;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.user.DigestCompleted;
 import net.yozmnews.user.DigestFailed;
-import net.yozmnews.user.DigestFailureCause;
+import net.yozmnews.user.GenerationFailureCause;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -452,7 +452,7 @@ class DigestGenerationTests {
 		assertThat(row.get("output_tokens")).isNull();
 		// 실패 이벤트 하나 — 끝낸 시각은 생성기가 시계를 2초 넘긴 뒤다
 		assertThat(this.events.stream(DigestFailed.class)).containsExactly(new DigestFailed(new UserId(42), id.value(),
-				LocalDate.parse("2026-11-16"), DigestFailureCause.PROVIDER_ACCOUNT, Instant.parse("2026-11-15T22:45:02Z")));
+				LocalDate.parse("2026-11-16"), GenerationFailureCause.PROVIDER_ACCOUNT, Instant.parse("2026-11-15T22:45:02Z")));
 		// 실패로 끝나면 끝남 이벤트가 없다
 		assertThat(this.events.stream(DigestCompleted.class)).isEmpty();
 	}
@@ -494,7 +494,7 @@ class DigestGenerationTests {
 		assertThat(calls).hasValue(1);
 		assertThat(row(id)).containsEntry("error_code", "KEY_INVALID");
 		assertThat(this.events.stream(DigestFailed.class)).extracting(DigestFailed::cause)
-			.containsExactly(DigestFailureCause.KEY);
+			.containsExactly(GenerationFailureCause.KEY);
 	}
 
 	@Test
@@ -536,7 +536,7 @@ class DigestGenerationTests {
 		assertThat(row(id)).containsEntry("error_code", "NO_CITATION")
 			.containsEntry("error_message", "검증 뒤 인용이 하나도 남지 않았다");
 		assertThat(this.events.stream(DigestFailed.class)).extracting(DigestFailed::cause)
-			.containsExactly(DigestFailureCause.OUTPUT);
+			.containsExactly(GenerationFailureCause.OUTPUT);
 		assertThat(count("select count(*) from digest_sections where digest_id = :id", id)).isZero();
 	}
 
@@ -696,7 +696,7 @@ class DigestGenerationTests {
 			.containsEntry("candidate_count", null)
 			.containsEntry("completed", true);
 		assertThat(this.events.stream(DigestFailed.class)).containsExactly(new DigestFailed(new UserId(42), id.value(),
-				LocalDate.parse("2026-11-16"), DigestFailureCause.TEMPORARY, Instant.parse("2026-11-15T22:45:00Z")));
+				LocalDate.parse("2026-11-16"), GenerationFailureCause.TEMPORARY, Instant.parse("2026-11-15T22:45:00Z")));
 	}
 
 	/**

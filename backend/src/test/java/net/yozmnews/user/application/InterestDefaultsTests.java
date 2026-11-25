@@ -73,7 +73,7 @@ class InterestDefaultsTests {
 
 		Map<String, Object> row = this.jdbc.sql("""
 				select tag_set_id, timezone, digest_time, llm_provider, llm_model, weekly_report,
-				  weekly_report_day, monthly_report, updated_at, version
+				  weekly_report_day, monthly_report, monthly_report_day, updated_at, version
 				from user_settings where user_id = :user
 				""").param("user", user.value()).query().singleRow();
 		assertThat(row).containsEntry("tag_set_id", active)
@@ -84,6 +84,7 @@ class InterestDefaultsTests {
 			.containsEntry("weekly_report", true)
 			.containsEntry("weekly_report_day", 1)
 			.containsEntry("monthly_report", true)
+			.containsEntry("monthly_report_day", 1)
 			.containsEntry("version", 0L);
 		assertThat(preferences(user)).containsExactly(Map.of("tag_kind", "FORMAT", "tag_key", "brief", "mode", "EXCLUDE"),
 				Map.of("tag_kind", "FORMAT", "tag_key", "press-release", "mode", "EXCLUDE"));

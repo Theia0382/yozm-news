@@ -53,6 +53,13 @@ public interface NoticeRepository {
 	 */
 	boolean createOnce(UserId user, DigestFailedContent content, Instant now);
 
+	/**
+	 * 리포트 실패 알림을 만든다 — 같은 사용자 · 리포트 · 실패 시각의 알림이 이미 있으면 만들지 않는다(같은 이벤트를 거듭 받아도 하나). 계정이
+	 * 있는지는 부르는 쪽이 먼저 본다.
+	 * @return 만들었으면 참 — 이미 있어 만들지 않았으면 거짓
+	 */
+	boolean createOnce(UserId user, ReportFailedContent content, Instant now);
+
 	/** 알림의 내용을 바꾼다 — 판 + 1, 고친 시각 = {@code now} */
 	void revise(long id, NoticeContent content, Instant now);
 

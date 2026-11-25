@@ -36,7 +36,7 @@ import net.yozmnews.llm.Provider;
 import net.yozmnews.platform.AppClock;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.user.DigestFailed;
-import net.yozmnews.user.DigestFailureCause;
+import net.yozmnews.user.GenerationFailureCause;
 import org.jobrunr.scheduling.JobScheduler;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -157,7 +157,7 @@ class StalledDigestsTests {
 		assertThat(row(early)).containsEntry("status", "SCHEDULED");
 		assertThat(this.enqueued).extracting(Map.Entry::getKey).containsExactly(early);
 		assertThat(this.events.stream(DigestFailed.class)).containsExactly(new DigestFailed(new UserId(42), late,
-				LocalDate.parse("2026-11-19"), DigestFailureCause.TEMPORARY, NOW));
+				LocalDate.parse("2026-11-19"), GenerationFailureCause.TEMPORARY, NOW));
 	}
 
 	@Test
@@ -177,7 +177,7 @@ class StalledDigestsTests {
 		assertThat(row(busy)).containsEntry("status", "RUNNING");
 		assertThat(this.enqueued).isEmpty();
 		assertThat(this.events.stream(DigestFailed.class)).extracting(DigestFailed::digestId, DigestFailed::cause)
-			.containsExactly(org.assertj.core.groups.Tuple.tuple(stuck, DigestFailureCause.TEMPORARY));
+			.containsExactly(org.assertj.core.groups.Tuple.tuple(stuck, GenerationFailureCause.TEMPORARY));
 	}
 
 	/**

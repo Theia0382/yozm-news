@@ -22,7 +22,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 판정 원본 표 둘의 이름을 스토리라인으로 바꾸는 마이그레이션(V86) — 실제 PostgreSQL 의 별도 스키마에 V85 까지만 올려 옛 이름의 표에
+ * 판정 원본 표 둘의 이름을 스토리라인으로 바꾸는 마이그레이션(V89) — 실제 PostgreSQL 의 별도 스키마에 V88 까지만 올려 옛 이름의 표에
  * 스토리라인 소속 · 관계 판정 원본과 사건 소속 판정 원본을 넣고, 끝까지 올린 뒤 표 · 칸 · 제약 · 인덱스 · 시퀀스가 새 이름만 갖고 행이
  * 그대로인지, 물은 후보의 ID 키가 바뀌었는지 본다. 앱이 쓰는 스키마와 섞이지 않게 스키마를 따로 두고 테스트 뒤 지운다.
  * <p>
@@ -34,7 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Import(TestcontainersConfiguration.class)
 class StorylineJudgementNamesMigrationTests {
 
-	private static final String SCHEMA = "v85_storyline_judgement_names";
+	private static final String SCHEMA = "v88_storyline_judgement_names";
 
 	@Autowired
 	DataSource dataSource;
@@ -49,7 +49,7 @@ class StorylineJudgementNamesMigrationTests {
 
 	@Test
 	void theJudgementTablesTakeStorylineNamesAndKeepTheirRows() {
-		flyway("85").migrate();
+		flyway("88").migrate();
 		// 후보 41 은 붙이기 꼴(스토리라인), 42 는 짝 꼴(이웃 사건) — 이 모듈에는 둘 다 후보 ID 다
 		long membership = this.jdbc.sql("insert into " + SCHEMA + ".flow_membership_judgements (article_id, evaluator, "
 				+ "model_version, wording_version, candidates, raw_response, input_tokens, judged_at) values (500, 'jev', "

@@ -46,6 +46,7 @@ const ANONYMOUS: Me = {
 const GATHERED: Notice = {
   id: 12,
   kind: "FEED_STATUS",
+  reportFailed: null,
   revision: 3,
   createdAt: "2026-11-13T00:00:00Z",
   updatedAt: "2026-11-13T02:00:00Z",
@@ -95,6 +96,7 @@ const GATHERED: Notice = {
 const OLD: Notice = {
   id: 5,
   kind: "FEED_STATUS",
+  reportFailed: null,
   revision: 1,
   createdAt: "2026-11-12T00:00:00Z",
   updatedAt: "2026-11-12T00:00:00Z",
@@ -124,6 +126,7 @@ const OLD: Notice = {
 const PASSWORD: Notice = {
   id: 20,
   kind: "PASSWORD_CHANGED",
+  reportFailed: null,
   revision: 1,
   createdAt: "2026-11-13T03:00:00Z",
   updatedAt: "2026-11-13T03:00:00Z",
@@ -140,6 +143,7 @@ const PASSWORD: Notice = {
 const KEY_INVALIDATED: Notice = {
   id: 30,
   kind: "KEY_INVALIDATED",
+  reportFailed: null,
   revision: 1,
   createdAt: "2026-11-13T03:00:05Z",
   updatedAt: "2026-11-13T03:00:05Z",
@@ -159,6 +163,7 @@ const KEY_INVALIDATED: Notice = {
 const PREFERENCES_ADJUSTED: Notice = {
   id: 40,
   kind: "PREFERENCES_ADJUSTED",
+  reportFailed: null,
   revision: 1,
   createdAt: "2026-11-13T04:00:00Z",
   updatedAt: "2026-11-13T04:00:00Z",
@@ -193,6 +198,7 @@ const PREFERENCES_ADJUSTED: Notice = {
 const SUBSCRIPTIONS_REMOVED: Notice = {
   id: 50,
   kind: "STORYLINE_SUBSCRIPTIONS_REMOVED",
+  reportFailed: null,
   revision: 1,
   createdAt: "2026-11-13T05:00:00Z",
   updatedAt: "2026-11-13T05:00:00Z",
@@ -214,6 +220,7 @@ const SUBSCRIPTIONS_REMOVED: Notice = {
 const DIGEST_FAILED_KEY: Notice = {
   id: 60,
   kind: "DIGEST_FAILED",
+  reportFailed: null,
   revision: 1,
   createdAt: "2026-11-18T22:03:11Z",
   updatedAt: "2026-11-18T22:03:11Z",
@@ -239,6 +246,30 @@ const DIGEST_FAILED_TEMPORARY: Notice = {
     cause: "TEMPORARY",
     failedAt: "2026-11-19T22:03:10Z",
   },
+};
+
+/** 모델 출력을 쓰지 못해 실패한 월간 리포트의 알림 */
+const REPORT_FAILED_OUTPUT: Notice = {
+  id: 70,
+  kind: "REPORT_FAILED",
+  reportFailed: {
+    reportId: 905,
+    kind: "MONTH",
+    firstDay: "2026-10-01",
+    lastDay: "2026-10-31",
+    cause: "OUTPUT",
+    failedAt: "2026-11-01T22:05:00Z",
+  },
+  revision: 1,
+  createdAt: "2026-11-01T22:05:01Z",
+  updatedAt: "2026-11-01T22:05:01Z",
+  read: false,
+  digestFailed: null,
+  feedStatus: null,
+  passwordChanged: null,
+  keyInvalidated: null,
+  preferencesAdjusted: null,
+  storylineSubscriptionsRemoved: null,
 };
 
 function page(notices: Notice[], nextBefore: number | null = null): NoticePage {
@@ -446,6 +477,29 @@ describe("NoticesPage", () => {
         name: "오늘 다이제스트에서 다시 만들기",
       }),
     ).toBeNull();
+  });
+
+  it("리포트 실패 알림은 종류 · 기간 · 시각과 리포트의 할 일을 보이고 그 리포트로, 출력 갈래면 모델 고르기로 잇는다", async () => {
+    renderNotices(() => json(page([REPORT_FAILED_OUTPUT])));
+
+    const item = await screen.findByRole("article");
+    expect(within(item).getByRole("heading", { level: 2 })).toHaveTextContent(
+      "새 알림변화 리포트를 만들지 못했습니다",
+    );
+    expect(item).toHaveTextContent(
+      "월간 리포트 · 2026. 10. 01. ~ 2026. 10. 31. · 2026. 11. 02. 오전 7:05 GMT+9",
+    );
+    expect(item).toHaveTextContent(
+      "모델의 출력을 리포트로 쓰지 못했습니다. 리포트 화면에서 다시 만들거나 관심 설정에서 다른 모델을 골라 보세요.",
+    );
+    expect(
+      within(item).getByRole("link", { name: "그 리포트 보기" }),
+    ).toHaveAttribute("href", "/reports/905");
+    expect(
+      within(item).getByRole("link", { name: "관심 설정에서 모델 고르기" }),
+    ).toHaveAttribute("href", "/interests#interest-model");
+    // 다이제스트의 할 일(오늘 다이제스트에서 다시 만들기)은 리포트 알림에 없다
+    expect(item).not.toHaveTextContent("다이제스트");
   });
 
   it("해결되지 않은 마지막 실패인 일시 장애 알림은 다시 만들기가 있는 오늘 다이제스트로 잇고 키 화면으로 잇지 않는다", async () => {
