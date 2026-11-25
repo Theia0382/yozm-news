@@ -85,11 +85,15 @@ describe("BigStorylinesPage", () => {
     renderPage();
 
     const section = await screen.findByRole("region", {
-      name: "기간의 큰 스토리라인",
+      name: "기간의 큰 화제",
     });
     expect(section).toHaveTextContent("지금 기준 보도 강도 15.00 이상");
+    expect(
+      screen.getByRole("heading", { name: "큰 화제" }),
+    ).toBeInTheDocument();
+    expect(section).toHaveTextContent("흐름에 들지 않은 사건 2건 · 기사 5건");
     expect(section).toHaveTextContent(
-      "스토리라인에 들지 않은 사건 2건 · 기사 5건",
+      "어느 흐름에도 들지 않아 큰 화제 판정에 들지 않는다",
     );
     const rows = within(within(section).getByRole("table")).getAllByRole("row");
     expect(
@@ -97,7 +101,7 @@ describe("BigStorylinesPage", () => {
         .getAllByRole("columnheader")
         .map((header) => header.textContent),
     ).toEqual([
-      "스토리라인",
+      "흐름",
       "상태",
       "사건 수",
       "보도 강도(기간)",
@@ -107,9 +111,9 @@ describe("BigStorylinesPage", () => {
       "대표 기사",
     ]);
     const first = within(rows[1]!).getAllByRole("cell");
-    expect(first[0]).toHaveTextContent(/^스토리라인 7$/);
+    expect(first[0]).toHaveTextContent(/^흐름 7$/);
     expect(
-      within(first[0]!).getByRole("link", { name: "스토리라인 7" }),
+      within(first[0]!).getByRole("link", { name: "흐름 7" }),
     ).toHaveAttribute("href", "/admin/storylines/7");
     expect(first[1]).toHaveTextContent(/^진행$/);
     expect(first[2]).toHaveTextContent(/^2$/);
@@ -150,27 +154,25 @@ describe("BigStorylinesPage", () => {
     await userEvent.click(screen.getByRole("button", { name: "미리보기" }));
 
     const preview = await screen.findByRole("region", { name: "미리보기" });
-    expect(preview).toHaveTextContent(
-      "새로 드는 스토리라인 1건, 빠지는 스토리라인 1건",
-    );
+    expect(preview).toHaveTextContent("새로 드는 흐름 1건, 빠지는 흐름 1건");
     const now = within(
-      within(preview).getByRole("table", { name: "지금 기준의 큰 스토리라인" }),
+      within(preview).getByRole("table", { name: "지금 기준의 큰 화제" }),
     ).getAllByRole("row");
     // 아래 행은 자기 행 바로 뒤에 들여 보인다 — 행이 되어도 새로 드는 것으로 세지 않는다
     expect(within(now[1]!).getAllByRole("cell")[0]).toHaveTextContent(
-      /^스토리라인 7$/,
+      /^흐름 7$/,
     );
     expect(within(now[2]!).getAllByRole("cell")[0]).toHaveTextContent(
-      /^└ 7 아래 스토리라인 8$/,
+      /^└ 7 아래 흐름 8$/,
     );
     expect(within(now[2]!).getAllByRole("cell")[8]).toHaveTextContent(/^$/);
     expect(within(now[3]!).getAllByRole("cell")[8]).toHaveTextContent(/^빠짐$/);
     const then = within(
-      within(preview).getByRole("table", { name: "제안 기준의 큰 스토리라인" }),
+      within(preview).getByRole("table", { name: "제안 기준의 큰 화제" }),
     ).getAllByRole("row");
     expect(within(then[1]!).getAllByRole("cell")[8]).toHaveTextContent(/^$/);
     expect(within(then[2]!).getAllByRole("cell")[0]).toHaveTextContent(
-      /^스토리라인 8$/,
+      /^흐름 8$/,
     );
     expect(within(then[2]!).getAllByRole("cell")[8]).toHaveTextContent(/^$/);
     expect(within(then[3]!).getAllByRole("cell")[8]).toHaveTextContent(
@@ -233,7 +235,7 @@ describe("BigStorylinesPage", () => {
       "POST /api/admin/big-storyline-criteria-previews": () =>
         problem(
           400,
-          "큰 판정 기준은 0 보다 크고 9999.99 이하인 소수 2자리까지다",
+          "큰 화제 기준은 0 보다 크고 9999.99 이하인 소수 2자리까지다",
         ),
     });
     const intensity = await screen.findByLabelText("보도 강도 기준");
@@ -244,7 +246,7 @@ describe("BigStorylinesPage", () => {
     await userEvent.click(screen.getByRole("button", { name: "미리보기" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "큰 판정 기준은 0 보다 크고 9999.99 이하인 소수 2자리까지다",
+      "큰 화제 기준은 0 보다 크고 9999.99 이하인 소수 2자리까지다",
     );
     expect(screen.getByRole("button", { name: "저장" })).toBeDisabled();
   });

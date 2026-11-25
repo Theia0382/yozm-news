@@ -171,7 +171,7 @@ class AdminStorylineControllerTests {
 	void aBadPeriodOrCursorIsABadRequest() throws Exception {
 		badRequest("/api/admin/storylines?" + PERIOD + "&afterId=8", "afterLastArticleAt 과 afterId 는 함께 준다");
 		badRequest("/api/admin/storylines?" + PERIOD + "&afterLastArticleAt=2026-11-03T00:00:00Z&afterId=0",
-				"스토리라인 ID 는 1 이상이다: 0");
+				"흐름 ID 는 1 이상이다: 0");
 		badRequest("/api/admin/storylines?" + PERIOD + "&afterLastArticleAt=yesterday&afterId=8",
 				"시각은 ISO-8601 형식이다: yesterday");
 		badRequest("/api/admin/storylines?from=2026-10-01&to=2026-11-07&zone=Asia/Seoul", "기간은 1일에서 31일까지다");
@@ -355,10 +355,10 @@ class AdminStorylineControllerTests {
 	void anUnknownStorylineIsNotFound() throws Exception {
 		this.mockMvc.perform(authorized(get("/api/admin/storylines/99")))
 			.andExpect(status().isNotFound())
-			.andExpect(content().json("{\"status\":404,\"detail\":\"없는 스토리라인: 99\"}"));
+			.andExpect(content().json("{\"status\":404,\"detail\":\"없는 흐름: 99\"}"));
 		this.mockMvc.perform(authorized(get("/api/admin/storylines/0")))
 			.andExpect(status().isNotFound())
-			.andExpect(content().json("{\"status\":404,\"detail\":\"없는 스토리라인: 0\"}"));
+			.andExpect(content().json("{\"status\":404,\"detail\":\"없는 흐름: 0\"}"));
 		assertThat(this.directory.calls).containsExactly("find 99");
 		assertThat(this.review.calls).isEmpty();
 	}

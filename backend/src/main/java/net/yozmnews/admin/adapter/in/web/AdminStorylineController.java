@@ -82,7 +82,7 @@ class AdminStorylineController {
 			@Parameter(description = "이어 받을 커서의 스토리라인 ID — afterLastArticleAt 과 함께") @RequestParam(
 					required = false) @Nullable Long afterId) {
 		EventPeriod period = AdminPeriods.events(from, to, zone);
-		AdminCursor cursor = AdminCursor.of(afterLastArticleAt, afterId, "afterLastArticleAt", "스토리라인");
+		AdminCursor cursor = AdminCursor.of(afterLastArticleAt, afterId, "afterLastArticleAt", "흐름");
 		StorylinePage page = this.directory.list(period,
 				(cursor == null) ? null : new StorylineCursor(cursor.at(), new StorylineId(cursor.id())), PAGE_SIZE);
 		Map<EventId, AdminRepresentatives.Representative> representatives = this.representatives

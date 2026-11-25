@@ -116,10 +116,10 @@ def _storylines(value: object, name: str, problems: list[str]) -> dict[str, froz
             problems.append(f"{where}: articles 가 기사 ID(정수) 배열이 아니다")
             continue
         if not articles:
-            problems.append(f"{where}: 스토리라인 {identifier} 에 기사가 없다")
+            problems.append(f"{where}: 흐름 {identifier} 에 기사가 없다")
             continue
         if len(set(articles)) != len(articles):
-            problems.append(f"{where}: 스토리라인 {identifier} 에 같은 기사가 둘이다")
+            problems.append(f"{where}: 흐름 {identifier} 에 같은 기사가 둘이다")
             continue
         storylines[identifier] = frozenset(articles)
     return storylines
@@ -142,10 +142,10 @@ def _relations(value: object, storylines: Mapping[str, frozenset[int]], name: st
             continue
         unknown = [str(end) for end in (source, target) if not isinstance(end, str) or end not in storylines]
         if unknown:
-            problems.append(f"{where}: 스토리라인 {', '.join(unknown)} 가 storylines 에 없다")
+            problems.append(f"{where}: 흐름 {', '.join(unknown)} 가 storylines 에 없다")
             continue
         if source == target:
-            problems.append(f"{where}: 스토리라인 {source} 가 자기 자신과 이어졌다")
+            problems.append(f"{where}: 흐름 {source} 가 자기 자신과 이어졌다")
             continue
         relation = (source, target, Relation[kind])
         if relation in relations:
@@ -168,7 +168,7 @@ def _big(value: object, storylines: Mapping[str, frozenset[int]], name: str,
         where = f"{name}: big[{index}]"
         storyline = item.get("storyline") if isinstance(item, dict) else None
         if not isinstance(storyline, str) or storyline not in storylines:
-            problems.append(f"{where}: 스토리라인 {storyline!r} 가 storylines 에 없다")
+            problems.append(f"{where}: 흐름 {storyline!r} 가 storylines 에 없다")
             continue
         try:
             day = date.fromisoformat(str(item.get("day")))

@@ -170,7 +170,7 @@ def read_storyline_sample(directory: Path) -> StorylineSample:
     except (OSError, ValueError):
         raw = None
     if isinstance(raw, dict) and raw.get("kind") != KIND:
-        raise LabelError([f"{path}: 스토리라인 평가의 표본이 아니다(kind {raw.get('kind')!r}) — "
+        raise LabelError([f"{path}: 흐름 평가의 표본이 아니다(kind {raw.get('kind')!r}) — "
                           "사건 평가의 표본은 event_eval.py 로 잰다"])
     period = read_sample(directory, label_rule=STORYLINE_LABEL_RULE_VERSION)
     try:
@@ -338,7 +338,7 @@ def read_labels(directory: Path, sheet: Sheet, seeds: Seeds, sample: StorylineSa
     for event_id in written:
         for storyline in labels.closed(event_id):
             members[storyline] += 1
-    small = [f"{STORYLINES_FILE}: 스토리라인 {storyline} 의 구성 사건이 {members[storyline]}개다 — 둘 이상이어야 한다"
+    small = [f"{STORYLINES_FILE}: 흐름 {storyline} 의 구성 사건이 {members[storyline]}개다 — 둘 이상이어야 한다"
              for storyline in sorted(names) if members[storyline] < 2]
     if small:
         raise LabelError(small)
@@ -415,11 +415,11 @@ def _read_relations(directory: Path, names: Mapping[str, str],
             problems.append(f"{where}: 표지 {', '.join(unknown)} 가 {STORYLINES_FILE} 에 없다")
             continue
         if source == target:
-            problems.append(f"{where}: 스토리라인 {source} 가 자기 자신과 이어졌다")
+            problems.append(f"{where}: 흐름 {source} 가 자기 자신과 이어졌다")
             continue
         pair = frozenset((source, target))
         if pair in pairs:
-            problems.append(f"{where}: {source} · {target} 의 관계가 {pairs[pair]}줄에도 있다 — 두 스토리라인의 관계는 하나다")
+            problems.append(f"{where}: {source} · {target} 의 관계가 {pairs[pair]}줄에도 있다 — 두 흐름의 관계는 하나다")
             continue
         pairs[pair] = line
         relations.add((source, target, Relation[kind]))

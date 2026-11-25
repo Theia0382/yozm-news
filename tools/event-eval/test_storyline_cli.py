@@ -220,7 +220,7 @@ class StorylineCliTest(unittest.TestCase):
         self.write("sample.json", '{"labelRule": 1, "start": "2026-11-04", "end": "2026-11-05", "zone": "Asia/Seoul"}')
         code, _, err = self.run_tool("seeds", "--count", "1")
         self.assertEqual(code, 2)
-        self.assertIn("스토리라인 평가의 표본이 아니다", err)
+        self.assertIn("흐름 평가의 표본이 아니다", err)
         self.assertFalse((self.data / "seeds.json").exists())
 
     def test_commands_write_only_inside_the_data_directory_and_only_sheet_calls_the_api(self):
@@ -308,7 +308,7 @@ class StorylineCliTest(unittest.TestCase):
         # 정답 큰 표시 하나를 못 찾았다 — 0/1. 날마다 수는 표본 이틀 모두(표시가 없는 날은 0)
         self.assertEqual((big["found"], big["gold"], big["recall"]), (0, 1, 0.0))
         self.assertEqual(big["byDay"], {"2026-11-04": {"system": 1, "gold": 1}, "2026-11-05": {"system": 0, "gold": 0}})
-        self.assertIn("큰 판정 정밀도 0.0000(0/1) · 재현율 0.0000(0/1)", out)
+        self.assertIn("큰 화제 정밀도 0.0000(0/1) · 재현율 0.0000(0/1)", out)
         self.assertIn("기록 ", out)
         self.assertIn("주의 — 결과 파일의 시트 밖 기사 1", out)
         # 운영자 API 를 부르지 않았고 토큰 없이 돌았다(run_tool 은 토큰을 주지 않는다), 기록에 제목이 없다
@@ -335,7 +335,7 @@ class StorylineCliTest(unittest.TestCase):
         self.assertAlmostEqual(big["precision"], 2 / 3, places=12)
         self.assertEqual((big["found"], big["gold"], big["recall"]), (1, 4, 0.25))
         self.assertEqual(big["byDay"], {"2026-11-04": {"system": 3, "gold": 2}, "2026-11-05": {"system": 0, "gold": 2}})
-        self.assertIn("큰 판정 정밀도 0.6667(2/3) · 재현율 0.2500(1/4)", out)
+        self.assertIn("큰 화제 정밀도 0.6667(2/3) · 재현율 0.2500(1/4)", out)
 
     def test_containment_in_the_result_is_closed_and_narrowed_per_view(self):
         # 정답: 10 · 11 은 x, y ⊃ x. 결과: sP = {101, 102}, sC = {103, 104}, sP ⊃ sC — 도구가 위로 닫아 103 · 104 는 sP 에도 든다
@@ -350,7 +350,7 @@ class StorylineCliTest(unittest.TestCase):
         code, out, err = self.run_tool("measure", "--result", str(result))
         self.assertEqual((code, err), (0, ""), err)
         # 결과에 큰 표시가 없다 — 정밀도는 잴 수 없고 정답 큰 표시 하나를 못 찾았다
-        self.assertIn("큰 판정 정밀도 없음 · 재현율 0.0000(0/1)", out)
+        self.assertIn("큰 화제 정밀도 없음 · 재현율 0.0000(0/1)", out)
         record = self.record()
         views = record["metrics"]["views"]
         for view, recall in (("ALL", 7 / 12), ("TOP", 5 / 6), ("LEAF", 1 / 2)):
