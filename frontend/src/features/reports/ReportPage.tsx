@@ -3,8 +3,8 @@ import { Link, useParams } from "react-router";
 import {
   type ReportCitation,
   type ReportDetail,
-  type ReportFlow,
-  type ReportFlowCount,
+  type ReportStoryline,
+  type ReportUserStorylineCount,
   type ReportInterests,
   ReportRequestError,
   type ReportSection,
@@ -39,7 +39,7 @@ import {
   usageText,
 } from "@/features/reports/reportTexts";
 import {
-  UNTITLED as FLOW_UNTITLED,
+  UNTITLED as STORYLINE_UNTITLED,
   storylinePath,
   userStorylinePath,
 } from "@/features/storylines/storylineTexts";
@@ -139,7 +139,9 @@ function Section({ section }: { section: ReportSection }) {
     <section className="space-y-3">
       <h2 className="text-lg font-semibold break-words">{section.title}</h2>
       <p className="break-words whitespace-pre-line">{section.body}</p>
-      {section.flows !== null && <FlowCounts rows={section.flows} />}
+      {section.userStorylines !== null && (
+        <UserStorylineCounts rows={section.userStorylines} />
+      )}
       {section.topics !== null && <TopicCounts rows={section.topics} />}
       {section.interests !== null && (
         <InterestLevels interests={section.interests} />
@@ -192,21 +194,21 @@ function level(value: number | null): string {
   return value === null ? NO_LEVEL : levelText(value);
 }
 
-function FlowCounts({ rows }: { rows: ReportFlowCount[] }) {
+function UserStorylineCounts({ rows }: { rows: ReportUserStorylineCount[] }) {
   return (
     <Table
       caption={statsTitles.STORYLINES}
       headers={[
-        countColumns.flow,
+        countColumns.userStoryline,
         countColumns.current,
         countColumns.previous,
         countColumns.trend,
       ]}
     >
       {rows.map((row) => (
-        <tr key={row.flow.storylineId} className="border-t border-input">
+        <tr key={row.storyline.storylineId} className="border-t border-input">
           <th scope="row" className="py-1 pr-3 text-left font-normal">
-            <FlowName flow={row.flow} />
+            <StorylineName storyline={row.storyline} />
             {row.trackedInPeriod && (
               <span className="block text-xs text-muted-foreground">
                 {TRACKED_IN_PERIOD}
@@ -280,15 +282,18 @@ function InterestLevels({ interests }: { interests: ReportInterests }) {
           ))}
         </Table>
       )}
-      {interests.flows.length > 0 && (
+      {interests.userStorylines.length > 0 && (
         <Table
-          caption={`${statsTitles.INTERESTS} — ${countColumns.flow}`}
-          headers={[countColumns.flow, ...headers]}
+          caption={`${statsTitles.INTERESTS} — ${countColumns.userStoryline}`}
+          headers={[countColumns.userStoryline, ...headers]}
         >
-          {interests.flows.map((row) => (
-            <tr key={row.flow.storylineId} className="border-t border-input">
+          {interests.userStorylines.map((row) => (
+            <tr
+              key={row.storyline.storylineId}
+              className="border-t border-input"
+            >
               <th scope="row" className="py-1 pr-3 text-left font-normal">
-                <FlowName flow={row.flow} />
+                <StorylineName storyline={row.storyline} />
               </th>
               <td className="py-1 pr-3 whitespace-nowrap">
                 {level(row.start)}
@@ -306,14 +311,14 @@ function InterestLevels({ interests }: { interests: ReportInterests }) {
 }
 
 /**
- * 흐름의 이름 — 정리된 흐름이 있으면 그 제목들(개인 흐름 화면), 없으면 대표 기사 제목(공용 타임라인), 그것도 없으면 이름 없는 흐름(공용
+ * 스토리라인의 이름 — 정리된 사용자 스토리라인이 있으면 그 제목들(개인 흐름 화면), 없으면 대표 기사 제목(공용 타임라인), 그것도 없으면 이름 없는 스토리라인(공용
  * 타임라인)
  */
-function FlowName({ flow }: { flow: ReportFlow }) {
-  if (flow.userStorylines.length > 0) {
+function StorylineName({ storyline }: { storyline: ReportStoryline }) {
+  if (storyline.userStorylines.length > 0) {
     return (
       <>
-        {flow.userStorylines.map((ref, index) => (
+        {storyline.userStorylines.map((ref, index) => (
           <span key={ref.id}>
             {index > 0 && " · "}
             <Link to={userStorylinePath(ref.id)} className="underline">
@@ -325,8 +330,8 @@ function FlowName({ flow }: { flow: ReportFlow }) {
     );
   }
   return (
-    <Link to={storylinePath(flow.storylineId)} className="underline">
-      {flow.title?.title ?? FLOW_UNTITLED}
+    <Link to={storylinePath(storyline.storylineId)} className="underline">
+      {storyline.title?.title ?? STORYLINE_UNTITLED}
     </Link>
   );
 }
@@ -343,7 +348,7 @@ function Citations({ citations }: { citations: ReportCitation[] }) {
       <ul aria-label={CITATIONS_TITLE} className="mt-1 space-y-1">
         {citations.map((citation, index) => (
           <li
-            key={`${citation.kind}-${citation.flow?.storylineId ?? citation.eventId}-${index}`}
+            key={`${citation.kind}-${citation.storyline?.storylineId ?? citation.eventId}-${index}`}
             className="break-words"
           >
             <CitationLine citation={citation} />
@@ -357,10 +362,10 @@ function Citations({ citations }: { citations: ReportCitation[] }) {
 function CitationLine({ citation }: { citation: ReportCitation }) {
   switch (citation.kind) {
     case "STORYLINE":
-      return citation.flow === null ? (
-        <span>{FLOW_UNTITLED}</span>
+      return citation.storyline === null ? (
+        <span>{STORYLINE_UNTITLED}</span>
       ) : (
-        <FlowName flow={citation.flow} />
+        <StorylineName storyline={citation.storyline} />
       );
     case "EVENT":
       if (citation.article === null) {

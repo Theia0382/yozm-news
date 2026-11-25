@@ -396,7 +396,7 @@ describe("NoticesPage", () => {
     expect(
       within(item).getByRole("link", { name: "관심 설정에서 확인하기" }),
     ).toHaveAttribute("href", "/interests");
-    // 추적 중인 흐름 링크는 사라진 구독 알림에만 있다
+    // 추적 중인 사용자 스토리라인 링크는 사라진 구독 알림에만 있다
     expect(
       within(item).queryByRole("link", { name: "추적 중인 흐름 보기" }),
     ).not.toBeInTheDocument();

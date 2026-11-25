@@ -119,7 +119,7 @@ describe("SubscriptionsPage", () => {
       within(first).getByRole("link", { name: "반도체 수출" }),
     ).toHaveAttribute("href", "/storylines/2");
     expect(first).toHaveTextContent(/^반도체 수출추적 해제잠잠 · 마지막 기사 /);
-    // 구독한 흐름의 소식은 구독하지 않은 주제여도 다이제스트에 들 수 있다
+    // 구독한 사용자 스토리라인의 소식은 구독하지 않은 주제여도 다이제스트에 들 수 있다
     expect(
       screen.getByText(
         /구독하지 않은 주제여도 그 흐름의 소식을 받을 수 있습니다/,
@@ -169,7 +169,7 @@ describe("SubscriptionsPage", () => {
   });
 
   it("추적 씨앗이 둘인 흐름도 한 줄이고, 정리가 있으면 정리의 제목으로 개인 흐름 화면에 · 없으면 카드 제목으로 타임라인에 잇는다", async () => {
-    // 흐름 7 은 A 와 B 를 눌러 추적했고 정리가 있다 — 헤드는 이어진 뒤 흐름 B 다. C 는 정리 없는 다른 흐름이다
+    // 사용자 스토리라인 7 은 A 와 B 를 눌러 추적했고 정리가 있다 — 헤드는 이어진 뒤 스토리라인 B 다. C 는 정리 없는 다른 사용자 스토리라인이다
     const { server } = renderRoutes(ROUTES, PAGE, {
       "GET /api/storyline-subscriptions": () =>
         json({
@@ -207,7 +207,7 @@ describe("SubscriptionsPage", () => {
       ),
     ).toHaveAttribute("href", `/storylines/${C}`);
     expect(screen.getByText("추적 2 / 100")).toBeInTheDocument();
-    // 카드는 흐름마다 헤드만 묻는다 — 첫 추적 씨앗(A)이 아니다
+    // 카드는 사용자 스토리라인마다 헤드만 묻는다 — 첫 추적 씨앗(A)이 아니다
     expect(
       server.requests
         .filter((r) => r.path === "/api/storyline-cards")
@@ -219,7 +219,7 @@ describe("SubscriptionsPage", () => {
         ),
     ).toEqual([[B, C]]);
 
-    // 해제는 헤드로 보낸다 — 헤드는 이 흐름에만 들어 다른 갈래를 끄지 않는다
+    // 해제는 헤드로 보낸다 — 헤드는 이 사용자 스토리라인에만 들어 다른 갈래를 끄지 않는다
     await userEvent.click(
       within(rows[0]!).getByRole("button", { name: "추적 해제" }),
     );
@@ -231,7 +231,7 @@ describe("SubscriptionsPage", () => {
   });
 
   it("카드 ID 가 100개를 넘으면 100개씩 나눠 묻는다", async () => {
-    // 카드 조회의 나눠 묻기를 본다 — 흐름 101개(서버의 상한 밖)를 응답으로 준다
+    // 카드 조회의 나눠 묻기를 본다 — 사용자 스토리라인 101개(서버의 상한 밖)를 응답으로 준다
     const ids = Array.from({ length: 101 }, (_, index) => index + 1);
     const { server } = renderRoutes(ROUTES, PAGE, {
       "GET /api/storyline-subscriptions": () =>

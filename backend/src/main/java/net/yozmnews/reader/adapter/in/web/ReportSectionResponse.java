@@ -13,12 +13,12 @@ import org.jspecify.annotations.Nullable;
  *
  * @param title 갈래 섹션의 제목 — 개요는 null
  * @param citations 지금 가리키는 인용 — 개요는 빈 목록
- * @param flows 추적한 흐름 섹션의 보도량 — 그 밖의 섹션이거나 숫자가 없으면 null
+ * @param userStorylines 추적한 사용자 스토리라인 섹션의 보도량 — 그 밖의 섹션이거나 숫자가 없으면 null
  * @param topics 구독 주제 섹션의 보도량 — 그 밖의 섹션이거나 숫자가 없으면 null
  * @param interests 관심 섹션의 변화 — 그 밖의 섹션이거나 숫자가 없으면 null
  */
 record ReportSectionResponse(ReportSectionKind kind, @Nullable String title, String body,
-		List<ReportCitationResponse> citations, @Nullable List<ReportFlowCountResponse> flows,
+		List<ReportCitationResponse> citations, @Nullable List<ReportUserStorylineCountResponse> userStorylines,
 		@Nullable List<ReportTopicCountResponse> topics, @Nullable ReportInterestsResponse interests) {
 
 	ReportSectionResponse {
@@ -27,7 +27,7 @@ record ReportSectionResponse(ReportSectionKind kind, @Nullable String title, Str
 		citations = List.copyOf(citations);
 	}
 
-	static ReportSectionResponse of(ReportSectionView section, ReportFlows.Named named) {
+	static ReportSectionResponse of(ReportSectionView section, ReportNames.Named named) {
 		List<ReportCitationResponse> citations = section.citations()
 			.stream()
 			.map(citation -> ReportCitationResponse.of(citation, named))
@@ -38,9 +38,9 @@ record ReportSectionResponse(ReportSectionKind kind, @Nullable String title, Str
 					null);
 		}
 		return switch (stats) {
-			case ReportSectionStats.UserStorylines flows -> new ReportSectionResponse(section.kind(), section.title(),
+			case ReportSectionStats.UserStorylines counts -> new ReportSectionResponse(section.kind(), section.title(),
 					section.body(), citations,
-					flows.userStorylines().stream().map(flow -> ReportFlowCountResponse.of(flow, named)).toList(), null, null);
+					counts.userStorylines().stream().map(count -> ReportUserStorylineCountResponse.of(count, named)).toList(), null, null);
 			case ReportSectionStats.Coverage coverage -> new ReportSectionResponse(section.kind(), section.title(),
 					section.body(), citations, null,
 					coverage.topics().stream().map(ReportTopicCountResponse::of).toList(), null);

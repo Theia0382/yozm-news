@@ -57,7 +57,7 @@ describe("StorylinePage", () => {
     expect(
       within(relations).getByRole("link", { name: "헌법 소원 제기" }),
     ).toHaveAttribute("href", "/storylines/9");
-    // 관계 넷은 상위 · 하위 · 앞 흐름 · 이어진 흐름 차례다
+    // 관계 넷은 상위 · 하위 · 앞 스토리라인 · 이어진 스토리라인 차례다
     expect(
       within(relations)
         .getAllByRole("heading", { level: 2 })

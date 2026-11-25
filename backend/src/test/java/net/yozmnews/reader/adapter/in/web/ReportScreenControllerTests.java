@@ -29,7 +29,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 /**
- * 독자 화면의 변화 리포트 — 종류 하나의 목록(쪽 · 커서), 한 편(섹션 · 인용 · 숫자 · 숨긴 수 · 직전 리포트 · 사용량)과 흐름 · 사건의 표시
+ * 독자 화면의 변화 리포트 — 종류 하나의 목록(쪽 · 커서), 한 편(섹션 · 인용 · 숫자 · 숨긴 수 · 직전 리포트 · 사용량)과 스토리라인 · 사건의 표시
  * 이름, 틀린 요청의 400 · 없는 리포트의 404.
  * <p>
  * 실제 PostgreSQL 위에서 행을 SQL 로 넣고, 풀기 · 꼭대기 · 정리 · 대표 기사는 실제 공개 조회를 거친다. 기대값은 손으로 쓴 리터럴이다.
@@ -147,27 +147,27 @@ class ReportScreenControllerTests {
 	}
 
 	@Test
-	void aReadyReportNamesItsFlowsAndEventsAndShowsTheNumbersOfEachSection() throws Exception {
+	void aReadyReportNamesItsStorylinesAndEventsAndShowsTheNumbersOfEachSection() throws Exception {
 		long user = this.reader.id().value();
-		// 정리된 흐름 — 사용자 스토리라인의 추적 대상이 그 스토리라인
+		// 정리된 스토리라인 — 사용자 스토리라인의 추적 대상이 그 스토리라인
 		long summarized = storyline("정리된 흐름의 대표");
 		long ofSummarized = this.summaries.userStoryline(user, summarized);
 		this.summaries.summarize(ofSummarized, "정리 하나", AT);
-		// 합쳐진 흐름 — 남는 흐름의 정리로 잇는다
+		// 합쳐진 스토리라인 — 남는 스토리라인의 정리로 잇는다
 		long merged = storyline("합쳐진 흐름의 대표");
 		long survivor = storyline("남는 흐름의 대표");
 		this.rows.merge(merged, survivor);
 		long ofSurvivor = this.summaries.userStoryline(user, survivor);
 		this.summaries.summarize(ofSurvivor, "남는 정리", AT);
-		// 생성 뒤 다른 흐름의 하위로 들어간 헤드 — 지금 꼭대기의 정리로 잇는다
+		// 생성 뒤 다른 스토리라인의 하위로 들어간 헤드 — 지금 꼭대기의 정리로 잇는다
 		long parent = storyline("상위 흐름의 대표");
 		long child = storyline("하위 흐름의 대표");
 		this.rows.relate("CONTAINS", parent, child);
 		long ofParent = this.summaries.userStoryline(user, parent);
 		this.summaries.summarize(ofParent, "상위 정리", AT);
-		// 정리가 없는 흐름
+		// 정리가 없는 스토리라인
 		long bare = storyline("정리 없는 흐름의 대표");
-		// 숫자 줄에만 있고 인용되지 않은 흐름 — 글이 말하지 않아도 표에는 이름이 붙는다
+		// 숫자 줄에만 있고 인용되지 않은 스토리라인 — 글이 말하지 않아도 표에는 이름이 붙는다
 		long uncited = storyline("인용 없는 흐름의 대표");
 		// 사건 인용
 		long article = this.rows.article("사건의 대표 기사");
@@ -191,11 +191,11 @@ class ReportScreenControllerTests {
 				   "userStorylines":[{"head":%d,"start":0.2,"end":0.6,"shift":"ENTERED"}]}}"""
 			.formatted(summarized, summarized, merged, merged, uncited, uncited, child), previous);
 		this.reports.section(id, "OVERVIEW", 0, null, "개요");
-		long flows = this.reports.section(id, "STORYLINES", 1, "흐름", "흐름 본문");
-		this.reports.item(flows, 0, summarized, null);
-		this.reports.item(flows, 1, merged, null);
-		this.reports.item(flows, 2, null, event);
-		this.reports.item(flows, 3, null, withoutArticle);
+		long storylineSection = this.reports.section(id, "STORYLINES", 1, "흐름", "흐름 본문");
+		this.reports.item(storylineSection, 0, summarized, null);
+		this.reports.item(storylineSection, 1, merged, null);
+		this.reports.item(storylineSection, 2, null, event);
+		this.reports.item(storylineSection, 3, null, withoutArticle);
 		this.reports.section(id, "COVERAGE", 2, "보도량", "보도량 본문");
 		long interests = this.reports.section(id, "INTERESTS", 3, "관심", "관심 본문");
 		this.reports.item(interests, 0, child, null);
@@ -215,39 +215,42 @@ class ReportScreenControllerTests {
 			.andExpect(jsonPath("$.usage.outputTokens").value(45))
 			.andExpect(jsonPath("$.sections.length()").value(4))
 			.andExpect(jsonPath("$.sections[0].kind").value("OVERVIEW"))
-			.andExpect(jsonPath("$.sections[0].flows").isEmpty())
-			// 흐름 섹션 — 정리된 흐름, 합쳐진 흐름은 남는 흐름, 사건은 대표 기사
+			.andExpect(jsonPath("$.sections[0].userStorylines").isEmpty())
+			// 사용자 스토리라인 섹션 — 정리된 스토리라인, 합쳐진 스토리라인은 남는 스토리라인, 사건은 대표 기사
 			.andExpect(jsonPath("$.sections[1].citations[0].kind").value("STORYLINE"))
-			.andExpect(jsonPath("$.sections[1].citations[0].flow.storylineId").value(summarized))
-			.andExpect(jsonPath("$.sections[1].citations[0].flow.title.title").value("정리된 흐름의 대표"))
-			.andExpect(jsonPath("$.sections[1].citations[0].flow.userStorylines[0].id").value(ofSummarized))
-			.andExpect(jsonPath("$.sections[1].citations[0].flow.userStorylines[0].title").value("정리 하나 제목"))
-			.andExpect(jsonPath("$.sections[1].citations[1].flow.storylineId").value(survivor))
-			.andExpect(jsonPath("$.sections[1].citations[1].flow.title.title").value("남는 흐름의 대표"))
-			.andExpect(jsonPath("$.sections[1].citations[1].flow.userStorylines[0].title").value("남는 정리 제목"))
+			.andExpect(jsonPath("$.sections[1].citations[0].storyline.storylineId").value(summarized))
+			// 화면용 API 의 칸 이름은 storyline · userStorylines 다 — 옛 이름 flow · flows 는 없다
+			.andExpect(jsonPath("$.sections[1].citations[0].flow").doesNotExist())
+			.andExpect(jsonPath("$.sections[1].flows").doesNotExist())
+			.andExpect(jsonPath("$.sections[1].citations[0].storyline.title.title").value("정리된 흐름의 대표"))
+			.andExpect(jsonPath("$.sections[1].citations[0].storyline.userStorylines[0].id").value(ofSummarized))
+			.andExpect(jsonPath("$.sections[1].citations[0].storyline.userStorylines[0].title").value("정리 하나 제목"))
+			.andExpect(jsonPath("$.sections[1].citations[1].storyline.storylineId").value(survivor))
+			.andExpect(jsonPath("$.sections[1].citations[1].storyline.title.title").value("남는 흐름의 대표"))
+			.andExpect(jsonPath("$.sections[1].citations[1].storyline.userStorylines[0].title").value("남는 정리 제목"))
 			.andExpect(jsonPath("$.sections[1].citations[2].kind").value("EVENT"))
 			.andExpect(jsonPath("$.sections[1].citations[2].eventId").value(event))
 			.andExpect(jsonPath("$.sections[1].citations[2].article.title").value("사건의 대표 기사"))
 			.andExpect(jsonPath("$.sections[1].citations[2].article.url").value(startsWith("https://event.example/")))
-			.andExpect(jsonPath("$.sections[1].citations[2].flow").isEmpty())
+			.andExpect(jsonPath("$.sections[1].citations[2].storyline").isEmpty())
 			.andExpect(jsonPath("$.sections[1].citations.length()").value(4))
 			.andExpect(jsonPath("$.sections[1].citations[3].kind").value("EVENT"))
 			.andExpect(jsonPath("$.sections[1].citations[3].eventId").value(withoutArticle))
 			.andExpect(jsonPath("$.sections[1].citations[3].article").isEmpty())
-			// 흐름 섹션의 숫자 — 줄의 헤드는 지금 스토리라인으로 풀려 이름이 붙는다
-			.andExpect(jsonPath("$.sections[1].flows.length()").value(3))
-			.andExpect(jsonPath("$.sections[1].flows[0].flow.userStorylines[0].title").value("정리 하나 제목"))
-			.andExpect(jsonPath("$.sections[1].flows[0].articles").value(8))
-			.andExpect(jsonPath("$.sections[1].flows[0].previous").value(2))
-			.andExpect(jsonPath("$.sections[1].flows[0].trend").value("ROSE"))
-			.andExpect(jsonPath("$.sections[1].flows[0].trackedInPeriod").value(false))
-			.andExpect(jsonPath("$.sections[1].flows[1].flow.storylineId").value(survivor))
-			.andExpect(jsonPath("$.sections[1].flows[1].previous").isEmpty())
-			.andExpect(jsonPath("$.sections[1].flows[1].trend").value("NO_COMPARISON"))
-			.andExpect(jsonPath("$.sections[1].flows[2].flow.storylineId").value(uncited))
-			.andExpect(jsonPath("$.sections[1].flows[2].flow.title.title").value("인용 없는 흐름의 대표"))
-			.andExpect(jsonPath("$.sections[1].flows[2].flow.userStorylines.length()").value(0))
-			.andExpect(jsonPath("$.sections[1].flows[2].articles").value(3))
+			// 사용자 스토리라인 섹션의 숫자 — 줄의 헤드는 지금 스토리라인으로 풀려 이름이 붙는다
+			.andExpect(jsonPath("$.sections[1].userStorylines.length()").value(3))
+			.andExpect(jsonPath("$.sections[1].userStorylines[0].storyline.userStorylines[0].title").value("정리 하나 제목"))
+			.andExpect(jsonPath("$.sections[1].userStorylines[0].articles").value(8))
+			.andExpect(jsonPath("$.sections[1].userStorylines[0].previous").value(2))
+			.andExpect(jsonPath("$.sections[1].userStorylines[0].trend").value("ROSE"))
+			.andExpect(jsonPath("$.sections[1].userStorylines[0].trackedInPeriod").value(false))
+			.andExpect(jsonPath("$.sections[1].userStorylines[1].storyline.storylineId").value(survivor))
+			.andExpect(jsonPath("$.sections[1].userStorylines[1].previous").isEmpty())
+			.andExpect(jsonPath("$.sections[1].userStorylines[1].trend").value("NO_COMPARISON"))
+			.andExpect(jsonPath("$.sections[1].userStorylines[2].storyline.storylineId").value(uncited))
+			.andExpect(jsonPath("$.sections[1].userStorylines[2].storyline.title.title").value("인용 없는 흐름의 대표"))
+			.andExpect(jsonPath("$.sections[1].userStorylines[2].storyline.userStorylines.length()").value(0))
+			.andExpect(jsonPath("$.sections[1].userStorylines[2].articles").value(3))
 			.andExpect(jsonPath("$.sections[1].topics").isEmpty())
 			// 보도량 섹션
 			.andExpect(jsonPath("$.sections[2].citations.length()").value(0))
@@ -255,21 +258,22 @@ class ReportScreenControllerTests {
 			.andExpect(jsonPath("$.sections[2].topics[0].articles").value(40))
 			.andExpect(jsonPath("$.sections[2].topics[0].previous").value(12))
 			.andExpect(jsonPath("$.sections[2].topics[0].trend").value("ROSE"))
-			// 관심 섹션 — 하위로 들어간 흐름은 지금 꼭대기의 정리, 정리 없는 흐름은 빈 목록과 대표 기사
-			.andExpect(jsonPath("$.sections[3].citations[0].flow.storylineId").value(child))
-			.andExpect(jsonPath("$.sections[3].citations[0].flow.title.title").value("하위 흐름의 대표"))
-			.andExpect(jsonPath("$.sections[3].citations[0].flow.userStorylines[0].id").value(ofParent))
-			.andExpect(jsonPath("$.sections[3].citations[0].flow.userStorylines[0].title").value("상위 정리 제목"))
-			.andExpect(jsonPath("$.sections[3].citations[1].flow.storylineId").value(bare))
-			.andExpect(jsonPath("$.sections[3].citations[1].flow.title.title").value("정리 없는 흐름의 대표"))
-			.andExpect(jsonPath("$.sections[3].citations[1].flow.userStorylines.length()").value(0))
+			// 관심 섹션 — 하위로 들어간 스토리라인은 지금 꼭대기의 정리, 정리 없는 스토리라인은 빈 목록과 대표 기사
+			.andExpect(jsonPath("$.sections[3].citations[0].storyline.storylineId").value(child))
+			.andExpect(jsonPath("$.sections[3].citations[0].storyline.title.title").value("하위 흐름의 대표"))
+			.andExpect(jsonPath("$.sections[3].citations[0].storyline.userStorylines[0].id").value(ofParent))
+			.andExpect(jsonPath("$.sections[3].citations[0].storyline.userStorylines[0].title").value("상위 정리 제목"))
+			.andExpect(jsonPath("$.sections[3].citations[1].storyline.storylineId").value(bare))
+			.andExpect(jsonPath("$.sections[3].citations[1].storyline.title.title").value("정리 없는 흐름의 대표"))
+			.andExpect(jsonPath("$.sections[3].citations[1].storyline.userStorylines.length()").value(0))
 			.andExpect(jsonPath("$.sections[3].interests.topics[0].name").value("금융"))
 			.andExpect(jsonPath("$.sections[3].interests.topics[0].start").value(0.42))
 			.andExpect(jsonPath("$.sections[3].interests.topics[0].end").isEmpty())
 			.andExpect(jsonPath("$.sections[3].interests.topics[0].shift").value("LEFT"))
-			.andExpect(jsonPath("$.sections[3].interests.flows[0].flow.userStorylines[0].title").value("상위 정리 제목"))
-			.andExpect(jsonPath("$.sections[3].interests.flows[0].end").value(0.6))
-			.andExpect(jsonPath("$.sections[3].interests.flows[0].shift").value("ENTERED"));
+			.andExpect(jsonPath("$.sections[3].interests.userStorylines[0].storyline.userStorylines[0].title").value("상위 정리 제목"))
+			.andExpect(jsonPath("$.sections[3].interests.userStorylines[0].end").value(0.6))
+			.andExpect(jsonPath("$.sections[3].interests.userStorylines[0].shift").value("ENTERED"))
+			.andExpect(jsonPath("$.sections[3].interests.flows").doesNotExist());
 	}
 
 	@Test

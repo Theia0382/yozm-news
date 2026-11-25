@@ -40,7 +40,7 @@ function readId(value: string | undefined): number | null {
 }
 
 /**
- * 개인 흐름 화면 — 정리된 흐름(사용자 스토리라인) 하나의 정리(제목 · 흐름 요약 · 최근 전개), 갈래마다의 정리와 공용 타임라인 링크, 그 흐름에
+ * 개인 흐름 화면 — 정리된 사용자 스토리라인 하나의 정리(제목 · 흐름 요약 · 최근 전개), 갈래마다의 정리와 공용 타임라인 링크, 그 사용자 스토리라인에
  * 묶인 지난 다이제스트 항목, 정리에 쓴 토큰(docs/specs/reader.md). 정리는 그 사용자의 LLM 키로 만든 글이다
  */
 export function UserStorylinePage() {
@@ -72,18 +72,21 @@ function Detail({ id }: { id: number }) {
       detail.error.status === 404;
     return <p role="alert">{notFound ? NOT_FOUND : LOAD_FAILED}</p>;
   }
-  const flow = detail.data;
+  const userStoryline = detail.data;
   return (
     <>
       <header className="space-y-2">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <h1 className="min-w-0 text-2xl font-bold tracking-tight break-words">
-            {flow.title}
+            {userStoryline.title}
           </h1>
-          <SubscribeButton storylineId={flow.storylineId} tracking={tracking} />
+          <SubscribeButton
+            storylineId={userStoryline.storylineId}
+            tracking={tracking}
+          />
         </div>
         <p className="text-sm text-muted-foreground tabular-nums">
-          {summarizedAt(flow.updatedAt)}
+          {summarizedAt(userStoryline.updatedAt)}
         </p>
         {tracking.failed && (
           <p role="alert" className="text-sm">
@@ -91,10 +94,13 @@ function Detail({ id }: { id: number }) {
           </p>
         )}
       </header>
-      <SummaryText summary={flow.summary} recent={flow.recent} />
-      <Parts tops={flow.tops} />
-      <Items id={flow.id} />
-      <UsageLines flow={flow} />
+      <SummaryText
+        summary={userStoryline.summary}
+        recent={userStoryline.recent}
+      />
+      <Parts tops={userStoryline.tops} />
+      <Items id={userStoryline.id} />
+      <UsageLines userStoryline={userStoryline} />
     </>
   );
 }
@@ -166,7 +172,7 @@ function Parts({ tops }: { tops: UserStorylineTop[] }) {
   );
 }
 
-/** 그 흐름에 묶인 지난 다이제스트 항목 — 날짜 화면으로 간다 */
+/** 그 사용자 스토리라인에 묶인 지난 다이제스트 항목 — 날짜 화면으로 간다 */
 function Items({ id }: { id: number }) {
   const items = useUserStorylineItems(id);
   const rows = items.data?.pages.flatMap((page) => page.items) ?? [];
@@ -208,14 +214,14 @@ function Items({ id }: { id: number }) {
 }
 
 /** 정리에 쓴 모델 · 토큰 — 다이제스트의 사용량 줄과 같은 자리(맨 아래) · 같은 꼴이다 */
-function UsageLines({ flow }: { flow: UserStorylineDetail }) {
-  const usage = flow.usage;
+function UsageLines({ userStoryline }: { userStoryline: UserStorylineDetail }) {
+  const usage = userStoryline.usage;
   return (
     <div className="space-y-1 text-xs text-muted-foreground tabular-nums">
       <p>
         {summaryUsageText(usage.model, usage.inputTokens, usage.outputTokens)}
         {" · "}
-        {summarizedAt(flow.updatedAt)}
+        {summarizedAt(userStoryline.updatedAt)}
       </p>
       {usage.calls > 1 && (
         <p>

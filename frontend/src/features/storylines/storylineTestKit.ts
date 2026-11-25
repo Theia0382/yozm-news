@@ -1,4 +1,4 @@
-// 독자 흐름 화면 시험의 응답 조각 — 탭 · 개인 흐름 화면 · 타임라인 · 구독 시험이 함께 쓴다.
+// 독자 스토리라인 화면 시험의 응답 조각 — 탭 · 개인 흐름 화면 · 타임라인 · 구독 시험이 함께 쓴다.
 
 import type {
   NewsArticle,
@@ -39,7 +39,7 @@ export function card(
   };
 }
 
-/** 정리된 흐름의 카드 — 추적 대상 스토리라인은 ID 에 100 을 더한 값 */
+/** 정리된 사용자 스토리라인의 카드 — 추적 대상 스토리라인은 ID 에 100 을 더한 값 */
 export function userCard(
   id: number,
   overrides: Partial<UserStorylineCard> = {},
@@ -57,7 +57,7 @@ export function userCard(
   };
 }
 
-/** 정리된 흐름 하나 — 갈래 하나, 처음 한 번 정리했다 */
+/** 정리된 사용자 스토리라인 하나 — 갈래 하나, 처음 한 번 정리했다 */
 export function userDetail(
   id: number,
   overrides: Partial<UserStorylineDetail> = {},
@@ -123,7 +123,7 @@ export function timeline(
   };
 }
 
-/** 추적 중인 흐름 응답 — 스토리라인마다 제 흐름(추적 씨앗 하나 · 정리 없음), 구독 시각은 모두 T, 상태는 진행 */
+/** 추적 중인 사용자 스토리라인 응답 — 스토리라인마다 제 사용자 스토리라인(추적 씨앗 하나 · 정리 없음), 구독 시각은 모두 T, 상태는 진행 */
 export function subscriptions(
   ids: number[],
   limit = 100,
@@ -157,7 +157,7 @@ export function trackingStates(
 
 /**
  * 흐름 추적 경로의 가짜 — 추적한 ID 집합을 들고, `ids` 의 스토리라인마다 추적하면 더하고(SUBSCRIBED) 해제하면 뺀다(UNSUBSCRIBED ·
- * NOT_SUBSCRIBED). 추적 중인 흐름 목록과 추적 상태는 그 집합을 낸다(스토리라인마다 제 흐름).
+ * NOT_SUBSCRIBED). 추적 중인 사용자 스토리라인 목록과 추적 상태는 그 집합을 낸다(스토리라인마다 제 사용자 스토리라인).
  */
 export function subscriptionHandlers(
   initial: number[],

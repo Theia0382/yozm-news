@@ -19,7 +19,7 @@ export const DIGEST_TRANSFER_ITEMS: readonly string[] = [
   "다이제스트 항목(주요 뉴스 · 헤드라인)마다 사건으로 묶인 표본 기사의 정보(제목 · 요약문 · 출처 · 발행 시각 · 주제 · 지역)",
 ];
 
-/** 관심이 쌓인 흐름을 정리할 때 쓸 모델의 공급자로 가는 것 */
+/** 관심이 쌓인 사용자 스토리라인을 정리할 때 쓸 모델의 공급자로 가는 것 */
 export const SUMMARY_TRANSFER_ITEMS: readonly string[] = [
   "그 흐름의 사건마다 날짜와 대표 기사의 제목 · 요약문",
   "그 흐름의 지난 정리(제목 · 흐름 요약 · 최근 전개)",

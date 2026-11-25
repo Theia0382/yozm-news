@@ -111,10 +111,10 @@ class DigestScreenControllerTests {
 		long more = this.rows.section(ready, "HEADLINE", 2, "헤드라인 제목", "한 줄 코멘트");
 		this.rows.cite(more, 0, kept);
 		this.rows.sectionEvent(more, 0, 80, "INTEREST");
-		// 주요 뉴스 항목을 묶은 흐름 — 헤드라인은 혼자 한 항목이다
-		long flow = UserStorylineFixtures.storyline(this.jdbc, Instant.parse("2026-11-05T00:00:00Z"));
-		this.jdbc.sql("update digest_sections set storyline_id = :flow where id = :id")
-			.param("flow", flow)
+		// 주요 뉴스 항목을 묶은 스토리라인 — 헤드라인은 혼자 한 항목이다
+		long storyline = UserStorylineFixtures.storyline(this.jdbc, Instant.parse("2026-11-05T00:00:00Z"));
+		this.jdbc.sql("update digest_sections set storyline_id = :storyline where id = :id")
+			.param("storyline", storyline)
 			.param("id", story)
 			.update();
 		long failed = this.rows.digest(user, "2026-11-05", "FAILED", 50, 0, "NO_CITATION");
@@ -150,9 +150,9 @@ class DigestScreenControllerTests {
 			.andExpect(jsonPath("$.day.shown.sections[1].reason").value("MAJOR_STORYLINE"))
 			// 항목의 사건 — 위치 순, 첫 사건이 항목 키(반응을 누르는 손잡이)
 			.andExpect(jsonPath("$.day.shown.sections[1].eventIds").value(contains(70, 71)))
-			// 항목을 묶은 흐름 — 흐름 추적의 대상
-			.andExpect(jsonPath("$.day.shown.sections[1].storylineId").value(flow))
-			// 그 흐름의 정리된 사용자 스토리라인이 없으면 제목 · 링크가 없다
+			// 항목을 묶은 스토리라인 — 흐름 추적의 대상
+			.andExpect(jsonPath("$.day.shown.sections[1].storylineId").value(storyline))
+			// 그 스토리라인의 정리된 사용자 스토리라인이 없으면 제목 · 링크가 없다
 			.andExpect(jsonPath("$.day.shown.sections[1].userStorylines").isEmpty())
 			// 지운 기사의 인용은 빠진다
 			.andExpect(jsonPath("$.day.shown.sections[1].citations.length()").value(1))
@@ -190,18 +190,18 @@ class DigestScreenControllerTests {
 	}
 
 	@Test
-	void anItemOfAFlowBeforeAForkCarriesEverySummarizedUserStorylineHoldingIt() throws Exception {
+	void anItemOfAStorylineBeforeAForkCarriesEverySummarizedUserStorylineHoldingIt() throws Exception {
 		long user = this.reader.id().value();
 		Instant at = Instant.parse("2026-11-05T00:00:00Z");
-		// 갈라지기 전 흐름 shared 가 두 갈래(사용자 스토리라인)의 추적 대상에 함께 든다
+		// 갈라지기 전 스토리라인 shared 가 두 갈래(사용자 스토리라인)의 추적 대상에 함께 든다
 		long shared = UserStorylineFixtures.storyline(this.jdbc, at);
 		long left = UserStorylineFixtures.storyline(this.jdbc, at);
 		long right = UserStorylineFixtures.storyline(this.jdbc, at);
 		long ready = this.rows.digest(user, "2026-11-05", "READY", 100, 20, null);
 		long item = this.rows.section(ready, "TOP_STORY", 0, "갈라지기 전 흐름의 항목", "요약");
 		this.rows.sectionEvent(item, 0, 70, "SUBSCRIBED");
-		this.jdbc.sql("update digest_sections set storyline_id = :flow where id = :id")
-			.param("flow", shared)
+		this.jdbc.sql("update digest_sections set storyline_id = :storyline where id = :id")
+			.param("storyline", shared)
 			.param("id", item)
 			.update();
 		UserStorylineSummaryRows summaries = new UserStorylineSummaryRows(this.jdbc);
@@ -226,7 +226,7 @@ class DigestScreenControllerTests {
 	 * 다이제스트 조회 시험이 보고, 여기서는 가장 늦은 날짜가 오늘보다 늦은 행으로 null 만 본다.
 	 */
 	@Test
-	void anItemOfASummarizedFlowCarriesTheTitleAndIdOfThatUserStoryline() throws Exception {
+	void anItemOfASummarizedStorylineCarriesTheTitleAndIdOfThatUserStoryline() throws Exception {
 		long user = this.reader.id().value();
 		Instant at = Instant.parse("2026-11-05T00:00:00Z");
 		long summarized = UserStorylineFixtures.storyline(this.jdbc, at);
@@ -239,12 +239,12 @@ class DigestScreenControllerTests {
 		for (int i = 0; i < items.length; i++) {
 			this.rows.sectionEvent(items[i], 0, 70 + i, "SUBSCRIBED");
 		}
-		this.jdbc.sql("update digest_sections set storyline_id = :flow where id = :id")
-			.param("flow", summarized)
+		this.jdbc.sql("update digest_sections set storyline_id = :storyline where id = :id")
+			.param("storyline", summarized)
 			.param("id", items[0])
 			.update();
-		this.jdbc.sql("update digest_sections set storyline_id = :flow where id = :id")
-			.param("flow", unsummarized)
+		this.jdbc.sql("update digest_sections set storyline_id = :storyline where id = :id")
+			.param("storyline", unsummarized)
 			.param("id", items[1])
 			.update();
 		UserStorylineSummaryRows summaries = new UserStorylineSummaryRows(this.jdbc);
@@ -261,7 +261,7 @@ class DigestScreenControllerTests {
 				.andExpect(jsonPath(day + ".shown.sections[1].userStorylines.length()").value(1))
 				.andExpect(jsonPath(day + ".shown.sections[1].userStorylines[0].id").value(userStoryline))
 				.andExpect(jsonPath(day + ".shown.sections[1].userStorylines[0].title").value("정리된 흐름 제목"))
-				// 정리가 없는 사용자 스토리라인의 흐름은 버튼의 대상만 있고 제목 · 링크가 없다
+				// 정리가 없는 사용자 스토리라인의 스토리라인은 버튼의 대상만 있고 제목 · 링크가 없다
 				.andExpect(jsonPath(day + ".shown.sections[2].storylineId").value(unsummarized))
 				.andExpect(jsonPath(day + ".shown.sections[2].userStorylines").isEmpty())
 				.andExpect(jsonPath(day + ".shown.sections[3].storylineId").isEmpty())

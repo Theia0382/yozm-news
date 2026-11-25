@@ -13,16 +13,16 @@ import {
   CHANGES_TITLE,
   EMPTY_HISTORY,
   ENTERED,
-  ENTERED_FLOWS,
+  ENTERED_USER_STORYLINES,
   FEWER_TOPICS,
-  FLOWS_TABLE,
+  USER_STORYLINES_TABLE,
   HOW_LINES,
   HOW_TITLE,
   INTEREST_HISTORY_INTRO,
   INTEREST_HISTORY_TITLE,
   IN_PROGRESS,
   LEFT,
-  LEFT_FLOWS,
+  LEFT_USER_STORYLINES,
   LOAD_FAILED,
   NO_CHANGES,
   SUBSCRIBED,
@@ -46,7 +46,7 @@ function readSpan(value: string | null): InterestSpan | null {
 }
 
 /**
- * 관심사 히스토리 — 주 · 월 단위와 기간 수를 고르고, 주제 중분류와 정리된 흐름마다 기간별 관심과 기간마다 새로 생긴 관심 · 사라진 관심 ·
+ * 관심사 히스토리 — 주 · 월 단위와 기간 수를 고르고, 주제 중분류와 정리된 사용자 스토리라인마다 기간별 관심과 기간마다 새로 생긴 관심 · 사라진 관심 ·
  * 주제 구독 변경을 본다(docs/specs/reader.md reader-R8). 관심이 드러나지 않은 주제는 접어 둔다.
  */
 export function InterestHistoryPage() {
@@ -130,7 +130,7 @@ function HistoryBody({
         <>
           {data.topics.length > 0 && <TopicGrid data={data} unit={unit} />}
           {data.userStorylines.length > 0 && (
-            <FlowGrid data={data} unit={unit} />
+            <UserStorylineGrid data={data} unit={unit} />
           )}
           <Changes data={data} />
         </>
@@ -195,7 +195,7 @@ function TopicRow({
   );
 }
 
-/** 표의 머리 줄 — 첫 열 이름과 기간 열. 주제 표와 흐름 표가 함께 쓴다 */
+/** 표의 머리 줄 — 첫 열 이름과 기간 열. 주제 표와 사용자 스토리라인 표가 함께 쓴다 */
 function PeriodHead({
   first,
   periods,
@@ -235,7 +235,7 @@ function PeriodHead({
   );
 }
 
-/** 한 행의 기간 칸들 — 값이 없으면 신호 없음. 주제 표와 흐름 표가 함께 쓴다 */
+/** 한 행의 기간 칸들 — 값이 없으면 신호 없음. 주제 표와 사용자 스토리라인 표가 함께 쓴다 */
 function LevelCells({
   levels,
   periods,
@@ -266,8 +266,8 @@ function LevelCells({
   );
 }
 
-/** 정리된 흐름마다 기간별 관심 — 제목은 개인 흐름 화면으로 간다. 행은 지금 정리된 흐름이다 */
-function FlowGrid({
+/** 정리된 사용자 스토리라인마다 기간별 관심 — 제목은 개인 흐름 화면으로 간다. 행은 지금 정리된 사용자 스토리라인이다 */
+function UserStorylineGrid({
   data,
   unit,
 }: {
@@ -276,11 +276,15 @@ function FlowGrid({
 }) {
   return (
     <div className="relative overflow-x-auto">
-      <table aria-label={FLOWS_TABLE} className="text-sm">
+      <table aria-label={USER_STORYLINES_TABLE} className="text-sm">
         <PeriodHead first="흐름" periods={data.periods} unit={unit} />
         <tbody>
-          {data.userStorylines.map((flow) => (
-            <FlowRow key={flow.id} flow={flow} periods={data.periods} />
+          {data.userStorylines.map((userStoryline) => (
+            <UserStorylineRow
+              key={userStoryline.id}
+              userStoryline={userStoryline}
+              periods={data.periods}
+            />
           ))}
         </tbody>
       </table>
@@ -288,11 +292,11 @@ function FlowGrid({
   );
 }
 
-function FlowRow({
-  flow,
+function UserStorylineRow({
+  userStoryline,
   periods,
 }: {
-  flow: InterestUserStoryline;
+  userStoryline: InterestUserStoryline;
   periods: InterestPeriod[];
 }) {
   return (
@@ -302,11 +306,14 @@ function FlowRow({
         scope="row"
         className="max-w-48 min-w-40 py-1.5 pr-3 text-left align-top font-normal"
       >
-        <Link to={userStorylinePath(flow.id)} className="break-words underline">
-          {flow.title}
+        <Link
+          to={userStorylinePath(userStoryline.id)}
+          className="break-words underline"
+        >
+          {userStoryline.title}
         </Link>
       </th>
-      <LevelCells levels={flow.levels} periods={periods} />
+      <LevelCells levels={userStoryline.levels} periods={periods} />
     </tr>
   );
 }
@@ -330,19 +337,22 @@ function cellOpacity(level: number | null): number {
 function Changes({ data }: { data: InterestHistory }) {
   const names = new Map(data.topics.map((topic) => [topic.key, topic.name]));
   const name = (key: string) => names.get(key) ?? key;
-  const flows = new Map(
-    data.userStorylines.map((flow) => [flow.id, flow.title]),
+  const userStorylines = new Map(
+    data.userStorylines.map((userStoryline) => [
+      userStoryline.id,
+      userStoryline.title,
+    ]),
   );
-  // 흐름의 생김 · 사라짐은 지금 정리된 흐름의 것만 온다 — 제목을 모르는 ID 는 보이지 않는다
-  const flowNames = (ids: number[]) =>
-    ids.flatMap((id) => flows.get(id) ?? []).join(", ");
+  // 사용자 스토리라인의 생김 · 사라짐은 지금 정리된 사용자 스토리라인의 것만 온다 — 제목을 모르는 ID 는 보이지 않는다
+  const userStorylineNames = (ids: number[]) =>
+    ids.flatMap((id) => userStorylines.get(id) ?? []).join(", ");
   const changed = data.periods
     .filter(
       (period) =>
         period.entered.length > 0 ||
         period.left.length > 0 ||
-        flowNames(period.enteredUserStorylines) !== "" ||
-        flowNames(period.leftUserStorylines) !== "" ||
+        userStorylineNames(period.enteredUserStorylines) !== "" ||
+        userStorylineNames(period.leftUserStorylines) !== "" ||
         period.subscriptionChanges.length > 0,
     )
     .reverse();
@@ -366,14 +376,16 @@ function Changes({ data }: { data: InterestHistory }) {
                   {LEFT}: {period.left.map(name).join(", ")}
                 </p>
               )}
-              {flowNames(period.enteredUserStorylines) !== "" && (
+              {userStorylineNames(period.enteredUserStorylines) !== "" && (
                 <p className="text-sm">
-                  {ENTERED_FLOWS}: {flowNames(period.enteredUserStorylines)}
+                  {ENTERED_USER_STORYLINES}:{" "}
+                  {userStorylineNames(period.enteredUserStorylines)}
                 </p>
               )}
-              {flowNames(period.leftUserStorylines) !== "" && (
+              {userStorylineNames(period.leftUserStorylines) !== "" && (
                 <p className="text-sm">
-                  {LEFT_FLOWS}: {flowNames(period.leftUserStorylines)}
+                  {LEFT_USER_STORYLINES}:{" "}
+                  {userStorylineNames(period.leftUserStorylines)}
                 </p>
               )}
               {period.subscriptionChanges.map((step, index) => (

@@ -2,7 +2,7 @@
 
 import type {
   ReportDetail,
-  ReportFlow,
+  ReportStoryline,
   ReportSummary,
 } from "@/features/reports/reportQueries";
 
@@ -30,11 +30,11 @@ export function summary(
   };
 }
 
-/** 흐름 하나의 표시 — 정리 없음, 대표 기사 있음 */
-export function flow(
+/** 스토리라인 하나의 표시 — 정리 없음, 대표 기사 있음 */
+export function storyline(
   storylineId: number,
-  overrides: Partial<ReportFlow> = {},
-): ReportFlow {
+  overrides: Partial<ReportStoryline> = {},
+): ReportStoryline {
   return {
     storylineId,
     title: { ...ARTICLE, title: `흐름 ${storylineId} 대표 기사` },

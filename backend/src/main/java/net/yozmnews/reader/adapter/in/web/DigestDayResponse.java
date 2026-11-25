@@ -32,8 +32,8 @@ record DigestDayResponse(LocalDate date, @Nullable LocalDate previousDate, @Null
 				DigestAttemptResponse.of(day.latest()), DigestUsageResponse.of(day.usage()));
 	}
 
-	/** 보이는 다이제스트의 항목을 묶은 흐름 — 서로 다른 것 */
-	static List<StorylineId> flows(DigestDay day) {
+	/** 보이는 다이제스트의 항목을 묶은 스토리라인 — 서로 다른 것 */
+	static List<StorylineId> storylines(DigestDay day) {
 		if (day.shown() == null) {
 			return List.of();
 		}

@@ -17,13 +17,13 @@ import net.yozmnews.storyline.StorylineView;
 import net.yozmnews.user.UserStorylineSummaryRef;
 
 /**
- * 변화 리포트가 가리키는 흐름 · 사건의 표시 이름 맞붙이기 — docs/specs/reader.md §5 reader-R16.
+ * 변화 리포트가 가리키는 스토리라인 · 사건의 표시 이름 맞붙이기 — docs/specs/reader.md §5 reader-R16.
  * <p>
- * 흐름(인용 · 숫자 줄의 지금 스토리라인)은 그 포함 나무의 지금 꼭대기({@link StorylineDirectory#topsOfStorylines})를 가진 정리된 사용자
+ * 스토리라인(인용 · 숫자 줄의 지금 스토리라인)은 그 포함 나무의 지금 꼭대기({@link StorylineDirectory#topsOfStorylines})를 가진 정리된 사용자
  * 스토리라인의 제목 · ID 와, 그 스토리라인의 대표 사건 대표 기사를 단다 — 정리가 없으면 화면은 대표 기사 제목과 공용 타임라인으로 잇는다. 사건은
- * 대표 기사를 단다. 한 응답에 각 조회를 한 번 부른다(상한으로 나누는 것 밖) — 대표 기사는 흐름과 사건을 모아 한 번에 읽는다.
+ * 대표 기사를 단다. 한 응답에 각 조회를 한 번 부른다(상한으로 나누는 것 밖) — 대표 기사는 스토리라인과 사건을 모아 한 번에 읽는다.
  */
-final class ReportFlows {
+final class ReportNames {
 
 	private final StorylineDirectory storylines;
 
@@ -31,18 +31,18 @@ final class ReportFlows {
 
 	private final StorylineTitles titles;
 
-	ReportFlows(StorylineDirectory storylines, UserStorylineRefs refs, StorylineTitles titles) {
+	ReportNames(StorylineDirectory storylines, UserStorylineRefs refs, StorylineTitles titles) {
 		this.storylines = Objects.requireNonNull(storylines, "storylines");
 		this.refs = Objects.requireNonNull(refs, "refs");
 		this.titles = Objects.requireNonNull(titles, "titles");
 	}
 
 	/**
-	 * @param flows 지금 스토리라인 ID 들 — 그새 없어진 스토리라인은 대표 기사 · 정리가 없는 이름으로 낸다
+	 * @param storylines 지금 스토리라인 ID 들 — 그새 없어진 스토리라인은 대표 기사 · 정리가 없는 이름으로 낸다
 	 * @param events 사건 ID 들
 	 */
-	Named of(UserId user, Collection<StorylineId> flows, Collection<EventId> events) {
-		List<StorylineId> distinct = flows.stream().distinct().toList();
+	Named of(UserId user, Collection<StorylineId> storylines, Collection<EventId> events) {
+		List<StorylineId> distinct = storylines.stream().distinct().toList();
 		Map<StorylineId, StorylineView> views = distinct.isEmpty() ? Map.of() : this.storylines.findAll(distinct);
 		Map<StorylineId, StorylineId> tops = topsOf(distinct);
 		Map<StorylineId, List<UserStorylineSummaryRef>> summaries = this.refs.of(user,
@@ -51,11 +51,11 @@ final class ReportFlows {
 		views.values().forEach(view -> represented.add(view.representativeEvent()));
 		Map<EventId, NewsArticleResponse> articles = this.titles.of(represented);
 
-		Map<StorylineId, ReportFlowResponse> named = new LinkedHashMap<>();
+		Map<StorylineId, ReportStorylineResponse> named = new LinkedHashMap<>();
 		for (StorylineId id : distinct) {
 			StorylineView view = views.get(id);
 			StorylineId top = tops.get(id);
-			named.put(id, new ReportFlowResponse(id.value(),
+			named.put(id, new ReportStorylineResponse(id.value(),
 					(view == null) ? null : articles.get(view.representativeEvent()),
 					((top == null) ? List.<UserStorylineSummaryRef>of() : summaries.getOrDefault(top, List.of()))
 						.stream()
@@ -85,10 +85,10 @@ final class ReportFlows {
 
 	/**
 	 * 맞붙인 이름
-	 * @param flows 스토리라인 ID → 흐름의 표시
+	 * @param storylines 스토리라인 ID → 그 스토리라인의 표시
 	 * @param events 사건 ID → 대표 기사 — 대표가 없거나 기사가 지워진 사건은 빠진다
 	 */
-	record Named(Map<StorylineId, ReportFlowResponse> flows, Map<EventId, NewsArticleResponse> events) {
+	record Named(Map<StorylineId, ReportStorylineResponse> storylines, Map<EventId, NewsArticleResponse> events) {
 	}
 
 }
