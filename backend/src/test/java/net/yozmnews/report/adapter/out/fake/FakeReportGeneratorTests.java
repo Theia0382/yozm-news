@@ -2,11 +2,11 @@ package net.yozmnews.report.adapter.out.fake;
 
 import static net.yozmnews.report.ReportFixtures.coverage;
 import static net.yozmnews.report.ReportFixtures.event;
-import static net.yozmnews.report.ReportFixtures.flow;
-import static net.yozmnews.report.ReportFixtures.flows;
 import static net.yozmnews.report.ReportFixtures.input;
 import static net.yozmnews.report.ReportFixtures.interests;
 import static net.yozmnews.report.ReportFixtures.storyline;
+import static net.yozmnews.report.ReportFixtures.userStoryline;
+import static net.yozmnews.report.ReportFixtures.userStorylines;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
@@ -43,7 +43,7 @@ class FakeReportGeneratorTests {
 
 	@Test
 	void writesEverySectionWithTheAliasesOfItsTargets() {
-		ReportOutcome.Generated generated = generate(input(flows(flow(31, 902)), coverage(), interests(44)));
+		ReportOutcome.Generated generated = generate(input(userStorylines(userStoryline(31, 902)), coverage(), interests(44)));
 
 		assertThat(JSON.readTree(generated.text())).isEqualTo(JSON.readTree("""
 				{"overview":"로컬 대체물이 만든 리포트다. 섹션 3개.","sections":{
@@ -57,7 +57,7 @@ class FakeReportGeneratorTests {
 	@Test
 	void followsTheInputOrderOfTargets() {
 		ReportOutcome.Generated generated = generate(
-				input(flows(flow(44, 903), flow(31, 902))));
+				input(userStorylines(userStoryline(44, 903), userStoryline(31, 902))));
 
 		assertThat(JSON.readTree(generated.text()).get("sections").get("storylines").get("refs").toString())
 			.isEqualTo("[\"S1\",\"E1\",\"S2\",\"E2\"]");
@@ -65,7 +65,7 @@ class FakeReportGeneratorTests {
 
 	@Test
 	void passesTheSameReadingAndCitationCheckWithManyOrNoTargets() {
-		ReportInput many = input(flows(flow(31, 902)), interests(31, 44));
+		ReportInput many = input(userStorylines(userStoryline(31, 902)), interests(31, 44));
 		ReportInput none = input(coverage());
 
 		assertThat(cite(many).sections()).containsExactly(

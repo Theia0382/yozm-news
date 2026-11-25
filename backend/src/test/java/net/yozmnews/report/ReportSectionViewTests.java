@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test;
  */
 class ReportSectionViewTests {
 
-	private static final ReportSectionStats FLOWS = new ReportSectionStats.Flows(List.of());
+	private static final ReportSectionStats USER_STORYLINES = new ReportSectionStats.UserStorylines(List.of());
 
 	private static final ReportSectionStats COVERAGE = new ReportSectionStats.Coverage(List.of());
 
@@ -24,12 +24,12 @@ class ReportSectionViewTests {
 
 	@Test
 	void eachKindSectionTakesOnlyTheNumbersOfItsKind() {
-		assertThatNoException().isThrownBy(() -> section(ReportSectionKind.STORYLINES, FLOWS));
+		assertThatNoException().isThrownBy(() -> section(ReportSectionKind.STORYLINES, USER_STORYLINES));
 		assertThatNoException().isThrownBy(() -> section(ReportSectionKind.COVERAGE, COVERAGE));
 		assertThatNoException().isThrownBy(() -> section(ReportSectionKind.INTERESTS, INTERESTS));
 		assertThatNoException().isThrownBy(() -> section(ReportSectionKind.COVERAGE, null));
 
-		assertThatIllegalArgumentException().isThrownBy(() -> section(ReportSectionKind.COVERAGE, FLOWS));
+		assertThatIllegalArgumentException().isThrownBy(() -> section(ReportSectionKind.COVERAGE, USER_STORYLINES));
 		assertThatIllegalArgumentException().isThrownBy(() -> section(ReportSectionKind.STORYLINES, INTERESTS));
 		assertThatIllegalArgumentException().isThrownBy(() -> section(ReportSectionKind.INTERESTS, COVERAGE));
 	}

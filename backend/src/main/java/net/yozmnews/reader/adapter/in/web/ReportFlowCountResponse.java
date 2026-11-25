@@ -20,7 +20,7 @@ record ReportFlowCountResponse(ReportFlowResponse flow, long articles, @Nullable
 		Objects.requireNonNull(trend, "trend");
 	}
 
-	static ReportFlowCountResponse of(ReportSectionStats.FlowCount count, ReportFlows.Named named) {
+	static ReportFlowCountResponse of(ReportSectionStats.UserStorylineCount count, ReportFlows.Named named) {
 		return new ReportFlowCountResponse(Objects.requireNonNull(named.flows().get(count.storyline()), "flow"),
 				count.articles(), count.previous(), count.trend(), count.trackedInPeriod());
 	}

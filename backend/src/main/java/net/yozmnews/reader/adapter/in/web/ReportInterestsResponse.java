@@ -16,7 +16,7 @@ record ReportInterestsResponse(List<ReportTopicLevelResponse> topics, List<Repor
 
 	static ReportInterestsResponse of(ReportSectionStats.Interests interests, ReportFlows.Named named) {
 		return new ReportInterestsResponse(interests.topics().stream().map(ReportTopicLevelResponse::of).toList(),
-				interests.flows().stream().map(flow -> ReportFlowLevelResponse.of(flow, named)).toList());
+				interests.userStorylines().stream().map(flow -> ReportFlowLevelResponse.of(flow, named)).toList());
 	}
 
 }

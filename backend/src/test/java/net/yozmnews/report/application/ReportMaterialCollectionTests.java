@@ -33,12 +33,9 @@ import net.yozmnews.report.ReportPeriodKind;
 import net.yozmnews.report.ReportSectionKind;
 import net.yozmnews.report.adapter.out.fake.FakeReportGenerator;
 import net.yozmnews.report.domain.content.ReportSectionRepository;
-import net.yozmnews.report.domain.input.CoverageSection;
 import net.yozmnews.report.domain.input.Count;
+import net.yozmnews.report.domain.input.CoverageSection;
 import net.yozmnews.report.domain.input.EventLine;
-import net.yozmnews.report.domain.input.FlowInterestLine;
-import net.yozmnews.report.domain.input.FlowMaterial;
-import net.yozmnews.report.domain.input.FlowSummary;
 import net.yozmnews.report.domain.input.InputSection;
 import net.yozmnews.report.domain.input.InterestsSection;
 import net.yozmnews.report.domain.input.PriorReport;
@@ -47,6 +44,9 @@ import net.yozmnews.report.domain.input.ReportInput;
 import net.yozmnews.report.domain.input.StorylinesSection;
 import net.yozmnews.report.domain.input.TopicCoverageLine;
 import net.yozmnews.report.domain.input.TopicInterestLine;
+import net.yozmnews.report.domain.input.UserStorylineInterestLine;
+import net.yozmnews.report.domain.input.UserStorylineMaterial;
+import net.yozmnews.report.domain.input.UserStorylineSummary;
 import net.yozmnews.report.domain.report.ReportPeriod;
 import net.yozmnews.report.domain.report.ReportRepository;
 import net.yozmnews.report.domain.view.ReportViewRepository;
@@ -112,7 +112,7 @@ class ReportMaterialCollectionTests {
 
 	private static final Instant SUMMARIZED = Instant.parse("2026-11-03T00:00:00Z");
 
-	/** 정리만 남은 흐름의 헤드 — 사용자 스토리라인 조회에는 없고 저장한 정리에만 있다 */
+	/** 정리만 남은 사용자 스토리라인의 헤드 — 사용자 스토리라인 조회에는 없고 저장한 정리에만 있다 */
 	private static final StorylineId SUMMARY_ONLY = new StorylineId(999_999_999L);
 
 	private static final JsonMapper JSON = JsonMapper.builder().build();
@@ -163,7 +163,7 @@ class ReportMaterialCollectionTests {
 
 	private long storylineB;
 
-	/** 추적하지 않는 사용자 스토리라인의 헤드 — 관심 줄에는 들고 추적한 흐름에는 들지 않는다 */
+	/** 추적하지 않는 사용자 스토리라인의 헤드 — 관심 줄에는 들고 추적한 사용자 스토리라인에는 들지 않는다 */
 	private long storylineC;
 
 	private long eventFirst;
@@ -203,9 +203,9 @@ class ReportMaterialCollectionTests {
 	@Test
 	void collectsTheThreeKindsWithThePreviousSnapshotAndText() {
 		ReportId previous = previousReport(USER, """
-				{"version": 1, "tagSet": %d,
+				{"version": 2, "tagSet": %d,
 				 "period": {"kind": "WEEK", "start": "2026-10-28T15:00:00Z", "end": "2026-11-04T15:00:00Z"},
-				 "storylines": {"basis": "PUBLISHED", "flows": [{"head": %d, "tops": [%d], "articles": 5, "previous": null,
+				 "storylines": {"basis": "PUBLISHED", "userStorylines": [{"head": %d, "tops": [%d], "articles": 5, "previous": null,
 				   "trend": "NO_COMPARISON", "trackedInPeriod": false}]},
 				 "coverage": {"basis": "FIRST_EVALUATED", "topics": [{"key": "%s", "name": "%s", "articles": 4,
 				   "previous": null, "trend": "NO_COMPARISON"}]}}"""
@@ -221,30 +221,30 @@ class ReportMaterialCollectionTests {
 		assertThat(input.sections()).extracting(InputSection::kind)
 			.containsExactly(ReportSectionKind.STORYLINES, ReportSectionKind.COVERAGE, ReportSectionKind.INTERESTS);
 		StorylineId head = new StorylineId(this.storylineB);
-		FlowSummary summary = new FlowSummary("금리 흐름", "흐름 요약", "최근 전개", SUMMARIZED);
-		// 흐름 — 꼭대기 둘의 기간 안 기사 2(기간 앞 사건은 빠진다), 직전 5 → 줄었다, 기간 안에 사용자가 추적을 더했다
-		// 추적 중인 사용자 스토리라인만 — 추적하지 않는 흐름(헤드 C)은 이 갈래에 없다(report-R14 · report-R16)
-		assertThat(((StorylinesSection) input.sections().get(0)).flows()).hasSize(1);
-		FlowMaterial flow = ((StorylinesSection) input.sections().get(0)).flows().getFirst();
-		assertThat(flow.head()).isEqualTo(head);
-		assertThat(flow.tops()).containsExactlyInAnyOrder(new StorylineId(this.storylineA), head);
-		assertThat(flow.summary()).isEqualTo(summary);
-		assertThat(flow.headState()).isEqualTo(this.storylines.find(head).orElseThrow().state());
-		assertThat(flow.trackedInPeriod()).isTrue();
-		assertThat(flow.articles()).isEqualTo(new Count(2, 5L));
-		assertThat(flow.events()).containsExactly(
+		UserStorylineSummary summary = new UserStorylineSummary("금리 흐름", "흐름 요약", "최근 전개", SUMMARIZED);
+		// 사용자 스토리라인 — 꼭대기 둘의 기간 안 기사 2(기간 앞 사건은 빠진다), 직전 5 → 줄었다, 기간 안에 사용자가 추적을 더했다
+		// 추적 중인 사용자 스토리라인만 — 추적하지 않는 사용자 스토리라인(헤드 C)은 이 갈래에 없다(report-R14 · report-R16)
+		assertThat(((StorylinesSection) input.sections().get(0)).userStorylines()).hasSize(1);
+		UserStorylineMaterial userStoryline = ((StorylinesSection) input.sections().get(0)).userStorylines().getFirst();
+		assertThat(userStoryline.head()).isEqualTo(head);
+		assertThat(userStoryline.tops()).containsExactlyInAnyOrder(new StorylineId(this.storylineA), head);
+		assertThat(userStoryline.summary()).isEqualTo(summary);
+		assertThat(userStoryline.headState()).isEqualTo(this.storylines.find(head).orElseThrow().state());
+		assertThat(userStoryline.trackedInPeriod()).isTrue();
+		assertThat(userStoryline.articles()).isEqualTo(new Count(2, 5L));
+		assertThat(userStoryline.events()).containsExactly(
 				new EventLine(new EventId(this.eventFirst), "금리 인상 발표", LocalDate.of(2026, 11, 5), 1, true),
 				new EventLine(new EventId(this.eventSecond), "환율 급등", LocalDate.of(2026, 11, 6), 1, true));
 		// 구독 주제 — 기간 안 평가가 없어 0, 직전 4
 		assertThat(((CoverageSection) input.sections().get(1)).topics())
 			.containsExactly(new TopicCoverageLine(this.topic, this.topicName, new Count(0, 4L)));
-		// 관심 — 주제 생김, 흐름은 헤드의 값. 흐름 줄은 사용자 스토리라인 전부(추적하지 않는 C 포함)와 정리만 남은 흐름의 합집합(report-R17)
+		// 관심 — 주제 생김, 사용자 스토리라인은 헤드의 값. 사용자 스토리라인 줄은 사용자 스토리라인 전부(추적하지 않는 C 포함)와 정리만 남은 사용자 스토리라인의 합집합(report-R17)
 		InterestsSection interests = (InterestsSection) input.sections().get(2);
 		assertThat(interests.topics())
 			.containsExactly(new TopicInterestLine(this.topic, this.topicName, 0.1, 0.3, InterestShift.ENTERED));
-		assertThat(interests.flows()).containsExactly(new FlowInterestLine(head, summary, null, 0.6, InterestShift.NONE),
-				new FlowInterestLine(new StorylineId(this.storylineC), null, null, 0.4, InterestShift.NONE),
-				new FlowInterestLine(SUMMARY_ONLY, new FlowSummary("지난 흐름", "지난 요약", "지난 전개", SUMMARIZED), 0.5, null,
+		assertThat(interests.userStorylines()).containsExactly(new UserStorylineInterestLine(head, summary, null, 0.6, InterestShift.NONE),
+				new UserStorylineInterestLine(new StorylineId(this.storylineC), null, null, 0.4, InterestShift.NONE),
+				new UserStorylineInterestLine(SUMMARY_ONLY, new UserStorylineSummary("지난 흐름", "지난 요약", "지난 전개", SUMMARIZED), 0.5, null,
 						InterestShift.LEFT));
 		assertThat(interests.subscriptionChanges()).isEmpty();
 		// 직전 리포트 — 시작할 때 행에 남긴다
@@ -255,14 +255,14 @@ class ReportMaterialCollectionTests {
 				List.of(new PriorSection(ReportSectionKind.STORYLINES, "로컬 섹션 1", "로컬 대체물이 만든 본문이다."))));
 		// 스냅숏 — 이은 직전 값과 판정
 		assertThat(JSON.readTree(input.statsSnapshot())).isEqualTo(JSON.readTree("""
-				{"version": 1, "tagSet": %d,
+				{"version": 2, "tagSet": %d,
 				 "period": {"kind": "WEEK", "start": "2026-11-04T15:00:00Z", "end": "2026-11-11T15:00:00Z"},
-				 "storylines": {"basis": "PUBLISHED", "flows": [{"head": %d, "tops": [%d, %d], "articles": 2,
+				 "storylines": {"basis": "PUBLISHED", "userStorylines": [{"head": %d, "tops": [%d, %d], "articles": 2,
 				   "previous": 5, "trend": "FELL", "trackedInPeriod": true}]},
 				 "coverage": {"basis": "FIRST_EVALUATED", "topics": [{"key": "%s", "name": "%s", "articles": 0,
 				   "previous": 4, "trend": "FELL"}]},
 				 "interests": {"topics": [{"key": "%s", "name": "%s", "start": 0.1, "end": 0.3, "shift": "ENTERED"}],
-				   "flows": [{"head": %d, "start": null, "end": 0.6, "shift": "NONE"},
+				   "userStorylines": [{"head": %d, "start": null, "end": 0.6, "shift": "NONE"},
 				             {"head": %d, "start": null, "end": 0.4, "shift": "NONE"},
 				             {"head": 999999999, "start": 0.5, "end": null, "shift": "LEFT"}]}}"""
 			.formatted(this.active.value(), this.storylineB, this.storylineA, this.storylineB, this.topic, this.topicName,
@@ -273,7 +273,7 @@ class ReportMaterialCollectionTests {
 	void leavesTheComparisonEmptyWithoutAPreviousReport() {
 		ReportInput input = collection(this.tagSets).collect(USER, WEEK, List.of()).orElseThrow();
 
-		assertThat(((StorylinesSection) input.sections().get(0)).flows().getFirst().articles()).isEqualTo(new Count(2, null));
+		assertThat(((StorylinesSection) input.sections().get(0)).userStorylines().getFirst().articles()).isEqualTo(new Count(2, null));
 		assertThat(((CoverageSection) input.sections().get(1)).topics().getFirst().articles()).isEqualTo(new Count(0, null));
 		assertThat(input.priors()).isEmpty();
 		assertThat(input.previous()).isNull();
@@ -281,7 +281,7 @@ class ReportMaterialCollectionTests {
 
 	@Test
 	void carriesThePreviousReportEvenWhenItsSnapshotCannotBeRead() {
-		ReportId previous = previousReport(USER, "{\"version\": 2}");
+		ReportId previous = previousReport(USER, "{\"version\": 3}");
 
 		ReportInput input = collection(this.tagSets).collect(USER, WEEK, List.of()).orElseThrow();
 
@@ -303,7 +303,7 @@ class ReportMaterialCollectionTests {
 	}
 
 	@Test
-	void hasNoSectionWithoutSubscriptionsTrackedFlowsAndInterestAndNoInputWithoutAnAccount() {
+	void hasNoSectionWithoutSubscriptionsTrackedUserStorylinesAndInterestAndNoInputWithoutAnAccount() {
 		ReportMaterialCollection bare = new ReportMaterialCollection(this.tagSets, this.lineage, this.coverage,
 				user -> user.equals(USER) ? Optional.of(interests(List.of())) : Optional.empty(),
 				(user, from, to) -> List.of(), new Summaries(List.of()), new Changes(List.of()),
@@ -370,7 +370,7 @@ class ReportMaterialCollectionTests {
 		ReportGeneration generation = generation();
 		ReportId id = generation.schedule(user, PREVIOUS);
 		generation.run(id, ReportFixtures.MODEL, ReportFixtures.EFFORT, new ReportInput(user, PREVIOUS, SEOUL,
-				List.of(new StorylinesSection(List.of(ReportFixtures.flow(this.storylineA)))), List.of(), snapshot, null));
+				List.of(new StorylinesSection(List.of(ReportFixtures.userStoryline(this.storylineA)))), List.of(), snapshot, null));
 		return id;
 	}
 

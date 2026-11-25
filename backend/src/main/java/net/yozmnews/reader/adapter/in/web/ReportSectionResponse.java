@@ -38,9 +38,9 @@ record ReportSectionResponse(ReportSectionKind kind, @Nullable String title, Str
 					null);
 		}
 		return switch (stats) {
-			case ReportSectionStats.Flows flows -> new ReportSectionResponse(section.kind(), section.title(),
+			case ReportSectionStats.UserStorylines flows -> new ReportSectionResponse(section.kind(), section.title(),
 					section.body(), citations,
-					flows.flows().stream().map(flow -> ReportFlowCountResponse.of(flow, named)).toList(), null, null);
+					flows.userStorylines().stream().map(flow -> ReportFlowCountResponse.of(flow, named)).toList(), null, null);
 			case ReportSectionStats.Coverage coverage -> new ReportSectionResponse(section.kind(), section.title(),
 					section.body(), citations, null,
 					coverage.topics().stream().map(ReportTopicCountResponse::of).toList(), null);

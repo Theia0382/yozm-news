@@ -18,12 +18,9 @@ import net.yozmnews.report.ReportId;
 import net.yozmnews.report.ReportPeriodKind;
 import net.yozmnews.report.ReportSectionKind;
 import net.yozmnews.report.domain.alias.ReportAliases;
-import net.yozmnews.report.domain.input.CoverageSection;
 import net.yozmnews.report.domain.input.Count;
+import net.yozmnews.report.domain.input.CoverageSection;
 import net.yozmnews.report.domain.input.EventLine;
-import net.yozmnews.report.domain.input.FlowInterestLine;
-import net.yozmnews.report.domain.input.FlowMaterial;
-import net.yozmnews.report.domain.input.FlowSummary;
 import net.yozmnews.report.domain.input.InputSection;
 import net.yozmnews.report.domain.input.InterestsSection;
 import net.yozmnews.report.domain.input.PriorReport;
@@ -33,6 +30,9 @@ import net.yozmnews.report.domain.input.StorylinesSection;
 import net.yozmnews.report.domain.input.TopicCoverageLine;
 import net.yozmnews.report.domain.input.TopicInterestLine;
 import net.yozmnews.report.domain.input.TopicSubscriptionLine;
+import net.yozmnews.report.domain.input.UserStorylineInterestLine;
+import net.yozmnews.report.domain.input.UserStorylineMaterial;
+import net.yozmnews.report.domain.input.UserStorylineSummary;
 import net.yozmnews.report.domain.report.ReportPeriod;
 import net.yozmnews.storyline.StorylineId;
 import net.yozmnews.storyline.StorylineState;
@@ -193,24 +193,24 @@ class ReportPromptsTests {
 		assertThatThrownBy(() -> new ReportPrompt("지시", "{}", " ")).isInstanceOf(IllegalArgumentException.class);
 	}
 
-	/** 추적 흐름 하나(사건 둘) · 구독 행 둘 · 관심 줄 셋 · 구독 변경 하나 */
+	/** 추적한 사용자 스토리라인 하나(사건 둘) · 구독 행 둘 · 관심 줄 셋 · 구독 변경 하나 */
 	private static ReportInput input(ZoneId zone, ReportPeriod period, List<PriorReport> priors) {
-		FlowMaterial flow = new FlowMaterial(new StorylineId(TRACKED_HEAD), Set.of(new StorylineId(TRACKED_HEAD)),
-				new FlowSummary("흐름 제목", "흐름 요약", "최근 전개", Instant.parse("2026-11-20T00:00:00Z")),
+		UserStorylineMaterial userStoryline = new UserStorylineMaterial(new StorylineId(TRACKED_HEAD), Set.of(new StorylineId(TRACKED_HEAD)),
+				new UserStorylineSummary("흐름 제목", "흐름 요약", "최근 전개", Instant.parse("2026-11-20T00:00:00Z")),
 				StorylineState.QUIET, true, new Count(12, 4L),
 				List.of(new EventLine(new EventId(FIRST_EVENT), "첫 사건 제목", LocalDate.of(2026, 11, 17), 5, true),
 						new EventLine(new EventId(SECOND_EVENT), "둘째 사건 제목", LocalDate.of(2026, 11, 10), 2, false)));
 		InterestsSection interests = new InterestsSection(
 				List.of(new TopicInterestLine("economy.finance", "금융", 0.123, null, InterestShift.LEFT)),
-				List.of(new FlowInterestLine(new StorylineId(TRACKED_HEAD),
-						new FlowSummary("흐름 제목", "흐름 요약", "최근 전개", Instant.parse("2026-11-20T00:00:00Z")), 0.2, 0.456,
+				List.of(new UserStorylineInterestLine(new StorylineId(TRACKED_HEAD),
+						new UserStorylineSummary("흐름 제목", "흐름 요약", "최근 전개", Instant.parse("2026-11-20T00:00:00Z")), 0.2, 0.456,
 						InterestShift.NONE),
-						new FlowInterestLine(new StorylineId(OTHER_HEAD),
-								new FlowSummary("다른 제목", "다른 요약", "다른 전개", Instant.parse("2026-11-19T00:00:00Z")), null,
+						new UserStorylineInterestLine(new StorylineId(OTHER_HEAD),
+								new UserStorylineSummary("다른 제목", "다른 요약", "다른 전개", Instant.parse("2026-11-19T00:00:00Z")), null,
 								0.3, InterestShift.ENTERED)),
 				List.of(new TopicSubscriptionLine(Instant.parse("2026-11-18T00:30:00Z"), TopicSubscriptionAction.ADD,
 						List.of("반도체", "배터리"))));
-		List<InputSection> sections = List.of(new StorylinesSection(List.of(flow)), coverage(), interests);
+		List<InputSection> sections = List.of(new StorylinesSection(List.of(userStoryline)), coverage(), interests);
 		return new ReportInput(ReportFixtures.USER, period, zone, sections, priors, ReportFixtures.SNAPSHOT, null);
 	}
 

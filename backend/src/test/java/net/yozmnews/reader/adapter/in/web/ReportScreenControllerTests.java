@@ -179,16 +179,16 @@ class ReportScreenControllerTests {
 		long previous =this.reports.report(user, "WEEK", "READY", Instant.parse("2026-11-08T15:00:00Z"),
 				ReportRows.WEEK_START, null, null);
 		long id = this.reports.report(user, "WEEK", "READY", ReportRows.WEEK_START, ReportRows.WEEK_END, """
-				{"version":1,"tagSet":4,
+				{"version":2,"tagSet":4,
 				 "period":{"kind":"WEEK","start":"2026-11-15T15:00:00Z","end":"2026-11-22T15:00:00Z"},
-				 "storylines":{"basis":"PUBLISHED","flows":[
+				 "storylines":{"basis":"PUBLISHED","userStorylines":[
 				   {"head":%d,"tops":[%d],"articles":8,"previous":2,"trend":"ROSE","trackedInPeriod":false},
 				   {"head":%d,"tops":[%d],"articles":5,"previous":null,"trend":"NO_COMPARISON","trackedInPeriod":true},
 				   {"head":%d,"tops":[%d],"articles":3,"previous":3,"trend":"STEADY","trackedInPeriod":false}]},
 				 "coverage":{"basis":"FIRST_EVALUATED","topics":[
 				   {"key":"economy.finance","name":"금융","articles":40,"previous":12,"trend":"ROSE"}]},
 				 "interests":{"topics":[{"key":"economy.finance","name":"금융","start":0.42,"end":null,"shift":"LEFT"}],
-				   "flows":[{"head":%d,"start":0.2,"end":0.6,"shift":"ENTERED"}]}}"""
+				   "userStorylines":[{"head":%d,"start":0.2,"end":0.6,"shift":"ENTERED"}]}}"""
 			.formatted(summarized, summarized, merged, merged, uncited, uncited, child), previous);
 		this.reports.section(id, "OVERVIEW", 0, null, "개요");
 		long flows = this.reports.section(id, "STORYLINES", 1, "흐름", "흐름 본문");

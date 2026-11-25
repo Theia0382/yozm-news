@@ -4,11 +4,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 import net.yozmnews.report.domain.input.CoverageSection;
-import net.yozmnews.report.domain.input.FlowMaterial;
 import net.yozmnews.report.domain.input.InputSection;
 import net.yozmnews.report.domain.input.InterestsSection;
 import net.yozmnews.report.domain.input.StorylinesSection;
 import net.yozmnews.report.domain.input.TopicCoverageLine;
+import net.yozmnews.report.domain.input.UserStorylineMaterial;
 
 /**
  * 갈래 조건과 갈래 순서의 정본 · docs/specs/report.md §5 · report-R14
@@ -21,17 +21,17 @@ public final class ReportSections {
 	private ReportSections() {
 	}
 
-	public static List<InputSection> of(List<FlowMaterial> flows, List<TopicCoverageLine> topics,
+	public static List<InputSection> of(List<UserStorylineMaterial> userStorylines, List<TopicCoverageLine> topics,
 			InterestLines.Lines interests) {
 		List<InputSection> sections = new ArrayList<>();
-		if (!flows.isEmpty()) {
-			sections.add(new StorylinesSection(flows));
+		if (!userStorylines.isEmpty()) {
+			sections.add(new StorylinesSection(userStorylines));
 		}
 		if (!topics.isEmpty()) {
 			sections.add(new CoverageSection(topics));
 		}
-		if (!interests.topics().isEmpty() || !interests.flows().isEmpty() || !interests.changes().isEmpty()) {
-			sections.add(new InterestsSection(interests.topics(), interests.flows(), interests.changes()));
+		if (!interests.topics().isEmpty() || !interests.userStorylines().isEmpty() || !interests.changes().isEmpty()) {
+			sections.add(new InterestsSection(interests.topics(), interests.userStorylines(), interests.changes()));
 		}
 		return List.copyOf(sections);
 	}

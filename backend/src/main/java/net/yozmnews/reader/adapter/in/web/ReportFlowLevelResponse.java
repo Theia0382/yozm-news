@@ -20,7 +20,7 @@ record ReportFlowLevelResponse(ReportFlowResponse flow, @Nullable Double start, 
 		Objects.requireNonNull(shift, "shift");
 	}
 
-	static ReportFlowLevelResponse of(ReportSectionStats.FlowLevel level, ReportFlows.Named named) {
+	static ReportFlowLevelResponse of(ReportSectionStats.UserStorylineLevel level, ReportFlows.Named named) {
 		return new ReportFlowLevelResponse(Objects.requireNonNull(named.flows().get(level.storyline()), "flow"),
 				level.start(), level.end(), level.shift());
 	}

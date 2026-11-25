@@ -100,12 +100,12 @@ class ReportScreenController {
 			return;
 		}
 		switch (section.stats()) {
-			case ReportSectionStats.Flows counts -> counts.flows().forEach(flow -> storylines.add(flow.storyline()));
+			case ReportSectionStats.UserStorylines counts -> counts.userStorylines().forEach(flow -> storylines.add(flow.storyline()));
 			case ReportSectionStats.Coverage coverage -> {
 				// 주제는 이름을 싣고 왔다
 			}
 			case ReportSectionStats.Interests interests ->
-				interests.flows().forEach(flow -> storylines.add(flow.storyline()));
+				interests.userStorylines().forEach(flow -> storylines.add(flow.storyline()));
 		}
 	}
 

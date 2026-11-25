@@ -1,10 +1,10 @@
 package net.yozmnews.report.adapter.out.llm;
 
 import static net.yozmnews.report.ReportFixtures.coverage;
-import static net.yozmnews.report.ReportFixtures.flow;
-import static net.yozmnews.report.ReportFixtures.flows;
 import static net.yozmnews.report.ReportFixtures.input;
 import static net.yozmnews.report.ReportFixtures.interests;
+import static net.yozmnews.report.ReportFixtures.userStoryline;
+import static net.yozmnews.report.ReportFixtures.userStorylines;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
@@ -56,7 +56,7 @@ class LlmReportGeneratorTests {
 		LlmReportGenerator generator = generator(request -> done(generated("{}", GenerationStop.COMPLETE)));
 
 		generator.generate(request(input(interests()), ReasoningEffort.HIGH));
-		generator.generate(request(input(flows(flow(31, 902)), coverage(), interests(31)), ReasoningEffort.LOW));
+		generator.generate(request(input(userStorylines(userStoryline(31, 902)), coverage(), interests(31)), ReasoningEffort.LOW));
 
 		assertThat(this.users).containsExactly(new UserId(7), new UserId(7));
 		assertThat(this.requests).containsExactly(

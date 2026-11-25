@@ -1,9 +1,9 @@
 package net.yozmnews.report.domain.output;
 
 import static net.yozmnews.report.ReportFixtures.coverage;
-import static net.yozmnews.report.ReportFixtures.flow;
-import static net.yozmnews.report.ReportFixtures.flows;
 import static net.yozmnews.report.ReportFixtures.input;
+import static net.yozmnews.report.ReportFixtures.userStoryline;
+import static net.yozmnews.report.ReportFixtures.userStorylines;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
@@ -22,7 +22,7 @@ import org.junit.jupiter.api.Test;
 class ReportOutputReaderTests {
 
 	private static final OutputShape.Obj ROOT = ReportOutputSchema.root(ReportAliases.of(input(
-			flows(flow(31, 902)), coverage())));
+			userStorylines(userStoryline(31, 902)), coverage())));
 
 	@Test
 	void readsTheOverviewAndEverySectionInto() {

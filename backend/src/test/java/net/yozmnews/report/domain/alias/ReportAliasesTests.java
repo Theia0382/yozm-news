@@ -2,8 +2,8 @@ package net.yozmnews.report.domain.alias;
 
 import static net.yozmnews.report.ReportFixtures.coverage;
 import static net.yozmnews.report.ReportFixtures.event;
-import static net.yozmnews.report.ReportFixtures.flow;
-import static net.yozmnews.report.ReportFixtures.flows;
+import static net.yozmnews.report.ReportFixtures.userStoryline;
+import static net.yozmnews.report.ReportFixtures.userStorylines;
 import static net.yozmnews.report.ReportFixtures.input;
 import static net.yozmnews.report.ReportFixtures.interests;
 import static net.yozmnews.report.ReportFixtures.PERIOD;
@@ -30,9 +30,9 @@ class ReportAliasesTests {
 
 	@Test
 	void namesStorylinesAndEventsInInputOrderAndKeepsOneAliasForTheSameTarget() {
-		ReportAliases aliases = ReportAliases.of(input(flows(flow(31, 902), flow(44, 903)), interests(44, 31)));
+		ReportAliases aliases = ReportAliases.of(input(userStorylines(userStoryline(31, 902), userStoryline(44, 903)), interests(44, 31)));
 
-		// 흐름의 헤드 → 그 흐름의 사건 순 — 다른 갈래에 다시 든 대상은 처음 매긴 별칭 하나
+		// 사용자 스토리라인의 헤드 → 그 사용자 스토리라인의 사건 순 — 다른 갈래에 다시 든 대상은 처음 매긴 별칭 하나
 		assertThat(aliases.sections()).containsExactly(
 				new AliasedSection(ReportSectionKind.STORYLINES, List.of("S1", "E1", "S2", "E2")),
 				new AliasedSection(ReportSectionKind.INTERESTS, List.of("S2", "S1")));
@@ -44,7 +44,7 @@ class ReportAliasesTests {
 
 	@Test
 	void givesTheAliasOfATargetAndRefusesATargetOutsideTheInput() {
-		ReportAliases aliases = ReportAliases.of(input(flows(flow(31, 902), flow(44, 903)), interests(44, 31)));
+		ReportAliases aliases = ReportAliases.of(input(userStorylines(userStoryline(31, 902), userStoryline(44, 903)), interests(44, 31)));
 
 		assertThat(aliases.alias(storyline(31))).isEqualTo("S1");
 		assertThat(aliases.alias(storyline(44))).isEqualTo("S2");
@@ -63,11 +63,11 @@ class ReportAliasesTests {
 
 	@Test
 	void keepsTheFirstOfARepeatedTargetAndRefusesEmptyMaterialARepeatedKindAndANonObjectSnapshot() {
-		// 한 갈래 안 같은 대상은 처음 것만 — 사건이 두 흐름에 들 수 있다
-		assertThat(flows(flow(31, 902), flow(44, 902)).targets()).containsExactly(storyline(31), event(902),
+		// 한 갈래 안 같은 대상은 처음 것만 — 사건이 두 사용자 스토리라인에 들 수 있다
+		assertThat(userStorylines(userStoryline(31, 902), userStoryline(44, 902)).targets()).containsExactly(storyline(31), event(902),
 				storyline(44));
 		assertThatIllegalArgumentException().isThrownBy(() -> new StorylinesSection(List.of()))
-			.withMessage("추적한 흐름의 갈래에 흐름이 없다");
+			.withMessage("추적한 사용자 스토리라인의 갈래에 사용자 스토리라인이 없다");
 		InputSection coverage = coverage();
 		assertThatIllegalArgumentException().isThrownBy(() -> input(coverage, coverage()))
 			.withMessage("갈래 종류가 겹친다: COVERAGE");

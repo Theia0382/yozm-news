@@ -37,7 +37,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 /**
  * 리포트 조회 공개 조회의 구현 · docs/specs/report.md §4 · report-R11 · report-R12 · report-R25 · report-R26
  * <p>
- * 행 · 섹션 · 인용은 읽기 전용 트랜잭션 하나에서 읽고, 인용의 사건 · 스토리라인과 스냅숏 흐름 줄의 헤드는 트랜잭션 밖에서 {@code event} ·
+ * 행 · 섹션 · 인용은 읽기 전용 트랜잭션 하나에서 읽고, 인용의 사건 · 스토리라인과 스냅숏 사용자 스토리라인 줄의 헤드는 트랜잭션 밖에서 {@code event} ·
  * {@code storyline} 의 공개 조회로 지금 것으로 푼다 — 스토리라인은 인용과 헤드를 한 번에 묻는다. 생성 때 이은 직전 리포트의 행도 같은
  * 트랜잭션에서 읽는다. 시작 전 행의 기간 날짜는 {@code user} 의 {@link UserTimezones} 로 지금 사용자 시간대를 읽어 적는다. 판단은
  * {@link ReportViews} 가 한다. 쓰지 않는다.
@@ -134,7 +134,7 @@ class ReportDirectoryService implements ReportDirectory {
 		return current;
 	}
 
-	/** 스토리라인(인용 · 스냅숏 흐름 줄의 헤드)마다 지금 스토리라인 — 합쳐졌으면 남는 것. 지운 스토리라인은 없다 */
+	/** 스토리라인(인용 · 스냅숏 사용자 스토리라인 줄의 헤드)마다 지금 스토리라인 — 합쳐졌으면 남는 것. 지운 스토리라인은 없다 */
 	private Map<StorylineId, StorylineId> currentStorylines(Set<StorylineId> ids) {
 		Map<StorylineId, StorylineId> current = new HashMap<>();
 		if (ids.isEmpty()) {
