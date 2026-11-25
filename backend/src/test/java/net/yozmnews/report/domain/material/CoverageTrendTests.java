@@ -2,7 +2,9 @@ package net.yozmnews.report.domain.material;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import net.yozmnews.report.ReportPeriodKind;
 import net.yozmnews.report.ReportTrend;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
@@ -25,6 +27,12 @@ class CoverageTrendTests {
 			"3, 0, FELL" })
 	void judgesTheChangeInTheRuleOrder(Long previous, long current, ReportTrend expected) {
 		assertThat(CoverageTrend.of(current, previous)).isEqualTo(expected);
+	}
+
+	@Test
+	void onlyAWeeklyReportComparesWithThePreviousReport() {
+		assertThat(CoverageTrend.compares(ReportPeriodKind.WEEK)).isTrue();
+		assertThat(CoverageTrend.compares(ReportPeriodKind.MONTH)).isFalse();
 	}
 
 }

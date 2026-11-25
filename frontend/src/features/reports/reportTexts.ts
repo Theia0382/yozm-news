@@ -92,13 +92,11 @@ export const reportFailureTexts: Record<ReportFailure, string> = {
   INTERRUPTED: "만들기가 정한 시간 안에 끝나지 않아 멈췄습니다.",
 };
 
-/** 섹션 종류마다 숫자 표의 이름 — 개요는 표가 없다 */
+/** 섹션 종류마다 숫자 표의 이름 */
 export const statsTitles = {
-  OVERVIEW: null,
   STORYLINES: "추적한 흐름의 보도량",
-  COVERAGE: "구독한 주제의 보도량",
   INTERESTS: "관심의 변화",
-} as const satisfies Record<SectionKind, string | null>;
+} as const satisfies Record<SectionKind, string>;
 
 /** 보도량 판정의 이름 */
 export const trendLabels = {

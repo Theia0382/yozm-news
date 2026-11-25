@@ -74,9 +74,9 @@ public class ReportScreenScopeTests {
 		LlmKeyRows.give(this.jdbc, a.id().value());
 		LlmKeyRows.give(this.jdbc, b.id().value());
 		long ofA = this.reports.report(a.id().value(), "READY", null);
-		this.reports.section(ofA, "OVERVIEW", 0, null, "A 의 개요");
+		this.reports.section(ofA, "INTERESTS", 0, "관심", "A 의 글");
 		long ofB = this.reports.report(b.id().value(), "READY", null);
-		this.reports.section(ofB, "OVERVIEW", 0, null, "B 의 개요");
+		this.reports.section(ofB, "INTERESTS", 0, "관심", "B 의 글");
 
 		// 빈 응답끼리 같아 통과하지 않게 A 의 응답에 행이 있음을 먼저 본다
 		this.mockMvc.perform(get("/api/reports").param("kind", "WEEK").with(a))
@@ -85,7 +85,7 @@ public class ReportScreenScopeTests {
 			.andExpect(jsonPath("$.reports[0].id").value(ofA));
 		this.mockMvc.perform(get("/api/reports/{id}", ofA).with(a))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.sections[0].body").value("A 의 개요"));
+			.andExpect(jsonPath("$.sections[0].body").value("A 의 글"));
 
 		this.mockMvc.perform(get("/api/reports").param("kind", "WEEK").with(b))
 			.andExpect(status().isOk())
@@ -97,7 +97,7 @@ public class ReportScreenScopeTests {
 			.andReturn()
 			.getResponse()
 			.getContentAsString();
-		assertThat(ofBDetail).contains("B 의 개요").doesNotContain("A 의 개요");
+		assertThat(ofBDetail).contains("B 의 글").doesNotContain("A 의 글");
 	}
 
 	@Test

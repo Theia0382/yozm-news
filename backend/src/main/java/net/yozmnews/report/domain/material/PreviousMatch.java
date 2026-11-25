@@ -10,9 +10,6 @@ import java.util.Set;
 
 import net.yozmnews.report.domain.material.ReportSnapshot.SnapshotUserStoryline;
 import net.yozmnews.storyline.StorylineId;
-import net.yozmnews.tag.TagKeyMapping;
-import net.yozmnews.tag.TagKind;
-import org.jspecify.annotations.Nullable;
 
 /**
  * 직전 스냅숏의 값을 지금 대상에 1:1 로 잇는 정본 · docs/specs/report.md §5 · report-R18
@@ -22,34 +19,6 @@ import org.jspecify.annotations.Nullable;
 public final class PreviousMatch {
 
 	private PreviousMatch() {
-	}
-
-	/**
-	 * 주제 — 직전 키 → 기사 수를 활성 키 → 기사 수로.
-	 * @param lineage 직전 스냅숏의 버전 → 활성 버전 계보 표 — 같은 버전이면 null(같은 키)
-	 * @return 이은 활성 키 → 직전 기사 수
-	 */
-	public static Map<String, Long> topics(Map<String, Long> previous, @Nullable TagKeyMapping lineage) {
-		Objects.requireNonNull(previous, "previous");
-		if (lineage == null) {
-			return Map.copyOf(previous);
-		}
-		Map<String, Set<String>> table = lineage.keys().get(TagKind.TOPIC);
-		// 활성 키마다 그리로 가는 직전 버전의 키 수 — 스냅숏에 없는 키도 센다
-		Map<String, Integer> inbound = new HashMap<>();
-		table.values().forEach(targets -> targets.forEach(target -> inbound.merge(target, 1, Integer::sum)));
-		Map<String, Long> carried = new LinkedHashMap<>();
-		previous.forEach((key, articles) -> {
-			Set<String> targets = table.get(key);
-			if (targets == null || targets.size() != 1) {
-				return;
-			}
-			String target = targets.iterator().next();
-			if (inbound.getOrDefault(target, 0) == 1) {
-				carried.put(target, articles);
-			}
-		});
-		return Map.copyOf(carried);
 	}
 
 	/**

@@ -12,7 +12,6 @@ import java.util.function.IntPredicate;
 import net.yozmnews.llm.TokenEstimate;
 import net.yozmnews.platform.CodePoints;
 import net.yozmnews.report.domain.alias.ReportAliases;
-import net.yozmnews.report.domain.input.CoverageSection;
 import net.yozmnews.report.domain.input.InputSection;
 import net.yozmnews.report.domain.input.InterestsSection;
 import net.yozmnews.report.domain.input.PriorReport;
@@ -129,8 +128,6 @@ public final class ReportInputFit {
 			for (InputSection section : original.sections()) {
 				switch (section) {
 					case StorylinesSection storylines -> this.userStorylines = new ArrayList<>(storylines.userStorylines());
-					case CoverageSection coverage -> {
-					}
 					case InterestsSection interests -> this.interestUserStorylines = new ArrayList<>(interests.userStorylines());
 				}
 			}
@@ -146,7 +143,6 @@ public final class ReportInputFit {
 			for (InputSection section : this.original.sections()) {
 				sections.add(switch (section) {
 					case StorylinesSection storylines -> new StorylinesSection(userStorylines);
-					case CoverageSection coverage -> coverage;
 					case InterestsSection interests ->
 						new InterestsSection(interests.topics(), interestUserStorylines, interests.subscriptionChanges());
 				});
@@ -174,7 +170,7 @@ public final class ReportInputFit {
 				}
 				int longest = prior.sections().stream().mapToInt(s -> codePoints(s.body())).max().orElse(0);
 				if (longest == 0) {
-					// 자를 본문이 없다 — 개요 · 섹션 제목은 자르지 않는다
+					// 자를 본문이 없다 — 섹션 제목은 자르지 않는다
 					next.add(prior);
 					continue;
 				}
@@ -299,7 +295,7 @@ public final class ReportInputFit {
 				.stream()
 				.map(section -> new PriorSection(section.kind(), section.title(), CodePoints.prefix(section.body(), keep)))
 				.toList();
-			return new PriorReport(prior.id(), prior.kind(), prior.start(), prior.end(), prior.overview(), sections);
+			return new PriorReport(prior.id(), prior.kind(), prior.start(), prior.end(), sections);
 		}
 
 		private static UserStorylineInterestLine withoutSummary(UserStorylineInterestLine line) {

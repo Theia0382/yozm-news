@@ -7,6 +7,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -89,6 +90,10 @@ class JdbcReportViewRepository implements ReportViewRepository {
 			.optional();
 	}
 
+	/**
+	 * 섹션 종류 제약이 받는 종류 가운데 {@link ReportSectionKind} 의 종류만 읽는다 — 저장소에는 생성이 더는 쓰지 않는 종류(개요 · 구독 주제
+	 * 보도량)의 행이 남아 있을 수 있고 지우지 않는다(report-R11 · report §6)
+	 */
 	@Override
 	public List<StoredSection> sections(UserId user, ReportId id) {
 		Objects.requireNonNull(user, "user");
@@ -99,9 +104,10 @@ class JdbcReportViewRepository implements ReportViewRepository {
 				from report_sections s
 				join reports r on r.id = s.report_id
 				left join report_items i on i.report_section_id = s.id
-				where r.id = :id and r.user_id = :user
+				where r.id = :id and r.user_id = :user and s.kind in (:kinds)
 				order by s.position, i.position""")
 			.param("id", id.value())
+			.param("kinds", Arrays.stream(ReportSectionKind.values()).map(Enum::name).toList())
 			.param("user", user.value())
 			.query((rs, n) -> {
 				Section section = sections.computeIfAbsent(rs.getLong("id"),
@@ -119,7 +125,7 @@ class JdbcReportViewRepository implements ReportViewRepository {
 			.list();
 		return sections.values()
 			.stream()
-			.map(section -> new StoredSection(section.kind(), section.title(),
+			.map(section -> new StoredSection(section.kind(), Objects.requireNonNull(section.title(), "title"),
 					Objects.requireNonNull(section.body(), "body"), section.citations()))
 			.toList();
 	}

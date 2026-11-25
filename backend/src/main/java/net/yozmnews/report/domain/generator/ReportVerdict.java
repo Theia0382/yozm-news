@@ -3,12 +3,14 @@ package net.yozmnews.report.domain.generator;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 import net.yozmnews.llm.GenerationStop;
 import net.yozmnews.platform.OutputShape;
 import net.yozmnews.report.ReportFailure;
 import net.yozmnews.report.ReportSectionKind;
 import net.yozmnews.report.domain.alias.ReportAliases;
+import net.yozmnews.report.domain.output.CitedReport;
 import net.yozmnews.report.domain.output.ReportCitationCheck;
 import net.yozmnews.report.domain.output.ReportOutputRead;
 import net.yozmnews.report.domain.output.ReportOutputReader;
@@ -21,7 +23,8 @@ import net.yozmnews.report.domain.output.ReportOutputSchema;
  * 생성에 다시 묻기는 한 번이다. 읽지 못해 다시 물은 호출에서 읽지 못하면 실패로 끝낸다({@link #settle(ReportOutcome, OutputShape.Obj)}).
  * 고쳐 쓰라고 다시 물었으면 두 읽기 가운데 모자람({@link Shortfall} — 빠진 갈래 수, 남은 별칭 수의 사전식)이 적은 쪽(같으면 다시 물은 쪽)을
  * 쓰고, 다시 물은 호출이 읽히지 않거나 끝나지 못했으면 첫 읽기를 쓴다({@link #settle(ReportOutcome, OutputShape.Obj, ReportAliases, Read)})
- * — 다시 물어도 남은 별칭은 실패로 치지 않는다. 잘린 응답 · 거절은 다시 묻지 않고 그 사유의 코드로 끝낸다. 생성기의 실패는 그 코드 그대로다.
+ * — 다시 물어도 남은 별칭은 실패로 치지 않는다. 고른 읽기를 대조한 뒤 남은 갈래 섹션이 하나도 없으면 읽지 못한 출력으로 끝낸다
+ * ({@link #withoutSections}). 잘린 응답 · 거절은 다시 묻지 않고 그 사유의 코드로 끝낸다. 생성기의 실패는 그 코드 그대로다.
  * 빠진 갈래 · 남은 별칭의 판정은 대조의 정본({@link ReportCitationCheck#missing} · {@link ReportCitationCheck#leftAliases})이다.
  */
 public final class ReportVerdict {
@@ -36,12 +39,26 @@ public final class ReportVerdict {
 	public static final String MISSING = "출력에 없는 갈래: ";
 
 	/** 글에 별칭이 남아 다시 물을 때의 진단 머리 — 뒤에 남은 별칭을 {@code ", "} 로 잇는다 */
-	public static final String LEFT_ALIASES = "개요 · 제목 · 본문에 남은 별칭(이름으로 바꿔 쓸 것): ";
+	public static final String LEFT_ALIASES = "제목 · 본문에 남은 별칭(이름으로 바꿔 쓸 것): ";
+
+	/** 대조 뒤 남은 갈래 섹션이 없는 출력의 실패 메시지 */
+	public static final String NO_SECTION = "출력에 대조를 지난 갈래 섹션이 없다";
 
 	/** 진단 둘을 잇는 구분 */
 	private static final String DIAGNOSIS_SEPARATOR = " · ";
 
 	private ReportVerdict() {
+	}
+
+	/**
+	 * 고른 읽기를 대조한 뒤의 판정 — 남은 갈래 섹션이 하나도 없으면 읽지 못한 출력({@code UNREADABLE_OUTPUT})으로 끝낸다. 리포트의 글은 갈래
+	 * 섹션뿐이라 섹션이 없으면 보일 글이 없다(report-R8)
+	 * @return 섹션이 하나라도 있으면 빈 값
+	 */
+	public static Optional<Fail> withoutSections(CitedReport cited) {
+		Objects.requireNonNull(cited, "cited");
+		return cited.sections().isEmpty() ? Optional.of(new Fail(ReportFailure.UNREADABLE_OUTPUT, NO_SECTION))
+				: Optional.empty();
 	}
 
 	/**

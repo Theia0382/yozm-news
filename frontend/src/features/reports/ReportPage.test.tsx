@@ -21,20 +21,11 @@ function renderReport(body: ReportDetail | (() => Response), id = 12) {
   });
 }
 
-/** 갈래 셋이 있는 주간 리포트 — 스토리라인 둘(정리 있음 · 없음), 사건 둘(기사 있음 · 없음), 직전 리포트 11, 숨긴 섹션 1 */
+/** 갈래 둘이 있는 주간 리포트 — 스토리라인 둘(정리 있음 · 없음), 사건 둘(기사 있음 · 없음), 직전 리포트 11, 숨긴 섹션 1 */
 const READY = detail(summary(12), {
   previous: summary(11, { firstDay: "2026-11-09", lastDay: "2026-11-15" }),
   hiddenSections: 1,
   sections: [
-    {
-      kind: "OVERVIEW",
-      title: null,
-      body: "이번 주의 개요다.",
-      citations: [],
-      userStorylines: null,
-      topics: null,
-      interests: null,
-    },
     {
       kind: "STORYLINES",
       title: "추적한 흐름이 커졌다",
@@ -60,6 +51,7 @@ const READY = detail(summary(12), {
           previous: 2,
           trend: "ROSE",
           trackedInPeriod: false,
+          state: "ACTIVE",
         },
         {
           storyline: storyline(33),
@@ -67,18 +59,9 @@ const READY = detail(summary(12), {
           previous: null,
           trend: "NO_COMPARISON",
           trackedInPeriod: true,
+          state: "QUIET",
         },
       ],
-      topics: null,
-      interests: null,
-    },
-    {
-      kind: "COVERAGE",
-      title: "금융 보도가 늘었다",
-      body: "보도량 본문이다.",
-      citations: [],
-      userStorylines: null,
-      topics: [{ name: "금융", articles: 40, previous: 12, trend: "ROSE" }],
       interests: null,
     },
     {
@@ -94,7 +77,6 @@ const READY = detail(summary(12), {
         },
       ],
       userStorylines: null,
-      topics: null,
       interests: {
         topics: [{ name: "금융", start: 0.42, end: null, shift: "LEFT" }],
         userStorylines: [
@@ -111,7 +93,7 @@ const READY = detail(summary(12), {
 });
 
 describe("ReportPage", () => {
-  it("개요와 갈래 섹션의 제목 · 본문 · 숫자 표 · 인용을 그린다", async () => {
+  it("갈래 섹션의 제목 · 본문 · 숫자 표 · 인용을 그린다", async () => {
     renderReport(READY);
 
     expect(
@@ -120,16 +102,11 @@ describe("ReportPage", () => {
         name: "주간 리포트 · 2026. 11. 16. ~ 2026. 11. 22.",
       }),
     ).toBeInTheDocument();
-    expect(screen.getByText("이번 주의 개요다.")).toBeInTheDocument();
     expect(
       screen
         .getAllByRole("heading", { level: 2 })
         .map((heading) => heading.textContent),
-    ).toEqual([
-      "추적한 흐름이 커졌다",
-      "금융 보도가 늘었다",
-      "관심이 옮겨 갔다",
-    ]);
+    ).toEqual(["추적한 흐름이 커졌다", "관심이 옮겨 갔다"]);
 
     const userStorylines = screen.getByRole("table", {
       name: "추적한 흐름의 보도량",
@@ -167,14 +144,6 @@ describe("ReportPage", () => {
         name: "흐름 33 대표 기사",
       }),
     ).toHaveAttribute("href", "/storylines/33");
-
-    const topics = screen.getByRole("table", { name: "구독한 주제의 보도량" });
-    expect(
-      within(topics)
-        .getAllByRole("row")
-        .slice(1)
-        .map((row) => row.textContent),
-    ).toEqual(["금융늘었음 (이번 기간 40건 · 직전 기간 12건)"]);
 
     const interestTopics = screen.getByRole("table", {
       name: "관심의 변화 — 주제",

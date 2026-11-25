@@ -39,9 +39,6 @@ public final class ReportOutputReader {
 		OutputValue.Obj written = root.obj(ReportOutputSchema.SECTIONS);
 		Map<ReportSectionKind, SectionDraft> sections = new EnumMap<>(ReportSectionKind.class);
 		for (ReportSectionKind kind : ReportSectionKind.values()) {
-			if (kind == ReportSectionKind.OVERVIEW) {
-				continue;
-			}
 			String key = ReportOutputSchema.key(kind);
 			if (!written.values().containsKey(key)) {
 				continue;
@@ -55,7 +52,7 @@ public final class ReportOutputReader {
 			sections.put(kind, new SectionDraft(section.string(ReportOutputSchema.TITLE),
 					section.string(ReportOutputSchema.BODY), refs));
 		}
-		return new ReportDraft(root.string(ReportOutputSchema.OVERVIEW), sections);
+		return new ReportDraft(sections);
 	}
 
 }

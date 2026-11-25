@@ -36,7 +36,6 @@ public final class FakeReportGenerator implements ReportGenerator {
 			written.put(ReportOutputSchema.key(section.kind()), entry);
 		}
 		Map<String, Object> output = new LinkedHashMap<>();
-		output.put(ReportOutputSchema.OVERVIEW, "로컬 대체물이 만든 리포트다. 섹션 " + sections.size() + "개.");
 		output.put(ReportOutputSchema.SECTIONS, written);
 		return new ReportOutcome.Generated(JSON.writeValueAsString(output), new TokenUsage(0, 0), GenerationStop.COMPLETE);
 	}

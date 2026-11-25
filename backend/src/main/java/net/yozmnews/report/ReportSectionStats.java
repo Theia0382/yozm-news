@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Objects;
 
 import net.yozmnews.storyline.StorylineId;
+import net.yozmnews.storyline.StorylineState;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -32,39 +33,13 @@ public sealed interface ReportSectionStats {
 	 * @param articles 이번 기간 기사 수
 	 * @param previous 이은 직전 값 — 없으면 null
 	 * @param trackedInPeriod 기간 안에 추적을 더했는가
+	 * @param state 생성 때 헤드의 상태 — 상태를 남기지 않은 판의 스냅숏(report-R19)이면 null
 	 */
 	record UserStorylineCount(StorylineId storyline, long articles, @Nullable Long previous, ReportTrend trend,
-			boolean trackedInPeriod) {
+			boolean trackedInPeriod, @Nullable StorylineState state) {
 
 		public UserStorylineCount {
 			Objects.requireNonNull(storyline, "storyline");
-			Objects.requireNonNull(trend, "trend");
-		}
-
-	}
-
-	/**
-	 * 구독 주제의 보도량 — {@link ReportSectionKind#COVERAGE} 섹션의 숫자
-	 * @param topics 구독 행마다 — 스냅숏의 순서
-	 */
-	record Coverage(List<TopicCount> topics) implements ReportSectionStats {
-
-		public Coverage {
-			topics = List.copyOf(topics);
-		}
-
-	}
-
-	/**
-	 * 구독 주제 하나의 보도량
-	 * @param name 생성 때의 주제 이름
-	 * @param articles 이번 기간 기사 수
-	 * @param previous 이은 직전 값 — 없으면 null
-	 */
-	record TopicCount(String name, long articles, @Nullable Long previous, ReportTrend trend) {
-
-		public TopicCount {
-			Objects.requireNonNull(name, "name");
 			Objects.requireNonNull(trend, "trend");
 		}
 

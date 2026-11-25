@@ -25,7 +25,6 @@ import net.yozmnews.event.EventView;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.report.ReportDirectory;
 import net.yozmnews.report.ReportId;
-import net.yozmnews.report.ReportSectionKind;
 import net.yozmnews.report.ReportSectionView;
 import net.yozmnews.report.ReportStatus;
 import net.yozmnews.report.ReportView;
@@ -34,9 +33,9 @@ import net.yozmnews.report.domain.input.InputSection;
 import net.yozmnews.report.domain.input.PriorReport;
 import net.yozmnews.report.domain.input.PriorSection;
 import net.yozmnews.report.domain.input.ReportInput;
-import net.yozmnews.report.domain.input.TopicCoverageLine;
 import net.yozmnews.report.domain.input.UserStorylineMaterial;
 import net.yozmnews.report.domain.input.UserStorylineSummary;
+import net.yozmnews.report.domain.material.CoverageTrend;
 import net.yozmnews.report.domain.material.EventLines;
 import net.yozmnews.report.domain.material.InterestLines;
 import net.yozmnews.report.domain.material.PreviousMatch;
@@ -52,21 +51,12 @@ import net.yozmnews.storyline.StorylineDirectory;
 import net.yozmnews.storyline.StorylineEvent;
 import net.yozmnews.storyline.StorylineId;
 import net.yozmnews.storyline.StorylineView;
-import net.yozmnews.tag.CategoryCoverage;
-import net.yozmnews.tag.EvaluationPeriod;
-import net.yozmnews.tag.SubtopicCoverage;
-import net.yozmnews.tag.TagKeyLineage;
-import net.yozmnews.tag.TagKeyMapping;
 import net.yozmnews.tag.TagSetDirectory;
 import net.yozmnews.tag.TagSetId;
-import net.yozmnews.tag.TopicCoverage;
-import net.yozmnews.tag.TopicCoverageResult;
-import net.yozmnews.tag.TopicCoverageView;
 import net.yozmnews.user.DigestInterests;
 import net.yozmnews.user.DigestInterestsDirectory;
 import net.yozmnews.user.StorylineSubscriptionChange;
 import net.yozmnews.user.StorylineSubscriptionDirectory;
-import net.yozmnews.user.TopicSubscription;
 import net.yozmnews.user.UserStorylineDirectory;
 import net.yozmnews.user.UserStorylineId;
 import net.yozmnews.user.UserStorylineSummaries;
@@ -89,10 +79,6 @@ public class ReportMaterialCollection {
 
 	private final TagSetDirectory tagSets;
 
-	private final TagKeyLineage lineage;
-
-	private final TopicCoverage coverage;
-
 	private final DigestInterestsDirectory interests;
 
 	private final UserStorylineDirectory userStorylines;
@@ -113,13 +99,10 @@ public class ReportMaterialCollection {
 
 	private final ReportDirectory reports;
 
-	public ReportMaterialCollection(TagSetDirectory tagSets, TagKeyLineage lineage, TopicCoverage coverage,
-			DigestInterestsDirectory interests, UserStorylineDirectory userStorylines, UserStorylineSummaries summaries,
+	public ReportMaterialCollection(TagSetDirectory tagSets, DigestInterestsDirectory interests, UserStorylineDirectory userStorylines, UserStorylineSummaries summaries,
 			StorylineSubscriptionDirectory subscriptions, StorylineDirectory storylines, EventDirectory events,
 			ArticleDirectory articles, InterestHistory history, ReportViewRepository views, ReportDirectory reports) {
 		this.tagSets = Objects.requireNonNull(tagSets, "tagSets");
-		this.lineage = Objects.requireNonNull(lineage, "lineage");
-		this.coverage = Objects.requireNonNull(coverage, "coverage");
 		this.interests = Objects.requireNonNull(interests, "interests");
 		this.userStorylines = Objects.requireNonNull(userStorylines, "userStorylines");
 		this.summaries = Objects.requireNonNull(summaries, "summaries");
@@ -144,10 +127,8 @@ public class ReportMaterialCollection {
 		Objects.requireNonNull(weeklyReports, "weeklyReports");
 		EventPeriod eventPeriod = EventPeriod.of(period.start(), period.end())
 			.orElseThrow(() -> new IllegalArgumentException("리포트 기간이 집계 기간의 상한을 넘는다: " + period));
-		EvaluationPeriod evaluationPeriod = EvaluationPeriod.of(period.start(), period.end())
-			.orElseThrow(() -> new IllegalArgumentException("리포트 기간이 집계 기간의 상한을 넘는다: " + period));
 		for (int attempt = 1; attempt <= ATTEMPTS; attempt++) {
-			Attempt result = attempt(user, period, weeklyReports, eventPeriod, evaluationPeriod);
+			Attempt result = attempt(user, period, weeklyReports, eventPeriod);
 			if (result instanceof Attempt.Done done) {
 				return done.input();
 			}
@@ -165,8 +146,7 @@ public class ReportMaterialCollection {
 
 	}
 
-	private Attempt attempt(UserId user, ReportPeriod period, List<ReportId> weeklyReports, EventPeriod eventPeriod,
-			EvaluationPeriod evaluationPeriod) {
+	private Attempt attempt(UserId user, ReportPeriod period, List<ReportId> weeklyReports, EventPeriod eventPeriod) {
 		TagSetId before = this.tagSets.activeTagSet().id();
 		Optional<DigestInterests> found = this.interests.interestsOf(user);
 		if (found.isEmpty()) {
@@ -187,21 +167,6 @@ public class ReportMaterialCollection {
 			.toList();
 		List<UserStorylineMaterial> userStorylines = userStorylines(user, period, eventPeriod, settings, tracked, shown);
 
-		// 구독 주제의 보도량(report-R14) — 구독 행이 없으면 부르지 않는다
-		List<TopicCoverageLine> topics = List.of();
-		Map<String, Long> counts = new LinkedHashMap<>();
-		Map<String, String> topicNames = new LinkedHashMap<>();
-		if (!settings.topics().isEmpty()) {
-			Set<String> keys = new LinkedHashSet<>();
-			settings.topics().forEach(row -> keys.add(row.key()));
-			TopicCoverageResult result = this.coverage.count(evaluationPeriod, keys);
-			if (!(result instanceof TopicCoverageResult.Counted counted)
-					|| !counted.view().activeVersion().equals(before)) {
-				return new Attempt.Mismatched();
-			}
-			read(counted.view(), counts, topicNames);
-		}
-
 		// 관심 변화 — 시작 · 끝 두 점(report-R17)
 		Optional<List<InterestPoint>> points = this.history.at(user,
 				List.of(period.start(), period.start(), period.end()));
@@ -215,32 +180,15 @@ public class ReportMaterialCollection {
 		InterestLines.Lines interestLines = InterestLines.of(points.get().get(0), points.get().get(1), refs,
 				this.tagSets.names(before));
 
-		// 직전 리포트의 스냅숏 — 1:1 로 이은 직전 값(report-R18)
+		// 직전 리포트 — 그 스냅숏에서 1:1 로 이은 직전 값(report-R18)은 견주는 기간 종류만(report-R15)
 		Optional<ReportRow> previous = this.views.previous(user, period.kind(), period.start());
-		Optional<SnapshotValues> values = previous.flatMap(row -> ReportSnapshot.read(row.statsSnapshot()));
-		Map<String, Long> previousTopics = Map.of();
+		Optional<SnapshotValues> values = CoverageTrend.compares(period.kind())
+				? previous.flatMap(row -> ReportSnapshot.read(row.statsSnapshot())) : Optional.empty();
 		Map<StorylineId, Long> previousUserStorylines = Map.of();
 		if (values.isPresent()) {
-			TagKeyMapping mapping = null;
-			if (!values.get().tagSet().equals(before)) {
-				mapping = lineageOf(values.get().tagSet());
-				if (mapping != null && !mapping.to().equals(before)) {
-					return new Attempt.Mismatched();
-				}
-			}
-			previousTopics = (mapping == null && !values.get().tagSet().equals(before)) ? Map.of()
-					: PreviousMatch.topics(values.get().topics(), mapping);
 			previousUserStorylines = PreviousMatch.userStorylines(values.get().userStorylines(), resolvedTops(values.get().userStorylines()),
 					currentUserStorylines(userStorylines));
 		}
-		Map<String, Long> carriedTopics = previousTopics;
-		topics = settings.topics()
-			.stream()
-			.map(TopicSubscription::key)
-			.filter(counts::containsKey)
-			.map(key -> new TopicCoverageLine(key, topicNames.get(key),
-					new Count(counts.get(key), carriedTopics.get(key))))
-			.toList();
 		Map<StorylineId, Long> carriedUserStorylines = previousUserStorylines;
 		userStorylines = userStorylines.stream()
 			.map(userStoryline -> new UserStorylineMaterial(userStoryline.head(), userStoryline.tops(), userStoryline.summary(), userStoryline.headState(),
@@ -258,7 +206,7 @@ public class ReportMaterialCollection {
 		if (!this.tagSets.activeTagSet().id().equals(before)) {
 			return new Attempt.Mismatched();
 		}
-		List<InputSection> sections = ReportSections.of(userStorylines, topics, interestLines);
+		List<InputSection> sections = ReportSections.of(userStorylines, interestLines);
 		return new Attempt.Done(Optional.of(new ReportInput(user, period, settings.timezone(), sections, priors,
 				ReportSnapshot.write(period, before, sections), previous.map(ReportRow::id).orElse(null))));
 	}
@@ -373,28 +321,6 @@ public class ReportMaterialCollection {
 		return refs;
 	}
 
-	/** 구독 행 키의 기사 수와 이름 — 대분류 키는 대분류의 수, 중분류 키는 그 중분류의 수 */
-	private static void read(TopicCoverageView view, Map<String, Long> counts, Map<String, String> names) {
-		for (CategoryCoverage category : view.categories()) {
-			counts.put(category.key(), category.articles());
-			names.put(category.key(), category.name());
-			for (SubtopicCoverage subtopic : category.subtopics()) {
-				counts.put(subtopic.key(), subtopic.articles());
-				names.put(subtopic.key(), subtopic.name());
-			}
-		}
-	}
-
-	/** 직전 스냅숏의 버전 → 활성 버전 계보 표 — 그 버전이 없으면 null(비교하지 않는다) */
-	private @Nullable TagKeyMapping lineageOf(TagSetId version) {
-		try {
-			return this.lineage.toActive(version);
-		}
-		catch (IllegalArgumentException ex) {
-			return null;
-		}
-	}
-
 	private Map<StorylineId, StorylineId> resolvedTops(List<SnapshotUserStoryline> userStorylines) {
 		Set<StorylineId> tops = new LinkedHashSet<>();
 		userStorylines.forEach(userStoryline -> tops.addAll(userStoryline.tops()));
@@ -415,18 +341,12 @@ public class ReportMaterialCollection {
 	}
 
 	private static PriorReport prior(ReportView view) {
-		String overview = "";
 		List<PriorSection> sections = new ArrayList<>();
 		for (ReportSectionView section : view.sections()) {
-			if (section.kind() == ReportSectionKind.OVERVIEW) {
-				overview = section.body();
-			}
-			else {
-				sections.add(new PriorSection(section.kind(), Objects.requireNonNull(section.title()), section.body()));
-			}
+			sections.add(new PriorSection(section.kind(), section.title(), section.body()));
 		}
 		return new PriorReport(view.summary().id(), view.summary().periodKind(), view.summary().periodStart(),
-				view.summary().periodEnd(), overview, sections);
+				view.summary().periodEnd(), sections);
 	}
 
 }

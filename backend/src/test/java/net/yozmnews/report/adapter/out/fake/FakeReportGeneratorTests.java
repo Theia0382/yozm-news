@@ -1,6 +1,5 @@
 package net.yozmnews.report.adapter.out.fake;
 
-import static net.yozmnews.report.ReportFixtures.coverage;
 import static net.yozmnews.report.ReportFixtures.event;
 import static net.yozmnews.report.ReportFixtures.input;
 import static net.yozmnews.report.ReportFixtures.interests;
@@ -43,13 +42,12 @@ class FakeReportGeneratorTests {
 
 	@Test
 	void writesEverySectionWithTheAliasesOfItsTargets() {
-		ReportOutcome.Generated generated = generate(input(userStorylines(userStoryline(31, 902)), coverage(), interests(44)));
+		ReportOutcome.Generated generated = generate(input(userStorylines(userStoryline(31, 902)), interests(44)));
 
 		assertThat(JSON.readTree(generated.text())).isEqualTo(JSON.readTree("""
-				{"overview":"로컬 대체물이 만든 리포트다. 섹션 3개.","sections":{
+				{"sections":{
 				  "storylines":{"title":"로컬 섹션 1","body":"로컬 대체물이 만든 본문이다.","refs":["S1","E1"]},
-				  "coverage":{"title":"로컬 섹션 2","body":"로컬 대체물이 만든 본문이다.","refs":[]},
-				  "interests":{"title":"로컬 섹션 3","body":"로컬 대체물이 만든 본문이다.","refs":["S2"]}}}"""));
+				  "interests":{"title":"로컬 섹션 2","body":"로컬 대체물이 만든 본문이다.","refs":["S2"]}}}"""));
 		assertThat(generated.usage()).isEqualTo(new TokenUsage(0, 0));
 		assertThat(generated.stop()).isEqualTo(GenerationStop.COMPLETE);
 	}
@@ -66,7 +64,7 @@ class FakeReportGeneratorTests {
 	@Test
 	void passesTheSameReadingAndCitationCheckWithManyOrNoTargets() {
 		ReportInput many = input(userStorylines(userStoryline(31, 902)), interests(31, 44));
-		ReportInput none = input(coverage());
+		ReportInput none = input(interests());
 
 		assertThat(cite(many).sections()).containsExactly(
 				new CitedSection(ReportSectionKind.STORYLINES, "로컬 섹션 1", "로컬 대체물이 만든 본문이다.",
@@ -74,9 +72,8 @@ class FakeReportGeneratorTests {
 				new CitedSection(ReportSectionKind.INTERESTS, "로컬 섹션 2", "로컬 대체물이 만든 본문이다.",
 						List.of(storyline(31), storyline(44))));
 		CitedReport cited = cite(none);
-		assertThat(cited.overview()).isEqualTo("로컬 대체물이 만든 리포트다. 섹션 1개.");
 		assertThat(cited.sections()).containsExactly(
-				new CitedSection(ReportSectionKind.COVERAGE, "로컬 섹션 1", "로컬 대체물이 만든 본문이다.", List.of()));
+				new CitedSection(ReportSectionKind.INTERESTS, "로컬 섹션 1", "로컬 대체물이 만든 본문이다.", List.of()));
 		assertThat(cited.missingSections()).isZero();
 		assertThat(cited.unknownRefs()).isZero();
 	}

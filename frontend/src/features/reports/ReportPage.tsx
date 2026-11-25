@@ -9,7 +9,6 @@ import {
   type ReportInterests,
   ReportRequestError,
   type ReportSection,
-  type ReportTopicCount,
   useRegenerateReport,
   useReport,
 } from "@/features/reports/reportQueries";
@@ -208,9 +207,6 @@ function Regenerate({
 }
 
 function Section({ section }: { section: ReportSection }) {
-  if (section.kind === "OVERVIEW") {
-    return <p className="break-words whitespace-pre-line">{section.body}</p>;
-  }
   return (
     <section className="space-y-3">
       <h2 className="text-lg font-semibold break-words">{section.title}</h2>
@@ -218,7 +214,6 @@ function Section({ section }: { section: ReportSection }) {
       {section.userStorylines !== null && (
         <UserStorylineCounts rows={section.userStorylines} />
       )}
-      {section.topics !== null && <TopicCounts rows={section.topics} />}
       {section.interests !== null && (
         <InterestLevels interests={section.interests} />
       )}
@@ -320,28 +315,6 @@ function UserStorylineCounts({ rows }: { rows: ReportUserStorylineCount[] }) {
                 {TRACKED_IN_PERIOD}
               </span>
             )}
-          </th>
-          <ToneCell
-            label={trendLabels[row.trend]}
-            tone={trendTones[row.trend]}
-            detail={countsText(row.articles, row.previous)}
-          />
-        </tr>
-      ))}
-    </Table>
-  );
-}
-
-function TopicCounts({ rows }: { rows: ReportTopicCount[] }) {
-  return (
-    <Table
-      caption={statsTitles.COVERAGE}
-      headers={[countColumns.topic, countColumns.trend]}
-    >
-      {rows.map((row) => (
-        <tr key={row.name} className="border-t border-input">
-          <th scope="row" className="py-1 pr-3 text-left font-normal">
-            {row.name}
           </th>
           <ToneCell
             label={trendLabels[row.trend]}

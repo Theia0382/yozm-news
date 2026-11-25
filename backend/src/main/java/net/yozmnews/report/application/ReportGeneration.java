@@ -207,6 +207,10 @@ public class ReportGeneration {
 						logger.info("리포트 출력에서 버리거나 남은 것이 있다 — 리포트 {}, 빠진 섹션 {}, 모르는 별칭 {}, 상한으로 버린 수 {}, 글에 남은 별칭 {}",
 								id.value(), cited.missingSections(), cited.unknownRefs(), read.output().overLimit(), leftAliases);
 					}
+					Optional<ReportVerdict.Fail> empty = ReportVerdict.withoutSections(cited);
+					if (empty.isPresent()) {
+						yield new Completion.Failed(empty.get().failure(), empty.get().message(), usage, took);
+					}
 					this.sections.saveAll(ReportSection.of(id, cited));
 					yield new Completion.Ready(Objects.requireNonNull(usage, "읽은 응답은 공급자가 센 토큰이 있다"), took);
 				}

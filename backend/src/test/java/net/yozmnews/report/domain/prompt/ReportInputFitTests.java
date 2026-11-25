@@ -1,6 +1,5 @@
 package net.yozmnews.report.domain.prompt;
 
-import static net.yozmnews.report.ReportFixtures.coverage;
 import static net.yozmnews.report.ReportFixtures.userStoryline;
 import static net.yozmnews.report.ReportFixtures.userStorylines;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -48,7 +47,7 @@ class ReportInputFitTests {
 
 	@Test
 	void leavesAnInputWithinTheBudgetAsItIs() {
-		ReportInput input = ReportFixtures.input(userStorylines(userStoryline(31, 902)), coverage());
+		ReportInput input = ReportFixtures.input(userStorylines(userStoryline(31, 902)), ReportFixtures.interests());
 
 		FittedInput fitted = ReportInputFit.fit(input, 72_000);
 
@@ -59,18 +58,17 @@ class ReportInputFitTests {
 	}
 
 	@Test
-	void cutsTheBodiesOfEachPriorToItsShareAndKeepsOverviewsAndTitles() {
+	void cutsTheBodiesOfEachPriorToItsShareAndKeepsTitles() {
 		// 직전 글 두 편 — 본문 5,000 자씩. 예산 4,000 의 몫 1,200 을 두 편이 600 씩
 		PriorReport first = prior(1, "가".repeat(5_000));
 		PriorReport second = prior(2, "나".repeat(5_000));
-		ReportInput input = input(List.of(coverage()), List.of(first, second));
+		ReportInput input = input(List.of(ReportFixtures.interests()), List.of(first, second));
 
 		FittedInput fitted = ReportInputFit.fit(input, 4_000);
 
 		assertThat(fitted.trimmed()).isEqualTo(new Trimmed(2, 0, 0, 0, 0));
 		assertThat(fitted.overBudget()).isFalse();
 		for (PriorReport prior : fitted.input().priors()) {
-			assertThat(prior.overview()).isEqualTo("지난 개요");
 			assertThat(prior.sections()).singleElement().satisfies(section -> {
 				assertThat(section.title()).isEqualTo("지난 제목");
 				assertThat(section.body().length()).isBetween(400, 600);
@@ -83,7 +81,7 @@ class ReportInputFitTests {
 		// 짧은 편이 몫 600 을 다 쓰지 않아도 긴 편은 자기 몫 600 까지만 — 남은 몫은 재료가 쓴다
 		PriorReport shortPrior = prior(1, "가".repeat(50));
 		PriorReport longPrior = prior(2, "나".repeat(5_000));
-		ReportInput input = input(List.of(coverage()), List.of(shortPrior, longPrior));
+		ReportInput input = input(List.of(ReportFixtures.interests()), List.of(shortPrior, longPrior));
 
 		FittedInput fitted = ReportInputFit.fit(input, 4_000);
 
@@ -178,7 +176,7 @@ class ReportInputFitTests {
 		List<UserStorylineInterestLine> lines = LongStream.range(100, 103)
 			.mapToObj(head -> new UserStorylineInterestLine(new StorylineId(head), null, 0.1, 0.6, InterestShift.ENTERED))
 			.toList();
-		ReportInput input = input(List.of(userStorylines(userStoryline(31, 902), userStoryline(32, 903)), coverage(),
+		ReportInput input = input(List.of(userStorylines(userStoryline(31, 902), userStoryline(32, 903)),
 				new InterestsSection(List.of(), lines, List.of())), List.of());
 
 		FittedInput fitted = ReportInputFit.fit(input, 0);
@@ -186,7 +184,7 @@ class ReportInputFitTests {
 		assertThat(fitted.overBudget()).isTrue();
 		ReportInput after = fitted.input();
 		assertThat(after.sections()).extracting(InputSection::kind)
-			.containsExactly(ReportSectionKind.STORYLINES, ReportSectionKind.COVERAGE, ReportSectionKind.INTERESTS);
+			.containsExactly(ReportSectionKind.STORYLINES, ReportSectionKind.INTERESTS);
 		assertThat(storylines(after).userStorylines()).hasSize(1);
 		// 관심 줄은 변화 줄뿐이라(관심 줄 고르기 — report-R17) 덜어 내는 단계가 없다
 		assertThat(interests(after).userStorylines()).hasSize(3);
@@ -214,12 +212,11 @@ class ReportInputFitTests {
 			.toList();
 		List<PriorReport> priors = LongStream.rangeClosed(1, 7)
 			.mapToObj(id -> new PriorReport(new ReportId(id), ReportPeriodKind.WEEK, Instant.parse("2026-11-09T00:00:00Z"),
-					Instant.parse("2026-11-16T00:00:00Z"), "자".repeat(1_500),
+					Instant.parse("2026-11-16T00:00:00Z"),
 					List.of(new PriorSection(ReportSectionKind.STORYLINES, "차".repeat(200), "카".repeat(3_000)),
-							new PriorSection(ReportSectionKind.COVERAGE, "차".repeat(200), "카".repeat(3_000)),
 							new PriorSection(ReportSectionKind.INTERESTS, "차".repeat(200), "카".repeat(3_000)))))
 			.toList();
-		ReportInput input = input(List.of(new StorylinesSection(userStorylines), coverage(),
+		ReportInput input = input(List.of(new StorylinesSection(userStorylines),
 				new InterestsSection(List.of(), lines, List.of())), priors);
 
 		FittedInput fitted = ReportInputFit.fit(input, 112_000);
@@ -231,7 +228,7 @@ class ReportInputFitTests {
 
 	@Test
 	void refusesANegativeBudget() {
-		ReportInput input = ReportFixtures.input(coverage());
+		ReportInput input = ReportFixtures.input(ReportFixtures.interests());
 
 		assertThatThrownBy(() -> ReportInputFit.fit(input, -1)).isInstanceOf(IllegalArgumentException.class);
 	}
@@ -243,7 +240,7 @@ class ReportInputFitTests {
 
 	private static PriorReport prior(long id, String body) {
 		return new PriorReport(new ReportId(id), ReportPeriodKind.WEEK, Instant.parse("2026-11-09T00:00:00Z"),
-				Instant.parse("2026-11-16T00:00:00Z"), "지난 개요",
+				Instant.parse("2026-11-16T00:00:00Z"),
 				List.of(new PriorSection(ReportSectionKind.STORYLINES, "지난 제목", body)));
 	}
 

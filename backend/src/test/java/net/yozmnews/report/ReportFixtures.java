@@ -14,13 +14,11 @@ import net.yozmnews.llm.ReasoningEffort;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.report.InterestShift;
 import net.yozmnews.report.domain.input.Count;
-import net.yozmnews.report.domain.input.CoverageSection;
 import net.yozmnews.report.domain.input.EventLine;
 import net.yozmnews.report.domain.input.InputSection;
 import net.yozmnews.report.domain.input.InterestsSection;
 import net.yozmnews.report.domain.input.ReportInput;
 import net.yozmnews.report.domain.input.StorylinesSection;
-import net.yozmnews.report.domain.input.TopicCoverageLine;
 import net.yozmnews.report.domain.input.TopicInterestLine;
 import net.yozmnews.report.domain.input.UserStorylineInterestLine;
 import net.yozmnews.report.domain.input.UserStorylineMaterial;
@@ -29,8 +27,8 @@ import net.yozmnews.storyline.StorylineId;
 import net.yozmnews.storyline.StorylineState;
 
 /**
- * 리포트 시험의 값 — 갈래는 재료 꼴로 만든다. 갈래의 인용 대상은 재료에서 나온다(report-R14): 추적한 사용자 스토리라인은 헤드 → 그 사용자 스토리라인의 사건, 구독 주제
- * 보도량은 없음, 관심 변화는 사용자 스토리라인 관심 줄의 헤드
+ * 리포트 시험의 값 — 갈래는 재료 꼴로 만든다. 갈래의 인용 대상은 재료에서 나온다(report-R14): 추적한 사용자 스토리라인은 헤드 → 그 사용자 스토리라인의 사건, 관심
+ * 변화는 사용자 스토리라인 관심 줄의 헤드
  */
 public final class ReportFixtures {
 
@@ -41,7 +39,7 @@ public final class ReportFixtures {
 	public static final ReasoningEffort EFFORT = ReasoningEffort.MEDIUM;
 
 	/** 통계 스냅숏 */
-	public static final String SNAPSHOT = "{\"coverage\":{\"이번\":12,\"직전\":7}}";
+	public static final String SNAPSHOT = "{\"storylines\":{\"이번\":12,\"직전\":7}}";
 
 	/** 입력의 사용자 */
 	public static final UserId USER = new UserId(7);
@@ -76,11 +74,6 @@ public final class ReportFixtures {
 	/** 추적한 사용자 스토리라인의 갈래 */
 	public static StorylinesSection userStorylines(UserStorylineMaterial... userStorylines) {
 		return new StorylinesSection(List.of(userStorylines));
-	}
-
-	/** 구독 주제 보도량의 갈래 — 구독 행 하나 */
-	public static CoverageSection coverage() {
-		return new CoverageSection(List.of(new TopicCoverageLine("economy.finance", "금융", new Count(12, 7L))));
 	}
 
 	/** 관심 변화의 갈래 — 헤드마다 사용자 스토리라인 관심 줄, 헤드가 없으면 주제 관심 줄 하나 */

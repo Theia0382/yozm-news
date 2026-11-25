@@ -27,6 +27,7 @@ import net.yozmnews.llm.LlmModel;
 import net.yozmnews.llm.Provider;
 import net.yozmnews.platform.SecretValue;
 import net.yozmnews.platform.UserId;
+import net.yozmnews.reader.InterestRows;
 import net.yozmnews.report.ReportFixtures;
 import net.yozmnews.report.ReportId;
 import net.yozmnews.report.ReportStatus;
@@ -141,7 +142,7 @@ class LlmReportGeneratorFlowTests {
 		assertThat(this.jdbc.sql("select kind from report_sections where report_id = :id order by position")
 			.param("id", row.get("id"))
 			.query(String.class)
-			.list()).containsExactly("OVERVIEW", "STORYLINES", "COVERAGE", "INTERESTS");
+			.list()).containsExactly("STORYLINES", "INTERESTS");
 	}
 
 	@Test
@@ -186,11 +187,12 @@ class LlmReportGeneratorFlowTests {
 				    reasoning_effort, updated_at, version)
 				values (:user, :tagSet, 'Asia/Seoul', '07:00', true, 1, true, 1, 'NORMAL', 3, 'NORMAL', 'MEDIUM', now(), 0)
 				""").param("user", user.value()).param("tagSet", this.tagSets.activeTagSet().id().value()).update();
-		// 구독 주제 하나 — 보도량 갈래가 있어 생성기를 부른다
+		// 기간 안에 주제 하나를 구독했다 — 구독 변경이 있어 관심 갈래가 들고 생성기를 부른다
 		this.jdbc.sql("""
 				insert into user_tag_preferences (user_id, tag_kind, tag_key, mode, created_at)
 				values (:user, 'TOPIC', 'economy.finance', 'SUBSCRIBE', now())
 				""").param("user", user.value()).update();
+		new InterestRows(this.jdbc).subscribe(user.value(), "economy.finance", "ADD", Instant.parse("2026-11-18T00:00:00Z"));
 		ReportGeneration generation = new ReportGeneration(this.reports, this.sections, this.endings,
 				new LlmReportGenerator(this.gateway), this.transaction, TestClocks.of(Instant::now));
 		ReportId id = generation.schedule(user, ReportFixtures.PERIOD).id();
@@ -229,7 +231,7 @@ class LlmReportGeneratorFlowTests {
 				new LlmReportGenerator(this.gateway), this.transaction, TestClocks.of(Instant::now));
 		ReportId id = generation.schedule(user, ReportFixtures.PERIOD).id();
 		ReportInput input = ReportFixtures.input(user, ReportFixtures.PERIOD,
-				ReportFixtures.userStorylines(ReportFixtures.userStoryline(31, 902)), ReportFixtures.coverage(), ReportFixtures.interests(31));
+				ReportFixtures.userStorylines(ReportFixtures.userStoryline(31, 902)), ReportFixtures.interests(31));
 		ReportStatus status = generation.run(id, MODEL, ReportFixtures.EFFORT, input);
 		assertThat(status).isIn(ReportStatus.READY, ReportStatus.FAILED);
 		return this.jdbc.sql("""

@@ -46,7 +46,7 @@ public final class ReportCitationCheck {
 			}
 			sections.add(new CitedSection(section.kind(), written.title(), written.body(), List.copyOf(citations)));
 		}
-		return new CitedReport(draft.overview(), sections, missing(draft, aliases).size(), unknown);
+		return new CitedReport(sections, missing(draft, aliases).size(), unknown);
 	}
 
 	/**
@@ -63,7 +63,7 @@ public final class ReportCitationCheck {
 	}
 
 	/**
-	 * 글(개요 · 갈래 제목 · 본문)에 남은 이번 요청의 별칭 — 별칭은 {@code refs} 에만 쓴다(report-R23). 앞뒤가 ASCII 영숫자가 아닌 자리만 센다 —
+	 * 글(갈래 제목 · 본문)에 남은 이번 요청의 별칭 — 별칭은 {@code refs} 에만 쓴다(report-R23). 앞뒤가 ASCII 영숫자가 아닌 자리만 센다 —
 	 * 한글 조사가 붙은 {@code S1의} 는 세고 {@code S10} · {@code GS1} 은 {@code S1} 로 세지 않는다
 	 * @return 남은 별칭 — 별칭을 매긴 순서, 같은 별칭은 한 번
 	 */
@@ -71,7 +71,6 @@ public final class ReportCitationCheck {
 		Objects.requireNonNull(draft, "draft");
 		Objects.requireNonNull(aliases, "aliases");
 		List<String> texts = new ArrayList<>();
-		texts.add(draft.overview());
 		draft.sections().values().forEach(section -> {
 			texts.add(section.title());
 			texts.add(section.body());

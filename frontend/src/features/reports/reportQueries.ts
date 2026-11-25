@@ -15,14 +15,12 @@ export type ReportCitation = components["schemas"]["ReportCitationResponse"];
 export type ReportStoryline = components["schemas"]["ReportStorylineResponse"];
 export type ReportUserStorylineCount =
   components["schemas"]["ReportUserStorylineCountResponse"];
-export type ReportTopicCount =
-  components["schemas"]["ReportTopicCountResponse"];
 export type ReportInterests = components["schemas"]["ReportInterestsResponse"];
 export type ReportUsage = components["schemas"]["ReportUsageResponse"];
 export type ReportKind = ReportSummary["kind"];
 export type ReportStatus = ReportSummary["status"];
 export type ReportFailure = NonNullable<ReportSummary["failure"]>;
-export type ReportTrend = ReportTopicCount["trend"];
+export type ReportTrend = ReportUserStorylineCount["trend"];
 export type InterestShift = ReportInterests["topics"][number]["shift"];
 export type ReportRegeneration =
   components["schemas"]["ReportRegenerationResponse"];

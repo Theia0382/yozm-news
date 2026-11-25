@@ -1,11 +1,10 @@
 package net.yozmnews.report.domain.output;
 
-import static net.yozmnews.report.ReportFixtures.coverage;
+import static net.yozmnews.report.ReportFixtures.interests;
 import static net.yozmnews.report.ReportFixtures.input;
 import static net.yozmnews.report.ReportFixtures.userStoryline;
 import static net.yozmnews.report.ReportFixtures.userStorylines;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 import net.yozmnews.platform.StructuredOutputSchema;
 import net.yozmnews.report.ReportSectionKind;
@@ -24,7 +23,7 @@ class ReportOutputSchemaTests {
 
 	@Test
 	void drawsTheInputKindsInInputOrderAsRequiredSectionFields() {
-		ReportAliases aliases = ReportAliases.of(input(coverage(), userStorylines(userStoryline(1))));
+		ReportAliases aliases = ReportAliases.of(input(interests(), userStorylines(userStoryline(1))));
 
 		assertThat(JSON.readTree(StructuredOutputSchema.json(ReportOutputSchema.root(aliases))))
 			.isEqualTo(JSON.readTree("""
@@ -32,11 +31,10 @@ class ReportOutputSchemaTests {
 					  "$schema": "https://json-schema.org/draft/2020-12/schema",
 					  "type": "object",
 					  "properties": {
-					    "overview": {"type": "string", "minLength": 1, "maxLength": 1500},
 					    "sections": {
 					      "type": "object",
 					      "properties": {
-					        "coverage": {"type": "object", "properties": {
+					        "interests": {"type": "object", "properties": {
 					          "title": {"type": "string", "minLength": 1, "maxLength": 200},
 					          "body": {"type": "string", "minLength": 1, "maxLength": 3000},
 					          "refs": {"type": "array", "items": {"type": "string", "minLength": 1, "maxLength": 16}}},
@@ -47,15 +45,15 @@ class ReportOutputSchemaTests {
 					          "refs": {"type": "array", "items": {"type": "string", "minLength": 1, "maxLength": 16}}},
 					          "required": ["title", "body", "refs"], "additionalProperties": false}
 					      },
-					      "required": ["coverage", "storylines"],
+					      "required": ["interests", "storylines"],
 					      "additionalProperties": false
 					    }
 					  },
-					  "required": ["overview", "sections"],
+					  "required": ["sections"],
 					  "additionalProperties": false
 					}"""));
 		assertThat(JSON.readTree(StructuredOutputSchema.json(ReportOutputSchema.root(aliases)))
-			.get("properties").get("sections").get("required").toString()).isEqualTo("[\"coverage\",\"storylines\"]");
+			.get("properties").get("sections").get("required").toString()).isEqualTo("[\"interests\",\"storylines\"]");
 	}
 
 	@Test
@@ -66,14 +64,10 @@ class ReportOutputSchemaTests {
 	}
 
 	@Test
-	void namesEveryKindAndRefusesTheOverview() {
+	void namesEveryKind() {
 		assertThat(ReportOutputSchema.key(ReportSectionKind.STORYLINES)).isEqualTo("storylines");
-		assertThat(ReportOutputSchema.key(ReportSectionKind.COVERAGE)).isEqualTo("coverage");
 		assertThat(ReportOutputSchema.key(ReportSectionKind.INTERESTS)).isEqualTo("interests");
-		assertThat(ReportSectionKind.values()).containsExactly(ReportSectionKind.OVERVIEW, ReportSectionKind.STORYLINES,
-				ReportSectionKind.COVERAGE, ReportSectionKind.INTERESTS);
-		assertThatIllegalArgumentException().isThrownBy(() -> ReportOutputSchema.key(ReportSectionKind.OVERVIEW))
-			.withMessage("개요는 갈래 칸이 아니다");
+		assertThat(ReportSectionKind.values()).containsExactly(ReportSectionKind.STORYLINES, ReportSectionKind.INTERESTS);
 	}
 
 }

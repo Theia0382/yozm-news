@@ -4,6 +4,7 @@ import static net.yozmnews.report.ReportFixtures.event;
 import static net.yozmnews.report.ReportFixtures.storyline;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.assertj.core.api.Assertions.tuple;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -17,6 +18,7 @@ import net.yozmnews.event.EventDirectory;
 import net.yozmnews.feedback.FeedbackRows;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.reader.ReaderRows;
+import net.yozmnews.report.InterestShift;
 import net.yozmnews.report.ReportDirectory;
 import net.yozmnews.report.ReportFailure;
 import net.yozmnews.report.ReportId;
@@ -30,8 +32,10 @@ import net.yozmnews.report.ReportSummary;
 import net.yozmnews.report.ReportTrend;
 import net.yozmnews.report.ReportView;
 import net.yozmnews.report.domain.view.ReportViewRepository;
+import net.yozmnews.report.domain.view.StoredSection;
 import net.yozmnews.storyline.StorylineDirectory;
 import net.yozmnews.storyline.StorylineId;
+import net.yozmnews.storyline.StorylineState;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -61,12 +65,12 @@ class ReportDirectoryServiceTests {
 
 	private static final UserId OTHER = new UserId(8);
 
-	/** 시작한 리포트의 스냅숏 — 구독 주제 보도량 하나(report-R19 의 꼴, 손으로 씀) */
+	/** 시작한 리포트의 스냅숏 — 주제 관심 줄 하나(report-R19 의 꼴, 손으로 씀) */
 	private static final String SNAPSHOT = """
-			{"version":2,"tagSet":4,
+			{"version":3,"tagSet":4,
 			 "period":{"kind":"WEEK","start":"2026-11-16T00:00:00Z","end":"2026-11-23T00:00:00Z"},
-			 "coverage":{"basis":"FIRST_EVALUATED","topics":[
-			   {"key":"economy.finance","name":"금융","articles":12,"previous":7,"trend":"ROSE"}]}}""";
+			 "interests":{"topics":[{"key":"economy.finance","name":"금융","start":0.1,"end":0.5,"shift":"ENTERED"}],
+			   "userStorylines":[]}}""";
 
 	@Autowired
 	ReportDirectory directory;
@@ -198,8 +202,7 @@ class ReportDirectoryServiceTests {
 	@Test
 	void findsTheOwnersReportWithItsFieldsAndNothingForAnotherUser() {
 		long id = report(OWNER, "READY");
-		section(id, "OVERVIEW", 0, null, "개요");
-		section(id, "COVERAGE", 1, "보도량", "본문");
+		section(id, "INTERESTS", 0, "관심", "본문");
 
 		ReportView view = this.directory.find(OWNER, new ReportId(id)).orElseThrow();
 
@@ -214,14 +217,38 @@ class ReportDirectoryServiceTests {
 		assertThat(view.outputTokens()).isEqualTo(45);
 		assertThat(view.hiddenSections()).isZero();
 		assertThat(view.sections()).containsExactly(
-				new ReportSectionView(ReportSectionKind.OVERVIEW, null, "개요", List.of(), null),
-				new ReportSectionView(ReportSectionKind.COVERAGE, "보도량", "본문", List.of(), new ReportSectionStats.Coverage(
-						List.of(new ReportSectionStats.TopicCount("금융", 12, 7L, ReportTrend.ROSE)))));
+				new ReportSectionView(ReportSectionKind.INTERESTS, "관심", "본문", List.of(), new ReportSectionStats.Interests(
+						List.of(new ReportSectionStats.TopicLevel("금융", 0.1, 0.5, InterestShift.ENTERED)), List.of())));
 		assertThat(this.directory.find(OTHER, new ReportId(id))).isEmpty();
 		assertThat(this.directory.find(OWNER, new ReportId(id + 1_000))).isEmpty();
-		assertThat(this.views.sections(OWNER, new ReportId(id))).hasSize(2);
+		assertThat(this.views.sections(OWNER, new ReportId(id))).hasSize(1);
 		assertThat(this.views.sections(OTHER, new ReportId(id))).isEmpty();
 		assertThat(this.views.page(OTHER, ReportPeriodKind.WEEK, null, 10)).isEmpty();
+	}
+
+	@Test
+	void readsOnlyTheSectionKindsTheReportWritesAndLeavesTheOldRowsInPlace() {
+		// 생성이 더는 쓰지 않는 종류(개요 · 구독 주제 보도량)의 행이 남은 리포트 — 종류 제약은 받는다
+		long id = report(OWNER, "READY");
+		section(id, "OVERVIEW", 0, null, "옛 개요");
+		long storylines = section(id, "STORYLINES", 1, "흐름", "본문 하나");
+		item(storylines, 0, null, FeedbackRows.event(this.jdbc));
+		section(id, "COVERAGE", 2, "보도량", "옛 본문");
+		section(id, "INTERESTS", 3, "관심", "본문 둘");
+
+		ReportView view = this.directory.find(OWNER, new ReportId(id)).orElseThrow();
+
+		assertThat(view.sections()).extracting(ReportSectionView::kind, ReportSectionView::body)
+			.containsExactly(tuple(ReportSectionKind.STORYLINES, "본문 하나"), tuple(ReportSectionKind.INTERESTS, "본문 둘"));
+		assertThat(view.sections().get(0).citations()).hasSize(1);
+		assertThat(view.hiddenSections()).isZero();
+		assertThat(this.views.sections(OWNER, new ReportId(id))).extracting(StoredSection::kind)
+			.containsExactly(ReportSectionKind.STORYLINES, ReportSectionKind.INTERESTS);
+		// 옛 행은 지우지 않는다
+		assertThat(this.jdbc.sql("select count(*) from report_sections where report_id = :id")
+			.param("id", id)
+			.query(Long.class)
+			.single()).isEqualTo(4L);
 	}
 
 	@Test
@@ -235,7 +262,7 @@ class ReportDirectoryServiceTests {
 				        timestamptz '2026-11-01 01:00Z', timestamptz '2026-11-01 01:00Z', 'Asia/Seoul', gen_random_uuid(),
 				        timestamptz '2026-11-01 01:00Z', timestamptz '2026-11-01 01:00Z', 0, 1)
 				returning id""").query(Long.class).single();
-		section(id, "OVERVIEW", 0, null, "남은 개요");
+		section(id, "STORYLINES", 0, "흐름", "남은 본문");
 
 		ReportView view = this.directory.find(OWNER, new ReportId(id)).orElseThrow();
 
@@ -258,8 +285,7 @@ class ReportDirectoryServiceTests {
 		long survivingLine = storylineOf(survivor);
 		this.rows.merge(mergedLine, survivingLine);
 		long id = report(OWNER, "READY");
-		section(id, "OVERVIEW", 0, null, "개요");
-		long sectionId = section(id, "STORYLINES", 1, "흐름", "본문");
+		long sectionId = section(id, "STORYLINES", 0, "흐름", "본문");
 		item(sectionId, 0, null, absorbed);
 		item(sectionId, 1, null, removed);
 		item(sectionId, 2, mergedLine, null);
@@ -270,8 +296,8 @@ class ReportDirectoryServiceTests {
 
 		List<ReportSectionView> sections = this.directory.find(OWNER, new ReportId(id)).orElseThrow().sections();
 
-		assertThat(sections).hasSize(2);
-		assertThat(sections.get(1).citations()).containsExactly(event(survivor), storyline(survivingLine), storyline(line),
+		assertThat(sections).hasSize(1);
+		assertThat(sections.get(0).citations()).containsExactly(event(survivor), storyline(survivingLine), storyline(line),
 				event(kept));
 	}
 
@@ -282,45 +308,45 @@ class ReportDirectoryServiceTests {
 		long survivingLine = storylineOf(FeedbackRows.event(this.jdbc));
 		this.rows.merge(mergedLine, survivingLine);
 		long id = report(OWNER, "READY", """
-				{"version":2,"tagSet":4,
+				{"version":3,"tagSet":4,
 				 "period":{"kind":"WEEK","start":"2026-11-16T00:00:00Z","end":"2026-11-23T00:00:00Z"},
 				 "storylines":{"basis":"PUBLISHED","userStorylines":[
-				   {"head":%d,"tops":[%d],"articles":8,"previous":2,"trend":"ROSE","trackedInPeriod":false},
-				   {"head":999997,"tops":[999997],"articles":5,"previous":null,"trend":"NO_COMPARISON","trackedInPeriod":false},
-				   {"head":%d,"tops":[%d],"articles":3,"previous":3,"trend":"STEADY","trackedInPeriod":true}]}}"""
+				   {"head":%d,"tops":[%d],"articles":8,"previous":2,"trend":"ROSE","trackedInPeriod":false,"state":"ACTIVE"},
+				   {"head":999997,"tops":[999997],"articles":5,"previous":null,"trend":"NO_COMPARISON","trackedInPeriod":false,
+				    "state":"QUIET"},
+				   {"head":%d,"tops":[%d],"articles":3,"previous":3,"trend":"STEADY","trackedInPeriod":true,"state":"ENDED"}]}}"""
 			.formatted(mergedLine, mergedLine, line, line));
-		section(id, "OVERVIEW", 0, null, "개요");
-		item(section(id, "STORYLINES", 1, "흐름", "본문"), 0, line, null);
+		item(section(id, "STORYLINES", 0, "흐름", "본문"), 0, line, null);
 
 		ReportView view = this.directory.find(OWNER, new ReportId(id)).orElseThrow();
 
-		assertThat(view.sections().get(1).stats()).isEqualTo(new ReportSectionStats.UserStorylines(List.of(
-				new ReportSectionStats.UserStorylineCount(new StorylineId(survivingLine), 8, 2L, ReportTrend.ROSE, false),
-				new ReportSectionStats.UserStorylineCount(new StorylineId(line), 3, 3L, ReportTrend.STEADY, true))));
+		assertThat(view.sections().get(0).stats()).isEqualTo(new ReportSectionStats.UserStorylines(List.of(
+				new ReportSectionStats.UserStorylineCount(new StorylineId(survivingLine), 8, 2L, ReportTrend.ROSE, false,
+						StorylineState.ACTIVE),
+				new ReportSectionStats.UserStorylineCount(new StorylineId(line), 3, 3L, ReportTrend.STEADY, true,
+						StorylineState.ENDED))));
 	}
 
 	@Test
-	void hidesASectionThatLostEveryCitationAndTheOverviewWhenEveryKindSectionIsHidden() {
+	void hidesASectionThatLostEveryCitationAndShowsNoSectionWhenEveryOneIsHidden() {
 		long removed = FeedbackRows.event(this.jdbc);
 		FeedbackRows.deleteEvent(this.jdbc, removed);
 		long kept = FeedbackRows.event(this.jdbc);
 		long partly = report(OWNER, "READY");
-		section(partly, "OVERVIEW", 0, null, "개요");
-		item(section(partly, "STORYLINES", 1, "흐름", "본문"), 0, null, removed);
-		section(partly, "INTERESTS", 2, "관심", "본문");
-		item(section(partly, "COVERAGE", 3, "보도량", "본문"), 0, null, kept);
+		item(section(partly, "STORYLINES", 0, "흐름", "본문"), 0, null, removed);
+		item(section(partly, "INTERESTS", 1, "관심", "본문"), 0, null, kept);
 		long whole = report(OWNER, "READY");
-		section(whole, "OVERVIEW", 0, null, "개요");
-		item(section(whole, "STORYLINES", 1, "흐름", "본문"), 0, 999_998L, null);
+		item(section(whole, "STORYLINES", 0, "흐름", "본문"), 0, 999_998L, null);
 
 		assertThat(this.directory.find(OWNER, new ReportId(partly)).orElseThrow().sections())
 			.extracting(ReportSectionView::kind)
-			.containsExactly(ReportSectionKind.OVERVIEW, ReportSectionKind.INTERESTS, ReportSectionKind.COVERAGE);
+			.containsExactly(ReportSectionKind.INTERESTS);
 		assertThat(this.directory.find(OWNER, new ReportId(whole)).orElseThrow().sections()).isEmpty();
+		assertThat(this.directory.find(OWNER, new ReportId(whole)).orElseThrow().hiddenSections()).isEqualTo(1);
 		assertThat(this.jdbc.sql("select count(*) from report_sections where report_id = :id")
 			.param("id", whole)
 			.query(Long.class)
-			.single()).isEqualTo(2L);
+			.single()).isEqualTo(1L);
 	}
 
 	@Test
@@ -336,8 +362,7 @@ class ReportDirectoryServiceTests {
 		long survivor = FeedbackRows.event(this.jdbc);
 		FeedbackRows.merge(this.jdbc, cited.getLast(), survivor);
 		long id = report(OWNER, "READY");
-		section(id, "OVERVIEW", 0, null, "개요");
-		long sectionId = section(id, "STORYLINES", 1, "흐름", "본문");
+		long sectionId = section(id, "STORYLINES", 0, "흐름", "본문");
 		this.jdbc.sql("""
 				insert into report_items (report_section_id, position, storyline_id, event_id)
 				select :section, (row_number() over (order by id)) - 1, null, id from events where id between :from and :to""")
@@ -348,8 +373,8 @@ class ReportDirectoryServiceTests {
 
 		List<ReportSectionView> sections = this.directory.find(OWNER, new ReportId(id)).orElseThrow().sections();
 
-		assertThat(sections).hasSize(2);
-		assertThat(sections.get(1).citations()).hasSize(cited.size())
+		assertThat(sections).hasSize(1);
+		assertThat(sections.get(0).citations()).hasSize(cited.size())
 			.startsWith(event(cited.getFirst()))
 			.endsWith(event(survivor));
 	}

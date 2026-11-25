@@ -1,6 +1,5 @@
 package net.yozmnews.report.application;
 
-import static net.yozmnews.report.ReportFixtures.coverage;
 import static net.yozmnews.report.ReportFixtures.input;
 import static net.yozmnews.report.ReportFixtures.interests;
 import static net.yozmnews.report.ReportFixtures.userStoryline;
@@ -109,9 +108,9 @@ class ReportGenerationTests {
 	}
 
 	@Test
-	void savesTheOverviewSectionsAndCitationsOfAReadyReport() {
+	void savesTheSectionsAndCitationsOfAReadyReport() {
 		ReportId id = generation(new FakeReportGenerator()).schedule(new UserId(7), WEEK).id();
-		ReportInput input = input(userStorylines(userStoryline(31, 902)), interests(31), coverage());
+		ReportInput input = input(userStorylines(userStoryline(31, 902)), interests(31));
 
 		ReportStatus status = generation(new FakeReportGenerator()).run(id, ReportFixtures.MODEL, ReportFixtures.EFFORT, input);
 
@@ -131,12 +130,12 @@ class ReportGenerationTests {
 		assertThat(instant(id, "started_at")).isEqualTo(T0);
 		assertThat(instant(id, "completed_at")).isEqualTo(T0);
 		assertThat(JSON.readTree((String) row.get("snapshot")))
-			.isEqualTo(JSON.readTree("{\"coverage\": {\"직전\": 7, \"이번\": 12}}"));
-		assertThat(sectionRows(id)).containsExactly("0 OVERVIEW null 로컬 대체물이 만든 리포트다. 섹션 3개.",
-				"1 STORYLINES 로컬 섹션 1 로컬 대체물이 만든 본문이다.", "2 INTERESTS 로컬 섹션 2 로컬 대체물이 만든 본문이다.",
-				"3 COVERAGE 로컬 섹션 3 로컬 대체물이 만든 본문이다.");
-		// 다른 갈래에 다시 든 사용자 스토리라인(S31)은 같은 별칭으로 인용되고, 구독 주제 보도량은 인용이 없다
-		assertThat(itemRows(id)).containsExactly("1:0 S31", "1:1 E902", "2:0 S31");
+			.isEqualTo(JSON.readTree("{\"storylines\": {\"직전\": 7, \"이번\": 12}}"));
+		// 갈래 섹션만 위치 0 부터 — 개요는 쓰지 않는다
+		assertThat(sectionRows(id)).containsExactly("0 STORYLINES 로컬 섹션 1 로컬 대체물이 만든 본문이다.",
+				"1 INTERESTS 로컬 섹션 2 로컬 대체물이 만든 본문이다.");
+		// 다른 갈래에 다시 든 사용자 스토리라인(S31)은 같은 별칭으로 인용된다
+		assertThat(itemRows(id)).containsExactly("0:0 S31", "0:1 E902", "1:0 S31");
 	}
 
 	@Test
@@ -205,7 +204,7 @@ class ReportGenerationTests {
 			.containsEntry("input_tokens", null)
 			.containsEntry("duration_ms", null);
 		assertThat(JSON.readTree((String) row(id).get("snapshot")))
-			.isEqualTo(JSON.readTree("{\"coverage\": {\"직전\": 7, \"이번\": 12}}"));
+			.isEqualTo(JSON.readTree("{\"storylines\": {\"직전\": 7, \"이번\": 12}}"));
 		assertThat(sectionRows(id)).isEmpty();
 	}
 
@@ -217,8 +216,7 @@ class ReportGenerationTests {
 		assertThat(generation.run(id, ReportFixtures.MODEL, ReportFixtures.EFFORT, input(interests())))
 			.isEqualTo(ReportStatus.READY);
 
-		assertThat(sectionRows(id)).containsExactly("0 OVERVIEW null 로컬 대체물이 만든 리포트다. 섹션 1개.",
-				"1 INTERESTS 로컬 섹션 1 로컬 대체물이 만든 본문이다.");
+		assertThat(sectionRows(id)).containsExactly("0 INTERESTS 로컬 섹션 1 로컬 대체물이 만든 본문이다.");
 		assertThat(itemRows(id)).isEmpty();
 	}
 
@@ -237,7 +235,7 @@ class ReportGenerationTests {
 		assertThat(row(id).get("duration_ms")).isNotNull();
 		assertThat(row(id).get("started_at")).isNotNull();
 		assertThat(JSON.readTree((String) row(id).get("snapshot")))
-			.isEqualTo(JSON.readTree("{\"coverage\": {\"직전\": 7, \"이번\": 12}}"));
+			.isEqualTo(JSON.readTree("{\"storylines\": {\"직전\": 7, \"이번\": 12}}"));
 		assertThat(sectionRows(id)).isEmpty();
 	}
 
@@ -249,11 +247,11 @@ class ReportGenerationTests {
 		generation.run(id, ReportFixtures.MODEL, ReportFixtures.EFFORT, input(interests()));
 
 		ReportGeneration again = generation(scripted(calls, request -> "{}"));
-		assertThat(again.run(id, ReportFixtures.MODEL, ReportFixtures.EFFORT, input(coverage())))
+		assertThat(again.run(id, ReportFixtures.MODEL, ReportFixtures.EFFORT, input(userStorylines(userStoryline(31)))))
 			.isEqualTo(ReportStatus.READY);
 
 		assertThat(calls).hasValue(0);
-		assertThat(sectionRows(id)).hasSize(2);
+		assertThat(sectionRows(id)).hasSize(1);
 	}
 
 	@Test
@@ -284,7 +282,7 @@ class ReportGenerationTests {
 			this.jdbc.sql("""
 					update reports set status = 'FAILED', error_code = 'PROVIDER_UNEXPECTED', error_message = '다른 실행',
 					completed_at = now(), version = version + 1 where id = :id""").param("id", target.get().value()).update();
-			return "{\"overview\":\"개요\",\"sections\":{\"interests\":{\"title\":\"제목\",\"body\":\"본문\",\"refs\":[]}}}";
+			return "{\"sections\":{\"interests\":{\"title\":\"제목\",\"body\":\"본문\",\"refs\":[]}}}";
 		}));
 		ReportId id = generation.schedule(new UserId(7), WEEK).id();
 		target.set(id);
@@ -305,7 +303,7 @@ class ReportGenerationTests {
 			this.jdbc.sql("update reports set version = version + 1 where id = :id")
 				.param("id", target.get().value())
 				.update();
-			return "{\"overview\":\"개요\",\"sections\":{\"interests\":{\"title\":\"제목\",\"body\":\"본문\",\"refs\":[]}}}";
+			return "{\"sections\":{\"interests\":{\"title\":\"제목\",\"body\":\"본문\",\"refs\":[]}}}";
 		}));
 		ReportId id = generation.schedule(new UserId(7), WEEK).id();
 		target.set(id);
@@ -359,7 +357,7 @@ class ReportGenerationTests {
 		List<ReportRequest> requests = new ArrayList<>();
 		ReportGeneration generation = generation(scripted(calls, request -> {
 			requests.add(request);
-			return "{\"overview\":\"개요\"}";
+			return "{}";
 		}));
 		ReportId id = generation.schedule(new UserId(7), WEEK).id();
 
@@ -380,18 +378,36 @@ class ReportGenerationTests {
 	}
 
 	@Test
+	void failsUnreadableWhenNoSectionIsLeftAfterAskingAgainForMissingSections() {
+		// 두 응답 모두 갈래 칸이 하나도 없다 — 다시 물은 쪽을 쓰지만 대조 뒤 섹션이 없어 보일 글이 없다
+		AtomicInteger calls = new AtomicInteger();
+		ReportGeneration generation = generation(scripted(calls, request -> "{\"sections\":{}}"));
+		ReportId id = generation.schedule(new UserId(7), WEEK).id();
+
+		assertThat(generation.run(id, ReportFixtures.MODEL, ReportFixtures.EFFORT, input(userStorylines(userStoryline(31)))))
+			.isEqualTo(ReportStatus.FAILED);
+
+		assertThat(calls).hasValue(2);
+		assertThat(row(id)).containsEntry("error_code", "UNREADABLE_OUTPUT")
+			.containsEntry("error_message", "출력에 대조를 지난 갈래 섹션이 없다")
+			.containsEntry("input_tokens", 22)
+			.containsEntry("output_tokens", 44);
+		assertThat(sectionRows(id)).isEmpty();
+	}
+
+	@Test
 	void savesTheSecondReadingWhenTheAnswerAskedAgainCanBeRead() {
 		AtomicInteger calls = new AtomicInteger();
-		ReportGeneration generation = generation(scripted(calls, request -> (calls.get() == 1) ? "{\"overview\":\"개요\"}"
+		ReportGeneration generation = generation(scripted(calls, request -> (calls.get() == 1) ? "{}"
 				: """
-						{"overview":"다시 쓴 개요","sections":{"interests":{"title":"관심","body":"본문","refs":[]}}}"""));
+						{"sections":{"interests":{"title":"다시 쓴 관심","body":"본문","refs":[]}}}"""));
 		ReportId id = generation.schedule(new UserId(7), WEEK).id();
 
 		assertThat(generation.run(id, ReportFixtures.MODEL, ReportFixtures.EFFORT, input(interests())))
 			.isEqualTo(ReportStatus.READY);
 
 		assertThat(calls).hasValue(2);
-		assertThat(sectionRows(id)).containsExactly("0 OVERVIEW null 다시 쓴 개요", "1 INTERESTS 관심 본문");
+		assertThat(sectionRows(id)).containsExactly("0 INTERESTS 다시 쓴 관심 본문");
 		assertThat(row(id)).containsEntry("input_tokens", 22).containsEntry("output_tokens", 44);
 	}
 
@@ -402,19 +418,19 @@ class ReportGenerationTests {
 		ReportGeneration generation = generation(scripted(calls, request -> {
 			requests.add(request);
 			return (calls.get() == 1) ? """
-					{"overview":"첫 개요","sections":{"coverage":{"title":"보도량","body":"본문","refs":[]}}}""" : """
-					{"overview":"둘째 개요","sections":{"coverage":{"title":"보도량","body":"본문","refs":[]},\
+					{"sections":{"storylines":{"title":"흐름","body":"첫 본문","refs":[]}}}""" : """
+					{"sections":{"storylines":{"title":"흐름","body":"둘째 본문","refs":[]},\
 					"interests":{"title":"관심","body":"본문","refs":[]}}}""";
 		}));
 		ReportId id = generation.schedule(new UserId(7), WEEK).id();
 
-		assertThat(generation.run(id, ReportFixtures.MODEL, ReportFixtures.EFFORT, input(coverage(), interests())))
+		assertThat(generation.run(id, ReportFixtures.MODEL, ReportFixtures.EFFORT,
+				input(userStorylines(userStoryline(31)), interests())))
 			.isEqualTo(ReportStatus.READY);
 
 		assertThat(requests.get(1).prompt().instructions()).endsWith(
 				"앞 출력을 고쳐 다시 써야 한다: 출력에 없는 갈래: interests\n출력 스키마에 맞는 JSON 객체 하나만 다시 출력하라.");
-		assertThat(sectionRows(id)).containsExactly("0 OVERVIEW null 둘째 개요", "1 COVERAGE 보도량 본문",
-				"2 INTERESTS 관심 본문");
+		assertThat(sectionRows(id)).containsExactly("0 STORYLINES 흐름 둘째 본문", "1 INTERESTS 관심 본문");
 		assertThat(output).contains("리포트 생성을 다시 물었다 — 리포트 " + id.value() + ", 까닭 빠진 갈래 1 · 남은 별칭 0");
 	}
 
@@ -424,9 +440,8 @@ class ReportGenerationTests {
 		List<ReportRequest> requests = new ArrayList<>();
 		ReportGeneration generation = generation(scripted(calls, request -> {
 			requests.add(request);
-			String overview = (calls.get() == 1) ? "S1의 관심이 생겼다" : "금리 흐름의 관심이 생겼다";
-			return "{\"overview\":\"" + overview
-					+ "\",\"sections\":{\"interests\":{\"title\":\"관심\",\"body\":\"본문\",\"refs\":[\"S1\"]}}}";
+			String title = (calls.get() == 1) ? "S1의 관심이 생겼다" : "금리 흐름의 관심이 생겼다";
+			return "{\"sections\":{\"interests\":{\"title\":\"" + title + "\",\"body\":\"본문\",\"refs\":[\"S1\"]}}}";
 		}));
 		ReportId id = generation.schedule(new UserId(7), WEEK).id();
 
@@ -435,8 +450,8 @@ class ReportGenerationTests {
 
 		assertThat(calls).hasValue(2);
 		assertThat(requests.get(1).prompt().instructions())
-			.contains("앞 출력을 고쳐 다시 써야 한다: 개요 · 제목 · 본문에 남은 별칭(이름으로 바꿔 쓸 것): S1");
-		assertThat(sectionRows(id)).containsExactly("0 OVERVIEW null 금리 흐름의 관심이 생겼다", "1 INTERESTS 관심 본문");
+			.contains("앞 출력을 고쳐 다시 써야 한다: 제목 · 본문에 남은 별칭(이름으로 바꿔 쓸 것): S1");
+		assertThat(sectionRows(id)).containsExactly("0 INTERESTS 금리 흐름의 관심이 생겼다 본문");
 		assertThat(output).contains("리포트 생성을 다시 물었다 — 리포트 " + id.value() + ", 까닭 빠진 갈래 0 · 남은 별칭 1");
 	}
 
@@ -444,7 +459,7 @@ class ReportGenerationTests {
 	void doesNotAskAgainWhenTheAliasIsOnlyInTheRefs() {
 		AtomicInteger calls = new AtomicInteger();
 		ReportGeneration generation = generation(scripted(calls,
-				request -> "{\"overview\":\"금리 흐름의 관심이 생겼다\",\"sections\":{\"interests\":{\"title\":\"관심\",\"body\":\"본문\","
+				request -> "{\"sections\":{\"interests\":{\"title\":\"금리 흐름의 관심이 생겼다\",\"body\":\"본문\","
 						+ "\"refs\":[\"S1\"]}}}"));
 		ReportId id = generation.schedule(new UserId(7), WEEK).id();
 
@@ -460,16 +475,17 @@ class ReportGenerationTests {
 		ReportGeneration generation = generation(request -> {
 			calls.incrementAndGet();
 			return (calls.get() == 1) ? new ReportOutcome.Generated("""
-					{"overview":"첫 개요","sections":{"coverage":{"title":"보도량","body":"본문","refs":[]}}}""",
+					{"sections":{"storylines":{"title":"흐름","body":"첫 본문","refs":[]}}}""",
 					new TokenUsage(11, 22), GenerationStop.COMPLETE)
 					: new ReportOutcome.Generated("{", new TokenUsage(5, 7), GenerationStop.TRUNCATED);
 		});
 		ReportId id = generation.schedule(new UserId(7), WEEK).id();
 
-		assertThat(generation.run(id, ReportFixtures.MODEL, ReportFixtures.EFFORT, input(coverage(), interests())))
+		assertThat(generation.run(id, ReportFixtures.MODEL, ReportFixtures.EFFORT,
+				input(userStorylines(userStoryline(31)), interests())))
 			.isEqualTo(ReportStatus.READY);
 
-		assertThat(sectionRows(id)).containsExactly("0 OVERVIEW null 첫 개요", "1 COVERAGE 보도량 본문");
+		assertThat(sectionRows(id)).containsExactly("0 STORYLINES 흐름 첫 본문");
 		assertThat(row(id)).containsEntry("input_tokens", 16).containsEntry("output_tokens", 29);
 	}
 
@@ -497,7 +513,7 @@ class ReportGenerationTests {
 		ReportGeneration generation = generation(scripted(new AtomicInteger(), request -> {
 			requests.add(request);
 			return """
-					{"overview":"개요","sections":{"storylines":{"title":"흐름","body":"본문","refs":["S1"]}}}""";
+					{"sections":{"storylines":{"title":"흐름","body":"본문","refs":["S1"]}}}""";
 		}));
 		ReportId id = generation.schedule(new UserId(7), WEEK).id();
 
@@ -524,7 +540,7 @@ class ReportGenerationTests {
 		ReportGeneration generation = generation(scripted(new AtomicInteger(), request -> {
 			requests.add(request);
 			return """
-					{"overview":"개요","sections":{"storylines":{"title":"흐름","body":"본문","refs":["S1"]}}}""";
+					{"sections":{"storylines":{"title":"흐름","body":"본문","refs":["S1"]}}}""";
 		}));
 		ReportId id = generation.schedule(new UserId(7), WEEK).id();
 		ReportInput input = input(new StorylinesSection(List.of(recentUserStoryline(31, 50, "가"), recentUserStoryline(32, 10, "나"),
@@ -534,9 +550,9 @@ class ReportGenerationTests {
 
 		String sent = requests.get(0).prompt().userContent();
 		assertThat(sent).contains("가".repeat(1_000)).doesNotContain("나".repeat(1_000), "다".repeat(1_000));
-		assertThat(itemRows(id)).containsExactly("1:0 S31");
+		assertThat(itemRows(id)).containsExactly("0:0 S31");
 		assertThat(JSON.readTree((String) row(id).get("snapshot")))
-			.isEqualTo(JSON.readTree("{\"coverage\": {\"직전\": 7, \"이번\": 12}}"));
+			.isEqualTo(JSON.readTree("{\"storylines\": {\"직전\": 7, \"이번\": 12}}"));
 		assertThat(output).contains("리포트 입력을 예산에 맞춰 덜어 냈다 — 리포트 " + id.value() + ", 예산 1600,")
 			.contains("사용자 스토리라인 뺌 2, 예산을 넘긴 채 false")
 			.doesNotContain("나".repeat(10));
@@ -544,19 +560,19 @@ class ReportGenerationTests {
 
 	@Test
 	void dropsUnknownAliasesKeepsTheReportAndLogsWhatWasDropped(CapturedOutput output) {
-		// 구독 주제 보도량 칸이 빠져 한 번 다시 묻고, 다시 물은 답도 같아 다시 물은 쪽을 쓴다
+		// 관심 변화 칸이 빠져 한 번 다시 묻고, 다시 물은 답도 같아 다시 물은 쪽을 쓴다
 		AtomicInteger calls = new AtomicInteger();
 		ReportGeneration generation = generation(scripted(calls, request -> """
-				{"overview":"개요","sections":{"storylines":{"title":"흐름","body":"본문","refs":["S1","Z9",""]}}}"""));
+				{"sections":{"storylines":{"title":"흐름","body":"본문","refs":["S1","Z9",""]}}}"""));
 		ReportId id = generation.schedule(new UserId(7), WEEK).id();
 
 		assertThat(generation.run(id, ReportFixtures.MODEL, ReportFixtures.EFFORT,
-				input(userStorylines(userStoryline(31)), coverage())))
+				input(userStorylines(userStoryline(31)), interests())))
 			.isEqualTo(ReportStatus.READY);
 
 		assertThat(calls).hasValue(2);
-		assertThat(sectionRows(id)).containsExactly("0 OVERVIEW null 개요", "1 STORYLINES 흐름 본문");
-		assertThat(itemRows(id)).containsExactly("1:0 S31");
+		assertThat(sectionRows(id)).containsExactly("0 STORYLINES 흐름 본문");
+		assertThat(itemRows(id)).containsExactly("0:0 S31");
 		assertThat(output).contains("리포트 출력에서 버리거나 남은 것이 있다 — 리포트 " + id.value() + ", 빠진 섹션 1, 모르는 별칭 2, 상한으로 버린 수 0, 글에 남은 별칭 0")
 			.doesNotContain("Z9");
 	}
