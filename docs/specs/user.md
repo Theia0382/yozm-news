@@ -104,7 +104,7 @@ HTTP 엔드포인트:
 | `/api/storyline-subscriptions/{storylineId}` | `DELETE` | 해제 — 그 스토리라인의 꼭대기를 가진 추적 중인 사용자 스토리라인 모두의 추적을 끈다. `UNSUBSCRIBED` · `NOT_SUBSCRIBED`. ID 가 1 보다 작거나 숫자가 아니면 400(user-R52) |
 | `/api/storyline-subscriptions/changes` | `GET` | 추적 이력 한 쪽 — 사용자가 직접 한 추적 · 해제의 지금 스토리라인 ID(지워졌으면 null) · 더함 뺌 · 시각, 최근부터, 다음 쪽 커서. 질의 `beforeAt` · `beforeId`(다음 쪽 커서 — 함께). 하나만 오거나 시각 · ID(1 이상)를 읽을 수 없으면 400(user-R63) |
 
-알림 세 경로 · 관심 설정 열두 경로 · 스토리라인 구독 네 경로는 세션이 필요하며 사용자 격리 시험에 등록돼 있고([account Spec](account.md#화면용-api-의-공개와-세션-사용자) account-R5 · R6), LLM 키가 없는 세션 사용자에게도 연다(`@AllowedWithoutLlmKey` — account-R5). 판정 결과는 200 이고 요청 본문의 칸이 없으면 본문 형식 400 이다. 요청 · 응답 형식은 `api/openapi.json` 에 있다.
+알림 세 경로 · 관심 설정 열두 경로 · 스토리라인 구독 다섯 경로는 세션이 필요하며 사용자 격리 시험에 등록돼 있고([account Spec](account.md#화면용-api-의-공개와-세션-사용자) account-R5 · R6), LLM 키가 없는 세션 사용자에게도 연다(`@AllowedWithoutLlmKey` — account-R5). 판정 결과는 200 이고 요청 본문의 칸이 없으면 본문 형식 400 이다. 요청 · 응답 형식은 `api/openapi.json` 에 있다.
 
 ### StorylineSubscriptionDirectory
 
@@ -576,11 +576,14 @@ public record UserStorylineSummaryRef(UserStorylineId id, String title) {}
 | 패키지 | 책임 |
 |---|---|
 | (최상위) | 스토리라인 구독 조회 · 사용자 스토리라인 조회와 관심 신호의 창(공급 인터페이스) · 다이제스트가 읽는 관심 설정 · 주제 구독 이력 · 사용자 시간대 · 다이제스트 일정 목록 · 쓸 모델 조회와 그 값, 리포트 일정 목록 · 쓸 모델 조회와 그 값, 구독 제안 거절 조회 · 지금 관심(공급 인터페이스), 정리 조회 · 지금 스토리라인 판정(공급 인터페이스), 받는 쪽으로 선언한 다이제스트 실패 · 끝남 · 리포트 실패 이벤트와 그 값(§3) |
-| `adapter/in/job` | 읽은 알림 정리 반복 작업 |
+| `adapter/in/job` | 읽은 알림 정리 반복 작업, 사용자 스토리라인 정리 작업 |
 | `adapter/in/web` | 알림함 · 관심 설정 · 스토리라인 구독 엔드포인트와 그 요청 · 응답 값 |
-| `adapter/out/persistence` | 알림 · 반영 기준 저장소, 설정 행 · 태그 선호 · 선호 이력 · 제외 소스 저장소, 선호 버전 울타리, 스토리라인 구독 · 구독 이력 저장소 |
-| `application` | 피드 상태 · 비밀번호 · 키 무효 · 다이제스트 실패 · 리포트 실패 알림 유스케이스와 그 리스너, 알림함 유스케이스, 읽은 알림 정리 유스케이스, 관심 설정 — 계정 생김 리스너 · 기본값 쓰기 · 기존 계정 채우기 · 기동 단계 · 조회 · 저장 유스케이스 넷 · 따라가기와 그 리스너 · 소스 삭제 리스너 · 사용자 시간대 · 다이제스트 · 리포트 일정 목록과 그 함께 쓰는 읽기 · 쓸 모델 조회와 함께 쓰는 쓸 모델 정하기 · 쓸 모델 판정의 재료 읽기, 스토리라인 구독 — 조회 · 추적 · 해제 · 추적 상태 유스케이스 · 소비자 조회 · 구독 이력 유스케이스 · 남는 쪽 풀기 · 사라진 구독 알림의 제목 읽기, 사용자 스토리라인 — 맞추기의 재료와 판정 · 저장하는 따라가기와 그 리스너 · 공개 조회 |
-| `domain` | `notice`(알림 종류 · 내용 · 모으기 · 반영 기준 · 보존과 그 저장), `interest`(설정 행 aggregate · 기본값 · 시간대 · 일정 · 리포트 · 고른 모델 · 쓸 모델 판정 · 선호 버전 울타리 · 제외 소스 저장), `preference`(태그 선호 집합 · 모드 · 원인 · 차이 · 정규화 · 따라가기 규칙과 그 저장), `subscription`(추적 중인 사용자 스토리라인 수의 상한 · 구독 이력 쪽 크기 · 추적 씨앗 따라가기 판정 · 구독 이력 저장), `userstoryline`(씨앗 · 묶음 · 잇기 판정과 사용자 스토리라인 · 추적 대상 · 추적 씨앗 · 구독 행 저장) |
+| `adapter/out/persistence` | 알림 · 반영 기준 저장소, 설정 행 · 태그 선호 · 선호 이력 · 제외 소스 저장소, 선호 버전 울타리, 스토리라인 구독 · 구독 이력 저장소, 사용자 스토리라인 저장소, 구독 제안 거절 저장소, 정리 · 시도 기록 저장소 |
+| `adapter/out/job` | 정리 작업 등록 포트의 JobRunr 구현 |
+| `adapter/out/llm` | 정리 생성기 포트의 실제 생성기(`local` 밖) |
+| `adapter/out/fake` | 정리 생성기 포트의 로컬 대체물(`local`) |
+| `application` | 피드 상태 · 비밀번호 · 키 무효 · 다이제스트 실패 · 리포트 실패 알림 유스케이스와 그 리스너, 알림함 유스케이스, 읽은 알림 정리 유스케이스, 관심 설정 — 계정 생김 리스너 · 기본값 쓰기 · 기존 계정 채우기 · 기동 단계 · 조회 · 저장 유스케이스 넷 · 따라가기와 그 리스너 · 소스 삭제 리스너 · 사용자 시간대 · 다이제스트 · 리포트 일정 목록과 그 함께 쓰는 읽기 · 쓸 모델 조회와 함께 쓰는 쓸 모델 정하기 · 쓸 모델 판정의 재료 읽기, 스토리라인 구독 — 조회 · 추적 · 해제 · 추적 상태 유스케이스 · 소비자 조회 · 구독 이력 유스케이스 · 남는 쪽 풀기 · 사라진 구독 알림의 제목 읽기, 사용자 스토리라인 — 맞추기의 재료와 판정 · 저장하는 따라가기와 그 리스너 · 공개 조회, 구독 제안 거절 — 거절 유스케이스 · 소비자 조회, 사용자 스토리라인의 정리 — 정리 실행 · 재료 읽기 · 다이제스트 끝남 리스너 · 지운 기사 따르기와 그 리스너 · 공개 조회 |
+| `domain` | `notice`(알림 종류 · 내용 · 모으기 · 반영 기준 · 보존과 그 저장), `interest`(설정 행 aggregate · 기본값 · 시간대 · 일정 · 리포트 · 고른 모델 · 쓸 모델 판정 · 선호 버전 울타리 · 제외 소스 저장), `preference`(태그 선호 집합 · 모드 · 원인 · 차이 · 정규화 · 따라가기 규칙과 그 저장), `subscription`(추적 중인 사용자 스토리라인 수의 상한 · 구독 이력 쪽 크기 · 추적 씨앗 따라가기 판정 · 구독 이력 저장), `userstoryline`(씨앗 · 묶음 · 잇기 판정과 사용자 스토리라인 · 추적 대상 · 추적 씨앗 · 구독 행 저장), `suggestion`(거절할 수 있는 주제 · 거절 기록과 그 저장), `summary`(정리의 처분 규칙 · 입력 · 프롬프트 · 출력 서술과 읽기 · 시도 기록 · 정리와 그 저장, 생성기 포트 · 작업 등록 포트) |
 
 계정: 세션 · 보안 구성 · 요청 방어는 `account` 의 것이다([account Spec §4](account.md#4-내부-구조)). 이 모듈의 처리기는 세션 체인이 정한 세션 사용자를 처리기 인자 `UserId` 로 받는다. 계정의 있음 · 쓰는 계정 · 쓰는 운영자 · 계정 쪽은 `account` 의 공개 조회 `AccountDirectory` 로 읽고, 계정 생김 · 비밀번호 바뀜은 `account` 의 이벤트로 받는다.
 
@@ -624,7 +627,7 @@ public record UserStorylineSummaryRef(UserStorylineId id, String title) {}
 | 리포트 실패 | `ReportFailedNoticeListener` → `ReportFailedNotices` | `report` 가 낸 `ReportFailed` | 그 사용자에게 리포트 실패 알림을 남긴다(user-R75). 비동기 · 새 트랜잭션이고 이벤트 발행 레지스트리에 기록된다 — 실패하면 다시 처리되고, 같은 실패의 알림은 하나만 남는다 |
 | 키 무효 | `KeyInvalidatedNoticeListener` → `KeyInvalidatedNotices` | `credential` 의 `CredentialInvalidated` | 그 사용자에게 키 무효 알림을 남긴다(user-R36). 비동기 · 새 트랜잭션이고 이벤트 발행 레지스트리에 기록된다 — 실패하면 다시 처리되고, 같은 전이의 알림은 하나만 남는다 |
 | 비밀번호 바뀜 | `PasswordChangedNoticeListener` → `PasswordChangedNotices` | `account` 의 `PasswordChanged` | 그 사용자에게 비밀번호 알림을 남긴다(user-R74). 비동기 · 새 트랜잭션이고 이벤트 발행 레지스트리에 기록된다 — 실패하면 다시 처리되고, 같은 변경의 알림은 하나만 남는다 |
-| 알림함 | `NoticeController` → `NoticeInbox` | `GET /api/notices` · `GET /api/notices/unread-count` · `POST /api/notices/read` | user-R25 · R27. 응답 값 `NoticePageResponse` · `NoticeResponse` · `FeedStatusNoticeResponse` · `FeedStatusEntryResponse` · `PasswordChangedNoticeResponse` · `KeyInvalidatedNoticeResponse` · `PreferencesAdjustedNoticeResponse` · `AdjustmentResponse` · `StorylineSubscriptionsRemovedNoticeResponse` · `RemovedStorylineResponse` · `ReportFailedNoticeResponse` · `UnreadNoticesResponse`, 요청 값 `ReadNoticesRequest` |
+| 알림함 | `NoticeController` → `NoticeInbox` | `GET /api/notices` · `GET /api/notices/unread-count` · `POST /api/notices/read` | user-R25 · R27. 응답 값 `NoticePageResponse` · `NoticeResponse` · `FeedStatusNoticeResponse` · `FeedStatusEntryResponse` · `PasswordChangedNoticeResponse` · `KeyInvalidatedNoticeResponse` · `PreferencesAdjustedNoticeResponse` · `AdjustmentResponse` · `StorylineSubscriptionsRemovedNoticeResponse` · `RemovedStorylineResponse` · `DigestFailedNoticeResponse` · `ReportFailedNoticeResponse` · `UnreadNoticesResponse`, 요청 값 `ReadNoticesRequest` |
 | 읽은 알림 정리 — 반복 작업 ID `forget-read-notices` | `ForgetReadNoticesJob` | 하루마다 | 읽은 지 90일이 지난 알림을 지운다(user-R26). 재시도하지 않는다 — 다음 회차가 이어 지운다 |
 
 ### `application`
@@ -639,12 +642,14 @@ public record UserStorylineSummaryRef(UserStorylineId id, String title) {}
 - `DigestFailedNotices` — 다이제스트 실패 알림 유스케이스. 이벤트 하나가 트랜잭션 하나다(user-R62)
 - `ReportFailedNotices` — 리포트 실패 알림 유스케이스. 이벤트 하나가 트랜잭션 하나다(user-R75)
 - `DigestFailedNoticeListener` — `DigestFailed` 리스너(들어오는 쪽). 역할 애너테이션이 없다(user-R62)
+- `ReportFailedNoticeListener` — `ReportFailed` 리스너(들어오는 쪽). 역할 애너테이션이 없다(user-R75)
 - `NoticeInbox` — 알림함 유스케이스 — 세션 사용자의 목록 한 쪽(`NoticePage` — 사라진 구독 알림이 가리키는 사건의 제목 표와 함께) · 안 읽은 수 · 읽음(user-R25 · R27 · R54)
 - `RemovedSubscriptionTitles` — 사라진 구독 알림이 가리키는 사건의 지금 대표 기사 제목 읽기 — 알림함 쪽마다 한 번(user-R54)
 - `InterestDefaultsWriter` — 관심 설정 기본값 쓰기의 정본 — 울타리 공유 잠금 → 활성 체계 → 설정 행 · 형식 기본 제외(이력 원인 `ONBOARDING`). 설정 행이 있으면 쓰지 않는다(user-R43)
 - `AccountCreatedListener` — `AccountCreated` 리스너(들어오는 쪽). 역할 애너테이션이 없다(user-R43)
 - `UserStartup` — 기동 단계 상수 `PHASE` 의 정본(user-R44)
 - `InterestBackfill` — 기존 계정 채우기(기동 단계)(user-R44)
+- `InterestSettingsLock` — 관심 설정 조회 · 저장의 앞 단계 정본 — 설정 행이 없으면 만들고, 잠그고, 선호 버전이 지금 활성 버전과 다르면 먼저 따라가게 한다(`lockFollowed` — user-R46). 같은 사용자의 조회 · 저장 · 따라가기가 이 잠금으로 줄을 선다
 - `TagPreferences` · `ExcludedSources` · `DigestSettings` · `ModelSelection` · `DigestVolumeSettings` — 관심 설정 조회 · 저장 유스케이스 다섯(user-R46 · R49 ~ R51 · R56 · R59 — 추론 강도는 `ModelSelection`)
 - `PreferenceFollowups` — 따라가기 — 사용자 하나(`followLocked` — 정본)와 전부(`followAll`), 쓰지 않는 계산(`followed` — 계보 표 · 옛 버전 구조를 읽어 `PreferenceFollowup` 을 부르는 정본, `followLocked` 와 다이제스트가 읽는 관심 설정이 함께 쓴다)(user-R47 · R57)
 - `TagSetActivationListener` · `SourceDeletedListener` — `TagSetActivated` · `SourceDeleted` 리스너(들어오는 쪽). 역할 애너테이션이 없다(user-R47 · R49)
@@ -674,7 +679,7 @@ public record UserStorylineSummaryRef(UserStorylineId id, String title) {}
 
 ### `domain`
 
-- `NoticeKind` — 알림 종류의 닫힌 집합 정본(user-R21). `NoticeContent` — 종류마다의 내용(봉인 — `FeedStatusContent` · `PasswordChangedContent` · `KeyInvalidatedContent` · `PreferencesAdjustedContent` · `StorylineSubscriptionsRemovedContent` · `DigestFailedContent`)
+- `NoticeKind` — 알림 종류의 닫힌 집합 정본(user-R21). `NoticeContent` — 종류마다의 내용(봉인 — `FeedStatusContent` · `PasswordChangedContent` · `KeyInvalidatedContent` · `PreferencesAdjustedContent` · `StorylineSubscriptionsRemovedContent` · `DigestFailedContent` · `ReportFailedContent`)
 - `DigestFailedContent` — 다이제스트 실패 알림의 내용(다이제스트 ID · 날짜 · 갈래 · 실패 시각)(user-R62)
 - `PasswordChangedContent` — 비밀번호 알림의 내용(방법 — `account` 의 `PasswordChangeMethod`, 바꾼 시각)(user-R74)
 - `KeyInvalidatedContent` — 키 무효 알림의 내용(공급자 · 키 ID · 무효 시각)(user-R36)
@@ -917,7 +922,7 @@ public interface SummaryJobQueue {
 
 ## 6. 데이터
 
-컬럼 타입 · 인덱스 · 제약 문면의 정본은 `backend/src/main/resources/db/migration/V36__user_notices.sql` · `V38__password_change_and_recovery.sql` · `V42__key_invalidated_notices.sql` · `V44__interest_settings.sql` · `V45__preferences_adjusted_notices.sql` · `V47__storyline_subscriptions.sql` · `V53__digest_volume.sql` · `V55__digest_writing_settings.sql` · `V60__digest_failed_notices.sql` · `V65__topic_suggestion_declines.sql` · `V76__user_storylines.sql` · `V78__user_storyline_summaries.sql` · `V79__user_storyline_head.sql` · `V81__password_changed_notice_once.sql` · `V82__drop_cross_module_user_foreign_keys.sql` · `V84__drop_interest_text.sql`(자유 텍스트 관심사 칸 지우기) 이다. `user_id` 는 `account` 의 계정 ID(`platform` 의 `UserId` — 1 이상 검사)이고 모듈 사이라 FK 가 없다 — 계정 표는 [account Spec §6](account.md#6-데이터)에 있다.
+컬럼 타입 · 인덱스 · 제약 문면의 정본은 `backend/src/main/resources/db/migration/V36__user_notices.sql` · `V38__password_change_and_recovery.sql` · `V42__key_invalidated_notices.sql` · `V44__interest_settings.sql` · `V45__preferences_adjusted_notices.sql` · `V47__storyline_subscriptions.sql` · `V51__llm_provider_openrouter.sql`(고른 모델의 공급자 제약에 OpenRouter) · `V53__digest_volume.sql` · `V55__digest_writing_settings.sql` · `V60__digest_failed_notices.sql` · `V65__topic_suggestion_declines.sql` · `V76__user_storylines.sql` · `V78__user_storyline_summaries.sql` · `V79__user_storyline_head.sql` · `V81__password_changed_notice_once.sql` · `V82__drop_cross_module_user_foreign_keys.sql` · `V84__drop_interest_text.sql`(자유 텍스트 관심사 칸 지우기) · `V86__user_settings_monthly_report_day.sql`(월간 리포트 날짜) · `V88__report_failed_notices.sql`(리포트 실패 알림의 종류와 부분 고유 인덱스) 이다. `user_id` 는 `account` 의 계정 ID(`platform` 의 `UserId` — 1 이상 검사)이고 모듈 사이라 FK 가 없다 — 계정 표는 [account Spec §6](account.md#6-데이터)에 있다.
 
 | 테이블 | 주요 컬럼 | 뜻 |
 |---|---|---|
@@ -952,7 +957,7 @@ public interface SummaryJobQueue {
 | [0136](../adr/0136-unread-notice-count-refetches-on-navigation-and-window-focus-without-polling.md) | 안 읽은 알림 수는 화면 이동 · 창 포커스 때 다시 읽고, 주기 조회를 하지 않는다 |
 | [0145](../adr/0145-password-notices-are-left-for-password-changes-and-recovery-resets-but-not-for-the-forced-first-sign-in-change.md) | 비밀번호 알림은 비밀번호 변경과 복구 코드 재설정에 남기고, 첫 로그인의 강제 변경에는 남기지 않는다 |
 | [0156](../adr/0156-user-id-is-a-platform-public-type.md) | 사용자 식별자 `UserId` 는 `platform` 의 공개 타입이다 |
-| [0160](../adr/0160-users-without-a-key-may-use-key-account-and-notice-handlers.md) | 키 없는 사용자에게 키 · 계정(비밀번호 변경 · 복구 코드 재발급) · 알림 처리기를 연다 |
+| [0160](../adr/0160-users-without-a-key-may-use-key-account-and-notice-handlers.md) | 키 없는 사용자에게 키 · 계정(비밀번호 변경 · 복구 코드 재발급) · 알림 처리기를 연다(연 처리기의 열거는 ADR-0179 · ADR-0190 이 부분 대체) |
 | [0166](../adr/0166-credential-invalidated-is-published-on-each-transition-to-invalid-and-leaves-one-notice-per-transition.md) | `CredentialInvalidated` 는 `credential` 이 키가 무효가 되는 전이마다 내고, 키 무효 알림은 전이마다 하나다 |
 | [0175](../adr/0175-tag-preferences-follow-tag-set-activation-events-and-are-rewritten-to-active-keys.md) | 태그 선호는 체계 활성 전환 이벤트를 받아 활성 버전의 키로 고쳐 쓴다 |
 | [0176](../adr/0176-tag-set-changes-do-not-narrow-a-users-preferences-without-telling.md) | 체계 변경은 사용자 모르게 선호 범위를 좁히지 않는다 — 일부만 제외한 병합은 해제하고 알리고, 구독한 대분류에서 옮겨 간 중분류는 구독으로 더한다 |
@@ -962,7 +967,7 @@ public interface SummaryJobQueue {
 | [0180](../adr/0180-user-settings-changes-publish-no-event-and-consumers-query.md) | `UserSettingsChanged` 를 내지 않고 소비자가 조회한다 |
 | [0181](../adr/0181-tag-preferences-take-only-topic-subscriptions-and-region-and-format-exclusions.md) | 태그 선호는 주제 구독 · 지역 제외 · 형식 제외만 받는다 |
 | [0182](../adr/0182-startup-work-reading-the-active-tag-set-runs-in-a-lifecycle-phase-after-first-start-seeding-and-before-the-web-server.md) | 기동 때 활성 태그 체계를 읽는 작업은 웹 서버 앞의 기동 단계에서 첫 기동 적재 뒤에 돈다 |
-| [0188](../adr/0188-storyline-subscriptions-follow-retired-storylines-by-event-and-before-each-use-and-notices-point-to-the-remaining-event.md) | 스토리라인 구독은 `storyline` 이 알리는 합침 · 지움과 사용자의 조회 · 저장 앞에서 따라가고, 사라진 구독은 남은 사건을 가리켜 알린다 |
+| [0188](../adr/0188-storyline-subscriptions-follow-retired-storylines-by-event-and-before-each-use-and-notices-point-to-the-remaining-event.md) | 스토리라인 구독은 `storyline` 이 알리는 합침 · 지움과 사용자의 조회 · 저장 앞에서 따라가고, 사라진 구독은 남은 사건을 가리켜 알린다(구독 행을 고쳐 쓰는 따라가기는 ADR-0282 가 부분 대체) |
 | [0189](../adr/0189-subscriptions-to-ended-storylines-stay-and-the-query-carries-the-current-state.md) | 끝난 스토리라인의 구독은 그대로 두고, 구독 조회가 지금 상태를 함께 낸다 |
 | [0190](../adr/0190-storyline-subscription-handlers-are-open-without-a-key.md) | 스토리라인 구독 처리기는 키 없이 연다 |
 | [0191](../adr/0191-the-consumer-query-of-storyline-subscriptions-is-opened-with-the-subscriptions-and-resolves-ids-without-writing.md) | 스토리라인 구독의 소비자 조회는 구독을 만든 작업이 열고, 쓰지 않고 남는 스토리라인 ID 로 풀어 낸다 |
@@ -984,7 +989,7 @@ public interface SummaryJobQueue {
 | [0248](../adr/0248-the-digest-interests-and-topic-suggestion-queries-may-be-called-on-screen-paths-with-the-session-user.md) | 다이제스트가 읽는 관심 설정과 구독 제안의 조회는 화면 경로에서 세션 사용자로 부를 수 있다 |
 | [0272](../adr/0272-the-input-token-budget-is-a-safety-ceiling-and-the-maximum-candidate-steps-set-the-digest-volume.md) | 입력 토큰 예산은 안전 상한이고, 다이제스트 분량은 최대 후보 수 단계가 정한다 |
 | [0281](../adr/0281-a-user-storyline-is-a-flow-that-received-interest-signals-and-tracks-the-tops-reached-forward-along-follows-from-its-seeds-as-one-group.md) | 사용자 스토리라인은 관심 신호를 받은 흐름이고, 씨앗에서 이어짐을 앞에서 뒤로 따라 닿는 꼭대기를 한 묶음으로 추적한다 |
-| [0282](../adr/0282-flow-tracking-points-to-a-user-storyline-which-user-handlers-store-under-the-settings-lock-while-readers-get-the-result-of-the-same-rule.md) | 흐름 추적은 사용자 스토리라인을 가리키고, 사용자 스토리라인은 `user` 의 처리기가 잠그고 저장하며 읽는 쪽은 같은 규칙의 결과를 받는다 |
+| [0282](../adr/0282-flow-tracking-points-to-a-user-storyline-which-user-handlers-store-under-the-settings-lock-while-readers-get-the-result-of-the-same-rule.md) | 흐름 추적은 사용자 스토리라인을 가리키고, 사용자 스토리라인은 `user` 의 처리기가 잠그고 저장하며 읽는 쪽은 같은 규칙의 결과를 받는다(저장하는 계기는 ADR-0287 이 부분 대체) |
 | [0287](../adr/0287-user-storyline-summaries-are-made-and-stored-by-user-with-the-users-key-and-digest-supplies-the-flow-standing.md) | 사용자 스토리라인의 정리는 이 모듈이 사용자 키로 만들고 저장하며, 스토리라인 판정은 `digest` 가 공급한다 |
 | [0288](../adr/0288-summaries-are-made-after-a-digest-ends-only-for-changed-flows-and-extended-with-new-events.md) | 정리는 다이제스트가 끝난 뒤 바뀐 흐름만, 지난 정리에 새 사건을 더해 고친다 |
 | [0289](../adr/0289-shown-flows-are-user-storylines-with-a-summary-which-the-summary-job-creates-and-removes.md) | 보이는 흐름은 정리가 있는 사용자 스토리라인이고, 정리 작업이 만들고 지운다 |

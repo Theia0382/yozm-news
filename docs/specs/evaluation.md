@@ -53,7 +53,7 @@
 
 ## 3. 공개 인터페이스
 
-모듈 최상위 패키지 `net.yozmnews.evaluation` 의 공개 타입은 태그 판정 `ArticleTagging` 과 그 질문 묶음 `TagQuestions` · 값 타입(`TopicCategory` · `AskedTag` · `FormatChoice` · `FormatOption` · `ImportanceScale` · `ImportanceLevel`) · 결과 타입, 사건 소속 판정 `EventMembership`, 관계 판정 `StorylineRelation`, 판정 원본 조회 `EventJudgementLog` · `RelationJudgementLog`, 판정 원본 조회 기간 `JudgementPeriod`, 그 값 · 결과 타입과 평가기 실패 갈래 `EvaluatorFailureKind`, 평가기 시간 `EvaluatorTiming`, 기사 임베딩 `TextEmbedding` 과 그 값 · 결과 타입(`EmbedderInfo` · `Embedding` · `EmbeddingResult` · `Embeddings` · `EmbeddingFailure`)과 임베딩 실패 갈래 `EmbedderFailureKind` 다. 이벤트는 내지 않는다.
+모듈 최상위 패키지 `net.yozmnews.evaluation` 의 공개 타입은 태그 판정 `ArticleTagging` 과 그 질문 묶음 `TagQuestions` · 값 타입(`TopicCategory` · `AskedTag` · `FormatChoice` · `FormatOption` · `ImportanceScale` · `ImportanceLevel`) · 결과 타입, 사건 소속 판정 `EventMembership`, 스토리라인 소속 판정 `StorylineMembership` 과 그 값 · 결과 타입(`StorylineMembershipQuery` · `StorylineCandidate` · `StorylineMembershipJudgement` · `StorylineMembershipJudgementId`), 관계 판정 `StorylineRelation`, 판정 원본 조회 `EventJudgementLog` · `RelationJudgementLog`, 판정 원본 조회 기간 `JudgementPeriod`, 그 값 · 결과 타입과 평가기 실패 갈래 `EvaluatorFailureKind`, 평가기 시간 `EvaluatorTiming`, 기사 임베딩 `TextEmbedding` 과 그 값 · 결과 타입(`EmbedderInfo` · `Embedding` · `EmbeddingResult` · `Embeddings` · `EmbeddingFailure`)과 임베딩 실패 갈래 `EmbedderFailureKind` 다. 이벤트는 내지 않는다.
 
 받는 이벤트는 `article` 의 `ArticlesRemoved` 이고, 판정의 입력은 `article` 의 공개 조회 `ArticleDirectory.findAll` 과 `source` 의 공개 조회 `FeedLabels` 로 읽는다([article Spec §3](article.md#3-공개-인터페이스) · [source Spec §3](source.md#3-공개-인터페이스)).
 
@@ -193,7 +193,7 @@ public enum EvaluatorFailureKind { TRANSIENT, ARTICLE_REJECTED, EVALUATOR_UNAVAI
 - 계약
   - 판정은 외부 호출이라 작업 역할의 작업에서, DB 트랜잭션 밖에서 부른다. 트랜잭션 안에서 부르거나 평가기가 없는 프로세스(키 없는 화면 역할)에서 부르면 `IllegalStateException` 이다 — 부르는 쪽 결함이다([ADR-0073](../adr/0073-event-membership-api-in-both-roles-looks-up-the-evaluator-on-call-and-fails-without-one.md))
   - 요청 값이 제약을 어기면 생성자가 `IllegalArgumentException` 을 던진다
-  - 확률을 받아들일지(기준 · 최댓값)는 부르는 쪽이 정한다. 같은 요청도 확률이 흔들릴 수 있다(ADR-0063)
+  - 확률을 받아들일지(기준 · 최댓값)는 부르는 쪽이 정한다. 같은 요청도 확률이 흔들릴 수 있다([ADR-0063](../adr/0063-jev-called-through-one-system-one-schema-context-overflow-probed-with-empty-state-latest-model-alias-by-default.md))
   - 판정에 성공하면 판정 원본을 남긴다(evaluation-R38). 평가기의 예상 못한 예외와 결과가 물은 후보와 어긋남(`IllegalStateException`)은 그대로 던지고 원본을 남기지 않는다
   - 사용자 정보를 받지 않는다 — 공유 판정이다
 
@@ -201,7 +201,7 @@ public enum EvaluatorFailureKind { TRANSIENT, ARTICLE_REJECTED, EVALUATOR_UNAVAI
 
 ### StorylineMembership · StorylineMembershipQuery · StorylineCandidate · StorylineMembershipJudgement · StorylineMembershipJudgementId
 
-스토리라인 소속 판정 — `storyline` 의 잇기가 사건 하나를 후보마다 같은 사안의 전개인지 평가기로 판정한다([ADR-0194](../adr/0194-storyline-linking-asks-jev-only-for-band-candidates-and-reuses-recorded-probabilities-until-either-side-doubles.md)). 구현은 `application` 의 `StorylineMembershipService` 다. 요청 · 결과의 꼴과 실패 갈래는 사건 소속 판정과 같고, 질문 문구와 판정 원본이 다르다.
+스토리라인 소속 판정 — `storyline` 의 잇기가 판정할 사건의 대표 기사 하나를 두고, 그 기사가 후보마다 같은 사안의 전개인지 평가기로 판정한다([ADR-0194](../adr/0194-storyline-linking-asks-jev-only-for-band-candidates-and-reuses-recorded-probabilities-until-either-side-doubles.md)). 구현은 `application` 의 `StorylineMembershipService` 다. 요청 · 결과의 꼴과 실패 갈래는 사건 소속 판정과 같고, 질문 문구와 판정 원본이 다르다.
 
 ```java
 public interface StorylineMembership {
@@ -699,7 +699,7 @@ OpenAI 호환 외부 임베딩의 판단이다. 스프링 없이 단위 시험�
 
 #### `ArticleEvaluator`
 
-태그 판정 · 사건 소속 판정 · 관계 판정의 포트 — Jev 를 부르는 유일한 포트다. 사용자 정보를 받지 않는다. 패키지는 `domain/evaluator` 다.
+태그 판정 · 사건 소속 판정 · 스토리라인 소속 판정 · 관계 판정의 포트 — Jev 를 부르는 유일한 포트다. 사용자 정보를 받지 않는다. 패키지는 `domain/evaluator` 다.
 
 ```java
 public interface ArticleEvaluator {
@@ -1119,7 +1119,6 @@ public interface ArticleEmbedder {
 |---|---|---|
 | `article_event_judgements` | id, article_id, evaluator, model_version, wording_version, candidates(jsonb — 물은 후보마다 사건 ID · 서술 기사 ID · 확률, 요청 순서), raw_response(jsonb), input_tokens, judged_at | 사건 소속 판정 원본 — 성공한 판정마다 한 행이고 고유 제약이 없다(evaluation-R38). `article_id` 인덱스, 기간 조회의 `(judged_at, id)` 인덱스(evaluation-R39). 사건 ID 는 `event` 의 사건을 가리키지만 FK 가 없다. 지운 기사(판정한 기사)의 행은 함께 지운다(evaluation-R44). 배정 결과는 `event` 가 갖는다 |
 | `article_tag_judgements` | id, article_id, evaluator, model_version, raw_response(jsonb), input_tokens, judged_at | 태그 판정 원본 — 성공한 판정마다 한 행이고 고유 제약이 없다(evaluation-R41). `article_id` 인덱스. `tag` 의 평가 행(`article_evaluations.judgement_id`)이 ID 로 가리키지만 FK 가 없다. 지운 기사(판정한 기사)의 행은 함께 지운다(evaluation-R44). 이 테이블이 생기기 전의 평가는 평가 ID 와 같은 ID 의 원본으로 옮겨졌다 |
-
 | `storyline_membership_judgements` | id, article_id, evaluator, model_version, wording_version, candidates(jsonb — 물은 후보마다 후보 ID(`candidateId`) · 서술 기사 ID(`articleIds`) · 확률(`probability`), 요청 순서), raw_response(jsonb), input_tokens(0 이상), judged_at | 스토리라인 소속 판정 원본 — 성공한 판정마다 한 행이고 고유 제약이 없다(evaluation-R52). `article_id` 인덱스, `judged_at` 인덱스(보존 정리용). `storyline` 의 소속(`storyline_members.judgement_id`) · 잇기 물은 기록이 ID 로 가리키지만 FK 가 없다. 지운 기사(판정할 기사)의 행은 함께 지운다(evaluation-R44) |
 | `storyline_relation_judgements` | id, first_storyline_id, second_storyline_id, described(jsonb — 스토리라인마다 실은 서술 기사 ID 와 요약문을 실었는가, 요청 순서), evaluator, model_version, wording_version, raw_response(jsonb), input_tokens, judged_at | 관계 판정 원본 — 성공한 판정마다 한 행이고 고유 제약이 없다(evaluation-R49). 두 스토리라인 ID 는 서로 다르다(제약). 스토리라인 ID 는 `storyline` 의 스토리라인을 가리키지만 FK 가 없다. 판정 시각 인덱스(보존 정리). 반영한 관계 · 물은 기록은 `storyline` 이 갖는다 |
 
@@ -1165,7 +1164,7 @@ public interface ArticleEmbedder {
 | [0090](../adr/0090-article-embedding-defaults-to-an-in-app-local-model-with-an-openai-compatible-api-by-setting.md) | 기사 임베딩의 기본은 앱 안 로컬 모델이고, OpenAI 호환 외부 API 를 설정으로 고르며, 외부 방식의 차원은 운영자가 정한다 |
 | [0091](../adr/0091-local-embedding-model-is-multilingual-e5-small-int8-fetched-at-build-into-the-image-with-onnx-telemetry-off.md) | 기본 로컬 모델은 multilingual-e5-small int8 을 DJL 토크나이저로 돌리고, 고정 리비전 · 해시로 빌드 때 받아 이미지에 담으며, ONNX Runtime 텔레메트리를 끄는 환경 변수가 없으면 모델을 열지 않는다 |
 | [0092](../adr/0092-embedder-failures-in-three-kinds-with-rejected-articles-isolated-and-dropped-after-a-limit.md) | 임베더 실패는 일시 · 입력 거부 · 사용 불가 셋으로 나누고, 입력 거부는 기사 하나씩 다시 불러 가린 뒤 거부 수가 상한에 이르면 사건 묶기 대기에서 뺀다 |
-| [0093](../adr/0093-worker-role-does-not-run-without-an-embedder-built-only-in-the-worker-role.md) | 작업 역할은 임베더 없이 운영하지 않는다 — 운영 임베더는 작업 역할에서만 만들고, 반복 작업이 생성자로 받는다 |
+| [0093](../adr/0093-worker-role-does-not-run-without-an-embedder-built-only-in-the-worker-role.md) | 작업 역할은 임베더 없이 운영하지 않는다 — 운영 임베더는 작업 역할에서만 만들고, 반복 작업이 생성자로 받는다(반복 작업이 임베더를 생성자로 받는 것은 ADR-0115 가 부분 대체) |
 | [0094](../adr/0094-event-membership-judgements-identified-by-id-read-by-operators-and-referenced-by-the-records-that-apply-them.md) | 사건 소속 판정 원본은 ID 로 식별되어 운영자 조회로 읽히고, 판정을 반영한 `event` 기록이 그 ID 를 가리켜 판정의 쓰임과 결과를 잇는다 |
 | [0102](../adr/0102-an-event-is-the-reports-of-one-happening-narrowed-by-the-event-membership-question-wording.md) | 사건은 한 번 일어난 일을 다룬 보도들이고, 시스템의 사건 범위는 사건 소속 질문 문구로 좁힌다 |
 | [0132](../adr/0132-storyline-relations-are-judged-by-jev-on-candidate-pairs-and-linked-only-above-a-probability-threshold.md) | 스토리라인 관계는 후보 쌍을 Jev 에 물어 종류와 방향을 정하고 확률이 높은 것만 맺는다 |

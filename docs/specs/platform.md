@@ -68,7 +68,7 @@
 
 ## 3. 공개 인터페이스
 
-모듈 최상위 패키지 `net.yozmnews.platform` 의 공개 타입은 역할 애너테이션 둘, 로컬 개발 애너테이션 하나, 화면용 API 경로 규약 하나(`ApiPaths`), 공개 처리기 표시 하나(`PublicApi`), 변경 전 허용 표시 하나(`AllowedBeforePasswordChange`), 키 없이 허용 표시 하나(`AllowedWithoutLlmKey`)와 세 표시의 판정 하나(`PublicApis`), 지키는 동작 하나(`GuardedAction`)와 요청 방어 표시 둘(`RequestLimited` · `HumanChecked`)과 그 판정 하나(`HandlerGuards`), 사용자 식별자 하나(`UserId`), 문제 응답 둘(`ApiProblem` · `ProblemResponses`), 이벤트 발행 운영 API(`EventPublicationAdministration` 과 결과 타입 — 파일 9개, 중첩 레코드를 더하면 타입 11개), YAML 원문 읽기(파일 8개), 코드 포인트 자르기 하나(`CodePoints`), 날짜 범위 변환 하나(`DayRange`), HTTP 응답 본문 수신자 하나(`CappedBody` — 중첩 타입을 더하면 넷), 벡터의 pgvector 텍스트 표현 하나(`VectorText`), 운영 설정의 행위자 종류 하나(`ChangeActor`), 비밀 값 평문의 래퍼 하나(`SecretValue`), 헤더에 실을 값의 꼴 하나(`HeaderValueShape` — 중첩 enum 을 더하면 둘), 앱 시계 하나(`AppClock`), 실제 시간이 아니라 거부하는 예외 하나(`RealTimeRequiredException`), 측정용 시계 운영 API(`MeasurementClockAdministration` 과 결과 타입 — 파일 5개, 중첩 레코드를 더하면 타입 10개)다.
+모듈 최상위 패키지 `net.yozmnews.platform` 의 공개 타입은 역할 애너테이션 둘, 로컬 개발 애너테이션 하나, 화면용 API 경로 규약 하나(`ApiPaths`), 공개 처리기 표시 하나(`PublicApi`), 변경 전 허용 표시 하나(`AllowedBeforePasswordChange`), 키 없이 허용 표시 하나(`AllowedWithoutLlmKey`)와 세 표시의 판정 하나(`PublicApis`), 지키는 동작 하나(`GuardedAction`)와 요청 방어 표시 둘(`RequestLimited` · `HumanChecked`)과 그 판정 하나(`HandlerGuards`), 사용자 식별자 하나(`UserId`), 문제 응답 둘(`ApiProblem` · `ProblemResponses`), 이벤트 발행 운영 API(`EventPublicationAdministration` 과 결과 타입 — 파일 9개, 중첩 레코드를 더하면 타입 11개), YAML 원문 읽기(파일 8개), LLM 출력 읽기(`OutputShape` · `OutputValue` · `StructuredOutputReader` · `StructuredOutputSchema` · `StructuredRead` — 파일 5개), 코드 포인트 자르기 하나(`CodePoints`), 날짜 범위 변환 하나(`DayRange`), HTTP 응답 본문 수신자 하나(`CappedBody` — 중첩 타입을 더하면 넷), 벡터의 pgvector 텍스트 표현 하나(`VectorText`), 운영 설정의 행위자 종류 하나(`ChangeActor`), 비밀 값 평문의 래퍼 하나(`SecretValue`), 헤더에 실을 값의 꼴 하나(`HeaderValueShape` — 중첩 enum 을 더하면 둘), 앱 시계 하나(`AppClock`), 실제 시간이 아니라 거부하는 예외 하나(`RealTimeRequiredException`), 측정용 시계 운영 API(`MeasurementClockAdministration` 과 결과 타입 — 파일 5개, 중첩 레코드를 더하면 타입 10개)다.
 
 | 타입 | 형태 | 용도 |
 |---|---|---|
@@ -431,7 +431,7 @@ public enum ChangeActor { SYSTEM, OPERATOR }
 | `OPERATOR` | 공개 운영 API 를 거친 운영자 |
 
 - 계약
-  - 사용자를 가리키지 않는다 — 지금 운영자는 토큰 하나라 사람을 구별하지 않는다
+  - 사용자를 가리키지 않는다 — 운영자 계정 세션과 운영자 토큰을 가리지 않고 `OPERATOR` 하나로 남긴다
   - 저장 값은 상수 이름(`SYSTEM` · `OPERATOR`)이다 — 쓰는 모듈의 이력 테이블이 이 이름으로 저장한다([tag-R13](tag.md#태그-기준--저장-기준) · [storyline-R20](storyline.md#큰-판정) · [account-R25](account.md#가입-정책))
 
 관련 규칙: 없음 — 이력 규칙은 쓰는 모듈이 갖는다.
@@ -638,7 +638,7 @@ HTTP 엔드포인트:
 
 | 패키지 | 책임 |
 |---|---|
-| (최상위) | 역할 애너테이션 · 화면용 API 경로 규약 · 공개 처리기 표시와 그 판정 · 요청 방어 표시와 그 판정 · 문제 응답 · 이벤트 발행 운영 API · YAML 원문 읽기 · LLM 출력 읽기 · 코드 포인트 자르기 · 날짜 범위 변환 · HTTP 응답 본문 상한 · 벡터의 pgvector 텍스트 표현 · 앱 시계 · 실제 시간 요구 예외 · 측정용 시계 운영 API(§3) |
+| (최상위) | 역할 애너테이션 · 로컬 개발 표시 · 화면용 API 경로 규약 · 공개 처리기 · 변경 전 허용 · 키 없이 허용 표시와 그 판정 · 사용자 식별자 · 운영 설정의 행위자 종류 · 비밀 값 평문의 래퍼 · 헤더에 실을 값의 꼴 · 요청 방어 표시와 그 판정 · 문제 응답 · 이벤트 발행 운영 API · YAML 원문 읽기 · LLM 출력 읽기 · 코드 포인트 자르기 · 날짜 범위 변환 · HTTP 응답 본문 상한 · 벡터의 pgvector 텍스트 표현 · 앱 시계 · 실제 시간 요구 예외 · 측정용 시계 운영 API(§3) |
 | `adapter/in/job` | 이벤트 발행 재처리 반복 작업 |
 | `adapter/in/web` | API 계약 확인 엔드포인트, 화면용 API 명세 설정, 컨트롤러 오류의 문제 응답 |
 | `adapter/out/persistence` | 이벤트 발행 레지스트리 행의 읽기 · 조건부 삭제, 설치된 DB 확장의 버전 읽기, 측정용 시계의 시계 행 · 넘긴 기록 읽기 · 쓰기 |
@@ -875,12 +875,12 @@ stateDiagram-v2
 | [0056](../adr/0056-platform-reads-yaml-text-and-applies-common-rejection.md) | YAML 원문 읽기와 공통 거부는 `platform` 이 맡고, 문서별 형식 · 검증은 각 모듈의 `domain` 이 한다 |
 | [0057](../adr/0057-local-substitutes-registered-only-in-local-profile-without-operator-switch.md) | 로컬 대체물은 `local` profile 에서만 등록하고, 운영 설정으로 켜는 스위치를 두지 않는다 |
 | [0113](../adr/0113-moving-listeners-or-jobs-between-modules-migrates-pending-publication-listener-ids-and-drops-pending-jobs-of-the-old-class.md) | 모듈 사이로 리스너 · 반복 작업을 옮기면 미완료 발행의 리스너 ID 를 마이그레이션으로 옮기고, 옛 클래스의 남은 예약 작업을 지운다 |
-| [0124](../adr/0124-security-configuration-lives-in-the-user-module-and-platform-keeps-only-the-screen-api-path-convention.md) | 인증 · 보안 구성은 운영자 토큰 체인까지 `user` 모듈이 갖고, `platform` 은 화면용 API 경로 규약만 갖는다 |
+| [0124](../adr/0124-security-configuration-lives-in-the-user-module-and-platform-keeps-only-the-screen-api-path-convention.md) | 인증 · 보안 구성은 운영자 토큰 체인까지 `user` 모듈이 갖고, `platform` 은 화면용 API 경로 규약만 갖는다(보안 구성의 모듈은 ADR-0308 이 부분 대체) |
 | [0125](../adr/0125-screen-api-handlers-need-a-session-unless-marked-public-and-take-the-user-only-as-a-session-filled-argument.md) | 화면용 API 처리기는 공개 표시가 없으면 세션을 요구하고, 사용자는 세션에서 채운 인자로만 받으며, 등록 가드가 공개 표시나 격리 시험 등록을 강제한다 |
 | [0152](../adr/0152-secret-value-is-a-platform-public-type-that-fails-on-serialization.md) | 비밀 값 평문의 래퍼 `SecretValue` 는 `platform` 의 공개 타입이고, 직렬화하면 실패한다 |
 | [0156](../adr/0156-user-id-is-a-platform-public-type.md) | 사용자 식별자 `UserId` 는 `platform` 의 공개 타입이다 |
 | [0158](../adr/0158-requests-of-session-users-without-a-key-are-closed-by-default-and-handlers-open-without-a-key-carry-a-platform-annotation.md) | 키 없는 세션 사용자의 요청은 닫힘이 기본이고, 키 없이도 여는 처리기에 `platform` 의 표시를 단다 |
-| [0169](../adr/0169-request-limits-and-bot-checks-are-platform-marks-applied-by-the-user-session-chain-before-the-handler.md) | 요청 제한 · 봇 차단은 `platform` 의 처리기 표시를 `user` 세션 체인이 처리기 앞에서 요청 제한 → 봇 차단 순으로 걸고, 거부는 429 `rate-limited` · 403 `human-check-failed` 다 |
+| [0169](../adr/0169-request-limits-and-bot-checks-are-platform-marks-applied-by-the-user-session-chain-before-the-handler.md) | 요청 제한 · 봇 차단은 `platform` 의 처리기 표시를 `user` 세션 체인이 처리기 앞에서 요청 제한 → 봇 차단 순으로 걸고, 거부는 429 `rate-limited` · 403 `human-check-failed` 다(세션 체인의 모듈은 ADR-0308 이 부분 대체) |
 | [0250](../adr/0250-the-apps-now-comes-from-one-appclock-bean-that-is-not-a-java-time-clock.md) | 앱의 지금은 `platform` 의 `AppClock` bean 하나에서 읽고, 그 bean 은 `java.time.Clock` 이 아니다 |
 | [0251](../adr/0251-the-measurement-clock-starts-only-with-the-measurement-profile-and-a-clock-row-and-moves-forward-through-the-operator-api.md) | 측정용 시계는 profile `measurement` 와 운영자가 넣는 DB 시계 행이 함께 있을 때만 뜨고, 운영자 API 로 앞으로만 넘긴다 |
 | [0252](../adr/0252-the-stall-and-duration-of-work-in-progress-are-measured-as-elapsed-time-without-the-jumps-of-the-clock.md) | 진행 중 작업의 멈춤과 걸린 시간은 시계가 넘긴 시간을 뺀 경과로 잰다 |

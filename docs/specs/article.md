@@ -64,7 +64,7 @@ public record ArticleId(long value) {}
 
 ### ArticleStored
 
-새 기사를 저장했다(article → evaluation · event).
+새 기사를 저장했다(article → event · tag).
 
 ```java
 public record ArticleStored(ArticleId articleId) {}
@@ -84,7 +84,7 @@ public record ArticleStored(ArticleId articleId) {}
 
 ### ArticlesRemoved
 
-기사를 지웠다(article → tag · evaluation · event · digest). 운영자가 소스 · 피드를 지워 엔트리가 남지 않은 기사다.
+기사를 지웠다(article → tag · evaluation · event · digest · user). 운영자가 소스 · 피드를 지워 엔트리가 남지 않은 기사다.
 
 ```java
 public record ArticlesRemoved(List<ArticleId> articleIds) {}

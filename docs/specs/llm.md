@@ -399,7 +399,7 @@ sequenceDiagram
     participant X as 공급자
     C->>S: validate(provider, key)
     Note over S: 트랜잭션 밖인가(llm-R5) · 키의 꼴(llm-R10)
-    S->>P: open(provider, key)
+    S->>P: open(provider, key, 검증 마감)
     P-->>S: client
     S->>K: probe()
     K->>X: 확인 조회(llm-R6 · R7 · R11 ~ R13)
@@ -417,6 +417,7 @@ sequenceDiagram
     participant C as 부르는 쪽
     participant S as LlmClientFactoryService
     participant Q as StoredKeySource
+    participant P as LlmProviderClients
     participant K as LlmProviderClient
     participant X as 공급자
     C->>S: generateStored(user, request)
@@ -424,7 +425,8 @@ sequenceDiagram
     S->>Q: find(user, provider)
     Q-->>S: 저장한 키(없으면 Missing)
     Note over S: 키의 꼴(llm-R10) · 출력 상한(llm-R23)
-    S->>K: open(provider, key, 생성 마감)
+    S->>P: open(provider, key, 생성 마감)
+    P-->>S: client
     loop 일시 장애면 기다렸다 다시(llm-R20)
         S->>K: generate(call)
         K->>X: 맞춘 스키마 · 추론 강도 · 출력 상한(llm-R21 · R23)

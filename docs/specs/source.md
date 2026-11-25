@@ -8,7 +8,7 @@
 
 - **등록과 운영 설정** — 소스를 수집 프로필로 등록하고(프리셋 참조 또는 운영자 프로필), 운영자 원문을 고치고, 소스 · 피드를 켜고 끄며, 운영자 수집 주기를 둔다. 피드는 한 번 받아 본 미리보기가 활성화 기준을 넘을 때만 켠다. 기동 때 저장된 피드를 지금의 프로필과 대조한다. 이 운영 기능과 운영 목록을 공개 API(`SourceAdministration`)로 낸다
 - **숨김과 삭제** — 소스 · 피드를 숨기고(끄고 목록에서 빼되 행과 받은 기사를 남긴다) 다시 보이며, 지운다(행을 지우고 `SourceDeleted` · `FeedDeleted` 를 발행해 그 소스 · 피드만 가진 기사까지 지우게 한다). 다른 모듈이 피드가 아직 있는지 묻는 공개 조회(`SourceDirectory`)를 낸다
-- **출처 이름 기록** — 프로필에서 마지막으로 확인한 소스 이름을 기록해, 프로필을 얻지 못해도 출처를 보일 수 있게 한다. 다른 모듈이 피드의 출처 이름 · 섹션을 읽는 공개 조회(`FeedLabels`)를 낸다
+- **출처 이름 기록** — 프로필에서 마지막으로 확인한 소스 이름을 기록해, 프로필을 얻지 못해도 출처를 보일 수 있게 한다. 다른 모듈이 피드의 출처 이름 · 섹션을 읽는 공개 조회(`FeedLabels`)와, 사용자가 고를 소스 목록을 읽는 공개 조회(`SourceNames` — `user` 의 제외 소스가 쓴다)를 낸다
 - **수집 일정** — 수집할 피드를 고르고, 겹치지 않게 점유하고, 같은 언론사에 요청이 몰리지 않게 띄우고, 결과로 다음 수집 시각을 정한다
 - **피드 요청** — 조건부 GET 으로 피드를 받고, 내부 주소로 가는 요청을 막고, 한 번의 수집에 마감 · 크기 상한을 건다
 - **정규화** — 받은 문서를 수집 프로필대로 보정 · 파싱하고 항목마다 기사 값으로 정리한다
@@ -111,7 +111,7 @@ public record ArticleFetched(SourceId sourceId, FeedId feedId, Instant fetchedAt
 
 ### SourceDeleted · FeedDeleted
 
-운영자가 소스 · 피드를 지웠다(source → article).
+운영자가 소스 · 피드를 지웠다(`SourceDeleted` 는 source → article · user, `FeedDeleted` 는 source → article).
 
 ```java
 public record SourceDeleted(SourceId sourceId) {}

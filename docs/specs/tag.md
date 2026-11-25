@@ -99,6 +99,7 @@ public interface TagSetDirectory {
 
 public record TagSetNames(TagSetId id, List<TagName> categories, List<TagName> subtopics, List<TagName> regions) {
     Optional<String> topicName(String key);
+    Optional<String> categoryOf(String subtopicKey);
     Optional<String> regionName(String key);
     Map<String, Integer> topicOrder();
     Map<String, Integer> regionOrder();
@@ -1165,7 +1166,7 @@ sequenceDiagram
   - `TAG_BELOW_STORE` — 새 태그 기준 < 새 저장 기준 이고, 지금 태그 기준 ≥ 지금 저장 기준
 
   판정의 정본은 `ThresholdRule` 하나다. 저장 기준을 낮춘 뒤 빠진 태그는 운영자가 채운다(tag-R31)
-- **tag-R13** — 태그 기준 · 저장 기준의 이력은 추가만 한다. 행마다 버전 · 태그 종류 · 이전 값 · 새 값 · 행위자 · 시각을 남기고, 처음 값이 첫 행이다 — 이전 값이 없고, 행위자는 그 버전을 만든 행위자다(첫 기동 적재는 시스템, 활성화는 요청의 행위자 — tag-R16). 행위자는 시스템(첫 기동 적재) · 운영자(공개 운영 API) 둘이다 — 지금 운영자는 토큰 하나라 사람을 구별하지 않는다([ADR-0043](../adr/0043-admin-functions-guarded-by-env-bearer-token-until-account-roles.md)). 이력은 무기한 보존한다
+- **tag-R13** — 태그 기준 · 저장 기준의 이력은 추가만 한다. 행마다 버전 · 태그 종류 · 이전 값 · 새 값 · 행위자 · 시각을 남기고, 처음 값이 첫 행이다 — 이전 값이 없고, 행위자는 그 버전을 만든 행위자다(첫 기동 적재는 시스템, 활성화는 요청의 행위자 — tag-R16). 행위자는 시스템(첫 기동 적재) · 운영자(공개 운영 API) 둘이다 — 운영자 계정 세션과 운영자 토큰을 가리지 않고 운영자 하나로 남긴다([ADR-0183](../adr/0183-admin-paths-open-with-admin-account-sessions-and-keep-the-operator-token-as-an-optional-script-bearer-with-csrf-only-for-sessions.md)). 이력은 무기한 보존한다
 
 ### 공유 평가
 
@@ -1190,7 +1191,7 @@ sequenceDiagram
   - 조회는 기사의 평가 가운데 체계 버전 번호가 가장 큰 것을 쓴다 — 버전은 앞으로만 켜므로 기사를 평가한 버전 가운데 가장 최근에 활성이던 것이다(tag-R16). 태그 키는 그 평가 버전의 키이고, 활성 버전의 키로는 tag-R26 으로 푼다
   - 정본: 저장은 `EvaluationRecord` · `ImportanceScore`, 판정은 `TagJudgement`, 비교는 `Probabilities`
   - `low_confidence` 판정을 다른 LLM 으로 다시 평가하지 않는다 — 운영자 비용이 든다([ADR-0002](../adr/0002-shared-evaluation-with-jev.md)). 체계를 바꿀 때의 재평가는 tag-R25 다
-- **tag-R17** — (없음 — 평가 입력의 피드 맥락 상한은 관문 규칙 [evaluation-R17](evaluation.md#태그-판정)이다)
+- **tag-R17** — (폐지 — 평가 입력의 피드 맥락 상한은 관문 규칙 [evaluation-R17](evaluation.md#태그-판정)이다)
 
 ### 평가 대기와 평가 작업
 
@@ -1372,6 +1373,7 @@ sequenceDiagram
 | [0058](../adr/0058-evaluator-failures-in-three-kinds-and-unavailable-evaluator-skips-article-retries.md) | 평가기 실패는 일시 · 기사 거부 · 평가기 사용 불가 셋으로 나누고, 평가기 사용 불가는 기사 재시도를 쓰지 않는다 |
 | [0059](../adr/0059-evaluation-job-limits-concurrency-and-retries-with-db-leases-on-queue-rows.md) | 평가 작업은 대기 행의 DB 점유와 상태로 동시성 · 재시도를 제한하고, 정착 시간 뒤 평가하며, 결과가 체계와 어긋나거나 평가기가 예상 못한 예외를 던지면 회차를 멈춘다 |
 | [0060](../adr/0060-article-deletion-announced-by-removed-article-ids-and-followed-by-referencing-modules.md) | 기사 삭제는 지운 기사 ID 이벤트로 알리고, 기사를 가리키는 모듈이 받아 자기 행을 지운다 |
+| [0061](../adr/0061-worker-role-does-not-run-without-an-evaluator.md) | 작업 역할은 평가기 없이 운영하지 않고, 그 기동 검사는 운영 평가기의 설정과 함께 둔다 |
 | [0062](../adr/0062-tag-set-versions-from-operator-text-activated-forward-with-key-lineage-and-recent-reevaluation.md) | 태그 체계는 운영자 원문으로 새 버전을 만들어 앞으로만 켜고, 키 계보를 원문에 적으며, 켤 때 정한 일수 안에 처음 본 기사를 재평가 대기에 넣는다 |
 | [0064](../adr/0064-topic-coverage-counts-articles-by-first-evaluation-time-with-query-time-judgement-over-key-lineage-in-the-app.md) | 주제별 보도량은 기사의 첫 평가 시각으로 기간에 넣고, 최신 평가의 조회 시점 판정을 계보로 활성 버전 키에 이어 앱에서 센다 |
 | [0069](../adr/0069-missing-tags-filled-by-the-evaluator-rereading-stored-raw-responses-over-an-operator-chosen-period.md) | 저장 기준을 낮춘 뒤 빠진 태그는 운영자가 정한 기간의 평가를 저장된 원본 응답으로 평가기가 다시 읽어 채운다 |
