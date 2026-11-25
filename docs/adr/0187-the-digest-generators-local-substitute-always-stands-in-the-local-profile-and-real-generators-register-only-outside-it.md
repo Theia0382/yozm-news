@@ -36,5 +36,5 @@
 
 ## 후속 기록
 
-- 2026-11-18: 결과 "실제 생성기가 생기기 전에는 `local` 밖에 생성기가 없다 — 생성할 때 찾고, 없으면 그 다이제스트를 실패로 끝낸다" — 실제 생성기가 `local` 밖에서 언제나 등록되어 그 갈래를 걷었다([ADR-0221](0221-generator-results-are-success-or-failure-and-the-use-case-asks-once-more-only-for-a-complete-unreadable-answer.md)), 지금 상태는 [digest Spec "생성 흐름"](../specs/digest.md#생성-흐름) digest-R8
+- 2026-11-18: 결과 "실제 생성기가 생기기 전에는 `local` 밖에 생성기가 없다 — 생성할 때 찾고, 없으면 그 다이제스트를 실패로 끝낸다" — 실제 생성기가 `local` 밖에서 언제나 등록되어 그 갈래를 걷었다([ADR-0221](0221-generator-results-are-success-or-failure-and-the-use-case-asks-once-more-only-for-a-complete-unreadable-answer.md)), 지금 상태는 [digest Spec "생성 과정"](../specs/digest.md#생성-과정) digest-R8
 - 2026-11-22: 결정(대체물은 `local` 에서 언제나, 실제 생성기는 `local` 밖에서만)과 결과 "실제 생성기가 생기기 전에는 `local` 밖에 생성기가 없다 — 생성할 때 찾고, 없으면 그 다이제스트를 실패로 끝낸다"를 변화 리포트 생성기로 넓힘 — [report Spec "로컬 대체물"](../specs/report.md#로컬-대체물) report-R10 · ["생성 흐름"](../specs/report.md#생성-흐름) report-R13
