@@ -368,7 +368,7 @@ class ReportGenerationTests {
 
 		assertThat(calls).hasValue(2);
 		assertThat(requests.get(1).prompt().instructions())
-			.isEqualTo(requests.get(0).prompt().instructions() + "\n앞 출력이 출력 스키마에 맞지 않았다: $.sections: 없다"
+			.isEqualTo(requests.get(0).prompt().instructions() + "\n앞 출력을 고쳐 다시 써야 한다: $.sections: 없다"
 					+ "\n출력 스키마에 맞는 JSON 객체 하나만 다시 출력하라.");
 		assertThat(requests.get(1).prompt().userContent()).isEqualTo(requests.get(0).prompt().userContent());
 		assertThat(row(id)).containsEntry("error_code", "UNREADABLE_OUTPUT")
@@ -412,10 +412,46 @@ class ReportGenerationTests {
 			.isEqualTo(ReportStatus.READY);
 
 		assertThat(requests.get(1).prompt().instructions()).endsWith(
-				"앞 출력이 출력 스키마에 맞지 않았다: 출력에 없는 갈래: interests\n출력 스키마에 맞는 JSON 객체 하나만 다시 출력하라.");
+				"앞 출력을 고쳐 다시 써야 한다: 출력에 없는 갈래: interests\n출력 스키마에 맞는 JSON 객체 하나만 다시 출력하라.");
 		assertThat(sectionRows(id)).containsExactly("0 OVERVIEW null 둘째 개요", "1 COVERAGE 보도량 본문",
 				"2 INTERESTS 관심 본문");
-		assertThat(output).contains("리포트 생성을 다시 물었다 — 리포트 " + id.value() + ", 까닭 빠진 갈래 1");
+		assertThat(output).contains("리포트 생성을 다시 물었다 — 리포트 " + id.value() + ", 까닭 빠진 갈래 1 · 남은 별칭 0");
+	}
+
+	@Test
+	void asksAgainWhenTheWritingKeepsAnAliasAndSavesTheRewrittenReading(CapturedOutput output) {
+		AtomicInteger calls = new AtomicInteger();
+		List<ReportRequest> requests = new ArrayList<>();
+		ReportGeneration generation = generation(scripted(calls, request -> {
+			requests.add(request);
+			String overview = (calls.get() == 1) ? "S1의 관심이 생겼다" : "금리 흐름의 관심이 생겼다";
+			return "{\"overview\":\"" + overview
+					+ "\",\"sections\":{\"interests\":{\"title\":\"관심\",\"body\":\"본문\",\"refs\":[\"S1\"]}}}";
+		}));
+		ReportId id = generation.schedule(new UserId(7), WEEK).id();
+
+		assertThat(generation.run(id, ReportFixtures.MODEL, ReportFixtures.EFFORT, input(interests(71))))
+			.isEqualTo(ReportStatus.READY);
+
+		assertThat(calls).hasValue(2);
+		assertThat(requests.get(1).prompt().instructions())
+			.contains("앞 출력을 고쳐 다시 써야 한다: 개요 · 제목 · 본문에 남은 별칭(이름으로 바꿔 쓸 것): S1");
+		assertThat(sectionRows(id)).containsExactly("0 OVERVIEW null 금리 흐름의 관심이 생겼다", "1 INTERESTS 관심 본문");
+		assertThat(output).contains("리포트 생성을 다시 물었다 — 리포트 " + id.value() + ", 까닭 빠진 갈래 0 · 남은 별칭 1");
+	}
+
+	@Test
+	void doesNotAskAgainWhenTheAliasIsOnlyInTheRefs() {
+		AtomicInteger calls = new AtomicInteger();
+		ReportGeneration generation = generation(scripted(calls,
+				request -> "{\"overview\":\"금리 흐름의 관심이 생겼다\",\"sections\":{\"interests\":{\"title\":\"관심\",\"body\":\"본문\","
+						+ "\"refs\":[\"S1\"]}}}"));
+		ReportId id = generation.schedule(new UserId(7), WEEK).id();
+
+		assertThat(generation.run(id, ReportFixtures.MODEL, ReportFixtures.EFFORT, input(interests(71))))
+			.isEqualTo(ReportStatus.READY);
+
+		assertThat(calls).hasValue(1);
 	}
 
 	@Test
@@ -521,7 +557,7 @@ class ReportGenerationTests {
 		assertThat(calls).hasValue(2);
 		assertThat(sectionRows(id)).containsExactly("0 OVERVIEW null 개요", "1 STORYLINES 흐름 본문");
 		assertThat(itemRows(id)).containsExactly("1:0 S31");
-		assertThat(output).contains("리포트 출력에서 버린 것이 있다 — 리포트 " + id.value() + ", 빠진 섹션 1, 모르는 별칭 2, 상한으로 버린 수 0")
+		assertThat(output).contains("리포트 출력에서 버리거나 남은 것이 있다 — 리포트 " + id.value() + ", 빠진 섹션 1, 모르는 별칭 2, 상한으로 버린 수 0, 글에 남은 별칭 0")
 			.doesNotContain("Z9");
 	}
 

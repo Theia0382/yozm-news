@@ -210,12 +210,12 @@ class ReportPromptsTests {
 
 		ReportPrompt retry = ReportPrompts.retry(first, diagnosis);
 
-		assertThat(retry.instructions()).isEqualTo(first.instructions() + "\n앞 출력이 출력 스키마에 맞지 않았다: " + "가".repeat(200)
+		assertThat(retry.instructions()).isEqualTo(first.instructions() + "\n앞 출력을 고쳐 다시 써야 한다: " + "가".repeat(200)
 				+ "\n출력 스키마에 맞는 JSON 객체 하나만 다시 출력하라.");
 		assertThat(retry.userContent()).isEqualTo(first.userContent());
 		assertThat(retry.outputSchema()).isEqualTo(first.outputSchema());
 		assertThat(ReportPrompts.retry(first, "출력에 없는 갈래: coverage").instructions())
-			.endsWith("앞 출력이 출력 스키마에 맞지 않았다: 출력에 없는 갈래: coverage\n출력 스키마에 맞는 JSON 객체 하나만 다시 출력하라.");
+			.endsWith("앞 출력을 고쳐 다시 써야 한다: 출력에 없는 갈래: coverage\n출력 스키마에 맞는 JSON 객체 하나만 다시 출력하라.");
 	}
 
 	@Test

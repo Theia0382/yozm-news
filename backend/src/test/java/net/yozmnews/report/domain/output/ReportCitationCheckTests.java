@@ -64,4 +64,16 @@ class ReportCitationCheckTests {
 			.isEmpty();
 	}
 
+	@Test
+	void findsAliasesOfThisRequestLeftInTheOverviewTitlesAndBodies() {
+		ReportDraft draft = new ReportDraft("S1의 보도가 이어졌다", Map.of(
+				ReportSectionKind.STORYLINES, new SectionDraft("E2 와 흐름", "GS1 · S10 · S1x 는 별칭이 아니다", List.of("S1", "S2")),
+				ReportSectionKind.COVERAGE, new SectionDraft("보도량", "(E1)이 늘었다", List.of())));
+
+		// 별칭을 매긴 순서(S1 · S2 · E1 · E2 가운데 글에 있는 것), refs 에만 있는 S2 는 세지 않는다
+		assertThat(ReportCitationCheck.leftAliases(draft, ALIASES)).containsExactly("S1", "E1", "E2");
+		// 대조 leg — 이번 요청의 별칭이 아니면 꼴이 같아도 세지 않는다(S9 · E9)
+		assertThat(ReportCitationCheck.leftAliases(new ReportDraft("S9 · E9", Map.of()), ALIASES)).isEmpty();
+	}
+
 }

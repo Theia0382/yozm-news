@@ -143,7 +143,7 @@ public final class ReportPrompts {
 
 	private static final String SCHEMA_HEADING = "\n출력 스키마:\n";
 
-	private static final String RETRY = "\n앞 출력이 출력 스키마에 맞지 않았다: %s\n출력 스키마에 맞는 JSON 객체 하나만 다시 출력하라.";
+	private static final String RETRY = "\n앞 출력을 고쳐 다시 써야 한다: %s\n출력 스키마에 맞는 JSON 객체 하나만 다시 출력하라.";
 
 	private ReportPrompts() {
 	}
@@ -166,9 +166,10 @@ public final class ReportPrompts {
 	}
 
 	/**
-	 * 끝까지 쓴 응답을 읽지 못했거나 빠진 갈래가 있어 다시 묻는 프롬프트 — 첫 지시에 진단과 다시 출력하라는 문장을 덧붙인다. 사용자 구획 · 스키마는
-	 * 같다
-	 * @param diagnosis 읽기의 진단 또는 빠진 갈래 — 출력 원문이 없다. {@link ReportPromptRules#MAX_DIAGNOSIS} 코드 포인트까지만 싣는다
+	 * 끝까지 쓴 응답을 읽지 못했거나, 빠진 갈래나 글에 남은 별칭이 있어 다시 묻는 프롬프트 — 첫 지시에 진단과 다시 출력하라는 문장을 덧붙인다. 사용자
+	 * 구획 · 스키마는 같다
+	 * @param diagnosis 읽기의 진단 또는 빠진 갈래 · 남은 별칭 — 출력 원문이 없다. {@link ReportPromptRules#MAX_DIAGNOSIS} 코드 포인트까지만
+	 * 싣는다
 	 */
 	public static ReportPrompt retry(ReportPrompt first, String diagnosis) {
 		Objects.requireNonNull(first, "first");
