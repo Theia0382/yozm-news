@@ -13,7 +13,7 @@
 - **상태** — 스토리라인의 상태(진행 · 잠잠 · 끝남)를 저장하지 않고 조회 때 마지막 기사 시각으로 정한다. 끝나도 잇기를 막지 않는다(storyline-R16, [ADR-0107](../adr/0107-storyline-state-is-judged-at-query-time-from-the-last-article-and-an-ended-storyline-still-links.md))
 - **판정 근거** — 소속마다 정한 것 · 점수 · 판정에 쓴 기준을 남긴다(storyline-R14)
 - **스토리라인 사이 관계** — 포함(상위 스토리라인과 그 갈래)과 이어짐(앞 스토리라인이 뒤 스토리라인을 낳음)을 스토리라인 둘의 고리로 둔다. 소속이 바뀐 스토리라인의 후보 쌍을 `evaluation` 의 관계 판정(Jev)에 물어 종류 · 방향을 정하고, 확률이 기준 이상인 것만 맺는다. 포함은 상위 하나의 나무이고 순환을 이루지 않는다(storyline-R25 ~ R32, [ADR-0131](../adr/0131-storyline-relations-are-explicit-links-with-containment-as-a-single-parent-tree-gathered-at-query-time.md) · [ADR-0132](../adr/0132-storyline-relations-are-judged-by-jev-on-candidate-pairs-and-linked-only-above-a-probability-threshold.md))
-- **조각 합치기** — 관계 판정이 두 스토리라인을 같은 사안의 조각(둘로 기록된 하나의 스토리라인)으로 답하고 그 확률이 합치기 확률 기준 이상이면 ID 가 작은 쪽에 합친다. 소속은 근거 그대로 옮기고 어디서 왔는지와 합친 판정 · 기준을 남긴다. 기준 미만이면 둘로 두고 관계를 맺지 않는다. 되돌리는 길은 두지 않는다(storyline-R17 · R18 · R29, [ADR-0234](../adr/0234-fragments-of-one-matter-are-recognised-by-the-relation-judgement-and-merged-above-a-merge-probability-without-a-way-back.md))
+- **조각 합치기** — 관계 판정이 두 스토리라인을 같은 사안의 조각(둘로 기록된 하나의 흐름)으로 답하고 그 확률이 합치기 확률 기준 이상이면 ID 가 작은 쪽에 합친다. 소속은 근거 그대로 옮기고 어디서 왔는지와 합친 판정 · 기준을 남긴다. 기준 미만이면 둘로 두고 관계를 맺지 않는다. 되돌리는 길은 두지 않는다(storyline-R17 · R18 · R29, [ADR-0234](../adr/0234-fragments-of-one-matter-are-recognised-by-the-relation-judgement-and-merged-above-a-merge-probability-without-a-way-back.md))
 - **채우기** — 운영자가 기간을 정해, 그 기간에 마지막 기사가 있는 사건을 잇기 대기에 넣는다(storyline-R15)
 - **공개 조회** — 다른 모듈이 스토리라인을 읽는다(`StorylineDirectory`) — ID 로 찾기(하나 · 여럿), 스토리라인의 사건(타임라인), 사건의 스토리라인, 사건마다 포함 나무의 꼭대기(소속 점수 순 — 점수는 싣지 않는다), 스토리라인마다 포함 나무의 꼭대기, 조회 기간의 스토리라인 목록 · 큰 스토리라인 · 소속 없는 사건, 스토리라인 묶음마다의 기간 집계, 스토리라인의 관계. 스토리라인의 사건 · 집계는 포함을 따라 하위의 사건까지 세고, 직접 든 것인지 물려받은 것인지 표시한다. 합쳐진 스토리라인 · 사건의 ID 는 남는 쪽을 따른다 — 꼭대기 조회는 합쳐진 사건을 뺀다(storyline-R21 ~ R24 · R33 · R37)
 - **운영자 조회** — 운영자 화면이 판정 근거를 읽는다(`StorylineReview`) — 스토리라인과 그 하위의 소속마다 판정 근거(합치기로 옮겨 온 소속은 어디서 왔는지), 관계의 확률 · 판정 원본 ID · 기준, 물은 기록, 이 스토리라인에 합쳐진 스토리라인과 그 합치기의 판정 · 기준, 지금 잇기 · 관계 기준(storyline-R34)
@@ -65,7 +65,7 @@
 | 채우기 | 운영자가 정한 기간에 마지막 기사가 있는 사건을 잇기 대기에 넣는 운영 기능(storyline-R15) |
 | 정돈 | 소속이 바뀐 스토리라인을 지우거나 · 합치거나 · 풀거나 그대로 두는 것(storyline-R13 · R17) |
 | 합쳐진 스토리라인 | 정돈이나 조각 합치기로 다른 스토리라인에 합쳐진 스토리라인 — 소속 · 핵심 말이 없고, 행이 남아 남는 스토리라인을 가리킨다(storyline-R18) |
-| 같은 사안의 조각 | 한 스토리라인이 두 스토리라인으로 기록된 것 — 같은 주체와 같은 경로로 같은 사안을 따른다. 관계 판정의 답 하나다(storyline-R29) |
+| 같은 사안의 조각 | 한 흐름이 두 스토리라인으로 기록된 것 — 같은 주체와 같은 경로로 같은 사안을 따른다. 관계 판정의 답 하나다(storyline-R29) |
 | 합치기 확률 기준 | 조각 답의 확률이 이 이상이면 두 스토리라인을 합친다 — 관계 기준의 하나(storyline-R17 · §7) |
 | 남는 스토리라인 | 합칠 때 남는 쪽 — 구성 사건이 같으면 ID 가 가장 작은 것, 사건 하나만 남은 스토리라인이면 그 사건을 가진 스토리라인 가운데 ID 가 가장 작은 것(storyline-R17) |
 | 풀기 | 사건 하나만 남았고 그 사건이 다른 스토리라인에 없는 스토리라인을 지우고, 그 사건을 잇기 대기에 다시 넣는 것(storyline-R17) |
@@ -80,7 +80,7 @@
 | 큰 판정 기준 | 보도 강도의 하한 — 운영자 설정(storyline-R20) |
 | 소속 없는 사건 | 조회 기간 안 기사가 있는데 어느 스토리라인에도 소속이 없는 사건(storyline-R23) |
 | 관계 | 스토리라인 둘 사이의 고리(`storyline_relations` 한 행) — 종류(포함 · 이어짐)와 방향, 맺은 확률 · 판정 원본 · 기준 · 시각을 갖는다(storyline-R25) |
-| 포함 | 상위 스토리라인과 그 갈래 — 갈래는 큰 스토리라인을 중심으로 도는 반응, 알아볼 수 있는 부분(회차 · 단계), 한 갈래다. 앞(`source`)이 상위, 뒤(`target`)가 하위다 |
+| 포함 | 상위 스토리라인과 그 갈래 — 갈래는 큰 흐름을 중심으로 도는 반응, 알아볼 수 있는 부분(회차 · 단계), 한 갈래다. 앞(`source`)이 상위, 뒤(`target`)가 하위다 |
 | 이어짐 | 앞 스토리라인이 뒤 스토리라인을 낳음 — 뒤 스토리라인은 자기 주체와 절차로 따로 굴러가는 다른 사안이다. 앞(`source`)이 낳은 쪽이다 |
 | 상위 · 하위 | 포함의 앞 · 뒤. 스토리라인은 상위를 하나까지 갖는다(storyline-R25) |
 | 직접 소속 · 물려받은 소속 | 사건이 그 스토리라인에 소속 행으로 든 것이 직접 소속, 하위 스토리라인의 구성 사건이라 상위에 든 것으로 보는 것이 물려받은 소속이다. 물려받은 소속은 저장하지 않는다(storyline-R33) |
@@ -364,7 +364,7 @@ public sealed interface BigStorylineCriteriaChangeResult {
 
 닫은 조회: `StorylineDirectoryService` 는 `RelationRepository.all` 로 `RelationGraph` 를 만들어 스토리라인의 하위(`descendants`) · 상위(`ancestors` · `parentOf`)를 얻고, `ClosedMembers.families` 로 가족을 정한 뒤 `StorylineRepository.members` 로 그 스토리라인들의 직접 소속을 읽어 닫은 사건 집합(`ClosedMembers`)을 만든다 — 스토리라인 값 · 타임라인 · 사건의 스토리라인 · 기간 집계와 운영자 조회의 가족이 이 한 길을 쓴다.
 
-#### 판정 스토리라인
+#### 판정 흐름
 
 ```mermaid
 sequenceDiagram

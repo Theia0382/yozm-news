@@ -7,11 +7,11 @@
 `reader` 는 독자 화면(인스턴스 사용자가 뉴스 내용을 보는 화면)이 부르는 HTTP API 를 낸다. 각 모듈의 공개 조회를 엮어 응답 모양을 정하고, 데이터 · 판정을 갖지 않는다([ADR-0192](../adr/0192-reader-screens-are-composed-by-the-reader-module-over-module-public-queries.md)).
 
 - **경계** — 뉴스 내용(기사 · 사건 · 스토리라인 · 사용자 스토리라인의 정리 · 다이제스트 · 변화 리포트 · 관심사 히스토리)을 보이는 사용자 화면의 응답은 이 모듈이 정한다. 사용자가 정해 두는 것(계정 · 키 · 관심 설정 · 구독 · 알림)의 화면은 그 데이터를 가진 모듈이 연다
-- **정리된 사용자 스토리라인** — 세션 사용자의 정리된 사용자 스토리라인의 목록(독자 화면의 "사건 흐름" 탭), 하나(개인 흐름 화면 — 사용자 스토리라인 전체의 정리 · 추적 대상 꼭대기마다의 정리와 상태 · 정리에 쓴 토큰), 그 스토리라인에 묶인 지난 다이제스트 항목을 낸다(reader-R13 · R14). 공용 스토리라인의 목록은 내지 않는다 — 운영자 화면(`admin`)에 있다
+- **정리된 사용자 스토리라인** — 세션 사용자의 정리된 사용자 스토리라인의 목록(독자 화면의 "사건 흐름" 탭), 하나(개인 흐름 화면 — 사용자 스토리라인 전체의 정리 · 추적 대상 꼭대기마다의 정리와 상태 · 정리에 쓴 토큰), 그 사용자 스토리라인에 묶인 지난 다이제스트 항목을 낸다(reader-R13 · R14). 공용 스토리라인의 목록은 내지 않는다 — 운영자 화면(`admin`)에 있다
 - **스토리라인 타임라인** — 스토리라인 하나의 값, 상위 · 하위 · 앞 스토리라인 · 이어진 스토리라인, 사건마다 대표 기사와 그 사용자가 받은 날짜를 낸다(reader-R3 ~ R5)
 - **스토리라인 카드** — 스토리라인 ID 여럿의 표시 정보를 낸다 — 추적 중인 사용자 스토리라인 목록처럼 ID 만 가진 화면이 쓴다(reader-R6)
 - **기사 정보** — 사용자 화면의 기사는 제목 · 출처 이름 · 발행 시각 · 원문 링크다(reader-R7)
-- **관심사 히스토리** — 세션 사용자의 기간별 주제 관심 · 새로 생긴 관심 · 사라진 관심 · 주제 구독 변경과, 정리된 사용자 스토리라인마다의 기간별 관심 · 관심이 생긴 스토리라인 · 사라진 스토리라인을 고른 기간(주 · 월)으로 낸다(reader-R8)
+- **관심사 히스토리** — 세션 사용자의 기간별 주제 관심 · 새로 생긴 관심 · 사라진 관심 · 주제 구독 변경과, 정리된 사용자 스토리라인마다의 기간별 관심 · 관심이 생긴 사용자 스토리라인 · 사라진 사용자 스토리라인을 고른 기간(주 · 월)으로 낸다(reader-R8)
 - **다이제스트** — 세션 사용자의 가장 늦은 날짜의 다이제스트와 수동 생성 상태, 날짜 하나의 다이제스트, 다이제스트가 있는 날짜 목록을 내고, 수동 생성 요청을 받는다. 항목을 묶은 스토리라인이 정리돼 있으면 그 정리의 제목을 붙인다(reader-R9 ~ R11)
 - **구독 제안** — 세션 사용자에게 지금 제안할 주제 중분류의 이름 · 대분류 이름과 태그 체계 버전을 낸다 — 다이제스트 홈의 제안 카드가 쓴다(reader-R12). 수락 · 거절은 `user` 의 처리기가 받는다
 - **변화 리포트** — 세션 사용자의 종류 하나(주간 · 월간)의 리포트 목록과 리포트 한 편(요약 · 비교한 직전 리포트 · 숨긴 섹션 수 · 사용량 · 섹션마다 제목 · 본문 · 인용 · 그 갈래의 숫자)을 낸다. 인용 · 숫자 줄이 가리키는 스토리라인에는 지금 꼭대기를 가진 정리된 사용자 스토리라인의 제목과 대표 기사를, 사건에는 대표 기사를 붙인다. 실패한 리포트를 다시 만들고, 관심 설정이 안내할 생성 조건의 수를 낸다(reader-R15 ~ R17)
@@ -32,7 +32,7 @@
 | 용어 | 뜻 |
 |---|---|
 | 개인 흐름 화면 | 정리된 사용자 스토리라인 하나를 보이는 화면 — 주소 `/user-storylines/{id}`(reader-R13) |
-| 헤드 | 정리된 사용자 스토리라인의 손잡이 — 추적 대상 가운데 뒤 스토리라인이 없는 꼭대기로 그 스토리라인에만 든다([user Spec](user.md#2-용어)). 흐름 추적 버튼의 대상이고 관심사 히스토리의 값을 읽는 자리다(reader-R13 · R8) |
+| 헤드 | 정리된 사용자 스토리라인의 손잡이 — 추적 대상 가운데 뒤 스토리라인이 없는 꼭대기로 그 사용자 스토리라인에만 든다([user Spec](user.md#2-용어)). 흐름 추적 버튼의 대상이고 관심사 히스토리의 값을 읽는 자리다(reader-R13 · R8) |
 | 카드 | 스토리라인 하나의 표시 정보 — 대표 기사 · 상태 · 사건 수 · 기사 수 · 첫 · 마지막 기사 시각 · 상위(reader-R3) |
 | 앞 스토리라인 · 이어진 스토리라인 | 보고 있는 스토리라인을 낳은 스토리라인 · 보고 있는 스토리라인이 낳은 스토리라인 — 이어짐 관계의 두 방향(reader-R4) |
 
@@ -46,7 +46,7 @@ HTTP 엔드포인트 — 모두 세션이 필요하고, 리포트의 생성 조�
 |---|---|
 | `GET /api/user-storylines` | 세션 사용자의 정리된 사용자 스토리라인 — 마지막으로 정리한 순 |
 | `GET /api/user-storylines/{id}` | 정리된 사용자 스토리라인 하나 — 사용자 스토리라인 전체의 정리 · 꼭대기마다의 정리와 상태 · 사용량. ID 가 1 보다 작거나 그 사용자의 정리된 사용자 스토리라인이 아니면 404 |
-| `GET /api/user-storylines/{id}/items` | 그 스토리라인에 묶인 지난 다이제스트 항목 한 쪽 — 질의 `beforeDate`(YYYY-MM-DD) · `beforePosition`(다음 쪽 커서 — 함께) |
+| `GET /api/user-storylines/{id}/items` | 그 사용자 스토리라인에 묶인 지난 다이제스트 항목 한 쪽 — 질의 `beforeDate`(YYYY-MM-DD) · `beforePosition`(다음 쪽 커서 — 함께) |
 | `GET /api/storylines/{id}` | 스토리라인 하나의 타임라인 — 카드 · 상위 · 하위 · 앞 스토리라인 · 이어진 스토리라인 · 사건마다 대표 기사와 받은 날짜. 합쳐진 ID 면 남는 스토리라인을 낸다 |
 | `GET /api/storyline-cards` | 스토리라인 ID 여럿의 카드 — 질의 `ids`(쉼표로 이은 ID, 1 ~ 100개) |
 | `GET /api/digests/latest` | 세션 사용자의 홈 — 가장 늦은 날짜의 날짜 보기(없으면 null)와 수동 생성 상태(계정이 없으면 null — 오늘 일정 생성 시각 · 사용자 시간대 · 해결되지 않은 마지막 실패를 함께) |
@@ -119,13 +119,13 @@ HTTP 엔드포인트 — 모두 세션이 필요하고, 리포트의 생성 조�
 
 ### 관심사 히스토리
 
-판단의 이유는 [ADR-0227](../adr/0227-the-interest-history-shows-subtopic-interest-and-the-users-own-topic-subscription-changes-only.md) · [ADR-0229](../adr/0229-interest-history-periods-are-monday-weeks-and-calendar-months-in-the-users-zone-and-the-query-takes-a-span-or-reference-times.md) · [ADR-0228](../adr/0228-consumer-queries-scoped-by-a-user-argument-may-be-called-on-screen-paths-with-the-session-user.md)에 있다. 기간 · 관심 · 변화의 판단은 `digest` 의 것이다(digest-R34 ~ R37). 스토리라인을 더한 이유는 [ADR-0293](../adr/0293-the-interest-history-also-shows-the-interest-of-summarized-flows.md)에 있다.
+판단의 이유는 [ADR-0227](../adr/0227-the-interest-history-shows-subtopic-interest-and-the-users-own-topic-subscription-changes-only.md) · [ADR-0229](../adr/0229-interest-history-periods-are-monday-weeks-and-calendar-months-in-the-users-zone-and-the-query-takes-a-span-or-reference-times.md) · [ADR-0228](../adr/0228-consumer-queries-scoped-by-a-user-argument-may-be-called-on-screen-paths-with-the-session-user.md)에 있다. 기간 · 관심 · 변화의 판단은 `digest` 의 것이다(digest-R34 ~ R37). 사용자 스토리라인을 더한 이유는 [ADR-0293](../adr/0293-the-interest-history-also-shows-the-interest-of-summarized-flows.md)에 있다.
 
-- **reader-R8** — 관심사 히스토리: 세션 사용자로 `InterestHistory.recent` 를 부른다. 질의 `span` 이 없으면 `InterestHistorySpan.DEFAULT`, 열거 값이 아니면 400 이다. 응답은 고른 기간(`span`), 단위마다 고를 수 있는 기간과 단위를 바꿨을 때의 기간(`spans[]` — `InterestHistorySpan.Unit` 순, `defaultOf`), 기간(`periods[]` — 시간 순, 마지막이 진행 중), 주제(`topics[]`), 정리된 사용자 스토리라인(`userStorylines[]`)을 싣는다. 계정이 없으면(조회가 빈 값) 기간 · 주제 · 스토리라인이 비어 있다
+- **reader-R8** — 관심사 히스토리: 세션 사용자로 `InterestHistory.recent` 를 부른다. 질의 `span` 이 없으면 `InterestHistorySpan.DEFAULT`, 열거 값이 아니면 400 이다. 응답은 고른 기간(`span`), 단위마다 고를 수 있는 기간과 단위를 바꿨을 때의 기간(`spans[]` — `InterestHistorySpan.Unit` 순, `defaultOf`), 기간(`periods[]` — 시간 순, 마지막이 진행 중), 주제(`topics[]`), 정리된 사용자 스토리라인(`userStorylines[]`)을 싣는다. 계정이 없으면(조회가 빈 값) 기간 · 주제 · 사용자 스토리라인이 비어 있다
   - 기간마다 첫날 · 마지막 날(사용자 시간대) · 진행 중 여부 · 새로 생긴 관심 · 사라진 관심 · 사용자가 직접 바꾼 주제 구독(시각 · 더함 / 뺌 · 덮는 중분류)을 싣는다. 키는 태그 체계 순이다
   - 주제는 기간 가운데 한 번이라도 관심 값이 있는 중분류이고 `TagSetNames.topicOrder()` 순이다. 주제마다 키 · 이름 · 대분류 이름(`TagSetNames.categoryOf` → `topicName`) · 기간마다 관심 칸(`level` — 신호가 없으면 null) · 드러남(`prominent` — digest-R36)을 싣는다. 이름은 조회가 낸 태그 체계 버전(`InterestTimeline.tagSet`)으로 읽는다 — 그 버전에 없는 키는 불변식이 깨진 것이라 `IllegalStateException` 이다
-  - 스토리라인은 지금 정리된 사용자 스토리라인이다(`UserStorylineSummaries.shown` 의 순서). 스토리라인마다 ID · 정리의 제목 · 기간마다 관심 칸(`level` — 그 기간 `InterestPoint.storylineLevels` 의 헤드 값, 없으면 null)을 싣는다. 헤드는 그 스토리라인에만 들어 그 값과 생김 · 사라짐이 그 스토리라인 하나의 것이다. 기간마다 관심이 생긴 스토리라인(`enteredUserStorylines`) · 사라진 스토리라인(`leftUserStorylines`)은 헤드가 그 기간의 `storylineEntered` · `storylineLeft` 에 든 스토리라인의 ID 다 — 정리되지 않은 꼭대기의 변화는 싣지 않는다
-  - 화면은 주제 표와 스토리라인 표를 따로 그리고, 스토리라인의 제목은 개인 흐름 화면으로 잇는다. 주제 행이 없어도 스토리라인이 있으면 스토리라인 표를 보인다
+  - 사용자 스토리라인 줄은 지금 정리된 사용자 스토리라인이다(`UserStorylineSummaries.shown` 의 순서). 사용자 스토리라인마다 ID · 정리의 제목 · 기간마다 관심 칸(`level` — 그 기간 `InterestPoint.storylineLevels` 의 헤드 값, 없으면 null)을 싣는다. 헤드는 그 사용자 스토리라인에만 들어 그 값과 생김 · 사라짐이 그 사용자 스토리라인 하나의 것이다. 기간마다 관심이 생긴 사용자 스토리라인(`enteredUserStorylines`) · 사라진 사용자 스토리라인(`leftUserStorylines`)은 헤드가 그 기간의 `storylineEntered` · `storylineLeft` 에 든 사용자 스토리라인의 ID 다 — 정리되지 않은 꼭대기의 변화는 싣지 않는다
+  - 화면은 주제 표와 사용자 스토리라인 표를 따로 그리고, 사용자 스토리라인의 제목은 개인 흐름 화면으로 잇는다. 주제 행이 없어도 사용자 스토리라인이 있으면 그 표를 보인다
   - 판정 · 관심의 계산은 하지 않는다 — θ 와 스토리라인의 기준은 응답에 없다
 
 ### 구독 제안
@@ -140,11 +140,11 @@ HTTP 엔드포인트 — 모두 세션이 필요하고, 리포트의 생성 조�
 판단의 이유는 [ADR-0289](../adr/0289-shown-flows-are-user-storylines-with-a-summary-which-the-summary-job-creates-and-removes.md) · [ADR-0290](../adr/0290-the-readers-storyline-tab-shows-the-users-summarized-flows-and-the-tracking-list-has-one-row-per-user-storyline.md) · [ADR-0291](../adr/0291-tokens-spent-on-a-summary-are-shown-on-the-personal-flow-screen-as-the-last-summary-and-the-running-total.md) · [ADR-0292](../adr/0292-reader-screens-call-a-storyline-an-event-flow.md)에 있다. 무엇이 정리된 사용자 스토리라인인지와 정리의 글은 `user` 의 것이다([user Spec](user.md#사용자-스토리라인의-정리) user-R73).
 
 - **reader-R13** — 정리된 사용자 스토리라인의 목록과 하나: `GET /api/user-storylines` 는 `UserStorylineSummaries.shown` 을 세션 사용자로 불러 낸 순서(마지막으로 정리한 순) 그대로 카드를 싣는다 — 사용자 스토리라인 ID · 사용자 스토리라인 전체의 제목 · 흐름 요약 · 최근 전개 · 추적 중인가 · 헤드의 스토리라인 ID(`storylineId`) · 추적 대상 수 · 마지막 정리 시각. `GET /api/user-storylines/{id}` 는 `find` 로 읽는다 — ID 가 1 보다 작거나 빈 값(다른 사용자의 것 · 정리 없음)이면 404 다. 응답은 카드의 칸에 꼭대기마다의 글(`tops[]`) · 사용량(`usage`) · 처음 정리 시각을 더한다
-  - 헤드는 `UserStorylineSummaryView.head` 다([user-R73](user.md#사용자-스토리라인의-정리) — 헤드를 저장하기 전의 개체의 대체도 거기 한 곳). 흐름 추적 버튼이 그 ID 로 추적 · 해제하고 추적 상태를 읽는다 — 헤드는 그 스토리라인에만 들어 해제가 다른 갈래를 끄지 않는다([user-R52 · R67](user.md#사용자-스토리라인))
+  - 헤드는 `UserStorylineSummaryView.head` 다([user-R73](user.md#사용자-스토리라인의-정리) — 헤드를 저장하기 전의 개체의 대체도 거기 한 곳). 흐름 추적 버튼이 그 ID 로 추적 · 해제하고 추적 상태를 읽는다 — 헤드는 그 사용자 스토리라인에만 들어 해제가 다른 갈래를 끄지 않는다([user-R52 · R67](user.md#사용자-스토리라인))
   - 꼭대기는 추적 대상을 `StorylineDirectory.findAll` 로 읽어 낸 지금 스토리라인만 싣는다 — 합쳐졌으면 남는 쪽의 ID 이고 그새 없어진 스토리라인은 뺀다. 꼭대기마다 스토리라인 ID · 상태 · 글 셋(글 없는 꼭대기는 셋 다 null)이다
   - 사용량은 마지막 정리의 공급자 키 · 모델 ID · 입력 · 출력 토큰과 호출 수 · 모든 호출의 토큰 합이다. 금액으로 바꾸지 않는다
   - 화면: 탭은 카드마다 제목(개인 흐름 화면 링크) · 흐름 요약 · 최근 전개 · 정리 시각 · 갈래 수(둘 이상일 때) · 흐름 추적 버튼을 그리고, 정리된 사용자 스토리라인이 없으면 어떻게 생기는지 안내한다. 개인 흐름 화면은 사용자 스토리라인 전체의 정리, 꼭대기마다의 정리와 공용 타임라인 링크(꼭대기가 하나면 링크만, 글 없는 꼭대기는 대체 제목과 링크만), 지난 다이제스트 항목, 맨 아래 작은 줄 둘(마지막 정리의 모델 · 토큰, 호출이 둘 이상이면 모든 호출의 합)을 그린다
-- **reader-R14** — 스토리라인에 묶인 지난 다이제스트 항목: `GET /api/user-storylines/{id}/items` 는 reader-R13 과 같이 스토리라인을 찾고(없으면 404) `DigestDirectory.itemsOfStorylines` 를 세션 사용자 · 그 스토리라인의 저장한 추적 대상으로 한 쪽 20개(`UserStorylineScreenController.ITEMS_PAGE_SIZE` — 측정 전 목표, `DigestDirectory.MAX_ITEMS` 이하)씩 부른다(digest-R53). 항목마다 다이제스트 날짜 · 종류 · 제목(없으면 null)을 싣고 다음 쪽 커서(`next` — `beforeDate` · `beforePosition`)를 그대로 낸다. 커서 두 값은 함께 오거나 함께 없다 — 하나만 오거나 날짜 꼴이 틀리거나 위치가 0 보다 작으면 400 이다(`ScreenRequests.itemCursor`). 화면은 항목을 그 날짜의 다이제스트 화면으로 잇는다
+- **reader-R14** — 사용자 스토리라인에 묶인 지난 다이제스트 항목: `GET /api/user-storylines/{id}/items` 는 reader-R13 과 같이 사용자 스토리라인을 찾고(없으면 404) `DigestDirectory.itemsOfStorylines` 를 세션 사용자 · 그 사용자 스토리라인의 저장한 추적 대상으로 한 쪽 20개(`UserStorylineScreenController.ITEMS_PAGE_SIZE` — 측정 전 목표, `DigestDirectory.MAX_ITEMS` 이하)씩 부른다(digest-R53). 항목마다 다이제스트 날짜 · 종류 · 제목(없으면 null)을 싣고 다음 쪽 커서(`next` — `beforeDate` · `beforePosition`)를 그대로 낸다. 커서 두 값은 함께 오거나 함께 없다 — 하나만 오거나 날짜 꼴이 틀리거나 위치가 0 보다 작으면 400 이다(`ScreenRequests.itemCursor`). 화면은 항목을 그 날짜의 다이제스트 화면으로 잇는다
 
 ### 기사 정보
 
