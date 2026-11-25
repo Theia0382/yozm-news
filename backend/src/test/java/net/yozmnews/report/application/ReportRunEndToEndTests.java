@@ -194,18 +194,10 @@ class ReportRunEndToEndTests {
 				   "trend": "FELL", "trackedInPeriod": true}]},
 				 "coverage": {"basis": "FIRST_EVALUATED", "topics": [{"key": "economy.finance", "name": "금융",
 				   "articles": 2, "previous": 1, "trend": "STEADY"}]}}""".formatted(active.value(), storyline, storyline)));
-		// 관심 — 실제 관심사 히스토리의 두 점. 값은 관심도 산식의 몫이라 여기서는 줄의 키와 변화만 본다: 구독 주제는 기간 앞부터 있어 두 점에
-		// 다 있고, 추적한 사용자 스토리라인은 기간 안에 추적해 시작 점에 없다. 둘 다 관심 있음 기준을 넘지 않아 변화가 없다
-		JsonNode interestsOf = snapshot.get("interests");
-		assertThat(interestsOf.get("topics")).hasSize(1);
-		assertThat(interestsOf.get("topics").get(0).get("key").asString()).isEqualTo("economy.finance");
-		assertThat(interestsOf.get("topics").get(0).get("start").isNumber()).isTrue();
-		assertThat(interestsOf.get("topics").get(0).get("shift").asString()).isEqualTo("NONE");
-		assertThat(interestsOf.get("userStorylines")).hasSize(1);
-		assertThat(interestsOf.get("userStorylines").get(0).get("head").asLong()).isEqualTo(storyline);
-		assertThat(interestsOf.get("userStorylines").get(0).get("start").isNull()).isTrue();
-		assertThat(interestsOf.get("userStorylines").get(0).get("end").asDouble()).isPositive();
-		assertThat(interestsOf.get("userStorylines").get(0).get("shift").asString()).isEqualTo("NONE");
+		// 관심 — 실제 관심사 히스토리의 두 점. 구독 주제 · 추적한 사용자 스토리라인 모두 관심 값은 있지만 관심 있음 기준을 넘지 않아 변화가 없다 —
+		// 관심 줄 고르기가 변화 줄만 내므로(report-R17) 관심 갈래가 없고 스냅숏에도 관심 칸이 없다
+		assertThat(snapshot.has("interests")).isFalse();
+		assertThat(JSON.readTree(this.requests.getFirst().prompt().userContent()).has("interests")).isFalse();
 		// 생성기가 받은 사용자 구획 — 사용자 스토리라인의 정리 · 기간 안 사건의 대표 기사 제목 · 직전 리포트의 글
 		assertThat(this.requests).hasSize(1);
 		String content = this.requests.getFirst().prompt().userContent();

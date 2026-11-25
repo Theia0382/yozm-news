@@ -23,8 +23,9 @@ import org.jspecify.annotations.Nullable;
 /**
  * 관심 줄 고르기의 정본 · docs/specs/report.md §5 · report-R17
  * <p>
- * 기간 시작 · 끝 두 점의 관심으로 고른다 — 주제 줄은 두 점 관심의 중분류 키 합집합(체계 순서), 사용자 스토리라인 줄은 받은 사용자 스토리라인의 헤드마다(헤드 ID 순 — 값이
- * 둘 다 없고 변화도 없는 사용자 스토리라인은 넣지 않는다), 구독 변경 줄은 끝 점의 사용자가 직접 바꾼 주제 구독.
+ * 기간 시작 · 끝 두 점의 관심으로 고른다 — 주제 줄은 두 점 관심의 중분류 키 합집합(체계 순서), 사용자 스토리라인 줄은 받은 사용자 스토리라인의 헤드마다(헤드 ID 순),
+ * 구독 변경 줄은 끝 점의 사용자가 직접 바꾼 주제 구독. 주제 · 사용자 스토리라인 줄은 끝 점에서 새로 생기거나 사라진 줄(변화가 {@link InterestShift#NONE}
+ * 이 아닌 줄)만 낸다 — 이 줄이 갈래 · 별칭 · 사용자 구획 · 스냅숏 · 화면의 공통 입력이다.
  */
 public final class InterestLines {
 
@@ -77,6 +78,7 @@ public final class InterestLines {
 			.sorted(byOrder)
 			.map(key -> new TopicInterestLine(key, name(names, key), start.levels().get(key), end.levels().get(key),
 					shift(end.entered().contains(key), end.left().contains(key))))
+			.filter(line -> line.shift() != InterestShift.NONE)
 			.toList();
 
 		Map<StorylineId, UserStorylineRef> byHead = new LinkedHashMap<>();
@@ -90,7 +92,7 @@ public final class InterestLines {
 				Double after = end.storylineLevels().get(userStoryline.head());
 				InterestShift shift = shift(end.storylineEntered().contains(userStoryline.head()),
 						end.storylineLeft().contains(userStoryline.head()));
-				if (before != null || after != null || shift != InterestShift.NONE) {
+				if (shift != InterestShift.NONE) {
 					userStorylineLines.add(new UserStorylineInterestLine(userStoryline.head(), userStoryline.summary(), before, after, shift));
 				}
 			});

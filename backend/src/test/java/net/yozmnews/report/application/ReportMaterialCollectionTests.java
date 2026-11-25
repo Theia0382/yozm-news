@@ -247,9 +247,8 @@ class ReportMaterialCollectionTests {
 		InterestsSection interests = (InterestsSection) input.sections().get(2);
 		assertThat(interests.topics())
 			.containsExactly(new TopicInterestLine(this.topic, this.topicName, 0.1, 0.3, InterestShift.ENTERED));
-		assertThat(interests.userStorylines()).containsExactly(new UserStorylineInterestLine(head, summary, null, 0.6, InterestShift.NONE),
-				new UserStorylineInterestLine(new StorylineId(this.storylineC), null, null, 0.4, InterestShift.NONE),
-				new UserStorylineInterestLine(SUMMARY_ONLY, new UserStorylineSummary("지난 흐름", "지난 요약", "지난 전개", SUMMARIZED), 0.5, null,
+		// 값만 있고 변화가 없는 사용자 스토리라인 관심 줄(헤드 B · C)은 관심 줄 고르기가 뺀다 — 갈래 · 스냅숏이 같은 줄을 쓴다
+		assertThat(interests.userStorylines()).containsExactly(new UserStorylineInterestLine(SUMMARY_ONLY, new UserStorylineSummary("지난 흐름", "지난 요약", "지난 전개", SUMMARIZED), 0.5, null,
 						InterestShift.LEFT));
 		assertThat(interests.subscriptionChanges()).isEmpty();
 		// 직전 리포트 — 시작할 때 행에 남긴다
@@ -267,11 +266,9 @@ class ReportMaterialCollectionTests {
 				 "coverage": {"basis": "FIRST_EVALUATED", "topics": [{"key": "%s", "name": "%s", "articles": 0,
 				   "previous": 4, "trend": "FELL"}]},
 				 "interests": {"topics": [{"key": "%s", "name": "%s", "start": 0.1, "end": 0.3, "shift": "ENTERED"}],
-				   "userStorylines": [{"head": %d, "start": null, "end": 0.6, "shift": "NONE"},
-				             {"head": %d, "start": null, "end": 0.4, "shift": "NONE"},
-				             {"head": 999999999, "start": 0.5, "end": null, "shift": "LEFT"}]}}"""
+				   "userStorylines": [{"head": 999999999, "start": 0.5, "end": null, "shift": "LEFT"}]}}"""
 			.formatted(this.active.value(), this.storylineB, this.storylineA, this.storylineB, this.topic, this.topicName,
-					this.topic, this.topicName, this.storylineB, this.storylineC)));
+					this.topic, this.topicName)));
 	}
 
 	@Test
@@ -318,6 +315,33 @@ class ReportMaterialCollectionTests {
 
 		assertThat(bare.collect(USER, WEEK, List.of()).orElseThrow().sections()).isEmpty();
 		assertThat(bare.collect(new UserId(99), WEEK, List.of())).isEmpty();
+	}
+
+	@Test
+	void hasNoInterestSectionWhenInterestsOnlyHoldValuesWithoutAChange() {
+		// 주제 관심 0.25 → 0.6, 사용자 스토리라인 관심 0.4 → 0.7 — 값은 있지만 새로 생기거나 사라진 것이 없다
+		StorylineId head = new StorylineId(this.storylineB);
+		InterestPoint start = new InterestPoint(WEEK.start(), Map.of(this.topic, 0.25), Set.of(), Set.of(), List.of(),
+				Map.of(head, 0.4), Set.of(), Set.of());
+		InterestPoint end = new InterestPoint(WEEK.end(), Map.of(this.topic, 0.6), Set.of(), Set.of(), List.of(),
+				Map.of(head, 0.7), Set.of(), Set.of());
+		ReportMaterialCollection steady = new ReportMaterialCollection(this.tagSets, this.lineage, this.coverage,
+				user -> user.equals(USER) ? Optional.of(interests(List.of())) : Optional.empty(),
+				(user, from, to) -> List.of(), new Summaries(List.of()), new Changes(List.of()),
+				this.storylines, this.events, this.articles, new History(start, end), this.views, this.reports);
+
+		assertThat(steady.collect(USER, WEEK, List.of()).orElseThrow().sections()).isEmpty();
+
+		// 대조 leg — 같은 값에 주제가 새로 생기면 관심 갈래가 든다
+		InterestPoint entered = new InterestPoint(WEEK.end(), Map.of(this.topic, 0.6), Set.of(this.topic), Set.of(),
+				List.of(), Map.of(head, 0.7), Set.of(), Set.of());
+		ReportMaterialCollection changed = new ReportMaterialCollection(this.tagSets, this.lineage, this.coverage,
+				user -> user.equals(USER) ? Optional.of(interests(List.of())) : Optional.empty(),
+				(user, from, to) -> List.of(), new Summaries(List.of()), new Changes(List.of()),
+				this.storylines, this.events, this.articles, new History(start, entered), this.views, this.reports);
+
+		assertThat(changed.collect(USER, WEEK, List.of()).orElseThrow().sections()).extracting(InputSection::kind)
+			.containsExactly(ReportSectionKind.INTERESTS);
 	}
 
 	@Test

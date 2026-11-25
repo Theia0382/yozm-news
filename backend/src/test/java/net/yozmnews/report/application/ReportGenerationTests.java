@@ -476,7 +476,7 @@ class ReportGenerationTests {
 				.isEqualTo("S1");
 			assertThat(JSON.readTree(request.prompt().outputSchema()).get("properties").get("sections").get("required"))
 				.isEqualTo(JSON.readTree("[\"storylines\"]"));
-			assertThat(request.prompt().instructions()).contains("서로 견주거나 더하지 않는다");
+			assertThat(request.prompt().instructions()).contains("별칭(S1 · E1 같은)은 refs 에만 쓰고");
 		});
 	}
 

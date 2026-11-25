@@ -20,9 +20,6 @@ public final class ReportPromptRules {
 	/** 다시 묻는 프롬프트에 싣는 진단의 최대 코드 포인트 — 넘으면 앞부분만 */
 	public static final int MAX_DIAGNOSIS = 200;
 
-	/** 사용자 구획에 싣는 관심 값의 소수 자리 */
-	public static final int INTEREST_SCALE = 2;
-
 	/** 출력 본문 토큰에서 갈래 칸마다 별칭 배열의 몫(코드 포인트) — {@code refs} 는 원소 수의 상한이 없다 */
 	public static final int REFS_ALLOWANCE = 1_000;
 

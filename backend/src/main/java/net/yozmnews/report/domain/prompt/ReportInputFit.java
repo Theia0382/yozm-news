@@ -11,7 +11,6 @@ import java.util.function.IntPredicate;
 
 import net.yozmnews.llm.TokenEstimate;
 import net.yozmnews.platform.CodePoints;
-import net.yozmnews.report.InterestShift;
 import net.yozmnews.report.domain.alias.ReportAliases;
 import net.yozmnews.report.domain.input.CoverageSection;
 import net.yozmnews.report.domain.input.InputSection;
@@ -30,9 +29,9 @@ import net.yozmnews.storyline.StorylineId;
  * 입력 맞추기 — 덜어 내기 순서의 정본 · docs/specs/report.md §5 · report-R22
  * <p>
  * 크기는 그 입력으로 그린 사용자 구획({@link ReportPrompts#userContent})의 코드 포인트를 {@link TokenEstimate} 로 어림한 토큰이다. 예산을 넘으면
- * 직전 글 → 추적하지 않는 사용자 스토리라인의 정리 → 변화 없는 사용자 스토리라인 관심 줄 → 사건 줄 → 흐름 요약 → 추적한 사용자 스토리라인의 순서로 덜어 내고, 단계마다 예산 안에 들면
- * 멈춘다. 갈래는 없어지지 않는다 — 갈래마다 줄 하나는 남긴다. 직전 글은 편마다 몫 안에 드는 가장 긴 본문 길이로, 변화 없는 사용자 스토리라인 관심 줄 ·
- * 사건 줄 · 추적한 사용자 스토리라인은 예산 안에 드는 가장 적은 양만 덜어 낸다(크기는 덜어 낼수록 줄어 이분 탐색으로 찾는다). 추적하지 않는 사용자 스토리라인의 정리와 사용자 스토리라인
+ * 직전 글 → 추적하지 않는 사용자 스토리라인의 정리 → 사건 줄 → 흐름 요약 → 추적한 사용자 스토리라인의 순서로 덜어 내고, 단계마다 예산 안에 들면
+ * 멈춘다. 갈래는 없어지지 않는다 — 갈래마다 줄 하나는 남긴다. 직전 글은 편마다 몫 안에 드는 가장 긴 본문 길이로, 사건 줄 · 추적한 사용자
+ * 스토리라인은 예산 안에 드는 가장 적은 양만 덜어 낸다(크기는 덜어 낼수록 줄어 이분 탐색으로 찾는다). 추적하지 않는 사용자 스토리라인의 정리와 사용자 스토리라인
  * 요약은 그 단계에서 모두 뺀다. 사용자 · 기간 · 시간대 · 스냅숏은 바꾸지 않는다.
  */
 public final class ReportInputFit {
@@ -56,17 +55,12 @@ public final class ReportInputFit {
 		Work work = new Work(input);
 		int priorsCut = work.cutPriors(ReportInputBudget.priorShare(budget));
 		int summariesDropped = 0;
-		int linesDropped = 0;
 		int eventsDropped = 0;
 		int overviewsDropped = 0;
 		int userStorylinesDropped = 0;
 		boolean done = fits(work.build(), budget);
 		if (!done) {
 			summariesDropped += work.dropUntrackedSummaries();
-			done = fits(work.build(), budget);
-		}
-		if (!done) {
-			linesDropped = work.dropSteadyInterestLines(budget);
 			done = fits(work.build(), budget);
 		}
 		if (!done) {
@@ -83,8 +77,8 @@ public final class ReportInputFit {
 			summariesDropped += dropped[1];
 			done = fits(work.build(), budget);
 		}
-		return new FittedInput(work.build(), new Trimmed(priorsCut, summariesDropped, linesDropped, eventsDropped,
-				overviewsDropped, userStorylinesDropped), !done);
+		return new FittedInput(work.build(), new Trimmed(priorsCut, summariesDropped, eventsDropped, overviewsDropped,
+				userStorylinesDropped), !done);
 	}
 
 	/** 사용자 구획의 토큰 어림 */
@@ -214,31 +208,7 @@ public final class ReportInputFit {
 		}
 
 		/**
-		 * 3 단계 — 변화가 없는 사용자 스토리라인 관심 줄을 헤드 ID 가 큰 것부터 뺀다. 관심 변화 갈래에 줄 하나는 남긴다
-		 * @return 뺀 줄 수
-		 */
-		int dropSteadyInterestLines(int budget) {
-			List<UserStorylineInterestLine> steady = this.interestUserStorylines.stream()
-				.filter(line -> line.shift() == InterestShift.NONE)
-				.sorted(Comparator.comparingLong((UserStorylineInterestLine line) -> line.head().value()).reversed())
-				.toList();
-			int max = steady.size();
-			if (max == 0) {
-				return 0;
-			}
-			if (max == this.interestUserStorylines.size() && interestsHaveNoOtherLine()) {
-				max--;
-			}
-			if (max == 0) {
-				return 0;
-			}
-			int count = smallest(1, max, k -> fitsWithout(steady.subList(0, k), budget));
-			this.interestUserStorylines = without(steady.subList(0, count));
-			return count;
-		}
-
-		/**
-		 * 4 단계 — 모든 사용자 스토리라인의 사건 줄을 같은 수까지 줄인다(사용자 스토리라인마다 앞을 남긴다)
+		 * 3 단계 — 모든 사용자 스토리라인의 사건 줄을 같은 수까지 줄인다(사용자 스토리라인마다 앞을 남긴다)
 		 * @return 뺀 사건 줄 수
 		 */
 		int shortenEventLines(int budget) {
@@ -258,7 +228,7 @@ public final class ReportInputFit {
 		}
 
 		/**
-		 * 5 단계 — 추적한 사용자 스토리라인의 정리에서 흐름 요약을 비운다(제목 · 최근 전개는 남긴다)
+		 * 4 단계 — 추적한 사용자 스토리라인의 정리에서 흐름 요약을 비운다(제목 · 최근 전개는 남긴다)
 		 * @return 비운 사용자 스토리라인 수
 		 */
 		int dropUserStorylineOverviews() {
@@ -280,7 +250,7 @@ public final class ReportInputFit {
 		}
 
 		/**
-		 * 6 단계 — 기간 보도량이 적은 사용자 스토리라인부터(같으면 헤드 ID 가 큰 것부터) 뺀다. 하나는 남긴다. 뺀 사용자 스토리라인의 헤드가 사용자 스토리라인 관심 줄에 있으면 그 줄의 정리도 뺀다
+		 * 5 단계 — 기간 보도량이 적은 사용자 스토리라인부터(같으면 헤드 ID 가 큰 것부터) 뺀다. 하나는 남긴다. 뺀 사용자 스토리라인의 헤드가 사용자 스토리라인 관심 줄에 있으면 그 줄의 정리도 뺀다
 		 * @return {뺀 사용자 스토리라인 수, 뺀 정리 수}
 		 */
 		int[] dropUserStorylines(int budget) {
@@ -310,24 +280,6 @@ public final class ReportInputFit {
 				.map(line -> heads.contains(line.head()) && line.summary() != null ? withoutSummary(line) : line)
 				.toList();
 			return build(this.priors, kept, lines);
-		}
-
-		private boolean fitsWithout(List<UserStorylineInterestLine> removed, int budget) {
-			return fits(build(this.priors, this.userStorylines, without(removed)), budget);
-		}
-
-		private List<UserStorylineInterestLine> without(List<UserStorylineInterestLine> removed) {
-			Set<UserStorylineInterestLine> gone = new HashSet<>(removed);
-			return this.interestUserStorylines.stream().filter(line -> !gone.contains(line)).toList();
-		}
-
-		private boolean interestsHaveNoOtherLine() {
-			for (InputSection section : this.original.sections()) {
-				if (section instanceof InterestsSection interests) {
-					return interests.topics().isEmpty() && interests.subscriptionChanges().isEmpty();
-				}
-			}
-			return false;
 		}
 
 		private List<UserStorylineMaterial> shortened(int keep) {
