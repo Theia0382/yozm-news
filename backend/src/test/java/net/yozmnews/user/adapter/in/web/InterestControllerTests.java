@@ -128,13 +128,13 @@ class InterestControllerTests {
 			.andExpect(status().isOk())
 			.andExpect(content().json("""
 					{"timezone":"Asia/Seoul","digestTime":"07:00","weeklyReport":true,"weeklyReportDay":"MONDAY",
-					 "monthlyReport":true}""", JsonCompareMode.STRICT));
+					 "monthlyReport":true,"monthlyReportDay":1,"monthlyReportDayRange":{"min":1,"max":31}}""", JsonCompareMode.STRICT));
 
 		this.mockMvc.perform(json(put("/api/interests/settings").with(this.user), settings("America/New_York", "06:30")))
 			.andExpect(status().isOk())
 			.andExpect(content().json("""
 					{"result":"SAVED","settings":{"timezone":"America/New_York","digestTime":"06:30","weeklyReport":false,
-					 "weeklyReportDay":"FRIDAY","monthlyReport":false}}""", JsonCompareMode.STRICT));
+					 "weeklyReportDay":"FRIDAY","monthlyReport":false,"monthlyReportDay":31,"monthlyReportDayRange":{"min":1,"max":31}}}""", JsonCompareMode.STRICT));
 		this.mockMvc.perform(json(put("/api/interests/settings").with(this.user), settings("+09:00", "06:30")))
 			.andExpect(content().json("""
 					{"result":"UNKNOWN_TIMEZONE","settings":null}""", JsonCompareMode.STRICT));
@@ -144,12 +144,30 @@ class InterestControllerTests {
 			.andExpect(status().isBadRequest());
 		this.mockMvc.perform(json(put("/api/interests/settings").with(this.user), """
 				{"timezone":"Asia/Seoul","digestTime":"07:00","weeklyReport":true,"weeklyReportDay":"FUNDAY",
-				 "monthlyReport":true}"""))
+				 "monthlyReport":true,"monthlyReportDay":1}"""))
 			.andExpect(status().isBadRequest());
+		// 월간 날짜는 1 ~ 31 — 밖이거나 빠지면 400
+		for (String day : new String[] { "0", "32", "-1", "null" }) {
+			this.mockMvc.perform(json(put("/api/interests/settings").with(this.user), """
+					{"timezone":"Asia/Seoul","digestTime":"07:00","weeklyReport":true,"weeklyReportDay":"MONDAY",
+					 "monthlyReport":true,"monthlyReportDay":%s}""".formatted(day)))
+				.andExpect(status().isBadRequest());
+		}
 		this.mockMvc.perform(get("/api/interests/settings").with(this.user))
 			.andExpect(content().json("""
 					{"timezone":"America/New_York","digestTime":"06:30","weeklyReport":false,"weeklyReportDay":"FRIDAY",
-					 "monthlyReport":false}""", JsonCompareMode.STRICT));
+					 "monthlyReport":false,"monthlyReportDay":31,"monthlyReportDayRange":{"min":1,"max":31}}""", JsonCompareMode.STRICT));
+	}
+
+	@Test
+	void theMonthlyReportDayAcceptsTheFirstAndTheThirtyFirst() throws Exception {
+		for (int day : new int[] { 1, 31 }) {
+			this.mockMvc.perform(json(put("/api/interests/settings").with(this.user), """
+					{"timezone":"Asia/Seoul","digestTime":"07:00","weeklyReport":true,"weeklyReportDay":"MONDAY",
+					 "monthlyReport":true,"monthlyReportDay":%d}""".formatted(day)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.settings.monthlyReportDay").value(day));
+		}
 	}
 
 	@Test
@@ -157,11 +175,11 @@ class InterestControllerTests {
 		// 업그레이드 전에 받은 화면은 관심사 칸을 실어 보낸다 — 모르는 칸이라 읽지 않고 나머지를 저장한다
 		this.mockMvc.perform(json(put("/api/interests/settings").with(this.user), """
 				{"timezone":"Europe/Paris","digestTime":"06:15","interestText":"반도체","weeklyReport":false,
-				 "weeklyReportDay":"FRIDAY","monthlyReport":false}"""))
+				 "weeklyReportDay":"FRIDAY","monthlyReport":false,"monthlyReportDay":15}"""))
 			.andExpect(status().isOk())
 			.andExpect(content().json("""
 					{"result":"SAVED","settings":{"timezone":"Europe/Paris","digestTime":"06:15","weeklyReport":false,
-					 "weeklyReportDay":"FRIDAY","monthlyReport":false}}""", JsonCompareMode.STRICT));
+					 "weeklyReportDay":"FRIDAY","monthlyReport":false,"monthlyReportDay":15,"monthlyReportDayRange":{"min":1,"max":31}}}""", JsonCompareMode.STRICT));
 	}
 
 	@Test
@@ -349,7 +367,7 @@ class InterestControllerTests {
 	private static String settings(String timezone, String time) {
 		return """
 				{"timezone":"%s","digestTime":"%s","weeklyReport":false,"weeklyReportDay":"FRIDAY",
-				 "monthlyReport":false}""".formatted(timezone, time);
+				 "monthlyReport":false,"monthlyReportDay":31}""".formatted(timezone, time);
 	}
 
 	private static MockHttpServletRequestBuilder json(MockHttpServletRequestBuilder request, String body) {

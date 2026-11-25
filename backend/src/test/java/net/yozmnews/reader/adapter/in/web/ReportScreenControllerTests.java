@@ -2,9 +2,12 @@ package net.yozmnews.reader.adapter.in.web;
 
 import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.Duration;
 import java.time.Instant;
 
 import net.yozmnews.LlmKeyRows;
@@ -26,6 +29,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.json.JsonCompareMode;
 import org.springframework.test.web.servlet.MockMvc;
 
 /**
@@ -91,8 +95,11 @@ class ReportScreenControllerTests {
 	void listsOneKindLatestFirstWithThePeriodDaysAndAPageCursor() throws Exception {
 		long user = this.reader.id().value();
 		long[] weeks = new long[ReportScreenController.REPORTS_PAGE_SIZE + 1];
+		// 같은 사용자 · 종류 · 기간은 하나라 앞선 주들은 한 주씩 앞선 기간이다 — 가장 늦은 실패만 기본 기간
 		for (int i = 0; i < weeks.length; i++) {
-			weeks[i] = this.reports.report(user, "EMPTY", null);
+			Duration earlier = Duration.ofDays(7L * (weeks.length - i));
+			weeks[i] = this.reports.report(user, "WEEK", "EMPTY", ReportRows.WEEK_START.minus(earlier),
+					ReportRows.WEEK_END.minus(earlier), null, null);
 		}
 		long failed = this.reports.report(user, "FAILED", null);
 		this.reports.report(user, "MONTH", "READY", Instant.parse("2026-09-30T15:00:00Z"),
@@ -279,7 +286,8 @@ class ReportScreenControllerTests {
 		this.reports.section(partly, "OVERVIEW", 0, null, "개요");
 		this.reports.item(this.reports.section(partly, "STORYLINES", 1, "흐름", "본문"), 0, 999_991L, null);
 		this.reports.section(partly, "COVERAGE", 2, "보도량", "본문");
-		long scheduled = this.reports.report(user, "SCHEDULED", null);
+		long scheduled = this.reports.report(user, "WEEK", "SCHEDULED", ReportRows.WEEK_END,
+				ReportRows.WEEK_END.plus(Duration.ofDays(7)), null, null);
 
 		this.mockMvc.perform(get("/api/reports/{id}", partly).with(this.reader))
 			.andExpect(status().isOk())
@@ -293,6 +301,67 @@ class ReportScreenControllerTests {
 			.andExpect(jsonPath("$.usage").isEmpty())
 			.andExpect(jsonPath("$.hiddenSections").value(0))
 			.andExpect(jsonPath("$.sections.length()").value(0));
+	}
+
+	@Test
+	void aFailedReportIsRegeneratedAndTheResultSaysWhyNotOtherwise() throws Exception {
+		long user = this.reader.id().value();
+		long failed = this.reports.report(user, "FAILED", null);
+		long ready = this.reports.report(user, "WEEK", "READY", ReportRows.WEEK_END,
+				ReportRows.WEEK_END.plus(Duration.ofDays(7)), null, null);
+		long spent = this.reports.report(user, "WEEK", "FAILED", ReportRows.WEEK_START.minus(Duration.ofDays(7)),
+				ReportRows.WEEK_START, null, null);
+		this.jdbc.sql("update reports set regenerations = 3 where id = :id").param("id", spent).update();
+
+		// 한 편은 실패일 때만 남은 다시 만들기 수를 싣는다
+		this.mockMvc.perform(get("/api/reports/{id}", failed).with(this.reader))
+			.andExpect(jsonPath("$.regenerationsLeft").value(3));
+		this.mockMvc.perform(get("/api/reports/{id}", spent).with(this.reader))
+			.andExpect(jsonPath("$.regenerationsLeft").value(0));
+		this.mockMvc.perform(get("/api/reports/{id}", ready).with(this.reader))
+			.andExpect(jsonPath("$.regenerationsLeft").isEmpty());
+
+		this.mockMvc.perform(post("/api/reports/{id}/regeneration", ready).with(this.reader))
+			.andExpect(status().isOk())
+			.andExpect(content().json("""
+					{"result":"NOT_FAILED","status":"READY"}""", JsonCompareMode.STRICT));
+		this.mockMvc.perform(post("/api/reports/{id}/regeneration", spent).with(this.reader))
+			.andExpect(status().isOk())
+			.andExpect(content().json("""
+					{"result":"LIMIT_REACHED","status":null}""", JsonCompareMode.STRICT));
+		this.mockMvc.perform(post("/api/reports/{id}/regeneration", failed).with(this.reader))
+			.andExpect(status().isOk())
+			.andExpect(content().json("""
+					{"result":"REQUESTED","status":null}""", JsonCompareMode.STRICT));
+		this.mockMvc.perform(get("/api/reports/{id}", failed).with(this.reader))
+			.andExpect(jsonPath("$.report.status").value("SCHEDULED"))
+			.andExpect(jsonPath("$.regenerationsLeft").isEmpty());
+		// 없는 리포트 · 1 보다 작은 ID 는 404
+		this.mockMvc.perform(post("/api/reports/{id}/regeneration", Long.MAX_VALUE).with(this.reader))
+			.andExpect(status().isNotFound());
+		this.mockMvc.perform(post("/api/reports/{id}/regeneration", 0).with(this.reader))
+			.andExpect(status().isNotFound());
+	}
+
+	@Test
+	void theConditionsAreTheGenerationThresholds() throws Exception {
+		this.mockMvc.perform(get("/api/reports/conditions").with(this.reader))
+			.andExpect(status().isOk())
+			.andExpect(content().json("""
+					{"minDigestDays":3,"minWeeklyReports":2}""", JsonCompareMode.STRICT));
+	}
+
+	@Test
+	void aUserWithoutAUsableModelIsToldSo() throws Exception {
+		long user = this.reader.id().value();
+		long failed = this.reports.report(user, "FAILED", null);
+		// 키는 있지만 무효 — 관문은 지나고 쓸 모델은 없다
+		this.jdbc.sql("update llm_credentials set status = 'INVALID' where user_id = :user").param("user", user).update();
+
+		this.mockMvc.perform(post("/api/reports/{id}/regeneration", failed).with(this.reader))
+			.andExpect(status().isOk())
+			.andExpect(content().json("""
+					{"result":"NO_USABLE_MODEL","status":null}""", JsonCompareMode.STRICT));
 	}
 
 	/** 스토리라인 하나 — 대표 사건과 그 사건의 기사 하나(대표 기사) */

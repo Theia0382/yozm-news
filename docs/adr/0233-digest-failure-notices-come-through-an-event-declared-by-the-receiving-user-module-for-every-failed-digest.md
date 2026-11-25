@@ -36,3 +36,4 @@
 ## 후속 기록
 
 - 2026-11-18: 결정 "알림은 날짜 · 갈래 문구 · 시각을 보이고, 키 갈래면 LLM 키 화면으로 잇는다" — 알림이 잇는 다이제스트 화면 · 홈과 다이제스트 화면과 함께 쓰는 갈래 문구([ADR-0240](0240-digest-failures-show-the-cause-action-and-the-code-and-never-the-failure-message.md)), 지금 상태는 [user Spec "화면 내 알림"](../specs/user.md#화면-내-알림) user-R62
+- 2026-11-25: 결정 "까닭 갈래(`DigestFailureCause` — 넷)" — 리포트 실패 알림과 함께 쓰려고 갈래 타입 이름을 `GenerationFailureCause` 로 바꿨다(값 넷 그대로 — [ADR-0324](0324-report-failures-become-notices-through-an-event-declared-by-the-receiving-user-module-like-digest-failures.md)), 지금 상태는 [user Spec "DigestFailed"](../specs/user.md#digestfailed)

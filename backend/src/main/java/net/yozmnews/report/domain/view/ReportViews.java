@@ -25,6 +25,7 @@ import net.yozmnews.report.domain.material.ReportSnapshot.FlowLevelStat;
 import net.yozmnews.report.domain.material.ReportSnapshot.FlowStat;
 import net.yozmnews.report.domain.material.ReportSnapshot.SnapshotStats;
 import net.yozmnews.report.domain.report.ReportPeriod;
+import net.yozmnews.report.domain.schedule.ReportScheduleRules;
 import net.yozmnews.storyline.StorylineId;
 import org.jspecify.annotations.Nullable;
 
@@ -106,7 +107,8 @@ public final class ReportViews {
 				: new Visible(List.of(), 0);
 		return new ReportView(summary(row, fallbackZone), row.provider(), row.model(), row.inputTokens(),
 				row.outputTokens(), (previous == null) ? null : summary(previous, fallbackZone), visible.hidden(),
-				visible.sections());
+				visible.sections(), (row.status() == ReportStatus.FAILED)
+						? ReportScheduleRules.regenerationsLeft(row.regenerations()) : null);
 	}
 
 	private static Visible visible(List<StoredSection> stored, Map<EventId, EventId> events,

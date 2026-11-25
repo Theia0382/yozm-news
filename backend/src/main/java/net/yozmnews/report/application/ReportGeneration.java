@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 
 import net.yozmnews.llm.LlmModel;
 import net.yozmnews.llm.ReasoningEffort;
@@ -34,6 +35,7 @@ import net.yozmnews.report.domain.report.Completion;
 import net.yozmnews.report.domain.report.Report;
 import net.yozmnews.report.domain.report.ReportPeriod;
 import net.yozmnews.report.domain.report.ReportRepository;
+import net.yozmnews.report.domain.report.ScheduledReport;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,26 +64,32 @@ public class ReportGeneration {
 
 	private final ReportSectionRepository sections;
 
+	private final ReportEndings endings;
+
 	private final ReportGenerator generator;
 
 	private final TransactionTemplate transaction;
 
 	private final AppClock clock;
 
-	ReportGeneration(ReportRepository reports, ReportSectionRepository sections, ReportGenerator generator,
-			TransactionTemplate transaction, AppClock clock) {
+	ReportGeneration(ReportRepository reports, ReportSectionRepository sections, ReportEndings endings,
+			ReportGenerator generator, TransactionTemplate transaction, AppClock clock) {
 		this.reports = Objects.requireNonNull(reports, "reports");
 		this.sections = Objects.requireNonNull(sections, "sections");
+		this.endings = Objects.requireNonNull(endings, "endings");
 		this.generator = Objects.requireNonNull(generator, "generator");
 		this.transaction = Objects.requireNonNull(transaction, "transaction");
 		this.clock = Objects.requireNonNull(clock, "clock");
 	}
 
 	/**
-	 * 생성을 기다리는 리포트를 만든다 — 같은 사용자 · 기간의 리포트를 막지 않는다(기간마다 한 번의 제약은 일정을 만드는 작업이 정한다).
+	 * 생성을 기다리는 리포트를 새 등록 토큰으로 만든다 — 같은 사용자 · 종류 · 기간의 리포트는 하나다(저장소의 유일 제약이 막는다 — 어기면 예외).
+	 * 생성 작업은 부르는 쪽이 커밋 뒤 그 토큰으로 등록한다.
 	 */
-	public ReportId schedule(UserId user, ReportPeriod period) {
-		return this.reports.save(Report.schedule(user, period, this.clock.instant())).id();
+	public ScheduledReport schedule(UserId user, ReportPeriod period) {
+		UUID token = UUID.randomUUID();
+		return new ScheduledReport(this.reports.save(Report.schedule(user, period, token, this.clock.instant())).id(),
+				token);
 	}
 
 	/**
@@ -176,7 +184,7 @@ public class ReportGeneration {
 				(input.previous() == null) ? null : input.previous().value(), input.zone().getId());
 		Report running = this.reports.save(report.start(model, this.clock.instant()));
 		if (aliases.hasNoSections()) {
-			Report empty = this.reports.save(running.complete(new Completion.Empty(), this.clock.instant()));
+			Report empty = this.endings.save(running.complete(new Completion.Empty(), this.clock.instant()));
 			return new Started(empty.status(), empty.userId(), 0);
 		}
 		return new Started(null, running.userId(), running.version().orElseThrow());
@@ -202,7 +210,7 @@ public class ReportGeneration {
 					yield new Completion.Ready(Objects.requireNonNull(usage, "읽은 응답은 공급자가 센 토큰이 있다"), took);
 				}
 			};
-			return this.reports.save(report.complete(completion, this.clock.instant())).status();
+			return this.endings.save(report.complete(completion, this.clock.instant())).status();
 		}));
 	}
 

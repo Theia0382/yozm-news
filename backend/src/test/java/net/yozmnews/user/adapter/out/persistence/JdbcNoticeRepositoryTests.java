@@ -22,7 +22,7 @@ import net.yozmnews.llm.Provider;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.source.FeedId;
 import net.yozmnews.source.FeedStatus;
-import net.yozmnews.user.DigestFailureCause;
+import net.yozmnews.user.GenerationFailureCause;
 import net.yozmnews.user.UserTables;
 import net.yozmnews.user.domain.notice.DigestFailedContent;
 import net.yozmnews.user.domain.notice.FeedStatusContent;
@@ -135,13 +135,13 @@ class JdbcNoticeRepositoryTests {
 	void aDigestFailedNoticeIsStoredOncePerDigestAndKeepsItsShape() throws Exception {
 		UserId alice = account("alice@example.com", AccountRole.USER);
 		DigestFailedContent content = new DigestFailedContent(901, LocalDate.parse("2026-11-19"),
-				DigestFailureCause.OUTPUT, Instant.parse("2026-11-18T22:03:10Z"));
+				GenerationFailureCause.OUTPUT, Instant.parse("2026-11-18T22:03:10Z"));
 
 		assertThat(this.notices.createOnce(alice, content, T1)).isTrue();
 		assertThat(this.notices.createOnce(alice, content, T1)).isFalse();
 		// 대조 — 같은 날짜의 다른 다이제스트는 다른 알림이다
 		DigestFailedContent other = new DigestFailedContent(902, LocalDate.parse("2026-11-19"),
-				DigestFailureCause.KEY, Instant.parse("2026-11-18T23:00:00Z"));
+				GenerationFailureCause.KEY, Instant.parse("2026-11-18T23:00:00Z"));
 		assertThat(this.notices.createOnce(alice, other, T1)).isTrue();
 
 		List<Notice> page = this.notices.page(alice, null, 50);

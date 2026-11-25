@@ -3,6 +3,7 @@ package net.yozmnews.report.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -153,6 +154,9 @@ class ReportMaterialCollectionTests {
 	@Autowired
 	JdbcClient jdbc;
 
+	@Autowired
+	ReportEndings endings;
+
 	private TagSetId active;
 
 	private String topic;
@@ -210,8 +214,9 @@ class ReportMaterialCollectionTests {
 				 "coverage": {"basis": "FIRST_EVALUATED", "topics": [{"key": "%s", "name": "%s", "articles": 4,
 				   "previous": null, "trend": "NO_COMPARISON"}]}}"""
 			.formatted(this.active.value(), this.storylineA, this.storylineA, this.topic, this.topicName));
-		// 같은 기간의 뒤 행이라도 시작하지 않은 리포트는 직전 리포트가 아니다(report-R18)
-		generation().schedule(USER, PREVIOUS);
+		// 끝이 같은 뒤 행이라도 시작하지 않은 리포트는 직전 리포트가 아니다(report-R18) — 같은 사용자 · 종류 · 기간은 하나라 시작을 하루 늦춘다
+		generation().schedule(USER, new ReportPeriod(ReportPeriodKind.WEEK, PREVIOUS.start().plus(Duration.ofDays(1)),
+				PREVIOUS.end()));
 
 		ReportInput input = collection(this.tagSets).collect(USER, WEEK, List.of()).orElseThrow();
 
@@ -293,7 +298,8 @@ class ReportMaterialCollectionTests {
 	void takesOnlyTheReadyWeeklyReportsOfTheUser() {
 		ReportId ready = previousReport(USER, "{}");
 		ReportId others = previousReport(new UserId(8), "{}");
-		ReportId scheduled = generation().schedule(USER, PREVIOUS);
+		ReportId scheduled = generation().schedule(USER, new ReportPeriod(ReportPeriodKind.WEEK,
+				PREVIOUS.start().plus(Duration.ofDays(1)), PREVIOUS.end())).id();
 
 		ReportInput input = collection(this.tagSets)
 			.collect(USER, new ReportPeriod(ReportPeriodKind.MONTH, WEEK.start(), WEEK.end()), List.of(ready, others, scheduled))
@@ -368,14 +374,15 @@ class ReportMaterialCollectionTests {
 	/** 직전 주간 리포트 — 로컬 대체물로 READY, 스냅숏은 손으로 쓴 문자열 */
 	private ReportId previousReport(UserId user, String snapshot) {
 		ReportGeneration generation = generation();
-		ReportId id = generation.schedule(user, PREVIOUS);
+		ReportId id = generation.schedule(user, PREVIOUS).id();
 		generation.run(id, ReportFixtures.MODEL, ReportFixtures.EFFORT, new ReportInput(user, PREVIOUS, SEOUL,
 				List.of(new StorylinesSection(List.of(ReportFixtures.flow(this.storylineA)))), List.of(), snapshot, null));
 		return id;
 	}
 
 	private ReportGeneration generation() {
-		return new ReportGeneration(this.reportRows, this.sections, new FakeReportGenerator(), this.transaction,
+		return new ReportGeneration(this.reportRows, this.sections, this.endings,
+				new FakeReportGenerator(), this.transaction,
 				TestClocks.of(() -> Instant.parse("2026-11-12T00:00:00Z")));
 	}
 

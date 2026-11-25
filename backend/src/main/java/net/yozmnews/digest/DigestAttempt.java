@@ -3,7 +3,7 @@ package net.yozmnews.digest;
 import java.time.Instant;
 import java.util.Objects;
 
-import net.yozmnews.user.DigestFailureCause;
+import net.yozmnews.user.GenerationFailureCause;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -16,7 +16,7 @@ import org.jspecify.annotations.Nullable;
  * @param completedAt 끝낸 시각 — 끝나기 전이면 null
  */
 public record DigestAttempt(long digestId, DigestStatus status, @Nullable DigestFailure failure,
-		@Nullable DigestFailureCause cause, @Nullable Instant completedAt) {
+		@Nullable GenerationFailureCause cause, @Nullable Instant completedAt) {
 
 	public DigestAttempt {
 		Objects.requireNonNull(status, "status");

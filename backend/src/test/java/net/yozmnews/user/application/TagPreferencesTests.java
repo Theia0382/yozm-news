@@ -181,11 +181,11 @@ class TagPreferencesTests {
 		behindOn(user, this.first);
 
 		DigestSettingsOutcome outcome = this.digestSettings.save(user, "Europe/Paris", LocalTime.of(6, 30),
-				new ReportSettings(false, DayOfWeek.FRIDAY, true), NOW);
+				new ReportSettings(false, DayOfWeek.FRIDAY, true, 15), NOW);
 
 		assertThat(outcome).isEqualTo(new DigestSettingsOutcome.Saved(
 				new DigestSettingsView(new DigestSchedule(ZoneId.of("Europe/Paris"), LocalTime.of(6, 30)),
-						new ReportSettings(false, DayOfWeek.FRIDAY, true))));
+						new ReportSettings(false, DayOfWeek.FRIDAY, true, 15))));
 		assertThat(version(user)).isEqualTo(active.value());
 		assertThat(notices(user)).isOne();
 		// 판 — 만들 때 0 → 리스너의 따라가기 1(그 뒤 버전 1 상태로 되돌림, 판은 그대로) → 먼저 따라가기 2 → 저장 3

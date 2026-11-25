@@ -17,7 +17,7 @@ import net.yozmnews.digest.domain.digest.DigestTrigger;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.tag.TagSetDirectory;
 import net.yozmnews.user.DigestFailed;
-import net.yozmnews.user.DigestFailureCause;
+import net.yozmnews.user.GenerationFailureCause;
 import net.yozmnews.user.UserTables;
 import org.jobrunr.scheduling.JobScheduler;
 import org.junit.jupiter.api.AfterEach;
@@ -106,7 +106,7 @@ class DigestRunTests {
 		assertThat(this.events.stream(DigestFailed.class)).extracting(DigestFailed::user, DigestFailed::digestId,
 				DigestFailed::digestDate, DigestFailed::cause)
 			.containsExactly(org.assertj.core.groups.Tuple.tuple(user, id.value(), LocalDate.parse("2026-11-19"),
-					DigestFailureCause.KEY));
+					GenerationFailureCause.KEY));
 	}
 
 	@Test
@@ -157,9 +157,9 @@ class DigestRunTests {
 				""").param("email", email).query(Long.class).single());
 		this.jdbc.sql("""
 				insert into user_settings (user_id, tag_set_id, timezone, digest_time, weekly_report,
-				    weekly_report_day, monthly_report, candidate_volume, big_slots, summary_length, reasoning_effort,
+				    weekly_report_day, monthly_report, monthly_report_day, candidate_volume, big_slots, summary_length, reasoning_effort,
 				    updated_at, version)
-				values (:user, :tagSet, 'Asia/Seoul', '07:00', true, 1, true, 'NORMAL', 0, 'NORMAL', 'MEDIUM', now(), 0)
+				values (:user, :tagSet, 'Asia/Seoul', '07:00', true, 1, true, 1, 'NORMAL', 0, 'NORMAL', 'MEDIUM', now(), 0)
 				""").param("user", user.value()).param("tagSet", this.tagSets.activeTagSet().id().value()).update();
 		this.jdbc.sql("""
 				insert into llm_credentials (user_id, provider, ciphertext, encrypted_dek, kek_version, key_hint, status,

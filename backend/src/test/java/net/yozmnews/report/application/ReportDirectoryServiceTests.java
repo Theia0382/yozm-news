@@ -5,6 +5,7 @@ import static net.yozmnews.report.ReportFixtures.storyline;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -52,6 +53,9 @@ import org.springframework.transaction.PlatformTransactionManager;
 @SpringBootTest
 @TestPropertySource(properties = "jobrunr.background-job-server.enabled=false")
 class ReportDirectoryServiceTests {
+
+	/** 이 시험에서 기본 기간으로 넣은 리포트 수 — 넣을 때마다 한 주씩 앞선다 */
+	private int defaultReports;
 
 	private static final UserId OWNER = new UserId(7);
 
@@ -158,9 +162,10 @@ class ReportDirectoryServiceTests {
 		// 서울 자정에 시작하는 주 — UTC 로는 전날 15 시
 		Instant start = Instant.parse("2026-11-23T15:00:00Z");
 		Instant end = Instant.parse("2026-11-30T15:00:00Z");
+		// 같은 사용자 · 종류 · 기간은 하나라 시작을 1분씩 늦춘다 — 날짜는 그대로다
 		long seoul = report(OWNER, "WEEK", "EMPTY", start, end, "Asia/Seoul", SNAPSHOT);
-		long utc = report(OWNER, "WEEK", "EMPTY", start, end, "UTC", SNAPSHOT);
-		long scheduled = report(OWNER, "WEEK", "SCHEDULED", start, end, "Asia/Seoul", SNAPSHOT);
+		long utc = report(OWNER, "WEEK", "EMPTY", start.plusSeconds(60), end, "UTC", SNAPSHOT);
+		long scheduled = report(OWNER, "WEEK", "SCHEDULED", start.plusSeconds(120), end, "Asia/Seoul", SNAPSHOT);
 		ReportDirectory inSeoul = new ReportDirectoryService(this.views, this.events, this.storylines,
 				user -> Optional.of(ZoneId.of("Asia/Seoul")), this.transactions);
 
@@ -223,10 +228,12 @@ class ReportDirectoryServiceTests {
 	void aFailedReportShowsItsCodeAndNoSections() {
 		long id = this.jdbc.sql("""
 				insert into reports (user_id, period_kind, period_start, period_end, status, provider, model, stats_snapshot,
-				                     error_code, error_message, created_at, started_at, completed_at, zone, version)
+				                     error_code, error_message, created_at, started_at, completed_at, zone, dispatch_token,
+				                     dispatched_at, scheduled_at, regenerations, version)
 				values (7, 'MONTH', timestamptz '2026-10-01 00:00Z', timestamptz '2026-11-01 00:00Z', 'FAILED', 'openai',
 				        'gpt-5.5-mini', cast('{}' as jsonb), 'KEY_MISSING', '쓸 모델 공급자의 저장한 키가 없다', timestamptz '2026-11-01 01:00Z',
-				        timestamptz '2026-11-01 01:00Z', timestamptz '2026-11-01 01:00Z', 'Asia/Seoul', 1)
+				        timestamptz '2026-11-01 01:00Z', timestamptz '2026-11-01 01:00Z', 'Asia/Seoul', gen_random_uuid(),
+				        timestamptz '2026-11-01 01:00Z', timestamptz '2026-11-01 01:00Z', 0, 1)
 				returning id""").query(Long.class).single();
 		section(id, "OVERVIEW", 0, null, "남은 개요");
 
@@ -351,9 +358,13 @@ class ReportDirectoryServiceTests {
 		return report(user, status, SNAPSHOT);
 	}
 
+	/**
+	 * 주간 리포트 — 첫 행은 2026-11-16 ~ 11-23 이고 부를 때마다 한 주씩 앞선다(같은 사용자 · 종류 · 기간은 하나 — 유일 인덱스)
+	 */
 	private long report(UserId user, String status, String snapshot) {
-		return report(user, "WEEK", status, Instant.parse("2026-11-16T00:00:00Z"), Instant.parse("2026-11-23T00:00:00Z"),
-				"Asia/Seoul", snapshot);
+		Duration earlier = Duration.ofDays(7L * this.defaultReports++);
+		return report(user, "WEEK", status, Instant.parse("2026-11-16T00:00:00Z").minus(earlier),
+				Instant.parse("2026-11-23T00:00:00Z").minus(earlier), "Asia/Seoul", snapshot);
 	}
 
 	/** 리포트 행 — 시작한 행은 공급자 · 모델 · 스냅숏 · 시간대를 함께 넣는다(테이블 제약) */
@@ -363,10 +374,12 @@ class ReportDirectoryServiceTests {
 		boolean finished = status.equals("READY") || status.equals("EMPTY");
 		return this.jdbc.sql("""
 				insert into reports (user_id, period_kind, period_start, period_end, status, provider, model, input_tokens,
-				                     output_tokens, stats_snapshot, created_at, started_at, completed_at, zone, version)
+				                     output_tokens, stats_snapshot, created_at, started_at, completed_at, zone, dispatch_token,
+				                     dispatched_at, scheduled_at, regenerations, version)
 				values (:user, :kind, :start, :end, :status,
 				        :provider, :model, :input, :output, cast(:snapshot as jsonb), timestamptz '2026-11-23 00:30Z',
-				        :started, :completed, :zone, 1)
+				        :started, :completed, :zone, gen_random_uuid(), timestamptz '2026-11-23 00:30Z',
+				        timestamptz '2026-11-23 00:30Z', 0, 1)
 				returning id""")
 			.param("user", user.value())
 			.param("kind", kind)

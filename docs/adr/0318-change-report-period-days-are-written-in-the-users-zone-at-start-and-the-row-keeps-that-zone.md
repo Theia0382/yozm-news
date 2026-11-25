@@ -30,3 +30,7 @@
 |---|---|
 | 언제나 지금 사용자 시간대로 적는다 | 시간대를 바꾸면 지난 리포트의 기간이 하루 밀려 보이고 글의 날짜와 다르다 |
 | 화면이 시각을 받아 브라우저 시간대로 적는다 | 기간 날짜 규칙(끝은 들지 않는다)의 사본이 화면에 생기고, 글과 다른 시간대일 수 있다 |
+
+## 후속 기록
+
+- 2026-11-25: 결정 "시작한 행은 시간대가 언제나 있다" · 결과 "시작 전 리포트의 날짜는 …" — 시작하지 않고 끝난 리포트도 끝낼 때 그때의 시간대를 적어 끝난 행은 언제나 시간대가 있고, 지금 시간대로 적는 것은 생성을 기다리는 리포트뿐이다([ADR-0323](0323-report-generation-jobs-and-stalled-report-recovery-follow-the-digest-and-a-report-ending-without-a-start-records-the-zone.md)), 지금 상태는 [report Spec "리포트 상태"](../specs/report.md#리포트-상태) report-R1 · R26

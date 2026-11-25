@@ -26,8 +26,8 @@ public interface ReportViewRepository {
 	List<StoredSection> sections(UserId user, ReportId id);
 
 	/**
-	 * 직전 리포트 — 그 사용자의 같은 종류이고 끝이 {@code end} 인 시작한 리포트 가운데 ID 가 가장 큰 것(report-R18). 같은 기간의 리포트가 여럿일
-	 * 수 있다 — (사용자, 리포트 기간)마다 한 번의 제약은 일정을 만드는 작업이 정한다
+	 * 직전 리포트 — 그 사용자의 같은 종류이고 끝이 {@code end} 인 시작한 리포트 가운데 ID 가 가장 큰 것(report-R18). 시작하지 않고 끝난 실패
+	 * 리포트(쓸 모델 없음 · 시작 기한 지남)는 스냅숏이 없어 들지 않는다 — 시작한 리포트인지는 상태가 아니라 시작 시각으로 본다
 	 * @return 없으면 빈 값
 	 */
 	Optional<ReportRow> previous(UserId user, ReportPeriodKind kind, Instant end);

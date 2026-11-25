@@ -320,8 +320,13 @@
 | [0316](0316-a-change-report-view-carries-each-visible-sections-numbers-as-typed-values-and-resolves-flow-lines-like-citations.md) | 변화 리포트 조회는 보이는 갈래 섹션마다 스냅숏의 숫자를 타입 있는 값으로 싣고, 흐름 줄은 인용과 같은 규칙으로 풀며, 숨긴 섹션 수를 낸다 | 승인 |
 | [0317](0317-a-change-report-row-points-to-the-previous-report-it-took-the-previous-values-from.md) | 변화 리포트 행은 생성 때 직전 값을 꺼낸 직전 리포트를 가리킨다 | 승인 |
 | [0318](0318-change-report-period-days-are-written-in-the-users-zone-at-start-and-the-row-keeps-that-zone.md) | 변화 리포트 기간의 날짜는 생성을 시작할 때의 사용자 시간대로 적고, 그 시간대를 리포트 행에 남긴다 | 승인 |
-| [0319](0319-the-change-report-screen-has-a-list-per-kind-and-a-report-page-with-four-states-and-the-failure-cause-only.md) | 변화 리포트 화면은 종류마다 목록과 한 편 화면으로 보이고, 상태는 넷, 실패는 코드의 무슨 일 문구만 보인다 | 승인 |
+| [0319](0319-the-change-report-screen-has-a-list-per-kind-and-a-report-page-with-four-states-and-the-failure-cause-only.md) | 변화 리포트 화면은 종류마다 목록과 한 편 화면으로 보이고, 상태는 넷, 실패는 코드의 무슨 일 문구만 보인다 | 승인 (부분 대체: 0323 · 0325) |
 | [0320](0320-operator-screens-operations-docs-and-the-evaluation-tool-also-call-a-storyline-an-event-flow-and-a-big-one-a-big-topic.md) | 운영자 화면 · 운영 문서 · 평가 도구도 스토리라인을 사건 흐름 · 흐름 · 큰 화제로 부른다 | 승인 |
+| [0321](0321-change-report-periods-end-at-the-digest-time-of-the-chosen-weekday-or-day-are-made-within-two-hours-and-a-changed-setting-makes-a-whole-new-period.md) | 변화 리포트는 고른 요일 · 날짜의 다이제스트 생성 시각에서 기간을 끊고, 그 시각 뒤 2시간 안에 만들며, 설정을 바꾸면 새 설정의 온전한 기간을 만든다 | 승인 |
+| [0322](0322-a-weekly-report-needs-three-ready-digest-days-a-monthly-report-two-ready-weeklies-wholly-inside-and-a-monthly-waits-for-unfinished-weeklies.md) | 주간 리포트는 그 주에 READY 다이제스트가 3일 이상, 월간은 그 기간에 다 든 READY 주간이 2편 이상일 때만 만들고, 월간은 끝나지 않은 주간을 기다리며 주간을 끄면 월간도 없다 | 승인 |
+| [0323](0323-report-generation-jobs-and-stalled-report-recovery-follow-the-digest-and-a-report-ending-without-a-start-records-the-zone.md) | 리포트의 생성 작업 · 거두기는 다이제스트를 따르고, 시작하지 않고 끝난 리포트도 그때의 시간대를 적는다 | 승인 |
+| [0324](0324-report-failures-become-notices-through-an-event-declared-by-the-receiving-user-module-like-digest-failures.md) | 리포트 실패는 받는 쪽 user 가 선언한 이벤트로 다이제스트와 같은 꼴의 알림이 되고, 실패 갈래 타입을 함께 쓴다 | 승인 |
+| [0325](0325-a-failed-report-is-regenerated-from-the-screen-on-the-same-row-up-to-three-times.md) | 실패한 리포트는 화면에서 같은 행을 다시 생성을 기다리게 해 리포트마다 세 번까지 다시 만든다 | 승인 |
 
 ## 운영 규칙
 

@@ -60,6 +60,8 @@ public final class UserScopedEndpoints {
 			Map.entry("GET /api/interest-history", InterestHistoryScopeTests.class),
 			Map.entry("GET /api/reports", ReportScreenScopeTests.class),
 			Map.entry("GET /api/reports/{id}", ReportScreenScopeTests.class),
+			Map.entry("POST /api/reports/{id}/regeneration", ReportScreenScopeTests.class),
+			Map.entry("GET /api/reports/conditions", ReportScreenScopeTests.class),
 			Map.entry("GET /api/topic-suggestions", TopicSuggestionScopeTests.class),
 			Map.entry("GET /api/digests/latest", DigestScreenScopeTests.class),
 			Map.entry("GET /api/digests/{date}", DigestScreenScopeTests.class),

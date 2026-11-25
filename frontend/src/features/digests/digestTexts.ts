@@ -142,8 +142,8 @@ export const KEYS_LINK = "LLM 키 화면에서 확인하기";
 /** 관심 설정의 모델 절로 가는 링크 */
 export const MODEL_LINK = "관심 설정에서 모델 고르기";
 
-/** 실패의 갈래마다 가 볼 화면 — 실패 상자와 알림 화면이 함께 쓴다(ADR-0240) */
-export const digestFailureCauseLinks: Record<
+/** 생성 실패(다이제스트 · 변화 리포트)의 갈래마다 가 볼 화면 — 다이제스트 실패 상자와 알림 화면의 두 실패 본문이 함께 쓴다(ADR-0240) */
+export const failureCauseLinks: Record<
   DigestFailureCause,
   { to: string; label: string } | null
 > = {

@@ -30,6 +30,12 @@ public enum ReportFailure {
 	PROVIDER_UNAVAILABLE,
 
 	/** 공급자가 예상 밖의 답을 했다(관문의 {@code UNEXPECTED}) */
-	PROVIDER_UNEXPECTED
+	PROVIDER_UNEXPECTED,
+
+	/** 쓸 모델이 없었다 — 유효한 키가 있는 공급자의 허용 모델이 없거나 계정을 쓸 수 없어 시작하지 않았다 */
+	NO_USABLE_MODEL,
+
+	/** 시작 기한 · 임대 안에 생성이 끝나지 않았다 — 다시 돌리지 않는다 */
+	INTERRUPTED
 
 }

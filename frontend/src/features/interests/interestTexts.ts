@@ -42,6 +42,33 @@ export const weekdayNames: Record<Weekday, string> = {
   SUNDAY: "일요일",
 };
 
+/**
+ * 일정 · 변화 리포트 절의 리포트 설명 — 받는 때와 만들지 않는 경우. 생성 조건의 수는 서버가 낸 값이고, 읽지 못했으면 수 없이 안내한다
+ */
+export function reportScheduleHelpText(
+  conditions: { minDigestDays: number; minWeeklyReports: number } | undefined,
+): string {
+  const when =
+    "주간 리포트는 고른 요일, 월간 리포트는 고른 날짜의 다이제스트를 만드는 시각에 그 앞 기간을 정리해 만듭니다.";
+  if (conditions === undefined) {
+    return `${when} 그 기간에 받은 다이제스트(주간)나 주간 리포트(월간)가 적으면 만들지 않습니다.`;
+  }
+  return `${when} 그 주에 다이제스트를 받은 날이 ${conditions.minDigestDays}일보다 적으면 주간 리포트를, 그 기간 안의 주간 리포트가 ${conditions.minWeeklyReports}편보다 적으면 월간 리포트를 만들지 않습니다.`;
+}
+
+/** 주간 리포트를 끄면 월간 리포트도 만들지 않는다는 안내 */
+export const MONTHLY_NEEDS_WEEKLY_TEXT =
+  "월간 리포트는 그 기간의 주간 리포트를 모아 만들어, 주간 리포트를 받을 때만 만듭니다.";
+
+/** 월간 리포트 날짜의 설명 */
+export const MONTHLY_DAY_HELP_TEXT =
+  "그 날이 없는 달(예: 2월 30일)에는 그 달 마지막 날에 만듭니다.";
+
+/** 월간 리포트 날짜의 이름 */
+export function monthlyDayName(day: number): string {
+  return `${day}일`;
+}
+
 /** 구독한 주제가 없을 때의 안내 — 홈과 관심 설정이 함께 쓴다 */
 export const NO_TOPIC_TEXT =
   "구독한 주제가 없어 다이제스트에 구독 기사가 들어가지 않습니다. 관심 있는 주제를 고르세요.";

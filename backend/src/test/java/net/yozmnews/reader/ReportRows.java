@@ -45,9 +45,10 @@ public final class ReportRows {
 		return this.jdbc.sql("""
 				insert into reports (user_id, period_kind, period_start, period_end, status, provider, model, input_tokens,
 				                     output_tokens, stats_snapshot, error_code, error_message, created_at, started_at,
-				                     completed_at, zone, previous_report_id, version)
+				                     completed_at, zone, previous_report_id, dispatch_token, dispatched_at, scheduled_at,
+				                     regenerations, version)
 				values (:user, :kind, :start, :end, :status, :provider, :model, :input, :output, cast(:snapshot as jsonb),
-				        :error, :message, :end, :started, :completed, :zone, :previous, 1)
+				        :error, :message, :end, :started, :completed, :zone, :previous, gen_random_uuid(), :end, :end, 0, 1)
 				returning id""")
 			.param("user", user)
 			.param("kind", kind)

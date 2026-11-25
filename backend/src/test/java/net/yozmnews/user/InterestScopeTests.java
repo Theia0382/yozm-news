@@ -94,7 +94,7 @@ public class InterestScopeTests {
 			.andExpect(jsonPath("$.result").value("SAVED"));
 		this.mockMvc.perform(json(put("/api/interests/settings").with(a), """
 				{"timezone":"Europe/Paris","digestTime":"06:15","weeklyReport":false,"weeklyReportDay":"FRIDAY",
-				 "monthlyReport":false}"""))
+				 "monthlyReport":false,"monthlyReportDay":15}"""))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.result").value("SAVED"));
 		this.mockMvc.perform(json(put("/api/interests/model").with(a), """
