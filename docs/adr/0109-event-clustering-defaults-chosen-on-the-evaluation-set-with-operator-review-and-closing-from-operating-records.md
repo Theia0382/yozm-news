@@ -45,5 +45,6 @@
 
 ## 후속 기록
 
+- 2026-11-11: 결정 절 "같은 품질의 후보 가운데서는 … 고른다" 의 실측 — 사건 소속 판정의 배정 판정(기사 하나와 후보 사건의 기사들)은 평가 세트에서 같은 일과 다른 일을 가른다(미결 사항 결정됨 28번의 기록, d798fc3)
 - 2026-11-12: 결과 절 "병합 질문의 꼴 … 에서 오는 것으로 보고 따로 본다" — 조사해 보니 원인은 질문의 꼴이 아니라 병합에 올라오는 쌍의 구성이었다. 병합이 묻던 띠 쌍의 다수는 배정 때 이미 확률 기준 미만의 답을 받고 갈린 쌍이어서, 그런 쌍은 묻지 않기로 했다([ADR-0119](0119-event-merge-does-not-ask-band-pairs-whose-prior-assignment-probability-is-below-the-probability-threshold.md))
 - 2026-11-12: 결정 절 "같은 품질의 후보 가운데서는 … 고른다" — 확률 기준의 기본값은 묶음 정확도에서 구별되지 않는 값 가운데 병합 판정의 정밀이 높은 값으로 다시 골랐고, 같은 방법(처음부터 다시 묶기 · 운영자 표본 검수)으로 확인했다([ADR-0120](0120-event-membership-probability-threshold-default-chosen-by-merge-precision-among-values-indistinguishable-in-assignment.md))
