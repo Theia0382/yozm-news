@@ -30,7 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
  * 독자 화면의 다이제스트 — 홈(가장 늦은 날짜 · 수동 생성 상태) · 날짜 하나 · 날짜 목록 · 수동 생성 요청. docs/specs/reader.md §3 ·
  * reader-R9 ~ R11.
  * <p>
- * {@code digest} · {@code article} · {@code user}(항목의 흐름을 가리키는 정리된 사용자 스토리라인)의 공개 조회 · 공개 API 만 부르고 응답
+ * {@code digest} · {@code article} · {@code user}(항목의 스토리라인을 가리키는 정리된 사용자 스토리라인)의 공개 조회 · 공개 API 만 부르고 응답
  * 모양을 정한다. 넷 모두 세션이 필요하고 키 관문 뒤다(키 없이 여는
  * 표시 · 요청 방어 표시가 없다 — 수동 생성의 하루 횟수는 {@code digest} 가 지킨다). 트랜잭션을 열지 않는다 — 수동 생성 요청은 트랜잭션 밖에서
  * 불러야 한다.
@@ -103,7 +103,7 @@ class DigestScreenController {
 	/** 날짜 보기 — 인용 기사의 정보는 응답 하나에 한 번 읽는다(reader-R7) */
 	private DigestDayResponse response(UserId user, DigestDay day) {
 		Map<ArticleId, NewsArticleResponse> cited = this.articles.of(DigestDayResponse.citedArticles(day));
-		return DigestDayResponse.of(day, cited, this.refs.of(user, DigestDayResponse.flows(day)));
+		return DigestDayResponse.of(day, cited, this.refs.of(user, DigestDayResponse.storylines(day)));
 	}
 
 }

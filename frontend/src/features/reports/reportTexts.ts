@@ -118,7 +118,7 @@ export const shiftLabels = {
 
 /** 숫자 표의 열 이름 */
 export const countColumns = {
-  flow: "흐름",
+  userStoryline: "흐름",
   topic: "주제",
   current: "이번 기간",
   previous: "직전 기간",
@@ -139,7 +139,7 @@ export function levelText(level: number): string {
   return level.toFixed(2);
 }
 
-/** 기간 안에 추적을 더한 흐름의 표시 */
+/** 기간 안에 추적을 더한 스토리라인의 표시 */
 export const TRACKED_IN_PERIOD = "이번 기간에 추적 시작";
 
 /** 인용 목록의 이름 */
@@ -148,7 +148,7 @@ export const CITATIONS_TITLE = "이 섹션이 다룬 흐름 · 사건";
 /** 대표 기사를 찾지 못한 사건 — 링크 없음 */
 export const EVENT_UNTITLED = "대표 기사를 찾지 못한 사건";
 
-/** 인용한 흐름 · 사건이 사라져 숨긴 섹션 */
+/** 인용한 스토리라인 · 사건이 사라져 숨긴 섹션 */
 export function hiddenSectionsText(count: number): string {
   return `인용한 흐름 · 사건이 사라져 섹션 ${count}개를 숨겼습니다.`;
 }

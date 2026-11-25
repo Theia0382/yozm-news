@@ -18,7 +18,7 @@ public final class LinkingSchedule {
 	public static final int MAX_FAILURES = 5;
 
 	/**
-	 * 사건 하나를 점유한 동안 판정을 시도하는 수의 상한 — 시도마다 흐름 소속 판정을 한 번까지 묻는다(붙이기 묻기 · 짝 묻기 · 쓰기). 남으면
+	 * 사건 하나를 점유한 동안 판정을 시도하는 수의 상한 — 시도마다 스토리라인 소속 판정을 한 번까지 묻는다(붙이기 묻기 · 짝 묻기 · 쓰기). 남으면
 	 * 점유를 풀어 다음 회차가 잇는다
 	 */
 	public static final int MAX_ATTEMPTS_PER_CLAIM = 3;

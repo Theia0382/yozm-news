@@ -8,7 +8,7 @@ import net.yozmnews.article.ArticleId;
 /**
  * 판정 원본에 남은 물은 후보 하나 · docs/specs/evaluation.md §3 · evaluation-R38.
  *
- * @param eventId 판정 당시의 후보 사건 ID — {@code event} 의 사건을 가리키는 값이고 {@code evaluation} 은 그 뜻을 모른다
+ * @param eventId 판정 당시의 후보 사건 ID — 부르는 쪽({@code event})의 사건
  * @param describedArticles 질문에 쓴 서술 기사 — 요청 순서
  * @param probability 그 사건에 속할 확률
  */

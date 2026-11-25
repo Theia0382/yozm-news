@@ -38,8 +38,8 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * 독자 화면의 변화 리포트 — 종류 하나의 목록 · 한 편 · 실패한 리포트 다시 만들기 · 생성 조건. docs/specs/reader.md §3 · reader-R15 ~ reader-R17.
  * <p>
- * {@code report} 의 리포트 조회 · 다시 만들기를 세션 사용자로 부르고, 한 편의 인용 · 숫자 줄이 가리키는 흐름 · 사건에 {@code storyline} ·
- * {@code user} · {@code event} · {@code article} 의 공개 조회로 표시 이름을 붙인다({@link ReportFlows}). 비교 · 숨기기 · 풀기는
+ * {@code report} 의 리포트 조회 · 다시 만들기를 세션 사용자로 부르고, 한 편의 인용 · 숫자 줄이 가리키는 스토리라인 · 사건에 {@code storyline} ·
+ * {@code user} · {@code event} · {@code article} 의 공개 조회로 표시 이름을 붙인다({@link ReportNames}). 비교 · 숨기기 · 풀기는
  * {@code report} 가 한다. 모두 세션이 필요하고, 생성 조건 밖의 셋은 키 관문 뒤다(키 없이 여는 표시 · 요청 방어 표시가 없다). 세션 사용자의 것만 낸다 —
  * 다른 사용자의 리포트 ID 는 없는 것이다. 트랜잭션을 열지 않는다.
  */
@@ -54,13 +54,13 @@ class ReportScreenController {
 
 	private final ReportRequests requests;
 
-	private final ReportFlows flows;
+	private final ReportNames names;
 
 	ReportScreenController(ReportDirectory reports, ReportRequests requests, StorylineDirectory storylines,
 			UserStorylineSummaries summaries, EventDirectory events, ArticleDirectory articles) {
 		this.reports = Objects.requireNonNull(reports, "reports");
 		this.requests = Objects.requireNonNull(requests, "requests");
-		this.flows = new ReportFlows(storylines, new UserStorylineRefs(summaries),
+		this.names = new ReportNames(storylines, new UserStorylineRefs(summaries),
 				new StorylineTitles(events, new ScreenArticles(articles)));
 	}
 
@@ -100,7 +100,7 @@ class ReportScreenController {
 		for (ReportSectionView section : view.sections()) {
 			collect(section, storylines, events);
 		}
-		return ReportDetailResponse.of(view, this.flows.of(user, storylines, events));
+		return ReportDetailResponse.of(view, this.names.of(user, storylines, events));
 	}
 
 	/** 실패한 리포트 다시 만들기 — 판정 결과 200, 없거나 다른 사용자의 리포트면 404 */
@@ -129,12 +129,12 @@ class ReportScreenController {
 			return;
 		}
 		switch (section.stats()) {
-			case ReportSectionStats.Flows counts -> counts.flows().forEach(flow -> storylines.add(flow.storyline()));
+			case ReportSectionStats.UserStorylines counts -> counts.userStorylines().forEach(count -> storylines.add(count.storyline()));
 			case ReportSectionStats.Coverage coverage -> {
 				// 주제는 이름을 싣고 왔다
 			}
 			case ReportSectionStats.Interests interests ->
-				interests.flows().forEach(flow -> storylines.add(flow.storyline()));
+				interests.userStorylines().forEach(level -> storylines.add(level.storyline()));
 		}
 	}
 

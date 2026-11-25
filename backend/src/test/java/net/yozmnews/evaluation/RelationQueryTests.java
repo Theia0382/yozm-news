@@ -25,47 +25,47 @@ class RelationQueryTests {
 
 	@Test
 	void takesTenDescribedHappeningsAndThreeSummaries() {
-		FlowDescriptor flow = new FlowDescriptor(7, 40, START, END, described(10, 3));
+		StorylineDescriptor storyline = new StorylineDescriptor(7, 40, START, END, described(10, 3));
 
-		assertThat(flow.described()).hasSize(10);
-		assertThat(FlowDescriptor.MAX_DESCRIBED).isEqualTo(10);
-		assertThat(FlowDescriptor.MAX_SUMMARIZED).isEqualTo(3);
+		assertThat(storyline.described()).hasSize(10);
+		assertThat(StorylineDescriptor.MAX_DESCRIBED).isEqualTo(10);
+		assertThat(StorylineDescriptor.MAX_SUMMARIZED).isEqualTo(3);
 	}
 
 	@Test
-	void rejectsAFlowBeyondItsLimits() {
-		assertThatIllegalArgumentException().isThrownBy(() -> new FlowDescriptor(7, 40, START, END, described(11, 0)))
+	void rejectsAStorylineBeyondItsLimits() {
+		assertThatIllegalArgumentException().isThrownBy(() -> new StorylineDescriptor(7, 40, START, END, described(11, 0)))
 			.withMessage("서술 사건은 10개까지다: 11");
-		assertThatIllegalArgumentException().isThrownBy(() -> new FlowDescriptor(7, 40, START, END, described(5, 4)))
+		assertThatIllegalArgumentException().isThrownBy(() -> new StorylineDescriptor(7, 40, START, END, described(5, 4)))
 			.withMessage("요약문을 싣는 서술 사건은 3개까지다: 4");
-		assertThatIllegalArgumentException().isThrownBy(() -> new FlowDescriptor(7, 40, START, END, List.of()))
+		assertThatIllegalArgumentException().isThrownBy(() -> new StorylineDescriptor(7, 40, START, END, List.of()))
 			.withMessage("서술 사건이 없다");
-		assertThatIllegalArgumentException().isThrownBy(() -> new FlowDescriptor(0, 40, START, END, described(1, 0)))
-			.withMessage("흐름 ID 는 1 이상이다: 0");
-		assertThatIllegalArgumentException().isThrownBy(() -> new FlowDescriptor(7, 0, START, END, described(1, 0)))
-			.withMessage("흐름의 사건 수는 1 이상이다: 0");
-		assertThatIllegalArgumentException().isThrownBy(() -> new FlowDescriptor(7, 40, END, START, described(1, 0)))
+		assertThatIllegalArgumentException().isThrownBy(() -> new StorylineDescriptor(0, 40, START, END, described(1, 0)))
+			.withMessage("스토리라인 ID 는 1 이상이다: 0");
+		assertThatIllegalArgumentException().isThrownBy(() -> new StorylineDescriptor(7, 0, START, END, described(1, 0)))
+			.withMessage("스토리라인의 사건 수는 1 이상이다: 0");
+		assertThatIllegalArgumentException().isThrownBy(() -> new StorylineDescriptor(7, 40, END, START, described(1, 0)))
 			.withMessageStartingWith("첫 기사 시각이 마지막 기사 시각보다 늦다");
 		assertThatIllegalArgumentException()
-			.isThrownBy(() -> new FlowDescriptor(7, 40, START, END,
-					List.of(new FlowHappening(new ArticleId(3), START, false),
-							new FlowHappening(new ArticleId(3), END, false))))
+			.isThrownBy(() -> new StorylineDescriptor(7, 40, START, END,
+					List.of(new StorylineHappening(new ArticleId(3), START, false),
+							new StorylineHappening(new ArticleId(3), END, false))))
 			.withMessage("서술 기사가 겹친다: 3");
 	}
 
 	@Test
-	void aFlowOfOneInstantIsValid() {
-		assertThat(new FlowDescriptor(7, 1, START, START, described(1, 1)).firstAt()).isEqualTo(START);
+	void aStorylineOfOneInstantIsValid() {
+		assertThat(new StorylineDescriptor(7, 1, START, START, described(1, 1)).firstAt()).isEqualTo(START);
 	}
 
 	@Test
-	void rejectsTheSameFlowTwiceButTakesASharedArticle() {
-		FlowDescriptor seven = new FlowDescriptor(7, 3, START, END, described(2, 0));
+	void rejectsTheSameStorylineTwiceButTakesASharedArticle() {
+		StorylineDescriptor seven = new StorylineDescriptor(7, 3, START, END, described(2, 0));
 
 		assertThatIllegalArgumentException().isThrownBy(() -> new RelationQuery(seven, seven))
-			.withMessage("두 흐름 ID 가 같다: 7");
-		// 두 흐름이 함께 가진 사건의 대표 기사는 양쪽에 있어도 된다
-		assertThat(new RelationQuery(seven, new FlowDescriptor(8, 3, START, END, described(2, 0))).second().flowId())
+			.withMessage("두 스토리라인 ID 가 같다: 7");
+		// 두 스토리라인이 함께 가진 사건의 대표 기사는 양쪽에 있어도 된다
+		assertThat(new RelationQuery(seven, new StorylineDescriptor(8, 3, START, END, described(2, 0))).second().storylineId())
 			.isEqualTo(8);
 	}
 
@@ -98,10 +98,10 @@ class RelationQueryTests {
 				RelationAnswer.SECOND_LED_TO_FIRST);
 	}
 
-	private static List<FlowHappening> described(int count, int summarized) {
-		List<FlowHappening> described = new ArrayList<>();
+	private static List<StorylineHappening> described(int count, int summarized) {
+		List<StorylineHappening> described = new ArrayList<>();
 		for (int i = 0; i < count; i++) {
-			described.add(new FlowHappening(new ArticleId(100 + i), START.plusSeconds(i), i < summarized));
+			described.add(new StorylineHappening(new ArticleId(100 + i), START.plusSeconds(i), i < summarized));
 		}
 		return described;
 	}

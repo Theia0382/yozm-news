@@ -155,31 +155,31 @@ class InterestHistoryControllerTests {
 	}
 
 	/**
-	 * 정리된 사용자 스토리라인의 행 — 값과 생김은 그 헤드의 것이다(저장 헤드가 없는 이 행은 추적 대상 하나가 손잡이). 흐름의 사건 넷을 하루 전에 보이고
+	 * 정리된 사용자 스토리라인의 행 — 값과 생김은 그 헤드의 것이다(저장 헤드가 없는 이 행은 추적 대상 하나가 손잡이). 스토리라인의 사건 넷을 하루 전에 보이고
 	 * 좋아요를 눌러 지금 관심은 4w ÷ (4w + 3) ≈ 0.57(w ≈ 0.977)로 만들 기준 0.35 위다. 정리가 없는 사용자 스토리라인은 행이 없다
 	 */
 	@Test
 	void summarizedUserStorylinesHaveARowWithALevelCellForEachPeriodAndAppearWhenTheyReachTheThreshold() throws Exception {
 		long user = this.reader.id().value();
 		Instant shown = Instant.now().truncatedTo(ChronoUnit.HOURS).minus(Duration.ofDays(1));
-		long flow = UserStorylineFixtures.storyline(this.jdbc, shown);
-		long unsummarizedFlow = UserStorylineFixtures.storyline(this.jdbc, shown);
+		long storyline = UserStorylineFixtures.storyline(this.jdbc, shown);
+		long unsummarizedStoryline = UserStorylineFixtures.storyline(this.jdbc, shown);
 		long[] liked = new long[4];
 		for (int i = 0; i < liked.length; i++) {
 			liked[i] = this.rows.article("흐름 사건 " + i, "politics.executive");
-			link(flow, liked[i]);
+			link(storyline, liked[i]);
 		}
 		long other = this.rows.article("다른 흐름 사건", "politics.executive");
-		link(unsummarizedFlow, other);
+		link(unsummarizedStoryline, other);
 		this.rows.cite(user, shown, liked[0], liked[1], liked[2], liked[3], other);
 		for (long article : liked) {
 			this.rows.react(user, article, "LIKE", shown.plus(Duration.ofMinutes(5)));
 		}
 		this.rows.react(user, other, "LIKE", shown.plus(Duration.ofMinutes(5)));
 		UserStorylineSummaryRows summaries = new UserStorylineSummaryRows(this.jdbc);
-		long summarized = summaries.userStoryline(user, flow);
+		long summarized = summaries.userStoryline(user, storyline);
 		summaries.summarize(summarized, "정리된 흐름", shown);
-		summaries.userStoryline(user, unsummarizedFlow);
+		summaries.userStoryline(user, unsummarizedStoryline);
 
 		String body = this.mockMvc.perform(get("/api/interest-history").with(this.reader))
 			.andExpect(status().isOk())
@@ -200,7 +200,7 @@ class InterestHistoryControllerTests {
 	}
 
 	/**
-	 * 행의 값과 생김은 저장 헤드의 것이다 — 추적 대상 {before, flow} 에 헤드 flow 를 두면 가장 작은 꼭대기 before(신호 없음)가 아니라 flow 의 관심이
+	 * 행의 값과 생김은 저장 헤드의 것이다 — 추적 대상 {before, storyline} 에 헤드 storyline 을 두면 가장 작은 꼭대기 before(신호 없음)가 아니라 storyline 의 관심이
 	 * 행에 든다
 	 */
 	@Test
@@ -208,21 +208,21 @@ class InterestHistoryControllerTests {
 		long user = this.reader.id().value();
 		Instant shown = Instant.now().truncatedTo(ChronoUnit.HOURS).minus(Duration.ofDays(1));
 		long before = UserStorylineFixtures.storyline(this.jdbc, shown);
-		long flow = UserStorylineFixtures.storyline(this.jdbc, shown);
+		long storyline = UserStorylineFixtures.storyline(this.jdbc, shown);
 		long[] liked = new long[4];
 		for (int i = 0; i < liked.length; i++) {
 			liked[i] = this.rows.article("헤드 흐름 사건 " + i, "politics.executive");
-			link(flow, liked[i]);
+			link(storyline, liked[i]);
 		}
 		this.rows.cite(user, shown, liked[0], liked[1], liked[2], liked[3]);
 		for (long article : liked) {
 			this.rows.react(user, article, "LIKE", shown.plus(Duration.ofMinutes(5)));
 		}
 		UserStorylineSummaryRows summaries = new UserStorylineSummaryRows(this.jdbc);
-		long summarized = summaries.userStoryline(user, before, flow);
+		long summarized = summaries.userStoryline(user, before, storyline);
 		summaries.summarize(summarized, "헤드 흐름", shown);
 		this.jdbc.sql("update user_storylines set head = :head where id = :id")
-			.param("head", flow)
+			.param("head", storyline)
 			.param("id", summarized)
 			.update();
 

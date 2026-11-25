@@ -44,11 +44,11 @@ import { NARROW_WIDTH, PAGE_FRAME } from "@/shared/ui/widths";
 
 type Subscription = StorylineSubscriptions["subscriptions"][number];
 
-/** 추적 중인 흐름 하나와 그 헤드의 카드 — 카드가 없으면 그새 지워진 스토리라인이다 */
+/** 추적 중인 사용자 스토리라인 하나와 그 헤드의 카드 — 카드가 없으면 그새 지워진 스토리라인이다 */
 type Row = { subscription: Subscription; card: StorylineCard | undefined };
 
 /**
- * 그 흐름의 손잡이 — 헤드(추적 대상 가운데 뒤 흐름이 없는 꼭대기)는 그 흐름에만 든다. 갈라지기 전 흐름을 추적 씨앗으로 둔 갈래들도 줄마다
+ * 그 사용자 스토리라인의 손잡이 — 헤드(추적 대상 가운데 뒤 스토리라인이 없는 꼭대기)는 그 사용자 스토리라인에만 든다. 갈라지기 전 스토리라인을 추적 씨앗으로 둔 갈래들도 줄마다
  * 다른 카드를 보이고 해제는 그 갈래만 끈다
  */
 function headOf(subscription: Subscription): number {
@@ -89,7 +89,7 @@ function orderSubscriptions(
 }
 
 /**
- * 추적 중인 흐름 — 흐름(사용자 스토리라인)마다 한 줄로, 이어지는 것(진행 · 잠잠)과 끝난 것으로 나눠 고른 순서로 보이고 해제한다. 아래에
+ * 추적 중인 사용자 스토리라인 — 사용자 스토리라인마다 한 줄로, 이어지는 것(진행 · 잠잠)과 끝난 것으로 나눠 고른 순서로 보이고 해제한다. 아래에
  * 사용자가 직접 한 구독 · 해제의 기록을 최근부터 보인다(docs/specs/user.md user-R52 · user-R63). 제목은 정리가 있으면 정리의 제목이고
  * 없으면 헤드의 카드 제목이다. 상태는 응답의 값(추적 씨앗 가운데 가장 이어지는 것)이다
  */
@@ -252,7 +252,7 @@ function SubscribedItem({ row }: { row: Row }) {
           disabled={toggle.isPending}
           onClick={() => {
             setFailed(false);
-            // 헤드로 해제한다 — 헤드는 이 흐름에만 들어 다른 갈래의 추적은 그대로다
+            // 헤드로 해제한다 — 헤드는 이 사용자 스토리라인에만 들어 다른 갈래의 추적은 그대로다
             toggle.mutate(
               { storylineId: headOf(subscription), subscribe: false },
               { onError: () => setFailed(true) },

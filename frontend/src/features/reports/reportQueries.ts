@@ -12,8 +12,9 @@ export type ReportSummary = components["schemas"]["ReportSummaryResponse"];
 export type ReportDetail = components["schemas"]["ReportDetailResponse"];
 export type ReportSection = components["schemas"]["ReportSectionResponse"];
 export type ReportCitation = components["schemas"]["ReportCitationResponse"];
-export type ReportFlow = components["schemas"]["ReportFlowResponse"];
-export type ReportFlowCount = components["schemas"]["ReportFlowCountResponse"];
+export type ReportStoryline = components["schemas"]["ReportStorylineResponse"];
+export type ReportUserStorylineCount =
+  components["schemas"]["ReportUserStorylineCountResponse"];
 export type ReportTopicCount =
   components["schemas"]["ReportTopicCountResponse"];
 export type ReportInterests = components["schemas"]["ReportInterestsResponse"];

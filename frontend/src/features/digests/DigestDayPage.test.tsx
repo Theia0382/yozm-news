@@ -35,8 +35,8 @@ function renderDay(
   );
 }
 
-/** 주요 뉴스(흐름 7) · 헤드라인(흐름 8) · 흐름 없는 헤드라인 — 개요는 SECTIONS 의 것 */
-function flowSections(): DigestDay {
+/** 주요 뉴스(스토리라인 7) · 헤드라인(스토리라인 8) · 스토리라인 없는 헤드라인 — 개요는 SECTIONS 의 것 */
+function storylineSections(): DigestDay {
   return day({
     shown: shown({
       sections: [
@@ -138,7 +138,7 @@ describe("DigestDayPage", () => {
 
   it("흐름이 있는 항목에만 흐름 추적 버튼을 두고, 상태는 그 다이제스트의 흐름을 한 번에 물어 읽는다", async () => {
     const { server } = renderDay(
-      flowSections(),
+      storylineSections(),
       "2026-11-18",
       subscriptionHandlers([7], [7, 8]),
     );
@@ -153,7 +153,7 @@ describe("DigestDayPage", () => {
     });
     expect(untracked).toHaveAttribute("aria-pressed", "false");
     await waitFor(() => expect(untracked).toBeEnabled());
-    // 흐름 없는 항목 · 개요에는 없다
+    // 스토리라인 없는 항목 · 개요에는 없다
     expect(
       screen.queryByRole("button", {
         name: /^흐름 없는 헤드라인 (흐름 추적|추적 중)$/,
@@ -170,7 +170,7 @@ describe("DigestDayPage", () => {
       );
     expect(stateReads().map((r) => r.search)).toEqual(["?ids=7&ids=8"]);
 
-    // 항목에서 추적하면 그 흐름의 ID 로 보내고 상태를 다시 읽는다
+    // 항목에서 추적하면 그 스토리라인의 ID 로 보내고 상태를 다시 읽는다
     await userEvent.click(untracked);
     expect(
       await screen.findByRole("button", { name: "헤드라인 제목 추적 중" }),
@@ -184,9 +184,9 @@ describe("DigestDayPage", () => {
   });
 
   it("두 항목이 같은 흐름이면 한쪽에서 추적할 때 다른 쪽도 추적 중이 된다", async () => {
-    // 서버는 같은 사용자 스토리라인의 스토리라인을 함께 추적 중으로 답한다 — 7 과 8 이 한 흐름
+    // 서버는 같은 사용자 스토리라인의 스토리라인을 함께 추적 중으로 답한다 — 7 과 8 이 한 사용자 스토리라인
     let on = false;
-    renderDay(flowSections(), "2026-11-18", {
+    renderDay(storylineSections(), "2026-11-18", {
       "GET /api/storyline-subscriptions/states": (request) =>
         trackingStates(request, () => on),
       "PUT /api/storyline-subscriptions/8": () => {
@@ -210,7 +210,7 @@ describe("DigestDayPage", () => {
   });
 
   it("흐름 추적의 상한은 항목 안에 알리고 추적 중인 흐름으로 가는 링크를 둔다", async () => {
-    renderDay(flowSections(), "2026-11-18", {
+    renderDay(storylineSections(), "2026-11-18", {
       "GET /api/storyline-subscriptions/states": (request) =>
         trackingStates(request, () => false),
       "PUT /api/storyline-subscriptions/7": () =>
@@ -235,7 +235,7 @@ describe("DigestDayPage", () => {
   });
 
   it("추적 상태를 읽지 못하면 버튼을 누를 수 없고 그렇게 알린다", async () => {
-    renderDay(flowSections(), "2026-11-18", {
+    renderDay(storylineSections(), "2026-11-18", {
       "GET /api/storyline-subscriptions/states": () => problem(500, "오류"),
     });
 
@@ -302,13 +302,13 @@ describe("DigestDayPage", () => {
       level: 3,
       name: "정리된 흐름의 소식",
     });
-    const flow = screen.getByRole("link", { name: "의대 정원 갈등" });
-    expect(flow).toHaveAttribute("href", "/user-storylines/3");
+    const userStoryline = screen.getByRole("link", { name: "의대 정원 갈등" });
+    expect(userStoryline).toHaveAttribute("href", "/user-storylines/3");
     // 링크는 제목 요소 밖이다 — 낭독되는 제목 이름에 섞이지 않는다
-    expect(linked).not.toContainElement(flow);
-    expect(linked.parentElement).toContainElement(flow);
-    expect(flow.closest("p")).toHaveTextContent("흐름 의대 정원 갈등");
-    // 정리 없는 항목에는 흐름 줄이 없다 — 화면의 흐름 링크는 하나다
+    expect(linked).not.toContainElement(userStoryline);
+    expect(linked.parentElement).toContainElement(userStoryline);
+    expect(userStoryline.closest("p")).toHaveTextContent("흐름 의대 정원 갈등");
+    // 정리 없는 항목에는 사용자 스토리라인 줄이 없다 — 화면의 사용자 스토리라인 링크는 하나다
     const plain = screen.getByRole("heading", {
       level: 3,
       name: "정리 없는 소식",
@@ -350,22 +350,23 @@ describe("DigestDayPage", () => {
       level: 3,
       name: "갈라지기 전 흐름의 소식",
     });
-    const flows = screen
+    const userStorylineLinks = screen
       .getAllByRole("link")
       .filter((link) =>
         link.getAttribute("href")?.startsWith("/user-storylines/"),
       );
-    expect(flows.map((link) => link.textContent)).toEqual([
+    expect(userStorylineLinks.map((link) => link.textContent)).toEqual([
       "의대 정원 갈등",
       "전공의 복귀 협상",
     ]);
-    expect(flows.map((link) => link.getAttribute("href"))).toEqual([
-      "/user-storylines/3",
-      "/user-storylines/7",
-    ]);
+    expect(userStorylineLinks.map((link) => link.getAttribute("href"))).toEqual(
+      ["/user-storylines/3", "/user-storylines/7"],
+    );
     // 한 줄에 함께 둔다
-    expect(flows[0]!.closest("p")).toBe(flows[1]!.closest("p"));
-    expect(flows[0]!.closest("p")).toHaveTextContent(
+    expect(userStorylineLinks[0]!.closest("p")).toBe(
+      userStorylineLinks[1]!.closest("p"),
+    );
+    expect(userStorylineLinks[0]!.closest("p")).toHaveTextContent(
       "흐름 의대 정원 갈등 · 전공의 복귀 협상",
     );
   });
@@ -424,7 +425,7 @@ describe("DigestDayPage", () => {
     expect(
       screen.getByRole("link", { name: "기사 2" }).closest("li"),
     ).not.toHaveTextContent("큰 화제");
-    // 관심 반영은 주제 · 흐름 관심으로 앞선 소식과, 구독하지 않은 주제의 따라가는 흐름 소식을 함께 말한다
+    // 관심 반영은 주제 · 스토리라인 관심으로 앞선 소식과, 구독하지 않은 주제의 따라가는 스토리라인 소식을 함께 말한다
     expect(
       screen.getByText(
         /‘관심 반영’은 좋아요 · 구독 · 흐름 추적으로 관심이 높아진 주제나 흐름이라 앞 순위에 든 소식, 또는 추적하거나 관심이 높은 흐름의 소식이라 구독하지 않은 주제여도/,

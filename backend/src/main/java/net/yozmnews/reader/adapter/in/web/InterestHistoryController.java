@@ -73,34 +73,34 @@ class InterestHistoryController {
 		TagSetNames names = this.tagSets.names(timeline.get().tagSet());
 		Map<String, Integer> order = names.topicOrder();
 		List<InterestPeriodView> periods = timeline.get().periods();
-		// 흐름의 행은 지금 정리된 사용자 스토리라인이고, 값과 변화는 그 헤드의 것이다 — 헤드는 그 사용자 스토리라인에만 들어 값이 그 하나의 것이다
-		List<UserStorylineSummaryView> flows = this.summaries.shown(user);
+		// 사용자 스토리라인의 행은 지금 정리된 사용자 스토리라인이고, 값과 변화는 그 헤드의 것이다 — 헤드는 그 사용자 스토리라인에만 들어 값이 그 하나의 것이다
+		List<UserStorylineSummaryView> summarized = this.summaries.shown(user);
 		List<InterestPeriodResponse> periodResponses = periods.stream()
 			.map(period -> new InterestPeriodResponse(period.firstDay(), period.lastDay(), period.inProgress(),
 					ordered(period.point().entered(), order), ordered(period.point().left(), order),
 					period.point().subscriptionChanges().stream().map(step -> step(step, order)).toList(),
-					among(flows, period.point().storylineEntered()), among(flows, period.point().storylineLeft())))
+					among(summarized, period.point().storylineEntered()), among(summarized, period.point().storylineLeft())))
 			.toList();
 		Set<String> keys = new LinkedHashSet<>();
 		periods.forEach(period -> keys.addAll(period.point().levels().keySet()));
 		List<InterestTopicResponse> topics = ordered(keys, order).stream()
 			.map(key -> topic(key, names, periods, timeline.get().prominent().contains(key)))
 			.toList();
-		List<InterestUserStorylineResponse> userStorylines = flows.stream()
-			.map(flow -> new InterestUserStorylineResponse(flow.id().value(), flow.title(),
+		List<InterestUserStorylineResponse> userStorylines = summarized.stream()
+			.map(summary -> new InterestUserStorylineResponse(summary.id().value(), summary.title(),
 					periods.stream()
 						.map(period -> new InterestLevelResponse(
-								period.point().storylineLevels().get(flow.head())))
+								period.point().storylineLevels().get(summary.head())))
 						.toList()))
 			.toList();
 		return new InterestHistoryResponse(chosen, choices(), periodResponses, topics, userStorylines);
 	}
 
-	/** 헤드가 주어진 꼭대기에 드는 흐름의 ID — 흐름 행의 순서 */
-	private static List<Long> among(List<UserStorylineSummaryView> flows, Set<StorylineId> tops) {
-		return flows.stream()
-			.filter(flow -> tops.contains(flow.head()))
-			.map(flow -> flow.id().value())
+	/** 헤드가 주어진 꼭대기에 드는 사용자 스토리라인의 ID — 사용자 스토리라인 행의 순서 */
+	private static List<Long> among(List<UserStorylineSummaryView> summarized, Set<StorylineId> tops) {
+		return summarized.stream()
+			.filter(summary -> tops.contains(summary.head()))
+			.map(summary -> summary.id().value())
 			.toList();
 	}
 

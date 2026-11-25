@@ -33,7 +33,7 @@ class CandidateSelectorTests {
 	private static final Instant START = Instant.parse("2026-11-16T22:00:00Z");
 
 	@Test
-	void theWholeFlowPutsBigSlotEventsFirstAndDropsThemFromTheSubscribed() {
+	void theWholeStorylinePutsBigSlotEventsFirstAndDropsThemFromTheSubscribed() {
 		Facts.Builder politicsArticle = Facts.article(1).importance(4.0);
 		Facts.Builder marketsArticle = Facts.article(2).subtopics("economy.markets").importance(3.0);
 		Facts.Builder conflictArticle = Facts.article(3).subtopics("world.conflict").importance(5.0);
@@ -208,8 +208,8 @@ class CandidateSelectorTests {
 	@Test
 	void aFollowedEventIsAlwaysMarkedInterest() {
 		// 새 길 사건은 가중치가 1 이어도 INTEREST — 중립 결과에는 그 길이 없다
-		CandidateEvent flow = Facts.single(Facts.article(21).subtopics("world.conflict"));
-		Shortlist cut = new Shortlist(List.of(), List.of(Facts.single(Facts.article(1))), List.of(flow), List.of());
+		CandidateEvent followed = Facts.single(Facts.article(21).subtopics("world.conflict"));
+		Shortlist cut = new Shortlist(List.of(), List.of(Facts.single(Facts.article(1))), List.of(followed), List.of());
 		Shortlist neutralCut = new Shortlist(List.of(), List.of(Facts.single(Facts.article(1))), List.of(), List.of());
 
 		assertThat(CandidateSelector.candidates(cut, neutralCut, InterestWeights.NEUTRAL_ALL))

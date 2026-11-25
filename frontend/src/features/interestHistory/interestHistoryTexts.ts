@@ -75,14 +75,14 @@ export const ENTERED = "새로 생긴 관심";
 
 export const LEFT = "사라진 관심";
 
-/** 그 기간에 관심이 기준을 넘은 흐름 */
-export const ENTERED_FLOWS = "관심이 생긴 흐름";
+/** 그 기간에 관심이 기준을 넘은 사용자 스토리라인 */
+export const ENTERED_USER_STORYLINES = "관심이 생긴 흐름";
 
-/** 그 기간에 관심이 기준 아래로 내려간 흐름 */
-export const LEFT_FLOWS = "관심이 사라진 흐름";
+/** 그 기간에 관심이 기준 아래로 내려간 사용자 스토리라인 */
+export const LEFT_USER_STORYLINES = "관심이 사라진 흐름";
 
-/** 흐름 표의 이름 */
-export const FLOWS_TABLE = "흐름별 관심";
+/** 사용자 스토리라인 표의 이름 */
+export const USER_STORYLINES_TABLE = "흐름별 관심";
 
 /** 주제 표의 이름 */
 export const TOPICS_TABLE = "주제별 관심";

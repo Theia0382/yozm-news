@@ -12,8 +12,8 @@ import java.util.List;
  * @param entered 새로 생긴 관심 — 주제 중분류 키, 태그 체계 순
  * @param left 사라진 관심 — 주제 중분류 키, 태그 체계 순
  * @param subscriptionChanges 이 기간에 사용자가 직접 바꾼 주제 구독 — 시각 순
- * @param enteredUserStorylines 이 기간에 보이게 된 정리된 사용자 스토리라인 — ID, 흐름 행의 순서
- * @param leftUserStorylines 이 기간에 보이지 않게 된 정리된 사용자 스토리라인 — ID, 흐름 행의 순서
+ * @param enteredUserStorylines 이 기간에 보이게 된 정리된 사용자 스토리라인 — ID, 사용자 스토리라인 행의 순서
+ * @param leftUserStorylines 이 기간에 보이지 않게 된 정리된 사용자 스토리라인 — ID, 사용자 스토리라인 행의 순서
  */
 record InterestPeriodResponse(LocalDate firstDay, LocalDate lastDay, boolean inProgress, List<String> entered,
 		List<String> left, List<TopicSubscriptionStepResponse> subscriptionChanges, List<Long> enteredUserStorylines,

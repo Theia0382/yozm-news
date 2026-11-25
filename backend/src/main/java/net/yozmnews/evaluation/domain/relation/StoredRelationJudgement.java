@@ -10,11 +10,11 @@ import net.yozmnews.evaluation.RelationJudgementId;
  * <p>
  * 서술은 싣지 않는다 — 조회가 쓰지 않는다.
  *
- * @param firstFlowId 요청의 first 흐름
- * @param secondFlowId 요청의 second 흐름
+ * @param firstStorylineId 요청의 first 스토리라인
+ * @param secondStorylineId 요청의 second 스토리라인
  * @param rawResponse 평가기의 원본 응답 — {@code jsonb} 에서 꺼낸 JSON 텍스트(공백 · 키 순서는 원문과 다르다)
  */
-public record StoredRelationJudgement(RelationJudgementId id, long firstFlowId, long secondFlowId, String evaluator,
+public record StoredRelationJudgement(RelationJudgementId id, long firstStorylineId, long secondStorylineId, String evaluator,
 		String modelVersion, String wordingVersion, int inputTokens, String rawResponse, Instant judgedAt) {
 
 	public StoredRelationJudgement {

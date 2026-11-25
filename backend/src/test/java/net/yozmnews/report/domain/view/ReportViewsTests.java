@@ -29,7 +29,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * 조회의 풀기 · 숨기기 · 숫자 · 쪽 — 합친 것은 남는 것으로, 지운 것은 빼고, 인용을 모두 잃은 섹션 · 개요의 숨김과 그 수, 보이는 갈래
- * 섹션의 숫자와 흐름 줄의 풀기. 기대 숫자는 손으로 쓴 스냅숏 리터럴에서 손으로 옮긴 값이다.
+ * 섹션의 숫자와 사용자 스토리라인 줄의 풀기. 기대 숫자는 손으로 쓴 스냅숏 리터럴에서 손으로 옮긴 값이다.
  * <p>
  * 지키는 규칙: report-R11 · report-R12 · report-R25 · report-R26
  */
@@ -44,15 +44,15 @@ class ReportViewsTests {
 	private static final Map<StorylineId, StorylineId> STORYLINES = Map.of(new StorylineId(31), new StorylineId(31),
 			new StorylineId(32), new StorylineId(33));
 
-	/** 스냅숏 흐름 줄의 헤드: 31 은 그대로, 32 는 33 에 합쳐졌고, 33 은 그대로, 34 는 지웠다 */
+	/** 스냅숏 사용자 스토리라인 줄의 헤드: 31 은 그대로, 32 는 33 에 합쳐졌고, 33 은 그대로, 34 는 지웠다 */
 	private static final Map<StorylineId, StorylineId> HEADS = Map.of(new StorylineId(31), new StorylineId(31),
 			new StorylineId(32), new StorylineId(33), new StorylineId(33), new StorylineId(33));
 
 	/** 갈래 셋이 있는 스냅숏 — 손으로 쓴 꼴(report-R19) */
 	private static final String SNAPSHOT = """
-			{"version":1,"tagSet":5,
+			{"version":2,"tagSet":5,
 			 "period":{"kind":"WEEK","start":"2026-11-16T00:00:00Z","end":"2026-11-23T00:00:00Z"},
-			 "storylines":{"basis":"PUBLISHED","flows":[
+			 "storylines":{"basis":"PUBLISHED","userStorylines":[
 			   {"head":31,"tops":[31],"articles":12,"previous":7,"trend":"ROSE","trackedInPeriod":false},
 			   {"head":32,"tops":[32],"articles":5,"previous":null,"trend":"NO_COMPARISON","trackedInPeriod":true},
 			   {"head":33,"tops":[33],"articles":9,"previous":9,"trend":"STEADY","trackedInPeriod":false},
@@ -61,7 +61,7 @@ class ReportViewsTests {
 			   {"key":"economy.finance","name":"금융","articles":40,"previous":12,"trend":"ROSE"}]},
 			 "interests":{
 			   "topics":[{"key":"economy.finance","name":"금융","start":0.42,"end":null,"shift":"LEFT"}],
-			   "flows":[{"head":34,"start":null,"end":0.3,"shift":"ENTERED"},
+			   "userStorylines":[{"head":34,"start":null,"end":0.3,"shift":"ENTERED"},
 			            {"head":32,"start":0.2,"end":0.6,"shift":"NONE"}]}}""";
 
 	@Test
@@ -151,9 +151,9 @@ class ReportViewsTests {
 		assertThat(view.sections()).containsExactly(
 				new ReportSectionView(ReportSectionKind.OVERVIEW, null, "개요", List.of(), null),
 				new ReportSectionView(ReportSectionKind.STORYLINES, "흐름", "본문 하나", List.of(storyline(33)),
-						new ReportSectionStats.Flows(List.of(
-								new ReportSectionStats.FlowCount(new StorylineId(31), 12, 7L, ReportTrend.ROSE, false),
-								new ReportSectionStats.FlowCount(new StorylineId(33), 5, null, ReportTrend.NO_COMPARISON,
+						new ReportSectionStats.UserStorylines(List.of(
+								new ReportSectionStats.UserStorylineCount(new StorylineId(31), 12, 7L, ReportTrend.ROSE, false),
+								new ReportSectionStats.UserStorylineCount(new StorylineId(33), 5, null, ReportTrend.NO_COMPARISON,
 										true)))),
 				new ReportSectionView(ReportSectionKind.COVERAGE, "보도량", "본문 둘", List.of(),
 						new ReportSectionStats.Coverage(
@@ -161,21 +161,21 @@ class ReportViewsTests {
 	}
 
 	@Test
-	void aVisibleInterestsSectionHasTopicLinesAndTheFlowLinesThatStillExist() {
+	void aVisibleInterestsSectionHasTopicLinesAndTheUserStorylineLinesThatStillExist() {
 		ReportView view = render(row(1, ReportStatus.READY, SNAPSHOT), List.of(OVERVIEW,
 				new StoredSection(ReportSectionKind.INTERESTS, "관심", "본문", List.of(storyline(31)))), EVENTS, HEADS);
 
 		assertThat(view.hiddenSections()).isZero();
 		assertThat(view.sections().get(1).stats()).isEqualTo(new ReportSectionStats.Interests(
 				List.of(new ReportSectionStats.TopicLevel("금융", 0.42, null, InterestShift.LEFT)),
-				List.of(new ReportSectionStats.FlowLevel(new StorylineId(33), 0.2, 0.6, InterestShift.NONE))));
+				List.of(new ReportSectionStats.UserStorylineLevel(new StorylineId(33), 0.2, 0.6, InterestShift.NONE))));
 	}
 
 	@Test
 	void aSectionWhoseKindIsMissingFromTheSnapshotOrAnUnreadableSnapshotHasNoNumbers() {
 		String withoutCoverage = """
-				{"version":1,"tagSet":5,"period":{"kind":"WEEK","start":"2026-11-16T00:00:00Z","end":"2026-11-23T00:00:00Z"}}""";
-		String unknownVersion = SNAPSHOT.replace("\"version\":1", "\"version\":2");
+				{"version":2,"tagSet":5,"period":{"kind":"WEEK","start":"2026-11-16T00:00:00Z","end":"2026-11-23T00:00:00Z"}}""";
+		String unknownVersion = SNAPSHOT.replace("\"version\":2", "\"version\":3");
 		List<StoredSection> stored = List.of(OVERVIEW,
 				new StoredSection(ReportSectionKind.COVERAGE, "보도량", "본문", List.of()),
 				new StoredSection(ReportSectionKind.STORYLINES, "흐름", "본문", List.of(storyline(31))));
@@ -188,7 +188,7 @@ class ReportViewsTests {
 	}
 
 	@Test
-	void snapshotHeadsAreTheFlowHeadsOfAReadyReport() {
+	void snapshotHeadsAreTheUserStorylineHeadsOfAReadyReport() {
 		assertThat(ReportViews.snapshotHeads(ReportViews.snapshotOf(row(1, ReportStatus.READY, SNAPSHOT)))).containsExactlyInAnyOrder(
 				new StorylineId(31), new StorylineId(32), new StorylineId(33), new StorylineId(34));
 		assertThat(ReportViews.snapshotHeads(ReportViews.snapshotOf(row(1, ReportStatus.FAILED, SNAPSHOT)))).isEmpty();

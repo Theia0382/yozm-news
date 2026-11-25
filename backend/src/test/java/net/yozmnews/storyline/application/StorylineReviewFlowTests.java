@@ -9,8 +9,8 @@ import java.util.List;
 import java.util.Map;
 
 import net.yozmnews.TestcontainersConfiguration;
-import net.yozmnews.evaluation.FlowMembershipJudgementId;
 import net.yozmnews.evaluation.RelationJudgementId;
+import net.yozmnews.evaluation.StorylineMembershipJudgementId;
 import net.yozmnews.event.EventId;
 import net.yozmnews.storyline.LinkScore;
 import net.yozmnews.storyline.LinkedBy;
@@ -18,7 +18,7 @@ import net.yozmnews.storyline.MergedStoryline;
 import net.yozmnews.storyline.RelationOutcome;
 import net.yozmnews.storyline.StorylineId;
 import net.yozmnews.storyline.StorylineLinkingCriteria;
-import net.yozmnews.storyline.StorylineMembership;
+import net.yozmnews.storyline.StorylineMembershipView;
 import net.yozmnews.storyline.StorylineRelationAsked;
 import net.yozmnews.storyline.StorylineRelationCriteria;
 import net.yozmnews.storyline.StorylineRelationDetail;
@@ -134,7 +134,7 @@ class StorylineReviewFlowTests {
 		this.memberships.addMember(this.parent, this.e3, LinkJudgement.merged(LINKED_AT.plusSeconds(60)));
 		this.memberships.addMember(this.child, this.e2,
 				LinkJudgement.judged(LinkedBy.PAIR, new Score(0.7, 0.66, 0.2), oldLinkingId, null, LINKED_AT));
-		// 띠 안에서 흐름 소속 판정의 확률로 붙은 소속
+		// 띠 안에서 스토리라인 소속 판정의 확률로 붙은 소속
 		this.memberships.addMember(this.child, this.e3, LinkJudgement.judged(LinkedBy.RULE,
 				new Score(0.9, 0.88, 0.5), linkingId, new Asked(0.71, 77L), LINKED_AT));
 		// 포함 parent ⊃ child, 이어짐 parent → follower
@@ -156,21 +156,21 @@ class StorylineReviewFlowTests {
 
 	@Test
 	void membershipsCoverTheStorylineAndItsDescendantsWithTheirJudgements() {
-		List<StorylineMembership> expected = List.of(
-				new StorylineMembership(new StorylineId(this.parent), new EventId(this.e1), LinkedBy.RULE,
+		List<StorylineMembershipView> expected = List.of(
+				new StorylineMembershipView(new StorylineId(this.parent), new EventId(this.e1), LinkedBy.RULE,
 						new LinkScore(0.81, 0.77, 0.4), LINKING_VIEW, null, null, LINKED_AT, null),
-				new StorylineMembership(new StorylineId(this.parent), new EventId(this.e3), LinkedBy.MERGE, null, null,
+				new StorylineMembershipView(new StorylineId(this.parent), new EventId(this.e3), LinkedBy.MERGE, null, null,
 						null, null, LINKED_AT.plusSeconds(60), null),
-				new StorylineMembership(new StorylineId(this.child), new EventId(this.e2), LinkedBy.PAIR,
+				new StorylineMembershipView(new StorylineId(this.child), new EventId(this.e2), LinkedBy.PAIR,
 						new LinkScore(0.7, 0.66, 0.2), OLD_LINKING_VIEW, null, null, LINKED_AT, null),
-				new StorylineMembership(new StorylineId(this.child), new EventId(this.e3), LinkedBy.RULE,
-						new LinkScore(0.9, 0.88, 0.5), LINKING_VIEW, 0.71, new FlowMembershipJudgementId(77), LINKED_AT, null));
+				new StorylineMembershipView(new StorylineId(this.child), new EventId(this.e3), LinkedBy.RULE,
+						new LinkScore(0.9, 0.88, 0.5), LINKING_VIEW, 0.71, new StorylineMembershipJudgementId(77), LINKED_AT, null));
 
 		assertThat(this.review.memberships(new StorylineId(this.parent))).isEqualTo(expected);
 		// 합쳐진 ID 는 남는 쪽을 따른다
 		assertThat(this.review.memberships(new StorylineId(this.merged))).isEqualTo(expected);
 		// 하위는 자기 소속만 — 상위의 소속은 들지 않는다
-		assertThat(this.review.memberships(new StorylineId(this.child))).extracting(StorylineMembership::storyline)
+		assertThat(this.review.memberships(new StorylineId(this.child))).extracting(StorylineMembershipView::storyline)
 			.containsOnly(new StorylineId(this.child));
 	}
 

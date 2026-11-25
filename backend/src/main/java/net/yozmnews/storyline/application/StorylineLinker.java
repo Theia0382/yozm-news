@@ -15,7 +15,7 @@ import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 import net.yozmnews.article.ArticleId;
-import net.yozmnews.evaluation.FlowMembershipJudgementId;
+import net.yozmnews.evaluation.StorylineMembershipJudgementId;
 import net.yozmnews.event.EventDirectory;
 import net.yozmnews.event.EventId;
 import net.yozmnews.event.EventKeyTerm;
@@ -127,7 +127,7 @@ class StorylineLinker {
 	 * @param judgement 판정 원본 — 확률이 있으면 있다
 	 * @param probabilities 답 — 후보 ID → 확률. 입력 거부 · 물을 서술이 없음이면 비었다
 	 */
-	void record(LinkingOutcome.Ask ask, @Nullable FlowMembershipJudgementId judgement,
+	void record(LinkingOutcome.Ask ask, @Nullable StorylineMembershipJudgementId judgement,
 			Map<Long, Double> probabilities, Instant now) {
 		this.storylines.lockLinking();
 		long eventId = ask.eventId();
@@ -136,19 +136,20 @@ class StorylineLinker {
 			return;
 		}
 		Set<Long> alive = switch (ask.target()) {
-			case LINK -> this.storylines.members(ask.flows().stream().map(LinkingOutcome.AskedFlow::flowId).toList())
+			case LINK -> this.storylines
+				.members(ask.candidates().stream().map(LinkingOutcome.AskedCandidate::candidateId).toList())
 				.keySet();
-			case PAIR -> ask.flows().stream().map(LinkingOutcome.AskedFlow::flowId).collect(Collectors.toSet());
+			case PAIR -> ask.candidates().stream().map(LinkingOutcome.AskedCandidate::candidateId).collect(Collectors.toSet());
 		};
 		Map<Long, AskedRecord> records = new TreeMap<>();
-		for (LinkingOutcome.AskedFlow flow : ask.flows()) {
-			if (!alive.contains(flow.flowId())) {
+		for (LinkingOutcome.AskedCandidate candidate : ask.candidates()) {
+			if (!alive.contains(candidate.candidateId())) {
 				continue;
 			}
-			Double probability = probabilities.get(flow.flowId());
+			Double probability = probabilities.get(candidate.candidateId());
 			Asked answer = (probability == null || judgement == null) ? Asked.UNANSWERED
 					: new Asked(probability, judgement.value());
-			records.put(flow.flowId(), new AskedRecord(answer, ask.eventArticles(), flow.size()));
+			records.put(candidate.candidateId(), new AskedRecord(answer, ask.eventArticles(), candidate.size()));
 		}
 		Runnable recordAsked = switch (ask.target()) {
 			case LINK -> () -> this.asked.recordLink(eventId, records, now);
@@ -371,7 +372,7 @@ class StorylineLinker {
 			describedEvents.addAll(chosen);
 		}
 		Map<EventId, ArticleId> representatives = this.events.representativesOfAll(ids(describedEvents));
-		List<LinkingOutcome.AskedFlow> flows = new ArrayList<>();
+		List<LinkingOutcome.AskedCandidate> candidates = new ArrayList<>();
 		for (Scored one : band) {
 			List<ArticleId> articles = described.get(one.id())
 				.stream()
@@ -379,11 +380,11 @@ class StorylineLinker {
 				.filter(found -> found != null)
 				.distinct()
 				.toList();
-			flows.add(new LinkingOutcome.AskedFlow(one.id(), articles,
+			candidates.add(new LinkingOutcome.AskedCandidate(one.id(), articles,
 					Math.max(1, bandMembers.getOrDefault(one.id(), List.of()).size())));
 		}
 		return Optional.of(new LinkingOutcome.Ask(LinkingOutcome.Target.LINK, profile.id().value(), article.get(),
-				profile.articleCount(), flows));
+				profile.articleCount(), candidates));
 	}
 
 	/** 짝 띠의 물을 것 — 후보마다 그 이웃 사건의 대표 기사 하나 */
@@ -396,14 +397,14 @@ class StorylineLinker {
 		near.forEach(neighbour -> sizes.put(neighbour.id().value(), neighbour.articleCount()));
 		Map<EventId, ArticleId> representatives = this.events
 			.representativesOfAll(band.stream().map(one -> new EventId(one.id())).toList());
-		List<LinkingOutcome.AskedFlow> flows = new ArrayList<>();
+		List<LinkingOutcome.AskedCandidate> candidates = new ArrayList<>();
 		for (Scored one : band) {
 			ArticleId found = representatives.get(new EventId(one.id()));
-			flows.add(new LinkingOutcome.AskedFlow(one.id(), (found == null) ? List.of() : List.of(found),
+			candidates.add(new LinkingOutcome.AskedCandidate(one.id(), (found == null) ? List.of() : List.of(found),
 					Math.max(1, sizes.getOrDefault(one.id(), 1))));
 		}
 		return Optional.of(new LinkingOutcome.Ask(LinkingOutcome.Target.PAIR, profile.id().value(), article.get(),
-				profile.articleCount(), flows));
+				profile.articleCount(), candidates));
 	}
 
 	private Optional<ArticleId> representative(EventId event) {

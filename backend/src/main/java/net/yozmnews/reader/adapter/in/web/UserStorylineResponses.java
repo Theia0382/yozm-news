@@ -38,11 +38,11 @@ final class UserStorylineResponses {
 	 * 목록의 한 줄.
 	 *
 	 * @param id 사용자 스토리라인 ID
-	 * @param title 흐름 전체의 제목
+	 * @param title 사용자 스토리라인 전체의 제목
 	 * @param summary 흐름 요약
 	 * @param recent 최근 전개
 	 * @param tracked 추적 중인가
-	 * @param storylineId 흐름 추적 버튼이 누를 스토리라인 — 헤드(추적 대상 가운데 뒤 흐름이 없는 꼭대기, 이 사용자 스토리라인에만 든다)
+	 * @param storylineId 흐름 추적 버튼이 누를 스토리라인 — 헤드(추적 대상 가운데 뒤 스토리라인이 없는 꼭대기, 이 사용자 스토리라인에만 든다)
 	 * @param topCount 추적 대상 꼭대기 수
 	 * @param updatedAt 마지막으로 정리한 시각
 	 */
@@ -60,11 +60,11 @@ final class UserStorylineResponses {
 	 * 정리된 사용자 스토리라인 하나.
 	 *
 	 * @param id 사용자 스토리라인 ID
-	 * @param title 흐름 전체의 제목
+	 * @param title 사용자 스토리라인 전체의 제목
 	 * @param summary 흐름 요약
 	 * @param recent 최근 전개
 	 * @param tracked 추적 중인가
-	 * @param storylineId 흐름 추적 버튼이 누를 스토리라인 — 헤드(추적 대상 가운데 뒤 흐름이 없는 꼭대기, 이 사용자 스토리라인에만 든다)
+	 * @param storylineId 흐름 추적 버튼이 누를 스토리라인 — 헤드(추적 대상 가운데 뒤 스토리라인이 없는 꼭대기, 이 사용자 스토리라인에만 든다)
 	 * @param tops 추적 대상 꼭대기 — 스토리라인 ID 순. 그새 없어진 스토리라인은 빠진다
 	 * @param usage 정리에 쓴 모델과 토큰
 	 * @param createdAt 처음 정리한 시각
@@ -126,7 +126,7 @@ final class UserStorylineResponses {
 	}
 
 	/**
-	 * 그 흐름에 묶인 지난 다이제스트 항목 한 쪽.
+	 * 그 사용자 스토리라인에 묶인 지난 다이제스트 항목 한 쪽.
 	 *
 	 * @param items 날짜 내림차순, 같은 날짜면 섹션 위치 내림차순
 	 * @param next 다음 쪽 커서 — 더 없으면 null
@@ -164,7 +164,7 @@ final class UserStorylineResponses {
 	 * 다이제스트 항목 · 관심사 히스토리가 가리키는 정리된 사용자 스토리라인.
 	 *
 	 * @param id 사용자 스토리라인 ID
-	 * @param title 흐름 전체의 제목
+	 * @param title 사용자 스토리라인 전체의 제목
 	 */
 	record RefResponse(long id, String title) {
 

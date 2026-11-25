@@ -17,7 +17,7 @@ public interface StorylineSubscriptionDirectory {
 
 	/**
 	 * 지금 추적하는 스토리라인 — 추적 중인 사용자 스토리라인의 추적 씨앗(사용자가 누른 스토리라인)을 남는 스토리라인 ID 로 풀고 같은 것은
-	 * 하나로, 사라진 것은 빼고, ID 순. 그 흐름이 이어짐으로 따라가는 뒤 흐름은 들지 않는다 — 그것은 {@link UserStorylineDirectory} 가
+	 * 하나로, 사라진 것은 빼고, ID 순. 그 스토리라인이 이어짐으로 따라가는 뒤 스토리라인은 들지 않는다 — 그것은 {@link UserStorylineDirectory} 가
 	 * 낸다
 	 */
 	List<StorylineId> subscriptions(UserId user);

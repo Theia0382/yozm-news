@@ -6,7 +6,7 @@ import java.util.Objects;
 import net.yozmnews.evaluation.RelationAnswer;
 
 /**
- * 관계를 판정했다 — 답마다 확률과 흐름마다 한 사안일 확률 · docs/specs/evaluation.md §4.
+ * 관계를 판정했다 — 답마다 확률과 스토리라인마다 한 사안일 확률 · docs/specs/evaluation.md §4.
  * <p>
  * 생성자는 값 하나하나만 검사한다. 문구 판의 답이 모두 있는지는 부르는 쪽이 본다.
  *

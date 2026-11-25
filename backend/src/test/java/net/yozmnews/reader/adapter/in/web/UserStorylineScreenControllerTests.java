@@ -30,7 +30,7 @@ import org.springframework.test.json.JsonCompareMode;
 import org.springframework.test.web.servlet.MockMvc;
 
 /**
- * 독자 화면의 정리된 사용자 스토리라인 — 목록(정리가 있는 것만 · 마지막 정리 순), 하나(흐름 전체의 글 · 꼭대기마다의 글과 상태 · 사용량), 그 흐름에
+ * 독자 화면의 정리된 사용자 스토리라인 — 목록(정리가 있는 것만 · 마지막 정리 순), 하나(사용자 스토리라인 전체의 글 · 꼭대기마다의 글과 상태 · 사용량), 그 사용자 스토리라인에
  * 묶인 지난 다이제스트 항목(쪽 · 커서), 없는 ID 의 404 와 틀린 커서의 400.
  * <p>
  * 실제 PostgreSQL 위에서 행을 SQL 로 넣는다 — 정리 작업 · 생성기는 돌지 않는다.
@@ -183,16 +183,16 @@ class UserStorylineScreenControllerTests {
 	}
 
 	@Test
-	void theItemsOfAFlowComeInPagesOfTwentyLatestFirst() throws Exception {
+	void theItemsOfAUserStorylineComeInPagesOfTwentyLatestFirst() throws Exception {
 		long user = this.reader.id().value();
-		long flow = UserStorylineFixtures.storyline(this.jdbc, AT);
-		long id = this.rows.userStoryline(user, flow);
+		long storyline = UserStorylineFixtures.storyline(this.jdbc, AT);
+		long id = this.rows.userStoryline(user, storyline);
 		this.rows.summarize(id, "전체", AT);
 		long earlier = this.digests.digest(user, "2026-11-04", "READY", 1, 1, null);
-		item(earlier, "TOP_STORY", 1, "4일 주요", flow);
+		item(earlier, "TOP_STORY", 1, "4일 주요", storyline);
 		long later = this.digests.digest(user, "2026-11-05", "READY", 1, 1, null);
 		for (int position = 1; position <= 20; position++) {
-			item(later, "HEADLINE", position, "5일 " + position, flow);
+			item(later, "HEADLINE", position, "5일 " + position, storyline);
 		}
 		long other = UserStorylineFixtures.storyline(this.jdbc, AT);
 		item(later, "HEADLINE", 21, "다른 흐름", other);
@@ -216,7 +216,7 @@ class UserStorylineScreenControllerTests {
 	}
 
 	@Test
-	void aFlowWithoutItemsHasAnEmptyPage() throws Exception {
+	void aUserStorylineWithoutItemsHasAnEmptyPage() throws Exception {
 		long id = this.rows.userStoryline(this.reader.id().value(), 11);
 		this.rows.summarize(id, "전체", AT);
 
@@ -246,12 +246,12 @@ class UserStorylineScreenControllerTests {
 			.andExpect(status().isBadRequest());
 	}
 
-	/** 그 흐름이 묶은 항목 섹션 하나 */
-	private void item(long digest, String kind, int position, String title, long flow) {
+	/** 그 스토리라인이 묶은 항목 섹션 하나 */
+	private void item(long digest, String kind, int position, String title, long storyline) {
 		long section = this.digests.section(digest, kind, position, title, null);
 		this.digests.sectionEvent(section, 0, 1_000 + position, "SUBSCRIBED");
-		this.jdbc.sql("update digest_sections set storyline_id = :flow where id = :id")
-			.param("flow", flow)
+		this.jdbc.sql("update digest_sections set storyline_id = :storyline where id = :id")
+			.param("storyline", storyline)
 			.param("id", section)
 			.update();
 	}

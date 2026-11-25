@@ -10,12 +10,12 @@ import net.yozmnews.user.domain.userstoryline.UserStorylineGroups.Group;
 import org.junit.jupiter.api.Test;
 
 /**
- * 갈라지는 흐름의 묶음 — 갈래마다 묶음이고 갈라지기 전 꼭대기는 갈래 모두에 든다(docs/specs/user.md §5). 묶음의 추적 대상과 씨앗만 본다.
+ * 갈라지는 스토리라인의 묶음 — 갈래마다 묶음이고 갈라지기 전 꼭대기는 갈래 모두에 든다(docs/specs/user.md §5). 묶음의 추적 대상과 씨앗만 본다.
  */
 class UserStorylineGroupsBranchTests {
 
 	@Test
-	void eachHeadOfAMemberUsersFlowIsItsOwnGroup() {
+	void eachHeadOfAMemberUsersStorylineIsItsOwnGroup() {
 		// 측정 사용자 u1 의 관계: 5 → 82 · 5 → 307 · 5 → 49 · 5 → 423 · 49 → 423, 씨앗 5 · 82 · 49
 		Map<Long, Set<Long>> continuations = Map.of(5L, Set.of(82L, 307L, 49L, 423L), 49L, Set.of(423L), 82L, Set.of(),
 				307L, Set.of(), 423L, Set.of());

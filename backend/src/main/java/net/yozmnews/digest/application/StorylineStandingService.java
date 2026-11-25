@@ -14,8 +14,8 @@ import net.yozmnews.user.UserTimezones;
 import org.springframework.stereotype.Service;
 
 /**
- * {@code user} 가 선언한 {@link StorylineStandingNow} 의 구현 — 지금의 스토리라인 관심({@link CurrentInterests})에서 관심 흐름과 남길
- * 흐름의 꼭대기를 낸다. 판정과 기준은 {@link StorylineLevels} 의 것 그대로다. docs/specs/digest.md §4
+ * {@code user} 가 선언한 {@link StorylineStandingNow} 의 구현 — 지금의 스토리라인 관심({@link CurrentInterests})에서 관심 스토리라인과 남길
+ * 스토리라인의 꼭대기를 낸다. 판정과 기준은 {@link StorylineLevels} 의 것 그대로다. docs/specs/digest.md §4
  * <p>
  * 트랜잭션 없이 조회를 차례로 부른다. 재료의 태그 체계 활성 버전이 어긋나면 처음부터 다시 한다.
  */
@@ -53,7 +53,7 @@ class StorylineStandingService implements StorylineStandingNow {
 			}
 		}
 		throw new IllegalStateException(
-				"흐름 판정 재료의 태그 체계 활성 버전이 " + ActiveEvaluations.ATTEMPTS + " 번 어긋났다");
+				"스토리라인 판정 재료의 태그 체계 활성 버전이 " + ActiveEvaluations.ATTEMPTS + " 번 어긋났다");
 	}
 
 }

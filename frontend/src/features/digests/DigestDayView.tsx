@@ -33,7 +33,7 @@ import {
   sectionHeadings,
   selectionReasonLabels,
   shownUsageText,
-  ITEM_FLOW,
+  ITEM_USER_STORYLINE,
 } from "@/features/digests/digestTexts";
 import { SubscribeButton } from "@/features/storylines/SubscribeButton";
 import {
@@ -49,8 +49,8 @@ import { formatDateTime } from "@/shared/lib/dateTime";
 /**
  * 날짜 하나의 다이제스트 — 가장 최근 시도의 상태 · 보이는 다이제스트의 섹션 · 사용량(docs/specs/reader.md reader-R9). 링크 · 출처 · 발행 시각은
  * 응답의 기사 정보로만 그리고, 종합문은 글자로만 그린다(HTML 로 해석하지 않는다). 주요 뉴스 · 헤드라인 항목마다 배지 하나 · 좋아요 /
- * 싫어요 한 벌 · 출처 기사 목록을 두고, 항목에 누른 값은 다이제스트마다 한 번 읽는다(docs/specs/feedback.md feedback-R7). 흐름이 있는
- * 항목에는 흐름 추적 버튼을 두고, 추적 상태는 그 다이제스트의 흐름 전부를 한 번에 읽는다(docs/specs/user.md user-R52).
+ * 싫어요 한 벌 · 출처 기사 목록을 두고, 항목에 누른 값은 다이제스트마다 한 번 읽는다(docs/specs/feedback.md feedback-R7). 스토리라인이 있는
+ * 항목에는 흐름 추적 버튼을 두고, 추적 상태는 그 다이제스트의 스토리라인 전부를 한 번에 읽는다(docs/specs/user.md user-R52).
  */
 export function DigestDayView({ day }: { day: DigestDay }) {
   const { shown, latest, usage } = day;
@@ -279,8 +279,8 @@ function Headline({
 }
 
 /**
- * 항목 머리 — 제목(선정 이유 배지 포함)과 그 항목의 흐름 추적 버튼(항목을 묶은 흐름이 있을 때) · 좋아요 / 싫어요 한 벌. 항목을 묶은 흐름이
- * 정리돼 있으면 제목 아래에 그 정리의 제목을 개인 흐름 화면 링크로 둔다. 버튼과 흐름 링크는 제목 요소 밖에 두어 낭독되는 제목 이름에 섞이지
+ * 항목 머리 — 제목(선정 이유 배지 포함)과 그 항목의 흐름 추적 버튼(항목을 묶은 스토리라인이 있을 때) · 좋아요 / 싫어요 한 벌. 항목을 묶은 스토리라인이
+ * 정리돼 있으면 제목 아래에 그 정리의 제목을 개인 흐름 화면 링크로 둔다. 버튼과 사용자 스토리라인 링크는 제목 요소 밖에 두어 낭독되는 제목 이름에 섞이지
  * 않는다. 좁은 화면에서는 버튼 묶음이 제목 아래로 내려간다
  */
 function ItemHead({
@@ -306,15 +306,15 @@ function ItemHead({
         </h3>
         {section.userStorylines.length > 0 && (
           <p className="text-sm text-muted-foreground">
-            {ITEM_FLOW}{" "}
-            {section.userStorylines.map((flow, index) => (
-              <span key={flow.id}>
+            {ITEM_USER_STORYLINE}{" "}
+            {section.userStorylines.map((userStoryline, index) => (
+              <span key={userStoryline.id}>
                 {index > 0 && " · "}
                 <Link
-                  to={userStorylinePath(flow.id)}
+                  to={userStorylinePath(userStoryline.id)}
                   className="break-words underline"
                 >
-                  {flow.title}
+                  {userStoryline.title}
                 </Link>
               </span>
             ))}

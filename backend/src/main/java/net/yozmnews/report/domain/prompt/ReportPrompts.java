@@ -23,12 +23,9 @@ import net.yozmnews.report.ReportSectionKind;
 import net.yozmnews.report.ReportTrend;
 import net.yozmnews.report.domain.alias.AliasedSection;
 import net.yozmnews.report.domain.alias.ReportAliases;
-import net.yozmnews.report.domain.input.CoverageSection;
 import net.yozmnews.report.domain.input.Count;
+import net.yozmnews.report.domain.input.CoverageSection;
 import net.yozmnews.report.domain.input.EventLine;
-import net.yozmnews.report.domain.input.FlowInterestLine;
-import net.yozmnews.report.domain.input.FlowMaterial;
-import net.yozmnews.report.domain.input.FlowSummary;
 import net.yozmnews.report.domain.input.InputSection;
 import net.yozmnews.report.domain.input.InterestsSection;
 import net.yozmnews.report.domain.input.PriorReport;
@@ -38,6 +35,9 @@ import net.yozmnews.report.domain.input.StorylinesSection;
 import net.yozmnews.report.domain.input.TopicCoverageLine;
 import net.yozmnews.report.domain.input.TopicInterestLine;
 import net.yozmnews.report.domain.input.TopicSubscriptionLine;
+import net.yozmnews.report.domain.input.UserStorylineInterestLine;
+import net.yozmnews.report.domain.input.UserStorylineMaterial;
+import net.yozmnews.report.domain.input.UserStorylineSummary;
 import net.yozmnews.report.domain.output.ReportOutputSchema;
 import net.yozmnews.report.domain.prompt.ReportPromptRules.Range;
 import net.yozmnews.report.domain.report.ReportPeriod;
@@ -52,8 +52,8 @@ import tools.jackson.databind.node.ObjectNode;
  * 프롬프트 구성 — 정본 · docs/specs/report.md §5 · report-R23
  * <p>
  * 지시는 고정 문면과 기간 종류마다의 길이 기준이고, 모델이 구조화 출력을 지원하지 않으면 출력 스키마 문서를 덧붙인다. 사용자 구획은 JSON 문서
- * 하나이고 JSON 으로 써서 신뢰할 수 없는 글(흐름의 정리 · 대표 기사 제목 · 주제 이름 · 직전 리포트 글)이 구획 구조를 흉내 내지 못한다. 스토리라인
- * · 사건은 이번 요청의 별칭으로만 싣고 DB ID · 주제 키는 싣지 않는다. 같은 헤드의 정리는 흐름 줄에 한 번만 싣는다. 개요가 비고 섹션이 없는 직전
+ * 하나이고 JSON 으로 써서 신뢰할 수 없는 글(사용자 스토리라인의 정리 · 대표 기사 제목 · 주제 이름 · 직전 리포트 글)이 구획 구조를 흉내 내지 못한다. 스토리라인
+ * · 사건은 이번 요청의 별칭으로만 싣고 DB ID · 주제 키는 싣지 않는다. 같은 헤드의 정리는 사용자 스토리라인 줄에 한 번만 싣는다. 개요가 비고 섹션이 없는 직전
  * 리포트 글은 싣지 않는다. 상태 · 판정 · 변화 값의 뜻은 그 타입마다 {@code default} 없는 {@code switch} 로 지시에 적는다 — 값이 늘면 컴파일이
  * 멈춘다. 지시는 분야 예시 없이 일반 원리로 쓴다.
  */
@@ -74,7 +74,7 @@ public final class ReportPrompts {
 	/** 관심 변화 갈래의 주제 관심 줄 */
 	static final String TOPICS = "topics";
 
-	/** 관심 변화 갈래의 흐름 관심 줄 */
+	/** 관심 변화 갈래의 사용자 스토리라인 관심 줄 */
 	static final String FLOWS = "flows";
 
 	/** 관심 변화 갈래의 구독 변경 줄 */
@@ -203,11 +203,11 @@ public final class ReportPrompts {
 		period.put(KIND, input.period().kind().name());
 		period.put(FIRST, day(input.period().start(), zone));
 		period.put(LAST, lastDay(input.period().end(), zone));
-		// 추적 흐름의 헤드 — 같은 헤드의 흐름 관심 줄은 정리를 다시 싣지 않는다
+		// 추적한 사용자 스토리라인의 헤드 — 같은 헤드의 사용자 스토리라인 관심 줄은 정리를 다시 싣지 않는다
 		Set<ReportCitation> tracked = new HashSet<>();
 		for (InputSection section : input.sections()) {
 			if (section instanceof StorylinesSection storylines) {
-				storylines.flows().forEach(flow -> tracked.add(new ReportCitation.Storyline(flow.head())));
+				storylines.userStorylines().forEach(userStoryline -> tracked.add(new ReportCitation.Storyline(userStoryline.head())));
 			}
 		}
 		for (InputSection section : input.sections()) {
@@ -215,8 +215,8 @@ public final class ReportPrompts {
 			switch (section) {
 				case StorylinesSection storylines -> {
 					ArrayNode lines = root.putArray(key);
-					for (FlowMaterial flow : storylines.flows()) {
-						lines.add(flowLine(flow, aliases, zone));
+					for (UserStorylineMaterial userStoryline : storylines.userStorylines()) {
+						lines.add(userStorylineLine(userStoryline, aliases, zone));
 					}
 				}
 				case CoverageSection coverage -> {
@@ -252,24 +252,24 @@ public final class ReportPrompts {
 		return JSON.writeValueAsString(prior(prior, zone));
 	}
 
-	/** 흐름 줄 — [헤드 별칭, 상태, 기간 안 추적, 보도량, 정리, 사건 줄들] */
-	private static ArrayNode flowLine(FlowMaterial flow, ReportAliases aliases, ZoneId zone) {
+	/** 사용자 스토리라인 줄 — [헤드 별칭, 상태, 기간 안 추적, 보도량, 정리, 사건 줄들] */
+	private static ArrayNode userStorylineLine(UserStorylineMaterial userStoryline, ReportAliases aliases, ZoneId zone) {
 		ArrayNode line = JSON.createArrayNode();
-		line.add(aliases.alias(new ReportCitation.Storyline(flow.head())));
-		line.add(flow.headState().name());
-		line.add(flow.trackedInPeriod());
+		line.add(aliases.alias(new ReportCitation.Storyline(userStoryline.head())));
+		line.add(userStoryline.headState().name());
+		line.add(userStoryline.trackedInPeriod());
 		ArrayNode articles = line.addArray();
-		articles.add(flow.articles().current());
-		if (flow.articles().previous() == null) {
+		articles.add(userStoryline.articles().current());
+		if (userStoryline.articles().previous() == null) {
 			articles.addNull();
 		}
 		else {
-			articles.add(flow.articles().previous());
+			articles.add(userStoryline.articles().previous());
 		}
-		articles.add(flow.articles().trend().name());
-		summary(line, flow.summary());
+		articles.add(userStoryline.articles().trend().name());
+		summary(line, userStoryline.summary());
 		ArrayNode events = line.addArray();
-		for (EventLine event : flow.events()) {
+		for (EventLine event : userStoryline.events()) {
 			ArrayNode row = events.addArray();
 			row.add(aliases.alias(new ReportCitation.Event(event.event())));
 			row.add(DAY.format(event.firstDay()));
@@ -280,7 +280,7 @@ public final class ReportPrompts {
 		return line;
 	}
 
-	/** 관심 변화 — 주제 관심 줄 · 흐름 관심 줄(추적 흐름이면 정리는 null) · 구독 변경 줄 */
+	/** 관심 변화 — 주제 관심 줄 · 사용자 스토리라인 관심 줄(추적한 사용자 스토리라인이면 정리는 null) · 구독 변경 줄 */
 	private static ObjectNode interests(InterestsSection interests, ReportAliases aliases, Set<ReportCitation> tracked,
 			ZoneId zone) {
 		ObjectNode node = JSON.createObjectNode();
@@ -292,15 +292,15 @@ public final class ReportPrompts {
 			interest(line, topic.end());
 			line.add(topic.shift().name());
 		}
-		ArrayNode flows = node.putArray(FLOWS);
-		for (FlowInterestLine flow : interests.flows()) {
-			ReportCitation head = new ReportCitation.Storyline(flow.head());
-			ArrayNode line = flows.addArray();
+		ArrayNode userStorylines = node.putArray(FLOWS);
+		for (UserStorylineInterestLine userStoryline : interests.userStorylines()) {
+			ReportCitation head = new ReportCitation.Storyline(userStoryline.head());
+			ArrayNode line = userStorylines.addArray();
 			line.add(aliases.alias(head));
-			interest(line, flow.start());
-			interest(line, flow.end());
-			line.add(flow.shift().name());
-			summary(line, tracked.contains(head) ? null : flow.summary());
+			interest(line, userStoryline.start());
+			interest(line, userStoryline.end());
+			line.add(userStoryline.shift().name());
+			summary(line, tracked.contains(head) ? null : userStoryline.summary());
 		}
 		ArrayNode changes = node.putArray(SUBSCRIPTION_CHANGES);
 		for (TopicSubscriptionLine change : interests.subscriptionChanges()) {
@@ -343,7 +343,7 @@ public final class ReportPrompts {
 	}
 
 	/** 정리 — [제목, 흐름 요약, 최근 전개] 또는 null */
-	private static void summary(ArrayNode line, @Nullable FlowSummary summary) {
+	private static void summary(ArrayNode line, @Nullable UserStorylineSummary summary) {
 		if (summary == null) {
 			line.addNull();
 			return;

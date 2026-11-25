@@ -391,7 +391,7 @@ function PreferencesAdjustedBody({
 }
 
 /**
- * 사라진 구독 — 스토리라인마다 그 흐름에 남았던 기사의 지금 제목. 제목은 알림함을 열 때 읽은 값이라, 기사가 지워졌으면 비어 있다.
+ * 사라진 구독 — 스토리라인마다 그 스토리라인에 남았던 기사의 지금 제목. 제목은 알림함을 열 때 읽은 값이라, 기사가 지워졌으면 비어 있다.
  */
 function StorylineSubscriptionsRemovedBody({
   body,

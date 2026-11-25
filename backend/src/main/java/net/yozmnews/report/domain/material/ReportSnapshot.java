@@ -12,15 +12,15 @@ import java.util.TreeSet;
 
 import net.yozmnews.report.InterestShift;
 import net.yozmnews.report.ReportTrend;
-import net.yozmnews.report.domain.input.CoverageSection;
 import net.yozmnews.report.domain.input.Count;
-import net.yozmnews.report.domain.input.FlowInterestLine;
-import net.yozmnews.report.domain.input.FlowMaterial;
+import net.yozmnews.report.domain.input.CoverageSection;
 import net.yozmnews.report.domain.input.InputSection;
 import net.yozmnews.report.domain.input.InterestsSection;
 import net.yozmnews.report.domain.input.StorylinesSection;
 import net.yozmnews.report.domain.input.TopicCoverageLine;
 import net.yozmnews.report.domain.input.TopicInterestLine;
+import net.yozmnews.report.domain.input.UserStorylineInterestLine;
+import net.yozmnews.report.domain.input.UserStorylineMaterial;
 import net.yozmnews.report.domain.report.ReportPeriod;
 import net.yozmnews.storyline.StorylineId;
 import net.yozmnews.tag.TagSetId;
@@ -35,19 +35,19 @@ import tools.jackson.databind.node.ObjectNode;
  * 통계 스냅숏 꼴의 정본 — 쓰기와 읽기 · docs/specs/report.md §5 · report-R19
  * <p>
  * 생성에 쓴 통계를 JSON 객체 하나로 쓴다 — 꼴의 판, 키의 태그 체계 버전, 기간, 입력에 든 갈래의 칸만. 보도량은 기간 시각의 종류를 함께 싣고
- * (구독 주제 {@value #FIRST_EVALUATED} · 흐름 {@value #PUBLISHED}), 이은 직전 값과 판정을 함께 남긴다. 주제 이름은 싣고 사건 줄 · 정리의
+ * (구독 주제 {@value #FIRST_EVALUATED} · 사용자 스토리라인 {@value #PUBLISHED}), 이은 직전 값과 판정을 함께 남긴다. 주제 이름은 싣고 사건 줄 · 정리의
  * 글은 싣지 않는다. 읽기는 판이 {@link #VERSION} 과 같을 때만 값을 낸다 — 파싱은 {@link #stats} 하나이고, 다음 리포트가 견줄 기사 수
  * ({@link #read})는 그 결과를 옮긴 것이다.
  */
 public final class ReportSnapshot {
 
 	/** 꼴의 판 — 올리면 옛 판을 읽는 길이나 옮기는 마이그레이션을 함께 둔다 */
-	public static final int VERSION = 1;
+	public static final int VERSION = 2;
 
 	/** 구독 주제 보도량의 기간 시각 — 첫 평가 시각 */
 	public static final String FIRST_EVALUATED = "FIRST_EVALUATED";
 
-	/** 흐름 보도량의 기간 시각 — 사건 배정의 발행 시각 */
+	/** 사용자 스토리라인 보도량의 기간 시각 — 사건 배정의 발행 시각 */
 	public static final String PUBLISHED = "PUBLISHED";
 
 	private static final JsonMapper JSON = JsonMapper.builder().build();
@@ -60,22 +60,22 @@ public final class ReportSnapshot {
 	 *
 	 * @param tagSet 주제 키의 태그 체계 버전
 	 * @param topics 구독 행 키 → 기사 수 — 보도량 갈래가 없었으면 빈 맵
-	 * @param flows 흐름 — 추적한 흐름 갈래가 없었으면 빈 목록
+	 * @param userStorylines 사용자 스토리라인 — 추적한 사용자 스토리라인 갈래가 없었으면 빈 목록
 	 */
-	public record SnapshotValues(TagSetId tagSet, Map<String, Long> topics, List<SnapshotFlow> flows) {
+	public record SnapshotValues(TagSetId tagSet, Map<String, Long> topics, List<SnapshotUserStoryline> userStorylines) {
 
 		public SnapshotValues {
 			Objects.requireNonNull(tagSet, "tagSet");
 			topics = Map.copyOf(topics);
-			flows = List.copyOf(flows);
+			userStorylines = List.copyOf(userStorylines);
 		}
 
 	}
 
-	/** 스냅숏의 흐름 하나 — 헤드 · 꼭대기들 · 기사 수 */
-	public record SnapshotFlow(StorylineId head, Set<StorylineId> tops, long articles) {
+	/** 스냅숏의 사용자 스토리라인 하나 — 헤드 · 꼭대기들 · 기사 수 */
+	public record SnapshotUserStoryline(StorylineId head, Set<StorylineId> tops, long articles) {
 
-		public SnapshotFlow {
+		public SnapshotUserStoryline {
 			Objects.requireNonNull(head, "head");
 			tops = Set.copyOf(tops);
 		}
@@ -87,10 +87,10 @@ public final class ReportSnapshot {
 	 *
 	 * @param tagSet 주제 키의 태그 체계 버전
 	 * @param coverage 구독 주제의 보도량
-	 * @param flows 추적한 흐름의 보도량
+	 * @param userStorylines 추적한 사용자 스토리라인의 보도량
 	 * @param interests 관심의 변화
 	 */
-	public record SnapshotStats(TagSetId tagSet, @Nullable CoverageStats coverage, @Nullable FlowStats flows,
+	public record SnapshotStats(TagSetId tagSet, @Nullable CoverageStats coverage, @Nullable UserStorylineStats userStorylines,
 			@Nullable InterestStats interests) {
 
 		public SnapshotStats {
@@ -119,20 +119,20 @@ public final class ReportSnapshot {
 
 	}
 
-	/** 추적한 흐름의 보도량 — 스냅숏의 순서 */
-	public record FlowStats(List<FlowStat> flows) {
+	/** 추적한 사용자 스토리라인의 보도량 — 스냅숏의 순서 */
+	public record UserStorylineStats(List<UserStorylineStat> userStorylines) {
 
-		public FlowStats {
-			flows = List.copyOf(flows);
+		public UserStorylineStats {
+			userStorylines = List.copyOf(userStorylines);
 		}
 
 	}
 
-	/** 흐름 하나 — 생성 때의 헤드 · 꼭대기들 · 이번 · 이은 직전 값(없으면 null) · 판정 · 기간 안 추적 */
-	public record FlowStat(StorylineId head, Set<StorylineId> tops, long articles, @Nullable Long previous,
+	/** 사용자 스토리라인 하나 — 생성 때의 헤드 · 꼭대기들 · 이번 · 이은 직전 값(없으면 null) · 판정 · 기간 안 추적 */
+	public record UserStorylineStat(StorylineId head, Set<StorylineId> tops, long articles, @Nullable Long previous,
 			ReportTrend trend, boolean trackedInPeriod) {
 
-		public FlowStat {
+		public UserStorylineStat {
 			Objects.requireNonNull(head, "head");
 			tops = Set.copyOf(tops);
 			Objects.requireNonNull(trend, "trend");
@@ -140,12 +140,12 @@ public final class ReportSnapshot {
 
 	}
 
-	/** 관심의 변화 — 주제 줄 · 흐름 줄, 스냅숏의 순서 */
-	public record InterestStats(List<TopicLevelStat> topics, List<FlowLevelStat> flows) {
+	/** 관심의 변화 — 주제 줄 · 사용자 스토리라인 줄, 스냅숏의 순서 */
+	public record InterestStats(List<TopicLevelStat> topics, List<UserStorylineLevelStat> userStorylines) {
 
 		public InterestStats {
 			topics = List.copyOf(topics);
-			flows = List.copyOf(flows);
+			userStorylines = List.copyOf(userStorylines);
 		}
 
 	}
@@ -162,10 +162,10 @@ public final class ReportSnapshot {
 
 	}
 
-	/** 흐름 관심 줄 — 생성 때의 헤드 · 시작 · 끝 값(신호가 없으면 null) · 변화 */
-	public record FlowLevelStat(StorylineId head, @Nullable Double start, @Nullable Double end, InterestShift shift) {
+	/** 사용자 스토리라인 관심 줄 — 생성 때의 헤드 · 시작 · 끝 값(신호가 없으면 null) · 변화 */
+	public record UserStorylineLevelStat(StorylineId head, @Nullable Double start, @Nullable Double end, InterestShift shift) {
 
-		public FlowLevelStat {
+		public UserStorylineLevelStat {
 			Objects.requireNonNull(head, "head");
 			Objects.requireNonNull(shift, "shift");
 		}
@@ -185,7 +185,7 @@ public final class ReportSnapshot {
 		at.put("end", period.end().toString());
 		for (InputSection section : sections) {
 			switch (section) {
-				case StorylinesSection storylines -> writeFlows(root.putObject("storylines"), storylines);
+				case StorylinesSection storylines -> writeUserStorylines(root.putObject("storylines"), storylines);
 				case CoverageSection coverage -> writeCoverage(root.putObject("coverage"), coverage);
 				case InterestsSection interests -> writeInterests(root.putObject("interests"), interests);
 			}
@@ -194,7 +194,7 @@ public final class ReportSnapshot {
 	}
 
 	/**
-	 * 다음 리포트가 견줄 값을 읽는다 — {@link #stats} 의 주제 키 · 기사 수와 흐름의 헤드 · 꼭대기 · 기사 수.
+	 * 다음 리포트가 견줄 값을 읽는다 — {@link #stats} 의 주제 키 · 기사 수와 사용자 스토리라인의 헤드 · 꼭대기 · 기사 수.
 	 * @return 모르는 판이거나 읽지 못하면 빈 값
 	 */
 	public static Optional<SnapshotValues> read(@Nullable String json) {
@@ -203,13 +203,13 @@ public final class ReportSnapshot {
 			if (stats.coverage() != null) {
 				stats.coverage().topics().forEach(topic -> topics.put(topic.key(), topic.articles()));
 			}
-			List<SnapshotFlow> flows = (stats.flows() == null) ? List.of()
-					: stats.flows()
-						.flows()
+			List<SnapshotUserStoryline> userStorylines = (stats.userStorylines() == null) ? List.of()
+					: stats.userStorylines()
+						.userStorylines()
 						.stream()
-						.map(flow -> new SnapshotFlow(flow.head(), flow.tops(), flow.articles()))
+						.map(userStoryline -> new SnapshotUserStoryline(userStoryline.head(), userStoryline.tops(), userStoryline.articles()))
 						.toList();
-			return new SnapshotValues(stats.tagSet(), topics, flows);
+			return new SnapshotValues(stats.tagSet(), topics, userStorylines);
 		});
 	}
 
@@ -229,7 +229,7 @@ public final class ReportSnapshot {
 			}
 			return Optional.of(new SnapshotStats(new TagSetId(root.path("tagSet").longValue()),
 					root.has("coverage") ? readCoverage(root.path("coverage")) : null,
-					root.has("storylines") ? readFlows(root.path("storylines")) : null,
+					root.has("storylines") ? readUserStorylines(root.path("storylines")) : null,
 					root.has("interests") ? readInterests(root.path("interests")) : null));
 		}
 		catch (JacksonException | IllegalArgumentException ex) {
@@ -246,18 +246,18 @@ public final class ReportSnapshot {
 		return new CoverageStats(topics);
 	}
 
-	private static FlowStats readFlows(JsonNode node) {
-		List<FlowStat> flows = new ArrayList<>();
-		for (JsonNode flow : node.path("flows")) {
+	private static UserStorylineStats readUserStorylines(JsonNode node) {
+		List<UserStorylineStat> userStorylines = new ArrayList<>();
+		for (JsonNode userStoryline : node.path("userStorylines")) {
 			Set<StorylineId> tops = new TreeSet<>(Comparator.comparingLong(StorylineId::value));
-			for (JsonNode top : flow.path("tops")) {
+			for (JsonNode top : userStoryline.path("tops")) {
 				tops.add(new StorylineId(top.longValue()));
 			}
-			flows.add(new FlowStat(new StorylineId(number(flow, "head")), tops, number(flow, "articles"),
-					nullableNumber(flow, "previous"), ReportTrend.valueOf(text(flow, "trend")),
-					bool(flow, "trackedInPeriod")));
+			userStorylines.add(new UserStorylineStat(new StorylineId(number(userStoryline, "head")), tops, number(userStoryline, "articles"),
+					nullableNumber(userStoryline, "previous"), ReportTrend.valueOf(text(userStoryline, "trend")),
+					bool(userStoryline, "trackedInPeriod")));
 		}
-		return new FlowStats(flows);
+		return new UserStorylineStats(userStorylines);
 	}
 
 	private static InterestStats readInterests(JsonNode node) {
@@ -266,12 +266,12 @@ public final class ReportSnapshot {
 			topics.add(new TopicLevelStat(text(topic, "key"), text(topic, "name"), nullableLevel(topic, "start"),
 					nullableLevel(topic, "end"), InterestShift.valueOf(text(topic, "shift"))));
 		}
-		List<FlowLevelStat> flows = new ArrayList<>();
-		for (JsonNode flow : node.path("flows")) {
-			flows.add(new FlowLevelStat(new StorylineId(number(flow, "head")), nullableLevel(flow, "start"),
-					nullableLevel(flow, "end"), InterestShift.valueOf(text(flow, "shift"))));
+		List<UserStorylineLevelStat> userStorylines = new ArrayList<>();
+		for (JsonNode userStoryline : node.path("userStorylines")) {
+			userStorylines.add(new UserStorylineLevelStat(new StorylineId(number(userStoryline, "head")), nullableLevel(userStoryline, "start"),
+					nullableLevel(userStoryline, "end"), InterestShift.valueOf(text(userStoryline, "shift"))));
 		}
-		return new InterestStats(topics, flows);
+		return new InterestStats(topics, userStorylines);
 	}
 
 	private static void writeCoverage(ObjectNode node, CoverageSection coverage) {
@@ -285,16 +285,16 @@ public final class ReportSnapshot {
 		}
 	}
 
-	private static void writeFlows(ObjectNode node, StorylinesSection storylines) {
+	private static void writeUserStorylines(ObjectNode node, StorylinesSection storylines) {
 		node.put("basis", PUBLISHED);
-		ArrayNode flows = node.putArray("flows");
-		for (FlowMaterial material : storylines.flows()) {
-			ObjectNode flow = flows.addObject();
-			flow.put("head", material.head().value());
-			ArrayNode tops = flow.putArray("tops");
+		ArrayNode userStorylines = node.putArray("userStorylines");
+		for (UserStorylineMaterial material : storylines.userStorylines()) {
+			ObjectNode userStoryline = userStorylines.addObject();
+			userStoryline.put("head", material.head().value());
+			ArrayNode tops = userStoryline.putArray("tops");
 			material.tops().stream().mapToLong(StorylineId::value).sorted().forEach(tops::add);
-			count(flow, material.articles());
-			flow.put("trackedInPeriod", material.trackedInPeriod());
+			count(userStoryline, material.articles());
+			userStoryline.put("trackedInPeriod", material.trackedInPeriod());
 		}
 	}
 
@@ -308,13 +308,13 @@ public final class ReportSnapshot {
 			level(topic, "end", line.end());
 			topic.put("shift", line.shift().name());
 		}
-		ArrayNode flows = node.putArray("flows");
-		for (FlowInterestLine line : interests.flows()) {
-			ObjectNode flow = flows.addObject();
-			flow.put("head", line.head().value());
-			level(flow, "start", line.start());
-			level(flow, "end", line.end());
-			flow.put("shift", line.shift().name());
+		ArrayNode userStorylines = node.putArray("userStorylines");
+		for (UserStorylineInterestLine line : interests.userStorylines()) {
+			ObjectNode userStoryline = userStorylines.addObject();
+			userStoryline.put("head", line.head().value());
+			level(userStoryline, "start", line.start());
+			level(userStoryline, "end", line.end());
+			userStoryline.put("shift", line.shift().name());
 		}
 	}
 

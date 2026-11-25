@@ -79,7 +79,7 @@ public class StorylineSubscriptionScopeTests {
 		this.mockMvc.perform(get("/api/storyline-subscriptions").with(b))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.subscriptions").isEmpty());
-		// A 가 추적한 흐름을 B 의 세션으로 물으면 추적 중이 아니다 — 대조: A 의 세션으로는 추적 중이다
+		// A 가 추적한 스토리라인을 B 의 세션으로 물으면 추적 중이 아니다 — 대조: A 의 세션으로는 추적 중이다
 		this.mockMvc.perform(get("/api/storyline-subscriptions/states").param("ids", String.valueOf(storyline)).with(b))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.states[0].storylineId").value(storyline))

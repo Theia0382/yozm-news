@@ -30,21 +30,21 @@ import net.yozmnews.report.ReportSectionView;
 import net.yozmnews.report.ReportStatus;
 import net.yozmnews.report.ReportView;
 import net.yozmnews.report.domain.input.Count;
-import net.yozmnews.report.domain.input.FlowMaterial;
-import net.yozmnews.report.domain.input.FlowSummary;
 import net.yozmnews.report.domain.input.InputSection;
 import net.yozmnews.report.domain.input.PriorReport;
 import net.yozmnews.report.domain.input.PriorSection;
 import net.yozmnews.report.domain.input.ReportInput;
 import net.yozmnews.report.domain.input.TopicCoverageLine;
+import net.yozmnews.report.domain.input.UserStorylineMaterial;
+import net.yozmnews.report.domain.input.UserStorylineSummary;
 import net.yozmnews.report.domain.material.EventLines;
 import net.yozmnews.report.domain.material.InterestLines;
 import net.yozmnews.report.domain.material.PreviousMatch;
 import net.yozmnews.report.domain.material.ReportSections;
 import net.yozmnews.report.domain.material.ReportSnapshot;
-import net.yozmnews.report.domain.material.ReportSnapshot.SnapshotFlow;
+import net.yozmnews.report.domain.material.ReportSnapshot.SnapshotUserStoryline;
 import net.yozmnews.report.domain.material.ReportSnapshot.SnapshotValues;
-import net.yozmnews.report.domain.material.TrackedFlows;
+import net.yozmnews.report.domain.material.TrackedUserStorylines;
 import net.yozmnews.report.domain.report.ReportPeriod;
 import net.yozmnews.report.domain.view.ReportRow;
 import net.yozmnews.report.domain.view.ReportViewRepository;
@@ -177,15 +177,15 @@ public class ReportMaterialCollection {
 			return new Attempt.Mismatched();
 		}
 
-		// 추적한 흐름 — 추적 중인 사용자 스토리라인(report-R16)
+		// 추적한 사용자 스토리라인 — 추적 중인 사용자 스토리라인(report-R16)
 		List<UserStorylineView> all = this.userStorylines.of(user, period.start(), period.end());
 		Map<UserStorylineId, UserStorylineSummaryView> shown = new LinkedHashMap<>();
 		this.summaries.shown(user).forEach(summary -> shown.put(summary.id(), summary));
 		List<UserStorylineView> tracked = all.stream()
 			.filter(UserStorylineView::tracked)
-			.sorted(Comparator.comparingLong(flow -> flow.head().value()))
+			.sorted(Comparator.comparingLong(userStoryline -> userStoryline.head().value()))
 			.toList();
-		List<FlowMaterial> flows = flows(user, period, eventPeriod, settings, tracked, shown);
+		List<UserStorylineMaterial> userStorylines = userStorylines(user, period, eventPeriod, settings, tracked, shown);
 
 		// 구독 주제의 보도량(report-R14) — 구독 행이 없으면 부르지 않는다
 		List<TopicCoverageLine> topics = List.of();
@@ -211,7 +211,7 @@ public class ReportMaterialCollection {
 		if (!this.tagSets.activeTagSet().id().equals(before)) {
 			return new Attempt.Mismatched();
 		}
-		List<InterestLines.FlowRef> refs = flowRefs(all, shown);
+		List<InterestLines.UserStorylineRef> refs = userStorylineRefs(all, shown);
 		InterestLines.Lines interestLines = InterestLines.of(points.get().get(0), points.get().get(1), refs,
 				this.tagSets.names(before));
 
@@ -219,7 +219,7 @@ public class ReportMaterialCollection {
 		Optional<ReportRow> previous = this.views.previous(user, period.kind(), period.start());
 		Optional<SnapshotValues> values = previous.flatMap(row -> ReportSnapshot.read(row.statsSnapshot()));
 		Map<String, Long> previousTopics = Map.of();
-		Map<StorylineId, Long> previousFlows = Map.of();
+		Map<StorylineId, Long> previousUserStorylines = Map.of();
 		if (values.isPresent()) {
 			TagKeyMapping mapping = null;
 			if (!values.get().tagSet().equals(before)) {
@@ -230,8 +230,8 @@ public class ReportMaterialCollection {
 			}
 			previousTopics = (mapping == null && !values.get().tagSet().equals(before)) ? Map.of()
 					: PreviousMatch.topics(values.get().topics(), mapping);
-			previousFlows = PreviousMatch.flows(values.get().flows(), resolvedTops(values.get().flows()),
-					currentFlows(flows));
+			previousUserStorylines = PreviousMatch.userStorylines(values.get().userStorylines(), resolvedTops(values.get().userStorylines()),
+					currentUserStorylines(userStorylines));
 		}
 		Map<String, Long> carriedTopics = previousTopics;
 		topics = settings.topics()
@@ -241,11 +241,11 @@ public class ReportMaterialCollection {
 			.map(key -> new TopicCoverageLine(key, topicNames.get(key),
 					new Count(counts.get(key), carriedTopics.get(key))))
 			.toList();
-		Map<StorylineId, Long> carriedFlows = previousFlows;
-		flows = flows.stream()
-			.map(flow -> new FlowMaterial(flow.head(), flow.tops(), flow.summary(), flow.headState(),
-					flow.trackedInPeriod(), new Count(flow.articles().current(), carriedFlows.get(flow.head())),
-					flow.events()))
+		Map<StorylineId, Long> carriedUserStorylines = previousUserStorylines;
+		userStorylines = userStorylines.stream()
+			.map(userStoryline -> new UserStorylineMaterial(userStoryline.head(), userStoryline.tops(), userStoryline.summary(), userStoryline.headState(),
+					userStoryline.trackedInPeriod(), new Count(userStoryline.articles().current(), carriedUserStorylines.get(userStoryline.head())),
+					userStoryline.events()))
 			.toList();
 
 		// 직전 리포트 글 — 직전 리포트와 넘긴 주간 리포트 가운데 READY 인 보이는 글(report-R20)
@@ -258,13 +258,13 @@ public class ReportMaterialCollection {
 		if (!this.tagSets.activeTagSet().id().equals(before)) {
 			return new Attempt.Mismatched();
 		}
-		List<InputSection> sections = ReportSections.of(flows, topics, interestLines);
+		List<InputSection> sections = ReportSections.of(userStorylines, topics, interestLines);
 		return new Attempt.Done(Optional.of(new ReportInput(user, period, settings.timezone(), sections, priors,
 				ReportSnapshot.write(period, before, sections), previous.map(ReportRow::id).orElse(null))));
 	}
 
-	/** 흐름 재료 — 직전 값은 나중에 잇는다 */
-	private List<FlowMaterial> flows(UserId user, ReportPeriod period, EventPeriod eventPeriod, DigestInterests settings,
+	/** 사용자 스토리라인 재료 — 직전 값은 나중에 잇는다 */
+	private List<UserStorylineMaterial> userStorylines(UserId user, ReportPeriod period, EventPeriod eventPeriod, DigestInterests settings,
 			List<UserStorylineView> tracked, Map<UserStorylineId, UserStorylineSummaryView> shown) {
 		if (tracked.isEmpty()) {
 			return List.of();
@@ -272,21 +272,21 @@ public class ReportMaterialCollection {
 		Map<StorylineId, StorylineView> heads = this.storylines
 			.findAll(tracked.stream().map(UserStorylineView::head).toList());
 		Map<StorylineId, Set<StorylineId>> groups = new LinkedHashMap<>();
-		tracked.forEach(flow -> groups.put(flow.head(), flow.tops()));
+		tracked.forEach(userStoryline -> groups.put(userStoryline.head(), userStoryline.tops()));
 		Map<StorylineId, EventTally> tallies = this.storylines.tallies(groups, eventPeriod);
 
-		// 흐름마다 꼭대기들의 닫은 사건 — 사건마다 기간 안 기사 수
+		// 사용자 스토리라인마다 꼭대기들의 닫은 사건 — 사건마다 기간 안 기사 수
 		Map<StorylineId, Map<EventId, EventView>> eventsOf = new LinkedHashMap<>();
 		Map<EventId, List<EventId>> single = new LinkedHashMap<>();
-		for (UserStorylineView flow : tracked) {
+		for (UserStorylineView userStoryline : tracked) {
 			Map<EventId, EventView> closed = new LinkedHashMap<>();
-			for (StorylineId top : flow.tops()) {
+			for (StorylineId top : userStoryline.tops()) {
 				for (StorylineEvent event : this.storylines.events(top)) {
 					closed.putIfAbsent(event.event().id(), event.event());
 					single.putIfAbsent(event.event().id(), List.of(event.event().id()));
 				}
 			}
-			eventsOf.put(flow.head(), closed);
+			eventsOf.put(userStoryline.head(), closed);
 		}
 		Map<EventId, EventTally> perEvent = single.isEmpty() ? Map.of() : this.events.tallies(single, eventPeriod);
 		Set<EventId> inPeriod = new HashSet<>();
@@ -300,7 +300,7 @@ public class ReportMaterialCollection {
 		Map<ArticleId, ArticleHeadline> headlines = representatives.isEmpty() ? Map.of()
 				: this.articles.headlines(new HashSet<>(representatives.values()));
 
-		// 기간 안에 추적을 더한 흐름(report-R16)
+		// 기간 안에 추적을 더한 사용자 스토리라인(report-R16)
 		List<StorylineSubscriptionChange> changes = this.subscriptions.changes(user, period.start(), period.end());
 		Set<StorylineId> currents = new LinkedHashSet<>();
 		changes.forEach(change -> {
@@ -310,23 +310,23 @@ public class ReportMaterialCollection {
 		});
 		Map<StorylineId, StorylineId> topsOfChanges = currents.isEmpty() ? Map.of()
 				: this.storylines.topsOfStorylines(currents);
-		Set<StorylineId> started = TrackedFlows.startedIn(changes, topsOfChanges, groups);
+		Set<StorylineId> started = TrackedUserStorylines.startedIn(changes, topsOfChanges, groups);
 
-		List<FlowMaterial> materials = new ArrayList<>();
-		for (UserStorylineView flow : tracked) {
-			StorylineView head = heads.get(flow.head());
+		List<UserStorylineMaterial> materials = new ArrayList<>();
+		for (UserStorylineView userStoryline : tracked) {
+			StorylineView head = heads.get(userStoryline.head());
 			if (head == null) {
-				// 그새 지운 스토리라인 — 다음 맞추기가 흐름에서 뺀다
+				// 그새 지운 스토리라인 — 다음 맞추기가 사용자 스토리라인에서 뺀다
 				continue;
 			}
-			List<EventLines.EventFact> facts = eventsOf.get(flow.head())
+			List<EventLines.EventFact> facts = eventsOf.get(userStoryline.head())
 				.values()
 				.stream()
 				.map(event -> new EventLines.EventFact(event.id(), event.firstArticleAt(), articlesOf(perEvent, event.id()),
 						title(representatives, headlines, event.id())))
 				.toList();
-			materials.add(new FlowMaterial(flow.head(), flow.tops(), summaryOf(flow, shown), head.state(),
-					started.contains(flow.head()), new Count(tallies.get(flow.head()).articles(), null),
+			materials.add(new UserStorylineMaterial(userStoryline.head(), userStoryline.tops(), summaryOf(userStoryline, shown), head.state(),
+					started.contains(userStoryline.head()), new Count(tallies.get(userStoryline.head()).articles(), null),
 					EventLines.pick(facts, period, settings.timezone())));
 		}
 		return List.copyOf(materials);
@@ -344,30 +344,30 @@ public class ReportMaterialCollection {
 		return (headline == null) ? null : headline.title();
 	}
 
-	private static @Nullable FlowSummary summaryOf(UserStorylineView flow,
+	private static @Nullable UserStorylineSummary summaryOf(UserStorylineView userStoryline,
 			Map<UserStorylineId, UserStorylineSummaryView> shown) {
-		UserStorylineSummaryView summary = (flow.id() == null) ? null : shown.get(flow.id());
+		UserStorylineSummaryView summary = (userStoryline.id() == null) ? null : shown.get(userStoryline.id());
 		return (summary == null) ? null : summary(summary);
 	}
 
-	private static FlowSummary summary(UserStorylineSummaryView summary) {
-		return new FlowSummary(summary.title(), summary.summary(), summary.recent(), summary.updatedAt());
+	private static UserStorylineSummary summary(UserStorylineSummaryView summary) {
+		return new UserStorylineSummary(summary.title(), summary.summary(), summary.recent(), summary.updatedAt());
 	}
 
-	/** 관심 줄의 흐름 — 사용자 스토리라인 전부와 정리된 흐름의 합집합, 같은 ID 면 사용자 스토리라인의 헤드(report-R17) */
-	private static List<InterestLines.FlowRef> flowRefs(List<UserStorylineView> all,
+	/** 관심 줄의 사용자 스토리라인 — 사용자 스토리라인 전부와 정리된 사용자 스토리라인의 합집합, 같은 ID 면 사용자 스토리라인의 헤드(report-R17) */
+	private static List<InterestLines.UserStorylineRef> userStorylineRefs(List<UserStorylineView> all,
 			Map<UserStorylineId, UserStorylineSummaryView> shown) {
-		List<InterestLines.FlowRef> refs = new ArrayList<>();
+		List<InterestLines.UserStorylineRef> refs = new ArrayList<>();
 		Set<UserStorylineId> seen = new HashSet<>();
-		for (UserStorylineView flow : all) {
-			if (flow.id() != null) {
-				seen.add(flow.id());
+		for (UserStorylineView userStoryline : all) {
+			if (userStoryline.id() != null) {
+				seen.add(userStoryline.id());
 			}
-			refs.add(new InterestLines.FlowRef(flow.head(), summaryOf(flow, shown)));
+			refs.add(new InterestLines.UserStorylineRef(userStoryline.head(), summaryOf(userStoryline, shown)));
 		}
 		shown.values().forEach(summary -> {
 			if (!seen.contains(summary.id())) {
-				refs.add(new InterestLines.FlowRef(summary.head(), summary(summary)));
+				refs.add(new InterestLines.UserStorylineRef(summary.head(), summary(summary)));
 			}
 		});
 		return refs;
@@ -395,15 +395,15 @@ public class ReportMaterialCollection {
 		}
 	}
 
-	private Map<StorylineId, StorylineId> resolvedTops(List<SnapshotFlow> flows) {
+	private Map<StorylineId, StorylineId> resolvedTops(List<SnapshotUserStoryline> userStorylines) {
 		Set<StorylineId> tops = new LinkedHashSet<>();
-		flows.forEach(flow -> tops.addAll(flow.tops()));
+		userStorylines.forEach(userStoryline -> tops.addAll(userStoryline.tops()));
 		return tops.isEmpty() ? Map.of() : this.storylines.topsOfStorylines(tops);
 	}
 
-	private static Map<StorylineId, Set<StorylineId>> currentFlows(Collection<FlowMaterial> flows) {
+	private static Map<StorylineId, Set<StorylineId>> currentUserStorylines(Collection<UserStorylineMaterial> userStorylines) {
 		Map<StorylineId, Set<StorylineId>> current = new LinkedHashMap<>();
-		flows.forEach(flow -> current.put(flow.head(), flow.tops()));
+		userStorylines.forEach(userStoryline -> current.put(userStoryline.head(), userStoryline.tops()));
 		return current;
 	}
 

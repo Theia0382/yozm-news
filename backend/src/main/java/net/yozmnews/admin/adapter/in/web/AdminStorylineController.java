@@ -25,7 +25,7 @@ import net.yozmnews.storyline.StorylineCursor;
 import net.yozmnews.storyline.StorylineDirectory;
 import net.yozmnews.storyline.StorylineEvent;
 import net.yozmnews.storyline.StorylineId;
-import net.yozmnews.storyline.StorylineMembership;
+import net.yozmnews.storyline.StorylineMembershipView;
 import net.yozmnews.storyline.StorylinePage;
 import net.yozmnews.storyline.StorylineRelationAsked;
 import net.yozmnews.storyline.StorylineRelationDetail;
@@ -108,7 +108,7 @@ class AdminStorylineController {
 			.orElseThrow(() -> AdminIds.unknownStoryline(id));
 		List<StorylineEvent> timeline = this.directory.events(view.id());
 		Map<Long, List<StorylineMembershipResponse>> memberships = new LinkedHashMap<>();
-		for (StorylineMembership membership : this.review.memberships(view.id())) {
+		for (StorylineMembershipView membership : this.review.memberships(view.id())) {
 			memberships.computeIfAbsent(membership.event().value(), event -> new ArrayList<>())
 				.add(StorylineMembershipResponse.of(membership));
 		}

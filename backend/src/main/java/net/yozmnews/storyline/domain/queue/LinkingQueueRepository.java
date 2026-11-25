@@ -55,7 +55,7 @@ public interface LinkingQueueRepository {
 	OptionalInt recordFailureIfLeased(long eventId, UUID token);
 
 	/**
-	 * 점유 토큰이 맞을 때만 일시 실패 수(흐름 소속 판정이 평가기 일시 실패로 끝난 수)를 하나 올리고 점유를 푼다. 실패 수는 그대로다.
+	 * 점유 토큰이 맞을 때만 일시 실패 수(스토리라인 소속 판정이 평가기 일시 실패로 끝난 수)를 하나 올리고 점유를 푼다. 실패 수는 그대로다.
 	 * @return 올린 뒤의 일시 실패 수 — 토큰이 맞지 않으면 빈 값
 	 */
 	OptionalInt recordTransientFailureIfLeased(long eventId, UUID token);

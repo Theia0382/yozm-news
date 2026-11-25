@@ -15,7 +15,7 @@ import org.springframework.stereotype.Service;
 
 /**
  * 지금의 관심 — 기준 시각과 창 끝을 모두 부르는 시각으로 둔 관심 x 를 낸다. 재료는 {@link InterestMaterials} 가 창
- * [{@link InterestWindow#start}(지금), 지금)에서 한 번 읽고, 계산은 {@link InterestWindow#levels} 가 한다. 구독 제안의 조회와 거절 때 관심, 흐름
+ * [{@link InterestWindow#start}(지금), 지금)에서 한 번 읽고, 계산은 {@link InterestWindow#levels} 가 한다. 구독 제안의 조회와 거절 때 관심, 스토리라인
  * 판정({@link StorylineStandingService})이 함께 쓰는 정본이다. docs/specs/digest.md §4
  * <p>
  * 트랜잭션 없이 조회를 차례로 부른다. 사용자를 인자로 받는다 — 화면 경로에서는 세션 사용자로만 부른다.
@@ -54,7 +54,7 @@ class CurrentInterests {
 		Objects.requireNonNull(now, "now");
 		return this.materials.read(user, version, InterestWindow.start(now), now)
 			.map(record -> new StorylineInterestsNow(InterestWindow.levels(record, now, now).storylines(),
-					record.flows().trackedTops()));
+					record.userStorylines().trackedTops()));
 	}
 
 	/**

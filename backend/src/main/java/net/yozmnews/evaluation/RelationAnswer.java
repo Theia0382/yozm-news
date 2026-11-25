@@ -10,7 +10,7 @@ public enum RelationAnswer {
 	/** 해당 없음 — 별개의 사안이거나, 한쪽이 한 사안이 아니다 */
 	NONE,
 
-	/** 두 흐름이 둘로 기록된 하나의 같은 흐름이다 */
+	/** 두 스토리라인이 둘로 기록된 하나의 같은 스토리라인이다 */
 	SAME_MATTER,
 
 	/** second 가 first 의 부분이다 */

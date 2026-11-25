@@ -12,7 +12,7 @@ import net.yozmnews.article.ArticleId;
  */
 public record MembershipQuery(ArticleId articleId, List<EventDescriptor> candidates) {
 
-	/** 한 요청의 후보 상한 — 정본(흐름 소속 판정도 쓴다). 측정 전 목표 */
+	/** 한 요청의 후보 상한 — 정본(스토리라인 소속 판정도 쓴다). 측정 전 목표 */
 	public static final int MAX_CANDIDATES = 10;
 
 	/**
@@ -21,7 +21,7 @@ public record MembershipQuery(ArticleId articleId, List<EventDescriptor> candida
 	 */
 	public MembershipQuery {
 		candidates = List.copyOf(candidates);
-		MembershipChecks.query(articleId, candidates, EventDescriptor::eventId, EventDescriptor::articleIds, "사건");
+		MembershipChecks.query(articleId, candidates, EventDescriptor::eventId, EventDescriptor::articleIds);
 	}
 
 }

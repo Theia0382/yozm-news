@@ -75,7 +75,7 @@ describe("PrivacyPage", () => {
     ).toBeInTheDocument();
     // 묶음 이름 · 대표 기사 제목은 보내지 않는다
     expect(transfer.queryByText(/큰 스토리라인 묶음/)).not.toBeInTheDocument();
-    // 흐름의 정리를 만들 때 가는 것
+    // 사용자 스토리라인의 정리를 만들 때 가는 것
     expect(
       transfer.getByRole("heading", { name: "관심이 쌓인 흐름을 정리할 때" }),
     ).toBeInTheDocument();

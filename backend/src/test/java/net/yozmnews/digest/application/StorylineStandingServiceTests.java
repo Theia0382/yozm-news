@@ -38,8 +38,8 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.TestPropertySource;
 
 /**
- * 흐름 판정 — {@code user} 가 선언한 {@code StorylineStandingNow} 의 구현. 실제 PostgreSQL 위에 다이제스트 노출 · 좋아요 / 싫어요 이력 ·
- * 흐름 추적 행을 넣고, 지금을 기준 시각으로 둔 관심 흐름 · 남길 흐름의 꼭대기를 손으로 계산한 집합으로 단언한다.
+ * 스토리라인 판정 — {@code user} 가 선언한 {@code StorylineStandingNow} 의 구현. 실제 PostgreSQL 위에 다이제스트 노출 · 좋아요 / 싫어요 이력 ·
+ * 흐름 추적 행을 넣고, 지금을 기준 시각으로 둔 관심 스토리라인 · 남길 스토리라인의 꼭대기를 손으로 계산한 집합으로 단언한다.
  * <p>
  * 다이제스트를 끝낸 시각 {@link #COMPLETED} 의 하루 뒤가 지금이라 노출 · 반응 · 추적의 무게 w 는 0.5 ^ (1 ÷ 30) ≈ 0.977 이다. 스토리라인 관심
  * x = F ÷ (E + 3) + S ÷ 3(추적 신호는 노출 분모 밖의 항, γ 1/3) —
@@ -121,54 +121,54 @@ class StorylineStandingServiceTests {
 	}
 
 	@Test
-	void aFlowLikedTwiceIsFollowedAndKept() {
-		long flow = flow("LIKE", "LIKE");
+	void aStorylineLikedTwiceIsFollowedAndKept() {
+		long storyline = reactedStoryline("LIKE", "LIKE");
 
 		assertThat(at(NOW).standingOf(this.user))
-			.contains(new StorylineStanding(Set.of(new StorylineId(flow)), Set.of(new StorylineId(flow))));
+			.contains(new StorylineStanding(Set.of(new StorylineId(storyline)), Set.of(new StorylineId(storyline))));
 	}
 
 	@Test
-	void aFlowLikedOnceIsKeptButNotFollowed() {
-		long flow = flow("LIKE");
+	void aStorylineLikedOnceIsKeptButNotFollowed() {
+		long storyline = reactedStoryline("LIKE");
 
 		assertThat(at(NOW).standingOf(this.user))
-			.contains(new StorylineStanding(Set.of(), Set.of(new StorylineId(flow))));
+			.contains(new StorylineStanding(Set.of(), Set.of(new StorylineId(storyline))));
 	}
 
 	@Test
-	void aTrackedFlowIsFollowedBelowTheFollowThreshold() {
-		long flow = UserStorylineFixtures.storyline(this.jdbc, COMPLETED);
-		UserStorylineFixtures.tracked(this.jdbc, this.user, flow, COMPLETED);
+	void aTrackedStorylineIsFollowedBelowTheFollowThreshold() {
+		long storyline = UserStorylineFixtures.storyline(this.jdbc, COMPLETED);
+		UserStorylineFixtures.tracked(this.jdbc, this.user, storyline, COMPLETED);
 
 		assertThat(at(NOW).standingOf(this.user))
-			.contains(new StorylineStanding(Set.of(new StorylineId(flow)), Set.of(new StorylineId(flow))));
+			.contains(new StorylineStanding(Set.of(new StorylineId(storyline)), Set.of(new StorylineId(storyline))));
 	}
 
 	@Test
-	void aTrackedFlowDislikedIntoExclusionIsNeitherFollowedNorKept() {
+	void aTrackedStorylineDislikedIntoExclusionIsNeitherFollowedNorKept() {
 		// 추적 + 노출 넷 모두 싫어요 → x = −4w ÷ (4w + 3) + w ÷ 3 ≈ −0.240 ≤ −0.2 — 추적 신호는 노출로 묽어지지 않아 셋으로는
 		// −3w ÷ (3w + 3) + w ÷ 3 ≈ −0.169 라 걸러지지 않는다
-		long flow = flow("DISLIKE", "DISLIKE", "DISLIKE", "DISLIKE");
-		UserStorylineFixtures.tracked(this.jdbc, this.user, flow, COMPLETED);
+		long storyline = reactedStoryline("DISLIKE", "DISLIKE", "DISLIKE", "DISLIKE");
+		UserStorylineFixtures.tracked(this.jdbc, this.user, storyline, COMPLETED);
 
 		assertThat(at(NOW).standingOf(this.user)).contains(new StorylineStanding(Set.of(), Set.of()));
 	}
 
 	@Test
-	void aTrackedFlowDislikedOnceIsFollowedButNotKept() {
-		long flow = flow("DISLIKE");
-		UserStorylineFixtures.tracked(this.jdbc, this.user, flow, COMPLETED);
+	void aTrackedStorylineDislikedOnceIsFollowedButNotKept() {
+		long storyline = reactedStoryline("DISLIKE");
+		UserStorylineFixtures.tracked(this.jdbc, this.user, storyline, COMPLETED);
 
 		assertThat(at(NOW).standingOf(this.user))
-			.contains(new StorylineStanding(Set.of(new StorylineId(flow)), Set.of()));
+			.contains(new StorylineStanding(Set.of(new StorylineId(storyline)), Set.of()));
 	}
 
 	@Test
-	void flowsAreJudgedSeparately() {
-		long likedTwice = flow("LIKE", "LIKE");
-		long likedOnce = flow("LIKE");
-		long excluded = flow("DISLIKE", "DISLIKE", "DISLIKE", "DISLIKE");
+	void storylinesAreJudgedSeparately() {
+		long likedTwice = reactedStoryline("LIKE", "LIKE");
+		long likedOnce = reactedStoryline("LIKE");
+		long excluded = reactedStoryline("DISLIKE", "DISLIKE", "DISLIKE", "DISLIKE");
 		UserStorylineFixtures.tracked(this.jdbc, this.user, excluded, COMPLETED);
 		long trackedOnly = UserStorylineFixtures.storyline(this.jdbc, COMPLETED);
 		UserStorylineFixtures.tracked(this.jdbc, this.user, trackedOnly, COMPLETED);
@@ -179,7 +179,7 @@ class StorylineStandingServiceTests {
 	}
 
 	@Test
-	void aUserWithoutSignalsHasNoFlows() {
+	void aUserWithoutSignalsHasNoStorylines() {
 		assertThat(at(NOW).standingOf(this.user)).contains(new StorylineStanding(Set.of(), Set.of()));
 	}
 
@@ -190,16 +190,16 @@ class StorylineStandingServiceTests {
 
 	@Test
 	void materialsSkewedOnceAreReadAgain() {
-		long flow = flow("LIKE", "LIKE");
+		long storyline = reactedStoryline("LIKE", "LIKE");
 		TagSetId elsewhere = new TagSetId(active().value() + 1_000);
 
 		assertThat(withLineage(skewing(new AtomicInteger(1), elsewhere)).standingOf(this.user))
-			.contains(new StorylineStanding(Set.of(new StorylineId(flow)), Set.of(new StorylineId(flow))));
+			.contains(new StorylineStanding(Set.of(new StorylineId(storyline)), Set.of(new StorylineId(storyline))));
 	}
 
 	@Test
 	void materialsSkewedEveryTimeFail() {
-		flow("LIKE", "LIKE");
+		reactedStoryline("LIKE", "LIKE");
 		TagSetId elsewhere = new TagSetId(active().value() + 1_000);
 
 		assertThatIllegalStateException()
@@ -209,7 +209,7 @@ class StorylineStandingServiceTests {
 	}
 
 	/** 스토리라인 하나와, 반응마다 그 스토리라인에 든 사건 하나 — 한 다이제스트가 사건마다 항목 하나로 보이고 그 값으로 눌렀다 */
-	private long flow(String... reactions) {
+	private long reactedStoryline(String... reactions) {
 		long storyline = UserStorylineFixtures.storyline(this.jdbc, COMPLETED);
 		long[] articles = new long[reactions.length];
 		for (int i = 0; i < reactions.length; i++) {

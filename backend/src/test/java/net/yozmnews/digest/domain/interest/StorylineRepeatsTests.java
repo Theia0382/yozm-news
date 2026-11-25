@@ -13,7 +13,7 @@ import net.yozmnews.storyline.StorylineId;
 import org.junit.jupiter.api.Test;
 
 /**
- * 다시 본 흐름(반복) 판정 — 기준은 사건의 첫 노출 날짜, 기간은 그 앞 7일(앞선 날짜만).
+ * 다시 본 스토리라인(반복) 판정 — 기준은 사건의 첫 노출 날짜, 기간은 그 앞 7일(앞선 날짜만).
  * <p>
  * 지키는 규칙: digest-R50
  */
@@ -80,34 +80,34 @@ class StorylineRepeatsTests {
 	}
 
 	@Test
-	void aTopInSeveralFlowsRepeatsWhenAnyOfItsFlowsWasSeen() {
+	void aTopInSeveralStorylinesRepeatsWhenAnyOfItsStorylinesWasSeen() {
 		// 갈라지기 전 꼭대기 TREE 는 묶음 0 · 1 에, 형제 갈래 OTHER 는 묶음 1 에만 — OTHER 를 3일 전에 본 뒤 TREE 의 첫 사건은
 		// 묶음 1 을 함께 가져 반복이다
 		Map<EventId, List<StorylineId>> tops = Map.of(EARLIER, List.of(OTHER), LATER, List.of(TREE));
 		List<ExposureRow> rows = List.of(row(10, D.minusDays(3), EARLIER), row(11, D, LATER));
 
 		assertThat(StorylineRepeats.repeated(tops,
-				new StorylineFlows(Map.of(TREE, Set.of(0, 1), OTHER, Set.of(1)), Set.of()), rows))
+				new UserStorylines(Map.of(TREE, Set.of(0, 1), OTHER, Set.of(1)), Set.of()), rows))
 			.containsExactly(LATER);
 		// 대조 — 묶음을 나눠 갖지 않으면 반복이 아니다
 		assertThat(StorylineRepeats.repeated(tops,
-				new StorylineFlows(Map.of(TREE, Set.of(0), OTHER, Set.of(1)), Set.of()), rows))
+				new UserStorylines(Map.of(TREE, Set.of(0), OTHER, Set.of(1)), Set.of()), rows))
 			.isEmpty();
 	}
 
 	@Test
-	void aLaterFlowOfTheSameUserStorylineSeenWithinSevenDaysIsARepeat() {
+	void aLaterStorylineOfTheSameUserStorylineSeenWithinSevenDaysIsARepeat() {
 		Map<EventId, List<StorylineId>> tops = Map.of(EARLIER, List.of(TREE), LATER, List.of(OTHER));
 		List<ExposureRow> rows = List.of(row(10, D.minusDays(3), EARLIER), row(11, D, LATER));
 		// 대조 — 묶음이 없거나 서로 다른 묶음이면 꼭대기가 달라 반복이 아니다
-		assertThat(StorylineRepeats.repeated(tops, StorylineFlows.NONE, rows)).isEmpty();
-		assertThat(StorylineRepeats.repeated(tops, new StorylineFlows(Map.of(TREE, Set.of(0), OTHER, Set.of(1)), Set.of()), rows))
+		assertThat(StorylineRepeats.repeated(tops, UserStorylines.NONE, rows)).isEmpty();
+		assertThat(StorylineRepeats.repeated(tops, new UserStorylines(Map.of(TREE, Set.of(0), OTHER, Set.of(1)), Set.of()), rows))
 			.isEmpty();
-		// 한쪽만 묶음이 있어도 같은 흐름이 아니다
-		assertThat(StorylineRepeats.repeated(tops, new StorylineFlows(Map.of(TREE, Set.of(0)), Set.of()), rows)).isEmpty();
+		// 한쪽만 묶음이 있어도 같은 스토리라인이 아니다
+		assertThat(StorylineRepeats.repeated(tops, new UserStorylines(Map.of(TREE, Set.of(0)), Set.of()), rows)).isEmpty();
 
-		// 두 꼭대기가 한 묶음(이어진 흐름) — 앞 흐름을 본 뒤 7일 안의 뒤 흐름 첫 사건은 반복이다
-		assertThat(StorylineRepeats.repeated(tops, new StorylineFlows(Map.of(TREE, Set.of(0), OTHER, Set.of(0)), Set.of()), rows))
+		// 두 꼭대기가 한 묶음(이어진 스토리라인) — 앞 스토리라인을 본 뒤 7일 안의 뒤 스토리라인 첫 사건은 반복이다
+		assertThat(StorylineRepeats.repeated(tops, new UserStorylines(Map.of(TREE, Set.of(0), OTHER, Set.of(0)), Set.of()), rows))
 			.containsExactly(LATER);
 	}
 
@@ -117,7 +117,7 @@ class StorylineRepeatsTests {
 
 	/** 사용자 스토리라인 묶음이 없는 재료 — 꼭대기 단위로 가른다 */
 	private static Set<EventId> repeated(Map<EventId, List<StorylineId>> tops, List<ExposureRow> rows) {
-		return StorylineRepeats.repeated(tops, StorylineFlows.NONE, rows);
+		return StorylineRepeats.repeated(tops, UserStorylines.NONE, rows);
 	}
 
 }

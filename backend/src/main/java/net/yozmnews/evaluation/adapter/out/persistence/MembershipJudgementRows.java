@@ -12,10 +12,10 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * 소속 판정 원본 표 둘(사건 소속 {@code article_event_judgements} · 흐름 소속 {@code flow_membership_judgements})의 넣기 · 지우기
+ * 소속 판정 원본 표 둘(사건 소속 {@code article_event_judgements} · 스토리라인 소속 {@code storyline_membership_judgements})의 넣기 · 지우기
  * — 정본 · docs/specs/evaluation.md §4.
  * <p>
- * 두 표는 칸이 같고 물은 후보 {@code jsonb} 의 ID 키({@code eventId} · {@code flowId})만 다르다. 표 이름과 키는 이 패키지의 상수만
+ * 두 표는 칸이 같고 물은 후보 {@code jsonb} 의 ID 키({@code eventId} · {@code candidateId})만 다르다. 표 이름과 키는 이 패키지의 상수만
  * 넘긴다 — 바깥 입력이 SQL 에 들어가지 않는다.
  */
 final class MembershipJudgementRows {
@@ -64,7 +64,7 @@ final class MembershipJudgementRows {
 	private static String candidates(String idKey, MembershipRecord record) {
 		List<Map<String, Object>> cells = record.candidates().stream().map(candidate -> {
 			Map<String, Object> cell = new LinkedHashMap<>();
-			cell.put(idKey, candidate.eventId());
+			cell.put(idKey, candidate.candidateId());
 			cell.put("articleIds", candidate.describedArticles().stream().map(ArticleId::value).toList());
 			cell.put("probability", candidate.probability());
 			return cell;

@@ -166,7 +166,7 @@ class DigestDirectoryServiceTests {
 	}
 
 	@Test
-	void aSectionCarriesTheCurrentTopOfTheFlowThatGroupedItsItem() {
+	void aSectionCarriesTheCurrentTopOfTheStorylineThatGroupedItsItem() {
 		UserId user = user("digest-view-flow@example.com", "VALID");
 		Instant at = Instant.parse("2026-11-17T00:00:00Z");
 		long kept = UserStorylineFixtures.storyline(this.jdbc, at);
@@ -186,7 +186,7 @@ class DigestDirectoryServiceTests {
 		storylineOf(items[1], merged);
 		storylineOf(items[2], removed);
 		// 대조 — 생성 때의 꼭대기가 그대로면 그 값이다
-		assertThat(flows(user)).containsExactly(null, new StorylineId(kept), new StorylineId(merged),
+		assertThat(sectionStorylines(user)).containsExactly(null, new StorylineId(kept), new StorylineId(merged),
 				new StorylineId(removed), null);
 
 		// 저장한 뒤 — 하나는 다른 스토리라인에 합쳐지고 그 남는 쪽이 더 큰 나무에 들었다, 하나는 지워졌다
@@ -194,38 +194,38 @@ class DigestDirectoryServiceTests {
 		UserStorylineFixtures.contains(this.jdbc, parent, survivor);
 		this.jdbc.sql("delete from storylines where id = :id").param("id", removed).update();
 
-		assertThat(flows(user)).as("합쳐졌으면 남는 쪽의 지금 꼭대기, 지워졌으면 없다")
+		assertThat(sectionStorylines(user)).as("합쳐졌으면 남는 쪽의 지금 꼭대기, 지워졌으면 없다")
 			.containsExactly(null, new StorylineId(kept), new StorylineId(parent), null, null);
 	}
 
 	@Test
-	void itemsOfAFlowAreFoundAcrossDatesByTheCurrentTopOfTheStoredOneLatestFirst() {
+	void itemsOfAStorylineAreFoundAcrossDatesByTheCurrentTopOfTheStoredOneLatestFirst() {
 		UserId user = user("digest-view-items@example.com", "VALID");
 		UserId other = user("digest-view-items-other@example.com", "VALID");
 		Instant at = Instant.parse("2026-11-15T00:00:00Z");
-		long flow = UserStorylineFixtures.storyline(this.jdbc, at);
+		long storyline = UserStorylineFixtures.storyline(this.jdbc, at);
 		long merged = UserStorylineFixtures.storyline(this.jdbc, at);
 		long elsewhere = UserStorylineFixtures.storyline(this.jdbc, at);
 		long removed = UserStorylineFixtures.storyline(this.jdbc, at);
 		long first = row(user, "2026-11-16", "READY", 1, 1, null);
-		storylineOf(itemSection(first, "TOP_STORY", 1, "16일 주요", 161), flow);
+		storylineOf(itemSection(first, "TOP_STORY", 1, "16일 주요", 161), storyline);
 		storylineOf(itemSection(first, "HEADLINE", 2, "16일 다른 흐름", 162), elsewhere);
 		long covered = row(user, "2026-11-17", "READY", 1, 1, null);
-		storylineOf(itemSection(covered, "TOP_STORY", 1, "17일 덮인 것", 170), flow);
+		storylineOf(itemSection(covered, "TOP_STORY", 1, "17일 덮인 것", 170), storyline);
 		long second = row(user, "2026-11-17", "READY", 1, 1, null);
 		storylineOf(itemSection(second, "TOP_STORY", 1, "17일 합쳐진 것", 171), merged);
 		itemSection(second, "HEADLINE", 2, "17일 흐름 없음", 172);
-		storylineOf(itemSection(second, "HEADLINE", 3, "17일 헤드라인", 173, 174), flow);
+		storylineOf(itemSection(second, "HEADLINE", 3, "17일 헤드라인", 173, 174), storyline);
 		storylineOf(itemSection(second, "HEADLINE", 4, "17일 지워진 것", 175), removed);
 		long failed = row(user, "2026-11-18", "FAILED", null, null, "PROVIDER_UNAVAILABLE");
-		storylineOf(itemSection(failed, "TOP_STORY", 1, "18일 실패", 180), flow);
+		storylineOf(itemSection(failed, "TOP_STORY", 1, "18일 실패", 180), storyline);
 		long others = row(other, "2026-11-18", "READY", 1, 1, null);
-		storylineOf(itemSection(others, "TOP_STORY", 1, "다른 사용자", 190), flow);
-		// 저장한 뒤 — 하나는 흐름에 합쳐지고 하나는 지워졌다
-		UserStorylineFixtures.merge(this.jdbc, merged, flow);
+		storylineOf(itemSection(others, "TOP_STORY", 1, "다른 사용자", 190), storyline);
+		// 저장한 뒤 — 하나는 스토리라인에 합쳐지고 하나는 지워졌다
+		UserStorylineFixtures.merge(this.jdbc, merged, storyline);
 		this.jdbc.sql("delete from storylines where id = :id").param("id", removed).update();
 
-		DigestItemPage page = directory().itemsOfStorylines(user, Set.of(new StorylineId(flow)), null, 50);
+		DigestItemPage page = directory().itemsOfStorylines(user, Set.of(new StorylineId(storyline)), null, 50);
 
 		assertThat(page).isEqualTo(new DigestItemPage(List.of(
 				new DigestItemRef(LocalDate.parse("2026-11-17"), 3, SectionKind.HEADLINE, "17일 헤드라인",
@@ -235,26 +235,26 @@ class DigestDirectoryServiceTests {
 				new DigestItemRef(LocalDate.parse("2026-11-16"), 1, SectionKind.TOP_STORY, "16일 주요",
 						List.of(new EventId(161)))),
 				null));
-		// 대조 — 다른 흐름은 그 흐름의 항목만, 다른 사용자는 자기 것만
+		// 대조 — 다른 스토리라인은 그 스토리라인의 항목만, 다른 사용자는 자기 것만
 		assertThat(directory().itemsOfStorylines(user, Set.of(new StorylineId(elsewhere)), null, 50).items())
 			.extracting(DigestItemRef::title)
 			.containsExactly("16일 다른 흐름");
-		assertThat(directory().itemsOfStorylines(other, Set.of(new StorylineId(flow)), null, 50).items())
+		assertThat(directory().itemsOfStorylines(other, Set.of(new StorylineId(storyline)), null, 50).items())
 			.extracting(DigestItemRef::title)
 			.containsExactly("다른 사용자");
 		assertThat(directory().itemsOfStorylines(user, Set.of(new StorylineId(removed)), null, 50)).isEqualTo(DigestItemPage.EMPTY);
 	}
 
 	@Test
-	void itemsOfAFlowArePagedByDateAndSectionPosition() {
+	void itemsOfAStorylineArePagedByDateAndSectionPosition() {
 		UserId user = user("digest-view-items-page@example.com", "VALID");
-		long flow = UserStorylineFixtures.storyline(this.jdbc, Instant.parse("2026-11-15T00:00:00Z"));
+		long storyline = UserStorylineFixtures.storyline(this.jdbc, Instant.parse("2026-11-15T00:00:00Z"));
 		long first = row(user, "2026-11-16", "READY", 1, 1, null);
-		storylineOf(itemSection(first, "TOP_STORY", 1, "16일 1", 161), flow);
+		storylineOf(itemSection(first, "TOP_STORY", 1, "16일 1", 161), storyline);
 		long second = row(user, "2026-11-17", "READY", 1, 1, null);
-		storylineOf(itemSection(second, "TOP_STORY", 1, "17일 1", 171), flow);
-		storylineOf(itemSection(second, "HEADLINE", 2, "17일 2", 172), flow);
-		Set<StorylineId> tops = Set.of(new StorylineId(flow));
+		storylineOf(itemSection(second, "TOP_STORY", 1, "17일 1", 171), storyline);
+		storylineOf(itemSection(second, "HEADLINE", 2, "17일 2", 172), storyline);
+		Set<StorylineId> tops = Set.of(new StorylineId(storyline));
 
 		DigestItemPage firstPage = directory().itemsOfStorylines(user, tops, null, 2);
 		DigestItemPage lastPage = directory().itemsOfStorylines(user, tops, firstPage.next(), 2);
@@ -288,8 +288,8 @@ class DigestDirectoryServiceTests {
 		return section;
 	}
 
-	/** 2026-11-18 의 보이는 다이제스트 섹션마다의 흐름 — 위치 순 */
-	private List<@Nullable StorylineId> flows(UserId user) {
+	/** 2026-11-18 의 보이는 다이제스트 섹션마다의 스토리라인 — 위치 순 */
+	private List<@Nullable StorylineId> sectionStorylines(UserId user) {
 		return directory().on(user, LocalDate.parse("2026-11-18"))
 			.orElseThrow()
 			.shown()

@@ -12,7 +12,7 @@ export type NewsArticle = components["schemas"]["NewsArticleResponse"];
 /** 독자 화면의 공용 스토리라인(타임라인) 조회 키의 접두 */
 export const STORYLINES_QUERY_KEY = ["storylines"] as const;
 
-/** 흐름 요청이 실패했다 — 화면이 상태 코드로 가른다 */
+/** 사용자 스토리라인 요청이 실패했다 — 화면이 상태 코드로 가른다 */
 export class StorylineRequestError extends Error {
   readonly status: number;
 

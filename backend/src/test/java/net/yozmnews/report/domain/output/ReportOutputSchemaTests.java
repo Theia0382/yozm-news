@@ -1,9 +1,9 @@
 package net.yozmnews.report.domain.output;
 
 import static net.yozmnews.report.ReportFixtures.coverage;
-import static net.yozmnews.report.ReportFixtures.flow;
-import static net.yozmnews.report.ReportFixtures.flows;
 import static net.yozmnews.report.ReportFixtures.input;
+import static net.yozmnews.report.ReportFixtures.userStoryline;
+import static net.yozmnews.report.ReportFixtures.userStorylines;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
@@ -24,7 +24,7 @@ class ReportOutputSchemaTests {
 
 	@Test
 	void drawsTheInputKindsInInputOrderAsRequiredSectionFields() {
-		ReportAliases aliases = ReportAliases.of(input(coverage(), flows(flow(1))));
+		ReportAliases aliases = ReportAliases.of(input(coverage(), userStorylines(userStoryline(1))));
 
 		assertThat(JSON.readTree(StructuredOutputSchema.json(ReportOutputSchema.root(aliases))))
 			.isEqualTo(JSON.readTree("""

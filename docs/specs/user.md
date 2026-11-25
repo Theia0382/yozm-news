@@ -4,14 +4,14 @@
 
 ## 1. 책임과 범위
 
-`user` 는 사용자 한 사람의 관심과 그 사람에게 보이는 기록을 맡는다 — 관심 설정 · 사용자 스토리라인 · 흐름 추적 · 흐름의 정리 · 구독 제안 거절과 화면 내 알림이다. 계정 · 인증 · 보안은 [account Spec](account.md)에 있다.
+`user` 는 사용자 한 사람의 관심과 그 사람에게 보이는 기록을 맡는다 — 관심 설정 · 사용자 스토리라인 · 흐름 추적 · 사용자 스토리라인의 정리 · 구독 제안 거절과 화면 내 알림이다. 계정 · 인증 · 보안은 [account Spec](account.md)에 있다.
 
-- **화면 내 알림** — 메일 대신 쓰는 알림을 받는 사용자마다 저장하고, 세션 사용자의 알림함(목록 · 안 읽은 수 · 읽음)을 낸다. 지금 종류는 일곱이다 — 피드 상태 알림(`source` 의 피드 상태 변화를 운영자 계정마다 안 읽은 알림 하나에 모은다), 비밀번호 알림(`account` 의 `PasswordChanged` 를 받아 남긴다), 키 무효 알림(`credential` 의 `CredentialInvalidated` 를 받아 남긴다), 선호 조정 알림(태그 체계 활성 전환이 선호를 해제하거나 더했을 때), 사라진 구독 알림(추적하던 흐름이 사라졌을 때), 다이제스트 실패 알림(`digest` 가 내는 `DigestFailed` 를 받아 남긴다), 리포트 실패 알림(`report` 가 내는 `ReportFailed` 를 받아 남긴다) — 두 실패 이벤트의 타입은 이 모듈이 선언한다
+- **화면 내 알림** — 메일 대신 쓰는 알림을 받는 사용자마다 저장하고, 세션 사용자의 알림함(목록 · 안 읽은 수 · 읽음)을 낸다. 지금 종류는 일곱이다 — 피드 상태 알림(`source` 의 피드 상태 변화를 운영자 계정마다 안 읽은 알림 하나에 모은다), 비밀번호 알림(`account` 의 `PasswordChanged` 를 받아 남긴다), 키 무효 알림(`credential` 의 `CredentialInvalidated` 를 받아 남긴다), 선호 조정 알림(태그 체계 활성 전환이 선호를 해제하거나 더했을 때), 사라진 구독 알림(추적하던 사용자 스토리라인이 사라졌을 때), 다이제스트 실패 알림(`digest` 가 내는 `DigestFailed` 를 받아 남긴다), 리포트 실패 알림(`report` 가 내는 `ReportFailed` 를 받아 남긴다) — 두 실패 이벤트의 타입은 이 모듈이 선언한다
 - **정리** — 읽은 지 오래된 알림을 지운다
 - **관심 설정** — 사용자마다 설정 행 하나(선호의 체계 버전 · 일정 · 고른 모델 · 변화 리포트 · 다이제스트 분량)와 태그 선호(주제 구독 · 지역 제외 · 형식 제외)의 현재 상태 · 추가 전용 이력, 제외 소스. 계정이 생기면(`account` 의 `AccountCreated`) 기본값을 넣고(설정 행이 없는 계정은 처음 저장할 때 · 기동 때 채운다), 태그 체계의 활성 전환을 따라 선호를 활성 키로 고쳐 쓰고 알린다. 고른 모델과 쓸 모델을 정한다
-- **사용자 스토리라인** — 사용자가 관심 신호(좋아요 · 싫어요 · 흐름 추적)를 준 흐름을 사용자마다 저장한다. 씨앗(신호를 받은 스토리라인의 꼭대기)에서 `storyline` 의 이어짐을 앞에서 뒤로 따라 닿는 끝(헤드)마다 한 사용자 스토리라인으로 추적하고(갈라지기 전 꼭대기는 갈래 여럿에 든다), 공용 관계의 변화(합침 · 지움 · 관계가 생기고 사라짐)를 따른다. 저장은 흐름 추적의 처리기 · `StorylinesRetired` 리스너 · 정리 작업이 하고, 다이제스트의 관심도가 읽는 공개 조회(`UserStorylineDirectory`)는 쓰지 않고 같은 규칙의 결과를 낸다
-- **사용자 스토리라인의 정리** — 관심 흐름인 사용자 스토리라인마다 그 사용자의 LLM 키로 제목 · 흐름 요약 · 최근 전개를 만들어 그 사용자에게만 저장한다. 다이제스트가 끝나면(`digest` 가 내는 `DigestCompleted` — 이벤트 타입은 이 모듈이 선언한다) 정리 작업을 등록하고, 작업은 사용자 스토리라인을 맞춘 뒤 흐름 판정(이 모듈이 선언하고 `digest` 가 구현하는 공급 인터페이스 `StorylineStandingNow`)으로 만들 것 · 고칠 것 · 지울 것을 정해 바뀐 흐름만 부른다. 생성 호출은 `llm` 의 관문으로 하고(포트 `StorylineSummarizer`) 호출마다 시도 기록(호출 수 · 토큰 합 · 연속 실패)을 남긴다. 지운 기사를 넣은 정리는 지운다. 독자 화면이 읽는 공개 조회(`UserStorylineSummaries`)는 저장한 정리만 낸다(user-R68 ~ R73)
-- **스토리라인 구독(화면 이름 "흐름 추적")** — 사용자 스토리라인을 추적하는 현재 상태와 추가 전용 이력, 추적 · 해제 · 추적 중인 흐름 목록(사용자 스토리라인마다 한 줄 · 상한 100) · 추적 상태 · 추적 이력(사용자가 직접 한 추적 · 해제). 사용자가 누른 스토리라인은 그 사용자 스토리라인의 추적 씨앗으로 남는다. 다이제스트 · 관심도 · 관심사 히스토리 · 변화 리포트가 읽는 공개 조회(`StorylineSubscriptionDirectory`)를 낸다
+- **사용자 스토리라인** — 사용자가 관심 신호(좋아요 · 싫어요 · 흐름 추적)를 준 스토리라인을 사용자마다 저장한다. 씨앗(신호를 받은 스토리라인의 꼭대기)에서 `storyline` 의 이어짐을 앞에서 뒤로 따라 닿는 끝(헤드)마다 한 사용자 스토리라인으로 추적하고(갈라지기 전 꼭대기는 갈래 여럿에 든다), 공용 관계의 변화(합침 · 지움 · 관계가 생기고 사라짐)를 따른다. 저장은 흐름 추적의 처리기 · `StorylinesRetired` 리스너 · 정리 작업이 하고, 다이제스트의 관심도가 읽는 공개 조회(`UserStorylineDirectory`)는 쓰지 않고 같은 규칙의 결과를 낸다
+- **사용자 스토리라인의 정리** — 관심 스토리라인인 사용자 스토리라인마다 그 사용자의 LLM 키로 제목 · 흐름 요약 · 최근 전개를 만들어 그 사용자에게만 저장한다. 다이제스트가 끝나면(`digest` 가 내는 `DigestCompleted` — 이벤트 타입은 이 모듈이 선언한다) 정리 작업을 등록하고, 작업은 사용자 스토리라인을 맞춘 뒤 스토리라인 판정(이 모듈이 선언하고 `digest` 가 구현하는 공급 인터페이스 `StorylineStandingNow`)으로 만들 것 · 고칠 것 · 지울 것을 정해 바뀐 사용자 스토리라인만 부른다. 생성 호출은 `llm` 의 관문으로 하고(포트 `StorylineSummarizer`) 호출마다 시도 기록(호출 수 · 토큰 합 · 연속 실패)을 남긴다. 지운 기사를 넣은 정리는 지운다. 독자 화면이 읽는 공개 조회(`UserStorylineSummaries`)는 저장한 정리만 낸다(user-R68 ~ R73)
+- **스토리라인 구독(화면 이름 "흐름 추적")** — 사용자 스토리라인을 추적하는 현재 상태와 추가 전용 이력, 추적 · 해제 · 추적 중인 사용자 스토리라인 목록(사용자 스토리라인마다 한 줄 · 상한 100) · 추적 상태 · 추적 이력(사용자가 직접 한 추적 · 해제). 사용자가 누른 스토리라인은 그 사용자 스토리라인의 추적 씨앗으로 남는다. 다이제스트 · 관심도 · 관심사 히스토리 · 변화 리포트가 읽는 공개 조회(`StorylineSubscriptionDirectory`)를 낸다
 - **구독 제안 거절** — 구독 제안을 거절한 주제 중분류를 기록 당시 태그 체계 버전 · 거절 때 관심 · 시각과 함께 사용자마다 현재 상태 한 벌로 저장하고(처리기), 활성 키로 풀어 내는 공개 조회(`TopicSuggestionDeclines`)를 낸다. 거절 때 관심은 이 모듈이 선언하고 `digest` 가 구현하는 공급 인터페이스(`TopicInterestNow`)로 묻는다. 제안의 판정은 하지 않는다(user-R64 · R65)
 - **다이제스트가 읽는 관심 설정** — 다이제스트 후보 선별 · 구독 제안이 읽는 공개 조회(`DigestInterestsDirectory`) — 활성 키의 주제 구독(펼친 중분류와 함께) · 제외 · 시간대 · 분량 · 요약 길이 · 추론 강도. 쓰지 않는다(user-R57)
 - **주제 구독 이력 조회** — 다이제스트의 관심도 · 관심사 히스토리가 읽는 공개 조회(`TopicSubscriptionHistory`) — 기간의 선호 이력 가운데 주제 행을 기록 당시 버전으로 펼치고 활성 중분류로 풀어 원인과 함께 낸다. 쓰지 않는다(user-R58)
@@ -27,7 +27,7 @@
 - 태그 체계 · 계보 · 기본 제외를 정하지 않는다 — `tag` 의 것이고, 이 모듈은 활성 체계 · 계보를 읽어 선호를 맞춘다
 - 스토리라인을 잇거나 합치거나 지우지 않고, 남는 스토리라인을 정하지 않는다 — `storyline` 의 것이고, 이 모듈은 그 알림과 묶음 찾기로 구독을 맞춘다. 스토리라인의 표시 정보(대표 기사 등)를 내지 않는다
 - LLM 공급자를 직접 부르지 않고 키를 다루지 않는다 — 정리의 생성 호출은 `llm` 의 관문이 저장한 키로 하고, 쓸 모델은 허용 모델 목록(`llm`)과 키 상태(`credential`)를 읽어 정하기만 한다
-- 관심을 계산하지 않고 관심 흐름의 기준을 갖지 않는다 — `digest` 의 것이고, 이 모듈은 판정의 결과를 공급 인터페이스로 받는다
+- 관심을 계산하지 않고 관심 스토리라인의 기준을 갖지 않는다 — `digest` 의 것이고, 이 모듈은 판정의 결과를 공급 인터페이스로 받는다
 - 공용 스토리라인에 사용자 LLM 의 출력을 두지 않는다 — 정리는 사용자 스토리라인에 붙는 그 사용자의 글이다
 
 다른 모듈과의 의존과 이벤트 흐름은 [overview.md §5](../overview.md#5-모듈-지도)에 있다.
@@ -59,25 +59,25 @@
 | 구독 제안 거절 | 사용자가 구독 제안을 거절한 주제 중분류 — 기록 당시 버전의 키 · 거절 때 관심 · 시각. 관심 신호가 아니다(user-R64) |
 | 다이제스트가 읽는 관심 설정 | 다이제스트 후보 선별 · 구독 제안이 읽는 관심 설정 — 활성 키로 낸 주제 구독 행(덮는 중분류와 함께) · 제외 · 시간대 · 분량 · 요약 길이 · 추론 강도(user-R57) |
 | 주제 구독 이력 조회 | 다이제스트의 관심도가 읽는 기간의 주제 구독 변경 — 선호 이력의 주제 행을 기록 당시 버전으로 펼쳐 활성 중분류로 풀고 원인과 함께 낸다(user-R58) |
-| 사용자 스토리라인 | 사용자가 관심 신호를 준 흐름 — 추적 대상(공용 스토리라인의 꼭대기 묶음)과 추적 씨앗을 갖는다. 공용 스토리라인과 다른 개체다(user-R66) |
+| 사용자 스토리라인 | 사용자가 관심 신호를 준 스토리라인 — 추적 대상(공용 스토리라인의 꼭대기 묶음)과 추적 씨앗을 갖는다. 공용 스토리라인과 다른 개체다(user-R66) |
 | 씨앗 | 사용자 스토리라인을 만드는 꼭대기 — 관심 창 안에 반응을 받은 사건의 꼭대기, 창 안에 사용자가 추적 · 해제한 스토리라인의 꼭대기, 추적 씨앗의 꼭대기(user-R66) |
 | 추적 대상 | 사용자 스토리라인이 따라가는 꼭대기들 — 헤드와, 씨앗 가운데 그 헤드에 닿는 것과, 그 씨앗에서 헤드까지 이어짐을 앞에서 뒤로 따라 닿는 꼭대기(user-R66) |
-| 헤드 | 사용자 스토리라인의 끝 — 추적 대상 가운데 뒤 흐름(이어짐)이 없는 꼭대기. 사용자 스토리라인마다 하나이고 겹치지 않으며 그 사용자 스토리라인의 손잡이다(화면의 추적 버튼 대상 · 정리 판정 · 관심사 히스토리 행). 갈라지기 전 꼭대기는 그 뒤 헤드의 사용자 스토리라인 여럿에 든다(user-R66) |
+| 헤드 | 사용자 스토리라인의 끝 — 추적 대상 가운데 뒤 스토리라인(이어짐)이 없는 꼭대기. 사용자 스토리라인마다 하나이고 겹치지 않으며 그 사용자 스토리라인의 손잡이다(화면의 추적 버튼 대상 · 정리 판정 · 관심사 히스토리 행). 갈라지기 전 꼭대기는 그 뒤 헤드의 사용자 스토리라인 여럿에 든다(user-R66) |
 | 맞추기 | 저장한 사용자 스토리라인을 지금의 신호 · 관계로 낸 묶음에 잇는 것 — 잇고 · 만들고 · 합치고 · 지운다(user-R53 · R66) |
 | 스토리라인 구독 | 사용자 스토리라인을 추적하는 상태 — 사용자 스토리라인 ID 와 추적하기 시작한 시각. 화면 이름은 "흐름 추적"이다(user-R52) |
 | 추적 씨앗 | 추적 중인 사용자 스토리라인에 남은, 사용자가 누른(또는 갈라질 때 물려받은) 스토리라인 — 구독 이력과 일대일이다(user-R52) |
 | 구독 이력 | 추적 씨앗의 추가 전용 변경 기록 — 원인(사용자 · 합쳐짐 · 사라짐 · 갈라져 물려받음)을 갖는다. 관심 신호는 원인이 사용자인 행만이다(user-R52 · R53) |
-| 정리 | 사용자 스토리라인 하나를 그 사용자의 LLM 키로 간추린 글 — 흐름 전체의 제목 · 흐름 요약 · 최근 전개와 추적 대상 꼭대기마다의 같은 세 글. 정리가 있는 사용자 스토리라인만 독자 화면에 보인다(user-R68 · R73) |
+| 정리 | 사용자 스토리라인 하나를 그 사용자의 LLM 키로 간추린 글 — 사용자 스토리라인 전체의 제목 · 흐름 요약 · 최근 전개와 추적 대상 꼭대기마다의 같은 세 글. 정리가 있는 사용자 스토리라인만 독자 화면에 보인다(user-R68 · R73) |
 | 처분 | 정리 실행이 사용자 스토리라인마다 정하는 일 — 새로 만들기 · 처음부터 다시 만들기 · 새 사건으로 고치기 · 그대로 두기 · 지우기(user-R69) |
 | 넣은 사건 | 정리에 반영한 것으로 기록한 사건과 그 대표 기사 — 다음 실행이 새 사건을 가리는 기준이고, 지운 기사를 따르는 색인이다(user-R69 · R72) |
 | 시도 기록 | 사용자 스토리라인마다 정리 호출의 수 · 토큰 합 · 연속 실패 · 마지막 실패 — 정리를 지워도 남는다(user-R71) |
-| 사라진 구독 알림 | 추적하던 사용자 스토리라인이 이을 흐름 없이 사라졌다는 알림 — 지워진 추적 씨앗의 스토리라인 ID 와 풀기에서 남은 사건 ID 만 담고, 제목은 알림함을 열 때 읽는다(user-R54) |
+| 사라진 구독 알림 | 추적하던 사용자 스토리라인이 이을 스토리라인 없이 사라졌다는 알림 — 지워진 추적 씨앗의 스토리라인 ID 와 풀기에서 남은 사건 ID 만 담고, 제목은 알림함을 열 때 읽는다(user-R54) |
 
 ## 3. 공개 인터페이스
 
 받는 이벤트는 `account` 의 `AccountCreated` · `PasswordChanged`(user-R43 · R74), `source` 의 `FeedStatusesChanged` · `SourceDeleted`, `credential` 의 `CredentialInvalidated`, `tag` 의 `TagSetActivated`, `storyline` 의 `StorylinesRetired`, `article` 의 `ArticlesRemoved`, `digest` 가 내는 `DigestFailed` · `DigestCompleted`, `report` 가 내는 `ReportFailed`(이 모듈이 선언한 이벤트 — user-R62 · R68 · R75)이고, 내는 이벤트는 없다 — 관심 설정 · 스토리라인 구독이 바뀌어도 이벤트를 내지 않는다([ADR-0180](../adr/0180-user-settings-changes-publish-no-event-and-consumers-query.md)).
 
-모듈 최상위 패키지 `net.yozmnews.user` 의 공개 타입 가운데 다른 모듈이 읽는 공개 조회는 스토리라인 구독(`StorylineSubscriptionDirectory`)과 그 값 타입(`StorylineSubscriptionChange` · `StorylineSubscriptionAction` · `StorylineSubscriptionCause`), 사용자 스토리라인(`UserStorylineDirectory`)과 그 값 타입(`UserStorylineView` · `UserStorylineId`), 다이제스트가 읽는 관심 설정(`DigestInterestsDirectory`)과 그 값 타입(`DigestInterests` · `TopicSubscription` · `SummaryLength`), 주제 구독 이력(`TopicSubscriptionHistory`)과 그 값 타입(`TopicSubscriptionChanges` · `TopicSubscriptionChange` · `TopicSubscriptionAction` · `TopicSubscriptionCause`), 사용자 시간대(`UserTimezones` · `UserDigestSchedules`), 다이제스트 일정 목록(`DigestScheduleDirectory`)과 그 값 타입(`DigestScheduleEntry`), 다이제스트의 쓸 모델(`DigestModelDirectory`), 리포트 일정 목록(`ReportScheduleDirectory`)과 그 값 타입(`ReportScheduleEntry`), 리포트의 쓸 모델(`ReportModelDirectory`)과 그 값 타입(`ReportModel`), 구독 제안 거절(`TopicSuggestionDeclines`)과 그 값 타입(`TopicSuggestionDeclineList` · `TopicSuggestionDecline`)이다. 독자 화면이 읽는 공개 조회는 사용자 스토리라인의 정리(`UserStorylineSummaries`)와 그 값 타입(`UserStorylineSummaryView` · `TopSummary` · `SummaryUsage` · `UserStorylineSummaryRef`)이다. 다른 모듈이 구현하는 공급 인터페이스는 지금 관심(`TopicInterestNow`) · 관심 신호의 창(`InterestSignalWindow`) · 지금 흐름 판정(`StorylineStandingNow` 와 그 값 타입 `StorylineStanding`)이다 — 셋 다 `digest` 가 구현한다. 받는 쪽으로 선언한 이벤트는 다이제스트 실패(`DigestFailed`), 다이제스트 끝남(`DigestCompleted`), 리포트 실패(`ReportFailed`)와 그 값 타입(`ReportFailedKind`)이고, 두 실패 이벤트가 함께 쓰는 값 타입은 생성 실패의 갈래(`GenerationFailureCause`)다. 사용자 식별자 `UserId` 는 `platform` 의 공개 타입이다([platform Spec](platform.md#userid)).
+모듈 최상위 패키지 `net.yozmnews.user` 의 공개 타입 가운데 다른 모듈이 읽는 공개 조회는 스토리라인 구독(`StorylineSubscriptionDirectory`)과 그 값 타입(`StorylineSubscriptionChange` · `StorylineSubscriptionAction` · `StorylineSubscriptionCause`), 사용자 스토리라인(`UserStorylineDirectory`)과 그 값 타입(`UserStorylineView` · `UserStorylineId`), 다이제스트가 읽는 관심 설정(`DigestInterestsDirectory`)과 그 값 타입(`DigestInterests` · `TopicSubscription` · `SummaryLength`), 주제 구독 이력(`TopicSubscriptionHistory`)과 그 값 타입(`TopicSubscriptionChanges` · `TopicSubscriptionChange` · `TopicSubscriptionAction` · `TopicSubscriptionCause`), 사용자 시간대(`UserTimezones` · `UserDigestSchedules`), 다이제스트 일정 목록(`DigestScheduleDirectory`)과 그 값 타입(`DigestScheduleEntry`), 다이제스트의 쓸 모델(`DigestModelDirectory`), 리포트 일정 목록(`ReportScheduleDirectory`)과 그 값 타입(`ReportScheduleEntry`), 리포트의 쓸 모델(`ReportModelDirectory`)과 그 값 타입(`ReportModel`), 구독 제안 거절(`TopicSuggestionDeclines`)과 그 값 타입(`TopicSuggestionDeclineList` · `TopicSuggestionDecline`)이다. 독자 화면이 읽는 공개 조회는 사용자 스토리라인의 정리(`UserStorylineSummaries`)와 그 값 타입(`UserStorylineSummaryView` · `TopSummary` · `SummaryUsage` · `UserStorylineSummaryRef`)이다. 다른 모듈이 구현하는 공급 인터페이스는 지금 관심(`TopicInterestNow`) · 관심 신호의 창(`InterestSignalWindow`) · 지금 스토리라인 판정(`StorylineStandingNow` 와 그 값 타입 `StorylineStanding`)이다 — 셋 다 `digest` 가 구현한다. 받는 쪽으로 선언한 이벤트는 다이제스트 실패(`DigestFailed`), 다이제스트 끝남(`DigestCompleted`), 리포트 실패(`ReportFailed`)와 그 값 타입(`ReportFailedKind`)이고, 두 실패 이벤트가 함께 쓰는 값 타입은 생성 실패의 갈래(`GenerationFailureCause`)다. 사용자 식별자 `UserId` 는 `platform` 의 공개 타입이다([platform Spec](platform.md#userid)).
 
 HTTP 엔드포인트:
 
@@ -98,10 +98,10 @@ HTTP 엔드포인트:
 | `/api/interests/volume` | `GET` | 다이제스트 분량 — 단계 · 직접 입력한 수 · 큰 슬롯 수 · 요약 길이와 단계마다의 후보 수 · 직접 입력 · 큰 슬롯 수의 범위 · 요약 길이 값들(user-R56) |
 | `/api/interests/volume` | `PUT` | 분량 저장 — `SAVED`(+조회와 같은 칸) · `COUNT_OUT_OF_RANGE`(+범위) · `BIG_SLOTS_OUT_OF_RANGE`(+범위). 직접 입력과 직접 입력한 수의 짝이 맞지 않으면 400(user-R56) |
 | `/api/interests/declined-suggestions` | `POST` | 구독 제안 거절 — 본문 `{tagSetId, topic}`, `DECLINED`(+주제 키) · `TAG_SET_CHANGED`(+활성 버전 ID). 그 버전의 주제 중분류 키가 아니거나 `tagSetId` 가 1 보다 작으면 400(user-R64) |
-| `/api/storyline-subscriptions` | `GET` | 추적 중인 흐름 — 사용자 스토리라인마다 그 ID · 헤드의 스토리라인 ID · 추적하기 시작한 시각 · 지금 있는 추적 씨앗의 스토리라인 ID 들 · 지금 상태 · 정리의 제목(없으면 null), 추적 시각 내림차순과 상한(user-R52) |
-| `/api/storyline-subscriptions/states` | `GET` | 추적 상태 — 질의 `ids`(스토리라인 ID 1 ~ 100개, 1 이상)마다 그 흐름을 추적 중인지, 받은 순서대로. `ids` 가 없거나 100개를 넘거나 1 보다 작은 값이 있으면 400(user-R67) |
+| `/api/storyline-subscriptions` | `GET` | 추적 중인 사용자 스토리라인 — 사용자 스토리라인마다 그 ID · 헤드의 스토리라인 ID · 추적하기 시작한 시각 · 지금 있는 추적 씨앗의 스토리라인 ID 들 · 지금 상태 · 정리의 제목(없으면 null), 추적 시각 내림차순과 상한(user-R52) |
+| `/api/storyline-subscriptions/states` | `GET` | 추적 상태 — 질의 `ids`(스토리라인 ID 1 ~ 100개, 1 이상)마다 그 사용자 스토리라인을 추적 중인지, 받은 순서대로. `ids` 가 없거나 100개를 넘거나 1 보다 작은 값이 있으면 400(user-R67) |
 | `/api/storyline-subscriptions/{storylineId}` | `PUT` | 추적 — `SUBSCRIBED`(+남는 스토리라인 ID) · `ALREADY_SUBSCRIBED`(+남는 스토리라인 ID) · `UNKNOWN_STORYLINE` · `LIMIT_REACHED`(+상한). ID 가 1 보다 작거나 숫자가 아니면 400(user-R52) |
-| `/api/storyline-subscriptions/{storylineId}` | `DELETE` | 해제 — 그 스토리라인의 꼭대기를 가진 추적 중인 흐름 모두의 추적을 끈다. `UNSUBSCRIBED` · `NOT_SUBSCRIBED`. ID 가 1 보다 작거나 숫자가 아니면 400(user-R52) |
+| `/api/storyline-subscriptions/{storylineId}` | `DELETE` | 해제 — 그 스토리라인의 꼭대기를 가진 추적 중인 사용자 스토리라인 모두의 추적을 끈다. `UNSUBSCRIBED` · `NOT_SUBSCRIBED`. ID 가 1 보다 작거나 숫자가 아니면 400(user-R52) |
 | `/api/storyline-subscriptions/changes` | `GET` | 추적 이력 한 쪽 — 사용자가 직접 한 추적 · 해제의 지금 스토리라인 ID(지워졌으면 null) · 더함 뺌 · 시각, 최근부터, 다음 쪽 커서. 질의 `beforeAt` · `beforeId`(다음 쪽 커서 — 함께). 하나만 오거나 시각 · ID(1 이상)를 읽을 수 없으면 400(user-R63) |
 
 알림 세 경로 · 관심 설정 열두 경로 · 스토리라인 구독 네 경로는 세션이 필요하며 사용자 격리 시험에 등록돼 있고([account Spec](account.md#화면용-api-의-공개와-세션-사용자) account-R5 · R6), LLM 키가 없는 세션 사용자에게도 연다(`@AllowedWithoutLlmKey` — account-R5). 판정 결과는 200 이고 요청 본문의 칸이 없으면 본문 형식 400 이다. 요청 · 응답 형식은 `api/openapi.json` 에 있다.
@@ -126,7 +126,7 @@ public enum StorylineSubscriptionCause { USER, STORYLINE_MERGED, STORYLINE_REMOV
 
 | 메서드 · 타입 | 뜻 |
 |---|---|
-| `subscriptions` | 지금 추적 씨앗 — 추적 중인 사용자 스토리라인의 추적 씨앗을 남는 스토리라인 ID 로 풀고 같은 것은 하나로, 사라진 것은 빼고, ID 순. 사용자 스토리라인이 이어짐으로 따라가는 뒤 흐름은 들지 않는다 — 그것은 `UserStorylineDirectory` 가 낸다 |
+| `subscriptions` | 지금 추적 씨앗 — 추적 중인 사용자 스토리라인의 추적 씨앗을 남는 스토리라인 ID 로 풀고 같은 것은 하나로, 사라진 것은 빼고, ID 순. 사용자 스토리라인이 이어짐으로 따라가는 뒤 스토리라인은 들지 않는다 — 그것은 `UserStorylineDirectory` 가 낸다 |
 | `changes` | 이력 행 가운데 시각이 `from` 이상 · `to` 미만인 것 — 시각 · 행 순. `from` 이 `to` 보다 늦으면 `IllegalArgumentException` |
 | `StorylineSubscriptionChange.recorded` | 기록된 스토리라인 ID — 기록 뒤에 합쳐졌거나 지워졌을 수 있다 |
 | `StorylineSubscriptionChange.current` | `recorded` 를 지금 푼 스토리라인 ID(합쳐졌으면 남는 쪽) — 지워졌으면 null |
@@ -498,7 +498,7 @@ public enum ReportFailedKind { WEEK, MONTH }
 
 ### StorylineStandingNow
 
-사용자 하나의 지금 흐름 판정 — 이 모듈이 선언하고 `digest` 가 구현하는 공급 인터페이스다(구현 `digest` 의 `StorylineStandingService`). 정리 실행이 만들 흐름 · 남길 흐름을 가리려고 부른다. 판정과 기준은 `digest` 의 관심도가 정본이다([digest Spec](digest.md#관심도) digest-R51).
+사용자 하나의 지금 스토리라인 판정 — 이 모듈이 선언하고 `digest` 가 구현하는 공급 인터페이스다(구현 `digest` 의 `StorylineStandingService`). 정리 실행이 만들 사용자 스토리라인 · 남길 스토리라인을 가리려고 부른다. 판정과 기준은 `digest` 의 관심도가 정본이다([digest Spec](digest.md#관심도) digest-R51).
 
 ```java
 public interface StorylineStandingNow {
@@ -511,8 +511,8 @@ public record StorylineStanding(Set<StorylineId> followed, Set<StorylineId> kept
 | 메서드 · 타입 | 뜻 |
 |---|---|
 | `standingOf` | 지금을 기준 시각으로 둔 판정 — 계정이 없으면 빈 값. 재료의 태그 체계 활성 버전이 거듭 어긋나 판정을 내지 못하면 `IllegalStateException` |
-| `StorylineStanding.followed` | 관심 흐름의 꼭대기 — 정리를 새로 만들 수 있는 흐름 |
-| `StorylineStanding.kept` | 남길 흐름의 꼭대기 — 이미 정리한 흐름을 남기는 기준. `followed` 와 따로 판정한 것이라 추적 중이어서 관심 흐름인 꼭대기는 여기 없을 수 있다 |
+| `StorylineStanding.followed` | 관심 스토리라인의 꼭대기 — 정리를 새로 만들 수 있는 사용자 스토리라인 |
+| `StorylineStanding.kept` | 남길 스토리라인의 꼭대기 — 이미 정리한 사용자 스토리라인을 남기는 기준. `followed` 와 따로 판정한 것이라 추적 중이어서 관심 스토리라인인 꼭대기는 여기 없을 수 있다 |
 
 - 계약
   - 사용자를 인자로 받는다 — 백그라운드 작업이 그 작업의 사용자로 부른다
@@ -522,7 +522,7 @@ public record StorylineStanding(Set<StorylineId> followed, Set<StorylineId> kept
 
 ### UserStorylineSummaries
 
-사용자 스토리라인의 정리 조회 — 독자 화면(`reader`)이 정리된 흐름을 엮을 때, 변화 리포트의 재료 조립이 흐름의 글을 실을 때 읽는다. 구현은 `application` 의 `UserStorylineSummariesService` 다.
+사용자 스토리라인의 정리 조회 — 독자 화면(`reader`)이 정리된 사용자 스토리라인을 엮을 때, 변화 리포트의 재료 조립이 사용자 스토리라인의 글을 실을 때 읽는다. 구현은 `application` 의 `UserStorylineSummariesService` 다.
 
 ```java
 public interface UserStorylineSummaries {
@@ -554,13 +554,13 @@ public record UserStorylineSummaryRef(UserStorylineId id, String title) {}
 | `find` | 그 사용자의 정리된 사용자 스토리라인 하나 — 다른 사용자의 것이거나 정리가 없으면 빈 값 |
 | `ofTops` | 꼭대기 → 그 꼭대기를 저장한 추적 대상으로 가진 정리된 사용자 스토리라인 모두(사용자 스토리라인 ID 순, 비지 않음) — 갈라지기 전 꼭대기는 그 뒤 갈래의 것 여럿이다. 그런 것이 없는 꼭대기는 빠지고 빈 입력이면 빈 맵이다. 서로 다른 꼭대기가 `MAX_TOPS`(100)보다 많으면 `IllegalArgumentException` |
 | `UserStorylineSummaryView.head` | 헤드 — 화면의 손잡이(추적 버튼 대상 · 관심사 히스토리 행). 저장한 헤드이고, 헤드를 저장하기 전의 개체(그 사용자의 다음 저장하는 맞추기 전까지)는 저장한 추적 대상 가운데 가장 작은 꼭대기다 — 이 대체는 이 조회 한 곳뿐이다 |
-| `UserStorylineSummaryView.title` · `summary` · `recent` | 흐름 전체의 제목 · 흐름 요약 · 최근 전개 |
+| `UserStorylineSummaryView.title` · `summary` · `recent` | 사용자 스토리라인 전체의 제목 · 흐름 요약 · 최근 전개 |
 | `UserStorylineSummaryView.members` | 저장한 추적 대상 — 포함 나무의 꼭대기. 비지 않는다 |
 | `UserStorylineSummaryView.tops` | 추적 대상 꼭대기마다의 글 — 스토리라인 ID 순이고 `members` 와 같은 꼭대기다 |
 | `TopSummary` | 꼭대기 하나의 글 — 글이 없는 꼭대기(정리할 사건이 없었거나 마지막 정리 뒤에 추적 대상에 들었다)는 세 칸이 모두 null 이다. 세 칸은 함께 있거나 함께 없다 |
 | `SummaryUsage.provider` · `model` · `inputTokens` · `outputTokens` | 마지막 정리의 공급자 키(다이제스트의 사용량이 내는 것과 같은 값) · 모델 ID · 입력 · 출력 토큰 |
 | `SummaryUsage.calls` · `totalInputTokens` · `totalOutputTokens` | 지금까지 공급자에 보낸 호출 수(실패한 · 버린 호출 포함)와 공급자가 토큰을 알려 준 모든 호출의 토큰 합. 금액으로 바꾸지 않는다 |
-| `UserStorylineSummaryRef` | 정리된 사용자 스토리라인을 가리키는 값 — ID 와 흐름 전체의 제목 |
+| `UserStorylineSummaryRef` | 정리된 사용자 스토리라인을 가리키는 값 — ID 와 사용자 스토리라인 전체의 제목 |
 
 - 계약
   - 사용자를 인자로 받는 조회다 — 화면 경로에서는 세션 사용자로만 부른다([ADR-0228](../adr/0228-consumer-queries-scoped-by-a-user-argument-may-be-called-on-screen-paths-with-the-session-user.md))
@@ -575,7 +575,7 @@ public record UserStorylineSummaryRef(UserStorylineId id, String title) {}
 
 | 패키지 | 책임 |
 |---|---|
-| (최상위) | 스토리라인 구독 조회 · 사용자 스토리라인 조회와 관심 신호의 창(공급 인터페이스) · 다이제스트가 읽는 관심 설정 · 주제 구독 이력 · 사용자 시간대 · 다이제스트 일정 목록 · 쓸 모델 조회와 그 값, 리포트 일정 목록 · 쓸 모델 조회와 그 값, 구독 제안 거절 조회 · 지금 관심(공급 인터페이스), 정리 조회 · 지금 흐름 판정(공급 인터페이스), 받는 쪽으로 선언한 다이제스트 실패 · 끝남 · 리포트 실패 이벤트와 그 값(§3) |
+| (최상위) | 스토리라인 구독 조회 · 사용자 스토리라인 조회와 관심 신호의 창(공급 인터페이스) · 다이제스트가 읽는 관심 설정 · 주제 구독 이력 · 사용자 시간대 · 다이제스트 일정 목록 · 쓸 모델 조회와 그 값, 리포트 일정 목록 · 쓸 모델 조회와 그 값, 구독 제안 거절 조회 · 지금 관심(공급 인터페이스), 정리 조회 · 지금 스토리라인 판정(공급 인터페이스), 받는 쪽으로 선언한 다이제스트 실패 · 끝남 · 리포트 실패 이벤트와 그 값(§3) |
 | `adapter/in/job` | 읽은 알림 정리 반복 작업 |
 | `adapter/in/web` | 알림함 · 관심 설정 · 스토리라인 구독 엔드포인트와 그 요청 · 응답 값 |
 | `adapter/out/persistence` | 알림 · 반영 기준 저장소, 설정 행 · 태그 선호 · 선호 이력 · 제외 소스 저장소, 선호 버전 울타리, 스토리라인 구독 · 구독 이력 저장소 |
@@ -655,7 +655,7 @@ public record UserStorylineSummaryRef(UserStorylineId id, String title) {}
 - `StorylinesRetiredListener` — `StorylinesRetired` 리스너(들어오는 쪽). 역할 애너테이션이 없다(user-R53)
 - `StorylineSubscriptionDirectoryService` — 공개 조회 `StorylineSubscriptionDirectory` 의 구현. 읽기 전용이다(user-R55)
 - `StorylineSubscriptionHistory` — 화면의 구독 이력 유스케이스 — 세션 사용자의 원인 `USER` 행 한 쪽과 다음 쪽 커서. 값 `HistoryPage` · `HistoryEntry`. 읽기 전용이다(user-R63)
-- `StorylineSummaryRun` — 사용자 하나의 정리 실행 — 쓸 모델 · 맞추기 · 흐름 판정 · 재료 · 처분 · 생성 호출 · 견줘 저장 · 시도 기록(user-R68 ~ R71). 결과 `SummaryRunResult`(저장 · 지움 · 실패 · 버림의 수). 역할 애너테이션이 없다
+- `StorylineSummaryRun` — 사용자 하나의 정리 실행 — 쓸 모델 · 맞추기 · 스토리라인 판정 · 재료 · 처분 · 생성 호출 · 견줘 저장 · 시도 기록(user-R68 ~ R71). 결과 `SummaryRunResult`(저장 · 지움 · 실패 · 버림의 수). 역할 애너테이션이 없다
 - `SummaryMaterials` — 정리의 재료 읽기 — 추적 대상 꼭대기의 사건(`storyline` 의 타임라인 — 하위 스토리라인의 사건까지)과 대표 기사(`event`)의 제목 · 요약문(`article`). 대표 기사가 없거나 그새 지운 사건은 뺀다. 트랜잭션 없이 조회를 차례로 부른다(user-R70)
 - `DigestCompletedListener` — `DigestCompleted` 리스너(들어오는 쪽). 역할 애너테이션이 없다(user-R68)
 - `SummaryArticleRemoval` · `SummaryArticleRemovalListener` — 지운 기사 따르기와 `ArticlesRemoved` 리스너(user-R72)
@@ -707,13 +707,13 @@ public record UserStorylineSummaryRef(UserStorylineId id, String title) {}
 - `UserStorylineRepository` — 사용자 스토리라인 · 추적 대상 · 추적 씨앗 · 헤드 · 구독 행 저장과 그 스토리라인을 가진 사용자 조회(리스너 전용). 값 `UserStorylineRow`. 구현 `JdbcUserStorylines`(user-R52 · R53 · R66)
 - `StorylineSubscriptionHistoryPage` — 구독 이력 한 쪽의 행 수의 정본(user-R63)
 - `SummaryRules` — 정리의 상수(한 호출의 사건 상한 · 한 실행의 호출 상한 · 권하는 글 길이와 서술의 상한 · 글 한 벌의 본문 토큰 · 추론 강도 · 쉬는 날의 상한)와 쉬는 끝 · 본문 토큰 상한의 정본(user-R69 ~ R71)
-- `SummaryPlan` — 처분의 정본. 입력 `Flow`, 결과 `Action`(봉인 — `Create` · `Rebuild` · `Extend` · `Keep` · `Remove`), 재료를 읽을 사용자 스토리라인(`needingMaterials`)(user-R69)
+- `SummaryPlan` — 처분의 정본. 입력 `UserStoryline`, 결과 `Action`(봉인 — `Create` · `Rebuild` · `Extend` · `Keep` · `Remove`), 재료를 읽을 사용자 스토리라인(`needingMaterials`)(user-R69)
 - `SummaryInput` · `SummaryEvent` — 호출 하나의 재료 — 글을 쓸 꼭대기마다 사건 줄(대표 기사의 제목 · 요약문 · 첫 기사 시각)과 지난 글(user-R70)
 - `SummaryPrompts` · `SummaryPrompt` — 지시와 사용자 구획(JSON 문서) · 꼭대기 별칭 · 출력 스키마(user-R70)
 - `SummaryOutputSchema` · `SummaryOutputReader` · `SummaryRead` — 출력의 서술 하나에서 나온 JSON Schema 문서와 읽기. 읽기 결과는 봉인(`Read` · `Unreadable`)이다(user-R70)
 - `SummaryFailure` — 정리 호출의 실패 코드와 키 쪽 실패의 구분(user-R71)
 - `SummaryOutcome` — 생성기의 결과(봉인 — `Generated` · `Failed` · `KeyMissing`). `SummaryRequest` — 생성기의 요청(user-R70)
-- `StorylineSummary` · `SummaryText` — 저장하는 정리(흐름 전체의 글 · 꼭대기마다의 글 · 넣은 사건과 그 대표 기사 · 마지막 정리의 모델과 토큰 · 처음 · 마지막 정리 시각 · 판)와 글 한 벌. 글 없는 꼭대기의 자리는 `SummaryText.NONE` 이다(user-R70)
+- `StorylineSummary` · `SummaryText` — 저장하는 정리(사용자 스토리라인 전체의 글 · 꼭대기마다의 글 · 넣은 사건과 그 대표 기사 · 마지막 정리의 모델과 토큰 · 처음 · 마지막 정리 시각 · 판)와 글 한 벌. 글 없는 꼭대기의 자리는 `SummaryText.NONE` 이다(user-R70)
 - `SummaryAttempt` — 시도 기록(user-R71)
 - `StorylineSummaryRepository` — 정리 · 꼭대기마다의 글 · 넣은 사건 · 시도 기록 저장. 고쳐 쓰기는 읽은 판을 견준다. 구현 `JdbcStorylineSummaryRepository`(user-R70 ~ R72)
 - `StorylineSubscriptionRepository` — 구독 이력 저장 · 기간 이력 · 사용자 이력 쪽(`userChanges`). 값 `SubscriptionChange` · `StoredSubscriptionChange` · `UserSubscriptionChange` · `SubscriptionChangeCursor`. 구현 `JdbcStorylineSubscriptions`(user-R52 · R53 · R55 · R63)
@@ -820,31 +820,31 @@ public interface SummaryJobQueue {
 
 ### 스토리라인 구독
 
-판단의 이유는 [ADR-0188](../adr/0188-storyline-subscriptions-follow-retired-storylines-by-event-and-before-each-use-and-notices-point-to-the-remaining-event.md) · [ADR-0189](../adr/0189-subscriptions-to-ended-storylines-stay-and-the-query-carries-the-current-state.md) · [ADR-0190](../adr/0190-storyline-subscription-handlers-are-open-without-a-key.md) · [ADR-0191](../adr/0191-the-consumer-query-of-storyline-subscriptions-is-opened-with-the-subscriptions-and-resolves-ids-without-writing.md) · [ADR-0243](../adr/0243-the-subscription-history-on-the-subscription-screen-shows-only-the-users-own-subscribe-and-unsubscribe.md) · [ADR-0244](../adr/0244-the-storyline-subscription-history-handler-is-opened-by-user-without-a-key-and-reads-recent-pages-in-the-module.md)에 있다. 구독이 사용자 스토리라인을 가리키는 것과 저장하는 자리는 [ADR-0282](../adr/0282-flow-tracking-points-to-a-user-storyline-which-user-handlers-store-under-the-settings-lock-while-readers-get-the-result-of-the-same-rule.md)에 있다. 추적 중인 흐름 목록을 어느 화면에 두는지는 [ADR-0242](../adr/0242-the-storyline-subscription-list-lives-on-the-key-gated-storyline-screen.md)에 있다.
+판단의 이유는 [ADR-0188](../adr/0188-storyline-subscriptions-follow-retired-storylines-by-event-and-before-each-use-and-notices-point-to-the-remaining-event.md) · [ADR-0189](../adr/0189-subscriptions-to-ended-storylines-stay-and-the-query-carries-the-current-state.md) · [ADR-0190](../adr/0190-storyline-subscription-handlers-are-open-without-a-key.md) · [ADR-0191](../adr/0191-the-consumer-query-of-storyline-subscriptions-is-opened-with-the-subscriptions-and-resolves-ids-without-writing.md) · [ADR-0243](../adr/0243-the-subscription-history-on-the-subscription-screen-shows-only-the-users-own-subscribe-and-unsubscribe.md) · [ADR-0244](../adr/0244-the-storyline-subscription-history-handler-is-opened-by-user-without-a-key-and-reads-recent-pages-in-the-module.md)에 있다. 구독이 사용자 스토리라인을 가리키는 것과 저장하는 자리는 [ADR-0282](../adr/0282-flow-tracking-points-to-a-user-storyline-which-user-handlers-store-under-the-settings-lock-while-readers-get-the-result-of-the-same-rule.md)에 있다. 추적 중인 사용자 스토리라인 목록을 어느 화면에 두는지는 [ADR-0242](../adr/0242-the-storyline-subscription-list-lives-on-the-key-gated-storyline-screen.md)에 있다.
 
-- **user-R52** — 추적 · 해제: 구독은 추적 중인 사용자 스토리라인(user-R66)마다 한 행(추적하기 시작한 시각)이고, 사용자가 누른 스토리라인은 그 사용자 스토리라인의 추적 씨앗으로 남는다. 추적 중인 사용자 스토리라인은 추적 씨앗이 하나 이상이다. 이력(`user_storyline_subscription_events`)은 추가만 하며 행마다 스토리라인 ID · 더함 뺌 · 원인(`USER` · `STORYLINE_MERGED` · `STORYLINE_REMOVED` · `STORYLINE_SPLIT`) · 시각을 갖고, 추적 씨앗과 일대일이다 — 지금 추적 씨앗은 이력을 차례로 재생한 집합이다. 관심 신호는 원인이 `USER` 인 행만이다. 조회 · 추적 · 해제 · 추적 상태(user-R67)는 한 트랜잭션에서 user-R46 ① ~ ③(설정 행 만들기 · 잠금 · 태그 따라가기) 뒤 사용자 스토리라인을 맞춘다(user-R53). 추적은 받은 ID 를 `storyline` 의 묶음 찾기로 풀어 남는 스토리라인과 그 포함 나무의 꼭대기를 얻는다 — 없는 스토리라인이면 `UNKNOWN_STORYLINE` 이다. 추적은 그 꼭대기를 추적 대상으로 가진 사용자 스토리라인 모두에 한다 — 갈라지기 전 꼭대기를 누르면 그 뒤 갈래 모두다. 그런 사용자 스토리라인이 모두 추적 중이고 남는 스토리라인이 모두의 추적 씨앗이면 바꾸지 않고 이력도 없이 `ALREADY_SUBSCRIBED` 다. 새로 추적 중이 될 사용자 스토리라인(추적 중이 아닌 것 — 그런 사용자 스토리라인이 없으면 그 꼭대기 하나로 만들 것 하나)이 있고 그 수를 지금 추적 중인 수에 더하면 상한(`StorylineSubscriptionLimit.MAX` — 100, 측정 전 목표)을 넘을 때 `LIMIT_REACHED` 다. 아니면 추적 중인 것에는 추적 씨앗만 더하고, 아닌 것에는 구독 행과 추적 씨앗을 둔다. 추적 씨앗을 더하면 더함 · `USER` 의 이력을 남기고 한 번 더 맞춘다 — 이어진 뒤 흐름이 추적 대상에 들고 헤드마다 맞춰진다. 해제는 받은 ID 의 꼭대기를 추적 대상으로 가진 추적 중인 사용자 스토리라인 모두를 끈다(갈래의 헤드에서 누르면 그 갈래만, 갈라지기 전 꼭대기에서 누르면 모든 갈래). 끄는 쪽과 남는 추적 중 사용자 스토리라인이 꼭대기를 함께 가진 추적 씨앗(갈라지기 전 꼭대기를 눌러 갈래 모두가 가진 씨앗)은 먼저 양쪽 모두 각자의 헤드로 바꾸고 그 차이를 `STORYLINE_SPLIT` 이력(뺌 · 더함)으로 남긴다(`BranchUntracking` — 정본). 그대로 두면 남는 쪽의 그 씨앗이 다음 맞추기에서 끈 쪽으로 돌아간다(user-R66 ④). 그 뒤 끄는 쪽의 구독 행과 추적 씨앗을 지우고, 남는 쪽에 없는 씨앗마다 뺌 · `USER` 의 이력을 남긴다 — 관심 신호(뺌)는 끈 갈래에만 든다. 한 갈래라도 끈 뒤에는 남는 갈래의 씨앗이 각자의 헤드라 그 앞 흐름에서 새로 갈라지는 갈래는 따라가지 않는다. 추적 중이 아니면 바꾸지 않고 이력도 없이 `NOT_SUBSCRIBED` 다. 사용자 스토리라인은 지우지 않는다. 조회는 추적 중인 사용자 스토리라인마다 한 줄을 추적 시각 내림차순 · 사용자 스토리라인 ID 순으로 내고, 줄마다 사용자 스토리라인 ID · 헤드(user-R66 — 줄의 카드 · 해제 대상) · 추적 시각 · 지금 있는 추적 씨앗의 스토리라인 ID 들(`StorylineDirectory.findAll` 이 낸 것, ID 순) · 지금 상태(`StorylineState`) · 정리의 제목(user-R70 의 저장 행 — 정리가 없으면 없음)을 싣는다. 줄의 상태는 추적 씨앗들의 상태 가운데 가장 이어지는 것이다 — 하나라도 진행이면 진행, 아니고 하나라도 잠잠이면 잠잠, 모두 끝났을 때만 끝남(`StorylineSubscriptions.liveliest` — 정본). 끝난 흐름의 줄도 그대로 남고, 지금 있는 추적 씨앗이 하나도 없는 줄은 내지 않는다. 거른 흐름이어도 추적 중이면 낸다. 스토리라인의 표시 정보는 내지 않는다. 목록의 꼴을 정한 이유는 [ADR-0290](../adr/0290-the-readers-storyline-tab-shows-the-users-summarized-flows-and-the-tracking-list-has-one-row-per-user-storyline.md)에 있다. 처리기 넷과 구독 이력 처리기(user-R63)는 키 없이 연다(account-R5). 요청 방어 표시는 없다
+- **user-R52** — 추적 · 해제: 구독은 추적 중인 사용자 스토리라인(user-R66)마다 한 행(추적하기 시작한 시각)이고, 사용자가 누른 스토리라인은 그 사용자 스토리라인의 추적 씨앗으로 남는다. 추적 중인 사용자 스토리라인은 추적 씨앗이 하나 이상이다. 이력(`user_storyline_subscription_events`)은 추가만 하며 행마다 스토리라인 ID · 더함 뺌 · 원인(`USER` · `STORYLINE_MERGED` · `STORYLINE_REMOVED` · `STORYLINE_SPLIT`) · 시각을 갖고, 추적 씨앗과 일대일이다 — 지금 추적 씨앗은 이력을 차례로 재생한 집합이다. 관심 신호는 원인이 `USER` 인 행만이다. 조회 · 추적 · 해제 · 추적 상태(user-R67)는 한 트랜잭션에서 user-R46 ① ~ ③(설정 행 만들기 · 잠금 · 태그 따라가기) 뒤 사용자 스토리라인을 맞춘다(user-R53). 추적은 받은 ID 를 `storyline` 의 묶음 찾기로 풀어 남는 스토리라인과 그 포함 나무의 꼭대기를 얻는다 — 없는 스토리라인이면 `UNKNOWN_STORYLINE` 이다. 추적은 그 꼭대기를 추적 대상으로 가진 사용자 스토리라인 모두에 한다 — 갈라지기 전 꼭대기를 누르면 그 뒤 갈래 모두다. 그런 사용자 스토리라인이 모두 추적 중이고 남는 스토리라인이 모두의 추적 씨앗이면 바꾸지 않고 이력도 없이 `ALREADY_SUBSCRIBED` 다. 새로 추적 중이 될 사용자 스토리라인(추적 중이 아닌 것 — 그런 사용자 스토리라인이 없으면 그 꼭대기 하나로 만들 것 하나)이 있고 그 수를 지금 추적 중인 수에 더하면 상한(`StorylineSubscriptionLimit.MAX` — 100, 측정 전 목표)을 넘을 때 `LIMIT_REACHED` 다. 아니면 추적 중인 것에는 추적 씨앗만 더하고, 아닌 것에는 구독 행과 추적 씨앗을 둔다. 추적 씨앗을 더하면 더함 · `USER` 의 이력을 남기고 한 번 더 맞춘다 — 이어진 뒤 스토리라인이 추적 대상에 들고 헤드마다 맞춰진다. 해제는 받은 ID 의 꼭대기를 추적 대상으로 가진 추적 중인 사용자 스토리라인 모두를 끈다(갈래의 헤드에서 누르면 그 갈래만, 갈라지기 전 꼭대기에서 누르면 모든 갈래). 끄는 쪽과 남는 추적 중 사용자 스토리라인이 꼭대기를 함께 가진 추적 씨앗(갈라지기 전 꼭대기를 눌러 갈래 모두가 가진 씨앗)은 먼저 양쪽 모두 각자의 헤드로 바꾸고 그 차이를 `STORYLINE_SPLIT` 이력(뺌 · 더함)으로 남긴다(`BranchUntracking` — 정본). 그대로 두면 남는 쪽의 그 씨앗이 다음 맞추기에서 끈 쪽으로 돌아간다(user-R66 ④). 그 뒤 끄는 쪽의 구독 행과 추적 씨앗을 지우고, 남는 쪽에 없는 씨앗마다 뺌 · `USER` 의 이력을 남긴다 — 관심 신호(뺌)는 끈 갈래에만 든다. 한 갈래라도 끈 뒤에는 남는 갈래의 씨앗이 각자의 헤드라 그 앞 스토리라인에서 새로 갈라지는 갈래는 따라가지 않는다. 추적 중이 아니면 바꾸지 않고 이력도 없이 `NOT_SUBSCRIBED` 다. 사용자 스토리라인은 지우지 않는다. 조회는 추적 중인 사용자 스토리라인마다 한 줄을 추적 시각 내림차순 · 사용자 스토리라인 ID 순으로 내고, 줄마다 사용자 스토리라인 ID · 헤드(user-R66 — 줄의 카드 · 해제 대상) · 추적 시각 · 지금 있는 추적 씨앗의 스토리라인 ID 들(`StorylineDirectory.findAll` 이 낸 것, ID 순) · 지금 상태(`StorylineState`) · 정리의 제목(user-R70 의 저장 행 — 정리가 없으면 없음)을 싣는다. 줄의 상태는 추적 씨앗들의 상태 가운데 가장 이어지는 것이다 — 하나라도 진행이면 진행, 아니고 하나라도 잠잠이면 잠잠, 모두 끝났을 때만 끝남(`StorylineSubscriptions.liveliest` — 정본). 끝난 사용자 스토리라인의 줄도 그대로 남고, 지금 있는 추적 씨앗이 하나도 없는 줄은 내지 않는다. 거른 스토리라인이어도 추적 중이면 낸다. 스토리라인의 표시 정보는 내지 않는다. 목록의 꼴을 정한 이유는 [ADR-0290](../adr/0290-the-readers-storyline-tab-shows-the-users-summarized-flows-and-the-tracking-list-has-one-row-per-user-storyline.md)에 있다. 처리기 넷과 구독 이력 처리기(user-R63)는 키 없이 연다(account-R5). 요청 방어 표시는 없다
 - **user-R53** — 사용자 스토리라인 따라가기: 사용자 하나의 저장 행을 지금의 신호 · 관계에 맞추는 정본은 하나다(`UserStorylineFollowups.followLocked` — 판정은 user-R66). 추적 씨앗은 `storyline` 의 묶음 찾기로 지금 가리키는 스토리라인을 읽어, 합쳐졌으면 남는 스토리라인으로 옮기고 없으면 뺀다(`SubscriptionFollow`). 맞춘 결과가 저장 행과 다른 칸만 고쳐 쓰고(추적 대상 · 추적 씨앗 · 구독 행 · 새 사용자 스토리라인 · 사라진 사용자 스토리라인), 추적 씨앗이 바뀐 만큼 이력을 남긴다 — 옮긴 씨앗은 옛 ID 의 뺌과(새로 더했으면) 남는 ID 의 더함으로 원인 `STORYLINE_MERGED`, 지워진 씨앗은 뺌으로 원인 `STORYLINE_REMOVED`, 갈라져 물려받은 씨앗은 더함으로 원인 `STORYLINE_SPLIT` 이다. 신호의 창은 [`InterestSignalWindow.start(지금)`, 지금) 이다. 계기는 셋이다:
   1. `storyline` 의 `StorylinesRetired` 를 받으면 그 스토리라인 가운데 하나라도 추적 대상이나 추적 씨앗으로 가진 사용자를 사용자 ID 순 쪽(100명)으로 읽어 사용자마다 트랜잭션 하나에서 설정 행을 잠그고 맞춘다(설정 행이 없는 사용자는 건너뛴다). 한 사용자의 실패는 그 사용자만 되돌리고, 이벤트가 다시 처리되면 지금 상태로 수렴한다 — 이미 고친 사용자는 바뀌지 않는다
   2. 사용자의 구독 조회 · 추적 · 해제 · 추적 상태 앞(user-R52 · R67) — 리스너가 닿기 전의 틈, 리스너가 놓친 사용자, 이벤트가 없는 변화(반응 · 관계가 생기고 사라짐 · 신호가 창 밖으로 나감)를 맞춘다
   3. 정리 실행의 첫 트랜잭션(user-R68) — 다이제스트가 끝난 뒤 설정 행을 잠그고 맞춘다. 좋아요 · 싫어요만 누르고 추적 화면을 열지 않은 사용자의 사용자 스토리라인도 이때 저장된다
-- **user-R54** — 사라진 구독 알림: 추적 중이던 사용자 스토리라인이 다른 사용자 스토리라인에 합쳐지지 않고 사라지면(추적 씨앗의 스토리라인이 모두 지워지고 이을 흐름이 없다) 그 사용자에게 알림 하나를 남긴다(`STORYLINE_SUBSCRIPTIONS_REMOVED` — 모으지 않는다). 추적 씨앗이 지워져도 흐름이 남아 추적이 넘어가면(user-R66 ⑤) 알림은 없다. 내용은 지워진 추적 씨앗마다 스토리라인 ID 와, 받은 이벤트가 그 스토리라인의 풀기에서 남은 사건을 실었으면 그 사건 ID 다(없으면 비운다). 기사 정보는 담지 않는다. 알림함은 쪽을 읽을 때 그 사건(합쳐졌으면 남는 사건)의 지금 대표 기사 제목을 읽어 항목마다 싣는다 — 사건 · 대표 기사 · 기사를 얻지 못하면 제목이 없다. 그래서 지운 기사의 제목은 알림에 남지 않는다. 알림은 키 없이 열리므로 키 없는 사용자도 이 제목을 본다
+- **user-R54** — 사라진 구독 알림: 추적 중이던 사용자 스토리라인이 다른 사용자 스토리라인에 합쳐지지 않고 사라지면(추적 씨앗의 스토리라인이 모두 지워지고 이을 스토리라인이 없다) 그 사용자에게 알림 하나를 남긴다(`STORYLINE_SUBSCRIPTIONS_REMOVED` — 모으지 않는다). 추적 씨앗이 지워져도 사용자 스토리라인이 남아 추적이 넘어가면(user-R66 ⑤) 알림은 없다. 내용은 지워진 추적 씨앗마다 스토리라인 ID 와, 받은 이벤트가 그 스토리라인의 풀기에서 남은 사건을 실었으면 그 사건 ID 다(없으면 비운다). 기사 정보는 담지 않는다. 알림함은 쪽을 읽을 때 그 사건(합쳐졌으면 남는 사건)의 지금 대표 기사 제목을 읽어 항목마다 싣는다 — 사건 · 대표 기사 · 기사를 얻지 못하면 제목이 없다. 그래서 지운 기사의 제목은 알림에 남지 않는다. 알림은 키 없이 열리므로 키 없는 사용자도 이 제목을 본다
 - **user-R55** — 소비자 조회(`StorylineSubscriptionDirectory`): 지금 추적 씨앗은 추적 중인 사용자 스토리라인의 추적 씨앗을 묶음 찾기로 풀어 남는 스토리라인 ID 로 내고(같은 것은 하나, 사라진 것은 뺌, ID 순), 기간의 변경은 이력 행마다 기록된 ID 와 그 ID 를 지금 푼 ID(지워졌으면 없음) · 원인 · 시각을 시작 포함 · 끝 제외 구간으로 낸다. 쓰지 않는다 — 고쳐 쓰기는 user-R53 의 세 계기만 한다. 사용자를 인자로 받는 조회다 — 화면 경로에서는 세션 사용자로만 부른다
-- **user-R63** — 추적 이력(`StorylineSubscriptionHistory` · `GET /api/storyline-subscriptions/changes`): 세션 사용자의 이력 행 가운데 원인이 `USER` 인 것만 시각 · 행의 내림차순으로 한 쪽(`StorylineSubscriptionHistoryPage.SIZE` — 50, 측정 전 목표) 낸다. 합쳐져 옮김 · 사라져 뺌 · 갈라져 물려받음(`STORYLINE_MERGED` · `STORYLINE_REMOVED` · `STORYLINE_SPLIT`)은 내지 않는다([ADR-0243](../adr/0243-the-subscription-history-on-the-subscription-screen-shows-only-the-users-own-subscribe-and-unsubscribe.md)). 행마다 기록된 ID 를 지금 푼 스토리라인 ID(합쳐졌으면 남는 쪽, 지워졌으면 없음 — `CurrentStorylines`) · 더함 뺌 · 시각을 싣고, 기록된 ID · 원인 · 스토리라인의 표시 정보는 싣지 않는다. 다음 쪽이 있으면 그 쪽의 마지막 행의 (시각, 행 ID)를 커서로 내고, 다음 쪽은 그 커서보다 앞선 행부터다 — 같은 시각의 행도 빠지거나 겹치지 않는다. 커서 두 값은 함께 오거나 함께 없다 — 하나만 오거나 시각(ISO-8601) · 행 ID(1 이상)를 읽을 수 없으면 400 이다. 읽기 전용 트랜잭션 하나에서 읽고 쓰지 않는다 — 설정 행을 잠그지 않고 사용자 스토리라인을 맞추지 않는다. 소비자 조회(user-R55)를 거치지 않는다([ADR-0244](../adr/0244-the-storyline-subscription-history-handler-is-opened-by-user-without-a-key-and-reads-recent-pages-in-the-module.md)). 키 없이 열고(account-R5) 요청 방어 표시는 없다. 한 쪽의 수는 카드 처리기 한 번의 상한(`StorylineDirectory.MAX_PAGE_SIZE` — reader-R6) 이하다 — 화면이 한 쪽의 제목을 카드 한 번으로 붙인다. 추적 중인 흐름 목록의 줄 수는 그 상한보다 많을 수 있어 화면이 카드를 상한씩 나눠 묻는다
+- **user-R63** — 추적 이력(`StorylineSubscriptionHistory` · `GET /api/storyline-subscriptions/changes`): 세션 사용자의 이력 행 가운데 원인이 `USER` 인 것만 시각 · 행의 내림차순으로 한 쪽(`StorylineSubscriptionHistoryPage.SIZE` — 50, 측정 전 목표) 낸다. 합쳐져 옮김 · 사라져 뺌 · 갈라져 물려받음(`STORYLINE_MERGED` · `STORYLINE_REMOVED` · `STORYLINE_SPLIT`)은 내지 않는다([ADR-0243](../adr/0243-the-subscription-history-on-the-subscription-screen-shows-only-the-users-own-subscribe-and-unsubscribe.md)). 행마다 기록된 ID 를 지금 푼 스토리라인 ID(합쳐졌으면 남는 쪽, 지워졌으면 없음 — `CurrentStorylines`) · 더함 뺌 · 시각을 싣고, 기록된 ID · 원인 · 스토리라인의 표시 정보는 싣지 않는다. 다음 쪽이 있으면 그 쪽의 마지막 행의 (시각, 행 ID)를 커서로 내고, 다음 쪽은 그 커서보다 앞선 행부터다 — 같은 시각의 행도 빠지거나 겹치지 않는다. 커서 두 값은 함께 오거나 함께 없다 — 하나만 오거나 시각(ISO-8601) · 행 ID(1 이상)를 읽을 수 없으면 400 이다. 읽기 전용 트랜잭션 하나에서 읽고 쓰지 않는다 — 설정 행을 잠그지 않고 사용자 스토리라인을 맞추지 않는다. 소비자 조회(user-R55)를 거치지 않는다([ADR-0244](../adr/0244-the-storyline-subscription-history-handler-is-opened-by-user-without-a-key-and-reads-recent-pages-in-the-module.md)). 키 없이 열고(account-R5) 요청 방어 표시는 없다. 한 쪽의 수는 카드 처리기 한 번의 상한(`StorylineDirectory.MAX_PAGE_SIZE` — reader-R6) 이하다 — 화면이 한 쪽의 제목을 카드 한 번으로 붙인다. 추적 중인 사용자 스토리라인 목록의 줄 수는 그 상한보다 많을 수 있어 화면이 카드를 상한씩 나눠 묻는다
 
 ### 사용자 스토리라인
 
 판단의 이유는 [ADR-0281](../adr/0281-a-user-storyline-is-a-flow-that-received-interest-signals-and-tracks-the-tops-reached-forward-along-follows-from-its-seeds-as-one-group.md) · [ADR-0282](../adr/0282-flow-tracking-points-to-a-user-storyline-which-user-handlers-store-under-the-settings-lock-while-readers-get-the-result-of-the-same-rule.md)에 있다.
 
-- **user-R66** — 사용자 스토리라인은 사용자가 관심 신호를 준 흐름이고, 지금의 신호 · 관계에서 낸 묶음에 저장한 개체를 이어 맞춘다. 판정은 `domain/userstoryline` 의 순수 규칙이고 재료 읽기와 호출은 `UserStorylineMaterials.match` 하나다 — 저장하는 따라가기(user-R53)와 쓰지 않는 공개 조회(`UserStorylineDirectory`)가 함께 쓴다
+- **user-R66** — 사용자 스토리라인은 사용자가 관심 신호를 준 스토리라인이고, 지금의 신호 · 관계에서 낸 묶음에 저장한 개체를 이어 맞춘다. 판정은 `domain/userstoryline` 의 순수 규칙이고 재료 읽기와 호출은 `UserStorylineMaterials.match` 하나다 — 저장하는 따라가기(user-R53)와 쓰지 않는 공개 조회(`UserStorylineDirectory`)가 함께 쓴다
   1. **씨앗**(`UserStorylineSeeds`) — 창 [from, to) 안에 좋아요 / 싫어요 이력 행(되돌리기 포함)이 있는 사건의 지금 사건(지운 사건은 빠진다)의 포함 나무 꼭대기, 창 안의 원인 `USER` 구독 이력의 스토리라인(남는 쪽)의 꼭대기, 추적 씨앗(남는 쪽)의 꼭대기. 추적 씨앗은 창과 무관하다. 노출은 씨앗이 아니다
-  2. **묶음**(`UserStorylineGroups`) — 닿는 꼭대기는 씨앗과, 씨앗에서 `storyline` 의 이어짐을 앞에서 뒤로 따라 닿는 꼭대기(`StorylineDirectory.continuationsOf` — storyline-R38, 닿은 꼭대기의 이어짐도 읽는다)다. 닿는 꼭대기 가운데 뒤 흐름이 없는 것이 헤드다 — 빠져나가는 이어짐 없이 서로 이어지는 꼭대기들(순환)은 함께 끝이고 그 가운데 ID 가 가장 작은 것이 헤드다(`headOf` — 정본). 헤드마다 묶음 하나: 추적 대상은 닿는 꼭대기 가운데 그 헤드이거나 그 헤드에 닿는 것이고, 씨앗 꼭대기는 그 가운데 씨앗이다. 갈라지기 전 꼭대기는 그 뒤 헤드의 묶음 여럿에 든다. 앞 흐름은 씨앗일 때만 든다. 순서는 헤드 ID 순이다
-  3. **잇기**(`UserStorylineReconcile`) — 저장 개체의 추적 대상 · 추적 씨앗 · 헤드는 먼저 지금 꼭대기로 푼다(합쳐진 스토리라인은 남는 쪽의, 지워진 것은 빠진다 — 지워진 헤드는 없음). ① 저장 개체마다 이을 묶음을 고른다 — 저장 헤드를 추적 대상으로 가진 묶음 가운데 헤드 ID 가 가장 작은 것(헤드가 그대로이거나 앞으로 옮겨 갔거나 갈라졌다). 저장 헤드가 없거나 그 헤드를 가진 묶음이 없으면 추적 씨앗을 가진 묶음 가운데 헤드 ID 가 가장 작은 것, 그것도 없으면 추적 대상과 추적 씨앗의 꼭대기에 겹치는 꼭대기가 가장 많은 묶음(같으면 헤드 ID 가 작은 묶음)이다. 고를 묶음이 없으면 고르지 않는다 ② 묶음마다 그 묶음을 고른 개체 가운데 ID 가 가장 작은 것이 잇고, 나머지는 그 개체에 합쳐져 사라진다 — 추적 씨앗은 합치고 추적 시각은 가장 이른 것이다 ③ 아무도 고르지 않은 묶음은 새 개체다 ④ 추적 씨앗은 그 꼭대기를 가진 묶음 모두의 개체로 간다 — 갈라지기 전 꼭대기를 추적했으면 모든 갈래가 추적 중이다. 추적 중이 아니던 개체가 옮겨 온 추적 씨앗으로 추적 중이 되면 추적 시각은 씨앗이 온 개체의 것이다(여럿이면 가장 이른 것) ⑤ 추적 중이던 개체의 저장 헤드를 추적 대상으로 가진 묶음 가운데 ② ④ 뒤에 추적 씨앗이 없는 것은 추적을 물려받는다 — 그 묶음의 씨앗 꼭대기가 추적 씨앗이 되고 추적 시각은 원래 개체의 것이다(헤드에서 갈라진 갈래, 이어짐이 사라져 추적 씨앗에서 떨어진 헤드 쪽, 추적 씨앗의 스토리라인이 지워졌어도 헤드가 남은 흐름). 저장 헤드가 없는 개체는 물려받기를 하지 않는다 — 갈라지기 전 꼭대기만 겹치는 형제 갈래로 추적이 번지지 않는다 ⑥ 어느 묶음도 고르지 못한 저장 개체는 사라진다
+  2. **묶음**(`UserStorylineGroups`) — 닿는 꼭대기는 씨앗과, 씨앗에서 `storyline` 의 이어짐을 앞에서 뒤로 따라 닿는 꼭대기(`StorylineDirectory.continuationsOf` — storyline-R38, 닿은 꼭대기의 이어짐도 읽는다)다. 닿는 꼭대기 가운데 뒤 스토리라인이 없는 것이 헤드다 — 빠져나가는 이어짐 없이 서로 이어지는 꼭대기들(순환)은 함께 끝이고 그 가운데 ID 가 가장 작은 것이 헤드다(`headOf` — 정본). 헤드마다 묶음 하나: 추적 대상은 닿는 꼭대기 가운데 그 헤드이거나 그 헤드에 닿는 것이고, 씨앗 꼭대기는 그 가운데 씨앗이다. 갈라지기 전 꼭대기는 그 뒤 헤드의 묶음 여럿에 든다. 앞 스토리라인은 씨앗일 때만 든다. 순서는 헤드 ID 순이다
+  3. **잇기**(`UserStorylineReconcile`) — 저장 개체의 추적 대상 · 추적 씨앗 · 헤드는 먼저 지금 꼭대기로 푼다(합쳐진 스토리라인은 남는 쪽의, 지워진 것은 빠진다 — 지워진 헤드는 없음). ① 저장 개체마다 이을 묶음을 고른다 — 저장 헤드를 추적 대상으로 가진 묶음 가운데 헤드 ID 가 가장 작은 것(헤드가 그대로이거나 앞으로 옮겨 갔거나 갈라졌다). 저장 헤드가 없거나 그 헤드를 가진 묶음이 없으면 추적 씨앗을 가진 묶음 가운데 헤드 ID 가 가장 작은 것, 그것도 없으면 추적 대상과 추적 씨앗의 꼭대기에 겹치는 꼭대기가 가장 많은 묶음(같으면 헤드 ID 가 작은 묶음)이다. 고를 묶음이 없으면 고르지 않는다 ② 묶음마다 그 묶음을 고른 개체 가운데 ID 가 가장 작은 것이 잇고, 나머지는 그 개체에 합쳐져 사라진다 — 추적 씨앗은 합치고 추적 시각은 가장 이른 것이다 ③ 아무도 고르지 않은 묶음은 새 개체다 ④ 추적 씨앗은 그 꼭대기를 가진 묶음 모두의 개체로 간다 — 갈라지기 전 꼭대기를 추적했으면 모든 갈래가 추적 중이다. 추적 중이 아니던 개체가 옮겨 온 추적 씨앗으로 추적 중이 되면 추적 시각은 씨앗이 온 개체의 것이다(여럿이면 가장 이른 것) ⑤ 추적 중이던 개체의 저장 헤드를 추적 대상으로 가진 묶음 가운데 ② ④ 뒤에 추적 씨앗이 없는 것은 추적을 물려받는다 — 그 묶음의 씨앗 꼭대기가 추적 씨앗이 되고 추적 시각은 원래 개체의 것이다(헤드에서 갈라진 갈래, 이어짐이 사라져 추적 씨앗에서 떨어진 헤드 쪽, 추적 씨앗의 스토리라인이 지워졌어도 헤드가 남은 사용자 스토리라인). 저장 헤드가 없는 개체는 물려받기를 하지 않는다 — 갈라지기 전 꼭대기만 겹치는 형제 갈래로 추적이 번지지 않는다 ⑥ 어느 묶음도 고르지 못한 저장 개체는 사라진다
   4. **끝** — 창 안에 신호가 없고 추적 중도 아닌 사용자 스토리라인은 씨앗이 없어 ⑥ 으로 사라진다. 관심 값은 보지 않는다
   5. **헤드 저장** — 저장하는 맞추기는 이은 묶음 · 새 묶음의 헤드를 개체의 헤드(`user_storylines.head`)로 쓴다. 헤드 열이 생기기 전에 저장된 개체는 헤드가 비어 있고 그 사용자의 다음 저장하는 맞추기가 채운다 — 그때 ① 은 추적 씨앗의 묶음으로 잇고 ⑤ 는 하지 않으므로, 추적 씨앗의 스토리라인이 모두 지워진 추적 중 개체는 ① 의 겹침으로 이을 묶음이 있으면 추적이 꺼진 채 남는다(없으면 ⑥ 으로 사라진다)
   - 공용 관계의 변화를 따른다 — 맞출 때마다 지금의 꼭대기 · 이어짐으로 묶음을 다시 낸다. 물려받기(⑤)는 저장하는 맞추기가 갈라짐을 본 때 일어난다 — 갈라진 조각의 신호가 창 밖으로 나갈 때까지 저장하는 맞추기가 한 번도 돌지 않으면 그 조각은 물려받지 못한다
   - 저장하는 맞추기의 창은 [`InterestSignalWindow.start(지금)`, 지금) 이다(user-R53). 공개 조회는 받은 창으로 계산한다 — 저장되지 않은 묶음은 ID 없이 낸다. 창의 길이는 `digest` 의 관심도가 정본이다([digest Spec](digest.md#관심도) digest-R49)
   - 조회는 `storyline` 의 한 번의 상한(`MAX_TOP_EVENTS` · `MAX_TOP_STORYLINES`)씩 나눠 묻는다
-- **user-R67** — 추적 상태(`GET /api/storyline-subscriptions/states`): 받은 스토리라인 ID 마다 그 포함 나무 꼭대기를 추적 대상으로 가진 사용자 스토리라인 가운데 하나라도 추적 중인지를 받은 순서대로 낸다 — 합쳐진 ID 는 남는 스토리라인의 꼭대기로 풀고, 없는 스토리라인은 추적 중이 아니다. 같은 흐름의 어느 스토리라인(하위 스토리라인 · 이어진 뒤 흐름)에서 물어도 같다. 사용자 스토리라인의 추적 대상 목록은 싣지 않는다. 한 번에 1 ~ 100개(같은 ID 를 여러 번 보낸 것도 센다)이고 ID 는 1 이상이다 — 아니면 400 이다. 같은 ID 는 처음 자리에 한 번만 낸다. 사용자 스토리라인을 먼저 맞추므로(user-R53) 쓰는 트랜잭션이다. 키 없이 열고(account-R5) 요청 방어 표시는 없다
+- **user-R67** — 추적 상태(`GET /api/storyline-subscriptions/states`): 받은 스토리라인 ID 마다 그 포함 나무 꼭대기를 추적 대상으로 가진 사용자 스토리라인 가운데 하나라도 추적 중인지를 받은 순서대로 낸다 — 합쳐진 ID 는 남는 스토리라인의 꼭대기로 풀고, 없는 스토리라인은 추적 중이 아니다. 같은 사용자 스토리라인의 어느 스토리라인(하위 스토리라인 · 이어진 뒤 스토리라인)에서 물어도 같다. 사용자 스토리라인의 추적 대상 목록은 싣지 않는다. 한 번에 1 ~ 100개(같은 ID 를 여러 번 보낸 것도 센다)이고 ID 는 1 이상이다 — 아니면 400 이다. 같은 ID 는 처음 자리에 한 번만 낸다. 사용자 스토리라인을 먼저 맞추므로(user-R53) 쓰는 트랜잭션이다. 키 없이 열고(account-R5) 요청 방어 표시는 없다
 
 ### 다이제스트가 읽는 관심 설정
 
@@ -890,12 +890,12 @@ public interface SummaryJobQueue {
 - **user-R68** — 계기와 실행: `DigestCompleted` 를 받으면 그 사용자의 정리 작업 하나를 등록한다 — 작업 ID 는 (사용자, 다이제스트)에서 낸 이름 기반 UUID 라 같은 이벤트를 다시 처리해도 작업은 하나다. 작업은 재시도하지 않는다 — 다음 다이제스트가 다시 계기가 된다. 실행(`StorylineSummaryRun.run`)은 트랜잭션 밖에서 다음 순서로 한다
   1. 쓸 모델(`DigestModelDirectory.modelOf`)이 없으면 아무 일도 하지 않는다
   2. 한 트랜잭션에서 설정 행을 잠그고(user-R46 ① ~ ③) 사용자 스토리라인을 맞춰 저장한 뒤(user-R53 의 정본) 그 사용자의 정리와 시도 기록을 읽는다
-  3. 흐름 판정(`StorylineStandingNow.standingOf`)을 묻는다 — 빈 값이면 아무 일도 하지 않는다(지우지도 않는다)
-  4. 정리가 있거나 관심 흐름인 사용자 스토리라인의 재료를 읽고(user-R70) 처분을 정한다(user-R69)
+  3. 스토리라인 판정(`StorylineStandingNow.standingOf`)을 묻는다 — 빈 값이면 아무 일도 하지 않는다(지우지도 않는다)
+  4. 정리가 있거나 관심 스토리라인인 사용자 스토리라인의 재료를 읽고(user-R70) 처분을 정한다(user-R69)
   5. 지울 정리를 한 트랜잭션에서 지운 뒤, 호출하는 처분을 차례로 부르고 저장한다(user-R70 · R71)
-- **user-R69** — 처분(`SummaryPlan.decide` — 정본): 사용자 스토리라인의 헤드가 관심 흐름의 꼭대기면 보일 흐름이다 — 헤드는 그 사용자 스토리라인에만 들어 그 하나의 관심이고, 갈라지기 전 꼭대기가 관심 흐름이어도 형제 갈래는 제 헤드가 관심 흐름일 때만 보인다. 지금 사건은 추적 대상 꼭대기들의 재료에 있는 사건이다
-  1. 정리가 없으면 — 보일 흐름이고 지금 사건이 있고 쉬는 중이 아닐 때 새로 만든다(`Create`). 아니면 아무것도 하지 않는다
-  2. 정리가 있고 보일 흐름도 아니고 헤드가 남길 흐름의 꼭대기도 아니면 지운다(`Remove`)
+- **user-R69** — 처분(`SummaryPlan.decide` — 정본): 사용자 스토리라인의 헤드가 관심 스토리라인의 꼭대기면 보일 스토리라인이다 — 헤드는 그 사용자 스토리라인에만 들어 그 하나의 관심이고, 갈라지기 전 꼭대기가 관심 스토리라인이어도 형제 갈래는 제 헤드가 관심 스토리라인일 때만 보인다. 지금 사건은 추적 대상 꼭대기들의 재료에 있는 사건이다
+  1. 정리가 없으면 — 보일 스토리라인이고 지금 사건이 있고 쉬는 중이 아닐 때 새로 만든다(`Create`). 아니면 아무것도 하지 않는다
+  2. 정리가 있고 보일 스토리라인도 아니고 헤드가 남길 스토리라인의 꼭대기도 아니면 지운다(`Remove`)
   3. 쉬는 중이면 그대로 둔다(`Keep`)
   4. 정리 때의 꼭대기 집합이 지금 추적 대상과 다르면 처음부터 다시 만든다(`Rebuild`) — 지금 사건이 없으면 그대로 둔다
   5. 지금 사건 가운데 넣은 사건에 없는 것(새 사건)이 있으면 지난 글과 새 사건으로 고친다(`Extend`). 없으면 그대로 둔다
@@ -903,17 +903,17 @@ public interface SummaryJobQueue {
   - 한 호출에 넣는 사건은 대상 사건(처음부터면 전부, 고칠 때면 새 사건) 가운데 `SummaryRules.MAX_EVENTS`(60)개까지다 — 대상 사건이 있는 꼭대기마다 먼저 그 꼭대기의 늦은 사건을 몫(상한 ÷ 그런 꼭대기 수, 적어도 하나)만큼 담고 남는 자리를 전체에서 늦은 순으로 채워, 첫 기사 시각 · 사건 ID 순으로 싣는다. 대상 사건이 있는 꼭대기는 모두 사건을 하나 이상 받는다. 상한에 걸려 넣지 못한 사건도 넣은 사건으로 기록한다
   - 값은 모두 측정 전 목표다
 - **user-R70** — 재료 · 프롬프트 · 출력 · 저장: 사건은 대표 기사의 제목과 저장된 RSS 요약문, 첫 기사 시각(사용자 시간대의 날짜)으로 싣는다 — 본문은 싣지 않는다. 사용자 구획은 JSON 문서이고 꼭대기마다 별칭 · 지난 글 · 사건 줄이다. 고치는 호출은 지난 글과 새 사건만 싣는다. 넣을 사건도 지난 글도 없는 꼭대기는 호출에 넣지 않고 글 없이 둔다 — 그런 꼭대기뿐이면 부르지 않는다. 지시는 분야를 가리지 않는 일반 원리로만 쓴다
-  - 출력의 서술은 하나다(`SummaryOutputSchema` — `platform` 의 `OutputShape`) — 흐름 전체의 글(`whole`)은 언제나 있고, 꼭대기가 둘 이상이면 꼭대기 별칭을 키로 한 필수 칸(`tops`)이 더 있다. 꼭대기가 하나면 흐름 전체의 글이 그 꼭대기의 글이다. 글 한 벌은 제목 · 흐름 요약 · 최근 전개이고 지시가 권하는 길이는 60 · 600 · 400 코드 포인트, 서술의 상한은 그 두 배다 — 상한을 넘은 글은 상한까지만 남긴다(`OverLimit.TRUNCATE` — [platform Spec](platform.md#3-공개-인터페이스)). 출력 본문 토큰 상한은 글 한 벌마다 `SummaryRules.MAX_BODY_TOKENS_PER_PART`(2,400)이고 관문의 상한을 넘지 않는다. 추론 강도는 `LOW` 로 고정한다 — 사용자의 추론 강도 설정을 따르지 않는다
+  - 출력의 서술은 하나다(`SummaryOutputSchema` — `platform` 의 `OutputShape`) — 사용자 스토리라인 전체의 글(`whole`)은 언제나 있고, 꼭대기가 둘 이상이면 꼭대기 별칭을 키로 한 필수 칸(`tops`)이 더 있다. 꼭대기가 하나면 사용자 스토리라인 전체의 글이 그 꼭대기의 글이다. 글 한 벌은 제목 · 흐름 요약 · 최근 전개이고 지시가 권하는 길이는 60 · 600 · 400 코드 포인트, 서술의 상한은 그 두 배다 — 상한을 넘은 글은 상한까지만 남긴다(`OverLimit.TRUNCATE` — [platform Spec](platform.md#3-공개-인터페이스)). 출력 본문 토큰 상한은 글 한 벌마다 `SummaryRules.MAX_BODY_TOKENS_PER_PART`(2,400)이고 관문의 상한을 넘지 않는다. 추론 강도는 `LOW` 로 고정한다 — 사용자의 추론 강도 설정을 따르지 않는다
   - 생성기(`StorylineSummarizer`)는 트랜잭션 밖에서 부른다. 끝까지 쓴 응답이 아니거나 서술대로 읽지 못하면 실패다(user-R71)
-  - 저장은 한 트랜잭션에서 설정 행을 잠근 뒤 견준다 — 그 사용자 스토리라인이 그대로 있고, 저장한 추적 대상이 호출 때와 같고, 정리의 판이 읽었을 때와 같을 때만 쓴다(처음이면 정리가 없을 때만). 아니면 결과를 버린다. 정리 행은 흐름 전체의 글, 꼭대기마다의 글(호출에 넣지 않은 꼭대기는 글 없음), 넣은 사건과 그 대표 기사, 마지막 호출의 공급자 키 · 모델 ID · 토큰, 처음 · 마지막 정리 시각을 갖는다
+  - 저장은 한 트랜잭션에서 설정 행을 잠근 뒤 견준다 — 그 사용자 스토리라인이 그대로 있고, 저장한 추적 대상이 호출 때와 같고, 정리의 판이 읽었을 때와 같을 때만 쓴다(처음이면 정리가 없을 때만). 아니면 결과를 버린다. 정리 행은 사용자 스토리라인 전체의 글, 꼭대기마다의 글(호출에 넣지 않은 꼭대기는 글 없음), 넣은 사건과 그 대표 기사, 마지막 호출의 공급자 키 · 모델 ID · 토큰, 처음 · 마지막 정리 시각을 갖는다
   - 로컬 대체물(`FakeStorylineSummarizer`)은 공급자를 부르지 않고 재료에서 고정 규칙으로 출력을 만든다 — 제목은 그 범위에서 가장 늦은 사건의 대표 기사 제목, 흐름 요약은 사건 수를 담은 고정 문장, 최근 전개는 가장 늦은 사건의 제목을 담은 고정 문장이고, 새 사건이 없는 범위는 지난 글을 그대로 쓴다. 글을 지어내지 않는다
   - 로그에는 사용자 ID · 사용자 스토리라인 ID · 실패 코드만 남긴다 — 글과 프롬프트는 남기지 않는다
 - **user-R71** — 시도 기록과 쉼: 공급자에 보낸 호출마다 시도 기록에 더한다 — 저장과 같은 트랜잭션이다. 저장한 호출은 호출 수 · 토큰 합을 올리고 연속 실패를 0 으로, 결과를 버린 호출은 호출 수 · 토큰 합만, 실패한 호출은 호출 수 · 토큰 합(공급자가 알려 주지 않았으면 0)을 올리고 연속 실패를 하나 올리며 실패 코드 · 시각을 남긴다. 사용자 스토리라인이 그새 사라졌으면 남기지 않는다. 저장한 키가 없어 보내지 않은 것(`KeyMissing`)은 호출이 아니다
-  - 실패 코드(`SummaryFailure`)는 `INVALID_KEY` · `PERMISSION_DENIED` · `QUOTA_EXHAUSTED`(키 쪽) · `PROVIDER_UNAVAILABLE` · `UNEXPECTED` · `UNREADABLE_OUTPUT` · `OUTPUT_TRUNCATED` · `OUTPUT_REFUSED` 다. 키 쪽의 실패와 저장한 키 없음은 그 실행을 멈춘다 — 같은 실행의 다른 흐름도 같은 까닭으로 실패한다
-  - 연속 실패가 n 번이면 마지막 실패 시각부터 min(n, `SummaryRules.MAX_REST_DAYS` — 7)일 동안 쉰다(`SummaryRules.restUntil` — 정본) — 그동안 그 흐름을 부르지 않는다
+  - 실패 코드(`SummaryFailure`)는 `INVALID_KEY` · `PERMISSION_DENIED` · `QUOTA_EXHAUSTED`(키 쪽) · `PROVIDER_UNAVAILABLE` · `UNEXPECTED` · `UNREADABLE_OUTPUT` · `OUTPUT_TRUNCATED` · `OUTPUT_REFUSED` 다. 키 쪽의 실패와 저장한 키 없음은 그 실행을 멈춘다 — 같은 실행의 다른 사용자 스토리라인도 같은 까닭으로 실패한다
+  - 연속 실패가 n 번이면 마지막 실패 시각부터 min(n, `SummaryRules.MAX_REST_DAYS` — 7)일 동안 쉰다(`SummaryRules.restUntil` — 정본) — 그동안 그 사용자 스토리라인을 부르지 않는다
   - 정리를 지워도 시도 기록은 남는다. 사용자 스토리라인이 사라지면 함께 지워진다
 - **user-R72** — 지운 기사 따르기: `article` 의 `ArticlesRemoved` 를 받으면 그 기사 가운데 하나라도 넣은 사건의 대표 기사로 가진 정리를 모두 지운다(여러 사용자에 걸친다 — 백그라운드 전용). 정리의 글이 그 기사의 제목 · 요약문에서 나왔기 때문이다. 다음 정리 실행이 남은 사건으로 처음부터 다시 만든다. 다시 처리해도 결과가 같다
-- **user-R73** — 정리 조회(`UserStorylineSummaries`): 정리가 있는 사용자 스토리라인만 낸다. 추적 대상의 정본은 저장한 추적 대상(`user_storyline_members`)이다 — 꼭대기마다의 글은 그 꼭대기만 내고, 정리 때의 꼭대기가 추적 대상에서 빠졌으면 그 글은 내지 않으며 정리 뒤에 든 꼭대기는 글 없이 낸다. `ofTops` 도 저장한 추적 대상으로 찾고, 한 꼭대기를 가진 정리된 사용자 스토리라인을 모두 사용자 스토리라인 ID 순으로 낸다. 손잡이(`head`)는 저장한 헤드이고, 헤드를 저장하기 전의 개체는 저장한 추적 대상 가운데 가장 작은 꼭대기다. 사용량은 정리 행의 마지막 호출과 시도 기록의 합이다. 쓰지 않고 맞추지 않는다 — 보이는 흐름은 길어야 다음 정리 실행까지 묵는다
+- **user-R73** — 정리 조회(`UserStorylineSummaries`): 정리가 있는 사용자 스토리라인만 낸다. 추적 대상의 정본은 저장한 추적 대상(`user_storyline_members`)이다 — 꼭대기마다의 글은 그 꼭대기만 내고, 정리 때의 꼭대기가 추적 대상에서 빠졌으면 그 글은 내지 않으며 정리 뒤에 든 꼭대기는 글 없이 낸다. `ofTops` 도 저장한 추적 대상으로 찾고, 한 꼭대기를 가진 정리된 사용자 스토리라인을 모두 사용자 스토리라인 ID 순으로 낸다. 손잡이(`head`)는 저장한 헤드이고, 헤드를 저장하기 전의 개체는 저장한 추적 대상 가운데 가장 작은 꼭대기다. 사용량은 정리 행의 마지막 호출과 시도 기록의 합이다. 쓰지 않고 맞추지 않는다 — 보이는 사용자 스토리라인은 길어야 다음 정리 실행까지 묵는다
 
 ## 6. 데이터
 
@@ -932,7 +932,7 @@ public interface SummaryJobQueue {
 | `user_storyline_tracked_seeds` | user_storyline_id · storyline_id(PK) | 추적 씨앗 — 사용자가 누른(또는 갈라질 때 물려받은) 스토리라인. 구독 이력의 투영이다(user-R52). `storyline_id` 는 `storyline` 의 스토리라인 ID(FK 없음, 스토리라인 ID 색인). 사용자 스토리라인을 지우면 함께 지워진다 |
 | `user_storyline_subscriptions` | user_storyline_id(PK), user_id, created_at | 스토리라인 구독의 현재 상태 — 추적 중인 사용자 스토리라인마다 한 행(user-R52). `created_at` 은 추적하기 시작한 시각. 사용자 색인. 사용자 스토리라인을 지우면 함께 지워진다 |
 | `user_storyline_subscription_events` | id, user_id, storyline_id, action(`ADD`/`REMOVE`), cause(`USER`/`STORYLINE_MERGED`/`STORYLINE_REMOVED`/`STORYLINE_SPLIT`), occurred_at | 구독 이력 — 추가만 한다(user-R52 · R53). `storyline_id` 는 기록 당시의 ID 다. 사용자 · 시각 · 행 순 색인 |
-| `user_storyline_summaries` | user_storyline_id(PK), title, summary, recent, provider, model, input_tokens, output_tokens, created_at, updated_at, version | 정리 — 사용자 스토리라인마다 많아야 하나(user-R70). 글 셋은 흐름 전체의 것. `provider` 는 공급자 키, `model` 은 모델 ID 이고 토큰은 마지막 호출의 것(0 이상). `version` 은 저장 때 견주는 판(0 부터). 사용자 스토리라인을 지우면 함께 지워진다 |
+| `user_storyline_summaries` | user_storyline_id(PK), title, summary, recent, provider, model, input_tokens, output_tokens, created_at, updated_at, version | 정리 — 사용자 스토리라인마다 많아야 하나(user-R70). 글 셋은 사용자 스토리라인 전체의 것. `provider` 는 공급자 키, `model` 은 모델 ID 이고 토큰은 마지막 호출의 것(0 이상). `version` 은 저장 때 견주는 판(0 부터). 사용자 스토리라인을 지우면 함께 지워진다 |
 | `user_storyline_top_summaries` | user_storyline_id · storyline_id(PK), title, summary, recent | 정리 때의 꼭대기마다의 글 — 글 없는 꼭대기는 세 칸이 빈 문자열이다(user-R70). `storyline_id` 는 `storyline` 의 스토리라인 ID(FK 없음). 정리를 지우면 함께 지워진다 |
 | `user_storyline_summary_events` | user_storyline_id · event_id(PK), article_id | 넣은 사건과 그 대표 기사(user-R69 · R72). FK 없음, 기사 ID 색인. 정리를 지우면 함께 지워진다 |
 | `user_storyline_summary_attempts` | user_storyline_id(PK), calls, total_input_tokens, total_output_tokens, failures, failure_code, failed_at | 시도 기록(user-R71). `calls` 는 1 이상. 연속 실패 수와 마지막 실패의 코드 · 시각은 함께 있거나 함께 없다(검사). 사용자 스토리라인을 지우면 함께 지워진다 — 정리를 지워도 남는다 |
@@ -985,7 +985,7 @@ public interface SummaryJobQueue {
 | [0272](../adr/0272-the-input-token-budget-is-a-safety-ceiling-and-the-maximum-candidate-steps-set-the-digest-volume.md) | 입력 토큰 예산은 안전 상한이고, 다이제스트 분량은 최대 후보 수 단계가 정한다 |
 | [0281](../adr/0281-a-user-storyline-is-a-flow-that-received-interest-signals-and-tracks-the-tops-reached-forward-along-follows-from-its-seeds-as-one-group.md) | 사용자 스토리라인은 관심 신호를 받은 흐름이고, 씨앗에서 이어짐을 앞에서 뒤로 따라 닿는 꼭대기를 한 묶음으로 추적한다 |
 | [0282](../adr/0282-flow-tracking-points-to-a-user-storyline-which-user-handlers-store-under-the-settings-lock-while-readers-get-the-result-of-the-same-rule.md) | 흐름 추적은 사용자 스토리라인을 가리키고, 사용자 스토리라인은 `user` 의 처리기가 잠그고 저장하며 읽는 쪽은 같은 규칙의 결과를 받는다 |
-| [0287](../adr/0287-user-storyline-summaries-are-made-and-stored-by-user-with-the-users-key-and-digest-supplies-the-flow-standing.md) | 사용자 스토리라인의 정리는 이 모듈이 사용자 키로 만들고 저장하며, 흐름 판정은 `digest` 가 공급한다 |
+| [0287](../adr/0287-user-storyline-summaries-are-made-and-stored-by-user-with-the-users-key-and-digest-supplies-the-flow-standing.md) | 사용자 스토리라인의 정리는 이 모듈이 사용자 키로 만들고 저장하며, 스토리라인 판정은 `digest` 가 공급한다 |
 | [0288](../adr/0288-summaries-are-made-after-a-digest-ends-only-for-changed-flows-and-extended-with-new-events.md) | 정리는 다이제스트가 끝난 뒤 바뀐 흐름만, 지난 정리에 새 사건을 더해 고친다 |
 | [0289](../adr/0289-shown-flows-are-user-storylines-with-a-summary-which-the-summary-job-creates-and-removes.md) | 보이는 흐름은 정리가 있는 사용자 스토리라인이고, 정리 작업이 만들고 지운다 |
 | [0290](../adr/0290-the-readers-storyline-tab-shows-the-users-summarized-flows-and-the-tracking-list-has-one-row-per-user-storyline.md) | 추적 중인 흐름 목록은 사용자 스토리라인마다 한 줄이다 |
@@ -997,3 +997,4 @@ public interface SummaryJobQueue {
 | [0314](../adr/0314-the-free-text-interest-setting-is-removed-and-its-stored-values-are-dropped-by-migration.md) | 관심 설정은 자유 텍스트 관심사를 받지 않고, 저장된 값은 마이그레이션에서 지운다 |
 | [0321](../adr/0321-change-report-periods-end-at-the-digest-time-of-the-chosen-weekday-or-day-are-made-within-two-hours-and-a-changed-setting-makes-a-whole-new-period.md) | 변화 리포트는 고른 요일 · 날짜의 다이제스트 생성 시각에서 기간을 끊고, 그 시각 뒤 2시간 안에 만들며, 설정을 바꾸면 새 설정의 온전한 기간을 만든다 |
 | [0324](../adr/0324-report-failures-become-notices-through-an-event-declared-by-the-receiving-user-module-like-digest-failures.md) | 리포트 실패는 받는 쪽 user 가 선언한 이벤트로 다이제스트와 같은 꼴의 알림이 되고, 실패 갈래 타입을 함께 쓴다 |
+| [0326](../adr/0326-development-names-call-a-shared-storyline-storyline-a-user-storyline-user-storyline-and-a-judgement-candidate-of-unknown-kind-candidate.md) | 개발 이름은 공유 스토리라인을 `Storyline`, 사용자 스토리라인을 `UserStoryline` 으로 부르고, 종류를 모르는 판정 후보는 `Candidate` 로 부른다 |

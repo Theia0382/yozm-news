@@ -30,7 +30,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 소속 판정 한 번의 흐름 — 사건 소속({@link EventMembershipService}) · 흐름 소속({@link FlowMembershipService})이 함께 쓰는 정본 ·
+ * 소속 판정 한 번의 흐름 — 사건 소속({@link EventMembershipService}) · 스토리라인 소속({@link StorylineMembershipService})이 함께 쓰는 정본 ·
  * docs/specs/evaluation.md §4 · evaluation-R37 · evaluation-R38 · evaluation-R44 · evaluation-R52.
  * <p>
  * 트랜잭션 밖에서 판정할 기사와 서술 기사를 한 번에 읽고, 물을 후보를 골라 평가기를 부른다. 성공이면 결과를 물은 후보와 대조한 뒤 짧은

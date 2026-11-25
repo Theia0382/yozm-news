@@ -25,7 +25,7 @@ import tools.jackson.databind.json.JsonMapper;
 /**
  * {@link EventJudgementRepository} 의 JdbcClient 구현 — docs/specs/evaluation.md §4.
  * <p>
- * 판정 원본은 넣기 한 번이고 갱신하지 않는다 — aggregate 가 없다. 넣기 · 지우기는 흐름 소속 표와 함께 쓰는
+ * 판정 원본은 넣기 한 번이고 갱신하지 않는다 — aggregate 가 없다. 넣기 · 지우기는 스토리라인 소속 표와 함께 쓰는
  * {@link MembershipJudgementRows} 이고, 물은 후보의 ID 키는 {@code eventId} 다. 기간 읽기는 {@code (judged_at, id)} 인덱스를 거꾸로
  * 훑고, ID 로 읽기는 기본 키로 찾는다.
  */

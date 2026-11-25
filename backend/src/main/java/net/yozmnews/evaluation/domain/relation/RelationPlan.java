@@ -8,19 +8,19 @@ import java.util.Optional;
 
 import net.yozmnews.article.ArticleContent;
 import net.yozmnews.article.ArticleId;
-import net.yozmnews.evaluation.FlowDescriptor;
-import net.yozmnews.evaluation.FlowHappening;
 import net.yozmnews.evaluation.RelationQuery;
+import net.yozmnews.evaluation.StorylineDescriptor;
+import net.yozmnews.evaluation.StorylineHappening;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationInput;
-import net.yozmnews.evaluation.domain.evaluator.FlowText;
 import net.yozmnews.evaluation.domain.evaluator.HappeningText;
 import net.yozmnews.evaluation.domain.evaluator.RelationInput;
 import net.yozmnews.evaluation.domain.evaluator.RelationWording;
+import net.yozmnews.evaluation.domain.evaluator.StorylineText;
 
 /**
  * 물을 서술 고르기 — 판정 요청과 읽은 기사로 포트 입력을 만든다 · docs/specs/evaluation.md §4 · evaluation-R49.
  * <p>
- * 흐름마다 서술 사건 가운데 기사가 아직 있는 것의 제목을 요청 순서로 {@link HappeningText#limited} 로 자른다. 지워진 기사와 자른 뒤 공백뿐인
+ * 스토리라인마다 서술 사건 가운데 기사가 아직 있는 것의 제목을 요청 순서로 {@link HappeningText#limited} 로 자른다. 지워진 기사와 자른 뒤 공백뿐인
  * 제목의 서술은 뺀다(요청에도 기록에도 없다). 요약문은 표시된 사건의 공백뿐이 아닌 요약문만 싣는다
  * ({@link EvaluationInput#presentSummary}). 한쪽이라도 남은 서술이 없으면 묻지 않는다.
  */
@@ -45,10 +45,10 @@ public final class RelationPlan {
 				first.used(), second.used());
 	}
 
-	private static Side side(FlowDescriptor flow, Map<ArticleId, ArticleContent> found) {
+	private static Side side(StorylineDescriptor storyline, Map<ArticleId, ArticleContent> found) {
 		List<HappeningText> texts = new ArrayList<>();
 		List<RelationRecord.Described> used = new ArrayList<>();
-		for (FlowHappening happening : flow.described()) {
+		for (StorylineHappening happening : storyline.described()) {
 			ArticleContent content = found.get(happening.articleId());
 			if (content == null) {
 				continue;
@@ -63,11 +63,11 @@ public final class RelationPlan {
 		return new Side(texts, used);
 	}
 
-	private static FlowText text(FlowDescriptor flow, Side side) {
-		return new FlowText(flow.happenings(), flow.firstAt(), flow.lastAt(), side.texts());
+	private static StorylineText text(StorylineDescriptor storyline, Side side) {
+		return new StorylineText(storyline.happenings(), storyline.firstAt(), storyline.lastAt(), side.texts());
 	}
 
-	/** 흐름 하나에서 남은 서술 — 요청에 싣는 것과 기록에 남기는 것 */
+	/** 스토리라인 하나에서 남은 서술 — 요청에 싣는 것과 기록에 남기는 것 */
 	private record Side(List<HappeningText> texts, List<RelationRecord.Described> used) {
 
 	}
@@ -92,7 +92,7 @@ public final class RelationPlan {
 
 		}
 
-		/** 한쪽 흐름에 남은 서술이 없어 묻지 않는다 */
+		/** 한쪽 스토리라인에 남은 서술이 없어 묻지 않는다 */
 		record NothingToAsk() implements Plan {
 
 		}

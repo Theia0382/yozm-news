@@ -16,7 +16,7 @@ public record ReportSectionView(ReportSectionKind kind, @Nullable String title, 
 		List<ReportCitation> citations, @Nullable ReportSectionStats stats) {
 
 	/**
-	 * @throws IllegalArgumentException 숫자가 섹션 종류의 숫자가 아닐 때 — 흐름은 {@link ReportSectionStats.Flows}, 보도량은
+	 * @throws IllegalArgumentException 숫자가 섹션 종류의 숫자가 아닐 때 — 사용자 스토리라인은 {@link ReportSectionStats.UserStorylines}, 보도량은
 	 * {@link ReportSectionStats.Coverage}, 관심은 {@link ReportSectionStats.Interests}, 개요는 없음
 	 */
 	public ReportSectionView {
@@ -31,7 +31,7 @@ public record ReportSectionView(ReportSectionKind kind, @Nullable String title, 
 	private static boolean matches(ReportSectionKind kind, ReportSectionStats stats) {
 		return switch (kind) {
 			case OVERVIEW -> false;
-			case STORYLINES -> stats instanceof ReportSectionStats.Flows;
+			case STORYLINES -> stats instanceof ReportSectionStats.UserStorylines;
 			case COVERAGE -> stats instanceof ReportSectionStats.Coverage;
 			case INTERESTS -> stats instanceof ReportSectionStats.Interests;
 		};

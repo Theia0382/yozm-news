@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import net.yozmnews.report.domain.material.ReportSnapshot.SnapshotFlow;
+import net.yozmnews.report.domain.material.ReportSnapshot.SnapshotUserStoryline;
 import net.yozmnews.storyline.StorylineId;
 import net.yozmnews.tag.TagKeyMapping;
 import net.yozmnews.tag.TagKind;
@@ -53,42 +53,42 @@ public final class PreviousMatch {
 	}
 
 	/**
-	 * 흐름 — 직전 흐름의 꼭대기를 지금 꼭대기로 푼 집합이 지금 흐름 하나의 꼭대기와만 겹치고, 그 지금 흐름과 겹치는 직전 흐름이 하나일 때만
+	 * 사용자 스토리라인 — 직전 사용자 스토리라인의 꼭대기를 지금 꼭대기로 푼 집합이 지금 사용자 스토리라인 하나의 꼭대기와만 겹치고, 그 지금 사용자 스토리라인과 겹치는 직전 사용자 스토리라인이 하나일 때만
 	 * 잇는다.
 	 * @param resolvedTops 직전 꼭대기 → 지금 포함 나무의 꼭대기(합쳐진 것은 남는 것) — 없는(지운) 것은 빠져 있다
-	 * @param currentFlows 지금 흐름의 헤드 → 꼭대기들
-	 * @return 지금 흐름의 헤드 → 직전 기사 수
+	 * @param currentUserStorylines 지금 사용자 스토리라인의 헤드 → 꼭대기들
+	 * @return 지금 사용자 스토리라인의 헤드 → 직전 기사 수
 	 */
-	public static Map<StorylineId, Long> flows(List<SnapshotFlow> previous, Map<StorylineId, StorylineId> resolvedTops,
-			Map<StorylineId, Set<StorylineId>> currentFlows) {
+	public static Map<StorylineId, Long> userStorylines(List<SnapshotUserStoryline> previous, Map<StorylineId, StorylineId> resolvedTops,
+			Map<StorylineId, Set<StorylineId>> currentUserStorylines) {
 		Objects.requireNonNull(previous, "previous");
 		Objects.requireNonNull(resolvedTops, "resolvedTops");
-		Objects.requireNonNull(currentFlows, "currentFlows");
-		Map<SnapshotFlow, Set<StorylineId>> overlaps = new LinkedHashMap<>();
+		Objects.requireNonNull(currentUserStorylines, "currentUserStorylines");
+		Map<SnapshotUserStoryline, Set<StorylineId>> overlaps = new LinkedHashMap<>();
 		Map<StorylineId, Integer> touched = new HashMap<>();
-		for (SnapshotFlow flow : previous) {
+		for (SnapshotUserStoryline userStoryline : previous) {
 			Set<StorylineId> resolved = new HashSet<>();
-			flow.tops().forEach(top -> {
+			userStoryline.tops().forEach(top -> {
 				StorylineId now = resolvedTops.get(top);
 				if (now != null) {
 					resolved.add(now);
 				}
 			});
 			Set<StorylineId> heads = new HashSet<>();
-			currentFlows.forEach((head, tops) -> {
+			currentUserStorylines.forEach((head, tops) -> {
 				if (tops.stream().anyMatch(resolved::contains)) {
 					heads.add(head);
 				}
 			});
-			overlaps.put(flow, heads);
+			overlaps.put(userStoryline, heads);
 			heads.forEach(head -> touched.merge(head, 1, Integer::sum));
 		}
 		Map<StorylineId, Long> carried = new LinkedHashMap<>();
-		overlaps.forEach((flow, heads) -> {
+		overlaps.forEach((userStoryline, heads) -> {
 			if (heads.size() == 1) {
 				StorylineId head = heads.iterator().next();
 				if (touched.get(head) == 1) {
-					carried.put(head, flow.articles());
+					carried.put(head, userStoryline.articles());
 				}
 			}
 		});

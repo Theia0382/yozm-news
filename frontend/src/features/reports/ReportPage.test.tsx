@@ -6,7 +6,7 @@ import type { ReportDetail } from "@/features/reports/reportQueries";
 import {
   ARTICLE,
   detail,
-  flow,
+  storyline,
   summary,
 } from "@/features/reports/reportTestKit";
 import { json, problem } from "@/test/fakeServer";
@@ -21,7 +21,7 @@ function renderReport(body: ReportDetail | (() => Response), id = 12) {
   });
 }
 
-/** 갈래 셋이 있는 주간 리포트 — 흐름 둘(정리 있음 · 없음), 사건 둘(기사 있음 · 없음), 직전 리포트 11, 숨긴 섹션 1 */
+/** 갈래 셋이 있는 주간 리포트 — 스토리라인 둘(정리 있음 · 없음), 사건 둘(기사 있음 · 없음), 직전 리포트 11, 숨긴 섹션 1 */
 const READY = detail(summary(12), {
   previous: summary(11, { firstDay: "2026-11-09", lastDay: "2026-11-15" }),
   hiddenSections: 1,
@@ -31,7 +31,7 @@ const READY = detail(summary(12), {
       title: null,
       body: "이번 주의 개요다.",
       citations: [],
-      flows: null,
+      userStorylines: null,
       topics: null,
       interests: null,
     },
@@ -42,18 +42,18 @@ const READY = detail(summary(12), {
       citations: [
         {
           kind: "STORYLINE",
-          flow: flow(31, {
+          storyline: storyline(31, {
             userStorylines: [{ id: 5, title: "의대 정원 갈등" }],
           }),
           eventId: null,
           article: null,
         },
-        { kind: "EVENT", flow: null, eventId: 902, article: ARTICLE },
-        { kind: "EVENT", flow: null, eventId: 903, article: null },
+        { kind: "EVENT", storyline: null, eventId: 902, article: ARTICLE },
+        { kind: "EVENT", storyline: null, eventId: 903, article: null },
       ],
-      flows: [
+      userStorylines: [
         {
-          flow: flow(31, {
+          storyline: storyline(31, {
             userStorylines: [{ id: 5, title: "의대 정원 갈등" }],
           }),
           articles: 8,
@@ -62,7 +62,7 @@ const READY = detail(summary(12), {
           trackedInPeriod: false,
         },
         {
-          flow: flow(33),
+          storyline: storyline(33),
           articles: 5,
           previous: null,
           trend: "NO_COMPARISON",
@@ -77,7 +77,7 @@ const READY = detail(summary(12), {
       title: "금융 보도가 늘었다",
       body: "보도량 본문이다.",
       citations: [],
-      flows: null,
+      userStorylines: null,
       topics: [{ name: "금융", articles: 40, previous: 12, trend: "ROSE" }],
       interests: null,
     },
@@ -86,15 +86,20 @@ const READY = detail(summary(12), {
       title: "관심이 옮겨 갔다",
       body: "관심 본문이다.",
       citations: [
-        { kind: "STORYLINE", flow: flow(33), eventId: null, article: null },
+        {
+          kind: "STORYLINE",
+          storyline: storyline(33),
+          eventId: null,
+          article: null,
+        },
       ],
-      flows: null,
+      userStorylines: null,
       topics: null,
       interests: {
         topics: [{ name: "금융", start: 0.42, end: null, shift: "LEFT" }],
-        flows: [
+        userStorylines: [
           {
-            flow: flow(34, { title: null }),
+            storyline: storyline(34, { title: null }),
             start: 0.2,
             end: 0.6,
             shift: "ENTERED",
@@ -126,17 +131,25 @@ describe("ReportPage", () => {
       "관심이 옮겨 갔다",
     ]);
 
-    const flows = screen.getByRole("table", { name: "추적한 흐름의 보도량" });
-    const flowRows = within(flows).getAllByRole("row").slice(1);
-    expect(flowRows.map((row) => row.textContent)).toEqual([
+    const userStorylines = screen.getByRole("table", {
+      name: "추적한 흐름의 보도량",
+    });
+    const userStorylineRows = within(userStorylines)
+      .getAllByRole("row")
+      .slice(1);
+    expect(userStorylineRows.map((row) => row.textContent)).toEqual([
       "의대 정원 갈등82늘었음",
       "흐름 33 대표 기사이번 기간에 추적 시작5—비교 없음",
     ]);
     expect(
-      within(flowRows[0]!).getByRole("link", { name: "의대 정원 갈등" }),
+      within(userStorylineRows[0]!).getByRole("link", {
+        name: "의대 정원 갈등",
+      }),
     ).toHaveAttribute("href", "/user-storylines/5");
     expect(
-      within(flowRows[1]!).getByRole("link", { name: "흐름 33 대표 기사" }),
+      within(userStorylineRows[1]!).getByRole("link", {
+        name: "흐름 33 대표 기사",
+      }),
     ).toHaveAttribute("href", "/storylines/33");
 
     const topics = screen.getByRole("table", { name: "구독한 주제의 보도량" });
@@ -156,18 +169,21 @@ describe("ReportPage", () => {
         .slice(1)
         .map((row) => row.textContent),
     ).toEqual(["금융0.42신호 없음사라진 관심"]);
-    const interestFlows = screen.getByRole("table", {
+    const interestUserStorylines = screen.getByRole("table", {
       name: "관심의 변화 — 흐름",
     });
-    const unnamed = within(interestFlows).getByRole("link", {
+    const unnamed = within(interestUserStorylines).getByRole("link", {
       name: "제목을 아직 정하지 못한 흐름",
     });
     expect(unnamed).toHaveAttribute("href", "/storylines/34");
 
-    const [flowCitations, interestCitations] = screen.getAllByRole("list", {
-      name: "이 섹션이 다룬 흐름 · 사건",
-    });
-    const lines = within(flowCitations!).getAllByRole("listitem");
+    const [userStorylineCitations, interestCitations] = screen.getAllByRole(
+      "list",
+      {
+        name: "이 섹션이 다룬 흐름 · 사건",
+      },
+    );
+    const lines = within(userStorylineCitations!).getAllByRole("listitem");
     expect(
       within(lines[0]!).getByRole("link", { name: "의대 정원 갈등" }),
     ).toHaveAttribute("href", "/user-storylines/5");

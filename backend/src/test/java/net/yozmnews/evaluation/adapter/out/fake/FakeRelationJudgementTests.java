@@ -11,12 +11,12 @@ import java.util.Map;
 import net.yozmnews.evaluation.EvaluatorFailureKind;
 import net.yozmnews.evaluation.RelationAnswer;
 import net.yozmnews.evaluation.domain.evaluator.EvaluationFailure;
-import net.yozmnews.evaluation.domain.evaluator.FlowText;
 import net.yozmnews.evaluation.domain.evaluator.HappeningText;
 import net.yozmnews.evaluation.domain.evaluator.Relation;
 import net.yozmnews.evaluation.domain.evaluator.RelationInput;
 import net.yozmnews.evaluation.domain.evaluator.RelationWording;
 import net.yozmnews.evaluation.domain.evaluator.RereadFailure;
+import net.yozmnews.evaluation.domain.evaluator.StorylineText;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -32,7 +32,7 @@ class FakeRelationJudgementTests {
 	private final FakeArticleEvaluator evaluator = new FakeArticleEvaluator();
 
 	@Test
-	void theFlowWithFewerDescriptionsIsPartOfTheOtherWhenTheirPiecesOverlap() {
+	void theStorylineWithFewerDescriptionsIsPartOfTheOtherWhenTheirPiecesOverlap() {
 		// 조각 A = {서울, 시장, 선거, 개표, 당선, 확정}, B = {서울, 시장} — 겹침 2 ÷ 2 = 1 → 0.5 + 0.4 = 0.9
 		Relation relation = (Relation) this.evaluator
 			.judgeRelation(input(List.of("서울 시장 선거 개표", "서울 시장 당선 확정"), List.of("서울 시장")));
@@ -49,7 +49,7 @@ class FakeRelationJudgementTests {
 	}
 
 	@Test
-	void flowsWithAsManyDescriptionsAreFragmentsOfOneMatterWhenTheirPiecesOverlap() {
+	void storylinesWithAsManyDescriptionsAreFragmentsOfOneMatterWhenTheirPiecesOverlap() {
 		// 조각 A = {서울, 시장, 선거}, B = {서울, 시장, 취임} — 겹침 2 ÷ 3 → 0.5 + 0.4 × 2 ÷ 3
 		Relation relation = (Relation) this.evaluator.judgeRelation(input(List.of("서울 시장 선거"), List.of("서울 시장 취임")));
 
@@ -74,8 +74,8 @@ class FakeRelationJudgementTests {
 	@Test
 	void answersOnlyTheAnswersOfTheWordingItWasAsked() {
 		// 조각 답이 없는 판 — 서술 사건 수가 같으면 second 가 first 의 부분이고, 나머지 답 넷이 그 나머지를 나눈다
-		Relation relation = (Relation) this.evaluator.judgeRelation(new RelationInput(flow(List.of("서울 시장 선거")),
-				flow(List.of("서울 시장 취임")), RelationWording.RELATION_1));
+		Relation relation = (Relation) this.evaluator.judgeRelation(new RelationInput(storyline(List.of("서울 시장 선거")),
+				storyline(List.of("서울 시장 취임")), RelationWording.RELATION_1));
 
 		assertThat(relation.probabilities()).containsOnlyKeys(RelationAnswer.NONE, RelationAnswer.SECOND_PART_OF_FIRST,
 				RelationAnswer.FIRST_PART_OF_SECOND, RelationAnswer.FIRST_LED_TO_SECOND, RelationAnswer.SECOND_LED_TO_FIRST);
@@ -133,14 +133,14 @@ class FakeRelationJudgementTests {
 	}
 
 	@Test
-	void theFirstFlowIsThePartWhenItHasFewerDescriptions() {
+	void theFirstStorylineIsThePartWhenItHasFewerDescriptions() {
 		// 조각 A = {서울, 시장, 취임}, B = {서울, 시장, 선거, 개표, 부산, 항만, 파업} — 겹침 2 ÷ min(3, 7) → 0.5 + 0.4 × 2 ÷ 3
 		Relation relation = (Relation) this.evaluator
 			.judgeRelation(input(List.of("서울 시장 취임"), List.of("서울 시장 선거 개표", "부산 항만 파업")));
 
 		assertThat(relation.probabilities().get(RelationAnswer.FIRST_PART_OF_SECOND))
 			.isCloseTo(0.7666666666666667, within(1e-12));
-		// 둘째 흐름의 두 제목은 조각을 함께 갖지 않는다 → 0.1
+		// 둘째 스토리라인의 두 제목은 조각을 함께 갖지 않는다 → 0.1
 		assertThat(relation.secondOneMatter()).isCloseTo(0.1, within(1e-12));
 	}
 
@@ -163,7 +163,7 @@ class FakeRelationJudgementTests {
 	}
 
 	@Test
-	void failsWithTheKindOfTheMarkerInTheFirstTitleOfTheFirstFlow() {
+	void failsWithTheKindOfTheMarkerInTheFirstTitleOfTheFirstStoryline() {
 		assertThat(this.evaluator.judgeRelation(input(List.of("[fake:transient] 서울 시장"), List.of("서울 시장"))))
 			.isEqualTo(new EvaluationFailure(EvaluatorFailureKind.TRANSIENT, "Fake 평가기 표지에 따른 실패"));
 		// 다른 자리의 표지는 보지 않는다
@@ -179,11 +179,11 @@ class FakeRelationJudgementTests {
 	}
 
 	private static RelationInput input(List<String> first, List<String> second) {
-		return new RelationInput(flow(first), flow(second), RelationWording.CURRENT);
+		return new RelationInput(storyline(first), storyline(second), RelationWording.CURRENT);
 	}
 
-	private static FlowText flow(List<String> titles) {
-		return new FlowText(titles.size(), DAY, DAY,
+	private static StorylineText storyline(List<String> titles) {
+		return new StorylineText(titles.size(), DAY, DAY,
 				titles.stream().map(title -> new HappeningText(DAY, title, null)).toList());
 	}
 

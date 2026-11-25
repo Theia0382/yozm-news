@@ -34,7 +34,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 /**
  * 사용자 스토리라인 따라가기 — 합쳐진 스토리라인의 추적 씨앗은 남는 스토리라인으로 옮기고(이력 원인 STORYLINE_MERGED), 지운 스토리라인의 추적은
  * 빼고 알린다(이력 원인 STORYLINE_REMOVED · 알림은 풀기의 남은 사건만 담는다). 신호가 관심 창 밖으로 나가고 추적도 없으면 사라지고, 추적 중이면
- * 남는다. 추적 중인 흐름이 갈라지면 조각이 추적을 물려받는다(이력 원인 STORYLINE_SPLIT). 리스너는 커밋한 발행을 받고, 추적하는 사용자를 쪽으로
+ * 남는다. 추적 중인 사용자 스토리라인이 갈라지면 조각이 추적을 물려받는다(이력 원인 STORYLINE_SPLIT). 리스너는 커밋한 발행을 받고, 추적하는 사용자를 쪽으로
  * 나눠 모두 따라간다. 실제 PostgreSQL 에서 본다 — 스토리라인과 관계는 행으로 직접 만든다.
  * <p>
  * 지키는 규칙: user-R52 · user-R53 · user-R54 · 사용자 스토리라인(docs/specs/user.md §5)
@@ -139,21 +139,21 @@ class UserStorylineFollowupsTests {
 	}
 
 	@Test
-	void aTrackedSeedRemovedWhileTheFlowRemainsMovesTheTrackingWithoutANotice() {
+	void aTrackedSeedRemovedWhileTheUserStorylineRemainsMovesTheTrackingWithoutANotice() {
 		UserId user = user("alice@example.com");
 		long top = storyline();
 		long child = storyline();
 		UserStorylineFixtures.contains(this.jdbc, top, child);
 		track(user, child);
 		this.subscriptions.view(user, TRACKED.plusSeconds(60));
-		// 누른 하위 스토리라인만 지워졌다 — 흐름(꼭대기)에는 반응이 남아 있다
+		// 누른 하위 스토리라인만 지워졌다 — 스토리라인(꼭대기)에는 반응이 남아 있다
 		UserStorylineFixtures.reaction(this.jdbc, user, UserStorylineFixtures.eventIn(this.jdbc, top), "LIKE",
 				TRACKED.plusSeconds(120));
 		this.jdbc.sql("delete from storylines where id = :id").param("id", child).update();
 
 		this.followups.followRetired(retired(child, null));
 
-		// 추적은 흐름에 남고 추적 씨앗이 신호를 받은 꼭대기로 넘어간다 — 사라진 구독 알림은 없다
+		// 추적은 스토리라인에 남고 추적 씨앗이 신호를 받은 꼭대기로 넘어간다 — 사라진 구독 알림은 없다
 		assertThat(saved(user)).singleElement().satisfies(one -> {
 			assertThat(one.subscribedAt()).isEqualTo(TRACKED);
 			assertThat(one.seeds()).containsExactly(top);
@@ -217,7 +217,7 @@ class UserStorylineFollowupsTests {
 	}
 
 	@Test
-	void aReactedFlowIsStoredAndVanishesWhenItsSignalsLeaveTheWindow() {
+	void aReactedUserStorylineIsStoredAndVanishesWhenItsSignalsLeaveTheWindow() {
 		UserId user = user("alice@example.com");
 		long storyline = storyline();
 		Instant reacted = Instant.parse("2026-07-01T00:00:00Z");
@@ -240,7 +240,7 @@ class UserStorylineFollowupsTests {
 	void anExposureWithoutAReactionMakesNoUserStoryline() {
 		UserId user = user("alice@example.com");
 		long storyline = storyline();
-		// 사건이 그 흐름에 있을 뿐 반응이 없다
+		// 사건이 그 스토리라인에 있을 뿐 반응이 없다
 		UserStorylineFixtures.eventIn(this.jdbc, storyline);
 
 		this.subscriptions.view(user, TRACKED);
@@ -250,7 +250,7 @@ class UserStorylineFollowupsTests {
 	}
 
 	@Test
-	void aTrackedFlowStaysAfterItsSignalsLeaveTheWindow() {
+	void aTrackedUserStorylineStaysAfterItsSignalsLeaveTheWindow() {
 		UserId user = user("alice@example.com");
 		long storyline = storyline();
 		Instant tracked = Instant.parse("2026-07-01T00:00:00Z");
@@ -272,13 +272,13 @@ class UserStorylineFollowupsTests {
 		UserStorylineFixtures.follows(this.jdbc, earlier, later);
 		Instant tracked = Instant.parse("2026-07-01T00:00:00Z");
 		this.subscriptions.subscribe(user, new StorylineId(earlier), tracked);
-		// 뒤 흐름에 반응이 있다 — 뒤 흐름도 씨앗이다
+		// 뒤 스토리라인에 반응이 있다 — 뒤 스토리라인도 씨앗이다
 		UserStorylineFixtures.reaction(this.jdbc, user, UserStorylineFixtures.eventIn(this.jdbc, later), "LIKE",
 				tracked.plusSeconds(60));
 		this.subscriptions.view(user, tracked.plusSeconds(120));
 		assertThat(saved(user)).singleElement().extracting(Saved::members).isEqualTo(Set.of(earlier, later));
 
-		// 이어짐이 사라져 흐름이 둘로 갈린다
+		// 이어짐이 사라져 스토리라인이 둘로 갈린다
 		UserStorylineFixtures.unrelate(this.jdbc, earlier, later);
 		this.subscriptions.view(user, tracked.plusSeconds(180));
 
@@ -311,8 +311,8 @@ class UserStorylineFollowupsTests {
 		this.subscriptions.subscribe(user, new StorylineId(root), TRACKED);
 		List<Saved> before = saved(user);
 		assertThat(before).extracting(Saved::members).containsExactly(Set.of(root, left), Set.of(root, right));
-		long leftFlow = before.get(0).id();
-		long rightFlow = before.get(1).id();
+		long leftUserStoryline = before.get(0).id();
+		long rightUserStoryline = before.get(1).id();
 
 		// 헤드 left 가 ID 가 가장 큰 새 스토리라인의 하위가 된다 — 그 갈래의 꼭대기는 parent 다
 		long parent = storyline();
@@ -322,8 +322,8 @@ class UserStorylineFollowupsTests {
 		// 저장한 헤드 left 를 지금 꼭대기 parent 로 풀어 같은 사용자 스토리라인이 그 갈래를 잇는다. 대조 — 풀지 않으면 헤드를 가진
 		// 묶음이 없어 추적 씨앗 root 의 묶음 가운데 헤드가 작은 right 갈래로 옮겨 가고, right 갈래의 사용자 스토리라인은 합쳐져 사라진다
 		assertThat(saved(user)).extracting(Saved::id, Saved::members, Saved::tracked)
-			.containsExactly(org.assertj.core.groups.Tuple.tuple(leftFlow, Set.of(root, parent), true),
-					org.assertj.core.groups.Tuple.tuple(rightFlow, Set.of(root, right), true));
+			.containsExactly(org.assertj.core.groups.Tuple.tuple(leftUserStoryline, Set.of(root, parent), true),
+					org.assertj.core.groups.Tuple.tuple(rightUserStoryline, Set.of(root, right), true));
 	}
 
 	private UserId user(String email) {

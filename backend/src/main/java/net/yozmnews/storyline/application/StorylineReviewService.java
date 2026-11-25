@@ -7,14 +7,14 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 
-import net.yozmnews.evaluation.FlowMembershipJudgementId;
 import net.yozmnews.evaluation.RelationJudgementId;
+import net.yozmnews.evaluation.StorylineMembershipJudgementId;
 import net.yozmnews.event.EventId;
 import net.yozmnews.storyline.LinkScore;
 import net.yozmnews.storyline.MergedStoryline;
 import net.yozmnews.storyline.StorylineId;
 import net.yozmnews.storyline.StorylineLinkingCriteria;
-import net.yozmnews.storyline.StorylineMembership;
+import net.yozmnews.storyline.StorylineMembershipView;
 import net.yozmnews.storyline.StorylineRelationAsked;
 import net.yozmnews.storyline.StorylineRelationCriteria;
 import net.yozmnews.storyline.StorylineRelationDetail;
@@ -72,7 +72,7 @@ class StorylineReviewService implements StorylineReview {
 	}
 
 	@Override
-	public List<StorylineMembership> memberships(StorylineId id) {
+	public List<StorylineMembershipView> memberships(StorylineId id) {
 		Optional<StoredStoryline> stored = this.storylines.find(id.value());
 		if (stored.isEmpty()) {
 			return List.of();
@@ -88,9 +88,9 @@ class StorylineReviewService implements StorylineReview {
 				.filter(criteria -> criteria != null)
 				.forEach(criteriaIds::add));
 		Map<Long, StorylineLinkingCriteria> criteria = this.linking.findAll(criteriaIds);
-		List<StorylineMembership> found = new ArrayList<>();
+		List<StorylineMembershipView> found = new ArrayList<>();
 		judgements.forEach((storyline, byEvent) -> byEvent.forEach((event, judgement) -> found
-			.add(new StorylineMembership(new StorylineId(storyline), new EventId(event), judgement.linkedBy(),
+			.add(new StorylineMembershipView(new StorylineId(storyline), new EventId(event), judgement.linkedBy(),
 					score(judgement.score()), linkingCriteria(criteria, judgement.criteriaId()), probability(judgement),
 					judgementId(judgement), judgement.linkedAt(),
 					(judgement.mergedFrom() == null) ? null : new StorylineId(judgement.mergedFrom())))));
@@ -183,10 +183,10 @@ class StorylineReviewService implements StorylineReview {
 		return (asked == null) ? null : asked.probability();
 	}
 
-	private static @Nullable FlowMembershipJudgementId judgementId(LinkJudgement judgement) {
+	private static @Nullable StorylineMembershipJudgementId judgementId(LinkJudgement judgement) {
 		Asked asked = judgement.asked();
 		return (asked == null || asked.judgementId() == null) ? null
-				: new FlowMembershipJudgementId(asked.judgementId());
+				: new StorylineMembershipJudgementId(asked.judgementId());
 	}
 
 	private static StorylineRelationCriteria relationCriteria(@Nullable RelationCriteria criteria) {

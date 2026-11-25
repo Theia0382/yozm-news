@@ -45,8 +45,8 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 정리 실행 — 실제 PostgreSQL 위에서 사용자 스토리라인을 맞춰 저장하고, 흐름 판정대로 만들 흐름만 정리해 저장한다. 생성기는 로컬 대체물을 감싼
- * 대역이다(호출을 세고 대본대로 실패한다). 흐름 판정은 한 시험만 실제 구현({@code digest})으로, 나머지는 꼭대기 집합을 그대로 답하는 대역으로
+ * 정리 실행 — 실제 PostgreSQL 위에서 사용자 스토리라인을 맞춰 저장하고, 스토리라인 판정대로 새로 정리할 사용자 스토리라인만 정리해 저장한다. 생성기는 로컬 대체물을 감싼
+ * 대역이다(호출을 세고 대본대로 실패한다). 스토리라인 판정은 한 시험만 실제 구현({@code digest})으로, 나머지는 꼭대기 집합을 그대로 답하는 대역으로
  * 준다 — 판정 자체의 시험은 {@code StorylineStandingServiceTests} 가 한다.
  * <p>
  * 지키는 규칙: docs/specs/user.md §5 의 정리 실행. 기대값은 손으로 쓴 행 · 글이다.
@@ -106,7 +106,7 @@ class StorylineSummaryRunTests {
 	}
 
 	@Test
-	void aFlowTheUserOnlyReactedToIsSavedAndSummarizedWithTheRealStanding() {
+	void aUserStorylineTheUserOnlyReactedToIsSavedAndSummarizedWithTheRealStanding() {
 		Instant realNow = Instant.now();
 		long storyline = UserStorylineFixtures.storyline(this.jdbc, realNow);
 		long first = this.rows.article("앞 사건", "politics.legislature");
@@ -139,7 +139,7 @@ class StorylineSummaryRunTests {
 
 	@Test
 	void aSecondRunWithoutNewEventsCallsNothing() {
-		long storyline = flow("가", 2);
+		long storyline = reactedStoryline("가", 2);
 		StorylineSummaryRun run = run(followed(storyline), NOW);
 		run.run(this.user);
 
@@ -150,9 +150,9 @@ class StorylineSummaryRunTests {
 	}
 
 	@Test
-	void aNewEventExtendsOnlyItsFlowWithOnlyThatEvent() {
-		long changed = flow("가", 2);
-		long unchanged = flow("나", 1);
+	void aNewEventExtendsOnlyItsUserStorylineWithOnlyThatEvent() {
+		long changed = reactedStoryline("가", 2);
+		long unchanged = reactedStoryline("나", 1);
 		run(followed(changed, unchanged), NOW).run(this.user);
 		long added = this.rows.article("가 새 사건", "politics.legislature");
 		link(changed, added);
@@ -175,13 +175,13 @@ class StorylineSummaryRunTests {
 
 	@Test
 	void changedTrackedTargetsRebuildTheSummaryFromScratchWithATextForEachTop() {
-		long earlier = flow("가", 1);
+		long earlier = reactedStoryline("가", 1);
 		run(followed(earlier), NOW).run(this.user);
 		long later = UserStorylineFixtures.storyline(this.jdbc, NOW);
 		link(later, this.rows.article("나 사건 1", "politics.legislature"));
 		UserStorylineFixtures.follows(this.jdbc, earlier, later);
 
-		// 관심 흐름은 사용자 스토리라인의 값이라 그 꼭대기 모두에 든다 — 이어진 뒤 흐름 later 가 헤드다
+		// 관심 스토리라인은 사용자 스토리라인의 값이라 그 꼭대기 모두에 든다 — 이어진 뒤 스토리라인 later 가 헤드다
 		SummaryRunResult result = run(followed(earlier, later), NOW.plusSeconds(60)).run(this.user);
 
 		assertThat(result).isEqualTo(new SummaryRunResult(1, 0, 0, 0));
@@ -199,11 +199,11 @@ class StorylineSummaryRunTests {
 
 	@Test
 	void aTopWithoutEventsIsLeftOutOfTheCallAndKeptWithoutATextUntilItGetsAnEvent() {
-		long first = flow("가", 1);
+		long first = reactedStoryline("가", 1);
 		long empty = UserStorylineFixtures.storyline(this.jdbc, NOW);
 		UserStorylineFixtures.follows(this.jdbc, first, empty);
 
-		// 관심 흐름은 사용자 스토리라인의 값이라 그 꼭대기 모두에 든다 — 이어진 뒤 흐름 empty 가 헤드다
+		// 관심 스토리라인은 사용자 스토리라인의 값이라 그 꼭대기 모두에 든다 — 이어진 뒤 스토리라인 empty 가 헤드다
 		assertThat(run(followed(first, empty), NOW).run(this.user)).isEqualTo(new SummaryRunResult(1, 0, 0, 0));
 
 		SummaryRequest created = this.script.requests.getLast();
@@ -236,8 +236,8 @@ class StorylineSummaryRunTests {
 	}
 
 	@Test
-	void aFlowNoLongerFollowedOrKeptLosesItsSummaryAndKeepsItsAttempts() {
-		long storyline = flow("가", 1);
+	void aUserStorylineNoLongerFollowedOrKeptLosesItsSummaryAndKeepsItsAttempts() {
+		long storyline = reactedStoryline("가", 1);
 		run(followed(storyline), NOW).run(this.user);
 
 		SummaryRunResult result = run(user -> Optional.of(new StorylineStanding(Set.of(), Set.of())), NOW).run(this.user);
@@ -248,10 +248,10 @@ class StorylineSummaryRunTests {
 	}
 
 	@Test
-	void aKeptFlowKeepsItsSummaryButAKeptFlowWithoutOneIsNotCreated() {
-		long summarized = flow("가", 1);
+	void aKeptUserStorylineKeepsItsSummaryButAKeptUserStorylineWithoutOneIsNotCreated() {
+		long summarized = reactedStoryline("가", 1);
 		run(followed(summarized), NOW).run(this.user);
-		long keptOnly = flow("나", 1);
+		long keptOnly = reactedStoryline("나", 1);
 		StorylineStandingNow kept = user -> Optional
 			.of(new StorylineStanding(Set.of(), Set.of(new StorylineId(summarized), new StorylineId(keptOnly))));
 
@@ -263,7 +263,7 @@ class StorylineSummaryRunTests {
 
 	@Test
 	void withoutAStandingNothingIsRemoved() {
-		long storyline = flow("가", 1);
+		long storyline = reactedStoryline("가", 1);
 		run(followed(storyline), NOW).run(this.user);
 
 		assertThat(run(user -> Optional.empty(), NOW).run(this.user)).isEqualTo(SummaryRunResult.NOTHING);
@@ -272,9 +272,9 @@ class StorylineSummaryRunTests {
 	}
 
 	@Test
-	void aFailedCallIsRecordedTheOtherFlowIsStoredAndTheFailedFlowRests() {
-		long failing = flow("가", 1);
-		long working = flow("나", 1);
+	void aFailedCallIsRecordedTheOtherUserStorylineIsStoredAndTheFailedUserStorylineRests() {
+		long failing = reactedStoryline("가", 1);
+		long working = reactedStoryline("나", 1);
 		this.script.script = request -> request.input().topIds().contains(failing)
 				? new SummaryOutcome.Failed(SummaryFailure.PROVIDER_UNAVAILABLE) : this.script.fake.summarize(request);
 
@@ -302,8 +302,8 @@ class StorylineSummaryRunTests {
 
 	@Test
 	void aKeySideFailureStopsTheRun() {
-		long first = flow("가", 1);
-		long second = flow("나", 1);
+		long first = reactedStoryline("가", 1);
+		long second = reactedStoryline("나", 1);
 		this.script.script = request -> new SummaryOutcome.Failed(SummaryFailure.INVALID_KEY);
 
 		SummaryRunResult result = run(followed(first, second), NOW).run(this.user);
@@ -316,8 +316,8 @@ class StorylineSummaryRunTests {
 
 	@Test
 	void aMissingKeyStopsTheRunWithoutAnAttempt() {
-		long first = flow("가", 1);
-		long second = flow("나", 1);
+		long first = reactedStoryline("가", 1);
+		long second = reactedStoryline("나", 1);
 		this.script.script = request -> new SummaryOutcome.KeyMissing();
 
 		assertThat(run(followed(first, second), NOW).run(this.user)).isEqualTo(SummaryRunResult.NOTHING);
@@ -329,9 +329,9 @@ class StorylineSummaryRunTests {
 
 	@Test
 	void unreadableTruncatedAndRefusedAnswersAreFailuresThatCountTheirTokens() {
-		long unreadable = flow("가", 1);
-		long truncated = flow("나", 1);
-		long refused = flow("다", 1);
+		long unreadable = reactedStoryline("가", 1);
+		long truncated = reactedStoryline("나", 1);
+		long refused = reactedStoryline("다", 1);
 		this.script.script = request -> {
 			List<Long> tops = request.input().topIds();
 			if (tops.contains(unreadable)) {
@@ -357,7 +357,7 @@ class StorylineSummaryRunTests {
 
 	@Test
 	void aResultIsDiscardedWhenTheTrackedTargetsChangeDuringTheCall() {
-		long storyline = flow("가", 1);
+		long storyline = reactedStoryline("가", 1);
 		long other = UserStorylineFixtures.storyline(this.jdbc, NOW);
 		this.script.script = request -> {
 			this.jdbc.sql("""
@@ -379,7 +379,7 @@ class StorylineSummaryRunTests {
 
 	@Test
 	void aResultForAUserStorylineThatVanishedIsDroppedWithoutAnAttempt() {
-		long storyline = flow("가", 1);
+		long storyline = reactedStoryline("가", 1);
 		this.script.script = request -> {
 			this.jdbc.sql("delete from user_storylines where user_id = :user").param("user", this.user.value()).update();
 			return this.script.fake.summarize(request);
@@ -393,7 +393,7 @@ class StorylineSummaryRunTests {
 
 	@Test
 	void withoutAUsableModelNothingIsSavedOrCalled() {
-		flow("가", 1);
+		reactedStoryline("가", 1);
 		StorylineSummaryRun run = new StorylineSummaryRun(user -> Optional.empty(), this.lock, this.followups,
 				this.userStorylines, this.summaries, user -> Optional.of(new StorylineStanding(Set.of(), Set.of())),
 				this.materials, this.script, this.transaction, InstantSource.fixed(NOW));
@@ -405,7 +405,7 @@ class StorylineSummaryRunTests {
 	}
 
 	/** 스토리라인 하나와 그 스토리라인에 든 사건들 — 사건마다 대표 기사 하나, 사용자가 첫 사건에 좋아요를 눌렀다 */
-	private long flow(String name, int events) {
+	private long reactedStoryline(String name, int events) {
 		long storyline = UserStorylineFixtures.storyline(this.jdbc, NOW);
 		for (int i = 1; i <= events; i++) {
 			long article = this.rows.article(name + " 사건 " + i, "politics.legislature");

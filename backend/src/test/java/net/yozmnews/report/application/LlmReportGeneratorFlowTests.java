@@ -229,7 +229,7 @@ class LlmReportGeneratorFlowTests {
 				new LlmReportGenerator(this.gateway), this.transaction, TestClocks.of(Instant::now));
 		ReportId id = generation.schedule(user, ReportFixtures.PERIOD).id();
 		ReportInput input = ReportFixtures.input(user, ReportFixtures.PERIOD,
-				ReportFixtures.flows(ReportFixtures.flow(31, 902)), ReportFixtures.coverage(), ReportFixtures.interests(31));
+				ReportFixtures.userStorylines(ReportFixtures.userStoryline(31, 902)), ReportFixtures.coverage(), ReportFixtures.interests(31));
 		ReportStatus status = generation.run(id, MODEL, ReportFixtures.EFFORT, input);
 		assertThat(status).isIn(ReportStatus.READY, ReportStatus.FAILED);
 		return this.jdbc.sql("""

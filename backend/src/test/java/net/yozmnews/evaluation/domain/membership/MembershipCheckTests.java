@@ -26,8 +26,8 @@ class MembershipCheckTests {
 	void namesTheMissingAndUnknownEvents() {
 		assertThat(MembershipCheck.mismatch(membership(Map.of(12L, 0.83, 99L, 0.5), "{}"), Set.of(12L, 15L), "사건"))
 			.contains("사건 키가 물은 후보와 다르다 — 빠진 사건 [15], 모르는 사건 [99]");
-		assertThat(MembershipCheck.mismatch(membership(Map.of(12L, 0.83, 99L, 0.5), "{}"), Set.of(12L, 15L), "흐름"))
-			.contains("흐름 키가 물은 후보와 다르다 — 빠진 흐름 [15], 모르는 흐름 [99]");
+		assertThat(MembershipCheck.mismatch(membership(Map.of(12L, 0.83, 99L, 0.5), "{}"), Set.of(12L, 15L), "후보"))
+			.contains("후보 키가 물은 후보와 다르다 — 빠진 후보 [15], 모르는 후보 [99]");
 	}
 
 	@Test

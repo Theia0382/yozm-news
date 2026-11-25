@@ -20,7 +20,7 @@ public final class MembershipCheck {
 
 	/**
 	 * @param asked 물은 후보 ID
-	 * @param noun 후보의 이름 — 사건 소속은 "사건", 흐름 소속은 "흐름"
+	 * @param noun 후보의 이름 — 사건 소속은 "사건", 스토리라인 소속은 "후보"
 	 * @return 어긋남의 운영자용 문구 — 맞으면 빈 값
 	 */
 	public static Optional<String> mismatch(Membership membership, Set<Long> asked, String noun) {

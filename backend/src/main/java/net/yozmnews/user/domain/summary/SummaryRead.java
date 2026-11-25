@@ -11,8 +11,8 @@ public sealed interface SummaryRead {
 	/**
 	 * 읽었다.
 	 *
-	 * @param whole 흐름 전체의 글
-	 * @param tops 꼭대기마다의 글 — 별칭 순. 꼭대기가 하나면 흐름 전체의 글 하나다
+	 * @param whole 사용자 스토리라인 전체의 글
+	 * @param tops 꼭대기마다의 글 — 별칭 순. 꼭대기가 하나면 사용자 스토리라인 전체의 글 하나다
 	 */
 	record Read(SummaryText whole, List<SummaryText> tops) implements SummaryRead {
 

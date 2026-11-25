@@ -1,10 +1,10 @@
 package net.yozmnews.report.application;
 
 import static net.yozmnews.report.ReportFixtures.coverage;
-import static net.yozmnews.report.ReportFixtures.flow;
-import static net.yozmnews.report.ReportFixtures.flows;
 import static net.yozmnews.report.ReportFixtures.input;
 import static net.yozmnews.report.ReportFixtures.interests;
+import static net.yozmnews.report.ReportFixtures.userStoryline;
+import static net.yozmnews.report.ReportFixtures.userStorylines;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
@@ -39,10 +39,10 @@ import net.yozmnews.report.domain.generator.ReportOutcome;
 import net.yozmnews.report.domain.generator.ReportRequest;
 import net.yozmnews.report.domain.generator.TokenUsage;
 import net.yozmnews.report.domain.input.Count;
-import net.yozmnews.report.domain.input.FlowMaterial;
-import net.yozmnews.report.domain.input.FlowSummary;
 import net.yozmnews.report.domain.input.ReportInput;
 import net.yozmnews.report.domain.input.StorylinesSection;
+import net.yozmnews.report.domain.input.UserStorylineMaterial;
+import net.yozmnews.report.domain.input.UserStorylineSummary;
 import net.yozmnews.report.domain.report.ReportPeriod;
 import net.yozmnews.report.domain.report.ReportRepository;
 import net.yozmnews.storyline.StorylineId;
@@ -111,7 +111,7 @@ class ReportGenerationTests {
 	@Test
 	void savesTheOverviewSectionsAndCitationsOfAReadyReport() {
 		ReportId id = generation(new FakeReportGenerator()).schedule(new UserId(7), WEEK).id();
-		ReportInput input = input(flows(flow(31, 902)), interests(31), coverage());
+		ReportInput input = input(userStorylines(userStoryline(31, 902)), interests(31), coverage());
 
 		ReportStatus status = generation(new FakeReportGenerator()).run(id, ReportFixtures.MODEL, ReportFixtures.EFFORT, input);
 
@@ -135,7 +135,7 @@ class ReportGenerationTests {
 		assertThat(sectionRows(id)).containsExactly("0 OVERVIEW null 로컬 대체물이 만든 리포트다. 섹션 3개.",
 				"1 STORYLINES 로컬 섹션 1 로컬 대체물이 만든 본문이다.", "2 INTERESTS 로컬 섹션 2 로컬 대체물이 만든 본문이다.",
 				"3 COVERAGE 로컬 섹션 3 로컬 대체물이 만든 본문이다.");
-		// 다른 갈래에 다시 든 흐름(S31)은 같은 별칭으로 인용되고, 구독 주제 보도량은 인용이 없다
+		// 다른 갈래에 다시 든 사용자 스토리라인(S31)은 같은 별칭으로 인용되고, 구독 주제 보도량은 인용이 없다
 		assertThat(itemRows(id)).containsExactly("1:0 S31", "1:1 E902", "2:0 S31");
 	}
 
@@ -465,7 +465,7 @@ class ReportGenerationTests {
 		}));
 		ReportId id = generation.schedule(new UserId(7), WEEK).id();
 
-		generation.run(id, ReportFixtures.MODEL, ReasoningEffort.HIGH, input(flows(flow(31, 902))));
+		generation.run(id, ReportFixtures.MODEL, ReasoningEffort.HIGH, input(userStorylines(userStoryline(31, 902))));
 
 		assertThat(requests).singleElement().satisfies(request -> {
 			assertThat(request.userId()).isEqualTo(new UserId(7));
@@ -482,7 +482,7 @@ class ReportGenerationTests {
 
 	@Test
 	void sendsTheInputFittedToTheBudgetAndKeepsTheOriginalSnapshot(CapturedOutput output) {
-		// 모델 예산 9,600 — 사용자 구획 예산 1,600. 흐름 셋의 최근 전개가 1,000 자씩이라 흐름 하나만 들어가 보도량이 적은 흐름 둘을 뺀다
+		// 모델 예산 9,600 — 사용자 구획 예산 1,600. 사용자 스토리라인 셋의 최근 전개가 1,000 자씩이라 사용자 스토리라인 하나만 들어가 보도량이 적은 사용자 스토리라인 둘을 뺀다
 		LlmModel small = new LlmModel(Provider.OPENAI, "gpt-small", 9_600, true);
 		List<ReportRequest> requests = new ArrayList<>();
 		ReportGeneration generation = generation(scripted(new AtomicInteger(), request -> {
@@ -491,8 +491,8 @@ class ReportGenerationTests {
 					{"overview":"개요","sections":{"storylines":{"title":"흐름","body":"본문","refs":["S1"]}}}""";
 		}));
 		ReportId id = generation.schedule(new UserId(7), WEEK).id();
-		ReportInput input = input(new StorylinesSection(List.of(recentFlow(31, 50, "가"), recentFlow(32, 10, "나"),
-				recentFlow(33, 30, "다"))));
+		ReportInput input = input(new StorylinesSection(List.of(recentUserStoryline(31, 50, "가"), recentUserStoryline(32, 10, "나"),
+				recentUserStoryline(33, 30, "다"))));
 
 		assertThat(generation.run(id, small, ReportFixtures.EFFORT, input)).isEqualTo(ReportStatus.READY);
 
@@ -502,7 +502,7 @@ class ReportGenerationTests {
 		assertThat(JSON.readTree((String) row(id).get("snapshot")))
 			.isEqualTo(JSON.readTree("{\"coverage\": {\"직전\": 7, \"이번\": 12}}"));
 		assertThat(output).contains("리포트 입력을 예산에 맞춰 덜어 냈다 — 리포트 " + id.value() + ", 예산 1600,")
-			.contains("흐름 뺌 2, 예산을 넘긴 채 false")
+			.contains("사용자 스토리라인 뺌 2, 예산을 넘긴 채 false")
 			.doesNotContain("나".repeat(10));
 	}
 
@@ -515,7 +515,7 @@ class ReportGenerationTests {
 		ReportId id = generation.schedule(new UserId(7), WEEK).id();
 
 		assertThat(generation.run(id, ReportFixtures.MODEL, ReportFixtures.EFFORT,
-				input(flows(flow(31)), coverage())))
+				input(userStorylines(userStoryline(31)), coverage())))
 			.isEqualTo(ReportStatus.READY);
 
 		assertThat(calls).hasValue(2);
@@ -530,10 +530,10 @@ class ReportGenerationTests {
 				TestClocks.of(() -> this.now.get()));
 	}
 
-	/** 사건 줄 없는 추적 흐름 — 최근 전개가 {@code letter} 1,000 자 */
-	private static FlowMaterial recentFlow(long head, long articles, String letter) {
-		return new FlowMaterial(new StorylineId(head), Set.of(new StorylineId(head)),
-				new FlowSummary("제목", "", letter.repeat(1_000), T0), StorylineState.ACTIVE, false,
+	/** 사건 줄 없는 추적한 사용자 스토리라인 — 최근 전개가 {@code letter} 1,000 자 */
+	private static UserStorylineMaterial recentUserStoryline(long head, long articles, String letter) {
+		return new UserStorylineMaterial(new StorylineId(head), Set.of(new StorylineId(head)),
+				new UserStorylineSummary("제목", "", letter.repeat(1_000), T0), StorylineState.ACTIVE, false,
 				new Count(articles, null), List.of());
 	}
 

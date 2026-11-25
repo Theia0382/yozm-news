@@ -8,7 +8,7 @@ import net.yozmnews.user.application.StorylineSubscriptions.SubscribedUserStoryl
 import org.jspecify.annotations.Nullable;
 
 /**
- * 추적 중인 흐름 하나 — docs/specs/user.md §3 · user-R52. 스토리라인의 표시 정보(대표 기사 등)는 싣지 않는다 — 스토리라인 조회가 낸다.
+ * 추적 중인 사용자 스토리라인 하나 — docs/specs/user.md §3 · user-R52. 스토리라인의 표시 정보(대표 기사 등)는 싣지 않는다 — 스토리라인 조회가 낸다.
  *
  * @param userStorylineId 사용자 스토리라인
  * @param headStorylineId 헤드 — 그 사용자 스토리라인의 손잡이(줄의 카드 · 해제 대상). 이 사용자 스토리라인에만 든다

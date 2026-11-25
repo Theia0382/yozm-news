@@ -122,10 +122,10 @@ public class ReportGeneration {
 		if (fitted.trimmedAnything() || fitted.overBudget()) {
 			Trimmed trimmed = fitted.trimmed();
 			logger.info(
-					"리포트 입력을 예산에 맞춰 덜어 냈다 — 리포트 {}, 예산 {}, 직전 글 자름 {}, 관심 줄의 정리 뺌 {}, 관심 줄 뺌 {}, 사건 줄 뺌 {}, 흐름 요약 뺌 {}, 흐름 뺌 {}, 예산을 넘긴 채 {}",
-					id.value(), budget, trimmed.priorsCut(), trimmed.flowSummariesDropped(),
-					trimmed.flowInterestLinesDropped(), trimmed.eventLinesDropped(), trimmed.flowOverviewsDropped(),
-					trimmed.flowsDropped(), fitted.overBudget());
+					"리포트 입력을 예산에 맞춰 덜어 냈다 — 리포트 {}, 예산 {}, 직전 글 자름 {}, 관심 줄의 정리 뺌 {}, 관심 줄 뺌 {}, 사건 줄 뺌 {}, 흐름 요약 뺌 {}, 사용자 스토리라인 뺌 {}, 예산을 넘긴 채 {}",
+					id.value(), budget, trimmed.priorsCut(), trimmed.userStorylineSummariesDropped(),
+					trimmed.userStorylineInterestLinesDropped(), trimmed.eventLinesDropped(), trimmed.userStorylineOverviewsDropped(),
+					trimmed.userStorylinesDropped(), fitted.overBudget());
 		}
 		ReportPrompt prompt = ReportPrompts.compose(sent, aliases, model);
 		Instant asked = this.clock.instant();

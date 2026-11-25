@@ -30,7 +30,7 @@ import tools.jackson.databind.json.JsonMapper;
  * Jev 의 200 응답을 포트 결과로 옮긴다 — docs/specs/evaluation.md §4.
  * <p>
  * 답은 {@link JevRequest} 의 질문 이름으로 읽는다 — 평가는 넘긴 질문 묶음, 사건 소속 판정은 물은 후보 사건의 질문, 관계 판정은 관계와
- * 흐름마다 한 사안인가의 질문이다. 중요도는 수준
+ * 스토리라인마다 한 사안인가의 질문이다. 중요도는 수준
  * 위치({@code "0"} 부터)를 질문 묶음의 수준 순서로 되찾는다. 묻지 않은 여분의 답은 읽지 않는다 — 원본 응답째 저장된다. 응답의 모양은 기사와
  * 무관하므로 읽을 수 없으면 평가기 사용 불가다.
  */
@@ -78,7 +78,7 @@ public final class JevResponse {
 
 	/**
 	 * @param wording 그 응답을 받은 요청의 문구 판 — 그 판의 선택지만 읽는다
-	 * @return 관계 질문의 그 판 선택지 모두와 두 흐름의 한 사안 질문에 0 ~ 1 의 유한 확률이 있으면 {@link Relation}, 아니면 평가기 사용
+	 * @return 관계 질문의 그 판 선택지 모두와 두 스토리라인의 한 사안 질문에 0 ~ 1 의 유한 확률이 있으면 {@link Relation}, 아니면 평가기 사용
 	 * 불가 실패 — 문구는 첫 문제 하나(질문 이름만)와 요청 ID
 	 */
 	public static RelationResult readRelation(String body, @Nullable String requestId, RelationWording wording) {

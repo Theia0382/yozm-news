@@ -21,9 +21,9 @@ import net.yozmnews.report.ReportStatus;
 import net.yozmnews.report.ReportSummary;
 import net.yozmnews.report.ReportView;
 import net.yozmnews.report.domain.material.ReportSnapshot;
-import net.yozmnews.report.domain.material.ReportSnapshot.FlowLevelStat;
-import net.yozmnews.report.domain.material.ReportSnapshot.FlowStat;
 import net.yozmnews.report.domain.material.ReportSnapshot.SnapshotStats;
+import net.yozmnews.report.domain.material.ReportSnapshot.UserStorylineLevelStat;
+import net.yozmnews.report.domain.material.ReportSnapshot.UserStorylineStat;
 import net.yozmnews.report.domain.report.ReportPeriod;
 import net.yozmnews.report.domain.schedule.ReportScheduleRules;
 import net.yozmnews.storyline.StorylineId;
@@ -33,7 +33,7 @@ import org.jspecify.annotations.Nullable;
  * 리포트 조회의 풀기 · 숨기기 · 숫자 · 쪽 나누기 — 정본 · docs/specs/report.md §5 · report-R11 · report-R12 · report-R25
  * <p>
  * 저장한 인용을 풀기 결과(지금 사건 · 지금 스토리라인)로 바꾸고 결과에 없는 것(지운 것)은 뺀다. 인용이 하나 이상 있었는데 하나도 남지 않은 갈래 섹션은
- * 숨기고 그 수를 세며, 갈래 섹션이 하나 이상 있었고 모두 숨었으면 개요도 숨긴다. 보이는 갈래 섹션에는 스냅숏의 그 갈래 칸을 숫자로 붙이고, 흐름 줄의
+ * 숨기고 그 수를 세며, 갈래 섹션이 하나 이상 있었고 모두 숨었으면 개요도 숨긴다. 보이는 갈래 섹션에는 스냅숏의 그 갈래 칸을 숫자로 붙이고, 사용자 스토리라인 줄의
  * 생성 때 헤드는 인용과 같은 스토리라인 풀기 결과로 바꾼다 — 지운 헤드의 줄은 빼고, 풀린 뒤 같은 스토리라인이 된 줄은 첫 줄만 둔다. 행을 고치지
  * 않는다.
  */
@@ -75,15 +75,15 @@ public final class ReportViews {
 	}
 
 	/**
-	 * 스냅숏 흐름 줄의 생성 때 헤드 — 조회가 인용의 스토리라인과 함께 풀기에 넘긴다. 스냅숏이 없으면 없다
+	 * 스냅숏 사용자 스토리라인 줄의 생성 때 헤드 — 조회가 인용의 스토리라인과 함께 풀기에 넘긴다. 스냅숏이 없으면 없다
 	 */
 	public static Set<StorylineId> snapshotHeads(@Nullable SnapshotStats snapshot) {
 		Set<StorylineId> heads = new LinkedHashSet<>();
-		if (snapshot != null && snapshot.flows() != null) {
-			snapshot.flows().flows().forEach(flow -> heads.add(flow.head()));
+		if (snapshot != null && snapshot.userStorylines() != null) {
+			snapshot.userStorylines().userStorylines().forEach(userStoryline -> heads.add(userStoryline.head()));
 		}
 		if (snapshot != null && snapshot.interests() != null) {
-			snapshot.interests().flows().forEach(flow -> heads.add(flow.head()));
+			snapshot.interests().userStorylines().forEach(userStoryline -> heads.add(userStoryline.head()));
 		}
 		return heads;
 	}
@@ -92,7 +92,7 @@ public final class ReportViews {
 	 * 리포트 한 편 — {@code READY} 가 아니면 섹션이 없고 숨긴 수는 0 이다
 	 * @param snapshot {@link #snapshotOf} 의 결과
 	 * @param events 저장한 사건 → 지금 사건(지운 사건은 없다)
-	 * @param storylines 저장한 스토리라인 · 스냅숏 흐름 줄의 헤드 → 지금 스토리라인(지운 스토리라인은 없다)
+	 * @param storylines 저장한 스토리라인 · 스냅숏 사용자 스토리라인 줄의 헤드 → 지금 스토리라인(지운 스토리라인은 없다)
 	 * @param previous 생성 때 이은 직전 리포트의 행 — 없었거나 그새 지워졌으면 null
 	 * @param fallbackZone 시작 전 행의 날짜를 적을 지금 사용자 시간대
 	 */
@@ -143,10 +143,10 @@ public final class ReportViews {
 			Map<StorylineId, StorylineId> storylines) {
 		return switch (kind) {
 			case OVERVIEW -> null;
-			case STORYLINES -> (snapshot.flows() == null) ? null
-					: new ReportSectionStats.Flows(resolveFlows(snapshot.flows().flows(), FlowStat::head, storylines,
-							(flow, current) -> new ReportSectionStats.FlowCount(current, flow.articles(), flow.previous(),
-									flow.trend(), flow.trackedInPeriod())));
+			case STORYLINES -> (snapshot.userStorylines() == null) ? null
+					: new ReportSectionStats.UserStorylines(resolveUserStorylines(snapshot.userStorylines().userStorylines(), UserStorylineStat::head, storylines,
+							(userStoryline, current) -> new ReportSectionStats.UserStorylineCount(current, userStoryline.articles(), userStoryline.previous(),
+									userStoryline.trend(), userStoryline.trackedInPeriod())));
 			case COVERAGE -> (snapshot.coverage() == null) ? null
 					: new ReportSectionStats.Coverage(snapshot.coverage()
 						.topics()
@@ -161,14 +161,14 @@ public final class ReportViews {
 						.map(topic -> new ReportSectionStats.TopicLevel(topic.name(), topic.start(), topic.end(),
 								topic.shift()))
 						.toList(),
-							resolveFlows(snapshot.interests().flows(), FlowLevelStat::head, storylines,
-									(flow, current) -> new ReportSectionStats.FlowLevel(current, flow.start(), flow.end(),
-											flow.shift())));
+							resolveUserStorylines(snapshot.interests().userStorylines(), UserStorylineLevelStat::head, storylines,
+									(userStoryline, current) -> new ReportSectionStats.UserStorylineLevel(current, userStoryline.start(), userStoryline.end(),
+											userStoryline.shift())));
 		};
 	}
 
-	/** 흐름 줄의 헤드를 지금 스토리라인으로 — 지운 헤드의 줄은 빼고, 풀린 뒤 같은 스토리라인은 첫 줄만 */
-	private static <S, T> List<T> resolveFlows(List<S> lines, Function<S, StorylineId> head,
+	/** 사용자 스토리라인 줄의 헤드를 지금 스토리라인으로 — 지운 헤드의 줄은 빼고, 풀린 뒤 같은 스토리라인은 첫 줄만 */
+	private static <S, T> List<T> resolveUserStorylines(List<S> lines, Function<S, StorylineId> head,
 			Map<StorylineId, StorylineId> storylines, BiFunction<S, StorylineId, T> line) {
 		Set<StorylineId> seen = new LinkedHashSet<>();
 		List<T> resolved = new ArrayList<>();

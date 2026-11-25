@@ -126,7 +126,7 @@ class StorylineScreenControllerTests {
 		this.c = this.rows.storyline(at(5), at(5), this.e3);
 		this.rows.member(this.c, this.e3);
 		this.rows.relate("CONTAINS", this.s, this.c);
-		// P — S 를 낳은 앞 흐름(기간 밖), F — S 가 낳은 이어진 흐름
+		// P — S 를 낳은 앞 스토리라인(기간 밖), F — S 가 낳은 이어진 스토리라인
 		long e4 = this.rows.event(1, at(-14), at(-14));
 		long a5 = this.rows.article("법안 발의");
 		this.rows.assign(a5, e4, at(-14));

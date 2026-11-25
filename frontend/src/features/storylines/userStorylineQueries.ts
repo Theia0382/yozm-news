@@ -13,7 +13,7 @@ export type UserStorylineItem = components["schemas"]["ItemResponse"];
 /** 정리된 사용자 스토리라인 조회 키의 접두 */
 export const USER_STORYLINES_QUERY_KEY = ["user-storylines"] as const;
 
-/** 정리된 내 흐름 목록 — 마지막으로 정리한 순(docs/specs/reader.md) */
+/** 정리된 내 사용자 스토리라인 목록 — 마지막으로 정리한 순(docs/specs/reader.md) */
 export function useUserStorylines() {
   const client = useApiClient();
   return useQuery({
@@ -28,7 +28,7 @@ export function useUserStorylines() {
   });
 }
 
-/** 정리된 흐름 하나 — 흐름 전체의 글 · 갈래마다의 글 · 사용량 */
+/** 정리된 사용자 스토리라인 하나 — 사용자 스토리라인 전체의 글 · 갈래마다의 글 · 사용량 */
 export function useUserStoryline(id: number) {
   const client = useApiClient();
   return useQuery({
@@ -47,7 +47,7 @@ export function useUserStoryline(id: number) {
 
 type ItemsParam = { beforeDate: string; beforePosition: number } | null;
 
-/** 그 흐름에 묶인 지난 다이제스트 항목 — 다음 쪽은 앞 응답의 커서 두 값을 그대로 넘긴다 */
+/** 그 사용자 스토리라인에 묶인 지난 다이제스트 항목 — 다음 쪽은 앞 응답의 커서 두 값을 그대로 넘긴다 */
 export function useUserStorylineItems(id: number) {
   const client = useApiClient();
   return useInfiniteQuery({

@@ -9,7 +9,7 @@ import java.util.Map;
 import net.yozmnews.storyline.MergedStoryline;
 import net.yozmnews.storyline.StorylineId;
 import net.yozmnews.storyline.StorylineLinkingCriteria;
-import net.yozmnews.storyline.StorylineMembership;
+import net.yozmnews.storyline.StorylineMembershipView;
 import net.yozmnews.storyline.StorylineRelationAsked;
 import net.yozmnews.storyline.StorylineRelationCriteria;
 import net.yozmnews.storyline.StorylineRelationDetail;
@@ -28,7 +28,7 @@ class FakeStorylineReview implements StorylineReview {
 	static final StorylineRelationCriteria RELATION = new StorylineRelationCriteria(0.6, 0.2, 3, 0.88,
 			Duration.ofDays(14), 0.75);
 
-	final Map<Long, List<StorylineMembership>> memberships = new LinkedHashMap<>();
+	final Map<Long, List<StorylineMembershipView>> memberships = new LinkedHashMap<>();
 
 	final Map<Long, List<StorylineRelationDetail>> relations = new LinkedHashMap<>();
 
@@ -47,7 +47,7 @@ class FakeStorylineReview implements StorylineReview {
 	}
 
 	@Override
-	public List<StorylineMembership> memberships(StorylineId id) {
+	public List<StorylineMembershipView> memberships(StorylineId id) {
 		this.calls.add("memberships " + id.value());
 		return this.memberships.getOrDefault(id.value(), List.of());
 	}

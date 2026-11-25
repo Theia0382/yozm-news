@@ -24,7 +24,7 @@ import {
 import { NARROW_WIDTH, PAGE_FRAME } from "@/shared/ui/widths";
 
 /**
- * 사건 흐름 탭 — 그 사용자의 정리된 흐름(사용자 스토리라인)만 마지막으로 정리한 순으로 보인다. 정리가 없는 흐름은 보이지 않는다. 카드마다
+ * 사건 흐름 탭 — 그 사용자의 정리된 사용자 스토리라인만 마지막으로 정리한 순으로 보인다. 정리가 없는 사용자 스토리라인은 보이지 않는다. 카드마다
  * 흐름 추적 버튼이 있고, 추적 상태는 보이는 카드 전부를 한 번에 읽는다(docs/specs/reader.md · docs/specs/user.md user-R52)
  */
 export function StorylinesPage() {

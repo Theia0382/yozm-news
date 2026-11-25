@@ -10252,19 +10252,19 @@
             "type" : [ "integer", "null" ],
             "format" : "int64"
           },
-          "flow" : {
-            "oneOf" : [ {
-              "$ref" : "#/components/schemas/ReportFlowResponse"
-            }, {
-              "type" : "null"
-            } ]
-          },
           "kind" : {
             "type" : "string",
             "enum" : [ "STORYLINE", "EVENT" ]
+          },
+          "storyline" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/ReportStorylineResponse"
+            }, {
+              "type" : "null"
+            } ]
           }
         },
-        "required" : [ "article", "eventId", "flow", "kind" ]
+        "required" : [ "article", "eventId", "kind", "storyline" ]
       },
       "ReportConditionsResponse" : {
         "type" : "object",
@@ -10347,91 +10347,23 @@
         },
         "required" : [ "cause", "failedAt", "firstDay", "kind", "lastDay", "reportId" ]
       },
-      "ReportFlowCountResponse" : {
-        "type" : "object",
-        "properties" : {
-          "articles" : {
-            "type" : "integer",
-            "format" : "int64"
-          },
-          "flow" : {
-            "$ref" : "#/components/schemas/ReportFlowResponse"
-          },
-          "previous" : {
-            "type" : [ "integer", "null" ],
-            "format" : "int64"
-          },
-          "trackedInPeriod" : {
-            "type" : "boolean"
-          },
-          "trend" : {
-            "type" : "string",
-            "enum" : [ "NEW", "ROSE", "FELL", "STEADY", "NO_COMPARISON" ]
-          }
-        },
-        "required" : [ "articles", "flow", "previous", "trackedInPeriod", "trend" ]
-      },
-      "ReportFlowLevelResponse" : {
-        "type" : "object",
-        "properties" : {
-          "end" : {
-            "type" : [ "number", "null" ],
-            "format" : "double"
-          },
-          "flow" : {
-            "$ref" : "#/components/schemas/ReportFlowResponse"
-          },
-          "shift" : {
-            "type" : "string",
-            "enum" : [ "ENTERED", "LEFT", "NONE" ]
-          },
-          "start" : {
-            "type" : [ "number", "null" ],
-            "format" : "double"
-          }
-        },
-        "required" : [ "end", "flow", "shift", "start" ]
-      },
-      "ReportFlowResponse" : {
-        "type" : "object",
-        "properties" : {
-          "storylineId" : {
-            "type" : "integer",
-            "format" : "int64"
-          },
-          "title" : {
-            "oneOf" : [ {
-              "$ref" : "#/components/schemas/NewsArticleResponse"
-            }, {
-              "type" : "null"
-            } ]
-          },
-          "userStorylines" : {
-            "type" : "array",
-            "items" : {
-              "$ref" : "#/components/schemas/RefResponse"
-            }
-          }
-        },
-        "required" : [ "storylineId", "title", "userStorylines" ]
-      },
       "ReportInterestsResponse" : {
         "type" : "object",
         "properties" : {
-          "flows" : {
-            "type" : "array",
-            "items" : {
-              "$ref" : "#/components/schemas/ReportFlowLevelResponse"
-            }
-          },
           "topics" : {
             "type" : "array",
             "items" : {
               "$ref" : "#/components/schemas/ReportTopicLevelResponse"
             }
+          },
+          "userStorylines" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ReportUserStorylineLevelResponse"
+            }
           }
         },
-        "required" : [ "flows", "topics" ]
+        "required" : [ "topics", "userStorylines" ]
       },
       "ReportListResponse" : {
         "type" : "object",
@@ -10475,12 +10407,6 @@
               "$ref" : "#/components/schemas/ReportCitationResponse"
             }
           },
-          "flows" : {
-            "type" : [ "array", "null" ],
-            "items" : {
-              "$ref" : "#/components/schemas/ReportFlowCountResponse"
-            }
-          },
           "interests" : {
             "oneOf" : [ {
               "$ref" : "#/components/schemas/ReportInterestsResponse"
@@ -10500,9 +10426,38 @@
             "items" : {
               "$ref" : "#/components/schemas/ReportTopicCountResponse"
             }
+          },
+          "userStorylines" : {
+            "type" : [ "array", "null" ],
+            "items" : {
+              "$ref" : "#/components/schemas/ReportUserStorylineCountResponse"
+            }
           }
         },
-        "required" : [ "body", "citations", "flows", "interests", "kind", "title", "topics" ]
+        "required" : [ "body", "citations", "interests", "kind", "title", "topics", "userStorylines" ]
+      },
+      "ReportStorylineResponse" : {
+        "type" : "object",
+        "properties" : {
+          "storylineId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "title" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/NewsArticleResponse"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "userStorylines" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/RefResponse"
+            }
+          }
+        },
+        "required" : [ "storylineId", "title", "userStorylines" ]
       },
       "ReportSummaryResponse" : {
         "type" : "object",
@@ -10599,6 +10554,51 @@
           }
         },
         "required" : [ "inputTokens", "model", "outputTokens", "provider" ]
+      },
+      "ReportUserStorylineCountResponse" : {
+        "type" : "object",
+        "properties" : {
+          "articles" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "previous" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int64"
+          },
+          "storyline" : {
+            "$ref" : "#/components/schemas/ReportStorylineResponse"
+          },
+          "trackedInPeriod" : {
+            "type" : "boolean"
+          },
+          "trend" : {
+            "type" : "string",
+            "enum" : [ "NEW", "ROSE", "FELL", "STEADY", "NO_COMPARISON" ]
+          }
+        },
+        "required" : [ "articles", "previous", "storyline", "trackedInPeriod", "trend" ]
+      },
+      "ReportUserStorylineLevelResponse" : {
+        "type" : "object",
+        "properties" : {
+          "end" : {
+            "type" : [ "number", "null" ],
+            "format" : "double"
+          },
+          "shift" : {
+            "type" : "string",
+            "enum" : [ "ENTERED", "LEFT", "NONE" ]
+          },
+          "start" : {
+            "type" : [ "number", "null" ],
+            "format" : "double"
+          },
+          "storyline" : {
+            "$ref" : "#/components/schemas/ReportStorylineResponse"
+          }
+        },
+        "required" : [ "end", "shift", "start", "storyline" ]
       },
       "ResubmissionItemResponse" : {
         "type" : "object",

@@ -57,7 +57,7 @@ import tools.jackson.databind.node.ObjectNode;
 
 /**
  * 생성 작업을 실제 모듈로 끝까지 — 예약한 리포트 하나를 생성 작업({@link ReportRun})이 실제 재료 조립으로 모아 생성하고, 시작할 때 행에 남긴
- * 스냅숏 · 직전 리포트와 생성기가 받은 사용자 구획을 본다. {@code user} 의 관심 설정 · 추적한 흐름 · 정리, {@code digest} 의 관심사 히스토리,
+ * 스냅숏 · 직전 리포트와 생성기가 받은 사용자 구획을 본다. {@code user} 의 관심 설정 · 추적한 사용자 스토리라인 · 정리, {@code digest} 의 관심사 히스토리,
  * {@code tag} 의 보도량 · 계보, {@code storyline} · {@code event} · {@code article} 의 조회 모두 실제 빈이고 행은 시험이 SQL 로 넣는다.
  * 생성기는 받은 요청을 기록하는 로컬 대체물이다. 기대값은 손으로 쓴 리터럴이다.
  * <p>
@@ -160,19 +160,19 @@ class ReportRunEndToEndTests {
 		evaluated("금융 기사 하나", active, FINANCE, "2026-11-17T00:00:00Z");
 		evaluated("금융 기사 둘", active, FINANCE, "2026-11-20T00:00:00Z");
 		evaluated("지난 금융 기사", active, FINANCE, "2026-11-10T00:00:00Z");
-		// 추적한 흐름 — 사건 둘(기간 앞 기사 하나 · 기간 안 기사 하나), 기간 안에 추적을 더했다, 정리가 있다
+		// 추적한 사용자 스토리라인 — 사건 둘(기간 앞 기사 하나 · 기간 안 기사 하나), 기간 안에 추적을 더했다, 정리가 있다
 		long before = event("지난 금리 동결", "2026-11-10T01:00:00Z");
 		long inside = event("금리 인상 발표", "2026-11-17T01:00:00Z");
 		long storyline = this.rows.storyline("2026-11-10T01:00:00Z", "2026-11-17T01:00:00Z", inside);
 		this.rows.member(storyline, before);
 		this.rows.member(storyline, inside);
-		long flow = UserStorylineFixtures.tracked(this.jdbc, user, storyline, Instant.parse("2026-11-18T00:00:00Z"));
-		new UserStorylineSummaryRows(this.jdbc).summarize(flow, "금리", Instant.parse("2026-11-19T00:00:00Z"));
-		// 직전 주간 — 같은 버전 스냅숏(흐름 기사 5 · 주제 기사 1)과 보이는 글
+		long userStoryline = UserStorylineFixtures.tracked(this.jdbc, user, storyline, Instant.parse("2026-11-18T00:00:00Z"));
+		new UserStorylineSummaryRows(this.jdbc).summarize(userStoryline, "금리", Instant.parse("2026-11-19T00:00:00Z"));
+		// 직전 주간 — 같은 버전 스냅숏(사용자 스토리라인 기사 5 · 주제 기사 1)과 보이는 글
 		long previous = this.reportRows.report(user.value(), "WEEK", "READY", PREVIOUS.start(), PREVIOUS.end(), """
-				{"version": 1, "tagSet": %d,
+				{"version": 2, "tagSet": %d,
 				 "period": {"kind": "WEEK", "start": "2026-11-08T15:00:00Z", "end": "2026-11-15T15:00:00Z"},
-				 "storylines": {"basis": "PUBLISHED", "flows": [{"head": %d, "tops": [%d], "articles": 5, "previous": null,
+				 "storylines": {"basis": "PUBLISHED", "userStorylines": [{"head": %d, "tops": [%d], "articles": 5, "previous": null,
 				   "trend": "NO_COMPARISON", "trackedInPeriod": false}]},
 				 "coverage": {"basis": "FIRST_EVALUATED", "topics": [{"key": "economy.finance", "name": "금융",
 				   "articles": 1, "previous": null, "trend": "NO_COMPARISON"}]}}"""
@@ -184,29 +184,29 @@ class ReportRunEndToEndTests {
 
 		Map<String, Object> row = row(id);
 		assertThat(row).containsEntry("previous_report_id", previous).containsEntry("zone", "Asia/Seoul");
-		// 흐름 — 기간 안 기사 1, 직전 5 → 차이 4 · 절반 이하라 줄었다, 기간 안 추적. 주제 — 기간 안 첫 평가 2, 직전 1 → 차이가 3 보다
+		// 사용자 스토리라인 — 기간 안 기사 1, 직전 5 → 차이 4 · 절반 이하라 줄었다, 기간 안 추적. 주제 — 기간 안 첫 평가 2, 직전 1 → 차이가 3 보다
 		// 작아 그대로(report-R15)
 		JsonNode snapshot = JSON.readTree((String) row.get("stats_snapshot"));
 		assertThat(without(snapshot, "interests")).isEqualTo(JSON.readTree("""
-				{"version": 1, "tagSet": %d,
+				{"version": 2, "tagSet": %d,
 				 "period": {"kind": "WEEK", "start": "2026-11-15T15:00:00Z", "end": "2026-11-22T15:00:00Z"},
-				 "storylines": {"basis": "PUBLISHED", "flows": [{"head": %d, "tops": [%d], "articles": 1, "previous": 5,
+				 "storylines": {"basis": "PUBLISHED", "userStorylines": [{"head": %d, "tops": [%d], "articles": 1, "previous": 5,
 				   "trend": "FELL", "trackedInPeriod": true}]},
 				 "coverage": {"basis": "FIRST_EVALUATED", "topics": [{"key": "economy.finance", "name": "금융",
 				   "articles": 2, "previous": 1, "trend": "STEADY"}]}}""".formatted(active.value(), storyline, storyline)));
 		// 관심 — 실제 관심사 히스토리의 두 점. 값은 관심도 산식의 몫이라 여기서는 줄의 키와 변화만 본다: 구독 주제는 기간 앞부터 있어 두 점에
-		// 다 있고, 추적한 흐름은 기간 안에 추적해 시작 점에 없다. 둘 다 관심 있음 기준을 넘지 않아 변화가 없다
+		// 다 있고, 추적한 사용자 스토리라인은 기간 안에 추적해 시작 점에 없다. 둘 다 관심 있음 기준을 넘지 않아 변화가 없다
 		JsonNode interestsOf = snapshot.get("interests");
 		assertThat(interestsOf.get("topics")).hasSize(1);
 		assertThat(interestsOf.get("topics").get(0).get("key").asString()).isEqualTo("economy.finance");
 		assertThat(interestsOf.get("topics").get(0).get("start").isNumber()).isTrue();
 		assertThat(interestsOf.get("topics").get(0).get("shift").asString()).isEqualTo("NONE");
-		assertThat(interestsOf.get("flows")).hasSize(1);
-		assertThat(interestsOf.get("flows").get(0).get("head").asLong()).isEqualTo(storyline);
-		assertThat(interestsOf.get("flows").get(0).get("start").isNull()).isTrue();
-		assertThat(interestsOf.get("flows").get(0).get("end").asDouble()).isPositive();
-		assertThat(interestsOf.get("flows").get(0).get("shift").asString()).isEqualTo("NONE");
-		// 생성기가 받은 사용자 구획 — 흐름의 정리 · 기간 안 사건의 대표 기사 제목 · 직전 리포트의 글
+		assertThat(interestsOf.get("userStorylines")).hasSize(1);
+		assertThat(interestsOf.get("userStorylines").get(0).get("head").asLong()).isEqualTo(storyline);
+		assertThat(interestsOf.get("userStorylines").get(0).get("start").isNull()).isTrue();
+		assertThat(interestsOf.get("userStorylines").get(0).get("end").asDouble()).isPositive();
+		assertThat(interestsOf.get("userStorylines").get(0).get("shift").asString()).isEqualTo("NONE");
+		// 생성기가 받은 사용자 구획 — 사용자 스토리라인의 정리 · 기간 안 사건의 대표 기사 제목 · 직전 리포트의 글
 		assertThat(this.requests).hasSize(1);
 		String content = this.requests.getFirst().prompt().userContent();
 		assertThat(content).contains("금리 제목", "금리 요약", "금리 인상 발표", "지난주 금리는 움직이지 않았다.")
@@ -221,7 +221,7 @@ class ReportRunEndToEndTests {
 		evaluated("은행 기사", second, BANKING, "2026-11-17T00:00:00Z");
 		// 직전 스냅숏은 버전 1 의 finance 4 — 계보(finance → banking)로 이어야 직전 값이 있다
 		this.reportRows.report(user.value(), "WEEK", "READY", PREVIOUS.start(), PREVIOUS.end(), """
-				{"version": 1, "tagSet": %d,
+				{"version": 2, "tagSet": %d,
 				 "period": {"kind": "WEEK", "start": "2026-11-08T15:00:00Z", "end": "2026-11-15T15:00:00Z"},
 				 "coverage": {"basis": "FIRST_EVALUATED", "topics": [{"key": "economy.finance", "name": "금융",
 				   "articles": 4, "previous": null, "trend": "NO_COMPARISON"}]}}""".formatted(first.value()), null);
@@ -230,7 +230,7 @@ class ReportRunEndToEndTests {
 		assertThat(run().run(id)).isEqualTo(ReportStatus.READY);
 
 		assertThat(without(JSON.readTree((String) row(id).get("stats_snapshot")), "interests")).isEqualTo(JSON.readTree("""
-				{"version": 1, "tagSet": %d,
+				{"version": 2, "tagSet": %d,
 				 "period": {"kind": "WEEK", "start": "2026-11-15T15:00:00Z", "end": "2026-11-22T15:00:00Z"},
 				 "coverage": {"basis": "FIRST_EVALUATED", "topics": [{"key": "economy.banking", "name": "금융",
 				   "articles": 1, "previous": 4, "trend": "FELL"}]}}""".formatted(second.value())));

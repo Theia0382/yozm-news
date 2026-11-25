@@ -28,7 +28,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 /**
  * 정리된 사용자 스토리라인 화면의 사용자 격리 — 사용자 A 의 정리는 A 의 목록에만 있고, B 의 세션으로 A 의 사용자 스토리라인 ID 를 부르면 없는
- * 것(404)이다. 같은 흐름의 다이제스트 항목도 자기 것만 본다. 세션 없이 401, 키가 없으면 403(키 관문)이다(docs/qa/test-strategy.md §13).
+ * 것(404)이다. 같은 스토리라인의 다이제스트 항목도 자기 것만 본다. 세션 없이 401, 키가 없으면 403(키 관문)이다(docs/qa/test-strategy.md §13).
  * <p>
  * 지키는 규칙: account-R5 · account-R6 · docs/specs/reader.md 의 사용자 스토리라인 화면
  */
@@ -78,13 +78,13 @@ public class UserStorylineScreenScopeTests {
 		SignedInUsers.SignedInUser b = users.signIn("user-storyline-b@example.com");
 		LlmKeyRows.give(this.jdbc, a.id().value());
 		LlmKeyRows.give(this.jdbc, b.id().value());
-		long flow = UserStorylineFixtures.storyline(this.jdbc, AT);
-		long ofA = this.rows.userStoryline(a.id().value(), flow);
+		long storyline = UserStorylineFixtures.storyline(this.jdbc, AT);
+		long ofA = this.rows.userStoryline(a.id().value(), storyline);
 		this.rows.summarize(ofA, "A 의 흐름", AT);
-		long ofB = this.rows.userStoryline(b.id().value(), flow);
+		long ofB = this.rows.userStoryline(b.id().value(), storyline);
 		this.rows.summarize(ofB, "B 의 흐름", AT);
-		item(this.digests.digest(a.id().value(), "2026-11-05", "READY", 1, 1, null), "A 의 항목", flow);
-		item(this.digests.digest(b.id().value(), "2026-11-05", "READY", 1, 1, null), "B 의 항목", flow);
+		item(this.digests.digest(a.id().value(), "2026-11-05", "READY", 1, 1, null), "A 의 항목", storyline);
+		item(this.digests.digest(b.id().value(), "2026-11-05", "READY", 1, 1, null), "B 의 항목", storyline);
 
 		// 빈 응답끼리 같아 통과하지 않게 A 의 응답에 행이 있음을 먼저 본다
 		this.mockMvc.perform(get("/api/user-storylines").with(a))
@@ -134,11 +134,11 @@ public class UserStorylineScreenScopeTests {
 		}
 	}
 
-	private void item(long digest, String title, long flow) {
+	private void item(long digest, String title, long storyline) {
 		long section = this.digests.section(digest, "TOP_STORY", 1, title, null);
 		this.digests.sectionEvent(section, 0, 70, "SUBSCRIBED");
-		this.jdbc.sql("update digest_sections set storyline_id = :flow where id = :id")
-			.param("flow", flow)
+		this.jdbc.sql("update digest_sections set storyline_id = :storyline where id = :id")
+			.param("storyline", storyline)
 			.param("id", section)
 			.update();
 	}

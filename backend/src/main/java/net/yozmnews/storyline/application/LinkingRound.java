@@ -9,10 +9,10 @@ import java.util.OptionalInt;
 import java.util.UUID;
 
 import net.yozmnews.evaluation.EvaluatorTiming;
-import net.yozmnews.evaluation.FlowCandidate;
-import net.yozmnews.evaluation.FlowMembership;
-import net.yozmnews.evaluation.FlowMembershipJudgement;
-import net.yozmnews.evaluation.FlowMembershipQuery;
+import net.yozmnews.evaluation.StorylineCandidate;
+import net.yozmnews.evaluation.StorylineMembership;
+import net.yozmnews.evaluation.StorylineMembershipJudgement;
+import net.yozmnews.evaluation.StorylineMembershipQuery;
 import net.yozmnews.platform.AppClock;
 import net.yozmnews.storyline.domain.linking.LinkingCriteria;
 import net.yozmnews.storyline.domain.linking.LinkingCriteriaRepository;
@@ -29,7 +29,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * <p>
  * 지금 기준을 기준 이력에 등록하고, 대기를 순서 키 순으로 점유해 커밋한 뒤 사건마다 판정을 시도한다. 시도는 한 트랜잭션에서
  * {@link StorylineLinker#link} 를 부르고, 마쳤으면 점유 토큰과 다시 알림 수가 그대로일 때만 대기 행을 지운다 — 달라졌으면 점유만 푼다.
- * 물을 것이 있으면 트랜잭션 밖에서 {@link FlowMembership} 에 묻고 짧은 트랜잭션에서 답을 기록한 뒤 다시 시도한다 — 사건 하나에
+ * 물을 것이 있으면 트랜잭션 밖에서 {@link StorylineMembership} 에 묻고 짧은 트랜잭션에서 답을 기록한 뒤 다시 시도한다 — 사건 하나에
  * {@link LinkingSchedule#MAX_ATTEMPTS_PER_CLAIM} 번까지, 남으면 점유를 풀어 다음 회차가 잇는다. 평가기 일시 실패면 일시 실패를 세고 판정
  * 가능 시각을 미룬다 — 대기에서 빼지 않는다. 평가기를 쓸 수 없으면 이 사건부터 남은 점유를 풀고 회차를 멈춘다. 판정이 예상 못한 예외를 내면
  * 그 트랜잭션은 롤백되고, 새 트랜잭션에서 실패 수를 올리고 다음 사건으로 넘어간다. 실패 수가 상한이면 대기에서 뺀다. 판정의 예외를 밖으로
@@ -48,14 +48,14 @@ public class LinkingRound {
 
 	private final StorylineLinker linker;
 
-	private final FlowMembership membership;
+	private final StorylineMembership membership;
 
 	private final TransactionTemplate transaction;
 
 	private final AppClock clock;
 
 	LinkingRound(LinkingQueueRepository queue, LinkingCriteriaRepository criteriaHistory, LinkingCriteria criteria,
-			StorylineLinker linker, FlowMembership membership, TransactionTemplate transaction, AppClock clock) {
+			StorylineLinker linker, StorylineMembership membership, TransactionTemplate transaction, AppClock clock) {
 		this.queue = queue;
 		this.criteriaHistory = criteriaHistory;
 		this.criteria = criteria;
@@ -135,25 +135,25 @@ public class LinkingRound {
 
 	/** 띠 후보를 묻고 결과를 기록한다 — 묻기는 트랜잭션 밖이다 */
 	private Next ask(PendingEvent claim, UUID token, LinkingOutcome.Ask ask) {
-		List<FlowCandidate> candidates = ask.flows()
+		List<StorylineCandidate> candidates = ask.candidates()
 			.stream()
-			.filter(flow -> !flow.articleIds().isEmpty())
-			.map(flow -> new FlowCandidate(flow.flowId(), flow.articleIds()))
+			.filter(candidate -> !candidate.articleIds().isEmpty())
+			.map(candidate -> new StorylineCandidate(candidate.candidateId(), candidate.articleIds()))
 			.toList();
-		FlowMembershipJudgement judgement = candidates.isEmpty() ? new FlowMembershipJudgement.Judged(null, Map.of())
-				: this.membership.judge(new FlowMembershipQuery(ask.article(), candidates));
+		StorylineMembershipJudgement judgement = candidates.isEmpty() ? new StorylineMembershipJudgement.Judged(null, Map.of())
+				: this.membership.judge(new StorylineMembershipQuery(ask.article(), candidates));
 		return switch (judgement) {
-			case FlowMembershipJudgement.Judged judged -> {
+			case StorylineMembershipJudgement.Judged judged -> {
 				this.transaction.executeWithoutResult(status -> this.linker.record(ask, judged.judgement(),
 						judged.probabilities(), this.clock.instant()));
 				yield Next.ATTEMPT;
 			}
-			case FlowMembershipJudgement.ArticleMissing missing -> {
+			case StorylineMembershipJudgement.ArticleMissing missing -> {
 				// 대표 기사가 지워졌다 — 사건이 바뀌어 알림이 다시 넣는다
 				this.transaction.executeWithoutResult(status -> this.queue.releaseIfLeased(claim.eventId(), token));
 				yield Next.EVENT;
 			}
-			case FlowMembershipJudgement.Failed failed -> switch (failed.kind()) {
+			case StorylineMembershipJudgement.Failed failed -> switch (failed.kind()) {
 				case TRANSIENT -> {
 					defer(claim.eventId(), token);
 					yield Next.EVENT;

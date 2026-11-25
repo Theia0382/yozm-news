@@ -98,7 +98,7 @@ import org.springframework.stereotype.Service;
  * <p>
  * 표본 기사의 제목 · 요약문은 토큰 어림에 쓴 읽기의 값을 그대로 입력에 싣는다 — 어림과 프롬프트의 글이 같다(ADR-0210).
  * <p>
- * 주제 구독 밖 관심 흐름의 사건은 추적 중인 사용자 스토리라인의 꼭대기로 관심 흐름을 정하고({@link FollowedStorylines}) 구독 사건의
+ * 주제 구독 밖 관심 스토리라인의 사건은 추적 중인 사용자 스토리라인의 꼭대기로 관심 스토리라인을 정하고({@link FollowedStorylines}) 구독 사건의
  * 자리에서 몫 상한 안으로 먼저 담는다 — 중립 결과에는 그 길이 없어 그 사건은 {@code INTEREST} 다.
  * <p>
  * 큰 슬롯은 큰 판정 목록의 행을 그대로 쓴다. 목록은 포함 나무마다 한 행이라 한 포함 나무는 슬롯 하나를 쓴다 — 행의 사건에는 그
@@ -150,7 +150,7 @@ public class CandidateSelection {
 	 * @param period 다이제스트 기간 — 시각 범위. 사용자 시간대의 날로 만드는 일은 부르는 쪽이 한다
 	 * @param model 쓸 모델 — 입력 토큰 예산
 	 * @return 생성의 입력 — 항목은 주요 뉴스 다음 헤드라인, 각각 항목 순위. 사건의 선정 이유는 큰 슬롯 사건 {@code MAJOR_STORYLINE},
-	 *     구독 사건은 관심도로 들어왔으면 {@code INTEREST} 아니면 {@code SUBSCRIBED}, 주제 구독 밖 관심 흐름의 길로 든 사건은
+	 *     구독 사건은 관심도로 들어왔으면 {@code INTEREST} 아니면 {@code SUBSCRIBED}, 주제 구독 밖 관심 스토리라인의 길로 든 사건은
 	 *     {@code INTEREST}. 후보가 없어도 프로필이 있는 입력이다. 계정이 없으면 빈 값
 	 * @throws IllegalStateException 관심 설정과 기사 평가 키의 활성 버전이 {@link ActiveEvaluations#ATTEMPTS} 번 모두 어긋났을 때
 	 */
@@ -209,17 +209,17 @@ public class CandidateSelection {
 		if (big.isEmpty()) {
 			return Optional.empty();
 		}
-		// 추적 중인 사용자 스토리라인의 꼭대기 — 추적한 흐름과 그 흐름이 이어짐으로 따라가는 뒤 흐름
-		Set<StorylineId> followed = levels.storylines().followed(interestRecord.get().flows().trackedTops());
+		// 추적 중인 사용자 스토리라인의 꼭대기 — 추적한 스토리라인과 그 스토리라인이 이어짐으로 따라가는 뒤 스토리라인
+		Set<StorylineId> followed = levels.storylines().followed(interestRecord.get().userStorylines().trackedTops());
 		Set<EventId> taken = big.get()
 			.slots()
 			.events()
 			.stream()
 			.map(event -> event.facts().id())
 			.collect(Collectors.toSet());
-		List<CandidateEvent> byFlow = FollowedStorylines.pick(pool, filter, weights, followed, taken);
+		List<CandidateEvent> byFollowed = FollowedStorylines.pick(pool, filter, weights, followed, taken);
 		Shortlist shortlist = CandidateSelector.shortlist(ranked, big.get().slots(), filter, interests.maxCandidates(),
-				byFlow);
+				byFollowed);
 		Shortlist neutralShortlist = CandidateSelector.shortlist(neutral, big.get().slots(), filter,
 				interests.maxCandidates(), List.of());
 		Map<EventId, List<ArticleFacts>> samples = samples(shortlist, neutralShortlist);

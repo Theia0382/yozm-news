@@ -35,7 +35,7 @@ public enum SummaryFailure {
 		this.key = key;
 	}
 
-	/** 키 쪽의 실패인가 — 같은 실행의 다른 흐름도 같은 까닭으로 실패하므로 실행을 멈춘다 */
+	/** 키 쪽의 실패인가 — 같은 실행의 다른 사용자 스토리라인도 같은 까닭으로 실패하므로 실행을 멈춘다 */
 	public boolean ofKey() {
 		return this.key;
 	}

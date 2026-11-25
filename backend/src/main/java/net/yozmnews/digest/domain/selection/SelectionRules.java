@@ -28,8 +28,8 @@ public final class SelectionRules {
 	public static final double BIG_SHARE = 0.5;
 
 	/**
-	 * 주제 구독 밖 관심 흐름의 길이 차지할 수 있는 몫 — 구독 사건의 자리(최대 후보 수 − 큰 슬롯 사건 수) × 이 값을 내림한 수까지
-	 * ({@link FollowedStorylines}). 흐름마다 한 사건이다
+	 * 주제 구독 밖 관심 스토리라인의 길이 차지할 수 있는 몫 — 구독 사건의 자리(최대 후보 수 − 큰 슬롯 사건 수) × 이 값을 내림한 수까지
+	 * ({@link FollowedStorylines}). 스토리라인마다 한 사건이다
 	 */
 	public static final double FOLLOWED_SHARE = 0.2;
 
@@ -37,7 +37,7 @@ public final class SelectionRules {
 	}
 
 	/**
-	 * 구독 사건의 자리에서 주제 구독 밖 관심 흐름의 길이 먼저 쓸 수 있는 수 — {@link #FOLLOWED_SHARE} 를 곱해 내림
+	 * 구독 사건의 자리에서 주제 구독 밖 관심 스토리라인의 길이 먼저 쓸 수 있는 수 — {@link #FOLLOWED_SHARE} 를 곱해 내림
 	 * @param seats 구독 사건의 자리
 	 */
 	public static int followedSeats(int seats) {

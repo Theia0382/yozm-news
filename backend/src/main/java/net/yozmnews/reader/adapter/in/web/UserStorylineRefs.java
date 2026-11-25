@@ -14,7 +14,7 @@ import net.yozmnews.user.UserStorylineSummaryRef;
  * 꼭대기마다 그 꼭대기를 추적 대상으로 가진 정리된 사용자 스토리라인 — 한 번에 묻는 상한({@link UserStorylineSummaries#MAX_TOPS})씩
  * 나눠 묻는다. docs/specs/reader.md §5 reader-R9 · reader-R16.
  * <p>
- * 다이제스트 항목의 흐름과 변화 리포트의 흐름이 함께 쓴다.
+ * 다이제스트 항목의 스토리라인과 변화 리포트의 스토리라인이 함께 쓴다.
  */
 final class UserStorylineRefs {
 

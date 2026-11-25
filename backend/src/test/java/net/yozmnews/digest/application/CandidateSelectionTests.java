@@ -540,7 +540,7 @@ class CandidateSelectionTests {
 	}
 
 	@Test
-	void aDislikeAfterASilentExposureOfTheSameFlowLeavesItsBigRowOut() {
+	void aDislikeAfterASilentExposureOfTheSameStorylineLeavesItsBigRowOut() {
 		long[] conflict = bigStoryline();
 		long storyline = storylineOf(event(conflict[0]));
 		// 그 스토리라인의 지난 사건 a · b — 11-03 다이제스트가 a 를 혼자인 항목으로 보였고 반응이 없었다. 11-04 다이제스트가 b 를 혼자인 항목으로
@@ -566,64 +566,64 @@ class CandidateSelectionTests {
 	void anEventOfASubscribedStorylineOutsideTheSubscribedTopicsEntersByInterest() {
 		// 구독 밖(국제 분쟁) 기사 하나뿐인 사건과 그 스토리라인 — 보도 강도가 작아 크지 않다
 		long article = article("분쟁 소식", "world.conflict", 3.0, "2026-11-05T06:00:00Z", 1);
-		long flowEvent = this.rows.event(1, "2026-11-05T06:00:00Z", "2026-11-05T06:00:00Z");
-		this.rows.assign(article, flowEvent, "2026-11-05T06:00:00Z");
-		long storyline = this.rows.storyline("2026-11-05T06:00:00Z", "2026-11-05T06:00:00Z", flowEvent);
-		this.rows.member(storyline, flowEvent);
+		long storylineEvent = this.rows.event(1, "2026-11-05T06:00:00Z", "2026-11-05T06:00:00Z");
+		this.rows.assign(article, storylineEvent, "2026-11-05T06:00:00Z");
+		long storyline = this.rows.storyline("2026-11-05T06:00:00Z", "2026-11-05T06:00:00Z", storylineEvent);
+		this.rows.member(storyline, storylineEvent);
 		// 대조 — 구독 전에는 구독 주제 밖이라 들지 않는다
 		assertThat(events(this.selection.select(new UserId(this.user), DAY, ROOMY)))
 			.containsExactly(this.e1 + ":SUBSCRIBED", event(this.a5) + ":SUBSCRIBED");
 
 		subscribeStoryline(storyline, "USER");
 
-		// 구독한 스토리라인은 관심 흐름 — 그 사건이 새 길로 들고 표본 기사가 입력에 실린다
+		// 구독한 스토리라인은 관심 스토리라인 — 그 사건이 새 길로 들고 표본 기사가 입력에 실린다
 		DigestInput input = this.selection.select(new UserId(this.user), DAY, ROOMY).orElseThrow();
-		assertThat(events(input)).contains(flowEvent + ":INTEREST");
-		assertThat(articlesOf(input, flowEvent)).containsExactly(article);
+		assertThat(events(input)).contains(storylineEvent + ":INTEREST");
+		assertThat(articlesOf(input, storylineEvent)).containsExactly(article);
 	}
 
 	@Test
-	void aDislikedEarlierFlowLeavesTheNewEventOfItsLaterFlowOut() {
-		// 앞 흐름 — 지난 사건 하나(11-04 다이제스트가 혼자인 항목으로 보였다)에 싫어요: 그 흐름의 관심 −1 ÷ 4 = −0.25 ≤ −0.2
+	void aDislikedEarlierStorylineLeavesTheNewEventOfItsLaterStorylineOut() {
+		// 앞 스토리라인 — 지난 사건 하나(11-04 다이제스트가 혼자인 항목으로 보였다)에 싫어요: 그 스토리라인의 관심 −1 ÷ 4 = −0.25 ≤ −0.2
 		long earlier = shownAndDislikedStoryline();
-		// 뒤 흐름 — 구독한 정치 행정의 새 사건 하나뿐인 다른 스토리라인
+		// 뒤 스토리라인 — 구독한 정치 행정의 새 사건 하나뿐인 다른 스토리라인
 		long fresh = event(eventArticle("정부 새 대응", "politics.executive", 3.5, "2026-11-05T06:00:00Z", 1));
 		long later = this.rows.storyline("2026-11-05T06:00:00Z", "2026-11-05T06:00:00Z", fresh);
 		this.rows.member(later, fresh);
-		// 대조 — 이어짐이 없으면 다른 흐름이라 새 사건이 구독 사건으로 든다
+		// 대조 — 이어짐이 없으면 다른 스토리라인이라 새 사건이 구독 사건으로 든다
 		assertThat(events(this.selection.select(new UserId(this.user), DAY, ROOMY))).contains(fresh + ":SUBSCRIBED");
 
 		UserStorylineFixtures.follows(this.jdbc, earlier, later);
 
-		// 사용자 스토리라인이 뒤 흐름을 따라가 같은 관심을 쓴다 — 새 사건의 꼭대기가 거른 흐름이라 빠진다
+		// 사용자 스토리라인이 뒤 스토리라인을 따라가 같은 관심을 쓴다 — 새 사건의 꼭대기가 거른 스토리라인이라 빠진다
 		assertThat(events(this.selection.select(new UserId(this.user), DAY, ROOMY)))
 			.containsExactly(this.e1 + ":SUBSCRIBED", event(this.a5) + ":SUBSCRIBED");
 	}
 
 	@Test
-	void anEventOfTheLaterFlowOfATrackedFlowOutsideTheSubscribedTopicsEntersByInterest() {
+	void anEventOfTheLaterStorylineOfATrackedStorylineOutsideTheSubscribedTopicsEntersByInterest() {
 		long tracked = legislatureStoryline();
 		subscribeStoryline(tracked, "USER");
-		// 뒤 흐름 — 구독 밖(국제 분쟁) 기사 하나뿐인 사건과 그 스토리라인, 보도 강도가 작아 크지 않다
+		// 뒤 스토리라인 — 구독 밖(국제 분쟁) 기사 하나뿐인 사건과 그 스토리라인, 보도 강도가 작아 크지 않다
 		long article = article("분쟁 소식", "world.conflict", 3.0, "2026-11-05T06:00:00Z", 1);
-		long flowEvent = this.rows.event(1, "2026-11-05T06:00:00Z", "2026-11-05T06:00:00Z");
-		this.rows.assign(article, flowEvent, "2026-11-05T06:00:00Z");
-		long later = this.rows.storyline("2026-11-05T06:00:00Z", "2026-11-05T06:00:00Z", flowEvent);
-		this.rows.member(later, flowEvent);
-		// 대조 — 이어짐이 없으면 추적하지 않는 흐름이고 구독 주제 밖이라 들지 않는다
+		long storylineEvent = this.rows.event(1, "2026-11-05T06:00:00Z", "2026-11-05T06:00:00Z");
+		this.rows.assign(article, storylineEvent, "2026-11-05T06:00:00Z");
+		long later = this.rows.storyline("2026-11-05T06:00:00Z", "2026-11-05T06:00:00Z", storylineEvent);
+		this.rows.member(later, storylineEvent);
+		// 대조 — 이어짐이 없으면 추적하지 않는 스토리라인이고 구독 주제 밖이라 들지 않는다
 		assertThat(events(this.selection.select(new UserId(this.user), DAY, ROOMY)))
 			.containsExactly(this.e1 + ":SUBSCRIBED", event(this.a5) + ":SUBSCRIBED");
 
 		UserStorylineFixtures.follows(this.jdbc, tracked, later);
 
-		// 추적한 흐름이 이어진 뒤 흐름도 관심 흐름이다 — 저장한 추적 대상에 아직 없어도(읽을 때 계산) 새 길로 든다
+		// 추적한 스토리라인이 이어진 뒤 스토리라인도 관심 스토리라인이다 — 저장한 추적 대상에 아직 없어도(읽을 때 계산) 새 길로 든다
 		DigestInput input = this.selection.select(new UserId(this.user), DAY, ROOMY).orElseThrow();
-		assertThat(events(input)).contains(flowEvent + ":INTEREST");
-		assertThat(articlesOf(input, flowEvent)).containsExactly(article);
+		assertThat(events(input)).contains(storylineEvent + ":INTEREST");
+		assertThat(articlesOf(input, storylineEvent)).containsExactly(article);
 	}
 
 	@Test
-	void aBigRowWhoseTopIsTheLaterFlowOfADislikedFlowIsSkipped() {
+	void aBigRowWhoseTopIsTheLaterStorylineOfADislikedStorylineIsSkipped() {
 		long bigEvent = event(bigStoryline()[0]);
 		long big = storylineOf(bigEvent);
 		long earlier = shownAndDislikedStoryline();
@@ -633,7 +633,7 @@ class CandidateSelectionTests {
 
 		UserStorylineFixtures.follows(this.jdbc, earlier, big);
 
-		// 큰 판정 행 머리의 꼭대기가 거른 흐름의 뒤 흐름이라 건너뛴다(다음 행이 없다)
+		// 큰 판정 행 머리의 꼭대기가 거른 스토리라인의 뒤 스토리라인이라 건너뛴다(다음 행이 없다)
 		assertThat(events(this.selection.select(new UserId(this.user), DAY, ROOMY)))
 			.containsExactly(this.e1 + ":SUBSCRIBED", event(this.a5) + ":SUBSCRIBED");
 	}
@@ -716,7 +716,7 @@ class CandidateSelectionTests {
 			.isEqualTo(trial + ":MAJOR_STORYLINE");
 
 		// 지난 다이제스트(11-04)의 혼자인 재판 항목 둘에 싫어요 — 재판 관심 ≈ −2 ÷ (2 + 3) = −0.4(가중치 ≈ 0.8). 그 지난 사건들은 스토리라인
-		// 소속이 없어 흐름 거름이 아니라 주제 거름으로 빠진다
+		// 소속이 없어 스토리라인 거름이 아니라 주제 거름으로 빠진다
 		dislikedShown("society.law", 2);
 
 		List<String> filtered = events(this.selection.select(new UserId(this.user), DAY, ROOMY));
@@ -880,7 +880,7 @@ class CandidateSelectionTests {
 	/**
 	 * 구독 밖(국제 정치)의 지난 사건(11-01) 하나뿐인 스토리라인 — 11-04 다이제스트가 그 사건을 혼자인 항목으로 보였고(몫 1) 사용자가 싫어요를
 	 * 눌렀다. 보도 강도가 작아 크지 않다. 주제는 {@link #bigStoryline} 의 국제 분쟁과 다르다 — 싫어요가 큰 판정 사건의 주제 관심을 거름
-	 * 기준까지 내려 흐름 거름과 주제 거름이 섞이지 않게
+	 * 기준까지 내려 스토리라인 거름과 주제 거름이 섞이지 않게
 	 */
 	private long shownAndDislikedStoryline() {
 		long article = article("국제 정치 지난 일", "world.politics", 3.0, "2026-11-01T00:00:00Z", 1);

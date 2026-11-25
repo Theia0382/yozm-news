@@ -6,7 +6,7 @@ import java.util.Map;
 import net.yozmnews.storyline.StorylineId;
 
 /**
- * 흐름 추적 상태 — 받은 스토리라인마다 그 흐름을 추적 중인가. docs/specs/user.md §3
+ * 흐름 추적 상태 — 받은 스토리라인마다 그 스토리라인을 추적 중인가. docs/specs/user.md §3
  *
  * @param states 받은 순서대로(같은 ID 는 처음 자리 한 번)
  */

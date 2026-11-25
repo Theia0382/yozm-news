@@ -201,7 +201,7 @@ class UserStorylineReconcileTests {
 
 	@Test
 	void aTrackedStorylineWithoutSeedsAndWithoutAnyGroupIsLostAsTracked() {
-		// 추적 중인데 추적 씨앗의 스토리라인이 모두 지워졌고(씨앗 없음) 흐름의 꼭대기에도 신호가 없어 이을 묶음이 없다
+		// 추적 중인데 추적 씨앗의 스토리라인이 모두 지워졌고(씨앗 없음) 스토리라인의 꼭대기에도 신호가 없어 이을 묶음이 없다
 		StoredUserStoryline stored = stored(10, 2L, Set.of(1L, 2L), Map.of(), EARLY);
 
 		UserStorylineReconcile result = UserStorylineReconcile.decide(List.of(stored),
@@ -231,7 +231,7 @@ class UserStorylineReconcileTests {
 	}
 
 	@Test
-	void aTrackedStorylineWhoseSeedsWereAllDeletedKeepsTrackingTheRemainingFlow() {
+	void aTrackedStorylineWhoseSeedsWereAllDeletedKeepsTrackingTheRemainingUserStoryline() {
 		// 추적 중인데 추적 씨앗의 스토리라인이 모두 지워졌다(씨앗 없음). 헤드 2 에 신호가 남아 있다
 		StoredUserStoryline stored = stored(10, 2L, Set.of(1L, 2L), Map.of(), EARLY);
 

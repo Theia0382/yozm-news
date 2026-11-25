@@ -100,12 +100,12 @@ class InterestSignalsTests {
 		assertThat(InterestSignals.storylinesToRead(changes)).containsExactly(kept, survivor);
 		// kept 의 꼭대기는 top, survivor 는 꼭대기를 모른다(그 사이 지워짐) — 꼭대기에 몫 1 로 든다
 		StorylineId top = new StorylineId(100);
-		assertThat(InterestSignals.storylines(changes, Map.of(kept, top), new StorylineFlows(Map.of(top, Set.of(7)), Set.of())))
+		assertThat(InterestSignals.storylines(changes, Map.of(kept, top), new UserStorylines(Map.of(top, Set.of(7)), Set.of())))
 			.as("꼭대기를 모르는 스토리라인은 신호가 아니다 — 신호는 그 꼭대기의 묶음에 든다")
 			.containsExactly(new SubscriptionSignal<>(Map.of(7, 1.0), 1, AT),
 					new SubscriptionSignal<>(Map.of(7, 1.0), -1, AT));
 		// 대조 — 꼭대기에 묶음이 없으면 신호가 아니다
-		assertThat(InterestSignals.storylines(changes, Map.of(kept, top), StorylineFlows.NONE)).isEmpty();
+		assertThat(InterestSignals.storylines(changes, Map.of(kept, top), UserStorylines.NONE)).isEmpty();
 	}
 
 	@Test
@@ -136,20 +136,20 @@ class InterestSignalsTests {
 		List<FeedbackChange> liked = List.of(reaction(twoTrees, FeedbackValue.LIKE));
 		// 꼭대기마다 다른 묶음 — 꼭대기 둘이면 묶음마다 1/2
 		assertThat(InterestSignals.storylineExposed(exposures, liked, tops,
-				new StorylineFlows(Map.of(tree, Set.of(0), other, Set.of(1)), Set.of())))
+				new UserStorylines(Map.of(tree, Set.of(0), other, Set.of(1)), Set.of())))
 			.containsExactlyInAnyOrder(new ExposedEvent<>(Map.of(0, 0.5, 1, 0.5), AT, 1.0, FeedbackValue.LIKE),
 					new ExposedEvent<>(Map.of(0, 1.0), AT, 0.5, FeedbackValue.NONE));
-		// 두 꼭대기가 같은 묶음(이어진 흐름) — 몫이 그 묶음에 모인다
+		// 두 꼭대기가 같은 묶음(이어진 스토리라인) — 몫이 그 묶음에 모인다
 		assertThat(InterestSignals.storylineExposed(exposures, liked, tops,
-				new StorylineFlows(Map.of(tree, Set.of(0), other, Set.of(0)), Set.of())))
+				new UserStorylines(Map.of(tree, Set.of(0), other, Set.of(0)), Set.of())))
 			.containsExactlyInAnyOrder(new ExposedEvent<>(Map.of(0, 1.0), AT, 1.0, FeedbackValue.LIKE),
 					new ExposedEvent<>(Map.of(0, 1.0), AT, 0.5, FeedbackValue.NONE));
 		// 묶음이 없는 꼭대기의 몫은 버린다 — tree 에만 묶음이 있으면 twoTrees 는 1/2 만 든다
-		assertThat(InterestSignals.storylineExposed(exposures, liked, tops, new StorylineFlows(Map.of(tree, Set.of(0)), Set.of())))
+		assertThat(InterestSignals.storylineExposed(exposures, liked, tops, new UserStorylines(Map.of(tree, Set.of(0)), Set.of())))
 			.containsExactlyInAnyOrder(new ExposedEvent<>(Map.of(0, 0.5), AT, 1.0, FeedbackValue.LIKE),
 					new ExposedEvent<>(Map.of(0, 1.0), AT, 0.5, FeedbackValue.NONE));
 		// 대조 — 묶음이 하나도 없으면 스토리라인 쪽 재료가 없다
-		assertThat(InterestSignals.storylineExposed(exposures, liked, tops, StorylineFlows.NONE)).isEmpty();
+		assertThat(InterestSignals.storylineExposed(exposures, liked, tops, UserStorylines.NONE)).isEmpty();
 	}
 
 	/** 그대로인 사건의 이력 행 — 기록한 사건과 지금 사건이 같다 */
@@ -169,21 +169,21 @@ class InterestSignalsTests {
 
 
 	@Test
-	void aTopInSeveralFlowsCarriesItsShareAndSubscriptionToEachFlow() {
+	void aTopInSeveralStorylinesCarriesItsShareAndSubscriptionToEachStoryline() {
 		// 사건 하나의 꼭대기 5 가 묶음 0 · 1 에 든다 → 두 묶음에 각각 몫 배수 1, 스토리라인 5 의 추적 더함도 두 묶음에 각각 1
 		StorylineId shared = new StorylineId(5);
-		StorylineFlows flows = new StorylineFlows(Map.of(shared, Set.of(0, 1)), Set.of());
+		UserStorylines userStorylines = new UserStorylines(Map.of(shared, Set.of(0, 1)), Set.of());
 		EventId event = new EventId(41);
 		Instant at = Instant.parse("2026-11-20T00:00:00Z");
 
 		List<ExposedEvent<Integer>> exposed = InterestSignals.storylineExposed(Map.of(event, new Exposure(at, 1.0)),
-				List.of(), Map.of(event, List.of(shared)), flows);
+				List.of(), Map.of(event, List.of(shared)), userStorylines);
 		assertThat(exposed).singleElement().satisfies(e -> assertThat(e.keys()).isEqualTo(Map.of(0, 1.0, 1, 1.0)));
 
 		StorylineId tracked = new StorylineId(9);
 		List<StorylineSubscriptionChange> changes = List.of(
 				storyline(tracked, tracked, StorylineSubscriptionAction.ADD, StorylineSubscriptionCause.USER));
-		assertThat(InterestSignals.storylines(changes, Map.of(tracked, shared), flows))
+		assertThat(InterestSignals.storylines(changes, Map.of(tracked, shared), userStorylines))
 			.containsExactly(new SubscriptionSignal<>(Map.of(0, 1.0, 1, 1.0), 1, AT));
 	}
 }

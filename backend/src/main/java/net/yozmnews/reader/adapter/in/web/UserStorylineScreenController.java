@@ -27,10 +27,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 독자 화면의 정리된 사용자 스토리라인(화면 이름 "사건 흐름") — 목록 · 하나 · 그 흐름에 묶인 지난 다이제스트 항목. docs/specs/reader.md §3
+ * 독자 화면의 정리된 사용자 스토리라인(화면 이름 "사건 흐름") — 목록 · 하나 · 그 사용자 스토리라인에 묶인 지난 다이제스트 항목. docs/specs/reader.md §3
  * <p>
  * {@code user} 의 정리 조회, {@code storyline} 의 스토리라인 조회, {@code digest} 의 항목 조회만 부르고 응답 모양을 정한다 — 무엇이 정리된
- * 흐름인지는 {@code user} 의 정리 작업이 정한다. 셋 모두 세션이 필요하고 키 관문 뒤다(키 없이 여는 표시 · 요청 방어 표시가 없다). 세션 사용자의
+ * 사용자 스토리라인인지는 {@code user} 의 정리 작업이 정한다. 셋 모두 세션이 필요하고 키 관문 뒤다(키 없이 여는 표시 · 요청 방어 표시가 없다). 세션 사용자의
  * 것만 낸다 — 다른 사용자의 사용자 스토리라인 ID 는 없는 것이다. 트랜잭션을 열지 않는다.
  */
 @WebRole

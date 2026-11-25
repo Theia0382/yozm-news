@@ -13,11 +13,11 @@ import java.util.UUID;
 
 import net.yozmnews.article.ArticleId;
 import net.yozmnews.evaluation.EvaluatorTiming;
-import net.yozmnews.evaluation.FlowDescriptor;
-import net.yozmnews.evaluation.FlowHappening;
-import net.yozmnews.evaluation.FlowRelation;
 import net.yozmnews.evaluation.RelationJudgement;
 import net.yozmnews.evaluation.RelationQuery;
+import net.yozmnews.evaluation.StorylineDescriptor;
+import net.yozmnews.evaluation.StorylineHappening;
+import net.yozmnews.evaluation.StorylineRelation;
 import net.yozmnews.event.EventDirectory;
 import net.yozmnews.event.EventId;
 import net.yozmnews.event.EventTermCounts;
@@ -78,7 +78,7 @@ public class RelationRound {
 
 	private final EventDirectory events;
 
-	private final FlowRelation judge;
+	private final StorylineRelation judge;
 
 	private final RelationCriteria criteria;
 
@@ -91,7 +91,7 @@ public class RelationRound {
 	private final AppClock clock;
 
 	RelationRound(RelationQueueRepository queue, RelationRepository relations, StorylineRepository storylines,
-			EventDirectory events, FlowRelation judge, RelationCriteria criteria, StorylineMerger merger,
+			EventDirectory events, StorylineRelation judge, RelationCriteria criteria, StorylineMerger merger,
 			ApplicationEventPublisher publisher, TransactionTemplate transaction, AppClock clock) {
 		this.queue = queue;
 		this.relations = relations;
@@ -270,31 +270,31 @@ public class RelationRound {
 
 	/** 관계 판정 요청(storyline-R28) — 한쪽이라도 실을 서술이 없으면 빈 값 */
 	private Optional<RelationQuery> query(Pair pair) {
-		Optional<FlowDescriptor> first = flow(pair.first(), pair.firstMembers());
-		Optional<FlowDescriptor> second = flow(pair.second(), pair.secondMembers());
+		Optional<StorylineDescriptor> first = descriptor(pair.first(), pair.firstMembers());
+		Optional<StorylineDescriptor> second = descriptor(pair.second(), pair.secondMembers());
 		if (first.isEmpty() || second.isEmpty()) {
 			return Optional.empty();
 		}
 		return Optional.of(new RelationQuery(first.get(), second.get()));
 	}
 
-	/** 흐름 하나 — 직접 소속 사건에서 서술 사건을 고르고 그 대표 기사를 싣는다. 대표 기사가 없는 사건은 뺀다 */
-	private Optional<FlowDescriptor> flow(StorylineProfile profile, List<Long> members) {
+	/** 관계 판정에 넘길 스토리라인 하나 — 직접 소속 사건에서 서술 사건을 고르고 그 대표 기사를 싣는다. 대표 기사가 없는 사건은 뺀다 */
+	private Optional<StorylineDescriptor> descriptor(StorylineProfile profile, List<Long> members) {
 		Map<EventId, EventView> views = this.events.views(members.stream().map(EventId::new).toList());
 		List<RelationDescription.Described> described = RelationDescription.of(List.copyOf(views.values()));
 		Map<EventId, ArticleId> representatives = this.events
 			.representativesOfAll(described.stream().map(one -> new EventId(one.eventId())).toList());
-		List<FlowHappening> happenings = new ArrayList<>();
+		List<StorylineHappening> happenings = new ArrayList<>();
 		for (RelationDescription.Described one : described) {
 			ArticleId article = representatives.get(new EventId(one.eventId()));
 			if (article != null) {
-				happenings.add(new FlowHappening(article, one.at(), one.summarized()));
+				happenings.add(new StorylineHappening(article, one.at(), one.summarized()));
 			}
 		}
 		if (happenings.isEmpty()) {
 			return Optional.empty();
 		}
-		return Optional.of(new FlowDescriptor(profile.id(), profile.events(), profile.firstArticleAt(),
+		return Optional.of(new StorylineDescriptor(profile.id(), profile.events(), profile.firstArticleAt(),
 				profile.lastArticleAt(), happenings));
 	}
 

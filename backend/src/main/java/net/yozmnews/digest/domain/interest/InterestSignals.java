@@ -24,7 +24,7 @@ import net.yozmnews.user.TopicSubscriptionChange;
  * 읽은 이력 행에서 관심도 산식의 입력을 고르는 정본 — docs/specs/digest.md §5
  * <ul>
  * <li>노출 사건은 주제 쪽과 스토리라인 쪽으로 나뉜다 — 주제 쪽은 주제(활성 중분류)를 셀 수 있고 반복이 아닌 사건({@link StorylineRepeats}),
- * 스토리라인 쪽은 꼭대기가 있는 사건(꼭대기마다 몫 배수 1/k). 꼭대기가 없는 사건은 주제 쪽에만, 처음 본 흐름의 사건은 양쪽에, 반복인 사건은
+ * 스토리라인 쪽은 꼭대기가 있는 사건(꼭대기마다 몫 배수 1/k). 꼭대기가 없는 사건은 주제 쪽에만, 처음 본 스토리라인의 사건은 양쪽에, 반복인 사건은
  * 스토리라인 쪽에만 든다</li>
  * <li>반응은 지금 사건이 그 사건인 이력 행의 기록 순 마지막 값 — 기록한 사건이 달라도 같은 사건으로 풀리면 한 줄기다. 노출되지 않은 사건 · 지운
  * 사건의 반응은 버린다. 두 쪽이 같은 고르기를 쓴다</li>
@@ -67,15 +67,15 @@ public final class InterestSignals {
 	 * @param exposures 지금 사건 → 창 안 가장 늦은 노출(시각 · 몫)
 	 * @param feedback 그 사용자의 이력 행 — 기록 순서
 	 * @param tops 지금 사건 → 꼭대기 — 소속이 없는 사건은 없다
-	 * @param flows 꼭대기 → 사용자 스토리라인 묶음
+	 * @param userStorylines 꼭대기 → 사용자 스토리라인 묶음
 	 * @return 묶음이 있는 꼭대기를 가진 노출 사건마다 하나 — 꼭대기 k 개면 꼭대기마다 그 꼭대기의 묶음 모두에 각각 몫 배수 1/k(같은
 	 *         묶음의 꼭대기 둘이면 2/k). 묶음이 없는 꼭대기의 몫은 버린다. 주제를 셀 수 없는 사건도 든다
 	 */
 	public static List<ExposedEvent<Integer>> storylineExposed(Map<EventId, Exposure> exposures,
-			List<FeedbackChange> feedback, Map<EventId, List<StorylineId>> tops, StorylineFlows flows) {
+			List<FeedbackChange> feedback, Map<EventId, List<StorylineId>> tops, UserStorylines userStorylines) {
 		Objects.requireNonNull(exposures, "exposures");
 		Objects.requireNonNull(tops, "tops");
-		Objects.requireNonNull(flows, "flows");
+		Objects.requireNonNull(userStorylines, "userStorylines");
 		Map<EventId, FeedbackValue> last = lastReactions(feedback);
 		List<ExposedEvent<Integer>> exposed = new ArrayList<>();
 		exposures.forEach((event, exposure) -> {
@@ -86,11 +86,11 @@ public final class InterestSignals {
 			Map<Integer, Double> keys = new HashMap<>();
 			for (StorylineId top : roots) {
 				// 꼭대기의 묶음 모두에 각각 온전히 — 갈라지기 전 꼭대기의 신호는 뒤 갈래 모두의 것이다
-				flows.flowsOf(top).forEach(flow -> keys.merge(flow, 1.0 / roots.size(), Double::sum));
+				userStorylines.userStorylinesOf(top).forEach(userStoryline -> keys.merge(userStoryline, 1.0 / roots.size(), Double::sum));
 			}
 			if (!keys.isEmpty()) {
 				// 같은 묶음의 몫을 더한 값이 1 을 넘지 않게 한다(부동소수 합)
-				keys.replaceAll((flow, multiple) -> Math.min(1.0, multiple));
+				keys.replaceAll((userStoryline, multiple) -> Math.min(1.0, multiple));
 				exposed.add(new ExposedEvent<>(keys, exposure.at(), exposure.share(),
 						last.getOrDefault(event, FeedbackValue.NONE)));
 			}
@@ -138,22 +138,22 @@ public final class InterestSignals {
 	/**
 	 * 스토리라인 구독 변경 — {@link #storylinesToRead} 와 같은 행 가운데 꼭대기와 그 묶음을 아는 행마다, 그 꼭대기의 묶음 모두에 각각 몫 1.
 	 * @param storylineTops 지금 스토리라인 → 꼭대기 — 없는 스토리라인은 없다
-	 * @param flows 꼭대기 → 사용자 스토리라인 묶음 — 묶음이 없는 꼭대기의 행은 버린다
+	 * @param userStorylines 꼭대기 → 사용자 스토리라인 묶음 — 묶음이 없는 꼭대기의 행은 버린다
 	 */
 	public static List<SubscriptionSignal<Integer>> storylines(List<StorylineSubscriptionChange> changes,
-			Map<StorylineId, StorylineId> storylineTops, StorylineFlows flows) {
+			Map<StorylineId, StorylineId> storylineTops, UserStorylines userStorylines) {
 		Objects.requireNonNull(changes, "changes");
 		Objects.requireNonNull(storylineTops, "storylineTops");
-		Objects.requireNonNull(flows, "flows");
+		Objects.requireNonNull(userStorylines, "userStorylines");
 		List<SubscriptionSignal<Integer>> signals = new ArrayList<>();
 		for (StorylineSubscriptionChange change : changes) {
 			if (!counts(change)) {
 				continue;
 			}
 			StorylineId top = storylineTops.get(change.current());
-			if (top != null && !flows.flowsOf(top).isEmpty()) {
+			if (top != null && !userStorylines.userStorylinesOf(top).isEmpty()) {
 				Map<Integer, Double> shares = new HashMap<>();
-				flows.flowsOf(top).forEach(flow -> shares.put(flow, 1.0));
+				userStorylines.userStorylinesOf(top).forEach(userStoryline -> shares.put(userStoryline, 1.0));
 				signals.add(new SubscriptionSignal<>(shares, sign(change.action()), change.occurredAt()));
 			}
 		}

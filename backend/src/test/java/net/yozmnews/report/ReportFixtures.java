@@ -13,24 +13,24 @@ import net.yozmnews.llm.Provider;
 import net.yozmnews.llm.ReasoningEffort;
 import net.yozmnews.platform.UserId;
 import net.yozmnews.report.InterestShift;
-import net.yozmnews.report.domain.input.CoverageSection;
 import net.yozmnews.report.domain.input.Count;
+import net.yozmnews.report.domain.input.CoverageSection;
 import net.yozmnews.report.domain.input.EventLine;
-import net.yozmnews.report.domain.input.FlowInterestLine;
-import net.yozmnews.report.domain.input.FlowMaterial;
 import net.yozmnews.report.domain.input.InputSection;
 import net.yozmnews.report.domain.input.InterestsSection;
 import net.yozmnews.report.domain.input.ReportInput;
 import net.yozmnews.report.domain.input.StorylinesSection;
 import net.yozmnews.report.domain.input.TopicCoverageLine;
 import net.yozmnews.report.domain.input.TopicInterestLine;
+import net.yozmnews.report.domain.input.UserStorylineInterestLine;
+import net.yozmnews.report.domain.input.UserStorylineMaterial;
 import net.yozmnews.report.domain.report.ReportPeriod;
 import net.yozmnews.storyline.StorylineId;
 import net.yozmnews.storyline.StorylineState;
 
 /**
- * 리포트 시험의 값 — 갈래는 재료 꼴로 만든다. 갈래의 인용 대상은 재료에서 나온다(report-R14): 추적한 흐름은 헤드 → 그 흐름의 사건, 구독 주제
- * 보도량은 없음, 관심 변화는 흐름 관심 줄의 헤드
+ * 리포트 시험의 값 — 갈래는 재료 꼴로 만든다. 갈래의 인용 대상은 재료에서 나온다(report-R14): 추적한 사용자 스토리라인은 헤드 → 그 사용자 스토리라인의 사건, 구독 주제
+ * 보도량은 없음, 관심 변화는 사용자 스토리라인 관심 줄의 헤드
  */
 public final class ReportFixtures {
 
@@ -64,18 +64,18 @@ public final class ReportFixtures {
 		return new ReportCitation.Event(new EventId(id));
 	}
 
-	/** 흐름 하나 — 헤드 하나가 꼭대기이고, 사건마다 사건 줄 하나 */
-	public static FlowMaterial flow(long head, long... events) {
+	/** 사용자 스토리라인 하나 — 헤드 하나가 꼭대기이고, 사건마다 사건 줄 하나 */
+	public static UserStorylineMaterial userStoryline(long head, long... events) {
 		List<EventLine> lines = Arrays.stream(events)
 			.mapToObj(event -> new EventLine(new EventId(event), "사건 " + event, LocalDate.of(2026, 11, 17), 1, true))
 			.toList();
-		return new FlowMaterial(new StorylineId(head), Set.of(new StorylineId(head)), null, StorylineState.ACTIVE, false,
+		return new UserStorylineMaterial(new StorylineId(head), Set.of(new StorylineId(head)), null, StorylineState.ACTIVE, false,
 				new Count(0, null), lines);
 	}
 
-	/** 추적한 흐름의 갈래 */
-	public static StorylinesSection flows(FlowMaterial... flows) {
-		return new StorylinesSection(List.of(flows));
+	/** 추적한 사용자 스토리라인의 갈래 */
+	public static StorylinesSection userStorylines(UserStorylineMaterial... userStorylines) {
+		return new StorylinesSection(List.of(userStorylines));
 	}
 
 	/** 구독 주제 보도량의 갈래 — 구독 행 하나 */
@@ -83,7 +83,7 @@ public final class ReportFixtures {
 		return new CoverageSection(List.of(new TopicCoverageLine("economy.finance", "금융", new Count(12, 7L))));
 	}
 
-	/** 관심 변화의 갈래 — 헤드마다 흐름 관심 줄, 헤드가 없으면 주제 관심 줄 하나 */
+	/** 관심 변화의 갈래 — 헤드마다 사용자 스토리라인 관심 줄, 헤드가 없으면 주제 관심 줄 하나 */
 	public static InterestsSection interests(long... heads) {
 		if (heads.length == 0) {
 			return new InterestsSection(
@@ -92,7 +92,7 @@ public final class ReportFixtures {
 		}
 		return new InterestsSection(List.of(),
 				Arrays.stream(heads)
-					.mapToObj(head -> new FlowInterestLine(new StorylineId(head), null, 0.4, 0.6, InterestShift.NONE))
+					.mapToObj(head -> new UserStorylineInterestLine(new StorylineId(head), null, 0.4, 0.6, InterestShift.NONE))
 					.toList(),
 				List.of());
 	}

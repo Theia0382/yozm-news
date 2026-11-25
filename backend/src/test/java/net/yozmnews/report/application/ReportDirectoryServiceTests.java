@@ -63,7 +63,7 @@ class ReportDirectoryServiceTests {
 
 	/** 시작한 리포트의 스냅숏 — 구독 주제 보도량 하나(report-R19 의 꼴, 손으로 씀) */
 	private static final String SNAPSHOT = """
-			{"version":1,"tagSet":4,
+			{"version":2,"tagSet":4,
 			 "period":{"kind":"WEEK","start":"2026-11-16T00:00:00Z","end":"2026-11-23T00:00:00Z"},
 			 "coverage":{"basis":"FIRST_EVALUATED","topics":[
 			   {"key":"economy.finance","name":"금융","articles":12,"previous":7,"trend":"ROSE"}]}}""";
@@ -276,15 +276,15 @@ class ReportDirectoryServiceTests {
 	}
 
 	@Test
-	void resolvesTheFlowHeadsOfTheSnapshotThroughTheRealQueriesLikeTheCitations() {
+	void resolvesTheUserStorylineHeadsOfTheSnapshotThroughTheRealQueriesLikeTheCitations() {
 		long line = storylineOf(FeedbackRows.event(this.jdbc));
 		long mergedLine = storylineOf(FeedbackRows.event(this.jdbc));
 		long survivingLine = storylineOf(FeedbackRows.event(this.jdbc));
 		this.rows.merge(mergedLine, survivingLine);
 		long id = report(OWNER, "READY", """
-				{"version":1,"tagSet":4,
+				{"version":2,"tagSet":4,
 				 "period":{"kind":"WEEK","start":"2026-11-16T00:00:00Z","end":"2026-11-23T00:00:00Z"},
-				 "storylines":{"basis":"PUBLISHED","flows":[
+				 "storylines":{"basis":"PUBLISHED","userStorylines":[
 				   {"head":%d,"tops":[%d],"articles":8,"previous":2,"trend":"ROSE","trackedInPeriod":false},
 				   {"head":999997,"tops":[999997],"articles":5,"previous":null,"trend":"NO_COMPARISON","trackedInPeriod":false},
 				   {"head":%d,"tops":[%d],"articles":3,"previous":3,"trend":"STEADY","trackedInPeriod":true}]}}"""
@@ -294,9 +294,9 @@ class ReportDirectoryServiceTests {
 
 		ReportView view = this.directory.find(OWNER, new ReportId(id)).orElseThrow();
 
-		assertThat(view.sections().get(1).stats()).isEqualTo(new ReportSectionStats.Flows(List.of(
-				new ReportSectionStats.FlowCount(new StorylineId(survivingLine), 8, 2L, ReportTrend.ROSE, false),
-				new ReportSectionStats.FlowCount(new StorylineId(line), 3, 3L, ReportTrend.STEADY, true))));
+		assertThat(view.sections().get(1).stats()).isEqualTo(new ReportSectionStats.UserStorylines(List.of(
+				new ReportSectionStats.UserStorylineCount(new StorylineId(survivingLine), 8, 2L, ReportTrend.ROSE, false),
+				new ReportSectionStats.UserStorylineCount(new StorylineId(line), 3, 3L, ReportTrend.STEADY, true))));
 	}
 
 	@Test

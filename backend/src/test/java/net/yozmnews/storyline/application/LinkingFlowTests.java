@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 
 import net.yozmnews.TestClocks;
 import net.yozmnews.TestcontainersConfiguration;
-import net.yozmnews.evaluation.FlowMembership;
+import net.yozmnews.evaluation.StorylineMembership;
 import net.yozmnews.event.EventDirectory;
 import net.yozmnews.event.EventId;
 import net.yozmnews.event.EventProfile;
@@ -96,8 +96,8 @@ class LinkingFlowTests {
 
 	private static final LinkingCriteria CRITERIA = new LinkingCriteria(Duration.ofDays(14), 0.80, 0.80, 0.50);
 
-	/** 띠가 없는 기준이라 흐름 소속 판정을 부르지 않는다 — 부르면 크게 실패한다 */
-	private static final FlowMembership NEVER_ASKED = query -> {
+	/** 띠가 없는 기준이라 스토리라인 소속 판정을 부르지 않는다 — 부르면 크게 실패한다 */
+	private static final StorylineMembership NEVER_ASKED = query -> {
 		throw new AssertionError("띠가 없는 기준은 묻지 않는다: " + query);
 	};
 
@@ -628,11 +628,11 @@ class LinkingFlowTests {
 			// [0,1] — 아래 사건들과 코사인이 하한 밑이라 후보 · 이웃이 되지 않고 말 수에만 든다
 			StorylineRows.event(this.jdbc, "CLOSED", MODEL, "[0,1]", 1, at, at, filler);
 		}
-		Map<String, Integer> flow = new HashMap<>(common);
-		flow.put("드문말", 1);
-		long p1 = StorylineRows.event(this.jdbc, "OPEN", MODEL, "[1,0]", 1, at, at, flow);
-		long p2 = StorylineRows.event(this.jdbc, "OPEN", MODEL, "[1,0]", 1, at, at, flow);
-		// x 는 흔한 말 아홉이 겹친다(말 수로는 9/10) — y 는 드문 말 하나가 겹친다(말 수로는 1/2). 둘 다 흐름과 코사인 0.8, 서로는 0.28
+		Map<String, Integer> pair = new HashMap<>(common);
+		pair.put("드문말", 1);
+		long p1 = StorylineRows.event(this.jdbc, "OPEN", MODEL, "[1,0]", 1, at, at, pair);
+		long p2 = StorylineRows.event(this.jdbc, "OPEN", MODEL, "[1,0]", 1, at, at, pair);
+		// x 는 흔한 말 아홉이 겹친다(말 수로는 9/10) — y 는 드문 말 하나가 겹친다(말 수로는 1/2). 둘 다 p1 · p2 와 코사인 0.8, 서로는 0.28
 		Map<String, Integer> xTerms = new HashMap<>(common);
 		xTerms.put("엑스말", 1);
 		long x = StorylineRows.event(this.jdbc, "OPEN", MODEL, "[4,3]", 1, at, at, xTerms);
@@ -900,7 +900,7 @@ class LinkingFlowTests {
 			.single();
 	}
 
-	/** openPair 와 다른 흐름의 짝 — [0,1] · 환율, openPair 의 스토리라인에는 기준 미만이라 따로 연다 */
+	/** openPair 와 다른 스토리라인의 짝 — [0,1] · 환율, openPair 의 스토리라인에는 기준 미만이라 따로 연다 */
 	private Pair openOtherPair() {
 		long e3 = StorylineRows.event(this.jdbc, "OPEN", MODEL, "[0,1]", 1, "2026-11-05T01:00:00Z",
 				"2026-11-05T01:00:00Z", Map.of("환율", 1));

@@ -20,7 +20,6 @@ import net.yozmnews.article.ArticlesRemoved;
 import net.yozmnews.evaluation.EvaluatorFailureKind;
 import net.yozmnews.evaluation.EventDescriptor;
 import net.yozmnews.evaluation.EventJudgementId;
-import net.yozmnews.evaluation.JudgedEvent;
 import net.yozmnews.evaluation.MembershipJudgement;
 import net.yozmnews.evaluation.MembershipQuery;
 import net.yozmnews.evaluation.TagQuestions;
@@ -40,6 +39,7 @@ import net.yozmnews.evaluation.domain.evaluator.MembershipWording;
 import net.yozmnews.evaluation.domain.evaluator.RereadResult;
 import net.yozmnews.evaluation.domain.membership.EventJudgementRepository;
 import net.yozmnews.evaluation.domain.membership.MembershipRecord;
+import net.yozmnews.evaluation.domain.membership.RecordedCandidate;
 import net.yozmnews.source.SourceDeleted;
 import net.yozmnews.source.SourceId;
 import org.jspecify.annotations.Nullable;
@@ -290,7 +290,7 @@ class EventMembershipFlowTests {
 	/** 기사 하나를 사건 12 에 대해 판정한 원본 — 서술 기사 하나 */
 	private static MembershipRecord judgement(long article, long described) {
 		return new MembershipRecord(new ArticleId(article),
-				List.of(new JudgedEvent(12, List.of(new ArticleId(described)), 0.8)), "fake", "fake-rules-3",
+				List.of(new RecordedCandidate(12, List.of(new ArticleId(described)), 0.8)), "fake", "fake-rules-3",
 				"membership-1", 10, "{\"events\":{\"12\":0.8}}", AT);
 	}
 

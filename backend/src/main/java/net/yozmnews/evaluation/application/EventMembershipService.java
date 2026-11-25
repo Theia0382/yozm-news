@@ -29,7 +29,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 /**
  * 공개 API {@link EventMembership} 의 구현 — docs/specs/evaluation.md §4 · evaluation-R37 · evaluation-R38 · evaluation-R44.
  * <p>
- * 판정 한 번의 흐름은 흐름 소속 판정과 함께 쓰는 {@link MembershipCall} 이다 — 이 서비스는 사건 소속 문구
+ * 판정 한 번의 흐름은 스토리라인 소속 판정과 함께 쓰는 {@link MembershipCall} 이다 — 이 서비스는 사건 소속 문구
  * ({@link MembershipWording#CURRENT}), 원본 표({@link EventJudgementRepository}), 결과 타입을 넘긴다. 트랜잭션 · 역할 애너테이션이
  * 없다(두 역할 공통).
  */

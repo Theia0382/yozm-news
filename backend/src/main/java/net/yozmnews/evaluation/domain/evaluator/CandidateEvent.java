@@ -11,9 +11,9 @@ import net.yozmnews.platform.CodePoints;
 /**
  * 소속 판정에서 물을 후보 하나 — 후보 ID 와 서술 기사의 제목 · docs/specs/evaluation.md §4 · evaluation-R37 · evaluation-R51.
  * <p>
- * 후보 ID 는 사건 소속 판정이면 사건 ID, 흐름 소속 판정이면 흐름 ID 다. 질문 이름({@code event.{ID}})과 결과의 키가 이 값이다.
+ * 후보 ID 는 사건 소속 판정이면 사건 ID, 스토리라인 소속 판정이면 부르는 쪽이 정한 후보 ID(스토리라인이나 이웃 사건)다. 질문 이름({@code event.{ID}})과 결과의 키가 이 값이다.
  *
- * @param eventId 후보 ID — 사건 ID 또는 흐름 ID
+ * @param eventId 후보 ID — 사건 ID 또는 스토리라인 소속의 후보 ID
  * @param titles 서술 기사의 제목 — 상한 안으로 자른 값, 서술 기사 순서
  */
 public record CandidateEvent(long eventId, List<String> titles) {

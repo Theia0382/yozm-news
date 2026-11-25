@@ -13,7 +13,7 @@ import java.util.Objects;
  * @param strength 관심(−1 ~ 1)을 가중치로 옮길 때의 세기(β) — 가중치는 1 − β ~ 1 + β 에 든다
  * @param reactionsReplaceEarlierSilence 반응이 그 앞의 무반응 노출을 대신하는가 — 켜면 키마다 그 키에 반응(좋아요 · 싫어요)한 노출 가운데
  *     가장 늦은 노출 시각보다 엄격히 앞선 무반응 노출을 그 키의 노출에서 뺀다(docs/specs/digest.md digest-R23). 같은 이야기를 거듭 보이는
- *     흐름에서 앞선 침묵이 반응을 묽히지 않게 한다
+ *     스토리라인에서 앞선 침묵이 반응을 묽히지 않게 한다
  */
 public record InterestConstants(Duration halfLife, double priorExposures, double subscriptionSignal, double strength,
 		boolean reactionsReplaceEarlierSilence) {

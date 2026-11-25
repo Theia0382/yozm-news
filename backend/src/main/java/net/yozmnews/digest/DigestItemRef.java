@@ -8,7 +8,7 @@ import net.yozmnews.event.EventId;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 날짜별로 보이는 다이제스트의 항목 하나 — 흐름에 묶인 지난 항목을 찾아볼 때 쓴다. docs/specs/digest.md §3
+ * 날짜별로 보이는 다이제스트의 항목 하나 — 스토리라인에 묶인 지난 항목을 찾아볼 때 쓴다. docs/specs/digest.md §3
  *
  * @param date 다이제스트 날짜
  * @param position 그 다이제스트 안의 섹션 위치

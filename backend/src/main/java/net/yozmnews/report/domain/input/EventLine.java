@@ -6,7 +6,7 @@ import java.util.Objects;
 import net.yozmnews.event.EventId;
 
 /**
- * 사건 줄 — 흐름의 기간 안 기사가 있는 사건 하나 · docs/specs/report.md §5 · report-R16
+ * 사건 줄 — 사용자 스토리라인의 기간 안 기사가 있는 사건 하나 · docs/specs/report.md §5 · report-R16
  *
  * @param title 대표 기사 제목
  * @param firstDay 첫 기사 시각의 사용자 시간대 날짜

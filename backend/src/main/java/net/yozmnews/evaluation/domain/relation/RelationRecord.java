@@ -12,32 +12,32 @@ import net.yozmnews.evaluation.domain.evaluator.Relation;
  * <p>
  * 제목 · 요약문 텍스트는 남기지 않는다 — 요청에 실은 서술 기사의 ID 와 요약문을 실었는가만 남긴다.
  *
- * @param firstFlowId 요청의 first 흐름
- * @param secondFlowId 요청의 second 흐름
+ * @param firstStorylineId 요청의 first 스토리라인
+ * @param secondStorylineId 요청의 second 스토리라인
  * @param first first 에서 요청에 실은 서술 — 요청 순서
  * @param second second 에서 요청에 실은 서술 — 요청 순서
  * @param wordingVersion 문구의 판
  * @param rawResponse 평가기의 원본 응답 — JSON 텍스트
  */
-public record RelationRecord(long firstFlowId, long secondFlowId, List<Described> first, List<Described> second,
+public record RelationRecord(long firstStorylineId, long secondStorylineId, List<Described> first, List<Described> second,
 		String evaluator, String modelVersion, String wordingVersion, int inputTokens, String rawResponse,
 		Instant judgedAt) {
 
 	/**
-	 * @throws IllegalArgumentException 흐름 ID 가 1 미만이거나 같거나, 한쪽의 서술이 없거나, 이름 · 버전 · 판이 공백뿐이거나, 토큰 수가
+	 * @throws IllegalArgumentException 스토리라인 ID 가 1 미만이거나 같거나, 한쪽의 서술이 없거나, 이름 · 버전 · 판이 공백뿐이거나, 토큰 수가
 	 * 음수일 때
 	 */
 	public RelationRecord {
-		if (firstFlowId < 1 || secondFlowId < 1) {
-			throw new IllegalArgumentException("흐름 ID 는 1 이상이다: " + firstFlowId + ", " + secondFlowId);
+		if (firstStorylineId < 1 || secondStorylineId < 1) {
+			throw new IllegalArgumentException("스토리라인 ID 는 1 이상이다: " + firstStorylineId + ", " + secondStorylineId);
 		}
-		if (firstFlowId == secondFlowId) {
-			throw new IllegalArgumentException("두 흐름 ID 가 같다: " + firstFlowId);
+		if (firstStorylineId == secondStorylineId) {
+			throw new IllegalArgumentException("두 스토리라인 ID 가 같다: " + firstStorylineId);
 		}
 		first = List.copyOf(first);
 		second = List.copyOf(second);
 		if (first.isEmpty() || second.isEmpty()) {
-			throw new IllegalArgumentException("실은 서술이 없는 흐름이 있다");
+			throw new IllegalArgumentException("실은 서술이 없는 스토리라인이 있다");
 		}
 		Objects.requireNonNull(evaluator, "evaluator");
 		Objects.requireNonNull(modelVersion, "modelVersion");
@@ -53,9 +53,9 @@ public record RelationRecord(long firstFlowId, long secondFlowId, List<Described
 	}
 
 	/** 판정 결과를 저장할 모양으로 */
-	public static RelationRecord of(long firstFlowId, long secondFlowId, List<Described> first, List<Described> second,
+	public static RelationRecord of(long firstStorylineId, long secondStorylineId, List<Described> first, List<Described> second,
 			Relation relation, String wordingVersion, Instant judgedAt) {
-		return new RelationRecord(firstFlowId, secondFlowId, first, second, relation.evaluator(),
+		return new RelationRecord(firstStorylineId, secondStorylineId, first, second, relation.evaluator(),
 				relation.modelVersion(), wordingVersion, relation.inputTokens(), relation.rawResponse(), judgedAt);
 	}
 

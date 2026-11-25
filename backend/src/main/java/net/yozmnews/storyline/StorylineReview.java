@@ -12,7 +12,7 @@ import java.util.List;
 public interface StorylineReview {
 
 	/** 스토리라인과 그 모든 하위의 직접 소속 전부와 저마다의 판정 근거 — 스토리라인 ID · 사건 ID 순 */
-	List<StorylineMembership> memberships(StorylineId id);
+	List<StorylineMembershipView> memberships(StorylineId id);
 
 	/** {@link StorylineDirectory#relationsOf} 와 같은 관계 · 같은 순서에 맺은 확률 · 판정 원본 ID · 그때의 관계 기준 */
 	List<StorylineRelationDetail> relations(StorylineId id);
