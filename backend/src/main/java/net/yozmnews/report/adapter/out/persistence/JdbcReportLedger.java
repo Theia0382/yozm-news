@@ -75,4 +75,27 @@ class JdbcReportLedger implements ReportLedger {
 			.list();
 	}
 
+
+	@Override
+	public List<ReportId> stalledScheduled(Instant before, int limit) {
+		return this.jdbc.sql("""
+				select id from reports where status = 'SCHEDULED' and dispatched_at < :before
+				order by dispatched_at, id limit :limit""")
+			.param("before", before.atOffset(ZoneOffset.UTC))
+			.param("limit", limit)
+			.query((rs, n) -> new ReportId(rs.getLong(1)))
+			.list();
+	}
+
+	@Override
+	public List<ReportId> stalledRunning(Instant before, int limit) {
+		return this.jdbc.sql("""
+				select id from reports where status = 'RUNNING' and started_at < :before
+				order by started_at, id limit :limit""")
+			.param("before", before.atOffset(ZoneOffset.UTC))
+			.param("limit", limit)
+			.query((rs, n) -> new ReportId(rs.getLong(1)))
+			.list();
+	}
+
 }

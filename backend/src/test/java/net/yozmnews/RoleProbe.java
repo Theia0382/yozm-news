@@ -20,6 +20,7 @@ import net.yozmnews.event.adapter.in.job.EventCleanupJob;
 import net.yozmnews.event.adapter.in.job.IntakeArticlesJob;
 import net.yozmnews.platform.adapter.in.job.EventResubmissionJob;
 import net.yozmnews.report.adapter.in.job.GenerateReportJob;
+import net.yozmnews.report.adapter.in.job.RecoverStalledReportsJob;
 import net.yozmnews.report.adapter.in.job.ScheduleDueReportsJob;
 import net.yozmnews.source.adapter.in.job.FeedHealthCheckJob;
 import net.yozmnews.source.adapter.in.job.PollDueFeedsJob;
@@ -43,7 +44,7 @@ final class RoleProbe {
 			BackfillMissingTagsJob.class, IntakeArticlesJob.class, EventCleanupJob.class, ExpireSessionsJob.class,
 			ForgetLoginFailuresJob.class, ForgetReadNoticesJob.class, RewrapKeysJob.class, CandidateCleanupJob.class,
 			ScheduleDueDigestsJob.class, GenerateDigestJob.class, RecoverStalledDigestsJob.class,
-			ScheduleDueReportsJob.class, GenerateReportJob.class);
+			ScheduleDueReportsJob.class, GenerateReportJob.class, RecoverStalledReportsJob.class);
 
 	/** Spring Modulith 멈춤 감시 작업의 설명 접두 — 작업은 이 구성의 람다다 */
 	private static final String STALENESS_MONITOR =

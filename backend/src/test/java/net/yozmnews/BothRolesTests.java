@@ -60,14 +60,14 @@ class BothRolesTests {
 	void runsBackgroundJobs() {
 		BackgroundJobServer server = this.context.getBean(BackgroundJobServer.class);
 		await().atMost(Duration.ofSeconds(60)).until(server::isRunning);
-		assertThat(RoleProbe.jobEntryPointBeans(this.context)).hasSize(18)
+		assertThat(RoleProbe.jobEntryPointBeans(this.context)).hasSize(19)
 			.allSatisfy((type, beans) -> assertThat(beans).as(type.getName()).isEqualTo(1));
 		assertThat(RoleProbe.recurringJobIds(this.jdbc)).containsExactlyInAnyOrder("poll-due-feeds",
 				"feed-health-check", "event-publication-resubmission", "evaluate-pending-articles",
 				"backfill-missing-tags", "event-intake", "event-cleanup", "storyline-linking", "storyline-relation",
 				"expire-sessions", "forget-login-failures", "forget-read-notices", "rewrap-llm-keys",
 				"forget-request-counts", "digest-candidate-cleanup", "schedule-due-digests",
-				"recover-stalled-digests", "schedule-due-reports");
+				"recover-stalled-digests", "schedule-due-reports", "recover-stalled-reports");
 		assertThat(this.context.containsBean("presetFeedReconciliation")).isTrue();
 		assertThat(RoleProbe.stalenessMonitorTasks(this.context)).hasSize(1);
 	}

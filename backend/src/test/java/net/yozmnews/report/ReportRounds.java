@@ -10,8 +10,8 @@ import org.jobrunr.scheduling.JobScheduler;
  */
 public final class ReportRounds {
 
-	/** 리포트의 반복 작업 ID — 일정 회차 */
-	static final List<String> IDS = List.of("schedule-due-reports");
+	/** 리포트의 반복 작업 ID — 일정 회차 · 거두기 회차 */
+	static final List<String> IDS = List.of("schedule-due-reports", "recover-stalled-reports");
 
 	private ReportRounds() {
 	}
