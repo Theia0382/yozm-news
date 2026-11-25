@@ -68,3 +68,4 @@
 
 - 2026-11-18: 결정 "다시 묻는다" — 문구 판을 올릴 때도 모두 다시 묻는다([ADR-0236](0236-raising-the-relation-wording-version-clears-asked-records-and-asks-every-storyline-again.md))
 - 2026-11-19: 결정 "판정은 잇기와 따로 돈다"의 일시 실패한 스토리라인 — [ADR-0255](0255-storyline-linking-and-relation-queues-defer-transient-failures-until-a-retry-time-and-never-drop-them.md) · [storyline Spec §5](../specs/storyline.md#스토리라인-사이-관계) storyline-R31
+- 2026-11-25: 결정 "판정은 `evaluation` 의 공개 API 하나다"의 흐름 ID 와 모르는 범위 — 이름은 [ADR-0326](0326-development-names-call-a-shared-storyline-storyline-a-user-storyline-user-storyline-and-a-judgement-candidate-of-unknown-kind-candidate.md), 경계는 [evaluation Spec §1](../specs/evaluation.md#1-책임과-범위)

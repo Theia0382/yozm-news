@@ -45,4 +45,4 @@
 
 ## 후속 기록
 
-- 2026-11-23: 결과 "사용자에게 드러나는 것(정리 · 탭)은 개인 스토리라인 화면이 정한다" — [ADR-0289](0289-shown-flows-are-user-storylines-with-a-summary-which-the-summary-job-creates-and-removes.md) · [ADR-0290](0290-the-readers-storyline-tab-shows-the-users-summarized-flows-and-the-tracking-list-has-one-row-per-user-storyline.md) · [`reader` reader-R13](../specs/reader.md#정리된-흐름)
+- 2026-11-23: 결과 "사용자에게 드러나는 것(정리 · 탭)은 개인 스토리라인 화면이 정한다" — [ADR-0289](0289-shown-flows-are-user-storylines-with-a-summary-which-the-summary-job-creates-and-removes.md) · [ADR-0290](0290-the-readers-storyline-tab-shows-the-users-summarized-flows-and-the-tracking-list-has-one-row-per-user-storyline.md) · [`reader` reader-R13](../specs/reader.md#정리된-사용자-스토리라인)

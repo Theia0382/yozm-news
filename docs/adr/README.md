@@ -322,6 +322,7 @@
 | [0318](0318-change-report-period-days-are-written-in-the-users-zone-at-start-and-the-row-keeps-that-zone.md) | 변화 리포트 기간의 날짜는 생성을 시작할 때의 사용자 시간대로 적고, 그 시간대를 리포트 행에 남긴다 | 승인 |
 | [0319](0319-the-change-report-screen-has-a-list-per-kind-and-a-report-page-with-four-states-and-the-failure-cause-only.md) | 변화 리포트 화면은 종류마다 목록과 한 편 화면으로 보이고, 상태는 넷, 실패는 코드의 무슨 일 문구만 보인다 | 승인 |
 | [0320](0320-operator-screens-operations-docs-and-the-evaluation-tool-also-call-a-storyline-an-event-flow-and-a-big-one-a-big-topic.md) | 운영자 화면 · 운영 문서 · 평가 도구도 스토리라인을 사건 흐름 · 흐름 · 큰 화제로 부른다 | 승인 |
+| [0326](0326-development-names-call-a-shared-storyline-storyline-a-user-storyline-user-storyline-and-a-judgement-candidate-of-unknown-kind-candidate.md) | 개발 이름은 공유 스토리라인을 `Storyline`, 사용자 스토리라인을 `UserStoryline` 으로 부르고, 종류를 모르는 판정 후보는 `Candidate` 로 부른다 | 승인 |
 
 ## 운영 규칙
 

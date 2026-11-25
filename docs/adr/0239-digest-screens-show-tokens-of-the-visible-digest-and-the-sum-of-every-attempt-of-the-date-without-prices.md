@@ -30,4 +30,4 @@
 
 ## 후속 기록
 
-- 2026-11-23: 다이제스트 화면 밖의 사용자 비용(사용자 스토리라인의 정리에 쓴 토큰) — [ADR-0291](0291-tokens-spent-on-a-summary-are-shown-on-the-personal-flow-screen-as-the-last-summary-and-the-running-total.md) · [`reader` reader-R13](../specs/reader.md#정리된-흐름)
+- 2026-11-23: 다이제스트 화면 밖의 사용자 비용(사용자 스토리라인의 정리에 쓴 토큰) — [ADR-0291](0291-tokens-spent-on-a-summary-are-shown-on-the-personal-flow-screen-as-the-last-summary-and-the-running-total.md) · [`reader` reader-R13](../specs/reader.md#정리된-사용자-스토리라인)

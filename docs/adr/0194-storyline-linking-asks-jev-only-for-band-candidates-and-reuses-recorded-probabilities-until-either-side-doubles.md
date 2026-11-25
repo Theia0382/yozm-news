@@ -47,3 +47,7 @@
 | 옛 기준 점수 설정을 위 기준의 뜻으로 남긴다 | 이름(기준 점수)과 뜻(묻지 않고 붙이는 위 기준)이 어긋난다 |
 | 옛 설정을 무시하고 기동한다 | 기준을 덮어쓴 인스턴스가 모르게 기본값으로 돌아간다 |
 | 기사 한 건짜리 사건끼리는 짝을 짓지 않는다 | 큰 스토리라인의 기사 한 건짜리 사건 비율이 사건 전체보다 낮았고, 표본 검수에서도 따로 다룰 근거가 나오지 않았다 |
+
+## 후속 기록
+
+- 2026-11-25: 결정 "판정은 evaluation 의 새 공개 API(흐름 소속 판정) 하나다"의 이름 — [ADR-0326](0326-development-names-call-a-shared-storyline-storyline-a-user-storyline-user-storyline-and-a-judgement-candidate-of-unknown-kind-candidate.md) · [evaluation Spec §3](../specs/evaluation.md#3-공개-인터페이스)
