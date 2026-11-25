@@ -93,6 +93,9 @@ class LlmReportGeneratorFlowTests {
 	@Autowired
 	JdbcClient jdbc;
 
+	@Autowired
+	ReportEndings endings;
+
 	@BeforeEach
 	void stopDigestRounds() {
 		DigestRounds.stop(this.digestJobs);
@@ -159,7 +162,7 @@ class LlmReportGeneratorFlowTests {
 	}
 
 	private Map<String, Object> run(UserId user) {
-		ReportGeneration generation = new ReportGeneration(this.reports, this.sections, new ReportEndings(this.reports),
+		ReportGeneration generation = new ReportGeneration(this.reports, this.sections, this.endings,
 				new LlmReportGenerator(this.gateway), this.transaction, TestClocks.of(Instant::now));
 		ReportId id = generation.schedule(user, ReportFixtures.PERIOD).id();
 		ReportInput input = ReportFixtures.input(user, ReportFixtures.PERIOD,

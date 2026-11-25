@@ -154,6 +154,9 @@ class ReportMaterialCollectionTests {
 	@Autowired
 	JdbcClient jdbc;
 
+	@Autowired
+	ReportEndings endings;
+
 	private TagSetId active;
 
 	private String topic;
@@ -378,7 +381,7 @@ class ReportMaterialCollectionTests {
 	}
 
 	private ReportGeneration generation() {
-		return new ReportGeneration(this.reportRows, this.sections, new ReportEndings(this.reportRows),
+		return new ReportGeneration(this.reportRows, this.sections, this.endings,
 				new FakeReportGenerator(), this.transaction,
 				TestClocks.of(() -> Instant.parse("2026-11-12T00:00:00Z")));
 	}

@@ -96,6 +96,9 @@ class ReportGenerationTests {
 	JdbcClient jdbc;
 
 	@Autowired
+	ReportEndings endings;
+
+	@Autowired
 	ReportGeneration contextGeneration;
 
 	private final AtomicReference<Instant> now = new AtomicReference<>(T0);
@@ -523,7 +526,7 @@ class ReportGenerationTests {
 	}
 
 	private ReportGeneration generation(ReportGenerator generator) {
-		return new ReportGeneration(this.reports, this.sections, new ReportEndings(this.reports), generator, this.transaction,
+		return new ReportGeneration(this.reports, this.sections, this.endings, generator, this.transaction,
 				TestClocks.of(() -> this.now.get()));
 	}
 

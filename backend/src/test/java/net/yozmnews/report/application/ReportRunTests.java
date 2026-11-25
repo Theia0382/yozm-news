@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Map;
 
 import net.yozmnews.TestClocks;
@@ -17,6 +18,9 @@ import net.yozmnews.report.domain.content.ReportSectionRepository;
 import net.yozmnews.report.domain.report.ReportLedger;
 import net.yozmnews.report.domain.report.ReportRepository;
 import net.yozmnews.tag.TagSetDirectory;
+import net.yozmnews.user.GenerationFailureCause;
+import net.yozmnews.user.ReportFailed;
+import net.yozmnews.user.ReportFailedKind;
 import net.yozmnews.user.ReportModelDirectory;
 import net.yozmnews.user.UserTables;
 import net.yozmnews.user.UserTimezones;
@@ -27,6 +31,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.event.ApplicationEvents;
+import org.springframework.test.context.event.RecordApplicationEvents;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
@@ -38,6 +44,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
 @TestPropertySource(properties = "jobrunr.background-job-server.enabled=false")
+@RecordApplicationEvents
 class ReportRunTests {
 
 	private static final Instant NOW = Instant.parse("2026-11-23T03:00:00Z");
@@ -69,6 +76,12 @@ class ReportRunTests {
 	@Autowired
 	JdbcClient jdbc;
 
+	@Autowired
+	ApplicationEvents events;
+
+	@Autowired
+	ReportEndings endings;
+
 	@AfterEach
 	void clear() {
 		this.jdbc.sql("delete from reports").update();
@@ -78,7 +91,7 @@ class ReportRunTests {
 	}
 
 	private ReportRun run() {
-		ReportEndings endings = new ReportEndings(this.reports);
+		ReportEndings endings = this.endings;
 		ReportGeneration generation = new ReportGeneration(this.reports, this.sections, endings,
 				new FakeReportGenerator(), this.transaction, TestClocks.of(() -> NOW));
 		return new ReportRun(this.reports, this.ledger, this.models, this.timezones, this.collection, generation,
@@ -97,6 +110,10 @@ class ReportRunTests {
 			.containsEntry("zone", "America/Denver")
 			.containsEntry("started", false)
 			.containsEntry("provider", null);
+		// 실패 알림 이벤트 — 갈래는 키 확인, 기간 날짜는 적은 시간대(덴버, UTC−7)로 11-15 ~ 11-22
+		assertThat(this.events.stream(ReportFailed.class)).containsExactly(new ReportFailed(user, id.value(),
+				ReportFailedKind.WEEK, LocalDate.parse("2026-11-15"), LocalDate.parse("2026-11-22"),
+				GenerationFailureCause.KEY, NOW));
 	}
 
 	@Test
@@ -108,6 +125,7 @@ class ReportRunTests {
 
 		// 구독 · 추적 · 관심이 없는 새 사용자 — 갈래가 없어 생성기를 부르지 않고 재료 없음으로 끝난다
 		assertThat(status).isEqualTo(ReportStatus.EMPTY);
+		assertThat(this.events.stream(ReportFailed.class)).isEmpty();
 		assertThat(row(id)).containsEntry("status", "EMPTY")
 			.containsEntry("zone", "America/Denver")
 			.containsEntry("started", true)
@@ -127,7 +145,7 @@ class ReportRunTests {
 	}
 
 	private ReportId schedule(UserId user) {
-		return new ReportGeneration(this.reports, this.sections, new ReportEndings(this.reports),
+		return new ReportGeneration(this.reports, this.sections, this.endings,
 				new FakeReportGenerator(), this.transaction, TestClocks.of(() -> NOW))
 			.schedule(user, ReportFixtures.PERIOD)
 			.id();

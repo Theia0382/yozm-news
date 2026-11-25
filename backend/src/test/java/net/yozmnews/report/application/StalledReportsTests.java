@@ -18,7 +18,10 @@ import net.yozmnews.platform.AppClock;
 import net.yozmnews.report.ReportRounds;
 import net.yozmnews.report.domain.report.ReportLedger;
 import net.yozmnews.report.domain.report.ReportRepository;
+import net.yozmnews.user.GenerationFailureCause;
+import net.yozmnews.user.ReportFailed;
 import net.yozmnews.user.UserTimezones;
+import org.assertj.core.groups.Tuple;
 import org.jobrunr.scheduling.JobScheduler;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,6 +31,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.event.ApplicationEvents;
+import org.springframework.test.context.event.RecordApplicationEvents;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
@@ -41,6 +46,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
 @TestPropertySource(properties = "jobrunr.background-job-server.enabled=false")
+@RecordApplicationEvents
 class StalledReportsTests {
 
 	private static final Instant NOW = Instant.parse("2026-11-19T12:00:00Z");
@@ -66,6 +72,12 @@ class StalledReportsTests {
 	@Autowired
 	JdbcClient jdbc;
 
+	@Autowired
+	ApplicationEvents events;
+
+	@Autowired
+	ReportEndings endings;
+
 	private final List<Map.Entry<Long, UUID>> enqueued = Collections.synchronizedList(new ArrayList<>());
 
 	/** 행마다 다른 기간 — 같은 사용자 · 종류 · 기간은 하나다 */
@@ -88,7 +100,7 @@ class StalledReportsTests {
 
 	private StalledReports stalled(AppClock clock) {
 		ReportDispatch dispatch = new ReportDispatch((id, token) -> this.enqueued.add(Map.entry(id.value(), token)));
-		return new StalledReports(this.reports, this.ledger, new ReportEndings(this.reports), dispatch, this.timezones,
+		return new StalledReports(this.reports, this.ledger, this.endings, dispatch, this.timezones,
 				this.transaction, clock);
 	}
 
@@ -100,6 +112,7 @@ class StalledReportsTests {
 
 		stalled(NOW).runRound();
 
+		assertThat(this.events.stream(ReportFailed.class)).isEmpty();
 		Map<String, Object> again = row(stale);
 		assertThat(again).containsEntry("status", "SCHEDULED")
 			.containsEntry("dispatched_at", Timestamp.from(NOW))
@@ -126,6 +139,9 @@ class StalledReportsTests {
 		// 대조 — 예약한 지 59분이면 다시 등록한다
 		assertThat(row(early)).containsEntry("status", "SCHEDULED");
 		assertThat(this.enqueued).extracting(Map.Entry::getKey).containsExactly(early);
+		// 시작하지 않고 끝난 실패도 알림 이벤트가 난다 — 갈래는 잠시 뒤
+		assertThat(this.events.stream(ReportFailed.class)).extracting(ReportFailed::reportId, ReportFailed::cause)
+			.containsExactly(Tuple.tuple(late, GenerationFailureCause.TEMPORARY));
 	}
 
 	@Test
@@ -160,6 +176,8 @@ class StalledReportsTests {
 		// 대조 — 39분이면 그대로 생성 중
 		assertThat(row(busy)).containsEntry("status", "RUNNING");
 		assertThat(this.enqueued).isEmpty();
+		assertThat(this.events.stream(ReportFailed.class)).extracting(ReportFailed::reportId, ReportFailed::cause)
+			.containsExactly(Tuple.tuple(stuck, GenerationFailureCause.TEMPORARY));
 	}
 
 	/**

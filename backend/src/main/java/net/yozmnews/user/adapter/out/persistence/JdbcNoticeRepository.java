@@ -16,6 +16,7 @@ import net.yozmnews.source.FeedId;
 import net.yozmnews.source.FeedStatus;
 import net.yozmnews.tag.TagKind;
 import net.yozmnews.user.GenerationFailureCause;
+import net.yozmnews.user.ReportFailedKind;
 import net.yozmnews.user.domain.notice.DigestFailedContent;
 import net.yozmnews.user.domain.notice.FeedStatusContent;
 import net.yozmnews.user.domain.notice.FeedStatusEntry;
@@ -26,6 +27,7 @@ import net.yozmnews.user.domain.notice.NoticeKind;
 import net.yozmnews.user.domain.notice.NoticeRepository;
 import net.yozmnews.user.domain.notice.PasswordChangedContent;
 import net.yozmnews.user.domain.notice.PreferencesAdjustedContent;
+import net.yozmnews.user.domain.notice.ReportFailedContent;
 import net.yozmnews.user.domain.notice.RemovedSubscription;
 import net.yozmnews.user.domain.notice.SeenNotice;
 import net.yozmnews.user.domain.notice.StorylineSubscriptionsRemovedContent;
@@ -136,6 +138,21 @@ class JdbcNoticeRepository implements NoticeRepository {
 	}
 
 	@Override
+	public boolean createOnce(UserId user, ReportFailedContent content, Instant now) {
+		return this.jdbc.sql("""
+				insert into user_notices (user_id, kind, content, revision, created_at, updated_at)
+				values (:user, :kind, cast(:content as jsonb), 1, :now, :now)
+				on conflict (user_id, (content ->> 'reportId'), (content ->> 'failedAt')) where kind = 'REPORT_FAILED'
+				do nothing
+				""")
+			.param("user", user.value())
+			.param("kind", content.kind().name())
+			.param("content", json(content))
+			.param("now", utc(now))
+			.update() == 1;
+	}
+
+	@Override
 	public boolean createOnce(UserId user, DigestFailedContent content, Instant now) {
 		return this.jdbc.sql("""
 				insert into user_notices (user_id, kind, content, revision, created_at, updated_at)
@@ -213,6 +230,7 @@ class JdbcNoticeRepository implements NoticeRepository {
 			case STORYLINE_SUBSCRIPTIONS_REMOVED ->
 				JSON.readValue(rs.getString("content"), StoredSubscriptionsRemoved.class).content();
 			case DIGEST_FAILED -> JSON.readValue(rs.getString("content"), StoredDigestFailed.class).content();
+			case REPORT_FAILED -> JSON.readValue(rs.getString("content"), StoredReportFailed.class).content();
 		};
 		return new Notice(rs.getLong("id"), kind, content, rs.getInt("revision"),
 				rs.getObject("created_at", OffsetDateTime.class).toInstant(),
@@ -230,6 +248,7 @@ class JdbcNoticeRepository implements NoticeRepository {
 			case StorylineSubscriptionsRemovedContent subscriptionsRemoved ->
 				JSON.writeValueAsString(StoredSubscriptionsRemoved.of(subscriptionsRemoved));
 			case DigestFailedContent digestFailed -> JSON.writeValueAsString(StoredDigestFailed.of(digestFailed));
+			case ReportFailedContent reportFailed -> JSON.writeValueAsString(StoredReportFailed.of(reportFailed));
 		};
 	}
 
@@ -312,6 +331,26 @@ class JdbcNoticeRepository implements NoticeRepository {
 		DigestFailedContent content() {
 			return new DigestFailedContent(this.digestId, LocalDate.parse(this.digestDate), this.cause,
 					Instant.parse(this.failedAt));
+		}
+
+	}
+
+	/**
+	 * 리포트 실패 알림 내용의 저장 모양 — {@code {"reportId":…,"reportKind":…,"firstDay":…,"lastDay":…,"cause":…,"failedAt":…}}. 날짜 · 시각은
+	 * ISO 8601 문자열이다. {@code reportId} · {@code failedAt} 은 같은 실패의 알림을 하나로 묶는 고유 인덱스의 키다 — 이름을 바꾸면
+	 * 마이그레이션의 인덱스도 바꾼다
+	 */
+	private record StoredReportFailed(long reportId, ReportFailedKind reportKind, String firstDay, String lastDay,
+			GenerationFailureCause cause, String failedAt) {
+
+		static StoredReportFailed of(ReportFailedContent content) {
+			return new StoredReportFailed(content.reportId(), content.reportKind(), content.firstDay().toString(),
+					content.lastDay().toString(), content.cause(), content.failedAt().toString());
+		}
+
+		ReportFailedContent content() {
+			return new ReportFailedContent(this.reportId, this.reportKind, LocalDate.parse(this.firstDay),
+					LocalDate.parse(this.lastDay), this.cause, Instant.parse(this.failedAt));
 		}
 
 	}

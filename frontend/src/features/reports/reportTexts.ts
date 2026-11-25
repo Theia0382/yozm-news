@@ -12,6 +12,9 @@ import { formatDate } from "@/shared/lib/dateTime";
 
 type SectionKind = components["schemas"]["ReportSectionResponse"]["kind"];
 
+type ReportFailureCause =
+  components["schemas"]["ReportFailedNoticeResponse"]["cause"];
+
 /** 목록의 주소 */
 export const REPORTS_PATH = "/reports";
 
@@ -196,3 +199,20 @@ export const LIST_LOAD_FAILED = "리포트 목록을 불러오지 못했습니�
 
 /** 한 편을 읽지 못했을 때 */
 export const LOAD_FAILED = "리포트를 불러오지 못했습니다.";
+
+/** 실패 알림의 머리 */
+export const REPORT_FAILED_TITLE = "변화 리포트를 만들지 못했습니다";
+
+/** 실패 알림에서 그 리포트로 가는 링크 */
+export const FAILED_REPORT_LINK = "그 리포트 보기";
+
+/** 실패 알림의 갈래마다 할 일 — 리포트의 할 일을 말한다(다이제스트의 할 일 문구와 따로 둔다) */
+export const reportFailureCauseTexts: Record<ReportFailureCause, string> = {
+  KEY: "LLM 키를 쓸 수 없었습니다. 키를 확인하거나 다시 등록하세요.",
+  PROVIDER_ACCOUNT:
+    "공급자 계정의 권한이나 잔액 때문에 만들지 못했습니다. 공급자 계정을 확인하세요.",
+  TEMPORARY:
+    "공급자가 잠시 답하지 못했거나 만들기가 정한 시간 안에 끝나지 않았습니다.",
+  OUTPUT:
+    "모델의 출력을 리포트로 쓰지 못했습니다. 관심 설정에서 다른 모델을 골라 볼 수 있습니다.",
+};

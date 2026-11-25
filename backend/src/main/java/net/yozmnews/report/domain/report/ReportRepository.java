@@ -31,6 +31,10 @@ public interface ReportRepository extends CrudRepository<Report, Long> {
 	void writeStart(@Param("id") long id, @Param("snapshot") String snapshot, @Param("previous") @Nullable Long previous,
 			@Param("zone") String zone);
 
+	/** 기간 날짜를 적는 사용자 시간대 — 시작했거나 끝난 행만 있다(테이블 제약). 트랜잭션 안에서 부르면 같은 트랜잭션에서 쓴 값을 읽는다 */
+	@Query("select zone from reports where id = :id")
+	Optional<String> zoneOf(@Param("id") long id);
+
 	/**
 	 * 기간 날짜를 적는 사용자 시간대를 쓴다 — 시작하지 않고 끝낼 때, 끝내는 저장 직전에 같은 트랜잭션에서 부른다(끝난 행은 시간대가 언제나 있다 —
 	 * 테이블 제약). 버전을 올리지 않는다
