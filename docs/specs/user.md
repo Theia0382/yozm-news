@@ -104,7 +104,7 @@ HTTP 엔드포인트:
 | `/api/storyline-subscriptions/{storylineId}` | `DELETE` | 해제 — 그 스토리라인의 꼭대기를 가진 추적 중인 사용자 스토리라인 모두의 추적을 끈다. `UNSUBSCRIBED` · `NOT_SUBSCRIBED`. ID 가 1 보다 작거나 숫자가 아니면 400(user-R52) |
 | `/api/storyline-subscriptions/changes` | `GET` | 추적 이력 한 쪽 — 사용자가 직접 한 추적 · 해제의 지금 스토리라인 ID(지워졌으면 null) · 더함 뺌 · 시각, 최근부터, 다음 쪽 커서. 질의 `beforeAt` · `beforeId`(다음 쪽 커서 — 함께). 하나만 오거나 시각 · ID(1 이상)를 읽을 수 없으면 400(user-R63) |
 
-알림 세 경로 · 관심 설정 열두 경로 · 스토리라인 구독 네 경로는 세션이 필요하며 사용자 격리 시험에 등록돼 있고([account Spec](account.md#화면용-api-의-공개와-세션-사용자) account-R5 · R6), LLM 키가 없는 세션 사용자에게도 연다(`@AllowedWithoutLlmKey` — account-R5). 판정 결과는 200 이고 요청 본문의 칸이 없으면 본문 형식 400 이다. 요청 · 응답 형식은 `api/openapi.json` 에 있다.
+알림 세 경로 · 관심 설정 열두 경로 · 스토리라인 구독 다섯 경로는 세션이 필요하며 사용자 격리 시험에 등록돼 있고([account Spec](account.md#화면용-api-의-공개와-세션-사용자) account-R5 · R6), LLM 키가 없는 세션 사용자에게도 연다(`@AllowedWithoutLlmKey` — account-R5). 판정 결과는 200 이고 요청 본문의 칸이 없으면 본문 형식 400 이다. 요청 · 응답 형식은 `api/openapi.json` 에 있다.
 
 ### StorylineSubscriptionDirectory
 

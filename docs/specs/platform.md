@@ -431,7 +431,7 @@ public enum ChangeActor { SYSTEM, OPERATOR }
 | `OPERATOR` | 공개 운영 API 를 거친 운영자 |
 
 - 계약
-  - 사용자를 가리키지 않는다 — 지금 운영자는 토큰 하나라 사람을 구별하지 않는다
+  - 사용자를 가리키지 않는다 — 운영자 계정 세션과 운영자 토큰을 가리지 않고 `OPERATOR` 하나로 남긴다
   - 저장 값은 상수 이름(`SYSTEM` · `OPERATOR`)이다 — 쓰는 모듈의 이력 테이블이 이 이름으로 저장한다([tag-R13](tag.md#태그-기준--저장-기준) · [storyline-R20](storyline.md#큰-판정) · [account-R25](account.md#가입-정책))
 
 관련 규칙: 없음 — 이력 규칙은 쓰는 모듈이 갖는다.

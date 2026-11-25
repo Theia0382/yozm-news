@@ -111,7 +111,7 @@ public record ArticleFetched(SourceId sourceId, FeedId feedId, Instant fetchedAt
 
 ### SourceDeleted · FeedDeleted
 
-운영자가 소스 · 피드를 지웠다(source → article).
+운영자가 소스 · 피드를 지웠다(`SourceDeleted` 는 source → article · user, `FeedDeleted` 는 source → article).
 
 ```java
 public record SourceDeleted(SourceId sourceId) {}

@@ -107,7 +107,7 @@ HTTP 엔드포인트 — 모두 운영자 경로다(`ADMIN` 계정 세션 또는
 | `POST /api/admin/accounts` | 계정 생성 — 본문 `email` · `displayName` · `initialPassword`. 만든 계정은 일반 사용자이고 첫 로그인에서 비밀번호를 바꾼다([account-R28](account.md#첫-운영자와-운영자의-계정-운영)) |
 | `PUT /api/admin/accounts/initial-password` | 첫 로그인 전 계정의 초기 비밀번호 다시 정하기 — 본문 `email` · `initialPassword`. 그 계정의 세션이 모두 끝난다 |
 
-요청 · 응답 형식의 정본은 [`api/openapi.json`](../../api/openapi.json)이다([ADR-0020](../adr/0020-screen-api-contract-from-committed-openapi-spec.md)). 결과 · 오류의 대응은 admin-R1 ~ admin-R3, 수집 현황의 응답은 admin-R4, 평가 현황 · 보도량 · 대기 건수의 응답은 admin-R5, 운영자 응답의 기사 정보는 admin-R6, 사건 · 스토리라인 · 큰 스토리라인 · 판정 기록의 응답은 admin-R7, 기사 상세의 응답은 admin-R8 이다. 빠진 태그 채움의 응답은 `evaluation` 의 결과 · 보기를 옮기고 버전 ID 를 JSON 수로 낸다(admin-R1). 이벤트 발행 목록은 `platform` 의 `StrandedPublications` 를 옮기기만 하고 이벤트 내용을 싣지 않는다(platform-R14).
+요청 · 응답 형식의 정본은 [`api/openapi.json`](../../api/openapi.json)이다([ADR-0020](../adr/0020-screen-api-contract-from-committed-openapi-spec.md)). 결과 · 오류의 대응은 admin-R1 ~ admin-R3, 수집 현황의 응답은 admin-R4, 평가 현황 · 보도량 · 대기 건수의 응답은 admin-R5, 운영자 응답의 기사 정보는 admin-R6, 사건 · 스토리라인 · 큰 스토리라인 · 판정 기록의 응답은 admin-R7, 기사 상세의 응답은 admin-R8 이다. 빠진 태그 채움의 응답은 `tag` 의 결과 · 보기를 옮기고 버전 ID 를 JSON 수로 낸다(admin-R1). 이벤트 발행 목록은 `platform` 의 `StrandedPublications` 를 옮기기만 하고 이벤트 내용을 싣지 않는다(platform-R14).
 
 ## 4. 내부 구조
 
