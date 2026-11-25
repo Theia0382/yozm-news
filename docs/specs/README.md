@@ -127,14 +127,14 @@
    - **불변식** — §4 · §6 의 동작 · 제약 가운데 지켜야 하는 불변식도 §5 에 규칙으로 쓰고, §4 · §6 은 그 식별자를 가리킨다. 멱등성 · 겹침 방지 · 고유 제약의 뜻 · 입력 방어가 그렇다
    - **인용** — 테스트는 자기가 지키는 규칙을 이 식별자로 가리킨다. 테스트 쪽 표기 형식은 코드 주석 규칙([CONTRIBUTING.md §7](../../CONTRIBUTING.md#주석))이 정한다
    - **판단 하나** — 규칙 하나는 판단 하나를 말한다. 하위 항목은 그 판단의 조건과 예외만 쓴다. 판단이 여럿이면 쪼갠다
-   - **쪼개기** — 원래 식별자는 묶음 머리로 남긴다. 묶음 머리에는 무엇을 덮는지 한두 문장과 하위 규칙 식별자의 목록만 쓴다. 쪼갠 판단은 그 Spec 의 새 번호를 받는다. 묶음 머리를 인용한 곳은 하위 규칙 전부를 가리킨다
-   - **배치** — §5 의 하위 절은 주제별로 두고, 하위 절 안의 규칙은 번호 오름차순으로 놓는다. 하위 절 이름은 링크 앵커이므로 바꾸지 않는다. 바꾸면 그 앵커를 가리키는 링크를 함께 고친다
+   - **쪼개기** — 원래 식별자는 묶음 머리로 남긴다. 묶음 머리에는 무엇을 덮는지 한두 문장과 하위 규칙 식별자의 목록만 쓴다. 쪼갠 판단은 그 Spec 의 새 번호를 받는다. 묶음 머리를 인용한 곳은 하위 규칙 전부를 가리킨다([ADR-0329](../adr/0329-a-large-rule-is-split-into-one-judgement-each-and-its-identifier-stays-as-a-group-head-covering-the-sub-rules.md))
+   - **배치** — §5 의 하위 절은 주제별로 두고, 하위 절 안의 규칙은 번호 오름차순으로 놓는다. 하위 절 이름은 링크 앵커이므로 바꾸지 않는다. 바꾸면 그 앵커를 가리키는 링크를 함께 고친다. 규칙마다 앵커를 두지 않는다([ADR-0330](../adr/0330-spec-rules-sit-in-number-order-within-topic-subsections-retired-rules-go-to-a-last-subsection-and-rules-get-no-anchors.md))
    - **폐지** — 규칙을 없앨 때는 항목을 지우지 않는다. 식별자를 남긴 채 내용을 `(폐지 — {대체 식별자 또는 사유})` 로 바꾸고, §5 마지막 하위 절 "폐지한 규칙"으로 옮겨 번호순으로 둔다
-3. **미구현 · 측정 전 표시** — 아직 코드가 없는 항목은 항목 앞에 `**(미구현)**` 을 적고, 그 항목을 구현하는 변경이 표시를 지운다. 구현된 것과 아닌 것이 한 문장에 섞이면 미구현 부분을 떼어 별도 항목으로 표시한다. 아직 재지 않은 잠정값인 상수에는 값 옆에 `(측정 전)` 을 달고, 그 값을 재서 고치는 변경이 표시를 지운다
+3. **미구현 · 측정 전 표시** — 아직 코드가 없는 항목은 항목 앞에 `**(미구현)**` 을 적고, 그 항목을 구현하는 변경이 표시를 지운다. 구현된 것과 아닌 것이 한 문장에 섞이면 미구현 부분을 떼어 별도 항목으로 표시한다. 아직 재지 않은 잠정값인 상수에는 값 옆에 `(측정 전)` 을 달고, 그 값을 재서 고치는 변경이 표시를 지운다([ADR-0332](../adr/0332-reasons-and-measurements-belong-to-the-deciding-adr-are-dropped-without-one-and-unmeasured-values-are-marked.md))
 4. **작성 규칙** — [docs/README.md §4](../README.md#4-작성-규칙)의 작성 규칙을 모두 따른다
 5. **코드 이름** — 코드의 타입 · 패키지는 인라인 코드 이름으로만 쓰고, 코드 파일 · 디렉터리로 링크하지 않는다. 타입은 이름 그대로(`FeedPoller`) 쓰고, 중첩 타입은 바깥 타입부터 점으로 잇는다(`FetchResult.Fetched`). 패키지는 모듈 패키지 기준 경로로 쓴다(`domain/poll`). Spec 의 코드 이름이 코드와 맞는지는 공개 인터페이스 · 포트 선언의 사본처럼 리뷰가 본다
 6. **다이어그램** — 시퀀스 · 상태 다이어그램(Mermaid)을 쓸 수 있다. 트랜잭션 경계 · 외부 호출 · 실패 갈림 · 잠금 가운데 하나라도 있는 과정은 시퀀스 다이어그램으로 그린다. 다만 단계가 하나뿐인 과정, 곧 참가자 사이 호출이 하나이고 갈림도 하나 이하인 과정은 그리지 않는다. 쓰기 · 잠금 · 외부 호출 · 실패 처리(결과에 따라 다시 하거나 다르게 처리하는 것) 없이 읽기만 하는 조회 과정은 공개 조회를 여럿 엮거나 요청 검사가 있어도 그리지 않는다. 저장하지 않는 미리보기도 읽기다. 그림은 설명이고 규범은 §5 의 규칙이다. 둘이 다르면 규칙이 맞고 그림을 고친다. 그림의 단계 · 전이에는 해당 규칙 식별자를 단다. 클래스 다이어그램은 쓰지 않는다
 7. **하위 제목** — §3 · §4 의 하위 제목은 같은 Spec 의 §5 하위 제목과 이름이 겹치지 않게 한다. 겹치면 먼저 나오는 쪽이 앵커를 가져, §5 하위 절을 가리키던 링크가 깨지지 않은 채 다른 절을 가리킨다
-8. **화면 동작** — 모듈 Spec 의 규칙은 서버가 지키는 것만 쓴다. 화면이 무엇을 언제 그리고 부르는지는 화면 Spec 에 쓰고, 모듈 Spec 의 규칙은 그 `web-R` 식별자를 가리킨다
+8. **화면 동작** — 모듈 Spec 의 규칙은 서버가 지키는 것만 쓴다. 화면이 무엇을 언제 그리고 부르는지는 화면 Spec 에 쓰고, 모듈 Spec 의 규칙은 그 `web-R` 식별자를 가리킨다([ADR-0328](../adr/0328-the-frontend-has-one-screen-spec-web-holding-screen-names-routes-and-screen-behavior.md))
 
-공통 구조와 이 규칙을 정한 결정은 [ADR-0034](../adr/0034-module-spec-as-public-interface-specification-and-docs-by-kind.md) · [ADR-0036](../adr/0036-module-spec-holds-internal-structure-and-port-declarations-in-eight-sections.md)에 있다.
+공통 구조와 이 규칙을 정한 결정은 [ADR-0034](../adr/0034-module-spec-as-public-interface-specification-and-docs-by-kind.md) · [ADR-0036](../adr/0036-module-spec-holds-internal-structure-and-port-declarations-in-eight-sections.md) · [ADR-0328](../adr/0328-the-frontend-has-one-screen-spec-web-holding-screen-names-routes-and-screen-behavior.md) · [ADR-0329](../adr/0329-a-large-rule-is-split-into-one-judgement-each-and-its-identifier-stays-as-a-group-head-covering-the-sub-rules.md) · [ADR-0330](../adr/0330-spec-rules-sit-in-number-order-within-topic-subsections-retired-rules-go-to-a-last-subsection-and-rules-get-no-anchors.md) · [ADR-0333](../adr/0333-a-term-is-defined-in-the-spec-of-the-module-owning-the-concept-and-only-cross-cutting-terms-go-to-the-overview.md)에 있다.

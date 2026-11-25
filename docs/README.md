@@ -90,8 +90,8 @@
 - **현재 상태 · 자기완결** — 참조 문서는 현재 상태만 쓴다. "~에서 바뀜" 같은 변경 이력, 이슈 번호에 기댄 서술을 넣지 않는다. 읽는 자리에서 조건과 귀결을 이해할 수 있게 쓴다
 - **절 번호 유지** — 다른 문서 · 코드 주석이 `overview.md §5` 처럼 절을 인용한다. 개정할 때 기존 절 번호를 유지하고, 새 절은 끝에 붙인다
 - **ADR 은 기록이다** — 본문은 등재한 작업의 PR 이 merge 되기 전까지만 고친다. merge 뒤에는 상태 줄 갱신 · 대체 표시 · 말미 후속 기록 · 형식 정정(링크 · 오탈자)만 한다. 결정을 바꿀 때는 새 ADR 을 쓰고 구 ADR 에 알린다([대체와 보충](adr/README.md#대체와-보충))
-- **한 말에 한 뜻** — 개발 용어는 코드 이름 하나의 뜻으로만 쓴다. 같은 말을 다른 뜻으로 쓰지 않고, 정의된 말과 겹치는 일반어도 피한다. 용어의 정본은 그 개념을 소유한 모듈의 Spec §2 다. 주인을 한 모듈로 정할 수 없는 횡단 용어의 정본은 `overview.md` §8 이고, 화면 이름의 정본은 화면 Spec 의 §2 다
-- **판단의 이유와 측정 기록** — 판단의 이유와 실측 결과는 그 판단을 정한 ADR 이 갖는다. 본문에 없는 실측은 그 ADR 의 말미 후속 기록에 남긴다. 그 판단을 정한 ADR 이 없으면 문서에 쓰지 않는다. 아직 재지 않은 잠정값에는 값 옆에 `(측정 전)` 만 단다
+- **한 말에 한 뜻** — 개발 용어는 코드 이름 하나의 뜻으로만 쓴다. 같은 말을 다른 뜻으로 쓰지 않고, 정의된 말과 겹치는 일반어도 피한다. 용어의 정본은 그 개념을 소유한 모듈의 Spec §2 다. 주인을 한 모듈로 정할 수 없는 횡단 용어의 정본은 `overview.md` §8 이고, 화면 이름의 정본은 화면 Spec 의 §2 다([ADR-0331](adr/0331-a-development-term-has-only-the-meaning-of-one-code-name-and-words-with-several-meanings-are-renamed-per-meaning.md) · [ADR-0333](adr/0333-a-term-is-defined-in-the-spec-of-the-module-owning-the-concept-and-only-cross-cutting-terms-go-to-the-overview.md))
+- **판단의 이유와 측정 기록** — 판단의 이유와 실측 결과는 그 판단을 정한 ADR 이 갖는다. 본문에 없는 실측은 그 ADR 의 말미 후속 기록에 남긴다. 그 판단을 정한 ADR 이 없으면 문서에 쓰지 않는다. 아직 재지 않은 잠정값에는 값 옆에 `(측정 전)` 만 단다([ADR-0332](adr/0332-reasons-and-measurements-belong-to-the-deciding-adr-are-dropped-without-one-and-unmeasured-values-are-marked.md))
 - **문장 꼴** — 리뷰가 읽어 보고 판정한다. 길이(글자 수) 상한은 두지 않는다
   - 한 문단과 한 표 칸은 한 가지를 말한다
   - 괄호는 한 겹까지 쓰고, 괄호 안에 줄표를 넣지 않는다

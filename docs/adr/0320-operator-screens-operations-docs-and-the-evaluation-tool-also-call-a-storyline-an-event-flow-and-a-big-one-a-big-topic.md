@@ -1,6 +1,6 @@
 # ADR-0320: 운영자 화면 · 운영 문서 · 평가 도구도 스토리라인을 사건 흐름 · 흐름 · 큰 화제로 부른다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 화면 이름과 개발 이름의 대응의 자리([ADR-0328](0328-the-frontend-has-one-screen-spec-web-holding-screen-names-routes-and-screen-behavior.md))
 - 날짜: 2026-11-25
 - 근거: [이슈 #251](https://github.com/Theia0382/yozm-news/issues/251) — 독자 화면은 스토리라인을 "사건 흐름" · "흐름" · "큰 화제"라 부르는데 운영자 화면과 운영 문서는 "스토리라인" · "큰 스토리라인"이라 같은 개체를 두 말로 불렀다. 운영 쪽 이름을 독자 화면에 맞추고 평가 도구의 출력까지 바꾸기로 정했다. 구현 커밋 `f501137` · `9c3cd91` · `f78f8ea`
 - 관련: [ADR-0292](0292-reader-screens-call-a-storyline-an-event-flow.md)(부분 대체 — 결정 셋째 항목의 운영자 화면 · 운영 문서 부분, 결과 첫 항목), [ADR-0241](0241-selection-reasons-mark-only-citations-outside-subscribed-topics-named-interest-and-big-topic.md)(부분 대체 — 운영자 화면의 "큰 스토리라인"은 그대로라는 문장)
@@ -18,10 +18,12 @@
 - **큰 판정과 그 기준은 "큰 화제 판정" · "큰 화제 기준", 평가 지표는 "큰 화제 정밀도 · 재현율"이다.**
 - **운영자 화면에 그대로 뜨는 운영자 API 의 문제 설명도 화면 이름을 쓴다** — "없는 흐름: {ID}" · "흐름 ID 는 1 이상이다" · "큰 화제 기준은 …".
 - **개발 이름은 그대로다** — 운영자 API 의 경로 · 응답 칸 · 명세 설명, 설정 키 · 환경 변수, 표 이름, 평가 도구의 명령 · 파일 · 칸 · docstring, 코드 주석 · 식별자 · 화면 주소, Spec 의 규칙 서술, 앱 로그 · 작업 이름.
+> 부분 대체(첫 문장) — [ADR-0328](0328-the-frontend-has-one-screen-spec-web-holding-screen-names-routes-and-screen-behavior.md). 지금 상태: [web Spec §2](../specs/web.md#2-용어)
 - **화면 이름과 개발 이름의 대응은 [overview §8](../overview.md#8-용어)이 갖는다.** 운영 문서는 [사건 · 흐름 화면 읽기](../operations/events.md) 머리에서 한 번 밝히고, 배포 구성의 설명 문장도 운영 문서와 같은 이름을 쓴다.
 
 ## 결과
 
+> 부분 대체(둘째 문장) — [ADR-0328](0328-the-frontend-has-one-screen-spec-web-holding-screen-names-routes-and-screen-behavior.md). 지금 상태: [web Spec §2](../specs/web.md#2-용어)
 - 같은 개체를 독자 화면 · 운영자 화면 · 운영 문서 · 평가 도구 출력이 한 말로 부른다. 화면 쪽 이름과 개발 쪽 이름(Spec · 코드 · 명세 · 로그)이 갈리고, 그 대응은 overview §8 의 "스토리라인" · "큰 판정" 행에 있다.
 - 운영자 API 의 명세 설명("없는 스토리라인이다")과 실제 문제 설명("없는 흐름")의 말이 다르다. admin Spec 은 화면에 뜨는 문제 설명을 인용하므로 그 인용에는 화면 이름이 든다.
 - 운영 문서의 절 제목이 바뀌어 앵커가 바뀌었다. 배포 구성 주석은 바뀐 절 제목을 가리킨다.

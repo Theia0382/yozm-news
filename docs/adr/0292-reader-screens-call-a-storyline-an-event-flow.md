@@ -14,12 +14,12 @@
 
 - **독자 화면의 탭과 화면 제목은 "사건 흐름", 본문은 "흐름"이다.**
 - **기간에 크게 보도된 흐름의 배지는 "큰 화제"다.**
-> 부분 대체(운영자 화면 · 운영 문서) — [ADR-0320](0320-operator-screens-operations-docs-and-the-evaluation-tool-also-call-a-storyline-an-event-flow-and-a-big-one-a-big-topic.md). 지금 상태: [overview §8](../overview.md#8-용어)
+> 부분 대체(운영자 화면 · 운영 문서) — [ADR-0320](0320-operator-screens-operations-docs-and-the-evaluation-tool-also-call-a-storyline-an-event-flow-and-a-big-one-a-big-topic.md). 지금 상태: [web Spec §2](../specs/web.md#2-용어)
 - **개발 이름(스토리라인 · 사용자 스토리라인 · 스토리라인 구독)과 운영자 화면 · 운영 문서의 "스토리라인"은 그대로다.**
 
 ## 결과
 
-> 부분 대체 — [ADR-0320](0320-operator-screens-operations-docs-and-the-evaluation-tool-also-call-a-storyline-an-event-flow-and-a-big-one-a-big-topic.md). 지금 상태: [overview §8](../overview.md#8-용어)
+> 부분 대체 — [ADR-0320](0320-operator-screens-operations-docs-and-the-evaluation-tool-also-call-a-storyline-an-event-flow-and-a-big-one-a-big-topic.md). 지금 상태: [web Spec §2](../specs/web.md#2-용어)
 - 같은 개체를 독자 화면과 운영자 화면이 다른 말로 부른다.
 - 관심사 히스토리의 "관심의 흐름" 같은 문구는 사건 흐름과 헷갈리지 않게 다른 말을 쓴다.
 

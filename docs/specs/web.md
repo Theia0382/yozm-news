@@ -29,7 +29,7 @@
 
 ## 2. 용어
 
-화면 이름의 정본이다. 개발 용어의 뜻은 [overview.md §8](../overview.md#8-용어)과 각 모듈 Spec 의 §2 에 있다.
+화면 이름의 정본이다([ADR-0328](../adr/0328-the-frontend-has-one-screen-spec-web-holding-screen-names-routes-and-screen-behavior.md)). 개발 용어의 뜻은 [overview.md §8](../overview.md#8-용어)과 각 모듈 Spec 의 §2 에 있다.
 
 | 화면 이름 | 쓰는 화면 | 개발 용어 |
 |---|---|---|
@@ -289,3 +289,4 @@
 | [0319](../adr/0319-the-change-report-screen-has-a-list-per-kind-and-a-report-page-with-four-states-and-the-failure-cause-only.md) | 변화 리포트 화면은 종류마다 목록과 한 편 화면이다 |
 | [0320](../adr/0320-operator-screens-operations-docs-and-the-evaluation-tool-also-call-a-storyline-an-event-flow-and-a-big-one-a-big-topic.md) | 운영자 화면도 사건 흐름 · 흐름 · 큰 화제로 부른다 |
 | [0325](../adr/0325-a-failed-report-is-regenerated-from-the-screen-on-the-same-row-up-to-three-times.md) | 실패한 리포트는 화면에서 세 번까지 다시 만든다 |
+| [0328](../adr/0328-the-frontend-has-one-screen-spec-web-holding-screen-names-routes-and-screen-behavior.md) | 프론트엔드는 화면 Spec 하나를 갖고 화면 이름 · 경로 · 동작을 담는다 |
