@@ -43,3 +43,4 @@
 
 - 2026-11-24: 결정 절 "화면은 스냅숏 하나로 리포트의 글과 같은 비교를 보인다"의 보이는 꼴 — [ADR-0316](0316-a-change-report-view-carries-each-visible-sections-numbers-as-typed-values-and-resolves-flow-lines-like-citations.md) · [report Spec](../specs/report.md#리포트-조회) report-R25
 - 2026-11-24: 결정 절 "직전 값은 직전 리포트의 스냅숏에서 꺼낸다"의 직전 리포트를 리포트 행에 남기는 것 — [ADR-0317](0317-a-change-report-row-points-to-the-previous-report-it-took-the-previous-values-from.md) · [report Spec](../specs/report.md#직전-리포트와-스냅숏) report-R18
+- 2026-11-25: 결정 절 "화면은 스냅숏 하나로 리포트의 글과 같은 비교를 보인다"의 보이는 꼴(수를 글자로 보이지 않음) — [ADR-0337](0337-the-change-report-screen-shows-no-numbers-in-text-interest-as-history-cells-and-judgements-as-coloured-words.md) · [reader Spec](../specs/reader.md#변화-리포트) reader-R16

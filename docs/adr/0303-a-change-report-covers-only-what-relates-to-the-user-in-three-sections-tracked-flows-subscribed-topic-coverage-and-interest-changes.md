@@ -1,6 +1,6 @@
 # ADR-0303: 변화 리포트는 그 사용자와 관계된 것만 다루고, 갈래는 추적한 흐름 · 구독 주제 보도량 · 관심 변화 셋이다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 결과의 `EMPTY` 조건([ADR-0336](0336-change-report-interest-lines-are-only-the-changed-ones-and-without-a-change-there-is-no-interest-section.md))
 - 날짜: 2026-11-24
 - 근거: [이슈 #238](https://github.com/Theia0382/yozm-news/issues/238) — 기점 `f1d0938` 의 리포트 입력 목록(pipeline §10)을 목적(ADR-0025)과 사용자 스토리라인(user Spec)에 대조해 재료의 범위와 갈래를 정함
 - 관련: [ADR-0273](0273-change-reports-are-written-in-fixed-sections-per-material-kind-keyed-as-required-fields.md)(갈래 집합과 맥락의 입력 갈래 넷 — 부분 대체), [ADR-0103](0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md)(결정 "변화 리포트의 보도량이 쓰는 '큰' 것" — 부분 대체), [ADR-0025](0025-long-term-personal-news-history-in-v1.md)(변화 리포트의 목적 — 개인 뉴스 히스토리)
@@ -24,6 +24,7 @@
 ## 결과
 
 - 리포트의 모든 흐름이 사용자 스토리라인이라 설명할 글(정리)이 설계상 있다.
+> 부분 대체(첫 문장) — [ADR-0336](0336-change-report-interest-lines-are-only-the-changed-ones-and-without-a-change-there-is-no-interest-section.md). 지금 상태: [report Spec](../specs/report.md#재료) report-R14
 - 구독 주제 · 추적 흐름 · 관심 신호가 모두 없는 사용자는 갈래가 하나도 없어 리포트가 `EMPTY` 다. 가입 기본값에는 주제 구독이 없다.
 - "이번 기간 세상의 큰 흐름"은 리포트에 배경으로 나오지 않는다 — 다이제스트 큰 슬롯이 알린다(큰 슬롯 수를 0 으로 둔 사용자는 그것도 없다).
 - 갈래가 하나 줄어 종류 enum, 출력 서술, 저장의 종류 제약을 함께 바꾼다.
