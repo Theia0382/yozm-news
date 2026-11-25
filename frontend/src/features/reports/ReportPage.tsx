@@ -7,6 +7,7 @@ import {
   type ReportStoryline,
   type ReportUserStorylineCount,
   type ReportInterests,
+  type ReportKind,
   ReportRequestError,
   type ReportSection,
   useRegenerateReport,
@@ -23,7 +24,6 @@ import {
   LOAD_FAILED,
   NOT_FOUND,
   NO_LEVEL,
-  NO_PREVIOUS,
   REGENERATE,
   REGENERATIONS_SPENT,
   REGENERATION_FAILED,
@@ -31,8 +31,10 @@ import {
   type Tone,
   countColumns,
   countsText,
+  currentCountText,
   hiddenSectionsText,
   levelText,
+  noPreviousTexts,
   previousLink,
   reportFailureTexts,
   reportPath,
@@ -42,7 +44,10 @@ import {
   reportsPath,
   shiftLabels,
   shiftTones,
-  statsTitles,
+  sectionHeadings,
+  stateTones,
+  storylineColumns,
+  storylineTableTitles,
   toneClasses,
   trendLabels,
   trendTones,
@@ -54,6 +59,7 @@ import {
   userStorylinePath,
 } from "@/features/storylines/storylineTexts";
 import { formatDateTime } from "@/shared/lib/dateTime";
+import { storylineStateLabels } from "@/shared/lib/storylineState";
 import { cellColor, cellOpacity } from "@/shared/lib/interestLevel";
 import { Button } from "@/shared/ui/button";
 import { NARROW_WIDTH, PAGE_FRAME } from "@/shared/ui/widths";
@@ -65,8 +71,8 @@ function readId(value: string | undefined): number | null {
 }
 
 /**
- * 변화 리포트 한 편 — 상태(만드는 중 · 비어 있음 · 실패 · 내용), 개요와 갈래 섹션마다 제목 · 본문 · 그 갈래의 숫자 표 · 인용, 숨긴 섹션
- * 안내, 비교한 직전 리포트, 모델 · 토큰(docs/specs/reader.md reader-R16). 비교는 리포트가 만들 때 남긴 숫자 그대로다
+ * 변화 리포트 한 편 — 상태(만드는 중 · 비어 있음 · 실패 · 내용), 갈래 섹션마다 고정 제목 · 요지(모델이 쓴 제목) · 본문 · 그 갈래의 표 · 인용,
+ * 숨긴 섹션 안내, 직전 리포트, 모델 · 토큰(docs/specs/reader.md reader-R16). 표는 리포트가 만들 때 남긴 값 그대로다
  */
 export function ReportPage() {
   const id = readId(useParams().id);
@@ -156,7 +162,7 @@ function Body({
       return (
         <div className="space-y-8">
           {report.sections.map((section) => (
-            <Section key={section.kind} section={section} />
+            <Section key={section.kind} section={section} kind={summary.kind} />
           ))}
           {report.hiddenSections > 0 && (
             <p role="status" className="text-sm text-muted-foreground">
@@ -206,13 +212,21 @@ function Regenerate({
   );
 }
 
-function Section({ section }: { section: ReportSection }) {
+/** 갈래 섹션 — 갈래의 고정 제목 아래 모델이 쓴 제목을 요지 한 줄로, 이어 본문 · 표 · 인용 */
+function Section({
+  section,
+  kind,
+}: {
+  section: ReportSection;
+  kind: ReportKind;
+}) {
   return (
     <section className="space-y-3">
-      <h2 className="text-lg font-semibold break-words">{section.title}</h2>
+      <h2 className="text-lg font-semibold">{sectionHeadings[section.kind]}</h2>
+      <p className="font-medium break-words">{section.title}</p>
       <p className="break-words whitespace-pre-line">{section.body}</p>
       {section.userStorylines !== null && (
-        <UserStorylineCounts rows={section.userStorylines} />
+        <UserStorylineCounts rows={section.userStorylines} kind={kind} />
       )}
       {section.interests !== null && (
         <InterestLevels interests={section.interests} />
@@ -300,11 +314,18 @@ function LevelCell({
   );
 }
 
-function UserStorylineCounts({ rows }: { rows: ReportUserStorylineCount[] }) {
+/** 추적한 흐름 표 — 주간은 직전 주간과 견준 판정, 월간은 생성 때 흐름의 상태(직전과 견주지 않는다) */
+function UserStorylineCounts({
+  rows,
+  kind,
+}: {
+  rows: ReportUserStorylineCount[];
+  kind: ReportKind;
+}) {
   return (
     <Table
-      caption={statsTitles.STORYLINES}
-      headers={[countColumns.userStoryline, countColumns.trend]}
+      caption={storylineTableTitles[kind]}
+      headers={[countColumns.userStoryline, storylineColumns[kind]]}
     >
       {rows.map((row) => (
         <tr key={row.storyline.storylineId} className="border-t border-input">
@@ -316,15 +337,48 @@ function UserStorylineCounts({ rows }: { rows: ReportUserStorylineCount[] }) {
               </span>
             )}
           </th>
-          <ToneCell
-            label={trendLabels[row.trend]}
-            tone={trendTones[row.trend]}
-            detail={countsText(row.articles, row.previous)}
-          />
+          <StorylineCountCell row={row} kind={kind} />
         </tr>
       ))}
     </Table>
   );
+}
+
+/** 흐름 줄의 판정 · 상태 칸 — 상태를 남기지 않은 옛 리포트의 월간 줄은 빈 칸 */
+function StorylineCountCell({
+  row,
+  kind,
+}: {
+  row: ReportUserStorylineCount;
+  kind: ReportKind;
+}) {
+  switch (kind) {
+    case "WEEK":
+      return (
+        <ToneCell
+          label={trendLabels[row.trend]}
+          tone={trendTones[row.trend]}
+          detail={countsText(row.articles, row.previous)}
+        />
+      );
+    case "MONTH": {
+      const detail = currentCountText(row.articles);
+      if (row.state === null) {
+        return (
+          <td className="py-1 pr-3" title={detail}>
+            <span className="sr-only">{detail}</span>
+          </td>
+        );
+      }
+      return (
+        <ToneCell
+          label={storylineStateLabels[row.state]}
+          tone={stateTones[row.state]}
+          detail={detail}
+        />
+      );
+    }
+  }
 }
 
 function InterestLevels({ interests }: { interests: ReportInterests }) {
@@ -333,7 +387,7 @@ function InterestLevels({ interests }: { interests: ReportInterests }) {
     <div className="space-y-3">
       {interests.topics.length > 0 && (
         <Table
-          caption={`${statsTitles.INTERESTS} — ${countColumns.topic}`}
+          caption={countColumns.topic}
           headers={[countColumns.topic, ...headers]}
         >
           {interests.topics.map((row) => (
@@ -353,7 +407,7 @@ function InterestLevels({ interests }: { interests: ReportInterests }) {
       )}
       {interests.userStorylines.length > 0 && (
         <Table
-          caption={`${statsTitles.INTERESTS} — ${countColumns.userStoryline}`}
+          caption={countColumns.userStoryline}
           headers={[countColumns.userStoryline, ...headers]}
         >
           {interests.userStorylines.map((row) => (
@@ -460,7 +514,7 @@ function CitationLine({ citation }: { citation: ReportCitation }) {
   }
 }
 
-/** 비교한 직전 리포트 — 생성 때 직전 값과 견준 리포트(내용 · 시작한 실패)에만. 시작하지 않고 실패한 리포트는 견주지 않았다 */
+/** 직전 리포트 — 생성 때 이은 직전 리포트(내용 · 시작한 실패)에만. 주간은 그 값과 견줬고 월간은 견주지 않는다. 시작하지 않고 실패한 리포트는 잇지 않았다 */
 function Previous({ report }: { report: ReportDetail }) {
   const status = report.report.status;
   if (status !== "READY" && status !== "FAILED") {
@@ -471,7 +525,11 @@ function Previous({ report }: { report: ReportDetail }) {
     return null;
   }
   if (report.previous === null) {
-    return <p className="text-sm text-muted-foreground">{NO_PREVIOUS}</p>;
+    return (
+      <p className="text-sm text-muted-foreground">
+        {noPreviousTexts[report.report.kind]}
+      </p>
+    );
   }
   const previous = report.previous;
   return (

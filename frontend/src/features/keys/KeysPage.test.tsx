@@ -132,7 +132,7 @@ describe("KeysPage", () => {
     expect(transfer.getByText("리포트 기간(날짜)")).toBeInTheDocument();
     expect(
       transfer.getByText(
-        "추적한 흐름마다 그 흐름의 정리(제목 · 흐름 요약 · 최근 전개), 상태, 기간 안에 추적을 더했는지, 직전 기간과 견준 보도의 변화(늘었음 · 줄었음 같은 판정 — 기사 수는 보내지 않는다)",
+        "추적한 흐름마다 그 흐름의 정리(제목 · 흐름 요약 · 최근 전개), 상태, 기간 안에 추적을 더했는지, 주간 리포트는 직전 주간과 견준 보도의 변화(늘었음 · 줄었음 같은 판정 — 기사 수는 보내지 않는다)",
       ),
     ).toBeInTheDocument();
     expect(
@@ -141,10 +141,10 @@ describe("KeysPage", () => {
       ),
     ).toBeInTheDocument();
     expect(
-      transfer.getByText(
+      transfer.queryByText(
         "구독 주제의 이름과 직전 기간과 견준 보도의 변화(판정)",
       ),
-    ).toBeInTheDocument();
+    ).not.toBeInTheDocument();
     expect(
       transfer.getByText(
         "관심 변화 — 새로 생기거나 사라진 주제 · 흐름의 관심(관심 값은 보내지 않는다), 흐름의 정리, 기간 안에 바꾼 주제 구독(시각 · 구독 · 해제 · 주제 이름)",
@@ -152,7 +152,7 @@ describe("KeysPage", () => {
     ).toBeInTheDocument();
     expect(
       transfer.getByText(
-        "직전 리포트의 글(개요 · 섹션 제목 · 본문) — 월간 리포트는 그 달 주간 리포트의 글도",
+        "직전 리포트의 글(섹션 제목 · 본문) — 월간 리포트는 그 달 주간 리포트의 글도",
       ),
     ).toBeInTheDocument();
     expect(

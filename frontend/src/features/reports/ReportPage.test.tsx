@@ -93,7 +93,7 @@ const READY = detail(summary(12), {
 });
 
 describe("ReportPage", () => {
-  it("갈래 섹션의 제목 · 본문 · 숫자 표 · 인용을 그린다", async () => {
+  it("갈래 섹션마다 고정 제목 · 요지 · 본문 · 표 · 인용을 그 순서로 그린다", async () => {
     renderReport(READY);
 
     expect(
@@ -106,10 +106,23 @@ describe("ReportPage", () => {
       screen
         .getAllByRole("heading", { level: 2 })
         .map((heading) => heading.textContent),
-    ).toEqual(["추적한 흐름이 커졌다", "관심이 옮겨 갔다"]);
+    ).toEqual(["추적한 흐름", "관심의 변화"]);
+    // 모델이 쓴 제목은 고정 제목 아래 요지 한 줄, 이어 본문 · 표
+    const storylineSection = screen
+      .getByRole("heading", { level: 2, name: "추적한 흐름" })
+      .closest("section")!;
+    const [heading, lead, body, table] = Array.from(storylineSection.children);
+    expect(heading).toHaveTextContent("추적한 흐름");
+    expect(lead!.tagName).toBe("P");
+    expect(lead).toHaveTextContent("추적한 흐름이 커졌다");
+    expect(lead).toHaveClass("font-medium");
+    expect(body).toHaveTextContent("흐름 본문이다.");
+    expect(
+      within(table as HTMLElement).getByRole("table"),
+    ).toHaveAccessibleName("보도");
 
     const userStorylines = screen.getByRole("table", {
-      name: "추적한 흐름의 보도량",
+      name: "보도",
     });
     const userStorylineRows = within(userStorylines)
       .getAllByRole("row")
@@ -146,7 +159,7 @@ describe("ReportPage", () => {
     ).toHaveAttribute("href", "/storylines/33");
 
     const interestTopics = screen.getByRole("table", {
-      name: "관심의 변화 — 주제",
+      name: "주제",
     });
     expect(
       within(interestTopics)
@@ -172,7 +185,7 @@ describe("ReportPage", () => {
       "text-destructive",
     );
     const interestUserStorylines = screen.getByRole("table", {
-      name: "관심의 변화 — 흐름",
+      name: "흐름",
     });
     const unnamed = within(interestUserStorylines).getByRole("link", {
       name: "제목을 아직 정하지 못한 흐름",
@@ -351,6 +364,106 @@ describe("ReportPage", () => {
     expect(
       screen.getByText("실패한 리포트가 아니라 다시 만들지 않았습니다."),
     ).toBeInTheDocument();
+  });
+
+  it("월간 리포트의 흐름 표는 생성 때 상태를 보이고 직전 리포트를 비교했다고 하지 않는다", async () => {
+    const month = summary(20, {
+      kind: "MONTH",
+      firstDay: "2026-10-26",
+      lastDay: "2026-11-25",
+    });
+    renderReport(
+      detail(month, {
+        previous: summary(19, {
+          kind: "MONTH",
+          firstDay: "2026-09-26",
+          lastDay: "2026-10-25",
+        }),
+        sections: [
+          {
+            kind: "STORYLINES",
+            title: "흐름이 이어졌다",
+            body: "월간 본문이다.",
+            citations: [],
+            userStorylines: [
+              {
+                storyline: storyline(31),
+                articles: 40,
+                previous: null,
+                trend: "NO_COMPARISON",
+                trackedInPeriod: false,
+                state: "ACTIVE",
+              },
+              {
+                storyline: storyline(33),
+                articles: 3,
+                previous: null,
+                trend: "NO_COMPARISON",
+                trackedInPeriod: false,
+                state: "ENDED",
+              },
+              {
+                storyline: storyline(35),
+                articles: 1,
+                previous: null,
+                trend: "NO_COMPARISON",
+                trackedInPeriod: false,
+                state: null,
+              },
+            ],
+            interests: null,
+          },
+        ],
+      }),
+      20,
+    );
+
+    const table = await screen.findByRole("table", { name: "상태" });
+    expect(
+      within(table)
+        .getAllByRole("columnheader")
+        .map((header) => header.textContent),
+    ).toEqual(["흐름", "상태"]);
+    const rows = within(table).getAllByRole("row").slice(1);
+    // 상태 낱말은 다른 화면과 같은 정본(진행 · 잠잠 · 끝남), 수는 title · 화면 낭독에만, 상태를 남기지 않은 옛 줄은 빈 칸
+    expect(rows.map((row) => row.textContent)).toEqual([
+      "흐름 31 대표 기사진행 (이번 기간 40건)",
+      "흐름 33 대표 기사끝남 (이번 기간 3건)",
+      "흐름 35 대표 기사이번 기간 1건",
+    ]);
+    const [active] = within(rows[0]!).getAllByRole("cell");
+    expect(active).toHaveAttribute("title", "이번 기간 40건");
+    expect(within(active!).getByText("진행")).toHaveClass("text-primary");
+    expect(
+      within(within(rows[1]!).getAllByRole("cell")[0]!).getByText("끝남"),
+    ).toHaveClass("text-muted-foreground");
+    expect(screen.queryByText(/비교 없음|판정/)).toBeNull();
+    expect(
+      screen.getByRole("link", {
+        name: "직전 월간 리포트 · 2026. 09. 26. ~ 2026. 10. 25.",
+      }),
+    ).toHaveAttribute("href", "/reports/19");
+    expect(screen.queryByText(/비교한/)).toBeNull();
+  });
+
+  it("직전 리포트가 없는 월간 리포트는 비교를 말하지 않는다", async () => {
+    renderReport(
+      detail(
+        summary(20, {
+          kind: "MONTH",
+          firstDay: "2026-10-26",
+          lastDay: "2026-11-25",
+        }),
+      ),
+      20,
+    );
+
+    expect(
+      await screen.findByText(
+        "직전 월간 리포트가 없습니다 — 첫 월간 리포트이거나 직전 기간과 이어지지 않습니다.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/비교한/)).toBeNull();
   });
 
   it("시작하지 않고 실패한 리포트는 비교한 직전 리포트 줄이 없다", async () => {
