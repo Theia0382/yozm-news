@@ -22,7 +22,7 @@ class UserStorylineSeedsTests {
 
 	@Test
 	void withoutAnySignalThereIsNoSeed() {
-		// 대조 — 노출만 받은 흐름은 재료에 오지 않는다. 신호가 없으면 씨앗도 없다
+		// 대조 — 노출만 받은 스토리라인은 재료에 오지 않는다. 신호가 없으면 씨앗도 없다
 		assertThat(UserStorylineSeeds.tops(List.of(), List.of(), List.of())).isEmpty();
 	}
 

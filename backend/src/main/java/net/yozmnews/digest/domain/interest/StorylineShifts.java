@@ -7,7 +7,7 @@ import java.util.Set;
 import net.yozmnews.storyline.StorylineId;
 
 /**
- * 관심사 히스토리에서 흐름이 보이고 사라지는 판정의 정본 — 기준은 {@link StorylineLevels} 의 것 그대로다. docs/specs/digest.md §5 · digest-R36
+ * 관심사 히스토리에서 스토리라인이 보이고 사라지는 판정의 정본 — 기준은 {@link StorylineLevels} 의 것 그대로다. docs/specs/digest.md §5 · digest-R36
  * <p>
  * 꼭대기는 관심이 만들 기준 이상이면 보이고, 한 번 보인 꼭대기는 관심이 남길 기준 이상인 동안 남는다. 추적은 넣지 않는다 — 관심 값만으로 본다.
  */

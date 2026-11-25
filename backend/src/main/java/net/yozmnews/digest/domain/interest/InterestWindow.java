@@ -60,7 +60,7 @@ public final class InterestWindow {
 		}
 		Map<EventId, Exposure> exposures = new HashMap<>();
 		latest.forEach((event, row) -> exposures.put(event, new Exposure(row.at(), Math.min(1.0, row.share()))));
-		Set<EventId> repeated = StorylineRepeats.repeated(record.tops(), record.flows(), rows);
+		Set<EventId> repeated = StorylineRepeats.repeated(record.tops(), record.userStorylines(), rows);
 		List<FeedbackChange> feedback = record.feedback()
 			.stream()
 			.filter(change -> within(change.occurredAt(), from, windowEnd))
@@ -76,19 +76,21 @@ public final class InterestWindow {
 		InterestLevels topicLevels = new InterestLevels(InterestFormula.levels(
 				InterestSignals.topicExposed(exposures, feedback, record.subtopics(), repeated),
 				InterestSignals.topics(topics), reference, InterestRules.TOPIC));
-		Map<Integer, Double> flowLevels = InterestFormula.levels(
-				InterestSignals.storylineExposed(exposures, feedback, record.tops(), record.flows()),
-				InterestSignals.storylines(storylines, record.storylineTops(), record.flows()), reference,
+		Map<Integer, Double> userStorylineLevels = InterestFormula.levels(
+				InterestSignals.storylineExposed(exposures, feedback, record.tops(), record.userStorylines()),
+				InterestSignals.storylines(storylines, record.storylineTops(), record.userStorylines()), reference,
 				InterestRules.STORYLINE);
 		// 묶음의 관심을 그 묶음의 모든 꼭대기에 펼친다 — 묶음 여럿에 든 꼭대기는 그 묶음들의 값을 모두 받는다(판정은 StorylineLevels)
 		Map<StorylineId, List<Double>> ofTop = new HashMap<>();
-		record.flows().flowsOfTop().forEach((top, flows) -> flows.forEach(flow -> {
-			Double level = flowLevels.get(flow);
-			if (level != null) {
-				ofTop.computeIfAbsent(top, ignored -> new ArrayList<>()).add(level);
-			}
-		}));
-		return new Interests(topicLevels, StorylineLevels.ofFlows(ofTop));
+		record.userStorylines()
+			.userStorylinesOfTop()
+			.forEach((top, userStorylines) -> userStorylines.forEach(userStoryline -> {
+				Double level = userStorylineLevels.get(userStoryline);
+				if (level != null) {
+					ofTop.computeIfAbsent(top, ignored -> new ArrayList<>()).add(level);
+				}
+			}));
+		return new Interests(topicLevels, StorylineLevels.ofUserStorylines(ofTop));
 	}
 
 	private static boolean within(Instant at, Instant from, Instant to) {

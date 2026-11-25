@@ -48,7 +48,7 @@ class SummaryRulesTests {
 	}
 
 	@Test
-	void aFlowHasAtLeastOneTop() {
+	void aUserStorylineHasAtLeastOneTop() {
 		assertThatIllegalArgumentException().isThrownBy(() -> SummaryRules.bodyTokens(0));
 	}
 

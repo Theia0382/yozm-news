@@ -47,7 +47,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * <p>
  * 이력: 합쳐져 옮긴 추적 씨앗은 옛 ID 의 뺌과(새로 더했으면) 남는 ID 의 더함({@code STORYLINE_MERGED}), 지워진 추적 씨앗은 뺌
  * ({@code STORYLINE_REMOVED}), 갈라져 물려받은 추적 씨앗은 더함({@code STORYLINE_SPLIT})으로 남긴다. 추적 중이던 사용자 스토리라인이
- * 이을 흐름 없이 사라지면 사라진 구독 알림 하나를 남긴다 — 알림은 스토리라인 ID 와 풀기의 남은 사건만 담는다.
+ * 이을 스토리라인 없이 사라지면 사라진 구독 알림 하나를 남긴다 — 알림은 스토리라인 ID 와 풀기의 남은 사건만 담는다.
  */
 @Service
 class UserStorylineFollowups {
@@ -132,7 +132,7 @@ class UserStorylineFollowups {
 		List<RemovedSubscription> vanished = new ArrayList<>();
 		for (Lost lost : result.removed()) {
 			if (lost.wasTracked() && lost.mergedInto() == null) {
-				// 추적 중이던 것이 이을 흐름 없이 사라졌다 — 그 추적 씨앗의 스토리라인이 모두 지워졌다
+				// 추적 중이던 것이 이을 스토리라인 없이 사라졌다 — 그 추적 씨앗의 스토리라인이 모두 지워졌다
 				rows.get(lost.id())
 					.seeds()
 					.stream()

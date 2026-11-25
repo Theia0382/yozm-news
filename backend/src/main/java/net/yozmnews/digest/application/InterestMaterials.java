@@ -17,7 +17,7 @@ import net.yozmnews.digest.domain.interest.InterestFormula;
 import net.yozmnews.digest.domain.interest.InterestRecord;
 import net.yozmnews.digest.domain.interest.InterestSignals;
 import net.yozmnews.digest.domain.interest.InterestWindow;
-import net.yozmnews.digest.domain.interest.StorylineFlows;
+import net.yozmnews.digest.domain.interest.UserStorylines;
 import net.yozmnews.digest.domain.selection.EventFacts;
 import net.yozmnews.event.EventDirectory;
 import net.yozmnews.event.EventId;
@@ -104,23 +104,23 @@ class InterestMaterials {
 		Map<StorylineId, StorylineId> storylineTops = StorylineTopsQueries.ofStorylines(this.storylines,
 				InterestSignals.storylinesToRead(storylineChanges));
 		return Optional.of(new InterestRecord(active, exposed, subtopics.get(), tops, reactions, topics.changes(),
-				storylineChanges, storylineTops, flows(this.userStorylines.of(user, from, to))));
+				storylineChanges, storylineTops, userStorylines(this.userStorylines.of(user, from, to))));
 	}
 
 	/** {@code user} 의 사용자 스토리라인을 묶음으로 옮긴다 — 묶음 번호는 받은 순서다. 갈라지기 전 꼭대기는 묶음 여럿에 든다 */
-	private static StorylineFlows flows(List<UserStorylineView> userStorylines) {
-		Map<StorylineId, Set<Integer>> flowsOfTop = new HashMap<>();
+	private static UserStorylines userStorylines(List<UserStorylineView> userStorylines) {
+		Map<StorylineId, Set<Integer>> userStorylinesOfTop = new HashMap<>();
 		Set<Integer> tracked = new HashSet<>();
-		for (int flow = 0; flow < userStorylines.size(); flow++) {
-			UserStorylineView view = userStorylines.get(flow);
+		for (int index = 0; index < userStorylines.size(); index++) {
+			UserStorylineView view = userStorylines.get(index);
 			for (StorylineId top : view.tops()) {
-				flowsOfTop.computeIfAbsent(top, ignored -> new HashSet<>()).add(flow);
+				userStorylinesOfTop.computeIfAbsent(top, ignored -> new HashSet<>()).add(index);
 			}
 			if (view.tracked()) {
-				tracked.add(flow);
+				tracked.add(index);
 			}
 		}
-		return new StorylineFlows(flowsOfTop, tracked);
+		return new UserStorylines(userStorylinesOfTop, tracked);
 	}
 
 	/**

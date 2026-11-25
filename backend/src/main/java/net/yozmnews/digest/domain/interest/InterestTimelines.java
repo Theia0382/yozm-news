@@ -42,16 +42,16 @@ public final class InterestTimelines {
 			Instant reference = references.get(i);
 			Interests interests = InterestWindow.levels(record, reference, reference);
 			InterestLevels levels = interests.topics();
-			StorylineShifts.Shift flows = StorylineShifts.between(shownBefore, interests.storylines());
+			StorylineShifts.Shift storylines = StorylineShifts.between(shownBefore, interests.storylines());
 			InterestShifts.Shift shift = InterestShifts.between(before, levels);
 			List<TopicSubscriptionStep> steps = changes.stream()
 				.filter(change -> !change.occurredAt().isBefore(from) && change.occurredAt().isBefore(reference))
 				.map(change -> new TopicSubscriptionStep(change.occurredAt(), change.action(), change.subtopics()))
 				.toList();
 			points.add(new InterestPoint(reference, levels.levels(), shift.entered(), shift.left(), steps,
-					interests.storylines().levels(), flows.entered(), flows.left()));
+					interests.storylines().levels(), storylines.entered(), storylines.left()));
 			before = levels;
-			shownBefore = flows.shown();
+			shownBefore = storylines.shown();
 		}
 		return List.copyOf(points);
 	}

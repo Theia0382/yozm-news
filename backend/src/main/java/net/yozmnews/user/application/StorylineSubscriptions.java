@@ -37,7 +37,7 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>
  * 넷 모두 한 트랜잭션에서 설정 행을 잠그고(관심 설정과 같은 줄 — user-R46) 먼저 사용자 스토리라인을 맞춘 뒤 한다
  * ({@link UserStorylineFollowups#followLocked}). 추적은 사용자 스토리라인에 붙는다 — 받은 스토리라인의 포함 나무 꼭대기를 추적 대상으로
- * 가진 사용자 스토리라인이 추적 중이면 그 흐름의 어느 스토리라인에서 물어도 추적 중이다. 누른 스토리라인은 추적 씨앗으로 남고, 이력은 추적
+ * 가진 사용자 스토리라인이 추적 중이면 그 사용자 스토리라인의 어느 스토리라인에서 물어도 추적 중이다. 누른 스토리라인은 추적 씨앗으로 남고, 이력은 추적
  * 씨앗마다 한 행이다(원인은 사용자).
  */
 @Service
@@ -168,7 +168,7 @@ public class StorylineSubscriptions {
 		}
 		this.history.record(user, List.of(new SubscriptionChange(survivor, StorylineSubscriptionAction.ADD)),
 				StorylineSubscriptionCause.USER, now);
-		// 새 추적 씨앗으로 추적 대상(이어진 뒤 흐름)을 채우고 헤드마다 맞춘다
+		// 새 추적 씨앗으로 추적 대상(이어진 뒤 스토리라인)을 채우고 헤드마다 맞춘다
 		this.followups.followLocked(user, Map.of(), now);
 		return new SubscribeOutcome.Subscribed(found.id());
 	}
@@ -316,7 +316,7 @@ public class StorylineSubscriptions {
 		record Unsubscribed(StorylineId id) implements UnsubscribeOutcome {
 		}
 
-		/** 추적하지 않는 흐름이다 — 바꾸지 않았다 */
+		/** 추적하지 않는 스토리라인이다 — 바꾸지 않았다 */
 		record NotSubscribed() implements UnsubscribeOutcome {
 		}
 

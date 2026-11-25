@@ -12,12 +12,12 @@ import java.util.Map;
 import java.util.Set;
 
 import net.yozmnews.user.domain.summary.SummaryPlan.Action;
-import net.yozmnews.user.domain.summary.SummaryPlan.Flow;
+import net.yozmnews.user.domain.summary.SummaryPlan.UserStoryline;
 import org.junit.jupiter.api.Test;
 
 /**
- * 정리의 처분 — 새로 만드는 것은 관심 흐름뿐이고, 정리한 흐름은 관심 흐름이거나 남길 흐름인 동안 남으며, 재료가 그대로면 부르지 않는다. 추적 대상이
- * 달라지면 처음부터, 새 사건이 있으면 그 사건만 넣는다. 연속 실패로 쉬는 흐름과 호출 상한 밖의 흐름은 부르지 않는다.
+ * 정리의 처분 — 새로 만드는 것은 관심 스토리라인뿐이고, 정리한 사용자 스토리라인은 관심 스토리라인이거나 남길 스토리라인인 동안 남으며, 재료가 그대로면 부르지 않는다. 추적 대상이
+ * 달라지면 처음부터, 새 사건이 있으면 그 사건만 넣는다. 연속 실패로 쉬는 사용자 스토리라인과 호출 상한 밖의 사용자 스토리라인은 부르지 않는다.
  * <p>
  * 지키는 규칙: docs/specs/user.md §5 의 정리 처분. 기대값은 손으로 쓴 처분이다.
  */
@@ -32,25 +32,25 @@ class SummaryPlanTests {
 	private static final Instant DAY3 = Instant.parse("2026-11-22T00:00:00Z");
 
 	@Test
-	void aFollowedFlowWithoutASummaryIsCreatedWithItsEventsInTimeOrder() {
-		Flow flow = new Flow(1, 10, Set.of(10L), false, null, null);
+	void aFollowedUserStorylineWithoutASummaryIsCreatedWithItsEventsInTimeOrder() {
+		UserStoryline userStoryline = new UserStoryline(1, 10, Set.of(10L), false, null, null);
 
-		assertThat(decide(List.of(flow), Set.of(10L), Set.of(), Map.of(1L, Map.of(103L, DAY3, 101L, DAY1, 102L, DAY2))))
+		assertThat(decide(List.of(userStoryline), Set.of(10L), Set.of(), Map.of(1L, Map.of(103L, DAY3, 101L, DAY1, 102L, DAY2))))
 			.containsExactly(new Action.Create(1, Set.of(10L), List.of(101L, 102L, 103L), Set.of(101L, 102L, 103L)));
 	}
 
 	@Test
 	void aFollowedHeadIsEnoughAmongTheTrackedTargets() {
-		Flow flow = new Flow(1, 11, Set.of(10L, 11L), false, null, null);
+		UserStoryline userStoryline = new UserStoryline(1, 11, Set.of(10L, 11L), false, null, null);
 
-		assertThat(decide(List.of(flow), Set.of(11L), Set.of(), Map.of(1L, Map.of(101L, DAY1))))
+		assertThat(decide(List.of(userStoryline), Set.of(11L), Set.of(), Map.of(1L, Map.of(101L, DAY1))))
 			.containsExactly(new Action.Create(1, Set.of(10L, 11L), List.of(101L), Set.of(101L)));
 	}
 
 	@Test
-	void aFlowThatIsOnlyKeptOrNotJudgedIsNotCreated() {
-		Flow keptOnly = new Flow(1, 10, Set.of(10L), false, null, null);
-		Flow unjudged = new Flow(2, 20, Set.of(20L), true, null, null);
+	void aUserStorylineThatIsOnlyKeptOrNotJudgedIsNotCreated() {
+		UserStoryline keptOnly = new UserStoryline(1, 10, Set.of(10L), false, null, null);
+		UserStoryline unjudged = new UserStoryline(2, 20, Set.of(20L), true, null, null);
 
 		assertThat(decide(List.of(keptOnly, unjudged), Set.of(), Set.of(10L),
 				Map.of(1L, Map.of(101L, DAY1), 2L, Map.of(201L, DAY1))))
@@ -58,17 +58,17 @@ class SummaryPlanTests {
 	}
 
 	@Test
-	void aFollowedFlowWithoutEventsIsNotCreated() {
-		Flow flow = new Flow(1, 10, Set.of(10L), false, null, null);
+	void aFollowedUserStorylineWithoutEventsIsNotCreated() {
+		UserStoryline userStoryline = new UserStoryline(1, 10, Set.of(10L), false, null, null);
 
-		assertThat(decide(List.of(flow), Set.of(10L), Set.of(), Map.of(1L, Map.of()))).isEmpty();
+		assertThat(decide(List.of(userStoryline), Set.of(10L), Set.of(), Map.of(1L, Map.of()))).isEmpty();
 	}
 
 	@Test
-	void aSummarizedFlowStaysWhileFollowedOrKeptAndIsRemovedOtherwise() {
-		Flow followedOnly = new Flow(1, 10, Set.of(10L), true, summary(1, Set.of(10L), Set.of(101L), 0), null);
-		Flow keptOnly = new Flow(2, 20, Set.of(20L), false, summary(2, Set.of(20L), Set.of(201L), 0), null);
-		Flow neither = new Flow(3, 30, Set.of(30L), false, summary(3, Set.of(30L), Set.of(301L), 0), null);
+	void aSummarizedUserStorylineStaysWhileFollowedOrKeptAndIsRemovedOtherwise() {
+		UserStoryline followedOnly = new UserStoryline(1, 10, Set.of(10L), true, summary(1, Set.of(10L), Set.of(101L), 0), null);
+		UserStoryline keptOnly = new UserStoryline(2, 20, Set.of(20L), false, summary(2, Set.of(20L), Set.of(201L), 0), null);
+		UserStoryline neither = new UserStoryline(3, 30, Set.of(30L), false, summary(3, Set.of(30L), Set.of(301L), 0), null);
 
 		assertThat(decide(List.of(followedOnly, keptOnly, neither), Set.of(10L), Set.of(20L),
 				Map.of(1L, Map.of(101L, DAY1), 2L, Map.of(201L, DAY1), 3L, Map.of(301L, DAY1))))
@@ -77,34 +77,34 @@ class SummaryPlanTests {
 
 	@Test
 	void newEventsExtendTheSummaryWithOnlyThoseEvents() {
-		Flow flow = new Flow(1, 10, Set.of(10L), false, summary(1, Set.of(10L), Set.of(101L, 102L), 4), null);
+		UserStoryline userStoryline = new UserStoryline(1, 10, Set.of(10L), false, summary(1, Set.of(10L), Set.of(101L, 102L), 4), null);
 
-		assertThat(decide(List.of(flow), Set.of(), Set.of(10L),
+		assertThat(decide(List.of(userStoryline), Set.of(), Set.of(10L),
 				Map.of(1L, Map.of(101L, DAY1, 102L, DAY2, 104L, DAY3, 103L, DAY3))))
 			.containsExactly(new Action.Extend(1, 4, Set.of(10L), List.of(103L, 104L), Set.of(101L, 102L, 103L, 104L)));
 	}
 
 	@Test
-	void eventsThatLeftTheFlowDoNotCallAgain() {
-		Flow flow = new Flow(1, 10, Set.of(10L), false, summary(1, Set.of(10L), Set.of(101L, 102L), 0), null);
+	void eventsThatLeftTheUserStorylineDoNotCallAgain() {
+		UserStoryline userStoryline = new UserStoryline(1, 10, Set.of(10L), false, summary(1, Set.of(10L), Set.of(101L, 102L), 0), null);
 
-		assertThat(decide(List.of(flow), Set.of(10L), Set.of(), Map.of(1L, Map.of(101L, DAY1))))
+		assertThat(decide(List.of(userStoryline), Set.of(10L), Set.of(), Map.of(1L, Map.of(101L, DAY1))))
 			.containsExactly(new Action.Keep(1));
 	}
 
 	@Test
 	void changedTrackedTargetsRebuildFromAllEvents() {
-		Flow flow = new Flow(1, 10, Set.of(10L, 11L), false, summary(1, Set.of(10L), Set.of(101L), 2), null);
+		UserStoryline userStoryline = new UserStoryline(1, 10, Set.of(10L, 11L), false, summary(1, Set.of(10L), Set.of(101L), 2), null);
 
-		assertThat(decide(List.of(flow), Set.of(10L), Set.of(), Map.of(1L, Map.of(101L, DAY1, 111L, DAY2))))
+		assertThat(decide(List.of(userStoryline), Set.of(10L), Set.of(), Map.of(1L, Map.of(101L, DAY1, 111L, DAY2))))
 			.containsExactly(new Action.Rebuild(1, 2, Set.of(10L, 11L), List.of(101L, 111L), Set.of(101L, 111L)));
 	}
 
 	@Test
 	void aRebuildWithoutEventsKeepsTheSummary() {
-		Flow flow = new Flow(1, 11, Set.of(11L), false, summary(1, Set.of(10L), Set.of(101L), 2), null);
+		UserStoryline userStoryline = new UserStoryline(1, 11, Set.of(11L), false, summary(1, Set.of(10L), Set.of(101L), 2), null);
 
-		assertThat(decide(List.of(flow), Set.of(11L), Set.of(), Map.of(1L, Map.of()))).containsExactly(new Action.Keep(1));
+		assertThat(decide(List.of(userStoryline), Set.of(11L), Set.of(), Map.of(1L, Map.of()))).containsExactly(new Action.Keep(1));
 	}
 
 	@Test
@@ -119,8 +119,8 @@ class SummaryPlanTests {
 				latestSixty.add(i);
 			}
 		}
-		Flow created = new Flow(1, 10, Set.of(10L), false, null, null);
-		Flow extended = new Flow(2, 20, Set.of(20L), false, summary(2, Set.of(20L), Set.of(1_000L), 0), null);
+		UserStoryline created = new UserStoryline(1, 10, Set.of(10L), false, null, null);
+		UserStoryline extended = new UserStoryline(2, 20, Set.of(20L), false, summary(2, Set.of(20L), Set.of(1_000L), 0), null);
 
 		assertThat(decide(List.of(created, extended), Set.of(10L, 20L), Set.of(), Map.of(1L, events, 2L, events)))
 			.containsExactly(new Action.Create(1, Set.of(10L), latestSixty, all),
@@ -141,10 +141,10 @@ class SummaryPlanTests {
 		for (long i = 13; i <= 70; i++) {
 			expected.add(i);
 		}
-		Flow flow = new Flow(1, 10, Set.of(10L, 20L, 30L), false, null, null);
+		UserStoryline userStoryline = new UserStoryline(1, 10, Set.of(10L, 20L, 30L), false, null, null);
 
 		// 사건이 있는 꼭대기 둘의 몫은 30 — 붐비는 꼭대기의 늦은 30(41 ~ 70)과 오래된 꼭대기의 둘, 남는 28 자리는 늦은 순(13 ~ 40)
-		assertThat(SummaryPlan.decide(List.of(flow), Set.of(10L), Set.of(),
+		assertThat(SummaryPlan.decide(List.of(userStoryline), Set.of(10L), Set.of(),
 				Map.of(1L, Map.of(10L, crowded, 20L, old, 30L, Map.of())), NOW))
 			.containsExactly(new Action.Create(1, Set.of(10L, 20L, 30L), expected, all));
 	}
@@ -162,20 +162,20 @@ class SummaryPlanTests {
 		for (long i = 12; i <= 70; i++) {
 			expected.add(i);
 		}
-		Flow flow = new Flow(1, 10, Set.of(10L, 20L), false, summary(1, Set.of(10L, 20L), Set.of(500L), 3), null);
+		UserStoryline userStoryline = new UserStoryline(1, 10, Set.of(10L, 20L), false, summary(1, Set.of(10L, 20L), Set.of(500L), 3), null);
 
 		// 새 사건이 있는 꼭대기 둘의 몫은 30 — 붐비는 꼭대기의 늦은 30 과 다른 꼭대기의 하나, 남는 29 자리는 늦은 순(12 ~ 40)
-		assertThat(SummaryPlan.decide(List.of(flow), Set.of(10L), Set.of(),
+		assertThat(SummaryPlan.decide(List.of(userStoryline), Set.of(10L), Set.of(),
 				Map.of(1L, Map.of(10L, crowded, 20L, Map.of(2_001L, DAY1.plusSeconds(5)))), NOW))
 			.containsExactly(new Action.Extend(1, 3, Set.of(10L, 20L), expected, all));
 	}
 
 	@Test
-	void aFlowRestsForAsManyDaysAsItsConsecutiveFailures() {
+	void aUserStorylineRestsForAsManyDaysAsItsConsecutiveFailures() {
 		Instant failedAt = Instant.parse("2026-11-21T00:00:00Z");
 		SummaryAttempt twice = new SummaryAttempt(1, 2, 0, 0, 2, "UNREADABLE_OUTPUT", failedAt);
-		Flow unsummarized = new Flow(1, 10, Set.of(10L), false, null, twice);
-		Flow summarized = new Flow(2, 20, Set.of(20L), false, summary(2, Set.of(20L), Set.of(), 0),
+		UserStoryline unsummarized = new UserStoryline(1, 10, Set.of(10L), false, null, twice);
+		UserStoryline summarized = new UserStoryline(2, 20, Set.of(20L), false, summary(2, Set.of(20L), Set.of(), 0),
 				new SummaryAttempt(2, 2, 0, 0, 2, "UNREADABLE_OUTPUT", failedAt));
 		Map<Long, Map<Long, Instant>> events = Map.of(1L, Map.of(101L, DAY1), 2L, Map.of(201L, DAY1));
 
@@ -189,29 +189,29 @@ class SummaryPlanTests {
 	}
 
 	@Test
-	void aRestingFlowIsStillRemoved() {
-		Flow flow = new Flow(1, 10, Set.of(10L), false, summary(1, Set.of(10L), Set.of(101L), 0),
+	void aRestingUserStorylineIsStillRemoved() {
+		UserStoryline userStoryline = new UserStoryline(1, 10, Set.of(10L), false, summary(1, Set.of(10L), Set.of(101L), 0),
 				new SummaryAttempt(1, 1, 0, 0, 1, "OUTPUT_TRUNCATED", NOW.minusSeconds(60)));
 
-		assertThat(decide(List.of(flow), Set.of(), Set.of(), Map.of(1L, Map.of(101L, DAY1))))
+		assertThat(decide(List.of(userStoryline), Set.of(), Set.of(), Map.of(1L, Map.of(101L, DAY1))))
 			.containsExactly(new Action.Remove(1));
 	}
 
 	@Test
 	void anAttemptWithoutFailuresDoesNotRest() {
-		Flow flow = new Flow(1, 10, Set.of(10L), false, null, new SummaryAttempt(1, 3, 100, 20, 0, null, null));
+		UserStoryline userStoryline = new UserStoryline(1, 10, Set.of(10L), false, null, new SummaryAttempt(1, 3, 100, 20, 0, null, null));
 
-		assertThat(decide(List.of(flow), Set.of(10L), Set.of(), Map.of(1L, Map.of(101L, DAY1))))
+		assertThat(decide(List.of(userStoryline), Set.of(10L), Set.of(), Map.of(1L, Map.of(101L, DAY1))))
 			.containsExactly(new Action.Create(1, Set.of(10L), List.of(101L), Set.of(101L)));
 	}
 
 	@Test
 	void callsComeFirstCreatesThenRebuildsThenExtendsTrackedFirstThenById() {
-		Flow extendTracked = new Flow(1, 10, Set.of(10L), true, summary(1, Set.of(10L), Set.of(), 0), null);
-		Flow rebuild = new Flow(2, 20, Set.of(20L), false, summary(2, Set.of(29L), Set.of(), 0), null);
-		Flow create = new Flow(3, 30, Set.of(30L), false, null, null);
-		Flow createTracked = new Flow(4, 40, Set.of(40L), true, null, null);
-		Flow kept = new Flow(5, 50, Set.of(50L), false, summary(5, Set.of(50L), Set.of(501L), 0), null);
+		UserStoryline extendTracked = new UserStoryline(1, 10, Set.of(10L), true, summary(1, Set.of(10L), Set.of(), 0), null);
+		UserStoryline rebuild = new UserStoryline(2, 20, Set.of(20L), false, summary(2, Set.of(29L), Set.of(), 0), null);
+		UserStoryline create = new UserStoryline(3, 30, Set.of(30L), false, null, null);
+		UserStoryline createTracked = new UserStoryline(4, 40, Set.of(40L), true, null, null);
+		UserStoryline kept = new UserStoryline(5, 50, Set.of(50L), false, summary(5, Set.of(50L), Set.of(501L), 0), null);
 		Map<Long, Map<Long, Instant>> events = Map.of(1L, Map.of(101L, DAY1), 2L, Map.of(201L, DAY1), 3L,
 				Map.of(301L, DAY1), 4L, Map.of(401L, DAY1), 5L, Map.of(501L, DAY1));
 
@@ -225,19 +225,19 @@ class SummaryPlanTests {
 
 	@Test
 	void callsBeyondTwentyAreDeferredAndADeferredSummaryIsKept() {
-		List<Flow> flows = new ArrayList<>();
+		List<UserStoryline> userStorylines = new ArrayList<>();
 		Map<Long, Map<Long, Instant>> events = new HashMap<>();
 		Set<Long> followed = new HashSet<>();
 		for (long id = 1; id <= 21; id++) {
-			flows.add(new Flow(id, id * 10, Set.of(id * 10), false, null, null));
+			userStorylines.add(new UserStoryline(id, id * 10, Set.of(id * 10), false, null, null));
 			events.put(id, Map.of(id * 100, DAY1));
 			followed.add(id * 10);
 		}
-		flows.add(new Flow(22, 220, Set.of(220L), false, summary(22, Set.of(220L), Set.of(), 0), null));
+		userStorylines.add(new UserStoryline(22, 220, Set.of(220L), false, summary(22, Set.of(220L), Set.of(), 0), null));
 		events.put(22L, Map.of(2_200L, DAY1));
 		followed.add(220L);
 
-		List<Action> decided = decide(flows, followed, Set.of(), events);
+		List<Action> decided = decide(userStorylines, followed, Set.of(), events);
 
 		assertThat(decided).hasSize(21);
 		assertThat(decided.subList(0, 20)).allMatch(Action.Create.class::isInstance)
@@ -247,10 +247,10 @@ class SummaryPlanTests {
 	}
 
 	@Test
-	void materialsAreNeededOnlyForSummarizedOrFollowedFlows() {
-		Flow summarized = new Flow(1, 10, Set.of(10L), false, summary(1, Set.of(10L), Set.of(), 0), null);
-		Flow followed = new Flow(2, 21, Set.of(20L, 21L), false, null, null);
-		Flow other = new Flow(3, 30, Set.of(30L), true, null, null);
+	void materialsAreNeededOnlyForSummarizedOrFollowedUserStorylines() {
+		UserStoryline summarized = new UserStoryline(1, 10, Set.of(10L), false, summary(1, Set.of(10L), Set.of(), 0), null);
+		UserStoryline followed = new UserStoryline(2, 21, Set.of(20L, 21L), false, null, null);
+		UserStoryline other = new UserStoryline(3, 30, Set.of(30L), true, null, null);
 
 		assertThat(SummaryPlan.needingMaterials(List.of(summarized, followed, other), Set.of(21L)))
 			.containsExactlyInAnyOrder(1L, 2L);
@@ -259,15 +259,15 @@ class SummaryPlanTests {
 	@Test
 	void aBranchIsSummarizedOnlyWhenItsOwnHeadIsFollowed() {
 		// 갈라지기 전 꼭대기 5 가 두 갈래(헤드 82 · 헤드 423)에 함께 든다
-		Flow tracked = new Flow(1, 82, Set.of(5L, 82L), true, null, null);
-		Flow sibling = new Flow(2, 423, Set.of(5L, 423L), false, null, null);
+		UserStoryline tracked = new UserStoryline(1, 82, Set.of(5L, 82L), true, null, null);
+		UserStoryline sibling = new UserStoryline(2, 423, Set.of(5L, 423L), false, null, null);
 		Map<Long, Map<Long, Instant>> events = Map.of(1L, Map.of(101L, DAY1), 2L, Map.of(201L, DAY1));
 
-		// 관심 흐름이 5 · 82 면 형제 갈래는 5 를 함께 가져도 만들지 않는다
+		// 관심 스토리라인이 5 · 82 면 형제 갈래는 5 를 함께 가져도 만들지 않는다
 		assertThat(decide(List.of(tracked, sibling), Set.of(5L, 82L), Set.of(), events))
 			.containsExactly(new Action.Create(1, Set.of(5L, 82L), List.of(101L), Set.of(101L)));
 		assertThat(SummaryPlan.needingMaterials(List.of(tracked, sibling), Set.of(5L, 82L))).containsExactly(1L);
-		// 대조 — 형제의 헤드 423 도 관심 흐름이면 둘 다
+		// 대조 — 형제의 헤드 423 도 관심 스토리라인이면 둘 다
 		assertThat(decide(List.of(tracked, sibling), Set.of(5L, 82L, 423L), Set.of(), events)).containsExactly(
 				new Action.Create(1, Set.of(5L, 82L), List.of(101L), Set.of(101L)),
 				new Action.Create(2, Set.of(5L, 423L), List.of(201L), Set.of(201L)));
@@ -275,7 +275,7 @@ class SummaryPlanTests {
 
 	@Test
 	void aSummaryOfABranchIsRemovedWhenOnlyTheSharedTopIsKept() {
-		Flow branch = new Flow(1, 423, Set.of(5L, 423L), false, summary(1, Set.of(5L, 423L), Set.of(201L), 0), null);
+		UserStoryline branch = new UserStoryline(1, 423, Set.of(5L, 423L), false, summary(1, Set.of(5L, 423L), Set.of(201L), 0), null);
 
 		assertThat(decide(List.of(branch), Set.of(), Set.of(5L), Map.of(1L, Map.of(201L, DAY1))))
 			.containsExactly(new Action.Remove(1));
@@ -283,21 +283,21 @@ class SummaryPlanTests {
 			.containsExactly(new Action.Keep(1));
 	}
 
-	/** 사건을 그 흐름의 가장 작은 꼭대기에 둔 처분 — 꼭대기마다의 사건을 따로 주는 시험은 {@link SummaryPlan#decide} 를 직접 부른다 */
-	private static List<Action> decide(List<Flow> flows, Set<Long> followed, Set<Long> kept,
+	/** 사건을 그 스토리라인의 가장 작은 꼭대기에 둔 처분 — 꼭대기마다의 사건을 따로 주는 시험은 {@link SummaryPlan#decide} 를 직접 부른다 */
+	private static List<Action> decide(List<UserStoryline> userStorylines, Set<Long> followed, Set<Long> kept,
 			Map<Long, Map<Long, Instant>> events) {
-		return SummaryPlan.decide(flows, followed, kept, underFirstTop(flows, events), NOW);
+		return SummaryPlan.decide(userStorylines, followed, kept, underFirstTop(userStorylines, events), NOW);
 	}
 
-	private static Map<Long, Map<Long, Map<Long, Instant>>> underFirstTop(List<Flow> flows,
+	private static Map<Long, Map<Long, Map<Long, Instant>>> underFirstTop(List<UserStoryline> userStorylines,
 			Map<Long, Map<Long, Instant>> events) {
 		Map<Long, Map<Long, Map<Long, Instant>>> nested = new HashMap<>();
-		for (Flow flow : flows) {
-			if (events.containsKey(flow.id())) {
+		for (UserStoryline userStoryline : userStorylines) {
+			if (events.containsKey(userStoryline.id())) {
 				Map<Long, Map<Long, Instant>> byTop = new HashMap<>();
-				flow.tops().forEach(top -> byTop.put(top, Map.of()));
-				byTop.put(java.util.Collections.min(flow.tops()), events.get(flow.id()));
-				nested.put(flow.id(), byTop);
+				userStoryline.tops().forEach(top -> byTop.put(top, Map.of()));
+				byTop.put(java.util.Collections.min(userStoryline.tops()), events.get(userStoryline.id()));
+				nested.put(userStoryline.id(), byTop);
 			}
 		}
 		return nested;

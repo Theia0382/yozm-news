@@ -19,7 +19,7 @@ class InterestConstantsTests {
 
 	@Test
 	void theStorylineBundleHoldsTheStorylineConstants() {
-		// 주제와 γ · 켜짐이 다르다 — 추적만 한 흐름의 관심 1/3, 반응이 앞선 무반응 노출을 대신한다
+		// 주제와 γ · 켜짐이 다르다 — 추적만 한 스토리라인의 관심 1/3, 반응이 앞선 무반응 노출을 대신한다
 		assertThat(InterestRules.STORYLINE).isEqualTo(new InterestConstants(Duration.ofDays(30), 3.0, 1.0 / 3.0, 0.5, true));
 	}
 

@@ -8,7 +8,7 @@ import java.util.Objects;
  * 사용자 스토리라인 하나의 정리 — 그 사용자의 LLM 키로 만든 글과 그 재료의 기록. docs/specs/user.md §4 · §6
  *
  * @param userStorylineId 사용자 스토리라인 ID
- * @param whole 흐름 전체의 글
+ * @param whole 사용자 스토리라인 전체의 글
  * @param tops 꼭대기(스토리라인 ID)마다의 글 — 이 키들이 정리 때의 추적 대상이다. 비지 않는다
  * @param events 정리에 넣은 사건 ID → 그때의 대표 기사 ID
  * @param provider 마지막 정리의 공급자 키 — 다이제스트 행이 적는 것과 같은 값

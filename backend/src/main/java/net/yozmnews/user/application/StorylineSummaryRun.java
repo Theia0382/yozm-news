@@ -33,7 +33,7 @@ import net.yozmnews.user.domain.summary.SummaryOutcome;
 import net.yozmnews.user.domain.summary.SummaryOutputReader;
 import net.yozmnews.user.domain.summary.SummaryPlan;
 import net.yozmnews.user.domain.summary.SummaryPlan.Action;
-import net.yozmnews.user.domain.summary.SummaryPlan.Flow;
+import net.yozmnews.user.domain.summary.SummaryPlan.UserStoryline;
 import net.yozmnews.user.domain.summary.SummaryPrompt;
 import net.yozmnews.user.domain.summary.SummaryPrompts;
 import net.yozmnews.user.domain.summary.SummaryRead;
@@ -49,11 +49,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 사용자 하나의 정리 실행 — 사용자 스토리라인을 맞춰 저장하고, 흐름 판정으로 처분을 정해, 만들 흐름만 그 사용자의 LLM 키로 정리한다.
+ * 사용자 하나의 정리 실행 — 사용자 스토리라인을 맞춰 저장하고, 스토리라인 판정으로 처분을 정해, 새로 정리할 사용자 스토리라인만 그 사용자의 LLM 키로 정리한다.
  * docs/specs/user.md §4 · §5
  * <p>
  * 트랜잭션 밖에서 부른다 — 생성 호출이 그렇다. 순서: 쓸 모델 → (트랜잭션) 설정 행 잠금 · 사용자 스토리라인 맞추기 · 정리와 시도 기록 읽기 →
- * 흐름 판정 → 재료 읽기 → 처분({@link SummaryPlan}) → (트랜잭션) 지울 정리 지우기 → 흐름마다 생성 호출 · 출력 읽기 → (트랜잭션) 견줌 ·
+ * 스토리라인 판정 → 재료 읽기 → 처분({@link SummaryPlan}) → (트랜잭션) 지울 정리 지우기 → 사용자 스토리라인마다 생성 호출 · 출력 읽기 → (트랜잭션) 견줌 ·
  * 저장 · 시도 기록(저장과 같은 트랜잭션 — 결과를 버릴 때도 남는다).
  * <p>
  * 저장 때 견줌: 그 사용자 스토리라인이 그대로 있고 저장한 추적 대상이 호출 때와 같고 정리의 판이 읽었을 때와 같을 때만 쓴다 — 아니면 결과를
@@ -118,33 +118,33 @@ public class StorylineSummaryRun {
 		}
 		Set<Long> followed = ids(judged.get().followed());
 		Set<Long> kept = ids(judged.get().kept());
-		Map<Long, Flow> flows = new LinkedHashMap<>();
-		snapshot.flows().forEach(flow -> flows.put(flow.id(), flow));
-		Set<Long> needing = SummaryPlan.needingMaterials(snapshot.flows(), followed);
-		Set<Long> tops = needing.stream().flatMap(id -> flows.get(id).tops().stream()).collect(Collectors.toSet());
+		Map<Long, UserStoryline> byId = new LinkedHashMap<>();
+		snapshot.userStorylines().forEach(userStoryline -> byId.put(userStoryline.id(), userStoryline));
+		Set<Long> needing = SummaryPlan.needingMaterials(snapshot.userStorylines(), followed);
+		Set<Long> tops = needing.stream().flatMap(id -> byId.get(id).tops().stream()).collect(Collectors.toSet());
 		Map<Long, List<SummaryEvent>> read = this.materials.read(tops);
 		Map<Long, Map<Long, Map<Long, Instant>>> events = new HashMap<>();
 		for (Long id : needing) {
-			Map<Long, Map<Long, Instant>> ofFlow = new HashMap<>();
-			for (Long top : flows.get(id).tops()) {
+			Map<Long, Map<Long, Instant>> ofUserStoryline = new HashMap<>();
+			for (Long top : byId.get(id).tops()) {
 				Map<Long, Instant> ofTop = new HashMap<>();
 				read.getOrDefault(top, List.of())
 					.forEach(event -> ofTop.put(event.eventId(), event.firstArticleAt()));
-				ofFlow.put(top, ofTop);
+				ofUserStoryline.put(top, ofTop);
 			}
-			events.put(id, ofFlow);
+			events.put(id, ofUserStoryline);
 		}
-		List<Action> actions = SummaryPlan.decide(snapshot.flows(), followed, kept, events, now);
+		List<Action> actions = SummaryPlan.decide(snapshot.userStorylines(), followed, kept, events, now);
 		int removed = remove(actions);
 		Tally tally = new Tally();
 		for (Action action : actions) {
 			boolean goOn = switch (action) {
-				case Action.Create create -> call(user, model.get(), snapshot.zone(), flows.get(create.id()), null,
+				case Action.Create create -> call(user, model.get(), snapshot.zone(), byId.get(create.id()), null,
 						create.tops(), create.send(), create.covered(), read, tally);
-				case Action.Rebuild rebuild -> call(user, model.get(), snapshot.zone(), flows.get(rebuild.id()), null,
+				case Action.Rebuild rebuild -> call(user, model.get(), snapshot.zone(), byId.get(rebuild.id()), null,
 						rebuild.tops(), rebuild.send(), rebuild.covered(), read, tally);
-				case Action.Extend extend -> call(user, model.get(), snapshot.zone(), flows.get(extend.id()),
-						flows.get(extend.id()).summary(), extend.tops(), extend.send(), extend.covered(), read, tally);
+				case Action.Extend extend -> call(user, model.get(), snapshot.zone(), byId.get(extend.id()),
+						byId.get(extend.id()).summary(), extend.tops(), extend.send(), extend.covered(), read, tally);
 				case Action.Keep keep -> true;
 				case Action.Remove remove -> true;
 			};
@@ -163,11 +163,11 @@ public class StorylineSummaryRun {
 		this.summaries.load(user).forEach(summary -> summaries.put(summary.userStorylineId(), summary));
 		Map<Long, SummaryAttempt> attempts = new HashMap<>();
 		this.summaries.attempts(user).forEach(attempt -> attempts.put(attempt.userStorylineId(), attempt));
-		List<Flow> flows = stored.stream()
-			.map(one -> new Flow(one.id(), headOf(one), one.tops(), one.tracked(), summaries.get(one.id()),
+		List<UserStoryline> loaded = stored.stream()
+			.map(one -> new UserStoryline(one.id(), headOf(one), one.tops(), one.tracked(), summaries.get(one.id()),
 					attempts.get(one.id())))
 			.toList();
-		return new Snapshot(flows, settings.schedule().timezone());
+		return new Snapshot(loaded, settings.schedule().timezone());
 	}
 
 	/** 맞춘 사용자 스토리라인의 헤드 — 저장하는 맞추기가 쓴 뒤라 비지 않는다 */
@@ -187,11 +187,11 @@ public class StorylineSummaryRun {
 	}
 
 	/**
-	 * 흐름 하나를 정리한다.
+	 * 사용자 스토리라인 하나를 정리한다.
 	 * @param previous 고치는 호출이면 지난 정리, 처음부터면 null
-	 * @return 다음 흐름으로 가도 되는가 — 저장한 키가 없거나 키 쪽의 실패면 false
+	 * @return 다음 사용자 스토리라인으로 가도 되는가 — 저장한 키가 없거나 키 쪽의 실패면 false
 	 */
-	private boolean call(UserId user, LlmModel model, ZoneId zone, Flow flow, @Nullable StorylineSummary previous,
+	private boolean call(UserId user, LlmModel model, ZoneId zone, UserStoryline userStoryline, @Nullable StorylineSummary previous,
 			Set<Long> tops, List<Long> send, Set<Long> covered, Map<Long, List<SummaryEvent>> read, Tally tally) {
 		Set<Long> sending = new HashSet<>(send);
 		Map<Long, List<SummaryEvent>> lines = new HashMap<>();
@@ -223,21 +223,21 @@ public class StorylineSummaryRun {
 		return switch (outcome) {
 			case SummaryOutcome.KeyMissing missing -> false;
 			case SummaryOutcome.Failed failed -> {
-				fail(user, flow.id(), 0, 0, failed.failure(), tally);
+				fail(user, userStoryline.id(), 0, 0, failed.failure(), tally);
 				yield !failed.failure().ofKey();
 			}
 			case SummaryOutcome.Generated generated -> {
 				if (generated.stop() != GenerationStop.COMPLETE) {
-					fail(user, flow.id(), generated.inputTokens(), generated.outputTokens(),
+					fail(user, userStoryline.id(), generated.inputTokens(), generated.outputTokens(),
 							(generated.stop() == GenerationStop.TRUNCATED) ? SummaryFailure.OUTPUT_TRUNCATED
 									: SummaryFailure.OUTPUT_REFUSED,
 							tally);
 					yield true;
 				}
 				switch (SummaryOutputReader.read(generated.text(), prompt.aliases())) {
-					case SummaryRead.Unreadable unreadable -> fail(user, flow.id(), generated.inputTokens(),
+					case SummaryRead.Unreadable unreadable -> fail(user, userStoryline.id(), generated.inputTokens(),
 							generated.outputTokens(), SummaryFailure.UNREADABLE_OUTPUT, tally);
-					case SummaryRead.Read done -> store(user, model, flow, tops, articles, input.topIds(), done,
+					case SummaryRead.Read done -> store(user, model, userStoryline, tops, articles, input.topIds(), done,
 							generated, tally);
 				}
 				yield true;
@@ -249,7 +249,7 @@ public class StorylineSummaryRun {
 	 * 견줘 저장하고 시도 기록에 더한다 — 그 사이 개체가 달라졌으면 결과를 버린다. 호출에 넣지 않은 꼭대기는 글 없이 둔다.
 	 * @param topOrder 글을 받은 꼭대기 — 출력의 별칭 순
 	 */
-	private void store(UserId user, LlmModel model, Flow flow, Set<Long> tops, Map<Long, Long> articles,
+	private void store(UserId user, LlmModel model, UserStoryline userStoryline, Set<Long> tops, Map<Long, Long> articles,
 			List<Long> topOrder, SummaryRead.Read read, SummaryOutcome.Generated generated, Tally tally) {
 		Instant at = this.clock.instant();
 		Map<Long, SummaryText> texts = new HashMap<>();
@@ -257,15 +257,15 @@ public class StorylineSummaryRun {
 		for (int i = 0; i < topOrder.size(); i++) {
 			texts.put(topOrder.get(i), read.tops().get(i));
 		}
-		StorylineSummary existing = flow.summary();
-		StorylineSummary next = new StorylineSummary(flow.id(), read.whole(), texts, articles, model.provider().key(),
+		StorylineSummary existing = userStoryline.summary();
+		StorylineSummary next = new StorylineSummary(userStoryline.id(), read.whole(), texts, articles, model.provider().key(),
 				model.id(), generated.inputTokens(), generated.outputTokens(), (existing == null) ? at : existing.createdAt(),
 				at, (existing == null) ? 0 : existing.version());
 		Boolean stored = this.transaction.execute(status -> {
 			this.lock.lockFollowed(user, at);
 			Optional<UserStorylineRow> row = this.userStorylines.load(user)
 				.stream()
-				.filter(one -> one.id() == flow.id())
+				.filter(one -> one.id() == userStoryline.id())
 				.findFirst();
 			if (row.isEmpty()) {
 				// 사용자 스토리라인이 사라졌다 — 시도 기록을 둘 자리도 없다
@@ -274,10 +274,10 @@ public class StorylineSummaryRun {
 			boolean written = row.get().members().equals(tops) && ((existing == null) ? this.summaries.create(next)
 					: this.summaries.replace(next, existing.version()));
 			if (written) {
-				this.summaries.recordStored(flow.id(), generated.inputTokens(), generated.outputTokens());
+				this.summaries.recordStored(userStoryline.id(), generated.inputTokens(), generated.outputTokens());
 			}
 			else {
-				this.summaries.recordDiscarded(flow.id(), generated.inputTokens(), generated.outputTokens());
+				this.summaries.recordDiscarded(userStoryline.id(), generated.inputTokens(), generated.outputTokens());
 			}
 			return written;
 		});
@@ -287,7 +287,7 @@ public class StorylineSummaryRun {
 		else {
 			tally.discarded++;
 			logger.info("정리 결과를 버렸다 — 그 사이 사용자 스토리라인이나 정리가 달라졌다: user={} userStoryline={}", user.value(),
-					flow.id());
+					userStoryline.id());
 		}
 	}
 
@@ -314,7 +314,7 @@ public class StorylineSummaryRun {
 		return storylines.stream().map(StorylineId::value).collect(Collectors.toSet());
 	}
 
-	private record Snapshot(List<Flow> flows, ZoneId zone) {
+	private record Snapshot(List<UserStoryline> userStorylines, ZoneId zone) {
 	}
 
 	private static final class Tally {

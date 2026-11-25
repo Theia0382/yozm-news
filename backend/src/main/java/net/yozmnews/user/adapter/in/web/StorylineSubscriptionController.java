@@ -33,7 +33,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
- * 스토리라인 구독(화면 이름 "흐름 추적") — 추적 중인 흐름 목록 · 추적 상태 · 추적 · 해제 · 추적 이력. docs/specs/user.md §3 · user-R52 ·
+ * 스토리라인 구독(화면 이름 "흐름 추적") — 추적 중인 사용자 스토리라인 목록 · 추적 상태 · 추적 · 해제 · 추적 이력. docs/specs/user.md §3 · user-R52 ·
  * user-R63 · user-R67
  * <p>
  * 모두 세션 사용자의 것이고 키 없이도 연다 — 스토리라인 ID · 시각 · 상태 · 더함 뺌만 내고 기사 내용을 내지 않는다(account-R5).
@@ -78,7 +78,7 @@ class StorylineSubscriptionController {
 		return StorylineUnsubscribeResponse.of(this.subscriptions.unsubscribe(user, storyline(storylineId), now()));
 	}
 
-	/** 흐름 추적 상태 — 받은 스토리라인마다 그 흐름을 추적 중인가. 없는 스토리라인은 추적 중이 아니다(user-R67) */
+	/** 흐름 추적 상태 — 받은 스토리라인마다 그 스토리라인을 추적 중인가. 없는 스토리라인은 추적 중이 아니다(user-R67) */
 	@AllowedWithoutLlmKey(reason = OPEN_WITHOUT_KEY)
 	@GetMapping("/api/storyline-subscriptions/states")
 	@ApiResponse(responseCode = "200", description = "OK", useReturnTypeSchema = true)

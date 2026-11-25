@@ -31,7 +31,7 @@ import org.springframework.transaction.IllegalTransactionStateException;
 
 /**
  * 흐름 추적(스토리라인 구독)의 추적 · 해제 · 조회 · 추적 상태 — 추적은 사용자 스토리라인에 붙고 누른 스토리라인은 추적 씨앗으로 남는다. 받은
- * ID 는 남는 스토리라인으로 풀고, 그 흐름의 어느 스토리라인(하위 · 이어진 뒤 흐름)에서 물어도 같은 추적이다. 해제는 그 흐름의 추적을 끈다.
+ * ID 는 남는 스토리라인으로 풀고, 그 사용자 스토리라인의 어느 스토리라인(하위 · 이어진 뒤 스토리라인)에서 물어도 같은 추적이다. 해제는 그 사용자 스토리라인의 추적을 끈다.
  * 이력은 추적 씨앗마다 한 행이고 지금 추적 씨앗은 이력을 차례로 재생한 집합과 같다. 추적 중인 사용자 스토리라인은 100 을 넘지 않는다. 실제
  * PostgreSQL 에서 본다 — 스토리라인과 관계는 행으로 직접 만든다.
  * <p>
@@ -92,7 +92,7 @@ class StorylineSubscriptionsTests {
 	}
 
 	@Test
-	void pressingAChildTracksTheFlowOfItsTopAndTheListShowsThePressedStoryline() {
+	void pressingAChildTracksTheUserStorylineOfItsTopAndTheListShowsThePressedStoryline() {
 		UserId user = user();
 		long top = storyline();
 		long child = storyline();
@@ -106,7 +106,7 @@ class StorylineSubscriptionsTests {
 			assertThat(one.members()).containsExactly(top);
 			assertThat(one.seeds()).containsExactly(child);
 		});
-		// 그 흐름의 어느 스토리라인에서 물어도 추적 중이다. 대조 — 관계없는 스토리라인은 아니다
+		// 그 사용자 스토리라인의 어느 스토리라인에서 물어도 추적 중이다. 대조 — 관계없는 스토리라인은 아니다
 		assertThat(this.subscriptions.states(user,
 				List.of(new StorylineId(top), new StorylineId(child), new StorylineId(unrelated)), at(60)))
 			.containsExactly(Map.entry(new StorylineId(top), true), Map.entry(new StorylineId(child), true),
@@ -117,20 +117,20 @@ class StorylineSubscriptionsTests {
 	}
 
 	@Test
-	void trackingAnEarlierFlowTracksItsLaterFlowAndUntrackingFromTheLaterFlowTurnsBothOff() {
+	void trackingAnEarlierStorylineTracksItsLaterStorylineAndUntrackingFromTheLaterStorylineTurnsBothOff() {
 		UserId user = user();
 		long earlier = storyline();
 		long later = storyline();
 		UserStorylineFixtures.follows(this.jdbc, earlier, later);
 		this.subscriptions.subscribe(user, new StorylineId(earlier), NOW);
-		long flow = saved(user).getFirst().id();
+		long userStoryline = saved(user).getFirst().id();
 
-		// 앞 흐름을 추적하면 뒤 흐름도 같은 사용자 스토리라인의 추적 대상이다
+		// 앞 스토리라인을 추적하면 뒤 스토리라인도 같은 사용자 스토리라인의 추적 대상이다
 		assertThat(saved(user)).singleElement().extracting(Saved::members).isEqualTo(Set.of(earlier, later));
 		assertThat(this.subscriptions.states(user, List.of(new StorylineId(later)), at(60)))
 			.containsExactly(Map.entry(new StorylineId(later), true));
 
-		// 뒤 흐름에서 해제해도 그 흐름을 받게 만든 앞 흐름의 추적을 끈다
+		// 뒤 스토리라인에서 해제해도 그 스토리라인을 받게 만든 앞 스토리라인의 추적을 끈다
 		assertThat(this.subscriptions.unsubscribe(user, new StorylineId(later), at(120)))
 			.isEqualTo(new UnsubscribeOutcome.Unsubscribed(new StorylineId(later)));
 		assertThat(this.subscriptions.states(user, List.of(new StorylineId(earlier), new StorylineId(later)), at(180)))
@@ -140,14 +140,14 @@ class StorylineSubscriptionsTests {
 		// 사용자 스토리라인은 남아 있다 — 다시 추적하면 같은 사용자 스토리라인이다
 		this.subscriptions.subscribe(user, new StorylineId(later), at(240));
 		assertThat(saved(user)).singleElement().satisfies(one -> {
-			assertThat(one.id()).isEqualTo(flow);
+			assertThat(one.id()).isEqualTo(userStoryline);
 			assertThat(one.tracked()).isTrue();
 			assertThat(one.seeds()).containsExactly(later);
 		});
 	}
 
 	@Test
-	void trackingTheLaterFlowDoesNotTrackTheEarlierFlow() {
+	void trackingTheLaterStorylineDoesNotTrackTheEarlierStoryline() {
 		UserId user = user();
 		long earlier = storyline();
 		long later = storyline();
@@ -162,7 +162,7 @@ class StorylineSubscriptionsTests {
 	}
 
 	@Test
-	void anotherStorylineOfATrackedFlowAddsATrackedSeedAndUntrackingRecordsEachSeed() {
+	void anotherStorylineOfATrackedUserStorylineAddsATrackedSeedAndUntrackingRecordsEachSeed() {
 		UserId user = user();
 		long earlier = storyline();
 		long later = storyline();
@@ -189,7 +189,7 @@ class StorylineSubscriptionsTests {
 	}
 
 	@Test
-	void theHundredAndFirstTrackedFlowIsRejectedButATrackedFlowTakesAnotherSeed() {
+	void theHundredAndFirstTrackedUserStorylineIsRejectedButATrackedUserStorylineTakesAnotherSeed() {
 		UserId user = user();
 		long earlier = storyline();
 		long later = storyline();
@@ -204,14 +204,14 @@ class StorylineSubscriptionsTests {
 
 		assertThat(this.subscriptions.subscribe(user, new StorylineId(storyline()), at(120)))
 			.isEqualTo(new SubscribeOutcome.LimitReached(100));
-		// 이미 추적 중인 흐름의 다른 스토리라인은 상한과 무관하게 추적 씨앗이 된다
+		// 이미 추적 중인 사용자 스토리라인의 다른 스토리라인은 상한과 무관하게 추적 씨앗이 된다
 		assertThat(this.subscriptions.subscribe(user, new StorylineId(later), at(180)))
 			.isEqualTo(new SubscribeOutcome.Subscribed(new StorylineId(later)));
 		assertThat(saved(user).stream().filter(Saved::tracked)).hasSize(100);
 	}
 
 	@Test
-	void anUntrackTurnsTheTrackingOffAndAnUntrackedFlowChangesNothing() {
+	void anUntrackTurnsTheTrackingOffAndAnUntrackedStorylineChangesNothing() {
 		UserId user = user();
 		long storyline = storyline();
 		long other = storyline();
@@ -229,7 +229,7 @@ class StorylineSubscriptionsTests {
 	}
 
 	@Test
-	void aMergedIdUntracksTheFlowOfItsSurvivor() {
+	void aMergedIdUntracksTheUserStorylineOfItsSurvivor() {
 		UserId user = user();
 		long survivor = storyline();
 		long merged = storyline();
@@ -268,9 +268,9 @@ class StorylineSubscriptionsTests {
 	}
 
 	@Test
-	void aFlowWithTwoTrackedSeedsIsOneRowWithTheLiveliestStateAndTheSummaryTitle() {
+	void aUserStorylineWithTwoTrackedSeedsIsOneRowWithTheLiveliestStateAndTheSummaryTitle() {
 		UserId user = user();
-		// 앞 흐름은 오래전에 끝났고 뒤 흐름은 지금 이어진다 — 상태는 조회하는 지금 시각으로 정한다
+		// 앞 스토리라인은 오래전에 끝났고 뒤 스토리라인은 지금 이어진다 — 상태는 조회하는 지금 시각으로 정한다
 		long earlier = UserStorylineFixtures.storyline(this.jdbc, Instant.parse("2026-09-01T00:00:00Z"));
 		long later = UserStorylineFixtures.storyline(this.jdbc, Instant.now());
 		long alone = UserStorylineFixtures.storyline(this.jdbc, Instant.parse("2026-09-01T00:00:00Z"));
@@ -278,18 +278,18 @@ class StorylineSubscriptionsTests {
 		this.subscriptions.subscribe(user, new StorylineId(later), NOW);
 		this.subscriptions.subscribe(user, new StorylineId(earlier), at(60));
 		this.subscriptions.subscribe(user, new StorylineId(alone), at(120));
-		Saved flow = saved(user).stream().filter(one -> one.seeds().size() == 2).findFirst().orElseThrow();
+		Saved userStoryline = saved(user).stream().filter(one -> one.seeds().size() == 2).findFirst().orElseThrow();
 		Saved single = saved(user).stream().filter(one -> one.seeds().size() == 1).findFirst().orElseThrow();
-		summarize(flow, "의대 정원 갈등");
+		summarize(userStoryline, "의대 정원 갈등");
 
 		List<SubscribedUserStoryline> view = this.subscriptions.view(user, at(180)).subscriptions();
 
-		// 씨앗 둘인 흐름이 한 줄이다 — 씨앗은 ID 순, 상태는 둘 가운데 이어지는 쪽, 제목은 정리의 제목, 추적 시각은 처음 것.
-		// 대조 — 씨앗 하나인 흐름은 그 씨앗의 상태 그대로이고 정리가 없어 제목이 없다
+		// 씨앗 둘인 사용자 스토리라인이 한 줄이다 — 씨앗은 ID 순, 상태는 둘 가운데 이어지는 쪽, 제목은 정리의 제목, 추적 시각은 처음 것.
+		// 대조 — 씨앗 하나인 사용자 스토리라인은 그 씨앗의 상태 그대로이고 정리가 없어 제목이 없다
 		assertThat(view).containsExactly(
 				new SubscribedUserStoryline(new UserStorylineId(single.id()), new StorylineId(alone), at(120),
 						List.of(new StorylineId(alone)), StorylineState.ENDED, null),
-				new SubscribedUserStoryline(new UserStorylineId(flow.id()), new StorylineId(later), NOW,
+				new SubscribedUserStoryline(new UserStorylineId(userStoryline.id()), new StorylineId(later), NOW,
 						List.of(new StorylineId(earlier), new StorylineId(later)), StorylineState.ACTIVE,
 						"의대 정원 갈등"));
 	}

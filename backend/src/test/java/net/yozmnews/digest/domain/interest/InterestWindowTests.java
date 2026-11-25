@@ -255,7 +255,7 @@ class InterestWindowTests {
 
 	@Test
 	void anEventWithATopButNoCountableTopicStillCountsForItsTop() {
-		// 대조 — 같은 사건에 주제가 있으면 처음 본 흐름이라 주제에도 든다: t = −1 ÷ 4
+		// 대조 — 같은 사건에 주제가 있으면 처음 본 스토리라인이라 주제에도 든다: t = −1 ÷ 4
 		InterestRecord topical = record(List.of(exposure(1, DAY_AFTER)), Map.of(event(1), Set.of("t")),
 				Map.of(event(1), List.of(TREE)), List.of(feedback(1, FeedbackValue.DISLIKE, DAY_AFTER)));
 		assertThat(InterestWindow.levels(topical, T, LATER).topics().level("t")).isCloseTo(-0.25, EXACT);
@@ -270,14 +270,14 @@ class InterestWindowTests {
 	}
 
 	@Test
-	void aDislikeOnAFlowSeenTheDayBeforeStaysOutOfTheTopic() {
-		// 대조 — b 가 a 의 8일 뒤(7일 밖)면 처음 본 흐름: t = −1 ÷ (2 + 3) = −0.2. TREE 는 스토리라인 묶음이 반응이 앞선 무반응 노출을
+	void aDislikeOnAStorylineSeenTheDayBeforeStaysOutOfTheTopic() {
+		// 대조 — b 가 a 의 8일 뒤(7일 밖)면 처음 본 스토리라인: t = −1 ÷ (2 + 3) = −0.2. TREE 는 스토리라인 묶음이 반응이 앞선 무반응 노출을
 		// 대신해 a 가 빠진다 — −1 ÷ (1 + 3) = −0.25. 주제는 대신하지 않아 a 가 남는다
-		InterestRecord late = flow(T.plus(Duration.ofDays(9)));
+		InterestRecord late = sameTree(T.plus(Duration.ofDays(9)));
 		assertThat(InterestWindow.levels(late, T, LATER).topics().level("t")).isCloseTo(-0.2, EXACT);
 		assertThat(InterestWindow.levels(late, T, LATER).storylines().level(TREE)).isCloseTo(-0.25, EXACT);
 		// 같은 꼭대기 TREE 의 사건 a(하루 뒤, 주제 t)와 b(이틀 뒤, 주제 t), b 에 싫어요 — b 는 반복이라 주제에 없다
-		InterestRecord record = flow(T.plus(Duration.ofDays(2)));
+		InterestRecord record = sameTree(T.plus(Duration.ofDays(2)));
 
 		Interests interests = InterestWindow.levels(record, T, LATER);
 
@@ -301,7 +301,7 @@ class InterestWindowTests {
 				Map.of(event(1), Set.of("s"), event(2), Set.of("t")),
 				Map.of(event(1), List.of(TREE), event(2), List.of(TREE)), List.of());
 
-		assertThat(InterestWindow.levels(record, T, T).topics().levels()).as("처음 본 흐름이라 주제에 든다")
+		assertThat(InterestWindow.levels(record, T, T).topics().levels()).as("처음 본 스토리라인이라 주제에 든다")
 			.containsOnlyKeys("t");
 	}
 
@@ -312,11 +312,11 @@ class InterestWindowTests {
 		InterestRecord rewritten = new InterestRecord(TAG_SET, List.of(), Map.of(), Map.of(), List.of(), List.of(),
 				List.of(new StorylineSubscriptionChange(new StorylineId(33), lower, StorylineSubscriptionAction.ADD,
 						StorylineSubscriptionCause.STORYLINE_MERGED, DAY_AFTER)),
-				Map.of(lower, TREE), flowsOf(List.of(TREE)));
+				Map.of(lower, TREE), userStorylinesOf(List.of(TREE)));
 		assertThat(InterestWindow.levels(rewritten, T, LATER)).isEqualTo(Interests.NONE);
 		// 하위 스토리라인 lower(꼭대기 TREE)를 사용자가 구독 — 기준 시각 뒤라 무게 1 → TREE = (1/3) × 1 = 1/3, 주제에는 들지 않는다
 		InterestRecord record = new InterestRecord(TAG_SET, List.of(), Map.of(), Map.of(), List.of(), List.of(),
-				List.of(storyline(lower, lower, DAY_AFTER)), Map.of(lower, TREE), flowsOf(List.of(TREE)));
+				List.of(storyline(lower, lower, DAY_AFTER)), Map.of(lower, TREE), userStorylinesOf(List.of(TREE)));
 
 		Interests interests = InterestWindow.levels(record, T, LATER);
 
@@ -327,7 +327,7 @@ class InterestWindowTests {
 
 	@Test
 	void theTopsOfOneUserStorylineShareOneInterest() {
-		// 앞 흐름 TREE 의 사건 셋을 하루 뒤에 보고 모두 싫어요 — 뒤 흐름 OTHER_TREE 는 본 적이 없다
+		// 앞 스토리라인 TREE 의 사건 셋을 하루 뒤에 보고 모두 싫어요 — 뒤 스토리라인 OTHER_TREE 는 본 적이 없다
 		List<ExposureRow> exposures = List.of(exposure(1, DAY_AFTER), exposure(2, DAY_AFTER), exposure(3, DAY_AFTER));
 		Map<EventId, List<StorylineId>> tops = Map.of(event(1), List.of(TREE), event(2), List.of(TREE), event(3),
 				List.of(TREE));
@@ -336,7 +336,7 @@ class InterestWindowTests {
 		// 대조 — 두 꼭대기가 다른 묶음이면 OTHER_TREE 에는 값이 없다(중립)
 		StorylineLevels apart = InterestWindow
 			.levels(new InterestRecord(TAG_SET, exposures, Map.of(), tops, dislikes, List.of(), List.of(), Map.of(),
-					new StorylineFlows(Map.of(TREE, Set.of(0), OTHER_TREE, Set.of(1)), Set.of())), T, LATER)
+					new UserStorylines(Map.of(TREE, Set.of(0), OTHER_TREE, Set.of(1)), Set.of())), T, LATER)
 			.storylines();
 		assertThat(apart.levels()).containsOnlyKeys(TREE);
 		assertThat(apart.level(TREE)).isCloseTo(-0.5, EXACT);
@@ -344,7 +344,7 @@ class InterestWindowTests {
 		// 두 꼭대기가 한 묶음 — E = 3 · F = −3 → x = −3 ÷ (3 + 3) = −0.5 가 두 꼭대기에 같은 값으로 든다
 		StorylineLevels together = InterestWindow
 			.levels(new InterestRecord(TAG_SET, exposures, Map.of(), tops, dislikes, List.of(), List.of(), Map.of(),
-					new StorylineFlows(Map.of(TREE, Set.of(0), OTHER_TREE, Set.of(0)), Set.of())), T, LATER)
+					new UserStorylines(Map.of(TREE, Set.of(0), OTHER_TREE, Set.of(0)), Set.of())), T, LATER)
 			.storylines();
 
 		assertThat(together.levels()).containsOnlyKeys(TREE, OTHER_TREE);
@@ -364,10 +364,10 @@ class InterestWindowTests {
 
 		StorylineLevels levels = InterestWindow
 			.levels(new InterestRecord(TAG_SET, exposures, Map.of(), tops, reactions, List.of(), List.of(), Map.of(),
-					new StorylineFlows(Map.of(TREE, Set.of(0, 1), OTHER_TREE, Set.of(1)), Set.of())), T, LATER)
+					new UserStorylines(Map.of(TREE, Set.of(0, 1), OTHER_TREE, Set.of(1)), Set.of())), T, LATER)
 			.storylines();
 
-		// TREE 의 관심은 두 묶음 값의 평균 (1/4 − 1/6) ÷ 2 = 1/24, 남길 흐름은 묶음 하나라도(1/4 ≥ 0.2)
+		// TREE 의 관심은 두 묶음 값의 평균 (1/4 − 1/6) ÷ 2 = 1/24, 남길 스토리라인은 묶음 하나라도(1/4 ≥ 0.2)
 		assertThat(levels.level(TREE)).isCloseTo(0.041666666666666664, EXACT);
 		assertThat(levels.level(OTHER_TREE)).isCloseTo(-0.16666666666666666, EXACT);
 		assertThat(levels.kept()).containsExactly(TREE);
@@ -382,13 +382,13 @@ class InterestWindowTests {
 		// 대조 — 묶음이 있으면 TREE = −1 ÷ 4
 		assertThat(InterestWindow
 			.levels(new InterestRecord(TAG_SET, exposures, Map.of(event(1), Set.of("t")), tops, dislike, List.of(),
-					List.of(), Map.of(), new StorylineFlows(Map.of(TREE, Set.of(0)), Set.of())), T, LATER)
+					List.of(), Map.of(), new UserStorylines(Map.of(TREE, Set.of(0)), Set.of())), T, LATER)
 			.storylines()
 			.level(TREE)).isCloseTo(-0.25, EXACT);
 
 		Interests interests = InterestWindow
 			.levels(new InterestRecord(TAG_SET, exposures, Map.of(event(1), Set.of("t")), tops, dislike, List.of(),
-					List.of(), Map.of(), StorylineFlows.NONE), T, LATER);
+					List.of(), Map.of(), UserStorylines.NONE), T, LATER);
 
 		assertThat(interests.storylines().levels()).isEmpty();
 		assertThat(interests.topics().level("t")).as("주제 쪽 값은 그대로다").isCloseTo(-0.25, EXACT);
@@ -398,12 +398,12 @@ class InterestWindowTests {
 	void trackingSignalsOfOneUserStorylineAddUpAndAnInheritedSeedIsNotASignal() {
 		StorylineId first = new StorylineId(31);
 		StorylineId second = new StorylineId(32);
-		StorylineFlows flows = new StorylineFlows(Map.of(TREE, Set.of(0), OTHER_TREE, Set.of(0)), Set.of(0));
+		UserStorylines userStorylines = new UserStorylines(Map.of(TREE, Set.of(0), OTHER_TREE, Set.of(0)), Set.of(0));
 		Map<StorylineId, StorylineId> storylineTops = Map.of(first, TREE, second, OTHER_TREE);
 		// 대조 — 사용자가 누른 것 하나: (1/3) × 1 = 1/3
 		assertThat(InterestWindow
 			.levels(new InterestRecord(TAG_SET, List.of(), Map.of(), Map.of(), List.of(), List.of(),
-					List.of(storyline(first, first, DAY_AFTER)), storylineTops, flows), T, LATER)
+					List.of(storyline(first, first, DAY_AFTER)), storylineTops, userStorylines), T, LATER)
 			.storylines()
 			.level(OTHER_TREE)).isCloseTo(0.3333333333333333, EXACT);
 		// 대조 — 갈라질 때 물려받은 추적 씨앗의 행은 신호가 아니다
@@ -412,7 +412,7 @@ class InterestWindowTests {
 					List.of(storyline(first, first, DAY_AFTER),
 							new StorylineSubscriptionChange(second, second, StorylineSubscriptionAction.ADD,
 									StorylineSubscriptionCause.STORYLINE_SPLIT, DAY_AFTER)),
-					storylineTops, flows), T, LATER)
+					storylineTops, userStorylines), T, LATER)
 			.storylines()
 			.level(TREE)).isCloseTo(0.3333333333333333, EXACT);
 
@@ -420,7 +420,7 @@ class InterestWindowTests {
 		StorylineLevels levels = InterestWindow
 			.levels(new InterestRecord(TAG_SET, List.of(), Map.of(), Map.of(), List.of(), List.of(),
 					List.of(storyline(first, first, DAY_AFTER), storyline(second, second, DAY_AFTER)), storylineTops,
-					flows), T, LATER)
+					userStorylines), T, LATER)
 			.storylines();
 
 		assertThat(levels.level(TREE)).isCloseTo(0.6666666666666666, EXACT);
@@ -428,7 +428,7 @@ class InterestWindowTests {
 	}
 
 	/** 같은 꼭대기 TREE 의 사건 a(1 — 하루 뒤)와 b(2 — {@code second}), 둘 다 주제 t, b 에 싫어요 */
-	private static InterestRecord flow(Instant second) {
+	private static InterestRecord sameTree(Instant second) {
 		return record(List.of(exposure(1, DAY_AFTER), exposure(2, second)),
 				Map.of(event(1), Set.of("t"), event(2), Set.of("t")),
 				Map.of(event(1), List.of(TREE), event(2), List.of(TREE)),
@@ -440,24 +440,24 @@ class InterestWindowTests {
 			List<FeedbackChange> feedback, List<TopicSubscriptionChange> topics,
 			List<StorylineSubscriptionChange> storylines, Map<StorylineId, StorylineId> storylineTops) {
 		return new InterestRecord(TAG_SET, exposures, subtopics, Map.of(), feedback, topics, storylines,
-				storylineTops, flowsOf(List.copyOf(storylineTops.values())));
+				storylineTops, userStorylinesOf(List.copyOf(storylineTops.values())));
 	}
 
 	/** 노출 사건의 꼭대기가 있는 재료 */
 	private static InterestRecord record(List<ExposureRow> exposures, Map<EventId, Set<String>> subtopics,
 			Map<EventId, List<StorylineId>> tops, List<FeedbackChange> feedback) {
 		return new InterestRecord(TAG_SET, exposures, subtopics, tops, feedback, List.of(), List.of(), Map.of(),
-				flowsOf(tops.values().stream().flatMap(List::stream).toList()));
+				userStorylinesOf(tops.values().stream().flatMap(List::stream).toList()));
 	}
 
 	/** 꼭대기마다 제 사용자 스토리라인 묶음 하나 — 꼭대기 ID 순으로 번호를 준다 */
-	private static StorylineFlows flowsOf(List<StorylineId> tops) {
+	private static UserStorylines userStorylinesOf(List<StorylineId> tops) {
 		List<StorylineId> ordered = tops.stream().distinct().sorted(Comparator.comparingLong(StorylineId::value)).toList();
-		Map<StorylineId, Set<Integer>> flowsOfTop = new HashMap<>();
-		for (int flow = 0; flow < ordered.size(); flow++) {
-			flowsOfTop.put(ordered.get(flow), Set.of(flow));
+		Map<StorylineId, Set<Integer>> userStorylinesOfTop = new HashMap<>();
+		for (int index = 0; index < ordered.size(); index++) {
+			userStorylinesOfTop.put(ordered.get(index), Set.of(index));
 		}
-		return new StorylineFlows(flowsOfTop, Set.of());
+		return new UserStorylines(userStorylinesOfTop, Set.of());
 	}
 
 	private static EventId event(long id) {

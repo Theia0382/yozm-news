@@ -68,7 +68,7 @@ class UserStorylineDirectoryServiceTests {
 		UserStorylineFixtures.reaction(this.jdbc, user, UserStorylineFixtures.eventIn(this.jdbc, later), "LIKE",
 				TRACKED.plusSeconds(60));
 		this.subscriptions.view(user, TRACKED.plusSeconds(120));
-		// 저장한 뒤에 바뀐 것 — 이어짐이 사라져 흐름이 갈리고, 다른 흐름에 싫어요가 생겼다
+		// 저장한 뒤에 바뀐 것 — 이어짐이 사라져 스토리라인이 갈리고, 다른 스토리라인에 싫어요가 생겼다
 		UserStorylineFixtures.unrelate(this.jdbc, earlier, later);
 		UserStorylineFixtures.reaction(this.jdbc, user, UserStorylineFixtures.eventIn(this.jdbc, reacted), "DISLIKE",
 				TRACKED.plusSeconds(180));
@@ -80,7 +80,7 @@ class UserStorylineDirectoryServiceTests {
 		// 쓰지 않는다 — 저장 행은 그대로다(갈라지기 전의 하나)
 		assertThat(UserStorylineFixtures.saved(this.jdbc, user)).isEqualTo(before);
 		assertThat(before).singleElement().extracting(Saved::members).isEqualTo(Set.of(earlier, later));
-		// 저장 개체는 헤드(later) 쪽 조각을 잇고 추적을 물려받는다. 추적 씨앗의 조각은 새 묶음으로 추적 중이고, 반응만 받은 흐름은
+		// 저장 개체는 헤드(later) 쪽 조각을 잇고 추적을 물려받는다. 추적 씨앗의 조각은 새 묶음으로 추적 중이고, 반응만 받은 스토리라인은
 		// 추적 중이 아니다 — 아직 저장되지 않은 묶음은 ID 가 없다. 헤드 ID 순이다
 		assertThat(read).containsExactly(
 				new UserStorylineView(null, new StorylineId(earlier), Set.of(new StorylineId(earlier)), true),
@@ -98,7 +98,7 @@ class UserStorylineDirectoryServiceTests {
 	}
 
 	@Test
-	void aWiderWindowGivesTheFlowsOfOlderSignals() {
+	void aWiderWindowGivesTheUserStorylinesOfOlderSignals() {
 		UserId user = UserStorylineFixtures.user(this.jdbc, "alice@example.com");
 		long old = storyline();
 		UserStorylineFixtures.reaction(this.jdbc, user, UserStorylineFixtures.eventIn(this.jdbc, old), "LIKE", TRACKED);

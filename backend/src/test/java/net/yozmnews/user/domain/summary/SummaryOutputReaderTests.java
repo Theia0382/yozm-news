@@ -8,7 +8,7 @@ import net.yozmnews.platform.StructuredOutputSchema;
 import org.junit.jupiter.api.Test;
 
 /**
- * 정리 출력의 서술과 읽기 — 흐름 전체의 글은 언제나, 꼭대기가 둘 이상이면 꼭대기 별칭마다의 글도 필수다. 칸이 빠지거나 비었으면 읽지 못한 출력이다 — 일부만
+ * 정리 출력의 서술과 읽기 — 사용자 스토리라인 전체의 글은 언제나, 꼭대기가 둘 이상이면 꼭대기 별칭마다의 글도 필수다. 칸이 빠지거나 비었으면 읽지 못한 출력이다 — 일부만
  * 읽지 않는다. 상한(제목 120 · 흐름 요약 1,200 · 최근 전개 800 코드 포인트)을 넘은 글은 상한까지만 남긴다.
  */
 class SummaryOutputReaderTests {

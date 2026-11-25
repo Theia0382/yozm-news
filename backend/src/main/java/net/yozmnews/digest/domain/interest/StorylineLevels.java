@@ -12,9 +12,9 @@ import net.yozmnews.storyline.StorylineId;
 
 /**
  * 한 사용자의 스토리라인(포함 나무의 꼭대기)마다 관심 x(−1 ~ 1) — {@link InterestWindow#levels} 가 {@link InterestRules#STORYLINE} 묶음으로
- * 낸다. 관심의 키는 사용자 스토리라인 묶음({@link StorylineFlows})이고, 한 묶음의 꼭대기는 모두 그 묶음의 값을 받는다. 묶음 여럿에 든 꼭대기(갈라지기
- * 전 꼭대기)는 그 묶음들의 값을 모두 받는다 — 관심 · 가중치는 평균, 거름은 모두 거름 기준 이하일 때, 관심 흐름 · 남길 흐름은 하나라도 기준 이상일
- * 때다. 맵에 없는 꼭대기는 0(신호 없음)이다. 가중치 변환과 거른 꼭대기 · 관심 흐름 · 남길 흐름의 판정이 여기 한 곳에 있다.
+ * 낸다. 관심의 키는 사용자 스토리라인 묶음({@link UserStorylines})이고, 한 묶음의 꼭대기는 모두 그 묶음의 값을 받는다. 묶음 여럿에 든 꼭대기(갈라지기
+ * 전 꼭대기)는 그 묶음들의 값을 모두 받는다 — 관심 · 가중치는 평균, 거름은 모두 거름 기준 이하일 때, 관심 스토리라인 · 남길 스토리라인은 하나라도 기준 이상일
+ * 때다. 맵에 없는 꼭대기는 0(신호 없음)이다. 가중치 변환과 거른 꼭대기 · 관심 스토리라인 · 남길 스토리라인의 판정이 여기 한 곳에 있다.
  * docs/specs/digest.md §5
  */
 public final class StorylineLevels {
@@ -47,7 +47,7 @@ public final class StorylineLevels {
 	 * @param levelsOfTop 꼭대기 → 묶음마다의 관심 x — 빈 목록인 꼭대기는 신호 없음
 	 * @throws IllegalArgumentException 값이 −1 ~ 1 밖이거나 수가 아닐 때
 	 */
-	public static StorylineLevels ofFlows(Map<StorylineId, ? extends Collection<Double>> levelsOfTop) {
+	public static StorylineLevels ofUserStorylines(Map<StorylineId, ? extends Collection<Double>> levelsOfTop) {
 		Objects.requireNonNull(levelsOfTop, "levelsOfTop");
 		Map<StorylineId, Double> mean = new HashMap<>();
 		Map<StorylineId, Double> max = new HashMap<>();
@@ -103,9 +103,9 @@ public final class StorylineLevels {
 	}
 
 	/**
-	 * 관심 흐름 — 묶음 하나라도(최대가) {@link InterestRules#STORYLINE_FOLLOW_THRESHOLD} 이상인 꼭대기와 {@code subscribed} 에서 거른 꼭대기를 뺀 것. 거름이
-	 * 앞선다 — 구독한 흐름도 거른 꼭대기면 관심 흐름이 아니다
-	 * @param subscribed 추적 중인 사용자 스토리라인의 꼭대기({@link StorylineFlows#trackedTops})
+	 * 관심 스토리라인 — 묶음 하나라도(최대가) {@link InterestRules#STORYLINE_FOLLOW_THRESHOLD} 이상인 꼭대기와 {@code subscribed} 에서 거른 꼭대기를 뺀 것. 거름이
+	 * 앞선다 — 구독한 스토리라인도 거른 꼭대기면 관심 스토리라인이 아니다
+	 * @param subscribed 추적 중인 사용자 스토리라인의 꼭대기({@link UserStorylines#trackedTops})
 	 */
 	public Set<StorylineId> followed(Set<StorylineId> subscribed) {
 		Objects.requireNonNull(subscribed, "subscribed");
@@ -119,7 +119,7 @@ public final class StorylineLevels {
 		return Set.copyOf(followed);
 	}
 
-	/** 남길 흐름 — 묶음 하나라도(최대가) {@link InterestRules#STORYLINE_KEEP_THRESHOLD} 이상인 꼭대기 */
+	/** 남길 스토리라인 — 묶음 하나라도(최대가) {@link InterestRules#STORYLINE_KEEP_THRESHOLD} 이상인 꼭대기 */
 	public Set<StorylineId> kept() {
 		return this.highest.entrySet()
 			.stream()

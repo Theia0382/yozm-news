@@ -122,7 +122,7 @@ class StorylineSubscriptionControllerTests {
 	}
 
 	@Test
-	void theListCarriesTheFlowItsSeedsStateAndTitleAndUnsubscribingAnswersEachOutcome() throws Exception {
+	void theListCarriesTheUserStorylineItsSeedsStateAndTitleAndUnsubscribingAnswersEachOutcome() throws Exception {
 		long storyline = storyline();
 		this.mockMvc.perform(put("/api/storyline-subscriptions/{id}", storyline).with(this.user));
 		long userStoryline = this.jdbc.sql("select id from user_storylines").query(Long.class).single();
@@ -146,18 +146,18 @@ class StorylineSubscriptionControllerTests {
 	}
 
 	@Test
-	void aFlowTrackedFromTwoStorylinesIsOneLineOfTheList() throws Exception {
+	void aUserStorylineTrackedFromTwoStorylinesIsOneLineOfTheList() throws Exception {
 		long earlier = storyline();
 		long later = storyline();
 		long alone = storyline();
 		UserStorylineFixtures.follows(this.jdbc, earlier, later);
-		// 대조 — 씨앗 하나인 흐름은 한 줄이다
+		// 대조 — 씨앗 하나인 사용자 스토리라인은 한 줄이다
 		this.mockMvc.perform(put("/api/storyline-subscriptions/{id}", alone).with(this.user));
 		this.mockMvc.perform(get("/api/storyline-subscriptions").with(this.user))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.subscriptions.length()").value(1));
 
-		// 한 흐름의 스토리라인 둘을 눌러도 줄은 하나 늘 뿐이다
+		// 한 사용자 스토리라인의 스토리라인 둘을 눌러도 줄은 하나 늘 뿐이다
 		this.mockMvc.perform(put("/api/storyline-subscriptions/{id}", earlier).with(this.user));
 		this.mockMvc.perform(put("/api/storyline-subscriptions/{id}", later).with(this.user));
 
@@ -176,7 +176,7 @@ class StorylineSubscriptionControllerTests {
 		UserStorylineFixtures.follows(this.jdbc, earlier, later);
 		this.mockMvc.perform(put("/api/storyline-subscriptions/{id}", earlier).with(this.user));
 
-		// 앞 흐름을 추적하면 뒤 흐름도 추적 중이다. 없는 스토리라인 · 관계없는 스토리라인은 아니고, 같은 ID 는 처음 자리 한 번이다
+		// 앞 스토리라인을 추적하면 뒤 스토리라인도 추적 중이다. 없는 스토리라인 · 관계없는 스토리라인은 아니고, 같은 ID 는 처음 자리 한 번이다
 		this.mockMvc
 			.perform(get("/api/storyline-subscriptions/states")
 				.param("ids", later + "," + other + ",999999999," + earlier + "," + later)
@@ -186,7 +186,7 @@ class StorylineSubscriptionControllerTests {
 					{"states":[{"storylineId":%d,"tracked":true},{"storylineId":%d,"tracked":false},
 					           {"storylineId":999999999,"tracked":false},{"storylineId":%d,"tracked":true}]}"""
 				.formatted(later, other, earlier), JsonCompareMode.STRICT));
-		// 목록의 줄은 누른 스토리라인과 그것이 든 사용자 스토리라인 · 그 헤드(이어진 뒤 흐름)를 싣는다
+		// 목록의 줄은 누른 스토리라인과 그것이 든 사용자 스토리라인 · 그 헤드(이어진 뒤 스토리라인)를 싣는다
 		long userStoryline = this.jdbc.sql("select id from user_storylines").query(Long.class).single();
 		this.mockMvc.perform(get("/api/storyline-subscriptions").with(this.user))
 			.andExpect(status().isOk())

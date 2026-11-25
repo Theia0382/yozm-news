@@ -17,8 +17,8 @@ import org.jspecify.annotations.Nullable;
  * 정리의 처분 — 사용자 스토리라인마다 새로 만들지 · 처음부터 다시 만들지 · 새 사건으로 고칠지 · 그대로 둘지 · 지울지를 정하는 정본.
  * docs/specs/user.md §5
  * <p>
- * 새로 만드는 것은 관심 흐름뿐이고, 이미 정리한 흐름은 관심 흐름이거나 남길 흐름인 동안 남는다. 재료가 그대로면 부르지 않는다. 연속 실패로 쉬는
- * 흐름은 부르지 않는다.
+ * 새로 만드는 것은 관심 스토리라인뿐이고, 이미 정리한 사용자 스토리라인은 관심 스토리라인이거나 남길 스토리라인인 동안 남는다. 재료가 그대로면 부르지 않는다. 연속 실패로 쉬는
+ * 사용자 스토리라인은 부르지 않는다.
  */
 public final class SummaryPlan {
 
@@ -29,16 +29,16 @@ public final class SummaryPlan {
 	 * 사용자 스토리라인 하나와 그 정리의 지금 상태.
 	 *
 	 * @param id 사용자 스토리라인 ID
-	 * @param head 헤드 — 보일 흐름 · 남길 흐름의 판정은 헤드로 한다(헤드는 이 사용자 스토리라인에만 든다)
+	 * @param head 헤드 — 보일 스토리라인 · 남길 스토리라인의 판정은 헤드로 한다(헤드는 이 사용자 스토리라인에만 든다)
 	 * @param tops 저장한 추적 대상(스토리라인 ID)
 	 * @param tracked 추적 중인가
 	 * @param summary 정리 — 없으면 null
 	 * @param attempt 시도 기록 — 없으면 null
 	 */
-	public record Flow(long id, long head, Set<Long> tops, boolean tracked, @Nullable StorylineSummary summary,
+	public record UserStoryline(long id, long head, Set<Long> tops, boolean tracked, @Nullable StorylineSummary summary,
 			@Nullable SummaryAttempt attempt) {
 
-		public Flow {
+		public UserStoryline {
 			tops = Set.copyOf(Objects.requireNonNull(tops, "tops"));
 			if (!tops.contains(head)) {
 				throw new IllegalArgumentException("헤드는 추적 대상에 든다: " + head + " · " + tops);
@@ -53,7 +53,7 @@ public final class SummaryPlan {
 		long id();
 
 		/**
-		 * 정리가 없는 관심 흐름을 처음 정리한다.
+		 * 정리가 없는 관심 스토리라인을 처음 정리한다.
 		 *
 		 * @param tops 정리할 추적 대상
 		 * @param send 호출에 넣을 사건 — 첫 기사 시각 순. 사건이 있는 꼭대기는 모두 하나 이상 받는다
@@ -74,7 +74,7 @@ public final class SummaryPlan {
 		record Keep(long id) implements Action {
 		}
 
-		/** 관심 흐름도 남길 흐름도 아니게 된 흐름의 정리를 지운다 */
+		/** 관심 스토리라인도 남길 스토리라인도 아니게 된 사용자 스토리라인의 정리를 지운다 */
 		record Remove(long id) implements Action {
 		}
 
@@ -82,14 +82,14 @@ public final class SummaryPlan {
 
 	/**
 	 * 재료(지금 사건)를 읽을 사용자 스토리라인 — 정리가 있거나 새로 만들 수 있는 것.
-	 * @param followed 관심 흐름의 꼭대기
+	 * @param followed 관심 스토리라인의 꼭대기
 	 * @return 사용자 스토리라인 ID
 	 */
-	public static Set<Long> needingMaterials(List<Flow> flows, Set<Long> followed) {
+	public static Set<Long> needingMaterials(List<UserStoryline> userStorylines, Set<Long> followed) {
 		Set<Long> needing = new HashSet<>();
-		for (Flow flow : flows) {
-			if (flow.summary() != null || followed.contains(flow.head())) {
-				needing.add(flow.id());
+		for (UserStoryline userStoryline : userStorylines) {
+			if (userStoryline.summary() != null || followed.contains(userStoryline.head())) {
+				needing.add(userStoryline.id());
 			}
 		}
 		return Set.copyOf(needing);
@@ -97,24 +97,24 @@ public final class SummaryPlan {
 
 	/**
 	 * 처분을 정한다.
-	 * @param followed 관심 흐름의 꼭대기
-	 * @param kept 남길 흐름의 꼭대기
+	 * @param followed 관심 스토리라인의 꼭대기
+	 * @param kept 남길 스토리라인의 꼭대기
 	 * @param events 사용자 스토리라인 ID → 추적 대상 꼭대기 → 그 꼭대기의 지금 사건(사건 ID → 첫 기사 시각). 재료를 읽지 않은 것은 없다
 	 * @param now 지금 — 쉬는 끝과 견준다
 	 * @return 처분 — 호출하는 것({@link Action.Create} → {@link Action.Rebuild} → {@link Action.Extend}, 그 안에서 추적 중인 것 먼저 ·
 	 * ID 순)이 앞이고 {@link SummaryRules#MAX_CALLS_PER_RUN} 개까지다. 그 뒤로 지울 것 · 그대로 둘 것이 ID 순. 정리가 없고 만들지도 않는
 	 * 사용자 스토리라인은 결과에 없다
 	 */
-	public static List<Action> decide(List<Flow> flows, Set<Long> followed, Set<Long> kept,
+	public static List<Action> decide(List<UserStoryline> userStorylines, Set<Long> followed, Set<Long> kept,
 			Map<Long, Map<Long, Map<Long, Instant>>> events, Instant now) {
 		Objects.requireNonNull(now, "now");
-		List<Flow> ordered = new ArrayList<>(flows);
-		ordered.sort(Comparator.comparingLong(Flow::id));
+		List<UserStoryline> ordered = new ArrayList<>(userStorylines);
+		ordered.sort(Comparator.comparingLong(UserStoryline::id));
 		List<Action> calls = new ArrayList<>();
 		Set<Long> trackedCalls = new HashSet<>();
 		List<Action> rest = new ArrayList<>();
-		for (Flow flow : ordered) {
-			Action action = decide(flow, followed, kept, events.getOrDefault(flow.id(), Map.of()), now);
+		for (UserStoryline userStoryline : ordered) {
+			Action action = decide(userStoryline, followed, kept, events.getOrDefault(userStoryline.id(), Map.of()), now);
 			if (action == null) {
 				continue;
 			}
@@ -125,8 +125,8 @@ public final class SummaryPlan {
 				case Action.Keep keep -> rest.add(keep);
 				case Action.Remove remove -> rest.add(remove);
 			}
-			if (flow.tracked()) {
-				trackedCalls.add(flow.id());
+			if (userStoryline.tracked()) {
+				trackedCalls.add(userStoryline.id());
 			}
 		}
 		calls.sort(Comparator.comparingInt(SummaryPlan::rank)
@@ -154,39 +154,39 @@ public final class SummaryPlan {
 		};
 	}
 
-	private static @Nullable Action decide(Flow flow, Set<Long> followed, Set<Long> kept,
+	private static @Nullable Action decide(UserStoryline userStoryline, Set<Long> followed, Set<Long> kept,
 			Map<Long, Map<Long, Instant>> byTop, Instant now) {
 		Map<Long, Instant> events = new HashMap<>();
 		byTop.values().forEach(events::putAll);
-		// 헤드로 판정한다 — 갈라지기 전 꼭대기가 관심 흐름이어도 형제 갈래는 제 헤드가 관심 흐름일 때만 보인다
-		boolean showable = followed.contains(flow.head());
-		StorylineSummary summary = flow.summary();
+		// 헤드로 판정한다 — 갈라지기 전 꼭대기가 관심 스토리라인이어도 형제 갈래는 제 헤드가 관심 스토리라인일 때만 보인다
+		boolean showable = followed.contains(userStoryline.head());
+		StorylineSummary summary = userStoryline.summary();
 		if (summary == null) {
-			if (!showable || events.isEmpty() || resting(flow.attempt(), now)) {
+			if (!showable || events.isEmpty() || resting(userStoryline.attempt(), now)) {
 				return null;
 			}
-			return new Action.Create(flow.id(), flow.tops(), chosen(byTop, events, events.keySet()),
+			return new Action.Create(userStoryline.id(), userStoryline.tops(), chosen(byTop, events, events.keySet()),
 					Set.copyOf(events.keySet()));
 		}
-		if (!showable && !kept.contains(flow.head())) {
-			return new Action.Remove(flow.id());
+		if (!showable && !kept.contains(userStoryline.head())) {
+			return new Action.Remove(userStoryline.id());
 		}
-		if (resting(flow.attempt(), now)) {
-			return new Action.Keep(flow.id());
+		if (resting(userStoryline.attempt(), now)) {
+			return new Action.Keep(userStoryline.id());
 		}
-		if (!summary.tops().keySet().equals(flow.tops())) {
+		if (!summary.tops().keySet().equals(userStoryline.tops())) {
 			if (events.isEmpty()) {
-				return new Action.Keep(flow.id());
+				return new Action.Keep(userStoryline.id());
 			}
-			return new Action.Rebuild(flow.id(), summary.version(), flow.tops(),
+			return new Action.Rebuild(userStoryline.id(), summary.version(), userStoryline.tops(),
 					chosen(byTop, events, events.keySet()), Set.copyOf(events.keySet()));
 		}
 		Set<Long> added = new HashSet<>(events.keySet());
 		added.removeAll(summary.events().keySet());
 		if (added.isEmpty()) {
-			return new Action.Keep(flow.id());
+			return new Action.Keep(userStoryline.id());
 		}
-		return new Action.Extend(flow.id(), summary.version(), flow.tops(), chosen(byTop, events, added),
+		return new Action.Extend(userStoryline.id(), summary.version(), userStoryline.tops(), chosen(byTop, events, added),
 				Set.copyOf(events.keySet()));
 	}
 

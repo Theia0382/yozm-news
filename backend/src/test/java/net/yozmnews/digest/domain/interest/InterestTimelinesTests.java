@@ -63,7 +63,7 @@ class InterestTimelinesTests {
 								T1.plus(Duration.ofDays(2))),
 						topic(Set.of("e"), TopicSubscriptionAction.REMOVE, TopicSubscriptionCause.USER,
 								T1.plus(Duration.ofDays(5)))),
-				List.of(), Map.of(), StorylineFlows.NONE);
+				List.of(), Map.of(), UserStorylines.NONE);
 
 		List<InterestPoint> points = InterestTimelines.points(record, List.of(T0, T1, T2));
 
@@ -96,7 +96,7 @@ class InterestTimelinesTests {
 	@Test
 	void theReferencesAreAtLeastTwoAndNotGoingBack() {
 		InterestRecord empty = new InterestRecord(TAG_SET, List.of(), Map.of(), Map.of(), List.of(), List.of(), List.of(),
-				Map.of(), StorylineFlows.NONE);
+				Map.of(), UserStorylines.NONE);
 
 		assertThatIllegalArgumentException().isThrownBy(() -> InterestTimelines.points(empty, List.of(T0)));
 		assertThatIllegalArgumentException().isThrownBy(() -> InterestTimelines.points(empty, List.of(T1, T0)));
@@ -108,7 +108,7 @@ class InterestTimelinesTests {
 	void aRepeatedReferenceHasTheSameInterestAndNoShiftOrStep() {
 		// 기간이 시작되는 정각에 부르면 앞 기간 끝과 진행 중 기간의 기준 시각이 같다 — a: T0 에 사용자가 다섯 번 더함
 		InterestRecord record = new InterestRecord(TAG_SET, List.of(), Map.of(), Map.of(), List.of(),
-				userAdds(5, "a", T0), List.of(), Map.of(), StorylineFlows.NONE);
+				userAdds(5, "a", T0), List.of(), Map.of(), UserStorylines.NONE);
 
 		List<InterestPoint> points = InterestTimelines.points(record, List.of(T0, T1, T1));
 
@@ -129,7 +129,7 @@ class InterestTimelinesTests {
 	 * 0.5 ÷ 3.5 = 1/7 로 사라진다
 	 */
 	@Test
-	void aFlowAppearsAtTheFollowThresholdStaysAboveTheKeepThresholdAndLeavesBelowIt() {
+	void aStorylineAppearsAtTheFollowThresholdStaysAboveTheKeepThresholdAndLeavesBelowIt() {
 		StorylineId top = new StorylineId(9);
 		Instant t3 = T2.plus(Duration.ofDays(30));
 		Instant t4 = t3.plus(Duration.ofDays(30));
@@ -138,7 +138,7 @@ class InterestTimelinesTests {
 				Map.of(event(1), List.of(top), event(2), List.of(top), event(3), List.of(top), event(4), List.of(top)),
 				List.of(feedback(1, FeedbackValue.LIKE), feedback(2, FeedbackValue.LIKE), feedback(3, FeedbackValue.LIKE),
 						feedback(4, FeedbackValue.LIKE)),
-				List.of(), List.of(), Map.of(), new StorylineFlows(Map.of(top, Set.of(0)), Set.of()));
+				List.of(), List.of(), Map.of(), new UserStorylines(Map.of(top, Set.of(0)), Set.of()));
 
 		List<InterestPoint> points = InterestTimelines.points(record, List.of(T0, T1, T2, t3, t4));
 
@@ -157,9 +157,9 @@ class InterestTimelinesTests {
 	}
 
 	@Test
-	void pointsWithoutFlowsCarryNoStorylineValues() {
+	void pointsWithoutStorylinesCarryNoStorylineValues() {
 		InterestRecord empty = new InterestRecord(TAG_SET, List.of(), Map.of(), Map.of(), List.of(), List.of(), List.of(),
-				Map.of(), StorylineFlows.NONE);
+				Map.of(), UserStorylines.NONE);
 
 		assertThat(InterestTimelines.points(empty, List.of(T0, T1))).singleElement().satisfies(point -> {
 			assertThat(point.storylineLevels()).isEmpty();

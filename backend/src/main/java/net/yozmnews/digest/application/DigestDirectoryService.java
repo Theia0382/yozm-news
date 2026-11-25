@@ -147,7 +147,7 @@ class DigestDirectoryService implements DigestDirectory {
 			List<StorylineId> stored = this.days.storedStorylines(user).stream().map(StorylineId::new).toList();
 			Map<StorylineId, StorylineId> current = StorylineTopsQueries.ofStorylines(this.storylines, stored);
 			List<Long> matching = stored.stream()
-				// 지워진 스토리라인은 풀리지 않는다 — 그 항목은 흐름을 다시 찾지 않는다
+				// 지워진 스토리라인은 풀리지 않는다 — 그 항목은 스토리라인을 다시 찾지 않는다
 				.filter(one -> current.get(one) != null && tops.contains(current.get(one)))
 				.map(StorylineId::value)
 				.toList();

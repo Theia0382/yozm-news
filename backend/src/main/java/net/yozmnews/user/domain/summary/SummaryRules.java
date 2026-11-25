@@ -35,7 +35,7 @@ public final class SummaryRules {
 	/** 출력 서술의 상한(코드 포인트) — 최근 전개 */
 	public static final int MAX_RECENT = RECENT_LENGTH * 2;
 
-	/** 출력의 글 한 벌(흐름 전체 또는 꼭대기 하나)에 주는 본문 토큰 — 서술의 상한 합에 JSON 몫을 더한 값 */
+	/** 출력의 글 한 벌(사용자 스토리라인 전체 또는 꼭대기 하나)에 주는 본문 토큰 — 서술의 상한 합에 JSON 몫을 더한 값 */
 	public static final int MAX_BODY_TOKENS_PER_PART = 2_400;
 
 	/** 정리 호출의 추론 강도 — 주어진 사건 줄을 간추리는 일이라 낮음으로 고정한다 */
@@ -62,7 +62,7 @@ public final class SummaryRules {
 
 	/**
 	 * 한 호출의 출력 본문 토큰 상한 — 글 한 벌마다 {@link #MAX_BODY_TOKENS_PER_PART}, 관문의 상한을 넘지 않는다.
-	 * @param tops 꼭대기 수(1 이상) — 하나면 글 한 벌, 둘 이상이면 꼭대기마다와 흐름 전체
+	 * @param tops 꼭대기 수(1 이상) — 하나면 글 한 벌, 둘 이상이면 꼭대기마다와 사용자 스토리라인 전체
 	 */
 	public static int bodyTokens(int tops) {
 		if (tops < 1) {

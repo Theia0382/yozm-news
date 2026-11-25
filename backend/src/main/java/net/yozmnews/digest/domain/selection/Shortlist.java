@@ -8,7 +8,7 @@ import java.util.Objects;
  *
  * @param big 큰 슬롯 사건 — 행 순서, 행 안에서는 사건 순서
  * @param subscribed 구독 사건 — 순위 순서
- * @param followed 주제 구독 밖 관심 흐름의 길로 든 사건 — 순위 순서({@link FollowedStorylines})
+ * @param followed 주제 구독 밖 관심 스토리라인의 길로 든 사건 — 순위 순서({@link FollowedStorylines})
  * @param bigRows {@code big} 과 같은 순서로 각 큰 슬롯 사건이 나온 큰 판정 행의 위치({@link BigSlotPicker.BigSlots#rows})
  */
 public record Shortlist(List<CandidateEvent> big, List<CandidateEvent> subscribed, List<CandidateEvent> followed,

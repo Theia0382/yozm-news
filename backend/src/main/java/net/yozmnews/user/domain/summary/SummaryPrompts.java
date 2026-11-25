@@ -19,7 +19,7 @@ import tools.jackson.databind.node.ObjectNode;
  */
 public final class SummaryPrompts {
 
-	/** 사용자 구획의 흐름 전체 지난 글 칸 */
+	/** 사용자 구획의 사용자 스토리라인 전체 지난 글 칸 */
 	static final String PREVIOUS = "previous";
 
 	/** 사용자 구획의 꼭대기 줄 칸 */
@@ -81,9 +81,9 @@ public final class SummaryPrompts {
 		else {
 			root.set(PREVIOUS, text(previousWhole));
 		}
-		ArrayNode flows = root.putArray(FLOWS);
+		ArrayNode lines = root.putArray(FLOWS);
 		for (int i = 0; i < tops.size(); i++) {
-			ArrayNode line = flows.addArray();
+			ArrayNode line = lines.addArray();
 			line.add(aliases.get(i));
 			SummaryText previousTop = input.previousTops().get(tops.get(i));
 			if (previousTop == null) {

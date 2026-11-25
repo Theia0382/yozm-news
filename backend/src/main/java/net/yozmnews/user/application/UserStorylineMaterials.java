@@ -155,7 +155,7 @@ class UserStorylineMaterials {
 	}
 
 	/**
-	 * 씨앗과 씨앗에서 닿는 꼭대기 모두의 이어짐 — 헤드(뒤 흐름이 없는 꼭대기)를 가르려면 닿은 꼭대기의 이어짐도 알아야 한다
+	 * 씨앗과 씨앗에서 닿는 꼭대기 모두의 이어짐 — 헤드(뒤 스토리라인이 없는 꼭대기)를 가르려면 닿은 꼭대기의 이어짐도 알아야 한다
 	 */
 	private Map<Long, Set<Long>> continuationsOf(Set<Long> seedTops) {
 		Map<Long, Set<Long>> continuations = reachOf(seedTops);
