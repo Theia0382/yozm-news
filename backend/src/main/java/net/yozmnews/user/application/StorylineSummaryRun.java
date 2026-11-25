@@ -122,7 +122,7 @@ public class StorylineSummaryRun {
 		snapshot.userStorylines().forEach(userStoryline -> byId.put(userStoryline.id(), userStoryline));
 		Set<Long> needing = SummaryPlan.needingMaterials(snapshot.userStorylines(), followed);
 		Set<Long> tops = needing.stream().flatMap(id -> byId.get(id).tops().stream()).collect(Collectors.toSet());
-		Map<Long, List<SummaryEvent>> read = this.materials.read(tops);
+		Map<Long, List<SummaryEvent>> read = this.materials.read(tops, now);
 		Map<Long, Map<Long, Map<Long, Instant>>> events = new HashMap<>();
 		for (Long id : needing) {
 			Map<Long, Map<Long, Instant>> ofUserStoryline = new HashMap<>();

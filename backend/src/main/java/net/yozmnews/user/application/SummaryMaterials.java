@@ -1,5 +1,6 @@
 package net.yozmnews.user.application;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -22,10 +23,11 @@ import net.yozmnews.user.domain.summary.SummaryEvent;
 import org.springframework.stereotype.Component;
 
 /**
- * 정리의 재료 읽기 — 추적 대상 꼭대기의 사건과 그 대표 기사의 제목 · 요약문을 다른 모듈의 공개 조회로 읽는다. docs/specs/user.md §4
+ * 정리의 재료 읽기 — 추적 대상 꼭대기의 사건과 그 대표 기사의 제목 · 요약문을 다른 모듈의 공개 조회로 읽는다. docs/specs/user.md §4 · user-R70
  * <p>
- * 꼭대기의 사건은 {@code storyline} 의 타임라인(하위 스토리라인의 사건까지), 대표 기사는 {@code event}, 제목 · 요약문은 {@code article} 이
- * 정한다. 대표 기사가 없거나 그새 지운 사건은 뺀다. 트랜잭션 없이 조회를 차례로 부른다 — 한 스냅숏이 아니다.
+ * 꼭대기의 사건은 {@code storyline} 의 타임라인(하위 스토리라인의 사건까지) 가운데 실행의 지금까지 첫 기사가 난 사건(ADR-0327), 대표 기사는
+ * {@code event}, 제목 · 요약문은 {@code article} 이 정한다. 대표 기사가 없거나 그새 지운 사건은 뺀다. 트랜잭션 없이 조회를 차례로 부른다 — 한
+ * 스냅숏이 아니다.
  */
 @Component
 class SummaryMaterials {
@@ -44,15 +46,18 @@ class SummaryMaterials {
 
 	/**
 	 * @param tops 읽을 꼭대기(스토리라인 ID)
+	 * @param until 실을 사건의 첫 기사 시각 상한(같으면 싣는다) — 정리 실행이 처분에 쓰는 지금
 	 * @return 꼭대기 → 그 꼭대기의 사건(첫 기사 시각 · 사건 ID 순). 받은 꼭대기는 모두 키로 있다 — 사건이 없으면 빈 목록
 	 */
-	Map<Long, List<SummaryEvent>> read(Collection<Long> tops) {
+	Map<Long, List<SummaryEvent>> read(Collection<Long> tops, Instant until) {
+		Objects.requireNonNull(until, "until");
 		Map<Long, List<EventView>> timelines = new HashMap<>();
 		Set<EventId> eventIds = new HashSet<>();
 		for (Long top : new HashSet<>(tops)) {
 			List<EventView> timeline = this.storylines.events(new StorylineId(top))
 				.stream()
 				.map(StorylineEvent::event)
+				.filter(event -> !event.firstArticleAt().isAfter(until))
 				.toList();
 			timelines.put(top, timeline);
 			timeline.forEach(event -> eventIds.add(event.id()));
