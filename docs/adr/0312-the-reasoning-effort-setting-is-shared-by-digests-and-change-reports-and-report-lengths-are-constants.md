@@ -1,6 +1,6 @@
 # ADR-0312: 추론 강도 설정은 다이제스트와 변화 리포트가 함께 쓰고, 리포트의 글 길이 기준은 상수다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 글 길이 기준의 개요([ADR-0338](0338-a-change-report-writes-only-kind-sections-without-an-overview.md))
 - 날짜: 2026-11-24
 - 근거: [이슈 #239](https://github.com/Theia0382/yozm-news/issues/239) — 수용 기준 "추론 강도 · 출력 상한을 정한다". 기점 `f07e122` 의 추론 강도 설정(user-R59 · 화면 도움말 "다이제스트를 만들 때")과 요약 길이 단계(digest-R26 — 하루치 개요 · 항목 요약의 범위)를 리포트의 개요 · 갈래 본문과 대조함
 - 관련: [ADR-0218](0218-the-digest-generation-reasoning-effort-is-a-user-setting-defaulting-to-medium.md)(보충 — 같은 설정을 리포트 생성에도 씀), [ADR-0223](0223-the-digest-summary-length-is-a-user-setting-in-the-digest-volume-section.md)(관련 — 요약 길이는 다이제스트에만)
@@ -14,6 +14,8 @@
 ## 결정
 
 - **리포트 생성은 다이제스트와 같은 추론 강도 설정(설정 행의 칸 하나)을 쓴다.** 생성을 부르는 쪽이 쓸 모델과 함께 그 값을 넘긴다. 화면 도움말은 두 과제를 함께 말한다.
+> 부분 대체(개요 길이) — [ADR-0338](0338-a-change-report-writes-only-kind-sections-without-an-overview.md). 지금 상태: [report Spec](../specs/report.md#프롬프트) report-R23
+
 - **리포트의 글 길이 기준은 코드 상수다** — 주간 개요 300 ~ 600 · 갈래 본문 300 ~ 900, 월간 개요 600 ~ 1,200 · 갈래 본문 600 ~ 1,800 코드 포인트, 제목 40 코드 포인트 안팎. 측정 전 목표다.
 
 규칙은 [user Spec](../specs/user.md#관심-설정) user-R59 · [report Spec](../specs/report.md#프롬프트) report-R23 에 있다.

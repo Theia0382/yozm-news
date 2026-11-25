@@ -1,6 +1,6 @@
 # ADR-0303: 변화 리포트는 그 사용자와 관계된 것만 다루고, 갈래는 추적한 흐름 · 구독 주제 보도량 · 관심 변화 셋이다
 
-- 상태: 승인. 부분 대체 — 결과의 `EMPTY` 조건([ADR-0336](0336-change-report-interest-lines-are-only-the-changed-ones-and-without-a-change-there-is-no-interest-section.md))
+- 상태: 승인. 부분 대체 — 결과의 `EMPTY` 조건([ADR-0336](0336-change-report-interest-lines-are-only-the-changed-ones-and-without-a-change-there-is-no-interest-section.md)) · 갈래 셋([ADR-0339](0339-change-report-kinds-are-tracked-flows-and-interest-changes-and-it-leaves-out-subscribed-topic-coverage.md))
 - 날짜: 2026-11-24
 - 근거: [이슈 #238](https://github.com/Theia0382/yozm-news/issues/238) — 기점 `f1d0938` 의 리포트 입력 목록(pipeline §10)을 목적(ADR-0025)과 사용자 스토리라인(user Spec)에 대조해 재료의 범위와 갈래를 정함
 - 관련: [ADR-0273](0273-change-reports-are-written-in-fixed-sections-per-material-kind-keyed-as-required-fields.md)(갈래 집합과 맥락의 입력 갈래 넷 — 부분 대체), [ADR-0103](0103-big-judgement-on-storylines-and-the-storyline-milestone-right-after-event-clustering-takes-over-big-events.md)(결정 "변화 리포트의 보도량이 쓰는 '큰' 것" — 부분 대체), [ADR-0025](0025-long-term-personal-news-history-in-v1.md)(변화 리포트의 목적 — 개인 뉴스 히스토리)
@@ -17,6 +17,8 @@
 
 - **리포트는 그 사용자와 관계된 것만 재료로 삼는다.** 추적 중인 사용자 스토리라인과 관심 흐름, 구독 주제와 관심 주제다. 공용 큰 스토리라인과 구독 밖 주제는 읽지 않는다.
 - **추적한 흐름은 추적 중인 사용자 스토리라인이다.** 사용자가 누른 스토리라인(추적 씨앗)이 아니라 이어짐을 따라간 흐름 전체로, 다이제스트의 추적과 같은 집합이다.
+> 부분 대체 — [ADR-0339](0339-change-report-kinds-are-tracked-flows-and-interest-changes-and-it-leaves-out-subscribed-topic-coverage.md). 지금 상태: [report Spec](../specs/report.md#재료) report-R14
+
 - **갈래는 셋이다** — 추적한 흐름의 변화(`STORYLINES`) · 구독 주제의 보도량과 직전 비교(`COVERAGE`) · 관심 변화(`INTERESTS`). "새로 나타남 · 줄어듦"은 각 갈래 안의 판정으로 보인다.
 
 규칙은 [report Spec](../specs/report.md#재료) report-R14 · R15 에 있다.

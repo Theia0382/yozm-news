@@ -1,6 +1,6 @@
 # ADR-0306: 변화 리포트는 구독 주제 보도량과 흐름 보도량을 서로 견주지 않고 각자 자기 직전 값과만 견준다
 
-- 상태: 승인. 부분 대체 — 결과의 생성 지시([ADR-0334](0334-change-report-llm-input-carries-judgements-in-words-without-article-counts-or-interest-values.md))
+- 상태: 승인. 부분 대체 — 결과의 생성 지시([ADR-0334](0334-change-report-llm-input-carries-judgements-in-words-without-article-counts-or-interest-values.md)) · 구독 주제 보도량([ADR-0339](0339-change-report-kinds-are-tracked-flows-and-interest-changes-and-it-leaves-out-subscribed-topic-coverage.md))
 - 날짜: 2026-11-24
 - 근거: [이슈 #238](https://github.com/Theia0382/yozm-news/issues/238) — 기점 `f1d0938` 의 주제별 보도량(tag Spec — 첫 평가 시각)과 스토리라인 기간 집계(event-R20 — 사건 배정의 발행 시각)를 대조해 리포트에서 두 보도량을 함께 보일 때의 처리를 정함
 - 관련: [ADR-0148](0148-storyline-coverage-is-the-article-count-in-the-period-over-the-closed-event-set.md)(두 보도량은 기간에 넣는 시각이 다르다 — 보충), [ADR-0303](0303-a-change-report-covers-only-what-relates-to-the-user-in-three-sections-tracked-flows-subscribed-topic-coverage-and-interest-changes.md)(갈래 셋)
@@ -12,6 +12,8 @@
 - 두 수를 같은 시각으로 맞추려면 `event` 의 집계가 `tag` 의 평가 시각을 읽거나, `tag` 가 사건 배정을 알아야 한다. `event` 는 이미 `tag` 를 읽어 `tag` 가 `event` 를 읽으면 순환이다.
 
 ## 결정
+
+> 부분 대체(아래 두 항목의 구독 주제 보도량) — [ADR-0339](0339-change-report-kinds-are-tracked-flows-and-interest-changes-and-it-leaves-out-subscribed-topic-coverage.md). 지금 상태: [report Spec](../specs/report.md#재료) report-R14 · R15
 
 - **두 보도량은 서로 더하거나 비율을 내지 않는다.** 구독 주제 보도량은 보도량 갈래에, 흐름 보도량은 추적한 흐름 갈래의 흐름마다 둔다.
 - **각자 자기 직전 값과만 견준다.** 스냅숏에 두 수의 기간 시각 종류(첫 평가 시각 · 발행 시각)를 적는다.

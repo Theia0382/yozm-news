@@ -1,6 +1,6 @@
 # ADR-0311: 변화 리포트의 입력은 모델 예산과 주간 · 월간 리포트 상한 가운데 작은 값 안으로, 직전 글의 몫과 정한 순서의 덜어 내기로 맞춘다
 
-- 상태: 승인. 부분 대체 — 덜어 내기의 변화 없는 흐름 관심 줄 단계([ADR-0336](0336-change-report-interest-lines-are-only-the-changed-ones-and-without-a-change-there-is-no-interest-section.md))
+- 상태: 승인. 부분 대체 — 덜어 내기의 변화 없는 흐름 관심 줄 단계([ADR-0336](0336-change-report-interest-lines-are-only-the-changed-ones-and-without-a-change-there-is-no-interest-section.md)) · 직전 글 자르기의 개요([ADR-0338](0338-a-change-report-writes-only-kind-sections-without-an-overview.md))
 - 날짜: 2026-11-24
 - 근거: [이슈 #239](https://github.com/Theia0382/yozm-news/issues/239) — 수용 기준 "월간 입력(주간 리포트 4 ~ 5편)의 토큰 몫과 상한". 기점 `f07e122` 의 재료 상한(추적 흐름 100 · 흐름마다 사건 줄 10 · 정리 글 상한 2,120 코드 포인트 · 직전 리포트 글 한 편 최대 11,100 코드 포인트)으로 흐름 갈래만 최악 약 31만 토큰이라 모델의 입력 예산(기본 120,000)을 넘음을 확인함. 값은 서술의 상한 · 정리의 길이 기준 · 기본 목록 첫 모델의 단가로 어림함
 - 관련: [ADR-0272](0272-the-input-token-budget-is-a-safety-ceiling-and-the-maximum-candidate-steps-set-the-digest-volume.md)(보충 — 입력 토큰 예산이 리포트의 바깥 상한으로도 쓰임), [ADR-0304](0304-a-change-report-takes-previous-values-from-the-previous-reports-snapshot-matched-one-to-one-and-keeps-them-in-its-own-snapshot.md)(스냅숏의 직전 값), [ADR-0313](0313-the-input-token-estimate-is-an-llm-public-type.md)(토큰 어림)
@@ -15,6 +15,8 @@
 ## 결정
 
 - **실제 상한은 쓸 모델의 입력 예산과 리포트 상한 가운데 작은 값이다.** 리포트 상한은 주간 80,000 · 월간 160,000 토큰이고, 입력 예산은 바깥 안전 상한이다. 사용자 구획의 예산은 실제 상한에서 지시 몫 8,000 을 뺀 값이다.
+> 부분 대체(둘째 문장의 개요) — [ADR-0338](0338-a-change-report-writes-only-kind-sections-without-an-overview.md). 지금 상태: [report Spec](../specs/report.md#입력-맞추기) report-R22
+
 - **직전 리포트 글은 예산의 30% 를 싣는 편마다 고르게 나눈 몫 안으로 맞춘다.** 몫을 넘는 편은 갈래 본문의 꼬리를 자르고 개요 · 섹션 제목은 남긴다. 몫보다 작은 편이 남긴 몫은 재료가 쓴다.
 > 부분 대체(첫 문장의 "변화 없는 흐름 관심 줄") — [ADR-0336](0336-change-report-interest-lines-are-only-the-changed-ones-and-without-a-change-there-is-no-interest-section.md). 지금 상태: [report Spec](../specs/report.md#입력-맞추기) report-R22
 - **그래도 넘으면 정한 순서로 덜어 낸다** — 추적하지 않는 흐름의 정리 → 변화 없는 흐름 관심 줄 → 사건 줄(모든 흐름을 같은 수로) → 흐름 요약 → 보도량이 적은 추적 흐름. 단계마다 예산 안에 들면 멈추고, 갈래는 없어지지 않는다. 끝까지 넘으면 그대로 보낸다 — 제목은 자르지 않는다.

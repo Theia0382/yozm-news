@@ -1,6 +1,6 @@
 # ADR-0304: 변화 리포트의 직전 기간 비교는 직전 리포트의 스냅숏에서 1:1 로 이은 값으로 하고, 이은 값을 자기 스냅숏에 함께 남긴다
 
-- 상태: 승인
+- 상태: 승인. 부분 대체 — 직전 값을 꺼내는 기간 종류([ADR-0341](0341-a-monthly-report-does-not-compare-flow-coverage-with-the-previous-monthly-and-shows-the-flow-state-kept-at-generation.md)) · 주제 잇기([ADR-0339](0339-change-report-kinds-are-tracked-flows-and-interest-changes-and-it-leaves-out-subscribed-topic-coverage.md))
 - 날짜: 2026-11-24
 - 근거: [이슈 #238](https://github.com/Theia0382/yozm-news/issues/238) — 기점 `f1d0938` 의 리포트 상태(report-R1 — 시작한 행은 스냅숏이 있다)와 합쳐진 스토리라인 풀기(storyline-R18) · 태그 키 계보(tag-R26)를 대조해 직전 값의 출처와 스냅숏의 꼴을 정함
 - 관련: [ADR-0212](0212-migrations-never-delete-user-data-or-the-shared-rows-and-ids-it-references-and-moved-data-is-checked-by-a-data-test.md)(스냅숏은 보존하는 사용자 이력 — 꼴을 바꾸면 옮기는 마이그레이션), [ADR-0274](0274-change-reports-cite-only-storylines-and-events-and-keep-topics-in-the-stats-snapshot.md)(주제의 값은 스냅숏에), [ADR-0303](0303-a-change-report-covers-only-what-relates-to-the-user-in-three-sections-tracked-flows-subscribed-topic-coverage-and-interest-changes.md)(갈래 셋)
@@ -14,7 +14,11 @@
 
 ## 결정
 
+> 부분 대체(첫 문장 — 주간으로 좁힘) — [ADR-0341](0341-a-monthly-report-does-not-compare-flow-coverage-with-the-previous-monthly-and-shows-the-flow-state-kept-at-generation.md). 지금 상태: [report Spec](../specs/report.md#직전-리포트와-스냅숏) report-R18
+
 - **직전 값은 직전 리포트의 스냅숏에서 꺼낸다.** 직전 리포트는 같은 사용자 · 같은 종류이고 끝이 이번 시작과 같은 시작한 리포트다. 없으면 비교를 비운다.
+> 부분 대체(둘째 문장의 주제) — [ADR-0339](0339-change-report-kinds-are-tracked-flows-and-interest-changes-and-it-leaves-out-subscribed-topic-coverage.md). 지금 상태: [report Spec](../specs/report.md#직전-리포트와-스냅숏) report-R18
+
 - **직전 스냅숏의 대상은 지금 대상에 1:1 로 풀릴 때만 잇는다.** 주제는 계보 표에서 직전 키 하나가 활성 키 하나로 가고 그 활성 키로 가는 직전 버전의 키가 하나일 때, 흐름은 직전 흐름의 꼭대기를 지금으로 푼 것이 지금 흐름 하나와만 겹치고 그 흐름과 겹치는 직전 흐름이 하나일 때다. 아니면 그 대상의 비교를 비운다.
 - **이번 스냅숏에 이은 직전 값과 판정을 함께 남긴다.** 스냅숏은 생성에 쓴 통계 그대로이고, 화면은 스냅숏 하나로 리포트의 글과 같은 비교를 보인다. 다음 리포트의 비교는 이번 기간의 수만 읽는다.
 - **스냅숏에는 꼴의 판 번호가 있다.** 읽는 쪽이 모르는 판이면 비교를 비운다.

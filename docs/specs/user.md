@@ -17,7 +17,7 @@
 - **주제 구독 이력 조회** — 다이제스트의 관심도 · 관심사 히스토리가 읽는 공개 조회(`TopicSubscriptionHistory`) — 기간의 선호 이력 가운데 주제 행을 기록 당시 버전으로 펼치고 활성 중분류로 풀어 원인과 함께 낸다. 쓰지 않는다(user-R58)
 - **사용자 시간대 · 일정 조회** — 관심 설정의 시간대를 내는 공개 조회(`UserTimezones`) — 다이제스트의 수동 생성이 오늘의 경계를 정할 때, 관심사 히스토리가 기간을 자를 때, 변화 리포트 조회가 시작 전 리포트의 기간 날짜를 적을 때 읽는다. 사용자 하나의 일정(시간대 · 생성 시각)을 내는 공개 조회(`UserDigestSchedules`) — 다이제스트의 수동 생성 상태가 오늘의 경계와 오늘 일정 생성 시각을 정할 때 읽는다. 쓰지 않는다(user-R60)
 - **다이제스트 일정과 쓸 모델** — 다이제스트의 일정 회차가 읽는 일정 목록(`DigestScheduleDirectory` — 쓰는 계정의 시간대 · 생성 시각)과 일정 · 생성 작업 · 수동 생성 · 수동 생성 상태가 읽는 쓸 모델(`DigestModelDirectory` — `ModelChoice`). 쓰지 않는다(user-R61)
-- **리포트 일정과 쓸 모델** — 변화 리포트의 일정 회차가 읽는 일정 목록(`ReportScheduleDirectory` — 쓰는 계정의 시간대 · 다이제스트 생성 시각 · 주간 켬 · 요일 · 월간 켬 · 날짜)과 일정 회차 · 생성 작업 · 다시 만들기가 읽는 쓸 모델과 추론 강도(`ReportModelDirectory` — `ModelChoice`). 쓰지 않는다(user-R76). 리포트의 재료는 구독 주제를 `DigestInterestsDirectory` 로 읽는다
+- **리포트 일정과 쓸 모델** — 변화 리포트의 일정 회차가 읽는 일정 목록(`ReportScheduleDirectory` — 쓰는 계정의 시간대 · 다이제스트 생성 시각 · 주간 켬 · 요일 · 월간 켬 · 날짜)과 일정 회차 · 생성 작업 · 다시 만들기가 읽는 쓸 모델과 추론 강도(`ReportModelDirectory` — `ModelChoice`). 쓰지 않는다(user-R76). 리포트의 재료는 시간대 · 태그 체계 버전을 `DigestInterestsDirectory` 로 읽는다
 
 하지 않는 것:
 
@@ -187,7 +187,7 @@ public interface InterestSignalWindow {
 
 ### DigestInterestsDirectory
 
-다이제스트가 읽는 관심 설정 — 다이제스트 후보 선별과 변화 리포트의 재료 조립(구독 주제 · 시간대)이 읽는다. 구현은 `application` 의 `DigestInterestsDirectoryService` 다.
+다이제스트가 읽는 관심 설정 — 다이제스트 후보 선별과 변화 리포트의 재료 조립(시간대 · 태그 체계 버전)이 읽는다. 구현은 `application` 의 `DigestInterestsDirectoryService` 다.
 
 ```java
 public interface DigestInterestsDirectory {
