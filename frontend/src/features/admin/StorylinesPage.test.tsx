@@ -48,7 +48,15 @@ describe("StorylinesPage", () => {
       ]),
     ]);
 
-    const table = await screen.findByRole("table", { name: "스토리라인" });
+    const table = await screen.findByRole("table", { name: "흐름" });
+    expect(
+      screen.getByRole("heading", { name: "사건 흐름" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /지금 큰 화제 기준으로 정한다\. .*하위 흐름의 사건까지 센 값이다/,
+      ),
+    ).toBeInTheDocument();
     const rows = within(table).getAllByRole("row");
     expect(within(rows[0]!).getAllByRole("columnheader")).toHaveLength(11);
     expect(within(rows[0]!).getAllByRole("columnheader")[5]).toHaveTextContent(
@@ -57,7 +65,7 @@ describe("StorylinesPage", () => {
     const first = within(rows[1]!).getAllByRole("cell");
     expect(first).toHaveLength(11);
     expect(
-      within(first[0]!).getByRole("link", { name: "스토리라인 7" }),
+      within(first[0]!).getByRole("link", { name: "흐름 7" }),
     ).toHaveAttribute("href", "/admin/storylines/7");
     expect(first[1]).toHaveTextContent(/^진행$/);
     expect(first[2]).toHaveTextContent(/^$/);
@@ -66,12 +74,12 @@ describe("StorylinesPage", () => {
     expect(first[5]).toHaveTextContent(/^18\.75$/);
     expect(first[6]).toHaveTextContent(/^3$/);
     expect(first[7]).toHaveTextContent(/^3\.75$/);
-    expect(first[9]).toHaveTextContent(/^큰 스토리라인$/);
+    expect(first[9]).toHaveTextContent(/^큰 화제$/);
     expect(first[10]).toHaveTextContent("국회 본회의 통과");
     const second = within(rows[2]!).getAllByRole("cell");
     expect(second[1]).toHaveTextContent(/^잠잠$/);
     expect(
-      within(second[2]!).getByRole("link", { name: "스토리라인 7" }),
+      within(second[2]!).getByRole("link", { name: "흐름 7" }),
     ).toHaveAttribute("href", "/admin/storylines/7");
     expect(second[7]).toHaveTextContent(/^없음$/);
     expect(second[9]).toHaveTextContent(/^$/);
@@ -99,11 +107,11 @@ describe("StorylinesPage", () => {
       storylineList([storylineRow(5)]),
     ]);
 
-    await screen.findByRole("link", { name: "스토리라인 7" });
+    await screen.findByRole("link", { name: "흐름 7" });
     await userEvent.click(screen.getByRole("button", { name: "더 보기" }));
 
     expect(
-      await screen.findByRole("link", { name: "스토리라인 5" }),
+      await screen.findByRole("link", { name: "흐름 5" }),
     ).toBeInTheDocument();
     const [, second] = listRequests(server);
     expect(second?.get("afterLastArticleAt")).toBe("2026-11-06T00:00:00Z");
@@ -115,7 +123,7 @@ describe("StorylinesPage", () => {
     renderPage([storylineList([])]);
 
     expect(
-      await screen.findByText("이 기간에 기사가 있는 스토리라인이 없다"),
+      await screen.findByText("이 기간에 기사가 있는 흐름이 없다"),
     ).toBeInTheDocument();
   });
 

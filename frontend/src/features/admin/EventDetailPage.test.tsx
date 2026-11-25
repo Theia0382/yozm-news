@@ -132,24 +132,22 @@ describe("EventDetailPage", () => {
       /^기록 없음$/,
     );
     const storylines = within(
-      screen.getByRole("region", { name: "사건의 스토리라인" }),
+      screen.getByRole("region", { name: "사건의 흐름" }),
     ).getAllByRole("listitem");
-    expect(storylines[0]).toHaveTextContent(
-      /^스토리라인 10 · 잠잠 · 사건 9 · 상위$/,
-    );
+    expect(storylines[0]).toHaveTextContent(/^흐름 10 · 잠잠 · 사건 9 · 상위$/);
     expect(
-      within(storylines[0]!).getByRole("link", { name: "스토리라인 10" }),
+      within(storylines[0]!).getByRole("link", { name: "흐름 10" }),
     ).toHaveAttribute("href", "/admin/storylines/10");
-    expect(storylines[1]).toHaveTextContent(/^스토리라인 12 · 진행 · 사건 3$/);
+    expect(storylines[1]).toHaveTextContent(/^흐름 12 · 진행 · 사건 3$/);
   });
 
   it("스토리라인에 들지 않은 사건은 그렇다고 알린다", async () => {
     renderPage(7, () => json({ ...DETAIL, storylines: [] }));
 
     const section = await screen.findByRole("region", {
-      name: "사건의 스토리라인",
+      name: "사건의 흐름",
     });
-    expect(section).toHaveTextContent("이 사건이 든 스토리라인이 없다");
+    expect(section).toHaveTextContent("이 사건이 든 흐름이 없다");
     expect(within(section).queryByRole("link")).toBeNull();
   });
 

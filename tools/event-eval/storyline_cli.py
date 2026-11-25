@@ -56,7 +56,7 @@ def main(argv: Sequence[str] | None = None, *, environ: Mapping[str, str] = os.e
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="storyline_eval.py",
-                                     description="스토리라인 평가 — 시트 · 씨앗 · 라벨 검토 · 측정 · 내보내기")
+                                     description="흐름 평가 — 시트 · 씨앗 · 라벨 검토 · 측정 · 내보내기")
     commands = parser.add_subparsers(dest="command", required=True)
     sheet = commands.add_parser("sheet", help="고정 덤프를 되살린 평가 인스턴스에서 기간의 사건 · 기사로 시트를 만든다")
     add_data_argument(sheet)
@@ -70,22 +70,22 @@ def _parser() -> argparse.ArgumentParser:
     add_data_argument(seeds)
     seeds.add_argument("--count", required=True, type=parse_count, help="씨앗 사건 수(있으면 늘리기만)")
     seeds.add_argument("--seed", type=int, help="씨앗 값 — 없으면 있는 seeds.json 의 값, 그것도 없으면 정해 출력한다")
-    review = commands.add_parser("review", help="정답 스토리라인별 구성 사건을 보인다")
+    review = commands.add_parser("review", help="정답 흐름별 구성 사건을 보인다")
     add_data_argument(review)
     review.add_argument("--against", type=Path,
-                        help="결과 파일 — 씨앗 스토리라인마다 대응된 시스템 스토리라인과 갈리는 사건을 보인다")
+                        help="결과 파일 — 씨앗 흐름마다 대응된 시스템 흐름과 갈리는 사건을 보인다")
     measure = commands.add_parser("measure", help="결과 파일을 라벨과 견주어 지표를 재고 결과 기록을 쓴다")
     add_data_argument(measure)
     measure.add_argument("--result", required=True, type=Path, help="후보 방법의 결과 파일(JSON)")
     measure.add_argument("--note", action="append", default=[], type=parse_note, help="기록에 남길 메모 KEY=VALUE(되풀이)")
-    export = commands.add_parser("export", help="평가 인스턴스의 스토리라인을 결과 파일과 물은 쌍 파일로 낸다")
+    export = commands.add_parser("export", help="평가 인스턴스의 흐름을 결과 파일과 물은 쌍 파일로 낸다")
     add_data_argument(export)
     export.add_argument("--result", required=True, type=Path, help="쓸 결과 파일(JSON) — 이미 있으면 멈춘다")
     export.add_argument("--pairs", required=True, type=Path, help="쓸 물은 쌍 파일(CSV) — 이미 있으면 멈춘다")
     export.add_argument("--method", required=True, help="결과 파일 meta.method — 방법 이름")
     export.add_argument("--embedding-model", required=True, help="결과 파일 meta.embeddingModel — 임베딩 방식 · 모델")
     export.add_argument("--big-branches", action="store_true",
-                        help="큰 표시에 큰 판정 목록의 행 아래에 실린 큰 스토리라인도 넣는다 — 없으면 행(포함 나무마다 하나)만")
+                        help="큰 표시에 큰 화제 목록의 행 아래에 실린 큰 화제도 넣는다 — 없으면 행(포함 나무마다 하나)만")
     add_base_url_argument(export)
     return parser
 
@@ -120,8 +120,8 @@ def _export(args: argparse.Namespace, api: AdminApi, clock: Callable[[], datetim
                                                             period.zone))
     write_export(export, args.result, args.pairs)
     result = export.result
-    print(f"결과 {args.result}: 스토리라인 {len(result['storylines'])} · 관계 {len(result['relations'])} · "
-          f"큰 표시 {len(result['big'])}(직접 기사가 없어 내지 않은 스토리라인 {export.dropped})", file=out)
+    print(f"결과 {args.result}: 흐름 {len(result['storylines'])} · 관계 {len(result['relations'])} · "
+          f"큰 표시 {len(result['big'])}(직접 기사가 없어 내지 않은 흐름 {export.dropped})", file=out)
     print(f"물은 쌍 {args.pairs}: {len(export.pairs)}쌍(확률 없는 쌍 {export.unread})", file=out)
     return 0
 
@@ -288,7 +288,7 @@ def _measure(args: argparse.Namespace, clock: Callable[[], datetime], out: TextI
               f"F1 {estimate.f1:.4f} [{estimate.f1_interval[0]:.4f}, {estimate.f1_interval[1]:.4f}]", file=out)
     if big is not None:
         precision = "없음" if big.precision is None else f"{big.precision:.4f}({big.correct}/{big.judged})"
-        print(f"큰 판정 정밀도 {precision} · 재현율 {big.recall:.4f}({big.found}/{big.gold})", file=out)
+        print(f"큰 화제 정밀도 {precision} · 재현율 {big.recall:.4f}({big.found}/{big.gold})", file=out)
     if outside:
         print(f"주의 — 결과 파일의 시트 밖 기사 {outside}", file=out)
     return 0

@@ -118,19 +118,19 @@ function DetailView({ detail }: { detail: Detail }) {
         </table>
       </section>
 
-      <section aria-label="사건의 스토리라인" className="space-y-2">
-        <h3 className="text-lg font-semibold">스토리라인</h3>
+      <section aria-label="사건의 흐름" className="space-y-2">
+        <h3 className="text-lg font-semibold">흐름</h3>
         {detail.storylines.length === 0 ? (
           <p className="text-sm">
-            이 사건이 든 스토리라인이 없다 — 방금 바뀐 사건은 다음 잇기 회차가
-            판정할 때까지 비어 있을 수 있다
+            이 사건이 든 흐름이 없다 — 방금 바뀐 사건은 다음 잇기 회차가 판정할
+            때까지 비어 있을 수 있다
           </p>
         ) : (
           <ul className="space-y-1 text-sm">
             {detail.storylines.map((storyline) => (
               <li key={storyline.id}>
                 <Link to={storylinePath(storyline.id)} className="underline">
-                  스토리라인 {storyline.id}
+                  흐름 {storyline.id}
                 </Link>{" "}
                 · {storylineStateLabels[storyline.state]} · 사건{" "}
                 {storyline.eventCount}

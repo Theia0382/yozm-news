@@ -54,7 +54,7 @@ export function StorylineDetailPage() {
     <div className="space-y-6">
       <p className="text-sm">
         <Link to="/admin/storylines" className="underline">
-          스토리라인 목록
+          사건 흐름 목록
         </Link>
       </p>
       {detail.error && <p role="alert">{failureText(detail.error)}</p>}
@@ -66,14 +66,14 @@ export function StorylineDetailPage() {
 function DetailView({ detail }: { detail: Detail }) {
   return (
     <>
-      <h2 className="text-xl font-semibold">스토리라인 {detail.id}</h2>
+      <h2 className="text-xl font-semibold">흐름 {detail.id}</h2>
       {detail.requestedId !== detail.id && (
         <p role="status" className="text-sm">
-          합쳐진 스토리라인 {detail.requestedId} 대신 남는 스토리라인을 보인다
+          합쳐진 흐름 {detail.requestedId} 대신 남는 흐름을 보인다
         </p>
       )}
       <dl
-        aria-label="스토리라인 값"
+        aria-label="흐름 값"
         className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-sm"
       >
         <dt className="text-muted-foreground">상태</dt>
@@ -114,17 +114,16 @@ function DetailView({ detail }: { detail: Detail }) {
 
 function EventsSection({ detail }: { detail: Detail }) {
   return (
-    <section aria-label="스토리라인의 사건" className="space-y-2">
+    <section aria-label="흐름의 사건" className="space-y-2">
       <h3 className="text-lg font-semibold">사건</h3>
       <p className="text-sm text-muted-foreground">
-        첫 기사 시각 순이다. 하위 스토리라인의 사건도 들고
-        &ldquo;하위에서&rdquo;로 표시한다. 소속 근거는 그 사건을 직접 가진
-        스토리라인마다의 것이다 — 기준은 그 판정에 쓴 값이라 지금 기준과 다를 수
-        있다
+        첫 기사 시각 순이다. 하위 흐름의 사건도 들고 &ldquo;하위에서&rdquo;로
+        표시한다. 소속 근거는 그 사건을 직접 가진 흐름마다의 것이다 — 기준은 그
+        판정에 쓴 값이라 지금 기준과 다를 수 있다
       </p>
       <div className="overflow-x-auto">
         <table
-          aria-label="스토리라인의 사건"
+          aria-label="흐름의 사건"
           className={`w-full text-left text-sm ${REVIEW_TABLE}`}
         >
           <thead>
@@ -190,7 +189,7 @@ function MembershipText({
   return (
     <>
       {membership.storylineId === self ? (
-        "이 스토리라인"
+        "이 흐름"
       ) : (
         <StorylineLink id={membership.storylineId} />
       )}{" "}
@@ -211,7 +210,7 @@ function MembershipText({
         </>
       )}
       {membership.mergedFrom !== null && (
-        <> · 합쳐진 스토리라인 {membership.mergedFrom} 에서 옮겨 옴</>
+        <> · 합쳐진 흐름 {membership.mergedFrom} 에서 옮겨 옴</>
       )}
       {membership.criteria !== null && (
         <span className="block text-muted-foreground">
@@ -237,8 +236,8 @@ function RelationsSection({ detail }: { detail: Detail }) {
       ) : (
         <>
           <p className="text-sm text-muted-foreground">
-            방향은 이 스토리라인 기준이다. 확률은 그 관계를 맺은 판정에서 가장
-            높았던 답의 확률이다
+            방향은 이 흐름 기준이다. 확률은 그 관계를 맺은 판정에서 가장 높았던
+            답의 확률이다
           </p>
           <JudgementLegend />
           <div className="overflow-x-auto">
@@ -361,20 +360,20 @@ function MergedSection({ detail }: { detail: Detail }) {
     return null;
   }
   return (
-    <section aria-label="합쳐진 스토리라인" className="space-y-2">
-      <h3 className="text-lg font-semibold">합쳐진 스토리라인</h3>
+    <section aria-label="합쳐진 흐름" className="space-y-2">
+      <h3 className="text-lg font-semibold">합쳐진 흐름</h3>
       <p className="text-sm text-muted-foreground">
-        이 스토리라인에 합쳐져 더는 따로 보이지 않는 스토리라인이다 — 합치기는
-        되돌리지 않는다
+        이 흐름에 합쳐져 더는 따로 보이지 않는 흐름이다 — 합치기는 되돌리지
+        않는다
       </p>
       <div className="overflow-x-auto">
         <table
-          aria-label="합쳐진 스토리라인"
+          aria-label="합쳐진 흐름"
           className={`w-full text-left text-sm ${REVIEW_TABLE}`}
         >
           <thead>
             <tr>
-              <th className="font-medium">스토리라인</th>
+              <th className="font-medium">흐름</th>
               <th className="font-medium">합친 시각</th>
               <th className="font-medium">합친 까닭</th>
               <th className="font-medium">기준</th>
@@ -417,8 +416,8 @@ function MergedSection({ detail }: { detail: Detail }) {
 function JudgementLegend() {
   return (
     <p className="text-sm text-muted-foreground">
-      판정 원본의 번호는 판정을 물을 때의 앞 · 뒤 스토리라인이다 — A ⊂ B 는 A 가
-      B 의 부분, A → B 는 A 가 B 를 낳음이다
+      판정 원본의 번호는 판정을 물을 때의 앞 · 뒤 흐름이다 — A ⊂ B 는 A 가 B 의
+      부분, A → B 는 A 가 B 를 낳음이다
     </p>
   );
 }
@@ -472,7 +471,7 @@ function JudgementText({
 function StorylineLink({ id }: { id: number }) {
   return (
     <Link to={storylinePath(id)} className="underline">
-      스토리라인 {id}
+      흐름 {id}
     </Link>
   );
 }

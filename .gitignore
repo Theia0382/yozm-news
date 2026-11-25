@@ -18,6 +18,9 @@ CLAUDE.md
 # 이슈별 작업 디렉터리 (git worktree)
 .worktrees/
 
+# 파이썬 바이트코드 — 호스트에서 tools/ 시험을 돌리면 생긴다
+__pycache__/
+
 # OS
 .DS_Store
 Thumbs.db

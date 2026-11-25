@@ -176,9 +176,9 @@ class AdminBigStorylineControllerTests {
 	@Test
 	void aPreviewOutOfRangeIsABadRequestAndJudgesNothing() throws Exception {
 		previewBadRequest("{\"minIntensity\":0,\"from\":\"2026-11-01\",\"to\":\"2026-11-07\","
-				+ "\"zone\":\"Asia/Seoul\"}", "큰 판정 기준은 0 보다 크고 9999.99 이하인 소수 2자리까지다");
+				+ "\"zone\":\"Asia/Seoul\"}", "큰 화제 기준은 0 보다 크고 9999.99 이하인 소수 2자리까지다");
 		previewBadRequest("{\"minIntensity\":15.125,\"from\":\"2026-11-01\",\"to\":\"2026-11-07\","
-				+ "\"zone\":\"Asia/Seoul\"}", "큰 판정 기준은 0 보다 크고 9999.99 이하인 소수 2자리까지다");
+				+ "\"zone\":\"Asia/Seoul\"}", "큰 화제 기준은 0 보다 크고 9999.99 이하인 소수 2자리까지다");
 		previewBadRequest("{\"minIntensity\":15,\"from\":\"2026-11-01\",\"to\":\"2026-12-02\","
 				+ "\"zone\":\"Asia/Seoul\"}", "기간은 1일에서 31일까지다");
 		assertThat(this.administration.calls).isEmpty();
@@ -214,7 +214,7 @@ class AdminBigStorylineControllerTests {
 		this.mockMvc.perform(json(put("/api/admin/big-storyline-criteria"), "{\"minIntensity\":0}"))
 			.andExpect(status().isBadRequest())
 			.andExpect(content().json("""
-					{"status":400,"detail":"큰 판정 기준은 0 보다 크고 9999.99 이하인 소수 2자리까지다"}
+					{"status":400,"detail":"큰 화제 기준은 0 보다 크고 9999.99 이하인 소수 2자리까지다"}
 					"""));
 		this.mockMvc.perform(json(put("/api/admin/big-storyline-criteria"), "{}"))
 			.andExpect(status().isBadRequest())

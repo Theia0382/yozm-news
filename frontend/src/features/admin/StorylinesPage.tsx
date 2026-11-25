@@ -76,7 +76,7 @@ export function StorylinesPage() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-semibold">스토리라인</h2>
+      <h2 className="text-xl font-semibold">사건 흐름</h2>
       <PeriodFields
         first={first}
         last={last}
@@ -86,14 +86,14 @@ export function StorylinesPage() {
         onLast={(value) => update("to", value)}
       />
       <p className="text-sm text-muted-foreground">
-        기간 안 기사 수 · 보도 강도 · 소스 수 · 중요도 평균 · 큰 여부는 고른
-        기간과 지금 큰 판정 기준으로 정한다. 사건 수 · 전체 기사 수 · 기간은
-        하위 스토리라인의 사건까지 센 값이다
+        기간 안 기사 수 · 보도 강도 · 소스 수 · 중요도 평균 · 큰 화제 여부는
+        고른 기간과 지금 큰 화제 기준으로 정한다. 사건 수 · 전체 기사 수 ·
+        기간은 하위 흐름의 사건까지 센 값이다
       </p>
       {list.error && <p role="alert">{failureText(list.error)}</p>}
       {head && <Overview list={head} />}
       {list.data && rows.length === 0 && (
-        <p className="text-sm">이 기간에 기사가 있는 스토리라인이 없다</p>
+        <p className="text-sm">이 기간에 기사가 있는 흐름이 없다</p>
       )}
       {rows.length > 0 && <StorylinesTable rows={rows} />}
       {list.hasNextPage && (
@@ -117,7 +117,7 @@ function Overview({ list }: { list: List }) {
       aria-label="기간 개요"
       className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-sm"
     >
-      <dt className="text-muted-foreground">스토리라인에 들지 않은 사건</dt>
+      <dt className="text-muted-foreground">흐름에 들지 않은 사건</dt>
       <dd className="tabular-nums">
         {list.unlinked.events}건 · 기사 {list.unlinked.articles}건
       </dd>
@@ -137,12 +137,12 @@ function StorylinesTable({ rows }: { rows: Row[] }) {
   return (
     <div className="overflow-x-auto">
       <table
-        aria-label="스토리라인"
+        aria-label="흐름"
         className={`w-full text-left text-sm ${REVIEW_TABLE}`}
       >
         <thead>
           <tr>
-            <th className="font-medium">스토리라인</th>
+            <th className="font-medium">흐름</th>
             <th className="font-medium">상태</th>
             <th className="font-medium">상위</th>
             <th className="font-medium">사건 수</th>
@@ -151,7 +151,7 @@ function StorylinesTable({ rows }: { rows: Row[] }) {
             <th className="font-medium">소스 수(기간)</th>
             <th className="font-medium">중요도 평균(기간)</th>
             <th className="font-medium">기간</th>
-            <th className="font-medium">큰 스토리라인</th>
+            <th className="font-medium">큰 화제</th>
             <th className="font-medium">대표 기사</th>
           </tr>
         </thead>
@@ -160,14 +160,14 @@ function StorylinesTable({ rows }: { rows: Row[] }) {
             <tr key={row.id} className="align-top">
               <td>
                 <Link to={storylinePath(row.id)} className="underline">
-                  스토리라인 {row.id}
+                  흐름 {row.id}
                 </Link>
               </td>
               <td>{storylineStateLabels[row.state]}</td>
               <td>
                 {row.parentId !== null && (
                   <Link to={storylinePath(row.parentId)} className="underline">
-                    스토리라인 {row.parentId}
+                    흐름 {row.parentId}
                   </Link>
                 )}
               </td>
@@ -184,7 +184,7 @@ function StorylinesTable({ rows }: { rows: Row[] }) {
                 {formatDateTime(row.firstArticleAt)} ~{" "}
                 {formatDateTime(row.lastArticleAt)}
               </td>
-              <td>{row.big ? "큰 스토리라인" : ""}</td>
+              <td>{row.big ? "큰 화제" : ""}</td>
               <td>
                 <ArticleTitle
                   id={row.representativeArticleId}

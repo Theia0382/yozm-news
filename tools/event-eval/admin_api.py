@@ -259,7 +259,7 @@ class AdminApi:
                 storyline_id = int(field(row, "StorylineRowResponse", "id"))
                 if storyline_id in seen:
                     raise ApiError(_STORYLINES, None,
-                                   f"스토리라인 {storyline_id} 가 목록에 두 번 나왔다 — 잇기가 도는 중이면 끝난 뒤 다시 낸다")
+                                   f"흐름 {storyline_id} 가 목록에 두 번 나왔다 — 잇기가 도는 중이면 끝난 뒤 다시 낸다")
                 seen.add(storyline_id)
                 ids.append(storyline_id)
             following = field(page, "StorylineListResponse", "next")

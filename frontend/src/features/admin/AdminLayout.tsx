@@ -133,10 +133,10 @@ export function AdminLayout({ baseUrl, fetch }: AdminLayoutProps) {
               사건
             </NavLink>
             <NavLink to="/admin/storylines" className={navLinkClass}>
-              스토리라인
+              사건 흐름
             </NavLink>
             <NavLink to="/admin/big-storylines" className={navLinkClass}>
-              큰 스토리라인
+              큰 화제
             </NavLink>
             <NavLink to="/admin/event-judgements" className={navLinkClass}>
               판정 기록

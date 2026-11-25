@@ -162,7 +162,7 @@ class StorylineExportTest(unittest.TestCase):
         self.assertEqual((code, err), (0, ""), err)
         self.assertEqual(json.loads(self.result.read_text(encoding="utf-8")), RESULT)
         self.assertEqual(self.pairs.read_text(encoding="utf-8"), PAIRS)
-        self.assertEqual(out, f"결과 {self.result}: 스토리라인 2 · 관계 1 · 큰 표시 1(직접 기사가 없어 내지 않은 스토리라인 1)\n"
+        self.assertEqual(out, f"결과 {self.result}: 흐름 2 · 관계 1 · 큰 표시 1(직접 기사가 없어 내지 않은 흐름 1)\n"
                               f"물은 쌍 {self.pairs}: 5쌍(확률 없는 쌍 3)\n")
         # 측정이 받는 결과 파일이다 — 같은 덤프 위의 결과
         self.assertEqual(run_kind(read_result(self.result), read_storyline_sample(self.data)), RunKind.SAME_DUMP)
@@ -199,7 +199,7 @@ class StorylineExportTest(unittest.TestCase):
         self.fake.listing = [[20, 21], [21]]
         code, _, err = self.export()
         self.assertEqual(code, 3)
-        self.assertIn("스토리라인 21 가 목록에 두 번 나왔다", err)
+        self.assertIn("흐름 21 가 목록에 두 번 나왔다", err)
         self.assertFalse(self.result.exists())
         self.assertFalse(self.pairs.exists())
 

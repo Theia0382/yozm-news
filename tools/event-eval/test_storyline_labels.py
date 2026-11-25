@@ -81,13 +81,13 @@ class StorylineLabelsTest(unittest.TestCase):
                    json.dumps({"labelRule": 1, "start": "2026-11-04", "end": "2026-11-05", "zone": ZONE}))
         with self.assertRaises(LabelError) as caught:
             read_storyline_sample(self.directory)
-        self.assertIn("스토리라인 평가의 표본이 아니다(kind None)", str(caught.exception))
+        self.assertIn("흐름 평가의 표본이 아니다(kind None)", str(caught.exception))
         # 사건 평가의 지금 판(2) 표본도 판 어긋남이 아니라 kind 로 알린다
         self.write("sample.json",
                    json.dumps({"labelRule": 2, "start": "2026-11-04", "end": "2026-11-05", "zone": ZONE}))
         with self.assertRaises(LabelError) as caught:
             read_storyline_sample(self.directory)
-        self.assertIn("스토리라인 평가의 표본이 아니다(kind None)", str(caught.exception))
+        self.assertIn("흐름 평가의 표본이 아니다(kind None)", str(caught.exception))
         self.assertNotIn("판으로 만든 표본이다", str(caught.exception))
         # 대조 — 파일이 없으면 kind 가 아니라 labels.read_sample 의 안내로 멈춘다
         (self.directory / "sample.json").unlink()
@@ -236,7 +236,7 @@ class StorylineLabelsTest(unittest.TestCase):
             "not in sheet": (dict(labels=LABELS + "9,c,\n"), "labels.csv:8: 사건 9 가 시트에 없다"),
             "twice": (dict(labels=LABELS + "2,b,\n"), "labels.csv:8: 사건 2 가 5줄에도 있다"),
             "seed row": (dict(labels=LABELS.replace("4,c,\n", "")), "씨앗 사건 4 의 줄이 없다"),
-            "self": (dict(relations=RELATIONS + "c,c,FOLLOWS\n"), "스토리라인 c 가 자기 자신과 이어졌다"),
+            "self": (dict(relations=RELATIONS + "c,c,FOLLOWS\n"), "흐름 c 가 자기 자신과 이어졌다"),
             "pair": (dict(relations=RELATIONS + "c,b,CONTAINS\n"), "relations.csv:4: c · b 의 관계가 3줄에도 있다"),
             "kind": (dict(relations=RELATIONS.replace("FOLLOWS", "NEXT")), "kind 는 CONTAINS 이나 FOLLOWS 다"),
             "relation end": (dict(relations=RELATIONS + "a,z,FOLLOWS\n"), "표지 z 가 storylines.csv 에 없다"),
@@ -248,7 +248,7 @@ class StorylineLabelsTest(unittest.TestCase):
             "storyline twice": (dict(storylines=STORYLINES + "a,또\n"), "storylines.csv:5: 표지 a 가 둘이다"),
             "big twice": (dict(big=BIG + "a,2026-11-04\n"), "big.csv:3: (a, 2026-11-04) 줄이 둘이다"),
             "one member": (dict(storylines=STORYLINES + "d,외톨이\n", labels=LABELS.replace("5,c,", "5,c;d,")),
-                           "스토리라인 d 의 구성 사건이 1개다 — 둘 이상이어야 한다"),
+                           "흐름 d 의 구성 사건이 1개다 — 둘 이상이어야 한다"),
         }
         for name, (files, message) in cases.items():
             with self.subTest(name):
@@ -264,7 +264,7 @@ class StorylineLabelsTest(unittest.TestCase):
         self.write_labels()
         self.assertEqual(len([event for event in (1, 2, 3, 4, 5, 6)
                               if "a" in read_labels(self.directory, sheet, SEEDS, SAMPLE).closed(event)]), 3)
-        self.assertIn("스토리라인 a 의 구성 사건이 1개다",
+        self.assertIn("흐름 a 의 구성 사건이 1개다",
                       self.labels_error(relations="source,target,kind\nb,c,FOLLOWS\n"))
 
 
