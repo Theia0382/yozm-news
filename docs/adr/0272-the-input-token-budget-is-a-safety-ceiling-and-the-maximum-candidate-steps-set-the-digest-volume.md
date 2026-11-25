@@ -37,3 +37,4 @@
 ## 후속 기록
 
 - 2026-11-24: 입력 토큰 예산을 변화 리포트 입력의 바깥 안전 상한으로도 쓴다 — 리포트의 평소 분량은 주간 · 월간 리포트 상한이 정한다. [ADR-0311](0311-a-change-report-input-fits-the-smaller-of-the-model-budget-and-the-weekly-or-monthly-cap-by-a-share-for-earlier-reports-and-a-fixed-trimming-order.md) · [report Spec "입력 맞추기"](../specs/report.md#입력-맞추기) report-R22 · [llm Spec "공급자와 허용 모델 목록"](../specs/llm.md#공급자와-허용-모델-목록) llm-R4
+- 2026-11-25: 결과 "단계 값은 측정 전 목표다"의 실측 — 한 공급자 모델로 사용자 넷의 7일치 다이제스트를 바꾼 단계 값(적게 20 · 보통 40 · 많이 60)으로 만들어 쟀다. 후보가 모자란 날이 아니면 사건 수가 고른 단계와 같았고 입력 토큰 예산은 자르지 않았다([이슈 #182](https://github.com/Theia0382/yozm-news/issues/182))
